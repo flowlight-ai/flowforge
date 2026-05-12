@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  flowforge:
+    build: .
+    image: flowforge:latest
+    container_name: flowforge-api
+    restart: unless-stopped
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-changeme}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ALIYUNCS_API_KEY=${ALIYUNCS_API_KEY}
+      - ARK_API_KEY=${ARK_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - DB_URL=sqlite:///data/flowforge.db
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowforge"
+version = "0.1.0"
+description = "Production-grade Python Agent orchestration framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "FlowForge Team"}]
+dependencies = [
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+    "apscheduler>=3.10",
+    "prometheus-client>=0.19",
+    "sqlalchemy>=2.0",
+    "aiosqlite>=0.20",
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+]
+
+[tool.setuptools.packages.find]
+include = ["core*", "modes*", "agents*", "tools*", "events*", "executor*", "memory*", "scheduler*", "app*"]
+exclude = ["tests*", "web*", "docs*", "config*"]
+
+[project.entry-points."flowforge.modes"]
+react = "flowforge.modes.react:ReActExecutor"
+plan_execute = "flowforge.modes.plan_execute:PlanExecuteExecutor"
+reflexion = "flowforge.modes.reflexion:ReflexionExecutor"
+multi_agent = "flowforge.modes.multi_agent:MultiAgentExecutor"
+workflow = "flowforge.modes.workflow:WorkflowExecutor"
+rewoo = "flowforge.modes.rewoo:ReWOOExecutor"
+self_discover = "flowforge.modes.self_discover:SelfDiscoverExecutor"
+agent_judge = "flowforge.modes.agent_judge:AgentJudgeExecutor"
+graph_of_thoughts = "flowforge.modes.graph_of_thoughts:GraphOfThoughtsExecutor"
+
+[project.entry-points."flowforge.agents"]
+topic_research = "flowforge.agents.topic_research:TopicResearchAgent"
+article_writing = "flowforge.agents.article_writing:ArticleWritingAgent"
+material_collection = "flowforge.agents.material_collection:MaterialCollectionAgent"
+seo_optimization = "flowforge.agents.seo_optimization:SEOOptimizationAgent"
+fact_check = "flowforge.agents.fact_check:FactCheckAgent"
+content_audit = "flowforge.agents.content_audit:ContentAuditAgent"
+trend_analysis = "flowforge.agents.trend_analysis:TrendAnalysisAgent"
+publishing = "flowforge.agents.publishing:PublishingAgent"
+headline_optimizer = "flowforge.agents.headline_optimizer:HeadlineOptimizerAgent"
+content_repurposer = "flowforge.agents.content_repurposer:ContentRepurposerAgent"
+image_research = "flowforge.agents.image_research:ImageResearchAgent"
+multilingual = "flowforge.agents.multilingual:MultilingualAgent"

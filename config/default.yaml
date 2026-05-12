@@ -1,0 +1,27 @@
+system:
+  db_url: "sqlite:///data/flowforge.db"
+  checkpointer_url: "sqlite:///data/checkpoints.db"
+  log_level: "INFO"
+  log_file: "logs/flowforge.log"
+  server_host: "0.0.0.0"
+  server_port: 8000
+  workers: 1
+  secret_key: "changeme-in-production"
+
+helixrag:
+  enabled: true
+  endpoint: "http://localhost:8100/api/v1/retrieve"
+  timeout: 90
+
+wechat:
+  official_enabled: false
+  app_id: ""
+  app_secret: ""
+  token: ""
+
+scheduler:
+  enabled: true
+  timezone: "Asia/Shanghai"
+
+metrics:
+  enabled: true
