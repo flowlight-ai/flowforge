@@ -1,7 +1,7 @@
-from core.base_mode_executor import BaseModeExecutor
-from core.base_agent import AgentInput
-from core.task_context import TaskContext
-from modes.default_llm_actors import DefaultLLMActor, DefaultLLMEvaluator, DefaultLLMReflector
+from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.base_agent import AgentInput
+from flowforge.core.task_context import TaskContext
+from flowforge.modes.default_llm_actors import DefaultLLMActor, DefaultLLMEvaluator, DefaultLLMReflector
 
 class ReflexionExecutor(BaseModeExecutor):
     mode_name = "reflexion"

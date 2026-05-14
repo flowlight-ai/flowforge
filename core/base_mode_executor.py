@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from core.task_context import TaskContext
+from flowforge.core.task_context import TaskContext
 
 
 class BaseModeExecutor(ABC):

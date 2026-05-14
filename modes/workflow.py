@@ -1,7 +1,7 @@
 import asyncio
-from core.base_mode_executor import BaseModeExecutor
-from core.task_context import TaskContext
-from core.errors import WorkflowRecursionError
+from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.task_context import TaskContext
+from flowforge.core.errors import WorkflowRecursionError
 
 class WorkflowExecutor(BaseModeExecutor):
     mode_name = "workflow"

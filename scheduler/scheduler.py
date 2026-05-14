@@ -1,7 +1,7 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from core.tracing import get_logger
-from core.config import system_config
+from flowforge.core.tracing import get_logger
+from flowforge.core.config import system_config
 
 logger = get_logger("scheduler")
 
@@ -28,7 +28,7 @@ class TaskScheduler:
         if not self.executor:
             logger.error("Executor not set for scheduler")
             return
-        from core.task_context import TaskContext
+        from flowforge.core.task_context import TaskContext
         import uuid
         task_id = f"cron-{uuid.uuid4()}"
         context = TaskContext(task_id=task_id, persona=persona, input_data=input_data, mode=mode)

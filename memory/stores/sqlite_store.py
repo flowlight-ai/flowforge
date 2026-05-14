@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, Column, String, Integer, Text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from datetime import datetime
 import uuid
-from core.config import system_config
+from flowforge.core.config import system_config
 
 class Base(DeclarativeBase):
     pass

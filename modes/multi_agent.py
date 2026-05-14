@@ -1,7 +1,7 @@
 import asyncio
-from core.base_mode_executor import BaseModeExecutor
-from core.base_agent import AgentInput
-from core.task_context import TaskContext
+from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.base_agent import AgentInput
+from flowforge.core.task_context import TaskContext
 
 class MultiAgentExecutor(BaseModeExecutor):
     mode_name = "multi_agent"

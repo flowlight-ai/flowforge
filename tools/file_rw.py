@@ -1,5 +1,5 @@
 import os
-from core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 
 
 class FileReadWriteTool(BaseTool):

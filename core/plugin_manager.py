@@ -1,8 +1,8 @@
 import importlib.metadata
 import importlib
 from typing import Dict, List, Callable
-from core.tracing import get_logger
-from core.errors import ConfigurationError
+from flowforge.core.tracing import get_logger
+from flowforge.core.errors import ConfigurationError
 
 logger = get_logger("plugin_manager")
 

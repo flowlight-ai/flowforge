@@ -1,9 +1,9 @@
 import json
 import re
-from core.base_mode_executor import BaseModeExecutor
-from core.base_agent import AgentInput
-from core.base_tool import ToolInput
-from core.task_context import TaskContext
+from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.base_agent import AgentInput
+from flowforge.core.base_tool import ToolInput
+from flowforge.core.task_context import TaskContext
 
 class PlanExecuteExecutor(BaseModeExecutor):
     mode_name = "plan_execute"
@@ -20,7 +20,7 @@ class PlanExecuteExecutor(BaseModeExecutor):
             agent_name = step.get("agent", "executor")
             agent = ctx.agents.get(agent_name) if ctx.agents else None
             if agent is None:
-                from modes.default_llm_actors import DefaultLLMActor
+                from flowforge.modes.default_llm_actors import DefaultLLMActor
                 agent = DefaultLLMActor()
             agent_input = AgentInput(params={"task": step.get("task", ""), "context": results})
             if hasattr(agent, 'execute_with_context'):

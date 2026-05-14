@@ -1,6 +1,6 @@
 import time
 from typing import Any, Dict, Optional
-from core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 
 
 class CacheTool(BaseTool):

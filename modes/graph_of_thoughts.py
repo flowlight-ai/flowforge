@@ -1,9 +1,9 @@
 import json
 import re
-from core.base_mode_executor import BaseModeExecutor
-from core.base_agent import AgentInput
-from core.base_tool import ToolInput
-from core.task_context import TaskContext
+from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.base_agent import AgentInput
+from flowforge.core.base_tool import ToolInput
+from flowforge.core.task_context import TaskContext
 
 class GraphOfThoughtsExecutor(BaseModeExecutor):
     mode_name = "graph_of_thoughts"

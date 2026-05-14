@@ -1,0 +1,38 @@
+from typing import Dict, List, Optional, Callable
+from flowforge.core.base_agent import BaseAgent
+from flowforge.core.errors import AgentNotFoundError
+
+
+class AgentRegistry:
+    """独立 Agent 注册中心，与 DIContainer 解耦。"""
+
+    def __init__(self):
+        self._agents: Dict[str, BaseAgent] = {}
+        self._factories: Dict[str, Callable] = {}
+
+    def register(self, agent: BaseAgent) -> None:
+        if agent.name in self._agents:
+            raise ValueError(f"Agent '{agent.name}' already registered")
+        self._agents[agent.name] = agent
+
+    def register_factory(self, name: str, factory: Callable) -> None:
+        self._factories[name] = factory
+
+    def get(self, name: str) -> Optional[BaseAgent]:
+        if name in self._agents:
+            return self._agents[name]
+        if name in self._factories:
+            agent = self._factories[name]()
+            self._agents[name] = agent
+            return agent
+        return None
+
+    def list_agents(self) -> List[str]:
+        names = set(self._agents.keys()) | set(self._factories.keys())
+        return sorted(names)
+
+    def get_all(self) -> Dict[str, BaseAgent]:
+        for name in list(self._factories.keys()):
+            if name not in self._agents:
+                self._agents[name] = self._factories[name]()
+        return dict(self._agents)

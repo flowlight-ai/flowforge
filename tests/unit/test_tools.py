@@ -1,8 +1,8 @@
 import pytest
-from tools.registry import ToolRegistry
-from tools.cache import CacheTool
-from core.base_tool import BaseTool, ToolInput, ToolOutput
-from core.errors import ToolNotFoundError
+from flowforge.tools.registry import ToolRegistry
+from flowforge.tools.cache import CacheTool
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.errors import ToolNotFoundError
 
 class EchoTool(BaseTool):
     name = "echo"

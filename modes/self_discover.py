@@ -1,8 +1,8 @@
 import json
 import re
-from core.base_mode_executor import BaseModeExecutor
-from core.base_tool import ToolInput
-from core.task_context import TaskContext
+from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.base_tool import ToolInput
+from flowforge.core.task_context import TaskContext
 
 class SelfDiscoverExecutor(BaseModeExecutor):
     mode_name = "self_discover"

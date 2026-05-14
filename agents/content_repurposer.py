@@ -1,6 +1,6 @@
-from core.base_agent import BaseAgent, AgentInput, AgentOutput
-from core.base_tool import ToolInput
-from core.task_context import TaskContext
+from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
+from flowforge.core.base_tool import ToolInput
+from flowforge.core.task_context import TaskContext
 
 
 class ContentRepurposerAgent(BaseAgent):

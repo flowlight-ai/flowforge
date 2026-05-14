@@ -1,9 +1,9 @@
 import pytest
-from modes.registry import ModeRegistry
-from modes.workflow import WorkflowExecutor
-from modes.reflexion import ReflexionExecutor
-from modes.react import ReActExecutor
-from core.errors import ModeNotFoundError
+from flowforge.modes.registry import ModeRegistry
+from flowforge.modes.workflow import WorkflowExecutor
+from flowforge.modes.reflexion import ReflexionExecutor
+from flowforge.modes.react import ReActExecutor
+from flowforge.core.errors import ModeNotFoundError
 
 def test_mode_registry():
     registry = ModeRegistry()
@@ -27,8 +27,8 @@ def test_mode_registry_suggest():
 @pytest.mark.asyncio
 async def test_workflow_recursion_limit():
     executor = WorkflowExecutor()
-    from core.task_context import TaskContext
-    from core.errors import WorkflowRecursionError
+    from flowforge.core.task_context import TaskContext
+    from flowforge.core.errors import WorkflowRecursionError
     ctx = TaskContext(task_id="t1", input_data={}, metadata={"_workflow_depth": 3})
     with pytest.raises(WorkflowRecursionError):
         await executor._execute_core(ctx)

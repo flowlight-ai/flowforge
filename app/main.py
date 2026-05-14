@@ -1,43 +1,61 @@
 import uvicorn
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from core.config import system_config
-from core.di import DIContainer
-from tools.registry import ToolRegistry
-from tools.llm_client import LLMClient
-from tools.helixrag_client import HelixRAGClient
-from tools.web_search import WebSearchTool
-from tools.python_executor import PythonExecutorTool
-from tools.file_rw import FileReadWriteTool
-from tools.cache import CacheTool
-from events.event_bus import EventBus
-from modes.registry import ModeRegistry
-from modes.workflow import WorkflowExecutor
-from modes.reflexion import ReflexionExecutor
-from modes.react import ReActExecutor
-from modes.plan_execute import PlanExecuteExecutor
-from modes.multi_agent import MultiAgentExecutor
-from modes.rewoo import ReWOOExecutor
-from modes.self_discover import SelfDiscoverExecutor
-from modes.agent_judge import AgentJudgeExecutor
-from modes.graph_of_thoughts import GraphOfThoughtsExecutor
-from executor.hybrid_executor import HybridExecutor
-from memory.manager import MemoryManager
-from agents.topic_research import TopicResearchAgent
-from agents.article_writing import ArticleWritingAgent
-from agents.material_collection import MaterialCollectionAgent
-from agents.seo_optimization import SEOOptimizationAgent
-from agents.fact_check import FactCheckAgent
-from agents.content_audit import ContentAuditAgent
-from agents.trend_analysis import TrendAnalysisAgent
-from agents.publishing import PublishingAgent
-from agents.headline_optimizer import HeadlineOptimizerAgent
-from agents.content_repurposer import ContentRepurposerAgent
-from agents.image_research import ImageResearchAgent
-from agents.multilingual import MultilingualAgent
-from app.api.router import router
-from app.deps import set_executor_instance
-from core import metrics
+from flowforge.core.config import system_config
+from flowforge.core.di import DIContainer
+from flowforge.core.agent_registry import AgentRegistry
+from flowforge.tools.registry import ToolRegistry
+from flowforge.tools.llm_client import LLMClient
+from flowforge.tools.helixrag_client import HelixRAGClient
+from flowforge.tools.web_search import WebSearchTool
+from flowforge.tools.python_executor import PythonExecutorTool
+from flowforge.tools.file_rw import FileReadWriteTool
+from flowforge.tools.cache import CacheTool
+from flowforge.tools.tavily_search import TavilySearchTool
+from flowforge.tools.duckduckgo_search import DuckDuckGoSearchTool
+from flowforge.tools.web_scraper import WebScraperTool
+from flowforge.tools.toutiao_publisher import ToutiaoPublisherTool
+from flowforge.tools.wechat_publisher import WeChatPublisherTool
+from flowforge.tools.pexels_image import PexelsImageTool
+from flowforge.tools.sendgrid_mail import SendGridMailTool
+from flowforge.tools.webhook import WebhookTool
+from flowforge.events.event_bus import EventBus
+from flowforge.modes.registry import ModeRegistry
+from flowforge.modes.workflow import WorkflowExecutor
+from flowforge.modes.reflexion import ReflexionExecutor
+from flowforge.modes.react import ReActExecutor
+from flowforge.modes.plan_execute import PlanExecuteExecutor
+from flowforge.modes.multi_agent import MultiAgentExecutor
+from flowforge.modes.rewoo import ReWOOExecutor
+from flowforge.modes.self_discover import SelfDiscoverExecutor
+from flowforge.modes.agent_judge import AgentJudgeExecutor
+from flowforge.modes.graph_of_thoughts import GraphOfThoughtsExecutor
+from flowforge.executor.hybrid_executor import HybridExecutor
+from flowforge.memory.manager import MemoryManager
+from flowforge.agents.topic_research import TopicResearchAgent
+from flowforge.agents.article_writing import ArticleWritingAgent
+from flowforge.agents.material_collection import MaterialCollectionAgent
+from flowforge.agents.seo_optimization import SEOOptimizationAgent
+from flowforge.agents.fact_check import FactCheckAgent
+from flowforge.agents.content_audit import ContentAuditAgent
+from flowforge.agents.trend_analysis import TrendAnalysisAgent
+from flowforge.agents.publishing import PublishingAgent
+from flowforge.agents.headline_optimizer import HeadlineOptimizerAgent
+from flowforge.agents.content_repurposer import ContentRepurposerAgent
+from flowforge.agents.image_research import ImageResearchAgent
+from flowforge.agents.multilingual import MultilingualAgent
+from flowforge.app.api.router import router
+from flowforge.app.deps import (
+    set_executor_instance, set_llm_client_instance,
+    set_scheduler_instance, set_plugin_manager_instance,
+)
+from flowforge.core import metrics
+from flowforge.scheduler.scheduler import TaskScheduler
+from flowforge.core.plugin_manager import PluginManager
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("main")
 
 app = FastAPI(title="FlowForge API", version="0.1.0")
 app.add_middleware(
@@ -48,17 +66,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-container = DIContainer()
 event_bus = EventBus()
+agent_registry = AgentRegistry()
 tool_registry = ToolRegistry()
 mode_registry = ModeRegistry()
 
-tool_registry.register(LLMClient())
+llm_client = LLMClient(event_bus=event_bus)
+llm_client.set_event_bus(event_bus)
+tool_registry.register(llm_client)
 tool_registry.register(HelixRAGClient())
 tool_registry.register(WebSearchTool())
 tool_registry.register(PythonExecutorTool())
 tool_registry.register(FileReadWriteTool())
 tool_registry.register(CacheTool())
+
+_optional_tools = [
+    (TavilySearchTool, "TAVILY_API_KEY"),
+    (DuckDuckGoSearchTool, None),
+    (WebScraperTool, None),
+    (ToutiaoPublisherTool, "TOUTIAO_ACCESS_TOKEN"),
+    (WeChatPublisherTool, "WECHAT_APP_ID"),
+    (PexelsImageTool, "PEXELS_API_KEY"),
+    (SendGridMailTool, "SENDGRID_API_KEY"),
+    (WebhookTool, None),
+]
+for tool_cls, env_key in _optional_tools:
+    try:
+        if env_key is None or __import__("os").getenv(env_key, ""):
+            tool_registry.register(tool_cls())
+    except Exception as e:
+        logger.debug(f"Skip tool {tool_cls.__name__}: {e}")
+
+set_llm_client_instance(llm_client)
 
 mode_registry.register(WorkflowExecutor())
 mode_registry.register(ReflexionExecutor())
@@ -70,43 +109,89 @@ mode_registry.register(SelfDiscoverExecutor())
 mode_registry.register(AgentJudgeExecutor())
 mode_registry.register(GraphOfThoughtsExecutor())
 
-container.register_agent("topic_research", lambda: TopicResearchAgent())
-container.register_agent("article_writing", lambda: ArticleWritingAgent())
-container.register_agent("material_collection", lambda: MaterialCollectionAgent())
-container.register_agent("seo_optimization", lambda: SEOOptimizationAgent())
-container.register_agent("fact_check", lambda: FactCheckAgent())
-container.register_agent("content_audit", lambda: ContentAuditAgent())
-container.register_agent("trend_analysis", lambda: TrendAnalysisAgent())
-container.register_agent("publishing", lambda: PublishingAgent())
-container.register_agent("headline_optimizer", lambda: HeadlineOptimizerAgent())
-container.register_agent("content_repurposer", lambda: ContentRepurposerAgent())
-container.register_agent("image_research", lambda: ImageResearchAgent())
-container.register_agent("multilingual", lambda: MultilingualAgent())
+agent_registry.register_factory("topic_research", lambda: TopicResearchAgent())
+agent_registry.register_factory("article_writing", lambda: ArticleWritingAgent())
+agent_registry.register_factory("material_collection", lambda: MaterialCollectionAgent())
+agent_registry.register_factory("seo_optimization", lambda: SEOOptimizationAgent())
+agent_registry.register_factory("fact_check", lambda: FactCheckAgent())
+agent_registry.register_factory("content_audit", lambda: ContentAuditAgent())
+agent_registry.register_factory("trend_analysis", lambda: TrendAnalysisAgent())
+agent_registry.register_factory("publishing", lambda: PublishingAgent())
+agent_registry.register_factory("headline_optimizer", lambda: HeadlineOptimizerAgent())
+agent_registry.register_factory("content_repurposer", lambda: ContentRepurposerAgent())
+agent_registry.register_factory("image_research", lambda: ImageResearchAgent())
+agent_registry.register_factory("multilingual", lambda: MultilingualAgent())
 
 memory_manager = MemoryManager({"db_url": system_config.db_url})
 
 _executor_instance = HybridExecutor(
-    mode_registry, container, tool_registry, event_bus,
+    mode_registry, agent_registry, tool_registry, event_bus,
     memory_manager=memory_manager
 )
 set_executor_instance(_executor_instance)
 
+scheduler = TaskScheduler(executor=_executor_instance)
+set_scheduler_instance(scheduler)
+
+plugin_manager = PluginManager()
+set_plugin_manager_instance(plugin_manager)
+
 app.include_router(router)
 
 try:
-    from app.api.endpoints import websocket as ws_endpoints
+    from flowforge.app.api.endpoints import websocket as ws_endpoints
     app.include_router(ws_endpoints.router)
 except ImportError:
     pass
 
+
 @app.get("/health")
 def health():
-    return {"status": "healthy", "mode_registry": mode_registry.list_modes()}
+    components = {}
+    components["mode_registry"] = {"status": "healthy", "modes": len(mode_registry.list_modes())}
+    components["tool_registry"] = {"status": "healthy", "tools": len(tool_registry.list_tools())}
+    components["agent_registry"] = {"status": "healthy", "agents": len(agent_registry.list_agents())}
+    components["event_bus"] = {"status": "healthy"}
+    try:
+        _executor_instance.state_manager.list_states()
+        components["database"] = {"status": "healthy"}
+    except Exception as e:
+        components["database"] = {"status": "unhealthy", "message": str(e)}
+    try:
+        health_report = llm_client.get_health_report()
+        summary = health_report.get("summary", {})
+        if summary.get("unhealthy", 0) > 0:
+            components["llm_proxy"] = {"status": "degraded", "message": f"{summary['unhealthy']} unhealthy models"}
+        else:
+            components["llm_proxy"] = {"status": "healthy"}
+    except Exception:
+        components["llm_proxy"] = {"status": "unknown"}
+    return {"status": "healthy", "components": components}
+
 
 @app.get("/metrics")
-def get_metrics():
-    from core.metrics import get_metrics as gm
+def get_metrics_endpoint():
+    from flowforge.core.metrics import get_prometheus_metrics, get_metrics as gm
+    prom_data = get_prometheus_metrics()
+    if prom_data:
+        from starlette.responses import Response
+        return Response(content=prom_data, media_type="text/plain; version=0.0.4; charset=utf-8")
     return gm()
+
+
+@app.on_event("startup")
+async def startup_event():
+    if system_config.scheduler_enabled:
+        scheduler.start()
+        logger.info("Scheduler started")
+    logger.info(f"FlowForge API started - {len(mode_registry.list_modes())} modes, {len(tool_registry.list_tools())} tools, {len(agent_registry.list_agents())} agents")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    scheduler.shutdown()
+    logger.info("FlowForge API shutdown")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host=system_config.server_host, port=system_config.server_port)

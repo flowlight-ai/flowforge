@@ -1,7 +1,7 @@
 import httpx
-from core.base_tool import BaseTool, ToolInput, ToolOutput
-from core.tracing import get_logger
-from core.config import system_config
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.tracing import get_logger
+from flowforge.core.config import system_config
 
 logger = get_logger("helixrag_client")
 

@@ -1,7 +1,7 @@
 import os
 import httpx
-from core.base_tool import BaseTool, ToolInput, ToolOutput
-from core.config import system_config
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.config import system_config
 
 
 class WebSearchTool(BaseTool):
@@ -22,7 +22,7 @@ class WebSearchTool(BaseTool):
 
         if system_config.helixrag_enabled:
             try:
-                from tools.helixrag_client import HelixRAGClient
+                from flowforge.tools.helixrag_client import HelixRAGClient
                 client = HelixRAGClient()
                 rag_input = ToolInput(params={"query": query, "max_results": max_results})
                 result = await client.execute(rag_input)

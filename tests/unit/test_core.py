@@ -1,9 +1,9 @@
 import pytest
-from core.base_agent import BaseAgent, AgentInput, AgentOutput
-from core.base_tool import BaseTool, ToolInput, ToolOutput
-from core.task_context import TaskContext
-from core.errors import FlowForgeError, ConflictError, ModeNotFoundError, WorkflowRecursionError
-from core.di import DIContainer
+from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.task_context import TaskContext
+from flowforge.core.errors import FlowForgeError, ConflictError, ModeNotFoundError, WorkflowRecursionError
+from flowforge.core.di import DIContainer
 
 class MockAgent(BaseAgent):
     name = "test"

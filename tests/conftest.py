@@ -5,27 +5,21 @@ import pytest
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PROJECT_ROOT.parent))
+
+DATA_DIR = PROJECT_ROOT / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 @pytest.fixture(autouse=True)
 def setup_test_env():
     os.environ["FLOWFORGE_ENV"] = "test"
-    os.environ["DB_URL"] = "sqlite:///data/test_flowforge.db"
     os.environ["OPENROUTER_API_KEY"] = "test-key"
     yield
     gc.collect()
-    for path in ["data/test_flowforge.db", "data/test_checkpoints.db",
-                 "data/short_term.db", "data/long_term.db", "data/episodic.db"]:
-        full = os.path.join(PROJECT_ROOT, path)
-        if os.path.exists(full):
-            try:
-                os.remove(full)
-            except PermissionError:
-                pass
 
 @pytest.fixture
 def mock_llm_tool():
-    from core.base_tool import BaseTool, ToolInput, ToolOutput
+    from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
     class MockLLM(BaseTool):
         name = "llm"
         description = "Mock LLM"
@@ -36,13 +30,13 @@ def mock_llm_tool():
 
 @pytest.fixture
 def event_bus():
-    from events.event_bus import EventBus
+    from flowforge.events.event_bus import EventBus
     return EventBus()
 
 @pytest.fixture
 def tool_registry(mock_llm_tool):
-    from tools.registry import ToolRegistry
-    from tools.cache import CacheTool
+    from flowforge.tools.registry import ToolRegistry
+    from flowforge.tools.cache import CacheTool
     registry = ToolRegistry()
     registry.register(mock_llm_tool)
     registry.register(CacheTool())
@@ -50,10 +44,10 @@ def tool_registry(mock_llm_tool):
 
 @pytest.fixture
 def mode_registry():
-    from modes.registry import ModeRegistry
-    from modes.workflow import WorkflowExecutor
-    from modes.reflexion import ReflexionExecutor
-    from modes.react import ReActExecutor
+    from flowforge.modes.registry import ModeRegistry
+    from flowforge.modes.workflow import WorkflowExecutor
+    from flowforge.modes.reflexion import ReflexionExecutor
+    from flowforge.modes.react import ReActExecutor
     registry = ModeRegistry()
     registry.register(WorkflowExecutor())
     registry.register(ReflexionExecutor())

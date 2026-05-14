@@ -1,7 +1,7 @@
 import pytest
 import asyncio
-from events.event_bus import EventBus
-from events.solo_adapter import EventBusSoloAdapter
+from flowforge.events.event_bus import EventBus
+from flowforge.events.solo_adapter import EventBusSoloAdapter
 
 def test_event_bus_subscribe_emit():
     bus = EventBus()

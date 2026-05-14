@@ -1,7 +1,7 @@
 import time
 from typing import Dict, Optional, Callable
-from core.base_tool import BaseTool, ToolInput, ToolOutput
-from core.errors import ToolNotFoundError
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.errors import ToolNotFoundError
 
 
 class ToolRegistry:

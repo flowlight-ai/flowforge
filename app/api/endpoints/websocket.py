@@ -1,7 +1,7 @@
 import asyncio
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.deps import get_executor
+from flowforge.app.deps import get_executor
 
 router = APIRouter(tags=["websocket"])
 
@@ -54,8 +54,8 @@ async def events_websocket(websocket: WebSocket):
     await websocket.accept()
     event_bus = None
     try:
-        from events.event_bus import EventBus
-        from app.main import event_bus as global_event_bus
+        from flowforge.events.event_bus import EventBus
+        from flowforge.app.main import event_bus as global_event_bus
         event_bus = global_event_bus
     except Exception:
         pass

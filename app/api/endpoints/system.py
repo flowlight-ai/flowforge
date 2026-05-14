@@ -1,16 +1,52 @@
 import sys
+import platform
+from datetime import datetime
 from fastapi import APIRouter
+from flowforge.core.tracing import get_trace_id
 
 router = APIRouter(prefix="/system", tags=["system"])
 
-@router.get("/platform")
-async def get_platform():
+_psutil_available = False
+try:
+    import psutil
+    _psutil_available = True
+except ImportError:
+    pass
+
+
+def _make_response(data: dict) -> dict:
     return {
         "status": "success",
-        "data": {
-            "os": sys.platform,
-            "sandbox_type": "subprocess",
-            "memory_limit_supported": sys.platform != "win32",
-            "psutil_available": False,
-        }
+        "data": data,
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.utcnow().isoformat() + "Z"},
     }
+
+
+@router.get("/platform")
+async def get_platform():
+    platform_info = {
+        "os": sys.platform,
+        "os_name": platform.system(),
+        "os_version": platform.version(),
+        "os_release": platform.release(),
+        "python_version": platform.python_version(),
+        "python_implementation": platform.python_implementation(),
+        "architecture": platform.machine(),
+        "processor": platform.processor(),
+        "hostname": platform.node(),
+        "sandbox_available": sys.platform != "win32",
+        "sandbox_type": "subprocess",
+        "memory_limit_supported": sys.platform != "win32",
+        "psutil_available": _psutil_available,
+    }
+    if _psutil_available:
+        platform_info.update({
+            "cpu_count": psutil.cpu_count(),
+            "cpu_percent": psutil.cpu_percent(interval=0.1),
+            "memory_total_gb": round(psutil.virtual_memory().total / (1024 ** 3), 2),
+            "memory_available_gb": round(psutil.virtual_memory().available / (1024 ** 3), 2),
+            "memory_percent": psutil.virtual_memory().percent,
+            "disk_total_gb": round(psutil.disk_usage("/").total / (1024 ** 3), 2) if sys.platform != "win32" else round(psutil.disk_usage("C:\\").total / (1024 ** 3), 2),
+            "disk_percent": psutil.disk_usage("/").percent if sys.platform != "win32" else psutil.disk_usage("C:\\").percent,
+        })
+    return _make_response(platform_info)

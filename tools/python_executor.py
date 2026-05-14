@@ -4,7 +4,7 @@ import multiprocessing
 import tempfile
 import io
 import contextlib
-from core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 
 
 class PythonExecutorTool(BaseTool):

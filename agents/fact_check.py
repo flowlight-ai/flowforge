@@ -1,7 +1,7 @@
 import re
 import httpx
-from core.base_agent import BaseAgent, AgentInput, AgentOutput
-from core.task_context import TaskContext
+from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
+from flowforge.core.task_context import TaskContext
 
 
 class FactCheckAgent(BaseAgent):

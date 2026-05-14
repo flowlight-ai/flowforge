@@ -1,6 +1,6 @@
 from typing import Dict
-from core.base_mode_executor import BaseModeExecutor
-from core.errors import ModeNotFoundError
+from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.errors import ModeNotFoundError
 
 class ModeRegistry:
     def __init__(self):
