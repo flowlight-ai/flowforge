@@ -1,4 +1,4 @@
-from flowforge.core.di import DIContainer
+from typing import Optional
 from flowforge.executor.hybrid_executor import HybridExecutor
 from flowforge.tools.llm_client import LLMClient
 from flowforge.scheduler.scheduler import TaskScheduler
@@ -34,8 +34,8 @@ async def get_executor() -> HybridExecutor:
     return _executor_instance
 
 
-async def get_container() -> DIContainer:
-    return _executor_instance.agent_registry if _executor_instance else None
+async def get_container() -> Optional[HybridExecutor]:
+    return _executor_instance
 
 
 async def get_llm_client() -> LLMClient:

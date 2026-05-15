@@ -16,7 +16,11 @@ class PluginManager:
     def discover_entry_points(self, group: str) -> List[Callable]:
         factories = []
         try:
-            eps = importlib.metadata.entry_points(group=group)
+            eps = importlib.metadata.entry_points()
+            if hasattr(eps, 'select'):
+                eps = eps.select(group=group)
+            else:
+                eps = eps.get(group, [])
             for ep in eps:
                 try:
                     factory = ep.load()
@@ -88,13 +92,13 @@ class PluginManager:
         for agent_factory in self.discover_entry_points("flowforge.agents"):
             try:
                 agent_inst = agent_factory()
-                agent_registry.register_agent(agent_inst.name, agent_factory)
+                agent_registry.register_factory(agent_inst.name, agent_factory)
             except Exception as e:
                 logger.warning(f"注册Agent插件失败: {e}")
         for agent_factory in self._config_results.get("agents", []):
             try:
                 agent_inst = agent_factory()
-                agent_registry.register_agent(agent_inst.name, agent_factory)
+                agent_registry.register_factory(agent_inst.name, agent_factory)
             except Exception as e:
                 logger.warning(f"注册配置Agent插件失败: {e}")
 

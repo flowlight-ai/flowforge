@@ -2,6 +2,11 @@ class FlowForgeError(Exception):
     status_code: int = 500
     detail: str = "Internal flowforge error"
 
+    def __init__(self, detail: str = "", **kwargs):
+        super().__init__(detail)
+        if detail:
+            self.detail = detail
+
 
 class ConfigurationError(FlowForgeError):
     status_code = 400

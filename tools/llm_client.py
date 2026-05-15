@@ -37,6 +37,8 @@ class LLMClient(BaseTool):
             "openrouter": os.getenv("OPENROUTER_API_KEY", ""),
             "aliyuncs": os.getenv("ALIYUNCS_API_KEY", ""),
             "ark": os.getenv("ARK_API_KEY", ""),
+            "local": os.getenv("LOCAL_LLM_API_KEY", "local"),
+            "webproxy": os.getenv("WEBPROXY_API_KEY", "none"),
         }
         self._event_bus = event_bus
         self._health_status: Dict[str, dict] = {}
@@ -72,8 +74,8 @@ class LLMClient(BaseTool):
         elif persona and agent_name:
             candidates = self._get_model_chain(persona, agent_name)
         else:
-            default_provider = os.getenv("LLM_DEFAULT_PROVIDER", "openrouter")
-            default_model = os.getenv("LLM_DEFAULT_MODEL", "anthropic/claude-3.5-sonnet")
+            default_provider = os.getenv("LLM_DEFAULT_PROVIDER", "webproxy")
+            default_model = os.getenv("LLM_DEFAULT_MODEL", "doubao-web/seed-2.0")
             candidates = [f"{default_provider}/{default_model}"]
 
         last_error = None
@@ -187,8 +189,8 @@ class LLMClient(BaseTool):
         elif persona and agent_name:
             candidates = self._get_model_chain(persona, agent_name)
         else:
-            default_provider = os.getenv("LLM_DEFAULT_PROVIDER", "openrouter")
-            default_model = os.getenv("LLM_DEFAULT_MODEL", "anthropic/claude-3.5-sonnet")
+            default_provider = os.getenv("LLM_DEFAULT_PROVIDER", "webproxy")
+            default_model = os.getenv("LLM_DEFAULT_MODEL", "doubao-web/seed-2.0")
             candidates = [f"{default_provider}/{default_model}"]
 
         for candidate in candidates:
@@ -311,5 +313,7 @@ class LLMClient(BaseTool):
             "openrouter": "https://openrouter.ai/api/v1",
             "aliyuncs": "https://dashscope.aliyuncs.com/compatible-mode/v1",
             "ark": "https://ark.cn-beijing.volces.com/api/v3",
+            "local": os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:11434/v1"),
+            "webproxy": os.getenv("WEBPROXY_BASE_URL", "http://127.0.0.1:13000/v1"),
         }
         return urls.get(provider, "")

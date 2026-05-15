@@ -1,5 +1,5 @@
 from typing import Any, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class TaskContext:
@@ -17,7 +17,7 @@ class TaskContext:
         self.memory = kwargs.pop('memory', None)
         self.executor = kwargs.pop('executor', None)
         self.persona = kwargs.pop('persona', None)
-        self.created_at = datetime.utcnow().isoformat()
+        self.created_at = datetime.now(timezone.utc).isoformat()
 
     @classmethod
     def from_parent(cls, parent: 'TaskContext', **overrides) -> 'TaskContext':

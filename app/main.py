@@ -1,5 +1,5 @@
 import uvicorn
-import sys
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from flowforge.core.config import system_config
@@ -57,7 +57,17 @@ from flowforge.core.tracing import get_logger
 
 logger = get_logger("main")
 
-app = FastAPI(title="FlowForge API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app):
+    if system_config.scheduler_enabled:
+        scheduler.start()
+        logger.info("Scheduler started")
+    logger.info(f"FlowForge API started - {len(mode_registry.list_modes())} modes, {len(tool_registry.list_tools())} tools, {len(agent_registry.list_agents())} agents")
+    yield
+    scheduler.shutdown()
+    logger.info("FlowForge API shutdown")
+
+app = FastAPI(title="FlowForge API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -71,10 +81,10 @@ agent_registry = AgentRegistry()
 tool_registry = ToolRegistry()
 mode_registry = ModeRegistry()
 
-llm_client = LLMClient(event_bus=event_bus)
-llm_client.set_event_bus(event_bus)
+llm_client = LLMClient(models_config=None, event_bus=event_bus)
 tool_registry.register(llm_client)
-tool_registry.register(HelixRAGClient())
+if system_config.helixrag_enabled:
+    tool_registry.register(HelixRAGClient())
 tool_registry.register(WebSearchTool())
 tool_registry.register(PythonExecutorTool())
 tool_registry.register(FileReadWriteTool())
@@ -177,20 +187,6 @@ def get_metrics_endpoint():
         from starlette.responses import Response
         return Response(content=prom_data, media_type="text/plain; version=0.0.4; charset=utf-8")
     return gm()
-
-
-@app.on_event("startup")
-async def startup_event():
-    if system_config.scheduler_enabled:
-        scheduler.start()
-        logger.info("Scheduler started")
-    logger.info(f"FlowForge API started - {len(mode_registry.list_modes())} modes, {len(tool_registry.list_tools())} tools, {len(agent_registry.list_agents())} agents")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    scheduler.shutdown()
-    logger.info("FlowForge API shutdown")
 
 
 if __name__ == "__main__":

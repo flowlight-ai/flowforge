@@ -14,20 +14,37 @@ export type SoloEventType =
   | "solo.task.resumed"
   | "solo.task.completed"
   | "solo.task.error"
-  | "solo.token.stats";
+  | "solo.token.stats"
+  | "solo.gate.verdict"
+  | "solo.agent.timeout"
+  | "solo.circuit_breaker.open"
+  | "solo.circuit_breaker.half_open"
+  | "solo.circuit_breaker.closed";
 
 export interface SoloWSEvent {
-  type: SoloEventType;
+  type: SoloEventType | string;
   payload: Record<string, any>;
+  task_id?: string;
   timestamp: string;
   seq: number;
 }
 
+export type StreamEntryType =
+  | "stage"
+  | "tool-call"
+  | "thinking"
+  | "llm-stream"
+  | "intermediate"
+  | "draft-update"
+  | "review"
+  | "gate"
+  | "system";
+
 export interface StreamEntry {
   id: string;
-  type: string;
-  data: Record<string, any>;
+  type: StreamEntryType;
   timestamp: string;
+  data: Record<string, any>;
 }
 
 export type SoloTaskPhase =
@@ -40,3 +57,31 @@ export type SoloTaskPhase =
   | "completed"
   | "error"
   | "rejected";
+
+export interface SoloTaskState {
+  taskId: string | null;
+  phase: SoloTaskPhase;
+  persona: string;
+  intent: string;
+  entries: StreamEntry[];
+  draftContent: string;
+  editorContent: string;
+  currentStage: string | null;
+  stageProgress: { current: number; total: number };
+  tokenStats: { total: number; cost: number };
+  startTime: number | null;
+  elapsedMs: number;
+}
+
+export interface SoloWSOptions {
+  onStageEnter?: (stage: string, label: string, order: number) => void;
+  onToolCall?: (type: "start" | "end", data: Record<string, any>) => void;
+  onLLMStream?: (agent: string, delta: string) => void;
+  onLLMReasoning?: (agent: string, delta: string) => void;
+  onDraftUpdate?: (content: string, isPartial: boolean) => void;
+  onReviewReady?: (summary: string) => void;
+  onGateVerdict?: (verdict: Record<string, any>) => void;
+  onError?: (step: string, msg: string) => void;
+  onCompleted?: (data: Record<string, any>) => void;
+  onTokenStats?: (tokens: number, cost: number) => void;
+}

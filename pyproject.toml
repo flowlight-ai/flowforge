@@ -24,8 +24,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["core*", "modes*", "agents*", "tools*", "events*", "executor*", "memory*", "scheduler*", "app*"]
-exclude = ["tests*", "web*", "docs*", "config*"]
+include = ["flowforge*"]
 
 [project.entry-points."flowforge.modes"]
 react = "flowforge.modes.react:ReActExecutor"

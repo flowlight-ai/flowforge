@@ -61,8 +61,6 @@ async def events_websocket(websocket: WebSocket):
         pass
 
     received_events = []
-    def on_event(event):
-        received_events.append(event)
 
     if event_bus:
         event_bus.subscribe("*", lambda e: received_events.append(e))
