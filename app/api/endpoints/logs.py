@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Query
-from flowforge.core.tracing import get_trace_id, get_logger
+from flowforge.core.tracing import get_trace_id, get_logger, get_log_file_path
 from flowforge.core.config import system_config
 
 logger = get_logger("audit_logger")
@@ -110,3 +110,40 @@ async def query_logs(
     audit = get_audit_logger()
     result = audit.query(task_id=task_id, level=level, mode=mode, limit=limit, offset=offset)
     return _make_response(result)
+
+
+@router.get("/stream")
+async def stream_logs(
+    lines: int = Query(100, ge=1, le=1000),
+    level: str = Query(None),
+):
+    log_file = get_log_file_path()
+    if not log_file.exists():
+        return _make_response({"items": [], "total": 0})
+    with open(log_file, "r", encoding="utf-8") as f:
+        all_lines = f.readlines()
+    filtered = []
+    for line in all_lines:
+        stripped = line.rstrip("\n")
+        if not stripped:
+            continue
+        if level and f"[{level.upper()}]" not in stripped:
+            continue
+        filtered.append(stripped)
+    result_lines = filtered[-lines:]
+    return _make_response({"items": result_lines, "total": len(filtered)})
+
+
+@router.get("/file")
+async def get_log_file():
+    from starlette.responses import Response
+    log_file = get_log_file_path()
+    if not log_file.exists():
+        return Response(content="", media_type="text/plain; charset=utf-8")
+    size = log_file.stat().st_size
+    with open(log_file, "r", encoding="utf-8") as f:
+        if size > 51200:
+            f.seek(size - 51200)
+            f.readline()
+        content = f.read()
+    return Response(content=content, media_type="text/plain; charset=utf-8")

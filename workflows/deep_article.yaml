@@ -1,5 +1,10 @@
 name: "deep_article"
 version: "1.0"
+display_name: "深度长文"
+description: "完整的内容创作流程：选题→素材→写作→SEO→事实核查→审核→发布"
+icon: "📰"
+category: "content"
+
 steps:
   - name: "topic_research"
     agent: "topic_research"

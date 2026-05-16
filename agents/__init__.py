@@ -11,7 +11,9 @@ from flowforge.agents.content_repurposer import ContentRepurposerAgent
 from flowforge.agents.image_research import ImageResearchAgent
 from flowforge.agents.multilingual import MultilingualAgent
 
-ALL_AGENTS = [
+from flowforge.agents.generic import GENERIC_AGENTS
+
+CONTENT_AGENTS = [
     TopicResearchAgent,
     ArticleWritingAgent,
     MaterialCollectionAgent,
@@ -25,3 +27,5 @@ ALL_AGENTS = [
     ImageResearchAgent,
     MultilingualAgent,
 ]
+
+ALL_AGENTS = CONTENT_AGENTS + GENERIC_AGENTS

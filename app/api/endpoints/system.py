@@ -50,3 +50,76 @@ async def get_platform():
             "disk_percent": psutil.disk_usage("/").percent if sys.platform != "win32" else psutil.disk_usage("C:\\").percent,
         })
     return _make_response(platform_info)
+
+
+@router.get("/agents")
+async def list_agents():
+    try:
+        from flowforge.app.deps import get_executor
+        executor = await get_executor()
+        agents = executor.agent_registry.list_agents()
+        result = []
+        for name in agents:
+            agent = executor.agent_registry.get(name)
+            result.append({
+                "name": name,
+                "description": getattr(agent, "description", "") or "",
+                "enabled": True,
+                "mode": getattr(agent, "default_mode", None),
+            })
+        return {"agents": result}
+    except Exception:
+        return {"agents": []}
+
+
+@router.get("/modes")
+async def list_modes():
+    try:
+        from flowforge.app.deps import get_executor
+        executor = await get_executor()
+        modes = executor.mode_registry.list_modes()
+        result = []
+        for name in modes:
+            mode = executor.mode_registry.get(name)
+            result.append({
+                "name": name,
+                "description": getattr(mode, "description", "") or "",
+                "enabled": True,
+            })
+        return {"modes": result}
+    except Exception:
+        return {"modes": []}
+
+
+@router.get("/tools")
+async def list_tools():
+    try:
+        from flowforge.app.deps import get_executor
+        executor = await get_executor()
+        tools = executor.tool_registry.list_tools()
+        result = []
+        for name in tools:
+            tool = executor.tool_registry.get(name)
+            result.append({
+                "name": name,
+                "description": getattr(tool, "description", "") or "",
+                "enabled": True,
+                "category": getattr(tool, "category", None),
+            })
+        return {"tools": result}
+    except Exception:
+        return {"tools": []}
+
+
+@router.get("/memory")
+async def list_memory():
+    try:
+        from flowforge.app.deps import get_executor
+        executor = await get_executor()
+        stores = []
+        if hasattr(executor, "memory_manager"):
+            for name in getattr(executor.memory_manager, "list_stores", lambda: [])():
+                stores.append({"name": name, "description": "Memory store", "enabled": True, "type": "sqlite"})
+        return {"memory": stores}
+    except Exception:
+        return {"memory": []}

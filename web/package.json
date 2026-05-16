@@ -1,7 +1,14 @@
 {
-  "name": "flowforge-web",
+  "name": "@flowforge/web",
   "version": "0.1.0",
   "private": true,
+  "main": "src/index.ts",
+  "exports": {
+    "./components/*": "./src/components/*",
+    "./lib/*": "./src/lib/*",
+    "./hooks/*": "./src/hooks/*",
+    "./style": "./src/app/globals.css"
+  },
   "scripts": {
     "dev": "next dev --port 5174",
     "build": "next build",

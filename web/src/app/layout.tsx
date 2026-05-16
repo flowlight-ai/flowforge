@@ -29,8 +29,8 @@ const shellConfig: ShellConfig = {
     {
       label: "管理",
       items: [
-        { href: "/admin/agents", label: "Agent 状态", icon: "🤖" },
-        { href: "/admin/models", label: "模型治理", icon: "⚙" },
+        { href: "/admin/models", label: "模型配置", icon: "⚙" },
+        { href: "/admin/settings", label: "系统设置", icon: "🔧" },
         { href: "/logs", label: "日志", icon: "ⓘ" },
       ],
     },

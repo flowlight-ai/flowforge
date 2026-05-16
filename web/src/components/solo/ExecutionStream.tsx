@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { StreamEntry, SoloTaskPhase } from "@/lib/solo-types";
+import { StreamEntry, SoloTaskPhase } from "../../lib/solo-types";
 import { StageTransition } from "./StageTransition";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { IntermediateBlock } from "./IntermediateBlock";
-import { useShellConfig } from "@/lib/shell-config";
+import { useShellConfig } from "../../lib/shell-config";
 
 interface Props {
   entries: StreamEntry[];

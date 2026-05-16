@@ -1,6 +1,6 @@
 "use client";
 
-import { SoloTaskPhase } from "@/lib/solo-types";
+import { SoloTaskPhase } from "../../lib/solo-types";
 
 interface Props {
   phase: SoloTaskPhase;

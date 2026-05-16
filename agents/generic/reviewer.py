@@ -1,0 +1,33 @@
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
+
+
+class ReviewerAgent(GenericAgent):
+    name = "reviewer"
+    description = "审核协调：协调人工审核流程，汇总审核意见"
+    default_mode = "react"
+
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+        task = input.params.get("task", input.params.get("query", ""))
+        content_to_review = input.params.get("generated", input.params.get("execution_result", ""))
+        review_type = input.params.get("review_type", "general")
+
+        prompt = (
+            "You are a review coordination agent. Prepare a review summary for human reviewers.\n"
+            f"Task: {task}\n"
+            f"Content to review: {content_to_review}\n"
+            f"Review type: {review_type}\n\n"
+            "Provide a structured review brief as JSON:\n"
+            '{"summary": "brief summary of what needs review", "key_points": ["point1"], '
+            '"risk_areas": ["area1"], "recommendation": "approve/revise/reject"}'
+        )
+
+        content = await self._call_llm(context, prompt)
+        data = self._extract_json(content)
+        if isinstance(data, str):
+            data = {"summary": data, "key_points": [], "risk_areas": [], "recommendation": "revise"}
+
+        return AgentOutput(
+            result={"review_result": data},
+            state_updates={"review_recommendation": data.get("recommendation", "revise")}
+        )

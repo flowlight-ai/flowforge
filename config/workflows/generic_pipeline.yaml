@@ -1,0 +1,27 @@
+name: "generic_pipeline"
+version: "1.0"
+display_name: "线性流水线"
+description: "简单的线性流水线，每个步骤依次执行"
+icon: "⚡"
+category: "generic"
+
+steps:
+  - id: "analyze"
+    agent: "analyst"
+    display_name: "需求分析"
+    output: "analysis"
+
+  - id: "process"
+    agent: "processor"
+    display_name: "处理执行"
+    output: "processed"
+
+  - id: "validate"
+    agent: "validator"
+    display_name: "验证检查"
+    output: "validation"
+
+  - id: "deliver"
+    agent: "deliverer"
+    display_name: "交付输出"
+    output: "deliverable"

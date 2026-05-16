@@ -1,0 +1,11 @@
+{
+  "task_id": "32820f80-c230-457f-b812-cb4961ccc3e0",
+  "created_at": "2026-05-16T15:30:34.105367+00:00",
+  "status": "running",
+  "message_count": 1,
+  "persona": "default",
+  "mode": "workflow",
+  "interaction_mode": "solo",
+  "intent": "??,????????",
+  "updated_at": "2026-05-16T15:30:34.116602+00:00"
+}

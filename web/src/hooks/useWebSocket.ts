@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { SoloWSEvent, SoloTaskPhase, StreamEntry, StreamEntryType } from "@/lib/solo-types";
-import { useShellConfig } from "@/lib/shell-config";
+import { SoloWSEvent, SoloTaskPhase, StreamEntry, StreamEntryType } from "../lib/solo-types";
+import { useShellConfig } from "../lib/shell-config";
 
 const MAX_RECONNECT = 10;
 

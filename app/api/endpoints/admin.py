@@ -88,6 +88,60 @@ async def force_refresh_health(llm_client=Depends(get_llm_client)):
     return _make_response(report)
 
 
+@router.post("/models/force-update")
+async def force_update_models():
+    """Force update all model health status and rebuild fallback chains.
+
+    Performs a full health check on all models, then rebuilds fallback
+    chains to only include available models. This is the primary endpoint
+    for users to manually trigger model status updates.
+    """
+    try:
+        from flowforge.tools.llm.model_service import get_model_service
+        svc = get_model_service()
+        result = await svc.force_update_models()
+        return _make_response(result)
+    except Exception as e:
+        return _make_error("INTERNAL_ERROR", str(e))
+
+
+@router.get("/models/available")
+async def get_available_models():
+    """Get list of currently available models for Solo chat selection."""
+    try:
+        from flowforge.tools.llm.model_service import get_model_service
+        svc = get_model_service()
+        all_models = svc.get_models()
+        available = [m for m in all_models if m.get("health_status") in ("available", "unknown")]
+        chain = svc.get_available_fallback_chain()
+        return _make_response({
+            "models": available,
+            "fallback_chain": chain,
+            "total": len(all_models),
+            "available_count": len(available),
+            "active_providers": svc.active_providers,
+        })
+    except Exception as e:
+        return _make_error("INTERNAL_ERROR", str(e))
+
+
+@router.put("/models/active-providers")
+async def set_active_providers(payload: dict):
+    """Update the active providers whitelist."""
+    try:
+        from flowforge.tools.llm.model_service import get_model_service
+        svc = get_model_service()
+        new_providers = payload.get("active_providers", [])
+        svc.active_providers = new_providers
+        svc._save_config()
+        return _make_response({
+            "active_providers": svc.active_providers,
+            "message": "Active providers updated",
+        })
+    except Exception as e:
+        return _make_error("INTERNAL_ERROR", str(e))
+
+
 @router.post("/models/health/check")
 async def check_specific_model(payload: dict, llm_client=Depends(get_llm_client)):
     if llm_client is None:

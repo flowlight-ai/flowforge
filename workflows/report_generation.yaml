@@ -1,5 +1,10 @@
 name: "report_generation"
 version: "1.0"
+display_name: "报告生成"
+description: "深度报告创作：选题→并行调研→写作→SEO→核查→审核→发布"
+icon: "📊"
+category: "content"
+
 steps:
   - name: "topic_research"
     agent: "topic_research"

@@ -12,8 +12,8 @@ import {
   SoloTaskPhase,
   StreamEntryType,
   SoloWSOptions,
-} from "@/lib/solo-types";
-import { useShellConfig } from "@/lib/shell-config";
+} from "../lib/solo-types";
+import { useShellConfig } from "../lib/shell-config";
 
 const MAX_RECONNECT = 10;
 const EDITOR_THROTTLE_MS = 80;
@@ -89,8 +89,8 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
   const WS_BASE =
     typeof window !== "undefined"
       ? config.wsBaseUrl ||
-        `ws://${window.location.hostname}:${window.location.port || "5174"}`
-      : "ws://localhost:5174";
+        `ws://${window.location.hostname}:8000`
+      : "ws://localhost:8000";
 
   const restored =
     typeof window !== "undefined" ? loadState(brand) : {};
@@ -366,6 +366,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
           body: JSON.stringify({
             intent: taskIntent,
             mode: "solo",
+            interaction_mode: "solo",
             ...extra,
           }),
         });
@@ -379,7 +380,13 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
           );
           return;
         }
-        const tid = data.task_id || data.id;
+        const tid = data?.data?.task_id || data?.task_id || data?.id;
+        if (!tid) {
+          setPhase("error");
+          saveState(brand, { phase: "error" });
+          optionsRef.current?.onError?.("create", "未获取到 task_id");
+          return;
+        }
         setTaskId(tid);
         saveState(brand, { taskId: tid });
         connectWS(tid);
@@ -409,6 +416,29 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     setIntent("");
     lastSeq.current = -1;
   }, [brand]);
+
+  const restoreTask = useCallback(
+    (tid: string, taskIntent: string, taskPersona: string, taskPhase: SoloTaskPhase) => {
+      disconnectWS();
+      setTaskId(tid);
+      setIntent(taskIntent);
+      setPersona(taskPersona);
+      setPhase(taskPhase);
+      entriesRef.current = [];
+      setEntries([]);
+      draftBuffer.current = "";
+      editorContentRef.current = "";
+      setEditorContent("");
+      setDraftContent("");
+      setTokenStats({ total: 0, cost: 0 });
+      lastSeq.current = -1;
+      saveState(brand, { taskId: tid, intent: taskIntent, persona: taskPersona, phase: taskPhase });
+      if (taskPhase === "running" || taskPhase === "creating" || taskPhase === "connecting" || taskPhase === "waiting_review" || taskPhase === "paused") {
+        connectWS(tid);
+      }
+    },
+    [brand, connectWS, disconnectWS]
+  );
 
   const pause = useCallback(() => {
     if (taskId)
@@ -456,6 +486,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     intent,
     createTask,
     resetState,
+    restoreTask,
     updateEditor,
     pause,
     resume,

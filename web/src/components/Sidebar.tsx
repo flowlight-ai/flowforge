@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useShellConfig } from "@/lib/shell-config";
+import { useShellConfig } from "../lib/shell-config";
 
 export default function Sidebar() {
   const pathname = usePathname();

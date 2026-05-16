@@ -7,6 +7,7 @@ from flowforge.core.di import DIContainer
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.tools.registry import ToolRegistry
 from flowforge.tools.llm_client import LLMClient
+from flowforge.tools.llm.model_service import ModelService
 from flowforge.tools.helixrag_client import HelixRAGClient
 from flowforge.tools.web_search import WebSearchTool
 from flowforge.tools.python_executor import PythonExecutorTool
@@ -48,11 +49,13 @@ from flowforge.agents.multilingual import MultilingualAgent
 from flowforge.app.api.router import router
 from flowforge.app.deps import (
     set_executor_instance, set_llm_client_instance,
+    set_model_service_instance,
     set_scheduler_instance, set_plugin_manager_instance,
 )
 from flowforge.core import metrics
 from flowforge.scheduler.scheduler import TaskScheduler
 from flowforge.core.plugin_manager import PluginManager
+from flowforge.tools.webproxy_service import get_webproxy_service
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("main")
@@ -64,6 +67,10 @@ async def lifespan(app):
         logger.info("Scheduler started")
     logger.info(f"FlowForge API started - {len(mode_registry.list_modes())} modes, {len(tool_registry.list_tools())} tools, {len(agent_registry.list_agents())} agents")
     yield
+    svc = get_webproxy_service()
+    if svc.is_running:
+        svc.stop()
+        logger.info("WebProxy service stopped on shutdown")
     scheduler.shutdown()
     logger.info("FlowForge API shutdown")
 
@@ -109,6 +116,9 @@ for tool_cls, env_key in _optional_tools:
 
 set_llm_client_instance(llm_client)
 
+model_service = ModelService()
+set_model_service_instance(model_service)
+
 mode_registry.register(WorkflowExecutor())
 mode_registry.register(ReflexionExecutor())
 mode_registry.register(ReActExecutor())
@@ -140,6 +150,12 @@ _executor_instance = HybridExecutor(
 )
 set_executor_instance(_executor_instance)
 
+try:
+    from flowforge.app.api.endpoints.websocket import manager as ws_manager
+    _executor_instance.set_solo_manager(ws_manager)
+except ImportError:
+    pass
+
 scheduler = TaskScheduler(executor=_executor_instance)
 set_scheduler_instance(scheduler)
 
@@ -151,6 +167,18 @@ app.include_router(router)
 try:
     from flowforge.app.api.endpoints import websocket as ws_endpoints
     app.include_router(ws_endpoints.router)
+except ImportError:
+    pass
+
+try:
+    from flowforge.app.api.endpoints import webproxy as webproxy_endpoints
+    app.include_router(webproxy_endpoints.router)
+except ImportError:
+    pass
+
+try:
+    from flowforge.app.api.endpoints import workspace as workspace_endpoints
+    app.include_router(workspace_endpoints.router)
 except ImportError:
     pass
 
@@ -168,14 +196,26 @@ def health():
     except Exception as e:
         components["database"] = {"status": "unhealthy", "message": str(e)}
     try:
-        health_report = llm_client.get_health_report()
+        health_report = model_service.get_health_report()
         summary = health_report.get("summary", {})
-        if summary.get("unhealthy", 0) > 0:
-            components["llm_proxy"] = {"status": "degraded", "message": f"{summary['unhealthy']} unhealthy models"}
+        disabled = summary.get("disabled", 0)
+        suspended = summary.get("suspended", 0)
+        if disabled > 0:
+            components["model_service"] = {"status": "degraded", "message": f"{disabled} disabled, {suspended} suspended models"}
+        elif suspended > 0:
+            components["model_service"] = {"status": "degraded", "message": f"{suspended} suspended models"}
         else:
-            components["llm_proxy"] = {"status": "healthy"}
+            components["model_service"] = {"status": "healthy"}
     except Exception:
-        components["llm_proxy"] = {"status": "unknown"}
+        components["model_service"] = {"status": "unknown"}
+    try:
+        svc = get_webproxy_service()
+        if svc.is_running:
+            components["webproxy"] = {"status": "running", "port": svc.port}
+        else:
+            components["webproxy"] = {"status": "stopped"}
+    except Exception:
+        components["webproxy"] = {"status": "unknown"}
     return {"status": "healthy", "components": components}
 
 

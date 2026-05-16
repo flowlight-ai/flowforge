@@ -1,5 +1,10 @@
 name: "multi_platform"
 version: "1.0"
+display_name: "多平台分发"
+description: "一次创作多平台分发：选题→写作→内容改写→多渠道发布"
+icon: "📡"
+category: "content"
+
 steps:
   - name: "topic_research"
     agent: "topic_research"

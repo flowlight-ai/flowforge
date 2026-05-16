@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useShellConfig } from "@/lib/shell-config";
+import { useShellConfig } from "../../lib/shell-config";
 
 interface Props {
   visible: boolean;

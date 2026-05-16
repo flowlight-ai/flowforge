@@ -1,5 +1,10 @@
 name: "multilingual"
 version: "1.0"
+display_name: "多语言发布"
+description: "多语言内容创作：选题→素材→写作→翻译→发布"
+icon: "🌐"
+category: "content"
+
 steps:
   - name: "topic_research"
     agent: "topic_research"

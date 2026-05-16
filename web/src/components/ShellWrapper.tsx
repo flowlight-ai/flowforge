@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useShellConfig } from "@/lib/shell-config";
+import { useShellConfig } from "../lib/shell-config";
 import Sidebar from "./Sidebar";
 
 export default function ShellWrapper({

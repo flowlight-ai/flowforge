@@ -1,11 +1,13 @@
 from typing import Optional
 from flowforge.executor.hybrid_executor import HybridExecutor
 from flowforge.tools.llm_client import LLMClient
+from flowforge.tools.llm.model_service import ModelService
 from flowforge.scheduler.scheduler import TaskScheduler
 from flowforge.core.plugin_manager import PluginManager
 
 _executor_instance: HybridExecutor = None
 _llm_client_instance: LLMClient = None
+_model_service_instance: ModelService = None
 _scheduler_instance: TaskScheduler = None
 _plugin_manager_instance: PluginManager = None
 
@@ -18,6 +20,11 @@ def set_executor_instance(executor: HybridExecutor):
 def set_llm_client_instance(llm_client: LLMClient):
     global _llm_client_instance
     _llm_client_instance = llm_client
+
+
+def set_model_service_instance(model_service: ModelService):
+    global _model_service_instance
+    _model_service_instance = model_service
 
 
 def set_scheduler_instance(scheduler: TaskScheduler):
@@ -46,6 +53,10 @@ async def get_llm_client() -> LLMClient:
         if tool and isinstance(tool, LLMClient):
             return tool
     return None
+
+
+async def get_model_service() -> ModelService:
+    return _model_service_instance
 
 
 async def get_scheduler() -> TaskScheduler:

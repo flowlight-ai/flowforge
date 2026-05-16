@@ -1,10 +1,13 @@
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Query
 from flowforge.app.deps import get_executor
 from flowforge.core.task_context import TaskContext
 from flowforge.core.errors import ConflictError, ModeNotFoundError
-from flowforge.core.tracing import get_trace_id
+from flowforge.core.tracing import get_trace_id, get_logger
+
+logger = get_logger("tasks_api")
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -29,15 +32,47 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
 async def create_task(payload: dict, executor=Depends(get_executor)):
     task_id = payload.get("task_id") or str(uuid.uuid4())
     persona = payload.get("persona", "default")
+    intent = payload.get("intent", "")
     input_data = payload.get("input_data", {})
+    if intent and not input_data:
+        input_data = {"task": intent}
     mode = payload.get("mode")
     interaction_mode = payload.get("interaction_mode", "standard")
+    if mode == "solo":
+        mode = "workflow"
+        interaction_mode = "solo"
     metadata = payload.get("metadata", {})
 
     context = TaskContext(
         task_id=task_id, persona=persona, input_data=input_data,
         metadata=metadata, mode=mode, interaction_mode=interaction_mode,
     )
+
+    if interaction_mode == "solo":
+        try:
+            from flowforge.core.workspace import get_workspace_manager
+            ws = get_workspace_manager()
+            ws.create_workspace(task_id, metadata={
+                "persona": persona, "mode": mode or "workflow",
+                "interaction_mode": interaction_mode,
+                "intent": intent[:200] if intent else "",
+            })
+            if intent:
+                ws.save_message(task_id, {
+                    "role": "user", "content": intent,
+                    "model": payload.get("model", "auto"),
+                })
+        except Exception as e:
+            logger.warning(f"Failed to create workspace for task {task_id}: {e}")
+
+        asyncio.ensure_future(_run_task_background(executor, context, mode))
+        return _make_response({
+            "task_id": task_id, "persona": persona,
+            "mode": mode or "workflow",
+            "interaction_mode": interaction_mode,
+            "status": "running",
+        })
+
     try:
         result = await executor.run(context, mode_hint=mode)
     except ConflictError as e:
@@ -53,6 +88,13 @@ async def create_task(payload: dict, executor=Depends(get_executor)):
         "interaction_mode": interaction_mode,
         "status": "completed", "result": result,
     })
+
+
+async def _run_task_background(executor, context: TaskContext, mode_hint: str):
+    try:
+        await executor.run(context, mode_hint=mode_hint)
+    except Exception as e:
+        logger.error(f"Background task {context.task_id} failed: {e}")
 
 
 @router.get("")

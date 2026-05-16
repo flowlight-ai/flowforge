@@ -12,7 +12,8 @@ def _ensure_file_logging():
     global _file_handler_configured
     if _file_handler_configured:
         return
-    log_dir = Path(__file__).parent.parent / "logs"
+    project_root = Path(__file__).parent.parent
+    log_dir = project_root / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "flowforge.log"
     handler = logging.FileHandler(str(log_file), encoding="utf-8")
@@ -20,6 +21,10 @@ def _ensure_file_logging():
     handler.setLevel(logging.DEBUG)
     logging.getLogger().addHandler(handler)
     _file_handler_configured = True
+
+
+def get_log_file_path() -> Path:
+    return Path(__file__).parent.parent / "logs" / "flowforge.log"
 
 
 def generate_trace_id() -> str:

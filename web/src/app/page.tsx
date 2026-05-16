@@ -5,6 +5,25 @@ import Link from "next/link";
 import { useShellConfig } from "@/lib/shell-config";
 import { TaskItem, SystemStatus } from "@/lib/types";
 
+interface WorkflowStep {
+  id: string;
+  display_name: string;
+  agent: string;
+  human_review: boolean;
+}
+
+interface Workflow {
+  name: string;
+  display_name: string;
+  description: string;
+  icon: string;
+  category: string;
+  version: string;
+  file: string;
+  steps: number;
+  step_details: WorkflowStep[];
+}
+
 export default function Dashboard() {
   const config = useShellConfig();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -12,11 +31,23 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   useEffect(() => {
     fetch("/api/v1/system/status")
       .then((r) => r.json())
       .then((data) => setSystemStatus(data))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/v1/workflows")
+      .then((r) => r.json())
+      .then((data) => {
+        const wfList = data?.data?.workflows || [];
+        setWorkflows(wfList);
+      })
       .catch(() => {});
   }, []);
 
@@ -52,6 +83,20 @@ export default function Dashboard() {
     return map[s] || s;
   };
 
+  const categoryLabel = (c: string) => {
+    const map: Record<string, string> = {
+      generic: "通用",
+      content: "内容",
+    };
+    return map[c] || c;
+  };
+
+  const categories = ["all", ...Array.from(new Set(workflows.map((w) => w.category)))];
+  const filteredWorkflows =
+    selectedCategory === "all"
+      ? workflows
+      : workflows.filter((w) => w.category === selectedCategory);
+
   return (
     <div className="animate-rise">
       <div className="card">
@@ -78,9 +123,9 @@ export default function Dashboard() {
               color: "var(--accent)",
             },
             {
-              label: "运行状态",
-              value: systemStatus?.status || "运行中",
-              color: "var(--ok)",
+              label: "工作流",
+              value: workflows.length,
+              color: "var(--info)",
             },
             {
               label: "版本",
@@ -119,6 +164,169 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: "20px" }}>
+        <h2 className="page-title">可用工作流</h2>
+        <p className="page-sub">选择一个工作流模板来创建新任务</p>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "6px",
+            marginTop: "16px",
+            marginBottom: "16px",
+            flexWrap: "wrap",
+          }}
+        >
+          {categories.map((c) => (
+            <button
+              key={c}
+              onClick={() => setSelectedCategory(c)}
+              style={{
+                cursor: "pointer",
+                border: "1px solid var(--border-strong)",
+                background: selectedCategory === c ? "var(--accent)" : "transparent",
+                color: selectedCategory === c ? "#fff" : "var(--muted)",
+                borderRadius: "20px",
+                padding: "4px 12px",
+                fontSize: "12px",
+                fontWeight: 500,
+              }}
+            >
+              {c === "all" ? "全部" : categoryLabel(c)}
+            </button>
+          ))}
+        </div>
+
+        {filteredWorkflows.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "40px",
+              color: "var(--muted)",
+            }}
+          >
+            <div style={{ fontSize: "24px", marginBottom: "8px" }}>📋</div>
+            暂无工作流
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "12px",
+            }}
+          >
+            {filteredWorkflows.map((wf) => (
+              <div
+                key={wf.name}
+                style={{
+                  padding: "16px",
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border)",
+                  cursor: "pointer",
+                  transition: "border-color 0.15s, box-shadow 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--accent)";
+                  e.currentTarget.style.boxShadow = "0 0 0 1px var(--accent)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+                onClick={() => {
+                  window.location.href = `/solo?workflow=${encodeURIComponent(wf.name)}`;
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <span style={{ fontSize: "24px" }}>{wf.icon || "📋"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {wf.display_name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--muted)",
+                      }}
+                    >
+                      {wf.steps} 步 · {categoryLabel(wf.category)}
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--muted)",
+                    lineHeight: 1.5,
+                    marginBottom: "10px",
+                  }}
+                >
+                  {wf.description}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "4px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {wf.step_details?.slice(0, 4).map((step) => (
+                    <span
+                      key={step.id}
+                      style={{
+                        fontSize: "10px",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        background: step.human_review
+                          ? "var(--warn-subtle)"
+                          : "var(--bg-hover)",
+                        color: step.human_review
+                          ? "var(--warn)"
+                          : "var(--muted)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {step.human_review && "👤 "}
+                      {step.display_name}
+                    </span>
+                  ))}
+                  {wf.step_details?.length > 4 && (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        background: "var(--bg-hover)",
+                        color: "var(--muted)",
+                      }}
+                    >
+                      +{wf.step_details.length - 4}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ marginTop: "20px" }}>
