@@ -300,6 +300,19 @@ FlowForge 后端启动
 3. 每个组件只负责一个关注点
 4. 复杂组件内部状态用 `useReducer` 管理
 
+### 铁律 9：禁止擅自修改服务端口和启动方式
+
+- ❌ 擅自将后端从 8000 改为其他端口
+- ❌ 擅自将 webproxy 从 13000 改为其他端口
+- ❌ 擅自将前端从 5174 改为其他端口
+- ❌ 不使用项目规定的启动脚本启动服务
+- ✅ 后端必须使用 `python -m uvicorn flowforge.app.main:app --host 0.0.0.0 --port 8000` 启动
+- ✅ webproxy 必须使用 `hiclaw/tool/proxy/run.ps1` 或 `run.bat` 启动脚本启动（端口 13000）
+- ✅ 前端必须使用 `cd flowforge/web && npm run dev` 启动（端口 5174）
+- ✅ 修改端口需要同步更新：models.yaml、next.config.js、PROVIDER_BASE_URLS、WebProxyService.DEFAULT_PROXY_PORT、useSoloWebSocket.ts
+
+**原因**：webproxy 使用 Playwright 浏览器自动化，浏览器登录缓存（cookies/session）与端口号绑定。改端口会导致所有网页版 LLM 需要重新登录，严重影响可用性。
+
 ### 9. Agent 内部节点规范
 
 - 每个 Agent 必须有明确的内部执行节点（至少 2 步）

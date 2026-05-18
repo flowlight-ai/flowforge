@@ -3,7 +3,7 @@
 > **对应架构文档**：FlowForge v4.0
 > **状态**：最终版，合并 v1.0 + v1.1 全部修复
 
----
+***
 
 ## 第一章：项目骨架与目录结构
 
@@ -140,7 +140,7 @@ deep_research = "flowforge.agents.topic_research:TopicResearchAgent"
 article_writer = "flowforge.agents.article_writing:ArticleWritingAgent"
 ```
 
----
+***
 
 ## 第二章：核心接口详细设计
 
@@ -308,7 +308,7 @@ class ConflictError(FlowForgeError):
     detail = "Resource conflict"
 ```
 
----
+***
 
 ## 第三章：依赖注入容器
 
@@ -350,7 +350,7 @@ class DIContainer:
         return {k: self.resolve(k) for k in self._agent_keys}
 ```
 
----
+***
 
 ## 第四章：模式注册中心与混合执行器
 
@@ -474,7 +474,7 @@ class HybridExecutor:
         pass
 ```
 
----
+***
 
 ## 第五章：事件总线与 Solo 集成
 
@@ -570,7 +570,7 @@ class EventBusSoloAdapter:
         self._bridged = True
 ```
 
----
+***
 
 ## 第六章：Database Schema
 
@@ -609,7 +609,7 @@ CREATE TABLE IF NOT EXISTS model_health (
 );
 ```
 
----
+***
 
 ## 第七章：九大模式执行器详细设计
 
@@ -644,7 +644,7 @@ class BaseModeExecutor(ABC):
 
 ### 7.2 ReAct 执行器
 
-```python
+````python
 # modes/react.py
 
 import json
@@ -712,7 +712,7 @@ class ReActExecutor(BaseModeExecutor):
         tool = ctx.tools.get_tool(tool_name)
         result = await tool.execute(ToolInput(params=params))
         return json.dumps(result.result, ensure_ascii=False)
-```
+````
 
 ### 7.3 Plan-and-Execute 执行器
 
@@ -1048,7 +1048,7 @@ class WorkflowExecutor(BaseModeExecutor):
 - **SelfDiscover**：调用 LLM 分析任务，输出推荐的思维框架（模式名称）。
 - **AgentJudge**：注册两个 Agent：actor 和 judge；先 actor 执行，judge 评估，可选多轮。
 
----
+***
 
 ## 第八章：通用 Agent 库详细设计
 
@@ -1086,7 +1086,7 @@ class TopicResearchAgent(BaseAgent):
 
 `MaterialCollectionAgent`、`ArticleWritingAgent`、`SEOOptimizationAgent`、`FactCheckAgent`、`ContentAuditAgent`、`HeadlineOptimizerAgent`、`ContentRepurposerAgent`、`TrendAnalysisAgent`、`PublishingAgent`、`ImageResearchAgent`、`MultilingualAgent` 均遵循相同模式：覆写 `execute_with_context`，通过 `context.tools` 获取工具。
 
----
+***
 
 ## 第九章：通用 Workflow 库设计
 
@@ -1138,7 +1138,7 @@ context = TaskContext(task_id="123", persona="education", input_data={"topic": "
 result = await forge.run(context, mode_hint="workflow")
 ```
 
----
+***
 
 ## 第十章：插件系统详细设计
 
@@ -1315,7 +1315,7 @@ tools:
     auth: {type: "bearer", token_env: "API_KEY"}
 ```
 
----
+***
 
 ## 第十一章：Tool 系统与沙箱安全机制
 
@@ -1475,7 +1475,7 @@ class FileReadWriteTool(BaseTool):
             return ToolOutput(result={"status": "written"})
 ```
 
----
+***
 
 ## 第十二章：Memory 模块详细设计
 
@@ -1516,25 +1516,933 @@ class MemoryManager:
 
 ### 12.2 记忆存储后端
 
-| 记忆类型 | Phase 1 实现 | Phase 2 升级 |
-|---------|-------------|-------------|
-| WorkingMemory | Python dict | 无需升级 |
-| ShortTermMemory | SQLite (带过期清理任务) | 迁移至 Redis |
-| LongTermMemory | SQLite (表结构复用 ContentForge) | 迁移至 PostgreSQL |
-| SemanticMemory | 未启用 (返回空列表) | 接入 Qdrant/BGE-M3 |
-| EpisodicMemory | SQLite (json 字段) | 增加向量化 |
+| 记忆类型            | Phase 1 实现                  | Phase 2 升级       |
+| --------------- | --------------------------- | ---------------- |
+| WorkingMemory   | Python dict                 | 无需升级             |
+| ShortTermMemory | SQLite (带过期清理任务)            | 迁移至 Redis        |
+| LongTermMemory  | SQLite (表结构复用 ContentForge) | 迁移至 PostgreSQL   |
+| SemanticMemory  | 未启用 (返回空列表)                 | 接入 Qdrant/BGE-M3 |
+| EpisodicMemory  | SQLite (json 字段)            | 增加向量化            |
 
----
+***
 
 ## 第十三章：安全机制总结
 
-| 安全层 | 机制 | 实现位置 |
-|--------|------|---------|
-| **Agent 隔离** | 严格的 `BaseAgent` 接口；Agent 不能直接调用 OS 命令 | `core/base_agent.py` |
-| **Tool 权限** | 所有 Tool 通过 `ToolRegistry` 调用；沙箱 Tool 进程隔离 | `tools/registry.py`, `tools/python_executor.py` |
-| **代码沙箱** | 子进程执行、资源限制、移除危险内置函数、临时目录隔离 | `tools/python_executor.py` |
-| **文件系统路径穿越防护** | `_validate_path()` 确保路径在允许目录内 | `tools/file_rw.py` |
-| **并发冲突** | Persona 锁 (`HybridExecutor._running_tasks`)，子步骤跳过锁 | `executor/hybrid_executor.py` |
-| **循环检测** | ReAct 模式的 `_is_loop`；Workflow 的 `MAX_DEPTH` | `modes/react.py`, `modes/workflow.py` |
-| **审批流** | Workflow 模式原生支持 `human: true` 节点，`asyncio.Event` 暂停 | `modes/workflow.py` |
-| **审计与追踪** | 每个任务生成唯一 `trace_id`；所有操作记录到 `audit_logs` | `events/event_bus.py`, DB 表 `audit_logs` |
+| 安全层            | 机制                                                  | 实现位置                                            |
+| -------------- | --------------------------------------------------- | ----------------------------------------------- |
+| **Agent 隔离**   | 严格的 `BaseAgent` 接口；Agent 不能直接调用 OS 命令               | `core/base_agent.py`                            |
+| **Tool 权限**    | 所有 Tool 通过 `ToolRegistry` 调用；沙箱 Tool 进程隔离           | `tools/registry.py`, `tools/python_executor.py` |
+| **代码沙箱**       | 子进程执行、资源限制、移除危险内置函数、临时目录隔离                          | `tools/python_executor.py`                      |
+| **文件系统路径穿越防护** | `_validate_path()` 确保路径在允许目录内                       | `tools/file_rw.py`                              |
+| **并发冲突**       | Persona 锁 (`HybridExecutor._running_tasks`)，子步骤跳过锁  | `executor/hybrid_executor.py`                   |
+| **循环检测**       | ReAct 模式的 `_is_loop`；Workflow 的 `MAX_DEPTH`         | `modes/react.py`, `modes/workflow.py`           |
+| **审批流**        | Workflow 模式原生支持 `human: true` 节点，`asyncio.Event` 暂停 | `modes/workflow.py`                             |
+| **审计与追踪**      | 每个任务生成唯一 `trace_id`；所有操作记录到 `audit_logs`            | `events/event_bus.py`, DB 表 `audit_logs`        |
+
+***
+
+# FlowForge 详细设计说明书 v5.0（防御与协作增强版）
+
+> **对应架构文档**：FlowForge v5.0
+> **状态**：增量更新，v2.0 内容保持不变，本部分仅描述 v5.0 新增内容
+> **设计依据**：Claude Code 架构深度分析，融合 TAOR 循环、Compressor、Fail-closed 工具、三层多 Agent 策略
+
+***
+
+## 第十四章：三层防御体系详细设计
+
+### 14.1 防御分层总览
+
+三层防御**分层实现**，每一层驻留在最合适的模块中：
+
+| 防御层         | 位置                                                                         | 机制                            | 默认值            |
+| ----------- | -------------------------------------------------------------------------- | ----------------------------- | -------------- |
+| **L1 超时**   | `flowforge.tools.registry.ToolRegistry.execute()`                          | `asyncio.wait_for()` 包裹单次工具调用 | 120s           |
+| **L2 重复检测** | `flowforge.core.base_mode_executor.BaseModeExecutor._on_exit()`            | hash-based 重复检测钩子             | threshold=3    |
+| **L3 自修正**  | `flowforge.modes.workflow.WorkflowExecutor` → `on_error="reflexion_retry"` | Reflexion 分析失败原因后重试           | retry\_count=2 |
+
+### 14.2 L1：ToolRegistry 超时防御
+
+```python
+from flowforge.tools.registry import ToolRegistry
+
+class ToolRegistry:
+    def __init__(self, tool_timeout: int = 120):
+        self._tools: Dict[str, BaseTool] = {}
+        self._emit_callback: Optional[Callable] = None
+        self._tool_timeout = tool_timeout
+
+    async def execute(self, name: str, input: ToolInput) -> ToolOutput:
+        tool = self.get_tool(name)
+        if not tool.validate_params(input.params):
+            raise ValueError(f"Invalid params for tool '{name}'")
+
+        start = time.time()
+        try:
+            result = await asyncio.wait_for(
+                tool.execute(input),
+                timeout=self._tool_timeout
+            )
+        except TimeoutError:
+            return ToolOutput(
+                result={},
+                error=f"Tool '{name}' timed out after {self._tool_timeout}s"
+            )
+        except Exception as e:
+            raise
+        return result
+```
+
+**设计决策**：
+
+- 超时后返回 `ToolOutput(error=...)` 而非抛异常，避免中断整个执行流
+- `tool_timeout` 可在构造时配置，也可通过 `ctx.metadata["defense"]["tool_timeout"]` 覆盖
+- 与全局 `TASK_TIMEOUT_SECONDS` 互补，L1 是单次工具级，全局是任务级
+
+### 14.3 L2：BaseModeExecutor 生命周期钩子
+
+```python
+from flowforge.core.base_mode_executor import BaseModeExecutor
+
+class BaseModeExecutor(ABC):
+    mode_name: str
+    capabilities: List[str] = []
+
+    async def _prepare(self, ctx: TaskContext) -> TaskContext:
+        return ctx
+
+    async def _on_enter(self, ctx: TaskContext):
+        pass
+
+    @abstractmethod
+    async def _execute_core(self, ctx: TaskContext) -> dict:
+        pass
+
+    async def _on_exit(self, ctx: TaskContext, result: dict) -> dict:
+        return result
+
+    async def _postprocess(self, ctx: TaskContext, result: dict) -> dict:
+        return result
+
+    async def run(self, ctx: TaskContext) -> dict:
+        ctx = await self._prepare(ctx)
+        await self._on_enter(ctx)
+        result = await self._execute_core(ctx)
+        result = await self._on_exit(ctx, result)
+        return await self._postprocess(ctx, result)
+```
+
+**设计决策**：
+
+- `_on_enter` / `_on_exit` 为空实现，子类按需覆写
+- `ReActExecutor` 已有 `_is_loop()` 检测，无需额外覆写
+- `WorkflowExecutor` 的 ReAct loop 内置 `repetition_limit` 检测
+- 生命周期：`prepare → on_enter → execute_core → on_exit → postprocess`
+
+### 14.4 L3：WorkflowExecutor 自修正策略
+
+在 `WorkflowExecutor._execute_sop_steps()` 中，`on_error` 新增 `"reflexion_retry"` 策略：
+
+```python
+class WorkflowExecutor(BaseModeExecutor):
+    DEFAULT_DEFENSE = {
+        "max_tool_calls": 50,
+        "tool_timeout": 120,
+        "repetition_limit": 3,
+        "reflexion_retries": 2,
+        "checkpoint_enabled": True,
+    }
+
+    async def _execute_sop_steps(self, ctx, sop_steps, context_data, depth):
+        defense_config = {**self.DEFAULT_DEFENSE, **ctx.metadata.get("defense", {})}
+        ctx.metadata["_defense"] = defense_config
+
+        for step in sop_steps:
+            # ... agent execution or mode execution ...
+            except Exception as e:
+                on_error = step.get("on_error", "abort")
+                if on_error == "reflexion_retry":
+                    reflexion_ctx = TaskContext.from_parent(
+                        ctx,
+                        input_data={"task": f"分析步骤'{step['name']}'失败原因并修正: {str(e)}"},
+                        metadata={"mode": "reflexion"}
+                    )
+                    reflexion_result = await ctx.executor.run(
+                        reflexion_ctx, mode_hint="reflexion", _is_substep=True
+                    )
+                    context_data["_reflexion_fix"] = reflexion_result
+                    retry_count = step.get("retry_count", 2)
+                    for i in range(retry_count):
+                        try:
+                            # retry original step
+                            break
+                        except Exception:
+                            if i == retry_count - 1:
+                                raise
+```
+
+**四种 on\_error 策略对比**：
+
+| 策略                | 行为                       | 适用场景        |
+| ----------------- | ------------------------ | ----------- |
+| `abort`（默认）       | 直接抛出异常，终止 Workflow       | 关键步骤不可跳过    |
+| `skip`            | 跳过失败步骤，继续执行              | 非关键步骤       |
+| `retry`           | 等待后重试 N 次                | 临时性故障（网络抖动） |
+| `reflexion_retry` | Reflexion 分析原因 → 修正 → 重试 | 逻辑性错误需要自修正  |
+
+### 14.5 防御配置传递
+
+防御参数通过 `ctx.metadata["defense"]` 传递，支持全局 + 步骤级覆盖：
+
+```yaml
+defense:
+  max_tool_calls: 50
+  tool_timeout: 120
+  repetition_limit: 3
+  reflexion_retries: 2
+  checkpoint_enabled: true
+
+steps:
+  - name: "quality_check"
+    mode: reflexion
+    defense:
+      tool_timeout: 180
+      reflexion_retries: 3
+```
+
+合并逻辑：
+
+```python
+defense_config = {**self.DEFAULT_DEFENSE, **ctx.metadata.get("defense", {})}
+step_defense = {**defense_config, **step.get("defense", {})}
+```
+
+***
+
+## 第十五章：上下文压缩系统详细设计
+
+### 15.1 ContextCompressor
+
+```python
+from flowforge.memory.compressor import ContextCompressor
+
+RECENT_ROUNDS = 3
+COMPRESSION_THRESHOLD = 0.85
+MAX_CONTEXT_TOKENS = 128000
+
+class ContextCompressor:
+    def __init__(self, llm_client=None):
+        self._llm_client = llm_client
+        self._max_context_tokens = MAX_CONTEXT_TOKENS
+
+    async def compress_if_needed(
+        self,
+        messages: List[Dict[str, Any]],
+        context=None,
+    ) -> List[Dict[str, Any]]:
+        total_tokens = self._estimate_messages_tokens(messages)
+        if total_tokens <= self._max_context_tokens * COMPRESSION_THRESHOLD:
+            return messages
+
+        recent, early = self._split_messages(messages)
+        if not early:
+            return messages
+
+        compressed_early = await self._compress_early_history(early, context)
+
+        if context and context.memory:
+            await self._save_to_memory(context, early)
+
+        return compressed_early + recent
+```
+
+### 15.2 Token 计数策略
+
+优先使用 tiktoken 真实计数，不可用时回退到字符估算（`len(text) // 4`）：
+
+```python
+try:
+    import tiktoken
+    _tokenizer = tiktoken.get_encoding("cl100k_base")
+    def _count_tokens(text: str) -> int:
+        return len(_tokenizer.encode(text))
+except Exception:
+    def _count_tokens(text: str) -> int:
+        return max(1, len(text) // 4)
+```
+
+### 15.3 滑动窗口 + 摘要策略
+
+1. 扫描所有消息，标记 `_is_decision_or_tool_result()` 的消息为"关键轮次边界"
+2. 保留最近 3 个关键轮次作为 "recent"
+3. 早期历史通过 LLM 压缩为一条 system 摘要消息
+4. 压缩后消息列表 = `[摘要消息] + 最近关键轮次`
+
+```python
+def _split_messages(self, messages):
+    decision_indices = []
+    for i, msg in enumerate(messages):
+        if self._is_decision_or_tool_result(msg):
+            decision_indices.append(i)
+
+    if not decision_indices:
+        return [], messages
+
+    recent_start = max(0, len(decision_indices) - RECENT_ROUNDS)
+    split_idx = decision_indices[recent_start]
+    return messages[:split_idx], messages[split_idx:]
+```
+
+### 15.4 关键消息判断
+
+基于消息角色和结构判断，**不依赖关键词**：
+
+```python
+def _is_decision_or_tool_result(self, msg):
+    role = msg.get("role", "")
+    if role in ("tool",):
+        return True
+    if role == "system":
+        return True
+    if role == "assistant":
+        if msg.get("tool_calls"):
+            return True
+        content = msg.get("content", "")
+        if isinstance(content, str) and any(
+            kw in content.lower()
+            for kw in ["final answer", "conclusion", "result:", "decision:"]
+        ):
+            return True
+    return False
+```
+
+### 15.5 LLM 调用方式
+
+ContextCompressor 通过 `context.tools.get_tool("llm")` 调用 LLM，**不直接持有 LLM 客户端引用**：
+
+```python
+async def _compress_early_history(self, early, context=None):
+    llm = None
+    if context and context.tools:
+        try:
+            llm = context.tools.get_tool("llm")
+        except Exception:
+            pass
+    if not llm and self._llm_client:
+        llm = self._llm_client
+    if not llm:
+        return early
+
+    result = await llm.execute(ToolInput(params={
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 800,
+    }))
+    summary_text = result.result.get("content", "")
+    return [{"role": "system", "content": f"[Compressed History] {summary_text}"}]
+```
+
+### 15.6 MemoryManager 集成
+
+```python
+from flowforge.memory.manager import MemoryManager
+
+class MemoryManager:
+    def __init__(self, config: dict, llm_client=None):
+        # ... existing stores ...
+        self.compressor = ContextCompressor(llm_client) \
+            if llm_client and config.get("compression_enabled", True) else None
+
+    async def compress_messages(self, messages: list, context=None) -> list:
+        if self.compressor:
+            return await self.compressor.compress_if_needed(messages, context)
+        return messages
+```
+
+压缩摘要自动通过 `_save_to_memory()` 存储到长期记忆，供未来检索使用。
+
+***
+
+## 第十六章：安全工具体系详细设计
+
+### 16.1 BaseTool 安全标记
+
+`BaseTool` 新增两个类属性，**有默认值，不破坏现有接口**：
+
+```python
+from flowforge.core.base_tool import BaseTool
+
+class BaseTool(ABC):
+    name: str = "base"
+    description: str = ""
+    parameters_schema: Dict[str, Any] = {}
+    safety_level: str = "normal"          # readonly / normal / dangerous
+    is_concurrency_safe: bool = True      # 是否并发安全
+```
+
+安全等级语义：
+
+| safety\_level | 含义   | 审批要求    | 典型工具         |
+| ------------- | ---- | ------- | ------------ |
+| `readonly`    | 只读操作 | 无需审批    | 搜索、检索、LLM 调用 |
+| `normal`      | 常规操作 | 仅并发时需注意 | 文件写入、数据转换    |
+| `dangerous`   | 危险操作 | 需人工审批   | 代码执行、删除、发布   |
+
+### 16.2 SecureToolRegistry
+
+```python
+from flowforge.tools.secure_registry import SecureToolRegistry
+
+class SecureToolRegistry(ToolRegistry):
+    SAFETY_READONLY = "readonly"
+    SAFETY_NORMAL = "normal"
+    SAFETY_DANGEROUS = "dangerous"
+
+    def __init__(self, event_bus=None, tool_timeout: int = 120):
+        super().__init__(tool_timeout=tool_timeout)
+        self._event_bus = event_bus
+        self._running_tools: Dict[str, asyncio.Lock] = {}
+
+    def register(self, tool: BaseTool):
+        if not hasattr(tool, 'safety_level'):
+            tool.safety_level = self.SAFETY_NORMAL
+        if not hasattr(tool, 'is_concurrency_safe'):
+            tool.is_concurrency_safe = True
+        super().register(tool)
+
+    async def execute(self, name: str, input: ToolInput,
+                      context: Optional[TaskContext] = None,
+                      require_approval: bool = True) -> ToolOutput:
+        tool = self.get_tool(name)
+        safety = getattr(tool, 'safety_level', self.SAFETY_NORMAL)
+
+        if safety == self.SAFETY_READONLY:
+            return await super().execute(name, input)
+
+        if safety == self.SAFETY_DANGEROUS and require_approval and context:
+            approved = await self._request_approval(context, name, input.params)
+            if not approved:
+                return ToolOutput(result={}, error=f"Permission denied for dangerous tool '{name}'")
+
+        if not getattr(tool, 'is_concurrency_safe', True):
+            if name not in self._running_tools:
+                self._running_tools[name] = asyncio.Lock()
+            async with self._running_tools[name]:
+                return await super().execute(name, input)
+
+        return await super().execute(name, input)
+```
+
+### 16.3 审批流程
+
+审批流程复用 `HybridExecutor.register_review_wait()` + EventBus 机制：
+
+```python
+async def _request_approval(self, context: TaskContext, tool_name: str, params: dict) -> bool:
+    if self._event_bus:
+        self._event_bus.emit(context.task_id, "permission.requested", {
+            "tool": tool_name, "params": params, "task_id": context.task_id
+        })
+    if hasattr(context, 'executor') and context.executor:
+        review_event = context.executor.register_review_wait(
+            f"{context.task_id}_tool_{tool_name}")
+        await review_event.wait()
+        state = context.executor.state_manager.load_state(context.task_id)
+        return state.get("review_verdict") == "approved"
+    return False
+```
+
+**设计决策**：
+
+- 不使用 `context._await_approval`，避免在 TaskContext 上添加私有方法
+- 复用已有的 `register_review_wait()` + EventBus 机制
+- 默认拒绝（fail-closed），无审批流程时 dangerous 工具不可执行
+
+### 16.4 并发安全
+
+通过 `asyncio.Lock` 保护非并发安全工具，每个工具名对应一把锁：
+
+```python
+if not getattr(tool, 'is_concurrency_safe', True):
+    if name not in self._running_tools:
+        self._running_tools[name] = asyncio.Lock()
+    async with self._running_tools[name]:
+        return await super().execute(name, input)
+```
+
+### 16.5 安全等级动态设置
+
+```python
+def set_tool_safety(self, name: str, level: str):
+    tool = self.get_tool(name)
+    tool.safety_level = level
+```
+
+***
+
+## 第十七章：Multi-Agent 三策略详细设计
+
+### 17.1 MultiAgentExecutor 策略分发
+
+```python
+from flowforge.modes.multi_agent import MultiAgentExecutor
+
+class MultiAgentExecutor(BaseModeExecutor):
+    mode_name = "multi_agent"
+    capabilities = ["collaboration"]
+
+    def __init__(self, task_board: Optional[TaskBoard] = None,
+                 mailbox: Optional[Mailbox] = None):
+        self.task_board = task_board
+        self.mailbox = mailbox
+        self.max_idle_rounds = 3
+
+    def _ensure_infrastructure(self):
+        if self.task_board is None:
+            self.task_board = TaskBoard()
+        if self.mailbox is None:
+            self.mailbox = Mailbox()
+
+    async def _execute_core(self, ctx: TaskContext) -> dict:
+        strategy = ctx.metadata.get("strategy", "subagents")
+        self._ensure_infrastructure()
+
+        if strategy == "subagents":
+            return await self._run_subagents(ctx)
+        elif strategy == "agent_teams":
+            return await self._run_agent_teams(ctx)
+        elif strategy == "swarms":
+            return await self._run_swarms(ctx)
+        else:
+            raise ValueError(f"Unknown multi-agent strategy: {strategy}")
+```
+
+### 17.2 Subagents：无状态并行隔离
+
+每个子任务拥有完全独立的上下文窗口，无历史污染：
+
+```python
+async def _run_subagents(self, ctx: TaskContext) -> dict:
+    tasks = ctx.metadata.get("sub_tasks", [])
+    if not tasks:
+        tasks = await self._decompose_task(ctx)
+
+    async def execute_sub_task(task):
+        sub_ctx = TaskContext.from_parent(
+            ctx,
+            input_data={"task": task.get("prompt", task.get("name", ""))},
+            state={},
+            metadata={"isolation": "full", "parent_task": ctx.task_id}
+        )
+        allowed_tools = task.get("tools", ["llm", "web_search"])
+        sub_ctx.tools = self._filter_tools(ctx.tools, allowed_tools)
+
+        agent = ctx.agents.get(task.get("agent_type", "default")) \
+            if ctx.agents else None
+        if agent is None:
+            from flowforge.modes.default_llm_actors import DefaultLLMActor
+            agent = DefaultLLMActor()
+
+        agent_input = AgentInput(params={"task": task.get("prompt", task.get("name", ""))})
+        output = await agent.execute_with_context(agent_input, sub_ctx) \
+            if hasattr(agent, 'execute_with_context') \
+            else await agent.execute(agent_input)
+        summary = await self._compress_result(sub_ctx, output.result)
+        return task.get("id", task.get("name", "")), summary
+
+    results = await asyncio.gather(
+        *[execute_sub_task(t) for t in tasks], return_exceptions=True
+    )
+    final = {}
+    for r in results:
+        if isinstance(r, Exception):
+            continue
+        key, value = r
+        final[key] = value
+    return {"results": final}
+```
+
+SOP 模板使用：
+
+```yaml
+steps:
+  - name: "research_sources"
+    mode: multi_agent
+    strategy: subagents
+    sub_tasks:
+      - id: "search_1"
+        prompt: "搜索关于{{topic}}的最新报道"
+        tools: ["web_search"]
+      - id: "search_2"
+        prompt: "搜索关于{{topic}}的学术研究"
+        tools: ["helixrag_search"]
+```
+
+### 17.3 Agent Teams：共享任务板 + 信箱通信
+
+Lead Agent 分解任务 → TaskBoard 发布 → 团队成员认领执行 → Mailbox 通信 → Lead 聚合结果：
+
+```python
+async def _run_agent_teams(self, ctx: TaskContext) -> dict:
+    lead_agent = self._get_lead_agent(ctx)
+    task_list = await self._create_task_board(ctx, lead_agent)
+    team_members = await self._spawn_team(ctx)
+
+    idle_rounds = 0
+    last_board_hash = None
+
+    while not await self._all_tasks_done() and idle_rounds < self.max_idle_rounds:
+        progress_made = False
+
+        for member in team_members:
+            task = await self.task_board.claim_task(member.name)
+            if task:
+                try:
+                    result = await self._execute_team_task(member, task, ctx)
+                    await self.task_board.complete_task(task["task_id"], result)
+                    progress_made = True
+                    if isinstance(result, dict) and result.get("important"):
+                        await self.mailbox.send(
+                            member.name, "lead",
+                            f"发现: {result['important']}",
+                            priority="high"
+                        )
+                except Exception as e:
+                    await self.task_board.fail_task(task["task_id"], str(e))
+                    await self.mailbox.send(
+                        member.name, "lead",
+                        f"任务 {task['task_id']} 失败: {str(e)}",
+                        priority="critical"
+                    )
+
+        messages = await self.mailbox.receive("lead", unread_only=True)
+        for msg in messages:
+            if self._needs_replanning(msg):
+                await self._replan(lead_agent, task_list, ctx)
+
+        await self.task_board.reset_stuck_tasks(timeout_seconds=300)
+
+        current_hash = await self._hash_board()
+        if current_hash == last_board_hash:
+            idle_rounds += 1
+        else:
+            idle_rounds = 0
+            last_board_hash = current_hash
+
+    return await self._aggregate_results(lead_agent, ctx)
+```
+
+**空闲检测**：通过 hash 比较任务板状态，连续 N 轮无变化则退出。
+
+### 17.4 Swarms：去中心化集群
+
+SwarmWorker 持续认领任务 + 心跳监控 + SwarmCoordinator 检测失联节点：
+
+```python
+from flowforge.modes.multi_agent import SwarmWorker, SwarmCoordinator, SwarmConfig
+
+class SwarmConfig:
+    max_workers: int = 10
+    task_claim_timeout: int = 300
+    heartbeat_interval: int = 30
+    max_retry_per_task: int = 3
+    max_empty_rounds: int = 30
+
+class SwarmWorker:
+    def __init__(self, agent, task_board, mailbox, config):
+        self.agent = agent
+        self.task_board = task_board
+        self.mailbox = mailbox
+        self.config = config
+        self.running = False
+
+    async def run(self, ctx: TaskContext):
+        self.running = True
+        self._heartbeat_task = asyncio.create_task(self._heartbeat(ctx))
+        empty_rounds = 0
+
+        while self.running:
+            task = await self.task_board.claim_task(self.agent.name)
+            if task is None:
+                empty_rounds += 1
+                if empty_rounds >= self.config.max_empty_rounds:
+                    break
+                all_tasks = await self.task_board.get_all_tasks()
+                if all(t["status"] in ("completed", "failed") for t in all_tasks):
+                    break
+                await asyncio.sleep(1)
+                continue
+
+            empty_rounds = 0
+            try:
+                result = await self._execute_task(task, ctx)
+                await self.task_board.complete_task(task["task_id"], result)
+            except Exception as e:
+                # retry logic with max_retry_per_task
+                ...
+
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+
+class SwarmCoordinator:
+    async def monitor(self, ctx: TaskContext):
+        while True:
+            messages = await self.mailbox.receive(
+                "coordinator", subject_contains="heartbeat",
+                unread_only=True, limit=100
+            )
+            for msg in messages:
+                self._worker_heartbeats[msg["sender"]] = time.time()
+
+            now = time.time()
+            for worker_name in list(self._worker_heartbeats.keys()):
+                if now - self._worker_heartbeats[worker_name] > self.config.heartbeat_interval * 3:
+                    await self.task_board.reset_stuck_tasks(self.config.task_claim_timeout)
+                    del self._worker_heartbeats[worker_name]
+
+            await asyncio.sleep(self.config.heartbeat_interval)
+```
+
+### 17.5 三策略对比
+
+| 维度       | Subagents                           | Agent Teams     | Swarms              |
+| -------- | ----------------------------------- | --------------- | ------------------- |
+| **状态**   | 无状态，完全隔离                            | 共享 TaskBoard    | 去中心化，各自认领           |
+| **通信**   | 无（结果压缩返回）                           | Mailbox 信箱      | Mailbox + 心跳        |
+| **协调**   | 无（并行执行）                             | Lead Agent 协调   | SwarmCoordinator 监控 |
+| **适用场景** | 独立子任务并行                             | 多角色协作           | 大规模分布式任务            |
+| **上下文**  | `TaskContext.from_parent(state={})` | 共享 TaskBoard 状态 | 各自独立 + TaskBoard    |
+| **容错**   | 单任务失败不影响其他                          | Lead 可重新规划      | 心跳检测 + 自动重发布        |
+| **退出条件** | 全部完成                                | 全部完成 或 空闲超限     | 全部完成 或 空闲超限         |
+
+***
+
+## 第十八章：协作基础设施详细设计
+
+### 18.1 TaskBoard：原子化共享任务板
+
+```python
+from flowforge.memory.task_board import TaskBoard
+
+class TaskBoard:
+    STATUS_PENDING = "pending"
+    STATUS_CLAIMED = "claimed"
+    STATUS_COMPLETED = "completed"
+    STATUS_FAILED = "failed"
+
+    def __init__(self, db_path: str = "data/task_board.db"):
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        self._db_path = db_path
+        self._supports_returning = self._check_returning_support()
+        self._claim_lock = asyncio.Lock()
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        # ... schema creation ...
+```
+
+**数据库 Schema**：
+
+```sql
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT UNIQUE NOT NULL,
+    task_type TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    claimed_by TEXT,
+    created_at TEXT NOT NULL,
+    claimed_at TEXT,
+    completed_at TEXT,
+    error_message TEXT
+);
+```
+
+**原子认领双策略**：
+
+| 策略           | 条件            | 实现                                    |
+| ------------ | ------------- | ------------------------------------- |
+| RETURNING 子句 | SQLite ≥ 3.35 | `UPDATE ... RETURNING` 单条 SQL 原子操作    |
+| 应用层锁         | SQLite < 3.35 | `asyncio.Lock` + SELECT + UPDATE 两步操作 |
+
+```python
+async def claim_task(self, claimant: str, task_type: Optional[str] = None) -> Optional[dict]:
+    if self._supports_returning:
+        return await self._claim_atomic_returning(claimant, task_type)
+    else:
+        return await self._claim_with_lock(claimant, task_type)
+```
+
+**关键方法**：
+
+| 方法                                      | 说明                    |
+| --------------------------------------- | --------------------- |
+| `add_task(task_id, task_type, payload)` | 发布单个任务                |
+| `add_tasks_batch(tasks)`                | 批量发布任务                |
+| `claim_task(claimant, task_type=None)`  | 原子认领（RETURNING 或应用层锁） |
+| `complete_task(task_id, result)`        | 标记完成，可附带结果            |
+| `fail_task(task_id, error_message)`     | 标记失败，记录错误信息           |
+| `get_all_tasks(status=None)`            | 获取所有任务（可按状态过滤）        |
+| `reset_stuck_tasks(timeout_seconds)`    | 重置超时任务为 pending       |
+
+### 18.2 Mailbox：优先级 + 过期信箱
+
+```python
+from flowforge.memory.mailbox import Mailbox
+
+PRIORITY_CRITICAL = "critical"
+PRIORITY_HIGH = "high"
+PRIORITY_NORMAL = "normal"
+PRIORITY_LOW = "low"
+
+class Mailbox:
+    def __init__(self, db_path: str = "data/mailbox.db"):
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        # ... schema creation with indexes ...
+```
+
+**数据库 Schema**：
+
+```sql
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender TEXT NOT NULL,
+    recipient TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    priority TEXT NOT NULL DEFAULT 'normal',
+    tags TEXT,
+    read INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    expires_at TEXT
+);
+CREATE INDEX idx_recipient ON messages (recipient);
+CREATE INDEX idx_recipient_priority ON messages (recipient, priority);
+CREATE INDEX idx_expires ON messages (expires_at);
+```
+
+**关键方法**：
+
+| 方法                                                                           | 说明                   |
+| ---------------------------------------------------------------------------- | -------------------- |
+| `send(sender, recipient, subject, body, priority, tags, ttl_seconds)`        | 发送消息，支持优先级和 TTL      |
+| `receive(recipient, unread_only, priority, subject_contains, sender, limit)` | 接收消息，自动标记已读          |
+| `get_stats(recipient)`                                                       | 获取信箱统计（总数/未读/按优先级分布） |
+| `_cleanup_expired()`                                                         | 自动清理过期消息             |
+
+**优先级排序**：
+
+```sql
+ORDER BY CASE priority
+    WHEN 'critical' THEN 0
+    WHEN 'high' THEN 1
+    WHEN 'normal' THEN 2
+    ELSE 3
+END ASC, created_at ASC
+```
+
+***
+
+## 第十九章：CheckpointManager 增强详细设计
+
+### 19.1 Schema 迁移
+
+`_ensure_schema()` 实现向后兼容的自动迁移：
+
+```python
+def _ensure_schema(self):
+    cursor = self._conn.execute("PRAGMA table_info(checkpoints)")
+    columns = {row[1] for row in cursor.fetchall()}
+
+    if not columns:
+        # 全新创建
+        self._conn.execute("""CREATE TABLE checkpoints (...)""")
+        return
+
+    if "id" not in columns:
+        # 旧 schema → 新 schema 迁移
+        self._conn.execute("ALTER TABLE checkpoints RENAME TO _checkpoints_old")
+        self._conn.execute("""CREATE TABLE checkpoints (...)""")
+        self._conn.execute("""INSERT INTO ... SELECT ... FROM _checkpoints_old""")
+        self._conn.execute("DROP TABLE _checkpoints_old")
+    else:
+        # 增量添加新列
+        if "messages_json" not in columns:
+            self._conn.execute("ALTER TABLE checkpoints ADD COLUMN messages_json TEXT")
+        if "version" not in columns:
+            self._conn.execute("ALTER TABLE checkpoints ADD COLUMN version INTEGER DEFAULT 1")
+        if "label" not in columns:
+            self._conn.execute("ALTER TABLE checkpoints ADD COLUMN label TEXT DEFAULT ''")
+```
+
+### 19.2 新增方法
+
+| 方法                                                  | 说明                             | 返回值                                 |
+| --------------------------------------------------- | ------------------------------ | ----------------------------------- |
+| `save_full(task_id, state, messages, label)`        | 完整保存（state + messages + 自动版本号） | checkpoint row id                   |
+| `save_incremental(task_id, state, messages, label)` | 增量保存（无变更则跳过）                   | checkpoint row id                   |
+| `restore(task_id, checkpoint_id=None)`              | 恢复 state + messages            | `{"state": dict, "messages": list}` |
+| `get_latest(task_id)`                               | 获取最新检查点完整信息                    | dict or None                        |
+| `delete_old_versions(task_id, keep_latest=5)`       | 清理旧版本                          | 删除数量                                |
+
+### 19.3 保留的旧方法
+
+| 方法                                | 说明                   |
+| --------------------------------- | -------------------- |
+| `save(task_id, step_name, state)` | 保存/更新指定步骤的检查点（版本号自增） |
+| `load(task_id, step_name)`        | 加载指定步骤的 state        |
+| `load_latest(task_id)`            | 加载最新 state           |
+| `delete(task_id)`                 | 删除任务所有检查点            |
+| `list_checkpoints(task_id)`       | 列出任务所有检查点            |
+
+***
+
+## 第二十章：v5.0 安全机制增强总结
+
+在 v4.0 安全机制基础上，v5.0 新增：
+
+| 安全层          | 机制                                        | 实现位置                         |
+| ------------ | ----------------------------------------- | ---------------------------- |
+| **L1 工具超时**  | `asyncio.wait_for()` 包裹单次工具调用             | `tools/registry.py`          |
+| **L2 重复检测**  | `_on_exit()` 生命周期钩子                       | `core/base_mode_executor.py` |
+| **L3 自修正**   | `on_error="reflexion_retry"` 策略           | `modes/workflow.py`          |
+| **工具安全分级**   | `safety_level`（readonly/normal/dangerous） | `core/base_tool.py`          |
+| **并发安全**     | `asyncio.Lock` 保护非并发安全工具                  | `tools/secure_registry.py`   |
+| **危险工具审批**   | EventBus + `register_review_wait()`       | `tools/secure_registry.py`   |
+| **上下文压缩**    | tiktoken 计数 + 滑动窗口摘要                      | `memory/compressor.py`       |
+| **SOP 防御配置** | 全局 + 步骤级 defense 配置                       | `modes/workflow.py`          |
+
+***
+
+## 第二十一章：v5.0 新增目录结构
+
+```
+flowforge/
+├── core/
+│   ├── base_tool.py               # +safety_level, +is_concurrency_safe
+│   ├── base_mode_executor.py      # +_on_enter(), +_on_exit()
+│   └── checkpoint_manager.py      # +save_full, +save_incremental, +restore, +get_latest, +delete_old_versions
+├── modes/
+│   ├── multi_agent.py             # REWRITE: Subagents/Teams/Swarms 三策略
+│   └── workflow.py                # +DEFAULT_DEFENSE, +reflexion_retry, +checkpoint, +template rendering
+├── tools/
+│   ├── registry.py                # +tool_timeout, +asyncio.wait_for
+│   └── secure_registry.py         # NEW: SecureToolRegistry
+├── memory/
+│   ├── compressor.py              # NEW: ContextCompressor
+│   ├── task_board.py              # NEW: TaskBoard
+│   ├── mailbox.py                 # NEW: Mailbox
+│   └── manager.py                 # +compressor, +compress_messages()
+└── tests/
+    ├── unit/
+    │   ├── test_defense.py        # NEW: 三层防御测试
+    │   ├── test_secure_registry.py # NEW: 安全工具注册表测试
+    │   ├── test_task_board.py     # NEW: TaskBoard 测试
+    │   ├── test_mailbox.py        # NEW: Mailbox 测试
+    │   └── test_compressor.py     # NEW: ContextCompressor 测试
+    └── ...
+```
+
+***
+
+**以上为 FlowForge 详细设计说明书 v5.0（防御与协作增强版）。** 本版本在 v2.0 基础上新增三层防御、上下文压缩、安全工具、三种 Multi-Agent 策略、协作基础设施的详细设计，所有 v2.0 内容保持不变。

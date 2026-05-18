@@ -41,7 +41,7 @@ class ReActExecutor(BaseModeExecutor):
             action = await self._parse_action(thought)
             if action is None:
                 ctx.event_bus.emit(ctx.task_id, "draft.update", {
-                    "content": thought, "is_partial": False,
+                    "content": thought, "is_partial": False, "agent_name": "react",
                 })
                 break
 
@@ -57,7 +57,7 @@ class ReActExecutor(BaseModeExecutor):
         final_answer = last_thought if last_thought else task
 
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": final_answer, "is_partial": False,
+            "content": final_answer, "is_partial": False, "agent_name": "react",
         })
 
         return {"final_answer": final_answer, "steps": step + 1, "action_history": action_history}

@@ -3,16 +3,19 @@ from .short_term import ShortTermMemory
 from .long_term import LongTermMemory
 from .semantic import SemanticMemory
 from .episodic import EpisodicMemory
-from typing import Any, List, Optional
+from .compressor import ContextCompressor
+from typing import Any, List, Optional, Dict
+
 
 class MemoryManager:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, llm_client=None):
         db_url = config.get("db_url", "data/memory.db")
         self.working = WorkingMemory()
         self.short_term = ShortTermMemory(db_url)
         self.long_term = LongTermMemory(db_url)
         self.semantic = SemanticMemory(config.get("vector_db_url")) if config.get("vector_db_url") else None
         self.episodic = EpisodicMemory(db_url)
+        self.compressor = ContextCompressor(llm_client) if llm_client and config.get("compression_enabled", True) else None
 
     async def save(self, memory_type: str, key: str, data: Any) -> None:
         store = getattr(self, memory_type, None)
@@ -103,3 +106,8 @@ class MemoryManager:
                 "created_at": row[3],
             })
         return records
+
+    async def compress_messages(self, messages: List[Dict], context=None) -> List[Dict]:
+        if not self.compressor:
+            return messages
+        return await self.compressor.compress_if_needed(messages, context)

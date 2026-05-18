@@ -16,6 +16,8 @@ class BaseTool(ABC):
     name: str = "base"
     description: str = ""
     parameters_schema: Dict[str, Any] = {}
+    safety_level: str = "normal"
+    is_concurrency_safe: bool = True
 
     @abstractmethod
     async def execute(self, input: ToolInput) -> ToolOutput:

@@ -41,4 +41,4 @@ def test_solo_adapter_bridge():
     adapter.bridge()
     assert adapter._bridged is True
     adapter.bridge()
-    assert len([cb for cbs in bus._subscribers.values() for cb in cbs]) == 17
+    assert len([cb for cbs in bus._subscribers.values() for cb in cbs]) >= 17

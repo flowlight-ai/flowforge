@@ -171,7 +171,7 @@ export default function StaticGraphModal({ type, name, onClose }: StaticGraphMod
 
   const renderGraph = useCallback(() => {
     if (!graph || !graph.nodes.length) {
-      return <div className="text-center text-gray-400 py-8">暂无关系图数据</div>;
+      return <div className="text-center text-gray-400 py-8">暂无流程图数据</div>;
     }
 
     const { positions, svgW, svgH } = layout;
@@ -332,7 +332,7 @@ export default function StaticGraphModal({ type, name, onClose }: StaticGraphMod
       <div className="bg-gray-800 rounded-xl shadow-2xl w-[780px] max-h-[85vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
           <h3 className="text-lg font-semibold text-white">
-            {typeLabel}关系图 — {graph?.display_name || graph?.name || name}
+            {typeLabel}流程图 — {graph?.display_name || graph?.name || name}
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">✕</button>
         </div>

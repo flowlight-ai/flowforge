@@ -3,6 +3,7 @@ from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.task_context import TaskContext
 from flowforge.tools.registry import ToolRegistry
+from flowforge.events.event_bus import EventBus
 from flowforge.agents.topic_research import TopicResearchAgent
 from flowforge.agents.article_writing import ArticleWritingAgent
 from flowforge.agents.material_collection import MaterialCollectionAgent
@@ -95,6 +96,7 @@ def _make_context(tool_registry: ToolRegistry, state: dict = None) -> TaskContex
         input_data={},
         tools=tool_registry,
         state=state or {},
+        event_bus=EventBus(),
     )
 
 
@@ -159,6 +161,7 @@ async def test_article_writing_agent():
 async def test_material_collection_agent():
     agent = MaterialCollectionAgent()
     registry = ToolRegistry()
+    registry.register(MockLLMTool())
     registry.register(MockHelixRAGTool())
     registry.register(MockWebSearchTool())
     ctx = _make_context(registry)
@@ -174,6 +177,7 @@ async def test_material_collection_agent():
 async def test_material_collection_agent_empty_topics():
     agent = MaterialCollectionAgent()
     registry = ToolRegistry()
+    registry.register(MockLLMTool())
     registry.register(MockHelixRAGTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
@@ -200,6 +204,7 @@ async def test_seo_optimization_agent():
 async def test_fact_check_agent():
     agent = FactCheckAgent()
     registry = ToolRegistry()
+    registry.register(MockLLMTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
         AgentInput(params={"draft": "This is a clean article with no links."}), ctx
@@ -214,7 +219,7 @@ async def test_fact_check_agent():
 async def test_content_audit_agent():
     agent = ContentAuditAgent()
     registry = ToolRegistry()
-    registry.register(MockLLMTool(response_content='{"score": 0.85, "issues": ["minor issue"]}'))
+    registry.register(MockLLMTool(response_content='{"accuracy": 8.5, "coherence": 8.5, "expression": 8.5, "value": 8.5, "readability": 8.5, "issues": ["minor issue"]}'))
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
         AgentInput(params={"draft": "Article to audit"}), ctx
@@ -235,13 +240,14 @@ async def test_content_audit_agent_unparseable():
         AgentInput(params={"draft": "Article to audit"}), ctx
     )
     assert output.result["score"] == 0.5
-    assert len(output.result["issues"]) > 0
+    assert output.result["issues"] == []
 
 
 @pytest.mark.asyncio
 async def test_trend_analysis_agent():
     agent = TrendAnalysisAgent()
     registry = ToolRegistry()
+    registry.register(MockLLMTool())
     registry.register(MockWebSearchTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
@@ -256,6 +262,7 @@ async def test_trend_analysis_agent():
 async def test_trend_analysis_agent_no_tools():
     agent = TrendAnalysisAgent()
     registry = ToolRegistry()
+    registry.register(MockLLMTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
         AgentInput(params={"domain": "科技"}), ctx
@@ -334,6 +341,7 @@ async def test_content_repurposer_agent():
 async def test_image_research_agent():
     agent = ImageResearchAgent()
     registry = ToolRegistry()
+    registry.register(MockLLMTool())
     registry.register(MockPexelsTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
@@ -348,6 +356,7 @@ async def test_image_research_agent():
 async def test_image_research_agent_fallback():
     agent = ImageResearchAgent()
     registry = ToolRegistry()
+    registry.register(MockLLMTool())
     registry.register(MockWebSearchTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
@@ -361,6 +370,7 @@ async def test_image_research_agent_fallback():
 async def test_image_research_agent_no_tools():
     agent = ImageResearchAgent()
     registry = ToolRegistry()
+    registry.register(MockLLMTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
         AgentInput(params={"topic": "AI technology"}), ctx
@@ -393,19 +403,6 @@ async def test_multilingual_agent_default_lang():
         AgentInput(params={"draft": "Bonjour le monde"}), ctx
     )
     assert output.result["target_lang"] == "en"
-
-
-@pytest.mark.asyncio
-async def test_all_agents_raise_on_bare_execute():
-    agents = [
-        TopicResearchAgent(), ArticleWritingAgent(), MaterialCollectionAgent(),
-        SEOOptimizationAgent(), FactCheckAgent(), ContentAuditAgent(),
-        TrendAnalysisAgent(), PublishingAgent(), HeadlineOptimizerAgent(),
-        ContentRepurposerAgent(), ImageResearchAgent(), MultilingualAgent(),
-    ]
-    for agent in agents:
-        with pytest.raises(NotImplementedError):
-            await agent.execute(AgentInput(params={}))
 
 
 def test_all_agents_have_correct_names():

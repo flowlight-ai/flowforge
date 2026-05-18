@@ -52,7 +52,7 @@ class PlanExecuteExecutor(BaseModeExecutor):
         })
 
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": str(results), "is_partial": False,
+            "content": str(results), "is_partial": False, "agent_name": "plan_execute",
         })
 
         return {"plan": plan, "results": results}

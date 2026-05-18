@@ -91,7 +91,7 @@ class GraphOfThoughtsExecutor(BaseModeExecutor):
 
         final_content = best_thought["content"] if best_thought else initial_thought
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": final_content, "is_partial": False,
+            "content": final_content, "is_partial": False, "agent_name": "graph_of_thoughts",
         })
 
         return {"thoughts": thoughts, "best": best_thought, "best_score": best_score, "total_thoughts": len(thoughts)}

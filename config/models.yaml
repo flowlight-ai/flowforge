@@ -155,3 +155,5 @@ assignments:
     primary: openrouter/baidu/cobuddy:free
     fallbacks:
     - tencent/hunyuan-lite
+    - webproxy/doubao-web/seed-2.0
+    - webproxy/web/chat

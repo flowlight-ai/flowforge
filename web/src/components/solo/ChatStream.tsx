@@ -7,6 +7,7 @@ import { useShellConfig } from "../../lib/shell-config";
 import {
   formatTs,
   groupMessagesIntoSteps,
+  renderMarkdown,
 } from "./solo-utils";
 import { ApprovalCard } from "./ChatPrimitives";
 import StepProgressTimeline from "./StepProgressTimeline";
@@ -83,6 +84,18 @@ export default function ChatStream({
         if (msg.role === "gate") return <div key={msg.id} className={`solo-gate${msg.data?.is_passed ? " passed" : " failed"} animate-rise`}>{msg.content}</div>;
         if (msg.role === "review") return <div key={msg.id} className="solo-review-card animate-rise"><div className="solo-review-header">⏸ 审核节点</div><p className="solo-review-summary">{msg.content}</p></div>;
         if (msg.role === "system") return <div key={msg.id} className={`solo-system-msg${msg.content.startsWith("✓") ? " success" : " error"} animate-rise`}>{msg.content}<span className="solo-msg-time">{formatTs(msg.timestamp)}</span></div>;
+        if (msg.role === "ai") {
+          const isDraft = msg.data?._draft;
+          return (
+            <div key={msg.id} className={`solo-ai-msg animate-rise${isDraft ? " solo-ai-draft" : ""}`}>
+              <div className="solo-ai-bubble">
+                {isDraft && <div className="solo-ai-draft-badge">📝 输出</div>}
+                <div className="solo-ai-content" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
+                <span className="chat-msg-time">{formatTs(msg.timestamp)}</span>
+              </div>
+            </div>
+          );
+        }
         return null;
       })}
       {phase === "waiting_review" && <ApprovalCard messageId="review-inline" data={{ type: "review", description: "AI 已完成当前阶段，等待您的审核确认后继续" }} onAction={onApprovalAction} />}

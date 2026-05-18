@@ -215,6 +215,29 @@ export default function StepGroup({
                 </div>
               );
             }
+            if (msg.role === "ai" && msg.data?._draft) {
+              return (
+                <div key={msg.id} className="solo-step-entry">
+                  <div className="solo-step-entry-connector ok-connector" />
+                  <div className="solo-draft-output">
+                    <div className="solo-draft-header">
+                      <span className="solo-draft-icon">📝</span>
+                      <span className="solo-draft-label">输出</span>
+                      {msg.data?._agent_name && <span className="solo-draft-agent">{msg.data._agent_name}</span>}
+                    </div>
+                    <div className="solo-draft-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
+                  </div>
+                </div>
+              );
+            }
+            if (msg.role === "ai") {
+              return (
+                <div key={msg.id} className="solo-step-entry">
+                  <div className="solo-step-entry-connector llm-connector" />
+                  <LLMCallCard msg={msg} />
+                </div>
+              );
+            }
             if (msg.role === "system") {
               const isSuccess = msg.content.startsWith("✓");
               return (

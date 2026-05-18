@@ -379,3 +379,147 @@ async def test_concurrent_create():
 | `memory/` | ≥ 80% | MemoryManager, 5 种记忆后端 |
 | `executor/` | ≥ 80% | HybridExecutor, StateManager |
 | `plugins/` | ≥ 75% | PluginManager, entry_points 加载 |
+
+---
+
+# FlowForge 测试用例设计 v5.0（防御与协作增强版）
+
+> **对应文档**：FlowForge 架构设计 v5.0 + 详细设计 v5.0
+> **测试策略**：在 v1.1 基础上新增 v5.0 特性的测试用例
+
+---
+
+## 第七章：v5.0 新增单元测试用例
+
+### 7.1 三层防御测试 (test_defense.py)
+
+| 用例 ID | 场景 | 输入 | 预期输出 |
+|---------|------|------|---------|
+| **UT-DEF-01** | L1 工具超时触发 | 注册慢工具（sleep 5s），tool_timeout=1 | 返回 `ToolOutput(error="timed out after 1s")` |
+| **UT-DEF-02** | L1 工具正常完成不超时 | 注册快工具（sleep 0.1s），tool_timeout=5 | 正常返回 `ToolOutput(result={...})` |
+| **UT-DEF-03** | L2 _on_enter 钩子调用 | 自定义 ModeExecutor 覆写 `_on_enter` | `_on_enter` 被调用，ctx 被传入 |
+| **UT-DEF-04** | L2 _on_exit 钩子调用 | 自定义 ModeExecutor 覆写 `_on_exit` | `_on_exit` 被调用，result 可被修改 |
+| **UT-DEF-05** | L3 reflexion_retry 策略 | SOP 步骤 `on_error: "reflexion_retry"`，步骤失败 | 触发 Reflexion 分析 → 重试 |
+
+### 7.2 安全工具注册表测试 (test_secure_registry.py)
+
+| 用例 ID | 场景 | 输入 | 预期输出 |
+|---------|------|------|---------|
+| **UT-SEC-01** | readonly 工具无需审批 | safety_level="readonly" | 直接执行，不触发审批 |
+| **UT-SEC-02** | normal 工具正常执行 | safety_level="normal" | 直接执行 |
+| **UT-SEC-03** | dangerous 工具需审批 | safety_level="dangerous" + 无审批 | 返回 `ToolOutput(error="Permission denied")` |
+| **UT-SEC-04** | dangerous 工具审批通过 | safety_level="dangerous" + 审批通过 | 正常执行 |
+| **UT-SEC-05** | 非并发安全工具串行执行 | is_concurrency_safe=False + 2 并发调用 | 通过 asyncio.Lock 串行执行 |
+| **UT-SEC-06** | set_tool_safety 动态修改 | `set_tool_safety("tool", "dangerous")` | 工具安全等级被更新 |
+
+### 7.3 TaskBoard 测试 (test_task_board.py)
+
+| 用例 ID | 场景 | 输入 | 预期输出 |
+|---------|------|------|---------|
+| **UT-TB-01** | 添加任务 | `add_task("t1", "research", {...})` | 任务出现在 pending 列表 |
+| **UT-TB-02** | 批量添加任务 | `add_tasks_batch([...])` | 所有任务出现在 pending 列表 |
+| **UT-TB-03** | 原子认领任务 | `claim_task("worker_1")` | 任务状态变为 claimed，claimed_by 正确 |
+| **UT-TB-04** | 无任务可认领 | 空 TaskBoard + `claim_task("worker")` | 返回 None |
+| **UT-TB-05** | 完成任务 | `complete_task("t1", {"result": ...})` | 任务状态变为 completed |
+| **UT-TB-06** | 任务失败 | `fail_task("t1", "error msg")` | 任务状态变为 failed，error_message 正确 |
+| **UT-TB-07** | 重置超时任务 | claimed 超时任务 + `reset_stuck_tasks(0)` | 任务状态重置为 pending |
+| **UT-TB-08** | 按状态过滤 | `get_all_tasks(status="completed")` | 只返回 completed 任务 |
+
+### 7.4 Mailbox 测试 (test_mailbox.py)
+
+| 用例 ID | 场景 | 输入 | 预期输出 |
+|---------|------|------|---------|
+| **UT-MB-01** | 发送消息 | `send("a", "b", "test", "body")` | 消息出现在数据库 |
+| **UT-MB-02** | 接收消息 | `receive("b")` | 返回消息列表，自动标记已读 |
+| **UT-MB-03** | 优先级排序 | 发送 low/high/critical 消息 | 接收顺序：critical → high → low |
+| **UT-MB-04** | 未读过滤 | `receive("b", unread_only=True)` | 只返回未读消息 |
+| **UT-MB-05** | 主题过滤 | `receive("b", subject_contains="alert")` | 只返回主题包含 "alert" 的消息 |
+| **UT-MB-06** | TTL 过期 | 发送消息 ttl_seconds=0 + 等待 | 消息被自动清理 |
+| **UT-MB-07** | 发送者过滤 | `receive("b", sender="a")` | 只返回来自 "a" 的消息 |
+| **UT-MB-08** | 信箱统计 | `get_stats("b")` | 返回 total/unread/by_priority |
+
+### 7.5 ContextCompressor 测试 (test_compressor.py)
+
+| 用例 ID | 场景 | 输入 | 预期输出 |
+|---------|------|------|---------|
+| **UT-CMP-01** | 低于阈值不压缩 | 短消息列表 | 原样返回，不调用 LLM |
+| **UT-CMP-02** | 超过阈值触发压缩 | 长消息列表（>85% 上下文窗口） | 早期历史被压缩为摘要消息 |
+| **UT-CMP-03** | 关键消息判断 | tool/assistant+tool_calls/system 消息 | `_is_decision_or_tool_result()` 返回 True |
+| **UT-CMP-04** | 无 LLM 可用时降级 | 无 LLM 工具 + 无 llm_client | 保持原始消息不压缩 |
+| **UT-CMP-05** | set_context_window | `set_context_window(64000)` | 后续压缩使用新的窗口大小 |
+
+### 7.6 CheckpointManager 增强测试
+
+| 用例 ID | 场景 | 输入 | 预期输出 |
+|---------|------|------|---------|
+| **UT-CP-01** | save_full 保存 | `save_full(task_id, state, messages, "label")` | 版本号自动递增 |
+| **UT-CP-02** | save_incremental 无变更跳过 | 连续两次相同 state | 第二次返回已有 id，不新增行 |
+| **UT-CP-03** | save_incremental 有变更保存 | 修改 state 后 save_incremental | 新增一行，版本号递增 |
+| **UT-CP-04** | restore 恢复最新 | `restore(task_id)` | 返回 `{"state": dict, "messages": list}` |
+| **UT-CP-05** | restore 恢复指定版本 | `restore(task_id, checkpoint_id)` | 返回指定版本的 state + messages |
+| **UT-CP-06** | get_latest 获取最新 | 多次 save 后 get_latest | 返回版本号最大的检查点 |
+| **UT-CP-07** | delete_old_versions 清理 | 保存 8 个版本 + `delete_old_versions(keep_latest=5)` | 保留 5 个，删除 3 个 |
+| **UT-CP-08** | Schema 迁移兼容 | 旧 schema（无 messages_json 列） | 自动添加新列，旧数据可读 |
+
+---
+
+## 第八章：v5.0 Multi-Agent 策略集成测试
+
+### 8.1 Subagents 策略测试
+
+| 用例 ID | 场景 | 验证点 |
+|---------|------|--------|
+| **IT-MA-01** | 2 个子任务并行执行 | 两个任务结果均返回，互不影响 |
+| **IT-MA-02** | 子任务隔离性 | 子任务 state 修改不影响父 context |
+| **IT-MA-03** | 子任务失败不影响其他 | 1 个子任务失败，其他正常返回 |
+| **IT-MA-04** | 自动任务分解 | 无 sub_tasks 时自动调用 LLM 分解 |
+
+### 8.2 Agent Teams 策略测试
+
+| 用例 ID | 场景 | 验证点 |
+|---------|------|--------|
+| **IT-AT-01** | Lead 分解 + 团队认领 | 任务被正确分解到 TaskBoard，团队成员认领执行 |
+| **IT-AT-02** | Mailbox 通信 | 成员发送 critical 消息 → Lead 触发 replan |
+| **IT-AT-03** | 空闲检测退出 | 连续 N 轮无进展 → 自动退出循环 |
+| **IT-AT-04** | 任务失败处理 | 成员任务失败 → fail_task + 通知 Lead |
+
+### 8.3 Swarms 策略测试
+
+| 用例 ID | 场景 | 验证点 |
+|---------|------|--------|
+| **IT-SW-01** | Worker 认领 + 执行 + 完成 | Worker 从 TaskBoard 认领任务并完成 |
+| **IT-SW-02** | 心跳监控 | Worker 发送心跳 → Coordinator 记录 |
+| **IT-SW-03** | 失联检测 | Worker 停止心跳 → Coordinator 重置其任务 |
+| **IT-SW-04** | 空闲退出 | 无任务可认领 → max_empty_rounds 后退出 |
+| **IT-SW-05** | 任务重试 | 任务失败 → 重试 → 超过 max_retry 后 fail |
+
+---
+
+## 第九章：v5.0 防御集成测试
+
+### 9.1 三层防御联合测试
+
+| 用例 ID | 场景 | 验证点 |
+|---------|------|--------|
+| **IT-DEF-01** | L1 超时 → L2 检测 → L3 修正 | 工具超时 → 重复检测 → reflexion_retry 自修正 |
+| **IT-DEF-02** | 防御配置传递 | `ctx.metadata["defense"]` 正确合并到步骤级 |
+| **IT-DEF-03** | SOP 模板渲染 | `{{variable}}` 被正确替换 |
+| **IT-DEF-04** | Checkpoint 入口保存 | checkpoint_enabled=True 时，SOP 入口自动保存检查点 |
+
+---
+
+## 第十章：v5.0 测试覆盖率目标
+
+| 模块 | 目标覆盖率 | 关键覆盖项 |
+|------|-----------|-----------|
+| `core/` | ≥ 90% | BaseAgent, BaseTool(+safety_level), TaskContext, DI, Errors, CheckpointManager(增强) |
+| `modes/` | ≥ 85% | 所有 9 种执行器 + MultiAgent(三策略) + Workflow(防御+reflexion_retry) |
+| `events/` | ≥ 90% | EventBus, SoloAdapter |
+| `tools/` | ≥ 85% | Registry(+timeout), SecureToolRegistry, Sandbox, LLMClient |
+| `memory/` | ≥ 85% | MemoryManager(+compressor), TaskBoard, Mailbox, ContextCompressor |
+| `executor/` | ≥ 80% | HybridExecutor, StateManager |
+| `plugins/` | ≥ 75% | PluginManager, entry_points 加载 |
+
+---
+
+**以上为 FlowForge 测试用例设计 v5.0（防御与协作增强版）。** 本版本在 v1.1 基础上新增三层防御、安全工具、协作基础设施、上下文压缩、Multi-Agent 三策略的测试用例，所有 v1.1 内容保持不变。

@@ -180,7 +180,7 @@ export default function SettingsPage() {
       </div>
       {onGraphClick && (
         <button onClick={onGraphClick} style={{ padding: "4px 10px", borderRadius: "6px", border: "1px solid var(--accent)", background: "var(--accent-subtle, rgba(255,92,92,0.1))", color: "var(--accent)", cursor: "pointer", fontSize: "11px", fontWeight: 600, whiteSpace: "nowrap" }}>
-          ◈ 关系图
+          ◈ 流程图
         </button>
       )}
       {onToggle && (
@@ -237,7 +237,7 @@ export default function SettingsPage() {
                         <div style={{ fontSize: "14px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{wf.display_name}</div>
                         <div style={{ fontSize: "11px", color: "var(--muted)" }}>{wf.steps} 步 · {categoryLabel(wf.category)}</div>
                       </div>
-                      <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "4px", background: "var(--accent-subtle, rgba(255,92,92,0.1))", color: "var(--accent)", fontWeight: 600 }}>◈ 关系图</span>
+                      <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "4px", background: "var(--accent-subtle, rgba(255,92,92,0.1))", color: "var(--accent)", fontWeight: 600 }}>◈ 流程图</span>
                     </div>
                     <div style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.5, marginBottom: "10px" }}>{wf.description}</div>
                     <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
@@ -257,7 +257,7 @@ export default function SettingsPage() {
 
         {tab === "agents" && (
           <div>
-            <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "10px" }}>{agents.length} 个 Agent 已注册 · 点击「关系图」查看依赖</div>
+            <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "10px" }}>{agents.length} 个 Agent 已注册 · 点击「流程图」查看依赖</div>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {agents.map((a) => <PluginCard key={a.name} item={a} graphType="agent" onGraphClick={() => setGraphModal({ type: "agent", name: a.name })} />)}
               {agents.length === 0 && <div className="empty">暂无 Agent</div>}
@@ -267,7 +267,7 @@ export default function SettingsPage() {
 
         {tab === "modes" && (
           <div>
-            <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "10px" }}>{modes.length} 个执行模式可用 · 点击「关系图」查看内部步骤</div>
+            <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "10px" }}>{modes.length} 个执行模式可用 · 点击「流程图」查看内部步骤</div>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {modes.map((m) => <PluginCard key={m.name} item={m} graphType="mode" onGraphClick={() => setGraphModal({ type: "mode", name: m.name })} />)}
               {modes.length === 0 && <div className="empty">暂无执行模式</div>}

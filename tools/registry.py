@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Dict, Optional, Callable
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
@@ -5,9 +6,10 @@ from flowforge.core.errors import ToolNotFoundError
 
 
 class ToolRegistry:
-    def __init__(self):
+    def __init__(self, tool_timeout: int = 120):
         self._tools: Dict[str, BaseTool] = {}
         self._emit_callback: Optional[Callable] = None
+        self._tool_timeout = tool_timeout
 
     def set_emit_callback(self, callback: Callable):
         self._emit_callback = callback
@@ -32,7 +34,11 @@ class ToolRegistry:
 
         start = time.time()
         try:
-            result = await tool.execute(input)
+            result = await asyncio.wait_for(tool.execute(input), timeout=self._tool_timeout)
+        except TimeoutError:
+            if self._emit_callback:
+                await self._emit_callback("tool.end", {"tool_name": name, "error": "timeout", "duration_ms": int((time.time()-start)*1000)})
+            return ToolOutput(result={}, error=f"Tool '{name}' timed out after {self._tool_timeout}s")
         except Exception as e:
             if self._emit_callback:
                 await self._emit_callback("tool.end", {"tool_name": name, "error": str(e), "duration_ms": int((time.time()-start)*1000)})

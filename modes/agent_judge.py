@@ -45,7 +45,7 @@ class AgentJudgeExecutor(BaseModeExecutor):
         })
 
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": str(actor_output.result), "is_partial": False,
+            "content": str(actor_output.result), "is_partial": False, "agent_name": "agent_judge",
         })
 
         return {"actor_result": actor_output.result, "judge_result": judge_output.result}

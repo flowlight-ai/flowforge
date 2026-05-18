@@ -196,6 +196,17 @@ export function mergeStreamingMessages(messages: ChatMessage[]): ChatMessage[] {
         if (currentStream) result.push(currentStream);
         currentStream = { ...msg, id: `stream-${msg.id}`, data: { ...msg.data, _streaming: true } };
       }
+    } else if (msg.role === "ai" && msg.data?._draft) {
+      if (currentStream) { result.push(currentStream); currentStream = null; }
+      const prevDraft = result.length > 0 && result[result.length - 1].role === "ai" && result[result.length - 1].data?._draft ? result.pop() : null;
+      if (prevDraft && prevDraft.data?._agent_name === msg.data?._agent_name && msg.data?.is_partial) {
+        result.push({ ...msg, id: prevDraft.id, content: prevDraft.content + msg.content });
+      } else if (prevDraft && prevDraft.data?._agent_name === msg.data?._agent_name && !msg.data?.is_partial) {
+        result.push({ ...msg, id: prevDraft.id, content: msg.content });
+      } else {
+        if (prevDraft) result.push(prevDraft);
+        result.push(msg);
+      }
     } else {
       if (currentStream) { result.push(currentStream); currentStream = null; }
       result.push(msg);

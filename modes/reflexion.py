@@ -70,7 +70,7 @@ class ReflexionExecutor(BaseModeExecutor):
         })
 
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": str(best_result) if best_result else "", "is_partial": False,
+            "content": str(best_result) if best_result else "", "is_partial": False, "agent_name": "reflexion",
         })
 
         return {"result": best_result, "score": best_score, "iterations": iteration + 1}

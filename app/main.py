@@ -2,7 +2,7 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from flowforge.core.config import system_config
+from flowforge.core.config import system_config, ConfigLoader
 from flowforge.core.di import DIContainer
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.tools.registry import ToolRegistry
@@ -95,7 +95,9 @@ agent_registry = AgentRegistry()
 tool_registry = ToolRegistry()
 mode_registry = ModeRegistry()
 
-llm_client = LLMClient(models_config=None, event_bus=event_bus)
+_config_loader = ConfigLoader()
+_models_config = _config_loader.get_models_config()
+llm_client = LLMClient(models_config=_models_config, event_bus=event_bus)
 tool_registry.register(llm_client)
 if system_config.helixrag_enabled:
     tool_registry.register(HelixRAGClient())

@@ -128,7 +128,7 @@ def build_cross_fallback_chain(
     3. Filter out models in cooldown
     4. Webproxy models go last (as fallback)
     """
-    provider_order = ["webproxy", "openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local"]
+    provider_order = ["openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local", "webproxy"]
     grouped: Dict[str, List[str]] = {}
     for provider in provider_order:
         models = available_models.get(provider, [])
@@ -303,6 +303,7 @@ class LLMClient(BaseTool):
         logger.info(f"LLM candidate chain ({len(candidates)}): {candidates[:5]}...")
 
         last_error = None
+        tried_any = False
         for candidate in candidates:
             if not candidate or "/" not in candidate:
                 continue
@@ -317,6 +318,7 @@ class LLMClient(BaseTool):
                 logger.debug(f"Skipping {provider}/{model_id}: no API key")
                 continue
 
+            tried_any = True
             key = f"{provider}/{model_id}"
             status = self._health_status.get(key, {})
             cooldown_until = status.get("cooldown_until", 0)
@@ -385,6 +387,13 @@ class LLMClient(BaseTool):
                     "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0,
                 })
 
+                if not content_text or (isinstance(content_text, str) and not content_text.strip()):
+                    logger.warning(f"LLM returned empty content for {provider}/{model_id}, trying next candidate")
+                    self._update_health(provider, model_id, False, "empty_response")
+                    self._record_model_result(f"{provider}/{model_id}", False, "empty_response")
+                    last_error = Exception("empty_response")
+                    continue
+
                 result = {
                     "content": content_text if isinstance(content_text, str) else content_text,
                     "provider": provider, "model": model_id, "tokens": tokens,
@@ -410,6 +419,69 @@ class LLMClient(BaseTool):
 
                 last_error = e
                 continue
+
+        if not tried_any:
+            fallback_chain = build_cross_fallback_chain(self._available_models, self._health_status)
+            if fallback_chain:
+                logger.info(f"All assignment candidates skipped, retrying with cross-fallback chain ({len(fallback_chain)})")
+                candidates = fallback_chain
+                for candidate in candidates:
+                    if not candidate or "/" not in candidate:
+                        continue
+                    provider, model_id = candidate.split("/", 1)
+                    base_url = self._providers.get(provider, {}).get("base_url", PROVIDER_BASE_URLS.get(provider, ""))
+                    if not base_url:
+                        continue
+                    api_key = self._resolve_api_key(provider)
+                    if not api_key:
+                        continue
+                    key = f"{provider}/{model_id}"
+                    status = self._health_status.get(key, {})
+                    cooldown_until = status.get("cooldown_until", 0)
+                    if time.time() < cooldown_until:
+                        continue
+                    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                    if provider == "openrouter":
+                        headers["HTTP-Referer"] = "https://flowforge.dev"
+                        headers["X-Title"] = "FlowForge"
+                    payload_fb = {"model": model_id, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "stream": stream}
+                    if tools:
+                        payload_fb["tools"] = tools
+                    url = base_url.rstrip("/") + "/chat/completions"
+                    self._emit_event(task_id, "llm.start", {"agent_name": agent_name or "unknown", "model": f"{provider}/{model_id}", "candidate_index": candidates.index(candidate) + 1, "total_candidates": len(candidates)})
+                    logger.info(f"🤖 [LLM回退] agent={agent_name or '?'} → {provider}/{model_id}")
+                    start = time.time()
+                    try:
+                        content = await self._stream_call(url, headers, payload_fb, task_id, agent_name, provider, model_id) if stream else await self._normal_call(url, headers, payload_fb)
+                        duration = time.time() - start
+                        tokens = 0
+                        tool_calls_result = None
+                        raw_message = None
+                        if isinstance(content, dict):
+                            tokens = content.get("tokens", 0)
+                            content_text = content["content"]
+                            tool_calls_result = content.get("tool_calls")
+                            raw_message = content.get("raw_message")
+                        else:
+                            content_text = content
+                        metrics.record_tool_call("llm", duration)
+                        self._update_health(provider, model_id, True)
+                        self._emit_event(task_id, "llm.end", {"agent_name": agent_name or "unknown", "full_response": content_text[:500] if isinstance(content_text, str) else str(content_text)[:500], "tokens": tokens, "duration_ms": int(duration * 1000), "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0})
+                        if not content_text or (isinstance(content_text, str) and not content_text.strip()):
+                            self._update_health(provider, model_id, False, "empty_response")
+                            last_error = Exception("empty_response")
+                            continue
+                        result = {"content": content_text if isinstance(content_text, str) else content_text, "provider": provider, "model": model_id, "tokens": tokens}
+                        if tool_calls_result:
+                            result["tool_calls"] = tool_calls_result
+                        if raw_message:
+                            result["raw_message"] = raw_message
+                        return ToolOutput(result=result)
+                    except Exception as e:
+                        logger.warning(f"LLM fallback failed for {provider}/{model_id}: {str(e)[:200]}")
+                        self._update_health(provider, model_id, False, str(e))
+                        last_error = e
+                        continue
 
         return ToolOutput(result={"content": "", "error": str(last_error)}, error=str(last_error))
 

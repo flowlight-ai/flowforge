@@ -30,7 +30,7 @@ def test_llm_client_with_models_config():
 def test_llm_client_model_chain_no_assignment():
     client = LLMClient(models_config={})
     chain = client._get_model_chain("nonexistent", "unknown")
-    assert chain == []
+    assert len(chain) > 0
 
 
 def test_llm_client_model_chain_no_agent():
@@ -41,7 +41,7 @@ def test_llm_client_model_chain_no_agent():
     }
     client = LLMClient(models_config=config)
     chain = client._get_model_chain("education", "unknown_agent")
-    assert chain == []
+    assert len(chain) > 0
 
 
 def test_llm_client_update_assignment():
@@ -114,11 +114,11 @@ def test_llm_client_update_health_failure():
 
 
 def test_llm_client_default_base_url():
-    client = LLMClient()
-    assert client._default_base_url("openrouter") == "https://openrouter.ai/api/v1"
-    assert client._default_base_url("aliyuncs") == "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    assert client._default_base_url("ark") == "https://ark.cn-beijing.volces.com/api/v3"
-    assert client._default_base_url("unknown") == ""
+    from flowforge.tools.llm_client import PROVIDER_BASE_URLS
+    assert PROVIDER_BASE_URLS["openrouter"] == "https://openrouter.ai/api/v1"
+    assert PROVIDER_BASE_URLS["aliyuncs"] == "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    assert PROVIDER_BASE_URLS["ark"] == "https://ark.cn-beijing.volces.com/api/v3"
+    assert PROVIDER_BASE_URLS.get("unknown", "") == ""
 
 
 def test_llm_client_set_event_bus():

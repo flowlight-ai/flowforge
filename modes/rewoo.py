@@ -61,7 +61,7 @@ class ReWOOExecutor(BaseModeExecutor):
         })
 
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": str(result_map), "is_partial": False,
+            "content": str(result_map), "is_partial": False, "agent_name": "rewoo",
         })
 
         return {"results": result_map}

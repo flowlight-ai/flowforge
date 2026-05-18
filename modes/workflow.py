@@ -19,6 +19,14 @@ class WorkflowExecutor(BaseModeExecutor):
     mode_name = "workflow"
     capabilities = ["orchestration", "planning"]
 
+    DEFAULT_DEFENSE = {
+        "max_tool_calls": 50,
+        "tool_timeout": 120,
+        "repetition_limit": 3,
+        "reflexion_retries": 2,
+        "checkpoint_enabled": True,
+    }
+
     async def _execute_core(self, ctx: TaskContext) -> dict:
         sop_steps = ctx.metadata.get("sop_steps", [])
         context_data = ctx.input_data.copy()
@@ -38,7 +46,16 @@ class WorkflowExecutor(BaseModeExecutor):
         return await self._execute_sop_steps(ctx, sop_steps, context_data, depth)
 
     async def _execute_sop_steps(self, ctx, sop_steps, context_data, depth):
+        defense_config = {**self.DEFAULT_DEFENSE, **ctx.metadata.get("defense", {})}
+        ctx.metadata["_defense"] = defense_config
+
+        if defense_config.get("checkpoint_enabled") and hasattr(ctx, 'checkpoint') and ctx.checkpoint:
+            await self._save_checkpoint(ctx, context_data)
+
         for step in sop_steps:
+            if step.get("prompt"):
+                step["prompt"] = self._render_template(step["prompt"], context_data)
+
             step_name = step["name"]
             ctx.event_bus.emit(ctx.task_id, "workflow.step.start", {
                 "step": step_name, "label": step_name,
@@ -87,6 +104,30 @@ class WorkflowExecutor(BaseModeExecutor):
                                 except Exception:
                                     if i == retry_count - 1:
                                         raise
+                        elif on_error == "reflexion_retry":
+                            reflexion_ctx = TaskContext.from_parent(
+                                ctx,
+                                input_data={"task": f"分析步骤'{step['name']}'失败原因并修正: {str(e)}"},
+                                metadata={"mode": "reflexion"}
+                            )
+                            reflexion_result = await ctx.executor.run(reflexion_ctx, mode_hint="reflexion", _is_substep=True)
+                            context_data["_reflexion_fix"] = reflexion_result
+                            retry_count = step.get("retry_count", 2)
+                            for i in range(retry_count):
+                                try:
+                                    merged_data = {**ctx.state, **context_data}
+                                    agent_input = AgentInput(params=merged_data)
+                                    agent_output = await agent.execute_with_context(agent_input, ctx)
+                                    context_data.update(agent_output.result)
+                                    if step.get("output") and step["output"] not in agent_output.result:
+                                        context_data[step["output"]] = agent_output.result
+                                    if hasattr(agent_output, 'state_updates') and agent_output.state_updates:
+                                        ctx.state.update(agent_output.state_updates)
+                                        context_data.update(agent_output.state_updates)
+                                    break
+                                except Exception:
+                                    if i == retry_count - 1:
+                                        raise
                         else:
                             raise
                     ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {"step": step_name})
@@ -105,6 +146,23 @@ class WorkflowExecutor(BaseModeExecutor):
                 on_error = step.get("on_error", "abort")
                 if on_error == "skip":
                     continue
+                elif on_error == "reflexion_retry":
+                    reflexion_ctx = TaskContext.from_parent(
+                        ctx,
+                        input_data={"task": f"分析步骤'{step['name']}'失败原因并修正: {str(e)}"},
+                        metadata={"mode": "reflexion"}
+                    )
+                    reflexion_result = await ctx.executor.run(reflexion_ctx, mode_hint="reflexion", _is_substep=True)
+                    context_data["_reflexion_fix"] = reflexion_result
+                    retry_count = step.get("retry_count", 2)
+                    for i in range(retry_count):
+                        try:
+                            sub_result = await ctx.executor.run(sub_ctx, mode_hint=step.get("mode"), _is_substep=True)
+                            context_data[step.get("output", step_name)] = sub_result
+                            break
+                        except Exception:
+                            if i == retry_count - 1:
+                                raise
                 else:
                     raise
 
@@ -133,7 +191,7 @@ class WorkflowExecutor(BaseModeExecutor):
 
         ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {"step": "normal_chat"})
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": result_content, "is_partial": False,
+            "content": result_content, "is_partial": False, "agent_name": "solo_assistant",
         })
 
         return {**context_data, "response": result_content}
@@ -184,7 +242,7 @@ class WorkflowExecutor(BaseModeExecutor):
 
             ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {"step": "response"})
             ctx.event_bus.emit(ctx.task_id, "draft.update", {
-                "content": result_content, "is_partial": False,
+                "content": result_content, "is_partial": False, "agent_name": "solo_assistant",
             })
             return {**context_data, "response": result_content}
 
@@ -211,7 +269,7 @@ class WorkflowExecutor(BaseModeExecutor):
             final_content = collected[:3000] if collected else f"执行失败: {e}"
 
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": final_content, "is_partial": False,
+            "content": final_content, "is_partial": False, "agent_name": "solo_assistant",
         })
 
         return {
@@ -223,6 +281,11 @@ class WorkflowExecutor(BaseModeExecutor):
 
     async def _run_react_loop(self, ctx: TaskContext, intent: str,
                                tool_schemas: list, model_hint: str, persona: str) -> dict:
+        defense_config = ctx.metadata.get("_defense", self.DEFAULT_DEFENSE)
+        max_tool_calls = defense_config.get("max_tool_calls", 50)
+        tool_timeout = defense_config.get("tool_timeout", 120)
+        repetition_limit = defense_config.get("repetition_limit", 3)
+
         tool_desc_text = self._build_tool_descriptions_text(ctx)
         system_prompt = get_prompt("react.orchestrator", tool_descriptions=tool_desc_text)
 
@@ -235,6 +298,10 @@ class WorkflowExecutor(BaseModeExecutor):
         max_iterations = 3
 
         for iteration in range(max_iterations):
+            if tool_calls_made >= max_tool_calls:
+                logger.warning(f"Tool call limit reached: {tool_calls_made}/{max_tool_calls}")
+                break
+
             if len(all_messages) > 10:
                 all_messages = [all_messages[0]] + all_messages[-8:]
 
@@ -279,6 +346,10 @@ class WorkflowExecutor(BaseModeExecutor):
                 collected_context += f"\n\n## 思考\n{content_text[:500]}"
 
             for tool_call in tool_calls:
+                if tool_calls_made >= max_tool_calls:
+                    logger.warning(f"Tool call limit reached during tool_calls processing")
+                    break
+
                 func_info = tool_call.get("function", {})
                 call_name = func_info.get("name", "")
                 arguments_str = func_info.get("arguments", "{}")
@@ -297,10 +368,10 @@ class WorkflowExecutor(BaseModeExecutor):
                 tool_result = await self._execute_tool_or_agent(ctx, call_name, arguments)
 
                 tool_call_history.append(call_name)
-                if len(tool_call_history) >= 3:
-                    recent = tool_call_history[-3:]
+                if len(tool_call_history) >= repetition_limit:
+                    recent = tool_call_history[-repetition_limit:]
                     if len(set(recent)) == 1:
-                        logger.warning(f"ReAct loop detected: {call_name} called 3 times in a row, forcing stop")
+                        logger.warning(f"ReAct loop detected: {call_name} called {repetition_limit} times in a row, forcing stop")
                         collected_context += f"\n\n## {call_name} 已完成（检测到重复调用，自动终止）"
                         break
 
@@ -428,7 +499,11 @@ class WorkflowExecutor(BaseModeExecutor):
         if ctx.tools:
             tool_input = ToolInput(params=llm_params)
             tool_output = await ctx.tools.execute("llm", tool_input)
-            return tool_output.result.get("content", "") if tool_output.result else ""
+            content = tool_output.result.get("content", "") if tool_output.result else ""
+            error = tool_output.result.get("error", "") if tool_output.result else ""
+            if not content and error:
+                logger.warning(f"LLM call returned empty content, error: {error[:200]}")
+            return content
         else:
             from flowforge.tools.llm_client import LLMClient
             llm = LLMClient(event_bus=ctx.event_bus)
@@ -468,3 +543,13 @@ class WorkflowExecutor(BaseModeExecutor):
                 raise result
             results[item.get("output", item["name"])] = result
         return results
+
+    async def _save_checkpoint(self, ctx, state):
+        if hasattr(ctx, 'checkpoint') and ctx.checkpoint:
+            ctx.checkpoint.save(ctx.task_id, "auto", state)
+
+    def _render_template(self, text: str, context_data: dict) -> str:
+        def replace_var(match):
+            key = match.group(1)
+            return str(context_data.get(key, match.group(0)))
+        return re.sub(r'\{\{(\w+)\}\}', replace_var, text)
