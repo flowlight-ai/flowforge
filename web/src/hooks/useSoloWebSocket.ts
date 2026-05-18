@@ -62,9 +62,13 @@ function clearState(brand: string) {
 function eventToEntry(event: SoloWSEvent): StreamEntry {
   const typeMap: Record<string, StreamEntryType> = {
     "solo.stage.enter": "stage",
+    "solo.stage.exit": "stage",
+    "solo.tool.start": "tool-call",
     "solo.tool.end": "tool-call",
+    "solo.llm.start": "stage",
     "solo.llm.reasoning": "thinking",
     "solo.llm.stream": "llm-stream",
+    "solo.llm.end": "stage",
     "solo.step.intermediate": "intermediate",
     "solo.draft.update": "draft-update",
     "solo.review.ready": "review",
@@ -124,6 +128,9 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
   );
   const [intent, setIntent] = useState(
     restored.intent || ""
+  );
+  const [interactionMode, setInteractionMode] = useState<"normal" | "solo" | "auto">(
+    restored.interactionMode || "solo"
   );
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -215,10 +222,20 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
           );
           break;
         case "solo.draft.update":
-          appendDraft(
-            event.payload.content || "",
-            event.payload.is_partial ?? true
-          );
+          if (event.payload.is_partial === false) {
+            draftBuffer.current = event.payload.content || "";
+            const content = draftBuffer.current;
+            editorContentRef.current = content;
+            setEditorContent(content);
+            setDraftContent(content);
+            saveState(brand, { draftContent: content, editorContent: content });
+            optionsRef.current?.onDraftUpdate?.(content, false);
+          } else {
+            appendDraft(
+              event.payload.content || "",
+              true
+            );
+          }
           break;
         case "solo.review.ready":
           setPhase("waiting_review");
@@ -366,7 +383,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
           body: JSON.stringify({
             intent: taskIntent,
             mode: "solo",
-            interaction_mode: "solo",
+            interaction_mode: interactionMode,
             ...extra,
           }),
         });
@@ -414,6 +431,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     setStartTime(null);
     setPersona("");
     setIntent("");
+    setInteractionMode("solo");
     lastSeq.current = -1;
   }, [brand]);
 
@@ -484,6 +502,8 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     startTime,
     persona,
     intent,
+    interactionMode,
+    setInteractionMode,
     createTask,
     resetState,
     restoreTask,

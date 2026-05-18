@@ -27,6 +27,7 @@ class EventBusSoloAdapter:
 
     EVENT_MAP = {
         "workflow.step.start": "solo.stage.enter",
+        "workflow.step.complete": "solo.stage.exit",
         "mode.enter": "solo.stage.enter",
         "tool.start": "solo.tool.start",
         "tool.end": "solo.tool.end",
@@ -43,6 +44,16 @@ class EventBusSoloAdapter:
         "task.completed": "solo.task.completed",
         "task.error": "solo.task.error",
         "token.stats": "solo.token.stats",
+        "tool_chain.iteration": "solo.stage.enter",
+        "tool_chain.tool_call": "solo.tool.start",
+        "tool_chain.tool_result": "solo.tool.end",
+        "tool_chain.complete": "solo.stage.exit",
+        "react.iteration": "solo.stage.enter",
+        "react.thought": "solo.llm.reasoning",
+        "react.action": "solo.tool.start",
+        "react.observation": "solo.tool.end",
+        "react.final": "solo.stage.exit",
+        "react.loop_detected": "solo.task.error",
     }
 
     def __init__(self, event_bus: EventBus, solo_manager):

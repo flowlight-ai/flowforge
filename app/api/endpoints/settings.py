@@ -66,6 +66,14 @@ async def get_secret(key: str):
 @router.post("/secrets")
 async def create_or_update_secret(body: SecretInput):
     store = get_secret_store()
+    if not body.value and store.has(body.key):
+        return _make_response({
+            "key": body.key,
+            "category": body.category,
+            "description": body.description,
+            "configured": bool(store.resolve(body.key)),
+            "skipped": True,
+        })
     store.set(body.key, body.value, body.category, body.description)
     return _make_response({
         "key": body.key,
@@ -127,11 +135,13 @@ async def get_providers_with_key_status():
     for name, pcfg in providers.items():
         api_key_env = pcfg.get("api_key_env", "")
         resolved = store.resolve(api_key_env) if api_key_env else ""
+        api_key_default = pcfg.get("api_key_default", "")
+        key_configured = bool(resolved) or bool(api_key_default)
         result.append({
             "name": name,
             "base_url": pcfg.get("base_url", ""),
             "api_key_env": api_key_env,
-            "key_configured": bool(resolved),
+            "key_configured": key_configured,
             "key_masked": resolved[:3] + "****" + resolved[-4:] if resolved and len(resolved) > 8 else ("****" if resolved else ""),
         })
     return _make_response({"providers": result, "total": len(result)})

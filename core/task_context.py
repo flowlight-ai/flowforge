@@ -28,7 +28,7 @@ class TaskContext:
         tools: Tool registry instance available to the task.
         agents: Agent registry instance available to the task.
         mode: The execution mode name (e.g. ``"react"``, ``"workflow"``).
-        interaction_mode: Interaction style (``"standard"`` or ``"solo"``).
+        interaction_mode: Interaction style (``"normal"``, ``"solo"``, or ``"auto"``).
         checkpoint: Checkpoint manager for persistence and recovery.
         event_bus: Event bus for emitting task lifecycle events.
         memory: Memory manager for long-term recall.
@@ -55,7 +55,7 @@ class TaskContext:
         self.tools = kwargs.pop('tools', None)
         self.agents = kwargs.pop('agents', None)
         self.mode = kwargs.pop('mode', None)
-        self.interaction_mode = kwargs.pop('interaction_mode', 'standard')
+        self.interaction_mode = kwargs.pop('interaction_mode', 'solo')
         self.checkpoint = kwargs.pop('checkpoint', None)
         self.event_bus = kwargs.pop('event_bus', None)
         self.memory = kwargs.pop('memory', None)

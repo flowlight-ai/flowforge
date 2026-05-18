@@ -3,7 +3,9 @@ from flowforge.app.api.endpoints import (
     tasks, modes, admin, dashboard, review, schedules,
     plugins, system, agents, workflows, auth, logs,
     admin_models, settings,
+    prompts, memory,
 )
+from flowforge.app.api.endpoints.graph import router as graph_router
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(tasks.router)
@@ -20,3 +22,6 @@ router.include_router(workflows.router)
 router.include_router(auth.router)
 router.include_router(logs.router)
 router.include_router(settings.router)
+router.include_router(graph_router)
+router.include_router(prompts.router)
+router.include_router(memory.router)

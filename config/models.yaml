@@ -1,7 +1,7 @@
 active_providers:
 - openrouter
-- webproxy
 - arkcode
+- webproxy
 providers:
   openrouter:
     base_url: https://openrouter.ai/api/v1
@@ -154,5 +154,4 @@ assignments:
   default:
     primary: openrouter/baidu/cobuddy:free
     fallbacks:
-    - openrouter/z-ai/glm-4.5-air:free
     - tencent/hunyuan-lite

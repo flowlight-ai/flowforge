@@ -9,7 +9,11 @@ License: MIT
 
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from flowforge.core.task_context import TaskContext
+    from flowforge.core.tool_chain_executor import ToolChainExecutor
 
 
 class AgentInput(BaseModel):
@@ -80,6 +84,63 @@ class BaseAgent(ABC):
             An AgentOutput.
         """
         return await self.execute(input)
+
+    async def execute_with_tool_chain(
+        self,
+        input: AgentInput,
+        context: 'TaskContext',
+        tool_chain_executor: 'ToolChainExecutor',
+        tools: Optional[List[str]] = None,
+        system_prompt: Optional[str] = None,
+    ) -> AgentOutput:
+        prompt = system_prompt
+        if not prompt:
+            prompt = self.description or f"You are the {self.name} agent."
+            if tools is None and context.tools:
+                tool_names = [t for t in context.tools.list_tools() if t != "llm"][:5]
+            elif tools:
+                tool_names = tools
+            else:
+                tool_names = []
+            if tool_names:
+                prompt += "\n\nYou have access to the following tools: " + ", ".join(tool_names)
+                prompt += ". Use them as needed. IMPORTANT: Give your final answer directly, do not loop."
+
+        user_content = input.params.get("task", input.params.get("intent", ""))
+        if not user_content:
+            user_content = str(input.params)[:2000]
+
+        messages = [{"role": "user", "content": user_content}]
+
+        model_hint = context.metadata.get("model", "auto") if context.metadata else "auto"
+
+        chain_result = await tool_chain_executor.execute(
+            task_id=context.task_id,
+            messages=messages,
+            tools=tools[:5] if tools else None,
+            system_prompt=prompt,
+            model=model_hint,
+            persona=context.persona or "default",
+            agent_name=self.name,
+        )
+
+        result = {
+            "content": chain_result.get("content", ""),
+            "provider": chain_result.get("provider", ""),
+            "model": chain_result.get("model", ""),
+        }
+
+        metadata = {
+            "iterations": chain_result.get("iterations", 0),
+            "total_tokens": chain_result.get("total_tokens", 0),
+            "tool_calls_made": len(chain_result.get("execution_trace", [])),
+        }
+
+        state_updates: Dict[str, Any] = {}
+        if chain_result.get("execution_trace"):
+            state_updates["tool_execution_trace"] = chain_result["execution_trace"]
+
+        return AgentOutput(result=result, metadata=metadata, state_updates=state_updates)
 
     def validate_input(self, input: AgentInput) -> bool:
         """Validate the input before execution.

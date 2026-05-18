@@ -1,10 +1,17 @@
 import sys
 import platform
+import yaml
 from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter
 from flowforge.core.tracing import get_trace_id
 
 router = APIRouter(prefix="/system", tags=["system"])
+
+_WORKFLOW_DIRS = [
+    Path(__file__).parent.parent.parent.parent / "config" / "workflows",
+    Path(__file__).parent.parent.parent.parent / "workflows",
+]
 
 _psutil_available = False
 try:
@@ -99,7 +106,7 @@ async def list_tools():
         tools = executor.tool_registry.list_tools()
         result = []
         for name in tools:
-            tool = executor.tool_registry.get(name)
+            tool = executor.tool_registry.get_tool(name)
             result.append({
                 "name": name,
                 "description": getattr(tool, "description", "") or "",
@@ -118,8 +125,134 @@ async def list_memory():
         executor = await get_executor()
         stores = []
         if hasattr(executor, "memory_manager"):
-            for name in getattr(executor.memory_manager, "list_stores", lambda: [])():
+            for name in executor.memory_manager.list_stores():
                 stores.append({"name": name, "description": "Memory store", "enabled": True, "type": "sqlite"})
         return {"memory": stores}
     except Exception:
         return {"memory": []}
+
+
+def _load_workflow_steps_for_graph() -> list:
+    seen_names: set = set()
+    workflows = []
+    for wf_dir in _WORKFLOW_DIRS:
+        if not wf_dir.exists():
+            continue
+        for f in sorted(wf_dir.glob("*.yaml")):
+            try:
+                with open(f, "r", encoding="utf-8") as fh:
+                    data = yaml.safe_load(fh) or {}
+                name = data.get("name", f.stem)
+                if name in seen_names:
+                    continue
+                seen_names.add(name)
+                steps = []
+                for s in data.get("steps", []):
+                    if s.get("parallel_group"):
+                        for item in s["parallel_group"]:
+                            steps.append({
+                                "name": item.get("name", item.get("id", "")),
+                                "agent": item.get("agent", ""),
+                                "mode": item.get("mode", ""),
+                            })
+                    else:
+                        steps.append({
+                            "name": s.get("name", s.get("id", "")),
+                            "agent": s.get("agent", ""),
+                            "mode": s.get("mode", ""),
+                            "human": s.get("human", False),
+                        })
+                workflows.append({
+                    "name": name,
+                    "display_name": data.get("display_name", name),
+                    "description": data.get("description", ""),
+                    "icon": data.get("icon", ""),
+                    "category": data.get("category", ""),
+                    "steps": steps,
+                })
+            except Exception:
+                pass
+    return workflows
+
+
+@router.get("/dependency-graph")
+async def get_dependency_graph():
+    nodes = []
+    edges = []
+    node_ids = set()
+
+    def add_node(nid: str, ntype: str, label: str, data: dict):
+        if nid not in node_ids:
+            node_ids.add(nid)
+            nodes.append({"id": nid, "type": ntype, "label": label, "data": data})
+
+    def add_edge(source: str, target: str, label: str):
+        edge_key = (source, target, label)
+        if source in node_ids and target in node_ids and edge_key not in {(e["source"], e["target"], e["label"]) for e in edges}:
+            edges.append({"source": source, "target": target, "label": label})
+
+    try:
+        from flowforge.app.deps import get_executor
+        executor = await get_executor()
+
+        for name in executor.agent_registry.list_agents():
+            agent = executor.agent_registry.get(name)
+            desc = getattr(agent, "description", "") or ""
+            mode = getattr(agent, "default_mode", None)
+            add_node(f"agent:{name}", "agent", name, {"description": desc, "default_mode": mode})
+            if mode:
+                add_node(f"mode:{mode}", "mode", mode, {"description": ""})
+                add_edge(f"agent:{name}", f"mode:{mode}", "default_mode")
+
+        for name in executor.mode_registry.list_modes():
+            mode = executor.mode_registry.get(name)
+            desc = getattr(mode, "description", "") or ""
+            caps = getattr(mode, "capabilities", []) or []
+            add_node(f"mode:{name}", "mode", name, {"description": desc, "capabilities": caps})
+
+        for name in executor.tool_registry.list_tools():
+            tool = executor.tool_registry.get_tool(name)
+            desc = getattr(tool, "description", "") or ""
+            cat = getattr(tool, "category", None)
+            add_node(f"tool:{name}", "tool", name, {"description": desc, "category": cat})
+
+        if hasattr(executor, "memory_manager") and executor.memory_manager:
+            for name in executor.memory_manager.list_stores():
+                add_node(f"memory:{name}", "memory", name, {"type": "sqlite"})
+
+        for wf in _load_workflow_steps_for_graph():
+            wf_name = wf["name"]
+            add_node(f"workflow:{wf_name}", "workflow", wf["display_name"] or wf_name, {
+                "description": wf["description"],
+                "icon": wf["icon"],
+                "category": wf["category"],
+                "steps": [s["name"] for s in wf["steps"]],
+            })
+            for step in wf["steps"]:
+                agent_name = step.get("agent", "")
+                if agent_name:
+                    add_edge(f"workflow:{wf_name}", f"agent:{agent_name}", "uses")
+                mode_name = step.get("mode", "")
+                if mode_name:
+                    add_node(f"mode:{mode_name}", "mode", mode_name, {"description": ""})
+                    add_edge(f"workflow:{wf_name}", f"mode:{mode_name}", "runs_in")
+
+        for name in executor.agent_registry.list_agents():
+            agent = executor.agent_registry.get(name)
+            tool_names = getattr(agent, "tool_names", None)
+            if tool_names:
+                for tn in tool_names:
+                    add_edge(f"agent:{name}", f"tool:{tn}", "calls")
+
+        tool_memory_map = {
+            "cache": "working",
+            "helixrag_search": "semantic",
+        }
+        for tool_name, mem_name in tool_memory_map.items():
+            if f"tool:{tool_name}" in node_ids and f"memory:{mem_name}" in node_ids:
+                add_edge(f"tool:{tool_name}", f"memory:{mem_name}", "uses")
+
+    except Exception:
+        pass
+
+    return _make_response({"nodes": nodes, "edges": edges})

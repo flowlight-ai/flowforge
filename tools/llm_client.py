@@ -96,6 +96,8 @@ ERROR_COOLDOWNS = {
     "unknown": 180,
 }
 
+MAX_CANDIDATES = 3
+
 
 def classify_error(error_msg: str) -> str:
     msg = error_msg.lower()
@@ -126,7 +128,7 @@ def build_cross_fallback_chain(
     3. Filter out models in cooldown
     4. Webproxy models go last (as fallback)
     """
-    provider_order = ["openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local", "webproxy"]
+    provider_order = ["webproxy", "openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local"]
     grouped: Dict[str, List[str]] = {}
     for provider in provider_order:
         models = available_models.get(provider, [])
@@ -182,6 +184,7 @@ class LLMClient(BaseTool):
             "stream": {"type": "boolean", "default": False},
             "persona": {"type": "string", "description": "Persona identifier for model routing"},
             "agent_name": {"type": "string", "description": "Agent name for model routing"},
+            "tools": {"type": "array", "description": "OpenAI function calling tools schema"},
         },
     }
 
@@ -278,6 +281,7 @@ class LLMClient(BaseTool):
         agent_name = input.params.get("agent_name")
         stream = input.params.get("stream", False)
         task_id = input.params.get("task_id", "unknown")
+        tools = input.params.get("tools")
 
         if model:
             if "/" not in model:
@@ -291,6 +295,10 @@ class LLMClient(BaseTool):
 
         if not candidates:
             candidates = build_cross_fallback_chain(self._available_models, self._health_status)
+
+        if len(candidates) > MAX_CANDIDATES:
+            logger.info(f"Candidate chain truncated: {len(candidates)} → {MAX_CANDIDATES}")
+            candidates = candidates[:MAX_CANDIDATES]
 
         logger.info(f"LLM candidate chain ({len(candidates)}): {candidates[:5]}...")
 
@@ -326,6 +334,8 @@ class LLMClient(BaseTool):
                 "temperature": temperature, "max_tokens": max_tokens,
                 "stream": stream,
             }
+            if tools:
+                payload["tools"] = tools
             url = base_url.rstrip("/") + "/chat/completions"
 
             self._emit_event(task_id, "llm.start", {
@@ -339,16 +349,26 @@ class LLMClient(BaseTool):
 
             start = time.time()
             try:
+                used_stream = stream
                 if stream:
                     content = await self._stream_call(url, headers, payload, task_id, agent_name, provider, model_id)
+                    if not content or (isinstance(content, str) and not content.strip()):
+                        logger.info(f"Stream returned empty for {provider}/{model_id}, falling back to non-stream")
+                        payload_fb = {**payload, "stream": False}
+                        content = await self._normal_call(url, headers, payload_fb)
+                        used_stream = False
                 else:
                     content = await self._normal_call(url, headers, payload)
 
                 duration = time.time() - start
                 tokens = 0
-                if not stream and isinstance(content, dict):
+                tool_calls_result = None
+                raw_message = None
+                if not used_stream and isinstance(content, dict):
                     tokens = content.get("tokens", 0)
                     content_text = content["content"]
+                    tool_calls_result = content.get("tool_calls")
+                    raw_message = content.get("raw_message")
                 else:
                     content_text = content
 
@@ -362,12 +382,18 @@ class LLMClient(BaseTool):
                     "full_response": content_text[:500] if isinstance(content_text, str) else str(content_text)[:500],
                     "tokens": tokens,
                     "duration_ms": int(duration * 1000),
+                    "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0,
                 })
 
-                return ToolOutput(result={
+                result = {
                     "content": content_text if isinstance(content_text, str) else content_text,
                     "provider": provider, "model": model_id, "tokens": tokens,
-                })
+                }
+                if tool_calls_result:
+                    result["tool_calls"] = tool_calls_result
+                if raw_message:
+                    result["raw_message"] = raw_message
+                return ToolOutput(result=result)
             except Exception as e:
                 duration = time.time() - start
                 error_str = str(e)
@@ -388,13 +414,15 @@ class LLMClient(BaseTool):
         return ToolOutput(result={"content": "", "error": str(last_error)}, error=str(last_error))
 
     async def _normal_call(self, url: str, headers: dict, payload: dict) -> dict:
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(url, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()
-            content = data["choices"][0]["message"]["content"]
+            message = data["choices"][0]["message"]
+            content = message.get("content") or ""
             tokens = data.get("usage", {}).get("total_tokens", 0)
-            return {"content": content, "tokens": tokens}
+            tool_calls = message.get("tool_calls")
+            return {"content": content, "tokens": tokens, "tool_calls": tool_calls, "raw_message": message}
 
     async def _stream_call(self, url: str, headers: dict, payload: dict,
                            task_id: str, agent_name: str, provider: str, model_id: str) -> str:
@@ -438,6 +466,9 @@ class LLMClient(BaseTool):
 
         if not candidates:
             candidates = build_cross_fallback_chain(self._available_models, self._health_status)
+
+        if len(candidates) > MAX_CANDIDATES:
+            candidates = candidates[:MAX_CANDIDATES]
 
         for candidate in candidates:
             if not candidate or "/" not in candidate:

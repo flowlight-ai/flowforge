@@ -21,6 +21,9 @@ from flowforge.tools.wechat_publisher import WeChatPublisherTool
 from flowforge.tools.pexels_image import PexelsImageTool
 from flowforge.tools.sendgrid_mail import SendGridMailTool
 from flowforge.tools.webhook import WebhookTool
+from flowforge.tools.shell_command import ShellCommandTool
+from flowforge.tools.workspace_file import WorkspaceFileTool
+from flowforge.tools.local_publish import LocalPublishTool
 from flowforge.events.event_bus import EventBus
 from flowforge.modes.registry import ModeRegistry
 from flowforge.modes.workflow import WorkflowExecutor
@@ -46,11 +49,15 @@ from flowforge.agents.headline_optimizer import HeadlineOptimizerAgent
 from flowforge.agents.content_repurposer import ContentRepurposerAgent
 from flowforge.agents.image_research import ImageResearchAgent
 from flowforge.agents.multilingual import MultilingualAgent
+from flowforge.agents.web_search_agent import WebSearchAgent
+from flowforge.agents.code_writer_agent import CodeWriterAgent
+from flowforge.agents.research_agent import ResearchAgent
 from flowforge.app.api.router import router
 from flowforge.app.deps import (
     set_executor_instance, set_llm_client_instance,
     set_model_service_instance,
     set_scheduler_instance, set_plugin_manager_instance,
+    set_tool_chain_executor_instance,
 )
 from flowforge.core import metrics
 from flowforge.scheduler.scheduler import TaskScheduler
@@ -96,6 +103,9 @@ tool_registry.register(WebSearchTool())
 tool_registry.register(PythonExecutorTool())
 tool_registry.register(FileReadWriteTool())
 tool_registry.register(CacheTool())
+tool_registry.register(ShellCommandTool())
+tool_registry.register(WorkspaceFileTool())
+tool_registry.register(LocalPublishTool())
 
 _optional_tools = [
     (TavilySearchTool, "TAVILY_API_KEY"),
@@ -115,6 +125,10 @@ for tool_cls, env_key in _optional_tools:
         logger.debug(f"Skip tool {tool_cls.__name__}: {e}")
 
 set_llm_client_instance(llm_client)
+
+from flowforge.core.tool_chain_executor import ToolChainExecutor
+tool_chain_executor = ToolChainExecutor(llm_client, tool_registry, event_bus=event_bus)
+set_tool_chain_executor_instance(tool_chain_executor)
 
 model_service = ModelService()
 set_model_service_instance(model_service)
@@ -141,6 +155,9 @@ agent_registry.register_factory("headline_optimizer", lambda: HeadlineOptimizerA
 agent_registry.register_factory("content_repurposer", lambda: ContentRepurposerAgent())
 agent_registry.register_factory("image_research", lambda: ImageResearchAgent())
 agent_registry.register_factory("multilingual", lambda: MultilingualAgent())
+agent_registry.register_factory("web_search_agent", lambda: WebSearchAgent())
+agent_registry.register_factory("code_writer_agent", lambda: CodeWriterAgent())
+agent_registry.register_factory("research_agent", lambda: ResearchAgent())
 
 memory_manager = MemoryManager({"db_url": system_config.db_url})
 
@@ -158,6 +175,17 @@ except ImportError:
 
 scheduler = TaskScheduler(executor=_executor_instance)
 set_scheduler_instance(scheduler)
+
+from flowforge.app.api.endpoints.graph import init_graph_api
+init_graph_api(agent_registry, mode_registry, tool_registry)
+
+from flowforge.app.api.endpoints.prompts import init_prompts_api
+from flowforge.app.api.endpoints.memory import init_memory_api
+from flowforge.core.config import ConfigLoader
+
+_config_dir = str(ConfigLoader().config_dir)
+init_prompts_api(_config_dir)
+init_memory_api(memory_manager)
 
 plugin_manager = PluginManager()
 set_plugin_manager_instance(plugin_manager)

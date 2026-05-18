@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
-from flowforge.app.deps import get_executor, get_llm_client
+from flowforge.app.deps import get_executor, get_llm_client, get_model_service
 from flowforge.core.tracing import get_trace_id, get_logger
 from flowforge.core.config import system_config, ConfigLoader
 
@@ -89,16 +89,10 @@ async def force_refresh_health(llm_client=Depends(get_llm_client)):
 
 
 @router.post("/models/force-update")
-async def force_update_models():
-    """Force update all model health status and rebuild fallback chains.
-
-    Performs a full health check on all models, then rebuilds fallback
-    chains to only include available models. This is the primary endpoint
-    for users to manually trigger model status updates.
-    """
+async def force_update_models(svc=Depends(get_model_service)):
+    if svc is None:
+        return _make_error("SERVICE_UNAVAILABLE", "ModelService not initialized")
     try:
-        from flowforge.tools.llm.model_service import get_model_service
-        svc = get_model_service()
         result = await svc.force_update_models()
         return _make_response(result)
     except Exception as e:
@@ -106,11 +100,10 @@ async def force_update_models():
 
 
 @router.get("/models/available")
-async def get_available_models():
-    """Get list of currently available models for Solo chat selection."""
+async def get_available_models(svc=Depends(get_model_service)):
+    if svc is None:
+        return _make_error("SERVICE_UNAVAILABLE", "ModelService not initialized")
     try:
-        from flowforge.tools.llm.model_service import get_model_service
-        svc = get_model_service()
         all_models = svc.get_models()
         available = [m for m in all_models if m.get("health_status") in ("available", "unknown")]
         chain = svc.get_available_fallback_chain()
@@ -126,17 +119,38 @@ async def get_available_models():
 
 
 @router.put("/models/active-providers")
-async def set_active_providers(payload: dict):
-    """Update the active providers whitelist."""
+async def set_active_providers(payload: dict, svc=Depends(get_model_service)):
+    if svc is None:
+        return _make_error("SERVICE_UNAVAILABLE", "ModelService not initialized")
     try:
-        from flowforge.tools.llm.model_service import get_model_service
-        svc = get_model_service()
         new_providers = payload.get("active_providers", [])
         svc.active_providers = new_providers
         svc._save_config()
         return _make_response({
             "active_providers": svc.active_providers,
             "message": "Active providers updated",
+        })
+    except Exception as e:
+        return _make_error("INTERNAL_ERROR", str(e))
+
+
+@router.get("/models/all-providers")
+async def get_all_providers(svc=Depends(get_model_service)):
+    if svc is None:
+        return _make_error("SERVICE_UNAVAILABLE", "ModelService not initialized")
+    try:
+        all_providers = []
+        for name, pcfg in svc.providers.items():
+            all_providers.append({
+                "name": name,
+                "base_url": pcfg.get("base_url", ""),
+                "api_key_env": pcfg.get("api_key_env", ""),
+                "active": name in svc.active_providers,
+            })
+        return _make_response({
+            "providers": all_providers,
+            "active_providers": svc.active_providers,
+            "total": len(all_providers),
         })
     except Exception as e:
         return _make_error("INTERNAL_ERROR", str(e))

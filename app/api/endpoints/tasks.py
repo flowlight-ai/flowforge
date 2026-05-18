@@ -37,10 +37,12 @@ async def create_task(payload: dict, executor=Depends(get_executor)):
     if intent and not input_data:
         input_data = {"task": intent}
     mode = payload.get("mode")
-    interaction_mode = payload.get("interaction_mode", "standard")
+    interaction_mode = payload.get("interaction_mode", "solo")
+    valid_modes = {"normal", "solo", "auto"}
+    if interaction_mode not in valid_modes:
+        interaction_mode = "solo"
     if mode == "solo":
         mode = "workflow"
-        interaction_mode = "solo"
     metadata = payload.get("metadata", {})
 
     context = TaskContext(
@@ -48,7 +50,7 @@ async def create_task(payload: dict, executor=Depends(get_executor)):
         metadata=metadata, mode=mode, interaction_mode=interaction_mode,
     )
 
-    if interaction_mode == "solo":
+    if interaction_mode in ("solo", "auto", "normal"):
         try:
             from flowforge.core.workspace import get_workspace_manager
             ws = get_workspace_manager()

@@ -25,6 +25,8 @@ from flowforge.core.tracing import get_logger
 
 logger = get_logger("executor")
 
+TASK_TIMEOUT_SECONDS = 120
+
 
 class HybridExecutor:
     """Central task execution engine supporting multiple reasoning modes.
@@ -148,7 +150,10 @@ class HybridExecutor:
             self.event_bus.emit(context.task_id, "task.start", {"mode": mode})
             self.event_bus.emit(context.task_id, "mode.enter", {"mode": mode})
             logger.info("Task started", task_id=context.task_id, mode=mode, persona=persona)
-            result = await executor.run(context)
+            result = await asyncio.wait_for(
+                executor.run(context),
+                timeout=TASK_TIMEOUT_SECONDS,
+            )
             duration = time.time() - start
             self.event_bus.emit(context.task_id, "task.completed", {"result": str(result)[:500]})
             logger.info("Task completed", task_id=context.task_id, mode=mode, persona=persona, duration=f"{duration:.2f}s")
@@ -156,6 +161,13 @@ class HybridExecutor:
                 ff_metrics.record_task_completed(mode, persona, duration)
                 self.state_manager.update_state(context.task_id, {"status": "completed", "result": str(result)[:500]})
             return result
+        except asyncio.TimeoutError:
+            logger.error("Task timed out", task_id=context.task_id, mode=mode, timeout=TASK_TIMEOUT_SECONDS)
+            self.event_bus.emit(context.task_id, "task.error", {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})
+            if not _is_substep:
+                ff_metrics.record_task_failed(mode_hint or "auto", persona)
+                self.state_manager.update_state(context.task_id, {"status": "failed", "error": "Task timed out"})
+            return {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s", "response": "任务执行超时，请稍后重试"}
         except Exception as e:
             self.event_bus.emit(context.task_id, "task.error", {"error": str(e)})
             logger.error("Task failed", task_id=context.task_id, mode=mode, persona=persona, error=str(e))

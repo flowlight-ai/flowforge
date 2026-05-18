@@ -4,12 +4,14 @@ from flowforge.tools.llm_client import LLMClient
 from flowforge.tools.llm.model_service import ModelService
 from flowforge.scheduler.scheduler import TaskScheduler
 from flowforge.core.plugin_manager import PluginManager
+from flowforge.core.tool_chain_executor import ToolChainExecutor
 
 _executor_instance: HybridExecutor = None
 _llm_client_instance: LLMClient = None
 _model_service_instance: ModelService = None
 _scheduler_instance: TaskScheduler = None
 _plugin_manager_instance: PluginManager = None
+_tool_chain_executor_instance: ToolChainExecutor = None
 
 
 def set_executor_instance(executor: HybridExecutor):
@@ -35,6 +37,11 @@ def set_scheduler_instance(scheduler: TaskScheduler):
 def set_plugin_manager_instance(plugin_manager: PluginManager):
     global _plugin_manager_instance
     _plugin_manager_instance = plugin_manager
+
+
+def set_tool_chain_executor_instance(tool_chain_executor: ToolChainExecutor):
+    global _tool_chain_executor_instance
+    _tool_chain_executor_instance = tool_chain_executor
 
 
 async def get_executor() -> HybridExecutor:
@@ -66,4 +73,14 @@ async def get_scheduler() -> TaskScheduler:
 async def get_plugin_manager() -> PluginManager:
     if _plugin_manager_instance:
         return _plugin_manager_instance
+    return None
+
+
+def get_tool_chain_executor() -> Optional[ToolChainExecutor]:
+    if _tool_chain_executor_instance:
+        return _tool_chain_executor_instance
+    if _executor_instance and _executor_instance.tool_registry:
+        llm_client = _executor_instance.tool_registry._tools.get("llm")
+        if llm_client:
+            return ToolChainExecutor(llm_client, _executor_instance.tool_registry)
     return None
