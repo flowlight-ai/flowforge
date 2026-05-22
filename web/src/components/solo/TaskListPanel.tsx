@@ -11,6 +11,23 @@ import {
   saveDeletedIds,
 } from "./solo-utils";
 
+const STALE_TASK_MS = 10 * 60 * 1000;
+
+function fixStalePhase(phase: SoloTaskPhase, timestamp: number): SoloTaskPhase {
+  if ((phase === "running" || phase === "creating" || phase === "connecting" || phase === "waiting_review" || phase === "paused") && Date.now() - timestamp > STALE_TASK_MS) {
+    return "interrupted";
+  }
+  return phase;
+}
+
+function serverStatusToPhase(status: string): SoloTaskPhase {
+  if (status === "completed") return "completed";
+  if (status === "error" || status === "failed") return "error";
+  if (status === "interrupted") return "interrupted";
+  if (status === "paused") return "paused";
+  return "running";
+}
+
 export default function TaskListPanel({
   phase, intent, taskId, elapsed, onNewTask, onRestoreChat, onSwitchTask, refreshTrigger,
 }: {
@@ -32,18 +49,26 @@ export default function TaskListPanel({
     fetch("/api/v1/workspace")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        const serverItems: TaskHistoryItem[] = (data?.workspaces || []).map((ws: any) => ({
-          taskId: ws.task_id,
-          persona: ws.persona || "default",
-          intent: ws.intent || ws.task_id,
-          phase: (ws.status === "completed" ? "completed" : ws.status === "error" ? "error" : ws.status === "running" ? "running" : "completed") as SoloTaskPhase,
-          timestamp: ws.created_at ? new Date(ws.created_at).getTime() : Date.now(),
-        }));
+        const serverItems: TaskHistoryItem[] = (data?.workspaces || []).map((ws: any) => {
+          const rawPhase = serverStatusToPhase(ws.status || "completed");
+          const ts = ws.created_at ? new Date(ws.created_at).getTime() : Date.now();
+          return {
+            taskId: ws.task_id,
+            persona: ws.persona || "default",
+            intent: ws.intent || ws.task_id,
+            phase: fixStalePhase(rawPhase, ts),
+            timestamp: ts,
+          };
+        });
         const localItems = loadTaskHistory(brand);
         const merged = new Map<string, TaskHistoryItem>();
         for (const item of [...serverItems, ...localItems]) {
           if (deletedIds.has(item.taskId)) continue;
-          if (!merged.has(item.taskId)) merged.set(item.taskId, item);
+          const fixed = { ...item, phase: fixStalePhase(item.phase, item.timestamp) };
+          const existing = merged.get(item.taskId);
+          if (!existing || fixed.timestamp > existing.timestamp) {
+            merged.set(item.taskId, fixed);
+          }
         }
         const sorted = Array.from(merged.values()).sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
         setHistory(sorted);
@@ -51,7 +76,7 @@ export default function TaskListPanel({
       })
       .catch(() => {
         const brand = config.brandName.toLowerCase();
-        const local = loadTaskHistory(brand).filter((h) => !deletedIdsRef.current.has(h.taskId));
+        const local = loadTaskHistory(brand).filter((h) => !deletedIdsRef.current.has(h.taskId)).map(h => ({ ...h, phase: fixStalePhase(h.phase, h.timestamp) }));
         setHistory(local);
       });
   }, [config.brandName]);
@@ -61,6 +86,11 @@ export default function TaskListPanel({
     deletedIdsRef.current = loadDeletedIds(brand);
     refreshList();
   }, [config.brandName, refreshList, refreshTrigger]);
+
+  useEffect(() => {
+    const interval = setInterval(refreshList, 60_000);
+    return () => clearInterval(interval);
+  }, [refreshList]);
 
   useEffect(() => {
     if (taskId && phase === "running") {
@@ -81,7 +111,7 @@ export default function TaskListPanel({
         setHistory(updated.filter((h) => !deletedIdsRef.current.has(h.taskId)));
       }
     }
-    if (taskId && (phase === "completed" || phase === "error")) {
+    if (taskId && (phase === "completed" || phase === "error" || phase === "interrupted")) {
       const brand = config.brandName.toLowerCase();
       const existing = loadTaskHistory(brand);
       const updated = existing.map((h) => h.taskId === taskId ? { ...h, phase } : h);
@@ -93,6 +123,7 @@ export default function TaskListPanel({
   const phaseLabel: Record<SoloTaskPhase, string> = {
     idle: "就绪", creating: "创建中", connecting: "连接中", running: "执行中",
     paused: "已暂停", waiting_review: "待审核", completed: "已完成", error: "出错", rejected: "已拒绝",
+    interrupted: "已中断",
   };
 
   const handleRename = (tid: string) => {
@@ -127,16 +158,51 @@ export default function TaskListPanel({
     if (p === "completed") return <span className="task-status-check">✓</span>;
     if (p === "error" || p === "rejected") return <span className="task-status-stop">■</span>;
     if (p === "paused") return <span className="task-status-pause">❚❚</span>;
+    if (p === "interrupted") return <span className="task-status-interrupted">⏻</span>;
     return <span className="task-status-dot" />;
   };
 
   const allTasks = useMemo(() => {
-    const tasks = [...history];
+    const tasks = history.map(h => ({ ...h, phase: fixStalePhase(h.phase, h.timestamp) }));
     if (taskId && !tasks.find((t) => t.taskId === taskId)) {
-      tasks.unshift({ taskId, persona: "default", intent: intent || "新任务", phase, timestamp: Date.now() });
+      tasks.unshift({ taskId, persona: "default", intent: intent || "新任务", phase: fixStalePhase(phase, Date.now()), timestamp: Date.now() });
     }
     return tasks;
   }, [history, taskId, intent, phase]);
+
+  const handleTaskClick = useCallback(async (item: TaskHistoryItem) => {
+    if (renaming) return;
+    if (item.taskId === taskId) return;
+    const effectivePhase: SoloTaskPhase = fixStalePhase(item.phase, item.timestamp);
+    onSwitchTask(item.taskId, item.intent, item.persona, effectivePhase);
+    try {
+      const r = await fetch(`/api/v1/workspace/${item.taskId}/messages`);
+      if (r.ok) {
+        const data = await r.json();
+        const rawMsgs = data.messages || [];
+        if (rawMsgs.length > 0) {
+          const restored: ChatMessage[] = rawMsgs.map((m: any, i: number) => {
+            let role: string = m.role;
+            if (role === "assistant") role = "ai";
+            return {
+              id: `restored-${item.taskId}-${i}`,
+              role: role as any,
+              content: m.content || "",
+              timestamp: m.timestamp || new Date().toISOString(),
+              data: m.data || {},
+            };
+          });
+          onRestoreChat(restored);
+        } else {
+          onRestoreChat([]);
+        }
+      } else {
+        onRestoreChat([]);
+      }
+    } catch {
+      onRestoreChat([]);
+    }
+  }, [renaming, taskId, onSwitchTask, onRestoreChat]);
 
   return (
     <div className="solo-task-sidebar">
@@ -150,28 +216,7 @@ export default function TaskListPanel({
         ) : (
           allTasks.map((item) => (
             <div key={item.taskId} className={`task-history-item${item.taskId === taskId ? " active" : ""}`}
-              onClick={async () => {
-                if (renaming) return;
-                if (item.taskId === taskId) return;
-                onSwitchTask(item.taskId, item.intent, item.persona, item.phase);
-                try {
-                  const r = await fetch(`/api/v1/workspace/${item.taskId}/messages`);
-                  if (r.ok) {
-                    const data = await r.json();
-                    if (data.messages?.length > 0) {
-                      const restored: ChatMessage[] = data.messages.map((m: any, i: number) => ({
-                        id: `restored-${item.taskId}-${i}`,
-                        role: m.role === "assistant" ? "ai" : m.role,
-                        content: m.content,
-                        timestamp: m.timestamp || new Date().toISOString(),
-                      }));
-                      onRestoreChat(restored);
-                    } else {
-                      onRestoreChat([]);
-                    }
-                  }
-                } catch {}
-              }}
+              onClick={() => handleTaskClick(item)}
             >
               <div className="task-history-row">
                 <div className="task-history-content">

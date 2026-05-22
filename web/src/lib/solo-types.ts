@@ -56,7 +56,8 @@ export type SoloTaskPhase =
   | "waiting_review"
   | "completed"
   | "error"
-  | "rejected";
+  | "rejected"
+  | "interrupted";
 
 export interface SoloTaskState {
   taskId: string | null;

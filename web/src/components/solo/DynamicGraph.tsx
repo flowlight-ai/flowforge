@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { DynNode, DynEdge } from "./solo-types";
 import { getAgentColor, getAgentInitials, getModeStyle, formatDurationMs } from "./solo-utils";
 
@@ -169,7 +169,7 @@ function DynNodeCard({ node, isCurrent }: { node: DynNode; isCurrent: boolean })
   );
 }
 
-export default function DynamicGraph({ nodes, edges, currentStep }: DynamicGraphProps) {
+export default memo(function DynamicGraph({ nodes, edges, currentStep }: DynamicGraphProps) {
   const hierarchy = useMemo(() => {
     const topLevel: DynNode[] = [];
     const children: Record<string, DynNode[]> = {};
@@ -245,4 +245,4 @@ export default function DynamicGraph({ nodes, edges, currentStep }: DynamicGraph
       `}</style>
     </div>
   );
-}
+});

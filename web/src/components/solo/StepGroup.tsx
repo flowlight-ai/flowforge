@@ -16,7 +16,7 @@ import {
 import LLMCallCard from "./LLMCallCard";
 
 function ToolCallCard({ msg }: { msg: ChatMessage }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const toolName = msg.content || msg.data?.tool_name || "工具";
   const durationMs = msg.data?.duration_ms || null;
   const params = msg.data?.params || msg.data?.input || msg.data?.arguments || null;
@@ -80,7 +80,7 @@ function ToolCallCard({ msg }: { msg: ChatMessage }) {
 }
 
 function ThinkingBlock({ msg }: { msg: ChatMessage }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const agentName = msg.data?.agent_name || "AI";
   const content = msg.content || "";
 
@@ -120,7 +120,7 @@ export default function StepGroup({
   isLastActive: boolean;
   onApprovalAction: (messageId: string, approved: boolean, feedback: string) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(!isLastActive);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     if (isLastActive && group.status === "running") setCollapsed(false);
@@ -216,14 +216,19 @@ export default function StepGroup({
               );
             }
             if (msg.role === "ai" && msg.data?._draft) {
+              const draftAgent = msg.data?._agent_name || "FlowForge Agent";
               return (
                 <div key={msg.id} className="solo-step-entry">
                   <div className="solo-step-entry-connector ok-connector" />
                   <div className="solo-draft-output">
                     <div className="solo-draft-header">
-                      <span className="solo-draft-icon">📝</span>
-                      <span className="solo-draft-label">输出</span>
-                      {msg.data?._agent_name && <span className="solo-draft-agent">{msg.data._agent_name}</span>}
+                      <div className="chat-avatar chat-avatar-ai" style={{ width: 22, height: 22 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2a4 4 0 014 4v1a1 1 0 001 1h1a4 4 0 010 8h-1a1 1 0 00-1 1v1a4 4 0 01-8 0v-1a1 1 0 00-1-1H6a4 4 0 010-8h1a1 1 0 001-1V6a4 4 0 014-4z" />
+                          <circle cx="12" cy="12" r="2" />
+                        </svg>
+                      </div>
+                      <span className="solo-draft-label">{draftAgent}</span>
                     </div>
                     <div className="solo-draft-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
                   </div>

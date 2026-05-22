@@ -30,6 +30,7 @@ export default function ChatInput({
   const [selectedModel, setSelectedModel] = useState<string>("auto");
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [updatingModels, setUpdatingModels] = useState(false);
+  const modelsFetchedRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const config = useShellConfig();
 
@@ -46,6 +47,8 @@ export default function ChatInput({
   }, [text, resizeTextarea]);
 
   const fetchAvailableModels = useCallback(() => {
+    if (modelsFetchedRef.current) return;
+    modelsFetchedRef.current = true;
     fetch("/api/v1/admin/models/available")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -59,14 +62,16 @@ export default function ChatInput({
 
   const handleForceUpdate = useCallback(async () => {
     setUpdatingModels(true);
+    modelsFetchedRef.current = false;
     try {
       await fetch("/api/v1/admin/models/force-update", { method: "POST" });
+      modelsFetchedRef.current = false;
       fetchAvailableModels();
     } catch {}
     setUpdatingModels(false);
   }, [fetchAvailableModels]);
 
-  const isIdle = phase === "idle" || phase === "completed" || phase === "error";
+  const isIdle = phase === "idle" || phase === "completed" || phase === "error" || phase === "rejected" || phase === "interrupted";
   const isWaitingReview = phase === "waiting_review";
   const isRunning = phase === "running" || phase === "paused";
   const isDisabled = phase === "creating" || phase === "connecting";

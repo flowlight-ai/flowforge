@@ -73,8 +73,13 @@ export function formatDurationMs(ms: number | null): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
+const mdCache = new Map<string, string>();
+const MD_CACHE_MAX = 200;
+
 export function renderMarkdown(md: string): string {
   if (!md) return "";
+  const cached = mdCache.get(md);
+  if (cached !== undefined) return cached;
   let html = md;
   const codeBlocks: string[] = [];
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
@@ -106,6 +111,11 @@ export function renderMarkdown(md: string): string {
   for (let i = 0; i < inlineCodes.length; i++) {
     html = html.replace(`%%INLINECODE_${i}%%`, inlineCodes[i]);
   }
+  if (mdCache.size >= MD_CACHE_MAX) {
+    const firstKey = mdCache.keys().next().value;
+    if (firstKey !== undefined) mdCache.delete(firstKey);
+  }
+  mdCache.set(md, html);
   return html;
 }
 
@@ -159,7 +169,7 @@ export function entryToChatMessages(entry: any): ChatMessage[] {
     case "thinking":
       return [{ ...base, role: "ai", content: entry.data.delta_text || "", data: { ...entry.data, _thinking: true } }];
     case "llm-stream":
-      return [{ ...base, role: "ai", content: entry.data.delta_text || "", data: { ...entry.data, _streaming: true, _agent_name: entry.data.agent_name } }];
+      return [{ ...base, role: "ai", content: entry.data.delta_text || "", data: { ...entry.data, _streaming: true, _agent_name: entry.data.agent_name || "FlowForge Agent" } }];
     case "intermediate":
       return [{ ...base, role: "system", content: entry.data.step_name || "中间结果" }];
     case "review":
@@ -168,7 +178,7 @@ export function entryToChatMessages(entry: any): ChatMessage[] {
       return [{ ...base, role: "gate", content: `${entry.data.is_passed ? "✓" : "✗"} ${entry.data.gate_id}` }];
     case "draft-update":
       if (entry.data.content && entry.data.content.length > 0) {
-        return [{ ...base, role: "ai", content: entry.data.content, data: { ...entry.data, _agent_name: entry.data.agent_name || "solo_assistant", _draft: true } }];
+        return [{ ...base, role: "ai", content: entry.data.content, data: { ...entry.data, _agent_name: entry.data.agent_name || "FlowForge Agent", _draft: true } }];
       }
       return [];
     case "system":
@@ -176,8 +186,12 @@ export function entryToChatMessages(entry: any): ChatMessage[] {
       if (entry.data?.published_urls) return [{ ...base, role: "system", content: "✓ 任务完成" }];
       if (entry.data?.result) {
         const resultStr = typeof entry.data.result === "string" ? entry.data.result : JSON.stringify(entry.data.result);
-        if (resultStr && resultStr.length > 10) return [{ ...base, role: "ai", content: resultStr, data: { ...entry.data, _agent_name: "solo_assistant" } }];
+        if (resultStr && resultStr.length > 10) return [{ ...base, role: "ai", content: resultStr, data: { ...entry.data, _agent_name: entry.data.agent_name || "FlowForge Agent" } }];
         return [{ ...base, role: "system", content: "✓ 任务完成" }];
+      }
+      if (entry.data?.full_response) {
+        const fr = typeof entry.data.full_response === "string" ? entry.data.full_response : JSON.stringify(entry.data.full_response);
+        if (fr && fr.length > 10) return [{ ...base, role: "ai", content: fr, data: { ...entry.data, _agent_name: entry.data.agent_name || "FlowForge Agent" } }];
       }
       return [{ ...base, role: "system", content: "✓ 任务完成" }];
     default:
@@ -223,7 +237,7 @@ export function groupMessagesIntoSteps(
   const result: (ChatMessage | StepGroupData)[] = [];
   let currentGroup: StepGroupData | null = null;
   let stepCounter = 0;
-  const isTerminal = (p: SoloTaskPhase): boolean => p === "completed" || p === "error" || p === "rejected";
+  const isTerminal = (p: SoloTaskPhase): boolean => p === "completed" || p === "error" || p === "rejected" || p === "interrupted" || p === "idle";
 
   for (const msg of messages) {
     if (msg.role === "stage") {
@@ -248,9 +262,7 @@ export function groupMessagesIntoSteps(
   }
   if (currentGroup) {
     if (currentGroup.status === "running") {
-      if (phase === "completed") currentGroup.status = "completed";
-      else if (phase === "error") currentGroup.status = "error";
-      else if (phase === "rejected") currentGroup.status = "error";
+      if (isTerminal(phase)) currentGroup.status = phase === "completed" ? "completed" : "error";
     }
     result.push(currentGroup);
   }

@@ -6,7 +6,7 @@ import { AgentAvatar } from "./ChatPrimitives";
 import { renderMarkdown, formatDurationMs } from "./solo-utils";
 
 export default function LLMCallCard({ msg }: { msg: ChatMessage }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const agentName = msg.data?._agent_name || msg.data?.agent_name || "AI";
   const model = msg.data?.model || msg.data?.model_name || "";
   const tokenCount = msg.data?.total_tokens || msg.data?.token_count || 0;
@@ -45,7 +45,7 @@ export default function LLMCallCard({ msg }: { msg: ChatMessage }) {
         <span className="solo-llm-expand-toggle">{expanded ? "▾" : "▸"}</span>
       </div>
       {content && (
-        <div className={`solo-llm-card-body ${expanded ? "expanded" : ""}`}>
+        <div className={`solo-llm-card-body ${expanded ? "expanded" : "collapsed"}`}>
           <div
             className="solo-markdown-bubble"
             dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}

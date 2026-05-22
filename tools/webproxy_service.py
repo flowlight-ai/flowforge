@@ -1,14 +1,18 @@
-"""
-WebProxy Service Manager for FlowForge.
+"""WebProxy Service Manager for FlowForge.
 
 Manages the lifecycle of the hiclaw web proxy service, which wraps web-based
 LLM chat interfaces (Doubao, Kimi, DeepSeek, Qianwen, Yuanbao) as OpenAI-compatible
 APIs using Playwright browser automation.
 
 The proxy service runs as a separate subprocess on port 13000, providing:
+- 1 auto-routing entry: auto (delegates to hiclaw's assignment-based model selection)
+- 1 round-robin entry: web/chat (distributes across all 5 platforms)
 - 5 platform-specific models: doubao-web/seed-2.0, kimi-web/chat, deepseek-web/chat,
   yuanbao-web/chat, qianwen-web/chat
-- 1 round-robin entry: web/chat (distributes across all 5 platforms)
+
+The "auto" model is the recommended default — it leverages hiclaw's full model
+routing intelligence (health checks, fallback chains, API + WebChat hybrid) to
+always pick the best available model. This means unlimited tokens with zero config.
 
 Usage:
     svc = WebProxyService()

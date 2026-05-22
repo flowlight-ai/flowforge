@@ -1,10 +1,10 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, memo } from "react";
 import { StepGroupData } from "./solo-types";
 import { SoloTaskPhase } from "../../lib/solo-types";
 
-export default function StepProgressTimeline({
+export default memo(function StepProgressTimeline({
   stepGroups,
   currentPhase,
 }: {
@@ -19,7 +19,7 @@ export default function StepProgressTimeline({
         {stepGroups.map((sg, idx) => {
           const isLast = idx === stepGroups.length - 1;
           const isActive = isLast && (currentPhase === "running" || currentPhase === "waiting_review" || currentPhase === "paused");
-          const statusClass = sg.status === "completed" ? "completed" : sg.status === "error" ? "error" : isActive ? "active" : "pending";
+          const statusClass = sg.status === "completed" ? "completed" : sg.status === "error" || (isLast && currentPhase === "interrupted") ? "error" : isActive ? "active" : "pending";
 
           return (
             <Fragment key={sg.id}>
@@ -53,4 +53,4 @@ export default function StepProgressTimeline({
       </div>
     </div>
   );
-}
+});

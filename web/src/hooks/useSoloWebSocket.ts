@@ -17,6 +17,7 @@ import { useShellConfig } from "../lib/shell-config";
 
 const MAX_RECONNECT = 10;
 const EDITOR_THROTTLE_MS = 80;
+const TASK_TIMEOUT_MS = 10 * 60 * 1000;
 
 let lastRAF = 0;
 
@@ -24,24 +25,16 @@ function getLSKey(brand: string): string {
   return `${brand}_solo_state`;
 }
 
-function saveState(
-  brand: string,
-  state: Record<string, any>
-) {
+function saveState(brand: string, state: Record<string, any>) {
   if (typeof window === "undefined") return;
   try {
     const existing = loadState(brand);
     const merged = { ...existing, ...state };
-    localStorage.setItem(
-      getLSKey(brand),
-      JSON.stringify(merged)
-    );
+    localStorage.setItem(getLSKey(brand), JSON.stringify(merged));
   } catch {}
 }
 
-function loadState(
-  brand: string
-): Record<string, any> {
+function loadState(brand: string): Record<string, any> {
   if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(getLSKey(brand));
@@ -92,64 +85,56 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
 
   const WS_BASE =
     typeof window !== "undefined"
-      ? config.wsBaseUrl ||
-        `ws://${window.location.hostname}:8000`
+      ? config.wsBaseUrl || `ws://${window.location.hostname}:8000`
       : "ws://localhost:8000";
 
-  const restored =
-    typeof window !== "undefined" ? loadState(brand) : {};
+  const restored = typeof window !== "undefined" ? loadState(brand) : {};
 
-  const [phase, setPhase] = useState<SoloTaskPhase>(
-    restored.phase || "idle"
-  );
-  const [taskId, setTaskId] = useState<string | null>(
-    restored.taskId || null
-  );
-  const [entries, setEntries] = useState<StreamEntry[]>(
-    restored.entries || []
-  );
-  const [draftContent, setDraftContent] = useState(
-    restored.draftContent || ""
-  );
-  const [editorContent, setEditorContent] = useState(
-    restored.editorContent || ""
-  );
-  const [stageProgress, setStageProgress] = useState(
-    restored.stageProgress || { current: 0, total: 6 }
-  );
-  const [tokenStats, setTokenStats] = useState(
-    restored.tokenStats || { total: 0, cost: 0 }
-  );
-  const [startTime, setStartTime] = useState<number | null>(
-    restored.startTime || null
-  );
-  const [persona, setPersona] = useState(
-    restored.persona || ""
-  );
-  const [intent, setIntent] = useState(
-    restored.intent || ""
-  );
-  const [interactionMode, setInteractionMode] = useState<"normal" | "solo" | "auto">(
-    restored.interactionMode || "solo"
-  );
+  const [phase, setPhase] = useState<SoloTaskPhase>(restored.phase || "idle");
+  const [taskId, setTaskId] = useState<string | null>(restored.taskId || null);
+  const [entries, setEntries] = useState<StreamEntry[]>(restored.entries || []);
+  const [draftContent, setDraftContent] = useState(restored.draftContent || "");
+  const [editorContent, setEditorContent] = useState(restored.editorContent || "");
+  const [stageProgress, setStageProgress] = useState(restored.stageProgress || { current: 0, total: 6 });
+  const [tokenStats, setTokenStats] = useState(restored.tokenStats || { total: 0, cost: 0 });
+  const [startTime, setStartTime] = useState<number | null>(restored.startTime || null);
+  const [persona, setPersona] = useState(restored.persona || "");
+  const [intent, setIntent] = useState(restored.intent || "");
+  const [interactionMode, setInteractionMode] = useState<"normal" | "solo" | "auto">(restored.interactionMode || "solo");
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectCount = useRef(0);
-  const lastSeq = useRef(
-    restored.entries?.length
-      ? (restored.entries as StreamEntry[]).length - 1
-      : -1
-  );
-  const entriesRef = useRef<StreamEntry[]>(
-    restored.entries || []
-  );
-  const editorContentRef = useRef(
-    restored.editorContent || ""
-  );
+  const lastSeq = useRef(restored.entries?.length ? (restored.entries as StreamEntry[]).length - 1 : -1);
+  const entriesRef = useRef<StreamEntry[]>(restored.entries || []);
+  const editorContentRef = useRef(restored.editorContent || "");
   const draftBuffer = useRef(restored.draftContent || "");
   const draftRAF = useRef(0);
   const optionsRef = useRef(opts);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intentionalDisconnectRef = useRef(false);
+  const currentWsIdRef = useRef(0);
   optionsRef.current = opts;
+
+  const clearTaskTimeout = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
+  const startTaskTimeout = useCallback(() => {
+    clearTaskTimeout();
+    timeoutRef.current = setTimeout(() => {
+      setPhase((prev) => {
+        if (prev === "running" || prev === "connecting" || prev === "creating" || prev === "waiting_review" || prev === "paused") {
+          saveState(brand, { phase: "interrupted" });
+          optionsRef.current?.onError?.("timeout", "任务执行超时，已自动中断");
+          return "interrupted";
+        }
+        return prev;
+      });
+    }, TASK_TIMEOUT_MS);
+  }, [brand, clearTaskTimeout]);
 
   const flushDraft = useCallback(() => {
     if (draftBuffer.current !== editorContentRef.current) {
@@ -157,266 +142,230 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
       editorContentRef.current = content;
       setEditorContent(content);
       setDraftContent(content);
-      saveState(brand, {
-        draftContent: content,
-        editorContent: content,
-      });
+      saveState(brand, { draftContent: content, editorContent: content });
       optionsRef.current?.onDraftUpdate?.(content, false);
     }
     draftRAF.current = 0;
   }, [brand]);
 
-  const appendDraft = useCallback(
-    (delta: string, isPartial: boolean) => {
-      draftBuffer.current += delta;
-      const now = performance.now();
-      if (draftRAF.current) {
-        cancelAnimationFrame(draftRAF.current);
-      }
-      if (now - lastRAF > EDITOR_THROTTLE_MS || !isPartial) {
-        lastRAF = now;
-        flushDraft();
-      } else {
-        draftRAF.current = requestAnimationFrame(flushDraft);
-      }
-    },
-    [flushDraft]
-  );
+  const appendDraft = useCallback((delta: string, isPartial: boolean) => {
+    draftBuffer.current += delta;
+    const now = performance.now();
+    if (draftRAF.current) {
+      cancelAnimationFrame(draftRAF.current);
+    }
+    if (now - lastRAF > EDITOR_THROTTLE_MS || !isPartial) {
+      lastRAF = now;
+      flushDraft();
+    } else {
+      draftRAF.current = requestAnimationFrame(flushDraft);
+    }
+  }, [flushDraft]);
 
-  const handleEvent = useCallback(
-    (event: SoloWSEvent) => {
-      switch (event.type) {
-        case "solo.stage.enter":
-          setStageProgress({
-            current: event.payload.order,
-            total: event.payload.total,
-          });
-          saveState(brand, {
-            stageProgress: {
-              current: event.payload.order,
-              total: event.payload.total,
-            },
-          });
-          optionsRef.current?.onStageEnter?.(
-            event.payload.stage,
-            event.payload.label,
-            event.payload.order
-          );
-          break;
-        case "solo.tool.start":
-          optionsRef.current?.onToolCall?.("start", event.payload);
-          break;
-        case "solo.tool.end":
-          optionsRef.current?.onToolCall?.("end", event.payload);
-          break;
-        case "solo.llm.reasoning":
-          optionsRef.current?.onLLMReasoning?.(
-            event.payload.agent_name,
-            event.payload.delta_text
-          );
-          break;
-        case "solo.llm.stream":
-          optionsRef.current?.onLLMStream?.(
-            event.payload.agent_name,
-            event.payload.delta_text
-          );
-          break;
-        case "solo.draft.update":
-          if (event.payload.is_partial === false) {
-            draftBuffer.current = event.payload.content || "";
-            const content = draftBuffer.current;
-            editorContentRef.current = content;
-            setEditorContent(content);
-            setDraftContent(content);
-            saveState(brand, { draftContent: content, editorContent: content });
-            optionsRef.current?.onDraftUpdate?.(content, false);
-          } else {
-            appendDraft(
-              event.payload.content || "",
-              true
-            );
-          }
-          break;
-        case "solo.review.ready":
-          setPhase("waiting_review");
-          saveState(brand, { phase: "waiting_review" });
-          optionsRef.current?.onReviewReady?.(
-            event.payload.draft_summary
-          );
-          break;
-        case "solo.gate.verdict":
-          optionsRef.current?.onGateVerdict?.(event.payload);
-          break;
-        case "solo.token.stats":
-          setTokenStats({
-            total: event.payload.total_tokens,
-            cost: event.payload.estimated_cost,
-          });
-          saveState(brand, {
-            tokenStats: {
-              total: event.payload.total_tokens,
-              cost: event.payload.estimated_cost,
-            },
-          });
-          optionsRef.current?.onTokenStats?.(
-            event.payload.total_tokens,
-            event.payload.estimated_cost
-          );
-          break;
-        case "solo.task.completed":
-          setPhase("completed");
-          saveState(brand, { phase: "completed" });
-          optionsRef.current?.onCompleted?.(event.payload);
-          break;
-        case "solo.task.error":
-          setPhase("error");
-          saveState(brand, { phase: "error" });
-          optionsRef.current?.onError?.(
-            event.payload.step_name,
-            event.payload.error_message
-          );
-          break;
-        case "solo.task.paused":
-          setPhase("paused");
-          saveState(brand, { phase: "paused" });
-          break;
-        case "solo.task.resumed":
-          setPhase("running");
-          saveState(brand, { phase: "running" });
-          break;
-      }
-    },
-    [appendDraft, brand]
-  );
-
-  const persistEntries = useCallback(
-    (newEntries: StreamEntry[]) => {
-      saveState(brand, { entries: newEntries.slice(-500) });
-    },
-    [brand]
-  );
-
-  const connectWS = useCallback(
-    (tid: string) => {
-      setPhase("connecting");
-      const ws = new WebSocket(`${WS_BASE}/ws/solo/${tid}`);
-
-      ws.onopen = () => {
-        reconnectCount.current = 0;
-        setPhase("running");
-        saveState(brand, { phase: "running", taskId: tid });
-        setStartTime(Date.now());
-        saveState(brand, { startTime: Date.now() });
-        if (lastSeq.current > -1) {
-          ws.send(
-            JSON.stringify({
-              type: "replay",
-              from_seq: lastSeq.current + 1,
-            })
-          );
-        }
-      };
-
-      ws.onmessage = (event) => {
-        const data: SoloWSEvent = JSON.parse(event.data);
-        if ((data.type as string) === "pong") return;
-        lastSeq.current = data.seq;
-        const entry = eventToEntry(data);
-        entriesRef.current = [...entriesRef.current, entry];
-        setEntries([...entriesRef.current]);
-        persistEntries(entriesRef.current);
-        handleEvent(data);
-      };
-
-      ws.onclose = () => {
-        if (reconnectCount.current < MAX_RECONNECT) {
-          const delay = Math.min(
-            1000 * Math.pow(2, reconnectCount.current),
-            30000
-          );
-          reconnectCount.current++;
-          setTimeout(() => connectWS(tid), delay);
+  const handleEvent = useCallback((event: SoloWSEvent) => {
+    switch (event.type) {
+      case "solo.stage.enter":
+        setStageProgress({ current: event.payload.order, total: event.payload.total });
+        saveState(brand, { stageProgress: { current: event.payload.order, total: event.payload.total } });
+        optionsRef.current?.onStageEnter?.(event.payload.stage, event.payload.label, event.payload.order);
+        break;
+      case "solo.tool.start":
+        optionsRef.current?.onToolCall?.("start", event.payload);
+        break;
+      case "solo.tool.end":
+        optionsRef.current?.onToolCall?.("end", event.payload);
+        break;
+      case "solo.llm.reasoning":
+        optionsRef.current?.onLLMReasoning?.(event.payload.agent_name, event.payload.delta_text);
+        break;
+      case "solo.llm.stream":
+        optionsRef.current?.onLLMStream?.(event.payload.agent_name, event.payload.delta_text);
+        break;
+      case "solo.draft.update":
+        if (event.payload.is_partial === false) {
+          draftBuffer.current = event.payload.content || "";
+          const content = draftBuffer.current;
+          editorContentRef.current = content;
+          setEditorContent(content);
+          setDraftContent(content);
+          saveState(brand, { draftContent: content, editorContent: content });
+          optionsRef.current?.onDraftUpdate?.(content, false);
         } else {
-          setPhase("error");
-          saveState(brand, { phase: "error" });
-          optionsRef.current?.onError?.(
-            "websocket",
-            "连接丢失，请刷新页面"
-          );
+          appendDraft(event.payload.content || "", true);
         }
-      };
+        break;
+      case "solo.review.ready":
+        setPhase("waiting_review");
+        saveState(brand, { phase: "waiting_review" });
+        optionsRef.current?.onReviewReady?.(event.payload.draft_summary);
+        break;
+      case "solo.gate.verdict":
+        optionsRef.current?.onGateVerdict?.(event.payload);
+        break;
+      case "solo.token.stats":
+        setTokenStats({ total: event.payload.total_tokens, cost: event.payload.estimated_cost });
+        saveState(brand, { tokenStats: { total: event.payload.total_tokens, cost: event.payload.estimated_cost } });
+        optionsRef.current?.onTokenStats?.(event.payload.total_tokens, event.payload.estimated_cost);
+        break;
+      case "solo.task.completed":
+        setPhase("completed");
+        clearTaskTimeout();
+        saveState(brand, { phase: "completed" });
+        optionsRef.current?.onCompleted?.(event.payload);
+        break;
+      case "solo.task.error":
+        setPhase("error");
+        clearTaskTimeout();
+        saveState(brand, { phase: "error" });
+        optionsRef.current?.onError?.(event.payload.step_name, event.payload.error_message);
+        break;
+      case "solo.task.paused":
+        setPhase("paused");
+        saveState(brand, { phase: "paused" });
+        break;
+      case "solo.task.resumed":
+        setPhase("running");
+        saveState(brand, { phase: "running" });
+        break;
+    }
+  }, [appendDraft, brand, clearTaskTimeout]);
 
-      wsRef.current = ws;
-    },
-    [WS_BASE, handleEvent, persistEntries, brand]
-  );
+  const persistEntries = useCallback((newEntries: StreamEntry[]) => {
+    saveState(brand, { entries: newEntries.slice(-500) });
+  }, [brand]);
+
+  const connectWS = useCallback((tid: string) => {
+    intentionalDisconnectRef.current = false;
+    const wsId = ++currentWsIdRef.current;
+    setPhase("connecting");
+    const ws = new WebSocket(`${WS_BASE}/ws/solo/${tid}`);
+
+    ws.onopen = () => {
+      if (currentWsIdRef.current !== wsId) {
+        ws.close();
+        return;
+      }
+      reconnectCount.current = 0;
+      setPhase("running");
+      saveState(brand, { phase: "running", taskId: tid });
+      setStartTime(Date.now());
+      saveState(brand, { startTime: Date.now() });
+      startTaskTimeout();
+      if (lastSeq.current > -1) {
+        ws.send(JSON.stringify({ type: "replay", from_seq: lastSeq.current + 1 }));
+      }
+    };
+
+    ws.onmessage = (event) => {
+      if (currentWsIdRef.current !== wsId) return;
+      const data: SoloWSEvent = JSON.parse(event.data);
+      if ((data.type as string) === "pong") return;
+      lastSeq.current = data.seq;
+      const entry = eventToEntry(data);
+      entriesRef.current = [...entriesRef.current, entry];
+      setEntries([...entriesRef.current]);
+      persistEntries(entriesRef.current);
+      handleEvent(data);
+    };
+
+    ws.onclose = () => {
+      if (currentWsIdRef.current !== wsId) return;
+      if (intentionalDisconnectRef.current) return;
+      if (reconnectCount.current < MAX_RECONNECT) {
+        const delay = Math.min(1000 * Math.pow(2, reconnectCount.current), 30000);
+        reconnectCount.current++;
+        setTimeout(() => {
+          if (!intentionalDisconnectRef.current && currentWsIdRef.current === wsId) {
+            connectWS(tid);
+          }
+        }, delay);
+      } else {
+        setPhase("error");
+        clearTaskTimeout();
+        saveState(brand, { phase: "error" });
+        optionsRef.current?.onError?.("websocket", "连接丢失，请刷新页面");
+      }
+    };
+
+    wsRef.current = ws;
+  }, [WS_BASE, handleEvent, persistEntries, brand, startTaskTimeout, clearTaskTimeout]);
 
   const disconnectWS = useCallback(() => {
-    wsRef.current?.close();
-    wsRef.current = null;
-  }, []);
+    intentionalDisconnectRef.current = true;
+    currentWsIdRef.current++;
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    reconnectCount.current = 0;
+    clearTaskTimeout();
+  }, [clearTaskTimeout]);
 
   useEffect(() => {
     return () => disconnectWS();
   }, [disconnectWS]);
 
-  const createTask = useCallback(
-    async (taskIntent: string, extra?: Record<string, any>) => {
-      setPhase("creating");
-      setPersona(extra?.persona || "");
-      setIntent(taskIntent);
-      entriesRef.current = [];
-      setEntries([]);
-      draftBuffer.current = "";
-      editorContentRef.current = "";
-      setEditorContent("");
-      setDraftContent("");
-      setTokenStats({ total: 0, cost: 0 });
-      lastSeq.current = -1;
-      clearState(brand);
-      saveState(brand, { intent: taskIntent, ...extra });
+  useEffect(() => {
+    const saved = loadState(brand);
+    if (saved.phase && saved.startTime) {
+      const savedPhase = saved.phase as SoloTaskPhase;
+      if (savedPhase === "running" || savedPhase === "connecting" || savedPhase === "creating" || savedPhase === "waiting_review" || savedPhase === "paused") {
+        const elapsed = Date.now() - (saved.startTime as number);
+        if (elapsed > TASK_TIMEOUT_MS) {
+          setPhase("interrupted");
+          saveState(brand, { phase: "interrupted" });
+        }
+      }
+    }
+  }, [brand]);
 
-      try {
-        const r = await fetch("/api/v1/tasks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            intent: taskIntent,
-            mode: "solo",
-            interaction_mode: interactionMode,
-            ...extra,
-          }),
-        });
-        const data = await r.json();
-        if (!r.ok) {
-          setPhase("error");
-          saveState(brand, { phase: "error" });
-          optionsRef.current?.onError?.(
-            "create",
-            data.detail || "创建失败"
-          );
-          return;
-        }
-        const tid = data?.data?.task_id || data?.task_id || data?.id;
-        if (!tid) {
-          setPhase("error");
-          saveState(brand, { phase: "error" });
-          optionsRef.current?.onError?.("create", "未获取到 task_id");
-          return;
-        }
-        setTaskId(tid);
-        saveState(brand, { taskId: tid });
-        connectWS(tid);
-      } catch (e: any) {
+  const createTask = useCallback(async (taskIntent: string, extra?: Record<string, any>) => {
+    setPhase("creating");
+    setPersona(extra?.persona || "");
+    setIntent(taskIntent);
+    entriesRef.current = [];
+    setEntries([]);
+    draftBuffer.current = "";
+    editorContentRef.current = "";
+    setEditorContent("");
+    setDraftContent("");
+    setTokenStats({ total: 0, cost: 0 });
+    lastSeq.current = -1;
+    clearState(brand);
+    saveState(brand, { intent: taskIntent, ...extra });
+
+    try {
+      const r = await fetch("/api/v1/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent: taskIntent, mode: "solo", interaction_mode: interactionMode, ...extra }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
         setPhase("error");
         saveState(brand, { phase: "error" });
-        optionsRef.current?.onError?.("create", e.message);
+        optionsRef.current?.onError?.("create", data.detail || "创建失败");
+        return;
       }
-    },
-    [connectWS, brand]
-  );
+      const tid = data?.data?.task_id || data?.task_id || data?.id;
+      if (!tid) {
+        setPhase("error");
+        saveState(brand, { phase: "error" });
+        optionsRef.current?.onError?.("create", "未获取到 task_id");
+        return;
+      }
+      setTaskId(tid);
+      saveState(brand, { taskId: tid });
+      connectWS(tid);
+    } catch (e: any) {
+      setPhase("error");
+      saveState(brand, { phase: "error" });
+      optionsRef.current?.onError?.("create", e.message);
+    }
+  }, [connectWS, brand, interactionMode]);
 
   const resetState = useCallback(() => {
+    disconnectWS();
     clearState(brand);
     setPhase("idle");
     setTaskId(null);
@@ -433,58 +382,49 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     setIntent("");
     setInteractionMode("solo");
     lastSeq.current = -1;
-  }, [brand]);
+  }, [brand, disconnectWS]);
 
-  const restoreTask = useCallback(
-    (tid: string, taskIntent: string, taskPersona: string, taskPhase: SoloTaskPhase) => {
-      disconnectWS();
-      setTaskId(tid);
-      setIntent(taskIntent);
-      setPersona(taskPersona);
-      setPhase(taskPhase);
-      entriesRef.current = [];
-      setEntries([]);
-      draftBuffer.current = "";
-      editorContentRef.current = "";
-      setEditorContent("");
-      setDraftContent("");
-      setTokenStats({ total: 0, cost: 0 });
-      lastSeq.current = -1;
-      saveState(brand, { taskId: tid, intent: taskIntent, persona: taskPersona, phase: taskPhase });
-      if (taskPhase === "running" || taskPhase === "creating" || taskPhase === "connecting" || taskPhase === "waiting_review" || taskPhase === "paused") {
-        connectWS(tid);
-      }
-    },
-    [brand, connectWS, disconnectWS]
-  );
+  const restoreTask = useCallback((tid: string, taskIntent: string, taskPersona: string, taskPhase: SoloTaskPhase) => {
+    disconnectWS();
+    setTaskId(tid);
+    setIntent(taskIntent);
+    setPersona(taskPersona);
+    setPhase(taskPhase);
+    entriesRef.current = [];
+    setEntries([]);
+    draftBuffer.current = "";
+    editorContentRef.current = "";
+    setEditorContent("");
+    setDraftContent("");
+    setTokenStats({ total: 0, cost: 0 });
+    lastSeq.current = -1;
+    saveState(brand, { taskId: tid, intent: taskIntent, persona: taskPersona, phase: taskPhase, entries: [], startTime: null });
+    if (taskPhase === "running" || taskPhase === "creating" || taskPhase === "connecting" || taskPhase === "waiting_review" || taskPhase === "paused") {
+      connectWS(tid);
+    }
+  }, [brand, connectWS, disconnectWS]);
 
   const pause = useCallback(() => {
-    if (taskId)
-      fetch(`/api/v1/tasks/${taskId}/pause`, { method: "POST" });
+    if (taskId) fetch(`/api/v1/tasks/${taskId}/pause`, { method: "POST" });
   }, [taskId]);
 
   const resume = useCallback(() => {
-    if (taskId)
-      fetch(`/api/v1/tasks/${taskId}/resume`, { method: "POST" });
+    if (taskId) fetch(`/api/v1/tasks/${taskId}/resume`, { method: "POST" });
   }, [taskId]);
 
   const skipCurrent = useCallback(() => {
-    if (taskId)
-      fetch(`/api/v1/tasks/${taskId}/skip`, { method: "POST" });
+    if (taskId) fetch(`/api/v1/tasks/${taskId}/skip`, { method: "POST" });
   }, [taskId]);
 
-  const submitReview = useCallback(
-    async (verdict: "pass" | "reject", feedback: string) => {
-      if (!taskId) return;
-      const r = await fetch(`/api/v1/tasks/${taskId}/review`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ verdict, feedback }),
-      });
-      return r.json();
-    },
-    [taskId]
-  );
+  const submitReview = useCallback(async (verdict: "pass" | "reject", feedback: string) => {
+    if (!taskId) return;
+    const r = await fetch(`/api/v1/tasks/${taskId}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ verdict, feedback }),
+    });
+    return r.json();
+  }, [taskId]);
 
   const updateEditor = useCallback((content: string) => {
     editorContentRef.current = content;
@@ -492,27 +432,11 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
   }, []);
 
   return {
-    phase,
-    taskId,
-    entries,
-    draftContent,
-    editorContent,
-    stageProgress,
-    tokenStats,
-    startTime,
-    persona,
-    intent,
-    interactionMode,
-    setInteractionMode,
-    createTask,
-    resetState,
-    restoreTask,
-    updateEditor,
-    pause,
-    resume,
-    skipCurrent,
-    submitReview,
-    connectWS,
-    disconnectWS,
+    phase, taskId, entries, draftContent, editorContent,
+    stageProgress, tokenStats, startTime, persona, intent,
+    interactionMode, setInteractionMode,
+    createTask, resetState, restoreTask, updateEditor,
+    pause, resume, skipCurrent, submitReview,
+    connectWS, disconnectWS,
   };
 }

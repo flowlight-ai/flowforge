@@ -1,0 +1,53 @@
+# FlowForge Layer Mapping
+# Defines module path prefixes → architectural layers.
+# Lower layers must NOT import from higher layers.
+# Layer order (low → high): Types → Config → Repo → Service → Runtime → UI
+
+layer_order:
+  - types
+  - config
+  - repo
+  - service
+  - runtime
+  - ui
+
+mapping:
+  # Types layer — pure data structures, interfaces, errors
+  flowforge.core.errors: types
+  flowforge.core.base_agent: types
+  flowforge.core.base_tool: types
+  flowforge.core.tracing: types
+  flowforge.core.task_context: types
+  flowforge.core.base_mode_executor: types
+
+  # Config layer — configuration, DI, secrets
+  flowforge.core.config: config
+  flowforge.core.di: config
+  flowforge.core.secret_store: config
+
+  # Repo layer — data persistence, memory stores
+  flowforge.memory: repo
+  flowforge.core.checkpoint_manager: repo
+
+  # Service layer — business logic, registries, metrics
+  flowforge.core.agent_registry: service
+  flowforge.core.plugin_manager: service
+  flowforge.core.prompt_manager: service
+  flowforge.core.metrics: service
+  flowforge.core.circuit_breaker: service
+  flowforge.core.agent_timeout: service
+  flowforge.core.workspace: service
+  flowforge.tools: service
+
+  # Runtime layer — execution, modes, agents, events
+  flowforge.core.tool_chain_executor: runtime
+  flowforge.modes: runtime
+  flowforge.executor: runtime
+  flowforge.scheduler: runtime
+  flowforge.agents: runtime
+  flowforge.events: runtime
+  flowforge.workflows: runtime
+
+  # UI layer — API endpoints, web frontend
+  flowforge.app: ui
+  flowforge.web: ui

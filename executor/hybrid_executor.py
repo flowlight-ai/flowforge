@@ -5,6 +5,8 @@ the appropriate execution mode, manages task lifecycle (start, pause, resume,
 review), persists state and checkpoints, and bridges events to the Solo
 interaction protocol when applicable.
 
+v6.0: Integrates Harness Layer hooks (pre_execute / post_execute).
+
 License: MIT
 """
 
@@ -37,6 +39,10 @@ class HybridExecutor:
     concurrency limits (one running task per persona) and records metrics
     for observability.
 
+    v6.0: Added optional ``harness`` parameter for Harness Layer integration.
+    When harness is provided, ``pre_execute`` and ``post_execute`` hooks
+    are called around mode execution.
+
     Attributes:
         mode_registry: Registry of available execution modes.
         agent_registry: Registry of available agents.
@@ -47,13 +53,15 @@ class HybridExecutor:
         memory_manager: Optional memory manager for long-term recall.
         state_manager: Manager for task state persistence.
         checkpoint_manager: Manager for checkpoint persistence.
+        harness: Optional HarnessOrchestrator for v6.0 Harness Layer.
     """
 
     def __init__(self, mode_registry: ModeRegistry, agent_registry: AgentRegistry,
                  tool_registry, event_bus: EventBus, task_repo=None, audit_repo=None,
                  memory_manager: MemoryManager = None,
                  checkpointer_path: str = "data/checkpoints.db",
-                 state_db_path: str = "data/states.db"):
+                 state_db_path: str = "data/states.db",
+                 harness=None):
         """Initialize the HybridExecutor.
 
         Args:
@@ -66,6 +74,7 @@ class HybridExecutor:
             memory_manager: Optional memory manager instance.
             checkpointer_path: File path for the checkpoint SQLite database.
             state_db_path: File path for the state SQLite database.
+            harness: Optional HarnessOrchestrator for v6.0 Harness Layer.
         """
         self.mode_registry = mode_registry
         self.agent_registry = agent_registry
@@ -76,6 +85,7 @@ class HybridExecutor:
         self.memory_manager = memory_manager
         self.state_manager = StateManager(state_db_path)
         self.checkpoint_manager = CheckpointManager(checkpointer_path)
+        self.harness = harness
         self._running_tasks: Dict[str, str] = {}
         self._solo_adapter: Optional[EventBusSoloAdapter] = None
         self._review_events: Dict[str, asyncio.Event] = {}
@@ -150,10 +160,26 @@ class HybridExecutor:
             self.event_bus.emit(context.task_id, "task.start", {"mode": mode})
             self.event_bus.emit(context.task_id, "mode.enter", {"mode": mode})
             logger.info("Task started", task_id=context.task_id, mode=mode, persona=persona)
+
+            # v6.0 Harness pre_execute hook
+            if self.harness and context.harness_enabled:
+                try:
+                    await self.harness.pre_execute(context)
+                except Exception as e:
+                    logger.warning(f"Harness pre_execute failed: {e}", task_id=context.task_id)
+
             result = await asyncio.wait_for(
                 executor.run(context),
                 timeout=TASK_TIMEOUT_SECONDS,
             )
+
+            # v6.0 Harness post_execute hook
+            if self.harness and context.harness_enabled:
+                try:
+                    result = await self.harness.post_execute(result, context)
+                except Exception as e:
+                    logger.warning(f"Harness post_execute failed: {e}", task_id=context.task_id)
+
             duration = time.time() - start
             self.event_bus.emit(context.task_id, "task.completed", {"result": str(result)[:500]})
             logger.info("Task completed", task_id=context.task_id, mode=mode, persona=persona, duration=f"{duration:.2f}s")

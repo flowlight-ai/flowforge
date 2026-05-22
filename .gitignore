@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,44 +9,52 @@ dist/
 build/
 .eggs/
 
+# Environment & Secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.crt
 
-data/*.db
-data/*.db-journal
-data/*.db-wal
-data/test_*.db
+# Data & Logs
+data/
 logs/
 *.log
 
+# Test & Coverage
 .pytest_cache/
 .coverage
 htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# IDE
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 
+# Node.js / Next.js
 node_modules/
 .next/
 out/
 web/dist/
+next-env.d.ts
+tsconfig.tsbuildinfo
 
-*.pem
-*.key
-*.crt
-
+# OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
+# FlowForge specific
 flowforge.egg-info/
+secrets.db
 
-# Next.js generated
-next-env.d.ts
-package-lock.json
-data/
+# Nested flowforge directory (accidental)
+flowforge/flowforge/
+
+# Temporary test scripts
+scripts/test_*.py

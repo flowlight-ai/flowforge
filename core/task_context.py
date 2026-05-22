@@ -61,6 +61,7 @@ class TaskContext:
         self.memory = kwargs.pop('memory', None)
         self.executor = kwargs.pop('executor', None)
         self.persona = kwargs.pop('persona', None)
+        self.harness_enabled = kwargs.pop('harness_enabled', True)
         self.created_at = datetime.now(timezone.utc).isoformat()
 
     @classmethod
@@ -93,5 +94,6 @@ class TaskContext:
             memory=parent.memory,
             executor=parent.executor,
             persona=parent.persona,
+            harness_enabled=parent.harness_enabled,
         )
         return child

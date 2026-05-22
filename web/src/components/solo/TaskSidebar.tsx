@@ -50,6 +50,7 @@ const PHASE_DOT_CLASS: Record<SoloTaskPhase, string> = {
   completed: "phase-dot-completed",
   error: "phase-dot-error",
   rejected: "phase-dot-error",
+  interrupted: "phase-dot-error",
 };
 
 const PHASE_LABEL: Record<SoloTaskPhase, string> = {
@@ -62,6 +63,7 @@ const PHASE_LABEL: Record<SoloTaskPhase, string> = {
   completed: "已完成",
   error: "出错",
   rejected: "已拒绝",
+  interrupted: "已中断",
 };
 
 function formatElapsed(ms: number): string {

@@ -37,6 +37,7 @@ export default function SoloLayout() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
   const [graphModal, setGraphModal] = useState<{type: "workflow" | "agent" | "mode"; name: string} | null>(null);
   const [rightTab, setRightTab] = useState<"editor" | "files">("editor");
+  const [refreshCounter, setRefreshCounter] = useState(0);
   const config = useShellConfig();
 
   const [leftWidth, setLeftWidth] = useState(220);
@@ -53,7 +54,7 @@ export default function SoloLayout() {
         .catch(() => setWebproxyStatus(null));
     };
     checkWebproxy();
-    const interval = setInterval(checkWebproxy, 30000);
+    const interval = setInterval(checkWebproxy, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -73,23 +74,19 @@ export default function SoloLayout() {
       const brand = config.brandName.toLowerCase();
       appendTaskHistory(brand, { taskId: solo.taskId, persona: solo.persona, intent: solo.intent, phase: solo.phase, timestamp: Date.now() });
     }
+    if (solo.phase === "completed" || solo.phase === "error" || solo.phase === "interrupted") {
+      setRefreshCounter((c) => c + 1);
+    }
   }, [solo.taskId, solo.phase, config.brandName]);
 
   useEffect(() => {
-    if (solo.taskId && solo.phase === "completed" && solo.entries.length > 0) {
-      const lastEntry = solo.entries[solo.entries.length - 1];
-      if (lastEntry?.data?.content) {
-        fetch(`/api/v1/workspace/${solo.taskId}/messages`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role: "assistant", content: lastEntry.data.content.slice(0, 2000) }),
-        }).catch(() => {});
-      }
+    if (solo.taskId && solo.phase === "completed") {
       fetch(`/api/v1/workspace/${solo.taskId}/status`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "completed" }),
       }).catch(() => {});
     }
-  }, [solo.taskId, solo.phase, solo.entries]);
+  }, [solo.taskId, solo.phase]);
 
   const chatMessages = useMemo(() => {
     const msgs: ChatMessage[] = [];
@@ -287,6 +284,12 @@ export default function SoloLayout() {
             if (!targetStep) targetStep = modeStepNodes[0];
             targetStep.status = "running";
             if (!currentStep) currentStep = targetStep.id;
+            const deltaText = entry.data?.delta_text || "";
+            if (deltaText && targetStep.summary) {
+              targetStep.summary = (targetStep.summary + deltaText).slice(-120);
+            } else if (deltaText) {
+              targetStep.summary = deltaText.slice(0, 120);
+            }
           }
         }
       }
@@ -306,12 +309,20 @@ export default function SoloLayout() {
           });
         }
       }
+
+      if (entry.type === "draft-update" && currentAgentNodeId) {
+        const existing = nodes.find((n) => n.id === currentAgentNodeId);
+        if (existing && entry.data?.content) {
+          const content = entry.data.content;
+          existing.summary = content.length > 120 ? content.slice(0, 120) + "…" : content;
+        }
+      }
     }
 
-    if (solo.phase === "completed" || solo.phase === "error" || solo.phase === "rejected") {
+    if (solo.phase === "completed" || solo.phase === "error" || solo.phase === "rejected" || solo.phase === "interrupted") {
       for (const n of nodes) {
         if (n.status === "running" || n.status === "pending") {
-          n.status = solo.phase === "error" || solo.phase === "rejected" ? "error" : "completed";
+          n.status = solo.phase === "error" || solo.phase === "rejected" || solo.phase === "interrupted" ? "error" : "completed";
         }
       }
       currentStep = undefined;
@@ -325,7 +336,7 @@ export default function SoloLayout() {
       const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: "user", content: text, timestamp: new Date().toISOString() };
       setUserMessages((prev) => [...prev, userMsg]);
 
-      if (solo.phase === "idle" || solo.phase === "completed" || solo.phase === "error" || solo.phase === "rejected") {
+      if (solo.phase === "idle" || solo.phase === "completed" || solo.phase === "error" || solo.phase === "rejected" || solo.phase === "interrupted") {
         solo.createTask(text, { persona: persona || "default", ...(model ? { model } : {}) });
       } else if (solo.taskId) {
         fetch(`/api/v1/workspace/${solo.taskId}/messages`, {
@@ -373,7 +384,7 @@ export default function SoloLayout() {
             setUserMessages([]);
             solo.restoreTask(tid, taskIntent, taskPersona, taskPhase);
           }}
-          refreshTrigger={solo.phase === "idle" ? 0 : Date.now()}
+          refreshTrigger={refreshCounter}
         />
       </div>
       <ResizeHandle onResize={(dx) => setLeftWidth((w) => Math.max(160, Math.min(400, w + dx)))} />

@@ -499,11 +499,7 @@ class WorkflowExecutor(BaseModeExecutor):
         if ctx.tools:
             tool_input = ToolInput(params=llm_params)
             tool_output = await ctx.tools.execute("llm", tool_input)
-            content = tool_output.result.get("content", "") if tool_output.result else ""
-            error = tool_output.result.get("error", "") if tool_output.result else ""
-            if not content and error:
-                logger.warning(f"LLM call returned empty content, error: {error[:200]}")
-            return content
+            return tool_output.result.get("content", "") if tool_output.result else ""
         else:
             from flowforge.tools.llm_client import LLMClient
             llm = LLMClient(event_bus=ctx.event_bus)

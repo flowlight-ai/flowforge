@@ -56,3 +56,8 @@ class ToolExecutionError(FlowForgeError):
 class ConfigError(FlowForgeError):
     status_code = 400
     detail = "Config error"
+
+
+class HarnessViolationError(FlowForgeError):
+    status_code = 422
+    detail = "Harness guardrail violation"

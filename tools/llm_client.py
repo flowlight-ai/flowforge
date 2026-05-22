@@ -23,6 +23,15 @@ from flowforge.core import metrics
 logger = get_logger("llm_client")
 
 DEFAULT_FREE_MODELS = {
+    "webproxy": [
+        "auto",
+        "web/chat",
+        "doubao-web/seed-2.0",
+        "kimi-web/chat",
+        "deepseek-web/chat",
+        "yuanbao-web/chat",
+        "qianwen-web/chat",
+    ],
     "openrouter": [
         "baidu/cobuddy:free",
         "inclusionai/ring-2.6-1t:free",
@@ -61,14 +70,6 @@ DEFAULT_FREE_MODELS = {
     ],
     "zhipu": [
         "glm-4-flash",
-    ],
-    "webproxy": [
-        "web/chat",
-        "doubao-web/seed-2.0",
-        "kimi-web/chat",
-        "deepseek-web/chat",
-        "yuanbao-web/chat",
-        "qianwen-web/chat",
     ],
     "local": [],
 }
@@ -126,9 +127,9 @@ def build_cross_fallback_chain(
     1. Group models by provider
     2. Interleave across top providers for diversity
     3. Filter out models in cooldown
-    4. Webproxy models go last (as fallback)
+    4. Webproxy models go first (as primary, unlimited tokens)
     """
-    provider_order = ["openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local", "webproxy"]
+    provider_order = ["webproxy", "openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local"]
     grouped: Dict[str, List[str]] = {}
     for provider in provider_order:
         models = available_models.get(provider, [])
@@ -330,6 +331,19 @@ class LLMClient(BaseTool):
             if provider == "openrouter":
                 headers["HTTP-Referer"] = "https://flowforge.dev"
                 headers["X-Title"] = "FlowForge"
+            # webproxy: pass X-Scene header for hiclaw proxy scene routing
+            # - has tools → proxy_combine (Proxy handles prompt combination + tool parsing)
+            # - no tools → caller_combine (FlowForge already composed the prompt)
+            # - auto model → auto (let hiclaw decide)
+            if provider == "webproxy":
+                if tools:
+                    headers["X-Scene"] = "proxy_combine"
+                elif model_id == "auto":
+                    headers["X-Scene"] = "auto"
+                else:
+                    headers["X-Scene"] = "caller_combine"
+                logger.info(f"🌐 [X-Scene] provider=webproxy model={model_id} "
+                            f"has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
 
             payload = {
                 "model": model_id, "messages": messages,
@@ -337,6 +351,10 @@ class LLMClient(BaseTool):
                 "stream": stream,
             }
             if tools:
+                payload["tools"] = tools
+            # webproxy/auto 模型：让 hiclaw proxy 自动选择最优模型
+            # 不传 tools 给 auto 模式，让 proxy 自行决定路由
+            if provider == "webproxy" and model_id == "auto" and tools:
                 payload["tools"] = tools
             url = base_url.rstrip("/") + "/chat/completions"
 
@@ -387,7 +405,8 @@ class LLMClient(BaseTool):
                     "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0,
                 })
 
-                if not content_text or (isinstance(content_text, str) and not content_text.strip()):
+                if (not content_text or (isinstance(content_text, str) and not content_text.strip())) \
+                        and not tool_calls_result:
                     logger.warning(f"LLM returned empty content for {provider}/{model_id}, trying next candidate")
                     self._update_health(provider, model_id, False, "empty_response")
                     self._record_model_result(f"{provider}/{model_id}", False, "empty_response")
@@ -444,6 +463,15 @@ class LLMClient(BaseTool):
                     if provider == "openrouter":
                         headers["HTTP-Referer"] = "https://flowforge.dev"
                         headers["X-Title"] = "FlowForge"
+                    if provider == "webproxy":
+                        if tools:
+                            headers["X-Scene"] = "proxy_combine"
+                        elif model_id == "auto":
+                            headers["X-Scene"] = "auto"
+                        else:
+                            headers["X-Scene"] = "caller_combine"
+                        logger.info(f"🌐 [X-Scene] fallback provider=webproxy model={model_id} "
+                                    f"has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
                     payload_fb = {"model": model_id, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "stream": stream}
                     if tools:
                         payload_fb["tools"] = tools
@@ -467,7 +495,8 @@ class LLMClient(BaseTool):
                         metrics.record_tool_call("llm", duration)
                         self._update_health(provider, model_id, True)
                         self._emit_event(task_id, "llm.end", {"agent_name": agent_name or "unknown", "full_response": content_text[:500] if isinstance(content_text, str) else str(content_text)[:500], "tokens": tokens, "duration_ms": int(duration * 1000), "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0})
-                        if not content_text or (isinstance(content_text, str) and not content_text.strip()):
+                        if (not content_text or (isinstance(content_text, str) and not content_text.strip())) \
+                                and not tool_calls_result:
                             self._update_health(provider, model_id, False, "empty_response")
                             last_error = Exception("empty_response")
                             continue
@@ -557,6 +586,13 @@ class LLMClient(BaseTool):
             if provider == "openrouter":
                 headers["HTTP-Referer"] = "https://flowforge.dev"
                 headers["X-Title"] = "FlowForge"
+            if provider == "webproxy":
+                if model_id == "auto":
+                    headers["X-Scene"] = "auto"
+                else:
+                    headers["X-Scene"] = "caller_combine"
+                logger.info(f"🌐 [X-Scene] stream provider=webproxy model={model_id} "
+                            f"→ X-Scene={headers['X-Scene']}")
 
             payload = {
                 "model": model_id, "messages": messages,

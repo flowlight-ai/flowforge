@@ -3,10 +3,59 @@ system:
   checkpointer_url: "sqlite:///data/checkpoints.db"
   log_level: "INFO"
   log_file: "logs/flowforge.log"
+  log_format: "structured"
   server_host: "0.0.0.0"
   server_port: 8000
   workers: 1
   secret_key: "changeme-in-production"
+
+logging:
+  format: "structured"
+  console:
+    enabled: true
+    level: "INFO"
+  file:
+    enabled: true
+    level: "DEBUG"
+    path: "logs/flowforge.log"
+    rotation: "10MB"
+    retention: 5
+  structured:
+    # Structured log format for Harness components
+    # Uses visual markers for quick console scanning:
+    #   ▶ START  — operation begins
+    #   ◀ END    — operation completes
+    #   ✔ PASS   — gate passed
+    #   ⚠ WARN   — gate conditional / entropy signal
+    #   ✖ FAIL   — gate failed / error recorded
+    #   ⏱ TIMING — performance measurement
+    #   🔧 SET    — configuration change
+    harness_enabled: true
+    feedback_loop:
+      show_scores: true
+      show_gate_counts: true
+      show_timing: true
+    entropy_manager:
+      show_flags: true
+      show_entropy_signals: true
+
+harness:
+  enabled: true
+  context_engine:
+    agents_md_paths: []
+  session_manager:
+    context_window: 128000
+    compact_threshold: 0.92
+    tool_output_limit: 25000
+    recent_rounds: 3
+  feedback_loop:
+    evaluation_mode: "lightweight"
+    quality_threshold: 0.7
+    max_corrections: 1
+  entropy_manager:
+    doc_gardener_enabled: true
+    debt_tracker_enabled: true
+    rule_evolution_enabled: true
 
 helixrag:
   enabled: true
