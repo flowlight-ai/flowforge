@@ -1,11 +1,11 @@
-"""Tests for X-Scene header passing and webproxy/auto routing logic.
+"""Tests for X-Scene header passing and openroute/auto routing logic.
 
 Verifies that:
-1. X-Scene: proxy_combine is set when tools are provided to webproxy
-2. X-Scene: caller_combine is set when no tools are provided to webproxy
+1. X-Scene: openroute_combine is set when tools are provided to openroute
+2. X-Scene: caller_combine is set when no tools are provided to openroute
 3. X-Scene: auto is set when model=auto and no tools
-4. webproxy/auto model correctly routes with and without tools
-5. Non-webproxy providers do not receive X-Scene header
+4. openroute/auto model correctly routes with and without tools
+5. Non-openroute providers do not receive X-Scene header
 """
 
 import pytest
@@ -45,14 +45,14 @@ def _mock_httpx_client(response_mock):
     return mock_client
 
 
-# ── Test 1: X-Scene: proxy_combine when tools are provided ──
+# ── Test 1: X-Scene: openroute_combine when tools are provided ──
 
 @pytest.mark.asyncio
-async def test_xscene_proxy_combine_with_tools():
-    """When tools are provided and provider is webproxy, X-Scene should be proxy_combine."""
+async def test_xscene_openroute_combine_with_tools():
+    """When tools are provided and provider is openroute, X-Scene should be openroute_combine."""
     client = LLMClient(models_config={
-        "providers": {"webproxy": {"base_url": "http://127.0.0.1:13000/v1"}},
-        "assignments": {"default": {"primary": "webproxy/doubao-web/seed-2.0", "fallbacks": []}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "assignments": {"default": {"primary": "openroute/doubao-web/seed-2.0", "fallbacks": []}},
     })
 
     tools_schema = [{
@@ -76,21 +76,21 @@ async def test_xscene_proxy_combine_with_tools():
     with patch("flowforge.tools.llm_client.httpx.AsyncClient", return_value=mock_client):
         result = await client.execute(ToolInput(params={
             "messages": [{"role": "user", "content": "Search for AI news"}],
-            "model": "webproxy/doubao-web/seed-2.0",
+            "model": "openroute/doubao-web/seed-2.0",
             "tools": tools_schema,
             "stream": False,
         }))
 
-    # Verify the request was made with X-Scene: proxy_combine
+    # Verify the request was made with X-Scene: openroute_combine
     mock_client.post.assert_called_once()
     call_kwargs = mock_client.post.call_args
     headers = call_kwargs.kwargs.get("headers", call_kwargs[1].get("headers", {}))
-    assert headers.get("X-Scene") == "proxy_combine", \
-        f"Expected X-Scene: proxy_combine, got {headers.get('X-Scene')}"
+    assert headers.get("X-Scene") == "openroute_combine", \
+        f"Expected X-Scene: openroute_combine, got {headers.get('X-Scene')}"
 
     # Verify tools were included in payload
     payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json", {}))
-    assert "tools" in payload, "tools should be in payload for proxy_combine"
+    assert "tools" in payload, "tools should be in payload for openroute_combine"
     assert payload["tools"] == tools_schema
 
 
@@ -98,10 +98,10 @@ async def test_xscene_proxy_combine_with_tools():
 
 @pytest.mark.asyncio
 async def test_xscene_caller_combine_without_tools():
-    """When no tools are provided and provider is webproxy, X-Scene should be caller_combine."""
+    """When no tools are provided and provider is openroute, X-Scene should be caller_combine."""
     client = LLMClient(models_config={
-        "providers": {"webproxy": {"base_url": "http://127.0.0.1:13000/v1"}},
-        "assignments": {"default": {"primary": "webproxy/doubao-web/seed-2.0", "fallbacks": []}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "assignments": {"default": {"primary": "openroute/doubao-web/seed-2.0", "fallbacks": []}},
     })
 
     mock_resp = _mock_response(content="Hello! How can I help you?")
@@ -110,7 +110,7 @@ async def test_xscene_caller_combine_without_tools():
     with patch("flowforge.tools.llm_client.httpx.AsyncClient", return_value=mock_client):
         result = await client.execute(ToolInput(params={
             "messages": [{"role": "user", "content": "Hello"}],
-            "model": "webproxy/doubao-web/seed-2.0",
+            "model": "openroute/doubao-web/seed-2.0",
             "stream": False,
         }))
 
@@ -127,8 +127,8 @@ async def test_xscene_caller_combine_without_tools():
 async def test_xscene_auto_for_auto_model():
     """When model=auto and no tools, X-Scene should be auto."""
     client = LLMClient(models_config={
-        "providers": {"webproxy": {"base_url": "http://127.0.0.1:13000/v1"}},
-        "assignments": {"default": {"primary": "webproxy/auto", "fallbacks": []}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "assignments": {"default": {"primary": "openroute/auto", "fallbacks": []}},
     })
 
     mock_resp = _mock_response(content="Auto-routed response")
@@ -137,7 +137,7 @@ async def test_xscene_auto_for_auto_model():
     with patch("flowforge.tools.llm_client.httpx.AsyncClient", return_value=mock_client):
         result = await client.execute(ToolInput(params={
             "messages": [{"role": "user", "content": "Hello"}],
-            "model": "webproxy/auto",
+            "model": "openroute/auto",
             "stream": False,
         }))
 
@@ -148,14 +148,14 @@ async def test_xscene_auto_for_auto_model():
         f"Expected X-Scene: auto, got {headers.get('X-Scene')}"
 
 
-# ── Test 4: X-Scene: proxy_combine for auto model WITH tools ──
+# ── Test 4: X-Scene: openroute_combine for auto model WITH tools ──
 
 @pytest.mark.asyncio
-async def test_xscene_proxy_combine_for_auto_with_tools():
-    """When model=auto AND tools are provided, X-Scene should be proxy_combine (tools take priority)."""
+async def test_xscene_openroute_combine_for_auto_with_tools():
+    """When model=auto AND tools are provided, X-Scene should be openroute_combine (tools take priority)."""
     client = LLMClient(models_config={
-        "providers": {"webproxy": {"base_url": "http://127.0.0.1:13000/v1"}},
-        "assignments": {"default": {"primary": "webproxy/auto", "fallbacks": []}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "assignments": {"default": {"primary": "openroute/auto", "fallbacks": []}},
     })
 
     tools_schema = [{
@@ -179,7 +179,7 @@ async def test_xscene_proxy_combine_for_auto_with_tools():
     with patch("flowforge.tools.llm_client.httpx.AsyncClient", return_value=mock_client):
         result = await client.execute(ToolInput(params={
             "messages": [{"role": "user", "content": "What is 2+2?"}],
-            "model": "webproxy/auto",
+            "model": "openroute/auto",
             "tools": tools_schema,
             "stream": False,
         }))
@@ -187,19 +187,19 @@ async def test_xscene_proxy_combine_for_auto_with_tools():
     mock_client.post.assert_called_once()
     call_kwargs = mock_client.post.call_args
     headers = call_kwargs.kwargs.get("headers", call_kwargs[1].get("headers", {}))
-    assert headers.get("X-Scene") == "proxy_combine", \
-        f"Expected X-Scene: proxy_combine (tools override auto), got {headers.get('X-Scene')}"
+    assert headers.get("X-Scene") == "openroute_combine", \
+        f"Expected X-Scene: openroute_combine (tools override auto), got {headers.get('X-Scene')}"
 
     # Verify tools are in payload even for auto model
     payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json", {}))
-    assert "tools" in payload, "tools should be in payload for auto+proxy_combine"
+    assert "tools" in payload, "tools should be in payload for auto+openroute_combine"
 
 
-# ── Test 5: No X-Scene for non-webproxy providers ──
+# ── Test 5: No X-Scene for non-openroute providers ──
 
 @pytest.mark.asyncio
-async def test_xscene_not_set_for_non_webproxy():
-    """Non-webproxy providers should NOT receive X-Scene header."""
+async def test_xscene_not_set_for_non_openroute():
+    """Non-openroute providers should NOT receive X-Scene header."""
     client = LLMClient(models_config={
         "providers": {
             "openrouter": {"base_url": "https://openrouter.ai/api/v1", "api_key_default": "test-key"},
@@ -221,42 +221,42 @@ async def test_xscene_not_set_for_non_webproxy():
     call_kwargs = mock_client.post.call_args
     headers = call_kwargs.kwargs.get("headers", call_kwargs[1].get("headers", {}))
     assert "X-Scene" not in headers, \
-        f"X-Scene should NOT be set for non-webproxy providers, got {headers.get('X-Scene')}"
+        f"X-Scene should NOT be set for non-openroute providers, got {headers.get('X-Scene')}"
 
 
-# ── Test 6: webproxy/auto routing — default assignment uses auto ──
+# ── Test 6: openroute/auto routing — default assignment uses auto ──
 
 @pytest.mark.asyncio
-async def test_webproxy_auto_default_assignment():
-    """Default assignment should use webproxy/auto as primary model."""
+async def test_openroute_auto_default_assignment():
+    """Default assignment should use openroute/auto as primary model."""
     client = LLMClient(models_config={
-        "providers": {"webproxy": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
         "assignments": {
             "default": {
-                "primary": "webproxy/auto",
-                "fallbacks": ["webproxy/doubao-web/seed-2.0", "openrouter/baidu/cobuddy:free"],
+                "primary": "openroute/auto",
+                "fallbacks": ["openroute/doubao-web/seed-2.0", "openrouter/baidu/cobuddy:free"],
             }
         },
     })
 
     chain = client._get_model_chain()
-    assert chain[0] == "webproxy/auto", \
-        f"Default chain should start with webproxy/auto, got {chain[0]}"
+    assert chain[0] == "openroute/auto", \
+        f"Default chain should start with openroute/auto, got {chain[0]}"
 
 
-# ── Test 7: webproxy/auto with tools — full integration mock ──
+# ── Test 7: openroute/auto with tools — full integration mock ──
 
 @pytest.mark.asyncio
-async def test_webproxy_auto_with_tools_integration():
-    """Simulate a full request to webproxy/auto with tools, verifying:
-    1. X-Scene: proxy_combine is set
+async def test_openroute_auto_with_tools_integration():
+    """Simulate a full request to openroute/auto with tools, verifying:
+    1. X-Scene: openroute_combine is set
     2. model=auto is in payload
     3. tools are in payload
     4. Response with tool_calls is correctly parsed
     """
     client = LLMClient(models_config={
-        "providers": {"webproxy": {"base_url": "http://127.0.0.1:13000/v1"}},
-        "assignments": {"default": {"primary": "webproxy/auto", "fallbacks": []}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "assignments": {"default": {"primary": "openroute/auto", "fallbacks": []}},
     })
 
     tools_schema = [{
@@ -306,19 +306,19 @@ async def test_webproxy_auto_with_tools_integration():
     headers = call_kwargs.kwargs.get("headers", call_kwargs[1].get("headers", {}))
     payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json", {}))
 
-    assert headers.get("X-Scene") == "proxy_combine"
+    assert headers.get("X-Scene") == "openroute_combine"
     assert payload["model"] == "auto"
     assert "tools" in payload
 
 
-# ── Test 8: webproxy/auto without tools — caller_combine fallback ──
+# ── Test 8: openroute/auto without tools — caller_combine fallback ──
 
 @pytest.mark.asyncio
-async def test_webproxy_auto_without_tools_caller_combine():
+async def test_openroute_auto_without_tools_caller_combine():
     """When auto model is used without tools, X-Scene should be auto (not caller_combine)."""
     client = LLMClient(models_config={
-        "providers": {"webproxy": {"base_url": "http://127.0.0.1:13000/v1"}},
-        "assignments": {"default": {"primary": "webproxy/auto", "fallbacks": []}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "assignments": {"default": {"primary": "openroute/auto", "fallbacks": []}},
     })
 
     mock_resp = _mock_response(content="The weather is sunny today.")
@@ -342,44 +342,44 @@ async def test_webproxy_auto_without_tools_caller_combine():
     assert payload["model"] == "auto"
 
 
-# ── Test 9: Fallback chain starts with webproxy ──
+# ── Test 9: Fallback chain starts with openroute ──
 
-def test_fallback_chain_webproxy_first():
-    """Cross-fallback chain should put webproxy models first."""
+def test_fallback_chain_openroute_first():
+    """Cross-fallback chain should put openroute models first."""
     from flowforge.tools.llm_client import build_cross_fallback_chain
 
     available = {
-        "webproxy": ["auto", "doubao-web/seed-2.0"],
+        "openroute": ["auto", "doubao-web/seed-2.0"],
         "openrouter": ["baidu/cobuddy:free"],
         "zhipu": ["glm-4-flash"],
     }
     chain = build_cross_fallback_chain(available, {})
     assert len(chain) > 0
-    # First model should be from webproxy
-    assert chain[0].startswith("webproxy/"), \
-        f"First in chain should be webproxy, got {chain[0]}"
+    # First model should be from openroute
+    assert chain[0].startswith("openroute/"), \
+        f"First in chain should be openroute, got {chain[0]}"
 
 
-# ── Test 10: X-Scene for specific webproxy models ──
+# ── Test 10: X-Scene for specific openroute models ──
 
 @pytest.mark.asyncio
-async def test_xscene_for_specific_webproxy_models():
-    """Each webproxy model type should get the correct X-Scene."""
+async def test_xscene_for_specific_openroute_models():
+    """Each openroute model type should get the correct X-Scene."""
     test_cases = [
         # (model, has_tools, expected_scene)
-        ("webproxy/kimi-web/chat", False, "caller_combine"),
-        ("webproxy/deepseek-web/chat", False, "caller_combine"),
-        ("webproxy/yuanbao-web/chat", True, "proxy_combine"),
-        ("webproxy/qianwen-web/chat", True, "proxy_combine"),
-        ("webproxy/web/chat", False, "caller_combine"),
-        ("webproxy/web/chat", True, "proxy_combine"),
+        ("openroute/kimi-web/chat", False, "caller_combine"),
+        ("openroute/deepseek-web/chat", False, "caller_combine"),
+        ("openroute/yuanbao-web/chat", True, "openroute_combine"),
+        ("openroute/qianwen-web/chat", True, "openroute_combine"),
+        ("openroute/web/chat", False, "caller_combine"),
+        ("openroute/web/chat", True, "openroute_combine"),
     ]
 
     tools_schema = [{"type": "function", "function": {"name": "test_tool", "parameters": {}}}]
 
     for model, has_tools, expected_scene in test_cases:
         client = LLMClient(models_config={
-            "providers": {"webproxy": {"base_url": "http://127.0.0.1:13000/v1"}},
+            "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
             "assignments": {"default": {"primary": model, "fallbacks": []}},
         })
 

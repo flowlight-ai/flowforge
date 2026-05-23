@@ -2942,7 +2942,7 @@ d:\software\openclaw\flowforge\
 │           ├── settings.py                # 设置 API
 │           ├── system.py                  # 系统 API
 │           ├── tasks.py                   # 任务 API
-│           ├── webproxy.py                # 网页代理 API
+│           ├── openroute.py                # 网页代理 API
 │           ├── websocket.py               # WebSocket 端点
 │           ├── workflows.py               # 工作流 API
 │           └── workspace.py               # 工作区 API
@@ -3096,7 +3096,7 @@ d:\software\openclaw\flowforge\
 │   ├── web_scraper.py                     # 网页抓取
 │   ├── web_search.py                      # 网络搜索
 │   ├── webhook.py                         # Webhook 通知
-│   ├── webproxy_service.py                # 网页代理服务管理
+│   ├── openroute_service.py                # 网页代理服务管理
 │   ├── wechat_publisher.py                # 微信公众号发布
 │   ├── workspace_file.py                  # 工作区文件操作
 │   └── llm/
@@ -3229,7 +3229,7 @@ d:\software\openclaw\flowforge\
    - 注册 9 种模式执行器
    - 注册 15 个 Agent 工厂
    - 创建 MemoryManager、HybridExecutor、TaskScheduler、PluginManager
-   - 挂载 API 路由、WebSocket 端点、WebProxy 端点
+   - 挂载 API 路由、WebSocket 端点、OpenRoute 端点
    - 提供 `/health` 和 `/metrics` 端点
 
 3. **`core/flowforge.py`** -- 编程式入口，提供 `FlowForge.from_config("config.yaml")` 方式，支持通过代码注册 Agent/Tool/Mode 后调用 `build()` 获取 HybridExecutor。
@@ -3272,7 +3272,7 @@ d:\software\openclaw\flowforge\
 **内容摘要**：项目级规则文档，Trae CN 启动时自动读取，包含完整项目上下文和开发规范。定义了 FlowForge 作为 AI Agent OS 的定位、分层架构（应用层 -> 指挥中枢 -> 专家执行 -> 工具与记忆）、9 条铁律（含新增的第 7-9 条）、Agent 内部节点规范、静态/动态关系图、模式切换 UI、YAML 兼容性等开发标准，以及详细的变更日志。
 
 **关键设计决策**：
-- WebProxy 通过 Playwright 驱动真实浏览器，将 Web 端 LLM 包装为 OpenAI 兼容 API
+- OpenRoute 通过 Playwright 驱动真实浏览器，将 Web 端 LLM 包装为 OpenAI 兼容 API
 - 固定端口分配：后端 8000、Solo 前端 13000、管理前端 5174
 - Prompts 完全外化到 prompts.yaml，代码中不硬编码提示词
 - SoloLayout 组件从 1575 行重构拆分为 9 个文件

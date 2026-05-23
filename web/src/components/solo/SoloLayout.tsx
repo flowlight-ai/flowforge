@@ -33,7 +33,7 @@ function getModeSteps(mode: string): { key: string; label: string }[] {
 
 export default function SoloLayout() {
   const [userMessages, setUserMessages] = useState<ChatMessage[]>([]);
-  const [webproxyStatus, setWebproxyStatus] = useState<{ running: boolean; healthy: boolean; models: number } | null>(null);
+  const [openrouteStatus, setOpenrouteStatus] = useState<{ running: boolean; healthy: boolean; models: number } | null>(null);
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
   const [graphModal, setGraphModal] = useState<{type: "workflow" | "agent" | "mode"; name: string} | null>(null);
   const [rightTab, setRightTab] = useState<"editor" | "files">("editor");
@@ -44,17 +44,17 @@ export default function SoloLayout() {
   const [centerWidth, setCenterWidth] = useState(420);
 
   useEffect(() => {
-    const checkWebproxy = () => {
-      fetch("http://127.0.0.1:8000/api/v1/webproxy/status")
+    const checkOpenroute = () => {
+      fetch("http://127.0.0.1:8000/api/v1/openroute/status")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (d) setWebproxyStatus({ running: d.running, healthy: d.healthy, models: (d.models || []).length });
-          else setWebproxyStatus(null);
+          if (d) setOpenrouteStatus({ running: d.running, healthy: d.healthy, models: (d.models || []).length });
+          else setOpenrouteStatus(null);
         })
-        .catch(() => setWebproxyStatus(null));
+        .catch(() => setOpenrouteStatus(null));
     };
-    checkWebproxy();
-    const interval = setInterval(checkWebproxy, 60000);
+    checkOpenroute();
+    const interval = setInterval(checkOpenroute, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -92,7 +92,11 @@ export default function SoloLayout() {
     const msgs: ChatMessage[] = [];
     for (const entry of solo.entries) msgs.push(...entryToChatMessages(entry));
     for (const um of userMessages) msgs.push(um);
-    msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    msgs.sort((a, b) => {
+      const ta = typeof a.timestamp === "number" ? a.timestamp : new Date(a.timestamp as string).getTime();
+      const tb = typeof b.timestamp === "number" ? b.timestamp : new Date(b.timestamp as string).getTime();
+      return ta - tb;
+    });
     return mergeStreamingMessages(msgs);
   }, [solo.entries, userMessages]);
 
@@ -333,12 +337,26 @@ export default function SoloLayout() {
 
   const handleChatSubmit = useCallback(
     (text: string, persona?: string, model?: string) => {
-      const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: "user", content: text, timestamp: new Date().toISOString() };
+      const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: "user", content: text, timestamp: Date.now() };
       setUserMessages((prev) => [...prev, userMsg]);
 
-      if (solo.phase === "idle" || solo.phase === "completed" || solo.phase === "error" || solo.phase === "rejected" || solo.phase === "interrupted") {
+      // Mark task as user-active for sort ordering
+      if (solo.taskId) {
+        const brand = config.brandName.toLowerCase();
+        appendTaskHistory(brand, { taskId: solo.taskId, persona: solo.persona || persona || "default", intent: solo.intent || text, phase: solo.phase, timestamp: Date.now() }, true);
+      }
+
+      if (solo.phase === "idle") {
+        // No task yet — create a brand new one
+        solo.createTask(text, { persona: persona || "default", ...(model ? { model } : {}) });
+      } else if (solo.phase === "completed" && solo.taskId) {
+        // Task completed — continue the same conversation with full history
+        solo.continueChat(text, { persona: persona || "default", ...(model ? { model } : {}) });
+      } else if (solo.phase === "error" || solo.phase === "rejected" || solo.phase === "interrupted") {
+        // Task failed — create a fresh one
         solo.createTask(text, { persona: persona || "default", ...(model ? { model } : {}) });
       } else if (solo.taskId) {
+        // Task is active (running/creating/connecting/waiting_review/paused) — send message to workspace
         fetch(`/api/v1/workspace/${solo.taskId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -346,7 +364,7 @@ export default function SoloLayout() {
         }).catch(() => {});
       }
     },
-    [solo]
+    [solo, config.brandName]
   );
 
   const handleReview = useCallback((verdict: "pass" | "reject", feedback: string) => { solo.submitReview(verdict, feedback); }, [solo]);
@@ -362,12 +380,12 @@ export default function SoloLayout() {
       case "/reset": solo.resetState(); setUserMessages([]); break;
       case "/review": if (solo.taskId) solo.submitReview("pass", "通过 /review 命令强制审核"); break;
       case "/help": {
-        const helpMsg: ChatMessage = { id: `system-help-${Date.now()}`, role: "system", content: `可用命令: ${COMMANDS.map((c) => c.cmd).join(", ")}`, timestamp: new Date().toISOString() };
+        const helpMsg: ChatMessage = { id: `system-help-${Date.now()}`, role: "system", content: `可用命令: ${COMMANDS.map((c) => c.cmd).join(", ")}`, timestamp: Date.now() };
         setUserMessages((prev) => [...prev, helpMsg]);
         break;
       }
       default: {
-        const userMsg: ChatMessage = { id: `user-cmd-${Date.now()}`, role: "user", content: `${cmd} 切换模式`, timestamp: new Date().toISOString() };
+        const userMsg: ChatMessage = { id: `user-cmd-${Date.now()}`, role: "user", content: `${cmd} 切换模式`, timestamp: Date.now() };
         setUserMessages((prev) => [...prev, userMsg]);
       }
     }
@@ -392,10 +410,10 @@ export default function SoloLayout() {
         <div className="solo-center-topbar">
           <span className="solo-brand">{config.brandName}<span className="topbar-sep">/</span>{solo.interactionMode === "normal" ? "普通" : solo.interactionMode === "auto" ? "全自动" : "Solo"}</span>
           <div className="solo-topbar-spacer" />
-          {webproxyStatus && (
-            <span className={`solo-webproxy-status${webproxyStatus.healthy ? " healthy" : webproxyStatus.running ? " degraded" : " stopped"}`}
-              title={webproxyStatus.healthy ? `网页代理运行中 (${webproxyStatus.models} 个模型)` : "网页代理未运行"}>
-              {webproxyStatus.healthy ? "🌐" : "⚠"} {webproxyStatus.models}
+          {openrouteStatus && (
+            <span className={`solo-openroute-status${openrouteStatus.healthy ? " healthy" : openrouteStatus.running ? " degraded" : " stopped"}`}
+              title={openrouteStatus.healthy ? `网页代理运行中 (${openrouteStatus.models} 个模型)` : "网页代理未运行"}>
+              {openrouteStatus.healthy ? "🌐" : "⚠"} {openrouteStatus.models}
             </span>
           )}
           <span className="solo-tokens">Token: {solo.tokenStats.total} · ¥{solo.tokenStats.cost.toFixed(2)}</span>

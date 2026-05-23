@@ -131,7 +131,7 @@ def test_llm_client_set_event_bus():
 
 @pytest.mark.asyncio
 async def test_llm_client_execute_no_api_key():
-    """When a specific provider has no API key, LLMClient falls back to webproxy (no key needed)."""
+    """When a specific provider has no API key, LLMClient falls back to openroute (no key needed)."""
     import os
     os.environ.pop("OPENROUTER_API_KEY", None)
     os.environ.pop("ALIYUNCS_API_KEY", None)
@@ -142,10 +142,10 @@ async def test_llm_client_execute_no_api_key():
         "messages": [{"role": "user", "content": "hello"}],
         "model": "openrouter/test-model",
     }))
-    # webproxy doesn't need API key, so fallback succeeds if proxy is running
-    # If proxy is not running, result.error will be set
+    # openroute doesn't need API key, so fallback succeeds if openroute is running
+    # If openroute is not running, result.error will be set
     if result.error is None:
-        assert result.result.get("provider") == "webproxy"
+        assert result.result.get("provider") == "openroute"
     else:
         # Proxy not running, fallback chain exhausted
         assert result.error is not None

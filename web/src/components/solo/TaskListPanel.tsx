@@ -70,9 +70,11 @@ export default function TaskListPanel({
             merged.set(item.taskId, fixed);
           }
         }
-        const sorted = Array.from(merged.values()).sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
-        setHistory(sorted);
-        saveTaskHistory(brand, sorted);
+        const sorted = Array.from(merged.values()).sort((a, b) => (b.lastUserMessageAt || b.timestamp) - (a.lastUserMessageAt || a.timestamp)).slice(0, 20);
+        // Defensive: ensure no deletedIds leak into saved history
+        const clean = sorted.filter((h) => !deletedIds.has(h.taskId));
+        setHistory(clean);
+        saveTaskHistory(brand, clean);
       })
       .catch(() => {
         const brand = config.brandName.toLowerCase();
@@ -95,10 +97,13 @@ export default function TaskListPanel({
   useEffect(() => {
     if (taskId && phase === "running") {
       const brand = config.brandName.toLowerCase();
+      // Never re-add a deleted task
+      const deletedIds = loadDeletedIds(brand);
+      if (deletedIds.has(taskId)) return;
       const existing = loadTaskHistory(brand);
       const found = existing.find((h) => h.taskId === taskId);
       if (!found && intent) {
-        const newItem: TaskHistoryItem = { taskId, persona: "default", intent, phase, timestamp: Date.now() };
+        const newItem: TaskHistoryItem = { taskId, persona: "default", intent, phase, timestamp: Date.now(), lastUserMessageAt: Date.now() };
         const updated = [newItem, ...existing].slice(0, 20);
         saveTaskHistory(brand, updated);
         setHistory((prev) => {
@@ -106,6 +111,7 @@ export default function TaskListPanel({
           return [newItem, ...prev].slice(0, 20);
         });
       } else if (found && found.phase !== phase) {
+        // Update phase in place — do NOT change sort position
         const updated = existing.map((h) => h.taskId === taskId ? { ...h, phase } : h);
         saveTaskHistory(brand, updated);
         setHistory(updated.filter((h) => !deletedIdsRef.current.has(h.taskId)));
@@ -114,6 +120,7 @@ export default function TaskListPanel({
     if (taskId && (phase === "completed" || phase === "error" || phase === "interrupted")) {
       const brand = config.brandName.toLowerCase();
       const existing = loadTaskHistory(brand);
+      // Update phase in place — do NOT change sort position
       const updated = existing.map((h) => h.taskId === taskId ? { ...h, phase } : h);
       saveTaskHistory(brand, updated);
       setHistory(updated.filter((h) => !deletedIdsRef.current.has(h.taskId)));
@@ -144,13 +151,22 @@ export default function TaskListPanel({
 
   const handleDelete = (tid: string) => {
     const brand = config.brandName.toLowerCase();
+    // 1. Remove from local history
     const items = loadTaskHistory(brand).filter((h) => h.taskId !== tid);
     saveTaskHistory(brand, items);
+    // 2. Track deleted ID so refreshList won't re-introduce it
     deletedIdsRef.current.add(tid);
     saveDeletedIds(brand, deletedIdsRef.current);
-    setHistory(items);
+    // 3. Update state immediately (filtering by deletedIds for safety)
+    setHistory(items.filter((h) => !deletedIdsRef.current.has(h.taskId)));
     setMenuOpen(null);
+    // 4. Delete from server workspace
     fetch(`/api/v1/workspace/${tid}`, { method: "DELETE" }).catch(() => {});
+    // If deleting the active task, reset state and clear taskId
+    if (tid === taskId) {
+      onNewTask();
+      return;
+    }
   };
 
   const statusIcon = (p: SoloTaskPhase) => {
@@ -164,7 +180,8 @@ export default function TaskListPanel({
 
   const allTasks = useMemo(() => {
     const tasks = history.map(h => ({ ...h, phase: fixStalePhase(h.phase, h.timestamp) }));
-    if (taskId && !tasks.find((t) => t.taskId === taskId)) {
+    // Only add active task if not already in list AND not deleted
+    if (taskId && !tasks.find((t) => t.taskId === taskId) && !deletedIdsRef.current.has(taskId)) {
       tasks.unshift({ taskId, persona: "default", intent: intent || "新任务", phase: fixStalePhase(phase, Date.now()), timestamp: Date.now() });
     }
     return tasks;

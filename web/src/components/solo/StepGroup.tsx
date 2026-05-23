@@ -2,75 +2,49 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ChatMessage, StepGroupData } from "./solo-types";
-import { SoloTaskPhase } from "../../lib/solo-types";
-import { AgentAvatar, ModeBadge, ApprovalCard } from "./ChatPrimitives";
 import {
-  formatTs,
   formatDurationMs,
-  renderMarkdown,
   getToolIcon,
   getToolSummary,
   truncateParams,
   truncateResult,
 } from "./solo-utils";
+import { ApprovalCard } from "./ChatPrimitives";
 import LLMCallCard from "./LLMCallCard";
 
-function ToolCallCard({ msg }: { msg: ChatMessage }) {
-  const [expanded, setExpanded] = useState(true);
+// ─── Compact tool card ───
+function ToolCardCompact({ msg }: { msg: ChatMessage }) {
+  const [expanded, setExpanded] = useState(false);
   const toolName = msg.content || msg.data?.tool_name || "工具";
   const durationMs = msg.data?.duration_ms || null;
   const params = msg.data?.params || msg.data?.input || msg.data?.arguments || null;
   const result = msg.data?.result || msg.data?.output || null;
   const error = msg.data?.error || null;
-  const hasError = !!error;
 
   return (
-    <div className={`solo-tool-card ${hasError ? "has-error" : ""}`}>
-      <div className="solo-tool-card-header" onClick={() => setExpanded(!expanded)}>
-        <span className="solo-tool-icon-wrap">
-          <span className="solo-tool-emoji">{getToolIcon(toolName)}</span>
-        </span>
-        <span className="solo-tool-name">{toolName}</span>
-        <span className="solo-tool-summary-inline">{getToolSummary(msg.data || {})}</span>
-        {durationMs != null && (
-          <span className="solo-tool-duration">{formatDurationMs(durationMs)}</span>
-        )}
-        <span className="solo-tool-expand-toggle">{expanded ? "▾" : "▸"}</span>
-      </div>
+    <div className="solo-tool-compact" onClick={() => setExpanded(!expanded)}>
+      <span className="solo-tool-compact-icon">{getToolIcon(toolName)}</span>
+      <span className="solo-tool-compact-name">{toolName}</span>
+      <span className="solo-tool-compact-detail">{getToolSummary(msg.data || {})}</span>
+      {durationMs != null && <span className="solo-step-duration">{formatDurationMs(durationMs)}</span>}
       {expanded && (
-        <div className="solo-tool-card-detail">
+        <div className="solo-tool-card-detail" style={{ position: "absolute", left: 0, marginTop: 8 }}>
           {params && (
             <div className="solo-tool-detail-section">
-              <div className="solo-tool-detail-label">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: 4 }}>
-                  <path d="M3 2h6v3H3zM3 7h6v3H3z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                输入
-              </div>
+              <div className="solo-tool-detail-label">参数</div>
               <pre className="solo-tool-detail-pre">{truncateParams(params, 300)}</pre>
             </div>
           )}
-          {result && !hasError && (
+          {result && !error && (
             <div className="solo-tool-detail-section">
-              <div className="solo-tool-detail-label">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: 4 }}>
-                  <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                输出
-              </div>
+              <div className="solo-tool-detail-label">输出</div>
               <pre className="solo-tool-detail-pre">{truncateResult(result, 500)}</pre>
             </div>
           )}
-          {hasError && (
-            <div className="solo-tool-detail-section solo-tool-error-section">
-              <div className="solo-tool-detail-label error-label">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginRight: 4 }}>
-                  <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
-                  <path d="M6 4v2M6 7.5v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
-                错误
-              </div>
-              <pre className="solo-tool-detail-pre error-pre">{error}</pre>
+          {error && (
+            <div className="solo-tool-detail-section">
+              <div className="solo-tool-detail-label" style={{ color: "var(--danger)" }}>错误</div>
+              <pre className="solo-tool-detail-pre" style={{ color: "var(--danger-muted)" }}>{error}</pre>
             </div>
           )}
         </div>
@@ -79,40 +53,34 @@ function ToolCallCard({ msg }: { msg: ChatMessage }) {
   );
 }
 
-function ThinkingBlock({ msg }: { msg: ChatMessage }) {
-  const [expanded, setExpanded] = useState(true);
-  const agentName = msg.data?.agent_name || "AI";
-  const content = msg.content || "";
-
+// ─── Step header status icon ───
+function StatusIcon({ status }: { status: string }) {
+  const style: React.CSSProperties = { fontSize: 12, flexShrink: 0 };
+  if (status === "running") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin 1s linear infinite", flexShrink: 0 }}>
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+    );
+  }
+  if (status === "completed") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
+    );
+  }
   return (
-    <div className="solo-thinking-block">
-      <div className="solo-thinking-header" onClick={() => setExpanded(!expanded)}>
-        <div className="solo-thinking-icon-wrap">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1a4.5 4.5 0 014.5 4.5c0 1.6-.8 3-2.1 3.8L9 9.8V11H5V9.8l-.4-.5A4.5 4.5 0 017 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-            <path d="M5.5 12.5h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-        </div>
-        <span className="solo-thinking-label">思考</span>
-        <AgentAvatar name={agentName} size={18} />
-        <span className="solo-thinking-agent-name">{agentName}</span>
-        {!expanded && content && (
-          <span className="solo-thinking-preview">{content.slice(0, 80)}{content.length > 80 ? "…" : ""}</span>
-        )}
-        <span className="solo-thinking-toggle">{expanded ? "收起" : "展开"}</span>
-      </div>
-      {expanded && content && (
-        <div className="solo-thinking-body">
-          <div
-            className="solo-markdown-bubble thinking-content"
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-          />
-        </div>
-      )}
-    </div>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--destructive)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
   );
 }
 
+// ─── StepGroup ───
 export default function StepGroup({
   group, isLastActive, onApprovalAction,
 }: {
@@ -126,132 +94,97 @@ export default function StepGroup({
     if (isLastActive && group.status === "running") setCollapsed(false);
   }, [isLastActive, group.status]);
 
-  const primaryAgent = useMemo(() => {
-    for (const e of group.entries) {
-      const name = e.data?._agent_name || e.data?.agent_name;
-      if (name) return name;
-    }
-    return "";
-  }, [group.entries]);
-
-  const executionMode = useMemo(() => {
-    for (const e of group.entries) {
-      const mode = e.data?.mode || e.data?.execution_mode;
-      if (mode) return mode;
-    }
-    return "";
-  }, [group.entries]);
-
   const statusClass = group.status === "completed" ? "completed" : group.status === "error" ? "error" : "running";
 
-  const toolCount = group.entries.filter((e) => e.role === "tool").length;
-  const llmCount = group.entries.filter((e) => e.role === "ai" && e.data?._streaming).length;
-  const thinkingCount = group.entries.filter((e) => e.role === "ai" && e.data?._thinking).length;
+  // Categorize entries
+  const aiMessages = useMemo(
+    () => group.entries.filter((m) => m.role === "ai"),
+    [group.entries]
+  );
+  const nonAiEntries = useMemo(
+    () => group.entries.filter((m) => m.role !== "ai"),
+    [group.entries]
+  );
+
+  // Status border color
+  const borderColor =
+    statusClass === "completed" ? "var(--ok)"
+    : statusClass === "error" ? "var(--destructive)"
+    : "var(--accent)";
 
   return (
-    <div className={`solo-step ${statusClass}`}>
-      <div className="solo-step-header" onClick={() => setCollapsed(!collapsed)}>
-        <div className="solo-step-left">
-          <span className={`solo-step-toggle ${collapsed ? "collapsed" : ""}`}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+    <div style={{ marginBottom: 1, marginLeft: 8, marginRight: 8, borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+      {/* Minimal step header — Dify style */}
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "8px 12px", cursor: "pointer", userSelect: "none",
+          borderLeft: `3px solid ${borderColor}`,
+          background: "var(--bg)",
+        }}
+        onClick={() => setCollapsed(!collapsed)}
+      >
+        {/* Chevron toggle */}
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{
+            flexShrink: 0,
+            transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
+            transition: "transform 0.2s var(--ease-out)",
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+
+        {/* Status icon */}
+        <StatusIcon status={statusClass} />
+
+        {/* Step label */}
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-strong)", flex: 1 }}>
+          {group.stepLabel}
+        </span>
+
+        {/* Duration */}
+        {group.durationMs != null && group.durationMs > 0 && (
+          <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "var(--mono)" }}>
+            {formatDurationMs(group.durationMs)}
           </span>
-          <div className="solo-step-status-indicator">
-            {statusClass === "completed" && (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" fill="rgba(34,197,94,0.15)" stroke="var(--ok)" strokeWidth="1.5" />
-                <path d="M5 8l2 2 4-4" stroke="var(--ok)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
-            {statusClass === "running" && <span className="solo-step-spinner" />}
-            {statusClass === "error" && (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" fill="rgba(239,68,68,0.15)" stroke="var(--danger)" strokeWidth="1.5" />
-                <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="var(--danger)" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            )}
-          </div>
-          {primaryAgent && <AgentAvatar name={primaryAgent} size={22} />}
-          <span className="solo-step-name">{group.stepLabel}</span>
-          {executionMode && <ModeBadge mode={executionMode} />}
-        </div>
-        <div className="solo-step-right">
-          <span className="solo-step-sub-count" title={`${toolCount} 工具 · ${llmCount} LLM · ${thinkingCount} 思考`}>
-            {toolCount > 0 && <span className="solo-step-count-chip tool">🔧 {toolCount}</span>}
-            {llmCount > 0 && <span className="solo-step-count-chip llm">🤖 {llmCount}</span>}
-            {thinkingCount > 0 && <span className="solo-step-count-chip think">💭 {thinkingCount}</span>}
-          </span>
-          {group.durationMs != null && group.durationMs > 0 && (
-            <span className="solo-step-duration">{formatDurationMs(group.durationMs)}</span>
-          )}
-        </div>
+        )}
       </div>
+
+      {/* Entry body */}
       {!collapsed && (
-        <div className="solo-step-body">
-          <div className="solo-step-timeline-line" />
-          {group.entries.map((msg, idx) => {
+        <div style={{ paddingLeft: 28, paddingRight: 12, paddingBottom: 12, paddingTop: 4 }}>
+          {/* AI messages */}
+          {aiMessages.map((msg) => (
+            <div key={msg.id} className="solo-step-entry">
+              <LLMCallCard
+                msg={msg}
+                thinkingContent={msg.data?._thinking_content || ""}
+              />
+            </div>
+          ))}
+
+          {/* Non-AI entries */}
+          {nonAiEntries.map((msg) => {
             if (msg.role === "tool") {
               return (
                 <div key={msg.id} className="solo-step-entry">
-                  <div className="solo-step-entry-connector tool-connector" />
-                  <ToolCallCard msg={msg} />
-                </div>
-              );
-            }
-            if (msg.role === "ai" && msg.data?._thinking) {
-              return (
-                <div key={msg.id} className="solo-step-entry">
-                  <div className="solo-step-entry-connector think-connector" />
-                  <ThinkingBlock msg={msg} />
-                </div>
-              );
-            }
-            if (msg.role === "ai" && msg.data?._streaming) {
-              return (
-                <div key={msg.id} className="solo-step-entry">
-                  <div className="solo-step-entry-connector llm-connector" />
-                  <LLMCallCard msg={msg} />
-                </div>
-              );
-            }
-            if (msg.role === "ai" && msg.data?._draft) {
-              const draftAgent = msg.data?._agent_name || "FlowForge Agent";
-              return (
-                <div key={msg.id} className="solo-step-entry">
-                  <div className="solo-step-entry-connector ok-connector" />
-                  <div className="solo-draft-output">
-                    <div className="solo-draft-header">
-                      <div className="chat-avatar chat-avatar-ai" style={{ width: 22, height: 22 }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 2a4 4 0 014 4v1a1 1 0 001 1h1a4 4 0 010 8h-1a1 1 0 00-1 1v1a4 4 0 01-8 0v-1a1 1 0 00-1-1H6a4 4 0 010-8h1a1 1 0 001-1V6a4 4 0 014-4z" />
-                          <circle cx="12" cy="12" r="2" />
-                        </svg>
-                      </div>
-                      <span className="solo-draft-label">{draftAgent}</span>
-                    </div>
-                    <div className="solo-draft-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
-                  </div>
-                </div>
-              );
-            }
-            if (msg.role === "ai") {
-              return (
-                <div key={msg.id} className="solo-step-entry">
-                  <div className="solo-step-entry-connector llm-connector" />
-                  <LLMCallCard msg={msg} />
+                  <ToolCardCompact msg={msg} />
                 </div>
               );
             }
             if (msg.role === "system") {
-              const isSuccess = msg.content.startsWith("✓");
+              const isSuccess = msg.content?.startsWith("✓");
               return (
                 <div key={msg.id} className="solo-step-entry">
-                  <div className={`solo-step-entry-connector ${isSuccess ? "ok-connector" : "error-connector"}`} />
-                  <div className={`solo-system-msg ${isSuccess ? "success" : "error"}`}>
-                    <span className="solo-system-icon">{isSuccess ? "✓" : "✗"}</span>
-                    {msg.content.replace(/^[✓✗]\s*/, "")}
-                    <span className="solo-msg-time">{formatTs(msg.timestamp)}</span>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    fontSize: 12, fontWeight: 600, padding: "4px 0",
+                    color: isSuccess ? "var(--ok)" : "var(--destructive)",
+                  }}>
+                    {msg.content}
                   </div>
                 </div>
               );
@@ -260,19 +193,35 @@ export default function StepGroup({
               const passed = msg.data?.is_passed;
               return (
                 <div key={msg.id} className="solo-step-entry">
-                  <div className={`solo-step-entry-connector ${passed ? "ok-connector" : "error-connector"}`} />
-                  <div className={`solo-gate ${passed ? "passed" : "failed"}`}>
-                    {passed ? (
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginRight: 6 }}>
-                        <path d="M3 7l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    ) : (
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginRight: 6 }}>
-                        <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "2px 10px", borderRadius: "var(--radius-full)",
+                    fontSize: 11, fontWeight: 600,
+                    color: passed ? "var(--ok)" : "var(--destructive)",
+                    background: passed
+                      ? "color-mix(in srgb, var(--ok) 12%, transparent)"
+                      : "color-mix(in srgb, var(--destructive) 12%, transparent)",
+                  }}>
+                    {passed ? "✓" : "✗"} {msg.data?.gate_id || "Gate"}
+                    {msg.data?.score != null && (
+                      <span style={{ fontSize: 10, opacity: 0.6, fontFamily: "var(--mono)", marginLeft: 4 }}>
+                        {msg.data.score}
+                      </span>
                     )}
-                    <span className="solo-gate-id">{msg.data?.gate_id || "Gate"}</span>
-                    {msg.data?.score != null && <span className="solo-gate-score">{msg.data.score}</span>}
+                  </span>
+                </div>
+              );
+            }
+            if (msg.role === "review") {
+              return (
+                <div key={msg.id} className="solo-step-entry">
+                  <div style={{
+                    borderRadius: "var(--radius-lg)", border: "1px solid var(--warn)",
+                    background: "color-mix(in srgb, var(--warn) 8%, var(--bg-elevated))",
+                    padding: "8px 12px", color: "var(--warn)",
+                    fontSize: 12, fontWeight: 600,
+                  }}>
+                    ⏸ 审核节点: {msg.content}
                   </div>
                 </div>
               );
@@ -280,29 +229,36 @@ export default function StepGroup({
             if (msg.role === "approval") {
               return (
                 <div key={msg.id} className="solo-step-entry">
-                  <div className="solo-step-entry-connector warn-connector" />
                   <ApprovalCard messageId={msg.id} data={msg.data || {}} onAction={onApprovalAction} />
                 </div>
               );
             }
-            if (msg.role === "review") {
-              return (
-                <div key={msg.id} className="solo-step-entry">
-                  <div className="solo-step-entry-connector warn-connector" />
-                  <div className="solo-review-card">
-                    <div className="solo-review-header">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: 8 }}>
-                        <path d="M8 2v4M8 10v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                        <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
-                      </svg>
-                      审核节点
-                    </div>
-                    <p className="solo-review-summary">{msg.content}</p>
+            // fallback
+            return (
+              <div key={msg.id} className="solo-step-entry">
+                <div style={{
+                  background: "var(--bg-elevated)", border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-md)", padding: "8px 12px",
+                  animation: "fadeIn 0.2s var(--ease-out)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase",
+                      letterSpacing: "0.05em", padding: "2px 6px", borderRadius: "var(--radius-full)",
+                      background: "var(--bg-hover)",
+                    }}>
+                      {msg.role}
+                    </span>
+                    <span style={{ fontSize: 10, color: "var(--muted)", fontFamily: "var(--mono)" }}>
+                      {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""}
+                    </span>
                   </div>
+                  {msg.content && (
+                    <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--text)" }}>{msg.content}</div>
+                  )}
                 </div>
-              );
-            }
-            return null;
+              </div>
+            );
           })}
         </div>
       )}

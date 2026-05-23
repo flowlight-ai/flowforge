@@ -189,8 +189,8 @@ class ModelService:
 
         provider, model_id = model_key.split("/", 1)
 
-        if provider == "webproxy":
-            return await self._check_webproxy_health(model_key, model_id)
+        if provider == "openroute":
+            return await self._check_openroute_health(model_key, model_id)
 
         base_url = self._get_base_url(provider)
         api_key = self._get_api_key(provider)
@@ -313,22 +313,25 @@ class ModelService:
                 "cached": False,
             }
 
-    async def _check_webproxy_health(self, model_key: str, model_id: str) -> dict:
-        """Check health of a webproxy model by verifying the proxy service is running.
+    async def _check_openroute_health(self, model_key: str, model_id: str) -> dict:
+        """Check health of an openroute model by verifying the openroute service is running.
 
-        Webproxy models require the hiclaw proxy service to be running on port 13000.
-        This method first checks if the proxy service is reachable, then attempts
+        OpenRoute models require the hiclaw openroute service to be running on port 13000.
+        This method first checks if the openroute service is reachable, then attempts
         a lightweight ping to the specific model.
         """
         try:
-            from flowforge.tools.webproxy_service import get_webproxy_service
-            svc = get_webproxy_service()
+            from flowforge.app.deps import get_plugin_registry
+            registry = get_plugin_registry()
+            if registry is None:
+                raise ImportError("PluginRegistry not initialized")
+            svc = registry.get_plugin("openroute")
         except ImportError:
-            self._update_health_state(model_key, self.STATUS_DISABLED, reason="webproxy_service_unavailable")
+            self._update_health_state(model_key, self.STATUS_DISABLED, reason="openroute_service_unavailable")
             return {
                 "model_key": model_key,
                 "status": self.STATUS_DISABLED,
-                "reason": "webproxy_service_module_not_found",
+                "reason": "openroute_service_module_not_found",
                 "cached": False,
             }
 

@@ -358,10 +358,10 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .solo-progress { font-size: 12px; color: var(--muted-strong); font-family: var(--mono); }
 .solo-topbar-spacer { flex: 1; }
 .solo-tokens { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-.solo-webproxy-status { font-size: 11px; font-family: var(--mono); padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
-.solo-webproxy-status.healthy { color: var(--ok-muted); background: var(--ok-subtle); }
-.solo-webproxy-status.degraded { color: var(--warn-muted); background: var(--warn-subtle); }
-.solo-webproxy-status.stopped { color: var(--danger-muted); background: var(--danger-subtle); }
+.solo-openroute-status { font-size: 11px; font-family: var(--mono); padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
+.solo-openroute-status.healthy { color: var(--ok-muted); background: var(--ok-subtle); }
+.solo-openroute-status.degraded { color: var(--warn-muted); background: var(--warn-subtle); }
+.solo-openroute-status.stopped { color: var(--danger-muted); background: var(--danger-subtle); }
 
 .execution-stream {
   grid-area: stream;
@@ -1530,125 +1530,72 @@ button, input, textarea, select { font: inherit; color: inherit; }
   border-left: 3px solid var(--danger);
 }
 .solo-step-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 12px;
-  background: color-mix(in srgb, var(--bg-elevated) 60%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
   cursor: pointer;
   user-select: none;
+  border-bottom: 1px solid transparent;
   transition: background 0.15s;
-  gap: 8px;
 }
 .solo-step-header:hover {
   background: var(--bg-hover);
 }
-.solo-step-left {
-  display: flex; align-items: center; gap: 6px;
-  flex: 1; min-width: 0;
-}
-.solo-step-right {
-  display: flex; align-items: center; gap: 6px;
-  flex-shrink: 0;
-}
 .solo-step-toggle {
-  display: flex; align-items: center; justify-content: center;
-  width: 16px; height: 16px;
+  font-size: 12px;
   color: var(--muted);
-  transition: transform 0.2s var(--ease-out);
-  flex-shrink: 0;
+  transition: transform 0.2s;
 }
 .solo-step-toggle.collapsed {
-  transform: rotate(0deg);
+  transform: rotate(-90deg);
 }
-.solo-step-toggle:not(.collapsed) {
-  transform: rotate(90deg);
-}
-.solo-step-status-indicator {
-  display: flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px;
+.solo-step-status-icon {
+  font-size: 10px;
   flex-shrink: 0;
 }
-.solo-step-spinner {
-  width: 14px; height: 14px;
-  border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
+.solo-step.completed .solo-step-status-icon { color: var(--ok); }
+.solo-step.error .solo-step-status-icon { color: var(--danger); }
+.solo-step.running .solo-step-status-icon { color: var(--accent-2); animation: pulse-dot 1.5s ease-in-out infinite; }
 .solo-step-name {
-  font-size: 13px; font-weight: 600; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.solo-step-sub-count {
-  display: flex; gap: 4px;
-}
-.solo-step-count-chip {
-  display: inline-flex; align-items: center; gap: 2px;
-  padding: 1px 5px; border-radius: var(--radius-full);
-  font-size: 9px; font-weight: 700;
-}
-.solo-step-count-chip.tool {
-  background: rgba(59,130,246,0.1); color: #3b82f6;
-}
-.solo-step-count-chip.llm {
-  background: rgba(139,92,246,0.1); color: #8b5cf6;
-}
-.solo-step-count-chip.think {
-  background: rgba(6,182,212,0.1); color: #06b6d4;
+  font-size: 14px; font-weight: 600; color: var(--text); flex: 1;
 }
 .solo-step-duration {
-  font-size: 11px; color: var(--muted-strong);
-  font-family: var(--mono); font-weight: 600;
+  font-size: 11px; color: var(--muted); font-family: var(--mono);
 }
+@keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 .solo-step-body {
-  padding: 4px 8px 8px 24px;
+  padding: 8px 12px 12px 28px;
   position: relative;
 }
-.solo-step-timeline-line {
+.solo-step-body::before {
+  content: '';
   position: absolute;
-  left: 18px; top: 4px; bottom: 8px;
+  left: 18px;
+  top: 4px;
+  bottom: 4px;
   width: 2px;
-  background: color-mix(in srgb, var(--border) 50%, transparent);
+  background: var(--border);
   border-radius: 1px;
+}
+.solo-step-timeline-line {
+  display: none;
 }
 .solo-step-entry {
   position: relative;
-  padding-left: 16px;
-  margin-bottom: 4px;
+  padding: 6px 0 6px 16px;
 }
-.solo-step-entry-connector {
+.solo-step-entry::before {
+  content: '';
   position: absolute;
-  left: 0; top: 12px;
-  width: 10px; height: 10px;
-  border-radius: var(--radius-full);
-  border: 2px solid;
-  background: var(--bg);
-  z-index: 1;
+  left: -11px;
+  top: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 2px solid var(--bg);
 }
-.solo-step-entry-connector.tool-connector {
-  border-color: #3b82f6;
-  background: rgba(59,130,246,0.15);
-}
-.solo-step-entry-connector.llm-connector {
-  border-color: #8b5cf6;
-  background: rgba(139,92,246,0.15);
-}
-.solo-step-entry-connector.think-connector {
-  border-color: #06b6d4;
-  background: rgba(6,182,212,0.15);
-}
-.solo-step-entry-connector.ok-connector {
-  border-color: var(--ok);
-  background: var(--ok-subtle);
-}
-.solo-step-entry-connector.error-connector {
-  border-color: var(--danger);
-  background: var(--danger-subtle);
-}
-.solo-step-entry-connector.warn-connector {
-  border-color: var(--warn);
-  background: var(--warn-subtle);
-}
-
 .solo-llm-card {
   background: color-mix(in srgb, #8b5cf6 4%, var(--bg-elevated));
   border: 1px solid color-mix(in srgb, #8b5cf6 18%, var(--border));
@@ -1657,8 +1604,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   animation: rise 0.2s ease-out;
 }
 .solo-llm-card-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -1666,7 +1613,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   background: color-mix(in srgb, #8b5cf6 6%, transparent);
 }
 .solo-llm-card-info {
-  display: flex; flex-direction: column; gap: 1px;
+  display: flex; align-items: center; gap: 4px;
   flex: 1; min-width: 0;
 }
 .solo-llm-agent-name {
@@ -1711,6 +1658,37 @@ button, input, textarea, select { font: inherit; color: inherit; }
 }
 .solo-llm-card-body.collapsed {
   max-height: 0;
+}
+
+/* LLM thinking inline bar */
+.solo-llm-thinking-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #06b6d4;
+  border-top: 1px dashed color-mix(in srgb, #8b5cf6 10%, var(--border));
+  transition: background 0.15s;
+}
+.solo-llm-thinking-bar:hover {
+  background: color-mix(in srgb, #06b6d4 6%, transparent);
+}
+.solo-llm-thinking-chevron {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+.solo-llm-thinking-label {
+  font-weight: 600;
+}
+.solo-llm-thinking-body {
+  padding: 8px 12px;
+  background: color-mix(in srgb, #06b6d4 5%, var(--bg));
+  border-top: 1px dashed var(--border);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted-strong);
 }
 
 .solo-tool-card {
@@ -1977,6 +1955,116 @@ button, input, textarea, select { font: inherit; color: inherit; }
   line-height: 1.5;
 }
 
+/* === File Reference Badges === */
+.file-ref {
+  color: var(--accent-2);
+  cursor: pointer;
+  border-bottom: 1px dashed var(--accent-2);
+  transition: all 0.15s;
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+.file-ref:hover {
+  color: var(--accent);
+  border-bottom-style: solid;
+  background: var(--accent-subtle);
+}
+
+/* === Fallback Card (for unhandled message types) === */
+.solo-fallback-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  animation: rise 0.2s ease-out;
+}
+.solo-fallback-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.solo-fallback-role {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+}
+.solo-fallback-time {
+  font-size: 10px;
+  color: var(--muted-strong);
+  font-family: var(--mono);
+}
+.solo-fallback-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+/* === Default connector === */
+.solo-step-entry-connector.default-connector {
+  border-color: var(--muted-strong);
+  background: rgba(100,100,116,0.1);
+}
+
+/* === File Change Badge Row === */
+.solo-file-change-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.solo-file-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+.solo-file-badge:hover {
+  border-color: var(--accent-2);
+  background: var(--accent-2-subtle);
+}
+.solo-file-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.solo-file-path {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+}
+.solo-file-diff {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+}
+.solo-file-diff.add { color: var(--ok); background: var(--ok-subtle); }
+.solo-file-diff.del { color: var(--danger); background: var(--danger-subtle); }
+.solo-file-action {
+  font-size: 10px;
+  color: var(--accent-2);
+  cursor: pointer;
+  opacity: 0.7;
+}
+.solo-file-action:hover { opacity: 1; text-decoration: underline; }
+
 .chat-approval-card {
   background: color-mix(in srgb, var(--warn) 8%, var(--bg-elevated));
   border: 1px solid var(--warn);
@@ -2078,15 +2166,21 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .chat-ai-content code { font-family: var(--mono); font-size: 12px; }
 
 .chat-processing {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 8px 0; margin: 2px 0;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.7;
 }
-.chat-processing-body { max-width: 80%; }
-.chat-processing-text {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 14px; border-radius: var(--radius-md);
-  background: var(--bg-elevated); border: 1px solid var(--border);
-  font-size: 12px; color: var(--muted);
+.chat-processing-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.chat-processing-label {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .task-status-interrupted {
@@ -2289,3 +2383,99 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .chat-model-option-status.unhealthy {
   background: var(--danger);
 }
+
+/* === Trae CN Style Chat Output === */
+
+/* Compact user line */
+.chat-user-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+}
+.chat-user-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.chat-user-text {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Compact AI message (outside steps) */
+.chat-mini-ai {
+  padding: 4px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.chat-mini-ai-sender {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-right: 8px;
+}
+.chat-mini-ai-time {
+  font-size: 10px;
+  color: var(--muted-strong);
+  font-family: var(--mono);
+}
+.chat-mini-ai-body {
+  margin-top: 2px;
+}
+
+/* Status line */
+.chat-status-line {
+  font-size: 12px;
+  padding: 4px 0;
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chat-status-line.ok { color: var(--ok); }
+.chat-status-line.err { color: var(--danger); }
+
+/* Gate badge */
+.solo-gate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+}
+.solo-gate-badge.passed { background: var(--ok-subtle); color: var(--ok); }
+.solo-gate-badge.failed { background: var(--danger-subtle); color: var(--danger); }
+
+/* Review node */
+.solo-review-node {
+  padding: 8px 12px;
+  background: var(--warn-subtle);
+  border: 1px solid var(--warn);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--warn);
+}
+
+/* Tool compact */
+.solo-tool-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--muted-strong);
+  cursor: pointer;
+}
+.solo-tool-compact-icon { font-size: 14px; flex-shrink: 0; }
+.solo-tool-compact-name { font-weight: 600; color: var(--text); font-family: var(--mono); font-size: 11px; }
+.solo-tool-compact-detail { color: var(--muted); font-size: 11px; }
+
+/* Default connector override */
+.solo-step-entry-connector.default-connector { border-color: var(--muted-strong); background: rgba(100,100,116,0.1); }

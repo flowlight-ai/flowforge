@@ -1,3 +1,10 @@
+"""Legacy ToolRegistry — kept for backward compatibility during migration.
+
+The new PluginRegistry (flowforge.core.plugin_registry) is the primary
+tool management system. This ToolRegistry wraps BaseTool instances and
+can optionally delegate to PluginRegistry for tools that have been migrated.
+"""
+
 import asyncio
 import time
 from typing import Dict, Optional, Callable
@@ -6,6 +13,12 @@ from flowforge.core.errors import ToolNotFoundError
 
 
 class ToolRegistry:
+    """Legacy tool registry for BaseTool instances.
+
+    During the migration from BaseTool to ToolPlugin, this registry
+    coexists with PluginRegistry. New code should use PluginRegistry.
+    """
+
     def __init__(self, tool_timeout: int = 120):
         self._tools: Dict[str, BaseTool] = {}
         self._emit_callback: Optional[Callable] = None

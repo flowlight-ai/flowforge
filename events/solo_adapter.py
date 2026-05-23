@@ -16,8 +16,8 @@ _SAVE_EVENTS = {
     "solo.stage.exit",
     "solo.tool.start",
     "solo.tool.end",
-    "solo.llm.end",
     "solo.draft.update",
+    "solo.draft.file",
     "solo.step.intermediate",
     "solo.review.ready",
     "solo.task.completed",
@@ -36,10 +36,8 @@ def _event_to_message(event_type: str, payload: dict) -> dict | None:
         return {"role": "tool", "content": payload.get("tool_name", "tool"), "data": payload}
     if event_type == "solo.tool.end":
         return {"role": "tool", "content": payload.get("tool_name", "tool"), "data": payload}
-    if event_type == "solo.llm.end":
-        agent_name = payload.get("agent_name", "FlowForge Agent")
-        content = payload.get("content") or payload.get("full_response") or payload.get("result") or ""
-        return {"role": "assistant", "content": content, "data": {**payload, "_agent_name": agent_name}}
+    # NOTE: llm.end is deliberately NOT saved — draft.update carries user-facing content.
+    # Saving llm.end creates duplicate AI messages in workspace chat history.
     if event_type == "solo.draft.update":
         content = payload.get("content", "")
         agent_name = payload.get("agent_name", "FlowForge Agent")
@@ -47,6 +45,8 @@ def _event_to_message(event_type: str, payload: dict) -> dict | None:
         if not is_partial and content:
             return {"role": "assistant", "content": content, "data": {**payload, "_agent_name": agent_name, "_draft": True}}
         return None
+    if event_type == "solo.draft.file":
+        return {"role": "assistant", "content": "", "data": {**payload, "_agent_name": "FlowForge", "_is_file": True}}
     if event_type == "solo.step.intermediate":
         return {"role": "system", "content": payload.get("step_name", "intermediate"), "data": payload}
     if event_type == "solo.review.ready":

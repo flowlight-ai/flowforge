@@ -64,6 +64,7 @@ function eventToEntry(event: SoloWSEvent): StreamEntry {
     "solo.llm.end": "stage",
     "solo.step.intermediate": "intermediate",
     "solo.draft.update": "draft-update",
+    "solo.draft.file": "draft-file",
     "solo.review.ready": "review",
     "solo.review.submitted": "review",
     "solo.gate.verdict": "gate",
@@ -74,9 +75,10 @@ function eventToEntry(event: SoloWSEvent): StreamEntry {
   return {
     id: `e-${event.seq}`,
     type: typeMap[event.type] || "system",
-    timestamp: event.timestamp,
+    timestamp: Date.now(),      // numeric for correct ordering
+    _serverTs: event.timestamp, // preserve server timestamp for display
     data: event.payload,
-  };
+  } as StreamEntry;
 }
 
 export function useSoloWebSocket(opts?: SoloWSOptions) {
@@ -364,6 +366,61 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     }
   }, [connectWS, brand, interactionMode]);
 
+  const continueChat = useCallback(async (taskIntent: string, extra?: Record<string, any>) => {
+    const existingTaskId = taskId;
+    if (!existingTaskId) return;
+
+    // Disconnect old WebSocket first to avoid duplicate events
+    disconnectWS();
+
+    setPhase("creating");
+    setIntent(taskIntent);
+    // Keep existing entries for conversation history continuity
+    draftBuffer.current = "";
+    setEditorContent("");
+    editorContentRef.current = "";
+    setDraftContent("");
+    saveState(brand, { intent: taskIntent, phase: "creating", ...extra });
+
+    // Save the new user message to the existing workspace
+    try {
+      await fetch(`/api/v1/workspace/${existingTaskId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "user", content: taskIntent, model: extra?.model }),
+      });
+    } catch {
+      // Non-fatal: the task creation endpoint also saves the message
+    }
+
+    try {
+      const r = await fetch("/api/v1/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          intent: taskIntent,
+          mode: "solo",
+          task_id: existingTaskId,
+          interaction_mode: interactionMode,
+          ...extra,
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setPhase("error");
+        saveState(brand, { phase: "error" });
+        optionsRef.current?.onError?.("continue", data.detail || "继续对话失败");
+        return;
+      }
+      saveState(brand, { taskId: existingTaskId, phase: "creating", intent: taskIntent });
+      connectWS(existingTaskId);
+    } catch (e: any) {
+      setPhase("error");
+      saveState(brand, { phase: "error" });
+      optionsRef.current?.onError?.("continue", e.message);
+    }
+  }, [taskId, connectWS, brand, interactionMode]);
+
   const resetState = useCallback(() => {
     disconnectWS();
     clearState(brand);
@@ -435,7 +492,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     phase, taskId, entries, draftContent, editorContent,
     stageProgress, tokenStats, startTime, persona, intent,
     interactionMode, setInteractionMode,
-    createTask, resetState, restoreTask, updateEditor,
+    createTask, continueChat, resetState, restoreTask, updateEditor,
     pause, resume, skipCurrent, submitReview,
     connectWS, disconnectWS,
   };

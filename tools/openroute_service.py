@@ -1,10 +1,10 @@
-"""WebProxy Service Manager for FlowForge.
+"""OpenRoute Service Manager for FlowForge.
 
-Manages the lifecycle of the hiclaw web proxy service, which wraps web-based
+Manages the lifecycle of the hiclaw openroute service, which wraps web-based
 LLM chat interfaces (Doubao, Kimi, DeepSeek, Qianwen, Yuanbao) as OpenAI-compatible
 APIs using Playwright browser automation.
 
-The proxy service runs as a separate subprocess on port 13000, providing:
+The openroute service runs as a separate subprocess on port 13000, providing:
 - 1 auto-routing entry: auto (delegates to hiclaw's assignment-based model selection)
 - 1 round-robin entry: web/chat (distributes across all 5 platforms)
 - 5 platform-specific models: doubao-web/seed-2.0, kimi-web/chat, deepseek-web/chat,
@@ -15,7 +15,7 @@ routing intelligence (health checks, fallback chains, API + WebChat hybrid) to
 always pick the best available model. This means unlimited tokens with zero config.
 
 Usage:
-    svc = WebProxyService()
+    svc = OpenRouteService()
     await svc.start()
     status = await svc.get_status()
     await svc.stop()
@@ -34,33 +34,33 @@ import httpx
 
 from flowforge.core.tracing import get_logger
 
-logger = get_logger("webproxy_service")
+logger = get_logger("openroute_service")
 
-PROXY_DIR = Path(r"d:\software\openclaw\hiclaw\tool\proxy")
-DEFAULT_PROXY_PORT = 13000
-DEFAULT_PROXY_HOST = "127.0.0.1"
+OPENROUTE_DIR = Path(r"d:\software\openclaw\hiclaw\tool\openroute")
+DEFAULT_OPENROUTE_PORT = 13000
+DEFAULT_OPENROUTE_HOST = "127.0.0.1"
 HEALTH_CHECK_TIMEOUT = 5
 STARTUP_WAIT_SECONDS = 30
 HEALTH_POLL_INTERVAL = 2
 
 
-class WebProxyService:
-    """Manages the hiclaw web proxy subprocess lifecycle.
+class OpenRouteService:
+    """Manages the hiclaw openroute subprocess lifecycle.
 
-    The proxy service is a FastAPI application that uses Playwright to drive
+    The openroute service is a FastAPI application that uses Playwright to drive
     real browsers, wrapping web chat interfaces as OpenAI-compatible APIs.
 
     Attributes:
-        _process: The subprocess running the proxy server.
-        _port: The port the proxy server listens on.
-        _host: The host the proxy server binds to.
-        _started_at: Timestamp when the proxy was last started.
-        _running: Whether the proxy is believed to be running.
+        _process: The subprocess running the openroute server.
+        _port: The port the openroute server listens on.
+        _host: The host the openroute server binds to.
+        _started_at: Timestamp when the openroute was last started.
+        _running: Whether the openroute is believed to be running.
     """
 
-    def __init__(self, proxy_dir: Optional[Path] = None, port: int = DEFAULT_PROXY_PORT,
-                 host: str = DEFAULT_PROXY_HOST):
-        self._proxy_dir = proxy_dir or PROXY_DIR
+    def __init__(self, openroute_dir: Optional[Path] = None, port: int = DEFAULT_OPENROUTE_PORT,
+                 host: str = DEFAULT_OPENROUTE_HOST):
+        self._openroute_dir = openroute_dir or OPENROUTE_DIR
         self._port = port
         self._host = host
         self._process: Optional[subprocess.Popen] = None
@@ -80,7 +80,7 @@ class WebProxyService:
         return self._port
 
     def start(self) -> dict:
-        """Start the web proxy service as a subprocess.
+        """Start the openroute service as a subprocess.
 
         Returns:
             dict with keys: status, message, port, pid (if started).
@@ -88,34 +88,34 @@ class WebProxyService:
         if self._process is not None and self._process.poll() is None:
             return {
                 "status": "already_running",
-                "message": f"Proxy already running (PID {self._process.pid})",
+                "message": f"OpenRoute already running (PID {self._process.pid})",
                 "port": self._port,
                 "pid": self._process.pid,
             }
 
-        if not self._proxy_dir.exists():
+        if not self._openroute_dir.exists():
             return {
                 "status": "error",
-                "message": f"Proxy directory not found: {self._proxy_dir}",
+                "message": f"OpenRoute directory not found: {self._openroute_dir}",
             }
 
-        app_py = self._proxy_dir / "app.py"
+        app_py = self._openroute_dir / "app.py"
         if not app_py.exists():
             return {
                 "status": "error",
-                "message": f"Proxy app.py not found: {app_py}",
+                "message": f"OpenRoute app.py not found: {app_py}",
             }
 
         env = os.environ.copy()
         env["HF_HUB_OFFLINE"] = "1"
         env["TRANSFORMERS_OFFLINE"] = "1"
         env["HF_ENDPOINT"] = "https://hf-mirror.com"
-        env["PROXY_PORT"] = str(self._port)
+        env["OPENROUTE_PORT"] = str(self._port)
 
         try:
             self._process = subprocess.Popen(
                 [sys.executable, str(app_py)],
-                cwd=str(self._proxy_dir),
+                cwd=str(self._openroute_dir),
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -123,25 +123,25 @@ class WebProxyService:
             )
             self._started_at = time.time()
             self._running = True
-            logger.info(f"WebProxy subprocess started: PID={self._process.pid}, port={self._port}")
+            logger.info(f"OpenRoute subprocess started: PID={self._process.pid}, port={self._port}")
             return {
                 "status": "started",
-                "message": f"Proxy subprocess started (PID {self._process.pid})",
+                "message": f"OpenRoute subprocess started (PID {self._process.pid})",
                 "port": self._port,
                 "pid": self._process.pid,
             }
         except Exception as e:
-            logger.error(f"Failed to start WebProxy: {e}")
+            logger.error(f"Failed to start OpenRoute: {e}")
             return {
                 "status": "error",
-                "message": f"Failed to start proxy: {e}",
+                "message": f"Failed to start openroute: {e}",
             }
 
     async def start_and_wait(self, timeout: int = STARTUP_WAIT_SECONDS) -> dict:
-        """Start the proxy and wait until it responds to health checks.
+        """Start the openroute and wait until it responds to health checks.
 
         Args:
-            timeout: Maximum seconds to wait for the proxy to become healthy.
+            timeout: Maximum seconds to wait for the openroute to become healthy.
 
         Returns:
             dict with keys: status, message, port, pid, healthy.
@@ -166,7 +166,7 @@ class WebProxyService:
                     pass
                 return {
                     "status": "crashed",
-                    "message": f"Proxy process exited with code {return_code}",
+                    "message": f"OpenRoute process exited with code {return_code}",
                     "stderr": stderr_output,
                 }
 
@@ -182,7 +182,7 @@ class WebProxyService:
         return result
 
     def stop(self) -> dict:
-        """Stop the web proxy service.
+        """Stop the openroute service.
 
         Returns:
             dict with keys: status, message.
@@ -191,7 +191,7 @@ class WebProxyService:
             self._running = False
             return {
                 "status": "not_running",
-                "message": "Proxy is not running",
+                "message": "OpenRoute is not running",
             }
 
         try:
@@ -207,28 +207,28 @@ class WebProxyService:
                 self._process.wait(timeout=5)
 
             self._running = False
-            logger.info("WebProxy subprocess stopped")
+            logger.info("OpenRoute subprocess stopped")
             return {
                 "status": "stopped",
-                "message": "Proxy stopped successfully",
+                "message": "OpenRoute stopped successfully",
             }
         except Exception as e:
-            logger.error(f"Error stopping WebProxy: {e}")
+            logger.error(f"Error stopping OpenRoute: {e}")
             self._running = False
             return {
                 "status": "error",
-                "message": f"Error stopping proxy: {e}",
+                "message": f"Error stopping openroute: {e}",
             }
 
     async def get_status(self) -> dict:
-        """Get the current status of the web proxy service.
+        """Get the current status of the openroute service.
 
         Checks both the subprocess state (if started by us) and the health
         endpoint (works even if started externally).
 
         Returns:
             dict with keys: running, healthy, port, pid, uptime_seconds,
-            models (list of available webproxy models).
+            models (list of available openroute models).
         """
         process_alive = self._process is not None and self._process.poll() is None
         healthy = await self._health_check()
@@ -256,10 +256,10 @@ class WebProxyService:
         }
 
     async def _health_check(self) -> bool:
-        """Check if the proxy service is healthy by calling /health.
+        """Check if the openroute service is healthy by calling /health.
 
         Returns:
-            True if the proxy responds with a healthy status.
+            True if the openroute responds with a healthy status.
         """
         try:
             async with httpx.AsyncClient(timeout=HEALTH_CHECK_TIMEOUT) as client:
@@ -269,7 +269,7 @@ class WebProxyService:
             return False
 
     async def _list_models(self) -> list:
-        """List available models from the proxy service.
+        """List available models from the openroute service.
 
         Returns:
             List of model dicts with id and object keys.
@@ -285,7 +285,7 @@ class WebProxyService:
         return []
 
     async def chat(self, model: str, messages: list, **kwargs) -> Optional[dict]:
-        """Send a chat completion request through the web proxy.
+        """Send a chat completion request through the openroute.
 
         Args:
             model: Model identifier (e.g., 'doubao-web/seed-2.0', 'web/chat').
@@ -293,10 +293,10 @@ class WebProxyService:
             **kwargs: Additional parameters (temperature, max_tokens, etc.).
 
         Returns:
-            OpenAI-format response dict, or None if the proxy is unavailable.
+            OpenAI-format response dict, or None if the openroute is unavailable.
         """
         if not await self._health_check():
-            logger.warning("WebProxy not healthy, cannot chat")
+            logger.warning("OpenRoute not healthy, cannot chat")
             return None
 
         payload = {
@@ -312,16 +312,22 @@ class WebProxyService:
                 resp.raise_for_status()
                 return resp.json()
         except Exception as e:
-            logger.error(f"WebProxy chat failed for model={model}: {e}")
+            logger.error(f"OpenRoute chat failed for model={model}: {e}")
             return None
 
 
-_webproxy_service: Optional[WebProxyService] = None
+_openroute_service: Optional[OpenRouteService] = None
 
 
-def get_webproxy_service() -> WebProxyService:
-    """Get or create the global WebProxyService singleton."""
-    global _webproxy_service
-    if _webproxy_service is None:
-        _webproxy_service = WebProxyService()
-    return _webproxy_service
+def get_openroute_service() -> OpenRouteService:
+    """Get or create the global OpenRouteService singleton.
+
+    .. deprecated::
+        Use PluginRegistry instead:
+            registry = get_plugin_registry()
+            svc = registry.get_plugin("openroute")
+    """
+    global _openroute_service
+    if _openroute_service is None:
+        _openroute_service = OpenRouteService()
+    return _openroute_service

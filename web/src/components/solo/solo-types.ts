@@ -2,7 +2,7 @@ export interface ChatMessage {
   id: string;
   role: "ai" | "system" | "tool" | "stage" | "gate" | "review" | "user" | "approval";
   content: string;
-  timestamp: string;
+  timestamp: number | string;  // numeric Date.now() or ISO string
   data?: Record<string, any>;
   collapsed?: boolean;
 }
@@ -15,7 +15,7 @@ export interface StepGroupData {
   status: "running" | "completed" | "error";
   durationMs: number | null;
   entries: ChatMessage[];
-  startTime: string;
+  startTime: number | string;
 }
 
 export interface TaskHistoryItem {
@@ -24,6 +24,8 @@ export interface TaskHistoryItem {
   intent: string;
   phase: import("../../lib/solo-types").SoloTaskPhase;
   timestamp: number;
+  /** Only updated when user sends a message — controls task list sort order */
+  lastUserMessageAt?: number;
 }
 
 export interface DynNode {

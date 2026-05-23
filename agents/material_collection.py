@@ -43,7 +43,7 @@ class MaterialCollectionAgent(BaseAgent):
         for topic in topics[:2]:
             query = topic.get("title", "") if isinstance(topic, dict) else str(topic)
             try:
-                helix = context.tools.get_tool("helixrag_search")
+                helix = context.tools.get_tool("opensieve_search")
                 result = await helix.execute(
                     ToolInput(params={"query": query, "max_results": 3, "min_score": 0.3})
                 )

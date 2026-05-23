@@ -246,7 +246,7 @@ async def get_dependency_graph():
 
         tool_memory_map = {
             "cache": "working",
-            "helixrag_search": "semantic",
+            "opensieve_search": "semantic",
         }
         for tool_name, mem_name in tool_memory_map.items():
             if f"tool:{tool_name}" in node_ids and f"memory:{mem_name}" in node_ids:

@@ -34,7 +34,7 @@ function renderSimpleMarkdown(md: string): string {
   return `<p>${html}</p>`;
 }
 
-function formatTime(ts: string) {
+function formatTime(ts: string | number) {
   try {
     const d = new Date(ts);
     return d.toLocaleTimeString("zh-CN", {
@@ -58,6 +58,8 @@ function formatDuration(ms: number): string {
 }
 
 const TOOL_ICONS: Record<string, string> = {
+  opensieve: "🔍",
+  opensieve_search: "🔍",
   helixrag: "🔍",
   helixrag_search: "🔍",
   web_search: "🌐",
@@ -71,6 +73,8 @@ const TOOL_ICONS: Record<string, string> = {
 };
 
 const TOOL_LABELS: Record<string, string> = {
+  opensieve: "素材检索",
+  opensieve_search: "素材检索",
   helixrag: "素材检索",
   helixrag_search: "素材检索",
   web_search: "网页搜索",

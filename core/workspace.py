@@ -123,6 +123,46 @@ class WorkspaceManager:
         ws_path.mkdir(parents=True, exist_ok=True)
         return ws_path
 
+    def save_output_file(self, task_id: str, filename: str, content: str,
+                          metadata: Optional[dict] = None) -> Optional[dict]:
+        """Save content as a workspace output file.
+
+        Args:
+            task_id: The task ID.
+            filename: Output filename (e.g., 'article.md').
+            content: File content.
+            metadata: Optional file metadata (e.g., mime_type, size_hint).
+
+        Returns:
+            File info dict: {path, size, filename, mtime} or None on error.
+        """
+        try:
+            output_dir = self.get_output_path(task_id)
+            safe_name = filename.replace("..", "").replace("/", "_").replace("\\", "_")
+            file_path = output_dir / safe_name
+            file_path.write_text(content, encoding="utf-8")
+            mtime = file_path.stat().st_mtime
+            return {
+                "filename": safe_name,
+                "path": str(file_path.relative_to(self._base)),
+                "size": file_path.stat().st_size,
+                "mtime": mtime,
+                **({} if metadata is None else metadata),
+            }
+        except Exception as e:
+            logger.error(f"Failed to save output file {filename} for task {task_id}: {e}")
+            return None
+
+    def save_content_file(self, task_id: str, filename: str, content: str) -> Optional[dict]:
+        """Save generated content as a workspace file.
+        
+        Shortcut for save_output_file with content-specific metadata."""
+        mime_type = "text/markdown" if filename.endswith(".md") else "text/plain"
+        return self.save_output_file(task_id, filename, content, {
+            "mime_type": mime_type,
+            "type": "generated_content",
+        })
+
     def validate_path(self, task_id: str, path: str) -> bool:
         """Validate that a path is within the workspace sandbox.
 

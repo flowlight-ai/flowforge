@@ -2,7 +2,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
-from flowforge.app.deps import get_plugin_manager
+from flowforge.app.deps import get_plugin_manager, get_plugin_registry
 from flowforge.core.tracing import get_trace_id, get_logger
 
 logger = get_logger("plugins_api")
@@ -27,15 +27,57 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
 
 
 @router.get("")
-async def list_plugins(plugin_manager=Depends(get_plugin_manager)):
-    if plugin_manager is None:
-        return _make_error("SERVICE_UNAVAILABLE", "Plugin manager not initialized")
-    status = plugin_manager.get_status()
+async def list_plugins(
+    plugin_manager=Depends(get_plugin_manager),
+    plugin_registry=Depends(get_plugin_registry),
+):
+    """List all registered plugins from both PluginManager and PluginRegistry."""
     plugins = []
-    for category, names in status.get("loaded", {}).items():
-        for name in names:
-            plugins.append({"name": name, "category": category, "status": "loaded"})
+
+    # New PluginRegistry data
+    if plugin_registry is not None:
+        for manifest in plugin_registry.list_plugins():
+            health = plugin_registry.get_health(manifest.name)
+            plugins.append({
+                "name": manifest.name,
+                "category": "tool",
+                "status": health.state.value,
+                "transport": manifest.transport.value,
+                "tags": manifest.tags,
+                "description": manifest.description,
+            })
+
+    # Legacy PluginManager data
+    if plugin_manager is not None:
+        status = plugin_manager.get_status()
+        for category, names in status.get("loaded", {}).items():
+            for name in names:
+                # Avoid duplicates from PluginRegistry
+                if not any(p["name"] == name for p in plugins):
+                    plugins.append({"name": name, "category": category, "status": "loaded"})
+
     return _make_response({"plugins": plugins, "total": len(plugins)})
+
+
+@router.get("/{plugin_name}/health")
+async def plugin_health(
+    plugin_name: str,
+    plugin_registry=Depends(get_plugin_registry),
+):
+    """Get health status for a specific plugin."""
+    if plugin_registry is None:
+        return _make_error("SERVICE_UNAVAILABLE", "Plugin registry not initialized")
+    if not plugin_registry.has_plugin(plugin_name):
+        raise HTTPException(status_code=404, detail=_make_error(
+            "NOT_FOUND", f"Plugin '{plugin_name}' not found"))
+    health = await plugin_registry.get_plugin(plugin_name).health_check()
+    return _make_response({
+        "name": plugin_name,
+        "state": health.state.value,
+        "message": health.message,
+        "latency_ms": health.latency_ms,
+        "last_check": health.last_check,
+    })
 
 
 @router.post("/install")
@@ -80,11 +122,43 @@ async def uninstall_plugin(plugin_name: str):
             "UNINSTALL_TIMEOUT", f"Uninstallation of {plugin_name} timed out"))
 
 
+@router.post("/{plugin_name}/execute")
+async def execute_plugin(
+    plugin_name: str,
+    payload: dict,
+    plugin_registry=Depends(get_plugin_registry),
+):
+    """Execute a plugin by name with the given parameters."""
+    if plugin_registry is None:
+        return _make_error("SERVICE_UNAVAILABLE", "Plugin registry not initialized")
+    if not plugin_registry.has_plugin(plugin_name):
+        raise HTTPException(status_code=404, detail=_make_error(
+            "NOT_FOUND", f"Plugin '{plugin_name}' not found"))
+    params = payload.get("params", {})
+    try:
+        result = await plugin_registry.execute(plugin_name, params)
+        return _make_response({"plugin": plugin_name, "result": result})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=_make_error(
+            "VALIDATION_ERROR", str(e)))
+    except Exception as e:
+        return _make_error("EXECUTION_ERROR", str(e))
+
+
 @router.post("/reload")
-async def reload_plugins(plugin_manager=Depends(get_plugin_manager)):
-    if plugin_manager is None:
-        return _make_error("SERVICE_UNAVAILABLE", "Plugin manager not initialized")
-    plugin_manager._loaded = {"modes": [], "agents": [], "tools": [], "workflows": []}
-    plugin_manager._config_results = {}
+async def reload_plugins(
+    plugin_manager=Depends(get_plugin_manager),
+    plugin_registry=Depends(get_plugin_registry),
+):
+    """Reload plugins from config."""
+    if plugin_registry is not None:
+        await plugin_registry.shutdown_all()
+        await plugin_registry.load_from_config("plugins.yaml")
+        plugin_registry.start_health_monitoring()
+
+    if plugin_manager is not None:
+        plugin_manager._loaded = {"modes": [], "agents": [], "tools": [], "workflows": []}
+        plugin_manager._config_results = {}
+
     logger.info("plugins reloaded")
     return _make_response({"reloaded": True})

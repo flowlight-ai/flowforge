@@ -44,9 +44,9 @@ class MockWebSearchTool(BaseTool):
         })
 
 
-class MockHelixRAGTool(BaseTool):
-    name = "helixrag_search"
-    description = "Mock HelixRAG"
+class MockOpenSieveTool(BaseTool):
+    name = "opensieve_search"
+    description = "Mock OpenSieve"
     parameters_schema = {}
 
     async def execute(self, input: ToolInput) -> ToolOutput:
@@ -105,7 +105,7 @@ async def test_topic_research_agent():
     agent = TopicResearchAgent()
     registry = ToolRegistry()
     registry.register(MockCacheTool())
-    registry.register(MockHelixRAGTool())
+    registry.register(MockOpenSieveTool())
     registry.register(MockWebSearchTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
@@ -121,7 +121,7 @@ async def test_topic_research_agent_empty_query():
     agent = TopicResearchAgent()
     registry = ToolRegistry()
     registry.register(MockCacheTool())
-    registry.register(MockHelixRAGTool())
+    registry.register(MockOpenSieveTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
         AgentInput(params={}), ctx
@@ -162,7 +162,7 @@ async def test_material_collection_agent():
     agent = MaterialCollectionAgent()
     registry = ToolRegistry()
     registry.register(MockLLMTool())
-    registry.register(MockHelixRAGTool())
+    registry.register(MockOpenSieveTool())
     registry.register(MockWebSearchTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
@@ -178,7 +178,7 @@ async def test_material_collection_agent_empty_topics():
     agent = MaterialCollectionAgent()
     registry = ToolRegistry()
     registry.register(MockLLMTool())
-    registry.register(MockHelixRAGTool())
+    registry.register(MockOpenSieveTool())
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
         AgentInput(params={"topics": []}), ctx

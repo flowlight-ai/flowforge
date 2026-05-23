@@ -202,12 +202,17 @@ class WorkflowExecutor(BaseModeExecutor):
         persona = ctx.persona or "default"
         mode_label = "全自动" if is_auto else "Solo"
 
+        # ── Stage 1: Plan ──
         ctx.event_bus.emit(ctx.task_id, "workflow.step.start", {
             "step": "planning", "label": f"{mode_label}意图识别",
-            "order": 1, "total": 2, "stage": "planning",
+            "order": 1, "stage": "planning",
+        })
+        ctx.event_bus.emit(ctx.task_id, "llm.start", {
+            "agent_name": "planner", "step": "planning",
         })
 
-        planning_prompt = get_prompt("planning.system", tool_descriptions="无额外工具")
+        tool_descriptions = self._build_tool_descriptions_text(ctx)
+        planning_prompt = get_prompt("planning.system", tool_descriptions=tool_descriptions)
         plan_messages = [{"role": "system", "content": planning_prompt}, {"role": "user", "content": intent}]
 
         plan_content = ""
@@ -216,67 +221,205 @@ class WorkflowExecutor(BaseModeExecutor):
         except Exception as e:
             logger.warning(f"Planning LLM call failed: {e}")
 
+        # llm.end WITHOUT content (only for stage tracking, not user-facing)
+        ctx.event_bus.emit(ctx.task_id, "llm.end", {
+            "agent_name": "planner", "step": "planning",
+        })
+        # Emit plan via step.intermediate so frontend can show it if needed
+        ctx.event_bus.emit(ctx.task_id, "step.intermediate", {
+            "step_name": "规划结果",
+            "content": plan_content[:500] if plan_content else "",
+            "stage": "planning",
+        })
+
         plan = self._parse_execution_plan(plan_content)
-        is_simple = plan.get("complexity", "simple") == "simple" or not plan.get("plan")
+        steps = plan.get("plan", [])
 
         ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {
             "step": "planning",
             "intent_type": plan.get("intent_type", "chat"),
-            "is_simple": is_simple,
+            "complexity": plan.get("complexity", "simple"),
+            "step_count": len(steps),
         })
 
-        if is_simple:
+        # ── Stage 2: Execute ──
+        if not steps:
+            # === SIMPLE: single LLM call ===
             ctx.event_bus.emit(ctx.task_id, "workflow.step.start", {
                 "step": "response", "label": "生成回复",
-                "order": 2, "total": 2, "stage": "response",
+                "order": 2, "stage": "response",
             })
 
             response_prompt = get_prompt("response.simple")
-            response_messages = [{"role": "system", "content": response_prompt}, {"role": "user", "content": intent}]
+            response_messages = [
+                {"role": "system", "content": response_prompt},
+                {"role": "user", "content": intent},
+            ]
 
-            result_content = ""
+            final_content = ""
             try:
-                result_content = await self._call_llm(ctx, response_messages, model_hint, "solo_assistant", persona)
+                final_content = await self._call_llm(ctx, response_messages, model_hint, "solo_assistant", persona)
             except Exception as e:
-                result_content = f"生成回复失败: {str(e)[:200]}"
+                final_content = f"生成回复失败: {str(e)[:200]}"
 
             ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {"step": "response"})
-            ctx.event_bus.emit(ctx.task_id, "draft.update", {
-                "content": result_content, "is_partial": False, "agent_name": "solo_assistant",
+        else:
+            # === MULTI-STEP: execute each step ===
+            step_results = []
+            step_order = 2
+            for step in steps:
+                step_name = step.get("name", step.get("step", f"步骤{step_order-1}"))
+                step_type = step.get("type", "generate")
+                agent_name = step.get("agent", "")
+                tool_name = step.get("tool", "")
+                step_input = step.get("input", step.get("params", {}))
+                step_desc = step.get("description", "")
+
+                ctx.event_bus.emit(ctx.task_id, "workflow.step.start", {
+                    "step": step_name, "label": step_name,
+                    "order": step_order, "stage": step_name,
+                })
+                step_order += 1
+
+                if step_type == "tool" or (tool_name and not agent_name):
+                    # ── Tool call ──
+                    tn = tool_name or step_name
+                    ctx.event_bus.emit(ctx.task_id, "tool.start", {
+                        "tool_name": tn,
+                        "input": step_input or {"query": intent},
+                        "step": step_name,
+                    })
+
+                    try:
+                        result = await self._execute_tool_or_agent(ctx, tn, step_input or {"query": intent})
+                    except Exception as e:
+                        result = {"success": False, "error": str(e)[:300]}
+
+                    ctx.event_bus.emit(ctx.task_id, "tool.end", {
+                        "tool_name": tn,
+                        "result": result,
+                        "success": result.get("success", False),
+                        "step": step_name,
+                    })
+                    step_results.append({"step": step_name, "type": "tool", "tool": tn, "result": result})
+
+                elif step_type == "agent" or agent_name:
+                    # ── Agent call ──
+                    an = agent_name or step_name
+                    ctx.event_bus.emit(ctx.task_id, "tool.start", {
+                        "tool_name": an,
+                        "input": step_input or {"topic": intent, "task": intent},
+                        "step": step_name,
+                        "is_agent": True,
+                    })
+
+                    agent_input = step_input or {"topic": intent, "task": intent, "query": intent}
+                    try:
+                        result = await self._execute_tool_or_agent(ctx, an, agent_input)
+                    except Exception as e:
+                        result = {"success": False, "error": str(e)[:300]}
+
+                    ctx.event_bus.emit(ctx.task_id, "tool.end", {
+                        "tool_name": an,
+                        "result": result,
+                        "success": result.get("success", False),
+                        "step": step_name,
+                        "is_agent": True,
+                    })
+                    step_results.append({"step": step_name, "type": "agent", "agent": an, "result": result})
+
+                else:
+                    # ── Generate (LLM) ──
+                    prompt = step_desc or f"请完成: {step_name}"
+                    gen_messages = [
+                        {"role": "system", "content": f"你正在执行「{step_name}」。上下文: {intent}"},
+                        {"role": "user", "content": prompt},
+                    ]
+
+                    gen_content = ""
+                    try:
+                        gen_content = await self._call_llm(ctx, gen_messages, model_hint, step_name, persona)
+                    except Exception as e:
+                        gen_content = f"生成失败: {str(e)[:200]}"
+
+                    ctx.event_bus.emit(ctx.task_id, "step.intermediate", {
+                        "step_name": step_name,
+                        "content": gen_content[:1000],
+                    })
+                    step_results.append({"step": step_name, "type": "generate", "content": gen_content})
+
+                ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {
+                    "step": step_name, "success": True,
+                })
+
+            # ── Compile: synthesize step results into final content ──
+            ctx.event_bus.emit(ctx.task_id, "workflow.step.start", {
+                "step": "compile", "label": "整理输出",
+                "order": step_order, "stage": "compile",
             })
-            return {**context_data, "response": result_content}
 
-        ctx.event_bus.emit(ctx.task_id, "workflow.step.start", {
-            "step": "execution", "label": f"执行任务",
-            "order": 2, "total": 2, "stage": "execution",
-        })
+            collected_json = json.dumps(step_results, ensure_ascii=False)[:4000]
+            response_prompt = get_prompt("response.solo",
+                intent=intent, collected_context=collected_json)
+            response_messages = [
+                {"role": "system", "content": response_prompt},
+                {"role": "user", "content": intent},
+            ]
 
-        tool_schemas = self._build_function_schemas(ctx)
-        react_result = await self._run_react_loop(ctx, intent, tool_schemas, model_hint, persona)
+            final_content = ""
+            try:
+                final_content = await self._call_llm(ctx, response_messages, model_hint, "solo_assistant", persona)
+            except Exception as e:
+                # Fallback: concatenate all step results
+                final_content = f"整理输出失败: {str(e)[:200]}"
+                for sr in step_results:
+                    c = sr.get("content", "") or sr.get("result", {}).get("result", "")
+                    if c:
+                        final_content += f"\n\n## {sr['step']}\n{c}"
 
-        ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {"step": "execution"})
+            ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {"step": "compile"})
 
-        collected = react_result.get("collected_context", "")
-        response_prompt = get_prompt("response.solo",
-            intent=intent,
-            collected_context=collected[:3000] if collected else '无')
-        response_messages = [{"role": "system", "content": response_prompt}, {"role": "user", "content": intent}]
+        # ── Stage 3: Save to workspace files ──
+        if final_content and len(final_content) > 200:
+            ctx.event_bus.emit(ctx.task_id, "workflow.step.start", {
+                "step": "save", "label": "保存文件",
+                "order": 99, "stage": "save",
+            })
 
-        final_content = ""
-        try:
-            final_content = await self._call_llm(ctx, response_messages, model_hint, "solo_assistant", persona)
-        except Exception as e:
-            final_content = collected[:3000] if collected else f"执行失败: {e}"
+            safe_intent = re.sub(r'[^\w\u4e00-\u9fff]', '_', intent[:30]).strip('_') or "output"
+            filename = f"{safe_intent}.md"
 
-        ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": final_content, "is_partial": False, "agent_name": "solo_assistant",
-        })
+            from flowforge.core.workspace import get_workspace_manager
+            ws = get_workspace_manager()
+            file_info = ws.save_content_file(ctx.task_id, filename, final_content)
+
+            if file_info:
+                ctx.event_bus.emit(ctx.task_id, "draft.file", {
+                    "filename": file_info["filename"],
+                    "path": file_info["path"],
+                    "size": file_info["size"],
+                    "file_path": f"/api/v1/workspace/{ctx.task_id}/files/output/{file_info['filename']}",
+                })
+
+            ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {
+                "step": "save", "file_info": file_info,
+            })
+
+        # ── Final draft update (single source of truth for AI content) ──
+        draft_payload = {
+            "content": final_content,
+            "is_partial": False,
+            "agent_name": "solo_assistant",
+        }
+        if final_content and len(final_content) > 200:
+            draft_payload["saved_to_file"] = True
+            draft_payload["content_preview"] = final_content[:200] + "..."
+        ctx.event_bus.emit(ctx.task_id, "draft.update", draft_payload)
 
         return {
             **context_data,
             "response": final_content,
             "plan": plan,
-            "execution_trace": react_result.get("execution_trace", []),
         }
 
     async def _run_react_loop(self, ctx: TaskContext, intent: str,

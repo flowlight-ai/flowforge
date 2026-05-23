@@ -57,7 +57,7 @@ harness:
     debt_tracker_enabled: true
     rule_evolution_enabled: true
 
-helixrag:
+opensieve:
   enabled: true
   endpoint: "http://localhost:8100/api/v1/retrieve"
   timeout: 90

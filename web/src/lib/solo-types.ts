@@ -36,6 +36,7 @@ export type StreamEntryType =
   | "llm-stream"
   | "intermediate"
   | "draft-update"
+  | "draft-file"
   | "review"
   | "gate"
   | "system";
@@ -43,7 +44,8 @@ export type StreamEntryType =
 export interface StreamEntry {
   id: string;
   type: StreamEntryType;
-  timestamp: string;
+  timestamp: number | string;  // numeric Date.now() or ISO string
+  _serverTs?: string;          // server timestamp for display
   data: Record<string, any>;
 }
 

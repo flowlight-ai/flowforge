@@ -7,7 +7,7 @@ from flowforge.events.event_bus import EventBus
 from flowforge.modes.registry import ModeRegistry
 from flowforge.tools.registry import ToolRegistry
 from flowforge.tools.llm_client import LLMClient
-from flowforge.tools.helixrag_client import HelixRAGClient
+from flowforge.tools.opensieve_client import OpenSieveClient
 from flowforge.tools.web_search import WebSearchTool
 from flowforge.tools.python_executor import PythonExecutorTool
 from flowforge.tools.file_rw import FileReadWriteTool
@@ -52,8 +52,8 @@ class FlowForge:
         models_config = self.config_loader.get_models_config()
         llm_client = LLMClient(models_config=models_config, event_bus=self.event_bus)
         self.tool_registry.register(llm_client)
-        if self.config.helixrag_enabled:
-            self.tool_registry.register(HelixRAGClient())
+        if self.config.opensieve_enabled:
+            self.tool_registry.register(OpenSieveClient())
         self.tool_registry.register(WebSearchTool())
         self.tool_registry.register(PythonExecutorTool())
         self.tool_registry.register(FileReadWriteTool())

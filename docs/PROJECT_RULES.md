@@ -152,15 +152,15 @@ DevForge（上层）     →  开发 Agent、IPD 工作流、代码审查、部�
 ### 铁律 9：禁止擅自修改服务端口和启动方式
 
 - ❌ 擅自将后端从 8000 改为其他端口
-- ❌ 擅自将 webproxy 从 13000 改为其他端口
+- ❌ 擅自将 openroute 从 13000 改为其他端口
 - ❌ 擅自将前端从 5174 改为其他端口
 - ❌ 不使用项目规定的启动脚本启动服务
 - ✅ 后端必须使用 `python -m uvicorn flowforge.app.main:app --host 0.0.0.0 --port 8000` 启动
-- ✅ webproxy 必须使用 `hiclaw/tool/proxy/run.ps1` 或 `run.bat` 启动脚本启动（端口 13000）
+- ✅ openroute 必须使用 `hiclaw/tool/openroute/run.ps1` 或 `run.bat` 启动脚本启动（端口 13000）
 - ✅ 前端必须使用 `cd flowforge/web && npm run dev` 启动（端口 5174）
-- ✅ 修改端口需要同步更新：models.yaml、next.config.js、PROVIDER_BASE_URLS、WebProxyService.DEFAULT_PROXY_PORT、useSoloWebSocket.ts
+- ✅ 修改端口需要同步更新：models.yaml、next.config.js、PROVIDER_BASE_URLS、OpenRouteService.DEFAULT_OPENROUTE_PORT、useSoloWebSocket.ts
 
-**原因**：webproxy 使用 Playwright 浏览器自动化，浏览器登录缓存（cookies/session）与端口号绑定。改端口会导致所有网页版 LLM 需要重新登录，严重影响可用性。
+**原因**：openroute 使用 Playwright 浏览器自动化，浏览器登录缓存（cookies/session）与端口号绑定。改端口会导致所有网页版 LLM 需要重新登录，严重影响可用性。
 
 ### 铁律 10：Harness 灰度开关 — 所有 Harness 功能必须通过 config/harness_v6.yaml 的 enabled 开关控制
 
@@ -249,7 +249,7 @@ harness:
 
 ### 6. 模型与代理
 
-- 网页 Chat 代理通过 `webproxy` provider 接入（指向 hiclaw proxy 服务 127.0.0.1:13000）
+- 网页 Chat 代理通过 `openroute` provider 接入（指向 hiclaw openroute 服务 127.0.0.1:13000）
 - 支持 5 个平台：豆包、Kimi、DeepSeek、腾讯元宝、阿里千问 + 1 个轮询虚拟模型 web/chat
 - API Key 通过 SecretStore 管理，优先级：DB → 环境变量 → .env 文件 → 默认值
 - 模型健康检查和自动修复是内置能力
@@ -261,7 +261,7 @@ harness:
 
 hiclaw proxy 是 FlowForge 的**关键外部依赖**，将网页版大模型（豆包、Kimi、DeepSeek、腾讯元宝、阿里千问）包装为 OpenAI 兼容 API。通过 Playwright 驱动真实浏览器，模拟用户在网页上的输入/输出行为。
 
-**代码位置**：`d:\software\openclaw\hiclaw\tool\proxy\`
+**代码位置**：`d:\software\openclaw\hiclaw\tool\openroute\`
 
 **提供的 6 个模型**：
 
@@ -278,16 +278,16 @@ hiclaw proxy 是 FlowForge 的**关键外部依赖**，将网页版大模型（�
 
 ```bash
 # 方式一：直接启动（推荐调试时使用）
-cd d:\software\openclaw\hiclaw\tool\proxy
+cd d:\software\openclaw\hiclaw\tool\openroute
 python app.py
- .\start_proxy.bat
+ .\start_openroute.bat
 
 # 方式二：uvicorn 启动
-cd d:\software\openclaw\hiclaw\tool\proxy
+cd d:\software\openclaw\hiclaw\tool\openroute
 python -m uvicorn app:app --host 0.0.0.0 --port 13000
 
 # 方式三：通过 FlowForge API 启动（推荐生产使用）
-POST http://127.0.0.1:8000/api/v1/webproxy/start
+POST http://127.0.0.1:8000/api/v1/openroute/start
 ```
 
 **启动后验证**：
@@ -307,24 +307,24 @@ curl -X POST http://127.0.0.1:13000/v1/chat/completions \
 
 #### 7.3 插件化接入方案
 
-FlowForge 通过 `WebProxyService`（`tools/webproxy_service.py`）管理 proxy 服务的生命周期：
+FlowForge 通过 `OpenRouteService`（`tools/openroute_service.py`）管理 openroute 服务的生命周期：
 
-1. **子进程管理**：`WebProxyService` 将 proxy 作为子进程启动/停止
+1. **子进程管理**：`OpenRouteService` 将 openroute 作为子进程启动/停止
 2. **健康检查**：定期调用 `http://127.0.0.1:13000/health` 检测服务状态
-3. **API 端点**：`/api/v1/webproxy/start|stop|status|models|chat`
-4. **自动关闭**：FlowForge 后端关闭时自动停止 proxy 子进程
-5. **外部启动兼容**：即使 proxy 不是通过 WebProxyService 启动的，也能检测到其运行状态
+3. **API 端点**：`/api/v1/openroute/start|stop|status|models|chat`
+4. **自动关闭**：FlowForge 后端关闭时自动停止 openroute 子进程
+5. **外部启动兼容**：即使 openroute 不是通过 OpenRouteService 启动的，也能检测到其运行状态
 
 **接入流程**：
 
 ```
 FlowForge 后端启动
-  → lifespan() 检查 webproxy 状态
-  → 用户通过 API 或 UI 启动 webproxy
-  → WebProxyService.start() 启动子进程
-  → 健康检查通过后，webproxy 模型可用
-  → LLMClient 的 fallback 链自动包含 webproxy 模型
-  → FlowForge 后端关闭时，lifespan() 自动停止 proxy
+  → lifespan() 检查 openroute 状态
+  → 用户通过 API 或 UI 启动 openroute
+  → OpenRouteService.start() 启动子进程
+  → 健康检查通过后，openroute 模型可用
+  → LLMClient 的 fallback 链自动包含 openroute 模型
+  → FlowForge 后端关闭时，lifespan() 自动停止 openroute
 ```
 
 #### 7.4 注意事项
@@ -332,8 +332,8 @@ FlowForge 后端启动
 - proxy 服务需要 Playwright 和 Chromium 已安装（`pip install playwright && playwright install chromium`）
 - Windows 下默认有头模式（方便调试登录），Linux 下检测 DISPLAY 环境变量决定
 - 首次使用需在浏览器中手动登录各平台（Cookie 保存在 `doubao_profile` 目录）
-- proxy 服务的 `app.py` 中硬编码了端口 13000，修改需同步更新 `WebProxyService.DEFAULT_PROXY_PORT`
-- **禁止在代码中硬编码 proxy 路径**，应通过 `WebProxyService` 或配置文件管理
+- proxy 服务的 `app.py` 中硬编码了端口 13000，修改需同步更新 `OpenRouteService.DEFAULT_OPENROUTE_PORT`
+- **禁止在代码中硬编码 openroute 路径**，应通过 `OpenRouteService` 或配置文件管理
 
 ### 8. Harness Hook 点设计
 
@@ -420,7 +420,7 @@ FeedbackLoop 作为全局护栏，独立于任何模式，与 Reflexion 模式�
 | `ARK_API_KEY`        | 字节火山方舟 API Key        | 可选                             |
 | `TAVILY_API_KEY`     | Tavily 搜索 API Key     | 可选                             |
 | `SECRET_KEY`         | 应用密钥                  | 建议                             |
-| `WEBPROXY_BASE_URL`  | 网页代理地址                | 默认 <http://127.0.0.1:13000/v1> |
+| `OPENROUTE_BASE_URL` | 网页代理地址                | 默认 <http://127.0.0.1:13000/v1> |
 | `HARNESS_CONFIG_PATH`| Harness 配置文件路径        | 可选，默认 `config/harness_v6.yaml` |
 
 > 所有 API Key 均可通过 Web UI「设置 → 密钥管理」动态配置，无需重启服务。

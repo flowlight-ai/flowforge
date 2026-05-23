@@ -15,9 +15,9 @@ class SystemConfig(BaseSettings):
     server_port: int = 8000
     workers: int = 1
     secret_key: str = "changeme-in-production"
-    helixrag_enabled: bool = True
-    helixrag_endpoint: str = "http://localhost:18001/api/v1/retrieve"
-    helixrag_timeout: int = 90
+    opensieve_enabled: bool = True
+    opensieve_endpoint: str = "http://localhost:18001/api/v1/retrieve"
+    opensieve_timeout: int = 90
     scheduler_enabled: bool = True
     scheduler_timezone: str = "Asia/Shanghai"
     metrics_enabled: bool = True

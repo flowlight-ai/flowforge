@@ -3,10 +3,12 @@
 interface Props {
   data: Record<string, any>;
   onClick: () => void;
-  timestamp?: string;
+  timestamp?: string | number;
 }
 
 const TOOL_ICONS: Record<string, string> = {
+  opensieve: "🔍",
+  opensieve_search: "🔍",
   helixrag: "🔍",
   helixrag_search: "🔍",
   web_search: "🌐",
@@ -26,7 +28,7 @@ const TOOL_ICONS: Record<string, string> = {
   monitoring: "📊",
 };
 
-function formatTime(ts: string) {
+function formatTime(ts: string | number) {
   try {
     const d = new Date(ts);
     return d.toLocaleTimeString("zh-CN", {

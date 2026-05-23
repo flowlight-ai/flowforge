@@ -23,7 +23,7 @@ from flowforge.core import metrics
 logger = get_logger("llm_client")
 
 DEFAULT_FREE_MODELS = {
-    "webproxy": [
+    "openroute": [
         "auto",
         "web/chat",
         "doubao-web/seed-2.0",
@@ -84,7 +84,7 @@ PROVIDER_BASE_URLS = {
     "kimi": "https://api.moonshot.cn/v1",
     "zhipu": "https://open.bigmodel.cn/api/paas/v4",
     "local": "http://localhost:11434/v1",
-    "webproxy": "http://127.0.0.1:13000/v1",
+    "openroute": "http://127.0.0.1:13000/v1",
 }
 
 ERROR_COOLDOWNS = {
@@ -127,9 +127,9 @@ def build_cross_fallback_chain(
     1. Group models by provider
     2. Interleave across top providers for diversity
     3. Filter out models in cooldown
-    4. Webproxy models go first (as primary, unlimited tokens)
+    4. OpenRoute models go first (as primary, unlimited tokens)
     """
-    provider_order = ["webproxy", "openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local"]
+    provider_order = ["openroute", "openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local"]
     grouped: Dict[str, List[str]] = {}
     for provider in provider_order:
         models = available_models.get(provider, [])
@@ -232,7 +232,7 @@ class LLMClient(BaseTool):
         default = provider_config.get("api_key_default", "")
         if default:
             return default
-        if provider == "webproxy":
+        if provider == "openroute":
             return "none"
         if provider == "local":
             return "local"
@@ -331,18 +331,18 @@ class LLMClient(BaseTool):
             if provider == "openrouter":
                 headers["HTTP-Referer"] = "https://flowforge.dev"
                 headers["X-Title"] = "FlowForge"
-            # webproxy: pass X-Scene header for hiclaw proxy scene routing
-            # - has tools → proxy_combine (Proxy handles prompt combination + tool parsing)
+            # openroute: pass X-Scene header for hiclaw openroute scene routing
+            # - has tools → openroute_combine (OpenRoute handles prompt combination + tool parsing)
             # - no tools → caller_combine (FlowForge already composed the prompt)
             # - auto model → auto (let hiclaw decide)
-            if provider == "webproxy":
+            if provider == "openroute":
                 if tools:
-                    headers["X-Scene"] = "proxy_combine"
+                    headers["X-Scene"] = "openroute_combine"
                 elif model_id == "auto":
                     headers["X-Scene"] = "auto"
                 else:
                     headers["X-Scene"] = "caller_combine"
-                logger.info(f"🌐 [X-Scene] provider=webproxy model={model_id} "
+                logger.info(f"🌐 [X-Scene] provider=openroute model={model_id} "
                             f"has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
 
             payload = {
@@ -352,9 +352,9 @@ class LLMClient(BaseTool):
             }
             if tools:
                 payload["tools"] = tools
-            # webproxy/auto 模型：让 hiclaw proxy 自动选择最优模型
-            # 不传 tools 给 auto 模式，让 proxy 自行决定路由
-            if provider == "webproxy" and model_id == "auto" and tools:
+            # openroute/auto 模型：让 hiclaw openroute 自动选择最优模型
+            # 不传 tools 给 auto 模式，让 openroute 自行决定路由
+            if provider == "openroute" and model_id == "auto" and tools:
                 payload["tools"] = tools
             url = base_url.rstrip("/") + "/chat/completions"
 
@@ -463,14 +463,14 @@ class LLMClient(BaseTool):
                     if provider == "openrouter":
                         headers["HTTP-Referer"] = "https://flowforge.dev"
                         headers["X-Title"] = "FlowForge"
-                    if provider == "webproxy":
+                    if provider == "openroute":
                         if tools:
-                            headers["X-Scene"] = "proxy_combine"
+                            headers["X-Scene"] = "openroute_combine"
                         elif model_id == "auto":
                             headers["X-Scene"] = "auto"
                         else:
                             headers["X-Scene"] = "caller_combine"
-                        logger.info(f"🌐 [X-Scene] fallback provider=webproxy model={model_id} "
+                        logger.info(f"🌐 [X-Scene] fallback provider=openroute model={model_id} "
                                     f"has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
                     payload_fb = {"model": model_id, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "stream": stream}
                     if tools:
@@ -586,12 +586,12 @@ class LLMClient(BaseTool):
             if provider == "openrouter":
                 headers["HTTP-Referer"] = "https://flowforge.dev"
                 headers["X-Title"] = "FlowForge"
-            if provider == "webproxy":
+            if provider == "openroute":
                 if model_id == "auto":
                     headers["X-Scene"] = "auto"
                 else:
                     headers["X-Scene"] = "caller_combine"
-                logger.info(f"🌐 [X-Scene] stream provider=webproxy model={model_id} "
+                logger.info(f"🌐 [X-Scene] stream provider=openroute model={model_id} "
                             f"→ X-Scene={headers['X-Scene']}")
 
             payload = {

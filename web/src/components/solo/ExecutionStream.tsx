@@ -16,7 +16,7 @@ interface Props {
   startTime: number | null;
 }
 
-function formatTs(ts: string) {
+function formatTs(ts: string | number) {
   try {
     const d = new Date(ts);
     return d.toLocaleTimeString("zh-CN", {

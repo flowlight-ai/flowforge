@@ -50,20 +50,20 @@ class TopicResearchAgent(BaseAgent):
             pass
         context.event_bus.emit(context.task_id, "topic_research.cache_check_complete", {"found": False})
 
-        # Step 2: HelixRAG搜索
-        context.event_bus.emit(context.task_id, "topic_research.helixrag_search_start", {"query": query})
+        # Step 2: OpenSieve搜索
+        context.event_bus.emit(context.task_id, "topic_research.opensieve_search_start", {"query": query})
         try:
-            helix = context.tools.get_tool("helixrag_search")
+            helix = context.tools.get_tool("opensieve_search")
             result = await helix.execute(ToolInput(params={"query": query, "max_results": 5}))
             topics = [{"title": r.get("title", ""), "angle": r.get("angle", "综合"), "url": r.get("url", "")}
                        for r in result.result.get("results", [])][:5]
             if topics:
-                context.event_bus.emit(context.task_id, "topic_research.helixrag_search_complete", {"count": len(topics)})
-                context.event_bus.emit(context.task_id, "topic_research.complete", {"source": "helixrag", "count": len(topics)})
+                context.event_bus.emit(context.task_id, "topic_research.opensieve_search_complete", {"count": len(topics)})
+                context.event_bus.emit(context.task_id, "topic_research.complete", {"source": "opensieve", "count": len(topics)})
                 return AgentOutput(result={"topics": topics})
         except Exception:
             pass
-        context.event_bus.emit(context.task_id, "topic_research.helixrag_search_complete", {"count": 0})
+        context.event_bus.emit(context.task_id, "topic_research.opensieve_search_complete", {"count": 0})
 
         # Step 3: Web搜索
         context.event_bus.emit(context.task_id, "topic_research.web_search_start", {"query": query})

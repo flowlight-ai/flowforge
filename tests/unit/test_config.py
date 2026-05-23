@@ -12,7 +12,7 @@ def test_system_config_defaults():
     assert config.server_host == "0.0.0.0"
     assert config.server_port == 8000
     assert config.workers == 1
-    assert config.helixrag_enabled is True
+    assert config.opensieve_enabled is True
     assert config.scheduler_enabled is True
     assert config.scheduler_timezone == "Asia/Shanghai"
     assert config.metrics_enabled is True

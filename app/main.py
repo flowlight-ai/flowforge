@@ -5,25 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from flowforge.core.config import system_config, ConfigLoader
 from flowforge.core.di import DIContainer
 from flowforge.core.agent_registry import AgentRegistry
+from flowforge.core.plugin_registry import PluginRegistry
 from flowforge.tools.registry import ToolRegistry
 from flowforge.tools.llm_client import LLMClient
 from flowforge.tools.llm.model_service import ModelService
-from flowforge.tools.helixrag_client import HelixRAGClient
-from flowforge.tools.web_search import WebSearchTool
-from flowforge.tools.python_executor import PythonExecutorTool
-from flowforge.tools.file_rw import FileReadWriteTool
-from flowforge.tools.cache import CacheTool
-from flowforge.tools.tavily_search import TavilySearchTool
-from flowforge.tools.duckduckgo_search import DuckDuckGoSearchTool
-from flowforge.tools.web_scraper import WebScraperTool
-from flowforge.tools.toutiao_publisher import ToutiaoPublisherTool
-from flowforge.tools.wechat_publisher import WeChatPublisherTool
-from flowforge.tools.pexels_image import PexelsImageTool
-from flowforge.tools.sendgrid_mail import SendGridMailTool
-from flowforge.tools.webhook import WebhookTool
-from flowforge.tools.shell_command import ShellCommandTool
-from flowforge.tools.workspace_file import WorkspaceFileTool
-from flowforge.tools.local_publish import LocalPublishTool
 from flowforge.events.event_bus import EventBus
 from flowforge.modes.registry import ModeRegistry
 from flowforge.modes.workflow import WorkflowExecutor
@@ -58,28 +43,42 @@ from flowforge.app.deps import (
     set_model_service_instance,
     set_scheduler_instance, set_plugin_manager_instance,
     set_tool_chain_executor_instance,
+    set_plugin_registry_instance,
 )
 from flowforge.core import metrics
 from flowforge.scheduler.scheduler import TaskScheduler
 from flowforge.core.plugin_manager import PluginManager
-from flowforge.tools.webproxy_service import get_webproxy_service
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("main")
 
+
 @asynccontextmanager
 async def lifespan(app):
+    # Load plugins from config
+    await plugin_registry.load_from_config("plugins.yaml")
+    plugin_registry.start_health_monitoring()
+
+    # Inject plugin_registry into WebSearchTool (late binding)
+    web_search_plugin = plugin_registry.get_plugin("web_search")
+    if web_search_plugin and hasattr(web_search_plugin, "set_plugin_registry"):
+        web_search_plugin.set_plugin_registry(plugin_registry)
+
     if system_config.scheduler_enabled:
         scheduler.start()
         logger.info("Scheduler started")
-    logger.info(f"FlowForge API started - {len(mode_registry.list_modes())} modes, {len(tool_registry.list_tools())} tools, {len(agent_registry.list_agents())} agents")
+    logger.info(
+        f"FlowForge API started - "
+        f"{len(mode_registry.list_modes())} modes, "
+        f"{len(plugin_registry.list_plugin_names())} plugins, "
+        f"{len(agent_registry.list_agents())} agents"
+    )
     yield
-    svc = get_webproxy_service()
-    if svc.is_running:
-        svc.stop()
-        logger.info("WebProxy service stopped on shutdown")
+    # Graceful shutdown
+    await plugin_registry.shutdown_all()
     scheduler.shutdown()
     logger.info("FlowForge API shutdown")
+
 
 app = FastAPI(title="FlowForge API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
@@ -92,48 +91,17 @@ app.add_middleware(
 
 event_bus = EventBus()
 agent_registry = AgentRegistry()
-tool_registry = ToolRegistry()
+plugin_registry = PluginRegistry(config_loader=ConfigLoader())
+tool_registry = ToolRegistry()  # Legacy — wraps PluginRegistry for backward compat
 mode_registry = ModeRegistry()
 
 _config_loader = ConfigLoader()
 _models_config = _config_loader.get_models_config()
 llm_client = LLMClient(models_config=_models_config, event_bus=event_bus)
 tool_registry.register(llm_client)
-if system_config.helixrag_enabled:
-    tool_registry.register(HelixRAGClient())
-tool_registry.register(WebSearchTool())
-tool_registry.register(PythonExecutorTool())
-tool_registry.register(FileReadWriteTool())
-tool_registry.register(CacheTool())
-tool_registry.register(ShellCommandTool())
-tool_registry.register(WorkspaceFileTool())
-tool_registry.register(LocalPublishTool())
 
-_optional_tools = [
-    (TavilySearchTool, "TAVILY_API_KEY"),
-    (DuckDuckGoSearchTool, None),
-    (WebScraperTool, None),
-    (ToutiaoPublisherTool, "TOUTIAO_ACCESS_TOKEN"),
-    (WeChatPublisherTool, "WECHAT_APP_ID"),
-    (PexelsImageTool, "PEXELS_API_KEY"),
-    (SendGridMailTool, "SENDGRID_API_KEY"),
-    (WebhookTool, None),
-]
-for tool_cls, env_key in _optional_tools:
-    try:
-        if env_key is None or __import__("os").getenv(env_key, ""):
-            tool_registry.register(tool_cls())
-    except Exception as e:
-        logger.debug(f"Skip tool {tool_cls.__name__}: {e}")
-
-set_llm_client_instance(llm_client)
-
-from flowforge.core.tool_chain_executor import ToolChainExecutor
-tool_chain_executor = ToolChainExecutor(llm_client, tool_registry, event_bus=event_bus)
-set_tool_chain_executor_instance(tool_chain_executor)
-
-model_service = ModelService()
-set_model_service_instance(model_service)
+# Register PluginRegistry as the global instance
+set_plugin_registry_instance(plugin_registry)
 
 mode_registry.register(WorkflowExecutor())
 mode_registry.register(ReflexionExecutor())
@@ -162,6 +130,15 @@ agent_registry.register_factory("code_writer_agent", lambda: CodeWriterAgent())
 agent_registry.register_factory("research_agent", lambda: ResearchAgent())
 
 memory_manager = MemoryManager({"db_url": system_config.db_url})
+
+set_llm_client_instance(llm_client)
+
+from flowforge.core.tool_chain_executor import ToolChainExecutor
+tool_chain_executor = ToolChainExecutor(llm_client, tool_registry, event_bus=event_bus)
+set_tool_chain_executor_instance(tool_chain_executor)
+
+model_service = ModelService()
+set_model_service_instance(model_service)
 
 _executor_instance = HybridExecutor(
     mode_registry, agent_registry, tool_registry, event_bus,
@@ -201,8 +178,8 @@ except ImportError:
     pass
 
 try:
-    from flowforge.app.api.endpoints import webproxy as webproxy_endpoints
-    app.include_router(webproxy_endpoints.router)
+    from flowforge.app.api.endpoints import openroute as openroute_endpoints
+    app.include_router(openroute_endpoints.router)
 except ImportError:
     pass
 
@@ -217,6 +194,7 @@ except ImportError:
 def health():
     components = {}
     components["mode_registry"] = {"status": "healthy", "modes": len(mode_registry.list_modes())}
+    components["plugin_registry"] = {"status": "healthy", "plugins": len(plugin_registry.list_plugin_names())}
     components["tool_registry"] = {"status": "healthy", "tools": len(tool_registry.list_tools())}
     components["agent_registry"] = {"status": "healthy", "agents": len(agent_registry.list_agents())}
     components["event_bus"] = {"status": "healthy"}
@@ -239,13 +217,13 @@ def health():
     except Exception:
         components["model_service"] = {"status": "unknown"}
     try:
-        svc = get_webproxy_service()
-        if svc.is_running:
-            components["webproxy"] = {"status": "running", "port": svc.port}
+        openroute_plugin = plugin_registry.get_plugin("openroute")
+        if openroute_plugin and openroute_plugin.is_running:
+            components["openroute"] = {"status": "running", "port": openroute_plugin.port}
         else:
-            components["webproxy"] = {"status": "stopped"}
+            components["openroute"] = {"status": "stopped"}
     except Exception:
-        components["webproxy"] = {"status": "unknown"}
+        components["openroute"] = {"status": "unknown"}
     return {"status": "healthy", "components": components}
 
 

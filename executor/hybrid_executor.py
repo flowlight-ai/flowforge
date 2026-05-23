@@ -181,11 +181,11 @@ class HybridExecutor:
                     logger.warning(f"Harness post_execute failed: {e}", task_id=context.task_id)
 
             duration = time.time() - start
-            self.event_bus.emit(context.task_id, "task.completed", {"result": str(result)[:500]})
+            self.event_bus.emit(context.task_id, "task.completed", {"status": "completed", "summary": str(result.get("response", result.get("content", "")))[:500] if isinstance(result, dict) else str(result)[:200]})
             logger.info("Task completed", task_id=context.task_id, mode=mode, persona=persona, duration=f"{duration:.2f}s")
             if not _is_substep:
                 ff_metrics.record_task_completed(mode, persona, duration)
-                self.state_manager.update_state(context.task_id, {"status": "completed", "result": str(result)[:500]})
+                self.state_manager.update_state(context.task_id, {"status": "completed", "summary": str(result.get("response", result.get("content", "")))[:500] if isinstance(result, dict) else str(result)[:200]})
             return result
         except asyncio.TimeoutError:
             logger.error("Task timed out", task_id=context.task_id, mode=mode, timeout=TASK_TIMEOUT_SECONDS)

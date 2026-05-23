@@ -2,10 +2,10 @@
 
 interface Props {
   data: Record<string, any>;
-  timestamp?: string;
+  timestamp?: string | number;
 }
 
-function formatTime(ts: string) {
+function formatTime(ts: string | number) {
   try {
     const d = new Date(ts);
     return d.toLocaleTimeString("zh-CN", {

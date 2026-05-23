@@ -141,7 +141,7 @@ NovelForge（上层）   →  小说创作 Agent、连载管理、章节编排
 
 - ✅ 预制 5 个通用 Workflow + 17 个通用 Agent
 - ✅ 预制 5 个 Provider + 9 个默认 Model 配置（含 6 个网页 Chat 代理）
-- ✅ 默认使用 webproxy（多平台网页 Chat 代理），无需 API Key 即可运行
+- ✅ 默认使用 openroute（多平台网页 Chat 代理），无需 API Key 即可运行
 - ✅ 模型治理自动健康检查和自动修复
 - ✅ Solo 交互界面直接可用，无需额外配置
 
