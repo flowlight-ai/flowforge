@@ -685,24 +685,42 @@ class GarbageCollection:
         resource_type: str,
         schedule: GCSchedule,
     ) -> Dict[str, Any]:
-        """Execute GC for a specific resource type.
+        now = time.time()
+        max_age_seconds = schedule.max_age_days * 86400
+        cutoff = now - max_age_seconds
+        data_dir = Path("data")
+        tmp_extensions = {".tmp", ".bak", ".log", ".temp", ".cache"}
+        deleted_files: List[str] = []
+        total_size: int = 0
 
-        In production, this would interface with the actual storage layer.
-        Here it provides the scheduling framework and returns metadata
-        about what would be collected.
+        if data_dir.exists():
+            for filepath in data_dir.rglob("*"):
+                if not filepath.is_file():
+                    continue
+                try:
+                    stat = filepath.stat()
+                    if stat.st_mtime < cutoff and filepath.suffix in tmp_extensions:
+                        total_size += stat.st_size
+                        filepath.unlink()
+                        deleted_files.append(str(filepath))
+                except OSError:
+                    continue
 
-        Args:
-            resource_type: The type of resource to collect.
-            schedule: The GC schedule for this resource type.
+        if deleted_files:
+            logger.info(
+                "GC collected files",
+                resource_type=resource_type,
+                count=len(deleted_files),
+                size_bytes=total_size,
+            )
 
-        Returns:
-            A dictionary with collection metadata.
-        """
         return {
             "resource_type": resource_type,
             "max_age_days": schedule.max_age_days,
-            "status": "scheduled",
-            "message": f"Resources older than {schedule.max_age_days} days marked for cleanup",
+            "status": "completed",
+            "deleted_count": len(deleted_files),
+            "freed_bytes": total_size,
+            "deleted_files": deleted_files[:50],
         }
 
 

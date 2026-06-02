@@ -61,3 +61,8 @@ class ConfigError(FlowForgeError):
 class HarnessViolationError(FlowForgeError):
     status_code = 422
     detail = "Harness guardrail violation"
+
+
+class StepTimeoutError(FlowForgeError):
+    status_code = 408
+    detail = "Workflow step timed out"

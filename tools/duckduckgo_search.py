@@ -1,25 +1,31 @@
 import httpx
-from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
+from typing import Any, Dict
+from flowforge.core.interfaces.tools import ToolPlugin, PluginManifest, PluginHealth, PluginState
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("duckduckgo_search")
 
 
-class DuckDuckGoSearchTool(BaseTool):
-    name = "duckduckgo_search"
-    description = "DuckDuckGo 搜索，无需 API Key"
-    parameters_schema = {
-        "type": "object",
-        "required": ["query"],
-        "properties": {
-            "query": {"type": "string"},
-            "max_results": {"type": "integer", "default": 5},
-        },
-    }
+class DuckDuckGoSearchTool(ToolPlugin):
+    """DuckDuckGo 搜索，无需 API Key。"""
 
-    async def execute(self, input: ToolInput) -> ToolOutput:
-        query = input.params["query"]
-        max_results = input.params.get("max_results", 5)
+    manifest = PluginManifest(
+        name="duckduckgo_search",
+        description="DuckDuckGo 搜索，无需 API Key",
+        tags=["search", "free"],
+        parameters_schema={
+            "type": "object",
+            "required": ["query"],
+            "properties": {
+                "query": {"type": "string"},
+                "max_results": {"type": "integer", "default": 5},
+            },
+        },
+    )
+
+    async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        query = params["query"]
+        max_results = params.get("max_results", 5)
         try:
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
@@ -48,7 +54,7 @@ class DuckDuckGoSearchTool(BaseTool):
                             "content": abstract,
                         },
                     )
-                return ToolOutput(result={"results": results})
+                return {"results": results}
         except Exception as e:
             logger.error(f"DuckDuckGo search failed: {e}")
-            return ToolOutput(result={"results": [], "error": str(e)})
+            return {"results": [], "error": str(e)}

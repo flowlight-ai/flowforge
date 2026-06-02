@@ -1,9 +1,15 @@
+import asyncio
 import json
 import re
 from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("code_writer_agent")
+
+_TOOL_TIMEOUT = 300
 
 
 class CodeWriterAgent(BaseAgent):
@@ -27,19 +33,21 @@ class CodeWriterAgent(BaseAgent):
                 ctx.agents = executor.agent_registry
                 ctx.event_bus = executor.event_bus
                 ctx.executor = executor
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get executor: {e}", task_id=ctx.task_id)
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
     async def execute_with_context(self, input: AgentInput, context: TaskContext) -> AgentOutput:
-        requirements = input.params.get("requirements", "")
+        requirements = input.params.get("requirements", "") or input.params.get("task", "") or input.params.get("query", "")
         language = input.params.get("language", "python")
         save_path = input.params.get("save_path", "")
         test_code = input.params.get("test", True)
-        llm = context.tools.get_tool("llm")
 
         if not requirements:
             return AgentOutput(result={"code": ""})
+
+        effective_persona = "coding" if context.persona in ("default", "") else context.persona
 
         # Step 1: analyze_requirements — 分析需求并设计
         context.event_bus.emit(context.task_id, "code_writer_agent.analyze_requirements_start", {
@@ -48,17 +56,22 @@ class CodeWriterAgent(BaseAgent):
         analyze_prompt = get_prompt("agent.code_analyze", language=language, requirements=requirements)
         design = {}
         try:
-            result = await llm.execute(ToolInput(params={
-                "messages": [{"role": "user", "content": analyze_prompt}],
-                "stream": True, "task_id": context.task_id,
-                "agent_name": self.name, "persona": context.persona or "default",
-            }))
+            result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [{"role": "user", "content": analyze_prompt}],
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": effective_persona,
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
             content = result.result.get("content", "{}")
             match = re.search(r'\{.*\}', content, re.DOTALL)
             if match:
                 design = json.loads(match.group())
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Code analyze timed out", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"Code analyze failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "code_writer_agent.analyze_requirements_complete", {
             "modules_count": len(design.get("modules", [])),
             "edge_cases_count": len(design.get("edge_cases", [])),
@@ -79,15 +92,20 @@ class CodeWriterAgent(BaseAgent):
         system_prompt = get_prompt("agent.code_generate", language=language, requirements=requirements, design=design_context)
         code = ""
         try:
-            llm_result = await llm.execute(ToolInput(params={
-                "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": requirements}],
-                "max_tokens": 2000,
-                "stream": True, "task_id": context.task_id,
-                "agent_name": self.name, "persona": context.persona or "default",
-            }))
+            llm_result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": requirements}],
+                    "max_tokens": 2000,
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": effective_persona,
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
             code = llm_result.result.get("content", "")
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Code generate timed out", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"Code generate failed: {e}", task_id=context.task_id)
 
         if code.startswith("```"):
             lines = code.split("\n")
@@ -104,23 +122,31 @@ class CodeWriterAgent(BaseAgent):
         if code:
             if test_code and language.lower() == "python":
                 try:
-                    executor = context.tools.get_tool("python_executor")
-                    exec_output = await executor.execute(
-                        ToolInput(params={"code": code, "timeout": 15})
+                    exec_output = await asyncio.wait_for(
+                        context.tools.execute("python_executor",
+                            ToolInput(params={"code": code, "timeout": 15})
+                        ),
+                        timeout=_TOOL_TIMEOUT,
                     )
                     execution_result = exec_output.result
                     if exec_output.error:
                         execution_result["error"] = exec_output.error
+                except asyncio.TimeoutError:
+                    logger.warning("Python executor timed out", task_id=context.task_id)
+                    execution_result = {"stdout": "", "stderr": "timeout"}
                 except Exception as e:
                     execution_result = {"stdout": "", "stderr": str(e)}
 
             review_prompt = get_prompt("agent.code_review", language=language, requirements=requirements, code=code[:2000])
             try:
-                result = await llm.execute(ToolInput(params={
-                    "messages": [{"role": "user", "content": review_prompt}],
-                    "stream": True, "task_id": context.task_id,
-                    "agent_name": self.name, "persona": context.persona or "default",
-                }))
+                result = await asyncio.wait_for(
+                    context.tools.execute("llm", ToolInput(params={
+                        "messages": [{"role": "user", "content": review_prompt}],
+                        "stream": False, "task_id": context.task_id,
+                        "agent_name": self.name, "persona": effective_persona,
+                    })),
+                    timeout=_TOOL_TIMEOUT,
+                )
                 content = result.result.get("content", "{}")
                 match = re.search(r'\{.*\}', content, re.DOTALL)
                 if match:
@@ -132,20 +158,25 @@ class CodeWriterAgent(BaseAgent):
                             f"审查问题: {review_data['issues']}\n"
                             f"优化建议: {review_data.get('suggestions', [])}"
                         )
-                        fix_result = await llm.execute(ToolInput(params={
-                            "messages": [{"role": "user", "content": fix_prompt}],
-                            "max_tokens": 2000,
-                            "stream": True, "task_id": context.task_id,
-                            "agent_name": self.name, "persona": context.persona or "default",
-                        }))
+                        fix_result = await asyncio.wait_for(
+                            context.tools.execute("llm", ToolInput(params={
+                                "messages": [{"role": "user", "content": fix_prompt}],
+                                "max_tokens": 2000,
+                                "stream": False, "task_id": context.task_id,
+                                "agent_name": self.name, "persona": effective_persona,
+                            })),
+                            timeout=_TOOL_TIMEOUT,
+                        )
                         fixed_code = fix_result.result.get("content", "")
                         if fixed_code.startswith("```"):
                             flines = fixed_code.split("\n")
                             fixed_code = "\n".join(flines[1:-1] if flines[-1].strip() == "```" else flines[1:])
                         if fixed_code:
                             code = fixed_code
-            except Exception:
-                pass
+            except asyncio.TimeoutError:
+                logger.warning("Code review timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"Code review failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "code_writer_agent.review_code_complete", {
             "final_code_length": len(code),
             "execution_tested": execution_result is not None,
@@ -153,12 +184,16 @@ class CodeWriterAgent(BaseAgent):
 
         if save_path and code:
             try:
-                file_rw = context.tools.get_tool("file_rw")
-                await file_rw.execute(
-                    ToolInput(params={"path": save_path, "action": "write", "content": code})
+                await asyncio.wait_for(
+                    context.tools.execute("file_rw",
+                        ToolInput(params={"path": save_path, "action": "write", "content": code})
+                    ),
+                    timeout=_TOOL_TIMEOUT,
                 )
-            except Exception:
-                pass
+            except asyncio.TimeoutError:
+                logger.warning("File write timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"File write failed: {e}", task_id=context.task_id)
 
         # Step 4: complete
         context.event_bus.emit(context.task_id, "code_writer_agent.complete", {

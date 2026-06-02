@@ -26,7 +26,7 @@ DEFAULT_FREE_MODELS = {
     "openroute": [
         "auto",
         "web/chat",
-        "doubao-web/seed-2.0",
+        "doubao-web/chat",
         "kimi-web/chat",
         "deepseek-web/chat",
         "yuanbao-web/chat",
@@ -98,6 +98,20 @@ ERROR_COOLDOWNS = {
 }
 
 MAX_CANDIDATES = 3
+MAX_FALLBACK_CANDIDATES = 3
+MAX_CALLS_PER_TASK = 50
+
+WEB_CHAT_ROTATION_POOL = [
+    "openroute/deepseek-web/chat",
+    "openroute/kimi-web/chat",
+    "openroute/yuanbao-web/chat",
+]
+
+DISABLED_MODELS = {
+    "openroute/doubao-web/chat",
+    "openroute/doubao-web/api",
+    "openroute/qianwen-web/chat",
+}
 
 
 def classify_error(error_msg: str) -> str:
@@ -196,6 +210,9 @@ class LLMClient(BaseTool):
         self._event_bus = event_bus
         self._health_status: Dict[str, dict] = {}
         self._available_models: Dict[str, List[str]] = {}
+        self._task_call_counts: Dict[str, int] = {}
+        self._task_used_models: Dict[str, set] = {}
+        self._webchat_rotation_index: int = 0
         self._build_available_models()
 
     def set_event_bus(self, event_bus):
@@ -238,26 +255,26 @@ class LLMClient(BaseTool):
             return "local"
         return ""
 
-    def _get_model_chain(self, persona: str = "", agent_name: str = "") -> List[str]:
+    def _get_model_chain(self, persona: str = "", agent_name: str = "", task_id: str = "") -> List[str]:
         if persona and agent_name:
             persona_config = self._assignments.get(persona, {})
             agent_config = persona_config.get(agent_name, {})
-            primary = agent_config.get("primary", "")
-            fallbacks = agent_config.get("fallbacks", [])
+            primary = agent_config.get("primary", "") or persona_config.get("primary", "")
+            fallbacks = agent_config.get("fallbacks", []) or persona_config.get("fallbacks", [])
             if primary:
                 chain = [primary]
                 chain.extend(fallbacks)
-                return chain
+                return self._apply_rotation_and_cross_validation(chain, persona, task_id)
 
         if persona:
             persona_config = self._assignments.get(persona, {})
             default_config = persona_config.get("default", {})
-            primary = default_config.get("primary", "")
-            fallbacks = default_config.get("fallbacks", [])
+            primary = default_config.get("primary", "") or persona_config.get("primary", "")
+            fallbacks = default_config.get("fallbacks", []) or persona_config.get("fallbacks", [])
             if primary:
                 chain = [primary]
                 chain.extend(fallbacks)
-                return chain
+                return self._apply_rotation_and_cross_validation(chain, persona, task_id)
 
         default_assign = self._assignments.get("default", {})
         primary = default_assign.get("primary", "")
@@ -265,9 +282,67 @@ class LLMClient(BaseTool):
         if primary:
             chain = [primary]
             chain.extend(fallbacks)
-            return chain
+            return self._apply_rotation_and_cross_validation(chain, persona, task_id)
 
         return build_cross_fallback_chain(self._available_models, self._health_status)
+
+    def _apply_rotation_and_cross_validation(self, chain: List[str], persona: str, task_id: str) -> List[str]:
+        chain = self._apply_webchat_rotation(chain, task_id)
+        chain = self._filter_disabled_models(chain)
+        chain = self._apply_cross_validation(chain, persona, task_id)
+        return chain
+
+    def _apply_webchat_rotation(self, chain: List[str], task_id: str) -> List[str]:
+        used = self._task_used_models.get(task_id, set())
+        available = [m for m in WEB_CHAT_ROTATION_POOL
+                     if m not in used and self._is_model_healthy(m)]
+        if not available:
+            available = [m for m in WEB_CHAT_ROTATION_POOL if self._is_model_healthy(m)]
+        if not available:
+            return chain
+        rotated = []
+        for m in chain:
+            if m in ("web/chat", "openroute/web/chat"):
+                chosen = available[self._webchat_rotation_index % len(available)]
+                self._webchat_rotation_index += 1
+                logger.info(f"WebChat rotation: {m} → {chosen} "
+                            f"(task={task_id[:8] if task_id else 'N/A'}, "
+                            f"used={len(used)}, pool={len(available)})")
+                rotated.append(chosen)
+            else:
+                rotated.append(m)
+        return rotated
+
+    def _filter_disabled_models(self, chain: List[str]) -> List[str]:
+        filtered = [m for m in chain if m not in DISABLED_MODELS]
+        if len(filtered) < len(chain):
+            removed = set(chain) - set(filtered)
+            logger.info(f"Filtered disabled models: {removed}")
+        return filtered
+
+    def _is_model_healthy(self, model_key: str) -> bool:
+        status = self._health_status.get(model_key, {})
+        if not status:
+            return True
+        cooldown_until = status.get("cooldown_until", 0)
+        if time.time() < cooldown_until:
+            return False
+        return True
+
+    def _apply_cross_validation(self, chain: List[str], persona: str, task_id: str) -> List[str]:
+        if not task_id or persona not in ("judge", "evaluator", "reviewer", "reflexion_evaluator"):
+            return chain
+        used = self._task_used_models.get(task_id, set())
+        if not used:
+            return chain
+        cross_validated = [m for m in chain if m not in used]
+        if cross_validated:
+            logger.info(f"Cross-validation: persona={persona} excluding used models {used}, "
+                        f"choosing from {cross_validated[:3]}")
+            return cross_validated
+        logger.warning(f"Cross-validation: all models already used for task {task_id}, "
+                       f"falling back to original chain")
+        return chain
 
     def _emit_event(self, task_id: str, event_type: str, payload: dict):
         if self._event_bus:
@@ -284,15 +359,62 @@ class LLMClient(BaseTool):
         task_id = input.params.get("task_id", "unknown")
         tools = input.params.get("tools")
 
+        # Call counter check
+        call_count = self._task_call_counts.get(task_id, 0)
+        if call_count >= MAX_CALLS_PER_TASK:
+            self._emit_event(task_id, "llm.error", {
+                "agent_name": agent_name or "unknown",
+                "error": f"Max calls per task exceeded ({MAX_CALLS_PER_TASK})",
+                "all_candidates_failed": True,
+            })
+            return ToolOutput(result={"content": "", "error": "max_calls_exceeded"}, error="max_calls_exceeded")
+
         if model:
+            # Resolve model to provider/model_id format
+            # Handle models like "deepseek-web/chat" or "doubao-web/chat" that contain "/"
+            # but are NOT in "provider/model_id" format — they need "openroute/" prefix
             if "/" not in model:
+                # Simple model ID without any slash — find which provider has it
                 for provider, models in self._available_models.items():
                     if model in models:
                         model = f"{provider}/{model}"
                         break
-            candidates = [model]
+            else:
+                # Model contains slash — check if it's already in provider/model_id format
+                # by checking if the part before first slash is a known provider
+                first_part = model.split("/")[0]
+                known_providers = set(self._providers.keys()) | set(PROVIDER_BASE_URLS.keys())
+                if first_part not in known_providers:
+                    # Not a provider prefix — this is a model ID like "deepseek-web/chat"
+                    # that needs to be prefixed with the correct provider
+                    found = False
+                    for provider, models in self._available_models.items():
+                        if model in models:
+                            model = f"{provider}/{model}"
+                            found = True
+                            break
+                    if not found:
+                        # Default to openroute for web/chat models
+                        if "-web/" in model or model.endswith("-web/chat"):
+                            model = f"openroute/{model}"
+            resolved_model = model
+            assignment_chain = self._get_model_chain(persona, agent_name, task_id)
+            if resolved_model in assignment_chain:
+                candidates = assignment_chain
+            else:
+                candidates = [resolved_model]
+                seen = {resolved_model}
+                for c in assignment_chain:
+                    if c not in seen:
+                        candidates.append(c)
+                        seen.add(c)
+                cross_chain = build_cross_fallback_chain(self._available_models, self._health_status)
+                for c in cross_chain:
+                    if c not in seen:
+                        candidates.append(c)
+                        seen.add(c)
         else:
-            candidates = self._get_model_chain(persona, agent_name)
+            candidates = self._get_model_chain(persona, agent_name, task_id)
 
         if not candidates:
             candidates = build_cross_fallback_chain(self._available_models, self._health_status)
@@ -326,6 +448,12 @@ class LLMClient(BaseTool):
             if time.time() < cooldown_until:
                 logger.debug(f"Skipping {key}: cooldown until {cooldown_until}")
                 continue
+
+            # Increment call counter
+            self._task_call_counts[task_id] = self._task_call_counts.get(task_id, 0) + 1
+            if self._task_call_counts[task_id] > MAX_CALLS_PER_TASK:
+                logger.warning(f"Task {task_id} exceeded max calls ({MAX_CALLS_PER_TASK})")
+                break
 
             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
             if provider == "openrouter":
@@ -421,6 +549,10 @@ class LLMClient(BaseTool):
                     result["tool_calls"] = tool_calls_result
                 if raw_message:
                     result["raw_message"] = raw_message
+                used_key = f"{provider}/{model_id}"
+                if task_id not in self._task_used_models:
+                    self._task_used_models[task_id] = set()
+                self._task_used_models[task_id].add(used_key)
                 return ToolOutput(result=result)
             except Exception as e:
                 duration = time.time() - start
@@ -429,6 +561,16 @@ class LLMClient(BaseTool):
                 metrics.record_llm_error(provider, type(e).__name__)
                 self._update_health(provider, model_id, False, error_str)
                 self._record_model_result(f"{provider}/{model_id}", False, error_str)
+
+                # 发射 llm.end 事件（失败时也必须发射，否则指标追踪断裂）
+                self._emit_event(task_id, "llm.end", {
+                    "agent_name": agent_name or "unknown",
+                    "full_response": "",
+                    "tokens": 0,
+                    "duration_ms": int(duration * 1000),
+                    "error": error_str[:200],
+                    "success": False,
+                })
 
                 error_type = classify_error(error_str)
                 if error_type in ("model_not_found", "no_permission"):
@@ -439,10 +581,14 @@ class LLMClient(BaseTool):
                 last_error = e
                 continue
 
-        if not tried_any:
+        if not tried_any or (tried_any and last_error is not None):
+            existing = set(candidates) if candidates else set()
             fallback_chain = build_cross_fallback_chain(self._available_models, self._health_status)
+            fallback_chain = [c for c in fallback_chain if c not in existing]
+            if len(fallback_chain) > MAX_FALLBACK_CANDIDATES:
+                fallback_chain = fallback_chain[:MAX_FALLBACK_CANDIDATES]
             if fallback_chain:
-                logger.info(f"All assignment candidates skipped, retrying with cross-fallback chain ({len(fallback_chain)})")
+                logger.info(f"Primary candidates exhausted, retrying with cross-fallback chain ({len(fallback_chain)})")
                 candidates = fallback_chain
                 for candidate in candidates:
                     if not candidate or "/" not in candidate:
@@ -459,6 +605,11 @@ class LLMClient(BaseTool):
                     cooldown_until = status.get("cooldown_until", 0)
                     if time.time() < cooldown_until:
                         continue
+                    # Increment call counter for fallback calls
+                    self._task_call_counts[task_id] = self._task_call_counts.get(task_id, 0) + 1
+                    if self._task_call_counts[task_id] > MAX_CALLS_PER_TASK:
+                        logger.warning(f"Task {task_id} exceeded max calls ({MAX_CALLS_PER_TASK})")
+                        break
                     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
                     if provider == "openrouter":
                         headers["HTTP-Referer"] = "https://flowforge.dev"
@@ -505,17 +656,41 @@ class LLMClient(BaseTool):
                             result["tool_calls"] = tool_calls_result
                         if raw_message:
                             result["raw_message"] = raw_message
+                        used_key = f"{provider}/{model_id}"
+                        if task_id not in self._task_used_models:
+                            self._task_used_models[task_id] = set()
+                        self._task_used_models[task_id].add(used_key)
                         return ToolOutput(result=result)
                     except Exception as e:
+                        duration_fb = time.time() - start
                         logger.warning(f"LLM fallback failed for {provider}/{model_id}: {str(e)[:200]}")
                         self._update_health(provider, model_id, False, str(e))
+                        # 回退链失败时也发射 llm.end 事件
+                        self._emit_event(task_id, "llm.end", {
+                            "agent_name": agent_name or "unknown",
+                            "full_response": "",
+                            "tokens": 0,
+                            "duration_ms": int(duration_fb * 1000),
+                            "error": str(e)[:200],
+                            "success": False,
+                        })
                         last_error = e
                         continue
 
+        # 所有候选模型都失败，发射最终错误事件
+        self._emit_event(task_id, "llm.error", {
+            "agent_name": agent_name or "unknown",
+            "error": str(last_error)[:300] if last_error else "no candidates",
+            "all_candidates_failed": True,
+        })
         return ToolOutput(result={"content": "", "error": str(last_error)}, error=str(last_error))
 
+    def cleanup_task(self, task_id: str):
+        self._task_call_counts.pop(task_id, None)
+        self._task_used_models.pop(task_id, None)
+
     async def _normal_call(self, url: str, headers: dict, payload: dict) -> dict:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=300) as client:
             resp = await client.post(url, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()
@@ -528,7 +703,7 @@ class LLMClient(BaseTool):
     async def _stream_call(self, url: str, headers: dict, payload: dict,
                            task_id: str, agent_name: str, provider: str, model_id: str) -> str:
         full_content = []
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=300) as client:
             async with client.stream("POST", url, json=payload, headers=headers) as resp:
                 resp.raise_for_status()
                 async for line in resp.aiter_lines():
@@ -608,7 +783,7 @@ class LLMClient(BaseTool):
             start = time.time()
             full_content = []
             try:
-                async with httpx.AsyncClient(timeout=120) as client:
+                async with httpx.AsyncClient(timeout=300) as client:
                     async with client.stream("POST", url, json=payload, headers=headers) as resp:
                         resp.raise_for_status()
                         async for line in resp.aiter_lines():

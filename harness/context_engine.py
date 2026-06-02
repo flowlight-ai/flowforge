@@ -174,23 +174,40 @@ class ContextEngine:
     # ------------------------------------------------------------------
 
     async def _retrieve_failures(self, persona: str) -> List[dict]:
-        """Retrieve relevant past failure cases for the persona.
-
-        Attempts to query the EntropyManager's failure records if available
-        via the config. Falls back to empty list if not configured.
-        """
         entropy_manager = self.config.get("entropy_manager")
+        if entropy_manager is not None and hasattr(entropy_manager, "debt_tracker"):
+            debt_tracker = entropy_manager.debt_tracker
+            if debt_tracker is not None and hasattr(debt_tracker, "get_open_items"):
+                open_items = debt_tracker.get_open_items()
+                failures: List[dict] = []
+                for item in open_items:
+                    failures.append({
+                        "failure_type": item.severity.value if hasattr(item, "severity") else "unknown",
+                        "description": item.description if hasattr(item, "description") else "",
+                        "timestamp": item.created_at if hasattr(item, "created_at") else 0.0,
+                        "source": item.source if hasattr(item, "source") else "",
+                        "id": item.id if hasattr(item, "id") else "",
+                    })
+                if failures:
+                    logger.debug(
+                        f"Retrieved {len(failures)} failure records from DebtTracker for persona={persona}"
+                    )
+                return failures
+
         if entropy_manager is not None and hasattr(entropy_manager, "get_status"):
             status = entropy_manager.get_status()
-            # EntropyManager tracks post_track_count as total failures
             failure_count = status.get("post_track_count", 0)
             if failure_count > 0:
                 logger.debug(
                     f"EntropyManager reports {failure_count} tracked failures for persona={persona}"
                 )
-                # Phase 2: Query specific failure records from DebtTracker
-                # For now, return a marker indicating failures exist
-                return [{"source": "entropy_manager", "failure_count": failure_count}]
+                return [{
+                    "failure_type": "unknown",
+                    "description": f"EntropyManager reports {failure_count} tracked failures but no DebtTracker available",
+                    "timestamp": 0.0,
+                    "source": "entropy_manager",
+                    "id": "",
+                }]
 
         return []
 

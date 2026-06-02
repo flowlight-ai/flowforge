@@ -19,6 +19,9 @@ def setup_test_env():
 
 @pytest.fixture
 def mock_llm_tool():
+    if os.environ.get("FLOWFORGE_REAL_LLM") == "1":
+        from flowforge.tools.llm_client import LLMClient
+        return LLMClient()
     from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
     class MockLLM(BaseTool):
         name = "llm"

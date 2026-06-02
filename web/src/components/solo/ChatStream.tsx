@@ -1,69 +1,79 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, Fragment } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
-import { ChatMessage } from "./solo-types";
+import { ChatMessage, StepGroupData } from "./solo-types";
 import { SoloTaskPhase } from "../../lib/solo-types";
 import { useShellConfig } from "../../lib/shell-config";
-import { formatTs, getToolIcon, getToolSummary, truncateParams, truncateResult, formatDurationMs } from "./solo-utils";
+import {
+  formatTs,
+  getToolIcon,
+  getToolSummary,
+  truncateParams,
+  truncateResult,
+  formatDurationMs,
+  renderMarkdown,
+  detectFilePaths,
+  groupMessagesIntoSteps,
+} from "./solo-utils";
 import { ApprovalCard } from "./ChatPrimitives";
 
-// ─── helpers ───
 const LONG_CONTENT_THRESHOLD = 500;
 
-function ts2str(ts: number | string): string {
-  const d = typeof ts === "number" ? new Date(ts) : new Date(ts);
-  return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-}
-
-// ═══════════════════════════════════════════
-// Stage Divider — subtle progress indicator
-// ═══════════════════════════════════════════
-function StageDivider({ label, isRunning, completed }: { label: string; isRunning: boolean; completed: boolean }) {
+function StepProgressBar({ current, total }: { current: number; total: number }) {
+  const pct = total > 0 ? Math.min((current / total) * 100, 100) : 0;
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 8, padding: "5px 16px",
-      animation: "fadeIn 0.2s var(--ease-out)",
-    }}>
-      {/* running spinner or completed check */}
-      {isRunning ? (
-        <div style={{
-          width: 14, height: 14, borderRadius: "50%",
-          border: "2px solid var(--border)", borderTopColor: "var(--accent)",
-          animation: "spin 0.7s linear infinite", flexShrink: 0,
-        }} />
-      ) : completed ? (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}>
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-      ) : (
-        <div style={{ width: 14, height: 14, borderRadius: "50%", background: "var(--border)", flexShrink: 0 }} />
-      )}
-      <span style={{ fontSize: 12.5, fontWeight: 600, color: isRunning ? "var(--accent)" : "var(--text)" }}>{label}</span>
+    <div className="trae-progress-bar-wrap">
+      <div className="trae-progress-bar-track">
+        <div className="trae-progress-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="trae-progress-bar-label">Step {current}/{total}</span>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════
-// User Bubble — right aligned
-// ═══════════════════════════════════════════
+function StatusIcon({ status }: { status: string }) {
+  if (status === "running") {
+    return (
+      <svg className="trae-spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+    );
+  }
+  if (status === "completed") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--destructive)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      className="trae-chevron"
+      style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
 function UserBubble({ msg }: { msg: ChatMessage }) {
   return (
-    <div style={{
-      display: "flex", gap: 10, padding: "6px 16px", justifyContent: "flex-end",
-      animation: "fadeIn 0.2s var(--ease-out)",
-    }}>
-      <div style={{
-        maxWidth: "75%", borderRadius: 16, borderBottomRightRadius: 4,
-        padding: "10px 16px", background: "var(--accent)",
-        color: "#fff", fontSize: 14, lineHeight: 1.55,
-      }}>
-        {msg.content}
-      </div>
-      <div style={{
-        width: 28, height: 28, borderRadius: "50%", background: "var(--accent)",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2,
-      }}>
+    <div className="trae-msg-row trae-msg-user">
+      <div className="trae-user-bubble">{msg.content}</div>
+      <div className="trae-avatar trae-avatar-user">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
           <circle cx="12" cy="7" r="4" />
@@ -73,10 +83,7 @@ function UserBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
-// ═══════════════════════════════════════════
-// AI Bubble — left aligned, with expand for long content
-// ═══════════════════════════════════════════
-function AIBubble({ msg }: { msg: ChatMessage }) {
+function AIBubble({ msg, onFileOpen }: { msg: ChatMessage; onFileOpen?: (filePath: string, fileName: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const content = msg.content || "";
   const fullContent = (msg.data?._content_full as string) || content;
@@ -88,100 +95,45 @@ function AIBubble({ msg }: { msg: ChatMessage }) {
   const fileName = (msg.data?.filename as string) || (msg.data?._file_name as string) || "";
 
   return (
-    <div style={{
-      display: "flex", gap: 10, padding: "6px 16px", justifyContent: "flex-start",
-      animation: "fadeIn 0.2s var(--ease-out)",
-    }}>
-      <div style={{
-        width: 28, height: 28, borderRadius: "50%", background: "var(--accent-subtle)",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2,
-      }}>
+    <div className="trae-msg-row trae-msg-ai">
+      <div className="trae-avatar trae-avatar-ai">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round">
           <rect x="3" y="3" width="18" height="14" rx="2" /><path d="M8 21h8" /><path d="M12 17v4" />
         </svg>
       </div>
-      <div style={{ maxWidth: "75%", minWidth: 0 }}>
-        <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 500, marginBottom: 4 }}>
-          {msg.data?._agent_name || "AI"}
-          <span style={{ marginLeft: 8, fontSize: 10, fontFamily: "var(--mono)", opacity: 0.6 }}>
-            {formatTs(msg.timestamp)}
-          </span>
+      <div className="trae-ai-body">
+        <div className="trae-ai-meta">
+          <span className="trae-ai-name">{msg.data?._agent_name || "AI"}</span>
+          <span className="trae-ai-time">{formatTs(msg.timestamp)}</span>
         </div>
-
-        {/* Thinking section */}
         {thinking && (
-          <div style={{
-            background: "var(--bg-elevated)", border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md)", padding: "8px 12px", marginBottom: 6,
-            fontSize: 12, color: "var(--muted)", lineHeight: 1.5, whiteSpace: "pre-wrap",
-          }}>
+          <div className="trae-thinking-block">
             {thinking}
           </div>
         )}
-
-        {/* Content */}
         {displayContent && (
-          <div style={{
-            borderRadius: 12, borderBottomLeftRadius: 4,
-            padding: "10px 16px", background: "var(--bg-elevated)",
-            border: "1px solid var(--border)",
-            fontSize: 14, lineHeight: 1.6, wordBreak: "break-word",
-          }}>
+          <div className="trae-ai-content">
             <ReactMarkdown>{displayContent}</ReactMarkdown>
             {isLong && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                style={{
-                  marginTop: 6, padding: "3px 10px", border: "none",
-                  borderRadius: "var(--radius-full)", cursor: "pointer",
-                  background: "var(--accent-subtle)", color: "var(--accent)",
-                  fontSize: 12, fontWeight: 500,
-                }}
-              >
+              <button className="trae-expand-btn" onClick={() => setExpanded(!expanded)}>
                 {expanded ? "收起" : `展开全部 (${content.length} 字)`}
               </button>
             )}
           </div>
         )}
-
-        {/* File reference */}
         {(filePath || savedToFile) && (
-          <div style={{
-            marginTop: 8, padding: "8px 14px",
-            background: "var(--bg)", borderRadius: "var(--radius-md)",
-            border: "1px dashed var(--border)", display: "flex", alignItems: "center", gap: 10,
-          }}>
+          <div className="trae-file-ref">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round">
               <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
               <polyline points="13 2 13 9 20 9" />
             </svg>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>
-                {fileName || "生成内容文件"}
-              </div>
-              <div style={{ fontSize: 10, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {filePath || "已保存至工作区"}
-              </div>
+            <div className="trae-file-info">
+              <div className="trae-file-name">{fileName || "生成内容文件"}</div>
+              <div className="trae-file-path">{filePath || "已保存至工作区"}</div>
             </div>
-            <button
-              onClick={() => {
-                // Copy file path or navigate
-                if (filePath) window.open(filePath, "_blank");
-              }}
-              style={{
-                padding: "3px 10px", border: "1px solid var(--border)",
-                borderRadius: "var(--radius-sm)", cursor: "pointer",
-                background: "var(--bg-elevated)", color: "var(--accent)",
-                fontSize: 11, fontWeight: 500,
-              }}
-            >
-              查看
-            </button>
-          </div>
-        )}
-        {savedToFile && !filePath && !fileName && (
-          <div style={{ marginTop: 6, fontSize: 12, color: "var(--accent)", cursor: "pointer" }}>
-            📄 内容已保存至工作区文件
+            {filePath && (
+              <button className="trae-file-view-btn" onClick={() => onFileOpen?.(filePath, fileName || "生成内容文件")}>查看</button>
+            )}
           </div>
         )}
       </div>
@@ -189,83 +141,88 @@ function AIBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
-// ═══════════════════════════════════════════
-// System Banner — subtle status
-// ═══════════════════════════════════════════
 function SystemBanner({ msg }: { msg: ChatMessage }) {
   const isOk = msg.content.startsWith("✓");
-  const color = isOk ? "var(--ok)" : "var(--destructive)";
   return (
-    <div style={{
-      display: "flex", justifyContent: "center", padding: "2px 16px",
-      animation: "fadeIn 0.15s var(--ease-out)",
-    }}>
-      <span style={{
-        fontSize: 11, fontWeight: 600, color,
-        padding: "2px 10px", borderRadius: "var(--radius-full)",
-        background: isOk
-          ? "color-mix(in srgb, var(--ok) 8%, transparent)"
-          : "color-mix(in srgb, var(--destructive) 8%, transparent)",
-      }}>
-        {msg.content}
-      </span>
+    <div className="trae-system-banner">
+      <span className={`trae-system-pill ${isOk ? "ok" : "err"}`}>{msg.content}</span>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════
-// Tool Card — compact, click-to-expand
-// ═══════════════════════════════════════════
-function ToolCard({ msg }: { msg: ChatMessage }) {
+function LLMCallInline({ msg }: { msg: ChatMessage }) {
+  const model = msg.data?._llm_model || msg.content || "";
+  const tokens = msg.data?._llm_tokens || 0;
+  const durationMs = msg.data?._llm_duration_ms || null;
+  const agent = msg.data?._llm_agent || "";
+  const isEnd = msg.data?._llm_is_end || false;
+  const inputTokens = msg.data?._llm_input_tokens || msg.data?.prompt_tokens || 0;
+  const outputTokens = msg.data?._llm_output_tokens || msg.data?.completion_tokens || 0;
+
+  return (
+    <div className={`trae-llm-inline ${isEnd ? "completed" : "running"}`}>
+      <span className="trae-llm-inline-icon">🤖</span>
+      <span className="trae-llm-inline-model">{model}</span>
+      {agent && <span className="trae-llm-inline-agent">{agent}</span>}
+      {tokens > 0 && <span className="trae-llm-inline-tokens">{tokens} tokens</span>}
+      {inputTokens > 0 && outputTokens > 0 && (
+        <span className="trae-llm-inline-token-detail">↑{inputTokens} ↓{outputTokens}</span>
+      )}
+      {durationMs != null && <span className="trae-llm-inline-duration">{formatDurationMs(durationMs)}</span>}
+      {!isEnd && <span className="trae-llm-inline-spinner" />}
+    </div>
+  );
+}
+
+function ToolInline({ msg, onFileOpen }: { msg: ChatMessage; onFileOpen?: (filePath: string, fileName: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const toolName = msg.content || msg.data?.tool_name || "工具";
   const duration = msg.data?.duration_ms || null;
   const params = msg.data?.params || msg.data?.input || msg.data?.arguments || null;
   const result = msg.data?.result || msg.data?.output || null;
   const error = msg.data?.error || null;
+  const hasError = !!error;
+  const resultFilePaths = result ? detectFilePaths(typeof result === "string" ? result : JSON.stringify(result)) : [];
 
   return (
-    <div style={{ padding: "2px 16px", animation: "fadeIn 0.15s var(--ease-out)" }}>
-      <div
-        onClick={() => setExpanded(!expanded)}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "4px 12px", borderRadius: "var(--radius-full)",
-          background: "color-mix(in srgb, var(--accent) 8%, transparent)",
-          border: "1px solid var(--border)", cursor: "pointer",
-          fontSize: 12, color: "var(--text)", userSelect: "none",
-        }}
-      >
-        <span>{getToolIcon(toolName)}</span>
-        <span style={{ fontWeight: 500 }}>{toolName}</span>
-        <span style={{ color: "var(--muted)", fontSize: 11 }}>{getToolSummary(msg.data || {})}</span>
-        {duration != null && <span style={{ color: "var(--muted)", fontSize: 10, fontFamily: "var(--mono)" }}>{formatDurationMs(duration)}</span>}
+    <div className="trae-tool-inline">
+      <div className="trae-tool-inline-header" onClick={() => setExpanded(!expanded)}>
+        <span className="trae-tool-inline-icon">{getToolIcon(toolName)}</span>
+        <span className="trae-tool-inline-name">{toolName}</span>
+        <span className="trae-tool-inline-summary">{getToolSummary(msg.data || {})}</span>
+        {duration != null && <span className="trae-tool-inline-duration">{formatDurationMs(duration)}</span>}
+        {hasError && <span className="trae-tool-inline-error-badge">✗</span>}
+        <ChevronIcon open={expanded} />
       </div>
       {expanded && (
-        <div style={{ marginTop: 6, marginLeft: 4, fontSize: 12 }}>
-          {params && <pre style={{ margin: 0, padding: "6px 10px", background: "var(--bg)", borderRadius: "var(--radius-sm)", color: "var(--muted)", overflow: "auto", maxHeight: 120 }}>{truncateParams(params, 300)}</pre>}
-          {result && !error && <pre style={{ margin: "4px 0 0", padding: "6px 10px", background: "var(--bg)", borderRadius: "var(--radius-sm)", color: "var(--text)", overflow: "auto", maxHeight: 200 }}>{truncateResult(result, 500)}</pre>}
-          {error && <pre style={{ margin: "4px 0 0", padding: "6px 10px", background: "color-mix(in srgb, var(--destructive) 6%, transparent)", borderRadius: "var(--radius-sm)", color: "var(--destructive)", overflow: "auto", maxHeight: 120 }}>{error}</pre>}
+        <div className="trae-tool-inline-detail">
+          {params && <div className="trae-tool-detail-section"><div className="trae-tool-detail-label">参数</div><pre className="trae-detail-pre">{truncateParams(params, 300)}</pre></div>}
+          {result && !error && <div className="trae-tool-detail-section"><div className="trae-tool-detail-label">输出</div><pre className="trae-detail-pre trae-detail-result">{truncateResult(result, 500)}</pre></div>}
+          {error && <div className="trae-tool-detail-section"><div className="trae-tool-detail-label trae-detail-error-label">错误</div><pre className="trae-detail-pre trae-detail-error">{error}</pre></div>}
+          {resultFilePaths.length > 0 && (
+            <div className="trae-tool-file-refs">
+              {resultFilePaths.map((fp, i) => {
+                const filename = fp.path.split(/[/\\]/).pop() || fp.path;
+                return (
+                  <button key={i} className="trae-tool-file-ref-btn" onClick={(e) => { e.stopPropagation(); onFileOpen?.(fp.path, filename); }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
+                    <span>{filename}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════
-// Gate Badge
-// ═══════════════════════════════════════════
 function GateBadge({ msg }: { msg: ChatMessage }) {
   const passed = msg.data?.is_passed;
   return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "2px 16px" }}>
-      <span style={{
-        fontSize: 11, fontWeight: 600, padding: "2px 10px", borderRadius: "var(--radius-full)",
-        color: passed ? "var(--ok)" : "var(--destructive)",
-        background: passed
-          ? "color-mix(in srgb, var(--ok) 10%, transparent)"
-          : "color-mix(in srgb, var(--destructive) 10%, transparent)",
-      }}>
+    <div className="trae-system-banner">
+      <span className={`trae-system-pill ${passed ? "ok" : "err"}`}>
         {passed ? "✓" : "✗"} {msg.data?.gate_id || "Gate"}
         {msg.data?.score != null && <span style={{ marginLeft: 6, opacity: 0.6 }}>{msg.data.score}</span>}
       </span>
@@ -273,30 +230,144 @@ function GateBadge({ msg }: { msg: ChatMessage }) {
   );
 }
 
-// ═══════════════════════════════════════════
-// Review Banner
-// ═══════════════════════════════════════════
 function ReviewBanner({ msg }: { msg: ChatMessage }) {
   return (
-    <div style={{ padding: "4px 16px" }}>
-      <div style={{
-        borderRadius: "var(--radius-md)", border: "1.5px solid var(--warn)",
-        background: "color-mix(in srgb, var(--warn) 8%, var(--bg-elevated))",
-        padding: "8px 14px", color: "var(--warn)", fontSize: 12.5, fontWeight: 600,
-        display: "flex", alignItems: "center", gap: 8,
-      }}>
-        <span>⏸</span>
-        <span>审核节点: {msg.content}</span>
-      </div>
+    <div className="trae-review-banner">
+      <span>⏸</span>
+      <span>审核节点: {msg.content}</span>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════
-// ChatStream — main component (flat timeline)
-// ═══════════════════════════════════════════
+function FileLinkInline({ path, onFileOpen }: { path: string; onFileOpen?: (filePath: string, fileName: string) => void }) {
+  const filename = path.split(/[/\\]/).pop() || path;
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  const iconMap: Record<string, string> = {
+    py: "🐍", ts: "🔷", tsx: "🔷", js: "🟡", jsx: "🟡", json: "📋",
+    md: "📝", yaml: "⚙️", yml: "⚙️", css: "🎨", html: "🌐", sh: "⌨️",
+    sql: "🗃️", go: "🔵", rs: "🦀", java: "☕", svg: "🖼️", png: "🖼️",
+    jpg: "🖼️", gif: "🖼️",
+  };
+  const icon = iconMap[ext] || "📄";
+
+  return (
+    <button className="trae-file-link-inline" onClick={() => onFileOpen?.(path, filename)} title={path}>
+      <span className="trae-file-link-icon">{icon}</span>
+      <span className="trae-file-link-name">{filename}</span>
+      <span className="trae-file-link-path">{path.length > 40 ? "..." + path.slice(-37) : path}</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="trae-file-link-arrow"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+    </button>
+  );
+}
+
+function StepAccordion({
+  group,
+  isLastActive,
+  onApprovalAction,
+  phase,
+  onFileOpen,
+}: {
+  group: StepGroupData;
+  isLastActive: boolean;
+  onApprovalAction: (messageId: string, approved: boolean, feedback: string) => void;
+  phase: SoloTaskPhase;
+  onFileOpen?: (filePath: string, fileName: string) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  const isTerminal = phase === "completed" || phase === "error" || phase === "rejected" || phase === "interrupted";
+  const effectiveStatus = isTerminal && group.status === "running"
+    ? (phase === "completed" ? "completed" : "error")
+    : group.status;
+
+  useEffect(() => {
+    if (isLastActive && effectiveStatus === "running") setCollapsed(false);
+    if (effectiveStatus === "completed" && !isLastActive) setCollapsed(true);
+  }, [isLastActive, effectiveStatus]);
+
+  const borderColor =
+    effectiveStatus === "completed" ? "var(--ok)"
+    : effectiveStatus === "error" ? "var(--destructive)"
+    : "var(--accent)";
+
+  const aiMessages = useMemo(() => group.entries.filter((m) => m.role === "ai"), [group.entries]);
+  const nonAiEntries = useMemo(() => group.entries.filter((m) => m.role !== "ai"), [group.entries]);
+
+  return (
+    <div className="trae-step-node" style={{ borderLeftColor: borderColor }}>
+      <div className="trae-step-header" onClick={() => setCollapsed(!collapsed)}>
+        <ChevronIcon open={!collapsed} />
+        <StatusIcon status={effectiveStatus} />
+        <span className="trae-step-label">{group.stepLabel}</span>
+        {group.durationMs != null && group.durationMs > 0 && (
+          <span className="trae-step-duration">{formatDurationMs(group.durationMs)}</span>
+        )}
+      </div>
+      {!collapsed && (
+        <div className="trae-step-body">
+          {aiMessages.map((msg) => (
+            <div key={msg.id} className="trae-step-entry">
+              <LLMCallInline msg={msg} />
+            </div>
+          ))}
+          {nonAiEntries.map((msg) => {
+            if (msg.role === "llm-call") {
+              return (
+                <div key={msg.id} className="trae-step-entry">
+                  <LLMCallInline msg={msg} />
+                </div>
+              );
+            }
+            if (msg.role === "tool") {
+              return (
+                <div key={msg.id} className="trae-step-entry">
+                  <ToolInline msg={msg} onFileOpen={onFileOpen} />
+                </div>
+              );
+            }
+            if (msg.role === "system") {
+              const isSuccess = msg.content?.startsWith("✓");
+              return (
+                <div key={msg.id} className="trae-step-entry">
+                  <div className={`trae-step-system ${isSuccess ? "ok" : "err"}`}>{msg.content}</div>
+                </div>
+              );
+            }
+            if (msg.role === "gate") {
+              const passed = msg.data?.is_passed;
+              return (
+                <div key={msg.id} className="trae-step-entry">
+                  <span className={`trae-gate-pill ${passed ? "ok" : "err"}`}>
+                    {passed ? "✓" : "✗"} {msg.data?.gate_id || "Gate"}
+                    {msg.data?.score != null && <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 4 }}>{msg.data.score}</span>}
+                  </span>
+                </div>
+              );
+            }
+            if (msg.role === "review") {
+              return (
+                <div key={msg.id} className="trae-step-entry">
+                  <div className="trae-review-banner">⏸ 审核节点: {msg.content}</div>
+                </div>
+              );
+            }
+            if (msg.role === "approval") {
+              return (
+                <div key={msg.id} className="trae-step-entry">
+                  <ApprovalCard messageId={msg.id} data={msg.data || {}} onAction={onApprovalAction} />
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ChatStream({
-  messages, phase, onApprovalAction, interactionMode,
+  messages, phase, onApprovalAction, stageProgress, interactionMode, onFileOpen,
 }: {
   messages: ChatMessage[];
   phase: SoloTaskPhase;
@@ -304,17 +375,15 @@ export default function ChatStream({
   stageProgress?: { current: number; total: number };
   interactionMode?: "normal" | "solo" | "auto";
   dynNodes?: any; dynEdges?: any; currentStep?: string;
+  onFileOpen?: (filePath: string, fileName: string) => void;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const userScrolled = useRef(false);
   const config = useShellConfig();
   const isActive = phase === "running" || phase === "connecting";
+  const isTerminal = phase === "completed" || phase === "error" || phase === "rejected" || phase === "interrupted";
 
-  // Track seen stage labels to show completion on next occurrence
-  const stageLabelsRef = useRef<Map<string, { idx: number; completed: boolean }>>(new Map());
-
-  // Auto-scroll
   useEffect(() => {
     if (!userScrolled.current && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
@@ -326,76 +395,80 @@ export default function ChatStream({
     if (el) userScrolled.current = el.scrollHeight - el.scrollTop - el.clientHeight > 80;
   }, []);
 
-  // Stage tracking
-  stageLabelsRef.current.clear();
-  for (let i = 0; i < messages.length; i++) {
-    const m = messages[i];
-    if (m.role === "stage") {
-      stageLabelsRef.current.set(m.content, { idx: i, completed: false });
-    } else if (m.role === "system" && m.content.startsWith("✓ ")) {
-      const label = m.content.slice(2).replace(" 完成", "");
-      const entry = stageLabelsRef.current.get(label);
-      if (entry) entry.completed = true;
+  const stepGroups = useMemo(() => {
+    return groupMessagesIntoSteps(messages, phase);
+  }, [messages, phase]);
+
+  const standaloneMessages = useMemo(() => {
+    return stepGroups.filter((item): item is ChatMessage => "role" in item);
+  }, [stepGroups]);
+
+  const groupedSteps = useMemo(() => {
+    return stepGroups.filter((item): item is StepGroupData => !("role" in item));
+  }, [stepGroups]);
+
+  const effectiveProgress = useMemo(() => {
+    if (groupedSteps.length > 0) {
+      const runningIdx = groupedSteps.findIndex((g) => g.status === "running");
+      const current = runningIdx >= 0 ? runningIdx + 1 : groupedSteps.length;
+      const total = Math.max(stageProgress?.total || 0, groupedSteps.length);
+      return { current, total };
     }
-  }
+    return stageProgress;
+  }, [groupedSteps, stageProgress]);
 
-  const isTerminal = phase === "completed" || phase === "error" || phase === "rejected" || phase === "interrupted";
+  const lastActiveStepIdx = useMemo(() => {
+    for (let i = groupedSteps.length - 1; i >= 0; i--) {
+      if (groupedSteps[i].status === "running") return i;
+    }
+    return -1;
+  }, [groupedSteps]);
 
-  // Map messages to components
-  const renderMessage = useCallback((msg: ChatMessage) => {
+  const renderStandaloneMessage = useCallback((msg: ChatMessage) => {
     switch (msg.role) {
-      case "stage":
-        // Skip — stage labels are rendered as dividers below
-        return null;
-      case "user":
-        return <UserBubble key={msg.id} msg={msg} />;
-      case "ai":
-        return <AIBubble key={msg.id} msg={msg} />;
+      case "user": return <UserBubble key={msg.id} msg={msg} />;
+      case "ai": return <AIBubble key={msg.id} msg={msg} onFileOpen={onFileOpen} />;
       case "system": {
-        // Skip stage completion messages (rendered as part of divider)
         if (msg.content.startsWith("✓ ") && msg.content.endsWith(" 完成")) return null;
         return <SystemBanner key={msg.id} msg={msg} />;
       }
-      case "tool":
-        return <ToolCard key={msg.id} msg={msg} />;
-      case "gate":
-        return <GateBadge key={msg.id} msg={msg} />;
-      case "review":
-        return <ReviewBanner key={msg.id} msg={msg} />;
-      case "approval":
-        return <ApprovalCard key={msg.id} messageId={msg.id} data={msg.data || {}} onAction={onApprovalAction} />;
-      default:
-        return null;
+      case "tool": return <ToolInline key={msg.id} msg={msg} onFileOpen={onFileOpen} />;
+      case "gate": return <GateBadge key={msg.id} msg={msg} />;
+      case "review": return <ReviewBanner key={msg.id} msg={msg} />;
+      case "llm-call": return <LLMCallInline key={msg.id} msg={msg} />;
+      case "approval": return <ApprovalCard key={msg.id} messageId={msg.id} data={msg.data || {}} onAction={onApprovalAction} />;
+      default: return null;
     }
-  }, [onApprovalAction]);
+  }, [onApprovalAction, onFileOpen]);
 
-  // Build flat timeline with stage dividers interspersed
   const timeline: React.ReactNode[] = [];
-  let lastStage: string | null = null;
 
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i];
-    
-    // Detect stage transitions
-    if (msg.role === "stage" && msg.content !== lastStage) {
-      // Check if this stage is completed
-      const info = stageLabelsRef.current.get(msg.content);
-      const isRunning = info ? !info.completed && !isTerminal : false;
-      const completed = info ? info.completed : false;
+  let msgIdx = 0;
+  let stepIdx = 0;
+
+  for (const item of stepGroups) {
+    if ("role" in item) {
+      const rendered = renderStandaloneMessage(item as ChatMessage);
+      if (rendered) timeline.push(rendered);
+      msgIdx++;
+    } else {
+      const group = item as StepGroupData;
       timeline.push(
-        <StageDivider key={`stage-${msg.id}`} label={msg.content} isRunning={isRunning} completed={completed} />
+        <StepAccordion
+          key={group.id}
+          group={group}
+          isLastActive={stepIdx === lastActiveStepIdx}
+          onApprovalAction={onApprovalAction}
+          phase={phase}
+          onFileOpen={onFileOpen}
+        />
       );
-      lastStage = msg.content;
+      stepIdx++;
     }
-
-    // Render non-stage messages
-    const rendered = renderMessage(msg);
-    if (rendered) timeline.push(rendered);
   }
 
   return (
     <div className="chat-stream" ref={containerRef} onScroll={handleScroll} style={{ overflowY: "auto" }}>
-      {/* Welcome / empty state */}
       {messages.length === 0 && phase === "idle" && (
         <div className="chat-welcome">
           <div className="chat-welcome-icon">✦</div>
@@ -413,7 +486,6 @@ export default function ChatStream({
         </div>
       )}
 
-      {/* Loading state */}
       {messages.length === 0 && (phase === "creating" || phase === "connecting") && (
         <div className="chat-welcome">
           <div className="spinner" />
@@ -423,34 +495,22 @@ export default function ChatStream({
         </div>
       )}
 
-      {/* Timeline */}
+      {effectiveProgress && effectiveProgress.total > 0 && (phase === "running" || phase === "connecting" || phase === "waiting_review" || phase === "paused") && (
+        <StepProgressBar current={effectiveProgress.current} total={effectiveProgress.total} />
+      )}
+
       {timeline}
 
-      {/* Active indicator */}
       {isActive && messages.length > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", color: "var(--muted)" }}>
-          <div style={{
-            width: 14, height: 14, borderRadius: "50%",
-            border: "2px solid var(--muted)", borderTopColor: "transparent",
-            animation: "spin 0.8s linear infinite",
-          }} />
-          <span style={{ fontSize: 12 }}>AI 正在思考...</span>
+        <div className="trae-thinking-indicator">
+          <div className="trae-thinking-spinner" />
+          <span>AI 正在思考...</span>
         </div>
       )}
 
-      {/* Terminal state */}
       {isTerminal && messages.length > 0 && (
-        <div style={{ display: "flex", justifyContent: "center", padding: "12px 16px" }}>
-          <span style={{
-            fontSize: 11, fontWeight: 600, padding: "4px 12px",
-            borderRadius: "var(--radius-full)", background: "var(--bg-elevated)",
-            border: "1px solid var(--border)",
-            color: (() => {
-              if (phase === "error" || phase === "interrupted") return "var(--destructive)";
-              const hasContent = messages.some((m) => m.role === "ai" && m.content && m.content.length > 10);
-              return hasContent ? "var(--ok)" : "var(--destructive)";
-            })(),
-          }}>
+        <div className="trae-terminal-banner">
+          <span className={`trae-terminal-pill ${phase === "error" || phase === "interrupted" ? "err" : phase === "rejected" ? "err" : "ok"}`}>
             {(() => {
               if (phase === "error") return "✗ 任务出错";
               if (phase === "interrupted") return "⏻ 任务已中断";
@@ -462,7 +522,6 @@ export default function ChatStream({
         </div>
       )}
 
-      {/* Waiting review */}
       {phase === "waiting_review" && (
         <ApprovalCard messageId="review-inline" data={{ type: "review", description: "AI 已完成当前阶段，等待您的审核确认后继续" }} onAction={onApprovalAction} />
       )}

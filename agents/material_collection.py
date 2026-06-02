@@ -1,8 +1,15 @@
+import asyncio
 import json
 import re
 from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("material_collection_agent")
+
+_TOOL_TIMEOUT = 300
 
 
 class MaterialCollectionAgent(BaseAgent):
@@ -26,13 +33,13 @@ class MaterialCollectionAgent(BaseAgent):
                 ctx.agents = executor.agent_registry
                 ctx.event_bus = executor.event_bus
                 ctx.executor = executor
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get executor: {e}", task_id=ctx.task_id)
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
     async def execute_with_context(self, input: AgentInput, context: TaskContext) -> AgentOutput:
         topics = input.params.get("topics", [])
-        llm = context.tools.get_tool("llm")
         materials: list[dict] = []
 
         # Step 1: cache_check — 检查本地知识库缓存
@@ -43,9 +50,9 @@ class MaterialCollectionAgent(BaseAgent):
         for topic in topics[:2]:
             query = topic.get("title", "") if isinstance(topic, dict) else str(topic)
             try:
-                helix = context.tools.get_tool("opensieve_search")
-                result = await helix.execute(
-                    ToolInput(params={"query": query, "max_results": 3, "min_score": 0.3})
+                result = await asyncio.wait_for(
+                    context.tools.execute("opensieve_search", ToolInput(params={"query": query, "max_results": 3, "min_score": 0.3})),
+                    timeout=_TOOL_TIMEOUT,
                 )
                 for r in result.result.get("results", []):
                     cached_materials.append({
@@ -54,8 +61,10 @@ class MaterialCollectionAgent(BaseAgent):
                         "url": r.get("url", ""),
                         "source_type": r.get("source_type", "cache"),
                     })
-            except Exception:
-                pass
+            except asyncio.TimeoutError:
+                logger.warning(f"OpenSieve search for '{query}' timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"OpenSieve search for '{query}' failed: {e}", task_id=context.task_id)
         materials.extend(cached_materials)
         context.event_bus.emit(context.task_id, "material_collection.cache_check_complete", {
             "cached_count": len(cached_materials),
@@ -69,8 +78,10 @@ class MaterialCollectionAgent(BaseAgent):
         for topic in topics[:3]:
             query = topic.get("title", "") if isinstance(topic, dict) else str(topic)
             try:
-                search = context.tools.get_tool("web_search")
-                result = await search.execute(ToolInput(params={"query": query, "max_results": 5}))
+                result = await asyncio.wait_for(
+                    context.tools.execute("web_search", ToolInput(params={"query": query, "max_results": 5})),
+                    timeout=_TOOL_TIMEOUT,
+                )
                 for r in result.result.get("results", []):
                     web_materials.append({
                         "title": r.get("title", ""),
@@ -78,17 +89,23 @@ class MaterialCollectionAgent(BaseAgent):
                         "url": r.get("url", ""),
                         "source_type": "web",
                     })
-            except Exception:
+            except asyncio.TimeoutError:
+                logger.warning(f"Web search for '{query}' timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"Web search for '{query}' failed: {e}", task_id=context.task_id)
                 try:
                     fallback_prompt = (
                         f"用户需要关于「{query}」的素材资料。请提供3条关键事实或数据点，"
                         f"每条包含标题和内容。严格输出JSON: {{\"facts\": [{{\"title\": \"...\", \"content\": \"...\"}}]}}"
                     )
-                    llm_result = await llm.execute(ToolInput(params={
-                        "messages": [{"role": "user", "content": fallback_prompt}],
-                        "stream": True, "task_id": context.task_id,
-                        "agent_name": self.name, "persona": context.persona or "default",
-                    }))
+                    llm_result = await asyncio.wait_for(
+                        context.tools.execute("llm", ToolInput(params={
+                            "messages": [{"role": "user", "content": fallback_prompt}],
+                            "stream": False, "task_id": context.task_id,
+                            "agent_name": self.name, "persona": context.persona or "default",
+                        })),
+                        timeout=_TOOL_TIMEOUT,
+                    )
                     content = llm_result.result.get("content", "{}")
                     match = re.search(r'\{.*\}', content, re.DOTALL)
                     if match:
@@ -100,8 +117,10 @@ class MaterialCollectionAgent(BaseAgent):
                                 "url": "",
                                 "source_type": "llm_fallback",
                             })
-                except Exception:
-                    pass
+                except asyncio.TimeoutError:
+                    logger.warning(f"LLM fallback for '{query}' timed out", task_id=context.task_id)
+                except Exception as e:
+                    logger.warning(f"LLM fallback for '{query}' failed: {e}", task_id=context.task_id)
         materials.extend(web_materials)
         context.event_bus.emit(context.task_id, "material_collection.web_search_complete", {
             "web_count": len(web_materials),
@@ -122,19 +141,24 @@ class MaterialCollectionAgent(BaseAgent):
                 f"原始素材:\n{raw_text[:4000]}"
             )
             try:
-                llm_result = await llm.execute(ToolInput(params={
-                    "messages": [{"role": "user", "content": summarize_prompt}],
-                    "stream": True, "task_id": context.task_id,
-                    "agent_name": self.name, "persona": context.persona or "default",
-                }))
+                llm_result = await asyncio.wait_for(
+                    context.tools.execute("llm", ToolInput(params={
+                        "messages": [{"role": "user", "content": summarize_prompt}],
+                        "stream": False, "task_id": context.task_id,
+                        "agent_name": self.name, "persona": context.persona or "default",
+                    })),
+                    timeout=_TOOL_TIMEOUT,
+                )
                 content = llm_result.result.get("content", "{}")
                 match = re.search(r'\{.*\}', content, re.DOTALL)
                 if match:
                     data = json.loads(match.group())
                     if data.get("materials"):
                         materials = data["materials"]
-            except Exception:
-                pass
+            except asyncio.TimeoutError:
+                logger.warning("LLM summarize timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"LLM summarize failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "material_collection.llm_summarize_complete", {
             "final_count": len(materials),
         })

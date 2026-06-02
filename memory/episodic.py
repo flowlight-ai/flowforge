@@ -19,6 +19,8 @@ class EpisodicMemory:
         self.conn.commit()
 
     async def search(self, query: str, limit: int = 10) -> list:
-        rows = self.conn.execute("SELECT trace FROM episodes WHERE task_id LIKE ? ORDER BY id DESC LIMIT ?",
-                                 (f"%{query}%", limit)).fetchall()
+        rows = self.conn.execute(
+            "SELECT trace FROM episodes WHERE task_id LIKE ? OR trace LIKE ? ORDER BY id DESC LIMIT ?",
+            (f"%{query}%", f"%{query}%", limit)
+        ).fetchall()
         return [json.loads(row[0]) for row in rows]

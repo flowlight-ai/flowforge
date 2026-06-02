@@ -33,7 +33,8 @@ async def test_short_term_store_and_search(short_term_db):
     await mem.store("key1", {"data": "value1"})
     results = await mem.search("key1")
     assert len(results) == 1
-    assert results[0]["data"] == "value1"
+    assert results[0]["key"] == "key1"
+    assert results[0]["value"]["data"] == "value1"
 
 
 @pytest.mark.asyncio
@@ -50,7 +51,7 @@ async def test_short_term_overwrite(short_term_db):
     await mem.store("key1", "second")
     results = await mem.search("key1")
     assert len(results) == 1
-    assert results[0] == "second"
+    assert results[0]["value"] == "second"
 
 
 @pytest.mark.asyncio

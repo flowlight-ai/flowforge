@@ -49,6 +49,7 @@ class WebSearchTool(ToolPlugin):
         self,
         primary: str = "opensieve_search",
         fallback: str = "tavily_search",
+        fallback_chain: Optional[list] = None,
         plugin_registry: Optional[Any] = None,
         **kwargs: Any,
     ):
@@ -57,11 +58,13 @@ class WebSearchTool(ToolPlugin):
         Args:
             primary: Name of the primary search plugin.
             fallback: Name of the fallback search plugin.
+            fallback_chain: Ordered list of search plugins to try (overrides primary/fallback).
             plugin_registry: PluginRegistry instance for delegate calls.
             **kwargs: Additional config (ignored for forward compatibility).
         """
         self._primary = primary
         self._fallback = fallback
+        self._fallback_chain = fallback_chain or [primary, fallback]
         self._registry = plugin_registry
 
     def set_plugin_registry(self, registry: Any) -> None:
@@ -72,7 +75,8 @@ class WebSearchTool(ToolPlugin):
         """Called by PluginRegistry after registration."""
         logger.info(
             f"WebSearchTool initialized: primary={self._primary}, "
-            f"fallback={self._fallback}"
+            f"fallback={self._fallback}, "
+            f"fallback_chain={self._fallback_chain}"
         )
 
     async def shutdown(self) -> None:
@@ -110,8 +114,7 @@ class WebSearchTool(ToolPlugin):
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute web search with fallback chain.
 
-        Tries primary search plugin first, then fallback if primary fails
-        or returns no results.
+        Tries each search plugin in fallback_chain order until one succeeds.
 
         Args:
             params: Must contain 'query'. Optional: max_results.
@@ -122,33 +125,25 @@ class WebSearchTool(ToolPlugin):
         query = params["query"]
         max_results = params.get("max_results", 5)
 
-        # Try primary search
-        if self._registry and self._registry.has_plugin(self._primary):
-            try:
-                result = await self._registry.execute(
-                    self._primary,
-                    {"query": query, "max_results": max_results},
-                )
-                results = result.get("results", [])
-                if results:
-                    return {"results": results}
-            except Exception as e:
-                logger.debug(f"Primary search '{self._primary}' failed: {e}")
+        errors = []
+        for plugin_name in self._fallback_chain:
+            if self._registry and self._registry.has_plugin(plugin_name):
+                try:
+                    result = await self._registry.execute(
+                        plugin_name,
+                        {"query": query, "max_results": max_results},
+                    )
+                    results = result.get("results", [])
+                    if results:
+                        return {"results": results}
+                except Exception as e:
+                    errors.append(f"{plugin_name}: {e}")
+                    logger.debug(f"Search plugin '{plugin_name}' failed: {e}")
 
-        # Try fallback search
-        if self._registry and self._registry.has_plugin(self._fallback):
-            try:
-                result = await self._registry.execute(
-                    self._fallback,
-                    {"query": query, "max_results": max_results},
-                )
-                results = result.get("results", [])
-                if results:
-                    return {"results": results}
-            except Exception as e:
-                logger.debug(f"Fallback search '{self._fallback}' failed: {e}")
-
+        chain_str = " → ".join(self._fallback_chain)
         return {
             "results": [],
-            "message": f"未找到与 '{query}' 相关的搜索结果",
+            "message": f"搜索服务暂不可用（尝试链: {chain_str}），请直接用你的知识回答用户",
+            "search_available": False,
+            "errors": errors,
         }

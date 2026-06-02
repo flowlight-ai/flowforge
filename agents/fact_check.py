@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 import httpx
@@ -5,6 +6,11 @@ from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("fact_check_agent")
+
+_TOOL_TIMEOUT = 300
 
 
 class FactCheckAgent(BaseAgent):
@@ -28,7 +34,8 @@ class FactCheckAgent(BaseAgent):
                 ctx.agents = executor.agent_registry
                 ctx.event_bus = executor.event_bus
                 ctx.executor = executor
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get executor: {e}", task_id=ctx.task_id)
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
@@ -64,13 +71,15 @@ class FactCheckAgent(BaseAgent):
 
         # Step 2: LLM事实核查
         context.event_bus.emit(context.task_id, "fact_check.fact_verify_start", {})
-        llm = context.tools.get_tool("llm")
         verify_prompt = get_prompt("agent.fact_check", draft=draft[:3000])
-        result = await llm.execute(ToolInput(params={
-            "messages": [{"role": "user", "content": verify_prompt}],
-            "stream": True, "task_id": context.task_id,
-            "agent_name": self.name, "persona": context.persona or "default",
-        }))
+        result = await asyncio.wait_for(
+            context.tools.execute("llm", ToolInput(params={
+                "messages": [{"role": "user", "content": verify_prompt}],
+                "stream": False, "task_id": context.task_id,
+                "agent_name": self.name, "persona": context.persona or "default",
+            })),
+            timeout=_TOOL_TIMEOUT,
+        )
         content = result.result.get("content", "{}")
         fact_match = re.search(r'\{.*\}', content, re.DOTALL)
         if fact_match:
@@ -81,7 +90,7 @@ class FactCheckAgent(BaseAgent):
                 if not fact_data.get("is_clean", True):
                     is_clean = False
             except json.JSONDecodeError:
-                pass
+                logger.warning("Fact check JSON parse failed", task_id=context.task_id)
 
         context.event_bus.emit(context.task_id, "fact_check.fact_verify_complete", {
             "issues_count": len(issues), "is_clean": is_clean,

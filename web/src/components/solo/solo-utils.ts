@@ -195,10 +195,26 @@ export function entryToChatMessages(entry: any): ChatMessage[] {
   switch (entry.type) {
     case "stage":
       const stageLabel = entry.data.label || entry.data.stage || entry.data.step || "";
-      const isExit = entry.data.step && !entry.data.order;
+      const isExit = entry.data._is_end === true
+        || (entry.data._is_start == null && entry.data._is_end == null && entry.data.order == null);
       if (isExit && stageLabel) return [{ ...base, role: "system", content: `✓ ${stageLabel} 完成` }];
       if (stageLabel) return [{ ...base, role: "stage", content: stageLabel }];
       return [];
+    case "llm-call":
+      return [{
+        ...base,
+        role: "llm-call",
+        content: entry.data.model || entry.data.model_name || "LLM",
+        data: {
+          ...entry.data,
+          _llm_model: entry.data.model || entry.data.model_name || "",
+          _llm_tokens: entry.data.total_tokens || entry.data.token_count || 0,
+          _llm_duration_ms: entry.data.duration_ms || entry.data.latency_ms || null,
+          _llm_agent: entry.data.agent_name || "",
+          _llm_is_start: entry.data._is_start || false,
+          _llm_is_end: entry.data._is_end || false,
+        },
+      }];
     case "tool-call":
       const tName = entry.data.tool_name || entry.data.tool || "工具调用";
       const tSuccess = entry.data.success !== undefined ? entry.data.success : (entry.type === "tool-call" && entry.id.includes("end"));
@@ -375,9 +391,15 @@ export function groupMessagesIntoSteps(
     if (currentGroup.status === "running") {
       if (isTerminal(phase)) currentGroup.status = phase === "completed" ? "completed" : "error";
     }
-    // Post-process: merge consecutive same-agent AI messages within group entries
     currentGroup.entries = mergeStreamingMessages(currentGroup.entries);
     result.push(currentGroup);
+  }
+  if (isTerminal(phase)) {
+    for (const item of result) {
+      if ("status" in item && item.status === "running") {
+        item.status = phase === "completed" ? "completed" : "error";
+      }
+    }
   }
   return result;
 }

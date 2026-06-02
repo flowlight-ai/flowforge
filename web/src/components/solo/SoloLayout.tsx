@@ -38,14 +38,29 @@ export default function SoloLayout() {
   const [graphModal, setGraphModal] = useState<{type: "workflow" | "agent" | "mode"; name: string} | null>(null);
   const [rightTab, setRightTab] = useState<"editor" | "files">("editor");
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const [previewFilePath, setPreviewFilePath] = useState<string | undefined>(undefined);
   const config = useShellConfig();
 
   const [leftWidth, setLeftWidth] = useState(220);
   const [centerWidth, setCenterWidth] = useState(420);
+  const [resumePrompt, setResumePrompt] = useState<{ task_id: string; intent: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/v1/workspace/incomplete")
+      .then((r) => (r.ok ? r.json() : { tasks: [] }))
+      .then((data) => {
+        const tasks = data.tasks || [];
+        if (tasks.length > 0) {
+          const t = tasks[0];
+          setResumePrompt({ task_id: t.task_id, intent: t.intent || t.task_id });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const checkOpenroute = () => {
-      fetch("http://127.0.0.1:8000/api/v1/openroute/status")
+      fetch("/api/v1/openroute/status")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (d) setOpenrouteStatus({ running: d.running, healthy: d.healthy, models: (d.models || []).length });
@@ -391,6 +406,28 @@ export default function SoloLayout() {
     }
   }, [solo]);
 
+  const handleFileOpen = useCallback((filePath: string, fileName: string) => {
+    setPreviewFilePath(fileName || filePath);
+    setRightTab("editor");
+    if (filePath.startsWith("/api/")) {
+      fetch(filePath)
+        .then((r) => (r.ok ? r.text() : ""))
+        .then((content) => {
+          if (content) {
+            try {
+              const data = JSON.parse(content);
+              if (data.content !== undefined) {
+                solo.updateEditor(data.content);
+                return;
+              }
+            } catch {}
+            solo.updateEditor(content);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [solo]);
+
   return (
     <div className="solo-shell-v2">
       <div className="solo-left-panel" style={{ width: leftWidth, minWidth: 160, maxWidth: 400 }}>
@@ -418,7 +455,27 @@ export default function SoloLayout() {
           )}
           <span className="solo-tokens">Token: {solo.tokenStats.total} · ¥{solo.tokenStats.cost.toFixed(2)}</span>
         </div>
-        <ChatStream messages={chatMessages} phase={solo.phase} onApprovalAction={handleApprovalAction} stageProgress={solo.stageProgress} interactionMode={solo.interactionMode} dynNodes={dynNodes} dynEdges={dynEdges} currentStep={currentDynStep} />
+        <ChatStream messages={chatMessages} phase={solo.phase} onApprovalAction={handleApprovalAction} stageProgress={solo.stageProgress} interactionMode={solo.interactionMode} dynNodes={dynNodes} dynEdges={dynEdges} currentStep={currentDynStep} onFileOpen={handleFileOpen} />
+        {resumePrompt && solo.phase === "idle" && (
+          <div className="px-4 py-3 bg-amber-900/30 border-t border-amber-700/50 flex items-center gap-3">
+            <span className="text-amber-300 text-xs">⏸ 发现未完成的任务: {resumePrompt.intent.slice(0, 40)}</span>
+            <button
+              onClick={() => {
+                solo.restoreTask(resumePrompt.task_id, resumePrompt.intent, "default", "running");
+                setResumePrompt(null);
+              }}
+              className="text-xs px-3 py-1 bg-amber-600 text-white rounded hover:bg-amber-500"
+            >
+              继续执行
+            </button>
+            <button
+              onClick={() => setResumePrompt(null)}
+              className="text-xs px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
+            >
+              忽略
+            </button>
+          </div>
+        )}
         <ChatInput phase={solo.phase} onSubmit={handleChatSubmit} onReview={handleReview} onCommand={handleCommand} onStop={solo.resetState} interactionMode={solo.interactionMode} onInteractionModeChange={solo.setInteractionMode} selectedWorkflow={selectedWorkflow} onWorkflowChange={setSelectedWorkflow} />
       </div>
       <ResizeHandle onResize={(dx) => setCenterWidth((w) => Math.max(320, Math.min(800, w + dx)))} />
@@ -428,9 +485,9 @@ export default function SoloLayout() {
           <button className={`px-4 py-2 text-sm ${rightTab === "files" ? "text-white border-b-2 border-indigo-500" : "text-gray-400"}`} onClick={() => setRightTab("files")}>工作区文件</button>
         </div>
         {rightTab === "editor" ? (
-          <MarkdownPanel content={solo.editorContent} onChange={solo.updateEditor} phase={solo.phase} />
+          <MarkdownPanel content={solo.editorContent} onChange={solo.updateEditor} phase={solo.phase} filePath={previewFilePath} />
         ) : (
-          <WorkspacePanel taskId={solo.taskId} />
+          <WorkspacePanel taskId={solo.taskId} onFileOpen={handleFileOpen} />
         )}
       </div>
       {graphModal && (

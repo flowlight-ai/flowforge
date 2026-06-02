@@ -52,12 +52,13 @@ def _event_to_message(event_type: str, payload: dict) -> dict | None:
     if event_type == "solo.review.ready":
         return {"role": "review", "content": payload.get("draft_summary", ""), "data": payload}
     if event_type == "solo.task.completed":
-        result = payload.get("result", "")
+        result = payload.get("result") or payload.get("summary") or payload.get("content") or ""
         if result:
-            return {"role": "assistant", "content": str(result), "data": payload}
+            return {"role": "assistant", "content": str(result), "data": {**payload, "result": str(result)}}
         return {"role": "system", "content": "✓ 任务完成", "data": payload}
     if event_type == "solo.task.error":
-        return {"role": "system", "content": f"✗ {payload.get('error_message', '任务出错')}", "data": payload}
+        error_msg = payload.get('error_message') or payload.get('error') or '任务出错'
+        return {"role": "system", "content": f"✗ {error_msg}", "data": {**payload, "error_message": error_msg}}
     return None
 
 
@@ -81,6 +82,7 @@ class EventBusSoloAdapter:
         "workflow.step.start": "solo.stage.enter",
         "workflow.step.complete": "solo.stage.exit",
         "mode.enter": "solo.stage.enter",
+        "mode.exit": "solo.stage.exit",
         "tool.start": "solo.tool.start",
         "tool.end": "solo.tool.end",
         "llm.start": "solo.llm.start",
@@ -88,6 +90,7 @@ class EventBusSoloAdapter:
         "llm.stream": "solo.llm.stream",
         "llm.end": "solo.llm.end",
         "draft.update": "solo.draft.update",
+        "draft.file": "solo.draft.file",
         "step.intermediate": "solo.step.intermediate",
         "review.ready": "solo.review.ready",
         "review.submitted": "solo.review.submitted",
@@ -106,6 +109,8 @@ class EventBusSoloAdapter:
         "react.observation": "solo.tool.end",
         "react.final": "solo.stage.exit",
         "react.loop_detected": "solo.task.error",
+        "agent.start": "solo.agent.start",
+        "agent.end": "solo.agent.end",
     }
 
     def __init__(self, event_bus: EventBus, solo_manager):

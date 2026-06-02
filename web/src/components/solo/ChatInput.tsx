@@ -124,18 +124,33 @@ export default function ChatInput({
           </div>
         </div>
       )}
+      <div className="chat-input-mode-indicator">
+        <span className={`chat-input-mode-dot ${interactionMode}`} />
+        <span className="chat-input-mode-label">
+          {interactionMode === "normal" ? "普通模式" : interactionMode === "auto" ? "全自动模式" : "Solo 模式"}
+        </span>
+        {isRunning && <span className="chat-input-running-badge">执行中</span>}
+      </div>
       <div className="chat-input-top">
         <div className="chat-input-wrapper">
           <textarea
             ref={textareaRef} className="chat-input-textarea" rows={1}
             value={text} onChange={handleTextChange} onInput={resizeTextarea} onKeyDown={handleKeyDown}
-            placeholder={isDisabled ? "请稍候..." : isWaitingReview ? "等待审核..." : isIdle ? "与 Solo 对话，输入 '/' 获取更多能力" : "输入补充指令..."}
+            placeholder={isDisabled ? "请稍候..." : isWaitingReview ? "等待审核..." : isIdle ? "与 Solo 对话，Shift+Enter 换行，输入 '/' 获取更多能力" : "输入补充指令..."}
             disabled={isDisabled || isWaitingReview}
           />
           {showCommands && <CommandDropdown filter={commandFilter} onSelect={(cmd) => { onCommand(cmd); setText(""); setShowCommands(false); setCommandFilter(""); textareaRef.current?.focus(); }} activeIndex={activeCmdIndex} />}
         </div>
       </div>
       <div className="chat-input-bottom">
+        <div className="chat-input-quick-actions">
+          <button className="chat-quick-btn" onClick={() => setText("")} disabled={!text} title="清空输入">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14" /></svg>
+          </button>
+          <button className="chat-quick-btn" onClick={() => { const v = text.trim(); if (v.startsWith("/")) { onCommand(v.split(" ")[0]); setText(""); } }} disabled={!text.trim().startsWith("/")} title="执行命令">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
+          </button>
+        </div>
         <div className="chat-mode-switch">
           <button className={`chat-mode-btn${interactionMode === "normal" ? " active" : ""}`} onClick={() => onInteractionModeChange("normal")} title="普通模式：选择工作流执行">普通</button>
           <button className={`chat-mode-btn${interactionMode === "solo" ? " active" : ""}`} onClick={() => onInteractionModeChange("solo")} title="Solo 模式：AI 规划，用户审批">Solo</button>

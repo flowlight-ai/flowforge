@@ -34,7 +34,11 @@ plugins:
     depends_on: [opensieve_search]
     config:
       primary: opensieve_search
-      fallback: tavily
+      fallback: tavily_search
+      fallback_chain:
+        - opensieve_search
+        - tavily_search
+        - duckduckgo_search
     parameters_schema:
       type: object
       required: [query]

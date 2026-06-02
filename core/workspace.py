@@ -26,6 +26,7 @@ Usage:
 
 import json
 import os
+import re
 import shutil
 import time
 from datetime import datetime, timezone
@@ -74,18 +75,10 @@ class WorkspaceManager:
     def __init__(self, base: Optional[Path] = None):
         self._base = base or WORKSPACE_BASE
         self._base.mkdir(parents=True, exist_ok=True)
+        self._dir_map: Dict[str, Path] = {}
 
-    def create_workspace(self, task_id: str, metadata: Optional[dict] = None) -> Path:
-        """Create a new workspace for a task.
-
-        Args:
-            task_id: Unique task identifier.
-            metadata: Optional task metadata to store.
-
-        Returns:
-            Path to the workspace root directory.
-        """
-        ws_path = self._base / task_id
+    def create_workspace(self, task_id: str, metadata: Optional[dict] = None, workspace_dir: Optional[str] = None) -> Path:
+        ws_path = Path(workspace_dir) if workspace_dir else self._base / task_id
         ws_path.mkdir(parents=True, exist_ok=True)
         (ws_path / SOLO_DIR).mkdir(exist_ok=True)
         (ws_path / FILES_DIR).mkdir(exist_ok=True)
@@ -96,32 +89,35 @@ class WorkspaceManager:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "status": "running",
             "message_count": 0,
+            "workspace_dir": workspace_dir,
             **(metadata or {}),
         }
         self._write_json(ws_path / SOLO_DIR / TASK_FILE, task_meta)
+
+        if workspace_dir:
+            self._dir_map[task_id] = ws_path
 
         logger.info(f"Workspace created: {ws_path}")
         return ws_path
 
     def get_workspace_path(self, task_id: str) -> Optional[Path]:
-        """Get the workspace path for a task, or None if not exists."""
+        if task_id in self._dir_map:
+            p = self._dir_map[task_id]
+            return p if p.exists() else None
         ws_path = self._base / task_id
         return ws_path if ws_path.exists() else None
 
     def get_sandbox_path(self, task_id: str) -> Path:
-        """Get the sandbox directory path for file operations.
-
-        All file read/write operations should be restricted to this directory.
-        """
-        ws_path = self._base / task_id / FILES_DIR
-        ws_path.mkdir(parents=True, exist_ok=True)
-        return ws_path
+        ws_path = self._resolve_ws_path(task_id) or self._base / task_id
+        sandbox = ws_path / FILES_DIR
+        sandbox.mkdir(parents=True, exist_ok=True)
+        return sandbox
 
     def get_output_path(self, task_id: str) -> Path:
-        """Get the output directory path for task artifacts."""
-        ws_path = self._base / task_id / OUTPUT_DIR
-        ws_path.mkdir(parents=True, exist_ok=True)
-        return ws_path
+        ws_path = self._resolve_ws_path(task_id) or self._base / task_id
+        output = ws_path / OUTPUT_DIR
+        output.mkdir(parents=True, exist_ok=True)
+        return output
 
     def save_output_file(self, task_id: str, filename: str, content: str,
                           metadata: Optional[dict] = None) -> Optional[dict]:
@@ -142,9 +138,14 @@ class WorkspaceManager:
             file_path = output_dir / safe_name
             file_path.write_text(content, encoding="utf-8")
             mtime = file_path.stat().st_mtime
+            ws_path = self._resolve_ws_path(task_id) or self._base / task_id
+            try:
+                rel_path = str(file_path.relative_to(ws_path))
+            except ValueError:
+                rel_path = str(file_path)
             return {
                 "filename": safe_name,
-                "path": str(file_path.relative_to(self._base)),
+                "path": rel_path,
                 "size": file_path.stat().st_size,
                 "mtime": mtime,
                 **({} if metadata is None else metadata),
@@ -164,21 +165,12 @@ class WorkspaceManager:
         })
 
     def validate_path(self, task_id: str, path: str) -> bool:
-        """Validate that a path is within the workspace sandbox.
-
-        Prevents path traversal attacks by checking that the resolved
-        path is within the workspace boundary.
-
-        Args:
-            task_id: The task whose workspace to check against.
-            path: The path to validate.
-
-        Returns:
-            True if the path is within the workspace sandbox.
-        """
-        ws_path = (self._base / task_id).resolve()
-        target = (ws_path / path).resolve()
-        return str(target).startswith(str(ws_path))
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return False
+        ws_resolved = ws_path.resolve()
+        target = (ws_resolved / path).resolve()
+        return str(target).startswith(str(ws_resolved))
 
     def validate_command(self, command: str) -> dict:
         """Validate a command for dangerous patterns.
@@ -203,18 +195,12 @@ class WorkspaceManager:
         return {"safe": True, "reason": "", "blocked_pattern": ""}
 
     def save_message(self, task_id: str, message: dict) -> None:
-        """Append a chat message to the workspace's chat log.
-
-        Messages are stored in JSONL format (one JSON object per line)
-        for efficient append operations.
-
-        Args:
-            task_id: The task ID.
-            message: Chat message dict with keys: role, content, timestamp, etc.
-        """
-        ws_path = self._base / task_id / SOLO_DIR
-        ws_path.mkdir(parents=True, exist_ok=True)
-        chat_path = ws_path / CHAT_FILE
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return
+        solo_dir = ws_path / SOLO_DIR
+        solo_dir.mkdir(parents=True, exist_ok=True)
+        chat_path = solo_dir / CHAT_FILE
 
         if "timestamp" not in message:
             message["timestamp"] = datetime.now(timezone.utc).isoformat()
@@ -226,18 +212,13 @@ class WorkspaceManager:
         if task_meta:
             task_meta["message_count"] = task_meta.get("message_count", 0) + 1
             task_meta["updated_at"] = datetime.now(timezone.utc).isoformat()
-            self._write_json(ws_path / TASK_FILE, task_meta)
+            self._write_json(solo_dir / TASK_FILE, task_meta)
 
     def load_messages(self, task_id: str) -> List[dict]:
-        """Load all chat messages for a task.
-
-        Args:
-            task_id: The task ID.
-
-        Returns:
-            List of message dicts in chronological order.
-        """
-        chat_path = self._base / task_id / SOLO_DIR / CHAT_FILE
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return []
+        chat_path = ws_path / SOLO_DIR / CHAT_FILE
         if not chat_path.exists():
             return []
 
@@ -253,27 +234,19 @@ class WorkspaceManager:
         return messages
 
     def save_context(self, task_id: str, context: dict) -> None:
-        """Save LLM context snapshot for task resume.
-
-        Args:
-            task_id: The task ID.
-            context: Context dict to persist (e.g., conversation history, state).
-        """
-        ws_path = self._base / task_id / SOLO_DIR
-        ws_path.mkdir(parents=True, exist_ok=True)
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return
+        solo_dir = ws_path / SOLO_DIR
+        solo_dir.mkdir(parents=True, exist_ok=True)
         context["saved_at"] = datetime.now(timezone.utc).isoformat()
-        self._write_json(ws_path / CONTEXT_FILE, context)
+        self._write_json(solo_dir / CONTEXT_FILE, context)
 
     def load_context(self, task_id: str) -> Optional[dict]:
-        """Load saved LLM context for task resume.
-
-        Args:
-            task_id: The task ID.
-
-        Returns:
-            Context dict or None if not found.
-        """
-        ctx_path = self._base / task_id / SOLO_DIR / CONTEXT_FILE
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return None
+        ctx_path = ws_path / SOLO_DIR / CONTEXT_FILE
         if not ctx_path.exists():
             return None
         return self._load_json(ctx_path)
@@ -292,72 +265,206 @@ class WorkspaceManager:
         task_meta["status"] = status
         task_meta["updated_at"] = datetime.now(timezone.utc).isoformat()
         task_meta.update(kwargs)
-        ws_path = self._base / task_id / SOLO_DIR
-        self._write_json(ws_path / TASK_FILE, task_meta)
+        ws_path = self._resolve_ws_path(task_id)
+        if ws_path:
+            self._write_json(ws_path / SOLO_DIR / TASK_FILE, task_meta)
 
     def update_task_metadata(self, task_id: str, updates: dict) -> Optional[dict]:
-        """Update specific fields in task metadata.
-
-        Args:
-            task_id: The task ID.
-            updates: Dict of fields to update (e.g. {"intent": "new name"}).
-
-        Returns:
-            Updated task metadata dict, or None if task not found.
-        """
         task_meta = self._load_task_meta(task_id)
         if not task_meta:
             return None
         task_meta.update(updates)
         task_meta["updated_at"] = datetime.now(timezone.utc).isoformat()
-        ws_path = self._base / task_id / SOLO_DIR
-        self._write_json(ws_path / TASK_FILE, task_meta)
+        ws_path = self._resolve_ws_path(task_id)
+        if ws_path:
+            self._write_json(ws_path / SOLO_DIR / TASK_FILE, task_meta)
         return task_meta
 
     def list_workspaces(self, status: Optional[str] = None) -> List[dict]:
-        """List all workspaces with their metadata.
-
-        Args:
-            status: Optional filter by task status.
-
-        Returns:
-            List of task metadata dicts, sorted by creation time (newest first).
-        """
         if not self._base.exists():
             return []
 
         workspaces = []
+        seen_ids = set()
         for ws_dir in self._base.iterdir():
             if not ws_dir.is_dir():
                 continue
             task_meta = self._load_task_meta(ws_dir.name)
             if task_meta:
+                seen_ids.add(ws_dir.name)
                 if status and task_meta.get("status") != status:
                     continue
                 task_meta["workspace_path"] = str(ws_dir)
+                workspaces.append(task_meta)
+
+        for task_id, ws_path in self._dir_map.items():
+            if task_id in seen_ids:
+                continue
+            task_meta = self._load_task_meta(task_id)
+            if task_meta:
+                if status and task_meta.get("status") != status:
+                    continue
+                task_meta["workspace_path"] = str(ws_path)
                 workspaces.append(task_meta)
 
         workspaces.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return workspaces
 
     def delete_workspace(self, task_id: str) -> bool:
-        """Delete a workspace and all its contents.
-
-        Args:
-            task_id: The task ID.
-
-        Returns:
-            True if the workspace was deleted.
-        """
         ws_path = self._base / task_id
         if ws_path.exists():
             shutil.rmtree(ws_path)
             logger.info(f"Workspace deleted: {ws_path}")
+            self._dir_map.pop(task_id, None)
+            return True
+        custom = self._dir_map.pop(task_id, None)
+        if custom and custom.exists():
+            shutil.rmtree(custom)
+            logger.info(f"Workspace deleted: {custom}")
             return True
         return False
 
+    def _resolve_ws_path(self, task_id: str) -> Optional[Path]:
+        if task_id in self._dir_map:
+            return self._dir_map[task_id]
+        ws_path = self._base / task_id
+        return ws_path if ws_path.exists() else None
+
+    def read_file(self, task_id: str, filename: str) -> Optional[str]:
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return None
+        filepath = ws_path / filename
+        if not filepath.exists() or not filepath.is_file():
+            return None
+        resolved = filepath.resolve()
+        ws_resolved = ws_path.resolve()
+        if not str(resolved).startswith(str(ws_resolved)):
+            return None
+        try:
+            return filepath.read_text(encoding="utf-8")
+        except Exception:
+            return None
+
+    def list_all_files(self, task_id: str, pattern: str = "*", subdir: str = "") -> List[dict]:
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return []
+        search_dir = ws_path / subdir if subdir else ws_path
+        if not search_dir.exists():
+            return []
+        resolved = search_dir.resolve()
+        ws_resolved = ws_path.resolve()
+        if not str(resolved).startswith(str(ws_resolved)):
+            return []
+        results = []
+        for entry in search_dir.rglob(pattern):
+            if entry.is_file() and SOLO_DIR not in entry.parts:
+                rel = entry.relative_to(ws_path)
+                stat = entry.stat()
+                results.append({
+                    "name": entry.name,
+                    "path": str(rel),
+                    "size": stat.st_size,
+                    "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                    "is_dir": False,
+                })
+        results.sort(key=lambda x: x["path"])
+        return results
+
+    def search_files(self, task_id: str, query: str) -> List[dict]:
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return []
+        results = []
+        query_lower = query.lower()
+        for entry in ws_path.rglob("*"):
+            if not entry.is_file() or SOLO_DIR in entry.parts:
+                continue
+            try:
+                content = entry.read_text(encoding="utf-8")
+                count = content.lower().count(query_lower)
+                if count > 0:
+                    rel = entry.relative_to(ws_path)
+                    results.append({
+                        "name": entry.name,
+                        "path": str(rel),
+                        "matches": count,
+                        "size": entry.stat().st_size,
+                    })
+            except Exception:
+                continue
+        results.sort(key=lambda x: x["matches"], reverse=True)
+        return results
+
+    def write_file(self, task_id: str, filename: str, content: str) -> Optional[dict]:
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return None
+        safe_name = filename.replace("..", "").replace("\\", "_")
+        filepath = ws_path / safe_name
+        resolved = filepath.resolve()
+        ws_resolved = ws_path.resolve()
+        if not str(resolved).startswith(str(ws_resolved)):
+            return None
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        filepath.write_text(content, encoding="utf-8")
+        stat = filepath.stat()
+        return {
+            "filename": safe_name,
+            "path": str(filepath.relative_to(ws_path)),
+            "size": stat.st_size,
+            "mtime": stat.st_mtime,
+        }
+
+    def delete_file(self, task_id: str, filename: str) -> bool:
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return False
+        filepath = ws_path / filename
+        resolved = filepath.resolve()
+        ws_resolved = ws_path.resolve()
+        if not str(resolved).startswith(str(ws_resolved)):
+            return False
+        if filepath.exists():
+            filepath.unlink()
+            return True
+        return False
+
+    def save_checkpoint(self, task_id: str, state: dict) -> None:
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return
+        ws_path.mkdir(parents=True, exist_ok=True)
+        state["saved_at"] = datetime.now(timezone.utc).isoformat()
+        self._write_json(ws_path / ".checkpoint.json", state)
+
+    def load_checkpoint(self, task_id: str) -> Optional[dict]:
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return None
+        cp_path = ws_path / ".checkpoint.json"
+        if not cp_path.exists():
+            return None
+        return self._load_json(cp_path)
+
+    def get_incomplete_tasks(self) -> List[dict]:
+        results = []
+        if not self._base.exists():
+            return results
+        for ws_dir in self._base.iterdir():
+            if not ws_dir.is_dir():
+                continue
+            task_meta = self._load_task_meta(ws_dir.name)
+            if task_meta and task_meta.get("status") in ("running", "paused"):
+                results.append(task_meta)
+        return results
+
     def _load_task_meta(self, task_id: str) -> Optional[dict]:
-        task_path = self._base / task_id / SOLO_DIR / TASK_FILE
+        ws_path = self._resolve_ws_path(task_id)
+        if not ws_path:
+            return None
+        task_path = ws_path / SOLO_DIR / TASK_FILE
         if not task_path.exists():
             return None
         return self._load_json(task_path)

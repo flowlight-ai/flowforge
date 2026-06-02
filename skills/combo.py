@@ -4,6 +4,7 @@ Implements FR-CAP-02: Combo Skills allow chaining multiple
 skills in a pipeline with variable passing.
 """
 
+import asyncio
 from typing import Optional, Dict, Any, List
 from flowforge.core.tracing import get_logger
 
@@ -82,12 +83,62 @@ class ComboEngine:
                 skill = skill_registry.get_skill(skill_name)
                 if skill:
                     logger.debug(f"Combo step '{step_name}': executing skill '{skill_name}'")
-                    # Skill execution is handled by the caller
-                    outputs[output_key] = {
-                        "skill": skill_name,
-                        "instructions": skill.instructions,
-                        "variables": resolved_vars,
-                    }
+                    executed = False
+                    if hasattr(skill, "execute") and callable(getattr(skill, "execute")):
+                        try:
+                            result = skill.execute(resolved_vars)
+                            if asyncio.iscoroutine(result):
+                                result = await result
+                            outputs[output_key] = {
+                                "skill": skill_name,
+                                "output": result,
+                                "variables": resolved_vars,
+                            }
+                            executed = True
+                        except Exception as e:
+                            logger.error(f"Combo step '{step_name}': skill.execute() failed: {e}")
+                            outputs[output_key] = {"skill": skill_name, "error": str(e)}
+                            executed = True
+
+                    if not executed and hasattr(skill_registry, "execute_skill") and callable(getattr(skill_registry, "execute_skill")):
+                        try:
+                            result = skill_registry.execute_skill(skill_name, resolved_vars)
+                            if asyncio.iscoroutine(result):
+                                result = await result
+                            outputs[output_key] = {
+                                "skill": skill_name,
+                                "output": result,
+                                "variables": resolved_vars,
+                            }
+                            executed = True
+                        except Exception as e:
+                            logger.error(f"Combo step '{step_name}': skill_registry.execute_skill() failed: {e}")
+                            outputs[output_key] = {"skill": skill_name, "error": str(e)}
+                            executed = True
+
+                    if not executed and hasattr(skill_registry, "execute") and callable(getattr(skill_registry, "execute")):
+                        try:
+                            result = skill_registry.execute(skill_name, resolved_vars)
+                            if asyncio.iscoroutine(result):
+                                result = await result
+                            outputs[output_key] = {
+                                "skill": skill_name,
+                                "output": result,
+                                "variables": resolved_vars,
+                            }
+                            executed = True
+                        except Exception as e:
+                            logger.error(f"Combo step '{step_name}': skill_registry.execute() failed: {e}")
+                            outputs[output_key] = {"skill": skill_name, "error": str(e)}
+                            executed = True
+
+                    if not executed:
+                        logger.warning(f"Combo step '{step_name}': skill '{skill_name}' has no execute method and registry has no execute_skill/execute method; returning metadata only")
+                        outputs[output_key] = {
+                            "skill": skill_name,
+                            "instructions": skill.instructions,
+                            "variables": resolved_vars,
+                        }
                 else:
                     outputs[output_key] = {"error": f"Skill '{skill_name}' not found"}
             else:

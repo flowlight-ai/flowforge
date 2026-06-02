@@ -28,8 +28,8 @@ class PluginTransport(str, Enum):
 
 
 class PluginState(str, Enum):
-    """Lifecycle states for a plugin."""
     UNINITIALIZED = "uninitialized"
+    UNKNOWN = "unknown"
     STARTING = "starting"
     READY = "ready"
     DEGRADED = "degraded"
@@ -88,6 +88,7 @@ class ToolPlugin(ABC):
 
     # Class-level manifest (overridden by YAML config if present)
     manifest: PluginManifest
+    _last_health_check_time: Optional[float] = None
 
     @abstractmethod
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -113,12 +114,7 @@ class ToolPlugin(ABC):
         pass
 
     async def health_check(self) -> PluginHealth:
-        """Return current health status.
-
-        Default implementation returns READY. Override for custom checks
-        (e.g., ping an external service endpoint).
-        """
-        return PluginHealth(state=PluginState.READY)
+        return PluginHealth(state=PluginState.UNKNOWN, message="No health check implemented")
 
     def validate_params(self, params: Dict[str, Any]) -> bool:
         """Validate params against manifest.parameters_schema.

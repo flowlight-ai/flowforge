@@ -225,18 +225,29 @@ class MultiAgentExecutor(BaseModeExecutor):
 
     async def _decompose_task(self, ctx: TaskContext) -> list:
         if not ctx.tools:
-            return []
-        llm = ctx.tools.get_tool("llm")
+            return self._default_decomposition(ctx)
         prompt = (
             f"将以下任务拆解为多个可并行的子任务，返回 JSON 数组:\n"
             f"{ctx.input_data.get('task', '')}\n"
             f'格式: [{{"id": "1", "prompt": "...", "agent_type": "...", "tools": ["llm"]}}]'
         )
-        result = await llm.execute(ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
         try:
-            return json.loads(result.result.get("content", "[]"))
-        except (json.JSONDecodeError, AttributeError):
-            return []
+            result = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
+            content = result.result.get("content", "[]")
+            tasks = json.loads(content)
+            if tasks and isinstance(tasks, list):
+                return tasks
+        except (json.JSONDecodeError, AttributeError, Exception) as e:
+            logger.warning(f"Task decomposition LLM failed: {e}")
+        return self._default_decomposition(ctx)
+
+    def _default_decomposition(self, ctx: TaskContext) -> list:
+        """当LLM无法分解任务时，使用默认分解策略。"""
+        task = ctx.input_data.get("task", "")
+        return [
+            {"id": "1", "prompt": f"研究和分析: {task[:500]}", "agent_type": "default", "tools": ["llm"]},
+            {"id": "2", "prompt": f"总结和归纳: {task[:500]}", "agent_type": "default", "tools": ["llm"]},
+        ]
 
     def _filter_tools(self, tools, allowed: list):
         filtered = ToolRegistry()
@@ -253,12 +264,11 @@ class MultiAgentExecutor(BaseModeExecutor):
         try:
             if not ctx.tools:
                 return str(result)[:200]
-            llm = ctx.tools.get_tool("llm")
             prompt = (
                 f"将以下执行结果压缩为最多3句话的摘要:\n"
                 f"{json.dumps(result, ensure_ascii=False)[:2000]}"
             )
-            res = await llm.execute(ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
+            res = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
             return res.result.get("content", str(result)[:200])
         except Exception:
             return str(result)[:200]
@@ -319,7 +329,6 @@ class MultiAgentExecutor(BaseModeExecutor):
     async def _create_task_board(self, ctx: TaskContext, lead) -> List[dict]:
         if not ctx.tools:
             return []
-        llm = ctx.tools.get_tool("llm")
         task_desc = ctx.input_data.get("task", "")
         prompt = (
             f"将以下任务分解为可并行/串行的子任务列表，输出 JSON:\n{task_desc}\n"
@@ -327,7 +336,7 @@ class MultiAgentExecutor(BaseModeExecutor):
             f'"depends_on": [], "agent_type": "writer", "tools": ["llm"]}}]\n'
             f"要求: 每个子任务必须有明确的输入和预期输出，标注依赖关系"
         )
-        result = await llm.execute(ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
+        result = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
         try:
             tasks = json.loads(result.result.get("content", "[]"))
             formatted_tasks = []
@@ -396,9 +405,8 @@ class MultiAgentExecutor(BaseModeExecutor):
     async def _replan(self, lead, task_list: list, ctx: TaskContext):
         if not ctx.tools:
             return
-        llm = ctx.tools.get_tool("llm")
         prompt = f"根据信箱中的紧急消息，调整任务计划（JSON数组）: {json.dumps(task_list)}"
-        result = await llm.execute(ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
+        result = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
         try:
             new_tasks = json.loads(result.result.get("content", "[]"))
             formatted_tasks = []
@@ -416,10 +424,9 @@ class MultiAgentExecutor(BaseModeExecutor):
         if not ctx.tools:
             tasks = await self.task_board.get_all_tasks()
             return {"aggregated": "", "tasks": tasks}
-        llm = ctx.tools.get_tool("llm")
         tasks = await self.task_board.get_all_tasks()
         prompt = f"聚合以下任务结果，输出最终 JSON: {json.dumps(tasks, ensure_ascii=False)[:3000]}"
-        result = await llm.execute(ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
+        result = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
         return {"aggregated": result.result.get("content", ""), "tasks": tasks}
 
     def _needs_replanning(self, msg: dict) -> bool:

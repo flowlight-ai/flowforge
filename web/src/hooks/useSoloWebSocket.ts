@@ -58,10 +58,10 @@ function eventToEntry(event: SoloWSEvent): StreamEntry {
     "solo.stage.exit": "stage",
     "solo.tool.start": "tool-call",
     "solo.tool.end": "tool-call",
-    "solo.llm.start": "stage",
+    "solo.llm.start": "llm-call",
     "solo.llm.reasoning": "thinking",
     "solo.llm.stream": "llm-stream",
-    "solo.llm.end": "stage",
+    "solo.llm.end": "llm-call",
     "solo.step.intermediate": "intermediate",
     "solo.draft.update": "draft-update",
     "solo.draft.file": "draft-file",
@@ -72,12 +72,31 @@ function eventToEntry(event: SoloWSEvent): StreamEntry {
     "solo.task.error": "system",
   };
 
+  const entryType = typeMap[event.type] || "system";
+  const payload = { ...event.payload };
+
+  if (event.type === "solo.stage.enter") {
+    payload._is_start = true;
+    payload._is_end = false;
+  } else if (event.type === "solo.stage.exit") {
+    payload._is_start = false;
+    payload._is_end = true;
+  }
+
+  if (event.type === "solo.llm.start") {
+    payload._is_start = true;
+    payload._is_end = false;
+  } else if (event.type === "solo.llm.end") {
+    payload._is_start = false;
+    payload._is_end = true;
+  }
+
   return {
     id: `e-${event.seq}`,
-    type: typeMap[event.type] || "system",
-    timestamp: Date.now(),      // numeric for correct ordering
-    _serverTs: event.timestamp, // preserve server timestamp for display
-    data: event.payload,
+    type: entryType,
+    timestamp: Date.now(),
+    _serverTs: event.timestamp,
+    data: payload,
   } as StreamEntry;
 }
 
@@ -87,8 +106,8 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
 
   const WS_BASE =
     typeof window !== "undefined"
-      ? config.wsBaseUrl || `ws://${window.location.hostname}:8000`
-      : "ws://localhost:8000";
+      ? config.wsBaseUrl || `ws://${window.location.hostname}:${window.location.port || "8002"}`
+      : "ws://localhost:8002";
 
   const restored = typeof window !== "undefined" ? loadState(brand) : {};
 
@@ -105,6 +124,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
   const [interactionMode, setInteractionMode] = useState<"normal" | "solo" | "auto">(restored.interactionMode || "solo");
 
   const wsRef = useRef<WebSocket | null>(null);
+  const taskIdRef = useRef<string | null>(restored.taskId || null);
   const reconnectCount = useRef(0);
   const lastSeq = useRef(restored.entries?.length ? (restored.entries as StreamEntry[]).length - 1 : -1);
   const entriesRef = useRef<StreamEntry[]>(restored.entries || []);
@@ -167,8 +187,16 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
   const handleEvent = useCallback((event: SoloWSEvent) => {
     switch (event.type) {
       case "solo.stage.enter":
-        setStageProgress({ current: event.payload.order, total: event.payload.total });
-        saveState(brand, { stageProgress: { current: event.payload.order, total: event.payload.total } });
+        setStageProgress((prev: { current: number; total: number }) => {
+          const order = event.payload.order;
+          const total = event.payload.total;
+          const next = {
+            current: order !== undefined ? order : prev.current + 1,
+            total: total !== undefined ? total : prev.total,
+          };
+          saveState(brand, { stageProgress: next });
+          return next;
+        });
         optionsRef.current?.onStageEnter?.(event.payload.stage, event.payload.label, event.payload.order);
         break;
       case "solo.tool.start":
@@ -261,7 +289,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     ws.onmessage = (event) => {
       if (currentWsIdRef.current !== wsId) return;
       const data: SoloWSEvent = JSON.parse(event.data);
-      if ((data.type as string) === "pong") return;
+      if ((data.type as string) === "pong" || (data.type as string) === "server_ping") return;
       lastSeq.current = data.seq;
       const entry = eventToEntry(data);
       entriesRef.current = [...entriesRef.current, entry];
@@ -282,6 +310,30 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
           }
         }, delay);
       } else {
+        const tid = taskIdRef.current;
+        if (tid) {
+          let pollCount = 0;
+          const pollInterval = setInterval(async () => {
+            pollCount++;
+            if (pollCount > 6) { clearInterval(pollInterval); return; }
+            try {
+              const r = await fetch(`/api/v1/tasks/${tid}`);
+              if (r.ok) {
+                const data = await r.json();
+                const status = data?.data?.status;
+                if (status === "completed" || status === "success") {
+                  setPhase("completed");
+                  clearTaskTimeout();
+                  clearInterval(pollInterval);
+                } else if (status === "failed" || status === "error") {
+                  setPhase("error");
+                  clearTaskTimeout();
+                  clearInterval(pollInterval);
+                }
+              }
+            } catch { }
+          }, 5000);
+        }
         setPhase("error");
         clearTaskTimeout();
         saveState(brand, { phase: "error" });
@@ -357,6 +409,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
         return;
       }
       setTaskId(tid);
+      taskIdRef.current = tid;
       saveState(brand, { taskId: tid });
       connectWS(tid);
     } catch (e: any) {
@@ -426,6 +479,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
     clearState(brand);
     setPhase("idle");
     setTaskId(null);
+    taskIdRef.current = null;
     setEntries([]);
     entriesRef.current = [];
     setDraftContent("");
@@ -444,6 +498,7 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
   const restoreTask = useCallback((tid: string, taskIntent: string, taskPersona: string, taskPhase: SoloTaskPhase) => {
     disconnectWS();
     setTaskId(tid);
+    taskIdRef.current = tid;
     setIntent(taskIntent);
     setPersona(taskPersona);
     setPhase(taskPhase);

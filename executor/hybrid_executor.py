@@ -14,9 +14,10 @@ import time
 import asyncio
 from typing import Dict, Optional
 from flowforge.core.task_context import TaskContext
-from flowforge.core.errors import ConflictError
+from flowforge.core.errors import ConflictError, StepTimeoutError
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.core.checkpoint_manager import CheckpointManager
+from flowforge.core.workspace import get_workspace_manager
 from flowforge.modes.registry import ModeRegistry
 from flowforge.events.event_bus import EventBus
 from flowforge.events.solo_adapter import EventBusSoloAdapter
@@ -27,7 +28,7 @@ from flowforge.core.tracing import get_logger
 
 logger = get_logger("executor")
 
-TASK_TIMEOUT_SECONDS = 120
+TASK_TIMEOUT_SECONDS = 1200
 
 
 class HybridExecutor:
@@ -91,6 +92,7 @@ class HybridExecutor:
         self._review_events: Dict[str, asyncio.Event] = {}
         self._pause_events: Dict[str, asyncio.Event] = {}
         self._task_contexts: Dict[str, TaskContext] = {}
+        self._task_futures: Dict[str, asyncio.Task] = {}
 
     def set_solo_manager(self, solo_manager):
         """Attach a SoloManager and create the event bridge adapter.
@@ -126,11 +128,31 @@ class HybridExecutor:
         persona = context.persona or "default"
 
         if not _is_substep:
+            # Save task state immediately so GET /tasks/{id} doesn't return 404
+            self._task_contexts[context.task_id] = context
+            self.state_manager.save_state(context.task_id, {
+                "task_id": context.task_id, "persona": persona,
+                "mode": mode_hint or context.mode or "auto", "status": "pending",
+                "input_data": context.input_data,
+                "interaction_mode": context.interaction_mode,
+            })
+
             if persona in self._running_tasks:
+                # Update state to reflect the conflict
+                self.state_manager.update_state(context.task_id, {"status": "failed", "error": f"Persona '{persona}' already running task {self._running_tasks[persona]}"})
                 raise ConflictError(
                     f"Persona '{persona}' already running task {self._running_tasks[persona]}")
             self._running_tasks[persona] = context.task_id
             ff_metrics.record_task_created(mode_hint or "auto", persona)
+
+            ws = get_workspace_manager()
+            if not ws.get_workspace_path(context.task_id):
+                workspace_dir = context.input_data.get("workspace_dir")
+                ws.create_workspace(
+                    context.task_id,
+                    metadata={"persona": persona, "intent": context.input_data.get("task", context.input_data.get("intent", ""))},
+                    workspace_dir=workspace_dir,
+                )
 
         if mode_hint is None and context.mode is None:
             mode = self.mode_registry.suggest_mode(context.input_data.get("task", ""))
@@ -147,12 +169,13 @@ class HybridExecutor:
         context.mode = mode
         context.checkpoint = self.checkpoint_manager
         context.event_bus = self.event_bus
+        if self.memory_manager and not context.memory:
+            context.memory = self.memory_manager
 
         if not _is_substep:
-            self._task_contexts[context.task_id] = context
-            self.state_manager.save_state(context.task_id, {
-                "task_id": context.task_id, "persona": persona,
-                "mode": mode, "status": "running", "input_data": context.input_data,
+            # Update state from pending to running
+            self.state_manager.update_state(context.task_id, {
+                "mode": mode, "status": "running",
             })
 
         start = time.time()
@@ -181,20 +204,43 @@ class HybridExecutor:
                     logger.warning(f"Harness post_execute failed: {e}", task_id=context.task_id)
 
             duration = time.time() - start
-            self.event_bus.emit(context.task_id, "task.completed", {"status": "completed", "summary": str(result.get("response", result.get("content", "")))[:500] if isinstance(result, dict) else str(result)[:200]})
+            if isinstance(result, dict):
+                summary_text = result.get("response") or result.get("final_answer") or result.get("content") or ""
+                summary = str(summary_text)[:500]
+            else:
+                summary = str(result)[:200]
+            self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
+            self.event_bus.emit(context.task_id, "task.completed", {"status": "completed", "summary": summary})
             logger.info("Task completed", task_id=context.task_id, mode=mode, persona=persona, duration=f"{duration:.2f}s")
             if not _is_substep:
                 ff_metrics.record_task_completed(mode, persona, duration)
-                self.state_manager.update_state(context.task_id, {"status": "completed", "summary": str(result.get("response", result.get("content", "")))[:500] if isinstance(result, dict) else str(result)[:200]})
+                ws = get_workspace_manager()
+                ws.update_task_status(context.task_id, "completed", duration=duration)
+                state_update = {"status": "completed", "summary": summary}
+                if isinstance(result, dict):
+                    state_update["output_data"] = result
+                else:
+                    state_update["output_data"] = {"response": str(result)}
+                self.state_manager.update_state(context.task_id, state_update)
             return result
         except asyncio.TimeoutError:
             logger.error("Task timed out", task_id=context.task_id, mode=mode, timeout=TASK_TIMEOUT_SECONDS)
+            self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
             self.event_bus.emit(context.task_id, "task.error", {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})
             if not _is_substep:
                 ff_metrics.record_task_failed(mode_hint or "auto", persona)
-                self.state_manager.update_state(context.task_id, {"status": "failed", "error": "Task timed out"})
+                self.state_manager.update_state(context.task_id, {"status": "failed", "error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})
             return {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s", "response": "任务执行超时，请稍后重试"}
+        except StepTimeoutError as e:
+            logger.error("Step timed out", task_id=context.task_id, mode=mode, error=str(e))
+            self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
+            self.event_bus.emit(context.task_id, "task.error", {"error": str(e)})
+            if not _is_substep:
+                ff_metrics.record_task_failed(mode_hint or "auto", persona)
+                self.state_manager.update_state(context.task_id, {"status": "failed", "error": str(e)})
+            return {"error": str(e), "response": f"步骤执行超时: {e}"}
         except Exception as e:
+            self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
             self.event_bus.emit(context.task_id, "task.error", {"error": str(e)})
             logger.error("Task failed", task_id=context.task_id, mode=mode, persona=persona, error=str(e))
             if not _is_substep:
@@ -219,8 +265,12 @@ class HybridExecutor:
             feedback: Optional textual feedback from the reviewer.
             edited_draft: Optional edited draft content from the reviewer.
         """
-        self.event_bus.emit(task_id, "review.submitted", {"verdict": verdict, "feedback": feedback})
-        self.state_manager.update_state(task_id, {"review_verdict": verdict, "review_feedback": feedback})
+        self.event_bus.emit(task_id, "review.submitted", {"verdict": verdict, "feedback": feedback, "edited_draft": edited_draft})
+        self.state_manager.update_state(task_id, {
+            "review_verdict": verdict,
+            "review_feedback": feedback,
+            "edited_draft": edited_draft,
+        })
         review_event = self._review_events.get(task_id)
         if review_event:
             review_event.set()
@@ -289,6 +339,37 @@ class HybridExecutor:
         review_event = asyncio.Event()
         self._review_events[task_id] = review_event
         return review_event
+
+    async def cancel_task(self, task_id: str):
+        """Cancel a running task by terminating its asyncio Task.
+
+        Updates state, emits event, and cancels the running asyncio.Task
+        if one exists for this task_id. Also releases the persona lock
+        if the cancelled task holds one.
+
+        Args:
+            task_id: The identifier of the task to cancel.
+        """
+        self.event_bus.emit(task_id, "task.cancelled", {"reason": "manual"})
+        self.state_manager.update_state(task_id, {"status": "cancelled"})
+
+        # Release persona lock if this task holds one
+        for persona, running_task_id in list(self._running_tasks.items()):
+            if running_task_id == task_id:
+                del self._running_tasks[persona]
+                logger.info(f"Released persona lock for '{persona}' (cancelled task {task_id})")
+                break
+
+        # Cancel the running asyncio.Task if it exists
+        future = self._task_futures.get(task_id)
+        if future and not future.done():
+            future.cancel()
+            logger.info(f"Cancelled running asyncio.Task for task {task_id}")
+            del self._task_futures[task_id]
+
+    def register_task_future(self, task_id: str, future: asyncio.Task):
+        """Register an asyncio.Task for a running task so it can be cancelled."""
+        self._task_futures[task_id] = future
 
     def is_persona_running(self, persona: str) -> bool:
         """Check whether a persona currently has a running task.

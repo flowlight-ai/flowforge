@@ -48,9 +48,9 @@ models:
   provider: openroute
   display_name: 网页代理轮询
   enabled: true
-- id: doubao-web/seed-2.0
+- id: doubao-web/chat
   provider: openroute
-  display_name: 豆包 Seed 2.0
+  display_name: 豆包网页版
   enabled: true
 - id: kimi-web/chat
   provider: openroute
@@ -162,16 +162,20 @@ models:
   enabled: true
 assignments:
   default:
-    primary: openroute/auto
+    primary: web/chat
     fallbacks:
-    - openrouter/baidu/cobuddy:free
-    - tencent/hunyuan-lite
+    - kimi-web/chat
+    - yuanbao-web/chat
   lightweight:
-    primary: openroute/doubao-web/seed-2.0
+    primary: web/chat
     fallbacks:
-    - openrouter/z-ai/glm-4.5-air:free
-    - zhipu/glm-4-flash
+    - kimi-web/chat
+    - yuanbao-web/chat
   coding:
     primary: arkcode/ark-code-latest
+    fallbacks: []
+  judge:
+    primary: openroute/kimi-web/chat
     fallbacks:
-    - openrouter/baidu/cobuddy:free
+    - web/chat
+    - yuanbao-web/chat

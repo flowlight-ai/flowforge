@@ -1,9 +1,15 @@
+import asyncio
 import json
 import re
 from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("multilingual_agent")
+
+_TOOL_TIMEOUT = 300
 
 
 class MultilingualAgent(BaseAgent):
@@ -27,14 +33,28 @@ class MultilingualAgent(BaseAgent):
                 ctx.agents = executor.agent_registry
                 ctx.event_bus = executor.event_bus
                 ctx.executor = executor
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get executor: {e}", task_id=ctx.task_id)
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
     async def execute_with_context(self, input: AgentInput, context: TaskContext) -> AgentOutput:
-        text = input.params.get("text", input.params.get("draft", ""))
+        # Try multiple sources for text to translate, in priority order:
+        # 1. Explicit "text" param
+        # 2. "draft" param (from article_writing output)
+        # 3. "_last_output" (from workflow step context)
+        # 4. "_output_article_writing" (from specific agent output)
+        # 5. "task" or "query" as fallback
+        text = input.params.get("text", "")
+        if not text or len(text.strip()) < 20:
+            text = input.params.get("draft", "")
+        if not text or len(text.strip()) < 20:
+            text = input.params.get("_last_output", "")
+        if not text or len(text.strip()) < 20:
+            text = input.params.get("_output_article_writing", "")
+        if not text or len(text.strip()) < 20:
+            text = input.params.get("task", input.params.get("query", ""))
         target_lang = input.params.get("target_lang", "en")
-        llm = context.tools.get_tool("llm")
 
         # Step 1: detect_language — 检测源语言
         context.event_bus.emit(context.task_id, "multilingual.detect_language_start", {
@@ -43,18 +63,23 @@ class MultilingualAgent(BaseAgent):
         detect_prompt = get_prompt("agent.multilingual_detect", text=text[:1000])
         source_lang = "unknown"
         try:
-            result = await llm.execute(ToolInput(params={
-                "messages": [{"role": "user", "content": detect_prompt}],
-                "stream": True, "task_id": context.task_id,
-                "agent_name": self.name, "persona": context.persona or "default",
-            }))
+            result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [{"role": "user", "content": detect_prompt}],
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": context.persona or "default",
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
             content = result.result.get("content", "{}")
             match = re.search(r'\{.*\}', content, re.DOTALL)
             if match:
                 data = json.loads(match.group())
                 source_lang = data.get("source_lang", "unknown")
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Language detection timed out", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"Language detection failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "multilingual.detect_language_complete", {
             "source_lang": source_lang,
         })
@@ -72,15 +97,20 @@ class MultilingualAgent(BaseAgent):
         translate_prompt = get_prompt("agent.multilingual_translate", source_lang=source_name, target_lang=target_name, text=text[:2000])
         translated = ""
         try:
-            result = await llm.execute(ToolInput(params={
-                "messages": [{"role": "system", "content": translate_prompt}, {"role": "user", "content": "请翻译"}],
-                "max_tokens": 2000,
-                "stream": True, "task_id": context.task_id,
-                "agent_name": self.name, "persona": context.persona or "default",
-            }))
+            result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [{"role": "system", "content": translate_prompt}, {"role": "user", "content": "请翻译"}],
+                    "max_tokens": 2000,
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": context.persona or "default",
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
             translated = result.result.get("content", "")
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Translation timed out", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"Translation failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "multilingual.translate_complete", {
             "translated_length": len(translated),
         })
@@ -93,19 +123,24 @@ class MultilingualAgent(BaseAgent):
         if translated:
             verify_prompt = get_prompt("agent.multilingual_verify", source_lang=source_name, target_lang=target_name, source_text=text[:1000], translated_text=translated[:1000])
             try:
-                result = await llm.execute(ToolInput(params={
-                    "messages": [{"role": "user", "content": verify_prompt}],
-                    "stream": True, "task_id": context.task_id,
-                    "agent_name": self.name, "persona": context.persona or "default",
-                }))
+                result = await asyncio.wait_for(
+                    context.tools.execute("llm", ToolInput(params={
+                        "messages": [{"role": "user", "content": verify_prompt}],
+                        "stream": False, "task_id": context.task_id,
+                        "agent_name": self.name, "persona": context.persona or "default",
+                    })),
+                    timeout=_TOOL_TIMEOUT,
+                )
                 content = result.result.get("content", "{}")
                 match = re.search(r'\{.*\}', content, re.DOTALL)
                 if match:
                     data = json.loads(match.group())
                     if data.get("verified_translation"):
                         verified = data["verified_translation"]
-            except Exception:
-                pass
+            except asyncio.TimeoutError:
+                logger.warning("Translation verification timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"Translation verification failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "multilingual.verify_complete", {
             "final_length": len(verified),
         })

@@ -17,10 +17,11 @@ class ShortTermMemory:
         self.conn.execute("INSERT OR REPLACE INTO short_mem VALUES (?, ?, ?)", (key, json.dumps(value), expires))
         self.conn.commit()
 
-    async def search(self, query: str) -> list:
+    async def search(self, query: str, limit: int = 10) -> list:
         self.conn.execute("DELETE FROM short_mem WHERE expires_at < ?", (time.time(),))
         self.conn.commit()
-        row = self.conn.execute("SELECT value FROM short_mem WHERE key = ?", (query,)).fetchone()
-        if row:
-            return [json.loads(row[0])]
-        return []
+        rows = self.conn.execute(
+            "SELECT key, value FROM short_mem WHERE key LIKE ? OR value LIKE ? ORDER BY expires_at DESC LIMIT ?",
+            (f"%{query}%", f"%{query}%", limit)
+        ).fetchall()
+        return [{"key": row[0], "value": json.loads(row[1])} for row in rows]

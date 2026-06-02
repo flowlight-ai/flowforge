@@ -12,20 +12,11 @@ import json
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from flowforge.app.deps import get_executor
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("api.websocket")
 
 router = APIRouter(tags=["websocket"])
-
-_seq_counter = 0
-
-def _next_seq():
-    """Generate the next monotonically increasing sequence number.
-
-    Returns:
-        The next integer sequence number.
-    """
-    global _seq_counter
-    _seq_counter += 1
-    return _seq_counter
 
 class ConnectionManager:
     """Manages active WebSocket connections grouped by task identifier.
@@ -46,9 +37,17 @@ class ConnectionManager:
     """
 
     def __init__(self):
-        """Initialize the ConnectionManager with no active connections."""
         self.active_connections: dict[str, list[WebSocket]] = {}
         self._event_buffers: dict[str, list[dict]] = {}
+        self._seq_counter: int = 0
+
+    def _next_seq(self) -> int:
+        self._seq_counter += 1
+        return self._seq_counter
+
+    def get_buffered_events(self, task_id: str, from_seq: int = 0) -> list:
+        events = self._event_buffers.get(task_id, [])
+        return [e for e in events if e.get("seq", 0) >= from_seq]
 
     async def connect(self, task_id: str, websocket: WebSocket):
         """Accept and register a WebSocket connection for a task.
@@ -68,8 +67,8 @@ class ConnectionManager:
             for event in buffered:
                 try:
                     await websocket.send_json(event)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to replay buffered event to websocket: {e}")
 
     def disconnect(self, task_id: str, websocket: WebSocket):
         """Remove a WebSocket connection from the manager.
@@ -87,21 +86,19 @@ class ConnectionManager:
                 del self.active_connections[task_id]
 
     async def broadcast(self, task_id: str, message: dict):
-        """Send a JSON message to all connections subscribed to a task.
-
-        Connections that have been closed or are otherwise unreachable are
-        silently skipped.
-
-        Args:
-            task_id: The task identifier whose connections should receive
-                the message.
-            message: The dictionary payload to serialize and send.
-        """
-        for ws in self.active_connections.get(task_id, []):
+        dead = []
+        delivered = False
+        for ws in list(self.active_connections.get(task_id, [])):
             try:
                 await ws.send_json(message)
-            except Exception:
-                pass
+                delivered = True
+            except Exception as e:
+                logger.debug(f"Failed to broadcast to websocket for task {task_id}: {e}")
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(task_id, ws)
+        if not delivered and not dead:
+            self._event_buffers.setdefault(task_id, []).append(message)
 
     async def emit_event(self, task_id: str, event_type: str, payload: dict):
         """Construct and broadcast a structured event message.
@@ -118,7 +115,7 @@ class ConnectionManager:
         """
         message = {
             "type": event_type,
-            "seq": _next_seq(),
+            "seq": self._next_seq(),
             "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
             "payload": payload or {},
         }
@@ -132,23 +129,57 @@ manager = ConnectionManager()
 @router.websocket("/ws/solo/{task_id}")
 async def solo_websocket(websocket: WebSocket, task_id: str):
     await manager.connect(task_id, websocket)
+    last_ping = asyncio.get_event_loop().time()
+
+    async def send_server_pings():
+        nonlocal last_ping
+        while True:
+            await asyncio.sleep(25)
+            try:
+                await websocket.send_json({"type": "server_ping"})
+                last_ping = asyncio.get_event_loop().time()
+            except Exception as e:
+                logger.debug(f"Server ping failed for solo websocket {task_id}: {e}")
+                break
+
+    ping_task = asyncio.create_task(send_server_pings())
     try:
         while True:
-            data = await websocket.receive_text()
-            msg = json.loads(data)
-            if msg.get("type") == "ping":
-                await websocket.send_json({"type": "pong"})
-            elif msg.get("type") == "review_submit":
-                executor = await get_executor()
-                if executor:
-                    await executor.submit_review(
-                        task_id, msg.get("verdict", "pass"),
-                        msg.get("feedback", ""), msg.get("edited_content", "")
-                    )
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30)
+                msg = json.loads(data)
+                if msg.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+                elif msg.get("type") == "pong":
+                    pass
+                elif msg.get("type") == "review_submit":
+                    executor = await get_executor()
+                    if executor:
+                        await executor.submit_review(
+                            task_id, msg.get("verdict", "pass"),
+                            msg.get("feedback", ""), msg.get("edited_content", "")
+                        )
+                elif msg.get("type") == "replay":
+                    from_seq = msg.get("from_seq", 0)
+                    buffered = manager.get_buffered_events(task_id, from_seq)
+                    for event in buffered:
+                        try:
+                            await websocket.send_json(event)
+                        except Exception:
+                            break
+            except asyncio.TimeoutError:
+                continue
     except WebSocketDisconnect:
         manager.disconnect(task_id, websocket)
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Solo websocket disconnected with error for task {task_id}: {e}")
         manager.disconnect(task_id, websocket)
+    finally:
+        ping_task.cancel()
+        try:
+            await ping_task
+        except asyncio.CancelledError:
+            pass
 
 @router.websocket("/ws/events")
 async def events_websocket(websocket: WebSocket):
@@ -158,8 +189,8 @@ async def events_websocket(websocket: WebSocket):
         from flowforge.events.event_bus import EventBus
         from flowforge.app.main import event_bus as global_event_bus
         event_bus = global_event_bus
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Failed to import EventBus for events websocket: {e}")
 
     received_events = []
 
@@ -172,13 +203,13 @@ async def events_websocket(websocket: WebSocket):
                 event = received_events.pop(0)
                 try:
                     await websocket.send_json(event)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to send event to events websocket: {e}")
             await asyncio.sleep(0.1)
     except WebSocketDisconnect:
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Events websocket disconnected with error: {e}")
 
 @router.websocket("/ws/logs")
 async def logs_websocket(websocket: WebSocket):
@@ -220,9 +251,9 @@ async def logs_websocket(websocket: WebSocket):
                         "line": stripped,
                         "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                     })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to read/send log line: {e}")
     except WebSocketDisconnect:
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Logs websocket disconnected with error: {e}")

@@ -1,6 +1,12 @@
+import asyncio
 from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("publishing_agent")
+
+_TOOL_TIMEOUT = 300
 
 
 class PublishingAgent(BaseAgent):
@@ -24,7 +30,8 @@ class PublishingAgent(BaseAgent):
                 ctx.agents = executor.agent_registry
                 ctx.event_bus = executor.event_bus
                 ctx.executor = executor
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get executor: {e}", task_id=ctx.task_id)
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
@@ -39,23 +46,36 @@ class PublishingAgent(BaseAgent):
 
         published = {}
         for platform in platforms:
+            tool_name = f"publish_{platform}"
             try:
-                pub_tool = context.tools.get_tool(f"publish_{platform}")
+                res = await asyncio.wait_for(
+                    context.tools.execute(tool_name, ToolInput(params={"title": title, "content": content, "platform": platform})),
+                    timeout=_TOOL_TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"Publish to {platform} timed out", task_id=context.task_id)
+                published[platform] = f"failed: timeout"
+                continue
             except Exception:
+                # Primary tool failed (not found or execution error), try fallback
                 try:
-                    pub_tool = context.tools.get_tool("publish_local")
-                except Exception:
-                    published[platform] = f"failed: no publish tool available"
+                    res = await asyncio.wait_for(
+                        context.tools.execute("publish_local", ToolInput(params={"title": title, "content": content, "platform": platform})),
+                        timeout=_TOOL_TIMEOUT,
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(f"Publish to {platform} timed out", task_id=context.task_id)
+                    published[platform] = f"failed: timeout"
+                    continue
+                except Exception as e:
+                    logger.warning(f"Publish to {platform} failed: {e}", task_id=context.task_id)
+                    published[platform] = f"failed: {str(e)}"
                     continue
 
-            try:
-                res = await pub_tool.execute(ToolInput(params={"title": title, "content": content, "platform": platform}))
-                published[platform] = res.result.get("url", "published")
-                context.event_bus.emit(context.task_id, "publishing.platform_done", {
-                    "platform": platform, "url": res.result.get("url", ""),
-                })
-            except Exception as e:
-                published[platform] = f"failed: {str(e)}"
+            published[platform] = res.result.get("url", "published")
+            context.event_bus.emit(context.task_id, "publishing.platform_done", {
+                "platform": platform, "url": res.result.get("url", ""),
+            })
 
         context.event_bus.emit(context.task_id, "publishing.complete", {
             "platforms": list(published.keys()),

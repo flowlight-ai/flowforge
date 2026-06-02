@@ -34,6 +34,7 @@ export type StreamEntryType =
   | "tool-call"
   | "thinking"
   | "llm-stream"
+  | "llm-call"
   | "intermediate"
   | "draft-update"
   | "draft-file"

@@ -308,14 +308,34 @@ class FeedbackLoop:
 
         # ── Heuristic fallback ──
         t_full_ms = (time.time() - t_full_start) * 1000
+        fallback_reason = 'no_llm_client' if self._llm_client is None else 'llm_call_failed'
         logger.info(f"[FeedbackLoop] ⏱ FULL total  | task={task_id} "
                      f"total={t_full_ms:.1f}ms method=heuristic_fallback "
-                     f"reason={'no_llm_client' if self._llm_client is None else 'llm_call_failed'}")
+                     f"reason={fallback_reason}")
+        logger.warning(f"[FeedbackLoop] ⚠ HEURISTIC FALLBACK | task={task_id} "
+                        f"reason={fallback_reason} — scores are heuristic estimates, not LLM-evaluated")
+
+        content_len = len(content) if content else 0
+        if content_len < 100:
+            correctness = 0.3
+        elif content_len <= 500:
+            correctness = 0.5
+        else:
+            correctness = 0.6
+
+        has_structure = any(marker in content for marker in ("#", "-", "*", "1.", "•")) if content else False
+        completeness = 0.5 if has_structure else 0.3
+
+        has_paragraphs = "\n\n" in content if content else False
+        coherence = 0.5 if has_paragraphs else 0.3
+
+        safety = 0.7
+
         return {
-            "correctness": 0.8,
-            "completeness": 0.7,
-            "coherence": 0.8,
-            "safety": 0.9,
+            "correctness": correctness,
+            "completeness": completeness,
+            "coherence": coherence,
+            "safety": safety,
         }
 
     # ── Lightweight evaluation (1 LLM call) ───────────────────────────────

@@ -8,6 +8,7 @@ __pycache__/
 dist/
 build/
 .eggs/
+*.whl
 
 # Environment & Secrets
 .env
@@ -16,18 +17,23 @@ build/
 *.pem
 *.key
 *.crt
+secrets.db
 
 # Data & Logs
 data/
 logs/
 *.log
+*.db
+*.sqlite3
 
-# Test & Coverage
+# Test & Coverage & Reports
 .pytest_cache/
 .coverage
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+test_reports/
+*.json.bak
 
 # IDE
 .idea/
@@ -43,6 +49,7 @@ out/
 web/dist/
 next-env.d.ts
 tsconfig.tsbuildinfo
+package-lock.json
 
 # OS
 .DS_Store
@@ -51,10 +58,52 @@ desktop.ini
 
 # FlowForge specific
 flowforge.egg-info/
-secrets.db
-
-# Nested flowforge directory (accidental)
 flowforge/flowforge/
 
 # Temporary test scripts
 scripts/test_*.py
+tests/debug_*.py
+tests/check_*.py
+tests/quick_test.py
+tests/single_test.py
+tests/full_e2e_test.py
+tests/real_llm_test*.py
+tests/search_debug.py
+tests/translate_test.py
+tests/val_test.py
+tests/wf_quick_test.py
+e2e_results.txt
+
+# Workflow artifacts (business-specific, not framework)
+workflows/*.yaml
+
+# Business-specific agents (moved to contentforge/devforge/novelforge)
+agents/article_*.py
+agents/content_*.py
+agents/fact_check.py
+agents/headline_optimizer.py
+agents/image_research.py
+agents/material_collection.py
+agents/multilingual.py
+agents/publishing.py
+agents/research_agent.py
+agents/seo_optimization.py
+agents/topic_research.py
+agents/trend_analysis.py
+agents/web_search_agent.py
+agents/code_writer_agent.py
+
+# Business-specific tools (moved to domain projects)
+tools/toutiao_publisher.py
+tools/wechat_publisher.py
+tools/local_publish.py
+tools/pexels_image.py
+tools/web_scraper.py
+tools/opensieve_client.py
+tools/web_search.py
+tools/tavily_search.py
+tools/duckduckgo_search.py
+tools/sendgrid_mail.py
+tools/openroute_service.py
+tools/graphql_adapter.py
+tools/openapi_adapter.py

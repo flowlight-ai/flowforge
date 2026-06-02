@@ -1,8 +1,8 @@
 export interface ChatMessage {
   id: string;
-  role: "ai" | "system" | "tool" | "stage" | "gate" | "review" | "user" | "approval";
+  role: "ai" | "system" | "tool" | "stage" | "gate" | "review" | "user" | "approval" | "llm-call";
   content: string;
-  timestamp: number | string;  // numeric Date.now() or ISO string
+  timestamp: number | string;
   data?: Record<string, any>;
   collapsed?: boolean;
 }

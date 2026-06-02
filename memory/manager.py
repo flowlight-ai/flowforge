@@ -13,7 +13,16 @@ class MemoryManager:
         self.working = WorkingMemory()
         self.short_term = ShortTermMemory(db_url)
         self.long_term = LongTermMemory(db_url)
-        self.semantic = SemanticMemory(config.get("vector_db_url")) if config.get("vector_db_url") else None
+        semantic_db_path = config.get("vector_db_url")
+        if not semantic_db_path:
+            if db_url.startswith("sqlite:///"):
+                base = db_url.replace("sqlite:///", "").rsplit(".", 1)[0]
+                semantic_db_path = f"{base}_semantic.db"
+            elif db_url.startswith("sqlite:"):
+                semantic_db_path = "data/flowforge_semantic.db"
+            else:
+                semantic_db_path = f"{db_url.rsplit('.', 1)[0]}_semantic.db"
+        self.semantic = SemanticMemory(semantic_db_path)
         self.episodic = EpisodicMemory(db_url)
         self.compressor = ContextCompressor(llm_client) if llm_client and config.get("compression_enabled", True) else None
 

@@ -1,9 +1,15 @@
+import asyncio
 import json
 import re
 from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("web_search_agent")
+
+_TOOL_TIMEOUT = 300
 
 
 class WebSearchAgent(BaseAgent):
@@ -27,7 +33,8 @@ class WebSearchAgent(BaseAgent):
                 ctx.agents = executor.agent_registry
                 ctx.event_bus = executor.event_bus
                 ctx.executor = executor
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get executor: {e}", task_id=ctx.task_id)
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
@@ -35,7 +42,6 @@ class WebSearchAgent(BaseAgent):
         queries = input.params.get("queries", [])
         query = input.params.get("query", "")
         max_results = input.params.get("max_results", 5)
-        llm = context.tools.get_tool("llm")
 
         if query and not queries:
             queries = [query]
@@ -49,19 +55,24 @@ class WebSearchAgent(BaseAgent):
         plan_prompt = get_prompt("agent.web_search_plan", query=queries)
         optimized_queries = list(queries)
         try:
-            result = await llm.execute(ToolInput(params={
-                "messages": [{"role": "user", "content": plan_prompt}],
-                "stream": True, "task_id": context.task_id,
-                "agent_name": self.name, "persona": context.persona or "default",
-            }))
+            result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [{"role": "user", "content": plan_prompt}],
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": context.persona or "default",
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
             content = result.result.get("content", "{}")
             match = re.search(r'\{.*\}', content, re.DOTALL)
             if match:
                 data = json.loads(match.group())
                 if data.get("optimized_queries"):
                     optimized_queries = data["optimized_queries"]
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Search plan timed out", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"Search plan failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "web_search_agent.plan_search_complete", {
             "optimized_queries_count": len(optimized_queries),
         })
@@ -73,9 +84,11 @@ class WebSearchAgent(BaseAgent):
         all_results: list[dict] = []
         for q in optimized_queries:
             try:
-                search = context.tools.get_tool("web_search")
-                result = await search.execute(
-                    ToolInput(params={"query": q, "max_results": max_results})
+                result = await asyncio.wait_for(
+                    context.tools.execute("web_search",
+                        ToolInput(params={"query": q, "max_results": max_results})
+                    ),
+                    timeout=_TOOL_TIMEOUT,
                 )
                 for item in result.result.get("results", []):
                     all_results.append({
@@ -84,17 +97,23 @@ class WebSearchAgent(BaseAgent):
                         "snippet": item.get("content", item.get("snippet", "")),
                         "query": q,
                     })
-            except Exception:
+            except asyncio.TimeoutError:
+                logger.warning(f"Web search for '{q}' timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"Web search for '{q}' failed: {e}", task_id=context.task_id)
                 try:
                     fallback_prompt = (
                         f"关于「{q}」，请提供3条关键信息，包含标题和摘要。"
                         f"严格输出JSON: {{\"results\": [{{\"title\": \"...\", \"snippet\": \"...\"}}]}}"
                     )
-                    llm_result = await llm.execute(ToolInput(params={
-                        "messages": [{"role": "user", "content": fallback_prompt}],
-                        "stream": True, "task_id": context.task_id,
-                        "agent_name": self.name, "persona": context.persona or "default",
-                    }))
+                    llm_result = await asyncio.wait_for(
+                        context.tools.execute("llm", ToolInput(params={
+                            "messages": [{"role": "user", "content": fallback_prompt}],
+                            "stream": False, "task_id": context.task_id,
+                            "agent_name": self.name, "persona": context.persona or "default",
+                        })),
+                        timeout=_TOOL_TIMEOUT,
+                    )
                     content = llm_result.result.get("content", "{}")
                     match = re.search(r'\{.*\}', content, re.DOTALL)
                     if match:
@@ -105,9 +124,13 @@ class WebSearchAgent(BaseAgent):
                                 "url": "",
                                 "snippet": r.get("snippet", ""),
                                 "query": q,
+                                "source_type": "llm_generated",
+                                "disclaimer": "此内容由LLM生成，非真实搜索结果",
                             })
-                except Exception:
-                    continue
+                except asyncio.TimeoutError:
+                    logger.warning(f"LLM fallback for '{q}' timed out", task_id=context.task_id)
+                except Exception as e:
+                    logger.warning(f"LLM fallback for '{q}' failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "web_search_agent.execute_search_complete", {
             "results_count": len(all_results),
         })
@@ -123,19 +146,24 @@ class WebSearchAgent(BaseAgent):
             )
             summarize_prompt = get_prompt("agent.web_search_summarize", results=results_text[:4000])
             try:
-                result = await llm.execute(ToolInput(params={
-                    "messages": [{"role": "user", "content": summarize_prompt}],
-                    "stream": True, "task_id": context.task_id,
-                    "agent_name": self.name, "persona": context.persona or "default",
-                }))
+                result = await asyncio.wait_for(
+                    context.tools.execute("llm", ToolInput(params={
+                        "messages": [{"role": "user", "content": summarize_prompt}],
+                        "stream": False, "task_id": context.task_id,
+                        "agent_name": self.name, "persona": context.persona or "default",
+                    })),
+                    timeout=_TOOL_TIMEOUT,
+                )
                 content = result.result.get("content", "{}")
                 match = re.search(r'\{.*\}', content, re.DOTALL)
                 if match:
                     data = json.loads(match.group())
                     if data.get("results"):
                         all_results = data["results"]
-            except Exception:
-                pass
+            except asyncio.TimeoutError:
+                logger.warning("Search summarize timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"Search summarize failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "web_search_agent.summarize_complete", {
             "final_results_count": len(all_results),
         })

@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from flowforge.core.config import system_config, ConfigLoader
-from flowforge.core.di import DIContainer
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.core.plugin_registry import PluginRegistry
 from flowforge.tools.registry import ToolRegistry
@@ -22,21 +21,6 @@ from flowforge.modes.agent_judge import AgentJudgeExecutor
 from flowforge.modes.graph_of_thoughts import GraphOfThoughtsExecutor
 from flowforge.executor.hybrid_executor import HybridExecutor
 from flowforge.memory.manager import MemoryManager
-from flowforge.agents.topic_research import TopicResearchAgent
-from flowforge.agents.article_writing import ArticleWritingAgent
-from flowforge.agents.material_collection import MaterialCollectionAgent
-from flowforge.agents.seo_optimization import SEOOptimizationAgent
-from flowforge.agents.fact_check import FactCheckAgent
-from flowforge.agents.content_audit import ContentAuditAgent
-from flowforge.agents.trend_analysis import TrendAnalysisAgent
-from flowforge.agents.publishing import PublishingAgent
-from flowforge.agents.headline_optimizer import HeadlineOptimizerAgent
-from flowforge.agents.content_repurposer import ContentRepurposerAgent
-from flowforge.agents.image_research import ImageResearchAgent
-from flowforge.agents.multilingual import MultilingualAgent
-from flowforge.agents.web_search_agent import WebSearchAgent
-from flowforge.agents.code_writer_agent import CodeWriterAgent
-from flowforge.agents.research_agent import ResearchAgent
 from flowforge.app.api.router import router
 from flowforge.app.deps import (
     set_executor_instance, set_llm_client_instance,
@@ -48,21 +32,104 @@ from flowforge.app.deps import (
 from flowforge.core import metrics
 from flowforge.scheduler.scheduler import TaskScheduler
 from flowforge.core.plugin_manager import PluginManager
-from flowforge.core.tracing import get_logger
+from flowforge.core.tracing import get_logger, load_logging_config
 
+load_logging_config()
 logger = get_logger("main")
+
+
+def _register_core_tools(tool_registry: ToolRegistry, plugin_registry: PluginRegistry):
+    from flowforge.tools.python_executor import PythonExecutorTool
+    from flowforge.tools.file_rw import FileReadWriteTool
+    from flowforge.tools.cache import CacheTool
+    from flowforge.tools.workspace_file import WorkspaceFileTool
+
+    tool_registry.register(PythonExecutorTool())
+    tool_registry.register(FileReadWriteTool())
+    tool_registry.register(CacheTool())
+    tool_registry.register(WorkspaceFileTool())
+
+    try:
+        from flowforge.tools.web_search import WebSearchTool
+        tool_registry.register(WebSearchTool(
+            primary="opensieve_search",
+            fallback="tavily_search",
+            fallback_chain=["opensieve_search", "tavily_search", "duckduckgo_search"],
+        ))
+    except ImportError:
+        logger.debug("WebSearchTool not available")
+
+    import os as _os
+    _optional = []
+    for mod_name, cls_name, env_key in [
+        ("flowforge.tools.tavily_search", "TavilySearchTool", "TAVILY_API_KEY"),
+        ("flowforge.tools.duckduckgo_search", "DuckDuckGoSearchTool", None),
+        ("flowforge.tools.web_scraper", "WebScraperTool", None),
+    ]:
+        try:
+            mod = __import__(mod_name, fromlist=[cls_name])
+            _optional.append((getattr(mod, cls_name), env_key))
+        except ImportError:
+            pass
+    for _tool_cls, _env_key in _optional:
+        try:
+            if _env_key is None or _os.getenv(_env_key, ""):
+                tool_registry.register(_tool_cls())
+        except Exception:
+            pass
+
+
+def _register_all_modes(mode_registry: ModeRegistry):
+    for executor_cls in [
+        WorkflowExecutor, ReflexionExecutor, ReActExecutor,
+        PlanExecuteExecutor, MultiAgentExecutor, ReWOOExecutor,
+        SelfDiscoverExecutor, AgentJudgeExecutor, GraphOfThoughtsExecutor,
+    ]:
+        mode_registry.register(executor_cls())
+
+
+def _load_domain_plugins(agent_registry: AgentRegistry, tool_registry: ToolRegistry):
+    import importlib
+    import os
+    domain_module = os.getenv("FLOWFORGE_DOMAIN_MODULE", "")
+    if not domain_module:
+        return
+    for mod_path in domain_module.split(","):
+        mod_path = mod_path.strip()
+        if not mod_path:
+            continue
+        try:
+            mod = importlib.import_module(mod_path)
+            if hasattr(mod, "register_agents"):
+                mod.register_agents(agent_registry)
+                logger.info(f"Registered agents from {mod_path}")
+            if hasattr(mod, "register_tools"):
+                mod.register_tools(tool_registry)
+                logger.info(f"Registered tools from {mod_path}")
+        except ImportError as e:
+            logger.warning(f"Failed to load domain plugin {mod_path}: {e}")
 
 
 @asynccontextmanager
 async def lifespan(app):
-    # Load plugins from config
     await plugin_registry.load_from_config("plugins.yaml")
     plugin_registry.start_health_monitoring()
+    plugin_registry.set_tool_timeout(300)
 
-    # Inject plugin_registry into WebSearchTool (late binding)
+    tool_registry.set_plugin_registry(plugin_registry)
+
     web_search_plugin = plugin_registry.get_plugin("web_search")
     if web_search_plugin and hasattr(web_search_plugin, "set_plugin_registry"):
         web_search_plugin.set_plugin_registry(plugin_registry)
+
+    try:
+        ws_tool = tool_registry._tools.get("web_search")
+        if ws_tool and hasattr(ws_tool, "set_plugin_registry"):
+            ws_tool.set_plugin_registry(plugin_registry)
+    except Exception as e:
+        logger.warning(f"Failed to set plugin_registry for web_search tool: {e}")
+
+    _load_domain_plugins(agent_registry, tool_registry)
 
     if system_config.scheduler_enabled:
         scheduler.start()
@@ -74,9 +141,9 @@ async def lifespan(app):
         f"{len(agent_registry.list_agents())} agents"
     )
     yield
-    # Graceful shutdown
     await plugin_registry.shutdown_all()
-    scheduler.shutdown()
+    if system_config.scheduler_enabled:
+        scheduler.shutdown()
     logger.info("FlowForge API shutdown")
 
 
@@ -91,43 +158,20 @@ app.add_middleware(
 
 event_bus = EventBus()
 agent_registry = AgentRegistry()
-plugin_registry = PluginRegistry(config_loader=ConfigLoader())
-tool_registry = ToolRegistry()  # Legacy — wraps PluginRegistry for backward compat
+_config_loader = ConfigLoader()
+plugin_registry = PluginRegistry(config_loader=_config_loader)
+tool_registry = ToolRegistry(tool_timeout=300)
 mode_registry = ModeRegistry()
 
-_config_loader = ConfigLoader()
 _models_config = _config_loader.get_models_config()
 llm_client = LLMClient(models_config=_models_config, event_bus=event_bus)
 tool_registry.register(llm_client)
 
-# Register PluginRegistry as the global instance
+_register_core_tools(tool_registry, plugin_registry)
+
 set_plugin_registry_instance(plugin_registry)
 
-mode_registry.register(WorkflowExecutor())
-mode_registry.register(ReflexionExecutor())
-mode_registry.register(ReActExecutor())
-mode_registry.register(PlanExecuteExecutor())
-mode_registry.register(MultiAgentExecutor())
-mode_registry.register(ReWOOExecutor())
-mode_registry.register(SelfDiscoverExecutor())
-mode_registry.register(AgentJudgeExecutor())
-mode_registry.register(GraphOfThoughtsExecutor())
-
-agent_registry.register_factory("topic_research", lambda: TopicResearchAgent())
-agent_registry.register_factory("article_writing", lambda: ArticleWritingAgent())
-agent_registry.register_factory("material_collection", lambda: MaterialCollectionAgent())
-agent_registry.register_factory("seo_optimization", lambda: SEOOptimizationAgent())
-agent_registry.register_factory("fact_check", lambda: FactCheckAgent())
-agent_registry.register_factory("content_audit", lambda: ContentAuditAgent())
-agent_registry.register_factory("trend_analysis", lambda: TrendAnalysisAgent())
-agent_registry.register_factory("publishing", lambda: PublishingAgent())
-agent_registry.register_factory("headline_optimizer", lambda: HeadlineOptimizerAgent())
-agent_registry.register_factory("content_repurposer", lambda: ContentRepurposerAgent())
-agent_registry.register_factory("image_research", lambda: ImageResearchAgent())
-agent_registry.register_factory("multilingual", lambda: MultilingualAgent())
-agent_registry.register_factory("web_search_agent", lambda: WebSearchAgent())
-agent_registry.register_factory("code_writer_agent", lambda: CodeWriterAgent())
-agent_registry.register_factory("research_agent", lambda: ResearchAgent())
+_register_all_modes(mode_registry)
 
 memory_manager = MemoryManager({"db_url": system_config.db_url})
 
@@ -160,7 +204,6 @@ init_graph_api(agent_registry, mode_registry, tool_registry)
 
 from flowforge.app.api.endpoints.prompts import init_prompts_api
 from flowforge.app.api.endpoints.memory import init_memory_api
-from flowforge.core.config import ConfigLoader
 
 _config_dir = str(ConfigLoader().config_dir)
 init_prompts_api(_config_dir)

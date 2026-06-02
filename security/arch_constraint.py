@@ -21,6 +21,17 @@ logger = get_logger("security.arch_constraint")
 # Default layer ordering (lower layers cannot import from higher layers)
 DEFAULT_LAYER_ORDER = ["types", "config", "repo", "service", "runtime", "ui"]
 
+DEFAULT_LAYER_MAPPING = {
+    "flowforge.app": 0,
+    "flowforge.brain": 1,
+    "flowforge.modes": 2,
+    "flowforge.workers": 2,
+    "flowforge.agents": 2,
+    "flowforge.tools": 3,
+    "flowforge.memory": 3,
+    "flowforge.core": 4,
+}
+
 
 class ArchitectureConstraintEngine:
     """Architecture constraint engine.
@@ -39,21 +50,13 @@ class ArchitectureConstraintEngine:
         self._violations: List[Dict[str, Any]] = []
 
     def get_layer(self, module_path: str) -> Optional[str]:
-        """Determine which layer a module belongs to.
-
-        Uses layer_mapping config to map module names to layers.
-        """
-        if not self.layer_mapping:
-            return None
-
-        # Check each layer's module patterns
-        for layer, patterns in self.layer_mapping.items():
+        mapping = self.layer_mapping or DEFAULT_LAYER_MAPPING
+        for layer, patterns in mapping.items():
             if isinstance(patterns, str):
                 patterns = [patterns]
             for pattern in patterns:
                 if pattern in module_path:
                     return layer
-
         return None
 
     def extract_dependencies(self, source_code: str) -> List[str]:

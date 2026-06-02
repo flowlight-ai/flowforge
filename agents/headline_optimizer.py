@@ -1,9 +1,15 @@
+import asyncio
 import json
 import re
 from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("headline_optimizer_agent")
+
+_TOOL_TIMEOUT = 300
 
 
 class HeadlineOptimizerAgent(BaseAgent):
@@ -27,14 +33,14 @@ class HeadlineOptimizerAgent(BaseAgent):
                 ctx.agents = executor.agent_registry
                 ctx.event_bus = executor.event_bus
                 ctx.executor = executor
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get executor: {e}", task_id=ctx.task_id)
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
     async def execute_with_context(self, input: AgentInput, context: TaskContext) -> AgentOutput:
         topic = input.params.get("topic", "")
         draft_title = input.params.get("title", "")
-        llm = context.tools.get_tool("llm")
         headlines: list[str] = [draft_title] if draft_title else []
 
         # Step 1: analyze_topic — 分析主题特征和受众
@@ -44,17 +50,22 @@ class HeadlineOptimizerAgent(BaseAgent):
         analyze_prompt = get_prompt("agent.headline_analyze", topic=topic, title=draft_title)
         analysis = {}
         try:
-            result = await llm.execute(ToolInput(params={
-                "messages": [{"role": "user", "content": analyze_prompt}],
-                "stream": True, "task_id": context.task_id,
-                "agent_name": self.name, "persona": context.persona or "default",
-            }))
+            result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [{"role": "user", "content": analyze_prompt}],
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": context.persona or "default",
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
             content = result.result.get("content", "{}")
             match = re.search(r'\{.*\}', content, re.DOTALL)
             if match:
                 analysis = json.loads(match.group())
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Headline analyze timed out", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"Headline analyze failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "headline_optimizer.analyze_topic_complete", {
             "audience": analysis.get("audience", ""),
             "hooks_count": len(analysis.get("hooks", [])),
@@ -67,18 +78,23 @@ class HeadlineOptimizerAgent(BaseAgent):
         hooks_text = "、".join(analysis.get("hooks", [])) if analysis.get("hooks") else "吸引力、好奇心、紧迫感"
         generate_prompt = get_prompt("agent.headline_generate", topic=topic, original_title=draft_title, audience=analysis.get('audience', '泛受众'), hooks=hooks_text)
         try:
-            result = await llm.execute(ToolInput(params={
-                "messages": [{"role": "user", "content": generate_prompt}],
-                "stream": True, "task_id": context.task_id,
-                "agent_name": self.name, "persona": context.persona or "default",
-            }))
+            result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [{"role": "user", "content": generate_prompt}],
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": context.persona or "default",
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
             content = result.result.get("content", "{}")
             match = re.search(r'\{.*\}', content, re.DOTALL)
             if match:
                 data = json.loads(match.group())
                 headlines = data.get("headlines", headlines)
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Headline generate timed out", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"Headline generate failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "headline_optimizer.generate_headlines_complete", {
             "headlines_count": len(headlines),
         })
@@ -91,11 +107,14 @@ class HeadlineOptimizerAgent(BaseAgent):
             headlines_text = "\n".join(f"{i+1}. {h}" for i, h in enumerate(headlines))
             evaluate_prompt = get_prompt("agent.headline_evaluate", headlines=headlines_text)
             try:
-                result = await llm.execute(ToolInput(params={
-                    "messages": [{"role": "user", "content": evaluate_prompt}],
-                    "stream": True, "task_id": context.task_id,
-                    "agent_name": self.name, "persona": context.persona or "default",
-                }))
+                result = await asyncio.wait_for(
+                    context.tools.execute("llm", ToolInput(params={
+                        "messages": [{"role": "user", "content": evaluate_prompt}],
+                        "stream": False, "task_id": context.task_id,
+                        "agent_name": self.name, "persona": context.persona or "default",
+                    })),
+                    timeout=_TOOL_TIMEOUT,
+                )
                 content = result.result.get("content", "{}")
                 match = re.search(r'\{.*\}', content, re.DOTALL)
                 if match:
@@ -103,8 +122,10 @@ class HeadlineOptimizerAgent(BaseAgent):
                     ranked = data.get("ranked", [])
                     if ranked:
                         headlines = [r.get("headline", "") for r in ranked if r.get("headline")]
-            except Exception:
-                pass
+            except asyncio.TimeoutError:
+                logger.warning("Headline evaluate timed out", task_id=context.task_id)
+            except Exception as e:
+                logger.warning(f"Headline evaluate failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "headline_optimizer.evaluate_headlines_complete", {
             "final_headlines_count": len(headlines),
         })

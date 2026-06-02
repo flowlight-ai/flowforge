@@ -4,7 +4,9 @@ import yaml
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter
-from flowforge.core.tracing import get_trace_id
+from flowforge.core.tracing import get_trace_id, get_logger
+
+logger = get_logger("api.system")
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -17,8 +19,8 @@ _psutil_available = False
 try:
     import psutil
     _psutil_available = True
-except ImportError:
-    pass
+except ImportError as e:
+    logger.debug(f"Optional dependency not available: {e}")
 
 
 def _make_response(data: dict) -> dict:
@@ -75,8 +77,9 @@ async def list_agents():
                 "mode": getattr(agent, "default_mode", None),
             })
         return {"agents": result}
-    except Exception:
-        return {"agents": []}
+    except Exception as e:
+        logger.warning(f"Failed to list agents: {e}")
+        return {"agents": [], "error": "agent_registry not available"}
 
 
 @router.get("/modes")
@@ -94,8 +97,9 @@ async def list_modes():
                 "enabled": True,
             })
         return {"modes": result}
-    except Exception:
-        return {"modes": []}
+    except Exception as e:
+        logger.warning(f"Failed to list modes: {e}")
+        return {"modes": [], "error": "mode_registry not available"}
 
 
 @router.get("/tools")
@@ -114,8 +118,9 @@ async def list_tools():
                 "category": getattr(tool, "category", None),
             })
         return {"tools": result}
-    except Exception:
-        return {"tools": []}
+    except Exception as e:
+        logger.warning(f"Failed to list tools: {e}")
+        return {"tools": [], "error": "tool_registry not available"}
 
 
 @router.get("/memory")
@@ -128,8 +133,9 @@ async def list_memory():
             for name in executor.memory_manager.list_stores():
                 stores.append({"name": name, "description": "Memory store", "enabled": True, "type": "sqlite"})
         return {"memory": stores}
-    except Exception:
-        return {"memory": []}
+    except Exception as e:
+        logger.warning(f"Failed to list memory: {e}")
+        return {"memory": [], "error": "memory_manager not available"}
 
 
 def _load_workflow_steps_for_graph() -> list:
@@ -170,8 +176,8 @@ def _load_workflow_steps_for_graph() -> list:
                     "category": data.get("category", ""),
                     "steps": steps,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to load workflow {f.name}: {e}")
     return workflows
 
 
@@ -252,7 +258,7 @@ async def get_dependency_graph():
             if f"tool:{tool_name}" in node_ids and f"memory:{mem_name}" in node_ids:
                 add_edge(f"tool:{tool_name}", f"memory:{mem_name}", "uses")
 
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to build dependency graph: {e}")
 
     return _make_response({"nodes": nodes, "edges": edges})

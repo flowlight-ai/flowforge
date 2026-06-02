@@ -42,6 +42,8 @@ export default function TaskListPanel({
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameText, setRenameText] = useState("");
+  const [leftTab, setLeftTab] = useState<"tasks" | "files">("tasks");
+  const [workspaceFiles, setWorkspaceFiles] = useState<{name: string; path: string; size: number; modified: string}[]>([]);
 
   const refreshList = useCallback(() => {
     const brand = config.brandName.toLowerCase();
@@ -93,6 +95,15 @@ export default function TaskListPanel({
     const interval = setInterval(refreshList, 60_000);
     return () => clearInterval(interval);
   }, [refreshList]);
+
+  useEffect(() => {
+    if (leftTab === "files") {
+      fetch("/api/v1/workspace/files")
+        .then((r) => r.json())
+        .then((data) => setWorkspaceFiles(data.files || []))
+        .catch(() => setWorkspaceFiles([]));
+    }
+  }, [leftTab, taskId, refreshTrigger]);
 
   useEffect(() => {
     if (taskId && phase === "running") {
@@ -225,54 +236,82 @@ export default function TaskListPanel({
     <div className="solo-task-sidebar">
       <div className="sidebar-header">
         <span className="sidebar-logo" style={{ background: config.brandColor }}>{config.brandShort}</span>
-        <span className="sidebar-title">任务列表</span>
+        <span className="sidebar-title">{leftTab === "tasks" ? "任务列表" : "工作区文件"}</span>
       </div>
-      <div className="task-history-list">
-        {allTasks.length === 0 ? (
-          <div className="task-empty-hint">暂无任务</div>
-        ) : (
-          allTasks.map((item) => (
-            <div key={item.taskId} className={`task-history-item${item.taskId === taskId ? " active" : ""}`}
-              onClick={() => handleTaskClick(item)}
-            >
-              <div className="task-history-row">
-                <div className="task-history-content">
-                  {renaming === item.taskId ? (
-                    <input className="task-rename-input" value={renameText}
-                      onChange={(e) => setRenameText(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleRename(item.taskId); if (e.key === "Escape") setRenaming(null); }}
-                      onBlur={() => handleRename(item.taskId)}
-                      autoFocus onClick={(e) => e.stopPropagation()} />
-                  ) : (
-                    <div className="task-history-intent">{item.intent.length > 40 ? item.intent.slice(0, 40) + "..." : item.intent}</div>
+      <div className="solo-left-tabs">
+        <button className={`solo-left-tab${leftTab === "tasks" ? " active" : ""}`} onClick={() => setLeftTab("tasks")}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" /></svg>
+          任务
+        </button>
+        <button className={`solo-left-tab${leftTab === "files" ? " active" : ""}`} onClick={() => setLeftTab("files")}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+          文件
+        </button>
+      </div>
+      {leftTab === "tasks" ? (
+        <>
+          <div className="task-history-list">
+            {allTasks.length === 0 ? (
+              <div className="task-empty-hint">暂无任务</div>
+            ) : (
+              allTasks.map((item) => (
+                <div key={item.taskId} className={`task-history-item${item.taskId === taskId ? " active" : ""}`}
+                  onClick={() => handleTaskClick(item)}
+                >
+                  <div className="task-history-row">
+                    <div className="task-history-content">
+                      {renaming === item.taskId ? (
+                        <input className="task-rename-input" value={renameText}
+                          onChange={(e) => setRenameText(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleRename(item.taskId); if (e.key === "Escape") setRenaming(null); }}
+                          onBlur={() => handleRename(item.taskId)}
+                          autoFocus onClick={(e) => e.stopPropagation()} />
+                      ) : (
+                        <div className="task-history-intent">{item.intent.length > 40 ? item.intent.slice(0, 40) + "..." : item.intent}</div>
+                      )}
+                    </div>
+                    <div className="task-history-menu-trigger" onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === item.taskId ? null : item.taskId); }}>
+                      ⋯
+                    </div>
+                  </div>
+                  <div className="task-history-meta">
+                    {statusIcon(item.phase)}
+                    <span>{phaseLabel[item.phase]}</span>
+                    <span>{new Date(item.timestamp).toLocaleDateString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                  {menuOpen === item.taskId && (
+                    <div className="task-context-menu" onClick={(e) => e.stopPropagation()}>
+                      <button className="task-context-menu-item" onClick={() => { setRenaming(item.taskId); setRenameText(item.intent); setMenuOpen(null); }}>
+                        ✏️ 重命名
+                      </button>
+                      <button className="task-context-menu-item task-context-menu-danger" onClick={() => handleDelete(item.taskId)}>
+                        🗑️ 删除
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className="task-history-menu-trigger" onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === item.taskId ? null : item.taskId); }}>
-                  ⋯
-                </div>
+              ))
+            )}
+          </div>
+          <div className="sidebar-footer">
+            <button className="btn btn-ghost btn-sm btn-full" onClick={onNewTask}>+ 新任务</button>
+          </div>
+        </>
+      ) : (
+        <div className="solo-file-tree">
+          {workspaceFiles.length === 0 ? (
+            <div className="task-empty-hint">暂无工作区文件</div>
+          ) : (
+            workspaceFiles.map((f) => (
+              <div key={f.path} className="solo-file-tree-item" title={f.path}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" strokeWidth="2" strokeLinecap="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" /></svg>
+                <span className="solo-file-tree-name">{f.name}</span>
+                <span className="solo-file-tree-size">{f.size > 1024 ? `${(f.size / 1024).toFixed(1)}K` : `${f.size}B`}</span>
               </div>
-              <div className="task-history-meta">
-                {statusIcon(item.phase)}
-                <span>{phaseLabel[item.phase]}</span>
-                <span>{new Date(item.timestamp).toLocaleDateString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-              </div>
-              {menuOpen === item.taskId && (
-                <div className="task-context-menu" onClick={(e) => e.stopPropagation()}>
-                  <button className="task-context-menu-item" onClick={() => { setRenaming(item.taskId); setRenameText(item.intent); setMenuOpen(null); }}>
-                    ✏️ 重命名
-                  </button>
-                  <button className="task-context-menu-item task-context-menu-danger" onClick={() => handleDelete(item.taskId)}>
-                    🗑️ 删除
-                  </button>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-      <div className="sidebar-footer">
-        <button className="btn btn-ghost btn-sm btn-full" onClick={onNewTask}>+ 新任务</button>
-      </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

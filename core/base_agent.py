@@ -143,23 +143,31 @@ class BaseAgent(ABC):
         return AgentOutput(result=result, metadata=metadata, state_updates=state_updates)
 
     def validate_input(self, input: AgentInput) -> bool:
-        """Validate the input before execution.
-
-        Args:
-            input: The agent input to validate.
-
-        Returns:
-            True if the input is valid, False otherwise.
-        """
-        return True
+        if not isinstance(input.params, dict) or not input.params:
+            return False
+        has_valid_field = False
+        for key in ("task", "intent"):
+            value = input.params.get(key)
+            if isinstance(value, str) and value.strip():
+                has_valid_field = True
+                break
+        if not has_valid_field:
+            for value in input.params.values():
+                if isinstance(value, str) and value.strip():
+                    has_valid_field = True
+                    break
+        return has_valid_field
 
     def get_cost_estimate(self, input: AgentInput) -> Dict[str, Any]:
-        """Estimate the cost of executing this agent.
-
-        Args:
-            input: The agent input.
-
-        Returns:
-            A dict with 'estimated_tokens' and 'estimated_cost'.
-        """
-        return {"estimated_tokens": 0, "estimated_cost": 0.0}
+        import re
+        total_chars = 0
+        for value in input.params.values():
+            if isinstance(value, str):
+                total_chars += len(value)
+            elif isinstance(value, dict):
+                total_chars += len(str(value))
+        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', str(input.params)))
+        english_words = len(re.findall(r'[a-zA-Z]+', str(input.params)))
+        estimated_tokens = int(chinese_chars / 2 + english_words)
+        estimated_cost = round(estimated_tokens * 0.002 / 1000, 6)
+        return {"estimated_tokens": estimated_tokens, "estimated_cost": estimated_cost}

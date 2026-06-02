@@ -1,9 +1,15 @@
+import asyncio
 import json
 import re
 from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("content_repurposer_agent")
+
+_TOOL_TIMEOUT = 300
 
 
 class ContentRepurposerAgent(BaseAgent):
@@ -27,7 +33,8 @@ class ContentRepurposerAgent(BaseAgent):
                 ctx.agents = executor.agent_registry
                 ctx.event_bus = executor.event_bus
                 ctx.executor = executor
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get executor: {e}", task_id=ctx.task_id)
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
@@ -35,7 +42,6 @@ class ContentRepurposerAgent(BaseAgent):
         draft_val = input.params.get("draft", "")
         draft = draft_val if isinstance(draft_val, str) else (draft_val.get("draft", str(draft_val)) if isinstance(draft_val, dict) else str(draft_val))
         target_platforms = input.params.get("platforms", ["wechat", "toutiao", "xiaohongshu"])
-        llm = context.tools.get_tool("llm")
         variants: dict = {}
 
         # Step 1: analyze_content — 分析原文特征
@@ -45,17 +51,22 @@ class ContentRepurposerAgent(BaseAgent):
         analyze_prompt = get_prompt("agent.repurposer_analyze", draft=draft[:2000])
         analysis = {}
         try:
-            result = await llm.execute(ToolInput(params={
-                "messages": [{"role": "user", "content": analyze_prompt}],
-                "stream": True, "task_id": context.task_id,
-                "agent_name": self.name, "persona": context.persona or "default",
-            }))
+            result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [{"role": "user", "content": analyze_prompt}],
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": context.persona or "default",
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
             content = result.result.get("content", "{}")
             match = re.search(r'\{.*\}', content, re.DOTALL)
             if match:
                 analysis = json.loads(match.group())
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Content analyze timed out", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"Content analyze failed: {e}", task_id=context.task_id)
         context.event_bus.emit(context.task_id, "content_repurposer.analyze_content_complete", {
             "core_message": analysis.get("core_message", "")[:100],
             "key_points_count": len(analysis.get("key_points", [])),
@@ -77,14 +88,21 @@ class ContentRepurposerAgent(BaseAgent):
             key_points_text = "、".join(analysis.get("key_points", [])) if analysis.get("key_points") else "原文核心信息"
             prompt = get_prompt("agent.repurposer_rewrite", spec=spec, core_message=analysis.get('core_message', ''), key_points=key_points_text, tone=analysis.get('tone', '中性'), draft=draft[:1500])
             try:
-                result = await llm.execute(ToolInput(params={
-                    "messages": [{"role": "system", "content": prompt}, {"role": "user", "content": f"请改写为{platform}版本"}],
-                    "max_tokens": 1500,
-                    "stream": True, "task_id": context.task_id,
-                    "agent_name": self.name, "persona": context.persona or "default",
-                }))
+                result = await asyncio.wait_for(
+                    context.tools.execute("llm", ToolInput(params={
+                        "messages": [{"role": "system", "content": prompt}, {"role": "user", "content": f"请改写为{platform}版本"}],
+                        "max_tokens": 1500,
+                        "stream": False, "task_id": context.task_id,
+                        "agent_name": self.name, "persona": context.persona or "default",
+                    })),
+                    timeout=_TOOL_TIMEOUT,
+                )
                 variants[platform] = result.result.get("content", "")
-            except Exception:
+            except asyncio.TimeoutError:
+                logger.warning(f"Repurpose for {platform} timed out", task_id=context.task_id)
+                variants[platform] = ""
+            except Exception as e:
+                logger.warning(f"Repurpose for {platform} failed: {e}", task_id=context.task_id)
                 variants[platform] = ""
         context.event_bus.emit(context.task_id, "content_repurposer.generate_variants_complete", {
             "platforms_completed": [p for p in target_platforms if variants.get(p)],

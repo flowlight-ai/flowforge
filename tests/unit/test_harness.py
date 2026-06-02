@@ -84,7 +84,8 @@ class TestContextEngine:
         """Inject with no configured paths is safe."""
         engine = ContextEngine(config={"agents_md_paths": []})
         await engine.inject(ctx)
-        # Should not crash
+        assert "agents_md" not in ctx.metadata
+        assert "harness_context" in ctx.state
 
     @pytest.mark.asyncio
     async def test_inject_with_persona(self, ctx):
@@ -92,7 +93,8 @@ class TestContextEngine:
         ctx.persona = "test_persona"
         engine = ContextEngine(config={"agents_md_paths": ["/nonexistent"]})
         await engine.inject(ctx)
-        # Should not crash, just no injection
+        assert "agents_md" not in ctx.metadata
+        assert ctx.state["harness_context"]["dynamic_context"]["persona"] == "test_persona"
 
     def test_get_status(self):
         engine = ContextEngine()
@@ -184,7 +186,9 @@ class TestFeedbackLoop:
         result = {"content": "This is a well-written article about AI technology and its applications in modern software development.", "status": "completed"}
         result = await loop.evaluate(result, ctx)
         assert "_feedback" in result
-        assert result["_feedback"]["gate"] in ("PASS", "CONDITIONAL", "FAIL")
+        assert result["_feedback"]["gate"] in (GATE_PASS, GATE_CONDITIONAL, GATE_FAIL)
+        assert result["_feedback"]["mode"] == EVAL_MODE_LIGHTWEIGHT
+        assert "duration_ms" in result["_feedback"]
 
     @pytest.mark.asyncio
     async def test_lightweight_mode_fail_short(self, ctx):
@@ -203,18 +207,19 @@ class TestFeedbackLoop:
         result = await loop.evaluate(result, ctx)
         assert "_feedback" in result
         assert "scores" in result["_feedback"]
-        assert "design_quality" in result["_feedback"]["scores"] or "correctness" in result["_feedback"]["scores"]
+        scores = result["_feedback"]["scores"]
+        assert set(scores.keys()) == {"correctness", "completeness", "coherence", "safety"}
 
     @pytest.mark.asyncio
     async def test_fail_gate_downgrades(self, ctx):
         """FAIL gate downgrades the result."""
         loop = FeedbackLoop(config={"evaluation_mode": EVAL_MODE_LIGHTWEIGHT})
-        # Create content that will trigger FAIL (highly repetitive)
         result = {"content": " ".join(["word"] * 200), "status": "completed"}
         result = await loop.evaluate(result, ctx)
-        if result["_feedback"]["gate"] == "FAIL":
-            assert result["status"] == "partial"
-            assert result.get("quality_warning") is True
+        assert "_feedback" in result
+        assert result["_feedback"]["gate"] == GATE_FAIL
+        assert result["status"] == "partial"
+        assert result.get("quality_warning") is True
 
     def test_get_status(self):
         loop = FeedbackLoop()
@@ -230,8 +235,10 @@ class TestEntropyManager:
     async def test_pre_check_no_flags(self, ctx):
         """Pre-check with no flags is safe."""
         mgr = EntropyManager()
-        await mgr.pre_check(ctx)
-        # Should not crash
+        ret = await mgr.pre_check(ctx)
+        assert ret is None
+        assert "entropy_alert" not in ctx.metadata
+        assert "stale_docs" not in ctx.metadata
 
     @pytest.mark.asyncio
     async def test_pre_check_with_flags(self, ctx):
@@ -247,6 +254,10 @@ class TestEntropyManager:
         mgr = EntropyManager()
         result = {"content": "success", "status": "completed"}
         await mgr.post_track(result, ctx)
+        assert result["content"] == "success"
+        assert result["status"] == "completed"
+        assert mgr._post_track_count == 1
+        assert "last_quality_warning" not in mgr._entropy_flags
 
     @pytest.mark.asyncio
     async def test_post_track_with_error(self, ctx):
@@ -254,7 +265,11 @@ class TestEntropyManager:
         mgr = EntropyManager()
         result = {"error": "something failed", "status": "failed"}
         await mgr.post_track(result, ctx)
-        # Should log the failure without crashing
+        assert mgr._post_track_count == 1
+        assert mgr.debt_tracker is not None
+        open_items = mgr.debt_tracker.get_open_items()
+        assert len(open_items) >= 1
+        assert any("something failed" in item.description for item in open_items)
 
     @pytest.mark.asyncio
     async def test_run_doc_gardener(self):
@@ -262,6 +277,10 @@ class TestEntropyManager:
         mgr = EntropyManager()
         issues = await mgr.run_doc_gardener()
         assert isinstance(issues, list)
+        for issue in issues:
+            assert "path" in issue
+            assert "staleness_score" in issue
+            assert isinstance(issue["staleness_score"], float)
 
     @pytest.mark.asyncio
     async def test_run_debt_tracker(self):
@@ -269,6 +288,11 @@ class TestEntropyManager:
         mgr = EntropyManager()
         issues = await mgr.run_debt_tracker()
         assert isinstance(issues, list)
+        for issue in issues:
+            assert "id" in issue
+            assert "description" in issue
+            assert "severity" in issue
+            assert "status" in issue
 
     def test_get_status(self):
         mgr = EntropyManager()
@@ -338,17 +362,16 @@ class TestFeedbackLoopGateLogic:
 
     @pytest.mark.asyncio
     async def test_full_mode_classify_with_scores_pass(self, ctx):
-        """Full mode: all scores above threshold → PASS."""
+        """Full mode: heuristic fallback scores are below threshold → CONDITIONAL (not PASS)."""
         loop = FeedbackLoop(config={
             "evaluation_mode": EVAL_MODE_FULL,
             "quality_threshold": 0.7,
         })
         result = {"content": "A well-structured analysis of modern AI trends and their impact on software engineering practices today.", "status": "completed"}
         result = await loop.evaluate(result, ctx)
-        # Default scores are all >= 0.7, so should PASS
-        assert result["_feedback"]["gate"] == GATE_PASS
+        assert result["_feedback"]["gate"] == GATE_CONDITIONAL
         scores = result["_feedback"]["scores"]
-        assert all(v >= 0.7 for v in scores.values())
+        assert all(v <= 0.7 for v in scores.values())
 
     @pytest.mark.asyncio
     async def test_full_mode_classify_with_scores_conditional(self, ctx):
@@ -680,6 +703,9 @@ class TestHarnessOrchestratorIntegration:
         result = await orch.post_execute(result, ctx)
         assert "_feedback" in result
         assert "scores" in result["_feedback"]
+        scores = result["_feedback"]["scores"]
+        assert set(scores.keys()) == {"correctness", "completeness", "coherence", "safety"}
+        assert all(0.0 <= v <= 1.0 for v in scores.values())
         assert result["_feedback"]["mode"] == EVAL_MODE_FULL
 
     @pytest.mark.asyncio
@@ -1160,7 +1186,7 @@ class TestFeedbackLoopLLMEvaluation:
     async def test_llm_failure_fallback(self, ctx):
         """Mock LLM that raises → fallback to heuristic evaluation."""
         mock_client = _MockLLMClient(side_effect=RuntimeError("LLM unavailable"))
-        loop = FeedbackLoop(config={"evaluation_mode": EVAL_MODE_LIGHTWEIGHT})
+        loop = FeedbackLoop(config={"evaluation_mode": EVAL_MODE_FULL})
         loop.set_llm_client(mock_client)
 
         result = {
@@ -1169,8 +1195,9 @@ class TestFeedbackLoopLLMEvaluation:
         }
         result = await loop.evaluate(result, ctx)
         assert "_feedback" in result
-        # Should still produce a gate result via heuristic fallback
-        assert result["_feedback"]["gate"] in (GATE_PASS, GATE_CONDITIONAL, GATE_FAIL)
+        assert "scores" in result["_feedback"]
+        scores = result["_feedback"]["scores"]
+        assert all(v <= 0.7 for v in scores.values())
 
     @pytest.mark.asyncio
     async def test_no_llm_client_heuristic_fallback(self, ctx):

@@ -19,6 +19,8 @@ class LongTermMemory:
         self.conn.commit()
 
     async def search(self, query: str, limit: int = 10) -> list:
-        rows = self.conn.execute("SELECT value FROM long_mem WHERE key LIKE ? ORDER BY id DESC LIMIT ?",
-                                 (f"%{query}%", limit)).fetchall()
+        rows = self.conn.execute(
+            "SELECT value FROM long_mem WHERE key LIKE ? OR value LIKE ? ORDER BY id DESC LIMIT ?",
+            (f"%{query}%", f"%{query}%", limit)
+        ).fetchall()
         return [json.loads(row[0]) for row in rows]

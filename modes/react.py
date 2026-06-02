@@ -12,7 +12,7 @@ logger = get_logger("react_executor")
 class ReActExecutor(BaseModeExecutor):
     mode_name = "react"
     capabilities = ["reasoning", "retrieval", "acting"]
-    MAX_STEPS = 3
+    MAX_STEPS = 8
     LOOP_THRESHOLD = 2
     MAX_MESSAGE_CHARS = 1000
 
@@ -28,6 +28,7 @@ class ReActExecutor(BaseModeExecutor):
         observation = ""
         action = None
         step = 0
+        loop_detected = False
         for step in range(self.MAX_STEPS):
             if len(messages) > 10:
                 messages = [messages[0]] + messages[-8:]
@@ -46,6 +47,13 @@ class ReActExecutor(BaseModeExecutor):
                 break
 
             if self._is_loop(action_history, action):
+                loop_detected = True
+                ctx.event_bus.emit(ctx.task_id, "react.loop_detected", {
+                    "step": step + 1,
+                    "action": str(action)[:200],
+                    "history_length": len(action_history),
+                })
+                logger.info(f"ReAct loop detected at step {step + 1}", task_id=ctx.task_id)
                 break
 
             action_history.append(action)
@@ -60,11 +68,10 @@ class ReActExecutor(BaseModeExecutor):
             "content": final_answer, "is_partial": False, "agent_name": "react",
         })
 
-        return {"final_answer": final_answer, "steps": step + 1, "action_history": action_history}
+        return {"final_answer": final_answer, "steps": step + 1, "action_history": action_history, "loop_detected": loop_detected}
 
     async def _generate_thought(self, ctx, messages):
-        llm_tool = ctx.tools.get_tool("llm")
-        result = await llm_tool.execute(ToolInput(params={
+        result = await ctx.tools.execute("llm", ToolInput(params={
             "messages": messages,
             "stream": False, "task_id": ctx.task_id, "agent_name": "react_thinker",
             "persona": ctx.persona or "default",
@@ -88,6 +95,17 @@ class ReActExecutor(BaseModeExecutor):
                     return action
             except json.JSONDecodeError:
                 pass
+        # 尝试从文本中直接提取JSON动作
+        match = re.search(r'\{\s*"tool"\s*:\s*"([^"]+)"', thought)
+        if match:
+            try:
+                action_match = re.search(r'\{[^{}]*"tool"[^{}]*\}', thought)
+                if action_match:
+                    action = json.loads(action_match.group())
+                    if isinstance(action, dict) and action.get("tool"):
+                        return action
+            except json.JSONDecodeError:
+                pass
         return None
 
     def _is_loop(self, history, action):
@@ -105,8 +123,7 @@ class ReActExecutor(BaseModeExecutor):
             return action.get("params", {}).get("query", action.get("params", {}).get("task", str(action)))
         params = action.get("params", {})
         try:
-            tool = ctx.tools.get_tool(tool_name)
-            result = await tool.execute(ToolInput(params=params))
+            result = await ctx.tools.execute(tool_name, ToolInput(params=params))
             return json.dumps(result.result, ensure_ascii=False)[:2000]
         except Exception as e:
             logger.warning(f"ReAct action failed for tool {tool_name}: {e}")
