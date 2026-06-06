@@ -6,6 +6,13 @@ Implements FR-OBS-02: 5 core Prometheus metrics:
 3. flowforge_token_usage_total - Token usage counter
 4. flowforge_tool_calls_total - Tool call counter
 5. flowforge_persona_running - Currently running persona gauge
+
+ContentForge-specific business metrics:
+6. contentforge_article_quality_score - Article quality score gauge
+7. contentforge_publish_success_total - Publish success counter
+8. contentforge_publish_failure_total - Publish failure counter
+9. contentforge_persona_usage_total - Persona usage counter
+10. contentforge_topic_research_duration_seconds - Topic research duration histogram
 """
 
 import time
@@ -18,7 +25,8 @@ logger = get_logger("observability.metrics_collector")
 class MetricsCollector:
     """Prometheus-compatible metrics collector.
 
-    Collects and exposes 5 core metrics for FlowForge observability.
+    Collects and exposes 5 core metrics for FlowForge observability,
+    plus ContentForge-specific business metrics.
     Phase 1 uses in-memory collection; Phase 2 adds Prometheus export.
     """
 
@@ -30,6 +38,8 @@ class MetricsCollector:
         self._counters: Dict[str, float] = {}
         self._histograms: Dict[str, list] = {}
         self._gauges: Dict[str, float] = {}
+
+    # ── Core metric operations ──────────────────────────────────────
 
     def inc_counter(self, name: str, value: float = 1.0, labels: Optional[Dict[str, str]] = None):
         """Increment a counter metric."""
@@ -61,6 +71,76 @@ class MetricsCollector:
         label_str = ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
         return f"{name}{{{label_str}}}"
 
+    # ── ContentForge business metrics ───────────────────────────────
+
+    def record_article_quality(self, score: float, persona: str = "", task_id: str = ""):
+        """Record article quality score.
+
+        Args:
+            score: Quality score (0.0 - 1.0).
+            persona: The persona that produced the article.
+            task_id: Associated task ID.
+        """
+        labels = {}
+        if persona:
+            labels["persona"] = persona
+        if task_id:
+            labels["task_id"] = task_id
+        self.set_gauge("contentforge_article_quality_score", score, labels or None)
+        logger.debug(f"Article quality recorded: score={score}, persona={persona}")
+
+    def record_publish_result(self, success: bool, platform: str = "", persona: str = ""):
+        """Record a publish attempt result.
+
+        Args:
+            success: Whether the publish succeeded.
+            platform: Target platform (wechat, toutiao, etc.).
+            persona: The persona that authored the content.
+        """
+        labels = {}
+        if platform:
+            labels["platform"] = platform
+        if persona:
+            labels["persona"] = persona
+        metric_name = "contentforge_publish_success_total" if success else "contentforge_publish_failure_total"
+        self.inc_counter(metric_name, labels=labels or None)
+        logger.debug(f"Publish result recorded: success={success}, platform={platform}")
+
+    def get_publish_success_rate(self, platform: str = "", persona: str = "") -> float:
+        """Calculate publish success rate for given filters."""
+        success_key = self._make_key("contentforge_publish_success_total",
+                                     {"platform": platform, "persona": persona} if platform or persona else None)
+        failure_key = self._make_key("contentforge_publish_failure_total",
+                                     {"platform": platform, "persona": persona} if platform or persona else None)
+        success_count = self._counters.get(success_key, 0)
+        failure_count = self._counters.get(failure_key, 0)
+        total = success_count + failure_count
+        return success_count / total if total > 0 else 0.0
+
+    def record_persona_usage(self, persona: str):
+        """Record a persona usage event."""
+        self.inc_counter("contentforge_persona_usage_total", labels={"persona": persona})
+        logger.debug(f"Persona usage recorded: persona={persona}")
+
+    def record_topic_research_duration(self, duration_seconds: float, strategy: str = "", persona: str = ""):
+        """Record topic research duration.
+
+        Args:
+            duration_seconds: Time spent on topic research.
+            strategy: The topic strategy used (hot_trend, vertical_deep_dive, etc.).
+            persona: The persona context.
+        """
+        labels = {}
+        if strategy:
+            labels["strategy"] = strategy
+        if persona:
+            labels["persona"] = persona
+        self.observe_histogram("contentforge_topic_research_duration_seconds", duration_seconds,
+                               labels=labels or None)
+        logger.debug(f"Topic research duration recorded: {duration_seconds:.2f}s, strategy={strategy}")
+
+    # ── Export methods ───────────────────────────────────────────────
+
     def get_all_metrics(self) -> dict:
         """Get all collected metrics."""
         return {
@@ -71,6 +151,51 @@ class MetricsCollector:
                 for k, v in self._histograms.items()
             },
         }
+
+    def get_contentforge_metrics(self) -> dict:
+        """Get ContentForge-specific business metrics summary."""
+        quality_scores = {k: v for k, v in self._gauges.items()
+                         if k.startswith("contentforge_article_quality_score")}
+        publish_success = {k: v for k, v in self._counters.items()
+                          if k.startswith("contentforge_publish_success_total")}
+        publish_failure = {k: v for k, v in self._counters.items()
+                          if k.startswith("contentforge_publish_failure_total")}
+        persona_usage = {k: v for k, v in self._counters.items()
+                        if k.startswith("contentforge_persona_usage_total")}
+        topic_durations = {k: v for k, v in self._histograms.items()
+                          if k.startswith("contentforge_topic_research_duration_seconds")}
+
+        return {
+            "article_quality_scores": quality_scores,
+            "publish_success": publish_success,
+            "publish_failure": publish_failure,
+            "publish_success_rate": self._compute_publish_rates(),
+            "persona_usage_counts": persona_usage,
+            "topic_research_durations": {
+                k: {"count": len(v), "sum": sum(v), "avg": sum(v)/len(v) if v else 0}
+                for k, v in topic_durations.items()
+            },
+        }
+
+    def _compute_publish_rates(self) -> dict:
+        """Compute publish success rates per platform/persona combination."""
+        rates = {}
+        all_keys = set()
+        for k in self._counters:
+            if k.startswith("contentforge_publish_success_total") or \
+               k.startswith("contentforge_publish_failure_total"):
+                base = k.split("{")[0]
+                labels_part = k.split("{")[1].rstrip("}") if "{" in k else ""
+                all_keys.add(labels_part)
+
+        for label_str in all_keys:
+            s_key = f"contentforge_publish_success_total{{{label_str}}}" if label_str else "contentforge_publish_success_total"
+            f_key = f"contentforge_publish_failure_total{{{label_str}}}" if label_str else "contentforge_publish_failure_total"
+            s = self._counters.get(s_key, 0)
+            f = self._counters.get(f_key, 0)
+            total = s + f
+            rates[label_str or "overall"] = s / total if total > 0 else 0.0
+        return rates
 
     def get_prometheus_format(self) -> str:
         """Export metrics in Prometheus text format."""

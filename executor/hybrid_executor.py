@@ -156,13 +156,16 @@ class HybridExecutor:
 
         if mode_hint is None and context.mode is None:
             mode = self.mode_registry.suggest_mode(context.input_data.get("task", ""))
+            logger.info(f"[hybrid_executor] Mode auto-suggested: mode={mode}, task_id={context.task_id}")
         else:
             mode = mode_hint or context.mode
+            logger.info(f"[hybrid_executor] Mode selected: mode={mode} (hint={mode_hint}, ctx_mode={context.mode}), task_id={context.task_id}")
 
         if context.interaction_mode == "solo" and self._solo_adapter:
             self._solo_adapter.bridge()
 
         executor = self.mode_registry.get(mode)
+        logger.info(f"[hybrid_executor] Mode executor resolved: mode={mode}, executor={type(executor).__name__}, task_id={context.task_id}")
         context.tools = self.tool_registry
         context.agents = self.agent_registry
         context.executor = self
@@ -182,7 +185,7 @@ class HybridExecutor:
         try:
             self.event_bus.emit(context.task_id, "task.start", {"mode": mode})
             self.event_bus.emit(context.task_id, "mode.enter", {"mode": mode})
-            logger.info("Task started", task_id=context.task_id, mode=mode, persona=persona)
+            logger.info(f"[hybrid_executor] Mode execution started: mode={mode}, task_id={context.task_id}, persona={persona}")
 
             # v6.0 Harness pre_execute hook
             if self.harness and context.harness_enabled:
@@ -211,7 +214,7 @@ class HybridExecutor:
                 summary = str(result)[:200]
             self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
             self.event_bus.emit(context.task_id, "task.completed", {"status": "completed", "summary": summary})
-            logger.info("Task completed", task_id=context.task_id, mode=mode, persona=persona, duration=f"{duration:.2f}s")
+            logger.info(f"[hybrid_executor] Mode execution completed: mode={mode}, task_id={context.task_id}, persona={persona}, duration={duration:.2f}s")
             if not _is_substep:
                 ff_metrics.record_task_completed(mode, persona, duration)
                 ws = get_workspace_manager()
@@ -224,7 +227,7 @@ class HybridExecutor:
                 self.state_manager.update_state(context.task_id, state_update)
             return result
         except asyncio.TimeoutError:
-            logger.error("Task timed out", task_id=context.task_id, mode=mode, timeout=TASK_TIMEOUT_SECONDS)
+            logger.error(f"[hybrid_executor] Task timed out: mode={mode}, task_id={context.task_id}, timeout={TASK_TIMEOUT_SECONDS}s")
             self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
             self.event_bus.emit(context.task_id, "task.error", {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})
             if not _is_substep:
@@ -232,7 +235,7 @@ class HybridExecutor:
                 self.state_manager.update_state(context.task_id, {"status": "failed", "error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})
             return {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s", "response": "任务执行超时，请稍后重试"}
         except StepTimeoutError as e:
-            logger.error("Step timed out", task_id=context.task_id, mode=mode, error=str(e))
+            logger.error(f"[hybrid_executor] Step timed out: mode={mode}, task_id={context.task_id}, error={e}")
             self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
             self.event_bus.emit(context.task_id, "task.error", {"error": str(e)})
             if not _is_substep:
@@ -242,7 +245,7 @@ class HybridExecutor:
         except Exception as e:
             self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
             self.event_bus.emit(context.task_id, "task.error", {"error": str(e)})
-            logger.error("Task failed", task_id=context.task_id, mode=mode, persona=persona, error=str(e))
+            logger.error(f"[hybrid_executor] Task failed: mode={mode}, task_id={context.task_id}, persona={persona}, error={e}")
             if not _is_substep:
                 ff_metrics.record_task_failed(mode_hint or "auto", persona)
                 self.state_manager.update_state(context.task_id, {"status": "failed", "error": str(e)})

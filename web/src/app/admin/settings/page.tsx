@@ -41,7 +41,7 @@ interface MemoryRecord {
   created_at?: string;
 }
 
-type Tab = "workflows" | "agents" | "modes" | "tools" | "memory" | "prompts";
+type Tab = "workflows" | "agents" | "modes" | "tools" | "memory" | "prompts" | "terminal";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("workflows");
@@ -63,6 +63,10 @@ export default function SettingsPage() {
   const [memoryRecords, setMemoryRecords] = useState<MemoryRecord[]>([]);
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memoryFilter, setMemoryFilter] = useState("");
+
+  const [terminalHistory, setTerminalHistory] = useState<{cmd: string; output: string; timestamp: number}[]>([]);
+  const [terminalInput, setTerminalInput] = useState("");
+  const [terminalRunning, setTerminalRunning] = useState(false);
 
   const categoryLabel = (c: string) => {
     const map: Record<string, string> = { generic: "通用", content: "内容" };
@@ -149,6 +153,27 @@ export default function SettingsPage() {
     } catch {}
   }, []);
 
+  const handleTerminalCommand = useCallback(async () => {
+    if (!terminalInput.trim() || terminalRunning) return;
+    const cmd = terminalInput.trim();
+    setTerminalInput("");
+    setTerminalRunning(true);
+    const startTime = Date.now();
+    try {
+      const r = await fetch("/api/v1/system/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: cmd }),
+      });
+      const data = await r.json();
+      const output = data.output || data.error || "（无输出）";
+      setTerminalHistory(prev => [...prev, { cmd, output, timestamp: startTime }]);
+    } catch (e: any) {
+      setTerminalHistory(prev => [...prev, { cmd, output: `错误: ${e.message}`, timestamp: startTime }]);
+    }
+    setTerminalRunning(false);
+  }, [terminalInput, terminalRunning]);
+
   if (loading) return <div className="animate-rise"><div className="card"><div className="empty">加载中...</div></div></div>;
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
@@ -158,6 +183,7 @@ export default function SettingsPage() {
     { key: "tools", label: "工具", icon: "🔧" },
     { key: "memory", label: "记忆", icon: "🧠" },
     { key: "prompts", label: "提示词", icon: "💬" },
+    { key: "terminal", label: "终端", icon: "💻" },
   ];
 
   const PluginCard = ({ item, onToggle, onGraphClick, graphType }: { item: { name: string; description: string; enabled: boolean; [k: string]: any }; onToggle?: (name: string) => void; onGraphClick?: () => void; graphType?: string }) => (
@@ -381,6 +407,94 @@ export default function SettingsPage() {
                     ← 从左侧选择一个提示词模板进行编辑
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "terminal" && (
+          <div>
+            <div style={{ marginBottom: "12px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-strong)", margin: "0 0 4px" }}>终端命令</h3>
+              <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0 }}>在此执行系统命令，支持 shell 命令和 FlowForge 内置命令</p>
+            </div>
+            <div style={{
+              background: "#1e1e2e",
+              borderRadius: "8px",
+              padding: "16px",
+              fontFamily: "monospace",
+              fontSize: "13px",
+              color: "#cdd6f4",
+              minHeight: "400px",
+              display: "flex",
+              flexDirection: "column",
+            }}>
+              <div style={{
+                flex: 1,
+                maxHeight: "400px",
+                overflowY: "auto",
+                marginBottom: "12px",
+              }}>
+                {terminalHistory.length === 0 && (
+                  <div style={{ color: "#585b70", fontStyle: "italic" }}>等待命令输入...</div>
+                )}
+                {terminalHistory.map((entry, idx) => (
+                  <div key={idx} style={{ marginBottom: "12px" }}>
+                    <div style={{ color: "#a6e3a1" }}>$ {entry.cmd}</div>
+                    <pre style={{
+                      color: entry.output.startsWith("错误") ? "#f38ba8" : "#cdd6f4",
+                      margin: "4px 0 0",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-all",
+                      fontSize: "12px",
+                      lineHeight: 1.5,
+                    }}>{entry.output}</pre>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                borderTop: "1px solid #313244",
+                paddingTop: "12px",
+              }}>
+                <span style={{ color: "#a6e3a1", fontFamily: "monospace", fontSize: "14px", fontWeight: 700 }}>$</span>
+                <input
+                  value={terminalInput}
+                  onChange={(e) => setTerminalInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleTerminalCommand(); }}
+                  placeholder="输入命令..."
+                  disabled={terminalRunning}
+                  style={{
+                    flex: 1,
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: "#cdd6f4",
+                    fontFamily: "monospace",
+                    fontSize: "13px",
+                    caretColor: "#a6e3a1",
+                  }}
+                />
+                <button
+                  onClick={handleTerminalCommand}
+                  disabled={terminalRunning || !terminalInput.trim()}
+                  style={{
+                    padding: "4px 14px",
+                    borderRadius: "6px",
+                    border: "1px solid #a6e3a1",
+                    background: "rgba(166,227,161,0.1)",
+                    color: "#a6e3a1",
+                    cursor: terminalRunning || !terminalInput.trim() ? "not-allowed" : "pointer",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    opacity: terminalRunning || !terminalInput.trim() ? 0.5 : 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {terminalRunning ? "⏳ 执行中" : "▶ 执行"}
+                </button>
               </div>
             </div>
           </div>

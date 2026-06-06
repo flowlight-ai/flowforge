@@ -9,7 +9,8 @@ import WorkflowSelector from "./WorkflowSelector";
 
 export default function ChatInput({
   phase, onSubmit, onReview, onCommand, onStop,
-  interactionMode, onInteractionModeChange, selectedWorkflow, onWorkflowChange,
+  interactionMode, onInteractionModeChange, selectedModel, onModelChange,
+  selectedWorkflow, onWorkflowChange,
 }: {
   phase: SoloTaskPhase;
   onSubmit: (text: string, persona?: string, model?: string) => void;
@@ -18,6 +19,8 @@ export default function ChatInput({
   onStop: () => void;
   interactionMode: "normal" | "solo" | "auto";
   onInteractionModeChange: (mode: "normal" | "solo" | "auto") => void;
+  selectedModel?: string;
+  onModelChange?: (model: string) => void;
   selectedWorkflow: string | null;
   onWorkflowChange: (wf: string | null) => void;
 }) {
@@ -27,9 +30,7 @@ export default function ChatInput({
   const [commandFilter, setCommandFilter] = useState("");
   const [activeCmdIndex, setActiveCmdIndex] = useState(0);
   const [models, setModels] = useState<any[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("auto");
   const [showModelDropdown, setShowModelDropdown] = useState(false);
-  const [updatingModels, setUpdatingModels] = useState(false);
   const modelsFetchedRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const config = useShellConfig();
@@ -38,7 +39,7 @@ export default function ChatInput({
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = "auto";
-    textarea.style.height = Math.min(Math.max(textarea.scrollHeight, 40), 140) + "px";
+    textarea.style.height = Math.min(Math.max(textarea.scrollHeight, 76), 180) + "px";
   }, []);
 
   useEffect(() => {
@@ -59,17 +60,6 @@ export default function ChatInput({
   }, []);
 
   useEffect(() => { fetchAvailableModels(); }, [fetchAvailableModels]);
-
-  const handleForceUpdate = useCallback(async () => {
-    setUpdatingModels(true);
-    modelsFetchedRef.current = false;
-    try {
-      await fetch("/api/v1/admin/models/force-update", { method: "POST" });
-      modelsFetchedRef.current = false;
-      fetchAvailableModels();
-    } catch {}
-    setUpdatingModels(false);
-  }, [fetchAvailableModels]);
 
   const isIdle = phase === "idle" || phase === "completed" || phase === "error" || phase === "rejected" || phase === "interrupted";
   const isWaitingReview = phase === "waiting_review";
@@ -124,17 +114,11 @@ export default function ChatInput({
           </div>
         </div>
       )}
-      <div className="chat-input-mode-indicator">
-        <span className={`chat-input-mode-dot ${interactionMode}`} />
-        <span className="chat-input-mode-label">
-          {interactionMode === "normal" ? "普通模式" : interactionMode === "auto" ? "全自动模式" : "Solo 模式"}
-        </span>
-        {isRunning && <span className="chat-input-running-badge">执行中</span>}
-      </div>
       <div className="chat-input-top">
+        <span className="chat-input-brand">{config.brandName} Agent</span>
         <div className="chat-input-wrapper">
           <textarea
-            ref={textareaRef} className="chat-input-textarea" rows={1}
+            ref={textareaRef} className="chat-input-textarea" rows={3}
             value={text} onChange={handleTextChange} onInput={resizeTextarea} onKeyDown={handleKeyDown}
             placeholder={isDisabled ? "请稍候..." : isWaitingReview ? "等待审核..." : isIdle ? "与 Solo 对话，Shift+Enter 换行，输入 '/' 获取更多能力" : "输入补充指令..."}
             disabled={isDisabled || isWaitingReview}
@@ -143,14 +127,6 @@ export default function ChatInput({
         </div>
       </div>
       <div className="chat-input-bottom">
-        <div className="chat-input-quick-actions">
-          <button className="chat-quick-btn" onClick={() => setText("")} disabled={!text} title="清空输入">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14" /></svg>
-          </button>
-          <button className="chat-quick-btn" onClick={() => { const v = text.trim(); if (v.startsWith("/")) { onCommand(v.split(" ")[0]); setText(""); } }} disabled={!text.trim().startsWith("/")} title="执行命令">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
-          </button>
-        </div>
         <div className="chat-mode-switch">
           <button className={`chat-mode-btn${interactionMode === "normal" ? " active" : ""}`} onClick={() => onInteractionModeChange("normal")} title="普通模式：选择工作流执行">普通</button>
           <button className={`chat-mode-btn${interactionMode === "solo" ? " active" : ""}`} onClick={() => onInteractionModeChange("solo")} title="Solo 模式：AI 规划，用户审批">Solo</button>
@@ -160,13 +136,13 @@ export default function ChatInput({
           <WorkflowSelector selected={selectedWorkflow} onChange={onWorkflowChange} />
         )}
         <div className="chat-model-select">
-          <button className="chat-model-btn" onClick={() => setShowModelDropdown(!showModelDropdown)}>
-            🤖 {selectedModel === "auto" ? "自动" : selectedModel}
+          <button className="chat-model-btn" onClick={() => setShowModelDropdown(!showModelDropdown)} title={selectedModel === "auto" ? "自动选择模型" : selectedModel || "选择模型"}>
+            🤖 {selectedModel === "auto" ? "自动" : selectedModel && selectedModel.length > 18 ? selectedModel.slice(0, 18) + "…" : selectedModel}
           </button>
           {showModelDropdown && (
             <div className="chat-model-dropdown">
               <button className={`chat-model-option${selectedModel === "auto" ? " active" : ""}`}
-                onClick={() => { setSelectedModel("auto"); setShowModelDropdown(false); }}>
+                onClick={() => { onModelChange?.("auto"); setShowModelDropdown(false); }}>
                 <span className="chat-model-option-name">⚡ 自动选择</span>
                 <span className="chat-model-option-desc">自动使用最优模型</span>
               </button>
@@ -185,7 +161,7 @@ export default function ChatInput({
                     <div className="chat-model-group-label">{provider}</div>
                     {providerModels.map((m) => (
                       <button key={m.model_id || m.id || m.name} className={`chat-model-option${selectedModel === (m.model_id || m.id || m.name) ? " active" : ""}`}
-                        onClick={() => { setSelectedModel(m.model_id || m.id || m.name); setShowModelDropdown(false); }}>
+                        onClick={() => { onModelChange?.(m.model_id || m.id || m.name); setShowModelDropdown(false); }}>
                         <span className="chat-model-option-name">{m.display_name || m.name || m.model_id}</span>
                         <span className="chat-model-option-status" />
                       </button>
@@ -197,9 +173,6 @@ export default function ChatInput({
           )}
         </div>
         <div className="chat-input-actions">
-          <button className="chat-update-models-btn" onClick={handleForceUpdate} disabled={updatingModels} title="强制更新模型状态和 fallback 链">
-            {updatingModels ? "⏳" : "🔄"}
-          </button>
           {isSending ? (
             <button className="chat-stop-btn" onClick={onStop} title="停止执行">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="1" width="12" height="12" rx="2" /></svg>

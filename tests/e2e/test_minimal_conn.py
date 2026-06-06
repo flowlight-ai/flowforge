@@ -1,7 +1,7 @@
 import os
 import httpx
 
-BASE_URL = os.environ.get("FLOWFORGE_BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.environ.get("FLOWFORGE_BASE_URL", "http://127.0.0.1:8002")
 
 
 class TestAPIValidation:

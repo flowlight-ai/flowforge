@@ -10,7 +10,7 @@ plugins:
   - name: opensieve_search
     transport: local
     entry_point: flowforge.tools.opensieve_client:OpenSieveClient
-    description: "OpenSieve RAG 检索服务"
+    description: "HelixRAG/OpenSieve RAG 检索服务（搜索回退链首选）"
     tags: [search, retrieval]
     config:
       endpoint: "${OPENSIEVE_ENDPOINT:http://localhost:8100/api/v1/retrieve}"
@@ -29,15 +29,12 @@ plugins:
   - name: web_search
     transport: local
     entry_point: flowforge.tools.web_search:WebSearchTool
-    description: "网络搜索聚合工具"
+    description: "网络搜索聚合工具：HelixRAG→DuckDuckGo→LLM联网搜索回退链"
     tags: [search]
     depends_on: [opensieve_search]
     config:
-      primary: opensieve_search
-      fallback: tavily_search
       fallback_chain:
         - opensieve_search
-        - tavily_search
         - duckduckgo_search
     parameters_schema:
       type: object

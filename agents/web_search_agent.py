@@ -11,10 +11,28 @@ logger = get_logger("web_search_agent")
 
 _TOOL_TIMEOUT = 300
 
+_LLM_WEB_SEARCH_PROMPT = (
+    "你是一个专业的内容研究助手，具备联网搜索能力。请针对以下主题进行深度研究和素材搜集。\n\n"
+    "主题：{topic}\n\n"
+    "要求：\n"
+    "1. 从多个角度搜索该主题的最新信息、数据、观点\n"
+    "2. 搜集可用于文章创作的素材：关键数据、权威观点、典型案例、最新动态\n"
+    "3. 每个信息点包含：标题、详细摘要、信息来源\n"
+    "4. 优先提供近期（最近3个月）的信息\n"
+    "5. 如果无法获取实时信息，请基于你的知识提供最相关的信息并明确标注\n"
+    "6. 严格输出JSON格式: {{\"results\": [{{\"title\": \"信息标题\", \"url\": \"来源URL（如有）\", "
+    "\"snippet\": \"详细摘要内容\", \"source_type\": \"llm_web_search\"}}]}}"
+)
+
+_LLM_WEB_SEARCH_SYSTEM = (
+    "你具备联网搜索能力，请务必利用联网功能搜索真实、最新的信息，不要编造内容。"
+    "直接输出JSON，不要添加markdown代码块标记。"
+)
+
 
 class WebSearchAgent(BaseAgent):
     name = "web_search_agent"
-    description = "网络搜索 Agent：使用 web_search 工具检索互联网信息，返回结构化结果"
+    description = "网络搜索 Agent：web_search(HelixRAG→爬虫→LLM联网)→LLM联网回退链"
     default_mode = "react"
 
     async def execute(self, input: AgentInput) -> AgentOutput:
@@ -77,60 +95,14 @@ class WebSearchAgent(BaseAgent):
             "optimized_queries_count": len(optimized_queries),
         })
 
-        # Step 2: execute_search — 执行搜索
+        # Step 2: execute_search — 按回退链执行搜索
         context.event_bus.emit(context.task_id, "web_search_agent.execute_search_start", {
             "queries_to_execute": optimized_queries,
         })
         all_results: list[dict] = []
         for q in optimized_queries:
-            try:
-                result = await asyncio.wait_for(
-                    context.tools.execute("web_search",
-                        ToolInput(params={"query": q, "max_results": max_results})
-                    ),
-                    timeout=_TOOL_TIMEOUT,
-                )
-                for item in result.result.get("results", []):
-                    all_results.append({
-                        "title": item.get("title", ""),
-                        "url": item.get("url", ""),
-                        "snippet": item.get("content", item.get("snippet", "")),
-                        "query": q,
-                    })
-            except asyncio.TimeoutError:
-                logger.warning(f"Web search for '{q}' timed out", task_id=context.task_id)
-            except Exception as e:
-                logger.warning(f"Web search for '{q}' failed: {e}", task_id=context.task_id)
-                try:
-                    fallback_prompt = (
-                        f"关于「{q}」，请提供3条关键信息，包含标题和摘要。"
-                        f"严格输出JSON: {{\"results\": [{{\"title\": \"...\", \"snippet\": \"...\"}}]}}"
-                    )
-                    llm_result = await asyncio.wait_for(
-                        context.tools.execute("llm", ToolInput(params={
-                            "messages": [{"role": "user", "content": fallback_prompt}],
-                            "stream": False, "task_id": context.task_id,
-                            "agent_name": self.name, "persona": context.persona or "default",
-                        })),
-                        timeout=_TOOL_TIMEOUT,
-                    )
-                    content = llm_result.result.get("content", "{}")
-                    match = re.search(r'\{.*\}', content, re.DOTALL)
-                    if match:
-                        data = json.loads(match.group())
-                        for r in data.get("results", []):
-                            all_results.append({
-                                "title": r.get("title", ""),
-                                "url": "",
-                                "snippet": r.get("snippet", ""),
-                                "query": q,
-                                "source_type": "llm_generated",
-                                "disclaimer": "此内容由LLM生成，非真实搜索结果",
-                            })
-                except asyncio.TimeoutError:
-                    logger.warning(f"LLM fallback for '{q}' timed out", task_id=context.task_id)
-                except Exception as e:
-                    logger.warning(f"LLM fallback for '{q}' failed: {e}", task_id=context.task_id)
+            search_result = await self._search_with_fallback(context, q, max_results)
+            all_results.extend(search_result)
         context.event_bus.emit(context.task_id, "web_search_agent.execute_search_complete", {
             "results_count": len(all_results),
         })
@@ -173,3 +145,64 @@ class WebSearchAgent(BaseAgent):
             "results_count": len(all_results),
         })
         return AgentOutput(result={"results": all_results})
+
+    async def _search_with_fallback(self, context: TaskContext, query: str, max_results: int) -> list[dict]:
+        # Primary: web_search tool (含完整3级回退链：HelixRAG→DuckDuckGo/Tavily→LLM WebChat)
+        try:
+            result = await asyncio.wait_for(
+                context.tools.execute("web_search", ToolInput(params={"query": query, "max_results": max_results})),
+                timeout=_TOOL_TIMEOUT,
+            )
+            items = result.result.get("results", [])
+            if items:
+                source = result.result.get("source", "web_search")
+                logger.info(f"web_search tool succeeded for '{query[:30]}' (source={source})", task_id=context.task_id)
+                return [{
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "snippet": item.get("content", item.get("snippet", "")),
+                    "query": query,
+                    "source": source,
+                } for item in items]
+        except asyncio.TimeoutError:
+            logger.warning(f"web_search tool timed out for '{query[:30]}'", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"web_search tool failed for '{query[:30]}': {e}", task_id=context.task_id)
+
+        # Safety net: LLM WebChat 联网搜索（直接调用，绕过web_search工具）
+        logger.info(f"Falling back to direct LLM WebChat search for '{query[:30]}'", task_id=context.task_id)
+        try:
+            search_prompt = _LLM_WEB_SEARCH_PROMPT.format(topic=query)
+            llm_result = await asyncio.wait_for(
+                context.tools.execute("llm", ToolInput(params={
+                    "messages": [
+                        {"role": "system", "content": _LLM_WEB_SEARCH_SYSTEM},
+                        {"role": "user", "content": search_prompt},
+                    ],
+                    "stream": False, "task_id": context.task_id,
+                    "agent_name": self.name, "persona": context.persona or "default",
+                    "model": "web/chat",
+                })),
+                timeout=_TOOL_TIMEOUT,
+            )
+            content = llm_result.result.get("content", "{}")
+            match = re.search(r'\{.*\}', content, re.DOTALL)
+            if match:
+                data = json.loads(match.group())
+                results = []
+                for r in data.get("results", []):
+                    results.append({
+                        "title": r.get("title", ""),
+                        "url": r.get("url", ""),
+                        "snippet": r.get("snippet", r.get("content", "")),
+                        "query": query,
+                        "source_type": "llm_web_search",
+                    })
+                if results:
+                    return results
+        except asyncio.TimeoutError:
+            logger.warning(f"LLM WebChat search timed out for '{query[:30]}'", task_id=context.task_id)
+        except Exception as e:
+            logger.warning(f"LLM WebChat search failed for '{query[:30]}': {e}", task_id=context.task_id)
+
+        return []

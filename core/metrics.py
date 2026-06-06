@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import time
 from typing import Dict, List, Optional
 from flowforge.core.tracing import get_logger
 
@@ -246,3 +249,114 @@ else:
             "task_stats": get_task_stats(),
             "llm_token_stats": get_llm_token_stats(),
         }
+
+
+# ---------------------------------------------------------------------------
+# MetricsCollector — 单任务指标采集器
+# ---------------------------------------------------------------------------
+
+_metrics_collectors: Dict[str, MetricsCollector] = {}
+
+
+class MetricsCollector:
+    """采集单个任务执行过程中的各项指标。"""
+
+    def __init__(self, task_id: str) -> None:
+        self.task_id: str = task_id
+        self.start_time: float = time.time()
+        self.end_time: float = 0.0
+        self.llm_calls: int = 0
+        self.tool_calls: int = 0
+        self.tokens_in: int = 0
+        self.tokens_out: int = 0
+        self.cost: float = 0.0
+        self.steps_total: int = 0
+        self.steps_completed: int = 0
+        self.errors: List[str] = []
+
+    # -- 记录方法 ----------------------------------------------------------
+
+    def record_llm_call(self, tokens_in: int, tokens_out: int, cost: float) -> None:
+        """记录一次 LLM 调用。"""
+        self.llm_calls += 1
+        self.tokens_in += tokens_in
+        self.tokens_out += tokens_out
+        self.cost += cost
+        logger.debug(
+            f"MetricsCollector[{self.task_id}] llm_call: "
+            f"tokens_in={tokens_in}, tokens_out={tokens_out}, cost={cost:.6f}"
+        )
+
+    def record_tool_call(self, tool_name: str, success: bool) -> None:
+        """记录一次工具调用。"""
+        self.tool_calls += 1
+        status = "success" if success else "error"
+        logger.debug(
+            f"MetricsCollector[{self.task_id}] tool_call: "
+            f"tool={tool_name}, status={status}"
+        )
+
+    def record_error(self, error_msg: str) -> None:
+        """记录一条错误信息。"""
+        self.errors.append(error_msg)
+        logger.debug(f"MetricsCollector[{self.task_id}] error: {error_msg}")
+
+    # -- 汇总方法 ----------------------------------------------------------
+
+    def get_summary(self) -> Dict[str, object]:
+        """返回指标汇总字典，同时将 end_time 设为当前时间。"""
+        end = self.end_time if self.end_time > 0 else time.time()
+        duration = end - self.start_time
+        return {
+            "task_id": self.task_id,
+            "duration": round(duration, 3),
+            "llm_calls": self.llm_calls,
+            "tool_calls": self.tool_calls,
+            "tokens_in": self.tokens_in,
+            "tokens_out": self.tokens_out,
+            "cost": round(self.cost, 6),
+            "steps_total": self.steps_total,
+            "steps_completed": self.steps_completed,
+            "steps_failed": self.steps_total - self.steps_completed,
+            "error_count": len(self.errors),
+            "errors": list(self.errors),
+        }
+
+    def to_dict(self) -> Dict[str, object]:
+        """将完整指标序列化为字典。"""
+        return {
+            "task_id": self.task_id,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "llm_calls": self.llm_calls,
+            "tool_calls": self.tool_calls,
+            "tokens_in": self.tokens_in,
+            "tokens_out": self.tokens_out,
+            "cost": self.cost,
+            "steps_total": self.steps_total,
+            "steps_completed": self.steps_completed,
+            "errors": list(self.errors),
+        }
+
+    def finish(self) -> None:
+        """标记任务结束，记录结束时间。"""
+        self.end_time = time.time()
+
+
+# -- 全局函数 ---------------------------------------------------------------
+
+
+def get_metrics_collector(task_id: str) -> MetricsCollector:
+    """获取或创建指定任务的指标采集器。"""
+    if task_id not in _metrics_collectors:
+        collector = MetricsCollector(task_id)
+        _metrics_collectors[task_id] = collector
+        logger.debug(f"MetricsCollector created for task: {task_id}")
+    return _metrics_collectors[task_id]
+
+
+def reset_metrics(task_id: str) -> None:
+    """重置指定任务的指标采集器。"""
+    if task_id in _metrics_collectors:
+        del _metrics_collectors[task_id]
+        logger.debug(f"MetricsCollector reset for task: {task_id}")

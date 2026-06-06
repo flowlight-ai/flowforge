@@ -136,6 +136,18 @@ class ToolRegistry:
             await self._emit_callback("tool.end", {"tool_name": name, "result": result.result, "duration_ms": int((time.time()-start)*1000)})
         return result
 
+    def unregister(self, name: str) -> None:
+        """Remove a registered tool by name.
+
+        Raises:
+            KeyError: If the tool name is not registered.
+        """
+        if name in self._tools:
+            del self._tools[name]
+            logger.info(f"Unregistered tool: {name}")
+        else:
+            raise KeyError(f"Tool '{name}' not registered")
+
     def list_tools(self) -> list:
         """List all available tool names from both registries."""
         names = set(self._tools.keys())

@@ -1,149 +1,209 @@
-"""Web Search Aggregation Tool — delegates to search plugins via PluginRegistry.
-
-Refactored to use PluginRegistry for delegate calls instead of directly
-importing HelixRAGClient. Accepts plugin_registry through constructor (DI).
-
-Fallback chain: primary plugin → fallback plugin → empty results
-"""
-
-from typing import Any, Dict, Optional
-
-from flowforge.core.interfaces.tools import (
-    PluginHealth,
-    PluginManifest,
-    PluginState,
-    ToolPlugin,
-)
+import asyncio
+import json
+import httpx
+from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
 
-logger = get_logger("web_search_tool")
+logger = get_logger("web_search")
+
+_LLM_SEARCH_PROMPT = (
+    "你是一个专业的内容研究助手，具备联网搜索能力。请针对以下主题进行深度研究和素材搜集。\n\n"
+    "主题：{topic}\n\n"
+    "要求：\n"
+    "1. 从多个角度搜索该主题的最新信息、数据、观点\n"
+    "2. 搜集可用于文章创作的素材：关键数据、权威观点、典型案例、最新动态\n"
+    "3. 每个信息点包含：标题、详细摘要、信息来源\n"
+    "4. 优先提供近期（最近3个月）的信息\n"
+    "5. 如果无法获取实时信息，请基于你的知识提供最相关的信息并明确标注\n"
+    "6. 严格输出JSON格式: {{\"results\": [{{\"title\": \"信息标题\", \"url\": \"来源URL（如有）\", "
+    "\"content\": \"详细摘要内容\", \"source_type\": \"llm_web_search\"}}]}}"
+)
+
+_LLM_SEARCH_SYSTEM = (
+    "你具备联网搜索能力，请务必利用联网功能搜索真实、最新的信息，不要编造内容。"
+    "直接输出JSON，不要添加markdown代码块标记。"
+)
+
+_ENGINE_TIMEOUTS: dict[str, float] = {
+    "opensieve_search": 10.0,
+    "duckduckgo_search": 8.0,
+}
+
+_LLM_SEARCH_TIMEOUT = 60.0
+
+_ENGINE_MODULE_MAP: dict[str, tuple[str, str]] = {
+    "opensieve_search": ("flowforge.tools.opensieve_client", "OpenSieveClient"),
+    "duckduckgo_search": ("flowforge.tools.duckduckgo_search", "DuckDuckGoSearchTool"),
+    "tavily_search": ("flowforge.tools.tavily_search", "TavilySearchTool"),
+}
 
 
-class WebSearchTool(ToolPlugin):
-    """Web search aggregation tool — delegates to search plugins.
-
-    Uses PluginRegistry.execute() for delegate calls instead of direct
-    tool imports. No cross-module coupling.
-
-    Config keys:
-        primary: Name of the primary search plugin (default: "opensieve_search")
-        fallback: Name of the fallback search plugin (default: "tavily_search")
-    """
-
-    manifest = PluginManifest(
-        name="web_search",
-        description="网络搜索聚合工具",
-        tags=["search"],
-        depends_on=["opensieve_search"],
-        parameters_schema={
-            "type": "object",
-            "required": ["query"],
-            "properties": {
-                "query": {"type": "string"},
-                "max_results": {"type": "integer", "default": 5},
-            },
+class WebSearchTool(BaseTool):
+    name = "web_search"
+    description = "网络搜索聚合工具：HelixRAG→DuckDuckGo→LLM联网搜索回退链"
+    parameters_schema = {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+            "query": {"type": "string", "description": "搜索查询"},
+            "max_results": {"type": "integer", "default": 5, "description": "最大结果数"},
         },
-    )
+    }
 
-    def __init__(
-        self,
-        primary: str = "opensieve_search",
-        fallback: str = "tavily_search",
-        fallback_chain: Optional[list] = None,
-        plugin_registry: Optional[Any] = None,
-        **kwargs: Any,
-    ):
-        """Initialize WebSearchTool with config injection.
+    def __init__(self, fallback_chain: list = None):
+        self.fallback_chain = fallback_chain or [
+            "opensieve_search", "duckduckgo_search"
+        ]
+        self._plugin_registry = None
+        self._llm_client = None
+        self._unavailable_engines: set[str] = set()
 
-        Args:
-            primary: Name of the primary search plugin.
-            fallback: Name of the fallback search plugin.
-            fallback_chain: Ordered list of search plugins to try (overrides primary/fallback).
-            plugin_registry: PluginRegistry instance for delegate calls.
-            **kwargs: Additional config (ignored for forward compatibility).
-        """
-        self._primary = primary
-        self._fallback = fallback
-        self._fallback_chain = fallback_chain or [primary, fallback]
-        self._registry = plugin_registry
+    def set_plugin_registry(self, plugin_registry):
+        self._plugin_registry = plugin_registry
 
-    def set_plugin_registry(self, registry: Any) -> None:
-        """Set the PluginRegistry instance (for late injection)."""
-        self._registry = registry
+    def set_llm_client(self, llm_client):
+        self._llm_client = llm_client
 
-    async def startup(self) -> None:
-        """Called by PluginRegistry after registration."""
-        logger.info(
-            f"WebSearchTool initialized: primary={self._primary}, "
-            f"fallback={self._fallback}, "
-            f"fallback_chain={self._fallback_chain}"
-        )
+    def _check_engine_available(self, engine: str) -> bool:
+        if engine in self._unavailable_engines:
+            return False
+        if engine not in _ENGINE_MODULE_MAP:
+            return True
+        module_path, class_name = _ENGINE_MODULE_MAP[engine]
+        try:
+            import importlib
+            mod = importlib.import_module(module_path)
+            if not hasattr(mod, class_name):
+                logger.warning(f"Engine {engine}: module {module_path} has no class {class_name}, skipping")
+                self._unavailable_engines.add(engine)
+                return False
+            return True
+        except ImportError as e:
+            logger.warning(f"Engine {engine}: module {module_path} not available ({e}), skipping")
+            self._unavailable_engines.add(engine)
+            return False
 
-    async def shutdown(self) -> None:
-        """No resources to clean up."""
-        pass
+    async def execute(self, input: ToolInput) -> ToolOutput:
+        query = input.params["query"]
+        max_results = input.params.get("max_results", 5)
 
-    async def health_check(self) -> PluginHealth:
-        """Check if at least one search backend is available."""
-        if not self._registry:
-            return PluginHealth(
-                state=PluginState.DEGRADED,
-                message="No PluginRegistry configured",
-            )
+        for engine in self.fallback_chain:
+            if not self._check_engine_available(engine):
+                logger.info(f"Skipping unavailable engine: {engine}")
+                continue
 
-        # Check primary
-        if self._registry.has_plugin(self._primary):
-            primary_health = await self._registry.get_plugin(self._primary).health_check()
-            if primary_health.state == PluginState.READY:
-                return PluginHealth(state=PluginState.READY)
-
-        # Check fallback
-        if self._registry.has_plugin(self._fallback):
-            fallback_health = await self._registry.get_plugin(self._fallback).health_check()
-            if fallback_health.state == PluginState.READY:
-                return PluginHealth(
-                    state=PluginState.DEGRADED,
-                    message=f"Primary '{self._primary}' unavailable, using fallback",
+            timeout = _ENGINE_TIMEOUTS.get(engine, 15.0)
+            try:
+                result = await asyncio.wait_for(
+                    self._try_engine(engine, query, max_results),
+                    timeout=timeout,
                 )
+                if result and result.get("results"):
+                    logger.info(f"Search succeeded with engine: {engine}")
+                    return ToolOutput(result=result)
+                logger.info(f"Search engine {engine} returned empty, trying next")
+            except asyncio.TimeoutError:
+                logger.warning(f"Search engine {engine} timed out after {timeout}s, trying next")
+                continue
+            except Exception as e:
+                logger.warning(f"Search engine {engine} failed: {e}")
+                continue
 
-        return PluginHealth(
-            state=PluginState.ERROR,
-            message="No search backend available",
-        )
+        try:
+            llm_result = await asyncio.wait_for(
+                self._llm_web_search(query, max_results),
+                timeout=_LLM_SEARCH_TIMEOUT,
+            )
+            if llm_result and llm_result.get("results"):
+                return ToolOutput(result=llm_result)
+        except asyncio.TimeoutError:
+            logger.warning(f"LLM WebChat search timed out after {_LLM_SEARCH_TIMEOUT}s")
+        except Exception as e:
+            logger.warning(f"LLM WebChat search failed: {e}")
 
-    async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute web search with fallback chain.
+        return ToolOutput(result={"results": [], "error": "All search engines and LLM fallback failed", "search_available": False})
 
-        Tries each search plugin in fallback_chain order until one succeeds.
+    async def _try_engine(self, engine: str, query: str, max_results: int) -> dict:
+        if self._plugin_registry:
+            try:
+                plugin = self._plugin_registry.get_plugin(engine)
+                if plugin:
+                    result = await plugin.execute({"query": query, "max_results": max_results})
+                    if isinstance(result, dict) and result.get("results"):
+                        return result
+            except Exception as e:
+                logger.debug(f"Plugin {engine} failed: {e}")
 
-        Args:
-            params: Must contain 'query'. Optional: max_results.
+        if engine not in _ENGINE_MODULE_MAP:
+            return {"results": []}
 
-        Returns:
-            Dict with 'results' list.
-        """
-        query = params["query"]
-        max_results = params.get("max_results", 5)
+        module_path, class_name = _ENGINE_MODULE_MAP[engine]
+        try:
+            import importlib
+            mod = importlib.import_module(module_path)
+            tool_cls = getattr(mod, class_name)
+        except (ImportError, AttributeError):
+            return {"results": []}
 
-        errors = []
-        for plugin_name in self._fallback_chain:
-            if self._registry and self._registry.has_plugin(plugin_name):
-                try:
-                    result = await self._registry.execute(
-                        plugin_name,
-                        {"query": query, "max_results": max_results},
-                    )
-                    results = result.get("results", [])
-                    if results:
-                        return {"results": results}
-                except Exception as e:
-                    errors.append(f"{plugin_name}: {e}")
-                    logger.debug(f"Search plugin '{plugin_name}' failed: {e}")
+        tool = tool_cls()
+        result = await tool.execute(ToolInput(params={"query": query, "max_results": max_results}))
+        if result.result.get("results"):
+            return result.result
 
-        chain_str = " → ".join(self._fallback_chain)
-        return {
-            "results": [],
-            "message": f"搜索服务暂不可用（尝试链: {chain_str}），请直接用你的知识回答用户",
-            "search_available": False,
-            "errors": errors,
-        }
+        return {"results": []}
+
+    async def _llm_web_search(self, query: str, max_results: int) -> dict:
+        logger.info(f"Falling back to LLM WebChat search for: {query[:50]}")
+        prompt = _LLM_SEARCH_PROMPT.format(topic=query)
+        messages = [
+            {"role": "system", "content": _LLM_SEARCH_SYSTEM},
+            {"role": "user", "content": prompt},
+        ]
+
+        if self._llm_client:
+            try:
+                result = await self._llm_client.execute(ToolInput(params={
+                    "messages": messages,
+                    "stream": False,
+                    "agent_name": "web_search",
+                    "persona": "default",
+                    "model": "web/chat",
+                }))
+                content = result.result.get("content", "")
+                return self._parse_llm_results(content, query)
+            except Exception as e:
+                logger.warning(f"LLM client WebChat search failed: {e}")
+
+        try:
+            from flowforge.tools.llm_client import LLMClient
+            llm = LLMClient()
+            result = await llm.execute(ToolInput(params={
+                "messages": messages,
+                "stream": False,
+                "agent_name": "web_search",
+                "persona": "default",
+                "model": "web/chat",
+            }))
+            content = result.result.get("content", "")
+            return self._parse_llm_results(content, query)
+        except Exception as e:
+            logger.warning(f"LLM fallback WebChat search failed: {e}")
+            return {"results": []}
+
+    def _parse_llm_results(self, content: str, query: str) -> dict:
+        if not content:
+            return {"results": []}
+        import re
+        match = re.search(r'\{[\s\S]*\}', content)
+        if match:
+            try:
+                data = json.loads(match.group())
+                results = data.get("results", [])
+                for r in results:
+                    r.setdefault("source_type", "llm_web_search")
+                    r.setdefault("url", "")
+                    r.setdefault("content", r.get("snippet", ""))
+                return {"results": results, "source": "llm_web_search"}
+            except json.JSONDecodeError:
+                pass
+        return {"results": [{"title": f"LLM搜索: {query[:30]}", "url": "", "content": content[:500], "source_type": "llm_web_search"}], "source": "llm_web_search"}

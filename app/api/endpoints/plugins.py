@@ -145,6 +145,38 @@ async def execute_plugin(
         return _make_error("EXECUTION_ERROR", str(e))
 
 
+@router.get("/{plugin_name}/frontend")
+async def get_plugin_frontend(plugin_name: str):
+    """Get frontend plugin metadata for dynamic loading.
+
+    Returns the plugin's frontend_entry and mount_points so that
+    the web UI can dynamically load plugin components.
+    """
+    from flowforge.app.main import _loaded_plugins
+
+    for p in _loaded_plugins:
+        if p.name == plugin_name:
+            manifest = p.manifest
+            if not manifest.frontend_entry:
+                raise HTTPException(
+                    status_code=404,
+                    detail=_make_error(
+                        "NO_FRONTEND",
+                        f"Plugin '{plugin_name}' has no frontend component",
+                    ),
+                )
+            return _make_response({
+                "name": p.name,
+                "version": p.version,
+                "frontend_entry": manifest.frontend_entry,
+                "mount_points": manifest.mount_points,
+            })
+    raise HTTPException(
+        status_code=404,
+        detail=_make_error("NOT_FOUND", f"Plugin '{plugin_name}' not found"),
+    )
+
+
 @router.post("/reload")
 async def reload_plugins(
     plugin_manager=Depends(get_plugin_manager),

@@ -45,6 +45,22 @@ class TaskScheduler:
         except Exception:
             pass
 
+    def pause_job(self, job_id: str):
+        """Pause a scheduled job without removing it."""
+        try:
+            self.scheduler.pause_job(job_id)
+            logger.info(f"定时任务已暂停: {job_id}")
+        except Exception as e:
+            logger.warning(f"暂停定时任务失败: {job_id} - {e}")
+
+    def resume_job(self, job_id: str):
+        """Resume a paused scheduled job."""
+        try:
+            self.scheduler.resume_job(job_id)
+            logger.info(f"定时任务已恢复: {job_id}")
+        except Exception as e:
+            logger.warning(f"恢复定时任务失败: {job_id} - {e}")
+
     def list_jobs(self) -> list:
         return [{"id": j.id, "next_run": str(j.next_run_time)} for j in self.scheduler.get_jobs()]
 

@@ -19,7 +19,7 @@ import pytest
 import httpx
 from typing import Dict, List, Optional
 
-BASE_URL = os.environ.get("FLOWFORGE_BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.environ.get("FLOWFORGE_BASE_URL", "http://127.0.0.1:8002")
 
 # T1铁律：测试始终使用真实LLM，不提供跳过开关
 

@@ -21,8 +21,8 @@ import pytest
 import httpx
 import websockets
 
-BASE_URL = os.environ.get("FLOWFORGE_BASE_URL", "http://127.0.0.1:8000")
-WS_URL = os.environ.get("FLOWFORGE_WS_URL", "ws://127.0.0.1:8000")
+BASE_URL = os.environ.get("FLOWFORGE_BASE_URL", "http://127.0.0.1:8002")
+WS_URL = os.environ.get("FLOWFORGE_WS_URL", "ws://127.0.0.1:8002")
 
 # T1铁律：测试始终使用真实LLM，不设skipif跳过条件
 # USE_REAL_LLM 已移除 — 测试必须无条件运行

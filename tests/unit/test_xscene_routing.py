@@ -349,7 +349,7 @@ def test_fallback_chain_openroute_first():
     from flowforge.tools.llm_client import build_cross_fallback_chain
 
     available = {
-        "openroute": ["auto", "doubao-web/seed-2.0"],
+        "openroute": ["auto", "DeepSeek-V4-Pro"],
         "openrouter": ["baidu/cobuddy:free"],
         "zhipu": ["glm-4-flash"],
     }

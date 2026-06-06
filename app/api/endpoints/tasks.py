@@ -160,7 +160,8 @@ async def create_task(payload: dict, executor=Depends(get_executor)):
         try:
             from flowforge.core.workspace import get_workspace_manager
             ws = get_workspace_manager()
-            ws.create_workspace(task_id, metadata={
+            workspace_name = payload.get("workspace", "default")
+            ws.add_task_to_workspace(workspace_name, task_id, metadata={
                 "persona": persona, "mode": mode or "workflow",
                 "interaction_mode": interaction_mode,
                 "intent": intent[:200] if intent else "",
@@ -247,6 +248,23 @@ async def submit_review(task_id: str, payload: dict, executor=Depends(get_execut
     await executor.submit_review(task_id, verdict, feedback, edited_draft)
     updated = executor.state_manager.load_state(task_id) or {}
     return _make_response({"task_id": task_id, "status": updated.get("status", verdict), "verdict": verdict})
+
+
+@router.post("/{task_id}/feedback")
+async def submit_feedback(task_id: str, payload: dict, executor=Depends(get_executor)):
+    """Submit user feedback (like/dislike) for a specific message in a task."""
+    state = executor.state_manager.load_state(task_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=_make_error("NOT_FOUND", f"Task {task_id} not found"))
+    message_id = payload.get("message_id", "")
+    feedback_type = payload.get("feedback")  # "like" or "dislike"
+    if feedback_type not in ("like", "dislike"):
+        raise HTTPException(status_code=422, detail=_make_error("INVALID_FEEDBACK", "'feedback' must be 'like' or 'dislike'"))
+    # Store feedback in task metadata
+    feedbacks = state.get("feedbacks", {}) if isinstance(state, dict) else {}
+    feedbacks[message_id] = feedback_type
+    executor.state_manager.update_state(task_id, {"feedbacks": feedbacks})
+    return _make_response({"task_id": task_id, "message_id": message_id, "feedback": feedback_type})
 
 
 @router.post("/{task_id}/pause")

@@ -101,7 +101,7 @@ export function ApprovalCard({ messageId, data, onAction }: { messageId: string;
     <div className="chat-approval-card">
       <div className="chat-approval-title">{icon} {title}</div>
       <div className="chat-approval-desc">{description}</div>
-      <textarea className="chat-approval-textarea" rows={2} value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="输入反馈（可选）..." />
+      <textarea className="chat-approval-feedback" rows={2} value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="输入反馈（可选）..." />
       <div className="chat-approval-actions">
         <button className="btn btn-success btn-sm" onClick={handleApprove}>✓ 批准</button>
         <button className="btn btn-danger btn-sm" onClick={handleReject}>✗ 拒绝</button>

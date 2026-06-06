@@ -56,6 +56,26 @@ def _is_error_content(text: str) -> bool:
     return any(kw in text_lower for kw in _ERROR_KEYWORDS)
 
 
+_SEARCH_TOOLS = {"web_search", "opensieve_search", "tavily_search", "duckduckgo_search"}
+_SEARCH_AGENTS = {"topic_research", "web_search_agent", "research_agent"}
+
+_LLM_WEB_SEARCH_PROMPT = (
+    "你是一个专业的内容研究助手，具备联网搜索能力。请针对以下主题进行深度研究和素材搜集。\n\n"
+    "主题：{topic}\n\n"
+    "要求：\n"
+    "1. 从多个角度搜索该主题的最新信息、数据、观点\n"
+    "2. 搜集可用于文章创作的素材：关键数据、权威观点、典型案例、最新动态\n"
+    "3. 每个信息点包含：标题、详细摘要、信息来源\n"
+    "4. 优先提供近期（最近3个月）的信息\n"
+    "5. 如果无法获取实时信息，请基于你的知识提供最相关的信息并明确标注\n"
+    "6. 严格输出JSON格式: {{\"results\": [{{\"title\": \"信息标题\", \"url\": \"来源URL（如有）\", \"content\": \"详细摘要内容\", \"source_type\": \"llm_web_search\"}}]}}"
+)
+
+_LLM_WEB_SEARCH_SYSTEM = (
+    "你具备联网搜索能力，请务必利用联网功能搜索真实、最新的信息，不要编造内容。"
+    "直接输出JSON，不要添加markdown代码块标记。"
+)
+
 TASK_TIMEOUT_SECONDS = 1200
 STEP_TIMEOUT_SECONDS = 300
 
@@ -436,7 +456,21 @@ class WorkflowExecutor(BaseModeExecutor):
         try:
             plan_content = await self._call_llm(ctx, plan_messages, model_hint, "planner", persona)
         except Exception as e:
-            logger.warning(f"Planning LLM call failed: {e}")
+            logger.error(f"Planning LLM call failed: {e}", task_id=ctx.task_id)
+            # Emit error event to frontend
+            ctx.event_bus.emit(ctx.task_id, "solo.stage.exit", {
+                "step": "planning", "stage": "planning",
+                "error": f"意图识别失败: {str(e)[:200]}",
+            })
+            raise RuntimeError(f"意图识别失败，LLM调用异常: {str(e)[:200]}")
+
+        if not plan_content or not plan_content.strip():
+            logger.error("Planning LLM returned empty content", task_id=ctx.task_id)
+            ctx.event_bus.emit(ctx.task_id, "solo.stage.exit", {
+                "step": "planning", "stage": "planning",
+                "error": "意图识别失败: LLM返回空内容",
+            })
+            raise RuntimeError("意图识别失败，LLM返回空内容")
 
         plan = self._parse_execution_plan(plan_content)
         steps = plan.get("plan", [])
@@ -688,29 +722,68 @@ class WorkflowExecutor(BaseModeExecutor):
                     except Exception as e:
                         result = {"success": False, "error": str(e)[:300]}
 
+                    # If tool/agent is unknown, stop execution immediately
+                    if isinstance(result, dict) and result.get("success") is False:
+                        err_msg = result.get("error", "")
+                        if "Unknown tool/agent" in err_msg:
+                            logger.error(f"Critical failure: {err_msg}, aborting task", task_id=ctx.task_id)
+                            raise RuntimeError(f"工具/Agent调用失败: {err_msg}")
+
                     ctx.event_bus.emit(ctx.task_id, "tool.end", {
                         "tool_name": tn,
                         "result": result,
                         "success": result.get("success", False),
                         "step": step_name,
                     })
-                    # If search tool returned no results and marked as unavailable,
-                    # add a hint for the compile stage to use LLM's own knowledge
-                    if isinstance(result, dict) and result.get("search_available") is False:
-                        step_results.append({
-                            "step": step_name, "type": "tool", "tool": tn,
-                            "result": result,
-                            "search_unavailable": True,
-                            "hint": "搜索服务不可用，请用LLM自身知识回答",
-                        })
+
+                    search_failed = (
+                        tn in _SEARCH_TOOLS
+                        and isinstance(result, dict)
+                        and (result.get("search_available") is False or not result.get("success", True))
+                    )
+                    search_empty = (
+                        tn in _SEARCH_TOOLS
+                        and isinstance(result, dict)
+                        and result.get("success", True)
+                        and isinstance(result.get("result"), dict)
+                        and not result["result"].get("results")
+                    )
+
+                    if search_failed or search_empty:
+                        logger.info(f"Search tool '{tn}' failed/empty, trying LLM WebChat fallback", task_id=ctx.task_id)
+                        llm_search_result = await self._llm_web_search_fallback(ctx, intent, model_hint, persona)
+                        if llm_search_result:
+                            step_results.append({
+                                "step": step_name, "type": "tool", "tool": tn,
+                                "result": llm_search_result,
+                                "search_fallback": "llm_web_search",
+                            })
+                            step_context[f"_output_{tn}"] = llm_search_result
+                            step_context["_last_output"] = llm_search_result
+                        elif isinstance(result, dict) and result.get("search_available") is False:
+                            step_results.append({
+                                "step": step_name, "type": "tool", "tool": tn,
+                                "result": result,
+                                "search_unavailable": True,
+                                "hint": "搜索服务不可用，请用LLM自身知识回答",
+                            })
+                        else:
+                            step_results.append({"step": step_name, "type": "tool", "tool": tn, "result": result})
                     else:
-                        step_results.append({"step": step_name, "type": "tool", "tool": tn, "result": result})
-                        # Update step_context with extracted content for subsequent steps
-                        if result.get("success"):
-                            extracted = self._extract_step_content({"step": step_name, "type": "tool", "result": result})
-                            if extracted and len(extracted.strip()) > 10:
-                                step_context[f"_output_{tn}"] = extracted
-                                step_context["_last_output"] = extracted
+                        if isinstance(result, dict) and result.get("search_available") is False:
+                            step_results.append({
+                                "step": step_name, "type": "tool", "tool": tn,
+                                "result": result,
+                                "search_unavailable": True,
+                                "hint": "搜索服务不可用，请用LLM自身知识回答",
+                            })
+                        else:
+                            step_results.append({"step": step_name, "type": "tool", "tool": tn, "result": result})
+                            if result.get("success"):
+                                extracted = self._extract_step_content({"step": step_name, "type": "tool", "result": result})
+                                if extracted and len(extracted.strip()) > 10:
+                                    step_context[f"_output_{tn}"] = extracted
+                                    step_context["_last_output"] = extracted
 
                 elif step_type == "agent" or agent_name:
                     # ── Agent call ──
@@ -728,6 +801,13 @@ class WorkflowExecutor(BaseModeExecutor):
                     except Exception as e:
                         result = {"success": False, "error": str(e)[:300]}
 
+                    # If tool/agent is unknown, stop execution immediately
+                    if isinstance(result, dict) and result.get("success") is False:
+                        err_msg = result.get("error", "")
+                        if "Unknown tool/agent" in err_msg:
+                            logger.error(f"Critical failure: {err_msg}, aborting task", task_id=ctx.task_id)
+                            raise RuntimeError(f"工具/Agent调用失败: {err_msg}")
+
                     ctx.event_bus.emit(ctx.task_id, "tool.end", {
                         "tool_name": an,
                         "result": result,
@@ -736,12 +816,23 @@ class WorkflowExecutor(BaseModeExecutor):
                         "is_agent": True,
                     })
                     step_results.append({"step": step_name, "type": "agent", "agent": an, "result": result})
-                    # Update step_context with extracted content for subsequent steps
                     if result.get("success"):
                         extracted = self._extract_step_content({"step": step_name, "type": "agent", "result": result})
                         if extracted and len(extracted.strip()) > 10:
                             step_context[f"_output_{an}"] = extracted
                             step_context["_last_output"] = extracted
+
+                    if an in _SEARCH_AGENTS and not result.get("success", True):
+                        logger.info(f"Search agent '{an}' failed, trying LLM WebChat fallback", task_id=ctx.task_id)
+                        llm_search_result = await self._llm_web_search_fallback(ctx, intent, model_hint, persona)
+                        if llm_search_result:
+                            step_results.append({
+                                "step": f"{step_name}_llm_fallback", "type": "tool", "tool": "llm_web_search",
+                                "result": llm_search_result,
+                                "search_fallback": "llm_web_search",
+                            })
+                            step_context[f"_output_{an}"] = llm_search_result
+                            step_context["_last_output"] = llm_search_result
 
                 else:
                     # ── Generate (LLM) ──
@@ -910,6 +1001,9 @@ class WorkflowExecutor(BaseModeExecutor):
         if final_content and len(final_content) > LONG_CONTENT_THRESHOLD:
             draft_payload["saved_to_file"] = True
             draft_payload["content_preview"] = final_content[:300] + "..."
+            if file_info:
+                draft_payload["file_path"] = f"/api/v1/workspace/{ctx.task_id}/files/{file_info['path']}"
+                draft_payload["filename"] = file_info["filename"]
         ctx.event_bus.emit(ctx.task_id, "draft.update", draft_payload)
 
         result = {
@@ -1009,6 +1103,13 @@ class WorkflowExecutor(BaseModeExecutor):
 
                 tool_result = await self._execute_tool_or_agent(ctx, call_name, arguments)
 
+                # If tool/agent is unknown, stop execution immediately
+                if isinstance(tool_result, dict) and tool_result.get("success") is False:
+                    err_msg = tool_result.get("error", "")
+                    if "Unknown tool/agent" in err_msg:
+                        logger.error(f"Critical failure in ReAct loop: {err_msg}, aborting task", task_id=ctx.task_id)
+                        raise RuntimeError(f"工具/Agent调用失败: {err_msg}")
+
                 tool_call_history.append(call_name)
                 if len(tool_call_history) >= repetition_limit:
                     recent = tool_call_history[-repetition_limit:]
@@ -1052,7 +1153,10 @@ class WorkflowExecutor(BaseModeExecutor):
         }
 
     async def _execute_tool_or_agent(self, ctx: TaskContext, name: str, arguments: dict) -> dict:
+        logger.info(f"[ToolOrAgent] >>> Calling: name={name}, args_keys={list(arguments.keys()) if isinstance(arguments, dict) else 'N/A'}", task_id=ctx.task_id)
+
         if ctx.agents:
+            logger.debug(f"[ToolOrAgent] Searching AgentRegistry for: {name}")
             agent = ctx.agents.get(name)
             if agent:
                 try:
@@ -1063,23 +1167,32 @@ class WorkflowExecutor(BaseModeExecutor):
                     result = await agent.execute_with_context(agent_input, ctx)
                     # 发射 agent.end 事件
                     ctx.event_bus.emit(ctx.task_id, "agent.end", {"agent_name": name, "success": True})
-                    return {"success": True, "result": result.result}
+                    _r = {"success": True, "result": result.result}
+                    logger.info(f"[ToolOrAgent] <<< Result: name={name}, success={_r.get('success')}, has_error={'error' in _r}", task_id=ctx.task_id)
+                    return _r
                 except NotImplementedError:
                     try:
                         agent_input = AgentInput(params={"task": task_desc, **arguments})
                         result = await agent.execute(agent_input)
                         ctx.event_bus.emit(ctx.task_id, "agent.end", {"agent_name": name, "success": True})
-                        return {"success": True, "result": result.result}
+                        _r = {"success": True, "result": result.result}
+                        logger.info(f"[ToolOrAgent] <<< Result: name={name}, success={_r.get('success')}, has_error={'error' in _r}", task_id=ctx.task_id)
+                        return _r
                     except Exception as e:
                         ctx.event_bus.emit(ctx.task_id, "agent.end", {"agent_name": name, "success": False, "error": str(e)[:200]})
-                        return {"success": False, "error": str(e)[:300]}
+                        _r = {"success": False, "error": str(e)[:300]}
+                        logger.info(f"[ToolOrAgent] <<< Result: name={name}, success={_r.get('success')}, has_error={'error' in _r}", task_id=ctx.task_id)
+                        return _r
                 except Exception as e:
                     logger.warning(f"Agent {name} execution failed: {e}")
                     error_msg = str(e) if str(e) else type(e).__name__
                     ctx.event_bus.emit(ctx.task_id, "agent.end", {"agent_name": name, "success": False, "error": error_msg[:200]})
-                    return {"success": False, "error": error_msg[:300]}
+                    _r = {"success": False, "error": error_msg[:300]}
+                    logger.info(f"[ToolOrAgent] <<< Result: name={name}, success={_r.get('success')}, has_error={'error' in _r}", task_id=ctx.task_id)
+                    return _r
 
         if ctx.tools:
+            logger.debug(f"[ToolOrAgent] Searching ToolRegistry for: {name}")
             try:
                 tool = ctx.tools.get_tool(name)
                 # 兼容 BaseTool (execute(ToolInput)) 和 ToolPlugin (execute(dict))
@@ -1087,15 +1200,20 @@ class WorkflowExecutor(BaseModeExecutor):
                 if isinstance(tool, BaseTool):
                     tool_input = ToolInput(params=arguments)
                     tool_output = await tool.execute(tool_input)
-                    return {"success": True, "result": tool_output.result}
+                    _r = {"success": True, "result": tool_output.result}
+                    logger.info(f"[ToolOrAgent] <<< Result: name={name}, success={_r.get('success')}, has_error={'error' in _r}", task_id=ctx.task_id)
+                    return _r
                 else:
                     # ToolPlugin — execute 接收 dict
                     result = await tool.execute(arguments)
-                    return {"success": True, "result": result}
+                    _r = {"success": True, "result": result}
+                    logger.info(f"[ToolOrAgent] <<< Result: name={name}, success={_r.get('success')}, has_error={'error' in _r}", task_id=ctx.task_id)
+                    return _r
             except Exception as e:
                 logger.debug(f"Tool {name} execution in ToolRegistry failed: {e}, trying PluginRegistry")
 
         # Fallback: try PluginRegistry (for tools like web_search that are registered as plugins)
+        logger.debug(f"[ToolOrAgent] Searching PluginRegistry for: {name}")
         try:
             from flowforge.app.deps import get_plugin_registry
             plugin_reg = get_plugin_registry()
@@ -1103,11 +1221,15 @@ class WorkflowExecutor(BaseModeExecutor):
                 plugin = plugin_reg.get_plugin(name)
                 if plugin:
                     result = await plugin_reg.execute(name, arguments)
-                    return {"success": True, "result": result}
+                    _r = {"success": True, "result": result}
+                    logger.info(f"[ToolOrAgent] <<< Result: name={name}, success={_r.get('success')}, has_error={'error' in _r}", task_id=ctx.task_id)
+                    return _r
         except Exception as e:
             logger.debug(f"Plugin {name} not found in PluginRegistry either: {e}")
 
-        return {"success": False, "error": f"Unknown tool/agent: {name}"}
+        result = {"success": False, "error": f"Unknown tool/agent: {name}"}
+        logger.info(f"[ToolOrAgent] <<< Result: name={name}, success={result.get('success')}, has_error={'error' in result}", task_id=ctx.task_id)
+        return result
 
     def _build_function_schemas(self, ctx: TaskContext) -> list:
         schemas = []
@@ -1134,6 +1256,30 @@ class WorkflowExecutor(BaseModeExecutor):
         if len(schemas) > 8:
             schemas = schemas[:8]
         return schemas
+
+    async def _llm_web_search_fallback(self, ctx: TaskContext, intent: str, model_hint: str, persona: str) -> dict:
+        search_prompt = _LLM_WEB_SEARCH_PROMPT.format(topic=intent)
+        try:
+            content = await self._call_llm(ctx, [
+                {"role": "system", "content": _LLM_WEB_SEARCH_SYSTEM},
+                {"role": "user", "content": search_prompt},
+            ], "web/chat", "web_search_fallback", persona)
+            if not content or not content.strip():
+                return {}
+            import json as _json
+            match = re.search(r'\{[\s\S]*\}', content)
+            if match:
+                try:
+                    data = _json.loads(match.group())
+                    results = data.get("results", [])
+                    if results:
+                        return {"success": True, "result": {"results": results, "source": "llm_web_search"}}
+                except _json.JSONDecodeError:
+                    pass
+            return {"success": True, "result": {"results": [{"title": f"LLM搜索: {intent[:30]}", "url": "", "content": content[:1000], "source_type": "llm_web_search"}], "source": "llm_web_search"}}
+        except Exception as e:
+            logger.warning(f"LLM WebChat search fallback failed: {e}", task_id=ctx.task_id)
+            return {}
 
     def _build_tool_descriptions_text(self, ctx: TaskContext) -> str:
         lines = []

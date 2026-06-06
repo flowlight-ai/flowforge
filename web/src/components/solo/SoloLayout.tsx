@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSoloWebSocket } from "../../hooks/useSoloWebSocket";
 import { useShellConfig } from "../../lib/shell-config";
 import { ChatMessage, DynNode, DynEdge } from "./solo-types";
-import { SoloTaskPhase } from "../../lib/solo-types";
 import {
   entryToChatMessages,
   mergeStreamingMessages,
@@ -18,7 +17,7 @@ import { ResizeHandle } from "./ChatPrimitives";
 import TaskListPanel from "./TaskListPanel";
 import ChatStream from "./ChatStream";
 import ChatInput from "./ChatInput";
-import MarkdownPanel from "./MarkdownPanel";
+import MarkdownPanel, { OpenTab } from "./MarkdownPanel";
 
 function getModeSteps(mode: string): { key: string; label: string }[] {
   const m = mode.toLowerCase().replace(/[_-]/g, "_");
@@ -33,17 +32,107 @@ function getModeSteps(mode: string): { key: string; label: string }[] {
 
 export default function SoloLayout() {
   const [userMessages, setUserMessages] = useState<ChatMessage[]>([]);
-  const [openrouteStatus, setOpenrouteStatus] = useState<{ running: boolean; healthy: boolean; models: number } | null>(null);
-  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
   const [graphModal, setGraphModal] = useState<{type: "workflow" | "agent" | "mode"; name: string} | null>(null);
-  const [rightTab, setRightTab] = useState<"editor" | "files">("editor");
   const [refreshCounter, setRefreshCounter] = useState(0);
-  const [previewFilePath, setPreviewFilePath] = useState<string | undefined>(undefined);
+  const [workspaceRefreshKey, setWorkspaceRefreshKey] = useState(0);
+  const [chatPanelWidth, setChatPanelWidth] = useState(280);
+  const [rightPanelWidth, setRightPanelWidth] = useState(260);
+  const [resumePrompt, setResumePrompt] = useState<{ task_id: string; intent: string } | null>(null);
+
+  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [highlightFilePath, setHighlightFilePath] = useState<string | null>(null);
+
+  const [workspaceList, setWorkspaceList] = useState<{name: string; display_name: string; path: string; task_count: number; created_at: string}[]>([]);
+  const [currentWorkspace, setCurrentWorkspace] = useState("default");
+  const [wsDropdownOpen, setWsDropdownOpen] = useState(false);
+  const wsDropdownRef = useRef<HTMLDivElement>(null);
+  const deletedIdsRef = useRef<Set<string>>(new Set());
+  const [panelMenuOpen, setPanelMenuOpen] = useState(false);
+  const panelMenuRef = useRef<HTMLDivElement>(null);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [showNewWorkspaceInput, setShowNewWorkspaceInput] = useState(false);
+  const [showSettingsInEditor, setShowSettingsInEditor] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>("auto");
+  const [showDirBrowser, setShowDirBrowser] = useState(false);
+  const [dirBrowserItems, setDirBrowserItems] = useState<{name: string; path: string; is_dir: boolean}[]>([]);
+  const [dirBrowserPath, setDirBrowserPath] = useState("");
+
+  /* ── Panel visibility + responsive ── */
+  const [panelVisibility, setPanelVisibility] = useState({ chat: true, editor: true, explorer: true });
+  const prevPanelVisibility = useRef(panelVisibility);
+
+  // Responsive: auto-hide panels on narrow screens
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 900px)");
+    const handleResize = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (e.matches) {
+        setPanelVisibility((prev) => {
+          const next = { ...prev, editor: false, explorer: false };
+          prevPanelVisibility.current = prev;
+          return next;
+        });
+      } else {
+        setPanelVisibility((prev) => {
+          const saved = prevPanelVisibility.current;
+          return { ...prev, editor: saved.editor, explorer: saved.explorer };
+        });
+      }
+    };
+    handleResize(mql);
+    mql.addEventListener("change", handleResize);
+    return () => mql.removeEventListener("change", handleResize);
+  }, []);
+
+  const handleTogglePanel = useCallback((panel: "chat" | "editor" | "explorer") => {
+    setPanelVisibility((prev) => {
+      const next = { ...prev, [panel]: !prev[panel] };
+      prevPanelVisibility.current = next;
+      // Ensure at least one panel is visible
+      if (!next.chat && !next.editor && !next.explorer) {
+        next.chat = true;
+      }
+      return next;
+    });
+  }, []);
+
   const config = useShellConfig();
 
-  const [leftWidth, setLeftWidth] = useState(220);
-  const [centerWidth, setCenterWidth] = useState(420);
-  const [resumePrompt, setResumePrompt] = useState<{ task_id: string; intent: string } | null>(null);
+  const fetchWorkspaceList = useCallback(() => {
+    fetch("/api/v1/workspace/named")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const workspaces = (data?.workspaces || []) as {name: string; display_name: string; path: string; task_count: number; created_at: string}[];
+        workspaces.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+        setWorkspaceList(workspaces);
+        // If current workspace doesn't exist in the list, switch to default
+        if (workspaces.length > 0 && !workspaces.find((w) => w.name === currentWorkspace)) {
+          setCurrentWorkspace("default");
+        }
+      })
+      .catch(() => {
+        setWorkspaceList([]);
+      });
+  }, [currentWorkspace]);
+
+  useEffect(() => {
+    fetchWorkspaceList();
+    const interval = setInterval(fetchWorkspaceList, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchWorkspaceList]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wsDropdownRef.current && !wsDropdownRef.current.contains(e.target as Node)) {
+        setWsDropdownOpen(false);
+      }
+      if (panelMenuRef.current && !panelMenuRef.current.contains(e.target as Node)) {
+        setPanelMenuOpen(false);
+      }
+    };
+    if (wsDropdownOpen || panelMenuOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [wsDropdownOpen, panelMenuOpen]);
 
   useEffect(() => {
     fetch("/api/v1/workspace/incomplete")
@@ -58,26 +147,17 @@ export default function SoloLayout() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const checkOpenroute = () => {
-      fetch("/api/v1/openroute/status")
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (d) setOpenrouteStatus({ running: d.running, healthy: d.healthy, models: (d.models || []).length });
-          else setOpenrouteStatus(null);
-        })
-        .catch(() => setOpenrouteStatus(null));
-    };
-    checkOpenroute();
-    const interval = setInterval(checkOpenroute, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
   const solo = useSoloWebSocket({
     onDraftUpdate: (content, isPartial) => {
       if (!isPartial) solo.updateEditor(content);
     },
   });
+
+  useEffect(() => {
+    if (solo.phase === "completed" || solo.phase === "error" || solo.phase === "interrupted") {
+      fetchWorkspaceList();
+    }
+  }, [solo.phase, fetchWorkspaceList]);
 
   const elapsed = useMemo(() => {
     if (!solo.startTime) return 0;
@@ -355,31 +435,27 @@ export default function SoloLayout() {
       const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: "user", content: text, timestamp: Date.now() };
       setUserMessages((prev) => [...prev, userMsg]);
 
-      // Mark task as user-active for sort ordering
       if (solo.taskId) {
         const brand = config.brandName.toLowerCase();
         appendTaskHistory(brand, { taskId: solo.taskId, persona: solo.persona || persona || "default", intent: solo.intent || text, phase: solo.phase, timestamp: Date.now() }, true);
       }
 
+      const effectiveModel = model || (selectedModel === "auto" ? undefined : selectedModel);
       if (solo.phase === "idle") {
-        // No task yet — create a brand new one
-        solo.createTask(text, { persona: persona || "default", ...(model ? { model } : {}) });
+        solo.createTask(text, { persona: persona || "default", ...(effectiveModel ? { model: effectiveModel } : {}) });
       } else if (solo.phase === "completed" && solo.taskId) {
-        // Task completed — continue the same conversation with full history
-        solo.continueChat(text, { persona: persona || "default", ...(model ? { model } : {}) });
+        solo.continueChat(text, { persona: persona || "default", ...(effectiveModel ? { model: effectiveModel } : {}) });
       } else if (solo.phase === "error" || solo.phase === "rejected" || solo.phase === "interrupted") {
-        // Task failed — create a fresh one
-        solo.createTask(text, { persona: persona || "default", ...(model ? { model } : {}) });
+        solo.createTask(text, { persona: persona || "default", ...(effectiveModel ? { model: effectiveModel } : {}) });
       } else if (solo.taskId) {
-        // Task is active (running/creating/connecting/waiting_review/paused) — send message to workspace
         fetch(`/api/v1/workspace/${solo.taskId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role: "user", content: text, model }),
+          body: JSON.stringify({ role: "user", content: text, model: effectiveModel }),
         }).catch(() => {});
       }
     },
-    [solo, config.brandName]
+    [solo, config.brandName, selectedModel]
   );
 
   const handleReview = useCallback((verdict: "pass" | "reject", feedback: string) => { solo.submitReview(verdict, feedback); }, [solo]);
@@ -407,8 +483,41 @@ export default function SoloLayout() {
   }, [solo]);
 
   const handleFileOpen = useCallback((filePath: string, fileName: string) => {
-    setPreviewFilePath(fileName || filePath);
-    setRightTab("editor");
+    // Auto-show editor panel when opening a file
+    if (!panelVisibility.editor) {
+      setPanelVisibility((prev) => {
+        const next = { ...prev, editor: true };
+        prevPanelVisibility.current = next;
+        return next;
+      });
+    }
+
+    const tabId = `tab-${filePath}`;
+    const existingTab = openTabs.find((t) => t.id === tabId);
+
+    // Derive relative path within workspace for explorer highlighting
+    const apiPrefix = `/api/v1/workspace/${solo.taskId}/files/`;
+    const relativePath = filePath.startsWith(apiPrefix) ? filePath.slice(apiPrefix.length) : fileName;
+
+    if (existingTab) {
+      setActiveTabId(tabId);
+      setHighlightFilePath(relativePath);
+      return;
+    }
+
+    const newTab: OpenTab = {
+      id: tabId,
+      filePath,
+      fileName: fileName || filePath.split(/[/\\]/).pop() || "未命名",
+      content: "",
+      originalContent: "",
+      isDirty: false,
+    };
+
+    setOpenTabs((prev) => [...prev, newTab]);
+    setActiveTabId(tabId);
+    setHighlightFilePath(relativePath);
+
     if (filePath.startsWith("/api/")) {
       fetch(filePath)
         .then((r) => (r.ok ? r.text() : ""))
@@ -417,22 +526,95 @@ export default function SoloLayout() {
             try {
               const data = JSON.parse(content);
               if (data.content !== undefined) {
-                solo.updateEditor(data.content);
+                const fileContent = typeof data.content === "string" ? data.content : JSON.stringify(data.content, null, 2);
+                setOpenTabs((prev) =>
+                  prev.map((t) => t.id === tabId ? { ...t, content: fileContent, originalContent: fileContent } : t)
+                );
                 return;
               }
             } catch {}
-            solo.updateEditor(content);
+            setOpenTabs((prev) =>
+              prev.map((t) => t.id === tabId ? { ...t, content, originalContent: content } : t)
+            );
           }
         })
         .catch(() => {});
+    } else {
+      const draftContent = solo.editorContent;
+      if (draftContent) {
+        setOpenTabs((prev) =>
+          prev.map((t) => t.id === tabId ? { ...t, content: draftContent, originalContent: draftContent } : t)
+        );
+      }
     }
-  }, [solo]);
+  }, [openTabs, solo.editorContent]);
+
+  const handleTabClose = useCallback((tabId: string) => {
+    setOpenTabs((prev) => prev.filter((t) => t.id !== tabId));
+    if (activeTabId === tabId) {
+      setActiveTabId((prev) => {
+        const remaining = openTabs.filter((t) => t.id !== tabId);
+        if (remaining.length > 0) {
+          const closedIdx = openTabs.findIndex((t) => t.id === tabId);
+          const nextIdx = Math.min(closedIdx, remaining.length - 1);
+          return remaining[nextIdx].id;
+        }
+        return null;
+      });
+    }
+  }, [activeTabId, openTabs]);
+
+  const handleTabSelect = useCallback((tabId: string) => {
+    setActiveTabId(tabId);
+    const tab = openTabs.find((t) => t.id === tabId);
+    if (tab) {
+      setHighlightFilePath(tab.fileName);
+    }
+  }, [openTabs]);
+
+  const handleContentChange = useCallback((tabId: string, content: string) => {
+    setOpenTabs((prev) =>
+      prev.map((t) => {
+        if (t.id !== tabId) return t;
+        return { ...t, content, isDirty: content !== t.originalContent };
+      })
+    );
+  }, []);
+
+  const handleWorkspaceFileOpen = useCallback((filePath: string, fileName: string) => {
+    handleFileOpen(filePath, fileName);
+    // Auto-show explorer panel when opening from explorer
+    if (!panelVisibility.explorer) {
+      setPanelVisibility((prev) => {
+        const next = { ...prev, explorer: true };
+        prevPanelVisibility.current = next;
+        return next;
+      });
+    }
+    const apiPrefix = `/api/v1/workspace/${solo.taskId}/files/`;
+    const relativePath = filePath.startsWith(apiPrefix) ? filePath.slice(apiPrefix.length) : fileName;
+    setHighlightFilePath(relativePath);
+  }, [handleFileOpen, solo.taskId, panelVisibility.explorer]);
+
+  const handleSettingsClick = useCallback(() => {
+    setPanelMenuOpen(false);
+    setShowSettingsInEditor(true);
+    setPanelVisibility(prev => {
+      const next = { ...prev, editor: true };
+      prevPanelVisibility.current = next;
+      return next;
+    });
+  }, []);
+
+  const currentWorkspaceName = currentWorkspace;
 
   return (
     <div className="solo-shell-v2">
-      <div className="solo-left-panel" style={{ width: leftWidth, minWidth: 160, maxWidth: 400 }}>
+      {/* Leftmost column: Task List */}
+      <div className="solo-tasklist-column">
         <TaskListPanel
           phase={solo.phase} intent={solo.intent} taskId={solo.taskId} elapsed={elapsed}
+          workspaceName={currentWorkspace}
           onNewTask={() => { solo.resetState(); setUserMessages([]); }}
           onRestoreChat={(msgs) => { setUserMessages(msgs); }}
           onSwitchTask={(tid, taskIntent, taskPersona, taskPhase) => {
@@ -440,58 +622,327 @@ export default function SoloLayout() {
             solo.restoreTask(tid, taskIntent, taskPersona, taskPhase);
           }}
           refreshTrigger={refreshCounter}
+          workspaceRefreshKey={workspaceRefreshKey}
         />
       </div>
-      <ResizeHandle onResize={(dx) => setLeftWidth((w) => Math.max(160, Math.min(400, w + dx)))} />
-      <div className="solo-center-panel" style={{ width: centerWidth, minWidth: 320, maxWidth: 800 }}>
-        <div className="solo-center-topbar">
-          <span className="solo-brand">{config.brandName}<span className="topbar-sep">/</span>{solo.interactionMode === "normal" ? "普通" : solo.interactionMode === "auto" ? "全自动" : "Solo"}</span>
-          <div className="solo-topbar-spacer" />
-          {openrouteStatus && (
-            <span className={`solo-openroute-status${openrouteStatus.healthy ? " healthy" : openrouteStatus.running ? " degraded" : " stopped"}`}
-              title={openrouteStatus.healthy ? `网页代理运行中 (${openrouteStatus.models} 个模型)` : "网页代理未运行"}>
-              {openrouteStatus.healthy ? "🌐" : "⚠"} {openrouteStatus.models}
-            </span>
-          )}
-          <span className="solo-tokens">Token: {solo.tokenStats.total} · ¥{solo.tokenStats.cost.toFixed(2)}</span>
-        </div>
-        <ChatStream messages={chatMessages} phase={solo.phase} onApprovalAction={handleApprovalAction} stageProgress={solo.stageProgress} interactionMode={solo.interactionMode} dynNodes={dynNodes} dynEdges={dynEdges} currentStep={currentDynStep} onFileOpen={handleFileOpen} />
-        {resumePrompt && solo.phase === "idle" && (
-          <div className="px-4 py-3 bg-amber-900/30 border-t border-amber-700/50 flex items-center gap-3">
-            <span className="text-amber-300 text-xs">⏸ 发现未完成的任务: {resumePrompt.intent.slice(0, 40)}</span>
-            <button
-              onClick={() => {
-                solo.restoreTask(resumePrompt.task_id, resumePrompt.intent, "default", "running");
-                setResumePrompt(null);
-              }}
-              className="text-xs px-3 py-1 bg-amber-600 text-white rounded hover:bg-amber-500"
-            >
-              继续执行
-            </button>
-            <button
-              onClick={() => setResumePrompt(null)}
-              className="text-xs px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
-            >
-              忽略
-            </button>
+
+      {panelVisibility.chat && (
+        <>
+          <div className="solo-chat-panel" style={{ width: chatPanelWidth, minWidth: 200, maxWidth: 400 }}>
+            <div className="solo-workspace-selector" ref={wsDropdownRef}>
+              <button
+                className="solo-ws-trigger"
+                onClick={() => setWsDropdownOpen(!wsDropdownOpen)}
+              >
+                <span className="solo-ws-trigger-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
+                </span>
+                <span className="solo-ws-trigger-name">
+                  {currentWorkspaceName || `${config.brandName} Solo`}
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={`solo-ws-chevron${wsDropdownOpen ? " open" : ""}`}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {wsDropdownOpen && (
+                <div className="solo-ws-dropdown">
+                  <div className="solo-ws-dropdown-header">
+                    <span>工作区</span>
+                    <button
+                      className="solo-ws-new-btn"
+                      onClick={() => setShowNewWorkspaceInput(!showNewWorkspaceInput)}
+                      title="新建工作区"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                    </button>
+                  </div>
+                  {showNewWorkspaceInput && (
+                    <div className="solo-ws-new-input-row">
+                      <input
+                        className="solo-ws-new-input"
+                        value={newWorkspaceName}
+                        onChange={(e) => setNewWorkspaceName(e.target.value)}
+                        placeholder="名称或完整路径（如 D:\myproject）"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newWorkspaceName.trim()) {
+                            const input = newWorkspaceName.trim();
+                            const isFullPath = /^[A-Za-z]:\\/.test(input) || input.startsWith("/") || input.includes("\\");
+                            const body = isFullPath
+                              ? { name: input.split(/[/\\]/).filter(Boolean).pop() || input, path: input }
+                              : { name: input };
+                            fetch("/api/v1/workspace/named", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(body),
+                            }).then(() => {
+                              setCurrentWorkspace(body.name);
+                              setNewWorkspaceName("");
+                              setShowNewWorkspaceInput(false);
+                              fetchWorkspaceList();
+                              solo.resetState();
+                              setUserMessages([]);
+                              setOpenTabs([]);
+                              setActiveTabId(null);
+                            });
+                          }
+                          if (e.key === "Escape") {
+                            setShowNewWorkspaceInput(false);
+                            setNewWorkspaceName("");
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        className="solo-ws-browse-btn"
+                        onClick={() => {
+                          // Open directory browser with root listing
+                          fetch("/api/v1/system/browse-directory", { method: "POST" })
+                            .then(r => r.ok ? r.json() : null)
+                            .then(data => {
+                              const roots = data?.roots || [];
+                              setDirBrowserItems(roots);
+                              setDirBrowserPath("");
+                              setShowDirBrowser(true);
+                            })
+                            .catch(() => {});
+                        }}
+                        title="浏览本地目录"
+                      >
+                        📂
+                      </button>
+                    </div>
+                  )}
+                  <div className="solo-ws-dropdown-list">
+                    {workspaceList.length === 0 ? (
+                      <div className="solo-ws-empty">暂无工作区</div>
+                    ) : (
+                      workspaceList.map((ws) => (
+                        <div
+                          key={ws.name}
+                          className={`solo-ws-item${ws.name === currentWorkspace ? " active" : ""}`}
+                          onClick={() => {
+                            setCurrentWorkspace(ws.name);
+                            setWsDropdownOpen(false);
+                            // Reset all panels when switching workspace
+                            solo.resetState();
+                            setUserMessages([]);
+                            setOpenTabs([]);
+                            setActiveTabId(null);
+                            // 加载新工作区的最新任务上下文
+                            fetch(`/api/v1/workspace/named/${ws.name}/tasks`)
+                              .then(r => r.ok ? r.json() : null)
+                              .then(data => {
+                                const tasks = data?.tasks || [];
+                                if (tasks.length > 0) {
+                                  const latest = tasks.sort((a: any, b: any) =>
+                                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                                  )[0];
+                                  solo.restoreTask(latest.task_id, latest.intent || latest.task_id, latest.persona || 'default', 'completed');
+                                }
+                              })
+                              .catch(() => {});
+                            fetchWorkspaceList();
+                            setRefreshCounter(c => c + 1);
+                            setWorkspaceRefreshKey(k => k + 1);
+                          }}
+                        >
+                          <span className="solo-ws-item-status">
+                            <span className="ws-status-dot" />
+                          </span>
+                          <span className="solo-ws-item-name">
+                            <span className="solo-ws-item-wsname">{ws.display_name || ws.name}</span>
+                            <span className="solo-ws-item-path">{ws.path}</span>
+                          </span>
+                          <span className="solo-ws-item-task-count">{ws.task_count || 0}</span>
+                          <button
+                            className="solo-ws-item-delete"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (ws.name === "default") return;
+                              fetch(`/api/v1/workspace/named/${ws.name}`, { method: "DELETE" }).then(() => {
+                                fetchWorkspaceList();
+                                if (ws.name === currentWorkspace) {
+                                  setCurrentWorkspace("default");
+                                  solo.resetState();
+                                  setUserMessages([]);
+                                  setOpenTabs([]);
+                                  setActiveTabId(null);
+                                }
+                              });
+                            }}
+                            title="删除工作区"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <>
+              <ChatStream messages={chatMessages} phase={solo.phase} onApprovalAction={handleApprovalAction} stageProgress={solo.stageProgress} interactionMode={solo.interactionMode} dynNodes={dynNodes} dynEdges={dynEdges} currentStep={currentDynStep} onFileOpen={handleFileOpen} onRetry={() => { if (solo.intent) solo.createTask(solo.intent, { persona: solo.persona || "default" }); }} onRefresh={() => { if (solo.taskId) { fetch(`/api/v1/tasks/${solo.taskId}`).then(r => r.json()).then(d => { if (d?.data?.status === "completed") solo.restoreTask(solo.taskId!, solo.intent || "", solo.persona || "default", "completed"); }).catch(() => {}); } }} onClear={() => { setUserMessages([]); solo.resetState(); }} taskId={solo.taskId} />
+              {resumePrompt && solo.phase === "idle" && (
+                <div className="px-4 py-3 bg-amber-900/30 border-t border-amber-700/50 flex items-center gap-3">
+                  <span className="text-amber-300 text-xs">⏸ 发现未完成的任务: {resumePrompt.intent.slice(0, 40)}</span>
+                  <button
+                    onClick={() => {
+                      solo.restoreTask(resumePrompt.task_id, resumePrompt.intent, "default", "running");
+                      setResumePrompt(null);
+                    }}
+                    className="text-xs px-3 py-1 bg-amber-600 text-white rounded hover:bg-amber-500"
+                  >
+                    继续执行
+                  </button>
+                  <button
+                    onClick={() => setResumePrompt(null)}
+                    className="text-xs px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
+                  >
+                    忽略
+                  </button>
+                </div>
+              )}
+              <ChatInput phase={solo.phase} onSubmit={handleChatSubmit} onReview={handleReview} onCommand={handleCommand} onStop={solo.resetState} interactionMode={solo.interactionMode} onInteractionModeChange={solo.setInteractionMode} selectedModel={selectedModel} onModelChange={setSelectedModel} selectedWorkflow={null} onWorkflowChange={() => {}} />
+            </>
           </div>
-        )}
-        <ChatInput phase={solo.phase} onSubmit={handleChatSubmit} onReview={handleReview} onCommand={handleCommand} onStop={solo.resetState} interactionMode={solo.interactionMode} onInteractionModeChange={solo.setInteractionMode} selectedWorkflow={selectedWorkflow} onWorkflowChange={setSelectedWorkflow} />
+          <ResizeHandle onResize={(dx) => setChatPanelWidth((w) => Math.max(200, Math.min(400, w + dx)))} />
+        </>
+      )}
+      <div className={`solo-editor-panel${!panelVisibility.editor ? " collapsed" : ""}`}>
+        <MarkdownPanel
+          tabs={openTabs}
+          activeTabId={activeTabId}
+          onTabSelect={handleTabSelect}
+          onTabClose={handleTabClose}
+          onContentChange={handleContentChange}
+          phase={solo.phase}
+          showSettings={showSettingsInEditor}
+          onCloseSettings={() => setShowSettingsInEditor(false)}
+          panelVisibility={panelVisibility}
+          onTogglePanel={handleTogglePanel}
+          onOpenSettings={handleSettingsClick}
+          collapsed={!panelVisibility.editor}
+        />
       </div>
-      <ResizeHandle onResize={(dx) => setCenterWidth((w) => Math.max(320, Math.min(800, w + dx)))} />
-      <div className="solo-right-panel" style={{ flex: 1, minWidth: 280 }}>
-        <div className="flex border-b border-gray-700">
-          <button className={`px-4 py-2 text-sm ${rightTab === "editor" ? "text-white border-b-2 border-indigo-500" : "text-gray-400"}`} onClick={() => setRightTab("editor")}>编辑器</button>
-          <button className={`px-4 py-2 text-sm ${rightTab === "files" ? "text-white border-b-2 border-indigo-500" : "text-gray-400"}`} onClick={() => setRightTab("files")}>工作区文件</button>
-        </div>
-        {rightTab === "editor" ? (
-          <MarkdownPanel content={solo.editorContent} onChange={solo.updateEditor} phase={solo.phase} filePath={previewFilePath} />
-        ) : (
-          <WorkspacePanel taskId={solo.taskId} onFileOpen={handleFileOpen} />
-        )}
-      </div>
+      {panelVisibility.explorer && (
+        <>
+          <ResizeHandle onResize={(dx) => setRightPanelWidth((w) => Math.max(180, Math.min(400, w - dx)))} />
+          <div className="solo-explorer-panel" style={{ width: rightPanelWidth, minWidth: 180, maxWidth: 400 }}>
+            <WorkspacePanel
+              taskId={solo.taskId}
+              workspaceName={currentWorkspace}
+              onFileOpen={handleWorkspaceFileOpen}
+              highlightFilePath={highlightFilePath}
+            />
+          </div>
+        </>
+      )}
       {graphModal && (
         <StaticGraphModal type={graphModal.type} name={graphModal.name} onClose={() => setGraphModal(null)} />
+      )}
+      {/* Directory Browser Modal */}
+      {showDirBrowser && (
+        <div className="dir-browser-overlay" onClick={() => setShowDirBrowser(false)}>
+          <div className="dir-browser-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="dir-browser-header">
+              <span>选择工作区目录</span>
+              <button className="dir-browser-close" onClick={() => setShowDirBrowser(false)}>✕</button>
+            </div>
+            <div className="dir-browser-path">
+              <span className="dir-browser-path-label">当前路径：</span>
+              <span className="dir-browser-path-value">{dirBrowserPath || "根目录"}</span>
+            </div>
+            <div className="dir-browser-list">
+              {dirBrowserPath && (
+                <div
+                  className="dir-browser-item dir-browser-parent"
+                  onClick={() => {
+                    const parent = dirBrowserPath.replace(/[/\\][^/\\]+$/, "");
+                    if (parent && parent !== dirBrowserPath) {
+                      fetch("/api/v1/system/list-directory", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ path: parent }),
+                      })
+                        .then(r => r.json())
+                        .then(data => {
+                          setDirBrowserItems(data.items || []);
+                          setDirBrowserPath(parent);
+                        })
+                        .catch(() => {});
+                    } else {
+                      // Go back to roots
+                      fetch("/api/v1/system/browse-directory", { method: "POST" })
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => {
+                          setDirBrowserItems(data?.roots || []);
+                          setDirBrowserPath("");
+                        })
+                        .catch(() => {});
+                    }
+                  }}
+                >
+                  📁 ..
+                </div>
+              )}
+              {dirBrowserItems.map((item) => (
+                <div
+                  key={item.path}
+                  className={`dir-browser-item${item.is_dir ? " dir-browser-dir" : ""}`}
+                  onClick={() => {
+                    if (item.is_dir) {
+                      fetch("/api/v1/system/list-directory", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ path: item.path }),
+                      })
+                        .then(r => r.json())
+                        .then(data => {
+                          setDirBrowserItems(data.items || []);
+                          setDirBrowserPath(item.path);
+                        })
+                        .catch(() => {});
+                    }
+                  }}
+                  onDoubleClick={() => {
+                    if (item.is_dir) {
+                      setNewWorkspaceName(item.path);
+                      setShowDirBrowser(false);
+                    }
+                  }}
+                >
+                  {item.is_dir ? "📁" : "📄"} {item.name}
+                </div>
+              ))}
+            </div>
+            <div className="dir-browser-footer">
+              <button
+                className="dir-browser-select-btn"
+                onClick={() => {
+                  if (dirBrowserPath) {
+                    setNewWorkspaceName(dirBrowserPath);
+                  }
+                  setShowDirBrowser(false);
+                }}
+                disabled={!dirBrowserPath}
+              >
+                选择此目录
+              </button>
+              <button className="dir-browser-cancel-btn" onClick={() => setShowDirBrowser(false)}>
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

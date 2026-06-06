@@ -1,27 +1,31 @@
 """
 Solo Workspace Manager for FlowForge.
 
-Provides per-task workspace isolation with file access control and
-sandbox execution, inspired by Trae SOLO's workspace and sandbox design.
+Provides named workspace (project directory) isolation with file access control
+and sandbox execution, inspired by VS Code workspace and Trae SOLO design.
 
-Each Solo task gets an independent workspace directory under `data/workspaces/`.
-All file operations and command executions are restricted to the workspace boundary.
+A workspace is a project directory (like VS Code workspace). Multiple tasks
+can belong to the same workspace. Tasks are stored inside the workspace.
 
 Workspace structure:
-    data/workspaces/{task_id}/
-    ├── .solo/              # Solo metadata (chat history, task state)
-    │   ├── chat.jsonl      # Chat messages (append-only log)
-    │   ├── task.json       # Task metadata and state
-    │   └── context.json    # LLM context snapshot for resume
-    ├── files/              # User/agent generated files
-    └── output/             # Task output artifacts
+    data/workspaces/{workspace_name}/
+    ├── .solo/                          # Solo metadata
+    │   ├── workspace.json              # Workspace metadata
+    │   ├── tasks/                      # Task metadata directory
+    │   │   ├── {task_id}.json          # Task metadata
+    │   │   └── {task_id}_chat.jsonl    # Task chat history
+    │   ├── chat.jsonl                  # (legacy) Chat messages
+    │   ├── task.json                   # (legacy) Task metadata
+    │   └── context.json                # (legacy) LLM context snapshot
+    ├── files/                          # User/agent generated files
+    └── output/                         # Task output artifacts
 
 Usage:
     ws = WorkspaceManager()
-    ws.create_workspace(task_id)
+    ws.create_named_workspace("my-project")
+    ws.add_task_to_workspace("my-project", task_id, metadata={...})
     ws.save_message(task_id, {"role": "user", "content": "hello"})
     messages = ws.load_messages(task_id)
-    sandbox_path = ws.get_sandbox_path(task_id)
 """
 
 import json
@@ -77,7 +81,51 @@ class WorkspaceManager:
         self._base.mkdir(parents=True, exist_ok=True)
         self._dir_map: Dict[str, Path] = {}
 
-    def create_workspace(self, task_id: str, metadata: Optional[dict] = None, workspace_dir: Optional[str] = None) -> Path:
+    def create_workspace(self, task_id: str, metadata: Optional[dict] = None, workspace_dir: Optional[str] = None, workspace_name: Optional[str] = None) -> Path:
+        # If workspace_name is provided, use the named workspace system
+        if workspace_name:
+            ws_path = self._base / workspace_name
+            ws_path.mkdir(parents=True, exist_ok=True)
+            (ws_path / SOLO_DIR).mkdir(exist_ok=True)
+            (ws_path / SOLO_DIR / "tasks").mkdir(exist_ok=True)
+            (ws_path / FILES_DIR).mkdir(exist_ok=True)
+            (ws_path / OUTPUT_DIR).mkdir(exist_ok=True)
+
+            # Ensure workspace.json exists
+            ws_meta_path = ws_path / SOLO_DIR / "workspace.json"
+            if not ws_meta_path.exists():
+                ws_meta = {
+                    "name": workspace_name,
+                    "display_name": workspace_name,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "path": str(ws_path),
+                }
+                self._write_json(ws_meta_path, ws_meta)
+
+            # Create task metadata inside workspace
+            tasks_dir = ws_path / SOLO_DIR / "tasks"
+            task_meta = {
+                "task_id": task_id,
+                "workspace": workspace_name,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "status": "running",
+                "message_count": 0,
+                **(metadata or {}),
+            }
+            self._write_json(tasks_dir / f"{task_id}.json", task_meta)
+
+            # Create chat file
+            chat_path = tasks_dir / f"{task_id}_chat.jsonl"
+            chat_path.touch()
+
+            # Also write legacy task.json for backward compatibility
+            self._write_json(ws_path / SOLO_DIR / TASK_FILE, task_meta)
+
+            self._dir_map[task_id] = ws_path
+            logger.info(f"Workspace created: {ws_path} for task {task_id}")
+            return ws_path
+
+        # Legacy path: use task_id as workspace directory name
         ws_path = Path(workspace_dir) if workspace_dir else self._base / task_id
         ws_path.mkdir(parents=True, exist_ok=True)
         (ws_path / SOLO_DIR).mkdir(exist_ok=True)
@@ -100,10 +148,136 @@ class WorkspaceManager:
         logger.info(f"Workspace created: {ws_path}")
         return ws_path
 
+    def create_named_workspace(self, name: str, path: Optional[str] = None) -> Path:
+        """Create a named workspace directory.
+
+        Args:
+            name: Workspace name (used for display and default directory naming).
+            path: Optional custom path for the workspace directory.
+                  If provided, this path is used instead of the default
+                  workspaces_dir / name.
+
+        Returns:
+            Path to the created workspace directory.
+        """
+        safe_name = re.sub(r'[^a-zA-Z0-9_\-\u4e00-\u9fff]', '_', name)
+        ws_path = Path(path) if path else self._base / safe_name
+        ws_path.mkdir(parents=True, exist_ok=True)
+        (ws_path / SOLO_DIR).mkdir(exist_ok=True)
+        (ws_path / SOLO_DIR / "tasks").mkdir(exist_ok=True)
+        (ws_path / FILES_DIR).mkdir(exist_ok=True)
+        (ws_path / OUTPUT_DIR).mkdir(exist_ok=True)
+        # Write workspace metadata
+        meta = {
+            "name": safe_name,
+            "display_name": name,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "path": str(ws_path),
+        }
+        self._write_json(ws_path / SOLO_DIR / "workspace.json", meta)
+        return ws_path
+
+    def list_named_workspaces(self) -> List[dict]:
+        """List all named workspaces (not task-id directories)."""
+        results = []
+        if not self._base.exists():
+            return results
+        for ws_dir in sorted(self._base.iterdir()):
+            if not ws_dir.is_dir():
+                continue
+            ws_meta_path = ws_dir / SOLO_DIR / "workspace.json"
+            if ws_meta_path.exists():
+                meta = self._load_json(ws_meta_path)
+                if meta:
+                    meta["path"] = str(ws_dir)
+                    # Count tasks
+                    tasks_dir = ws_dir / SOLO_DIR / "tasks"
+                    if tasks_dir.exists():
+                        task_files = [f for f in tasks_dir.glob("*.json") if not f.name.endswith("_chat.jsonl")]
+                        meta["task_count"] = len(task_files)
+                    else:
+                        meta["task_count"] = 0
+                    results.append(meta)
+        return results
+
+    def get_default_workspace(self) -> str:
+        """Get or create the default workspace name."""
+        default_path = self._base / "default"
+        if not default_path.exists() or not (default_path / SOLO_DIR / "workspace.json").exists():
+            self.create_named_workspace("default")
+        return "default"
+
+    def add_task_to_workspace(self, workspace_name: str, task_id: str, metadata: Optional[dict] = None) -> Path:
+        """Add a task to a named workspace."""
+        ws_path = self._base / workspace_name
+        if not ws_path.exists() or not (ws_path / SOLO_DIR / "workspace.json").exists():
+            ws_path = self.create_named_workspace(workspace_name)
+        tasks_dir = ws_path / SOLO_DIR / "tasks"
+        tasks_dir.mkdir(parents=True, exist_ok=True)
+
+        task_meta = {
+            "task_id": task_id,
+            "workspace": workspace_name,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "running",
+            **(metadata or {}),
+        }
+        self._write_json(tasks_dir / f"{task_id}.json", task_meta)
+
+        # Also create chat file
+        chat_path = tasks_dir / f"{task_id}_chat.jsonl"
+        chat_path.touch()
+
+        # Register in dir_map for fast lookup
+        self._dir_map[task_id] = ws_path
+
+        # Also write legacy task.json for backward compatibility
+        self._write_json(ws_path / SOLO_DIR / TASK_FILE, task_meta)
+
+        return ws_path
+
+    def list_workspace_tasks(self, workspace_name: str) -> List[dict]:
+        """List all tasks in a named workspace."""
+        ws_path = self._base / workspace_name
+        tasks_dir = ws_path / SOLO_DIR / "tasks"
+        if not tasks_dir.exists():
+            return []
+        results = []
+        for tf in tasks_dir.glob("*.json"):
+            if tf.name.endswith("_chat.jsonl"):
+                continue
+            meta = self._load_json(tf)
+            if meta:
+                results.append(meta)
+        results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        return results
+
+    def get_task_workspace(self, task_id: str) -> Optional[str]:
+        """Find which workspace a task belongs to."""
+        if not self._base.exists():
+            return None
+        for ws_dir in self._base.iterdir():
+            if not ws_dir.is_dir():
+                continue
+            tasks_dir = ws_dir / SOLO_DIR / "tasks"
+            if tasks_dir.exists():
+                task_file = tasks_dir / f"{task_id}.json"
+                if task_file.exists():
+                    return ws_dir.name
+        return None
+
     def get_workspace_path(self, task_id: str) -> Optional[Path]:
         if task_id in self._dir_map:
             p = self._dir_map[task_id]
             return p if p.exists() else None
+        # Try to find task in named workspaces first
+        workspace_name = self.get_task_workspace(task_id)
+        if workspace_name:
+            ws_path = self._base / workspace_name
+            if ws_path.exists():
+                self._dir_map[task_id] = ws_path
+                return ws_path
+        # Fallback: legacy path using task_id as directory name
         ws_path = self._base / task_id
         return ws_path if ws_path.exists() else None
 
@@ -205,20 +379,35 @@ class WorkspaceManager:
         if "timestamp" not in message:
             message["timestamp"] = datetime.now(timezone.utc).isoformat()
 
+        # Save to legacy chat.jsonl
         with open(chat_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(message, ensure_ascii=False) + "\n")
+
+        # Also save to task-specific chat file if in named workspace
+        tasks_dir = solo_dir / "tasks"
+        if tasks_dir.exists():
+            task_chat_path = tasks_dir / f"{task_id}_chat.jsonl"
+            with open(task_chat_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(message, ensure_ascii=False) + "\n")
 
         task_meta = self._load_task_meta(task_id)
         if task_meta:
             task_meta["message_count"] = task_meta.get("message_count", 0) + 1
             task_meta["updated_at"] = datetime.now(timezone.utc).isoformat()
             self._write_json(solo_dir / TASK_FILE, task_meta)
+            # Also update task-specific metadata
+            if tasks_dir.exists():
+                task_file = tasks_dir / f"{task_id}.json"
+                if task_file.exists():
+                    self._write_json(task_file, task_meta)
 
     def load_messages(self, task_id: str) -> List[dict]:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return []
-        chat_path = ws_path / SOLO_DIR / CHAT_FILE
+        # Prefer task-specific chat file
+        task_chat_path = ws_path / SOLO_DIR / "tasks" / f"{task_id}_chat.jsonl"
+        chat_path = task_chat_path if task_chat_path.exists() else ws_path / SOLO_DIR / CHAT_FILE
         if not chat_path.exists():
             return []
 
@@ -268,6 +457,12 @@ class WorkspaceManager:
         ws_path = self._resolve_ws_path(task_id)
         if ws_path:
             self._write_json(ws_path / SOLO_DIR / TASK_FILE, task_meta)
+            # Also update task-specific metadata
+            tasks_dir = ws_path / SOLO_DIR / "tasks"
+            if tasks_dir.exists():
+                task_file = tasks_dir / f"{task_id}.json"
+                if task_file.exists():
+                    self._write_json(task_file, task_meta)
 
     def update_task_metadata(self, task_id: str, updates: dict) -> Optional[dict]:
         task_meta = self._load_task_meta(task_id)
@@ -278,6 +473,12 @@ class WorkspaceManager:
         ws_path = self._resolve_ws_path(task_id)
         if ws_path:
             self._write_json(ws_path / SOLO_DIR / TASK_FILE, task_meta)
+            # Also update task-specific metadata
+            tasks_dir = ws_path / SOLO_DIR / "tasks"
+            if tasks_dir.exists():
+                task_file = tasks_dir / f"{task_id}.json"
+                if task_file.exists():
+                    self._write_json(task_file, task_meta)
         return task_meta
 
     def list_workspaces(self, status: Optional[str] = None) -> List[dict]:

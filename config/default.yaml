@@ -1,6 +1,7 @@
 system:
   db_url: "sqlite:///data/flowforge.db"
   checkpointer_url: "sqlite:///data/checkpoints.db"
+  domain_modules: ""
   log_level: "INFO"
   log_file: "logs/flowforge.log"
   log_format: "structured"
@@ -61,6 +62,22 @@ opensieve:
   enabled: true
   endpoint: "http://localhost:8100/api/v1/retrieve"
   timeout: 90
+
+helixrag:
+  enabled: true
+  endpoint: "http://localhost:8100/api/v1/retrieve"
+  timeout: 90
+  min_score: 0.3
+  max_results: 5
+
+search:
+  fallback_chain:
+    - opensieve_search
+    - tavily_search
+    - duckduckgo_search
+  llm_web_search:
+    enabled: true
+    model: "web/chat"
 
 wechat:
   official_enabled: false

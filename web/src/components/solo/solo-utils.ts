@@ -1,4 +1,4 @@
-import { ChatMessage, StepGroupData } from "./solo-types";
+import { ChatMessage, StepGroupData, TaskHistoryItem } from "./solo-types";
 import { SoloTaskPhase } from "../../lib/solo-types";
 
 export const COMMANDS = [
@@ -133,14 +133,9 @@ export function renderMarkdown(md: string): string {
   for (let i = 0; i < inlineCodes.length; i++) {
     html = html.replace(`%%INLINECODE_${i}%%`, inlineCodes[i]);
   }
-  if (mdCache.size >= MD_CACHE_MAX) {
-    const firstKey = mdCache.keys().next().value;
-    if (firstKey !== undefined) mdCache.delete(firstKey);
-  }
-  mdCache.set(md, html);
   const fileExtRe = /\.(py|ts|tsx|js|jsx|md|yaml|yml|json|css|html|toml|cfg|ini|sh|bat|ps1|sql|rb|go|rs|java|kt|swift|c|cpp|h|hpp|cs|php|vue|svelte|astro|env|lock)(?::\+(\d+)(?:-(\d+))?)?(?=[^a-zA-Z0-9_/.\-<]|$)/g;
-  html = html.replace(fileExtRe, (match) => {
-    let pathStart = html.indexOf(match);
+  html = html.replace(fileExtRe, (match, _ext, _lineStart, _lineEnd, offset) => {
+    let pathStart = offset;
     if (pathStart === -1) return match;
     const searchStart = Math.max(0, pathStart - 120);
     const segment = html.slice(searchStart, pathStart + match.length);
@@ -151,6 +146,11 @@ export function renderMarkdown(md: string): string {
     if (rawPath.includes("<") || rawPath.startsWith("http")) return match;
     return `<span class="file-ref" data-path="${rawPath.replace(/"/g, "&quot;")}">${rawPath}</span>`;
   });
+  if (mdCache.size >= MD_CACHE_MAX) {
+    const firstKey = mdCache.keys().next().value;
+    if (firstKey !== undefined) mdCache.delete(firstKey);
+  }
+  mdCache.set(md, html);
   return html;
 }
 
@@ -270,7 +270,9 @@ export function entryToChatMessages(entry: any): ChatMessage[] {
             _draft: true,
             _is_final_result: !entry.data.is_partial,
             _saved_to_file: isSaved,
-            _content_full: entry.data.content,  // full content for expand
+            _content_full: entry.data.content,
+            _file_path: entry.data.file_path || "",
+            _file_name: entry.data.filename || "",
           },
         }];
       }
@@ -358,11 +360,19 @@ export function groupMessagesIntoSteps(
   const result: (ChatMessage | StepGroupData)[] = [];
   let currentGroup: StepGroupData | null = null;
   let stepCounter = 0;
-  const isTerminal = (p: SoloTaskPhase): boolean => p === "completed" || p === "error" || p === "rejected" || p === "interrupted" || p === "idle";
+  const isTerminal = (p: SoloTaskPhase): boolean => p === "completed" || p === "error" || p === "rejected" || p === "interrupted";
+  const isNotActive = (p: SoloTaskPhase): boolean => isTerminal(p) || p === "waiting_review" || p === "paused";
 
   for (const msg of messages) {
     if (msg.role === "stage") {
-      if (currentGroup) { currentGroup.status = "completed"; result.push(currentGroup); }
+      if (currentGroup) {
+        const hasError = currentGroup.entries.some(m =>
+          m.data?.error || m.data?._llm_error ||
+          (m.role === "system" && m.content?.startsWith("✗"))
+        );
+        currentGroup.status = hasError ? "error" : "completed";
+        result.push(currentGroup);
+      }
       stepCounter++;
       currentGroup = {
         id: `step-${stepCounter}`, stepNumber: stepCounter,
@@ -372,7 +382,14 @@ export function groupMessagesIntoSteps(
     } else if (currentGroup) {
       // User messages should NOT be absorbed into step groups; render standalone
       if (msg.role === "user") {
-        if (currentGroup) { currentGroup.status = "completed"; result.push(currentGroup); currentGroup = null; }
+        if (currentGroup) {
+          const hasError = currentGroup.entries.some(m =>
+            m.data?.error || m.data?._llm_error ||
+            (m.role === "system" && m.content?.startsWith("✗"))
+          );
+          currentGroup.status = hasError ? "error" : "completed";
+          currentGroup = null;
+        }
         result.push(msg);
       } else {
         currentGroup.entries.push(msg);
@@ -388,16 +405,27 @@ export function groupMessagesIntoSteps(
     }
   }
   if (currentGroup) {
-    if (currentGroup.status === "running") {
-      if (isTerminal(phase)) currentGroup.status = phase === "completed" ? "completed" : "error";
-    }
     currentGroup.entries = mergeStreamingMessages(currentGroup.entries);
+    if (currentGroup.status === "running") {
+      const hasError = currentGroup.entries.some(m =>
+        m.data?.error || m.data?._llm_error ||
+        (m.role === "system" && m.content?.startsWith("✗"))
+      );
+      if (isNotActive(phase)) {
+        currentGroup.status = hasError || phase === "error" || phase === "rejected" || phase === "interrupted" ? "error" : "completed";
+      }
+    }
     result.push(currentGroup);
   }
-  if (isTerminal(phase)) {
+  if (isNotActive(phase)) {
     for (const item of result) {
-      if ("status" in item && item.status === "running") {
-        item.status = phase === "completed" ? "completed" : "error";
+      if ("status" in item && (item as StepGroupData).status === "running") {
+        const sg = item as StepGroupData;
+        const hasError = sg.entries.some(m =>
+          m.data?.error || m.data?._llm_error ||
+          (m.role === "system" && m.content?.startsWith("✗"))
+        );
+        sg.status = hasError || phase === "error" || phase === "rejected" || phase === "interrupted" ? "error" : "completed";
       }
     }
   }
@@ -447,5 +475,3 @@ export function saveDeletedIds(brand: string, ids: Set<string>): void {
   if (typeof window === "undefined") return;
   try { localStorage.setItem(`${brand}_solo_deleted`, JSON.stringify([...ids])); } catch {}
 }
-
-import { TaskHistoryItem } from "./solo-types";

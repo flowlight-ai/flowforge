@@ -9,6 +9,9 @@ License: MIT
 
 from .event_bus import EventBus
 from flowforge.core.workspace import get_workspace_manager
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("solo_adapter")
 
 
 _SAVE_EVENTS = {
@@ -126,6 +129,7 @@ class EventBusSoloAdapter:
                 async def callback(event):
                     task_id = event.get("task_id", "")
                     payload = event.get("payload", {})
+                    logger.info(f"[solo_adapter] Event received: flowforge='{flowforge_event}' → solo='{etype}', task_id={task_id}")
                     await self.solo_manager.emit_event(task_id, etype, payload)
                     if etype in _SAVE_EVENTS and task_id:
                         try:
@@ -133,14 +137,19 @@ class EventBusSoloAdapter:
                             if msg:
                                 ws = get_workspace_manager()
                                 ws.save_message(task_id, msg)
+                                logger.info(f"[solo_adapter] Message saved: task_id={task_id}, role={msg.get('role')}, event_type={etype}")
+                            else:
+                                logger.debug(f"[solo_adapter] Message skipped (None): task_id={task_id}, event_type={etype}")
                             if etype == "solo.task.completed":
                                 ws = get_workspace_manager()
                                 ws.update_task_status(task_id, "completed")
+                                logger.info(f"[solo_adapter] Task status updated: task_id={task_id}, status=completed")
                             elif etype == "solo.task.error":
                                 ws = get_workspace_manager()
                                 ws.update_task_status(task_id, "error")
-                        except Exception:
-                            pass
+                                logger.info(f"[solo_adapter] Task status updated: task_id={task_id}, status=error")
+                        except Exception as e:
+                            logger.warning(f"[solo_adapter] Save/status update failed: task_id={task_id}, event_type={etype}, error={e}")
                 return callback
             self.event_bus.subscribe(flowforge_event, make_callback())
         self._bridged = True

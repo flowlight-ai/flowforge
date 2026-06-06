@@ -224,20 +224,48 @@ class PluginRegistry:
         Use this when you have a plugin instance created outside the
         registry (e.g., for testing or programmatic registration).
 
+        Also accepts BaseTool instances — they are automatically wrapped
+        in a _BaseToolToPluginAdapter.
+
         Args:
-            plugin: ToolPlugin instance to register.
+            plugin: ToolPlugin or BaseTool instance to register.
             manifest: Optional manifest override. If not provided,
                 uses the plugin's class-level manifest.
         """
-        name = manifest.name if manifest else plugin.manifest.name
+        # Auto-adapter: wrap BaseTool instances
+        from flowforge.core.base_tool import BaseTool
+        if isinstance(plugin, BaseTool) and not isinstance(plugin, ToolPlugin):
+            tool_name = getattr(plugin, "name", None) or plugin.__class__.__name__.lower()
+            adapter_manifest = manifest
+            if adapter_manifest is None:
+                adapter_manifest = PluginManifest(name=tool_name)
+            adapter = _BaseToolToPluginAdapter(plugin, adapter_manifest)
+            # Recurse with the adapter
+            return await self.register_instance(adapter, adapter_manifest)
+
+        name = manifest.name if manifest else getattr(plugin, "manifest", None)
+        if name and hasattr(name, "name"):
+            name = name.name
+        if not name:
+            name = getattr(plugin, "name", plugin.__class__.__name__.lower())
         if name in self._plugins:
             logger.warning(f"Plugin '{name}' already registered, skipping")
             return
 
         if manifest:
             self._manifests[name] = manifest
-        elif hasattr(plugin, "manifest"):
-            self._manifests[name] = plugin.manifest
+        elif hasattr(plugin, "manifest") and plugin.manifest is not None:
+            # plugin.manifest may be from plugin_protocol (plain class)
+            # or interfaces.tools (Pydantic) — normalize to interfaces.tools
+            pm = plugin.manifest
+            if isinstance(pm, PluginManifest):
+                self._manifests[name] = pm
+            else:
+                # Convert from plugin_protocol.PluginManifest
+                self._manifests[name] = PluginManifest(name=getattr(pm, "name", name))
+        else:
+            # Create a default manifest for plugins without one
+            self._manifests[name] = PluginManifest(name=name)
 
         self._configs[name] = {}
 

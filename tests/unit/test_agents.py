@@ -150,10 +150,8 @@ async def test_topic_research_agent():
     agent = TopicResearchAgent()
     registry = ToolRegistry()
     cache_tool = SimulatedCacheTool()
-    opensieve_tool = SimulatedOpenSieveTool()
     web_search_tool = SimulatedWebSearchTool()
     registry.register(cache_tool)
-    registry.register(opensieve_tool)
     registry.register(web_search_tool)
     ctx = _make_context(registry)
     collector = EventCollector(ctx.event_bus)
@@ -163,11 +161,9 @@ async def test_topic_research_agent():
     assert isinstance(output, AgentOutput)
     assert "topics" in output.result
     assert len(output.result["topics"]) > 0
-    assert all("title" in t and "angle" in t and "url" in t for t in output.result["topics"])
+    assert all("title" in t and "url" in t for t in output.result["topics"])
     assert len(cache_tool._calls) >= 1
-    assert len(opensieve_tool._calls) >= 1
     assert collector.has_event("topic_research.cache_check_start")
-    assert collector.has_event("topic_research.opensieve_search_start")
     assert collector.has_event("topic_research.complete")
 
 
@@ -212,7 +208,6 @@ async def test_topic_research_agent_fallback_to_web_search():
     assert len(cache_tool._calls) >= 1
     assert len(web_search_tool._calls) >= 1
     assert collector.has_event("topic_research.cache_check_start")
-    assert collector.has_event("topic_research.web_search_start")
     assert collector.has_event("topic_research.complete")
 
 

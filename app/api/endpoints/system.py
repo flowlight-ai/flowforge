@@ -1,9 +1,11 @@
 import sys
 import platform
 import yaml
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from flowforge.core.tracing import get_trace_id, get_logger
 
 logger = get_logger("api.system")
@@ -262,3 +264,125 @@ async def get_dependency_graph():
         logger.warning(f"Failed to build dependency graph: {e}")
 
     return _make_response({"nodes": nodes, "edges": edges})
+
+
+@router.post("/browse-directory")
+async def browse_directory():
+    """List local directories for the frontend directory browser."""
+    try:
+        import os
+        # Return common root directories for the user to browse
+        if sys.platform == "win32":
+            # Windows: list drive letters
+            drives = []
+            for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                drive = f"{letter}:\\"
+                if os.path.exists(drive):
+                    drives.append({"name": drive, "path": drive, "is_dir": True})
+            # Add user home directory
+            home = os.path.expanduser("~")
+            drives.insert(0, {"name": f"Home ({home})", "path": home, "is_dir": True})
+            return {"roots": drives}
+        else:
+            # Linux/Mac: list root and home
+            home = os.path.expanduser("~")
+            return {"roots": [
+                {"name": "Home", "path": home, "is_dir": True},
+                {"name": "Root", "path": "/", "is_dir": True},
+            ]}
+    except Exception as e:
+        return {"roots": [], "error": str(e)}
+
+
+class ListDirRequest(BaseModel):
+    path: str
+
+
+@router.post("/list-directory")
+async def list_directory(req: ListDirRequest):
+    """List contents of a directory for the frontend directory browser."""
+    import os
+    try:
+        target = req.path
+        if not os.path.isdir(target):
+            return {"items": [], "error": "Not a directory"}
+        items = []
+        for entry in os.scandir(target):
+            try:
+                is_dir = entry.is_dir()
+                if not is_dir and not entry.is_file():
+                    continue
+                items.append({
+                    "name": entry.name,
+                    "path": entry.path,
+                    "is_dir": is_dir,
+                })
+            except (PermissionError, OSError):
+                continue
+        # Sort: directories first, then by name
+        items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
+        return {"items": items[:200]}  # Limit to 200 items
+    except PermissionError:
+        return {"items": [], "error": "Permission denied"}
+    except Exception as e:
+        return {"items": [], "error": str(e)}
+
+
+class ExecuteRequest(BaseModel):
+    command: str
+    timeout: int = 30
+
+
+@router.post("/execute")
+async def execute_command(req: ExecuteRequest):
+    """Execute a shell command and return the output."""
+    # 安全限制：禁止危险命令
+    dangerous = ["rm -rf", "del /", "format", "shutdown", "rmdir /s"]
+    cmd_lower = req.command.lower()
+    for d in dangerous:
+        if d in cmd_lower:
+            raise HTTPException(status_code=403, detail=f"禁止执行危险命令: {d}")
+
+    try:
+        import sys
+        import subprocess
+        if sys.platform == "win32":
+            # Windows: use cmd.exe /c to execute commands
+            proc = subprocess.run(
+                ["cmd.exe", "/c", req.command],
+                capture_output=True,
+                timeout=req.timeout,
+                text=True,
+                errors="replace",
+            )
+            output = proc.stdout or ""
+            err_output = proc.stderr or ""
+            if err_output:
+                output = output + "\n" + err_output if output else err_output
+            if not output and proc.returncode != 0:
+                output = f"命令退出码: {proc.returncode}"
+            return {"output": output, "returncode": proc.returncode}
+        else:
+            proc = await asyncio.create_subprocess_shell(
+                req.command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=req.timeout)
+            output = stdout.decode("utf-8", errors="replace")
+            err_output = stderr.decode("utf-8", errors="replace") if stderr else ""
+            if err_output:
+                output = output + "\n" + err_output if output else err_output
+            if not output and proc.returncode != 0:
+                output = f"命令退出码: {proc.returncode}"
+            return {"output": output, "returncode": proc.returncode}
+    except subprocess.TimeoutExpired:
+        return {"output": f"命令超时（{req.timeout}秒）", "error": True}
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        return {"output": f"命令超时（{req.timeout}秒）", "error": True}
+    except Exception as e:
+        return {"output": str(e), "error": True}

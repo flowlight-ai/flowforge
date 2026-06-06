@@ -12,7 +12,6 @@ from flowforge.tools.web_search import WebSearchTool
 from flowforge.tools.python_executor import PythonExecutorTool
 from flowforge.tools.file_rw import FileReadWriteTool
 from flowforge.tools.cache import CacheTool
-from flowforge.tools.tavily_search import TavilySearchTool
 from flowforge.tools.duckduckgo_search import DuckDuckGoSearchTool
 from flowforge.tools.web_scraper import WebScraperTool
 from flowforge.tools.toutiao_publisher import ToutiaoPublisherTool
@@ -60,7 +59,6 @@ class FlowForge:
         self.tool_registry.register(CacheTool())
 
         _optional_tools = [
-            (TavilySearchTool, "TAVILY_API_KEY"),
             (DuckDuckGoSearchTool, None),
             (WebScraperTool, None),
             (ToutiaoPublisherTool, "TOUTIAO_ACCESS_TOKEN"),

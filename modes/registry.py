@@ -56,6 +56,16 @@ class ModeRegistry:
             raise ModeNotFoundError(f"Mode '{mode_name}' not found")
         return self._modes[mode_name]
 
+    def unregister(self, mode_name: str) -> None:
+        """Remove a registered mode by name.
+
+        Raises:
+            ModeNotFoundError: If no mode with the given name is registered.
+        """
+        if mode_name not in self._modes:
+            raise ModeNotFoundError(f"Mode '{mode_name}' not found")
+        del self._modes[mode_name]
+
     def list_modes(self) -> list:
         """List all registered mode names.
 

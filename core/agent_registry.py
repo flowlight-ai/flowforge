@@ -31,6 +31,24 @@ class AgentRegistry:
         names = set(self._agents.keys()) | set(self._factories.keys())
         return sorted(names)
 
+    def unregister(self, name: str) -> None:
+        """Remove a registered agent by name.
+
+        Removes from both direct registrations and factories.
+
+        Raises:
+            KeyError: If the agent name is not registered.
+        """
+        found = False
+        if name in self._agents:
+            del self._agents[name]
+            found = True
+        if name in self._factories:
+            del self._factories[name]
+            found = True
+        if not found:
+            raise KeyError(f"Agent '{name}' not registered")
+
     def get_all(self) -> Dict[str, BaseAgent]:
         for name in list(self._factories.keys()):
             if name not in self._agents:

@@ -14,6 +14,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 def setup_test_env():
     os.environ["FLOWFORGE_ENV"] = "test"
     os.environ["OPENROUTER_API_KEY"] = "test-key"
+    os.environ["OPENROUTE_API_KEY"] = "test-key"
     yield
     gc.collect()
 

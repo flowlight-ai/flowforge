@@ -35,6 +35,46 @@ class SaveMessageRequest(BaseModel):
     model: Optional[str] = None
 
 
+# ── Named Workspace Endpoints ──
+
+
+@router.get("/named")
+async def list_named_workspaces():
+    ws = get_workspace_manager()
+    workspaces = ws.list_named_workspaces()
+    return {"workspaces": workspaces}
+
+
+@router.post("/named")
+async def create_named_workspace(payload: dict):
+    name = payload.get("name", "default")
+    path = payload.get("path")
+    ws = get_workspace_manager()
+    ws_path = ws.create_named_workspace(name, path=path)
+    return {"status": "created", "name": name, "path": str(ws_path)}
+
+
+@router.get("/named/{workspace_name}/tasks")
+async def list_workspace_tasks(workspace_name: str):
+    ws = get_workspace_manager()
+    tasks = ws.list_workspace_tasks(workspace_name)
+    return {"workspace": workspace_name, "tasks": tasks}
+
+
+@router.delete("/named/{workspace_name}")
+async def delete_named_workspace(workspace_name: str):
+    ws = get_workspace_manager()
+    import shutil
+    ws_path = ws._base / workspace_name
+    if ws_path.exists():
+        shutil.rmtree(ws_path)
+        return {"status": "deleted", "name": workspace_name}
+    raise HTTPException(status_code=404, detail=f"Workspace not found: {workspace_name}")
+
+
+# ── Legacy Workspace Endpoints ──
+
+
 @router.post("")
 async def create_workspace(payload: CreateWorkspaceRequest):
     ws = get_workspace_manager()
@@ -49,10 +89,17 @@ async def create_workspace(payload: CreateWorkspaceRequest):
 
 
 @router.get("")
-async def list_workspaces(status: str = None):
+async def list_workspaces(status: str = None, limit: int = 20):
     ws = get_workspace_manager()
+    # Prefer named workspaces
+    named = ws.list_named_workspaces()
+    if named:
+        named.sort(key=lambda w: w.get("created_at", ""), reverse=True)
+        return {"workspaces": named[:limit], "total": len(named)}
+    # Fallback to legacy task-based workspaces
     workspaces = ws.list_workspaces(status=status)
-    return {"workspaces": workspaces, "total": len(workspaces)}
+    workspaces.sort(key=lambda w: w.get("created_at", ""), reverse=True)
+    return {"workspaces": workspaces[:limit], "total": len(workspaces)}
 
 
 @router.get("/incomplete")

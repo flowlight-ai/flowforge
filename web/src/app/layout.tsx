@@ -10,6 +10,7 @@ const shellConfig: ShellConfig = {
   brandColor: "#ff5c5c",
   brandSubtitle: "AI Agent OS",
   version: "v0.1.0",
+  soloPaths: ["/solo"],
   navSections: [
     {
       label: "主页",

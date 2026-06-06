@@ -25,65 +25,34 @@ logger = get_logger("llm_client")
 DEFAULT_FREE_MODELS = {
     "openroute": [
         "auto",
-        "web/chat",
-        "doubao-web/chat",
-        "kimi-web/chat",
-        "deepseek-web/chat",
-        "yuanbao-web/chat",
-        "qianwen-web/chat",
+        "proxy",
+        "Doubao-Seed2.0",
+        "MiniMax-M3",
+        "GLM-5.1",
+        "DeepSeek-V4-Pro",
+        "Kimi-K2.6",
+        "Qwen3.6-Plus",
+        "HunYuan3",
     ],
     "openrouter": [
-        "baidu/cobuddy:free",
-        "inclusionai/ring-2.6-1t:free",
-        "z-ai/glm-4.5-air:free",
-        "poolside/laguna-m.1:free",
+        "moonshotai/kimi-k2.6:free",
         "minimax/minimax-m2.5:free",
+        "z-ai/glm-4.5-air:free",
+        "qwen/qwen3-coder:free",
+        "qwen/qwen3-next-80b-a3b-instruct:free",
+        "openai/gpt-oss-120b:free",
+        "openai/gpt-oss-20b:free",
+        "nousresearch/hermes-3-llama-3.1-405b:free",
+        "google/gemma-4-31b-it:free",
+        "google/gemma-4-26b-a4b-it:free",
         "nvidia/nemotron-3-super-120b-a12b:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "poolside/laguna-m.1:free",
     ],
-    "aliyuncs": [
-        "glm-4.5-air",
-        "qwen3.5-flash-2026-02-23",
-        "qwen3.5-27b",
-        "MiniMax-M2.5",
-        "kimi-k2.5",
-        "glm-4.5",
-        "glm-4.6",
-    ],
-    "ark": [
-        "glm-4-7-251222",
-        "deepseek-v3-2-251201",
-        "doubao-1-5-pro-32k-250115",
-    ],
-    "arkcode": [
-        "ark-code-latest",
-    ],
-    "tencent": [
-        "hunyuan-lite",
-        "hunyuan-standard",
-        "hunyuan-pro",
-    ],
-    "siliconflow": [
-        "deepseek-ai/DeepSeek-V2.5",
-    ],
-    "kimi": [
-        "kimi-k2.5",
-    ],
-    "zhipu": [
-        "glm-4-flash",
-    ],
-    "local": [],
 }
 
 PROVIDER_BASE_URLS = {
     "openrouter": "https://openrouter.ai/api/v1",
-    "aliyuncs": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "ark": "https://ark.cn-beijing.volces.com/api/v3",
-    "arkcode": "https://ark.cn-beijing.volces.com/api/coding/v3",
-    "tencent": "https://hunyuan.tencentcloudapi.com/v1",
-    "siliconflow": "https://api.siliconflow.cn/v1",
-    "kimi": "https://api.moonshot.cn/v1",
-    "zhipu": "https://open.bigmodel.cn/api/paas/v4",
-    "local": "http://localhost:11434/v1",
     "openroute": "http://127.0.0.1:13000/v1",
 }
 
@@ -102,15 +71,16 @@ MAX_FALLBACK_CANDIDATES = 3
 MAX_CALLS_PER_TASK = 50
 
 WEB_CHAT_ROTATION_POOL = [
-    "openroute/deepseek-web/chat",
-    "openroute/kimi-web/chat",
-    "openroute/yuanbao-web/chat",
+    "openroute/DeepSeek-V4-Pro",
+    "openroute/Kimi-K2.6",
+    "openroute/HunYuan3",
+    "openroute/MiniMax-M3",
+    "openroute/GLM-5.1",
 ]
 
 DISABLED_MODELS = {
-    "openroute/doubao-web/chat",
-    "openroute/doubao-web/api",
-    "openroute/qianwen-web/chat",
+    "openroute/Doubao-Seed2.0",   # 豆包验证码问题
+    "openroute/Qwen3.6-Plus",     # 千问不稳定
 }
 
 
@@ -143,7 +113,7 @@ def build_cross_fallback_chain(
     3. Filter out models in cooldown
     4. OpenRoute models go first (as primary, unlimited tokens)
     """
-    provider_order = ["openroute", "openrouter", "aliyuncs", "ark", "arkcode", "tencent", "siliconflow", "kimi", "zhipu", "local"]
+    provider_order = ["openroute", "openrouter"]
     grouped: Dict[str, List[str]] = {}
     for provider in provider_order:
         models = available_models.get(provider, [])
@@ -236,24 +206,43 @@ class LLMClient(BaseTool):
             self._available_models[provider] = existing
 
     def _resolve_api_key(self, provider: str) -> str:
+        logger.info(f"[API Key] 正在解析 provider={provider} 的 API Key")
         secret_store = get_secret_store()
         provider_config = self._providers.get(provider, {})
         api_key_env = provider_config.get("api_key_env", "")
         if api_key_env:
             key = secret_store.resolve(api_key_env)
             if key:
+                masked = self._mask_api_key(key)
+                logger.info(f"[API Key] provider={provider} 从 api_key_env='{api_key_env}' 获取成功: {masked}")
                 return key
-        key = secret_store.resolve(f"{provider.upper()}_API_KEY")
+            logger.info(f"[API Key] provider={provider} api_key_env='{api_key_env}' 未获取到值")
+        env_name = f"{provider.upper()}_API_KEY"
+        key = secret_store.resolve(env_name)
         if key:
+            masked = self._mask_api_key(key)
+            logger.info(f"[API Key] provider={provider} 从环境变量 '{env_name}' 获取成功: {masked}")
             return key
+        logger.info(f"[API Key] provider={provider} 环境变量 '{env_name}' 未获取到值")
         default = provider_config.get("api_key_default", "")
         if default:
+            masked = self._mask_api_key(default)
+            logger.info(f"[API Key] provider={provider} 从 api_key_default 获取成功: {masked}")
             return default
-        if provider == "openroute":
-            return "none"
-        if provider == "local":
-            return "local"
+        logger.warning(f"[API Key] provider={provider} 所有来源均未获取到 API Key，返回空字符串")
+        # openroute: 从 models.yaml 的 api_key_default 获取，不再返回 "none"
+        # 如果 provider_config 中有 api_key_default，上面已经返回了
+        # 如果环境变量也没有，则返回空字符串让调用方跳过
         return ""
+
+    @staticmethod
+    def _mask_api_key(key: str) -> str:
+        """脱敏显示 API Key：前8位+后4位，中间用...替代"""
+        if not key:
+            return "<empty>"
+        if len(key) <= 12:
+            return key[:4] + "..." + key[-4:] if len(key) > 8 else key[:3] + "..."
+        return key[:8] + "..." + key[-4:]
 
     def _get_model_chain(self, persona: str = "", agent_name: str = "", task_id: str = "") -> List[str]:
         if persona and agent_name:
@@ -302,7 +291,7 @@ class LLMClient(BaseTool):
             return chain
         rotated = []
         for m in chain:
-            if m in ("web/chat", "openroute/web/chat"):
+            if m in ("proxy", "openroute/proxy", "web/chat", "openroute/web/chat"):
                 chosen = available[self._webchat_rotation_index % len(available)]
                 self._webchat_rotation_index += 1
                 logger.info(f"WebChat rotation: {m} → {chosen} "
@@ -358,6 +347,10 @@ class LLMClient(BaseTool):
         stream = input.params.get("stream", False)
         task_id = input.params.get("task_id", "unknown")
         tools = input.params.get("tools")
+
+        logger.info(f"[LLM请求] agent={agent_name or 'N/A'} persona={persona or 'N/A'} "
+                    f"model={model or 'auto'} task_id={task_id[:8] if task_id else 'N/A'} "
+                    f"messages={len(messages)} has_tools={bool(tools)} stream={stream}")
 
         # Call counter check
         call_count = self._task_call_counts.get(task_id, 0)
@@ -423,22 +416,24 @@ class LLMClient(BaseTool):
             logger.info(f"Candidate chain truncated: {len(candidates)} → {MAX_CANDIDATES}")
             candidates = candidates[:MAX_CANDIDATES]
 
-        logger.info(f"LLM candidate chain ({len(candidates)}): {candidates[:5]}...")
+        logger.info(f"[候选链] 完整列表 ({len(candidates)}): {candidates}")
 
         last_error = None
         tried_any = False
-        for candidate in candidates:
+        for idx, candidate in enumerate(candidates):
             if not candidate or "/" not in candidate:
+                logger.info(f"[候选链] #{idx+1} 跳过 '{candidate}': 格式无效（缺少provider前缀）")
                 continue
             provider, model_id = candidate.split("/", 1)
 
             base_url = self._providers.get(provider, {}).get("base_url", PROVIDER_BASE_URLS.get(provider, ""))
             if not base_url:
+                logger.info(f"[候选链] #{idx+1} 跳过 {provider}/{model_id}: 无 base_url")
                 continue
 
             api_key = self._resolve_api_key(provider)
             if not api_key:
-                logger.debug(f"Skipping {provider}/{model_id}: no API key")
+                logger.info(f"[候选链] #{idx+1} 跳过 {provider}/{model_id}: 无 API Key")
                 continue
 
             tried_any = True
@@ -446,7 +441,8 @@ class LLMClient(BaseTool):
             status = self._health_status.get(key, {})
             cooldown_until = status.get("cooldown_until", 0)
             if time.time() < cooldown_until:
-                logger.debug(f"Skipping {key}: cooldown until {cooldown_until}")
+                remaining = int(cooldown_until - time.time())
+                logger.info(f"[候选链] #{idx+1} 跳过 {key}: cooldown中，剩余{remaining}秒")
                 continue
 
             # Increment call counter
@@ -486,6 +482,19 @@ class LLMClient(BaseTool):
                 payload["tools"] = tools
             url = base_url.rstrip("/") + "/chat/completions"
 
+            # 请求详情日志
+            masked_headers = dict(headers)
+            if "Authorization" in masked_headers:
+                auth_val = masked_headers["Authorization"]
+                if auth_val.startswith("Bearer "):
+                    token = auth_val[7:]
+                    masked_headers["Authorization"] = f"Bearer {self._mask_api_key(token)}"
+            messages_char_count = sum(len(json.dumps(m, ensure_ascii=False)) for m in messages)
+            logger.info(f"[LLM请求详情] URL={url} model={model_id}")
+            logger.info(f"[LLM请求详情] headers={masked_headers}")
+            logger.info(f"[LLM请求详情] payload大小: messages字符数={messages_char_count} "
+                        f"tools={len(tools) if tools else 0} stream={stream}")
+
             self._emit_event(task_id, "llm.start", {
                 "agent_name": agent_name or "unknown",
                 "model": f"{provider}/{model_id}",
@@ -519,6 +528,13 @@ class LLMClient(BaseTool):
                     raw_message = content.get("raw_message")
                 else:
                     content_text = content
+
+                # 响应详情日志
+                content_preview = content_text[:100] if isinstance(content_text, str) else str(content_text)[:100]
+                content_len = len(content_text) if isinstance(content_text, str) else len(str(content_text))
+                logger.info(f"[LLM响应] provider={provider} model={model_id} "
+                            f"状态=成功 耗时={duration:.2f}s tokens={tokens}")
+                logger.info(f"[LLM响应] 内容长度={content_len} 预览={content_preview!r}")
 
                 metrics.record_tool_call("llm", duration)
                 metrics.record_llm_tokens(provider, model_id, tokens)
@@ -557,7 +573,8 @@ class LLMClient(BaseTool):
             except Exception as e:
                 duration = time.time() - start
                 error_str = str(e)
-                logger.warning(f"LLM call failed for {provider}/{model_id}: {error_str[:200]}")
+                logger.warning(f"[LLM响应] provider={provider} model={model_id} "
+                               f"状态=失败 耗时={duration:.2f}s 错误={error_str[:300]}")
                 metrics.record_llm_error(provider, type(e).__name__)
                 self._update_health(provider, model_id, False, error_str)
                 self._record_model_result(f"{provider}/{model_id}", False, error_str)
@@ -690,41 +707,67 @@ class LLMClient(BaseTool):
         self._task_used_models.pop(task_id, None)
 
     async def _normal_call(self, url: str, headers: dict, payload: dict) -> dict:
-        async with httpx.AsyncClient(timeout=300) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
-            data = resp.json()
-            message = data["choices"][0]["message"]
-            content = message.get("content") or ""
-            tokens = data.get("usage", {}).get("total_tokens", 0)
-            tool_calls = message.get("tool_calls")
-            return {"content": content, "tokens": tokens, "tool_calls": tool_calls, "raw_message": message}
+        model_id = payload.get("model", "unknown")
+        logger.info(f"[_normal_call] 请求开始 URL={url} model={model_id}")
+        start = time.time()
+        try:
+            async with httpx.AsyncClient(timeout=300) as client:
+                resp = await client.post(url, json=payload, headers=headers)
+                duration = time.time() - start
+                logger.info(f"[_normal_call] 响应返回 URL={url} model={model_id} "
+                            f"状态码={resp.status_code} 耗时={duration:.2f}s")
+                resp.raise_for_status()
+                data = resp.json()
+                message = data["choices"][0]["message"]
+                content = message.get("content") or ""
+                tokens = data.get("usage", {}).get("total_tokens", 0)
+                tool_calls = message.get("tool_calls")
+                return {"content": content, "tokens": tokens, "tool_calls": tool_calls, "raw_message": message}
+        except Exception as e:
+            duration = time.time() - start
+            logger.warning(f"[_normal_call] 请求失败 URL={url} model={model_id} "
+                           f"耗时={duration:.2f}s 错误={str(e)[:300]}")
+            raise
 
     async def _stream_call(self, url: str, headers: dict, payload: dict,
                            task_id: str, agent_name: str, provider: str, model_id: str) -> str:
+        logger.info(f"[_stream_call] 请求开始 URL={url} model={model_id} provider={provider}")
         full_content = []
-        async with httpx.AsyncClient(timeout=300) as client:
-            async with client.stream("POST", url, json=payload, headers=headers) as resp:
-                resp.raise_for_status()
-                async for line in resp.aiter_lines():
-                    if not line.startswith("data: "):
-                        continue
-                    data_str = line[6:]
-                    if data_str.strip() == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(data_str)
-                        delta = chunk.get("choices", [{}])[0].get("delta", {})
-                        text = delta.get("content", "")
-                        if text:
-                            full_content.append(text)
-                            self._emit_event(task_id, "llm.stream", {
-                                "agent_name": agent_name or "unknown",
-                                "delta_text": text,
-                            })
-                    except json.JSONDecodeError:
-                        continue
-        return "".join(full_content)
+        start = time.time()
+        try:
+            async with httpx.AsyncClient(timeout=300) as client:
+                async with client.stream("POST", url, json=payload, headers=headers) as resp:
+                    duration = time.time() - start
+                    logger.info(f"[_stream_call] 响应返回 URL={url} model={model_id} "
+                                f"状态码={resp.status_code} 耗时={duration:.2f}s")
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            delta = chunk.get("choices", [{}])[0].get("delta", {})
+                            text = delta.get("content", "")
+                            if text:
+                                full_content.append(text)
+                                self._emit_event(task_id, "llm.stream", {
+                                    "agent_name": agent_name or "unknown",
+                                    "delta_text": text,
+                                })
+                        except json.JSONDecodeError:
+                            continue
+            duration = time.time() - start
+            logger.info(f"[_stream_call] 流式完成 URL={url} model={model_id} "
+                        f"总耗时={duration:.2f}s 内容长度={len(''.join(full_content))}")
+            return "".join(full_content)
+        except Exception as e:
+            duration = time.time() - start
+            logger.warning(f"[_stream_call] 请求失败 URL={url} model={model_id} "
+                           f"耗时={duration:.2f}s 错误={str(e)[:300]}")
+            raise
 
     async def stream(self, input: ToolInput) -> AsyncIterator[str]:
         messages = input.params.get("messages", [])
@@ -832,12 +875,18 @@ class LLMClient(BaseTool):
             current["success_count"] += 1
             current["last_error"] = ""
             current["cooldown_until"] = 0
+            logger.info(f"[健康状态] {key} 调用成功 "
+                        f"累计成功={current['success_count']} 累计失败={current['error_count']}")
         else:
             current["error_count"] += 1
             current["last_error"] = error[:200]
             error_type = classify_error(error)
             cooldown = ERROR_COOLDOWNS.get(error_type, 180)
             current["cooldown_until"] = time.time() + cooldown
+            logger.warning(f"[健康状态] {key} 调用失败 "
+                           f"错误类型={error_type} cooldown={cooldown}s "
+                           f"累计成功={current['success_count']} 累计失败={current['error_count']} "
+                           f"错误信息={error[:100]}")
         current["last_check"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         self._health_status[key] = current
 

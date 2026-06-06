@@ -497,11 +497,11 @@ export function useSoloWebSocket(opts?: SoloWSOptions) {
 
   const restoreTask = useCallback((tid: string, taskIntent: string, taskPersona: string, taskPhase: SoloTaskPhase) => {
     disconnectWS();
+    setPhase(taskPhase);
     setTaskId(tid);
     taskIdRef.current = tid;
     setIntent(taskIntent);
     setPersona(taskPersona);
-    setPhase(taskPhase);
     entriesRef.current = [];
     setEntries([]);
     draftBuffer.current = "";

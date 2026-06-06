@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
+
 export interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: ReactNode;
   badge?: number;
 }
 
@@ -17,6 +19,7 @@ export interface ShellConfig {
   brandSubtitle: string;
   version: string;
   navSections: NavSection[];
+  soloPaths?: string[];
   apiBaseUrl?: string;
   wsBaseUrl?: string;
 }

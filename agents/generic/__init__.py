@@ -15,6 +15,23 @@ from flowforge.agents.generic.deliverer import DelivererAgent
 from flowforge.agents.generic.finalizer import FinalizerAgent
 from flowforge.agents.generic.approver import ApproverAgent
 from flowforge.agents.generic.generator import GeneratorAgent
+from flowforge.agents.generic.web_search_agent import WebSearchAgent
+from flowforge.agents.generic.research_agent import ResearchAgent
+from flowforge.agents.generic.multilingual import MultilingualAgent
+from flowforge.agents.generic.fact_check import FactCheckAgent
+from flowforge.agents.generic.trend_analysis import TrendAnalysisAgent
+from flowforge.agents.generic.image_research import ImageResearchAgent
+from flowforge.agents.article_writing import ArticleWritingAgent
+from flowforge.agents.article_eval import ArticleEvalAgent
+from flowforge.agents.article_reflect import ArticleReflectAgent
+from flowforge.agents.topic_research import TopicResearchAgent
+from flowforge.agents.material_collection import MaterialCollectionAgent
+from flowforge.agents.content_audit import ContentAuditAgent
+from flowforge.agents.publishing import PublishingAgent
+from flowforge.agents.code_writer_agent import CodeWriterAgent
+from flowforge.agents.seo_optimization import SEOOptimizationAgent
+from flowforge.agents.headline_optimizer import HeadlineOptimizerAgent
+from flowforge.agents.content_repurposer import ContentRepurposerAgent
 
 GENERIC_AGENTS = [
     ReactThinkerAgent,
@@ -34,4 +51,21 @@ GENERIC_AGENTS = [
     FinalizerAgent,
     ApproverAgent,
     GeneratorAgent,
+    WebSearchAgent,
+    ResearchAgent,
+    MultilingualAgent,
+    FactCheckAgent,
+    TrendAnalysisAgent,
+    ImageResearchAgent,
+    ArticleWritingAgent,
+    ArticleEvalAgent,
+    ArticleReflectAgent,
+    TopicResearchAgent,
+    MaterialCollectionAgent,
+    ContentAuditAgent,
+    PublishingAgent,
+    CodeWriterAgent,
+    SEOOptimizationAgent,
+    HeadlineOptimizerAgent,
+    ContentRepurposerAgent,
 ]

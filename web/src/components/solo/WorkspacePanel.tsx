@@ -12,7 +12,9 @@ interface FileItem {
 
 interface WorkspacePanelProps {
   taskId?: string | null;
+  workspaceName?: string | null;
   onFileOpen?: (filePath: string, fileName: string) => void;
+  highlightFilePath?: string | null;
 }
 
 function formatSize(bytes: number): string {
@@ -21,7 +23,8 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function getFileIcon(name: string): string {
+function getFileIcon(name: string, isDir: boolean): string {
+  if (isDir) return "📁";
   const ext = name.split(".").pop()?.toLowerCase() || "";
   const icons: Record<string, string> = {
     md: "📝", txt: "📄", json: "📋", yaml: "⚙️", yml: "⚙️",
@@ -31,16 +34,140 @@ function getFileIcon(name: string): string {
   return icons[ext] || "📄";
 }
 
-export default function WorkspacePanel({ taskId, onFileOpen }: WorkspacePanelProps) {
+interface TreeNode {
+  name: string;
+  path: string;
+  isDir: boolean;
+  children: TreeNode[];
+  file?: FileItem;
+}
+
+function buildTree(files: FileItem[]): TreeNode[] {
+  const root: TreeNode[] = [];
+
+  for (const f of files) {
+    const parts = f.path.split("/").filter(Boolean);
+    let currentLevel = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isLast = i === parts.length - 1;
+      const currentPath = parts.slice(0, i + 1).join("/");
+
+      let existing = currentLevel.find((n) => n.name === part);
+
+      if (!existing) {
+        const node: TreeNode = {
+          name: part,
+          path: currentPath,
+          isDir: !isLast || f.is_dir,
+          children: [],
+          file: isLast && !f.is_dir ? f : undefined,
+        };
+        currentLevel.push(node);
+        existing = node;
+      }
+
+      if (!isLast) {
+        currentLevel = existing.children;
+      }
+    }
+  }
+
+  const sortNodes = (nodes: TreeNode[]): TreeNode[] => {
+    return nodes.sort((a, b) => {
+      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    }).map((n) => ({ ...n, children: sortNodes(n.children) }));
+  };
+
+  return sortNodes(root);
+}
+
+function TreeNodeItem({
+  node,
+  depth,
+  activeFile,
+  highlightPath,
+  onFileOpen,
+}: {
+  node: TreeNode;
+  depth: number;
+  activeFile: string | null;
+  highlightPath: string | null;
+  onFileOpen: (path: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(depth < 2);
+  const isHighlighted = highlightPath === node.path || (node.file && highlightPath === node.file.path);
+  const isActive = activeFile === node.path;
+
+  if (node.isDir) {
+    return (
+      <div>
+        <div
+          className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer text-xs hover:bg-white/5 rounded transition-colors ${
+            isHighlighted ? "bg-accent-2-subtle" : "text-gray-400"
+          }`}
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
+          onClick={() => setExpanded(!expanded)}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            className="flex-shrink-0 transition-transform duration-150"
+            style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          <span className="flex-shrink-0">{expanded ? "📂" : "📁"}</span>
+          <span className="truncate font-medium">{node.name}</span>
+        </div>
+        {expanded && node.children.map((child) => (
+          <TreeNodeItem
+            key={child.path}
+            node={child}
+            depth={depth + 1}
+            activeFile={activeFile}
+            highlightPath={highlightPath}
+            onFileOpen={onFileOpen}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer text-xs rounded transition-colors ${
+        isActive
+          ? "bg-white/10 text-white"
+          : isHighlighted
+          ? "bg-accent-2-subtle text-white"
+          : "text-gray-300 hover:bg-white/5"
+      }`}
+      style={{ paddingLeft: `${depth * 12 + 20}px` }}
+      onClick={() => onFileOpen(node.path)}
+    >
+      <span className="flex-shrink-0">{getFileIcon(node.name, false)}</span>
+      <span className="truncate flex-1 min-w-0">{node.name}</span>
+      {node.file && (
+        <span className="text-gray-600 text-[10px] font-mono flex-shrink-0">
+          {formatSize(node.file.size)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function WorkspacePanel({ taskId, workspaceName, onFileOpen, highlightFilePath }: WorkspacePanelProps) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
-  const [fileContent, setFileContent] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Array<{ name: string; path: string; matches: number }>>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"tree" | "search">("tree");
 
   const fetchFiles = useCallback(() => {
     if (!taskId) {
@@ -59,249 +186,98 @@ export default function WorkspacePanel({ taskId, onFileOpen }: WorkspacePanelPro
     return () => clearInterval(interval);
   }, [fetchFiles]);
 
-  useEffect(() => {
-    if (!taskId) return;
-    if (taskId && activeFile) {
-      fetch(`/api/v1/workspace/${taskId}/files/${encodeURIComponent(activeFile)}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data?.content !== undefined) {
-            setFileContent(data.content);
-            setEditContent(data.content);
-          }
-        })
-        .catch(() => setFileContent("加载失败"));
-    }
-  }, [taskId, activeFile]);
-
   const openFile = useCallback((path: string) => {
     setActiveFile(path);
-    setIsEditing(false);
     const fileName = path.split(/[/\\]/).pop() || path;
     onFileOpen?.(`/api/v1/workspace/${taskId}/files/${path}`, fileName);
   }, [taskId, onFileOpen]);
 
-  const handleSearch = useCallback(() => {
-    if (!taskId || !searchQuery.trim()) return;
-    setIsSearching(true);
-    setViewMode("search");
-    fetch(`/api/v1/workspace/${taskId}/search?query=${encodeURIComponent(searchQuery)}`)
-      .then((r) => (r.ok ? r.json() : { results: [] }))
-      .then((data) => setSearchResults(data.results || []))
-      .catch(() => setSearchResults([]))
-      .finally(() => setIsSearching(false));
-  }, [taskId, searchQuery]);
+  const tree = buildTree(files);
 
-  const handleSave = useCallback(async () => {
-    if (!taskId || !activeFile) return;
-    try {
-      const r = await fetch(`/api/v1/workspace/${taskId}/files`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: activeFile, content: editContent }),
-      });
-      if (r.ok) {
-        setFileContent(editContent);
-        setIsEditing(false);
-        fetchFiles();
-      }
-    } catch {}
-  }, [taskId, activeFile, editContent, fetchFiles]);
-
-  const handleDelete = useCallback(async (path: string) => {
-    if (!taskId) return;
-    try {
-      const r = await fetch(`/api/v1/workspace/${taskId}/files/${encodeURIComponent(path)}`, {
-        method: "DELETE",
-      });
-      if (r.ok) {
-        if (activeFile === path) {
-          setActiveFile(null);
-          setFileContent("");
-        }
-        fetchFiles();
-      }
-    } catch {}
-  }, [taskId, activeFile, fetchFiles]);
-
-  const buildFileTree = (files: FileItem[]) => {
-    const tree: Record<string, FileItem[]> = {};
-    const rootFiles: FileItem[] = [];
-    for (const f of files) {
-      const parts = f.path.split("/");
-      if (parts.length <= 1) {
-        rootFiles.push(f);
-      } else {
-        const dir = parts[0];
-        if (!tree[dir]) tree[dir] = [];
-        tree[dir].push(f);
-      }
-    }
-    return { tree, rootFiles };
-  };
-
-  const { tree, rootFiles } = buildFileTree(files);
+  const filteredTree = searchQuery.trim()
+    ? files.filter((f) =>
+        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.path.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : null;
 
   return (
-    <div className="h-full flex flex-col bg-gray-900">
-      <div className="px-3 py-2 border-b border-gray-800 flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-gray-200 flex-1">工作区文件</h3>
+    <div className="h-full flex flex-col bg-[#0c0d12] border-l border-gray-800">
+      <div className="px-3 py-2.5 border-b border-gray-800 flex items-center gap-2 flex-shrink-0">
+        <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">资源管理器</span>
+        {workspaceName && (
+          <>
+            <span className="text-gray-700 text-xs">/</span>
+            <span className="text-xs text-gray-400 truncate max-w-[120px]" title={workspaceName}>
+              {workspaceName.length > 20 ? workspaceName.slice(0, 20) + "…" : workspaceName}
+            </span>
+          </>
+        )}
+        <div className="flex-1" />
         <button
           onClick={fetchFiles}
-          className="text-gray-400 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-gray-800"
+          className="text-gray-500 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors"
           title="刷新"
         >
-          ↻
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
         </button>
       </div>
 
-      <div className="px-3 py-2 border-b border-gray-800 flex gap-1.5">
+      <div className="px-2 py-1.5 border-b border-gray-800 flex-shrink-0">
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          placeholder="搜索文件内容..."
-          className="flex-1 bg-gray-800 text-gray-200 text-xs px-2 py-1.5 rounded border border-gray-700 focus:border-indigo-500 focus:outline-none"
+          placeholder="搜索文件..."
+          className="w-full bg-gray-900 text-gray-200 text-xs px-2 py-1.5 rounded border border-gray-700 focus:border-indigo-500 focus:outline-none"
         />
-        <button
-          onClick={handleSearch}
-          disabled={isSearching}
-          className="text-xs px-2 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-500 disabled:opacity-50"
-        >
-          {isSearching ? "..." : "搜索"}
-        </button>
       </div>
 
-      <div className="flex border-b border-gray-800">
-        <button
-          className={`flex-1 px-2 py-1.5 text-xs ${viewMode === "tree" ? "text-white border-b-2 border-indigo-500" : "text-gray-400"}`}
-          onClick={() => setViewMode("tree")}
-        >
-          文件树
-        </button>
-        <button
-          className={`flex-1 px-2 py-1.5 text-xs ${viewMode === "search" ? "text-white border-b-2 border-indigo-500" : "text-gray-400"}`}
-          onClick={() => setViewMode("search")}
-        >
-          搜索结果{searchResults.length > 0 ? ` (${searchResults.length})` : ""}
-        </button>
-      </div>
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {viewMode === "tree" ? (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="overflow-y-auto" style={{ maxHeight: activeFile ? "40%" : "100%", minHeight: 80 }}>
-              {files.length === 0 ? (
-                <div className="flex items-center justify-center text-gray-500 text-xs p-4 h-full">
-                  {taskId ? "执行过程中生成的文件将显示在这里" : "请先创建任务"}
-                </div>
-              ) : (
-                <div className="py-1">
-                  {rootFiles.map((f) => (
-                    <div
-                      key={f.path}
-                      className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs hover:bg-gray-800 ${activeFile === f.path ? "bg-gray-800 text-white" : "text-gray-300"}`}
-                      onClick={() => openFile(f.path)}
-                    >
-                      <span>{getFileIcon(f.name)}</span>
-                      <span className="flex-1 truncate">{f.name}</span>
-                      <span className="text-gray-500 text-[10px]">{formatSize(f.size)}</span>
-                    </div>
-                  ))}
-                  {Object.entries(tree).map(([dir, dirFiles]) => (
-                    <div key={dir}>
-                      <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400">
-                        <span>📁</span>
-                        <span className="font-medium">{dir}/</span>
-                      </div>
-                      {dirFiles.map((f) => (
-                        <div
-                          key={f.path}
-                          className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs hover:bg-gray-800 pl-7 ${activeFile === f.path ? "bg-gray-800 text-white" : "text-gray-300"}`}
-                          onClick={() => openFile(f.path)}
-                        >
-                          <span>{getFileIcon(f.name)}</span>
-                          <span className="flex-1 truncate">{f.name}</span>
-                          <span className="text-gray-500 text-[10px]">{formatSize(f.size)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
+      <div className="flex-1 overflow-y-auto py-1 min-h-0">
+        {files.length === 0 ? (
+          <div className="flex items-center justify-center text-gray-600 text-xs p-4 h-full">
+            {taskId ? "执行过程中生成的文件将显示在这里" : "请先创建任务"}
+          </div>
+        ) : filteredTree ? (
+          filteredTree.length === 0 ? (
+            <div className="flex items-center justify-center text-gray-600 text-xs p-4">
+              未找到匹配文件
             </div>
-
-            {activeFile && (
-              <div className="flex-1 flex flex-col border-t border-gray-800 overflow-hidden">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-850 border-b border-gray-800">
-                  <span className="text-xs text-gray-300 flex-1 truncate">{activeFile}</span>
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={handleSave}
-                        className="text-[10px] px-2 py-0.5 bg-green-600 text-white rounded hover:bg-green-500"
-                      >
-                        保存
-                      </button>
-                      <button
-                        onClick={() => { setEditContent(fileContent); setIsEditing(false); }}
-                        className="text-[10px] px-2 py-0.5 bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
-                      >
-                        取消
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="text-[10px] px-2 py-0.5 bg-indigo-600 text-white rounded hover:bg-indigo-500"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => handleDelete(activeFile)}
-                        className="text-[10px] px-2 py-0.5 bg-red-600/50 text-red-300 rounded hover:bg-red-600"
-                      >
-                        删除
-                      </button>
-                    </>
-                  )}
-                </div>
-                <div className="flex-1 overflow-auto p-3">
-                  {isEditing ? (
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      className="w-full h-full bg-gray-950 text-gray-200 text-xs font-mono p-2 rounded border border-gray-700 focus:border-indigo-500 focus:outline-none resize-none"
-                    />
-                  ) : (
-                    <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap">{fileContent}</pre>
-                  )}
-                </div>
+          ) : (
+            filteredTree.map((f) => (
+              <div
+                key={f.path}
+                className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer text-xs rounded transition-colors mx-1 ${
+                  activeFile === f.path
+                    ? "bg-white/10 text-white"
+                    : highlightFilePath && f.path === highlightFilePath
+                    ? "bg-accent-2-subtle text-white"
+                    : "text-gray-300 hover:bg-white/5"
+                }`}
+                onClick={() => openFile(f.path)}
+              >
+                <span>{getFileIcon(f.name, f.is_dir)}</span>
+                <span className="truncate flex-1 min-w-0">{f.name}</span>
+                <span className="text-gray-600 text-[10px] font-mono flex-shrink-0">
+                  {formatSize(f.size)}
+                </span>
               </div>
-            )}
-          </div>
+            ))
+          )
         ) : (
-          <div className="flex-1 overflow-auto py-1">
-            {searchResults.length === 0 ? (
-              <div className="flex items-center justify-center text-gray-500 text-xs p-4 h-full">
-                {searchQuery ? "未找到匹配结果" : "输入关键词搜索文件内容"}
-              </div>
-            ) : (
-              searchResults.map((r) => (
-                <div
-                  key={r.path}
-                  className="flex items-center gap-2 px-3 py-1.5 cursor-pointer text-xs hover:bg-gray-800 text-gray-300"
-                  onClick={() => { openFile(r.path); setViewMode("tree"); }}
-                >
-                  <span>{getFileIcon(r.name)}</span>
-                  <span className="flex-1 truncate">{r.name}</span>
-                  <span className="text-gray-500 text-[10px]">{r.matches} 处匹配</span>
-                </div>
-              ))
-            )}
-          </div>
+          tree.map((node) => (
+            <TreeNodeItem
+              key={node.path}
+              node={node}
+              depth={0}
+              activeFile={activeFile}
+              highlightPath={highlightFilePath ?? null}
+              onFileOpen={openFile}
+            />
+          ))
         )}
       </div>
     </div>
