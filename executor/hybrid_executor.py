@@ -2,7 +2,7 @@
 
 The HybridExecutor is the central runtime engine of FlowForge.  It selects
 the appropriate execution mode, manages task lifecycle (start, pause, resume,
-review), persists state and checkpoints, and bridges events to the Solo
+review), persists state and checkpoints, and bridges events to the Helm
 interaction protocol when applicable.
 
 v6.0: Integrates Harness Layer hooks (pre_execute / post_execute).
@@ -20,7 +20,7 @@ from flowforge.core.checkpoint_manager import CheckpointManager
 from flowforge.core.workspace import get_workspace_manager
 from flowforge.modes.registry import ModeRegistry
 from flowforge.events.event_bus import EventBus
-from flowforge.events.solo_adapter import EventBusSoloAdapter
+from flowforge.events.helm_adapter import EventBusHelmAdapter
 from flowforge.executor.state_manager import StateManager
 from flowforge.memory.manager import MemoryManager
 from flowforge.core import metrics as ff_metrics
@@ -88,19 +88,19 @@ class HybridExecutor:
         self.checkpoint_manager = CheckpointManager(checkpointer_path)
         self.harness = harness
         self._running_tasks: Dict[str, str] = {}
-        self._solo_adapter: Optional[EventBusSoloAdapter] = None
+        self._helm_adapter: Optional[EventBusHelmAdapter] = None
         self._review_events: Dict[str, asyncio.Event] = {}
         self._pause_events: Dict[str, asyncio.Event] = {}
         self._task_contexts: Dict[str, TaskContext] = {}
         self._task_futures: Dict[str, asyncio.Task] = {}
 
-    def set_solo_manager(self, solo_manager):
-        """Attach a SoloManager and create the event bridge adapter.
+    def set_helm_manager(self, helm_manager):
+        """Attach a HelmManager and create the event bridge adapter.
 
         Args:
-            solo_manager: The SoloManager instance to bridge events to.
+            helm_manager: The HelmManager instance to bridge events to.
         """
-        self._solo_adapter = EventBusSoloAdapter(self.event_bus, solo_manager)
+        self._helm_adapter = EventBusHelmAdapter(self.event_bus, helm_manager)
 
     async def run(self, context: TaskContext, mode_hint: str = None,
                   _is_substep: bool = False) -> dict:
@@ -161,8 +161,8 @@ class HybridExecutor:
             mode = mode_hint or context.mode
             logger.info(f"[hybrid_executor] Mode selected: mode={mode} (hint={mode_hint}, ctx_mode={context.mode}), task_id={context.task_id}")
 
-        if context.interaction_mode == "solo" and self._solo_adapter:
-            self._solo_adapter.bridge()
+        if context.interaction_mode == "helm" and self._helm_adapter:
+            self._helm_adapter.bridge()
 
         executor = self.mode_registry.get(mode)
         logger.info(f"[hybrid_executor] Mode executor resolved: mode={mode}, executor={type(executor).__name__}, task_id={context.task_id}")

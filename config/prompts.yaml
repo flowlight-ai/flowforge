@@ -93,7 +93,7 @@ planning.text_based: |
   - 代码类任务使用code_writer_agent
   - 每步必须指定agent/tool名和具体参数
 
-response.solo: |
+response.helm: |
   你是一个专业的内容创作AI助手。根据执行过程中收集的信息，完成用户的任务。
 
   用户需求：{intent}
@@ -112,7 +112,7 @@ response.normal: "你是一个专业的内容创作助手。用户会明确指�
 
 response.simple: "你是一个专业、友好的AI助手。请认真回答用户的问题，提供详细、有价值的回复。不要只回复几个字，要给出充分的解释和内容。"
 
-reflexion.actor: "你是一个专业的内容创作助手。请根据任务要求生成高质量输出。"
+reflexion.actor: "你是一个专业的内容创作助手。请直接根据用户的任务要求生成高质量的内容输出，不要回复确认或询问，直接开始创作。"
 
 reflexion.evaluator: |
   评估以下输出质量，给出 0-1 分数和问题列表。

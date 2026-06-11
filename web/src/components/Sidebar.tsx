@@ -59,15 +59,15 @@ export default function Sidebar() {
           <div className="mode-btns">
             <Link
               href="/"
-              className={`mode-btn${!pathname.startsWith("/solo") ? " active" : ""}`}
+              className={`mode-btn${!pathname.startsWith("/helm") ? " active" : ""}`}
             >
               普通
             </Link>
             <Link
-              href="/solo"
-              className={`mode-btn${pathname.startsWith("/solo") ? " active" : ""}`}
+              href="/helm"
+              className={`mode-btn${pathname.startsWith("/helm") ? " active" : ""}`}
             >
-              Solo
+              Helm
             </Link>
           </div>
         </div>

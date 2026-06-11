@@ -14,7 +14,7 @@ plugins:
     tags: [search, retrieval]
     config:
       endpoint: "${OPENSIEVE_ENDPOINT:http://localhost:8100/api/v1/retrieve}"
-      timeout: 90
+      timeout: 120
     parameters_schema:
       type: object
       required: [query]

@@ -1,23 +1,23 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { SoloWSEvent, SoloTaskPhase, StreamEntry, StreamEntryType } from "../lib/solo-types";
+import { HelmWSEvent, HelmTaskPhase, StreamEntry, StreamEntryType } from "../lib/helm-types";
 import { useShellConfig } from "../lib/shell-config";
 
 const MAX_RECONNECT = 10;
 
-function eventToEntry(event: SoloWSEvent): StreamEntry {
+function eventToEntry(event: HelmWSEvent): StreamEntry {
   const typeMap: Record<string, StreamEntryType> = {
-    "solo.stage.enter": "stage",
-    "solo.tool.end": "tool-call",
-    "solo.llm.reasoning": "thinking",
-    "solo.llm.stream": "llm-stream",
-    "solo.step.intermediate": "intermediate",
-    "solo.draft.update": "draft-update",
-    "solo.review.ready": "review",
-    "solo.gate.verdict": "gate",
-    "solo.task.completed": "system",
-    "solo.task.error": "system",
+    "helm.stage.enter": "stage",
+    "helm.tool.end": "tool-call",
+    "helm.llm.reasoning": "thinking",
+    "helm.llm.stream": "llm-stream",
+    "helm.step.intermediate": "intermediate",
+    "helm.draft.update": "draft-update",
+    "helm.review.ready": "review",
+    "helm.gate.verdict": "gate",
+    "helm.task.completed": "system",
+    "helm.task.error": "system",
   };
 
   return {
@@ -40,7 +40,7 @@ export interface UseWebSocketOptions {
 
 export function useWebSocket(opts?: UseWebSocketOptions) {
   const config = useShellConfig();
-  const [phase, setPhase] = useState<SoloTaskPhase>("idle");
+  const [phase, setPhase] = useState<HelmTaskPhase>("idle");
   const [taskId, setTaskId] = useState<string | null>(null);
   const [entries, setEntries] = useState<StreamEntry[]>([]);
   const [stageProgress, setStageProgress] = useState({ current: 0, total: 0 });
@@ -52,42 +52,42 @@ export function useWebSocket(opts?: UseWebSocketOptions) {
   const optsRef = useRef(opts);
   optsRef.current = opts;
 
-  const handleEvent = useCallback((event: SoloWSEvent) => {
+  const handleEvent = useCallback((event: HelmWSEvent) => {
     seqRef.current = event.seq;
     const entry = eventToEntry(event);
     entriesRef.current = [...entriesRef.current, entry];
     setEntries([...entriesRef.current]);
 
     switch (event.type) {
-      case "solo.stage.enter":
+      case "helm.stage.enter":
         setStageProgress({ current: event.payload.order, total: event.payload.total });
         optsRef.current?.onStageEnter?.(event.payload.stage, event.payload.label, event.payload.order);
         break;
-      case "solo.tool.start":
+      case "helm.tool.start":
         optsRef.current?.onToolCall?.("start", event.payload);
         break;
-      case "solo.tool.end":
+      case "helm.tool.end":
         optsRef.current?.onToolCall?.("end", event.payload);
         break;
-      case "solo.review.ready":
+      case "helm.review.ready":
         setPhase("waiting_review");
         optsRef.current?.onReviewReady?.(event.payload.draft_summary);
         break;
-      case "solo.gate.verdict":
+      case "helm.gate.verdict":
         optsRef.current?.onGateVerdict?.(event.payload);
         break;
-      case "solo.task.completed":
+      case "helm.task.completed":
         setPhase("completed");
         optsRef.current?.onCompleted?.(event.payload);
         break;
-      case "solo.task.error":
+      case "helm.task.error":
         setPhase("error");
         optsRef.current?.onError?.(event.payload.step_name || "unknown", event.payload.error_message || "Unknown error");
         break;
-      case "solo.task.paused":
+      case "helm.task.paused":
         setPhase("paused");
         break;
-      case "solo.task.resumed":
+      case "helm.task.resumed":
         setPhase("running");
         break;
     }
@@ -110,7 +110,7 @@ export function useWebSocket(opts?: UseWebSocketOptions) {
 
     ws.onmessage = (event) => {
       try {
-        const data: SoloWSEvent = JSON.parse(event.data);
+        const data: HelmWSEvent = JSON.parse(event.data);
         if (data.type === "pong") return;
         handleEvent(data);
       } catch {}

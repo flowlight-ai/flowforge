@@ -8,14 +8,14 @@ from flowforge.agents.topic_research import TopicResearchAgent
 from flowforge.agents.article_writing import ArticleWritingAgent
 from flowforge.agents.material_collection import MaterialCollectionAgent
 from flowforge.agents.seo_optimization import SEOOptimizationAgent
-from flowforge.agents.fact_check import FactCheckAgent
+from flowforge.agents.generic.fact_check import FactCheckAgent
 from flowforge.agents.content_audit import ContentAuditAgent
-from flowforge.agents.trend_analysis import TrendAnalysisAgent
+from flowforge.agents.generic.trend_analysis import TrendAnalysisAgent
 from flowforge.agents.publishing import PublishingAgent
 from flowforge.agents.headline_optimizer import HeadlineOptimizerAgent
 from flowforge.agents.content_repurposer import ContentRepurposerAgent
-from flowforge.agents.image_research import ImageResearchAgent
-from flowforge.agents.multilingual import MultilingualAgent
+from flowforge.agents.generic.image_research import ImageResearchAgent
+from flowforge.agents.generic.multilingual import MultilingualAgent
 
 
 class SimulatedLLMTool(BaseTool):
@@ -310,7 +310,6 @@ async def test_fact_check_agent():
     llm_tool = SimulatedLLMTool(response_content='{"issues": [], "is_clean": true}')
     registry.register(llm_tool)
     ctx = _make_context(registry)
-    collector = EventCollector(ctx.event_bus)
     output = await agent.execute_with_context(
         AgentInput(params={"draft": "This is a clean article with no links."}), ctx
     )
@@ -320,9 +319,6 @@ async def test_fact_check_agent():
     assert isinstance(output.result["issues"], list)
     assert output.result["is_clean"] is True
     assert len(llm_tool._calls) >= 1
-    assert collector.has_event("fact_check.url_check_start")
-    assert collector.has_event("fact_check.fact_verify_start")
-    assert collector.has_event("fact_check.complete")
 
 
 @pytest.mark.asyncio
@@ -381,26 +377,17 @@ async def test_trend_analysis_agent():
     agent = TrendAnalysisAgent()
     registry = ToolRegistry()
     llm_tool = SimulatedLLMTool(responses=[
-        '{"trends": [{"title": "AI趋势1", "heat": 8, "direction": "上升", "potential": "高", "analysis": "分析"}]}',
-        "Trend report content",
+        '[{"topic": "AI趋势1", "heat_score": 8, "trend_direction": "上升", "spread_potential": "高", "analysis": "分析"}]',
     ])
-    web_search_tool = SimulatedWebSearchTool()
     registry.register(llm_tool)
-    registry.register(web_search_tool)
     ctx = _make_context(registry)
-    collector = EventCollector(ctx.event_bus)
     output = await agent.execute_with_context(
         AgentInput(params={"domain": "科技"}), ctx
     )
     assert isinstance(output, AgentOutput)
     assert "trends" in output.result
-    assert "report" in output.result
     assert len(output.result["trends"]) > 0
-    assert all("title" in t for t in output.result["trends"])
-    assert len(web_search_tool._calls) >= 1
     assert len(llm_tool._calls) >= 1
-    assert collector.has_event("trend_analysis.collect_data_start")
-    assert collector.has_event("trend_analysis.complete")
 
 
 @pytest.mark.asyncio
@@ -409,21 +396,18 @@ async def test_trend_analysis_agent_no_search_tools():
     agent = TrendAnalysisAgent()
     registry = ToolRegistry()
     llm_tool = SimulatedLLMTool(responses=[
-        '{"trends": [{"title": "LLM生成趋势", "heat": 7, "direction": "上升", "potential": "中", "analysis": "基于LLM推理"}]}',
-        "LLM generated trend report",
+        '[{"topic": "LLM生成趋势", "heat_score": 7, "trend_direction": "上升", "spread_potential": "中", "analysis": "基于LLM推理"}]',
     ])
     registry.register(llm_tool)
     ctx = _make_context(registry)
-    collector = EventCollector(ctx.event_bus)
     output = await agent.execute_with_context(
         AgentInput(params={"domain": "科技"}), ctx
     )
     assert isinstance(output, AgentOutput)
     assert "trends" in output.result
     assert len(output.result["trends"]) > 0
-    assert output.result["trends"][0]["title"] == "LLM生成趋势"
+    assert output.result["trends"][0]["topic"] == "LLM生成趋势"
     assert len(llm_tool._calls) >= 1
-    assert collector.has_event("trend_analysis.complete")
 
 
 @pytest.mark.asyncio
@@ -539,42 +523,35 @@ async def test_image_research_agent():
     agent = ImageResearchAgent()
     registry = ToolRegistry()
     llm_tool = SimulatedLLMTool(responses=[
-        '{"selected": [{"url": "https://images.example.com/1.jpg", "title": "Image 1", "relevance": 0.9, "reason": "highly relevant"}]}',
+        '[{"url": "https://images.example.com/1.jpg", "relevance": 0.9, "quality": "高", "reason": "highly relevant"}]',
     ])
-    pexels_tool = SimulatedPexelsTool()
     registry.register(llm_tool)
-    registry.register(pexels_tool)
     ctx = _make_context(registry)
-    collector = EventCollector(ctx.event_bus)
     output = await agent.execute_with_context(
-        AgentInput(params={"topic": "AI technology"}), ctx
+        AgentInput(params={"topic": "AI technology", "images": [{"url": "https://images.example.com/1.jpg"}], "mode": "filter"}), ctx
     )
     assert isinstance(output, AgentOutput)
-    assert "images" in output.result
-    assert len(output.result["images"]) > 0
-    assert all("url" in img for img in output.result["images"])
-    assert len(pexels_tool._calls) >= 1
-    assert collector.has_event("image_research.search_images_start")
-    assert collector.has_event("image_research.complete")
+    assert "filtered_images" in output.result
+    assert len(output.result["filtered_images"]) > 0
+    assert len(llm_tool._calls) >= 1
 
 
 @pytest.mark.asyncio
-async def test_image_research_agent_fallback():
+async def test_image_research_agent_image_plan():
     """此为单元测试，使用模拟LLM；集成测试应使用真实LLM。"""
     agent = ImageResearchAgent()
     registry = ToolRegistry()
-    llm_tool = SimulatedLLMTool()
-    web_search_tool = SimulatedWebSearchTool()
+    llm_tool = SimulatedLLMTool(responses=[
+        '{"image_suggestions": [{"type": "插图", "style": "简约", "search_keywords": ["AI"], "placement": "正文"}]}',
+    ])
     registry.register(llm_tool)
-    registry.register(web_search_tool)
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
         AgentInput(params={"topic": "AI technology"}), ctx
     )
     assert isinstance(output, AgentOutput)
-    assert "images" in output.result
-    assert len(output.result["images"]) > 0
-    assert len(web_search_tool._calls) >= 1
+    assert "image_plan" in output.result
+    assert len(llm_tool._calls) >= 1
 
 
 @pytest.mark.asyncio
@@ -589,7 +566,7 @@ async def test_image_research_agent_no_tools():
         AgentInput(params={"topic": "AI technology"}), ctx
     )
     assert isinstance(output, AgentOutput)
-    assert output.result["images"] == []
+    assert "image_plan" in output.result
 
 
 @pytest.mark.asyncio
@@ -598,13 +575,10 @@ async def test_multilingual_agent():
     agent = MultilingualAgent()
     registry = ToolRegistry()
     llm_tool = SimulatedLLMTool(responses=[
-        '{"source_lang": "zh"}',
         "Translated content here",
-        '{"verified_translation": "Translated content here"}',
     ])
     registry.register(llm_tool)
     ctx = _make_context(registry)
-    collector = EventCollector(ctx.event_bus)
     output = await agent.execute_with_context(
         AgentInput(params={"text": "Hello world", "target_lang": "en"}), ctx
     )
@@ -613,10 +587,7 @@ async def test_multilingual_agent():
     assert "target_lang" in output.result
     assert len(output.result["translated"]) > 0
     assert output.result["target_lang"] == "en"
-    assert len(llm_tool._calls) >= 2
-    assert collector.has_event("multilingual.detect_language_start")
-    assert collector.has_event("multilingual.translate_start")
-    assert collector.has_event("multilingual.complete")
+    assert len(llm_tool._calls) >= 1
 
 
 @pytest.mark.asyncio
@@ -625,14 +596,12 @@ async def test_multilingual_agent_default_lang():
     agent = MultilingualAgent()
     registry = ToolRegistry()
     llm_tool = SimulatedLLMTool(responses=[
-        '{"source_lang": "zh"}',
         "Contenu traduit",
-        '{"verified_translation": "Contenu traduit"}',
     ])
     registry.register(llm_tool)
     ctx = _make_context(registry)
     output = await agent.execute_with_context(
-        AgentInput(params={"draft": "Bonjour le monde"}), ctx
+        AgentInput(params={"text": "Bonjour le monde"}), ctx
     )
     assert isinstance(output, AgentOutput)
     assert output.result["target_lang"] == "en"

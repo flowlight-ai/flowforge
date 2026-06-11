@@ -135,7 +135,7 @@ flowforge/
 │   ├── __init__.py
 │   ├── event_bus.py               # EventBus
 │   ├── event_types.py             # 事件类型定义
-│   └── solo_adapter.py            # EventBus → Solo 事件桥接
+│   └── helm_adapter.py            # EventBus → Helm 事件桥接
 │
 ├── modes/                         # 模式执行器
 │   ├── __init__.py
@@ -620,7 +620,7 @@ class HybridExecutor:
 
 ***
 
-## 第五章：事件总线与 Solo 集成
+## 第五章：事件总线与 Helm 集成
 
 ### 5.1 EventBus
 
@@ -664,50 +664,50 @@ class EventBus:
                 pass
 ```
 
-### 5.2 EventBusSoloAdapter
+### 5.2 EventBusHelmAdapter
 
 ```python
-# events/solo_adapter.py
+# events/helm_adapter.py
 
 from .event_bus import EventBus
 
-class EventBusSoloAdapter:
-    """将 FlowForge EventBus 事件桥接到 ContentForge SoloWSManager。
-    全局订阅 + task_id 路由：SoloWSManager 按 task_id 维护连接映射，
+class EventBusHelmAdapter:
+    """将 FlowForge EventBus 事件桥接到 ContentForge HelmWSManager。
+    全局订阅 + task_id 路由：HelmWSManager 按 task_id 维护连接映射，
     emit_event(task_id, ...) 只会发送到正确的 WebSocket 连接。"""
 
     EVENT_MAP = {
-        "workflow.step.start": "solo.stage.enter",
-        "mode.enter": "solo.stage.enter",
-        "tool.start": "solo.tool.start",
-        "tool.end": "solo.tool.end",
-        "llm.start": "solo.llm.start",
-        "llm.reasoning": "solo.llm.reasoning",
-        "llm.stream": "solo.llm.stream",
-        "llm.end": "solo.llm.end",
-        "draft.update": "solo.draft.update",
-        "step.intermediate": "solo.step.intermediate",
-        "review.ready": "solo.review.ready",
-        "review.submitted": "solo.review.submitted",
-        "task.paused": "solo.task.paused",
-        "task.resumed": "solo.task.resumed",
-        "task.completed": "solo.task.completed",
-        "task.error": "solo.task.error",
-        "token.stats": "solo.token.stats",
+        "workflow.step.start": "helm.stage.enter",
+        "mode.enter": "helm.stage.enter",
+        "tool.start": "helm.tool.start",
+        "tool.end": "helm.tool.end",
+        "llm.start": "helm.llm.start",
+        "llm.reasoning": "helm.llm.reasoning",
+        "llm.stream": "helm.llm.stream",
+        "llm.end": "helm.llm.end",
+        "draft.update": "helm.draft.update",
+        "step.intermediate": "helm.step.intermediate",
+        "review.ready": "helm.review.ready",
+        "review.submitted": "helm.review.submitted",
+        "task.paused": "helm.task.paused",
+        "task.resumed": "helm.task.resumed",
+        "task.completed": "helm.task.completed",
+        "task.error": "helm.task.error",
+        "token.stats": "helm.token.stats",
     }
 
-    def __init__(self, event_bus: EventBus, solo_manager):
+    def __init__(self, event_bus: EventBus, helm_manager):
         self.event_bus = event_bus
-        self.solo_manager = solo_manager
+        self.helm_manager = helm_manager
         self._bridged = False
 
     def bridge(self):
         if self._bridged:
             return
-        for flowforge_event, solo_event_type in self.EVENT_MAP.items():
-            def make_callback(etype=solo_event_type):
+        for flowforge_event, helm_event_type in self.EVENT_MAP.items():
+            def make_callback(etype=helm_event_type):
                 async def callback(event):
-                    await self.solo_manager.emit_event(
+                    await self.helm_manager.emit_event(
                         event["task_id"], etype, event["payload"])
                 return callback
             self.event_bus.subscribe(flowforge_event, make_callback())
@@ -2773,8 +2773,8 @@ class SkillRegistry:
                 if any(t in context["recent_tools"] for t in skill.required_tools):
                     score += 0.5
 
-            # Solo 模式加权
-            if context and context.get("mode") == "solo":
+            # Helm 模式加权
+            if context and context.get("mode") == "helm":
                 score *= 1.2
 
             if score > 0:

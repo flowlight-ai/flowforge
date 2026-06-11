@@ -20,10 +20,11 @@ class OpenSieveClient(BaseTool):
         },
     }
 
-    def __init__(self, endpoint: str = None, timeout: int = 90):
+    def __init__(self, endpoint: str = None, timeout: int = 120):
         self.endpoint = endpoint or os.getenv(
             "OPENSIEVE_ENDPOINT", "http://localhost:8100/api/v1/retrieve"
         )
+        self.api_key = os.getenv("OPENSIEVE_API_KEY", "or-local")
         self.timeout = timeout
 
     async def execute(self, input: ToolInput) -> ToolOutput:
@@ -32,6 +33,9 @@ class OpenSieveClient(BaseTool):
         min_score = input.params.get("min_score", 0.3)
 
         try:
+            headers = {}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 resp = await client.post(
                     self.endpoint,
@@ -40,6 +44,7 @@ class OpenSieveClient(BaseTool):
                         "max_results": max_results,
                         "min_score": min_score,
                     },
+                    headers=headers,
                 )
                 resp.raise_for_status()
                 data = resp.json()

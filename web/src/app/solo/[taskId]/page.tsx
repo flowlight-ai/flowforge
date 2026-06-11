@@ -7,6 +7,6 @@ const SoloReplayContent = dynamic(
   { ssr: false }
 );
 
-export default function SoloReplayPage() {
+export default function HelmReplayPage() {
   return <SoloReplayContent />;
 }

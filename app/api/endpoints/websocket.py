@@ -2,7 +2,7 @@
 
 Provides the ``ConnectionManager`` class that tracks active WebSocket
 connections per task and broadcasts events, as well as three WebSocket
-endpoints: Solo interaction, global event streaming, and log tailing.
+endpoints: Helm interaction, global event streaming, and log tailing.
 
 License: MIT
 """
@@ -110,7 +110,7 @@ class ConnectionManager:
 
         Args:
             task_id: The task identifier to broadcast to.
-            event_type: The event type string (e.g. ``"solo.llm.stream"``).
+            event_type: The event type string (e.g. ``"helm.llm.stream"``).
             payload: The event payload dictionary.
         """
         message = {
@@ -126,8 +126,8 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@router.websocket("/ws/solo/{task_id}")
-async def solo_websocket(websocket: WebSocket, task_id: str):
+@router.websocket("/ws/helm/{task_id}")
+async def helm_websocket(websocket: WebSocket, task_id: str):
     await manager.connect(task_id, websocket)
     last_ping = asyncio.get_event_loop().time()
 
@@ -139,7 +139,7 @@ async def solo_websocket(websocket: WebSocket, task_id: str):
                 await websocket.send_json({"type": "server_ping"})
                 last_ping = asyncio.get_event_loop().time()
             except Exception as e:
-                logger.debug(f"Server ping failed for solo websocket {task_id}: {e}")
+                logger.debug(f"Server ping failed for helm websocket {task_id}: {e}")
                 break
 
     ping_task = asyncio.create_task(send_server_pings())
@@ -172,7 +172,7 @@ async def solo_websocket(websocket: WebSocket, task_id: str):
     except WebSocketDisconnect:
         manager.disconnect(task_id, websocket)
     except Exception as e:
-        logger.debug(f"Solo websocket disconnected with error for task {task_id}: {e}")
+        logger.debug(f"Helm websocket disconnected with error for task {task_id}: {e}")
         manager.disconnect(task_id, websocket)
     finally:
         ping_task.cancel()

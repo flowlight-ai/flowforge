@@ -52,7 +52,7 @@ async def test_xscene_openroute_combine_with_tools():
     """When tools are provided and provider is openroute, X-Scene should be openroute_combine."""
     client = LLMClient(models_config={
         "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
-        "assignments": {"default": {"primary": "openroute/doubao-web/seed-2.0", "fallbacks": []}},
+        "assignments": {"default": {"primary": "openroute/Doubao-Seed2.0", "fallbacks": []}},
     })
 
     tools_schema = [{
@@ -101,7 +101,7 @@ async def test_xscene_caller_combine_without_tools():
     """When no tools are provided and provider is openroute, X-Scene should be caller_combine."""
     client = LLMClient(models_config={
         "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
-        "assignments": {"default": {"primary": "openroute/doubao-web/seed-2.0", "fallbacks": []}},
+        "assignments": {"default": {"primary": "openroute/Doubao-Seed2.0", "fallbacks": []}},
     })
 
     mock_resp = _mock_response(content="Hello! How can I help you?")
@@ -234,7 +234,7 @@ async def test_openroute_auto_default_assignment():
         "assignments": {
             "default": {
                 "primary": "openroute/auto",
-                "fallbacks": ["openroute/doubao-web/seed-2.0", "openrouter/baidu/cobuddy:free"],
+                "fallbacks": ["openroute/Doubao-Seed2.0", "openrouter/baidu/cobuddy:free"],
             }
         },
     })

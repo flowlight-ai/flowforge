@@ -188,7 +188,7 @@ class WorkflowAPITestBase:
             "persona": persona,
             "mode": "workflow",
             "workflow": workflow,
-            "interaction_mode": "solo",
+            "interaction_mode": "helm",
         }
         if input_data:
             payload["input_data"] = input_data

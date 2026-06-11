@@ -8,6 +8,7 @@ from flowforge.app.api.endpoints import (
 from flowforge.app.api.endpoints.graph import router as graph_router
 from flowforge.app.api.endpoints.domain_plugins import router as domain_plugins_router
 from flowforge.app.api.plugin_management import router as plugin_management_router
+from flowforge.app.api.marketplace_api import router as marketplace_router
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(tasks.router)
@@ -30,3 +31,4 @@ router.include_router(memory.router)
 router.include_router(metrics.router)
 router.include_router(domain_plugins_router)
 router.include_router(plugin_management_router)
+router.include_router(marketplace_router)

@@ -88,7 +88,7 @@ class E2EMetricsCollector:
     def _ws_loop(self):
         """WebSocket事件采集循环"""
         async def _run():
-            uri = f"{WS_URL}/ws/solo/{self.task_id}"
+            uri = f"{WS_URL}/ws/helm/{self.task_id}"
             try:
                 async with websockets.connect(uri, close_timeout=3) as ws:
                     while not self._ws_stop.is_set():

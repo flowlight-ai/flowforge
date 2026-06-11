@@ -76,7 +76,7 @@ class TestPersonaConcurrency:
             payload = {
                 "task": task_msg,
                 "persona": "default",
-                "mode": "solo",
+                "mode": "helm",
                 "input_data": {"task": task_msg},
             }
             with httpx.Client(timeout=180.0) as client:
@@ -110,7 +110,7 @@ class TestPersonaConcurrency:
             payload = {
                 "task": task_msg,
                 "persona": persona,
-                "mode": "solo",
+                "mode": "helm",
                 "input_data": {"task": task_msg},
             }
             with httpx.Client(timeout=180.0) as client:
@@ -164,7 +164,7 @@ class TestCircuitBreaker:
             resp = client.post(f"{BASE_URL}/api/v1/tasks", json={
                 "task": "你好，请介绍一下你自己",
                 "persona": "default",
-                "mode": "solo",
+                "mode": "helm",
             })
             assert resp.status_code in [200, 201], \
                 f"正常请求应被接受: {resp.status_code}"
@@ -184,7 +184,7 @@ class TestCrossWorkflow:
             resp1 = client.post(f"{BASE_URL}/api/v1/tasks", json={
                 "task": "写一篇关于AI在金融领域应用的短文",
                 "persona": "cross_workflow",
-                "mode": "solo",
+                "mode": "helm",
             })
             assert resp1.status_code in [200, 201], f"第一个任务创建失败: {resp1.status_code}"
             task1 = resp1.json()["data"]
@@ -226,7 +226,7 @@ class TestCrossWorkflow:
             resp2 = client.post(f"{BASE_URL}/api/v1/tasks", json={
                 "task": "将AI金融应用文章翻译成英文",
                 "persona": "cross_workflow_2",
-                "mode": "solo",
+                "mode": "helm",
             })
             assert resp2.status_code in [200, 201], f"第二个任务创建失败: {resp2.status_code}"
 
@@ -241,7 +241,7 @@ class TestAPIValidation:
             resp = client.post(f"{BASE_URL}/api/v1/tasks", json={
                 "task": "API生命周期测试：分析2026年AI芯片市场",
                 "persona": "default",
-                "mode": "solo",
+                "mode": "helm",
             })
             assert resp.status_code in [200, 201], f"创建失败: {resp.status_code}"
             data = resp.json()["data"]

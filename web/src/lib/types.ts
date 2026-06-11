@@ -19,7 +19,7 @@ export interface ShellConfig {
   brandSubtitle: string;
   version: string;
   navSections: NavSection[];
-  soloPaths?: string[];
+  helmPaths?: string[];
   apiBaseUrl?: string;
   wsBaseUrl?: string;
 }

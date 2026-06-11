@@ -3,22 +3,22 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { StageTransition } from "@/components/solo/StageTransition";
-import { ToolCallCard } from "@/components/solo/ToolCallCard";
-import { ThinkingBlock } from "@/components/solo/ThinkingBlock";
-import { SoloEditor } from "@/components/solo/SoloEditor";
-import { SoloWSEvent, StreamEntry, StreamEntryType } from "@/lib/solo-types";
+import { StageTransition } from "@/components/helm/StageTransition";
+import { ToolCallCard } from "@/components/helm/ToolCallCard";
+import { ThinkingBlock } from "@/components/helm/ThinkingBlock";
+import { HelmEditor } from "@/components/helm/HelmEditor";
+import { HelmWSEvent, StreamEntry, StreamEntryType } from "@/lib/helm-types";
 
-function eventToEntry(event: SoloWSEvent): StreamEntry {
+function eventToEntry(event: HelmWSEvent): StreamEntry {
   const typeMap: Record<string, StreamEntryType> = {
-    "solo.stage.enter": "stage",
-    "solo.tool.end": "tool-call",
-    "solo.llm.reasoning": "thinking",
-    "solo.step.intermediate": "intermediate",
-    "solo.review.ready": "review",
-    "solo.gate.verdict": "gate",
-    "solo.task.completed": "system",
-    "solo.task.error": "system",
+    "helm.stage.enter": "stage",
+    "helm.tool.end": "tool-call",
+    "helm.llm.reasoning": "thinking",
+    "helm.step.intermediate": "intermediate",
+    "helm.review.ready": "review",
+    "helm.gate.verdict": "gate",
+    "helm.task.completed": "system",
+    "helm.task.error": "system",
   };
   return {
     id: `e-${event.seq}`,
@@ -28,9 +28,9 @@ function eventToEntry(event: SoloWSEvent): StreamEntry {
   };
 }
 
-export default function SoloReplayContent() {
+export default function HelmReplayContent() {
   const { taskId } = useParams();
-  const [events, setEvents] = useState<SoloWSEvent[]>([]);
+  const [events, setEvents] = useState<HelmWSEvent[]>([]);
   const [finalDraft, setFinalDraft] = useState("");
   const [entries, setEntries] = useState<StreamEntry[]>([]);
   const [playIndex, setPlayIndex] = useState(0);
@@ -41,7 +41,7 @@ export default function SoloReplayContent() {
     fetch(`/api/v1/tasks/${taskId}`)
       .then((r) => r.json())
       .then((data) => {
-        const evts = data.solo_events || [];
+        const evts = data.helm_events || [];
         setEvents(evts);
         setFinalDraft(data.draft_content || "");
         setPlayIndex(evts.length ? 0 : -1);
@@ -72,10 +72,10 @@ export default function SoloReplayContent() {
   const noop = () => {};
 
   return (
-    <div className="solo-shell replay-mode">
-      <div className="solo-topbar replay-topbar">
+    <div className="helm-shell replay-mode">
+      <div className="helm-topbar replay-topbar">
         <Link
-          href="/solo"
+          href="/helm"
           style={{ color: "var(--muted)", fontSize: "12px" }}
         >
           ← 返回
@@ -108,7 +108,7 @@ export default function SoloReplayContent() {
         ))}
       </div>
 
-      <SoloEditor
+      <HelmEditor
         content={finalDraft}
         onChange={() => {}}
         readOnly

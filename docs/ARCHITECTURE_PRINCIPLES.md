@@ -12,7 +12,7 @@
 ### 1.1 能力分层
 
 ```
-FlowForge（底座）    →  通用 Agent、通用 Workflow、模型治理、配置管理、日志追踪、Solo 交互
+FlowForge（底座）    →  通用 Agent、通用 Workflow、模型治理、配置管理、日志追踪、Helm 交互
 ContentForge（上层） →  内容创作 Agent、内容 SOP、专栏配置、发布渠道
 DevForge（上层）     →  开发 Agent、IPD 工作流、代码审查、部署流程
 NovelForge（上层）   →  小说创作 Agent、连载管理、章节编排
@@ -34,7 +34,7 @@ NovelForge（上层）   →  小说创作 Agent、连载管理、章节编排
 | 通用 Workflow（ReAct/Plan-Execute/Iterative/Pipeline/Review） | 无（新增） | 2025-05 |
 | 通用 Agent（Thinker/Planner/Drafter/Critic/Analyst 等 17 个） | 无（新增） | 2025-05 |
 | 动态配置管理（API Key 存储、Web UI 配置） | 无（新增） | 2025-05 |
-| Solo 交互界面（三栏布局、对话流、审批卡片、命令系统） | ContentForge | 2025-05 |
+| Helm 交互界面（三栏布局、对话流、审批卡片、命令系统） | ContentForge | 2025-05 |
 
 ---
 
@@ -143,7 +143,7 @@ NovelForge（上层）   →  小说创作 Agent、连载管理、章节编排
 - ✅ 预制 5 个 Provider + 9 个默认 Model 配置（含 6 个网页 Chat 代理）
 - ✅ 默认使用 openroute（多平台网页 Chat 代理），无需 API Key 即可运行
 - ✅ 模型治理自动健康检查和自动修复
-- ✅ Solo 交互界面直接可用，无需额外配置
+- ✅ Helm 交互界面直接可用，无需额外配置
 
 ---
 

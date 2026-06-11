@@ -7,9 +7,12 @@ that maps task descriptions to the most appropriate execution mode.
 License: MIT
 """
 
+import logging
 from typing import Dict
 from flowforge.core.base_mode_executor import BaseModeExecutor
 from flowforge.core.errors import ModeNotFoundError
+
+_logger = logging.getLogger(__name__)
 
 class ModeRegistry:
     """Central registry for execution mode executors.
@@ -29,15 +32,20 @@ class ModeRegistry:
     def register(self, executor: BaseModeExecutor) -> None:
         """Register a mode executor.
 
+        If a mode with the same name is already registered, the new
+        registration is silently skipped and a DEBUG message is logged.
+        This allows plugins to safely register modes that may already
+        be provided by the core framework.
+
         Args:
             executor: A ``BaseModeExecutor`` instance whose ``mode_name``
                 will be used as the registry key.
-
-        Raises:
-            ValueError: If a mode with the same name is already registered.
         """
         if executor.mode_name in self._modes:
-            raise ValueError(f"Mode '{executor.mode_name}' already registered")
+            _logger.debug(
+                "Mode '%s' already registered, skipping duplicate", executor.mode_name
+            )
+            return
         self._modes[executor.mode_name] = executor
 
     def get(self, mode_name: str) -> BaseModeExecutor:

@@ -46,7 +46,7 @@ class ToolChainExecutor:
         system_prompt: Optional[str] = None,
         model: str = "auto",
         persona: str = "default",
-        agent_name: str = "solo_assistant",
+        agent_name: str = "helm_assistant",
         temperature: float = 0.7,
         max_tokens: int = 4000,
     ) -> Dict[str, Any]:

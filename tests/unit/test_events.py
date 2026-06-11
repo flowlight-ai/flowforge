@@ -1,7 +1,7 @@
 import pytest
 import asyncio
 from flowforge.events.event_bus import EventBus
-from flowforge.events.solo_adapter import EventBusSoloAdapter
+from flowforge.events.helm_adapter import EventBusHelmAdapter
 
 def test_event_bus_subscribe_emit():
     bus = EventBus()
@@ -29,15 +29,15 @@ async def test_event_bus_async_callback():
     await asyncio.sleep(0.1)
     assert len(received) == 1
 
-def test_solo_adapter_bridge():
+def test_helm_adapter_bridge():
     bus = EventBus()
-    class MockSoloManager:
+    class MockHelmManager:
         def __init__(self):
             self.events = []
         async def emit_event(self, task_id, event_type, payload):
             self.events.append((task_id, event_type, payload))
-    manager = MockSoloManager()
-    adapter = EventBusSoloAdapter(bus, manager)
+    manager = MockHelmManager()
+    adapter = EventBusHelmAdapter(bus, manager)
     adapter.bridge()
     assert adapter._bridged is True
     adapter.bridge()

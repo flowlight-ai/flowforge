@@ -60,12 +60,12 @@ try:
 except Exception as e:
     print(f"Error: {e}")
 
-# 6. Test solo task with real model
-print("\n=== Solo Task with Real Model ===")
+# 6. Test helm task with real model
+print("\n=== Helm Task with Real Model ===")
 try:
     r6 = requests.post(f"{BASE}/tasks", json={
         "query": "Hello, please introduce yourself briefly",
-        "mode": "solo",
+        "mode": "helm",
         "persona": "default",
     })
     task = r6.json()

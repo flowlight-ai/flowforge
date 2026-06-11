@@ -63,7 +63,7 @@ class MetricsTracker:
 
 
 class HarnessTestBase:
-    def create_task(self, task: str, mode: str = "solo", **kwargs) -> dict:
+    def create_task(self, task: str, mode: str = "helm", **kwargs) -> dict:
         payload = {
             "task": task,
             "persona": kwargs.get("persona", "default"),

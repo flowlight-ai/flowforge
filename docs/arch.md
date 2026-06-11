@@ -41,7 +41,7 @@ FlowForge 是独立开源项目（MIT），ContentForge 是其应用层参考实
 | **通用性** | 核心不感知业务概念，只定义 TaskContext 和 Agent/Tool 接口 |
 | **完整性** | 内置 9 种主流 Agent 模式，支持混合编排 |
 | **可扩展性** | 任何新模式、新工具可通过注册机制热插拔；支持 MCP、OpenAPI、GraphQL、Skill 等协议接入 |
-| **生产就绪** | 内置 Harness 四根护栏、三层防御、追踪、指标、检查点、Persona 锁、Human-in-the-Loop、Solo 实时交互 |
+| **生产就绪** | 内置 Harness 四根护栏、三层防御、追踪、指标、检查点、Persona 锁、Human-in-the-Loop、Helm 实时交互 |
 | **开源友好** | MIT 许可证，完善的文档和例子，支持通过 `pip install flowforge` 安装 |
 | **高性能** | 基于 asyncio 异步执行，支持并行步骤和流式输出 |
 
@@ -59,7 +59,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 │     ContentForge / NovelForge / 其他业务系统                        │
 ├─────────────────────────────────────────────────────────────────────┤
 │  5. 接入层 (Gateway Layer)                                          │
-│     FastAPI REST API + WebSocket (Solo/Events) + Web UI + CLI       │
+│     FastAPI REST API + WebSocket (Helm/Events) + Web UI + CLI       │
 ├─────────────────────────────────────────────────────────────────────┤
 │  4. Harness 驾驭层 (Harness Layer) ★ v6.0 核心                      │
 │     上下文工程 | 架构约束 | 反馈循环 | 熵管理 | 权限管线 | 会话管理  │
@@ -124,7 +124,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 │  │       MemoryManager (5种记忆) + EventBus (可观测性)                   │   │
 │  │  工作记忆 | 短期记忆 | 长期记忆 | 语义记忆 | 情景记忆                 │   │
 │  │  TaskBoard (原子认领) | Mailbox (四级优先级) | CheckpointManager      │   │
-│  │  SessionManager (92%阈值压缩) | Solo 16种事件映射                     │   │
+│  │  SessionManager (92%阈值压缩) | Helm 16种事件映射                     │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
@@ -209,7 +209,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 | **通用Agent** | 无 | 无 | 无 | 少量角色模板 | 无 | 无 | **30+ 预置通用Agent** |
 | **Skill 系统** | 无 | 无 | 无 | 无 | 无 | 无 | **4种格式适配 + 组合技** |
 | **MCP 支持** | 无 | 无 | 无 | 无 | 无 | 无 | **4层架构 (Client→Gateway→Broker→Adapter)** |
-| **Solo交互** | 无 | 无 | 无 | 无 | 无 | 无 | **原生Solo模式 (16种实时事件)** |
+| **Helm交互** | 无 | 无 | 无 | 无 | 无 | 无 | **原生Helm模式 (16种实时事件)** |
 | **Memory** | Checkpoint（单一） | 无独立模块 | 无 | 无 | 无 | 无 | **5种记忆策略 + SessionManager** |
 | **可扩展性** | 自定义Node | 插件市场 | 自定义Agent | 自定义Role | 自定义Agent | 自定义Activity | **Mode/Agent/Tool/Skill 四层插件 + 注册机制** |
 | **目标用户** | 资深AI工程师 | 产品经理/非AI开发者 | 研究人员 | 研究人员 | 研究人员 | 后端工程师 | **AI工程团队** |
@@ -226,7 +226,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 1. **四根 Harness 护栏**：上下文工程、架构约束、反馈循环、熵管理——为 Agent 提供完整控制回路，这是其他框架不具备的。
 2. **9 种高级 Agent 模式的深刻工程化实现**：对每种模式的思考过程、反馈循环、终止条件、错误处理的深度编码。
 3. **Skill 系统 + MCP 生态**：4 种 Skill 格式适配 + MCP 四层架构，实现跨平台能力复用。
-4. **Solo 交互模式**：提供极致透明度和控制力，任何其他框架目前不具备。
+4. **Helm 交互模式**：提供极致透明度和控制力，任何其他框架目前不具备。
 
 ---
 
@@ -248,13 +248,34 @@ class TaskContext:
     tools: ToolRegistry
     agents: AgentRegistry
     mode: Optional[str] = None          # 执行模式: react/reflexion/workflow/...
-    interaction_mode: str = "standard"   # 交互模式: standard / solo
+    interaction_mode: str = "standard"   # 交互模式: standard / helm
     checkpoint: CheckpointManager
     event_bus: EventBus
     memory: MemoryManager
     executor: Optional['HybridExecutor'] = None  # Workflow 嵌套调用
     harness_enabled: bool = False        # ★ v6.0 新增：是否启用 Harness 层
+
+    # ★ Plan 模式扩展字段
+    plan_mode: bool = False               # 是否为 Plan 模式
+    plan_active: bool = False             # Plan 是否已确认并正在执行
+    plan_id: Optional[str] = None         # Plan 唯一标识
+    is_plan_step: bool = False            # 当前是否在执行 Plan 的某个步骤
+    plan_step_index: int = 0              # 当前步骤索引（从 0 开始）
+    plan_total_steps: int = 0             # Plan 总步骤数
+    plan_step_name: Optional[str] = None  # 当前步骤名称
 ```
+
+### 4.2.1 Plan 模式 TaskContext 字段说明
+
+| 字段 | 类型 | 说明 | 生命周期 |
+|------|------|------|---------|
+| `plan_mode` | `bool` | 标识当前任务是否使用 Plan 模式 | 任务创建时设置，全程不变 |
+| `plan_active` | `bool` | Plan 是否已确认并正在执行 | 用户确认后置 True，Plan 完成后置 False |
+| `plan_id` | `Optional[str]` | Plan 唯一标识，用于 HelmDatabase 查询 | Plan 生成时创建 |
+| `is_plan_step` | `bool` | 当前执行上下文是否为 Plan 的某个步骤 | 步骤执行期间为 True |
+| `plan_step_index` | `int` | 当前步骤在 Plan 中的索引 | 步骤执行期间有效 |
+| `plan_total_steps` | `int` | Plan 的总步骤数 | Plan 确认时设置 |
+| `plan_step_name` | `Optional[str]` | 当前步骤的名称 | 步骤执行期间有效 |
 
 ### 4.3 BaseAgent — Agent 抽象
 
@@ -351,6 +372,46 @@ class HybridExecutor:
     async def pause_task(self, task_id): ...
     async def resume_task(self, task_id): ...
     async def get_task_snapshot(self, task_id) -> dict: ...
+
+    # ★ Plan 模式入口
+    async def run_plan(self, context: TaskContext) -> dict:
+        """Plan 模式执行：确认后将 Plan 转换为临时 Workflow YAML，委托 WorkflowExecutor 执行
+
+        执行流程：
+        1. Plan 生成阶段：ContextEngine 注入上下文，LLM 生成 Plan 步骤
+        2. Plan 确认阶段：PermissionPipeline prepare 级别审批
+        3. 步骤执行阶段：每步 Harness 正常 + lightweight FeedbackLoop
+        4. Plan 完成阶段：full FeedbackLoop 终审
+        """
+        # 1. 生成 Plan（ContextEngine 注入上下文）
+        if context.harness_enabled and self.harness:
+            await self.harness.context.inject_dynamic_context(
+                context.input_data, context.persona or "default")
+
+        plan = await self._generate_plan(context)
+        context.plan_id = plan["plan_id"]
+        context.plan_total_steps = len(plan["steps"])
+
+        # 2. 确认阶段：PermissionPipeline prepare 级别
+        if context.harness_enabled and self.harness:
+            permission = await self.harness.permission.evaluate(
+                "plan_confirm", plan, context)
+            if permission == "deny":
+                return {"status": "denied", "plan_id": plan["plan_id"]}
+
+        # 3. 转换为临时 Workflow YAML 并委托 WorkflowExecutor 执行
+        workflow_yaml = self._plan_to_workflow(plan)
+        context.plan_active = True
+        context.metadata["sop_steps"] = workflow_yaml["steps"]
+
+        result = await self._execute_with_mode(context, "workflow")
+
+        # 4. Plan 完成阶段：full FeedbackLoop
+        if context.harness_enabled and self.harness:
+            result = await self.harness.feedback.evaluate_agent_output(
+                result, context, evaluation_mode="full")
+        context.plan_active = False
+        return result
 ```
 
 ---
@@ -967,7 +1028,7 @@ class SkillRegistry:
                 for tool_name in skill.required_tools:
                     if tool_name in context.state.get("recent_tool_calls", []):
                         score += 0.5
-                if context.interaction_mode == "solo":
+                if context.interaction_mode == "helm":
                     score *= 1.2
             if score > 0:
                 scored.append((skill, score))
@@ -1278,9 +1339,468 @@ class WorkflowExecutor(BaseModeExecutor):
 | **语义记忆** | Qdrant/Milvus | ❌ Phase 3+ |
 | **情景记忆** | SQLite | ✅ |
 
-### 10.6 Solo 模式与 EventBus
+### 10.6 Helm 模式与 EventBus
 
-17 种 FlowForge 事件 → 16 种 Solo 事件类型全映射，WebSocket 专用通道 `/ws/solo/{task_id}`，支持断线重连和事件回放。
+17 种 FlowForge 事件 → 16 种 Helm 事件类型全映射，WebSocket 专用通道 `/ws/helm/{task_id}`，支持断线重连和事件回放。
+
+#### 10.6.1 Plan 模式架构
+
+Plan 模式是 Helm 交互的核心增强，允许用户在执行前审查并确认 Agent 的执行计划。
+
+**核心流程**：Plan 确认后内部转换为临时 Workflow YAML，委托 WorkflowExecutor 执行。
+
+```
+用户输入 → LLM 生成 Plan → 用户确认 → 转换为临时 Workflow YAML → WorkflowExecutor 执行 → 结果
+              ↑                                    ↓
+         ContextEngine 注入              PermissionPipeline prepare 级别
+```
+
+**Harness 集成策略**：
+
+| 阶段 | Harness 组件 | 行为 |
+|------|-------------|------|
+| Plan 生成 | ContextEngine | 注入上下文（规则 + 历史教训 + 交接物） |
+| Plan 确认 | PermissionPipeline | prepare 级别审批（生成变更计划，需用户确认） |
+| 步骤执行 | Harness 正常 + FeedbackLoop | 每步 lightweight FeedbackLoop |
+| Plan 完成 | FeedbackLoop | full FeedbackLoop 终审 |
+
+**Plan → Workflow YAML 转换规则**：
+
+```yaml
+# Plan 输出示例
+plan_id: "plan-abc123"
+steps:
+  - name: "搜索相关资料"
+    agent: "researcher"
+    mode: "rewoo"
+  - name: "撰写初稿"
+    agent: "writer"
+    mode: "reflexion"
+  - name: "审核发布"
+    agent: "publisher"
+    mode: "plan_execute"
+
+# 自动转换为临时 Workflow YAML
+steps:
+  - name: "搜索相关资料"
+    agent: "researcher"
+    mode: "rewoo"
+    output: "step_0_result"
+  - name: "撰写初稿"
+    agent: "writer"
+    mode: "reflexion"
+    output: "step_1_result"
+  - name: "审核发布"
+    agent: "publisher"
+    mode: "plan_execute"
+    output: "step_2_result"
+```
+
+#### 10.6.2 FileChangeTracker 架构
+
+FileChangeTracker 是 Helm 模式下的文件变更追踪组件，为前端 DiffViewer 提供实时变更数据。
+
+**组件位置**：`tools/file_change_tracker.py`
+
+**核心机制**：拦截 `file_rw` 和 `workspace_file` 工具的 write 操作，在写入前后捕获文件快照，通过 EventBus 发射变更事件。
+
+```
+Agent 调用 file_rw.write(path, content)
+    ↓
+FileChangeTracker.capture_before(path)  →  记录原始内容 + hash
+    ↓
+file_rw.write(path, content)  →  实际写入
+    ↓
+FileChangeTracker.capture_after(path)   →  记录新内容 + hash
+    ↓
+EventBus.emit("file.changed", {path, before_hash, after_hash, diff})
+    ↓
+HelmAdapter 桥接 → 前端 DiffViewer
+```
+
+**关键设计**：
+
+| 参数 | 值 | 说明 |
+|------|---|------|
+| `MAX_FILE_SIZE` | 500KB | 超过此阈值的文件跳过追踪，避免内存溢出 |
+| 拦截范围 | `file_rw`, `workspace_file` | 仅拦截文件写入类工具 |
+| 事件类型 | `file.changed` | 映射为 Helm 事件 `helm.file.changed` |
+| Diff 格式 | unified diff | 标准化 diff 输出，前端可直接渲染 |
+
+```python
+# flowforge/tools/file_change_tracker.py
+
+class FileChangeTracker:
+    """文件变更追踪器：拦截写入操作，捕获前后快照，发射变更事件"""
+
+    MAX_FILE_SIZE = 500 * 1024  # 500KB
+
+    def __init__(self, event_bus: EventBus):
+        self.event_bus = event_bus
+        self._snapshots: Dict[str, dict] = {}  # path → {content, hash}
+
+    async def capture_before(self, path: str) -> Optional[str]:
+        """写入前捕获：记录原始内容和 hash"""
+        if not os.path.exists(path):
+            self._snapshots[path] = {"content": None, "hash": None}
+            return None
+        if os.path.getsize(path) > self.MAX_FILE_SIZE:
+            return None  # 超大文件跳过追踪
+        content = open(path, "r", encoding="utf-8").read()
+        self._snapshots[path] = {
+            "content": content,
+            "hash": hashlib.sha256(content.encode()).hexdigest()[:16],
+        }
+        return content
+
+    async def capture_after(self, path: str, task_id: str) -> Optional[dict]:
+        """写入后捕获：对比差异，发射事件"""
+        before = self._snapshots.pop(path, {"content": None, "hash": None})
+        if os.path.getsize(path) > self.MAX_FILE_SIZE:
+            return None
+        after_content = open(path, "r", encoding="utf-8").read()
+        after_hash = hashlib.sha256(after_content.encode()).hexdigest()[:16]
+        if before["hash"] == after_hash:
+            return None  # 无实际变更
+        diff = unified_diff(
+            (before["content"] or "").splitlines(),
+            after_content.splitlines(),
+            lineterm=[""],
+        )
+        change_event = {
+            "path": path,
+            "before_hash": before["hash"],
+            "after_hash": after_hash,
+            "diff": "\n".join(diff),
+        }
+        self.event_bus.emit(task_id, "file.changed", change_event)
+        return change_event
+```
+
+**HelmAdapter 桥接**：HelmAdapter 监听 `file.changed` 事件，转换为前端 DiffViewer 可消费的 WebSocket 消息格式，包含语法高亮元信息。
+
+#### 10.6.3 HelmDatabase 架构
+
+Helm 模式使用独立的 SQLite 数据库 `data/helm.db`，与 `task_board.db` 完全隔离。
+
+**设计原则**：独立存储、自动迁移、轻量 CRUD。
+
+**数据库表结构**：
+
+```sql
+-- plans 表：存储 Plan 模式的执行计划
+CREATE TABLE IF NOT EXISTS plans (
+    plan_id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    steps TEXT NOT NULL,           -- JSON: [{name, agent, mode, output}]
+    status TEXT DEFAULT 'pending', -- pending / confirmed / executing / completed / failed
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    confirmed_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(task_id)
+);
+
+-- attachments 表：存储用户上传的附件元信息
+CREATE TABLE IF NOT EXISTS attachments (
+    attachment_id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    stored_path TEXT NOT NULL,     -- UUID 重命名后的存储路径
+    mime_type TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(task_id)
+);
+```
+
+**HelmDatabase 类**：
+
+```python
+# flowforge/helm/database.py
+
+class HelmDatabase:
+    """Helm 模式独立数据库：自动迁移 + CRUD"""
+
+    def __init__(self, db_path: str = "data/helm.db"):
+        self.db_path = db_path
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        self._conn: Optional[aiosqlite.Connection] = None
+
+    async def initialize(self):
+        """自动迁移：检查并创建表结构"""
+        self._conn = await aiosqlite.connect(self.db_path)
+        await self._conn.executescript(SCHEMA_SQL)
+        await self._conn.commit()
+
+    # Plans CRUD
+    async def create_plan(self, plan_id: str, task_id: str, steps: list) -> dict: ...
+    async def get_plan(self, plan_id: str) -> Optional[dict]: ...
+    async def confirm_plan(self, plan_id: str) -> dict: ...
+    async def update_plan_status(self, plan_id: str, status: str) -> dict: ...
+    async def list_plans_by_task(self, task_id: str) -> list: ...
+
+    # Attachments CRUD
+    async def create_attachment(self, task_id: str, original_name: str,
+                                 stored_path: str, mime_type: str,
+                                 file_size: int) -> dict: ...
+    async def get_attachment(self, attachment_id: str) -> Optional[dict]: ...
+    async def list_attachments_by_task(self, task_id: str) -> list: ...
+    async def delete_attachment(self, attachment_id: str) -> bool: ...
+```
+
+**FastAPI lifespan 初始化**：
+
+```python
+# 在 FastAPI 应用 lifespan 中初始化 HelmDatabase
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    helm_db = HelmDatabase("data/helm.db")
+    await helm_db.initialize()
+    app.state.helm_db = helm_db
+    yield
+    await helm_db.close()
+```
+
+#### 10.6.4 UploadValidator 架构
+
+UploadValidator 是 Helm 模式下用户文件上传的安全校验组件。
+
+**组件位置**：`tools/upload_validator.py`
+
+**核心能力**：
+
+| 校验维度 | 机制 | 说明 |
+|---------|------|------|
+| MIME 类型 | 白名单校验 | 仅允许安全类型（image/*, text/*, application/pdf 等） |
+| 扩展名 | 白名单校验 | 与 MIME 类型双重验证，防止伪装 |
+| 文件名 | UUID 重命名 | 消除路径穿越风险，原始名存数据库 |
+| 路径穿越 | 防护检查 | `os.path.realpath()` 验证最终路径在允许目录内 |
+| 速率限制 | 10 文件/分钟/任务 | 防止滥用上传 |
+
+```python
+# flowforge/tools/upload_validator.py
+
+class UploadValidator:
+    """上传校验器：MIME + 扩展名双重白名单 + UUID 重命名 + 速率限制"""
+
+    ALLOWED_MIME_TYPES = {
+        "image/jpeg", "image/png", "image/gif", "image/webp",
+        "text/plain", "text/markdown", "text/csv",
+        "application/pdf", "application/json",
+    }
+    ALLOWED_EXTENSIONS = {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp",
+        ".txt", ".md", ".csv",
+        ".pdf", ".json",
+    }
+    MAX_UPLOAD_RATE = 10  # 10 文件/分钟/任务
+
+    def __init__(self, upload_dir: str = "data/uploads"):
+        self.upload_dir = os.path.realpath(upload_dir)
+        os.makedirs(self.upload_dir, exist_ok=True)
+        self._rate_tracker: Dict[str, list] = {}  # task_id → [timestamps]
+
+    async def validate_and_store(self, task_id: str, filename: str,
+                                  content: bytes, mime_type: str) -> dict:
+        """校验 + 存储：返回 {attachment_id, stored_path, original_name}"""
+        # 1. 速率限制检查
+        if not self._check_rate_limit(task_id):
+            raise ValueError(f"上传速率超限：每任务每分钟最多 {self.MAX_UPLOAD_RATE} 个文件")
+
+        # 2. MIME + 扩展名双重白名单
+        ext = os.path.splitext(filename)[1].lower()
+        if mime_type not in self.ALLOWED_MIME_TYPES:
+            raise ValueError(f"不允许的 MIME 类型: {mime_type}")
+        if ext not in self.ALLOWED_EXTENSIONS:
+            raise ValueError(f"不允许的文件扩展名: {ext}")
+
+        # 3. UUID 重命名存储
+        attachment_id = str(uuid.uuid4())
+        stored_name = f"{attachment_id}{ext}"
+        stored_path = os.path.join(self.upload_dir, stored_name)
+
+        # 4. 路径穿越防护
+        real_path = os.path.realpath(stored_path)
+        if not real_path.startswith(self.upload_dir):
+            raise ValueError("检测到路径穿越攻击")
+
+        with open(real_path, "wb") as f:
+            f.write(content)
+
+        return {
+            "attachment_id": attachment_id,
+            "stored_path": real_path,
+            "original_name": filename,
+            "mime_type": mime_type,
+            "file_size": len(content),
+        }
+
+    def _check_rate_limit(self, task_id: str) -> bool:
+        """速率限制：10 文件/分钟/任务"""
+        now = time.time()
+        timestamps = self._rate_tracker.get(task_id, [])
+        # 清理 60 秒前的记录
+        timestamps = [t for t in timestamps if now - t < 60]
+        if len(timestamps) >= self.MAX_UPLOAD_RATE:
+            return False
+        timestamps.append(now)
+        self._rate_tracker[task_id] = timestamps
+        return True
+```
+
+#### 10.6.5 EventBus 事件映射（新增）
+
+在原有 17 种 FlowForge 事件 → 16 种 Helm 事件映射基础上，新增以下映射：
+
+| FlowForge 内部事件 | Helm WebSocket 事件 | 说明 |
+|-------------------|---------------------|------|
+| `plan.step.start` | `helm.plan.step.start` | Plan 步骤开始执行 |
+| `plan.step.complete` | `helm.plan.step.complete` | Plan 步骤执行完成 |
+| `plan.step.error` | `helm.plan.step.error` | Plan 步骤执行出错 |
+| `file.changed` | `helm.file.changed` | 文件内容变更（FileChangeTracker 触发） |
+
+**完整 Helm 事件映射表（含新增）**：
+
+```
+FlowForge 内部事件          →  Helm WebSocket 事件
+─────────────────────────────────────────────────
+task.start                  →  helm.task.start
+task.complete               →  helm.task.complete
+task.error                  →  helm.task.error
+task.paused                 →  helm.task.paused
+task.resumed                →  helm.task.resumed
+mode.enter                  →  helm.mode.enter
+mode.exit                   →  helm.mode.exit
+agent.start                 →  helm.agent.start
+agent.end                   →  helm.agent.end
+tool.start                  →  helm.tool.start
+tool.end                    →  helm.tool.end
+llm.start                   →  helm.llm.start
+llm.reasoning               →  helm.llm.reasoning
+llm.stream                  →  helm.llm.stream
+llm.end                     →  helm.llm.end
+draft.update                →  helm.draft.update
+step.intermediate           →  helm.step.intermediate
+review.ready                →  helm.review.ready
+review.submitted            →  helm.review.submitted
+token.stats                 →  helm.token.stats
+plan.step.start    ★ 新增   →  helm.plan.step.start
+plan.step.complete ★ 新增   →  helm.plan.step.complete
+plan.step.error    ★ 新增   →  helm.plan.step.error
+file.changed       ★ 新增   →  helm.file.changed
+```
+
+#### 10.6.6 前端状态管理架构
+
+Helm 模式前端采用 React Context + useReducer 实现状态管理，零外部依赖，轻量高效。
+
+**设计原则**：零依赖（不引入 Redux / Zustand 等第三方状态库），使用 React 原生 Context + useReducer 模式。
+
+**三大 Context**：
+
+| Context | 职责 | 核心状态 |
+|---------|------|---------|
+| `PlanContext` | Plan 模式状态管理 | plan_id / steps / current_step / status / is_plan_step |
+| `AttachmentContext` | 附件上传状态管理 | attachments / upload_status / error |
+| `DiffContext` | 文件变更 Diff 视图状态 | changes / selected_file / diff_content / loading |
+
+**HelmContextProvider 组合 Provider**：
+
+```tsx
+// web/src/contexts/HelmContextProvider.tsx
+
+function HelmContextProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <PlanContext.Provider value={planReducer}>
+      <AttachmentContext.Provider value={attachmentReducer}>
+        <DiffContext.Provider value={diffReducer}>
+          {children}
+        </DiffContext.Provider>
+      </AttachmentContext.Provider>
+    </PlanContext.Provider>
+  );
+}
+```
+
+**PlanContext 状态模型**：
+
+```typescript
+// web/src/contexts/PlanContext.tsx
+
+interface PlanState {
+  planId: string | null;
+  steps: PlanStep[];
+  currentStepIndex: number;
+  status: 'idle' | 'generating' | 'pending' | 'confirmed' | 'executing' | 'completed' | 'failed';
+  isPlanStep: boolean;
+}
+
+interface PlanStep {
+  name: string;
+  agent: string;
+  mode: string;
+  status: 'pending' | 'running' | 'completed' | 'error';
+  result?: any;
+}
+
+type PlanAction =
+  | { type: 'PLAN_GENERATED'; payload: { planId: string; steps: PlanStep[] } }
+  | { type: 'PLAN_CONFIRMED' }
+  | { type: 'STEP_START'; payload: { stepIndex: number } }
+  | { type: 'STEP_COMPLETE'; payload: { stepIndex: number; result: any } }
+  | { type: 'STEP_ERROR'; payload: { stepIndex: number; error: string } }
+  | { type: 'PLAN_COMPLETED' }
+  | { type: 'RESET' };
+```
+
+**AttachmentContext 状态模型**：
+
+```typescript
+// web/src/contexts/AttachmentContext.tsx
+
+interface AttachmentState {
+  attachments: Attachment[];
+  uploadStatus: 'idle' | 'uploading' | 'success' | 'error';
+  error: string | null;
+}
+
+interface Attachment {
+  attachmentId: string;
+  originalName: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+}
+```
+
+**DiffContext 状态模型**：
+
+```typescript
+// web/src/contexts/DiffContext.tsx
+
+interface DiffState {
+  changes: FileChange[];
+  selectedFile: string | null;
+  diffContent: string | null;
+  loading: boolean;
+}
+
+interface FileChange {
+  path: string;
+  beforeHash: string | null;
+  afterHash: string;
+  timestamp: string;
+}
+```
+
+**WebSocket 事件 → Context Action 映射**：
+
+| WebSocket 事件 | Context | Action |
+|---------------|---------|--------|
+| `helm.plan.step.start` | PlanContext | `STEP_START` |
+| `helm.plan.step.complete` | PlanContext | `STEP_COMPLETE` |
+| `helm.plan.step.error` | PlanContext | `STEP_ERROR` |
+| `helm.file.changed` | DiffContext | `ADD_CHANGE` |
 
 ---
 
@@ -1307,7 +1827,7 @@ class WorkflowExecutor(BaseModeExecutor):
   - `flowforge_tool_calls_total{tool_name, status}`
   - `flowforge_persona_running{persona}`
 - **审计日志**：所有 Agent、Tool 调用均记录在 audit_logs 表中，含 trace_id、耗时、敏感信息脱敏
-- **WebSocket 实时推送**：通用事件通道 `/ws/events`，Solo 专用通道 `/ws/solo/{task_id}`
+- **WebSocket 实时推送**：通用事件通道 `/ws/events`，Helm 专用通道 `/ws/helm/{task_id}`
 
 ### 11.3 检查点与恢复
 
@@ -1425,7 +1945,92 @@ mcp:
   broker:
     max_retries: 3
     circuit_breaker_threshold: 5
+
+# ★ Helm 模式配置
+helm:
+  enabled: true
+  database_path: "data/helm.db"
+  upload_dir: "data/uploads"
+  upload_validator:
+    max_file_size: 10485760  # 10MB
+    max_upload_rate: 10      # 10 文件/分钟/任务
+  file_change_tracker:
+    max_file_size: 512000    # 500KB
+    tracked_tools: ["file_rw", "workspace_file"]
+
+# ★ Plan 模式配置
+plan:
+  enabled: true
+  prompt_template: "config/prompts.yaml"  # Plan 生成 Prompt 模板路径
+  auto_confirm: false                     # 是否自动确认（生产环境必须为 false）
+  max_steps: 10                           # Plan 最大步骤数
 ```
+
+### 13.1.1 Plan 生成 Prompt 外置
+
+Plan 生成使用的 Prompt 模板外置于 `config/prompts.yaml`，支持热更新和版本管理。
+
+**设计原则**：Prompt 与代码分离，修改 Prompt 无需重新部署。
+
+**模板结构**：
+
+```yaml
+# config/prompts.yaml
+
+prompts:
+  plan_generation:
+    description: "Plan 模式的执行计划生成 Prompt"
+    template: |
+      你是一个任务规划专家。请根据用户需求，生成一个分步执行计划。
+
+      ## 可用 Agent
+      {{available_agents}}
+
+      ## 可用工具
+      {{available_tools}}
+
+      ## 上下文信息
+      {{context}}
+
+      ## 用户需求
+      {{task}}
+
+      ## 输出要求
+      请以 YAML 格式输出执行计划，包含以下字段：
+      - plan_id: 唯一标识
+      - steps: 步骤列表，每个步骤包含 name/agent/mode 字段
+
+      示例格式：
+      ```yaml
+      plan_id: "plan-xxx"
+      steps:
+        - name: "步骤名称"
+          agent: "agent名称"
+          mode: "执行模式"
+      ```
+    variables:
+      - name: available_agents
+        description: "当前注册的所有 Agent 列表及其能力描述"
+        required: true
+      - name: available_tools
+        description: "当前注册的所有工具列表及其功能描述"
+        required: true
+      - name: context
+        description: "ContextEngine 注入的上下文信息（规则、历史教训、交接物）"
+        required: false
+      - name: task
+        description: "用户的原始任务描述"
+        required: true
+```
+
+**变量注入机制**：
+
+| 变量 | 来源 | 注入时机 |
+|------|------|---------|
+| `available_agents` | AgentRegistry | Plan 生成前自动填充 |
+| `available_tools` | ToolRegistry | Plan 生成前自动填充 |
+| `context` | ContextEngine | Plan 生成时注入（规则 + 历史教训 + 交接物） |
+| `task` | 用户输入 | Plan 生成时传入 |
 
 ### 13.2 编程式启动
 
@@ -1515,4 +2120,209 @@ result = await forge.run(
 
 ---
 
-**以上为 FlowForge 架构设计文档 v6.0。** 本文档合并了 v4.0 的核心接口设计、竞品分析、九大模式、通用 Agent/Workflow 库，v5.0 的三层防御、上下文压缩、安全工具、Multi-Agent 三策略、协作基础设施，新增 v6.0 的四根 Harness 护栏（上下文工程、架构约束、反馈循环、熵管理）、Skill 系统（4 种格式适配 + 组合技）、MCP 模块（4 层架构 + 索引路由 + 流式支持），并应用了三轮评审的全部修复（统一 Compaction 阈值为 92%、明确 FeedbackLoop 为全局护栏与 Reflexion 内环串行、制定增量三步迁移策略、补充 ast 依赖提取、MCP Broker 索引优化、删除 control_loop.py 改用 HarnessOrchestrator、Skill 匹配置信度评分 + 触发词长度权重、evaluation_mode 三档配置等），为唯一有效版本。
+## 17. v7.0 新增核心模块
+
+> ★ v7.0 新增——SDK 统一入口 + 零配置模型访问 + 安全护栏 + Agent 委托 + 声明式 Agent + 插件市场
+
+### 17.1 新增模块总览
+
+| 模块 | 位置 | 职责 |
+|------|------|------|
+| **ModelCapabilityProvider** | `core/model_capability.py` | 零配置模型访问单例，上层项目无需关心 provider/model 配置即可调用 LLM |
+| **@tool 装饰器** | `core/tool_decorator.py` | 简化工具注册，5 行代码创建工具并自动生成 Schema |
+| **FlowForgeSDK** | `sdk.py` | 统一入口，上层项目只需 `from flowforge.sdk import FlowForgeSDK` 即可获得全部能力 |
+| **Guardrails** | `core/guardrails.py` | 并行安全检查，支持 InputGuardrail/OutputGuardrail，结果为 PASS/WARN/BLOCK/MODIFY |
+| **Agent Handoff** | `core/handoff.py` | LLM 驱动的 Agent 间任务委托，HandoffManager 管理委托路由与上下文传递 |
+| **MCP Integration** | `core/mcp_integration.py` | Model Context Protocol 服务器集成，一键连接 MCP 服务器并自动注册工具 |
+| **Declarative Agent** | `core/declarative_agent.py` | 无继承、纯配置的 Agent 定义，支持 model/tools/instructions/handoffs/guardrails 声明 |
+| **Marketplace** | `core/marketplace.py` | 插件市场，支持一键安装/卸载/搜索插件 |
+
+### 17.2 更新后的扩展性架构
+
+```
+┌─────────────────────────────────────────────┐
+│           应用层（Gateway / API）              │
+│  REST API + WebSocket + Marketplace API       │
+├─────────────────────────────────────────────┤
+│           编排层（Brain / SOP）                │
+│  Guardrails(并行) + Handoff(委托) + SOP       │
+├─────────────────────────────────────────────┤
+│           Agent 层（Workers）                  │
+│  Declarative Agent + BaseAgent + Handoff      │
+├─────────────────────────────────────────────┤
+│           工具层（Tools）                      │
+│  @tool装饰器 + MCP Server + BaseTool          │
+├─────────────────────────────────────────────┤
+│           共享内核（Core）                      │
+│  SDK / ModelCapability / Guardrails /         │
+│  Handoff / Marketplace / Config / Tracing     │
+└─────────────────────────────────────────────┘
+```
+
+### 17.3 FlowForgeSDK 统一入口
+
+FlowForgeSDK 是上层项目与 FlowForge 交互的**唯一入口**，提供懒初始化的属性访问和装饰器注册：
+
+```python
+from flowforge.sdk import FlowForgeSDK
+
+sdk = FlowForgeSDK()
+
+# 零配置模型访问
+result = await sdk.llm.chat("Write something")
+
+# @tool 装饰器注册工具
+@sdk.tool(name="my_tool", description="My custom tool")
+async def my_tool(query: str) -> dict:
+    return {"result": query}
+
+# @agent 装饰器注册 Agent
+@sdk.agent(name="my_agent", description="My custom agent")
+async def my_agent(task: str) -> dict:
+    return {"output": task}
+
+# 声明式 Agent（无继承、纯配置）
+@sdk.declarative_agent(
+    name="writer",
+    description="Content writer",
+    model="DeepSeek-V4-Pro",
+    tools=["web_search"],
+    instructions="You are a professional writer.",
+    handoffs=["reviewer"],
+)
+async def write(task: str, style: str = "professional") -> str:
+    ...
+
+# 安全护栏
+@sdk.input_guardrail(name="content_safety")
+class ContentSafetyGuardrail(InputGuardrail):
+    async def check(self, input_text: str, context: dict) -> GuardrailResult:
+        ...
+
+# MCP 服务器连接
+await sdk.mcp.connect_server(
+    name="filesystem",
+    command="npx",
+    args=["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+)
+
+# 事件订阅
+@sdk.on_event("task.completed")
+async def on_task_completed(event):
+    print(f"Task completed: {event}")
+```
+
+### 17.4 ModelCapabilityProvider — 零配置模型访问
+
+`ModelCapability` 是一个单例，上层项目无需配置 provider/model 即可直接调用 LLM：
+
+```python
+from flowforge.sdk import FlowForgeSDK
+
+sdk = FlowForgeSDK()
+result = await sdk.llm.chat("你好")  # 自动路由到可用模型
+```
+
+核心特性：
+- **零配置**：自动读取 `models.yaml` 中的 provider 和 model 配置
+- **智能路由**：根据健康检查结果自动选择可用模型
+- **降级容错**：主模型不可用时自动切换到 fallback 模型
+- **上层项目无需关心**：ContentForge/DevForge/NovelForge/MallForge 直接通过 `sdk.llm` 访问
+
+### 17.5 Guardrails — 并行安全检查
+
+Guardrails 在 Agent 执行前后并行运行安全检查，支持四种结果：
+
+| 结果 | 行为 |
+|------|------|
+| `passed` | 允许继续执行 |
+| `warned` | 记录警告但允许继续 |
+| `blocked` | 立即停止执行 |
+| `modified` | 转换输入/输出后继续 |
+
+```python
+# InputGuardrail — 执行前检查
+class ContentSafetyGuardrail(InputGuardrail):
+    name = "content_safety"
+    async def check(self, input_text: str, context: dict) -> GuardrailResult:
+        if any(word in input_text for word in BANNED_WORDS):
+            return GuardrailResult(status="blocked", message="Contains banned content")
+        return GuardrailResult(status="passed")
+
+# OutputGuardrail — 执行后检查
+class QualityGuardrail(OutputGuardrail):
+    name = "quality_check"
+    async def check(self, output_text: str, context: dict) -> GuardrailResult:
+        if len(output_text) < 100:
+            return GuardrailResult(status="warned", message="Output too short")
+        return GuardrailResult(status="passed")
+```
+
+### 17.6 Agent Handoff — LLM 驱动的任务委托
+
+Agent Handoff 允许 Agent 将任务委托给其他专业 Agent，由 LLM 决定何时委托：
+
+```python
+from flowforge.core.handoff import Handoff, HandoffManager
+
+handoffs = [
+    Handoff(target="topic_agent", condition="research and topic selection"),
+    Handoff(target="writing_agent", condition="article writing and editing"),
+]
+
+hm = HandoffManager(agent_registry=agent_registry)
+hm.register_handoffs("coordinator_agent", handoffs)
+
+# 执行委托
+result = await hm.execute_handoff(
+    source_agent="coordinator_agent",
+    target_agent="topic_agent",
+    task="Research trending AI topics",
+    context={"persona": "tech"}
+)
+```
+
+### 17.7 MCP Integration — 一键连接 MCP 服务器
+
+MCPIntegration 简化了 MCP 服务器的连接流程，自动将 MCP 工具注册为 FlowForge BaseTool：
+
+```python
+sdk = FlowForgeSDK()
+await sdk.mcp.connect_server(
+    name="filesystem",
+    command="npx",
+    args=["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+)
+# MCP 工具自动注册到 sdk.tools
+```
+
+### 17.8 Declarative Agent — 纯配置 Agent 定义
+
+Declarative Agent 无需继承 BaseAgent，通过装饰器声明 model/tools/instructions/handoffs/guardrails 即可创建：
+
+```python
+@sdk.declarative_agent(
+    name="writer",
+    description="Content writer",
+    model="DeepSeek-V4-Pro",
+    tools=["web_search"],
+    instructions="You are a professional writer.",
+    handoffs=["reviewer"],
+    guardrails=["content_safety"],
+)
+async def write(task: str, style: str = "professional") -> str:
+    ...  # 留空则使用默认 LLM 执行
+```
+
+### 17.9 Marketplace — 插件市场
+
+Marketplace 提供插件的发现、安装、卸载能力：
+
+- **搜索**：按关键词/标签搜索可用插件
+- **安装**：一键安装插件到项目
+- **卸载**：一键移除已安装插件
+- **版本管理**：支持插件版本检查和更新
+
+---
+
+**以上为 FlowForge 架构设计文档 v6.0 + v7.0 增量。** v7.0 在 v6.0 基础上新增了 FlowForgeSDK 统一入口、ModelCapabilityProvider 零配置模型访问、@tool 装饰器、Guardrails 并行安全检查、Agent Handoff 任务委托、MCP Integration 一键连接、Declarative Agent 纯配置定义、Marketplace 插件市场等 8 个核心模块，为上层项目提供更简洁、更安全的集成体验。

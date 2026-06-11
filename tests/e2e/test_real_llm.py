@@ -4,7 +4,7 @@ import urllib.request, json, time, sys
 BASE = "http://127.0.0.1:8002"
 
 def create_task(task, persona="default", model="openroute/DeepSeek-V4-Pro"):
-    data = json.dumps({"task": task, "persona": persona, "mode": "solo", "model": model}).encode()
+    data = json.dumps({"task": task, "persona": persona, "mode": "helm", "model": model}).encode()
     req = urllib.request.Request(f"{BASE}/api/v1/tasks", data=data, headers={"Content-Type": "application/json"})
     r = urllib.request.urlopen(req, timeout=30)
     return json.loads(r.read().decode())["data"]

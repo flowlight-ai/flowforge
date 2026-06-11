@@ -53,6 +53,8 @@ DEFAULT_FREE_MODELS = {
 
 PROVIDER_BASE_URLS = {
     "openrouter": "https://openrouter.ai/api/v1",
+    # openroute base_url 从 models.yaml providers.openroute.base_url 动态读取
+    # 此处仅作为 fallback，实际使用 _get_provider_base_url() 方法
     "openroute": "http://127.0.0.1:13000/v1",
 }
 
@@ -70,12 +72,11 @@ MAX_CANDIDATES = 3
 MAX_FALLBACK_CANDIDATES = 3
 MAX_CALLS_PER_TASK = 50
 
+# WebChat 轮询池：使用 openroute 的 proxy 模型
+# openroute 的 proxy 模型已内置 round-robin 负载均衡和繁忙模型跳过
+# FlowForge 不需要重复实现轮询逻辑，直接委托给 openroute
 WEB_CHAT_ROTATION_POOL = [
-    "openroute/DeepSeek-V4-Pro",
-    "openroute/Kimi-K2.6",
-    "openroute/HunYuan3",
-    "openroute/MiniMax-M3",
-    "openroute/GLM-5.1",
+    "openroute/proxy",
 ]
 
 DISABLED_MODELS = {
@@ -457,12 +458,12 @@ class LLMClient(BaseTool):
                 headers["X-Title"] = "FlowForge"
             # openroute: pass X-Scene header for hiclaw openroute scene routing
             # - has tools → openroute_combine (OpenRoute handles prompt combination + tool parsing)
-            # - no tools → caller_combine (FlowForge already composed the prompt)
-            # - auto model → auto (let hiclaw decide)
+            # - auto/proxy model → auto (let hiclaw decide, proxy has built-in round-robin)
+            # - no tools + specific model → caller_combine (FlowForge already composed the prompt)
             if provider == "openroute":
                 if tools:
                     headers["X-Scene"] = "openroute_combine"
-                elif model_id == "auto":
+                elif model_id in ("auto", "proxy", "free"):
                     headers["X-Scene"] = "auto"
                 else:
                     headers["X-Scene"] = "caller_combine"
@@ -634,7 +635,7 @@ class LLMClient(BaseTool):
                     if provider == "openroute":
                         if tools:
                             headers["X-Scene"] = "openroute_combine"
-                        elif model_id == "auto":
+                        elif model_id in ("auto", "proxy", "free"):
                             headers["X-Scene"] = "auto"
                         else:
                             headers["X-Scene"] = "caller_combine"
@@ -805,7 +806,7 @@ class LLMClient(BaseTool):
                 headers["HTTP-Referer"] = "https://flowforge.dev"
                 headers["X-Title"] = "FlowForge"
             if provider == "openroute":
-                if model_id == "auto":
+                if model_id in ("auto", "proxy", "free"):
                     headers["X-Scene"] = "auto"
                 else:
                     headers["X-Scene"] = "caller_combine"

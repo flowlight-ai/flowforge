@@ -51,8 +51,8 @@
 | 版本 | 原始位置 | 核心内容 | 行数 |
 |------|---------|---------|------|
 | **v1.1 + v5.0** | test_v6.1_backup.md L1-L525 | 单元测试(UT-CORE-01~UT-LLM-05)、集成测试(API/SOP/插件/跨平台)、E2E Web UI、性能、防御层、Multi-Agent(TaskBoard/Mailbox/Swarms)、压缩器、Checkpoint | 525 |
-| **v6.0 (test1.md)** | test1.md 全文 | 8 WF E2E 含 spec/arch 引用、模式执行器专项、Solo WebSocket E2E、模型通道矩阵、并发/熔断、跨 WF、API 业务验证、需求追溯矩阵、6 维指标体系 | 915 |
-| **v6.1** | test_v6.1_backup.md L527-L1411 | 两条执行路径分析、基于源码的 WF Agent 链路、Solo UI 路径、Playwright 断言代码、MetricsCollector 设计、"测试通过"定义、架构问题 | 885 |
+| **v6.0 (test1.md)** | test1.md 全文 | 8 WF E2E 含 spec/arch 引用、模式执行器专项、Helm WebSocket E2E、模型通道矩阵、并发/熔断、跨 WF、API 业务验证、需求追溯矩阵、6 维指标体系 | 915 |
+| **v6.1** | test_v6.1_backup.md L527-L1411 | 两条执行路径分析、基于源码的 WF Agent 链路、Helm UI 路径、Playwright 断言代码、MetricsCollector 设计、"测试通过"定义、架构问题 | 885 |
 
 ### 0.2 合并时应用的 5 项关键修正（v7.0）
 
@@ -61,7 +61,7 @@
 | 1 | LLM 调用次数 | 基于模式执行器假设（deep_article≥12, quick_post≥5, trend_article≥8） | 基于 Agent 源码（deep_article 8~11, quick_post 1~2, trend_article 3~5） | testreview1.md 问题1 |
 | 2 | Reflexion 迭代在 Workflow API 路径不生效 | writing 阶段 Reflexion 1+N(1~3) | Workflow API 路径 writing=1次LLM，无迭代 | testreview1.md 问题2 |
 | 3 | content_audit 独立 Judge 模型需代码修复 | 假设 audit 使用不同模型 | 标注"需代码修复前置条件" | testreview1.md 问题3 |
-| 4 | 两条执行路径必须区分 | 混用事件格式 | Workflow API 路径 vs Solo UI 路径分别测试 | testreview1.md 问题5 |
+| 4 | 两条执行路径必须区分 | 混用事件格式 | Workflow API 路径 vs Helm UI 路径分别测试 | testreview1.md 问题5 |
 | 5 | Reflexion 独立 Agent 条件修正 | "三个角色使用独立 Agent" | "三种 Prompt 不同"（DefaultLLMActor/Evaluator 共用 LLM Tool） | testreview1.md 问题4 |
 
 ### 0.3 v8.0 审核修订清单（6份专家审核）
@@ -71,7 +71,7 @@
 | # | 修订项 | 严重度 | 修改章节 | 审核来源 |
 |---|--------|--------|---------|---------|
 | 1 | 新增代码修复前置清单（B1-B4） | P0 | 文档头部 | 全部6份 |
-| 2 | Solo UI路径按意图类型设计（非Workflow名称） | P0 | 第十七章 | qwen(R1), glm(P0-2), deepseek(ARCH-1) |
+| 2 | Helm UI路径按意图类型设计（非Workflow名称） | P0 | 第十七章 | qwen(R1), glm(P0-2), deepseek(ARCH-1) |
 | 3 | FactCheckAgent用httpx HEAD（非web_search） | P0 | 第十六章 | qwen(架构问题4), glm(P0-4) |
 | 4 | TrendAnalysisAgent web_search必须成功断言 | P0 | 第十六章16.3 | qwen(架构问题5) |
 | 5 | MetricsCollector升级为可执行代码 | P0 | 第二十八章 | 全部6份 |
@@ -81,7 +81,7 @@
 | 9 | 每个Workflow增加预期输出JSON结构 | P0 | 第十六章 | glm(P0-6), kimi(问题20) |
 | 10 | 所有Workflow增加Memory指标验证 | P1 | 第十六章 | glm(P1-8) |
 | 11 | 新增通用Agent+通用Workflow测试 | P2 | 新增第二十九章 | glm(P1-5/6) |
-| 12 | 模型名无seed-2.0残留+Phase 0-Pre验证 | P0 | 第十六章16.0 | doubao(问题4), m27(4.1) |
+| 12 | 模型名无seed-2.0残留+Phase 0-Pre验证 | ✅ 已完成 | 第十六章16.0 | doubao(问题4), m27(4.1) |
 | 13 | 附录B架构问题vs Bug分类（A1-A4+B1-B4） | P1 | 附录B | glm(P1-12) |
 | 14 | 并行步骤数据竞争标注（B2） | P0 | 第十六章16.5 | qwen(R3) |
 
@@ -97,8 +97,8 @@
 | 2 | 16.0模型名称修正（doubao-api→openroute/auto等） | 16.0 | DeepSeek E1 |
 | 3 | IT-WF-API-02~08补全调用路径验证表 | 16.2~16.8 | GLM P0-1, Kimi P0-2 |
 | 4 | IT-WF-API-02~08补全预期输出JSON结构 | 16.2~16.8 | GLM P0-1, Kimi P0-2 |
-| 5 | IT-SOLO-03~09补全WebSocket事件序列 | 17.3~17.9 | GLM P0-2, Kimi P1-2 |
-| 6 | IT-SOLO-05翻译意图修正（走Planning路径） | 17.5 | GLM P1-5 |
+| 5 | IT-HELM-03~09补全WebSocket事件序列 | 17.3~17.9 | GLM P0-2, Kimi P1-2 |
+| 6 | IT-HELM-05翻译意图修正（走Planning路径） | 17.5 | GLM P1-5 |
 | 7 | 修复MetricsCollector EventBus订阅（通配符+过滤） | 28.1 | DeepSeek Z.1-9, GLM P1-6, M27 2.1 |
 | 8 | 新增第三十二章Harness驾驭层测试 | 32 | DeepSeek F1, GLM P1-2 |
 | 9 | 新增第三十三章Skill系统测试 | 33 | DeepSeek F1, GLM P1-3 |
@@ -107,7 +107,7 @@
 | 12 | 新增负向测试（16.9+17.10） | 16.9, 17.10 | DeepSeek F2 |
 | 13 | TrendAnalysisAgent fallback验证修正 | 16.3 | Qwen 3.2 |
 | 14 | 附录A报告模板同步v9.0 | 附录A | DeepSeek E3/E4, GLM P0-3, Kimi P1-3 |
-| 15 | 第三十章执行顺序同步（按意图类型Solo+IT-MODE-06~09） | 30 | DeepSeek E3, GLM P1-4, Kimi |
+| 15 | 第三十章执行顺序同步（按意图类型Helm+IT-MODE-06~09） | 30 | DeepSeek E3, GLM P1-4, Kimi |
 | 16 | 第二十九章通用Agent增加预期输出JSON | 29.1 | Qwen 3.3 |
 | 17 | 第三章7维定义增加量化阈值 | 3 | DeepSeek F3, Kimi P1-4, M27 1.1 |
 | 18 | 新增3.5测试失败处理规范 | 3.5 | Kimi P1-5 |
@@ -150,7 +150,7 @@
 | 路径 | 入口 | 核心方法 | 事件格式 | 适用场景 |
 |------|------|---------|---------|---------|
 | **Workflow API** | `POST /api/v1/tasks` | `_execute_sop_steps()` | Agent 内部事件 `topic_research.*`, `material_collection.*` | 按 YAML 定义的 Workflow 执行 |
-| **Solo UI** | WebSocket 对话框 | `_execute_intelligent_chat()` | 动态规划事件 `workflow.step.start`, `tool.start`, `step.intermediate` | 自由对话 + LLM 动态规划 |
+| **Helm UI** | WebSocket 对话框 | `_execute_intelligent_chat()` | 动态规划事件 `workflow.step.start`, `tool.start`, `step.intermediate` | 自由对话 + LLM 动态规划 |
 
 **测试必须分别覆盖两条路径**。它们的 LLM 调用次数、工具链、事件序列完全不同。
 
@@ -160,7 +160,7 @@
 |------|------|------|------|-----------|
 | **单元测试** | pytest + pytest-asyncio | Mock LLM 可用 | 模块/接口/工具函数独立验证 | ≥ 85% |
 | **集成测试 (Workflow API)** | pytest + httpx | **真实 LLM** | 8 个 Workflow 全流程 | ≥ 70% |
-| **集成测试 (Solo UI)** | pytest + WebSocket 客户端 | **真实 LLM** | Solo 动态规划全流程 | 核心流程 100% |
+| **集成测试 (Helm UI)** | pytest + WebSocket 客户端 | **真实 LLM** | Helm 动态规划全流程 | 核心流程 100% |
 | **E2E 测试** | Playwright | **真实 LLM + 真实浏览器** | 前端时间线渲染 + WebSocket | 核心流程 100% |
 | **通道测试** | pytest | **真实 LLM 分通道** | doubao-api / doubao-web/chat / openroute-api / openroute-web | 关键模块 100% |
 | **跨平台测试** | pytest + 条件跳过 | Mock | Windows/Linux 兼容性验证 | 关键模块 100% |
@@ -173,7 +173,7 @@
 | TaskContext 深拷贝测试 | Agent 执行链路验证 |
 | EventBus 回调调度测试 | Tool 调用链验证 |
 | DI 容器解析测试 | LLM 输出格式验证 |
-| 数据库 CRUD 测试 | 前端 Solo WebSocket E2E |
+| 数据库 CRUD 测试 | 前端 Helm WebSocket E2E |
 | 沙箱安全规则测试 | 多模型通道测试 |
 
 ### 1.4 测试环境
@@ -299,8 +299,8 @@ async def real_llm_context(use_real_llm):
 | **Memory** | 写入次数 | Memory被写入次数 | MemoryManager.save调用计数 | integer |
 | **Memory** | 压缩触发次数 | 92%阈值触发压缩次数 | `context.warning`事件计数 | integer |
 | **Memory** | 缓存命中率 | 命中缓存/总查询 | cache工具返回cached=True比例 | float 0-1 |
-| **WebSocket** | 事件总数 | 推送到前端的事件数 | SoloWSManager发送计数 | integer |
-| **WebSocket** | 各类型事件分布 | 每种事件类型数量 | 按solo_event_type分组 | `{type: count}` |
+| **WebSocket** | 事件总数 | 推送到前端的事件数 | HelmWSManager发送计数 | integer |
+| **WebSocket** | 各类型事件分布 | 每种事件类型数量 | 按helm_event_type分组 | `{type: count}` |
 | **WebSocket** | 序号连续性 | 事件序号是否有跳号 | 序号差值检测 | `{gaps: int, missing: []}` |
 | **Frontend** | 时间线节点数 | 前端渲染的步骤节点数 | DOM节点计数 | integer |
 | **Frontend** | Citation链接数 | 来源引用卡片数 | DOM中citation元素计数 | integer |
@@ -333,7 +333,7 @@ async def real_llm_context(use_real_llm):
 3. **每个 Agent 的工具调用链符合预期** — 工具名匹配，调用次数在 `[min, max]` 范围内，`tool.start`事件序列包含预期工具
 4. **每个 Agent 的 LLM 调用次数符合预期** — 在 `[min, max]` 范围内（基于 Agent 源码，非模式执行器假设），`llm.start`计数在[min,max]范围内
 5. **阶段输出格式完整** — 必填字段存在且类型正确
-6. **前端时间线正确渲染** — Solo 路径下每个节点的图标、文本、子节点正确，DOM节点计数≥预期
+6. **前端时间线正确渲染** — Helm 路径下每个节点的图标、文本、子节点正确，DOM节点计数≥预期
 7. **WebSocket 事件序列完整** — 无丢事件，事件序号连续无跳号
 
 ### 3.5 测试失败处理规范
@@ -380,7 +380,7 @@ async def real_llm_context(use_real_llm):
 
 ---
 
-## 第六章：EventBus + SoloAdapter 测试
+## 第六章：EventBus + HelmAdapter 测试
 
 ### 6.1 EventBus 测试 (events/)
 
@@ -395,14 +395,14 @@ async def real_llm_context(use_real_llm):
 | **UT-EVT-07** | EventBus 异步回调通过 asyncio.ensure_future 调度 | async def callback + emit | 回调被正确调度执行 |
 | **UT-EVT-08** | EventBus 同步回调直接执行 | 普通函数 callback + emit | 不抛异常，正常执行 |
 
-### 6.2 EventBusSoloAdapter 测试 (events/solo_adapter.py)
+### 6.2 EventBusHelmAdapter 测试 (events/helm_adapter.py)
 
 | 用例 ID | 场景 | 输入 | 预期输出 |
 |---------|------|------|---------|
-| **UT-SOLO-01** | bridge 建立全部事件映射 | bridge() | 17 个订阅者注册到 event_bus（17 个 FlowForge 事件映射到 16 种 Solo 事件类型） |
-| **UT-SOLO-02** | bridge 防重入 | bridge() 调用两次 | _bridged=True，第二次不重复订阅 |
-| **UT-SOLO-03** | 事件映射正确 | emit "llm.stream" | solo_manager.emit_event 被调用，参数为 "solo.llm.stream" |
-| **UT-SOLO-04** | task_id 正确传递 | emit(task_id="task-001") | solo_manager.emit_event 收到 task_id="task-001" |
+| **UT-HELM-01** | bridge 建立全部事件映射 | bridge() | 17 个订阅者注册到 event_bus（17 个 FlowForge 事件映射到 16 种 Helm 事件类型） |
+| **UT-HELM-02** | bridge 防重入 | bridge() 调用两次 | _bridged=True，第二次不重复订阅 |
+| **UT-HELM-03** | 事件映射正确 | emit "llm.stream" | helm_manager.emit_event 被调用，参数为 "helm.llm.stream" |
+| **UT-HELM-04** | task_id 正确传递 | emit(task_id="task-001") | helm_manager.emit_event 收到 task_id="task-001" |
 
 ---
 
@@ -519,7 +519,7 @@ async def real_llm_context(use_real_llm):
 | **UT-LLM-01** | 正常调用返回内容 | result["content"] 非空 |
 | **UT-LLM-02** | 主模型不可用，自动切换 fallback | 使用 fallback 模型 |
 | **UT-LLM-03** | 所有模型不可用 | 抛出 AllModelsUnavailable |
-| **UT-LLM-04** | Solo emitter 注入 | set_solo_emitter 后调用 llm.start/llm.end |
+| **UT-LLM-04** | Helm emitter 注入 | set_helm_emitter 后调用 llm.start/llm.end |
 | **UT-LLM-05** | Token 统计更新 | token.stats 事件被发射 |
 
 ### 9.4 Memory 模块测试 (memory/)
@@ -621,7 +621,7 @@ async def real_llm_context(use_real_llm):
 | **IT-API-02** | POST | `/api/v1/tasks` | 创建 Reflexion 模式任务 | mode=reflexion in response |
 | **IT-API-03** | POST | `/api/v1/tasks` | 同一 persona 并发创建 | status_code=409 ConflictError |
 | **IT-API-04** | POST | `/api/v1/tasks` | 指定不存在的 mode | status_code=404 ModeNotFoundError |
-| **IT-API-05** | POST | `/api/v1/tasks` | Solo 模式创建 | interaction_mode=solo, WebSocket 可连接 |
+| **IT-API-05** | POST | `/api/v1/tasks` | Helm 模式创建 | interaction_mode=helm, WebSocket 可连接 |
 | **IT-API-06** | GET | `/api/v1/tasks` | 获取任务列表 | 分页正确 |
 | **IT-API-07** | GET | `/api/v1/tasks/{id}` | 获取任务详情 | state 包含中间结果 |
 | **IT-API-08** | POST | `/api/v1/tasks/{id}/cancel` | 取消任务 | status=cancelled |
@@ -693,7 +693,7 @@ async def real_llm_context(use_real_llm):
 
 ### 15.1 路径对比
 
-| 维度 | Workflow API 路径 | Solo UI 路径 |
+| 维度 | Workflow API 路径 | Helm UI 路径 |
 |------|------------------|-------------|
 | **入口** | `POST /api/v1/tasks` | WebSocket 对话框 |
 | **核心方法** | `_execute_sop_steps()` | `_execute_intelligent_chat()` |
@@ -703,7 +703,7 @@ async def real_llm_context(use_real_llm):
 | **Reflexion 迭代** | ❌ 不生效 | ✅ 生效（通过模式执行器） |
 | **事件格式** | Agent 内部事件 `topic_research.*` | 动态规划事件 `workflow.step.start` |
 | **LLM 调用次数** | 基于 Agent 内部逻辑 | 基于 Planning + Steps + Compile |
-| **审核方式** | `POST /review` | Solo 前端内联审核 |
+| **审核方式** | `POST /review` | Helm 前端内联审核 |
 | **典型 LLM 次数** | deep_article: 8~11 | deep_article: 3~4 |
 
 ### 15.2 WorkflowExecutor 的 Agent 执行路径
@@ -722,7 +722,7 @@ if agent_name and ctx.agents:
 
 **这意味着**: 虽然 YAML 中写了 `mode: "rewoo"`，但 WorkflowExecutor **并不使用 rewoo 模式执行器**。Agent 被直接调用，Agent 内部自己处理 LLM 调用和工具调用。
 
-### 15.3 Solo UI 动态规划路径
+### 15.3 Helm UI 动态规划路径
 
 ```
 Stage 1: Planning (LLM × 1) — 意图识别
@@ -863,7 +863,7 @@ Stage 4: Save (file I/O) — 保存文件（仅长内容）
 | 缓存命中率 | > 0（第二次执行时） | _ | _ |
 | Reflexion迭代次数 | N/A (Workflow API路径不适用) | _ | _ |
 | Judge Agent模型名 | ≠ openroute/auto (需代码修复) | _ | _ |
-| WebSocket事件数 | N/A (API路径无Solo事件) | _ | _ |
+| WebSocket事件数 | N/A (API路径无Helm事件) | _ | _ |
 | 前端时间线节点数 | N/A (API路径) | _ | _ |
 
 **失败处理**：
@@ -1413,11 +1413,11 @@ Stage 4: Save (file I/O) — 保存文件（仅长内容）
 
 ---
 
-## 第十七章：Solo UI 路径测试用例（按意图类型设计）
+## 第十七章：Helm UI 路径测试用例（按意图类型设计）
 
-> **v8.0 关键修订**：Solo UI路径不走Workflow YAML，走的是Planner LLM动态规划 + `_infer_steps_from_intent`降级模板。因此测试用例按**用户输入意图类型**设计，而非按Workflow名称。
+> **v8.0 关键修订**：Helm UI路径不走Workflow YAML，走的是Planner LLM动态规划 + `_infer_steps_from_intent`降级模板。因此测试用例按**用户输入意图类型**设计，而非按Workflow名称。
 > 
-> **Solo UI 执行流程**：
+> **Helm UI 执行流程**：
 > 1. 用户输入 → `_is_simple_message()` → True走Fast-path（1次LLM）
 > 2. 用户输入 → `_is_simple_message()` → False走Planning路径
 > 3. Planning: LLM生成执行计划 `{intent_type, plan: [{name, type, tool/agent}]}`
@@ -1426,7 +1426,7 @@ Stage 4: Save (file I/O) — 保存文件（仅长内容）
 > 6. Compile: LLM整理输出
 > 7. Save: 长内容保存文件（>800字符）
 
-### 17.1 IT-SOLO-01：简单问候（Fast-path）
+### 17.1 IT-HELM-01：简单问候（Fast-path）
 
 **用户输入**：`"你好"`
 
@@ -1439,7 +1439,7 @@ Stage 4: Save (file I/O) — 保存文件（仅长内容）
 
 **预期WebSocket事件序列**：
 ```
-solo.llm.start → solo.llm.stream → solo.llm.end → solo.draft.update → solo.task.completed
+helm.llm.start → helm.llm.stream → helm.llm.end → helm.draft.update → helm.task.completed
 ```
 
 **通过条件**：
@@ -1450,7 +1450,7 @@ solo.llm.start → solo.llm.stream → solo.llm.end → solo.draft.update → so
 
 ---
 
-### 17.2 IT-SOLO-02：写作意图（Planning路径）
+### 17.2 IT-HELM-02：写作意图（Planning路径）
 
 **用户输入**：`"帮我写一篇关于AI发展趋势的文章"`
 
@@ -1481,11 +1481,11 @@ solo.llm.start → solo.llm.stream → solo.llm.end → solo.draft.update → so
 
 **预期WebSocket事件序列**：
 ```
-solo.stage.enter(planning) → solo.llm.start → solo.llm.end → solo.stage.exit(planning)
-solo.stage.enter(搜索素材) → solo.tool.start(web_search) → solo.tool.end(web_search) → solo.stage.exit(搜索素材)
-solo.stage.enter(撰写内容) → solo.tool.start(article_writing) → solo.tool.end(article_writing) → solo.stage.exit(撰写内容)
-solo.stage.enter(compile) → solo.llm.start → solo.llm.stream → solo.llm.end → solo.stage.exit(compile)
-solo.draft.update → solo.task.completed
+helm.stage.enter(planning) → helm.llm.start → helm.llm.end → helm.stage.exit(planning)
+helm.stage.enter(搜索素材) → helm.tool.start(web_search) → helm.tool.end(web_search) → helm.stage.exit(搜索素材)
+helm.stage.enter(撰写内容) → helm.tool.start(article_writing) → helm.tool.end(article_writing) → helm.stage.exit(撰写内容)
+helm.stage.enter(compile) → helm.llm.start → helm.llm.stream → helm.llm.end → helm.stage.exit(compile)
+helm.draft.update → helm.task.completed
 ```
 
 **通过条件**：
@@ -1497,7 +1497,7 @@ solo.draft.update → solo.task.completed
 
 ---
 
-### 17.3 IT-SOLO-03：搜索意图（Planning路径）
+### 17.3 IT-HELM-03：搜索意图（Planning路径）
 
 **用户输入**：`"搜索最新的AI Agent框架"`
 
@@ -1526,15 +1526,15 @@ solo.draft.update → solo.task.completed
 
 **预期WebSocket事件序列**：
 ```
-solo.stage.enter(planning) → solo.llm.start → solo.llm.end → solo.stage.exit(planning)
-solo.stage.enter(搜索) → solo.tool.start(web_search) → solo.tool.end(web_search) → solo.stage.exit(搜索)
-solo.stage.enter(compile) → solo.llm.start → solo.llm.stream → solo.llm.end → solo.stage.exit(compile)
-solo.draft.update → solo.task.completed
+helm.stage.enter(planning) → helm.llm.start → helm.llm.end → helm.stage.exit(planning)
+helm.stage.enter(搜索) → helm.tool.start(web_search) → helm.tool.end(web_search) → helm.stage.exit(搜索)
+helm.stage.enter(compile) → helm.llm.start → helm.llm.stream → helm.llm.end → helm.stage.exit(compile)
+helm.draft.update → helm.task.completed
 ```
 
 ---
 
-### 17.4 IT-SOLO-04：研究意图（Planning路径）
+### 17.4 IT-HELM-04：研究意图（Planning路径）
 
 **用户输入**：`"研究一下量子计算的最新进展和应用前景"`
 
@@ -1566,16 +1566,16 @@ solo.draft.update → solo.task.completed
 
 **预期WebSocket事件序列**：
 ```
-solo.stage.enter(planning) → solo.llm.start → solo.llm.end → solo.stage.exit(planning)
-solo.stage.enter(搜索资料) → solo.tool.start(web_search) → solo.tool.end(web_search) → solo.stage.exit(搜索资料)
-solo.stage.enter(分析整理) → solo.tool.start(topic_research) → solo.tool.end(topic_research) → solo.stage.exit(分析整理)
-solo.stage.enter(compile) → solo.llm.start → solo.llm.stream → solo.llm.end → solo.stage.exit(compile)
-solo.draft.update → solo.task.completed
+helm.stage.enter(planning) → helm.llm.start → helm.llm.end → helm.stage.exit(planning)
+helm.stage.enter(搜索资料) → helm.tool.start(web_search) → helm.tool.end(web_search) → helm.stage.exit(搜索资料)
+helm.stage.enter(分析整理) → helm.tool.start(topic_research) → helm.tool.end(topic_research) → helm.stage.exit(分析整理)
+helm.stage.enter(compile) → helm.llm.start → helm.llm.stream → helm.llm.end → helm.stage.exit(compile)
+helm.draft.update → helm.task.completed
 ```
 
 ---
 
-### 17.5 IT-SOLO-05：翻译意图（Planning路径）
+### 17.5 IT-HELM-05：翻译意图（Planning路径）
 
 **用户输入**：`"请把'人工智能正在改变世界'翻译成英文"`
 
@@ -1605,14 +1605,14 @@ solo.draft.update → solo.task.completed
 
 **预期WebSocket事件序列**：
 ```
-solo.stage.enter(planning) → solo.llm.start → solo.llm.end → solo.stage.exit(planning)
-solo.stage.enter(翻译) → solo.llm.start → solo.llm.stream → solo.llm.end → solo.stage.exit(翻译)
-solo.draft.update → solo.task.completed
+helm.stage.enter(planning) → helm.llm.start → helm.llm.end → helm.stage.exit(planning)
+helm.stage.enter(翻译) → helm.llm.start → helm.llm.stream → helm.llm.end → helm.stage.exit(翻译)
+helm.draft.update → helm.task.completed
 ```
 
 ---
 
-### 17.6 IT-SOLO-06：代码意图（Planning路径）
+### 17.6 IT-HELM-06：代码意图（Planning路径）
 
 **用户输入**：`"用Python写一个快速排序算法"`
 
@@ -1642,15 +1642,15 @@ solo.draft.update → solo.task.completed
 
 **预期WebSocket事件序列**：
 ```
-solo.stage.enter(planning) → solo.llm.start → solo.llm.end → solo.stage.exit(planning)
-solo.stage.enter(编写代码) → solo.tool.start(code_writer_agent) → solo.tool.end(code_writer_agent) → solo.stage.exit(编写代码)
-solo.stage.enter(compile) → solo.llm.start → solo.llm.stream → solo.llm.end → solo.stage.exit(compile)
-solo.draft.update → solo.task.completed
+helm.stage.enter(planning) → helm.llm.start → helm.llm.end → helm.stage.exit(planning)
+helm.stage.enter(编写代码) → helm.tool.start(code_writer_agent) → helm.tool.end(code_writer_agent) → helm.stage.exit(编写代码)
+helm.stage.enter(compile) → helm.llm.start → helm.llm.stream → helm.llm.end → helm.stage.exit(compile)
+helm.draft.update → helm.task.completed
 ```
 
 ---
 
-### 17.7 IT-SOLO-07：Plan降级场景
+### 17.7 IT-HELM-07：Plan降级场景
 
 **用户输入**：`"帮我分析一下这个数据"`（模糊意图，Planner可能返回空plan）
 
@@ -1667,15 +1667,15 @@ solo.draft.update → solo.task.completed
 
 **预期WebSocket事件序列**：
 ```
-solo.stage.enter(planning) → solo.llm.start → solo.llm.end → solo.stage.exit(planning)
+helm.stage.enter(planning) → helm.llm.start → helm.llm.end → helm.stage.exit(planning)
 [Planning失败，降级到_infer_steps_from_intent]
-solo.stage.enter(通用执行) → solo.llm.start → solo.llm.stream → solo.llm.end → solo.stage.exit(通用执行)
-solo.draft.update → solo.task.completed
+helm.stage.enter(通用执行) → helm.llm.start → helm.llm.stream → helm.llm.end → helm.stage.exit(通用执行)
+helm.draft.update → helm.task.completed
 ```
 
 ---
 
-### 17.8 IT-SOLO-08：复杂多步意图
+### 17.8 IT-HELM-08：复杂多步意图
 
 **用户输入**：`"写一篇关于中国高铁技术的文章，然后翻译成英文发布"`
 
@@ -1710,17 +1710,17 @@ solo.draft.update → solo.task.completed
 
 **预期WebSocket事件序列**：
 ```
-solo.stage.enter(planning) → solo.llm.start → solo.llm.end → solo.stage.exit(planning)
-solo.stage.enter(搜索素材) → solo.tool.start(web_search) → solo.tool.end(web_search) → solo.stage.exit(搜索素材)
-solo.stage.enter(撰写文章) → solo.tool.start(article_writing) → solo.tool.end(article_writing) → solo.stage.exit(撰写文章)
-solo.stage.enter(翻译) → solo.tool.start(multilingual) → solo.tool.end(multilingual) → solo.stage.exit(翻译)
-solo.stage.enter(compile) → solo.llm.start → solo.llm.stream → solo.llm.end → solo.stage.exit(compile)
-solo.draft.update → solo.task.completed
+helm.stage.enter(planning) → helm.llm.start → helm.llm.end → helm.stage.exit(planning)
+helm.stage.enter(搜索素材) → helm.tool.start(web_search) → helm.tool.end(web_search) → helm.stage.exit(搜索素材)
+helm.stage.enter(撰写文章) → helm.tool.start(article_writing) → helm.tool.end(article_writing) → helm.stage.exit(撰写文章)
+helm.stage.enter(翻译) → helm.tool.start(multilingual) → helm.tool.end(multilingual) → helm.stage.exit(翻译)
+helm.stage.enter(compile) → helm.llm.start → helm.llm.stream → helm.llm.end → helm.stage.exit(compile)
+helm.draft.update → helm.task.completed
 ```
 
 ---
 
-### 17.9 IT-SOLO-09：Fast-path负面测试
+### 17.9 IT-HELM-09：Fast-path负面测试
 
 **用户输入**：`"帮我写一篇深度分析文章"`（复杂意图，不应走Fast-path）
 
@@ -1736,21 +1736,21 @@ solo.draft.update → solo.task.completed
 
 **预期WebSocket事件序列**：
 ```
-solo.stage.enter(planning) → solo.llm.start → solo.llm.end → solo.stage.exit(planning)
+helm.stage.enter(planning) → helm.llm.start → helm.llm.end → helm.stage.exit(planning)
 [至少1个执行阶段]
-solo.tool.start/web_search → solo.tool.end → ...
-solo.draft.update → solo.task.completed
+helm.tool.start/web_search → helm.tool.end → ...
+helm.draft.update → helm.task.completed
 ```
 
-### 17.10 IT-SOLO-NEG: Solo UI 负向/异常路径测试
+### 17.10 IT-HELM-NEG: Helm UI 负向/异常路径测试
 
 | 测试ID | 输入 | 预期行为 | 验证方法 |
 |--------|------|---------|---------|
-| IT-SOLO-NEG-01 | 仅含特殊字符`"!@#$%"` | 不崩溃，返回合理响应 | 检查响应非空 |
-| IT-SOLO-NEG-02 | Planner返回格式错误JSON | 降级到_infer_steps_from_intent | 检查降级日志 |
-| IT-SOLO-NEG-03 | _infer_steps_from_intent无匹配模板 | 通用降级处理 | 检查通用响应 |
-| IT-SOLO-NEG-04 | LLM返回429/503 | 重试+退避 | 检查重试次数 |
-| IT-SOLO-NEG-05 | web_search返回0结果 | LLM回退路径 | 检查输出非空 |
+| IT-HELM-NEG-01 | 仅含特殊字符`"!@#$%"` | 不崩溃，返回合理响应 | 检查响应非空 |
+| IT-HELM-NEG-02 | Planner返回格式错误JSON | 降级到_infer_steps_from_intent | 检查降级日志 |
+| IT-HELM-NEG-03 | _infer_steps_from_intent无匹配模板 | 通用降级处理 | 检查通用响应 |
+| IT-HELM-NEG-04 | LLM返回429/503 | 重试+退避 | 检查重试次数 |
+| IT-HELM-NEG-05 | web_search返回0结果 | LLM回退路径 | 检查输出非空 |
 
 ---
 
@@ -1987,7 +1987,7 @@ solo.draft.update → solo.task.completed
 
 ---
 
-## 第十九章：前端 Solo/WebSocket E2E 测试
+## 第十九章：前端 Helm/WebSocket E2E 测试
 
 ### 19.1 测试环境
 
@@ -1995,27 +1995,27 @@ solo.draft.update → solo.task.completed
 - 前端: `http://localhost:5173`
 - WebSocket: `ws://localhost:8889/ws/{task_id}`
 
-### 19.2 E2E-SOLO-01：完整 ReAct Solo 流程
+### 19.2 E2E-HELM-01：完整 ReAct Helm 流程
 
-**需求依据**：spec.md FR-SOL-01~04；arch.md 10.6
+**需求依据**：spec.md FR-HELM-01~04；arch.md 10.6
 
 **操作**：浏览器打开 http://localhost:5173 → 选择 ReAct 模式 → 输入 `"百度最新的AI战略是什么"` → 提交
 
 **预期时间线事件序列**：
 
 ```
-solo.stage.enter → solo.llm.start → solo.llm.reasoning → solo.llm.end →
-solo.tool.start(web_search) → solo.tool.end(web_search) →
-solo.llm.start → solo.llm.reasoning → solo.llm.end →
-solo.tool.start(web_scraper) → solo.tool.end(web_scraper) →
-solo.llm.start → solo.llm.stream → solo.llm.end →
-solo.draft.update → solo.task.completed
+helm.stage.enter → helm.llm.start → helm.llm.reasoning → helm.llm.end →
+helm.tool.start(web_search) → helm.tool.end(web_search) →
+helm.llm.start → helm.llm.reasoning → helm.llm.end →
+helm.tool.start(web_scraper) → helm.tool.end(web_scraper) →
+helm.llm.start → helm.llm.stream → helm.llm.end →
+helm.draft.update → helm.task.completed
 ```
 
 **验证点**：
 1. ✅ 前端时间线正确渲染每个节点
 2. ✅ 工具调用节点和 LLM 思考节点正确区分（图标/颜色）
-3. ✅ 流式答案逐行渲染（solo.llm.stream）
+3. ✅ 流式答案逐行渲染（helm.llm.stream）
 4. ✅ 事件序号连续无跳号
 5. ✅ 来源卡片（Citation）正确展示 URL
 6. ✅ `eventToEntry` 正确映射所有事件类型
@@ -2025,9 +2025,9 @@ solo.draft.update → solo.task.completed
 
 ---
 
-### 19.3 E2E-SOLO-02：Workflow 完整 Solo 流程（deep_article）
+### 19.3 E2E-HELM-02：Workflow 完整 Helm 流程（deep_article）
 
-**操作**：浏览器 → Solo → 选择 deep_article Workflow → 输入 `"写一篇关于量子计算的科普文章"` → 提交
+**操作**：浏览器 → Helm → 选择 deep_article Workflow → 输入 `"写一篇关于量子计算的科普文章"` → 提交
 
 **预期时间线节点**：
 
@@ -2087,13 +2087,13 @@ expect(page.locator('[data-testid="file-download"]')).toBeVisible();
 3. ✅ 阶段 7 渲染为"审核中"按钮，点击通过后继续
 4. ✅ 阶段 3 不显示 Reflexion 迭代轮次标签（⚠️ Workflow API 路径无迭代）
 5. ✅ 来源面板（Source Panel）始终可见，Citation 可点击跳转
-6. ✅ 虚拟滚动支持 500+ 条事件（spec.md FR-SOL-02）
+6. ✅ 虚拟滚动支持 500+ 条事件（spec.md FR-HELM-02）
 
 ---
 
-### 19.4 E2E-SOLO-03：WebSocket 断线重连
+### 19.4 E2E-HELM-03：WebSocket 断线重连
 
-**操作**：Solo 执行中手动断开 WebSocket → 等待 5 秒 → 重连
+**操作**：Helm 执行中手动断开 WebSocket → 等待 5 秒 → 重连
 
 **预期**：
 1. ✅ 重连成功
@@ -2116,9 +2116,9 @@ expect(await stageNodes.count()).toBeGreaterThan(0);
 
 ---
 
-### 19.5 E2E-SOLO-04：审核交互全流程
+### 19.5 E2E-HELM-04：审核交互全流程
 
-**需求依据**：spec.md FR-SOL-03（审核节点内联）；arch.md 12.3 Human-in-the-Loop
+**需求依据**：spec.md FR-HELM-03（审核节点内联）；arch.md 12.3 Human-in-the-Loop
 
 **操作**：选择 deep_article Workflow → 等待 review 阶段暂停 → 点击"驳回" → 输入反馈 → 提交
 
@@ -2130,11 +2130,11 @@ review.ready → task.paused → (用户操作) → review.submitted(verdict=rej
 
 **验证点**：
 1. ✅ review.ready 事件触发时间线暂停
-2. ✅ 审核窗口期 5 分钟内可撤回（spec.md FR-SOL-03）
+2. ✅ 审核窗口期 5 分钟内可撤回（spec.md FR-HELM-03）
 3. ✅ 用户点击"驳回" → review.submitted(verdict=reject)
 4. ✅ **Persona 锁在审核暂停期间必须保留**（spec.md 开发规范铁律）
 5. ✅ 审核完成后 persona 锁必须释放
-6. ✅ Solo 前端显示审核内联块（不跳转独立页面）
+6. ✅ Helm 前端显示审核内联块（不跳转独立页面）
 7. ✅ 支持审核通过/驳回/编辑提交三种操作
 
 ---
@@ -2356,8 +2356,8 @@ review.ready → task.paused → (用户操作) → review.submitted(verdict=rej
 | **E2E-01** | 创建并完成普通任务 | 仪表盘 → 填入意图 → 选择模式 → 提交 | 任务创建成功，可在任务列表查看 |
 | **E2E-02** | 审核流程 | 审核中心 → 预览草稿 → 通过 | 任务状态变为 published |
 | **E2E-03** | 驳回流程 | 审核中心 → 预览草稿 → 驳回 + 反馈 | 任务状态变为 rejected |
-| **E2E-04** | Solo 模式实时交互 | 创建 Solo 任务 → WebSocket 连接 → 观察实时事件流 | 执行流展示全部工具调用和 LLM 思考过程 |
-| **E2E-05** | Solo 模式审核 | Solo 模式中点击通过/驳回 | 任务继续执行到 publish |
+| **E2E-04** | Helm 模式实时交互 | 创建 Helm 任务 → WebSocket 连接 → 观察实时事件流 | 执行流展示全部工具调用和 LLM 思考过程 |
+| **E2E-05** | Helm 模式审核 | Helm 模式中点击通过/驳回 | 任务继续执行到 publish |
 | **E2E-06** | 定时任务管理 | 创建 Cron 任务 → 等待触发 | 定时触发创作 |
 | **E2E-07** | 模型健康管理 | 查看模型列表 → 触发健康检查 | 模型状态更新 |
 | **E2E-08** | 插件管理 | 查看已加载插件 → 安装新插件 → 重载 | 新插件可用 |
@@ -2374,7 +2374,7 @@ review.ready → task.paused → (用户操作) → review.submitted(verdict=rej
 | **Workflow 8 步骤执行** | < 30s (不含 LLM API 耗时) | 10 次 deep_article Workflow 取均值 |
 | **Reflexion 3 迭代** | < 15s (不含 LLM API 耗时) | 10 次 Reflexion Writer 取均值 |
 | **并发创建 10 个不同 persona 任务** | 全部成功，无锁冲突 | 10 并发 POST /tasks |
-| **WebSocket 事件延迟** | < 50ms (P95) | Solo 模式下 tool.start 到前端接收 |
+| **WebSocket 事件延迟** | < 50ms (P95) | Helm 模式下 tool.start 到前端接收 |
 | **插件加载时间** | < 500ms (10 个插件) | 启动时扫描 entry_points + YAML |
 | **沙箱代码执行** | 启动延迟 < 100ms | 100 次 PythonExecutorTool 取均值 |
 
@@ -2411,7 +2411,7 @@ async def test_concurrent_create():
 |------|-----------|-----------|
 | `core/` | ≥ 90% | BaseAgent, BaseTool(+safety_level), TaskContext, DI, Errors, CheckpointManager(增强) |
 | `modes/` | ≥ 85% | 所有 9 种执行器 + MultiAgent(三策略) + Workflow(防御+reflexion_retry) |
-| `events/` | ≥ 90% | EventBus, SoloAdapter |
+| `events/` | ≥ 90% | EventBus, HelmAdapter |
 | `tools/` | ≥ 85% | Registry(+timeout), SecureToolRegistry, Sandbox, LLMClient |
 | `memory/` | ≥ 85% | MemoryManager(+compressor), TaskBoard, Mailbox, ContextCompressor |
 | `executor/` | ≥ 80% | HybridExecutor, StateManager |
@@ -2620,7 +2620,7 @@ class TestMetricsCollector:
                 "cache_hit_rate": 0,  # 需要从cache工具结果采集
             },
 
-            # WebSocket 维度 (3项) — 需要从SoloWSManager采集
+            # WebSocket 维度 (3项) — 需要从HelmWSManager采集
             "websocket": {
                 "total_events": len(self.events),
                 "event_types": self._group_by(self.events, "type"),
@@ -2772,16 +2772,16 @@ Phase 3: Workflow API 路径 E2E (以通过的主通道为准)
   ├── IT-WF-API-07: multi_platform (4 步)
   └── IT-WF-API-08: image_article (5 步)
 
-Phase 4: Solo UI 路径 E2E（按意图类型）
-  ├── IT-SOLO-01: 简单问候（Fast-path）
-  ├── IT-SOLO-02: 写作意图（Planning路径）
-  ├── IT-SOLO-03: 搜索意图
-  ├── IT-SOLO-04: 研究意图
-  ├── IT-SOLO-05: 翻译意图（Planning路径）
-  ├── IT-SOLO-06: 代码意图
-  ├── IT-SOLO-07: Plan降级
-  ├── IT-SOLO-08: 复杂多步
-  └── IT-SOLO-09: Fast-path负面
+Phase 4: Helm UI 路径 E2E（按意图类型）
+  ├── IT-HELM-01: 简单问候（Fast-path）
+  ├── IT-HELM-02: 写作意图（Planning路径）
+  ├── IT-HELM-03: 搜索意图
+  ├── IT-HELM-04: 研究意图
+  ├── IT-HELM-05: 翻译意图（Planning路径）
+  ├── IT-HELM-06: 代码意图
+  ├── IT-HELM-07: Plan降级
+  ├── IT-HELM-08: 复杂多步
+  └── IT-HELM-09: Fast-path负面
 
 Phase 5: 模式执行器专项
   ├── IT-MODE-01: ReAct 循环检测
@@ -2795,10 +2795,10 @@ Phase 5: 模式执行器专项
   └── IT-MODE-09: Workflow on_error 四种策略
 
 Phase 6: 前端 Playwright E2E
-  ├── E2E-SOLO-01: ReAct Solo 流程
-  ├── E2E-SOLO-02: Workflow Solo 流程
-  ├── E2E-SOLO-03: WebSocket 断线重连
-  └── E2E-SOLO-04: 审核交互
+  ├── E2E-HELM-01: ReAct Helm 流程
+  ├── E2E-HELM-02: Workflow Helm 流程
+  ├── E2E-HELM-03: WebSocket 断线重连
+  └── E2E-HELM-04: 审核交互
 
 Phase 7: 并发 + Circuit Breaker
   ├── IT-CONC-01: 10 并发不同 persona
@@ -2835,13 +2835,13 @@ Phase 10: 生成报告
 | IT-WF-API-06 | FR-CAP-06 #7 | 6.5 Workflow #7 | 9.1 | 缺陷2 |
 | IT-WF-API-07 | FR-CAP-06 #4 | 6.5 Workflow #4 | 9.1 | 缺陷2 |
 | IT-WF-API-08 | FR-CAP-06 #6 | 6.5 Workflow #6 | 9.1 | 缺陷2/8 |
-| IT-SOLO-01~08 | FR-SOL-01~04 | 10.6 | 5.2 | 缺陷4 |
+| IT-HELM-01~08 | FR-HELM-01~04 | 10.6 | 5.2 | 缺陷4 |
 | IT-MODE-01 | FR-ENG-03 | 5.1 ReAct | 7.1 | 缺陷5 |
 | IT-MODE-02 | FR-ENG-03 | 5.1 Reflexion | 7.3 | 缺陷5 |
 | IT-MODE-03 | FR-HRN-03 | 7.4 FeedbackLoop | 14.5 | 缺陷8 |
 | IT-MODE-04 | FR-CAP-04 | 6.4 | 8.2 | 缺陷7 |
 | IT-MODE-05 | FR-MAS-01 | 10.3 | 7.4 | 缺陷10 |
-| E2E-SOLO-01~04 | FR-SOL-01~04 | 10.6 | 5.2 | 缺陷4 |
+| E2E-HELM-01~04 | FR-HELM-01~04 | 10.6 | 5.2 | 缺陷4 |
 | CH-01~05 | FR-CAP-01 | 10.4 | 11.1 | 缺陷7 |
 | IT-CONC-01~02 | FR-ENG-01 | 12.2 | 4.2 | 缺陷10 |
 | IT-CB-01~02 | 4.3可靠性 | 9.2 | 16.3 | 缺陷10 |
@@ -2850,7 +2850,7 @@ Phase 10: 生成报告
 | UT-CORE-01~10 | FR-ENG-01~06 | 4.1~4.6 | 3.1~3.6 | — |
 | UT-DI-01~05 | FR-ENG-02 | 4.2 | 3.2 | — |
 | UT-EVT-01~08 | FR-ENG-04 | 4.3 | 3.3 | — |
-| UT-SOLO-01~04 | FR-SOL-01~04 | 10.6 | 5.2 | — |
+| UT-HELM-01~04 | FR-HELM-01~04 | 10.6 | 5.2 | — |
 | UT-MOD-01~08 | FR-ENG-03 | 5.1 | 7.1 | — |
 | UT-REACT-01~05 | FR-ENG-03 | 5.1 ReAct | 7.1 | — |
 | UT-PE-01~03 | FR-ENG-03 | 5.1 PlanExecute | 7.2 | — |
@@ -3068,29 +3068,29 @@ Phase 10: 生成报告
 | IT-WF-API-08 | image_article | 5 | - | - | - | - | - | - |
 | IT-WF-NEG-01~08 | 负向/异常 | - | - | - | - | - | - | - |
 
-## 三、Solo UI 路径结果（按意图类型）
+## 三、Helm UI 路径结果（按意图类型）
 
 | ID | 意图类型 | 状态 | LLM | Tool | 时间线节点 | 备注 |
 |----|---------|------|-----|------|----------|------|
-| IT-SOLO-01 | 简单问候（Fast-path） | - | - | - | - | - |
-| IT-SOLO-02 | 写作意图 | - | - | - | - | - |
-| IT-SOLO-03 | 搜索意图 | - | - | - | - | - |
-| IT-SOLO-04 | 研究意图 | - | - | - | - | - |
-| IT-SOLO-05 | 翻译意图（Planning路径） | - | - | - | - | - |
-| IT-SOLO-06 | 代码意图 | - | - | - | - | - |
-| IT-SOLO-07 | Plan降级 | - | - | - | - | - |
-| IT-SOLO-08 | 复杂多步 | - | - | - | - | - |
-| IT-SOLO-09 | Fast-path负面 | - | - | - | - | - |
-| IT-SOLO-NEG-01~05 | 负向/异常 | - | - | - | - | - |
+| IT-HELM-01 | 简单问候（Fast-path） | - | - | - | - | - |
+| IT-HELM-02 | 写作意图 | - | - | - | - | - |
+| IT-HELM-03 | 搜索意图 | - | - | - | - | - |
+| IT-HELM-04 | 研究意图 | - | - | - | - | - |
+| IT-HELM-05 | 翻译意图（Planning路径） | - | - | - | - | - |
+| IT-HELM-06 | 代码意图 | - | - | - | - | - |
+| IT-HELM-07 | Plan降级 | - | - | - | - | - |
+| IT-HELM-08 | 复杂多步 | - | - | - | - | - |
+| IT-HELM-09 | Fast-path负面 | - | - | - | - | - |
+| IT-HELM-NEG-01~05 | 负向/异常 | - | - | - | - | - |
 
 ## 四、前端 E2E 结果
 
 | ID | 场景 | 状态 | 备注 |
 |----|------|------|------|
-| E2E-SOLO-01 | ReAct Solo 流程 | - | - |
-| E2E-SOLO-02 | Workflow Solo 流程 | - | - |
-| E2E-SOLO-03 | 断线重连 | - | - |
-| E2E-SOLO-04 | 审核交互 | - | - |
+| E2E-HELM-01 | ReAct Helm 流程 | - | - |
+| E2E-HELM-02 | Workflow Helm 流程 | - | - |
+| E2E-HELM-03 | 断线重连 | - | - |
+| E2E-HELM-04 | 审核交互 | - | - |
 
 ## 五、并发与容错
 
@@ -3173,7 +3173,7 @@ Phase 10: 生成报告
 
 ## 十二、结论
 
-| 通过率 | Workflow API | Solo UI | 前端 E2E | 并发 | 综合 |
+| 通过率 | Workflow API | Helm UI | 前端 E2E | 并发 | 综合 |
 |--------|:---:|:---:|:---:|:---:|:---:|
 | 目标 | 8/8 | 9/9 | 4/4 | 4/4 | 25/25 |
 | 实际 | -/8 | -/9 | -/4 | -/4 | -/25 |
@@ -3200,9 +3200,9 @@ Phase 10: 生成报告
 
 | # | 问题 | 严重度 | 影响 | 建议 | 验证方案 |
 |---|------|--------|------|------|---------|
-| A1 | Workflow YAML的mode字段在API路径下无效 | P1 | 用户配置的mode被忽略 | 方案1: 让WorkflowExecutor尊重mode字段；方案2: 文档化说明mode仅在Solo路径生效 | 标注为"设计限制"，Solo路径验证mode生效 |
-| A2 | Solo UI和Workflow API事件格式不统一 | P1 | 前端需要两套渲染逻辑 | 方案1: 统一事件格式；方案2: EventBusSoloAdapter增加Agent内部事件映射 | 分别验证两条路径的事件格式 |
-| A3 | Solo UI路径与Workflow YAML步骤不匹配 | P1 | Solo UI走Planner动态规划，不执行YAML定义的步骤 | 文档化说明两条路径的差异 | 第十七章按意图类型设计（已修复） |
+| A1 | Workflow YAML的mode字段在API路径下无效 | P1 | 用户配置的mode被忽略 | 方案1: 让WorkflowExecutor尊重mode字段；方案2: 文档化说明mode仅在Helm路径生效 | 标注为"设计限制"，Helm路径验证mode生效 |
+| A2 | Helm UI和Workflow API事件格式不统一 | P1 | 前端需要两套渲染逻辑 | 方案1: 统一事件格式；方案2: EventBusHelmAdapter增加Agent内部事件映射 | 分别验证两条路径的事件格式 |
+| A3 | Helm UI路径与Workflow YAML步骤不匹配 | P1 | Helm UI走Planner动态规划，不执行YAML定义的步骤 | 文档化说明两条路径的差异 | 第十七章按意图类型设计（已修复） |
 | A4 | DI容器实际是全局单例(deps.py) | P2 | 违反铁律3 | 迁移到真正的DI容器 | P2优先级，后续迭代 |
 
 ### B.3 叠加效应分析
@@ -3212,7 +3212,7 @@ Phase 10: 生成报告
 > 2. ContentAuditAgent无judge_model（B1）→ 审核评分无独立性
 > 3. 事件格式不统一（A2）→ 前端时间线渲染异常
 > 4. Mock测试环境（B4）→ 测试无法发现上述问题
-> 5. Solo UI走Planner而非YAML（A3）→ Solo测试预期错误
+> 5. Helm UI走Planner而非YAML（A3）→ Helm测试预期错误
 
 ### B.4 修复追踪表
 

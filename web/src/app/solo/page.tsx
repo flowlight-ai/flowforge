@@ -2,11 +2,11 @@
 
 import dynamic from "next/dynamic";
 
-const SoloLayout = dynamic(
-  () => import("@/components/solo/SoloLayout"),
+const HelmLayout = dynamic(
+  () => import("@/components/helm/HelmLayout"),
   { ssr: false }
 );
 
-export default function SoloPage() {
-  return <SoloLayout />;
+export default function HelmPage() {
+  return <HelmLayout />;
 }

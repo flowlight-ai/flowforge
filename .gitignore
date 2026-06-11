@@ -61,6 +61,7 @@ flowforge.egg-info/
 
 # Temporary & backup
 tmp/
+docs_tmp/
 scripts/test_*.py
 tests/debug_*.py
 tests/check_*.py
@@ -69,6 +70,47 @@ tests/single_test.py
 tests/full_e2e_test.py
 tests/real_llm_test*.py
 e2e_results.txt
+
+# Ad-hoc test output & logs (never commit)
+*_output.txt
+*_output2.txt
+*_result.txt
+*_exit.txt
+*_check.txt
+*_report.txt
+regression_report.txt
+
+# Ad-hoc scripts at project root (use proper test structure instead)
+quick_checks.py
+quick_test.py
+run_regression.py
+run_server.py
+test_e2e.py
+test_llm.py
+
+# Ad-hoc test scripts in tests/ root (use tests/unit/, tests/integration/, tests/e2e/ instead)
+tests/test_api_live*.py
+tests/test_api_quick.py
+tests/test_api_all_in_one.py
+tests/test_api_testclient.py
+tests/test_debug_api.py
+tests/test_deep_article.py
+tests/test_llm_direct.py
+tests/test_llm_models.py
+tests/test_multi_project_flows.py
+tests/test_opensieve.py
+tests/test_solo_apis.py
+tests/test_solo_dynamic_update.py
+tests/test_complex_flow_dynamic_update.py
+tests/search_debug.py
+tests/translate_test.py
+tests/val_test.py
+tests/wf_quick_test.py
+tests/regression_test.py
+tests/run_all_tests.py
+tests/run_tests.py
+tests/metrics_collector.py
+tests/TEST_REPORT_*.md
 
 # Workflow artifacts
 workflows/*.yaml

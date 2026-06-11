@@ -1,6 +1,9 @@
 from typing import Dict, List, Optional, Callable
 from flowforge.core.base_agent import BaseAgent
 from flowforge.core.errors import AgentNotFoundError
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("agent_registry")
 
 
 class AgentRegistry:
@@ -12,10 +15,14 @@ class AgentRegistry:
 
     def register(self, agent: BaseAgent) -> None:
         if agent.name in self._agents:
-            raise ValueError(f"Agent '{agent.name}' already registered")
+            logger.debug(f"Agent '{agent.name}' already registered, skipping duplicate")
+            return
         self._agents[agent.name] = agent
 
     def register_factory(self, name: str, factory: Callable) -> None:
+        if name in self._factories:
+            logger.debug(f"Agent factory '{name}' already registered, skipping duplicate")
+            return
         self._factories[name] = factory
 
     def get(self, name: str) -> Optional[BaseAgent]:

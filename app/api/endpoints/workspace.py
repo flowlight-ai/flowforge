@@ -119,7 +119,7 @@ async def get_workspace(task_id: str):
     context = ws.load_context(task_id)
     from pathlib import Path
     import json
-    task_meta_path = Path(str(path)) / ".solo" / "task.json"
+    task_meta_path = Path(str(path)) / ".helm" / "task.json"
     task_meta = None
     if task_meta_path.exists():
         with open(task_meta_path, "r", encoding="utf-8") as f:

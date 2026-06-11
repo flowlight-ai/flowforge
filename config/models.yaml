@@ -13,6 +13,30 @@ providers:
     api_key_env: OPENROUTER_API_KEY
     user_manageable: true
     description: 自定义模型供应商，用户可管理模型
+  aliyuncs:
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: ALIYUN_API_KEY
+  ark:
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    api_key_env: ARK_API_KEY
+  arkcode:
+    base_url: https://ark.cn-beijing.volces.com/api/coding/v3
+    api_key_env: ARKCODE_API_KEY
+  siliconflow:
+    base_url: https://api.siliconflow.cn/v1
+    api_key_env: SILICONFLOW_API_KEY
+  kimi:
+    base_url: https://api.moonshot.cn/v1
+    api_key_env: KIMI_API_KEY
+  zhipu:
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    api_key_env: ZHIPU_API_KEY
+  tencent:
+    base_url: https://hunyuan.tencentcloudapi.com/v1
+    api_key_env: TENCENT_API_KEY
+  local:
+    base_url: http://localhost:11434/v1
+    api_key_default: local
 models:
 - id: auto
   provider: openroute
@@ -118,20 +142,56 @@ models:
   provider: openroute
   display_name: 免费模型集合
   enabled: true
+- id: ark-code-latest
+  provider: arkcode
+  display_name: Ark Code Latest
+  enabled: true
+- id: deepseek-v3-2-251201
+  provider: ark
+  display_name: DeepSeek V3 (Ark)
+  enabled: true
+- id: doubao-1-5-pro-32k-250115
+  provider: ark
+  display_name: Doubao 1.5 Pro (Ark)
+  enabled: true
+- id: qwen3.5-flash-2026-02-23
+  provider: aliyuncs
+  display_name: Qwen 3.5 Flash
+  enabled: true
+- id: qwen3.5-27b
+  provider: aliyuncs
+  display_name: Qwen 3.5 27B
+  enabled: true
+- id: glm-4.5
+  provider: aliyuncs
+  display_name: GLM 4.5
+  enabled: true
+- id: glm-4.6
+  provider: aliyuncs
+  display_name: GLM 4.6
+  enabled: true
+- id: kimi-k2.5
+  provider: aliyuncs
+  display_name: Kimi K2.5
+  enabled: true
+- id: kimi-k2.5-moonshot
+  provider: kimi
+  display_name: Kimi K2.5 (Moonshot)
+  enabled: true
+- id: glm-4-flash
+  provider: zhipu
+  display_name: GLM-4 Flash
+  enabled: true
 assignments:
   default:
     primary: proxy
-    fallbacks:
-    - auto
+    fallbacks: []
   lightweight:
     primary: proxy
-    fallbacks:
-    - auto
+    fallbacks: []
   coding:
     primary: qwen/qwen3-coder:free
-    fallbacks:
-    - proxy
+    fallbacks: []
   judge:
     primary: Kimi-K2.6
-    fallbacks:
-    - proxy
+    fallbacks: []

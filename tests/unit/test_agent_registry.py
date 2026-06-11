@@ -26,11 +26,12 @@ def test_register_agent():
     assert registry.get("dummy") is agent
 
 
-def test_register_duplicate_raises():
+def test_register_duplicate_skips():
     registry = AgentRegistry()
     registry.register(DummyAgent())
-    with pytest.raises(ValueError, match="already registered"):
-        registry.register(DummyAgent())
+    # Duplicate registration should be silently skipped (no exception)
+    registry.register(DummyAgent())
+    assert registry.get("dummy") is not None
 
 
 def test_get_nonexistent():

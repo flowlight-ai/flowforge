@@ -10,7 +10,7 @@
 
 ### 1.1 产品定位
 
-FlowForge v6.0 是一个**企业级 Agent Harness 平台**，它将前沿的 AI Agent 架构模式（9 大模式）、四根 Harness 护栏（上下文工程、架构约束、反馈循环、熵管理）、多协议工具生态（MCP/OpenAPI/GraphQL）、Skill 系统、多 Agent 策略（Subagents/Teams/Swarms）和 Solo 实时交互融合为一体，为上层业务提供**可控、可观测、可进化的 Agent 运行基础设施**。
+FlowForge v6.0 是一个**企业级 Agent Harness 平台**，它将前沿的 AI Agent 架构模式（9 大模式）、四根 Harness 护栏（上下文工程、架构约束、反馈循环、熵管理）、多协议工具生态（MCP/OpenAPI/GraphQL）、Skill 系统、多 Agent 策略（Subagents/Teams/Swarms）和 Helm 实时交互融合为一体，为上层业务提供**可控、可观测、可进化的 Agent 运行基础设施**。
 
 ### 1.2 核心公式
 
@@ -36,10 +36,10 @@ FlowForge = Harness Layer = 前馈控制 + 反馈控制 + 熵管理 + 可观测�
 
 ### 1.5 核心业务场景
 
-1. **被动创作 (On-Demand)**：用户通过 Web UI 或 Solo 界面发送创作意图，系统启动全链路（选题→研究→写作→审核→发布），最终推送审核通知。
+1. **被动创作 (On-Demand)**：用户通过 Web UI 或 Helm 界面发送创作意图，系统启动全链路（选题→研究→写作→审核→发布），最终推送审核通知。
 2. **主动创作 (Scheduled)**：用户在 Web UI 配置 Cron 定时任务，系统自主完成选题→创作→审核提示的全流程。
 3. **级联自愈 (Self-Healing)**：当专栏的创作 Agent 发现主力模型接连失败时，自动触发模型健康检查、刷新可用模型，并**级联更新**所有共享该模型的其他专栏。
-4. **审核与干预 (Human-in-the-Loop)**：AI 生成的任何内容在正式发布前，通过 Web UI、Solo 内联审核块或即时通讯渠道推送预览，用户可选择通过、编辑或拒绝。
+4. **审核与干预 (Human-in-the-Loop)**：AI 生成的任何内容在正式发布前，通过 Web UI、Helm 内联审核块或即时通讯渠道推送预览，用户可选择通过、编辑或拒绝。
 5. **系统监控 (Dashboard)**：统一 Web UI 仪表盘实时展示专栏运行状态、今日创作数量、模型费用统计、系统健康度。
 6. **Agent-to-Agent Review**：在反馈循环中，生成 Agent 的产出由独立的评判 Agent 进行四维评分（Design Quality / Originality / Craft / Functionality），不通过则进入自修正循环。
 7. **技术债自动回收**：文档园丁 Agent 后台定期扫描文档-代码不一致，自动提交修复 PR；技术债跟踪器按优先级持续偿还技术债务。
@@ -58,7 +58,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 │     ContentForge / NovelForge / 其他业务系统                        │
 ├─────────────────────────────────────────────────────────────────────┤
 │  5. 接入层 (Gateway Layer)                                          │
-│     FastAPI REST API + WebSocket (Solo/Events) + Web UI + CLI       │
+│     FastAPI REST API + WebSocket (Helm/Events) + Web UI + CLI       │
 ├─────────────────────────────────────────────────────────────────────┤
 │  4. Harness 驾驭层 (Harness Layer) ★ v6.0 核心                      │
 │     上下文工程 | 架构约束 | 反馈循环 | 熵管理 | 权限管线 | 会话管理  │
@@ -308,30 +308,75 @@ if ctx.harness_enabled:
 - 失败节点自动恢复：失联 Worker 的任务自动重发布
 - 乐观并发控制 + 分布式锁
 
-### 3.5 Solo 实时交互 (Solo Mode)
+### 3.5 Helm 实时交互 (Helm Mode)
 
-**FR-SOL-01：实时执行流**
+**FR-HELM-01：实时执行流**
 
-- 17 种 FlowForge 事件 → 16 种 Solo 事件类型全映射
-- WebSocket 专用通道 `/ws/solo/{task_id}`
+- 17 种 FlowForge 事件 → 16 种 Helm 事件类型全映射
+- WebSocket 专用通道 `/ws/helm/{task_id}`
 - 事件序号 + 断线重连 + 历史回放
 
-**FR-SOL-02：Solo 三栏布局**
+**FR-HELM-02：Helm 三栏布局**
 
 - 左栏：执行流（虚拟滚动，支持 500+ 条事件）
 - 中栏：工具调用/LLM 思考详情面板（可展开/折叠）
 - 右栏：Markdown 编辑器（编辑/预览/分屏三种模式）
 
-**FR-SOL-03：审核节点内联**
+**FR-HELM-03：审核节点内联**
 
 - 审核操作直接嵌入执行流，不跳转到独立页面
 - 支持审核通过/驳回/编辑提交
 - 审核窗口期 5 分钟内可撤回
 
-**FR-SOL-04：任务控制**
+**FR-HELM-04：任务控制**
 
 - 暂停/恢复/跳过当前节点
 - 实时 Token 统计和费用预估
+
+**FR-HELM-05：Plan 模式 UI**
+
+- 用户输入任务后 AI 生成结构化执行计划
+- 用户可编辑/调整/确认 Plan 后系统按计划执行
+- Plan 步骤支持指定 agent/tool/mode
+- Plan 确认后内部转换为 Workflow YAML 委托 WorkflowExecutor 执行
+- Harness 集成：步骤执行用 lightweight FeedbackLoop，完成时用 full 模式
+
+**FR-HELM-06：文件上传/附件**
+
+- 支持拖拽或按钮上传文件（截图/文档/代码等）
+- 文件类型白名单校验（MIME + 扩展名双重校验）
+- UUID 重命名存储，原始文件名保留在元数据
+- 速率限制：每分钟 10 个文件/每任务
+- 附件自动注入 TaskContext.state 供 Agent 通过 workspace_file 访问
+
+**FR-HELM-07：Diff 视图升级**
+
+- 引入 diff 库替代手写 Diff 算法
+- 支持字符级高亮和行号显示
+- 支持按文件分组的多文件变更视图
+- 一键接受/拒绝单个 Hunk 或全部变更
+- FileChangeTracker 后端组件跟踪文件变更历史
+- 大文件（>1000 行）使用 Web Worker 计算 Diff
+
+**FR-HELM-08：斜杠命令面板**
+
+- 可视化命令面板，支持分组（执行控制/模式切换/导航/工具/帮助）
+- 模糊匹配算法（精确 > 包含 > 字符序列）
+- Ctrl+K 全局触发
+- 后端 API 动态生成命令列表
+- 空状态和无匹配状态设计
+
+**FR-HELM-09：前端状态管理**
+
+- React Context + useReducer 零依赖方案
+- PlanContext / AttachmentContext / DiffContext
+- HelmContextProvider 组合 Provider
+
+**FR-HELM-10：数据库迁移**
+
+- 新建 data/helm.db 管理 Helm 交互数据
+- plans 表：id / task_id / title / steps_json / status / current_step / total_steps 等
+- attachments 表：id / task_id / file_name / file_size / file_type / mime_type / storage_path 等
 
 ### 3.6 插件与扩展 (Plugin System)
 
@@ -380,7 +425,7 @@ if ctx.harness_enabled:
 **FR-OBS-04：WebSocket 实时推送**
 
 - 通用事件通道 `/ws/events`
-- Solo 专用通道 `/ws/solo/{task_id}`
+- Helm 专用通道 `/ws/helm/{task_id}`
 - 支持断线重连和事件回放
 
 ### 3.8 安全体系 (Security)
@@ -403,6 +448,62 @@ if ctx.harness_enabled:
 - Persona 锁：同一专栏互斥
 - TaskBoard 原子认领（RETURNING 子句 + 应用层锁）
 - 非并发安全工具自动加锁
+
+### 3.9 SDK 与上层集成 (SDK & Upper Integration)
+
+**FR-SDK-01：FlowForgeSDK 统一入口**
+
+- 上层项目只需 `from flowforge.sdk import FlowForgeSDK` 即可获得全部 FlowForge 能力
+- 懒初始化属性访问：`sdk.llm` / `sdk.models` / `sdk.tools` / `sdk.agents` / `sdk.events` / `sdk.memory` / `sdk.guardrails` / `sdk.handoffs` / `sdk.mcp`
+- 装饰器注册：`@sdk.tool()` / `@sdk.agent()` / `@sdk.declarative_agent()` / `@sdk.input_guardrail()` / `@sdk.output_guardrail()` / `@sdk.on_event()`
+- `sdk.wire(flowforge_instance)` 可将 SDK 的注册表与已有 FlowForge 实例对接
+
+**FR-SDK-02：ModelCapabilityProvider 零配置模型访问**
+
+- 上层项目通过 `sdk.llm.chat()` 即可调用 LLM，无需关心 provider/model 配置
+- 自动读取 `models.yaml` 中的 provider 和 model 配置
+- 智能路由：根据健康检查结果自动选择可用模型
+- 降级容错：主模型不可用时自动切换到 fallback 模型
+
+**FR-SDK-03：@tool 装饰器**
+
+- 5 行代码即可创建工具：`@sdk.tool(name="my_tool", description="...")`
+- 自动从函数签名生成 `parameters_schema`
+- 自动注册到 `ToolRegistry`
+- 支持 `safety_level` 参数
+
+**FR-SDK-04：Guardrails 并行安全检查**
+
+- InputGuardrail：Agent 执行前的输入检查
+- OutputGuardrail：Agent 执行后的输出检查
+- 并行执行：所有 Guardrail 通过 `asyncio.gather` 并行运行
+- 四种结果：`passed`（通过）/ `warned`（警告但通过）/ `blocked`（阻断）/ `modified`（转换后通过）
+- 任何 Guardrail 返回 `blocked` 时立即停止执行
+
+**FR-SDK-05：Agent Handoff 任务委托**
+
+- LLM 驱动的 Agent 间任务委托
+- `Handoff` 定义委托目标、触发条件
+- `HandoffManager` 管理委托路由、验证目标 Agent、传递上下文
+- 自动生成委托提示词注入 Agent 系统提示
+
+**FR-SDK-06：MCP Integration**
+
+- 一键连接 MCP 服务器：`await sdk.mcp.connect_server(name, command, args)`
+- 自动将 MCP 工具注册为 FlowForge BaseTool
+- 支持动态工具发现和延迟加载
+
+**FR-SDK-07：Declarative Agent 声明式 Agent**
+
+- 无需继承 BaseAgent，通过装饰器声明即可创建 Agent
+- 支持声明：`model`（首选模型）/ `tools`（可用工具列表）/ `instructions`（系统提示）/ `handoffs`（可委托 Agent）/ `guardrails`（安全护栏）
+- 函数体留空（`...`）时使用默认 LLM 执行逻辑
+
+**FR-SDK-08：Marketplace 插件市场**
+
+- 插件搜索：按关键词/标签搜索可用插件
+- 一键安装/卸载：`sdk.marketplace.install("plugin_name")` / `sdk.marketplace.uninstall("plugin_name")`
+- 版本管理：支持插件版本检查和更新
 
 ***
 
@@ -460,6 +561,11 @@ if ctx.harness_enabled:
 - **NFR-13**：Prometheus + Grafana 监控
 - **NFR-14**：结构化异常体系——`ProxyError` 携带 `context dict`，包含 trace\_id、tool\_name、原始错误信息
 
+### 4.7 Helm 交互性能与安全
+
+- **NFR-HELM-01**：附件预览 < 200ms，Diff 渲染 < 500ms，Plan 生成 < 5s
+- **NFR-HELM-02**：文件上传安全（类型白名单 / 路径防护 / 速率限制 / UUID 重命名）
+
 ***
 
 ## 第五章：与 ContentForge 的集成方案
@@ -484,20 +590,20 @@ FlowForge v6.0 作为底层 Harness 引擎，ContentForge 作为上层业务应�
 | 多平台分发           | Workflow 模式 + `multi_platform` SOP                  |
 | SEO 内容生产        | Workflow 模式 + SEOOptimization Agent                 |
 | 定时批量创作          | TaskScheduler + Cron 任务                             |
-| 人工审核            | Human-in-the-Loop 节点 + Solo 审核块                     |
+| 人工审核            | Human-in-the-Loop 节点 + Helm 审核块                     |
 | 模型故障自愈          | ModelService 健康检查 + 级联修复                            |
 | 文档维护            | 文档园丁 Agent + 技术债回收                                  |
-| AI 主编实时协作       | Solo 模式 + WebSocket 事件流                             |
+| AI 主编实时协作       | Helm 模式 + WebSocket 事件流                             |
 
 ### 5.3 迁移路径
 
 | ContentForge 现有模块                 | FlowForge v6.0 对应                                | 迁移策略                                                     |
 | --------------------------------- | ------------------------------------------------ | -------------------------------------------------------- |
-| `brain/orchestrator.py`           | `engine/hybrid_executor.py`                      | **包装**：保留 Persona 锁、Solo 回调，核心执行委托                       |
+| `brain/orchestrator.py`           | `engine/hybrid_executor.py`                      | **包装**：保留 Persona 锁、Helm 回调，核心执行委托                       |
 | `workers/`                        | `agents/content/`                                | **继承**：改继承 FlowForge BaseAgent，使用 `execute_with_context` |
 | `tools/registry.py`               | `tools/registry.py`                              | **委托**：包装 FlowForge ToolRegistry                         |
 | `tools/llm/client.py`             | `tools/builtin/llm_client.py`                    | **替换**                                                   |
-| `core/interfaces/solo_emitter.py` | `events/event_bus.py` + `events/solo_adapter.py` | **桥接**                                                   |
+| `core/interfaces/helm_emitter.py` | `events/event_bus.py` + `events/helm_adapter.py` | **桥接**                                                   |
 | `brain/scheduler.py`              | `scheduler/scheduler.py`                         | **替换**                                                   |
 | `config/persona/*.yaml`           | `config/persona/*.yaml`                          | **保留**                                                   |
 
@@ -517,14 +623,14 @@ Step 2 的 import 兼容期为 **1 个大版本周期**（v6.0 全周期内保�
 
 | 业务场景     | 执行模式          | 多Agent策略     | Harness护栏  | Tool依赖                           | Skill           | 交互模式     |
 | -------- | ------------- | ------------ | ---------- | -------------------------------- | --------------- | -------- |
-| 深度长文创作   | workflow      | subagents    | 反馈循环+熵管理   | helixrag+web\_search             | article-outline | Solo     |
+| 深度长文创作   | workflow      | subagents    | 反馈循环+熵管理   | helixrag+web\_search             | article-outline | Helm     |
 | 快速帖子生成   | rewoo         | -            | 架构约束       | llm+web\_search                  | -               | Standard |
 | 热点追踪     | multi\_agent  | subagents    | 上下文工程      | web\_search+helixrag             | trend-analysis  | Standard |
 | 多平台分发    | workflow      | -            | 权限管线       | publish\_toutiao+publish\_wechat | -               | Standard |
 | SEO内容生产  | plan\_execute | -            | 反馈循环       | helixrag+llm                     | seo-optimizer   | Standard |
 | 定时批量创作   | workflow      | -            | 所有         | 全部                               | -               | Cron     |
-| AI主编实时协作 | workflow      | agent\_teams | 上下文工程+反馈循环 | 全部                               | 全部              | Solo     |
-| 代码审查     | reflexion     | agent\_teams | 架构约束+反馈循环  | git\_ops+llm                     | code-review     | Solo     |
+| AI主编实时协作 | workflow      | agent\_teams | 上下文工程+反馈循环 | 全部                               | 全部              | Helm     |
+| 代码审查     | reflexion     | agent\_teams | 架构约束+反馈循环  | git\_ops+llm                     | code-review     | Helm     |
 | 文档维护     | plan\_execute | -            | 熵管理        | file\_rw+git\_ops                | doc-gardener    | Cron     |
 
 ***

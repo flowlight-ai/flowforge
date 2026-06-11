@@ -7,7 +7,7 @@ APIs using Playwright browser automation.
 The openroute service runs as a separate subprocess on port 13000, providing:
 - 1 auto-routing entry: auto (delegates to hiclaw's assignment-based model selection)
 - 1 round-robin entry: web/chat (distributes across all 5 platforms)
-- 5 platform-specific models: doubao-web/seed-2.0, kimi-web/chat, deepseek-web/chat,
+- 5 platform-specific models: Doubao-Seed2.0, kimi-web/chat, deepseek-web/chat,
   yuanbao-web/chat, qianwen-web/chat
 
 This module implements the ToolPlugin interface so OpenRouteService can be
@@ -412,7 +412,7 @@ class OpenRouteService(ToolPlugin):
         """Send a chat completion request through the openroute.
 
         Args:
-            model: Model identifier (e.g., 'doubao-web/seed-2.0', 'web/chat').
+            model: Model identifier (e.g., 'Doubao-Seed2.0', 'web/chat').
             messages: OpenAI-format message list.
             **kwargs: Additional parameters (temperature, max_tokens, etc.).
 

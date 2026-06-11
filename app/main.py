@@ -776,7 +776,7 @@ set_executor_instance(_executor_instance)
 
 try:
     from flowforge.app.api.endpoints.websocket import manager as ws_manager
-    _executor_instance.set_solo_manager(ws_manager)
+    _executor_instance.set_helm_manager(ws_manager)
 except ImportError:
     pass
 
@@ -832,6 +832,18 @@ except ImportError:
 try:
     from flowforge.app.api.endpoints import workspace as workspace_endpoints
     app.include_router(workspace_endpoints.router)
+except ImportError:
+    pass
+
+try:
+    from flowforge.app.api.endpoints import plans as plans_endpoints
+    app.include_router(plans_endpoints.router)
+except ImportError:
+    pass
+
+try:
+    from flowforge.app.api.endpoints import uploads as uploads_endpoints
+    app.include_router(uploads_endpoints.router)
 except ImportError:
     pass
 

@@ -14,7 +14,7 @@ import urllib.request, json, time, sys, websocket
 BASE = "http://127.0.0.1:8002"
 
 def create_task(task, persona="education", model="openroute/DeepSeek-V4-Pro"):
-    data = json.dumps({"task": task, "persona": persona, "mode": "solo", "model": model}).encode()
+    data = json.dumps({"task": task, "persona": persona, "mode": "helm", "model": model}).encode()
     req = urllib.request.Request(f"{BASE}/api/v1/tasks", data=data, headers={"Content-Type": "application/json"})
     r = urllib.request.urlopen(req, timeout=30)
     return json.loads(r.read().decode())["data"]
@@ -38,7 +38,7 @@ def wait_task(task_id, timeout=1800):
 def collect_ws_events(task_id, duration_sec=1800):
     """Collect WebSocket events for the task."""
     events = []
-    ws_url = f"ws://127.0.0.1:8002/ws/solo/{task_id}"
+    ws_url = f"ws://127.0.0.1:8002/ws/helm/{task_id}"
     try:
         ws = websocket.create_connection(ws_url, timeout=duration_sec)
         ws.settimeout(5)
@@ -145,8 +145,8 @@ for e in stage_events:
 print(f"\nSteps executed: {sorted(steps_seen)}")
 
 # Count LLM calls
-llm_calls = len([e for e in events if e.get("type") == "solo.llm.end"])
-total_tokens = sum(e.get("payload", {}).get("total_tokens", 0) for e in events if e.get("type") == "solo.llm.end")
+llm_calls = len([e for e in events if e.get("type") == "helm.llm.end"])
+total_tokens = sum(e.get("payload", {}).get("total_tokens", 0) for e in events if e.get("type") == "helm.llm.end")
 print(f"LLM calls: {llm_calls}")
 print(f"Total tokens: {total_tokens}")
 

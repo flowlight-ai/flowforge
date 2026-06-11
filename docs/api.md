@@ -105,7 +105,7 @@
 | `persona` | string | 是 | 专栏/业务标识 |
 | `input_data` | object | 是 | 任务输入数据 |
 | `mode` | string | 否 | 执行模式：`react`/`reflexion`/`workflow`/`plan_execute`/`multi_agent`/`rewoo`/`graph_of_thoughts`/`self_discover`/`agent_judge`。不传则由引擎自动选择 |
-| `interaction_mode` | string | 否 | 交互模式：`standard`(默认) 或 `solo` |
+| `interaction_mode` | string | 否 | 交互模式：`standard`(默认) 或 `helm` |
 | `platforms` | array | 否 | 发布平台列表，默认 `["toutiao"]` |
 | `publish_mode` | string | 否 | `draft` 或 `publish`，默认 `draft` |
 | `metadata` | object | 否 | 扩展元数据，如 `sop_name` 指定 workflow |
@@ -153,7 +153,7 @@
 | `persona` | string | 否 | 按 persona 筛选 |
 | `status` | string | 否 | 按状态筛选：`pending`/`running`/`waiting_review`/`completed`/`published`/`failed`/`rejected`/`cancelled` |
 | `mode` | string | 否 | 按执行模式筛选 |
-| `interaction_mode` | string | 否 | 按交互模式筛选：`standard`/`solo` |
+| `interaction_mode` | string | 否 | 按交互模式筛选：`standard`/`helm` |
 | `limit` | integer | 否 | 每页数量，默认 20 |
 | `offset` | integer | 否 | 偏移量，默认 0 |
 
@@ -167,7 +167,7 @@
         "task_id": "uuid-string",
         "persona": "education",
         "mode": "reflexion",
-        "interaction_mode": "solo",
+        "interaction_mode": "helm",
         "status": "waiting_review",
         "created_at": "2026-05-12T12:00:00Z",
         "updated_at": "2026-05-12T12:03:00Z"
@@ -196,7 +196,7 @@
     "task_id": "uuid-string",
     "persona": "education",
     "mode": "reflexion",
-    "interaction_mode": "solo",
+    "interaction_mode": "helm",
     "status": "waiting_review",
     "trace_id": "uuid-string",
     "input_data": { "topic": "..." },
@@ -204,7 +204,7 @@
       "draft": "## 武汉中考...",
       "audit_score": 0.92
     },
-    "solo_events": [],
+    "helm_events": [],
     "published_urls": {
       "toutiao": "https://..."
     },
@@ -811,33 +811,33 @@
 
 ---
 
-### 8.2 Solo 模式专用通道
+### 8.2 Helm 模式专用通道
 
 | 项目 | 值 |
 |------|-----|
 | 协议 | WebSocket |
-| 路径 | `/ws/solo/{task_id}` |
+| 路径 | `/ws/helm/{task_id}` |
 
 **完整事件映射**：
 
-| Solo 事件类型 | 说明 |
+| Helm 事件类型 | 说明 |
 |-------------|------|
-| `solo.stage.enter` | `{stage, order, total, label}` SOP 阶段开始 |
-| `solo.tool.start` | `{tool_name, params, timestamp}` 工具调用开始 |
-| `solo.tool.end` | `{tool_name, result, duration_ms, error?}` 工具调用完成 |
-| `solo.llm.start` | `{agent_name, model, messages_preview?}` LLM 调用开始 |
-| `solo.llm.reasoning` | `{agent_name, delta_text}` LLM 推理内容 (流式) |
-| `solo.llm.stream` | `{agent_name, delta_text}` LLM 输出文本 (流式) |
-| `solo.llm.end` | `{agent_name, full_response, tokens}` LLM 调用完成 |
-| `solo.draft.update` | `{content, is_partial}` 草稿内容更新 |
-| `solo.step.intermediate` | `{step_name, data}` 中间产出展示 |
-| `solo.review.ready` | `{task_id, draft_summary}` 审核节点就绪 |
-| `solo.review.submitted` | `{verdict, feedback}` 审核已提交 |
-| `solo.task.paused` | `{reason}` 任务暂停 |
-| `solo.task.resumed` | `{}` 任务恢复 |
-| `solo.task.completed` | `{published_urls?}` 任务完成 |
-| `solo.task.error` | `{step_name, error_message}` 任务出错 |
-| `solo.token.stats` | `{total_tokens, estimated_cost}` Token 统计更新 |
+| `helm.stage.enter` | `{stage, order, total, label}` SOP 阶段开始 |
+| `helm.tool.start` | `{tool_name, params, timestamp}` 工具调用开始 |
+| `helm.tool.end` | `{tool_name, result, duration_ms, error?}` 工具调用完成 |
+| `helm.llm.start` | `{agent_name, model, messages_preview?}` LLM 调用开始 |
+| `helm.llm.reasoning` | `{agent_name, delta_text}` LLM 推理内容 (流式) |
+| `helm.llm.stream` | `{agent_name, delta_text}` LLM 输出文本 (流式) |
+| `helm.llm.end` | `{agent_name, full_response, tokens}` LLM 调用完成 |
+| `helm.draft.update` | `{content, is_partial}` 草稿内容更新 |
+| `helm.step.intermediate` | `{step_name, data}` 中间产出展示 |
+| `helm.review.ready` | `{task_id, draft_summary}` 审核节点就绪 |
+| `helm.review.submitted` | `{verdict, feedback}` 审核已提交 |
+| `helm.task.paused` | `{reason}` 任务暂停 |
+| `helm.task.resumed` | `{}` 任务恢复 |
+| `helm.task.completed` | `{published_urls?}` 任务完成 |
+| `helm.task.error` | `{step_name, error_message}` 任务出错 |
+| `helm.token.stats` | `{total_tokens, estimated_cost}` Token 统计更新 |
 
 **客户端 → 服务端消息**：
 
@@ -941,7 +941,7 @@ pending → running → waiting_review → completed/published
 
 ---
 
-**以上为 FlowForge API 参考文档 v1.0 完整内容。** 覆盖了架构设计中所有功能点的 API 定义，包括 9 种执行模式、Solo/Standard 双交互模式、16 种 Solo 实时事件、模型治理、插件管理、沙箱安全等。
+**以上为 FlowForge API 参考文档 v1.0 完整内容。** 覆盖了架构设计中所有功能点的 API 定义，包括 9 种执行模式、Helm/Standard 双交互模式、16 种 Helm 实时事件、模型治理、插件管理、沙箱安全等。
 
 
 # FlowForge API 参考文档 v1.1 (增量补充)

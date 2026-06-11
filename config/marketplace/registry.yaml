@@ -1,0 +1,54 @@
+# FlowForge Marketplace Registry
+# Each plugin entry provides a complete manifest for discovery, install, and verification.
+
+plugins:
+  # === Tool Plugins ===
+  - name: flowforge-web-search
+    display_name: "Web Search Aggregator"
+    description: "Aggregated web search tool with fallback chain: HelixRAG → DuckDuckGo → LLM-powered search. Supports multi-query, deduplication, and relevance scoring."
+    version: "1.2.0"
+    author: "FlowForge Team"
+    category: tool
+    tags: [search, web, retrieval, aggregation]
+    homepage: "https://github.com/flowforge/plugins/tree/main/web-search"
+    repository: "https://github.com/flowforge/plugins.git"
+    license: MIT
+    min_flowforge_version: "0.5.0"
+    dependencies: []
+    permissions: [network_access]
+    entry_point: "flowforge.tools.web_search:WebSearchTool"
+    checksum: null
+
+  # === Agent Plugins ===
+  - name: flowforge-content-writer
+    display_name: "Content Writer Agent"
+    description: "AI-powered content writing agent with style adaptation, SEO optimization, and multi-format output. Supports long-form articles, social media posts, and technical documentation."
+    version: "2.0.1"
+    author: "FlowForge Team"
+    category: agent
+    tags: [writing, content, seo, agent]
+    homepage: "https://github.com/flowforge/plugins/tree/main/content-writer"
+    repository: "https://github.com/flowforge/plugins.git"
+    license: MIT
+    min_flowforge_version: "0.5.0"
+    dependencies: [flowforge-web-search]
+    permissions: [llm_access, network_access]
+    entry_point: "flowforge.agents.article_writing:ArticleWritingAgent"
+    checksum: null
+
+  # === Integration Plugins ===
+  - name: flowforge-mcp-bridge
+    display_name: "MCP Bridge Integration"
+    description: "Bridge plugin that connects FlowForge to external MCP (Model Context Protocol) servers. Auto-discovers and registers MCP tools as FlowForge-compatible tools with full lifecycle management."
+    version: "1.0.0"
+    author: "FlowForge Team"
+    category: integration
+    tags: [mcp, integration, bridge, protocol]
+    homepage: "https://github.com/flowforge/plugins/tree/main/mcp-bridge"
+    repository: "https://github.com/flowforge/plugins.git"
+    license: Apache-2.0
+    min_flowforge_version: "0.6.0"
+    dependencies: []
+    permissions: [process_spawn, network_access]
+    entry_point: "flowforge.mcp.gateway:MCPGateway"
+    checksum: null

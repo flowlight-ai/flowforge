@@ -316,7 +316,7 @@ class ModelService:
     async def _check_openroute_health(self, model_key: str, model_id: str) -> dict:
         """Check health of an openroute model by verifying the openroute service is running.
 
-        OpenRoute models require the hiclaw openroute service to be running on port 13000.
+        OpenRoute models require the hiclaw openroute service to be running.
         This method first checks if the openroute service is reachable, then attempts
         a lightweight ping to the specific model.
         """
@@ -345,6 +345,14 @@ class ModelService:
                 "cached": False,
             }
 
+        # Resolve openroute base_url and api_key from config
+        openroute_cfg = self.providers.get("openroute", {})
+        base_url = openroute_cfg.get("base_url", "http://127.0.0.1:13000/v1").rstrip("/")
+        api_key = openroute_cfg.get("api_key_default", "")
+        if not api_key:
+            api_key_env = openroute_cfg.get("api_key_env", "OPENROUTE_API_KEY")
+            api_key = os.getenv(api_key_env, "")
+
         start = time.time()
         try:
             async with httpx.AsyncClient(timeout=30) as client:
@@ -353,10 +361,13 @@ class ModelService:
                     "messages": [{"role": "user", "content": "ping"}],
                     "max_tokens": 1,
                 }
+                headers = {"Content-Type": "application/json"}
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
                 resp = await client.post(
-                    f"http://127.0.0.1:13000/v1/chat/completions",
+                    f"{base_url}/chat/completions",
                     json=payload,
-                    headers={"Authorization": "Bearer none", "Content-Type": "application/json"},
+                    headers=headers,
                 )
                 latency = (time.time() - start) * 1000
                 if resp.status_code == 200:
@@ -712,7 +723,7 @@ class ModelService:
         """Get fallback chain containing only available models.
 
         Filters out disabled and suspended models from the fallback chain.
-        Used by Solo chat model selection to only show working models.
+        Used by Helm chat model selection to only show working models.
 
         Args:
             assignment_key: The assignment key to get the chain for.

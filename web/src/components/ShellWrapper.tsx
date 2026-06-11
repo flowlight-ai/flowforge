@@ -13,9 +13,9 @@ export default function ShellWrapper({
 }) {
   const pathname = usePathname();
   const config = useShellConfig();
-  const isSolo = (config.soloPaths ?? ["/solo"]).some((p) => pathname.startsWith(p));
+  const isHelm = (config.helmPaths ?? ["/helm"]).some((p) => pathname.startsWith(p));
 
-  if (isSolo) {
+  if (isHelm) {
     return <>{children}</>;
   }
 

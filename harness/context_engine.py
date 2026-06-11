@@ -277,7 +277,7 @@ class ContextEngine:
             "task_id": getattr(ctx, 'task_id', 'unknown'),
             "persona": getattr(ctx, 'persona', None) or "default",
             "mode": getattr(ctx, 'mode', None) or "unknown",
-            "interaction_mode": getattr(ctx, 'interaction_mode', 'solo'),
+            "interaction_mode": getattr(ctx, 'interaction_mode', 'helm'),
             "created_at": getattr(ctx, 'created_at', ''),
         }
 

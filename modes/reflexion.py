@@ -13,8 +13,8 @@ class ReflexionExecutor(BaseModeExecutor):
     capabilities = ["generation", "evaluation", "refinement"]
     MAX_ITERATIONS = 3
     QUALITY_THRESHOLD = 0.85
-    # 单次LLM调用超时（秒）
-    STEP_TIMEOUT = 120
+    # 单次LLM调用超时（秒）— 需要足够长以覆盖OpenRoute代理延迟
+    STEP_TIMEOUT = 300
 
     async def _execute_core(self, ctx: TaskContext) -> dict:
         import asyncio

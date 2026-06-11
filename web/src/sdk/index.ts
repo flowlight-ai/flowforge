@@ -31,19 +31,19 @@ export type {
   SystemStatus,
 } from "../lib/types";
 
-// ─── Solo Types ─────────────────────────────────────────────
+// ─── Helm Types ─────────────────────────────────────────────
 export type {
-  SoloEventType,
-  SoloWSEvent,
+  HelmEventType,
+  HelmWSEvent,
   StreamEntryType,
   StreamEntry,
-  SoloTaskPhase,
-  SoloTaskState,
-  SoloWSOptions,
-} from "../lib/solo-types";
+  HelmTaskPhase,
+  HelmTaskState,
+  HelmWSOptions,
+} from "../lib/helm-types";
 
 // ─── Hooks ──────────────────────────────────────────────────
-export { useSoloWebSocket } from "../hooks/useSoloWebSocket";
+export { useHelmWebSocket } from "../hooks/useHelmWebSocket";
 
 // ─── Plugin System ──────────────────────────────────────────
 export type { PluginFrontendMeta } from "../lib/plugin-registry";

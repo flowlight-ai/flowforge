@@ -430,7 +430,7 @@ class TestPluginLoadedCallChain:
 
     def test_single_plugin_no_self_notification(self):
         p = _TrackingPlugin()
-        p.manifest = PluginManifest(name="solo", version="1.0.0")
+        p.manifest = PluginManifest(name="helm", version="1.0.0")
         loaded = [p]
         for plugin in loaded:
             for other_plugin in loaded:

@@ -184,7 +184,7 @@ class PluginManager:
                         self._loaded.setdefault(plugin_type, []).append(module_path)
                         logger.info(f"配置加载插件: [{plugin_type}] {module_path}")
                     except Exception as e:
-                        logger.warning(f"配置加载插件失败 {module_path}: {e}")
+                        logger.debug(f"配置加载插件失败 {module_path}: {e}")
         self._config_results = results
         return results
 
@@ -206,36 +206,36 @@ class PluginManager:
             try:
                 mode_registry.register(mode_factory())
             except Exception as e:
-                logger.warning(f"注册模式插件失败: {e}")
+                logger.debug(f"注册模式插件失败: {e}")
         for mode_factory in self._config_results.get("modes", []):
             try:
                 mode_registry.register(mode_factory())
             except Exception as e:
-                logger.warning(f"注册配置模式插件失败: {e}")
+                logger.debug(f"注册配置模式插件失败: {e}")
 
         for tool_factory in self.discover_entry_points("flowforge.tools"):
             try:
                 tool_registry.register(tool_factory())
             except Exception as e:
-                logger.warning(f"注册工具插件失败: {e}")
+                logger.debug(f"Skip tool from entry_points: {e}")
         for tool_factory in self._config_results.get("tools", []):
             try:
                 tool_registry.register(tool_factory())
             except Exception as e:
-                logger.warning(f"注册配置工具插件失败: {e}")
+                logger.debug(f"Skip tool from config: {e}")
 
         for agent_factory in self.discover_entry_points("flowforge.agents"):
             try:
                 agent_inst = agent_factory()
                 agent_registry.register_factory(agent_inst.name, agent_factory)
             except Exception as e:
-                logger.warning(f"注册Agent插件失败: {e}")
+                logger.debug(f"Skip agent from entry_points: {e}")
         for agent_factory in self._config_results.get("agents", []):
             try:
                 agent_inst = agent_factory()
                 agent_registry.register_factory(agent_inst.name, agent_factory)
             except Exception as e:
-                logger.warning(f"注册配置Agent插件失败: {e}")
+                logger.debug(f"Skip agent from config: {e}")
 
     def get_status(self) -> dict:
         return {"loaded": self._loaded}

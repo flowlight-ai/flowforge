@@ -96,8 +96,8 @@ class SystemConfig(BaseSettings):
     workers: int = 1
     secret_key: str = "changeme-in-production"
     opensieve_enabled: bool = True
-    opensieve_endpoint: str = "http://localhost:18001/api/v1/retrieve"
-    opensieve_timeout: int = 90
+    opensieve_endpoint: str = "http://localhost:8101/api/v1/retrieve"
+    opensieve_timeout: int = 120
     scheduler_enabled: bool = True
     scheduler_timezone: str = "Asia/Shanghai"
     metrics_enabled: bool = True

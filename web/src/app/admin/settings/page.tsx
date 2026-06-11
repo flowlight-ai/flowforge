@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import StaticGraphModal from "../../../components/solo/StaticGraphModal";
+import StaticGraphModal from "../../../components/helm/StaticGraphModal";
 
 interface WorkflowStep {
   id: string;

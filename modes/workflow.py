@@ -202,8 +202,8 @@ class WorkflowExecutor(BaseModeExecutor):
 
             if step.get("human"):
                 auto_approve = ctx.metadata.get("auto_approve_review", False)
-                # Solo/Auto模式下自动跳过人工审核步骤（无人审核）
-                if not auto_approve and ctx.interaction_mode in ("solo", "auto"):
+                # Helm/Auto模式下自动跳过人工审核步骤（无人审核）
+                if not auto_approve and ctx.interaction_mode in ("helm", "auto"):
                     auto_approve = True
                     logger.info(f"Step '{step_name}' is human review, auto-skipping in {ctx.interaction_mode} mode")
                 if not auto_approve:
@@ -410,7 +410,7 @@ class WorkflowExecutor(BaseModeExecutor):
 
         ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {"step": "normal_chat"})
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
-            "content": result_content, "is_partial": False, "agent_name": "solo_assistant",
+            "content": result_content, "is_partial": False, "agent_name": "helm_assistant",
         })
 
         result = {**context_data, "response": result_content}
@@ -421,7 +421,7 @@ class WorkflowExecutor(BaseModeExecutor):
         intent = context_data.get("task", context_data.get("intent", ""))
         model_hint = ctx.metadata.get("model", "auto")
         persona = ctx.persona or "default"
-        mode_label = "全自动" if is_auto else "Solo"
+        mode_label = "全自动" if is_auto else "Helm"
 
         depth = ctx.metadata.get("_workflow_depth", 0)
         if depth >= 3:
@@ -458,7 +458,7 @@ class WorkflowExecutor(BaseModeExecutor):
         except Exception as e:
             logger.error(f"Planning LLM call failed: {e}", task_id=ctx.task_id)
             # Emit error event to frontend
-            ctx.event_bus.emit(ctx.task_id, "solo.stage.exit", {
+            ctx.event_bus.emit(ctx.task_id, "helm.stage.exit", {
                 "step": "planning", "stage": "planning",
                 "error": f"意图识别失败: {str(e)[:200]}",
             })
@@ -466,7 +466,7 @@ class WorkflowExecutor(BaseModeExecutor):
 
         if not plan_content or not plan_content.strip():
             logger.error("Planning LLM returned empty content", task_id=ctx.task_id)
-            ctx.event_bus.emit(ctx.task_id, "solo.stage.exit", {
+            ctx.event_bus.emit(ctx.task_id, "helm.stage.exit", {
                 "step": "planning", "stage": "planning",
                 "error": "意图识别失败: LLM返回空内容",
             })
@@ -621,7 +621,7 @@ class WorkflowExecutor(BaseModeExecutor):
 
             final_content = ""
             try:
-                final_content = await self._call_llm(ctx, response_messages, model_hint, "solo_assistant", persona)
+                final_content = await self._call_llm(ctx, response_messages, model_hint, "helm_assistant", persona)
             except Exception as e:
                 final_content = f"生成回复失败: {str(e)[:200]}"
 
@@ -943,7 +943,7 @@ class WorkflowExecutor(BaseModeExecutor):
                         {"role": "user", "content": intent},
                     ]
                 else:
-                    response_prompt = get_prompt("response.solo",
+                    response_prompt = get_prompt("response.helm",
                         intent=intent, collected_context=collected_json)
                     response_messages = [
                         {"role": "system", "content": response_prompt},
@@ -951,7 +951,7 @@ class WorkflowExecutor(BaseModeExecutor):
                     ]
 
                 try:
-                    final_content = await self._call_llm(ctx, response_messages, model_hint, "solo_assistant", persona)
+                    final_content = await self._call_llm(ctx, response_messages, model_hint, "helm_assistant", persona)
                 except Exception as e:
                     logger.error(f"Compile LLM call failed: {e}")
                     final_content = ""
@@ -996,7 +996,7 @@ class WorkflowExecutor(BaseModeExecutor):
         draft_payload = {
             "content": final_content,
             "is_partial": False,
-            "agent_name": "solo_assistant",
+            "agent_name": "helm_assistant",
         }
         if final_content and len(final_content) > LONG_CONTENT_THRESHOLD:
             draft_payload["saved_to_file"] = True
@@ -1312,7 +1312,7 @@ class WorkflowExecutor(BaseModeExecutor):
         return "\n".join(lines) if lines else "无可用工具"
 
     async def _call_llm(self, ctx: TaskContext, messages: list, model_hint: str,
-                         agent_name: str = "solo_assistant", persona: str = "default") -> str:
+                         agent_name: str = "helm_assistant", persona: str = "default") -> str:
         llm_params = {
             "messages": messages,
             "stream": False,
@@ -1663,7 +1663,7 @@ class WorkflowExecutor(BaseModeExecutor):
 
         final_content = ""
         try:
-            final_content = await self._call_llm(ctx, response_messages, model_hint, "solo_assistant", persona)
+            final_content = await self._call_llm(ctx, response_messages, model_hint, "helm_assistant", persona)
         except Exception as e:
             final_content = f"生成回复失败: {str(e)[:200]}"
 
@@ -1672,7 +1672,7 @@ class WorkflowExecutor(BaseModeExecutor):
         ctx.event_bus.emit(ctx.task_id, "draft.update", {
             "content": final_content,
             "is_partial": False,
-            "agent_name": "solo_assistant",
+            "agent_name": "helm_assistant",
         })
 
         result = {

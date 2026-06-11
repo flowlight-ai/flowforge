@@ -50,7 +50,8 @@ class ToolRegistry:
         if not tool_name:
             raise ValueError(f"Tool must have 'name' attribute or manifest.name")
         if tool_name in self._tools:
-            raise ValueError(f"Tool '{tool_name}' already registered")
+            logger.debug(f"Tool '{tool_name}' already registered, skipping duplicate")
+            return
         self._tools[tool_name] = tool
 
     def get_tool(self, name: str):

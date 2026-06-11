@@ -61,12 +61,12 @@ harness:
 opensieve:
   enabled: true
   endpoint: "http://localhost:8100/api/v1/retrieve"
-  timeout: 90
+  timeout: 120
 
 helixrag:
   enabled: true
   endpoint: "http://localhost:8100/api/v1/retrieve"
-  timeout: 90
+  timeout: 120
   min_score: 0.3
   max_results: 5
 
