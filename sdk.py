@@ -870,6 +870,7 @@ class FlowForgeSDK:
         routes: Optional[List[str]] = None,
         event_handlers: Optional[Dict[str, Callable]] = None,
         health_check_fn: Optional[Callable] = None,
+        extra_tools: Optional[List[str]] = None,
     ) -> FlowForgePlugin:
         """Declaratively create a FlowForgePlugin with auto-discovery.
 
@@ -887,6 +888,8 @@ class FlowForgeSDK:
             routes: List of router paths in ``module:variable`` format.
             event_handlers: Dict mapping event types to handler callables.
             health_check_fn: Custom health check function.
+            extra_tools: List of extra tool paths in ``module:ClassName`` format to register
+                beyond those found by tools_package scanning.
 
         Returns:
             A :class:`FlowForgePlugin` instance ready for registration.
@@ -908,6 +911,7 @@ class FlowForgeSDK:
         _routes = routes or []
         _event_handlers = event_handlers or {}
         _health_check_fn = health_check_fn
+        _extra_tools = extra_tools or []
 
         class AutoPlugin(FlowForgePlugin):
             manifest = PluginManifest(
@@ -924,6 +928,18 @@ class FlowForgeSDK:
             def register_tools(self, tool_registry: Any) -> None:
                 if _tools_package:
                     sdk_ref.scan_tools(_tools_package)
+                # Register extra tools specified by path
+                for tool_path in _extra_tools:
+                    try:
+                        module_path, class_name = tool_path.rsplit(":", 1)
+                        import importlib
+                        mod = importlib.import_module(module_path)
+                        tool_cls = getattr(mod, class_name)
+                        tool_instance = tool_cls()
+                        tool_registry.register(tool_instance)
+                        logger.info(f"Extra tool registered: {tool_path}")
+                    except Exception as e:
+                        logger.warning(f"Failed to register extra tool '{tool_path}': {e}")
 
             def register_routes(self, app: Any) -> None:
                 for route_path in _routes:
