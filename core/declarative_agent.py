@@ -135,10 +135,42 @@ class DeclarativeAgent(BaseAgent):
         If a custom ``execute_fn`` was provided, it is called with the
         input params as keyword arguments.  Otherwise, the default
         LLM-based execution path is used.
+
+        When config declares guardrails, they are checked before and
+        after execution.  When config declares tools, they are resolved
+        from ToolRegistry and passed to the LLM as function-calling
+        tools.  When config declares handoffs, the LLM response is
+        inspected for handoff signals and delegated accordingly.
         """
+        # ── Input guardrails ──────────────────────────────────────
+        if self.config.guardrails:
+            input_text = input.params.get("task", input.params.get("intent", ""))
+            if not input_text:
+                input_text = str(input.params)[:2000]
+            guardrail_block = await self._run_input_guardrails(input_text, input.params)
+            if guardrail_block is not None:
+                return guardrail_block
+
+        # ── Core execution ────────────────────────────────────────
         if self._execute_fn is not None:
-            return await self._execute_custom(input)
-        return await self._execute_llm(input)
+            output = await self._execute_custom(input)
+        else:
+            output = await self._execute_llm(input)
+
+        # ── Output guardrails ─────────────────────────────────────
+        if self.config.guardrails:
+            output_text = output.result.get("content", "") if output.result else ""
+            guardrail_block = await self._run_output_guardrails(output_text, output.result)
+            if guardrail_block is not None:
+                return guardrail_block
+
+        # ── Handoff check ─────────────────────────────────────────
+        if self.config.handoffs:
+            handoff_output = await self._check_and_execute_handoff(output, input)
+            if handoff_output is not None:
+                return handoff_output
+
+        return output
 
     # ── Custom execution ────────────────────────────────────────────
 
@@ -166,7 +198,12 @@ class DeclarativeAgent(BaseAgent):
     # ── Default LLM-based execution ─────────────────────────────────
 
     async def _execute_llm(self, input: AgentInput) -> AgentOutput:
-        """Default execution: build messages and call LLMClient."""
+        """Default execution: build messages and call LLMClient.
+
+        If config.tools is set, resolves each tool from ToolRegistry
+        and passes their schemas as function-calling tools to the LLM.
+        If the LLM returns tool_calls, executes them via ToolRegistry.
+        """
         from flowforge.core.base_tool import ToolInput
         from flowforge.core.model_capability import ModelCapability
 
@@ -174,39 +211,303 @@ class DeclarativeAgent(BaseAgent):
             f"You are the {self.name} agent."
         )
 
+        # Append handoff prompt to instructions if handoffs are configured
+        if self.config.handoffs:
+            handoff_prompt = self._build_handoff_prompt()
+            if handoff_prompt:
+                instructions = instructions + "\n\n" + handoff_prompt
+
         # Build the user message from input params
         task = input.params.get("task", input.params.get("intent", ""))
         if not task:
             task = str(input.params)[:2000]
 
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": instructions},
-            {"role": "user", "content": task},
-        ]
-
         mc = ModelCapability()
         model = self.config.model or ""
+
+        # Resolve tool schemas from ToolRegistry if config.tools is set
+        tools_schema: Optional[list] = None
+        if self.config.tools:
+            tools_schema = self._resolve_tools_schema()
 
         llm_result = await mc.chat(
             prompt=task,
             system=instructions,
             model=model,
             agent_name=self.name,
+            tools=tools_schema,
         )
+
+        # Handle tool_calls from LLM response
+        tool_calls = llm_result.get("tool_calls", [])
+        tool_results: List[Dict[str, Any]] = []
+        if tool_calls:
+            tool_results = await self._execute_tool_calls(tool_calls)
 
         result: Dict[str, Any] = {
             "content": llm_result.get("content", ""),
             "provider": llm_result.get("provider", ""),
             "model": llm_result.get("model", ""),
         }
+        if tool_results:
+            result["tool_results"] = tool_results
 
         metadata: Dict[str, Any] = {
             "tokens": llm_result.get("tokens", 0),
             "agent_type": "declarative",
             "config_model": self.config.model,
         }
+        if tool_calls:
+            metadata["tool_calls_count"] = len(tool_calls)
+        if tool_results:
+            metadata["tool_results_count"] = len(tool_results)
 
         return AgentOutput(result=result, metadata=metadata)
+
+    # ── Tools resolution and execution ──────────────────────────────
+
+    def _resolve_tools_schema(self) -> list:
+        """Resolve tool names from config into OpenAI function-calling schemas.
+
+        Looks up each tool name in the ToolRegistry and extracts its
+        parameters_schema.  Tools that are not found are skipped with a
+        warning.
+        """
+        from flowforge.tools.registry import ToolRegistry
+
+        schemas: list = []
+        try:
+            registry = ToolRegistry()
+        except Exception:
+            logger.warning(f"Agent '{self.name}': ToolRegistry not available for tool resolution")
+            return schemas
+
+        for tool_name in self.config.tools:
+            try:
+                tool = registry.get_tool(tool_name)
+                schema = {
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "description": getattr(tool, "description", ""),
+                        "parameters": getattr(tool, "parameters_schema", {}),
+                    },
+                }
+                schemas.append(schema)
+            except Exception:
+                logger.warning(f"Agent '{self.name}': tool '{tool_name}' not found in ToolRegistry, skipping")
+
+        return schemas
+
+    async def _execute_tool_calls(self, tool_calls: list) -> List[Dict[str, Any]]:
+        """Execute tool_calls returned by the LLM via ToolRegistry.
+
+        Args:
+            tool_calls: List of tool call dicts with 'name' and 'arguments'.
+
+        Returns:
+            List of result dicts from each tool execution.
+        """
+        from flowforge.core.base_tool import ToolInput
+        from flowforge.tools.registry import ToolRegistry
+
+        results: List[Dict[str, Any]] = []
+        try:
+            registry = ToolRegistry()
+        except Exception:
+            logger.warning(f"Agent '{self.name}': ToolRegistry not available for tool execution")
+            return results
+
+        for tc in tool_calls:
+            tool_name = tc.get("name", "")
+            arguments = tc.get("arguments", {})
+            if isinstance(arguments, str):
+                import json
+                try:
+                    arguments = json.loads(arguments)
+                except json.JSONDecodeError:
+                    arguments = {}
+
+            try:
+                output = await registry.execute(tool_name, ToolInput(params=arguments))
+                results.append({
+                    "tool": tool_name,
+                    "result": output.result,
+                    "error": output.error,
+                })
+            except Exception as e:
+                logger.warning(f"Agent '{self.name}': tool '{tool_name}' execution failed: {e}")
+                results.append({
+                    "tool": tool_name,
+                    "result": {},
+                    "error": str(e),
+                })
+
+        return results
+
+    # ── Handoff support ─────────────────────────────────────────────
+
+    def _build_handoff_prompt(self) -> str:
+        """Build a prompt snippet describing available handoff targets.
+
+        This is appended to the system instructions so the LLM knows
+        when it can delegate tasks to other agents.
+        """
+        lines = ["You can delegate tasks to the following specialized agents:", ""]
+        for target_name in self.config.handoffs:
+            lines.append(f"- {target_name}")
+        lines.append("")
+        lines.append(
+            "To delegate a task, include a line in your response in the format: "
+            "[HANDOFF_TO: agent_name] followed by the task description."
+        )
+        return "\n".join(lines)
+
+    async def _check_and_execute_handoff(
+        self, output: AgentOutput, input: AgentInput
+    ) -> Optional[AgentOutput]:
+        """Check if the LLM response indicates a handoff and execute it.
+
+        Looks for the pattern ``[HANDOFF_TO: agent_name]`` in the
+        response content.  If found and the target is in config.handoffs,
+        delegates execution to that agent via HandoffManager.
+
+        Returns:
+            An AgentOutput from the target agent if handoff was executed,
+            or None if no handoff was detected.
+        """
+        import re
+        from flowforge.core.handoff import Handoff, HandoffManager
+        from flowforge.core.agent_registry import AgentRegistry
+
+        content = output.result.get("content", "") if output.result else ""
+        match = re.search(r"\[HANDOFF_TO:\s*(\w[\w\-]*)\]", content)
+        if not match:
+            return None
+
+        target_agent = match.group(1).strip()
+        if target_agent not in self.config.handoffs:
+            logger.warning(
+                f"Agent '{self.name}': LLM requested handoff to '{target_agent}' "
+                f"but it is not in configured handoffs {self.config.handoffs}"
+            )
+            return None
+
+        try:
+            agent_registry = AgentRegistry()
+            hm = HandoffManager(agent_registry=agent_registry)
+
+            # Register handoffs so HandoffManager can validate
+            handoffs = [Handoff(target=t, condition=f"delegated by {self.name}")
+                        for t in self.config.handoffs]
+            hm.register_handoffs(self.name, handoffs)
+
+            # Extract task from content (everything after the handoff marker)
+            task = content[match.end():].strip()
+            if not task:
+                task = input.params.get("task", input.params.get("intent", ""))
+
+            context = dict(input.params)
+            context.pop("task", None)
+            context.pop("intent", None)
+
+            result = await hm.execute_handoff(
+                source_agent=self.name,
+                target_agent=target_agent,
+                task=task,
+                context=context,
+            )
+            # Tag the result as coming from a handoff
+            result.metadata["handoff_from"] = self.name
+            result.metadata["handoff_to"] = target_agent
+            return result
+        except Exception as e:
+            logger.error(
+                f"Agent '{self.name}': handoff to '{target_agent}' failed: {e}"
+            )
+            return None
+
+    # ── Guardrail support ────────────────────────────────────────────
+
+    async def _run_input_guardrails(
+        self, input_text: str, context: dict
+    ) -> Optional[AgentOutput]:
+        """Run input guardrails from config.guardrails.
+
+        Returns:
+            An AgentOutput with error if any guardrail blocks, or None
+            if all guardrails pass.
+        """
+        from flowforge.core.guardrails import GuardrailRegistry, GuardrailExecutor
+
+        try:
+            registry = GuardrailRegistry()
+        except Exception:
+            return None
+
+        # Filter to only the guardrails named in config
+        input_guardrails = []
+        for name in self.config.guardrails:
+            g = registry._input_guardrails.get(name)
+            if g is not None:
+                input_guardrails.append(g)
+
+        if not input_guardrails:
+            return None
+
+        executor = GuardrailExecutor(registry)
+        results = await executor.run_input_guardrails(input_text, context)
+
+        for gr in results:
+            if gr.status == "blocked":
+                logger.warning(
+                    f"Agent '{self.name}': input blocked by guardrail: {gr.message}"
+                )
+                return AgentOutput(
+                    result={"error": f"Input blocked by guardrail: {gr.message}", "status": "blocked"},
+                    metadata={"guardrail_status": "blocked"},
+                )
+        return None
+
+    async def _run_output_guardrails(
+        self, output_text: str, context: dict
+    ) -> Optional[AgentOutput]:
+        """Run output guardrails from config.guardrails.
+
+        Returns:
+            An AgentOutput with error if any guardrail blocks, or None
+            if all guardrails pass.
+        """
+        from flowforge.core.guardrails import GuardrailRegistry, GuardrailExecutor
+
+        try:
+            registry = GuardrailRegistry()
+        except Exception:
+            return None
+
+        # Filter to only the guardrails named in config
+        output_guardrails = []
+        for name in self.config.guardrails:
+            g = registry._output_guardrails.get(name)
+            if g is not None:
+                output_guardrails.append(g)
+
+        if not output_guardrails:
+            return None
+
+        executor = GuardrailExecutor(registry)
+        results = await executor.run_output_guardrails(output_text, context)
+
+        for gr in results:
+            if gr.status == "blocked":
+                logger.warning(
+                    f"Agent '{self.name}': output blocked by guardrail: {gr.message}"
+                )
+                return AgentOutput(
+                    result={"error": f"Output blocked by guardrail: {gr.message}", "status": "blocked"},
+                    metadata={"guardrail_status": "blocked"},
+                )
+        return None
 
     # ── Factory methods ─────────────────────────────────────────────
 

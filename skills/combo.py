@@ -193,12 +193,105 @@ class ComboPipeline:
         return None
 
     def _check_condition(self, skill: SkillBase, context: SkillContext) -> bool:
-        """Check whether a skill should execute based on context.
+        """Check whether a skill should execute based on context conditions.
 
-        Currently a simple pass-through; can be extended with
-        condition expressions in the future.
+        Evaluates condition expressions stored on the skill (via a
+        ``condition`` attribute) against the current context state and
+        step results.
+
+        Supported operators:
+        - ``eq``  : equals
+        - ``neq`` : not equals
+        - ``gt``  : greater than
+        - ``lt``  : less than
+        - ``contains`` : string/list contains value
+        - ``in``  : field value is in a comma-separated list
+
+        Condition format: ``"field_path operator value"``
+        Field paths use dot notation to traverse dicts, e.g.
+        ``"state.status eq completed"`` or
+        ``"step_results.research.output.score gt 0.8"``.
+
+        If the skill has no ``condition`` attribute, returns True.
         """
-        return True
+        condition = getattr(skill, 'condition', None)
+        if not condition:
+            return True
+
+        # Build a merged data dict for field resolution
+        data = {
+            "state": context.state,
+            "step_results": context.step_results,
+            "metadata": context.metadata,
+        }
+
+        # Parse condition: "field_path operator value"
+        parts = condition.strip().split(None, 2)
+        if len(parts) < 3:
+            logger.warning(
+                f"Invalid condition format '{condition}', expected "
+                f"'field_path operator value'"
+            )
+            return True  # malformed condition → allow execution
+
+        field_path, operator, expected_value = parts
+        supported_ops = {"eq", "neq", "gt", "lt", "contains", "in"}
+        if operator not in supported_ops:
+            logger.warning(f"Unsupported condition operator: {operator}")
+            return True
+
+        # Resolve field value from data dict using dot notation
+        actual_value = self._resolve_field(data, field_path)
+        if actual_value is None:
+            logger.debug(
+                f"Condition field '{field_path}' not found in context, "
+                f"condition not met"
+            )
+            return False
+
+        return self._evaluate_condition(actual_value, operator, expected_value)
+
+    @staticmethod
+    def _resolve_field(data: dict, field_path: str) -> Any:
+        """Resolve a dot-notated field path from a nested dict.
+
+        Example: ``"step_results.research.output.score"`` traverses
+        ``data["step_results"]["research"]["output"]["score"]``.
+        """
+        current: Any = data
+        for key in field_path.split("."):
+            if isinstance(current, dict):
+                current = current.get(key)
+            else:
+                return None
+            if current is None:
+                return None
+        return current
+
+    @staticmethod
+    def _evaluate_condition(
+        actual: Any, operator: str, expected: str
+    ) -> bool:
+        """Evaluate a single condition comparison."""
+        try:
+            if operator == "eq":
+                return str(actual) == expected
+            elif operator == "neq":
+                return str(actual) != expected
+            elif operator == "gt":
+                return float(actual) > float(expected)
+            elif operator == "lt":
+                return float(actual) < float(expected)
+            elif operator == "contains":
+                if isinstance(actual, (list, tuple)):
+                    return expected in [str(item) for item in actual]
+                return expected in str(actual)
+            elif operator == "in":
+                allowed = [v.strip() for v in expected.split(",")]
+                return str(actual) in allowed
+        except (ValueError, TypeError):
+            return False
+        return False
 
     async def _execute_with_retries(
         self,

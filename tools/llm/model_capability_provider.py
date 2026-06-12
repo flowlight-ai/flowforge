@@ -43,13 +43,30 @@ class ModelCapabilityProvider:
         self._load_models_from_config()
 
     def _load_models_from_config(self) -> None:
-        """Auto-discover models from config."""
+        """Auto-discover models from config.
+
+        Supports two config formats:
+        1. List format: models is a list of dicts with 'id', 'provider', etc.
+        2. Dict format: models is a dict mapping model_name -> model_conf.
+        """
         models_config = self._config.get("models", {})
-        for model_name, model_conf in models_config.items():
-            if isinstance(model_conf, dict):
-                provider = model_conf.get("provider", "unknown")
-                capabilities = model_conf.get("capabilities", [])
-                self.register_model(model_name, provider, capabilities)
+        if isinstance(models_config, list):
+            # List format: [{"id": "auto", "provider": "openroute", ...}, ...]
+            for item in models_config:
+                if isinstance(item, dict):
+                    model_id = item.get("id", "")
+                    provider = item.get("provider", "unknown")
+                    capabilities = item.get("capabilities", [])
+                    enabled = item.get("enabled", True)
+                    if model_id and enabled:
+                        self.register_model(model_id, provider, capabilities)
+        elif isinstance(models_config, dict):
+            # Dict format: {"model_name": {"provider": "...", ...}, ...}
+            for model_name, model_conf in models_config.items():
+                if isinstance(model_conf, dict):
+                    provider = model_conf.get("provider", "unknown")
+                    capabilities = model_conf.get("capabilities", [])
+                    self.register_model(model_name, provider, capabilities)
 
     def register_model(self, name: str, provider: str, capabilities: list[str] = None) -> None:
         """Register a model with its capabilities."""

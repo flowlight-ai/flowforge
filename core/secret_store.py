@@ -18,7 +18,7 @@ from flowforge.core.tracing import get_logger
 
 logger = get_logger("secret_store")
 
-_DEFAULT_DB_PATH = Path(__file__).parent.parent / "data" / "secrets.db"
+_DEFAULT_DB_PATH = Path(os.environ.get("FLOWFORGE_SECRET_DB_PATH", "data/secrets.db"))
 
 _CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS secrets (
@@ -232,7 +232,7 @@ class SecretStore:
         if env_value:
             return env_value
 
-        env_file = Path(__file__).parent.parent / ".env"
+        env_file = Path(os.environ.get("FLOWFORGE_ENV_FILE", ".env"))
         if env_file.exists():
             try:
                 with open(env_file, "r", encoding="utf-8") as f:

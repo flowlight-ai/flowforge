@@ -75,6 +75,7 @@ class SkillContext(BaseModel):
     state: Dict[str, Any] = Field(default_factory=dict)
     metadata: Dict[str, Any] = Field(default_factory=dict)
     step_results: Dict[str, Any] = Field(default_factory=dict)
+    task_context: Optional[Any] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -239,21 +240,91 @@ class FlowForgeNativeSkill(SkillBase):
     async def _execute_step(
         self, step: SkillStep, context: SkillContext
     ) -> Dict[str, Any]:
-        """Execute a single step.
+        """Execute a single step by dispatching to agent/tool/LLM.
 
-        In the base implementation, steps are declarative and require
-        an external executor (e.g. HybridExecutor) to actually dispatch
-        to agents/tools.  Here we return the step definition so the
-        caller can handle dispatch.
+        Dispatches based on the step configuration:
+        - If step has an ``agent`` field, call the agent via HybridExecutor
+        - If step has a ``tool`` field, call the tool via ToolRegistry
+        - If step has a ``prompt`` field, call LLM directly via ModelCapability
         """
-        return {
-            "step": step.name,
-            "agent": step.agent,
-            "tool": step.tool,
-            "prompt": step.prompt,
-            "params": step.params,
-            "status": "defined",
-        }
+        agent_name = step.agent
+        tool_name = step.tool
+        prompt = step.prompt
+
+        # 1. Dispatch to agent via HybridExecutor
+        if agent_name and context.task_context:
+            try:
+                executor = None
+                # Prefer executor from metadata (set by HybridExecutor.run)
+                metadata = getattr(context.task_context, 'metadata', None)
+                if metadata and isinstance(metadata, dict):
+                    executor = metadata.get("_executor")
+                # Fallback to direct attribute
+                if executor is None:
+                    executor = getattr(context.task_context, 'executor', None)
+                if executor is not None:
+                    from flowforge.core.task_context import TaskContext
+                    child_ctx = TaskContext.from_parent(
+                        context.task_context,
+                        input_data={"prompt": prompt, **step.params},
+                    )
+                    child_ctx.mode = "agent"
+                    result = await executor.run(child_ctx, mode_hint="agent")
+                    return {"status": "completed", "agent": agent_name, "result": result}
+            except Exception as exc:
+                from flowforge.core.tracing import get_logger
+                get_logger("skills.base").warning(
+                    f"Agent dispatch failed for step '{step.name}': {exc}"
+                )
+                return {"status": "failed", "agent": agent_name, "error": str(exc)}
+
+        # 2. Dispatch to tool via ToolRegistry
+        if tool_name:
+            try:
+                from flowforge.core.base_tool import ToolInput
+                # Try task_context.tools first, then standalone registry
+                tool_registry = None
+                if context.task_context and hasattr(context.task_context, 'tools'):
+                    tool_registry = context.task_context.tools
+                if tool_registry is None:
+                    from flowforge.tools.registry import ToolRegistry
+                    tool_registry = ToolRegistry()
+                tool_instance = tool_registry.get_tool(tool_name)
+                tool_input = ToolInput(params=step.params)
+                tool_output = await tool_instance.execute(tool_input)
+                return {
+                    "status": "completed",
+                    "tool": tool_name,
+                    "result": tool_output.result,
+                }
+            except Exception as exc:
+                from flowforge.core.tracing import get_logger
+                get_logger("skills.base").warning(
+                    f"Tool dispatch failed for step '{step.name}': {exc}"
+                )
+                return {"status": "failed", "tool": tool_name, "error": str(exc)}
+
+        # 3. Direct LLM call via LLMClient
+        if prompt:
+            try:
+                from flowforge.tools.llm_client import LLMClient
+                from flowforge.core.base_tool import ToolInput
+                llm_client = LLMClient()
+                tool_input = ToolInput(params={
+                    "messages": [{"role": "user", "content": prompt}],
+                    "agent_name": agent_name or "skill",
+                    "task_id": context.task_id or "skill",
+                })
+                tool_output = await llm_client.execute(tool_input)
+                return {"status": "completed", "llm_call": True, "result": tool_output.result}
+            except Exception as exc:
+                from flowforge.core.tracing import get_logger
+                get_logger("skills.base").warning(
+                    f"LLM call failed for step '{step.name}': {exc}"
+                )
+                return {"status": "failed", "llm_call": True, "error": str(exc)}
+
+        return {"status": "failed", "reason": "no agent/tool/prompt specified"}
 
     def validate(self, context: SkillContext) -> bool:
         """Validate that all required input data keys are present."""

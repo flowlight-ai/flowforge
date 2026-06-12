@@ -97,35 +97,6 @@ class HelmDatabase:
             CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON attachments(task_id);
             CREATE INDEX IF NOT EXISTS idx_attachments_status ON attachments(status);
             CREATE INDEX IF NOT EXISTS idx_attachments_uploaded_at ON attachments(uploaded_at);
-
-            CREATE TABLE IF NOT EXISTS loops (
-                id TEXT PRIMARY KEY,
-                task_id TEXT NOT NULL,
-                template_name TEXT NOT NULL,
-                phase TEXT NOT NULL DEFAULT 'planning',
-                attempt INTEGER NOT NULL DEFAULT 0,
-                max_retries INTEGER NOT NULL DEFAULT 3,
-                state_json TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_loops_task_id ON loops(task_id);
-            CREATE INDEX IF NOT EXISTS idx_loops_phase ON loops(phase);
-
-            CREATE TABLE IF NOT EXISTS loop_iterations (
-                id TEXT PRIMARY KEY,
-                loop_id TEXT NOT NULL,
-                attempt INTEGER NOT NULL,
-                plan_json TEXT,
-                result_json TEXT,
-                verdict_json TEXT,
-                reflection_json TEXT,
-                started_at TEXT NOT NULL,
-                completed_at TEXT
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_iterations_loop_id ON loop_iterations(loop_id);
         """)
         self.conn.commit()
 

@@ -698,14 +698,11 @@ class Marketplace:
             except (ImportError, ValueError):
                 pass
 
-        # Fallback: create a stub __init__.py so the directory exists
-        init_file = target_dir / "__init__.py"
-        if not init_file.exists():
-            init_file.write_text(
-                f'"""Plugin: {manifest.name} v{manifest.version}"""\n',
-                encoding="utf-8",
-            )
-        logger.info(f"Created plugin stub at {target_dir}")
+        # No plugin files could be located — raise instead of creating empty stub
+        raise RuntimeError(
+            f"Failed to download plugin '{manifest.name}': "
+            f"could not locate source files for entry_point '{manifest.entry_point}'"
+        )
 
     async def _register_with_manager(
         self, manifest: PluginManifest, plugin_dir: Path

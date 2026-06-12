@@ -201,7 +201,11 @@ class FlowForgeSDK:
 
     @property
     def llm(self) -> ModelCapability:
-        """Access the ModelCapability for zero-config LLM calls."""
+        """Access the ModelCapability for zero-config LLM calls.
+
+        The internal provider is accessible via ``sdk.llm.provider``
+        for advanced model routing and health tracking.
+        """
         if self._model_capability is None:
             self._model_capability = ModelCapability()
         return self._model_capability
@@ -315,6 +319,36 @@ class FlowForgeSDK:
             from flowforge.core.marketplace import Marketplace
             self._marketplace = Marketplace()
         return self._marketplace
+
+    @property
+    def skills(self) -> Any:
+        """Access the Skill system.
+
+        Lazily creates a :class:`SkillManager` and loads skills from
+        global and project directories.
+
+        Example::
+
+            # List all loaded skills
+            all_skills = sdk.skills.list_skills()
+
+            # Execute a skill
+            result = await sdk.skills.execute_skill("my-skill", context)
+        """
+        if not hasattr(self, '_skills_manager'):
+            from flowforge.skills.manager import SkillManager
+            self._skills_manager = SkillManager()
+            # Load global skills
+            global_dir = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), "config", "skills"
+            )
+            if os.path.exists(global_dir):
+                self._skills_manager.load_skills(global_dir=global_dir)
+            # Load project skills
+            project_dir = os.path.join(os.getcwd(), "skills")
+            if os.path.exists(project_dir):
+                self._skills_manager.load_skills(project_dir=project_dir)
+        return self._skills_manager
 
     # ── Decorator methods ───────────────────────────────────────────
 

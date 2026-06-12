@@ -19,17 +19,44 @@ from flowforge.core.tracing import get_logger
 logger = get_logger("security.arch_constraint")
 
 # Default layer ordering (lower layers cannot import from higher layers)
+# Matches design doc section 7.3 and config/layer_mapping.yaml
 DEFAULT_LAYER_ORDER = ["types", "config", "repo", "service", "runtime", "ui"]
 
 DEFAULT_LAYER_MAPPING = {
-    "flowforge.app": 0,
-    "flowforge.brain": 1,
-    "flowforge.modes": 2,
-    "flowforge.workers": 2,
-    "flowforge.agents": 2,
-    "flowforge.tools": 3,
-    "flowforge.memory": 3,
-    "flowforge.core": 4,
+    # Types layer — pure data structures, interfaces, errors
+    "flowforge.core.errors": "types",
+    "flowforge.core.base_agent": "types",
+    "flowforge.core.base_tool": "types",
+    "flowforge.core.tracing": "types",
+    "flowforge.core.task_context": "types",
+    "flowforge.core.base_mode_executor": "types",
+    # Config layer — configuration, DI, secrets
+    "flowforge.core.config": "config",
+    "flowforge.core.di": "config",
+    "flowforge.core.secret_store": "config",
+    # Repo layer — data persistence, memory stores
+    "flowforge.memory": "repo",
+    "flowforge.core.checkpoint_manager": "repo",
+    # Service layer — business logic, registries, metrics
+    "flowforge.core.agent_registry": "service",
+    "flowforge.core.plugin_manager": "service",
+    "flowforge.core.prompt_manager": "service",
+    "flowforge.core.metrics": "service",
+    "flowforge.core.circuit_breaker": "service",
+    "flowforge.core.agent_timeout": "service",
+    "flowforge.core.workspace": "service",
+    "flowforge.tools": "service",
+    # Runtime layer — execution, modes, agents, events
+    "flowforge.core.tool_chain_executor": "runtime",
+    "flowforge.modes": "runtime",
+    "flowforge.executor": "runtime",
+    "flowforge.scheduler": "runtime",
+    "flowforge.agents": "runtime",
+    "flowforge.events": "runtime",
+    "flowforge.workflows": "runtime",
+    # UI layer — API endpoints, web frontend
+    "flowforge.app": "ui",
+    "flowforge.web": "ui",
 }
 
 
@@ -51,12 +78,16 @@ class ArchitectureConstraintEngine:
 
     def get_layer(self, module_path: str) -> Optional[str]:
         mapping = self.layer_mapping or DEFAULT_LAYER_MAPPING
-        for layer, patterns in mapping.items():
-            if isinstance(patterns, str):
-                patterns = [patterns]
-            for pattern in patterns:
-                if pattern in module_path:
-                    return layer
+        for module_prefix, layer_name in mapping.items():
+            if isinstance(layer_name, list):
+                # YAML config format: layer_name -> [patterns]
+                for pattern in layer_name:
+                    if pattern in module_path:
+                        return module_prefix  # key is the layer name
+            elif isinstance(layer_name, str):
+                # DEFAULT format: module_prefix -> layer_name
+                if module_prefix in module_path:
+                    return layer_name
         return None
 
     def extract_dependencies(self, source_code: str) -> List[str]:

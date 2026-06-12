@@ -184,18 +184,18 @@ models:
   enabled: true
 assignments:
   default:
-    primary: proxy
+    primary: free
     fallbacks:
-    - auto
+    - Doubao-Seed2.0
     - openai/gpt-oss-120b:free
     - openai/gpt-oss-20b:free
     - google/gemma-4-31b-it:free
     - nvidia/nemotron-3-super-120b-a12b:free
     - poolside/laguna-m.1:free
   lightweight:
-    primary: proxy
+    primary: free
     fallbacks:
-    - auto
+    - Doubao-Seed2.0
     - openai/gpt-oss-120b:free
     - openai/gpt-oss-20b:free
     - google/gemma-4-31b-it:free
@@ -204,7 +204,6 @@ assignments:
   coding:
     primary: qwen/qwen3-coder:free
     fallbacks:
-    - auto
     - openai/gpt-oss-120b:free
     - openai/gpt-oss-20b:free
     - google/gemma-4-31b-it:free
@@ -213,7 +212,6 @@ assignments:
   judge:
     primary: Kimi-K2.6
     fallbacks:
-    - auto
     - openai/gpt-oss-120b:free
     - openai/gpt-oss-20b:free
     - google/gemma-4-31b-it:free

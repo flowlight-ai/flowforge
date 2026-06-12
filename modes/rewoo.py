@@ -12,6 +12,7 @@ logger = get_logger("rewoo_executor")
 class ReWOOExecutor(BaseModeExecutor):
     mode_name = "rewoo"
     capabilities = ["planning", "parallel_execution"]
+    MAX_STEPS = 10
     MAX_BLUEPRINT_STEPS = 5
 
     async def _execute_core(self, ctx: TaskContext) -> dict:

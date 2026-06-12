@@ -441,8 +441,11 @@ class TestMCPBroker:
         broker = MCPBroker()
         client = MCPClient()
         broker.register_server("test", client)
-        broker._circuit_breaker["test"] = 5
-        broker._circuit_open["test"] = True
+        # Simulate circuit breaker in OPEN state by recording failures
+        cb = broker._circuit_breakers["test"]
+        for _ in range(cb.failure_threshold):
+            cb.record_failure()
+        assert not cb.allow_request()
         result = await broker.call_tool("any_tool", {})
         assert "error" in result
 

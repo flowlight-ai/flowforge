@@ -20,15 +20,21 @@ Usage in upper projects:
 
     # Check model health
     health = await mc.check_health()
+
+    # Access the internal provider for advanced routing
+    provider = mc.provider
+    best_model = provider.get_model(capability="chat", preferred="deepseek-v4")
 """
 
 from __future__ import annotations
 
+import time
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.config import ConfigLoader
 from flowforge.core.tracing import get_logger
+from flowforge.tools.llm.model_capability_provider import ModelCapabilityProvider
 from flowforge.tools.llm.model_service import ModelService, get_model_service
 
 logger = get_logger("model_capability")
@@ -40,6 +46,10 @@ class ModelCapability:
     Wraps LLMClient and ModelService into a simple, high-level API.
     Upper projects never need to configure providers, models, or API keys —
     everything is inherited from flowforge's models.yaml.
+
+    Internally delegates model selection and health tracking to
+    :class:`ModelCapabilityProvider`, which provides smart routing
+    and degradation fallback.
 
     This class is a singleton: repeated construction returns the same instance.
     """
@@ -57,6 +67,7 @@ class ModelCapability:
         self._initialized = True
         self._llm_client: Optional[Any] = None
         self._model_service: Optional[ModelService] = None
+        self._provider: Optional[ModelCapabilityProvider] = None
 
     # ── Lazy initialization ─────────────────────────────────────────
 
@@ -75,6 +86,30 @@ class ModelCapability:
             self._model_service = get_model_service()
         return self._model_service
 
+    def _ensure_provider(self) -> ModelCapabilityProvider:
+        """Lazily create the ModelCapabilityProvider on first access.
+
+        The provider is initialized from the same models config that
+        LLMClient uses, ensuring consistent model discovery.
+        """
+        if self._provider is None:
+            config_loader = ConfigLoader()
+            models_config = config_loader.get_models_config()
+            self._provider = ModelCapabilityProvider(config=models_config)
+        return self._provider
+
+    @property
+    def provider(self) -> ModelCapabilityProvider:
+        """Access the internal ModelCapabilityProvider for advanced routing.
+
+        Use this to:
+        - Query best model for a capability
+        - Register custom models
+        - Check per-model health status
+        - Report success/failure for health tracking
+        """
+        return self._ensure_provider()
+
     # ── High-level chat API ─────────────────────────────────────────
 
     async def chat(
@@ -92,6 +127,11 @@ class ModelCapability:
     ) -> Dict[str, Any]:
         """Send a chat message and return the response dict.
 
+        When no explicit model is specified, uses ModelCapabilityProvider
+        to select the best available model based on capability and health.
+        After the call, reports success/failure to the provider for
+        ongoing health tracking.
+
         Args:
             prompt: The user message content.
             system: Optional system prompt.
@@ -107,6 +147,21 @@ class ModelCapability:
             Dict with keys: content, provider, model, tokens, tool_calls (optional).
         """
         llm = self._ensure_llm_client()
+        provider = self._ensure_provider()
+
+        # Use provider to select best model if not explicitly specified
+        selected_model = model
+        if not selected_model:
+            capability = None
+            if persona:
+                capability = f"persona:{persona}"
+            elif agent_name:
+                capability = f"agent:{agent_name}"
+            selected_model = provider.get_model(
+                capability=capability,
+                preferred=model or None,
+            ) or ""
+
         messages: list[dict[str, str]] = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -121,13 +176,28 @@ class ModelCapability:
             "task_id": task_id,
             "stream": False,
         }
-        if model:
-            params["model"] = model
+        if selected_model:
+            params["model"] = selected_model
         if tools:
             params["tools"] = tools
 
-        output = await llm.execute(ToolInput(params=params))
-        return output.result
+        start_time = time.monotonic()
+        try:
+            output = await llm.execute(ToolInput(params=params))
+            result = output.result
+
+            # Report success to provider for health tracking
+            latency_ms = (time.monotonic() - start_time) * 1000
+            used_model = result.get("model", selected_model)
+            if used_model:
+                provider.report_success(used_model, latency_ms)
+
+            return result
+        except Exception as e:
+            # Report failure to provider for degradation tracking
+            if selected_model:
+                provider.report_failure(selected_model, str(e))
+            raise
 
     async def chat_stream(
         self,
@@ -143,6 +213,9 @@ class ModelCapability:
     ) -> AsyncIterator[str]:
         """Stream a chat response, yielding text chunks.
 
+        When no explicit model is specified, uses ModelCapabilityProvider
+        to select the best available model.
+
         Args:
             prompt: The user message content.
             system: Optional system prompt.
@@ -157,6 +230,21 @@ class ModelCapability:
             Text chunks as they arrive from the LLM.
         """
         llm = self._ensure_llm_client()
+        provider = self._ensure_provider()
+
+        # Use provider to select best model if not explicitly specified
+        selected_model = model
+        if not selected_model:
+            capability = None
+            if persona:
+                capability = f"persona:{persona}"
+            elif agent_name:
+                capability = f"agent:{agent_name}"
+            selected_model = provider.get_model(
+                capability=capability,
+                preferred=model or None,
+            ) or ""
+
         messages: list[dict[str, str]] = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -171,11 +259,21 @@ class ModelCapability:
             "task_id": task_id,
             "stream": True,
         }
-        if model:
-            params["model"] = model
+        if selected_model:
+            params["model"] = selected_model
 
-        async for chunk in llm.stream(ToolInput(params=params)):
-            yield chunk
+        start_time = time.monotonic()
+        try:
+            async for chunk in llm.stream(ToolInput(params=params)):
+                yield chunk
+            # Report success after stream completes
+            latency_ms = (time.monotonic() - start_time) * 1000
+            if selected_model:
+                provider.report_success(selected_model, latency_ms)
+        except Exception as e:
+            if selected_model:
+                provider.report_failure(selected_model, str(e))
+            raise
 
     # ── Model discovery & health ────────────────────────────────────
 
