@@ -62,6 +62,7 @@ class TaskContext:
         self.executor = kwargs.pop('executor', None)
         self.persona = kwargs.pop('persona', None)
         self.harness_enabled = kwargs.pop('harness_enabled', True)
+        self.plugin_registry = kwargs.pop('plugin_registry', None)
         self.created_at = datetime.now(timezone.utc).isoformat()
 
     @classmethod
@@ -95,5 +96,6 @@ class TaskContext:
             executor=parent.executor,
             persona=parent.persona,
             harness_enabled=parent.harness_enabled,
+            plugin_registry=parent.plugin_registry,
         )
         return child

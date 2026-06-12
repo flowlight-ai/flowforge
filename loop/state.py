@@ -48,6 +48,15 @@ class LoopState(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class LoopNestingError(Exception):
+    """Raised when Loop nesting exceeds maximum depth."""
+
+    def __init__(self, depth: int, max_depth: int):
+        super().__init__(f"Loop nesting depth {depth} exceeds maximum {max_depth}")
+        self.depth = depth
+        self.max_depth = max_depth
+
+
 class LoopResult(BaseModel):
     """Loop 执行结果。"""
     success: bool

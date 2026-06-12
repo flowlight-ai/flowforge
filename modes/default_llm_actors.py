@@ -16,15 +16,14 @@ class DefaultLLMActor(BaseAgent):
             persona=input.params.get("persona", "default"),
             input_data=input.params,
         )
-        try:
-            from flowforge.app.deps import get_executor
-            executor = get_executor()
-            if executor:
-                ctx.tools = executor.tool_registry
-                ctx.agents = executor.agent_registry
-                ctx.event_bus = executor.event_bus
-                ctx.executor = executor
-        except Exception:
+        # Use executor passed via params (DI) instead of importing from app layer
+        executor = input.params.get("_executor")
+        if executor:
+            ctx.tools = executor.tool_registry
+            ctx.agents = executor.agent_registry
+            ctx.event_bus = executor.event_bus
+            ctx.executor = executor
+        else:
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
@@ -65,15 +64,14 @@ class DefaultLLMEvaluator(BaseAgent):
             persona=input.params.get("persona", "default"),
             input_data=input.params,
         )
-        try:
-            from flowforge.app.deps import get_executor
-            executor = get_executor()
-            if executor:
-                ctx.tools = executor.tool_registry
-                ctx.agents = executor.agent_registry
-                ctx.event_bus = executor.event_bus
-                ctx.executor = executor
-        except Exception:
+        # Use executor passed via params (DI) instead of importing from app layer
+        executor = input.params.get("_executor")
+        if executor:
+            ctx.tools = executor.tool_registry
+            ctx.agents = executor.agent_registry
+            ctx.event_bus = executor.event_bus
+            ctx.executor = executor
+        else:
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 
@@ -115,15 +113,14 @@ class DefaultLLMReflector(BaseAgent):
             persona=input.params.get("persona", "default"),
             input_data=input.params,
         )
-        try:
-            from flowforge.app.deps import get_executor
-            executor = get_executor()
-            if executor:
-                ctx.tools = executor.tool_registry
-                ctx.agents = executor.agent_registry
-                ctx.event_bus = executor.event_bus
-                ctx.executor = executor
-        except Exception:
+        # Use executor passed via params (DI) instead of importing from app layer
+        executor = input.params.get("_executor")
+        if executor:
+            ctx.tools = executor.tool_registry
+            ctx.agents = executor.agent_registry
+            ctx.event_bus = executor.event_bus
+            ctx.executor = executor
+        else:
             ctx.event_bus = EventBus()
         return await self.execute_with_context(input, ctx)
 

@@ -1,0 +1,36 @@
+name: content-polish-loop
+description: "内容润色闭环：SEO优化→去AI味→平台适配→质量校验"
+version: 1.0
+max_retries: 2
+timeout_per_iteration: 120
+total_timeout: 400
+backoff_strategy: "fixed"
+backoff_base: 2
+
+planner:
+  mode: llm_direct
+  agent: polish-planner
+
+worker:
+  mode: agent
+  agent: editor-agent
+
+verifier:
+  mode: agent_judge
+  agent: content-audit
+  pass_threshold: 0.9
+  rules:
+    - "无AI味模板化开头"
+    - "SEO关键词密度 1%-3%"
+
+reflector:
+  mode: reflexion
+  agent: polish-reflector
+  max_reflections: 1
+
+memory:
+  store_failures: true
+  failure_key: "polish-failures"
+  memory_mapping:
+    context: working
+    failures: long_term

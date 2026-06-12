@@ -38,8 +38,7 @@ class Mailbox:
                 tags TEXT,
                 read INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
-                expires_at TEXT,
-                FOREIGN KEY (recipient) REFERENCES None
+                expires_at TEXT
             )
         """)
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_recipient ON messages (recipient)")

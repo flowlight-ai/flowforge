@@ -18,10 +18,11 @@ from flowforge.executor.hybrid_executor import HybridExecutor
 from flowforge.harness.orchestrator import HarnessOrchestrator
 from flowforge.harness.entropy_manager import EntropyManager, DebtSeverity, RuleEvolution
 from flowforge.core.checkpoint_manager import CheckpointManager
-from flowforge.loop.state import LoopState, LoopResult, LoopPhase
+from flowforge.loop.state import LoopState, LoopResult, LoopPhase, LoopNestingError
 from flowforge.loop.planner import LoopPlanner
 from flowforge.loop.verifier import LoopVerifier
 from flowforge.loop.reflector import LoopReflector
+from flowforge.loop.registry import LoopRegistry
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("loop.executor")
@@ -38,6 +39,9 @@ class LoopExecutor:
     5. 仅在失败时触发 Loop Reflector（复盘+规则进化）
     6. 保存检查点
     """
+
+    MAX_NESTING_DEPTH: int = 3
+    _current_nesting_depth: int = 0
 
     def __init__(
         self,
@@ -61,8 +65,24 @@ class LoopExecutor:
 
     async def run(self, task: TaskContext, loop_config: dict) -> LoopResult:
         """执行 Loop：规划→执行→校验→复盘→重试。"""
+        # 嵌套深度检查
+        if LoopExecutor._current_nesting_depth >= LoopExecutor.MAX_NESTING_DEPTH:
+            raise LoopNestingError(
+                depth=LoopExecutor._current_nesting_depth,
+                max_depth=LoopExecutor.MAX_NESTING_DEPTH,
+            )
+
+        LoopExecutor._current_nesting_depth += 1
+        try:
+            return await self._run_loop(task, loop_config)
+        finally:
+            LoopExecutor._current_nesting_depth -= 1
+
+    async def _run_loop(self, task: TaskContext, loop_config: dict) -> LoopResult:
+        """内部 Loop 执行逻辑。"""
         max_retries = loop_config.get("max_retries", 3)
-        worker_mode = loop_config.get("worker", {}).get("mode", "workflow")
+        worker_config = loop_config.get("worker", {})
+        worker_mode = worker_config.get("mode", "workflow")
         backoff_strategy = loop_config.get("backoff_strategy", "exponential")
         backoff_base = loop_config.get("backoff_base", 2)
 
@@ -105,9 +125,44 @@ class LoopExecutor:
                 task.metadata["loop_reflections"] = state.reflection_history[-1].get("suggestions", [])
             await self.harness.pre_execute(task)
 
-            # 3. 执行（委托给 HybridExecutor）
+            # 3. 执行（委托给 HybridExecutor / 嵌套 Loop / 并行 Worker）
             state.phase = LoopPhase.EXECUTING
-            result = await self.hybrid_executor.run(task, mode_hint=worker_mode)
+            if worker_mode == "loop":
+                nested_template = worker_config.get("template", "")
+                nested_registry = LoopRegistry()
+                nested_config = nested_registry.get(nested_template)
+                if nested_config:
+                    nested_config_dict = nested_config.model_dump()
+                    nested_config_dict["name"] = f"{state.loop_id}:nested:{nested_template}"
+                    nested_executor = LoopExecutor(
+                        hybrid_executor=self.hybrid_executor,
+                        harness=self.harness,
+                        planner=self.planner,
+                        verifier=self.verifier,
+                        reflector=self.reflector,
+                        checkpoint_mgr=self.checkpoint_mgr,
+                        entropy_mgr=self.entropy_mgr,
+                        rule_evolution=self.rule_evolution,
+                    )
+                    result = await nested_executor.run(task, nested_config_dict)
+                    if not result.success:
+                        # Nested loop failed, trigger reflector in outer loop
+                        pass  # The outer loop's verifier will catch the failure
+                else:
+                    result = {"error": f"Nested loop template '{nested_template}' not found"}
+            elif worker_mode == "parallel":
+                from flowforge.loop.parallel import execute_parallel_workers
+                workers = worker_config.get("workers", [])
+                merge_strategy = worker_config.get("merge_strategy", "concat")
+                parallel_result = await execute_parallel_workers(
+                    workers, task, self.hybrid_executor, merge_strategy
+                )
+                result = parallel_result.merge_results(merge_strategy)
+                if not parallel_result.all_succeeded:
+                    for name, error in parallel_result.errors.items():
+                        state.past_errors.append(f"Worker '{name}' failed: {error}")
+            else:
+                result = await self.hybrid_executor.run(task, mode_hint=worker_mode)
 
             # 4. Harness post_execute（架构约束校验 + FeedbackLoop 评分）
             result = await self.harness.post_execute(result, task)

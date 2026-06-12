@@ -1,0 +1,19 @@
+name: content-audit
+description: "内容审计技能：检查文章质量、SEO、事实准确性"
+version: 1.0
+format: flowforge
+triggers:
+  - on_demand
+steps:
+  - name: quality_check
+    agent: content-audit
+    prompt: "评估文章质量，给出四维评分"
+  - name: seo_check
+    agent: editor-agent
+    prompt: "检查SEO关键词密度和结构"
+  - name: fact_check
+    agent: fact-check-agent
+    prompt: "验证文章中的事实和数据"
+output:
+  format: report
+  fields: [quality_score, seo_score, fact_check_result]
