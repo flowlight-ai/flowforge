@@ -9,7 +9,7 @@
 
 ## 1. 项目概述与设计目标
 
-FlowForge 是一个解耦了业务逻辑的通用 Agent 操作系统内核，封装了业界主流的 9 种 Agent 架构模式，提供统一的工具注册、状态管理、可观测性接口，并通过 **四根 Harness 护栏**（上下文工程、架构约束、反馈循环、熵管理）为 Agent 提供完整的控制回路，让开发者通过声明式配置（YAML/JSON）即可组合出可控、可观测、可进化的智能体工作流。
+FlowForge 是一个解耦了业务逻辑的通用 Agent 操作系统内核，封装了业界主流的 9 种 Agent 架构模式，提供统一的工具注册、状态管理、可观测性接口，并通过 **Harness 驾驭层**（上下文工程、架构约束、反馈循环、熵管理、Loop Engine）为 Agent 提供完整的控制回路，让开发者通过声明式配置（YAML/JSON）即可组合出可控、可观测、可进化的智能体工作流。
 
 ### 1.1 核心公式
 
@@ -62,7 +62,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 │     FastAPI REST API + WebSocket (Helm/Events) + Web UI + CLI       │
 ├─────────────────────────────────────────────────────────────────────┤
 │  4. Harness 驾驭层 (Harness Layer) ★ v6.0 核心                      │
-│     上下文工程 | 架构约束 | 反馈循环 | 熵管理 | 权限管线 | 会话管理  │
+│     上下文工程 | 架构约束 | 反馈循环 | 熵管理 | Loop Engine | 权限管线 | 会话管理  │
 ├─────────────────────────────────────────────────────────────────────┤
 │  3. 执行引擎层 (Engine Layer)                                       │
 │     HybridExecutor (TAOR循环) | ModeRegistry (9大模式) | Scheduler  │
@@ -93,7 +93,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                         四根护栏 (四大引擎)                            │   │
+│  │                         五大组件 (五大引擎)                            │   │
 │  │                                                                       │   │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │   │
 │  │  │ 上下文工程   │  │ 架构约束    │  │ 反馈循环    │  │ 熵管理      │  │   │
@@ -103,6 +103,12 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 │  │  │ · 会话交接  │  │ · Linter   │  │ · 四维评分  │  │ · 技术债回收│  │   │
 │  │  │ · 按需注入  │  │ · CI阻断   │  │ · 自修正    │  │ · 规则进化  │  │   │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘  │   │
+│  │                                                                       │   │
+│  │  ┌──────────────────────────────────────────────────────────────────┐│   │
+│  │  │ Loop Engine (v6.1 新增)                                          ││   │
+│  │  │ Planner → Worker → Verifier → Reflector → Memory                ││   │
+│  │  │ 规划→执行→校验→复盘的自主迭代闭环，包装 HybridExecutor          ││   │
+│  │  └──────────────────────────────────────────────────────────────────┘│   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
@@ -223,7 +229,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 
 ### 3.4 核心护城河
 
-1. **四根 Harness 护栏**：上下文工程、架构约束、反馈循环、熵管理——为 Agent 提供完整控制回路，这是其他框架不具备的。
+1. **Harness 驾驭层五大组件**：上下文工程、架构约束、反馈循环、熵管理、Loop Engine——为 Agent 提供完整控制回路，这是其他框架不具备的。
 2. **9 种高级 Agent 模式的深刻工程化实现**：对每种模式的思考过程、反馈循环、终止条件、错误处理的深度编码。
 3. **Skill 系统 + MCP 生态**：4 种 Skill 格式适配 + MCP 四层架构，实现跨平台能力复用。
 4. **Helm 交互模式**：提供极致透明度和控制力，任何其他框架目前不具备。
@@ -367,6 +373,11 @@ class HybridExecutor:
         if context.harness_enabled and self.harness:
             result = await self.harness.post_execute(result, context)
         return result
+
+        # ★ v6.1 注意：LoopExecutor 包装本方法，在 run() 外层添加迭代闭环。
+        # LoopExecutor.run() 每次迭代调用 HybridExecutor.run()，并附加
+        # Loop Verifier（业务级校验）和 Reflector（失败复盘）。
+        # 详见 docs/loop.md
 
     async def submit_review(self, task_id, verdict, feedback="", edited_draft=""): ...
     async def pause_task(self, task_id): ...
@@ -767,7 +778,14 @@ layers:
 # flowforge/harness/feedback/feedback_loop.py
 
 class FeedbackLoop:
-    """反馈循环引擎：生成与评判分离 + 四维评分 + 分类闸门"""
+    """反馈循环引擎：生成与评判分离 + 四维评分 + 分类闸门
+
+    四维评分维度（与代码实现一致）：
+    - correctness: 事实准确性与逻辑合理性
+    - completeness: 需求覆盖的完整性
+    - coherence: 内部一致性与连贯性
+    - safety: 安全合规性
+    """
 
     MAX_REFLEXION_ITERATIONS = 3
     QUALITY_THRESHOLD = 0.8
@@ -792,10 +810,10 @@ class FeedbackLoop:
         if evaluation_mode == "full":
             evaluation = await self.evaluator.evaluate(output, ctx)
             scores = {
-                "design_quality": evaluation.get("design_score", 0),
-                "originality": evaluation.get("originality_score", 0),
-                "craft": evaluation.get("craft_score", 0),
-                "functionality": evaluation.get("functionality_score", 0),
+                "correctness": evaluation.get("correctness_score", 0),
+                "completeness": evaluation.get("completeness_score", 0),
+                "coherence": evaluation.get("coherence_score", 0),
+                "safety": evaluation.get("safety_score", 0),
             }
             overall = sum(scores.values()) / 4
 
@@ -855,7 +873,29 @@ class EntropyManager:
         return rule_text
 ```
 
-### 7.6 权限管线（Permission Pipeline）
+### 7.6 Loop Engine（自主迭代闭环）
+
+> ★ v6.1 新增——Harness 驾驭层第五大组件
+
+**核心定位**：Loop Engine 是 Harness 驾驭层的第五大组件，提供**规划→执行→校验→复盘**的自主迭代闭环，让 Agent 从"听令行事"进化为"自主干活"。
+
+**核心概念**：LoopExecutor **包装** HybridExecutor，不替代。每次迭代通过 HybridExecutor 执行任务，Loop Engine 负责迭代控制与质量把关。
+
+**五层子模块**：
+
+| 子模块 | 职责 |
+|--------|------|
+| **Planner** | 拆解任务、分配工具、制定步骤 |
+| **Worker** | 调用 HybridExecutor 执行（复用现有引擎） |
+| **Verifier** | 业务级质量校验（与 Harness FeedbackLoop 互补） |
+| **Reflector** | 失败时生成改进建议，驱动 EntropyManager 规则进化 |
+| **Memory** | LoopState 独立持久化，不污染 TaskContext |
+
+**关键原则**：Loop Verifier（业务级校验）与 Harness FeedbackLoop（架构级校验）**互补而非重复**。FeedbackLoop 负责格式、安全、合规等架构级质量闸门，Loop Verifier 负责内容质量、完整性、准确性等业务级校验，两者在不同阶段独立运行。
+
+**完整设计详见**：`docs/loop.md`
+
+### 7.7 权限管线（Permission Pipeline）
 
 **核心问题**：Agent 可能执行危险操作；Prompt 不是安全边界。
 
@@ -905,9 +945,9 @@ class PermissionPipeline:
         return "allow"
 ```
 
-### 7.7 HarnessOrchestrator — 统一入口
+### 7.8 HarnessOrchestrator — 统一入口
 
-Harness 层的入口为 `harness/__init__.py`（非 `control_loop.py`，后者已删除），暴露 `HarnessOrchestrator` 类，封装四根护栏的初始化和 Hook 调用：
+Harness 层的入口为 `harness/__init__.py`（非 `control_loop.py`，后者已删除），暴露 `HarnessOrchestrator` 类，封装五大组件的初始化和 Hook 调用：
 
 ```python
 # flowforge/harness/__init__.py
@@ -1888,7 +1928,7 @@ harness:
     enabled: true
     evaluation_mode: "lightweight"  # full | lightweight | skip
     evaluator_model: "sonnet-4.6"
-    scoring_dimensions: [design_quality, originality, craft, functionality]
+    scoring_dimensions: [correctness, completeness, coherence, safety]
     pass_threshold: 0.8
     max_reflexion_iterations: 3
 

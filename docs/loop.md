@@ -75,31 +75,48 @@ Claude Code 之父 Boris 和 OpenAI 的 Peter 均公开表示："别给 Agent �
     │
     ├─ HarnessOrchestrator.pre_execute()  ← 每次迭代前注入上下文
     │    └─ ContextEngine.inject()
+    │       · 首次迭代：完整上下文注入
+    │       · 后续迭代：仅注入 delta（Reflector 的反思结果 → task.metadata["loop_reflections"]）
     │    └─ PermissionPipeline.check()
     │
-    ├─ HybridExecutor.execute()           ← 复用现有执行引擎
+    ├─ HybridExecutor.run()              ← 复用现有执行引擎（传入 mode_hint）
     │    └─ ModeRegistry.select()
     │    └─ Agent/Tool/Workflow 执行
     │
     ├─ HarnessOrchestrator.post_execute() ← 每次迭代后架构约束校验
     │    └─ ArchConstraintEngine.validate()
     │    └─ FeedbackLoop.evaluate()       ← Harness 级别的四维评分
+    │       （correctness / completeness / coherence / safety）
     │
     ├─ LoopVerifier.verify()              ← Loop 级别的业务质量校验
     │    （与 Harness FeedbackLoop 互补而非重复）
     │
     ├─ [仅失败时] LoopReflector.reflect() ← 生成改进建议
-    │    └─ EntropyManager.track_debt()   ← 将失败转化为技术债
-    │    └─ RuleEvolution.evolve()        ← 规则进化
+    │    └─ EntropyManager.debt_tracker.record()  ← 将失败转化为技术债
+    │    └─ RuleEvolution.propose()       ← 规则进化提案
     │
-    └─ CheckpointManager.save()           ← 每次迭代保存检查点
+    ├─ CheckpointManager.save()           ← 每次迭代保存检查点（3 参数）
+    │
+    └─ EventBus.emit("loop.*")            ← 每次关键节点发出事件
 ```
 
 **关键原则**：
 - **LoopExecutor 包装 HybridExecutor**，不替代。每次迭代通过 HybridExecutor 执行任务。
 - **Harness Hook 每次迭代都触发**。`pre_execute` 注入上下文，`post_execute` 进行架构约束校验。
-- **Loop Verifier 与 Harness FeedbackLoop 互补**。FeedbackLoop 负责架构级校验（格式、安全、合规），Loop Verifier 负责业务级校验（内容质量、完整性、准确性）。
+- **ContextEngine 增量注入**：首次迭代完整注入上下文，后续迭代仅注入 delta（Reflector 的反思结果），通过 `task.metadata["loop_reflections"]` 传递，避免重复注入导致上下文膨胀。
+- **Loop Verifier 与 Harness FeedbackLoop 互补**。FeedbackLoop 负责架构级校验（格式、安全、合规），评分维度为 `correctness / completeness / coherence / safety`；Loop Verifier 负责业务级校验（内容质量、完整性、准确性）。
 - **独立 LoopState**，不修改 TaskContext。LoopState 通过 CheckpointManager 持久化。
+
+### 2.3 Loop vs Workflow 使用决策树
+
+| 场景 | 推荐 | 理由 |
+|------|------|------|
+| 流程确定、步骤固定 | Workflow | 不需要自修正，线性执行即可 |
+| 质量要求高、需要多轮打磨 | Loop | Verifier 校验 + Reflector 复盘 |
+| 任务可能失败、需要重试 | Loop | 自动重试 + 退避策略 |
+| 单次执行即可完成 | Workflow | Loop 的规划-校验-复盘开销不值得 |
+| 输出需要符合特定标准 | Loop | Verifier 的规则校验确保达标 |
+| 探索性任务（不确定步骤） | Loop | Planner 动态规划 + ReAct 执行 |
 
 ---
 
@@ -195,7 +212,7 @@ class LoopResult(BaseModel):
 | 业务级 | Loop Verifier | 内容质量、完整性、准确性、关键数据正确性 |
 
 - **实现方式**：
-  - 规则校验：调用 `FeedbackLoop.evaluator_agent`（四维评分）或 `VerificationHooks`
+  - 规则校验：调用 `FeedbackLoop.evaluator_agent`（四维评分：correctness / completeness / coherence / safety）或 `VerificationHooks`
   - 自动化测试：代码生成任务自动运行测试套件
   - Schema 校验：使用 `input_schema` / `output_schema` 验证 JSON 结构
 - **评分标准**：由 Loop 模板的 `pass_threshold` 定义（默认 0.8）
@@ -205,8 +222,8 @@ class LoopResult(BaseModel):
 - **职责**：当 Verifier 判定失败时，分析失败原因，生成改进建议，反馈给 Planner 调整计划。
 - **实现方式**：复用 `reflexion` 模式中的 Reflector Agent。
 - **与 Harness 集成**：
-  - 反思结果通过 `EntropyManager.track_debt()` 记录为技术债
-  - 通过 `RuleEvolution.evolve()` 将失败转化为规则
+  - 反思结果通过 `EntropyManager.debt_tracker.record()` 记录为技术债
+  - 通过 `RuleEvolution.propose()` 将失败转化为规则提案
   - 实现"永不再犯同样的错"
 
 ### 4.6 Memory（记忆器）
@@ -235,9 +252,8 @@ class LoopResult(BaseModel):
 from flowforge.core.task_context import TaskContext
 from flowforge.executor.hybrid_executor import HybridExecutor
 from flowforge.harness.orchestrator import HarnessOrchestrator
-from flowforge.harness.entropy_manager import EntropyManager
-from flowforge.harness.rule_evolution import RuleEvolution
-from flowforge.memory.checkpoint_manager import CheckpointManager
+from flowforge.harness.entropy_manager import EntropyManager, DebtSeverity, RuleEvolution
+from flowforge.core.checkpoint_manager import CheckpointManager
 
 class LoopExecutor:
     """Loop 执行器 — 包装 HybridExecutor，添加规划-校验-复盘闭环。
@@ -274,6 +290,9 @@ class LoopExecutor:
     async def run(self, task: TaskContext, loop_config: dict) -> LoopResult:
         """执行 Loop：规划→执行→校验→复盘→重试。"""
         max_retries = loop_config.get("max_retries", 3)
+        worker_mode = loop_config.get("worker", {}).get("mode", "workflow")
+        backoff_strategy = loop_config.get("backoff_strategy", "exponential")
+        backoff_base = loop_config.get("backoff_base", 2)
         state = LoopState(
             loop_id=loop_config["name"],
             task_id=task.task_id,
@@ -286,16 +305,36 @@ class LoopExecutor:
         plan = await self.planner.plan(task, loop_config.get("planner", {}))
         state.current_plan = plan
 
+        # Loop 启动事件
+        if task.event_bus:
+            task.event_bus.emit("loop.started", {
+                "loop_id": state.loop_id,
+                "task_id": state.task_id,
+                "template_name": state.template_name,
+                "max_retries": max_retries,
+            })
+
         for attempt in range(max_retries):
             state.attempt = attempt + 1
             state.updated_at = datetime.utcnow()
 
+            # 迭代开始事件
+            if task.event_bus:
+                task.event_bus.emit("loop.iteration.start", {
+                    "loop_id": state.loop_id,
+                    "attempt": state.attempt,
+                    "phase": "executing",
+                })
+
             # 2. Harness pre_execute（注入上下文 + 权限检查）
-            task = await self.harness.pre_execute(task)
+            #    首次迭代：完整上下文注入；后续迭代：仅注入 delta（Reflector 的反思结果）
+            if attempt > 0 and state.reflection_history:
+                task.metadata["loop_reflections"] = state.reflection_history[-1].get("suggestions", [])
+            await self.harness.pre_execute(task)  # modifies ctx in-place, returns None
 
             # 3. 执行（委托给 HybridExecutor）
             state.phase = LoopPhase.EXECUTING
-            result = await self.hybrid_executor.execute(task)
+            result = await self.hybrid_executor.run(task, mode_hint=worker_mode)
 
             # 4. Harness post_execute（架构约束校验 + FeedbackLoop 评分）
             result = await self.harness.post_execute(result, task)
@@ -305,10 +344,29 @@ class LoopExecutor:
             verdict = await self.verifier.verify(result, task, loop_config.get("verifier", {}))
             state.verification_history.append(verdict.model_dump())
 
+            # 校验结果事件
+            if task.event_bus:
+                task.event_bus.emit("loop.verify.passed" if verdict.passed else "loop.verify.failed", {
+                    "loop_id": state.loop_id,
+                    "attempt": state.attempt,
+                    "score": verdict.score,
+                    **({} if verdict.passed else {"errors": verdict.errors}),
+                })
+
             if verdict.passed:
                 # 成功：存储经验 + 返回
                 state.phase = LoopPhase.COMPLETED
-                await self.checkpoint_mgr.save(state.loop_id, state.model_dump())
+                self.checkpoint_mgr.save(
+                    task_id=state.task_id,
+                    step_name=f"loop:{state.loop_id}:attempt_{state.attempt}",
+                    state=state.model_dump(),
+                )
+                if task.event_bus:
+                    task.event_bus.emit("loop.completed", {
+                        "loop_id": state.loop_id,
+                        "total_attempts": attempt + 1,
+                        "final_score": verdict.score,
+                    })
                 return LoopResult(success=True, output=result, total_attempts=attempt + 1, state=state)
 
             # 6. 失败：复盘
@@ -317,34 +375,118 @@ class LoopExecutor:
             state.reflection_history.append(reflection.model_dump())
             state.past_errors.extend(verdict.errors)
 
+            # 复盘完成事件
+            if task.event_bus:
+                task.event_bus.emit("loop.reflect.complete", {
+                    "loop_id": state.loop_id,
+                    "attempt": state.attempt,
+                    "suggestions": reflection.suggestions,
+                })
+
             # 7. Harness 将失败转化为规则
-            await self.entropy_mgr.track_debt(
-                source=f"loop:{state.loop_id}",
-                description=f"Loop attempt {attempt + 1} failed: {verdict.errors}",
-                severity="medium",
-                context=task,
-            )
-            await self.rule_evolution.evolve(
-                trigger=f"loop_failure:{state.loop_id}",
-                failures=verdict.errors,
-                reflection=reflection,
-                context=task,
+            if self.entropy_mgr.debt_tracker:
+                self.entropy_mgr.debt_tracker.record(
+                    description=f"Loop attempt {attempt + 1} failed: {verdict.errors}",
+                    severity=DebtSeverity.MEDIUM,
+                    source=f"loop:{state.loop_id}",
+                    metadata={"task_id": task.task_id, "attempt": attempt + 1, "errors": verdict.errors},
+                )
+            self.rule_evolution.propose(
+                name=f"Loop failure: {state.loop_id} attempt {attempt + 1}",
+                description=f"Loop iteration failed with errors: {verdict.errors}. Reflection: {reflection}",
+                metadata={"loop_id": state.loop_id, "attempt": attempt + 1, "errors": verdict.errors},
             )
 
             # 8. 保存检查点
-            await self.checkpoint_mgr.save(state.loop_id, state.model_dump())
+            self.checkpoint_mgr.save(
+                task_id=state.task_id,
+                step_name=f"loop:{state.loop_id}:attempt_{state.attempt}",
+                state=state.model_dump(),
+            )
 
             # 9. 更新计划（注入教训）
             plan = await self.planner.replan(plan, reflection, state.past_errors)
             state.current_plan = plan
 
+            # 10. 退避等待（失败迭代后）
+            if attempt < max_retries - 1:
+                wait_secs = self._calc_backoff(backoff_strategy, backoff_base, attempt)
+                await asyncio.sleep(wait_secs)
+
         # 耗尽重试次数
         state.phase = LoopPhase.FAILED
-        await self.checkpoint_mgr.save(state.loop_id, state.model_dump())
+        self.checkpoint_mgr.save(
+            task_id=state.task_id,
+            step_name=f"loop:{state.loop_id}:attempt_{state.attempt}",
+            state=state.model_dump(),
+        )
+        if task.event_bus:
+            task.event_bus.emit("loop.failed", {
+                "loop_id": state.loop_id,
+                "total_attempts": max_retries,
+                "last_errors": state.past_errors[-3:] if state.past_errors else [],
+            })
         return LoopResult(success=False, error=f"Max retries ({max_retries}) exceeded", total_attempts=max_retries, state=state)
+
+    @staticmethod
+    def _calc_backoff(strategy: str, base: int, attempt: int) -> float:
+        """根据退避策略计算等待秒数。"""
+        if strategy == "fixed":
+            return float(base)
+        elif strategy == "linear":
+            return float(base * (attempt + 1))
+        elif strategy == "exponential":
+            return float(base * (2 ** attempt))
+        return float(base)
 ```
 
-### 5.2 Loop 与 9 大模式的关系
+### 5.2 抽象接口定义
+
+Loop 五层模块通过以下抽象接口解耦，具体实现由 DI 容器注入。
+
+```python
+from abc import ABC, abstractmethod
+from pydantic import BaseModel, Field
+
+class Verdict(BaseModel):
+    """Verifier 校验结果。"""
+    passed: bool
+    score: float = 0.0
+    errors: list[str] = Field(default_factory=list)
+
+class Reflection(BaseModel):
+    """Reflector 复盘结果。"""
+    suggestions: list[str] = Field(default_factory=list)
+    root_cause: str = ""
+    plan_adjustments: list[dict] = Field(default_factory=list)
+
+class LoopPlanner(ABC):
+    """Loop 规划器接口。"""
+
+    @abstractmethod
+    async def plan(self, task: TaskContext, config: dict) -> list[dict]:
+        """根据任务生成执行计划。"""
+
+    @abstractmethod
+    async def replan(self, plan: list[dict], reflection: Reflection, past_errors: list[str]) -> list[dict]:
+        """根据复盘结果和过往错误调整计划。"""
+
+class LoopVerifier(ABC):
+    """Loop 校验器接口。"""
+
+    @abstractmethod
+    async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
+        """校验执行结果质量，返回 Verdict。"""
+
+class LoopReflector(ABC):
+    """Loop 复盘器接口。"""
+
+    @abstractmethod
+    async def reflect(self, errors: list[str], task: TaskContext, state: LoopState) -> Reflection:
+        """分析失败原因，生成改进建议。"""
+```
+
+### 5.3 Loop 与 9 大模式的关系
 
 Loop 不是新模式，而是**模式的"上层管理者"**。它决定"当前这个步骤应该用什么模式"，并根据校验结果动态切换。
 
@@ -356,6 +498,23 @@ Loop 不是新模式，而是**模式的"上层管理者"**。它决定"当前�
 | `plan_execute` | Planner 生成计划 |
 | `agent_judge` | Verifier 独立评判 |
 | `rewoo` | Worker 批量工具调用 |
+
+### 5.4 Loop 与 Persona Lock 的交互
+
+Loop 迭代期间与 Persona 锁的交互规则：
+
+- **Loop 整体持有 Persona 锁**：从 Loop 开始到 Loop 结束（成功或失败），Persona 锁一直被持有，**不在迭代之间释放**。
+- **防止干扰**：这确保其他任务不会在 Loop 迭代间隙抢占 Persona，避免迭代间的上下文被污染。
+- **手动停止释放锁**：如果用户通过 `POST /api/v1/loops/{loop_id}/stop` 手动停止 Loop，Persona 锁立即释放。
+- **异常退出释放锁**：如果 Loop 因未捕获异常退出，Persona 锁由 Harness 的 `post_execute` 兜底释放。
+
+```python
+# LoopExecutor.run() 中的 Persona Lock 伪代码
+async with persona_lock.acquire(task.persona_id):  # 整个 Loop 期间持有
+    for attempt in range(max_retries):
+        # ... 迭代逻辑 ...
+    # Loop 结束后自动释放
+```
 
 ---
 
@@ -623,6 +782,32 @@ socket.on("event", (event) => {
 
 - 内层 Loop 耗尽重试次数 → 返回 `LoopResult(success=False)` → 外层 Loop 触发 Reflector
 - 内层 Loop 成功 → 返回结果 → 外层 Loop 继续 Verifier
+
+**嵌套深度限制**：
+
+- 默认最大嵌套深度 `max_nesting_depth: 3`，防止无限嵌套导致资源耗尽。
+- 运行时检查：LoopExecutor 在创建子 Loop 前校验当前嵌套深度，超出限制则拒绝执行并返回错误。
+
+```yaml
+# 全局配置（config/system.yaml）
+loop:
+  max_nesting_depth: 3  # 默认值，可按需调整
+```
+
+```python
+# LoopExecutor.run() 中的嵌套深度校验
+current_depth = task.metadata.get("loop_nesting_depth", 0)
+max_depth = loop_config.get("max_nesting_depth", 3)
+if current_depth >= max_depth:
+    return LoopResult(
+        success=False,
+        error=f"Loop nesting depth ({current_depth}) exceeds max_nesting_depth ({max_depth})",
+        total_attempts=0,
+        state=state,
+    )
+# 子 Loop 执行时传递递增的深度
+task.metadata["loop_nesting_depth"] = current_depth + 1
+```
 
 ```yaml
 # 外层 Loop

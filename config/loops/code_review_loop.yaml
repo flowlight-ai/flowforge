@@ -1,0 +1,38 @@
+name: code-review-loop
+description: "代码审查闭环：自动审查→校验→修复→复验"
+version: 1.0
+max_retries: 3
+timeout_per_iteration: 120
+total_timeout: 600
+backoff_strategy: "fixed"
+backoff_base: 1
+
+planner:
+  mode: plan_execute
+  agent: code-planner
+
+worker:
+  mode: react
+  agent: code-writer
+
+verifier:
+  mode: test_suite
+  pass_threshold: 0.9
+  rules:
+    - "所有测试通过"
+    - "无 lint 错误"
+    - "代码覆盖率 >= 80%"
+
+reflector:
+  mode: reflexion
+  agent: code-reflector
+  max_reflections: 2
+
+memory:
+  store_failures: true
+  failure_key: "code-review-failures"
+  memory_mapping:
+    context: working
+    failures: long_term
+    rules: semantic
+    trajectory: episodic

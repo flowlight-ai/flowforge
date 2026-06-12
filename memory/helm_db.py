@@ -97,6 +97,35 @@ class HelmDatabase:
             CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON attachments(task_id);
             CREATE INDEX IF NOT EXISTS idx_attachments_status ON attachments(status);
             CREATE INDEX IF NOT EXISTS idx_attachments_uploaded_at ON attachments(uploaded_at);
+
+            CREATE TABLE IF NOT EXISTS loops (
+                id TEXT PRIMARY KEY,
+                task_id TEXT NOT NULL,
+                template_name TEXT NOT NULL,
+                phase TEXT NOT NULL DEFAULT 'planning',
+                attempt INTEGER NOT NULL DEFAULT 0,
+                max_retries INTEGER NOT NULL DEFAULT 3,
+                state_json TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_loops_task_id ON loops(task_id);
+            CREATE INDEX IF NOT EXISTS idx_loops_phase ON loops(phase);
+
+            CREATE TABLE IF NOT EXISTS loop_iterations (
+                id TEXT PRIMARY KEY,
+                loop_id TEXT NOT NULL,
+                attempt INTEGER NOT NULL,
+                plan_json TEXT,
+                result_json TEXT,
+                verdict_json TEXT,
+                reflection_json TEXT,
+                started_at TEXT NOT NULL,
+                completed_at TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_iterations_loop_id ON loop_iterations(loop_id);
         """)
         self.conn.commit()
 
@@ -113,6 +142,38 @@ class HelmDatabase:
                 self.conn.execute(f"ALTER TABLE plans ADD COLUMN {col} {coldef}")
             except sqlite3.OperationalError:
                 pass  # Column already exists
+        self.conn.commit()
+
+        # Loop Engine tables
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS loops (
+                id TEXT PRIMARY KEY,
+                task_id TEXT NOT NULL,
+                template_name TEXT NOT NULL,
+                phase TEXT NOT NULL DEFAULT 'planning',
+                attempt INTEGER NOT NULL DEFAULT 0,
+                max_retries INTEGER NOT NULL DEFAULT 3,
+                state_json TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS loop_iterations (
+                id TEXT PRIMARY KEY,
+                loop_id TEXT NOT NULL REFERENCES loops(id),
+                attempt INTEGER NOT NULL,
+                plan_json TEXT,
+                result_json TEXT,
+                verdict_json TEXT,
+                reflection_json TEXT,
+                started_at TEXT NOT NULL,
+                completed_at TEXT
+            )
+        """)
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_loops_task_id ON loops(task_id)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_loops_phase ON loops(phase)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_iterations_loop_id ON loop_iterations(loop_id)")
         self.conn.commit()
 
     # ──────────────────────────── Plan CRUD ────────────────────────────
@@ -491,6 +552,119 @@ class HelmDatabase:
         )
         self.conn.commit()
 
+    # ──────────────────────────── Loop Engine CRUD ────────────────────────────
+
+    def create_loop(self, task_id: str, template_name: str, max_retries: int = 3) -> str:
+        """创建 Loop 实例，返回 loop_id。"""
+        import uuid
+        loop_id = f"loop-{uuid.uuid4().hex[:12]}"
+        now = datetime.now(timezone.utc).isoformat()
+        self.conn.execute(
+            """INSERT INTO loops (id, task_id, template_name, max_retries, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (loop_id, task_id, template_name, max_retries, now, now),
+        )
+        self.conn.commit()
+        logger.info(f"Loop created: id={loop_id}, task_id={task_id}, template={template_name}")
+        return loop_id
+
+    def get_loop(self, loop_id: str) -> Optional[dict[str, Any]]:
+        """按 id 获取 Loop 实例，返回字典或 None。"""
+        row = self.conn.execute("SELECT * FROM loops WHERE id = ?", (loop_id,)).fetchone()
+        if row is None:
+            return None
+        return {
+            "id": row[0],
+            "task_id": row[1],
+            "template_name": row[2],
+            "phase": row[3],
+            "attempt": row[4],
+            "max_retries": row[5],
+            "state_json": json.loads(row[6]) if row[6] else None,
+            "created_at": row[7],
+            "updated_at": row[8],
+        }
+
+    def get_loops_by_task(self, task_id: str) -> list[dict[str, Any]]:
+        """按 task_id 获取所有 Loop 实例。"""
+        rows = self.conn.execute(
+            "SELECT * FROM loops WHERE task_id = ? ORDER BY created_at DESC",
+            (task_id,),
+        ).fetchall()
+        return [
+            {
+                "id": row[0],
+                "task_id": row[1],
+                "template_name": row[2],
+                "phase": row[3],
+                "attempt": row[4],
+                "max_retries": row[5],
+                "state_json": json.loads(row[6]) if row[6] else None,
+                "created_at": row[7],
+                "updated_at": row[8],
+            }
+            for row in rows
+        ]
+
+    def update_loop_state(self, loop_id: str, state_json: str, phase: str, attempt: int) -> bool:
+        """更新 Loop 状态，返回是否成功。"""
+        now = datetime.now(timezone.utc).isoformat()
+        cursor = self.conn.execute(
+            "UPDATE loops SET state_json = ?, phase = ?, attempt = ?, updated_at = ? WHERE id = ?",
+            (state_json, phase, attempt, now, loop_id),
+        )
+        self.conn.commit()
+        success = cursor.rowcount > 0
+        if success:
+            logger.info(f"Loop state updated: id={loop_id}, phase={phase}, attempt={attempt}")
+        else:
+            logger.warning(f"Loop state update failed: id={loop_id}")
+        return success
+
+    def create_loop_iteration(
+        self,
+        loop_id: str,
+        attempt: int,
+        plan_json: str | None = None,
+        result_json: str | None = None,
+        verdict_json: str | None = None,
+        reflection_json: str | None = None,
+    ) -> str:
+        """创建 Loop 迭代记录，返回迭代 id。"""
+        import uuid
+        iter_id = f"iter-{uuid.uuid4().hex[:12]}"
+        now = datetime.now(timezone.utc).isoformat()
+        self.conn.execute(
+            """INSERT INTO loop_iterations
+               (id, loop_id, attempt, plan_json, result_json, verdict_json, reflection_json, started_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (iter_id, loop_id, attempt, plan_json, result_json, verdict_json, reflection_json, now),
+        )
+        self.conn.commit()
+        logger.info(f"Loop iteration created: id={iter_id}, loop_id={loop_id}, attempt={attempt}")
+        return iter_id
+
+    def get_loop_iterations(self, loop_id: str) -> list[dict[str, Any]]:
+        """获取 Loop 的所有迭代记录。"""
+        rows = self.conn.execute(
+            "SELECT * FROM loop_iterations WHERE loop_id = ? ORDER BY attempt ASC",
+            (loop_id,),
+        ).fetchall()
+        return [
+            {
+                "id": row[0],
+                "loop_id": row[1],
+                "attempt": row[2],
+                "plan_json": json.loads(row[3]) if row[3] else None,
+                "result_json": json.loads(row[4]) if row[4] else None,
+                "verdict_json": json.loads(row[5]) if row[5] else None,
+                "reflection_json": json.loads(row[6]) if row[6] else None,
+                "started_at": row[7],
+                "completed_at": row[8],
+            }
+            for row in rows
+        ]
+
     # ──────────────────────────── 行转字典 ────────────────────────────
 
     @staticmethod
@@ -539,3 +713,16 @@ class HelmDatabase:
             "last_accessed_at": row[10],
             "error_message": row[11],
         }
+
+
+# ── 模块级单例 ──
+
+_helm_db: HelmDatabase | None = None
+
+
+def get_helm_db() -> HelmDatabase:
+    """获取 HelmDatabase 单例实例。"""
+    global _helm_db
+    if _helm_db is None:
+        _helm_db = HelmDatabase()
+    return _helm_db

@@ -1,0 +1,39 @@
+name: deep-article-loop
+description: "深度文章创作闭环：自动规划→写作→审计→复盘"
+version: 1.0
+max_retries: 3
+timeout_per_iteration: 300
+total_timeout: 1800
+backoff_strategy: "exponential"
+backoff_base: 2
+
+planner:
+  mode: plan_execute
+  agent: meta-planner
+
+worker:
+  mode: workflow
+  workflow: defense_article
+
+verifier:
+  mode: agent_judge
+  agent: content-audit
+  pass_threshold: 0.85
+  rules:
+    - "文章字数 >= 2000"
+    - "包含至少3个实际案例"
+    - "SEO关键词密度 1%-3%"
+
+reflector:
+  mode: reflexion
+  agent: reflexion-reflector
+  max_reflections: 2
+
+memory:
+  store_failures: true
+  failure_key: "article-failures"
+  memory_mapping:
+    context: working
+    failures: long_term
+    rules: semantic
+    trajectory: episodic

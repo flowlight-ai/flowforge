@@ -847,6 +847,12 @@ try:
 except ImportError:
     pass
 
+try:
+    from flowforge.app.api.endpoints import loops as loops_endpoints
+    app.include_router(loops_endpoints.router)
+except ImportError:
+    pass
+
 
 @app.get("/health")
 def health():
