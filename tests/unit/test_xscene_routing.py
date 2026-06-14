@@ -51,7 +51,7 @@ def _mock_httpx_client(response_mock):
 async def test_xscene_openroute_combine_with_tools():
     """When tools are provided and provider is openroute, X-Scene should be openroute_combine."""
     client = LLMClient(models_config={
-        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
         "assignments": {"default": {"primary": "openroute/Doubao-Seed2.0", "fallbacks": []}},
     })
 
@@ -100,7 +100,7 @@ async def test_xscene_openroute_combine_with_tools():
 async def test_xscene_caller_combine_without_tools():
     """When no tools are provided and provider is openroute, X-Scene should be caller_combine."""
     client = LLMClient(models_config={
-        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
         "assignments": {"default": {"primary": "openroute/Doubao-Seed2.0", "fallbacks": []}},
     })
 
@@ -127,7 +127,7 @@ async def test_xscene_caller_combine_without_tools():
 async def test_xscene_auto_for_auto_model():
     """When model=auto and no tools, X-Scene should be auto."""
     client = LLMClient(models_config={
-        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
         "assignments": {"default": {"primary": "openroute/auto", "fallbacks": []}},
     })
 
@@ -154,7 +154,7 @@ async def test_xscene_auto_for_auto_model():
 async def test_xscene_openroute_combine_for_auto_with_tools():
     """When model=auto AND tools are provided, X-Scene should be openroute_combine (tools take priority)."""
     client = LLMClient(models_config={
-        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
         "assignments": {"default": {"primary": "openroute/auto", "fallbacks": []}},
     })
 
@@ -230,7 +230,7 @@ async def test_xscene_not_set_for_non_openroute():
 async def test_openroute_auto_default_assignment():
     """Default assignment should use openroute/auto as primary model."""
     client = LLMClient(models_config={
-        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
         "assignments": {
             "default": {
                 "primary": "openroute/auto",
@@ -255,7 +255,7 @@ async def test_openroute_auto_with_tools_integration():
     4. Response with tool_calls is correctly parsed
     """
     client = LLMClient(models_config={
-        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
         "assignments": {"default": {"primary": "openroute/auto", "fallbacks": []}},
     })
 
@@ -317,7 +317,7 @@ async def test_openroute_auto_with_tools_integration():
 async def test_openroute_auto_without_tools_caller_combine():
     """When auto model is used without tools, X-Scene should be auto (not caller_combine)."""
     client = LLMClient(models_config={
-        "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+        "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
         "assignments": {"default": {"primary": "openroute/auto", "fallbacks": []}},
     })
 
@@ -379,7 +379,7 @@ async def test_xscene_for_specific_openroute_models():
 
     for model, has_tools, expected_scene in test_cases:
         client = LLMClient(models_config={
-            "providers": {"openroute": {"base_url": "http://127.0.0.1:13000/v1"}},
+            "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
             "assignments": {"default": {"primary": model, "fallbacks": []}},
         })
 

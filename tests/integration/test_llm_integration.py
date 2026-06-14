@@ -75,12 +75,12 @@ HAS_OPENROUTER = _is_valid_openrouter_key(OPENROUTER_API_KEY)
 HAS_OPENROUTE = False
 try:
     import httpx
-    _openroute_resp = httpx.get("http://127.0.0.1:13000/health", timeout=3)
+    _openroute_resp = httpx.get("http://127.0.0.1:13001/health", timeout=3)
     if _openroute_resp.status_code == 200:
         # Health endpoint is up — also verify a lightweight chat call works
         try:
             _test_resp = httpx.post(
-                "http://127.0.0.1:13000/v1/chat/completions",
+                "http://127.0.0.1:13001/v1/chat/completions",
                 json={"model": "auto", "messages": [{"role": "user", "content": "ping"}], "max_tokens": 1},
                 headers={"Authorization": "Bearer none", "Content-Type": "application/json"},
                 timeout=15,

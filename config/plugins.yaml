@@ -78,9 +78,9 @@ plugins:
     safety_level: readonly
     config:
       openroute_dir: "${OPENROUTE_DIR:}"
-      port: "${OPENROUTE_PORT:13000}"
+      port: "${OPENROUTE_PORT:13001}"
       host: "127.0.0.1"
-    health_endpoint: "http://127.0.0.1:${OPENROUTE_PORT:13000}/health"
+    health_endpoint: "http://127.0.0.1:${OPENROUTE_PORT:13001}/health"
     health_interval: 120
 
   # === Content Tools ===

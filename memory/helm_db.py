@@ -615,6 +615,53 @@ class HelmDatabase:
         logger.info(f"Loop iteration created: id={iter_id}, loop_id={loop_id}, attempt={attempt}")
         return iter_id
 
+    def update_loop_iteration(
+        self,
+        iteration_id: str,
+        *,
+        plan_json: str | None = None,
+        result_json: str | None = None,
+        verdict_json: str | None = None,
+        reflection_json: str | None = None,
+    ) -> bool:
+        """更新 Loop 迭代记录的字段，返回是否成功。"""
+        sets: list[str] = []
+        params: list[Any] = []
+        if plan_json is not None:
+            sets.append("plan_json = ?")
+            params.append(plan_json)
+        if result_json is not None:
+            sets.append("result_json = ?")
+            params.append(result_json)
+        if verdict_json is not None:
+            sets.append("verdict_json = ?")
+            params.append(verdict_json)
+        if reflection_json is not None:
+            sets.append("reflection_json = ?")
+            params.append(reflection_json)
+        if not sets:
+            return False
+        params.append(iteration_id)
+        cursor = self.conn.execute(
+            f"UPDATE loop_iterations SET {', '.join(sets)} WHERE id = ?",
+            params,
+        )
+        self.conn.commit()
+        return cursor.rowcount > 0
+
+    def complete_loop_iteration(self, iteration_id: str) -> bool:
+        """标记 Loop 迭代记录为已完成（设置 completed_at）。"""
+        now = datetime.now(timezone.utc).isoformat()
+        cursor = self.conn.execute(
+            "UPDATE loop_iterations SET completed_at = ? WHERE id = ?",
+            (now, iteration_id),
+        )
+        self.conn.commit()
+        success = cursor.rowcount > 0
+        if success:
+            logger.debug(f"Loop iteration completed: id={iteration_id}")
+        return success
+
     def get_loop_iterations(self, loop_id: str) -> list[dict[str, Any]]:
         """获取 Loop 的所有迭代记录。"""
         rows = self.conn.execute(

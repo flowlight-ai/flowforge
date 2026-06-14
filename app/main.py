@@ -35,6 +35,7 @@ from flowforge.core.plugin_protocol import FlowForgePlugin, PluginState
 from flowforge.core.plugin_manager import PluginManager
 from flowforge.core.plugin_lifecycle import PluginLifecycleManager
 from flowforge.core.tracing import get_logger, load_logging_config
+from flowforge.core.persona_lock import PersonaLock
 
 load_logging_config()
 logger = get_logger("main")
@@ -773,6 +774,42 @@ _executor_instance = HybridExecutor(
     memory_manager=memory_manager
 )
 set_executor_instance(_executor_instance)
+
+# PersonaLock 单例 — Loop 执行期间防止同一 Persona 被其他任务抢占
+# 必须在 LoopExecutor 注入之前定义，因为 LoopExecutor 依赖 PersonaLock
+_persona_lock = PersonaLock()
+
+
+def get_persona_lock() -> PersonaLock:
+    """获取全局 PersonaLock 实例。"""
+    return _persona_lock
+
+# 注入 LoopExecutor — 激活 HybridExecutor.run() 中的 Loop 编排分支和回退机制
+# 设计文档 loop.md §5.3: Loop 是 mode 的"上层管理者"，不是 mode 本身
+try:
+    from flowforge.loop.executor import LoopExecutor
+    from flowforge.loop.planner import LLMPlanner
+    from flowforge.loop.verifier import RuleBasedVerifier
+    from flowforge.loop.reflector import ReflexionReflector
+    from flowforge.harness.orchestrator import HarnessOrchestrator
+    from flowforge.harness.entropy_manager import EntropyManager, RuleEvolution
+
+    _loop_executor = LoopExecutor(
+        hybrid_executor=_executor_instance,
+        harness=_executor_instance.harness or HarnessOrchestrator(),
+        planner=LLMPlanner(),
+        verifier=RuleBasedVerifier(),
+        reflector=ReflexionReflector(),
+        checkpoint_mgr=_executor_instance.checkpoint_manager,
+        entropy_mgr=EntropyManager(),
+        rule_evolution=RuleEvolution(),
+        persona_lock=_persona_lock,
+        memory_manager=memory_manager,
+    )
+    _executor_instance.set_loop_executor(_loop_executor)
+    logger.info("LoopExecutor injected into HybridExecutor")
+except Exception as _loop_err:
+    logger.warning(f"Failed to inject LoopExecutor: {_loop_err}")
 
 try:
     from flowforge.app.api.endpoints.websocket import manager as ws_manager

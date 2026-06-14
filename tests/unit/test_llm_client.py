@@ -116,7 +116,7 @@ def test_llm_client_update_health_failure():
 def test_llm_client_default_base_url():
     from flowforge.tools.llm_client import PROVIDER_BASE_URLS
     assert PROVIDER_BASE_URLS["openrouter"] == "https://openrouter.ai/api/v1"
-    assert PROVIDER_BASE_URLS["openroute"] == "http://127.0.0.1:13000/v1"
+    assert PROVIDER_BASE_URLS["openroute"] == "http://127.0.0.1:13001/v1"
     assert PROVIDER_BASE_URLS.get("unknown", "") == ""
 
 

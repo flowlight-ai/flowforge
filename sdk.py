@@ -176,6 +176,7 @@ class FlowForgeSDK:
         self._handoff_manager: Optional[HandoffManager] = None
         self._mcp_integration: Optional[Any] = None
         self._marketplace: Optional[Any] = None
+        self._loop_executor: Optional[Any] = None
 
     # ── Lazy property accessors ─────────────────────────────────────
 
@@ -319,6 +320,104 @@ class FlowForgeSDK:
             from flowforge.core.marketplace import Marketplace
             self._marketplace = Marketplace()
         return self._marketplace
+
+    @property
+    def loop_executor(self) -> Any:
+        """Access the LoopExecutor for iterative execution with verification.
+
+        Loop is NOT a mode — it is the "upper-level manager" of modes
+        (design doc loop.md §5.3). The LoopExecutor wraps HybridExecutor
+        and decides which mode to use for each iteration.
+
+        Lazily creates a :class:`LoopExecutor` instance with default
+        dependencies.  For full customization, create a LoopExecutor
+        manually and set it via ``sdk.loop_executor = executor`` or
+        pass it to the HybridExecutor.
+
+        The recommended way to trigger Loop is via loop_config in
+        TaskContext.metadata, which HybridExecutor detects and delegates
+        to LoopExecutor directly (bypassing ModeRegistry).
+
+        Example::
+
+            # Recommended: use loop_config to trigger Loop
+            ctx = TaskContext(
+                task_id="loop-1",
+                input_data={"task": "迭代优化文章"},
+                metadata={"loop_config": {"name": "article_refine", "max_retries": 5}},
+            )
+            result = await hybrid.run(ctx)
+
+            # Backward compat: mode_hint="loop" also works
+            result = await hybrid.run(ctx, mode_hint="loop")
+        """
+        if self._loop_executor is None:
+            from flowforge.loop.executor import LoopExecutor
+            from flowforge.loop.planner import LLMPlanner
+            from flowforge.loop.verifier import RuleBasedVerifier
+            from flowforge.loop.reflector import ReflexionReflector
+            from flowforge.harness.orchestrator import HarnessOrchestrator
+            from flowforge.harness.entropy_manager import EntropyManager, RuleEvolution
+            from flowforge.core.checkpoint_manager import CheckpointManager
+
+            # Create default dependencies for LoopExecutor
+            harness = HarnessOrchestrator()
+            planner = LLMPlanner()
+            verifier = RuleBasedVerifier()
+            reflector = ReflexionReflector()
+            checkpoint_mgr = CheckpointManager("data/loop_checkpoints.db")
+            entropy_mgr = EntropyManager()
+            rule_evolution = RuleEvolution()
+
+            # Try to get HybridExecutor from FlowForge main module
+            hybrid_executor = None
+            try:
+                from flowforge.app import main as _main
+                hybrid_executor = getattr(_main, "_executor_instance", None)
+            except ImportError:
+                pass
+
+            # Try to get PersonaLock from FlowForge main module
+            persona_lock = None
+            try:
+                from flowforge.app import main as _main
+                persona_lock = _main.get_persona_lock()
+            except (ImportError, AttributeError):
+                pass
+
+            if hybrid_executor is not None:
+                self._loop_executor = LoopExecutor(
+                    hybrid_executor=hybrid_executor,
+                    harness=harness,
+                    planner=planner,
+                    verifier=verifier,
+                    reflector=reflector,
+                    checkpoint_mgr=checkpoint_mgr,
+                    entropy_mgr=entropy_mgr,
+                    rule_evolution=rule_evolution,
+                    persona_lock=persona_lock,
+                )
+                # Also inject into HybridExecutor
+                if hasattr(hybrid_executor, 'set_loop_executor'):
+                    hybrid_executor.set_loop_executor(self._loop_executor)
+                logger.info("SDK initialized LoopExecutor with HybridExecutor")
+            else:
+                # Store dependencies for later initialization
+                self._loop_harness = harness
+                self._loop_planner = planner
+                self._loop_verifier = verifier
+                self._loop_reflector = reflector
+                self._loop_checkpoint_mgr = checkpoint_mgr
+                self._loop_entropy_mgr = entropy_mgr
+                self._loop_rule_evolution = rule_evolution
+                self._loop_executor_pending = True
+        return self._loop_executor
+
+    @loop_executor.setter
+    def loop_executor(self, value: Any) -> None:
+        """Set the LoopExecutor instance directly."""
+        self._loop_executor = value
+        self._loop_executor_pending = False
 
     @property
     def skills(self) -> Any:
@@ -575,6 +674,52 @@ class FlowForgeSDK:
             return result
 
         return decorator
+
+    # ── Loop template creation ───────────────────────────────────────
+
+    def create_loop_template(self, name: str, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Create a Loop configuration template.
+
+        Generates a loop configuration dict that can be used with
+        ``TaskContext(metadata={"loop_config": ...})`` or registered
+        with the LoopRegistry.
+
+        Args:
+            name: Unique template name for the loop.
+            config: Optional configuration overrides.  Supported keys:
+                ``max_retries`` (int, default 3), ``worker`` (dict with
+                ``mode`` key, default ``{"mode": "workflow"}``),
+                ``backoff_strategy`` (str, default ``"exponential"``),
+                ``backoff_base`` (int, default 2),
+                ``planner`` (dict, planner config),
+                ``verifier`` (dict, verifier config).
+
+        Returns:
+            A loop configuration dictionary ready for use.
+
+        Example::
+
+            loop_config = sdk.create_loop_template(
+                name="article_refine",
+                config={"max_retries": 5, "worker": {"mode": "reflexion"}},
+            )
+            ctx = TaskContext(
+                task_id="refine-1",
+                input_data={"task": "迭代优化文章"},
+                metadata={"loop_config": loop_config},
+            )
+        """
+        template: Dict[str, Any] = {
+            "name": name,
+            "max_retries": 3,
+            "worker": {"mode": "workflow"},
+            "backoff_strategy": "exponential",
+            "backoff_base": 2,
+        }
+        if config:
+            template.update(config)
+        logger.info(f"SDK created loop template: {name}")
+        return template
 
     # ── Plugin base class ───────────────────────────────────────────
 
@@ -1008,6 +1153,8 @@ class FlowForgeSDK:
         - ``{project}.tools`` package for BaseTool subclasses
         - ``{project}.app.api.router`` module for a FastAPI Router
           (tries common variable names: ``router``, ``api_router``)
+        - Registers LoopModeExecutor as a convenience adapter (backward compat)
+        - Initializes LoopExecutor and injects into HybridExecutor
 
         Returns self for chaining.
 
@@ -1052,4 +1199,104 @@ class FlowForgeSDK:
                 f"bootstrap: no routes module at '{route_module}'"
             )
 
+        # Register LoopModeExecutor as a convenience adapter for backward compat
+        # (Loop is NOT a mode — it's the upper-level manager of modes)
+        self._register_loop_mode()
+
+        # Initialize LoopExecutor and inject into HybridExecutor
+        # (This is the primary way Loop is activated — via loop_config)
+        self._init_loop_executor()
+
         return self
+
+    # ── Loop initialization helpers ──────────────────────────────────
+
+    def _register_loop_mode(self) -> None:
+        """Register LoopModeExecutor as a convenience adapter for backward compat.
+
+        Loop is NOT a mode — it is the "upper-level manager" of modes
+        (design doc loop.md §5.3). LoopModeExecutor is registered into
+        ModeRegistry only as a backward-compatible adapter so that
+        mode_hint="loop" still works when LoopExecutor is not available
+        via HybridExecutor's loop orchestration path.
+
+        The primary way to trigger Loop is via loop_config in
+        TaskContext.metadata, which is handled by HybridExecutor directly
+        (delegating to LoopExecutor), bypassing ModeRegistry entirely.
+        """
+        try:
+            from flowforge.modes.loop_mode import LoopModeExecutor
+            from flowforge.app import main as _main
+
+            mode_registry = getattr(_main, "mode_registry", None)
+            if mode_registry is not None:
+                # Register as convenience adapter for mode_hint="loop" backward compat
+                mode_registry.register(LoopModeExecutor())
+                logger.info("SDK registered LoopModeExecutor as convenience adapter (Loop is not a mode)")
+        except ImportError:
+            logger.debug("SDK: LoopModeExecutor registration skipped — framework main not available")
+        except Exception as e:
+            logger.warning(f"SDK: LoopModeExecutor registration failed: {e}")
+
+    def _init_loop_executor(self) -> None:
+        """Initialize LoopExecutor and inject it into the HybridExecutor.
+
+        Loop is NOT a mode — it is the "upper-level manager" of modes
+        (design doc loop.md §5.3). The LoopExecutor wraps HybridExecutor
+        and decides which mode to use for each iteration, dynamically
+        switching based on verification results.
+
+        Creates a LoopExecutor with default dependencies and injects it
+        into the framework's HybridExecutor (if available).  This enables
+        loop orchestration through the standard task pipeline when
+        loop_config is present in TaskContext.metadata.
+        """
+        try:
+            from flowforge.loop.executor import LoopExecutor
+            from flowforge.loop.planner import LLMPlanner
+            from flowforge.loop.verifier import RuleBasedVerifier
+            from flowforge.loop.reflector import ReflexionReflector
+            from flowforge.harness.orchestrator import HarnessOrchestrator
+            from flowforge.harness.entropy_manager import EntropyManager, RuleEvolution
+            from flowforge.core.checkpoint_manager import CheckpointManager
+            from flowforge.app import main as _main
+
+            hybrid_executor = getattr(_main, "_executor_instance", None)
+            if hybrid_executor is None:
+                logger.debug("SDK: LoopExecutor init skipped — HybridExecutor not available")
+                return
+
+            # Only create if not already set
+            if hybrid_executor.loop_executor is not None:
+                logger.debug("SDK: LoopExecutor already configured, skipping init")
+                return
+
+            harness = getattr(hybrid_executor, "harness", None) or HarnessOrchestrator()
+            planner = LLMPlanner()
+            verifier = RuleBasedVerifier()
+            reflector = ReflexionReflector()
+            checkpoint_mgr = getattr(
+                hybrid_executor, "checkpoint_manager",
+                CheckpointManager("data/loop_checkpoints.db"),
+            )
+            entropy_mgr = EntropyManager()
+            rule_evolution = RuleEvolution()
+
+            loop_exec = LoopExecutor(
+                hybrid_executor=hybrid_executor,
+                harness=harness,
+                planner=planner,
+                verifier=verifier,
+                reflector=reflector,
+                checkpoint_mgr=checkpoint_mgr,
+                entropy_mgr=entropy_mgr,
+                rule_evolution=rule_evolution,
+            )
+
+            hybrid_executor.set_loop_executor(loop_exec)
+            self._loop_executor = loop_exec
+            logger.info("SDK initialized LoopExecutor and injected into HybridExecutor")
+        except ImportError:
+            logger.debug("SDK: LoopExecutor init skipped — dependencies not available")
+        except Exception as e:
+            logger.warning(f"SDK: LoopExecutor init failed: {e}")

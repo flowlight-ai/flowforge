@@ -55,6 +55,7 @@ class HybridExecutor:
         state_manager: Manager for task state persistence.
         checkpoint_manager: Manager for checkpoint persistence.
         harness: Optional HarnessOrchestrator for v6.0 Harness Layer.
+        loop_executor: Optional LoopExecutor for loop orchestration (upper-level manager of modes).
     """
 
     def __init__(self, mode_registry: ModeRegistry, agent_registry: AgentRegistry,
@@ -62,7 +63,7 @@ class HybridExecutor:
                  memory_manager: MemoryManager = None,
                  checkpointer_path: str = "data/checkpoints.db",
                  state_db_path: str = "data/states.db",
-                 harness=None):
+                 harness=None, loop_executor=None):
         """Initialize the HybridExecutor.
 
         Args:
@@ -76,6 +77,7 @@ class HybridExecutor:
             checkpointer_path: File path for the checkpoint SQLite database.
             state_db_path: File path for the state SQLite database.
             harness: Optional HarnessOrchestrator for v6.0 Harness Layer.
+            loop_executor: Optional LoopExecutor for loop orchestration (upper-level manager of modes).
         """
         self.mode_registry = mode_registry
         self.agent_registry = agent_registry
@@ -87,6 +89,7 @@ class HybridExecutor:
         self.state_manager = StateManager(state_db_path)
         self.checkpoint_manager = CheckpointManager(checkpointer_path)
         self.harness = harness
+        self._loop_executor = loop_executor
         self._running_tasks: Dict[str, str] = {}
         self._helm_adapter: Optional[EventBusHelmAdapter] = None
         self._review_events: Dict[str, asyncio.Event] = {}
@@ -101,6 +104,26 @@ class HybridExecutor:
             helm_manager: The HelmManager instance to bridge events to.
         """
         self._helm_adapter = EventBusHelmAdapter(self.event_bus, helm_manager)
+
+    def set_loop_executor(self, loop_executor) -> None:
+        """Inject a LoopExecutor for loop orchestration support.
+
+        Loop is NOT a mode — it is the "upper-level manager" of modes
+        (design doc loop.md §5.3). When a LoopExecutor is set and
+        loop_config is present in the task metadata, HybridExecutor
+        delegates to LoopExecutor.run() directly, which in turn calls
+        back into HybridExecutor for each iteration's worker execution.
+
+        Args:
+            loop_executor: The LoopExecutor instance to use for loop orchestration.
+        """
+        self._loop_executor = loop_executor
+        logger.info("LoopExecutor injected into HybridExecutor")
+
+    @property
+    def loop_executor(self):
+        """Return the configured LoopExecutor, or None if not set."""
+        return self._loop_executor
 
     async def run(self, context: TaskContext, mode_hint: str = None,
                   _is_substep: bool = False) -> dict:
@@ -160,6 +183,138 @@ class HybridExecutor:
         else:
             mode = mode_hint or context.mode
             logger.info(f"[hybrid_executor] Mode selected: mode={mode} (hint={mode_hint}, ctx_mode={context.mode}), task_id={context.task_id}")
+
+        # Loop orchestration: Loop is the "upper-level manager" of modes,
+        # not a mode itself (design doc loop.md §5.3).
+        # When loop_config is present, delegate directly to LoopExecutor,
+        # which will call back into HybridExecutor for each iteration.
+        if self._loop_executor is not None and context.metadata.get("loop_config"):
+            loop_config = context.metadata["loop_config"]
+            logger.info(
+                f"[hybrid_executor] Loop orchestration activated: "
+                f"loop_name={loop_config.get('name')}, "
+                f"task_id={context.task_id}, delegating to LoopExecutor"
+            )
+
+            # Hydrate context with registries and services for LoopExecutor
+            context.tools = self.tool_registry
+            context.agents = self.agent_registry
+            context.executor = self
+            context.mode = "loop"
+            context.checkpoint = self.checkpoint_manager
+            context.event_bus = self.event_bus
+            if self.memory_manager and not context.memory:
+                context.memory = self.memory_manager
+
+            if not _is_substep:
+                # Update state from pending to running (state was already saved above)
+                self.state_manager.update_state(context.task_id, {
+                    "mode": "loop", "status": "running",
+                })
+
+            start = time.time()
+            try:
+                self.event_bus.emit(context.task_id, "task.start", {"mode": "loop"})
+                logger.info(f"[hybrid_executor] Loop execution started: task_id={context.task_id}, persona={persona}")
+
+                loop_result = await asyncio.wait_for(
+                    self._loop_executor.run(context, loop_config),
+                    timeout=TASK_TIMEOUT_SECONDS,
+                )
+
+                # Convert LoopResult to dict
+                result = {
+                    "success": loop_result.success,
+                    "total_attempts": loop_result.total_attempts,
+                }
+                if loop_result.output is not None:
+                    result["output"] = loop_result.output
+                    if isinstance(loop_result.output, dict):
+                        for key in ("response", "final_answer", "content"):
+                            if key in loop_result.output and key not in result:
+                                result[key] = loop_result.output[key]
+                if loop_result.error is not None:
+                    result["error"] = loop_result.error
+                if loop_result.state is not None:
+                    result["loop_state"] = loop_result.state.model_dump()
+
+                # P1-3: Loop 失败时退化为单次 HybridExecutor 执行
+                # 设计文档 loop.md §865: "Loop 失败时退化为单次 HybridExecutor 执行"
+                if not loop_result.success:
+                    logger.warning(
+                        f"[hybrid_executor] Loop failed, degrading to single mode execution: "
+                        f"task_id={context.task_id}, loop_error={loop_result.error}, "
+                        f"attempts={loop_result.total_attempts}"
+                    )
+                    self.event_bus.emit(context.task_id, "loop.degraded", {
+                        "loop_id": loop_result.state.loop_id if loop_result.state else "unknown",
+                        "reason": loop_result.error,
+                        "attempts": loop_result.total_attempts,
+                    })
+                    try:
+                        # 退化执行：清除 loop_config 避免再次进入 Loop 分支
+                        # 使用 loop_config 中 worker.mode 作为退化执行的 mode_hint
+                        fallback_mode = loop_config.get("worker", {}).get("mode", "workflow")
+                        degraded_context = context
+                        degraded_context.metadata = {k: v for k, v in context.metadata.items() if k != "loop_config"}
+                        degraded_result = await self.run(degraded_context, mode_hint=fallback_mode, _is_substep=True)
+                        # 合并退化执行结果与 Loop 失败信息
+                        if isinstance(degraded_result, dict):
+                            degraded_result["loop_degraded"] = True
+                            degraded_result["loop_error"] = loop_result.error
+                            degraded_result["loop_attempts"] = loop_result.total_attempts
+                        result = degraded_result
+                    except Exception as fallback_err:
+                        logger.error(
+                            f"[hybrid_executor] Degraded execution also failed: "
+                            f"task_id={context.task_id}, error={fallback_err}"
+                        )
+                        result["loop_degraded"] = True
+                        result["degraded_error"] = str(fallback_err)
+
+                duration = time.time() - start
+                if isinstance(result, dict):
+                    summary_text = result.get("response") or result.get("final_answer") or result.get("content") or ""
+                    summary = str(summary_text)[:500]
+                else:
+                    summary = str(result)[:200]
+                self.event_bus.emit(context.task_id, "task.completed", {"status": "completed", "summary": summary})
+                logger.info(f"[hybrid_executor] Loop execution completed: task_id={context.task_id}, persona={persona}, duration={duration:.2f}s")
+                if not _is_substep:
+                    ff_metrics.record_task_completed("loop", persona, duration)
+                    ws = get_workspace_manager()
+                    ws.update_task_status(context.task_id, "completed", duration=duration)
+                    state_update = {"status": "completed", "summary": summary}
+                    if isinstance(result, dict):
+                        state_update["output_data"] = result
+                    else:
+                        state_update["output_data"] = {"response": str(result)}
+                    self.state_manager.update_state(context.task_id, state_update)
+                return result
+            except asyncio.TimeoutError:
+                logger.error(f"[hybrid_executor] Loop task timed out: task_id={context.task_id}, timeout={TASK_TIMEOUT_SECONDS}s")
+                self.event_bus.emit(context.task_id, "task.error", {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})
+                if not _is_substep:
+                    ff_metrics.record_task_failed("loop", persona)
+                    self.state_manager.update_state(context.task_id, {"status": "failed", "error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})
+                return {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s", "response": "任务执行超时，请稍后重试"}
+            except Exception as e:
+                self.event_bus.emit(context.task_id, "task.error", {"error": str(e)})
+                logger.error(f"[hybrid_executor] Loop task failed: task_id={context.task_id}, persona={persona}, error={e}")
+                if not _is_substep:
+                    ff_metrics.record_task_failed("loop", persona)
+                    self.state_manager.update_state(context.task_id, {"status": "failed", "error": str(e)})
+                raise
+            finally:
+                if not _is_substep and persona in self._running_tasks:
+                    del self._running_tasks[persona]
+                if not _is_substep and context.task_id in self._task_contexts:
+                    del self._task_contexts[context.task_id]
+
+        # Backward compatibility: mode_hint="loop" without loop_config
+        # falls through to LoopModeExecutor as a convenience adapter
+        if mode == "loop" and self._loop_executor is not None:
+            context.metadata["loop_executor"] = self._loop_executor
 
         if context.interaction_mode == "helm" and self._helm_adapter:
             self._helm_adapter.bridge()

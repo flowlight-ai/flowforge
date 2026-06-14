@@ -8,12 +8,17 @@ LoopExecutor 是 Harness 驾驭层的子模块，每次迭代：
 5. 仅在失败时触发 Loop Reflector（复盘+规则进化）
 6. 保存检查点
 7. 发出事件
+8. 写入迭代记录（通过注入的回调，遵守铁律4）
 """
 
 import asyncio
+import json
+import time
 from datetime import datetime
+from typing import Optional, Callable, Any
 
 from flowforge.core.task_context import TaskContext
+from flowforge.core.persona_lock import PersonaLock
 from flowforge.executor.hybrid_executor import HybridExecutor
 from flowforge.harness.orchestrator import HarnessOrchestrator
 from flowforge.harness.entropy_manager import EntropyManager, DebtSeverity, RuleEvolution
@@ -26,6 +31,9 @@ from flowforge.loop.registry import LoopRegistry
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("loop.executor")
+
+# 迭代记录回调类型：接收 loop_id, attempt, 阶段数据，由 Repository 层实现
+IterationCallback = Callable[..., Any]
 
 
 class LoopExecutor:
@@ -40,9 +48,6 @@ class LoopExecutor:
     6. 保存检查点
     """
 
-    MAX_NESTING_DEPTH: int = 3
-    _current_nesting_depth: int = 0
-
     def __init__(
         self,
         hybrid_executor: HybridExecutor,
@@ -53,6 +58,12 @@ class LoopExecutor:
         checkpoint_mgr: CheckpointManager,
         entropy_mgr: EntropyManager,
         rule_evolution: RuleEvolution,
+        persona_lock: Optional[PersonaLock] = None,
+        memory_manager: Optional[Any] = None,
+        on_iteration_create: Optional[IterationCallback] = None,
+        on_iteration_update: Optional[IterationCallback] = None,
+        on_iteration_complete: Optional[IterationCallback] = None,
+        on_loop_state_update: Optional[IterationCallback] = None,
     ):
         self.hybrid_executor = hybrid_executor
         self.harness = harness
@@ -62,21 +73,32 @@ class LoopExecutor:
         self.checkpoint_mgr = checkpoint_mgr
         self.entropy_mgr = entropy_mgr
         self.rule_evolution = rule_evolution
+        self.persona_lock = persona_lock
+        self.memory_manager = memory_manager
+        # 迭代记录回调 — 由 API 层注入 Repository 实现，遵守铁律4
+        self.on_iteration_create = on_iteration_create
+        self.on_iteration_update = on_iteration_update
+        self.on_iteration_complete = on_iteration_complete
+        self.on_loop_state_update = on_loop_state_update
 
     async def run(self, task: TaskContext, loop_config: dict) -> LoopResult:
         """执行 Loop：规划→执行→校验→复盘→重试。"""
-        # 嵌套深度检查
-        if LoopExecutor._current_nesting_depth >= LoopExecutor.MAX_NESTING_DEPTH:
-            raise LoopNestingError(
-                depth=LoopExecutor._current_nesting_depth,
-                max_depth=LoopExecutor.MAX_NESTING_DEPTH,
+        # 嵌套深度检查 — 通过 task.metadata 传递，避免类变量竞争
+        current_depth = task.metadata.get("loop_nesting_depth", 0)
+        max_depth = loop_config.get("max_nesting_depth", 3)
+        if current_depth >= max_depth:
+            return LoopResult(
+                success=False,
+                error=f"Loop nesting depth ({current_depth}) exceeds max_nesting_depth ({max_depth})",
+                total_attempts=0,
+                state=None,
             )
 
-        LoopExecutor._current_nesting_depth += 1
+        task.metadata["loop_nesting_depth"] = current_depth + 1
         try:
             return await self._run_loop(task, loop_config)
         finally:
-            LoopExecutor._current_nesting_depth -= 1
+            task.metadata["loop_nesting_depth"] = current_depth
 
     async def _run_loop(self, task: TaskContext, loop_config: dict) -> LoopResult:
         """内部 Loop 执行逻辑。"""
@@ -85,6 +107,7 @@ class LoopExecutor:
         worker_mode = worker_config.get("mode", "workflow")
         backoff_strategy = loop_config.get("backoff_strategy", "exponential")
         backoff_base = loop_config.get("backoff_base", 2)
+        total_timeout = loop_config.get("total_timeout", 1800)
 
         state = LoopState(
             loop_id=loop_config["name"],
@@ -93,10 +116,96 @@ class LoopExecutor:
             max_retries=max_retries,
         )
 
+        # 确定 Persona Lock 是否需要持有
+        persona_id = getattr(task, 'persona', None)
+        need_lock = self.persona_lock is not None and persona_id is not None
+
+        async def _do_execute() -> LoopResult:
+            if need_lock:
+                # 整个 Loop 期间持有 Persona 锁，不在迭代之间释放
+                async with self.persona_lock.acquire(persona_id, holder=state.loop_id):
+                    return await self._execute_iterations(
+                        task, loop_config, state, max_retries,
+                        worker_config, worker_mode, backoff_strategy, backoff_base,
+                    )
+            else:
+                # 无 PersonaLock 或无 persona_id，跳过锁逻辑（向后兼容）
+                return await self._execute_iterations(
+                    task, loop_config, state, max_retries,
+                    worker_config, worker_mode, backoff_strategy, backoff_base,
+                )
+
+        # 使用 asyncio.wait_for 包裹整个 Loop，实现总超时控制
+        try:
+            return await asyncio.wait_for(_do_execute(), timeout=total_timeout)
+        except asyncio.TimeoutError:
+            state.phase = LoopPhase.FAILED
+            state.past_errors.append(
+                f"Loop total timeout ({total_timeout}s) exceeded"
+            )
+            logger.warning(
+                f"[loop] Total timeout exceeded: loop_id={state.loop_id}, "
+                f"total_timeout={total_timeout}s"
+            )
+            self.checkpoint_mgr.save(
+                task_id=state.task_id,
+                step_name=f"loop:{state.loop_id}:total_timeout",
+                state=state.model_dump(),
+            )
+            if task.event_bus:
+                task.event_bus.emit(task.task_id, "loop.failed", {
+                    "loop_id": state.loop_id,
+                    "total_attempts": state.attempt,
+                    "last_errors": state.past_errors[-3:] if state.past_errors else [],
+                    "reason": "total_timeout",
+                })
+            return LoopResult(
+                success=False,
+                error=f"Loop total timeout ({total_timeout}s) exceeded",
+                total_attempts=state.attempt,
+                state=state,
+            )
+
+    async def _execute_iterations(
+        self,
+        task: TaskContext,
+        loop_config: dict,
+        state: LoopState,
+        max_retries: int,
+        worker_config: dict,
+        worker_mode: str,
+        backoff_strategy: str,
+        backoff_base: int,
+    ) -> LoopResult:
+        """执行 Loop 迭代逻辑（从 _run_loop 中提取，支持 PersonaLock 包裹）。"""
+
+        # 读取超时配置
+        total_timeout = loop_config.get("total_timeout", 1800)
+        timeout_per_iteration = loop_config.get("timeout_per_iteration", 300)
+
+        # 读取 Memory 映射配置
+        memory_config = loop_config.get("memory", {})
+        store_failures = memory_config.get("store_failures", False)
+        failure_key = memory_config.get("failure_key", "loop-failures")
+        # memory_mapping 使用设计文档中的英文键名：
+        #   context → WorkingMemory, session → ShortTermMemory,
+        #   failures → LongTermMemory, rules → SemanticMemory,
+        #   trajectory → EpisodicMemory
+        memory_mapping = memory_config.get("memory_mapping", {})
+
         # 1. 规划
         state.phase = LoopPhase.PLANNING
         plan = await self.planner.plan(task, loop_config.get("planner", {}))
         state.current_plan = plan
+
+        # Memory 映射：Loop 启动时从 LongTermMemory 读取历史失败教训，注入规划上下文
+        if self.memory_manager is not None:
+            past_failures = await self._read_memory(
+                memory_mapping.get("failures", "long_term"),
+                failure_key,
+            )
+            if past_failures:
+                task.metadata["loop_past_failures"] = past_failures
 
         # Loop 启动事件
         if task.event_bus:
@@ -107,9 +216,48 @@ class LoopExecutor:
                 "max_retries": max_retries,
             })
 
+        total_start = time.monotonic()
+
         for attempt in range(max_retries):
+            # 检查总超时
+            elapsed = time.monotonic() - total_start
+            remaining = total_timeout - elapsed
+            if remaining <= 0:
+                logger.warning(
+                    f"[loop] Total timeout exceeded: loop_id={state.loop_id}, "
+                    f"elapsed={elapsed:.1f}s, total_timeout={total_timeout}s"
+                )
+                state.past_errors.append(
+                    f"Total timeout exceeded after {elapsed:.1f}s (limit: {total_timeout}s)"
+                )
+                break
+
             state.attempt = attempt + 1
             state.updated_at = datetime.utcnow()
+
+            # 写入迭代记录（开始）— 通过回调遵守铁律4
+            iter_id: str | None = None
+            if self.on_iteration_create:
+                try:
+                    iter_id = self.on_iteration_create(
+                        loop_id=state.loop_id,
+                        attempt=state.attempt,
+                        plan_json=json.dumps(state.current_plan, ensure_ascii=False) if state.current_plan else None,
+                    )
+                except Exception as e:
+                    logger.warning(f"[loop] Failed to create iteration record: {e}")
+
+            # 更新 Loop 数据库状态为 executing
+            if self.on_loop_state_update:
+                try:
+                    self.on_loop_state_update(
+                        loop_id=state.loop_id,
+                        state_json=json.dumps(state.model_dump(), ensure_ascii=False),
+                        phase="executing",
+                        attempt=state.attempt,
+                    )
+                except Exception as e:
+                    logger.warning(f"[loop] Failed to update loop state: {e}")
 
             # 迭代开始事件
             if task.event_bus:
@@ -119,6 +267,31 @@ class LoopExecutor:
                     "phase": "executing",
                 })
 
+            # Memory 映射：每次迭代将当前上下文写入 WorkingMemory
+            await self._write_memory(
+                memory_mapping.get("context", "working"),
+                f"loop:{state.loop_id}:attempt:{state.attempt}",
+                {
+                    "loop_id": state.loop_id,
+                    "attempt": state.attempt,
+                    "task_id": state.task_id,
+                    "plan": state.current_plan,
+                },
+            )
+
+            # Memory 映射：每次迭代将对话历史写入 ShortTermMemory
+            await self._write_memory(
+                memory_mapping.get("session", "short_term"),
+                f"loop:{state.loop_id}:session",
+                {
+                    "loop_id": state.loop_id,
+                    "task_id": state.task_id,
+                    "attempt": state.attempt,
+                    "reflections": state.reflection_history[-1] if state.reflection_history else None,
+                    "past_errors_count": len(state.past_errors),
+                },
+            )
+
             # 2. Harness pre_execute（注入上下文 + 权限检查）
             #    首次迭代：完整上下文注入；后续迭代：仅注入 delta（Reflector 的反思结果）
             if attempt > 0 and state.reflection_history:
@@ -126,43 +299,34 @@ class LoopExecutor:
             await self.harness.pre_execute(task)
 
             # 3. 执行（委托给 HybridExecutor / 嵌套 Loop / 并行 Worker）
+            #    使用 asyncio.wait_for 包裹，实现单次迭代超时控制
             state.phase = LoopPhase.EXECUTING
-            if worker_mode == "loop":
-                nested_template = worker_config.get("template", "")
-                nested_registry = LoopRegistry()
-                nested_config = nested_registry.get(nested_template)
-                if nested_config:
-                    nested_config_dict = nested_config.model_dump()
-                    nested_config_dict["name"] = f"{state.loop_id}:nested:{nested_template}"
-                    nested_executor = LoopExecutor(
-                        hybrid_executor=self.hybrid_executor,
-                        harness=self.harness,
-                        planner=self.planner,
-                        verifier=self.verifier,
-                        reflector=self.reflector,
-                        checkpoint_mgr=self.checkpoint_mgr,
-                        entropy_mgr=self.entropy_mgr,
-                        rule_evolution=self.rule_evolution,
+            iter_timeout = min(timeout_per_iteration, remaining)
+
+            try:
+                if worker_mode == "loop":
+                    result = await asyncio.wait_for(
+                        self._execute_nested_loop(task, worker_config, state),
+                        timeout=iter_timeout,
                     )
-                    result = await nested_executor.run(task, nested_config_dict)
-                    if not result.success:
-                        # Nested loop failed, trigger reflector in outer loop
-                        pass  # The outer loop's verifier will catch the failure
+                elif worker_mode == "parallel":
+                    result = await asyncio.wait_for(
+                        self._execute_parallel_workers(task, worker_config, state),
+                        timeout=iter_timeout,
+                    )
                 else:
-                    result = {"error": f"Nested loop template '{nested_template}' not found"}
-            elif worker_mode == "parallel":
-                from flowforge.loop.parallel import execute_parallel_workers
-                workers = worker_config.get("workers", [])
-                merge_strategy = worker_config.get("merge_strategy", "concat")
-                parallel_result = await execute_parallel_workers(
-                    workers, task, self.hybrid_executor, merge_strategy
+                    result = await asyncio.wait_for(
+                        self.hybrid_executor.run(task, mode_hint=worker_mode),
+                        timeout=iter_timeout,
+                    )
+            except asyncio.TimeoutError:
+                iter_error = (
+                    f"Iteration {attempt + 1} timed out after {iter_timeout:.1f}s "
+                    f"(per_iteration={timeout_per_iteration}s, remaining={remaining:.1f}s)"
                 )
-                result = parallel_result.merge_results(merge_strategy)
-                if not parallel_result.all_succeeded:
-                    for name, error in parallel_result.errors.items():
-                        state.past_errors.append(f"Worker '{name}' failed: {error}")
-            else:
-                result = await self.hybrid_executor.run(task, mode_hint=worker_mode)
+                logger.warning(f"[loop] {iter_error}: loop_id={state.loop_id}")
+                state.past_errors.append(iter_error)
+                result = {"error": iter_error}
 
             # 4. Harness post_execute（架构约束校验 + FeedbackLoop 评分）
             result = await self.harness.post_execute(result, task)
@@ -171,6 +335,17 @@ class LoopExecutor:
             state.phase = LoopPhase.VERIFYING
             verdict = await self.verifier.verify(result, task, loop_config.get("verifier", {}))
             state.verification_history.append(verdict.model_dump())
+
+            # 更新迭代记录（result + verdict）
+            if iter_id and self.on_iteration_update:
+                try:
+                    self.on_iteration_update(
+                        iteration_id=iter_id,
+                        result_json=json.dumps(result, ensure_ascii=False, default=str) if result else None,
+                        verdict_json=json.dumps(verdict.model_dump(), ensure_ascii=False),
+                    )
+                except Exception as e:
+                    logger.warning(f"[loop] Failed to update iteration record with verdict: {e}")
 
             # 校验结果事件
             if task.event_bus:
@@ -192,6 +367,39 @@ class LoopExecutor:
                     step_name=f"loop:{state.loop_id}:attempt_{state.attempt}",
                     state=state.model_dump(),
                 )
+
+                # 完成迭代记录
+                if iter_id and self.on_iteration_complete:
+                    try:
+                        self.on_iteration_complete(iteration_id=iter_id)
+                    except Exception as e:
+                        logger.warning(f"[loop] Failed to complete iteration record: {e}")
+
+                # 更新 Loop 数据库状态为 completed
+                if self.on_loop_state_update:
+                    try:
+                        self.on_loop_state_update(
+                            loop_id=state.loop_id,
+                            state_json=json.dumps(state.model_dump(), ensure_ascii=False),
+                            phase="completed",
+                            attempt=state.attempt,
+                        )
+                    except Exception as e:
+                        logger.warning(f"[loop] Failed to update loop state to completed: {e}")
+
+                # Memory 映射：成功时将执行轨迹写入 EpisodicMemory
+                await self._write_memory(
+                    memory_mapping.get("trajectory", "episodic"),
+                    f"loop:{state.loop_id}:trajectory",
+                    {
+                        "loop_id": state.loop_id,
+                        "task_id": state.task_id,
+                        "total_attempts": attempt + 1,
+                        "final_score": verdict.score,
+                        "trace": state.verification_history,
+                    },
+                )
+
                 if task.event_bus:
                     task.event_bus.emit(task.task_id, "loop.completed", {
                         "loop_id": state.loop_id,
@@ -205,6 +413,50 @@ class LoopExecutor:
             reflection = await self.reflector.reflect(verdict.errors, task, state)
             state.reflection_history.append(reflection.model_dump())
             state.past_errors.extend(verdict.errors)
+
+            # 更新迭代记录（reflection）
+            if iter_id and self.on_iteration_update:
+                try:
+                    self.on_iteration_update(
+                        iteration_id=iter_id,
+                        reflection_json=json.dumps(reflection.model_dump(), ensure_ascii=False),
+                    )
+                except Exception as e:
+                    logger.warning(f"[loop] Failed to update iteration record with reflection: {e}")
+
+            # 完成迭代记录（失败迭代也标记完成）
+            if iter_id and self.on_iteration_complete:
+                try:
+                    self.on_iteration_complete(iteration_id=iter_id)
+                except Exception as e:
+                    logger.warning(f"[loop] Failed to complete iteration record: {e}")
+
+            # 更新 Loop 数据库状态为 reflecting
+            if self.on_loop_state_update:
+                try:
+                    self.on_loop_state_update(
+                        loop_id=state.loop_id,
+                        state_json=json.dumps(state.model_dump(), ensure_ascii=False),
+                        phase="reflecting",
+                        attempt=state.attempt,
+                    )
+                except Exception as e:
+                    logger.warning(f"[loop] Failed to update loop state to reflecting: {e}")
+
+            # Memory 映射：失败时将失败教训写入 LongTermMemory（受 store_failures 控制）
+            if store_failures:
+                await self._write_memory(
+                    memory_mapping.get("failures", "long_term"),
+                    failure_key,
+                    {
+                        "loop_id": state.loop_id,
+                        "task_id": state.task_id,
+                        "attempt": state.attempt,
+                        "errors": verdict.errors,
+                        "root_cause": reflection.root_cause,
+                        "suggestions": reflection.suggestions,
+                    },
+                )
 
             # 复盘完成事件
             if task.event_bus:
@@ -228,6 +480,19 @@ class LoopExecutor:
                 metadata={"loop_id": state.loop_id, "attempt": attempt + 1, "errors": verdict.errors},
             )
 
+            # Memory 映射：规则进化时将进化规则写入 SemanticMemory
+            await self._write_memory(
+                memory_mapping.get("rules", "semantic"),
+                f"loop:{state.loop_id}:rule:attempt:{attempt + 1}",
+                {
+                    "loop_id": state.loop_id,
+                    "task_id": state.task_id,
+                    "attempt": state.attempt,
+                    "rule_name": f"Loop failure: {state.loop_id} attempt {attempt + 1}",
+                    "rule_description": f"Loop iteration failed with errors: {verdict.errors}. Reflection: {reflection}",
+                },
+            )
+
             # 8. 保存检查点
             self.checkpoint_mgr.save(
                 task_id=state.task_id,
@@ -244,25 +509,135 @@ class LoopExecutor:
                 wait_secs = self._calc_backoff(backoff_strategy, backoff_base, attempt)
                 await asyncio.sleep(wait_secs)
 
-        # 耗尽重试次数
+        # 耗尽重试次数或总超时
         state.phase = LoopPhase.FAILED
         self.checkpoint_mgr.save(
             task_id=state.task_id,
             step_name=f"loop:{state.loop_id}:attempt_{state.attempt}",
             state=state.model_dump(),
         )
+
+        # 更新 Loop 数据库状态为 failed
+        if self.on_loop_state_update:
+            try:
+                self.on_loop_state_update(
+                    loop_id=state.loop_id,
+                    state_json=json.dumps(state.model_dump(), ensure_ascii=False),
+                    phase="failed",
+                    attempt=state.attempt,
+                )
+            except Exception as e:
+                logger.warning(f"[loop] Failed to update loop state to failed: {e}")
+
+        # Memory 映射：最终失败时将执行轨迹写入 EpisodicMemory
+        await self._write_memory(
+            memory_mapping.get("trajectory", "episodic"),
+            f"loop:{state.loop_id}:trajectory",
+            {
+                "loop_id": state.loop_id,
+                "task_id": state.task_id,
+                "total_attempts": state.attempt,
+                "outcome": "failed",
+                "errors": state.past_errors[-5:] if state.past_errors else [],
+                "trace": state.verification_history,
+            },
+        )
+
         if task.event_bus:
             task.event_bus.emit(task.task_id, "loop.failed", {
                 "loop_id": state.loop_id,
-                "total_attempts": max_retries,
+                "total_attempts": state.attempt,
                 "last_errors": state.past_errors[-3:] if state.past_errors else [],
             })
         return LoopResult(
             success=False,
             error=f"Max retries ({max_retries}) exceeded",
-            total_attempts=max_retries,
+            total_attempts=state.attempt,
             state=state,
         )
+
+    async def _execute_nested_loop(self, task: TaskContext, worker_config: dict, state: LoopState):
+        """执行嵌套 Loop Worker。"""
+        nested_template = worker_config.get("template", "")
+        nested_registry = LoopRegistry()
+        nested_config = nested_registry.get(nested_template)
+        if nested_config:
+            nested_config_dict = nested_config.model_dump()
+            nested_config_dict["name"] = f"{state.loop_id}:nested:{nested_template}"
+            nested_executor = LoopExecutor(
+                hybrid_executor=self.hybrid_executor,
+                harness=self.harness,
+                planner=self.planner,
+                verifier=self.verifier,
+                reflector=self.reflector,
+                checkpoint_mgr=self.checkpoint_mgr,
+                entropy_mgr=self.entropy_mgr,
+                rule_evolution=self.rule_evolution,
+                persona_lock=self.persona_lock,
+                memory_manager=self.memory_manager,
+                on_iteration_create=self.on_iteration_create,
+                on_iteration_update=self.on_iteration_update,
+                on_iteration_complete=self.on_iteration_complete,
+                on_loop_state_update=self.on_loop_state_update,
+            )
+            result = await nested_executor.run(task, nested_config_dict)
+            if not result.success:
+                pass  # The outer loop's verifier will catch the failure
+            return result
+        else:
+            return {"error": f"Nested loop template '{nested_template}' not found"}
+
+    async def _execute_parallel_workers(self, task: TaskContext, worker_config: dict, state: LoopState):
+        """执行并行 Worker。"""
+        from flowforge.loop.parallel import execute_parallel_workers
+        workers = worker_config.get("workers", [])
+        merge_strategy = worker_config.get("merge_strategy", "concat")
+        parallel_result = await execute_parallel_workers(
+            workers, task, self.hybrid_executor, merge_strategy
+        )
+        result = parallel_result.merge_results(merge_strategy)
+        if not parallel_result.all_succeeded:
+            for name, error in parallel_result.errors.items():
+                state.past_errors.append(f"Worker '{name}' failed: {error}")
+        return result
+
+    async def _write_memory(self, memory_type: str, key: str, data: dict) -> None:
+        """按 Memory 映射关系写入 MemoryManager。
+
+        Args:
+            memory_type: MemoryManager 中的 store 名称（working/short_term/long_term/semantic/episodic）
+            key: 存储键名
+            data: 要写入的数据
+
+        如果 memory_manager 不可用则静默跳过（向后兼容）。
+        """
+        if self.memory_manager is None:
+            return
+        try:
+            await self.memory_manager.save(memory_type, key, data)
+        except Exception as e:
+            logger.warning(
+                f"[loop] Failed to write {memory_type} memory: {e}, "
+                f"loop_id={data.get('loop_id', 'unknown')}"
+            )
+
+    async def _read_memory(self, memory_type: str, key: str) -> Any:
+        """从 MemoryManager 读取记忆数据。
+
+        Args:
+            memory_type: MemoryManager 中的 store 名称
+            key: 查询键名
+
+        如果 memory_manager 不可用或读取失败则返回 None。
+        """
+        if self.memory_manager is None:
+            return None
+        try:
+            results = await self.memory_manager.retrieve(memory_type, key)
+            return results
+        except Exception as e:
+            logger.warning(f"[loop] Failed to read {memory_type} memory: {e}")
+            return None
 
     @staticmethod
     def _calc_backoff(strategy: str, base: int, attempt: int) -> float:

@@ -22,7 +22,7 @@ import httpx
 # 常量
 # ---------------------------------------------------------------------------
 
-OPENROUTE_BASE_URL = "http://127.0.0.1:13000/v1"
+OPENROUTE_BASE_URL = "http://127.0.0.1:13001/v1"
 OPENROUTE_API_KEY = "or-2c2e4d8edd586e694139259e4b5cea7c25ace5e674ed5d46"
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 
@@ -110,7 +110,7 @@ def _is_openroute_reachable() -> bool:
 
 
 openroute_available = _is_openroute_reachable()
-skip_reason = "openroute 服务 (http://127.0.0.1:13000) 不可达，跳过集成测试"
+skip_reason = "openroute 服务 (http://127.0.0.1:13001) 不可达，跳过集成测试"
 
 
 # ---------------------------------------------------------------------------
@@ -288,7 +288,7 @@ async def test_model_service_health_check_with_correct_auth(metrics: Integration
     # 注意：_check_openroute_health 依赖 PluginRegistry，在集成测试中可能不可用
     # 因此我们直接验证 ModelService 能正确读取 API Key 并构造请求
     base_url = openroute_cfg.get("base_url", "")
-    assert base_url == "http://127.0.0.1:13000/v1", f"Unexpected base_url: {base_url}"
+    assert base_url == "http://127.0.0.1:13001/v1", f"Unexpected base_url: {base_url}"
 
     # 直接用 ModelService 的 _get_api_key 方法验证
     resolved_key = svc._get_api_key("openroute")

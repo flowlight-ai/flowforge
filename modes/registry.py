@@ -96,6 +96,10 @@ class ModeRegistry:
             The suggested mode name string.
         """
         desc = task_description.lower()
+        # NOTE: "loop" keywords removed — Loop is NOT a mode, it is the
+        # "upper-level manager" of modes (design doc loop.md §5.3).
+        # Loop should be triggered via loop_config in TaskContext.metadata,
+        # not via mode suggestion.
         if any(w in desc for w in ["复杂", "推理", "数学", "证明"]):
             return "graph_of_thoughts"
         if any(w in desc for w in ["多步", "搜索", "查询"]):

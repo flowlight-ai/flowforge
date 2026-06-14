@@ -55,7 +55,7 @@ PROVIDER_BASE_URLS = {
     "openrouter": "https://openrouter.ai/api/v1",
     # openroute base_url 从 models.yaml providers.openroute.base_url 动态读取
     # 此处仅作为 fallback，实际使用 _get_provider_base_url() 方法
-    "openroute": "http://127.0.0.1:13000/v1",
+    "openroute": "http://127.0.0.1:13001/v1",
 }
 
 ERROR_COOLDOWNS = {

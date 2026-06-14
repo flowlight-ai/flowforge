@@ -38,7 +38,7 @@ def _resolve_env_vars(value: str) -> str:
 
     Examples:
         "${OPENSIEVE_ENDPOINT:http://localhost:8100}" → env value or "http://localhost:8100"
-        "${OPENROUTE_PORT:13000}" → env value or "13000"
+        "${OPENROUTE_PORT:13001}" → env value or "13001"
     """
     pattern = r"\$\{([^}:]+)(?::([^}]*))?\}"
 

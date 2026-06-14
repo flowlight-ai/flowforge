@@ -1,5 +1,6 @@
 import os
 import copy
+import logging
 import yaml
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -94,7 +95,7 @@ class SystemConfig(BaseSettings):
     server_host: str = "0.0.0.0"
     server_port: int = 8000
     workers: int = 1
-    secret_key: str = "changeme-in-production"
+    secret_key: str = os.environ.get("FLOWFORGE_SECRET_KEY", "changeme-in-production")
     opensieve_enabled: bool = True
     opensieve_endpoint: str = "http://localhost:8101/api/v1/retrieve"
     opensieve_timeout: int = 120
@@ -178,3 +179,9 @@ class ConfigLoader:
 ConfigLoader.FLOWFORGE_ROOT = Path(__file__).parent.parent
 
 system_config = SystemConfig()
+
+if system_config.secret_key == "changeme-in-production":
+    logging.getLogger("flowforge.config").warning(
+        "⚠️  FLOWFORGE_SECRET_KEY is using the default value 'changeme-in-production'. "
+        "This is insecure for production! Set the FLOWFORGE_SECRET_KEY environment variable."
+    )

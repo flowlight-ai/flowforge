@@ -36,7 +36,7 @@ from flowforge.core.tracing import get_logger
 
 logger = get_logger("openroute_service")
 
-DEFAULT_OPENROUTE_PORT = 13000
+DEFAULT_OPENROUTE_PORT = 13001
 DEFAULT_OPENROUTE_HOST = "127.0.0.1"
 HEALTH_CHECK_TIMEOUT = 5
 STARTUP_WAIT_SECONDS = 30

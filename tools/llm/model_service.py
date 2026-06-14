@@ -347,7 +347,7 @@ class ModelService:
 
         # Resolve openroute base_url and api_key from config
         openroute_cfg = self.providers.get("openroute", {})
-        base_url = openroute_cfg.get("base_url", "http://127.0.0.1:13000/v1").rstrip("/")
+        base_url = openroute_cfg.get("base_url", "http://127.0.0.1:13001/v1").rstrip("/")
         api_key = openroute_cfg.get("api_key_default", "")
         if not api_key:
             api_key_env = openroute_cfg.get("api_key_env", "OPENROUTE_API_KEY")

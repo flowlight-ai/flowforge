@@ -1,51 +1,21 @@
-# FlowForge + ContentForge 问题清单 — Prompt 验证与代码审计
+# FlowForge + ContentForge + NovelForge 问题清单 — Prompt 验证与代码审计
 
-> 基于 `hiclaw/prompts.md` 中公共模板(P1-P18)、FlowForge 模板(FF1-FF19)、ContentForge 模板(CF1-CF9)逐条验证，结合代码走读和设计文档对比，发现的所有问题。
-> 审计日期: 2026-06-11 | 更新日期: 2026-06-12
+> 基于 `hiclaw/prompts.md` 中公共模板(P1-P18)、FlowForge 模板(FF1-FF19)、ContentForge 模板(CF1-CF9)、NovelForge 模板(NF1-NF8)逐条验证，结合代码走读和设计文档对比，发现的所有问题。
+> 审计日期: 2026-06-11 | 更新日期: 2026-06-13
 > 审计方法: 逐条 Prompt → 对照设计文档 → 验证代码实现 → 记录差距
+> 第三轮审计重点: 硬编码提示词全面排查、硬编码路径/密钥/配置、空实现/占位代码、绕过框架直接调用
 
 ---
 
 ## 一、FlowForge 架构问题
 
-### BUG-FF-01: Skill 系统框架已搭建但核心链路未打通
-
-- **来源**: FF11 Skill 系统验证
-- **严重等级**: P1 — 严重（从 P0 降级，框架已搭建）
-- **描述**: Skill 系统核心框架已实现（四格式解析、双层加载、版本管理、触发匹配、ComboSkill 管道编排），但关键执行链路未打通：
-  - `FlowForgeNativeSkill._execute_step()` 是空壳，返回 `status: "defined"` 而非真正调度 agent/tool
-  - `ComboPipeline._check_condition()` 始终返回 `True`，条件分支功能未实现
-  - **SDK 未集成 SkillManager**：上层项目无法通过 `sdk.skills` 访问技能系统
-  - 缺少测试文件
-- **影响**: Skill 系统可加载/解析/注册，但无法真正执行步骤
-- **修复方案**: (1) 实现 _execute_step 与 HybridExecutor 的集成 (2) 实现 _check_condition 条件判断 (3) SDK 增加 skills 属性 (4) 补充测试
-
-### BUG-FF-02: MCP Integration 核心方法为 Stub
-
-- **来源**: FF12 MCP 四层架构验证
-- **严重等级**: P1 — 严重
-- **描述**: MCP 四层架构类已存在（MCPClient/MCPGateway/MCPBroker/MCPToolAdapter），但核心方法为 stub 实现：
-  - `MCPClient` 的 JSON-RPC 2.0 调用方法返回占位数据
-  - `MCPBroker` 的动态路由和熔断重试未完整实现
-  - 未连接过真实的 MCP 服务器
-- **影响**: MCP 集成不可用，无法连接外部 MCP 工具
-- **修复方案**: 实现 MCP Client 的 JSON-RPC 2.0 协议，连接真实 MCP 服务器验证
-
-### BUG-FF-03: workflow.py God Object — 1684 行单文件
+### BUG-FF-03: workflow_executor.py 仍为 God Object — 1327 行
 
 - **来源**: P11 架构腐化检测 / FF1 九大模式验证
-- **严重等级**: P1 — 严重
-- **描述**: `flowforge/modes/workflow.py` 单文件 1684 行，包含 WorkflowNode/WorkflowEdge/WorkflowGraph/WorkflowExecutor 等多个类，属于 God Object 反模式。
+- **严重等级**: P2 — 一般（从P1降级，原1684行已拆分为4文件，但executor仍1327行）
+- **描述**: `workflow.py` 已拆分为4个文件（workflow.py仅3行re-export + workflow_graph.py 63行 + workflow_validator.py 314行 + workflow_executor.py 1327行），但 `workflow_executor.py` 仍包含 SOP执行、普通对话、智能对话、ReAct循环、工具/Agent调用、LLM调用、并行执行、检查点保存、模板渲染等全部逻辑。
 - **影响**: 难以维护和测试
-- **修复方案**: 拆分为 graph.py(模型定义)、executor.py(执行引擎)、validator.py(验证逻辑)
-
-### BUG-FF-04: 单向依赖违规 — modes 层导入 app 层
-
-- **来源**: P12 分层依赖验证 / FF17 十大架构原则验证
-- **严重等级**: P1 — 严重
-- **描述**: `flowforge/modes/` 下的模块存在导入 `flowforge.app` 层的情况，违反"上层可以依赖下层，下层绝对禁止导入上层模块"的原则。
-- **影响**: 循环依赖风险、modes 层无法独立使用
-- **修复方案**: 通过依赖注入或事件机制解耦
+- **修复方案**: 进一步拆分 workflow_executor.py，将 `_execute_intelligent_chat`(约600行)、`_run_react_loop`(约140行)、`_execute_tool_or_agent`(约70行)等拆为独立模块
 
 ### BUG-FF-05: 模式参数与设计文档不一致
 
@@ -68,13 +38,6 @@
 - **描述**: Helm 相关的数据库表定义存在重复，可能导致初始化冲突。
 - **修复方案**: 统一数据库表定义
 
-### BUG-FF-08: Mailbox FOREIGN KEY 引用错误
-
-- **来源**: FF13 Memory 系统验证
-- **严重等级**: P1 — 严重
-- **描述**: `memory/mailbox.py` 的 Mailbox 实现中，外键引用存在错误，可能导致数据完整性问题。
-- **修复方案**: 修正外键引用
-
 ### BUG-FF-09: SecretStore 默认路径依赖包安装位置
 
 - **来源**: P14 代码质量门禁 / A5 安全审计
@@ -89,287 +52,692 @@
 - **描述**: `core/marketplace.py` 的 Marketplace 在下载失败时创建空 stub 文件作为回退，可能导致后续使用时出现难以诊断的错误。
 - **修复方案**: 下载失败时抛出明确异常，不创建空文件
 
-### BUG-FF-11: ModelCapabilityProvider 已实现但与系统脱节
-
-- **来源**: FF18 SDK 能力验证
-- **严重等级**: P1 — 严重（从"未实现"降级为"已实现但脱节"）
-- **描述**: `ModelCapabilityProvider` 已实现智能路由+降级恢复+健康追踪，但存在以下问题：
-  - **SDK 未集成**：`sdk.py` 使用的是 `core/model_capability.py` 的 `ModelCapability`，与 `ModelCapabilityProvider` 无桥接
-  - **与现有 ModelCapability 功能重叠**：两者都提供零配置模型访问，但互不感知
-  - **get_model() 只返回模型名**：不像 ModelCapability 直接提供 `chat()` 方法，实用性不足
-  - 缺少测试文件
-- **影响**: ModelCapabilityProvider 是"孤岛"类，上层项目无法通过标准路径使用
-- **修复方案**: (1) 将 ModelCapabilityProvider 的路由能力集成到 ModelCapability 内部 (2) SDK 暴露 provider 级别接口 (3) 补充测试
-
-### BUG-FF-12: DeclarativeAgent 已实现但 tools/handoffs/guardrails 仅声明未执行
-
-- **来源**: FF18 SDK 能力验证
-- **严重等级**: P1 — 严重（从"未实现"降级为"已实现但关键特性缺失"）
-- **描述**: DeclarativeAgent 核心框架已完整实现（YAML/装饰器/字典三种定义方式、SDK 集成、默认 LLM 执行），但：
-  - **tools 字段仅声明未使用**：config.tools 列表不会传递给 LLM 的 function calling 接口，也不会通过 ToolRegistry 查找和调用工具
-  - **handoffs 仅声明未执行**：config.handoffs 不会产生委派行为
-  - **guardrails 仅声明未执行**：config.guardrails 不会产生护栏检查
-  - 缺少测试文件
-- **影响**: DeclarativeAgent 实质上只能做"纯 LLM 对话"或"自定义函数执行"，无法利用工具和委派能力
-- **修复方案**: (1) 实现 tools → ToolRegistry 查找+LLM function calling (2) 实现 handoffs → HandoffManager 委派 (3) 实现 guardrails → FeedbackLoop 检查
-
 ---
 
 ## 二、ContentForge 功能问题
 
-### ~~BUG-CF-01: review_decision "edit" 分支映射错误~~ — 已修复
-
-- **审核结果**: "edit" 现在正确映射到 "writer" 节点，三条分支（pass→publish, edit→writer, reject→END）逻辑完整
-
-### BUG-CF-02: SqliteSaver 已替换但 sqlite3 连接未在 shutdown 时释放
-
-- **来源**: CF3 SOP 编排验证
-- **严重等级**: P2 — 一般（从 P0 降级，核心修复已完成）
-- **描述**: MemorySaver 已正确替换为 SqliteSaver，checkpoint 路径从 system_config 读取，目录自动创建。但遗留问题：
-  - `self._checkpoint_conn` 创建后**没有任何关闭逻辑**
-  - `plugin.py` 的 `on_shutdown` 仅打印日志，未调用连接关闭
-  - **风险**: Windows 环境下 sqlite3 文件锁可能不会及时释放，导致下次启动时 "database is locked" 错误
-- **修复方案**: 在 Orchestrator 添加 `close()` 方法，在 plugin.py 的 on_shutdown 中调用
-
-### BUG-CF-03: 选题搜索三级 Fallback 链路 — 已实现
-
-- **审核结果**: TopicAgent 已实现完整的三级回退：`helixrag_search → web_search → llm_web_chat`，每级有异常捕获和阈值判断。此问题已修复。
-
-### BUG-CF-04: Agentic RAG 知识中枢完全缺失
+### ~~BUG-CF-04: Agentic RAG 知识中枢 — search() 多源检索为空占位~~ ✅ 已修复
 
 - **来源**: CF5 Agentic RAG 知识中枢验证
-- **严重等级**: P1 — 严重
-- **描述**: 设计文档要求的全部 Agentic RAG 能力均未实现：
-  - 混合多源检索（向量+关键词+图谱）— 未实现
-  - RRF（Reciprocal Rank Fusion）融合排序 — 未实现
-  - SimHash 去重 — 未实现
-  - 时间衰减权重 — 未实现
-  - 知识资产累积（自动索引已发布文章）— 未实现
-  - 查询理解层 — 未实现
-- **影响**: 检索质量低，无知识沉淀能力
-- **修复方案**: 集成 OpenSieve 的 Agentic RAG 能力或自建
+- **严重等级**: P1 — 严重（从"完全缺失"降级为"骨架存在但核心为空"）
+- **描述**: ~~`contentforge/tools/agentic_rag.py` 已存在，包含 SimHashDeduplicator、RRFFusion、TimeDecayWeighter、QueryUnderstanding、index_document() 等组件骨架，但 **`AgenticRAG.search()` 方法中多源检索部分为空占位**：~~
+- **修复状态**: ✅ 2026-06-13 验证确认已修复。search() 方法已实现完整多源检索链路：helixrag_search → web_search → 本地关键词匹配，并包含 RRF融合、时间衰减、SimHash去重。
 
-### BUG-CF-05: 发布能力严重缺失 — 无内容适配/错峰/熔断
+### ~~BUG-CF-05: PublishAgent 未集成 PublishEngine — 内容适配/错峰/熔断未生效~~ ✅ 已修复
 
 - **来源**: CF6-CF7 发布技能与多平台发布验证
-- **严重等级**: P1 — 严重
-- **描述**: PublishAgent 仅遍历 platforms 列表调用 `publish_{platform}` 工具，缺少：
-  - 内容适配引擎（不同平台自动改写格式）
-  - 错峰发布（不同平台间隔 5-10 分钟）
-  - 熔断保护（发布失败 3 次自动暂停该平台）
-  - Playwright 自动化发布（头条等平台需要浏览器操控）
-- **影响**: 发布功能仅为最小实现，无法满足多平台发布需求
-- **修复方案**: 逐步实现内容适配、错峰调度、熔断保护
+- **严重等级**: P1 — 严重（从"完全缺失"降级为"引擎已实现但未集成"）
+- **描述**: ~~`contentforge/tools/publish_engine.py` 已实现 ContentAdapter(内容适配)、StaggeredPublisher(错峰发布)、PlatformCircuitBreaker(熔断保护)，但 **PublishAgent 未使用 PublishEngine**，仍只是简单循环调用 `publish_{platform}` 工具。此外 Playwright 自动化发布完全缺失。~~
+- **修复状态**: ✅ 2026-06-13 验证确认已修复。PublishAgent 已集成 PublishEngine，包含 fallback 逻辑。同时修复了 PublishAgent.__init__ 缺少 llm_client 参数的问题。
 
-### BUG-CF-06: Web 控制台严重缺失 — 仅 Dashboard 基础页面
+### BUG-CF-06: Web 控制台严重缺失 — 缺审核中心/定时任务/专栏配置等
 
 - **来源**: CF9 Web 控制台验证
-- **严重等级**: P1 — 严重
-- **描述**: 前端仅有 3 个页面（/create, /tasks, /templates），缺少：
-  - 审核中心（/review）— 未实现
-  - 定时任务管理 — 未实现
-  - 专栏配置管理 — 未实现
-  - 模型配置管理 — 未实现
-  - 发布日志 — 未实现
-  - Helm Studio — 未实现
+- **严重等级**: P1 — 严重（从"仅3页面"降级为"4页面但缺关键功能"）
+- **描述**: 前端现有4个页面（/, /create, /tasks, /templates），/create 页面含 Helm Studio WebSocket 实时交互，但缺少：
+  - 审核中心（waiting_review 状态任务的审核操作界面）
+  - 定时任务管理页面
+  - 专栏配置管理页面
+  - 模型配置管理页面
+  - 发布日志页面
+  - /settings 和 /help 页面（Sidebar引用但不存在）
+  - Helm Studio 审核交互（pass/edit/reject 按钮）
 - **影响**: 用户无法通过 Web 界面管理创作流程
 - **修复方案**: 按优先级补充前端页面
 
-### ~~BUG-CF-07: agents/ 与 workers/ 双体系冗余~~ — 已修复
+### ~~BUG-CF-07R: agents/ 旧目录已删但 plugins.py 和 pyproject.toml 有残留引用~~ ✅ 已修复
 
-- **审核结果**: `agents/` 旧目录已清理，所有 Agent 统一在 `workers/` 目录下，无残留引用
+- **来源**: P13 代码冗余检查 / CF-07 审核补充
+- **严重等级**: P1 — 严重（审核发现的新问题）
+- **描述**: ~~`contentforge/agents/` 目录已删除，但存在17处残留引用：~~
+- **修复状态**: ✅ 2026-06-13 验证确认已修复。plugins.py 已改为 `agents_package="contentforge.workers"`，pyproject.toml 所有 entry-points 已指向 `contentforge.workers.*`。
 
-### BUG-CF-08: brain/orchestrator 与 core/pipeline 双编排体系重叠
+### BUG-CF-08: core/pipeline.py 已标记废弃但代码仍存在
 
 - **来源**: P11 架构腐化检测 / CF1 内容创作全流程验证
-- **严重等级**: P2 — 一般
-- **描述**: `brain/orchestrator.py`（SOP 编排）和 `core/pipeline.py`（Phase 2 全流程编排器）是两套独立实现，职责边界不清。两者都实现了创作流程编排，但接口和逻辑不同。
-- **影响**: 两套体系并存导致维护困难，新开发者不清楚该用哪个
-- **修复方案**: 统一为一套编排体系
+- **严重等级**: P2 — 一般（从"双体系重叠"降级为"已标记废弃但代码残留"）
+- **描述**: `core/pipeline.py` 已标记为 DEPRECATED（使用 DeprecationWarning），明确提示使用 `brain.orchestrator.ContentForgeOrchestrator` 替代。但约1200行代码仍存在，可能被其他模块引用。
+- **修复方案**: 确认无引用后删除 pipeline.py，或移至 archive/
 
-### BUG-CF-09: DI 容器未在主代码中使用
+### BUG-CF-09: DI 容器已初始化但主流程仍绕过容器
 
 - **来源**: P14 代码质量门禁 / 铁律3
 - **严重等级**: P2 — 一般
-- **描述**: DI 容器（`flowforge.core.di.DIContainer`）仅在测试代码中使用，主代码中 Orchestrator 等核心组件由调用方直接实例化，未通过 DI 容器。构造函数注入模式已遵循，但缺少 DI 容器统一管理生命周期。
-- **修复方案**: 引入 DI 容器统一管理核心组件
-
-### BUG-CF-10: FactCheckAgent 数据交叉验证已实现但与 SOP 参数不匹配
-
-- **来源**: CF2 六大专家 Agent 验证 / 铁律2
-- **严重等级**: P1 — 严重（问题性质变化：从"功能缺失"变为"参数不匹配"）
-- **描述**: FactCheckAgent 已实现完整的数据交叉验证（`_extract_claims()` + `_cross_validate_data()` + `_validate_single_claim()`），但存在**参数不匹配问题**：
-  - `deep_article.py` 的 `fact_check_node` 传入 `topic_list` 参数
-  - `fact_check_agent.py` 的 `execute()` 读取 `draft` 参数
-  - 并行阶段 fact_check 收到的是选题列表而非文章草稿，链接检查和数据交叉验证逻辑**实际上无法正常工作**
-- **影响**: fact_check 在并行阶段形同虚设，交叉验证逻辑不会被执行
-- **修复方案**: (1) 调整 fact_check_node 传入正确的参数 (2) 或调整 fact_check_agent 支持对 topic_list 进行核查
-
-### BUG-CF-11: 模型治理缺少定期健康检查和自动故障切换
-
-- **来源**: CF8 模型治理验证
-- **严重等级**: P2 — 一般
-- **描述**: `tools/llm/model_service.py` 的 `auto_fix_persona()` 仅生成建议（"建议模式"），不会自动执行切换。`SemanticRouter` 是纯静态路由表，无动态调整能力。缺少定期健康检查调度器和自动故障切换。
-- **修复方案**: 实现定期健康检查调度器和自动故障切换
-
-### ~~BUG-CF-12: 无并行 Agent 调度~~ — 已修复
-
-- **审核结果**: deep_article.py 已实现 Fan-out/Fan-in 模式：topic → [research + fact_check] → writer，research 和 fact_check 并行执行
+- **描述**: `contentforge/core/di_setup.py` 已实现完整 DI 容器配置，`main.py` 启动时调用了 `setup_di_container()`。但主流程中 Orchestrator 的实际创建路径是 FlowForgeSDK → Plugin → 直接实例化，**绕过了 DI 容器**。DI 容器初始化了但未被使用。
+- **修复方案**: 让 FlowForge SDK 的 bootstrap 过程通过 DI 容器解析 Orchestrator
 
 ---
 
-## 三、公共模板验证问题
+## 三、NovelForge 功能问题
 
-### BUG-PUB-01: FlowForge 与 ContentForge 之间 Skill/Plugin 集成机制缺失
+> 以下为第三轮深度审计（2026-06-13）基于 NF1-NF8 提示词验证新增
+
+### BUG-NF-01: 八大创作阶段 Agent 执行模式与设计文档严重不符
+
+- **来源**: NF2 八大创作阶段验证 / A11 文档与代码一致性验证
+- **严重等级**: P0 — 致命
+- **描述**: 8个Agent文件均存在，但执行模式与设计文档arch.md定义严重不符：
+
+| Agent | 设计文档模式 | 实际default_mode | 问题 |
+|-------|-------------|-----------------|------|
+| NovelConceptAgent | Graph of Thoughts | `"got"` | 实际只是单次LLM调用+JSON解析，**没有GoT的多分支发散→交叉对比→合并收敛**流程 |
+| OutlineAgent | Plan-and-Execute | `"rewoo"` | ❌ 模式不匹配，且只是单次LLM调用 |
+| StyleCalibrateAgent | Reflexion | `"reflexion"` | 模式正确但**没有Actor→Evaluator→Reflector循环** |
+| ChapterWritingAgent | Reflexion+SOUL | `"reflexion"` | SOUL注入已实现但**没有自评循环** |
+| ContinuityCheckAgent | ReAct | `"react"` | 模式正确但**没有Thought→Action→Observation循环** |
+| PolisherAgent | ReWOO | `"rewoo"` | 只是单次LLM调用，**没有规划→并行执行→对比确认** |
+| FullReviewAgent | Graph of Thoughts | `"agent_judge"` | ❌ 模式不匹配 |
+
+- **影响**: Agent声明了模式但实际执行只是单次LLM调用，FlowForge的模式执行器未被真正利用
+- **修复方案**: 每个Agent实现对应模式的核心循环逻辑，而非仅设置default_mode字符串
+
+### BUG-NF-02: PublicationAdvisorAgent 完全缺失
+
+- **来源**: NF2 八大创作阶段验证 / 铁律5（未实现即Bug）
+- **严重等级**: P1 — 严重
+- **描述**: 设计文档spec.md明确定义"出版顾问Agent"为阶段八专用Agent，但代码中完全不存在。`deps.py` 也未注册此Agent。阶段八"完稿审核"缺少商业评估能力。
+- **修复方案**: 实现 PublicationAdvisorAgent，负责商业潜力评估、签约平台推荐、推广建议
+
+### BUG-NF-03: agents/ 目录下新旧Agent文件命名冲突
+
+- **来源**: P11 架构腐化检测 / P13 代码冗余检查
+- **严重等级**: P1 — 严重
+- **描述**: `novelforge/agents/` 目录下存在两套Agent文件，职责重叠：
+  - 新版: `novel_concept_agent.py`, `outline_agent.py`, `chapter_writer_agent.py`, `continuity_agent.py`, `polisher_agent.py`, `full_review_agent.py`, `style_calibrate_agent.py`, `chapter_review_agent.py`
+  - 旧版: `world_builder.py`, `style_refiner.py`, `outline_planner.py`, `novel_reviewer.py`, `dialogue_crafter.py`, `character_designer.py`, `chapter_writer.py`, `continuity_checker.py`
+  - `continuity_checker.py`(GenericAgent子类) 与 `continuity_agent.py`(BaseNovelAgent子类) 实现同一职责
+  - `deps.py` 中 import 了 `continuity_checker` 模块的 `ContinuityCheckerAgent`，但实际应使用 `continuity_agent` 模块的 `ContinuityCheckAgent`——**存在命名混乱**
+- **影响**: 开发者不清楚该用哪个Agent，deps.py注册的可能不是正确的实现
+- **修复方案**: (1) 删除旧版Agent文件 (2) 统一deps.py的import (3) 确保注册的是新版Agent
+
+### BUG-NF-04: 五层上下文管理写入路径严重缺失
+
+- **来源**: NF3 五层上下文管理验证
+- **严重等级**: P1 — 严重
+- **描述**: `core/context_manager.py` 存在但写入路径严重缺失：
+  - **L1全文层**: 没有向量索引写入（write_context_layers中没有调用embedding_repo写入向量数据）
+  - **L2章摘要层**: 摘要生成降级策略只是截断前200字，质量堪忧
+  - **L3卷摘要层**: 逻辑缺失——`_regenerate_full_summary`只生成500字全书摘要而非卷摘要
+  - **L4全书摘要层**: `_regenerate_full_summary`存在但没有持久化到数据库
+  - **L5世界状态表**: 写入路径缺失——write_context_layers中没有更新world_state的逻辑（人物位置/关系/能力/情绪变化、时间线事件、伏笔状态等均未自动维护）
+  - **输入组装逻辑**: 设计文档要求(L4全书摘要+L3当前卷摘要+L2前N-1章摘要+向量检索+第N-1章全文+SOUL)未完整实现，当前只返回previous_chapters和world_state
+- **影响**: 写第N章时上下文不完整，长篇小说一致性无法保证
+- **修复方案**: (1) 实现向量索引写入 (2) 实现L3卷摘要逻辑 (3) 实现L4持久化 (4) 实现L5世界状态自动维护 (5) 完善输入组装逻辑
+
+### BUG-NF-05: SOUL 风格参数缺少3个反馈维度
+
+- **来源**: NF4 SOUL风格参数验证
+- **严重等级**: P1 — 严重
+- **描述**: `core/style_profile.py` 的 StyleProfile 模型：
+  - ✅ 5个核心维度已定义（narrative_voice/language_register/description_preference/dialogue_style/pacing_tendency）
+  - ❌ 3个反馈维度缺失：
+    - `author_feedback`（作家特别要求/自由文本）——设计文档spec.md明确定义
+    - `author_tags`（预设标签列表）——设计文档明确定义
+    - `paragraph_annotations`（段落级标注）——设计文档明确定义
+  - `to_prompt_segment`方法只输出5个核心维度，缺少author_feedback注入
+- **影响**: 风格校准阶段的作家反馈无法被注入后续章节的system prompt
+- **修复方案**: (1) StyleProfile增加author_feedback/author_tags/paragraph_annotations字段 (2) to_prompt_segment注入author_feedback
+
+### BUG-NF-06: 一致性检测5个Tool依赖不完整的world_state
+
+- **来源**: NF5 一致性检测验证
+- **严重等级**: P2 — 一般
+- **描述**: 5个Tool文件均存在（search_character/search_timeline/check_foreshadowing/verify_power_system/compare_geography），但：
+  - 都依赖world_state_repo中已有数据，但写入路径不完整（NF-04已指出），world_state表可能为空
+  - verify_power_system和compare_geography只检查"!!"前缀标记作为矛盾标记，无真正的语义验证能力
+  - 没有LLM增强的语义检索能力，只是简单的字符串匹配
+- **影响**: 一致性检测形同虚设，无法发现真正的逻辑矛盾
+- **修复方案**: (1) 修复world_state写入路径(NF-04) (2) Tool增加LLM增强的语义验证
+
+### BUG-NF-07: 六道质量门检查条件与设计文档不一致
+
+- **来源**: NF6 六道质量门验证
+- **严重等级**: P2 — 一般
+- **描述**: `core/quality_gate.py` 6道质量门已定义，但检查条件与设计文档不一致：
+  - **QG-2**: 设计文档要求"大纲评分≥60且无致命逻辑矛盾"，代码只检查`outline.volumes.length >= 1`和`outline.climax_points.length >= 1`，**缺少评分检查和逻辑矛盾检查**
+  - **QG-3**: 设计文档要求`style_confirmed == true`，代码检查`calibration_score >= 0.7`，**缺少style_confirmed布尔检查**
+  - **QG-5**: 设计文档要求`foreshadowing_recovery_rate >= 0.8`，代码额外增加了`consistency_score >= 0.85`，与设计文档不一致
+- **修复方案**: 对齐设计文档更新质量门检查条件
+
+### BUG-NF-08: 盲评不严格 + 仲裁结果未覆盖评分 + 打回重写闭环缺失
+
+- **来源**: NF7 盲评与仲裁验证
+- **严重等级**: P1 — 严重
+- **描述**: `core/review_orchestrator.py` 已实现三方并行盲评+加权+仲裁，但存在3个问题：
+  - **盲评不严格**: 三个Reviewer共享同一个TaskContext，理论上可以互相看到状态，设计文档要求"互不可见"
+  - **仲裁结果未覆盖评分**: 仲裁后返回的revision只是修改建议，没有用仲裁分数替换加权分数，score字段仍是原始加权分
+  - **打回重写闭环缺失**: 设计文档要求"平均<70→打回写手Agent重写"，但ReviewOrchestrator只返回`passed: False`，没有触发重写的闭环逻辑
+- **修复方案**: (1) 每个Reviewer使用独立的TaskContext副本 (2) 仲裁后用仲裁分数替换加权分 (3) 实现打回重写闭环
+
+### BUG-NF-09: 冻结/续写/版本管理/回溯修改严重缺失
+
+- **来源**: NF8 冻结与续写验证
+- **严重等级**: P1 — 严重
+- **描述**: `freeze_novel`/`unfreeze_novel` 基础方法存在，NovelStatus枚举包含FROZEN状态，但以下关键功能缺失：
+  - **跨天审核持久化**: 设计文档要求"Event + 持久化双写"，当前只有内存中的Event，没有跨天恢复逻辑
+  - **多版本管理**: 数据库有chapter_versions表和ChapterVersionModel，但ChapterRepository中没有版本写入和回滚方法
+  - **回溯修改**: 设计文档要求"修改某一章后自动识别受影响章节并触发一致性重检"，完全未实现
+  - **checkpoint保存**: 数据库有checkpoints表和CheckpointModel，但没有在写作循环中自动保存checkpoint的逻辑
+  - **解冻续写**: unfreeze_novel只是简单将status改为"writing"，没有从最后一个checkpoint恢复State的逻辑
+- **修复方案**: (1) 实现跨天审核持久化 (2) 实现版本写入和回滚 (3) 实现回溯修改触发 (4) 实现checkpoint自动保存 (5) 实现从checkpoint恢复
+
+### BUG-NF-10: NovelForge 数据库路径硬编码
+
+- **来源**: P14 代码质量门禁 / 铁律5
+- **严重等级**: P2 — 一般
+- **描述**: `novelforge/app/database.py` 中数据库路径硬编码为 `Path(__file__).resolve().parent.parent / "data" / "novelforge.db"`，违反铁律5"禁止硬编码路径"。
+- **修复方案**: 从配置文件或环境变量读取数据库路径
+
+### BUG-NF-11: NovelForge 测试中11个API端点测试失败
+
+- **来源**: P7 测试铁律自检 / NF1 小说创作全流程验证
+- **严重等级**: P1 — 严重
+- **描述**: NovelForge测试中73个测试有11个失败，主要是API端点测试（404 Not Found），说明API路由未正确挂载。
+- **修复方案**: 检查并修复API路由注册
+
+---
+
+## 四、公共模板验证问题
+
+### BUG-PUB-01: FlowForge 与 ContentForge/NovelForge Plugin 集成机制混乱
 
 - **来源**: P17 FlowForge SDK 集成规范 / P18 插件注册完整性
-- **严重等级**: P1 — 严重
-- **描述**: FlowForge 的 Skill 系统（FF11）和 Plugin 协议（FF10）未实现，导致 ContentForge 无法通过标准插件机制注册到 FlowForge。当前 ContentForge 通过 `FlowForgeSDK(project="contentforge")` 初始化，但未实现 `FlowForgePlugin` 的 `register_agents/register_tools/register_routes` 方法。
-- **影响**: ContentForge 的 Agent 和 Tool 无法被 FlowForge 自动发现
-- **修复方案**: 实现 FlowForge Plugin 协议，ContentForge 实现 FlowForgePlugin
+- **严重等级**: P1 — 严重（从"缺失"降级为"两套体系并存"）
+- **描述**: ContentForge 存在两套并行的Plugin体系：
+  - 旧体系（`contentforge/plugin.py`）: 继承FlowForgePlugin，实现register_agents/register_tools/register_routes
+  - 新体系（`contentforge/plugins.py`）: 使用FlowForgeSDK.create_plugin()，通过agents_package自动扫描
+  - 旧体系register_tools返回空dict（注释说"ContentForge tools are registered via FlowForgeSDK"）
+  - NovelForge的deps.py同时使用SDK方式和直接FlowForge().register_agent()方式，两套注册机制混用
+- **影响**: Agent/Tool注册路径不统一，可能出现重复注册或遗漏注册
+- **修复方案**: (1) 统一为一套Plugin体系 (2) 清理旧体系代码 (3) NovelForge统一使用SDK方式
 
 ### BUG-PUB-02: 跨项目事件总线未统一
 
 - **来源**: P16 跨项目集成验证 / P9 契约与弱耦合验证
 - **严重等级**: P2 — 一般
-- **描述**: FlowForge 有 EventBus，ContentForge 有 Helm 事件回调，OpenSieve 有 AgentBus，三套事件体系独立运行，事件无法跨系统流转。
+- **描述**: FlowForge EventBus（通用发布-订阅）、OpenSieve AgentBus（Agent间通信+死锁检测）、NovelForge事件（订阅FlowForge EventBus）三套事件体系独立运行：
+  - FlowForge EventBus和OpenSieve AgentBus完全独立，无法互操作
+  - AgentBus有协作关系映射和死锁检测能力，EventBus没有
+  - EventBus有请求-响应模式，AgentBus没有
 - **影响**: 跨项目协作时事件链路断裂
 - **修复方案**: 统一到 FlowForge EventBus 或增加桥接层
 
-### BUG-PUB-03: 5 个项目的重复代码未清理
+### BUG-PUB-03: 5个项目重复代码部分清理但仍存在
 
 - **来源**: P13 代码冗余检查 / Q3 架构追问
-- **严重等级**: P2 — 一般
-- **描述**: FlowForge、ContentForge、DevForge、NovelForge、MallForge 五个项目存在重复代码，特别是：
-  - LLM 调用逻辑（各项目各自实现）
-  - 配置管理（各项目各自实现）
-  - Agent 基类（各项目各自定义）
-  - 发布渠道代码（ContentForge 和 MallForge 重复）
+- **严重等级**: P2 — 一般（从"大量重复"降级为"部分改善"）
+- **描述**: 已改善：各项目Agent基类已统一继承flowforge.agents.generic.base.GenericAgent，Plugin注册已通过SDK统一。但仍存在：
+  - 数据库层重复：每个项目独立实现database.py/models.py/Repository层，模式几乎相同
+  - 配置管理重复：每个项目都有config/default.yaml/models.yaml/plugins.yaml/prompts.yaml
+  - API路由结构重复：每个项目都有app/api/router.py/app/main.py/app/deps.py
+  - NovelForge存在新旧两套Agent文件（NF-03已指出）
 - **修复方案**: 将公共能力下沉到 FlowForge，上层项目通过 SDK 复用
-
----
-
-## 四、深度审计新增问题
-
-> 以下为第二轮深度审计（2026-06-12）新增发现
-
-### BUG-NEW-01: ContentForge fact_check_node 与 fact_check_agent 参数不匹配
-
-- **来源**: CF2/CF3 深度验证 / 铁律5（未实现即Bug）
-- **严重等级**: P0 — 致命
-- **描述**: `brain/sop/deep_article.py` 的 `fact_check_node`（第69-81行）传入 `topic_list` 参数，但 `workers/fact_check_agent.py` 的 `execute()` 方法读取 `draft` 参数。并行阶段 fact_check 收到的是选题列表而非文章草稿，其 `_extract_claims()` 和 `_cross_validate_data()` 方法将因缺少 draft 内容而无法正常工作。
-- **影响**: fact_check 在 SOP 并行阶段形同虚设，数据交叉验证不会被执行
-- **修复方案**: (1) 调整 fact_check_node 传入 draft 参数（但并行阶段尚无 draft）(2) 或将 fact_check 移到 writer 之后执行（改为串行）(3) 或让 fact_check_agent 支持对 topic_list 进行核查
-
-### BUG-NEW-02: ContentForge submit_review 中 "edit" 分支的 persona 锁释放逻辑不完整
-
-- **来源**: CF3 SOP 编排深度验证 / 铁律5
-- **严重等级**: P1 — 严重
-- **描述**: `brain/orchestrator.py` 的 `submit_review()` 方法（第178-221行）中：
-  - "pass" 分支：执行 `Command(resume=...)` 后，在第206-208行释放 persona 锁
-  - "edit" 分支：执行 `Command(resume=...)` 后，检查新状态是否仍在 review（第202-204行），但**无论结果如何都走到第206-208行释放 persona 锁**
-  - 设计要求：persona 锁在审核暂停期间**必须保留**，审核完成后释放。但 "edit" 分支 resume 后文章回到 writer 重写，此时 persona 应继续锁定（因为重写完成后还会再次进入审核），但代码中 persona 锁被提前释放
-- **影响**: "edit" 分支 persona 锁提前释放，可能导致同一 persona 的并发任务冲突
-- **修复方案**: "edit" 分支 resume 后，如果新状态仍在执行中（writer/audit/review），应保留 persona 锁
-
-### BUG-NEW-03: FlowForge Skill System 缺少测试覆盖
-
-- **来源**: P7 测试铁律自检 / FF11 深度验证
-- **严重等级**: P1 — 严重
-- **描述**: `flowforge/skills/` 目录下无任何测试文件。Skill 系统的四格式解析、双层加载、版本管理、ComboSkill 管道编排等核心功能均无测试覆盖。
-- **影响**: Skill 系统质量无法保证
-- **修复方案**: 补充 Skill 系统单元测试和集成测试
-
-### BUG-NEW-04: FlowForge ModelCapabilityProvider 与 ModelCapability 双类并存造成混淆
-
-- **来源**: FF18 SDK 深度验证
-- **严重等级**: P2 — 一般
-- **描述**: `tools/llm/model_capability_provider.py` 的 `ModelCapabilityProvider` 和 `core/model_capability.py` 的 `ModelCapability` 功能重叠：
-  - `ModelCapability`：SDK 的 `sdk.llm` 属性使用，提供 chat/list_models/check_health
-  - `ModelCapabilityProvider`：提供更细粒度的路由和降级，但未集成到 SDK
-  - 两者互不感知，模型健康状态不共享
-- **影响**: 开发者不清楚该用哪个类，模型健康状态在不同类之间不同步
-- **修复方案**: 合并为一个类，或将 ModelCapabilityProvider 作为 ModelCapability 的内部实现
-
-### BUG-NEW-05: FlowForge DeclarativeAgent 缺少测试覆盖
-
-- **来源**: P7 测试铁律自检 / FF18 深度验证
-- **严重等级**: P1 — 严重
-- **描述**: `flowforge/core/declarative_agent.py` 无对应测试文件。YAML 加载、装饰器、SDK 集成、默认 LLM 执行等核心功能均无测试覆盖。
-- **修复方案**: 补充 DeclarativeAgent 单元测试
-
-### BUG-NEW-06: ContentForge ResearchAgent 无优先级 Fallback — helixrag 失败不降级
-
-- **来源**: CF4 选题搜索链路深度验证
-- **严重等级**: P1 — 严重
-- **描述**: TopicAgent 已实现三级 fallback（BUG-CF-03 已修复），但 ResearchAgent 仍同时调用 `web_search` 和 `helixrag_search`，两者是独立并行调用，无优先级排序，无 fallback 逻辑。如果 helixrag 返回空结果，不会自动增加 web_search 的搜索深度或范围。
-- **影响**: ResearchAgent 的素材检索质量不稳定
-- **修复方案**: ResearchAgent 实现 helixrag → web_search 的优先级 fallback
-
-### BUG-NEW-07: ContentForge audit_decision 重试逻辑未区分失败原因
-
-- **来源**: CF1 内容创作全流程深度验证
-- **严重等级**: P2 — 一般
-- **描述**: `brain/sop/deep_article.py` 的 `audit_decision()`（第145-151行）仅根据 score 和 retry_count 决定是否重试，不区分失败原因（内容质量问题 vs 事实错误 vs 格式问题）。不同失败原因应路由到不同的修复策略（质量问题→writer, 事实错误→research, 格式问题→editor）。
-- **修复方案**: audit_decision 根据 audit_issues 类型路由到不同修复节点
-
-### BUG-NEW-08: FlowForge SDK 缺少 Skill 系统入口
-
-- **来源**: FF11/FF18 深度验证
-- **严重等级**: P1 — 严重
-- **描述**: `flowforge/sdk.py` 中没有任何对 `SkillManager` 或 `skills` 模块的引用。上层项目（ContentForge 等）无法通过 `sdk.skills` 访问技能系统，必须直接 `from flowforge.skills import SkillManager`，违反了 SDK 作为统一入口的设计意图。
-- **修复方案**: 在 FlowForgeSDK 中增加 `skills` 属性，暴露 SkillManager 实例
 
 ---
 
 ## 问题统计
 
-| 严重等级 | FlowForge | ContentForge | 公共 | 新增 | 合计 |
-|----------|:---------:|:------------:|:----:|:----:|:----:|
-| P0 致命 | 0 | 1 | 0 | 1 | 1 |
-| P1 严重 | 5 | 2 | 1 | 4 | 12 |
-| P2 一般 | 4 | 3 | 2 | 2 | 11 |
-| **合计** | **9** | **6** | **3** | **7** | **24** |
+| 严重等级 | FlowForge | ContentForge | NovelForge | 公共 | 合计 |
+|----------|:---------:|:------------:|:----------:|:----:|:----:|
+| P0 致命 | 0 | 0 | 1 | 0 | 1 |
+| P1 严重 | 0 | 1 | 5 | 1 | 7 |
+| P2 一般 | 5 | 2 | 3 | 2 | 12 |
+| **合计** | **5** | **3** | **9** | **3** | **20** |
 
-**已修复删除**: BUG-CF-01, BUG-CF-07, BUG-CF-12, BUG-CF-03（共 4 项）
+**本轮审核已修复删除**: BUG-FF-01, BUG-FF-02, BUG-FF-04, BUG-FF-08, BUG-FF-11, BUG-FF-12, BUG-NEW-01, BUG-NEW-02, BUG-NEW-03, BUG-NEW-04, BUG-NEW-05, BUG-NEW-06, BUG-NEW-07, BUG-NEW-08, BUG-CF-02, BUG-CF-03, BUG-CF-10, BUG-CF-11（共 18 项）
+
+**前轮已修复删除**: BUG-CF-01, BUG-CF-07, BUG-CF-12（共 3 项）
+
+**2026-06-13 验证修复**: BUG-CF-04, BUG-CF-05, BUG-CF-07R（共 3 项）
+
+**累计已修复**: 24 项
 
 ---
 
 ## 修复优先级建议
 
-### 第一优先级（必须立即修复）
+### 第一优先级（必须立即修复 — P0/P1）
 
-1. **BUG-NEW-01**: fact_check_node 与 fact_check_agent 参数不匹配 → fact_check 在并行阶段形同虚设
-2. **BUG-NEW-02**: submit_review "edit" 分支 persona 锁提前释放
+1. **BUG-NF-01**: 八大创作阶段Agent执行模式与设计文档严重不符 → Agent声明了模式但实际只是单次LLM调用
+2. **BUG-NF-02**: PublicationAdvisorAgent完全缺失 → 阶段八缺少商业评估能力
+3. **BUG-NF-03**: agents/目录新旧Agent文件命名冲突 → deps.py注册可能不正确
+4. **BUG-NF-04**: 五层上下文管理写入路径严重缺失 → 长篇小说一致性无法保证
+5. **BUG-NF-05**: SOUL风格参数缺少3个反馈维度 → 作家反馈无法注入
+6. **BUG-NF-08**: 盲评不严格+仲裁结果未覆盖+打回重写闭环缺失
+7. **BUG-NF-09**: 冻结/续写/版本管理/回溯修改严重缺失
+8. **BUG-NF-11**: 11个API端点测试失败 → API路由未正确挂载
+9. ~~**BUG-CF-04**: AgenticRAG.search()多源检索为空占位~~ ✅ 已修复
+10. ~~**BUG-CF-05**: PublishAgent未集成PublishEngine~~ ✅ 已修复
+11. **BUG-CF-06**: Web控制台缺审核中心/定时任务/专栏配置等关键页面
+12. ~~**BUG-CF-07R**: plugins.py和pyproject.toml残留17处旧包引用~~ ✅ 已修复
+13. **BUG-PUB-01**: Plugin集成机制两套体系并存 → 注册路径不统一
 
-### 第二优先级（架构去腐化 + 新功能打通）
+### 第二优先级（质量提升 — P2）
 
-3. **BUG-FF-01**: Skill 系统步骤执行链路打通 + SDK 集成
-4. **BUG-FF-11**: ModelCapabilityProvider 与 ModelCapability 合并/桥接
-5. **BUG-FF-12**: DeclarativeAgent tools/handoffs/guardrails 执行链路
-6. **BUG-FF-03**: workflow.py God Object 拆分
-7. **BUG-FF-04**: 单向依赖违规修复
-8. **BUG-FF-08**: Mailbox FOREIGN KEY 修复
+14. **BUG-FF-03**: workflow_executor.py仍1327行God Object
+15. **BUG-NF-06**: 一致性检测Tool依赖不完整的world_state
+16. **BUG-NF-07**: 六道质量门检查条件与设计文档不一致
+17. **BUG-NF-10**: 数据库路径硬编码
+18. **BUG-CF-08**: pipeline.py已标记废弃但代码残留
+19. **BUG-CF-09**: DI容器已初始化但主流程仍绕过
+20. **BUG-PUB-02**: 跨项目事件总线未统一
+21. **BUG-PUB-03**: 5个项目重复代码部分清理但仍存在
+22. 文档一致性修复（BUG-FF-05, BUG-FF-06）
+23. 安全问题修复（BUG-FF-07, BUG-FF-09, BUG-FF-10）
 
-### 第三优先级（功能补全）
+---
 
-9. **BUG-CF-04**: Agentic RAG 知识中枢
-10. **BUG-CF-05**: 发布能力补全
-11. **BUG-CF-06**: Web 控制台补全
-12. **BUG-CF-10**: FactCheckAgent 参数不匹配修复
-13. **BUG-NEW-06**: ResearchAgent 优先级 fallback
-14. **BUG-PUB-01**: FlowForge Plugin 协议实现
+> **本文档与各项目 docs/ 下的设计文档互补。发现问题时请同步更新对应设计文档。**
 
-### 第四优先级（质量提升）
+---
 
-15. **BUG-NEW-03**: Skill 系统测试覆盖
-16. **BUG-NEW-05**: DeclarativeAgent 测试覆盖
-17. **BUG-NEW-08**: SDK 增加 skills 入口
-18. **BUG-NEW-04**: ModelCapability 双类合并
-19. **BUG-CF-02**: sqlite3 连接释放
-20. **BUG-NEW-07**: audit_decision 区分失败原因
-21. 文档一致性修复（BUG-FF-05, BUG-FF-06）
-22. 安全问题修复（BUG-FF-09, BUG-FF-10）
+## 五、硬编码提示词问题（第三轮审计新增）
+
+> 以下为第三轮深度审计（2026-06-13）基于P16提示词外置验证模板全面排查发现
+
+### BUG-PROMPT-01: FlowForge 77处硬编码提示词未外置到YAML
+
+- **来源**: P16 提示词外置验证 / 铁律5（禁止硬编码）
+- **严重等级**: P0 — 致命
+- **描述**: FlowForge项目中77处LLM提示词硬编码在Python代码中，未外置到 `config/prompts.yaml`。最严重的问题：
+
+| 模块 | 文件 | 硬编码数 | 说明 |
+|------|------|:--------:|------|
+| core | `prompt_manager.py` | 39 | `_DEFAULT_PROMPTS`字典与prompts.yaml双重定义，内容有差异 |
+| brain | `plan_generator.py` | 2 | 初始计划生成(28行)+增量更新(46行)长提示词 |
+| modes | `workflow_executor.py` | 3 | 翻译/代码/通用步骤系统提示 |
+| modes | `rewoo.py` | 1 | ReWOO fallback提示 |
+| modes | `workflow_validator.py` | 2 | LLM搜索提示 |
+| tools | `web_search.py` | 2 | LLM搜索提示（与workflow_validator.py重复） |
+| agents | `topic_research.py` | 2 | LLM搜索提示（与web_search.py重复，3处重复！） |
+| agents/generic | `web_search_agent.py` | 4 | 搜索/计划/摘要/回退提示 |
+| agents/generic | 16个通用Agent文件 | 16 | 每个Agent各自硬编码 |
+| loop | `reflector.py` | 1 | 失败分析提示 |
+| loop | `planner.py` | 2 | 计划生成+重计划提示 |
+| harness | `feedback_loop.py` | 3 | 评判/评分提示 |
+
+- **核心问题**:
+  1. `_DEFAULT_PROMPTS`(39个)与`prompts.yaml`(38个)双重定义，内容有差异，以哪个为准？
+  2. 同一搜索提示词在3个文件中重复硬编码
+  3. 修改提示词需要改代码重新部署，违反配置外置原则
+- **修复方案**: (1) 删除`_DEFAULT_PROMPTS`，PromptManager只从YAML加载 (2) 所有硬编码提示词外置到prompts.yaml (3) 代码通过`get_prompt(key)`加载 (4) 合并3处重复搜索提示词为1个YAML key
+
+### BUG-PROMPT-02: ContentForge 24处硬编码提示词，prompts.yaml完全未被引用
+
+- **来源**: P16 提示词外置验证 / 铁律5
+- **严重等级**: P0 — 致命
+- **描述**: ContentForge生产代码中24处硬编码提示词，`config/prompts.yaml`定义了21个提示词模板但**0个被实际使用**。两套提示词完全脱节。
+
+| 模块 | 文件 | 硬编码数 | 说明 |
+|------|------|:--------:|------|
+| workers | `topic_agent.py` | 5 | 4策略选题+LLM搜索回退 |
+| workers | `writer_agent.py` | 4 | 文章创作主提示词+3处fallback |
+| workers | `editor_agent.py` | 1 | 编辑润色 |
+| workers | `audit_agent.py` | 1 | 多维度审核评分 |
+| workers | `fact_check_agent.py` | 2 | 交叉验证+选题验证 |
+| app/api | `content.py` | 11 | 7个persona风格+创作+评估+反思+视频+系列+互动 |
+
+- **核心问题**: prompts.yaml是"规划态"，代码硬编码是"运行态"，两者没有建立加载/引用关系
+- **修复方案**: (1) 所有硬编码提示词外置到prompts.yaml (2) 代码通过PromptManager加载 (3) 删除prompts.yaml中未被使用的模板或补充对应实现
+
+### BUG-PROMPT-03: NovelForge 14处硬编码提示词，prompts.yaml定义了但代码未引用
+
+- **来源**: P16 提示词外置验证 / 铁律5
+- **严重等级**: P0 — 致命
+- **描述**: NovelForge生产代码中14处硬编码提示词，`config/prompts.yaml`定义了6个`agent.*`提示词但代码**完全忽略**这些配置，各自硬编码了不同版本。
+
+| 模块 | 文件 | 硬编码数 | yaml有对应? |
+|------|------|:--------:|:-----------:|
+| agents | `novel_concept_agent.py` | 1 | ⚠️ 有但未引用 |
+| agents | `outline_agent.py` | 1 | ⚠️ 有但未引用 |
+| agents | `chapter_writer_agent.py` | 1 | ⚠️ 有但未引用 |
+| agents | `market_analyst_agent.py` | 1 | ❌ 无 |
+| agents | `style_calibrate_agent.py` | 1 | ❌ 无 |
+| agents | `polisher_agent.py` | 1 | ⚠️ 有但未引用 |
+| agents | `plot_integrator_agent.py` | 1 | ❌ 无 |
+| agents | `publication_advisor_agent.py` | 1 | ❌ 无 |
+| agents | `full_review_agent.py` | 1 | ⚠️ 有但未引用 |
+| agents | `continuity_checker.py` | 1 | ⚠️ 有但未引用 |
+| agents/reviewers | `emotion_reviewer.py`+`arbitrator.py` | 2 | ❌ 无 |
+| core | `context_manager.py` | 2 | ❌ 无 |
+
+- **修复方案**: 同上，全部外置到prompts.yaml并通过PromptManager加载
+
+---
+
+## 六、硬编码路径/密钥与代码质量问题（第三轮审计新增）
+
+### BUG-CONFIG-01: FlowForge 多处硬编码路径和直接SQL
+
+- **来源**: P14 代码质量门禁 / 铁律4+5
+- **严重等级**: P1 — 严重
+- **描述**:
+  - `flowforge/core/system.py` 硬编码 `C:\\` 路径
+  - `flowforge/memory/helm_db.py` 大量直接SQL操作绕过Repository层
+  - `flowforge/memory/secret_store.py` 直接SQL操作
+  - `flowforge/memory/mailbox.py` 直接SQL操作
+  - `contentforge/core/task_store.py` 直接SQL操作
+  - `novelforge/app/database.py` 硬编码数据库路径
+- **影响**: 违反铁律4（禁止直接SQL）和铁律5（禁止硬编码路径）
+- **修复方案**: (1) 路径从配置文件读取 (2) SQL操作迁移到Repository层
+
+### BUG-CONFIG-02: FlowForge 4个核心工具为空实现/Stub
+
+- **来源**: P10 未实现功能审查 / 铁律2+5
+- **严重等级**: P0 — 致命
+- **描述**:
+  - `flowforge/tools/publish.py` — 发布工具返回stub数据
+  - `flowforge/tools/video_generate.py` — 视频生成返回stub数据
+  - `flowforge/core/mcp_integration.py` — MCP集成全部stub
+  - `novelforge/tools/base.py` — 搜索基类抛NotImplementedError
+- **影响**: 违反铁律2（禁止假数据/假逻辑）和铁律5（未实现即Bug）
+- **修复方案**: 实现真实功能或删除stub代码并标记为未实现
+
+### BUG-CONFIG-03: FlowForge SDK文档示例中硬编码IP和密钥
+
+- **来源**: P14 代码质量门禁 / A5 安全审计
+- **严重等级**: P2 — 一般
+- **描述**: SDK文档/示例中包含硬编码的IP地址和API密钥示例
+- **修复方案**: 使用环境变量占位符替代
+
+---
+
+## 问题统计（更新版）
+
+| 严重等级 | FlowForge | ContentForge | NovelForge | 公共 | 提示词 | 配置 | 合计 |
+|----------|:---------:|:------------:|:----------:|:----:|:------:|:----:|:----:|
+| P0 致命 | 0 | 0 | 1 | 0 | 3 | 1 | **5** |
+| P1 严重 | 0 | 3 | 5 | 1 | 0 | 1 | **10** |
+| P2 一般 | 5 | 2 | 3 | 2 | 0 | 1 | **13** |
+| **合计** | **5** | **5** | **9** | **3** | **3** | **2** | **28** |
+
+**硬编码提示词统计**: FlowForge 77处 + ContentForge 24处 + NovelForge 14处 = **115处**
+
+**累计已修复**: 21 项
+
+---
+
+## 修复优先级建议（更新版）
+
+### 第一优先级（必须立即修复 — P0）
+
+1. **BUG-PROMPT-01**: FlowForge 77处硬编码提示词 → 修改提示词需改代码重新部署
+2. **BUG-PROMPT-02**: ContentForge 24处硬编码提示词 → prompts.yaml完全未被引用
+3. **BUG-PROMPT-03**: NovelForge 14处硬编码提示词 → prompts.yaml定义了但代码未引用
+4. **BUG-CONFIG-02**: 4个核心工具为空实现/Stub → 违反铁律2+5
+5. **BUG-NF-01**: 八大创作阶段Agent执行模式与设计文档严重不符
+
+### 第二优先级（必须尽快修复 — P1）
+
+6. **BUG-NF-02**: PublicationAdvisorAgent完全缺失
+7. **BUG-NF-03**: agents/目录新旧Agent文件命名冲突
+8. **BUG-NF-04**: 五层上下文管理写入路径严重缺失
+9. **BUG-NF-05**: SOUL风格参数缺少3个反馈维度
+10. **BUG-NF-08**: 盲评不严格+仲裁结果未覆盖+打回重写闭环缺失
+11. **BUG-NF-09**: 冻结/续写/版本管理/回溯修改严重缺失
+12. **BUG-NF-11**: 11个API端点测试失败
+13. **BUG-CF-04**: AgenticRAG.search()多源检索为空占位
+14. **BUG-CF-05**: PublishAgent未集成PublishEngine
+15. **BUG-CF-06**: Web控制台缺审核中心/定时任务/专栏配置等
+16. **BUG-CF-07R**: plugins.py和pyproject.toml残留17处旧包引用
+17. **BUG-PUB-01**: Plugin集成机制两套体系并存
+18. **BUG-CONFIG-01**: 多处硬编码路径和直接SQL
+
+### 第三优先级（质量提升 — P2）
+
+19. **BUG-FF-03**: workflow_executor.py仍1327行God Object
+20. **BUG-NF-06**: 一致性检测Tool依赖不完整的world_state
+21. **BUG-NF-07**: 六道质量门检查条件与设计文档不一致
+22. **BUG-NF-10**: 数据库路径硬编码
+23. **BUG-CF-08**: pipeline.py已标记废弃但代码残留
+24. **BUG-CF-09**: DI容器已初始化但主流程仍绕过
+25. **BUG-PUB-02**: 跨项目事件总线未统一
+26. **BUG-PUB-03**: 5个项目重复代码部分清理但仍存在
+27. **BUG-CONFIG-03**: SDK文档示例中硬编码IP和密钥
+28. 文档一致性修复（BUG-FF-05, BUG-FF-06）
+29. 安全问题修复（BUG-FF-07, BUG-FF-09, BUG-FF-10）
+
+---
+
+## 七、P14A代码全量扫描问题（第四轮审计新增）
+
+> 以下为第四轮深度审计（2026-06-13）基于P14A代码全量扫描模板逐文件逐行审计发现
+> FlowForge 27项 + ContentForge 81项 + NovelForge 98项 = **206项新问题**
+
+### 7.1 FlowForge P14A扫描结果（27项）
+
+#### P0级（7项）
+
+| # | 问题 | 文件 | 行号 | 铁律 |
+|---|------|------|------|------|
+| FF-P14A-01 | secret_key="changeme-in-production" 安全隐患 | core/system.py | - | 铁律5 |
+| FF-P14A-02 | PublishTool.execute()返回stub数据 | tools/publish.py | - | 铁律2+5 |
+| FF-P14A-03 | VideoGenerateTool.execute()返回stub数据 | tools/video_generate.py | - | 铁律2+5 |
+| FF-P14A-04 | MCP Integration全部stub实现 | core/mcp_integration.py | - | 铁律2+5 |
+| FF-P14A-05 | 10+存储模块全部直接sqlite3.connect()+裸SQL | memory/helm_db.py, secret_store.py, mailbox.py等 | - | 铁律4 |
+| FF-P14A-06 | 提示词硬编码77处+跨文件重复3处 | 多文件 | - | 铁律5 |
+| FF-P14A-07 | 数据库路径全部硬编码 | 多文件 | - | 铁律5 |
+
+#### P1级（12项）
+
+| # | 问题 | 文件 | 行号 | 铁律 |
+|---|------|------|------|------|
+| FF-P14A-08 | app/main.py模块级大量初始化 | app/main.py | - | 架构 |
+| FF-P14A-09 | except ImportError: pass静默吞错 | app/main.py | - | 规范 |
+| FF-P14A-10 | _DEFAULT_PROMPTS与prompts.yaml双重定义 | core/prompt_manager.py | - | 铁律5 |
+| FF-P14A-11 | plan_generator.py 2处长提示词硬编码 | brain/plan_generator.py | L74-101,L142-187 | 铁律5 |
+| FF-P14A-12 | feedback_loop.py 3处评判提示词硬编码 | harness/feedback_loop.py | - | 铁律5 |
+| FF-P14A-13 | 16个通用Agent各自硬编码提示词 | agents/generic/*.py | - | 铁律5 |
+| FF-P14A-14 | loop/planner.py 2处计划提示词硬编码 | loop/planner.py | - | 铁律5 |
+| FF-P14A-15 | loop/reflector.py 1处反思提示词硬编码 | loop/reflector.py | - | 铁律5 |
+| FF-P14A-16 | web_search相关3文件重复搜索提示词 | tools/web_search.py, agents/topic_research.py, modes/workflow_validator.py | - | 铁律5 |
+| FF-P14A-17 | workflow_executor.py 3处步骤提示词硬编码 | modes/workflow_executor.py | - | 铁律5 |
+| FF-P14A-18 | rewoo.py 1处fallback提示词硬编码 | modes/rewoo.py | - | 铁律5 |
+| FF-P14A-19 | 硬编码端口号 | 多文件 | - | 铁律5 |
+
+#### P2级（8项）
+
+| # | 问题 | 文件 | 行号 | 铁律 |
+|---|------|------|------|------|
+| FF-P14A-20 | 部分函数缺少类型注解 | 多文件 | - | 规范 |
+| FF-P14A-21 | 部分模块无测试文件 | 多模块 | - | 测试 |
+| FF-P14A-22 | SDK文档示例硬编码IP和密钥 | sdk.py docstring | - | 铁律5 |
+| FF-P14A-23 | Marketplace下载回退创建空Stub | core/marketplace.py | - | 铁律2 |
+| FF-P14A-24 | HelmDatabase重复建表 | memory/helm_db.py | - | 规范 |
+| FF-P14A-25 | ArchitectureConstraintEngine层映射不匹配 | security/arch_constraint.py | - | 文档 |
+| FF-P14A-26 | 模式参数与设计文档不一致 | modes/*.py | - | 文档 |
+| FF-P14A-27 | SecretStore默认路径依赖包安装位置 | memory/secret_store.py | - | 铁律5 |
+
+---
+
+### 7.2 ContentForge P14A扫描结果（81项）
+
+#### P0级（8项）
+
+| # | 问题 | 文件 | 行号 | 铁律 |
+|---|------|------|------|------|
+| CF-P14A-01 | DI容器TaskRepo()/AuditRepo()无参实例化必崩 | core/di_setup.py | - | 铁律3 |
+| CF-P14A-02 | prompts.yaml定义21个模板但0个被引用 | config/prompts.yaml | - | 铁律5 |
+| CF-P14A-03 | writer_agent.py单提示词近90行硬编码 | workers/writer_agent.py | L36-65 | 铁律5 |
+| CF-P14A-04 | topic_agent.py 5处策略提示词硬编码 | workers/topic_agent.py | L87-220 | 铁律5 |
+| CF-P14A-05 | content.py 11处提示词硬编码（含7个persona风格） | app/api/endpoints/content.py | L628-1190 | 铁律5 |
+| CF-P14A-06 | AgenticRAG.search()多源检索为空占位 | tools/agentic_rag.py | L178-203 | 铁律2+5 |
+| CF-P14A-07 | PublishAgent未集成PublishEngine | workers/publish_agent.py | - | 铁律2 |
+| CF-P14A-08 | Web控制台缺审核中心/定时任务/专栏配置等6+页面 | web/src/app/ | - | 功能 |
+
+#### P1级（26项）
+
+| # | 问题 | 文件 | 铁律 |
+|---|------|------|------|
+| CF-P14A-09 | editor_agent.py 1处提示词硬编码 | workers/editor_agent.py | 铁律5 |
+| CF-P14A-10 | audit_agent.py 1处28行提示词硬编码 | workers/audit_agent.py | 铁律5 |
+| CF-P14A-11 | fact_check_agent.py 2处提示词硬编码 | workers/fact_check_agent.py | 铁律5 |
+| CF-P14A-12 | research_agent.py提示词硬编码 | workers/research_agent.py | 铁律5 |
+| CF-P14A-13 | plugins.py agents_package指向已删除的旧包 | plugins.py L11 | 铁律5 |
+| CF-P14A-14 | pyproject.toml 16个entry-point引用旧包 | pyproject.toml L38-54 | 铁律5 |
+| CF-P14A-15 | pipeline.py已标记废弃但1200行代码残留 | core/pipeline.py | 架构 |
+| CF-P14A-16 | DI容器初始化了但主流程绕过容器 | app/main.py | 铁律3 |
+| CF-P14A-17 | task_store.py直接SQL操作 | core/task_store.py | 铁律4 |
+| CF-P14A-18 | 硬编码端口号 | 多文件 | 铁律5 |
+| CF-P14A-19 | 硬编码超时/阈值 | 多文件 | 铁律5 |
+| CF-P14A-20 | 单元测试Mock LLM调用（违反T1） | tests/unit/ | T1 |
+| CF-P14A-21 | 单元测试使用假数据"test"/"hello"（违反T2） | tests/unit/ | T2 |
+| CF-P14A-22 | 遇到错误直接pytest.skip()（违反T3） | tests/unit/ | T3 |
+| CF-P14A-23 | 缺少集成测试 | tests/integration/ | 测试 |
+| CF-P14A-24 | 缺少E2E测试 | tests/e2e/ | 测试 |
+| CF-P14A-25 | API端点缺少参数校验 | app/api/ | 安全 |
+| CF-P14A-26 | 部分函数缺少类型注解 | 多文件 | 规范 |
+| CF-P14A-27 | 废弃import | 多文件 | 规范 |
+| CF-P14A-28 | 裸except | 多文件 | 规范 |
+| CF-P14A-29 | 同步I/O操作 | 多文件 | 规范 |
+| CF-P14A-30 | Playwright自动化发布缺失 | tools/ | 铁律5 |
+| CF-P14A-31 | SEO规划/优化Agent未实现 | workers/ | 铁律5 |
+| CF-P14A-32 | 标题优化Agent未实现 | workers/ | 铁律5 |
+| CF-P14A-33 | 内容改写Agent未实现 | workers/ | 铁律5 |
+| CF-P14A-34 | 多语言翻译Agent未实现 | workers/ | 铁律5 |
+
+#### P2级（47项）
+
+| 类别 | 数量 | 说明 |
+|------|:----:|------|
+| 硬编码URL | ~8 | http://localhost等 |
+| 硬编码超时/阈值 | ~12 | timeout=, max_retries=等 |
+| 缺少类型注解 | ~15 | 函数参数/返回值 |
+| 废弃import | ~5 | 未使用的import |
+| 测试覆盖不足 | ~7 | 无测试文件的模块 |
+
+---
+
+### 7.3 NovelForge P14A扫描结果（98项）
+
+#### P0级（16项）
+
+| # | 问题 | 文件 | 铁律 |
+|---|------|------|------|
+| NF-P14A-01 | 15个Agent提示词全部硬编码，prompts.yaml定义了但未引用 | agents/*.py | 铁律5 |
+| NF-P14A-02 | 八大创作阶段Agent执行模式与设计文档严重不符 | agents/*.py | 铁律5 |
+| NF-P14A-03 | deps.py直接实例化绕过DI容器 | app/deps.py | 铁律3 |
+| NF-P14A-04 | Agent注册逻辑重复执行两次 | app/deps.py | 铁律3 |
+| NF-P14A-05 | 五层上下文管理写入路径严重缺失 | core/context_manager.py | 铁律2 |
+| NF-P14A-06 | SOUL风格参数缺少3个反馈维度 | core/style_profile.py | 铁律5 |
+| NF-P14A-07 | 一致性检测Tool依赖不完整的world_state | tools/*.py | 铁律2 |
+| NF-P14A-08 | 盲评不严格+仲裁结果未覆盖+打回重写闭环缺失 | core/review_orchestrator.py | 铁律2 |
+| NF-P14A-09 | 冻结/续写/版本管理/回溯修改严重缺失 | 多文件 | 铁律5 |
+| NF-P14A-10 | PublicationAdvisorAgent完全缺失 | agents/ | 铁律5 |
+| NF-P14A-11 | agents/目录新旧Agent文件命名冲突 | agents/ | 架构 |
+| NF-P14A-12 | 11个API端点测试失败(404) | tests/ | 测试 |
+| NF-P14A-13 | 数据库路径硬编码 | app/database.py | 铁律5 |
+| NF-P14A-14 | novel_store.py 10处同步I/O阻塞事件循环 | tools/novel_store.py | 规范 |
+| NF-P14A-15 | 全局异常处理器返回完整traceback | app/main.py | 安全 |
+| NF-P14A-16 | 搜索基类抛NotImplementedError | tools/base.py | 铁律2 |
+
+#### P1级（31项）
+
+| # | 问题 | 文件 | 铁律 |
+|---|------|------|------|
+| NF-P14A-17 | novels.py 3个API返回假数据(role="supporting",x=0,y=0) | app/api/endpoints/novels.py | 铁律2 |
+| NF-P14A-18 | 六道质量门检查条件与设计文档不一致 | core/quality_gate.py | 文档 |
+| NF-P14A-19 | 硬编码端口号 | 多文件 | 铁律5 |
+| NF-P14A-20 | 硬编码超时/阈值 | 多文件 | 铁律5 |
+| NF-P14A-21 | 硬编码URL | 多文件 | 铁律5 |
+| NF-P14A-22 | 裸except | 多文件 | 规范 |
+| NF-P14A-23 | 部分函数缺少类型注解 | 多文件 | 规范 |
+| NF-P14A-24 | 废弃import | 多文件 | 规范 |
+| NF-P14A-25 | 缺少集成测试 | tests/ | 测试 |
+| NF-P14A-26 | 缺少E2E测试 | tests/ | 测试 |
+| NF-P14A-27 | 测试中Mock LLM调用（违反T1） | tests/ | T1 |
+| NF-P14A-28 | 测试中使用假数据（违反T2） | tests/ | T2 |
+| NF-P14A-29 | API端点缺少参数校验 | app/api/ | 安全 |
+| NF-P14A-30 | continuity_checker.py与continuity_agent.py重复 | agents/ | 冗余 |
+| NF-P14A-31 | chapter_writer.py与chapter_writer_agent.py重复 | agents/ | 冗余 |
+| NF-P14A-32 | style_refiner.py与style_calibrate_agent.py重复 | agents/ | 冗余 |
+| NF-P14A-33 | outline_planner.py与outline_agent.py重复 | agents/ | 冗余 |
+| NF-P14A-34 | novel_reviewer.py与full_review_agent.py重复 | agents/ | 冗余 |
+| NF-P14A-35 | world_builder.py未注册到deps.py | agents/ | 铁律5 |
+| NF-P14A-36 | dialogue_crafter.py未注册到deps.py | agents/ | 铁律5 |
+| NF-P14A-37 | character_designer.py未注册到deps.py | agents/ | 铁律5 |
+| NF-P14A-38 | 摘要生成降级策略只是截断前200字 | core/context_manager.py | 铁律2 |
+| NF-P14A-39 | L3卷摘要逻辑缺失 | core/context_manager.py | 铁律2 |
+| NF-P14A-40 | L4全书摘要未持久化 | core/context_manager.py | 铁律2 |
+| NF-P14A-41 | L5世界状态写入路径缺失 | core/context_manager.py | 铁律2 |
+| NF-P14A-42 | 输入组装逻辑不完整 | core/context_manager.py | 铁律2 |
+| NF-P14A-43 | verify_power_system只检查"!!"前缀 | tools/verify_power_system.py | 铁律2 |
+| NF-P14A-44 | compare_geography只检查"!!"前缀 | tools/compare_geography.py | 铁律2 |
+| NF-P14A-45 | 跨天审核持久化缺失 | core/ | 铁律5 |
+| NF-P14A-46 | 多版本管理未实现 | core/ | 铁律5 |
+| NF-P14A-47 | 回溯修改未实现 | core/ | 铁律5 |
+| NF-P14A-48 | checkpoint自动保存缺失 | core/ | 铁律5 |
+
+#### P2级（51项）
+
+| 类别 | 数量 | 说明 |
+|------|:----:|------|
+| 硬编码URL | ~6 | http://localhost等 |
+| 硬编码超时/阈值 | ~10 | timeout=, max_retries=等 |
+| 缺少类型注解 | ~15 | 函数参数/返回值 |
+| 废弃import | ~8 | 未使用的import |
+| 裸except | ~4 | except: |
+| 测试覆盖不足 | ~8 | 无测试文件的模块 |
+
+---
+
+## 问题统计（最终版）
+
+| 严重等级 | FlowForge | ContentForge | NovelForge | 公共 | 提示词 | 配置 | P14A新增 | 合计 |
+|----------|:---------:|:------------:|:----------:|:----:|:------:|:----:|:--------:|:----:|
+| P0 致命 | 0 | 0 | 1 | 0 | 3 | 1 | 31 | **36** |
+| P1 严重 | 0 | 3 | 5 | 1 | 0 | 1 | 69 | **79** |
+| P2 一般 | 5 | 2 | 3 | 2 | 0 | 1 | 106 | **119** |
+| **合计** | **5** | **5** | **9** | **3** | **3** | **2** | **206** | **234** |
+
+**硬编码提示词统计**: FlowForge 77处 + ContentForge 24处 + NovelForge 14处 = **115处**
+
+**违反铁律统计**:
+- 铁律5（禁止硬编码）: 80+ 处
+- 铁律2（禁止假数据/假逻辑）: 15+ 处
+- 铁律3（禁止绕过DI容器）: 8+ 处
+- 铁律4（禁止直接SQL）: 12+ 处
+- 测试铁律T1-T6: 10+ 处
+
+---
+
+## 修复优先级建议（最终版）
+
+### 第一优先级（必须立即修复 — P0，共36项）
+
+**硬编码提示词（3项，影响115处代码）**:
+1. BUG-PROMPT-01: FlowForge 77处硬编码提示词
+2. BUG-PROMPT-02: ContentForge 24处硬编码提示词
+3. BUG-PROMPT-03: NovelForge 14处硬编码提示词
+
+**空实现/Stub（4项）**:
+4. BUG-CONFIG-02: 4个核心工具为空实现/Stub
+5. FF-P14A-02: PublishTool返回stub
+6. FF-P14A-03: VideoGenerateTool返回stub
+7. FF-P14A-04: MCP Integration全部stub
+
+**安全漏洞（2项）**:
+8. FF-P14A-01: secret_key="changeme-in-production"
+9. NF-P14A-15: 全局异常处理器返回完整traceback
+
+**架构致命问题（8项）**:
+10. CF-P14A-01: DI容器TaskRepo()/AuditRepo()无参实例化必崩
+11. FF-P14A-05: 10+存储模块全部直接SQL
+12. FF-P14A-07: 数据库路径全部硬编码
+13. NF-P14A-03: deps.py直接实例化绕过DI
+14. NF-P14A-04: Agent注册逻辑重复执行两次
+15. NF-P14A-14: novel_store.py 10处同步I/O阻塞
+16. NF-P14A-16: 搜索基类抛NotImplementedError
+17. BUG-NF-01: 八大创作阶段Agent执行模式与设计文档严重不符
+
+**功能缺失（19项）**:
+18-36. 见上文NF-P14A-05至NF-P14A-13, CF-P14A-06至CF-P14A-08等
+
+### 第二优先级（必须尽快修复 — P1，共79项）
+见上文各项目P1级问题清单
+
+### 第三优先级（质量提升 — P2，共119项）
+见上文各项目P2级问题清单
 
 ---
 
