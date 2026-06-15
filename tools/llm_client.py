@@ -171,6 +171,7 @@ class LLMClient(BaseTool):
             "persona": {"type": "string", "description": "Persona identifier for model routing"},
             "agent_name": {"type": "string", "description": "Agent name for model routing"},
             "tools": {"type": "array", "description": "OpenAI function calling tools schema"},
+            "skip_cooldown": {"type": "boolean", "default": False, "description": "Skip cooldown check for judge calls"},
         },
     }
 
@@ -348,6 +349,7 @@ class LLMClient(BaseTool):
         stream = input.params.get("stream", False)
         task_id = input.params.get("task_id", "unknown")
         tools = input.params.get("tools")
+        skip_cooldown = input.params.get("skip_cooldown", False)
 
         logger.info(f"[LLM请求] agent={agent_name or 'N/A'} persona={persona or 'N/A'} "
                     f"model={model or 'auto'} task_id={task_id[:8] if task_id else 'N/A'} "
@@ -441,7 +443,7 @@ class LLMClient(BaseTool):
             key = f"{provider}/{model_id}"
             status = self._health_status.get(key, {})
             cooldown_until = status.get("cooldown_until", 0)
-            if time.time() < cooldown_until:
+            if not skip_cooldown and time.time() < cooldown_until:
                 remaining = int(cooldown_until - time.time())
                 logger.info(f"[候选链] #{idx+1} 跳过 {key}: cooldown中，剩余{remaining}秒")
                 continue
@@ -621,7 +623,7 @@ class LLMClient(BaseTool):
                     key = f"{provider}/{model_id}"
                     status = self._health_status.get(key, {})
                     cooldown_until = status.get("cooldown_until", 0)
-                    if time.time() < cooldown_until:
+                    if not skip_cooldown and time.time() < cooldown_until:
                         continue
                     # Increment call counter for fallback calls
                     self._task_call_counts[task_id] = self._task_call_counts.get(task_id, 0) + 1

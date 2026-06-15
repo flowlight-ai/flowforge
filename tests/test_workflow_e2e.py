@@ -9,6 +9,7 @@
 """
 
 import asyncio
+import time
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -864,3 +865,129 @@ class TestBaseModeExecutorLifecycle:
 
         assert call_order == ["prepare", "on_enter", "execute_core", "on_exit", "postprocess"]
         assert result == {"response": "ok"}
+
+
+# ──────────────────────────────────────────────────────────────
+# 13. 真实LLM E2E验证 — T1铁律遵守
+# ──────────────────────────────────────────────────────────────
+
+def _llm_available() -> bool:
+    """检查LLM服务是否可用（openroute 可达且API key有效）"""
+    import os
+    if os.environ.get("FLOWFORGE_REAL_LLM") == "1":
+        return True
+    # 检查是否有真实的API key（非测试key）
+    openroute_key = os.environ.get("OPENROUTE_API_KEY", "")
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if openroute_key in ("", "test-key") and openrouter_key in ("", "test-key"):
+        return False
+    # 检查openroute端口是否可达
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            "http://127.0.0.1:13001/v1/models",
+            headers={"Content-Type": "application/json"},
+        )
+        resp = urllib.request.urlopen(req, timeout=3)
+        return resp.status == 200
+    except Exception:
+        return False
+
+
+skip_no_llm = pytest.mark.skipif(
+    not _llm_available(),
+    reason="LLM服务不可用，需设置 FLOWFORGE_REAL_LLM=1 或启动 openroute"
+)
+
+
+@skip_no_llm
+class TestRealLLMWorkflowE2E:
+    """真实LLM E2E测试 — 验证WorkflowExecutor通过真实LLM完成对话"""
+
+    @pytest.mark.asyncio
+    async def test_normal_chat_with_real_llm(self):
+        """使用真实LLM执行normal_chat流程，验证返回内容质量"""
+        from flowforge.modes.workflow_executor import WorkflowExecutor
+        from flowforge.modes.workflow_chat import ChatHandler
+        from flowforge.tools.llm_client import LLMClient
+        from flowforge.core.config import ConfigLoader
+        from flowforge.core.base_tool import ToolInput
+        from flowforge.core import metrics as ff_metrics
+
+        # 创建真实LLMClient
+        config_loader = ConfigLoader()
+        models_config = config_loader.get_models_config()
+        event_bus = EventBus()
+        llm_client = LLMClient(models_config=models_config, event_bus=event_bus)
+
+        # 创建 MetricsCollector (T6)
+        collector = ff_metrics.get_metrics_collector("test-real-llm-chat")
+
+        executor = WorkflowExecutor()
+        # 注入真实LLMClient到ContextHandler
+        executor._context_handler._llm_client = llm_client
+
+        ctx = _make_mock_ctx(
+            input_data={"task": "请分析2026年人工智能在教育领域的三大突破性趋势，每条趋势给出具体案例。"},
+            interaction_mode="normal",
+        )
+        ctx.event_bus = event_bus
+
+        # 使用真实LLM执行
+        executor._recall_memories = AsyncMock(return_value=[])
+        executor._save_to_memory = AsyncMock()
+
+        result = await executor._execute_core(ctx)
+
+        # T3: 具体断言，验证内容质量
+        assert result is not None, "LLM返回结果为空"
+        response = result.get("response", "")
+        assert len(response) >= 30, f"LLM返回内容过短(len={len(response)}), 期望>=30字"
+        # 验证内容与AI/教育主题相关
+        assert any(kw in response for kw in ["AI", "人工智能", "教育", "学习", "技术"]), \
+            f"LLM返回内容与主题不相关: {response[:200]}"
+
+        # 输出指标报告 (T6)
+        collector.end_time = time.time()
+        report = collector.generate_report()
+        print(f"\n[Metrics] {report}")
+
+    @pytest.mark.asyncio
+    async def test_llm_client_direct_call(self):
+        """直接调用LLMClient验证真实LLM可达性"""
+        from flowforge.tools.llm_client import LLMClient
+        from flowforge.core.config import ConfigLoader
+        from flowforge.core.base_tool import ToolInput
+        from flowforge.core import metrics as ff_metrics
+
+        config_loader = ConfigLoader()
+        models_config = config_loader.get_models_config()
+        event_bus = EventBus()
+        client = LLMClient(models_config=models_config, event_bus=event_bus)
+
+        # 创建 MetricsCollector (T6)
+        collector = ff_metrics.get_metrics_collector("test-llm-direct")
+
+        result = await client.execute(ToolInput(params={
+            "messages": [
+                {"role": "system", "content": "你是一位资深科技评论员，擅长撰写深度分析文章。"},
+                {"role": "user", "content": "请用200字分析人工智能如何重塑2026年的教育模式。"},
+            ],
+            "max_tokens": 500,
+        }))
+
+        # T3: 具体断言
+        assert result.error is None, f"LLM调用失败: {result.error}"
+        content = result.result.get("content", "")
+        assert len(content) >= 20, f"LLM返回内容过短(len={len(content)}), 期望>=20字"
+
+        # 记录指标 (T6)
+        collector.record_llm_call(
+            provider=result.result.get("provider", "unknown"),
+            model=result.result.get("model", "unknown"),
+            latency_ms=result.result.get("latency_ms", 0),
+            success=True,
+        )
+        collector.end_time = time.time()
+        report = collector.generate_report()
+        print(f"\n[Metrics] {report}")

@@ -463,20 +463,36 @@ loop.planner.replan: |
 # ── loop/reflector 提示词 ──
 
 loop.reflector.reflect: |
-  You are a failure analysis assistant. Given the following errors, task context, and past reflections, perform root cause analysis and generate improvement suggestions.
+  你是一位经验丰富的质量改进专家。你的任务是根据评审反馈，分析失败根因并生成具体的、可操作的改进建议。
 
-  Errors: {errors}
-  Task ID: {task_id}
-  Task input: {input_data}
-  Attempt number: {attempt}
-  Past reflections: {history}
+  ## 评审反馈
+  {errors}
 
-  Output a JSON object with exactly these keys:
-  - "root_cause": string, the primary root cause
-  - "suggestions": array of strings, specific improvement suggestions
-  - "plan_adjustments": array of step objects to append to the plan, each with "step", "action", and optional "params"
+  ## 任务上下文
+  任务ID: {task_id}
+  任务输入: {input_data}
+  当前迭代: 第 {attempt} 次
+  历史反思: {history}
 
-  Output ONLY the JSON object, no other text.
+  ## 分析要求
+  1. **精准定位**：根据低分维度和加权贡献分析，找出对总分拖累最大的维度
+  2. **根因分析**：不要泛泛而谈"质量不够"，要具体到哪个维度为什么低分
+  3. **可操作建议**：每条建议必须明确说明"如何改"而非"改什么"
+     - 错误示例："提高内容深度"（太笼统）
+     - 正确示例："在第二段增加一个具体数据案例（如'根据XX报告，2026年XX市场规模达XX亿'），用对比分析替代泛泛描述"
+  4. **优先级排序**：按对总分影响从大到小排列建议
+  5. **避免重复**：如果历史反思中已有建议，不要重复，而是给出更深层的改进方向
+
+  ## 输出格式
+  严格输出JSON对象，不要输出其他内容:
+  {{
+    "root_cause": "一句话总结最关键的失败根因",
+    "suggestions": [
+      "具体的、可操作的改进建议1",
+      "具体的、可操作的改进建议2"
+    ],
+    "plan_adjustments": []
+  }}
 
 # ── modes/workflow 步骤提示词 ──
 

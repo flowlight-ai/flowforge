@@ -488,7 +488,7 @@ class TestPluginManagerBackwardCompat:
         """load_from_config still works with string module paths."""
         pm = PluginManager()
         config = {
-            "agents": ["flowforge.agents.topic_research:TopicResearchAgent"],
+            "agents": ["flowforge.agents.generic.fact_check:FactCheckAgent"],
         }
         result = pm.load_from_config(config)
         assert len(result["agents"]) == 1

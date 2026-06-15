@@ -50,18 +50,18 @@ def test_load_from_config_empty():
 def test_load_from_config_with_string_modules():
     pm = PluginManager()
     config = {
-        "agents": ["flowforge.agents.topic_research:TopicResearchAgent"],
+        "agents": ["flowforge.agents.generic.fact_check:FactCheckAgent"],
     }
     result = pm.load_from_config(config)
     assert len(result["agents"]) == 1
     agent = result["agents"][0]()
-    assert agent.name == "topic_research"
+    assert agent.name == "fact_check"
 
 
 def test_load_from_config_with_dict_modules():
     pm = PluginManager()
     config = {
-        "agents": [{"module": "flowforge.agents.topic_research:TopicResearchAgent"}],
+        "agents": [{"module": "flowforge.agents.generic.fact_check:FactCheckAgent"}],
     }
     result = pm.load_from_config(config)
     assert len(result["agents"]) == 1
@@ -79,11 +79,11 @@ def test_load_from_config_invalid_module():
 def test_get_status_after_load():
     pm = PluginManager()
     pm.load_from_config({
-        "agents": ["flowforge.agents.topic_research:TopicResearchAgent"],
+        "agents": ["flowforge.agents.generic.fact_check:FactCheckAgent"],
     })
     status = pm.get_status()
-    assert "topic_research" in status["loaded"]["agents"] or \
-           "flowforge.agents.topic_research:TopicResearchAgent" in status["loaded"]["agents"]
+    assert "fact_check" in status["loaded"]["agents"] or \
+           "flowforge.agents.generic.fact_check:FactCheckAgent" in status["loaded"]["agents"]
 
 
 def test_register_all_with_config_tools():

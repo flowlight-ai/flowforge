@@ -21,19 +21,11 @@ from flowforge.agents.generic.multilingual import MultilingualAgent
 from flowforge.agents.generic.fact_check import FactCheckAgent
 from flowforge.agents.generic.trend_analysis import TrendAnalysisAgent
 from flowforge.agents.generic.image_research import ImageResearchAgent
-# ContentForge domain agents — now imported from contentforge package
-from contentforge.agents.article_writing import ArticleWritingAgent
-from contentforge.agents.article_eval import ArticleEvalAgent
-from contentforge.agents.article_reflect import ArticleReflectAgent
-from contentforge.agents.topic_research import TopicResearchAgent
-from contentforge.agents.material_collection import MaterialCollectionAgent
-from contentforge.agents.content_audit import ContentAuditAgent
-from contentforge.agents.publishing import PublishingAgent
-from contentforge.agents.seo_optimization import SEOOptimizationAgent
-from contentforge.agents.headline_optimizer import HeadlineOptimizerAgent
-from contentforge.agents.content_repurposer import ContentRepurposerAgent
-# DevForge domain agents — now imported from devforge package
-from devforge.agents.code_writer_agent import CodeWriterAgent
+
+# ContentForge domain agents have been migrated to contentforge package.
+# Use: from contentforge.agents.xxx import XxxAgent
+# DevForge domain agents have been migrated to devforge package.
+# Use: from devforge.agents.xxx import XxxAgent
 
 GENERIC_AGENTS = [
     ReactThinkerAgent,
@@ -59,15 +51,4 @@ GENERIC_AGENTS = [
     FactCheckAgent,
     TrendAnalysisAgent,
     ImageResearchAgent,
-    ArticleWritingAgent,
-    ArticleEvalAgent,
-    ArticleReflectAgent,
-    TopicResearchAgent,
-    MaterialCollectionAgent,
-    ContentAuditAgent,
-    PublishingAgent,
-    CodeWriterAgent,
-    SEOOptimizationAgent,
-    HeadlineOptimizerAgent,
-    ContentRepurposerAgent,
 ]

@@ -237,6 +237,15 @@ class HybridExecutor:
                     result["error"] = loop_result.error
                 if loop_result.state is not None:
                     result["loop_state"] = loop_result.state.model_dump()
+                    # 传递 Loop 评审信息（质量分和迭代次数）
+                    result["loop_attempts"] = loop_result.total_attempts
+                    result["loop_failed"] = not loop_result.success
+                    # 从 verification_history 中提取最后一轮的质量分
+                    vh = loop_result.state.verification_history
+                    if vh:
+                        last_verdict = vh[-1]
+                        if isinstance(last_verdict, dict):
+                            result["loop_last_score"] = last_verdict.get("score", 0.0)
 
                 # P1-3: Loop 失败时退化为单次 HybridExecutor 执行
                 # 设计文档 loop.md §865: "Loop 失败时退化为单次 HybridExecutor 执行"

@@ -65,7 +65,7 @@ def _register_core_tools(tool_registry: ToolRegistry, plugin_registry: PluginReg
         ("flowforge.tools.duckduckgo_search", "DuckDuckGoSearchTool", None),
         ("flowforge.tools.web_scraper", "WebScraperTool", None),
         ("flowforge.tools.pexels_image", "PexelsImageTool", "PEXELS_API_KEY"),
-        ("contentforge.tools.pexels_image", "PexelsImageTool", "PEXELS_API_KEY"),
+        # ContentForge domain tools — use contentforge.tools.xxx directly
         ("flowforge.tools.sendgrid_mail", "SendGridMailTool", "SENDGRID_API_KEY"),
         ("flowforge.tools.local_publish", "LocalPublishTool", None),
         ("flowforge.tools.opensieve_client", "OpenSieveClient", None),

@@ -1,9 +1,8 @@
-# 此文件已迁移到 contentforge/agents/article_writing.py
-# 保留此文件仅为向后兼容，新代码请使用 contentforge.agents.article_writing
-import warnings
-warnings.warn(
-    "flowforge.agents.article_writing 已迁移到 contentforge.agents.article_writing，请更新导入路径",
-    DeprecationWarning,
-    stacklevel=2,
+"""此模块已迁移到 contentforge.agents.article_writing。
+
+请使用: from contentforge.agents.article_writing import ArticleWritingAgent
+"""
+raise ImportError(
+    "此Agent已迁移到ContentForge项目。"
+    "请使用: from contentforge.agents.article_writing import ArticleWritingAgent"
 )
-from contentforge.agents.article_writing import ArticleWritingAgent  # noqa: F401

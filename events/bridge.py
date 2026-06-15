@@ -116,7 +116,7 @@ class EventBridge:
 
         # If bidirectional, subscribe to main bus events matching the prefix
         if config.bidirectional and bridge._local_bus is not None:
-            self._main_bus.subscribe("*", bridge.on_main_bus_event)
+            self._main_bus.subscribe("*", bridge._on_main_bus_event_ref)
 
         logger.info(
             f"EventBridge: registered project '{project_name}' "
@@ -131,7 +131,7 @@ class EventBridge:
         """
         bridge = self._bridges.pop(project_name, None)
         if bridge is not None and bridge._config.bidirectional and bridge._local_bus is not None:
-            self._main_bus.unsubscribe("*", bridge.on_main_bus_event)
+            self._main_bus.unsubscribe("*", bridge._on_main_bus_event_ref)
             logger.info(f"EventBridge: unregistered project '{project_name}'")
 
     # ── Event forwarding ──────────────────────────────────────────────
@@ -167,11 +167,16 @@ class EventBridge:
         target_type = bridge.transform_event_type(event_type)
 
         # Build payload with source metadata
+        # Preserve any existing _forwarded_from chain from bidirectional
+        # re-forwarding to maintain the full origin trail
+        forwarded_from = list(data.get("_forwarded_from", [])) if "_forwarded_from" in data else []
         payload = {
             **data,
             "_source_project": project_name,
             "_original_type": event_type,
         }
+        if forwarded_from:
+            payload["_forwarded_from"] = forwarded_from
 
         self._main_bus.emit(task_id=task_id, event_type=target_type, payload=payload)
         logger.debug(
@@ -252,6 +257,10 @@ class _ProjectBridge:
         self._local_bus = local_bus
         self._callback = callback
         self._config = config
+        # Cache the bound method so unregister can match by identity.
+        # Python creates a new bound method object on each attribute access,
+        # so ``self.on_main_bus_event is self.on_main_bus_event`` is False.
+        self._on_main_bus_event_ref = self.on_main_bus_event
 
     def should_forward(self, event_type: str) -> bool:
         """Check whether this event type passes the filter."""
@@ -275,6 +284,14 @@ class _ProjectBridge:
 
         Only forwards events whose type starts with this project's prefix
         back to the local bus, stripping the prefix.
+
+        Anti-loop protection:
+        1. Skip events where ``_source_project`` matches this project
+           (prevents direct echo loop).
+        2. Skip events where ``_forwarded_from`` contains this project
+           (prevents multi-hop circular forwarding: A→B→C→A).
+        3. Preserve origin info as ``_forwarded_from`` in the local payload
+           so downstream handlers can detect and break potential loops.
         """
         if self._local_bus is None:
             return
@@ -287,16 +304,32 @@ class _ProjectBridge:
         # Strip prefix to get local event type
         local_type = event_type[len(prefix):]
 
+        payload = event.get("payload", {})
+
         # Don't re-forward events that originated from this project
-        source = event.get("payload", {}).get("_source_project")
+        source = payload.get("_source_project")
         if source == self._project_name:
             return
 
-        # Emit on local bus
+        # Don't re-forward events that have already been forwarded through
+        # this project (multi-hop circular loop prevention: A→B→C→A)
+        forwarded_from = payload.get("_forwarded_from", [])
+        if self._project_name in forwarded_from:
+            return
+
+        # Build local payload: strip internal metadata but preserve
+        # origin chain for loop detection
         local_payload = {
-            k: v for k, v in event.get("payload", {}).items()
+            k: v for k, v in payload.items()
             if not k.startswith("_")
         }
+        # Preserve forwarding chain for downstream loop detection
+        new_forwarded_from = list(forwarded_from)
+        if source:
+            new_forwarded_from.append(source)
+        if new_forwarded_from:
+            local_payload["_forwarded_from"] = new_forwarded_from
+
         self._local_bus.emit(
             task_id=event.get("task_id", ""),
             event_type=local_type,

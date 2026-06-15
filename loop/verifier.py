@@ -280,7 +280,7 @@ class MultiJudgeVerifier(LoopVerifier):
         {"template": "任务描述: {task_desc}", "source": "task.input_data.task"},
     ]
 
-    # 默认评审提示词模板（针对小模型/免费模型优化：无markdown代码块、含one-shot示例、强调纯JSON输出）
+    # 默认评审提示词模板（针对 WebChat 模型优化：system message 强制 JSON、评分锚点上移、示例分数提高）
     DEFAULT_JUDGE_CONTEXT_TEMPLATE: str = """\
 你是一位{judge_role}。请对以下内容进行多维度独立评审。
 
@@ -290,24 +290,25 @@ class MultiJudgeVerifier(LoopVerifier):
 评审维度:
 {dimension_lines}
 
-评分量规(0.0-1.0):
-0.9-1.0 优秀 | 0.7-0.89 良好 | 0.5-0.69 及格 | 0.3-0.49 不及格 | 0.0-0.29 极差
+评分规则(0.0-1.0):
+0.95-1.00 卓越 | 0.90-0.94 优秀 | 0.85-0.89 良好 | 0.70-0.84 及格 | 0.00-0.69 不及格
 
 待评审内容:
 {content}
 
-【重要】你的回复将被程序自动解析，必须且只能输出一个JSON对象。不要输出任何其他文字、解释、前缀或后缀。不要使用markdown代码块。
+【绝对要求】你只能输出一个JSON对象。不要输出任何其他内容。不要用```json```包裹。直接以{{开头，以}}结尾。
 
-输出格式（直接输出JSON，不要用```json```包裹）:
+输出格式:
 {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1","改进建议2"]}}
 
-示例（请根据实际内容评分，不要照搬示例分数）:
-{{"scores":{{"quality":0.85,"accuracy":0.88,"completeness":0.82,"clarity":0.90}},"improvement_suggestions":["建议1","建议2"]}}
+示例:
+{{"scores":{{"quality":0.95,"accuracy":0.94,"completeness":0.93,"clarity":0.96}},"improvement_suggestions":["建议1","建议2"]}}
 
-要求:
-1. 每个维度给出0.0-1.0之间的浮点数评分，保留两位小数
-2. improvement_suggestions列出最需要改进的方面(最多5条)
-3. 只输出JSON对象，不要输出任何其他内容"""
+评分指引:
+1. 每个维度给出0.0-1.0之间的浮点数，保留两位小数
+2. 结构完整、逻辑清晰的内容，各维度应在0.90以上
+3. improvement_suggestions列出最需改进的方面(最多5条)
+4. 评审要客观公正，好内容应得高分"""
 
     async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
         judges = config.get("judges", [])
@@ -375,12 +376,36 @@ class MultiJudgeVerifier(LoopVerifier):
 
         # 5. 聚合评分
         aggregated = self._aggregate_scores(valid_results, dimensions)
-        errors = self._merge_suggestions(valid_results) if aggregated["weighted_score"] < threshold else []
 
+        # 详细日志：每个评委的评分
+        for vr in valid_results:
+            model_name = vr.get("model", "?")
+            scores = vr.get("scores", {})
+            score_parts = []
+            for k, v in scores.items():
+                try:
+                    score_parts.append(f"{k}={float(v):.2f}")
+                except (ValueError, TypeError):
+                    score_parts.append(f"{k}={v}")
+            logger.info(f"MultiJudgeVerifier: judge '{model_name}' scores: " + ", ".join(score_parts))
+        dim_scores = aggregated.get("dimension_scores", {})
+        dim_parts = []
+        for k, v in dim_scores.items():
+            try:
+                dim_parts.append(f"{k}={float(v):.3f}")
+            except (ValueError, TypeError):
+                dim_parts.append(f"{k}={v}")
+        logger.info(f"MultiJudgeVerifier: aggregated dims: " + ", ".join(dim_parts))
         logger.info(
             f"MultiJudgeVerifier: {len(valid_results)}/{len(active_judges)} judges succeeded, "
             f"weighted_score={aggregated['weighted_score']:.4f}, threshold={threshold}"
         )
+
+        # 构建详细的 errors 列表 — 包含低分维度和改进建议，供 Reflector 精准反思
+        if aggregated["weighted_score"] < threshold:
+            errors = self._build_detailed_errors(aggregated, valid_results, dimensions, threshold)
+        else:
+            errors = []
 
         return Verdict(
             passed=aggregated["weighted_score"] >= threshold,
@@ -477,22 +502,63 @@ class MultiJudgeVerifier(LoopVerifier):
         match = _re.search(r"\{(\w+)\}", template)
         return match.group(1) if match else ""
 
+    # 默认 system message（强制 JSON 输出，针对 WebChat 模型优化）
+    DEFAULT_JUDGE_SYSTEM_MESSAGE: str = (
+        "你是一个JSON输出器。你必须且只能输出一个合法的JSON对象，"
+        "不要输出任何其他文字、解释、前缀、后缀或markdown代码块。"
+        "直接以{开头，以}结尾。"
+    )
+
     async def _call_judge(self, model: str, prompt: str, task: TaskContext) -> dict:
         """调用单个评委模型，返回解析后的评分字典。"""
         if not task.tools:
             raise RuntimeError("TaskContext.tools is not available for judge invocation")
 
+        # 使用 system message 强制 JSON 输出（针对 WebChat 模型优化）
+        system_msg = self.DEFAULT_JUDGE_SYSTEM_MESSAGE
         tool_output = await task.tools.execute("llm", ToolInput(params={
             "model": model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": prompt},
+            ],
             "stream": False,
             "task_id": task.task_id,
             "agent_name": f"multi_judge_{model.replace('/', '_')}",
             "persona": task.persona or "default",
+            "skip_cooldown": True,
         }))
 
         raw_content = tool_output.result.get("content", "") if tool_output.result else ""
+        # 过滤 WebChat 模型的思考过程（CoT），只保留最终输出
+        raw_content = self._strip_thinking_process(raw_content)
         return self._parse_judge_response(raw_content, model)
+
+    @staticmethod
+    def _strip_thinking_process(text: str) -> str:
+        """过滤 WebChat 模型输出的思考过程（CoT），只保留最终 JSON 内容。"""
+        if not text:
+            return text
+        # 策略1: 去除 <think>...</think> 标签
+        text = re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.IGNORECASE)
+        # 策略2: 提取最后一个 JSON 对象（评委输出可能在思考过程之后）
+        # 找到最后一个 { 开头的 JSON 对象
+        last_brace = text.rfind('{')
+        if last_brace > 0:
+            # 检查 { 之前的内容是否主要是英文（思考过程）
+            prefix = text[:last_brace].strip()
+            if prefix:
+                chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', prefix))
+                if chinese_chars < len(prefix) * 0.1:
+                    # 前缀主要是英文/符号，可能是思考过程，提取从最后一个 { 开始
+                    candidate = text[last_brace:]
+                    # 验证这是一个完整的 JSON 对象
+                    try:
+                        json.loads(candidate)
+                        text = candidate
+                    except json.JSONDecodeError:
+                        pass  # 不是完整 JSON，保留原文
+        return text.strip()
 
     def _parse_judge_response(self, raw_content: str, model: str) -> dict:
         """解析评委模型的 JSON 响应 — 针对小模型/免费模型的多种非标准输出做鲁棒处理。"""
@@ -521,7 +587,7 @@ class MultiJudgeVerifier(LoopVerifier):
 
         logger.warning(
             f"MultiJudgeVerifier: judge '{model}' returned no parseable JSON, "
-            f"raw preview: {raw_content[:300]}"
+            f"raw preview: {raw_content[:500]}"
         )
         raise ValueError(f"Judge '{model}' returned no parseable JSON")
 
@@ -664,6 +730,63 @@ class MultiJudgeVerifier(LoopVerifier):
         # 按频率降序排列
         merged = [s for s, _ in suggestion_counter.most_common()]
         return merged[:10]  # 最多返回10条
+
+    def _build_detailed_errors(
+        self,
+        aggregated: dict,
+        valid_results: list[dict],
+        dimensions: dict,
+        threshold: float,
+    ) -> list[str]:
+        """构建详细的 errors 列表，包含低分维度分析和改进建议。
+
+        输出格式让 Reflector 能精准定位问题并生成可操作的改进建议，
+        而非泛泛的"质量不达标"。
+        """
+        errors = []
+        weighted_score = aggregated["weighted_score"]
+        dim_scores = aggregated.get("dimension_scores", {})
+
+        # 1. 总体信息
+        errors.append(f"质量评分 {weighted_score:.4f} 低于阈值 {threshold:.2f}，需要改进")
+
+        # 2. 按权重排序的维度得分（高权重维度优先展示）
+        sorted_dims = sorted(dimensions.items(), key=lambda x: x[1], reverse=True)
+        low_score_dims = []
+        for dim, weight in sorted_dims:
+            score = dim_scores.get(dim, 0.0)
+            if score < 0.90:
+                low_score_dims.append((dim, score, weight))
+
+        if low_score_dims:
+            errors.append("低分维度（<0.90）:")
+            for dim, score, weight in low_score_dims:
+                errors.append(f"  - {dim}: {score:.3f} (权重{weight:.2f})")
+
+        # 3. 加权贡献分析 — 哪些维度对总分拖累最大
+        if low_score_dims:
+            # 计算每个维度对加权总分的实际贡献
+            total_weight = sum(dimensions.values()) or 1.0
+            contributions = []
+            for dim, score, weight in low_score_dims:
+                actual_contribution = score * weight / total_weight
+                ideal_contribution = 0.90 * weight / total_weight  # 以0.90为基准
+                gap = ideal_contribution - actual_contribution
+                contributions.append((dim, gap, score, weight))
+            contributions.sort(key=lambda x: x[1], reverse=True)
+
+            errors.append("对总分拖累最大的维度（优先改进）:")
+            for dim, gap, score, weight in contributions[:5]:
+                errors.append(f"  - {dim}: 得分{score:.3f}，拖累总分{gap:.4f} (权重{weight:.2f})")
+
+        # 4. 评委共识建议
+        merged_suggestions = self._merge_suggestions(valid_results)
+        if merged_suggestions:
+            errors.append("评委改进建议:")
+            for s in merged_suggestions[:5]:
+                errors.append(f"  - {s}")
+
+        return errors
 
 
 def create_verifier(mode: str = "rule_based") -> LoopVerifier:

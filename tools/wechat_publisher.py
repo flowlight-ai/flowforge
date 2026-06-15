@@ -1,9 +1,8 @@
-# 此文件已迁移到 contentforge/tools/wechat_publisher.py
-# 保留此文件仅为向后兼容，新代码请使用 contentforge.tools.wechat_publisher
-import warnings
-warnings.warn(
-    "flowforge.tools.wechat_publisher 已迁移到 contentforge.tools.wechat_publisher，请更新导入路径",
-    DeprecationWarning,
-    stacklevel=2,
+"""此模块已迁移到 contentforge.tools.wechat_publisher。
+
+请使用: from contentforge.tools.wechat_publisher import WeChatPublisherTool
+"""
+raise ImportError(
+    "此Tool已迁移到ContentForge项目。"
+    "请使用: from contentforge.tools.wechat_publisher import WeChatPublisherTool"
 )
-from contentforge.tools.wechat_publisher import WeChatPublisherTool  # noqa: F401

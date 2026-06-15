@@ -296,7 +296,13 @@ class LoopExecutor:
             # 2. Harness pre_execute（注入上下文 + 权限检查）
             #    首次迭代：完整上下文注入；后续迭代：仅注入 delta（Reflector 的反思结果）
             if attempt > 0 and state.reflection_history:
-                task.metadata["loop_reflections"] = state.reflection_history[-1].get("suggestions", [])
+                last_reflection = state.reflection_history[-1]
+                task.metadata["loop_reflections"] = last_reflection.get("suggestions", [])
+                # 同时传递上一轮 Verifier 的详细评审信息（低分维度、加权贡献分析等）
+                # 从 verification_history 中获取上一轮的 verdict
+                if state.verification_history:
+                    last_verdict = state.verification_history[-1]
+                    task.metadata["loop_verifier_errors"] = last_verdict.get("errors", [])
             await self.harness.pre_execute(task)
 
             # 3. 执行（委托给 HybridExecutor / 嵌套 Loop / 并行 Worker）

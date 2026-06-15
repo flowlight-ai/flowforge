@@ -288,15 +288,15 @@ class TestNoHardcodedPaths:
 # ═══════════════════════════════════════════════════════════════════════
 
 class TestFlowForgeNoDomainAgents:
-    """验证FlowForge的领域Agent已迁移。"""
+    """验证FlowForge的领域Agent已迁移（不再re-export，直接raise ImportError）。"""
 
-    def test_article_writing_is_reexport(self):
-        """验证flowforge/agents/article_writing.py是重导出。"""
+    def test_article_writing_raises_import_error(self):
+        """验证flowforge/agents/article_writing.py已迁移，导入会raise ImportError。"""
         src = (FLOWFORGE_ROOT / "agents" / "article_writing.py").read_text(encoding="utf-8")
-        assert "DeprecationWarning" in src, \
-            "article_writing.py 应包含 DeprecationWarning"
+        assert "ImportError" in src, \
+            "article_writing.py 应包含 ImportError"
         assert "contentforge" in src, \
-            "article_writing.py 应重导出自 contentforge"
+            "article_writing.py 应提示从 contentforge 导入"
 
     def test_code_writer_agent_is_reexport(self):
         """验证flowforge/agents/code_writer_agent.py是重导出。"""
@@ -306,21 +306,21 @@ class TestFlowForgeNoDomainAgents:
         assert "devforge" in src, \
             "code_writer_agent.py 应重导出自 devforge"
 
-    def test_publish_tool_is_reexport(self):
-        """验证flowforge/tools/publish.py是重导出。"""
+    def test_publish_tool_raises_import_error(self):
+        """验证flowforge/tools/publish.py已迁移，导入会raise ImportError。"""
         src = (FLOWFORGE_ROOT / "tools" / "publish.py").read_text(encoding="utf-8")
-        assert "DeprecationWarning" in src, \
-            "flowforge/tools/publish.py 应包含 DeprecationWarning"
+        assert "ImportError" in src, \
+            "flowforge/tools/publish.py 应包含 ImportError"
         assert "contentforge" in src, \
-            "flowforge/tools/publish.py 应重导出自 contentforge"
+            "flowforge/tools/publish.py 应提示从 contentforge 导入"
 
-    def test_video_generate_is_reexport(self):
-        """验证flowforge/tools/video_generate.py是重导出。"""
+    def test_video_generate_raises_import_error(self):
+        """验证flowforge/tools/video_generate.py已迁移，导入会raise ImportError。"""
         src = (FLOWFORGE_ROOT / "tools" / "video_generate.py").read_text(encoding="utf-8")
-        assert "DeprecationWarning" in src, \
-            "flowforge/tools/video_generate.py 应包含 DeprecationWarning"
+        assert "ImportError" in src, \
+            "flowforge/tools/video_generate.py 应包含 ImportError"
         assert "contentforge" in src, \
-            "flowforge/tools/video_generate.py 应重导出自 contentforge"
+            "flowforge/tools/video_generate.py 应提示从 contentforge 导入"
 
 
 # ═══════════════════════════════════════════════════════════════════════

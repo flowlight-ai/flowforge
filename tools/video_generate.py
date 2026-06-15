@@ -1,9 +1,8 @@
-# 此文件已迁移到 contentforge/tools/video_generate.py
-# 保留此文件仅为向后兼容，新代码请使用 contentforge.tools.video_generate
-import warnings
-warnings.warn(
-    "flowforge.tools.video_generate 已迁移到 contentforge.tools.video_generate，请更新导入路径",
-    DeprecationWarning,
-    stacklevel=2,
+"""此模块已迁移到 contentforge.tools.video_generate。
+
+请使用: from contentforge.tools.video_generate import VideoGenerateTool
+"""
+raise ImportError(
+    "此Tool已迁移到ContentForge项目。"
+    "请使用: from contentforge.tools.video_generate import VideoGenerateTool"
 )
-from contentforge.tools.video_generate import VideoGenerateTool  # noqa: F401
