@@ -2,18 +2,9 @@ import json
 import re
 from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
 from typing import Optional
-
-_LLM_WEB_SEARCH_PROMPT = (
-    "你是一个专业的信息搜索助手。请利用你的联网能力，搜索关于{topic}的最新信息。\n"
-    "要求：\n"
-    "1. 搜索至少3个不同角度的信息\n"
-    "2. 每个信息点包含：标题、摘要、来源\n"
-    "3. 标注信息的时间范围\n"
-    "4. 如果无法获取实时信息，明确说明\n"
-    "5. 严格输出JSON数组: [{{\"title\": \"标题\", \"url\": \"https://...\", \"content\": \"摘要内容\"}}]"
-)
 
 
 class WebSearchAgent(GenericAgent):
@@ -83,7 +74,7 @@ class WebSearchAgent(GenericAgent):
 
         # Fallback 3: LLM WebChat 联网搜索
         try:
-            search_prompt = _LLM_WEB_SEARCH_PROMPT.format(topic=query)
+            search_prompt = get_prompt("tools.web_search.search_prompt", topic=query)
             content = await self._call_llm_with_model(context, search_prompt, "web/chat")
             data = self._extract_json(content)
             if isinstance(data, str):

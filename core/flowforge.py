@@ -14,9 +14,18 @@ from flowforge.tools.file_rw import FileReadWriteTool
 from flowforge.tools.cache import CacheTool
 from flowforge.tools.duckduckgo_search import DuckDuckGoSearchTool
 from flowforge.tools.web_scraper import WebScraperTool
-from flowforge.tools.toutiao_publisher import ToutiaoPublisherTool
-from flowforge.tools.wechat_publisher import WeChatPublisherTool
-from flowforge.tools.pexels_image import PexelsImageTool
+try:
+    from contentforge.tools.toutiao_publisher import ToutiaoPublisherTool
+except ImportError:
+    ToutiaoPublisherTool = None
+try:
+    from contentforge.tools.wechat_publisher import WeChatPublisherTool
+except ImportError:
+    WeChatPublisherTool = None
+try:
+    from contentforge.tools.pexels_image import PexelsImageTool
+except ImportError:
+    PexelsImageTool = None
 from flowforge.tools.sendgrid_mail import SendGridMailTool
 from flowforge.tools.webhook import WebhookTool
 from flowforge.memory.manager import MemoryManager
@@ -61,12 +70,19 @@ class FlowForge:
         _optional_tools = [
             (DuckDuckGoSearchTool, None),
             (WebScraperTool, None),
+        ]
+        # ContentForge domain tools — conditionally loaded
+        for tool_cls, env_key in [
             (ToutiaoPublisherTool, "TOUTIAO_ACCESS_TOKEN"),
             (WeChatPublisherTool, "WECHAT_APP_ID"),
             (PexelsImageTool, "PEXELS_API_KEY"),
+        ]:
+            if tool_cls is not None:
+                _optional_tools.append((tool_cls, env_key))
+        _optional_tools.extend([
             (SendGridMailTool, "SENDGRID_API_KEY"),
             (WebhookTool, None),
-        ]
+        ])
         for tool_cls, env_key in _optional_tools:
             try:
                 if env_key is None or os.getenv(env_key, ""):

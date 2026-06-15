@@ -4,6 +4,7 @@ import json
 import logging
 
 from abc import ABC, abstractmethod
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
 from flowforge.loop.state import LoopState, Reflection
 
@@ -58,22 +59,12 @@ class ReflexionReflector(LoopReflector):
         history = state.reflection_history[-3:] if state.reflection_history else []
         history_str = json.dumps(history, ensure_ascii=False, default=str) if history else "None"
 
-        prompt = (
-            "You are a failure analysis assistant. Given the following errors, "
-            "task context, and past reflections, perform root cause analysis and "
-            "generate improvement suggestions.\n\n"
-            f"Errors: {json.dumps(errors, ensure_ascii=False)}\n"
-            f"Task ID: {task.task_id}\n"
-            f"Task input: {json.dumps(task.input_data, ensure_ascii=False, default=str)}\n"
-            f"Attempt number: {state.attempt}\n"
-            f"Past reflections: {history_str}\n\n"
-            'Output a JSON object with exactly these keys:\n'
-            '- "root_cause": string, the primary root cause\n'
-            '- "suggestions": array of strings, specific improvement suggestions\n'
-            '- "plan_adjustments": array of step objects to append to the plan, '
-            'each with "step", "action", and optional "params"\n\n'
-            "Output ONLY the JSON object, no other text."
-        )
+        prompt = get_prompt("loop.reflector.reflect",
+                            errors=json.dumps(errors, ensure_ascii=False),
+                            task_id=task.task_id,
+                            input_data=json.dumps(task.input_data, ensure_ascii=False, default=str),
+                            attempt=str(state.attempt),
+                            history=history_str)
         response = await self.llm_client.chat(prompt)
         return self._parse_reflection_response(response)
 

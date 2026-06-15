@@ -16,7 +16,7 @@ Usage:
         args=["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
     )
 
-    # Or connect via SSE
+    # Or connect via HTTP/SSE
     await mcp.connect_server(
         name="remote-api",
         url="http://localhost:3001/sse",
@@ -90,13 +90,18 @@ class MCPToolWrapper(BaseTool):
 
     async def execute(self, input: ToolInput) -> ToolOutput:
         """Execute the MCP tool through the integration layer."""
+        if not self._integration.is_available():
+            return ToolOutput(
+                result={},
+                error="MCP integration is not available — no MCPClient could be loaded",
+            )
         try:
             result = await self._integration._call_mcp_tool(
                 server_name=self._server_name,
                 tool_name=self._mcp_tool_name,
                 arguments=input.params,
             )
-            if isinstance(result, dict) and "error" in result:
+            if isinstance(result, dict) and "error" in result and result.get("result") is None:
                 return ToolOutput(result={}, error=result["error"])
             if isinstance(result, ToolOutput):
                 return result
@@ -121,16 +126,39 @@ class MCPIntegration:
     tools, and registers each as an :class:`MCPToolWrapper` in the
     target :class:`ToolRegistry`.
 
-    The current implementation uses a simplified stub for the MCP
-    protocol communication.  The real JSON-RPC 2.0 transport will be
-    added in a future phase; the architecture and tool-bridging logic
-    are production-ready.
+    Uses :class:`flowforge.mcp.client.MCPClient` for real JSON-RPC 2.0
+    communication. If MCPClient is not available, the integration reports
+    itself as unavailable via :meth:`is_available`.
     """
 
     def __init__(self, tool_registry: ToolRegistry) -> None:
         self._tool_registry = tool_registry
         # server_name -> {client, config, tools}
         self._servers: Dict[str, Dict[str, Any]] = {}
+        self._mcp_client_available: Optional[bool] = None
+
+    def is_available(self) -> bool:
+        """Check whether the MCP client library is available.
+
+        Returns False if the ``flowforge.mcp.client.MCPClient`` cannot
+        be imported, meaning all MCP operations will fail gracefully.
+        """
+        if self._mcp_client_available is None:
+            try:
+                from flowforge.mcp.client import MCPClient  # noqa: F401
+                self._mcp_client_available = True
+            except ImportError:
+                self._mcp_client_available = False
+                logger.warning(
+                    "MCPClient is not available — MCP integration is disabled. "
+                    "Ensure flowforge.mcp.client is importable."
+                )
+        return self._mcp_client_available
+
+    def _create_client(self, **kwargs) -> Any:
+        """Instantiate an MCPClient, raising if unavailable."""
+        from flowforge.mcp.client import MCPClient
+        return MCPClient(config=kwargs)
 
     # ── Server lifecycle ────────────────────────────────────────────
 
@@ -148,12 +176,13 @@ class MCPIntegration:
             name: Logical name for this server (used as namespace prefix).
             command: Executable command for stdio transport.
             args: Command arguments for stdio transport.
-            url: URL for SSE/HTTP transport.
+            url: URL for HTTP/SSE transport.
             env: Extra environment variables for the server process.
 
         Raises:
             ValueError: If neither *command* nor *url* is provided, or
                 a server with *name* is already connected.
+            RuntimeError: If MCPClient is not available.
         """
         if not command and not url:
             raise ValueError("Either 'command' or 'url' must be provided")
@@ -161,9 +190,26 @@ class MCPIntegration:
         if name in self._servers:
             raise ValueError(f"MCP server '{name}' is already connected")
 
-        # --- Simplified stub: log the connection and discover tools ---
-        # In a future phase this will delegate to flowforge.mcp.client.MCPClient
-        # for real JSON-RPC 2.0 communication.
+        if not self.is_available():
+            raise RuntimeError(
+                "Cannot connect to MCP server: MCPClient is not available. "
+                "Ensure flowforge.mcp.client is importable."
+            )
+
+        # Create and connect the real MCPClient
+        client = self._create_client(server_name=name)
+        connected = await client.connect(
+            command=command,
+            args=args,
+            url=url,
+            server_name=name,
+        )
+        if not connected:
+            raise RuntimeError(
+                f"Failed to connect to MCP server '{name}' "
+                f"(command={command}, url={url})"
+            )
+
         transport = "stdio" if command else "sse"
         logger.info(
             f"MCP connection to {name} established "
@@ -180,9 +226,10 @@ class MCPIntegration:
             "url": url,
             "env": env or {},
             "connected": True,
+            "client": client,
         }
 
-        # Discover tools (stub: returns placeholder tools)
+        # Discover tools via the real MCPClient
         discovered_tools = await self._discover_tools(name, server_config)
 
         # Wrap and register each tool
@@ -221,6 +268,15 @@ class MCPIntegration:
             raise KeyError(f"MCP server '{name}' is not connected")
 
         server = self._servers[name]
+
+        # Disconnect the real MCPClient
+        client = server.get("client")
+        if client:
+            try:
+                await client.disconnect()
+            except Exception as e:
+                logger.warning(f"Error disconnecting MCP client for '{name}': {e}")
+
         for wrapper in server.get("tools", []):
             try:
                 self._tool_registry.unregister(wrapper.name)
@@ -273,7 +329,7 @@ class MCPIntegration:
                 })
         return tools
 
-    # ── Internal dispatch (stub) ────────────────────────────────────
+    # ── Internal dispatch ────────────────────────────────────────────
 
     async def _call_mcp_tool(
         self,
@@ -281,72 +337,59 @@ class MCPIntegration:
         tool_name: str,
         arguments: Dict[str, Any],
     ) -> Any:
-        """Dispatch a tool call to the MCP server.
-
-        Currently a stub that logs the call.  Will be replaced with
-        real JSON-RPC 2.0 dispatch via :class:`MCPClient`.
-        """
+        """Dispatch a tool call to the MCP server via MCPClient."""
         server = self._servers.get(server_name)
         if not server or not server.get("connected"):
-            return {"error": f"MCP server '{server_name}' is not connected"}
+            return {"result": None, "error": f"MCP server '{server_name}' is not connected"}
+
+        client = server.get("client")
+        if not client:
+            return {"result": None, "error": f"No MCPClient for server '{server_name}'"}
 
         logger.info(
             f"MCP tool call: mcp.{server_name}.{tool_name} "
             f"(args keys: {list(arguments.keys())})"
         )
 
-        # Stub: return a placeholder indicating the call was received.
-        # Real implementation will delegate to MCPClient.call_tool().
-        return {
-            "status": "stub",
-            "message": (
-                f"MCP tool call to '{tool_name}' on server "
-                f"'{server_name}' received (stub mode)"
-            ),
-            "arguments": arguments,
-        }
+        try:
+            response = await client.call_tool(
+                tool_name=tool_name,
+                arguments=arguments,
+                server_name=server_name,
+            )
+            error = response.get("error")
+            result = response.get("result")
+            if error:
+                return {"result": None, "error": error}
+            return result if isinstance(result, dict) else {"result": result}
+        except Exception as e:
+            logger.error(f"MCP tool call failed: {e}")
+            return {"result": None, "error": str(e)}
 
     async def _discover_tools(
         self,
         server_name: str,
         server_config: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
-        """Discover tools exposed by an MCP server.
+        """Discover tools exposed by an MCP server via MCPClient."""
+        client = server_config.get("client")
+        if not client:
+            logger.warning(f"No MCPClient for server '{server_name}', cannot discover tools")
+            return []
 
-        Currently a stub that returns placeholder tool definitions.
-        Will be replaced with real discovery via
-        :meth:`MCPClient.list_tools`.
-        """
         transport = server_config.get("transport", "unknown")
         logger.info(
             f"Discovering tools from MCP server '{server_name}' "
             f"(transport={transport})"
         )
 
-        # Stub: return a single placeholder tool per server so the
-        # architecture is exercised end-to-end.
-        return [
-            {
-                "name": "call",
-                "description": (
-                    f"Execute a request on MCP server '{server_name}' "
-                    f"({transport} transport). "
-                    f"This is a stub tool; real tools will be discovered "
-                    f"via the MCP protocol in a future phase."
-                ),
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "method": {
-                            "type": "string",
-                            "description": "The method or action to invoke",
-                        },
-                        "params": {
-                            "type": "object",
-                            "description": "Parameters for the method",
-                        },
-                    },
-                    "required": ["method"],
-                },
-            }
-        ]
+        try:
+            tools = await client.list_tools(server_name=server_name)
+            if tools:
+                logger.info(f"Discovered {len(tools)} tool(s) from MCP server '{server_name}'")
+                return tools
+            logger.info(f"No tools discovered from MCP server '{server_name}'")
+            return []
+        except Exception as e:
+            logger.error(f"Tool discovery failed for MCP server '{server_name}': {e}")
+            return []

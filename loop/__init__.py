@@ -13,7 +13,7 @@ Key principle: LoopExecutor wraps HybridExecutor, not replaces it.
 from flowforge.loop.state import LoopState, LoopResult, LoopPhase, Verdict, Reflection, LoopNestingError
 from flowforge.loop.executor import LoopExecutor
 from flowforge.loop.planner import LoopPlanner, LLMPlanner
-from flowforge.loop.verifier import LoopVerifier, AgentJudgeVerifier, RuleBasedVerifier, SchemaVerifier, TestSuiteVerifier
+from flowforge.loop.verifier import LoopVerifier, AgentJudgeVerifier, RuleBasedVerifier, SchemaVerifier, TestSuiteVerifier, MultiJudgeVerifier, create_verifier
 from flowforge.loop.reflector import LoopReflector, ReflexionReflector
 from flowforge.loop.registry import LoopRegistry, LoopTemplateConfig
 from flowforge.loop.parallel import ParallelWorkerResult, execute_parallel_workers
@@ -22,7 +22,7 @@ __all__ = [
     "LoopState", "LoopResult", "LoopPhase", "Verdict", "Reflection", "LoopNestingError",
     "LoopExecutor",
     "LoopPlanner", "LLMPlanner",
-    "LoopVerifier", "AgentJudgeVerifier", "RuleBasedVerifier", "SchemaVerifier", "TestSuiteVerifier",
+    "LoopVerifier", "AgentJudgeVerifier", "RuleBasedVerifier", "SchemaVerifier", "TestSuiteVerifier", "MultiJudgeVerifier", "create_verifier",
     "LoopReflector", "ReflexionReflector",
     "LoopRegistry", "LoopTemplateConfig",
     "ParallelWorkerResult", "execute_parallel_workers",

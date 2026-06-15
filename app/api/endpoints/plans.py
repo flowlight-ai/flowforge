@@ -147,11 +147,7 @@ async def confirm_plan(task_id: str, body: ConfirmPlanRequest):
 
     # 如果提供了编辑后的步骤，更新 steps_json
     if body.edited_steps is not None:
-        db.conn.execute(
-            "UPDATE plans SET steps_json = ?, total_steps = ? WHERE id = ?",
-            (json.dumps(body.edited_steps, ensure_ascii=False), len(body.edited_steps), body.plan_id),
-        )
-        db.conn.commit()
+        db.update_plan_steps_json(body.plan_id, body.edited_steps, len(body.edited_steps))
 
     db.update_plan_status(body.plan_id, HelmDatabase.PLAN_CONFIRMED)
 
@@ -188,11 +184,7 @@ async def update_step(task_id: str, step_index: int, body: UpdateStepRequest):
     steps[step_index] = step
 
     # 更新 steps_json
-    db.conn.execute(
-        "UPDATE plans SET steps_json = ? WHERE id = ?",
-        (json.dumps(steps, ensure_ascii=False), plan["id"]),
-    )
-    db.conn.commit()
+    db.update_plan_steps_json_only(plan["id"], steps)
 
     # 将步骤名称加入 edited_steps
     edited_steps: list[str] = plan.get("edited_steps") or []
@@ -258,11 +250,7 @@ async def generate_plan_llm(task_id: str, body: GeneratePlanLLMRequest):
 
     # Initialize steps_status
     steps_status = {str(i): "pending" for i in range(len(steps))}
-    db.conn.execute(
-        "UPDATE plans SET steps_status = ? WHERE id = ?",
-        (json.dumps(steps_status), plan_id),
-    )
-    db.conn.commit()
+    db.update_plan_steps_status(plan_id, steps_status)
 
     plan = db.get_plan(plan_id)
     return _make_response(plan)

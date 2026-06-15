@@ -80,7 +80,7 @@ WEB_CHAT_ROTATION_POOL = [
 ]
 
 DISABLED_MODELS = {
-    "openroute/Doubao-Seed2.0",   # 豆包验证码问题
+    # "openroute/Doubao-Seed2.0",   # 豆包验证码问题 — 已修复，重新启用作为写作模型
     "openroute/Qwen3.6-Plus",     # 千问不稳定
 }
 

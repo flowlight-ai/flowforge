@@ -217,6 +217,7 @@ class LoopExecutor:
             })
 
         total_start = time.monotonic()
+        last_good_result: dict | None = None  # 保存最后一次成功的执行结果
 
         for attempt in range(max_retries):
             # 检查总超时
@@ -331,9 +332,31 @@ class LoopExecutor:
             # 4. Harness post_execute（架构约束校验 + FeedbackLoop 评分）
             result = await self.harness.post_execute(result, task)
 
+            # 注入 _model 字段（用于 exclude_creator 功能）
+            # 从 task.metadata 中获取执行过程中使用的模型
+            if isinstance(result, dict) and "_model" not in result:
+                used_model = task.metadata.get("last_used_model", "")
+                if used_model:
+                    result["_model"] = used_model
+
+            # 保存最后一次成功的执行结果（超时/失败时仍可返回内容）
+            if isinstance(result, dict) and not result.get("error"):
+                last_good_result = result
+
             # 5. Loop Verifier（业务级质量校验）
+            # 根据 loop_config.verifier.mode 动态选择 verifier
+            verifier_config = loop_config.get("verifier", {})
+            verifier_mode = verifier_config.get("mode", "")
+            active_verifier = self.verifier
+            if verifier_mode:
+                from flowforge.loop.verifier import create_verifier
+                try:
+                    active_verifier = create_verifier(verifier_mode)
+                    logger.info(f"[loop] Using verifier mode: {verifier_mode} ({type(active_verifier).__name__})")
+                except Exception as e:
+                    logger.warning(f"[loop] Failed to create verifier mode '{verifier_mode}': {e}, using default")
             state.phase = LoopPhase.VERIFYING
-            verdict = await self.verifier.verify(result, task, loop_config.get("verifier", {}))
+            verdict = await active_verifier.verify(result, task, verifier_config)
             state.verification_history.append(verdict.model_dump())
 
             # 更新迭代记录（result + verdict）
@@ -549,8 +572,11 @@ class LoopExecutor:
                 "total_attempts": state.attempt,
                 "last_errors": state.past_errors[-3:] if state.past_errors else [],
             })
+        # 失败时仍返回最后一次成功的执行结果，确保调用方可以获取内容
+        fallback_output = last_good_result if last_good_result else (result if isinstance(result, dict) else None)
         return LoopResult(
             success=False,
+            output=fallback_output,
             error=f"Max retries ({max_retries}) exceeded",
             total_attempts=state.attempt,
             state=state,

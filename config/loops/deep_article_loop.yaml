@@ -16,13 +16,88 @@ worker:
   workflow: defense_article
 
 verifier:
-  mode: agent_judge
-  agent: content-audit
-  pass_threshold: 0.85
-  rules:
-    - "文章字数 >= 2000"
-    - "包含至少3个实际案例"
-    - "SEO关键词密度 1%-3%"
+  mode: multi_judge
+  judges:
+    - openroute/deepseek-web/chat
+    - openroute/kimi-web/chat
+    - openroute/yuanbao-web/chat
+    - openroute/qianwen-web/chat
+    - openroute/glm-web/chat
+  exclude_creator: true
+  pass_threshold: 0.95
+  judge_role: "严格的内容质量评审专家"
+  judge_context_template: |
+    你是一位{judge_role}。请对以下内容进行多维度独立评审。
+
+    ## 评审上下文
+    {context_sections}
+
+    ## 评审维度
+    {dimension_lines}
+
+    ## 评分量规（0.0-1.0）
+    - 0.9-1.0: 优秀 — 该维度表现卓越，无明显瑕疵
+    - 0.7-0.89: 良好 — 该维度表现较好，有微小改进空间
+    - 0.5-0.69: 及格 — 该维度基本达标，但存在明显不足
+    - 0.3-0.49: 不及格 — 该维度表现较差，需要大幅改进
+    - 0.0-0.29: 极差 — 该维度严重缺失或完全不当
+
+    ## 待评审内容
+    ---
+    {content}
+    ---
+
+    ## 输出要求
+    请严格按照以下 JSON 格式输出，不要输出任何其他内容：
+    ```json
+    {{
+      "scores": {{{score_fields}}},
+      "improvement_suggestions": ["具体改进建议1", "具体改进建议2"]
+    }}
+    ```
+
+    注意：
+    1. 每个维度必须给出 0.0-1.0 之间的浮点数评分
+    2. improvement_suggestions 列出该内容最需要改进的方面（最多5条）
+    3. ai_flavor 维度：分数越高表示AI痕迹越少（0.9=几乎无AI味，0.3=AI味很重）
+    4. 必须严格输出合法 JSON，不要包含注释或额外文字
+  context_sections:
+    - template: "角色/人设: {persona}"
+      source: "task.persona"
+    - template: "任务描述: {task_desc}"
+      source: "task.input_data.task"
+    - template: "目标平台: {platform}"
+      source: "task.input_data.platform"
+  dimensions:
+    title_attractiveness: 0.08
+    opening_hook: 0.08
+    content_depth: 0.10
+    structure_clarity: 0.05
+    ai_flavor: 0.08
+    persona_fit: 0.08
+    fact_accuracy: 0.10
+    differentiation: 0.08
+    timeliness: 0.08
+    viral_potential: 0.06
+    platform_fit: 0.05
+    originality: 0.08
+    engagement: 0.03
+    compliance: 0.05
+  dimension_descriptions:
+    title_attractiveness: "标题是否吸引眼球，含数字/冲突点"
+    opening_hook: "开头是否有强烈情绪钩子"
+    content_depth: "内容是否有深度分析、推理、对比"
+    structure_clarity: "段落是否简短，逻辑是否连贯"
+    ai_flavor: "AI痕迹程度（0.9=几乎无AI味，0.3=AI味很重）"
+    persona_fit: "是否符合人设风格要求"
+    fact_accuracy: "数据、案例是否准确，是否有幻觉"
+    differentiation: "与素材的差异程度，是否照搬"
+    timeliness: "是否使用当前年份数据，是否有过时引用"
+    viral_potential: "情绪钩子、可分享金句、互动引导"
+    platform_fit: "是否符合目标平台风格"
+    originality: "是否有增量创作，而非仅复述素材"
+    engagement: "是否有互动问题、评论引导"
+    compliance: "是否遵守合规铁律"
 
 reflector:
   mode: reflexion

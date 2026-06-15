@@ -1,10 +1,16 @@
 """Loop Verifier — business-level quality verification."""
 
+import asyncio
 import json
-
+import re
+from collections import Counter
 from abc import ABC, abstractmethod
 from flowforge.core.task_context import TaskContext
+from flowforge.core.base_tool import ToolInput
 from flowforge.loop.state import Verdict
+from flowforge.core.tracing import get_logger
+
+logger = get_logger("loop.verifier")
 
 
 class LoopVerifier(ABC):
@@ -213,3 +219,470 @@ class TestSuiteVerifier(LoopVerifier):
             if "FAIL" in line.upper() or "ERROR" in line.upper():
                 errors.append(line[:200])  # 截断长行
         return errors[:5]  # 最多返回5个错误
+
+
+class MultiJudgeVerifier(LoopVerifier):
+    """多评委交叉评审校验器 — 使用多个不同模型独立评审，聚合评分。
+
+    核心思路：多个不同厂商/架构的 LLM 作为独立评委，对同一内容按维度打分，
+    通过 trimmed mean 聚合消除单一模型偏见，提升评审客观性。
+
+    完全配置驱动：评审角色、提示词模板、上下文段、维度说明均从 loop YAML 读取，
+    不硬编码任何业务领域信息，适用于内容创作、代码审查、数据分析等任意任务类型。
+
+    配置示例 (loop YAML):
+        verifier:
+          mode: multi_judge
+          judges:
+            - openroute/deepseek-web/chat
+            - openroute/kimi-web/chat
+          exclude_creator: true
+          pass_threshold: 0.95
+          judge_role: "严格的质量评审专家"
+          judge_context_template: |
+            你是一位{judge_role}。请对以下内容进行多维度独立评审。
+            ...
+          context_sections:
+            - template: "角色/人设: {persona}"
+              source: "task.persona"
+            - template: "任务描述: {task_desc}"
+              source: "task.input_data.task"
+          dimensions:
+            title_attractiveness: 0.08
+            ...
+          dimension_descriptions:
+            title_attractiveness: "标题是否吸引眼球"
+            ...
+    """
+
+    # 默认评审维度及权重（仅作为 fallback，实际应从配置读取）
+    DEFAULT_DIMENSIONS: dict[str, float] = {
+        "quality": 0.30,
+        "accuracy": 0.25,
+        "completeness": 0.25,
+        "clarity": 0.20,
+    }
+
+    # 默认维度说明
+    DEFAULT_DIMENSION_DESCRIPTIONS: dict[str, str] = {
+        "quality": "整体质量是否达标",
+        "accuracy": "内容是否准确无误",
+        "completeness": "内容是否完整无遗漏",
+        "clarity": "表达是否清晰易懂",
+    }
+
+    # 默认评审角色
+    DEFAULT_JUDGE_ROLE: str = "质量评审专家"
+
+    # 默认上下文段定义
+    DEFAULT_CONTEXT_SECTIONS: list[dict] = [
+        {"template": "角色/人设: {persona}", "source": "task.persona"},
+        {"template": "任务描述: {task_desc}", "source": "task.input_data.task"},
+    ]
+
+    # 默认评审提示词模板（针对小模型/免费模型优化：无markdown代码块、含one-shot示例、强调纯JSON输出）
+    DEFAULT_JUDGE_CONTEXT_TEMPLATE: str = """\
+你是一位{judge_role}。请对以下内容进行多维度独立评审。
+
+评审上下文:
+{context_sections}
+
+评审维度:
+{dimension_lines}
+
+评分量规(0.0-1.0):
+0.9-1.0 优秀 | 0.7-0.89 良好 | 0.5-0.69 及格 | 0.3-0.49 不及格 | 0.0-0.29 极差
+
+待评审内容:
+{content}
+
+【重要】你必须且只能输出一个JSON对象，不要输出任何其他文字、解释或标记。
+不要在JSON前后添加任何内容。不要使用markdown代码块。
+
+输出格式示例(直接输出JSON，不要用```json```包裹):
+{{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1","改进建议2"]}}
+
+要求:
+1. 每个维度给出0.0-1.0之间的浮点数评分
+2. improvement_suggestions列出最需要改进的方面(最多5条)
+3. 只输出JSON，不要输出任何其他内容"""
+
+    async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
+        judges = config.get("judges", [])
+        exclude_creator = config.get("exclude_creator", True)
+        threshold = config.get("pass_threshold", 0.95)
+        dimensions = config.get("dimensions", self.DEFAULT_DIMENSIONS)
+
+        if not judges:
+            logger.warning("MultiJudgeVerifier: no judges configured, falling back to pass")
+            return Verdict(passed=True, score=1.0)
+
+        # 1. 排除创作模型（避免自我评分）
+        # 优先使用配置中的 creator_model，其次从 result 中获取
+        creator_model = config.get("creator_model", "") or (result.get("_model", "") if isinstance(result, dict) else "")
+        active_judges = list(judges)
+        if exclude_creator and creator_model:
+            active_judges = [j for j in active_judges if j != creator_model]
+
+        if not active_judges:
+            logger.warning("MultiJudgeVerifier: all judges excluded (creator model), using original list")
+            active_judges = list(judges)
+
+        # 2. 构建评审提示词（完全配置驱动）
+        # 从 result 中提取待评审内容，支持多种返回格式
+        content = ""
+        if isinstance(result, dict):
+            # 优先级: content > response > output > draft > final_answer
+            for key in ("content", "response", "output", "draft", "final_answer"):
+                val = result.get(key, "")
+                if isinstance(val, str) and val.strip():
+                    content = val
+                    break
+                elif isinstance(val, dict):
+                    # 嵌套 dict 时尝试提取子字段
+                    for sub_key in ("draft", "response", "content", "result"):
+                        sub_val = val.get(sub_key, "")
+                        if isinstance(sub_val, str) and sub_val.strip():
+                            content = sub_val
+                            break
+                    if content:
+                        break
+            if not content:
+                # 最后尝试：将整个 result 转为字符串
+                content = str(result)
+        else:
+            content = str(result)
+        prompt = self._build_eval_prompt(content, task, dimensions, config)
+
+        # 3. 并行调用所有评委
+        judge_tasks = [self._call_judge(j, prompt, task) for j in active_judges]
+        judge_results = await asyncio.gather(*judge_tasks, return_exceptions=True)
+
+        # 4. 过滤有效结果
+        valid_results: list[dict] = []
+        for i, r in enumerate(judge_results):
+            if isinstance(r, Exception):
+                logger.warning(f"MultiJudgeVerifier: judge '{active_judges[i]}' failed: {r}")
+            elif isinstance(r, dict):
+                valid_results.append(r)
+            else:
+                logger.warning(f"MultiJudgeVerifier: judge '{active_judges[i]}' returned unexpected type: {type(r)}")
+
+        if not valid_results:
+            return Verdict(passed=False, score=0.0, errors=["All judges failed to return valid results"])
+
+        # 5. 聚合评分
+        aggregated = self._aggregate_scores(valid_results, dimensions)
+        errors = self._merge_suggestions(valid_results) if aggregated["weighted_score"] < threshold else []
+
+        logger.info(
+            f"MultiJudgeVerifier: {len(valid_results)}/{len(active_judges)} judges succeeded, "
+            f"weighted_score={aggregated['weighted_score']:.4f}, threshold={threshold}"
+        )
+
+        return Verdict(
+            passed=aggregated["weighted_score"] >= threshold,
+            score=aggregated["weighted_score"],
+            errors=errors,
+        )
+
+    def _resolve_source(self, source: str, task: TaskContext) -> str:
+        """从 TaskContext 动态解析 source 路径的值。
+
+        支持点号分隔的路径，如 "task.persona" → task.persona，
+        "task.input_data.task" → task.input_data.get("task", "")。
+        """
+        if not source:
+            return ""
+
+        # 去掉 "task." 前缀（因为 task 就是传入的 TaskContext 对象）
+        path = source
+        if path.startswith("task."):
+            path = path[5:]  # 去掉 "task."
+
+        if not path:
+            return ""
+
+        parts = path.split(".")
+        obj: object = task
+        for part in parts:
+            if isinstance(obj, dict):
+                obj = obj.get(part, "")
+            else:
+                obj = getattr(obj, part, None)
+                if obj is None:
+                    return ""
+        result = str(obj) if obj is not None else ""
+        return result[:500] if result else ""
+
+    def _build_eval_prompt(self, content: str, task: TaskContext, dimensions: dict, config: dict) -> str:
+        """构建评审提示词 — 完全配置驱动，不硬编码任何业务领域信息。"""
+
+        # 1. 读取评审角色
+        judge_role = config.get("judge_role", self.DEFAULT_JUDGE_ROLE)
+
+        # 2. 构建上下文段 — 从 context_sections 配置动态提取
+        context_sections_config = config.get("context_sections", self.DEFAULT_CONTEXT_SECTIONS)
+        context_lines: list[str] = []
+        for section in context_sections_config:
+            template = section.get("template", "")
+            source = section.get("source", "")
+            value = self._resolve_source(source, task)
+            # 如果值非空则渲染该段
+            if value and value != "None":
+                context_lines.append(f"- {template.format(**{self._extract_template_keys(template): value})}")
+            elif template:
+                # 值为空时仍保留模板行，用 "无" 填充
+                keys = self._extract_template_keys(template)
+                context_lines.append(f"- {template.format(**{keys: '无'})}")
+
+        context_sections_str = "\n".join(context_lines) if context_lines else "无"
+
+        # 3. 构建维度行 — 包含维度说明
+        dimension_descriptions = config.get("dimension_descriptions", self.DEFAULT_DIMENSION_DESCRIPTIONS)
+        dim_lines: list[str] = []
+        for dim, weight in dimensions.items():
+            desc = dimension_descriptions.get(dim, "")
+            if desc:
+                dim_lines.append(f"  - {dim} (权重 {weight:.2f}): {desc}")
+            else:
+                dim_lines.append(f"  - {dim} (权重 {weight:.2f})")
+
+        # 4. 动态生成 score_fields
+        score_field_lines = [f'"{dim}": 0.0' for dim in dimensions.keys()]
+        score_fields = ",\n    ".join(score_field_lines)
+
+        # 5. 读取提示词模板
+        template = config.get("judge_context_template", self.DEFAULT_JUDGE_CONTEXT_TEMPLATE)
+
+        # 6. 渲染模板
+        prompt = template.format(
+            judge_role=judge_role,
+            context_sections=context_sections_str,
+            dimension_lines="\n".join(dim_lines),
+            content=content[:8000],
+            score_fields=score_fields,
+        )
+        return prompt
+
+    @staticmethod
+    def _extract_template_keys(template: str) -> str:
+        """从简单模板字符串中提取第一个花括号键名。
+
+        例如 "角色/人设: {persona}" → "persona"
+        """
+        import re as _re
+        match = _re.search(r"\{(\w+)\}", template)
+        return match.group(1) if match else ""
+
+    async def _call_judge(self, model: str, prompt: str, task: TaskContext) -> dict:
+        """调用单个评委模型，返回解析后的评分字典。"""
+        if not task.tools:
+            raise RuntimeError("TaskContext.tools is not available for judge invocation")
+
+        tool_output = await task.tools.execute("llm", ToolInput(params={
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "task_id": task.task_id,
+            "agent_name": f"multi_judge_{model.replace('/', '_')}",
+            "persona": task.persona or "default",
+        }))
+
+        raw_content = tool_output.result.get("content", "") if tool_output.result else ""
+        return self._parse_judge_response(raw_content, model)
+
+    def _parse_judge_response(self, raw_content: str, model: str) -> dict:
+        """解析评委模型的 JSON 响应 — 针对小模型/免费模型的多种非标准输出做鲁棒处理。"""
+
+        # 1. 尝试从 markdown code block 中提取 JSON
+        json_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", raw_content, re.DOTALL)
+        if json_match:
+            candidate = json_match.group(1).strip()
+            parsed = self._try_parse_json(candidate)
+            if parsed is not None:
+                return self._extract_judge_result(parsed, model)
+
+        # 2. 尝试提取第一个 { 到最后一个 } 之间的内容（处理前后有解释文字的情况）
+        first_brace = raw_content.find("{")
+        last_brace = raw_content.rfind("}")
+        if first_brace != -1 and last_brace > first_brace:
+            candidate = raw_content[first_brace:last_brace + 1]
+            parsed = self._try_parse_json(candidate)
+            if parsed is not None:
+                return self._extract_judge_result(parsed, model)
+
+        # 3. 对整个内容尝试解析
+        parsed = self._try_parse_json(raw_content.strip())
+        if parsed is not None:
+            return self._extract_judge_result(parsed, model)
+
+        logger.warning(
+            f"MultiJudgeVerifier: judge '{model}' returned no parseable JSON, "
+            f"raw preview: {raw_content[:300]}"
+        )
+        raise ValueError(f"Judge '{model}' returned no parseable JSON")
+
+    def _try_parse_json(self, text: str) -> dict | None:
+        """尝试多种策略解析 JSON，返回解析后的字典或 None。"""
+
+        # 策略1: 直接解析
+        try:
+            result = json.loads(text)
+            if isinstance(result, dict):
+                return result
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # 策略2: 修复单引号 → 双引号
+        fixed = text.replace("'", '"')
+        try:
+            result = json.loads(fixed)
+            if isinstance(result, dict):
+                return result
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # 策略3: 修复尾部逗号（}, ]前的逗号）
+        fixed = re.sub(r",\s*([}\]])", r"\1", text)
+        try:
+            result = json.loads(fixed)
+            if isinstance(result, dict):
+                return result
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # 策略4: 修复未加引号的键（如 scores: {...} → "scores": {...}）
+        fixed = re.sub(r'(?<=[{,])\s*(\w+)\s*:', r' "\1":', text)
+        # 清理可能产生的双引号重复
+        fixed = fixed.replace('""', '"')
+        try:
+            result = json.loads(fixed)
+            if isinstance(result, dict):
+                return result
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # 策略5: 组合修复 — 单引号 + 尾部逗号 + 未加引号的键
+        fixed = text.replace("'", '"')
+        fixed = re.sub(r",\s*([}\]])", r"\1", fixed)
+        fixed = re.sub(r'(?<=[{,])\s*(\w+)\s*:', r' "\1":', fixed)
+        fixed = fixed.replace('""', '"')
+        try:
+            result = json.loads(fixed)
+            if isinstance(result, dict):
+                return result
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # 策略6: 修复布尔值/None（Python风格 → JSON风格）
+        fixed = text
+        for py_val, json_val in [("True", "true"), ("False", "false"), ("None", "null")]:
+            fixed = fixed.replace(py_val, json_val)
+        try:
+            result = json.loads(fixed)
+            if isinstance(result, dict):
+                return result
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        return None
+
+    def _extract_judge_result(self, parsed: dict, model: str) -> dict:
+        """从解析后的字典中提取评分和建议，处理多种字段命名风格。"""
+        # 兼容多种字段名: scores / score / 评分
+        scores = parsed.get("scores") or parsed.get("score") or parsed.get("评分") or {}
+        # 兼容多种字段名: improvement_suggestions / suggestions / improvements / 建议
+        suggestions = (
+            parsed.get("improvement_suggestions")
+            or parsed.get("suggestions")
+            or parsed.get("improvements")
+            or parsed.get("建议")
+            or []
+        )
+
+        # 确保所有分数在 [0, 1] 范围内
+        normalized_scores = {}
+        for dim, score in scores.items():
+            try:
+                s = float(score)
+                normalized_scores[dim] = max(0.0, min(1.0, s))
+            except (ValueError, TypeError):
+                logger.warning(f"MultiJudgeVerifier: judge '{model}' invalid score for '{dim}': {score}")
+
+        return {
+            "model": model,
+            "scores": normalized_scores,
+            "improvement_suggestions": suggestions if isinstance(suggestions, list) else [],
+        }
+
+    def _aggregate_scores(self, results: list[dict], dimensions: dict) -> dict:
+        """聚合多个评委的评分，使用 trimmed mean（>=3评委时去除最高最低）。"""
+        dim_scores: dict[str, list[float]] = {}
+        for r in results:
+            for dim, score in r.get("scores", {}).items():
+                dim_scores.setdefault(dim, []).append(score)
+
+        aggregated_dims: dict[str, float] = {}
+        for dim, scores_list in dim_scores.items():
+            if not scores_list:
+                aggregated_dims[dim] = 0.0
+                continue
+
+            sorted_scores = sorted(scores_list)
+            # trimmed mean: >=3评委时去除最高和最低
+            if len(sorted_scores) >= 3:
+                trimmed = sorted_scores[1:-1]
+            else:
+                trimmed = sorted_scores
+            aggregated_dims[dim] = sum(trimmed) / len(trimmed) if trimmed else 0.0
+
+        # 加权汇总
+        total_weight = sum(dimensions.values()) or 1.0
+        weighted_score = sum(
+            aggregated_dims.get(dim, 0.0) * weight
+            for dim, weight in dimensions.items()
+        ) / total_weight
+
+        return {
+            "weighted_score": weighted_score,
+            "dimension_scores": aggregated_dims,
+        }
+
+    def _merge_suggestions(self, results: list[dict]) -> list[str]:
+        """合并去重多个评委的改进建议，按出现频率排序。"""
+        suggestion_counter: Counter = Counter()
+        for r in results:
+            for s in r.get("improvement_suggestions", []):
+                # 归一化：去首尾空格、转小写用于去重
+                normalized = str(s).strip()
+                if normalized:
+                    suggestion_counter[normalized] += 1
+
+        # 按频率降序排列
+        merged = [s for s, _ in suggestion_counter.most_common()]
+        return merged[:10]  # 最多返回10条
+
+
+def create_verifier(mode: str = "rule_based") -> LoopVerifier:
+    """根据模式字符串创建对应的 Verifier 实例。
+
+    Args:
+        mode: 校验模式，支持 "agent_judge", "rule_based", "schema",
+              "test_suite", "multi_judge"。
+
+    Returns:
+        对应的 LoopVerifier 实例。
+    """
+    verifiers = {
+        "agent_judge": AgentJudgeVerifier,
+        "rule_based": RuleBasedVerifier,
+        "schema": SchemaVerifier,
+        "test_suite": TestSuiteVerifier,
+        "multi_judge": MultiJudgeVerifier,
+    }
+    cls = verifiers.get(mode)
+    if cls is None:
+        logger.warning(f"Unknown verifier mode '{mode}', falling back to rule_based")
+        cls = RuleBasedVerifier
+    return cls()

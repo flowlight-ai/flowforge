@@ -3,6 +3,7 @@ import json
 import re
 from flowforge.core.base_mode_executor import BaseModeExecutor
 from flowforge.core.base_tool import ToolInput
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
 
@@ -79,9 +80,10 @@ class ReWOOExecutor(BaseModeExecutor):
         if not final_content or len(final_content.strip()) < 50:
             logger.info("ReWOO: all steps failed or search unavailable, using LLM directly")
             try:
+                fallback_system = get_prompt("modes.rewoo.fallback")
                 llm_result = await ctx.tools.execute("llm", ToolInput(params={
                     "messages": [
-                        {"role": "system", "content": "你是一个专业的内容创作助手。请基于你的知识详细回答用户的问题。"},
+                        {"role": "system", "content": fallback_system},
                         {"role": "user", "content": task[:2000]},
                     ],
                     "stream": False, "task_id": ctx.task_id,

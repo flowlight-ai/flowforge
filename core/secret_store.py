@@ -4,6 +4,9 @@ Provides the SecretStore class for persisting and retrieving sensitive
 configuration values (API keys, tokens, etc.) with masked listing and
 a multi-source resolution chain (database → environment variable → .env file).
 
+All SQL operations are encapsulated in SecretRepository, complying with
+Iron Law #4 (no direct SQL outside Repository layer).
+
 License: MIT
 """
 
@@ -19,17 +22,6 @@ from flowforge.core.tracing import get_logger
 logger = get_logger("secret_store")
 
 _DEFAULT_DB_PATH = Path(os.environ.get("FLOWFORGE_SECRET_DB_PATH", "data/secrets.db"))
-
-_CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS secrets (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    category TEXT DEFAULT 'api_key',
-    description TEXT,
-    created_at TEXT,
-    updated_at TEXT
-)
-"""
 
 
 def _mask_value(value: str) -> str:
@@ -52,59 +44,45 @@ def _mask_value(value: str) -> str:
     return value[:3] + "****" + value[-4:]
 
 
-class SecretStore:
-    """Thread-safe SQLite-backed store for sensitive configuration values.
+class SecretRepository:
+    """Secret 数据库 Repository 层 — 封装所有 SQL 操作。
 
-    Secrets are stored in a local SQLite database with key, value, category,
-    description, and timestamp columns.  All database operations are
-    protected by a threading lock.  The ``resolve`` method implements a
-    fallback chain: database → environment variable → ``.env`` file.
-
-    Attributes:
-        _db_path: Path to the SQLite database file.
-        _lock: Threading lock for serialized database access.
+    职责：数据库连接管理、表初始化、所有 CRUD 的 SQL 执行。
+    上层 SecretStore 通过此类间接操作数据库，不直接编写 SQL。
     """
 
-    def __init__(self, db_path: Optional[Path] = None):
-        """Initialize the SecretStore and ensure the database schema exists.
-
-        Args:
-            db_path: Optional path to the SQLite database file.  Defaults
-                to ``<package_root>/data/secrets.db``.
-        """
-        if db_path is None:
-            db_path = _DEFAULT_DB_PATH
+    def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
+        db_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
-        self._ensure_db()
-
-    def _ensure_db(self):
-        """Create the database file and secrets table if they do not exist."""
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._get_conn() as conn:
-            conn.execute(_CREATE_TABLE_SQL)
-            conn.commit()
-        logger.info(f"SecretStore initialized: {self._db_path}")
+        self._init_db()
+        logger.info(f"SecretRepository initialized: {db_path}")
 
     def _get_conn(self) -> sqlite3.Connection:
-        """Open a new SQLite connection with Row factory enabled.
-
-        Returns:
-            A ``sqlite3.Connection`` configured with ``Row`` row factory.
-        """
+        """Open a new SQLite connection with Row factory enabled."""
         conn = sqlite3.connect(str(self._db_path))
         conn.row_factory = sqlite3.Row
         return conn
 
+    def _init_db(self) -> None:
+        """Create the database file and secrets table if they do not exist."""
+        with self._get_conn() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS secrets (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    category TEXT DEFAULT 'api_key',
+                    description TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+            """)
+            conn.commit()
+
+    # ──────────────────────────── CRUD ────────────────────────────
+
     def get(self, key: str) -> Optional[str]:
-        """Retrieve a secret value by key.
-
-        Args:
-            key: The unique key of the secret.
-
-        Returns:
-            The secret value string, or ``None`` if the key is not found.
-        """
+        """Retrieve a secret value by key. Returns None if not found."""
         with self._lock:
             with self._get_conn() as conn:
                 row = conn.execute(
@@ -114,20 +92,9 @@ class SecretStore:
                     return row["value"]
         return None
 
-    def set(self, key: str, value: str, category: str = "api_key", description: str = "") -> None:
-        """Store or update a secret.
-
-        If the key already exists, its value, category, description, and
-        ``updated_at`` timestamp are updated.  Otherwise a new row is
-        inserted.
-
-        Args:
-            key: The unique key for the secret.
-            value: The secret value to store.
-            category: Optional category label (default ``"api_key"``).
-            description: Optional human-readable description.
-        """
-        now = datetime.now(timezone.utc).isoformat()
+    def set(self, key: str, value: str, category: str, description: str,
+            now: str) -> None:
+        """Store or update a secret (upsert)."""
         with self._lock:
             with self._get_conn() as conn:
                 existing = conn.execute(
@@ -144,6 +111,87 @@ class SecretStore:
                         (key, value, category, description, now, now),
                     )
                 conn.commit()
+
+    def delete(self, key: str) -> None:
+        """Delete a secret by key."""
+        with self._lock:
+            with self._get_conn() as conn:
+                conn.execute("DELETE FROM secrets WHERE key = ?", (key,))
+                conn.commit()
+
+    def list_keys(self, category: Optional[str] = None) -> List[sqlite3.Row]:
+        """List stored secrets as Row objects, optionally filtered by category."""
+        with self._lock:
+            with self._get_conn() as conn:
+                if category:
+                    return conn.execute(
+                        "SELECT key, value, category, description, created_at, updated_at FROM secrets WHERE category = ? ORDER BY key",
+                        (category,),
+                    ).fetchall()
+                else:
+                    return conn.execute(
+                        "SELECT key, value, category, description, created_at, updated_at FROM secrets ORDER BY key"
+                    ).fetchall()
+
+    def has(self, key: str) -> bool:
+        """Check whether a secret exists for the given key."""
+        with self._lock:
+            with self._get_conn() as conn:
+                row = conn.execute(
+                    "SELECT 1 FROM secrets WHERE key = ?", (key,)
+                ).fetchone()
+                return row is not None
+
+
+class SecretStore:
+    """Thread-safe SQLite-backed store for sensitive configuration values.
+
+    Secrets are stored in a local SQLite database with key, value, category,
+    description, and timestamp columns.  All database operations are
+    delegated to SecretRepository.  The ``resolve`` method implements a
+    fallback chain: database → environment variable → ``.env`` file.
+
+    Attributes:
+        _repo: SecretRepository instance handling all SQL operations.
+    """
+
+    def __init__(self, db_path: Optional[Path] = None):
+        """Initialize the SecretStore and ensure the database schema exists.
+
+        Args:
+            db_path: Optional path to the SQLite database file.  Defaults
+                to ``<package_root>/data/secrets.db``.
+        """
+        if db_path is None:
+            db_path = _DEFAULT_DB_PATH
+        self._repo = SecretRepository(db_path)
+
+    def get(self, key: str) -> Optional[str]:
+        """Retrieve a secret value by key.
+
+        Args:
+            key: The unique key of the secret.
+
+        Returns:
+            The secret value string, or ``None`` if the key is not found.
+        """
+        return self._repo.get(key)
+
+    def set(self, key: str, value: str, category: str = "api_key", description: str = "") -> None:
+        """Store or update a secret.
+
+        If the key already exists, its value, category, description, and
+        ``updated_at`` timestamp are updated.  Otherwise a new row is
+        inserted.
+
+        Args:
+            key: The unique key for the secret.
+            value: The secret value to store.
+            category: Optional category label (default ``"api_key"``).
+            description: Optional human-readable description.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        self._repo.set(key, value, category, description, now)
         logger.info(f"Secret set: {key} [{category}]")
 
     def delete(self, key: str) -> None:
@@ -152,10 +200,7 @@ class SecretStore:
         Args:
             key: The unique key of the secret to delete.
         """
-        with self._lock:
-            with self._get_conn() as conn:
-                conn.execute("DELETE FROM secrets WHERE key = ?", (key,))
-                conn.commit()
+        self._repo.delete(key)
         logger.info(f"Secret deleted: {key}")
 
     def list_keys(self, category: Optional[str] = None) -> List[Dict]:
@@ -170,17 +215,7 @@ class SecretStore:
             ``value_masked``, ``category``, ``description``,
             ``created_at``, and ``updated_at``.
         """
-        with self._lock:
-            with self._get_conn() as conn:
-                if category:
-                    rows = conn.execute(
-                        "SELECT key, value, category, description, created_at, updated_at FROM secrets WHERE category = ? ORDER BY key",
-                        (category,),
-                    ).fetchall()
-                else:
-                    rows = conn.execute(
-                        "SELECT key, value, category, description, created_at, updated_at FROM secrets ORDER BY key"
-                    ).fetchall()
+        rows = self._repo.list_keys(category)
         result = []
         for row in rows:
             result.append({
@@ -202,12 +237,7 @@ class SecretStore:
         Returns:
             ``True`` if the key exists in the store, ``False`` otherwise.
         """
-        with self._lock:
-            with self._get_conn() as conn:
-                row = conn.execute(
-                    "SELECT 1 FROM secrets WHERE key = ?", (key,)
-                ).fetchone()
-                return row is not None
+        return self._repo.has(key)
 
     def resolve(self, key: str) -> str:
         """Resolve a secret value through a multi-source fallback chain.

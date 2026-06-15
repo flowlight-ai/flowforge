@@ -8,6 +8,7 @@ from typing import Any, Optional
 from pydantic import BaseModel
 
 from flowforge.core.base_tool import ToolInput
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.tracing import get_logger
 from flowforge.tools.llm_client import LLMClient
 
@@ -71,34 +72,9 @@ class PlanGenerator:
                 context_lines.append(f"  [{role}] {content[:200]}")
             context_block = f"\n对话上下文:\n" + "\n".join(context_lines)
 
-        prompt = f"""你是一个任务规划专家。请为以下用户意图制定一个详细的执行计划。
-
-用户意图: {intent}
-执行模式: {mode}
-人设: {persona}{context_block}
-
-要求:
-1. 将任务分解为 3-8 个可执行的步骤
-2. 每个步骤必须包含: name(步骤名)、task(具体任务描述)、agent(执行者)
-3. 步骤之间应有逻辑顺序，后续步骤可依赖前序步骤的结果
-4. 如果涉及搜索/检索，使用 researcher 或 web_search_agent
-5. 如果涉及写作/创作，使用 drafter 或 generator
-6. 如果涉及审核/校验，使用 reviewer 或 validator
-7. 如果涉及发布，使用 deliverer 或 publisher
-
-输出 JSON 数组，格式:
-[
-  {{
-    "name": "步骤名称",
-    "task": "具体任务描述",
-    "agent": "执行者名称",
-    "tool": "使用的工具(可选)",
-    "mode": "执行模式(可选)",
-    "dependencies": []
-  }}
-]
-
-仅输出 JSON，不要输出其他内容。"""
+        prompt = get_prompt("brain.plan_generator.initial_plan",
+                            intent=intent, mode=mode, persona=persona,
+                            context_block=context_block)
 
         result_text = await self._call_llm(prompt, persona, "plan_generator")
         return self._parse_steps(result_text)
@@ -139,52 +115,11 @@ class PlanGenerator:
             content = msg.get("content", "")
             context_lines.append(f"  [{role}] {content[:200]}")
 
-        prompt = f"""你是一个任务规划专家。现在需要根据用户的新消息，对现有执行计划进行增量更新。
-
-当前计划:
-{chr(10).join(steps_summary)}
-
-已完成步骤索引: {completed_steps}
-
-对话上下文:
-{chr(10).join(context_lines)}
-
-用户新消息: {new_message}
-
-请分析新消息对现有计划的影响，输出增量更新:
-
-{{
-  "reasoning": "分析新消息如何影响计划的推理过程",
-  "steps_added": [
-    {{
-      "name": "新步骤名称",
-      "task": "新步骤的具体任务描述",
-      "agent": "执行者",
-      "tool": "工具(可选)",
-      "mode": "模式(可选)",
-      "dependencies": [依赖步骤索引]
-    }}
-  ],
-  "steps_modified": {{
-    "索引号": {{
-      "name": "修改后的名称(可选)",
-      "task": "修改后的任务描述(可选)"
-    }}
-  }},
-  "steps_completed": [应标记为完成的步骤索引],
-  "steps_removed": [应移除的步骤索引],
-  "title_updated": "更新后的计划标题(如无需更新则为null)",
-  "description_updated": "更新后的计划描述(如无需更新则为null)"
-}}
-
-规则:
-1. 如果新消息是追加需求，添加新步骤到 steps_added
-2. 如果新消息改变了某个步骤的目标，修改 steps_modified
-3. 如果新消息使某些步骤不再需要，放入 steps_removed
-4. 如果新消息确认了某些步骤已完成，放入 steps_completed
-5. 如果新消息与计划无关（如闲聊），所有数组留空
-6. 新步骤的 dependencies 应引用现有步骤的索引
-7. 仅输出 JSON，不要输出其他内容"""
+        prompt = get_prompt("brain.plan_generator.incremental_update",
+                            steps_summary="\n".join(steps_summary),
+                            completed_steps=str(completed_steps),
+                            context_lines="\n".join(context_lines),
+                            new_message=new_message)
 
         result_text = await self._call_llm(prompt, persona, "plan_generator_update")
         return self._parse_delta(result_text)

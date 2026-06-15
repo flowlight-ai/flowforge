@@ -1,3 +1,10 @@
+"""Mailbox — Agent 间异步消息邮箱
+
+提供 Agent 间的异步消息收发能力，支持优先级、标签、TTL 过期清理。
+
+所有 SQL 操作通过 MailboxRepository 封装，遵守铁律4（禁止直接SQL）。
+"""
+
 import json
 import sqlite3
 import datetime
@@ -22,11 +29,23 @@ PRIORITY_ORDER = {
 }
 
 
-class Mailbox:
-    def __init__(self, db_path: str = "data/mailbox.db"):
+class MailboxRepository:
+    """Mailbox 数据库 Repository 层 — 封装所有 SQL 操作。
+
+    职责：数据库连接管理、表初始化、所有 CRUD 的 SQL 执行。
+    上层 Mailbox 通过此类间接操作数据库，不直接编写 SQL。
+    """
+
+    def __init__(self, db_path: str) -> None:
+        self._db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.execute("PRAGMA journal_mode=WAL")
+        self._init_db()
+        logger.info(f"MailboxRepository initialized: {db_path}")
+
+    def _init_db(self) -> None:
+        """初始化数据库表和索引。"""
         self.conn.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +65,82 @@ class Mailbox:
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_expires ON messages (expires_at)")
         self.conn.commit()
 
+    # ──────────────────────────── CRUD ────────────────────────────
+
+    def insert_message(
+        self,
+        sender: str,
+        recipient: str,
+        subject: str,
+        body: str,
+        priority: str,
+        tags_json: Optional[str],
+        created_at: str,
+        expires_at: Optional[str],
+    ) -> int:
+        """插入消息，返回自增 id。"""
+        cursor = self.conn.execute(
+            "INSERT INTO messages (sender, recipient, subject, body, priority, tags, created_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (sender, recipient, subject, body, priority, tags_json, created_at, expires_at),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def query_messages(
+        self,
+        where_clause: str,
+        params: List[Any],
+        order_clause: str,
+        limit: int,
+    ) -> List[tuple]:
+        """按条件查询消息行。"""
+        query = (
+            f"SELECT id, sender, recipient, subject, body, priority, tags, read, created_at, expires_at "
+            f"FROM messages WHERE {where_clause} ORDER BY {order_clause} LIMIT ?"
+        )
+        return self.conn.execute(query, params + [limit]).fetchall()
+
+    def mark_as_read(self, message_id: int) -> None:
+        """标记消息为已读。"""
+        self.conn.execute("UPDATE messages SET read = 1 WHERE id = ?", (message_id,))
+
+    def commit(self) -> None:
+        """提交当前事务。"""
+        self.conn.commit()
+
+    def cleanup_expired(self, now: str) -> int:
+        """清理过期消息，返回清理数量。"""
+        cursor = self.conn.execute(
+            "DELETE FROM messages WHERE expires_at IS NOT NULL AND expires_at < ?",
+            (now,),
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def count_messages(self, where_clause: str, params: List[Any]) -> int:
+        """按条件统计消息数量。"""
+        return self.conn.execute(
+            f"SELECT COUNT(*) FROM messages WHERE {where_clause}", params
+        ).fetchone()[0]
+
+    def count_by_priority(self, where_clause: str, params: List[Any]) -> List[tuple]:
+        """按条件分组统计各优先级消息数量。"""
+        return self.conn.execute(
+            f"SELECT priority, COUNT(*) FROM messages WHERE {where_clause} GROUP BY priority",
+            params,
+        ).fetchall()
+
+
+class Mailbox:
+    """Agent 间异步消息邮箱。
+
+    所有 SQL 操作委托给 MailboxRepository，本类仅负责业务逻辑和行转字典。
+    """
+
+    def __init__(self, db_path: str = "data/mailbox.db"):
+        self._repo = MailboxRepository(db_path)
+
     async def send(
         self,
         sender: str,
@@ -61,14 +156,18 @@ class Mailbox:
         if ttl_seconds is not None:
             expires_at = (now + datetime.timedelta(seconds=ttl_seconds)).isoformat()
         tags_json = json.dumps(tags) if tags else None
-        cursor = self.conn.execute(
-            "INSERT INTO messages (sender, recipient, subject, body, priority, tags, created_at, expires_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (sender, recipient, subject, body, priority, tags_json, now.isoformat(), expires_at),
+        msg_id = self._repo.insert_message(
+            sender=sender,
+            recipient=recipient,
+            subject=subject,
+            body=body,
+            priority=priority,
+            tags_json=tags_json,
+            created_at=now.isoformat(),
+            expires_at=expires_at,
         )
-        self.conn.commit()
         logger.info(f"Message sent: from={sender} to={recipient} subject={subject} priority={priority}")
-        return cursor.lastrowid
+        return msg_id
 
     async def receive(
         self,
@@ -98,27 +197,20 @@ class Mailbox:
 
         where = " AND ".join(conditions)
         order = f"CASE priority {self._priority_case()} END ASC, created_at ASC"
-        query = f"SELECT id, sender, recipient, subject, body, priority, tags, read, created_at, expires_at FROM messages WHERE {where} ORDER BY {order} LIMIT ?"
-        params.append(limit)
 
-        rows = self.conn.execute(query, params).fetchall()
+        rows = self._repo.query_messages(where, params, order, limit)
         results = []
         for row in rows:
             msg = self._row_to_dict(row)
             results.append(msg)
             if not msg["read"]:
-                self.conn.execute("UPDATE messages SET read = 1 WHERE id = ?", (msg["id"],))
-        self.conn.commit()
+                self._repo.mark_as_read(msg["id"])
+        self._repo.commit()
         return results
 
     async def _cleanup_expired(self) -> int:
         now = datetime.datetime.now(timezone.utc).isoformat()
-        cursor = self.conn.execute(
-            "DELETE FROM messages WHERE expires_at IS NOT NULL AND expires_at < ?",
-            (now,),
-        )
-        self.conn.commit()
-        count = cursor.rowcount
+        count = self._repo.cleanup_expired(now)
         if count:
             logger.info(f"Cleaned up {count} expired messages")
         return count
@@ -127,24 +219,13 @@ class Mailbox:
         await self._cleanup_expired()
 
         if recipient:
-            total = self.conn.execute(
-                "SELECT COUNT(*) FROM messages WHERE recipient = ?", (recipient,)
-            ).fetchone()[0]
-            unread = self.conn.execute(
-                "SELECT COUNT(*) FROM messages WHERE recipient = ? AND read = 0", (recipient,)
-            ).fetchone()[0]
-            by_priority_rows = self.conn.execute(
-                "SELECT priority, COUNT(*) FROM messages WHERE recipient = ? GROUP BY priority",
-                (recipient,),
-            ).fetchall()
+            total = self._repo.count_messages("recipient = ?", [recipient])
+            unread = self._repo.count_messages("recipient = ? AND read = 0", [recipient])
+            by_priority_rows = self._repo.count_by_priority("recipient = ?", [recipient])
         else:
-            total = self.conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
-            unread = self.conn.execute(
-                "SELECT COUNT(*) FROM messages WHERE read = 0"
-            ).fetchone()[0]
-            by_priority_rows = self.conn.execute(
-                "SELECT priority, COUNT(*) FROM messages GROUP BY priority"
-            ).fetchall()
+            total = self._repo.count_messages("1=1", [])
+            unread = self._repo.count_messages("read = 0", [])
+            by_priority_rows = self._repo.count_by_priority("1=1", [])
 
         by_priority = {row[0]: row[1] for row in by_priority_rows}
         return {

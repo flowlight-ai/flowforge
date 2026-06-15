@@ -2,6 +2,8 @@
 
 管理 plans（计划）和 attachments（附件）两张表，
 提供完整的 CRUD 操作，支持 WAL 日志、外键约束和自动迁移。
+
+所有 SQL 操作通过 HelmRepository 封装，遵守铁律4（禁止直接SQL）。
 """
 
 import json
@@ -15,44 +17,26 @@ from flowforge.core.tracing import get_logger
 logger = get_logger("flowforge.memory.helm_db")
 
 
-class HelmDatabase:
-    """Helm 模式数据库管理器，管理 plans 和 attachments 表。"""
+class HelmRepository:
+    """Helm 数据库 Repository 层 — 封装所有 SQL 操作。
 
-    # ── Plan 状态 ──
-    PLAN_PENDING = "pending"
-    PLAN_CONFIRMED = "confirmed"
-    PLAN_EXECUTING = "executing"
-    PLAN_COMPLETED = "completed"
-    PLAN_REJECTED = "rejected"
-    PLAN_CANCELLED = "cancelled"
+    职责：数据库连接管理、表初始化/迁移、所有 CRUD 的 SQL 执行。
+    上层 HelmDatabase 通过此类间接操作数据库，不直接编写 SQL。
+    """
 
-    # ── Attachment 状态 ──
-    ATT_UPLOADED = "uploaded"
-    ATT_PROCESSING = "processing"
-    ATT_READY = "ready"
-    ATT_FAILED = "failed"
-    ATT_DELETED = "deleted"
-
-    # ── Attachment 文件类型 ──
-    ATT_TYPE_IMAGE = "image"
-    ATT_TYPE_TEXT = "text"
-    ATT_TYPE_CODE = "code"
-    ATT_TYPE_PDF = "pdf"
-    ATT_TYPE_JSON = "json"
-    ATT_TYPE_OTHER = "other"
-
-    def __init__(self, db_path: str = "data/helm.db") -> None:
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_path: str) -> None:
         self._db_path = db_path
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA foreign_keys=ON")
-        self._migrate()
-        logger.info(f"HelmDatabase initialized: {db_path}")
+        self._init_db()
+        logger.info(f"HelmRepository initialized: {db_path}")
 
-    # ──────────────────────────── 迁移 ────────────────────────────
+    # ──────────────────────────── 初始化与迁移 ────────────────────────────
 
-    def _migrate(self) -> None:
+    def _init_db(self) -> None:
+        """初始化数据库表和索引。"""
         self.conn.executescript("""
             CREATE TABLE IF NOT EXISTS plans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,6 +137,320 @@ class HelmDatabase:
         self,
         task_id: str,
         title: str,
+        steps_json: str,
+        status: str,
+        total_steps: int,
+        persona: Optional[str],
+        mode: Optional[str],
+        created_at: str,
+        description: Optional[str] = None,
+    ) -> int:
+        """创建计划，返回自增 id。"""
+        cursor = self.conn.execute(
+            """
+            INSERT INTO plans
+                (task_id, title, description, steps_json, status, total_steps, persona, mode, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (task_id, title, description, steps_json, status, total_steps, persona, mode, created_at),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_plan(self, plan_id: int) -> Optional[tuple]:
+        """按 id 获取计划行，返回原始 tuple 或 None。"""
+        return self.conn.execute(
+            "SELECT * FROM plans WHERE id = ?",
+            (plan_id,),
+        ).fetchone()
+
+    def get_plan_by_task(self, task_id: str) -> Optional[tuple]:
+        """按 task_id 获取最新一条计划行。"""
+        return self.conn.execute(
+            "SELECT * FROM plans WHERE task_id = ? ORDER BY created_at DESC LIMIT 1",
+            (task_id,),
+        ).fetchone()
+
+    def update_plan_status(
+        self,
+        sets: list[str],
+        params: list[Any],
+    ) -> int:
+        """更新计划状态及关联字段，返回受影响行数。"""
+        cursor = self.conn.execute(
+            f"UPDATE plans SET {', '.join(sets)} WHERE id = ?",
+            params,
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def list_plans_by_task(self, task_id: str) -> list[tuple]:
+        """按 task_id 列出所有计划行，按创建时间升序。"""
+        return self.conn.execute(
+            "SELECT * FROM plans WHERE task_id = ? ORDER BY created_at ASC",
+            (task_id,),
+        ).fetchall()
+
+    def update_plan_incremental(
+        self,
+        plan_id: int,
+        steps_json: str,
+        steps_status: str,
+        total_steps: int,
+        title: str,
+        description: str,
+        new_version: int,
+        last_updated_at: str,
+        update_reasoning: str,
+        expected_version: int,
+    ) -> int:
+        """增量更新计划（乐观并发控制），返回受影响行数。"""
+        cursor = self.conn.execute(
+            """UPDATE plans SET
+                steps_json = ?, steps_status = ?, total_steps = ?,
+                title = ?, description = ?,
+                plan_version = ?, last_updated_at = ?, update_reasoning = ?
+            WHERE id = ? AND plan_version = ?""",
+            (
+                steps_json, steps_status, total_steps,
+                title, description,
+                new_version, last_updated_at, update_reasoning,
+                plan_id, expected_version,
+            ),
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def update_step_status(
+        self,
+        sets: list[str],
+        params: list[Any],
+    ) -> None:
+        """更新单个步骤的状态。"""
+        self.conn.execute(
+            f"UPDATE plans SET {', '.join(sets)} WHERE id = ?",
+            params,
+        )
+        self.conn.commit()
+
+    def update_conversation_context(self, plan_id: int, context_json: str) -> None:
+        """更新计划的对话上下文。"""
+        self.conn.execute(
+            "UPDATE plans SET conversation_context = ? WHERE id = ?",
+            (context_json, plan_id),
+        )
+        self.conn.commit()
+
+    def update_plan_steps_json(self, plan_id: int, steps_json: str, total_steps: int) -> None:
+        """更新计划的步骤 JSON 和总步骤数。"""
+        self.conn.execute(
+            "UPDATE plans SET steps_json = ?, total_steps = ? WHERE id = ?",
+            (steps_json, total_steps, plan_id),
+        )
+        self.conn.commit()
+
+    def update_plan_steps_json_only(self, plan_id: int, steps_json: str) -> None:
+        """仅更新计划的步骤 JSON。"""
+        self.conn.execute(
+            "UPDATE plans SET steps_json = ? WHERE id = ?",
+            (steps_json, plan_id),
+        )
+        self.conn.commit()
+
+    def update_plan_steps_status(self, plan_id: int, steps_status_json: str) -> None:
+        """更新计划的步骤状态 JSON。"""
+        self.conn.execute(
+            "UPDATE plans SET steps_status = ? WHERE id = ?",
+            (steps_status_json, plan_id),
+        )
+        self.conn.commit()
+
+    # ──────────────────────────── Attachment CRUD ────────────────────────────
+
+    def create_attachment(
+        self,
+        task_id: str,
+        file_name: str,
+        file_size: int,
+        file_type: str,
+        storage_path: str,
+        status: str,
+        uploaded_at: str,
+        mime_type: Optional[str] = None,
+        extension: Optional[str] = None,
+    ) -> int:
+        """创建附件记录，返回自增 id。"""
+        cursor = self.conn.execute(
+            """
+            INSERT INTO attachments
+                (task_id, file_name, file_size, file_type, mime_type, extension,
+                 storage_path, status, uploaded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (task_id, file_name, file_size, file_type, mime_type, extension,
+             storage_path, status, uploaded_at),
+        )
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_attachment(self, attachment_id: int) -> Optional[tuple]:
+        """按 id 获取附件行。"""
+        return self.conn.execute(
+            "SELECT * FROM attachments WHERE id = ?",
+            (attachment_id,),
+        ).fetchone()
+
+    def list_attachments_by_task(self, task_id: str, deleted_status: str) -> list[tuple]:
+        """按 task_id 列出所有未删除附件行。"""
+        return self.conn.execute(
+            "SELECT * FROM attachments WHERE task_id = ? AND status != ? ORDER BY uploaded_at ASC",
+            (task_id, deleted_status),
+        ).fetchall()
+
+    def update_attachment_status(
+        self,
+        sets: list[str],
+        params: list[Any],
+    ) -> int:
+        """更新附件状态，返回受影响行数。"""
+        cursor = self.conn.execute(
+            f"UPDATE attachments SET {', '.join(sets)} WHERE id = ?",
+            params,
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def mark_accessed(self, attachment_id: int, now: str) -> int:
+        """更新附件最后访问时间，返回受影响行数。"""
+        cursor = self.conn.execute(
+            "UPDATE attachments SET last_accessed_at = ? WHERE id = ?",
+            (now, attachment_id),
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    # ──────────────────────────── Loop Engine CRUD ────────────────────────────
+
+    def create_loop(self, loop_id: str, task_id: str, template_name: str,
+                    max_retries: int, created_at: str, updated_at: str) -> None:
+        """创建 Loop 实例。"""
+        self.conn.execute(
+            """INSERT INTO loops (id, task_id, template_name, max_retries, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (loop_id, task_id, template_name, max_retries, created_at, updated_at),
+        )
+        self.conn.commit()
+
+    def get_loop(self, loop_id: str) -> Optional[tuple]:
+        """按 id 获取 Loop 行。"""
+        return self.conn.execute("SELECT * FROM loops WHERE id = ?", (loop_id,)).fetchone()
+
+    def get_loops_by_task(self, task_id: str) -> list[tuple]:
+        """按 task_id 获取所有 Loop 行。"""
+        return self.conn.execute(
+            "SELECT * FROM loops WHERE task_id = ? ORDER BY created_at DESC",
+            (task_id,),
+        ).fetchall()
+
+    def update_loop_state(self, loop_id: str, state_json: str,
+                          phase: str, attempt: int, updated_at: str) -> int:
+        """更新 Loop 状态，返回受影响行数。"""
+        cursor = self.conn.execute(
+            "UPDATE loops SET state_json = ?, phase = ?, attempt = ?, updated_at = ? WHERE id = ?",
+            (state_json, phase, attempt, updated_at, loop_id),
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def create_loop_iteration(
+        self,
+        iter_id: str,
+        loop_id: str,
+        attempt: int,
+        plan_json: Optional[str],
+        result_json: Optional[str],
+        verdict_json: Optional[str],
+        reflection_json: Optional[str],
+        started_at: str,
+    ) -> None:
+        """创建 Loop 迭代记录。"""
+        self.conn.execute(
+            """INSERT INTO loop_iterations
+               (id, loop_id, attempt, plan_json, result_json, verdict_json, reflection_json, started_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (iter_id, loop_id, attempt, plan_json, result_json, verdict_json, reflection_json, started_at),
+        )
+        self.conn.commit()
+
+    def update_loop_iteration(
+        self,
+        sets: list[str],
+        params: list[Any],
+    ) -> int:
+        """更新 Loop 迭代记录的字段，返回受影响行数。"""
+        cursor = self.conn.execute(
+            f"UPDATE loop_iterations SET {', '.join(sets)} WHERE id = ?",
+            params,
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def complete_loop_iteration(self, iteration_id: str, completed_at: str) -> int:
+        """标记 Loop 迭代记录为已完成，返回受影响行数。"""
+        cursor = self.conn.execute(
+            "UPDATE loop_iterations SET completed_at = ? WHERE id = ?",
+            (completed_at, iteration_id),
+        )
+        self.conn.commit()
+        return cursor.rowcount
+
+    def get_loop_iterations(self, loop_id: str) -> list[tuple]:
+        """获取 Loop 的所有迭代记录行。"""
+        return self.conn.execute(
+            "SELECT * FROM loop_iterations WHERE loop_id = ? ORDER BY attempt ASC",
+            (loop_id,),
+        ).fetchall()
+
+
+class HelmDatabase:
+    """Helm 模式数据库管理器，管理 plans 和 attachments 表。
+
+    所有 SQL 操作委托给 HelmRepository，本类仅负责业务逻辑和行转字典。
+    """
+
+    # ── Plan 状态 ──
+    PLAN_PENDING = "pending"
+    PLAN_CONFIRMED = "confirmed"
+    PLAN_EXECUTING = "executing"
+    PLAN_COMPLETED = "completed"
+    PLAN_REJECTED = "rejected"
+    PLAN_CANCELLED = "cancelled"
+
+    # ── Attachment 状态 ──
+    ATT_UPLOADED = "uploaded"
+    ATT_PROCESSING = "processing"
+    ATT_READY = "ready"
+    ATT_FAILED = "failed"
+    ATT_DELETED = "deleted"
+
+    # ── Attachment 文件类型 ──
+    ATT_TYPE_IMAGE = "image"
+    ATT_TYPE_TEXT = "text"
+    ATT_TYPE_CODE = "code"
+    ATT_TYPE_PDF = "pdf"
+    ATT_TYPE_JSON = "json"
+    ATT_TYPE_OTHER = "other"
+
+    def __init__(self, db_path: str = "data/helm.db") -> None:
+        self._repo = HelmRepository(db_path)
+        logger.info(f"HelmDatabase initialized: {db_path}")
+
+    # ──────────────────────────── Plan CRUD ────────────────────────────
+
+    def create_plan(
+        self,
+        task_id: str,
+        title: str,
         steps: list[dict[str, Any]],
         *,
         description: Optional[str] = None,
@@ -161,45 +459,30 @@ class HelmDatabase:
     ) -> int:
         """创建计划，返回自增 id。"""
         now = datetime.now(timezone.utc).isoformat()
-        cursor = self.conn.execute(
-            """
-            INSERT INTO plans
-                (task_id, title, description, steps_json, status, total_steps, persona, mode, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                task_id,
-                title,
-                description,
-                json.dumps(steps, ensure_ascii=False),
-                self.PLAN_PENDING,
-                len(steps),
-                persona,
-                mode,
-                now,
-            ),
+        plan_id = self._repo.create_plan(
+            task_id=task_id,
+            title=title,
+            steps_json=json.dumps(steps, ensure_ascii=False),
+            status=self.PLAN_PENDING,
+            total_steps=len(steps),
+            persona=persona,
+            mode=mode,
+            created_at=now,
+            description=description,
         )
-        self.conn.commit()
-        plan_id = cursor.lastrowid
         logger.info(f"Plan created: id={plan_id}, task_id={task_id}, title={title}")
         return plan_id
 
     def get_plan(self, plan_id: int) -> Optional[dict[str, Any]]:
         """按 id 获取计划，返回字典或 None。"""
-        row = self.conn.execute(
-            "SELECT * FROM plans WHERE id = ?",
-            (plan_id,),
-        ).fetchone()
+        row = self._repo.get_plan(plan_id)
         if row is None:
             return None
         return self._plan_row_to_dict(row)
 
     def get_plan_by_task(self, task_id: str) -> Optional[dict[str, Any]]:
         """按 task_id 获取最新一条计划。"""
-        row = self.conn.execute(
-            "SELECT * FROM plans WHERE task_id = ? ORDER BY created_at DESC LIMIT 1",
-            (task_id,),
-        ).fetchone()
+        row = self._repo.get_plan_by_task(task_id)
         if row is None:
             return None
         return self._plan_row_to_dict(row)
@@ -248,12 +531,8 @@ class HelmDatabase:
             params.append(now)
 
         params.append(plan_id)
-        cursor = self.conn.execute(
-            f"UPDATE plans SET {', '.join(sets)} WHERE id = ?",
-            params,
-        )
-        self.conn.commit()
-        success = cursor.rowcount > 0
+        rowcount = self._repo.update_plan_status(sets, params)
+        success = rowcount > 0
         if success:
             logger.info(f"Plan status updated: id={plan_id}, status={status}")
         else:
@@ -262,10 +541,7 @@ class HelmDatabase:
 
     def list_plans_by_task(self, task_id: str) -> list[dict[str, Any]]:
         """按 task_id 列出所有计划，按创建时间升序。"""
-        rows = self.conn.execute(
-            "SELECT * FROM plans WHERE task_id = ? ORDER BY created_at ASC",
-            (task_id,),
-        ).fetchall()
+        rows = self._repo.list_plans_by_task(task_id)
         return [self._plan_row_to_dict(row) for row in rows]
 
     # ──────────────────────────── Attachment CRUD ────────────────────────────
@@ -283,46 +559,30 @@ class HelmDatabase:
     ) -> int:
         """创建附件记录，返回自增 id。"""
         now = datetime.now(timezone.utc).isoformat()
-        cursor = self.conn.execute(
-            """
-            INSERT INTO attachments
-                (task_id, file_name, file_size, file_type, mime_type, extension,
-                 storage_path, status, uploaded_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                task_id,
-                file_name,
-                file_size,
-                file_type,
-                mime_type,
-                extension,
-                storage_path,
-                self.ATT_UPLOADED,
-                now,
-            ),
+        att_id = self._repo.create_attachment(
+            task_id=task_id,
+            file_name=file_name,
+            file_size=file_size,
+            file_type=file_type,
+            storage_path=storage_path,
+            status=self.ATT_UPLOADED,
+            uploaded_at=now,
+            mime_type=mime_type,
+            extension=extension,
         )
-        self.conn.commit()
-        att_id = cursor.lastrowid
         logger.info(f"Attachment created: id={att_id}, task_id={task_id}, file={file_name}")
         return att_id
 
     def get_attachment(self, attachment_id: int) -> Optional[dict[str, Any]]:
         """按 id 获取附件，返回字典或 None。"""
-        row = self.conn.execute(
-            "SELECT * FROM attachments WHERE id = ?",
-            (attachment_id,),
-        ).fetchone()
+        row = self._repo.get_attachment(attachment_id)
         if row is None:
             return None
         return self._attachment_row_to_dict(row)
 
     def list_attachments_by_task(self, task_id: str) -> list[dict[str, Any]]:
         """按 task_id 列出所有未删除附件，按上传时间升序。"""
-        rows = self.conn.execute(
-            "SELECT * FROM attachments WHERE task_id = ? AND status != ? ORDER BY uploaded_at ASC",
-            (task_id, self.ATT_DELETED),
-        ).fetchall()
+        rows = self._repo.list_attachments_by_task(task_id, self.ATT_DELETED)
         return [self._attachment_row_to_dict(row) for row in rows]
 
     def update_attachment_status(
@@ -341,12 +601,8 @@ class HelmDatabase:
             params.append(error_message)
 
         params.append(attachment_id)
-        cursor = self.conn.execute(
-            f"UPDATE attachments SET {', '.join(sets)} WHERE id = ?",
-            params,
-        )
-        self.conn.commit()
-        success = cursor.rowcount > 0
+        rowcount = self._repo.update_attachment_status(sets, params)
+        success = rowcount > 0
         if success:
             logger.info(f"Attachment status updated: id={attachment_id}, status={status}")
         else:
@@ -356,12 +612,8 @@ class HelmDatabase:
     def mark_accessed(self, attachment_id: int) -> bool:
         """更新附件最后访问时间。"""
         now = datetime.now(timezone.utc).isoformat()
-        cursor = self.conn.execute(
-            "UPDATE attachments SET last_accessed_at = ? WHERE id = ?",
-            (now, attachment_id),
-        )
-        self.conn.commit()
-        success = cursor.rowcount > 0
+        rowcount = self._repo.mark_accessed(attachment_id, now)
+        success = rowcount > 0
         if success:
             logger.debug(f"Attachment accessed: id={attachment_id}")
         return success
@@ -443,22 +695,18 @@ class HelmDatabase:
         now = datetime.now(timezone.utc).isoformat()
         new_version = expected_version + 1
 
-        self.conn.execute(
-            """UPDATE plans SET
-                steps_json = ?, steps_status = ?, total_steps = ?,
-                title = ?, description = ?,
-                plan_version = ?, last_updated_at = ?, update_reasoning = ?
-            WHERE id = ? AND plan_version = ?""",
-            (
-                json.dumps(steps, ensure_ascii=False),
-                json.dumps(steps_status, ensure_ascii=False),
-                len(steps),
-                title, description,
-                new_version, now, delta.reasoning,
-                plan_id, expected_version,
-            ),
+        self._repo.update_plan_incremental(
+            plan_id=plan_id,
+            steps_json=json.dumps(steps, ensure_ascii=False),
+            steps_status=json.dumps(steps_status, ensure_ascii=False),
+            total_steps=len(steps),
+            title=title,
+            description=description,
+            new_version=new_version,
+            last_updated_at=now,
+            update_reasoning=delta.reasoning,
+            expected_version=expected_version,
         )
-        self.conn.commit()
 
         return self.get_plan(plan_id)
 
@@ -506,22 +754,34 @@ class HelmDatabase:
                 params.append(datetime.now(timezone.utc).isoformat())
 
         params.append(plan_id)
-        self.conn.execute(
-            f"UPDATE plans SET {', '.join(sets)} WHERE id = ?",
-            params,
-        )
-        self.conn.commit()
+        self._repo.update_step_status(sets, params)
         return True
 
     def update_conversation_context(self, plan_id: int, context: list[dict[str, str]]) -> None:
         """Update the conversation context for a plan."""
         # Keep only last 20 messages
         context = context[-20:]
-        self.conn.execute(
-            "UPDATE plans SET conversation_context = ? WHERE id = ?",
-            (json.dumps(context, ensure_ascii=False), plan_id),
+        self._repo.update_conversation_context(
+            plan_id, json.dumps(context, ensure_ascii=False)
         )
-        self.conn.commit()
+
+    def update_plan_steps_json(self, plan_id: int, steps: list[dict[str, Any]], total_steps: int) -> None:
+        """更新计划的步骤 JSON 和总步骤数。"""
+        self._repo.update_plan_steps_json(
+            plan_id, json.dumps(steps, ensure_ascii=False), total_steps
+        )
+
+    def update_plan_steps_json_only(self, plan_id: int, steps: list[dict[str, Any]]) -> None:
+        """仅更新计划的步骤 JSON。"""
+        self._repo.update_plan_steps_json_only(
+            plan_id, json.dumps(steps, ensure_ascii=False)
+        )
+
+    def update_plan_steps_status(self, plan_id: int, steps_status: dict[str, str]) -> None:
+        """更新计划的步骤状态 JSON。"""
+        self._repo.update_plan_steps_status(
+            plan_id, json.dumps(steps_status)
+        )
 
     # ──────────────────────────── Loop Engine CRUD ────────────────────────────
 
@@ -530,18 +790,13 @@ class HelmDatabase:
         import uuid
         loop_id = f"loop-{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc).isoformat()
-        self.conn.execute(
-            """INSERT INTO loops (id, task_id, template_name, max_retries, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (loop_id, task_id, template_name, max_retries, now, now),
-        )
-        self.conn.commit()
+        self._repo.create_loop(loop_id, task_id, template_name, max_retries, now, now)
         logger.info(f"Loop created: id={loop_id}, task_id={task_id}, template={template_name}")
         return loop_id
 
     def get_loop(self, loop_id: str) -> Optional[dict[str, Any]]:
         """按 id 获取 Loop 实例，返回字典或 None。"""
-        row = self.conn.execute("SELECT * FROM loops WHERE id = ?", (loop_id,)).fetchone()
+        row = self._repo.get_loop(loop_id)
         if row is None:
             return None
         return {
@@ -558,10 +813,7 @@ class HelmDatabase:
 
     def get_loops_by_task(self, task_id: str) -> list[dict[str, Any]]:
         """按 task_id 获取所有 Loop 实例。"""
-        rows = self.conn.execute(
-            "SELECT * FROM loops WHERE task_id = ? ORDER BY created_at DESC",
-            (task_id,),
-        ).fetchall()
+        rows = self._repo.get_loops_by_task(task_id)
         return [
             {
                 "id": row[0],
@@ -580,12 +832,8 @@ class HelmDatabase:
     def update_loop_state(self, loop_id: str, state_json: str, phase: str, attempt: int) -> bool:
         """更新 Loop 状态，返回是否成功。"""
         now = datetime.now(timezone.utc).isoformat()
-        cursor = self.conn.execute(
-            "UPDATE loops SET state_json = ?, phase = ?, attempt = ?, updated_at = ? WHERE id = ?",
-            (state_json, phase, attempt, now, loop_id),
-        )
-        self.conn.commit()
-        success = cursor.rowcount > 0
+        rowcount = self._repo.update_loop_state(loop_id, state_json, phase, attempt, now)
+        success = rowcount > 0
         if success:
             logger.info(f"Loop state updated: id={loop_id}, phase={phase}, attempt={attempt}")
         else:
@@ -605,13 +853,9 @@ class HelmDatabase:
         import uuid
         iter_id = f"iter-{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc).isoformat()
-        self.conn.execute(
-            """INSERT INTO loop_iterations
-               (id, loop_id, attempt, plan_json, result_json, verdict_json, reflection_json, started_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (iter_id, loop_id, attempt, plan_json, result_json, verdict_json, reflection_json, now),
+        self._repo.create_loop_iteration(
+            iter_id, loop_id, attempt, plan_json, result_json, verdict_json, reflection_json, now
         )
-        self.conn.commit()
         logger.info(f"Loop iteration created: id={iter_id}, loop_id={loop_id}, attempt={attempt}")
         return iter_id
 
@@ -642,32 +886,21 @@ class HelmDatabase:
         if not sets:
             return False
         params.append(iteration_id)
-        cursor = self.conn.execute(
-            f"UPDATE loop_iterations SET {', '.join(sets)} WHERE id = ?",
-            params,
-        )
-        self.conn.commit()
-        return cursor.rowcount > 0
+        rowcount = self._repo.update_loop_iteration(sets, params)
+        return rowcount > 0
 
     def complete_loop_iteration(self, iteration_id: str) -> bool:
         """标记 Loop 迭代记录为已完成（设置 completed_at）。"""
         now = datetime.now(timezone.utc).isoformat()
-        cursor = self.conn.execute(
-            "UPDATE loop_iterations SET completed_at = ? WHERE id = ?",
-            (now, iteration_id),
-        )
-        self.conn.commit()
-        success = cursor.rowcount > 0
+        rowcount = self._repo.complete_loop_iteration(iteration_id, now)
+        success = rowcount > 0
         if success:
             logger.debug(f"Loop iteration completed: id={iteration_id}")
         return success
 
     def get_loop_iterations(self, loop_id: str) -> list[dict[str, Any]]:
         """获取 Loop 的所有迭代记录。"""
-        rows = self.conn.execute(
-            "SELECT * FROM loop_iterations WHERE loop_id = ? ORDER BY attempt ASC",
-            (loop_id,),
-        ).fetchall()
+        rows = self._repo.get_loop_iterations(loop_id)
         return [
             {
                 "id": row[0],

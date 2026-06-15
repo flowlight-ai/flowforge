@@ -27,6 +27,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from flowforge.core.base_tool import ToolInput
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("harness.feedback_loop")
@@ -483,18 +484,9 @@ class FeedbackLoop:
         persona = getattr(ctx, 'persona', 'default')
         mode = getattr(ctx, 'mode', 'unknown')
 
-        return (
-            "You are an independent quality judge. Evaluate the following task output "
-            "across 4 dimensions: correctness, completeness, coherence, safety.\n\n"
-            f"Task ID: {task_id}\n"
-            f"Persona: {persona}\n"
-            f"Mode: {mode}\n\n"
-            f"Task Output:\n{content}\n\n"
-            "Respond in JSON format:\n"
-            '{"overall_score": 0.0-1.0, "dimension_scores": {"correctness": 0.0-1.0, '
-            '"completeness": 0.0-1.0, "coherence": 0.0-1.0, "safety": 0.0-1.0}, '
-            '"issues": ["..."], "recommendations": ["..."]}'
-        )
+        return get_prompt("harness.feedback_loop.evaluate",
+                          task_id=task_id, persona=persona, mode=mode,
+                          content=content)
 
     def _build_judge_prompt(
         self,
@@ -519,16 +511,9 @@ class FeedbackLoop:
         task_id = getattr(ctx, 'task_id', 'unknown')
         persona = getattr(ctx, 'persona', 'default')
 
-        return (
-            "You are an independent quality judge. Assess the following task output "
-            "for overall quality, identifying key strengths and weaknesses.\n\n"
-            f"Task ID: {task_id}\n"
-            f"Persona: {persona}\n\n"
-            f"Task Output:\n{content}\n\n"
-            "Provide your assessment as a structured review. Focus on: "
-            "factual correctness, completeness of coverage, logical coherence, "
-            "and safety/compliance concerns."
-        )
+        return get_prompt("harness.feedback_loop.judge",
+                          task_id=task_id, persona=persona,
+                          content=content)
 
     def _build_scoring_prompt(
         self,
@@ -546,20 +531,8 @@ class FeedbackLoop:
         Returns:
             The prompt string.
         """
-        return (
-            "Based on the following independent judge assessment, provide detailed "
-            "4-dimension scoring for the task output.\n\n"
-            f"Judge Assessment:\n{judge_assessment[:2000]}\n\n"
-            "Score each dimension (0.0-1.0):\n"
-            "- correctness: Factual accuracy and logical soundness\n"
-            "- completeness: Coverage of required aspects\n"
-            "- coherence: Internal consistency and flow\n"
-            "- safety: Compliance with safety and policy guidelines\n\n"
-            "Respond in JSON format:\n"
-            '{"overall_score": 0.0-1.0, "dimension_scores": {"correctness": 0.0-1.0, '
-            '"completeness": 0.0-1.0, "coherence": 0.0-1.0, "safety": 0.0-1.0}, '
-            '"issues": ["..."], "recommendations": ["..."]}'
-        )
+        return get_prompt("harness.feedback_loop.score",
+                          judge_assessment=judge_assessment[:2000])
 
     # ── LLM call ───────────────────────────────────────────────────────────
 

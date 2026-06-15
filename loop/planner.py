@@ -4,6 +4,7 @@ import json
 import logging
 
 from abc import ABC, abstractmethod
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
 from flowforge.loop.state import LoopState, Reflection
 
@@ -33,19 +34,11 @@ class LLMPlanner(LoopPlanner):
 
         if self.llm_client is not None:
             try:
-                prompt = (
-                    "You are a task planning assistant. Given the following task, "
-                    "generate an execution plan as a JSON array of step objects.\n"
-                    "Each step should have: \"step\" (integer), \"action\" (string), "
-                    "and optional \"params\" (object).\n\n"
-                    f"Task ID: {task.task_id}\n"
-                    f"Input data: {json.dumps(task.input_data, ensure_ascii=False, default=str)}\n"
-                    f"Metadata: {json.dumps(task.metadata, ensure_ascii=False, default=str)}\n"
-                    f"Execution mode: {mode}\n\n"
-                    "Output ONLY the JSON array, no other text. Example:\n"
-                    '[{"step": 1, "action": "analyze", "params": {}}, '
-                    '{"step": 2, "action": "execute", "params": {}}]'
-                )
+                prompt = get_prompt("loop.planner.plan",
+                                    task_id=task.task_id,
+                                    input_data=json.dumps(task.input_data, ensure_ascii=False, default=str),
+                                    metadata=json.dumps(task.metadata, ensure_ascii=False, default=str),
+                                    mode=mode)
                 response = await self.llm_client.chat(prompt)
                 plan = self._parse_plan_response(response)
                 if plan:
@@ -59,18 +52,11 @@ class LLMPlanner(LoopPlanner):
     async def replan(self, plan: list[dict], reflection: Reflection, past_errors: list[str]) -> list[dict]:
         if self.llm_client is not None:
             try:
-                prompt = (
-                    "You are a task replanning assistant. Given the current plan, "
-                    "reflection results, and past errors, generate an adjusted execution plan "
-                    "as a JSON array of step objects.\n"
-                    "Each step should have: \"step\" (integer), \"action\" (string), "
-                    "and optional \"params\" (object).\n\n"
-                    f"Current plan: {json.dumps(plan, ensure_ascii=False, default=str)}\n"
-                    f"Root cause: {reflection.root_cause}\n"
-                    f"Suggestions: {json.dumps(reflection.suggestions, ensure_ascii=False)}\n"
-                    f"Past errors: {json.dumps(past_errors[-5:], ensure_ascii=False)}\n\n"
-                    "Output ONLY the JSON array, no other text."
-                )
+                prompt = get_prompt("loop.planner.replan",
+                                    plan=json.dumps(plan, ensure_ascii=False, default=str),
+                                    root_cause=reflection.root_cause,
+                                    suggestions=json.dumps(reflection.suggestions, ensure_ascii=False),
+                                    past_errors=json.dumps(past_errors[-5:], ensure_ascii=False))
                 response = await self.llm_client.chat(prompt)
                 new_plan = self._parse_plan_response(response)
                 if new_plan:

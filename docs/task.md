@@ -741,4 +741,223 @@
 
 ---
 
+## 八、P8A架构边界违反问题（第五轮审计新增）
+
+> 以下为第五轮深度审计（2026-06-13）基于P8A架构边界验证铁律发现
+> 这是整个生态的根基问题——FlowForge应纯通用框架，*Forge应轻量业务扩展
+
+### 8.1 FlowForge 含有特定领域业务代码（应移出）
+
+**严重等级**: P0 — 致命（违反架构根基原则）
+
+FlowForge中包含 **10个内容创作Agent + 1个开发Agent + 6个内容/素材Tool + 5个内容配置**，这些属于特定领域，应移到对应的*forge项目：
+
+| # | 文件 | 所属领域 | 应移至 | 行数 |
+|---|------|---------|--------|:----:|
+| ARCH-FF-01 | agents/article_writing.py | 内容创作 | ContentForge | ~60 |
+| ARCH-FF-02 | agents/article_eval.py | 内容创作 | ContentForge | ~40 |
+| ARCH-FF-03 | agents/article_reflect.py | 内容创作 | ContentForge | ~30 |
+| ARCH-FF-04 | agents/content_audit.py | 内容创作 | ContentForge | ~80 |
+| ARCH-FF-05 | agents/content_repurposer.py | 内容创作 | ContentForge | ~70 |
+| ARCH-FF-06 | agents/headline_optimizer.py | 内容创作 | ContentForge | ~90 |
+| ARCH-FF-07 | agents/material_collection.py | 内容创作 | ContentForge | ~50 |
+| ARCH-FF-08 | agents/publishing.py | 内容创作 | ContentForge | ~40 |
+| ARCH-FF-09 | agents/seo_optimization.py | 内容创作 | ContentForge | ~60 |
+| ARCH-FF-10 | agents/topic_research.py | 内容创作 | ContentForge | ~80 |
+| ARCH-FF-11 | agents/code_writer_agent.py | 开发 | DevForge | ~70 |
+| ARCH-FF-12 | tools/wechat_publisher.py | 内容发布 | ContentForge | ~50 |
+| ARCH-FF-13 | tools/toutiao_publisher.py | 内容发布 | ContentForge | ~50 |
+| ARCH-FF-14 | tools/publish.py | 内容发布 | ContentForge | ~40 |
+| ARCH-FF-15 | tools/pexels_search.py | 素材检索 | ContentForge/OpenSieve | ~60 |
+| ARCH-FF-16 | tools/pexels_image.py | 素材检索 | ContentForge/OpenSieve | ~40 |
+| ARCH-FF-17 | tools/image_download.py | 素材检索 | ContentForge/OpenSieve | ~50 |
+| ARCH-FF-18 | tools/video_generate.py | 内容创作 | ContentForge | ~30 |
+| ARCH-FF-19 | config/loops/content_polish_loop.yaml | 内容创作 | ContentForge | ~30 |
+| ARCH-FF-20 | config/loops/deep_article_loop.yaml | 内容创作 | ContentForge | ~40 |
+| ARCH-FF-21 | config/loops/news_summary_loop.yaml | 内容创作 | ContentForge | ~30 |
+| ARCH-FF-22 | config/loops/series_article_loop.yaml | 内容创作 | ContentForge | ~30 |
+| ARCH-FF-23 | config/skills/content_audit.yaml | 内容创作 | ContentForge | ~20 |
+
+**预计可移出代码**: ~1100行 + 5个配置文件
+
+### 8.2 ContentForge 含有大量不应存在的重复服务代码
+
+**严重等级**: P0 — 致命（违反*Forge轻量原则）
+
+| # | 违反类型 | 文件 | 行数 | 应怎么做 |
+|---|---------|------|:----:|---------|
+| ARCH-CF-01 | 独立编排逻辑 | brain/orchestrator.py | 677 | 删除，使用FlowForge Orchestrator + Workflow |
+| ARCH-CF-02 | 独立DI容器组装 | core/di_setup.py | 220 | 删除，通过SDK自动发现注册 |
+| ARCH-CF-03 | 独立数据库层 | memory/stores/sqlite_store.py + memory/repositories/ | ~400 | 删除，使用FlowForge Memory |
+| ARCH-CF-04 | 独立任务存储 | core/task_store.py | ~150 | 删除，使用FlowForge Memory |
+| ARCH-CF-05 | 独立LLM服务 | tools/llm/model_service.py + router.py + helm_adapter.py | ~500 | 删除，使用FlowForge LLMClient |
+| ARCH-CF-06 | 独立SOP编排 | brain/sop/deep_article.py + news_summary.py + review_controller.py | ~500 | 删除，使用FlowForge Workflow YAML |
+| ARCH-CF-07 | 独立调度器 | brain/scheduler.py | ~100 | 删除，使用FlowForge Scheduler |
+| ARCH-CF-08 | 独立Bridge封装 | core/flowforge_bridge.py | ~80 | 删除，直接用GenericAgent |
+| ARCH-CF-09 | 独立SDK封装 | sdk/client.py | ~60 | 删除，直接用FlowForgeSDK |
+| ARCH-CF-10 | 独立指标系统 | core/metrics.py | ~30 | 删除，直接用flowforge.metrics |
+| ARCH-CF-11 | 独立回调系统 | core/callback.py | ~50 | 抽象为FlowForge通用通知机制 |
+| ARCH-CF-12 | 独立配置系统 | core/config.py | ~100 | 简化，仅保留ContentForge特有字段 |
+
+**预计可删除重复代码**: ~2867行
+
+### 8.3 NovelForge 含有大量不应存在的重复服务代码
+
+**严重等级**: P0 — 致命
+
+| # | 违反类型 | 文件 | 行数 | 应怎么做 |
+|---|---------|------|:----:|---------|
+| ARCH-NF-01 | 独立编排逻辑 | core/orchestrator.py | 467 | 删除，使用FlowForge Orchestrator |
+| ARCH-NF-02 | 独立核心模块 | core/下9个模块 | ~800 | 删除events/state_repository等重复模块，保留context_manager/quality_gate等NovelForge特有 |
+| ARCH-NF-03 | 独立数据库层 | app/database.py + models.py + repositories/ | ~500 | 删除，使用FlowForge Memory |
+| ARCH-NF-04 | 独立Deps组装 | app/deps.py | ~200 | 删除，通过SDK自动注册 |
+| ARCH-NF-05 | Agent基类封装 | agents/base.py BaseNovelAgent | ~60 | 删除，直接用GenericAgent |
+
+**预计可删除重复代码**: ~2027行（保留NovelForge特有的context_manager/quality_gate/style_profile/review_orchestrator等约500行）
+
+### 8.4 DevForge 含有大量不应存在的重复服务代码
+
+**严重等级**: P0 — 致命
+
+| # | 违反类型 | 文件 | 行数 | 应怎么做 |
+|---|---------|------|:----:|---------|
+| ARCH-DF-01 | 独立编排逻辑 | core/orchestrator.py | 477 | 删除，使用FlowForge Orchestrator |
+| ARCH-DF-02 | 独立配置系统 | core/config.py | ~100 | 删除，继承FlowForge SystemConfig |
+| ARCH-DF-03 | 独立数据库层 | memory/database.py + repository.py + audit_service.py | ~400 | 删除，使用FlowForge Memory |
+| ARCH-DF-04 | 独立工作流执行器 | core/workflow_executor.py | ~300 | 删除，使用FlowForge WorkflowExecutor |
+| ARCH-DF-05 | 独立门控编排 | core/gate_orchestrator.py + agent_guard.py | ~200 | 抽象为FlowForge通用机制 |
+| ARCH-DF-06 | 独立模型定义 | core/models.py | ~100 | 删除，使用FlowForge TaskContext |
+| ARCH-DF-07 | 独立API层 | api/routes.py + schemas.py + websocket.py | ~300 | 通过plugins.py注册到FlowForge |
+
+**预计可删除重复代码**: ~1877行
+
+### 8.5 MallForge — 基本符合架构原则
+
+MallForge是最接近理想架构的项目：仅有agents、tools、config、web和plugins.py，无独立core/memory/orchestrator。
+
+唯一问题：plugins.py中直接定义了3个API端点，应抽离到独立的endpoints文件。
+
+### 8.6 跨项目配置重复
+
+| 配置文件 | 重复项目数 | 应统一管理方 |
+|---------|:---------:|------------|
+| config/models.yaml | 5 | FlowForge统一管理，*Forge不再重复 |
+| config/default.yaml | 5 | FlowForge提供默认值，*Forge仅覆盖特有字段 |
+| config/prompts.yaml | 5 | 各*Forge保留自己的（提示词是业务特有的） |
+| config/plugins.yaml | 5 | 各*Forge保留自己的（插件是业务特有的） |
+
+---
+
+## 问题统计（最终版v2）
+
+| 严重等级 | 前四轮 | P8A架构边界 | 合计 |
+|----------|:------:|:-----------:|:----:|
+| P0 致命 | 36 | 4 | **40** |
+| P1 严重 | 79 | 0 | **79** |
+| P2 一般 | 119 | 0 | **119** |
+| **合计** | **234** | **4** | **238** |
+
+**架构边界违反统计**:
+- FlowForge含特定领域代码: 23处（~1100行 + 5配置文件）
+- ContentForge含重复服务代码: 12处（~2867行）
+- NovelForge含重复服务代码: 5处（~2027行）
+- DevForge含重复服务代码: 7处（~1877行）
+- **总计可删除重复代码: ~7871行**
+
+### 8.7 FlowForge框架配置能力不足（导致*Forge必须代码继承）
+
+**严重等级**: P0 — 致命（这是架构问题的根因）
+
+当前各*Forge中82处通过代码继承扩展的案例，其中大部分本应通过配置驱动实现。以下是FlowForge框架缺失的配置能力清单：
+
+#### P0级（影响全部4个项目，必须最先实现）
+
+| # | 缺失能力 | 影响 | 说明 |
+|---|---------|------|------|
+| FWK-01 | **Workflow YAML Compiler** | 全部4个项目 | YAML定义→LangGraph图自动编译，含条件边/并行/中断点。当前3个项目各自用Python硬编码编排 |
+| FWK-02 | **Conditional Router** | CF/NF/MF | 根据输入条件选择不同prompt模板/工具链/处理路径。当前TopicAgent/SupportAgent等用if-else硬编码策略路由 |
+| FWK-03 | **Fallback Chain** | CF/NF/MF | 工具调用的有序回退链声明式定义(helixrag→web_search→llm_generate)。当前4个Agent各自硬编码回退逻辑 |
+
+#### P1级（影响3+项目）
+
+| # | 缺失能力 | 影响 | 说明 |
+|---|---------|------|------|
+| FWK-04 | **State Param Mapping** | CF/NF | 从state中自动填充agent输入参数(如style_profile←state.style_profile)。当前ChapterWritingAgent等硬编码参数注入 |
+| FWK-05 | **Persona Auto-Inject** | CF | persona的SOUL/MEMORY/CREATION自动注入prompt。当前WriterAgent/EditorAgent等硬编码persona加载 |
+| FWK-06 | **Reflexion Loop** | CF/DF | max_rounds + threshold + check_tool + retry_prompt。当前CoderAgent等硬编码自检循环 |
+| FWK-07 | **Agent Pipeline** | MF | 串行步骤定义+步骤间数据传递+翻译链。当前ListingGeneratorAgent等硬编码多步pipeline |
+| FWK-08 | **Scoring Rubric** | CF | 维度/权重/阈值/风险规则的声明式定义。当前AuditAgent硬编码15维度评分体系 |
+| FWK-09 | **DeclarativeAgent state_updates** | NF | DeclarativeAgent增加state_updates映射配置。当前约15个纯prompt+LLM+JSON的Agent可YAML化但缺此能力 |
+
+#### P2级（影响1-2个项目）
+
+| # | 缺失能力 | 影响 | 说明 |
+|---|---------|------|------|
+| FWK-10 | **Gate Config** | DF | 门控类型+评估器+通过条件的声明式定义 |
+| FWK-11 | **Execution Guard** | DF | 超时+熔断+重试的声明式定义 |
+| FWK-12 | **CLI Tool Wrapper** | DF | executable + args_template + output_parser |
+| FWK-13 | **Intent Router** | MF | 关键词→处理路径的映射 |
+| FWK-14 | **Business Rules** | MF | 阈值判断/约束过滤的声明式定义 |
+| FWK-15 | **Declarative API Endpoint** | MF | YAML定义端点→Tool映射 |
+
+#### P3级（影响1个项目）
+
+| # | 缺失能力 | 影响 | 说明 |
+|---|---------|------|------|
+| FWK-16 | **Context Pre-load** | NF | 执行前自动从工具加载特定数据 |
+| FWK-17 | **Sub-Orchestrator** | NF | Agent内部嵌套编排其他Agent(如三方盲评+仲裁) |
+| FWK-18 | **Checkpoint Config** | NF | 自动保存/恢复state |
+| FWK-19 | **JSON Store Tool** | NF/MF | 基于JSON文件的CRUD工具声明式配置 |
+| FWK-20 | **Formula Tool** | MF | 声明式公式计算工具 |
+| FWK-21 | **Channel Plugin Protocol** | CF | 消息渠道标准扩展接口 |
+
+### 8.8 配置驱动率统计
+
+| 项目 | Agent配置声明 | Agent代码继承 | Agent独立实现 | Tool配置声明 | Tool代码继承 | Workflow配置 | Workflow代码编排 |
+|------|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-------------:|
+| ContentForge | 0 | 7 | 0 | 0 | 3 | 0 | 3 SOP |
+| NovelForge | 0 | 12 | 0 | 0 | 7 | 0 | 1 Orchestrator |
+| DevForge | 0 | 20 | 0 | 0 | 5 | 0 | 1 Orchestrator |
+| MallForge | 0 | 6 | 0 | 0 | 6 | 1 YAML | 0 |
+| **合计** | **0** | **45** | **0** | **0** | **21** | **1** | **5** |
+
+**配置驱动率**: Agent 0/45=0%, Tool 0/21=0%, Workflow 1/6=17%
+
+**目标配置驱动率**: Agent ≥80%, Tool ≥60%, Workflow ≥90%
+
+---
+
+## 修复优先级建议（最终版v3）
+
+### 第负一优先级（FlowForge框架能力 — 不补齐则架构原则无法落地）
+
+**FlowForge框架配置能力不足是所有架构问题的根因**，不补齐这些能力，*Forge就无法通过配置驱动，只能继续代码继承：
+
+1. **FWK-01**: Workflow YAML Compiler（影响全部4个项目，消除5个独立Orchestrator）
+2. **FWK-02**: Conditional Router（影响CF/NF/MF，消除if-else策略路由）
+3. **FWK-03**: Fallback Chain（影响CF/NF/MF，消除4处硬编码回退逻辑）
+4. **FWK-04**: State Param Mapping（影响CF/NF，消除参数注入硬编码）
+5. **FWK-05**: Persona Auto-Inject（影响CF，消除persona加载硬编码）
+6. **FWK-09**: DeclarativeAgent state_updates（影响NF，15个Agent可YAML化）
+
+### 第零优先级（架构根基 — 框架能力补齐后立即执行）
+
+7. **ARCH-FF**: FlowForge移出23处特定领域代码到对应*Forge（~1100行）
+8. **ARCH-CF**: ContentForge删除12处重复服务代码（~2867行），改用FlowForge SDK
+9. **ARCH-NF**: NovelForge删除5处重复服务代码（~2027行），改用FlowForge SDK
+10. **ARCH-DF**: DevForge删除7处重复服务代码（~1877行），改用FlowForge SDK
+11. 删除ContentForgeAgent/BaseNovelAgent/DevForgeAgent冗余中间层
+12. 约15个纯prompt+LLM+JSON的Agent迁移到DeclarativeAgent YAML配置
+
+### 第一优先级（P0，共36项）
+见上文
+
+### 第二优先级（P1，共79项）
+见上文
+
+### 第三优先级（P2，共119项）
+见上文
+
+---
+
 > **本文档与各项目 docs/ 下的设计文档互补。发现问题时请同步更新对应设计文档。**

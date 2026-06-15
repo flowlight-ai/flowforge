@@ -22,8 +22,6 @@ from flowforge.modes.workflow_validator import (
     is_error_content,
     _SEARCH_TOOLS,
     _SEARCH_AGENTS,
-    _LLM_WEB_SEARCH_PROMPT,
-    _LLM_WEB_SEARCH_SYSTEM,
     TASK_TIMEOUT_SECONDS,
     STEP_TIMEOUT_SECONDS,
 )
@@ -767,11 +765,11 @@ class WorkflowExecutor(BaseModeExecutor):
                     if any(kw in step_name.lower() for kw in ["audit", "review", "fact_check", "judge", "eval"]):
                         step_persona = "judge"
                     if intent_type == "translate":
-                        system_prompt = "你是一个专业翻译。请准确翻译用户提供的文本，保持原文的语气和格式。直接输出翻译结果，不要添加解释。"
+                        system_prompt = get_prompt("modes.workflow.translate")
                     elif intent_type == "code":
-                        system_prompt = "你是一个编程专家。请编写高质量的代码，并简要解释算法原理。使用markdown代码块格式。"
+                        system_prompt = get_prompt("modes.workflow.code")
                     else:
-                        system_prompt = f"你正在执行「{step_name}」。请给出详细、完整的回复，不要反问用户，直接输出内容。"
+                        system_prompt = get_prompt("modes.workflow.general", step_name=step_name)
 
                     prompt = step_desc or intent
                     if step_context:
@@ -849,12 +847,7 @@ class WorkflowExecutor(BaseModeExecutor):
 
             if len(final_content.strip()) < 50:
                 if search_unavailable or any_step_failed or any_step_error:
-                    compile_system = (
-                        "搜索服务暂不可用，无法获取实时信息。请基于你自身的知识和训练数据，"
-                        "尽可能完整、详细地回答用户的问题。如果问题涉及近期事件，"
-                        "请说明你的知识截止日期，并基于已有信息给出最佳回答。"
-                        "⚠️ 重要：在回答开头明确标注「以下内容基于AI自身知识生成，未经实时搜索验证」。"
-                    )
+                    compile_system = get_prompt("modes.workflow.search_unavailable")
                     response_messages = [
                         {"role": "system", "content": compile_system},
                         {"role": "user", "content": intent},
@@ -1169,10 +1162,11 @@ class WorkflowExecutor(BaseModeExecutor):
         return schemas
 
     async def _llm_web_search_fallback(self, ctx: TaskContext, intent: str, model_hint: str, persona: str) -> dict:
-        search_prompt = _LLM_WEB_SEARCH_PROMPT.format(topic=intent)
+        search_prompt = get_prompt("tools.web_search.search_prompt", topic=intent)
+        search_system = get_prompt("tools.web_search.search_system")
         try:
             content = await self._call_llm(ctx, [
-                {"role": "system", "content": _LLM_WEB_SEARCH_SYSTEM},
+                {"role": "system", "content": search_system},
                 {"role": "user", "content": search_prompt},
             ], "web/chat", "web_search_fallback", persona)
             if not content or not content.strip():

@@ -10,7 +10,7 @@ def mailbox():
     path = tempfile.mktemp(suffix=".db")
     m = Mailbox(path)
     yield m
-    m.conn.close()
+    m._repo.conn.close()
 
 
 @pytest.mark.asyncio

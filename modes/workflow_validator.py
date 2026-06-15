@@ -13,6 +13,7 @@ import json
 import re
 from typing import Dict, List, Optional
 
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("workflow_validator")
@@ -35,23 +36,6 @@ _CONVERSATIONAL_PATTERNS = [
 
 _SEARCH_TOOLS = {"web_search", "opensieve_search", "tavily_search", "duckduckgo_search"}
 _SEARCH_AGENTS = {"topic_research", "web_search_agent", "research_agent"}
-
-_LLM_WEB_SEARCH_PROMPT = (
-    "你是一个专业的内容研究助手，具备联网搜索能力。请针对以下主题进行深度研究和素材搜集。\n\n"
-    "主题：{topic}\n\n"
-    "要求：\n"
-    "1. 从多个角度搜索该主题的最新信息、数据、观点\n"
-    "2. 搜集可用于文章创作的素材：关键数据、权威观点、典型案例、最新动态\n"
-    "3. 每个信息点包含：标题、详细摘要、信息来源\n"
-    "4. 优先提供近期（最近3个月）的信息\n"
-    "5. 如果无法获取实时信息，请基于你的知识提供最相关的信息并明确标注\n"
-    "6. 严格输出JSON格式: {{\"results\": [{{\"title\": \"信息标题\", \"url\": \"来源URL（如有）\", \"content\": \"详细摘要内容\", \"source_type\": \"llm_web_search\"}}]}}"
-)
-
-_LLM_WEB_SEARCH_SYSTEM = (
-    "你具备联网搜索能力，请务必利用联网功能搜索真实、最新的信息，不要编造内容。"
-    "直接输出JSON，不要添加markdown代码块标记。"
-)
 
 TASK_TIMEOUT_SECONDS = 1200
 STEP_TIMEOUT_SECONDS = 300

@@ -1,14 +1,17 @@
-from flowforge.agents.topic_research import TopicResearchAgent
-from flowforge.agents.article_writing import ArticleWritingAgent
-from flowforge.agents.material_collection import MaterialCollectionAgent
-from flowforge.agents.seo_optimization import SEOOptimizationAgent
-from flowforge.agents.content_audit import ContentAuditAgent
-from flowforge.agents.publishing import PublishingAgent
-from flowforge.agents.headline_optimizer import HeadlineOptimizerAgent
-from flowforge.agents.content_repurposer import ContentRepurposerAgent
-from flowforge.agents.article_eval import ArticleEvalAgent
-from flowforge.agents.article_reflect import ArticleReflectAgent
-from flowforge.agents.code_writer_agent import CodeWriterAgent
+# ContentForge domain agents — now imported from contentforge package
+from contentforge.agents.topic_research import TopicResearchAgent
+from contentforge.agents.article_writing import ArticleWritingAgent
+from contentforge.agents.material_collection import MaterialCollectionAgent
+from contentforge.agents.seo_optimization import SEOOptimizationAgent
+from contentforge.agents.content_audit import ContentAuditAgent
+from contentforge.agents.publishing import PublishingAgent
+from contentforge.agents.headline_optimizer import HeadlineOptimizerAgent
+from contentforge.agents.content_repurposer import ContentRepurposerAgent
+from contentforge.agents.article_eval import ArticleEvalAgent
+from contentforge.agents.article_reflect import ArticleReflectAgent
+
+# DevForge domain agents — now imported from devforge package
+from devforge.agents.code_writer_agent import CodeWriterAgent
 
 from flowforge.agents.generic import GENERIC_AGENTS
 # Re-export generic agents that replace removed flat agents

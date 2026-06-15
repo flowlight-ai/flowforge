@@ -78,6 +78,22 @@ class GenericAgent(BaseAgent, ABC):
             return result.result
         raise RuntimeError(f"Tool '{tool_name}' not available")
 
+    def _get_prompt(self, key: str, fallback: str = "", **kwargs) -> str:
+        """从 PromptManager 加载提示词，失败时使用 fallback。"""
+        try:
+            from flowforge.core.prompt_manager import get_prompt
+            result = get_prompt(key, **kwargs)
+            if result:
+                return result
+        except Exception:
+            pass
+        if fallback and kwargs:
+            try:
+                return fallback.format(**kwargs)
+            except (KeyError, ValueError, IndexError):
+                pass
+        return fallback or ""
+
     @staticmethod
     def _extract_json(text: str) -> Any:
         match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
