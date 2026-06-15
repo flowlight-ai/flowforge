@@ -11,10 +11,12 @@ class FactCheckAgent(GenericAgent):
     async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         draft = input.params.get("draft", "")
 
-        prompt = (
-            "你是一个事实核查专家。请检查以下文章中的事实性错误、逻辑矛盾和可疑声明。\n"
-            '严格输出JSON: {"issues": ["问题1"], "is_clean": true/false}\n\n'
-            f"文章:\n{draft}"
+        prompt = self._get_prompt(
+            "flowforge.agent.fact_check",
+            '你是一个事实核查专家。请检查以下文章中的事实性错误、逻辑矛盾和可疑声明。\n'
+            '严格输出JSON: {{"issues": ["问题1"], "is_clean": true/false}}\n\n'
+            '文章:\n{draft}',
+            draft=draft,
         )
 
         content = await self._call_llm(context, prompt)

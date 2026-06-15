@@ -509,3 +509,216 @@ tools.web_search.search_prompt: |
   6. 严格输出JSON格式: {{"results": [{{"title": "信息标题", "url": "来源URL（如有）", "content": "详细摘要内容", "source_type": "llm_web_search"}}]}}
 
 tools.web_search.search_system: "你具备联网搜索能力，请务必利用联网功能搜索真实、最新的信息，不要编造内容。直接输出JSON，不要添加markdown代码块标记。"
+
+# ── flowforge/agents/generic 提示词（从硬编码外置） ──
+
+flowforge.agent.analyst: |
+  You are an analysis agent. Thoroughly analyze the task requirements.
+  Task: {task}
+  {background_section}{constraints_section}
+  Provide analysis as JSON:
+  {{"summary": "task summary", "key_requirements": ["req1"], "constraints": ["constraint1"], "assumptions": ["assumption1"], "scope": "scope description", "dependencies": ["dep1"], "risks": ["risk1"]}}
+
+flowforge.agent.approver: |
+  You are an approval agent. Process the review decision and prepare for release.
+  Original task: {task}
+  Content: {generated}
+  Review result: {review_result}
+  Review decision: {review_decision}
+
+  Produce the approval outcome as JSON:
+  {{"approved": true/false, "approval_note": "note", "release_ready": true/false, "post_approval_actions": ["action1"]}}
+
+flowforge.agent.critic: |
+  You are a critic agent. Evaluate the draft and provide detailed feedback.
+  Original task: {task}
+  Current draft: {draft}
+  Iteration: {iteration}
+  {criteria_section}
+  Provide critique as JSON:
+  {{"score": 0.0-1.0, "strengths": ["strength1"], "weaknesses": ["weakness1"], "suggestions": ["suggestion1"], "meets_quality_gate": true/false}}
+
+flowforge.agent.deliverer: |
+  You are a delivery agent. Format and prepare the final deliverable.
+  Original task: {task}
+  Content to deliver: {processed}
+  Output format: {output_format}
+  {validation_section}
+  Prepare the final deliverable as JSON:
+  {{"deliverable": "formatted output", "format": "format description", "summary": "brief summary of deliverable", "metadata": {{}}}}
+
+flowforge.agent.drafter: |
+  You are a drafting agent. Create an initial draft based on the given requirements.
+  Task: {task}
+  Style: {style}
+  {requirements_section}{reference_section}
+  Create a complete initial draft. Output as JSON:
+  {{"draft": "your draft content", "notes": "any notes about the draft"}}
+
+flowforge.agent.finalizer: |
+  You are a finalization agent. Polish and finalize the content after iterative refinement.
+  Original task: {task}
+  Content to finalize: {draft}
+  {critique_section}
+  Produce the final polished version as JSON:
+  {{"final_output": "your finalized content", "quality_notes": "notes on quality", "final_score_estimate": 0.0-1.0}}
+
+flowforge.agent.generator: |
+  You are a generation agent. Produce content based on the task requirements.
+  Task: {task}
+  Style: {style}
+  {requirements_section}
+  Generate the content as JSON:
+  {{"generated": "your generated content", "metadata": {{"word_count": 0, "quality_estimate": 0.0-1.0}}}}
+
+flowforge.agent.planner: |
+  You are a planning agent. Create a detailed, executable plan for the given task.
+  Task: {task}
+  {constraints_section}{resources_section}
+  Output the plan as JSON:
+  {{"plan_name": "name", "steps": [{{"id": 1, "description": "step description", "estimated_effort": "low/medium/high", "dependencies": []}}], "estimated_total_effort": "low/medium/high", "risks": ["risk1"]}}
+
+flowforge.agent.processor: |
+  You are a processing agent. Execute the core processing based on the analysis.
+  Task: {task}
+  Analysis: {analysis}
+  Method: {method}
+
+  Produce the processed result as JSON:
+  {{"result": "processed output", "method_used": "description of method", "intermediate_steps": ["step1"], "confidence": 0.0-1.0}}
+
+flowforge.agent.react_observer: |
+  You are an observer in a ReAct loop. Analyze the action result and extract key observations.
+  Original task: {query}
+  Previous thought: {thought}
+  Action result: {action_output}
+
+  Provide a concise observation as JSON:
+  {{"observation": "what you observed", "progress": "description of progress", "remaining": "what still needs to be done"}}
+
+flowforge.agent.react_thinker: |
+  You are a reasoning agent in a ReAct loop. Analyze the current situation and decide the next action.
+  Task: {query}
+  {observation_section}{iteration_section}
+  Output your reasoning as JSON:
+  {{"thought": "your analysis", "next_action": "action_name", "action_input": {{"key": "value"}}, "is_complete": false}}
+  Set is_complete to true if the task is fully resolved.
+
+flowforge.agent.refiner: |
+  You are a refinement agent. Improve the draft based on the critique feedback.
+  Original task: {task}
+  Current draft: {draft}
+  Weaknesses identified: {weaknesses}
+  Suggestions for improvement: {suggestions}
+  Iteration: {iteration}
+
+  Produce an improved version as JSON:
+  {{"refined_draft": "your improved content", "changes_made": ["change1"], "remaining_issues": ["issue1"]}}
+
+flowforge.agent.reviewer: |
+  You are a review coordination agent. Prepare a review summary for human reviewers.
+  Task: {task}
+  Content to review: {content_to_review}
+  Review type: {review_type}
+
+  Provide a structured review brief as JSON:
+  {{"summary": "brief summary of what needs review", "key_points": ["point1"], "risk_areas": ["area1"], "recommendation": "approve/revise/reject"}}
+
+flowforge.agent.validator: |
+  You are a validation agent. Verify that the processed result is correct and complete.
+  Original task: {task}
+  Processed result: {processed}
+  Requirements: {analysis}
+  {validation_rules_section}
+  Provide validation as JSON:
+  {{"is_valid": true/false, "completeness": 0.0-1.0, "correctness": 0.0-1.0, "errors": ["error1"], "warnings": ["warning1"], "fix_suggestions": ["fix1"]}}
+
+flowforge.agent.verifier: |
+  You are a verification agent. Check whether the execution results meet the task requirements.
+  Original task: {task}
+  Execution result: {execution_result}
+  {plan_section}{criteria_section}
+  Output verification as JSON:
+  {{"is_valid": true/false, "score": 0.0-1.0, "issues": ["issue1"], "strengths": ["strength1"], "recommendation": "accept/reject/revise"}}
+
+flowforge.agent.fact_check: |
+  你是一个事实核查专家。请检查以下文章中的事实性错误、逻辑矛盾和可疑声明。
+  严格输出JSON: {{"issues": ["问题1"], "is_clean": true/false}}
+
+  文章:
+  {draft}
+
+flowforge.agent.web_search_plan: |
+  优化以下搜索查询，生成多个搜索变体以提高搜索覆盖率。
+  输出JSON: {{"optimized_queries": ["变体1"], "search_strategy": "搜索策略"}}
+
+  原始查询: {query}
+
+flowforge.agent.web_search_summarize: |
+  整理和去重以下搜索结果，生成摘要。
+  输出JSON数组: [{{"title": "标题", "url": "URL", "summary": "摘要"}}]
+
+  搜索结果: {results}
+
+flowforge.agent.web_search_fallback: |
+  你是一个搜索助手。请为以下查询生成{max_results}条搜索结果。
+  严格输出JSON数组: [{{"title": "标题", "url": "https://...", "content": "摘要内容"}}]
+  查询: {query}
+
+# ── flowforge/modes 提示词（从硬编码外置） ──
+
+flowforge.mode.multi_agent.decompose: |
+  将以下任务拆解为多个可并行的子任务，返回 JSON 数组:
+  {task}
+  格式: [{{"id": "1", "prompt": "...", "agent_type": "...", "tools": ["llm"]}}]
+
+flowforge.mode.multi_agent.compress: |
+  将以下执行结果压缩为最多3句话的摘要:
+  {result}
+
+flowforge.mode.multi_agent.create_task_board: |
+  将以下任务分解为可并行/串行的子任务列表，输出 JSON:
+  {task}
+  格式: [{{"id": "1", "title": "...", "description": "...", "depends_on": [], "agent_type": "writer", "tools": ["llm"]}}]
+  要求: 每个子任务必须有明确的输入和预期输出，标注依赖关系
+
+flowforge.mode.multi_agent.replan: |
+  根据信箱中的紧急消息，调整任务计划（JSON数组）: {task_list}
+
+flowforge.mode.multi_agent.aggregate: |
+  聚合以下任务结果，输出最终 JSON: {tasks}
+
+flowforge.mode.graph_of_thoughts.initial: |
+  对以下问题进行深度思考，给出你的推理过程和结论。
+  问题: {task}
+
+flowforge.mode.graph_of_thoughts.branch: |
+  基于以下思考，从不同角度继续推理（角度{branch_num}）:
+  {content}
+  输出 JSON: {{"reasoning": "...", "conclusion": "..."}}
+
+flowforge.mode.graph_of_thoughts.evaluate: |
+  评估以下推理的质量，给出 0-1 分数。输出 JSON: {{"score": 0.85}}
+  推理: {content}
+
+flowforge.mode.rewoo.generate_blueprint: |
+  为以下任务生成工具调用蓝图，输出JSON数组。最多{max_steps}步。
+  可用工具: llm, {tools_desc}
+  格式: [{{"name":"step1", "tool":"工具名", "params":{{"query":"..."}}}}]
+  任务: {task}
+
+flowforge.mode.self_discover.select: |
+  分析以下任务，推荐最合适的思维框架或执行模式。
+  可选模式: react(推理+工具), reflexion(迭代优化), workflow(流水线), rewoo(规划+并行), graph_of_thoughts(多角度推理)
+  输出 JSON: {{"mode": "模式名", "reasoning": "选择理由"}}
+  任务: {task}
+
+flowforge.mode.self_discover.adapt: |
+  为以下任务调整'{mode}'执行模式的参数，使其更适合任务需求。
+  输出 JSON: {{"params": {{"key": "value"}}, "prompt": "调整后的任务提示"}}
+  任务: {task}
+
+flowforge.mode.plan_execute.generate_plan: |
+  将以下任务分解为顺序执行步骤，输出 JSON 数组。最多{max_steps}步。
+  格式: [{{"name": "step1", "task": "具体任务描述", "agent": "agent名或executor"}}]
+  任务: {task}

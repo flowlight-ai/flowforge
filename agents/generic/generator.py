@@ -12,15 +12,18 @@ class GeneratorAgent(GenericAgent):
         requirements = input.params.get("requirements", [])
         style = input.params.get("style", "professional")
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.generator",
             "You are a generation agent. Produce content based on the task requirements.\n"
-            f"Task: {task}\n"
-            f"Style: {style}\n"
+            "Task: {task}\n"
+            "Style: {style}\n"
+            "{requirements_section}"
+            "\nGenerate the content as JSON:\n"
+            '{{"generated": "your generated content", "metadata": {{"word_count": 0, "quality_estimate": 0.0-1.0}}}}',
+            task=task,
+            style=style,
+            requirements_section=f"Requirements: {requirements}\n" if requirements else "",
         )
-        if requirements:
-            prompt += f"Requirements: {requirements}\n"
-        prompt += "\nGenerate the content as JSON:\n"
-        prompt += '{"generated": "your generated content", "metadata": {"word_count": 0, "quality_estimate": 0.0-1.0}}'
 
         content = await self._call_llm(context, prompt)
         data = self._extract_json(content)

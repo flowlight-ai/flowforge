@@ -13,18 +13,20 @@ class DelivererAgent(GenericAgent):
         validation = input.params.get("validation", {})
         output_format = input.params.get("output_format", "default")
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.deliverer",
             "You are a delivery agent. Format and prepare the final deliverable.\n"
-            f"Original task: {task}\n"
-            f"Content to deliver: {processed}\n"
-            f"Output format: {output_format}\n"
-        )
-        if validation:
-            prompt += f"Validation status: {validation}\n"
-        prompt += (
+            "Original task: {task}\n"
+            "Content to deliver: {processed}\n"
+            "Output format: {output_format}\n"
+            "{validation_section}"
             "\nPrepare the final deliverable as JSON:\n"
-            '{"deliverable": "formatted output", "format": "format description", '
-            '"summary": "brief summary of deliverable", "metadata": {}}'
+            '{{"deliverable": "formatted output", "format": "format description", '
+            '"summary": "brief summary of deliverable", "metadata": {{}}}}',
+            task=task,
+            processed=processed,
+            output_format=output_format,
+            validation_section=f"Validation status: {validation}\n" if validation else "",
         )
 
         content = await self._call_llm(context, prompt)

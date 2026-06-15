@@ -16,16 +16,22 @@ class RefinerAgent(GenericAgent):
         weaknesses = critique.get("weaknesses", []) if isinstance(critique, dict) else []
         suggestions = critique.get("suggestions", []) if isinstance(critique, dict) else []
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.refiner",
             "You are a refinement agent. Improve the draft based on the critique feedback.\n"
-            f"Original task: {task}\n"
-            f"Current draft: {draft}\n"
-            f"Weaknesses identified: {weaknesses}\n"
-            f"Suggestions for improvement: {suggestions}\n"
-            f"Iteration: {iteration}\n\n"
+            "Original task: {task}\n"
+            "Current draft: {draft}\n"
+            "Weaknesses identified: {weaknesses}\n"
+            "Suggestions for improvement: {suggestions}\n"
+            "Iteration: {iteration}\n\n"
             "Produce an improved version as JSON:\n"
-            '{"refined_draft": "your improved content", "changes_made": ["change1"], '
-            '"remaining_issues": ["issue1"]}'
+            '{{"refined_draft": "your improved content", "changes_made": ["change1"], '
+            '"remaining_issues": ["issue1"]}}',
+            task=task,
+            draft=draft,
+            weaknesses=weaknesses,
+            suggestions=suggestions,
+            iteration=iteration,
         )
 
         content = await self._call_llm(context, prompt)

@@ -177,6 +177,7 @@ class FlowForgeSDK:
         self._mcp_integration: Optional[Any] = None
         self._marketplace: Optional[Any] = None
         self._loop_executor: Optional[Any] = None
+        self._event_bridge: Optional[Any] = None
 
     # ── Lazy property accessors ─────────────────────────────────────
 
@@ -245,6 +246,18 @@ class FlowForgeSDK:
         if self._event_bus is None:
             self._event_bus = EventBus()
         return self._event_bus
+
+    @property
+    def event_bridge(self) -> Any:
+        """Access the EventBridge for cross-project event propagation.
+
+        Lazily creates an :class:`~flowforge.events.bridge.EventBridge`
+        bound to this SDK's :attr:`events` bus.
+        """
+        if self._event_bridge is None:
+            from flowforge.events.bridge import EventBridge
+            self._event_bridge = EventBridge(self.events)
+        return self._event_bridge
 
     @property
     def memory(self) -> Any:

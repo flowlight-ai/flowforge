@@ -18,10 +18,12 @@ class WebSearchAgent(GenericAgent):
         max_results = input.params.get("max_results", 5)
 
         if mode == "plan":
-            prompt = (
-                "优化以下搜索查询，生成多个搜索变体以提高搜索覆盖率。\n"
-                '输出JSON: {"optimized_queries": ["变体1"], "search_strategy": "搜索策略"}\n\n'
-                f"原始查询: {query}"
+            prompt = self._get_prompt(
+                "flowforge.agent.web_search_plan",
+                '优化以下搜索查询，生成多个搜索变体以提高搜索覆盖率。\n'
+                '输出JSON: {{"optimized_queries": ["变体1"], "search_strategy": "搜索策略"}}\n\n'
+                '原始查询: {query}',
+                query=query,
             )
             content = await self._call_llm(context, prompt)
             data = self._extract_json(content)
@@ -31,10 +33,12 @@ class WebSearchAgent(GenericAgent):
 
         if mode == "summarize":
             results = input.params.get("results", [])
-            prompt = (
-                "整理和去重以下搜索结果，生成摘要。\n"
-                '输出JSON数组: [{"title": "标题", "url": "URL", "summary": "摘要"}]\n\n'
-                f"搜索结果: {results}"
+            prompt = self._get_prompt(
+                "flowforge.agent.web_search_summarize",
+                '整理和去重以下搜索结果，生成摘要。\n'
+                '输出JSON数组: [{{"title": "标题", "url": "URL", "summary": "摘要"}}]\n\n'
+                '搜索结果: {results}',
+                results=results,
             )
             content = await self._call_llm(context, prompt)
             data = self._extract_json(content)
@@ -89,10 +93,13 @@ class WebSearchAgent(GenericAgent):
             pass
 
         # Fallback 4: 纯LLM生成
-        prompt = (
-            f"你是一个搜索助手。请为以下查询生成{max_results}条搜索结果。\n"
-            f'严格输出JSON数组: [{{"title": "标题", "url": "https://...", "content": "摘要内容"}}]\n'
-            f"查询: {query}"
+        prompt = self._get_prompt(
+            "flowforge.agent.web_search_fallback",
+            '你是一个搜索助手。请为以下查询生成{max_results}条搜索结果。\n'
+            '严格输出JSON数组: [{{"title": "标题", "url": "https://...", "content": "摘要内容"}}]\n'
+            '查询: {query}',
+            max_results=max_results,
+            query=query,
         )
         content = await self._call_llm(context, prompt)
         data = self._extract_json(content)

@@ -121,7 +121,7 @@ models:
 - id: Qwen3.6-Plus
   provider: openroute
   display_name: 通义千问 3.6 Plus
-  enabled: false
+  enabled: true
 - id: HunYuan3
   provider: openroute
   display_name: 腾讯混元 3

@@ -13,18 +13,20 @@ class CriticAgent(GenericAgent):
         criteria = input.params.get("criteria", [])
         iteration = input.params.get("iteration", 0)
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.critic",
             "You are a critic agent. Evaluate the draft and provide detailed feedback.\n"
-            f"Original task: {task}\n"
-            f"Current draft: {draft}\n"
-            f"Iteration: {iteration}\n"
-        )
-        if criteria:
-            prompt += f"Evaluation criteria: {criteria}\n"
-        prompt += (
+            "Original task: {task}\n"
+            "Current draft: {draft}\n"
+            "Iteration: {iteration}\n"
+            "{criteria_section}"
             "\nProvide critique as JSON:\n"
-            '{"score": 0.0-1.0, "strengths": ["strength1"], "weaknesses": ["weakness1"], '
-            '"suggestions": ["suggestion1"], "meets_quality_gate": true/false}'
+            '{{"score": 0.0-1.0, "strengths": ["strength1"], "weaknesses": ["weakness1"], '
+            '"suggestions": ["suggestion1"], "meets_quality_gate": true/false}}',
+            task=task,
+            draft=draft,
+            iteration=iteration,
+            criteria_section=f"Evaluation criteria: {criteria}\n" if criteria else "",
         )
 
         content = await self._call_llm(context, prompt)

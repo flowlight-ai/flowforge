@@ -296,16 +296,18 @@ class MultiJudgeVerifier(LoopVerifier):
 待评审内容:
 {content}
 
-【重要】你必须且只能输出一个JSON对象，不要输出任何其他文字、解释或标记。
-不要在JSON前后添加任何内容。不要使用markdown代码块。
+【重要】你的回复将被程序自动解析，必须且只能输出一个JSON对象。不要输出任何其他文字、解释、前缀或后缀。不要使用markdown代码块。
 
-输出格式示例(直接输出JSON，不要用```json```包裹):
+输出格式（直接输出JSON，不要用```json```包裹）:
 {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1","改进建议2"]}}
 
+示例（请根据实际内容评分，不要照搬示例分数）:
+{{"scores":{{"quality":0.85,"accuracy":0.88,"completeness":0.82,"clarity":0.90}},"improvement_suggestions":["建议1","建议2"]}}
+
 要求:
-1. 每个维度给出0.0-1.0之间的浮点数评分
+1. 每个维度给出0.0-1.0之间的浮点数评分，保留两位小数
 2. improvement_suggestions列出最需要改进的方面(最多5条)
-3. 只输出JSON，不要输出任何其他内容"""
+3. 只输出JSON对象，不要输出任何其他内容"""
 
     async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
         judges = config.get("judges", [])

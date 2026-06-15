@@ -12,14 +12,18 @@ class ProcessorAgent(GenericAgent):
         analysis = input.params.get("analysis", {})
         method = input.params.get("method", "standard")
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.processor",
             "You are a processing agent. Execute the core processing based on the analysis.\n"
-            f"Task: {task}\n"
-            f"Analysis: {analysis}\n"
-            f"Method: {method}\n\n"
+            "Task: {task}\n"
+            "Analysis: {analysis}\n"
+            "Method: {method}\n\n"
             "Produce the processed result as JSON:\n"
-            '{"result": "processed output", "method_used": "description of method", '
-            '"intermediate_steps": ["step1"], "confidence": 0.0-1.0}'
+            '{{"result": "processed output", "method_used": "description of method", '
+            '"intermediate_steps": ["step1"], "confidence": 0.0-1.0}}',
+            task=task,
+            analysis=analysis,
+            method=method,
         )
 
         content = await self._call_llm(context, prompt)

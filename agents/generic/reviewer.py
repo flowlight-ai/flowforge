@@ -12,14 +12,18 @@ class ReviewerAgent(GenericAgent):
         content_to_review = input.params.get("generated", input.params.get("execution_result", ""))
         review_type = input.params.get("review_type", "general")
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.reviewer",
             "You are a review coordination agent. Prepare a review summary for human reviewers.\n"
-            f"Task: {task}\n"
-            f"Content to review: {content_to_review}\n"
-            f"Review type: {review_type}\n\n"
+            "Task: {task}\n"
+            "Content to review: {content_to_review}\n"
+            "Review type: {review_type}\n\n"
             "Provide a structured review brief as JSON:\n"
-            '{"summary": "brief summary of what needs review", "key_points": ["point1"], '
-            '"risk_areas": ["area1"], "recommendation": "approve/revise/reject"}'
+            '{{"summary": "brief summary of what needs review", "key_points": ["point1"], '
+            '"risk_areas": ["area1"], "recommendation": "approve/revise/reject"}}',
+            task=task,
+            content_to_review=content_to_review,
+            review_type=review_type,
         )
 
         content = await self._call_llm(context, prompt)

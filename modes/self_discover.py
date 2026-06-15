@@ -4,6 +4,7 @@ from flowforge.core.base_mode_executor import BaseModeExecutor
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
+from flowforge.core.prompt_manager import get_prompt
 
 logger = get_logger("self_discover_executor")
 
@@ -76,12 +77,14 @@ class SelfDiscoverExecutor(BaseModeExecutor):
 
     async def _select(self, ctx: TaskContext, task: str) -> dict:
         """Phase 1: 选择最合适的思维框架。"""
-        prompt = (
-            f"分析以下任务，推荐最合适的思维框架或执行模式。\n"
-            f"可选模式: react(推理+工具), reflexion(迭代优化), workflow(流水线), "
-            f"rewoo(规划+并行), graph_of_thoughts(多角度推理)\n"
-            f'输出 JSON: {{"mode": "模式名", "reasoning": "选择理由"}}\n'
-            f"任务: {task[:2000]}"
+        prompt = get_prompt(
+            "flowforge.mode.self_discover.select",
+            "分析以下任务，推荐最合适的思维框架或执行模式。\n"
+            "可选模式: react(推理+工具), reflexion(迭代优化), workflow(流水线), "
+            "rewoo(规划+并行), graph_of_thoughts(多角度推理)\n"
+            '输出 JSON: {{"mode": "模式名", "reasoning": "选择理由"}}\n'
+            "任务: {task}",
+            task=task[:2000],
         )
         result = await ctx.tools.execute("llm", ToolInput(params={
             "messages": [{"role": "user", "content": prompt}],
@@ -100,10 +103,13 @@ class SelfDiscoverExecutor(BaseModeExecutor):
 
     async def _adapt(self, ctx: TaskContext, task: str, mode: str) -> dict:
         """Phase 2: 根据任务调整框架参数。"""
-        prompt = (
-            f"为以下任务调整'{mode}'执行模式的参数，使其更适合任务需求。\n"
-            f'输出 JSON: {{"params": {{"key": "value"}}, "prompt": "调整后的任务提示"}}\n'
-            f"任务: {task[:2000]}"
+        prompt = get_prompt(
+            "flowforge.mode.self_discover.adapt",
+            "为以下任务调整'{mode}'执行模式的参数，使其更适合任务需求。\n"
+            '输出 JSON: {{"params": {{"key": "value"}}, "prompt": "调整后的任务提示"}}\n'
+            "任务: {task}",
+            mode=mode,
+            task=task[:2000],
         )
         result = await ctx.tools.execute("llm", ToolInput(params={
             "messages": [{"role": "user", "content": prompt}],

@@ -13,15 +13,20 @@ class ApproverAgent(GenericAgent):
         review_result = input.params.get("review_result", {})
         review_decision = input.params.get("review_decision", "approved")
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.approver",
             "You are an approval agent. Process the review decision and prepare for release.\n"
-            f"Original task: {task}\n"
-            f"Content: {generated}\n"
-            f"Review result: {review_result}\n"
-            f"Review decision: {review_decision}\n\n"
+            "Original task: {task}\n"
+            "Content: {generated}\n"
+            "Review result: {review_result}\n"
+            "Review decision: {review_decision}\n\n"
             "Produce the approval outcome as JSON:\n"
-            '{"approved": true/false, "approval_note": "note", "release_ready": true/false, '
-            '"post_approval_actions": ["action1"]}'
+            '{{"approved": true/false, "approval_note": "note", "release_ready": true/false, '
+            '"post_approval_actions": ["action1"]}}',
+            task=task,
+            generated=generated,
+            review_result=review_result,
+            review_decision=review_decision,
         )
 
         content = await self._call_llm(context, prompt)

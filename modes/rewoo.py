@@ -104,11 +104,15 @@ class ReWOOExecutor(BaseModeExecutor):
     async def _generate_blueprint(self, ctx, task):
         available_tools = ctx.tools.list_tools() if ctx.tools else []
         tools_desc = ", ".join([t for t in available_tools if t != "llm"])
-        prompt = (
-            f"为以下任务生成工具调用蓝图，输出JSON数组。最多{self.MAX_BLUEPRINT_STEPS}步。\n"
-            f"可用工具: llm, {tools_desc}\n"
-            f"格式: [{{\"name\":\"step1\", \"tool\":\"工具名\", \"params\":{{\"query\":\"...\"}}}}]\n"
-            f"任务: {task}"
+        prompt = get_prompt(
+            "flowforge.mode.rewoo.generate_blueprint",
+            "为以下任务生成工具调用蓝图，输出JSON数组。最多{max_steps}步。\n"
+            "可用工具: llm, {tools_desc}\n"
+            '格式: [{{"name":"step1", "tool":"工具名", "params":{{"query":"..."}}}}]\n'
+            "任务: {task}",
+            max_steps=self.MAX_BLUEPRINT_STEPS,
+            tools_desc=tools_desc,
+            task=task,
         )
         result = await ctx.tools.execute("llm", ToolInput(params={
             "messages": [{"role": "user", "content": prompt}],

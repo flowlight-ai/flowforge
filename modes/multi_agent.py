@@ -8,6 +8,7 @@ from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.tools.registry import ToolRegistry
 from flowforge.memory.task_board import TaskBoard
 from flowforge.memory.mailbox import Mailbox
@@ -226,10 +227,12 @@ class MultiAgentExecutor(BaseModeExecutor):
     async def _decompose_task(self, ctx: TaskContext) -> list:
         if not ctx.tools:
             return self._default_decomposition(ctx)
-        prompt = (
-            f"将以下任务拆解为多个可并行的子任务，返回 JSON 数组:\n"
-            f"{ctx.input_data.get('task', '')}\n"
-            f'格式: [{{"id": "1", "prompt": "...", "agent_type": "...", "tools": ["llm"]}}]'
+        prompt = get_prompt(
+            "flowforge.mode.multi_agent.decompose",
+            "将以下任务拆解为多个可并行的子任务，返回 JSON 数组:\n"
+            "{task}\n"
+            '格式: [{{"id": "1", "prompt": "...", "agent_type": "...", "tools": ["llm"]}}]',
+            task=ctx.input_data.get('task', ''),
         )
         try:
             result = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
@@ -264,9 +267,10 @@ class MultiAgentExecutor(BaseModeExecutor):
         try:
             if not ctx.tools:
                 return str(result)[:200]
-            prompt = (
-                f"将以下执行结果压缩为最多3句话的摘要:\n"
-                f"{json.dumps(result, ensure_ascii=False)[:2000]}"
+            prompt = get_prompt(
+                "flowforge.mode.multi_agent.compress",
+                "将以下执行结果压缩为最多3句话的摘要:\n{result}",
+                result=json.dumps(result, ensure_ascii=False)[:2000],
             )
             res = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
             return res.result.get("content", str(result)[:200])
@@ -330,11 +334,13 @@ class MultiAgentExecutor(BaseModeExecutor):
         if not ctx.tools:
             return []
         task_desc = ctx.input_data.get("task", "")
-        prompt = (
-            f"将以下任务分解为可并行/串行的子任务列表，输出 JSON:\n{task_desc}\n"
-            f'格式: [{{"id": "1", "title": "...", "description": "...", '
-            f'"depends_on": [], "agent_type": "writer", "tools": ["llm"]}}]\n'
-            f"要求: 每个子任务必须有明确的输入和预期输出，标注依赖关系"
+        prompt = get_prompt(
+            "flowforge.mode.multi_agent.create_task_board",
+            "将以下任务分解为可并行/串行的子任务列表，输出 JSON:\n{task}\n"
+            '格式: [{{"id": "1", "title": "...", "description": "...", '
+            '"depends_on": [], "agent_type": "writer", "tools": ["llm"]}}]\n'
+            "要求: 每个子任务必须有明确的输入和预期输出，标注依赖关系",
+            task=task_desc,
         )
         result = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
         try:
@@ -405,7 +411,11 @@ class MultiAgentExecutor(BaseModeExecutor):
     async def _replan(self, lead, task_list: list, ctx: TaskContext):
         if not ctx.tools:
             return
-        prompt = f"根据信箱中的紧急消息，调整任务计划（JSON数组）: {json.dumps(task_list)}"
+        prompt = get_prompt(
+            "flowforge.mode.multi_agent.replan",
+            "根据信箱中的紧急消息，调整任务计划（JSON数组）: {task_list}",
+            task_list=json.dumps(task_list),
+        )
         result = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
         try:
             new_tasks = json.loads(result.result.get("content", "[]"))
@@ -425,7 +435,11 @@ class MultiAgentExecutor(BaseModeExecutor):
             tasks = await self.task_board.get_all_tasks()
             return {"aggregated": "", "tasks": tasks}
         tasks = await self.task_board.get_all_tasks()
-        prompt = f"聚合以下任务结果，输出最终 JSON: {json.dumps(tasks, ensure_ascii=False)[:3000]}"
+        prompt = get_prompt(
+            "flowforge.mode.multi_agent.aggregate",
+            "聚合以下任务结果，输出最终 JSON: {tasks}",
+            tasks=json.dumps(tasks, ensure_ascii=False)[:3000],
+        )
         result = await ctx.tools.execute("llm", ToolInput(params={"messages": [{"role": "user", "content": prompt}]}))
         return {"aggregated": result.result.get("content", ""), "tasks": tasks}
 

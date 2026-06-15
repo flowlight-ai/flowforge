@@ -13,19 +13,20 @@ class VerifierAgent(GenericAgent):
         plan = input.params.get("plan", {})
         criteria = input.params.get("criteria", [])
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.verifier",
             "You are a verification agent. Check whether the execution results meet the task requirements.\n"
-            f"Original task: {task}\n"
-            f"Execution result: {execution_result}\n"
-        )
-        if plan:
-            prompt += f"Original plan: {plan}\n"
-        if criteria:
-            prompt += f"Success criteria: {criteria}\n"
-        prompt += (
+            "Original task: {task}\n"
+            "Execution result: {execution_result}\n"
+            "{plan_section}"
+            "{criteria_section}"
             "\nOutput verification as JSON:\n"
-            '{"is_valid": true/false, "score": 0.0-1.0, "issues": ["issue1"], '
-            '"strengths": ["strength1"], "recommendation": "accept/reject/revise"}'
+            '{{"is_valid": true/false, "score": 0.0-1.0, "issues": ["issue1"], '
+            '"strengths": ["strength1"], "recommendation": "accept/reject/revise"}}',
+            task=task,
+            execution_result=execution_result,
+            plan_section=f"Original plan: {plan}\n" if plan else "",
+            criteria_section=f"Success criteria: {criteria}\n" if criteria else "",
         )
 
         content = await self._call_llm(context, prompt)

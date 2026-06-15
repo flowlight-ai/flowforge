@@ -13,17 +13,20 @@ class DrafterAgent(GenericAgent):
         style = input.params.get("style", "professional")
         reference = input.params.get("reference", "")
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.drafter",
             "You are a drafting agent. Create an initial draft based on the given requirements.\n"
-            f"Task: {task}\n"
-            f"Style: {style}\n"
+            "Task: {task}\n"
+            "Style: {style}\n"
+            "{requirements_section}"
+            "{reference_section}"
+            "\nCreate a complete initial draft. Output as JSON:\n"
+            '{{"draft": "your draft content", "notes": "any notes about the draft"}}',
+            task=task,
+            style=style,
+            requirements_section=f"Requirements: {requirements}\n" if requirements else "",
+            reference_section=f"Reference material: {reference}\n" if reference else "",
         )
-        if requirements:
-            prompt += f"Requirements: {requirements}\n"
-        if reference:
-            prompt += f"Reference material: {reference}\n"
-        prompt += "\nCreate a complete initial draft. Output as JSON:\n"
-        prompt += '{"draft": "your draft content", "notes": "any notes about the draft"}'
 
         content = await self._call_llm(context, prompt)
         data = self._extract_json(content)

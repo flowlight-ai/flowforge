@@ -5,6 +5,7 @@ from flowforge.core.base_agent import AgentInput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
+from flowforge.core.prompt_manager import get_prompt
 
 logger = get_logger("plan_execute_executor")
 
@@ -59,10 +60,13 @@ class PlanExecuteExecutor(BaseModeExecutor):
 
     async def _planner_generate_plan(self, ctx, task):
         llm_tool = ctx.tools.get_tool("llm")
-        prompt = (
-            f"将以下任务分解为顺序执行步骤，输出 JSON 数组。最多{self.MAX_PLAN_STEPS}步。\n"
-            f"格式: [{{\"name\": \"step1\", \"task\": \"具体任务描述\", \"agent\": \"agent名或executor\"}}]\n"
-            f"任务: {task}"
+        prompt = get_prompt(
+            "flowforge.mode.plan_execute.generate_plan",
+            "将以下任务分解为顺序执行步骤，输出 JSON 数组。最多{max_steps}步。\n"
+            '格式: [{{"name": "step1", "task": "具体任务描述", "agent": "agent名或executor"}}]\n'
+            "任务: {task}",
+            max_steps=self.MAX_PLAN_STEPS,
+            task=task,
         )
         result = await llm_tool.execute(ToolInput(params={
             "messages": [{"role": "user", "content": prompt}],

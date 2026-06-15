@@ -4,6 +4,7 @@ from flowforge.core.base_mode_executor import BaseModeExecutor
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
+from flowforge.core.prompt_manager import get_prompt
 
 logger = get_logger("graph_of_thoughts_executor")
 
@@ -22,7 +23,11 @@ class GraphOfThoughtsExecutor(BaseModeExecutor):
         best_thought = None
         best_score = 0.0
 
-        initial_prompt = f"对以下问题进行深度思考，给出你的推理过程和结论。\n问题: {task}"
+        initial_prompt = get_prompt(
+            "flowforge.mode.graph_of_thoughts.initial",
+            "对以下问题进行深度思考，给出你的推理过程和结论。\n问题: {task}",
+            task=task,
+        )
         result = await ctx.tools.execute("llm", ToolInput(params={
             "messages": [{"role": "user", "content": initial_prompt}],
             "stream": False, "task_id": ctx.task_id,
@@ -45,7 +50,12 @@ class GraphOfThoughtsExecutor(BaseModeExecutor):
             for b in range(self.MAX_BRANCHES):
                 if len(thoughts) + len(branches) >= self.MAX_TOTAL_THOUGHTS:
                     break
-                branch_prompt = f"基于以下思考，从不同角度继续推理（角度{b+1}）:\n{best_at_depth['content'][:1000]}\n输出 JSON: {{\"reasoning\": \"...\", \"conclusion\": \"...\"}}"
+                branch_prompt = get_prompt(
+                    "flowforge.mode.graph_of_thoughts.branch",
+                    "基于以下思考，从不同角度继续推理（角度{branch_num}）:\n{content}\n输出 JSON: {{\"reasoning\": \"...\", \"conclusion\": \"...\"}}",
+                    branch_num=b+1,
+                    content=best_at_depth['content'][:1000],
+                )
                 try:
                     b_result = await ctx.tools.execute("llm", ToolInput(params={
                         "messages": [{"role": "user", "content": branch_prompt}],
@@ -69,7 +79,11 @@ class GraphOfThoughtsExecutor(BaseModeExecutor):
                     logger.warning(f"GoT branch {b} at depth {depth} failed: {e}", task_id=ctx.task_id)
 
             for branch in branches:
-                eval_prompt = f"评估以下推理的质量，给出 0-1 分数。输出 JSON: {{\"score\": 0.85}}\n推理: {branch['content'][:500]}"
+                eval_prompt = get_prompt(
+                    "flowforge.mode.graph_of_thoughts.evaluate",
+                    "评估以下推理的质量，给出 0-1 分数。输出 JSON: {{\"score\": 0.85}}\n推理: {content}",
+                    content=branch['content'][:500],
+                )
                 try:
                     eval_result = await ctx.tools.execute("llm", ToolInput(params={
                         "messages": [{"role": "user", "content": eval_prompt}],

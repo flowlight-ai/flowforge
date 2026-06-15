@@ -13,18 +13,20 @@ class ValidatorAgent(GenericAgent):
         analysis = input.params.get("analysis", {})
         validation_rules = input.params.get("validation_rules", [])
 
-        prompt = (
+        prompt = self._get_prompt(
+            "flowforge.agent.validator",
             "You are a validation agent. Verify that the processed result is correct and complete.\n"
-            f"Original task: {task}\n"
-            f"Processed result: {processed}\n"
-            f"Requirements: {analysis}\n"
-        )
-        if validation_rules:
-            prompt += f"Validation rules: {validation_rules}\n"
-        prompt += (
+            "Original task: {task}\n"
+            "Processed result: {processed}\n"
+            "Requirements: {analysis}\n"
+            "{validation_rules_section}"
             "\nProvide validation as JSON:\n"
-            '{"is_valid": true/false, "completeness": 0.0-1.0, "correctness": 0.0-1.0, '
-            '"errors": ["error1"], "warnings": ["warning1"], "fix_suggestions": ["fix1"]}'
+            '{{"is_valid": true/false, "completeness": 0.0-1.0, "correctness": 0.0-1.0, '
+            '"errors": ["error1"], "warnings": ["warning1"], "fix_suggestions": ["fix1"]}}',
+            task=task,
+            processed=processed,
+            analysis=analysis,
+            validation_rules_section=f"Validation rules: {validation_rules}\n" if validation_rules else "",
         )
 
         content = await self._call_llm(context, prompt)
