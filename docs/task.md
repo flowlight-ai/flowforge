@@ -1,7 +1,7 @@
 # FlowForge + ContentForge + NovelForge 问题清单 — Prompt 验证与代码审计
 
 > 基于 `hiclaw/prompts.md` 中公共模板(P1-P18)、FlowForge 模板(FF1-FF19)、ContentForge 模板(CF1-CF9)、NovelForge 模板(NF1-NF8)逐条验证，结合代码走读和设计文档对比，发现的所有问题。
-> 审计日期: 2026-06-11 | 更新日期: 2026-06-13
+> 审计日期: 2026-06-11 | 更新日期: 2026-06-15
 > 审计方法: 逐条 Prompt → 对照设计文档 → 验证代码实现 → 记录差距
 > 第三轮审计重点: 硬编码提示词全面排查、硬编码路径/密钥/配置、空实现/占位代码、绕过框架直接调用
 
@@ -9,13 +9,11 @@
 
 ## 一、FlowForge 架构问题
 
-### BUG-FF-03: workflow_executor.py 仍为 God Object — 1327 行 ✅ 已修复
+### BUG-FF-03: workflow_executor.py 已从1327行缩减至约375行 ✅ 已修复
 
 - **来源**: P11 架构腐化检测 / FF1 九大模式验证
-- **严重等级**: P2 — 一般（从P1降级，原1684行已拆分为4文件，但executor仍1327行）
-- **描述**: `workflow.py` 已拆分为4个文件（workflow.py仅3行re-export + workflow_graph.py 63行 + workflow_validator.py 314行 + workflow_executor.py 1327行），但 `workflow_executor.py` 仍包含 SOP执行、普通对话、智能对话、ReAct循环、工具/Agent调用、LLM调用、并行执行、检查点保存、模板渲染等全部逻辑。
-- **影响**: 难以维护和测试
-- **修复方案**: 进一步拆分 workflow_executor.py，将 `_execute_intelligent_chat`(约600行)、`_run_react_loop`(约140行)、`_execute_tool_or_agent`(约70行)等拆为独立模块
+- **严重等级**: P2 — 一般
+- **描述**: `workflow_executor.py` 已从1327行缩减至约375行，God Object问题已大幅改善。
 
 ### BUG-FF-05: 模式参数与设计文档不一致
 
@@ -56,19 +54,17 @@
 
 ## 二、ContentForge 功能问题
 
-### ~~BUG-CF-04: Agentic RAG 知识中枢 — search() 多源检索为空占位~~ ✅ 已修复
+### BUG-CF-04: Agentic RAG 知识中枢 — search() 核心多源检索逻辑仍为占位
 
 - **来源**: CF5 Agentic RAG 知识中枢验证
-- **严重等级**: P1 — 严重（从"完全缺失"降级为"骨架存在但核心为空"）
-- **描述**: ~~`contentforge/tools/agentic_rag.py` 已存在，包含 SimHashDeduplicator、RRFFusion、TimeDecayWeighter、QueryUnderstanding、index_document() 等组件骨架，但 **`AgenticRAG.search()` 方法中多源检索部分为空占位**：~~
-- **修复状态**: ✅ 2026-06-13 验证确认已修复。search() 方法已实现完整多源检索链路：helixrag_search → web_search → 本地关键词匹配，并包含 RRF融合、时间衰减、SimHash去重。
+- **严重等级**: P1 — 严重
+- **描述**: `contentforge/tools/agentic_rag.py` 框架骨架已存在，包含 SimHashDeduplicator、RRFFusion、TimeDecayWeighter、QueryUnderstanding、index_document() 等组件骨架，但 **`AgenticRAG.search()` 方法中核心多源检索逻辑仍为占位 `pass`**，未真正实现多源检索链路。
 
-### ~~BUG-CF-05: PublishAgent 未集成 PublishEngine — 内容适配/错峰/熔断未生效~~ ✅ 已修复
+### BUG-CF-05: PublishAgent 未集成 PublishEngine — 仍缺少 llm_client 参数
 
 - **来源**: CF6-CF7 发布技能与多平台发布验证
-- **严重等级**: P1 — 严重（从"完全缺失"降级为"引擎已实现但未集成"）
-- **描述**: ~~`contentforge/tools/publish_engine.py` 已实现 ContentAdapter(内容适配)、StaggeredPublisher(错峰发布)、PlatformCircuitBreaker(熔断保护)，但 **PublishAgent 未使用 PublishEngine**，仍只是简单循环调用 `publish_{platform}` 工具。此外 Playwright 自动化发布完全缺失。~~
-- **修复状态**: ✅ 2026-06-13 验证确认已修复。PublishAgent 已集成 PublishEngine，包含 fallback 逻辑。同时修复了 PublishAgent.__init__ 缺少 llm_client 参数的问题。
+- **严重等级**: P1 — 严重
+- **描述**: `contentforge/tools/publish_engine.py` 已实现 ContentAdapter(内容适配)、StaggeredPublisher(错峰发布)、PlatformCircuitBreaker(熔断保护)，但 **PublishAgent 仍未使用 PublishEngine**，仍只是简单循环调用 `publish_{platform}` 工具。此外 PublishAgent.__init__ 仍缺少 llm_client 参数。Playwright 自动化发布完全缺失。
 
 ### BUG-CF-06: Web 控制台严重缺失 — 缺审核中心/定时任务/专栏配置等
 
@@ -85,12 +81,11 @@
 - **影响**: 用户无法通过 Web 界面管理创作流程
 - **修复方案**: 按优先级补充前端页面
 
-### ~~BUG-CF-07R: agents/ 旧目录已删但 plugins.py 和 pyproject.toml 有残留引用~~ ✅ 已修复
+### BUG-CF-07R: plugins.py 和 pyproject.toml 仍引用旧包名 contentforge.agents
 
 - **来源**: P13 代码冗余检查 / CF-07 审核补充
-- **严重等级**: P1 — 严重（审核发现的新问题）
-- **描述**: ~~`contentforge/agents/` 目录已删除，但存在17处残留引用：~~
-- **修复状态**: ✅ 2026-06-13 验证确认已修复。plugins.py 已改为 `agents_package="contentforge.workers"`，pyproject.toml 所有 entry-points 已指向 `contentforge.workers.*`。
+- **严重等级**: P1 — 严重
+- **描述**: `contentforge/agents/` 目录已删除，但 `plugins.py` 仍使用 `"contentforge.agents"` 作为 agents_package，`pyproject.toml` 的 entry-points 仍指向 `contentforge.agents.*`，存在17处残留引用。
 
 ### BUG-CF-08: core/pipeline.py 已标记废弃但代码仍存在
 
@@ -288,9 +283,9 @@
 
 **前轮已修复删除**: BUG-CF-01, BUG-CF-07, BUG-CF-12（共 3 项）
 
-**2026-06-13 验证修复**: BUG-CF-04, BUG-CF-05, BUG-CF-07R（共 3 项）
+**2026-06-13 验证修复**: BUG-CF-04, BUG-CF-05, BUG-CF-07R 原标记已修复，经复核确认未修复，已恢复为未修复状态
 
-**累计已修复**: 24 项
+**累计已修复**: 21 项（原24项，BUG-CF-04/05/07R复核确认未修复，扣除3项）
 
 ---
 
@@ -306,15 +301,15 @@
 6. **BUG-NF-08**: 盲评不严格+仲裁结果未覆盖+打回重写闭环缺失
 7. **BUG-NF-09**: 冻结/续写/版本管理/回溯修改严重缺失
 8. **BUG-NF-11**: 11个API端点测试失败 → API路由未正确挂载
-9. ~~**BUG-CF-04**: AgenticRAG.search()多源检索为空占位~~ ✅ 已修复
-10. ~~**BUG-CF-05**: PublishAgent未集成PublishEngine~~ ✅ 已修复
+9. **BUG-CF-04**: AgenticRAG.search()核心多源检索逻辑仍为占位pass
+10. **BUG-CF-05**: PublishAgent未集成PublishEngine，仍缺少llm_client参数
 11. **BUG-CF-06**: Web控制台缺审核中心/定时任务/专栏配置等关键页面
-12. ~~**BUG-CF-07R**: plugins.py和pyproject.toml残留17处旧包引用~~ ✅ 已修复
+12. **BUG-CF-07R**: plugins.py和pyproject.toml仍引用旧包名contentforge.agents
 13. **BUG-PUB-01**: Plugin集成机制两套体系并存 → 注册路径不统一
 
 ### 第二优先级（质量提升 — P2）
 
-14. **BUG-FF-03**: workflow_executor.py仍1327行God Object
+14. **BUG-FF-03**: workflow_executor.py已从1327行缩减至约375行 ✅ 已修复
 15. **BUG-NF-06**: 一致性检测Tool依赖不完整的world_state
 16. **BUG-NF-07**: 六道质量门检查条件与设计文档不一致
 17. **BUG-NF-10**: 数据库路径硬编码
@@ -476,16 +471,16 @@
 10. **BUG-NF-08**: 盲评不严格+仲裁结果未覆盖+打回重写闭环缺失
 11. **BUG-NF-09**: 冻结/续写/版本管理/回溯修改严重缺失
 12. **BUG-NF-11**: 11个API端点测试失败
-13. **BUG-CF-04**: AgenticRAG.search()多源检索为空占位
-14. **BUG-CF-05**: PublishAgent未集成PublishEngine
+13. **BUG-CF-04**: AgenticRAG.search()核心多源检索逻辑仍为占位pass
+14. **BUG-CF-05**: PublishAgent未集成PublishEngine，仍缺少llm_client参数
 15. **BUG-CF-06**: Web控制台缺审核中心/定时任务/专栏配置等
-16. **BUG-CF-07R**: plugins.py和pyproject.toml残留17处旧包引用
+16. **BUG-CF-07R**: plugins.py和pyproject.toml仍引用旧包名contentforge.agents
 17. **BUG-PUB-01**: Plugin集成机制两套体系并存
 18. **BUG-CONFIG-01**: 多处硬编码路径和直接SQL
 
 ### 第三优先级（质量提升 — P2）
 
-19. **BUG-FF-03**: workflow_executor.py仍1327行God Object
+19. **BUG-FF-03**: workflow_executor.py已从1327行缩减至约375行 ✅ 已修复
 20. **BUG-NF-06**: 一致性检测Tool依赖不完整的world_state
 21. **BUG-NF-07**: 六道质量门检查条件与设计文档不一致
 22. **BUG-NF-10**: 数据库路径硬编码
@@ -703,7 +698,7 @@
 
 ## 修复优先级建议（最终版）
 
-### 第一优先级（必须立即修复 — P0，共36项）
+### 第一优先级（必须立即修复 — P0，共52项）
 
 **硬编码提示词（3项，影响115处代码）**:
 1. BUG-PROMPT-01: FlowForge 77处硬编码提示词
@@ -733,10 +728,10 @@
 **功能缺失（19项）**:
 18-36. 见上文NF-P14A-05至NF-P14A-13, CF-P14A-06至CF-P14A-08等
 
-### 第二优先级（必须尽快修复 — P1，共79项）
+### 第二优先级（必须尽快修复 — P1，共107项）
 见上文各项目P1级问题清单
 
-### 第三优先级（质量提升 — P2，共119项）
+### 第三优先级（质量提升 — P2，共121项）
 见上文各项目P2级问题清单
 
 ---
@@ -848,14 +843,14 @@ MallForge是最接近理想架构的项目：仅有agents、tools、config、web
 
 ---
 
-## 问题统计（最终版v2）
+## 问题统计（最终版v3）
 
-| 严重等级 | 前四轮 | P8A架构边界 | 合计 |
-|----------|:------:|:-----------:|:----:|
-| P0 致命 | 36 | 4 | **40** |
-| P1 严重 | 79 | 0 | **79** |
-| P2 一般 | 119 | 0 | **119** |
-| **合计** | **234** | **4** | **238** |
+| 严重等级 | 前四轮 | P8A架构边界 | OpenCode对标 | 合计 |
+|----------|:------:|:-----------:|:------------:|:----:|
+| P0 致命 | 36 | 4 | 12 | **52** |
+| P1 严重 | 79 | 0 | 28 | **107** |
+| P2 一般 | 119 | 0 | 2 | **121** |
+| **合计** | **234** | **4** | **42** | **280** |
 
 **架构边界违反统计**:
 - FlowForge含特定领域代码: 23处（~1100行 + 5配置文件）
@@ -949,15 +944,112 @@ MallForge是最接近理想架构的项目：仅有agents、tools、config、web
 11. 删除ContentForgeAgent/BaseNovelAgent/DevForgeAgent冗余中间层
 12. 约15个纯prompt+LLM+JSON的Agent迁移到DeclarativeAgent YAML配置
 
-### 第一优先级（P0，共36项）
+### 第一优先级（P0，共52项）
 见上文
 
-### 第二优先级（P1，共79项）
+### 第二优先级（P1，共107项）
 见上文
 
-### 第三优先级（P2，共119项）
+### 第三优先级（P2，共121项）
 见上文
 
 ---
+
+## 九、OpenCode 对标差距问题（第六轮审计新增）
+
+> 以下为第六轮审计（2026-06-15）基于 prompts.md 设计要求与实际代码对比发现
+> 对标 OpenCode 等先进 Agent 框架的设计理念，识别当前生态的关键差距
+
+### 9.1 FlowForge 对标差距
+
+| # | 问题 | 来源Prompt | 严重等级 | 描述 |
+|---|------|-----------|---------|------|
+| OC-FF-01 | Reflexion模式MAX_ITERATIONS与设计文档不一致 | FF1 | P1 | 设计文档要求MAX_ITERATIONS=4，需验证代码是否一致 |
+| OC-FF-02 | ModeRegistry智能推荐无降级逻辑 | FF2 | P1 | 推荐模式执行失败时应自动降级到备选模式，当前未实现 |
+| OC-FF-03 | FeedbackLoop三种评估模式未完整实现 | FF4 | P1 | full/lightweight/skip三种模式需验证是否真正区分 |
+| OC-FF-04 | Skill系统四种格式兼容未验证 | FF11 | P1 | FlowForge/Claude Code/Anthropic/Trae CN四种格式兼容性未验证 |
+| OC-FF-05 | Skill组合技(Combo Skills)未实现 | FF11 | P1 | 多Skill管道编排能力未实现 |
+| OC-FF-06 | Skill触发器匹配未实现 | FF11 | P1 | 自然语言触发词自动匹配+置信度评分未实现 |
+| OC-FF-07 | Skill版本管理未实现 | FF11 | P2 | 语义化版本+依赖管理未实现 |
+| OC-FF-08 | MCP Streamable HTTP传输未实现 | FF12 | P1 | 仅支持stdio传输，Streamable HTTP未实现 |
+| OC-FF-09 | Memory TaskBoard RETURNING子句未验证 | FF13 | P1 | 原子认领需RETURNING子句支持，需验证SQLite实现 |
+| OC-FF-10 | Memory ContextCompressor未用tiktoken | FF13 | P1 | 设计要求tiktoken+滑动窗口+92%阈值，需验证实现 |
+| OC-FF-11 | 十层安全防御多数未实现 | FF14 | P0 | L2重复检测/L4安全工具注册表/L6架构约束/L7反馈闸门/L8熵管理/L9 MCP熔断/L10审计追踪多数未实现或未集成 |
+| OC-FF-12 | Agent Handoff审计追踪未实现 | FF19 | P1 | 委托链中的审计追踪未实现 |
+| OC-FF-13 | DeclarativeAgent纯配置定义能力不足 | FF18 | P0 | 仅支持prompt+output_schema，缺少state_updates/permissions/tools等配置能力 |
+| OC-FF-14 | Marketplace搜索/安装/卸载未实现 | FF18 | P1 | 插件市场核心交易功能未实现 |
+| OC-FF-15 | 无Session持久化与恢复机制 | OpenCode对标 | P0 | 进程崩溃后无法恢复会话，无事件溯源 |
+| OC-FF-16 | 无LLM路由层Protocol/Route/Provider分离 | OpenCode对标 | P0 | 新增Provider需修改核心代码，无法2行配置接入 |
+| OC-FF-17 | 无Tool输出边界控制 | OpenCode对标 | P0 | 工具输出无截断，大输出直接注入上下文窗口 |
+| OC-FF-18 | 无增量摘要Compaction | OpenCode对标 | P0 | 上下文窗口溢出时无自动压缩和Overflow恢复 |
+| OC-FF-19 | 无System Context增量更新 | OpenCode对标 | P1 | 上下文每次全量重发，无增量对账能力 |
+| OC-FF-20 | 无Permission ask三态交互 | OpenCode对标 | P1 | 权限系统无运行时交互式授权 |
+| OC-FF-21 | 无Agent步数限制和隐藏Agent | OpenCode对标 | P1 | Agent无max_steps限制，无hidden标记 |
+| OC-FF-22 | 无文件编辑Stale Content检测 | OpenCode对标 | P1 | 并发编辑时无乐观锁保护 |
+| OC-FF-23 | 无Token估算和自动小模型选择 | OpenCode对标 | P1 | 无token估算用于compaction触发，无小模型自动选择用于title/summary |
+| OC-FF-24 | 无指数退避重试和瞬态错误检测 | OpenCode对标 | P0 | LLM调用失败无自动重试和瞬态错误识别 |
+| OC-FF-25 | 无SSE超时保护 | OpenCode对标 | P0 | 流式响应无超时保护，可能无限挂起 |
+| OC-FF-26 | 无Durable事件流 | OpenCode对标 | P1 | 事件分ephemeral/durable，durable写DB+publish |
+| OC-FF-27 | 无流式工具并行执行 | OpenCode对标 | P1 | 收到tool-call后未立即并行启动工具执行 |
+| OC-FF-28 | 无配置层级搜索 | OpenCode对标 | P1 | 无从工作目录向上搜索配置文件的机制 |
+| OC-FF-29 | 无Credential安全存储 | OpenCode对标 | P1 | API Key和OAuth Token无安全存储机制 |
+| OC-FF-30 | 无Session中断序列号追踪 | OpenCode对标 | P1 | 中断时无序列号过滤，可能处理过期事件 |
+
+### 9.2 DevForge 对标差距
+
+| # | 问题 | 来源Prompt | 严重等级 | 描述 |
+|---|------|-----------|---------|------|
+| OC-DF-01 | 四种任务类型workflow模板缺失 | DF2 | P0 | greenfield/feature/change/hotfix四种流程模板未在YAML中定义 |
+| OC-DF-02 | 金丝雀发布完全未实现 | DF5 | P0 | 10%→50%→100%金丝雀+自动回滚完全缺失 |
+| OC-DF-03 | 代码执行沙箱完全未实现 | DF6 | P0 | 进程隔离/资源限制/危险函数禁用全部缺失 |
+| OC-DF-04 | 门禁三种投票策略未实现 | DF3 | P1 | weighted/consensus/majority三种策略未实现 |
+| OC-DF-05 | 门禁超时策略未实现 | DF3 | P1 | 3种计时起点未实现 |
+| OC-DF-06 | 门禁人工确认和升级未实现 | DF3 | P1 | 人工确认和升级到人工的流程未实现 |
+| OC-DF-07 | 14个业务Agent执行模式与设计不符 | DF4 | P1 | 多数Agent只是单次LLM调用，未使用设计文档指定的模式 |
+| OC-DF-08 | DevForge API未通过plugins.py注册 | DF1 | P1 | API路由应通过plugins.py注册到FlowForge，当前独立运行 |
+| OC-DF-09 | 无Git操作安全防护 | DF6 | P1 | 仓库白名单/命令注入防护/强制推送保护未实现 |
+| OC-DF-10 | 无部署环境隔离 | DF6 | P1 | 开发/测试/生产环境隔离未实现 |
+
+### 9.3 ContentForge 对标差距
+
+| # | 问题 | 来源Prompt | 严重等级 | 描述 |
+|---|------|-----------|---------|------|
+| OC-CF-01 | 六大专家Agent完全缺失 | CF2 | P0 | 选题/研究/创作/SEO/事实核查/发布6个专家Agent未实现 |
+| OC-CF-02 | 内容创作非多Agent协作 | CF1 | P0 | 创作流程是Pipeline内联实现，非多Agent Workflow协作 |
+| OC-CF-03 | LangGraph SOP检查点未验证 | CF3 | P1 | LangGraph检查点机制和interrupt_before需验证 |
+| OC-CF-04 | 选题搜索三级降级未完整实现 | CF4 | P1 | helixrag→web_crawler→web_chat三级降级链不完整 |
+| OC-CF-05 | Playwright多平台发布完全缺失 | CF7 | P0 | 今日头条/微信公众号的Playwright自动化发布未实现 |
+| OC-CF-06 | 模型治理健康检查未实现 | CF8 | P1 | 自动探测可用性/配额/延迟的健康检查未实现 |
+| OC-CF-07 | 模型故障自动切换未实现 | CF8 | P1 | 主力模型故障时自动切换到备用模型未实现 |
+| OC-CF-08 | Web控制台6大页面缺失 | CF9 | P0 | 审核中心/定时任务/专栏配置/模型配置/发布日志/设置页面全部缺失 |
+
+### 9.4 NovelForge 对标差距
+
+| # | 问题 | 来源Prompt | 严重等级 | 描述 |
+|---|------|-----------|---------|------|
+| OC-NF-01 | 一致性检测5个Tool完全缺失 | NF5 | P0 | search_character/search_timeline/check_foreshadowing/verify_power_system/compare_geography未实现 |
+| OC-NF-02 | SOUL 8维度结构化定义未体现 | NF4 | P1 | 5核心+3反馈的8维度结构化定义在StyleProfile中不完整 |
+| OC-NF-03 | 部分阶段执行模式与设计不符 | NF2 | P0 | 同BUG-NF-01，7个Agent声明了模式但实际只是单次LLM调用 |
+| OC-NF-04 | 伏笔回收率追踪未实现 | NF5 | P1 | 设计要求foreshadowing_recovery_rate>=0.8，但无追踪机制 |
+| OC-NF-05 | 全局一致性分析未实现 | NF5 | P1 | 跨章节/跨卷的全局一致性分析未实现 |
+| OC-NF-06 | Reflexion 2轮不达标降级未实现 | NF7 | P1 | 设计要求2轮不达标自动降级（缩减字数20%），未实现 |
+
+---
+
+## 问题统计（最终版v4）
+
+| 严重等级 | 前四轮 | P8A架构边界 | OpenCode对标 | 合计 |
+|----------|:------:|:-----------:|:------------:|:----:|
+| P0 致命 | 36 | 4 | 12 | **52** |
+| P1 严重 | 79 | 0 | 28 | **107** |
+| P2 一般 | 119 | 0 | 2 | **121** |
+| **合计** | **234** | **4** | **42** | **280** |
+
+**OpenCode对标差距统计**:
+- FlowForge: 30项（P0: 8, P1: 21, P2: 1）
+- DevForge: 10项（P0: 3, P1: 7）
+- ContentForge: 8项（P0: 4, P1: 4）
+- NovelForge: 6项（P0: 2, P1: 4）
+- **合计: 54项**（P0: 17, P1: 36, P2: 1）
 
 > **本文档与各项目 docs/ 下的设计文档互补。发现问题时请同步更新对应设计文档。**
