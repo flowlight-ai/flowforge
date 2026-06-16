@@ -3303,3 +3303,174 @@ class HarnessOrchestrator:
 ---
 
 > **本文档与 landing_plan.md 互补。每个设计项均提供了代码级详细设计、现有代码融合方案和向后兼容策略。重点融合项（FWK-06、INF-02、INF-05、CAP-01、CAP-09、CAP-10）已深入到方法级别的设计。**
+---
+
+# [审核修订 v2.1] 六方联合审核修订增补
+
+> 审核日期：2026-06-15 | 修订版本：v2.1
+
+## 修订1：FWK-01 Workflow YAML Compiler [审核修订 v2.1]
+
+### 修订1.1：编译器拆分为三阶段
+原设计WorkflowCompiler同时承担编译、验证、转换。修订为：
+- **Parser**：YAML → RawWorkflow AST
+- **Validator**：校验AST完整性、类型安全、循环依赖
+- **CodeGen**：AST → CompiledWorkflow → sop_steps
+
+### 修订1.2：MVP范围
+先实现 SEQUENCE + CONDITIONAL + GATE 三种StepType，其余迭代扩展。
+
+### 修订1.3：输入映射表达式
+引入Jinja2模板引擎替代简单Dict映射，支持 `${{ outputs.requirements.requirements_doc | truncate(1000) }}` 等转换。
+
+## 修订2：FWK-02 Conditional Router [审核修订 v2.1]
+
+### 修订2.1：安全表达式引擎
+替换字符串拼接解析为 asteval 安全表达式库，防止表达式注入。
+
+### 修订2.2：strict_mode
+增加 strict_mode 配置，None结果时抛出明确异常或强制使用default。
+
+## 修订3：FWK-03 Fallback Chain [审核修订 v2.1]
+
+支持 per-step 的 success_condition 配置，允许声明式定义成功条件。
+
+## 修订4：FWK-05 Persona Auto-Inject [审核修订 v2.1]
+
+- Persona指令使用结构化格式 ≤512 token
+- 成本审计：persona token占比 <15%
+- 中文格式规范注入
+
+## 修订5：FWK-06 Reflexion Loop [审核修订 v2.1]
+
+### 修订5.1：TurnTransitionEngine完整状态机
+状态：IDLE → EXECUTING → EVALUATING → REFLECTING → COMPACTING → AGENT_SWITCHING → COMPLETED/FAILED
+
+### 修订5.2：LoopContext封装
+decide() 只接收 verdict + LoopContext（封装feedback_gate, context_utilization, compaction_threshold等7个参数）
+
+### 修订5.3：max_steps优先级
+max_steps优先级高于max_retries（OpenCode安全护栏）
+
+## 修订6：FWK-07 PipelineCompiler [审核修订 v2.1]
+
+PipelineCompiler独立实现，不继承WorkflowCompiler，避免违反最小知识原则。
+
+## 修订7：INF-02 Session持久化 [审核修订 v2.1]
+
+### 修订7.1：EventStore WAL模式
+改为WAL模式 + 批量提交（每100条或每秒）
+
+### 修订7.2：RunCoordinator持久化
+_runs 状态也需要持久化到EventStore
+
+### 修订7.3：SessionInputManager
+Phase 2可选组件，实现admit→promote→execute三阶段
+
+### 修订7.4：LoopExecutor构造函数
+增加 optional_components: Dict 注入入口，避免参数爆炸
+
+## 修订8：INF-03 DI容器 [审核修订 v2.1]
+
+明确SCOPED使用场景或先移除，只保留SINGLETON + TRANSIENT。
+
+## 修订9：INF-05 Compaction [审核修订 v2.1]
+
+### 修订9.1：最大次数限制
+Compaction最大次数限制：3次/Session
+
+### 修订9.2：强制截断
+抽取式摘要后强制截断到安全阈值以下
+
+### 修订9.3：降级策略
+Compaction失败后丢弃最旧消息
+
+### 修订9.4：中文摘要模型
+显式声明摘要模型为doubao-seed2，中文摘要按语义段落切分
+
+## 修订10：INF-08 十层安全防御 [审核修订 v2.1]
+
+### 修订10.1：优先实现L5/L6
+L5 InputGuardrail和L6 OutputGuardrail优先实现（与现有Guardrails框架对接）
+
+### 修订10.2：L9沙箱
+L9 SandboxExecutor放到DevForge Plugin实现，FlowForge提供ToolIsolation抽象
+
+### 修订10.3：每层必须包含
+启用/禁用配置、输入/输出契约、默认策略（fail-open/fail-closed）、指标埋点
+
+## 修订11：CAP-01 Source<A>代数 [审核修订 v2.1]
+
+降级为P3。Phase 2先用简单 Dict[str, ContextFragment]（key/content/priority），Phase 3再引入代数操作。
+
+## 修订12：CAP-02 Permission V2 [审核修订 v2.1]
+
+- TaskContext增加 request_user_approval(tool, params, timeout) 抽象方法
+- ASK超时默认DENY（fail-closed）
+- 每次ask→allow/deny决策记录到审计日志
+- FlowForge提供默认 WebSocketApprovalProvider
+
+## 修订13：CAP-10 FiberSet [审核修订 v2.1]
+
+next_completed() 超时改为可配置，默认1.0s（原0.1s太短）。
+
+## 修订14：ECO-07 VS Code扩展 [审核修订 v2.1]
+
+优先级从P2升级到P1（DevForge核心竞争力）。
+
+## 新增1：FWK-10 领域代码迁移方案 [审核修订 v2.1]
+
+Phase 0新增：将FlowForge中23处特定领域代码（~1100行）迁移到对应 *Forge 项目。
+
+## 新增2：INF-11 Repository层统一重构 [审核修订 v2.1]
+
+Phase 1新增：10+存储模块从直接SQL操作重构为Repository模式。
+
+## 新增3：INF-12 配置外置系统性整改 [审核修订 v2.1]
+
+Phase 1新增：数据库路径等硬编码配置全部外置。
+
+## 新增4：FWK-PROMPT PromptManager统一设计 [审核修订 v2.1]
+
+Phase 0新增：统一YAML Schema、热加载、版本管理、A/B测试、缓存策略。
+
+## 新增5：OpenCode模式优先级矩阵 [审核修订 v2.1]
+
+按 阻塞性 × 复用性 两维评估65+模式的取舍：
+
+| 优先级 | 模式 | 阻塞性 | 复用性 |
+|--------|------|--------|--------|
+| P0必须 | Session持久化 | 高 | 高 |
+| P0必须 | LLM路由层分离 | 高 | 高 |
+| P0必须 | Compaction | 高 | 高 |
+| P0必须 | 指数退避重试 | 高 | 高 |
+| P1推荐 | System Context代数 | 中 | 高 |
+| P1推荐 | Permission V2 | 中 | 高 |
+| P2可选 | Session共享 | 低 | 中 |
+| P2可选 | Session Todo追踪 | 低 | 低 |
+
+## 新增6：实现追溯表（21个GAP） [审核修订 v2.1]
+
+| 编号 | 设计 | 代码现状 | 风险 |
+|------|------|---------|------|
+| GAP-01 | TurnTransition | 仅if-else | 高 |
+| GAP-02 | DualThresholdCompactor | content[:2000]截断 | 中 |
+| GAP-03 | EventStore | 不存在 | 高 |
+| GAP-04 | WorkflowCompiler | 整个目录不存在 | 高 |
+| GAP-05 | ConditionalRouter | 不存在 | 中 |
+| GAP-06 | PersonaInjector | PersonaLock无自动注入 | 中 |
+| GAP-07 | LLMRouter | 仅单Provider | 中 |
+| GAP-08 | DIContainer升级 | Service Locator | 中 |
+| GAP-09 | FiberSet | asyncio.gather | 中 |
+| GAP-10 | PermissionV2 | 简单顺序链 | 中 |
+| GAP-11 | DurableEventStream | 仅内存总线 | 中 |
+| GAP-12 | CredentialStore | SecretStore路径问题 | 中 |
+| GAP-13 | LayeredSearch | 不存在 | 低 |
+| GAP-C01 | flowforge.py反向import | 严重违反P9 | 高 |
+| GAP-C02 | LoopExecutor 11个构造参数 | 设计只展示4个 | 中 |
+| GAP-C03 | BaseNovelAgent | 未提删除计划 | 低 |
+| GAP-C04 | LoopPhase 7状态 vs TurnKind 6状态 | 两套并行 | 高 |
+| GAP-C05 | DebtTracker/RuleEvolution | 无SQLite fallback | 中 |
+| GAP-C06 | declarative.py | FWK-09未引用 | 中 |
+| GAP-C07 | skills/loader.py | ECO-02与现有loader重复 | 低 |
+| GAP-C08 | MemoryManager | add()签名不一致 | 中 |

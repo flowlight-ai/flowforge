@@ -2366,3 +2366,127 @@ Marketplace 提供插件的发现、安装、卸载能力：
 ---
 
 **以上为 FlowForge 架构设计文档 v6.0 + v7.0 增量。** v7.0 在 v6.0 基础上新增了 FlowForgeSDK 统一入口、ModelCapabilityProvider 零配置模型访问、@tool 装饰器、Guardrails 并行安全检查、Agent Handoff 任务委托、MCP Integration 一键连接、Declarative Agent 纯配置定义、Marketplace 插件市场等 8 个核心模块，为上层项目提供更简洁、更安全的集成体验。
+---
+
+# [审核修订 v2.1] 六方联合审核修订增补
+
+> 审核日期：2026-06-15 | 修订版本：v2.1
+
+## 18. 审核修订：架构修复 [审核修订 v2.1]
+
+### 18.1 GAP-C01修复：删除FlowForge反向import
+
+flowforge/core/flowforge.py 第17-28行存在反向import ContentForge工具（ToutiaoPublisherTool等），严重违反P9契约原则。
+
+**修复方案**：
+- 删除 flowforge.py 中的反向import
+- ToutiaoPublisherTool / WeChatPublisherTool / PexelsImageTool 通过 ContentForgePlugin 的 register_tools() 钩子注册
+- 在 hiclaw/prompts.md P9 契约验证中显式添加此检查项
+
+### 18.2 Plugin协议扩展
+
+当前 FlowForgePlugin 协议仅提供4个钩子，不足以表达 *Forge 的业务复杂度。
+
+**扩展后协议**：
+
+```python
+class FlowForgePlugin(Protocol):
+    # 现有
+    def register_agents(self, registry): ...
+    def register_tools(self, registry): ...
+    def register_routes(self, app): ...
+    def register_event_handlers(self, bus): ...
+    # [审核修订 v2.1] 新增
+    def register_workflows(self, compiler): ...      # DevForge 4种workflow
+    def register_gates(self, gate_registry): ...      # DevForge DCP/TR门禁
+    def register_evaluators(self, registry): ...      # DevForge 8个Evaluator
+    def register_sops(self, compiler): ...            # ContentForge 4种SOP
+    def register_quality_gates(self, registry): ...   # NovelForge 6道质量门
+    def register_context_layers(self, manager): ...   # NovelForge 5层上下文
+    def register_workflow_step_handler(self, registry): ...  # 自定义StepType
+```
+
+### 18.3 ConfigVersion数据结构
+
+```python
+@dataclass
+class ConfigVersion:
+    config_type: str  # "workflow" / "agent" / "persona" / "prompt"
+    config_name: str
+    version: str
+    checksum: str  # SHA256
+    loaded_at: datetime
+```
+
+启动时检测配置变更，变更后优雅重启（graceful restart）。
+
+### 18.4 TurnKind与LoopPhase合并
+
+TurnKind（6状态）与 LoopPhase（7状态）合并为统一状态机：
+
+| 统一状态 | 原LoopPhase | 原TurnKind | 说明 |
+|---------|-----------|-----------|------|
+| IDLE | PENDING | - | 等待启动 |
+| EXECUTING | RUNNING | CONTINUE | 正在执行 |
+| EVALUATING | - | REBUILD_PREPARED | 评估结果 |
+| REFLECTING | REFLECTING | - | 反思修正 |
+| COMPACTING | - | OVERFLOW_COMPACTION | 上下文压缩 |
+| AGENT_SWITCHING | - | AGENT_SWITCH | Agent切换 |
+| COMPLETED | COMPLETED | COMPLETED | 成功完成 |
+| FAILED | FAILED | FAILED | 失败终止 |
+| LOOPING | LOOPING | - | 循环中 |
+
+**decide() 简化**：只接收 verdict + LoopContext（封装7个参数）
+
+**max_steps优先级高于max_retries**（OpenCode安全护栏）
+
+### 18.5 CAP-01 Source<A>代数简化
+
+Phase 2先用简单实现：
+
+```python
+# 简化版：Dict[str, ContextFragment]
+@dataclass
+class ContextFragment:
+    key: str
+    content: str
+    priority: int = 0  # 0=最低, 数字越大优先级越高
+
+# ContextEngine.inject() 中按priority排序后拼接
+```
+
+Phase 3再引入代数操作（reconcile/replace/map）。
+
+### 18.6 关键数据结构Pydantic化
+
+以下数据结构必须改为 Pydantic BaseModel：
+- LLMRequest（当前是 @dataclass）
+- SessionEvent.data（当前是 Dict[str, Any] 黑盒）
+- CompiledStep.metadata（当前是 Dict[str, Any]）
+- GateVerdict（新增Pydantic模型）
+
+### 18.7 Persona注入规范化
+
+- Persona指令使用结构化格式（非自然语言段落），限定 ≤512 token
+- 增加 Persona注入成本审计：每个prompt构建完成后打印persona token占比（<15%为健康）
+- 中文格式规范注入：标点/编号/日期/单位统一指令段
+
+### 18.8 FWK-01 MVP接口冻结
+
+```python
+# MVP必须支持
+class WorkflowCompiler:
+    def compile(self, yaml_dict: Dict) -> CompiledWorkflow: ...
+    def to_sop_steps(self, workflow: CompiledWorkflow) -> List[Dict]: ...
+
+# MVP StepType: SEQUENCE + CONDITIONAL + GATE
+# MVP 变量引用: ${{outputs.xxx}}
+# MVP 验收用例: dev_hotfix.yaml 能跑通
+```
+
+### 18.9 Doubao moderation作为统一内容安全层
+
+- FlowForge INF-08 十层安全防御中L5内容安全层用Doubao moderation实现
+- NovelForge/ContentForge章节发布前强制走moderation预检
+- DevForge代码门禁中对coder生成的代码做moderation + 沙箱执行双重校验
+- moderation的风险标签存入EventStream，方便后续合规审计

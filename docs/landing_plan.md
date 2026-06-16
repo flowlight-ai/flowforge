@@ -282,3 +282,75 @@ FlowForge 77处 + ContentForge 24处 + NovelForge 14处 = **115处**
 ---
 
 > **本文档与各项目 docs/ 下的设计文档互补。各*Forge项目的具体落地计划见各自 docs/landing_plan.md。**
+---
+
+# [审核修订 v2.1] 六方联合审核修订增补
+
+> 审核日期：2026-06-15 | 修订版本：v2.1
+
+## 优先级调整 [审核修订 v2.1]
+
+| 原项 | 原优先级 | 调整后 | 原因 |
+|------|---------|--------|------|
+| CAP-01 Source<A>代数 | P1 | **P3（推迟）** | 过度设计，当前阶段简单Dict足够 |
+| INF-08 十层安全防御 | P0 | **P1（先实现L5/L6）** | 设计过于粗略，先实现两层 |
+| ECO-07 VS Code扩展 | P2 | **P1（提前）** | DevForge核心竞争力 |
+| CAP-10 FiberSet | P1 | **P2（降级）** | DevForge/ContentForge当前用不到 |
+
+## 新增交付物 [审核修订 v2.1]
+
+| 编号 | 交付物 | 优先级 | Phase | 说明 |
+|------|--------|--------|-------|------|
+| FWK-10 | 领域代码迁移方案 | P0 | Phase 0 | 23处领域代码~1100行迁移到*Forge |
+| FWK-PROMPT | PromptManager统一设计 | P0 | Phase 0 | 115处硬编码提示词统一方案 |
+| INF-11 | Repository层统一重构 | P1 | Phase 1 | 10+存储模块直接SQL重构 |
+| INF-12 | 配置外置系统性整改 | P1 | Phase 1 | 数据库路径等硬编码外置 |
+| NEW-01 | PromptManager统一协议 | P0 | Phase 0 | YAML Schema + 热加载 + 版本管理 |
+| NEW-02 | Checkpoint Schema统一格式 | P1 | Phase 1 | 四个项目检查点格式统一 |
+| NEW-03 | Workflow Compiler MVP验收用例 | P0 | Phase 0 | dev_hotfix.yaml能跑通 |
+| NEW-04 | AgenticRAG vs OpenSieve边界 | P1 | Phase 1 | 避免检索能力重复建设 |
+| NEW-05 | 性能基线设计 | P2 | Phase 2 | 关键组件性能指标 |
+| NEW-06 | Playwright发布引擎详细设计 | P0 | Phase 1 | 登录态/反检测/选择器维护 |
+| NEW-07 | 前端架构设计 | P1 | Phase 1 | ContentForge Web控制台技术方案 |
+| NEW-DB-01 | Doubao Provider规格文件 | P0 | Phase 0 | models.yaml补全Doubao规格 |
+| NEW-DB-02 | BaseTool function call Schema | P0 | Phase 0 | parameters_schema + to_function_call() |
+| NEW-DB-03 | 统一提示词外置+Doubao重写 | P0 | Phase 0 | 115处硬编码提示词外置+最佳实践重写 |
+| NEW-DB-04 | Persona注入规范化 | P1 | Phase 1 | ≤512 token + 成本审计 |
+| NEW-DB-05 | Provider级成本/配额管理 | P1 | Phase 1 | ProviderQuotaManager |
+| NEW-DB-06 | Doubao moderation内容安全层 | P0 | Phase 1 | 内容发布/代码生成前预检 |
+| NEW-DB-07 | 多模型级联策略 | P1 | Phase 1 | Doubao主+Qwen/DeepSeek次级 |
+| NEW-DB-08 | 中文格式规范检查 | P2 | Phase 2 | 标点/编号/日期/单位统一 |
+| NEW-DB-09 | 流式输出一致性测试 | P2 | Phase 2 | Doubao SSE响应格式验证 |
+| NEW-DB-10 | Doubao multi-modal接入规范 | P3 | Phase 3 | 封面图/插画/角色头像 |
+| NEW-DB-11 | Agent模式与Doubao能力矩阵 | P1 | Phase 1 | 每个Agent推荐模式+A/B验证 |
+| NEW-DB-12 | Skill系统知识沉淀机制 | P2 | Phase 2 | Agent成功产出自动写入Skill |
+| NEW-DB-13 | Doubao对话上下文checkpoint | P1 | Phase 1 | 冻结续写checkpoint含对话历史 |
+| NEW-DB-14 | 伏笔标记统一JSON Schema | P1 | Phase 1 | NovelForge伏笔半自动化标记 |
+| NEW-DB-15 | 门禁打分prompt标准化 | P1 | Phase 1 | gate YAML增加gate_prompts块 |
+
+## 实施节奏修订 [审核修订 v2.1]
+
+从并行改为串行+小步快跑：
+
+```
+Week 1-2:   FWK-01 MVP（sequence + conditional + gate）
+Week 2-3:   FWK-09 MVP（DeclarativeAgent YAML加载器）
+Week 3-4:   FlowForge内部清理（删GAP-C01反向依赖 + BUG-FF-09/10）
+Week 4-5:   ContentForge 6 Agent YAML化 + 4 SOP YAML化
+Week 5-6:   DevForge 14 Agent + 8 Evaluator + 10 Gate YAML化
+Week 6-7:   NovelForge 8 Agent + 6 QualityGate YAML化
+Week 7-8:   FlowForge 12内置Agent + 14 Tool YAML化
+Week 8-9:   INF-01 LLMRouter + 1个迁移示例
+Week 9-10:  INF-02 EventStore MVP
+Week 10-12: *Forge Phase 1核心功能
+Week 12+:   Phase 2能力升级
+```
+
+## FWK-01 MVP里程碑 [审核修订 v2.1]
+
+| 里程碑 | 支持StepType | 验收用例 |
+|--------|-------------|---------|
+| MVP-1 | SEQUENCE | 3步顺序执行workflow |
+| MVP-2 | + CONDITIONAL | 条件分支workflow |
+| MVP-3 | + GATE | dev_hotfix.yaml跑通 |
+| 完整版 | + PARALLEL/FALLBACK/LOOP | dev_greenfield.yaml跑通 |

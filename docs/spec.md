@@ -1,7 +1,7 @@
-# FlowForge v6.0 功能特性规格说明书
+# FlowForge v2.1 功能特性规格说明书
 
-> **版本**：v6.0
-> **日期**：2026-05-12
+> **版本**：v2.1
+> **日期**：2026-06-15
 > **定位**：从 Agent 编排框架进化为 **Agent 驾驭层 (Harness Layer)**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统。
 
 ***
@@ -10,7 +10,7 @@
 
 ### 1.1 产品定位
 
-FlowForge v6.0 是一个**企业级 Agent Harness 平台**，它将前沿的 AI Agent 架构模式（9 大模式）、四根 Harness 护栏（上下文工程、架构约束、反馈循环、熵管理）、多协议工具生态（MCP/OpenAPI/GraphQL）、Skill 系统、多 Agent 策略（Subagents/Teams/Swarms）和 Helm 实时交互融合为一体，为上层业务提供**可控、可观测、可进化的 Agent 运行基础设施**。
+FlowForge v2.1 是一个**企业级 Agent Harness 平台**，它将前沿的 AI Agent 架构模式（9 大模式）、四根 Harness 护栏（上下文工程、架构约束、反馈循环、熵管理）、多协议工具生态（MCP/OpenAPI/GraphQL）、Skill 系统、多 Agent 策略（Subagents/Teams/Swarms）和 Helm 实时交互融合为一体，为上层业务提供**可控、可观测、可进化的 Agent 运行基础设施**。
 
 ### 1.2 核心公式
 
@@ -50,7 +50,7 @@ FlowForge = Harness Layer = 前馈控制 + 反馈控制 + 熵管理 + 可观测�
 
 ### 2.1 六层架构模型
 
-FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
+FlowForge v2.1 采用分层解耦的 Harness 架构，整体分为六层：
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -60,7 +60,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 │  5. 接入层 (Gateway Layer)                                          │
 │     FastAPI REST API + WebSocket (Helm/Events) + Web UI + CLI       │
 ├─────────────────────────────────────────────────────────────────────┤
-│  4. Harness 驾驭层 (Harness Layer) ★ v6.0 核心                      │
+│  4. Harness 驾驭层 (Harness Layer) ★ v2.1 核心                      │
 │     上下文工程 | 架构约束 | 反馈循环 | 熵管理 | 权限管线 | 会话管理  │
 ├─────────────────────────────────────────────────────────────────────┤
 │  3. 执行引擎层 (Engine Layer)                                       │
@@ -76,7 +76,7 @@ FlowForge v6.0 采用分层解耦的 Harness 架构，整体分为六层：
 
 ### 2.2 控制回路设计
 
-FlowForge v6.0 的核心是一个完整的前馈+反馈控制回路：
+FlowForge v2.1 的核心是一个完整的前馈+反馈控制回路：
 
 ```
                  ┌─────────────────┐
@@ -572,7 +572,7 @@ if ctx.harness_enabled:
 
 ### 5.1 集成架构
 
-FlowForge v6.0 作为底层 Harness 引擎，ContentForge 作为上层业务应用。ContentForge 通过以下方式接入：
+FlowForge v2.1 作为底层 Harness 引擎，ContentForge 作为上层业务应用。ContentForge 通过以下方式接入：
 
 1. **注册业务 Agent**：ContentForge 的 7 个业务 Agent（TopicAgent、ResearchAgent、WriterAgent 等）继承 FlowForge BaseAgent，注册到 AgentRegistry
 2. **配置 Persona**：内容专栏的 SOUL/MEMORY 转换为 `config/persona/{name}.yaml`
@@ -583,7 +583,7 @@ FlowForge v6.0 作为底层 Harness 引擎，ContentForge 作为上层业务应�
 
 ### 5.2 业务场景映射
 
-| ContentForge 场景 | FlowForge v6.0 对应能力                                 |
+| ContentForge 场景 | FlowForge v2.1 对应能力                                 |
 | --------------- | --------------------------------------------------- |
 | 深度长文创作          | Workflow 模式 + `deep_article` SOP + Reflexion Writer |
 | 热点追踪创作          | Multi-Agent (Subagents) + WebSearch Tool            |
@@ -597,7 +597,7 @@ FlowForge v6.0 作为底层 Harness 引擎，ContentForge 作为上层业务应�
 
 ### 5.3 迁移路径
 
-| ContentForge 现有模块                 | FlowForge v6.0 对应                                | 迁移策略                                                     |
+| ContentForge 现有模块                 | FlowForge v2.1 对应                                | 迁移策略                                                     |
 | --------------------------------- | ------------------------------------------------ | -------------------------------------------------------- |
 | `brain/orchestrator.py`           | `engine/hybrid_executor.py`                      | **包装**：保留 Persona 锁、Helm 回调，核心执行委托                       |
 | `workers/`                        | `agents/content/`                                | **继承**：改继承 FlowForge BaseAgent，使用 `execute_with_context` |
@@ -615,7 +615,7 @@ FlowForge v6.0 作为底层 Harness 引擎，ContentForge 作为上层业务应�
 | **Step 2** | 重组 tools/agents，import 兼容                   | `tools/builtin/` 等子目录                    | `__init__.py` re-export + DeprecationWarning | 所有现有 Agent/Tool 测试通过 |
 | **Step 3** | executor/→engine/，引入 security/observability | `engine/`, `security/`, `observability/` | 删除旧 import 路径                                | 全量回归测试               |
 
-Step 2 的 import 兼容期为 **1 个大版本周期**（v6.0 全周期内保持兼容，v7.0 才删除旧路径），旧 import 路径触发时输出 `DeprecationWarning`。
+Step 2 的 import 兼容期为 **1 个大版本周期**（v2.1 全周期内保持兼容，v7.0 才删除旧路径），旧 import 路径触发时输出 `DeprecationWarning`。
 
 ***
 
@@ -746,3 +746,289 @@ layers:
 | 15 | 熵管理定位              | 明确为内置核心能力，不走插件市场                                                         |
 | 16 | 保留对话轮数             | 改为可配置（默认 3，可配置），适应不同模型上下文窗口                                              |
 
+---
+
+# [审核修订 v2.1] 六方联合审核修订增补
+
+> 审核日期：2026-06-15 | 修订版本：v2.1 | 修订依据：6份专家审核意见取并集
+
+## 附录D：用户旅程图 [审核修订 v2.1]
+
+### D.1 核心角色与关键操作节点
+
+| 角色 | 关键操作 | 触发方式 | 期望反馈 |
+|------|---------|---------|---------|
+| **AI应用开发者** | 创建Agent/Workflow YAML | CLI / Web UI | 编译结果、运行日志、调试信息 |
+| **平台管理员** | 配置安全策略/权限规则 | Web UI / YAML | 策略生效确认、审计日志 |
+| **业务专家** | 提交创作/开发任务 | Web UI / Helm | 任务进度、质量门结果、审核通知 |
+| **AI主编/指挥** | 调度Agent执行 | 自动触发 | 执行状态、异常告警 |
+
+### D.2 EventBus → 前端 WebSocket 推送契约
+
+| 事件 | 触发条件 | 推送目标 | Payload |
+|------|---------|---------|---------|
+| `task.created` | 任务创建 | 开发者/管理员 | {{task_id, type, status}} |
+| `gate.review_ready` | 门禁评分完成 | 审核者 | {{gate_id, scores, verdict}} |
+| `gate.human_required` | 门禁需人工确认 | 管理员 | {{gate_id, timeout, escalation}} |
+| `iteration.retry_exhausted` | 重试耗尽 | 开发者 | {{task_id, attempts, last_error}} |
+| `compaction.completed` | 上下文压缩完成 | 系统 | {{session_id, before_tokens, after_tokens}} |
+| `llm.fallback_triggered` | 主模型失败降级 | 管理员 | {{model, fallback_model, error}} |
+
+## 附录E：失败UX设计 [审核修订 v2.1]
+
+### E.1 Reflexion重试耗尽
+- **用户看到**：任务状态→"质量未达标"，评分趋势图、失败原因摘要、建议人工介入方向
+- **系统行为**：标记 status=partial，触发 task.degrade_to_human 事件
+- **降级路径**：自动降级到规则引擎 / 人工审核
+
+### E.2 门禁veto触发
+- **用户看到**：门禁详情页，veto维度高亮，可一键"打回重做"或"人工覆盖"
+- **系统行为**：记录审计日志，触发 gate.veto_triggered 事件
+- **回退策略**：回退到veto维度对应的上游阶段，最多回退3次后升级
+
+### E.3 沙箱执行崩溃
+- **用户看到**：错误详情（脱敏后），崩溃时间点，建议修改方向
+- **系统行为**：记录崩溃日志，触发 sandbox.crash 事件
+- **降级路径**：跳过沙箱执行 → 人工代码审查
+
+### E.4 LLM全部不可用
+- **降级决策树**：主模型→fallback模型→规则引擎→人工处理
+- **用户看到**：降级通知，预计恢复时间，当前使用策略
+- **系统行为**：触发 llm.all_degraded 事件，进入只读模式
+
+## 附录F：用户价值度量(KPI/OKR) [审核修订 v2.1]
+
+| 项目 | 北极星指标 | 健康指标 |
+|------|---------|---------|
+| FlowForge | 配置驱动率（Agent/Tool/Workflow三大类YAML化率） | 启动时间 < 5s、cold start内存 < 200MB、并发session ≥ 50 |
+| DevForge | DCP门禁准确率（与人工评审的一致性） | 端到端发布时长 < 30min、hotfix修复时长 < 15min、自动回滚成功率 ≥ 95% |
+| ContentForge | SOP完成率（深度长文从选题到发布一次通过率） | 平均审核次数 < 2、单篇发布耗时 < 10min、平台适配成功率 ≥ 90% |
+| NovelForge | 章节一致性得分 ≥ 0.8 | 单章节生成耗时 < 60s、Reflexion收敛轮数 < 3 |
+
+## 附录G：PromptManager统一协议 [审核修订 v2.1]
+
+### G.1 设计目标
+解决三个项目共115处硬编码提示词（FlowForge 77 + ContentForge 24 + NovelForge 14）。
+
+### G.2 YAML Schema
+
+```yaml
+# config/prompts.yaml
+prompts:
+  agent.topic.search:
+    template: |
+      你是一个选题策略专家，请基于以下信息生成选题...
+      专栏领域：{{{{ domain }}}}
+      热点数据：{{{{ hot_topics }}}}
+    variables: [domain, hot_topics]
+    output_schema: "topic_search.v1"
+    max_tokens: 2048
+    version: "1.0"
+    tags: [contentforge, topic]
+```
+
+### G.3 核心能力
+1. **加载优先级**：YAML > _DEFAULT_PROMPTS > 代码硬编码
+2. **热加载**：修改prompts.yaml无需重启，5秒内生效
+3. **版本管理**：每个prompt有version字段，支持A/B测试
+4. **缓存策略**：LRU缓存，避免每次从磁盘读取
+5. **变量插值**：Jinja2模板引擎，支持 {{{{ variable }}}} 语法
+6. **Token审计**：构建完成后打印persona token占比（<15%为健康）
+
+### G.4 迁移策略
+1. 统一删除 _DEFAULT_PROMPTS 字典
+2. 代码通过 prompt_manager.get_prompt(key, **kwargs) 加载
+3. 合并重复定义（同一提示词在3个文件中重复硬编码→合并为1个YAML key）
+4. 按Agent/模块维度分批外置，每批完成后用自动化脚本验证
+
+## 附录H：Provider规格与配额管理 [审核修订 v2.1]
+
+### H.1 models.yaml完整规格Schema
+
+```yaml
+providers:
+  openroute:
+    base_url: "https://openrouter.ai/api/v1"
+    api_key: "${{OPENROUTER_API_KEY}}"
+
+models:
+  doubao-seed2:
+    provider: openroute
+    model_id: "doubao-seed-2.0"
+    max_tokens: 8192
+    temperature: 0.7
+    top_p: 0.95
+    json_schema_supported: true
+    parallel_tool_calls: true
+    seed: 42
+    safety_threshold: "medium"
+    cost_per_1k_input_tokens: 0.002
+    cost_per_1k_output_tokens: 0.006
+    tpm_quota: 100000
+    rpm_quota: 1000
+    fallback_chain: ["qwen3.6-plus", "deepseek-chat"]
+```
+
+### H.2 ProviderQuotaManager
+
+```python
+class ProviderQuotaManager:
+    # Provider级TPM/RPM/成本配额管理
+    def __init__(self, config):
+        self._quotas = {}  # model -> QuotaState
+
+    async def check_quota(self, model, token_count):
+        # 检查是否在配额内
+        pass
+
+    async def record_usage(self, model, prompt_tokens, completion_tokens):
+        # 记录使用量
+        pass
+
+    def get_budget_status(self, project):
+        # 获取项目预算状态
+        pass
+```
+
+### H.3 多模型级联策略
+
+```yaml
+# config/llm_route.yaml
+primary_chain:
+  - doubao-seed2.0
+  - qwen3.6-plus
+  - deepseek-chat
+failover:
+  condition: "status_code == 429 or timeout > 30s or moderation_rejected"
+  next: chain[index + 1]
+default_agent_override:
+  fact_check_agent: [doubao-seed2.0, gpt-4o-mini]
+  novel_concept_agent: [doubao-seed2.0]
+```
+
+## 附录I：BaseTool Function Call Schema [审核修订 v2.1]
+
+### I.1 新增接口
+
+```python
+class BaseTool(ABC):
+    name: str
+    description: str
+    # [审核修订 v2.1] 新增
+    parameters_schema: Dict[str, Any]  # JSON Schema格式
+    safety_level: str = "safe"  # safe/moderate/dangerous/critical
+
+    def to_function_call(self) -> Dict[str, Any]:
+        return {{
+            "name": self.name,
+            "description": self.description,
+            "parameters": self.parameters_schema
+        }}
+```
+
+### I.2 HarnessOrchestrator集成
+在 pre_execute 中自动将visible tools注入LLM对话上下文。
+
+## 附录J：可观测性设计 [审核修订 v2.1]
+
+### J.1 Trace链路
+- 每个Agent调用前注入 trace_id（UUID v7，时间排序）
+- 全链路传播：trace_id → session_id → task_id → step_id
+- 结构化日志：JSON格式，PII脱敏，trace_id关联
+
+### J.2 LLM调用事件
+
+```python
+@dataclass
+class LLMCallEvent:
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+    latency_ms: float
+    is_fallback: bool
+    fallback_chain_index: int
+    error_code: Optional[str]
+```
+
+### J.3 开箱即用Grafana仪表盘
+
+| 仪表盘 | 核心指标 |
+|--------|---------|
+| FlowForge健康度 | session数、compaction频率、EventStore写入延迟 |
+| DevForge门禁通过率 | DCP/TR通过率、人工干预率、平均门禁耗时 |
+| ContentForge发布成功率 | 平台适配成功率、发布耗时、CircuitBreaker触发次数 |
+| NovelForge一致性得分 | 章节一致性趋势、伏笔回收率、Reflexion收敛轮数 |
+
+## 附录K：跨项目契约统一 [审核修订 v2.1]
+
+### K.1 变量引用语法统一
+统一为 LangGraph 风格：
+- `${{state.xxx}}` — 引用TaskContext.state中的值
+- `${{params.xxx}}` — 引用任务输入参数
+- `${{result.xxx}}` — 引用上一步骤输出
+- `${{outputs.xxx.yyy}}` — 引用指定步骤的输出字段
+
+### K.2 Agent命名空间
+格式：`项目前缀:agent名`，如 `contentforge:topic`、`novelforge:outline`、`devforge:coder`
+
+### K.3 状态输出统一
+统一为 `state_updates: {{key: expression}}` 一种语法
+
+### K.4 执行策略统一
+
+```yaml
+execution_policy:
+  timeout: 300
+  retry: {{max_attempts: 3, strategy: "exponential_backoff"}}
+  on_error: "abort"  # abort / retry / degrade_to_human
+  on_anomaly: "escalate"
+```
+
+### K.5 检查点统一
+
+```yaml
+checkpoint:
+  enabled: true
+  backend: "sqlite"
+  path: "${{FLOWFORGE_DATA_DIR}}/checkpoints"
+  every_n_steps: 5
+```
+
+## 附录L：配置驱动率度量标准 [审核修订 v2.1]
+
+### L.1 计算公式
+
+```
+配置驱动率 = (通过YAML配置的行为数) / (总行为数)
+行为数 = Agent定义数 + Tool定义数 + Workflow步骤数 + Prompt模板数 + 阈值/规则数
+```
+
+### L.2 各Phase里程碑
+
+| Phase | Agent驱动率 | Tool驱动率 | Workflow驱动率 | Prompt驱动率 |
+|-------|-----------|-----------|--------------|------------|
+| 当前 | 0% | 0% | 17% | 0% |
+| Phase 0 完成 | ≥40% | ≥30% | ≥60% | ≥50% |
+| Phase 1 完成 | ≥70% | ≥50% | ≥80% | ≥80% |
+| Phase 2 完成 | ≥90% | ≥70% | ≥95% | ≥95% |
+| Phase 3 完成 | ≥95% | ≥80% | ≥98% | ≥98% |
+
+## 附录M：性能基线SLO [审核修订 v2.1]
+
+| 组件 | 指标 | 目标 |
+|------|------|------|
+| WorkflowCompiler.compile() | 100 step编译耗时 | < 50ms |
+| SessionManager.check_and_compact() | 1MB上下文压缩耗时 | < 500ms |
+| FiberSet.parallel(10 workers) | 调度延迟 | < 10ms |
+| EventStore.append() | SQLite WAL模式 | < 5ms |
+| PersonaInjector.inject() | 包含5个Source resolve | < 30ms |
+| LoopExecutor单次迭代 | 端到端（含1次LLM） | < 30s |
+| DualThresholdCompactor | LLM摘要 | < 10s |
+| MultiJudgeVerifier | 3个评委并行 | < 15s |
+
+## 附录N：弃用时间线 [审核修订 v2.1]
+
+- DeprecationWarning保留期限：**3个minor版本**或**6个月**，以先到者为准
+- 在 pyproject.toml 中通过 tools.deprecated 配置表管理
+- 删除前必须用 git grep 全量搜索引用，确保0引用
+- 每批删除后跑 pytest --collect-only + E2E骨架测试
