@@ -60,14 +60,18 @@ class PlanExecuteExecutor(BaseModeExecutor):
 
     async def _planner_generate_plan(self, ctx, task):
         llm_tool = ctx.tools.get_tool("llm")
-        prompt = get_prompt(
-            "flowforge.mode.plan_execute.generate_plan",
+        fallback = (
             "将以下任务分解为顺序执行步骤，输出 JSON 数组。最多{max_steps}步。\n"
             '格式: [{{"name": "step1", "task": "具体任务描述", "agent": "agent名或executor"}}]\n'
-            "任务: {task}",
+            "任务: {task}"
+        )
+        prompt = get_prompt(
+            "flowforge.mode.plan_execute.generate_plan",
             max_steps=self.MAX_PLAN_STEPS,
             task=task,
         )
+        if not prompt:
+            prompt = fallback.format(max_steps=self.MAX_PLAN_STEPS, task=task)
         result = await llm_tool.execute(ToolInput(params={
             "messages": [{"role": "user", "content": prompt}],
             "stream": False, "task_id": ctx.task_id,

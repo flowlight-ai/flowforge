@@ -10,10 +10,10 @@ class CacheTool(BaseTool):
         "type": "object",
         "required": ["key"],
         "properties": {
-            "key": {"type": "string"},
-            "action": {"type": "string", "enum": ["get", "set", "delete"], "default": "get"},
-            "value": {"type": "object"},
-            "ttl": {"type": "integer", "default": 3600},
+            "key": {"type": "string", "description": "缓存键名"},
+            "action": {"type": "string", "enum": ["get", "set", "delete"], "default": "get", "description": "操作类型"},
+            "value": {"type": "object", "description": "缓存值（action=set时必填）"},
+            "ttl": {"type": "integer", "default": 3600, "description": "过期时间（秒）"},
         }
     }
 

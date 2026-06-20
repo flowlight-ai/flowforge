@@ -30,6 +30,14 @@ class PluginRegistrationRecord:
         self.event_subscriptions: List[tuple] = []  # (event_type, handler)
         self.schedule_ids: List[str] = []
         self.middleware_added: bool = False
+        # V2 tracking
+        self.workflow_names: List[str] = []
+        self.gate_names: List[str] = []
+        self.evaluator_names: List[str] = []
+        self.sop_names: List[str] = []
+        self.quality_gate_names: List[str] = []
+        self.context_layer_names: List[str] = []
+        self.step_handler_names: List[str] = []
 
     def summary(self) -> Dict[str, Any]:
         return {
@@ -40,6 +48,13 @@ class PluginRegistrationRecord:
             "routes": len(self.route_prefixes),
             "event_subscriptions": len(self.event_subscriptions),
             "schedules": len(self.schedule_ids),
+            "workflows": len(self.workflow_names),
+            "gates": len(self.gate_names),
+            "evaluators": len(self.evaluator_names),
+            "sops": len(self.sop_names),
+            "quality_gates": len(self.quality_gate_names),
+            "context_layers": len(self.context_layer_names),
+            "step_handlers": len(self.step_handler_names),
         }
 
 
@@ -59,6 +74,7 @@ class PluginLifecycleManager:
         memory_manager=None,
         model_service=None,
         plugin_registry=None,
+        event_store=None,
     ):
         self._agent_registry = agent_registry
         self._tool_registry = tool_registry
@@ -71,6 +87,7 @@ class PluginLifecycleManager:
         self._memory_manager = memory_manager
         self._model_service = model_service
         self._plugin_registry = plugin_registry
+        self._event_store = event_store
 
         self._plugins: Dict[str, FlowForgePlugin] = {}
         self._states: Dict[str, PluginState] = {}
@@ -306,3 +323,20 @@ class PluginLifecycleManager:
             plugin.register_event_handlers(self._event_bus)
         if self._scheduler:
             plugin.register_schedules(self._scheduler)
+
+        # V2 hooks
+        try:
+            from flowforge.sdk import (
+                WorkflowRegistry, GateRegistry, QualityGateRegistry,
+                EvaluatorRegistry, SOPRegistry, ContextLayerRegistry,
+                WorkflowStepHandlerRegistry,
+            )
+            plugin.register_workflows(WorkflowRegistry())
+            plugin.register_gates(GateRegistry())
+            plugin.register_evaluators(EvaluatorRegistry())
+            plugin.register_sops(SOPRegistry())
+            plugin.register_quality_gates(QualityGateRegistry())
+            plugin.register_context_layers(ContextLayerRegistry())
+            plugin.register_workflow_step_handler(WorkflowStepHandlerRegistry())
+        except ImportError:
+            pass

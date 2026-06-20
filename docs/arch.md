@@ -2490,3 +2490,2363 @@ class WorkflowCompiler:
 - NovelForge/ContentForge章节发布前强制走moderation预检
 - DevForge代码门禁中对coder生成的代码做moderation + 沙箱执行双重校验
 - moderation的风险标签存入EventStream，方便后续合规审计
+
+---
+
+# [审核修订 v2.2] 六方联合审核修订增补（v2.1未覆盖项）
+
+> 审核日期：2026-06-16 | 修订版本：v2.2 | 来源：6份专家审核意见并集，v2.1未覆盖部分
+
+## 修订19：FWK-01 WorkflowExecutor运行时扩展方案 [来源：审核FWK-01]
+
+### 19.1 问题
+`to_sop_steps()` 只做格式转换（YAML → CompiledStep列表），WorkflowExecutor对条件路由/并行组/回退链的运行时调度能力需明确。
+
+### 19.2 WorkflowExecutor职责边界
+
+```python
+class WorkflowExecutor:
+    """Workflow运行时执行器 — 负责调度逻辑，非格式转换"""
+
+    async def execute(self, workflow: CompiledWorkflow, context: TaskContext) -> WorkflowResult:
+        """执行编译后的Workflow，处理运行时调度"""
+        current_step = workflow.entry_step
+        step_results: Dict[str, StepResult] = {}
+
+        while current_step:
+            step = workflow.steps[current_step]
+
+            # 1. 条件路由：运行时评估条件表达式
+            if step.step_type == StepType.CONDITIONAL:
+                branch = self._evaluate_condition(step.condition, context, step_results)
+                current_step = step.branches[branch]
+                continue
+
+            # 2. 并行组：运行时调度并行执行
+            if step.step_type == StepType.PARALLEL:
+                results = await self._execute_parallel(step, context)
+                step_results[current_step] = StepResult(merged=results)
+                current_step = step.next_step
+                continue
+
+            # 3. 回退链：运行时错误处理与回退
+            if step.step_type == StepType.FALLBACK:
+                result = await self._execute_with_fallback(step, context)
+                step_results[current_step] = result
+                current_step = step.next_step
+                continue
+
+            # 4. 循环：运行时循环控制
+            if step.step_type == StepType.LOOP:
+                result = await self._execute_loop(step, context, step_results)
+                step_results[current_step] = result
+                current_step = step.next_step
+                continue
+
+            # 5. 普通步骤：顺序执行
+            result = await self._execute_step(step, context)
+            step_results[current_step] = result
+            current_step = step.next_step
+
+        return WorkflowResult(step_results=step_results, context=context)
+```
+
+### 19.3 条件路由运行时评估
+
+```python
+def _evaluate_condition(
+    self,
+    condition: str,
+    context: TaskContext,
+    step_results: Dict[str, StepResult],
+) -> str:
+    """运行时评估条件表达式，返回分支名"""
+    # 安全表达式求值（asteval）
+    from asteval import Interpreter
+    aeval = Interpreter()
+
+    # 注入变量
+    aeval.symtable["state"] = context.state
+    aeval.symtable["params"] = context.params
+    aeval.symtable["outputs"] = {
+        k: v.data for k, v in step_results.items()
+    }
+
+    result = aeval(condition)
+    if aeval.error:
+        raise WorkflowConditionError(
+            f"条件表达式求值失败: {condition}, 错误: {aeval.error[0].get_error()}"
+        )
+    return str(result)
+```
+
+### 19.4 并行组运行时调度
+
+```python
+async def _execute_parallel(
+    self, step: CompiledStep, context: TaskContext
+) -> Dict[str, StepResult]:
+    """并行执行多个子步骤，收集所有结果"""
+    import asyncio
+    tasks = []
+    for sub_step_id in step.parallel_steps:
+        sub_step = step.sub_steps[sub_step_id]
+        tasks.append(self._execute_step(sub_step, context))
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    parallel_results = {}
+    for sub_step_id, result in zip(step.parallel_steps, results):
+        if isinstance(result, Exception):
+            if step.fail_fast:
+                raise result
+            parallel_results[sub_step_id] = StepResult(error=str(result))
+        else:
+            parallel_results[sub_step_id] = result
+
+    return parallel_results
+```
+
+### 19.5 回退链运行时处理
+
+```python
+async def _execute_with_fallback(
+    self, step: CompiledStep, context: TaskContext
+) -> StepResult:
+    """带回退链的步骤执行"""
+    last_error = None
+
+    for attempt, provider_step in enumerate(step.fallback_chain):
+        try:
+            result = await self._execute_step(provider_step, context)
+            if attempt > 0:
+                result.metadata["fallback_index"] = attempt
+            return result
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                f"回退链第{attempt}步失败: {provider_step.agent_id}, 错误: {e}"
+            )
+            continue
+
+    raise WorkflowFallbackExhaustedError(
+        f"回退链全部失败，最后错误: {last_error}"
+    )
+```
+
+## 修订20：FWK-06 MAX_STEPS兼容性分析 [来源：审核FWK-06]
+
+### 20.1 问题
+`max_steps` 是 breaking change — 现有代码使用 `max_retries` 控制循环次数，引入 `max_steps` 后语义不同（max_steps=总步骤数 vs max_retries=重试次数），需兼容性分析。
+
+### 20.2 语义差异
+
+| 参数 | 语义 | 作用域 | 默认值 |
+|------|------|--------|--------|
+| `max_retries` | 单步最大重试次数 | 单个Step | 3 |
+| `max_steps` | 整个Workflow/Loop最大步骤数 | 整个Workflow | 50 |
+
+### 20.3 兼容性策略
+
+```python
+@dataclass
+class LoopConfig:
+    """循环配置 — 兼容max_retries和max_steps"""
+    max_steps: int = 50          # 新参数：总步骤上限（安全护栏）
+    max_retries: int = 3         # 旧参数：单步重试次数（向后兼容）
+    max_retries_per_step: int = 3  # 明确语义：每步最大重试
+
+    # 兼容性：max_steps优先级高于max_retries
+    # 旧代码只设max_retries → 自动推算max_steps = max_retries * step_count * 2
+    # 新代码显式设max_steps → 使用新值
+
+    def __post_init__(self):
+        if self.max_steps <= 0:
+            raise ValueError("max_steps必须>0")
+        if self.max_retries <= 0:
+            raise ValueError("max_retries必须>0")
+```
+
+### 20.4 迁移路径
+
+```python
+# 旧代码（仅max_retries）
+config = LoopConfig(max_retries=5)
+# 自动推算：max_steps = 5 * estimated_steps * 2 = 50
+
+# 新代码（显式max_steps）
+config = LoopConfig(max_steps=30, max_retries_per_step=3)
+
+# 过渡期：两者都设
+config = LoopConfig(max_steps=30, max_retries=5)
+# max_steps=30生效，max_retries仅作为max_retries_per_step的别名
+```
+
+### 20.5 Deprecation计划
+
+| 版本 | 行为 |
+|------|------|
+| v1.1 | `max_retries`仍可用，打印DeprecationWarning |
+| v1.2 | `max_retries`映射到`max_retries_per_step`，仍可用 |
+| v2.0 | 移除`max_retries`，仅保留`max_steps` + `max_retries_per_step` |
+
+## 修订21：CAP-14 Harness护栏全面集成设计 [来源：审核CAP-14]
+
+### 21.1 问题
+ArchitectureConstraintEngine / EntropyManager 代码与设计不完全一致，需要代码对齐方案。
+
+### 21.2 ArchitectureConstraintEngine对齐
+
+```python
+class ArchitectureConstraintEngine:
+    """架构约束引擎 — 代码与设计对齐"""
+
+    def __init__(self, config: ConstraintConfig):
+        self.constraints: Dict[str, Constraint] = {}
+        self.violation_log: List[ConstraintViolation] = []
+        self._load_constraints(config)
+
+    def _load_constraints(self, config: ConstraintConfig):
+        """从配置加载约束规则"""
+        for rule in config.rules:
+            self.constraints[rule.id] = Constraint(
+                id=rule.id,
+                pattern=rule.pattern,       # 模块路径匹配模式
+                direction=rule.direction,   # "deny_import" / "require_interface"
+                message=rule.message,
+                severity=rule.severity,     # "error" / "warning"
+            )
+
+    async def check(self, module_path: str, import_path: str) -> ConstraintResult:
+        """检查一次import是否违反架构约束"""
+        for constraint_id, constraint in self.constraints.items():
+            if constraint.matches(module_path, import_path):
+                violation = ConstraintViolation(
+                    constraint_id=constraint_id,
+                    source=module_path,
+                    target=import_path,
+                    severity=constraint.severity,
+                    message=constraint.message,
+                )
+                self.violation_log.append(violation)
+                if constraint.severity == "error":
+                    return ConstraintResult(passed=False, violations=[violation])
+        return ConstraintResult(passed=True, violations=[])
+
+@dataclass
+class Constraint:
+    id: str
+    pattern: str          # 如 "workers.*" → "brain.*" (workers禁止导入brain)
+    direction: str        # "deny_import" / "require_interface"
+    message: str
+    severity: str         # "error" / "warning"
+
+    def matches(self, source: str, target: str) -> bool:
+        """检查source→target是否匹配约束模式"""
+        import fnmatch
+        source_match = fnmatch.fnmatch(source, self.pattern.split("→")[0].strip())
+        target_match = fnmatch.fnmatch(target, self.pattern.split("→")[1].strip())
+        return source_match and target_match
+```
+
+### 21.3 EntropyManager对齐
+
+```python
+class EntropyManager:
+    """熵管理器 — 检测和控制系统复杂度增长"""
+
+    def __init__(self, config: EntropyConfig):
+        self.thresholds = config.thresholds
+        self.metrics: Dict[str, float] = {}
+        self.history: List[EntropySnapshot] = []
+
+    async def measure(self, codebase_path: str) -> EntropyReport:
+        """测量代码库熵值"""
+        snapshot = EntropySnapshot(
+            timestamp=datetime.now(),
+            total_modules=self._count_modules(codebase_path),
+            circular_deps=self._detect_circular_deps(codebase_path),
+            cross_layer_imports=self._detect_cross_layer(codebase_path),
+            hardcoded_values=self._detect_hardcoded(codebase_path),
+            avg_file_lines=self._avg_file_lines(codebase_path),
+        )
+        self.history.append(snapshot)
+
+        # 计算综合熵值
+        entropy = self._calculate_entropy(snapshot)
+        return EntropyReport(
+            entropy_score=entropy,
+            snapshot=snapshot,
+            violations=self._check_thresholds(entropy, snapshot),
+        )
+
+    def _calculate_entropy(self, snapshot: EntropySnapshot) -> float:
+        """综合熵值 = 加权求和"""
+        weights = {
+            "circular_deps": 0.30,      # 循环依赖权重最高
+            "cross_layer": 0.25,        # 跨层导入
+            "hardcoded": 0.20,          # 硬编码
+            "module_growth": 0.15,      # 模块增长
+            "file_size": 0.10,          # 文件大小
+        }
+        scores = {
+            "circular_deps": min(snapshot.circular_deps / 5.0, 1.0),
+            "cross_layer": min(snapshot.cross_layer_imports / 10.0, 1.0),
+            "hardcoded": min(snapshot.hardcoded_values / 20.0, 1.0),
+            "module_growth": min(snapshot.total_modules / 100.0, 1.0),
+            "file_size": min(snapshot.avg_file_lines / 500.0, 1.0),
+        }
+        return sum(weights[k] * scores[k] for k in weights)
+
+@dataclass
+class EntropySnapshot:
+    timestamp: datetime
+    total_modules: int
+    circular_deps: int
+    cross_layer_imports: int
+    hardcoded_values: int
+    avg_file_lines: float
+```
+
+### 21.4 护栏集成到CI
+
+```yaml
+# .github/workflows/ci.yml 新增步骤
+- name: Architecture Constraint Check
+  run: |
+    python -m flowforge.core.constraints check --path flowforge/
+    python -m flowforge.core.entropy measure --path flowforge/ --max-entropy 0.3
+```
+
+## 修订22：INF-01 LLM路由层代码示例 [来源：审核INF-01]
+
+### 22.1 LLMRouter完整代码级设计
+
+```python
+class LLMRouter:
+    """LLM路由层 — 多Provider智能路由"""
+
+    def __init__(self, config: LLMRouterConfig):
+        self.providers: Dict[str, LLMProvider] = {}
+        self.model_routes: Dict[str, ModelRoute] = {}
+        self.health_checker = ProviderHealthChecker()
+        self.cost_tracker = ProviderCostTracker()
+        self._load_config(config)
+
+    def _load_config(self, config: LLMRouterConfig):
+        """加载模型路由配置"""
+        for provider_cfg in config.providers:
+            self.providers[provider_cfg.name] = LLMProvider(
+                name=provider_cfg.name,
+                base_url=provider_cfg.base_url,
+                api_key_env=provider_cfg.api_key_env,
+                models=provider_cfg.models,
+                priority=provider_cfg.priority,
+                rate_limit=provider_cfg.rate_limit,
+            )
+        for route in config.routes:
+            self.model_routes[route.model] = route
+
+    async def chat(
+        self,
+        model: str,
+        messages: List[Dict],
+        **kwargs,
+    ) -> LLMResponse:
+        """智能路由chat请求"""
+        route = self.model_routes.get(model)
+        if not route:
+            raise ModelNotFoundError(f"模型 {model} 无路由配置")
+
+        # 按优先级尝试Provider
+        last_error = None
+        for provider_name in route.providers:
+            provider = self.providers[provider_name]
+
+            # 健康检查
+            if not await self.health_checker.is_healthy(provider):
+                logger.warning(f"Provider {provider_name} 不健康，跳过")
+                continue
+
+            # 限流检查
+            if not provider.rate_limiter.allow():
+                logger.warning(f"Provider {provider_name} 限流，跳过")
+                continue
+
+            try:
+                response = await provider.chat(
+                    model=route.get_actual_model(provider_name),
+                    messages=messages,
+                    **kwargs,
+                )
+                # 记录成功调用
+                self.cost_tracker.record(
+                    provider=provider_name,
+                    model=model,
+                    prompt_tokens=response.usage.prompt_tokens,
+                    completion_tokens=response.usage.completion_tokens,
+                )
+                return response
+            except (LLMTimeoutError, LLMRateLimitError) as e:
+                last_error = e
+                logger.warning(f"Provider {provider_name} 调用失败: {e}")
+                # 标记不健康
+                await self.health_checker.mark_unhealthy(provider, e)
+                continue
+
+        raise LLMAllProvidersFailedError(
+            f"模型 {model} 所有Provider均失败，最后错误: {last_error}"
+        )
+
+@dataclass
+class ModelRoute:
+    """模型路由规则"""
+    model: str                          # 逻辑模型名
+    providers: List[str]                # Provider优先级列表
+    _model_mapping: Dict[str, str]      # Provider → 实际模型名映射
+
+    def get_actual_model(self, provider_name: str) -> str:
+        return self._model_mapping.get(provider_name, self.model)
+```
+
+### 22.2 路由配置示例
+
+```yaml
+# config/models.yaml
+providers:
+  - name: openroute
+    base_url: "http://localhost:6000/v1"
+    api_key_env: "OPENROUTE_API_KEY"
+    priority: 1
+    rate_limit: { rpm: 60, tpm: 100000 }
+    models:
+      - "doubao-seed2"
+      - "qwen-plus"
+      - "deepseek-chat"
+
+  - name: openrouter
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    priority: 2
+    rate_limit: { rpm: 30, tpm: 50000 }
+    models:
+      - "deepseek/deepseek-coder"
+
+routes:
+  - model: "doubao-seed2"
+    providers: ["openroute"]
+    model_mapping: { "openroute": "doubao-seed2" }
+
+  - model: "deepseek-coder"
+    providers: ["openroute", "openrouter"]
+    model_mapping:
+      "openroute": "deepseek-chat"
+      "openrouter": "deepseek/deepseek-coder"
+```
+
+### 22.3 健康检查器
+
+```python
+class ProviderHealthChecker:
+    """Provider健康检查"""
+
+    def __init__(self):
+        self._health_status: Dict[str, ProviderHealth] = {}
+        self._check_interval = 30  # 秒
+
+    async def is_healthy(self, provider: LLMProvider) -> bool:
+        health = self._health_status.get(provider.name)
+        if health is None:
+            return True  # 首次默认健康
+        if health.consecutive_failures >= 3:
+            # 检查是否过了冷却期
+            cooldown = timedelta(seconds=30 * health.consecutive_failures)
+            if datetime.now() - health.last_failure < cooldown:
+                return False
+        return health.is_healthy
+
+    async def mark_unhealthy(self, provider: LLMProvider, error: Exception):
+        health = self._health_status.setdefault(
+            provider.name, ProviderHealth(name=provider.name)
+        )
+        health.consecutive_failures += 1
+        health.last_failure = datetime.now()
+        health.last_error = str(error)
+```
+
+## 修订23：GateConfig timeout竞态条件 [来源：审核CAP-14]
+
+### 23.1 问题
+Gate评估有超时机制，但计时器与评估执行在不同协程中，可能产生竞态：评估完成后计时器仍触发超时。
+
+### 23.2 解决方案：分布式计时器同步
+
+```python
+class GateTimeoutManager:
+    """Gate超时管理 — 防止竞态条件"""
+
+    def __init__(self, default_timeout: float = 10.0):
+        self.default_timeout = default_timeout
+        self._active_timers: Dict[str, asyncio.Task] = {}
+        self._completed: Set[str] = set()
+
+    async def evaluate_with_timeout(
+        self,
+        gate: BaseGate,
+        context: TaskContext,
+        timeout: Optional[float] = None,
+    ) -> GateVerdict:
+        """带超时的Gate评估，防止竞态"""
+        gate_id = gate.gate_id
+        timeout = timeout or self.default_timeout
+
+        # 创建评估任务和超时任务
+        eval_task = asyncio.create_task(
+            gate.evaluate(context),
+            name=f"gate_eval_{gate_id}",
+        )
+        timeout_task = asyncio.create_task(
+            asyncio.sleep(timeout),
+            name=f"gate_timeout_{gate_id}",
+        )
+
+        try:
+            # 等待任一完成
+            done, pending = await asyncio.wait(
+                {eval_task, timeout_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            # 取消未完成的任务
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+            if eval_task in done:
+                # 评估先完成 — 标记完成，防止超时回调
+                self._completed.add(gate_id)
+                return eval_task.result()
+            else:
+                # 超时先完成 — 检查评估是否实际已完成（竞态保护）
+                if gate_id in self._completed:
+                    return eval_task.result()
+                # 真正超时
+                return GateVerdict(
+                    gate_id=gate_id,
+                    passed=True,  # fail-open策略
+                    score=0.0,
+                    reason=f"Gate评估超时({timeout}s)，fail-open放行",
+                    details={"timeout": timeout},
+                    evaluated_at=datetime.now(),
+                )
+        except Exception as e:
+            # 评估异常 — fail-open
+            return GateVerdict(
+                gate_id=gate_id,
+                passed=True,
+                score=0.0,
+                reason=f"Gate评估异常: {e}，fail-open放行",
+                details={"error": str(e)},
+                evaluated_at=datetime.now(),
+            )
+        finally:
+            self._completed.discard(gate_id)
+```
+
+## 修订24：金丝雀状态机checkpoint [来源：审核INF-01]
+
+### 24.1 问题
+金丝雀发布期间进程崩溃后，金丝雀状态丢失，无法确定哪些请求走了新路径。
+
+### 24.2 状态持久化+崩溃恢复
+
+```python
+class CanaryStateManager:
+    """金丝雀状态管理 — 持久化+崩溃恢复"""
+
+    def __init__(self, store: EventStore):
+        self.store = store
+        self._state_key = "canary_state"
+
+    async def save_state(self, state: CanaryState):
+        """持久化金丝雀状态到EventStore"""
+        event = SessionEvent(
+            event_type="canary.state_checkpoint",
+            data={
+                "feature": state.feature,
+                "rollout_percentage": state.rollout_percentage,
+                "phase": state.phase,
+                "requests_new": state.requests_new,
+                "requests_old": state.requests_old,
+                "errors_new": state.errors_new,
+                "errors_old": state.errors_old,
+                "started_at": state.started_at.isoformat(),
+                "last_updated": datetime.now().isoformat(),
+            },
+        )
+        await self.store.append(event)
+
+    async def recover_state(self, feature: str) -> Optional[CanaryState]:
+        """崩溃恢复：从EventStore读取最后状态"""
+        events = await self.store.query(
+            event_type="canary.state_checkpoint",
+            filters={"feature": feature},
+            limit=1,
+            order_by="created_at DESC",
+        )
+        if not events:
+            return None
+
+        data = events[0].data
+        return CanaryState(
+            feature=data["feature"],
+            rollout_percentage=data["rollout_percentage"],
+            phase=data["phase"],
+            requests_new=data["requests_new"],
+            requests_old=data["requests_old"],
+            errors_new=data["errors_new"],
+            errors_old=data["errors_old"],
+            started_at=datetime.fromisoformat(data["started_at"]),
+        )
+
+    async def should_use_new_path(self, feature: str) -> bool:
+        """判断当前请求是否走新路径"""
+        state = await self.recover_state(feature)
+        if not state:
+            return False  # 无状态默认走旧路径
+
+        # 基于rollout_percentage的确定性路由（同一session_id始终走同一路径）
+        import hashlib
+        session_id = get_current_session_id()
+        hash_val = int(hashlib.md5(session_id.encode()).hexdigest(), 16) % 100
+        return hash_val < state.rollout_percentage
+
+@dataclass
+class CanaryState:
+    feature: str
+    rollout_percentage: int  # 0-100
+    phase: Literal["off", "canary_5", "canary_25", "canary_50", "full"]
+    requests_new: int = 0
+    requests_old: int = 0
+    errors_new: int = 0
+    errors_old: int = 0
+    started_at: datetime = field(default_factory=datetime.now)
+```
+
+## 修订25：consensus策略伪代码定义 [来源：审核CAP-14]
+
+### 25.1 问题
+MultiJudgeVerifier的consensus策略（全体一致/超多数/veto_dimensions）在consensus下的行为未明确定义。
+
+### 25.2 Consensus策略伪代码
+
+```python
+class ConsensusStrategy:
+    """共识策略 — 定义多评委裁决规则"""
+
+    @staticmethod
+    def unanimous(verdicts: List[GateVerdict]) -> ConsensusResult:
+        """全体一致：所有评委必须通过"""
+        all_passed = all(v.passed for v in verdicts)
+        min_score = min(v.score for v in verdicts) if verdicts else 0.0
+        dissenters = [v for v in verdicts if not v.passed]
+
+        return ConsensusResult(
+            passed=all_passed,
+            score=min_score,
+            strategy="unanimous",
+            total_judges=len(verdicts),
+            passed_judges=len([v for v in verdicts if v.passed]),
+            dissenters=dissenters,
+            reason=(
+                f"全体一致通过({len(verdicts)}/{len(verdicts)})"
+                if all_passed
+                else f"存在{len(dissenters)}个反对评委"
+            ),
+        )
+
+    @staticmethod
+    def supermajority(
+        verdicts: List[GateVerdict],
+        threshold: float = 2/3,
+    ) -> ConsensusResult:
+        """超多数：通过比例≥threshold（默认2/3）"""
+        passed_count = sum(1 for v in verdicts if v.passed)
+        ratio = passed_count / len(verdicts) if verdicts else 0.0
+        passed = ratio >= threshold
+        avg_score = sum(v.score for v in verdicts) / len(verdicts) if verdicts else 0.0
+        dissenters = [v for v in verdicts if not v.passed]
+
+        return ConsensusResult(
+            passed=passed,
+            score=avg_score,
+            strategy="supermajority",
+            total_judges=len(verdicts),
+            passed_judges=passed_count,
+            dissenters=dissenters,
+            reason=(
+                f"超多数通过({passed_count}/{len(verdicts)}={ratio:.1%}≥{threshold:.1%})"
+                if passed
+                else f"未达超多数({passed_count}/{len(verdicts)}={ratio:.1%}<{threshold:.1%})"
+            ),
+        )
+
+    @staticmethod
+    def veto_dimensions(
+        verdicts: List[GateVerdict],
+        veto_dimensions: List[str],
+    ) -> ConsensusResult:
+        """否决维度：指定维度有一票否决权"""
+        # 按维度分组
+        dim_verdicts: Dict[str, List[GateVerdict]] = {}
+        for v in verdicts:
+            dim = v.details.get("dimension", "default")
+            dim_verdicts.setdefault(dim, []).append(v)
+
+        # 检查否决维度
+        vetoed = False
+        veto_reasons = []
+        for dim in veto_dimensions:
+            if dim in dim_verdicts:
+                dim_passed = all(v.passed for v in dim_verdicts[dim])
+                if not dim_passed:
+                    vetoed = True
+                    veto_reasons.append(
+                        f"否决维度'{dim}'未通过: "
+                        f"{[v.reason for v in dim_verdicts[dim] if not v.passed]}"
+                    )
+
+        # 非否决维度用超多数
+        non_veto_verdicts = [
+            v for v in verdicts
+            if v.details.get("dimension", "default") not in veto_dimensions
+        ]
+        non_veto_result = ConsensusStrategy.supermajority(non_veto_verdicts)
+
+        passed = not vetoed and non_veto_result.passed
+        avg_score = sum(v.score for v in verdicts) / len(verdicts) if verdicts else 0.0
+
+        return ConsensusResult(
+            passed=passed,
+            score=avg_score,
+            strategy="veto_dimensions",
+            total_judges=len(verdicts),
+            passed_judges=sum(1 for v in verdicts if v.passed),
+            dissenters=[v for v in verdicts if not v.passed],
+            reason=(
+                "通过" if passed
+                else "；".join(veto_reasons) if vetoed
+                else non_veto_result.reason
+            ),
+        )
+
+@dataclass
+class ConsensusResult:
+    passed: bool
+    score: float
+    strategy: str
+    total_judges: int
+    passed_judges: int
+    dissenters: List[GateVerdict]
+    reason: str
+```
+
+### 25.3 配置示例
+
+```yaml
+# config/gates.yaml
+gates:
+  - id: "dcp"
+    consensus: "unanimous"  # 代码门禁：全体一致
+    judges: 3
+
+  - id: "content_quality"
+    consensus: "supermajority"
+    supermajority_threshold: 0.67  # 2/3通过
+    judges: 3
+
+  - id: "novel_consistency"
+    consensus: "veto_dimensions"
+    veto_dimensions: ["safety", "legal"]  # 安全/法律维度一票否决
+    judges: 5
+```
+
+---
+
+# [审核修订 v3.0] 六方联合审核修订增补（v2.1/v2.2未覆盖项）
+
+> 审核日期：2026-06-16 | 修订版本：v3.0 | 来源：6份专家审核意见并集，v2.1/v2.2未覆盖部分
+> 审核来源：review_landing_design.md / review_landing_design_deepseek.md / review_landing_design_doubao.md / review_landing_design_kimi.md / review_landing_design_mm.md / review_landing_design_qw.md
+
+## A3.0-1 FWK-01 WorkflowCompiler拆分为Parser+Validator+CodeGen三阶段 [来源：审核1-P0]
+
+### 问题描述
+WorkflowCompiler同时承担编译、验证、转换三个职责，CompiledStep的递归嵌套导致编译产物难以调试。
+
+### 修订方案
+
+```python
+class WorkflowCompilerV2:
+    """WorkflowCompiler V2 — 三阶段编译"""
+
+    def compile(self, yaml_config: Dict[str, Any]) -> CompiledWorkflow:
+        # 阶段1：解析YAML为AST
+        ast = self._parse(yaml_config)
+        # 阶段2：验证AST（类型检查、依赖检查、循环检测）
+        self._validate(ast)
+        # 阶段3：代码生成（AST → CompiledWorkflow）
+        compiled = self._codegen(ast)
+        return compiled
+
+    def _parse(self, yaml_config: Dict) -> WorkflowAST:
+        """阶段1：解析YAML为抽象语法树"""
+        parser = WorkflowParser()
+        return parser.parse(yaml_config)
+
+    def _validate(self, ast: WorkflowAST) -> None:
+        """阶段2：验证AST"""
+        validators = [
+            TypeValidator(),       # StepType合法性
+            DependencyValidator(), # 步骤间依赖可达性
+            CycleValidator(),      # 循环依赖检测
+            SchemaValidator(),     # YAML Schema校验
+        ]
+        for validator in validators:
+            result = validator.validate(ast)
+            if not result.passed:
+                raise WorkflowCompileError(result.errors)
+
+    def _codegen(self, ast: WorkflowAST) -> CompiledWorkflow:
+        """阶段3：代码生成"""
+        codegen = WorkflowCodeGen()
+        return codegen.generate(ast)
+
+    def to_ir(self, yaml_config: Dict) -> str:
+        """导出IR（中间表示）用于可视化调试"""
+        ast = self._parse(yaml_config)
+        return IRSerializer().serialize(ast)
+```
+
+### 优先级
+P0
+
+## A3.0-2 FWK-01编译器与执行器契约，WorkflowExecutor需同步改造 [来源：审核kimi-P0]
+
+### 问题描述
+to_sop_steps()只是格式转换，没有解决WorkflowExecutor对条件路由、并行组、回退链的运行时调度能力。
+
+### 修订方案
+
+```python
+class WorkflowExecutorV2:
+    """WorkflowExecutor V2 — 支持编译产物的运行时调度"""
+
+    def __init__(self, compiler: WorkflowCompiler):
+        self.compiler = compiler
+        self._step_handlers: Dict[StepType, StepHandler] = {
+            StepType.SEQUENCE: SequenceHandler(),
+            StepType.CONDITIONAL: ConditionalHandler(),
+            StepType.PARALLEL: ParallelHandler(),
+            StepType.FALLBACK: FallbackHandler(),
+            StepType.LOOP: LoopHandler(),
+            StepType.GATE: GateHandler(),
+        }
+
+    async def execute(self, workflow: CompiledWorkflow, context: TaskContext) -> WorkflowResult:
+        """执行编译后的Workflow"""
+        results = {}
+        for step in workflow.steps:
+            handler = self._step_handlers.get(step.step_type)
+            if not handler:
+                raise UnsupportedStepTypeError(step.step_type)
+            result = await handler.execute(step, context, results)
+            results[step.id] = result
+        return WorkflowResult(outputs=results)
+```
+
+### 优先级
+P0
+
+## A3.0-3 FWK-01输入映射引入Jinja2模板引擎 [来源：审核kimi-P0]
+
+### 问题描述
+当前input_mapping只支持简单键值映射，无法处理数组映射、字段提取、条件赋值等复杂场景。
+
+### 修订方案
+
+```python
+from jinja2 import Environment, BaseLoader, StrictUndefined
+
+class InputMapperV2:
+    """输入映射V2 — Jinja2模板引擎"""
+
+    def __init__(self):
+        self._env = Environment(
+            loader=BaseLoader(),
+            undefined=StrictUndefined,  # 严格模式：未定义变量报错
+            autoescape=False,
+        )
+
+    def map_inputs(self, input_mapping: Dict[str, str], context: Dict) -> Dict[str, Any]:
+        """根据input_mapping映射输入"""
+        result = {}
+        for target_key, expression in input_mapping.items():
+            template = self._env.from_string(expression)
+            result[target_key] = template.render(**context)
+        return result
+
+# YAML中使用示例：
+# input_mapping:
+#   task_description: "${task.description}"
+#   requirements_doc: "{{ outputs.requirements.requirements_doc | truncate(1000) }}"
+#   chapter_info: "{{ state.outline.volumes[current_volume].chapters[current_chapter] }}"
+```
+
+### 优先级
+P0
+
+## A3.0-4 FWK-02条件表达式解析器安全隐患，使用asteval [来源：审核kimi-P0]
+
+### 问题描述
+当前实现是字符串拼接解析，存在表达式注入风险。
+
+### 修订方案
+
+```python
+from asteval import Interpreter
+
+class SafeExpressionEvaluator:
+    """安全表达式评估器 — 使用asteval"""
+
+    SAFE_NAMES = {
+        "len": len, "min": min, "max": max,
+        "abs": abs, "round": round, "sorted": sorted,
+        "True": True, "False": False, "None": None,
+    }
+
+    def __init__(self):
+        self._interpreter = Interpreter(
+            usersyms=self.SAFE_NAMES,
+            use_numpy=False,
+            minimal=True,
+        )
+
+    def evaluate(self, expression: str, context: Dict[str, Any]) -> Any:
+        """安全评估表达式"""
+        # 白名单检查：只允许安全字符
+        import re
+        if not re.match(r'^[\w\s\.\[\]><=!&|+\-*/%(),:"]+$', expression):
+            raise ExpressionSecurityError(f"不安全的表达式: {expression}")
+
+        self._interpreter.symtable.update(context)
+        try:
+            result = self._interpreter(expression)
+            if self._interpreter.error:
+                raise self._interpreter.error[0]
+            return result
+        except Exception as e:
+            raise ExpressionEvaluationError(f"表达式评估失败: {expression}, 错误: {e}")
+
+    def evaluate_with_default(self, expression: str, context: Dict, default: Any = None, strict: bool = False) -> Any:
+        """含None处理和strict_mode的表达式评估"""
+        result = self.evaluate(expression, context)
+        if result is None:
+            if strict:
+                raise ExpressionNoneError(f"表达式结果为None: {expression}")
+            return default
+        return result
+```
+
+### 优先级
+P0
+
+## A3.0-5 FWK-03 per-step success_condition配置 [来源：审核kimi-P0]
+
+### 问题描述
+FallbackChain的_is_success()判断逻辑过于简化，不同Tool的成功/失败语义不一致。
+
+### 修订方案
+
+```python
+class FallbackChainV2:
+    """FallbackChain V2 — per-step success_condition"""
+
+    @staticmethod
+    async def _is_success(result: Any, success_condition: Optional[str] = None) -> bool:
+        """根据per-step的success_condition判断成功"""
+        if success_condition is None:
+            # 默认逻辑
+            if isinstance(result, dict):
+                return not result.get("error") and result.get("status") != "failed"
+            return True
+
+        # 使用安全表达式评估器
+        evaluator = SafeExpressionEvaluator()
+        context = {"result": result, "status": result.get("status") if isinstance(result, dict) else None}
+        return bool(evaluator.evaluate(success_condition, context))
+
+# YAML配置示例：
+# steps:
+#   - name: "check_resource"
+#     type: fallback
+#     fallback_chain: ["http_head", "http_get"]
+#     success_condition: "status in [200, 404]"  # 404也算成功
+#
+#   - name: "publish_article"
+#     type: fallback
+#     fallback_chain: ["playwright_publish", "api_publish"]
+#     success_condition: "result.get('published', False) == True"
+```
+
+### 优先级
+P0
+
+## A3.0-6 FWK-06 TurnKind与LoopPhase合并为统一状态机 [来源：审核kimi-P0/mm-P0]
+
+### 问题描述
+TurnKind含6种状态，LoopPhase含7种状态，两套并行状态机导致隐式不一致。
+
+### 修订方案
+
+```python
+from enum import Enum
+
+class UnifiedLoopState(str, Enum):
+    """统一循环状态机 — 合并TurnKind与LoopPhase"""
+    # 基础状态（对应LoopPhase）
+    IDLE = "idle"               # 初始状态
+    EXECUTING = "executing"     # 执行Agent
+    EVALUATING = "evaluating"   # 评估结果（Gate/QualityCheck）
+    REFLECTING = "reflecting"   # 反思修正
+    COMPACTING = "compacting"   # 上下文压缩
+    AGENT_SWITCHING = "agent_switching"  # Agent切换
+    COMPLETED = "completed"     # 完成
+    FAILED = "failed"           # 失败
+    PAUSED = "paused"           # 暂停（人工审核）
+
+class LoopContext:
+    """循环上下文 — 封装7个参数为1个对象"""
+    def __init__(
+        self,
+        verdict: Optional[GateVerdict] = None,
+        attempt: int = 0,
+        max_retries: int = 4,
+        max_steps: int = 25,
+        feedback_gate: Optional[str] = None,
+        context_utilization: float = 0.0,
+        compaction_threshold: float = 0.8,
+    ):
+        self.verdict = verdict
+        self.attempt = attempt
+        self.max_retries = max_retries
+        self.max_steps = max_steps  # max_steps优先级高于max_retries
+        self.feedback_gate = feedback_gate
+        self.context_utilization = context_utilization
+        self.compaction_threshold = compaction_threshold
+
+class UnifiedLoopStateMachine:
+    """统一循环状态机"""
+
+    TRANSITIONS = {
+        # (当前状态, 条件) → 下一状态
+        (UnifiedLoopState.IDLE, "start"): UnifiedLoopState.EXECUTING,
+        (UnifiedLoopState.EXECUTING, "success"): UnifiedLoopState.EVALUATING,
+        (UnifiedLoopState.EXECUTING, "error"): UnifiedLoopState.REFLECTING,
+        (UnifiedLoopState.EVALUATING, "passed"): UnifiedLoopState.COMPLETED,
+        (UnifiedLoopState.EVALUATING, "failed"): UnifiedLoopState.REFLECTING,
+        (UnifiedLoopState.EVALUATING, "human_required"): UnifiedLoopState.PAUSED,
+        (UnifiedLoopState.REFLECTING, "retry"): UnifiedLoopState.EXECUTING,
+        (UnifiedLoopState.REFLECTING, "exhausted"): UnifiedLoopState.FAILED,
+        (UnifiedLoopState.REFLECTING, "overflow"): UnifiedLoopState.COMPACTING,
+        (UnifiedLoopState.COMPACTING, "done"): UnifiedLoopState.EXECUTING,
+        (UnifiedLoopState.COMPACTING, "failed"): UnifiedLoopState.FAILED,
+        (UnifiedLoopState.PAUSED, "resume"): UnifiedLoopState.EVALUATING,
+        (UnifiedLoopState.EXECUTING, "switch_agent"): UnifiedLoopState.AGENT_SWITCHING,
+        (UnifiedLoopState.AGENT_SWITCHING, "done"): UnifiedLoopState.EXECUTING,
+    }
+
+    def decide(self, current: UnifiedLoopState, ctx: LoopContext) -> UnifiedLoopState:
+        """根据当前状态和上下文决定下一状态"""
+        # max_steps优先级高于max_retries
+        if ctx.attempt >= ctx.max_steps:
+            return UnifiedLoopState.FAILED
+        if ctx.context_utilization > ctx.compaction_threshold:
+            return UnifiedLoopState.COMPACTING
+        # ... 其他转换逻辑
+```
+
+### 优先级
+P0
+
+## A3.0-7 INF-02 EventStore WAL模式+批量提交+inbox三阶段 [来源：审核1-P0/kimi-P0/mm-P0]
+
+### 问题描述
+EventStore使用SQLite单文件append后立即commit，高频写入性能堪忧。缺失steer/queue投递语义和inbox三阶段。
+
+### 修订方案
+
+```python
+class EventStoreV2:
+    """EventStore V2 — WAL模式+批量提交+inbox三阶段"""
+
+    def __init__(self, db_path: str, batch_size: int = 100, flush_interval: float = 1.0):
+        self._conn = sqlite3.connect(db_path)
+        self._conn.execute("PRAGMA journal_mode=WAL")  # WAL模式
+        self._conn.execute("PRAGMA synchronous=NORMAL")  # 降低同步级别
+        self._batch: List[SessionEvent] = []
+        self._batch_size = batch_size
+        self._flush_interval = flush_interval
+        self._last_flush = time.time()
+
+    async def append(self, event: SessionEvent) -> None:
+        """追加事件（批量提交）"""
+        self._batch.append(event)
+        if len(self._batch) >= self._batch_size or \
+           time.time() - self._last_flush >= self._flush_interval:
+            await self._flush()
+
+    async def _flush(self) -> None:
+        """批量提交"""
+        if not self._batch:
+            return
+        cursor = self._conn.cursor()
+        cursor.executemany(
+            "INSERT INTO events (event_type, data, created_at) VALUES (?, ?, ?)",
+            [(e.event_type, json.dumps(e.data), e.created_at) for e in self._batch]
+        )
+        self._conn.commit()
+        self._batch.clear()
+        self._last_flush = time.time()
+
+class SessionInputManager:
+    """Session输入管理器 — inbox三阶段（admit→promote→execute）"""
+
+    async def admit(self, input: SessionInput) -> str:
+        """阶段1：接收输入，放入inbox"""
+        input_id = str(uuid4())
+        await self.event_store.append(SessionEvent(
+            event_type="input.admitted",
+            data={"input_id": input_id, "content": input.content, "priority": input.priority},
+        ))
+        return input_id
+
+    async def promote(self, input_id: str) -> None:
+        """阶段2：提升输入，从inbox移到执行队列"""
+        await self.event_store.append(SessionEvent(
+            event_type="input.promoted",
+            data={"input_id": input_id},
+        ))
+
+    async def execute(self, input_id: str) -> None:
+        """阶段3：执行输入"""
+        await self.event_store.append(SessionEvent(
+            event_type="input.executing",
+            data={"input_id": input_id},
+        ))
+
+    async def steer(self, input: SessionInput) -> None:
+        """steer语义：用户中途插入指令优先处理"""
+        input_id = await self.admit(input)
+        await self.promote(input_id)  # steer立即提升
+        # interrupt_seq：抑制旧wake
+        await self.event_store.append(SessionEvent(
+            event_type="input.steer",
+            data={"input_id": input_id, "interrupt_previous": True},
+        ))
+```
+
+### 优先级
+P0
+
+## A3.0-8 INF-03 DI容器SCOPED生命周期 [来源：审核1-P1]
+
+### 问题描述
+DIContainer的SCOPED生命周期未实现，resolve()中只处理了SINGLETON和TRANSIENT。
+
+### 修订方案
+
+```python
+class DIContainerV2:
+    """DI容器V2 — 支持SCOPED生命周期"""
+
+    def __init__(self):
+        self._singletons: Dict[str, Any] = {}
+        self._factories: Dict[str, Tuple[type, Lifecycle]] = {}
+        self._scope_stack: List[Dict[str, Any]] = []  # SCOPED实例存储
+
+    def register(self, interface: type, implementation: type,
+                 lifecycle: Lifecycle = Lifecycle.SINGLETON):
+        self._factories[interface.__name__] = (implementation, lifecycle)
+
+    def create_scope(self) -> "ScopedContainer":
+        """创建SCOPED作用域"""
+        scope_instances = {}
+        self._scope_stack.append(scope_instances)
+        return ScopedContainer(self, scope_instances)
+
+    def release_scope(self) -> None:
+        """释放SCOPED作用域"""
+        if self._scope_stack:
+            self._scope_stack.pop()
+
+    async def resolve(self, interface: type) -> Any:
+        name = interface.__name__
+        impl, lifecycle = self._factories[name]
+
+        if lifecycle == Lifecycle.SINGLETON:
+            if name not in self._singletons:
+                self._singletons[name] = impl()
+            return self._singletons[name]
+        elif lifecycle == Lifecycle.SCOPED:
+            if not self._scope_stack:
+                raise DIScopeError(f"SCOPED依赖'{name}'在作用域外解析")
+            scope = self._scope_stack[-1]
+            if name not in scope:
+                scope[name] = impl()
+            return scope[name]
+        else:  # TRANSIENT
+            return impl()
+
+class ScopedContainer:
+    """作用域容器 — 绑定到请求/会话生命周期"""
+    def __init__(self, parent: DIContainerV2, instances: Dict[str, Any]):
+        self._parent = parent
+        self._instances = instances
+
+    async def resolve(self, interface: type) -> Any:
+        return await self._parent.resolve(interface)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        self._instances.clear()
+```
+
+### 优先级
+P1
+
+## A3.0-9 INF-05 DualThresholdCompactor最大次数限制+强制截断 [来源：审核1-P0]
+
+### 问题描述
+Compaction触发LLM摘要但LLM调用失败时，回退到抽取式摘要可能仍超阈值，导致死循环。
+
+### 修订方案
+
+```python
+class DualThresholdCompactorV2:
+    """DualThresholdCompactor V2 — 最大次数限制+强制截断"""
+
+    def __init__(self, max_compactions: int = 3, safe_threshold_ratio: float = 0.7):
+        self.max_compactions = max_compactions
+        self.safe_threshold_ratio = safe_threshold_ratio  # 强制截断到安全阈值的70%
+        self._compaction_count: Dict[str, int] = {}  # session_id → count
+
+    async def compact(self, session_id: str, messages: List[Message]) -> List[Message]:
+        count = self._compaction_count.get(session_id, 0)
+        if count >= self.max_compactions:
+            # 超过最大次数：强制截断+丢弃最旧消息
+            logger.warning(f"Session {session_id} 达到Compaction上限({self.max_compactions})，强制截断")
+            return self._force_truncate(messages)
+
+        self._compaction_count[session_id] = count + 1
+
+        try:
+            # 尝试LLM摘要（中文摘要模型指定Doubao）
+            return await self._llm_summarize(messages, model="doubao-seed2")
+        except LLMError:
+            # LLM失败：回退到抽取式摘要
+            result = self._extractive_summarize(messages)
+            # 抽取式摘要后检查是否仍超阈值
+            if self._estimate_tokens(result) > self._soft_threshold * self.safe_threshold_ratio:
+                # 仍超阈值：强制截断到安全线以下
+                return self._force_truncate(result)
+            return result
+
+    def _force_truncate(self, messages: List[Message]) -> List[Message]:
+        """强制截断到安全阈值以下"""
+        # 保留最近的消息，丢弃最旧的
+        budget = int(self._soft_threshold * self.safe_threshold_ratio)
+        result = []
+        current_tokens = 0
+        for msg in reversed(messages):
+            msg_tokens = self._estimate_tokens([msg])
+            if current_tokens + msg_tokens > budget:
+                break
+            result.insert(0, msg)
+            current_tokens += msg_tokens
+        return result
+```
+
+### 优先级
+P0
+
+## A3.0-10 CAP-10 FiberSet next_completed()超时可配置 [来源：审核1-P1]
+
+### 问题描述
+next_completed()使用asyncio.wait_for(timeout=0.1)，100ms超时在LLM调用场景下太短。
+
+### 修订方案
+
+```python
+class FiberSetV2:
+    """FiberSet V2 — 超时可配置"""
+
+    def __init__(self, default_timeout: float = 1.0):
+        self.default_timeout = default_timeout
+        self._fibers: Dict[str, asyncio.Task] = {}
+
+    async def next_completed(self, timeout: Optional[float] = None) -> Optional[FiberResult]:
+        """等待下一个完成的Fiber，超时返回None"""
+        timeout = timeout or self.default_timeout
+        if not self._fibers:
+            return None
+
+        try:
+            done, _ = await asyncio.wait(
+                self._fibers.values(),
+                timeout=timeout,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if not done:
+                return None
+            task = done.pop()
+            fiber_id = self._get_fiber_id(task)
+            result = task.result()
+            del self._fibers[fiber_id]
+            return FiberResult(fiber_id=fiber_id, result=result)
+        except Exception as e:
+            logger.warning(f"FiberSet next_completed异常: {e}")
+            return None
+```
+
+### 优先级
+P1
+
+## A3.0-11 Effect Schema映射，关键数据结构改Pydantic BaseModel [来源：审核kimi-P1/mm-P1]
+
+### 问题描述
+LLMRequest是@dataclass而非BaseModel，SessionEvent.data是黑盒dict，关键跨边界数据结构缺乏运行时校验。
+
+### 修订方案
+
+```python
+from pydantic import BaseModel, Field
+
+class LLMRequest(BaseModel):
+    """LLM请求 — Pydantic BaseModel替代@dataclass"""
+    model: str
+    messages: List[Dict[str, str]]
+    temperature: float = 0.7
+    max_tokens: int = 4096
+    top_p: float = 0.95
+    json_schema: Optional[Dict] = None
+    stream: bool = False
+
+class LLMCallEvent(BaseModel):
+    """LLM调用事件 — Pydantic BaseModel"""
+    event_type: str = "llm.call_completed"
+    model: str
+    provider: str
+    prompt_tokens: int
+    completion_tokens: int
+    latency_ms: float
+    is_fallback: bool = False
+    fallback_chain_index: int = 0
+    error_code: Optional[str] = None
+    trace_id: str
+    session_id: str
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+class SessionEventV2(BaseModel):
+    """Session事件V2 — Pydantic BaseModel替代黑盒dict"""
+    event_type: str
+    data: Dict[str, Any] = Field(default_factory=dict)
+    trace_id: Optional[str] = None
+    session_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+class GateVerdictV2(BaseModel):
+    """Gate裁决V2 — Pydantic BaseModel"""
+    gate_id: str
+    passed: bool
+    score: float
+    reason: str
+    details: Dict[str, Any] = Field(default_factory=dict)
+    evaluated_at: datetime = Field(default_factory=datetime.now)
+```
+
+### 优先级
+P1
+
+## A3.0-12 FlowForge反向import修复 [来源：审核kimi-P1/mm-P1]
+
+### 问题描述
+flowforge/core/flowforge.py第17-28行反向import ContentForge工具，违反P9契约。
+
+### 修订方案
+
+```python
+# 修复前（flowforge/core/flowforge.py 第17-28行）：
+# try:
+#     from contentforge.tools.toutiao_publisher import ToutiaoPublisherTool
+# except ImportError:
+#     ToutiaoPublisherTool = None
+
+# 修复后：删除反向import，通过ContentForgePlugin的register_tools()注册
+# flowforge/core/flowforge.py 中不再import任何*Forge模块
+
+# ContentForge Plugin注册：
+class ContentForgePlugin(FlowForgePlugin):
+    def register_tools(self) -> List[Type[BaseTool]]:
+        from contentforge.tools.toutiao_publisher import ToutiaoPublisherTool
+        from contentforge.tools.wechat_publisher import WeChatPublisherTool
+        from contentforge.tools.pexels_image import PexelsImageTool
+        return [ToutiaoPublisherTool, WeChatPublisherTool, PexelsImageTool]
+
+# P9契约验证检查项：
+# - CI新增：grep -r "from contentforge" flowforge/ → 0匹配
+# - CI新增：grep -r "from devforge" flowforge/ → 0匹配
+# - CI新增：grep -r "from novelforge" flowforge/ → 0匹配
+```
+
+### 优先级
+P0
+
+## A3.0-13 Plugin协议扩展 [来源：审核kimi-P1/mm-P1]
+
+### 问题描述
+FlowForgePlugin协议只提供4个钩子，不足以表达*Forge业务复杂度。
+
+### 修订方案
+
+```python
+class FlowForgePluginV2(Protocol):
+    """FlowForge Plugin协议V2 — 扩展钩子"""
+
+    # 原有4个钩子
+    def register_agents(self) -> List[Type[BaseAgent]]: ...
+    def register_tools(self) -> List[Type[BaseTool]]: ...
+    def register_routes(self) -> List[RouteDef]: ...
+    def register_event_handlers(self) -> Dict[str, Callable]: ...
+
+    # 新增钩子
+    def register_workflows(self) -> List[str]:
+        """注册Workflow YAML文件路径"""
+        return []
+
+    def register_gates(self) -> List[str]:
+        """注册Gate YAML文件路径（DevForge DCP/TR、NovelForge QG）"""
+        return []
+
+    def register_evaluators(self) -> List[Type[BaseEvaluator]]:
+        """注册Evaluator Agent（DevForge 8个Evaluator）"""
+        return []
+
+    def register_sops(self) -> List[str]:
+        """注册SOP YAML文件路径（ContentForge 4种SOP）"""
+        return []
+
+    def register_quality_gates(self) -> List[str]:
+        """注册Quality Gate YAML路径（NovelForge 6道QG）"""
+        return []
+
+    def register_context_layers(self) -> List[ContextLayerDef]:
+        """注册上下文层定义（NovelForge 5层上下文）"""
+        return []
+
+    def register_workflow_step_handler(self) -> Dict[str, Type[StepHandler]]:
+        """注册自定义StepType处理器"""
+        return {}
+        # DevForge注入: {"gate": GateStepHandler}
+        # ContentForge注入: {"sop_node": SOPNodeHandler}
+        # NovelForge注入: {"quality_gate": QualityGateStepHandler}
+
+    def register_canary_strategy(self) -> Optional[Type[CanaryStrategy]]:
+        """注册金丝雀发布策略（DevForge）"""
+        return None
+
+    def register_sandbox(self) -> Optional[Type[SandboxExecutor]]:
+        """注册代码沙箱执行器（DevForge）"""
+        return None
+
+    def register_publish_platforms(self) -> List[Type[PlatformPublisher]]:
+        """注册多平台Publisher（ContentForge）"""
+        return []
+```
+
+### 优先级
+P1
+
+## A3.0-14 ConfigVersion配置版本控制 [来源：审核kimi-P1/mm-P1]
+
+### 问题描述
+Workflow YAML、Agent YAML、Persona定义、Prompt模板等没有版本控制，配置变更无法追踪。
+
+### 修订方案
+
+```python
+class ConfigVersion(BaseModel):
+    """配置版本控制"""
+    config_type: str          # "workflow" | "agent" | "persona" | "prompt" | "gate"
+    config_id: str            # 配置唯一标识
+    version: str              # 语义化版本 "1.0.0"
+    checksum: str             # 内容SHA256
+    created_at: datetime
+    created_by: str
+    changelog: str            # 变更说明
+    deprecated: bool = False
+    deprecated_since: Optional[str] = None  # 弃用版本
+
+class ConfigVersionManager:
+    """配置版本管理器"""
+
+    def __init__(self, store: ConfigStore):
+        self.store = store
+
+    async def detect_changes(self) -> List[ConfigChange]:
+        """启动时检测配置变更"""
+        changes = []
+        for config_type in ["workflow", "agent", "persona", "prompt", "gate"]:
+            current = await self._load_configs(config_type)
+            baseline = await self.store.get_baseline(config_type)
+            for config_id, config in current.items():
+                checksum = self._compute_checksum(config)
+                if config_id not in baseline or baseline[config_id].checksum != checksum:
+                    changes.append(ConfigChange(
+                        config_type=config_type,
+                        config_id=config_id,
+                        change_type="added" if config_id not in baseline else "modified",
+                        new_checksum=checksum,
+                    ))
+        return changes
+
+    async def graceful_reload(self, changes: List[ConfigChange]) -> None:
+        """优雅重载变更的配置"""
+        for change in changes:
+            if change.config_type == "prompt":
+                # Prompt模板：热加载
+                await self.prompt_manager.reload(change.config_id)
+            elif change.config_type in ("workflow", "agent"):
+                # Workflow/Agent：标记需要重启
+                logger.warning(f"配置 {change.config_id} 已变更，需要重启生效")
+```
+
+### 优先级
+P1
+
+## A3.0-15 BaseTool function call Schema [来源：审核doubao-P0]
+
+### 问题描述
+BaseTool未提供标准的function_call schema，Doubao的function call要求parameters_schema。
+
+### 修订方案
+
+```python
+from pydantic import BaseModel
+
+class BaseToolV2:
+    """BaseTool V2 — 增加parameters_schema和to_function_call()"""
+
+    name: str
+    description: str
+
+    @classmethod
+    def parameters_schema(cls) -> Dict[str, Any]:
+        """返回工具参数的JSON Schema"""
+        # 从_run方法的类型注解自动生成
+        import inspect
+        sig = inspect.signature(cls._run)
+        properties = {}
+        required = []
+        for param_name, param in sig.parameters.items():
+            if param_name == "self":
+                continue
+            prop = {"type": "string"}  # 默认string
+            if param.annotation != inspect.Parameter.empty:
+                type_map = {str: "string", int: "integer", float: "number", bool: "boolean"}
+                prop["type"] = type_map.get(param.annotation, "string")
+            properties[param_name] = prop
+            if param.default == inspect.Parameter.empty:
+                required.append(param_name)
+        return {
+            "type": "object",
+            "properties": properties,
+            "required": required,
+        }
+
+    def to_function_call(self) -> Dict[str, Any]:
+        """转换为Doubao/OpenAI function call格式"""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "parameters": self.parameters_schema(),
+        }
+
+    async def _run(self, **kwargs) -> Any:
+        raise NotImplementedError
+```
+
+### 优先级
+P0
+
+## A3.0-16 models.yaml Doubao规格参数完整配置 [来源：审核doubao-P0]
+
+### 问题描述
+models.yaml只有模型名字，缺少Doubao的max_tokens/temperature/json_schema/cost/tpm等规格参数。
+
+### 修订方案
+
+```yaml
+# config/models.yaml — 完整Doubao规格
+providers:
+  openroute:
+    base_url: "http://localhost:6000/v1"
+    api_key_env: "OPENROUTE_API_KEY"
+    priority: 1
+    rate_limit: { rpm: 60, tpm: 100000 }
+
+  openrouter:
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    priority: 2
+    rate_limit: { rpm: 30, tpm: 50000 }
+
+models:
+  doubao-seed2:
+    provider: openroute
+    model_id: "doubao-seed-2.0"
+    max_tokens: 8192
+    temperature: 0.7
+    top_p: 0.95
+    json_schema_supported: true
+    parallel_tool_calls: true
+    seed: 42
+    safety_threshold: "medium"
+    cost_per_1k_input_tokens: 0.002
+    cost_per_1k_output_tokens: 0.006
+    tpm_quota: 100000
+    rpm_quota: 1000
+    fallback_chain: ["qwen-plus", "deepseek-chat"]
+
+  qwen-plus:
+    provider: openroute
+    model_id: "qwen3.6-plus"
+    max_tokens: 8192
+    temperature: 0.7
+    top_p: 0.9
+    json_schema_supported: true
+    parallel_tool_calls: false
+    cost_per_1k_input_tokens: 0.003
+    cost_per_1k_output_tokens: 0.009
+    tpm_quota: 60000
+    rpm_quota: 500
+
+  deepseek-chat:
+    provider: openroute
+    model_id: "deepseek-chat"
+    max_tokens: 8192
+    temperature: 0.7
+    top_p: 0.9
+    json_schema_supported: false
+    parallel_tool_calls: false
+    cost_per_1k_input_tokens: 0.001
+    cost_per_1k_output_tokens: 0.002
+    tpm_quota: 80000
+    rpm_quota: 800
+```
+
+### 优先级
+P0
+
+## A3.0-17 Persona注入Doubao seed指令格式 [来源：审核doubao-P0]
+
+### 问题描述
+Persona注入使用自然语言段落，Doubao的system prompt最佳做法是短（≤1024 token）、指令式、无冗余。
+
+### 修订方案
+
+```python
+class PersonaInjectorV2:
+    """Persona注入V2 — Doubao seed指令格式"""
+
+    MAX_SOUL_TOKENS = 512  # SOUL维度限定512 token以内
+    MAX_PERSONA_RATIO = 0.15  # persona token占比<15%
+
+    async def inject(self, prompt: str, persona: PersonaConfig, context: TaskContext) -> str:
+        """注入Persona到prompt"""
+        # 1. 构建结构化system指令（非自然语言段落）
+        system_parts = []
+
+        if persona.soul:
+            soul_text = self._compress_if_needed(persona.soul.to_prompt_segment(), self.MAX_SOUL_TOKENS)
+            system_parts.append(f"<|system|>SOUL:{soul_text}")
+
+        if persona.memory:
+            memory_text = persona.memory.to_prompt_segment()
+            system_parts.append(f"<|system|>MEMORY:{memory_text}")
+
+        if persona.creation:
+            creation_text = persona.creation.to_prompt_segment()
+            system_parts.append(f"<|system|>CREATION:{creation_text}")
+
+        # 2. 成本审计：检查persona token占比
+        persona_tokens = self._estimate_tokens("\n".join(system_parts))
+        total_tokens = persona_tokens + self._estimate_tokens(prompt)
+        if persona_tokens / max(total_tokens, 1) > self.MAX_PERSONA_RATIO:
+            logger.warning(
+                f"Persona token占比 {persona_tokens/total_tokens:.1%} 超过阈值 {self.MAX_PERSONA_RATIO:.1%}"
+            )
+
+        return "\n".join(system_parts) + "\n" + prompt
+
+    def _compress_if_needed(self, text: str, max_tokens: int) -> str:
+        """超限时自动压缩"""
+        current_tokens = self._estimate_tokens(text)
+        if current_tokens <= max_tokens:
+            return text
+        # 截断到max_tokens
+        ratio = max_tokens / current_tokens
+        char_limit = int(len(text) * ratio)
+        return text[:char_limit] + "..."
+```
+
+### 优先级
+P0
+
+## A3.0-18 FWK-07 PipelineCompiler独立实现 [来源：审核1-P2]
+
+### 问题描述
+PipelineCompiler继承WorkflowCompiler意味着Pipeline拥有了Workflow的全部能力，违反最小知识原则。
+
+### 修订方案
+
+```python
+class PipelineCompiler:
+    """PipelineCompiler — 独立实现，不继承WorkflowCompiler"""
+
+    def compile(self, yaml_config: Dict[str, Any]) -> CompiledPipeline:
+        """编译Pipeline YAML为CompiledPipeline（仅SEQUENCE步骤）"""
+        steps = []
+        for step_config in yaml_config.get("steps", []):
+            if step_config.get("type") not in (None, "sequence"):
+                raise PipelineCompileError(
+                    f"Pipeline只支持SEQUENCE步骤，不支持 {step_config.get('type')}"
+                )
+            steps.append(CompiledStep(
+                id=step_config["id"],
+                name=step_config.get("name", step_config["id"]),
+                step_type=StepType.SEQUENCE,
+                agent=step_config.get("agent"),
+                input_mapping=step_config.get("input_mapping", {}),
+                output_key=step_config.get("output_key"),
+            ))
+        return CompiledPipeline(name=yaml_config["name"], steps=steps)
+```
+
+### 优先级
+P2
+
+## A3.0-19 CAP-01 Source<A>代数降级为简单Dict [来源：审核1-P0/kimi/mm]
+
+### 问题描述
+5种Source类型（SourceStatic / SourceAgent / SourceTool / SourceParam / SourceContext）+ 6字段ContextFragment过度设计，Phase 2阶段不需要代数操作能力，增加理解成本和实现复杂度。
+
+### 修订方案
+
+```python
+# Phase 2：降级为简单Dict
+@dataclass
+class ContextFragment:
+    """上下文片段 — 简化为3字段"""
+    key: str           # 片段标识
+    content: str       # 片段内容
+    priority: float    # 优先级（0.0~1.0）
+
+# 上下文容器：Dict[str, ContextFragment]
+# 使用示例：
+context = {
+    "topic_result": ContextFragment(key="topic_result", content="...", priority=0.9),
+    "search_result": ContextFragment(key="search_result", content="...", priority=0.7),
+    "draft_outline": ContextFragment(key="draft_outline", content="...", priority=0.5),
+}
+
+# Phase 3：再引入代数操作（merge / filter / compose）
+# class ContextLayer:
+#     def merge(self, other: "ContextLayer") -> "ContextLayer": ...
+#     def filter(self, predicate: Callable[[ContextFragment], bool]) -> "ContextLayer": ...
+#     def compose(self, layers: List["ContextLayer"]) -> "ContextLayer": ...
+```
+
+### 优先级
+P0→P3（Phase 2降级为简单Dict，Phase 3再引入代数操作）
+
+## A3.0-20 跨项目统一规范架构 [来源：6份审核文档并集]
+
+### 问题描述
+6份审核文档一致指出跨项目规范不统一：变量引用3种语法（`${xxx}` / `{{xxx}}` / `$xxx`）、Agent命名空间冲突（同名Agent在不同项目无法区分）、状态输出3种语法（`state_updates` / `output_key` / `returns`）、错误处理不统一（有的用异常有的用dict）、检查点不统一（有的有有的没有）。
+
+### 修订方案
+
+```yaml
+# 1. 变量引用统一语法
+variable_reference:
+  pattern: "${scope.name}"
+  scopes:
+    - state: "${state.xxx}"        # 运行时状态
+    - params: "${params.xxx}"      # 任务参数
+    - result: "${result.xxx}"      # 当前步骤结果
+    - outputs: "${outputs.xxx.yyy}" # 其他步骤输出（步骤ID.字段名）
+
+# 2. Agent命名空间：项目前缀:agent名
+agent_namespace:
+  pattern: "{project}:{agent_name}"
+  examples:
+    - "contentforge:topic"       # ContentForge选题Agent
+    - "contentforge:writer"      # ContentForge写作Agent
+    - "novelforge:outline"       # NovelForge大纲Agent
+    - "devforge:coder"           # DevForge编码Agent
+    - "mallforge:cs_agent"       # MallForge客服Agent
+  resolution: "默认项目前缀可省略，跨项目引用必须带前缀"
+
+# 3. 状态输出统一语法
+state_output:
+  pattern: "state_updates"
+  syntax:
+    state_updates:
+      key: expression            # 统一用state_updates
+  deprecated:
+    - "output_key"               # 废弃，迁移到state_updates
+    - "returns"                  # 废弃，迁移到state_updates
+
+# 4. 执行策略统一
+execution_policy:
+  fields:
+    timeout: int                 # 超时秒数
+    retry: int                   # 重试次数
+    on_error: str                # "fail" | "skip" | "fallback"
+    on_anomaly: str              # "pause" | "log" | "ignore"
+  example:
+    execution_policy:
+      timeout: 300
+      retry: 3
+      on_error: "fallback"
+      on_anomaly: "pause"
+
+# 5. 检查点统一
+checkpoint:
+  fields:
+    enabled: bool
+    backend: str                 # "sqlite" | "file" | "redis"
+    path: str                    # 存储路径
+    every_n_steps: int           # 每N步自动检查点
+  example:
+    checkpoint:
+      enabled: true
+      backend: "sqlite"
+      path: "${config.data_dir}/checkpoints"
+      every_n_steps: 5
+```
+
+### 优先级
+P0
+
+## A3.0-21 ProviderQuotaManager统一TPM/RPM/成本预算管理 [来源：审核doubao]
+
+### 问题描述
+当前无统一的TPM（Tokens Per Minute）/RPM（Requests Per Minute）/成本预算管理，多Agent并发调用时可能超出供应商配额导致限流或额外费用。
+
+### 修订方案
+
+```python
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from collections import defaultdict
+
+@dataclass
+class QuotaState:
+    """配额状态"""
+    tpm_used: int = 0
+    rpm_used: int = 0
+    cost_used: float = 0.0
+    window_start: datetime = field(default_factory=datetime.now)
+
+class ProviderQuotaManager:
+    """供应商配额管理器 — TPM/RPM/成本预算"""
+
+    def __init__(self, config: Dict[str, Any]):
+        self._quotas: Dict[str, Dict] = config  # provider → quota配置
+        self._states: Dict[str, Dict[str, QuotaState]] = defaultdict(dict)
+        # _states[provider][model] → QuotaState
+
+    async def check_tpm(self, provider: str, model: str) -> bool:
+        """检查TPM配额是否可用"""
+        state = self._get_state(provider, model)
+        self._reset_if_expired(state)
+        quota = self._quotas.get(provider, {}).get("tpm_quota", float("inf"))
+        return state.tpm_used < quota
+
+    async def check_rpm(self, provider: str, model: str) -> bool:
+        """检查RPM配额是否可用"""
+        state = self._get_state(provider, model)
+        self._reset_if_expired(state)
+        quota = self._quotas.get(provider, {}).get("rpm_quota", float("inf"))
+        return state.rpm_used < quota
+
+    async def check_budget(self, provider: str) -> bool:
+        """检查成本预算是否可用"""
+        total_cost = sum(s.cost_used for s in self._states.get(provider, {}).values())
+        budget = self._quotas.get(provider, {}).get("daily_budget", float("inf"))
+        return total_cost < budget
+
+    async def record_usage(self, provider: str, model: str,
+                           tokens: int, cost: float) -> None:
+        """记录使用量"""
+        state = self._get_state(provider, model)
+        self._reset_if_expired(state)
+        state.tpm_used += tokens
+        state.rpm_used += 1
+        state.cost_used += cost
+
+    async def wait_for_quota(self, provider: str, model: str,
+                             timeout: float = 30.0) -> bool:
+        """等待配额可用（带超时）"""
+        import asyncio
+        start = time.time()
+        while time.time() - start < timeout:
+            if await self.check_tpm(provider, model) and \
+               await self.check_rpm(provider, model) and \
+               await self.check_budget(provider):
+                return True
+            await asyncio.sleep(1.0)
+        return False
+
+    def _get_state(self, provider: str, model: str) -> QuotaState:
+        if model not in self._states[provider]:
+            self._states[provider][model] = QuotaState()
+        return self._states[provider][model]
+
+    def _reset_if_expired(self, state: QuotaState) -> None:
+        """1分钟窗口过期则重置"""
+        if datetime.now() - state.window_start >= timedelta(minutes=1):
+            state.tpm_used = 0
+            state.rpm_used = 0
+            state.window_start = datetime.now()
+```
+
+### 优先级
+P1
+
+## A3.0-22 Doubao moderation内容安全层架构 [来源：审核doubao]
+
+### 问题描述
+内容安全高风险域（新闻/财经/健康等）未集成Doubao moderation能力，存在合规风险。INF-08安全层的L5层需要具体实现方案。
+
+### 修订方案
+
+```python
+from pydantic import BaseModel
+from enum import Enum
+from typing import List, Optional
+
+class RiskLevel(str, Enum):
+    """风险等级"""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+class ModerationResult(BaseModel):
+    """内容审核结果"""
+    passed: bool
+    risk_level: RiskLevel
+    risk_labels: List[str]       # ["violence", "politics", "adult"]
+    confidence: float            # 0.0~1.0
+    suggestion: Optional[str]    # 修改建议
+    raw_response: Dict[str, Any] # Doubao原始响应
+
+class DoubaoModerationLayer:
+    """Doubao内容安全层 — INF-08 L5层实现"""
+
+    # 高风险域必须过审
+    HIGH_RISK_DOMAINS = {"news", "finance", "health", "politics", "education"}
+
+    def __init__(self, llm_client: LLMClient, config: Dict[str, Any]):
+        self.llm_client = llm_client
+        self.strict_mode = config.get("strict_mode", True)  # fail-closed
+        self.risk_threshold = config.get("risk_threshold", 0.7)
+
+    async def moderate(self, content: str, domain: str = "",
+                       context: Optional[Dict] = None) -> ModerationResult:
+        """内容安全审核"""
+        try:
+            response = await self.llm_client.chat(
+                model="doubao-seed2",
+                messages=[{
+                    "role": "system",
+                    "content": "你是一个内容安全审核员，评估内容是否合规。"
+                }, {
+                    "role": "user",
+                    "content": f"请审核以下内容的合规性：\n{content}"
+                }],
+                tools=[{
+                    "type": "function",
+                    "function": {
+                        "name": "moderation_result",
+                        "description": "内容审核结果",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "passed": {"type": "boolean"},
+                                "risk_level": {"type": "string", "enum": ["low","medium","high","critical"]},
+                                "risk_labels": {"type": "array", "items": {"type": "string"}},
+                                "confidence": {"type": "number"},
+                                "suggestion": {"type": "string"}
+                            },
+                            "required": ["passed", "risk_level", "risk_labels", "confidence"]
+                        }
+                    }
+                }]
+            )
+            return self._parse_moderation_response(response, domain)
+        except Exception as e:
+            # fail-closed：审核失败默认拒绝
+            if self.strict_mode:
+                return ModerationResult(
+                    passed=False, risk_level=RiskLevel.CRITICAL,
+                    risk_labels=["moderation_error"],
+                    confidence=1.0,
+                    suggestion=f"审核服务异常，安全策略拒绝：{e}",
+                    raw_response={"error": str(e)}
+                )
+            raise
+
+    def _parse_moderation_response(self, response: Any, domain: str) -> ModerationResult:
+        """解析审核响应"""
+        # 高风险域降低通过阈值
+        effective_threshold = self.risk_threshold
+        if domain in self.HIGH_RISK_DOMAINS:
+            effective_threshold = max(0.5, self.risk_threshold - 0.2)
+        # ... 解析逻辑
+```
+
+### 优先级
+P0
+
+## A3.0-23 多模型级联架构 [来源：审核doubao]
+
+### 问题描述
+未明确以Doubao为主的级联策略，多模型之间缺乏primary/failover/default的统一编排机制。
+
+### 修订方案
+
+```yaml
+# config/llm_route.yaml — 多模型级联配置
+cascade_strategy:
+  # 主链：Doubao优先
+  primary_chain:
+    - model: "doubao-seed2"
+      provider: "openroute"
+      role: "primary"
+      conditions:
+        json_schema: true        # 支持JSON Schema输出
+        function_call: true      # 支持Function Call
+        moderation: true         # 支持内容安全审核
+
+  # 回退条件
+  failover_conditions:
+    - condition: "provider_unavailable"
+      action: "next_in_chain"
+    - condition: "rate_limited"
+      action: "wait_and_retry"
+      wait_seconds: 5
+      max_retries: 3
+    - condition: "timeout"
+      action: "fallback_to_fast_model"
+    - condition: "quality_below_threshold"
+      action: "escalate_to_larger_model"
+
+  # 回退链
+  fallback_chain:
+    - model: "qwen-plus"
+      provider: "openroute"
+      role: "fallback_1"
+    - model: "deepseek-chat"
+      provider: "openroute"
+      role: "fallback_2"
+
+  # 默认Agent覆盖：特定Agent使用指定模型
+  default_agent_override:
+    contentforge:topic: "doubao-seed2"     # 选题用Doubao
+    contentforge:writer: "doubao-seed2"    # 写作用Doubao
+    devforge:coder: "deepseek-chat"        # 编码用DeepSeek
+    devforge:reviewer: "qwen-plus"         # 审查用Qwen
+    novelforge:outline: "doubao-seed2"     # 大纲用Doubao
+```
+
+```python
+class LLMCascadeRouter:
+    """LLM级联路由器"""
+
+    def __init__(self, config: Dict[str, Any], quota_manager: ProviderQuotaManager):
+        self.config = config
+        self.quota_manager = quota_manager
+
+    async def route(self, agent_name: str, request: LLMRequest) -> LLMResponse:
+        """级联路由：primary → failover → fallback"""
+        # 1. 检查Agent覆盖
+        override = self._get_agent_override(agent_name)
+        if override:
+            request.model = override
+
+        # 2. 尝试primary
+        try:
+            if await self.quota_manager.check_tpm(request.model, request.provider):
+                return await self._call_with_retry(request)
+        except (ProviderUnavailableError, RateLimitError) as e:
+            logger.warning(f"Primary模型失败: {e}")
+
+        # 3. 尝试fallback链
+        for fallback in self.config.get("fallback_chain", []):
+            try:
+                request.model = fallback["model"]
+                request.provider = fallback["provider"]
+                return await self._call_with_retry(request)
+            except Exception as e:
+                logger.warning(f"Fallback模型 {fallback['model']} 失败: {e}")
+                continue
+
+        raise AllModelsExhaustedError("所有模型均不可用")
+```
+
+### 优先级
+P1
+
+## A3.0-24 CAP-02 PermissionV2完善 — ASK超时/并发去重/审计日志 [来源：审核mm]
+
+### 问题描述
+Permission系统（ASK机制）存在3个缺失：1) ASK超时无默认行为，用户不响应时系统挂死；2) 并发ASK无去重，同一操作多次请求审批；3) 审批审计日志缺失，无法追溯。
+
+### 修订方案
+
+```python
+from pydantic import BaseModel
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Any
+
+class ApprovalRequest(BaseModel):
+    """审批请求"""
+    request_id: str
+    operation: str
+    resource: str
+    risk_level: str              # "low" | "medium" | "high"
+    reason: str
+    requested_at: datetime
+    timeout_seconds: int = 300   # 默认5分钟超时
+    dedup_key: Optional[str]     # 去重键（相同操作+资源）
+
+class ApprovalResponse(BaseModel):
+    """审批响应"""
+    request_id: str
+    approved: bool
+    responder: str               # "user" | "timeout" | "auto_policy"
+    responded_at: datetime
+    reason: Optional[str] = None
+
+class ApprovalAuditLog(BaseModel):
+    """审批审计日志"""
+    request_id: str
+    operation: str
+    resource: str
+    risk_level: str
+    approved: bool
+    responder: str
+    requested_at: datetime
+    responded_at: datetime
+    duration_seconds: float
+
+class PermissionV2:
+    """Permission V2 — ASK超时/并发去重/审计日志"""
+
+    def __init__(self, event_store: EventStore, config: Dict[str, Any]):
+        self.event_store = event_store
+        self.timeout_default = config.get("ask_timeout_default", "deny")  # fail-closed
+        self._pending: Dict[str, ApprovalRequest] = {}
+        self._dedup_cache: Dict[str, str] = {}  # dedup_key → request_id
+        self._audit_logs: List[ApprovalAuditLog] = []
+
+    async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
+        """请求审批（带超时和去重）"""
+        # 1. 并发去重：相同操作+资源复用已有审批
+        if request.dedup_key and request.dedup_key in self._dedup_cache:
+            existing_id = self._dedup_cache[request.dedup_key]
+            if existing_id in self._pending:
+                logger.info(f"审批请求去重: {request.dedup_key} → {existing_id}")
+                return await self._wait_for_approval(existing_id, request.timeout_seconds)
+
+        # 2. 记录待审批
+        self._pending[request.request_id] = request
+        if request.dedup_key:
+            self._dedup_cache[request.dedup_key] = request.request_id
+
+        # 3. 发送审批事件（WebSocket推送给用户）
+        await self.event_store.append(SessionEvent(
+            event_type="approval.requested",
+            data=request.model_dump(),
+        ))
+
+        # 4. 等待审批（带超时）
+        try:
+            response = await self._wait_for_approval(
+                request.request_id, request.timeout_seconds
+            )
+        except ApprovalTimeoutError:
+            # fail-closed：超时默认DENY
+            response = ApprovalResponse(
+                request_id=request.request_id,
+                approved=False,
+                responder="timeout",
+                responded_at=datetime.now(),
+                reason=f"审批超时({request.timeout_seconds}s)，安全策略默认拒绝",
+            )
+
+        # 5. 记录审计日志
+        self._audit_logs.append(ApprovalAuditLog(
+            request_id=request.request_id,
+            operation=request.operation,
+            resource=request.resource,
+            risk_level=request.risk_level,
+            approved=response.approved,
+            responder=response.responder,
+            requested_at=request.requested_at,
+            responded_at=response.responded_at,
+            duration_seconds=(response.responded_at - request.requested_at).total_seconds(),
+        ))
+
+        # 6. 清理
+        self._pending.pop(request.request_id, None)
+        if request.dedup_key:
+            self._dedup_cache.pop(request.dedup_key, None)
+
+        return response
+
+    async def _wait_for_approval(self, request_id: str,
+                                  timeout: int) -> ApprovalResponse:
+        """等待审批响应（子类实现具体等待机制）"""
+        raise NotImplementedError
+```
+
+### 优先级
+P0
+
+## A3.0-25 事件总线统一架构 [来源：审核1]
+
+### 问题描述
+当前4套事件体系并存（EventStore + EventBus + AgentBus + SessionEventStream），职责重叠、语义混乱、事件丢失风险高。需要统一为单一事件架构。
+
+### 修订方案
+
+```python
+from pydantic import BaseModel
+from typing import Callable, Any, List, Dict
+from enum import Enum
+
+class EventPriority(str, Enum):
+    """事件优先级"""
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+class DurableEvent(BaseModel):
+    """持久化事件 — 统一事件模型"""
+    event_id: str
+    event_type: str              # "agent.completed" / "tool.called" / "gate.evaluated" ...
+    source: str                  # 事件源（agent_id / tool_id / system）
+    priority: EventPriority = EventPriority.NORMAL
+    data: Dict[str, Any]
+    trace_id: str
+    session_id: str
+    timestamp: datetime
+
+class FlowForgeEventBus:
+    """统一事件总线 — 合并4套事件体系"""
+
+    def __init__(self, event_store: EventStore):
+        self._store = event_store
+        self._handlers: Dict[str, List[Callable]] = {}
+        self._wildcard_handlers: List[Callable] = []  # 监听所有事件
+
+    async def emit(self, event: DurableEvent) -> None:
+        """发布事件（持久化+通知）"""
+        # 1. 持久化到EventStore
+        await self._store.append(SessionEvent(
+            event_type=event.event_type,
+            data=event.model_dump(),
+        ))
+        # 2. 通知订阅者
+        handlers = self._handlers.get(event.event_type, [])
+        for handler in handlers:
+            try:
+                await handler(event)
+            except Exception as e:
+                logger.error(f"事件处理器异常: {event.event_type}, {e}")
+        # 3. 通知通配符订阅者
+        for handler in self._wildcard_handlers:
+            try:
+                await handler(event)
+            except Exception as e:
+                logger.error(f"通配符处理器异常: {e}")
+
+    def subscribe(self, event_type: str, handler: Callable) -> None:
+        """订阅事件"""
+        if event_type == "*":
+            self._wildcard_handlers.append(handler)
+        else:
+            self._handlers.setdefault(event_type, []).append(handler)
+
+    def unsubscribe(self, event_type: str, handler: Callable) -> None:
+        """取消订阅"""
+        if event_type == "*":
+            self._wildcard_handlers = [h for h in self._wildcard_handlers if h != handler]
+        else:
+            self._handlers.get(event_type, []).remove(handler)
+
+class AgentBus:
+    """AgentBus — 桥接层，适配旧接口到统一EventBus"""
+
+    def __init__(self, event_bus: FlowForgeEventBus):
+        self._bus = event_bus
+
+    async def agent_completed(self, agent_id: str, result: Any,
+                               trace_id: str, session_id: str) -> None:
+        """Agent完成事件（桥接到统一EventBus）"""
+        await self._bus.emit(DurableEvent(
+            event_id=str(uuid4()),
+            event_type="agent.completed",
+            source=agent_id,
+            data={"result": result},
+            trace_id=trace_id,
+            session_id=session_id,
+            timestamp=datetime.now(),
+        ))
+
+    async def tool_called(self, tool_name: str, args: Dict,
+                           trace_id: str, session_id: str) -> None:
+        """工具调用事件（桥接到统一EventBus）"""
+        await self._bus.emit(DurableEvent(
+            event_id=str(uuid4()),
+            event_type="tool.called",
+            source=tool_name,
+            data={"args": args},
+            trace_id=trace_id,
+            session_id=session_id,
+            timestamp=datetime.now(),
+        ))
+```
+
+### 优先级
+P1

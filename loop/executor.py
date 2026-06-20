@@ -28,6 +28,7 @@ from flowforge.loop.planner import LoopPlanner
 from flowforge.loop.verifier import LoopVerifier
 from flowforge.loop.reflector import LoopReflector
 from flowforge.loop.registry import LoopRegistry
+from flowforge.loop.turn_transition import TurnTransitionEngine, TurnState
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("loop.executor")
@@ -80,6 +81,8 @@ class LoopExecutor:
         self.on_iteration_update = on_iteration_update
         self.on_iteration_complete = on_iteration_complete
         self.on_loop_state_update = on_loop_state_update
+        # FWK-06: 统一状态机
+        self.turn_engine = TurnTransitionEngine()
 
     async def run(self, task: TaskContext, loop_config: dict) -> LoopResult:
         """执行 Loop：规划→执行→校验→复盘→重试。"""
@@ -140,6 +143,7 @@ class LoopExecutor:
             return await asyncio.wait_for(_do_execute(), timeout=total_timeout)
         except asyncio.TimeoutError:
             state.phase = LoopPhase.FAILED
+            self.turn_engine.try_transition(TurnState.FAILED, reason="total timeout exceeded")
             state.past_errors.append(
                 f"Loop total timeout ({total_timeout}s) exceeded"
             )
@@ -186,6 +190,15 @@ class LoopExecutor:
         # 读取 Memory 映射配置
         memory_config = loop_config.get("memory", {})
         store_failures = memory_config.get("store_failures", False)
+
+        # 将 worker_config 中的 steps 注入到 task.metadata，使 WorkflowExecutor 能获取 SOP 步骤
+        worker_steps = worker_config.get("steps", [])
+        if worker_steps and worker_mode == "workflow":
+            task.metadata["sop_steps"] = worker_steps
+            # 同时注入 workflow 名称，供 WorkflowExecutor 识别
+            task.metadata["workflow_name"] = worker_config.get("workflow", "")
+            logger.info(f"[loop] Injected worker steps into task.metadata: {len(worker_steps)} steps, "
+                        f"workflow={worker_config.get('workflow', '')}")
         failure_key = memory_config.get("failure_key", "loop-failures")
         # memory_mapping 使用设计文档中的英文键名：
         #   context → WorkingMemory, session → ShortTermMemory,
@@ -195,6 +208,7 @@ class LoopExecutor:
 
         # 1. 规划
         state.phase = LoopPhase.PLANNING
+        self.turn_engine.try_transition(TurnState.EXECUTING, reason="loop planning started")
         plan = await self.planner.plan(task, loop_config.get("planner", {}))
         state.current_plan = plan
 
@@ -303,11 +317,14 @@ class LoopExecutor:
                 if state.verification_history:
                     last_verdict = state.verification_history[-1]
                     task.metadata["loop_verifier_errors"] = last_verdict.get("errors", [])
+                    logger.info(f"[loop] 迭代{attempt + 1}: 注入loop_verifier_errors={len(last_verdict.get('errors', []))}条, "
+                                 f"loop_reflections={len(last_reflection.get('suggestions', []))}条")
             await self.harness.pre_execute(task)
 
             # 3. 执行（委托给 HybridExecutor / 嵌套 Loop / 并行 Worker）
             #    使用 asyncio.wait_for 包裹，实现单次迭代超时控制
             state.phase = LoopPhase.EXECUTING
+            self.turn_engine.try_transition(TurnState.EXECUTING, reason=f"iteration {attempt + 1} executing")
             iter_timeout = min(timeout_per_iteration, remaining)
 
             try:
@@ -349,6 +366,19 @@ class LoopExecutor:
             if isinstance(result, dict) and not result.get("error"):
                 last_good_result = result
 
+            # === 详细日志：定位执行结果内容 ===
+            logger.info(f"[loop][DEBUG] 迭代{attempt + 1}执行结果: type={type(result).__name__}")
+            if isinstance(result, dict):
+                logger.info(f"[loop][DEBUG]   result keys={list(result.keys())}")
+                for k in ['draft', 'edited_draft', 'content', 'result', 'output', 'seo_title']:
+                    if k in result:
+                        v = result[k]
+                        v_preview = str(v)[:200] if v else "None"
+                        logger.info(f"[loop][DEBUG]   result[{k}] type={type(v).__name__}, len={len(str(v)) if v else 0}, preview={v_preview}")
+            elif hasattr(result, '__dict__'):
+                logger.info(f"[loop][DEBUG]   result attrs={list(vars(result).keys())}")
+            # === 详细日志结束 ===
+
             # 5. Loop Verifier（业务级质量校验）
             # 根据 loop_config.verifier.mode 动态选择 verifier
             verifier_config = loop_config.get("verifier", {})
@@ -362,8 +392,15 @@ class LoopExecutor:
                 except Exception as e:
                     logger.warning(f"[loop] Failed to create verifier mode '{verifier_mode}': {e}, using default")
             state.phase = LoopPhase.VERIFYING
+            self.turn_engine.try_transition(TurnState.EVALUATING, reason=f"iteration {attempt + 1} verifying")
             verdict = await active_verifier.verify(result, task, verifier_config)
             state.verification_history.append(verdict.model_dump())
+
+            # 详细日志：评审结果
+            logger.info(f"[loop] 迭代{attempt + 1}评审结果: passed={verdict.passed}, "
+                         f"score={verdict.score:.3f}, threshold={verifier_config.get('pass_threshold', 0.9)}, "
+                         f"errors_count={len(verdict.errors)}, "
+                         f"errors_top3={verdict.errors[:3] if verdict.errors else '[]'}")
 
             # 更新迭代记录（result + verdict）
             if iter_id and self.on_iteration_update:
@@ -391,6 +428,7 @@ class LoopExecutor:
             if verdict.passed:
                 # 成功：存储经验 + 返回
                 state.phase = LoopPhase.COMPLETED
+                self.turn_engine.try_transition(TurnState.COMPLETED, reason=f"iteration {attempt + 1} passed")
                 self.checkpoint_mgr.save(
                     task_id=state.task_id,
                     step_name=f"loop:{state.loop_id}:attempt_{state.attempt}",
@@ -439,6 +477,7 @@ class LoopExecutor:
 
             # 6. 失败：复盘
             state.phase = LoopPhase.REFLECTING
+            self.turn_engine.try_transition(TurnState.REFLECTING, reason=f"iteration {attempt + 1} failed, reflecting")
             reflection = await self.reflector.reflect(verdict.errors, task, state)
             state.reflection_history.append(reflection.model_dump())
             state.past_errors.extend(verdict.errors)
@@ -540,6 +579,7 @@ class LoopExecutor:
 
         # 耗尽重试次数或总超时
         state.phase = LoopPhase.FAILED
+        self.turn_engine.try_transition(TurnState.FAILED, reason="max retries exceeded or total timeout")
         self.checkpoint_mgr.save(
             task_id=state.task_id,
             step_name=f"loop:{state.loop_id}:attempt_{state.attempt}",

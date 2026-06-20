@@ -158,3 +158,20 @@ class ToolRegistry:
             except Exception:
                 pass
         return sorted(names)
+
+    def get_function_calls(self, tool_names: list[str] | None = None) -> list[dict]:
+        """获取指定工具（或全部工具）的function calling格式定义。
+
+        Args:
+            tool_names: 需要获取的工具名列表，为None时返回全部工具。
+
+        Returns:
+            符合OpenAI function calling协议的tools列表。
+        """
+        tools = []
+        for name, tool in self._tools.items():
+            if tool_names and name not in tool_names:
+                continue
+            if hasattr(tool, 'to_function_call'):
+                tools.append(tool.to_function_call())
+        return tools

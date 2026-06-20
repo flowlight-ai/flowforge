@@ -1032,3 +1032,1661 @@ checkpoint:
 - 在 pyproject.toml 中通过 tools.deprecated 配置表管理
 - 删除前必须用 git grep 全量搜索引用，确保0引用
 - 每批删除后跑 pytest --collect-only + E2E骨架测试
+
+---
+
+# [审核修订 v2.2] 六方联合审核修订增补（v2.1未覆盖项）
+
+> 审核日期：2026-06-16 | 修订版本：v2.2 | 来源：6份专家审核意见并集，v2.1未覆盖部分
+
+## 一、向后兼容切换策略 [来源：审核FWK-01/FWK-06/INF-01]
+
+每个设计项需补充新旧路径切换策略，明确迁移完成后的旧代码删除时间线和验收标准。
+
+### 1.1 切换策略分类
+
+| 策略 | 适用场景 | 风险等级 | 切换机制 |
+|------|---------|---------|---------|
+| Feature Flag | 核心运行时路径（WorkflowCompiler、LLMRouter、TurnTransition） | 高 | `config/system.yaml` 中 `features.use_new_xxx: true/false`，默认false |
+| A-B并行验证 | 数据产出路径（EventStore、Compaction、PersonaInjector） | 中 | 新旧路径同时运行，对比输出一致性≥99.5%后切换 |
+| 硬切换 | 纯内部重构（Repository层、Config外置、DI容器升级） | 低 | 直接替换，单PR完成 |
+
+### 1.2 各设计项切换策略
+
+| 设计项 | 切换策略 | Feature Flag名 | 旧代码删除时间线 | 验收标准 |
+|--------|---------|---------------|----------------|---------|
+| FWK-01 WorkflowCompiler | Feature Flag | `features.use_workflow_compiler` | Flag开启后2个minor版本（3个月） | dev_hotfix.yaml + dev_greenfield.yaml跑通 |
+| FWK-06 TurnTransitionEngine | Feature Flag | `features.use_turn_transition_v2` | Flag开启后1个minor版本（6周） | 9状态覆盖原6+7状态所有场景 |
+| INF-01 LLMRouter | A-B并行验证 | `features.use_llm_router` | 并行验证通过后1个minor版本 | 相同请求路由结果一致率≥99.5% |
+| INF-02 EventStore | A-B并行验证 | `features.use_event_store` | 并行验证通过后1个minor版本 | 事件写入/读取一致性100% |
+| INF-05 Compaction | Feature Flag | `features.use_dual_threshold_compactor` | Flag开启后1个minor版本 | 压缩后上下文可用性≥95% |
+| INF-11 Repository层 | 硬切换 | N/A | 单PR合入后立即删除 | 所有SQL操作通过Repository |
+| INF-12 配置外置 | 硬切换 | N/A | 单PR合入后立即删除 | 0处硬编码路径/密钥 |
+
+### 1.3 Feature Flag数据结构
+
+```python
+@dataclass
+class FeatureFlag:
+    name: str
+    enabled: bool
+    rollout_percentage: int = 0  # 0-100，支持灰度
+    allowed_projects: List[str] = field(default_factory=list)  # 空=全部
+    fallback_to_old: bool = True  # 新路径异常时是否回退旧路径
+    created_at: datetime = field(default_factory=datetime.now)
+    expires_at: Optional[datetime] = None  # Flag过期时间，到期强制切换
+```
+
+### 1.4 旧代码删除验收流程
+
+```
+1. git grep 搜索旧代码所有引用 → 0引用
+2. pytest --collect-only 确认无测试依赖旧路径
+3. 运行全量E2E测试（含HTTP Cassette录制回放）
+4. 删除旧代码 + 删除Feature Flag
+5. 再次全量回归验证
+```
+
+## 二、Gate/Quality Gate术语统一 [来源：审核FWK-01/CAP-14]
+
+### 2.1 问题
+当前FlowForge用"Gate"、DevForge用"QualityGate"、NovelForge用"门禁"，术语不统一导致跨项目协作混乱。
+
+### 2.2 统一方案
+
+FlowForge提供通用Gate抽象，三个项目统一使用：
+
+```python
+class BaseGate(ABC):
+    """通用门禁抽象基类"""
+    gate_id: str
+    gate_type: Literal["quality", "safety", "compliance", "performance"]
+    threshold: float  # 0.0-1.0
+    evaluator: BaseEvaluator
+
+    @abstractmethod
+    async def evaluate(self, context: TaskContext) -> GateVerdict: ...
+
+@dataclass
+class GateVerdict:
+    gate_id: str
+    passed: bool
+    score: float  # 0.0-1.0
+    reason: str
+    details: Dict[str, Any]
+    evaluated_at: datetime
+```
+
+### 2.3 术语映射
+
+| 项目 | 原术语 | 统一术语 | 迁移方式 |
+|------|--------|---------|---------|
+| FlowForge | Gate | Gate | 无需迁移 |
+| DevForge | QualityGate / DCP / TR | Gate(gate_type="quality") | Phase 1迁移 |
+| NovelForge | 门禁 / QualityGate | Gate(gate_type="quality") | Phase 1迁移 |
+| ContentForge | 审核 | Gate(gate_type="compliance") | Phase 1迁移 |
+
+## 三、灾备与降级设计 [来源：审核INF-01/INF-02/CAP-02]
+
+### 3.1 降级决策树
+
+每个Phase 1核心功能配降级决策树：
+
+```python
+class DegradationDecisionTree:
+    """通用降级决策树"""
+
+    @staticmethod
+    async def decide(component: str, error: Exception) -> DegradationAction:
+        if isinstance(error, (LLMTimeoutError, LLMRateLimitError)):
+            # LLM不可用 → 降级到备选模型或人工
+            if await LLMRouter.has_fallback(component):
+                return DegradationAction.SWITCH_PROVIDER
+            return DegradationAction.DEGRADE_TO_HUMAN
+
+        if isinstance(error, (StorageError, DatabaseCorruptError)):
+            # 存储不可用 → 降级到内存模式
+            return DegradationAction.USE_MEMORY_FALLBACK
+
+        if isinstance(error, WorkflowCompileError):
+            # Workflow编译失败 → 降级到硬编码SOP
+            return DegradationAction.USE_HARDCODED_SOP
+
+        if isinstance(error, ToolExecutionError):
+            # 工具执行失败 → 降级到替代工具或跳过
+            if await ToolRegistry.has_alternative(component):
+                return DegradationAction.USE_ALTERNATIVE_TOOL
+            return DegradationAction.SKIP_AND_LOG
+
+        return DegradationAction.ABORT
+
+@dataclass
+class DegradationAction:
+    action_type: Literal[
+        "switch_provider", "degrade_to_human",
+        "use_memory_fallback", "use_hardcoded_sop",
+        "use_alternative_tool", "skip_and_log", "abort"
+    ]
+    target: Optional[str] = None
+    reason: str = ""
+```
+
+### 3.2 task.degrade_to_human事件契约
+
+```python
+@dataclass
+class DegradeToHumanEvent:
+    """降级到人工事件"""
+    task_id: str
+    component: str  # 触发降级的组件
+    original_error: str
+    degradation_reason: str
+    context_snapshot: Dict[str, Any]  # 当前任务状态快照
+    suggested_action: str  # 建议人工操作
+    urgency: Literal["low", "medium", "high", "critical"]
+    created_at: datetime
+
+    def to_event(self) -> SessionEvent:
+        return SessionEvent(
+            event_type="task.degrade_to_human",
+            data=self.model_dump(),
+            metadata={"requires_notification": True}
+        )
+```
+
+### 3.3 各组件降级矩阵
+
+| 组件 | 降级策略 | 降级触发条件 | 恢复条件 |
+|------|---------|------------|---------|
+| LLMRouter | 切换到备选Provider | 主Provider连续3次超时 | 主Provider健康检查通过 |
+| EventStore | 内存List暂存+定期flush | SQLite写入失败3次 | SQLite恢复写入 |
+| WorkflowCompiler | 使用硬编码SOP | YAML编译失败 | YAML修复后重新编译 |
+| PersonaInjector | 使用默认Persona | Persona文件损坏/缺失 | Persona文件修复 |
+| Compaction | 丢弃最旧消息 | LLM摘要失败 | LLM恢复可用 |
+| Gate评估 | fail-open（放行+告警） | 评估超时10s | 评估服务恢复 |
+
+## 四、测试策略设计 [来源：审核FWK-01/INF-01/CAP-14]
+
+### 4.1 测试套件规划
+
+```
+tests/
+├── config/
+│   ├── test_workflow_yaml_validation.py    # YAML Schema校验
+│   ├── test_persona_yaml_validation.py     # Persona格式校验
+│   ├── test_model_routes_yaml.py           # 模型路由配置校验
+│   └── test_system_yaml_defaults.py        # 系统配置默认值校验
+├── integration/
+│   ├── test_workflow_e2e.py                # Workflow端到端
+│   ├── test_llm_router_e2e.py              # LLM路由端到端
+│   ├── test_event_store_e2e.py             # EventStore端到端
+│   ├── test_gate_e2e.py                    # Gate评估端到端
+│   ├── test_doubao_stream.py               # SSE流式输出一致性
+│   └── test_degradation_e2e.py             # 降级链路端到端
+├── cassettes/                              # HTTP Cassette录制目录
+│   ├── doubao_chat_response.yaml
+│   ├── helixrag_search_response.yaml
+│   └── qwen_fallback_response.yaml
+└── unit/                                   # 现有单元测试
+```
+
+### 4.2 HTTP Cassette录制策略
+
+使用 `pytest-recording` (VCR.py) 录制真实LLM/HelixRAG响应：
+
+```python
+# conftest.py
+import pytest
+
+@pytest.fixture
+def vcr_config():
+    return {
+        "cassette_library_dir": "tests/cassettes",
+        "record_mode": "once",  # 首次录制，后续回放
+        "filter_headers": ["authorization"],  # 脱敏
+        "decode_compressed_response": True,
+    }
+
+# test_llm_router_e2e.py
+@pytest.mark.vcr
+async def test_llm_router_primary_fallback():
+    """测试LLM路由主备切换"""
+    router = LLMRouter(config=load_config())
+    result = await router.chat(
+        model="doubao-seed2",
+        messages=[{"role": "user", "content": "请分析以下技术方案的可行性"}],
+    )
+    assert result.provider in ["doubao", "qwen", "deepseek"]
+    assert result.content  # 非空响应
+```
+
+### 4.3 删除代码回归测试策略
+
+```python
+# tests/integration/test_code_removal_regression.py
+async def test_old_orchestrator_removed():
+    """验证旧Orchestrator代码已完全删除且功能由WorkflowCompiler替代"""
+    # 1. 确认旧模块不存在
+    with pytest.raises(ImportError):
+        from flowforge.workers.orchestrator import Orchestrator
+
+    # 2. 确认新路径可用
+    from flowforge.core.workflow import WorkflowCompiler
+    compiler = WorkflowCompiler()
+    workflow = compiler.compile(load_yaml("dev_hotfix.yaml"))
+    assert len(workflow.steps) > 0
+
+    # 3. 回放Cassette验证功能等价
+    # (使用录制的真实LLM响应，避免每次调用)
+```
+
+## 五、CI/CD和部署方案 [来源：审核INF-02/INF-12]
+
+### 5.1 Docker Compose开发环境
+
+```yaml
+# docker-compose.dev.yml
+version: "3.8"
+services:
+  flowforge-api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      - FLOWFORGE_DATA_DIR=/data
+      - FLOWFORGE_MASTER_KEY=${FLOWFORGE_MASTER_KEY}
+    volumes:
+      - ./data:/data
+      - ./config:/app/config
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  flowforge-web:
+    build: ./web
+    ports: ["5174:5174"]
+    environment:
+      - VITE_API_URL=http://flowforge-api:8000
+    depends_on:
+      flowforge-api:
+        condition: service_healthy
+```
+
+### 5.2 K8s生产部署
+
+```yaml
+# k8s/flowforge-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flowforge-api
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    spec:
+      containers:
+      - name: api
+        image: flowforge-api:latest
+        readinessProbe:
+          httpGet: { path: /health, port: 8000 }
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: { path: /health, port: 8000 }
+          periodSeconds: 30
+        resources:
+          requests: { cpu: "500m", memory: "512Mi" }
+          limits: { cpu: "2000m", memory: "2Gi" }
+        env:
+        - name: FLOWFORGE_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: flowforge-secrets
+              key: master-key
+```
+
+### 5.3 CI流水线
+
+```yaml
+# .github/workflows/ci.yml
+name: FlowForge CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]"
+      - run: ruff check flowforge/
+      - run: mypy flowforge/ --ignore-missing-imports
+      - run: pytest tests/unit/ -x
+      - run: pytest tests/integration/ --vcr-record=none  # 仅回放，不录制
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f docker-compose.dev.yml up -d --wait
+      - run: pytest tests/integration/ --vcr-record=once  # 首次录制
+```
+
+## 六、API版本管理和兼容性设计 [来源：审核FWK-01/INF-01]
+
+### 6.1 API版本策略
+
+```python
+# FlowForge API版本管理
+API_VERSION_CURRENT = "v1"
+API_VERSIONS_SUPPORTED = ["v1"]
+
+# 路由前缀：/api/{version}/...
+app = FastAPI(
+    title="FlowForge API",
+    version=API_VERSION_CURRENT,
+)
+
+# 版本兼容性保障
+@dataclass
+class APICompatibilityGuarantee:
+    """API兼容性保障契约"""
+    version: str
+    breaking_changes: List[str]  # 必须为空才能发布
+    deprecated_endpoints: List[str]  # 弃用端点列表
+    deprecation_notice_version: str  # 弃用通知版本
+    removal_version: str  # 计划移除版本
+```
+
+### 6.2 *Forge项目兼容性保障
+
+```python
+# FlowForge SDK客户端兼容性检查
+class FlowForgeClient:
+    def __init__(self, base_url: str, api_version: str = "v1"):
+        self.base_url = base_url
+        self.api_version = api_version
+        self._compatibility_checked = False
+
+    async def _check_compatibility(self):
+        """启动时检查API兼容性"""
+        server_info = await self._get("/health")
+        server_version = server_info.get("api_version", "v1")
+        if server_version != self.api_version:
+            raise APIVersionMismatchError(
+                f"Client expects v{self.api_version}, "
+                f"server provides v{server_version}"
+            )
+        self._compatibility_checked = True
+```
+
+### 6.3 版本升级兼容性矩阵
+
+| FlowForge API版本 | ContentForge兼容 | DevForge兼容 | NovelForge兼容 | MallForge兼容 |
+|------------------|-----------------|-------------|---------------|--------------|
+| v1.0 | ✅ | ✅ | ✅ | ✅ |
+| v1.1 (新增端点) | ✅ 向后兼容 | ✅ 向后兼容 | ✅ 向后兼容 | ✅ 向后兼容 |
+| v2.0 (Breaking) | 需适配 | 需适配 | 需适配 | 需适配 |
+
+## 七、Helm可视化体验设计 [来源：审核ECO-07]
+
+### 7.1 UI交互设计细节
+
+```
+┌─────────────────────────────────────────────────────┐
+│ FlowForge Helm                              [⚙️][👤] │
+├──────────┬──────────────────────────────────────────┤
+│ 工作区    │  📋 任务列表          │  💬 对话面板      │
+│ ─────── │ ──────────────────  │ ──────────────  │
+│ 📁 Dev  │  ▶ T-001 热修复     │  [Agent] 正在   │
+│ 📁 Cnt  │  ■ T-002 代码审查   │   编译workflow  │
+│ 📁 Nov  │  ✓ T-003 单元测试   │  [Tool] 调用    │
+│         │                     │   LLMRouter     │
+│ ─────── │  进度: ████████░░ 80%│  [Gate] DCP通过 │
+│ + 新建   │                     │                 │
+├──────────┴──────────────────────────────────────────┤
+│ 🔧 工具调用链 │ 📊 指标 │ 📝 日志                    │
+└─────────────────────────────────────────────────────┘
+```
+
+### 7.2 关键交互规范
+
+| 交互元素 | 规范 | 实现要点 |
+|---------|------|---------|
+| 工作区切换 | 左侧面板，点击即切换，任务列表联动过滤 | WebSocket推送工作区状态 |
+| 步骤进度条 | 每个步骤显示状态图标（▶运行/■暂停/✓完成/✗失败） | SSE实时更新 |
+| 工具调用链 | 底部面板，折叠式展示每次Tool调用 | 记录input/output/latency |
+| Agent节点图标 | workflow🧩/agent🤖/llm💬/tool🔧 | 根据event_type自动匹配 |
+| 长任务防卡死 | 虚拟滚动 + 分页加载（每页50条） | IntersectionObserver |
+
+## 八、用户引导路径 [来源：审核ECO-07/CAP-02]
+
+### 8.1 新手引导流程
+
+```
+首次登录 → 选择项目模板（Dev/Content/Novel/Mall）
+         → 一键部署示例Workflow
+         → 引导式创建第一个任务
+         → 实时查看执行过程
+         → 查看结果与指标
+```
+
+### 8.2 模板市场设计
+
+```yaml
+# templates/index.yaml
+templates:
+  - id: "dev-hotfix"
+    name: "热修复工作流"
+    project: "devforge"
+    description: "从Bug报告到修复提交的完整流程"
+    workflow_file: "dev_hotfix.yaml"
+    persona: "devforge:coder"
+    estimated_time: "5-10min"
+
+  - id: "content-article"
+    name: "文章创作工作流"
+    project: "contentforge"
+    description: "从选题到发布的完整创作流程"
+    workflow_file: "content_article.yaml"
+    persona: "contentforge:writer"
+    estimated_time: "10-15min"
+```
+
+### 8.3 一键部署
+
+```python
+class TemplateDeployer:
+    """模板一键部署"""
+
+    async def deploy(self, template_id: str, project: str) -> DeployResult:
+        template = await self.template_store.get(template_id)
+        # 1. 加载Workflow YAML
+        workflow = self.compiler.compile(template.workflow_file)
+        # 2. 注册Persona
+        await self.persona_manager.register(template.persona)
+        # 3. 创建示例任务
+        task = await self.task_manager.create(
+            project=project,
+            workflow=workflow,
+            input=template.sample_input,
+        )
+        return DeployResult(task_id=task.id, status="ready")
+```
+
+## 九、Agent开发DX设计 [来源：审核ECO-07]
+
+### 9.1 本地调试Agent
+
+```bash
+# CLI调试命令
+flowforge agent debug \
+  --agent devforge:coder \
+  --input '{"task": "修复登录页面CSS错位"}' \
+  --trace-dir ./traces \
+  --step  # 单步模式，每步暂停等待确认
+```
+
+### 9.2 执行轨迹查看
+
+```python
+# traces/2026-06-16_task-001.json
+{
+  "trace_id": "0192a3b4-c5d6-7e8f-9a0b-1c2d3e4f5a6b",
+  "task_id": "task-001",
+  "steps": [
+    {
+      "step_id": "step-1",
+      "agent": "devforge:coder",
+      "action": "llm_call",
+      "input": {"model": "doubao-seed2", "messages": [...]},
+      "output": {"content": "...", "tokens": 1500},
+      "latency_ms": 3200,
+      "gate_verdict": null
+    },
+    {
+      "step_id": "step-2",
+      "agent": "devforge:coder",
+      "action": "tool_call",
+      "tool": "file_write",
+      "input": {"path": "src/login.css", "content": "..."},
+      "output": {"success": true},
+      "latency_ms": 50,
+      "gate_verdict": {"gate_id": "dcp", "passed": true, "score": 0.92}
+    }
+  ]
+}
+```
+
+### 9.3 VS Code扩展集成
+
+```json
+// .vscode/launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug FlowForge Agent",
+      "type": "python",
+      "request": "launch",
+      "module": "flowforge.cli",
+      "args": ["agent", "debug", "--agent", "${input:agentName}", "--step"],
+      "env": {
+        "FLOWFORGE_TRACE_DIR": "${workspaceFolder}/traces"
+      }
+    }
+  ]
+}
+```
+
+## 十、密钥迁移Runbook [来源：审核INF-12/CAP-02]
+
+### 10.1 CredentialStore迁移计划
+
+```python
+# 旧方式：SecretStore（路径硬编码）
+# 新方式：CredentialStore（FLOWFORGE_MASTER_KEY加密）
+
+class CredentialMigrationRunbook:
+    """密钥迁移Runbook"""
+
+    @staticmethod
+    async def migrate():
+        # Step 1: 检查环境变量
+        master_key = os.environ.get("FLOWFORGE_MASTER_KEY")
+        if not master_key:
+            raise RuntimeError(
+                "FLOWFORGE_MASTER_KEY环境变量未设置！"
+                "请执行: export FLOWFORGE_MASTER_KEY=$(openssl rand -hex 32)"
+            )
+
+        # Step 2: 初始化新CredentialStore
+        new_store = CredentialStore(master_key=master_key)
+
+        # Step 3: 读取旧SecretStore中的所有密钥
+        old_store = SecretStore()  # 旧实现
+        for key_name in old_store.list_keys():
+            value = old_store.get(key_name)
+            await new_store.set(key_name, value)
+            print(f"✅ 迁移密钥: {key_name}")
+
+        # Step 4: 验证迁移完整性
+        for key_name in old_store.list_keys():
+            old_value = old_store.get(key_name)
+            new_value = await new_store.get(key_name)
+            assert old_value == new_value, f"密钥 {key_name} 迁移后不一致！"
+
+        # Step 5: 备份旧存储
+        old_store.backup(path="backups/secret_store_pre_migration.json")
+
+        # Step 6: 更新配置引用
+        # config/system.yaml: credential_store.backend: "encrypted" (原 "file")
+```
+
+### 10.2 FLOWFORGE_MASTER_KEY管理
+
+```yaml
+# config/system.yaml 新增
+credential_store:
+  backend: "encrypted"  # encrypted | file | env
+  master_key_env: "FLOWFORGE_MASTER_KEY"
+  encryption_algorithm: "aes-256-gcm"
+  key_rotation_days: 90
+  backup_path: "${FLOWFORGE_DATA_DIR}/backups/credentials"
+```
+
+## 十一、SSE流式输出一致性测试 [来源：审核NEW-DB-09]
+
+### 11.1 test_doubao_stream.py
+
+```python
+# tests/integration/test_doubao_stream.py
+import pytest
+from flowforge.tools.llm import LLMClient
+
+@pytest.mark.vcr
+async def test_doubao_sse_format_consistency():
+    """验证Doubao SSE响应格式与OpenAI兼容"""
+    client = LLMClient(provider="doubao")
+
+    # 测试1: 流式响应格式
+    chunks = []
+    async for chunk in client.chat_stream(
+        model="doubao-seed2",
+        messages=[{"role": "user", "content": "请用三句话描述微服务架构的优势"}],
+    ):
+        chunks.append(chunk)
+        # 每个chunk必须包含delta
+        assert hasattr(chunk, "choices")
+        assert len(chunk.choices) > 0
+        assert hasattr(chunk.choices[0], "delta")
+
+    # 测试2: 完整响应与流式拼接一致
+    full_response = await client.chat(
+        model="doubao-seed2",
+        messages=[{"role": "user", "content": "请用三句话描述微服务架构的优势"}],
+    )
+    streamed_content = "".join(
+        c.choices[0].delta.content or "" for c in chunks
+    )
+    assert streamed_content == full_response.content, (
+        "流式拼接内容与完整响应不一致"
+    )
+
+@pytest.mark.vcr
+async def test_doubao_sse_error_handling():
+    """验证SSE错误事件处理"""
+    client = LLMClient(provider="doubao")
+    with pytest.raises(LLMRateLimitError):
+        async for _ in client.chat_stream(
+            model="doubao-seed2",
+            messages=[{"role": "user", "content": "test"}] * 100,  # 触发限流
+        ):
+            pass
+```
+
+## 十二、中文格式规范检查 [来源：审核NEW-DB-08]
+
+### 12.1 ChineseFormatChecker
+
+```python
+class ChineseFormatChecker:
+    """中文格式规范检查器，注入到Persona指令中"""
+
+    RULES = {
+        "punctuation": {
+            "description": "中文语境使用中文标点",
+            "pattern": r'[\u4e00-\u9fff]\s*[,.!?;:]\s*[\u4e00-\u9fff]',
+            "replacement": "中文标点（，。！？；：）",
+        },
+        "numbering": {
+            "description": "编号格式统一",
+            "pattern": r'第\s*(\d+)\s*章',
+            "replacement": "第X章（无空格）",
+        },
+        "date_format": {
+            "description": "日期格式统一",
+            "pattern": r'\d{4}/\d{1,2}/\d{1,2}',
+            "replacement": "YYYY年MM月DD日",
+        },
+        "unit_spacing": {
+            "description": "数字与单位间无空格",
+            "pattern": r'\d+\s*(个|次|篇|章|节|条|项|款|种|类|份|期|轮|遍|套|组|批|段|步|层|级|类|种)',
+            "replacement": "数字与中文单位间无空格",
+        },
+    }
+
+    def check(self, text: str) -> List[FormatViolation]:
+        violations = []
+        for rule_name, rule in self.RULES.items():
+            matches = re.findall(rule["pattern"], text)
+            if matches:
+                violations.append(FormatViolation(
+                    rule=rule_name,
+                    description=rule["description"],
+                    expected=rule["replacement"],
+                    found=matches,
+                ))
+        return violations
+```
+
+### 12.2 Persona注入指令段
+
+```yaml
+# persona/base.yaml 新增段
+format_guidelines: |
+  【中文格式规范】
+  1. 中文语境使用中文标点（，。！？；：""''），英文语境使用英文标点
+  2. 编号格式：第一章、第二章（无空格），1.1、1.2（半角点+数字）
+  3. 日期格式：2026年6月16日，不使用2026/06/16
+  4. 数字与中文单位间无空格：3篇文章，不是3 篇文章
+  5. 中英文之间加空格：使用 Python 开发，不是使用Python开发
+```
+
+## 十三、多模态接入规范 [来源：审核NEW-DB-10]
+
+### 13.1 MultiModalProvider
+
+```python
+class MultiModalProvider:
+    """多模态接入规范"""
+
+    SUPPORTED_MODALITIES = ["text", "image", "audio", "video"]
+
+    async def generate(
+        self,
+        modality: str,
+        prompt: str,
+        model: str = "doubao-seed2-vision",
+        **kwargs,
+    ) -> MultiModalResult:
+        if modality == "image":
+            return await self._generate_image(prompt, model, **kwargs)
+        elif modality == "text":
+            return await self._generate_text(prompt, model, **kwargs)
+        else:
+            raise UnsupportedModalityError(modality)
+
+@dataclass
+class MultiModalResult:
+    modality: str
+    content: Union[str, bytes]
+    mime_type: str
+    metadata: Dict[str, Any]
+    provider: str
+    model: str
+```
+
+### 13.2 Doubao多模态接入矩阵
+
+| 模态 | 模型 | 用途 | 项目 | Phase |
+|------|------|------|------|-------|
+| 文本 | doubao-seed2 | 文章/代码/对话 | 全部 | Phase 0 |
+| 图像理解 | doubao-seed2-vision | 封面图审核/素材分析 | Content/Novel | Phase 3 |
+| 图像生成 | doubao-seed2-image | 封面图/插画/角色头像 | Content/Novel | Phase 3 |
+| 音频 | - | 语音播报 | Content | Phase 4+ |
+
+## 十四、Agent模式与Doubao能力矩阵 [来源：审核NEW-DB-11]
+
+### 14.1 ModeDoubaoCompatibility
+
+```python
+@dataclass
+class ModeDoubaoCompatibility:
+    """Agent模式与Doubao能力矩阵"""
+    agent_id: str
+    mode: str  # open_code / workflow / sop / interactive
+    recommended_model: str
+    fallback_model: str
+    compatibility_score: float  # 0.0-1.0
+    notes: str
+```
+
+### 14.2 能力矩阵
+
+| Agent | 模式 | 推荐模型 | 备选模型 | 兼容度 | 备注 |
+|-------|------|---------|---------|--------|------|
+| devforge:coder | open_code | doubao-seed2 | deepseek-coder | 0.85 | 代码补全优秀，长上下文需分段 |
+| devforge:reviewer | workflow | doubao-seed2 | qwen-plus | 0.90 | 代码审查稳定 |
+| contentforge:topic | sop | doubao-seed2 | qwen-plus | 0.88 | 选题分析准确 |
+| contentforge:writer | sop | doubao-seed2 | qwen-plus | 0.82 | 长文需分段+续写 |
+| novelforge:outline | workflow | doubao-seed2 | qwen-plus | 0.85 | 大纲生成稳定 |
+| novelforge:chapter | sop | doubao-seed2 | qwen-plus | 0.78 | 长章节需checkpoint续写 |
+
+---
+
+# [审核修订 v3.0] 六方联合审核修订增补（v2.1/v2.2未覆盖项）
+
+> 审核日期：2026-06-16 | 修订版本：v3.0 | 来源：6份专家审核意见并集，v2.1/v2.2未覆盖部分
+> 审核来源：review_landing_design.md / review_landing_design_deepseek.md / review_landing_design_doubao.md / review_landing_design_kimi.md / review_landing_design_mm.md / review_landing_design_qw.md
+
+## S3.0-1 用户故事地图与端到端用户旅程 [来源：审核mm-P0]
+
+### 问题描述
+四份landing_design.md通篇只讲架构、不讲用户。缺少用户故事地图，无法回答"谁提交任务""门禁人工确认如何触发""DCP被驳回时PM在哪个页面看到"等核心产品问题。
+
+### 修订方案
+每个项目landing_design.md顶部新增"用户旅程图"章节，含3-5个核心角色+关键操作节点。
+
+```yaml
+# 用户旅程规范
+user_journeys:
+  - role: "PM"
+    journey:
+      - action: "提交开发任务"
+        entry: "Helm任务创建页"
+        events: ["task.created"]
+      - action: "查看门禁评审结果"
+        entry: "Helm任务详情→Gate面板"
+        events: ["gate.review_ready", "gate.human_required"]
+      - action: "驳回后修改需求"
+        entry: "Helm审核中心"
+        events: ["gate.rejected", "task.retry_requested"]
+  - role: "开发者"
+    journey:
+      - action: "查看代码审查结果"
+        entry: "Helm→工具调用链面板"
+        events: ["tool.code_review.completed"]
+      - action: "沙箱执行代码"
+        entry: "Helm→执行输出面板"
+        events: ["tool.sandbox.completed"]
+  - role: "运维"
+    journey:
+      - action: "金丝雀发布审批"
+        entry: "Helm→发布面板"
+        events: ["canary.approval_required"]
+      - action: "回滚决策"
+        entry: "Helm→发布面板→回滚按钮"
+        events: ["canary.rollback_triggered"]
+```
+
+### 优先级
+P0
+
+## S3.0-2 失败UX设计 [来源：审核mm-P0]
+
+### 问题描述
+所有landing_design.md只画PASS路径，完全缺少FAIL路径。Reflexion重试耗尽后用户看到什么？门禁被veto_dimensions触发后回退到哪个阶段？沙箱执行崩溃时暴露什么信息？
+
+### 修订方案
+在每个Phase 1核心功能实现条目下，强制要求附"失败路径UX流程图"。
+
+```yaml
+# 失败UX规范
+failure_ux:
+  reflexion_exhausted:
+    display: "重试耗尽提示卡片"
+    message: "Agent已尝试{max_rounds}轮仍未达标，请人工介入"
+    actions: ["查看执行轨迹", "修改参数重试", "降级到人工处理"]
+    event: "iteration.retry_exhausted"
+
+  gate_vetoed:
+    display: "门禁否决提示卡片"
+    message: "维度'{veto_dimension}'触发一票否决"
+    actions: ["查看否决详情", "修改后重新提交", "申请升级审批"]
+    rollback_to: "gate_config.rollback_stage"
+    event: "gate.vetoed"
+
+  sandbox_crash:
+    display: "沙箱崩溃提示卡片"
+    message: "代码执行异常退出（exit_code={code}）"
+    actions: ["查看错误日志", "修改代码重试", "跳过沙箱直接评审"]
+    expose_info: "exit_code + stderr前100行（脱敏后）"
+    event: "tool.sandbox.crashed"
+```
+
+### 优先级
+P0
+
+## S3.0-3 用户价值度量（KPI/OKR） [来源：审核mm-P1]
+
+### 问题描述
+四份文档都未定义如何度量项目自身的成功。
+
+### 修订方案
+
+| 项目 | 北极星指标 | 健康指标 |
+|------|---------|---------|
+| FlowForge | 配置驱动率（Agent/Tool/Workflow三大类YAML化率） | 启动时间、cold start内存、并发session数 |
+| DevForge | DCP门禁准确率（与人工评审的一致性） | 端到端发布时长、hotfix修复时长、自动回滚成功率 |
+| ContentForge | SOP完成率（深度长文从选题到发布一次通过率） | 平均审核次数、单篇发布耗时、平台适配成功率 |
+| NovelForge | 章节一致性得分、伏笔回收率 | 单章节生成耗时、Reflexion收敛轮数 |
+
+### 优先级
+P1
+
+## S3.0-4 跨项目契约一致性规范 [来源：审核kimi-P1/mm-P1]
+
+### 问题描述
+四份landing_design.md在同一类概念上使用了不同命名/结构。变量引用3种语法、Agent命名空间冲突、状态输出3种语法。
+
+### 修订方案
+
+```yaml
+# 跨项目统一契约规范
+contract:
+  # 变量引用统一为 LangGraph 风格
+  variable_reference: "${state.xxx}" / "${params.xxx}" / "${result.xxx}"
+
+  # Agent命名空间加项目前缀
+  agent_namespace: "{project}:{agent_name}"
+  examples:
+    - "contentforge:topic"
+    - "devforge:coder"
+    - "novelforge:outline"
+
+  # 状态输出统一语法
+  state_output: "state_updates: {key: expression}"
+
+  # 错误处理/重试/超时统一
+  execution_policy:
+    timeout: "timeout_seconds: int"
+    retry: "retry: {max_attempts, strategy, backoff}"
+    on_error: "on_error: abort | auto_rollback | degrade_to_human"
+    on_anomaly: "on_anomaly: log_and_continue | pause_and_notify"
+
+  # 检查点统一
+  checkpoint: "checkpoint: {enabled, backend, path, every_n_steps}"
+
+  # Gate术语统一
+  gate_terminology: "统一使用 Gate（DevForge DCP/TR 和 NovelForge QG 都是 Gate 实例化）"
+```
+
+### 优先级
+P0
+
+## S3.0-5 Agent YAML Schema统一规范 [来源：审核kimi-P1]
+
+### 问题描述
+三个项目的Agent YAML Schema不统一，导致FlowForge的Agent YAML Compiler无法统一解析。
+
+### 修订方案
+
+```yaml
+# flowforge/schemas/agent.yaml — 统一Agent YAML Schema
+name: str                    # 统一命名，含项目前缀
+mode: str                    # 统一为mode（非execution_mode/default_mode混用）
+tools: list[str]             # 工具列表
+model: str                   # 引用FlowForge路由层route名
+model_params:                # 模型参数覆盖（从models.yaml默认值继承）
+  temperature: float | null
+  top_p: float | null
+  max_tokens: int | null
+  json_schema: object | null
+permissions: list[str]       # 权限规则
+max_steps: int               # 步数限制
+
+# 模式特定配置（由ModeRegistry验证）
+mode_config:
+  type: object               # 根据mode不同，结构不同
+  # reflexion: { max_rounds, quality_threshold }
+  # got: { max_branches, merge_strategy }
+  # rewoo: { max_workers_parallel }
+
+# 输入输出
+input_mapping: dict[str, str]
+output_schema: object
+state_updates: dict[str, str]
+```
+
+### 优先级
+P0
+
+## S3.0-6 配置驱动率度量标准 [来源：审核kimi-P1]
+
+### 问题描述
+各项目design中没有明确定义"配置驱动率"的计算方式。
+
+### 修订方案
+
+```
+配置驱动率 = (通过YAML配置的行为数) / (总行为数)
+行为数 = Agent定义数 + Tool定义数 + Workflow步骤数 + Prompt模板数 + 阈值/规则数
+```
+
+| 项目 | Agent数 | Tool数 | Workflow数 | 当前驱动率 | 目标驱动率 |
+|------|--------:|--------:|------------:|----------:|----------:|
+| FlowForge | 12内置+3 Generic | 14 | 0 | 0% | Agent 90%/Tool 60% |
+| DevForge | 14 | 5 | 4 | 17% | Agent 100%/Tool 100%/Workflow 100% |
+| ContentForge | 6 | 6 | 4 SOP | 0% | Agent 100%/Tool 100%/Workflow 100% |
+| NovelForge | 8 | 5 | 1 | 0% | Agent 100%/Tool 100%/Workflow 100% |
+
+### 优先级
+P1
+
+## S3.0-7 可观测性功能规格 [来源：审核mm-P0]
+
+### 问题描述
+4份landing_design.md通篇没有业务指标、Trace链路、日志规范、告警规则、仪表盘。
+
+### 修订方案
+
+```yaml
+# 可观测性功能规格
+observability:
+  trace:
+    provider: "OpenTelemetry"
+    propagation: "trace_id全链路传播（Agent→Tool→LLM→Gate）"
+    injection_point: "每个Agent调用前注入trace_id"
+
+  metrics:
+    business:
+      - name: "config_drive_rate"
+        description: "配置驱动率"
+        type: "gauge"
+      - name: "gate_pass_rate"
+        description: "门禁通过率"
+        type: "ratio"
+      - name: "sop_completion_rate"
+        description: "SOP完成率"
+        type: "ratio"
+    technical:
+      - name: "llm_call_duration_seconds"
+        description: "LLM调用延迟"
+        type: "histogram"
+      - name: "llm_tokens_total"
+        description: "LLM token使用量"
+        type: "counter"
+        labels: ["model", "provider", "project"]
+      - name: "event_store_write_duration_seconds"
+        description: "EventStore写入延迟"
+        type: "histogram"
+
+  logging:
+    format: "结构化JSON日志"
+    pii_masking: true
+    trace_id_injection: true
+    fields: ["timestamp", "level", "trace_id", "session_id", "task_id", "agent_id", "message"]
+
+  alerting:
+    rules:
+      - name: "llm_provider_down"
+        condition: "llm_call_errors_total > 5 in 1min"
+        severity: "critical"
+      - name: "gate_timeout_high"
+        condition: "gate_timeout_rate > 0.1 in 5min"
+        severity: "warning"
+
+  dashboards:
+    - name: "FlowForge健康度"
+      panels: ["配置驱动率", "Session数", "LLM调用QPS", "EventStore延迟"]
+    - name: "DevForge门禁通过率"
+      panels: ["DCP通过率", "TR通过率", "人工审批响应时间"]
+    - name: "ContentForge发布成功率"
+      panels: ["SOP完成率", "平台发布成功率", "审核次数分布"]
+    - name: "NovelForge一致性得分"
+      panels: ["一致性得分趋势", "伏笔回收率", "Reflexion收敛轮数"]
+```
+
+### 优先级
+P0
+
+## S3.0-8 性能基线SLO功能规格 [来源：审核1-P2/mm-P1]
+
+### 问题描述
+所有设计项都没有性能指标，没有SLO定义。
+
+### 修订方案
+
+| 组件 | 指标 | 目标SLO |
+|------|------|---------|
+| WorkflowCompiler.compile() | 100 step编译耗时 | < 50ms |
+| SessionManager.check_and_compact() | 1MB上下文压缩耗时 | < 500ms |
+| FiberSet.parallel(10 workers) | 调度延迟 | < 10ms |
+| EventStore.append() | SQLite WAL模式写入 | < 5ms |
+| PersonaInjector.inject() | 含5个Source resolve | < 30ms |
+| LoopExecutor单次迭代 | 端到端（含1次LLM） | < 30s |
+| DualThresholdCompactor | LLM摘要 | < 10s |
+| MultiJudgeVerifier | 3个评委并行 | < 15s |
+| LLMRouter.chat() | 路由决策+首次Provider调用 | < 35s |
+| GateTimeoutManager.evaluate_with_timeout() | 含超时的Gate评估 | < 12s |
+
+### 优先级
+P1
+
+## S3.0-9 CAP-02 PermissionV2功能完整性 [来源：审核mm-P0]
+
+### 问题描述
+PermissionV2的ASK超时怎么办？多个ASK并发时如何去重？没有审计日志。
+
+### 修订方案
+
+```python
+class PermissionV2Enhanced:
+    """PermissionV2增强 — ASK超时/并发去重/审计日志"""
+
+    async def _request_user_approval(
+        self,
+        match: PermissionMatch,
+        tool_name: str,
+        params: dict,
+        context: TaskContext,
+        timeout: float = 300.0,  # 默认5分钟
+    ) -> bool:
+        """请求用户审批，含超时和去重"""
+        # 1. 去重：同一tool+params的ASK只发一次
+        dedup_key = f"{tool_name}:{hash(frozenset(params.items()))}"
+        if dedup_key in self._pending_asks:
+            return await self._pending_asks[dedup_key]
+
+        # 2. 发起审批
+        future = asyncio.get_event_loop().create_future()
+        self._pending_asks[dedup_key] = future
+
+        # 3. 推送到Web UI
+        await self.approval_provider.push(
+            ApprovalRequest(
+                tool=tool_name, params=params,
+                reason=match.reason, timeout=timeout,
+            )
+        )
+
+        # 4. 等待结果（含超时）
+        try:
+            result = await asyncio.wait_for(future, timeout=timeout)
+            # 5. 审计日志
+            await self.audit_log.record(
+                decision="allow" if result else "deny",
+                tool=tool_name, params=params,
+                reason=match.reason, timeout=not result,
+            )
+            return result
+        except asyncio.TimeoutError:
+            # ASK超时默认DENY（fail-closed）
+            await self.audit_log.record(
+                decision="deny", tool=tool_name, params=params,
+                reason="ASK timeout (fail-closed)", timeout=True,
+            )
+            return False
+        finally:
+            self._pending_asks.pop(dedup_key, None)
+```
+
+### 优先级
+P0
+
+## S3.0-10 十层安全防御功能规格 [来源：审核1-P1/mm-P0]
+
+### 问题描述
+INF-08十层安全防御L1-L10全部为空实现，缺少每层的功能规格。
+
+### 修订方案
+
+| 层级 | 名称 | 功能规格 | 默认策略 | 指标埋点 |
+|------|------|---------|---------|---------|
+| L1 | 工具超时防御 | 每个Tool可配置timeout，超时自动取消 | fail-open | tool_timeout_total |
+| L2 | 重复检测钩子 | 相同input在N秒内不重复执行 | deny重复 | dedup_hit_rate |
+| L3 | 自修正重试 | reflexion_retry次数可配置 | fail-open | retry_success_rate |
+| L4 | 安全工具注册表 | Tool标记安全级别(safe/unsafe/dangerous) | deny dangerous | unsafe_tool_blocked |
+| L5 | InputGuardrail | 与现有Guardrails框架对接 | fail-closed | input_blocked_total |
+| L6 | OutputGuardrail | 输出内容安全检查（含Doubao moderation） | fail-closed | output_blocked_total |
+| L7 | 反馈循环闸门 | 检测Agent循环调用同一Tool | deny>3次 | loop_detected_total |
+| L8 | 熵管理 | 检测系统复杂度增长 | warning | entropy_score |
+| L9 | 沙箱执行 | DevForge Plugin实现（用FlowForge ToolIsolation抽象） | fail-closed | sandbox_violation |
+| L10 | 审计追踪 | 所有Agent/Tool调用记录到不可篡改日志 | always-on | audit_entries_total |
+
+### 优先级
+P0
+
+## S3.0-11 OpenCode模式优先级矩阵 [来源：审核deepseek-P0]
+
+### 问题描述
+未评估65+ OpenCode模式的引入成本与风险，需按"阻塞性×复用性"两维评估取舍。
+
+### 修订方案
+
+| 优先级 | 模式 | 阻塞性 | 复用性 | 引入成本 | Phase |
+|--------|------|:------:|:------:|:-------:|-------|
+| P0-必须 | SES-01 Session持久化 | 高 | 高 | 中 | Phase 1 |
+| P0-必须 | CTX-04 Compaction | 高 | 高 | 中 | Phase 1 |
+| P0-必须 | ERR-01 指数退避重试 | 高 | 高 | 低 | Phase 1 |
+| P0-必须 | PER-01 Permission V2 | 高 | 高 | 中 | Phase 1 |
+| P1-重要 | AGT-01 Agent三模式 | 中 | 高 | 中 | Phase 2 |
+| P1-重要 | CTX-01 System Context增量 | 中 | 高 | 高 | Phase 2 |
+| P1-重要 | AGT-07 Agent步数限制 | 中 | 高 | 低 | Phase 2 |
+| P2-可选 | SES-04 Session共享 | 低 | 中 | 高 | Phase 3 |
+| P2-可选 | SES-05 Session Todo追踪 | 低 | 低 | 中 | Phase 3 |
+| P2-可选 | SKL-01 Skill版本管理 | 低 | 中 | 中 | Phase 3 |
+
+### 优先级
+P1
+
+## S3.0-12 21个GAP清单（设计写但代码不存在 + 代码存在但设计未覆盖） [来源：审核mm-P0]
+
+### 问题描述
+设计文档与代码之间存在21个关键差距，未在文档中识别和追踪。
+
+### 修订方案
+
+**设计写但代码不存在（13个）：**
+
+| 编号 | 设计 | 代码现状 | 风险 |
+|------|------|---------|------|
+| GAP-01 | loop/executor.py TurnTransition | 仅Plan→Execute→Verify三段if-else | 高 |
+| GAP-02 | harness/compaction.py DualThresholdCompactor | SessionManager._summarize_older_messages仍是content[:2000]截断 | 中 |
+| GAP-03 | session/event_store.py EventStore | 完全不存在 | 高 |
+| GAP-04 | compiler/workflow_compiler.py | 整个目录不存在 | 高（全链阻塞） |
+| GAP-05 | compiler/conditional_router.py | 整个目录不存在 | 中 |
+| GAP-06 | harness/persona_injector.py | PersonaLock存在但没有自动注入机制 | 中 |
+| GAP-07 | llm/router.py LLMRouter | 仅tools/llm_client.py单Provider | 中 |
+| GAP-08 | core/di.py DIContainer升级 | 现有DI是Service Locator | 中 |
+| GAP-09 | loop/fiber_set.py FiberSet | loop/parallel.py用asyncio.gather | 中 |
+| GAP-10 | security/permission_v2.py PermissionV2 | 现有PermissionPipeline仅1个deny/ask/allow顺序链 | 中 |
+| GAP-11 | events/durable_stream.py DurableEventStream | 仅events/event_bus.py内存总线 | 中 |
+| GAP-12 | security/credential_store.py | 仅core/secret_store.py且默认路径依赖包安装位置 | 中 |
+| GAP-13 | config/layered_search.py | 不存在 | 低 |
+
+**代码存在但设计未覆盖（8个）：**
+
+| 编号 | 代码现状 | 设计覆盖度 |
+|------|---------|-----------|
+| GAP-C01 | flowforge/core/flowforge.py反向import ContentForge工具 | 完全未提及（违反P9契约） |
+| GAP-C02 | flowforge/loop/executor.py的11个构造参数 | 设计文档只展示了4个 |
+| GAP-C03 | novelforge/agents/base.py BaseNovelAgent（已标记deprecated） | 设计文档未提删除计划 |
+| GAP-C04 | flowforge/loop/state.py LoopPhase 7状态 | 设计文档TurnKind 6状态，两套并行未说明如何合并 |
+| GAP-C05 | flowforge/harness/entropy_manager.py DebtTracker/RuleEvolution | 设计文档说SQLite持久化，但没说什么时候fallback到内存模式 |
+| GAP-C06 | flowforge/agents/declarative.py | 4个*Forge都引但FWK-09设计文档没引用此模块 |
+| GAP-C07 | flowforge/skills/loader.py MarkdownSkill加载器 | ECO-02 MarkdownSkill设计与现有loader重复 |
+| GAP-C08 | flowforge/memory/manager.py MemoryManager | 设计文档说用FlowForge Memory，但没明确MemoryManager接口 |
+
+### 优先级
+P0
+
+## S3.0-13 ProviderQuotaManager功能规格 [来源：审核doubao-P1]
+
+### 问题描述
+四个项目各自独立调用LLM，没有统一的TPM/RPM/成本预算管理。
+
+### 修订方案
+
+```python
+class ProviderQuotaManager:
+    """Provider级成本/配额管理"""
+
+    async def check_quota(self, provider: str, model: str, estimated_tokens: int) -> QuotaResult:
+        """检查配额是否允许本次调用"""
+        tpm_used = await self._get_tpm_usage(provider, model)
+        rpm_used = await self._get_rpm_usage(provider, model)
+        budget_used = await self._get_budget_usage(provider)
+
+        if tpm_used + estimated_tokens > self._get_tpm_limit(provider, model):
+            return QuotaResult(allowed=False, reason="TPM exceeded", action="queue_or_fallback")
+        if rpm_used >= self._get_rpm_limit(provider, model):
+            return QuotaResult(allowed=False, reason="RPM exceeded", action="queue_or_fallback")
+        if budget_used >= self._get_budget_limit(provider):
+            return QuotaResult(allowed=False, reason="budget exceeded", action="alert_and_fallback")
+
+        return QuotaResult(allowed=True)
+
+    async def record_usage(self, provider: str, model: str, prompt_tokens: int, completion_tokens: int, cost: float):
+        """记录使用量"""
+        await self._increment_tpm(provider, model, prompt_tokens + completion_tokens)
+        await self._increment_rpm(provider, model)
+        await self._increment_budget(provider, cost)
+```
+
+### 优先级
+P1
+
+## S3.0-14 Doubao moderation统一内容安全层 [来源：审核doubao-P0]
+
+### 问题描述
+ContentForge和NovelForge是内容安全高风险域，但未集成Doubao moderation接口。
+
+### 修订方案
+
+```python
+class ContentModerationLayer:
+    """Doubao moderation统一内容安全层"""
+
+    async def check(self, content: str, context: str = "publish") -> ModerationResult:
+        """内容安全预检"""
+        result = await self.doubao_client.moderation(
+            content=content,
+            safety_threshold=self._get_threshold(context),
+        )
+        if not result.is_safe:
+            await self.audit_log.record(
+                event="moderation_blocked",
+                risk_tags=result.risk_tags,
+                context=context,
+            )
+        return result
+
+    def _get_threshold(self, context: str) -> str:
+        """不同场景不同安全阈值"""
+        thresholds = {
+            "publish": "strict",       # 发布前预检：严格
+            "code_generation": "medium", # 代码生成：中等
+            "novel_chapter": "medium",   # 小说章节：中等
+            "internal_review": "loose",  # 内部审核：宽松
+        }
+        return thresholds.get(context, "medium")
+```
+
+### 优先级
+P0
+
+## S3.0-15 多模型级联策略 [来源：审核doubao-P1]
+
+### 问题描述
+未明确"Doubao为主"的级联策略和failover条件。
+
+### 修订方案
+
+```yaml
+# config/llm_route.yaml
+primary_chain:
+  - doubao-seed2
+  - qwen-plus
+  - deepseek-chat
+
+failover:
+  conditions:
+    - "status_code == 429"
+    - "timeout > 30s"
+    - "moderation_rejected"
+  next: "chain[index + 1]"
+
+default_agent_override:
+  # 某些Agent对特定模型有偏好
+  fact_check_agent: [doubao-seed2, deepseek-chat]
+  novel_concept_agent: [doubao-seed2]
+  code_review_agent: [deepseek-coder, doubao-seed2]
+```
+
+### 优先级
+P1
+
+## S3.0-16 115处硬编码提示词统一删除_DEFAULT_PROMPTS方案 [来源：审核qw-P0]
+
+### 问题描述
+FlowForge的_DEFAULT_PROMPTS字典（39个）与prompts.yaml（38个）双重定义，内容有差异。ContentForge的prompts.yaml定义了21个模板但0个被使用。
+
+### 修订方案
+
+```python
+# 删除方案：统一删除_DEFAULT_PROMPTS，PromptManager只从YAML加载
+class PromptManagerV2:
+    """提示词管理器V2 — 只从YAML加载，删除_DEFAULT_PROMPTS"""
+
+    def __init__(self, config_dir: str):
+        self._prompts: Dict[str, PromptTemplate] = {}
+        self._load_all_yaml(config_dir)
+
+    def _load_all_yaml(self, config_dir: str):
+        """加载所有prompts.yaml"""
+        for yaml_file in Path(config_dir).rglob("prompts.yaml"):
+            with open(yaml_file) as f:
+                data = yaml.safe_load(f)
+            for key, value in data.items():
+                self._prompts[key] = PromptTemplate(key=key, **value)
+
+    def get_prompt(self, key: str, **variables) -> str:
+        """获取提示词，支持变量插值"""
+        template = self._prompts.get(key)
+        if not template:
+            raise KeyError(f"Prompt '{key}' not found in any prompts.yaml")
+        return template.render(**variables)
+
+# 迁移步骤：
+# 1. grep -r "_DEFAULT_PROMPTS" flowforge/ contentforge/ novelforge/ → 找到所有引用
+# 2. 将_DEFAULT_PROMPTS内容合并到对应项目的config/prompts.yaml
+# 3. 将代码中的_DEFAULT_PROMPTS[key]替换为prompt_manager.get_prompt(key)
+# 4. 删除_DEFAULT_PROMPTS字典定义
+# 5. CI新增检查：grep -r "_DEFAULT_PROMPTS" → 0匹配
+```
+
+### 优先级
+P0
+
+## S3.0-17 DeprecationWarning保留时长定义 [来源：审核mm-P0]
+
+### 问题描述
+所有删除都说"过渡期保留DeprecationWarning"，但没有说明保留时长。
+
+### 修订方案
+
+```yaml
+# Deprecation策略
+deprecation_policy:
+  retention: "3个minor版本或6个月，以先到者为准"
+  tracking: "pyproject.toml tools.deprecated配置表"
+  removal_checklist:
+    - "git grep全量搜索引用 → 0引用"
+    - "pytest --collect-only确认无测试依赖旧路径"
+    - "运行全量E2E测试（含HTTP Cassette录制回放）"
+    - "删除旧代码 + 删除Feature Flag"
+    - "再次全量回归验证"
+```
+
+### 优先级
+P1
+
+## S3.0-18 事件总线统一方案 [来源：审核1-P2/mm-P1]
+
+### 问题描述
+FlowForge EventBus、OpenSieve AgentBus、NovelForge事件三套体系独立运行，CAP-11 DurableEventStream是新增的第四套事件体系。
+
+### 修订方案
+
+```yaml
+# 事件总线统一方案
+event_system:
+  core: "FlowForge EventBus + DurableEventStream"
+  bridge:
+    opensieve: "AgentBus → EventBus桥接层（OpenSieve事件转发到EventBus）"
+    novelforge: "NovelForge事件通过EventBus发布（删除独立事件体系）"
+  events:
+    - type: "task.created"
+      schema: "TaskEvent"
+    - type: "task.degrade_to_human"
+      schema: "DegradeToHumanEvent"
+    - type: "gate.review_ready"
+      schema: "GateEvent"
+    - type: "gate.human_required"
+      schema: "GateEvent"
+    - type: "llm.call_completed"
+      schema: "LLMCallEvent"
+    - type: "iteration.retry_exhausted"
+      schema: "IterationEvent"
+    - type: "canary.state_checkpoint"
+      schema: "CanaryStateEvent"
+```
+
+### 优先级
+P1
+| flowforge:planner | open_code | doubao-seed2 | deepseek-chat | 0.90 | 任务规划准确 |
+
+## 十五、Skill知识沉淀机制 [来源：审核NEW-DB-12]
+
+### 15.1 SkillKnowledgePrecipitator
+
+```python
+class SkillKnowledgePrecipitator:
+    """Agent执行产出自动写入Skill系统"""
+
+    async def precipitate(self, task_result: TaskResult) -> Optional[SkillEntry]:
+        """从成功的任务执行中提取可复用知识"""
+        if not task_result.success:
+            return None
+
+        # 1. 提取关键决策路径
+        decisions = self._extract_decisions(task_result.trace)
+
+        # 2. 提取有效的Prompt模式
+        prompt_patterns = self._extract_prompt_patterns(task_result.trace)
+
+        # 3. 提取工具调用链
+        tool_chains = self._extract_tool_chains(task_result.trace)
+
+        # 4. 生成Skill条目
+        if decisions or prompt_patterns or tool_chains:
+            return SkillEntry(
+                skill_id=f"auto-{task_result.task_id}",
+                source_task=task_result.task_id,
+                agent=task_result.agent_id,
+                decisions=decisions,
+                prompt_patterns=prompt_patterns,
+                tool_chains=tool_chains,
+                quality_score=task_result.gate_score,
+                created_at=datetime.now(),
+            )
+        return None
+
+@dataclass
+class SkillEntry:
+    skill_id: str
+    source_task: str
+    agent: str
+    decisions: List[Dict]
+    prompt_patterns: List[str]
+    tool_chains: List[List[str]]
+    quality_score: float
+    created_at: datetime
+```
+
+### 15.2 沉淀触发条件
+
+```yaml
+# config/system.yaml
+skill_precipitation:
+  enabled: true
+  min_quality_score: 0.8  # Gate评分≥0.8才沉淀
+  auto_apply: false  # 自动应用需人工确认
+  dedup_strategy: "semantic"  # 语义去重
+  max_entries_per_agent: 100
+```
+
+## S3.0-19 FWK-01 WorkflowCompiler三阶段拆分
+
+- **审核来源**：review_landing_design.md 问题1
+- **问题描述**：WorkflowCompiler同时承担编译、验证、转换三个职责，CompiledStep递归嵌套导致编译产物难以调试
+- **修订方案**：拆分为Parser+Validator+CodeGen三阶段，增加编译中间产物(IR)可视化调试能力，先实现SEQUENCE+CONDITIONAL+GATE三种StepType
+- **优先级**：P0
+
+## S3.0-20 INF-02 EventStore WAL模式与批量提交
+
+- **审核来源**：review_landing_design.md 问题2
+- **问题描述**：EventStore使用SQLite单文件存储，append()后立即commit，高频写入性能堪忧；RunCoordinator._runs纯内存
+- **修订方案**：EventStore改为WAL模式+批量提交(每100条或每秒)，RunCoordinator._runs状态持久化到EventStore，增加snapshot compaction机制
+- **优先级**：P0
+
+## S3.0-21 INF-05 DualThresholdCompactor死循环防护
+
+- **审核来源**：review_landing_design.md 问题3
+- **问题描述**：Compaction触发LLM摘要但LLM调用失败时，回退到抽取式摘要可能仍超阈值，导致反复触发
+- **修订方案**：增加Compaction最大次数限制(3次/Session)，抽取式摘要后强制截断到安全阈值以下，增加失败降级策略(丢弃最旧消息)
+- **优先级**：P0
+
+## S3.0-22 CAP-01 Source<A>代数系统降级
+
+- **审核来源**：review_landing_design.md 问题4, review_landing_design_kimi.md, review_landing_design_mm.md
+- **问题描述**：Source<A>代数系统引入5种类型+6字段ContextFragment，抽象层次过高，实际收益不明显
+- **修订方案**：Phase 2先用Dict[str, ContextFragment]实现(每个Fragment含key/content/priority)，Phase 3再引入代数操作，优先保证ContextEngine.inject()正确性
+- **优先级**：P0→P3降级
+
+## S3.0-23 FWK-06 TurnTransition参数封装与状态机合并
+
+- **审核来源**：review_landing_design.md 问题5, review_landing_design_kimi.md, review_landing_design_mm.md
+- **问题描述**：TurnTransitionEngine.decide()参数列表过长(7个)，TurnKind与LoopPhase两套并行状态机
+- **修订方案**：将feedback_gate/context_utilization/compaction_threshold封装为LoopContext对象，TurnTransitionEngine.decide()只接收verdict+LoopContext；合并TurnKind与LoopPhase为统一状态机(IDLE→EXECUTING→EVALUATING→REFLECTING→COMPACTING→AGENT_SWITCHING→COMPLETED/FAILED/LOOPING)
+- **优先级**：P0
+
+## S3.0-24 INF-03 DI容器SCOPED生命周期
+
+- **审核来源**：review_landing_design.md 问题6
+- **问题描述**：SCOPED生命周期未实现，resolve()中只处理SINGLETON和TRANSIENT
+- **修订方案**：明确SCOPED使用场景(TaskContext是否需要SCOPED)，实现ScopedContainer子类绑定到请求/会话生命周期，或先移除SCOPED只保留SINGLETON+TRANSIENT
+- **优先级**：P1
+
+## S3.0-25 CAP-10 FiberSet超时配置化
+
+- **审核来源**：review_landing_design.md 问题7
+- **问题描述**：next_completed()使用asyncio.wait_for(timeout=0.1)，100ms超时在LLM调用场景下太短
+- **修订方案**：超时时间改为可配置，默认值设为1.0s，或改用asyncio.wait()的FIRST_COMPLETED模式
+- **优先级**：P1
+
+## S3.0-26 FWK-07 PipelineCompiler独立实现
+
+- **审核来源**：review_landing_design.md 问题9
+- **问题描述**：PipelineCompiler继承WorkflowCompiler不合理，Pipeline拥有Workflow全部能力违反最小知识原则
+- **修订方案**：PipelineCompiler独立实现不继承WorkflowCompiler，或Pipeline编译为CompiledWorkflow(steps_type=SEQUENCE)后由WorkflowCompiler统一处理
+- **优先级**：P2
+
+## S3.0-27 底座净化ARCH-00
+
+- **审核来源**：review_landing_design_deepseek.md 问题②, review_landing_design_mm.md
+- **问题描述**：FlowForge包含10个内容创作Agent+6个内容Tool+5个配置文件，违反底座能力原则
+- **修订方案**：Phase 0新增ARCH-00底座净化，将23处领域代码迁移到对应*Forge项目，预计移出~1100行
+- **优先级**：P0
+
+## S3.0-28 FWK-01 MVP里程碑与并行降级方案
+
+- **审核来源**：review_landing_design_deepseek.md 问题④
+- **问题描述**：FWK-01成为全局单点阻塞，但未给出MVP定义和*Forge并行降级路径
+- **修订方案**：FWK-01 MVP里程碑(顺序执行→条件路由→并行执行)，每个里程碑可独立交付；各*Forge在FWK-01 MVP-1就绪前保留现有Orchestrator作为fallback
+- **优先级**：P0
+
+## S3.0-29 CAP-14 Harness护栏全面集成
+
+- **审核来源**：review_landing_design_deepseek.md 问题⑥
+- **问题描述**：缺少Harness四根护栏的代码级融合方案
+- **修订方案**：Phase 2补充CAP-14设计项，将四根护栏与LoopEngine的pre_execute/post_execute钩子完整对接
+- **优先级**：P1
+
+## S3.0-30 Persona注入规范化
+
+- **审核来源**：review_landing_design_doubao.md DB-P0-03
+- **问题描述**：Persona注入缺少Doubao seed指令格式，SOUL维度可能触发指令稀释
+- **修订方案**：Persona注入统一使用结构化格式(非自然语言)，SOUL维度限定512 token以内超限时自动压缩，增加Persona注入成本审计(persona token占比<15%为健康)
+- **优先级**：P1
+
+## S3.0-31 Compaction中文摘要模型指定
+
+- **审核来源**：review_landing_design_doubao.md DB-P1-04
+- **问题描述**：DualThresholdCompactor使用LLM做摘要但未指定摘要模型
+- **修订方案**：显式声明摘要模型为doubao-seed2，定义中文摘要最小粒度(按语义段落切分)，提供压缩失败→抽取式摘要→丢弃最旧消息三档回退链
+- **优先级**：P1
+
+## S3.0-32 FWK-01编译器与执行器契约明确
+
+- **审核来源**：review_landing_design_kimi.md FWK-01-A
+- **问题描述**：to_sop_steps()只是格式转换，WorkflowExecutor对条件路由/并行组/回退链无运行时调度能力
+- **修订方案**：明确WorkflowExecutor运行时扩展方案，或声明WorkflowExecutor也需同步改造
+- **优先级**：P0
+
+## S3.0-33 FWK-01输入映射表达式增强
+
+- **审核来源**：review_landing_design_kimi.md FWK-01-B
+- **问题描述**：input_mapping只支持简单键值映射，大量场景仍需硬编码
+- **修订方案**：引入Jinja2模板引擎作为输入映射表达式语言，支持{{ outputs.xxx | truncate(1000) }}等转换
+- **优先级**：P1
+
+## S3.0-34 FWK-02条件表达式安全
+
+- **审核来源**：review_landing_design_kimi.md FWK-02-A/B
+- **问题描述**：条件表达式解析器存在安全隐患(表达式注入)，None结果处理不完整
+- **修订方案**：使用asteval安全表达式库，增加strict_mode配置，显式处理None结果
+- **优先级**：P0
+
+## S3.0-35 FWK-03成功判断可配置化
+
+- **审核来源**：review_landing_design_kimi.md FWK-03-A
+- **问题描述**：_is_success()逻辑过于简化，不同Tool成功/失败语义不一致
+- **修订方案**：支持per-step的success_condition配置，允许声明式定义成功条件
+- **优先级**：P1
+
+## S3.0-36 FWK-06 TurnTransition完整状态机
+
+- **审核来源**：review_landing_design_kimi.md FWK-06-A/B
+- **问题描述**：TurnTransition缺少具体状态机实现，MAX_STEPS与现有Loop兼容性未分析
+- **修订方案**：补充TurnTransitionEngine完整状态机设计(状态定义/Transition条件表/上下文操作)，增加MAX_STEPS兼容性分析
+- **优先级**：P0
+
+## S3.0-37 Plugin协议扩展
+
+- **审核来源**：review_landing_design_kimi.md, review_landing_design_mm.md
+- **问题描述**：FlowForgePlugin协议只提供4个钩子，不足以表达*Forge业务复杂度
+- **修订方案**：扩展为register_workflows/register_gates/register_evaluators/register_sops/register_quality_gates/register_context_layers/register_workflow_step_handler全集
+- **优先级**：P1
+
+## S3.0-38 配置版本控制ConfigVersion
+
+- **审核来源**：review_landing_design_kimi.md, review_landing_design_mm.md
+- **问题描述**：Workflow YAML/Agent YAML/Persona/Prompt模板无版本控制
+- **修订方案**：新增ConfigVersion数据结构+启动时配置变更检测+优雅重启
+- **优先级**：P1
+
+## S3.0-39 FlowForge反向import修复
+
+- **审核来源**：review_landing_design_kimi.md, review_landing_design_mm.md GAP-C01
+- **问题描述**：flowforge/core/flowforge.py反向import ContentForge工具
+- **修订方案**：删除反向import，工具通过ContentForgePlugin的register_tools()钩子注册
+- **优先级**：P0
+
+## S3.0-40 关键数据结构Pydantic化
+
+- **审核来源**：review_landing_design_kimi.md, review_landing_design_mm.md
+- **问题描述**：LLMRequest是@dataclass而非BaseModel，SessionEvent.data是黑盒dict
+- **修订方案**：关键跨边界数据结构(LLMRequest/SessionEvent/CompiledStep/GateVerdict)全部改为Pydantic BaseModel
+- **优先级**：P1
+
+## S3.0-41 Skill知识沉淀机制
+
+- **审核来源**：review_landing_design_doubao.md
+- **问题描述**：Agent执行过程中产生的高质量产出没有沉淀机制
+- **修订方案**：Phase 3把Agent成功产出写入Skill系统，Skill作为检索库供后续任务复用
+- **优先级**：P2
+
+## S3.0-42 INF-02 EventStore三阶段投递
+
+- **审核来源**：review_landing_design_kimi.md, review_landing_design_mm.md
+- **问题描述**：缺失steer/queue投递语义、interrupt_seq抑制旧wake、inbox→promoted状态机
+- **修订方案**：SessionInputManager为LoopExecutor可选项(Phase 1先做基础EventStore，Phase 2加inbox三阶段)，给LoopExecutor加optional_components注入入口避免构造函数参数爆炸
+- **优先级**：P1

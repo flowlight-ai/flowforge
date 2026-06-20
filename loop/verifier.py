@@ -280,7 +280,7 @@ class MultiJudgeVerifier(LoopVerifier):
         {"template": "任务描述: {task_desc}", "source": "task.input_data.task"},
     ]
 
-    # 默认评审提示词模板（针对 WebChat 模型优化：system message 强制 JSON、评分锚点上移、示例分数提高）
+    # 默认评审提示词模板（严格评审，不引导高分）
     DEFAULT_JUDGE_CONTEXT_TEMPLATE: str = """\
 你是一位{judge_role}。请对以下内容进行多维度独立评审。
 
@@ -302,13 +302,13 @@ class MultiJudgeVerifier(LoopVerifier):
 {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1","改进建议2"]}}
 
 示例:
-{{"scores":{{"quality":0.95,"accuracy":0.94,"completeness":0.93,"clarity":0.96}},"improvement_suggestions":["建议1","建议2"]}}
+{{"scores":{{"quality":0.75,"accuracy":0.80,"completeness":0.72,"clarity":0.78}},"improvement_suggestions":["建议1","建议2"]}}
 
 评分指引:
 1. 每个维度给出0.0-1.0之间的浮点数，保留两位小数
-2. 结构完整、逻辑清晰的内容，各维度应在0.90以上
-3. improvement_suggestions列出最需改进的方面(最多5条)
-4. 评审要客观公正，好内容应得高分"""
+2. 严格按维度标准评分，不要因为整体还行就给所有维度高分
+3. improvement_suggestions列出最需改进的方面(3-5条)
+4. 评审要严格客观，宁可低估不要高估"""
 
     async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
         judges = config.get("judges", [])
@@ -357,9 +357,13 @@ class MultiJudgeVerifier(LoopVerifier):
             content = str(result)
         prompt = self._build_eval_prompt(content, task, dimensions, config)
 
-        # 3. 并行调用所有评委
+        # 3. 并行调用所有评委（每个评委最多60秒，超时跳过）
+        judge_timeout = config.get("judge_timeout", 60)
         judge_tasks = [self._call_judge(j, prompt, task) for j in active_judges]
-        judge_results = await asyncio.gather(*judge_tasks, return_exceptions=True)
+        judge_results = await asyncio.gather(
+            *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
+            return_exceptions=True,
+        )
 
         # 4. 过滤有效结果
         valid_results: list[dict] = []

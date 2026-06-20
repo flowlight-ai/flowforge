@@ -1,6 +1,7 @@
 active_providers:
 - openroute
 - openrouter
+- doubao
 providers:
   openroute:
     base_url: http://127.0.0.1:13001/v1
@@ -37,6 +38,10 @@ providers:
   local:
     base_url: http://localhost:11434/v1
     api_key_default: local
+  doubao:
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    api_key_env: ARK_API_KEY
+    description: 豆包大模型官方API（火山引擎Ark平台）
 models:
 - id: auto
   provider: openroute
@@ -231,3 +236,172 @@ assignments:
     - google/gemma-4-31b-it:free
     - nvidia/nemotron-3-super-120b-a12b:free
     - poolside/laguna-m.1:free
+
+# ═══════════════════════════════════════════════════════════════════
+# Model Specifications — 完整模型规格定义
+# Phase 0 Week1 里程碑: MODELS-SPEC-COMPLETE
+# ═══════════════════════════════════════════════════════════════════
+model_specs:
+  doubao-seed2:
+    provider: doubao
+    display_name: "豆包 Seed 2.0"
+    model_id: "doubao-seed-2.0"
+    max_tokens: 4096
+    temperature: 0.7
+    top_p: 0.9
+    cost_per_1k_input_tokens: 0.004
+    cost_per_1k_output_tokens: 0.008
+    tpm_quota: 100000
+    rpm_quota: 500
+    supports_function_calling: true
+    supports_streaming: true
+    supports_vision: false
+    context_window: 128000
+    fallback_chain:
+      - qwen3.6-plus
+      - deepseek-chat
+    capabilities:
+      - text_generation
+      - function_calling
+      - streaming
+    moderation_level: L5
+
+  doubao-pro:
+    provider: doubao
+    display_name: "豆包 Pro"
+    model_id: "doubao-pro-4k"
+    max_tokens: 4096
+    temperature: 0.7
+    top_p: 0.9
+    cost_per_1k_input_tokens: 0.002
+    cost_per_1k_output_tokens: 0.004
+    tpm_quota: 200000
+    rpm_quota: 1000
+    supports_function_calling: true
+    supports_streaming: true
+    supports_vision: false
+    context_window: 128000
+    fallback_chain:
+      - qwen3.6-plus
+    capabilities:
+      - text_generation
+      - function_calling
+      - streaming
+    moderation_level: L5
+
+  doubao-lite:
+    provider: doubao
+    display_name: "豆包 Lite"
+    model_id: "doubao-lite-4k"
+    max_tokens: 4096
+    temperature: 0.7
+    top_p: 0.9
+    cost_per_1k_input_tokens: 0.001
+    cost_per_1k_output_tokens: 0.002
+    tpm_quota: 500000
+    rpm_quota: 2000
+    supports_function_calling: true
+    supports_streaming: true
+    supports_vision: false
+    context_window: 32000
+    fallback_chain:
+      - qwen3.6-plus
+    capabilities:
+      - text_generation
+      - function_calling
+      - streaming
+    moderation_level: L5
+
+  qwen3.6-plus:
+    provider: openrouter
+    display_name: "Qwen 3.6 Plus"
+    model_id: "qwen/qwen3.6-plus"
+    max_tokens: 8192
+    temperature: 0.7
+    top_p: 0.9
+    cost_per_1k_input_tokens: 0.005
+    cost_per_1k_output_tokens: 0.01
+    tpm_quota: 50000
+    rpm_quota: 200
+    supports_function_calling: true
+    supports_streaming: true
+    supports_vision: false
+    context_window: 32768
+    capabilities:
+      - text_generation
+      - function_calling
+      - streaming
+
+  deepseek-chat:
+    provider: openrouter
+    display_name: "DeepSeek Chat"
+    model_id: "deepseek/deepseek-chat"
+    max_tokens: 8192
+    temperature: 0.7
+    top_p: 0.9
+    cost_per_1k_input_tokens: 0.003
+    cost_per_1k_output_tokens: 0.006
+    tpm_quota: 50000
+    rpm_quota: 200
+    supports_function_calling: true
+    supports_streaming: true
+    supports_vision: false
+    context_window: 64000
+    capabilities:
+      - text_generation
+      - function_calling
+      - streaming
+
+# ═══════════════════════════════════════════════════════════════════
+# Cascade Strategies — LLM级联策略配置
+# ═══════════════════════════════════════════════════════════════════
+cascade_strategies:
+  default:
+    primary: doubao-seed2
+    fallback:
+      - qwen3.6-plus
+      - deepseek-chat
+    retry_on:
+      - rate_limit
+      - timeout
+      - server_error
+    max_retries: 2
+
+  content_writing:
+    primary: doubao-seed2
+    fallback:
+      - qwen3.6-plus
+    retry_on:
+      - rate_limit
+      - timeout
+
+  code_generation:
+    primary: deepseek-chat
+    fallback:
+      - doubao-seed2
+    retry_on:
+      - rate_limit
+      - timeout
+
+  fact_check:
+    primary: qwen3.6-plus
+    fallback:
+      - deepseek-chat
+    retry_on:
+      - rate_limit
+      - timeout
+
+# ═══════════════════════════════════════════════════════════════════
+# Provider Quotas — 供应商配额与预算
+# ═══════════════════════════════════════════════════════════════════
+provider_quotas:
+  doubao:
+    monthly_budget_usd: 100
+    tpm_limit: 100000
+    rpm_limit: 500
+    alert_threshold: 0.8
+  openrouter:
+    monthly_budget_usd: 50
+    tpm_limit: 50000
+    rpm_limit: 200
+    alert_threshold: 0.8

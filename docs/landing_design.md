@@ -3474,3 +3474,1179 @@ Phase 0新增：统一YAML Schema、热加载、版本管理、A/B测试、缓�
 | GAP-C06 | declarative.py | FWK-09未引用 | 中 |
 | GAP-C07 | skills/loader.py | ECO-02与现有loader重复 | 低 |
 | GAP-C08 | MemoryManager | add()签名不一致 | 中 |
+
+---
+
+# [审核修订 v2.2] 六方联合审核修订增补（v2.1未覆盖项）
+
+> 审核日期：2026-06-16 | 修订版本：v2.2 | 来源：6份专家审核意见并集，v2.1未覆盖部分
+
+## 新增7：向后兼容切换策略 [来源：审核FWK-01/FWK-06/INF-01]
+
+### 7.1 每个设计项的新旧路径切换策略
+
+| 设计项 | 切换策略 | Feature Flag | 旧代码删除时间线 | 验收标准 |
+|--------|---------|-------------|----------------|---------|
+| FWK-01 WorkflowCompiler | Feature Flag | `features.use_workflow_compiler` | Flag开启后2个minor版本 | dev_hotfix.yaml + dev_greenfield.yaml跑通 |
+| FWK-06 TurnTransitionEngine | Feature Flag | `features.use_turn_transition_v2` | Flag开启后1个minor版本 | 9状态覆盖原6+7状态所有场景 |
+| INF-01 LLMRouter | A-B并行验证 | `features.use_llm_router` | 并行验证通过后1个minor版本 | 路由结果一致率≥99.5% |
+| INF-02 EventStore | A-B并行验证 | `features.use_event_store` | 并行验证通过后1个minor版本 | 事件写入/读取一致性100% |
+| INF-05 Compaction | Feature Flag | `features.use_dual_threshold_compactor` | Flag开启后1个minor版本 | 压缩后上下文可用性≥95% |
+| INF-11 Repository层 | 硬切换 | N/A | 单PR合入后立即删除 | 所有SQL操作通过Repository |
+| INF-12 配置外置 | 硬切换 | N/A | 单PR合入后立即删除 | 0处硬编码路径/密钥 |
+| CAP-14 ArchitectureConstraint | Feature Flag | `features.use_constraint_engine` | Flag开启后1个minor版本 | 检测到循环依赖/跨层导入 |
+
+### 7.2 Feature Flag数据结构
+
+```python
+@dataclass
+class FeatureFlag:
+    name: str
+    enabled: bool
+    rollout_percentage: int = 0  # 0-100，支持灰度
+    allowed_projects: List[str] = field(default_factory=list)
+    fallback_to_old: bool = True  # 新路径异常时回退旧路径
+    created_at: datetime = field(default_factory=datetime.now)
+    expires_at: Optional[datetime] = None  # Flag过期时间
+```
+
+### 7.3 旧代码删除验收流程
+
+```
+1. git grep 搜索旧代码所有引用 → 0引用
+2. pytest --collect-only 确认无测试依赖旧路径
+3. 运行全量E2E测试（含HTTP Cassette录制回放）
+4. 删除旧代码 + 删除Feature Flag
+5. 再次全量回归验证
+```
+
+## 新增8：INF-01 LLM路由层代码级设计 [来源：审核INF-01]
+
+### 8.1 LLMRouter完整实现
+
+```python
+class LLMRouter:
+    """LLM路由层 — 多Provider智能路由"""
+
+    def __init__(self, config: LLMRouterConfig):
+        self.providers: Dict[str, LLMProvider] = {}
+        self.model_routes: Dict[str, ModelRoute] = {}
+        self.health_checker = ProviderHealthChecker()
+        self.cost_tracker = ProviderCostTracker()
+        self._load_config(config)
+
+    async def chat(self, model: str, messages: List[Dict], **kwargs) -> LLMResponse:
+        """智能路由chat请求"""
+        route = self.model_routes.get(model)
+        if not route:
+            raise ModelNotFoundError(f"模型 {model} 无路由配置")
+
+        last_error = None
+        for provider_name in route.providers:
+            provider = self.providers[provider_name]
+            if not await self.health_checker.is_healthy(provider):
+                continue
+            if not provider.rate_limiter.allow():
+                continue
+            try:
+                response = await provider.chat(
+                    model=route.get_actual_model(provider_name),
+                    messages=messages, **kwargs,
+                )
+                self.cost_tracker.record(provider=provider_name, model=model,
+                    prompt_tokens=response.usage.prompt_tokens,
+                    completion_tokens=response.usage.completion_tokens)
+                return response
+            except (LLMTimeoutError, LLMRateLimitError) as e:
+                last_error = e
+                await self.health_checker.mark_unhealthy(provider, e)
+                continue
+
+        raise LLMAllProvidersFailedError(f"模型 {model} 所有Provider均失败: {last_error}")
+```
+
+### 8.2 路由配置
+
+```yaml
+# config/models.yaml
+providers:
+  - name: openroute
+    base_url: "http://localhost:6000/v1"
+    api_key_env: "OPENROUTE_API_KEY"
+    priority: 1
+    rate_limit: { rpm: 60, tpm: 100000 }
+  - name: openrouter
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: "OPENROUTER_API_KEY"
+    priority: 2
+    rate_limit: { rpm: 30, tpm: 50000 }
+
+routes:
+  - model: "doubao-seed2"
+    providers: ["openroute"]
+    model_mapping: { "openroute": "doubao-seed2" }
+  - model: "deepseek-coder"
+    providers: ["openroute", "openrouter"]
+    model_mapping: { "openroute": "deepseek-chat", "openrouter": "deepseek/deepseek-coder" }
+```
+
+### 8.3 健康检查器
+
+```python
+class ProviderHealthChecker:
+    def __init__(self):
+        self._health_status: Dict[str, ProviderHealth] = {}
+
+    async def is_healthy(self, provider: LLMProvider) -> bool:
+        health = self._health_status.get(provider.name)
+        if health is None:
+            return True
+        if health.consecutive_failures >= 3:
+            cooldown = timedelta(seconds=30 * health.consecutive_failures)
+            if datetime.now() - health.last_failure < cooldown:
+                return False
+        return health.is_healthy
+
+    async def mark_unhealthy(self, provider: LLMProvider, error: Exception):
+        health = self._health_status.setdefault(provider.name, ProviderHealth(name=provider.name))
+        health.consecutive_failures += 1
+        health.last_failure = datetime.now()
+        health.last_error = str(error)
+```
+
+## 新增9：CAP-14 Harness护栏集成设计 [来源：审核CAP-14]
+
+### 9.1 ArchitectureConstraintEngine代码对齐方案
+
+```python
+class ArchitectureConstraintEngine:
+    """架构约束引擎 — 代码与设计对齐"""
+
+    def __init__(self, config: ConstraintConfig):
+        self.constraints: Dict[str, Constraint] = {}
+        self.violation_log: List[ConstraintViolation] = []
+        self._load_constraints(config)
+
+    def _load_constraints(self, config: ConstraintConfig):
+        for rule in config.rules:
+            self.constraints[rule.id] = Constraint(
+                id=rule.id, pattern=rule.pattern,
+                direction=rule.direction, message=rule.message,
+                severity=rule.severity,
+            )
+
+    async def check(self, module_path: str, import_path: str) -> ConstraintResult:
+        for constraint_id, constraint in self.constraints.items():
+            if constraint.matches(module_path, import_path):
+                violation = ConstraintViolation(
+                    constraint_id=constraint_id, source=module_path,
+                    target=import_path, severity=constraint.severity,
+                    message=constraint.message,
+                )
+                self.violation_log.append(violation)
+                if constraint.severity == "error":
+                    return ConstraintResult(passed=False, violations=[violation])
+        return ConstraintResult(passed=True, violations=[])
+```
+
+### 9.2 EntropyManager代码对齐方案
+
+```python
+class EntropyManager:
+    """熵管理器 — 检测和控制系统复杂度增长"""
+
+    def __init__(self, config: EntropyConfig):
+        self.thresholds = config.thresholds
+        self.history: List[EntropySnapshot] = []
+
+    async def measure(self, codebase_path: str) -> EntropyReport:
+        snapshot = EntropySnapshot(
+            timestamp=datetime.now(),
+            total_modules=self._count_modules(codebase_path),
+            circular_deps=self._detect_circular_deps(codebase_path),
+            cross_layer_imports=self._detect_cross_layer(codebase_path),
+            hardcoded_values=self._detect_hardcoded(codebase_path),
+            avg_file_lines=self._avg_file_lines(codebase_path),
+        )
+        self.history.append(snapshot)
+        entropy = self._calculate_entropy(snapshot)
+        return EntropyReport(
+            entropy_score=entropy, snapshot=snapshot,
+            violations=self._check_thresholds(entropy, snapshot),
+        )
+
+    def _calculate_entropy(self, snapshot: EntropySnapshot) -> float:
+        weights = {"circular_deps": 0.30, "cross_layer": 0.25,
+                   "hardcoded": 0.20, "module_growth": 0.15, "file_size": 0.10}
+        scores = {
+            "circular_deps": min(snapshot.circular_deps / 5.0, 1.0),
+            "cross_layer": min(snapshot.cross_layer_imports / 10.0, 1.0),
+            "hardcoded": min(snapshot.hardcoded_values / 20.0, 1.0),
+            "module_growth": min(snapshot.total_modules / 100.0, 1.0),
+            "file_size": min(snapshot.avg_file_lines / 500.0, 1.0),
+        }
+        return sum(weights[k] * scores[k] for k in weights)
+```
+
+### 9.3 护栏集成到CI
+
+```yaml
+# .github/workflows/ci.yml 新增步骤
+- name: Architecture Constraint Check
+  run: |
+    python -m flowforge.core.constraints check --path flowforge/
+    python -m flowforge.core.entropy measure --path flowforge/ --max-entropy 0.3
+```
+
+## 新增10：GateConfig timeout竞态条件解决方案 [来源：审核CAP-14]
+
+### 10.1 问题
+Gate评估有超时机制，计时器与评估执行在不同协程中，可能产生竞态。
+
+### 10.2 分布式计时器同步
+
+```python
+class GateTimeoutManager:
+    """Gate超时管理 — 防止竞态条件"""
+
+    def __init__(self, default_timeout: float = 10.0):
+        self.default_timeout = default_timeout
+        self._completed: Set[str] = set()
+
+    async def evaluate_with_timeout(
+        self, gate: BaseGate, context: TaskContext, timeout: Optional[float] = None,
+    ) -> GateVerdict:
+        gate_id = gate.gate_id
+        timeout = timeout or self.default_timeout
+
+        eval_task = asyncio.create_task(gate.evaluate(context), name=f"gate_eval_{gate_id}")
+        timeout_task = asyncio.create_task(asyncio.sleep(timeout), name=f"gate_timeout_{gate_id}")
+
+        try:
+            done, pending = await asyncio.wait(
+                {eval_task, timeout_task}, return_when=asyncio.FIRST_COMPLETED,
+            )
+            for task in pending:
+                task.cancel()
+                try: await task
+                except asyncio.CancelledError: pass
+
+            if eval_task in done:
+                self._completed.add(gate_id)
+                return eval_task.result()
+            else:
+                if gate_id in self._completed:
+                    return eval_task.result()
+                return GateVerdict(
+                    gate_id=gate_id, passed=True, score=0.0,
+                    reason=f"Gate评估超时({timeout}s)，fail-open放行",
+                    details={"timeout": timeout}, evaluated_at=datetime.now(),
+                )
+        except Exception as e:
+            return GateVerdict(
+                gate_id=gate_id, passed=True, score=0.0,
+                reason=f"Gate评估异常: {e}，fail-open放行",
+                details={"error": str(e)}, evaluated_at=datetime.now(),
+            )
+        finally:
+            self._completed.discard(gate_id)
+```
+
+## 新增11：金丝雀状态机checkpoint设计 [来源：审核INF-01]
+
+### 11.1 状态持久化+崩溃恢复
+
+```python
+class CanaryStateManager:
+    """金丝雀状态管理 — 持久化+崩溃恢复"""
+
+    def __init__(self, store: EventStore):
+        self.store = store
+
+    async def save_state(self, state: CanaryState):
+        """持久化金丝雀状态到EventStore"""
+        event = SessionEvent(
+            event_type="canary.state_checkpoint",
+            data={
+                "feature": state.feature,
+                "rollout_percentage": state.rollout_percentage,
+                "phase": state.phase,
+                "requests_new": state.requests_new,
+                "requests_old": state.requests_old,
+                "errors_new": state.errors_new,
+                "errors_old": state.errors_old,
+                "started_at": state.started_at.isoformat(),
+                "last_updated": datetime.now().isoformat(),
+            },
+        )
+        await self.store.append(event)
+
+    async def recover_state(self, feature: str) -> Optional[CanaryState]:
+        """崩溃恢复：从EventStore读取最后状态"""
+        events = await self.store.query(
+            event_type="canary.state_checkpoint",
+            filters={"feature": feature}, limit=1, order_by="created_at DESC",
+        )
+        if not events:
+            return None
+        data = events[0].data
+        return CanaryState(
+            feature=data["feature"],
+            rollout_percentage=data["rollout_percentage"],
+            phase=data["phase"],
+            requests_new=data["requests_new"],
+            requests_old=data["requests_old"],
+            errors_new=data["errors_new"],
+            errors_old=data["errors_old"],
+            started_at=datetime.fromisoformat(data["started_at"]),
+        )
+
+    async def should_use_new_path(self, feature: str) -> bool:
+        """基于rollout_percentage的确定性路由"""
+        state = await self.recover_state(feature)
+        if not state:
+            return False
+        import hashlib
+        session_id = get_current_session_id()
+        hash_val = int(hashlib.md5(session_id.encode()).hexdigest(), 16) % 100
+        return hash_val < state.rollout_percentage
+
+@dataclass
+class CanaryState:
+    feature: str
+    rollout_percentage: int
+    phase: Literal["off", "canary_5", "canary_25", "canary_50", "full"]
+    requests_new: int = 0
+    requests_old: int = 0
+    errors_new: int = 0
+    errors_old: int = 0
+    started_at: datetime = field(default_factory=datetime.now)
+```
+
+## 新增12：consensus策略伪代码 [来源：审核CAP-14]
+
+### 12.1 完整实现
+
+```python
+class ConsensusStrategy:
+    """共识策略 — 定义多评委裁决规则"""
+
+    @staticmethod
+    def unanimous(verdicts: List[GateVerdict]) -> ConsensusResult:
+        """全体一致：所有评委必须通过"""
+        all_passed = all(v.passed for v in verdicts)
+        min_score = min(v.score for v in verdicts) if verdicts else 0.0
+        dissenters = [v for v in verdicts if not v.passed]
+        return ConsensusResult(
+            passed=all_passed, score=min_score, strategy="unanimous",
+            total_judges=len(verdicts),
+            passed_judges=len([v for v in verdicts if v.passed]),
+            dissenters=dissenters,
+            reason=f"全体一致通过({len(verdicts)}/{len(verdicts)})" if all_passed
+                   else f"存在{len(dissenters)}个反对评委",
+        )
+
+    @staticmethod
+    def supermajority(verdicts: List[GateVerdict], threshold: float = 2/3) -> ConsensusResult:
+        """超多数：通过比例≥threshold"""
+        passed_count = sum(1 for v in verdicts if v.passed)
+        ratio = passed_count / len(verdicts) if verdicts else 0.0
+        avg_score = sum(v.score for v in verdicts) / len(verdicts) if verdicts else 0.0
+        return ConsensusResult(
+            passed=ratio >= threshold, score=avg_score, strategy="supermajority",
+            total_judges=len(verdicts), passed_judges=passed_count,
+            dissenters=[v for v in verdicts if not v.passed],
+            reason=f"超多数通过({passed_count}/{len(verdicts)}={ratio:.1%})" if ratio >= threshold
+                   else f"未达超多数({passed_count}/{len(verdicts)}={ratio:.1%})",
+        )
+
+    @staticmethod
+    def veto_dimensions(verdicts: List[GateVerdict], veto_dimensions: List[str]) -> ConsensusResult:
+        """否决维度：指定维度有一票否决权"""
+        dim_verdicts: Dict[str, List[GateVerdict]] = {}
+        for v in verdicts:
+            dim = v.details.get("dimension", "default")
+            dim_verdicts.setdefault(dim, []).append(v)
+
+        vetoed = False
+        veto_reasons = []
+        for dim in veto_dimensions:
+            if dim in dim_verdicts and not all(v.passed for v in dim_verdicts[dim]):
+                vetoed = True
+                veto_reasons.append(f"否决维度'{dim}'未通过")
+
+        non_veto_verdicts = [v for v in verdicts
+            if v.details.get("dimension", "default") not in veto_dimensions]
+        non_veto_result = ConsensusStrategy.supermajority(non_veto_verdicts)
+
+        passed = not vetoed and non_veto_result.passed
+        avg_score = sum(v.score for v in verdicts) / len(verdicts) if verdicts else 0.0
+        return ConsensusResult(
+            passed=passed, score=avg_score, strategy="veto_dimensions",
+            total_judges=len(verdicts),
+            passed_judges=sum(1 for v in verdicts if v.passed),
+            dissenters=[v for v in verdicts if not v.passed],
+            reason="通过" if passed else "；".join(veto_reasons) if vetoed else non_veto_result.reason,
+        )
+
+@dataclass
+class ConsensusResult:
+    passed: bool
+    score: float
+    strategy: str
+    total_judges: int
+    passed_judges: int
+    dissenters: List[GateVerdict]
+    reason: str
+```
+
+## 新增13：SSE一致性测试设计 [来源：审核NEW-DB-09]
+
+### 13.1 test_doubao_stream.py
+
+```python
+# tests/integration/test_doubao_stream.py
+import pytest
+from flowforge.tools.llm import LLMClient
+
+@pytest.mark.vcr
+async def test_doubao_sse_format_consistency():
+    """验证Doubao SSE响应格式与OpenAI兼容"""
+    client = LLMClient(provider="doubao")
+    chunks = []
+    async for chunk in client.chat_stream(
+        model="doubao-seed2",
+        messages=[{"role": "user", "content": "请用三句话描述微服务架构的优势"}],
+    ):
+        chunks.append(chunk)
+        assert hasattr(chunk, "choices")
+        assert len(chunk.choices) > 0
+        assert hasattr(chunk.choices[0], "delta")
+
+    # 完整响应与流式拼接一致
+    full_response = await client.chat(
+        model="doubao-seed2",
+        messages=[{"role": "user", "content": "请用三句话描述微服务架构的优势"}],
+    )
+    streamed_content = "".join(c.choices[0].delta.content or "" for c in chunks)
+    assert streamed_content == full_response.content
+
+@pytest.mark.vcr
+async def test_doubao_sse_error_handling():
+    """验证SSE错误事件处理"""
+    client = LLMClient(provider="doubao")
+    with pytest.raises(LLMRateLimitError):
+        async for _ in client.chat_stream(
+            model="doubao-seed2",
+            messages=[{"role": "user", "content": "test"}] * 100,
+        ):
+            pass
+```
+
+## 新增14：中文格式规范检查设计 [来源：审核NEW-DB-08]
+
+### 14.1 ChineseFormatChecker
+
+```python
+class ChineseFormatChecker:
+    """中文格式规范检查器"""
+
+    RULES = {
+        "punctuation": {
+            "description": "中文语境使用中文标点",
+            "pattern": r'[\u4e00-\u9fff]\s*[,.!?;:]\s*[\u4e00-\u9fff]',
+            "replacement": "中文标点（，。！？；：）",
+        },
+        "numbering": {
+            "description": "编号格式统一",
+            "pattern": r'第\s*(\d+)\s*章',
+            "replacement": "第X章（无空格）",
+        },
+        "date_format": {
+            "description": "日期格式统一",
+            "pattern": r'\d{4}/\d{1,2}/\d{1,2}',
+            "replacement": "YYYY年MM月DD日",
+        },
+        "unit_spacing": {
+            "description": "数字与单位间无空格",
+            "pattern": r'\d+\s*(个|次|篇|章|节|条|项|款|种|类|份|期|轮|遍|套|组|批|段|步|层|级)',
+            "replacement": "数字与中文单位间无空格",
+        },
+    }
+
+    def check(self, text: str) -> List[FormatViolation]:
+        violations = []
+        for rule_name, rule in self.RULES.items():
+            matches = re.findall(rule["pattern"], text)
+            if matches:
+                violations.append(FormatViolation(
+                    rule=rule_name, description=rule["description"],
+                    expected=rule["replacement"], found=matches,
+                ))
+        return violations
+```
+
+### 14.2 Persona注入指令段
+
+```yaml
+# persona/base.yaml 新增段
+format_guidelines: |
+  【中文格式规范】
+  1. 中文语境使用中文标点（，。！？；：""''），英文语境使用英文标点
+  2. 编号格式：第一章、第二章（无空格），1.1、1.2（半角点+数字）
+  3. 日期格式：2026年6月16日，不使用2026/06/16
+  4. 数字与中文单位间无空格：3篇文章，不是3 篇文章
+  5. 中英文之间加空格：使用 Python 开发，不是使用Python开发
+```
+
+## 新增15：多模态接入规范 [来源：审核NEW-DB-10]
+
+### 15.1 MultiModalProvider
+
+```python
+class MultiModalProvider:
+    """多模态接入规范"""
+
+    SUPPORTED_MODALITIES = ["text", "image", "audio", "video"]
+
+    async def generate(
+        self, modality: str, prompt: str, model: str = "doubao-seed2-vision", **kwargs,
+    ) -> MultiModalResult:
+        if modality == "image":
+            return await self._generate_image(prompt, model, **kwargs)
+        elif modality == "text":
+            return await self._generate_text(prompt, model, **kwargs)
+        else:
+            raise UnsupportedModalityError(modality)
+
+@dataclass
+class MultiModalResult:
+    modality: str
+    content: Union[str, bytes]
+    mime_type: str
+    metadata: Dict[str, Any]
+    provider: str
+    model: str
+```
+
+### 15.2 Doubao多模态接入矩阵
+
+| 模态 | 模型 | 用途 | 项目 | Phase |
+|------|------|------|------|-------|
+| 文本 | doubao-seed2 | 文章/代码/对话 | 全部 | Phase 0 |
+| 图像理解 | doubao-seed2-vision | 封面图审核/素材分析 | Content/Novel | Phase 3 |
+| 图像生成 | doubao-seed2-image | 封面图/插画/角色头像 | Content/Novel | Phase 3 |
+| 音频 | - | 语音播报 | Content | Phase 4+ |
+
+## 新增16：Agent模式与Doubao能力矩阵 [来源：审核NEW-DB-11]
+
+### 16.1 ModeDoubaoCompatibility
+
+```python
+@dataclass
+class ModeDoubaoCompatibility:
+    """Agent模式与Doubao能力矩阵"""
+    agent_id: str
+    mode: str  # open_code / workflow / sop / interactive
+    recommended_model: str
+    fallback_model: str
+    compatibility_score: float  # 0.0-1.0
+    notes: str
+```
+
+### 16.2 能力矩阵
+
+| Agent | 模式 | 推荐模型 | 备选模型 | 兼容度 | 备注 |
+|-------|------|---------|---------|--------|------|
+| devforge:coder | open_code | doubao-seed2 | deepseek-coder | 0.85 | 代码补全优秀，长上下文需分段 |
+| devforge:reviewer | workflow | doubao-seed2 | qwen-plus | 0.90 | 代码审查稳定 |
+| contentforge:topic | sop | doubao-seed2 | qwen-plus | 0.88 | 选题分析准确 |
+| contentforge:writer | sop | doubao-seed2 | qwen-plus | 0.82 | 长文需分段+续写 |
+| novelforge:outline | workflow | doubao-seed2 | qwen-plus | 0.85 | 大纲生成稳定 |
+| novelforge:chapter | sop | doubao-seed2 | qwen-plus | 0.78 | 长章节需checkpoint续写 |
+| flowforge:planner | open_code | doubao-seed2 | deepseek-chat | 0.90 | 任务规划准确 |
+
+## 新增17：Skill知识沉淀机制 [来源：审核NEW-DB-12]
+
+### 17.1 SkillKnowledgePrecipitator
+
+```python
+class SkillKnowledgePrecipitator:
+    """Agent执行产出自动写入Skill系统"""
+
+    async def precipitate(self, task_result: TaskResult) -> Optional[SkillEntry]:
+        """从成功的任务执行中提取可复用知识"""
+        if not task_result.success:
+            return None
+
+        decisions = self._extract_decisions(task_result.trace)
+        prompt_patterns = self._extract_prompt_patterns(task_result.trace)
+        tool_chains = self._extract_tool_chains(task_result.trace)
+
+        if decisions or prompt_patterns or tool_chains:
+            return SkillEntry(
+                skill_id=f"auto-{task_result.task_id}",
+                source_task=task_result.task_id,
+                agent=task_result.agent_id,
+                decisions=decisions,
+                prompt_patterns=prompt_patterns,
+                tool_chains=tool_chains,
+                quality_score=task_result.gate_score,
+                created_at=datetime.now(),
+            )
+        return None
+
+@dataclass
+class SkillEntry:
+    skill_id: str
+    source_task: str
+    agent: str
+    decisions: List[Dict]
+    prompt_patterns: List[str]
+    tool_chains: List[List[str]]
+    quality_score: float
+    created_at: datetime
+```
+
+### 17.2 沉淀触发条件
+
+```yaml
+# config/system.yaml
+skill_precipitation:
+  enabled: true
+  min_quality_score: 0.8  # Gate评分≥0.8才沉淀
+  auto_apply: false       # 自动应用需人工确认
+  dedup_strategy: "semantic"
+  max_entries_per_agent: 100
+```
+
+## 新增18：灾备降级决策树 [来源：审核INF-01/INF-02/CAP-02]
+
+### 18.1 DegradationDecisionTree
+
+```python
+class DegradationDecisionTree:
+    """通用降级决策树"""
+
+    @staticmethod
+    async def decide(component: str, error: Exception) -> DegradationAction:
+        if isinstance(error, (LLMTimeoutError, LLMRateLimitError)):
+            if await LLMRouter.has_fallback(component):
+                return DegradationAction.SWITCH_PROVIDER
+            return DegradationAction.DEGRADE_TO_HUMAN
+        if isinstance(error, (StorageError, DatabaseCorruptError)):
+            return DegradationAction.USE_MEMORY_FALLBACK
+        if isinstance(error, WorkflowCompileError):
+            return DegradationAction.USE_HARDCODED_SOP
+        if isinstance(error, ToolExecutionError):
+            if await ToolRegistry.has_alternative(component):
+                return DegradationAction.USE_ALTERNATIVE_TOOL
+            return DegradationAction.SKIP_AND_LOG
+        return DegradationAction.ABORT
+```
+
+### 18.2 task.degrade_to_human事件契约
+
+```python
+@dataclass
+class DegradeToHumanEvent:
+    task_id: str
+    component: str
+    original_error: str
+    degradation_reason: str
+    context_snapshot: Dict[str, Any]
+    suggested_action: str
+    urgency: Literal["low", "medium", "high", "critical"]
+    created_at: datetime
+
+    def to_event(self) -> SessionEvent:
+        return SessionEvent(
+            event_type="task.degrade_to_human",
+            data=self.model_dump(),
+            metadata={"requires_notification": True}
+        )
+```
+
+### 18.3 各组件降级矩阵
+
+| 组件 | 降级策略 | 降级触发条件 | 恢复条件 |
+|------|---------|------------|---------|
+| LLMRouter | 切换到备选Provider | 主Provider连续3次超时 | 主Provider健康检查通过 |
+| EventStore | 内存List暂存+定期flush | SQLite写入失败3次 | SQLite恢复写入 |
+| WorkflowCompiler | 使用硬编码SOP | YAML编译失败 | YAML修复后重新编译 |
+| PersonaInjector | 使用默认Persona | Persona文件损坏/缺失 | Persona文件修复 |
+| Compaction | 丢弃最旧消息 | LLM摘要失败 | LLM恢复可用 |
+| Gate评估 | fail-open（放行+告警） | 评估超时10s | 评估服务恢复 |
+
+## 新增19：测试策略设计 [来源：审核FWK-01/INF-01/CAP-14]
+
+### 19.1 测试套件规划
+
+```
+tests/
+├── config/
+│   ├── test_workflow_yaml_validation.py    # YAML Schema校验
+│   ├── test_persona_yaml_validation.py     # Persona格式校验
+│   ├── test_model_routes_yaml.py           # 模型路由配置校验
+│   └── test_system_yaml_defaults.py        # 系统配置默认值校验
+├── integration/
+│   ├── test_workflow_e2e.py                # Workflow端到端
+│   ├── test_llm_router_e2e.py              # LLM路由端到端
+│   ├── test_event_store_e2e.py             # EventStore端到端
+│   ├── test_gate_e2e.py                    # Gate评估端到端
+│   ├── test_doubao_stream.py               # SSE流式输出一致性
+│   └── test_degradation_e2e.py             # 降级链路端到端
+├── cassettes/                              # HTTP Cassette录制目录
+│   ├── doubao_chat_response.yaml
+│   ├── helixrag_search_response.yaml
+│   └── qwen_fallback_response.yaml
+└── unit/                                   # 现有单元测试
+```
+
+### 19.2 HTTP Cassette录制策略
+
+```python
+# conftest.py
+@pytest.fixture
+def vcr_config():
+    return {
+        "cassette_library_dir": "tests/cassettes",
+        "record_mode": "once",
+        "filter_headers": ["authorization"],
+        "decode_compressed_response": True,
+    }
+```
+
+## 新增20：密钥迁移Runbook [来源：审核INF-12/CAP-02]
+
+### 20.1 CredentialMigrationRunbook
+
+```python
+class CredentialMigrationRunbook:
+    """密钥迁移Runbook"""
+
+    @staticmethod
+    async def migrate():
+        # Step 1: 检查环境变量
+        master_key = os.environ.get("FLOWFORGE_MASTER_KEY")
+        if not master_key:
+            raise RuntimeError(
+                "FLOWFORGE_MASTER_KEY环境变量未设置！"
+                "请执行: export FLOWFORGE_MASTER_KEY=$(openssl rand -hex 32)"
+            )
+
+        # Step 2: 初始化新CredentialStore
+        new_store = CredentialStore(master_key=master_key)
+
+        # Step 3: 读取旧SecretStore中的所有密钥
+        old_store = SecretStore()
+        for key_name in old_store.list_keys():
+            value = old_store.get(key_name)
+            await new_store.set(key_name, value)
+
+        # Step 4: 验证迁移完整性
+        for key_name in old_store.list_keys():
+            old_value = old_store.get(key_name)
+            new_value = await new_store.get(key_name)
+            assert old_value == new_value, f"密钥 {key_name} 迁移后不一致！"
+
+        # Step 5: 备份旧存储
+        old_store.backup(path="backups/secret_store_pre_migration.json")
+
+        # Step 6: 更新配置引用
+        # config/system.yaml: credential_store.backend: "encrypted"
+```
+
+### 20.2 FLOWFORGE_MASTER_KEY管理
+
+```yaml
+# config/system.yaml 新增
+credential_store:
+  backend: "encrypted"
+  master_key_env: "FLOWFORGE_MASTER_KEY"
+  encryption_algorithm: "aes-256-gcm"
+  key_rotation_days: 90
+  backup_path: "${FLOWFORGE_DATA_DIR}/backups/credentials"
+```
+
+## 新增21：删除代码回归测试策略 [来源：审核FWK-10/INF-11]
+
+### 21.1 HTTPCassette策略
+
+```python
+# tests/integration/test_code_removal_regression.py
+async def test_old_orchestrator_removed():
+    """验证旧Orchestrator代码已完全删除且功能由WorkflowCompiler替代"""
+    # 1. 确认旧模块不存在
+    with pytest.raises(ImportError):
+        from flowforge.workers.orchestrator import Orchestrator
+
+    # 2. 确认新路径可用
+    from flowforge.core.workflow import WorkflowCompiler
+    compiler = WorkflowCompiler()
+    workflow = compiler.compile(load_yaml("dev_hotfix.yaml"))
+    assert len(workflow.steps) > 0
+
+    # 3. 回放Cassette验证功能等价
+```
+
+### 21.2 删除验收流程
+
+```
+1. git grep 搜索旧代码所有引用 → 0引用
+2. pytest --collect-only 确认无测试依赖旧路径
+3. 运行全量E2E测试（含HTTP Cassette录制回放）
+4. 删除旧代码 + 删除Feature Flag
+5. 再次全量回归验证
+```
+
+---
+
+# [审核修订 v3.0] 六方联合审核修订增补（v2.1/v2.2未覆盖项）
+
+> 审核日期：2026-06-16 | 修订版本：v3.0 | 来源：6份专家审核意见并集，v2.1/v2.2未覆盖部分
+
+## 新增22：FWK-01 WorkflowCompiler三阶段拆分详细设计 [来源：审核问题1]
+
+### 22.1 Parser→Validator→CodeGen三阶段流水线
+
+```python
+@dataclass
+class WorkflowIR:
+    name: str
+    version: str
+    steps: List[StepIR]
+    variables: Dict[str, Any]
+    metadata: Dict[str, Any]
+
+@dataclass
+class StepIR:
+    id: str
+    type: StepType  # SEQUENCE | CONDITIONAL | GATE (MVP)
+    config: Dict[str, Any]
+    dependencies: List[str]
+    input_mapping: Dict[str, str]
+    success_condition: Optional[str] = None
+
+class Parser:
+    """YAML → IR 解析器"""
+    def parse(self, yaml_config: Dict) -> WorkflowIR:
+        steps = []
+        for i, step_cfg in enumerate(yaml_config.get("steps", [])):
+            steps.append(StepIR(
+                id=step_cfg.get("id", f"step_{i}"),
+                type=StepType(step_cfg["type"]),
+                config=step_cfg,
+                dependencies=step_cfg.get("depends_on", []),
+                input_mapping=step_cfg.get("input_mapping", {}),
+                success_condition=step_cfg.get("success_condition"),
+            ))
+        return WorkflowIR(name=yaml_config["name"], version=yaml_config.get("version", "1.0"),
+                          steps=steps, variables=yaml_config.get("variables", {}),
+                          metadata=yaml_config.get("metadata", {}))
+
+class Validator:
+    """IR 校验器"""
+    def validate(self, ir: WorkflowIR) -> ValidationResult:
+        errors = []
+        step_ids = {s.id for s in ir.steps}
+        for step in ir.steps:
+            for dep in step.dependencies:
+                if dep not in step_ids:
+                    errors.append(f"Step {step.id} 依赖不存在的 {dep}")
+        return ValidationResult(valid=len(errors) == 0, errors=errors)
+
+class CodeGen:
+    """IR → CompiledWorkflow 代码生成器"""
+    def generate(self, ir: WorkflowIR) -> CompiledWorkflow:
+        compiled_steps = [self._compile_step(s) for s in ir.steps]
+        return CompiledWorkflow(name=ir.name, steps=compiled_steps, version=ir.version)
+```
+
+### 22.2 MVP StepType范围
+
+| Phase | StepType | 说明 |
+|-------|----------|------|
+| MVP-1 | SEQUENCE | 顺序执行 |
+| MVP-2 | +CONDITIONAL | 条件路由 |
+| MVP-3 | +GATE | 门禁评估 |
+
+- **优先级**：P0
+
+## 新增23：INF-02 EventStore WAL+批量提交详细设计 [来源：审核问题2]
+
+```python
+class EventStore:
+    def __init__(self, db_path: str):
+        self._conn = sqlite3.connect(db_path)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA synchronous=NORMAL")
+        self._conn.execute("PRAGMA wal_autocheckpoint=1000")
+        self._batch: List[SessionEvent] = []
+        self._batch_size = 100
+        self._flush_interval = 1.0
+
+    async def append(self, event: SessionEvent) -> None:
+        self._batch.append(event)
+        if len(self._batch) >= self._batch_size:
+            await self._flush()
+
+    async def _flush(self) -> None:
+        if not self._batch: return
+        batch = self._batch[:]; self._batch.clear()
+        self._conn.executemany(
+            "INSERT INTO events (event_type, session_id, data, created_at) VALUES (?, ?, ?, ?)",
+            [(e.event_type, e.session_id, json.dumps(e.data), e.created_at.isoformat()) for e in batch])
+        self._conn.commit()
+```
+
+- **优先级**：P0
+
+## 新增24：INF-05 Compaction死循环防护详细设计 [来源：审核问题3]
+
+```python
+class DualThresholdCompactor:
+    MAX_COMPACTION_PER_SESSION = 3
+
+    async def check_and_compact(self, context: ConversationContext) -> CompactionResult:
+        session_id = context.session_id
+        self._compaction_count.setdefault(session_id, 0)
+        if not self._should_compact(context):
+            return CompactionResult(action="none")
+        if self._compaction_count[session_id] >= self.MAX_COMPACTION_PER_SESSION:
+            return CompactionResult(action="force_truncate",
+                                    messages_removed=self._force_truncate(context, target_ratio=0.5))
+        self._compaction_count[session_id] += 1
+        try:
+            return CompactionResult(action="summarize", summary=await self._llm_summarize(context))
+        except LLMError:
+            extracted = self._extractive_summarize(context)
+            if self._estimate_tokens(extracted) > self.config.soft_threshold:
+                extracted = self._force_truncate_to_target(extracted, target_ratio=0.6)
+            return CompactionResult(action="extractive_truncate", messages_removed=extracted)
+```
+
+- **优先级**：P0
+
+## 新增25：CAP-01 Source<A>降级为Dict实现 [来源：审核问题4/kimi/mm]
+
+```python
+ContextFragment = TypedDict("ContextFragment", {"key": str, "content": str, "priority": int})
+
+class ContextEngine:
+    def inject(self, context: Dict[str, ContextFragment], max_tokens: int) -> List[ContextFragment]:
+        sorted_fragments = sorted(context.values(), key=lambda f: f["priority"], reverse=True)
+        result, total = [], 0
+        for f in sorted_fragments:
+            est = self._estimate_tokens(f["content"])
+            if total + est > max_tokens: continue
+            result.append(f); total += est
+        return result
+```
+
+- **优先级**：P0→P3降级
+
+## 新增26：TurnKind+LoopPhase统一状态机详细设计 [来源：审核问题5/kimi/mm]
+
+```python
+class UnifiedLoopState(Enum):
+    IDLE = "idle"; EXECUTING = "executing"; EVALUATING = "evaluating"
+    REFLECTING = "reflecting"; COMPACTING = "compacting"; AGENT_SWITCHING = "agent_switching"
+    COMPLETED = "completed"; FAILED = "failed"; LOOPING = "looping"
+
+TRANSITIONS = {
+    UnifiedLoopState.IDLE: {UnifiedLoopState.EXECUTING},
+    UnifiedLoopState.EXECUTING: {UnifiedLoopState.EVALUATING, UnifiedLoopState.FAILED},
+    UnifiedLoopState.EVALUATING: {UnifiedLoopState.COMPLETED, UnifiedLoopState.REFLECTING,
+                                  UnifiedLoopState.COMPACTING, UnifiedLoopState.AGENT_SWITCHING},
+    UnifiedLoopState.REFLECTING: {UnifiedLoopState.EXECUTING, UnifiedLoopState.LOOPING},
+    UnifiedLoopState.COMPACTING: {UnifiedLoopState.EXECUTING},
+    UnifiedLoopState.AGENT_SWITCHING: {UnifiedLoopState.EXECUTING},
+    UnifiedLoopState.LOOPING: {UnifiedLoopState.EXECUTING, UnifiedLoopState.FAILED},
+    UnifiedLoopState.COMPLETED: set(), UnifiedLoopState.FAILED: set(),
+}
+
+@dataclass
+class LoopContext:
+    feedback_gate: float = 0.7; context_utilization: float = 0.8
+    compaction_threshold: float = 0.9; max_steps: int = 25
+    max_retries: int = 4; current_attempt: int = 0
+```
+
+- **优先级**：P0
+
+## 新增27：FWK-01编译器-执行器契约详细设计 [来源：kimi FWK-01-A]
+
+```python
+class WorkflowExecutor:
+    async def execute(self, workflow: CompiledWorkflow, context: TaskContext) -> WorkflowResult:
+        results: Dict[str, StepResult] = {}
+        for step in workflow.steps:
+            if step.type == StepType.CONDITIONAL:
+                result = await self._execute_branch(self._evaluate_condition(step, results), context, results)
+            elif step.type == StepType.GATE:
+                result = await self._execute_gate(step, context)
+            else:
+                result = await self._execute_step(step, context, results)
+            if not result.success and step.fallback:
+                result = await self._execute_step(step.fallback, context, results)
+            results[step.id] = result
+        return WorkflowResult(step_results=results)
+```
+
+- **优先级**：P0
+
+## 新增28：FWK-01输入映射Jinja2模板引擎 [来源：kimi FWK-01-B]
+
+```python
+from jinja2 import Environment, BaseLoader, StrictUndefined
+
+class InputMappingEngine:
+    def __init__(self):
+        self._env = Environment(loader=BaseLoader(), undefined=StrictUndefined)
+
+    def resolve(self, mapping: Dict[str, str], context: Dict[str, Any]) -> Dict[str, Any]:
+        return {k: self._env.from_string(t).render(**context) for k, t in mapping.items()}
+# YAML: input_mapping: {query: "{{ outputs.topic_agent.selected_topic }}"}
+```
+
+- **优先级**：P1
+
+## 新增29：FWK-02条件表达式安全详细设计 [来源：kimi FWK-02-A/B]
+
+```python
+from asteval import Interpreter
+
+class SafeExpressionEvaluator:
+    def __init__(self, strict: bool = True):
+        self._interp = Interpreter(minimal=True, max_time=1.0); self.strict = strict
+
+    def evaluate(self, expression: str, context: Dict[str, Any]) -> Any:
+        if not expression or expression.strip() == "":
+            if self.strict: raise ExpressionError("空表达式在strict模式下不允许")
+            return None
+        try:
+            self._interp.symtable.update(context)
+            result = self._interp(expression)
+            if self._interp.error: raise ExpressionError(str(self._interp.error[0]))
+            return result
+        except Exception as e:
+            if self.strict: raise ExpressionError(f"表达式 '{expression}' 求值失败: {e}")
+            return None
+```
+
+- **优先级**：P0
+
+## 新增30：FWK-03 success_condition可配置化 [来源：kimi FWK-03-A]
+
+```python
+class StepExecutor:
+    def _is_success(self, result: StepResult, step: StepConfig) -> bool:
+        if step.success_condition:
+            return self._evaluator.evaluate(step.success_condition, {
+                "status": result.status, "output": result.output, "error": result.error})
+        return result.status == "completed" and result.error is None
+# YAML: success_condition: "output.results | length > 0"
+```
+
+- **优先级**：P1
+
+## 新增31：底座净化ARCH-00详细设计 [来源：deepseek问题②/mm]
+
+23处领域代码迁移（~1100行），包括：6个内容Agent→contentforge/agents/、3个内容Tool→contentforge/tools/、5个persona配置→contentforge/config/persona/、其他9项→contentforge/。
+
+- **优先级**：P0
+
+## 新增32：OpenCode模式优先级矩阵 [来源：deepseek问题③]
+
+P0(Phase 1): react/plan_execute/workflow/reflexion/sop | P1(Phase 2): multi_agent/rewoo/agent_judge/loop | P2(Phase 3): graph_of_thoughts
+
+- **优先级**：P1
+
+## 新增33：FWK-01 MVP里程碑定义 [来源：deepseek问题④]
+
+| 里程碑 | 功能 | 验收用例 | *Forge并行降级 |
+|--------|------|---------|---------------|
+| MVP-1 | SEQUENCE | dev_hotfix.yaml跑通 | 保留Orchestrator |
+| MVP-2 | +CONDITIONAL | dev_greenfield.yaml跑通 | Feature Flag切换 |
+| MVP-3 | +GATE | dev_canary.yaml跑通 | 旧门禁代码删除 |
+
+- **优先级**：P0
+
+## 新增34：跨项目统一规范详细设计 [来源：6份审核并集]
+
+变量引用统一`${{state.xxx}}`/`${{params.xxx}}`/`${{result.xxx}}`/`${{outputs.xxx.yyy}}`，Agent命名空间`项目前缀:agent名`，状态输出`state_updates:{key:expression}`，执行策略`execution_policy:{timeout,retry,on_error,on_anomaly}`，检查点`checkpoint:{enabled,backend,path,every_n_steps}`
+
+- **优先级**：P0
+
+## 新增35：用户旅程图详细设计 [来源：mm]
+
+核心角色：运维管理员/Agent开发者/业务用户，EventBus→WebSocket推送契约(task.created/task.degrade_to_human/workflow.step_completed/gate.verdict)
+
+- **优先级**：P0
+
+## 新增36：失败UX详细设计 [来源：mm]
+
+5种FAIL路径：Reflexion重试耗尽→降级人工、门禁veto→修改重提、沙箱崩溃→本地执行、LLM全失败→稍后重试、Workflow编译失败→硬编码SOP
+
+- **优先级**：P0
+
+## 新增37：可观测性详细设计 [来源：mm]
+
+trace_id全链路注入 + 4个Grafana仪表盘(LLM概览/Agent执行/Workflow/系统)
+
+- **优先级**：P0
+
+## 新增38：CAP-02 PermissionV2完善详细设计 [来源：mm]
+
+WebSocketApprovalProvider：ASK超时默认DENY(fail-closed)，每次决策写audit_log
+
+- **优先级**：P0
+
+## 新增39：ProviderQuotaManager详细设计 [来源：doubao]
+
+TPM/RPM/月度预算管理，超限行为(block/degrade/queue)
+
+- **优先级**：P1
+
+## 新增40：Doubao moderation内容安全层详细设计 [来源：doubao]
+
+L5层Doubao moderation集成，风险标签存入EventStream，发布前强制预检
+
+- **优先级**：P0
+
+## 新增41：多模型级联策略详细设计 [来源：doubao]
+
+llm_route.yaml: primary=doubao-seed2, fallback=[qwen3.6-plus, deepseek-chat]，failover条件(30s超时/限流2次/5分钟错误率30%)
+
+- **优先级**：P1
+
+## 新增42：性能基线SLO详细设计 [来源：mm/审核问题8]
+
+8项核心组件SLO：compile<50ms, check_and_compact<500ms, parallel<10ms, append<5ms, inject<30ms, 单次迭代<30s, compactor<10s, verifier<15s
+
+- **优先级**：P1
+
+## 新增43：INF-02 SessionInputManager三阶段投递详细设计 [来源：kimi/mm]
+
+inbox→promoted→executed三阶段，LoopExecutor加optional_components注入入口
+
+- **优先级**：P1
+
+## 新增44：事件总线统一详细设计 [来源：审核问题跨项目]
+
+FlowForge EventBus+DurableEventStream统一，OpenSieve AgentBus作为桥接层，NovelForge事件通过EventBus发布
+
+- **优先级**：P1
+
+## 新增45：Agent-Doubao能力矩阵详细设计 [来源：doubao]
+
+agent_mode_tuning.yaml：每个Agent的推荐模式+推荐模型+备选模型+兼容度评分+A/B测试结果
+
+- **优先级**：P1
+
+## 新增46：21个GAP追溯表更新 [来源：mm]
+
+GAP-01→统一状态机(LD3.0-26), GAP-02→死循环防护(LD3.0-24), GAP-03→WAL+批量提交(LD3.0-23), GAP-04→三阶段拆分(LD3.0-22), GAP-C01→删除+Plugin注册, GAP-C04→统一状态机(LD3.0-26)
+
+- **优先级**：P0

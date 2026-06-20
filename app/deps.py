@@ -14,6 +14,7 @@ _scheduler_instance: TaskScheduler = None
 _plugin_manager_instance: PluginManager = None
 _plugin_registry_instance: PluginRegistry = None
 _tool_chain_executor_instance: ToolChainExecutor = None
+_event_store_instance = None
 
 
 def set_executor_instance(executor: HybridExecutor):
@@ -95,3 +96,12 @@ def get_tool_chain_executor() -> Optional[ToolChainExecutor]:
 
 def get_plugin_registry() -> Optional[PluginRegistry]:
     return _plugin_registry_instance
+
+
+def set_event_store_instance(event_store):
+    global _event_store_instance
+    _event_store_instance = event_store
+
+
+async def get_event_store():
+    return _event_store_instance

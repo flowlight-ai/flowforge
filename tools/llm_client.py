@@ -14,25 +14,27 @@ import json
 import time
 import asyncio
 import httpx
-from typing import List, Dict, Optional, AsyncIterator
+from typing import List, Dict, Optional, AsyncIterator, TYPE_CHECKING
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.secret_store import get_secret_store
-from flowforge.core.tracing import get_logger
+from flowforge.core.tracing import get_logger, get_trace_id
 from flowforge.core import metrics
+from flowforge.llm.call_event import LLMCallEvent, get_call_event_collector
+
+if TYPE_CHECKING:
+    from flowforge.llm.router import LLMRouter
 
 logger = get_logger("llm_client")
 
 DEFAULT_FREE_MODELS = {
     "openroute": [
-        "auto",
-        "proxy",
         "Doubao-Seed2.0",
-        "MiniMax-M3",
-        "GLM-5.1",
         "DeepSeek-V4-Pro",
         "Kimi-K2.6",
         "Qwen3.6-Plus",
         "HunYuan3",
+        "GLM-5.1",
+        "MiniMax-M3",
     ],
     "openrouter": [
         "moonshotai/kimi-k2.6:free",
@@ -175,11 +177,12 @@ class LLMClient(BaseTool):
         },
     }
 
-    def __init__(self, models_config: dict = None, event_bus=None):
+    def __init__(self, models_config: dict = None, event_bus=None, llm_router: Optional["LLMRouter"] = None):
         self._models_config = models_config or {}
         self._providers = self._models_config.get("providers", {})
         self._assignments = self._models_config.get("assignments", {})
         self._event_bus = event_bus
+        self._llm_router = llm_router
         self._health_status: Dict[str, dict] = {}
         self._available_models: Dict[str, List[str]] = {}
         self._task_call_counts: Dict[str, int] = {}
@@ -189,6 +192,44 @@ class LLMClient(BaseTool):
 
     def set_event_bus(self, event_bus):
         self._event_bus = event_bus
+
+    def set_llm_router(self, llm_router: "LLMRouter"):
+        """设置 LLMRouter 实例，用于策略级模型路由.
+
+        可在运行时动态注入，不影响已有代码。
+        """
+        self._llm_router = llm_router
+        logger.info("LLMRouter已注入到LLMClient")
+
+    async def _get_routed_model(self, strategy: str = "default") -> Optional[str]:
+        """通过 LLMRouter 获取策略路由的模型ID.
+
+        Args:
+            strategy: 级联策略名称（default/content_writing/code_generation/fact_check等）
+
+        Returns:
+            路由选中的模型ID（provider/model_id格式），如果 LLMRouter 不可用则返回 None
+        """
+        if self._llm_router is None:
+            return None
+        try:
+            model_id = await self._llm_router.route(strategy=strategy)
+            if model_id:
+                # LLMRouter 返回的是纯 model_id，需要转换为 provider/model_id 格式
+                if "/" not in model_id:
+                    for provider, models in self._available_models.items():
+                        if model_id in models:
+                            routed = f"{provider}/{model_id}"
+                            logger.info(f"LLMRouter路由: strategy={strategy} → {routed}")
+                            return routed
+                    # 未在 available_models 中找到，默认使用 openroute
+                    routed = f"openroute/{model_id}"
+                    logger.info(f"LLMRouter路由: strategy={strategy} → {routed} (默认openroute)")
+                    return routed
+                return model_id
+        except Exception as e:
+            logger.warning(f"LLMRouter路由失败: strategy={strategy}, error={e}")
+        return None
 
     def _build_available_models(self):
         yaml_models = self._models_config.get("models", [])
@@ -247,6 +288,56 @@ class LLMClient(BaseTool):
         return key[:8] + "..." + key[-4:]
 
     def _get_model_chain(self, persona: str = "", agent_name: str = "", task_id: str = "") -> List[str]:
+        # LLMRouter 优先路由：当 router 可用时，根据 persona 映射到策略
+        if self._llm_router is not None:
+            strategy = self._map_persona_to_strategy(persona, agent_name)
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # 在异步上下文中，不能同步调用 async 方法，回退到原有逻辑
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        future = pool.submit(asyncio.run, self._get_routed_model(strategy))
+                        routed_model = future.result(timeout=5)
+                else:
+                    routed_model = loop.run_until_complete(self._get_routed_model(strategy))
+                if routed_model:
+                    chain = [routed_model]
+                    # 将原有候选链作为 fallback 追加
+                    original_chain = self._build_assignment_chain(persona, agent_name, task_id)
+                    for c in original_chain:
+                        if c not in chain:
+                            chain.append(c)
+                    return self._apply_rotation_and_cross_validation(chain, persona, task_id)
+            except Exception as e:
+                logger.warning(f"LLMRouter路由异常，回退到原有逻辑: {e}")
+
+        return self._build_assignment_chain(persona, agent_name, task_id)
+
+    def _map_persona_to_strategy(self, persona: str, agent_name: str) -> str:
+        """将 persona/agent_name 映射到 LLMRouter 级联策略名称."""
+        # 映射规则：persona → strategy
+        persona_strategy_map = {
+            "writer": "content_writing",
+            "content_writing": "content_writing",
+            "coder": "code_generation",
+            "code_generation": "code_generation",
+            "judge": "fact_check",
+            "evaluator": "fact_check",
+            "reviewer": "fact_check",
+            "reflexion_evaluator": "fact_check",
+            "fact_check": "fact_check",
+        }
+        # 优先匹配 agent_name
+        if agent_name and agent_name in persona_strategy_map:
+            return persona_strategy_map[agent_name]
+        # 其次匹配 persona
+        if persona and persona in persona_strategy_map:
+            return persona_strategy_map[persona]
+        return "default"
+
+    def _build_assignment_chain(self, persona: str = "", agent_name: str = "", task_id: str = "") -> List[str]:
+        """原有的模型候选链构建逻辑（从 _get_model_chain 中提取）."""
         if persona and agent_name:
             persona_config = self._assignments.get(persona, {})
             agent_config = persona_config.get(agent_name, {})
@@ -334,6 +425,7 @@ class LLMClient(BaseTool):
         logger.warning(f"Cross-validation: all models already used for task {task_id}, "
                        f"falling back to original chain")
         return chain
+
 
     def _emit_event(self, task_id: str, event_type: str, payload: dict):
         if self._event_bus:
@@ -458,25 +550,17 @@ class LLMClient(BaseTool):
             if provider == "openrouter":
                 headers["HTTP-Referer"] = "https://flowforge.dev"
                 headers["X-Title"] = "FlowForge"
-            # openroute: pass X-Scene header for hiclaw openroute scene routing
-            # - has tools → openroute_combine (OpenRoute handles prompt combination + tool parsing)
-            # - auto/proxy model → auto (let hiclaw decide, proxy has built-in round-robin)
-            # - no tools + specific model → caller_combine (FlowForge already composed the prompt)
-            if provider == "openroute":
-                if tools:
-                    headers["X-Scene"] = "openroute_combine"
-                elif model_id in ("auto", "proxy", "free"):
-                    headers["X-Scene"] = "auto"
-                else:
-                    headers["X-Scene"] = "caller_combine"
-                logger.info(f"🌐 [X-Scene] provider=openroute model={model_id} "
-                            f"has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
+            # openroute: 不传 X-Scene header，让 openroute 自行决定场景路由
+            # 老版本content不传X-Scene，从来没有英文CoT问题
 
             payload = {
                 "model": model_id, "messages": messages,
                 "temperature": temperature, "max_tokens": max_tokens,
-                "stream": stream,
             }
+            # 只有明确要求stream时才传stream参数
+            # 老版本content不传stream，走非流式路径，从来没有英文CoT问题
+            if stream:
+                payload["stream"] = True
             if tools:
                 payload["tools"] = tools
             # openroute/auto 模型：让 hiclaw openroute 自动选择最优模型
@@ -543,6 +627,13 @@ class LLMClient(BaseTool):
                 metrics.record_llm_tokens(provider, model_id, tokens)
                 self._update_health(provider, model_id, True)
                 self._record_model_result(f"{provider}/{model_id}", True)
+                self._report_router_health(f"{provider}/{model_id}", True, duration)
+
+                self._record_call_event(
+                    provider=provider, model_id=model_id, status="success",
+                    latency_ms=duration * 1000, input_tokens=0, output_tokens=tokens,
+                    agent_name=agent_name or "", task_id=task_id,
+                )
 
                 self._emit_event(task_id, "llm.end", {
                     "agent_name": agent_name or "unknown",
@@ -559,7 +650,6 @@ class LLMClient(BaseTool):
                     self._record_model_result(f"{provider}/{model_id}", False, "empty_response")
                     last_error = Exception("empty_response")
                     continue
-
                 result = {
                     "content": content_text if isinstance(content_text, str) else content_text,
                     "provider": provider, "model": model_id, "tokens": tokens,
@@ -582,6 +672,16 @@ class LLMClient(BaseTool):
                 self._update_health(provider, model_id, False, error_str)
                 self._record_model_result(f"{provider}/{model_id}", False, error_str)
 
+                error_type = classify_error(error_str)
+                self._report_router_health(f"{provider}/{model_id}", False, error_type=error_type)
+
+                self._record_call_event(
+                    provider=provider, model_id=model_id, status="error",
+                    latency_ms=duration * 1000,
+                    error_message=error_str[:200],
+                    agent_name=agent_name or "", task_id=task_id,
+                )
+
                 # 发射 llm.end 事件（失败时也必须发射，否则指标追踪断裂）
                 self._emit_event(task_id, "llm.end", {
                     "agent_name": agent_name or "unknown",
@@ -592,7 +692,6 @@ class LLMClient(BaseTool):
                     "success": False,
                 })
 
-                error_type = classify_error(error_str)
                 if error_type in ("model_not_found", "no_permission"):
                     logger.info(f"  ❌ 永久性错误({error_type})，跳过 {provider}/{model_id}")
                 else:
@@ -665,6 +764,11 @@ class LLMClient(BaseTool):
                             content_text = content
                         metrics.record_tool_call("llm", duration)
                         self._update_health(provider, model_id, True)
+                        self._record_call_event(
+                            provider=provider, model_id=model_id, status="success",
+                            latency_ms=duration * 1000, output_tokens=tokens,
+                            agent_name=agent_name or "", task_id=task_id,
+                        )
                         self._emit_event(task_id, "llm.end", {"agent_name": agent_name or "unknown", "full_response": content_text[:500] if isinstance(content_text, str) else str(content_text)[:500], "tokens": tokens, "duration_ms": int(duration * 1000), "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0})
                         if (not content_text or (isinstance(content_text, str) and not content_text.strip())) \
                                 and not tool_calls_result:
@@ -685,6 +789,12 @@ class LLMClient(BaseTool):
                         duration_fb = time.time() - start
                         logger.warning(f"LLM fallback failed for {provider}/{model_id}: {str(e)[:200]}")
                         self._update_health(provider, model_id, False, str(e))
+                        self._record_call_event(
+                            provider=provider, model_id=model_id, status="error",
+                            latency_ms=duration_fb * 1000,
+                            error_message=str(e)[:200],
+                            agent_name=agent_name or "", task_id=task_id,
+                        )
                         # 回退链失败时也发射 llm.end 事件
                         self._emit_event(task_id, "llm.end", {
                             "agent_name": agent_name or "unknown",
@@ -854,6 +964,11 @@ class LLMClient(BaseTool):
                 duration = time.time() - start
                 metrics.record_tool_call("llm", duration)
                 self._update_health(provider, model_id, True)
+                self._record_call_event(
+                    provider=provider, model_id=model_id, status="success",
+                    latency_ms=duration * 1000,
+                    agent_name=agent_name or "", task_id=task_id,
+                )
                 self._emit_event(task_id, "llm.end", {
                     "agent_name": agent_name or "unknown",
                     "full_response": "".join(full_content)[:500],
@@ -861,9 +976,16 @@ class LLMClient(BaseTool):
                 })
                 return
             except Exception as e:
+                duration = time.time() - start
                 logger.warning(f"LLM stream failed for {provider}/{model_id}: {e}")
                 metrics.record_llm_error(provider, type(e).__name__)
                 self._update_health(provider, model_id, False, str(e))
+                self._record_call_event(
+                    provider=provider, model_id=model_id, status="error",
+                    latency_ms=duration * 1000,
+                    error_message=str(e)[:200],
+                    agent_name=agent_name or "", task_id=task_id,
+                )
                 continue
 
         raise RuntimeError("All LLM candidates failed for stream request")
@@ -949,3 +1071,61 @@ class LLMClient(BaseTool):
 
     def get_candidate_chain(self, persona: str = "", agent_name: str = "") -> List[str]:
         return self._get_model_chain(persona, agent_name)
+
+    def _report_router_health(
+        self,
+        model_key: str,
+        success: bool,
+        latency: float = 0.0,
+        error_type: str = "",
+    ):
+        """向 LLMRouter 报告模型调用健康状态.
+
+        LLMRouter 不可用时静默跳过，不影响主流程。
+        """
+        if self._llm_router is None:
+            return
+        try:
+            # LLMRouter 使用纯 model_id（不含 provider 前缀）
+            model_id = model_key.split("/", 1)[-1] if "/" in model_key else model_key
+            if success:
+                # record_success 是 async，使用 fire-and-forget 方式
+                asyncio.ensure_future(self._llm_router.record_success(model_id, latency))
+            else:
+                asyncio.ensure_future(self._llm_router.record_error(model_id, error_type))
+        except Exception as e:
+            logger.debug(f"LLMRouter健康报告失败（可忽略）: {e}")
+
+    def _record_call_event(
+        self,
+        provider: str,
+        model_id: str,
+        status: str,
+        latency_ms: float,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        cost: float = 0.0,
+        error_message: str = "",
+        agent_name: str = "",
+        task_id: str = "",
+    ) -> None:
+        """Record an LLMCallEvent to the global collector (fire-and-forget)."""
+        try:
+            event = LLMCallEvent(
+                trace_id=get_trace_id(),
+                timestamp=time.time(),
+                model=model_id,
+                provider=provider,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                latency_ms=latency_ms,
+                cost=cost,
+                status=status,
+                error_message=error_message,
+                agent_name=agent_name,
+                task_id=task_id,
+            )
+            collector = get_call_event_collector()
+            asyncio.ensure_future(collector.record(event))
+        except Exception as e:
+            logger.debug(f"LLMCallEvent记录失败（可忽略）: {e}")

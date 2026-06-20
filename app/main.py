@@ -28,6 +28,7 @@ from flowforge.app.deps import (
     set_scheduler_instance, set_plugin_manager_instance,
     set_tool_chain_executor_instance,
     set_plugin_registry_instance,
+    set_event_store_instance,
 )
 from flowforge.core import metrics
 from flowforge.scheduler.scheduler import TaskScheduler
@@ -64,7 +65,6 @@ def _register_core_tools(tool_registry: ToolRegistry, plugin_registry: PluginReg
         ("flowforge.tools.tavily_search", "TavilySearchTool", "TAVILY_API_KEY"),
         ("flowforge.tools.duckduckgo_search", "DuckDuckGoSearchTool", None),
         ("flowforge.tools.web_scraper", "WebScraperTool", None),
-        ("flowforge.tools.pexels_image", "PexelsImageTool", "PEXELS_API_KEY"),
         # ContentForge domain tools — use contentforge.tools.xxx directly
         ("flowforge.tools.sendgrid_mail", "SendGridMailTool", "SENDGRID_API_KEY"),
         ("flowforge.tools.local_publish", "LocalPublishTool", None),
@@ -375,7 +375,61 @@ def _load_single_plugin(
             new_jobs = set(scheduler._jobs.keys()) - jobs_before
             plugin_instance._registered_schedules.extend(new_jobs)
 
-        # 8. startup — pass PluginContext for dependency injection
+        # 8–14. V2 hooks — call with corresponding registries
+        try:
+            from flowforge.sdk import (
+                WorkflowRegistry, GateRegistry, QualityGateRegistry,
+                EvaluatorRegistry, SOPRegistry, ContextLayerRegistry,
+                WorkflowStepHandlerRegistry,
+            )
+        except ImportError:
+            WorkflowRegistry = GateRegistry = QualityGateRegistry = None
+            EvaluatorRegistry = SOPRegistry = ContextLayerRegistry = None
+            WorkflowStepHandlerRegistry = None
+
+        # 8. workflows
+        if WorkflowRegistry is not None:
+            wf_registry = WorkflowRegistry()
+            plugin_instance.register_workflows(wf_registry)
+            plugin_instance._registered_workflows.extend(wf_registry.list_workflows())
+
+        # 9. gates
+        if GateRegistry is not None:
+            gate_reg = GateRegistry()
+            plugin_instance.register_gates(gate_reg)
+            plugin_instance._registered_gates.extend(gate_reg.list_gates())
+
+        # 10. evaluators
+        if EvaluatorRegistry is not None:
+            eval_reg = EvaluatorRegistry()
+            plugin_instance.register_evaluators(eval_reg)
+            plugin_instance._registered_evaluators.extend(eval_reg.list_evaluators())
+
+        # 11. SOPs
+        if SOPRegistry is not None:
+            sop_reg = SOPRegistry()
+            plugin_instance.register_sops(sop_reg)
+            plugin_instance._registered_sops.extend(sop_reg.list_sops())
+
+        # 12. quality gates
+        if QualityGateRegistry is not None:
+            qg_reg = QualityGateRegistry()
+            plugin_instance.register_quality_gates(qg_reg)
+            plugin_instance._registered_quality_gates.extend(qg_reg.list_quality_gates())
+
+        # 13. context layers
+        if ContextLayerRegistry is not None:
+            cl_reg = ContextLayerRegistry()
+            plugin_instance.register_context_layers(cl_reg)
+            plugin_instance._registered_context_layers.extend(cl_reg.list_layers())
+
+        # 14. workflow step handlers
+        if WorkflowStepHandlerRegistry is not None:
+            sh_reg = WorkflowStepHandlerRegistry()
+            plugin_instance.register_workflow_step_handler(sh_reg)
+            plugin_instance._registered_step_handlers.extend(sh_reg.list_handlers())
+
+        # 15. startup — pass PluginContext for dependency injection
         from flowforge.core.plugin_protocol import PluginContext
         from flowforge.core.plugin_protocol import validate_plugin_config, fill_config_defaults
         plugin_config = {}
@@ -408,6 +462,7 @@ def _load_single_plugin(
             memory_manager=memory_manager,
             model_service=model_service,
             plugin_registry=plugin_registry,
+            event_store=event_store,
         )
         plugin_instance.on_startup({"context": ctx})
 
@@ -761,6 +816,12 @@ _register_all_modes(mode_registry)
 
 memory_manager = MemoryManager({"db_url": system_config.db_url})
 
+# EventStore 初始化 — WAL模式事件存储，用于任务生命周期事件持久化
+from flowforge.session.event_store import EventStore
+event_store = EventStore(store_dir=str(ConfigLoader().config_dir / ".flowforge" / "events"))
+set_event_store_instance(event_store)
+logger.info(f"EventStore initialized with {event_store.entry_count} existing entries")
+
 set_llm_client_instance(llm_client)
 
 from flowforge.core.tool_chain_executor import ToolChainExecutor
@@ -847,6 +908,7 @@ lifecycle_manager = PluginLifecycleManager(
     memory_manager=memory_manager,
     model_service=model_service,
     plugin_registry=plugin_registry,
+    event_store=event_store,
 )
 
 app.include_router(router)

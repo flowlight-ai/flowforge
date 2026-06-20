@@ -298,13 +298,13 @@ class TestFlowForgeNoDomainAgents:
         assert "contentforge" in src, \
             "article_writing.py 应提示从 contentforge 导入"
 
-    def test_code_writer_agent_is_reexport(self):
-        """验证flowforge/agents/code_writer_agent.py是重导出。"""
+    def test_code_writer_agent_raises_import_error(self):
+        """验证flowforge/agents/code_writer_agent.py已迁移，导入会raise ImportError。"""
         src = (FLOWFORGE_ROOT / "agents" / "code_writer_agent.py").read_text(encoding="utf-8")
-        assert "DeprecationWarning" in src, \
-            "code_writer_agent.py 应包含 DeprecationWarning"
+        assert "ImportError" in src, \
+            "code_writer_agent.py 应包含 ImportError"
         assert "devforge" in src, \
-            "code_writer_agent.py 应重导出自 devforge"
+            "code_writer_agent.py 应提示从 devforge 导入"
 
     def test_publish_tool_raises_import_error(self):
         """验证flowforge/tools/publish.py已迁移，导入会raise ImportError。"""
@@ -446,12 +446,12 @@ class TestNoTracebackExposure:
 class TestAgentModeImplementations:
     """验证NovelForge Agent实现了模式循环。"""
 
-    def test_novel_concept_agent_has_got(self):
-        """验证NovelConceptAgent有GoT逻辑（多分支）。"""
+    def test_novel_concept_agent_has_plan_execute(self):
+        """验证NovelConceptAgent有Plan-Execute逻辑（v3.0修订：GoT降级为可选，默认plan_execute）。"""
         src = (NOVELFORGE_ROOT / "agents" / "novel_concept_agent.py").read_text(encoding="utf-8")
-        assert "graph_of_thoughts" in src, "NovelConceptAgent 应使用 graph_of_thoughts 模式"
-        # GoT 应有多分支发散逻辑
-        assert "branch" in src.lower(), "NovelConceptAgent 应有多分支(branch)发散逻辑"
+        assert "plan_execute" in src, "NovelConceptAgent 应使用 plan_execute 模式（v3.0修订）"
+        # plan_execute 应有规划阶段
+        assert "_plan_phase" in src or "plan" in src.lower(), "NovelConceptAgent 应有规划阶段"
 
     def test_style_calibrate_agent_has_reflexion(self):
         """验证StyleCalibrateAgent有Reflexion逻辑（循环）。"""

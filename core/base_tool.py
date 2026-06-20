@@ -23,6 +23,21 @@ class BaseTool(ABC):
     async def execute(self, input: ToolInput) -> ToolOutput:
         ...
 
+    def to_function_call(self) -> Dict[str, Any]:
+        """转换为LLM function calling格式（OpenAI tools schema）。"""
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.parameters_schema or {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                },
+            },
+        }
+
     def validate_params(self, params: Dict[str, Any]) -> bool:
         required = self.parameters_schema.get("required", [])
         for field in required:

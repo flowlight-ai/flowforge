@@ -1,9 +1,8 @@
-# 此文件已迁移到 devforge/agents/code_writer_agent.py
-# 保留此文件仅为向后兼容，新代码请使用 devforge.agents.code_writer_agent
-import warnings
-warnings.warn(
-    "flowforge.agents.code_writer_agent 已迁移到 devforge.agents.code_writer_agent，请更新导入路径",
-    DeprecationWarning,
-    stacklevel=2,
+"""此模块已迁移到 devforge.agents.code_writer_agent。
+
+请使用: from devforge.agents.code_writer_agent import CodeWriterAgent
+"""
+raise ImportError(
+    "此Agent已迁移到DevForge项目。"
+    "请使用: from devforge.agents.code_writer_agent import CodeWriterAgent"
 )
-from devforge.agents.code_writer_agent import CodeWriterAgent  # noqa: F401

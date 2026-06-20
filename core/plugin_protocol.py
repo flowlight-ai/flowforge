@@ -135,6 +135,7 @@ class PluginContext:
         memory_manager: Optional[Any] = None,
         model_service: Optional[Any] = None,
         plugin_registry: Optional[Any] = None,
+        event_store: Optional[Any] = None,
     ):
         self._agent_registry = agent_registry
         self._tool_registry = tool_registry
@@ -148,6 +149,7 @@ class PluginContext:
         self._memory_manager = memory_manager
         self._model_service = model_service
         self._plugin_registry = plugin_registry
+        self._event_store = event_store
         self._services: Dict[str, Any] = {}
 
     @property
@@ -217,6 +219,11 @@ class PluginContext:
         """Access the plugin registry for tool plugin management."""
         return self._plugin_registry
 
+    @property
+    def event_store(self) -> Optional[Any]:
+        """Access the event store for WAL-mode event persistence and replay."""
+        return self._event_store
+
     def register_service(self, name: str, service: Any) -> None:
         """Register a named service for plugin access."""
         self._services[name] = service
@@ -254,6 +261,14 @@ class FlowForgePlugin(ABC):
         self._registered_routes: list[str] = []
         self._registered_event_handlers: list[tuple[str, Any]] = []
         self._registered_schedules: list[str] = []
+        # V2 tracking
+        self._registered_workflows: list[str] = []
+        self._registered_gates: list[str] = []
+        self._registered_evaluators: list[str] = []
+        self._registered_sops: list[str] = []
+        self._registered_quality_gates: list[str] = []
+        self._registered_context_layers: list[str] = []
+        self._registered_step_handlers: list[str] = []
 
     @property
     def state(self) -> PluginState:
@@ -323,6 +338,66 @@ class FlowForgePlugin(ABC):
 
     def register_schedules(self, scheduler: Any) -> None:
         """Register scheduled / cron tasks on the scheduler."""
+        pass
+
+    # ── V2 Registration hooks ───────────────────────────────────────
+
+    def register_workflows(self, workflow_registry: Any) -> None:
+        """Register Workflow YAML definitions into the workflow registry.
+
+        Plugins can define workflow YAML configurations and register them
+        for the framework to discover and execute.
+        """
+        pass
+
+    def register_gates(self, gate_registry: Any) -> None:
+        """Register gate / access-control configurations.
+
+        Gates control whether a workflow step or agent execution is
+        allowed to proceed based on runtime conditions.
+        """
+        pass
+
+    def register_evaluators(self, registry: Any) -> None:
+        """Register evaluator agents into the evaluator registry.
+
+        Evaluators assess the quality or correctness of agent outputs,
+        workflow results, or other artifacts.
+        """
+        pass
+
+    def register_sops(self, sop_registry: Any) -> None:
+        """Register SOP (Standard Operating Procedure) definitions.
+
+        SOPs define ordered sequences of steps that must be followed
+        for a particular business process.
+        """
+        pass
+
+    def register_quality_gates(self, quality_gate_registry: Any) -> None:
+        """Register quality gate configurations.
+
+        Quality gates define pass/fail criteria that must be satisfied
+        before a workflow can transition to the next phase.
+        """
+        pass
+
+    def register_context_layers(self, context_registry: Any) -> None:
+        """Register context layers.
+
+        Context layers provide additional contextual information
+        (e.g., persona, domain knowledge) that agents can access
+        during execution.
+        """
+        pass
+
+    def register_workflow_step_handler(self, handler_registry: Any) -> None:
+        """Register custom workflow step handlers.
+
+        Step handlers define how specific workflow step types are
+        executed, allowing plugins to extend the workflow engine
+        with custom step logic.
+        """
         pass
 
     # ── Lifecycle hooks ─────────────────────────────────────────────

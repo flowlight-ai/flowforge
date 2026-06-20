@@ -1,0 +1,72 @@
+id: dev_greenfield
+name: "Greenfield开发流程"
+description: "从需求分析到代码交付的完整流程，支持并行开发与降级回退"
+version: "1.0"
+
+state_schema:
+  requirement: str
+  architecture: str | null
+  code: str | null
+  test_result: str | null
+  review_passed: bool | null
+
+steps:
+  - id: analyze
+    name: "需求分析"
+    type: agent
+    agent: "devforge:analyst"
+    input_mapping:
+      requirement: "${params.requirement}"
+    output_key: "architecture"
+
+  - id: parallel_dev
+    name: "并行开发"
+    type: parallel
+    parallel_steps:
+      - id: code_impl
+        name: "代码实现"
+        type: agent
+        agent: "devforge:coder"
+        input_mapping:
+          architecture: "${state.architecture}"
+        output_key: "code"
+      - id: test_gen
+        name: "测试生成"
+        type: agent
+        agent: "devforge:test_generator"
+        input_mapping:
+          architecture: "${state.architecture}"
+        output_key: "test_cases"
+
+  - id: review_with_fallback
+    name: "代码审查（含降级）"
+    type: fallback
+    primary:
+      - id: ai_review
+        name: "AI代码审查"
+        type: agent
+        agent: "devforge:reviewer"
+        input_mapping:
+          code: "${state.code}"
+        output_key: "review_result"
+    fallback:
+      - id: manual_review
+        name: "人工审查标记"
+        type: agent
+        agent: "devforge:review_notifier"
+        input_mapping:
+          code: "${state.code}"
+        output_key: "review_result"
+
+  - id: quality_gate
+    name: "质量关卡"
+    type: gate
+
+execution_policy:
+  timeout: 900
+  retry: 2
+  on_error: "retry"
+
+checkpoint:
+  enabled: true
+  every_n_steps: 1

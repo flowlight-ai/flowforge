@@ -9,9 +9,9 @@ class FileReadWriteTool(BaseTool):
         "type": "object",
         "required": ["path", "action"],
         "properties": {
-            "path": {"type": "string"},
-            "action": {"type": "string", "enum": ["read", "write", "delete"]},
-            "content": {"type": "string"},
+            "path": {"type": "string", "description": "文件相对路径"},
+            "action": {"type": "string", "enum": ["read", "write", "delete"], "description": "操作类型"},
+            "content": {"type": "string", "description": "写入内容（action=write时必填）"},
         }
     }
     ALLOWED_BASE = os.path.join(os.path.dirname(__file__), "..", "data", "sandbox")

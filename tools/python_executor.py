@@ -14,9 +14,9 @@ class PythonExecutorTool(BaseTool):
         "type": "object",
         "required": ["code"],
         "properties": {
-            "code": {"type": "string"},
-            "timeout": {"type": "integer", "default": 10},
-            "max_memory_mb": {"type": "integer", "default": 64},
+            "code": {"type": "string", "description": "要执行的Python代码"},
+            "timeout": {"type": "integer", "default": 10, "description": "执行超时秒数"},
+            "max_memory_mb": {"type": "integer", "default": 64, "description": "最大内存限制（MB）"},
         }
     }
 

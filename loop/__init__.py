@@ -6,6 +6,7 @@ Loop Engine is the 5th component of the Harness layer, providing:
 - Verifier: Business-level quality verification
 - Reflector: Analyze failures and generate improvements
 - Memory: Map to existing 5 memory types
+- TurnTransition: Unified state machine (FWK-06)
 
 Key principle: LoopExecutor wraps HybridExecutor, not replaces it.
 """
@@ -17,6 +18,7 @@ from flowforge.loop.verifier import LoopVerifier, AgentJudgeVerifier, RuleBasedV
 from flowforge.loop.reflector import LoopReflector, ReflexionReflector
 from flowforge.loop.registry import LoopRegistry, LoopTemplateConfig
 from flowforge.loop.parallel import ParallelWorkerResult, execute_parallel_workers
+from flowforge.loop.turn_transition import TurnState, TurnTransition, TurnTransitionEngine, VALID_TRANSITIONS
 
 __all__ = [
     "LoopState", "LoopResult", "LoopPhase", "Verdict", "Reflection", "LoopNestingError",
@@ -26,4 +28,5 @@ __all__ = [
     "LoopReflector", "ReflexionReflector",
     "LoopRegistry", "LoopTemplateConfig",
     "ParallelWorkerResult", "execute_parallel_workers",
+    "TurnState", "TurnTransition", "TurnTransitionEngine", "VALID_TRANSITIONS",
 ]

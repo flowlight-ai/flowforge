@@ -9,9 +9,9 @@ class WorkspaceFileTool(BaseTool):
         "type": "object",
         "required": ["action", "path"],
         "properties": {
-            "action": {"type": "string", "enum": ["read", "write", "list", "delete", "mkdir", "exists"]},
-            "path": {"type": "string"},
-            "content": {"type": "string"},
+            "action": {"type": "string", "enum": ["read", "write", "list", "delete", "mkdir", "exists"], "description": "操作类型"},
+            "path": {"type": "string", "description": "文件相对路径"},
+            "content": {"type": "string", "description": "写入内容（action=write时必填）"},
         }
     }
 

@@ -43,16 +43,25 @@ class ReflexionReflector(LoopReflector):
         if not errors:
             return Reflection(suggestions=[], root_cause="", plan_adjustments=[])
 
+        logger.info(f"[reflector] 开始反思: task_id={task.task_id}, attempt={state.attempt}, "
+                     f"errors_count={len(errors)}, errors_top3={errors[:3]}")
+
         if self.llm_client is not None:
             try:
                 reflection = await self._llm_reflect(errors, task, state)
                 if reflection:
+                    logger.info(f"[reflector] LLM反思完成: root_cause={reflection.root_cause[:100]}, "
+                                 f"suggestions_count={len(reflection.suggestions)}, "
+                                 f"suggestions={reflection.suggestions[:3]}")
                     return reflection
                 logger.warning("LLM reflect response could not be parsed, falling back to rule-based logic")
             except Exception as e:
                 logger.warning("LLM reflect failed: %s, falling back to rule-based logic", e)
 
-        return self._rule_based_reflect(errors, task, state)
+        reflection = self._rule_based_reflect(errors, task, state)
+        logger.info(f"[reflector] 规则反思完成: root_cause={reflection.root_cause[:100]}, "
+                     f"suggestions_count={len(reflection.suggestions)}")
+        return reflection
 
     async def _llm_reflect(self, errors: list[str], task: TaskContext, state: LoopState) -> Reflection | None:
         """Use LLM to perform root cause analysis and generate suggestions."""
