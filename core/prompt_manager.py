@@ -21,22 +21,38 @@ class PromptManager:
         if self._prompts:
             return
         self._prompts = {}
+        # 动态注册的项目列表：{prefix: project_name}
+        # 例如 {"contentforge.": "contentforge"} 表示以 "contentforge." 开头的 key
+        # 会从对应项目的 config 目录加载
+        self._registered_projects: dict[str, str] = {}
         # Load from default config dir first
         if os.path.isdir(_DEFAULT_CONFIG_DIR):
             self._load_from_dir(_DEFAULT_CONFIG_DIR)
-        # Auto-discover and load prompts from upper-layer projects
+        # Auto-discover and load prompts from registered projects
         self._auto_discover_project_prompts()
         # Load from custom dir if specified
         if prompts_dir and os.path.isdir(prompts_dir) and prompts_dir != _DEFAULT_CONFIG_DIR:
             self._load_from_dir(prompts_dir)
 
-    def _auto_discover_project_prompts(self):
-        """Auto-discover and load prompts.yaml from upper-layer projects (contentforge, novelforge, etc.)."""
-        # flowforge/core/prompt_manager.py -> flowforge/ -> openclaw/
+    def register_project(self, prefix: str, project_name: str) -> None:
+        """注册一个上层项目，使其 prompts 可被自动发现和按前缀加载。
+
+        Args:
+            prefix: prompt key 的前缀，如 "contentforge."
+            project_name: 项目名称，如 "contentforge"，用于定位 config 目录
+        """
+        self._registered_projects[prefix] = project_name
+        # 立即尝试加载该项目的 prompts
         workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        project_names = ["contentforge", "novelforge", "devforge", "mallforge"]
-        for project in project_names:
-            project_config_dir = os.path.join(workspace_root, project, "config")
+        project_config_dir = os.path.join(workspace_root, project_name, "config")
+        if os.path.isdir(project_config_dir):
+            self._load_from_dir(project_config_dir)
+
+    def _auto_discover_project_prompts(self):
+        """Auto-discover and load prompts.yaml from registered projects."""
+        workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        for prefix, project_name in self._registered_projects.items():
+            project_config_dir = os.path.join(workspace_root, project_name, "config")
             if os.path.isdir(project_config_dir):
                 self._load_from_dir(project_config_dir)
 
@@ -73,13 +89,7 @@ class PromptManager:
 
     def _try_load_project_prompt(self, key: str) -> str:
         """Try to load a prompt from a project-specific prompts.yaml based on key prefix."""
-        project_map = {
-            "contentforge.": "contentforge",
-            "novelforge.": "novelforge",
-            "devforge.": "devforge",
-            "mallforge.": "mallforge",
-        }
-        for prefix, project_name in project_map.items():
+        for prefix, project_name in self._registered_projects.items():
             if key.startswith(prefix):
                 # flowforge/core/prompt_manager.py -> flowforge/ -> openclaw/
                 workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

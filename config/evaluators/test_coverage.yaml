@@ -1,0 +1,17 @@
+name: test_coverage
+description: "测试覆盖率评估器"
+dimension: test_coverage
+evaluator_agent: TestCoverageEvaluatorAgent
+scoring_rules:
+  - field: unit_coverage
+    weight: 0.3
+  - field: integration_coverage
+    weight: 0.25
+  - field: boundary_coverage
+    weight: 0.25
+  - field: test_quality
+    weight: 0.2
+default_score: 0.0
+default_confidence: 0.0
+weight: 1.0
+threshold: 0.8

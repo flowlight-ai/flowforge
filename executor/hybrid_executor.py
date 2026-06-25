@@ -150,6 +150,24 @@ class HybridExecutor:
         """
         persona = context.persona or "default"
 
+        # [loop-trace] run()入口详细日志
+        logger.info(f"[loop-trace] task_id={context.task_id} HybridExecutor.run()入口: "
+                     f"mode_hint={mode_hint}, _is_substep={_is_substep}, "
+                     f"persona={persona}, interaction_mode={context.interaction_mode}")
+        if isinstance(context.input_data, dict):
+            logger.info(f"[loop-trace] task_id={context.task_id} input_data_keys={list(context.input_data.keys())}")
+            for _ik, _iv in context.input_data.items():
+                if _ik.startswith("_"):
+                    continue
+                _iv_len = len(str(_iv)) if _iv is not None else 0
+                _iv_preview = str(_iv)[:200] if _iv is not None else "None"
+                if isinstance(_iv, dict):
+                    logger.info(f"[loop-trace] task_id={context.task_id} input_data[{_ik}] type=dict, keys={list(_iv.keys())}")
+                else:
+                    logger.info(f"[loop-trace] task_id={context.task_id} input_data[{_ik}] type={type(_iv).__name__}, len={_iv_len}, preview={_iv_preview}")
+        if isinstance(context.metadata, dict):
+            logger.info(f"[loop-trace] task_id={context.task_id} metadata_keys={list(context.metadata.keys())}")
+
         if not _is_substep:
             # Save task state immediately so GET /tasks/{id} doesn't return 404
             self._task_contexts[context.task_id] = context
@@ -233,6 +251,27 @@ class HybridExecutor:
                         for key in ("response", "final_answer", "content"):
                             if key in loop_result.output and key not in result:
                                 result[key] = loop_result.output[key]
+
+                # [loop-trace] Loop执行完成后结果详细日志
+                logger.info(f"[loop-trace] task_id={context.task_id} Loop执行完成: "
+                             f"success={loop_result.success}, total_attempts={loop_result.total_attempts}, "
+                             f"error={loop_result.error}")
+                if isinstance(loop_result.output, dict):
+                    logger.info(f"[loop-trace] task_id={context.task_id} loop_output_keys={list(loop_result.output.keys())}")
+                    for _lok, _lov in loop_result.output.items():
+                        if _lok.startswith("_"):
+                            continue
+                        _lov_len = len(str(_lov)) if _lov is not None else 0
+                        _lov_preview = str(_lov)[:200] if _lov is not None else "None"
+                        if isinstance(_lov, dict):
+                            logger.info(f"[loop-trace] task_id={context.task_id} loop_output[{_lok}] type=dict, keys={list(_lov.keys())}, len={_lov_len}")
+                        else:
+                            logger.info(f"[loop-trace] task_id={context.task_id} loop_output[{_lok}] type={type(_lov).__name__}, len={_lov_len}, preview={_lov_preview}")
+                elif loop_result.output is not None:
+                    logger.info(f"[loop-trace] task_id={context.task_id} loop_output type={type(loop_result.output).__name__}, preview={str(loop_result.output)[:200]}")
+                else:
+                    logger.info(f"[loop-trace] task_id={context.task_id} loop_output is None")
+                logger.info(f"[loop-trace] task_id={context.task_id} result_dict_keys={list(result.keys())}")
                 if loop_result.error is not None:
                     result["error"] = loop_result.error
                 if loop_result.state is not None:
@@ -362,6 +401,22 @@ class HybridExecutor:
                 executor.run(context),
                 timeout=TASK_TIMEOUT_SECONDS,
             )
+
+            # [loop-trace] 非Loop模式执行完成后结果详细日志
+            logger.info(f"[loop-trace] task_id={context.task_id} 非Loop模式执行完成: mode={mode}")
+            if isinstance(result, dict):
+                logger.info(f"[loop-trace] task_id={context.task_id} result_keys={list(result.keys())}")
+                for _rk, _rv in result.items():
+                    if _rk.startswith("_"):
+                        continue
+                    _rv_len = len(str(_rv)) if _rv is not None else 0
+                    _rv_preview = str(_rv)[:200] if _rv is not None else "None"
+                    if isinstance(_rv, dict):
+                        logger.info(f"[loop-trace] task_id={context.task_id} result[{_rk}] type=dict, keys={list(_rv.keys())}, len={_rv_len}")
+                    else:
+                        logger.info(f"[loop-trace] task_id={context.task_id} result[{_rk}] type={type(_rv).__name__}, len={_rv_len}, preview={_rv_preview}")
+            else:
+                logger.info(f"[loop-trace] task_id={context.task_id} result type={type(result).__name__}, preview={str(result)[:200]}")
 
             # v6.0 Harness post_execute hook
             if self.harness and context.harness_enabled:

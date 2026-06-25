@@ -312,6 +312,189 @@ lifecycle_manager: PluginLifecycleManager | None = None
 sandbox_manager = None
 frontend_registry = None
 
+# ── Auto-discover *forge plugins ──────────────────────────────────────
+
+# Standard config sub-directories that auto_discover_plugins scans
+_AUTO_DISCOVER_SUBDIRS = [
+    "agents", "workflows", "tools", "personas", "prompts",
+    "gates", "quality_gates", "evaluators", "context_layers", "loops", "sops",
+]
+
+# Default *forge project names to scan
+_DEFAULT_FORGE_NAMES = ["contentforge", "devforge", "novelforge", "mallforge"]
+
+
+def auto_discover_plugins(
+    agent_registry: AgentRegistry,
+    tool_registry: ToolRegistry,
+    mode_registry: ModeRegistry | None = None,
+    event_bus: EventBus | None = None,
+    scheduler: TaskScheduler | None = None,
+    app: FastAPI | None = None,
+):
+    """Auto-discover and load *forge plugins from sibling directories.
+
+    Scans sibling *forge projects' config/ directories and creates
+    AutoPlugin instances to register their declarative configurations.
+    No Python plugin code is required in the *forge projects — only
+    YAML configuration files in the standard sub-directories.
+
+    Controlled by:
+      - ``FLOWFORGE_AUTO_DISCOVER`` env var (default: ``true``)
+      - ``FLOWFORGE_FORGE_DIRS`` env var (comma-separated custom dirs)
+      - ``system.auto_discover`` in default.yaml
+      - ``system.forge_dirs`` in default.yaml
+    """
+    import os
+    from pathlib import Path
+
+    # 1. Check if auto-discover is enabled
+    env_flag = os.getenv("FLOWFORGE_AUTO_DISCOVER", "").lower()
+    if env_flag in ("0", "false", "no", "off"):
+        logger.info("auto_discover_plugins: disabled by FLOWFORGE_AUTO_DISCOVER env var")
+        return
+
+    cfg = None
+    try:
+        cfg = ConfigLoader().load_yaml("default.yaml")
+        yaml_flag = cfg.get("system", {}).get("auto_discover", True)
+    except Exception:
+        yaml_flag = True
+
+    if env_flag == "" and not yaml_flag:
+        logger.info("auto_discover_plugins: disabled by default.yaml config")
+        return
+
+    # 2. Determine flowforge parent directory
+    flowforge_dir = Path(__file__).resolve().parent.parent  # flowforge/
+    parent_dir = flowforge_dir.parent  # d:\software\openclaw
+
+    # 3. Determine which *forge directories to scan
+    env_dirs = os.getenv("FLOWFORGE_FORGE_DIRS", "").strip()
+    yaml_dirs = ""
+    if cfg is not None:
+        try:
+            yaml_dirs = cfg.get("system", {}).get("forge_dirs", "").strip()
+        except Exception:
+            yaml_dirs = ""
+
+    dirs_str = env_dirs or yaml_dirs
+
+    if dirs_str:
+        # Custom directory list provided
+        forge_dirs = []
+        for d in dirs_str.split(","):
+            d = d.strip()
+            if not d:
+                continue
+            p = Path(d)
+            if not p.is_absolute():
+                p = parent_dir / p
+            if p.is_dir():
+                forge_dirs.append(p)
+            else:
+                logger.warning(f"auto_discover_plugins: custom dir '{d}' not found, skipping")
+    else:
+        # Auto-scan sibling *forge directories
+        forge_dirs = []
+        for name in _DEFAULT_FORGE_NAMES:
+            candidate = parent_dir / name
+            if candidate.is_dir():
+                forge_dirs.append(candidate)
+
+    if not forge_dirs:
+        logger.info("auto_discover_plugins: no *forge directories found")
+        return
+
+    logger.info(f"auto_discover_plugins: scanning {len(forge_dirs)} *forge director(ies)")
+
+    # 4. For each *forge directory, check config/ and create AutoPlugin
+    from flowforge.sdk import FlowForgeSDK
+
+    sdk = FlowForgeSDK._current_instance
+
+    for forge_dir in forge_dirs:
+        config_dir = forge_dir / "config"
+        if not config_dir.is_dir():
+            logger.debug(f"auto_discover_plugins: {forge_dir.name} has no config/ directory, skipping")
+            continue
+
+        # Discover which standard sub-directories exist
+        discovered_dirs: dict[str, str] = {}
+        for subdir_name in _AUTO_DISCOVER_SUBDIRS:
+            subdir_path = config_dir / subdir_name
+            if subdir_path.is_dir():
+                # Check if directory has any YAML files
+                has_yaml = any(subdir_path.glob("*.y*ml"))
+                if has_yaml:
+                    discovered_dirs[subdir_name] = str(subdir_path)
+
+        if not discovered_dirs:
+            logger.debug(f"auto_discover_plugins: {forge_dir.name}/config/ has no standard sub-directories with YAML, skipping")
+            continue
+
+        forge_name = forge_dir.name
+        logger.info(
+            f"auto_discover_plugins: {forge_name} discovered config dirs: "
+            f"{', '.join(discovered_dirs.keys())}"
+        )
+
+        # 5. Create AutoPlugin via SDK
+        try:
+            if sdk is not None:
+                plugin = sdk.create_plugin(
+                    name=forge_name,
+                    version="0.1.0",
+                    description=f"Auto-discovered {forge_name} declarative configs",
+                    priority=200,
+                    namespace=forge_name,
+                    agents_dir=discovered_dirs.get("agents"),
+                    workflows_dir=discovered_dirs.get("workflows"),
+                    tools_dir=discovered_dirs.get("tools"),
+                    personas_dir=discovered_dirs.get("personas"),
+                    prompts_dir=discovered_dirs.get("prompts"),
+                    gates_dir=discovered_dirs.get("gates"),
+                    quality_gates_dir=discovered_dirs.get("quality_gates"),
+                    evaluators_dir=discovered_dirs.get("evaluators"),
+                    context_layers_dir=discovered_dirs.get("context_layers"),
+                    loops_dir=discovered_dirs.get("loops"),
+                    sops_dir=discovered_dirs.get("sops"),
+                )
+            else:
+                # Fallback: create SDK instance for this forge
+                forge_sdk = FlowForgeSDK(project=forge_name, namespace=forge_name)
+                plugin = forge_sdk.create_plugin(
+                    name=forge_name,
+                    version="0.1.0",
+                    description=f"Auto-discovered {forge_name} declarative configs",
+                    priority=200,
+                    namespace=forge_name,
+                    agents_dir=discovered_dirs.get("agents"),
+                    workflows_dir=discovered_dirs.get("workflows"),
+                    tools_dir=discovered_dirs.get("tools"),
+                    personas_dir=discovered_dirs.get("personas"),
+                    prompts_dir=discovered_dirs.get("prompts"),
+                    gates_dir=discovered_dirs.get("gates"),
+                    quality_gates_dir=discovered_dirs.get("quality_gates"),
+                    evaluators_dir=discovered_dirs.get("evaluators"),
+                    context_layers_dir=discovered_dirs.get("context_layers"),
+                    loops_dir=discovered_dirs.get("loops"),
+                    sops_dir=discovered_dirs.get("sops"),
+                )
+        except Exception as e:
+            logger.error(f"auto_discover_plugins: failed to create plugin for {forge_name}: {e}")
+            continue
+
+        # 6. Load the plugin
+        try:
+            logger.info(f"auto_discover_plugins: loading auto-discovered plugin '{forge_name}'")
+            _load_single_plugin(
+                plugin, agent_registry, tool_registry,
+                mode_registry, event_bus, scheduler, app,
+            )
+        except Exception as e:
+            logger.error(f"auto_discover_plugins: failed to load plugin '{forge_name}': {e}")
+
 
 def _load_single_plugin(
     plugin_instance: FlowForgePlugin,
@@ -387,39 +570,52 @@ def _load_single_plugin(
             EvaluatorRegistry = SOPRegistry = ContextLayerRegistry = None
             WorkflowStepHandlerRegistry = None
 
-        # 8. workflows
+        # Helper: get SDK shared registry instance, or create a persistent one
+        def _get_sdk_registry(attr_name: str, registry_cls: type):
+            """Try to use SDK's shared registry; fall back to a new persistent instance."""
+            try:
+                from flowforge.sdk import FlowForgeSDK as _FFSDK
+                _sdk_inst = _FFSDK._current_instance
+                if _sdk_inst is not None:
+                    return getattr(_sdk_inst, attr_name)
+            except Exception:
+                pass
+            # Create a persistent instance (not a throwaway)
+            return registry_cls()
+
+        # 8. workflows — use SDK shared instance
         if WorkflowRegistry is not None:
-            wf_registry = WorkflowRegistry()
+            wf_registry = _get_sdk_registry("workflows", WorkflowRegistry)
             plugin_instance.register_workflows(wf_registry)
             plugin_instance._registered_workflows.extend(wf_registry.list_workflows())
 
-        # 9. gates
+        # 9. gates — use SDK shared instance to avoid isolation
         if GateRegistry is not None:
-            gate_reg = GateRegistry()
+            gate_reg = _get_sdk_registry("gates", GateRegistry)
             plugin_instance.register_gates(gate_reg)
             plugin_instance._registered_gates.extend(gate_reg.list_gates())
 
-        # 10. evaluators
+        # 10. evaluators — use SDK shared instance to avoid isolation
         if EvaluatorRegistry is not None:
-            eval_reg = EvaluatorRegistry()
+            eval_reg = _get_sdk_registry("evaluators", EvaluatorRegistry)
             plugin_instance.register_evaluators(eval_reg)
             plugin_instance._registered_evaluators.extend(eval_reg.list_evaluators())
 
-        # 11. SOPs
+        # 11. SOPs — use SDK shared instance
         if SOPRegistry is not None:
-            sop_reg = SOPRegistry()
+            sop_reg = _get_sdk_registry("sops", SOPRegistry)
             plugin_instance.register_sops(sop_reg)
             plugin_instance._registered_sops.extend(sop_reg.list_sops())
 
-        # 12. quality gates
+        # 12. quality gates — use SDK shared instance
         if QualityGateRegistry is not None:
-            qg_reg = QualityGateRegistry()
+            qg_reg = _get_sdk_registry("quality_gates", QualityGateRegistry)
             plugin_instance.register_quality_gates(qg_reg)
             plugin_instance._registered_quality_gates.extend(qg_reg.list_quality_gates())
 
-        # 13. context layers
+        # 13. context layers — use SDK shared instance
         if ContextLayerRegistry is not None:
-            cl_reg = ContextLayerRegistry()
+            cl_reg = _get_sdk_registry("context_layers", ContextLayerRegistry)
             plugin_instance.register_context_layers(cl_reg)
             plugin_instance._registered_context_layers.extend(cl_reg.list_layers())
 
@@ -429,7 +625,18 @@ def _load_single_plugin(
             plugin_instance.register_workflow_step_handler(sh_reg)
             plugin_instance._registered_step_handlers.extend(sh_reg.list_handlers())
 
-        # 15. startup — pass PluginContext for dependency injection
+        # 15. loops — use LoopRegistry for auto-discovered loop configs
+        try:
+            from flowforge.loop.registry import LoopRegistry as _LoopRegistry
+            loop_reg = _LoopRegistry(config_dir="")  # empty dir — no auto-load
+            plugin_instance.register_loops(loop_reg)
+            plugin_instance._registered_loops.extend(loop_reg.list_templates())
+        except ImportError:
+            logger.debug("LoopRegistry not available, skipping loop registration")
+        except Exception as e:
+            logger.debug(f"Loop registration skipped: {e}")
+
+        # 16. startup — pass PluginContext for dependency injection
         from flowforge.core.plugin_protocol import PluginContext
         from flowforge.core.plugin_protocol import validate_plugin_config, fill_config_defaults
         plugin_config = {}
@@ -753,6 +960,15 @@ async def lifespan(app):
         app=app,
     )
 
+    # Auto-discover *forge plugins from sibling directories
+    auto_discover_plugins(
+        agent_registry, tool_registry,
+        mode_registry=mode_registry,
+        event_bus=event_bus,
+        scheduler=scheduler if system_config.scheduler_enabled else None,
+        app=app,
+    )
+
     if system_config.scheduler_enabled:
         scheduler.start()
         logger.info("Scheduler started")
@@ -828,7 +1044,7 @@ from flowforge.core.tool_chain_executor import ToolChainExecutor
 tool_chain_executor = ToolChainExecutor(llm_client, tool_registry, event_bus=event_bus)
 set_tool_chain_executor_instance(tool_chain_executor)
 
-model_service = ModelService()
+model_service = ModelService(plugin_registry=plugin_registry)
 set_model_service_instance(model_service)
 
 _executor_instance = HybridExecutor(
@@ -861,7 +1077,7 @@ try:
         harness=_executor_instance.harness or HarnessOrchestrator(),
         planner=LLMPlanner(),
         verifier=RuleBasedVerifier(),
-        reflector=ReflexionReflector(),
+        reflector=ReflexionReflector(llm_client=self.llm),
         checkpoint_mgr=_executor_instance.checkpoint_manager,
         entropy_mgr=EntropyManager(),
         rule_evolution=RuleEvolution(),

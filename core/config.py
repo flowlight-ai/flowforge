@@ -174,6 +174,18 @@ class ConfigLoader:
     def get_models_config(self) -> Dict[str, Any]:
         return self.load_yaml("models.yaml")
 
+    def get_persona_config(self, name: str) -> Dict[str, Any]:
+        """Load a persona configuration file from config/persona/{name}.yaml."""
+        file_path = self.config_dir / "persona" / f"{name}.yaml"
+        if not file_path.exists():
+            raise FileNotFoundError(f"Persona config not found: {file_path}")
+        with open(file_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+
+    def save_models_config(self, data: Dict[str, Any]):
+        """Save models configuration to models.yaml."""
+        self.save_yaml("models.yaml", data)
+
 
 # Set flowforge root (parent of core/)
 ConfigLoader.FLOWFORGE_ROOT = Path(__file__).parent.parent

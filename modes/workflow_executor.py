@@ -188,20 +188,81 @@ class WorkflowExecutor(BaseModeExecutor):
 
             if agent_name and ctx.agents:
                 agent = ctx.agents.get(agent_name)
+                # namespace fallback: try contentforge:{agent_name} if bare name not found
+                if agent is None and ':' not in agent_name:
+                    for ns_prefix in ('contentforge:', 'flowforge:'):
+                        agent = ctx.agents.get(f'{ns_prefix}{agent_name}')
+                        if agent:
+                            logger.info(f"Step '{step_name}' agent '{agent_name}' resolved via namespace fallback to '{ns_prefix}{agent_name}'")
+                            break
                 if agent:
                     try:
                         merged_data = {**ctx.state, **context_data}
+                        # [修复断点2] 合并metadata中的loop反馈，确保agent能看到评委建议
+                        if hasattr(ctx, 'metadata') and ctx.metadata:
+                            for key in ('loop_reflections', 'loop_verifier_errors', 'last_draft'):
+                                if key in ctx.metadata:
+                                    merged_data[key] = ctx.metadata[key]
                         agent_input = AgentInput(params=merged_data)
+
+                        # [loop-trace] agent执行前详细日志
+                        logger.info(f"[loop-trace] task_id={ctx.task_id} agent执行前: "
+                                     f"agent_name={agent_name}, step_name={step_name}, "
+                                     f"params_keys={list(agent_input.params.keys())}")
+                        for _pk, _pv in agent_input.params.items():
+                            if _pk.startswith("_"):
+                                continue
+                            _pv_len = len(str(_pv)) if _pv is not None else 0
+                            _pv_preview = str(_pv)[:200] if _pv is not None else "None"
+                            if isinstance(_pv, dict):
+                                logger.info(f"[loop-trace] task_id={ctx.task_id} params[{_pk}] type=dict, keys={list(_pv.keys())}")
+                            else:
+                                logger.info(f"[loop-trace] task_id={ctx.task_id} params[{_pk}] type={type(_pv).__name__}, len={_pv_len}, preview={_pv_preview}")
+
                         agent_output = await asyncio.wait_for(
                             agent.execute_with_context(agent_input, ctx),
                             timeout=step_timeout,
                         )
+
+                        # [loop-trace] agent执行后详细日志
+                        logger.info(f"[loop-trace] task_id={ctx.task_id} agent执行后: agent_name={agent_name}")
+                        if hasattr(agent_output, 'result') and isinstance(agent_output.result, dict):
+                            logger.info(f"[loop-trace] task_id={ctx.task_id} agent_output.result_keys={list(agent_output.result.keys())}")
+                            for _aok, _aov in agent_output.result.items():
+                                if _aok.startswith("_"):
+                                    continue
+                                _aov_len = len(str(_aov)) if _aov is not None else 0
+                                _aov_preview = str(_aov)[:200] if _aov is not None else "None"
+                                if isinstance(_aov, dict):
+                                    logger.info(f"[loop-trace] task_id={ctx.task_id} result[{_aok}] type=dict, keys={list(_aov.keys())}, len={_aov_len}")
+                                else:
+                                    logger.info(f"[loop-trace] task_id={ctx.task_id} result[{_aok}] type={type(_aov).__name__}, len={_aov_len}, preview={_aov_preview}")
+                        else:
+                            logger.info(f"[loop-trace] task_id={ctx.task_id} agent_output.result type={type(agent_output.result).__name__}, preview={str(agent_output.result)[:200]}")
+                        if hasattr(agent_output, 'state_updates') and agent_output.state_updates:
+                            logger.info(f"[loop-trace] task_id={ctx.task_id} agent_output.state_updates_keys={list(agent_output.state_updates.keys())}")
+                            for _suk, _suv in agent_output.state_updates.items():
+                                _suv_len = len(str(_suv)) if _suv is not None else 0
+                                _suv_preview = str(_suv)[:200] if _suv is not None else "None"
+                                logger.info(f"[loop-trace] task_id={ctx.task_id} state_updates[{_suk}] type={type(_suv).__name__}, len={_suv_len}, preview={_suv_preview}")
+
                         context_data.update(agent_output.result)
                         if step.get("output") and step["output"] not in agent_output.result:
                             context_data[step["output"]] = agent_output.result
                         if hasattr(agent_output, 'state_updates') and agent_output.state_updates:
                             ctx.state.update(agent_output.state_updates)
                             context_data.update(agent_output.state_updates)
+
+                        # [loop-trace] context_data更新后详细日志
+                        logger.info(f"[loop-trace] task_id={ctx.task_id} context_data更新后: keys={list(context_data.keys())}")
+                        for _cdk, _cdv in context_data.items():
+                            if _cdk.startswith("_"):
+                                continue
+                            _cdv_len = len(str(_cdv)) if _cdv is not None else 0
+                            if isinstance(_cdv, dict):
+                                logger.info(f"[loop-trace] task_id={ctx.task_id} context_data[{_cdk}] type=dict, keys={list(_cdv.keys())}, len={_cdv_len}")
+                            else:
+                                logger.info(f"[loop-trace] task_id={ctx.task_id} context_data[{_cdk}] type={type(_cdv).__name__}, len={_cdv_len}")
                     except asyncio.TimeoutError:
                         logger.warning(f"Step '{step_name}' agent '{agent_name}' timed out after {step_timeout}s")
                         on_error = step.get("on_error", "abort")

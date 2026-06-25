@@ -311,14 +311,58 @@ class LoopExecutor:
             #    首次迭代：完整上下文注入；后续迭代：仅注入 delta（Reflector 的反思结果）
             if attempt > 0 and state.reflection_history:
                 last_reflection = state.reflection_history[-1]
-                task.metadata["loop_reflections"] = last_reflection.get("suggestions", [])
+                loop_reflections = last_reflection.get("suggestions", [])
+                task.metadata["loop_reflections"] = loop_reflections
                 # 同时传递上一轮 Verifier 的详细评审信息（低分维度、加权贡献分析等）
                 # 从 verification_history 中获取上一轮的 verdict
+                loop_verifier_errors = []
                 if state.verification_history:
                     last_verdict = state.verification_history[-1]
-                    task.metadata["loop_verifier_errors"] = last_verdict.get("errors", [])
-                    logger.info(f"[loop] 迭代{attempt + 1}: 注入loop_verifier_errors={len(last_verdict.get('errors', []))}条, "
-                                 f"loop_reflections={len(last_reflection.get('suggestions', []))}条")
+                    loop_verifier_errors = last_verdict.get("errors", [])
+                    task.metadata["loop_verifier_errors"] = loop_verifier_errors
+                    logger.info(f"[loop] 迭代{attempt + 1}: 注入loop_verifier_errors={len(loop_verifier_errors)}条, "
+                                 f"loop_reflections={len(loop_reflections)}条")
+                # [修复断点1] 同时注入到state和input_data，确保workflow_executor能传递给agent
+                if hasattr(task, 'state') and isinstance(task.state, dict):
+                    task.state["loop_reflections"] = loop_reflections
+                    task.state["loop_verifier_errors"] = loop_verifier_errors
+                task.input_data["loop_reflections"] = loop_reflections
+                task.input_data["loop_verifier_errors"] = loop_verifier_errors
+                # [修复Bug#1] 将上一轮draft注入到task.input_data，让反思→重写流程生效
+                if last_good_result and isinstance(last_good_result, dict):
+                    draft_content = ""
+                    # 优先查找已知内容键
+                    for dk in ("draft", "edited_draft", "content", "response"):
+                        dv = last_good_result.get(dk, "")
+                        if isinstance(dv, str) and dv.strip():
+                            draft_content = dv
+                            break
+                    # 如果已知键没找到，遍历所有值找长文本（中文step名等情况）
+                    if not draft_content:
+                        for dk, dv in last_good_result.items():
+                            if dk.startswith("_"):
+                                continue
+                            if isinstance(dv, str) and len(dv.strip()) > 200:
+                                draft_content = dv
+                                break
+                            if isinstance(dv, dict):
+                                for dk2 in ("draft", "edited_draft", "content", "response", "output"):
+                                    dv2 = dv.get(dk2, "")
+                                    if isinstance(dv2, str) and dv2.strip():
+                                        draft_content = dv2
+                                        break
+                                if draft_content:
+                                    break
+                    if draft_content:
+                        task.input_data["draft"] = draft_content
+                        task.metadata["last_draft"] = draft_content
+                        # 同时注入到task.state，确保DeclarativeAgent从state也能获取
+                        if hasattr(task, 'state') and isinstance(task.state, dict):
+                            task.state["draft"] = draft_content
+                        logger.info(f"[loop] 迭代{attempt + 1}: 注入draft到input_data+state, len={len(draft_content)}")
+                        logger.info(f"[loop-trace] task_id={task.task_id} draft注入后: input_data_keys={list(task.input_data.keys())}, draft_len={len(draft_content)}, draft_preview={draft_content[:200]}")
+                        if hasattr(task, 'state') and isinstance(task.state, dict):
+                            logger.info(f"[loop-trace] task_id={task.task_id} draft注入后: state_keys={list(task.state.keys())}, state_draft_len={len(str(task.state.get('draft', '')))}")
             await self.harness.pre_execute(task)
 
             # 3. 执行（委托给 HybridExecutor / 嵌套 Loop / 并行 Worker）
@@ -350,7 +394,12 @@ class LoopExecutor:
                 )
                 logger.warning(f"[loop] {iter_error}: loop_id={state.loop_id}")
                 state.past_errors.append(iter_error)
-                result = {"error": iter_error}
+                # 超时时保留上一轮的best_draft，避免评审分数暴跌
+                if last_good_result and isinstance(last_good_result, dict):
+                    result = {"error": iter_error, **last_good_result}
+                    logger.info(f"[loop] 迭代{attempt + 1}超时，保留best_draft, keys={list(last_good_result.keys())}")
+                else:
+                    result = {"error": iter_error}
 
             # 4. Harness post_execute（架构约束校验 + FeedbackLoop 评分）
             result = await self.harness.post_execute(result, task)
@@ -379,6 +428,22 @@ class LoopExecutor:
                 logger.info(f"[loop][DEBUG]   result attrs={list(vars(result).keys())}")
             # === 详细日志结束 ===
 
+            # [loop-trace] 执行结果保存后详细日志
+            logger.info(f"[loop-trace] task_id={task.task_id} 迭代{attempt + 1}执行结果保存后: type={type(result).__name__}")
+            if isinstance(result, dict):
+                logger.info(f"[loop-trace] task_id={task.task_id} result_keys={list(result.keys())}")
+                for _rk, _rv in result.items():
+                    if _rk.startswith("_"):
+                        continue
+                    _rv_type = type(_rv).__name__
+                    _rv_len = len(str(_rv)) if _rv is not None else 0
+                    _rv_preview = str(_rv)[:200] if _rv is not None else "None"
+                    if isinstance(_rv, dict):
+                        logger.info(f"[loop-trace] task_id={task.task_id} result[{_rk}] type=dict, keys={list(_rv.keys())}, len={_rv_len}")
+                    else:
+                        logger.info(f"[loop-trace] task_id={task.task_id} result[{_rk}] type={_rv_type}, len={_rv_len}, preview={_rv_preview}")
+            # [loop-trace] 执行结果详细日志结束
+
             # 5. Loop Verifier（业务级质量校验）
             # 根据 loop_config.verifier.mode 动态选择 verifier
             verifier_config = loop_config.get("verifier", {})
@@ -401,6 +466,14 @@ class LoopExecutor:
                          f"score={verdict.score:.3f}, threshold={verifier_config.get('pass_threshold', 0.9)}, "
                          f"errors_count={len(verdict.errors)}, "
                          f"errors_top3={verdict.errors[:3] if verdict.errors else '[]'}")
+
+            # [loop-trace] 评审结果详细日志
+            logger.info(f"[loop-trace] task_id={task.task_id} 迭代{attempt + 1}评审结果: "
+                         f"passed={verdict.passed}, score={verdict.score:.3f}, "
+                         f"errors_count={len(verdict.errors)}, "
+                         f"errors={verdict.errors[:5] if verdict.errors else '[]'}")
+            if hasattr(verdict, 'details') and verdict.details:
+                logger.info(f"[loop-trace] task_id={task.task_id} verdict.details={str(verdict.details)[:200]}")
 
             # 更新迭代记录（result + verdict）
             if iter_id and self.on_iteration_update:
@@ -473,6 +546,26 @@ class LoopExecutor:
                         "total_attempts": attempt + 1,
                         "final_score": verdict.score,
                     })
+
+                # [loop-trace] Loop成功返回前详细日志
+                _loop_result = LoopResult(success=True, output=result, total_attempts=attempt + 1, state=state)
+                logger.info(f"[loop-trace] task_id={task.task_id} Loop成功返回: "
+                             f"success={_loop_result.success}, total_attempts={_loop_result.total_attempts}, "
+                             f"final_score={verdict.score:.3f}")
+                if isinstance(result, dict):
+                    logger.info(f"[loop-trace] task_id={task.task_id} Loop成功output_keys={list(result.keys())}")
+                    for _ok, _ov in result.items():
+                        if _ok.startswith("_"):
+                            continue
+                        _ov_len = len(str(_ov)) if _ov is not None else 0
+                        _ov_preview = str(_ov)[:200] if _ov is not None else "None"
+                        if isinstance(_ov, dict):
+                            logger.info(f"[loop-trace] task_id={task.task_id} output[{_ok}] type=dict, keys={list(_ov.keys())}, len={_ov_len}")
+                        else:
+                            logger.info(f"[loop-trace] task_id={task.task_id} output[{_ok}] type={type(_ov).__name__}, len={_ov_len}, preview={_ov_preview}")
+                else:
+                    logger.info(f"[loop-trace] task_id={task.task_id} Loop成功output type={type(result).__name__}, preview={str(result)[:200]}")
+
                 return LoopResult(success=True, output=result, total_attempts=attempt + 1, state=state)
 
             # 6. 失败：复盘
@@ -620,6 +713,25 @@ class LoopExecutor:
             })
         # 失败时仍返回最后一次成功的执行结果，确保调用方可以获取内容
         fallback_output = last_good_result if last_good_result else (result if isinstance(result, dict) else None)
+
+        # [loop-trace] Loop失败返回前详细日志
+        logger.info(f"[loop-trace] task_id={task.task_id} Loop失败返回: "
+                     f"total_attempts={state.attempt}, past_errors_count={len(state.past_errors)}, "
+                     f"last_errors={state.past_errors[-3:] if state.past_errors else '[]'}")
+        if isinstance(fallback_output, dict):
+            logger.info(f"[loop-trace] task_id={task.task_id} fallback_output_keys={list(fallback_output.keys())}")
+            for _fk, _fv in fallback_output.items():
+                if _fk.startswith("_"):
+                    continue
+                _fv_len = len(str(_fv)) if _fv is not None else 0
+                _fv_preview = str(_fv)[:200] if _fv is not None else "None"
+                if isinstance(_fv, dict):
+                    logger.info(f"[loop-trace] task_id={task.task_id} fallback[{_fk}] type=dict, keys={list(_fv.keys())}, len={_fv_len}")
+                else:
+                    logger.info(f"[loop-trace] task_id={task.task_id} fallback[{_fk}] type={type(_fv).__name__}, len={_fv_len}, preview={_fv_preview}")
+        else:
+            logger.info(f"[loop-trace] task_id={task.task_id} fallback_output is None or non-dict: type={type(fallback_output).__name__}, value={str(fallback_output)[:200] if fallback_output else 'None'}")
+
         return LoopResult(
             success=False,
             output=fallback_output,

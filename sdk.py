@@ -70,6 +70,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.core.base_agent import AgentInput, AgentOutput, BaseAgent
 from flowforge.core.base_tool import BaseTool, ToolInput
+from flowforge.core.canary import CanaryDeploymentConfig, CanaryDeploymentRegistry
 from flowforge.core.config import ConfigLoader
 from flowforge.core.guardrails import GuardrailRegistry, GuardrailExecutor, InputGuardrail, OutputGuardrail
 from flowforge.core.handoff import Handoff, HandoffManager
@@ -83,6 +84,35 @@ from flowforge.tools.registry import ToolRegistry
 
 logger = get_logger("sdk")
 
+
+# ── Public API Surface ─────────────────────────────────────────────
+# Only declarative/config-driven interfaces are exposed to upper *Forge
+# projects. Internal base classes (BaseTool, BaseAgent, StateQueryTool)
+# are NOT exported — upper projects must use MCP/declarative config.
+__all__ = [
+    "FlowForgeSDK",
+    "FlowForgePlugin",
+    "PluginManifest",
+    "tool",
+    "set_tool_registry",
+    "AgentRegistry",
+    "ToolRegistry",
+    "ConfigLoader",
+    "EventBus",
+    "ModelService",
+    "get_model_service",
+    "ModelCapability",
+    "GuardrailRegistry",
+    "GuardrailExecutor",
+    "InputGuardrail",
+    "OutputGuardrail",
+    "CanaryDeploymentConfig",
+    "CanaryDeploymentRegistry",
+    "Handoff",
+    "HandoffManager",
+    # NOTE: BaseTool, BaseAgent, AgentInput, AgentOutput, DecoratedTool
+    #       are intentionally NOT in __all__ — they are internal.
+]
 
 # ── V2 Registries ────────────────────────────────────────────────────
 
@@ -127,10 +157,26 @@ class GateRegistry:
 
     Gates control whether a workflow step or agent execution is
     allowed to proceed based on runtime conditions.
+
+    Delegates to :class:`flowforge.core.gate.registry.GateRegistry`
+    for YAML auto-loading support while preserving the original
+    dict-based ``register(name, config)`` interface.
     """
 
-    def __init__(self) -> None:
-        self._gates: Dict[str, Dict[str, Any]] = {}
+    def __init__(self, config_dir: str | None = None) -> None:
+        from flowforge.core.gate.registry import GateRegistry as _CoreGateRegistry
+        self._core = _CoreGateRegistry(config_dir=config_dir)
+
+    def load_from_dir(self, dir_path: str | Path) -> int:
+        """Load gate configurations from a directory of YAML files.
+
+        Args:
+            dir_path: Path to directory containing gate YAML files.
+
+        Returns:
+            Number of gates loaded.
+        """
+        return self._core.load_from_dir(dir_path)
 
     def register(self, name: str, config: Dict[str, Any]) -> None:
         """Register a gate configuration.
@@ -139,22 +185,25 @@ class GateRegistry:
             name: Unique gate identifier.
             config: Gate configuration dict.
         """
-        if name in self._gates:
+        if name in self._core._gates:
             logger.warning(f"GateRegistry: '{name}' already registered, overwriting")
-        self._gates[name] = config
-        logger.info(f"GateRegistry: registered gate '{name}'")
+        self._core.register(name, config)
 
     def get(self, name: str) -> Optional[Dict[str, Any]]:
         """Get a gate configuration by name."""
-        return self._gates.get(name)
+        gate = self._core.get(name)
+        if gate is None:
+            return None
+        # Return dict for backward compatibility
+        return gate.model_dump()
 
     def list_gates(self) -> List[str]:
         """List all registered gate names."""
-        return list(self._gates.keys())
+        return self._core.list_gates()
 
     def get_all(self) -> Dict[str, Dict[str, Any]]:
         """Return all registered gates."""
-        return dict(self._gates)
+        return {k: v.model_dump() for k, v in self._core.get_all().items()}
 
 
 class QualityGateRegistry:
@@ -162,10 +211,25 @@ class QualityGateRegistry:
 
     Quality gates define pass/fail criteria that must be satisfied
     before a workflow can transition to the next phase.
+
+    Internally delegates to :class:`GateRegistry` — quality gates
+    are a specialised subset of gates with the same YAML schema.
     """
 
-    def __init__(self) -> None:
-        self._quality_gates: Dict[str, Dict[str, Any]] = {}
+    def __init__(self, config_dir: str | None = None) -> None:
+        from flowforge.core.gate.registry import GateRegistry as _CoreGateRegistry
+        self._core = _CoreGateRegistry(config_dir=config_dir)
+
+    def load_from_dir(self, dir_path: str | Path) -> int:
+        """Load quality gate configurations from a directory of YAML files.
+
+        Args:
+            dir_path: Path to directory containing quality gate YAML files.
+
+        Returns:
+            Number of quality gates loaded.
+        """
+        return self._core.load_from_dir(dir_path)
 
     def register(self, name: str, config: Dict[str, Any]) -> None:
         """Register a quality gate configuration.
@@ -174,22 +238,24 @@ class QualityGateRegistry:
             name: Unique quality gate identifier.
             config: Quality gate configuration dict.
         """
-        if name in self._quality_gates:
+        if name in self._core._gates:
             logger.warning(f"QualityGateRegistry: '{name}' already registered, overwriting")
-        self._quality_gates[name] = config
-        logger.info(f"QualityGateRegistry: registered quality gate '{name}'")
+        self._core.register(name, config)
 
     def get(self, name: str) -> Optional[Dict[str, Any]]:
         """Get a quality gate configuration by name."""
-        return self._quality_gates.get(name)
+        gate = self._core.get(name)
+        if gate is None:
+            return None
+        return gate.model_dump()
 
     def list_quality_gates(self) -> List[str]:
         """List all registered quality gate names."""
-        return list(self._quality_gates.keys())
+        return self._core.list_gates()
 
     def get_all(self) -> Dict[str, Dict[str, Any]]:
         """Return all registered quality gates."""
-        return dict(self._quality_gates)
+        return {k: v.model_dump() for k, v in self._core.get_all().items()}
 
 
 class EvaluatorRegistry:
@@ -197,30 +263,43 @@ class EvaluatorRegistry:
 
     Evaluators assess the quality or correctness of agent outputs,
     workflow results, or other artifacts.
+
+    Delegates to :class:`flowforge.evaluators.registry.EvaluatorRegistry`
+    for YAML auto-loading while preserving the original dict-based API.
     """
 
     def __init__(self) -> None:
-        self._evaluators: Dict[str, Any] = {}
+        from flowforge.evaluators.registry import EvaluatorRegistry as _RealRegistry
+        self._impl = _RealRegistry()
+
+    def load_from_dir(self, dir_path: str) -> int:
+        """Load evaluator configurations from a YAML directory."""
+        return self._impl.load_from_dir(dir_path)
 
     def register(self, name: str, evaluator: Any) -> None:
         """Register an evaluator.
 
         Args:
             name: Unique evaluator identifier.
-            evaluator: Evaluator instance or callable.
+            evaluator: Evaluator instance, config dict, or EvaluatorConfig.
         """
-        if name in self._evaluators:
-            logger.warning(f"EvaluatorRegistry: '{name}' already registered, overwriting")
-        self._evaluators[name] = evaluator
-        logger.info(f"EvaluatorRegistry: registered evaluator '{name}'")
+        self._impl.register(name, evaluator)
 
     def get(self, name: str) -> Optional[Any]:
         """Get an evaluator by name."""
-        return self._evaluators.get(name)
+        return self._impl.get(name)
+
+    def get_config(self, name: str) -> Optional[Any]:
+        """Get an evaluator configuration by name."""
+        return self._impl.get_config(name)
 
     def list_evaluators(self) -> List[str]:
         """List all registered evaluator names."""
-        return list(self._evaluators.keys())
+        return self._impl.list_evaluators()
+
+    def get_all_configs(self) -> Dict[str, Any]:
+        """Return all registered evaluator configurations."""
+        return self._impl.get_all_configs()
 
 
 class SOPRegistry:
@@ -375,6 +454,8 @@ class FlowForgeSDK:
     All services are lazily initialized on first access.
     """
 
+    _current_instance: ClassVar[Optional["FlowForgeSDK"]] = None
+
     def __init__(
         self,
         project: str = "",
@@ -405,6 +486,9 @@ class FlowForgeSDK:
                 except (ImportError, AttributeError, TypeError):
                     pass
 
+        # Register as current instance for shared access
+        self.__class__._current_instance = self
+
         self._agent_registry: Optional[AgentRegistry] = None
         self._tool_registry: Optional[ToolRegistry] = None
         self._event_bus: Optional[EventBus] = None
@@ -419,6 +503,10 @@ class FlowForgeSDK:
         self._loop_executor: Optional[Any] = None
         self._event_bridge: Optional[Any] = None
 
+        # Service containers for YAML-configured services (type: service)
+        self._services: Dict[str, Any] = {}
+        self._service_factories: Dict[str, Dict[str, Any]] = {}
+
         # V2 registries
         self._workflow_registry: Optional[WorkflowRegistry] = None
         self._gate_registry: Optional[GateRegistry] = None
@@ -427,6 +515,7 @@ class FlowForgeSDK:
         self._sop_registry: Optional[SOPRegistry] = None
         self._context_layer_registry: Optional[ContextLayerRegistry] = None
         self._step_handler_registry: Optional[WorkflowStepHandlerRegistry] = None
+        self._canary_registry: Optional[CanaryDeploymentRegistry] = None
 
     # ── Lazy property accessors ─────────────────────────────────────
 
@@ -639,7 +728,9 @@ class FlowForgeSDK:
             harness = HarnessOrchestrator()
             planner = LLMPlanner()
             verifier = RuleBasedVerifier()
-            reflector = ReflexionReflector()
+            # Inject LLM client so Reflector can perform LLM-based reflection
+            # (falls back to rule-based logic if llm_client is None or call fails)
+            reflector = ReflexionReflector(llm_client=self.llm)
             checkpoint_mgr = CheckpointManager("data/loop_checkpoints.db")
             entropy_mgr = EntropyManager()
             rule_evolution = RuleEvolution()
@@ -738,6 +829,8 @@ class FlowForgeSDK:
         """Access the GateRegistry for gate/access-control management."""
         if self._gate_registry is None:
             self._gate_registry = GateRegistry()
+            # Auto-load from project config/gates/ directory
+            self._auto_load_gates(self._gate_registry)
         return self._gate_registry
 
     @property
@@ -745,6 +838,8 @@ class FlowForgeSDK:
         """Access the QualityGateRegistry for quality gate management."""
         if self._quality_gate_registry is None:
             self._quality_gate_registry = QualityGateRegistry()
+            # Auto-load from project config/quality_gates/ directory
+            self._auto_load_gates(self._quality_gate_registry, subdir="quality_gates")
         return self._quality_gate_registry
 
     @property
@@ -752,7 +847,22 @@ class FlowForgeSDK:
         """Access the EvaluatorRegistry for evaluator agent management."""
         if self._evaluator_registry is None:
             self._evaluator_registry = EvaluatorRegistry()
+            # Auto-load evaluator YAML configs from flowforge and project dirs
+            self._auto_load_evaluator_configs()
         return self._evaluator_registry
+
+    def _auto_load_evaluator_configs(self) -> None:
+        """Auto-load evaluator YAML configs from standard directories."""
+        # 1. FlowForge built-in evaluator configs
+        flowforge_config_dir = Path(__file__).parent / "config" / "evaluators"
+        if flowforge_config_dir.is_dir():
+            self._evaluator_registry.load_from_dir(str(flowforge_config_dir))
+
+        # 2. Project-specific evaluator configs
+        if self._config_dir is not None:
+            project_eval_dir = self._config_dir / "evaluators"
+            if project_eval_dir.is_dir():
+                self._evaluator_registry.load_from_dir(str(project_eval_dir))
 
     @property
     def sops(self) -> SOPRegistry:
@@ -774,6 +884,162 @@ class FlowForgeSDK:
         if self._step_handler_registry is None:
             self._step_handler_registry = WorkflowStepHandlerRegistry()
         return self._step_handler_registry
+
+    @property
+    def canary(self) -> CanaryDeploymentRegistry:
+        """Access the CanaryDeploymentRegistry for canary deployment management.
+
+        Lazily creates a :class:`CanaryDeploymentRegistry` and auto-loads
+        canary deployment configurations from standard directories.
+
+        Search order:
+        1. Project-specific ``{project}/config/canary/``
+        2. Framework-level ``flowforge/config/canary/``
+
+        Example::
+
+            # List all canary deployment configs
+            deployments = sdk.canary.list_deployments()
+
+            # Get a specific config
+            config = sdk.canary.get("production")
+
+            # Create a canary deployment from config
+            deployment = sdk.create_canary_deployment("production")
+        """
+        if self._canary_registry is None:
+            self._canary_registry = CanaryDeploymentRegistry()
+            self._auto_load_canary_configs()
+        return self._canary_registry
+
+    # ── Gate auto-loading helper ──────────────────────────────────────
+
+    def _auto_load_gates(self, registry: GateRegistry | QualityGateRegistry, subdir: str = "gates") -> None:
+        """Auto-load gate YAML configs from framework and project config dirs.
+
+        Searches in order (project-level overrides framework-level):
+        1. Framework-level ``flowforge/config/{subdir}/``
+        2. Project-specific ``{project}/config/{subdir}/``
+        """
+        search_paths: list[Path] = []
+
+        # 1. Framework-level config dir (loaded first, can be overridden by project)
+        framework_config = Path(__file__).parent / "config" / subdir
+        search_paths.append(framework_config)
+
+        # 2. Project config dir (loaded second, overrides framework)
+        if self._config_dir is not None:
+            search_paths.append(self._config_dir / subdir)
+
+        for p in search_paths:
+            if p.is_dir():
+                try:
+                    count = registry.load_from_dir(p)
+                    if count > 0:
+                        logger.info(f"SDK auto-loaded {count} gate(s) from '{p}'")
+                except Exception as e:
+                    logger.warning(f"SDK: failed to auto-load gates from '{p}': {e}")
+
+    # ── Canary auto-loading helper ────────────────────────────────────
+
+    def _auto_load_canary_configs(self) -> None:
+        """Auto-load canary deployment YAML configs from standard directories.
+
+        Searches in order:
+        1. Project-specific ``{project}/config/canary/``
+        2. Framework-level ``flowforge/config/canary/``
+        """
+        search_paths: list[Path] = []
+
+        # 1. Project config dir
+        if self._config_dir is not None:
+            search_paths.append(self._config_dir / "canary")
+
+        # 2. Framework-level config dir
+        framework_config = Path(__file__).parent / "config" / "canary"
+        search_paths.append(framework_config)
+
+        for p in search_paths:
+            if p.is_dir():
+                try:
+                    count = self._canary_registry.load_from_dir(p)
+                    if count > 0:
+                        logger.info(f"SDK auto-loaded {count} canary config(s) from '{p}'")
+                except Exception as e:
+                    logger.warning(f"SDK: failed to auto-load canary configs from '{p}': {e}")
+
+    def create_canary_deployment(
+        self,
+        name: str,
+        *,
+        config_overrides: Optional[Dict[str, Any]] = None,
+    ) -> tuple[Any, Any]:
+        """Create a canary deployment from a registered configuration.
+
+        Looks up the canary deployment config by name from the registry,
+        then creates a :class:`CanaryManager` and :class:`AutoRollbackManager`
+        configured according to the deployment config.
+
+        Args:
+            name: Name of the canary deployment config (as registered in YAML).
+            config_overrides: Optional dict of config overrides applied to
+                the loaded :class:`CanaryDeploymentConfig`.
+
+        Returns:
+            A tuple of ``(CanaryManager, AutoRollbackManager, CanaryState)``
+            ready for execution.
+
+        Raises:
+            KeyError: If no config with the given name is registered.
+
+        Example::
+
+            manager, rollback, state = sdk.create_canary_deployment("production")
+            result = await manager.run_full_canary(state)
+        """
+        from flowforge.tools.canary_manager import CanaryManager, CanaryConfig, CanaryState
+        from flowforge.tools.auto_rollback import AutoRollbackManager, RollbackPolicy
+
+        config = self.canary.get(name)
+        if config is None:
+            raise KeyError(f"Canary deployment config '{name}' not found. "
+                           f"Available: {self.canary.list_deployments()}")
+
+        # Apply overrides
+        if config_overrides:
+            config_data = config.model_dump()
+            config_data.update(config_overrides)
+            config = CanaryDeploymentConfig(**config_data)
+
+        # Create CanaryManager from config
+        canary_config = CanaryConfig(
+            max_error_rate=config.rollback_on_error_rate,
+            max_latency_multiplier=config.rollback_on_latency_multiplier,
+            observation_seconds=config.observation_seconds,
+            auto_rollback_enabled=config.auto_rollback,
+        )
+        canary_manager = CanaryManager(config=canary_config)
+
+        # Create AutoRollbackManager from config
+        rollback_policy = RollbackPolicy(
+            max_error_rate=config.rollback_on_error_rate,
+            max_latency_multiplier=config.rollback_on_latency_multiplier,
+            observation_window_seconds=config.observation_seconds,
+            auto_rollback_enabled=config.auto_rollback,
+        )
+        rollback_manager = AutoRollbackManager(policy=rollback_policy)
+
+        # Create initial CanaryState
+        state = CanaryState(
+            task_id=f"canary-{name}",
+            observation_seconds=config.observation_seconds,
+        )
+
+        logger.info(
+            f"SDK created canary deployment '{name}': "
+            f"stages={len(config.stages)}, auto_rollback={config.auto_rollback}"
+        )
+        return canary_manager, rollback_manager, state
 
     # ── Decorator methods ───────────────────────────────────────────
 
@@ -1252,6 +1518,58 @@ class FlowForgeSDK:
         logger.info(f"scan_agents: {count} agents discovered in '{package}'")
         return count
 
+    def scan_agent_configs(self, config_dir: str, *, namespace: Optional[str] = None) -> int:
+        """Auto-discover and register agents from YAML config files.
+
+        Each YAML file in *config_dir* is loaded as an :class:`AgentConfig`
+        and used to create a :class:`DeclarativeAgent`. This enables
+        pure-configuration agent definitions without writing Python classes.
+
+        Args:
+            config_dir: Path to directory containing agent YAML files.
+            namespace: Optional namespace override.
+
+        Returns:
+            Number of agents registered.
+
+        Example::
+
+            count = sdk.scan_agent_configs("contentforge/config/agents")
+        """
+        from flowforge.core.declarative_agent import DeclarativeAgent, AgentConfig
+
+        effective_namespace = namespace or self._namespace
+        count = 0
+        config_path = Path(config_dir)
+        if not config_path.is_dir():
+            logger.warning(f"scan_agent_configs: '{config_dir}' is not a directory")
+            return 0
+
+        for yaml_file in sorted(config_path.glob("*.yaml")):
+            try:
+                agent = DeclarativeAgent.from_yaml(yaml_file)
+                config = agent.config
+
+                # Determine registration name
+                reg_name = config.name
+                if effective_namespace and ":" not in reg_name:
+                    reg_name = f"{effective_namespace}:{reg_name}"
+
+                # Also register with simplified name (without namespace prefix)
+                self.agents.register_factory(reg_name, lambda cls=type(agent), cfg=config: DeclarativeAgent(config=cfg))
+                count += 1
+                logger.info(
+                    f"scan_agent_configs: registered '{reg_name}' "
+                    f"from {yaml_file.name} (mode={config.execution_mode})"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"scan_agent_configs: failed to load '{yaml_file.name}': {e}"
+                )
+
+        logger.info(f"scan_agent_configs: {count} agents discovered in '{config_dir}'")
+        return count
+
     def scan_tools(self, package: str) -> int:
         """Auto-discover and register all BaseTool subclasses in a package.
 
@@ -1342,6 +1660,253 @@ class FlowForgeSDK:
         logger.info(f"scan_tools: {count} tools discovered in '{package}'")
         return count
 
+    def scan_tool_configs(self, config_dir: str) -> int:
+        """Auto-discover and register tools from YAML config files.
+
+        Each YAML file in *config_dir* defines a tool with metadata and
+        an entry point.  Supported types:
+
+        - ``local``: Instantiates a Python class from ``entry_point``
+          (``module.path:ClassName`` format).  If the class is a
+          :class:`BaseTool` subclass it is instantiated with no args;
+          otherwise it is registered as a plain service object.
+        - ``service``: Like ``local`` but the class is a business service
+          (not a tool).  The class is imported and registered as a
+          named service accessible via ``sdk.get_service(name)``.
+          If ``lazy: true`` is set, the class is not instantiated at
+          scan time — only the factory is registered for later use.
+        - ``http`` / ``script`` / ``transform``: Delegated to
+          :func:`load_declarative_tools_from_yaml`.
+
+        Environment variable interpolation is supported in the ``config``
+        section using the ``${ENV_VAR:default}`` syntax.
+
+        Args:
+            config_dir: Path to directory containing tool YAML files.
+
+        Returns:
+            Number of tools/services registered.
+
+        Example::
+
+            count = sdk.scan_tool_configs("contentforge/config/tools")
+        """
+        import yaml as _yaml
+
+        count = 0
+        config_path = Path(config_dir)
+        if not config_path.is_dir():
+            logger.warning(f"scan_tool_configs: '{config_dir}' is not a directory")
+            return 0
+
+        for yaml_file in sorted(config_path.glob("*.yaml")):
+            try:
+                with open(yaml_file, "r", encoding="utf-8") as f:
+                    data = _yaml.safe_load(f) or {}
+
+                tool_type = data.get("type", "local")
+                tool_name = data.get("name", yaml_file.stem)
+
+                if tool_type == "service":
+                    # Service type — register as named service, not as tool
+                    entry_point = data.get("entry_point", "")
+                    if not entry_point or ":" not in entry_point:
+                        logger.warning(
+                            f"scan_tool_configs: '{yaml_file.name}' missing "
+                            f"or invalid entry_point, skipping"
+                        )
+                        continue
+
+                    module_path, class_name = entry_point.rsplit(":", 1)
+                    try:
+                        mod = importlib.import_module(module_path)
+                    except ImportError as e:
+                        logger.warning(
+                            f"scan_tool_configs: failed to import module "
+                            f"'{module_path}' for service '{tool_name}': {e}"
+                        )
+                        continue
+
+                    service_cls = getattr(mod, class_name, None)
+                    if service_cls is None:
+                        logger.warning(
+                            f"scan_tool_configs: class '{class_name}' not "
+                            f"found in '{module_path}', skipping"
+                        )
+                        continue
+
+                    is_lazy = data.get("lazy", False)
+
+                    if is_lazy:
+                        # Register factory only — don't instantiate
+                        self._service_factories[tool_name] = {
+                            "cls": service_cls,
+                            "config": data.get("config", {}),
+                            "entry_point": entry_point,
+                        }
+                        count += 1
+                        logger.info(
+                            f"scan_tool_configs: registered lazy service "
+                            f"factory '{tool_name}' from {entry_point}"
+                        )
+                    else:
+                        # Eagerly instantiate
+                        tool_config = data.get("config", {})
+                        resolved_config = self._resolve_env_vars(tool_config)
+                        try:
+                            instance = service_cls(**resolved_config)
+                        except TypeError:
+                            instance = service_cls()
+                        self._services[tool_name] = instance
+                        count += 1
+                        logger.info(
+                            f"scan_tool_configs: registered service "
+                            f"'{tool_name}' from {entry_point}"
+                        )
+
+                elif tool_type == "local":
+                    entry_point = data.get("entry_point", "")
+                    if not entry_point or ":" not in entry_point:
+                        logger.warning(
+                            f"scan_tool_configs: '{yaml_file.name}' missing "
+                            f"or invalid entry_point, skipping"
+                        )
+                        continue
+
+                    module_path, class_name = entry_point.rsplit(":", 1)
+                    try:
+                        mod = importlib.import_module(module_path)
+                    except ImportError as e:
+                        logger.warning(
+                            f"scan_tool_configs: failed to import module "
+                            f"'{module_path}' for tool '{tool_name}': {e}"
+                        )
+                        continue
+
+                    tool_cls = getattr(mod, class_name, None)
+                    if tool_cls is None:
+                        logger.warning(
+                            f"scan_tool_configs: class '{class_name}' not "
+                            f"found in '{module_path}', skipping"
+                        )
+                        continue
+
+                    # Resolve config section with env var interpolation
+                    tool_config = data.get("config", {})
+                    resolved_config = self._resolve_env_vars(tool_config)
+
+                    # Instantiate — BaseTool subclasses need no args;
+                    # other classes receive resolved config as kwargs
+                    if isinstance(tool_cls, type) and issubclass(tool_cls, BaseTool):
+                        try:
+                            tool_instance = tool_cls()
+                        except TypeError:
+                            tool_instance = tool_cls(**resolved_config)
+                        self.tools.register(tool_instance)
+                        count += 1
+                        logger.info(
+                            f"scan_tool_configs: registered local tool "
+                            f"'{tool_name}' from {entry_point}"
+                        )
+                    else:
+                        # Non-BaseTool local tool — register as service
+                        try:
+                            instance = tool_cls(**resolved_config)
+                        except TypeError:
+                            instance = tool_cls()
+                        self.tools.register(instance)
+                        count += 1
+                        logger.info(
+                            f"scan_tool_configs: registered local service "
+                            f"'{tool_name}' from {entry_point}"
+                        )
+
+                else:
+                    # Declarative tool types (http/script/transform)
+                    from flowforge.core.declarative_tool import (
+                        load_declarative_tools_from_yaml,
+                    )
+                    tools = load_declarative_tools_from_yaml(yaml_file)
+                    for t in tools:
+                        try:
+                            self.tools.register(t)
+                            count += 1
+                        except ValueError:
+                            pass
+                    logger.info(
+                        f"scan_tool_configs: loaded {len(tools)} declarative "
+                        f"tool(s) from '{yaml_file.name}'"
+                    )
+
+            except Exception as e:
+                logger.warning(
+                    f"scan_tool_configs: failed to load '{yaml_file.name}': {e}"
+                )
+
+        logger.info(
+            f"scan_tool_configs: {count} tool(s)/service(s) discovered in '{config_dir}'"
+        )
+        return count
+
+    @staticmethod
+    def _resolve_env_vars(config: dict) -> dict:
+        """Resolve ``${ENV_VAR:default}`` placeholders in config values.
+
+        Only string values are processed; nested dicts are recursed.
+        """
+        resolved: dict = {}
+        for key, value in config.items():
+            if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
+                inner = value[2:-1]
+                if ":" in inner:
+                    env_key, default = inner.split(":", 1)
+                else:
+                    env_key, default = inner, ""
+                resolved[key] = os.environ.get(env_key, default)
+            elif isinstance(value, dict):
+                resolved[key] = FlowForgeSDK._resolve_env_vars(value)
+            else:
+                resolved[key] = value
+        return resolved
+
+    def get_service(self, name: str) -> Optional[Any]:
+        """Get a named service registered via ``scan_tool_configs``.
+
+        Services are registered from YAML configs with ``type: service``.
+        For lazy services (``lazy: true``), the first call to
+        ``get_service`` triggers instantiation.
+
+        Args:
+            name: Service name as defined in the YAML config.
+
+        Returns:
+            The service instance, or ``None`` if not found.
+        """
+        # Check eagerly instantiated services first
+        if name in self._services:
+            return self._services[name]
+
+        # Check lazy factories — instantiate on first access
+        if name in self._service_factories:
+            factory = self._service_factories[name]
+            service_cls = factory["cls"]
+            config = factory.get("config", {})
+            resolved_config = self._resolve_env_vars(config)
+            try:
+                instance = service_cls(**resolved_config)
+            except TypeError:
+                instance = service_cls()
+            self._services[name] = instance
+            del self._service_factories[name]
+            logger.info(f"get_service: lazy-instantiated service '{name}'")
+            return instance
+
+        return None
+
+    def list_services(self) -> List[str]:
+        """List all registered service names (including lazy factories)."""
+        return list(set(list(self._services.keys()) + list(self._service_factories.keys())))
+
     def scan_routes(self, router_path: str, *, prefix: str = "") -> None:
         """Import and register a FastAPI Router on the SDK's app.
 
@@ -1379,6 +1944,47 @@ class FlowForgeSDK:
 
     # ── Declarative Plugin creation ──────────────────────────────────
 
+    @staticmethod
+    def _scan_yaml_dir(dir_path: str, registry: Any, item_type: str) -> int:
+        """Scan a directory for YAML files and register them with a registry.
+
+        Each YAML file is loaded and registered using the filename stem
+        (without extension) as the registration name.
+
+        Args:
+            dir_path: Path to the directory containing YAML files.
+            registry: Registry object with a ``register(name, config)`` method.
+            item_type: Type label for logging (e.g. "workflow", "sop").
+
+        Returns:
+            Number of items registered.
+        """
+        import yaml as _yaml
+
+        count = 0
+        p = Path(dir_path)
+        if not p.is_dir():
+            # Try resolving relative to workspace root
+            workspace_root = Path(__file__).parent.parent
+            p = workspace_root / dir_path
+        if not p.is_dir():
+            logger.debug(f"_scan_yaml_dir: directory '{dir_path}' not found, skipping {item_type} scan")
+            return 0
+
+        for yaml_file in sorted(p.glob("*.y*ml")):
+            try:
+                with open(yaml_file, "r", encoding="utf-8") as f:
+                    data = _yaml.safe_load(f) or {}
+                item_name = yaml_file.stem
+                registry.register(item_name, data)
+                count += 1
+                logger.info(f"_scan_yaml_dir: registered {item_type} '{item_name}' from {yaml_file}")
+            except Exception as e:
+                logger.warning(f"_scan_yaml_dir: failed to load {item_type} from {yaml_file}: {e}")
+
+        logger.info(f"_scan_yaml_dir: {count} {item_type}(s) discovered in '{dir_path}'")
+        return count
+
     def create_plugin(
         self,
         *,
@@ -1393,6 +1999,17 @@ class FlowForgeSDK:
         health_check_fn: Optional[Callable] = None,
         extra_tools: Optional[List[str]] = None,
         namespace: Optional[str] = None,
+        workflows_dir: Optional[str] = None,
+        sops_dir: Optional[str] = None,
+        personas_dir: Optional[str] = None,
+        prompts_dir: Optional[str] = None,
+        tools_dir: Optional[str] = None,
+        agents_dir: Optional[str] = None,
+        gates_dir: Optional[str] = None,
+        evaluators_dir: Optional[str] = None,
+        quality_gates_dir: Optional[str] = None,
+        context_layers_dir: Optional[str] = None,
+        loops_dir: Optional[str] = None,
     ) -> FlowForgePlugin:
         """Declaratively create a FlowForgePlugin with auto-discovery.
 
@@ -1414,6 +2031,17 @@ class FlowForgeSDK:
                 beyond those found by tools_package scanning.
             namespace: Agent namespace prefix. If provided, agents are registered
                 as ``{namespace}:{agent_name}``. Defaults to the SDK's namespace.
+            workflows_dir: Directory to scan for workflow YAML files.
+            sops_dir: Directory to scan for SOP YAML files.
+            personas_dir: Directory to scan for persona YAML files.
+            prompts_dir: Directory to scan for prompts YAML files.
+            tools_dir: Directory to scan for declarative Tool YAML files.
+            agents_dir: Directory to scan for declarative Agent YAML files.
+            gates_dir: Directory to scan for gate YAML files.
+            evaluators_dir: Directory to scan for evaluator YAML files.
+            quality_gates_dir: Directory to scan for quality gate YAML files.
+            context_layers_dir: Directory to scan for context layer YAML files.
+            loops_dir: Directory to scan for loop YAML files.
 
         Returns:
             A :class:`FlowForgePlugin` instance ready for registration.
@@ -1427,6 +2055,9 @@ class FlowForgeSDK:
                 tools_package="contentforge.tools",
                 routes=["contentforge.app.api:router"],
                 event_handlers={"task.completed": on_task_done},
+                workflows_dir="contentforge/config/workflows",
+                sops_dir="contentforge/config/sops",
+                personas_dir="contentforge/config/persona",
             )
         """
         sdk_ref = self
@@ -1437,6 +2068,17 @@ class FlowForgeSDK:
         _health_check_fn = health_check_fn
         _extra_tools = extra_tools or []
         _namespace = namespace or self._namespace
+        _workflows_dir = workflows_dir
+        _sops_dir = sops_dir
+        _personas_dir = personas_dir
+        _prompts_dir = prompts_dir
+        _tools_dir = tools_dir
+        _agents_dir = agents_dir
+        _gates_dir = gates_dir
+        _evaluators_dir = evaluators_dir
+        _quality_gates_dir = quality_gates_dir
+        _context_layers_dir = context_layers_dir
+        _loops_dir = loops_dir
 
         class AutoPlugin(FlowForgePlugin):
             manifest = PluginManifest(
@@ -1449,6 +2091,9 @@ class FlowForgeSDK:
             def register_agents(self, agent_registry: Any) -> None:
                 if _agents_package:
                     sdk_ref.scan_agents(_agents_package, namespace=_namespace)
+                # Register agents from YAML config directory
+                if _agents_dir:
+                    sdk_ref.scan_agent_configs(_agents_dir, namespace=_namespace)
 
             def register_tools(self, tool_registry: Any) -> None:
                 if _tools_package:
@@ -1465,6 +2110,9 @@ class FlowForgeSDK:
                         logger.info(f"Extra tool registered: {tool_path}")
                     except Exception as e:
                         logger.warning(f"Failed to register extra tool '{tool_path}': {e}")
+                # Register tools from YAML config directory
+                if _tools_dir:
+                    sdk_ref.scan_tool_configs(_tools_dir)
 
             def register_routes(self, app: Any) -> None:
                 for route_path in _routes:
@@ -1486,7 +2134,77 @@ class FlowForgeSDK:
                     "version": version,
                 }
 
+            # ── V2 钩子：自动扫描 YAML 目录并注册 ─────────────────
+
+            def register_workflows(self, workflow_registry: Any) -> None:
+                if _workflows_dir:
+                    sdk_ref._scan_yaml_dir(_workflows_dir, workflow_registry, "workflow")
+
+            def register_sops(self, sop_registry: Any) -> None:
+                if _sops_dir:
+                    sdk_ref._scan_yaml_dir(_sops_dir, sop_registry, "sop")
+
+            def register_personas(self, persona_registry: Any) -> None:
+                if _personas_dir:
+                    sdk_ref._scan_yaml_dir(_personas_dir, persona_registry, "persona")
+
+            def register_prompts(self, prompt_registry: Any) -> None:
+                if _prompts_dir:
+                    sdk_ref._scan_yaml_dir(_prompts_dir, prompt_registry, "prompt")
+
+            def register_gates(self, gate_registry: Any) -> None:
+                if _gates_dir:
+                    sdk_ref._scan_yaml_dir(_gates_dir, gate_registry, "gate")
+
+            def register_evaluators(self, evaluator_registry: Any) -> None:
+                if _evaluators_dir:
+                    sdk_ref._scan_yaml_dir(_evaluators_dir, evaluator_registry, "evaluator")
+
+            def register_quality_gates(self, quality_gate_registry: Any) -> None:
+                if _quality_gates_dir:
+                    sdk_ref._scan_yaml_dir(_quality_gates_dir, quality_gate_registry, "quality_gate")
+
+            def register_context_layers(self, context_registry: Any) -> None:
+                if _context_layers_dir:
+                    sdk_ref._scan_yaml_dir(_context_layers_dir, context_registry, "context_layer")
+
+            def register_loops(self, loop_registry: Any) -> None:
+                if _loops_dir:
+                    sdk_ref._scan_yaml_dir(_loops_dir, loop_registry, "loop")
+
         return AutoPlugin()
+
+    # ── Declarative Tool creation ────────────────────────────────────
+
+    def declarative_tool(self, *, name: str, type: str = "http", **kwargs: Any) -> Any:
+        """Declarative Tool definition convenience method.
+
+        Creates a tool from a declarative configuration (e.g. HTTP tool,
+        shell tool) without writing any Python code. The tool is
+        automatically registered with the SDK's ToolRegistry.
+
+        Args:
+            name: Unique tool name.
+            type: Tool type, e.g. ``"http"``, ``"shell"``, ``"python"``.
+            **kwargs: Additional configuration passed to DeclarativeToolConfig.
+
+        Returns:
+            The created tool instance.
+
+        Example::
+
+            tool = sdk.declarative_tool(
+                name="web_search",
+                type="http",
+                url="https://api.example.com/search",
+                method="GET",
+            )
+        """
+        from flowforge.core.declarative_tool import DeclarativeToolConfig, create_declarative_tool
+        config = DeclarativeToolConfig(name=name, type=type, **kwargs)
+        tool = create_declarative_tool(config)
+        self.tools.register(tool)
+        return tool
 
     # ── Convention-over-configuration bootstrap ──────────────────────
 
@@ -1527,6 +2245,33 @@ class FlowForgeSDK:
             self.scan_tools(tools_pkg)
         except ImportError:
             logger.debug(f"bootstrap: no tools package at '{tools_pkg}'")
+
+        # Load tools from plugins.yaml (if config_dir is set)
+        if self._config_dir is not None:
+            plugins_yaml = self._config_dir / "plugins.yaml"
+            if plugins_yaml.exists():
+                try:
+                    import yaml as _yaml
+                    with open(plugins_yaml, "r", encoding="utf-8") as _f:
+                        _data = _yaml.safe_load(_f) or {}
+                    _plugin_list = _data.get("plugins", [])
+                    for _decl in _plugin_list:
+                        _name = _decl.get("name", "")
+                        _transport = _decl.get("transport", "local")
+                        _entry = _decl.get("entry_point", "")
+                        if _transport == "local" and _entry and not self.tools.has_tool(_name):
+                            try:
+                                _mod_path, _, _cls_name = _entry.rpartition(":")
+                                _mod = importlib.import_module(_mod_path)
+                                _cls = getattr(_mod, _cls_name, None)
+                                if _cls is not None:
+                                    _instance = _cls()
+                                    self.tools.register(_instance)
+                                    logger.info(f"bootstrap: registered tool '{_name}' from plugins.yaml ({_entry})")
+                            except Exception as _e:
+                                logger.debug(f"bootstrap: failed to load tool '{_name}' from {_entry}: {_e}")
+                except Exception as e:
+                    logger.warning(f"bootstrap: failed to load plugins.yaml: {e}")
 
         # Scan routes — try common module/variable names
         route_module = f"{self._project}.app.api.router"
@@ -1624,7 +2369,9 @@ class FlowForgeSDK:
             harness = getattr(hybrid_executor, "harness", None) or HarnessOrchestrator()
             planner = LLMPlanner()
             verifier = RuleBasedVerifier()
-            reflector = ReflexionReflector()
+            # Inject LLM client so Reflector can perform LLM-based reflection
+            # (falls back to rule-based logic if llm_client is None or call fails)
+            reflector = ReflexionReflector(llm_client=self.llm)
             checkpoint_mgr = getattr(
                 hybrid_executor, "checkpoint_manager",
                 CheckpointManager("data/loop_checkpoints.db"),
@@ -1677,6 +2424,7 @@ class FlowForgeSDK:
 
         # Call each V2 hook with the corresponding registry
         v2_hooks = [
+            ("register_tools", self.tools),
             ("register_workflows", self.workflows),
             ("register_gates", self.gates),
             ("register_evaluators", self.evaluators),

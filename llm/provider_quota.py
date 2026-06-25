@@ -1,8 +1,11 @@
-"""Provider quota manager — TPM/RPM/cost budget tracking per provider.
+"""Provider quota manager — TPM/RPM/cost budget tracking per provider and per model.
 
 Loads quota configuration from models.yaml's ``provider_quotas`` section
 and tracks usage with sliding-window counters for TPM/RPM and daily
 cost budget enforcement.
+
+Also supports per-model quota management with over-limit action strategies,
+merged from DevForge's quota module.
 
 License: MIT
 """
@@ -10,8 +13,10 @@ License: MIT
 import asyncio
 import time
 from collections import deque
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
-from typing import Any, Dict, Optional
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel
 
@@ -21,7 +26,52 @@ logger = get_logger("provider_quota")
 
 
 # ---------------------------------------------------------------------------
-# Pydantic models
+# Over-limit action (from DevForge quota)
+# ---------------------------------------------------------------------------
+
+
+class OverLimitAction(Enum):
+    """超限行为策略。"""
+    QUEUE = "queue"          # 排队等待
+    CASCADE = "cascade"      # 级联到备选模型
+    REJECT = "reject"        # 直接拒绝
+    WARN = "warn"            # 警告但继续
+
+
+# ---------------------------------------------------------------------------
+# Per-model quota (from DevForge quota)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ModelQuota:
+    """单个模型的配额配置。
+
+    与 QuotaConfig（按provider维度）互补，提供按模型维度的配额管理。
+    """
+    model: str
+    provider: str
+    tpm: int = 0             # tokens per minute, 0=无限制
+    rpm: int = 0             # requests per minute, 0=无限制
+    cost_per_1k_input: float = 0.0
+    cost_per_1k_output: float = 0.0
+    monthly_budget: float = 0.0  # 月度预算, 0=无限制
+    over_limit_action: OverLimitAction = OverLimitAction.CASCADE
+    alert_threshold: float = 0.8  # 预算使用率告警阈值
+
+
+@dataclass
+class ModelUsageRecord:
+    """按模型维度的使用记录。"""
+    model: str
+    timestamp: float
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost: float = 0.0
+
+
+# ---------------------------------------------------------------------------
+# Pydantic models (per-provider)
 # ---------------------------------------------------------------------------
 
 
@@ -32,6 +82,8 @@ class QuotaConfig(BaseModel):
     tpm_limit: int = 0  # 0 means unlimited
     rpm_limit: int = 0  # 0 means unlimited
     alert_threshold: float = 0.8  # alert when usage exceeds this fraction
+    cost_per_1k_input: float = 0.0
+    cost_per_1k_output: float = 0.0
 
 
 class UsageRecord(BaseModel):
@@ -229,6 +281,112 @@ class ProviderQuotaManager:
             self._rpm_counters[provider] = _SlidingWindowCounter(window_seconds=60.0)
         self._daily_costs.setdefault(provider, 0.0)
         self._daily_dates.setdefault(provider, "")
+
+
+# ---------------------------------------------------------------------------
+# Model-level Quota Manager (from DevForge quota)
+# ---------------------------------------------------------------------------
+
+
+class ModelQuotaManager:
+    """按模型维度的配额管理器。
+
+    与 ProviderQuotaManager（按provider维度）互补，
+    提供更细粒度的按模型TPM/RPM和月度预算管理。
+    """
+
+    def __init__(self, quotas: list[ModelQuota] | None = None):
+        self._quotas: dict[str, ModelQuota] = {}
+        self._usage: dict[str, list[ModelUsageRecord]] = {}
+        self._monthly_cost: dict[str, float] = {}
+
+        if quotas:
+            for q in quotas:
+                self._quotas[q.model] = q
+                self._usage[q.model] = []
+                self._monthly_cost[q.model] = 0.0
+
+    def register_quota(self, quota: ModelQuota) -> None:
+        """注册模型配额。"""
+        self._quotas[quota.model] = quota
+        if quota.model not in self._usage:
+            self._usage[quota.model] = []
+        if quota.model not in self._monthly_cost:
+            self._monthly_cost[quota.model] = 0.0
+
+    def check_quota(self, model: str, estimated_tokens: int = 0) -> Tuple[bool, str]:
+        """检查是否还有配额。
+
+        Returns:
+            (allowed, reason) - 是否允许，以及拒绝原因
+        """
+        quota = self._quotas.get(model)
+        if not quota:
+            return True, ""
+
+        # 检查月度预算
+        if quota.monthly_budget > 0:
+            current_cost = self._monthly_cost.get(model, 0.0)
+            if current_cost >= quota.monthly_budget:
+                return False, f"月度预算已用完: {current_cost:.2f}/{quota.monthly_budget:.2f}"
+            if current_cost / quota.monthly_budget >= quota.alert_threshold:
+                logger.warning(
+                    f"模型 {model} 月度预算使用率 {current_cost/quota.monthly_budget:.1%}"
+                )
+
+        # 检查RPM
+        if quota.rpm > 0:
+            now = time.time()
+            recent = [r for r in self._usage.get(model, []) if now - r.timestamp < 60]
+            if len(recent) >= quota.rpm:
+                return False, f"RPM已达上限: {len(recent)}/{quota.rpm}"
+
+        # 检查TPM
+        if quota.tpm > 0 and estimated_tokens > 0:
+            now = time.time()
+            recent = [r for r in self._usage.get(model, []) if now - r.timestamp < 60]
+            recent_tokens = sum(r.input_tokens + r.output_tokens for r in recent)
+            if recent_tokens + estimated_tokens > quota.tpm:
+                return False, f"TPM即将达上限: {recent_tokens}/{quota.tpm}"
+
+        return True, ""
+
+    def record_usage(self, model: str, input_tokens: int, output_tokens: int) -> float:
+        """记录使用量并返回费用。"""
+        quota = self._quotas.get(model)
+        cost = 0.0
+        if quota:
+            cost = (input_tokens / 1000 * quota.cost_per_1k_input +
+                    output_tokens / 1000 * quota.cost_per_1k_output)
+            self._monthly_cost[model] = self._monthly_cost.get(model, 0.0) + cost
+
+        self._usage.setdefault(model, []).append(ModelUsageRecord(
+            model=model, timestamp=time.time(),
+            input_tokens=input_tokens, output_tokens=output_tokens,
+            cost=cost,
+        ))
+        return cost
+
+    def get_usage_summary(self) -> dict[str, dict[str, Any]]:
+        """获取使用量摘要。"""
+        summary = {}
+        for model, quota in self._quotas.items():
+            current_cost = self._monthly_cost.get(model, 0.0)
+            summary[model] = {
+                "provider": quota.provider,
+                "monthly_cost": current_cost,
+                "monthly_budget": quota.monthly_budget,
+                "budget_usage_rate": (current_cost / quota.monthly_budget
+                                      if quota.monthly_budget > 0 else 0.0),
+                "rpm_limit": quota.rpm,
+                "tpm_limit": quota.tpm,
+            }
+        return summary
+
+    def get_over_limit_action(self, model: str) -> OverLimitAction:
+        """获取超限行为。"""
+        quota = self._quotas.get(model)
+        return quota.over_limit_action if quota else OverLimitAction.CASCADE
 
 
 # ---------------------------------------------------------------------------

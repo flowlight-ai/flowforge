@@ -147,3 +147,70 @@ def reset_all() -> None:
     """重置所有已注册的熔断器。"""
     for breaker in _breakers.values():
         breaker.reset()
+
+
+# ---------------------------------------------------------------------------
+# AgentExecutionGuard (from DevForge agent_guard)
+# ---------------------------------------------------------------------------
+
+
+class AgentExecutionGuard:
+    """Agent执行守卫 — 统一管理Agent级别的熔断保护和超时控制。
+
+    为每个Agent维护独立的 CircuitBreaker 和超时配置。
+    从 DevForge 迁移至 FlowForge 通用框架。
+    """
+
+    def __init__(
+        self,
+        default_timeout: float = 300.0,
+        failure_threshold: int = 3,
+        recovery_timeout: float = 300.0,
+    ) -> None:
+        self._default_timeout = default_timeout
+        self._failure_threshold = failure_threshold
+        self._recovery_timeout = recovery_timeout
+        self._breakers: dict[str, CircuitBreaker] = {}
+        self._timeouts: dict[str, float] = {}
+
+    def get_breaker(self, agent_name: str) -> CircuitBreaker:
+        """获取或创建Agent的熔断器。"""
+        if agent_name not in self._breakers:
+            self._breakers[agent_name] = CircuitBreaker(
+                name=agent_name,
+                failure_threshold=self._failure_threshold,
+                recovery_timeout=self._recovery_timeout,
+            )
+        return self._breakers[agent_name]
+
+    def set_timeout(self, agent_name: str, timeout: float) -> None:
+        """设置Agent的超时时间。"""
+        self._timeouts[agent_name] = timeout
+
+    def get_timeout(self, agent_name: str) -> float:
+        """获取Agent的超时时间。"""
+        return self._timeouts.get(agent_name, self._default_timeout)
+
+    def is_available(self, agent_name: str) -> bool:
+        """检查Agent是否可用（熔断器未打开）。"""
+        return self.get_breaker(agent_name).is_available
+
+    def record_success(self, agent_name: str) -> None:
+        """记录Agent执行成功。"""
+        self.get_breaker(agent_name).record_success()
+
+    def record_failure(self, agent_name: str) -> None:
+        """记录Agent执行失败。"""
+        self.get_breaker(agent_name).record_failure()
+
+    def get_all_status(self) -> dict[str, dict[str, Any]]:
+        """获取所有Agent的守卫状态。"""
+        result: dict[str, dict[str, Any]] = {}
+        for name, breaker in self._breakers.items():
+            result[name] = {
+                "state": breaker.state.value,
+                "failure_count": breaker._failure_count,
+                "is_available": breaker.is_available,
+                "timeout": self.get_timeout(name),
+            }
+        return result

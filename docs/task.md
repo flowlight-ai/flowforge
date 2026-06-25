@@ -1053,3 +1053,684 @@ MallForge是最接近理想架构的项目：仅有agents、tools、config、web
 - **合计: 54项**（P0: 17, P1: 36, P2: 1）
 
 > **本文档与各项目 docs/ 下的设计文档互补。发现问题时请同步更新对应设计文档。**
+
+---
+
+## 重构优化完成记录（2026-06-20）
+
+### 核心原则
+FlowForge 是底座平台，上层 *Forge 项目（contentforge/devforge/novelforge/mallforge）只需配置扩展，不需要继承代码。
+如果上层需要写代码继承，说明 FlowForge 底座能力不够，应该补齐框架能力。
+
+### 已完成的 P0 阻塞性差距修复
+
+| 编号 | 缺失能力 | 修复内容 | 文件 |
+|------|---------|---------|------|
+| FWK-01 | Workflow YAML Compiler | 已有，增加 loop/error_handler/sub-workflow 节点类型 | compiler/ir.py |
+| FWK-02 | Conditional Router | 已有 core/conditional_router.py | - |
+| FWK-03 | Fallback Chain | 已有 core/fallback_chain.py | - |
+| FWK-04 | State Param Mapping | 已有 core/state_mapper.py | - |
+| FWK-05 | Persona Auto-Inject | 已有 core/persona_injector.py，增加注册机制 | - |
+| FWK-06 | Reflexion Loop | 已有 loop/executor.py | - |
+| FWK-09 | DeclarativeAgent state_updates | 增强 agents/declarative.py，增加 multi-turn tool loop | - |
+| GAP-10 | PermissionV2 | 新增 security/permission_v2.py | - |
+| GAP-11 | DurableEventStream | 新增 events/durable_stream.py | - |
+| GAP-02 | DualThresholdCompactor | 新增 harness/compaction.py | - |
+
+### 新增模块
+
+| 模块 | 文件 | 说明 |
+|------|------|------|
+| FeatureFlags | core/feature_flags.py | 灰度发布、A-B验证、项目级白名单 |
+| DeclarativeTool | core/declarative_tool.py | HTTP/Script/Transform三种声明式Tool模板 |
+| ContentModerationLayer | core/content_moderation.py | 五层审核链（L1~L5） |
+| DegradationDecisionTree | core/degradation.py | 7种降级动作类型 |
+| ProviderQuotaManager | llm/quota_manager.py | TPM/RPM配额、月度预算管理 |
+| ResumeAdapter | compiler/resume_adapter.py | LangGraph Command(resume=...)打通 |
+
+### 增强模块
+
+| 模块 | 增强内容 |
+|------|---------|
+| DeclarativeAgent | 增加 multi-turn tool loop（ReAct模式）、max_steps、permissions、output_schema |
+| DIContainer | 增加生命周期管理（singleton/transient/scoped）、自动依赖解析、循环依赖检测 |
+| SDK.create_plugin | 增加 workflows_dir/sops_dir/personas_dir/prompts_dir/tools_dir 自动扫描 |
+| SDK | 增加 declarative_tool() 便捷方法 |
+| PersonaInjector | 删除硬编码路径，增加 register_persona_dir/register_persona |
+| PluginProtocol | 增加 register_personas/register_prompts/register_declarative_tools V2钩子 |
+| WorkflowCompiler IR | 增加 loop/error_handler/sub-workflow 节点类型 |
+| core/workflow_compiler.py | 合并为 re-export 入口，实际实现在 compiler/ 包 |
+
+### 配置修复
+
+| 修复项 | 文件 | 说明 |
+|--------|------|------|
+| API Key 硬编码 | config/models.yaml | api_key_default → api_key_env |
+| Feature Flags | config/default.yaml | 增加9个feature flags配置 |
+| Credential Store | config/default.yaml | 增加credential_store配置节 |
+
+### *Forge 项目冗余代码统计
+
+| 项目 | 应删除行数 | 应迁移行数 | 主要冗余 |
+|------|:---------:|:---------:|---------|
+| ContentForge | ~3,500 | ~1,350 | core/agents/brain/memory/tools重复 |
+| DevForge | ~800 | ~140 | core/memory/events重复 |
+| NovelForge | ~340 | ~80 | core/5个废弃文件 |
+| **合计** | **~4,640** | **~1,570** | - |
+
+### 测试验证
+- 798个单元测试通过
+- 15个新模块导入验证通过
+- 0个回归引入
+
+---
+
+## 八、ContentForge 配置化重构（第五轮审计 — 2026-06-20）
+
+> 核心原则：ContentForge 应该是"配置项目"，通过 YAML 配置扩展 FlowForge，而不是通过 Python 代码继承扩展。
+> 如果 ContentForge 需要写 Python 代码继承 FlowForge 基类，说明 FlowForge 框架不够好，需要改进 FlowForge。
+
+### 8.1 重构成果
+
+#### FlowForge 框架增强（P0级）
+
+| 编号 | 增强项 | 状态 | 说明 |
+|------|--------|------|------|
+| FF-ENH-01 | AgentConfig 扩展 | ✅ 已完成 | 新增13个字段：execution_mode, model_params, persona, input_mapping, output_key, execution_policy, checkpoint, fallback_chain, post_processors, prompt_template, handoffs, guardrails, metadata |
+| FF-ENH-02 | ExecutionPolicy 模型 | ✅ 已完成 | timeout/retry/on_error/on_anomaly 四要素 |
+| FF-ENH-03 | CheckpointConfig 模型 | ✅ 已完成 | enabled/mode/interrupt_before/persist_fields 四要素 |
+| FF-ENH-04 | DeclarativeAgent PersonaInjector 集成 | ✅ 已完成 | persona 配置自动注入 SOUL/MEMORY/CREATION |
+| FF-ENH-05 | DeclarativeAgent execution_mode 路由 | ✅ 已完成 | 支持 react/reflexion/plan_execute/rewoo/graph_of_thoughts/single |
+| FF-ENH-06 | DeclarativeAgent fallback_chain | ✅ 已完成 | 按顺序尝试工具/Agent，首个成功即返回 |
+| FF-ENH-07 | DeclarativeAgent post_processors | ✅ 已完成 | 内置 deai_postprocess/quality_filter/word_count_check |
+| FF-ENH-08 | DeclarativeAgent prompt_template | ✅ 已完成 | 从 prompts.yaml 加载指令 |
+| FF-ENH-09 | DeclarativeAgent model_params | ✅ 已完成 | per-agent temperature/top_p/max_tokens |
+| FF-ENH-10 | DeclarativeAgent input_mapping | ✅ 已完成 | 支持 ${state.xxx}/${params.xxx}/${result.xxx}/${outputs.xxx} |
+| FF-ENH-11 | DeclarativeAgent output_key | ✅ 已完成 | Agent 输出自动映射到 workflow state |
+| FF-ENH-12 | SDK scan_agent_configs | ✅ 已完成 | 从 YAML 目录自动创建 DeclarativeAgent |
+| FF-ENH-13 | @agent 装饰器扩展 | ✅ 已完成 | 支持全部新增字段 |
+
+#### ContentForge 清理成果
+
+| 分类 | 删除文件数 | 说明 |
+|------|-----------|------|
+| agents/ 整个目录 | 11 | 旧版 Agent 重复实现，与 workers/ 完全重复 |
+| sdk/ 整个目录 | 2 | 已废弃的 ContentForgeClient |
+| brain/scheduler.py | 1 | 已废弃，委托 FlowForge Scheduler |
+| brain/sop/ Python 文件 | 4 | 已废弃的硬编码 SOP，迁移到 YAML |
+| core/di_setup.py | 1 | 已废弃的 DI 容器 |
+| core/metrics.py | 1 | 纯转发到 FlowForge |
+| core/_archive/pipeline.py | 1 | 已废弃 |
+| memory/repositories/ | 4 | 已废弃的 Repository 层 |
+| tools/pexels_image.py | 1 | 与 pexels_search.py 重复 |
+| tools/channels/base.py | 1 | 与 core/interfaces/plugin.py 重复 |
+| tools/llm/router.py | 1 | 已废弃的 SemanticRouter |
+| workers/seo_planner_agent.py | 1 | 与 seo_agent.py 重复 |
+| app/api/rate_limit.py | 1 | FlowForge 已有 |
+| tests/unit/test_scheduler.py | 1 | 对应已删除模块的测试 |
+| **合计** | **34** | |
+
+#### ContentForge YAML 配置驱动成果
+
+| Agent | YAML 配置 | execution_mode | prompt_template | persona | fallback_chain |
+|-------|----------|---------------|----------------|---------|---------------|
+| contentforge:topic | ✅ | reflexion | contentforge.topic.hot_trend | ✅ | [helixrag_search, web_search, llm_web_chat] |
+| contentforge:research | ✅ | rewoo | contentforge.research.plan_searches | ✅ | [helixrag_search, web_search] |
+| contentforge:writer | ✅ | reflexion | contentforge.writer.main | ✅ | — |
+| contentforge:fact_check | ✅ | react | contentforge.fact_check.validate_claim | ✅ | — |
+| contentforge:seo | ✅ | plan_execute | contentforge.seo_planner.analyze_keywords | ✅ | — |
+| contentforge:publish | ✅ | workflow | — | ✅ | — |
+
+**配置驱动率**: Agent 6/12=50%（6个核心Agent已YAML驱动，6个辅助Agent仍为Python类）
+
+### 8.2 仍需改进的 FlowForge 框架能力
+
+| 优先级 | 缺失能力 | 影响 | 建议 |
+|--------|---------|------|------|
+| P0 | 通用 PublishEngine 未下沉 | 发布引擎全在 ContentForge | 将 PublishEngine/ContentAdapter/StaggeredPublisher 下沉到 FlowForge |
+| P0 | Playwright 浏览器自动化缺失 | 浏览器发布全在 ContentForge | 在 FlowForge 中增加通用 Playwright 工具 |
+| P1 | AgenticRAG 通用能力缺失 | RAG 全在 ContentForge | 在 FlowForge 中实现通用 AgenticRAG |
+| P1 | Workflow YAML 格式与 SOP 不兼容 | ContentForge SOP 无法直接编译 | 增加 ContentForge SOP 格式兼容解析器 |
+| P1 | 声明式 API Tool 缺失 | 每个平台发布器都要写 Python | 支持纯 YAML 配置驱动 API 调用 |
+| P2 | 内容安全审核敏感词库为占位符 | 审核能力弱 | 配置化敏感词库 + LLM 辅助审核 |
+| P2 | Plugin 不支持纯 YAML 注册 | 仍需写 Python 插件类 | 支持 YAML 声明式插件 |
+
+### 8.3 ContentForge 理想目录结构（目标）
+
+```
+contentforge/
+├── __init__.py
+├── plugins.py              # 插件注册入口（~50行）
+├── app/
+│   ├── main.py             # 应用入口（~60行）
+│   └── api/
+│       ├── router.py       # 路由注册
+│       └── endpoints/
+│           ├── content.py  # Content API 端点（业务特有）
+│           └── personas.py # Persona API 端点
+├── config/                 # ★ 全部配置驱动
+│   ├── system.yaml
+│   ├── agents/             # Agent YAML 定义
+│   ├── sops/               # SOP YAML 定义
+│   ├── loops/              # Loop YAML 定义
+│   ├── workflows/          # Workflow YAML 定义
+│   ├── persona/            # Persona YAML 定义
+│   ├── platforms/          # 平台配置
+│   ├── prompts.yaml        # 提示词模板
+│   └── scoring_rubric.yaml # 评分标准
+├── web/                    # 前端（Next.js）
+└── docs/                   # 设计文档
+```
+
+**当前差距**：workers/、tools/、brain/、core/、memory/ 目录仍存在，需要继续将基础代码下沉到 FlowForge。
+
+### 8.4 第六轮配置化重构成果（2026-06-20 续）
+
+> 继续第五轮重构，完成基础代码下沉和目录清理。
+
+#### FlowForge BaseAgent 增强
+
+| 增强项 | 说明 |
+|--------|------|
+| `__init__(tool_registry, llm_client)` | 支持构造函数注入，不再需要子类兼容层 |
+| `_call_tool(tool_name, params)` | 便捷工具调用，通过 ToolRegistry.execute() |
+| `_call_llm(messages, **kwargs)` | 便捷 LLM 调用，委托给 llm 工具 |
+| `_get_prompt(key, fallback, **kwargs)` | 便捷提示词加载，从 PromptManager 获取 |
+| `execute_with_context` 自动注入 | 自动设置 `_tool_registry` 和 `_context` |
+
+#### 基础代码下沉到 FlowForge
+
+| 模块 | 原位置 | 新位置 | 说明 |
+|------|--------|--------|------|
+| TaskStore | contentforge/core/task_store.py | flowforge/core/task_store.py | SQLite 任务存储，通用化表名 |
+| HelmEventEmitter | contentforge/core/interfaces/helm_emitter.py | flowforge/core/interfaces/helm_emitter.py | Helm 事件发射接口 |
+| MessageChannelPlugin | contentforge/core/interfaces/plugin.py | flowforge/core/interfaces/plugin.py | 消息渠道插件接口 |
+| ChannelManager | contentforge/tools/channels/__init__.py | flowforge/core/channel_manager.py | 渠道管理框架 |
+| NativeToolServer | contentforge/core/native_tool_server.py | flowforge/core/native_tool_server.py | Native Tool 调用服务器 |
+| PublishEngine | contentforge/tools/publish_engine.py | flowforge/tools/publish_engine.py | 发布引擎（适配+错峰+熔断+审核） |
+| PlatformAdapter | contentforge/tools/platform_adapter.py | flowforge/tools/platform_adapter.py | 声明式平台适配框架 |
+| PlaywrightPublisher | contentforge/tools/playwright_publisher.py | flowforge/tools/playwright_publisher.py | 浏览器自动化发布 |
+| AgenticRAG | contentforge/tools/agentic_rag.py | flowforge/tools/agentic_rag.py | SimHash+RRF+时间衰减 |
+| AgenticRAGCore | contentforge/tools/agentic_rag_core.py | flowforge/tools/agentic_rag_core.py | QueryExpander+ContentSynthesizer |
+| 6个通用工具 | contentforge/tools/*.py | flowforge/tools/*.py | image_download/pexels_search/video_generate/publish/wechat_publisher/toutiao_publisher |
+
+#### ContentForge 目录清理
+
+| 操作 | 文件/目录 | 说明 |
+|------|----------|------|
+| 删除 | core/__init__.py | 空文件 |
+| 删除 | core/di_setup.py | 已废弃的 DI 兼容层 |
+| 删除 | core/interfaces/__init__.py | 空文件 |
+| 删除 | core/interfaces/helm_emitter.py | 已下沉到 FlowForge |
+| 删除 | core/interfaces/plugin.py | 已下沉到 FlowForge |
+| 删除 | core/native_tool_server.py | 已下沉到 FlowForge |
+| 删除 | core/schemas/__init__.py | 空文件 |
+| 删除 | core/flowforge_bridge.py + pyc | 幽灵文件 |
+| 删除 | core/callback.py | 空壳，已内联替代 |
+| 删除 | workers/base.py | 仅2行 re-export |
+| 删除 | memory/ 整个目录 | 已废弃 |
+| 迁移 | core/schemas/content.py → app/schemas/content.py | 业务 API Schema |
+| 迁移 | core/schemas/article.py → app/schemas/article.py | 业务数据模型 |
+| 迁移 | core/schemas/task.py → app/schemas/task.py | 任务 API 模型 |
+| 迁移 | core/schemas/state.py → brain/schemas/state.py | SOP State 定义 |
+| 迁移 | core/config.py → app/config.py | 业务配置 |
+| re-export | core/task_store.py | 桥接到 flowforge.core.task_store |
+| re-export | core/config.py | 桥接到 contentforge.app.config |
+| re-export | tools/ 下11个文件 | 桥接到 flowforge.tools.* |
+| 清理 | 4个 Agent 幽灵 import | 删除 ContentForgeAgent 引用 |
+
+#### Agent 重构
+
+| 变更 | 说明 |
+|------|------|
+| 7个 Agent → BaseAgent | TopicAgent/ResearchAgent/WriterAgent/EditorAgent/AuditAgent/FactCheckAgent/PublishAgent 从 ContentForgeAgent 改为直接继承 BaseAgent |
+| 删除 ContentForgeAgent 兼容层 | core/flowforge_bridge.py 已删除 |
+
+#### API 端点修复
+
+| 修复 | 说明 |
+|------|------|
+| 恢复 @router.post("/create") | create_content 函数缺少路由装饰器，导致 /api/v1/content/create 返回 404 |
+| 新增 GET /tasks 列表端点 | 缺少任务列表 API，openclaw_pkg 适配器需要 |
+
+#### 验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 应用加载 | ✅ 6个 YAML Agent + 7个工具 + 7个工作流 + 187个路由 |
+| Health API | ✅ 200 healthy |
+| POST /api/v1/content/create | ✅ 202 + task_id |
+| POST /api/v1/content/polish | ✅ 202 + task_id |
+| POST /api/v1/content/pipeline | ✅ 202 + task_id |
+| GET /api/v1/content/tasks | ✅ 200 + 任务列表 |
+| openclaw_pkg 7个端点全部可达 | ✅ |
+
+#### ContentForge 当前目录结构
+
+```
+contentforge/
+├── __init__.py
+├── plugins.py              # 插件注册入口
+├── app/
+│   ├── main.py             # 应用入口
+│   ├── config.py           # ContentForge 业务配置（ContentForgeConfig + ConfigLoader）
+│   ├── schemas/            # 业务 Schema（从 core/schemas 迁移）
+│   │   ├── article.py
+│   │   ├── content.py
+│   │   └── task.py
+│   └── api/
+│       ├── router.py
+│       ├── helm_ws_manager.py
+│       └── endpoints/
+│           ├── content.py  # Content API（/create, /polish, /pipeline 等）
+│           └── personas.py
+├── brain/
+│   ├── orchestrator.py     # 指挥中枢
+│   └── schemas/
+│       └── state.py        # SOP State 定义
+├── core/                   # ★ 仅剩 re-export 桥接（2个文件）
+│   ├── config.py           # → re-export from app.config
+│   └── task_store.py       # → re-export from flowforge.core.task_store
+├── workers/                # 业务 Agent（9个，全部继承 BaseAgent）
+├── tools/                  # re-export 桥接 + 业务扩展
+│   ├── channels/           # 微信渠道插件（业务特有）
+│   └── llm/                # Helm 适配器 + 模型管理（业务扩展）
+├── config/                 # YAML 配置驱动
+├── workflows/              # Workflow YAML
+├── web/                    # 前端
+└── docs/                   # 文档
+```
+
+#### 仍需改进
+
+| 优先级 | 问题 | 建议 |
+|--------|------|------|
+| P1 | core/ 目录仍有2个 re-export 文件 | 逐步更新引用后删除 core/ |
+| P1 | tools/llm/model_service.py 仍继承 FlowForge ModelService | persona 分配改为 YAML 配置化 |
+| P2 | workers/ 中6个辅助 Agent 仍为 Python 类 | 逐步改为 YAML 配置驱动 |
+| P2 | tools/channels/wechat_plugin.py 依赖 system_config 单例 | 改为 DI 注入 |
+
+---
+
+## 十、Loop执行流程与质量分阈值审查（第七轮审计新增 — 2026-06-23）
+
+> 以下为第七轮审计基于 review.md 最新意见逐条验证发现
+> 审查重点：Loop执行流程落地、质量分阈值、CoT检测、评委配置、SSE协议、硬编码提示词、架构违反、性能、workflow_executor拆分、跨项目事件总线
+
+### 10.1 已修复问题确认 ✅
+
+#### [LOOP-01] Loop执行流程已完整落地 ✅ 已修复
+- **来源**：review.md 段落1（Loop执行流程）
+- **问题描述**：所有智能体是否都通过LoopExecutor执行？创作和润色是否为两个独立Loop接口？
+- **当前代码状态**：✅ 已完整实现
+  - `flowforge/loop/executor.py` 实现了完整的 LoopExecutor（826行），包装 HybridExecutor，包含规划→执行→校验→复盘→重试闭环
+  - `flowforge/loop/orchestrator.py` 实现了 LoopOrchestrator，作为通用 Loop 编排入口
+  - `flowforge/loop/verifier.py` 实现了5种校验器：AgentJudgeVerifier、RuleBasedVerifier、SchemaVerifier、TestSuiteVerifier、MultiJudgeVerifier
+  - ContentForge 所有任务通过 `_execute_via_loop()` 走 LoopExecutor：`contentforge/app/api/endpoints/content.py` L101-118
+  - 创作和润色为两个独立 Loop 接口：
+    - `/create` → `deep-article-loop`（worker=contentforge:writer）
+    - `/polish` → `content-polish-loop`（worker=contentforge:editor）
+  - 6个 Loop 模板已配置：deep_article_loop、content_polish_loop、series_article_loop、publish_loop、news_summary_loop、fact_check_loop
+- **修复建议**：无需修复，已完整落地
+
+#### [LOOP-02] CoT检测/中文比例检测已删除 ✅ 已修复
+- **来源**：review.md 段落3（CoT检测）
+- **问题描述**：代码中是否还有CoT检测/中文比例检测？（用户多次要求删除）
+- **当前代码状态**：✅ 已删除
+  - 在 flowforge/ 和 contentforge/ 全量搜索 `cot_detection|chinese_ratio|中文比例|CoT检测|cot_check` 均无匹配
+  - `loop/verifier.py` 中的 `_strip_thinking_process()` 方法仅用于过滤 WebChat 模型输出的思考过程标签，提取最终 JSON 响应，**不是 CoT 检测/拒绝逻辑**
+- **修复建议**：无需修复，CoT检测已彻底删除
+
+#### [LOOP-03] 评委配置已实现5个WebChat评委+1个WebChat写作 ✅ 已修复
+- **来源**：review.md 段落4（评委配置）
+- **问题描述**：是否配置了5个不同WebChat评委+1个WebChat写作？是否并行评审？
+- **当前代码状态**：✅ 已实现
+  - `contentforge/config/loops/deep_article_loop.yaml` 配置了5个WebChat评委：
+    - `openroute/DeepSeek-V4-Pro`
+    - `openroute/Kimi-K2.6`
+    - `openroute/Qwen3.6-Plus`
+    - `openroute/HunYuan3`
+    - `openroute/MiniMax-M3`
+  - 写作模型为 `openroute/Doubao-Seed2.0`，通过 `exclude_creator: true` 排除自我评分
+  - `content_polish_loop.yaml` 同样配置5个评委（HunYuan3-Turbo 替代 HunYuan3）
+  - 并行评审已实现：`loop/verifier.py` L362-366 使用 `asyncio.gather()` + `asyncio.wait_for()` 并行调用所有评委
+  - 聚合策略使用 trimmed mean（≥3评委时去除最高最低），消除单一模型偏见
+- **修复建议**：无需修复，已完整实现
+
+#### [LOOP-04] SSE协议保持接口契约，仅增加stream参数 ✅ 已修复
+- **来源**：review.md 段落5（SSE协议）
+- **问题描述**：SSE端点是否保持接口契约？是否只加了参数而非改协议？
+- **当前代码状态**：✅ 已实现
+  - `contentforge/app/schemas/content.py` 在请求模型中增加了 `stream: bool = Field(default=False)` 参数
+  - `stream=False`（默认）：返回 `202 + task_id`，**完全向后兼容**
+  - `stream=True`：返回 `StreamingResponse(media_type="text/event-stream")`，SSE流式推送进度
+  - SSE 端点 `GET /api/v1/content/tasks/{task_id}/stream` 作为独立端点，不改变原有 `/create` 和 `/polish` 的契约
+  - 事件类型：`progress`（中间进度）、`result`（最终结果）、`error`（错误）、`done`（流结束标记）
+- **修复建议**：无需修复，SSE是参数扩展非协议变更
+
+#### [LOOP-05] 跨项目事件总线桥接层已实现 ✅ 已修复
+- **来源**：review.md 段落10（跨项目事件总线）
+- **问题描述**：是否已统一？桥接层是否实现？
+- **当前代码状态**：✅ 已实现
+  - `flowforge/events/bridge.py` 实现了完整的 EventBridge 桥接层（346行）
+  - 支持：项目注册、事件前缀、事件过滤、事件类型映射、双向桥接
+  - 防循环保护：直接回声检测（`_source_project`）+ 多跳循环检测（`_forwarded_from` 链）
+  - 跨项目订阅：支持 `*` 和 `**` 通配符模式匹配
+  - `flowforge/events/durable_stream.py` 实现了 DurableEventStream（持久化事件流）
+- **修复建议**：无需修复，桥接层已完整实现（原 BUG-PUB-02 可标记为已修复）
+
+#### [LOOP-06] workflow_executor.py已拆分消除God Object ✅ 已修复
+- **来源**：review.md 段落9（workflow_executor.py）
+- **问题描述**：是否已拆分消除God Object？
+- **当前代码状态**：✅ 已拆分
+  - `modes/workflow_executor.py` 已重构为组合模式，委托给4个子模块：
+    - `workflow_context.py`：LLM调用、记忆、工具描述、模板渲染（ContextHandler）
+    - `workflow_tools.py`：工具/Agent执行、函数schema、搜索回退（ToolHandler）
+    - `workflow_react.py`：ReAct循环执行（ReactHandler）
+    - `workflow_chat.py`：智能聊天、普通聊天、简单响应（ChatHandler）
+  - 主类仅保留代理方法和核心编排逻辑，不再是 God Object
+- **修复建议**：无需修复，已通过组合模式拆分（原 BUG-FF-03 已确认修复）
+
+---
+
+### 10.2 新发现问题
+
+### [LOOP-07] 质量分阈值配置不一致 — 0.85/0.9/0.95 三套默认值
+- **来源**：review.md 段落2（质量分阈值）
+- **问题描述**：当前配置是否为0.9？是否有代码偷偷降低阈值？
+- **当前代码状态**：⚠️ 阈值不一致，存在3套默认值
+  - **ContentForge Loop配置**：`pass_threshold: 0.85`
+    - `contentforge/config/loops/deep_article_loop.yaml` L35
+    - `contentforge/config/loops/content_polish_loop.yaml` L33
+  - **FlowForge code_review_loop配置**：`pass_threshold: 0.9`
+    - `flowforge/config/loops/code_review_loop.yaml` L20
+  - **MultiJudgeVerifier代码默认值**：`pass_threshold: 0.95`
+    - `flowforge/loop/verifier.py` L316: `threshold = config.get("pass_threshold", 0.95)`
+  - **AgentJudgeVerifier代码默认值**：`pass_threshold: 0.8`
+    - `flowforge/loop/verifier.py` L31
+  - **executor.py日志默认值**：`pass_threshold: 0.9`
+    - `flowforge/loop/executor.py` L457
+  - **loop.md设计文档**：示例中同时出现 0.85（L584）和 0.9（L674）
+- **影响**：阈值不统一导致评审标准混乱。ContentForge 实际使用 0.85（低于用户期望的 0.9），可能导致低质量内容通过评审
+- **修复建议**：
+  1. 统一 ContentForge Loop 配置的 pass_threshold 为 0.9（用户期望值）
+  2. 统一 MultiJudgeVerifier 代码默认值为 0.9（与配置保持一致）
+  3. 在 loop.md 设计文档中明确默认阈值为 0.9
+- **优先级**：P1
+
+### [LOOP-08] 剩余6处硬编码提示词未外置到YAML
+- **来源**：review.md 段落6（硬编码提示词）
+- **问题描述**：代码中还有多少处硬编码提示词？
+- **当前代码状态**：⚠️ 仍有6处硬编码提示词（相比原77处已大幅改善）
+  - **`flowforge/agents/generic/executor.py`** L23-27：计划执行提示词硬编码
+  - **`flowforge/agents/generic/multilingual.py`** L18-22, L32-38, L45-49：3处翻译/检测/验证提示词硬编码
+  - **`flowforge/agents/generic/image_research.py`** L17-22, L33-39：2处图片研究提示词硬编码
+  - **`flowforge/tools/agentic_rag_core.py`** L49-74：3个类常量 `REWRITE_PROMPT`、`DECOMPOSE_PROMPT`、`EXPAND_PROMPT` 硬编码
+  - **`flowforge/agents/generic/fact_check.py`** L16-18：使用 `_get_prompt()` 加载但 fallback 仍硬编码（部分改善）
+  - **正面进展**：16个通用Agent中已有10个使用 `_get_prompt()` 从 PromptManager 加载（analyst/approver/drafter/deliverer/critic/finalizer/generator/processor/refiner/react_observer）
+- **影响**：修改这些提示词需要改代码重新部署，违反配置外置原则
+- **修复建议**：
+  1. 将 executor.py、multilingual.py、image_research.py 的硬编码提示词外置到 `config/prompts.yaml`
+  2. 将 agentic_rag_core.py 的3个 PROMPT 常量外置到 `config/prompts.yaml`
+  3. 代码通过 `_get_prompt(key)` 加载
+- **优先级**：P2（原 BUG-PROMPT-01 的残留部分，已从77处降至6处）
+
+### [LOOP-09] Loop总超时配置远超3分钟性能要求
+- **来源**：review.md 段落8（性能）
+- **问题描述**：Loop流程是否在3分钟内完成？
+- **当前代码状态**：⚠️ 超时配置远超3分钟
+  - **ContentForge deep_article_loop**：`total_timeout: 3600`（60分钟），`timeout_per_iteration: 600`（10分钟）
+  - **ContentForge content_polish_loop**：`total_timeout: 1200`（20分钟），`timeout_per_iteration: 120`（2分钟）
+  - **FlowForge code_review_loop**：`total_timeout: 600`（10分钟），`timeout_per_iteration: 120`（2分钟）
+  - **loop.md 设计文档**：`total_timeout: 1800`（30分钟）
+  - **executor.py 代码默认值**：`total_timeout: 1800`（30分钟），`timeout_per_iteration: 300`（5分钟）
+- **影响**：内容创作类任务（深度文章）实际执行时间远超3分钟，无法满足3分钟性能要求
+- **修复建议**：
+  1. 明确3分钟性能要求的适用场景（如简单问答、快速润色），不适用于深度文章创作
+  2. 对不同任务类型设置差异化超时：快速任务（polish/fact_check）≤3分钟，深度任务（deep_article）允许更长
+  3. 在 loop.md 设计文档中明确性能基线和分级标准
+- **优先级**：P2（需明确性能要求适用范围）
+
+### [LOOP-10] _strip_thinking_process 可能误删合法JSON内容
+- **来源**：review.md 段落3（CoT检测相关）
+- **问题描述**：`loop/verifier.py` 的 `_strip_thinking_process()` 方法存在误删风险
+- **当前代码状态**：⚠️ 存在边界情况风险
+  - `flowforge/loop/verifier.py` L541-565 实现了 `_strip_thinking_process()`
+  - 策略1：去除思考过程标签（合理）
+  - 策略2：提取最后一个 `{` 开始的内容作为JSON，但判断条件是"前缀主要是英文（中文占比<10%）"
+  - **风险**：如果评委模型输出的JSON前有中文解释（如"以下是评审结果：{"scores":...}"），且中文占比≥10%，则不会提取最后一个JSON，可能导致解析失败
+  - **风险**：如果评委输出的JSON本身包含多个 `{`（如嵌套对象），`rfind('{')` 可能定位到嵌套的 `{` 而非顶层 `{`
+- **影响**：评委响应解析失败，被计为无效结果，可能影响评审聚合
+- **修复建议**：
+  1. 改进策略2：使用括号匹配而非简单的 `rfind('{')` 定位最后一个完整JSON对象
+  2. 增加单元测试覆盖：中文前缀JSON、嵌套JSON、多JSON对象等边界情况
+- **优先级**：P2
+
+### [LOOP-11] LoopExecutor 日志过度冗长影响性能和可读性
+- **来源**：代码走读发现
+- **问题描述**：`loop/executor.py` 包含大量 `[loop-trace]` 和 `[loop][DEBUG]` 日志，在生产环境可能影响性能
+- **当前代码状态**：⚠️ 日志冗余
+  - `flowforge/loop/executor.py` 中有约30处 `logger.info()` 调用，其中多数为 `[loop-trace]` 调试日志
+  - 典型示例 L354: `logger.info(f"[loop-trace] task_id={task.task_id} draft注入后: input_data_keys=...")`
+  - 典型示例 L423-436: 每次迭代输出10+行详细日志
+  - 这些日志在每次迭代中都输出，Loop 5次迭代可能产生100+行日志
+- **影响**：生产环境日志膨胀，可能影响 I/O 性能；排查问题时关键信息被淹没
+- **修复建议**：
+  1. 将 `[loop-trace]` 和 `[loop][DEBUG]` 日志降级为 `logger.debug()` 级别
+  2. 保留关键里程碑日志（迭代开始/结束、评审结果、最终结果）为 `logger.info()`
+  3. 通过配置控制日志级别
+- **优先级**：P2
+
+### [LOOP-12] Loop API 端点缺少流式进度推送（仅轮询）
+- **来源**：代码走读发现
+- **问题描述**：FlowForge 的 Loop API（`/api/v1/loops`）仅支持轮询查询状态，无 SSE 流式推送
+- **当前代码状态**：⚠️ FlowForge Loop API 无 SSE
+  - `flowforge/app/api/endpoints/loops.py` 仅提供：POST /loops、GET /loops/{id}、POST /loops/{id}/stop、GET /loops/{id}/history
+  - 状态更新依赖客户端轮询 `GET /loops/{loop_id}`
+  - ContentForge 的 `/create` 和 `/polish` 已实现 SSE（`stream=True`），但 FlowForge Loop API 未实现
+  - FlowForge 使用 WebSocket（`websocket.py`）推送事件，但 Loop 事件未接入 WebSocket
+- **影响**：用户无法实时获取 Loop 迭代进度，体验差
+- **修复建议**：
+  1. 增加 `GET /api/v1/loops/{loop_id}/stream` SSE 端点
+  2. 或将 Loop 事件（loop.started/iteration.start/verify.passed/failed/completed）接入现有 WebSocket
+- **优先级**：P2
+
+---
+
+### 10.3 审查总结
+
+| 审查项 | 状态 | 说明 |
+|--------|------|------|
+| 1. Loop执行流程 | ✅ 已修复 | LoopExecutor完整实现，创作/润色为独立Loop接口 |
+| 2. 质量分阈值 | ⚠️ 问题 | 0.85/0.9/0.95 三套默认值不一致（LOOP-07） |
+| 3. CoT检测 | ✅ 已修复 | 已彻底删除 |
+| 4. 评委配置 | ✅ 已修复 | 5个WebChat评委+1个WebChat写作，并行评审 |
+| 5. SSE协议 | ✅ 已修复 | 仅增加stream参数，向后兼容 |
+| 6. 硬编码提示词 | ⚠️ 残留 | 从77处降至6处（LOOP-08） |
+| 7. 架构违反 | ⚠️ 已记录 | 见原 ARCH-FF/CF/NF/DF 系列 |
+| 8. 性能 | ⚠️ 问题 | 超时配置远超3分钟（LOOP-09） |
+| 9. workflow_executor.py | ✅ 已修复 | 已拆分为4个子模块 |
+| 10. 跨项目事件总线 | ✅ 已修复 | EventBridge桥接层已实现 |
+
+**本轮新增问题统计**：
+- ✅ 已修复：6项（LOOP-01/02/03/04/05/06）
+- ⚠️ 新发现：6项（LOOP-07 P1 + LOOP-08~12 P2）
+
+**原问题状态更新**：
+- BUG-PUB-02（跨项目事件总线未统一）→ ✅ 可标记为已修复（EventBridge已实现）
+- BUG-FF-03（workflow_executor.py God Object）→ ✅ 已确认修复
+- BUG-PROMPT-01（FlowForge 77处硬编码提示词）→ 部分修复，剩余6处（LOOP-08）
+
+---
+
+> **本文档与各项目 docs/ 下的设计文档互补。发现问题时请同步更新对应设计文档。**
+
+---
+
+# 第十一章：跨项目审查问题（第八轮审计新增 — 2026-06-23）
+
+> 来源：review.md最新意见 + 代码审查
+
+## HICLAW-01: 浏览器关闭逻辑未按平台区分
+- **来源**：review.md段落53
+- **问题描述**：Win11发布完成后应关闭浏览器，Linux只关闭tab。当前所有平台都只关闭tab
+- **当前代码状态**：base_publisher.py第132-141行finally块在所有平台都只调用_close_tab_via_cdp关闭tab，_kill_browser只在错误清理场景调用
+- **修复建议**：在base_publisher.py的finally块中增加平台判断：Win11下调用_kill_browser杀整个浏览器，Linux下保持_close_tab_via_cdp只关tab
+- **优先级**：P0
+
+## MALL-01: MallForge缺失/quick-listing页面
+- **来源**：review.md段落7
+- **问题描述**：shell-config.tsx配置了"快速生成Listing"导航项链接到/quick-listing，但该页面不存在
+- **当前代码状态**：mallforge/web/src/app/目录下缺失quick-listing/page.tsx
+- **修复建议**：创建quick-listing/page.tsx页面，或将导航项href改为/listing
+- **优先级**：P0
+
+## MALL-02: MallForge前端大量写死假数据
+- **来源**：review.md段落7
+- **问题描述**：page.tsx硬编码销售数据、listing/page.tsx的handleGenerate用setTimeout假装延迟不调用API、DailyAITasks.tsx完全不调用API
+- **当前代码状态**：违反铁律2（禁止假数据），多个组件使用demo*常量
+- **修复建议**：移除所有demo*常量，API失败时显示空状态，handleGenerate必须调用真实API
+- **优先级**：P0
+
+## CONTENT-01: web_api模式下发布功能不可用
+- **来源**：review.md段落17
+- **问题描述**：web_api模式下publish_toutiao为native_tool不可用，被当作"已知限制"放行
+- **当前代码状态**：test_contentforge.py第1916-1920行注释提到此限制
+- **修复建议**：明确web_api模式下发布功能的替代方案或文档化限制
+- **优先级**：P1
+
+## LOOP-07: 质量分阈值不一致
+- **来源**：review.md段落37/39/40
+- **问题描述**：代码中存在0.85/0.9/0.95三套默认值，用户最终要求0.9
+- **当前代码状态**：contentforge_adapter.py已修复为0.9，但其他位置可能仍有0.85
+- **修复建议**：全局搜索0.85和0.95质量分阈值，统一改为0.9
+- **优先级**：P0
+
+## LOOP-08: 剩余6处硬编码提示词
+- **来源**：review.md段落30/31
+- **问题描述**：约6处硬编码提示词未外置到YAML
+- **当前代码状态**：已替换43处，剩余6处
+- **修复建议**：搜索并替换剩余硬编码提示词到prompts.yaml
+- **优先级**：P1
+
+## LOOP-09: Loop总超时配置远超3分钟
+- **来源**：review.md段落48/49
+- **问题描述**：deep-article-loop total_timeout=1200s(20分钟)，content-polish-loop total_timeout=900s(15分钟)，远超用户要求的3分钟
+- **当前代码状态**：配置在loops YAML中
+- **修复建议**：优化Loop执行效率，将total_timeout降至180s(3分钟)
+- **优先级**：P1
+
+## LOOP-10: _strip_thinking_process可能误删合法内容
+- **来源**：review.md段落54/55/57
+- **问题描述**：_strip_thinking_process可能误删合法的JSON内容
+- **当前代码状态**：已删除CoT检测，但_strip_thinking_process仍存在
+- **修复建议**：审查_strip_thinking_process逻辑，确保不误删合法内容
+- **优先级**：P2
+
+---
+
+# 第十二章：代码与设计文档一致性审查（第九轮审计新增 — 2026-06-23）
+
+> 来源：v3.0设计文档 vs 代码实现交叉验证
+
+## CONSIST-01: UnifiedLoopState未接入LoopExecutor
+- **项目**：FlowForge
+- **设计描述**：v3.0新增26要求UnifiedLoopState统一状态机合并TurnKind+LoopPhase
+- **代码现状**：loop/turn_transition.py实现了TurnState（类名不符），但loop/executor.py仍用旧LoopPhase，两套并行
+- **差异类型**：已实现但不一致
+- **优先级**：P0
+
+## CONSIST-02: AgenticRAG完全未实现
+- **项目**：ContentForge
+- **设计描述**：v3.0修订32要求AgenticRAG.search()实现RRF/SimHash/TimeDecay+Doubao query扩展
+- **代码现状**：无任何AgenticRAG代码，research_engine.py仅并行调helixrag+web_search
+- **差异类型**：未实现
+- **优先级**：P0
+
+## CONSIST-03: CookieManager/HumanBehaviorSimulator未实现
+- **项目**：ContentForge
+- **设计描述**：v3.0修订24/25要求CookieManager加密持久化+HumanBehaviorSimulator反检测
+- **代码现状**：无对应代码，human_behavior_profile.yaml配置存在但无消费方
+- **差异类型**：未实现
+- **优先级**：P1
+
+## CONSIST-04: ChapterWriteSaga未实现
+- **项目**：NovelForge
+- **设计描述**：v3.0 LD3.0-2要求ChapterWriteSaga五层写入Saga模式
+- **代码现状**：无ChapterWriteSaga代码，五层写入非原子化
+- **差异类型**：未实现
+- **优先级**：P0
+
+## CONSIST-05: DevForge缺3个Agent
+- **项目**：DevForge
+- **设计描述**：v3.0 LD3.0-7定义14个Agent
+- **代码现状**：11/14已实现，缺devops/gate_evaluator/incident_handler
+- **差异类型**：部分实现
+- **优先级**：P1
+
+## CONSIST-06: DevForgeGateOrchestrator/DockerComposeCanaryManager/SandboxSecurityModel未实现
+- **项目**：DevForge
+- **设计描述**：v3.0 LD3.0-16要求DevForgeGateOrchestrator+DockerComposeCanaryManager+SandboxSecurityModel
+- **代码现状**：无对应代码，仅FlowForge基础GateOrchestrator存在
+- **差异类型**：未实现
+- **优先级**：P1
+
+## CONSIST-07: SEO Agent temperature参数偏差
+- **项目**：ContentForge
+- **设计描述**：v3.0修订31要求seo_agent temperature=0.3
+- **代码现状**：seo_agent.py temperature=0.6
+- **差异类型**：已实现但不一致
+- **优先级**：P2
+
+---
+
+# 第十三章：代码规范审查（第十轮审计新增 — 2026-06-24）
+
+> 来源：project_rules.md更新后代码与规范一致性检查
+
+## AUDIT-10-01: UnifiedLoopState完全未在代码中实现
+- **来源**：project_rules.md更新审查
+- **问题描述**：设计文档要求UnifiedLoopState统一状态机，但代码中完全未实现
+- **当前代码状态**：loop/executor.py导入的是旧LoopState/LoopPhase，UnifiedLoopState仅存在于文档中
+- **修复建议**：在loop/executor.py中实现UnifiedLoopState，替换旧LoopState
+- **优先级**：P0
+
+## AUDIT-10-02: 质量分阈值三套默认值并存
+- **来源**：编程红线第2条（必须为0.9）
+- **问题描述**：代码中存在0.85/0.95两套默认值，未统一为0.9
+- **当前代码状态**：
+  - modes/reflexion.py:16 — QUALITY_THRESHOLD = 0.85
+  - harness/feedback_loop.py:72 — _PASS_THRESHOLD = 0.85
+  - loop/verifier.py:316 — threshold = config.get("pass_threshold", 0.95)
+  - memory/compressor.py:20 — COMPRESSION_THRESHOLD = 0.85
+- **修复建议**：全部统一为0.9
+- **优先级**：P0
+
+## AUDIT-10-03: GenericAgent硬编码中文提示词
+- **来源**：铁律5+P16+P34第11条
+- **问题描述**：FlowForge通用Agent中存在硬编码中文提示词
+- **当前代码状态**：
+  - agents/generic/fact_check.py:16 — '你是一个事实核查专家...'
+  - agents/generic/web_search_agent.py:98 — '你是一个搜索助手...'
+- **修复建议**：外置到config/prompts.yaml
+- **优先级**：P1
+
+## AUDIT-10-04: agentic_rag_core.py硬编码提示词4处
+- **来源**：铁律5+P16
+- **当前代码状态**：tools/agentic_rag_core.py L50/L59/L68/L194各有硬编码提示词
+- **修复建议**：外置到config/prompts.yaml
+- **优先级**：P1
+
+## AUDIT-10-05: ChapterWriteSaga错位在FlowForge中
+- **来源**：编程红线第10条（禁止在flowforge中写死业务领域代码）
+- **问题描述**：ChapterWriteSaga是NovelForge业务逻辑，但放在flowforge/tools/下
+- **当前代码状态**：flowforge/tools/chapter_write_saga.py（397行）实现了5步Saga，全是小说创作业务逻辑
+- **修复建议**：迁移到novelforge/tools/或novelforge/config/workflows/
+- **优先级**：P1
+
+## AUDIT-10-06: publish.py硬编码平台publisher
+- **来源**：编程红线第10条
+- **问题描述**：tools/publish.py的_PLATFORM_TOOL_MAP硬编码了wechat/toutiao平台特定publisher
+- **当前代码状态**：tools/publish.py:13-16硬编码了平台映射
+- **修复建议**：移除默认值，通过ContentForgePlugin.register_tools()注册
+- **优先级**：P2

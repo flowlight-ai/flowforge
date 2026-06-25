@@ -121,6 +121,7 @@ class ModelCapability:
         agent_name: str = "",
         model: str = "",
         temperature: float = 0.7,
+        top_p: Optional[float] = None,
         max_tokens: int = 4000,
         task_id: str = "sdk",
         tools: Optional[list] = None,
@@ -139,6 +140,7 @@ class ModelCapability:
             agent_name: Agent name for model routing.
             model: Specific model to use (provider/model_id format).
             temperature: Sampling temperature.
+            top_p: Nucleus sampling parameter (optional).
             max_tokens: Maximum tokens to generate.
             task_id: Task identifier for event tracking.
             tools: Optional OpenAI function-calling tools schema.
@@ -176,6 +178,8 @@ class ModelCapability:
             "task_id": task_id,
             "stream": False,
         }
+        if top_p is not None:
+            params["top_p"] = top_p
         if selected_model:
             params["model"] = selected_model
         if tools:

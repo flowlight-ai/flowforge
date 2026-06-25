@@ -37,14 +37,6 @@ logger = get_logger("persona_injector")
 # 占位符模式
 PERSONA_PLACEHOLDER = "{{auto.persona}}"
 
-# 默认persona配置搜索目录（相对于workspace根目录）
-_DEFAULT_PERSONA_DIRS: list[str] = [
-    "contentforge/config/persona",
-    "novelforge/config/personas",
-    "devforge/config/persona",
-    "mallforge/config/persona",
-]
-
 
 class PersonaContext(BaseModel):
     """Persona完整上下文。
@@ -76,6 +68,11 @@ class PersonaInjector:
     2. 获取完整的PersonaContext对象
     3. 将persona信息注入到参数字典中
     """
+
+    # 类变量：通过Plugin协议注册的persona目录和直接注册的persona数据
+    # 所有PersonaInjector实例共享，避免每次实例化时丢失注册信息
+    _persona_dirs: list[str] = []
+    _registered_personas: dict[str, dict] = {}
 
     def __init__(self, persona_repo: Any = None, prompt_manager: Any = None) -> None:
         self._persona_repo = persona_repo
@@ -130,7 +127,8 @@ class PersonaInjector:
     async def get_persona_context(self, persona_id: str) -> PersonaContext:
         """获取完整的persona上下文。
 
-        优先从缓存获取，然后从persona_repo，最后从YAML文件加载。
+        优先从缓存获取，然后从直接注册的persona数据，再从persona_repo，
+        最后从YAML文件加载。
 
         Args:
             persona_id: persona标识
@@ -141,7 +139,13 @@ class PersonaInjector:
         if persona_id in self._cache:
             return self._cache[persona_id]
 
-        # 优先使用persona_repo（如果提供了的话）
+        # 优先使用直接注册的persona数据
+        if persona_id in self._registered_personas:
+            context = self._build_context_from_data(persona_id, self._registered_personas[persona_id])
+            self._cache[persona_id] = context
+            return context
+
+        # 使用persona_repo（如果提供了的话）
         if self._persona_repo is not None:
             try:
                 context = await self._load_from_repo(persona_id)
@@ -194,6 +198,33 @@ class PersonaInjector:
         else:
             self._cache.clear()
 
+    def register_persona_dir(self, dir_path: str) -> None:
+        """注册一个persona配置目录，允许通过Plugin协议注入。
+
+        注册的目录将在加载persona时被搜索。路径可以是绝对路径
+        或相对于workspace根目录的相对路径。
+
+        Args:
+            dir_path: persona配置目录路径
+        """
+        if dir_path not in self._persona_dirs:
+            self._persona_dirs.append(dir_path)
+            logger.info(f"PersonaInjector: registered persona dir '{dir_path}'")
+
+    def register_persona(self, persona_id: str, persona_data: dict) -> None:
+        """直接注册一个persona，无需YAML文件。
+
+        允许通过Plugin协议直接注入persona数据，优先级高于YAML文件。
+
+        Args:
+            persona_id: persona标识
+            persona_data: persona数据字典，包含soul/memory/creation等字段
+        """
+        self._registered_personas[persona_id] = persona_data
+        # 清除该persona的缓存，确保下次获取时使用新数据
+        self._cache.pop(persona_id, None)
+        logger.info(f"PersonaInjector: registered persona '{persona_id}' directly")
+
     async def _load_from_repo(self, persona_id: str) -> PersonaContext | None:
         """从persona_repo加载persona信息。"""
         if not hasattr(self._persona_repo, "get_persona"):
@@ -206,12 +237,25 @@ class PersonaInjector:
     def _load_from_yaml(self, persona_id: str) -> PersonaContext:
         """从YAML配置文件加载persona信息。
 
-        搜索所有项目的persona目录，查找匹配的YAML文件。
+        搜索通过Plugin协议注册的persona目录，查找匹配的YAML文件。
+        如果没有注册任何目录，返回空的PersonaContext并记录警告。
         """
         workspace_root = self._get_workspace_root()
 
-        for persona_dir in _DEFAULT_PERSONA_DIRS:
-            dir_path = workspace_root / persona_dir
+        # 仅使用通过Plugin协议注册的目录
+        search_dirs = list(self._persona_dirs)
+
+        if not search_dirs:
+            logger.warning(
+                f"PersonaInjector: no persona dirs registered via register_persona_dir(), "
+                f"persona '{persona_id}' cannot be loaded from YAML. "
+                f"Please call register_persona_dir() during plugin initialization."
+            )
+
+        for persona_dir in search_dirs:
+            dir_path = Path(persona_dir)
+            if not dir_path.is_absolute():
+                dir_path = workspace_root / persona_dir
             if not dir_path.is_dir():
                 continue
 

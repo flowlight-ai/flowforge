@@ -2690,3 +2690,32 @@ skill_precipitation:
 - **问题描述**：缺失steer/queue投递语义、interrupt_seq抑制旧wake、inbox→promoted状态机
 - **修订方案**：SessionInputManager为LoopExecutor可选项(Phase 1先做基础EventStore，Phase 2加inbox三阶段)，给LoopExecutor加optional_components注入入口避免构造函数参数爆炸
 - **优先级**：P1
+
+---
+
+## StockForge 应用层支持（v2.2新增）
+
+### StockForge 定位
+基于 FlowForge 的 AI 股票基金自动化分析和量化交易系统，通过 StockForgePlugin 注册业务能力。
+
+### 核心能力映射
+
+| StockForge能力 | FlowForge底座支持 |
+|---------------|------------------|
+| 多Agent协作分析 | 9大执行模式（react/plan_execute/multi_agent等） |
+| 全周期预测Loop | LoopExecutor + 质量分阈值0.9 |
+| 多空辩论机制 | multi_agent模式 + Agent Handoff |
+| 技术指标计算 | ToolRegistry + BaseTool |
+| 投资报告生成 | DeclarativeAgent + YAML配置 |
+| 数据采集调度 | APScheduler + 事件总线 |
+| 风险评估 | Gate门禁 + Harness约束 |
+| Web界面 | Helm + WebSocket实时推送 |
+
+### Plugin注册清单
+- 8个Agent（stockforge:data_analyst等）
+- 8个Tool（stock_data/indicators等）
+- 3个Workflow（analysis_loop/screening_loop/report_loop）
+- 5个数据源（tushare/akshare/baostock/fund/ecommerce预留）
+
+### 端口分配
+StockForge: 后端8005 / 前端5179

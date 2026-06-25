@@ -5,6 +5,7 @@ Upper layers (brain, workers, app) depend on these interfaces;
 lower layers (tools, memory) implement them.
 """
 
+from flowforge.core.interfaces.helm_emitter import HelmEventEmitter
 from flowforge.core.interfaces.tools import (
     PluginHealth,
     PluginManifest,
@@ -14,6 +15,7 @@ from flowforge.core.interfaces.tools import (
 )
 
 __all__ = [
+    "HelmEventEmitter",
     "PluginHealth",
     "PluginManifest",
     "PluginState",

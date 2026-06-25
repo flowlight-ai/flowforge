@@ -41,7 +41,12 @@ class AgentOutput(BaseModel):
 
 
 class BaseAgent(ABC):
-    """Abstract base class for all FlowForge agents.
+    """Abstract base class for all FlowForge agents (internal).
+
+    .. warning::
+        Upper *Forge projects must NOT inherit this class directly.
+        Use declarative YAML config (config/agents/*.yaml) to define
+        custom agents. This class is internal to FlowForge's engine.
 
     Every agent must implement the ``execute`` method which takes an
     AgentInput and returns an AgentOutput.  Agents are registered in
@@ -56,6 +61,41 @@ class BaseAgent(ABC):
     name: str = "base"
     description: str = ""
     default_mode: Optional[str] = "react"
+
+    def __init__(self, tool_registry=None, llm_client=None):
+        self._tool_registry = tool_registry
+        self._llm_client = llm_client
+        self._context: Optional['TaskContext'] = None
+        if 'name' not in type(self).__dict__:
+            self.name = self.__class__.__name__
+
+    async def _call_tool(self, tool_name: str, params: dict):
+        """Call a tool from the registry. Returns ToolOutput."""
+        from flowforge.core.base_tool import ToolInput
+        tools = self._tool_registry
+        if tools is None:
+            raise RuntimeError(f"Tool registry not available for agent '{self.name}'")
+        return await tools.execute(tool_name, ToolInput(params=params))
+
+    async def _call_llm(self, messages: list, **kwargs) -> dict:
+        """Convenience: call the LLM tool with the given messages."""
+        return (await self._call_tool("llm", {"messages": messages, **kwargs})).result
+
+    def _get_prompt(self, key: str, fallback: str = "", **kwargs) -> str:
+        """Load a prompt template from PromptManager, with optional fallback."""
+        try:
+            from flowforge.core.prompt_manager import get_prompt
+            result = get_prompt(key, **kwargs)
+            if result:
+                return result
+        except Exception:
+            pass
+        if fallback and kwargs:
+            try:
+                return fallback.format(**kwargs)
+            except (KeyError, ValueError, IndexError):
+                pass
+        return fallback or ""
 
     @abstractmethod
     async def execute(self, input: AgentInput) -> AgentOutput:
@@ -72,9 +112,9 @@ class BaseAgent(ABC):
     async def execute_with_context(self, input: AgentInput, context: 'TaskContext') -> AgentOutput:
         """Execute with full task context (optional override).
 
-        Default implementation delegates to ``execute``.  Subclasses can
-        override this to access tools, agents, event_bus, etc. from the
-        task context.
+        Default implementation sets up tool_registry from context and
+        delegates to ``execute``.  Subclasses can override this to
+        access tools, agents, event_bus, etc. from the task context.
 
         Args:
             input: The agent input.
@@ -83,6 +123,9 @@ class BaseAgent(ABC):
         Returns:
             An AgentOutput.
         """
+        self._context = context
+        if context.tools and not self._tool_registry:
+            self._tool_registry = context.tools
         return await self.execute(input)
 
     async def execute_with_tool_chain(

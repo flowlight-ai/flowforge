@@ -4850,3 +4850,47 @@ class AgentBus:
 
 ### 优先级
 P1
+
+---
+
+## 上层 *Forge 项目声明式配置接入规则
+
+### 核心原则
+
+FlowForge 作为通用智能体框架底座，上层 *Forge 项目（ContentForge、DevForge、NovelForge、MallForge 等）**必须通过声明式配置接入**，禁止通过代码继承或强依赖引用接入。
+
+### 接入方式
+
+上层 *Forge 项目的 `config/` 目录下只能放置声明式配置文件（YAML），**禁止放置 .py 代码文件**。支持的标准子目录：
+
+| 目录 | 用途 | 配置格式 |
+|------|------|---------|
+| config/agents/ | Agent 定义 | YAML（DeclarativeAgent 格式） |
+| config/workflows/ | 工作流定义 | YAML（Workflow IR 格式） |
+| config/loops/ | 循环模板 | YAML（LoopTemplate 格式） |
+| config/sops/ | SOP 定义 | YAML |
+| config/tools/ | 声明式工具 | YAML（HTTPTool/ScriptTool/TransformTool） |
+| config/personas/ | Persona 配置 | YAML |
+| config/gates/ | 门控配置 | YAML |
+| config/quality_gates/ | 质量门配置 | YAML |
+| config/evaluators/ | 评估器配置 | YAML |
+| config/context_layers/ | 上下文层配置 | YAML |
+| config/prompts/ | 提示词配置 | YAML |
+
+### 自动发现机制
+
+FlowForge 启动时通过 `auto_discover_plugins()` 自动扫描同级目录下的 *Forge 项目 config/ 目录，无需手动注册。支持的环境变量：
+- `FLOWFORGE_AUTO_DISCOVER=true`（默认）：启用自动发现
+- `FLOWFORGE_FORGE_DIRS=""`：自定义 *Forge 目录列表（逗号分隔）
+
+### 禁止的接入方式
+
+以下接入方式已对上层项目关闭，仅保留在 FlowForge 内部使用：
+- ❌ 继承 `BaseTool` / `BaseAgent` / `StateQueryTool` 等内部基类
+- ❌ 直接 import `flowforge.core.*` / `flowforge.tools.*` / `flowforge.app.*` 等内部模块
+- ❌ 通过 `flowforge.app.deps.get_llm_client()` 等反向依赖获取服务实例
+
+上层项目如需自定义工具逻辑，请通过以下方式：
+1. **MCP Server**：实现 MCP 协议的 JSON-RPC 2.0 服务端，通过 `config/tools/*.yaml` 声明式配置注入
+2. **声明式工具**：使用 HTTPTool/ScriptTool/TransformTool YAML 模板定义
+3. **Plugin V2 钩子**：通过 `sdk.create_plugin()` 创建 AutoPlugin，自动扫描 config/ 目录

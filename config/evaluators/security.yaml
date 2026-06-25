@@ -1,0 +1,17 @@
+name: security
+description: "安全评估器"
+dimension: security
+evaluator_agent: SecurityEvaluatorAgent
+scoring_rules:
+  - field: privacy_compliance
+    weight: 0.25
+  - field: data_security
+    weight: 0.25
+  - field: attack_surface
+    weight: 0.25
+  - field: compliance_posture
+    weight: 0.25
+default_score: 0.0
+default_confidence: 0.0
+weight: 1.0
+threshold: 0.8

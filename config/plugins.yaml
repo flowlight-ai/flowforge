@@ -249,3 +249,18 @@ plugins:
         subject: {type: string}
         content: {type: string}
         content_type: {type: string, default: "text/plain"}
+  - name: translation
+    transport: local
+    entry_point: flowforge.tools.translation:TranslationTool
+    description: "跨境电商多语言翻译工具（11种语言，LLM驱动）"
+    tags: [ecommerce, translation]
+    parameters_schema:
+      type: object
+      required: [action]
+      properties:
+        action: {type: string, enum: [translate, batch_translate], description: "操作类型"}
+        text: {type: string, description: "待翻译文本"}
+        texts: {type: array, items: {type: string}, description: "待翻译文本列表"}
+        source_lang: {type: string, default: auto, description: "源语言代码"}
+        target_lang: {type: string, default: en, description: "目标语言代码"}
+        context: {type: string, default: ecommerce, description: "翻译上下文"}

@@ -1,9 +1,6 @@
 """ProviderQuotaManager — Provider级成本/配额管理
 
-设计文档参考：
-- S3.0-13: ProviderQuotaManager功能规格
-- spec.md H.2: ProviderQuotaManager
-- LP3.0-24: PROVIDER-QUOTA
+设计文档参考：S3.0-13, spec.md H.2, LP3.0-24
 """
 from __future__ import annotations
 
@@ -11,7 +8,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -19,16 +16,14 @@ logger = logging.getLogger(__name__)
 
 
 class QuotaResult(BaseModel):
-    """配额检查结果"""
-    allowed: bool
+    allowed: bool = True
     reason: str = ""
-    action: str = ""  # "proceed" / "queue_or_fallback" / "alert_and_fallback"
+    action: str = "proceed"
     current_usage: Dict[str, Any] = {}
 
 
 @dataclass
 class QuotaState:
-    """配额状态"""
     tpm_used: int = 0
     rpm_used: int = 0
     budget_used: float = 0.0
@@ -41,7 +36,6 @@ class QuotaState:
 
 @dataclass
 class QuotaConfig:
-    """配额配置"""
     tpm_limit: int = 100000
     rpm_limit: int = 1000
     monthly_budget_usd: float = 100.0
@@ -51,148 +45,71 @@ class QuotaConfig:
 
 
 class ProviderQuotaManager:
-    """Provider级成本/配额管理
-
-    功能：
-    1. TPM/RPM配额检查
-    2. 月度预算管理
-    3. 成本估算和记录
-    4. 告警通知
-    """
+    """Provider级成本/配额管理"""
 
     def __init__(self, configs: Optional[Dict[str, QuotaConfig]] = None):
         self._configs: Dict[str, QuotaConfig] = configs or {}
         self._states: Dict[str, QuotaState] = {}
         self._alert_callbacks: List[Any] = []
-        self._budget_reset_day: int = 1
 
     def register_provider(self, provider: str, config: QuotaConfig) -> None:
-        """注册Provider配额"""
         self._configs[provider] = config
         self._states[provider] = QuotaState()
 
     def add_alert_callback(self, callback: Any) -> None:
-        """添加告警回调"""
         self._alert_callbacks.append(callback)
 
-    async def check_quota(
-        self,
-        provider: str,
-        model: str = "",
-        estimated_tokens: int = 0,
-    ) -> QuotaResult:
-        """检查配额是否允许本次调用"""
+    async def check_quota(self, provider: str, model: str = "", estimated_tokens: int = 0) -> QuotaResult:
         config = self._configs.get(provider)
         if not config:
             return QuotaResult(allowed=True, action="proceed")
-
         state = self._get_state(provider)
         self._reset_windows_if_needed(state)
-
-        current_usage = {
-            "tpm_used": state.tpm_used,
-            "tpm_limit": config.tpm_limit,
-            "rpm_used": state.rpm_used,
-            "rpm_limit": config.rpm_limit,
-            "budget_used": round(state.budget_used, 4),
-            "budget_limit": config.monthly_budget_usd,
-        }
+        current_usage = {"tpm_used": state.tpm_used, "tpm_limit": config.tpm_limit, "rpm_used": state.rpm_used, "rpm_limit": config.rpm_limit, "budget_used": round(state.budget_used, 4), "budget_limit": config.monthly_budget_usd}
 
         if state.tpm_used + estimated_tokens > config.tpm_limit:
-            return QuotaResult(
-                allowed=False,
-                reason=f"TPM exceeded: {state.tpm_used + estimated_tokens}/{config.tpm_limit}",
-                action="queue_or_fallback",
-                current_usage=current_usage,
-            )
-
+            return QuotaResult(allowed=False, reason=f"TPM exceeded: {state.tpm_used + estimated_tokens}/{config.tpm_limit}", action="queue_or_fallback", current_usage=current_usage)
         if state.rpm_used >= config.rpm_limit:
-            return QuotaResult(
-                allowed=False,
-                reason=f"RPM exceeded: {state.rpm_used}/{config.rpm_limit}",
-                action="queue_or_fallback",
-                current_usage=current_usage,
-            )
-
+            return QuotaResult(allowed=False, reason=f"RPM exceeded: {state.rpm_used}/{config.rpm_limit}", action="queue_or_fallback", current_usage=current_usage)
         if state.budget_used >= config.monthly_budget_usd:
-            return QuotaResult(
-                allowed=False,
-                reason=f"Budget exceeded: ${state.budget_used:.2f}/${config.monthly_budget_usd:.2f}",
-                action="alert_and_fallback",
-                current_usage=current_usage,
-            )
+            return QuotaResult(allowed=False, reason=f"Budget exceeded: ${state.budget_used:.2f}/${config.monthly_budget_usd:.2f}", action="alert_and_fallback", current_usage=current_usage)
 
         budget_ratio = state.budget_used / config.monthly_budget_usd if config.monthly_budget_usd > 0 else 0
         if budget_ratio >= config.alert_threshold:
             await self._emit_alert(provider, "budget", budget_ratio, current_usage)
-
-        tpm_ratio = (state.tpm_used + estimated_tokens) / config.tpm_limit if config.tpm_limit > 0 else 0
-        if tpm_ratio >= config.alert_threshold:
-            await self._emit_alert(provider, "tpm", tpm_ratio, current_usage)
-
         return QuotaResult(allowed=True, action="proceed", current_usage=current_usage)
 
-    async def record_usage(
-        self,
-        provider: str,
-        model: str = "",
-        prompt_tokens: int = 0,
-        completion_tokens: int = 0,
-    ) -> None:
-        """记录使用量"""
+    async def record_usage(self, provider: str, model: str = "", prompt_tokens: int = 0, completion_tokens: int = 0) -> None:
         config = self._configs.get(provider)
         if not config:
             return
-
         state = self._get_state(provider)
         self._reset_windows_if_needed(state)
-
         total_tokens = prompt_tokens + completion_tokens
-
         state.tpm_used += total_tokens
         state.rpm_used += 1
-
-        cost = (prompt_tokens / 1000 * config.cost_per_1k_input +
-                completion_tokens / 1000 * config.cost_per_1k_output)
+        cost = (prompt_tokens / 1000 * config.cost_per_1k_input + completion_tokens / 1000 * config.cost_per_1k_output)
         state.budget_used += cost
-
         state.total_requests += 1
         state.total_tokens += total_tokens
         state.total_cost += cost
 
     def get_budget_status(self, provider: str) -> Dict[str, Any]:
-        """获取Provider预算状态"""
         config = self._configs.get(provider)
         state = self._states.get(provider)
         if not config or not state:
             return {"provider": provider, "status": "unknown"}
-
-        return {
-            "provider": provider,
-            "budget_used": round(state.budget_used, 4),
-            "budget_limit": config.monthly_budget_usd,
-            "budget_ratio": round(state.budget_used / config.monthly_budget_usd, 4) if config.monthly_budget_usd > 0 else 0,
-            "tpm_used": state.tpm_used,
-            "tpm_limit": config.tpm_limit,
-            "rpm_used": state.rpm_used,
-            "rpm_limit": config.rpm_limit,
-            "total_requests": state.total_requests,
-            "total_tokens": state.total_tokens,
-            "total_cost": round(state.total_cost, 4),
-        }
+        return {"provider": provider, "budget_used": round(state.budget_used, 4), "budget_limit": config.monthly_budget_usd, "budget_ratio": round(state.budget_used / config.monthly_budget_usd, 4) if config.monthly_budget_usd > 0 else 0, "tpm_used": state.tpm_used, "tpm_limit": config.tpm_limit, "rpm_used": state.rpm_used, "rpm_limit": config.rpm_limit, "total_requests": state.total_requests, "total_tokens": state.total_tokens, "total_cost": round(state.total_cost, 4)}
 
     def get_all_status(self) -> Dict[str, Dict[str, Any]]:
-        """获取所有Provider状态"""
         return {provider: self.get_budget_status(provider) for provider in self._configs}
 
     def _get_state(self, provider: str) -> QuotaState:
-        """获取或创建配额状态"""
         if provider not in self._states:
             self._states[provider] = QuotaState()
         return self._states[provider]
 
     def _reset_windows_if_needed(self, state: QuotaState) -> None:
-        """重置时间窗口"""
         now = time.time()
         if now - state.tpm_window_start >= 60:
             state.tpm_used = 0
@@ -201,23 +118,9 @@ class ProviderQuotaManager:
             state.rpm_used = 0
             state.rpm_window_start = now
 
-    async def _emit_alert(
-        self,
-        provider: str,
-        metric: str,
-        ratio: float,
-        current_usage: Dict[str, Any],
-    ) -> None:
-        """发送告警"""
-        alert_data = {
-            "provider": provider,
-            "metric": metric,
-            "ratio": round(ratio, 4),
-            "threshold": self._configs[provider].alert_threshold,
-            "current_usage": current_usage,
-        }
+    async def _emit_alert(self, provider: str, metric: str, ratio: float, current_usage: Dict[str, Any]) -> None:
+        alert_data = {"provider": provider, "metric": metric, "ratio": round(ratio, 4), "threshold": self._configs[provider].alert_threshold, "current_usage": current_usage}
         logger.warning(f"Quota alert: {provider} {metric} at {ratio:.1%}")
-
         for callback in self._alert_callbacks:
             try:
                 if asyncio.iscoroutinefunction(callback):
@@ -228,17 +131,13 @@ class ProviderQuotaManager:
                 logger.error(f"Alert callback error: {e}")
 
     def load_from_config(self, config_data: Dict[str, Any]) -> None:
-        """从配置数据加载配额"""
         for provider, quota_config in config_data.items():
             if isinstance(quota_config, dict):
-                self.register_provider(
-                    provider,
-                    QuotaConfig(
-                        tpm_limit=quota_config.get("tpm_limit", 100000),
-                        rpm_limit=quota_config.get("rpm_limit", 1000),
-                        monthly_budget_usd=quota_config.get("monthly_budget_usd", 100.0),
-                        alert_threshold=quota_config.get("alert_threshold", 0.8),
-                        cost_per_1k_input=quota_config.get("cost_per_1k_input", 0.002),
-                        cost_per_1k_output=quota_config.get("cost_per_1k_output", 0.006),
-                    )
-                )
+                self.register_provider(provider, QuotaConfig(
+                    tpm_limit=quota_config.get("tpm_limit", 100000),
+                    rpm_limit=quota_config.get("rpm_limit", 1000),
+                    monthly_budget_usd=quota_config.get("monthly_budget_usd", 100.0),
+                    alert_threshold=quota_config.get("alert_threshold", 0.8),
+                    cost_per_1k_input=quota_config.get("cost_per_1k_input", 0.002),
+                    cost_per_1k_output=quota_config.get("cost_per_1k_output", 0.006),
+                ))

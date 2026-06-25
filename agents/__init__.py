@@ -1,5 +1,5 @@
 from flowforge.agents.generic import GENERIC_AGENTS
-# Re-export generic agents that replace removed flat agents
+# Re-export generic agents for backwards-compatible imports
 from flowforge.agents.generic.fact_check import FactCheckAgent
 from flowforge.agents.generic.trend_analysis import TrendAnalysisAgent
 from flowforge.agents.generic.image_research import ImageResearchAgent
@@ -8,20 +8,10 @@ from flowforge.agents.generic.web_search_agent import WebSearchAgent
 from flowforge.agents.generic.research_agent import ResearchAgent
 
 # ContentForge domain agents have been migrated to contentforge package.
-# Use: from contentforge.agents.xxx import XxxAgent
+# Load them via DeclarativeAgent.from_yaml("contentforge/config/agents/*.yaml").
 # DevForge domain agents have been migrated to devforge package.
-# Use: from devforge.agents.xxx import XxxAgent
 
-CONTENT_AGENTS = [
-    FactCheckAgent,
-    TrendAnalysisAgent,
-    ImageResearchAgent,
-    MultilingualAgent,
-    WebSearchAgent,
-    ResearchAgent,
-]
-
-ALL_AGENTS = CONTENT_AGENTS + GENERIC_AGENTS
+ALL_AGENTS = GENERIC_AGENTS
 
 
 def register_agents(agent_registry) -> None:

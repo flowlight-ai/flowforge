@@ -1,0 +1,17 @@
+name: feasibility
+description: "可行性评估器"
+dimension: feasibility
+evaluator_agent: FeasibilityEvaluatorAgent
+scoring_rules:
+  - field: technical_feasibility
+    weight: 0.3
+  - field: resource_availability
+    weight: 0.25
+  - field: timeline_realism
+    weight: 0.25
+  - field: dependency_risk
+    weight: 0.2
+default_score: 0.0
+default_confidence: 0.0
+weight: 1.0
+threshold: 0.8

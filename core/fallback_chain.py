@@ -566,7 +566,21 @@ class FallbackChain:
 
     @classmethod
     def publish_chain(cls) -> FallbackChain:
-        """发布回退链: wechat → toutiao → draft_save。"""
+        """发布回退链: wechat → toutiao → draft_save。
+
+        .. deprecated::
+            此方法硬编码了内容发布领域的回退链，属于 contentforge 领域逻辑，
+            不应存在于 flowforge 底座中。请在 contentforge 项目中定义自己的
+            发布回退链。此方法将在未来版本中移除。
+        """
+        import warnings
+        warnings.warn(
+            "FallbackChain.publish_chain() is deprecated: "
+            "publish fallback chain is domain-specific to contentforge and should be "
+            "defined in the contentforge project. This method will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return cls(
             name="publish_fallback",
             description="发布回退链：wechat → toutiao → draft_save",

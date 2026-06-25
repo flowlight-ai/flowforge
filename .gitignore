@@ -1,4 +1,4 @@
-# Python
+# ==================== Python ====================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -10,23 +10,25 @@ build/
 .eggs/
 *.whl
 
-# Environment & Secrets
+# ==================== Environment & Secrets ====================
 .env
 .env.*
 !.env.example
+!.env.template
 *.pem
 *.key
 *.crt
 secrets.db
 
-# Data & Logs
+# ==================== Data & Logs ====================
 data/
 logs/
 *.log
 *.db
 *.sqlite3
+*.db-journal
 
-# Test & Coverage & Reports
+# ==================== Test & Coverage & Reports ====================
 .pytest_cache/
 .coverage
 htmlcov/
@@ -35,14 +37,14 @@ htmlcov/
 test_reports/
 *.json.bak
 
-# IDE
+# ==================== IDE ====================
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 
-# Node.js / Next.js
+# ==================== Node.js / Next.js ====================
 node_modules/
 .next/
 out/
@@ -51,17 +53,19 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 package-lock.json
 
-# OS
+# ==================== OS ====================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# FlowForge specific
+# ==================== FlowForge specific ====================
 flowforge.egg-info/
 
-# Temporary & backup
+# ==================== Temporary & backup ====================
 tmp/
 docs_tmp/
+
+# ==================== Ad-hoc test scripts (use proper test structure) ====================
 scripts/test_*.py
 tests/debug_*.py
 tests/check_*.py
@@ -69,26 +73,23 @@ tests/quick_test.py
 tests/single_test.py
 tests/full_e2e_test.py
 tests/real_llm_test*.py
-e2e_results.txt
 
-# Ad-hoc test output & logs (never commit)
-*_output.txt
-*_output2.txt
-*_result.txt
-*_exit.txt
-*_check.txt
-*_report.txt
-regression_report.txt
-
-# Ad-hoc scripts at project root (use proper test structure instead)
+# ==================== Ad-hoc root-level scripts ====================
 quick_checks.py
 quick_test.py
 run_regression.py
 run_server.py
 test_e2e.py
 test_llm.py
+check_*.py
+tmp_*.py
+fix_*.py
+query_*.py
+debug_*.py
+simple_test.py
+py_check_runner.py
 
-# Ad-hoc test scripts in tests/ root (use tests/unit/, tests/integration/, tests/e2e/ instead)
+# ==================== Ad-hoc test scripts in tests/ ====================
 tests/test_api_live*.py
 tests/test_api_quick.py
 tests/test_api_all_in_one.py
@@ -112,5 +113,39 @@ tests/run_tests.py
 tests/metrics_collector.py
 tests/TEST_REPORT_*.md
 
-# Workflow artifacts
+# ==================== Ad-hoc test output & logs ====================
+*_output.txt
+*_output2.txt
+*_result.txt
+*_exit.txt
+*_check.txt
+*_report.txt
+regression_report.txt
+e2e_results.txt
+*_test_*.log
+debug.log
+task_status.txt
+resp.txt
+
+# ==================== E2E test artifacts ====================
+e2e_*.json
+e2e_*.ps1
+e2e_*.py
+e2e_*.txt
+e2e_*.log
+
+# ==================== PowerShell ad-hoc scripts ====================
+cf_*.ps1
+cf_*.py
+check_*.ps1
+read_*.ps1
+run_*.ps1
+poll_*.ps1
+read_log_tail*.ps1
+read_task_log*.ps1
+read_writer_llm.ps1
+run_e2e_check.ps1
+run_port_check.ps1
+
+# ==================== Workflow artifacts (generated, not source) ====================
 workflows/*.yaml

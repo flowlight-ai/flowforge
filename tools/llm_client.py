@@ -174,6 +174,7 @@ class LLMClient(BaseTool):
             "agent_name": {"type": "string", "description": "Agent name for model routing"},
             "tools": {"type": "array", "description": "OpenAI function calling tools schema"},
             "skip_cooldown": {"type": "boolean", "default": False, "description": "Skip cooldown check for judge calls"},
+            "prefer_api": {"type": "boolean", "default": False, "description": "Prefer API backend, exclude WebChat backend models from candidate chain"},
         },
     }
 
@@ -369,10 +370,54 @@ class LLMClient(BaseTool):
         return build_cross_fallback_chain(self._available_models, self._health_status)
 
     def _apply_rotation_and_cross_validation(self, chain: List[str], persona: str, task_id: str) -> List[str]:
+        chain = self._resolve_model_candidates(chain)
         chain = self._apply_webchat_rotation(chain, task_id)
         chain = self._filter_disabled_models(chain)
         chain = self._apply_cross_validation(chain, persona, task_id)
         return chain
+
+    def _resolve_model_candidates(self, chain: List[str]) -> List[str]:
+        """Resolve raw model IDs to provider/model_id format.
+
+        Handles three cases:
+        1. Already in provider/model_id format with a known provider → keep as-is
+        2. Bare model name (e.g., 'Doubao-Seed2.0') → prepend provider from _available_models
+        3. Model ID containing '/' but prefix isn't a known provider
+           (e.g., 'openai/gpt-oss-120b:free') → find full string in
+           _available_models and prepend the actual provider (openrouter).
+        """
+        # Build reverse lookup: model_id → provider
+        model_to_provider: dict[str, str] = {}
+        for provider, models in self._available_models.items():
+            for model_id in models:
+                model_to_provider[model_id] = provider
+
+        known_providers = set(self._providers.keys()) | set(PROVIDER_BASE_URLS.keys())
+
+        resolved: list[str] = []
+        for candidate in chain:
+            if not candidate:
+                continue
+            # Case 1: already starts with a known provider prefix
+            parts = candidate.split("/", 1)
+            if len(parts) == 2 and parts[0] in known_providers:
+                resolved.append(candidate)
+                continue
+
+            # Case 2 & 3: look up the full candidate string in the reverse map
+            provider = model_to_provider.get(candidate)
+            if provider:
+                resolved_candidate = f"{provider}/{candidate}"
+                if resolved_candidate != candidate:
+                    logger.info(f"[候选链解析] '{candidate}' → '{resolved_candidate}'")
+                resolved.append(resolved_candidate)
+                continue
+
+            # Fallback: keep as-is (will likely be skipped later with a warning)
+            logger.debug(f"[候选链解析] '{candidate}' 未找到对应 provider，保留原值")
+            resolved.append(candidate)
+
+        return resolved
 
     def _apply_webchat_rotation(self, chain: List[str], task_id: str) -> List[str]:
         used = self._task_used_models.get(task_id, set())
@@ -400,6 +445,34 @@ class LLMClient(BaseTool):
         if len(filtered) < len(chain):
             removed = set(chain) - set(filtered)
             logger.info(f"Filtered disabled models: {removed}")
+        return filtered
+
+    @staticmethod
+    def _is_webchat_model(model_key: str) -> bool:
+        """判断一个模型标识是否属于 WebChat backend。
+
+        WebChat backend 模型特征：
+        - model_id 为 proxy / openroute/proxy
+        - model_id 包含 web/chat（如 deepseek-web/chat、doubao-web/chat）
+        - model_id 包含 -web/（如 kimi-web/...）
+        """
+        if not model_key:
+            return False
+        # 去掉 provider 前缀，取 model_id 部分判断
+        model_id = model_key.split("/", 1)[-1] if "/" in model_key else model_key
+        if model_id in ("proxy", "openroute/proxy", "web/chat", "openroute/web/chat"):
+            return True
+        if "web/chat" in model_id or "-web/" in model_id:
+            return True
+        return False
+
+    def _filter_webchat_models(self, chain: List[str]) -> List[str]:
+        """过滤候选链中的 WebChat backend 模型，仅保留 API backend 模型。
+
+        用于 prefer_api 场景（如评委调用），避免 WebChat backend 的
+        8000 token 限制和 CoT 输出导致失败。
+        """
+        filtered = [m for m in chain if not self._is_webchat_model(m)]
         return filtered
 
     def _is_model_healthy(self, model_key: str) -> bool:
@@ -435,6 +508,7 @@ class LLMClient(BaseTool):
         messages = input.params.get("messages", [])
         model = input.params.get("model")
         temperature = input.params.get("temperature", 0.7)
+        top_p = input.params.get("top_p")
         max_tokens = input.params.get("max_tokens", 4000)
         persona = input.params.get("persona")
         agent_name = input.params.get("agent_name")
@@ -442,6 +516,7 @@ class LLMClient(BaseTool):
         task_id = input.params.get("task_id", "unknown")
         tools = input.params.get("tools")
         skip_cooldown = input.params.get("skip_cooldown", False)
+        prefer_api = input.params.get("prefer_api", False)
 
         logger.info(f"[LLM请求] agent={agent_name or 'N/A'} persona={persona or 'N/A'} "
                     f"model={model or 'auto'} task_id={task_id[:8] if task_id else 'N/A'} "
@@ -507,6 +582,15 @@ class LLMClient(BaseTool):
         if not candidates:
             candidates = build_cross_fallback_chain(self._available_models, self._health_status)
 
+        # prefer_api: 过滤候选链中的 WebChat backend 模型，仅保留 API backend
+        # WebChat backend 有 8000 token 限制且输出含 CoT，导致评委失败率高
+        if prefer_api:
+            filtered = self._filter_webchat_models(candidates)
+            if len(filtered) < len(candidates):
+                removed = set(candidates) - set(filtered)
+                logger.info(f"[prefer_api] 过滤 WebChat backend 模型: {removed}")
+            candidates = filtered if filtered else candidates
+
         if len(candidates) > MAX_CANDIDATES:
             logger.info(f"Candidate chain truncated: {len(candidates)} → {MAX_CANDIDATES}")
             candidates = candidates[:MAX_CANDIDATES]
@@ -550,13 +634,22 @@ class LLMClient(BaseTool):
             if provider == "openrouter":
                 headers["HTTP-Referer"] = "https://flowforge.dev"
                 headers["X-Title"] = "FlowForge"
-            # openroute: 不传 X-Scene header，让 openroute 自行决定场景路由
-            # 老版本content不传X-Scene，从来没有英文CoT问题
+            # openroute: 传 X-Scene header，让 openroute 网关正确路由
+            if provider == "openroute":
+                if tools:
+                    headers["X-Scene"] = "openroute_combine"
+                elif model_id in ("auto", "proxy", "free"):
+                    headers["X-Scene"] = "auto"
+                else:
+                    headers["X-Scene"] = "caller_combine"
+                logger.debug(f"[X-Scene] provider=openroute model={model_id} has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
 
             payload = {
                 "model": model_id, "messages": messages,
                 "temperature": temperature, "max_tokens": max_tokens,
             }
+            if top_p is not None:
+                payload["top_p"] = top_p
             # 只有明确要求stream时才传stream参数
             # 老版本content不传stream，走非流式路径，从来没有英文CoT问题
             if stream:
@@ -704,6 +797,9 @@ class LLMClient(BaseTool):
             existing = set(candidates) if candidates else set()
             fallback_chain = build_cross_fallback_chain(self._available_models, self._health_status)
             fallback_chain = [c for c in fallback_chain if c not in existing]
+            # prefer_api: 回退链也过滤 WebChat backend 模型
+            if prefer_api:
+                fallback_chain = self._filter_webchat_models(fallback_chain)
             if len(fallback_chain) > MAX_FALLBACK_CANDIDATES:
                 fallback_chain = fallback_chain[:MAX_FALLBACK_CANDIDATES]
             if fallback_chain:
@@ -743,6 +839,8 @@ class LLMClient(BaseTool):
                         logger.info(f"🌐 [X-Scene] fallback provider=openroute model={model_id} "
                                     f"has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
                     payload_fb = {"model": model_id, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "stream": stream}
+                    if top_p is not None:
+                        payload_fb["top_p"] = top_p
                     if tools:
                         payload_fb["tools"] = tools
                     url = base_url.rstrip("/") + "/chat/completions"
@@ -930,6 +1028,8 @@ class LLMClient(BaseTool):
                 "temperature": temperature, "max_tokens": max_tokens,
                 "stream": True,
             }
+            if top_p is not None:
+                payload["top_p"] = top_p
             url = base_url.rstrip("/") + "/chat/completions"
 
             self._emit_event(task_id, "llm.start", {

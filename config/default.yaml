@@ -2,6 +2,8 @@ system:
   db_url: "sqlite:///data/flowforge.db"
   checkpointer_url: "sqlite:///data/checkpoints.db"
   domain_modules: ""
+  auto_discover: true
+  forge_dirs: ""
   log_level: "INFO"
   log_file: "logs/flowforge.log"
   log_format: "structured"
@@ -9,6 +11,64 @@ system:
   server_port: 8000
   workers: 1
   secret_key: "${FLOWFORGE_SECRET_KEY}"
+
+# ==================== Feature Flags ====================
+# 新旧路径切换策略：feature_flag(开关) / ab_parallel(A-B验证) / hard_switch(硬切换)
+features:
+  use_workflow_compiler:
+    enabled: true
+    rollout_percentage: 100
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "Workflow YAML Compiler替代硬编码SOP"
+  use_declarative_agent:
+    enabled: true
+    rollout_percentage: 100
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "DeclarativeAgent YAML加载器"
+  use_turn_transition_v2:
+    enabled: true
+    rollout_percentage: 100
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "统一状态机TurnTransitionEngine"
+  use_llm_router:
+    enabled: true
+    rollout_percentage: 100
+    fallback_to_old: false
+    switch_strategy: "ab_parallel"
+    description: "LLMRouter多Provider智能路由"
+  use_event_store:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "ab_parallel"
+    description: "EventStore事件持久化"
+  use_dual_threshold_compactor:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "DualThresholdCompactor双阈值压缩"
+  use_constraint_engine:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "ArchitectureConstraintEngine架构约束"
+  use_content_moderation:
+    enabled: true
+    rollout_percentage: 100
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "ContentModerationLayer内容安全审核"
+  use_permission_v2:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "PermissionV2增强版权限管线"
 
 logging:
   format: "structured"
@@ -57,6 +117,9 @@ harness:
     doc_gardener_enabled: true
     debt_tracker_enabled: true
     rule_evolution_enabled: true
+  credential_store:
+    backend: "env"  # env | encrypted_file
+    encrypted_file_path: ""  # encrypted_file后端的文件路径
 
 opensieve:
   enabled: true

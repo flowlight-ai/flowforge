@@ -13,6 +13,13 @@ class ToolOutput(BaseModel):
 
 
 class BaseTool(ABC):
+    """Base class for FlowForge tools (internal).
+
+    .. warning::
+        Upper *Forge projects must NOT inherit this class directly.
+        Use declarative YAML config (config/tools/*.yaml) or MCP Server
+        protocol to define custom tools.
+    """
     name: str = "base"
     description: str = ""
     parameters_schema: Dict[str, Any] = {}

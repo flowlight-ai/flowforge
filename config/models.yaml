@@ -5,12 +5,12 @@ active_providers:
 providers:
   openroute:
     base_url: http://127.0.0.1:13001/v1
-    api_key_default: or-2c2e4d8edd586e694139259e4b5cea7c25ace5e674ed5d46
+    api_key_env: OPENROUTE_API_KEY
+    api_key_default: or-306e066ec411840c019a1c1b2cd0b447bb62e6c976d27f73
     protected: true
     description: 预装默认供应商，用户不可删除或修改
   openrouter:
     base_url: https://openrouter.ai/api/v1
-    api_key_default: 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
     api_key_env: OPENROUTER_API_KEY
     user_manageable: true
     description: 自定义模型供应商，用户可管理模型
@@ -37,7 +37,7 @@ providers:
     api_key_env: TENCENT_API_KEY
   local:
     base_url: http://localhost:11434/v1
-    api_key_default: local
+    api_key_env: LOCAL_API_KEY
   doubao:
     base_url: https://ark.cn-beijing.volces.com/api/v3
     api_key_env: ARK_API_KEY

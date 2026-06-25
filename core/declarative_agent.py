@@ -55,6 +55,32 @@ logger = get_logger("declarative_agent")
 # ── Configuration model ──────────────────────────────────────────────
 
 
+class ExecutionPolicy(BaseModel):
+    """Agent execution policy — timeout, retry, and error handling."""
+    timeout: int = Field(default=300, description="Max execution time in seconds")
+    retry: int = Field(default=0, description="Max retry attempts on failure")
+    on_error: str = Field(
+        default="raise",
+        description="Error handling strategy: raise | fallback | skip",
+    )
+    on_anomaly: str = Field(
+        default="log",
+        description="Anomaly handling: log | retry | abort",
+    )
+
+
+class CheckpointConfig(BaseModel):
+    """Agent checkpoint configuration."""
+    enabled: bool = Field(default=False, description="Enable checkpointing")
+    mode: str = Field(default="step", description="Checkpoint mode: step | state")
+    interrupt_before: List[str] = Field(
+        default_factory=list, description="Step names to interrupt before"
+    )
+    persist_fields: List[str] = Field(
+        default_factory=list, description="State fields to persist in checkpoint"
+    )
+
+
 class AgentConfig(BaseModel):
     """Declarative agent configuration.
 
@@ -63,13 +89,23 @@ class AgentConfig(BaseModel):
     However, ``name`` is required for a usable agent.
 
     Attributes:
-        name: Unique agent identifier.
+        name: Unique agent identifier (namespace format: project:agent_name).
         description: Human-readable purpose description.
         model: Preferred LLM model (provider/model_id or short name).
+        model_params: Per-agent model parameters (temperature, top_p, etc.).
         tools: List of tool names this agent can use.
         instructions: System prompt / instructions for LLM-based execution.
+        prompt_template: Key in prompts.yaml for loading instructions.
+        execution_mode: Execution mode (react/reflexion/plan_execute/rewoo/graph_of_thoughts/single).
+        persona: Persona configuration for auto-injection (SOUL/MEMORY/CREATION).
+        input_mapping: Map input params from state/params/result/outputs.
+        output_key: Key in workflow state to store this agent's output.
         handoffs: List of agent names this agent can delegate to.
         guardrails: List of guardrail names to enforce.
+        execution_policy: Timeout, retry, and error handling.
+        checkpoint: Checkpoint and interrupt configuration.
+        fallback_chain: Ordered list of tool/agent names for fallback.
+        post_processors: List of post-processor names to apply to output.
         metadata: Arbitrary metadata for plugins and extensions.
     """
 
@@ -78,11 +114,35 @@ class AgentConfig(BaseModel):
     model: Optional[str] = Field(
         default=None, description="Preferred LLM model"
     )
+    model_params: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Per-agent model parameters (temperature, top_p, max_tokens, etc.)",
+    )
     tools: List[str] = Field(
         default_factory=list, description="Tool names this agent can use"
     )
     instructions: Optional[str] = Field(
         default=None, description="System prompt for LLM-based execution"
+    )
+    prompt_template: Optional[str] = Field(
+        default=None,
+        description="Key in prompts.yaml for loading instructions",
+    )
+    execution_mode: str = Field(
+        default="single",
+        description="Execution mode: single/react/reflexion/plan_execute/rewoo/graph_of_thoughts",
+    )
+    persona: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Persona config for auto-injection: {persona_id, sections: [soul, memory, creation]}",
+    )
+    input_mapping: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Map input params: {param_name: '${state.xxx}' or '${params.xxx}'}",
+    )
+    output_key: Optional[str] = Field(
+        default=None,
+        description="Key in workflow state to store this agent's output",
     )
     handoffs: List[str] = Field(
         default_factory=list,
@@ -90,6 +150,20 @@ class AgentConfig(BaseModel):
     )
     guardrails: List[str] = Field(
         default_factory=list, description="Guardrail names to enforce"
+    )
+    execution_policy: Optional[ExecutionPolicy] = Field(
+        default=None, description="Timeout, retry, and error handling"
+    )
+    checkpoint: Optional[CheckpointConfig] = Field(
+        default=None, description="Checkpoint and interrupt configuration"
+    )
+    fallback_chain: List[str] = Field(
+        default_factory=list,
+        description="Ordered list of tool/agent names for fallback execution",
+    )
+    post_processors: List[str] = Field(
+        default_factory=list,
+        description="Post-processor names: deai_postprocess, quality_filter, word_count_check, etc.",
     )
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Arbitrary metadata"
@@ -118,6 +192,7 @@ class DeclarativeAgent(BaseAgent):
         config: AgentConfig,
         execute_fn: Optional[Callable] = None,
     ) -> None:
+        super().__init__()
         self.config = config
         self.name = config.name
         self.description = config.description
@@ -200,24 +275,97 @@ class DeclarativeAgent(BaseAgent):
     async def _execute_llm(self, input: AgentInput) -> AgentOutput:
         """Default execution: build messages and call LLMClient.
 
-        If config.tools is set, resolves each tool from ToolRegistry
-        and passes their schemas as function-calling tools to the LLM.
-        If the LLM returns tool_calls, executes them via ToolRegistry.
+        Supports:
+        - prompt_template: load instructions from prompts.yaml
+        - persona: auto-inject SOUL/MEMORY/CREATION via PersonaInjector
+        - model_params: per-agent temperature/top_p/max_tokens
+        - execution_mode: route to appropriate mode executor
+        - fallback_chain: try tools in order on failure
+        - post_processors: apply transformations to output
         """
         from flowforge.core.base_tool import ToolInput
         from flowforge.core.model_capability import ModelCapability
 
+        # 1. Resolve instructions: prompt_template > instructions > description
         instructions = self.config.instructions or self.description or (
             f"You are the {self.name} agent."
         )
 
-        # Append handoff prompt to instructions if handoffs are configured
+        # Load from prompts.yaml if prompt_template is set
+        if self.config.prompt_template:
+            try:
+                from flowforge.core.prompt_manager import PromptManager
+                pm = PromptManager()
+                loaded = pm.get(self.config.prompt_template)
+                if loaded:
+                    instructions = loaded
+            except Exception as e:
+                logger.debug(f"Agent '{self.name}': prompt_template load failed: {e}")
+
+        # 1.5 Loop 反思重写检测 — 当存在评委反馈和草稿时，使用反思重写 prompt
+        # 把反思重写逻辑从 writer_engine.py 迁移到 DeclarativeAgent 层，
+        # 让 execution_mode=reflexion 且 tools 为空的 writer agent 也能基于评委反馈重写
+        loop_reflections = input.params.get("loop_reflections", []) if input.params else []
+        loop_verifier_errors = input.params.get("loop_verifier_errors", []) if input.params else []
+        existing_draft = input.params.get("draft", "") if input.params else ""
+
+        all_feedback = list(loop_reflections) + list(loop_verifier_errors)
+
+        if all_feedback and existing_draft and len(str(existing_draft)) > 10:
+            # 反思重写模式：使用 refine prompt 替换首次创作 prompt
+            logger.info(
+                f"[declarative_agent] Loop feedback detected for '{self.name}': "
+                f"{len(all_feedback)} items, draft length={len(str(existing_draft))}, using refine prompt"
+            )
+            instructions = self._load_refine_prompt(all_feedback, str(existing_draft), input)
+        # 否则保持首次创作 instructions 不变
+
+        # 2. Persona auto-injection
+        if self.config.persona:
+            try:
+                from flowforge.core.persona_injector import PersonaInjector
+                injector = PersonaInjector()
+                persona_id = self.config.persona.get("persona_id", "")
+                # Resolve template variables like ${config.persona}
+                if persona_id and persona_id.startswith("${") and persona_id.endswith("}"):
+                    resolved = self._resolve_ref(persona_id, input)
+                    if resolved:
+                        persona_id = str(resolved)
+                    else:
+                        # Fallback: try to get persona from input params or state
+                        persona_id = input.params.get("persona", "") or (input.state.get("persona", "") if input.state else "") or ""
+                sections = self.config.persona.get("sections", ["soul", "memory", "creation"])
+                if persona_id:
+                    instructions = await injector.inject(instructions, persona_id, sections)
+                    logger.info(f"Agent '{self.name}': persona '{persona_id}' injected")
+            except Exception as e:
+                logger.debug(f"Agent '{self.name}': persona injection failed: {e}")
+
+        # 3. Apply input_mapping
+        if self.config.input_mapping:
+            mapped_params = {}
+            for key, ref in self.config.input_mapping.items():
+                val = self._resolve_ref(ref, input)
+                if val is not None:
+                    mapped_params[key] = val
+            input.params.update(mapped_params)
+
+        # 4. Append handoff prompt to instructions if handoffs are configured
         if self.config.handoffs:
             handoff_prompt = self._build_handoff_prompt()
             if handoff_prompt:
                 instructions = instructions + "\n\n" + handoff_prompt
 
-        # Build the user message from input params
+        # 5. Route to execution mode
+        mode = self.config.execution_mode
+        if mode and mode not in ("single",):
+            mode_output = await self._execute_via_mode(mode, input, instructions)
+            if mode_output is not None:
+                # Apply post_processors
+                mode_output = await self._apply_post_processors(mode_output)
+                return mode_output
+
+        # 6. Default single-shot LLM execution
         task = input.params.get("task", input.params.get("intent", ""))
         if not task:
             task = str(input.params)[:2000]
@@ -230,19 +378,31 @@ class DeclarativeAgent(BaseAgent):
         if self.config.tools:
             tools_schema = self._resolve_tools_schema()
 
+        # Build model_params from config
+        model_kwargs: Dict[str, Any] = {}
+        if self.config.model_params:
+            model_kwargs.update(self.config.model_params)
+
         llm_result = await mc.chat(
             prompt=task,
             system=instructions,
             model=model,
             agent_name=self.name,
             tools=tools_schema,
+            **model_kwargs,
         )
 
         # Handle tool_calls from LLM response
         tool_calls = llm_result.get("tool_calls", [])
         tool_results: List[Dict[str, Any]] = []
         if tool_calls:
-            tool_results = await self._execute_tool_calls(tool_calls)
+            tool_results = await self._execute_tool_calls(tool_calls, input)
+
+        # Handle fallback_chain if primary execution returns empty
+        if not llm_result.get("content") and self.config.fallback_chain:
+            fallback_result = await self._execute_fallback_chain(input, instructions)
+            if fallback_result is not None:
+                return await self._apply_post_processors(fallback_result)
 
         result: Dict[str, Any] = {
             "content": llm_result.get("content", ""),
@@ -252,17 +412,317 @@ class DeclarativeAgent(BaseAgent):
         if tool_results:
             result["tool_results"] = tool_results
 
+        # Map output to output_key if configured
+        state_updates: Dict[str, Any] = {}
+        if self.config.output_key:
+            state_updates[self.config.output_key] = result
+
         metadata: Dict[str, Any] = {
             "tokens": llm_result.get("tokens", 0),
             "agent_type": "declarative",
             "config_model": self.config.model,
+            "execution_mode": mode,
         }
         if tool_calls:
             metadata["tool_calls_count"] = len(tool_calls)
         if tool_results:
             metadata["tool_results_count"] = len(tool_results)
 
-        return AgentOutput(result=result, metadata=metadata)
+        output = AgentOutput(result=result, metadata=metadata, state_updates=state_updates)
+        return await self._apply_post_processors(output)
+
+    def _load_refine_prompt(self, feedback: list, draft: str, input: AgentInput) -> str:
+        """加载反思重写 prompt，注入评委反馈和草稿。
+
+        把反思重写逻辑从 writer_engine.py 迁移到 DeclarativeAgent 层，
+        让 execution_mode=reflexion 且 tools 为空的 writer agent 也能基于评委反馈重写。
+
+        优先从 prompts.yaml 加载 refine 模板（按 agent 名称和通用 key 依次查找），
+        如果模板不存在则构建内联 refine prompt。
+
+        Args:
+            feedback: 评委反馈列表（loop_reflections + loop_verifier_errors 合并）。
+            draft: 上一轮创作的草稿内容。
+            input: Agent 输入，用于解析额外的上下文变量。
+
+        Returns:
+            渲染后的反思重写 prompt 字符串。
+        """
+        # 尝试从 prompts.yaml 加载 refine 模板
+        template = ""
+        try:
+            from flowforge.core.prompt_manager import PromptManager
+            pm = PromptManager()
+            # 按优先级查找 refine 模板
+            candidate_keys = [
+                f"{self.name}.refine_with_reflections",
+                "contentforge.writer.refine_with_reflections",
+                "writer_agent_reflection",
+            ]
+            for key in candidate_keys:
+                loaded = pm.get(key)
+                if loaded:
+                    template = loaded
+                    logger.info(f"[declarative_agent] Loaded refine prompt template: '{key}'")
+                    break
+        except Exception as e:
+            logger.debug(f"[declarative_agent] Failed to load refine prompt template: {e}")
+
+        # 最多取 20 条反馈，避免 prompt 过长
+        feedback_items = [str(f) for f in feedback[:20] if f]
+        feedback_text = "\n".join(f"- {f}" for f in feedback_items)
+
+        # 加载评委维度评分标准（模板中可能引用 {judge_dimensions_guide}）
+        judge_dimensions_guide = ""
+        try:
+            from flowforge.core.prompt_manager import PromptManager
+            pm = PromptManager()
+            guide_keys = [
+                f"{self.name}.judge_dimensions_guide",
+                "contentforge.writer.judge_dimensions_guide",
+            ]
+            for gk in guide_keys:
+                loaded_guide = pm.get(gk)
+                if loaded_guide:
+                    judge_dimensions_guide = loaded_guide
+                    break
+        except Exception:
+            pass
+
+        if template:
+            # 模板存在：用 format 注入变量，兼容缺失字段
+            try:
+                return template.format(
+                    existing_draft=draft,
+                    feedback_text=feedback_text,
+                    verifier_info="\n".join(feedback_items[:10]),
+                    judge_dimensions_guide=judge_dimensions_guide,
+                )
+            except (KeyError, ValueError, IndexError) as e:
+                logger.warning(f"[declarative_agent] Refine template format error: {e}, using inline prompt")
+                # 降级：手动替换已知占位符
+                rendered = template
+                rendered = rendered.replace("{existing_draft}", draft)
+                rendered = rendered.replace("{feedback_text}", feedback_text)
+                rendered = rendered.replace("{verifier_info}", "\n".join(feedback_items[:10]))
+                rendered = rendered.replace("{judge_dimensions_guide}", judge_dimensions_guide)
+                return rendered
+
+        # 模板不存在：构建内联 refine prompt
+        return f"""你是资深内容创作者。以下是上一轮创作的文章和评委的改进建议，请根据建议重写文章。
+
+## 上一轮文章
+{draft}
+
+## 评委改进建议（必须逐条落实）
+{feedback_text}
+
+## 要求
+1. 针对每条评委建议，在文章中做出实质性改进
+2. 保留原文的优点和有效内容
+3. 重点关注低分维度
+4. 输出完整的中文Markdown文章，第一行必须是 # 标题
+"""
+
+    def _resolve_ref(self, ref: str, input: AgentInput) -> Any:
+        """Resolve a variable reference like '${state.xxx}' or '${params.xxx}'."""
+        if not ref.startswith("${") or not ref.endswith("}"):
+            return ref
+        path = ref[2:-1]  # Remove ${ and }
+        parts = path.split(".", 1)
+        if len(parts) != 2:
+            return None
+        source, key = parts
+        if source == "state":
+            return input.state.get(key) if input.state else None
+        elif source == "params":
+            return input.params.get(key)
+        elif source == "result":
+            return input.state.get(f"result.{key}") if input.state else None
+        elif source == "outputs":
+            return input.state.get(f"outputs.{key}") if input.state else None
+        elif source == "metadata":
+            # metadata可能在input.metadata或input.params中（workflow_executor合并后）
+            val = None
+            if hasattr(input, 'metadata') and input.metadata:
+                val = input.metadata.get(key)
+            if val is None and hasattr(input, 'params') and input.params:
+                val = input.params.get(key)
+            return val
+        return None
+
+    async def _execute_via_mode(
+        self, mode: str, input: AgentInput, instructions: str
+    ) -> Optional[AgentOutput]:
+        """Route to the appropriate execution mode executor."""
+        try:
+            from flowforge.core.task_context import TaskContext
+
+            # Build TaskContext for mode executors
+            # Inherit tools/agents/event_bus from parent context if available
+            parent_ctx = self._context
+            task_context = TaskContext(
+                task_id=input.params.get("task_id", self.name),
+                input_data=dict(input.params),
+                metadata={"persona": input.params.get("persona", "")},
+                tools=parent_ctx.tools if parent_ctx else None,
+                agents=parent_ctx.agents if parent_ctx else None,
+                event_bus=parent_ctx.event_bus if parent_ctx else None,
+                persona=input.params.get("persona", ""),
+            )
+
+            if mode == "react":
+                from flowforge.modes.react import ReactModeExecutor
+                executor = ReactModeExecutor()
+                return await self._run_mode_executor(executor, task_context, instructions)
+            elif mode == "reflexion":
+                from flowforge.modes.reflexion import ReflexionExecutor
+                executor = ReflexionExecutor()
+                return await self._run_mode_executor(executor, task_context, instructions)
+            elif mode == "plan_execute":
+                from flowforge.modes.plan_execute import PlanExecuteModeExecutor
+                executor = PlanExecuteModeExecutor()
+                return await self._run_mode_executor(executor, task_context, instructions)
+            elif mode == "rewoo":
+                from flowforge.modes.rewoo import ReWooModeExecutor
+                executor = ReWooModeExecutor()
+                return await self._run_mode_executor(executor, task_context, instructions)
+            elif mode == "graph_of_thoughts":
+                from flowforge.modes.graph_of_thoughts import GraphOfThoughtsModeExecutor
+                executor = GraphOfThoughtsModeExecutor()
+                return await self._run_mode_executor(executor, task_context, instructions)
+            else:
+                logger.warning(f"Agent '{self.name}': unknown execution_mode '{mode}', falling back to single")
+                return None
+        except ImportError as e:
+            logger.warning(f"Agent '{self.name}': mode '{mode}' not available: {e}, falling back to single")
+            return None
+        except Exception as e:
+            logger.error(f"Agent '{self.name}': mode '{mode}' execution failed: {e}")
+            return None
+
+    async def _run_mode_executor(
+        self, executor: Any, task_context: Any, instructions: str
+    ) -> AgentOutput:
+        """Run a mode executor and convert result to AgentOutput."""
+        try:
+            # Set agent info on task_context
+            task_context.agent_name = self.name
+            task_context.instructions = instructions
+            task_context.model = self.config.model or ""
+            task_context.tools = self.config.tools
+            task_context.model_params = self.config.model_params
+
+            result = await executor.run(task_context)
+            if isinstance(result, AgentOutput):
+                return result
+            if isinstance(result, dict):
+                state_updates = {}
+                if self.config.output_key:
+                    state_updates[self.config.output_key] = result
+                return AgentOutput(result=result, state_updates=state_updates)
+            return AgentOutput(result={"content": str(result)})
+        except Exception as e:
+            logger.error(f"Agent '{self.name}': mode executor failed: {e}")
+            return AgentOutput(result={"error": str(e)})
+
+    async def _execute_fallback_chain(
+        self, input: AgentInput, instructions: str
+    ) -> Optional[AgentOutput]:
+        """Execute tools in fallback_chain order until one succeeds."""
+        from flowforge.core.base_tool import ToolInput
+        from flowforge.tools.registry import ToolRegistry
+
+        try:
+            registry = ToolRegistry()
+        except Exception:
+            return None
+
+        task = input.params.get("task", input.params.get("intent", ""))
+
+        for tool_name in self.config.fallback_chain:
+            try:
+                tool = registry.get_tool(tool_name)
+                params = dict(input.params)
+                params["query"] = task
+                params["prompt"] = instructions
+                output = await registry.execute(tool_name, ToolInput(params=params))
+                if output.result and not output.error:
+                    content = output.result.get("content", output.result.get("result", ""))
+                    if content:
+                        state_updates = {}
+                        if self.config.output_key:
+                            state_updates[self.config.output_key] = output.result
+                        return AgentOutput(
+                            result=output.result,
+                            metadata={"fallback_tool": tool_name},
+                            state_updates=state_updates,
+                        )
+            except Exception as e:
+                logger.debug(f"Agent '{self.name}': fallback tool '{tool_name}' failed: {e}")
+                continue
+
+        return None
+
+    async def _apply_post_processors(self, output: AgentOutput) -> AgentOutput:
+        """Apply post-processor transformations to agent output."""
+        if not self.config.post_processors:
+            return output
+
+        content = output.result.get("content", "") if isinstance(output.result, dict) else ""
+
+        for processor_name in self.config.post_processors:
+            try:
+                if processor_name == "deai_postprocess":
+                    content = self._deai_postprocess(content)
+                elif processor_name == "quality_filter":
+                    content = self._quality_filter(content)
+                elif processor_name == "word_count_check":
+                    content = self._word_count_check(content)
+                else:
+                    logger.debug(f"Agent '{self.name}': unknown post_processor '{processor_name}'")
+            except Exception as e:
+                logger.debug(f"Agent '{self.name}': post_processor '{processor_name}' failed: {e}")
+
+        if isinstance(output.result, dict) and content:
+            output.result["content"] = content
+        return output
+
+    @staticmethod
+    def _deai_postprocess(content: str) -> str:
+        """Remove common AI-generated phrases and patterns."""
+        import re
+        # Common AI-isms to remove
+        ai_patterns = [
+            (r"作为一名AI[，,]?\s*", ""),
+            (r"作为AI[，,]?\s*", ""),
+            (r"总之[，,]?\s*", ""),
+            (r"综上所述[，,]?\s*", ""),
+            (r"总的来说[，,]?\s*", ""),
+            (r"值得注意的是[，,]?\s*", ""),
+            (r"需要指出的是[，,]?\s*", ""),
+            (r"不可否认[，,]?\s*", ""),
+            (r"毋庸置疑[，,]?\s*", ""),
+            (r"在这个.*的时代[，,]?\s*", ""),
+            (r"让我们.*吧[。.]?\s*", ""),
+        ]
+        for pattern, replacement in ai_patterns:
+            content = re.sub(pattern, replacement, content, flags=re.IGNORECASE)
+        return content.strip()
+
+    @staticmethod
+    def _quality_filter(content: str) -> str:
+        """Basic quality filter — remove empty lines and trim."""
+        lines = [line.strip() for line in content.split("\n") if line.strip()]
+        return "\n\n".join(lines)
+
+    @staticmethod
+    def _word_count_check(content: str) -> str:
+        """Basic word count check — log warning if too short."""
+        word_count = len(content)
+        if word_count < 100:
+            logger.warning(f"Content too short: {word_count} chars")
+        return content
 
     # ── Tools resolution and execution ──────────────────────────────
 
@@ -299,11 +759,15 @@ class DeclarativeAgent(BaseAgent):
 
         return schemas
 
-    async def _execute_tool_calls(self, tool_calls: list) -> List[Dict[str, Any]]:
+    async def _execute_tool_calls(self, tool_calls: list, input: Optional[AgentInput] = None) -> List[Dict[str, Any]]:
         """Execute tool_calls returned by the LLM via ToolRegistry.
 
         Args:
             tool_calls: List of tool call dicts with 'name' and 'arguments'.
+            input: Optional AgentInput — when provided, loop feedback params
+                (loop_reflections, loop_verifier_errors, draft) are forwarded
+                from input.params into the tool arguments so that downstream
+                tools (e.g. writer_engine) receive the Loop context.
 
         Returns:
             List of result dicts from each tool execution.
@@ -318,6 +782,10 @@ class DeclarativeAgent(BaseAgent):
             logger.warning(f"Agent '{self.name}': ToolRegistry not available for tool execution")
             return results
 
+        # Loop 反馈参数 — 这些是数据型参数，LLM 不会在 tool_call 中生成，
+        # 必须从 agent 的 input.params 转发到工具调用中（最后一公里）
+        _LOOP_FORWARD_KEYS = ('loop_reflections', 'loop_verifier_errors', 'draft')
+
         for tc in tool_calls:
             tool_name = tc.get("name", "")
             arguments = tc.get("arguments", {})
@@ -327,6 +795,14 @@ class DeclarativeAgent(BaseAgent):
                     arguments = json.loads(arguments)
                 except json.JSONDecodeError:
                     arguments = {}
+            if not isinstance(arguments, dict):
+                arguments = {}
+
+            # 转发 loop 反馈参数到工具调用（LLM 不会在 tool_call arguments 中包含这些）
+            if input is not None and input.params:
+                for key in _LOOP_FORWARD_KEYS:
+                    if key in input.params and key not in arguments:
+                        arguments[key] = input.params[key]
 
             try:
                 output = await registry.execute(tool_name, ToolInput(params=arguments))
@@ -576,10 +1052,20 @@ def agent(
     name: str,
     description: str = "",
     model: Optional[str] = None,
+    model_params: Optional[Dict[str, Any]] = None,
     tools: Optional[List[str]] = None,
     instructions: Optional[str] = None,
+    prompt_template: Optional[str] = None,
+    execution_mode: str = "single",
+    persona: Optional[Dict[str, Any]] = None,
+    input_mapping: Optional[Dict[str, str]] = None,
+    output_key: Optional[str] = None,
     handoffs: Optional[List[str]] = None,
     guardrails: Optional[List[str]] = None,
+    execution_policy: Optional[Dict[str, Any]] = None,
+    checkpoint: Optional[Dict[str, Any]] = None,
+    fallback_chain: Optional[List[str]] = None,
+    post_processors: Optional[List[str]] = None,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> Callable:
     """Decorator that registers a function as a DeclarativeAgent.
@@ -622,10 +1108,20 @@ def agent(
             name=name,
             description=description or inspect.getdoc(func) or "",
             model=model,
+            model_params=model_params or {},
             tools=tools or [],
             instructions=instructions,
+            prompt_template=prompt_template,
+            execution_mode=execution_mode,
+            persona=persona,
+            input_mapping=input_mapping or {},
+            output_key=output_key,
             handoffs=handoffs or [],
             guardrails=guardrails or [],
+            execution_policy=ExecutionPolicy(**execution_policy) if execution_policy else None,
+            checkpoint=CheckpointConfig(**checkpoint) if checkpoint else None,
+            fallback_chain=fallback_chain or [],
+            post_processors=post_processors or [],
             metadata=metadata or {},
         )
 

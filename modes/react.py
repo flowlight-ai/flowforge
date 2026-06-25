@@ -33,9 +33,26 @@ class ReActExecutor(BaseModeExecutor):
             if len(messages) > 10:
                 messages = [messages[0]] + messages[-8:]
 
-            thought = await self._generate_thought(ctx, messages)
+            thought, tool_calls = await self._generate_thought(ctx, messages)
             last_thought = thought
 
+            # Handle function calling (preferred path)
+            if tool_calls:
+                for tc in tool_calls:
+                    func = tc.get("function", {})
+                    action = {
+                        "tool": func.get("name", ""),
+                        "params": json.loads(func.get("arguments", "{}")) if isinstance(func.get("arguments"), str) else func.get("arguments", {}),
+                    }
+                    if not action["tool"] or action["tool"] == "llm":
+                        continue
+                    action_history.append(action)
+                    observation = await self._execute_action(ctx, action)
+                    messages.append({"role": "assistant", "content": thought[:self.MAX_MESSAGE_CHARS] if thought else ""})
+                    messages.append({"role": "user", "content": f"观察结果: {observation[:self.MAX_MESSAGE_CHARS]}"})
+                continue
+
+            # Fallback: text-based action parsing
             if not thought or len(thought.strip()) < 10:
                 break
 
@@ -71,12 +88,47 @@ class ReActExecutor(BaseModeExecutor):
         return {"final_answer": final_answer, "steps": step + 1, "action_history": action_history, "loop_detected": loop_detected}
 
     async def _generate_thought(self, ctx, messages):
-        result = await ctx.tools.execute("llm", ToolInput(params={
+        # Build tool schemas for function calling
+        tool_schemas = self._build_tool_schemas(ctx)
+        llm_params = {
             "messages": messages,
             "stream": False, "task_id": ctx.task_id, "agent_name": "react_thinker",
             "persona": ctx.persona or "default",
-        }))
-        return result.result.get("content", "")
+        }
+        if tool_schemas:
+            llm_params["tools"] = tool_schemas
+        result = await ctx.tools.execute("llm", ToolInput(params=llm_params))
+        return result.result.get("content", ""), result.result.get("tool_calls")
+
+    def _build_tool_schemas(self, ctx):
+        """Build OpenAI-compatible tool schemas from registered tools."""
+        schemas = []
+        if not ctx.tools:
+            return schemas
+        try:
+            for name in ctx.tools.list_tools():
+                if name in ("llm", "shell_command"):
+                    continue
+                try:
+                    tool = ctx.tools.get_tool(name)
+                    desc = getattr(tool, 'description', '') or name
+                    params = getattr(tool, 'parameters_schema', None) or {
+                        "type": "object",
+                        "properties": {"query": {"type": "string", "description": "查询内容"}},
+                    }
+                    schemas.append({
+                        "type": "function",
+                        "function": {"name": name, "description": desc[:200], "parameters": params},
+                    })
+                except Exception as e:
+                    logger.debug(f"ReAct schema build skip tool {name}: {e}")
+                    continue
+        except Exception as e:
+            logger.warning(f"ReAct _build_tool_schemas failed: {e}")
+        if len(schemas) > 8:
+            schemas = schemas[:8]
+        logger.info(f"[react] built {len(schemas)} tool schemas for function calling", task_id=ctx.task_id if ctx else None)
+        return schemas
 
     async def _parse_action(self, thought):
         if not thought:

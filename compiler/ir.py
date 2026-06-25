@@ -21,6 +21,8 @@ class StepType(str, Enum):
     CONDITIONAL = "conditional"
     FALLBACK = "fallback"
     LOOP = "loop"
+    ERROR_HANDLER = "error_handler"  # 错误处理节点
+    SUB_WORKFLOW = "sub_workflow"  # 子工作流节点
 
 
 class IRStep(BaseModel):
@@ -51,9 +53,15 @@ class IRStep(BaseModel):
     fallback: List["IRStep"] = []
     # LOOP: 循环执行
     loop_steps: List["IRStep"] = []
-    max_iterations: int = 1
-    exit_condition: Optional[str] = None
+    max_iterations: Optional[int] = None  # loop最大迭代次数
+    exit_condition: Optional[str] = None  # loop退出条件表达式
     loop_variable: Optional[str] = None
+    # ERROR_HANDLER / LOOP: 子步骤
+    body: Optional[List["IRStep"]] = None  # loop/error_handler的子步骤
+    # SUB_WORKFLOW: 引用的workflow名称
+    workflow_ref: Optional[str] = None  # sub-workflow引用的workflow名称
+    # ERROR_HANDLER: 错误处理步骤
+    on_error: Optional[List["IRStep"]] = None  # 错误处理步骤
 
     model_config = {"extra": "allow"}
 

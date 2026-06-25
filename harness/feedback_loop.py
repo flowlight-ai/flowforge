@@ -193,16 +193,23 @@ class FeedbackLoop:
         logger.info(f"[FeedbackLoop] ▶ EVAL START | task={task_id} persona={persona} "
                      f"mode={mode_str} content_len={content_len}")
 
-        if not content or (isinstance(content, str) and len(content.strip()) < 50):
-            # Too short to evaluate meaningfully
-            self._gate_counts[GATE_PASS] += 1
+        if not content or (isinstance(content, str) and len(content.strip()) < 100):
+            # Too short to evaluate meaningfully — FAIL instead of PASS
+            # (content < 100 chars indicates a serious output quality problem)
+            self._gate_counts[GATE_FAIL] += 1
             result["_feedback"] = {
-                "gate": GATE_PASS,
+                "gate": GATE_FAIL,
                 "mode": mode_str,
                 "reason": "output_too_short_for_evaluation",
+                "action": "downgraded",
             }
-            logger.info(f"[FeedbackLoop] ◀ EVAL END   | task={task_id} gate=PASS (auto) "
+            result["status"] = result.get("status", "completed")
+            if result["status"] == "completed":
+                result["status"] = "partial"
+            result["quality_warning"] = True
+            logger.warning(f"[FeedbackLoop] ◀ EVAL END   | task={task_id} gate=FAIL (auto) "
                          f"reason=too_short({content_len} chars) "
+                         f"action=downgrade→partial quality_warning=True "
                          f"counts={dict(self._gate_counts)}")
             return result
 

@@ -31,8 +31,9 @@ class ModelService:
         "server_error": ["5xx", "internal server error"],
     }
 
-    def __init__(self, config_dir: Path = None, health_state_file: Path = None):
+    def __init__(self, config_dir: Path = None, health_state_file: Path = None, plugin_registry: Any = None):
         self._config_loader = ConfigLoader(config_dir)
+        self._plugin_registry = plugin_registry
         if health_state_file is None:
             data_dir = Path(__file__).parent.parent.parent / "data"
             data_dir.mkdir(parents=True, exist_ok=True)
@@ -321,10 +322,9 @@ class ModelService:
         a lightweight ping to the specific model.
         """
         try:
-            from flowforge.app.deps import get_plugin_registry
-            registry = get_plugin_registry()
+            registry = self._plugin_registry
             if registry is None:
-                raise ImportError("PluginRegistry not initialized")
+                raise ImportError("PluginRegistry not injected via constructor")
             svc = registry.get_plugin("openroute")
         except ImportError:
             self._update_health_state(model_key, self.STATUS_DISABLED, reason="openroute_service_unavailable")
@@ -927,9 +927,9 @@ class ModelService:
 _model_service: Optional["ModelService"] = None
 
 
-def get_model_service() -> "ModelService":
+def get_model_service(plugin_registry: Any = None) -> "ModelService":
     """Get or create the global ModelService singleton."""
     global _model_service
     if _model_service is None:
-        _model_service = ModelService()
+        _model_service = ModelService(plugin_registry=plugin_registry)
     return _model_service

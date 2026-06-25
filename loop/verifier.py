@@ -355,11 +355,27 @@ class MultiJudgeVerifier(LoopVerifier):
                 content = str(result)
         else:
             content = str(result)
+
+        # B2/B3: 空内容保护 — 空 draft 或过短内容直接返回失败，不送给评委
+        # 避免空内容被评委打出全0分或返回"无法回答"等无效响应
+        if not content or len(content.strip()) < 50:
+            logger.warning(
+                f"MultiJudgeVerifier: content is empty or too short ({len(content.strip()) if content else 0} chars), "
+                f"skipping judge evaluation"
+            )
+            return Verdict(
+                passed=False,
+                score=0.0,
+                errors=["内容为空或过短，无法评审"],
+            )
+
         prompt = self._build_eval_prompt(content, task, dimensions, config)
 
         # 3. 并行调用所有评委（每个评委最多60秒，超时跳过）
         judge_timeout = config.get("judge_timeout", 60)
-        judge_tasks = [self._call_judge(j, prompt, task) for j in active_judges]
+        # prefer_api: 评委优先使用API backend，排除WebChat backend（8000 token限制导致失败率高）
+        prefer_api = config.get("prefer_api", False)
+        judge_tasks = [self._call_judge(j, prompt, task, prefer_api) for j in active_judges]
         judge_results = await asyncio.gather(
             *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
             return_exceptions=True,
@@ -479,8 +495,8 @@ class MultiJudgeVerifier(LoopVerifier):
             else:
                 dim_lines.append(f"  - {dim} (权重 {weight:.2f})")
 
-        # 4. 动态生成 score_fields
-        score_field_lines = [f'"{dim}": 0.0' for dim in dimensions.keys()]
+        # 4. 动态生成 score_fields — 用占位符代替具体0.0值，避免Web模型直接复制0分
+        score_field_lines = [f'"{dim}": <your_score 0.0-1.0>' for dim in dimensions.keys()]
         score_fields = ",\n    ".join(score_field_lines)
 
         # 5. 读取提示词模板
@@ -513,14 +529,22 @@ class MultiJudgeVerifier(LoopVerifier):
         "直接以{开头，以}结尾。"
     )
 
-    async def _call_judge(self, model: str, prompt: str, task: TaskContext) -> dict:
-        """调用单个评委模型，返回解析后的评分字典。"""
+    async def _call_judge(self, model: str, prompt: str, task: TaskContext, prefer_api: bool = False) -> dict:
+        """调用单个评委模型，返回解析后的评分字典。
+
+        Args:
+            model: 评委模型标识（provider/model_id 格式）。
+            prompt: 评审提示词。
+            task: 任务上下文，提供 tools/persona/task_id。
+            prefer_api: 为 True 时强制使用 API backend，排除 WebChat backend，
+                避免 8000 token 限制和 CoT 干扰导致评委失败。
+        """
         if not task.tools:
             raise RuntimeError("TaskContext.tools is not available for judge invocation")
 
         # 使用 system message 强制 JSON 输出（针对 WebChat 模型优化）
         system_msg = self.DEFAULT_JUDGE_SYSTEM_MESSAGE
-        tool_output = await task.tools.execute("llm", ToolInput(params={
+        judge_params = {
             "model": model,
             "messages": [
                 {"role": "system", "content": system_msg},
@@ -531,7 +555,11 @@ class MultiJudgeVerifier(LoopVerifier):
             "agent_name": f"multi_judge_{model.replace('/', '_')}",
             "persona": task.persona or "default",
             "skip_cooldown": True,
-        }))
+        }
+        # prefer_api: 让 LLMClient 过滤候选链中的 WebChat backend，仅使用 API backend
+        if prefer_api:
+            judge_params["prefer_api"] = True
+        tool_output = await task.tools.execute("llm", ToolInput(params=judge_params))
 
         raw_content = tool_output.result.get("content", "") if tool_output.result else ""
         # 过滤 WebChat 模型的思考过程（CoT），只保留最终输出
@@ -566,6 +594,17 @@ class MultiJudgeVerifier(LoopVerifier):
 
     def _parse_judge_response(self, raw_content: str, model: str) -> dict:
         """解析评委模型的 JSON 响应 — 针对小模型/免费模型的多种非标准输出做鲁棒处理。"""
+
+        # B3: 检测"无法回答"等非JSON文本 — 记录但不当作成功
+        stripped = raw_content.strip()
+        _UNABLE_MARKERS = ("无法回答", "无法评审", "无法评估", "不能回答", "无法判断",
+                           "I cannot", "I can't", "unable to", "无法分析")
+        for marker in _UNABLE_MARKERS:
+            if marker in stripped and len(stripped) < 200:
+                logger.warning(
+                    f"MultiJudgeVerifier: judge '{model}' returned unable-to-answer text: {stripped[:100]}"
+                )
+                raise ValueError(f"Judge '{model}' returned unable-to-answer text")
 
         # 1. 尝试从 markdown code block 中提取 JSON
         json_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", raw_content, re.DOTALL)
@@ -681,6 +720,23 @@ class MultiJudgeVerifier(LoopVerifier):
                 normalized_scores[dim] = max(0.0, min(1.0, s))
             except (ValueError, TypeError):
                 logger.warning(f"MultiJudgeVerifier: judge '{model}' invalid score for '{dim}': {score}")
+
+        # B3: 检测全0分 — 可能是评委未理解任务或占位符问题
+        # 如果所有维度都是0.0，说明评委可能返回了占位符或"无法回答"
+        if normalized_scores and all(v == 0.0 for v in normalized_scores.values()):
+            logger.warning(
+                f"MultiJudgeVerifier: judge '{model}' returned all-zero scores "
+                f"(possible placeholder/unable-to-answer), treating as invalid"
+            )
+            raise ValueError(f"Judge '{model}' returned all-zero scores (possible placeholder issue)")
+
+        # B3: 检测"无法回答"等非JSON文本被误解析为空scores
+        if not normalized_scores:
+            logger.warning(
+                f"MultiJudgeVerifier: judge '{model}' returned no valid scores, "
+                f"raw parsed keys: {list(parsed.keys())}"
+            )
+            raise ValueError(f"Judge '{model}' returned no valid scores")
 
         return {
             "model": model,

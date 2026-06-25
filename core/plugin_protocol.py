@@ -89,6 +89,10 @@ class PluginManifest:
         # ── Frontend extension ───────────────────────────────────────
         frontend_entry: str = "",
         mount_points: Optional[List[str]] = None,
+        # ── V2 resource directories ──────────────────────────────────
+        personas_dir: Optional[str] = None,
+        prompts_dir: Optional[str] = None,
+        tools_dir: Optional[str] = None,
     ):
         self.name = name
         self.version = version
@@ -112,6 +116,9 @@ class PluginManifest:
         self.health_interval = health_interval
         self.frontend_entry = frontend_entry
         self.mount_points = mount_points or []
+        self.personas_dir = personas_dir
+        self.prompts_dir = prompts_dir
+        self.tools_dir = tools_dir
 
 
 class PluginContext:
@@ -269,6 +276,7 @@ class FlowForgePlugin(ABC):
         self._registered_quality_gates: list[str] = []
         self._registered_context_layers: list[str] = []
         self._registered_step_handlers: list[str] = []
+        self._registered_loops: list[str] = []
 
     @property
     def state(self) -> PluginState:
@@ -398,6 +406,26 @@ class FlowForgePlugin(ABC):
         executed, allowing plugins to extend the workflow engine
         with custom step logic.
         """
+        pass
+
+    def register_loops(self, loop_registry: Any) -> None:
+        """Register loop configurations.
+
+        Loops define iterative execution patterns that repeat
+        a set of steps until a condition is met.
+        """
+        pass
+
+    def register_personas(self, persona_registry: Any) -> None:
+        """注册Persona配置"""
+        pass
+
+    def register_prompts(self, prompt_manager: Any) -> None:
+        """注册Prompt模板"""
+        pass
+
+    def register_declarative_tools(self, tool_registry: Any) -> None:
+        """注册声明式Tool"""
         pass
 
     # ── Lifecycle hooks ─────────────────────────────────────────────

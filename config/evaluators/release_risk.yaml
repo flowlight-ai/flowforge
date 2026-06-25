@@ -1,0 +1,17 @@
+name: release_risk
+description: "发布风险评估器"
+dimension: release_risk
+evaluator_agent: ReleaseRiskEvaluatorAgent
+scoring_rules:
+  - field: regression_risk
+    weight: 0.25
+  - field: dependency_stability
+    weight: 0.25
+  - field: performance_impact
+    weight: 0.25
+  - field: ops_risk
+    weight: 0.25
+default_score: 0.0
+default_confidence: 0.0
+weight: 1.0
+threshold: 0.8

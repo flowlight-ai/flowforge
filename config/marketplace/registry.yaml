@@ -22,7 +22,7 @@ plugins:
   # === Agent Plugins ===
   - name: flowforge-content-writer
     display_name: "Content Writer Agent"
-    description: "AI-powered content writing agent with style adaptation, SEO optimization, and multi-format output. Supports long-form articles, social media posts, and technical documentation."
+    description: "AI-powered content writing agent with style adaptation, SEO optimization, and multi-format output. Supports long-form articles, social media posts, and technical documentation. Configured via contentforge/config/agents/writer_agent.yaml (DeclarativeAgent)."
     version: "2.0.1"
     author: "FlowForge Team"
     category: agent
@@ -33,7 +33,7 @@ plugins:
     min_flowforge_version: "0.5.0"
     dependencies: [flowforge-web-search]
     permissions: [llm_access, network_access]
-    entry_point: "flowforge.agents.article_writing:ArticleWritingAgent"
+    entry_point: "contentforge.workers.writer_agent:WriterAgent"
     checksum: null
 
   # === Integration Plugins ===

@@ -76,6 +76,10 @@ class AgentConfig(BaseModel):
         tools: 可用工具列表
         max_retries: 最大重试次数
         retry_on_error: 触发重试的错误类型
+        max_steps: 最大执行步数（1=单轮, >1=多轮tool loop）
+        multi_turn: 是否启用多轮tool loop（ReAct模式）
+        permissions: 权限声明列表
+        output_schema: 输出JSON Schema校验
     """
 
     model_config = {"extra": "allow"}
@@ -121,6 +125,12 @@ class AgentConfig(BaseModel):
         default_factory=lambda: ["json_parse_error"],
         description="触发重试的错误类型",
     )
+
+    # 多轮Tool Loop配置
+    max_steps: int = Field(default=1, description="最大执行步数（1=单轮, >1=多轮tool loop）")
+    multi_turn: bool = Field(default=False, description="是否启用多轮tool loop（ReAct模式）")
+    permissions: list[str] = Field(default_factory=list, description="权限声明列表")
+    output_schema: dict | None = Field(default=None, description="输出JSON Schema校验")
 
 
 class DeclarativeAgent:
@@ -178,6 +188,8 @@ class DeclarativeAgent:
 
         for attempt in range(self.config.max_retries + 1):
             try:
+                if self.config.multi_turn or self.config.max_steps > 1:
+                    return await self._execute_multi_turn(input_data, state, params)
                 return await self._execute_once(input_data, state, params)
             except Exception as e:
                 last_error = e
@@ -255,6 +267,158 @@ class DeclarativeAgent:
         }
 
         return AgentOutput(result=result, metadata=metadata, state_updates=state_updates)
+
+    async def _execute_multi_turn(
+        self,
+        input_data: AgentInput,
+        state: dict,
+        params: dict,
+    ) -> AgentOutput:
+        """多轮Tool Loop执行（ReAct模式）。
+
+        执行流程:
+        1. 加载prompt → StateMapper → Persona注入 → 渲染模板
+        2. 构建初始messages（system + user）
+        3. 获取tools schema
+        4. 循环：调用LLM → 如果有tool_calls则执行 → 追加结果 → 再次调用LLM
+        5. 直到LLM不再返回tool_calls或达到max_steps
+        6. 解析最终输出 → output_mapping → state_updates
+        """
+        # Step 1: 加载prompt
+        prompt = self._load_prompt(params)
+
+        # Step 2: StateMapper提取参数
+        if self._state_mapper:
+            mapped_params = self._state_mapper.apply(state, extra=params)
+            params.update(mapped_params)
+
+        # Step 3: Persona注入
+        persona_id = params.get("persona_id", state.get("persona", ""))
+        if self._persona_injector and persona_id:
+            prompt = await self._persona_injector.inject(
+                prompt, persona_id, self.config.persona_sections
+            )
+            params = await self._persona_injector.inject_params(params, persona_id)
+
+        # Step 4: 渲染模板
+        prompt = self._render_template(prompt, params)
+
+        # Step 5: 构建初始messages
+        system_prompt = self.config.system_prompt or ""
+        messages: list[dict[str, Any]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        # Step 6: 获取tools schema
+        tools_schema: list[dict] | None = None
+        if self.config.tools and self._tool_registry is not None:
+            tools_schema = self._tool_registry.get_function_calls(self.config.tools)
+            if not tools_schema:
+                tools_schema = None
+
+        # Step 7: 多轮循环
+        tool_results_all: list[dict] = []
+        step = 0
+        llm_result: dict[str, Any] = {}
+
+        for step in range(self.config.max_steps):
+            llm_result = await self._call_llm_with_tools(messages, tools_schema)
+
+            content = llm_result.get("content", "")
+            tool_calls = llm_result.get("tool_calls", [])
+
+            # 如果没有tool_calls，循环结束
+            if not tool_calls:
+                break
+
+            # 追加assistant消息（含tool_calls）
+            assistant_msg: dict[str, Any] = {"role": "assistant", "content": content}
+            # 保留原始tool_calls格式供LLM理解上下文
+            assistant_msg["tool_calls"] = tool_calls
+            messages.append(assistant_msg)
+
+            # 执行每个tool_call
+            for tc in tool_calls:
+                tool_name = tc.get("name", tc.get("function", {}).get("name", ""))
+                # 兼容OpenAI格式：arguments可能在function下
+                arguments = tc.get("arguments", tc.get("function", {}).get("arguments", {}))
+                if isinstance(arguments, str):
+                    try:
+                        arguments = json.loads(arguments)
+                    except json.JSONDecodeError:
+                        arguments = {}
+
+                tool_result = await self._execute_single_tool(tool_name, arguments)
+                tool_results_all.append({"tool": tool_name, "arguments": arguments, "result": tool_result})
+                messages.append({
+                    "role": "tool",
+                    "content": json.dumps(tool_result, ensure_ascii=False),
+                    "name": tool_name,
+                })
+
+        # Step 8: 解析最终输出
+        # 取最后一条非tool消息的content作为最终输出
+        final_content = ""
+        for msg in reversed(messages):
+            if msg.get("role") in ("assistant", "user") and msg.get("content"):
+                final_content = msg["content"]
+                break
+
+        # 如果最后一轮LLM返回了content，优先使用
+        if llm_result.get("content"):
+            final_content = llm_result["content"]
+
+        parsed_output = self._parse_output(final_content)
+
+        # Step 9: output_schema校验（如果配置了）
+        if self.config.output_schema and isinstance(parsed_output, dict):
+            parsed_output = self._validate_output_schema(parsed_output)
+
+        # Step 10: 构建结果
+        result = self._apply_output_mapping(parsed_output)
+        state_updates = self._build_state_updates(parsed_output)
+
+        metadata: dict[str, Any] = {
+            "agent_type": "declarative_multi_turn",
+            "agent_name": self.name,
+            "steps_used": step + 1,
+            "tool_calls_total": len(tool_results_all),
+            "tool_results": tool_results_all,
+            "model": llm_result.get("model", ""),
+            "provider": llm_result.get("provider", ""),
+            "tokens": llm_result.get("tokens", 0),
+            "response_format": self.config.response_format,
+        }
+
+        return AgentOutput(result=result, metadata=metadata, state_updates=state_updates)
+
+    def _validate_output_schema(self, parsed_output: dict) -> dict:
+        """使用output_schema校验输出，移除不符合schema的字段。
+
+        Args:
+            parsed_output: 解析后的输出dict
+
+        Returns:
+            校验后的输出dict
+        """
+        if not self.config.output_schema:
+            return parsed_output
+
+        allowed_props = self.config.output_schema.get("properties", {})
+        if not allowed_props:
+            return parsed_output
+
+        validated: dict[str, Any] = {}
+        for key in allowed_props:
+            if key in parsed_output:
+                validated[key] = parsed_output[key]
+
+        # 如果校验后为空，保留原始输出
+        if not validated:
+            return parsed_output
+
+        return validated
 
     def _load_prompt(self, params: dict) -> str:
         """加载prompt，优先级：prompt_template > prompt_key > description。"""
@@ -334,6 +498,84 @@ class DeclarativeAgent:
             agent_name=self.name,
             persona=params.get("persona_id", ""),
         )
+
+    async def _call_llm_with_tools(self, messages: list[dict], tools_schema: list[dict] | None = None) -> dict:
+        """调用LLM并附带tools schema，用于多轮tool loop。
+
+        Args:
+            messages: 对话消息列表
+            tools_schema: OpenAI function-calling格式的tools列表
+
+        Returns:
+            包含content, tool_calls, model等字段的dict
+        """
+        from flowforge.core.base_tool import ToolInput
+
+        # 尝试使用注入的llm_client
+        if self._llm_client is not None:
+            tool_params: dict[str, Any] = {
+                "messages": messages,
+                "temperature": self.config.temperature,
+                "max_tokens": self.config.max_tokens,
+                "stream": False,
+            }
+            if self.config.model:
+                tool_params["model"] = self.config.model
+            if tools_schema:
+                tool_params["tools"] = tools_schema
+
+            result = await self._llm_client.execute(ToolInput(params=tool_params))
+            return result.result
+
+        # 使用ModelCapability
+        from flowforge.core.model_capability import ModelCapability
+
+        mc = ModelCapability()
+
+        # 从messages中提取system和user内容
+        system_content = ""
+        user_parts: list[str] = []
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_content = msg.get("content", "")
+            elif msg.get("role") == "user":
+                user_parts.append(msg.get("content", ""))
+
+        prompt = "\n".join(user_parts) if user_parts else ""
+
+        return await mc.chat(
+            prompt=prompt,
+            system=system_content,
+            model=self.config.model or "",
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            agent_name=self.name,
+            tools=tools_schema,
+        )
+
+    async def _execute_single_tool(self, tool_name: str, arguments: dict) -> dict:
+        """执行单个工具调用。
+
+        Args:
+            tool_name: 工具名称
+            arguments: 工具调用参数
+
+        Returns:
+            工具执行结果dict
+        """
+        if self._tool_registry is None:
+            return {"error": f"ToolRegistry not configured, cannot execute tool '{tool_name}'"}
+
+        try:
+            from flowforge.core.base_tool import ToolInput
+
+            result = await self._tool_registry.execute(tool_name, ToolInput(params=arguments))
+            if result.error:
+                return {"error": result.error, "tool": tool_name}
+            return result.result
+        except Exception as e:
+            logger.warning(f"DeclarativeAgent '{self.name}': tool '{tool_name}' execution failed: {e}")
+            return {"error": str(e), "tool": tool_name}
 
     def _parse_output(self, content: str) -> Any:
         """解析LLM输出。
@@ -526,6 +768,11 @@ class DeclarativeAgent:
                     state_updates=fallback_config.get("state_updates", self.config.state_updates),
                     inject_persona=fallback_config.get("inject_persona", self.config.inject_persona),
                     persona_sections=fallback_config.get("persona_sections", self.config.persona_sections),
+                    tools=fallback_config.get("tools", self.config.tools),
+                    max_steps=fallback_config.get("max_steps", self.config.max_steps),
+                    multi_turn=fallback_config.get("multi_turn", self.config.multi_turn),
+                    permissions=fallback_config.get("permissions", self.config.permissions),
+                    output_schema=fallback_config.get("output_schema", self.config.output_schema),
                 )
 
                 fallback_agent = DeclarativeAgent(

@@ -8,5 +8,14 @@
 
 from flowforge.compiler.compiler import WorkflowCompiler
 from flowforge.compiler.ir import IRStep, IRWorkflow, StepType
+from flowforge.compiler.resume_adapter import HumanReviewConfig, ResumeAdapter, ResumeCommand
 
-__all__ = ["WorkflowCompiler", "IRStep", "IRWorkflow", "StepType"]
+__all__ = [
+    "WorkflowCompiler",
+    "IRStep",
+    "IRWorkflow",
+    "StepType",
+    "ResumeAdapter",
+    "ResumeCommand",
+    "HumanReviewConfig",
+]

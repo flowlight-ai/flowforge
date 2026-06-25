@@ -331,12 +331,30 @@ class PluginLifecycleManager:
                 EvaluatorRegistry, SOPRegistry, ContextLayerRegistry,
                 WorkflowStepHandlerRegistry,
             )
-            plugin.register_workflows(WorkflowRegistry())
-            plugin.register_gates(GateRegistry())
-            plugin.register_evaluators(EvaluatorRegistry())
-            plugin.register_sops(SOPRegistry())
-            plugin.register_quality_gates(QualityGateRegistry())
-            plugin.register_context_layers(ContextLayerRegistry())
-            plugin.register_workflow_step_handler(WorkflowStepHandlerRegistry())
+            # Use SDK shared instances to avoid isolation from SDK's lazy-loaded registries
+            try:
+                from flowforge.sdk import FlowForgeSDK as _FFSDK
+                _sdk = _FFSDK._current_instance if hasattr(_FFSDK, '_current_instance') else None
+            except Exception:
+                _sdk = None
+            plugin.register_workflows(_sdk.workflows if _sdk else WorkflowRegistry())
+            plugin.register_gates(_sdk.gates if _sdk else GateRegistry())
+            plugin.register_evaluators(_sdk.evaluators if _sdk else EvaluatorRegistry())
+            plugin.register_sops(_sdk.sops if _sdk else SOPRegistry())
+            plugin.register_quality_gates(_sdk.quality_gates if _sdk else QualityGateRegistry())
+            plugin.register_context_layers(_sdk.context_layers if _sdk else ContextLayerRegistry())
+            plugin.register_workflow_step_handler(_sdk.step_handlers if _sdk else WorkflowStepHandlerRegistry())
         except ImportError:
             pass
+
+        # V2 Persona/Prompt/DeclarativeTool hooks
+        try:
+            from flowforge.sdk import PersonaRegistry, PromptManager
+            plugin.register_personas(PersonaRegistry())
+            plugin.register_prompts(PromptManager())
+        except ImportError:
+            pass
+
+        # Declarative tools use the same tool_registry
+        if self._tool_registry:
+            plugin.register_declarative_tools(self._tool_registry)

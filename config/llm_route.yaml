@@ -1,0 +1,136 @@
+# ==================== LLM 路由配置 ====================
+# 定义多模型级联策略和 Agent 路由映射。
+# FlowForge LLMRouter + RouteResolver 加载此配置。
+
+# ==================== 路由定义 ====================
+routes:
+  # 默认路由：doubao 为主，qwen/deepseek 为备
+  default:
+    primary_provider: doubao
+    primary_model: doubao-seed2
+    fallback_providers:
+      - qwen
+      - deepseek
+    fallback_models:
+      - qwen3.6-plus
+      - deepseek-chat
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+        - moderation_rejected
+      timeout_seconds: 30
+      max_retries: 2
+      retry_delay_seconds: 1.0
+    default_temperature: 0.7
+    default_max_tokens: 4096
+
+  # 创意路由：高温度，适合写作/创意场景
+  creative:
+    primary_provider: doubao
+    primary_model: doubao-seed2
+    fallback_providers:
+      - qwen
+    fallback_models:
+      - qwen3.6-plus
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+      timeout_seconds: 60
+      max_retries: 2
+    default_temperature: 0.9
+    default_max_tokens: 8192
+
+  # 精确路由：低温度，适合事实核查/代码生成
+  precise:
+    primary_provider: doubao
+    primary_model: doubao-seed2
+    fallback_providers:
+      - deepseek
+    fallback_models:
+      - deepseek-chat
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+        - moderation_rejected
+      timeout_seconds: 30
+      max_retries: 3
+    default_temperature: 0.0
+    default_max_tokens: 4096
+
+# ==================== Agent 路由映射 ====================
+# Agent 命名空间 -> 路由名
+agent_routes:
+  # ContentForge Agent
+  contentforge:topic: default
+  contentforge:research: default
+  contentforge:writer: creative
+  contentforge:seo: precise
+  contentforge:fact_check: precise
+  contentforge:publish: default
+
+  # NovelForge Agent
+  novelforge:novel_concept: creative
+  novelforge:outline: creative
+  novelforge:chapter_writing: creative
+  novelforge:chapter_review: default
+  novelforge:continuity_check: precise
+  novelforge:polisher: creative
+  novelforge:full_review: default
+  novelforge:publication_advisor: default
+
+  # DevForge Agent
+  devforge:requirements_analyst: default
+  devforge:architect: creative
+  devforge:coder: precise
+  devforge:code_reviewer: precise
+  devforge:test_generator: precise
+  devforge:deployment: default
+  devforge:security_auditor: precise
+
+# ==================== Agent 模型参数覆盖 ====================
+# Agent 命名空间 -> 模型参数覆盖
+agent_model_params:
+  contentforge:writer:
+    temperature: 0.9
+    max_tokens: 8192
+  contentforge:seo:
+    temperature: 0.3
+    json_mode: true
+  contentforge:fact_check:
+    temperature: 0.0
+    json_mode: true
+  contentforge:publish:
+    temperature: 0.3
+  novelforge:chapter_writing:
+    temperature: 0.9
+    max_tokens: 8192
+  novelforge:continuity_check:
+    temperature: 0.0
+    json_mode: true
+  devforge:coder:
+    temperature: 0.3
+    max_tokens: 8192
+  devforge:security_auditor:
+    temperature: 0.0
+  devforge:code_reviewer:
+    temperature: 0.3
+
+# ==================== 故障转移条件定义 ====================
+failover_conditions:
+  rate_limited:
+    http_status: 429
+    action: fallback
+    cooldown_seconds: 60
+  timeout:
+    threshold_seconds: 30
+    action: fallback
+  moderation_rejected:
+    action: reject  # 不回退，直接拒绝
+    notify: true
+  error:
+    max_consecutive: 3
+    action: mark_unhealthy
+    recovery_check_seconds: 300

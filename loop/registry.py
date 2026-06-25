@@ -38,5 +38,14 @@ class LoopRegistry:
     def get(self, name: str) -> LoopTemplateConfig | None:
         return self._templates.get(name)
 
+    def register(self, name: str, config: dict) -> None:
+        """Register a loop template from a config dict.
+
+        This enables compatibility with _scan_yaml_dir and the
+        auto-discover plugin mechanism.
+        """
+        template = LoopTemplateConfig(**config)
+        self._templates[template.name] = template
+
     def list_templates(self) -> list[str]:
         return list(self._templates.keys())

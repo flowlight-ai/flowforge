@@ -9,10 +9,13 @@
       on_anomaly: "reflect"   # reflect | retry | abort | escalate
 
 与 workflow_compiler.OnErrorStrategy 对齐，并扩展 anomaly 处理策略。
+
+包含 RetryPolicy 和 CheckpointPolicy 数据类（从 DevForge 迁移）。
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Optional
 
@@ -40,6 +43,39 @@ class OnAnomalyStrategy(str, Enum):
     RETRY = "retry"
     ABORT = "abort"
     ESCALATE = "escalate"
+
+
+# ---------------------------------------------------------------------------
+# RetryPolicy & CheckpointPolicy (dataclass, from DevForge)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RetryPolicy:
+    """重试策略。"""
+    max_attempts: int = 3
+    backoff_seconds: float = 2.0
+    backoff_multiplier: float = 2.0
+    max_backoff_seconds: float = 60.0
+    retryable_errors: list[str] = field(default_factory=lambda: [
+        "TimeoutError", "ConnectionError", "RateLimitError",
+    ])
+
+
+@dataclass
+class CheckpointPolicy:
+    """检查点策略。"""
+    enabled: bool = True
+    backend: str = "sqlite"  # sqlite | redis | file
+    path: str = "checkpoints/"
+    every_n_steps: int = 1
+    retention_max: int = 100
+    auto_compact_after: int = 50  # 超过N步自动压缩状态
+
+
+# ---------------------------------------------------------------------------
+# ExecutionPolicy (Pydantic model)
+# ---------------------------------------------------------------------------
 
 
 class ExecutionPolicy(BaseModel):
