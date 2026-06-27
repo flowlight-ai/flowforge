@@ -23,8 +23,8 @@ export default function TaskListPage() {
       if (typeFilter) params.set("workflow_type", typeFilter);
       const r = await fetch(`/api/v1/tasks?${params}`);
       const data = await r.json();
-      setTasks(data.items || data.tasks || []);
-      setTotal(data.total || 0);
+      setTasks(data?.data?.items ?? data.items ?? data.tasks ?? []);
+      setTotal(data?.data?.total ?? data.total ?? 0);
     } catch (e) {
       console.error(e);
     }

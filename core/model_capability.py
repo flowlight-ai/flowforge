@@ -125,6 +125,7 @@ class ModelCapability:
         max_tokens: int = 4000,
         task_id: str = "sdk",
         tools: Optional[list] = None,
+        prefer_api: bool = False,
     ) -> Dict[str, Any]:
         """Send a chat message and return the response dict.
 
@@ -184,6 +185,8 @@ class ModelCapability:
             params["model"] = selected_model
         if tools:
             params["tools"] = tools
+        if prefer_api:
+            params["prefer_api"] = True
 
         start_time = time.monotonic()
         try:
@@ -278,6 +281,69 @@ class ModelCapability:
             if selected_model:
                 provider.report_failure(selected_model, str(e))
             raise
+
+    # ── JSON-mode chat ──────────────────────────────────────────────
+
+    async def chat_json(
+        self,
+        prompt: str,
+        *,
+        system: str = "",
+        persona: str = "",
+        agent_name: str = "",
+        model: str = "",
+        temperature: float = 0.3,
+        max_tokens: int = 4096,
+        task_id: str = "sdk",
+    ) -> Dict[str, Any]:
+        """Send a chat message and parse the response as JSON.
+
+        Convenience wrapper around :meth:`chat` that strips markdown
+        code fences and parses the content as a JSON object. Useful for
+        structured-output prompts (e.g. multi-actor debates, predictions).
+
+        Args:
+            prompt: The user message content (should instruct JSON output).
+            system: Optional system prompt.
+            persona: Persona identifier for model routing.
+            agent_name: Agent name for model routing.
+            model: Specific model to use (provider/model_id format).
+            temperature: Sampling temperature (defaults to 0.3 for determinism).
+            max_tokens: Maximum tokens to generate.
+            task_id: Task identifier for event tracking.
+
+        Returns:
+            Parsed JSON object as a dict.
+
+        Raises:
+            ValueError: If the response cannot be parsed as JSON.
+        """
+        import json
+        import re
+
+        result = await self.chat(
+            prompt=prompt,
+            system=system,
+            persona=persona,
+            agent_name=agent_name,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            task_id=task_id,
+        )
+        content = result.get("content", "") if isinstance(result, dict) else str(result)
+        if not content:
+            raise ValueError("LLM 返回空内容，无法解析 JSON")
+
+        # 去除 markdown 代码块包装
+        cleaned = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.MULTILINE)
+        cleaned = re.sub(r"\s*```$", "", cleaned.strip())
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"LLM 输出 JSON 解析失败: {e}. 原始内容前 500 字符: {content[:500]}"
+            ) from e
 
     # ── Model discovery & health ────────────────────────────────────
 

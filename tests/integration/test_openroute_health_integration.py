@@ -18,6 +18,8 @@ from typing import Dict, Any
 import pytest
 import httpx
 
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
+
 # ---------------------------------------------------------------------------
 # 常量
 # ---------------------------------------------------------------------------
@@ -135,6 +137,12 @@ def http_client():
     return _create
 
 
+@pytest.fixture
+def t7_reviewer():
+    """T7 LLM内容审核器"""
+    return T7Reviewer()
+
+
 # ---------------------------------------------------------------------------
 # 测试用例
 # ---------------------------------------------------------------------------
@@ -176,7 +184,7 @@ async def test_openroute_service_reachable(metrics: IntegrationMetricsCollector)
 @pytest.mark.integration
 @pytest.mark.skipif(not openroute_available, reason=skip_reason)
 @pytest.mark.asyncio
-async def test_openroute_auth_with_valid_key(metrics: IntegrationMetricsCollector):
+async def test_openroute_auth_with_valid_key(metrics: IntegrationMetricsCollector, t7_reviewer):
     """测试2: 验证有效 API Key 认证成功
 
     - POST /v1/chat/completions with Bearer token from models.yaml
@@ -218,6 +226,11 @@ async def test_openroute_auth_with_valid_key(metrics: IntegrationMetricsCollecto
     # 记录 LLM 指标
     tokens = data.get("usage", {}).get("total_tokens", 0)
     metrics.record_llm_call(tokens=tokens, success=True, latency_ms=latency_ms)
+
+    # T7: LLM内容审核
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="请用一句话介绍量子计算的基本原理", content_type="openroute认证回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
 
 
 @pytest.mark.integration
@@ -333,7 +346,7 @@ async def test_model_service_health_check_with_correct_auth(metrics: Integration
 @pytest.mark.integration
 @pytest.mark.skipif(not openroute_available, reason=skip_reason)
 @pytest.mark.asyncio
-async def test_llm_client_openroute_direct_call(metrics: IntegrationMetricsCollector):
+async def test_llm_client_openroute_direct_call(metrics: IntegrationMetricsCollector, t7_reviewer):
     """测试5: 验证 LLMClient 可以直接调用 openroute
 
     - 创建 LLMClient（使用 models.yaml 配置）
@@ -415,11 +428,16 @@ async def test_llm_client_openroute_direct_call(metrics: IntegrationMetricsColle
     tokens = result.result.get("tokens", 0)
     metrics.record_llm_call(tokens=tokens, success=True, latency_ms=latency_ms)
 
+    # T7: LLM内容审核
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="请详细解释什么是大语言模型（LLM），以及它为什么能理解人类语言", content_type="LLM解释回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
 
 @pytest.mark.integration
 @pytest.mark.skipif(not openroute_available, reason=skip_reason)
 @pytest.mark.asyncio
-async def test_llm_client_fallback_from_openroute_to_openrouter(metrics: IntegrationMetricsCollector):
+async def test_llm_client_fallback_from_openroute_to_openrouter(metrics: IntegrationMetricsCollector, t7_reviewer):
     """测试6: 验证 LLMClient 从 openroute 回退到 openrouter
 
     - 调用一个可能在 openroute 上不可用的模型
@@ -469,11 +487,16 @@ async def test_llm_client_fallback_from_openroute_to_openrouter(metrics: Integra
     tokens = result.result.get("tokens", 0)
     metrics.record_llm_call(tokens=tokens, success=True, latency_ms=latency_ms)
 
+    # T7: LLM内容审核
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="请用一句话描述人工智能在医疗领域的应用前景", content_type="回退链回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
 
 @pytest.mark.integration
 @pytest.mark.skipif(not openroute_available, reason=skip_reason)
 @pytest.mark.asyncio
-async def test_xscene_header_proxy_model(metrics: IntegrationMetricsCollector):
+async def test_xscene_header_proxy_model(metrics: IntegrationMetricsCollector, t7_reviewer):
     """测试7: 验证 proxy 模型的 X-Scene 头设置为 "auto"
 
     - 调用 openroute/proxy 模型
@@ -531,6 +554,11 @@ async def test_xscene_header_proxy_model(metrics: IntegrationMetricsCollector):
     tokens = result.result.get("tokens", 0)
     metrics.record_llm_call(tokens=tokens, success=True, latency_ms=latency_ms)
 
+    # T7: LLM内容审核
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="请用一句话说明什么是区块链技术", content_type="proxy模型回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
     # 额外验证：直接发送 HTTP 请求，确认 X-Scene=auto 时能正常工作
     headers_direct = {
         "Authorization": f"Bearer {OPENROUTE_API_KEY}",
@@ -561,7 +589,7 @@ async def test_xscene_header_proxy_model(metrics: IntegrationMetricsCollector):
 @pytest.mark.integration
 @pytest.mark.skipif(not openroute_available, reason=skip_reason)
 @pytest.mark.asyncio
-async def test_reflexion_multi_llm_cross_review(metrics: IntegrationMetricsCollector):
+async def test_reflexion_multi_llm_cross_review(metrics: IntegrationMetricsCollector, t7_reviewer):
     """测试8: 验证 Reflexion 多模型交叉评审流程
 
     - 创建 reflexion 任务：actor 用一个模型，evaluator 用另一个，reflector 用另一个
@@ -645,6 +673,11 @@ async def test_reflexion_multi_llm_cross_review(metrics: IntegrationMetricsColle
     actor_tokens = actor_result.result.get("tokens", 0) if actor_result.result else 0
     metrics.record_llm_call(tokens=actor_tokens, success=True, latency_ms=actor_latency)
 
+    # T7: LLM内容审核 — Actor生成内容
+    if actor_content.strip():
+        t7_result = await t7_reviewer.review(content=actor_content, context="请写一段关于2025年AI Agent技术对软件工程影响的分析", content_type="Actor生成内容")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
     # Step 2: Evaluator — 使用不同模型评审 actor 的输出
     EVAL_MIN_LENGTH = 5
     eval_result, eval_content, eval_latency = await _call_with_retry(
@@ -676,6 +709,11 @@ async def test_reflexion_multi_llm_cross_review(metrics: IntegrationMetricsColle
 
     eval_tokens = eval_result.result.get("tokens", 0) if eval_result.result else 0
     metrics.record_llm_call(tokens=eval_tokens, success=True, latency_ms=eval_latency)
+
+    # T7: LLM内容审核 — Evaluator评审内容
+    if eval_content.strip():
+        t7_result = await t7_reviewer.review(content=eval_content, context="请评审以下内容的准确性和深度，指出至少一个改进点", content_type="Evaluator评审内容")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
 
     # Step 3: Reflector — 使用另一个模型根据评审意见改进
     # 使用 proxy 模型避免特定模型超时问题，且 proxy 内置 round-robin 可减少缓存命中
@@ -725,6 +763,11 @@ async def test_reflexion_multi_llm_cross_review(metrics: IntegrationMetricsColle
 
     reflect_tokens = reflect_result.result.get("tokens", 0) if reflect_result.result else 0
     metrics.record_llm_call(tokens=reflect_tokens, success=True, latency_ms=reflect_latency)
+
+    # T7: LLM内容审核 — Reflector改进内容
+    if reflect_content.strip():
+        t7_result = await t7_reviewer.review(content=reflect_content, context="请根据评审意见改进原始内容，输出改进后的完整版本", content_type="Reflector改进内容")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
 
     # 验证三个步骤使用了不同的模型（至少 provider/model_id 不同）
     actor_model = f"{actor_result.result.get('provider')}/{actor_result.result.get('model')}" if actor_result.result else ""

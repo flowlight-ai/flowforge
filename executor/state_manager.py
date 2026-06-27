@@ -66,6 +66,7 @@ class StateManager:
                 continue
             if interaction_mode and state.get("interaction_mode") != interaction_mode:
                 continue
+            state["task_id"] = task_id
             state["updated_at"] = updated_at
             items.append(state)
         total = len(items)

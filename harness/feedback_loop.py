@@ -187,8 +187,32 @@ class FeedbackLoop:
         task_id = getattr(ctx, 'task_id', 'unknown')
         persona = getattr(ctx, 'persona', 'unknown')
 
-        # Get content to evaluate
-        content = result.get("content", "")
+        # Get content to evaluate — 与 MultiJudgeVerifier 一致的字段优先级
+        content = ""
+        if isinstance(result, dict):
+            for key in ("content", "edited_draft", "response", "output", "draft", "final_answer"):
+                val = result.get(key, "")
+                if isinstance(val, str) and val.strip():
+                    content = val
+                    break
+                elif isinstance(val, dict):
+                    # 嵌套dict：递归提取content/output/result/response字段
+                    for sub_key in ("content", "output", "result", "response", "final_answer"):
+                        sub_val = val.get(sub_key, "")
+                        if isinstance(sub_val, str) and sub_val.strip():
+                            content = sub_val
+                            break
+                        elif isinstance(sub_val, dict):
+                            # 二级嵌套
+                            for sub2_key in ("content", "output", "result"):
+                                sub2_val = sub_val.get(sub2_key, "")
+                                if isinstance(sub2_val, str) and sub2_val.strip():
+                                    content = sub2_val
+                                    break
+                            if content:
+                                break
+                    if content:
+                        break
         content_len = len(content) if isinstance(content, str) else 0
         logger.info(f"[FeedbackLoop] ▶ EVAL START | task={task_id} persona={persona} "
                      f"mode={mode_str} content_len={content_len}")

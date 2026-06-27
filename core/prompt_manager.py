@@ -69,12 +69,21 @@ class PromptManager:
                 except Exception as e:
                     logger.warning(f"Failed to load prompts from {filepath}: {e}")
 
-    def get(self, key: str, **kwargs) -> str:
+    def get(self, key: str, fallback: str = "", **kwargs) -> str:
         template = self._prompts.get(key, "")
         if not template:
             # Try to load from project-specific prompts on miss
             template = self._try_load_project_prompt(key)
         if not template:
+            # YAML 未命中时使用 fallback 模板（支持 {var} 占位符渲染）
+            if fallback:
+                try:
+                    return fallback.format(**kwargs)
+                except (KeyError, ValueError, IndexError) as e:
+                    logger.warning(f"Prompt '{key}' fallback format error: {e}")
+                    for k, v in kwargs.items():
+                        fallback = fallback.replace(f"{{{k}}}", str(v))
+                    return fallback
             logger.warning(f"Prompt key '{key}' not found")
             return ""
         if kwargs:
@@ -116,5 +125,13 @@ class PromptManager:
             self._load_from_dir(prompts_dir)
 
 
-def get_prompt(key: str, **kwargs) -> str:
-    return PromptManager().get(key, **kwargs)
+def get_prompt(key: str, fallback: str = "", **kwargs) -> str:
+    """加载提示词模板并渲染.
+
+    Args:
+        key: 提示词键名（对应 prompts.yaml 中的键）
+        fallback: YAML 未命中时的兜底模板（支持 {var} 占位符渲染）。
+                  兼容 rewoo/plan_execute 等模式的 `get_prompt(key, "fallback...", **vars)` 调用。
+        **kwargs: 模板变量
+    """
+    return PromptManager().get(key, fallback=fallback, **kwargs)

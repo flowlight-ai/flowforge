@@ -10,7 +10,7 @@ const shellConfig: ShellConfig = {
   brandColor: "#ff5c5c",
   brandSubtitle: "AI Agent OS",
   version: "v0.1.0",
-  helmPaths: ["/helm"],
+  helmPaths: ["/solo"],
   navSections: [
     {
       label: "主页",
@@ -25,7 +25,7 @@ const shellConfig: ShellConfig = {
     },
     {
       label: "Helm",
-      items: [{ href: "/helm", label: "Helm Studio", icon: "⚡" }],
+      items: [{ href: "/solo", label: "Helm Studio", icon: "⚡" }],
     },
     {
       label: "管理",

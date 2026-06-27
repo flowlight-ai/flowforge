@@ -8,10 +8,22 @@ Validates the complete article creation pipeline:
   5. Article Evaluation + Content Audit
 
 Uses openroute provider with real LLM calls.
+
+铁律遵守:
+    T1: 禁止Mock LLM — 所有LLM调用通过真实openroute
+    T2: 不使用假数据 — 使用真实业务场景数据
+    T3: 不跳过验证 — 每个测试有具体断言
+    T7: LLM内容必须经LLM审核 — 生成文章经T7Reviewer审核通过才算PASS
 """
 import urllib.request, json, time, sys, websocket
+from pathlib import Path
 
-BASE = "http://127.0.0.1:8002"
+# 导入T7审核器（标准框架）
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
+
+BASE = "http://127.0.0.1:8000"  # FlowForge后端端口
+_t7 = T7Reviewer()  # T7审核器单例
 
 def create_task(task, persona="education", model="openroute/DeepSeek-V4-Pro"):
     data = json.dumps({"task": task, "persona": persona, "mode": "helm", "model": model}).encode()
@@ -150,10 +162,31 @@ total_tokens = sum(e.get("payload", {}).get("total_tokens", 0) for e in events i
 print(f"LLM calls: {llm_calls}")
 print(f"Total tokens: {total_tokens}")
 
-# Final verdict
+# Final verdict + T7 审核
 if final and final.get("status") == "completed":
+    # T7审核：对LLM生成的文章内容进行LLM二次审核
+    article_content = final.get("output_data", {}).get("response", "") or final.get("summary", "")
+    t7_passed = True
+    if article_content and len(article_content.strip()) >= 50:
+        print(f"\n--- T7 LLM 内容审核 ---")
+        t7_result = _t7.review_sync(
+            content=article_content,
+            context="写一篇关于人工智能在教育领域应用的分析文章",
+            content_type="教育AI分析文章"
+        )
+        t7_passed = t7_result["passed"]
+        if t7_passed:
+            print(f"  [T7] 审核通过: verdict={t7_result['verdict']}")
+        else:
+            print(f"  [T7] 审核未通过: {t7_result.get('reason', '')[:150]}")
+    else:
+        print(f"  [T7] 跳过: 文章内容为空或过短")
+
     print("\n" + "=" * 70)
-    print("RESULT: PASS - Article creation workflow completed successfully!")
+    if t7_passed:
+        print("RESULT: PASS - Article creation workflow completed + T7 audit passed!")
+    else:
+        print("RESULT: FAIL - T7 audit rejected the article content")
     print("=" * 70)
 elif final and final.get("status") in ("failed", "error"):
     print("\n" + "=" * 70)

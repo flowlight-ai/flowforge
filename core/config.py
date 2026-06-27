@@ -3,7 +3,7 @@ import copy
 import logging
 import yaml
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from pydantic_settings import BaseSettings
 
 
@@ -102,8 +102,12 @@ class SystemConfig(BaseSettings):
     scheduler_enabled: bool = True
     scheduler_timezone: str = "Asia/Shanghai"
     metrics_enabled: bool = True
-    mcp_server_enabled: bool = False
+    mcp_server_enabled: bool = True
     mcp_server_port: int = 9000
+    # External MCP server connection configs. Each entry is a dict with
+    # keys: name, transport, command, args, url, env, enabled.
+    # Populated from config/default.yaml (mcp.servers) at startup.
+    mcp_servers: List[Dict[str, Any]] = []
 
     class Config:
         env_file = ".env"

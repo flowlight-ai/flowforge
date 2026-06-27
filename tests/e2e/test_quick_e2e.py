@@ -1,13 +1,21 @@
 """Quick E2E test: real LLM call via openroute.
 
 铁律遵守:
+    T1: 禁止Mock LLM — 所有LLM调用通过真实openroute
     T2: 不使用假数据 — 使用真实业务场景数据
     T3: 不跳过验证 — 每个测试有具体断言
     T6: 采集指标 — 使用MetricsCollector
+    T7: LLM内容必须经LLM审核 — 生成内容经T7Reviewer审核通过才算PASS
 """
 import urllib.request, json, time, sys, os
+from pathlib import Path
 
-BASE = "http://127.0.0.1:8002"
+# 导入T7审核器（标准框架）
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
+
+BASE = "http://127.0.0.1:8000"  # FlowForge后端端口
+_t7 = T7Reviewer()  # T7审核器单例
 
 # ── MetricsCollector (T6) ──
 class MetricsCollector:
@@ -78,6 +86,22 @@ if r1:
     if r1.get("error"):
         print(f"Error: {r1['error'][:300]}")
     passed = r1["status"] == "completed"
+    # T7审核：对LLM生成内容进行LLM二次审核
+    if passed:
+        content = r1.get("summary", "") or r1.get("output_data", {}).get("response", "") or r1.get("output", "")
+        if content and len(content.strip()) >= 10:
+            t7_result = _t7.review_sync(
+                content=content,
+                context="分析2026年人工智能如何重塑教育模式",
+                content_type="科技评论"
+            )
+            if not t7_result["passed"]:
+                passed = False
+                print(f"  [T7] 审核未通过: {t7_result.get('reason', '')[:100]}")
+            else:
+                print(f"  [T7] 审核通过: verdict={t7_result['verdict']}")
+        else:
+            print(f"  [T7] 跳过: 内容为空或过短")
     results.append(("科技评论对话", passed))
     metrics.record("科技评论对话", "PASS" if passed else "FAIL", t1_duration)
     print("PASS" if passed else f"FAIL: expected completed, got {r1['status']}")
@@ -108,6 +132,22 @@ try:
         if r2.get("error"):
             print(f"Error: {r2['error'][:300]}")
         passed = r2["status"] == "completed"
+        # T7审核：对LLM生成内容进行LLM二次审核
+        if passed:
+            content = r2.get("summary", "") or r2.get("output_data", {}).get("response", "") or r2.get("output", "")
+            if content and len(content.strip()) >= 10:
+                t7_result = _t7.review_sync(
+                    content=content,
+                    context="分析2026年AI在医疗健康领域的三大应用趋势",
+                    content_type="医疗AI分析"
+                )
+                if not t7_result["passed"]:
+                    passed = False
+                    print(f"  [T7] 审核未通过: {t7_result.get('reason', '')[:100]}")
+                else:
+                    print(f"  [T7] 审核通过: verdict={t7_result['verdict']}")
+            else:
+                print(f"  [T7] 跳过: 内容为空或过短")
         results.append(("OpenRouter free", passed))
         metrics.record("OpenRouter free", "PASS" if passed else "FAIL", t2_duration)
         print("PASS" if passed else f"FAIL: expected completed, got {r2['status']}")

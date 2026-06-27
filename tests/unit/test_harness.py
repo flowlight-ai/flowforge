@@ -424,11 +424,11 @@ class TestFeedbackLoopGateLogic:
 
     @pytest.mark.asyncio
     async def test_empty_content_auto_pass(self, ctx):
-        """Empty content auto-passes (too short to evaluate)."""
+        """Empty content auto-fails (too short to evaluate)."""
         loop = FeedbackLoop(config={"evaluation_mode": EVAL_MODE_LIGHTWEIGHT})
         result = {"content": "", "status": "completed"}
         result = await loop.evaluate(result, ctx)
-        assert result["_feedback"]["gate"] == GATE_PASS
+        assert result["_feedback"]["gate"] == GATE_FAIL
         assert result["_feedback"]["reason"] == "output_too_short_for_evaluation"
 
     @pytest.mark.asyncio

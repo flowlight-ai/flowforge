@@ -32,7 +32,8 @@ export default function ReviewPage() {
     try {
       const r = await fetch(`/api/v1/tasks/${taskId}`);
       if (!r.ok) throw new Error(await r.text());
-      setTask(await r.json());
+      const resp = await r.json();
+      setTask(resp?.data ?? resp);
     } catch (e: any) {
       setError(e.message);
     }
@@ -44,10 +45,12 @@ export default function ReviewPage() {
       `正在提交 ${verdict === "approve" ? "批准" : "驳回"}...`
     );
     try {
-      const r = await fetch(
-        `/api/v1/tasks/${taskId}/review?verdict=${verdict}&feedback=${verdict === "approve" ? "审核通过" : "需要修改"}`,
-        { method: "POST" }
-      );
+      const feedback = verdict === "approve" ? "审核通过" : "需要修改";
+      const r = await fetch(`/api/v1/tasks/${taskId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verdict, feedback }),
+      });
       const data = await r.json();
       if (r.ok) {
         setActionMsg(

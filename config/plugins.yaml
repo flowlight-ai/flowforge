@@ -264,3 +264,25 @@ plugins:
         source_lang: {type: string, default: auto, description: "源语言代码"}
         target_lang: {type: string, default: en, description: "目标语言代码"}
         context: {type: string, default: ecommerce, description: "翻译上下文"}
+
+# ── MCP Servers (external tool providers) ──────────────────────────
+# Uncomment and configure to connect external MCP servers.
+# External server tools are auto-registered with prefix: mcp.{name}.{tool}
+# and become available through the FlowForge ToolRegistry.
+#
+# NOTE: Runtime MCP server connection is managed by config/default.yaml
+#       (mcp.servers). This template documents the expected schema.
+#
+# mcp_servers:
+#   - name: "filesystem"
+#     transport: "stdio"
+#     command: "npx"
+#     args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]
+#     enabled: false
+#   - name: "github"
+#     transport: "stdio"
+#     command: "npx"
+#     args: ["-y", "@modelcontextprotocol/server-github"]
+#     env:
+#       GITHUB_TOKEN: "${GITHUB_TOKEN}"
+#     enabled: false

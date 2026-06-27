@@ -29,7 +29,18 @@ class LSPTool(BaseTool):
         "properties": {
             "action": {
                 "type": "string",
-                "enum": ["diagnostics", "definitions", "references", "hover", "symbols", "rename"],
+                "enum": [
+                    "diagnostics",
+                    "definitions",
+                    "references",
+                    "hover",
+                    "symbols",
+                    "rename",
+                    "implementations",
+                    "call_hierarchy",
+                    "incoming_calls",
+                    "outgoing_calls",
+                ],
                 "description": "操作类型",
             },
             "path": {"type": "string", "description": "文件路径"},
@@ -41,6 +52,10 @@ class LSPTool(BaseTool):
                 "description": "诊断严重级别过滤",
             },
             "new_name": {"type": "string", "description": "新名称（rename 操作）"},
+            "symbol_name": {
+                "type": "string",
+                "description": "符号名（implementations/incoming_calls 可选，替代 line+column）",
+            },
         },
         "required": ["action", "path"],
     }
@@ -71,6 +86,10 @@ class LSPTool(BaseTool):
             "hover": self._hover,
             "symbols": self._symbols,
             "rename": self._rename,
+            "implementations": self._implementations,
+            "call_hierarchy": self._call_hierarchy,
+            "incoming_calls": self._incoming_calls,
+            "outgoing_calls": self._outgoing_calls,
         }
 
         handler = handlers.get(action)
@@ -647,6 +666,296 @@ class LSPTool(BaseTool):
         return changes
 
     # ------------------------------------------------------------------
+    # implementations — 跳转到接口/抽象方法的实现
+    # ------------------------------------------------------------------
+
+    def _implementations(self, source: str, file_path: Path, params: dict[str, Any]) -> dict[str, Any]:
+        """查找类/方法的实现位置（搜索项目中继承该类的子类及重写的方法）."""
+        line: int = params.get("line", 0)
+        column: int = params.get("column", 0)
+        symbol_name: str = params.get("symbol_name", "")
+
+        if symbol_name:
+            symbol = symbol_name
+        else:
+            symbol = self._get_symbol_at_position(source, line, column)
+
+        if not symbol:
+            return {"success": True, "implementations": [], "message": "No symbol at position"}
+
+        try:
+            tree = ast.parse(source, filename=str(file_path))
+        except SyntaxError:
+            return {"success": True, "implementations": [], "message": "Cannot parse file"}
+
+        # 判断符号是类还是方法：先找类定义，再找包含该符号的方法所属类
+        target_class: Optional[ast.ClassDef] = None
+        method_name: Optional[str] = None
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == symbol:
+                target_class = node
+                break
+
+        if target_class is None:
+            # 符号可能是方法，查找包含它的类
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    for item in node.body:
+                        if (
+                            isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+                            and item.name == symbol
+                        ):
+                            target_class = node
+                            method_name = symbol
+                            break
+                    if target_class is not None:
+                        break
+
+        if target_class is None:
+            return {
+                "success": True,
+                "implementations": [],
+                "message": f"No class or method '{symbol}' found",
+            }
+
+        target_class_name = target_class.name
+
+        # 在项目中搜索继承该类的子类
+        implementations: list[dict[str, Any]] = []
+        project_root = self._find_project_root(file_path)
+        search_files = [file_path]
+        if project_root:
+            search_files = [
+                f for f in project_root.rglob("*.py") if f.stat().st_size <= 512 * 1024
+            ]
+
+        for py_file in search_files:
+            try:
+                file_source = py_file.read_text(encoding="utf-8", errors="replace")
+                file_tree = ast.parse(file_source, filename=str(py_file))
+            except (OSError, SyntaxError):
+                continue
+
+            for node in ast.walk(file_tree):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                if node.name == target_class_name:
+                    continue  # 跳过类自身
+
+                # 检查是否继承目标类
+                is_subclass = False
+                for base in node.bases:
+                    base_name = self._get_name_from_node(base)
+                    if base_name == target_class_name or base_name.endswith(
+                        f".{target_class_name}"
+                    ):
+                        is_subclass = True
+                        break
+
+                if not is_subclass:
+                    continue
+
+                if method_name:
+                    # 查找子类中重写的方法
+                    for item in node.body:
+                        if isinstance(
+                            item, (ast.FunctionDef, ast.AsyncFunctionDef)
+                        ) and item.name == method_name:
+                            implementations.append({
+                                "file": str(py_file),
+                                "line": item.lineno - 1,
+                                "column": item.col_offset,
+                                "name": f"{node.name}.{method_name}",
+                            })
+                            break
+                else:
+                    implementations.append({
+                        "file": str(py_file),
+                        "line": node.lineno - 1,
+                        "column": node.col_offset,
+                        "name": node.name,
+                    })
+
+                if len(implementations) >= 50:
+                    break
+            if len(implementations) >= 50:
+                break
+
+        return {
+            "success": True,
+            "implementations": implementations,
+            "count": len(implementations),
+        }
+
+    # ------------------------------------------------------------------
+    # call_hierarchy — 准备调用层次
+    # ------------------------------------------------------------------
+
+    def _call_hierarchy(
+        self, source: str, file_path: Path, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """解析指定位置的函数/方法，返回其调用信息（incoming + outgoing）."""
+        line: int = params.get("line", 0)
+        column: int = params.get("column", 0)
+
+        symbol = self._get_symbol_at_position(source, line, column)
+        if not symbol:
+            return {"success": True, "call_hierarchy": None, "message": "No symbol at position"}
+
+        try:
+            tree = ast.parse(source, filename=str(file_path))
+        except SyntaxError:
+            return {"success": True, "call_hierarchy": None, "message": "Cannot parse file"}
+
+        func_node = self._find_function_at_position(tree, line)
+        if func_node is None:
+            return {"success": True, "call_hierarchy": None, "message": "No function at position"}
+
+        # 判断是函数还是方法（方法位于类定义体内）
+        kind = "function"
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                for item in node.body:
+                    if item is func_node:
+                        kind = "method"
+                        break
+
+        incoming = self._find_incoming_calls(symbol, file_path)
+        outgoing = self._find_outgoing_calls(func_node, file_path)
+
+        return {
+            "success": True,
+            "call_hierarchy": {
+                "name": symbol,
+                "kind": kind,
+                "file": str(file_path),
+                "line": func_node.lineno - 1,
+                "incoming": incoming,
+                "outgoing": outgoing,
+            },
+        }
+
+    # ------------------------------------------------------------------
+    # incoming_calls — 查找谁调用了此函数
+    # ------------------------------------------------------------------
+
+    def _incoming_calls(
+        self, source: str, file_path: Path, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """在项目中搜索所有调用指定函数的位置."""
+        line: int = params.get("line", 0)
+        column: int = params.get("column", 0)
+        symbol_name: str = params.get("symbol_name", "")
+
+        if symbol_name:
+            symbol = symbol_name
+        else:
+            symbol = self._get_symbol_at_position(source, line, column)
+
+        if not symbol:
+            return {"success": True, "incoming_calls": [], "message": "No symbol at position"}
+
+        calls = self._find_incoming_calls(symbol, file_path)
+        return {"success": True, "incoming_calls": calls, "count": len(calls)}
+
+    def _find_incoming_calls(
+        self, symbol: str, current_file: Path
+    ) -> list[dict[str, Any]]:
+        """查找项目中所有调用指定函数的位置（共享逻辑）."""
+        calls: list[dict[str, Any]] = []
+        project_root = self._find_project_root(current_file)
+
+        search_files = [current_file]
+        if project_root:
+            search_files = [
+                f for f in project_root.rglob("*.py") if f.stat().st_size <= 512 * 1024
+            ]
+
+        for py_file in search_files:
+            try:
+                file_source = py_file.read_text(encoding="utf-8", errors="replace")
+                file_tree = ast.parse(file_source, filename=str(py_file))
+            except (OSError, SyntaxError):
+                continue
+
+            for node in ast.walk(file_tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                callee_name = self._get_call_name(node.func)
+                if not callee_name:
+                    continue
+                # 匹配直接调用或属性方法调用（如 obj.symbol）
+                if callee_name == symbol or callee_name.endswith(f".{symbol}"):
+                    caller = self._find_enclosing_function(file_tree, node)
+                    calls.append({
+                        "file": str(py_file),
+                        "line": node.lineno - 1,
+                        "column": node.col_offset,
+                        "caller": caller,
+                    })
+                    if len(calls) >= 50:
+                        break
+            if len(calls) >= 50:
+                break
+
+        return calls
+
+    # ------------------------------------------------------------------
+    # outgoing_calls — 查找此函数调用了哪些函数
+    # ------------------------------------------------------------------
+
+    def _outgoing_calls(
+        self, source: str, file_path: Path, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """解析函数体中的 AST Call 节点，提取所有被调用的函数."""
+        line: int = params.get("line", 0)
+        column: int = params.get("column", 0)
+
+        symbol = self._get_symbol_at_position(source, line, column)
+        if not symbol:
+            return {"success": True, "outgoing_calls": [], "message": "No symbol at position"}
+
+        try:
+            tree = ast.parse(source, filename=str(file_path))
+        except SyntaxError:
+            return {"success": True, "outgoing_calls": [], "message": "Cannot parse file"}
+
+        func_node = self._find_function_at_position(tree, line)
+        if func_node is None:
+            return {"success": True, "outgoing_calls": [], "message": "No function at position"}
+
+        calls = self._find_outgoing_calls(func_node, file_path)
+        return {"success": True, "outgoing_calls": calls, "count": len(calls)}
+
+    def _find_outgoing_calls(
+        self,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        file_path: Path,
+    ) -> list[dict[str, Any]]:
+        """查找函数体中所有被调用的函数（共享逻辑）."""
+        calls: list[dict[str, Any]] = []
+        seen: set[str] = set()
+
+        for node in ast.walk(func_node):
+            if not isinstance(node, ast.Call):
+                continue
+            callee_name = self._get_call_name(node.func)
+            if not callee_name or callee_name in seen:
+                continue
+            seen.add(callee_name)
+            calls.append({
+                "file": str(file_path),
+                "line": node.lineno - 1,
+                "column": node.col_offset,
+                "callee": callee_name,
+            })
+            if len(calls) >= 50:
+                break
+
+        return calls
+
+    # ------------------------------------------------------------------
     # 辅助方法
     # ------------------------------------------------------------------
 
@@ -712,3 +1021,49 @@ class LSPTool(BaseTool):
         if isinstance(node, ast.Constant):
             return repr(node.value)
         return ast.unparse(node) if hasattr(ast, "unparse") else "..."
+
+    def _find_function_at_position(
+        self, tree: ast.AST, line: int
+    ) -> Optional[ast.FunctionDef | ast.AsyncFunctionDef]:
+        """查找包含指定行号（0-based）的最内层函数/方法节点."""
+        best: Optional[ast.FunctionDef | ast.AsyncFunctionDef] = None
+        best_start = -1
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            start = node.lineno - 1
+            end = (node.end_lineno or node.lineno) - 1
+            if start <= line <= end and start > best_start:
+                best = node
+                best_start = start
+        return best
+
+    def _get_call_name(self, node: ast.AST) -> str:
+        """从 Call 节点的 func 提取调用名称.
+
+        - 直接调用 foo()  -> "foo"
+        - 属性方法 obj.foo()  -> "obj.foo"
+        """
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            base = self._get_call_name(node.value)
+            return f"{base}.{node.attr}" if base else node.attr
+        return ""
+
+    def _find_enclosing_function(self, tree: ast.AST, target: ast.AST) -> str:
+        """查找包含指定节点的函数/方法名，用于标识 caller."""
+        target_line = getattr(target, "lineno", 0)
+        if not target_line:
+            return "<module>"
+        best_name = "<module>"
+        best_start = 0
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            start = node.lineno
+            end = node.end_lineno or node.lineno
+            if start <= target_line <= end and start > best_start:
+                best_name = node.name
+                best_start = start
+        return best_name

@@ -19,6 +19,7 @@ from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.secret_store import get_secret_store
 from flowforge.core.tracing import get_logger, get_trace_id
 from flowforge.core import metrics
+from flowforge.core.circuit_breaker import get_circuit_breaker
 from flowforge.llm.call_event import LLMCallEvent, get_call_event_collector
 
 if TYPE_CHECKING:
@@ -60,19 +61,24 @@ PROVIDER_BASE_URLS = {
     "openroute": "http://127.0.0.1:13001/v1",
 }
 
+# 冷却时间设计原则：参考老版本openclaw（从不永久禁用模型），所有冷却均可快速恢复
+# 仅 model_not_found/no_permission 较长（模型确实不存在或无权限），其余快速恢复
 ERROR_COOLDOWNS = {
-    "rate_limit": 300,
-    "no_permission": 3600,
-    "model_not_found": 86400,
-    "no_quota": 18000,
-    "timeout": 120,
-    "server_error": 60,
-    "unknown": 180,
+    "rate_limit": 60,          # 限流：60s后重试（原300s过长）
+    "no_permission": 600,      # 无权限：10分钟后重试（原3600s）
+    "model_not_found": 600,    # 模型不存在：10分钟后重试（原86400s永久禁用）
+    "no_quota": 300,           # 配额不足：5分钟后重试（原18000s=5小时）
+    "timeout": 30,             # 超时：30s后重试（原120s）
+    "server_error": 15,        # 服务器错误：15s后重试（原60s）
+    "unknown": 30,             # 未知错误：30s后重试（原180s）
+    "empty_response": 10,      # 空响应：10s后重试
+    "invalid_response": 10,    # 无效响应：10s后重试
 }
 
-MAX_CANDIDATES = 3
-MAX_FALLBACK_CANDIDATES = 3
-MAX_CALLS_PER_TASK = 50
+# 候选链容量：参考老版本17个候选全部尝试，不截断
+MAX_CANDIDATES = 20
+MAX_FALLBACK_CANDIDATES = 20
+MAX_CALLS_PER_TASK = 200
 
 # WebChat 轮询池：使用 openroute 的 proxy 模型
 # openroute 的 proxy 模型已内置 round-robin 负载均衡和繁忙模型跳过
@@ -81,10 +87,24 @@ WEB_CHAT_ROTATION_POOL = [
     "openroute/proxy",
 ]
 
-DISABLED_MODELS = {
-    # "openroute/Doubao-Seed2.0",   # 豆包验证码问题 — 已修复，重新启用作为写作模型
-    # "openroute/Qwen3.6-Plus",     # 千问已修复，重新启用作为评委
+# 禁用模型列表改为配置驱动（从 models.yaml 的 disabled_models 段读取）
+# 移除硬编码 DISABLED_MODELS（违反铁律5：禁止硬编码）
+DISABLED_MODELS = set()  # 由 _load_disabled_models() 从配置加载
+
+
+# 无效响应检测（参考老版本openclaw的llm_client.py）
+# 这些响应虽然HTTP 200，但内容无效，应触发下一个候选模型
+INVALID_RESPONSES = {
+    "素材不足", "草稿无效", "无法创作", "素材不足。", "无法回答",
+    "（API不可用", "（请求无法处理", "（网页版未返回内容",
+    "（豆包未返回内容", "（网页版输入失败", "（网页版暂时不可用",
+    "（页面崩溃", "（所有模型当前繁忙", "（所有模型当前不可用",
 }
+INVALID_RESPONSE_PREFIXES = ("草稿无效",)
+INVALID_RESPONSE_PATTERNS = (
+    "Hiclaw OpenRoute 内置命令", "hc ping", "hc help", "hc reset",
+    "hc update", "上下文已重置", "页面已刷新", "浏览器页面不可用",
+)
 
 
 def classify_error(error_msg: str) -> str:
@@ -102,6 +122,54 @@ def classify_error(error_msg: str) -> str:
     if any(k in msg for k in ["500", "502", "503", "server error"]):
         return "server_error"
     return "unknown"
+
+
+def is_invalid_response(content: str, agent_name: str = "", min_length: int = 50) -> bool:
+    """检测LLM返回的无效响应（参考老版本openclaw的llm_client.py）.
+
+    虽然HTTP 200，但内容无效的情况：
+    1. 明确的失败标识（素材不足/草稿无效等）
+    2. 系统命令泄露（hc ping/hc reset等）
+    3. 网页代理失败标识（（API不可用/（页面崩溃等）
+    4. 创作类agent响应过短（< min_length字符）
+
+    Args:
+        content: LLM返回的内容
+        agent_name: agent名称（用于判断是否需要长度检查）
+        min_length: 最小长度阈值（创作/润色类agent适用）
+
+    Returns:
+        True表示无效响应，应触发下一个候选模型
+    """
+    if not content or not content.strip():
+        return True
+
+    content_stripped = content.strip()
+
+    # 1. 明确的失败标识
+    if content_stripped in INVALID_RESPONSES:
+        return True
+
+    # 2. 失败前缀
+    if any(content_stripped.startswith(p) for p in INVALID_RESPONSE_PREFIXES):
+        return True
+
+    # 3. 系统命令泄露 / 网页代理失败
+    if any(pattern in content_stripped[:200] for pattern in INVALID_RESPONSE_PATTERNS):
+        return True
+
+    # 4. 素材不足（前20字符内且整体较短）
+    if "素材不足" in content_stripped[:20] and len(content_stripped) < 50:
+        return True
+
+    # 5. 创作类agent响应过短检查
+    # reviewer/审核类agent不需要长度限制（VERDICT: PASS仅13字符）
+    # 评论/回复等短文本场景可通过 min_length=0 跳过
+    if min_length > 0 and agent_name in ("creator", "polisher", "writer", "editor"):
+        if len(content_stripped) < min_length:
+            return True
+
+    return False
 
 
 def build_cross_fallback_chain(
@@ -189,7 +257,99 @@ class LLMClient(BaseTool):
         self._task_call_counts: Dict[str, int] = {}
         self._task_used_models: Dict[str, set] = {}
         self._webchat_rotation_index: int = 0
+        # P0-1/P0-4: 从 llm_route.yaml 读取 timeout_seconds，禁止硬编码 300s
+        # P0-4: 加载所有路由的超时配置和 agent_routes 映射，支持按 agent_name 查找超时
+        self._route_timeouts, self._agent_routes = self._load_route_timeouts()
+        # 默认超时：使用 default 路由的 timeout_seconds，回退到 30s
+        self._request_timeout = self._route_timeouts.get("default", 30.0)
+        # L3: 从 llm_route.yaml 加载 FailoverPolicy 的 max_retries 和 retry_delay_seconds
+        self._max_retries, self._retry_delay_seconds = self._load_failover_retries()
         self._build_available_models()
+        # 从 models.yaml 的 disabled_models 段加载禁用模型列表（配置驱动，非硬编码）
+        self._disabled_models = self._load_disabled_models()
+
+    def _load_route_timeouts(self) -> tuple:
+        """从 llm_route.yaml 加载所有路由的超时配置和 agent_routes 映射（P0-4 修复）.
+
+        Returns:
+            (route_timeouts, agent_routes) 元组:
+            - route_timeouts: {route_name: timeout_seconds}
+            - agent_routes: {agent_name: route_name}
+        """
+        route_timeouts: Dict[str, float] = {"default": 30.0}
+        agent_routes: Dict[str, str] = {}
+        try:
+            import yaml
+            from pathlib import Path
+            config_path = Path(__file__).parent.parent / "config" / "llm_route.yaml"
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = yaml.safe_load(f) or {}
+                routes = cfg.get("routes", {})
+                for route_name, route_cfg in routes.items():
+                    failover = route_cfg.get("failover_policy", {})
+                    timeout = float(failover.get("timeout_seconds", 30.0))
+                    route_timeouts[route_name] = timeout
+                agent_routes = cfg.get("agent_routes", {}) or {}
+                logger.info(f"[P0-4] 从 llm_route.yaml 加载路由超时: {route_timeouts}")
+                logger.info(f"[P0-4] 从 llm_route.yaml 加载 agent_routes: {len(agent_routes)} 条映射")
+        except Exception as e:
+            logger.warning(f"[P0-4] 加载 llm_route.yaml 路由超时配置失败，使用默认 30s: {e}")
+        return route_timeouts, agent_routes
+
+    def _get_timeout_for_agent(self, agent_name: str = "") -> float:
+        """根据 agent_name 查找对应路由的 timeout（P0-4 修复）.
+
+        查找逻辑：
+        1. 精确匹配: 从 agent_routes 映射查找 agent_name 对应的路由名
+        2. 前缀匹配: 遍历 agent_routes,若 agent_name 以某个 key 开头则匹配(如 multi_judge_*)
+        3. 从 route_timeouts 中获取该路由的 timeout_seconds
+        4. 回退到 default 路由的 timeout，再回退到 30s
+
+        例如: contentforge:writer → creative 路由 → 90s
+        例如: multi_judge_doubao-seed2 → judge 路由 → 180s (前缀匹配 multi_judge_)
+        """
+        if not agent_name:
+            return self._route_timeouts.get("default", 30.0)
+        # 1. 精确匹配
+        route_name = self._agent_routes.get(agent_name, "")
+        # 2. 前缀匹配(如 multi_judge_ 匹配 multi_judge_doubao-seed2)
+        if not route_name:
+            for prefix_key, prefix_route in self._agent_routes.items():
+                if prefix_key.endswith("_") and agent_name.startswith(prefix_key):
+                    route_name = prefix_route
+                    logger.info(f"[P0-4] agent='{agent_name}' 前缀匹配 '{prefix_key}' → route='{route_name}'")
+                    break
+        if route_name and route_name in self._route_timeouts:
+            timeout = self._route_timeouts[route_name]
+            logger.info(f"[P0-4] agent='{agent_name}' → route='{route_name}' → timeout={timeout}s")
+            return timeout
+        return self._route_timeouts.get("default", 30.0)
+
+    def _load_failover_retries(self):
+        """从 llm_route.yaml 加载 FailoverPolicy 的重试配置（L3 修复）.
+
+        读取 default 路由的 failover_policy.max_retries 和 retry_delay_seconds。
+        返回 (max_retries, retry_delay_seconds)，默认 (2, 1.0)。
+        """
+        try:
+            import yaml
+            from pathlib import Path
+            config_path = Path(__file__).parent.parent / "config" / "llm_route.yaml"
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = yaml.safe_load(f) or {}
+                routes = cfg.get("routes", {})
+                default_route = routes.get("default", {})
+                failover = default_route.get("failover_policy", {})
+                max_retries = int(failover.get("max_retries", 2))
+                retry_delay = float(failover.get("retry_delay_seconds", 1.0))
+                logger.info(f"[L3] 从 llm_route.yaml 加载重试配置: max_retries={max_retries}, "
+                            f"retry_delay={retry_delay}s（替代硬编码）")
+                return max_retries, retry_delay
+        except Exception as e:
+            logger.warning(f"[L3] 加载 llm_route.yaml 重试配置失败，使用默认值: {e}")
+        return 2, 1.0
 
     def set_event_bus(self, event_bus):
         self._event_bus = event_bus
@@ -248,6 +408,27 @@ class LLMClient(BaseTool):
                 if m not in existing:
                     existing.append(m)
             self._available_models[provider] = existing
+
+    def _load_disabled_models(self) -> set:
+        """从 models.yaml 的 disabled_models 段加载禁用模型列表（配置驱动）.
+
+        替代原硬编码 DISABLED_MODELS，遵循铁律5（禁止硬编码）。
+        models.yaml 中配置示例：
+            disabled_models:
+              - openroute/some-broken-model
+              - openrouter/another-bad-model
+
+        Returns:
+            禁用模型集合（格式：provider/model_id）
+        """
+        disabled = set()
+        disabled_list = self._models_config.get("disabled_models", [])
+        for item in disabled_list:
+            if isinstance(item, str) and item.strip():
+                disabled.add(item.strip())
+        if disabled:
+            logger.info(f"[配置] 从 models.yaml 加载 {len(disabled)} 个禁用模型: {disabled}")
+        return disabled
 
     def _resolve_api_key(self, provider: str) -> str:
         logger.info(f"[API Key] 正在解析 provider={provider} 的 API Key")
@@ -440,10 +621,23 @@ class LLMClient(BaseTool):
                 rotated.append(m)
         return rotated
 
-    def _filter_disabled_models(self, chain: List[str]) -> List[str]:
-        filtered = [m for m in chain if m not in DISABLED_MODELS]
-        if len(filtered) < len(chain):
-            removed = set(chain) - set(filtered)
+    def _filter_disabled_models(self, models: List[str]) -> List[str]:
+        """过滤已禁用的模型，同时匹配带前缀和不带前缀的名称。
+
+        从 self._disabled_models（配置驱动）加载禁用列表，
+        同时构建带前缀和不带前缀的名称集合，确保都能匹配。
+        """
+        if not self._disabled_models:
+            return models
+        disabled_names = set()
+        for m in self._disabled_models:
+            disabled_names.add(m)
+            # 同时添加不带前缀的版本
+            if "/" in m:
+                disabled_names.add(m.split("/")[-1])
+        filtered = [m for m in models if m not in disabled_names]
+        if len(filtered) < len(models):
+            removed = set(models) - set(filtered)
             logger.info(f"Filtered disabled models: {removed}")
         return filtered
 
@@ -517,10 +711,13 @@ class LLMClient(BaseTool):
         tools = input.params.get("tools")
         skip_cooldown = input.params.get("skip_cooldown", False)
         prefer_api = input.params.get("prefer_api", False)
+        # P0-4: 根据 agent_name 查找对应路由的 timeout（如 contentforge:writer → creative → 60s）
+        agent_timeout = self._get_timeout_for_agent(agent_name or "")
 
         logger.info(f"[LLM请求] agent={agent_name or 'N/A'} persona={persona or 'N/A'} "
                     f"model={model or 'auto'} task_id={task_id[:8] if task_id else 'N/A'} "
-                    f"messages={len(messages)} has_tools={bool(tools)} stream={stream}")
+                    f"messages={len(messages)} has_tools={bool(tools)} stream={stream} "
+                    f"timeout={agent_timeout}s")
 
         # Call counter check
         call_count = self._task_call_counts.get(task_id, 0)
@@ -624,6 +821,12 @@ class LLMClient(BaseTool):
                 logger.info(f"[候选链] #{idx+1} 跳过 {key}: cooldown中，剩余{remaining}秒")
                 continue
 
+            # P0-2: CircuitBreaker 检查 — OPEN 状态直接跳过，防止雪崩
+            breaker = get_circuit_breaker(key, failure_threshold=5, recovery_timeout=60.0)
+            if not breaker.can_execute():
+                logger.info(f"[候选链] #{idx+1} 跳过 {key}: 熔断器OPEN（连续失败≥5次）")
+                continue
+
             # Increment call counter
             self._task_call_counts[task_id] = self._task_call_counts.get(task_id, 0) + 1
             if self._task_call_counts[task_id] > MAX_CALLS_PER_TASK:
@@ -684,119 +887,162 @@ class LLMClient(BaseTool):
 
             logger.info(f"🤖 [LLM调用] agent={agent_name or '?'} → provider={provider} model={model_id}")
 
-            start = time.time()
-            try:
-                used_stream = stream
-                if stream:
-                    content = await self._stream_call(url, headers, payload, task_id, agent_name, provider, model_id)
-                    if not content or (isinstance(content, str) and not content.strip()):
-                        logger.info(f"Stream returned empty for {provider}/{model_id}, falling back to non-stream")
-                        payload_fb = {**payload, "stream": False}
-                        content = await self._normal_call(url, headers, payload_fb)
-                        used_stream = False
-                else:
-                    content = await self._normal_call(url, headers, payload)
+            retry_attempt = 0
+            while True:
+                start = time.time()
+                try:
+                    used_stream = stream
+                    if stream:
+                        content = await self._stream_call(url, headers, payload, task_id, agent_name, provider, model_id, timeout=agent_timeout)
+                        if not content or (isinstance(content, str) and not content.strip()):
+                            logger.info(f"Stream returned empty for {provider}/{model_id}, falling back to non-stream")
+                            payload_fb = {**payload, "stream": False}
+                            content = await self._normal_call(url, headers, payload_fb, timeout=agent_timeout)
+                            used_stream = False
+                    else:
+                        content = await self._normal_call(url, headers, payload, timeout=agent_timeout)
 
-                duration = time.time() - start
-                tokens = 0
-                tool_calls_result = None
-                raw_message = None
-                if not used_stream and isinstance(content, dict):
-                    tokens = content.get("tokens", 0)
-                    content_text = content["content"]
-                    tool_calls_result = content.get("tool_calls")
-                    raw_message = content.get("raw_message")
-                else:
-                    content_text = content
+                    duration = time.time() - start
+                    tokens = 0
+                    tool_calls_result = None
+                    raw_message = None
+                    if not used_stream and isinstance(content, dict):
+                        tokens = content.get("tokens", 0)
+                        content_text = content["content"]
+                        tool_calls_result = content.get("tool_calls")
+                        raw_message = content.get("raw_message")
+                    else:
+                        content_text = content
 
-                # 响应详情日志
-                content_preview = content_text[:100] if isinstance(content_text, str) else str(content_text)[:100]
-                content_len = len(content_text) if isinstance(content_text, str) else len(str(content_text))
-                logger.info(f"[LLM响应] provider={provider} model={model_id} "
-                            f"状态=成功 耗时={duration:.2f}s tokens={tokens}")
-                logger.info(f"[LLM响应] 内容长度={content_len} 预览={content_preview!r}")
+                    # 响应详情日志
+                    content_preview = content_text[:100] if isinstance(content_text, str) else str(content_text)[:100]
+                    content_len = len(content_text) if isinstance(content_text, str) else len(str(content_text))
+                    logger.info(f"[LLM响应] provider={provider} model={model_id} "
+                                f"状态=成功 耗时={duration:.2f}s tokens={tokens}")
+                    logger.info(f"[LLM响应] 内容长度={content_len} 预览={content_preview!r}")
 
-                metrics.record_tool_call("llm", duration)
-                metrics.record_llm_tokens(provider, model_id, tokens)
-                self._update_health(provider, model_id, True)
-                self._record_model_result(f"{provider}/{model_id}", True)
-                self._report_router_health(f"{provider}/{model_id}", True, duration)
+                    metrics.record_tool_call("llm", duration)
+                    metrics.record_llm_tokens(provider, model_id, tokens)
+                    self._update_health(provider, model_id, True)
+                    self._record_model_result(f"{provider}/{model_id}", True)
+                    self._report_router_health(f"{provider}/{model_id}", True, duration)
+                    # P0-2: 记录熔断器成功
+                    breaker.record_success()
 
-                self._record_call_event(
-                    provider=provider, model_id=model_id, status="success",
-                    latency_ms=duration * 1000, input_tokens=0, output_tokens=tokens,
-                    agent_name=agent_name or "", task_id=task_id,
-                )
+                    self._record_call_event(
+                        provider=provider, model_id=model_id, status="success",
+                        latency_ms=duration * 1000, input_tokens=0, output_tokens=tokens,
+                        agent_name=agent_name or "", task_id=task_id,
+                    )
 
-                self._emit_event(task_id, "llm.end", {
-                    "agent_name": agent_name or "unknown",
-                    "full_response": content_text[:500] if isinstance(content_text, str) else str(content_text)[:500],
-                    "tokens": tokens,
-                    "duration_ms": int(duration * 1000),
-                    "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0,
-                })
+                    self._emit_event(task_id, "llm.end", {
+                        "agent_name": agent_name or "unknown",
+                        "full_response": content_text[:500] if isinstance(content_text, str) else str(content_text)[:500],
+                        "tokens": tokens,
+                        "duration_ms": int(duration * 1000),
+                        "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0,
+                    })
 
-                if (not content_text or (isinstance(content_text, str) and not content_text.strip())) \
-                        and not tool_calls_result:
-                    logger.warning(f"LLM returned empty content for {provider}/{model_id}, trying next candidate")
-                    self._update_health(provider, model_id, False, "empty_response")
-                    self._record_model_result(f"{provider}/{model_id}", False, "empty_response")
-                    last_error = Exception("empty_response")
-                    continue
-                result = {
-                    "content": content_text if isinstance(content_text, str) else content_text,
-                    "provider": provider, "model": model_id, "tokens": tokens,
-                }
-                if tool_calls_result:
-                    result["tool_calls"] = tool_calls_result
-                if raw_message:
-                    result["raw_message"] = raw_message
-                used_key = f"{provider}/{model_id}"
-                if task_id not in self._task_used_models:
-                    self._task_used_models[task_id] = set()
-                self._task_used_models[task_id].add(used_key)
-                return ToolOutput(result=result)
-            except Exception as e:
-                duration = time.time() - start
-                error_str = str(e)
-                logger.warning(f"[LLM响应] provider={provider} model={model_id} "
-                               f"状态=失败 耗时={duration:.2f}s 错误={error_str[:300]}")
-                metrics.record_llm_error(provider, type(e).__name__)
-                self._update_health(provider, model_id, False, error_str)
-                self._record_model_result(f"{provider}/{model_id}", False, error_str)
+                    if (not content_text or (isinstance(content_text, str) and not content_text.strip())) \
+                            and not tool_calls_result:
+                        logger.warning(f"LLM returned empty content for {provider}/{model_id}, trying next candidate")
+                        self._update_health(provider, model_id, False, "empty_response")
+                        self._record_model_result(f"{provider}/{model_id}", False, "empty_response")
+                        last_error = Exception("empty_response")
+                        break  # empty_response → next candidate, no retry
 
-                error_type = classify_error(error_str)
-                self._report_router_health(f"{provider}/{model_id}", False, error_type=error_type)
+                    # 无效响应检测（参考老版本openclaw的llm_client.py）
+                    # HTTP 200但内容无效（素材不足/系统命令泄露/响应过短等）
+                    if isinstance(content_text, str) and not tool_calls_result:
+                        # 创作类agent需要长度检查，审核类agent不需要
+                        min_len = 50 if agent_name in ("creator", "polisher", "writer", "editor") else 0
+                        if is_invalid_response(content_text, agent_name or "", min_length=min_len):
+                            preview = content_text[:80].replace("\n", " ")
+                            logger.warning(
+                                f"[无效响应] {provider}/{model_id} 返回无效内容, "
+                                f"agent={agent_name} 长度={len(content_text)} 预览='{preview}'"
+                            )
+                            self._update_health(provider, model_id, False, "invalid_response")
+                            self._record_model_result(f"{provider}/{model_id}", False, "invalid_response")
+                            last_error = Exception(f"invalid_response: {preview}")
+                            break  # invalid_response → next candidate, no retry
 
-                self._record_call_event(
-                    provider=provider, model_id=model_id, status="error",
-                    latency_ms=duration * 1000,
-                    error_message=error_str[:200],
-                    agent_name=agent_name or "", task_id=task_id,
-                )
+                    result = {
+                        "content": content_text if isinstance(content_text, str) else content_text,
+                        "provider": provider, "model": model_id, "tokens": tokens,
+                    }
+                    if tool_calls_result:
+                        result["tool_calls"] = tool_calls_result
+                    if raw_message:
+                        result["raw_message"] = raw_message
+                    used_key = f"{provider}/{model_id}"
+                    if task_id not in self._task_used_models:
+                        self._task_used_models[task_id] = set()
+                    self._task_used_models[task_id].add(used_key)
+                    return ToolOutput(result=result)
+                except Exception as e:
+                    duration = time.time() - start
+                    error_str = str(e)
+                    logger.warning(f"[LLM响应] provider={provider} model={model_id} "
+                                   f"状态=失败 耗时={duration:.2f}s 错误={error_str[:300]}")
+                    metrics.record_llm_error(provider, type(e).__name__)
+                    self._update_health(provider, model_id, False, error_str)
+                    self._record_model_result(f"{provider}/{model_id}", False, error_str)
 
-                # 发射 llm.end 事件（失败时也必须发射，否则指标追踪断裂）
-                self._emit_event(task_id, "llm.end", {
-                    "agent_name": agent_name or "unknown",
-                    "full_response": "",
-                    "tokens": 0,
-                    "duration_ms": int(duration * 1000),
-                    "error": error_str[:200],
-                    "success": False,
-                })
+                    error_type = classify_error(error_str)
+                    self._report_router_health(f"{provider}/{model_id}", False, error_type=error_type)
+                    # P0-2: 记录熔断器失败（连续失败≥5次将触发熔断）
+                    breaker.record_failure()
 
-                if error_type in ("model_not_found", "no_permission"):
-                    logger.info(f"  ❌ 永久性错误({error_type})，跳过 {provider}/{model_id}")
-                else:
-                    logger.info(f"  ⚠ 临时性错误({error_type})，尝试下一个候选")
+                    self._record_call_event(
+                        provider=provider, model_id=model_id, status="error",
+                        latency_ms=duration * 1000,
+                        error_message=error_str[:200],
+                        agent_name=agent_name or "", task_id=task_id,
+                    )
 
-                last_error = e
-                continue
+                    # 发射 llm.end 事件（失败时也必须发射，否则指标追踪断裂）
+                    self._emit_event(task_id, "llm.end", {
+                        "agent_name": agent_name or "unknown",
+                        "full_response": "",
+                        "tokens": 0,
+                        "duration_ms": int(duration * 1000),
+                        "error": error_str[:200],
+                        "success": False,
+                    })
+
+                    if error_type in ("model_not_found", "no_permission"):
+                        logger.info(f"  ❌ 永久性错误({error_type})，跳过 {provider}/{model_id}")
+                        last_error = e
+                        break  # exit while → next candidate
+                    # L7: same-model retry with exponential backoff (L3: config from FailoverPolicy)
+                    if retry_attempt < self._max_retries:
+                        backoff = self._retry_delay_seconds * (2 ** retry_attempt)
+                        logger.info(f"  ⚠ 临时性错误({error_type})，{backoff:.1f}s 后重试 "
+                                    f"{provider}/{model_id} ({retry_attempt+1}/{self._max_retries})")
+                        await asyncio.sleep(backoff)
+                        retry_attempt += 1
+                        continue  # retry same model
+                    logger.info(f"  ⚠ 重试 {self._max_retries} 次后仍失败({error_type})，尝试下一个候选")
+                    # 日志埋点：模型切换记录
+                    logger.warning(
+                        f"[模型切换] {provider}/{model_id} 失败({error_type}), "
+                        f"切换到候选链下一个模型"
+                    )
+                    last_error = e
+                    break  # exit while → next candidate
 
         if not tried_any or (tried_any and last_error is not None):
+            # 断点B修复：构建候选链前同步 model_service 持久化健康状态
+            self._sync_health_from_model_service()
             existing = set(candidates) if candidates else set()
             fallback_chain = build_cross_fallback_chain(self._available_models, self._health_status)
             fallback_chain = [c for c in fallback_chain if c not in existing]
+            # 断点C修复：候选链耗尽时触发 force_update 自动重建
+            if not fallback_chain:
+                logger.info("[断点C] 跨供应商回退链为空，触发自动重建...")
+                rebuilt_chain = await self._trigger_force_update_and_rebuild()
+                fallback_chain = [c for c in rebuilt_chain if c not in existing]
             # prefer_api: 回退链也过滤 WebChat backend 模型
             if prefer_api:
                 fallback_chain = self._filter_webchat_models(fallback_chain)
@@ -848,7 +1094,7 @@ class LLMClient(BaseTool):
                     logger.info(f"🤖 [LLM回退] agent={agent_name or '?'} → {provider}/{model_id}")
                     start = time.time()
                     try:
-                        content = await self._stream_call(url, headers, payload_fb, task_id, agent_name, provider, model_id) if stream else await self._normal_call(url, headers, payload_fb)
+                        content = await self._stream_call(url, headers, payload_fb, task_id, agent_name, provider, model_id, timeout=agent_timeout) if stream else await self._normal_call(url, headers, payload_fb, timeout=agent_timeout)
                         duration = time.time() - start
                         tokens = 0
                         tool_calls_result = None
@@ -906,6 +1152,11 @@ class LLMClient(BaseTool):
                         continue
 
         # 所有候选模型都失败，发射最终错误事件
+        # 日志埋点：所有候选模型耗尽
+        logger.error(
+            f"[全链失败] agent={agent_name or '?'} task={task_id} "
+            f"所有候选模型耗尽, last_error={str(last_error)[:200] if last_error else 'no candidates'}"
+        )
         self._emit_event(task_id, "llm.error", {
             "agent_name": agent_name or "unknown",
             "error": str(last_error)[:300] if last_error else "no candidates",
@@ -917,12 +1168,14 @@ class LLMClient(BaseTool):
         self._task_call_counts.pop(task_id, None)
         self._task_used_models.pop(task_id, None)
 
-    async def _normal_call(self, url: str, headers: dict, payload: dict) -> dict:
+    async def _normal_call(self, url: str, headers: dict, payload: dict, timeout: float = None) -> dict:
         model_id = payload.get("model", "unknown")
-        logger.info(f"[_normal_call] 请求开始 URL={url} model={model_id}")
+        # P0-4: 使用 agent 专用超时（如果传入），否则回退到默认超时
+        req_timeout = timeout if timeout is not None else self._request_timeout
+        logger.info(f"[_normal_call] 请求开始 URL={url} model={model_id} timeout={req_timeout}s")
         start = time.time()
         try:
-            async with httpx.AsyncClient(timeout=300) as client:
+            async with httpx.AsyncClient(timeout=req_timeout) as client:
                 resp = await client.post(url, json=payload, headers=headers)
                 duration = time.time() - start
                 logger.info(f"[_normal_call] 响应返回 URL={url} model={model_id} "
@@ -941,12 +1194,15 @@ class LLMClient(BaseTool):
             raise
 
     async def _stream_call(self, url: str, headers: dict, payload: dict,
-                           task_id: str, agent_name: str, provider: str, model_id: str) -> str:
-        logger.info(f"[_stream_call] 请求开始 URL={url} model={model_id} provider={provider}")
+                           task_id: str, agent_name: str, provider: str, model_id: str,
+                           timeout: float = None) -> str:
+        # P0-4: 使用 agent 专用超时（如果传入），否则回退到默认超时
+        req_timeout = timeout if timeout is not None else self._request_timeout
+        logger.info(f"[_stream_call] 请求开始 URL={url} model={model_id} provider={provider} timeout={req_timeout}s")
         full_content = []
         start = time.time()
         try:
-            async with httpx.AsyncClient(timeout=300) as client:
+            async with httpx.AsyncClient(timeout=req_timeout) as client:
                 async with client.stream("POST", url, json=payload, headers=headers) as resp:
                     duration = time.time() - start
                     logger.info(f"[_stream_call] 响应返回 URL={url} model={model_id} "
@@ -988,6 +1244,8 @@ class LLMClient(BaseTool):
         persona = input.params.get("persona")
         agent_name = input.params.get("agent_name")
         task_id = input.params.get("task_id", "unknown")
+        # P0-4: 根据 agent_name 查找对应路由的 timeout
+        agent_timeout = self._get_timeout_for_agent(agent_name or "")
 
         if model:
             candidates = [model]
@@ -1039,7 +1297,7 @@ class LLMClient(BaseTool):
             start = time.time()
             full_content = []
             try:
-                async with httpx.AsyncClient(timeout=300) as client:
+                async with httpx.AsyncClient(timeout=agent_timeout) as client:
                     async with client.stream("POST", url, json=payload, headers=headers) as resp:
                         resp.raise_for_status()
                         async for line in resp.aiter_lines():
@@ -1125,6 +1383,86 @@ class LLMClient(BaseTool):
                 svc.record_call_failure(model_key, error)
         except Exception:
             pass
+
+    def _sync_health_from_model_service(self):
+        """从 model_service 同步持久化健康状态到内存（断点B修复）.
+
+        LLMClient 的候选链构建只读 self._health_status（纯内存，重启丢失），
+        而 model_service 的 record_call_failure 写入 _health_data（持久化）。
+        此方法在候选链构建前同步两者，确保：
+        1. 持久化的 disabled 状态被尊重（不重试永久禁用的模型）
+        2. 持久化的 suspended 状态被同步（挂起期内不尝试）
+        3. openrouter/:free 的"永远可用"兜底状态被继承
+        """
+        try:
+            from flowforge.tools.llm.model_service import get_model_service
+            svc = get_model_service()
+            if not svc:
+                return
+            for model_key, persistent_state in svc._health_data.items():
+                status = persistent_state.get("status", "unknown")
+                if status == "disabled":
+                    # 永久禁用：设长 cooldown 避免重试
+                    self._health_status[model_key] = self._health_status.get(model_key, {})
+                    self._health_status[model_key]["cooldown_until"] = time.time() + 86400
+                    self._health_status[model_key]["error_count"] = 999
+                elif status == "suspended":
+                    # 挂起：同步 cooldown
+                    suspended_until = persistent_state.get("suspended_until_ts", 0)
+                    if suspended_until > time.time():
+                        self._health_status[model_key] = self._health_status.get(model_key, {})
+                        self._health_status[model_key]["cooldown_until"] = suspended_until
+                elif status == "available":
+                    # 永远可用（openrouter/:free 兜底）：清除 cooldown
+                    self._health_status[model_key] = self._health_status.get(model_key, {})
+                    self._health_status[model_key]["cooldown_until"] = 0
+                    self._health_status[model_key]["error_count"] = 0
+        except Exception as e:
+            logger.debug(f"[断点B] 同步 model_service 健康状态失败: {e}")
+
+    async def _trigger_force_update_and_rebuild(self) -> List[str]:
+        """候选链耗尽时触发 force_update 并重建（断点C修复）.
+
+        当 build_cross_fallback_chain 返回空链时，说明所有模型都在 cooldown。
+        此时触发 model_service 的 force_update_models 并发健康检查，
+        重建后重新同步状态并构建新的候选链。
+
+        Returns:
+            重建后的候选链（可能仍为空，但此时已有兜底保证）
+        """
+        try:
+            from flowforge.tools.llm.model_service import get_model_service
+            svc = get_model_service()
+            if not svc:
+                return []
+            logger.info("[断点C] 候选链耗尽，触发 force_update_models 重建...")
+            try:
+                await asyncio.wait_for(svc.force_update_models(), timeout=30)
+            except asyncio.TimeoutError:
+                logger.warning("[断点C] force_update 超时(30s)，使用当前状态重建")
+            except Exception as e:
+                logger.warning(f"[断点C] force_update 失败: {e}")
+            # 同步重建后的状态
+            self._sync_health_from_model_service()
+            # 重建候选链
+            new_chain = build_cross_fallback_chain(self._available_models, self._health_status)
+            if new_chain:
+                logger.info(f"[断点C] force_update 后重建候选链: {len(new_chain)} 个模型")
+                return new_chain
+            # 最终兜底：确保至少有 openrouter/:free 模型
+            free_models = [
+                f"openrouter/{m}"
+                for m in self._available_models.get("openrouter", [])
+                if ":free" in m
+            ][:3]
+            if free_models:
+                logger.info(f"[断点C] 使用 openrouter/:free 兜底: {free_models}")
+                return free_models
+            logger.error("[断点C] 无任何可用模型（包括兜底），返回空链")
+            return []
+        except Exception as e:
+            logger.error(f"[断点C] 自动重建失败: {e}")
+            return []
 
     def get_health_report(self) -> dict:
         models = []

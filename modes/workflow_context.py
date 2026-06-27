@@ -41,7 +41,8 @@ class ContextHandler:
             tool_output = await ctx.tools.execute("llm", tool_input)
             content = tool_output.result.get("content", "") if tool_output.result else ""
             if tool_output.error and not content:
-                logger.warning(f"_call_llm LLM failed: {tool_output.error[:200]}", task_id=ctx.task_id)
+                logger.error(f"_call_llm LLM failed: {tool_output.error[:200]}", task_id=ctx.task_id)
+                raise RuntimeError(f"LLM 调用失败: {tool_output.error[:200]}")
             return content
         else:
             from flowforge.tools.llm_client import LLMClient
@@ -50,7 +51,8 @@ class ContextHandler:
             tool_output = await llm.execute(tool_input)
             content = tool_output.result.get("content", "") if tool_output.result else ""
             if tool_output.error and not content:
-                logger.warning(f"_call_llm LLM failed (no ctx.tools): {tool_output.error[:200]}", task_id=ctx.task_id)
+                logger.error(f"_call_llm LLM failed (no ctx.tools): {tool_output.error[:200]}", task_id=ctx.task_id)
+                raise RuntimeError(f"LLM 调用失败: {tool_output.error[:200]}")
             return content
 
     async def recall_memories(self, ctx, intent: str) -> list:

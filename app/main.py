@@ -984,6 +984,43 @@ async def lifespan(app):
         app.include_router(mcp_server.get_sse_endpoint())
         logger.info(f"MCP Server enabled, {len(mcp_server.list_tools())} tools exposed")
 
+    # Connect to external MCP servers (MCP Client integration)
+    # Reads mcp.servers from config/default.yaml and connects each enabled
+    # server, registering its tools into the ToolRegistry with prefix
+    # mcp.{server_name}.{tool}.
+    try:
+        _mcp_cfg = ConfigLoader().load_yaml("default.yaml")
+        _mcp_section = _mcp_cfg.get("mcp", {})
+        _mcp_servers = _mcp_section.get("servers", []) or []
+        if _mcp_servers:
+            from flowforge.core.mcp_integration import MCPIntegration
+            _mcp_integration = MCPIntegration(tool_registry=tool_registry)
+            _connected = 0
+            for _server in _mcp_servers:
+                _srv_name = _server.get("name", "unknown")
+                if not _server.get("enabled", False):
+                    logger.debug(f"MCP server '{_srv_name}' disabled, skipping")
+                    continue
+                try:
+                    await _mcp_integration.connect_server(
+                        name=_srv_name,
+                        command=_server.get("command"),
+                        args=_server.get("args"),
+                        url=_server.get("url"),
+                        env=_server.get("env"),
+                    )
+                    _connected += 1
+                except Exception as _e:
+                    logger.warning(f"Failed to connect MCP server '{_srv_name}': {_e}")
+            if _connected:
+                logger.info(f"MCP client integration: {_connected} external server(s) connected")
+            else:
+                logger.info("MCP client integration: no external servers connected (template only)")
+        else:
+            logger.debug("MCP client integration: no external servers configured")
+    except Exception as _e:
+        logger.warning(f"MCP client integration skipped: {_e}")
+
     logger.info(
         f"FlowForge API started - "
         f"{len(mode_registry.list_modes())} modes, "

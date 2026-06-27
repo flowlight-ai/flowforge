@@ -33,6 +33,7 @@ from flowforge.tools.llm.model_service import ModelService
 from flowforge.core.base_tool import ToolInput
 from flowforge.events.event_bus import EventBus
 from flowforge.tests.metrics_collector import TestMetricsCollector
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +157,7 @@ class TestLLMClientIntegration:
     @pytest.mark.skipif(not HAS_ANY_PROVIDER, reason="No LLM provider available (need OPENROUTER_API_KEY or openroute service)")
     @pytest.mark.timeout(60)
     @pytest.mark.asyncio
-    async def test_simple_chat_completion(self, llm_client, metrics_collector, available_model):
+    async def test_simple_chat_completion(self, llm_client, metrics_collector, available_model, t7_reviewer):
         """Send a simple chat request and verify non-empty response.
 
         Discovers an available model via ModelService health check,
@@ -165,9 +166,10 @@ class TestLLMClientIntegration:
         if not available_model:
             pytest.skip("No available model found via health check")
 
+        original_prompt = "请用一句话介绍人工智能的发展趋势。"
         messages = [
             {"role": "system", "content": "You are a helpful assistant. Respond concisely."},
-            {"role": "user", "content": "请用一句话介绍人工智能的发展趋势。"},
+            {"role": "user", "content": original_prompt},
         ]
         tool_input = ToolInput(params={
             "messages": messages,
@@ -188,21 +190,31 @@ class TestLLMClientIntegration:
         assert "provider" in result.result, "Missing 'provider' in result"
         assert "model" in result.result, "Missing 'model' in result"
 
+        # T7: LLM生成内容必须经LLM审核
+        t7_result = await t7_reviewer.review(
+            content=content,
+            context=original_prompt,
+            content_type="LLM简单对话回答",
+        )
+        assert t7_result["verdict"] == "PASS", \
+            f"T7审核未通过: verdict={t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
         # T6: 采集指标
         report = metrics_collector.generate_report()
         assert report["llm"]["total_calls"] >= 1, "No LLM calls recorded"
         print(f"\n[指标] 响应时间: {report['llm']['latency_ms']}ms, "
-              f"模型链: {report['llm']['model_chain']}")
+              f"模型链: {report['llm']['model_chain']}, T7={t7_result['verdict']}")
 
     @pytest.mark.skipif(not HAS_OPENROUTER, reason="Need OPENROUTER_API_KEY for fallback test")
     @pytest.mark.timeout(60)
     @pytest.mark.asyncio
-    async def test_model_chain_fallback(self, llm_client, metrics_collector, available_model):
+    async def test_model_chain_fallback(self, llm_client, metrics_collector, available_model, t7_reviewer):
         """Test model chain fallback: request a non-existent model first,
         then verify automatic fallback to an available model.
         """
+        original_prompt = "请说出1+1等于几。"
         messages = [
-            {"role": "user", "content": "请说出1+1等于几。"},
+            {"role": "user", "content": original_prompt},
         ]
         tool_input = ToolInput(params={
             "messages": messages,
@@ -224,20 +236,30 @@ class TestLLMClientIntegration:
         assert "nonexistent-model-xyz" not in used_model, \
             f"Should have fallen back, but used: {used_model}"
 
+        # T7: LLM生成内容必须经LLM审核
+        t7_result = await t7_reviewer.review(
+            content=content,
+            context=original_prompt,
+            content_type="fallback回答",
+        )
+        assert t7_result["verdict"] == "PASS", \
+            f"T7审核未通过: verdict={t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
         # T6: 采集指标
         report = metrics_collector.generate_report()
         print(f"\n[指标] 回退测试 - 模型链: {report['llm']['model_chain']}, "
-              f"调用次数: {report['llm']['total_calls']}")
+              f"调用次数: {report['llm']['total_calls']}, T7={t7_result['verdict']}")
 
     @pytest.mark.skipif(not HAS_ANY_PROVIDER, reason="No LLM provider available for streaming test")
     @pytest.mark.timeout(60)
     @pytest.mark.asyncio
-    async def test_streaming_completion(self, llm_client, metrics_collector, available_model):
+    async def test_streaming_completion(self, llm_client, metrics_collector, available_model, t7_reviewer):
         """Test streaming output — verify at least 1 chunk is received."""
         if not available_model:
             pytest.skip("No available model found via health check")
+        original_prompt = "请列举三种编程语言的名称。"
         messages = [
-            {"role": "user", "content": "请列举三种编程语言的名称。"},
+            {"role": "user", "content": original_prompt},
         ]
         tool_input = ToolInput(params={
             "messages": messages,
@@ -255,20 +277,30 @@ class TestLLMClientIntegration:
         assert isinstance(content, str), f"Stream content should be str, got {type(content)}"
         assert len(content.strip()) > 0, "Streaming returned empty content"
 
+        # T7: LLM生成内容必须经LLM审核
+        t7_result = await t7_reviewer.review(
+            content=content,
+            context=original_prompt,
+            content_type="流式回答",
+        )
+        assert t7_result["verdict"] == "PASS", \
+            f"T7审核未通过: verdict={t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
         # T6: 采集指标
         report = metrics_collector.generate_report()
         print(f"\n[指标] 流式测试 - 内容长度: {len(content)}, "
-              f"调用次数: {report['llm']['total_calls']}")
+              f"调用次数: {report['llm']['total_calls']}, T7={t7_result['verdict']}")
 
     @pytest.mark.skipif(not HAS_ANY_PROVIDER, reason="No LLM provider available for health test")
     @pytest.mark.timeout(60)
     @pytest.mark.asyncio
-    async def test_health_status_update(self, llm_client, metrics_collector, available_model):
+    async def test_health_status_update(self, llm_client, metrics_collector, available_model, t7_reviewer):
         """Test that health status is updated after a successful LLM call."""
         if not available_model:
             pytest.skip("No available model found via health check")
+        original_prompt = "你好"
         messages = [
-            {"role": "user", "content": "你好"},
+            {"role": "user", "content": original_prompt},
         ]
         tool_input = ToolInput(params={
             "messages": messages,
@@ -280,6 +312,17 @@ class TestLLMClientIntegration:
 
         result = await llm_client.execute(tool_input)
         assert result.error is None, f"LLM call failed: {result.error}"
+
+        # T7: LLM生成内容必须经LLM审核
+        content = result.result.get("content", "")
+        if content.strip():  # 仅当LLM返回非空内容时审核
+            t7_result = await t7_reviewer.review(
+                content=content,
+                context=original_prompt,
+                content_type="健康检查回答",
+            )
+            assert t7_result["verdict"] == "PASS", \
+                f"T7审核未通过: verdict={t7_result['verdict']}, reason={t7_result.get('reason', '')}"
 
         # Check health report
         health_report = llm_client.get_health_report()
@@ -316,7 +359,7 @@ class TestLLMClientIntegration:
     @pytest.mark.skipif(not HAS_OPENROUTER, reason="Need OPENROUTER_API_KEY for cross-provider fallback test")
     @pytest.mark.timeout(60)
     @pytest.mark.asyncio
-    async def test_cross_provider_fallback(self, llm_client, metrics_collector, available_model):
+    async def test_cross_provider_fallback(self, llm_client, metrics_collector, available_model, t7_reviewer):
         """Test cross-provider fallback from openroute to openrouter.
 
         Force a failure on the openroute provider by using a model that
@@ -326,8 +369,9 @@ class TestLLMClientIntegration:
             pytest.skip("No available model found via health check")
         # Set up a scenario where openroute fails (nonexistent model)
         # and openrouter succeeds
+        original_prompt = "请说出2+3等于几。"
         messages = [
-            {"role": "user", "content": "请说出2+3等于几。"},
+            {"role": "user", "content": original_prompt},
         ]
         # Request a model that doesn't exist, forcing fallback
         tool_input = ToolInput(params={
@@ -350,9 +394,18 @@ class TestLLMClientIntegration:
         assert used_provider != "openroute" or "nonexistent-xyz-999" not in result.result.get("model", ""), \
             f"Should have fallen back to different provider/model, got {used_provider}/{result.result.get('model')}"
 
+        # T7: LLM生成内容必须经LLM审核
+        t7_result = await t7_reviewer.review(
+            content=content,
+            context=original_prompt,
+            content_type="跨provider fallback回答",
+        )
+        assert t7_result["verdict"] == "PASS", \
+            f"T7审核未通过: verdict={t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
         # T6: 采集指标
         report = metrics_collector.generate_report()
-        print(f"\n[指标] 跨供应商回退 - 模型链: {report['llm']['model_chain']}")
+        print(f"\n[指标] 跨供应商回退 - 模型链: {report['llm']['model_chain']}, T7={t7_result['verdict']}")
 
 
 # ---------------------------------------------------------------------------

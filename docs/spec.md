@@ -2719,3 +2719,176 @@ skill_precipitation:
 
 ### 端口分配
 StockForge: 后端8005 / 前端5179
+
+### v2.0审核修正（2026-06-25）
+
+- StockForge Agent数量从8个调整为6个核心Agent
+- 删除独立Repository/Database/Scheduler，复用FlowForge基础设施
+- Plugin钩子修正为V2协议（register_workflows/register_gates/register_schedules/register_evaluators/register_helm_handlers）
+- 所有Loop走loop模式，worker.mode禁止使用workflow/reflexion
+- Loop超时统一180s（3分钟）
+- 质量分阈值0.9在config/default.yaml中显式声明
+- 实盘交易隔离：ArchConstraintEngine增加deny规则+CI静态检查
+
+---
+
+# 附录: 2026-06-25 规格更新
+
+> 来源：第十一轮文档与代码一致性深度审查（task.md 中 FW-CONSIST-001~029）
+> 目的：补全 spec.md 中 PluginProtocol 完整接口清单、配置驱动率现状、各模块完成度评估
+
+## S.1 PluginProtocol 完整接口清单（FW-CONSIST-001/002 验证结果）
+
+实际 `flowforge/core/plugin_protocol.py` 中 `FlowForgePlugin` 抽象基类提供的注册钩子（registration hooks）共 19 个，另有 5 个生命周期钩子（lifecycle hooks）。
+
+### S.1.1 已实现的注册钩子（19 个）
+
+| # | 方法名 | 参数 | 用途 |
+|---|--------|------|------|
+| 1 | `register_middleware(app)` | FastAPI app | 添加自定义中间件 |
+| 2 | `register_agents(agent_registry)` | AgentRegistry | 注册业务 Agent |
+| 3 | `register_tools(tool_registry)` | ToolRegistry | 注册业务 Tool |
+| 4 | `register_modes(mode_registry)` | ModeRegistry | 注册自定义执行模式 |
+| 5 | `register_routes(app)` | FastAPI app | 挂载业务 API 路由 |
+| 6 | `register_event_handlers(event_bus)` | EventBus | 订阅框架事件 |
+| 7 | `register_schedules(scheduler)` | TaskScheduler | 注册 Cron 任务 |
+| 8 | `register_workflows(workflow_registry)` | registry | 注册 Workflow YAML（V2） |
+| 9 | `register_gates(gate_registry)` | registry | 注册门控配置（V2） |
+| 10 | `register_evaluators(registry)` | registry | 注册评估器（V2） |
+| 11 | `register_sops(sop_registry)` | registry | 注册 SOP（V2） |
+| 12 | `register_quality_gates(quality_gate_registry)` | registry | 注册质量门（V2） |
+| 13 | `register_context_layers(context_registry)` | registry | 注册上下文层（V2） |
+| 14 | `register_workflow_step_handler(handler_registry)` | registry | 注册自定义步骤处理器（V2） |
+| 15 | `register_loops(loop_registry)` | registry | 注册 Loop 配置（V2） |
+| 16 | `register_personas(persona_registry)` | registry | 注册 Persona 配置 |
+| 17 | `register_prompts(prompt_manager)` | PromptManager | 注册 Prompt 模板 |
+| 18 | `register_declarative_tools(tool_registry)` | ToolRegistry | 注册声明式 Tool |
+| 19 | `PluginContext.register_service(name, service)` | str, Any | 注册命名服务（在 PluginContext 上） |
+
+### S.1.2 已实现的生命周期钩子（5 个）
+
+| # | 方法名 | 触发时机 |
+|---|--------|---------|
+| 1 | `on_startup(context)` | 所有注册完成后 |
+| 2 | `on_shutdown(context)` | 应用关闭时 |
+| 3 | `on_error(context, error)` | 插件执行出错时 |
+| 4 | `on_config_reload(config)` | 配置热重载时 |
+| 5 | `on_plugin_loaded(plugin_name)` | 其他插件加载完成时 |
+
+### S.1.3 代码缺失的钩子（FW-CONSIST-001/002）
+
+| 方法名 | 状态 | 关联问题 | 影响 |
+|--------|------|---------|------|
+| `register_helm_handlers` | **代码缺失**，需补充实现 | FW-CONSIST-001 | StockForge v2.0 审核修正声称已修正为 V2 协议包含此钩子，但实际 plugin_protocol.py 未定义，导致 *Forge 项目无法通过 Plugin 注册自定义 Helm 事件处理器 |
+| `register_permission_policy` | **代码缺失**，需补充实现 | FW-CONSIST-002 | 当前权限策略只能通过 `register_gates` 间接挂载，缺少专用钩子导致 PermissionV2 配置无法声明式注入 |
+
+**修复建议**：在 `FlowForgePlugin` 类中新增以下两个方法（默认 no-op）：
+
+```python
+def register_helm_handlers(self, helm_registry: Any) -> None:
+    """注册 Helm 事件处理器（FWK-CONSIST-001 修复）"""
+    pass
+
+def register_permission_policy(self, policy_registry: Any) -> None:
+    """注册权限策略（FWK-CONSIST-002 修复）"""
+    pass
+```
+
+## S.2 配置驱动率统计现状（2026-06-25 审计）
+
+按附录 L.1 计算公式：`配置驱动率 = (通过YAML配置的行为数) / (总行为数)`
+
+| 维度 | 当前驱动率 | Phase 0 目标 | Phase 1 目标 | Phase 2 目标 | 状态 |
+|------|----------|------------|------------|------------|------|
+| Agent 驱动率 | ~15% | ≥40% | ≥70% | ≥90% | 🔄 推进中（22 个 generic Agent 仍为代码实现，declarative_agent.py 框架已就绪） |
+| Tool 驱动率 | ~10% | ≥30% | ≥50% | ≥70% | 🔄 推进中（50+ 工具多为代码实现，declarative_tool.py 框架已就绪） |
+| Workflow 驱动率 | ~25% | ≥60% | ≥80% | ≥95% | 🔄 推进中（config/workflows/ 已有模板，compiler/ 已就绪） |
+| Prompt 驱动率 | ~30% | ≥50% | ≥80% | ≥95% | 🔄 推进中（config/prompts.yaml 已存在，_DEFAULT_PROMPTS 部分未清理） |
+| 阈值/规则驱动率 | ~20% | — | — | — | 🔄 推进中（config/gates/ + config/evaluators/ 已建立） |
+
+**综合配置驱动率**：约 **20%**（Phase 0 目标 30% 尚未达成，主要瓶颈为 Agent 和 Tool 的代码实现占比高）。
+
+**推进路径**：
+1. 完成 S3.0-16 `_DEFAULT_PROMPTS` 字典删除（115 处硬编码提示词迁移）
+2. 将 22 个 generic Agent 迁移为 `config/agents/*.yaml` 声明式定义
+3. 将 50+ 工具中可声明化的部分迁移为 `config/tools/*.yaml`（HTTPTool/ScriptTool/TransformTool）
+4. 验证 `compiler/parser.py` + `compiler/codegen.py` 三阶段编译链路
+
+## S.3 各模块完成度评估（2026-06-25）
+
+按 spec.md 第三章功能需求编号评估：
+
+### S.3.1 执行引擎层（FR-ENG）
+
+| 编号 | 功能 | 完成度 | 实现位置 | 备注 |
+|------|------|--------|---------|------|
+| FR-ENG-01 | HybridExecutor 混合执行器 | 90% | `executor/hybrid_executor.py` | TAOR 循环 + Persona 锁已实现；Hook 点已对接 harness/orchestrator.py |
+| FR-ENG-02 | ModeRegistry 模式注册中心 | 95% | `modes/registry.py` | 注册/获取/推荐均实现 |
+| FR-ENG-03 | 9 大内置 Agent 模式 | 85% | `modes/*.py` | 9 大模式全部存在；rewoo/self_discover 简化实现 |
+| FR-ENG-04 | TaskScheduler 定时调度 | 80% | `scheduler/scheduler.py` | APScheduler + SQLAlchemy job store；动态增删待补 |
+| FR-ENG-05 | 三层防御机制 | 90% | `core/agent_timeout.py` 等 | L1 超时 + L2 重复检测 + L3 reflexion_retry 均实现 |
+| FR-ENG-06 | 轨迹记录与评估管线 | 70% | `observability/tracer.py` + `session/event_store.py` | 记录完整，自动质量判定逻辑待补 |
+
+### S.3.2 Harness 驾驭层（FR-HRN）
+
+| 编号 | 功能 | 完成度 | 实现位置 | 备注 |
+|------|------|--------|---------|------|
+| FR-HRN-01 | ContextEngine 上下文工程 | 75% | `harness/context_engine.py` | AGENTS.md 注入已实现；会话交接待对接 SessionManager |
+| FR-HRN-02 | ArchitectureConstraintEngine | 80% | `security/arch_constraint.py` + `harness/constraints/` | ast 解析 + layer_mapping.yaml 已实现；CI 门禁待补 |
+| FR-HRN-03 | FeedbackLoop 反馈循环 | 70% | `harness/feedback_loop.py` | 三档 evaluation_mode 已实现；四维评分 LLM 调用待补 |
+| FR-HRN-04 | EntropyManager 熵管理 | 50% | `harness/entropy_manager.py` | 文档园丁/技术债跟踪/规则进化均未实现，仅占位 |
+| FR-HRN-05 | PermissionPipeline 权限管线 | 85% | `security/permission_pipeline.py` + `security/permission_v2.py` | V1 完整；V2 增强（ASK 超时/并发去重/审计）已实现 |
+| FR-HRN-06 | SessionManager 会话管理 | 80% | `harness/session_manager.py` + `harness/compaction.py` | 92% 阈值压缩已实现；DualThresholdCompactor 已实现 |
+
+### S.3.3 能力层（FR-CAP）
+
+| 编号 | 功能 | 完成度 | 实现位置 | 备注 |
+|------|------|--------|---------|------|
+| FR-CAP-01 | Tool 生态 | 85% | `tools/` (50+ 文件) | 内置工具充足；MCP/OpenAPI/GraphQL 适配器在 mcp/ 下 |
+| FR-CAP-02 | Skill 系统 | 60% | `skills/` (4 文件) | 双层加载已实现；4 种格式适配器待补（adapters/ 子目录未建） |
+| FR-CAP-03 | MCP 模块 | 80% | `mcp/` (5 文件) | L1-L4 四层架构完整；execute_stream 已实现 |
+| FR-CAP-04 | 通用 Agent 库 | 90% | `agents/generic/` (22 个) | generic Agent 数量超 spec（22 vs 17+15=32，部分业务 Agent 已下沉到 *Forge） |
+| FR-CAP-05 | Memory 系统 | 85% | `memory/` (11 文件) | 5 种记忆策略 + TaskBoard + Mailbox + CheckpointManager 全部实现 |
+| FR-CAP-06 | 通用 Workflow 库 | 70% | `config/workflows/` | 模板存在；15+ 模板数量待验证 |
+
+### S.3.4 多 Agent 策略（FR-MAS）
+
+| 编号 | 功能 | 完成度 | 实现位置 | 备注 |
+|------|------|--------|---------|------|
+| FR-MAS-01 | Subagents 策略 | 85% | `modes/multi_agent.py` | 上下文隔离 + 并行 + 结果压缩已实现 |
+| FR-MAS-02 | Agent Teams 策略 | 75% | `modes/multi_agent.py` | TaskBoard + Mailbox 已实现；Lead Agent 协调逻辑简化 |
+| FR-MAS-03 | Swarms 策略 | 40% | `modes/multi_agent.py` | 仅占位实现；心跳 + 失败恢复未实现 |
+
+### S.3.5 其他模块
+
+| 编号 | 功能 | 完成度 | 实现位置 | 备注 |
+|------|------|--------|---------|------|
+| FR-HELM-01~10 | Helm 实时交互 | 80% | `core/helm_*.py` + `app/api/endpoints/websocket.py` | 10 个子需求平均 80% |
+| FR-PLG-01~03 | 插件系统 | 75% | `core/plugin_*.py` (10+ 文件) | 三层架构 + 发现机制已实现；市场未实现 |
+| FR-OBS-01~04 | 可观测性 | 70% | `observability/` (3 文件) + `core/metrics.py` | 全链路追踪 + Prometheus 指标已实现；Grafana 仪表盘未实现 |
+| FR-SEC-01~03 | 安全体系 | 85% | `security/` (4 文件) + `core/guardrails.py` | Fail-closed + 沙箱 + 并发安全已实现 |
+| FR-SDK-01~08 | SDK 与上层集成 | 80% | `sdk.py` + `core/flowforge.py` | 8 个子需求平均 80% |
+
+### S.3.6 新增模块完成度（spec 未覆盖）
+
+| 模块 | 完成度 | 实现位置 | 对应 spec 设计项 |
+|------|--------|---------|---------------|
+| Loop 引擎 | 75% | `loop/` (10 文件) | FR-ENG-06 + S3.0-23 TurnTransition |
+| Workflow YAML Compiler | 70% | `compiler/` (6 文件) | FWK-01 + S3.0-19 三阶段拆分 |
+| LLM 路由层 | 80% | `llm/` (7 文件) | INF-01 + S3.0-13/15 |
+| 事件总线增强 | 75% | `events/` (5 文件) | INF-02 + S3.0-18/42 |
+| Feature Flags | 85% | `core/feature_flags.py` | spec v2.2 第一章 |
+| DeclarativeTool | 80% | `core/declarative_tool.py` | FR-PLG-01 扩展 |
+| ContentModerationLayer | 70% | `core/content_moderation.py` | S3.0-14 |
+| DegradationDecisionTree | 75% | `core/degradation.py` | spec v2.2 第三章 |
+| DualThresholdCompactor | 80% | `harness/compaction.py` | S3.0-21 |
+| PermissionV2 | 85% | `security/permission_v2.py` | S3.0-9 |
+
+## S.4 综合评估结论
+
+- **整体完成度**：约 **75%**（Phase 0 收尾阶段）
+- **P0 阻塞项**：FW-CONSIST-001/002（Plugin 钩子缺失）、S3.0-16（_DEFAULT_PROMPTS 清理）、FR-HRN-04（熵管理未实现）
+- **配置驱动率**：约 20%（Phase 0 目标 30% 尚差 10 个百分点）
+- **建议优先级**：先补 Plugin 钩子 → 清理硬编码 Prompt → 迁移 Agent/Tool 为声明式 → 推进配置驱动率达 30%
+
+> 本附录为规格更新快照，所有完成度评估基于 2026-06-25 代码审计，后续演进需同步更新。

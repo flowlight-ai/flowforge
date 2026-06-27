@@ -3036,3 +3036,221 @@ class MCPToolAdapter(BaseTool):
 ***
 
 **以上为 FlowForge v6.0 详细设计说明书。** 本版本合并 v2.0 + v5.0 全部内容，并新增 Harness 驾驭层、Skill 系统、MCP 模块的详细设计，安全机制从 8 层扩展至 10 层。
+
+---
+
+# 附录: 2026-06-25 设计修正
+
+> 来源：第十一轮文档与代码一致性深度审查（task.md 中 FW-CONSIST-001~029）
+> 目的：修正 design.md 第一章 1.1 节目录结构与实际代码的偏差，补全新增模块设计说明
+
+## D.1 engine/ 目录修正为 modes/ + loop/ + executor/ + scheduler/
+
+### D.1.1 问题
+
+design.md 第一章 1.1 节描述的 `engine/` 目录在 flowforge 实际代码中**不存在**。该目录包含 7 个文件（hybrid_executor/defense_layer/agent_registry/mode_registry/scheduler/state_manager/sub_agent_engine/trajectory_pipeline），实际代码中相关职责被拆分到 4 个独立目录。
+
+### D.1.2 修正后的目录映射
+
+```
+design.md 描述                  实际代码位置
+─────────────────────────────────────────────────────
+engine/hybrid_executor.py    →  executor/hybrid_executor.py
+engine/state_manager.py      →  executor/state_manager.py
+engine/defense_layer.py      →  （拆分）
+                                core/agent_timeout.py        (L1 超时)
+                                core/base_mode_executor.py   (L2 重复检测)
+                                modes/workflow.py            (L3 reflexion_retry)
+engine/agent_registry.py     →  core/agent_registry.py
+engine/mode_registry.py      →  modes/registry.py
+engine/scheduler.py          →  scheduler/scheduler.py
+engine/sub_agent_engine.py   →  （合并）modes/multi_agent.py
+engine/trajectory_pipeline.py →  （合并）observability/tracer.py + session/event_store.py
+```
+
+### D.1.3 修正后的执行引擎层架构
+
+执行引擎层由以下 4 个目录协同承担（替代原 engine/）：
+
+| 目录 | 职责 | 关键文件 |
+|------|------|---------|
+| `executor/` | 混合执行器 + 状态持久化 | `hybrid_executor.py`, `state_manager.py` |
+| `modes/` | 9 大执行模式 + 注册中心 + 默认 Actor | `registry.py`, `react.py`, `plan_execute.py`, `reflexion.py`, `multi_agent.py`, `workflow.py`, `graph_of_thoughts.py`, `rewoo.py`, `self_discover.py`, `agent_judge.py`, `loop_mode.py` + 7 个 workflow_* 辅助文件 |
+| `loop/` | Loop 执行引擎（5 步闭环） | `executor.py`, `orchestrator.py`, `verifier.py`, `planner.py`, `reflector.py`, `parallel.py`, `registry.py`, `result_extractor.py`, `state.py`, `turn_transition.py` |
+| `scheduler/` | APScheduler 定时调度 | `scheduler.py` |
+
+**说明**：`loop/` 是与 `modes/` 平行的独立引擎，二者关系为：`modes/loop_mode.py` 是 9 大模式之一（注册到 ModeRegistry），`loop/executor.py` 是 Loop 执行引擎本体（5 步闭环 Discover→Assign→Act→Verify→Persist），loop_mode 调用 loop/executor 执行。
+
+## D.2 harness/ 实际子目录与文档差异
+
+### D.2.1 问题
+
+design.md 第一章 1.1 节描述 harness/ 包含 4 个子目录（context/constraints/feedback/entropy，共 14 个文件），但实际代码中：
+
+1. **无 context/feedback/entropy 子目录**：所有文件平铺在 harness/ 根下
+2. **仅 constraints/ 子目录保留**：且只含 linter_rules.py + linter_runner.py（design.md 描述的 arch_constraint_engine.py 已迁移到 security/）
+3. **新增 compaction.py**：DualThresholdCompactor 实现（design.md 未描述）
+
+### D.2.2 修正后的 harness/ 结构
+
+```
+harness/
+├── constraints/              # Linter 规则与执行器
+│   ├── linter_rules.py
+│   └── linter_runner.py
+├── compaction.py              # DualThresholdCompactor（S3.0-21，新增）
+├── context_engine.py          # ContextEngine（原 design.md context/context_engine.py）
+├── entropy_manager.py         # EntropyManager（原 design.md entropy/entropy_manager.py）
+├── feedback_loop.py           # FeedbackLoop（原 design.md feedback/feedback_loop.py）
+├── orchestrator.py            # HarnessOrchestrator（原 design.md __init__.py）
+└── session_manager.py         # SessionManager（原 design.md context/session_manager.py）
+```
+
+### D.2.3 迁移说明
+
+| design.md 路径 | 实际路径 | 迁移原因 |
+|--------------|---------|---------|
+| `harness/__init__.py` | `harness/orchestrator.py` | Orchestrator 独立成文件，便于单测 |
+| `harness/context/context_engine.py` | `harness/context_engine.py` | 平铺减少嵌套 |
+| `harness/context/session_manager.py` | `harness/session_manager.py` | 平铺减少嵌套 |
+| `harness/constraints/arch_constraint_engine.py` | `security/arch_constraint.py` | 架构约束属于安全体系，归入 security/ |
+| `harness/feedback/feedback_loop.py` | `harness/feedback_loop.py` | 平铺减少嵌套 |
+| `harness/feedback/verification_hooks.py` | （未实现） | 设计中，Phase 1 实现 |
+| `harness/entropy/entropy_manager.py` | `harness/entropy_manager.py` | 平铺减少嵌套 |
+| `harness/entropy/doc_gardener.py` | （未实现） | 设计中，Phase 1 实现 |
+| `harness/entropy/debt_tracker.py` | （未实现） | 设计中，Phase 1 实现 |
+| `harness/entropy/rule_evolution.py` | （未实现） | 设计中，Phase 1 实现 |
+| —（design.md 未描述） | `harness/compaction.py` | 新增：DualThresholdCompactor |
+
+## D.3 新增模块设计说明
+
+### D.3.1 events/ 事件总线（design.md 未独立描述）
+
+实际代码 `events/` 目录包含 5 个文件，承担 spec.md FR-OBS-04 + S3.0-18 事件总线统一方案：
+
+```
+events/
+├── event_bus.py          # EventBus（同步 emit + asyncio.ensure_future 调度）
+├── durable_stream.py     # DurableEventStream（WAL 模式持久化，CAP-11）
+├── event_types.py        # 事件类型枚举（17 种 FlowForge 事件）
+├── helm_adapter.py       # EventBus → Helm WS 事件桥接（16 种 Helm 事件映射）
+└── bridge.py             # 跨项目事件桥接（OpenSieve/NovelForge 事件转发）
+```
+
+**设计要点**：
+- EventBus.emit() 为同步方法，异步回调通过 asyncio.ensure_future 调度，不阻塞主流程
+- DurableEventStream 使用 SQLite WAL 模式，append() 后批量提交（每 100 条或每秒）
+- helm_adapter.py 实现 17 种 FlowForge 事件 → 16 种 Helm 事件的全映射（见 design.md 第五章 5.2）
+
+### D.3.2 llm/ LLM 路由层（design.md 未独立描述）
+
+实际代码 `llm/` 目录包含 7 个文件，承担 spec.md INF-01 + S3.0-13/15：
+
+```
+llm/
+├── router.py             # LLMRouter（主备切换 + 健康检查 + 级联）
+├── cascade.py            # 多模型级联策略（doubao→qwen→deepseek）
+├── provider.py           # Provider 抽象（OpenAI 兼容接口）
+├── provider_quota.py     # Provider 级 TPM/RPM/成本配额
+├── quota_manager.py      # ProviderQuotaManager（S3.0-13）
+├── route.py              # 路由策略实现（429/timeout/moderation_rejected 触发 failover）
+└── call_event.py         # LLMCallEvent dataclass（spec 附录 J.2）
+```
+
+**设计要点**：
+- 替代 design.md 描述的 `tools/builtin/llm_client.py` 单 Provider 实现
+- 主链路：doubao-seed2 → qwen3.6-plus → deepseek-chat（可在 llm_route.yaml 配置）
+- failover 条件：`status_code == 429` / `timeout > 30s` / `moderation_rejected`
+- ProviderQuotaManager 实现 TPM/RPM/成本预算三重检查
+
+### D.3.3 compiler/ Workflow YAML Compiler（design.md 未独立描述）
+
+实际代码 `compiler/` 目录包含 6 个文件，承担 spec.md FWK-01 + S3.0-19 三阶段拆分：
+
+```
+compiler/
+├── parser.py             # YAML → IR 解析器（Jinja2 模板引擎，S3.0-33）
+├── validator.py          # IR 校验器（asteval 安全表达式，S3.0-34）
+├── ir.py                 # 编译中间产物（CompiledWorkflow IR，可视化调试）
+├── codegen.py            # IR → 可执行 Workflow 代码生成
+├── compiler.py           # 三阶段编排入口（Parser→Validator→CodeGen）
+└── resume_adapter.py     # 检查点恢复适配器（长程任务恢复）
+```
+
+**设计要点**：
+- 三阶段拆分（Parser + Validator + CodeGen），每阶段独立可测
+- IR（中间产物）可序列化为 JSON，支持可视化调试
+- Validator 使用 asteval 安全表达式库，防止表达式注入（S3.0-34）
+- 支持 SEQUENCE + CONDITIONAL + GATE 三种 StepType（MVP 里程碑 1）
+
+### D.3.4 security/permission_v2.py PermissionV2（design.md 未描述）
+
+实际代码 `security/permission_v2.py` 承担 spec.md S3.0-9 PermissionV2 增强：
+
+```python
+class PermissionV2Enhanced:
+    """PermissionV2 增强 — ASK 超时/并发去重/审计日志"""
+    
+    async def _request_user_approval(
+        self, match, tool_name, params, context,
+        timeout: float = 300.0,  # 默认 5 分钟
+    ) -> bool:
+        # 1. 去重：同一 tool+params 的 ASK 只发一次
+        # 2. 发起审批（推送到 Web UI）
+        # 3. 等待结果（含超时）
+        # 4. ASK 超时默认 DENY（fail-closed）
+        # 5. 审计日志记录
+```
+
+**与 design.md 第十四章 14.7 PermissionPipeline 的关系**：
+- `security/permission_pipeline.py`：V1 版本，deny→ask→allow 顺序链
+- `security/permission_v2.py`：V2 增强版，新增 ASK 超时/并发去重/审计日志
+- 二者共存，通过 FeatureFlag 切换（`features.use_permission_v2`）
+
+### D.3.5 harness/compaction.py DualThresholdCompactor（design.md 未描述）
+
+实际代码 `harness/compaction.py` 承担 spec.md S3.0-21 死循环防护：
+
+```python
+class DualThresholdCompactor:
+    """双阈值压缩器 — LLM 摘要 + 抽取式摘要 + 丢弃最旧消息三档回退"""
+    
+    MAX_COMPACTIONS_PER_SESSION = 3  # 防死循环
+    
+    async def compact(self, messages, context):
+        # 1. LLM 摘要（首选，doubao-seed2）
+        # 2. 抽取式摘要（LLM 失败时回退，强制截断到安全阈值以下）
+        # 3. 丢弃最旧消息（抽取式仍失败时兜底）
+```
+
+**与 design.md 第十四章 14.3 SessionManager 的关系**：
+- SessionManager 负责 92% 阈值检测和触发
+- DualThresholdCompactor 负责实际压缩执行（三档回退链）
+- 二者协作：SessionManager 调用 DualThresholdCompactor.compact()
+
+### D.3.6 core/ 新增模块（design.md 未描述）
+
+| 模块 | 路径 | 设计来源 | 职责 |
+|------|------|---------|------|
+| FeatureFlags | `core/feature_flags.py` | spec v2.2 第一章 | FeatureFlag dataclass + 灰度开关 + 过期强制切换 |
+| DeclarativeTool | `core/declarative_tool.py` | FR-PLG-01 扩展 | HTTPTool/ScriptTool/TransformTool 的父类，YAML 声明式工具 |
+| ContentModerationLayer | `core/content_moderation.py` | S3.0-14 | Doubao moderation 统一内容安全层（4 场景阈值） |
+| DegradationDecisionTree | `core/degradation.py` | spec v2.2 第三章 | 通用降级决策树（7 种 DegradationAction） |
+
+## D.4 设计修正总结
+
+| 修正项 | design.md 原描述 | 实际代码 | 修正动作 |
+|--------|---------------|---------|---------|
+| engine/ 目录 | 7 个文件 | 不存在 | 拆分为 executor/+modes/+loop/+scheduler/（D.1） |
+| harness/ 子目录 | 4 子目录 14 文件 | 1 子目录 + 6 平铺文件 | 平铺 + 新增 compaction.py（D.2） |
+| events/ | 未独立描述 | 5 文件 | 新增 D.3.1 节 |
+| llm/ | 未独立描述 | 7 文件 | 新增 D.3.2 节 |
+| compiler/ | 未独立描述 | 6 文件 | 新增 D.3.3 节 |
+| security/permission_v2.py | 未描述 | 1 文件 | 新增 D.3.4 节 |
+| harness/compaction.py | 未描述 | 1 文件 | 新增 D.3.5 节 |
+| core/ 4 个新模块 | 未描述 | 4 文件 | 新增 D.3.6 节 |
+| agents/generic/ 数量 | 17 个 | 22 个 | 更新为 22 个（含 fact_check/image_research/multilingual/research_agent/trend_analysis/web_search_agent） |
+| workflows/ 目录 | 顶级目录 | 迁移到 config/workflows/ | 更新路径 |
+| plugins/ 目录 | 顶级目录 | 迁移到 core/plugin_*.py | 更新路径 |
+
+> 本附录为设计修正快照，所有差异项的修复任务详见 task.md FW-CONSIST-001~029。design.md 正文内容保持不变，以本附录为准进行代码对齐。

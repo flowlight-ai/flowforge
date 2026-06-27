@@ -1123,3 +1123,533 @@ security:
 | `SANDBOX_PLATFORM_LIMITED` | 400 | 当前平台沙箱功能受限（如 Windows 无内存限制） |
 
 ---
+
+# 附录: 2026-06-25 API 端点补全
+
+> 来源：第十一轮文档与代码一致性深度审查（task.md 中 FW-CONSIST-005）
+> 目的：将 api.md 与 `app/api/endpoints/` 实际 24 个端点文件对齐，补全缺失的端点文档
+
+## API.1 实际端点文件清单（24 个）
+
+flowforge/app/api/endpoints/ 目录下共有 24 个端点文件（不含 `__init__.py` 和 `admin_models.py`）：
+
+| # | 文件 | 已文档化 | 缺失 |
+|---|------|---------|------|
+| 1 | admin.py | ✅ 第四章（部分） | 缺 /api/v1/admin/config 等端点 |
+| 2 | agents.py | ✅ 第五章 5.2 | — |
+| 3 | auth.py | ✅ 补充 1 | — |
+| 4 | dashboard.py | ✅ 第六章 | — |
+| 5 | domain_plugins.py | ❌ | **缺失（API.2 补全）** |
+| 6 | graph.py | ❌ | **缺失（API.3 补全）** |
+| 7 | logs.py | ✅ 第六章 6.6 | — |
+| 8 | loops.py | ❌ | **缺失（API.4 补全）** |
+| 9 | memory.py | ❌ | **缺失（API.5 补全）** |
+| 10 | metrics.py | ✅ 第六章 6.5 | — |
+| 11 | modes.py | ✅ 第五章 5.1 | — |
+| 12 | openroute.py | ❌ | **缺失（API.6 补全）** |
+| 13 | plans.py | ❌ | **缺失（API.7 补全）** |
+| 14 | plugins.py | ✅ 第七章 | — |
+| 15 | prompts.py | ❌ | **缺失（API.8 补全）** |
+| 16 | review.py | ✅ 第三章 | — |
+| 17 | schedules.py | ❌ | **缺失（API.9 补全）** |
+| 18 | settings.py | ❌ | **缺失（API.10 补全）** |
+| 19 | system.py | ✅ 补充 3 | — |
+| 20 | tasks.py | ✅ 第二章 | — |
+| 21 | uploads.py | ❌ | **缺失（API.11 补全）** |
+| 22 | websocket.py | ✅ 第八章 | — |
+| 23 | workflows.py | ✅ 第五章 5.3 | — |
+| 24 | workspace.py | ❌ | **缺失（API.12 补全）** |
+
+**统计**：已文档化 13 个，缺失 11 个（FW-CONSIST-005 记录的"20+ 端点缺失"实际为 11 个）。
+
+## API.2 domain_plugins 端点（缺失补全）
+
+### 获取已注册的领域插件列表
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/domain-plugins` |
+
+**响应 (200)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "plugins": [
+      {
+        "name": "contentforge",
+        "version": "1.0.0",
+        "state": "ready",
+        "agents": ["topic", "research", "writer"],
+        "tools": ["helixrag", "publish_toutiao"]
+      }
+    ]
+  }
+}
+```
+
+### 获取领域插件详情
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/domain-plugins/{plugin_name}` |
+
+### 重新加载领域插件
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/domain-plugins/{plugin_name}/reload` |
+
+## API.3 graph 端点（缺失补全）
+
+### 获取任务执行图
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/graph/{task_id}` |
+
+**响应 (200)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "task_id": "uuid-string",
+    "nodes": [
+      { "id": "step-1", "type": "agent", "agent_name": "writer", "status": "completed" }
+    ],
+    "edges": [
+      { "from": "step-1", "to": "step-2" }
+    ]
+  }
+}
+```
+
+### 获取任务执行轨迹
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/graph/{task_id}/trace` |
+
+## API.4 loops 端点（缺失补全）
+
+### 获取 Loop 列表
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/loops` |
+
+**响应 (200)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "loops": [
+      { "loop_id": "article-refine", "template": "default_loop", "max_iterations": 3, "quality_threshold": 0.9 }
+    ]
+  }
+}
+```
+
+### 获取 Loop 详情
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/loops/{loop_id}` |
+
+### 创建 Loop
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/loops` |
+
+### 获取 Loop 执行历史
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/loops/{loop_id}/history` |
+
+## API.5 memory 端点（缺失补全）
+
+### 获取任务记忆
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/memory/{task_id}` |
+
+**响应 (200)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "task_id": "uuid-string",
+    "working_memory": {},
+    "short_term": [],
+    "long_term": [],
+    "episodic": []
+  }
+}
+```
+
+### 检索记忆
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/memory/search` |
+
+**请求体**：
+```json
+{
+  "query": "武汉中考政策",
+  "types": ["semantic", "long_term", "episodic"],
+  "limit": 10
+}
+```
+
+### 清除任务记忆
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `DELETE` |
+| 路径 | `/api/v1/memory/{task_id}` |
+
+## API.6 openroute 端点（缺失补全）
+
+### 获取 OpenRoute 模型列表
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/openroute/models` |
+
+### 测试 OpenRoute 连接
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/openroute/test` |
+
+### 获取 OpenRoute 路由配置
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/openroute/routes` |
+
+## API.7 plans 端点（缺失补全）
+
+### 获取任务执行计划
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/plans/{task_id}` |
+
+**响应 (200)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "task_id": "uuid-string",
+    "plan": {
+      "title": "武汉中考深度分析",
+      "steps": [
+        { "name": "topic_research", "agent": "topic", "mode": "rewoo" }
+      ],
+      "status": "confirmed"
+    }
+  }
+}
+```
+
+### 创建执行计划
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/plans` |
+
+### 确认执行计划
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/plans/{task_id}/confirm` |
+
+### 修改执行计划
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `PUT` |
+| 路径 | `/api/v1/plans/{task_id}` |
+
+## API.8 prompts 端点（缺失补全）
+
+### 获取 Prompt 模板列表
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/prompts` |
+
+**查询参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `tag` | string | 否 | 按标签筛选 |
+| `agent` | string | 否 | 按关联 Agent 筛选 |
+
+### 获取 Prompt 模板详情
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/prompts/{prompt_key}` |
+
+### 创建/更新 Prompt 模板
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `PUT` |
+| 路径 | `/api/v1/prompts/{prompt_key}` |
+
+### 测试 Prompt 模板渲染
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/prompts/{prompt_key}/render` |
+
+**请求体**：
+```json
+{
+  "variables": { "domain": "education", "hot_topics": ["中考", "分配生"] }
+}
+```
+
+## API.9 schedules 端点（缺失补全）
+
+### 获取定时任务列表
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/schedules` |
+
+**响应 (200)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "schedules": [
+      {
+        "job_id": "daily-topic-education",
+        "cron": "0 9 * * *",
+        "persona": "education",
+        "workflow": "deep_article",
+        "next_run": "2026-06-26T09:00:00+08:00",
+        "status": "active"
+      }
+    ]
+  }
+}
+```
+
+### 创建定时任务
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/schedules` |
+
+### 暂停/恢复定时任务
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/schedules/{job_id}/pause` |
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/schedules/{job_id}/resume` |
+
+### 删除定时任务
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `DELETE` |
+| 路径 | `/api/v1/schedules/{job_id}` |
+
+## API.10 settings 端点（缺失补全）
+
+### 获取系统设置
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/settings` |
+
+**响应 (200)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "quality_threshold": 0.9,
+    "loop_timeout_seconds": 180,
+    "compaction_threshold": 0.92,
+    "default_mode": "loop",
+    "features": {
+      "use_workflow_compiler": true,
+      "use_turn_transition_v2": false,
+      "use_llm_router": true
+    }
+  }
+}
+```
+
+### 更新系统设置
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `PUT` |
+| 路径 | `/api/v1/settings` |
+
+### 重置设置为默认值
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/settings/reset` |
+
+## API.11 uploads 端点（缺失补全）
+
+### 上传文件
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/uploads` |
+| Content-Type | `multipart/form-data` |
+
+**请求体**：
+```
+file: <binary>
+task_id: uuid-string (optional)
+```
+
+**响应 (201)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "file_id": "uuid-string",
+    "original_name": "screenshot.png",
+    "mime_type": "image/png",
+    "size": 102400,
+    "storage_path": "uploads/2026/06/uuid.png"
+  }
+}
+```
+
+### 获取上传文件列表
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/uploads` |
+
+**查询参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `task_id` | string | 否 | 按任务筛选 |
+| `limit` | integer | 否 | 每页数量，默认 20 |
+
+### 下载/预览上传文件
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/uploads/{file_id}` |
+
+### 删除上传文件
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `DELETE` |
+| 路径 | `/api/v1/uploads/{file_id}` |
+
+## API.12 workspace 端点（缺失补全）
+
+### 获取工作区列表
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/workspace` |
+
+**响应 (200)**：
+```json
+{
+  "status": "success",
+  "data": {
+    "workspaces": [
+      { "id": "dev", "name": "DevForge 工作区", "project": "devforge" },
+      { "id": "content", "name": "ContentForge 工作区", "project": "contentforge" }
+    ]
+  }
+}
+```
+
+### 获取工作区详情
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/workspace/{workspace_id}` |
+
+### 获取工作区任务列表
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `GET` |
+| 路径 | `/api/v1/workspace/{workspace_id}/tasks` |
+
+### 切换当前工作区
+
+| 项目 | 值 |
+|------|-----|
+| 方法 | `POST` |
+| 路径 | `/api/v1/workspace/{workspace_id}/activate` |
+
+## API.13 端点补全总结
+
+| 端点模块 | 补全端点数 | 主要功能 |
+|---------|----------|---------|
+| domain_plugins | 3 | 领域插件列表/详情/重载 |
+| graph | 2 | 任务执行图/轨迹 |
+| loops | 4 | Loop 列表/详情/创建/历史 |
+| memory | 3 | 任务记忆/检索/清除 |
+| openroute | 3 | OpenRoute 模型/测试/路由 |
+| plans | 4 | 执行计划 CRUD |
+| prompts | 4 | Prompt 模板 CRUD + 渲染测试 |
+| schedules | 4 | 定时任务 CRUD |
+| settings | 3 | 系统设置 GET/PUT/RESET |
+| uploads | 4 | 文件上传/列表/下载/删除 |
+| workspace | 4 | 工作区列表/详情/任务/切换 |
+| **合计** | **38** | **11 个模块共补全 38 个端点** |
+
+> 本附录为 API 端点补全快照，所有端点的实际路由前缀以 `app/api/router.py` 中的注册为准。具体请求/响应字段可能因实现细节略有差异，建议结合 OpenAPI 自动文档（`/docs`）使用。
+
+---

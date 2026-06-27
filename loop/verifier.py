@@ -28,7 +28,7 @@ class AgentJudgeVerifier(LoopVerifier):
         feedback = result.get("_feedback", {}) if isinstance(result, dict) else {}
         gate = feedback.get("gate", "PASS")
         score = feedback.get("overall_score", 0.0)
-        threshold = config.get("pass_threshold", 0.8)
+        threshold = config.get("pass_threshold", 0.9)
 
         if gate == "FAIL" or score < threshold:
             errors = feedback.get("details", {}).get("improvements", ["Quality below threshold"])
@@ -182,7 +182,7 @@ class TestSuiteVerifier(LoopVerifier):
     async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
         test_command = config.get("test_command", "")
         working_dir = config.get("working_dir", ".")
-        pass_threshold = config.get("pass_threshold", 0.8)
+        pass_threshold = config.get("pass_threshold", 0.9)
 
         if not test_command:
             return Verdict(passed=True, score=1.0)
@@ -313,7 +313,8 @@ class MultiJudgeVerifier(LoopVerifier):
     async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
         judges = config.get("judges", [])
         exclude_creator = config.get("exclude_creator", True)
-        threshold = config.get("pass_threshold", 0.95)
+        # 质量阈值统一为0.9（项目规则：禁止私自降低质量分阈值，必须为0.9）
+        threshold = config.get("pass_threshold", 0.9)
         dimensions = config.get("dimensions", self.DEFAULT_DIMENSIONS)
 
         if not judges:
@@ -335,24 +336,40 @@ class MultiJudgeVerifier(LoopVerifier):
         # 从 result 中提取待评审内容，支持多种返回格式
         content = ""
         if isinstance(result, dict):
-            # 优先级: content > response > output > draft > final_answer
-            for key in ("content", "response", "output", "draft", "final_answer"):
+            # 优先级: content > edited_draft > response > output > draft > final_answer
+            for key in ("content", "edited_draft", "response", "output", "draft", "final_answer"):
                 val = result.get(key, "")
                 if isinstance(val, str) and val.strip():
                     content = val
                     break
                 elif isinstance(val, dict):
                     # 嵌套 dict 时尝试提取子字段
-                    for sub_key in ("draft", "response", "content", "result"):
+                    for sub_key in ("content", "output", "draft", "response", "result"):
                         sub_val = val.get(sub_key, "")
                         if isinstance(sub_val, str) and sub_val.strip():
                             content = sub_val
                             break
+                        elif isinstance(sub_val, dict):
+                            # 二级嵌套
+                            for sub2_key in ("content", "output", "result"):
+                                sub2_val = sub_val.get(sub2_key, "")
+                                if isinstance(sub2_val, str) and sub2_val.strip():
+                                    content = sub2_val
+                                    break
+                            if content:
+                                break
                     if content:
                         break
             if not content:
-                # 最后尝试：将整个 result 转为字符串
-                content = str(result)
+                logger.warning(
+                    f"MultiJudgeVerifier: no content field found in result, "
+                    f"result_keys={list(result.keys()) if isinstance(result, dict) else type(result).__name__}"
+                )
+                return Verdict(
+                    passed=False,
+                    score=0.0,
+                    errors=["result中未找到任何内容字段（content/edited_draft/response/output/draft/final_answer均为空），无法评审"],
+                )
         else:
             content = str(result)
 
@@ -375,11 +392,32 @@ class MultiJudgeVerifier(LoopVerifier):
         judge_timeout = config.get("judge_timeout", 60)
         # prefer_api: 评委优先使用API backend，排除WebChat backend（8000 token限制导致失败率高）
         prefer_api = config.get("prefer_api", False)
+        # SSE修复：评委调用前发射事件，让客户端能看到评审进度
+        if task.event_bus:
+            task.event_bus.emit(task.task_id, "verify.judges.start", {
+                "judges": active_judges, "judge_count": len(active_judges),
+                "judge_timeout": judge_timeout, "content_len": len(content),
+            })
         judge_tasks = [self._call_judge(j, prompt, task, prefer_api) for j in active_judges]
         judge_results = await asyncio.gather(
             *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
             return_exceptions=True,
         )
+        # SSE修复：评委调用后发射事件，汇报评委成功/失败情况
+        if task.event_bus:
+            judge_status = []
+            for i, r in enumerate(judge_results):
+                if isinstance(r, Exception):
+                    judge_status.append({"judge": active_judges[i], "status": "failed", "error": str(r)[:100]})
+                elif isinstance(r, dict):
+                    judge_status.append({"judge": active_judges[i], "status": "ok"})
+                else:
+                    judge_status.append({"judge": active_judges[i], "status": "invalid"})
+            task.event_bus.emit(task.task_id, "verify.judges.complete", {
+                "judge_results": judge_status,
+                "valid_count": sum(1 for r in judge_results if isinstance(r, dict)),
+                "total_count": len(active_judges),
+            })
 
         # 4. 过滤有效结果
         valid_results: list[dict] = []
@@ -426,6 +464,17 @@ class MultiJudgeVerifier(LoopVerifier):
             errors = self._build_detailed_errors(aggregated, valid_results, dimensions, threshold)
         else:
             errors = []
+
+        # SSE修复：评审结果出来后发射事件，让客户端能看到最终分数
+        if task.event_bus:
+            task.event_bus.emit(task.task_id, "verify.result", {
+                "passed": aggregated["weighted_score"] >= threshold,
+                "score": round(aggregated["weighted_score"], 4),
+                "threshold": threshold,
+                "valid_judges": len(valid_results),
+                "total_judges": len(active_judges),
+                "errors_count": len(errors),
+            })
 
         return Verdict(
             passed=aggregated["weighted_score"] >= threshold,

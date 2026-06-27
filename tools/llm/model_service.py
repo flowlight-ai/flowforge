@@ -42,6 +42,8 @@ class ModelService:
         self._lock = asyncio.Lock()
         self._load_config()
         self._load_health_state()
+        # 断点A修复：恢复"永远可用"的兜底模型状态
+        self._restore_always_available_models()
 
     def _load_config(self):
         cfg = self._config_loader.get_models_config()
@@ -67,6 +69,38 @@ class ModelService:
                 self._health_data = {}
         else:
             self._health_data = {}
+
+    def _restore_always_available_models(self):
+        """恢复"永远可用"的兜底模型状态（断点A修复）.
+
+        openrouter/*:free 模型通过 OpenRouter 公共 API 永远可用。
+        这些模型即使被持久化为 suspended/disabled，重启后也应恢复为 available，
+        确保任何情况下都有模型可用（100% 成功率兜底）。
+
+        注意：openroute/*-web/chat 的可用性依赖浏览器，不在此恢复，
+        而是通过 R4 修复的 _browser_available_fn 回调动态判断。
+        """
+        restored = 0
+        for m in self.models:
+            model_id = m.get("id", "")
+            provider = m.get("provider", "")
+            # openrouter 免费模型永远可用（公共 API，无配额限制）
+            if provider == "openrouter" and ":free" in model_id:
+                # _health_data 的 key 格式是 "provider/model_id"（与 _check_with_cache 一致）
+                model_key = f"{provider}/{model_id}"
+                existing = self._health_data.get(model_key, {})
+                if existing.get("status") != self.STATUS_AVAILABLE:
+                    self._health_data[model_key] = {
+                        "status": self.STATUS_AVAILABLE,
+                        "reason": "always available (openrouter free fallback guarantee)",
+                        "consecutive_failures": 0,
+                        "last_check": datetime.utcnow().isoformat(),
+                        "last_check_ts": time.time(),
+                    }
+                    restored += 1
+        if restored > 0:
+            logger.info(f"[兜底] 恢复 {restored} 个 openrouter/:free 模型为 available（永远可用兜底）")
+            self._save_health_state()
 
     def _save_health_state(self):
         self._health_state_file.parent.mkdir(parents=True, exist_ok=True)
@@ -156,14 +190,22 @@ class ModelService:
                     "cached": True,
                 }
 
+        # DISABLED 状态不再永久缓存：超过 ERROR_COOLDOWNS["model_not_found"]（600s）后重新检查
+        # 这修复了旧数据中误判为 DISABLED 的模型（如 404 误判）能自动恢复
         if not force and state.get("status") == self.STATUS_DISABLED:
-            return {
-                "model_key": model_key,
-                "status": self.STATUS_DISABLED,
-                "last_check": state.get("last_check"),
-                "reason": state.get("reason", ""),
-                "cached": True,
-            }
+            last_check_ts = state.get("last_check_ts", 0)
+            cooldown = self.ERROR_COOLDOWNS["model_not_found"]
+            if now - last_check_ts < cooldown:
+                return {
+                    "model_key": model_key,
+                    "status": self.STATUS_DISABLED,
+                    "last_check": state.get("last_check"),
+                    "reason": state.get("reason", ""),
+                    "cached": True,
+                }
+            # 超过冷却期，降级为 unknown 重新检查
+            logger.info(f"[健康检查] model={model_key} DISABLED 状态超过 {cooldown}s 冷却期，重新检查")
+            state["status"] = self.STATUS_UNKNOWN
 
         if not force and state.get("status") == self.STATUS_SUSPENDED:
             suspended_until_ts = state.get("suspended_until_ts", 0)
@@ -177,6 +219,12 @@ class ModelService:
                     "cached": True,
                 }
 
+        # 日志埋点：缓存未命中或 force=True，执行实际健康检查
+        prev_status = state.get("status", "unknown")
+        logger.info(
+            f"[健康检查] model={model_key} force={force} prev_status={prev_status}, "
+            f"执行实际健康检查..."
+        )
         return await self._perform_health_check(model_key)
 
     async def _perform_health_check(self, model_key: str) -> dict:
@@ -209,16 +257,20 @@ class ModelService:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+        # 健康检查 payload：使用 max_tokens=10 和友好的 "Hi" 内容
+        # 旧版用 max_tokens=1 + "ping" 会被部分模型拒绝（如 openai/gpt-oss 系列
+        # 要求 max_tokens >= 1 但实际返回至少 1 token，且 "ping" 可能触发安全过滤）
+        # 改用 max_tokens=10 + "Hi" 降低误判率
         payload = {
             "model": model_id,
-            "messages": [{"role": "user", "content": "ping"}],
-            "max_tokens": 1,
+            "messages": [{"role": "user", "content": "Hi"}],
+            "max_tokens": 10,
         }
         url = base_url.rstrip("/") + "/chat/completions"
 
         start = time.time()
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(url, json=payload, headers=headers)
                 latency = (time.time() - start) * 1000
                 status_code = resp.status_code
@@ -235,47 +287,28 @@ class ModelService:
                         "cached": False,
                     }
 
+                # 所有非200响应统一改为 SUSPENDED（可恢复），不再永久 DISABLED
                 err_type, suspend_seconds = self._classify_error(None, resp)
-                if suspend_seconds < 0:
-                    reason = f"{err_type}: HTTP {status_code}"
-                    self._update_health_state(model_key, self.STATUS_DISABLED, reason=reason)
-                    return {
-                        "model_key": model_key,
-                        "status": self.STATUS_DISABLED,
-                        "reason": reason,
-                        "cached": False,
-                    }
-                else:
-                    suspended_until = datetime.utcnow() + timedelta(seconds=suspend_seconds)
-                    reason = f"{err_type}: HTTP {status_code}"
-                    self._update_health_state(
-                        model_key, self.STATUS_SUSPENDED,
-                        suspended_until=suspended_until.isoformat(),
-                        suspended_until_ts=suspended_until.timestamp(),
-                        reason=reason,
-                    )
-                    return {
-                        "model_key": model_key,
-                        "status": self.STATUS_SUSPENDED,
-                        "reason": reason,
-                        "suspended_until": suspended_until.isoformat(),
-                        "cached": False,
-                    }
-        except httpx.TimeoutException:
-            error_count = self._health_data.get(model_key, {}).get("error_count", 0) + 1
-            if error_count >= 5:
+                suspended_until = datetime.utcnow() + timedelta(seconds=suspend_seconds)
+                reason = f"{err_type}: HTTP {status_code}"
                 self._update_health_state(
-                    model_key, self.STATUS_DISABLED,
-                    error_count=error_count,
-                    reason=f"consecutive {error_count} timeouts",
+                    model_key, self.STATUS_SUSPENDED,
+                    suspended_until=suspended_until.isoformat(),
+                    suspended_until_ts=suspended_until.timestamp(),
+                    reason=reason,
                 )
                 return {
                     "model_key": model_key,
-                    "status": self.STATUS_DISABLED,
-                    "reason": "timeout",
+                    "status": self.STATUS_SUSPENDED,
+                    "reason": reason,
+                    "suspended_until": suspended_until.isoformat(),
                     "cached": False,
                 }
-            suspended_until = datetime.utcnow() + timedelta(seconds=300)
+        except httpx.TimeoutException:
+            # 超时统一改为 SUSPENDED（可恢复），不再因5次超时就永久 DISABLED
+            # 参考老版本openclaw：超时只是临时问题，下次可能就可用
+            suspended_until = datetime.utcnow() + timedelta(seconds=self.ERROR_COOLDOWNS["timeout"])
+            error_count = self._health_data.get(model_key, {}).get("error_count", 0) + 1
             self._update_health_state(
                 model_key, self.STATUS_SUSPENDED,
                 suspended_until=suspended_until.isoformat(),
@@ -290,26 +323,20 @@ class ModelService:
                 "cached": False,
             }
         except Exception as e:
+            # 所有异常统一改为 SUSPENDED（可恢复），不再永久 DISABLED
             err_type, suspend_seconds = self._classify_error(e)
             error_count = self._health_data.get(model_key, {}).get("error_count", 0) + 1
-            if suspend_seconds < 0:
-                self._update_health_state(
-                    model_key, self.STATUS_DISABLED,
-                    error_count=error_count,
-                    reason=str(e)[:200],
-                )
-            else:
-                suspended_until = datetime.utcnow() + timedelta(seconds=suspend_seconds)
-                self._update_health_state(
-                    model_key, self.STATUS_SUSPENDED,
-                    suspended_until=suspended_until.isoformat(),
-                    suspended_until_ts=suspended_until.timestamp(),
-                    error_count=error_count,
-                    reason=str(e)[:200],
-                )
+            suspended_until = datetime.utcnow() + timedelta(seconds=suspend_seconds)
+            self._update_health_state(
+                model_key, self.STATUS_SUSPENDED,
+                suspended_until=suspended_until.isoformat(),
+                suspended_until_ts=suspended_until.timestamp(),
+                error_count=error_count,
+                reason=str(e)[:200],
+            )
             return {
                 "model_key": model_key,
-                "status": self.STATUS_DISABLED if suspend_seconds < 0 else self.STATUS_SUSPENDED,
+                "status": self.STATUS_SUSPENDED,
                 "reason": str(e)[:200],
                 "cached": False,
             }
@@ -320,6 +347,8 @@ class ModelService:
         OpenRoute models require the hiclaw openroute service to be running.
         This method first checks if the openroute service is reachable, then attempts
         a lightweight ping to the specific model.
+
+        所有不健康状态统一为 SUSPENDED（可恢复），不再永久 DISABLED。
         """
         try:
             registry = self._plugin_registry
@@ -327,21 +356,36 @@ class ModelService:
                 raise ImportError("PluginRegistry not injected via constructor")
             svc = registry.get_plugin("openroute")
         except ImportError:
-            self._update_health_state(model_key, self.STATUS_DISABLED, reason="openroute_service_unavailable")
+            # 服务不可用是临时的，改为 SUSPENDED 而非永久 DISABLED
+            suspended_until = datetime.utcnow() + timedelta(seconds=self.ERROR_COOLDOWNS["server_error"])
+            self._update_health_state(
+                model_key, self.STATUS_SUSPENDED,
+                suspended_until=suspended_until.isoformat(),
+                suspended_until_ts=suspended_until.timestamp(),
+                reason="openroute_service_unavailable",
+            )
             return {
                 "model_key": model_key,
-                "status": self.STATUS_DISABLED,
+                "status": self.STATUS_SUSPENDED,
                 "reason": "openroute_service_module_not_found",
+                "suspended_until": suspended_until.isoformat(),
                 "cached": False,
             }
 
         proxy_healthy = await svc._health_check()
         if not proxy_healthy:
-            self._update_health_state(model_key, self.STATUS_SUSPENDED, reason="proxy_service_not_running")
+            suspended_until = datetime.utcnow() + timedelta(seconds=self.ERROR_COOLDOWNS["server_error"])
+            self._update_health_state(
+                model_key, self.STATUS_SUSPENDED,
+                suspended_until=suspended_until.isoformat(),
+                suspended_until_ts=suspended_until.timestamp(),
+                reason="proxy_service_not_running",
+            )
             return {
                 "model_key": model_key,
                 "status": self.STATUS_SUSPENDED,
                 "reason": "proxy_service_not_running",
+                "suspended_until": suspended_until.isoformat(),
                 "cached": False,
             }
 
@@ -356,10 +400,12 @@ class ModelService:
         start = time.time()
         try:
             async with httpx.AsyncClient(timeout=30) as client:
+                # 健康检查 payload：使用 max_tokens=10 + "Hi"（与通用健康检查一致）
+                # 旧版 max_tokens=1 + "ping" 会被部分模型拒绝
                 payload = {
                     "model": model_id,
-                    "messages": [{"role": "user", "content": "ping"}],
-                    "max_tokens": 1,
+                    "messages": [{"role": "user", "content": "Hi"}],
+                    "max_tokens": 10,
                 }
                 headers = {"Content-Type": "application/json"}
                 if api_key:
@@ -382,15 +428,8 @@ class ModelService:
                         "cached": False,
                     }
                 else:
+                    # 所有非200统一改为 SUSPENDED（可恢复），不再永久 DISABLED
                     err_type, suspend_seconds = self._classify_error(None, resp)
-                    if suspend_seconds < 0:
-                        self._update_health_state(model_key, self.STATUS_DISABLED, reason=f"{err_type}: HTTP {resp.status_code}")
-                        return {
-                            "model_key": model_key,
-                            "status": self.STATUS_DISABLED,
-                            "reason": f"{err_type}: HTTP {resp.status_code}",
-                            "cached": False,
-                        }
                     suspended_until = datetime.utcnow() + timedelta(seconds=suspend_seconds)
                     self._update_health_state(
                         model_key, self.STATUS_SUSPENDED,
@@ -406,37 +445,74 @@ class ModelService:
                         "cached": False,
                     }
         except httpx.TimeoutException:
-            self._update_health_state(model_key, self.STATUS_SUSPENDED, reason="timeout")
+            suspended_until = datetime.utcnow() + timedelta(seconds=self.ERROR_COOLDOWNS["timeout"])
+            self._update_health_state(
+                model_key, self.STATUS_SUSPENDED,
+                suspended_until=suspended_until.isoformat(),
+                suspended_until_ts=suspended_until.timestamp(),
+                reason="timeout",
+            )
             return {
                 "model_key": model_key,
                 "status": self.STATUS_SUSPENDED,
                 "reason": "timeout",
+                "suspended_until": suspended_until.isoformat(),
                 "cached": False,
             }
         except Exception as e:
-            self._update_health_state(model_key, self.STATUS_SUSPENDED, reason=str(e)[:200])
+            err_type, suspend_seconds = self._classify_error(e)
+            suspended_until = datetime.utcnow() + timedelta(seconds=suspend_seconds)
+            self._update_health_state(
+                model_key, self.STATUS_SUSPENDED,
+                suspended_until=suspended_until.isoformat(),
+                suspended_until_ts=suspended_until.timestamp(),
+                reason=str(e)[:200],
+            )
             return {
                 "model_key": model_key,
                 "status": self.STATUS_SUSPENDED,
                 "reason": str(e)[:200],
+                "suspended_until": suspended_until.isoformat(),
                 "cached": False,
             }
+
+    # 冷却时间表：与 LLMClient.ERROR_COOLDOWNS 对齐（参考老版本openclaw，从不永久禁用模型）
+    # 所有错误类型都是可恢复的 SUSPENDED，没有 -1（永久 DISABLED）
+    # 这确保任何模型在短暂失败后都能重新加入候选链，达成 100% 成功率
+    ERROR_COOLDOWNS = {
+        "rate_limit": 60,          # 限流：60s后重试
+        "no_permission": 600,      # 无权限：10分钟后重试（可能密钥临时失效）
+        "model_not_found": 600,    # 模型不存在：10分钟后重试（可能是临时下线，会上线）
+        "model_disabled": 600,     # 模型禁用：10分钟后重试
+        "no_quota": 300,           # 配额不足：5分钟后重试
+        "timeout": 30,             # 超时：30s后重试
+        "server_error": 15,        # 服务器错误：15s后重试
+        "unknown": 30,             # 未知错误：30s后重试
+    }
 
     def _classify_error(
         self,
         error: Optional[Exception],
         response: Optional[httpx.Response] = None,
     ) -> Tuple[str, int]:
+        """分类错误并返回 (error_type, suspend_seconds).
+
+        所有错误类型都返回正数 suspend_seconds（可恢复的 SUSPENDED），
+        永不返回 -1（永久 DISABLED）。参考老版本openclaw：从不永久禁用模型，
+        任何模型在短暂失败后都能重新加入候选链。
+
+        与 LLMClient.ERROR_COOLDOWNS 保持一致，确保两层冷却逻辑统一。
+        """
         if response is not None:
             status_code = response.status_code
             if status_code in (401, 403):
-                return "no_permission", 3600
+                return "no_permission", self.ERROR_COOLDOWNS["no_permission"]
             if status_code == 404:
-                return "model_not_found", -1
+                return "model_not_found", self.ERROR_COOLDOWNS["model_not_found"]
             if status_code == 429:
-                return "rate_limit", 300
+                return "rate_limit", self.ERROR_COOLDOWNS["rate_limit"]
             if 500 <= status_code < 600:
-                return "server_error", 60
+                return "server_error", self.ERROR_COOLDOWNS["server_error"]
 
             try:
                 resp_data = response.json()
@@ -445,43 +521,38 @@ class ModelService:
                 for err_type, patterns in self.ERROR_TYPE_MAP.items():
                     for pattern in patterns:
                         if pattern in error_code or pattern in error_msg:
-                            if err_type in ("model_not_found", "model_disabled", "no_permission"):
-                                return err_type, -1
-                            elif err_type == "no_quota":
-                                return err_type, 18000
-                            elif err_type == "rate_limit":
-                                return err_type, 300
-                            else:
-                                return err_type, 60
+                            return err_type, self.ERROR_COOLDOWNS.get(err_type, self.ERROR_COOLDOWNS["unknown"])
             except Exception:
                 pass
 
         if error is not None:
             error_msg = str(error).lower()
             if "timeout" in error_msg or "connection" in error_msg:
-                return "timeout", 300
+                return "timeout", self.ERROR_COOLDOWNS["timeout"]
             for err_type, patterns in self.ERROR_TYPE_MAP.items():
                 for pattern in patterns:
                     if pattern in error_msg:
-                        if err_type in ("model_not_found", "model_disabled", "no_permission"):
-                            return err_type, -1
-                        elif err_type == "no_quota":
-                            return err_type, 18000
-                        elif err_type == "rate_limit":
-                            return err_type, 300
-                        else:
-                            return err_type, 60
+                        return err_type, self.ERROR_COOLDOWNS.get(err_type, self.ERROR_COOLDOWNS["unknown"])
 
-        return "unknown", 60
+        return "unknown", self.ERROR_COOLDOWNS["unknown"]
 
     def _update_health_state(self, model_key: str, status: str, **kwargs):
         if model_key not in self._health_data:
             self._health_data[model_key] = {}
 
         record = self._health_data[model_key]
+        prev_status = record.get("status", "unknown")
         record["status"] = status
         record["last_check"] = datetime.utcnow().isoformat()
         record["last_check_ts"] = time.time()
+
+        # 日志埋点：模型状态变更
+        if prev_status != status:
+            reason = kwargs.get("reason", "")
+            logger.info(
+                f"[状态变更] model={model_key} {prev_status} -> {status}"
+                + (f" reason={reason[:80]}" if reason else "")
+            )
 
         if status == self.STATUS_AVAILABLE:
             record.pop("suspended_until", None)
@@ -765,6 +836,13 @@ class ModelService:
         if error:
             record["last_failure_reason"] = error[:200]
 
+        # 日志埋点：记录每次调用失败
+        prev_status = record.get("status", "unknown")
+        logger.warning(
+            f"[模型失败] model={model_key} consecutive_failures={failures} "
+            f"prev_status={prev_status} error={error[:150]}"
+        )
+
         removed_from_fallback = False
         fallback_now_empty = False
         triggered_force_update = False
@@ -773,6 +851,11 @@ class ModelService:
             removed_from_fallback = self._remove_from_fallbacks(model_key)
             record["status"] = self.STATUS_SUSPENDED
             record["reason"] = f"consecutive {failures} failures"
+            # 日志埋点：模型被挂起
+            logger.warning(
+                f"[模型挂起] model={model_key} 达到3次连续失败阈值, "
+                f"removed_from_fallback={removed_from_fallback}"
+            )
 
             for assignment_key, assignment in self.assignments.items():
                 fallbacks = assignment.get("fallbacks", [])
@@ -788,6 +871,11 @@ class ModelService:
                     triggered_force_update = True
 
         if triggered_force_update:
+            # 日志埋点：候选链耗尽，触发 force_update
+            logger.warning(
+                f"[候选链耗尽] model={model_key} 所有 fallback 已耗尽, "
+                f"触发 force_update_models 重建健康状态"
+            )
             asyncio.ensure_future(self.force_update_models())
 
         self._save_health_state()
@@ -812,6 +900,8 @@ class ModelService:
             self._health_data[model_key] = {}
 
         record = self._health_data[model_key]
+        prev_failures = record.get("consecutive_failures", 0)
+        prev_status = record.get("status", "unknown")
         record["consecutive_failures"] = 0
         record["last_success"] = datetime.utcnow().isoformat()
         if record.get("status") != self.STATUS_AVAILABLE:
@@ -819,6 +909,11 @@ class ModelService:
             record.pop("reason", None)
             record.pop("suspended_until", None)
             record.pop("suspended_until_ts", None)
+            # 日志埋点：模型状态从 suspended/disabled 恢复为 available
+            logger.info(
+                f"[模型恢复] model={model_key} status: {prev_status} -> available "
+                f"(prev_failures={prev_failures})"
+            )
 
         self._save_health_state()
         return {"model_key": model_key, "consecutive_failures_reset": True}
@@ -860,7 +955,7 @@ class ModelService:
             dict with keys: checked_models, available_count, disabled_count,
             suspended_count, fallback_chains_rebuilt.
         """
-        logger.info(f"Force updating model health for active providers: {self.active_providers}")
+        logger.info(f"[force_update] 开始强制更新模型健康状态, active_providers={self.active_providers}")
         active_models = [m for m in self.models
                          if m.get("enabled", True) and m["provider"] in self.active_providers]
         provider_groups: Dict[str, List[str]] = {}
@@ -868,20 +963,40 @@ class ModelService:
             mk = f"{m['provider']}/{m['id']}"
             provider_groups.setdefault(m["provider"], []).append(mk)
 
+        # 日志埋点：记录 force_update 的分组详情
+        for provider, keys in provider_groups.items():
+            logger.info(f"[force_update] provider={provider} 待检查模型数={len(keys)}")
+
         all_results = []
+        t0 = time.time()
         async with self._lock:
             for provider, model_keys in provider_groups.items():
                 tasks = [self._check_with_cache(mk, force=True) for mk in model_keys]
                 provider_results = await asyncio.gather(*tasks, return_exceptions=True)
-                for r in provider_results:
+                for mk, r in zip(model_keys, provider_results):
                     if isinstance(r, Exception):
                         all_results.append({"status": self.STATUS_SUSPENDED, "reason": str(r)[:200]})
+                        logger.warning(f"[force_update] model={mk} 检查异常: {str(r)[:100]}")
                     else:
                         all_results.append(r)
+                        # 日志埋点：记录状态切换
+                        old_state = self._health_data.get(mk, {}).get("status", "unknown")
+                        new_state = r.get("status", "unknown")
+                        if old_state != new_state:
+                            logger.info(
+                                f"[force_update] model={mk} status: {old_state} -> {new_state}"
+                            )
 
+        elapsed = time.time() - t0
         available_count = sum(1 for r in all_results if r.get("status") == self.STATUS_AVAILABLE)
         disabled_count = sum(1 for r in all_results if r.get("status") == self.STATUS_DISABLED)
         suspended_count = sum(1 for r in all_results if r.get("status") == self.STATUS_SUSPENDED)
+
+        # 日志埋点：force_update 汇总
+        logger.info(
+            f"[force_update] 完成: checked={len(all_results)} available={available_count} "
+            f"disabled={disabled_count} suspended={suspended_count} elapsed={elapsed:.2f}s"
+        )
 
         chains_rebuilt = 0
         for assignment_key, assignment in self.assignments.items():

@@ -23,7 +23,7 @@ from flowforge.executor.hybrid_executor import HybridExecutor
 from flowforge.harness.orchestrator import HarnessOrchestrator
 from flowforge.harness.entropy_manager import EntropyManager, DebtSeverity, RuleEvolution
 from flowforge.core.checkpoint_manager import CheckpointManager
-from flowforge.loop.state import LoopState, LoopResult, LoopPhase, LoopNestingError
+from flowforge.loop.state import LoopState, LoopResult, LoopPhase, LoopNestingError, Verdict
 from flowforge.loop.planner import LoopPlanner
 from flowforge.loop.verifier import LoopVerifier
 from flowforge.loop.reflector import LoopReflector
@@ -110,7 +110,8 @@ class LoopExecutor:
         worker_mode = worker_config.get("mode", "workflow")
         backoff_strategy = loop_config.get("backoff_strategy", "exponential")
         backoff_base = loop_config.get("backoff_base", 2)
-        total_timeout = loop_config.get("total_timeout", 1800)
+        # 性能修复：总超时从1800s(30分钟)降为600s(10分钟)，避免20分钟卡死
+        total_timeout = loop_config.get("total_timeout", 600)
 
         state = LoopState(
             loop_id=loop_config["name"],
@@ -169,6 +170,26 @@ class LoopExecutor:
                 total_attempts=state.attempt,
                 state=state,
             )
+        except Exception as loop_exc:
+            # 异常处理修复：捕获非Timeout异常，返回失败结果避免业务卡死
+            state.phase = LoopPhase.FAILED
+            self.turn_engine.try_transition(TurnState.FAILED, reason=f"loop exception: {type(loop_exc).__name__}")
+            error_msg = f"Loop exception: {type(loop_exc).__name__}: {loop_exc}"
+            state.past_errors.append(error_msg)
+            logger.error(f"[loop] {error_msg}: loop_id={state.loop_id}", exc_info=True)
+            if task.event_bus:
+                task.event_bus.emit(task.task_id, "loop.failed", {
+                    "loop_id": state.loop_id,
+                    "total_attempts": state.attempt,
+                    "last_errors": [error_msg],
+                    "reason": "exception",
+                })
+            return LoopResult(
+                success=False,
+                error=error_msg,
+                total_attempts=state.attempt,
+                state=state,
+            )
 
     async def _execute_iterations(
         self,
@@ -184,8 +205,9 @@ class LoopExecutor:
         """执行 Loop 迭代逻辑（从 _run_loop 中提取，支持 PersonaLock 包裹）。"""
 
         # 读取超时配置
-        total_timeout = loop_config.get("total_timeout", 1800)
-        timeout_per_iteration = loop_config.get("timeout_per_iteration", 300)
+        # 性能修复：总超时600s(10分钟)，单次迭代120s(2分钟)，避免20分钟卡死
+        total_timeout = loop_config.get("total_timeout", 600)
+        timeout_per_iteration = loop_config.get("timeout_per_iteration", 120)
 
         # 读取 Memory 映射配置
         memory_config = loop_config.get("memory", {})
@@ -399,6 +421,54 @@ class LoopExecutor:
                     result = {"error": iter_error, **last_good_result}
                     logger.info(f"[loop] 迭代{attempt + 1}超时，保留best_draft, keys={list(last_good_result.keys())}")
                 else:
+                    # Bug修复：超时时从state/input_data中恢复writer已产出的内容
+                    # writer可能已成功生成内容但因publish等后续步骤超时
+                    # TaskContext无context属性，正确字段为state(共享状态)和input_data
+                    result = {"error": iter_error}
+                    recovered = False
+                    for src_attr in ("state", "input_data"):
+                        src = getattr(task, src_attr, None)
+                        if not isinstance(src, dict):
+                            continue
+                        for ctx_key in ("draft", "edited_draft", "result", "content"):
+                            ctx_val = src.get(ctx_key)
+                            if not ctx_val:
+                                continue
+                            if isinstance(ctx_val, str) and ctx_val.strip():
+                                result[ctx_key] = ctx_val
+                                result.setdefault("content", ctx_val)
+                                recovered = True
+                                break
+                            elif isinstance(ctx_val, dict):
+                                result[ctx_key] = ctx_val
+                                # 同时提取嵌套content
+                                for sub_key in ("content", "output", "result"):
+                                    sub_val = ctx_val.get(sub_key, "")
+                                    if isinstance(sub_val, str) and sub_val.strip():
+                                        result.setdefault("content", sub_val)
+                                        recovered = True
+                                        break
+                                if recovered:
+                                    break
+                        if recovered:
+                            break
+                    if recovered:
+                        logger.info(f"[loop] 迭代{attempt + 1}超时，从task属性恢复内容: content_len={len(str(result.get('content', '')))}, keys={list(result.keys())}")
+
+            except Exception as iter_exc:
+                # 异常处理修复：捕获非Timeout异常，走fallback避免业务卡死
+                iter_error = f"Iteration {attempt + 1} exception: {type(iter_exc).__name__}: {iter_exc}"
+                logger.error(f"[loop] {iter_error}: loop_id={state.loop_id}", exc_info=True)
+                state.past_errors.append(iter_error)
+                if task.event_bus:
+                    task.event_bus.emit(task.task_id, "loop.iteration.exception", {
+                        "loop_id": state.loop_id, "attempt": attempt + 1,
+                        "error": iter_error, "error_type": type(iter_exc).__name__,
+                    })
+                if last_good_result and isinstance(last_good_result, dict):
+                    result = {"error": iter_error, **last_good_result}
+                    logger.info(f"[loop] 迭代{attempt + 1}异常，保留best_draft")
+                else:
                     result = {"error": iter_error}
 
             # 4. Harness post_execute（架构约束校验 + FeedbackLoop 评分）
@@ -412,8 +482,12 @@ class LoopExecutor:
                     result["_model"] = used_model
 
             # 保存最后一次成功的执行结果（超时/失败时仍可返回内容）
-            if isinstance(result, dict) and not result.get("error"):
-                last_good_result = result
+            # Bug修复：即使result含error，只要有content/draft字段也应更新last_good_result
+            # 这样下一轮超时时能保留本轮writer已产出的内容
+            if isinstance(result, dict):
+                has_content = any(result.get(k) for k in ("content", "draft", "edited_draft", "output") if result.get(k))
+                if not result.get("error") or has_content:
+                    last_good_result = result
 
             # === 详细日志：定位执行结果内容 ===
             logger.info(f"[loop][DEBUG] 迭代{attempt + 1}执行结果: type={type(result).__name__}")
@@ -445,20 +519,41 @@ class LoopExecutor:
             # [loop-trace] 执行结果详细日志结束
 
             # 5. Loop Verifier（业务级质量校验）
-            # 根据 loop_config.verifier.mode 动态选择 verifier
             verifier_config = loop_config.get("verifier", {})
             verifier_mode = verifier_config.get("mode", "")
-            active_verifier = self.verifier
-            if verifier_mode:
-                from flowforge.loop.verifier import create_verifier
-                try:
-                    active_verifier = create_verifier(verifier_mode)
-                    logger.info(f"[loop] Using verifier mode: {verifier_mode} ({type(active_verifier).__name__})")
-                except Exception as e:
-                    logger.warning(f"[loop] Failed to create verifier mode '{verifier_mode}': {e}, using default")
-            state.phase = LoopPhase.VERIFYING
-            self.turn_engine.try_transition(TurnState.EVALUATING, reason=f"iteration {attempt + 1} verifying")
-            verdict = await active_verifier.verify(result, task, verifier_config)
+
+            # 检查 FeedbackLoop gate 状态，如果 FAIL 则跳过评委直接构造失败 verdict
+            # （评委收到 params 字典 str() 而非文章正文是已知问题，FeedbackLoop 已判定
+            #   内容为空/过短，此处短路避免无效的评委调用）
+            feedback = result.get("_feedback", {}) if isinstance(result, dict) else {}
+            if feedback.get("gate") == "FAIL":
+                logger.warning(
+                    f"[loop] FeedbackLoop gate=FAIL, reason={feedback.get('reason')}, "
+                    f"short-circuit verifier (skip judge evaluation)"
+                )
+                state.phase = LoopPhase.VERIFYING
+                self.turn_engine.try_transition(
+                    TurnState.EVALUATING,
+                    reason=f"iteration {attempt + 1} verifying (gate=FAIL short-circuit)",
+                )
+                verdict = Verdict(
+                    passed=False,
+                    score=0.0,
+                    errors=[f"FeedbackLoop gate=FAIL: {feedback.get('reason', 'unknown')}"],
+                )
+            else:
+                # 根据 loop_config.verifier.mode 动态选择 verifier
+                active_verifier = self.verifier
+                if verifier_mode:
+                    from flowforge.loop.verifier import create_verifier
+                    try:
+                        active_verifier = create_verifier(verifier_mode)
+                        logger.info(f"[loop] Using verifier mode: {verifier_mode} ({type(active_verifier).__name__})")
+                    except Exception as e:
+                        logger.warning(f"[loop] Failed to create verifier mode '{verifier_mode}': {e}, using default")
+                state.phase = LoopPhase.VERIFYING
+                self.turn_engine.try_transition(TurnState.EVALUATING, reason=f"iteration {attempt + 1} verifying")
+                verdict = await active_verifier.verify(result, task, verifier_config)
             state.verification_history.append(verdict.model_dump())
 
             # 详细日志：评审结果

@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from flowforge.core.task_context import TaskContext
 from flowforge.events.event_bus import EventBus
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
 
 
 # ──────────────────────────────────────────────────────────────
@@ -904,8 +905,13 @@ skip_no_llm = pytest.mark.skipif(
 class TestRealLLMWorkflowE2E:
     """真实LLM E2E测试 — 验证WorkflowExecutor通过真实LLM完成对话"""
 
+    @pytest.fixture
+    def t7_reviewer(self):
+        """T7 LLM内容审核器"""
+        return T7Reviewer()
+
     @pytest.mark.asyncio
-    async def test_normal_chat_with_real_llm(self):
+    async def test_normal_chat_with_real_llm(self, t7_reviewer):
         """使用真实LLM执行normal_chat流程，验证返回内容质量"""
         from flowforge.modes.workflow_executor import WorkflowExecutor
         from flowforge.modes.workflow_chat import ChatHandler
@@ -952,8 +958,13 @@ class TestRealLLMWorkflowE2E:
         report = collector.generate_report()
         print(f"\n[Metrics] {report}")
 
+        # T7: LLM内容审核
+        if response.strip():
+            t7_result = await t7_reviewer.review(content=response, context="请分析2026年人工智能在教育领域的三大突破性趋势，每条趋势给出具体案例", content_type="workflow回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
     @pytest.mark.asyncio
-    async def test_llm_client_direct_call(self):
+    async def test_llm_client_direct_call(self, t7_reviewer):
         """直接调用LLMClient验证真实LLM可达性"""
         from flowforge.tools.llm_client import LLMClient
         from flowforge.core.config import ConfigLoader
@@ -991,3 +1002,8 @@ class TestRealLLMWorkflowE2E:
         collector.end_time = time.time()
         report = collector.generate_report()
         print(f"\n[Metrics] {report}")
+
+        # T7: LLM内容审核
+        if content.strip():
+            t7_result = await t7_reviewer.review(content=content, context="请用200字分析人工智能如何重塑2026年的教育模式", content_type="workflow回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"

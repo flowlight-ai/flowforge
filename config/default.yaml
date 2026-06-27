@@ -154,3 +154,27 @@ scheduler:
 
 metrics:
   enabled: true
+
+# ==================== MCP Integration ====================
+# MCP (Model Context Protocol) — expose FlowForge tools via MCP Server and
+# connect external MCP servers as additional tool providers.
+# External server tools are auto-registered with prefix: mcp.{name}.{tool}
+mcp:
+  server_enabled: true      # Expose FlowForge tools via MCP Server (SSE)
+  server_port: 9000
+  # External MCP servers to connect as tool providers.
+  # Each server's tools are auto-registered with prefix: mcp.{name}.{tool}
+  servers: []
+  # Example (uncomment and set enabled: true to activate):
+  #   - name: "filesystem"
+  #     transport: "stdio"
+  #     command: "npx"
+  #     args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]
+  #     enabled: false
+  #   - name: "github"
+  #     transport: "stdio"
+  #     command: "npx"
+  #     args: ["-y", "@modelcontextprotocol/server-github"]
+  #     env:
+  #       GITHUB_TOKEN: "${GITHUB_TOKEN}"
+  #     enabled: false

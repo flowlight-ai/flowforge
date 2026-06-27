@@ -34,7 +34,15 @@ class DefaultLLMActor(BaseAgent):
         task = input.params.get("task", "")
         memory = input.params.get("memory", [])
         memory_text = "\n".join(str(m) for m in memory[-3:]) if memory else ""
-        system_prompt = get_prompt("reflexion.actor")
+        # P0-1: 优先使用agent的instructions（来自DeclarativeAgent的prompt_template）
+        # 而非通用的 reflexion.actor prompt，确保writer agent的 contentforge.writer.main 被使用
+        system_prompt = ""
+        if hasattr(context, 'instructions') and context.instructions:
+            system_prompt = context.instructions
+        elif input.params.get("instructions"):
+            system_prompt = input.params.get("instructions")
+        else:
+            system_prompt = get_prompt("reflexion.actor") or "你是内容创作者"
         if memory_text:
             system_prompt += f"\n\n之前的反思和改进建议:\n{memory_text}"
         persona = context.persona or "default"
@@ -43,14 +51,28 @@ class DefaultLLMActor(BaseAgent):
             code_keywords = ["代码", "编程", "写代码", "code", "python", "算法", "函数", "排序", "实现", "程序", "javascript", "java", "rust", "golang"]
             if any(kw in task_lower for kw in code_keywords):
                 persona = "coding"
-        result = await context.tools.execute("llm", ToolInput(params={
+        # P0-5: 传递prefer_api到LLM调用，writer agent优先使用API backend
+        # 避免WebChat backend浏览器会话过期导致300s超时
+        prefer_api = input.params.get("prefer_api", False) if hasattr(input, 'params') and input.params else False
+        # B4 修复：从context或input.params获取真实agent_name，而非硬编码"reflexion_actor"
+        # 原代码硬编码导致LLM超时路由失效（agent_routes映射的是contentforge:writer→creative→60s，
+        # 但硬编码的reflexion_actor不在agent_routes中，回退到default→30s）
+        agent_name = "reflexion_actor"
+        if hasattr(context, 'agent_name') and context.agent_name:
+            agent_name = context.agent_name
+        elif hasattr(input, 'params') and input.params:
+            agent_name = input.params.get('agent_name', input.params.get('_agent_name', 'reflexion_actor'))
+        llm_params = {
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": task[:2000]},
             ],
             "stream": False, "task_id": context.task_id,
-            "agent_name": "reflexion_actor", "persona": persona,
-        }))
+            "agent_name": agent_name, "persona": persona,
+        }
+        if prefer_api:
+            llm_params["prefer_api"] = True
+        result = await context.tools.execute("llm", ToolInput(params=llm_params))
         return AgentOutput(result={"output": result.result.get("content", "")})
 
 

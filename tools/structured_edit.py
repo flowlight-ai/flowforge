@@ -114,13 +114,40 @@ class StructuredEditTool(BaseTool):
                 },
                 "description": "多编辑列表（multi_edit）",
             },
+            "expected_hash": {
+                "type": "string",
+                "description": (
+                    "预期的文件内容 SHA256 hash，用于陈旧内容检测。"
+                    "若提供，执行前会校验当前文件 hash 是否匹配，"
+                    "不匹配则返回 Stale content 错误"
+                ),
+            },
         },
         "required": ["action", "path"],
     }
 
+    def __init__(self) -> None:
+        """初始化，创建文件快照字典用于陈旧内容检测."""
+        self._file_snapshots: Dict[str, str] = {}
+
     async def execute(self, input: ToolInput) -> ToolOutput:
         action = input.params.get("action")
         path = input.params.get("path", "")
+
+        # 陈旧内容检测：若提供 expected_hash，校验当前文件 hash 是否匹配
+        expected_hash = input.params.get("expected_hash")
+        if expected_hash:
+            try:
+                content, _, _ = self._read_file(path)
+                current_hash = self._compute_hash(content)
+                if current_hash != expected_hash:
+                    return ToolOutput(error=(
+                        f"Stale content detected: file '{path}' has been modified since last read. "
+                        f"Expected hash {expected_hash[:8]}, got {current_hash[:8]}. "
+                        f"Please re-read the file and retry."
+                    ))
+            except (FileNotFoundError, IsADirectoryError) as e:
+                return ToolOutput(error=str(e))
 
         try:
             if action == "replace":
@@ -174,6 +201,35 @@ class StructuredEditTool(BaseTool):
         ))
         return "".join(diff_lines) if diff_lines else "(no changes)"
 
+    # ── 陈旧内容检测 ──────────────────────────────────────────
+
+    @staticmethod
+    def _compute_hash(content: str) -> str:
+        """Compute SHA256 hash of file content."""
+        import hashlib
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+    def _snapshot_file(self, file_path: str) -> str:
+        """读取文件内容，计算 SHA256 hash，存入 _file_snapshots，返回 hash."""
+        content, _, _ = self._read_file(file_path)
+        file_hash = self._compute_hash(content)
+        self._file_snapshots[file_path] = file_hash
+        return file_hash
+
+    def _check_stale(self, file_path: str) -> bool:
+        """比较当前文件 hash 与快照 hash，如果不同则返回 True（陈旧）.
+
+        若文件无快照记录，返回 False（无法判定，视为未陈旧）。
+        """
+        if file_path not in self._file_snapshots:
+            return False
+        try:
+            content, _, _ = self._read_file(file_path)
+            current_hash = self._compute_hash(content)
+        except (FileNotFoundError, IsADirectoryError):
+            return True  # 文件不存在或变为目录，视为陈旧
+        return current_hash != self._file_snapshots[file_path]
+
     # ── 1. replace — 精确字符串替换 ────────────────────────────
 
     async def _replace(self, path: str, params: Dict) -> ToolOutput:
@@ -217,11 +273,15 @@ class StructuredEditTool(BaseTool):
         diff = self._make_diff(content, new_content, path)
         logger.info(f"structured_edit replace: {path} ({count} replacement(s))")
 
+        # 记录新的文件快照，供后续操作陈旧检测使用
+        new_hash = self._snapshot_file(path)
+
         return ToolOutput(result={
             "path": path,
             "action": "replace",
             "replacements": count if replace_all else 1,
             "diff": diff[:4000],
+            "file_hash": new_hash,
         })
 
     # ── 2. insert — 在指定行插入内容 ──────────────────────────
@@ -383,11 +443,15 @@ class StructuredEditTool(BaseTool):
         diff = self._make_diff(content, new_content, path)
         logger.info(f"structured_edit search_replace: {path} ({match_count} match(es))")
 
+        # 记录新的文件快照，供后续操作陈旧检测使用
+        new_hash = self._snapshot_file(path)
+
         return ToolOutput(result={
             "path": path,
             "action": "search_replace",
             "matches": match_count,
             "diff": diff[:4000],
+            "file_hash": new_hash,
         })
 
     # ── 5. apply_patch — 应用 unified diff 补丁 ───────────────
@@ -564,6 +628,17 @@ class StructuredEditTool(BaseTool):
         content, encoding, line_ending = self._read_file(path)
 
         # 阶段1：验证所有 old_string 存在且唯一
+        # 陈旧内容检测：若提供 expected_hash，先校验文件 hash 是否匹配
+        expected_hash = params.get("expected_hash")
+        if expected_hash:
+            current_hash = self._compute_hash(content)
+            if current_hash != expected_hash:
+                return ToolOutput(error=(
+                    f"Stale content detected: file '{path}' has been modified since last read. "
+                    f"Expected hash {expected_hash[:8]}, got {current_hash[:8]}. "
+                    f"Please re-read the file and retry."
+                ))
+
         validation_errors = []
         for i, edit in enumerate(edits):
             old_string = edit["old_string"]
@@ -603,11 +678,15 @@ class StructuredEditTool(BaseTool):
         diff = self._make_diff(content, new_content, path)
         logger.info(f"structured_edit multi_edit: {path} ({len(edits)} edits)")
 
+        # 记录新的文件快照，供后续操作陈旧检测使用
+        new_hash = self._snapshot_file(path)
+
         return ToolOutput(result={
             "path": path,
             "action": "multi_edit",
             "edits_applied": len(edits),
             "diff": diff[:4000],
+            "file_hash": new_hash,
         })
 
     # ── 辅助方法 ──────────────────────────────────────────────

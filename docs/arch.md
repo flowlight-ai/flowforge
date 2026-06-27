@@ -4894,3 +4894,396 @@ FlowForge 启动时通过 `auto_discover_plugins()` 自动扫描同级目录下�
 1. **MCP Server**：实现 MCP 协议的 JSON-RPC 2.0 服务端，通过 `config/tools/*.yaml` 声明式配置注入
 2. **声明式工具**：使用 HTTPTool/ScriptTool/TransformTool YAML 模板定义
 3. **Plugin V2 钩子**：通过 `sdk.create_plugin()` 创建 AutoPlugin，自动扫描 config/ 目录
+
+---
+
+# 附录A: 2026-06-25 文档与代码一致性更新
+
+> 来源：第十一轮文档与代码一致性深度审查（task.md 中 FW-CONSIST-001~029）
+> 目的：将 arch.md 与 flowforge/ 实际代码目录结构对齐，修正 design.md 中 `engine/` 目录等历史偏差
+
+## A.1 实际代码目录结构（2026-06-25 审计基线）
+
+下图为 `flowforge/` 当前真实目录结构（与 design.md 第一章 1.1 节描述存在差异，差异项见 A.3）：
+
+```
+flowforge/
+├── agents/
+│   ├── generic/        # 22 个通用 Agent (analyst/approver/base/critic/deliverer/drafter/executor/
+│   │                   #   fact_check/finalizer/generator/image_research/multilingual/planner/
+│   │                   #   processor/react_actor/react_observer/react_thinker/refiner/
+│   │                   #   research_agent/reviewer/trend_analysis/validator/verifier/web_search_agent)
+│   └── declarative.py  # 声明式 Agent
+├── app/
+│   ├── api/endpoints/  # 24 个端点文件 (admin/agents/auth/dashboard/domain_plugins/graph/logs/
+│   │                   #   loops/memory/metrics/modes/openroute/plans/plugins/prompts/review/
+│   │                   #   schedules/settings/system/tasks/uploads/websocket/workflows/workspace)
+│   ├── api/marketplace_api.py
+│   ├── api/plugin_frontend_api.py
+│   ├── api/plugin_management.py
+│   ├── api/router.py
+│   ├── deps.py
+│   └── main.py
+├── brain/
+│   └── plan_generator.py
+├── compiler/           # Workflow YAML Compiler（design.md 未描述，见 A.3）
+│   ├── codegen.py
+│   ├── compiler.py
+│   ├── ir.py
+│   ├── parser.py
+│   ├── resume_adapter.py
+│   └── validator.py
+├── config/
+│   ├── canary/
+│   ├── evaluators/    # 8 个评估器 (business_value/code_quality/deploy_readiness/feasibility/
+│   │                   #   release_risk/security/test_coverage/ux)
+│   ├── gates/
+│   ├── loops/
+│   ├── marketplace/
+│   ├── workflows/
+│   ├── default.yaml
+│   ├── layer_mapping.yaml
+│   ├── llm_route.yaml
+│   ├── logging.yaml
+│   ├── models.yaml
+│   ├── plugins.yaml
+│   └── prompts.yaml
+├── core/
+│   ├── gate/          # 门控系统 (approval/models/orchestrator/registry/timeout/voting)
+│   ├── interfaces/    # 接口定义 (helm_emitter/plugin/tools)
+│   ├── agent_registry.py
+│   ├── agent_timeout.py
+│   ├── base_agent.py
+│   ├── base_mode_executor.py
+│   ├── base_tool.py
+│   ├── canary.py
+│   ├── channel_manager.py
+│   ├── checkpoint_config.py
+│   ├── checkpoint_manager.py
+│   ├── circuit_breaker.py
+│   ├── conditional_router.py
+│   ├── config.py
+│   ├── config_version.py
+│   ├── content_moderation.py     # ContentModerationLayer（design.md 未描述，见 A.4）
+│   ├── context_layer_manager.py
+│   ├── credential_store.py
+│   ├── declarative_agent.py
+│   ├── declarative_tool.py       # DeclarativeTool（design.md 未描述，见 A.4）
+│   ├── degradation.py            # DegradationDecisionTree（design.md 未描述，见 A.4）
+│   ├── di.py
+│   ├── errors.py
+│   ├── event_bridge.py
+│   ├── execution_policy.py
+│   ├── fallback_chain.py
+│   ├── feature_flags.py          # FeatureFlags（design.md 未描述，见 A.4）
+│   ├── field_condition_gate.py
+│   ├── flowforge.py
+│   ├── guardrails.py
+│   ├── handoff.py
+│   ├── helm_adapter.py
+│   ├── helm_ws_manager.py
+│   ├── hooks.py
+│   ├── marketplace.py
+│   ├── mcp_integration.py
+│   ├── metrics.py
+│   ├── middlewares.py
+│   ├── model_capability.py
+│   ├── model_service.py
+│   ├── namespace.py
+│   ├── native_tool_server.py
+│   ├── observability.py
+│   ├── persona_injector.py
+│   ├── persona_lock.py
+│   ├── plugin.py
+│   ├── plugin_frontend.py
+│   ├── plugin_lifecycle.py
+│   ├── plugin_manager.py
+│   ├── plugin_packaging.py
+│   ├── plugin_protocol.py        # FlowForgePlugin（见 A.5 接口清单）
+│   ├── plugin_registry.py
+│   ├── plugin_sandbox.py
+│   ├── prompt_manager.py
+│   ├── secret_store.py
+│   ├── session_persistence.py
+│   ├── state_mapper.py
+│   ├── state_query_tool.py
+│   ├── state_updates.py
+│   ├── step_limiter.py
+│   ├── task_context.py
+│   ├── task_store.py
+│   ├── tool_chain_executor.py
+│   ├── tool_decorator.py
+│   ├── tracing.py
+│   ├── variable_resolver.py
+│   ├── workflow_compiler.py
+│   ├── workflow_compiler_parser.py
+│   └── workflow_compiler_validator.py
+├── docs/
+│   ├── archive/       # 已归档老文件
+│   ├── ARCHITECTURE_PRINCIPLES.md
+│   ├── api.md
+│   ├── arch.md        # 本文件
+│   ├── design.md
+│   ├── spec.md
+│   ├── task.md
+│   ├── test.md
+│   └── loop.md
+├── events/            # 事件总线（design.md 未描述，见 A.4）
+│   ├── bridge.py
+│   ├── durable_stream.py
+│   ├── event_bus.py
+│   ├── event_types.py
+│   └── helm_adapter.py
+├── executor/
+│   ├── hybrid_executor.py
+│   └── state_manager.py
+├── harness/           # Harness 四根护栏（design.md 1.1 描述与实际不符，见 A.3）
+│   ├── constraints/  # (linter_rules/linter_runner) — 实际仅 1 个子目录
+│   ├── compaction.py  # （design.md 未描述，见 A.4）
+│   ├── context_engine.py
+│   ├── entropy_manager.py
+│   ├── feedback_loop.py
+│   ├── orchestrator.py
+│   └── session_manager.py
+├── llm/               # LLM 路由（design.md 未描述，见 A.4）
+│   ├── call_event.py
+│   ├── cascade.py
+│   ├── provider.py
+│   ├── provider_quota.py
+│   ├── quota_manager.py
+│   ├── route.py
+│   └── router.py
+├── loop/              # Loop 执行引擎（design.md 未独立描述，见 A.3）
+│   ├── executor.py
+│   ├── orchestrator.py
+│   ├── parallel.py
+│   ├── planner.py
+│   ├── reflector.py
+│   ├── registry.py
+│   ├── result_extractor.py
+│   ├── state.py
+│   ├── turn_transition.py
+│   └── verifier.py
+├── mcp/               # MCP Broker
+│   ├── broker.py
+│   ├── client.py
+│   ├── gateway.py
+│   ├── server.py
+│   └── tool_adapter.py
+├── memory/
+│   ├── stores/sqlite_store.py
+│   ├── compressor.py
+│   ├── episodic.py
+│   ├── helm_db.py
+│   ├── long_term.py
+│   ├── mailbox.py
+│   ├── manager.py
+│   ├── semantic.py
+│   ├── short_term.py
+│   ├── task_board.py
+│   └── working.py
+├── middleware/
+│   ├── auth.py
+│   └── rate_limit.py
+├── modes/             # 9 大执行模式（design.md 中误称为 engine/，见 A.3）
+│   ├── agent_judge.py
+│   ├── default_llm_actors.py
+│   ├── graph_of_thoughts.py
+│   ├── loop_mode.py
+│   ├── multi_agent.py
+│   ├── plan_execute.py
+│   ├── react.py
+│   ├── reflexion.py
+│   ├── registry.py
+│   ├── rewoo.py
+│   ├── self_discover.py
+│   ├── workflow.py
+│   ├── workflow_chat.py
+│   ├── workflow_context.py
+│   ├── workflow_executor.py
+│   ├── workflow_graph.py
+│   ├── workflow_react.py
+│   ├── workflow_tools.py
+│   └── workflow_validator.py
+├── observability/
+│   ├── alerts.py
+│   ├── metrics_collector.py
+│   └── tracer.py
+├── scheduler/
+│   └── scheduler.py
+├── security/          # 安全权限
+│   ├── arch_constraint.py
+│   ├── moderation.py
+│   ├── permission_pipeline.py
+│   └── permission_v2.py    # （design.md 未描述，见 A.4）
+├── services/
+│   └── openroute_service.py
+├── session/
+│   └── event_store.py
+├── skills/
+│   ├── base.py
+│   ├── combo.py
+│   ├── loader.py
+│   └── manager.py
+├── tools/             # 50+ 通用工具
+│   ├── llm/           # LLM 相关工具
+│   ├── agentic_rag.py
+│   ├── agentic_rag_core.py
+│   ├── chapter_write_saga.py
+│   ├── cicd_trigger.py
+│   ├── code_quality.py
+│   ├── llm_client.py
+│   ├── opensieve_client.py  # OpenSieve 客户端
+│   ├── publish.py
+│   ├── publish_engine.py
+│   ├── web_search.py
+│   └── ... (50+ 个工具)
+├── web/               # Next.js 前端
+└── sdk.py             # FlowForge SDK 入口
+```
+
+## A.2 design.md 中 `engine/` 目录的修正说明
+
+design.md 第一章 1.1 节描述的 `engine/` 目录在 flowforge 实际代码中**不存在**，相关职责被拆分到以下三个目录：
+
+| design.md 描述（engine/） | 实际位置 | 说明 |
+|--------------------------|---------|------|
+| `engine/hybrid_executor.py` | `executor/hybrid_executor.py` | HybridExecutor 迁移到独立 executor/ 目录 |
+| `engine/defense_layer.py` | （拆分） | L1/L2/L3 防御机制分别下沉到 `core/agent_timeout.py`、`core/base_mode_executor.py`、`modes/workflow.py` |
+| `engine/agent_registry.py` | `core/agent_registry.py` | 回归到 core/ 共享内核 |
+| `engine/mode_registry.py` | `modes/registry.py` | 与 9 大模式实现同目录 |
+| `engine/scheduler.py` | `scheduler/scheduler.py` | 独立为顶级目录 |
+| `engine/state_manager.py` | `executor/state_manager.py` | 与 HybridExecutor 同目录 |
+| `engine/sub_agent_engine.py` | （已合并） | SubAgent 逻辑下沉到 `modes/multi_agent.py` |
+| `engine/trajectory_pipeline.py` | （已合并） | 轨迹记录逻辑由 `observability/tracer.py` + `session/event_store.py` 承担 |
+
+**结论**：design.md 中"3. 执行引擎层 (Engine Layer)"在代码中实际由 `executor/` + `modes/` + `loop/` + `scheduler/` 共同承担，不存在单一的 `engine/` 目录。详见 design.md 附录"2026-06-25 设计修正"。
+
+## A.3 harness/ 实际子目录与文档差异
+
+design.md 第一章 1.1 节描述 harness/ 包含 4 个子目录（context/constraints/feedback/entropy，共 14 个文件），但实际代码中 harness/ **没有子目录嵌套**，所有文件平铺在 harness/ 根下，且文件集合与文档不一致：
+
+| design.md 描述 | 实际文件 | 差异说明 |
+|--------------|---------|---------|
+| `harness/__init__.py`（HarnessOrchestrator） | `harness/orchestrator.py` | Orchestrator 独立成文件，未放在 `__init__.py` |
+| `harness/context/context_engine.py` | `harness/context_engine.py` | 平铺，未建 context/ 子目录 |
+| `harness/context/session_manager.py` | `harness/session_manager.py` | 平铺 |
+| `harness/constraints/arch_constraint_engine.py` | （迁移到 `security/arch_constraint.py`） | 架构约束下沉到 security/ |
+| `harness/constraints/linter_rules.py` | `harness/constraints/linter_rules.py` | 仅此子目录保留 |
+| `harness/constraints/linter_runner.py` | `harness/constraints/linter_runner.py` | 仅此子目录保留 |
+| `harness/feedback/feedback_loop.py` | `harness/feedback_loop.py` | 平铺 |
+| `harness/feedback/verification_hooks.py` | （未实现） | 设计中 |
+| `harness/entropy/entropy_manager.py` | `harness/entropy_manager.py` | 平铺 |
+| `harness/entropy/doc_gardener.py` | （未实现） | 设计中 |
+| `harness/entropy/debt_tracker.py` | （未实现） | 设计中 |
+| `harness/entropy/rule_evolution.py` | （未实现） | 设计中 |
+| —（design.md 未描述） | `harness/compaction.py` | **新增**：DualThresholdCompactor 实现 |
+| —（design.md 未描述） | `harness/context_engine.py` 中的 ContextEngine | 实际为独立模块 |
+
+**实际 harness/ 内容**：`constraints/`（仅 linter_rules + linter_runner）、`compaction.py`、`context_engine.py`、`entropy_manager.py`、`feedback_loop.py`、`orchestrator.py`、`session_manager.py`，共 7 个文件（不含 __init__.py / __pycache__）。
+
+## A.4 新增模块说明（design.md 未覆盖）
+
+以下模块在实际代码中已实现，但 design.md 第一/十七章未描述：
+
+| 模块 | 路径 | 职责 | 关联审查问题 |
+|------|------|------|------------|
+| **events/** | `events/` (5 文件) | 事件总线 + DurableEventStream + Helm 桥接 | FW-CONSIST-006 |
+| │ ├── `event_bus.py` | 同步 EventBus（emit + subscribe + asyncio.ensure_future） | |
+| │ ├── `durable_stream.py` | WAL 模式持久化事件流（CAP-11 DurableEventStream） | |
+| │ ├── `event_types.py` | 事件类型枚举（17 种 FlowForge 事件） | |
+| │ ├── `helm_adapter.py` | EventBus → Helm WS 事件桥接（16 种 Helm 事件映射） | |
+| │ └── `bridge.py` | 跨项目事件桥接（OpenSieve/NovelForge） | |
+| **llm/** | `llm/` (7 文件) | LLM 路由层（替代 design.md 描述的 `tools/llm_client.py` 单 Provider） | FW-CONSIST-007 |
+| │ ├── `router.py` | LLMRouter（主备切换 + 健康检查） | |
+| │ ├── `cascade.py` | 多模型级联策略（doubao→qwen→deepseek） | |
+| │ ├── `provider.py` | Provider 抽象（OpenAI 兼容） | |
+| │ ├── `provider_quota.py` | Provider 级 TPM/RPM/成本配额 | |
+| │ ├── `quota_manager.py` | ProviderQuotaManager（S3.0-13） | |
+| │ ├── `route.py` | 路由策略实现 | |
+| │ └── `call_event.py` | LLMCallEvent dataclass（附录 J.2） | |
+| **compiler/** | `compiler/` (6 文件) | Workflow YAML Compiler 三阶段拆分（S3.0-19） | FW-CONSIST-003 |
+| │ ├── `parser.py` | YAML → IR 解析器 | |
+| │ ├── `validator.py` | IR 校验器（含 asteval 安全表达式） | |
+| │ ├── `ir.py` | 编译中间产物（CompiledWorkflow IR） | |
+| │ ├── `codegen.py` | IR → 可执行 Workflow 代码生成 | |
+| │ ├── `compiler.py` | 三阶段编排入口 | |
+| │ └── `resume_adapter.py` | 检查点恢复适配器 | |
+| **core/feature_flags.py** | `core/feature_flags.py` | FeatureFlag dataclass + 灰度开关（spec 附录 v2.2 第一章） | FW-CONSIST-008 |
+| **core/declarative_tool.py** | `core/declarative_tool.py` | DeclarativeTool 基类（HTTPTool/ScriptTool/TransformTool 的父类） | FW-CONSIST-009 |
+| **core/content_moderation.py** | `core/content_moderation.py` | ContentModerationLayer（Doubao moderation 统一内容安全层，S3.0-14） | FW-CONSIST-010 |
+| **core/degradation.py** | `core/degradation.py` | DegradationDecisionTree（spec v2.2 第三章灾备降级） | FW-CONSIST-011 |
+| **harness/compaction.py** | `harness/compaction.py` | DualThresholdCompactor（S3.0-21 死循环防护） | FW-CONSIST-012 |
+| **security/permission_v2.py** | `security/permission_v2.py` | PermissionV2 增强版（ASK 超时/并发去重/审计日志，S3.0-9） | FW-CONSIST-013 |
+| **loop/** | `loop/` (10 文件) | Loop 执行引擎（与 modes/ 平行的独立引擎） | FW-CONSIST-014 |
+| │ ├── `executor.py` | LoopExecutor（5 步闭环 Discover→Assign→Act→Verify→Persist） | |
+| │ ├── `orchestrator.py` | Loop 编排器 | |
+| │ ├── `verifier.py` | MultiJudgeVerifier（3 评委并行） | |
+| │ ├── `planner.py` | Loop 规划器 | |
+| │ ├── `reflector.py` | 反思器 | |
+| │ ├── `parallel.py` | 并行执行（asyncio.gather，待升级为 FiberSet） | |
+| │ ├── `registry.py` | Loop 注册中心 | |
+| │ ├── `result_extractor.py` | 结果提取器 | |
+| │ ├── `state.py` | LoopPhase 7 状态机 | |
+| │ └── `turn_transition.py` | TurnTransitionEngine（9 状态合并） | |
+
+## A.5 PluginProtocol 完整接口清单（FW-CONSIST-001/002 验证）
+
+实际 `core/plugin_protocol.py` 中 `FlowForgePlugin` 类提供的注册钩子共 **19 个**（不含 lifecycle 钩子）：
+
+| # | 方法名 | 参数 | 状态 |
+|---|--------|------|------|
+| 1 | `register_middleware` | app | ✅ 已实现 |
+| 2 | `register_agents` | agent_registry | ✅ 已实现 |
+| 3 | `register_tools` | tool_registry | ✅ 已实现 |
+| 4 | `register_modes` | mode_registry | ✅ 已实现 |
+| 5 | `register_routes` | app | ✅ 已实现 |
+| 6 | `register_event_handlers` | event_bus | ✅ 已实现 |
+| 7 | `register_schedules` | scheduler | ✅ 已实现 |
+| 8 | `register_workflows` | workflow_registry | ✅ 已实现（V2） |
+| 9 | `register_gates` | gate_registry | ✅ 已实现（V2） |
+| 10 | `register_evaluators` | registry | ✅ 已实现（V2） |
+| 11 | `register_sops` | sop_registry | ✅ 已实现（V2） |
+| 12 | `register_quality_gates` | quality_gate_registry | ✅ 已实现（V2） |
+| 13 | `register_context_layers` | context_registry | ✅ 已实现（V2） |
+| 14 | `register_workflow_step_handler` | handler_registry | ✅ 已实现（V2） |
+| 15 | `register_loops` | loop_registry | ✅ 已实现（V2） |
+| 16 | `register_personas` | persona_registry | ✅ 已实现 |
+| 17 | `register_prompts` | prompt_manager | ✅ 已实现 |
+| 18 | `register_declarative_tools` | tool_registry | ✅ 已实现 |
+| 19 | `register_service` (PluginContext) | name, service | ✅ 已实现（PluginContext） |
+
+**FW-CONSIST-001 验证结论**：`register_helm_handlers` 方法 **代码缺失**，需补充实现（已在 task.md FW-CONSIST-001 记录）。StockForge v2.0 审核修正（见 spec.md 末尾）声称"Plugin 钩子修正为 V2 协议（register_workflows/register_gates/register_schedules/register_evaluators/register_helm_handlers）"，但实际代码中 `register_helm_handlers` 未定义。
+
+**FW-CONSIST-002 验证结论**：`register_permission_policy` 方法 **代码缺失**，需补充实现（已在 task.md FW-CONSIST-002 记录）。当前权限策略只能通过 `register_gates` 或在 `register_routes` 中手动挂载 PermissionPipeline 实现，缺少专用钩子。
+
+## A.6 与 design.md 第十七章的差异对照
+
+design.md 第十七章"v6.0 目录结构完整清单"与实际代码的差异：
+
+| 模块 | design.md 文件数 | 实际文件数 | 差异 |
+|------|----------------|----------|------|
+| core/ | 9 | 60+ | 实际远超文档（含 gate/、interfaces/ 子目录及大量新模块） |
+| engine/ | 7 | 0 | **目录不存在**，拆分为 executor/+modes/+loop/+scheduler/ |
+| harness/ | 14 | 7 | 实际仅 7 个文件，无 context/feedback/entropy 子目录 |
+| security/ | 7 | 4 | 实际 4 个文件，design.md 多列了 action_classifier/secure_tool_registry/sandbox/path_validator/audit_trail |
+| skills/ | 10+ | 4 | 实际 4 个文件（base/combo/loader/manager），无 adapters/ 子目录 |
+| mcp/ | 5 | 5 | 一致（实际多一个 server.py，少 config.py） |
+| tools/ | ~20 | 50+ | 实际工具数远超文档 |
+| memory/ | 12 | 11 | 基本一致（实际多 helm_db.py，少 checkpoint_manager.py 已合并到 core/checkpoint_manager.py） |
+| events/ | 4 | 5 | 实际多 bridge.py |
+| modes/ | 11 | 18 | 实际多 loop_mode/workflow_chat/workflow_context/workflow_executor/workflow_graph/workflow_react/workflow_tools/workflow_validator |
+| agents/ | 32+ | 22+1 | generic/ 实际 22 个 Agent + declarative.py（design.md 列 17 个，缺 fact_check/image_research/multilingual/research_agent/trend_analysis/web_search_agent） |
+| workflows/ | 8 | 0 | **目录不存在**，已迁移到 `config/workflows/` |
+| plugins/ | 3 | 0 | **目录不存在**，已迁移到 `core/plugin_*.py` 系列 |
+| observability/ | 4 | 3 | 实际 3 个文件，design.md 多列 dashboard.py |
+| api/ | 12+ | 24 | 实际 24 个端点文件（见 api.md 附录） |
+
+## A.7 修正后目录结构原则
+
+1. **engine/ 不再使用**：所有执行相关代码归入 `executor/`（HybridExecutor+StateManager）、`modes/`（9 大模式）、`loop/`（Loop 引擎）、`scheduler/`（定时调度）
+2. **harness/ 平铺优先**：除 `constraints/` 保留子目录外，其余文件平铺在 harness/ 根下
+3. **配置与代码分离**：`workflows/` 目录已迁移到 `config/workflows/`，`plugins/` 已迁移到 `core/plugin_*.py`
+4. **新增模块独立目录**：`events/`、`llm/`、`compiler/`、`loop/` 均为独立顶级目录，不挂在 core/ 下
+
+> 本附录为文档与代码一致性更新的快照，后续代码演进时需同步更新本附录。所有差异项的修复任务详见 task.md FW-CONSIST-001~029。

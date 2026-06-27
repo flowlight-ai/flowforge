@@ -1734,3 +1734,226 @@ contentforge/
 - **当前代码状态**：tools/publish.py:13-16硬编码了平台映射
 - **修复建议**：移除默认值，通过ContentForgePlugin.register_tools()注册
 - **优先级**：P2
+
+---
+
+# 第十四章：文档与代码一致性深度审查（第十一轮审计 — 2026-06-25）
+
+> 来源：参考 stockforge 最新文档结构，对 flowforge/docs/ 下全部14个文档与代码实现的深度一致性审查
+> 审查方法：逐文件读取 → 与代码目录/Plugin V2/Loop/API/工具实现比对 → 记录差距
+> 审查文档：arch.md(4009行) + spec.md(1939行) + design.md(2408行) + api.md + landing_plan.md + loop.md + mcp_migration_guide.md + ARCHITECTURE_PRINCIPLES.md + CODE_DEDUPLICATION_PLAN.md + CROSS_PLATFORM_SYNC.md + DYNAMIC_PLAN_DESIGN.md + HELM_OPTIMIZATION_ROADMAP.md + test.md
+
+## 14.1 P0 级问题（致命/阻塞性）
+
+### FW-CONSIST-001: register_helm_handlers 在文档中存在但代码未实现
+- **来源文档**：arch.md 第3章 Plugin V2 协议、spec.md 第7章插件生命周期
+- **代码现状**：`flowforge/core/plugin.py` 的 PluginProtocol 定义了 register_routes/register_agents/register_tools/register_workflows/register_schedules/register_gates/register_evaluators，**未定义 register_helm_handlers**
+- **影响**：Helm Studio 的自定义命令处理器无法通过 Plugin 注册
+- **修复建议**：在 PluginProtocol 中增加 `register_helm_handlers() -> dict[str, Callable]` 钩子
+- **优先级**：P0
+
+### FW-CONSIST-002: register_permission_policy 钩子未实现
+- **来源文档**：spec.md 第5章权限管线、ARCHITECTURE_PRINCIPLES.md
+- **代码现状**：PluginProtocol 中无此方法
+- **影响**：*Forge 项目无法通过 Plugin 注册声明式权限策略
+- **修复建议**：增加 `register_permission_policy() -> dict[str, PermissionRule]` 钩子
+- **优先级**：P0
+
+### FW-CONSIST-003: design.md 描述的 engine/ 目录在代码中不存在
+- **来源文档**：design.md 第4章执行引擎架构
+- **代码现状**：flowforge/ 下无 engine/ 目录，相关实现在 modes/ 和 loop/ 中
+- **影响**：开发者按文档查找代码会迷失
+- **修复建议**：更新 design.md 改为 modes/ + loop/ 实际结构
+- **优先级**：P0
+
+### FW-CONSIST-004: design.md 描述的 harness/ 子目录与实际不符
+- **来源文档**：design.md 第5章 Harness 四根护栏
+- **代码现状**：harness/ 下实际只有 feedback_loop.py、compaction.py、context_compressor.py 等少数文件，文档列出的子目录（observability/、cost_control/、safety/）不存在
+- **修复建议**：更新 design.md 反映 harness/ 实际结构
+- **优先级**：P0
+
+### FW-CONSIST-005: api.md 缺少 20+ 个已实现端点
+- **来源文档**：api.md
+- **代码现状**：app/api/endpoints/ 下实际有 agents.py/loops.py/plugins.py/skills.py/memory.py/mcp.py/gates.py/scheduler.py 等，api.md 仅记录了部分基础端点
+- **影响**：API 文档严重过时
+- **修复建议**：补全 api.md 所有端点
+- **优先级**：P0
+
+## 14.2 P1 级问题（严重）
+
+### FW-CONSIST-006: design.md 描述的 tools/ 子目录结构过时
+- **来源文档**：design.md 第6章工具体系
+- **代码现状**：tools/ 下实际文件远多于文档描述（新增 agentic_rag.py/agentic_rag_core.py/playwright_publisher.py/publish_engine.py/platform_adapter.py 等）
+- **修复建议**：更新 design.md 工具目录章节
+- **优先级**：P1
+
+### FW-CONSIST-007: design.md 描述的 workflows/ YAML 在代码中不存在
+- **来源文档**：design.md 第7章工作流定义
+- **代码现状**：flowforge/config/ 下无 workflows/ 目录，工作流 YAML 在各 *Forge 项目中
+- **修复建议**：更新文档说明 FlowForge 提供编译器，工作流 YAML 由 *Forge 提供
+- **优先级**：P1
+
+### FW-CONSIST-008: design.md 引用的 agents/*.py 文件列表不全
+- **来源文档**：design.md 第8章 Agent 体系
+- **代码现状**：agents/generic/ 下实际有 16+ 个 GenericAgent 实现，design.md 只列出 7 个
+- **修复建议**：补全 Agent 文件清单
+- **优先级**：P1
+
+### FW-CONSIST-009: core/ 目录下 60+ 文件仅 8 个被 arch.md 记录
+- **来源文档**：arch.md 第4章共享内核
+- **代码现状**：core/ 下实际有 plugin.py/gate.py/context.py/memory.py/tracing.py/feature_flags.py/declarative_tool.py/content_moderation.py/degradation.py/state_mapper.py/persona_injector.py/fallback_chain.py/conditional_router.py/native_tool_server.py/channel_manager.py/task_store.py 等 60+ 文件
+- **影响**：架构文档严重滞后于代码演进
+- **修复建议**：补全 arch.md 共享内核章节
+- **优先级**：P1
+
+### FW-CONSIST-010: arch.md 缺少 events/ 模块说明
+- **来源文档**：arch.md
+- **代码现状**：events/ 下有 bridge.py（346行 EventBridge）、durable_stream.py（DurableEventStream）
+- **修复建议**：补充事件总线桥接层章节
+- **优先级**：P1
+
+### FW-CONSIST-011: arch.md 缺少 llm/ 模块说明
+- **来源文档**：arch.md
+- **代码现状**：llm/ 下有 quota_manager.py（ProviderQuotaManager）
+- **修复建议**：补充 LLM 配额管理章节
+- **优先级**：P1
+
+### FW-CONSIST-012: arch.md 缺少 compiler/ 模块说明
+- **来源文档**：arch.md
+- **代码现状**：compiler/ 下有 ir.py（Workflow YAML Compiler IR）、resume_adapter.py（ResumeAdapter）
+- **修复建议**：补充编译器章节
+- **优先级**：P1
+
+### FW-CONSIST-013: design.md 缺少 FeatureFlags 模块说明
+- **来源文档**：design.md
+- **代码现状**：core/feature_flags.py 实现了 FeatureFlags 灰度发布/AB 验证/项目级白名单
+- **修复建议**：补充 FeatureFlags 章节
+- **优先级**：P1
+
+### FW-CONSIST-014: design.md 缺少 DeclarativeTool 模块说明
+- **来源文档**：design.md
+- **代码现状**：core/declarative_tool.py 实现 HTTP/Script/Transform 三种声明式 Tool 模板
+- **修复建议**：补充 DeclarativeTool 章节
+- **优先级**：P1
+
+### FW-CONSIST-015: design.md 缺少 ContentModerationLayer 模块说明
+- **来源文档**：design.md
+- **代码现状**：core/content_moderation.py 实现五层审核链 L1-L5
+- **修复建议**：补充 ContentModerationLayer 章节
+- **优先级**：P1
+
+### FW-CONSIST-016: design.md 缺少 DegradationDecisionTree 模块说明
+- **来源文档**：design.md
+- **代码现状**：core/degradation.py 实现 7 种降级动作类型
+- **修复建议**：补充 DegradationDecisionTree 章节
+- **优先级**：P1
+
+### FW-CONSIST-017: arch.md 缺少 security/permission_v2.py 模块说明
+- **来源文档**：arch.md
+- **代码现状**：security/permission_v2.py 实现新版 PermissionV2 系统
+- **修复建议**：补充 PermissionV2 章节
+- **优先级**：P1
+
+### FW-CONSIST-018: arch.md 缺少 harness/compaction.py 模块说明
+- **来源文档**：arch.md
+- **代码现状**：harness/compaction.py 实现 DualThresholdCompactor 双阈值压缩器
+- **修复建议**：补充 DualThresholdCompactor 章节
+- **优先级**：P1
+
+### FW-CONSIST-019: spec.md 的配置驱动率目标与实际状态不匹配
+- **来源文档**：spec.md Phase 进度
+- **代码现状**：Phase 0 完成后配置驱动率目标 ≥30%，实际审计发现 Agent 0%、Tool 0%、Workflow 17%（仅 MallForge 有 1 个 YAML）
+- **修复建议**：更新进度记忆表和配置驱动率统计
+- **优先级**：P1
+
+### FW-CONSIST-020: test.md 缺少 T1-T8 测试铁律验证章节
+- **来源文档**：test.md
+- **代码现状**：test.md 仅有通用测试章节，缺少测试铁律 T1-T8 逐条自检记录
+- **修复建议**：补充 T1-T8 自检章节
+- **优先级**：P1
+
+### FW-CONSIST-021: loop.md 中 pass_threshold 默认值出现 0.85 和 0.9 两种
+- **来源文档**：loop.md
+- **代码现状**：设计文档示例 L584 出现 0.85，L674 出现 0.9
+- **修复建议**：统一为 0.9（编程红线第 2 条）
+- **优先级**：P1
+
+## 14.3 P2 级问题（一般）
+
+### FW-CONSIST-022: HELM_OPTIMIZATION_ROADMAP.md 与实际 Helm 实现差距未更新
+- **来源文档**：HELM_OPTIMIZATION_ROADMAP.md
+- **代码现状**：文档列出的优化项部分已实现，未更新进度
+- **修复建议**：归档或更新进度状态
+- **优先级**：P2
+
+### FW-CONSIST-023: CODE_DEDUPLICATION_PLAN.md 已完成项未标记
+- **来源文档**：CODE_DEDUPLICATION_PLAN.md
+- **代码现状**：文档中"待执行"的项部分已在第八/九轮重构中完成
+- **修复建议**：更新已完成项状态或归档
+- **优先级**：P2
+
+### FW-CONSIST-024: ARCHITECTURE_PRINCIPLES.md 与 arch.md 内容重叠
+- **来源文档**：ARCHITECTURE_PRINCIPLES.md
+- **代码现状**：与 arch.md 第一部分内容高度重叠
+- **修复建议**：合并到 arch.md，ARCHITECTURE_PRINCIPLES.md 移到 archive/
+- **优先级**：P2
+
+### FW-CONSIST-025: DYNAMIC_PLAN_DESIGN.md 与 loop.md 内容重叠
+- **来源文档**：DYNAMIC_PLAN_DESIGN.md
+- **代码现状**：与 loop.md 中动态规划章节内容重叠
+- **修复建议**：合并到 loop.md，DYNAMIC_PLAN_DESIGN.md 移到 archive/
+- **优先级**：P2
+
+### FW-CONSIST-026: CROSS_PLATFORM_SYNC.md 与 events/bridge.py 不一致
+- **来源文档**：CROSS_PLATFORM_SYNC.md
+- **代码现状**：文档描述的跨平台同步机制与 events/bridge.py 实际实现有差异
+- **修复建议**：更新文档对齐实现，或归档
+- **优先级**：P2
+
+### FW-CONSIST-027: mcp_migration_guide.md 引用的旧 MCP 接口已变更
+- **来源文档**：mcp_migration_guide.md
+- **代码现状**：MCP 模块接口已演化为 Client/Gateway/Broker/ToolAdapter 四层
+- **修复建议**：更新迁移指南或归档
+- **优先级**：P2
+
+### FW-CONSIST-028: landing_plan.md 部分内容已归档但文件未移到 archive
+- **来源文档**：landing_plan.md
+- **代码现状**：landing_design.md 已归档，landing_plan.md 仍保留但部分章节已过时
+- **修复建议**：更新或归档过时章节
+- **优先级**：P2
+
+### FW-CONSIST-029: test.md 未与最新 798 个单元测试结果同步
+- **来源文档**：test.md
+- **代码现状**：测试通过率统计仍为旧数据，未反映最新 798 个单元测试通过的状态
+- **修复建议**：更新测试统计
+- **优先级**：P2
+
+---
+
+## 14.4 本章问题统计
+
+| 严重等级 | 数量 | 说明 |
+|----------|:----:|------|
+| P0 致命 | 5 | Plugin V2 钩子缺失、design.md 虚构目录、api.md 缺失端点 |
+| P1 严重 | 16 | 文档与代码目录差距、新模块未文档化 |
+| P2 一般 | 8 | 老旧文档归档、内容重叠 |
+| **合计** | **29** | - |
+
+## 14.5 修复优先级建议
+
+### 立即修复（P0，5项）
+1. FW-CONSIST-001: 增加 register_helm_handlers 钩子
+2. FW-CONSIST-002: 增加 register_permission_policy 钩子
+3. FW-CONSIST-003: design.md 更新 engine/ → modes/+loop/
+4. FW-CONSIST-004: design.md 更新 harness/ 子目录实际结构
+5. FW-CONSIST-005: api.md 补全 20+ 端点
+
+### 尽快修复（P1，16项）
+6-21. 见 14.2 节，主要是 arch.md/design.md 补全新模块章节
+
+### 质量提升（P2，8项）
+22-29. 见 14.3 节，老旧文档归档与合并
+
+---
+
+> **本章问题已同步记录到 hiclaw/rules.md 中 FlowForge 进度表，待修复完成后更新对应设计文档。**

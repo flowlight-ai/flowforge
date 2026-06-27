@@ -114,12 +114,14 @@ class ToolRegistry:
             await self._emit_callback("tool.start", {"tool_name": name, "params": input.params})
 
         start = time.time()
+        # LLM 工具需要更长超时（候选链 6 模型 × 30s + fallback 6 模型 × 30s = 360s）
+        effective_timeout = 300 if name in ("llm", "llm_client") else self._tool_timeout
         try:
             if is_base_tool:
-                result = await asyncio.wait_for(tool.execute(input), timeout=self._tool_timeout)
+                result = await asyncio.wait_for(tool.execute(input), timeout=effective_timeout)
             else:
                 # ToolPlugin: call execute(dict) and wrap result in ToolOutput
-                raw_result = await asyncio.wait_for(tool.execute(input.params), timeout=self._tool_timeout)
+                raw_result = await asyncio.wait_for(tool.execute(input.params), timeout=effective_timeout)
                 if isinstance(raw_result, ToolOutput):
                     result = raw_result
                 else:
@@ -127,7 +129,8 @@ class ToolRegistry:
         except TimeoutError:
             if self._emit_callback:
                 await self._emit_callback("tool.end", {"tool_name": name, "error": "timeout", "duration_ms": int((time.time()-start)*1000)})
-            return ToolOutput(result={}, error=f"Tool '{name}' timed out after {self._tool_timeout}s")
+            logger.warning(f"Tool '{name}' timed out after {effective_timeout}s")
+            return ToolOutput(result={"content": "", "error": f"timeout after {effective_timeout}s"}, error=f"Tool '{name}' timed out after {effective_timeout}s")
         except Exception as e:
             if self._emit_callback:
                 await self._emit_callback("tool.end", {"tool_name": name, "error": str(e), "duration_ms": int((time.time()-start)*1000)})

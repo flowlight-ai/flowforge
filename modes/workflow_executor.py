@@ -124,6 +124,15 @@ class WorkflowExecutor(BaseModeExecutor):
         defense_config = {**self.DEFAULT_DEFENSE, **ctx.metadata.get("defense", {})}
         ctx.metadata["_defense"] = defense_config
         step_timeout = ctx.metadata.get("step_timeout", STEP_TIMEOUT_SECONDS)
+        # P0-3: reflexion模式内部有多轮迭代（actor/evaluator/reflector），
+        # 每轮可能涉及LLM调用+反思，需要更长超时（至少600s）
+        agent_execution_mode = ""
+        if hasattr(ctx, 'input_data') and isinstance(ctx.input_data, dict):
+            agent_execution_mode = ctx.input_data.get("execution_mode", "") or ""
+        if not agent_execution_mode and hasattr(ctx, 'metadata') and ctx.metadata:
+            agent_execution_mode = ctx.metadata.get("execution_mode", "") or ""
+        if agent_execution_mode == "reflexion":
+            step_timeout = max(step_timeout, 600)
 
         intent = context_data.get("task", context_data.get("intent", ""))
         recalled = await self._recall_memories(ctx, intent)
@@ -205,6 +214,17 @@ class WorkflowExecutor(BaseModeExecutor):
                                     merged_data[key] = ctx.metadata[key]
                         agent_input = AgentInput(params=merged_data)
 
+                        # P0-3: 根据agent的execution_mode动态调整超时
+                        # reflexion模式内部有多轮迭代（actor/evaluator/reflector），需要更长超时
+                        agent_step_timeout = step_timeout
+                        agent_execution_mode = ""
+                        if hasattr(agent, 'config') and hasattr(agent.config, 'execution_mode'):
+                            agent_execution_mode = agent.config.execution_mode or ""
+                        elif isinstance(agent, dict):
+                            agent_execution_mode = agent.get("execution_mode", "") or ""
+                        if agent_execution_mode == "reflexion":
+                            agent_step_timeout = max(step_timeout, 600)
+
                         # [loop-trace] agent执行前详细日志
                         logger.info(f"[loop-trace] task_id={ctx.task_id} agent执行前: "
                                      f"agent_name={agent_name}, step_name={step_name}, "
@@ -221,7 +241,7 @@ class WorkflowExecutor(BaseModeExecutor):
 
                         agent_output = await asyncio.wait_for(
                             agent.execute_with_context(agent_input, ctx),
-                            timeout=step_timeout,
+                            timeout=agent_step_timeout,
                         )
 
                         # [loop-trace] agent执行后详细日志
@@ -264,12 +284,12 @@ class WorkflowExecutor(BaseModeExecutor):
                             else:
                                 logger.info(f"[loop-trace] task_id={ctx.task_id} context_data[{_cdk}] type={type(_cdv).__name__}, len={_cdv_len}")
                     except asyncio.TimeoutError:
-                        logger.warning(f"Step '{step_name}' agent '{agent_name}' timed out after {step_timeout}s")
+                        logger.warning(f"Step '{step_name}' agent '{agent_name}' timed out after {agent_step_timeout}s")
                         on_error = step.get("on_error", "abort")
                         if on_error == "skip":
                             ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {"step": step_name, "timed_out": True})
                             continue
-                        raise StepTimeoutError(f"Step '{step_name}' agent '{agent_name}' timed out after {step_timeout}s")
+                        raise StepTimeoutError(f"Step '{step_name}' agent '{agent_name}' timed out after {agent_step_timeout}s")
                     except Exception as e:
                         on_error = step.get("on_error", "abort")
                         if on_error == "skip":
@@ -285,7 +305,7 @@ class WorkflowExecutor(BaseModeExecutor):
                                     agent_input = AgentInput(params=merged_data)
                                     agent_output = await asyncio.wait_for(
                                         agent.execute_with_context(agent_input, ctx),
-                                        timeout=step_timeout,
+                                        timeout=agent_step_timeout,
                                     )
                                     context_data.update(agent_output.result)
                                     break
@@ -293,7 +313,7 @@ class WorkflowExecutor(BaseModeExecutor):
                                     if i == retry_count - 1:
                                         logger.warning(f"Step '{step_name}' retry {i+1} timed out")
                                         if on_error != "skip":
-                                            raise StepTimeoutError(f"Step '{step_name}' retry {i+1} timed out after {step_timeout}s")
+                                            raise StepTimeoutError(f"Step '{step_name}' retry {i+1} timed out after {agent_step_timeout}s")
                                 except Exception:
                                     if i == retry_count - 1:
                                         raise
@@ -312,7 +332,7 @@ class WorkflowExecutor(BaseModeExecutor):
                                     agent_input = AgentInput(params=merged_data)
                                     agent_output = await asyncio.wait_for(
                                         agent.execute_with_context(agent_input, ctx),
-                                        timeout=step_timeout,
+                                        timeout=agent_step_timeout,
                                     )
                                     context_data.update(agent_output.result)
                                     if step.get("output") and step["output"] not in agent_output.result:
@@ -324,7 +344,7 @@ class WorkflowExecutor(BaseModeExecutor):
                                 except asyncio.TimeoutError:
                                     if i == retry_count - 1:
                                         logger.warning(f"Step '{step_name}' reflexion retry {i+1} timed out")
-                                        raise StepTimeoutError(f"Step '{step_name}' reflexion retry timed out after {step_timeout}s")
+                                        raise StepTimeoutError(f"Step '{step_name}' reflexion retry timed out after {agent_step_timeout}s")
                                 except Exception:
                                     if i == retry_count - 1:
                                         raise

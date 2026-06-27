@@ -21,6 +21,8 @@ class PermissionDecision(str, Enum):
     DENY = "deny"
     ASK = "ask"
     ALLOW = "allow"
+    ALWAYS_ALLOW = "always_allow"
+    ALWAYS_DENY = "always_deny"
 
 
 class ActionLevel(str, Enum):
@@ -124,9 +126,63 @@ class PermissionV2:
             ActionLevel.PREPARE: PermissionDecision.ASK,
             ActionLevel.EXECUTE: PermissionDecision.DENY,
         }
+        self._decision_store: Dict[str, str] = {}
+        self._store_path: Optional[str] = "flowforge/config/permission_decisions.json"
+        self._load_decisions()
 
     def add_rule(self, rule: PermissionRule) -> None:
         self._rules.append(rule)
+
+    def _make_key(self, tool_name: str, action: str, params: dict) -> str:
+        """Generate a decision key from tool name, action, and key params."""
+        import hashlib
+        import json as json_mod
+        # Only include stable, identifying params (path, action type)
+        key_params = {
+            "tool": tool_name,
+            "action": action,
+        }
+        if "path" in params:
+            key_params["path"] = params["path"]
+        if "file_path" in params:
+            key_params["path"] = params["file_path"]
+        key_str = json_mod.dumps(key_params, sort_keys=True)
+        return hashlib.sha256(key_str.encode()).hexdigest()[:16]
+
+    def _load_decisions(self) -> None:
+        """Load persisted decisions from JSON file."""
+        import os
+        import json as json_mod
+        if not self._store_path:
+            return
+        try:
+            if os.path.exists(self._store_path):
+                with open(self._store_path, "r", encoding="utf-8") as f:
+                    self._decision_store = json_mod.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to load permission decisions: {e}")
+            self._decision_store = {}
+
+    def _save_decisions(self) -> None:
+        """Save decisions to JSON file."""
+        import os
+        import json as json_mod
+        if not self._store_path:
+            return
+        try:
+            dir_path = os.path.dirname(self._store_path)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
+            with open(self._store_path, "w", encoding="utf-8") as f:
+                json_mod.dump(self._decision_store, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.warning(f"Failed to save permission decisions: {e}")
+
+    def record_decision(self, key: str, decision: str) -> None:
+        """Record a user's always-allow/always-deny decision."""
+        if decision in ("always_allow", "always_deny"):
+            self._decision_store[key] = decision
+            self._save_decisions()
 
     async def check(
         self, tool_name: str, params: Dict[str, Any] = None,
@@ -134,6 +190,16 @@ class PermissionV2:
         context: Optional[Dict[str, Any]] = None,
     ) -> bool:
         params = params or {}
+        # Check persisted decisions first
+        key = self._make_key(tool_name, action_level.value, params)
+        if key in self._decision_store:
+            decision = self._decision_store[key]
+            if decision == "always_allow":
+                await self._record_audit("allow", tool_name, params, "Persisted: always allow")
+                return True
+            elif decision == "always_deny":
+                await self._record_audit("deny", tool_name, params, "Persisted: always deny")
+                return False
         decision = self._evaluate_rules(tool_name, params, action_level, context)
 
         if decision == PermissionDecision.DENY:

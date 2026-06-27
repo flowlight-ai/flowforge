@@ -19,13 +19,15 @@ routes:
         - rate_limited
         - timeout
         - moderation_rejected
-      timeout_seconds: 30
+      timeout_seconds: 90
       max_retries: 2
       retry_delay_seconds: 1.0
     default_temperature: 0.7
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
+  # writer 创作需要较长时间(OpenRoute 推理 90s+),提升 timeout 到 180s 避免超时
+  # (用户 memory: 长文章 LLM timeout 应为 2 分钟+,此处 180s 留余量)
   creative:
     primary_provider: doubao
     primary_model: doubao-seed2
@@ -37,7 +39,7 @@ routes:
       conditions:
         - rate_limited
         - timeout
-      timeout_seconds: 60
+      timeout_seconds: 180
       max_retries: 2
     default_temperature: 0.9
     default_max_tokens: 8192
@@ -55,14 +57,41 @@ routes:
         - rate_limited
         - timeout
         - moderation_rejected
-      timeout_seconds: 30
+      timeout_seconds: 90
       max_retries: 3
     default_temperature: 0.0
     default_max_tokens: 4096
 
+  # 评委路由：长超时，适合 MultiJudge 评委并行评审
+  # 评委 agent_name 为 multi_judge_<model>，LLM 评审可能较慢(94-111s实测)
+  # judge_timeout(YAML)=180s 为 asyncio.wait_for 上限，此处 timeout=180s 与之对齐
+  judge:
+    primary_provider: doubao
+    primary_model: doubao-seed2
+    fallback_providers:
+      - qwen
+      - deepseek
+    fallback_models:
+      - qwen3.6-plus
+      - deepseek-chat
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+      timeout_seconds: 180
+      max_retries: 1
+      retry_delay_seconds: 2.0
+    default_temperature: 0.3
+    default_max_tokens: 2048
+
 # ==================== Agent 路由映射 ====================
 # Agent 命名空间 -> 路由名
+# 支持前缀匹配: agent_name 以 "multi_judge_" 开头时自动匹配 judge 路由
+# (LLMClient._get_timeout_for_agent 会先精确匹配,再前缀匹配)
 agent_routes:
+  # 评委路由(前缀匹配): multi_judge_<model> → judge 路由(180s 超时)
+  multi_judge_: judge
+
   # ContentForge Agent
   contentforge:topic: default
   contentforge:research: default
@@ -89,6 +118,14 @@ agent_routes:
   devforge:test_generator: precise
   devforge:deployment: default
   devforge:security_auditor: precise
+
+  # MallForge Agent
+  mallforge:product_scout: default
+  mallforge:listing_generator: creative
+  mallforge:ad_optimizer: default
+  mallforge:supply_chain: precise
+  mallforge:support_agent: default
+  mallforge:report_generator: default
 
 # ==================== Agent 模型参数覆盖 ====================
 # Agent 命名空间 -> 模型参数覆盖
@@ -117,6 +154,24 @@ agent_model_params:
     temperature: 0.0
   devforge:code_reviewer:
     temperature: 0.3
+  mallforge:product_scout:
+    temperature: 0.4
+    json_mode: true
+  mallforge:listing_generator:
+    temperature: 0.7
+    json_mode: true
+  mallforge:ad_optimizer:
+    temperature: 0.5
+    json_mode: true
+  mallforge:supply_chain:
+    temperature: 0.3
+    json_mode: true
+  mallforge:support_agent:
+    temperature: 0.6
+    json_mode: true
+  mallforge:report_generator:
+    temperature: 0.4
+    json_mode: true
 
 # ==================== 故障转移条件定义 ====================
 failover_conditions:
@@ -125,7 +180,7 @@ failover_conditions:
     action: fallback
     cooldown_seconds: 60
   timeout:
-    threshold_seconds: 30
+    threshold_seconds: 90
     action: fallback
   moderation_rejected:
     action: reject  # 不回退，直接拒绝

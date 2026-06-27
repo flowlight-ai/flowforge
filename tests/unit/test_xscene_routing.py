@@ -13,6 +13,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch, ANY
 from flowforge.tools.llm_client import LLMClient
 from flowforge.core.base_tool import ToolInput, ToolOutput
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
 
 
 # ── Helper: create a mock httpx response ──
@@ -45,10 +46,17 @@ def _mock_httpx_client(response_mock):
     return mock_client
 
 
+# ── T7 LLM内容审核器 fixture ──
+
+@pytest.fixture
+def t7_reviewer():
+    return T7Reviewer()
+
+
 # ── Test 1: X-Scene: openroute_combine when tools are provided ──
 
 @pytest.mark.asyncio
-async def test_xscene_openroute_combine_with_tools():
+async def test_xscene_openroute_combine_with_tools(t7_reviewer):
     """When tools are provided and provider is openroute, X-Scene should be openroute_combine."""
     client = LLMClient(models_config={
         "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
@@ -93,11 +101,17 @@ async def test_xscene_openroute_combine_with_tools():
     assert "tools" in payload, "tools should be in payload for openroute_combine"
     assert payload["tools"] == tools_schema
 
+    # T7: LLM内容审核
+    content = result.result.get("content", "") if result.result else ""
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="Search for AI news", content_type="路由回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
 
 # ── Test 2: X-Scene: caller_combine when no tools ──
 
 @pytest.mark.asyncio
-async def test_xscene_caller_combine_without_tools():
+async def test_xscene_caller_combine_without_tools(t7_reviewer):
     """When no tools are provided and provider is openroute, X-Scene should be caller_combine."""
     client = LLMClient(models_config={
         "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
@@ -120,11 +134,17 @@ async def test_xscene_caller_combine_without_tools():
     assert headers.get("X-Scene") == "caller_combine", \
         f"Expected X-Scene: caller_combine, got {headers.get('X-Scene')}"
 
+    # T7: LLM内容审核
+    content = result.result.get("content", "") if result.result else ""
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="Hello", content_type="路由回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
 
 # ── Test 3: X-Scene: auto for auto model without tools ──
 
 @pytest.mark.asyncio
-async def test_xscene_auto_for_auto_model():
+async def test_xscene_auto_for_auto_model(t7_reviewer):
     """When model=auto and no tools, X-Scene should be auto."""
     client = LLMClient(models_config={
         "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
@@ -147,11 +167,17 @@ async def test_xscene_auto_for_auto_model():
     assert headers.get("X-Scene") == "auto", \
         f"Expected X-Scene: auto, got {headers.get('X-Scene')}"
 
+    # T7: LLM内容审核
+    content = result.result.get("content", "") if result.result else ""
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="Hello", content_type="路由回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
 
 # ── Test 4: X-Scene: openroute_combine for auto model WITH tools ──
 
 @pytest.mark.asyncio
-async def test_xscene_openroute_combine_for_auto_with_tools():
+async def test_xscene_openroute_combine_for_auto_with_tools(t7_reviewer):
     """When model=auto AND tools are provided, X-Scene should be openroute_combine (tools take priority)."""
     client = LLMClient(models_config={
         "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
@@ -194,11 +220,17 @@ async def test_xscene_openroute_combine_for_auto_with_tools():
     payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json", {}))
     assert "tools" in payload, "tools should be in payload for auto+openroute_combine"
 
+    # T7: LLM内容审核
+    content = result.result.get("content", "") if result.result else ""
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="What is 2+2?", content_type="路由回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
 
 # ── Test 5: No X-Scene for non-openroute providers ──
 
 @pytest.mark.asyncio
-async def test_xscene_not_set_for_non_openroute():
+async def test_xscene_not_set_for_non_openroute(t7_reviewer):
     """Non-openroute providers should NOT receive X-Scene header."""
     client = LLMClient(models_config={
         "providers": {
@@ -222,6 +254,12 @@ async def test_xscene_not_set_for_non_openroute():
     headers = call_kwargs.kwargs.get("headers", call_kwargs[1].get("headers", {}))
     assert "X-Scene" not in headers, \
         f"X-Scene should NOT be set for non-openroute providers, got {headers.get('X-Scene')}"
+
+    # T7: LLM内容审核
+    content = result.result.get("content", "") if result.result else ""
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="Hello", content_type="路由回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
 
 
 # ── Test 6: openroute/auto routing — default assignment uses auto ──
@@ -247,7 +285,7 @@ async def test_openroute_auto_default_assignment():
 # ── Test 7: openroute/auto with tools — full integration mock ──
 
 @pytest.mark.asyncio
-async def test_openroute_auto_with_tools_integration():
+async def test_openroute_auto_with_tools_integration(t7_reviewer):
     """Simulate a full request to openroute/auto with tools, verifying:
     1. X-Scene: openroute_combine is set
     2. model=auto is in payload
@@ -310,11 +348,17 @@ async def test_openroute_auto_with_tools_integration():
     assert payload["model"] == "auto"
     assert "tools" in payload
 
+    # T7: LLM内容审核 (content为空时跳过)
+    content = result.result.get("content", "") if result.result else ""
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="What's the latest AI news?", content_type="路由回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
 
 # ── Test 8: openroute/auto without tools — caller_combine fallback ──
 
 @pytest.mark.asyncio
-async def test_openroute_auto_without_tools_caller_combine():
+async def test_openroute_auto_without_tools_caller_combine(t7_reviewer):
     """When auto model is used without tools, X-Scene should be auto (not caller_combine)."""
     client = LLMClient(models_config={
         "providers": {"openroute": {"base_url": "http://127.0.0.1:13001/v1"}},
@@ -341,6 +385,12 @@ async def test_openroute_auto_without_tools_caller_combine():
     # model=auto
     assert payload["model"] == "auto"
 
+    # T7: LLM内容审核
+    content = result.result.get("content", "") if result.result else ""
+    if content.strip():
+        t7_result = await t7_reviewer.review(content=content, context="How's the weather?", content_type="路由回答")
+        assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
+
 
 # ── Test 9: Fallback chain starts with openroute ──
 
@@ -363,7 +413,7 @@ def test_fallback_chain_openroute_first():
 # ── Test 10: X-Scene for specific openroute models ──
 
 @pytest.mark.asyncio
-async def test_xscene_for_specific_openroute_models():
+async def test_xscene_for_specific_openroute_models(t7_reviewer):
     """Each openroute model type should get the correct X-Scene."""
     test_cases = [
         # (model, has_tools, expected_scene)
@@ -402,3 +452,9 @@ async def test_xscene_for_specific_openroute_models():
         actual_scene = headers.get("X-Scene")
         assert actual_scene == expected_scene, \
             f"Model={model}, tools={has_tools}: expected X-Scene={expected_scene}, got {actual_scene}"
+
+        # T7: LLM内容审核
+        content = result.result.get("content", "") if result.result else ""
+        if content.strip():
+            t7_result = await t7_reviewer.review(content=content, context="test", content_type="路由回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"

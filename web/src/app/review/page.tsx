@@ -19,7 +19,7 @@ export default function ReviewCenterPage() {
       if (typeFilter) params.set("workflow_type", typeFilter);
       const r = await fetch(`/api/v1/tasks?${params}`);
       const data = await r.json();
-      setTasks(data.items || data.tasks || []);
+      setTasks(data?.data?.items ?? data.items ?? data.tasks ?? []);
     } catch (e) {
       console.error(e);
     }
@@ -32,10 +32,11 @@ export default function ReviewCenterPage() {
 
   const handleQuickApprove = async (taskId: string) => {
     try {
-      await fetch(
-        `/api/v1/tasks/${taskId}/review?verdict=approve&feedback=快速批准`,
-        { method: "POST" }
-      );
+      await fetch(`/api/v1/tasks/${taskId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verdict: "approve", feedback: "快速批准" }),
+      });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (e) {
       console.error(e);
@@ -44,10 +45,11 @@ export default function ReviewCenterPage() {
 
   const handleQuickReject = async (taskId: string) => {
     try {
-      await fetch(
-        `/api/v1/tasks/${taskId}/review?verdict=reject&feedback=快速驳回`,
-        { method: "POST" }
-      );
+      await fetch(`/api/v1/tasks/${taskId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verdict: "reject", feedback: "快速驳回" }),
+      });
       setTasks((prev) => prev.filter((t) => t.id !== taskId));
     } catch (e) {
       console.error(e);

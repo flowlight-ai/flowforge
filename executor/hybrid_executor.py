@@ -31,6 +31,22 @@ logger = get_logger("executor")
 TASK_TIMEOUT_SECONDS = 1200
 
 
+def _get_task_timeout(context) -> int:
+    """从 context.metadata 读取 task_timeout，支持调用方按需覆盖总超时。
+
+    用于 E2E 测试等需要长耗时 LLM 调用的场景（rewoo/reflexion 多次 LLM 调用
+    累计可能超过默认 1200s）。默认仍返回 TASK_TIMEOUT_SECONDS=1200。
+    """
+    try:
+        meta = getattr(context, "metadata", None) or {}
+        v = meta.get("task_timeout") if isinstance(meta, dict) else None
+        if v and isinstance(v, (int, float)) and v > 0:
+            return int(v)
+    except Exception:
+        pass
+    return TASK_TIMEOUT_SECONDS
+
+
 class HybridExecutor:
     """Central task execution engine supporting multiple reasoning modes.
 
@@ -91,6 +107,11 @@ class HybridExecutor:
         self.harness = harness
         self._loop_executor = loop_executor
         self._running_tasks: Dict[str, str] = {}
+        # 陈旧锁检测：记录每个 persona 任务开始时间，超过 STALE_LOCK_TIMEOUT 自动清除
+        # 修复"异常处理了一直不返回导致业务卡死"问题
+        self._running_task_start_times: Dict[str, float] = {}
+        import time as _time_mod
+        self._stale_lock_timeout = 900  # 15分钟，超过此时间的运行任务视为陈旧锁
         self._helm_adapter: Optional[EventBusHelmAdapter] = None
         self._review_events: Dict[str, asyncio.Event] = {}
         self._pause_events: Dict[str, asyncio.Event] = {}
@@ -179,11 +200,36 @@ class HybridExecutor:
             })
 
             if persona in self._running_tasks:
-                # Update state to reflect the conflict
-                self.state_manager.update_state(context.task_id, {"status": "failed", "error": f"Persona '{persona}' already running task {self._running_tasks[persona]}"})
-                raise ConflictError(
-                    f"Persona '{persona}' already running task {self._running_tasks[persona]}")
+                # 陈旧锁检测：如果当前运行的任务超过15分钟，自动清除锁
+                # 修复"异常处理了一直不返回导致业务卡死"问题
+                import time as _time_check
+                stale_task_id = self._running_tasks[persona]
+                start_time = self._running_task_start_times.get(persona, 0)
+                elapsed = _time_check.time() - start_time if start_time else 0
+                if elapsed > self._stale_lock_timeout:
+                    logger.warning(
+                        f"[hybrid_executor] 检测到陈旧锁: persona='{persona}', "
+                        f"stale_task_id={stale_task_id}, elapsed={elapsed:.0f}s > "
+                        f"timeout={self._stale_lock_timeout}s, 自动清除以避免业务卡死")
+                    del self._running_tasks[persona]
+                    if persona in self._running_task_start_times:
+                        del self._running_task_start_times[persona]
+                    # 更新旧任务状态为failed
+                    try:
+                        self.state_manager.update_state(stale_task_id, {
+                            "status": "failed",
+                            "error": f"Task stale lock detected after {elapsed:.0f}s, auto-released"
+                        })
+                    except Exception as _e:
+                        logger.warning(f"[hybrid_executor] 更新旧任务状态失败: {_e}")
+                else:
+                    # 锁仍有效，拒绝新任务
+                    self.state_manager.update_state(context.task_id, {"status": "failed", "error": f"Persona '{persona}' already running task {stale_task_id}"})
+                    raise ConflictError(
+                        f"Persona '{persona}' already running task {stale_task_id}")
             self._running_tasks[persona] = context.task_id
+            import time as _time_set
+            self._running_task_start_times[persona] = _time_set.time()
             ff_metrics.record_task_created(mode_hint or "auto", persona)
 
             ws = get_workspace_manager()
@@ -237,7 +283,7 @@ class HybridExecutor:
 
                 loop_result = await asyncio.wait_for(
                     self._loop_executor.run(context, loop_config),
-                    timeout=TASK_TIMEOUT_SECONDS,
+                    timeout=_get_task_timeout(context),
                 )
 
                 # Convert LoopResult to dict
@@ -356,6 +402,8 @@ class HybridExecutor:
             finally:
                 if not _is_substep and persona in self._running_tasks:
                     del self._running_tasks[persona]
+                if not _is_substep and persona in self._running_task_start_times:
+                    del self._running_task_start_times[persona]
                 if not _is_substep and context.task_id in self._task_contexts:
                     del self._task_contexts[context.task_id]
 
@@ -399,7 +447,7 @@ class HybridExecutor:
 
             result = await asyncio.wait_for(
                 executor.run(context),
-                timeout=TASK_TIMEOUT_SECONDS,
+                timeout=_get_task_timeout(context),
             )
 
             # [loop-trace] 非Loop模式执行完成后结果详细日志
@@ -579,6 +627,8 @@ class HybridExecutor:
         for persona, running_task_id in list(self._running_tasks.items()):
             if running_task_id == task_id:
                 del self._running_tasks[persona]
+                if persona in self._running_task_start_times:
+                    del self._running_task_start_times[persona]
                 logger.info(f"Released persona lock for '{persona}' (cancelled task {task_id})")
                 break
 

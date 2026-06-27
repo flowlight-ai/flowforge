@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from flowforge.agents.declarative import DeclarativeAgent, AgentConfig, DeclarativeAgentAdapter
 from flowforge.core.base_agent import AgentInput, AgentOutput
 from flowforge.compiler.resume_adapter import ResumeAdapter, HumanReviewConfig, ResumeCommand
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
 
 
 # ── Mock LLM Client ──────────────────────────────────────────────
@@ -116,11 +117,17 @@ class MockToolRegistry:
 
 # ── 测试用例 ──────────────────────────────────────────────────────
 
+@pytest.fixture
+def t7_reviewer():
+    """T7 LLM内容审核器"""
+    return T7Reviewer()
+
+
 class TestReActMultiTurn:
     """测试 DeclarativeAgent ReAct 多轮 Tool Loop"""
     
     @pytest.mark.asyncio
-    async def test_single_tool_call(self):
+    async def test_single_tool_call(self, t7_reviewer):
         """测试单轮Tool调用：LLM调用一次工具后返回结果"""
         # LLM第一轮返回tool_call，第二轮返回最终结果
         mock_llm = MockLLMClient(responses=[
@@ -157,9 +164,15 @@ class TestReActMultiTurn:
         assert output.result is not None
         assert output.metadata.get("agent_type") == "declarative_multi_turn"
         assert output.metadata.get("steps_used", 0) >= 1
+
+        # T7: LLM内容审核
+        content = output.result.get("content", "") if isinstance(output.result, dict) else (str(output.result) if output.result else "")
+        if content.strip():
+            t7_result = await t7_reviewer.review(content=content, context="2024年AI发展趋势", content_type="react回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
     
     @pytest.mark.asyncio
-    async def test_multi_tool_calls_sequential(self):
+    async def test_multi_tool_calls_sequential(self, t7_reviewer):
         """测试多轮Tool调用：LLM连续调用多个工具"""
         mock_llm = MockLLMClient(responses=[
             # 第1轮：调用搜索
@@ -189,9 +202,15 @@ class TestReActMultiTurn:
         
         assert mock_llm.call_count == 3
         assert output.metadata.get("tool_calls_total", 0) >= 2
+
+        # T7: LLM内容审核
+        content = output.result.get("content", "") if isinstance(output.result, dict) else (str(output.result) if output.result else "")
+        if content.strip():
+            t7_result = await t7_reviewer.review(content=content, context="深度学习趋势", content_type="react回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
     
     @pytest.mark.asyncio
-    async def test_max_steps_limit(self):
+    async def test_max_steps_limit(self, t7_reviewer):
         """测试max_steps限制：LLM持续调用工具但被max_steps截断"""
         # LLM每轮都返回tool_call，模拟无限循环
         infinite_tool_calls = [
@@ -218,9 +237,15 @@ class TestReActMultiTurn:
         # 验证：LLM最多被调用3次（max_steps限制）
         assert mock_llm.call_count <= 3
         assert output.metadata.get("steps_used", 0) <= 3
+
+        # T7: LLM内容审核
+        content = output.result.get("content", "") if isinstance(output.result, dict) else (str(output.result) if output.result else "")
+        if content.strip():
+            t7_result = await t7_reviewer.review(content=content, context="test", content_type="react回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
     
     @pytest.mark.asyncio
-    async def test_single_turn_fallback(self):
+    async def test_single_turn_fallback(self, t7_reviewer):
         """测试单轮模式（multi_turn=False）：不执行tool loop"""
         mock_llm = MockLLMClient(responses=[
             ("直接回答", []),
@@ -240,6 +265,12 @@ class TestReActMultiTurn:
         assert mock_llm.call_count == 1
         # 单轮模式不应有 declarative_multi_turn 标记
         assert output.metadata.get("agent_type") != "declarative_multi_turn"
+
+        # T7: LLM内容审核
+        content = output.result.get("content", "") if isinstance(output.result, dict) else (str(output.result) if output.result else "")
+        if content.strip():
+            t7_result = await t7_reviewer.review(content=content, context="你好", content_type="react回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
 
 
 class TestResumeAdapter:
@@ -391,7 +422,7 @@ class TestReActWithResume:
     """测试 ReAct Agent + 人工审核中断 的完整场景"""
     
     @pytest.mark.asyncio
-    async def test_react_then_review_then_continue(self):
+    async def test_react_then_review_then_continue(self, t7_reviewer):
         """完整场景：Agent执行 → 触发审核 → 审核通过 → Agent继续
         
         模拟一个内容创作流程：
@@ -459,9 +490,14 @@ class TestReActWithResume:
         # Step 4: 验证审核后无pending
         pending = adapter.get_pending_reviews(workflow_id="article-001")
         assert len(pending) == 0
+
+        # T7: LLM内容审核
+        if draft_content.strip():
+            t7_result = await t7_reviewer.review(content=draft_content, context="AI趋势", content_type="react回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"
     
     @pytest.mark.asyncio
-    async def test_react_review_reject_with_feedback(self):
+    async def test_react_review_reject_with_feedback(self, t7_reviewer):
         """场景：Agent执行 → 审核拒绝 → 反馈回Agent"""
         mock_llm = MockLLMClient(responses=[
             ("搜索中", [{"name": "web_search", "arguments": {"query": "测试"}}]),
@@ -490,3 +526,9 @@ class TestReActWithResume:
         
         assert result["resume_values"]["approved"] is False
         assert "质量不达标" in result["resume_values"]["feedback"]
+
+        # T7: LLM内容审核
+        content = output.result.get("content", "") if isinstance(output.result, dict) else (str(output.result) if output.result else "")
+        if content.strip():
+            t7_result = await t7_reviewer.review(content=content, context="测试", content_type="react回答")
+            assert t7_result["verdict"] == "PASS", f"T7审核未通过: {t7_result['verdict']}, reason={t7_result.get('reason', '')}"

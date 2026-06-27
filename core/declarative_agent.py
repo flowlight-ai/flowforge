@@ -40,6 +40,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import inspect
+import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -164,6 +165,10 @@ class AgentConfig(BaseModel):
     post_processors: List[str] = Field(
         default_factory=list,
         description="Post-processor names: deai_postprocess, quality_filter, word_count_check, etc.",
+    )
+    prefer_api: Optional[bool] = Field(
+        default=None,
+        description="Prefer API backend over WebChat backend to avoid session timeout (P0-5)",
     )
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Arbitrary metadata"
@@ -350,6 +355,17 @@ class DeclarativeAgent(BaseAgent):
                     mapped_params[key] = val
             input.params.update(mapped_params)
 
+        # 3.5 渲染模板变量 — 把 {xxx} 占位符用 input.params/state 的值替换
+        # 必须在 input_mapping 之后(映射字段已展平到 params)、persona 注入之后(persona 占位符已替换)
+        # 避免 prompt_template 原文(含 {platform_name} {topic_title} 等占位符)直接发给 LLM
+        # 通用智能提取:支持 {topic_title} <- topic_list[0].title 等嵌套字段
+        # persona 占位符({soul_intro}{soul}{memory}{creation})若仍残留则保留
+        instructions = self._render_template_vars(instructions, input)
+        if self.config.prompt_template:
+            unresolved = re.findall(r'\{([a-zA-Z_][a-zA-Z0-9_]*)\}', instructions)
+            if unresolved:
+                logger.info(f"[declarative_agent] Agent '{self.name}' 模板渲染后剩余占位符: {unresolved}")
+
         # 4. Append handoff prompt to instructions if handoffs are configured
         if self.config.handoffs:
             handoff_prompt = self._build_handoff_prompt()
@@ -430,6 +446,155 @@ class DeclarativeAgent(BaseAgent):
 
         output = AgentOutput(result=result, metadata=metadata, state_updates=state_updates)
         return await self._apply_post_processors(output)
+
+    def _render_template_vars(self, template: str, input: AgentInput) -> str:
+        """渲染模板变量 — 用 input.params/state/metadata 的值替换 {xxx} 占位符。
+
+        通用逻辑,不写死业务领域:
+        1. 用正则匹配所有 {xxx} 占位符
+        2. 从 input.params / input.state / input.metadata 查找同名 key
+        3. 智能提取值(str 直接用,list 取第一个元素的 title/name,text 取前 N 字)
+        4. 通用嵌套字段提取: {topic_title} <- topic_list[0].title / topic.title
+        5. 组合字段提取: {xxx_section} <- 拼接 xxx/xxx_list/xxxes 等变量内容
+        6. persona 占位符({soul_intro}{soul}{memory}{creation})保留给 PersonaInjector
+        7. 找不到值时用空字符串替换,避免 LLM 看到原始 {xxx}
+        """
+        if not template or not input:
+            return template
+
+        # persona 占位符保留列表 — 由 PersonaInjector 注入
+        _PERSONA_VARS = {"soul_intro", "soul", "memory", "creation"}
+
+        # 收集所有可用变量
+        variables: dict = {}
+        if input.params:
+            variables.update(input.params)
+        if input.state:
+            for k, v in input.state.items():
+                if k not in variables:
+                    variables[k] = v
+        if hasattr(input, 'metadata') and input.metadata:
+            for k, v in input.metadata.items():
+                if k not in variables:
+                    variables[k] = v
+
+        # 匹配所有 {xxx} 占位符(不匹配 {{xxx}} 双花括号)
+        pattern = re.compile(r'(?<!\{)\{([a-zA-Z_][a-zA-Z0-9_]*)\}(?!\})')
+
+        def _extract_value(val) -> str:
+            """智能提取值的字符串表示"""
+            if isinstance(val, str):
+                return val
+            elif isinstance(val, (int, float)):
+                return str(val)
+            elif isinstance(val, list):
+                if not val:
+                    return ""
+                first = val[0]
+                if isinstance(first, str):
+                    return first
+                elif isinstance(first, dict):
+                    # 取 title/name/angle/content/text 字段
+                    for field in ("title", "name", "angle", "content", "text"):
+                        fv = first.get(field)
+                        if isinstance(fv, str) and fv.strip():
+                            return fv
+                    return ""
+                return ""
+            elif isinstance(val, dict):
+                for field in ("content", "output", "title", "name", "text", "result"):
+                    fv = val.get(field)
+                    if isinstance(fv, str) and fv.strip():
+                        return fv
+                return ""
+            else:
+                return str(val)[:500]
+
+        def _smart_extract_nested(var_name: str) -> Optional[str]:
+            """通用智能嵌套字段提取(不写死业务字段名)
+
+            规则:
+            1. {xxx_section}: 拼接 xxx/xxx_list/xxxes/xxx_materials 等变量的内容为 section 文本
+            2. {prefix_suffix}: 在 variables 里找 prefix_list/prefix/prefixes,从 list[0] 或 dict 提取 suffix 字段
+               例如 {topic_title} <- topic_list[0].title / topic.title
+               例如 {topic_angle} <- topic_list[0].angle / topic.angle
+            """
+            # 规则1: 组合字段 xxx_section
+            if var_name.endswith("_section"):
+                prefix = var_name[:-len("_section")]
+                candidate_keys = [prefix, prefix + "_list", prefix + "s", prefix + "es",
+                                  prefix + "_materials", "research_" + prefix,
+                                  "research_" + prefix + "s", "research_" + prefix + "_list",
+                                  prefix + "_items", prefix + "_data"]
+                for ck in candidate_keys:
+                    if ck in variables:
+                        val = variables[ck]
+                        if isinstance(val, list):
+                            parts = []
+                            for item in val:
+                                if isinstance(item, dict):
+                                    content = item.get("content") or item.get("text") or item.get("summary") or item.get("title") or ""
+                                    if content and str(content).strip():
+                                        parts.append(str(content))
+                                elif isinstance(item, str) and item.strip():
+                                    parts.append(item)
+                            if parts:
+                                return "## 参考资料\n" + "\n\n".join(parts)
+                        elif isinstance(val, str) and val.strip():
+                            return val
+                return ""
+
+            # 规则2: 嵌套字段 prefix_suffix <- prefix_list[0].suffix
+            parts = var_name.split("_")
+            if len(parts) >= 2:
+                # 尝试多种前缀拆分: topic_title -> (topic, title) 或 (topic_t, itle)
+                # 优先取最后一段作为字段名
+                prefix = "_".join(parts[:-1])
+                suffix = parts[-1]
+                candidate_var_keys = [prefix, prefix + "_list", prefix + "s", prefix + "es",
+                                      prefix + "_items", prefix + "_data"]
+                for vk in candidate_var_keys:
+                    if vk in variables:
+                        val = variables[vk]
+                        if isinstance(val, list) and val:
+                            first = val[0]
+                            if isinstance(first, dict):
+                                fv = first.get(suffix)
+                                if isinstance(fv, str) and fv.strip():
+                                    return fv
+                                # 字段名变体: title/name/angle
+                                for alt in (suffix, "title" if suffix == "name" else "",
+                                            "name" if suffix == "title" else ""):
+                                    if alt and alt in first:
+                                        av = first[alt]
+                                        if isinstance(av, str) and av.strip():
+                                            return av
+                        elif isinstance(val, dict):
+                            fv = val.get(suffix)
+                            if isinstance(fv, str) and fv.strip():
+                                return fv
+            return None
+
+        def replace_match(m):
+            var_name = m.group(1)
+            # persona 占位符保留,给 PersonaInjector 注入
+            if var_name in _PERSONA_VARS:
+                return m.group(0)
+            # 1. 直接匹配: variables["topic_title"] = "xxx"
+            if var_name in variables:
+                extracted = _extract_value(variables[var_name])
+                if extracted:
+                    return extracted
+                # 值存在但提取为空(如空列表),用空字符串替换
+                return ""
+            # 2. 通用智能嵌套提取: {topic_title} <- topic_list[0].title
+            smart_val = _smart_extract_nested(var_name)
+            if smart_val is not None:
+                return smart_val
+            # 3. 找不到的配置类占位符用空字符串替换,避免 LLM 看到原始 {xxx}
+            return ""
+
+        return pattern.sub(replace_match, template)
 
     def _load_refine_prompt(self, feedback: list, draft: str, input: AgentInput) -> str:
         """加载反思重写 prompt，注入评委反馈和草稿。
@@ -561,15 +726,23 @@ class DeclarativeAgent(BaseAgent):
             # Build TaskContext for mode executors
             # Inherit tools/agents/event_bus from parent context if available
             parent_ctx = self._context
+            # P0-5: 将 prefer_api 注入 input_data，让 reflexion executor 能转发给 DefaultLLMActor
+            mode_input_data = dict(input.params)
+            if self.config.prefer_api is not None:
+                mode_input_data["prefer_api"] = self.config.prefer_api
             task_context = TaskContext(
                 task_id=input.params.get("task_id", self.name),
-                input_data=dict(input.params),
+                input_data=mode_input_data,
                 metadata={"persona": input.params.get("persona", "")},
                 tools=parent_ctx.tools if parent_ctx else None,
                 agents=parent_ctx.agents if parent_ctx else None,
                 event_bus=parent_ctx.event_bus if parent_ctx else None,
                 persona=input.params.get("persona", ""),
             )
+            # B2 修复：在 TaskContext 创建时立即填充 instructions 字段
+            # 确保 prompt_template 加载的 instructions 传递到 reflexion 执行器
+            # （_run_mode_executor 也会设置，但此处提前设置确保所有代码路径可用）
+            task_context.instructions = instructions
 
             if mode == "react":
                 from flowforge.modes.react import ReactModeExecutor
@@ -1066,6 +1239,7 @@ def agent(
     checkpoint: Optional[Dict[str, Any]] = None,
     fallback_chain: Optional[List[str]] = None,
     post_processors: Optional[List[str]] = None,
+    prefer_api: Optional[bool] = None,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> Callable:
     """Decorator that registers a function as a DeclarativeAgent.
@@ -1122,6 +1296,7 @@ def agent(
             checkpoint=CheckpointConfig(**checkpoint) if checkpoint else None,
             fallback_chain=fallback_chain or [],
             post_processors=post_processors or [],
+            prefer_api=prefer_api,
             metadata=metadata or {},
         )
 
