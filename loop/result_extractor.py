@@ -87,11 +87,25 @@ def _deep_extract_content(data: dict, depth: int = 0) -> str:
     """递归提取内容：优先查找已知键，然后遍历所有值找长文本。"""
     if depth > 3 or not isinstance(data, dict):
         return ""
-    # 1. 优先查找已知内容键
-    for key in ("draft", "edited_draft", "content", "response"):
+    # v2.6 修复: 调整优先级，润色后字段优先于原始 draft
+    # 原顺序 ("draft", "edited_draft", "content", "response") 中 draft 排第一，
+    # 导致 polish 任务返回原始输入 draft 而非润色后的 content。
+    # 新顺序: edited_draft（editor_engine 输出）> polished_content（润色结果）
+    #         > content（FeedbackLoop 评估用的润色后内容）> response > draft（原始输入/创作输出）
+    # 对比长度兜底：如果多个键都有内容，取较长的（润色后通常更长）
+    candidate = ""
+    candidate_key = ""
+    for key in ("edited_draft", "polished_content", "content", "response", "draft"):
         val = data.get(key, "")
         if isinstance(val, str) and len(val.strip()) > 100:
-            return val
+            # 取较长的内容（避免原始 draft 覆盖润色后的 content）
+            if len(val) > len(candidate):
+                candidate = val
+                candidate_key = key
+    if candidate:
+        if depth == 0 and candidate_key != "edited_draft":
+            logger.info(f"[result_extractor] 提取自 key={candidate_key}, len={len(candidate)}")
+        return candidate
     # 2. 查找嵌套的result/output字段
     for key in ("result", "output", "results"):
         inner = data.get(key)

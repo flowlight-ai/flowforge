@@ -92,7 +92,14 @@ class ReflexionReflector(LoopReflector):
                             attempt=str(state.attempt),
                             history=history_str,
                             last_draft=last_draft_preview)
-        response = await self.llm_client.chat(prompt)
+        # v2.2 修复: 显式传入 agent_name="reflexion_evaluator"，让 LLMClient 走 reflector 路由(90s 超时)
+        # 原来不传 agent_name 导致 LLMClient 走 default 路由(200s 超时)，实际耗时 124s+
+        # llm_route.yaml 中 agent_routes.reflexion_evaluator → reflector 路由 (timeout_seconds=90)
+        response = await self.llm_client.chat(
+            prompt,
+            agent_name="reflexion_evaluator",
+            task_id=task.task_id,
+        )
         # ModelCapability.chat returns a dict with "content" key;
         # LLMClient-style clients return a string. Handle both.
         if isinstance(response, dict):

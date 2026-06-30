@@ -3,85 +3,122 @@
 # FlowForge LLMRouter + RouteResolver 加载此配置。
 
 # ==================== 路由定义 ====================
+# 注意：primary_model 必须与 models.yaml 中 models[].id 完全一致（区分大小写）
+# openroute 暴露的模型 ID 为 Pascal-Case: Doubao-Seed2.0 / DeepSeek-V4-Pro / GLM-5.1 等
 routes:
-  # 默认路由：doubao 为主，qwen/deepseek 为备
+  # 默认路由：doubao 为主，多模型备选
   default:
-    primary_provider: doubao
-    primary_model: doubao-seed2
+    primary_provider: openroute
+    primary_model: Doubao-Seed2.0
     fallback_providers:
-      - qwen
-      - deepseek
+      - openroute
     fallback_models:
-      - qwen3.6-plus
-      - deepseek-chat
+      - DeepSeek-V4-Pro
+      - GLM-5.1
+      - Kimi-K2.6
     failover_policy:
       conditions:
         - rate_limited
         - timeout
         - moderation_rejected
-      timeout_seconds: 90
+      timeout_seconds: 200
       max_retries: 2
       retry_delay_seconds: 1.0
     default_temperature: 0.7
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # writer 创作需要较长时间(OpenRoute 推理 90s+),提升 timeout 到 180s 避免超时
-  # (用户 memory: 长文章 LLM timeout 应为 2 分钟+,此处 180s 留余量)
+  # writer 创作需要较长时间(OpenRoute WebChat 推理 90s+,含锁等待可能 200s+)
+  # 提升 timeout 到 300s 避免超时（用户 memory: 长文章 LLM timeout 应为 2 分钟+）
   creative:
-    primary_provider: doubao
-    primary_model: doubao-seed2
+    primary_provider: openroute
+    primary_model: Doubao-Seed2.0
     fallback_providers:
-      - qwen
+      - openroute
     fallback_models:
-      - qwen3.6-plus
+      - DeepSeek-V4-Pro
+      - Kimi-K2.6
+      - GLM-5.1
+      - MiniMax-M3
     failover_policy:
       conditions:
         - rate_limited
         - timeout
-      timeout_seconds: 180
+      timeout_seconds: 300
       max_retries: 2
     default_temperature: 0.9
     default_max_tokens: 8192
 
   # 精确路由：低温度，适合事实核查/代码生成
+  # 修复：DeepSeek-V4-Pro 持续超时(每次93s×3次=280s)阻塞 ReflexionEvaluator 导致迭代超时
+  # 改用 Doubao-Seed2.0 作为 primary（更稳定），DeepSeek-V4-Pro 降为 fallback
+  # max_retries 从 3 降为 2，避免 evaluator 单次调用 >120s
   precise:
-    primary_provider: doubao
-    primary_model: doubao-seed2
+    primary_provider: openroute
+    primary_model: Doubao-Seed2.0
     fallback_providers:
-      - deepseek
+      - openroute
     fallback_models:
-      - deepseek-chat
+      - DeepSeek-V4-Pro
+      - GLM-5.1
+      - Kimi-K2.6
     failover_policy:
       conditions:
         - rate_limited
         - timeout
         - moderation_rejected
-      timeout_seconds: 90
-      max_retries: 3
+      timeout_seconds: 60
+      max_retries: 2
     default_temperature: 0.0
     default_max_tokens: 4096
 
-  # 评委路由：长超时，适合 MultiJudge 评委并行评审
-  # 评委 agent_name 为 multi_judge_<model>，LLM 评审可能较慢(94-111s实测)
-  # judge_timeout(YAML)=180s 为 asyncio.wait_for 上限，此处 timeout=180s 与之对齐
+  # 评委路由：适合 MultiJudge 评委并行评审
+  # 评委 agent_name 为 multi_judge_<model>，前缀匹配 multi_judge_ → judge 路由
+  # timeout=240s（单模型超时），max_retries=0（失败立即换下一个模型，不重试）
+  # verifier judge_timeout=240s 为 asyncio.wait_for 上限，允许 1 次模型尝试
+  # webchat模型响应>180s，原120s导致全失败，提升至240s
+  # fallback 链由 models.yaml assignments.judge 提供，FlowForge 统一管理
   judge:
-    primary_provider: doubao
-    primary_model: doubao-seed2
+    primary_provider: openroute
+    primary_model: DeepSeek-V4-Pro
     fallback_providers:
-      - qwen
-      - deepseek
+      - openroute
     fallback_models:
-      - qwen3.6-plus
-      - deepseek-chat
+      - Kimi-K2.6
+      - Qwen3.6-Plus
+      - HunYuan3
+      - MiniMax-M3
+      - GLM-5.1
+      - Doubao-Seed2.0
     failover_policy:
       conditions:
         - rate_limited
         - timeout
-      timeout_seconds: 180
-      max_retries: 1
-      retry_delay_seconds: 2.0
+      timeout_seconds: 240
+      max_retries: 0
+      retry_delay_seconds: 1.0
     default_temperature: 0.3
+    default_max_tokens: 2048
+
+  # 反思路由：reflector 生成改进建议（原用 default 200s 超时，实际耗时 300s+）
+  # v2.1 修复: 限制到 90s + max_retries=1, 总上限 180s（原 300s 导致总超时）
+  # reflector 只需生成 3-5 条改进建议，不需要长文生成
+  reflector:
+    primary_provider: openroute
+    primary_model: Doubao-Seed2.0
+    fallback_providers:
+      - openroute
+    fallback_models:
+      - DeepSeek-V4-Pro
+      - GLM-5.1
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+      timeout_seconds: 90
+      max_retries: 1
+      retry_delay_seconds: 1.0
+    default_temperature: 0.5
     default_max_tokens: 2048
 
 # ==================== Agent 路由映射 ====================
@@ -89,12 +126,21 @@ routes:
 # 支持前缀匹配: agent_name 以 "multi_judge_" 开头时自动匹配 judge 路由
 # (LLMClient._get_timeout_for_agent 会先精确匹配,再前缀匹配)
 agent_routes:
-  # 评委路由(前缀匹配): multi_judge_<model> → judge 路由(180s 超时)
+  # 评委路由(前缀匹配): multi_judge_<model> → judge 路由(240s 超时)
   multi_judge_: judge
+  # 反思路由: reflexion_evaluator → reflector 路由(90s 超时, 原 default 200s 导致 300s 耗时)
+  reflexion_evaluator: reflector
+  # v2.3 修复: reflexion_reflector 也走 reflector 路由(90s)
+  # 原: DefaultLLMReflector 硬编码 agent_name="reflexion_reflector" 但 yaml 未映射 → default 200s
+  # 日志: agent=reflexion_reflector timeout=200.0s（应走 90s 路由）
+  reflexion_reflector: reflector
 
   # ContentForge Agent
   contentforge:topic: default
   contentforge:research: default
+  # v2.4 修复: editor 也走 creative 路由(300s timeout)
+  # 原: 未映射 → default 200s → OpenRoute webchat 推理>200s 超时
+  contentforge:editor: creative
   contentforge:writer: creative
   contentforge:seo: precise
   contentforge:fact_check: precise

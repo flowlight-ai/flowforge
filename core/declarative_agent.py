@@ -297,7 +297,16 @@ class DeclarativeAgent(BaseAgent):
         )
 
         # Load from prompts.yaml if prompt_template is set
-        if self.config.prompt_template:
+        # 修复"组合提示词bug"：当 execution_mode 非 single 且配置了 tools 时，跳过 prompt_template 加载
+        # 因为复杂 prompt_template（如 contentforge.writer.main）含 {writing_methods_text}、
+        # {viral_types_text} 等占位符，只能由对应 tool（如 writer_engine）内部完整渲染
+        # DeclarativeAgent 的 _render_template_vars 无法渲染这些复杂占位符，会导致 LLM 收到
+        # 残缺 prompt 返回 "OK"。此时保留简单的 instructions 字段作为 system_prompt 即可
+        skip_prompt_template = (
+            self.config.execution_mode not in ("single", "")
+            and bool(self.config.tools)
+        )
+        if self.config.prompt_template and not skip_prompt_template:
             try:
                 from flowforge.core.prompt_manager import PromptManager
                 pm = PromptManager()
@@ -655,23 +664,23 @@ class DeclarativeAgent(BaseAgent):
             pass
 
         if template:
-            # 模板存在：用 format 注入变量，兼容缺失字段
-            try:
-                return template.format(
-                    existing_draft=draft,
-                    feedback_text=feedback_text,
-                    verifier_info="\n".join(feedback_items[:10]),
-                    judge_dimensions_guide=judge_dimensions_guide,
-                )
-            except (KeyError, ValueError, IndexError) as e:
-                logger.warning(f"[declarative_agent] Refine template format error: {e}, using inline prompt")
-                # 降级：手动替换已知占位符
-                rendered = template
-                rendered = rendered.replace("{existing_draft}", draft)
-                rendered = rendered.replace("{feedback_text}", feedback_text)
-                rendered = rendered.replace("{verifier_info}", "\n".join(feedback_items[:10]))
-                rendered = rendered.replace("{judge_dimensions_guide}", judge_dimensions_guide)
-                return rendered
+            # Phase 5.5 修复: 模板可能含大量上下文占位符（soul_intro/iteration_round/platform_name 等）
+            # 这些占位符由 writer_engine 工具负责渲染，DeclarativeAgent 只替换自己提供的4个变量
+            # 使用正则替换避免 KeyError，未匹配的占位符替换为空字符串
+            import re
+            rendered = template
+            replacements = {
+                "existing_draft": draft,
+                "feedback_text": feedback_text,
+                "verifier_info": "\n".join(feedback_items[:10]),
+                "judge_dimensions_guide": judge_dimensions_guide,
+            }
+            for key, value in replacements.items():
+                rendered = rendered.replace("{" + key + "}", str(value))
+            # 移除其他未替换的占位符（避免 LLM 看到原始 {xxx}）
+            rendered = re.sub(r'\{[a-z_]+\}', '', rendered)
+            logger.info(f"[declarative_agent] Refined prompt rendered (len={len(rendered)})")
+            return rendered
 
         # 模板不存在：构建内联 refine prompt
         return f"""你是资深内容创作者。以下是上一轮创作的文章和评委的改进建议，请根据建议重写文章。
@@ -730,15 +739,47 @@ class DeclarativeAgent(BaseAgent):
             mode_input_data = dict(input.params)
             if self.config.prefer_api is not None:
                 mode_input_data["prefer_api"] = self.config.prefer_api
-            task_context = TaskContext(
-                task_id=input.params.get("task_id", self.name),
-                input_data=mode_input_data,
-                metadata={"persona": input.params.get("persona", "")},
-                tools=parent_ctx.tools if parent_ctx else None,
-                agents=parent_ctx.agents if parent_ctx else None,
-                event_bus=parent_ctx.event_bus if parent_ctx else None,
-                persona=input.params.get("persona", ""),
-            )
+
+            # 关键修复（迭代超时 draft 丢失根因）：
+            # 原 task_context 创建时 state 字段未传（默认为新建 dict），
+            # input_data/metadata 也是新建/拷贝，不共享 parent_ctx 引用。
+            # 导致 ReflexionExecutor 写入 ctx.state["draft"]/ctx.input_data["draft"] 后，
+            # LoopExecutor 的 task.state/task.input_data 找不到 draft（迭代超时恢复失败）。
+            # 修复：共享 parent_ctx 的 state/input_data/metadata 引用，让 draft 立即可见。
+            if parent_ctx is not None:
+                # 共享 state 引用 — mode executor 写入的 draft 立即对 LoopExecutor 可见
+                shared_state = parent_ctx.state if isinstance(parent_ctx.state, dict) else {}
+                # 共享 input_data 引用，并把 mode_input_data 的额外字段合并进去
+                shared_input = parent_ctx.input_data if isinstance(parent_ctx.input_data, dict) else {}
+                # 把 mode_input_data 的额外字段合并进 parent_ctx.input_data（共享引用）
+                for k, v in mode_input_data.items():
+                    if k not in shared_input or shared_input.get(k) != v:
+                        shared_input[k] = v
+                # 共享 metadata 引用，合并新值
+                shared_metadata = parent_ctx.metadata if isinstance(parent_ctx.metadata, dict) else {}
+                if "persona" not in shared_metadata:
+                    shared_metadata["persona"] = input.params.get("persona", "")
+                task_context = TaskContext(
+                    task_id=input.params.get("task_id", self.name),
+                    input_data=shared_input,           # 共享 parent_ctx.input_data 引用
+                    metadata=shared_metadata,           # 共享 parent_ctx.metadata 引用
+                    state=shared_state,                # 共享 parent_ctx.state 引用
+                    tools=parent_ctx.tools,
+                    agents=parent_ctx.agents,
+                    event_bus=parent_ctx.event_bus,
+                    persona=input.params.get("persona", ""),
+                )
+            else:
+                # 无 parent_ctx：保持原行为（向后兼容单元测试）
+                task_context = TaskContext(
+                    task_id=input.params.get("task_id", self.name),
+                    input_data=mode_input_data,
+                    metadata={"persona": input.params.get("persona", "")},
+                    tools=None,
+                    agents=None,
+                    event_bus=None,
+                    persona=input.params.get("persona", ""),
+                )
             # B2 修复：在 TaskContext 创建时立即填充 instructions 字段
             # 确保 prompt_template 加载的 instructions 传递到 reflexion 执行器
             # （_run_mode_executor 也会设置，但此处提前设置确保所有代码路径可用）
@@ -783,7 +824,11 @@ class DeclarativeAgent(BaseAgent):
             task_context.agent_name = self.name
             task_context.instructions = instructions
             task_context.model = self.config.model or ""
-            task_context.tools = self.config.tools
+            # 修复"组合提示词bug"：不要用 config.tools（工具名列表，如 ["writer_engine"]）
+            # 覆盖 task_context.tools（真正的 ToolRegistry 对象，来自 parent_ctx）
+            # 否则 DefaultLLMActor 访问 ctx.tools.execute() 会失败（list 无 execute 方法）
+            # 将 config 的工具名列表存到 allowed_tools，供 executor 决定调用哪个工具
+            task_context.allowed_tools = self.config.tools
             task_context.model_params = self.config.model_params
 
             result = await executor.run(task_context)

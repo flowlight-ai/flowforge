@@ -164,11 +164,15 @@ class LoopExecutor:
                     "last_errors": state.past_errors[-3:] if state.past_errors else [],
                     "reason": "total_timeout",
                 })
+            # 关键修复：总超时后从 task.state/input_data 恢复 writer 已产出的 draft
+            # 避免 FeedbackLoop 拿到 content_len=0 触发 FAIL
+            recovered_output = self._recover_draft_from_task(task)
             return LoopResult(
                 success=False,
                 error=f"Loop total timeout ({total_timeout}s) exceeded",
                 total_attempts=state.attempt,
                 state=state,
+                output=recovered_output,
             )
         except Exception as loop_exc:
             # 异常处理修复：捕获非Timeout异常，返回失败结果避免业务卡死
@@ -184,12 +188,102 @@ class LoopExecutor:
                     "last_errors": [error_msg],
                     "reason": "exception",
                 })
+            # 异常时也尝试恢复 draft
+            recovered_output = self._recover_draft_from_task(task)
             return LoopResult(
                 success=False,
                 error=error_msg,
                 total_attempts=state.attempt,
                 state=state,
+                output=recovered_output,
             )
+
+    def _recover_draft_from_task(self, task: TaskContext) -> dict | None:
+        """从 task.state/input_data 恢复 writer 已产出的 draft。
+
+        当 LoopExecutor 总超时或异常时，writer 可能已成功生成内容
+        但 ReflexionExecutor 的 evaluator/reflector 阻塞导致超时。
+        此方法从 task.state/input_data 中恢复 draft/content，确保
+        FeedbackLoop 和最终结果能拿到有效内容。
+        """
+        recovered = {}
+        for src_attr in ("state", "input_data"):
+            src = getattr(task, src_attr, None)
+            if not isinstance(src, dict):
+                continue
+            for ctx_key in ("draft", "edited_draft", "content", "result"):
+                ctx_val = src.get(ctx_key)
+                if not ctx_val:
+                    continue
+                if isinstance(ctx_val, str) and ctx_val.strip():
+                    # 内容有效性检查：跳过prompt模板片段（如"### 合规红线"）
+                    if not self._is_valid_recovered_content(ctx_val):
+                        logger.warning(
+                            f"[loop] 跳过无效恢复内容(prompt模板片段): "
+                            f"task_id={task.task_id} key={ctx_key} "
+                            f"preview={ctx_val[:80]!r}"
+                        )
+                        continue
+                    recovered[ctx_key] = ctx_val
+                    recovered.setdefault("content", ctx_val)
+                    break
+                elif isinstance(ctx_val, dict):
+                    recovered[ctx_key] = ctx_val
+                    for sub_key in ("content", "output", "result", "draft"):
+                        sub_val = ctx_val.get(sub_key, "")
+                        if isinstance(sub_val, str) and sub_val.strip():
+                            if not self._is_valid_recovered_content(sub_val):
+                                logger.warning(
+                                    f"[loop] 跳过无效恢复内容(嵌套prompt片段): "
+                                    f"task_id={task.task_id} key={ctx_key}.{sub_key} "
+                                    f"preview={sub_val[:80]!r}"
+                                )
+                                continue
+                            recovered.setdefault("content", sub_val)
+                            break
+            if recovered.get("content"):
+                break
+        if recovered.get("content"):
+            logger.info(
+                f"[loop] 总超时/异常后恢复 draft: task_id={task.task_id} "
+                f"content_len={len(str(recovered.get('content', '')))} "
+                f"keys={list(recovered.keys())}"
+            )
+            return recovered
+        logger.warning(f"[loop] 总超时/异常后未找到 draft: task_id={task.task_id}")
+        return None
+
+    @staticmethod
+    def _is_valid_recovered_content(content: str) -> bool:
+        """检测恢复的内容是否是有效文章，而非prompt模板片段.
+
+        判断逻辑：
+        1. 必须以 # 一级标题开头（文章标题），或包含足够中文（≥50字）
+        2. 跳过以 ### 三级标题开头的内容（通常是prompt模板的section，如"### 合规红线"）
+        3. 跳过以 ## 二级标题开头且无 # 一级标题的内容（通常是prompt模板的section）
+
+        Args:
+            content: 待检测的内容字符串
+
+        Returns:
+            True表示有效内容，False表示prompt模板片段
+        """
+        if not content or not content.strip():
+            return False
+        stripped = content.strip()
+        # 跳过以 ### 三级标题开头的内容（prompt模板的section）
+        if stripped.startswith("### "):
+            return False
+        # 跳过以 ## 二级标题开头且不包含 # 一级标题的内容
+        if stripped.startswith("## ") and "\n# " not in stripped and not stripped.startswith("# "):
+            return False
+        # 有效内容：以 # 一级标题开头，或包含足够中文（≥50字）
+        if stripped.startswith("# "):
+            return True
+        chinese_chars = sum(1 for ch in stripped if "\u4e00" <= ch <= "\u9fff")
+        if chinese_chars >= 50:
+            return True
+        return False
 
     async def _execute_iterations(
         self,
@@ -231,7 +325,10 @@ class LoopExecutor:
         # 1. 规划
         state.phase = LoopPhase.PLANNING
         self.turn_engine.try_transition(TurnState.EXECUTING, reason="loop planning started")
+        _plan_start = time.monotonic()
         plan = await self.planner.plan(task, loop_config.get("planner", {}))
+        _plan_duration = time.monotonic() - _plan_start
+        logger.info(f"[loop][阶段耗时] planner.plan: {_plan_duration:.2f}s, task_id={task.task_id}")
         state.current_plan = plan
 
         # Memory 映射：Loop 启动时从 LongTermMemory 读取历史失败教训，注入规划上下文
@@ -385,13 +482,17 @@ class LoopExecutor:
                         logger.info(f"[loop-trace] task_id={task.task_id} draft注入后: input_data_keys={list(task.input_data.keys())}, draft_len={len(draft_content)}, draft_preview={draft_content[:200]}")
                         if hasattr(task, 'state') and isinstance(task.state, dict):
                             logger.info(f"[loop-trace] task_id={task.task_id} draft注入后: state_keys={list(task.state.keys())}, state_draft_len={len(str(task.state.get('draft', '')))}")
+            _pre_exec_start = time.monotonic()
             await self.harness.pre_execute(task)
+            _pre_exec_duration = time.monotonic() - _pre_exec_start
+            logger.info(f"[loop][阶段耗时] harness.pre_execute: {_pre_exec_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}")
 
             # 3. 执行（委托给 HybridExecutor / 嵌套 Loop / 并行 Worker）
             #    使用 asyncio.wait_for 包裹，实现单次迭代超时控制
             state.phase = LoopPhase.EXECUTING
             self.turn_engine.try_transition(TurnState.EXECUTING, reason=f"iteration {attempt + 1} executing")
             iter_timeout = min(timeout_per_iteration, remaining)
+            _exec_start = time.monotonic()
 
             try:
                 if worker_mode == "loop":
@@ -409,7 +510,11 @@ class LoopExecutor:
                         self.hybrid_executor.run(task, mode_hint=worker_mode),
                         timeout=iter_timeout,
                     )
+                _exec_duration = time.monotonic() - _exec_start
+                logger.info(f"[loop][阶段耗时] worker执行({worker_mode}): {_exec_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}")
             except asyncio.TimeoutError:
+                _exec_duration = time.monotonic() - _exec_start
+                logger.warning(f"[loop][阶段耗时] worker执行({worker_mode})超时: {_exec_duration:.2f}s/{iter_timeout:.1f}s, 迭代{attempt + 1}, task_id={task.task_id}")
                 iter_error = (
                     f"Iteration {attempt + 1} timed out after {iter_timeout:.1f}s "
                     f"(per_iteration={timeout_per_iteration}s, remaining={remaining:.1f}s)"
@@ -435,6 +540,13 @@ class LoopExecutor:
                             if not ctx_val:
                                 continue
                             if isinstance(ctx_val, str) and ctx_val.strip():
+                                # 内容有效性检查：跳过prompt模板片段
+                                if not self._is_valid_recovered_content(ctx_val):
+                                    logger.warning(
+                                        f"[loop] 迭代{attempt+1}超时恢复: 跳过无效内容(prompt片段) "
+                                        f"key={ctx_key} preview={ctx_val[:80]!r}"
+                                    )
+                                    continue
                                 result[ctx_key] = ctx_val
                                 result.setdefault("content", ctx_val)
                                 recovered = True
@@ -445,6 +557,8 @@ class LoopExecutor:
                                 for sub_key in ("content", "output", "result"):
                                     sub_val = ctx_val.get(sub_key, "")
                                     if isinstance(sub_val, str) and sub_val.strip():
+                                        if not self._is_valid_recovered_content(sub_val):
+                                            continue
                                         result.setdefault("content", sub_val)
                                         recovered = True
                                         break
@@ -457,6 +571,8 @@ class LoopExecutor:
 
             except Exception as iter_exc:
                 # 异常处理修复：捕获非Timeout异常，走fallback避免业务卡死
+                _exec_duration = time.monotonic() - _exec_start
+                logger.warning(f"[loop][阶段耗时] worker执行({worker_mode})异常: {_exec_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}, 错误={type(iter_exc).__name__}: {str(iter_exc)[:200]}")
                 iter_error = f"Iteration {attempt + 1} exception: {type(iter_exc).__name__}: {iter_exc}"
                 logger.error(f"[loop] {iter_error}: loop_id={state.loop_id}", exc_info=True)
                 state.past_errors.append(iter_error)
@@ -469,10 +585,54 @@ class LoopExecutor:
                     result = {"error": iter_error, **last_good_result}
                     logger.info(f"[loop] 迭代{attempt + 1}异常，保留best_draft")
                 else:
+                    # Bug修复：异常时从state/input_data中恢复writer已产出的内容
+                    # writer可能已成功生成内容但后续步骤(如publish)异常导致整体失败
                     result = {"error": iter_error}
+                    recovered = False
+                    for src_attr in ("state", "input_data"):
+                        src = getattr(task, src_attr, None)
+                        if not isinstance(src, dict):
+                            continue
+                        for ctx_key in ("draft", "edited_draft", "content", "result"):
+                            ctx_val = src.get(ctx_key)
+                            if not ctx_val:
+                                continue
+                            if isinstance(ctx_val, str) and ctx_val.strip():
+                                # 内容有效性检查：跳过prompt模板片段
+                                if not self._is_valid_recovered_content(ctx_val):
+                                    logger.warning(
+                                        f"[loop] 迭代{attempt+1}异常恢复: 跳过无效内容(prompt片段) "
+                                        f"key={ctx_key} preview={ctx_val[:80]!r}"
+                                    )
+                                    continue
+                                result[ctx_key] = ctx_val
+                                result.setdefault("content", ctx_val)
+                                recovered = True
+                                break
+                            elif isinstance(ctx_val, dict):
+                                result[ctx_key] = ctx_val
+                                for sub_key in ("content", "output", "result", "draft"):
+                                    sub_val = ctx_val.get(sub_key, "")
+                                    if isinstance(sub_val, str) and sub_val.strip():
+                                        if not self._is_valid_recovered_content(sub_val):
+                                            continue
+                                        result.setdefault("content", sub_val)
+                                        recovered = True
+                                        break
+                                if recovered:
+                                    break
+                        if recovered:
+                            break
+                    if recovered:
+                        logger.info(f"[loop] 迭代{attempt + 1}异常，从task属性恢复内容: "
+                                     f"content_len={len(str(result.get('content', '')))}, "
+                                     f"keys={list(result.keys())}")
 
             # 4. Harness post_execute（架构约束校验 + FeedbackLoop 评分）
+            _post_exec_start = time.monotonic()
             result = await self.harness.post_execute(result, task)
+            _post_exec_duration = time.monotonic() - _post_exec_start
+            logger.info(f"[loop][阶段耗时] harness.post_execute: {_post_exec_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}")
 
             # 注入 _model 字段（用于 exclude_creator 功能）
             # 从 task.metadata 中获取执行过程中使用的模型
@@ -484,8 +644,15 @@ class LoopExecutor:
             # 保存最后一次成功的执行结果（超时/失败时仍可返回内容）
             # Bug修复：即使result含error，只要有content/draft字段也应更新last_good_result
             # 这样下一轮超时时能保留本轮writer已产出的内容
+            # BUG-D1 修复：增加内容长度校验（≥50字符），避免短文本/错误信息被当作有效产出
+            # 短内容会导致verifier触发"内容过短"保护，从而短路跳过评委
             if isinstance(result, dict):
-                has_content = any(result.get(k) for k in ("content", "draft", "edited_draft", "output") if result.get(k))
+                has_content = False
+                for k in ("content", "draft", "edited_draft", "output"):
+                    v = result.get(k)
+                    if isinstance(v, str) and len(v.strip()) >= 50:
+                        has_content = True
+                        break
                 if not result.get("error") or has_content:
                     last_good_result = result
 
@@ -553,7 +720,10 @@ class LoopExecutor:
                         logger.warning(f"[loop] Failed to create verifier mode '{verifier_mode}': {e}, using default")
                 state.phase = LoopPhase.VERIFYING
                 self.turn_engine.try_transition(TurnState.EVALUATING, reason=f"iteration {attempt + 1} verifying")
+                _verify_start = time.monotonic()
                 verdict = await active_verifier.verify(result, task, verifier_config)
+                _verify_duration = time.monotonic() - _verify_start
+                logger.info(f"[loop][阶段耗时] verifier.verify({verifier_mode or 'default'}): {_verify_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}, score={verdict.score:.3f}, passed={verdict.passed}")
             state.verification_history.append(verdict.model_dump())
 
             # 详细日志：评审结果
@@ -666,7 +836,10 @@ class LoopExecutor:
             # 6. 失败：复盘
             state.phase = LoopPhase.REFLECTING
             self.turn_engine.try_transition(TurnState.REFLECTING, reason=f"iteration {attempt + 1} failed, reflecting")
+            _reflect_start = time.monotonic()
             reflection = await self.reflector.reflect(verdict.errors, task, state)
+            _reflect_duration = time.monotonic() - _reflect_start
+            logger.info(f"[loop][阶段耗时] reflector.reflect: {_reflect_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}")
             state.reflection_history.append(reflection.model_dump())
             state.past_errors.extend(verdict.errors)
 

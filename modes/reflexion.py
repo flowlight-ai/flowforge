@@ -16,6 +16,12 @@ class ReflexionExecutor(BaseModeExecutor):
     QUALITY_THRESHOLD = 0.85
     # 单次LLM调用超时（秒）— 需要足够长以覆盖OpenRoute代理延迟
     STEP_TIMEOUT = 300
+    # evaluator/reflector 是评审/反思，不需要太长超时
+    # 修复：原 evaluator 用 STEP_TIMEOUT=300s，DeepSeek-V4-Pro 重试3次=280s 阻塞
+    # 导致 actor 25s + evaluator 280s + reflector 20s = 325s > 360s 迭代超时
+    # 降低到 90s，配合 precise 路由 max_retries=2，单次 evaluator 最多 90s+90s=180s
+    EVALUATOR_TIMEOUT = 90
+    REFLECTOR_TIMEOUT = 90
 
     async def _execute_core(self, ctx: TaskContext) -> dict:
         import asyncio
@@ -49,45 +55,135 @@ class ReflexionExecutor(BaseModeExecutor):
             actor_output = None
 
             # Actor阶段
-            try:
-                actor = ctx.agents.get("reflexion_actor") if ctx.agents else None
-                if actor is None:
-                    actor = DefaultLLMActor()
-                actor_params = {"task": task, "memory": memory, "persona": ctx.persona or "default"}
-                # B4 修复：传递真实 agent_name 到 actor_params，让 DefaultLLMActor 能使用正确的 LLM 路由
-                # 原代码硬编码 agent_name="reflexion_actor"，导致 LLM 超时路由失效（用30s而非60s）
-                actor_params["agent_name"] = getattr(ctx, 'agent_name', None) or "contentforge:writer"
-                # P0-1: 传递agent的instructions到actor_params，确保DefaultLLMActor能使用
-                # writer agent的 contentforge.writer.main prompt_template
-                if hasattr(ctx, 'instructions') and ctx.instructions:
-                    actor_params["instructions"] = ctx.instructions
-                # 传递prefer_api配置（writer agent配置了prefer_api: true）
-                if hasattr(ctx, 'input_data') and ctx.input_data and ctx.input_data.get("prefer_api"):
-                    actor_params["prefer_api"] = ctx.input_data.get("prefer_api")
-                # 传递上一轮的draft和评委反馈，确保反思链路不断裂
-                if hasattr(ctx, 'input_data') and ctx.input_data:
-                    for key in ('draft', 'loop_reflections', 'loop_verifier_errors'):
-                        if key in ctx.input_data:
-                            actor_params[key] = ctx.input_data[key]
-                if hasattr(ctx, 'state') and ctx.state:
-                    for key in ('draft', 'loop_reflections', 'loop_verifier_errors'):
-                        if key in ctx.state and key not in actor_params:
-                            actor_params[key] = ctx.state[key]
-                if hasattr(ctx, 'metadata') and ctx.metadata:
-                    for key in ('loop_reflections', 'loop_verifier_errors', 'last_draft'):
-                        if key in ctx.metadata and key not in actor_params:
-                            actor_params[key] = ctx.metadata[key]
-                actor_input = AgentInput(params=actor_params)
-                if hasattr(actor, 'execute_with_context'):
-                    actor_output = await asyncio.wait_for(
-                        actor.execute_with_context(actor_input, ctx), timeout=self.STEP_TIMEOUT)
-                else:
-                    actor_output = await asyncio.wait_for(
-                        actor.execute(actor_input), timeout=self.STEP_TIMEOUT)
-            except asyncio.TimeoutError:
-                logger.warning(f"Reflexion actor timed out at iteration {iteration+1}", task_id=ctx.task_id)
-            except Exception as e:
-                logger.warning(f"Reflexion actor failed at iteration {iteration+1}: {e}", task_id=ctx.task_id)
+            # 修复"组合提示词bug"：优先调用 agent 配置的工具（如 writer_engine），
+            # 它有完整的 prompt 渲染逻辑（渲染 {writing_methods_text} 等复杂占位符）
+            # 原 DefaultLLMActor 用残缺的 prompt_template 导致 LLM 返回 "OK"
+            allowed_tools = getattr(ctx, 'allowed_tools', None) or []
+            ctx_tools = getattr(ctx, 'tools', None)
+            # 诊断日志：确认 actor 阶段每个条件是否满足
+            logger.info(
+                f"[reflexion_actor_diag] task_id={ctx.task_id} iter={iteration+1} "
+                f"allowed_tools={allowed_tools!r} "
+                f"ctx.tools={'None' if ctx_tools is None else type(ctx_tools).__name__} "
+                f"has_execute={hasattr(ctx_tools, 'execute') if ctx_tools else False} "
+                f"agent_name={getattr(ctx, 'agent_name', 'N/A')}",
+                task_id=ctx.task_id,
+            )
+            if allowed_tools and ctx_tools and hasattr(ctx_tools, 'execute'):
+                actor_tool = allowed_tools[0]
+                try:
+                    # 构造工具参数 — 从 ctx.input_data 获取完整上下文
+                    tool_params = dict(ctx.input_data) if ctx.input_data else {}
+                    tool_params.setdefault("persona", ctx.persona or "education")
+                    tool_params.setdefault("platforms", ["toutiao"])
+                    # 传递反思反馈（来自 metadata）
+                    if hasattr(ctx, 'metadata') and ctx.metadata:
+                        for key in ('loop_reflections', 'loop_verifier_errors', 'last_draft'):
+                            if key in ctx.metadata:
+                                tool_params[key] = ctx.metadata[key]
+                    # 确保 draft 字段存在（反思重写场景）
+                    if 'draft' not in tool_params and hasattr(ctx, 'metadata') and ctx.metadata:
+                        last_draft = ctx.metadata.get('last_draft', '')
+                        if last_draft:
+                            tool_params['draft'] = last_draft
+                    tool_input = ToolInput(params=tool_params)
+                    logger.info(
+                        f"[reflexion_actor_call] task_id={ctx.task_id} 调用工具 '{actor_tool}' "
+                        f"params_keys={list(tool_params.keys())[:15]}",
+                        task_id=ctx.task_id,
+                    )
+                    tool_result = await asyncio.wait_for(
+                        ctx_tools.execute(actor_tool, tool_input), timeout=self.STEP_TIMEOUT)
+                    if tool_result and hasattr(tool_result, 'result'):
+                        result_dict = tool_result.result if isinstance(tool_result.result, dict) else {"output": str(tool_result.result)}
+                        # v2.3 修复: 兼容 editor_engine 返回的 edited_draft 字段
+                        # 原: draft = result_dict.get("draft", "") 仅兼容 writer_engine（返回 draft）
+                        # 但 editor_engine 返回 edited_draft → 取不到 → _extract_text 返回 dict JSON 字符串
+                        # → actor_text 是 69 字符的 dict JSON（content_len=69 bug 根因）
+                        # 修复: 按优先级查找 draft/edited_draft/content/output 字段
+                        draft = (
+                            result_dict.get("draft")
+                            or result_dict.get("edited_draft")
+                            or result_dict.get("content")
+                            or result_dict.get("output")
+                            or ""
+                        )
+                        if draft:
+                            result_dict["output"] = draft
+                        actor_output = AgentOutput(result=result_dict)
+                        logger.info(f"Reflexion actor via tool '{actor_tool}': draft len={len(draft)}", task_id=ctx.task_id)
+                        # 关键修复：立即把 draft 写入 ctx.state/ctx.input_data
+                        # 这样即使后续 evaluator/reflector 超时被 LoopExecutor 取消整个迭代，
+                        # LoopExecutor 的超时恢复逻辑也能从 task.state/input_data 找到 draft，
+                        # 避免 FeedbackLoop 拿到 content_len=0 触发 FAIL
+                        if draft:
+                            if hasattr(ctx, 'state') and isinstance(ctx.state, dict):
+                                ctx.state["draft"] = draft
+                                ctx.state["content"] = draft
+                            if hasattr(ctx, 'input_data') and isinstance(ctx.input_data, dict):
+                                ctx.input_data["draft"] = draft
+                                ctx.input_data["content"] = draft
+                            if hasattr(ctx, 'metadata') and isinstance(ctx.metadata, dict):
+                                ctx.metadata["last_draft"] = draft
+                                ctx.metadata["last_used_model"] = result_dict.get("model", "")
+                            logger.info(
+                                f"[reflexion_actor_persist] task_id={ctx.task_id} 已写入ctx.state/input_data, "
+                                f"draft_len={len(draft)}",
+                                task_id=ctx.task_id,
+                            )
+                    else:
+                        logger.warning(
+                            f"[reflexion_actor_call] task_id={ctx.task_id} 工具 '{actor_tool}' 返回空结果 "
+                            f"tool_result={tool_result!r}",
+                            task_id=ctx.task_id,
+                        )
+                except asyncio.TimeoutError:
+                    logger.warning(f"Tool '{actor_tool}' timed out at iteration {iteration+1}", task_id=ctx.task_id)
+                except Exception as e:
+                    logger.warning(f"Tool '{actor_tool}' failed at iteration {iteration+1}: {e}, falling back to DefaultLLMActor", task_id=ctx.task_id)
+                    actor_output = None
+
+            # 如果工具调用失败或未配置工具，使用 DefaultLLMActor
+            if actor_output is None:
+                try:
+                    actor = ctx.agents.get("reflexion_actor") if ctx.agents else None
+                    if actor is None:
+                        actor = DefaultLLMActor()
+                    actor_params = {"task": task, "memory": memory, "persona": ctx.persona or "default"}
+                    # B4 修复：传递真实 agent_name 到 actor_params，让 DefaultLLMActor 能使用正确的 LLM 路由
+                    # 原代码硬编码 agent_name="reflexion_actor"，导致 LLM 超时路由失效（用30s而非60s）
+                    actor_params["agent_name"] = getattr(ctx, 'agent_name', None) or "contentforge:writer"
+                    # P0-1: 传递agent的instructions到actor_params，确保DefaultLLMActor能使用
+                    # writer agent的 contentforge.writer.main prompt_template
+                    if hasattr(ctx, 'instructions') and ctx.instructions:
+                        actor_params["instructions"] = ctx.instructions
+                    # 传递prefer_api配置（writer agent配置了prefer_api: true）
+                    if hasattr(ctx, 'input_data') and ctx.input_data and ctx.input_data.get("prefer_api"):
+                        actor_params["prefer_api"] = ctx.input_data.get("prefer_api")
+                    # 传递上一轮的draft和评委反馈，确保反思链路不断裂
+                    if hasattr(ctx, 'input_data') and ctx.input_data:
+                        for key in ('draft', 'loop_reflections', 'loop_verifier_errors'):
+                            if key in ctx.input_data:
+                                actor_params[key] = ctx.input_data[key]
+                    if hasattr(ctx, 'state') and ctx.state:
+                        for key in ('draft', 'loop_reflections', 'loop_verifier_errors'):
+                            if key in ctx.state and key not in actor_params:
+                                actor_params[key] = ctx.state[key]
+                    if hasattr(ctx, 'metadata') and ctx.metadata:
+                        for key in ('loop_reflections', 'loop_verifier_errors', 'last_draft'):
+                            if key in ctx.metadata and key not in actor_params:
+                                actor_params[key] = ctx.metadata[key]
+                    actor_input = AgentInput(params=actor_params)
+                    if hasattr(actor, 'execute_with_context'):
+                        actor_output = await asyncio.wait_for(
+                            actor.execute_with_context(actor_input, ctx), timeout=self.STEP_TIMEOUT)
+                    else:
+                        actor_output = await asyncio.wait_for(
+                            actor.execute(actor_input), timeout=self.STEP_TIMEOUT)
+                except asyncio.TimeoutError:
+                    logger.warning(f"Reflexion actor timed out at iteration {iteration+1}", task_id=ctx.task_id)
+                except Exception as e:
+                    logger.warning(f"Reflexion actor failed at iteration {iteration+1}: {e}", task_id=ctx.task_id)
 
             # Fallback: 如果actor失败或返回"LLMTool not available"，直接使用ModelCapability
             if actor_output is None or (actor_output.result.get("output", "") == "LLMTool not available"):
@@ -136,6 +232,25 @@ class ReflexionExecutor(BaseModeExecutor):
                 "output_preview": actor_text[:300],
             })
 
+            # 关键修复：actor 成功后立即把内容持久化到 ctx.state/ctx.input_data
+            # 这样即使后续 evaluator/reflector 阻塞导致整个迭代被 LoopExecutor 超时取消，
+            # LoopExecutor 的超时恢复逻辑也能从 task.state/input_data 找到 draft，
+            # 避免 FeedbackLoop 拿到 content_len=0 触发 FAIL
+            if actor_text and len(actor_text.strip()) >= 50:
+                if hasattr(ctx, 'state') and isinstance(ctx.state, dict):
+                    ctx.state["draft"] = actor_text
+                    ctx.state["content"] = actor_text
+                if hasattr(ctx, 'input_data') and isinstance(ctx.input_data, dict):
+                    ctx.input_data["draft"] = actor_text
+                    ctx.input_data["content"] = actor_text
+                if hasattr(ctx, 'metadata') and isinstance(ctx.metadata, dict):
+                    ctx.metadata["last_draft"] = actor_text
+                logger.info(
+                    f"[reflexion_persist] task_id={ctx.task_id} iter={iteration+1} "
+                    f"已持久化actor产出, content_len={len(actor_text)}",
+                    task_id=ctx.task_id,
+                )
+
             # Evaluator阶段
             try:
                 evaluator = ctx.agents.get("reflexion_evaluator") if ctx.agents else None
@@ -144,10 +259,10 @@ class ReflexionExecutor(BaseModeExecutor):
                 eval_input = AgentInput(params={"output": actor_output.result, "persona": "judge"})
                 if hasattr(evaluator, 'execute_with_context'):
                     eval_output = await asyncio.wait_for(
-                        evaluator.execute_with_context(eval_input, ctx), timeout=self.STEP_TIMEOUT)
+                        evaluator.execute_with_context(eval_input, ctx), timeout=self.EVALUATOR_TIMEOUT)
                 else:
                     eval_output = await asyncio.wait_for(
-                        evaluator.execute(eval_input), timeout=self.STEP_TIMEOUT)
+                        evaluator.execute(eval_input), timeout=self.EVALUATOR_TIMEOUT)
             except (asyncio.TimeoutError, Exception) as e:
                 logger.warning(f"Reflexion evaluator failed at iteration {iteration+1}: {e}", task_id=ctx.task_id)
                 score = 0.5
@@ -160,10 +275,19 @@ class ReflexionExecutor(BaseModeExecutor):
                 "iteration": iteration + 1, "score": score, "issues": issues,
             })
 
-            if score > best_score:
+            # 修复：如果 best_text 为空（第一次迭代或之前都失败），无论 score 多少都保存当前 actor_text
+            # 这样即使 evaluator 返回 score=0，最终返回的 final_text 也不会为空
+            # 避免 FeedbackLoop 拿到 content_len=0 触发 FAIL
+            if score > best_score or not best_text:
                 best_result = actor_output.result
-                best_score = score
+                if score > best_score:
+                    best_score = score
                 best_text = actor_text
+                logger.info(
+                    f"[reflexion_best_update] task_id={ctx.task_id} iter={iteration+1} "
+                    f"score={score} best_score={best_score} best_text_len={len(best_text)}",
+                    task_id=ctx.task_id,
+                )
             if score >= self.QUALITY_THRESHOLD:
                 _emit("reflexion.quality_passed", {
                     "iteration": iteration + 1, "score": score,
@@ -178,11 +302,30 @@ class ReflexionExecutor(BaseModeExecutor):
                 reflect_input = AgentInput(params={"output": actor_output.result, "issues": issues, "persona": ctx.persona or "default"})
                 if hasattr(reflector, 'execute_with_context'):
                     reflect_output = await asyncio.wait_for(
-                        reflector.execute_with_context(reflect_input, ctx), timeout=self.STEP_TIMEOUT)
+                        reflector.execute_with_context(reflect_input, ctx), timeout=self.REFLECTOR_TIMEOUT)
                 else:
                     reflect_output = await asyncio.wait_for(
-                        reflector.execute(reflect_input), timeout=self.STEP_TIMEOUT)
-                memory.append(reflect_output.result.get("reflection", ""))
+                        reflector.execute(reflect_input), timeout=self.REFLECTOR_TIMEOUT)
+                reflection_text = reflect_output.result.get("reflection", "")
+                memory.append(reflection_text)
+                # v2.5 关键修复: 把 reflection 和 issues 写入 ctx.metadata
+                # 这样下一轮 actor 调用工具（如 editor_engine）时，能从 ctx.metadata
+                # 读取 loop_reflections/loop_verifier_errors，触发 _execute_with_reflections
+                # 反思重写路径（原代码只存入本地 memory，第二轮 actor 收不到反馈）
+                if hasattr(ctx, 'metadata') and isinstance(ctx.metadata, dict):
+                    # 累积所有轮次的 reflection（最多保留5条，避免 prompt 过长）
+                    existing_reflections = ctx.metadata.get('loop_reflections', [])
+                    if not isinstance(existing_reflections, list):
+                        existing_reflections = []
+                    existing_reflections.append(reflection_text)
+                    ctx.metadata['loop_reflections'] = existing_reflections[-5:]
+                    ctx.metadata['loop_verifier_errors'] = issues if isinstance(issues, list) else [str(issues)]
+                    logger.info(
+                        f"[reflexion_reflector_persist] task_id={ctx.task_id} iter={iteration+1} "
+                        f"已写入ctx.metadata: loop_reflections_count={len(ctx.metadata['loop_reflections'])}, "
+                        f"loop_verifier_errors_count={len(ctx.metadata['loop_verifier_errors'])}",
+                        task_id=ctx.task_id,
+                    )
             except (asyncio.TimeoutError, Exception) as e:
                 logger.warning(f"Reflexion reflector failed at iteration {iteration+1}: {e}", task_id=ctx.task_id)
                 memory.append(f"反思阶段失败: {type(e).__name__}")

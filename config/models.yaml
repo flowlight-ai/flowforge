@@ -191,48 +191,30 @@ assignments:
   default:
     primary: Doubao-Seed2.0
     fallbacks:
-    - openai/gpt-oss-20b:free
-    - google/gemma-4-31b-it:free
-    - google/gemma-4-26b-a4b-it:free
-    - nvidia/nemotron-3-super-120b-a12b:free
-    - poolside/laguna-m.1:free
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
   lightweight:
     primary: Doubao-Seed2.0
     fallbacks:
-    - openai/gpt-oss-20b:free
-    - google/gemma-4-31b-it:free
-    - google/gemma-4-26b-a4b-it:free
     - nvidia/nemotron-3-super-120b-a12b:free
     - poolside/laguna-m.1:free
   coding:
     primary: DeepSeek-V4-Pro
     fallbacks:
-    - openai/gpt-oss-20b:free
-    - google/gemma-4-31b-it:free
-    - google/gemma-4-26b-a4b-it:free
     - nvidia/nemotron-3-super-120b-a12b:free
     - poolside/laguna-m.1:free
   judge:
     primary: DeepSeek-V4-Pro
     fallbacks:
-    - openai/gpt-oss-20b:free
-    - google/gemma-4-31b-it:free
-    - google/gemma-4-26b-a4b-it:free
-    - nvidia/nemotron-3-super-120b-a12b:free
-    - poolside/laguna-m.1:free
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
   content_create:
+    primary: Doubao-Seed2.0
+    fallbacks:
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+  content_refine:
     primary: DeepSeek-V4-Pro
     fallbacks:
-    - openai/gpt-oss-20b:free
-    - google/gemma-4-31b-it:free
-    - google/gemma-4-26b-a4b-it:free
-    - nvidia/nemotron-3-super-120b-a12b:free
-    - poolside/laguna-m.1:free
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
   content_eval:
     primary: DeepSeek-V4-Pro
     fallbacks:
-    - openai/gpt-oss-20b:free
-    - google/gemma-4-31b-it:free
-    - google/gemma-4-26b-a4b-it:free
-    - nvidia/nemotron-3-super-120b-a12b:free
-    - poolside/laguna-m.1:free
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free

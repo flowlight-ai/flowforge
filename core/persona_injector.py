@@ -96,8 +96,12 @@ class PersonaInjector:
     ) -> str:
         """将persona信息注入到prompt中。
 
-        查找prompt中的 {{auto.persona}} 占位符，替换为格式化的persona信息。
-        如果没有占位符，则在prompt末尾追加。
+        支持三种占位符格式：
+        1. {{auto.persona}} — 整体注入格式化persona上下文
+        2. {soul} {memory} {creation} {constraints} — 单字段占位符(单花括号)
+        3. {soul_intro} — soul首句摘要(取soul按句号分割的第一段)
+
+        未命中任何占位符时，在prompt末尾追加格式化persona上下文。
 
         Args:
             prompt: 原始提示词
@@ -116,13 +120,41 @@ class PersonaInjector:
             return prompt
 
         sections = sections or ["soul", "memory", "creation", "constraints"]
+
+        # 1. 替换 {{auto.persona}} 整体占位符
         injected_text = self._format_persona_context(context, sections)
-
         if PERSONA_PLACEHOLDER in prompt:
-            return prompt.replace(PERSONA_PLACEHOLDER, injected_text)
+            prompt = prompt.replace(PERSONA_PLACEHOLDER, injected_text)
 
-        # 没有占位符时追加到末尾
-        return prompt + "\n\n" + injected_text
+        # 2. 替换单字段占位符 {soul} {memory} {creation} {constraints} {soul_intro}
+        # 这些占位符在 prompts.yaml 模板中广泛使用，必须在此处替换，
+        # 否则 DeclarativeAgent._render_template_vars 会跳过它们（_PERSONA_VARS保留列表）
+        single_vars = {
+            "soul": context.soul,
+            "memory": context.memory,
+            "creation": context.creation if isinstance(context.creation, str) else "",
+            "constraints": context.constraints,
+        }
+        # soul_intro: soul首句摘要(取soul按句号分割的第一段)
+        if context.soul:
+            single_vars["soul_intro"] = context.soul.split('。')[0] if '。' in context.soul else context.soul
+        else:
+            single_vars["soul_intro"] = "专业作者"
+
+        replaced_any = False
+        for var_name, value in single_vars.items():
+            placeholder = "{" + var_name + "}"
+            if placeholder in prompt:
+                prompt = prompt.replace(placeholder, str(value) if value else "")
+                replaced_any = True
+
+        # 3. 如果没有任何占位符被替换，也没有 {{auto.persona}}，则在末尾追加
+        if not replaced_any and PERSONA_PLACEHOLDER not in prompt:
+            # 检查是否已经有注入的persona内容(避免重复追加)
+            if "你的创作身份（SOUL）" not in prompt and "你的创作身份(SOUL)" not in prompt:
+                prompt = prompt + "\n\n" + injected_text
+
+        return prompt
 
     async def get_persona_context(self, persona_id: str) -> PersonaContext:
         """获取完整的persona上下文。

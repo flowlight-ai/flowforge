@@ -8,6 +8,7 @@ from flowforge.core.plugin_registry import PluginRegistry
 from flowforge.tools.registry import ToolRegistry
 from flowforge.tools.llm_client import LLMClient
 from flowforge.tools.llm.model_service import ModelService
+from flowforge.llm.router import LLMRouter
 from flowforge.events.event_bus import EventBus
 from flowforge.modes.registry import ModeRegistry
 from flowforge.modes.workflow import WorkflowExecutor
@@ -1057,7 +1058,11 @@ tool_registry = ToolRegistry(tool_timeout=300)
 mode_registry = ModeRegistry()
 
 _models_config = _config_loader.get_models_config()
-llm_client = LLMClient(models_config=_models_config, event_bus=event_bus)
+# 实例化 LLMRouter 并注入到 LLMClient，让 llm_route.yaml 的路由策略真正生效
+# 修复审核报告缺陷 #1：原代码未注入 LLMRouter，导致 llm_route.yaml 的 routes 配置完全失效
+_models_yaml_path = _config_loader.config_dir / "models.yaml"
+llm_router = LLMRouter(config_path=str(_models_yaml_path))
+llm_client = LLMClient(models_config=_models_config, event_bus=event_bus, llm_router=llm_router)
 tool_registry.register(llm_client)
 
 _register_core_tools(tool_registry, plugin_registry)
@@ -1114,7 +1119,7 @@ try:
         harness=_executor_instance.harness or HarnessOrchestrator(),
         planner=LLMPlanner(),
         verifier=RuleBasedVerifier(),
-        reflector=ReflexionReflector(llm_client=self.llm),
+        reflector=ReflexionReflector(llm_client=llm_client),
         checkpoint_mgr=_executor_instance.checkpoint_manager,
         entropy_mgr=EntropyManager(),
         rule_evolution=RuleEvolution(),

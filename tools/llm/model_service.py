@@ -245,11 +245,19 @@ class ModelService:
         api_key = self._get_api_key(provider)
 
         if not base_url:
-            self._update_health_state(model_key, self.STATUS_DISABLED, reason="missing base_url")
+            # base_url 缺失可能是配置未加载完成，改为 SUSPENDED（可恢复）
+            suspended_until = datetime.utcnow() + timedelta(seconds=self.ERROR_COOLDOWNS["server_error"])
+            self._update_health_state(
+                model_key, self.STATUS_SUSPENDED,
+                suspended_until=suspended_until.isoformat(),
+                suspended_until_ts=suspended_until.timestamp(),
+                reason="missing base_url",
+            )
             return {
                 "model_key": model_key,
-                "status": self.STATUS_DISABLED,
+                "status": self.STATUS_SUSPENDED,
                 "reason": "missing base_url",
+                "suspended_until": suspended_until.isoformat(),
                 "cached": False,
             }
 
@@ -349,30 +357,41 @@ class ModelService:
         a lightweight ping to the specific model.
 
         所有不健康状态统一为 SUSPENDED（可恢复），不再永久 DISABLED。
-        """
-        try:
-            registry = self._plugin_registry
-            if registry is None:
-                raise ImportError("PluginRegistry not injected via constructor")
-            svc = registry.get_plugin("openroute")
-        except ImportError:
-            # 服务不可用是临时的，改为 SUSPENDED 而非永久 DISABLED
-            suspended_until = datetime.utcnow() + timedelta(seconds=self.ERROR_COOLDOWNS["server_error"])
-            self._update_health_state(
-                model_key, self.STATUS_SUSPENDED,
-                suspended_until=suspended_until.isoformat(),
-                suspended_until_ts=suspended_until.timestamp(),
-                reason="openroute_service_unavailable",
-            )
-            return {
-                "model_key": model_key,
-                "status": self.STATUS_SUSPENDED,
-                "reason": "openroute_service_module_not_found",
-                "suspended_until": suspended_until.isoformat(),
-                "cached": False,
-            }
 
-        proxy_healthy = await svc._health_check()
+        降级策略：当 plugin_registry 不可用时（如 contentforge 通过 SDK 启动未注入），
+        直接通过 HTTP 探测 openroute 的 /health 端点判断服务可用性，
+        避免误将所有 openroute 模型标记为 SUSPENDED。
+        """
+        proxy_healthy = False
+        # 优先：通过 plugin_registry 调用 OpenRouteService.health_check()
+        if self._plugin_registry is not None:
+            try:
+                svc = self._plugin_registry.get_plugin("openroute")
+                plugin_health = await svc.health_check()
+                proxy_healthy = getattr(plugin_health, "state", None) is not None
+                state_value = getattr(plugin_health, "state", None)
+                state_name = getattr(state_value, "name", str(state_value)).upper() if state_value else "UNKNOWN"
+                if state_name == "STOPPED":
+                    proxy_healthy = False
+            except Exception as he:
+                logger.warning(f"[健康检查] openroute plugin.health_check() 异常: {he}，降级为HTTP探测")
+                proxy_healthy = False
+
+        # 降级：plugin_registry 不可用时直接 HTTP 探测 openroute /health 端点
+        # 这是关键修复：避免 contentforge 通过 SDK 启动时所有 openroute 模型被误挂起
+        if not proxy_healthy:
+            openroute_cfg_fallback = self.providers.get("openroute", {})
+            probe_base_url = openroute_cfg_fallback.get("base_url", "http://127.0.0.1:13001/v1").rstrip("/v1").rstrip("/")
+            probe_url = f"{probe_base_url}/health"
+            try:
+                async with httpx.AsyncClient(timeout=5) as probe_client:
+                    probe_resp = await probe_client.get(probe_url)
+                    proxy_healthy = probe_resp.status_code == 200
+                    logger.info(f"[健康检查] openroute HTTP探测 {probe_url} → {probe_resp.status_code} healthy={proxy_healthy}")
+            except Exception as probe_err:
+                logger.warning(f"[健康检查] openroute HTTP探测失败: {probe_err}")
+                proxy_healthy = False
+
         if not proxy_healthy:
             suspended_until = datetime.utcnow() + timedelta(seconds=self.ERROR_COOLDOWNS["server_error"])
             self._update_health_state(

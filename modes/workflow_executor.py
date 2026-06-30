@@ -176,6 +176,24 @@ class WorkflowExecutor(BaseModeExecutor):
                 step["prompt"] = self._render_template(step["prompt"], context_data)
 
             step_name = step.get("name", f"step_{step_idx}")
+
+            # Condition check: skip step if condition evaluates to false
+            # Supports ${var:default} syntax — e.g. ${publish_after_write:false}
+            condition = step.get("condition")
+            if condition:
+                should_run, resolved_val = self._evaluate_condition(condition, context_data, ctx)
+                if not should_run:
+                    logger.info(
+                        f"Step '{step_name}' skipped: condition '{condition}' "
+                        f"resolved to '{resolved_val}' (falsy)"
+                    )
+                    ctx.event_bus.emit(ctx.task_id, "workflow.step.complete", {
+                        "step": step_name, "skipped": True, "reason": f"condition={condition}",
+                    })
+                    continue
+                else:
+                    logger.info(f"Step '{step_name}' condition '{condition}' resolved to '{resolved_val}' (truthy), executing")
+
             ctx.event_bus.emit(ctx.task_id, "workflow.step.start", {
                 "step": step_name, "label": step_name,
                 "order": step_idx + 1, "total": len(sop_steps),
@@ -428,6 +446,53 @@ class WorkflowExecutor(BaseModeExecutor):
         return context_data
 
     # ── Helper methods kept in main class ──
+
+    @staticmethod
+    def _evaluate_condition(condition: str, context_data: dict, ctx: TaskContext) -> tuple[bool, str]:
+        """Evaluate a step condition expression.
+
+        Supports the ``${var:default}`` syntax:
+        - Resolves ``var`` from context_data, ctx.state, or ctx.input_data.
+        - Uses ``default`` if the variable is not found.
+        - Returns ``(should_run, resolved_value)``:
+          - Falsy values (false, "false", "", 0, None, "0") → should_run=False (skip step)
+          - Truthy values → should_run=True (run step)
+
+        Examples:
+            ``${publish_after_write:false}`` → if publish_after_write not set, default="false" → skip
+            ``${publish_after_write:true}``  → if publish_after_write not set, default="true" → run
+        """
+        import re as _re
+
+        if not condition:
+            return True, ""
+
+        # Parse ${var:default} or ${var} syntax
+        match = _re.match(r'^\$\{(\w+)(?::([^}]*))?\}$', condition.strip())
+        if not match:
+            # Not a variable expression — treat as literal truthy/falsy
+            val = condition.strip().lower()
+            return val not in ("false", "0", "", "none", "no"), condition
+
+        var_name = match.group(1)
+        default_val = match.group(2) if match.group(2) is not None else ""
+
+        # Resolve variable from multiple sources
+        resolved = None
+        for source in (context_data, getattr(ctx, 'state', {}), getattr(ctx, 'input_data', {})):
+            if isinstance(source, dict) and var_name in source:
+                resolved = source[var_name]
+                break
+
+        if resolved is None:
+            resolved = default_val
+
+        # Convert to string for truthiness check
+        resolved_str = str(resolved).strip().lower() if resolved is not None else ""
+        falsy_values = ("false", "0", "", "none", "no", "f")
+        should_run = resolved_str not in falsy_values
+
+        return should_run, resolved_str
 
     async def _pause_for_review(self, ctx, step):
         ctx.event_bus.emit(ctx.task_id, "review.ready", {"step": step["name"]})

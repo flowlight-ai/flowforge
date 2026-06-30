@@ -311,36 +311,84 @@ class MultiJudgeVerifier(LoopVerifier):
 4. 评审要严格客观，宁可低估不要高估"""
 
     async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
-        judges = config.get("judges", [])
+        judges_raw = config.get("judges", [])
         exclude_creator = config.get("exclude_creator", True)
         # 质量阈值统一为0.9（项目规则：禁止私自降低质量分阈值，必须为0.9）
         threshold = config.get("pass_threshold", 0.9)
         dimensions = config.get("dimensions", self.DEFAULT_DIMENSIONS)
+        # 全局 prefer_api（可作为 per-judge 的默认值）
+        global_prefer_api = config.get("prefer_api", False)
 
-        if not judges:
+        if not judges_raw:
             logger.warning("MultiJudgeVerifier: no judges configured, falling back to pass")
+            return Verdict(passed=True, score=1.0)
+
+        # Phase 5.4: 支持 per-judge prefer_api 配置
+        # judges 可以是字符串列表（使用 global_prefer_api）或对象列表（带 model + prefer_api）
+        # 例如:
+        #   judges:
+        #     - openroute/DeepSeek-V4-Pro       # 字符串：使用 global_prefer_api
+        #     - model: openroute/GLM-5.1         # 对象：per-judge prefer_api
+        #       prefer_api: true
+        normalized_judges: list[tuple[str, bool]] = []
+        for j in judges_raw:
+            if isinstance(j, str):
+                normalized_judges.append((j, global_prefer_api))
+            elif isinstance(j, dict) and "model" in j:
+                jpa = j.get("prefer_api", global_prefer_api)
+                normalized_judges.append((j["model"], bool(jpa)))
+            else:
+                logger.warning(f"MultiJudgeVerifier: 跳过无效 judge 配置: {j!r}")
+
+        if not normalized_judges:
+            logger.warning("MultiJudgeVerifier: no valid judges after normalization, falling back to pass")
             return Verdict(passed=True, score=1.0)
 
         # 1. 排除创作模型（避免自我评分）
         # 优先使用配置中的 creator_model，其次从 result 中获取
         creator_model = config.get("creator_model", "") or (result.get("_model", "") if isinstance(result, dict) else "")
-        active_judges = list(judges)
+        active_judges = list(normalized_judges)
         if exclude_creator and creator_model:
-            active_judges = [j for j in active_judges if j != creator_model]
+            active_judges = [(m, pa) for m, pa in active_judges if m != creator_model]
 
         if not active_judges:
             logger.warning("MultiJudgeVerifier: all judges excluded (creator model), using original list")
-            active_judges = list(judges)
+            active_judges = list(normalized_judges)
 
         # 2. 构建评审提示词（完全配置驱动）
         # 从 result 中提取待评审内容，支持多种返回格式
         content = ""
+
+        # [诊断日志] 记录传入 verify() 的 result 的完整 keys 和每个 key 的内容预览
+        # 用于定位"评委收到 params 字典 str() 而非文章正文"的根因
+        if isinstance(result, dict):
+            result_keys_preview = {}
+            for _k, _v in result.items():
+                if _k.startswith("_"):
+                    continue
+                if isinstance(_v, str):
+                    result_keys_preview[_k] = f"str(len={len(_v)}, preview={_v[:100]!r})"
+                elif isinstance(_v, dict):
+                    result_keys_preview[_k] = f"dict(keys={list(_v.keys())[:5]})"
+                elif isinstance(_v, list):
+                    result_keys_preview[_k] = f"list(len={len(_v)})"
+                else:
+                    result_keys_preview[_k] = f"{type(_v).__name__}(val={str(_v)[:50]!r})"
+            logger.info(
+                f"[verifier-diag] verify() result keys: {list(result.keys())}, "
+                f"details={result_keys_preview}"
+            )
+        else:
+            logger.info(f"[verifier-diag] verify() result type={type(result).__name__}, not dict")
+
         if isinstance(result, dict):
             # 优先级: content > edited_draft > response > output > draft > final_answer
+            extracted_from_key = ""
             for key in ("content", "edited_draft", "response", "output", "draft", "final_answer"):
                 val = result.get(key, "")
                 if isinstance(val, str) and val.strip():
                     content = val
+                    extracted_from_key = key
                     break
                 elif isinstance(val, dict):
                     # 嵌套 dict 时尝试提取子字段
@@ -348,6 +396,7 @@ class MultiJudgeVerifier(LoopVerifier):
                         sub_val = val.get(sub_key, "")
                         if isinstance(sub_val, str) and sub_val.strip():
                             content = sub_val
+                            extracted_from_key = f"{key}.{sub_key}"
                             break
                         elif isinstance(sub_val, dict):
                             # 二级嵌套
@@ -355,11 +404,25 @@ class MultiJudgeVerifier(LoopVerifier):
                                 sub2_val = sub_val.get(sub2_key, "")
                                 if isinstance(sub2_val, str) and sub2_val.strip():
                                     content = sub2_val
+                                    extracted_from_key = f"{key}.{sub_key}.{sub2_key}"
                                     break
                             if content:
                                 break
                     if content:
                         break
+
+            # [诊断日志] 记录提取到的内容来源和长度
+            if extracted_from_key:
+                logger.info(
+                    f"[verifier-diag] content extracted from key='{extracted_from_key}', "
+                    f"len={len(content)}, preview={content[:200]!r}"
+                )
+            else:
+                logger.warning(
+                    f"[verifier-diag] NO content extracted! result_keys={list(result.keys())}, "
+                    f"checked_keys=('content','edited_draft','response','output','draft','final_answer')"
+                )
+
             if not content:
                 logger.warning(
                     f"MultiJudgeVerifier: no content field found in result, "
@@ -371,7 +434,19 @@ class MultiJudgeVerifier(LoopVerifier):
                     errors=["result中未找到任何内容字段（content/edited_draft/response/output/draft/final_answer均为空），无法评审"],
                 )
         else:
-            content = str(result)
+            # BUG-C3 修复：result 不是 dict 时（如 str/None/异常），直接返回失败
+            # 原代码 content = str(result) 会把异常对象/params 字典 str() 化送给评委，
+            # 导致评委收到无意义的字符串（如 "{'topic_list': [...], 'research_materials': [...]}"）
+            # 而不是真正的文章正文
+            logger.warning(
+                f"[verifier-diag] result is not dict (type={type(result).__name__}), "
+                f"refusing to send str(result) to judges. result_preview={str(result)[:200]!r}"
+            )
+            return Verdict(
+                passed=False,
+                score=0.0,
+                errors=[f"result类型异常({type(result).__name__})，不是dict，无法提取文章正文，拒绝评审"],
+            )
 
         # B2/B3: 空内容保护 — 空 draft 或过短内容直接返回失败，不送给评委
         # 避免空内容被评委打出全0分或返回"无法回答"等无效响应
@@ -390,15 +465,30 @@ class MultiJudgeVerifier(LoopVerifier):
 
         # 3. 并行调用所有评委（每个评委最多60秒，超时跳过）
         judge_timeout = config.get("judge_timeout", 60)
-        # prefer_api: 评委优先使用API backend，排除WebChat backend（8000 token限制导致失败率高）
-        prefer_api = config.get("prefer_api", False)
+        # Phase 5.4: prefer_api 已在 per-judge 级别配置（normalized_judges 中每个元素为 (model, prefer_api)）
+        # 并发限流：避免5个评委同时打同一个provider导致超时
+        # 不同provider可并行，但同一个provider最多2个并发
+        # 配置项：max_judge_concurrency（默认2），可通过 loop.yaml verifier 配置
+        max_concurrency = int(config.get("max_judge_concurrency", 2))
+        judge_semaphore = asyncio.Semaphore(max_concurrency)
+
+        async def _limited_call_judge(judge_model: str, judge_prompt: str, _task, _prefer_api: bool):
+            async with judge_semaphore:
+                return await self._call_judge(judge_model, judge_prompt, _task, _prefer_api)
+
+        # active_judges 是 (model, prefer_api) 元组列表
+        judge_names = [m for m, _ in active_judges]
+        logger.info(f"[verifier-diag] 评委并发限流: max_concurrency={max_concurrency}, "
+                    f"judges={judge_names}, judge_timeout={judge_timeout}s, "
+                    f"content_len={len(content)}, prompt_len={len(prompt)}")
         # SSE修复：评委调用前发射事件，让客户端能看到评审进度
         if task.event_bus:
             task.event_bus.emit(task.task_id, "verify.judges.start", {
-                "judges": active_judges, "judge_count": len(active_judges),
+                "judges": judge_names, "judge_count": len(active_judges),
                 "judge_timeout": judge_timeout, "content_len": len(content),
+                "max_concurrency": max_concurrency,
             })
-        judge_tasks = [self._call_judge(j, prompt, task, prefer_api) for j in active_judges]
+        judge_tasks = [_limited_call_judge(m, prompt, task, pa) for m, pa in active_judges]
         judge_results = await asyncio.gather(
             *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
             return_exceptions=True,
@@ -408,11 +498,11 @@ class MultiJudgeVerifier(LoopVerifier):
             judge_status = []
             for i, r in enumerate(judge_results):
                 if isinstance(r, Exception):
-                    judge_status.append({"judge": active_judges[i], "status": "failed", "error": str(r)[:100]})
+                    judge_status.append({"judge": judge_names[i], "status": "failed", "error": str(r)[:100]})
                 elif isinstance(r, dict):
-                    judge_status.append({"judge": active_judges[i], "status": "ok"})
+                    judge_status.append({"judge": judge_names[i], "status": "ok"})
                 else:
-                    judge_status.append({"judge": active_judges[i], "status": "invalid"})
+                    judge_status.append({"judge": judge_names[i], "status": "invalid"})
             task.event_bus.emit(task.task_id, "verify.judges.complete", {
                 "judge_results": judge_status,
                 "valid_count": sum(1 for r in judge_results if isinstance(r, dict)),
@@ -423,11 +513,11 @@ class MultiJudgeVerifier(LoopVerifier):
         valid_results: list[dict] = []
         for i, r in enumerate(judge_results):
             if isinstance(r, Exception):
-                logger.warning(f"MultiJudgeVerifier: judge '{active_judges[i]}' failed: {r}")
+                logger.warning(f"MultiJudgeVerifier: judge '{judge_names[i]}' failed: {r}")
             elif isinstance(r, dict):
                 valid_results.append(r)
             else:
-                logger.warning(f"MultiJudgeVerifier: judge '{active_judges[i]}' returned unexpected type: {type(r)}")
+                logger.warning(f"MultiJudgeVerifier: judge '{judge_names[i]}' returned unexpected type: {type(r)}")
 
         if not valid_results:
             return Verdict(passed=False, score=0.0, errors=["All judges failed to return valid results"])
@@ -544,21 +634,72 @@ class MultiJudgeVerifier(LoopVerifier):
             else:
                 dim_lines.append(f"  - {dim} (权重 {weight:.2f})")
 
-        # 4. 动态生成 score_fields — 用占位符代替具体0.0值，避免Web模型直接复制0分
-        score_field_lines = [f'"{dim}": <your_score 0.0-1.0>' for dim in dimensions.keys()]
+        # 4. 动态生成 score_fields — 用示例值 0.85（非 0.0）
+        # v3 修复: 原 0.0 会导致 GLM-5.1 API 空响应时, OpenRoute 网关返回 prompt 中的
+        #   JSON 模板(scores 全 0.0)作为响应, 浪费 230s 后才被 Echo 检测捕获
+        # v3 改为 0.85 (示例值), LLM 看到具体数值会理解需替换为实际评分;
+        #   若 LLM echo 模板, scores 全 0.85 (明显非真实评分), 容易检测
+        # v2 历史: 原 <your_score 0.0-1.0> 占位符让某些 LLM 误以为要输出占位符本身
+        score_field_lines = [f'"{dim}": 0.85' for dim in dimensions.keys()]
         score_fields = ",\n    ".join(score_field_lines)
 
         # 5. 读取提示词模板
         template = config.get("judge_context_template", self.DEFAULT_JUDGE_CONTEXT_TEMPLATE)
 
-        # 6. 渲染模板
-        prompt = template.format(
-            judge_role=judge_role,
-            context_sections=context_sections_str,
-            dimension_lines="\n".join(dim_lines),
-            content=content[:8000],
-            score_fields=score_fields,
+        # 6. 渲染模板（加 try/except 保护，避免 KeyError 中断整个迭代）
+        try:
+            prompt = template.format(
+                judge_role=judge_role,
+                context_sections=context_sections_str,
+                dimension_lines="\n".join(dim_lines),
+                content=content[:8000],
+                score_fields=score_fields,
+            )
+        except KeyError as ke:
+            # Bug-5 修复：模板含未提供的占位符（如自定义模板中的 {platform_name}），
+            # 降级到默认模板渲染，避免整个迭代失败
+            logger.error(
+                f"[verifier-diag] template.format KeyError: 占位符 {ke} 未提供, "
+                f"回退到默认模板。自定义模板前300字符: {template[:300]!r}"
+            )
+            try:
+                prompt = self.DEFAULT_JUDGE_CONTEXT_TEMPLATE.format(
+                    judge_role=judge_role,
+                    context_sections=context_sections_str,
+                    dimension_lines="\n".join(dim_lines),
+                    content=content[:8000],
+                    score_fields=score_fields,
+                )
+            except Exception as fallback_e:
+                # 默认模板也失败，构造最小可用 prompt
+                logger.error(
+                    f"[verifier-diag] 默认模板也失败: {fallback_e}, 构造最小可用 prompt"
+                )
+                prompt = (
+                    f"你是{judge_role}。\n\n"
+                    f"评审维度:\n{chr(10).join(dim_lines)}\n\n"
+                    f"待评审内容:\n{content[:8000]}\n\n"
+                    f'输出JSON: {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1"]}}'
+                )
+
+        # [诊断日志] 记录渲染后的 prompt 关键信息
+        # 验证 content 是否正确注入到 prompt 中（用户反馈"传给llm评审的提示词里没有被评审的内容"）
+        content_in_prompt = content[:200] in prompt
+        prompt_content_section = ""
+        if "待评审内容:" in prompt:
+            idx = prompt.find("待评审内容:")
+            prompt_content_section = prompt[idx:idx + 300]
+        logger.info(
+            f"[verifier-diag] _build_eval_prompt: prompt_len={len(prompt)}, "
+            f"content_in_prompt={content_in_prompt}, "
+            f"content_section_preview={prompt_content_section[:200]!r}"
         )
+        if not content_in_prompt:
+            logger.error(
+                f"[verifier-diag] CRITICAL: content NOT found in rendered prompt! "
+                f"This means the judge will receive an empty content section. "
+                f"content_len={len(content)}, template_has_content_placeholder={'{content}' in template}"
+            )
         return prompt
 
     @staticmethod
@@ -571,11 +712,14 @@ class MultiJudgeVerifier(LoopVerifier):
         match = _re.search(r"\{(\w+)\}", template)
         return match.group(1) if match else ""
 
-    # 默认 system message（强制 JSON 输出，针对 WebChat 模型优化）
+    # 默认 system message（明确任务角色 + JSON 格式约束，避免 LLM 误解为"等待输入"）
+    # v2: 修复评委返回"我需要看到内容"的问题 — 原 system_msg 过于强硬，
+    #     让某些 LLM 误以为自己是"JSON 输出器"而非"评审员"，导致拒绝评审。
     DEFAULT_JUDGE_SYSTEM_MESSAGE: str = (
-        "你是一个JSON输出器。你必须且只能输出一个合法的JSON对象，"
-        "不要输出任何其他文字、解释、前缀、后缀或markdown代码块。"
-        "直接以{开头，以}结尾。"
+        "你是资深内容质量评审员。用户消息中已包含待评审的文章内容和评审维度，"
+        "请仔细阅读后给出每个维度的评分（0.00-1.00）和具体改进建议。"
+        "最终只输出一个JSON对象，不要输出解释、前缀或markdown代码块，"
+        '以 {"scores":{...}} 开头，以 } 结尾。'
     )
 
     async def _call_judge(self, model: str, prompt: str, task: TaskContext, prefer_api: bool = False) -> dict:
@@ -608,9 +752,45 @@ class MultiJudgeVerifier(LoopVerifier):
         # prefer_api: 让 LLMClient 过滤候选链中的 WebChat backend，仅使用 API backend
         if prefer_api:
             judge_params["prefer_api"] = True
+
+        # [诊断日志] 记录发送给评委的 prompt 长度和内容预览
+        logger.info(
+            f"[verifier-diag] _call_judge: model={model}, prompt_len={len(prompt)}, "
+            f"user_msg_preview={prompt[:300]!r}"
+        )
+
         tool_output = await task.tools.execute("llm", ToolInput(params=judge_params))
 
+        # P-WIN-FIX: 检查 tool_output.error — 当 LLM 调用失败时（超时/空响应/WebChat崩溃），
+        # LLMClient 返回 ToolOutput(result={"content":"","error":...}, error=...)。
+        # 原代码只读 content="" 不检查 error，导致空字符串被 _parse_judge_response 解析失败。
+        # 此修复不影响成功路径（Linux 评委正常时 tool_output.error 为 None）。
+        if tool_output.error:
+            err_msg = str(tool_output.error)[:300]
+            logger.warning(
+                f"[verifier-diag] _call_judge LLM call failed: model={model}, "
+                f"error={err_msg}"
+            )
+            raise ValueError(f"Judge '{model}' LLM call failed: {err_msg}")
+
         raw_content = tool_output.result.get("content", "") if tool_output.result else ""
+        # 二次检查：result 中可能包含 error 字段（部分失败路径）
+        if not raw_content and tool_output.result and tool_output.result.get("error"):
+            err_msg = str(tool_output.result.get("error"))[:300]
+            logger.warning(
+                f"[verifier-diag] _call_judge empty content with error: model={model}, "
+                f"error={err_msg}"
+            )
+            raise ValueError(f"Judge '{model}' returned empty content: {err_msg}")
+
+        # [诊断日志] 记录评委返回的原始内容
+        _raw_preview = repr(raw_content[:300]) if raw_content else repr("EMPTY")
+        logger.info(
+            f"[verifier-diag] _call_judge response: model={model}, "
+            f"raw_content_len={len(raw_content) if raw_content else 0}, "
+            f"raw_content_preview={_raw_preview}"
+        )
+
         # 过滤 WebChat 模型的思考过程（CoT），只保留最终输出
         raw_content = self._strip_thinking_process(raw_content)
         return self._parse_judge_response(raw_content, model)

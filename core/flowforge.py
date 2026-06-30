@@ -7,6 +7,7 @@ from flowforge.events.event_bus import EventBus
 from flowforge.modes.registry import ModeRegistry
 from flowforge.tools.registry import ToolRegistry
 from flowforge.tools.llm_client import LLMClient
+from flowforge.llm.router import LLMRouter
 from flowforge.tools.opensieve_client import OpenSieveClient
 from flowforge.tools.web_search import WebSearchTool
 from flowforge.tools.python_executor import PythonExecutorTool
@@ -46,7 +47,10 @@ class FlowForge:
 
     def _register_defaults(self):
         models_config = self.config_loader.get_models_config()
-        llm_client = LLMClient(models_config=models_config, event_bus=self.event_bus)
+        # 实例化 LLMRouter 并注入到 LLMClient，让 llm_route.yaml 的路由策略真正生效
+        models_yaml_path = self.config_loader.config_dir / "models.yaml"
+        llm_router = LLMRouter(config_path=str(models_yaml_path))
+        llm_client = LLMClient(models_config=models_config, event_bus=self.event_bus, llm_router=llm_router)
         self.tool_registry.register(llm_client)
         if self.config.opensieve_enabled:
             self.tool_registry.register(OpenSieveClient())

@@ -183,13 +183,27 @@ def build_cross_fallback_chain(
     2. Interleave across top providers for diversity
     3. Filter out models in cooldown
     4. OpenRoute models go first (as primary, unlimited tokens)
+    5. Append openroute/free and openroute/auto as last-resort fallbacks
+
+    兜底链构建原则（参考老版本content model_manager的100%成功率设计）：
+    - 主路径应由 models.yaml assignments 提供，本函数仅作为最后兜底
+    - 具体web chat模型优先（Doubao-Seed2.0/DeepSeek-V4-Pro等）
+    - auto/free 是openroute的特殊入口，作为最末兜底追加到链尾
+      （auto是智能路由按auto.order尝试所有一级模型，free是免费模型集合）
+    - 这两个特殊入口是100%成功率的关键保障（老版本设计的核心理念）
     """
+    # auto/free/proxy 不从常规分组中提取，而是作为最末兜底单独追加
+    SPECIAL_FALLBACK_ENTRIES = {"auto", "free", "proxy"}
+
     provider_order = ["openroute", "openrouter"]
     grouped: Dict[str, List[str]] = {}
     for provider in provider_order:
         models = available_models.get(provider, [])
         healthy = []
         for m in models:
+            # 特殊入口（auto/free/proxy）跳过常规分组，作为最末兜底追加
+            if m in SPECIAL_FALLBACK_ENTRIES:
+                continue
             key = f"{provider}/{m}"
             status = health_status.get(key, {})
             cooldown_until = status.get("cooldown_until", 0)
@@ -199,18 +213,24 @@ def build_cross_fallback_chain(
         if healthy:
             grouped[provider] = healthy
 
-    if not grouped:
-        return []
-
-    sorted_providers = sorted(grouped.keys(), key=lambda p: len(grouped[p]), reverse=True)
-
+    # 即使所有具体模型都在cooldown，也要构建特殊入口兜底链
     chain = []
-    max_len = max(len(v) for v in grouped.values())
-    for i in range(max_len):
-        for provider in sorted_providers:
-            models = grouped[provider]
-            if i < len(models):
-                chain.append(models[i])
+    if grouped:
+        sorted_providers = sorted(grouped.keys(), key=lambda p: len(grouped[p]), reverse=True)
+        max_len = max(len(v) for v in grouped.values())
+        for i in range(max_len):
+            for provider in sorted_providers:
+                models = grouped[provider]
+                if i < len(models):
+                    chain.append(models[i])
+
+    # 追加 openroute 特殊入口作为最末兜底（老版本100%成功率的关键设计）
+    # openroute/free: 自动尝试所有可用免费模型
+    # openroute/auto: 按auto.order智能路由尝试所有一级模型
+    openroute_models = available_models.get("openroute", [])
+    for special in ("free", "auto"):
+        if special in openroute_models:
+            chain.append(f"openroute/{special}")
 
     return chain
 
@@ -240,6 +260,11 @@ class LLMClient(BaseTool):
             "stream": {"type": "boolean", "default": False},
             "persona": {"type": "string", "description": "Persona identifier for model routing"},
             "agent_name": {"type": "string", "description": "Agent name for model routing"},
+            # assignment 参数：任务类型路由键（如 content_create/content_refine/judge），
+            # 优先级高于 persona，让 models.yaml 中专用的 assignment 真正生效。
+            # 例如 contentforge writer_engine 传 assignment="content_create" → primary=Doubao-Seed2.0
+            #      contentforge editor_engine 传 assignment="content_refine" → primary=DeepSeek-V4-Pro
+            "assignment": {"type": "string", "description": "Task type assignment key for model routing (overrides persona)"},
             "tools": {"type": "array", "description": "OpenAI function calling tools schema"},
             "skip_cooldown": {"type": "boolean", "default": False, "description": "Skip cooldown check for judge calls"},
             "prefer_api": {"type": "boolean", "default": False, "description": "Prefer API backend, exclude WebChat backend models from candidate chain"},
@@ -263,7 +288,8 @@ class LLMClient(BaseTool):
         # 默认超时：使用 default 路由的 timeout_seconds，回退到 30s
         self._request_timeout = self._route_timeouts.get("default", 30.0)
         # L3: 从 llm_route.yaml 加载 FailoverPolicy 的 max_retries 和 retry_delay_seconds
-        self._max_retries, self._retry_delay_seconds = self._load_failover_retries()
+        # 关键修复：加载所有路由的 max_retries，让 judge 路由的 max_retries=0 生效
+        self._max_retries, self._retry_delay_seconds, self._route_max_retries = self._load_failover_retries()
         self._build_available_models()
         # 从 models.yaml 的 disabled_models 段加载禁用模型列表（配置驱动，非硬编码）
         self._disabled_models = self._load_disabled_models()
@@ -327,10 +353,17 @@ class LLMClient(BaseTool):
         return self._route_timeouts.get("default", 30.0)
 
     def _load_failover_retries(self):
-        """从 llm_route.yaml 加载 FailoverPolicy 的重试配置（L3 修复）.
+        """从 llm_route.yaml 加载 FailoverPolicy 的重试配置（L3 修复 + judge 路由修复）.
 
-        读取 default 路由的 failover_policy.max_retries 和 retry_delay_seconds。
-        返回 (max_retries, retry_delay_seconds)，默认 (2, 1.0)。
+        读取所有路由的 failover_policy.max_retries 和 retry_delay_seconds。
+        返回 (default_max_retries, retry_delay_seconds, route_max_retries_dict)。
+
+        关键修复：judge 路由的 max_retries=0 必须生效！
+        - default 路由: max_retries=2（创作/润色可以重试）
+        - judge 路由: max_retries=0（评委失败立即切换到下一个候选模型，不重试）
+        - creative 路由: max_retries=2（创作可以重试）
+
+        老版本content的100%成功率设计：永不放弃，但失败后立即切换模型，不重试同一模型。
         """
         try:
             import yaml
@@ -341,15 +374,48 @@ class LLMClient(BaseTool):
                     cfg = yaml.safe_load(f) or {}
                 routes = cfg.get("routes", {})
                 default_route = routes.get("default", {})
-                failover = default_route.get("failover_policy", {})
-                max_retries = int(failover.get("max_retries", 2))
-                retry_delay = float(failover.get("retry_delay_seconds", 1.0))
-                logger.info(f"[L3] 从 llm_route.yaml 加载重试配置: max_retries={max_retries}, "
-                            f"retry_delay={retry_delay}s（替代硬编码）")
-                return max_retries, retry_delay
+                default_failover = default_route.get("failover_policy", {})
+                default_max_retries = int(default_failover.get("max_retries", 2))
+                retry_delay = float(default_failover.get("retry_delay_seconds", 1.0))
+
+                # 加载所有路由的 max_retries（关键修复：让 judge 路由的 max_retries=0 生效）
+                route_max_retries = {}
+                for route_name, route_cfg in routes.items():
+                    failover = route_cfg.get("failover_policy", {})
+                    route_max_retries[route_name] = int(failover.get("max_retries", default_max_retries))
+
+                logger.info(f"[L3] 从 llm_route.yaml 加载重试配置: default_max_retries={default_max_retries}, "
+                            f"retry_delay={retry_delay}s, route_max_retries={route_max_retries}")
+                return default_max_retries, retry_delay, route_max_retries
         except Exception as e:
             logger.warning(f"[L3] 加载 llm_route.yaml 重试配置失败，使用默认值: {e}")
-        return 2, 1.0
+        return 2, 1.0, {}
+
+    def _get_retries_for_agent(self, agent_name: str = "") -> int:
+        """根据 agent_name 查找对应路由的 max_retries（关键修复）.
+
+        查找逻辑（与 _get_timeout_for_agent 一致）：
+        1. 精确匹配: 从 agent_routes 映射查找 agent_name 对应的路由名
+        2. 前缀匹配: 遍历 agent_routes,若 agent_name 以某个 key 开头则匹配(如 multi_judge_*)
+        3. 从 route_max_retries 中获取该路由的 max_retries
+        4. 回退到 default 路由的 max_retries
+
+        例如: multi_judge_doubao-seed2 → judge 路由 → max_retries=0（失败立即切换）
+        例如: contentforge:writer → creative 路由 → max_retries=2（可以重试）
+        """
+        if not agent_name or not self._route_max_retries:
+            return self._max_retries
+        # 1. 精确匹配
+        route_name = self._agent_routes.get(agent_name, "")
+        # 2. 前缀匹配(如 multi_judge_ 匹配 multi_judge_doubao-seed2)
+        if not route_name:
+            for prefix_key, prefix_route in self._agent_routes.items():
+                if prefix_key.endswith("_") and agent_name.startswith(prefix_key):
+                    route_name = prefix_route
+                    break
+        if route_name and route_name in self._route_max_retries:
+            return self._route_max_retries[route_name]
+        return self._max_retries
 
     def set_event_bus(self, event_bus):
         self._event_bus = event_bus
@@ -469,18 +535,27 @@ class LLMClient(BaseTool):
             return key[:4] + "..." + key[-4:] if len(key) > 8 else key[:3] + "..."
         return key[:8] + "..." + key[-4:]
 
-    def _get_model_chain(self, persona: str = "", agent_name: str = "", task_id: str = "") -> List[str]:
-        # LLMRouter 优先路由：当 router 可用时，根据 persona 映射到策略
+    def _get_model_chain(self, persona: str = "", agent_name: str = "", task_id: str = "", assignment: str = "") -> List[str]:
+        # assignment 优先：任务类型路由键（如 content_create/content_refine/judge），
+        # 优先于 persona，让 models.yaml 中专用的 assignment 真正生效。
+        # 这是修复"专用 assignment 从未生效"bug 的关键（参考审核报告缺陷 D3）。
+        if assignment:
+            return self._build_assignment_chain(persona, agent_name, task_id, assignment)
+
+        # LLMRouter 优先路由：当 router 可用且无 assignment 时，根据 persona 映射到策略
         if self._llm_router is not None:
             strategy = self._map_persona_to_strategy(persona, agent_name)
             try:
+                # 修复 async/sync 桥接 bug：使用 asyncio.run_coroutine_threadsafe 而非
+                # concurrent.futures.ThreadPoolExecutor + asyncio.run（后者在已有事件循环中
+                # 会抛 RuntimeError: asyncio.run() cannot be called from a running event loop）
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    # 在异步上下文中，不能同步调用 async 方法，回退到原有逻辑
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as pool:
-                        future = pool.submit(asyncio.run, self._get_routed_model(strategy))
-                        routed_model = future.result(timeout=5)
+                    # 在异步上下文中，使用 threadsafe 方式调用 async 方法
+                    future = asyncio.run_coroutine_threadsafe(
+                        self._get_routed_model(strategy), loop
+                    )
+                    routed_model = future.result(timeout=5)
                 else:
                     routed_model = loop.run_until_complete(self._get_routed_model(strategy))
                 if routed_model:
@@ -518,8 +593,36 @@ class LLMClient(BaseTool):
             return persona_strategy_map[persona]
         return "default"
 
-    def _build_assignment_chain(self, persona: str = "", agent_name: str = "", task_id: str = "") -> List[str]:
-        """原有的模型候选链构建逻辑（从 _get_model_chain 中提取）."""
+    def _build_assignment_chain(self, persona: str = "", agent_name: str = "", task_id: str = "", assignment: str = "") -> List[str]:
+        """构建模型候选链（参考老版本content model_manager的17候选链设计）.
+
+        查找优先级（从高到低）：
+        1. assignment 参数：任务类型路由键（如 content_create/content_refine/judge），
+           直接匹配 assignments[assignment]，让专用 assignment 真正生效
+        2. persona + agent_name：精确匹配 assignments[persona][agent_name]
+        3. persona：匹配 assignments[persona].default 或 assignments[persona]
+        4. default：匹配 assignments.default
+        5. 跨供应商兜底：build_cross_fallback_chain
+
+        Args:
+            assignment: 任务类型路由键（优先级最高，如 content_create/content_refine/judge）
+            persona: persona 标识符
+            agent_name: agent 名称
+            task_id: 任务ID（用于cross-validation）
+        """
+        # 1. assignment 优先：直接匹配 assignments[assignment]
+        #    让 content_create/content_refine/judge 等专用 assignment 真正生效
+        if assignment:
+            assign_config = self._assignments.get(assignment, {})
+            primary = assign_config.get("primary", "")
+            fallbacks = assign_config.get("fallbacks", [])
+            if primary:
+                chain = [primary]
+                chain.extend(fallbacks)
+                logger.info(f"[候选链] assignment='{assignment}' → primary={primary}, fallbacks={len(fallbacks)}个")
+                return self._apply_rotation_and_cross_validation(chain, persona, task_id)
+
+        # 2. persona + agent_name 精确匹配
         if persona and agent_name:
             persona_config = self._assignments.get(persona, {})
             agent_config = persona_config.get(agent_name, {})
@@ -530,6 +633,7 @@ class LLMClient(BaseTool):
                 chain.extend(fallbacks)
                 return self._apply_rotation_and_cross_validation(chain, persona, task_id)
 
+        # 3. persona 匹配
         if persona:
             persona_config = self._assignments.get(persona, {})
             default_config = persona_config.get("default", {})
@@ -540,6 +644,7 @@ class LLMClient(BaseTool):
                 chain.extend(fallbacks)
                 return self._apply_rotation_and_cross_validation(chain, persona, task_id)
 
+        # 4. default 匹配
         default_assign = self._assignments.get("default", {})
         primary = default_assign.get("primary", "")
         fallbacks = default_assign.get("fallbacks", [])
@@ -548,6 +653,7 @@ class LLMClient(BaseTool):
             chain.extend(fallbacks)
             return self._apply_rotation_and_cross_validation(chain, persona, task_id)
 
+        # 5. 跨供应商兜底
         return build_cross_fallback_chain(self._available_models, self._health_status)
 
     def _apply_rotation_and_cross_validation(self, chain: List[str], persona: str, task_id: str) -> List[str]:
@@ -701,11 +807,20 @@ class LLMClient(BaseTool):
     async def execute(self, input: ToolInput) -> ToolOutput:
         messages = input.params.get("messages", [])
         model = input.params.get("model")
+        # 修复：将 "auto"/"proxy"/"free" 视为无 hint（None），让候选链按 assignments 配置选模型
+        # 原代码将 "auto" 当作具体模型传入，导致 openroute/auto 被加到候选链首位
+        # 即使 disabled_models 配置了 openroute/auto 也不生效（因为它是被 model 参数直接指定的）
+        # 用户反馈：创作/润色/5评委评审应使用web chat模型，auto/free/proxy 仅作备份
+        if model in ("auto", "proxy", "free", ""):
+            model = None
         temperature = input.params.get("temperature", 0.7)
         top_p = input.params.get("top_p")
         max_tokens = input.params.get("max_tokens", 4000)
         persona = input.params.get("persona")
         agent_name = input.params.get("agent_name")
+        # assignment 参数：任务类型路由键（如 content_create/content_refine/judge）
+        # 优先级高于 persona，让 models.yaml 中专用的 assignment 真正生效
+        assignment = input.params.get("assignment")
         stream = input.params.get("stream", False)
         task_id = input.params.get("task_id", "unknown")
         tools = input.params.get("tools")
@@ -758,9 +873,13 @@ class LLMClient(BaseTool):
                         if "-web/" in model or model.endswith("-web/chat"):
                             model = f"openroute/{model}"
             resolved_model = model
-            assignment_chain = self._get_model_chain(persona, agent_name, task_id)
+            assignment_chain = self._get_model_chain(persona, agent_name, task_id, assignment)
             if resolved_model in assignment_chain:
-                candidates = assignment_chain
+                # 修复：将调用方指定的模型排在候选链首位，其余作为 fallback。
+                # 原代码 candidates = assignment_chain 导致所有评委都从路由 primary
+                # (DeepSeek-V4-Pro) 开始尝试，5个评委中3个同时请求同一 provider，
+                # 引发并发瓶颈全部超时。修复后每个评委从自己指定的模型开始。
+                candidates = [resolved_model] + [c for c in assignment_chain if c != resolved_model]
             else:
                 candidates = [resolved_model]
                 seen = {resolved_model}
@@ -774,7 +893,7 @@ class LLMClient(BaseTool):
                         candidates.append(c)
                         seen.add(c)
         else:
-            candidates = self._get_model_chain(persona, agent_name, task_id)
+            candidates = self._get_model_chain(persona, agent_name, task_id, assignment)
 
         if not candidates:
             candidates = build_cross_fallback_chain(self._available_models, self._health_status)
@@ -863,6 +982,10 @@ class LLMClient(BaseTool):
             # 不传 tools 给 auto 模式，让 openroute 自行决定路由
             if provider == "openroute" and model_id == "auto" and tools:
                 payload["tools"] = tools
+            # Phase 5.4: prefer_api 传递给 OpenRoute，让其在解析模型时跳过 web chat backend
+            # 评委场景：web chat backend 会截断长 prompt 导致评委返回无效内容
+            if prefer_api and provider == "openroute":
+                payload["prefer_api"] = True
             url = base_url.rstrip("/") + "/chat/completions"
 
             # 请求详情日志
@@ -885,7 +1008,29 @@ class LLMClient(BaseTool):
                 "total_candidates": len(candidates),
             })
 
-            logger.info(f"🤖 [LLM调用] agent={agent_name or '?'} → provider={provider} model={model_id}")
+            logger.info(f"🤖 [LLM调用] agent={agent_name or '?'} → provider={provider} model={model_id} "
+                        f"(候选 {idx+1}/{len(candidates)} timeout={agent_timeout}s)")
+
+            # 🔍 关键诊断日志：记录喂给 LLM 的输入内容预览（用户反馈"喂给llm的内容有严重质量问题"）
+            # 记录最后一条 user message 的前 800 字符，用于分析组合提示词是否有质量问题
+            try:
+                user_msgs = [m for m in messages if m.get("role") == "user"]
+                if user_msgs:
+                    last_user_msg = user_msgs[-1].get("content", "")
+                    if isinstance(last_user_msg, list):
+                        # multimodal content, extract text
+                        last_user_msg = " ".join(
+                            str(c.get("text", "")) for c in last_user_msg if isinstance(c, dict)
+                        )
+                    input_preview = str(last_user_msg)[:800].replace("\n", "\\n")
+                    input_len = len(str(last_user_msg))
+                    system_msgs = [m for m in messages if m.get("role") == "system"]
+                    system_len = sum(len(str(m.get("content", ""))) for m in system_msgs)
+                    logger.info(f"[LLM输入] agent={agent_name or '?'} model={model_id} "
+                                f"system_chars={system_len} user_chars={input_len} "
+                                f"preview={input_preview!r}")
+            except Exception as log_e:
+                logger.warning(f"[LLM输入] 记录输入预览失败: {log_e}")
 
             retry_attempt = 0
             while True:
@@ -914,12 +1059,14 @@ class LLMClient(BaseTool):
                     else:
                         content_text = content
 
-                    # 响应详情日志
-                    content_preview = content_text[:100] if isinstance(content_text, str) else str(content_text)[:100]
+                    # 响应详情日志（输出预览扩到300字符，便于分析 LLM 返回内容质量）
+                    content_preview = content_text[:300] if isinstance(content_text, str) else str(content_text)[:300]
+                    content_preview = content_preview.replace("\n", "\\n")
                     content_len = len(content_text) if isinstance(content_text, str) else len(str(content_text))
                     logger.info(f"[LLM响应] provider={provider} model={model_id} "
-                                f"状态=成功 耗时={duration:.2f}s tokens={tokens}")
-                    logger.info(f"[LLM响应] 内容长度={content_len} 预览={content_preview!r}")
+                                f"状态=成功 耗时={duration:.2f}s tokens={tokens} 内容长度={content_len}")
+                    logger.info(f"[LLM输出] agent={agent_name or '?'} model={model_id} "
+                                f"preview={content_preview!r}")
 
                     metrics.record_tool_call("llm", duration)
                     metrics.record_llm_tokens(provider, model_id, tokens)
@@ -966,6 +1113,53 @@ class LLMClient(BaseTool):
                             self._record_model_result(f"{provider}/{model_id}", False, "invalid_response")
                             last_error = Exception(f"invalid_response: {preview}")
                             break  # invalid_response → next candidate, no retry
+
+                        # Echo响应检测：LLM返回user message内容而非生成内容（openroute网关bug）
+                    # 日志特征：tokens很少（<50）但content长度很大（>500）
+                    # 或content是user message的子串（被复制）
+                    # Phase 5.5 修复: 移除 prompt_section_count 检测，因为正常 Markdown 文章
+                    # 也包含多个 ### 标题，会导致误判。只有 content_in_user=True 才触发 Echo
+                    try:
+                        user_msgs = [m for m in messages if m.get("role") == "user"]
+                        is_echo = False
+                        echo_reason = ""
+                        if user_msgs:
+                            last_user_msg = user_msgs[-1].get("content", "")
+                            if isinstance(last_user_msg, list):
+                                last_user_msg = " ".join(
+                                    str(c.get("text", "")) for c in last_user_msg if isinstance(c, dict)
+                                )
+                            # 强检测1：tokens极少（<50）但content很长（>500）
+                            # 正常长文生成tokens应>100，tokens<50且content>500基本是echo
+                            if tokens < 50 and len(content_text) > 500 and last_user_msg:
+                                # Phase 5.5 修复: 只有 content 确实是 user message 的子串时才触发 Echo
+                                # 移除 prompt_section_count 检测（正常 Markdown 文章也有多个 ### 标题）
+                                content_in_user = content_text[:200] in last_user_msg
+                                if content_in_user:
+                                    is_echo = True
+                                    echo_reason = (f"strong_echo tokens={tokens} content_len={len(content_text)} "
+                                                  f"content_in_user={content_in_user}")
+                            # 弱检测2：tokens极少（<20）且content前100字符与user message前100字符完全匹配
+                            elif (tokens < 20 and len(content_text) > 100
+                                  and last_user_msg and len(last_user_msg) > 50):
+                                content_head = content_text[:100]
+                                user_head = last_user_msg[:100]
+                                if content_head == user_head:
+                                    is_echo = True
+                                    echo_reason = (f"prefix_match tokens={tokens} "
+                                                  f"content_len={len(content_text)} "
+                                                  f"user_msg_len={len(last_user_msg)}")
+                        if is_echo:
+                            logger.warning(
+                                f"[Echo响应] {provider}/{model_id} 返回user message内容而非生成内容, "
+                                f"agent={agent_name} {echo_reason} 预览='{content_text[:80]}'"
+                            )
+                            self._update_health(provider, model_id, False, "echo_response")
+                            self._record_model_result(f"{provider}/{model_id}", False, "echo_response")
+                            last_error = Exception(f"echo_response: LLM returned user message content")
+                            break  # echo_response → next candidate, no retry
+                    except Exception as echo_e:
+                        logger.debug(f"[Echo响应] 检测失败: {echo_e}")
 
                     result = {
                         "content": content_text if isinstance(content_text, str) else content_text,
@@ -1016,14 +1210,18 @@ class LLMClient(BaseTool):
                         last_error = e
                         break  # exit while → next candidate
                     # L7: same-model retry with exponential backoff (L3: config from FailoverPolicy)
-                    if retry_attempt < self._max_retries:
+                    # 关键修复：按 agent_name 对应路由读取 max_retries
+                    # judge 路由 max_retries=0 → 失败立即切换到下一个候选模型（不重试）
+                    # default/creative 路由 max_retries=2 → 可以重试2次
+                    agent_max_retries = self._get_retries_for_agent(agent_name or "")
+                    if retry_attempt < agent_max_retries:
                         backoff = self._retry_delay_seconds * (2 ** retry_attempt)
                         logger.info(f"  ⚠ 临时性错误({error_type})，{backoff:.1f}s 后重试 "
-                                    f"{provider}/{model_id} ({retry_attempt+1}/{self._max_retries})")
+                                    f"{provider}/{model_id} ({retry_attempt+1}/{agent_max_retries})")
                         await asyncio.sleep(backoff)
                         retry_attempt += 1
                         continue  # retry same model
-                    logger.info(f"  ⚠ 重试 {self._max_retries} 次后仍失败({error_type})，尝试下一个候选")
+                    logger.info(f"  ⚠ 重试 {agent_max_retries} 次后仍失败({error_type})，尝试下一个候选")
                     # 日志埋点：模型切换记录
                     logger.warning(
                         f"[模型切换] {provider}/{model_id} 失败({error_type}), "
@@ -1089,6 +1287,9 @@ class LLMClient(BaseTool):
                         payload_fb["top_p"] = top_p
                     if tools:
                         payload_fb["tools"] = tools
+                    # Phase 5.4: fallback 路径也传递 prefer_api（评委场景）
+                    if prefer_api and provider == "openroute":
+                        payload_fb["prefer_api"] = True
                     url = base_url.rstrip("/") + "/chat/completions"
                     self._emit_event(task_id, "llm.start", {"agent_name": agent_name or "unknown", "model": f"{provider}/{model_id}", "candidate_index": candidates.index(candidate) + 1, "total_candidates": len(candidates)})
                     logger.info(f"🤖 [LLM回退] agent={agent_name or '?'} → {provider}/{model_id}")
@@ -1172,10 +1373,18 @@ class LLMClient(BaseTool):
         model_id = payload.get("model", "unknown")
         # P0-4: 使用 agent 专用超时（如果传入），否则回退到默认超时
         req_timeout = timeout if timeout is not None else self._request_timeout
+        # v2: 使用精细超时配置，避免 chunked encoding 响应导致单一 timeout 不生效
+        # connect=10s (连接建立), read=req_timeout (读取响应), write=30s (发送请求), pool=30s (连接池)
+        timeout_config = httpx.Timeout(
+            connect=10.0,
+            read=float(req_timeout),
+            write=30.0,
+            pool=30.0,
+        )
         logger.info(f"[_normal_call] 请求开始 URL={url} model={model_id} timeout={req_timeout}s")
         start = time.time()
         try:
-            async with httpx.AsyncClient(timeout=req_timeout) as client:
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
                 resp = await client.post(url, json=payload, headers=headers)
                 duration = time.time() - start
                 logger.info(f"[_normal_call] 响应返回 URL={url} model={model_id} "
@@ -1187,6 +1396,11 @@ class LLMClient(BaseTool):
                 tokens = data.get("usage", {}).get("total_tokens", 0)
                 tool_calls = message.get("tool_calls")
                 return {"content": content, "tokens": tokens, "tool_calls": tool_calls, "raw_message": message}
+        except httpx.TimeoutException as e:
+            duration = time.time() - start
+            logger.warning(f"[_normal_call] 请求超时 URL={url} model={model_id} "
+                           f"耗时={duration:.2f}s (timeout={req_timeout}s) 错误={str(e)[:300]}")
+            raise
         except Exception as e:
             duration = time.time() - start
             logger.warning(f"[_normal_call] 请求失败 URL={url} model={model_id} "
@@ -1198,11 +1412,18 @@ class LLMClient(BaseTool):
                            timeout: float = None) -> str:
         # P0-4: 使用 agent 专用超时（如果传入），否则回退到默认超时
         req_timeout = timeout if timeout is not None else self._request_timeout
+        # v2: 使用精细超时配置，避免 chunked encoding 响应导致单一 timeout 不生效
+        timeout_config = httpx.Timeout(
+            connect=10.0,
+            read=float(req_timeout),
+            write=30.0,
+            pool=30.0,
+        )
         logger.info(f"[_stream_call] 请求开始 URL={url} model={model_id} provider={provider} timeout={req_timeout}s")
         full_content = []
         start = time.time()
         try:
-            async with httpx.AsyncClient(timeout=req_timeout) as client:
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
                 async with client.stream("POST", url, json=payload, headers=headers) as resp:
                     duration = time.time() - start
                     logger.info(f"[_stream_call] 响应返回 URL={url} model={model_id} "

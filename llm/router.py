@@ -41,24 +41,31 @@ class ModelStatus(BaseModel):
 class LLMRouter:
     """LLM路由器 — 根据级联策略选择最优模型.
 
-    从models.yaml的cascade_strategies段加载级联策略，结合模型健康状态
+    从models.yaml的assignments段加载模型分配策略，结合模型健康状态
     决定使用哪个模型。支持：
     - 多策略路由（default/content_writing/code_generation/fact_check等）
     - 健康感知：自动跳过UNAVAILABLE模型
     - 降级路由：HEALTHY → DEGRADED → UNAVAILABLE
     - 运行时健康更新：record_success/record_error
+
+    注意：配置文件中使用 assignments（含 primary + fallbacks），
+    而非旧的 cascade_strategies（含 primary + fallback）。
+    本类对外保留 route(strategy) 接口，内部映射到 assignments。
     """
 
     def __init__(self, config_path: str = ""):
         self._models: Dict[str, ModelStatus] = {}
-        self._cascade_strategies: Dict[str, dict] = {}
+        self._cascade_strategies: Dict[str, dict] = {}  # 兼容字段，实际从 assignments 加载
         self._model_specs: Dict[str, dict] = {}
         self._lock = asyncio.Lock()
         if config_path:
             self._load_config(config_path)
 
     def _load_config(self, path: str):
-        """加载级联策略配置（从models.yaml）."""
+        """加载模型分配配置（从models.yaml的assignments段）.
+
+        兼容旧配置：若 assignments 不存在，回退到 cascade_strategies。
+        """
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
@@ -66,8 +73,36 @@ class LLMRouter:
             logger.error(f"LLMRouter加载配置失败: {path}, 错误: {e}")
             return
 
-        self._cascade_strategies = data.get("cascade_strategies", {})
+        # 优先从 assignments 加载（models.yaml 的标准结构）
+        assignments = data.get("assignments", {})
+        if assignments:
+            # 将 assignments 转换为内部 cascade_strategies 格式
+            # assignments[key] = {primary, fallbacks}  →  cascade_strategies[key] = {primary, fallback}
+            self._cascade_strategies = {}
+            for key, assignment in assignments.items():
+                self._cascade_strategies[key] = {
+                    "primary": assignment.get("primary", ""),
+                    "fallback": assignment.get("fallbacks", []),
+                }
+            logger.info(f"LLMRouter从 assignments 加载 {len(self._cascade_strategies)} 个策略")
+        else:
+            # 回退兼容：旧的 cascade_strategies 结构
+            self._cascade_strategies = data.get("cascade_strategies", {})
+            if self._cascade_strategies:
+                logger.warning(
+                    f"LLMRouter: models.yaml 使用旧的 cascade_strategies 结构，"
+                    f"建议迁移到 assignments。加载了 {len(self._cascade_strategies)} 个策略"
+                )
+
+        # 加载模型规格（兼容 models 列表和 model_specs 字典两种格式）
         self._model_specs = data.get("model_specs", {})
+        models_list = data.get("models", [])
+        if models_list and not self._model_specs:
+            # 将 models 列表转换为字典（以 id 为 key）
+            for m in models_list:
+                mid = m.get("id", "")
+                if mid:
+                    self._model_specs[mid] = m
 
         # 初始化模型状态
         for model_id in self._model_specs:
@@ -92,7 +127,7 @@ class LLMRouter:
         """根据策略路由到最优模型.
 
         Args:
-            strategy: 级联策略名称（default/content_writing/code_generation/fact_check等）
+            strategy: 策略名称（对应 assignments 的 key，如 default/content_writing等）
             **kwargs: 预留扩展参数
 
         Returns:
