@@ -433,7 +433,7 @@ class HybridExecutor:
 |---------|------|---------|----------|
 | `react` | ReAct | Thought → Action → Observation 循环（MAX_STEPS=8, 含循环检测） | 需要多步动态检索或工具调用 |
 | `plan_execute` | Plan-and-Execute | Planner 生成步骤清单，Executor 依次执行 | 路径明确、步骤可预测的任务 |
-| `reflexion` | Reflexion | Actor → Evaluator → Reflector → 记忆 (MAX_ITERATIONS=4, QUALITY_THRESHOLD=0.85) | 需要反复打磨才能达标的任务（代码、文档） |
+| `reflexion` | Reflexion | Actor → Evaluator → Reflector → 记忆 (MAX_ITERATIONS=4, QUALITY_THRESHOLD=0.9) | 需要反复打磨才能达标的任务（代码、文档） |
 | `multi_agent` | Multi-Agent | Subagents/Teams/Swarms 三策略，Orchestrator 分发 | 需要多角色配合的复杂任务 |
 | `workflow` | Workflow / Orchestration | 预定义的 DAG 流程，可混合其他模式（禁止嵌套Workflow，max_depth=3） | 长流程、端到端的业务流水线 |
 | `graph_of_thoughts` | Graph of Thoughts | 图式推理，多思路聚合、交叉验证 | 复杂推理、数学证明、多源情报融合 |
@@ -487,7 +487,7 @@ steps:
 
 | # | Agent 名称 | 核心能力 | 默认模式 |
 |---|-----------|---------|---------|
-| 1 | **TopicResearchAgent** | 多级检索策略：缓存→HelixRAG→热榜→自定义 | `rewoo` |
+| 1 | **TopicResearchAgent** | 多级检索策略：缓存→OpenSieve→热榜→自定义 | `rewoo` |
 | 2 | **MaterialCollectionAgent** | 并行多源检索、素材清洗、关键事实提取 | `rewoo` |
 | 3 | **ArticleWritingAgent** | 三层生成管道：大纲→初稿→润色，风格注入 | `reflexion` |
 | 4 | **SEOOptimizationAgent** | 标题优化、关键词植入、段落结构优化 | `plan_execute` |
@@ -788,7 +788,7 @@ class FeedbackLoop:
     """
 
     MAX_REFLEXION_ITERATIONS = 3
-    QUALITY_THRESHOLD = 0.8
+    QUALITY_THRESHOLD = 0.9
 
     def __init__(self, evaluator_agent, classifier_model, verification_hooks):
         self.evaluator = evaluator_agent
@@ -1294,7 +1294,7 @@ class ReActExecutor(BaseModeExecutor):
 class ReflexionExecutor(BaseModeExecutor):
     mode_name = "reflexion"
     MAX_ITERATIONS = 4
-    QUALITY_THRESHOLD = 0.85
+    QUALITY_THRESHOLD = 0.9
 
     async def _execute_core(self, ctx: TaskContext) -> dict:
         memory, best_result, best_score = [], None, 0.0
@@ -1929,7 +1929,7 @@ harness:
     evaluation_mode: "lightweight"  # full | lightweight | skip
     evaluator_model: "sonnet-4.6"
     scoring_dimensions: [correctness, completeness, coherence, safety]
-    pass_threshold: 0.8
+    pass_threshold: 0.9
     max_reflexion_iterations: 3
 
   permission_pipeline:
@@ -2401,7 +2401,7 @@ class FlowForgePlugin(Protocol):
     def register_gates(self, gate_registry): ...      # DevForge DCP/TR门禁
     def register_evaluators(self, registry): ...      # DevForge 8个Evaluator
     def register_sops(self, compiler): ...            # ContentForge 4种SOP
-    def register_quality_gates(self, registry): ...   # NovelForge 6道质量门
+    def register_quality_gates(self, registry): ...   # NovelForge 7道质量门
     def register_context_layers(self, manager): ...   # NovelForge 5层上下文
     def register_workflow_step_handler(self, registry): ...  # 自定义StepType
 ```
@@ -4294,12 +4294,12 @@ P0→P3（Phase 2降级为简单Dict，Phase 3再引入代数操作）
 ```yaml
 # 1. 变量引用统一语法
 variable_reference:
-  pattern: "${scope.name}"
+  pattern: "${{scope.name}}"
   scopes:
-    - state: "${state.xxx}"        # 运行时状态
-    - params: "${params.xxx}"      # 任务参数
-    - result: "${result.xxx}"      # 当前步骤结果
-    - outputs: "${outputs.xxx.yyy}" # 其他步骤输出（步骤ID.字段名）
+    - state: "${{state.xxx}}"        # 运行时状态
+    - params: "${{params.xxx}}"      # 任务参数
+    - result: "${{result.xxx}}"      # 当前步骤结果
+    - outputs: "${{outputs.xxx.yyy}}" # 其他步骤输出（步骤ID.字段名）
 
 # 2. Agent命名空间：项目前缀:agent名
 agent_namespace:
@@ -5253,9 +5253,9 @@ design.md 第一章 1.1 节描述 harness/ 包含 4 个子目录（context/const
 | 18 | `register_declarative_tools` | tool_registry | ✅ 已实现 |
 | 19 | `register_service` (PluginContext) | name, service | ✅ 已实现（PluginContext） |
 
-**FW-CONSIST-001 验证结论**：`register_helm_handlers` 方法 **代码缺失**，需补充实现（已在 task.md FW-CONSIST-001 记录）。StockForge v2.0 审核修正（见 spec.md 末尾）声称"Plugin 钩子修正为 V2 协议（register_workflows/register_gates/register_schedules/register_evaluators/register_helm_handlers）"，但实际代码中 `register_helm_handlers` 未定义。
+**FW-CONSIST-001 验证结论（v3.0 P1 修订）**：`register_helm_handlers` 在 PluginProtocol 中**未定义且不应补充实现**（依据 hiclaw/rules.md §2.5 死代码警告）。StockForge v2.0 审核修正曾声称"Plugin 钩子修正为 V2 协议（含 register_helm_handlers）"系误述，实际 V2 协议中并无此钩子。Helm 事件处理器应**使用 `register_event_handlers` 替代**，通过事件总线订阅 Helm 相关消息。
 
-**FW-CONSIST-002 验证结论**：`register_permission_policy` 方法 **代码缺失**，需补充实现（已在 task.md FW-CONSIST-002 记录）。当前权限策略只能通过 `register_gates` 或在 `register_routes` 中手动挂载 PermissionPipeline 实现，缺少专用钩子。
+**FW-CONSIST-002 验证结论（v3.0 P1 修订）**：`register_permission_policy` 在 PluginProtocol 中**未定义且不应补充实现**（依据 hiclaw/rules.md §2.5 死代码警告）。权限策略应**使用 `register_gates` 替代**，通过 gate_registry 声明式挂载；如需在路由层手动控制，可在 `register_routes` 中挂载 PermissionPipeline。
 
 ## A.6 与 design.md 第十七章的差异对照
 

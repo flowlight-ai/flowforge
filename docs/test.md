@@ -13,6 +13,7 @@
 | **T6** | **必须采集指标** | 每个E2E测试必须使用MetricsCollector采集LLM调用次数、工具调用链、Agent调用链、Workflow步骤、Memory操作等指标，并写入报告 | 测试报告视为不完整 |
 | **T7** | **LLM内容必须经LLM审核** | 凡LLM生成的内容（代码/文章/评论/文案/小说等），必须再调用LLM审核通过后才算验证通过 | 验证视为无效 |
 | **T8** | **Web功能必须操控浏览器验证DOM** | 凡涉及网页操作的功能（发布/上架/部署等），必须操控浏览器查看DOM确认真实成功，且对DOM内容调用LLM审核质量 | 验证视为无效 |
+| **T9** | **运行时数据文件必须存放data目录** | 所有运行时生成的数据文件（缓存、持久化记录、浏览器数据等）必须存放在 agents/main/data/ 目录下，禁止污染 scripts/vendor/platforms/prompts/config 等代码目录 | 测试结果视为无效 |
 
 > **执行方式**：`FLOWFORGE_REAL_LLM=1 pytest tests/e2e/ -v` — 必须设置此环境变量才运行真实测试
 
@@ -445,7 +446,7 @@ async def real_llm_context(use_real_llm):
 
 | 用例 ID | 场景 | 预期 |
 |---------|------|------|
-| **UT-REF-01** | 第一次迭代达到阈值 | iterations=1, score≥0.85 |
+| **UT-REF-01** | 第一次迭代达到阈值 | iterations=1, score≥0.9 |
 | **UT-REF-02** | 未达标继续迭代 | iterations>1 |
 | **UT-REF-03** | 达到 MAX_ITERATIONS 停止 | iterations≤4 |
 | **UT-REF-04** | 记录最佳结果 | best_score ≥ 所有迭代分数 |
@@ -654,7 +655,7 @@ async def real_llm_context(use_real_llm):
 | 用例 ID | 场景 | 验证点 |
 |---------|------|--------|
 | **IT-SOP-01** | deep_article 全流程（8 步骤） | 从 topic_research 到 publish 全部完成 |
-| **IT-SOP-02** | Workflow 中 Reflexion Writer 迭代 | Writer 步骤 score≥0.85（⚠️ 仅模式执行器直接模式下有效，Workflow API 路径不适用） |
+| **IT-SOP-02** | Workflow 中 Reflexion Writer 迭代 | Writer 步骤 score≥0.9（⚠️ 仅模式执行器直接模式下有效，Workflow API 路径不适用） |
 | **IT-SOP-03** | 审核暂停后恢复 | 暂停→审核通过→继续→完成 |
 | **IT-SOP-04** | 审核拒绝 | 任务状态 rejected |
 | **IT-SOP-05** | Workflow 步骤失败 retry | retry 1 次后成功 |
@@ -1790,7 +1791,7 @@ helm.draft.update → helm.task.completed
 
 ### 18.2 IT-MODE-02：Reflexion 不收敛处理
 
-**需求依据**：spec.md FR-ENG-03 Reflexion（MAX_ITERATIONS=4，QUALITY_THRESHOLD=0.85）；design.md 7.3
+**需求依据**：spec.md FR-ENG-03 Reflexion（MAX_ITERATIONS=4，QUALITY_THRESHOLD=0.9）；design.md 7.3
 
 **输入数据**：
 - 意图：`"写一篇关于量子场论的学术论文，要求达到Nature发表水平"`（故意极高要求，LLM 难以达标）
@@ -1801,10 +1802,10 @@ helm.draft.update → helm.task.completed
 
 | 迭代 | Actor | Evaluator | Reflector |
 |------|-------|-----------|-----------|
-| 1 | 生成初稿 | 评分 < 0.85 | 分析问题 |
-| 2 | 基于反思改进 | 评分 < 0.85 | 分析问题 |
-| 3 | 基于反思改进 | 评分 < 0.85 | 分析问题 |
-| 4 | 基于反思改进 | 评分（可能仍<0.85） | — |
+| 1 | 生成初稿 | 评分 < 0.9 | 分析问题 |
+| 2 | 基于反思改进 | 评分 < 0.9 | 分析问题 |
+| 3 | 基于反思改进 | 评分 < 0.9 | 分析问题 |
+| 4 | 基于反思改进 | 评分（可能仍<0.9） | — |
 
 **通过条件**：
 1. ✅ 达到 MAX_ITERATIONS=4 后停止，不会崩溃

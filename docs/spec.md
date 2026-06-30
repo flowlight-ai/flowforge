@@ -237,7 +237,7 @@ if ctx.harness_enabled:
 
 **FR-CAP-01：Tool 生态**
 
-- 内置 12+ 工具：LLM Client、文件读写、Shell 执行、网络搜索、HelixRAG、Python 沙箱、Git 操作、图片搜索、邮件发送、Webhook、TaskBoard 操作
+- 内置 12+ 工具：LLM Client、文件读写、Shell 执行、网络搜索、OpenSieveClient、Python 沙箱、Git 操作、图片搜索、邮件发送、Webhook、TaskBoard 操作
 - 协议适配器：MCP / OpenAPI / GraphQL 三种协议自动转换为 Tool
 - 门控工具管线：权限检查 → 安全分类 → 执行 → 输出校验
 - 安全标记：`safety_level` 属性 + `is_concurrency_safe`
@@ -577,7 +577,7 @@ FlowForge v2.1 作为底层 Harness 引擎，ContentForge 作为上层业务应�
 1. **注册业务 Agent**：ContentForge 的 7 个业务 Agent（TopicAgent、ResearchAgent、WriterAgent 等）继承 FlowForge BaseAgent，注册到 AgentRegistry
 2. **配置 Persona**：内容专栏的 SOUL/MEMORY 转换为 `config/persona/{name}.yaml`
 3. **定义 SOP**：创作流程映射为 Workflow YAML 模板
-4. **注册业务 Tool**：HelixRAG、ToutiaoPublisher、WeChatPublisher 等注册到 ToolRegistry
+4. **注册业务 Tool**：OpenSieveClient、ToutiaoPublisher、WeChatPublisher 等注册到 ToolRegistry
 5. **使用 Skill**：创作类 Skill（如 weekly-report、book-essence-extractor）直接注入到 Agent 上下文
 6. **启用 Harness**：上下文工程、架构约束、反馈循环、熵管理作为全局配置启用
 
@@ -623,11 +623,11 @@ Step 2 的 import 兼容期为 **1 个大版本周期**（v2.1 全周期内保�
 
 | 业务场景     | 执行模式          | 多Agent策略     | Harness护栏  | Tool依赖                           | Skill           | 交互模式     |
 | -------- | ------------- | ------------ | ---------- | -------------------------------- | --------------- | -------- |
-| 深度长文创作   | workflow      | subagents    | 反馈循环+熵管理   | helixrag+web\_search             | article-outline | Helm     |
+| 深度长文创作   | workflow      | subagents    | 反馈循环+熵管理   | opensieve+web\_search             | article-outline | Helm     |
 | 快速帖子生成   | rewoo         | -            | 架构约束       | llm+web\_search                  | -               | Standard |
-| 热点追踪     | multi\_agent  | subagents    | 上下文工程      | web\_search+helixrag             | trend-analysis  | Standard |
+| 热点追踪     | multi\_agent  | subagents    | 上下文工程      | web\_search+opensieve             | trend-analysis  | Standard |
 | 多平台分发    | workflow      | -            | 权限管线       | publish\_toutiao+publish\_wechat | -               | Standard |
-| SEO内容生产  | plan\_execute | -            | 反馈循环       | helixrag+llm                     | seo-optimizer   | Standard |
+| SEO内容生产  | plan\_execute | -            | 反馈循环       | opensieve+llm                     | seo-optimizer   | Standard |
 | 定时批量创作   | workflow      | -            | 所有         | 全部                               | -               | Cron     |
 | AI主编实时协作 | workflow      | agent\_teams | 上下文工程+反馈循环 | 全部                               | 全部              | Helm     |
 | 代码审查     | reflexion     | agent\_teams | 架构约束+反馈循环  | git\_ops+llm                     | code-review     | Helm     |
@@ -662,7 +662,7 @@ harness:
     evaluation_mode: "lightweight"  # full | lightweight | skip
     evaluator_model: "sonnet-4.6"
     scoring_dimensions: [design_quality, originality, craft, functionality]
-    pass_threshold: 0.8
+    pass_threshold: 0.9
     max_reflexion_iterations: 3
     cross_validation: true
 
@@ -1225,14 +1225,14 @@ tests/
 │   └── test_degradation_e2e.py             # 降级链路端到端
 ├── cassettes/                              # HTTP Cassette录制目录
 │   ├── doubao_chat_response.yaml
-│   ├── helixrag_search_response.yaml
+│   ├── opensieve_search_response.yaml
 │   └── qwen_fallback_response.yaml
 └── unit/                                   # 现有单元测试
 ```
 
 ### 4.2 HTTP Cassette录制策略
 
-使用 `pytest-recording` (VCR.py) 录制真实LLM/HelixRAG响应：
+使用 `pytest-recording` (VCR.py) 录制真实LLM/OpenSieve响应：
 
 ```python
 # conftest.py
@@ -1931,7 +1931,7 @@ P1
 # 跨项目统一契约规范
 contract:
   # 变量引用统一为 LangGraph 风格
-  variable_reference: "${state.xxx}" / "${params.xxx}" / "${result.xxx}"
+  variable_reference: "${{state.xxx}}" / "${{params.xxx}}" / "${{result.xxx}}"
 
   # Agent命名空间加项目前缀
   agent_namespace: "{project}:{agent_name}"
@@ -2696,7 +2696,7 @@ skill_precipitation:
 ## StockForge 应用层支持（v2.2新增）
 
 ### StockForge 定位
-基于 FlowForge 的 AI 股票基金自动化分析和量化交易系统，通过 StockForgePlugin 注册业务能力。
+基于 FlowForge 的 AI 股票基金自动化分析与投资决策辅助系统，通过 StockForgePlugin 注册业务能力。
 
 ### 核心能力映射
 
@@ -2724,9 +2724,9 @@ StockForge: 后端8005 / 前端5179
 
 - StockForge Agent数量从8个调整为6个核心Agent
 - 删除独立Repository/Database/Scheduler，复用FlowForge基础设施
-- Plugin钩子修正为V2协议（register_workflows/register_gates/register_schedules/register_evaluators/register_helm_handlers）
+- Plugin钩子修正为V2协议（register_workflows/register_gates/register_schedules/register_evaluators/register_event_handlers）；register_helm_handlers 不属于 V2 协议，Helm 事件处理器应通过 register_event_handlers 注册，权限策略应通过 register_gates 挂载
 - 所有Loop走loop模式，worker.mode禁止使用workflow/reflexion
-- Loop超时统一180s（3分钟）
+- Loop超时分档（快速180s / 内容720s / 长文7200s，详见 rules.md §2.3 第6条）
 - 质量分阈值0.9在config/default.yaml中显式声明
 - 实盘交易隔离：ArchConstraintEngine增加deny规则+CI静态检查
 
@@ -2775,23 +2775,25 @@ StockForge: 后端8005 / 前端5179
 | 4 | `on_config_reload(config)` | 配置热重载时 |
 | 5 | `on_plugin_loaded(plugin_name)` | 其他插件加载完成时 |
 
-### S.1.3 代码缺失的钩子（FW-CONSIST-001/002）
+### S.1.3 不予实现的钩子（FW-CONSIST-001/002 修订结论）
 
-| 方法名 | 状态 | 关联问题 | 影响 |
-|--------|------|---------|------|
-| `register_helm_handlers` | **代码缺失**，需补充实现 | FW-CONSIST-001 | StockForge v2.0 审核修正声称已修正为 V2 协议包含此钩子，但实际 plugin_protocol.py 未定义，导致 *Forge 项目无法通过 Plugin 注册自定义 Helm 事件处理器 |
-| `register_permission_policy` | **代码缺失**，需补充实现 | FW-CONSIST-002 | 当前权限策略只能通过 `register_gates` 间接挂载，缺少专用钩子导致 PermissionV2 配置无法声明式注入 |
+> 依据 hiclaw/rules.md §2.5 死代码警告：`register_helm_handlers` 和 `register_permission_policy` 在 PluginProtocol 中**未定义且不应补充实现**，避免引入死代码与伪接口。
 
-**修复建议**：在 `FlowForgePlugin` 类中新增以下两个方法（默认 no-op）：
+| 方法名 | 状态 | 关联问题 | 正确替代方案 |
+|--------|------|---------|------------|
+| `register_helm_handlers` | **未定义，不实现** | FW-CONSIST-001 | 使用 `register_event_handlers` 订阅 Helm 相关事件总线消息，自定义 Helm 事件处理器通过事件总线挂载 |
+| `register_permission_policy` | **未定义，不实现** | FW-CONSIST-002 | 使用 `register_gates` 声明式挂载权限/门控策略，PermissionV2 配置通过 gate_registry 注入 |
+
+**正确用法示例**：
 
 ```python
-def register_helm_handlers(self, helm_registry: Any) -> None:
-    """注册 Helm 事件处理器（FWK-CONSIST-001 修复）"""
-    pass
+def register_event_handlers(self, event_bus) -> None:
+    """Helm 事件处理器通过事件总线注册（替代 register_helm_handlers）"""
+    event_bus.subscribe("helm.command", self._on_helm_command)
 
-def register_permission_policy(self, policy_registry: Any) -> None:
-    """注册权限策略（FWK-CONSIST-002 修复）"""
-    pass
+def register_gates(self, gate_registry) -> None:
+    """权限策略通过 gate 声明式挂载（替代 register_permission_policy）"""
+    gate_registry.register("permission:write", PermissionGate(rule=...))
 ```
 
 ## S.2 配置驱动率统计现状（2026-06-25 审计）
