@@ -184,11 +184,11 @@
 - **影响**: 一致性检测形同虚设，无法发现真正的逻辑矛盾
 - **修复方案**: (1) 修复world_state写入路径(NF-04) (2) Tool增加LLM增强的语义验证
 
-### BUG-NF-07: 六道质量门检查条件与设计文档不一致
+### BUG-NF-07: 七道质量门检查条件与设计文档不一致
 
-- **来源**: NF6 六道质量门验证
+- **来源**: NF6 七道质量门验证
 - **严重等级**: P2 — 一般
-- **描述**: `core/quality_gate.py` 6道质量门已定义，但检查条件与设计文档不一致：
+- **描述**: `core/quality_gate.py` 7道质量门已定义，但检查条件与设计文档不一致：
   - **QG-2**: 设计文档要求"大纲评分≥60且无致命逻辑矛盾"，代码只检查`outline.volumes.length >= 1`和`outline.climax_points.length >= 1`，**缺少评分检查和逻辑矛盾检查**
   - **QG-3**: 设计文档要求`style_confirmed == true`，代码检查`calibration_score >= 0.7`，**缺少style_confirmed布尔检查**
   - **QG-5**: 设计文档要求`foreshadowing_recovery_rate >= 0.8`，代码额外增加了`consistency_score >= 0.85`，与设计文档不一致
@@ -311,7 +311,7 @@
 
 14. **BUG-FF-03**: workflow_executor.py已从1327行缩减至约375行 ✅ 已修复
 15. **BUG-NF-06**: 一致性检测Tool依赖不完整的world_state
-16. **BUG-NF-07**: 六道质量门检查条件与设计文档不一致
+16. **BUG-NF-07**: 七道质量门检查条件与设计文档不一致
 17. **BUG-NF-10**: 数据库路径硬编码
 18. **BUG-CF-08**: pipeline.py已标记废弃但代码残留
 19. **BUG-CF-09**: DI容器已初始化但主流程仍绕过
@@ -482,7 +482,7 @@
 
 19. **BUG-FF-03**: workflow_executor.py已从1327行缩减至约375行 ✅ 已修复
 20. **BUG-NF-06**: 一致性检测Tool依赖不完整的world_state
-21. **BUG-NF-07**: 六道质量门检查条件与设计文档不一致
+21. **BUG-NF-07**: 七道质量门检查条件与设计文档不一致
 22. **BUG-NF-10**: 数据库路径硬编码
 23. **BUG-CF-08**: pipeline.py已标记废弃但代码残留
 24. **BUG-CF-09**: DI容器已初始化但主流程仍绕过
@@ -631,7 +631,7 @@
 | # | 问题 | 文件 | 铁律 |
 |---|------|------|------|
 | NF-P14A-17 | novels.py 3个API返回假数据(role="supporting",x=0,y=0) | app/api/endpoints/novels.py | 铁律2 |
-| NF-P14A-18 | 六道质量门检查条件与设计文档不一致 | core/quality_gate.py | 文档 |
+| NF-P14A-18 | 七道质量门检查条件与设计文档不一致 | core/quality_gate.py | 文档 |
 | NF-P14A-19 | 硬编码端口号 | 多文件 | 铁律5 |
 | NF-P14A-20 | 硬编码超时/阈值 | 多文件 | 铁律5 |
 | NF-P14A-21 | 硬编码URL | 多文件 | 铁律5 |
@@ -871,7 +871,7 @@ MallForge是最接近理想架构的项目：仅有agents、tools、config、web
 |---|---------|------|------|
 | FWK-01 | **Workflow YAML Compiler** | 全部4个项目 | YAML定义→LangGraph图自动编译，含条件边/并行/中断点。当前3个项目各自用Python硬编码编排 |
 | FWK-02 | **Conditional Router** | CF/NF/MF | 根据输入条件选择不同prompt模板/工具链/处理路径。当前TopicAgent/SupportAgent等用if-else硬编码策略路由 |
-| FWK-03 | **Fallback Chain** | CF/NF/MF | 工具调用的有序回退链声明式定义(helixrag→web_search→llm_generate)。当前4个Agent各自硬编码回退逻辑 |
+| FWK-03 | **Fallback Chain** | CF/NF/MF | 工具调用的有序回退链声明式定义(opensieve→web_search→llm_generate)。当前4个Agent各自硬编码回退逻辑 |
 
 #### P1级（影响3+项目）
 
@@ -1017,7 +1017,7 @@ MallForge是最接近理想架构的项目：仅有agents、tools、config、web
 | OC-CF-01 | 六大专家Agent完全缺失 | CF2 | P0 | 选题/研究/创作/SEO/事实核查/发布6个专家Agent未实现 |
 | OC-CF-02 | 内容创作非多Agent协作 | CF1 | P0 | 创作流程是Pipeline内联实现，非多Agent Workflow协作 |
 | OC-CF-03 | LangGraph SOP检查点未验证 | CF3 | P1 | LangGraph检查点机制和interrupt_before需验证 |
-| OC-CF-04 | 选题搜索三级降级未完整实现 | CF4 | P1 | helixrag→web_crawler→web_chat三级降级链不完整 |
+| OC-CF-04 | 选题搜索三级降级未完整实现 | CF4 | P1 | opensieve→web_crawler→web_chat三级降级链不完整 |
 | OC-CF-05 | Playwright多平台发布完全缺失 | CF7 | P0 | 今日头条/微信公众号的Playwright自动化发布未实现 |
 | OC-CF-06 | 模型治理健康检查未实现 | CF8 | P1 | 自动探测可用性/配额/延迟的健康检查未实现 |
 | OC-CF-07 | 模型故障自动切换未实现 | CF8 | P1 | 主力模型故障时自动切换到备用模型未实现 |
@@ -1145,7 +1145,7 @@ FlowForge 是底座平台，上层 *Forge 项目（contentforge/devforge/novelfo
 | FF-ENH-07 | DeclarativeAgent post_processors | ✅ 已完成 | 内置 deai_postprocess/quality_filter/word_count_check |
 | FF-ENH-08 | DeclarativeAgent prompt_template | ✅ 已完成 | 从 prompts.yaml 加载指令 |
 | FF-ENH-09 | DeclarativeAgent model_params | ✅ 已完成 | per-agent temperature/top_p/max_tokens |
-| FF-ENH-10 | DeclarativeAgent input_mapping | ✅ 已完成 | 支持 ${state.xxx}/${params.xxx}/${result.xxx}/${outputs.xxx} |
+| FF-ENH-10 | DeclarativeAgent input_mapping | ✅ 已完成 | 支持 ${{state.xxx}}/${{params.xxx}}/${{result.xxx}}/${{outputs.xxx}} |
 | FF-ENH-11 | DeclarativeAgent output_key | ✅ 已完成 | Agent 输出自动映射到 workflow state |
 | FF-ENH-12 | SDK scan_agent_configs | ✅ 已完成 | 从 YAML 目录自动创建 DeclarativeAgent |
 | FF-ENH-13 | @agent 装饰器扩展 | ✅ 已完成 | 支持全部新增字段 |
@@ -1174,8 +1174,8 @@ FlowForge 是底座平台，上层 *Forge 项目（contentforge/devforge/novelfo
 
 | Agent | YAML 配置 | execution_mode | prompt_template | persona | fallback_chain |
 |-------|----------|---------------|----------------|---------|---------------|
-| contentforge:topic | ✅ | reflexion | contentforge.topic.hot_trend | ✅ | [helixrag_search, web_search, llm_web_chat] |
-| contentforge:research | ✅ | rewoo | contentforge.research.plan_searches | ✅ | [helixrag_search, web_search] |
+| contentforge:topic | ✅ | reflexion | contentforge.topic.hot_trend | ✅ | [opensieve_search, web_search, llm_web_chat] |
+| contentforge:research | ✅ | rewoo | contentforge.research.plan_searches | ✅ | [opensieve_search, web_search] |
 | contentforge:writer | ✅ | reflexion | contentforge.writer.main | ✅ | — |
 | contentforge:fact_check | ✅ | react | contentforge.fact_check.validate_claim | ✅ | — |
 | contentforge:seo | ✅ | plan_execute | contentforge.seo_planner.analyze_keywords | ✅ | — |
@@ -1643,7 +1643,7 @@ contentforge/
 ## CONSIST-02: AgenticRAG完全未实现
 - **项目**：ContentForge
 - **设计描述**：v3.0修订32要求AgenticRAG.search()实现RRF/SimHash/TimeDecay+Doubao query扩展
-- **代码现状**：无任何AgenticRAG代码，research_engine.py仅并行调helixrag+web_search
+- **代码现状**：无任何AgenticRAG代码，research_engine.py仅并行调opensieve+web_search
 - **差异类型**：未实现
 - **优先级**：P0
 
@@ -1745,19 +1745,19 @@ contentforge/
 
 ## 14.1 P0 级问题（致命/阻塞性）
 
-### FW-CONSIST-001: register_helm_handlers 在文档中存在但代码未实现
+### FW-CONSIST-001: register_helm_handlers 在文档中存在但代码未实现（v3.0 P1 修订）
 - **来源文档**：arch.md 第3章 Plugin V2 协议、spec.md 第7章插件生命周期
 - **代码现状**：`flowforge/core/plugin.py` 的 PluginProtocol 定义了 register_routes/register_agents/register_tools/register_workflows/register_schedules/register_gates/register_evaluators，**未定义 register_helm_handlers**
-- **影响**：Helm Studio 的自定义命令处理器无法通过 Plugin 注册
-- **修复建议**：在 PluginProtocol 中增加 `register_helm_handlers() -> dict[str, Callable]` 钩子
-- **优先级**：P0
+- **影响**：原记录认为影响 Helm Studio 自定义命令注册；v3.0 P1 修订后确认该钩子不应实现
+- **修复建议**：**不在 PluginProtocol 中增加 `register_helm_handlers`**（依据 hiclaw/rules.md §2.5 死代码警告），改用 `register_event_handlers` 替代，通过事件总线订阅 Helm 相关消息
+- **优先级**：P0（已修订为不实现，文档同步修正）
 
-### FW-CONSIST-002: register_permission_policy 钩子未实现
+### FW-CONSIST-002: register_permission_policy 钩子未实现（v3.0 P1 修订）
 - **来源文档**：spec.md 第5章权限管线、ARCHITECTURE_PRINCIPLES.md
 - **代码现状**：PluginProtocol 中无此方法
-- **影响**：*Forge 项目无法通过 Plugin 注册声明式权限策略
-- **修复建议**：增加 `register_permission_policy() -> dict[str, PermissionRule]` 钩子
-- **优先级**：P0
+- **影响**：原记录认为影响声明式权限策略注册；v3.0 P1 修订后确认该钩子不应实现
+- **修复建议**：**不在 PluginProtocol 中增加 `register_permission_policy`**（依据 hiclaw/rules.md §2.5 死代码警告），改用 `register_gates` 替代，通过 gate_registry 声明式挂载权限策略
+- **优先级**：P0（已修订为不实现，文档同步修正）
 
 ### FW-CONSIST-003: design.md 描述的 engine/ 目录在代码中不存在
 - **来源文档**：design.md 第4章执行引擎架构
@@ -1942,8 +1942,8 @@ contentforge/
 ## 14.5 修复优先级建议
 
 ### 立即修复（P0，5项）
-1. FW-CONSIST-001: 增加 register_helm_handlers 钩子
-2. FW-CONSIST-002: 增加 register_permission_policy 钩子
+1. FW-CONSIST-001: register_helm_handlers 不实现，使用 register_event_handlers 替代（v3.0 P1 修订）
+2. FW-CONSIST-002: register_permission_policy 不实现，使用 register_gates 替代（v3.0 P1 修订）
 3. FW-CONSIST-003: design.md 更新 engine/ → modes/+loop/
 4. FW-CONSIST-004: design.md 更新 harness/ 子目录实际结构
 5. FW-CONSIST-005: api.md 补全 20+ 端点
@@ -1957,3 +1957,102 @@ contentforge/
 ---
 
 > **本章问题已同步记录到 hiclaw/rules.md 中 FlowForge 进度表，待修复完成后更新对应设计文档。**
+
+---
+
+## TASK-R2 文档一致性同步记录（2026-06-29）
+
+> **触发**：用户 2026-06-28 明确要求"所有数据检索走 OpenSieve" + "rules.md/prompts.md 与 9 大项目 docs/ 文档保持一致"。
+> **同步基线**：[`hiclaw/rules.md` v3.0](../../hiclaw/rules.md) + [`hiclaw/prompts.md`](../../hiclaw/prompts.md) P31/P33/P8A/T1-T9。
+> **影响范围**：FlowForge 作为平台层，**所有 *Forge 项目依赖的 Plugin V2 协议钩子**是本批更新的核心。
+
+### TASK-R2-FF-01: Plugin 死代码钩子处理 ✅（StockForge 侧已迁移）
+- **现状**:
+  - `register_helm_handlers` / `register_permission_policy` 在 FlowForge PluginProtocol 中**未定义**
+  - StockForge 中已实现的这两个钩子原为实现也不会被调用的死代码
+- **处理结果**（2026-06-29）：
+  - StockForge 已采用替代方案：
+    - `register_helm_handlers` 事件处理逻辑 → 迁移至 `register_event_handlers`
+    - `register_permission_policy` 实盘交易隔离策略 → 迁移至 `register_gates`
+  - 相关方法已从 `stockforge/plugins.py` 删除，design.md §4 同步更新
+- **FlowForge 侧决策**: 依据 hiclaw/rules.md §2.5 死代码警告，**不在 PluginProtocol 中新增这两个钩子**，统一使用 register_event_handlers / register_gates 替代（FW-CONSIST-001/002 v3.0 P1 修订）
+- **状态**: ✅ StockForge 侧已修复；FlowForge 框架层已决策为不实现
+
+### TASK-R2-FF-02: Loop 模式铁律（P31）跨项目一致性 ✅
+- **现状**: rules.md v3.0 + prompts.md P31 明确"所有 Agent 任务必须经 LoopExecutor 执行，worker.mode 必须是 `loop`"
+- **FlowForge 责任**:
+  - `loop/registry.py` / `loop/executor.py` 必须强制 `mode: loop`
+  - `modes/loop_mode.py` 是 Loop 的 Worker 实现，验证 mode 字段
+- **状态**: ✅ FlowForge SDK 0.3.0 已支持（与 stockforge 验证一致）
+
+### TASK-R2-FF-03: 9 大项目进度表更新
+- **触发**: rules.md v3.0 §1.2 列出 9 大项目，FlowForge 进度表需包含全部 9 个
+- **建议更新**: 在 FlowForge docs/task.md 进度表新增 contentforge/devforge/novelforge/mallforge/stockforge/openroute/opensieve/openclaw_pkg 行
+- **状态**: 🔄 待执行
+
+### TASK-R2-FF-10: register_loops 与 register_workflows 区分澄清 ✅
+- **触发**: StockForge 误用 `register_workflows` / `workflows_dir` 注册 Loop 配置
+- **澄清结果**:
+  - FlowForge `create_plugin` 同时支持 `workflows_dir`（Workflow 模板）和 `loops_dir`（Loop 配置）两个独立参数
+  - Loop 配置应通过 `loops_dir` + `register_loops` 注册（P31 铁律）
+  - Workflow 模板应通过 `workflows_dir` + `register_workflows` 注册
+- **状态**: ✅ 已完成，StockForge `plugins.py` 与 `design.md` §4 已同步修正
+
+### TASK-R2-FF 后续待办
+- TASK-R2-FF-04: FW-CONSIST-001（register_helm_handlers 不实现，改用 register_event_handlers）— **P0**（v3.0 P1 修订：已决策不实现）
+- TASK-R2-FF-05: FW-CONSIST-002（register_permission_policy 不实现，改用 register_gates）— **P0**（v3.0 P1 修订：已决策不实现）
+- TASK-R2-FF-06: design.md §engine/→modes/+loop/ 修正 — **P0**
+- TASK-R2-FF-07: api.md 补全 20+ 端点 — **P0**
+- TASK-R2-FF-08: Harness 四根护栏实际调用验证 — **P1**（与 stockforge P1-02 联动）
+
+### TASK-R2-FF-09: spec.md StockForge 定位描述修正 ✅
+- **触发**: 2026-06-29 文档一致性检查
+- **问题**: spec.md §StockForge应用层支持 L2699 写 "基于 FlowForge 的 AI 股票基金自动化分析和量化交易系统"，与 prompts.md SF5 第1条"禁止量化交易四字"冲突
+- **修正**: "量化交易系统" → "分析与投资决策辅助系统"
+- **状态**: ✅ 已完成
+
+---
+
+## 第十一章：v3.0 文档一致性机械修复（2026-06-29）
+
+> 基线：hiclaw/rules.md v3.0 + hiclaw/prompts.md SF5/P31/P33/T1-T9
+
+### FF-FIX-2026-0629-01：helixrag 全局替换为 opensieve ✅
+- **变更**：spec.md (7处) + arch.md (1处) + design.md (2处) + task.md (5处) 共 15 处 helixrag/HelixRAG 替换为 opensieve/OpenSieve/OpenSieveClient
+- **依据**：rules.md §2.2 所有数据检索走 OpenSieve + project_memory helixrag 已更名为 opensieve
+
+### FF-FIX-2026-0629-02：质量分阈值全局统一为 0.9 ✅
+- **变更**：spec.md (1处) + arch.md (4处) + design.md (2处) + test.md (4处) 共 11 处 0.8/0.85 统一为 0.9
+- **依据**：rules.md §2.3 第5条 + §5.6 P33 + 编程红线第2条
+
+### FF-FIX-2026-0629-03：test.md 补充 T9 测试铁律 ✅
+- **变更**：test.md 测试铁律表追加 T9 行（运行时数据文件必须存放 data 目录）
+- **依据**：rules.md §5.5 T9 + prompts.md T9
+
+### FF-FIX-2026-0629-04：待修复重大问题（需用户/架构委员会决策）
+- **FW-CONSIST-001/002 修复方向错误**：task.md L1748-1760 建议"补充实现 register_helm_handlers/register_permission_policy"，应改为"使用 register_event_handlers / register_gates 替代"（rules.md §2.5 死代码警告）
+- **spec.md L2727/L2782-2795 错误建议**：同上，需清除"补充实现"建议
+- **arch.md L5256-5258 验证结论错误**：同上
+- **LOOP-09 Loop 超时分档**（已决策 2026-06-29）：用户确认分档铁律（快速 180s / 内容 720s / 长文 7200s），rules.md §2.3 第6条已改为分档；deep_article/content_polish 按 720s、series_article 按 7200s 执行
+- **design.md engine/ 和 harness/ 目录描述与实际代码不符**：FW-CONSIST-003/004 已记未改
+- **Plugin V2 协议澄清**：prompts.md SF5 第7条明确 register_loops 和 register_workflows 是两个不同钩子（前者注册 Loop 配置，后者注册 Workflow 配置），project_memory 之前误记为"register_workflows (NOT register_loops)"已纠正
+
+### FF-FIX-2026-0629-05：项目 memory 纠正
+- **变更**：/home/hyg/.trae-cn/memory/projects/-home-hyg-ai-openclaw/project_memory.md L7 已纠正
+- **原记录**：`register_workflows (NOT register_loops)`
+- **新记录**：`register_loops 和 register_workflows 是两个不同钩子；StockForge 应使用 register_loops（因为其配置是 Loop 配置）`
+- **依据**：prompts.md SF5 第7条原文
+
+---
+
+## 第十二章：v3.0 P1 文档一致性修复（2026-06-29）
+
+### FF-FIX-2026-0629-P1-01：清除 register_helm_handlers / register_permission_policy 错误建议
+- **位置**: spec.md / arch.md / task.md
+- **问题**: 文档中"建议补充实现 register_helm_handlers / register_permission_policy"违反 rules.md §2.5 死代码警告
+- **修复**: 改为"使用 register_event_handlers / register_gates 替代"
+
+### FF-FIX-2026-0629-P1-02：变量引用统一双大括号
+- **位置**: spec.md / arch.md / task.md
+- **问题**: YAML/代码示例中存在单大括号 `${state.xxx}` 或 `{{state.xxx}}`
+- **修复**: 统一改为 `${{state.xxx}}` / `${{params.xxx}}` / `${{result.xxx}}` / `${{outputs.xxx.yyy}}`

@@ -3,7 +3,7 @@ description: "代码审查闭环：自动审查→校验→修复→复验"
 version: 1.0
 max_retries: 3
 timeout_per_iteration: 120
-total_timeout: 600
+total_timeout: 720
 backoff_strategy: "fixed"
 backoff_base: 1
 

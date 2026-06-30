@@ -956,7 +956,7 @@ class ReflexionExecutor(BaseModeExecutor):
     capabilities = ["generation", "evaluation", "refinement"]
 
     MAX_ITERATIONS = 4
-    QUALITY_THRESHOLD = 0.85
+    QUALITY_THRESHOLD = 0.9
 
     async def _execute_core(self, ctx: TaskContext) -> dict:
         memory = []
@@ -1385,7 +1385,7 @@ from flowforge.core.task_context import TaskContext
 
 class TopicResearchAgent(BaseAgent):
     name = "topic_research"
-    description = "多级检索策略：缓存→HelixRAG→热榜→自定义"
+    description = "多级检索策略：缓存→OpenSieve→热榜→自定义"
     default_mode = "rewoo"
 
     async def execute(self, input: AgentInput) -> AgentOutput:
@@ -1398,7 +1398,7 @@ class TopicResearchAgent(BaseAgent):
         if cached.result.get("data"):
             return AgentOutput(result={"topics": cached.result["data"]})
 
-        helix = context.tools.get_tool("helixrag")
+        helix = context.tools.get_tool("opensieve_search")
         result = await helix.execute(ToolInput(params={"query": query, "max_results": 5}))
         topics = [{"title": r["title"], "angle": r.get("angle", "综合")} for r in result.result.get("results", [])]
         return AgentOutput(result={"topics": topics})
@@ -2471,7 +2471,7 @@ class FeedbackLoop:
     """
 
     MAX_REFLEXION_ITERATIONS = 3
-    QUALITY_THRESHOLD = 0.8
+    QUALITY_THRESHOLD = 0.9
 
     def __init__(self, config: dict):
         self.evaluation_mode = EvaluationMode(config.get("evaluation_mode", "lightweight"))
