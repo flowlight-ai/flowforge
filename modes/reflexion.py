@@ -271,6 +271,23 @@ class ReflexionExecutor(BaseModeExecutor):
 
             score = eval_output.result.get("score", 0)
             issues = eval_output.result.get("issues", [])
+            # v2.7 修复: evaluator 解析失败时 score=-1，跳过 reflexion 内部评分
+            # 让 LoopExecutor 的 5评委 verifier 评分生效（更准确）
+            # 原 bug: score=0.5 误判失败，触发不必要的迭代
+            eval_failed = (score < 0)
+            if eval_failed:
+                logger.info(f"[reflexion] evaluator解析失败(score={score})，跳过reflexion评分，由verifier兜底",
+                            task_id=ctx.task_id)
+                # 不更新 best_score，让 verifier 评分决定
+                if not best_text:
+                    best_text = actor_text
+                    best_result = actor_output.result
+                # 跳过Reflector阶段（无issues可用），直接进入下一轮让verifier评分
+                _emit("reflexion.evaluator", {
+                    "iteration": iteration + 1, "score": score, "issues": issues,
+                    "eval_failed": True,
+                })
+                continue
             _emit("reflexion.evaluator", {
                 "iteration": iteration + 1, "score": score, "issues": issues,
             })

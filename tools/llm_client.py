@@ -104,6 +104,11 @@ INVALID_RESPONSE_PREFIXES = ("草稿无效",)
 INVALID_RESPONSE_PATTERNS = (
     "Hiclaw OpenRoute 内置命令", "hc ping", "hc help", "hc reset",
     "hc update", "上下文已重置", "页面已刷新", "浏览器页面不可用",
+    # openroute app.py:1348 伪装 chat.completion 的 silent failure 标识
+    # 当模型被禁用/不可用时,openroute 返回 HTTP 200 + "模型 X 当前不可用，请稍后重试"
+    # 必须对所有 agent 识别(否则非创作类 agent 会把错误文案当正常响应返回)
+    "当前不可用，请稍后重试",
+    "当前不可用,请稍后重试",
 )
 
 
@@ -111,7 +116,12 @@ def classify_error(error_msg: str) -> str:
     msg = error_msg.lower()
     if any(k in msg for k in ["rate limit", "too many requests", "429"]):
         return "rate_limit"
-    if any(k in msg for k in ["unauthorized", "forbidden", "403", "401", "invalid api key"]):
+    # 模型被禁用/停用/不可用 → 永久错误，立即切换（不重试）
+    if any(k in msg for k in ["model disabled", "deactivated", "all_backends_failed",
+                                "not available", "not enabled", "model_not_allowed"]):
+        return "model_not_found"
+    if any(k in msg for k in ["unauthorized", "forbidden", "403", "401", "invalid api key",
+                                "无权访问", "不存在或无权"]):
         return "no_permission"
     if any(k in msg for k in ["not found", "does not exist", "404"]):
         return "model_not_found"
@@ -1022,13 +1032,19 @@ class LLMClient(BaseTool):
                         last_user_msg = " ".join(
                             str(c.get("text", "")) for c in last_user_msg if isinstance(c, dict)
                         )
-                    input_preview = str(last_user_msg)[:800].replace("\n", "\\n")
+                    input_preview = str(last_user_msg)[:5000].replace("\n", "\\n")
                     input_len = len(str(last_user_msg))
                     system_msgs = [m for m in messages if m.get("role") == "system"]
                     system_len = sum(len(str(m.get("content", ""))) for m in system_msgs)
+                    # v2.7: 增加 system prompt 预览（前2000字符），便于分析提示词组装质量
+                    system_preview = ""
+                    if system_msgs:
+                        system_content = str(system_msgs[-1].get("content", ""))
+                        system_preview = system_content[:2000].replace("\n", "\\n")
                     logger.info(f"[LLM输入] agent={agent_name or '?'} model={model_id} "
                                 f"system_chars={system_len} user_chars={input_len} "
-                                f"preview={input_preview!r}")
+                                f"system_preview={system_preview!r} "
+                                f"user_preview={input_preview!r}")
             except Exception as log_e:
                 logger.warning(f"[LLM输入] 记录输入预览失败: {log_e}")
 
@@ -1049,22 +1065,28 @@ class LLMClient(BaseTool):
 
                     duration = time.time() - start
                     tokens = 0
+                    prompt_tokens = 0
+                    completion_tokens = 0
                     tool_calls_result = None
                     raw_message = None
                     if not used_stream and isinstance(content, dict):
                         tokens = content.get("tokens", 0)
+                        prompt_tokens = content.get("prompt_tokens", 0)
+                        completion_tokens = content.get("completion_tokens", 0)
                         content_text = content["content"]
                         tool_calls_result = content.get("tool_calls")
                         raw_message = content.get("raw_message")
                     else:
                         content_text = content
 
-                    # 响应详情日志（输出预览扩到300字符，便于分析 LLM 返回内容质量）
-                    content_preview = content_text[:300] if isinstance(content_text, str) else str(content_text)[:300]
+                    # v2.7: 输出预览扩到3000字符（原300字符太短，无法分析 LLM 返回内容质量）
+                    content_preview = content_text[:3000] if isinstance(content_text, str) else str(content_text)[:3000]
                     content_preview = content_preview.replace("\n", "\\n")
                     content_len = len(content_text) if isinstance(content_text, str) else len(str(content_text))
                     logger.info(f"[LLM响应] provider={provider} model={model_id} "
-                                f"状态=成功 耗时={duration:.2f}s tokens={tokens} 内容长度={content_len}")
+                                f"状态=成功 耗时={duration:.2f}s tokens={tokens} "
+                                f"prompt_tokens={prompt_tokens} completion_tokens={completion_tokens} "
+                                f"内容长度={content_len}")
                     logger.info(f"[LLM输出] agent={agent_name or '?'} model={model_id} "
                                 f"preview={content_preview!r}")
 
@@ -1078,7 +1100,7 @@ class LLMClient(BaseTool):
 
                     self._record_call_event(
                         provider=provider, model_id=model_id, status="success",
-                        latency_ms=duration * 1000, input_tokens=0, output_tokens=tokens,
+                        latency_ms=duration * 1000, input_tokens=prompt_tokens, output_tokens=tokens,
                         agent_name=agent_name or "", task_id=task_id,
                     )
 
@@ -1298,20 +1320,34 @@ class LLMClient(BaseTool):
                         content = await self._stream_call(url, headers, payload_fb, task_id, agent_name, provider, model_id, timeout=agent_timeout) if stream else await self._normal_call(url, headers, payload_fb, timeout=agent_timeout)
                         duration = time.time() - start
                         tokens = 0
+                        prompt_tokens = 0
+                        completion_tokens = 0
                         tool_calls_result = None
                         raw_message = None
                         if isinstance(content, dict):
                             tokens = content.get("tokens", 0)
+                            prompt_tokens = content.get("prompt_tokens", 0)
+                            completion_tokens = content.get("completion_tokens", 0)
                             content_text = content["content"]
                             tool_calls_result = content.get("tool_calls")
                             raw_message = content.get("raw_message")
                         else:
                             content_text = content
+                        # v2.7: fallback 路径也记录输出预览（原缺失，无法分析 fallback 返回内容质量）
+                        content_preview_fb = content_text[:3000] if isinstance(content_text, str) else str(content_text)[:3000]
+                        content_preview_fb = content_preview_fb.replace("\n", "\\n")
+                        content_len_fb = len(content_text) if isinstance(content_text, str) else len(str(content_text))
+                        logger.info(f"[LLM回退响应] provider={provider} model={model_id} "
+                                    f"状态=成功 耗时={duration:.2f}s prompt_tokens={prompt_tokens} "
+                                    f"completion_tokens={completion_tokens} total_tokens={tokens} "
+                                    f"内容长度={content_len_fb}")
+                        logger.info(f"[LLM回退输出] agent={agent_name or '?'} model={model_id} "
+                                    f"preview={content_preview_fb!r}")
                         metrics.record_tool_call("llm", duration)
                         self._update_health(provider, model_id, True)
                         self._record_call_event(
                             provider=provider, model_id=model_id, status="success",
-                            latency_ms=duration * 1000, output_tokens=tokens,
+                            latency_ms=duration * 1000, input_tokens=prompt_tokens, output_tokens=tokens,
                             agent_name=agent_name or "", task_id=task_id,
                         )
                         self._emit_event(task_id, "llm.end", {"agent_name": agent_name or "unknown", "full_response": content_text[:500] if isinstance(content_text, str) else str(content_text)[:500], "tokens": tokens, "duration_ms": int(duration * 1000), "has_tool_calls": tool_calls_result is not None and len(tool_calls_result) > 0})
@@ -1391,11 +1427,34 @@ class LLMClient(BaseTool):
                             f"状态码={resp.status_code} 耗时={duration:.2f}s")
                 resp.raise_for_status()
                 data = resp.json()
+                # OpenRoute 可能在 HTTP 200 下返回 error body（如 all_backends_failed）
+                # 或返回伪装的 chat.completion 但 content 是错误文案
+                if "error" in data and "choices" not in data:
+                    err_info = data["error"]
+                    err_msg = err_info.get("message", str(err_info)) if isinstance(err_info, dict) else str(err_info)
+                    raise RuntimeError(f"openroute_error: {err_msg}")
+                if "choices" not in data:
+                    raise RuntimeError(f"openroute_error: invalid response (no choices key): {str(data)[:200]}")
                 message = data["choices"][0]["message"]
                 content = message.get("content") or ""
-                tokens = data.get("usage", {}).get("total_tokens", 0)
+                # openroute app.py:1342-1353 silent failure 检测:
+                # 当模型被禁用/不可用时,openroute 返回 HTTP 200 + 伪装 chat.completion
+                # content = "模型 X 当前不可用，请稍后重试"
+                # 必须主动检测并抛错,否则业务侧会把错误文案当正常响应
+                # 抛出含 "model disabled" 的错误,让 classify_error 识别为 model_not_found
+                # (永久错误,立即切换到下一个候选,冷却 600s 避免频繁重试被禁用的模型)
+                if content and isinstance(content, str) and "当前不可用" in content and "请稍后重试" in content:
+                    raise RuntimeError(
+                        f"openroute_silent_failure: model disabled - {content[:120]}"
+                    )
+                usage = data.get("usage", {}) or {}
+                tokens = usage.get("total_tokens", 0)
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
                 tool_calls = message.get("tool_calls")
-                return {"content": content, "tokens": tokens, "tool_calls": tool_calls, "raw_message": message}
+                return {"content": content, "tokens": tokens, "tool_calls": tool_calls,
+                        "raw_message": message, "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens}
         except httpx.TimeoutException as e:
             duration = time.time() - start
             logger.warning(f"[_normal_call] 请求超时 URL={url} model={model_id} "
@@ -1448,9 +1507,15 @@ class LLMClient(BaseTool):
                         except json.JSONDecodeError:
                             continue
             duration = time.time() - start
+            full_text = "".join(full_content)
             logger.info(f"[_stream_call] 流式完成 URL={url} model={model_id} "
-                        f"总耗时={duration:.2f}s 内容长度={len(''.join(full_content))}")
-            return "".join(full_content)
+                        f"总耗时={duration:.2f}s 内容长度={len(full_text)}")
+            # openroute silent failure 检测(同 _normal_call)
+            if full_text and "当前不可用" in full_text and "请稍后重试" in full_text:
+                raise RuntimeError(
+                    f"openroute_silent_failure: model disabled - {full_text[:120]}"
+                )
+            return full_text
         except Exception as e:
             duration = time.time() - start
             logger.warning(f"[_stream_call] 请求失败 URL={url} model={model_id} "

@@ -15,10 +15,10 @@ class LoopTemplateConfig(BaseModel):
     total_timeout: int = 1800
     backoff_strategy: str = "exponential"
     backoff_base: int = 2
-    planner: dict
-    worker: dict
-    verifier: dict
-    reflector: dict
+    planner: dict = {}
+    worker: dict = {}
+    verifier: dict = {}
+    reflector: dict = {}
     memory: dict = {}
 
 

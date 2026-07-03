@@ -381,7 +381,7 @@ class ModelService:
         # 这是关键修复：避免 contentforge 通过 SDK 启动时所有 openroute 模型被误挂起
         if not proxy_healthy:
             openroute_cfg_fallback = self.providers.get("openroute", {})
-            probe_base_url = openroute_cfg_fallback.get("base_url", "http://127.0.0.1:13001/v1").rstrip("/v1").rstrip("/")
+            probe_base_url = openroute_cfg_fallback.get("base_url", "http://127.0.0.1:13001/v1").removesuffix("/v1").rstrip("/")
             probe_url = f"{probe_base_url}/health"
             try:
                 async with httpx.AsyncClient(timeout=5) as probe_client:

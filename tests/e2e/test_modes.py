@@ -21,6 +21,14 @@ import pytest
 import httpx
 import websockets
 
+# T7/T8 支持 — LLM生成内容必须经LLM审核（铁律T7）
+import sys
+from pathlib import Path
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
+
 BASE_URL = os.environ.get("FLOWFORGE_BASE_URL", "http://127.0.0.1:8002")
 WS_URL = os.environ.get("FLOWFORGE_WS_URL", "ws://127.0.0.1:8002")
 
@@ -379,6 +387,23 @@ class ModeTestBase:
                 return max(candidates, key=lambda x: len(x[1]))[1]
             return json.dumps(output, ensure_ascii=False)
         return str(output)
+
+    def t7_verify_content(self, content: str, context: str = "",
+                          content_type: str = "模式输出") -> dict:
+        """T7铁律：对LLM生成内容进行二次LLM审核。
+
+        凡LLM生成的内容必须经另一个LLM审核通过后才算验证通过。
+        使用方式：
+            content = self.extract_content(final)
+            review = self.t7_verify_content(content, context="原始任务描述")
+            assert review["verdict"] == "PASS", f"T7审核未通过: {review['reason']}"
+        """
+        reviewer = T7Reviewer()
+        return reviewer.review_sync(
+            content=content,
+            context=context,
+            content_type=content_type,
+        )
 
 
 # ---------------------------------------------------------------------------

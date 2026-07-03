@@ -191,30 +191,43 @@ assignments:
   default:
     primary: Doubao-Seed2.0
     fallbacks:
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - DeepSeek-V4-Pro
+    - GLM-5.1
+    - Kimi-K2.6
   lightweight:
     primary: Doubao-Seed2.0
     fallbacks:
-    - nvidia/nemotron-3-super-120b-a12b:free
-    - poolside/laguna-m.1:free
+    - GLM-5.1
+    - DeepSeek-V4-Pro
+    - Gemini-3.3-Pro
   coding:
     primary: DeepSeek-V4-Pro
     fallbacks:
-    - nvidia/nemotron-3-super-120b-a12b:free
-    - poolside/laguna-m.1:free
+    - GLM-5.1
+    - Qwen3.6-Plus
+    - Kimi-K2.6
   judge:
     primary: DeepSeek-V4-Pro
     fallbacks:
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - GLM-5.1
+    - Qwen3.6-Plus
+    - HunYuan3
   content_create:
     primary: Doubao-Seed2.0
     fallbacks:
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - DeepSeek-V4-Pro
+    - GLM-5.1
+    - Gemini-3.3-Pro
   content_refine:
     primary: DeepSeek-V4-Pro
     fallbacks:
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - Doubao-Seed2.0
+    - GLM-5.1
+    - Gemini-3.3-Pro
   content_eval:
     primary: DeepSeek-V4-Pro
     fallbacks:
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - GLM-5.1
+    - Qwen3.6-Plus
+    - HunYuan3
+    - Gemini-3.3-Pro

@@ -84,17 +84,16 @@ routes:
     fallback_providers:
       - openroute
     fallback_models:
-      - Kimi-K2.6
-      - Qwen3.6-Plus
-      - HunYuan3
-      - MiniMax-M3
-      - GLM-5.1
       - Doubao-Seed2.0
+      - GPT-5.5
+      - Gemini-3.3-Pro
+      - GLM-5.1
+      - MiniMax-M3
     failover_policy:
       conditions:
         - rate_limited
         - timeout
-      timeout_seconds: 240
+      timeout_seconds: 120  # 单模型最多120s，剩余120s给fallback尝试（judge_timeout=240s）
       max_retries: 0
       retry_delay_seconds: 1.0
     default_temperature: 0.3

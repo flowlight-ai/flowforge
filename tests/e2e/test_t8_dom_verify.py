@@ -171,7 +171,7 @@ class TestT8DOMVerify:
                 llm_verify=True,  # T7+T8联合验证：对DOM内容调用LLM审核
                 content_type="Web UI页面内容",
                 context="FlowForge管理界面首页，应该包含导航、功能入口等元素",
-                timeout=30,
+                timeout=60,
             )
             metrics.record_tool_call("playwright+llm", "ok" if result["found"] else "fail", result["detail"])
 

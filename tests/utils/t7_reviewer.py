@@ -26,14 +26,23 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# T7审核单次LLM调用超时（用户指示：长文章可能需要2分钟，设为90s）
-T7_REVIEW_TIMEOUT_SECONDS = 90
+# T7审核单次LLM调用超时（OpenRoute网页通道响应可能>90s，提升到180s避免ReadTimeout）
+T7_REVIEW_TIMEOUT_SECONDS = 180
 
 # T7审核重试次数（小模型可能不遵守格式，参考test_base.py LLMReviewer）
 T7_MAX_RETRIES = 3
 
-# T7 system message（参考test_base.py第183行）
-T7_SYSTEM_MESSAGE = "你是审核员。只输出VERDICT: PASS或VERDICT: FAIL，不要输出其他内容。"
+# T7 system message — 强格式约束，避免LLM输出说明性文字导致VERDICT解析失败
+T7_SYSTEM_MESSAGE = (
+    "你是严格的内容审核员。你的唯一输出格式是：\n"
+    "VERDICT: PASS\n"
+    "或\n"
+    "VERDICT: FAIL\n"
+    "REASON: <简短原因>\n"
+    "\n"
+    "禁止输出任何说明性文字、问候、解释、前言。"
+    "第一行必须是 VERDICT: PASS 或 VERDICT: FAIL。"
+)
 
 # T7 审核提示词模板（按prompts.md V1规范 + browser_verify.py标准格式）
 T7_REVIEW_PROMPT = """你是严格的内容审核员。请审核以下{content_type}内容是否合格。
@@ -61,11 +70,13 @@ T7_REVIEW_PROMPT = """你是严格的内容审核员。请审核以下{content_t
   * 含AI生成痕迹（"作为AI"、"我是人工智能"等）
 - 以下情况判PASS：口语化、简短但有实质内容、有情绪表达
 
-【输出格式】严格按以下格式输出：
+【输出格式】严格按以下格式输出，禁止输出任何其他内容：
 VERDICT: PASS
 或
 VERDICT: FAIL
 REASON: <原因>
+
+注意：第一行必须是 VERDICT: PASS 或 VERDICT: FAIL，不要输出前言、问候、解释。
 """
 
 
@@ -180,7 +191,7 @@ class T7Reviewer:
                                 {"role": "user", "content": prompt},
                             ],
                             "temperature": 0.1,
-                            "max_tokens": 100,  # 审核只需VERDICT+REASON，不需要长输出
+                            "max_tokens": 200,  # 审核只需VERDICT+REASON，但部分模型需要更多空间
                         },
                     )
                     if resp.status_code != 200:
@@ -275,24 +286,48 @@ class T7Reviewer:
 
     @staticmethod
     def _parse_verdict(review_text: str) -> str:
-        """解析VERDICT — 支持中英文（参考test_base.py第198-206行）.
+        """解析VERDICT — 支持中英文 + 容错解析（参考test_base.py第198-206行）.
 
-        支持格式：
-        - VERDICT: PASS / VERDICT: FAIL
-        - VERDICT：通过 / VERDICT：不通过
-        - VERDICT: 合格 / VERDICT: 不合格
+        支持格式（严格度递减）：
+        1. VERDICT: PASS / VERDICT: FAIL
+        2. VERDICT：通过 / VERDICT：不通过 / VERDICT：合格 / VERDICT：不合格
+        3. 独立的 PASS / FAIL 关键词（容错：LLM未按格式输出）
+        4. 独立的 通过 / 不通过 / 合格 / 不合格 关键词（容错）
+        5. 包含"审核通过"/"审核不通过"等表述（容错）
         """
+        # 1. 严格 VERDICT: 格式
         verdict_match = re.search(
             r'VERDICT\s*[:：]\s*(PASS|FAIL|通过|不通过|合格|不合格)',
             review_text,
             re.IGNORECASE,
         )
-        if not verdict_match:
-            return ""
-        verdict_raw = verdict_match.group(1).upper()
-        if verdict_raw in ("PASS", "通过", "合格"):
+        if verdict_match:
+            verdict_raw = verdict_match.group(1).upper()
+            if verdict_raw in ("PASS", "通过", "合格"):
+                return "PASS"
+            return "FAIL"
+
+        # 2. 容错：独立的 PASS/FAIL 关键词（不区分大小写，词边界）
+        # 仅在文本较短（<200字）时启用，避免误匹配长文本中的单词
+        if len(review_text) <= 200:
+            pass_match = re.search(r'\bPASS\b', review_text, re.IGNORECASE)
+            fail_match = re.search(r'\bFAIL\b', review_text, re.IGNORECASE)
+            # 优先 FAIL（更严格），若仅有 PASS 则判 PASS
+            if fail_match and not pass_match:
+                return "FAIL"
+            if pass_match and not fail_match:
+                return "PASS"
+
+        # 3. 容错：中文 通过/不通过/合格/不合格
+        if "不通过" in review_text or "不合格" in review_text:
+            return "FAIL"
+        if "审核通过" in review_text or "内容合格" in review_text:
             return "PASS"
-        return "FAIL"
+        if len(review_text) <= 100 and ("通过" in review_text or "合格" in review_text):
+            return "PASS"
+
+        # 4. 无法解析
+        return ""
 
     @staticmethod
     def _parse_reason(review_text: str) -> str:

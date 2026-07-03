@@ -747,6 +747,7 @@ class MultiJudgeVerifier(LoopVerifier):
             "task_id": task.task_id,
             "agent_name": f"multi_judge_{model.replace('/', '_')}",
             "persona": task.persona or "default",
+            "assignment": "judge",  # 使用 judge assignment 的 fallback 链（而非 default 的超短链）
             "skip_cooldown": True,
         }
         # prefer_api: 让 LLMClient 过滤候选链中的 WebChat backend，仅使用 API backend

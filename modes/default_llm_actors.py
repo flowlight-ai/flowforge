@@ -104,11 +104,24 @@ class DefaultLLMEvaluator(BaseAgent):
         output_content = input.params.get("output", "")
         if isinstance(output_content, dict):
             output_content = output_content.get("output", output_content.get("draft", str(output_content)))
-        prompt = get_prompt("reflexion.evaluator", output=str(output_content)[:2000])
+        prompt = get_prompt("reflexion.evaluator", output=str(output_content)[:3000])
+        # v2.7 修复: 加 system prompt 强约束 JSON 输出，避免模型自由发挥对话式回复
+        # 原 bug: 只发 user message，DeepSeek-V4-Pro 返回"你这篇文写得太有画面感了..."对话式回复
+        # GLM-5.1 返回英文事实核查内容，都不输出 JSON，导致 evaluator 解析失败
+        system_prompt = (
+            "你是严格的内容质量审核员。你的唯一输出是一个JSON对象，禁止任何对话、解释、前言、寒暄。"
+            "JSON格式: {\"score\": 0.85, \"issues\": [\"具体问题1\", \"具体问题2\"]}。"
+            "score必须在0-1之间（0.85=良好，0.6=及格，0.3=差）。issues列出最多3个最关键的问题。"
+            "再次强调：只输出JSON，第一个字符必须是{，最后一个字符必须是}。"
+        )
         llm_params = {
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
             "stream": False, "task_id": context.task_id,
             "agent_name": "reflexion_evaluator", "persona": input.params.get("persona", context.persona or "default"),
+            "temperature": 0.1,  # v2.7: 低温提高 JSON 输出稳定性
         }
         # 支持外部指定模型（如agent_judge传入deepseek-web/chat）
         model_hint = input.params.get("model")
@@ -116,13 +129,25 @@ class DefaultLLMEvaluator(BaseAgent):
             llm_params["model"] = model_hint
         result = await context.tools.execute("llm", ToolInput(params=llm_params))
         content = result.result.get("content", "{}")
-        match = re.search(r'\{.*\}', content, re.DOTALL)
+        # v2.7: 增强JSON解析 - 尝试多种模式
+        match = re.search(r'\{[^{}]*"score"[^{}]*\}', content, re.DOTALL)
+        if not match:
+            match = re.search(r'\{.*\}', content, re.DOTALL)
         if match:
             try:
-                return AgentOutput(result=json.loads(match.group()))
-            except json.JSONDecodeError:
+                parsed = json.loads(match.group())
+                # 验证 score 字段
+                if "score" in parsed:
+                    score = float(parsed["score"])
+                    if 0 <= score <= 1:
+                        return AgentOutput(result=parsed)
+                    return AgentOutput(result={"score": max(0.0, min(1.0, score)),
+                                                "issues": parsed.get("issues", [])})
+            except (json.JSONDecodeError, ValueError, TypeError):
                 pass
-        return AgentOutput(result={"score": 0.5, "issues": [f"无法解析评估: {content[:100]}"]})
+        # v2.7: 解析失败时返回 score=-1 表示"评估失败"，让 LoopExecutor 跳过 evaluator 评分
+        # 原 bug: 返回 score=0.5 导致 reflexion 误判失败，触发不必要的迭代
+        return AgentOutput(result={"score": -1.0, "issues": [f"评估解析失败(将由verifier兜底): {content[:80]}"]})
 
 
 class DefaultLLMReflector(BaseAgent):
@@ -159,18 +184,32 @@ class DefaultLLMReflector(BaseAgent):
         else:
             issues_text = str(issues)
         prompt = get_prompt("reflexion.reflector",
-            output=str(output_content)[:2000],
+            output=str(output_content)[:3000],
             issues=issues_text)
+        # v2.7 修复: 加 system prompt 强约束 JSON 输出
+        system_prompt = (
+            "你是严格的反思员。你的唯一输出是一个JSON对象，禁止任何对话或解释。"
+            "JSON格式: {\"reflection\": \"1. 具体改进建议1；2. 具体改进建议2；3. 具体改进建议3\"}。"
+            "每条建议必须可执行：明确指出改哪一段/加什么内容/删什么内容/换成什么表达。"
+            "禁止空泛建议如'加强深度'、'提升质量'。"
+            "再次强调：只输出JSON，第一个字符必须是{，最后一个字符必须是}。"
+        )
         result = await context.tools.execute("llm", ToolInput(params={
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
             "stream": False, "task_id": context.task_id,
             "agent_name": "reflexion_reflector", "persona": input.params.get("persona", context.persona or "default"),
+            "temperature": 0.1,
         }))
         content = result.result.get("content", "{}")
-        match = re.search(r'\{.*\}', content, re.DOTALL)
+        match = re.search(r'\{[^{}]*"reflection"[^{}]*\}', content, re.DOTALL)
+        if not match:
+            match = re.search(r'\{.*\}', content, re.DOTALL)
         if match:
             try:
                 return AgentOutput(result=json.loads(match.group()))
             except json.JSONDecodeError:
                 pass
-        return AgentOutput(result={"reflection": content[:200]})
+        return AgentOutput(result={"reflection": content[:300]})

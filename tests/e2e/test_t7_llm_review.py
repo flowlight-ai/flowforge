@@ -36,7 +36,13 @@ from flowforge.tests.utils.t7_t8_base import MetricsCollector, TestReporter, pri
 TOUTIAO_COMMENT_SCENARIO = {
     "title": "17岁女生指控被江西财大男生多次性侵",
     "context": "你正在刷今日头条，看到了这篇文章，想发表一条评论。作为一个普通网友，对事件有自己的看法。",
-    "prompt": "请以普通网友的口吻，对这条新闻发表一条评论。要求：口语化、有情绪表达、20-50字、不能有AI痕迹。",
+    "prompt": (
+        "新闻标题：17岁女生指控被江西财大男生多次性侵\n"
+        "新闻内容：近日，一名17岁女生在社交平台发帖称，遭到江西财经大学一名男生多次性侵，"
+        "并已向警方报案。校方回应称已介入调查，涉事男生已被停课配合调查。警方表示正在依法处理。\n\n"
+        "请以普通网友的口吻，对这条新闻发表一条评论。要求：口语化、有情绪表达、20-50字、不能有AI痕迹。"
+        "直接输出评论内容，不要索要更多信息。"
+    ),
 }
 
 # 真实场景：文章标题生成
@@ -50,7 +56,16 @@ ARTICLE_TITLE_SCENARIO = {
 TECH_SUMMARY_SCENARIO = {
     "title": "FlowForge架构设计",
     "context": "FlowForge是一个多项目AI Agent智能体平台，采用分层架构：应用层→指挥中枢→专家执行→工具与记忆。",
-    "prompt": "请为这段FlowForge架构介绍生成一个50字以内的摘要。要求：准确概括、语言精炼、有技术感。",
+    "prompt": (
+        "以下是FlowForge架构介绍的完整内容，请基于此生成一个50字以内的摘要：\n\n"
+        "FlowForge是一个多项目AI Agent智能体平台，采用分层架构设计。"
+        "应用层包含ContentForge/DevForge/NovelForge/MallForge等专业场景应用；"
+        "指挥中枢层负责Agent编排和任务调度；专家执行层提供各类专业Agent能力；"
+        "工具与记忆层提供工具注册、向量检索、记忆管理等基础能力。"
+        "FlowForge作为通用底座框架，通过插件化/配置化方式支持上层*Forge项目扩展。"
+        "核心原则是配置驱动优于代码继承，组合优于继承。\n\n"
+        "要求：准确概括、语言精炼、有技术感。直接输出摘要，不要索要更多信息。"
+    ),
 }
 
 
@@ -87,7 +102,7 @@ async def call_openroute_llm(prompt: str, system: str = "", model: str = "Doubao
     messages.append({"role": "user", "content": prompt})
 
     start = time.time()
-    async with httpx.AsyncClient(timeout=90) as client:
+    async with httpx.AsyncClient(timeout=180) as client:
         resp = await client.post(
             f"{base_url}/chat/completions",
             headers=headers,

@@ -196,8 +196,12 @@ ConfigLoader.FLOWFORGE_ROOT = Path(__file__).parent.parent
 
 system_config = SystemConfig()
 
-if system_config.secret_key == "changeme-in-production":
-    logging.getLogger("flowforge.config").warning(
-        "⚠️  FLOWFORGE_SECRET_KEY is using the default value 'changeme-in-production'. "
-        "This is insecure for production! Set the FLOWFORGE_SECRET_KEY environment variable."
-    )
+if not system_config.secret_key:
+    # 优先尝试从 config/default.yaml 加载，若仍为空则发出警告
+    _config_secret = os.environ.get("FLOWFORGE_SECRET_KEY", "")
+    if not _config_secret:
+        logging.getLogger("flowforge.config").warning(
+            "⚠️  FLOWFORGE_SECRET_KEY is not set. "
+            "Set the FLOWFORGE_SECRET_KEY environment variable or configure system.secret_key in config/default.yaml. "
+            "Using empty default — features requiring signing (JWT, session tokens) will fail at runtime."
+        )
