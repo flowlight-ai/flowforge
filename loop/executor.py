@@ -310,10 +310,26 @@ class LoopExecutor:
         # 将 worker_config 中的 steps 注入到 task.metadata，使 WorkflowExecutor 能获取 SOP 步骤
         worker_steps = worker_config.get("steps", [])
         if worker_steps and worker_mode == "workflow":
-            task.metadata["sop_steps"] = worker_steps
+            # 转换 worker.steps 格式到 sop_steps 格式（展平 worker 嵌套）
+            # loop YAML: {name, worker: {agent, mode}, input, output_key}
+            # sop_steps:  {name, agent, mode, input, output}
+            sop_steps = []
+            for step in worker_steps:
+                sop_step = dict(step)
+                worker_inner = step.get("worker")
+                if isinstance(worker_inner, dict):
+                    if "agent" in worker_inner and "agent" not in sop_step:
+                        sop_step["agent"] = worker_inner["agent"]
+                    if "mode" in worker_inner and "mode" not in sop_step:
+                        sop_step["mode"] = worker_inner["mode"]
+                # output_key → output（WorkflowExecutor 使用 step.get("output")）
+                if "output_key" in sop_step and "output" not in sop_step:
+                    sop_step["output"] = sop_step["output_key"]
+                sop_steps.append(sop_step)
+            task.metadata["sop_steps"] = sop_steps
             # 同时注入 workflow 名称，供 WorkflowExecutor 识别
             task.metadata["workflow_name"] = worker_config.get("workflow", "")
-            logger.info(f"[loop] Injected worker steps into task.metadata: {len(worker_steps)} steps, "
+            logger.info(f"[loop] Injected worker steps into task.metadata: {len(sop_steps)} steps, "
                         f"workflow={worker_config.get('workflow', '')}")
         failure_key = memory_config.get("failure_key", "loop-failures")
         # memory_mapping 使用设计文档中的英文键名：

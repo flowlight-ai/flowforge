@@ -111,7 +111,7 @@ harness:
     recent_rounds: 3
   feedback_loop:
     evaluation_mode: "lightweight"
-    quality_threshold: 0.7
+    quality_threshold: 0.9
     max_corrections: 1
   entropy_manager:
     doc_gardener_enabled: true
