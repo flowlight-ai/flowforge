@@ -49,11 +49,39 @@ class PromptManager:
             self._load_from_dir(project_config_dir)
 
     def _auto_discover_project_prompts(self):
-        """Auto-discover and load prompts.yaml from registered projects."""
+        """Auto-discover and load prompts.yaml from registered projects.
+
+        扫描策略：
+        1. 先加载已通过 register_project 注册的项目
+        2. 再自动扫描工作目录下所有 *forge/ 项目的 config/prompts.yaml
+           （使测试环境无需加载 plugins.py 也能发现项目级 prompts）
+        """
         workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+        # 1. 加载已注册项目
         for prefix, project_name in self._registered_projects.items():
             project_config_dir = os.path.join(workspace_root, project_name, "config")
             if os.path.isdir(project_config_dir):
+                self._load_from_dir(project_config_dir)
+
+        # 2. 自动扫描工作目录下所有 *forge/ 项目
+        if not os.path.isdir(workspace_root):
+            return
+        for entry in sorted(os.listdir(workspace_root)):
+            project_dir = os.path.join(workspace_root, entry)
+            if not os.path.isdir(project_dir):
+                continue
+            # 匹配 *forge 项目（contentforge/devforge/novelforge/mallforge/stockforge/demoforge）
+            if not entry.endswith("forge") or entry == "flowforge":
+                continue
+            prefix = entry + "."
+            # 跳过已注册的项目（避免重复加载）
+            if prefix in self._registered_projects:
+                continue
+            project_config_dir = os.path.join(project_dir, "config")
+            if os.path.isdir(project_config_dir):
+                # 自动注册前缀并加载
+                self._registered_projects[prefix] = entry
                 self._load_from_dir(project_config_dir)
 
     def _load_from_dir(self, prompts_dir: str):
@@ -119,8 +147,12 @@ class PromptManager:
 
     def reload(self, prompts_dir: str = None):
         self._prompts = {}
+        # 保留已注册的项目列表（reload 不清除项目注册）
+        registered = dict(self._registered_projects)
         if os.path.isdir(_DEFAULT_CONFIG_DIR):
             self._load_from_dir(_DEFAULT_CONFIG_DIR)
+        # 重新触发自动发现（包括已注册项目和自动扫描）
+        self._auto_discover_project_prompts()
         if prompts_dir and os.path.isdir(prompts_dir) and prompts_dir != _DEFAULT_CONFIG_DIR:
             self._load_from_dir(prompts_dir)
 

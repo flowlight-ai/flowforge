@@ -196,7 +196,11 @@ class ReflexionExecutor(BaseModeExecutor):
                     if hasattr(ctx, 'instructions') and ctx.instructions:
                         system_prompt = ctx.instructions
                     else:
-                        system_prompt = get_prompt("reflexion.actor", fallback="You are a helpful assistant.")
+                        # 红线#11：从 prompts.yaml 加载 fallback（flowforge.reflexion.actor_fallback）
+                        system_prompt = get_prompt(
+                            "reflexion.actor",
+                            fallback=get_prompt("flowforge.reflexion.actor_fallback"),
+                        )
                     if memory_text:
                         system_prompt += f"\n\n之前的反思和改进建议:\n{memory_text}"
                     persona = ctx.persona or "default"

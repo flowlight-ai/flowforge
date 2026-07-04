@@ -533,6 +533,9 @@ class FallbackChain:
     @classmethod
     def search_chain(cls) -> FallbackChain:
         """搜索回退链: helixrag → web_search → llm_generate。"""
+        # 红线#11：LLM 兜底提示词从 prompts.yaml 加载
+        from flowforge.core.prompt_manager import get_prompt
+        llm_prompt = get_prompt("flowforge.fallback_chain.search_llm_prompt") or ""
         return cls(
             name="search_fallback",
             description="搜索回退链：helixrag → web_search → llm_generate",
@@ -557,7 +560,7 @@ class FallbackChain:
                 FallbackStep(
                     name="llm_generate",
                     type="llm",
-                    prompt="请基于你的知识，回答以下问题：{{input.query}}",
+                    prompt=llm_prompt,
                     timeout=30.0,
                     description="最后回退到LLM生成",
                 ),

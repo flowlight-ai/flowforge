@@ -632,6 +632,21 @@ class LLMClient(BaseTool):
                 logger.info(f"[候选链] assignment='{assignment}' → primary={primary}, fallbacks={len(fallbacks)}个")
                 return self._apply_rotation_and_cross_validation(chain, persona, task_id)
 
+        # 1.5 agent_name 直接匹配 assignments（P0-25 新增）
+        # 当 agent_name 本身作为 assignment key 时（如 "stockforge:stock_data"），
+        # 直接匹配 assignments[agent_name]，无需 persona。
+        # 这让 stockforge/contentforge/novelforge 等 *Forge agents 能在 models.yaml
+        # 中独立配置 primary/fallbacks，而不必走 default → Doubao-Seed2.0。
+        if agent_name:
+            agent_assign = self._assignments.get(agent_name, {})
+            primary = agent_assign.get("primary", "")
+            fallbacks = agent_assign.get("fallbacks", [])
+            if primary:
+                chain = [primary]
+                chain.extend(fallbacks)
+                logger.info(f"[候选链] agent_name='{agent_name}' → primary={primary}, fallbacks={len(fallbacks)}个")
+                return self._apply_rotation_and_cross_validation(chain, persona, task_id)
+
         # 2. persona + agent_name 精确匹配
         if persona and agent_name:
             persona_config = self._assignments.get(persona, {})

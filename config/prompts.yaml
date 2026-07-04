@@ -205,6 +205,28 @@ agent.research_full: |
   3. 深度分析
   4. 结论和建议
 
+agent.code_analyze: |
+  分析以下代码，识别潜在问题、设计缺陷和改进机会。
+  输出JSON: {{"issues": [{{"type": "问题类型", "severity": "严重程度", "location": "位置", "description": "描述", "suggestion": "改进建议"}}], "summary": "总体评估"}}
+
+  代码: {code}
+  语言: {language}
+
+agent.code_generate: |
+  根据以下需求生成高质量的代码实现。
+  输出格式：使用markdown代码块包裹代码，并简要解释实现思路。
+
+  需求: {requirement}
+  语言: {language}
+  上下文: {context}
+
+agent.code_review: |
+  审查以下代码，评估代码质量、可维护性和安全性。
+  输出JSON: {{"score": 0.0-1.0, "dimensions": {{"quality": 0.0-1.0, "maintainability": 0.0-1.0, "security": 0.0-1.0, "performance": 0.0-1.0}}, "issues": ["问题1"], "recommendations": ["建议1"]}}
+
+  代码: {code}
+  语言: {language}
+
 flowforge.agent.react_actor.fallback: |
   Execute the following action and describe the result:
   Action: {next_action}
@@ -411,6 +433,21 @@ modes.workflow.general: "你正在执行「{step_name}」。请给出详细、�
 
 modes.workflow.search_unavailable: |
   搜索服务暂不可用，无法获取实时信息。请基于你自身的知识和训练数据，尽可能完整、详细地回答用户的问题。如果问题涉及近期事件，请说明你的知识截止日期，并基于已有信息给出最佳回答。⚠️ 重要：在回答开头明确标注「以下内容基于AI自身知识生成，未经实时搜索验证」。
+
+# workflow_chat 上下文拼接模板（红线#11：从内联 f-string 外置）
+modes.workflow_chat.context_prefix: |
+  以下是之前步骤的结果：
+
+  {context}
+
+  请基于以上信息，{prompt}
+
+# reflexion.actor 的 fallback 提示词（P2：原为短 fallback）
+flowforge.reflexion.actor_fallback: "You are a helpful assistant."
+
+# fallback_chain.search_chain 的 LLM 兜底提示词（P1：原硬编码在工厂方法中）
+flowforge.fallback_chain.search_llm_prompt: "请基于你的知识，回答以下问题：{{input.query}}"
+
 
 # ── modes/rewoo 提示词 ──
 

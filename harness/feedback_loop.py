@@ -188,9 +188,11 @@ class FeedbackLoop:
         persona = getattr(ctx, 'persona', 'unknown')
 
         # Get content to evaluate — 与 MultiJudgeVerifier 一致的字段优先级
+        # P0-29 修复: 添加 "report" 字段, stockforge:report agent 的报告内容在 result["report"] 中
+        # 原字段列表不包含 report, 导致 FeedbackLoop 提取 content="" (0 chars), gate=FAIL
         content = ""
         if isinstance(result, dict):
-            for key in ("content", "edited_draft", "response", "output", "draft", "final_answer"):
+            for key in ("content", "edited_draft", "response", "output", "draft", "final_answer", "report"):
                 val = result.get(key, "")
                 if isinstance(val, str) and val.strip():
                     content = val

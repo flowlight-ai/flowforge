@@ -481,7 +481,18 @@ class ChatHandler:
                             if isinstance(val, str) and len(val.strip()) > 20 and key.startswith("_output_"):
                                 context_parts.append(f"【{key}】\n{val[:2000]}")
                         if context_parts:
-                            prompt = f"以下是之前步骤的结果：\n\n{''.join(context_parts)}\n\n请基于以上信息，{prompt}"
+                            # 红线#11：从 prompts.yaml 加载（modes.workflow_chat.context_prefix）
+                            context_template = get_prompt("modes.workflow_chat.context_prefix")
+                            if context_template:
+                                try:
+                                    prompt = context_template.format(
+                                        context="".join(context_parts),
+                                        prompt=prompt,
+                                    )
+                                except (KeyError, ValueError, IndexError):
+                                    prompt = f"以下是之前步骤的结果：\n\n{''.join(context_parts)}\n\n请基于以上信息，{prompt}"
+                            else:
+                                prompt = f"以下是之前步骤的结果：\n\n{''.join(context_parts)}\n\n请基于以上信息，{prompt}"
                     gen_messages = [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt},
