@@ -18,15 +18,6 @@ class RefinerAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.refiner",
-            "You are a refinement agent. Improve the draft based on the critique feedback.\n"
-            "Original task: {task}\n"
-            "Current draft: {draft}\n"
-            "Weaknesses identified: {weaknesses}\n"
-            "Suggestions for improvement: {suggestions}\n"
-            "Iteration: {iteration}\n\n"
-            "Produce an improved version as JSON:\n"
-            '{{"refined_draft": "your improved content", "changes_made": ["change1"], '
-            '"remaining_issues": ["issue1"]}}',
             task=task,
             draft=draft,
             weaknesses=weaknesses,

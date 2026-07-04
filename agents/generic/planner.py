@@ -14,14 +14,6 @@ class PlannerAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.planner",
-            "You are a planning agent. Create a detailed, executable plan for the given task.\n"
-            "Task: {task}\n"
-            "{constraints_section}"
-            "{resources_section}"
-            "\nOutput the plan as JSON:\n"
-            '{{"plan_name": "name", "steps": [{{"id": 1, "description": "step description", '
-            '"estimated_effort": "low/medium/high", "dependencies": []}}], '
-            '"estimated_total_effort": "low/medium/high", "risks": ["risk1"]}}',
             task=task,
             constraints_section=f"Constraints: {constraints}\n" if constraints else "",
             resources_section=f"Available resources: {resources}\n" if resources else "",

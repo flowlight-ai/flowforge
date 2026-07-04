@@ -15,14 +15,6 @@ class CriticAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.critic",
-            "You are a critic agent. Evaluate the draft and provide detailed feedback.\n"
-            "Original task: {task}\n"
-            "Current draft: {draft}\n"
-            "Iteration: {iteration}\n"
-            "{criteria_section}"
-            "\nProvide critique as JSON:\n"
-            '{{"score": 0.0-1.0, "strengths": ["strength1"], "weaknesses": ["weakness1"], '
-            '"suggestions": ["suggestion1"], "meets_quality_gate": true/false}}',
             task=task,
             draft=draft,
             iteration=iteration,

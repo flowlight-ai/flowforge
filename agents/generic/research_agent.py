@@ -14,14 +14,13 @@ class ResearchAgent(GenericAgent):
         mode = input.params.get("mode", "full")
 
         if mode == "plan":
-            prompt = (
-                "为以下研究主题制定研究计划。\n"
-                '输出JSON: {"sub_queries": ["子查询1"], "angles": ["研究角度1"], "search_strategy": "搜索策略"}\n\n'
-                f"主题: {topic}\n"
-                f"深度: {depth}"
+            prompt = self._get_prompt(
+                "agent.research_plan",
+                topic=topic,
+                depth=depth,
             )
-            content = await self._call_llm(context, prompt)
-            data = self._extract_json(content)
+            content = await self._call_llm(context, prompt) if prompt else ""
+            data = self._extract_json(content) if content else {}
             if isinstance(data, str):
                 data = {"sub_queries": [topic], "angles": ["全面分析"], "search_strategy": data}
             return AgentOutput(result={"research_plan": data}, state_updates={"research_plan": data})
@@ -29,30 +28,23 @@ class ResearchAgent(GenericAgent):
         if mode == "synthesize":
             angles = input.params.get("angles", [])
             search_results = input.params.get("search_results", [])
-            prompt = (
-                "根据以下搜索结果，综合撰写研究报告。\n"
-                f"研究角度: {angles}\n"
-                f"搜索结果: {search_results}\n\n"
-                "输出结构化的研究报告，包含引言、主要发现、分析和结论。"
+            prompt = self._get_prompt(
+                "agent.research_synthesize",
+                angles=angles,
+                search_results=search_results,
             )
-            content = await self._call_llm(context, prompt)
+            content = await self._call_llm(context, prompt) if prompt else ""
             return AgentOutput(
                 result={"report": content},
                 state_updates={"research_report": content},
             )
 
-        prompt = (
-            f"为以下主题进行深度研究，制定研究计划并综合分析。\n"
-            f"主题: {topic}\n"
-            f"深度: {depth}\n\n"
-            "请输出完整的研究报告，包含：\n"
-            "1. 研究背景和问题\n"
-            "2. 关键发现\n"
-            "3. 深度分析\n"
-            "4. 结论和建议"
+        prompt = self._get_prompt(
+            "agent.research_full",
+            topic=topic,
+            depth=depth,
         )
-
-        content = await self._call_llm(context, prompt)
+        content = await self._call_llm(context, prompt) if prompt else ""
 
         return AgentOutput(
             result={"report": content, "topic": topic},

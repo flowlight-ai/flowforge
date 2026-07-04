@@ -408,14 +408,26 @@ class DeclarativeAgent(BaseAgent):
         if self.config.model_params:
             model_kwargs.update(self.config.model_params)
 
-        llm_result = await mc.chat(
-            prompt=task,
-            system=instructions,
-            model=model,
-            agent_name=self.name,
-            tools=tools_schema,
-            **model_kwargs,
-        )
+        try:
+            llm_result = await mc.chat(
+                prompt=task,
+                system=instructions,
+                model=model,
+                agent_name=self.name,
+                tools=tools_schema,
+                **model_kwargs,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Agent '{self.name}': LLM call failed: {e}; "
+                f"attempting fallback_chain"
+            )
+            # P0-12: LLM 调用失败时也触发 fallback_chain 直接调用工具
+            if self.config.fallback_chain:
+                fallback_result = await self._execute_fallback_chain(input, instructions)
+                if fallback_result is not None:
+                    return await self._apply_post_processors(fallback_result)
+            return AgentOutput(result={"error": str(e)[:200], "content": ""})
 
         # Handle tool_calls from LLM response
         tool_calls = llm_result.get("tool_calls", [])
@@ -423,8 +435,25 @@ class DeclarativeAgent(BaseAgent):
         if tool_calls:
             tool_results = await self._execute_tool_calls(tool_calls, input)
 
-        # Handle fallback_chain if primary execution returns empty
-        if not llm_result.get("content") and self.config.fallback_chain:
+        # Handle fallback_chain if primary execution returns empty, too short,
+        # OR when agent has tools but LLM didn't call them.
+        # P0-12: LLM 可能返回短文本而非调用工具，fallback_chain 应触发直接调用工具
+        # P0-15: 当 agent 配置了 tools 但 LLM 未返回 tool_calls 时，
+        # 说明 LLM 未按指令调用工具（如生成了无关内容），应强制触发 fallback
+        content_str = llm_result.get("content", "") or ""
+        should_fallback = False
+        if self.config.fallback_chain:
+            if not content_str or len(content_str) < 50:
+                should_fallback = True
+            elif tools_schema and not tool_calls:
+                # Agent was given tools but didn't call them → LLM failed to follow instructions
+                logger.warning(
+                    f"Agent '{self.name}': LLM returned content (len={len(content_str)}) "
+                    f"but did not call any tools despite having tools configured. "
+                    f"Triggering fallback_chain."
+                )
+                should_fallback = True
+        if should_fallback:
             fallback_result = await self._execute_fallback_chain(input, instructions)
             if fallback_result is not None:
                 return await self._apply_post_processors(fallback_result)
@@ -682,7 +711,23 @@ class DeclarativeAgent(BaseAgent):
             logger.info(f"[declarative_agent] Refined prompt rendered (len={len(rendered)})")
             return rendered
 
-        # 模板不存在：构建内联 refine prompt
+        # 模板不存在：从 prompts.yaml 加载兜底 refine prompt（键 flowforge.loop.refine_fallback）
+        # 消除硬编码提示词（编程红线#11）；占位符 {draft} {feedback_text}
+        try:
+            from flowforge.core.prompt_manager import get_prompt
+            loaded = get_prompt(
+                "flowforge.loop.refine_fallback",
+                fallback="",
+                draft=draft,
+                feedback_text=feedback_text,
+            )
+            if loaded:
+                logger.info(f"[declarative_agent] Loaded refine_fallback from prompts.yaml (len={len(loaded)})")
+                return loaded
+        except Exception as e:
+            logger.debug(f"[declarative_agent] Failed to load refine_fallback from prompts.yaml: {e}")
+
+        # prompts.yaml 也未命中：使用内联兜底（与 prompts.yaml 默认值保持一致）
         return f"""你是资深内容创作者。以下是上一轮创作的文章和评委的改进建议，请根据建议重写文章。
 
 ## 上一轮文章
@@ -849,11 +894,10 @@ class DeclarativeAgent(BaseAgent):
     ) -> Optional[AgentOutput]:
         """Execute tools in fallback_chain order until one succeeds."""
         from flowforge.core.base_tool import ToolInput
-        from flowforge.tools.registry import ToolRegistry
+        from flowforge.core.tool_decorator import get_tool_registry
 
-        try:
-            registry = ToolRegistry()
-        except Exception:
+        registry = get_tool_registry()
+        if registry is None:
             return None
 
         task = input.params.get("task", input.params.get("intent", ""))
@@ -951,12 +995,11 @@ class DeclarativeAgent(BaseAgent):
         parameters_schema.  Tools that are not found are skipped with a
         warning.
         """
-        from flowforge.tools.registry import ToolRegistry
+        from flowforge.core.tool_decorator import get_tool_registry
 
         schemas: list = []
-        try:
-            registry = ToolRegistry()
-        except Exception:
+        registry = get_tool_registry()
+        if registry is None:
             logger.warning(f"Agent '{self.name}': ToolRegistry not available for tool resolution")
             return schemas
 
@@ -991,12 +1034,11 @@ class DeclarativeAgent(BaseAgent):
             List of result dicts from each tool execution.
         """
         from flowforge.core.base_tool import ToolInput
-        from flowforge.tools.registry import ToolRegistry
+        from flowforge.core.tool_decorator import get_tool_registry
 
         results: List[Dict[str, Any]] = []
-        try:
-            registry = ToolRegistry()
-        except Exception:
+        registry = get_tool_registry()
+        if registry is None:
             logger.warning(f"Agent '{self.name}': ToolRegistry not available for tool execution")
             return results
 

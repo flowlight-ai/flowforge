@@ -15,14 +15,6 @@ class ValidatorAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.validator",
-            "You are a validation agent. Verify that the processed result is correct and complete.\n"
-            "Original task: {task}\n"
-            "Processed result: {processed}\n"
-            "Requirements: {analysis}\n"
-            "{validation_rules_section}"
-            "\nProvide validation as JSON:\n"
-            '{{"is_valid": true/false, "completeness": 0.0-1.0, "correctness": 0.0-1.0, '
-            '"errors": ["error1"], "warnings": ["warning1"], "fix_suggestions": ["fix1"]}}',
             task=task,
             processed=processed,
             analysis=analysis,

@@ -15,14 +15,6 @@ class DelivererAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.deliverer",
-            "You are a delivery agent. Format and prepare the final deliverable.\n"
-            "Original task: {task}\n"
-            "Content to deliver: {processed}\n"
-            "Output format: {output_format}\n"
-            "{validation_section}"
-            "\nPrepare the final deliverable as JSON:\n"
-            '{{"deliverable": "formatted output", "format": "format description", '
-            '"summary": "brief summary of deliverable", "metadata": {{}}}}',
             task=task,
             processed=processed,
             output_format=output_format,

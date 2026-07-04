@@ -15,13 +15,6 @@ class DrafterAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.drafter",
-            "You are a drafting agent. Create an initial draft based on the given requirements.\n"
-            "Task: {task}\n"
-            "Style: {style}\n"
-            "{requirements_section}"
-            "{reference_section}"
-            "\nCreate a complete initial draft. Output as JSON:\n"
-            '{{"draft": "your draft content", "notes": "any notes about the draft"}}',
             task=task,
             style=style,
             requirements_section=f"Requirements: {requirements}\n" if requirements else "",

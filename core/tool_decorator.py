@@ -213,6 +213,15 @@ def set_tool_registry(registry: Any) -> None:
     _global_tool_registry = registry
 
 
+def get_tool_registry() -> Optional[Any]:
+    """Get the global ToolRegistry set by FlowForgeSDK.
+
+    Returns None if not set. Callers should fall back to creating a new
+    ToolRegistry only if this returns None (e.g. in unit tests).
+    """
+    return _global_tool_registry
+
+
 def tool(
     *,
     name: str,

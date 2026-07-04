@@ -17,8 +17,11 @@ Dependencies:
 - Follows DI pattern: all external deps injected via constructor or set_tool_registry
 """
 import hashlib
+import os
 import re
 from typing import Dict, List, Optional
+
+import yaml
 
 from flowforge.core.tracing import get_logger
 
@@ -30,6 +33,49 @@ from flowforge.tools.agentic_rag import (
 )
 
 logger = get_logger(__name__)
+
+
+# 提示词配置文件路径（红线#11：禁止硬编码提示词）
+_PROMPTS_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "config",
+    "prompts.yaml",
+)
+
+
+def _load_agentic_rag_prompt(key: str, **kwargs) -> str:
+    """从 config/prompts.yaml 加载 tools.agentic_rag.* 提示词.
+
+    Args:
+        key: 提示词 key（如 "rewrite"、"decompose"、"expand"、"synthesize"、"conflict_check"）
+        **kwargs: 模板格式化参数
+
+    Returns:
+        渲染后的提示词字符串，未命中则返回空字符串（fail-open）
+    """
+    full_key = f"tools.agentic_rag.{key}"
+    try:
+        if not os.path.exists(_PROMPTS_PATH):
+            logger.error(f"[agentic_rag_core] prompts file not found: {_PROMPTS_PATH} (fail-open)")
+            return ""
+        with open(_PROMPTS_PATH, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        template = data.get(full_key, "")
+        if not template:
+            logger.error(f"[agentic_rag_core] prompt '{full_key}' not found in prompts.yaml (fail-open)")
+            return ""
+        if kwargs:
+            try:
+                return template.format(**kwargs)
+            except (KeyError, ValueError, IndexError) as e:
+                logger.warning(f"[agentic_rag_core] prompt '{full_key}' format error: {e}")
+                for k, v in kwargs.items():
+                    template = template.replace(f"{{{k}}}", str(v))
+                return template
+        return template
+    except Exception as e:
+        logger.error(f"[agentic_rag_core] failed to load prompt '{full_key}': {e} (fail-open)")
+        return ""
 
 
 # ── QueryExpander: LLM-powered query understanding and expansion ────────
@@ -46,32 +92,8 @@ class QueryExpander:
     importing any SDK directly.
     """
 
-    REWRITE_PROMPT = (
-        "你是一个专业的搜索查询优化专家。请将以下用户查询改写为3个不同的搜索查询，"
-        "使其更适合信息检索。每个改写应侧重不同角度，但保持原始意图不变。\n\n"
-        "原始查询: {query}\n\n"
-        "上下文信息: {context}\n\n"
-        "请以JSON数组格式返回改写后的查询，例如: [\"改写1\", \"改写2\", \"改写3\"]\n"
-        "只返回JSON数组，不要其他内容。"
-    )
-
-    DECOMPOSE_PROMPT = (
-        "你是一个专业的搜索查询分解专家。如果以下查询是复杂查询，"
-        "请将其分解为2-4个更简单的子查询，每个子查询聚焦一个方面。\n"
-        "如果查询本身足够简单，则返回原始查询即可。\n\n"
-        "原始查询: {query}\n\n"
-        "请以JSON数组格式返回分解后的子查询，例如: [\"子查询1\", \"子查询2\"]\n"
-        "只返回JSON数组，不要其他内容。"
-    )
-
-    EXPAND_PROMPT = (
-        "你是一个专业的搜索查询扩展专家。请为以下查询生成3个语义相关的扩展查询，"
-        "用于提高检索召回率。扩展查询应包含同义词、相关术语或不同表述方式。\n\n"
-        "原始查询: {query}\n\n"
-        "上下文信息: {context}\n\n"
-        "请以JSON数组格式返回扩展查询，例如: [\"扩展1\", \"扩展2\", \"扩展3\"]\n"
-        "只返回JSON数组，不要其他内容。"
-    )
+    # 提示词外置到 config/prompts.yaml（tools.agentic_rag.rewrite/decompose/expand）
+    # 调用处通过 _load_agentic_rag_prompt() 加载
 
     def __init__(self, tool_registry=None, model: str = "doubao-pro-32k"):
         self._tool_registry = tool_registry
@@ -141,24 +163,26 @@ class QueryExpander:
         all_variations: List[str] = [query]  # Always start with original
 
         # Step 1: Rewrite
-        rewrite_prompt = self.REWRITE_PROMPT.format(
+        rewrite_prompt = _load_agentic_rag_prompt(
+            "rewrite",
             query=query, context=context_str or "无"
         )
-        rewrite_text = await self._call_llm(rewrite_prompt)
+        rewrite_text = await self._call_llm(rewrite_prompt) if rewrite_prompt else ""
         rewrites = self._parse_json_list(rewrite_text)
         all_variations.extend(rewrites)
 
         # Step 2: Decompose
-        decompose_prompt = self.DECOMPOSE_PROMPT.format(query=query)
-        decompose_text = await self._call_llm(decompose_prompt)
+        decompose_prompt = _load_agentic_rag_prompt("decompose", query=query)
+        decompose_text = await self._call_llm(decompose_prompt) if decompose_prompt else ""
         decompositions = self._parse_json_list(decompose_text)
         all_variations.extend(decompositions)
 
         # Step 3: Expand
-        expand_prompt = self.EXPAND_PROMPT.format(
+        expand_prompt = _load_agentic_rag_prompt(
+            "expand",
             query=query, context=context_str or "无"
         )
-        expand_text = await self._call_llm(expand_prompt)
+        expand_text = await self._call_llm(expand_prompt) if expand_prompt else ""
         expansions = self._parse_json_list(expand_text)
         all_variations.extend(expansions)
 
@@ -190,26 +214,8 @@ class ContentSynthesizer:
     - Detect and note conflicting information across sources
     """
 
-    SYNTHESIZE_PROMPT = (
-        "你是一个专业的内容综合专家。请根据以下检索到的文档，综合回答用户的问题。\n\n"
-        "要求:\n"
-        "1. 综合所有文档中的相关信息，不要遗漏重要内容\n"
-        "2. 如果不同文档之间存在矛盾或冲突，请明确指出并说明差异\n"
-        "3. 在回答末尾标注信息来源\n"
-        "4. 使用{style}风格撰写\n\n"
-        "用户问题: {query}\n\n"
-        "检索到的文档:\n{documents}\n\n"
-        "请综合以上信息，撰写一个完整、准确的回答。"
-    )
-
-    CONFLICT_CHECK_PROMPT = (
-        "请检查以下文档之间是否存在事实性矛盾或冲突信息。\n\n"
-        "文档:\n{documents}\n\n"
-        "如果存在冲突，请以JSON格式列出:\n"
-        "[{{\"claim\": \"冲突的观点\", \"source_a\": \"文档A的表述\", \"source_b\": \"文档B的表述\"}}]\n"
-        "如果没有冲突，返回空数组 []\n"
-        "只返回JSON数组，不要其他内容。"
-    )
+    SYNTHESIZE_PROMPT = ""  # 外置到 config/prompts.yaml（tools.agentic_rag.synthesize）
+    CONFLICT_CHECK_PROMPT = ""  # 外置到 config/prompts.yaml（tools.agentic_rag.conflict_check)
 
     STYLE_MAP = {
         "academic": "学术严谨",
@@ -265,8 +271,8 @@ class ContentSynthesizer:
             return []
 
         doc_text = self._format_documents(documents)
-        prompt = self.CONFLICT_CHECK_PROMPT.format(documents=doc_text)
-        response = await self._call_llm(prompt)
+        prompt = _load_agentic_rag_prompt("conflict_check", documents=doc_text)
+        response = await self._call_llm(prompt) if prompt else ""
 
         if not response:
             return []
@@ -320,12 +326,13 @@ class ContentSynthesizer:
 
         # Synthesize
         doc_text = self._format_documents(documents)
-        prompt = self.SYNTHESIZE_PROMPT.format(
+        prompt = _load_agentic_rag_prompt(
+            "synthesize",
             query=query,
             documents=doc_text,
             style=style_label,
         )
-        synthesized = await self._call_llm(prompt)
+        synthesized = await self._call_llm(prompt) if prompt else ""
 
         if not synthesized:
             # Fallback: basic concatenation when LLM is unavailable

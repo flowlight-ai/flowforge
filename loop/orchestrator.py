@@ -22,16 +22,42 @@ logger = get_logger("loop.orchestrator")
 class LoopOrchestrator:
     """通用 Loop 编排器 — 通过 LoopExecutor 执行任务，提取结果，支持降级。"""
 
+    # 平台默认命名空间（始终最后一个尝试）
+    PLATFORM_NAMESPACE = "flowforge:"
+
     def __init__(self, sdk=None):
         self._sdk = sdk
+
+    def _discover_agent_namespaces(self) -> list[str]:
+        """动态发现已注册的 Agent 命名空间列表。
+
+        优先使用 flowforge.core.namespace 注册表（各 *Forge 通过
+        register_namespace 注册自己的命名空间）。
+        平台命名空间 'flowforge:' 始终最后尝试。
+
+        Returns:
+            list[str]: 命名空间前缀列表（含冒号），如 ['contentforge:', 'flowforge:']
+        """
+        namespaces: list[str] = []
+        try:
+            from flowforge.core.namespace import get_all_namespaces
+            for project in get_all_namespaces():
+                namespaces.append(f"{project}:")
+        except Exception as e:
+            logger.debug(f"[LoopOrchestrator] namespace registry lookup failed: {e}")
+
+        # 平台命名空间始终在列（最后尝试）
+        if self.PLATFORM_NAMESPACE not in namespaces:
+            namespaces.append(self.PLATFORM_NAMESPACE)
+        return namespaces
 
     async def run(
         self,
         task_id: str,
         input_data: dict,
-        template_name: str = "deep-article-loop",
+        template_name: str = "",
         persona: str = "default",
-        sop_name: str = "create",
+        sop_name: str = "",
         fallback_agent_name: str | None = None,
     ) -> dict:
         """执行任务 — 通过 LoopExecutor（含多评委评审+反思迭代）。
@@ -39,9 +65,9 @@ class LoopOrchestrator:
         Args:
             task_id: 任务ID
             input_data: 输入数据（topic_list, research_materials等）
-            template_name: Loop模板名
+            template_name: Loop模板名（空串表示使用注册表中第一个可用模板）
             persona: 人设
-            sop_name: SOP名称
+            sop_name: SOP名称（空串表示不指定SOP）
             fallback_agent_name: 降级时直接调用的Agent名
 
         Returns:
@@ -91,6 +117,21 @@ class LoopOrchestrator:
             config_dir = project_config_dir
 
         loop_registry = LoopRegistry(config_dir=config_dir)
+
+        # 空模板名：尝试使用注册表中第一个可用模板（业务无关降级）
+        if not template_name:
+            try:
+                available = loop_registry.list_names() if hasattr(loop_registry, 'list_names') else []
+                if available:
+                    template_name = available[0]
+                    logger.info(f"[LoopOrchestrator] template_name 为空，使用首个可用模板: '{template_name}'")
+                else:
+                    logger.warning("[LoopOrchestrator] template_name 为空且注册表无可用模板")
+                    return None
+            except Exception as e:
+                logger.warning(f"[LoopOrchestrator] 枚举可用模板失败: {e}")
+                return None
+
         template = loop_registry.get(template_name)
         if template is None:
             logger.warning(f"[LoopOrchestrator] Loop模板 '{template_name}' 未找到")
@@ -141,7 +182,10 @@ class LoopOrchestrator:
         # 支持namespace查找
         agent = agents.get(agent_name)
         if agent is None and ':' not in agent_name:
-            for ns in ('contentforge:', 'flowforge:'):
+            # 动态发现已注册的命名空间（消除硬编码 'contentforge:' 业务耦合）
+            # 各 *Forge 通过 flowforge.core.namespace.register_namespace 注册
+            namespaces = self._discover_agent_namespaces()
+            for ns in namespaces:
                 agent = agents.get(f'{ns}{agent_name}')
                 if agent:
                     break

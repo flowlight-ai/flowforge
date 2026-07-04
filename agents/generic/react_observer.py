@@ -14,13 +14,6 @@ class ReactObserverAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.react_observer",
-            "You are an observer in a ReAct loop. Analyze the action result and extract key observations.\n"
-            "Original task: {query}\n"
-            "Previous thought: {thought}\n"
-            "Action result: {action_output}\n\n"
-            "Provide a concise observation as JSON:\n"
-            '{{"observation": "what you observed", "progress": "description of progress", '
-            '"remaining": "what still needs to be done"}}',
             query=query,
             thought=thought,
             action_output=action_output,

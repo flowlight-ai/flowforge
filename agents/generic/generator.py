@@ -14,12 +14,6 @@ class GeneratorAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.generator",
-            "You are a generation agent. Produce content based on the task requirements.\n"
-            "Task: {task}\n"
-            "Style: {style}\n"
-            "{requirements_section}"
-            "\nGenerate the content as JSON:\n"
-            '{{"generated": "your generated content", "metadata": {{"word_count": 0, "quality_estimate": 0.0-1.0}}}}',
             task=task,
             style=style,
             requirements_section=f"Requirements: {requirements}\n" if requirements else "",

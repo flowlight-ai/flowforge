@@ -14,13 +14,6 @@ class FinalizerAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.finalizer",
-            "You are a finalization agent. Polish and finalize the content after iterative refinement.\n"
-            "Original task: {task}\n"
-            "Content to finalize: {draft}\n"
-            "{critique_section}"
-            "\nProduce the final polished version as JSON:\n"
-            '{{"final_output": "your finalized content", "quality_notes": "notes on quality", '
-            '"final_score_estimate": 0.0-1.0}}',
             task=task,
             draft=draft,
             critique_section=f"Last critique: {critique}\n" if critique else "",

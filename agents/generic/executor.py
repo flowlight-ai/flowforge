@@ -20,13 +20,14 @@ class ExecutorAgent(GenericAgent):
             if i < current_step_index:
                 continue
             step_desc = step.get("description", str(step)) if isinstance(step, dict) else str(step)
-            prompt = (
-                f"Execute the following plan step and describe the result:\n"
-                f"Step {i + 1}/{len(steps)}: {step_desc}\n"
-                f"Output as JSON: {{\"step_result\": \"result description\", \"status\": \"success/partial/failed\"}}"
+            prompt = self._get_prompt(
+                "flowforge.agent.executor.step",
+                step_index=i + 1,
+                total_steps=len(steps),
+                step_desc=step_desc,
             )
-            content = await self._call_llm(context, prompt)
-            data = self._extract_json(content)
+            content = await self._call_llm(context, prompt) if prompt else ""
+            data = self._extract_json(content) if content else {}
             if isinstance(data, str):
                 data = {"step_result": data, "status": "partial"}
             completed.append({"step": i + 1, "result": data})

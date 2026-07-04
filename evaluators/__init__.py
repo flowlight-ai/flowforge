@@ -1,20 +1,15 @@
-"""FlowForge evaluator agents for multi-dimension scoring.
+"""FlowForge evaluator framework — base classes and registry only.
 
-All evaluator agents have been migrated from DevForge to FlowForge so that
-every *forge project can reuse them.  DevForge now re-exports these classes
-with a DeprecationWarning.
+Business-specific evaluator agents (BusinessValueEvaluatorAgent, CodeQualityEvaluatorAgent,
+etc.) have been migrated to devforge/evaluators/ to fix P8A architecture boundary violation.
+FlowForge only retains the abstract base class (EvaluatorAgent), Score model, and
+EvaluatorRegistry/EvaluatorConfig/ScoringRule which are generic platform capabilities.
+
+DevForge re-exports these classes from devforge.evaluators.
 """
 from flowforge.evaluators.models import Score
 from flowforge.evaluators.base import EvaluatorAgent
 from flowforge.evaluators.registry import EvaluatorConfig, EvaluatorRegistry, ScoringRule
-from flowforge.evaluators.business_value import BusinessValueEvaluatorAgent
-from flowforge.evaluators.feasibility import FeasibilityEvaluatorAgent
-from flowforge.evaluators.security import SecurityEvaluatorAgent
-from flowforge.evaluators.ux import UXEvaluatorAgent
-from flowforge.evaluators.code_quality import CodeQualityEvaluatorAgent
-from flowforge.evaluators.test_coverage import TestCoverageEvaluatorAgent
-from flowforge.evaluators.deploy_readiness import DeployReadinessEvaluatorAgent
-from flowforge.evaluators.release_risk import ReleaseRiskEvaluatorAgent
 
 __all__ = [
     "Score",
@@ -22,12 +17,4 @@ __all__ = [
     "EvaluatorConfig",
     "EvaluatorRegistry",
     "ScoringRule",
-    "BusinessValueEvaluatorAgent",
-    "FeasibilityEvaluatorAgent",
-    "SecurityEvaluatorAgent",
-    "UXEvaluatorAgent",
-    "CodeQualityEvaluatorAgent",
-    "TestCoverageEvaluatorAgent",
-    "DeployReadinessEvaluatorAgent",
-    "ReleaseRiskEvaluatorAgent",
 ]

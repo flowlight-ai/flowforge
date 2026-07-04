@@ -14,13 +14,6 @@ class ReviewerAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.reviewer",
-            "You are a review coordination agent. Prepare a review summary for human reviewers.\n"
-            "Task: {task}\n"
-            "Content to review: {content_to_review}\n"
-            "Review type: {review_type}\n\n"
-            "Provide a structured review brief as JSON:\n"
-            '{{"summary": "brief summary of what needs review", "key_points": ["point1"], '
-            '"risk_areas": ["area1"], "recommendation": "approve/revise/reject"}}',
             task=task,
             content_to_review=content_to_review,
             review_type=review_type,
