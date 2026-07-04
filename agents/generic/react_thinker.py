@@ -14,14 +14,6 @@ class ReactThinkerAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.react_thinker",
-            "You are a reasoning agent in a ReAct loop. Analyze the current situation and decide the next action.\n"
-            "Task: {query}\n"
-            "{observation_section}"
-            "{iteration_section}"
-            "Output your reasoning as JSON:\n"
-            '{{"thought": "your analysis", "next_action": "action_name", '
-            '"action_input": {{"key": "value"}}, "is_complete": false}}\n'
-            "Set is_complete to true if the task is fully resolved.",
             query=query,
             observation_section=f"Latest observation: {observation}\n" if observation else "",
             iteration_section=f"Iteration: {iteration}\n" if iteration > 0 else "",

@@ -3,14 +3,66 @@
 import asyncio
 import json
 import re
+import yaml
 from collections import Counter
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any
 from flowforge.core.task_context import TaskContext
 from flowforge.core.base_tool import ToolInput
 from flowforge.loop.state import Verdict
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("loop.verifier")
+
+# 配置文件路径（flowforge/loop/verifier.py → flowforge/config/prompts.yaml）
+_VERIFIER_PROMPTS_PATH = Path(__file__).parent.parent / "config" / "prompts.yaml"
+
+
+def _load_verifier_prompt(section: str) -> str:
+    """从 prompts.yaml 加载 verifier 字符串提示词。
+
+    fail-open: 加载失败时返回空字符串并记录 ERROR 日志。
+    """
+    try:
+        if not _VERIFIER_PROMPTS_PATH.exists():
+            logger.error(f"_load_verifier_prompt: prompts.yaml not found at {_VERIFIER_PROMPTS_PATH}")
+            return ""
+        with open(_VERIFIER_PROMPTS_PATH, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        value = data.get(section, "")
+        if isinstance(value, str):
+            return value
+        logger.error(
+            f"_load_verifier_prompt: section '{section}' expected str, got {type(value).__name__}"
+        )
+        return ""
+    except Exception as e:
+        logger.error(f"_load_verifier_prompt: failed to load section '{section}': {e}")
+        return ""
+
+
+def _load_verifier_dict(section: str) -> dict[str, Any]:
+    """从 prompts.yaml 加载 verifier dict 配置。
+
+    fail-open: 加载失败时返回空 dict 并记录 ERROR 日志。
+    """
+    try:
+        if not _VERIFIER_PROMPTS_PATH.exists():
+            logger.error(f"_load_verifier_dict: prompts.yaml not found at {_VERIFIER_PROMPTS_PATH}")
+            return {}
+        with open(_VERIFIER_PROMPTS_PATH, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        value = data.get(section, {})
+        if isinstance(value, dict):
+            return value
+        logger.error(
+            f"_load_verifier_dict: section '{section}' expected dict, got {type(value).__name__}"
+        )
+        return {}
+    except Exception as e:
+        logger.error(f"_load_verifier_dict: failed to load section '{section}': {e}")
+        return {}
 
 
 class LoopVerifier(ABC):
@@ -255,67 +307,27 @@ class MultiJudgeVerifier(LoopVerifier):
             ...
     """
 
-    # 默认评审维度及权重（仅作为 fallback，实际应从配置读取）
-    DEFAULT_DIMENSIONS: dict[str, float] = {
-        "quality": 0.30,
-        "accuracy": 0.25,
-        "completeness": 0.25,
-        "clarity": 0.20,
-    }
+    # 默认评审维度及权重（已外置到 prompts.yaml: flowforge.verifier.dimensions）
+    DEFAULT_DIMENSIONS: dict[str, float] = {}
 
-    # 默认维度说明
-    DEFAULT_DIMENSION_DESCRIPTIONS: dict[str, str] = {
-        "quality": "整体质量是否达标",
-        "accuracy": "内容是否准确无误",
-        "completeness": "内容是否完整无遗漏",
-        "clarity": "表达是否清晰易懂",
-    }
+    # 默认维度说明（已外置到 prompts.yaml: flowforge.verifier.dimension_descriptions）
+    DEFAULT_DIMENSION_DESCRIPTIONS: dict[str, str] = {}
 
-    # 默认评审角色
-    DEFAULT_JUDGE_ROLE: str = "质量评审专家"
+    # 默认评审角色（已外置到 prompts.yaml: flowforge.verifier.judge_role）
+    DEFAULT_JUDGE_ROLE: str = ""
 
-    # 默认上下文段定义
-    DEFAULT_CONTEXT_SECTIONS: list[dict] = [
-        {"template": "角色/人设: {persona}", "source": "task.persona"},
-        {"template": "任务描述: {task_desc}", "source": "task.input_data.task"},
-    ]
+    # 默认上下文段定义（已外置到 prompts.yaml: flowforge.verifier.context_sections）
+    DEFAULT_CONTEXT_SECTIONS: list[dict] = []
 
-    # 默认评审提示词模板（严格评审，不引导高分）
-    DEFAULT_JUDGE_CONTEXT_TEMPLATE: str = """\
-你是一位{judge_role}。请对以下内容进行多维度独立评审。
-
-评审上下文:
-{context_sections}
-
-评审维度:
-{dimension_lines}
-
-评分规则(0.0-1.0):
-0.95-1.00 卓越 | 0.90-0.94 优秀 | 0.85-0.89 良好 | 0.70-0.84 及格 | 0.00-0.69 不及格
-
-待评审内容:
-{content}
-
-【绝对要求】你只能输出一个JSON对象。不要输出任何其他内容。不要用```json```包裹。直接以{{开头，以}}结尾。
-
-输出格式:
-{{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1","改进建议2"]}}
-
-示例:
-{{"scores":{{"quality":0.75,"accuracy":0.80,"completeness":0.72,"clarity":0.78}},"improvement_suggestions":["建议1","建议2"]}}
-
-评分指引:
-1. 每个维度给出0.0-1.0之间的浮点数，保留两位小数
-2. 严格按维度标准评分，不要因为整体还行就给所有维度高分
-3. improvement_suggestions列出最需改进的方面(3-5条)
-4. 评审要严格客观，宁可低估不要高估"""
+    # 默认评审提示词模板（已外置到 prompts.yaml: flowforge.verifier.judge_context_template）
+    DEFAULT_JUDGE_CONTEXT_TEMPLATE: str = ""
 
     async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
         judges_raw = config.get("judges", [])
         exclude_creator = config.get("exclude_creator", True)
         # 质量阈值统一为0.9（项目规则：禁止私自降低质量分阈值，必须为0.9）
         threshold = config.get("pass_threshold", 0.9)
-        dimensions = config.get("dimensions", self.DEFAULT_DIMENSIONS)
+        dimensions = config.get("dimensions") or _load_verifier_dict("flowforge.verifier.dimensions")
         # 全局 prefer_api（可作为 per-judge 的默认值）
         global_prefer_api = config.get("prefer_api", False)
 
@@ -605,10 +617,10 @@ class MultiJudgeVerifier(LoopVerifier):
         """构建评审提示词 — 完全配置驱动，不硬编码任何业务领域信息。"""
 
         # 1. 读取评审角色
-        judge_role = config.get("judge_role", self.DEFAULT_JUDGE_ROLE)
+        judge_role = config.get("judge_role") or _load_verifier_prompt("flowforge.verifier.judge_role")
 
         # 2. 构建上下文段 — 从 context_sections 配置动态提取
-        context_sections_config = config.get("context_sections", self.DEFAULT_CONTEXT_SECTIONS)
+        context_sections_config = config.get("context_sections") or _load_verifier_dict("flowforge.verifier.context_sections").get("sections", [])
         context_lines: list[str] = []
         for section in context_sections_config:
             template = section.get("template", "")
@@ -625,7 +637,7 @@ class MultiJudgeVerifier(LoopVerifier):
         context_sections_str = "\n".join(context_lines) if context_lines else "无"
 
         # 3. 构建维度行 — 包含维度说明
-        dimension_descriptions = config.get("dimension_descriptions", self.DEFAULT_DIMENSION_DESCRIPTIONS)
+        dimension_descriptions = config.get("dimension_descriptions") or _load_verifier_dict("flowforge.verifier.dimension_descriptions")
         dim_lines: list[str] = []
         for dim, weight in dimensions.items():
             desc = dimension_descriptions.get(dim, "")
@@ -644,7 +656,7 @@ class MultiJudgeVerifier(LoopVerifier):
         score_fields = ",\n    ".join(score_field_lines)
 
         # 5. 读取提示词模板
-        template = config.get("judge_context_template", self.DEFAULT_JUDGE_CONTEXT_TEMPLATE)
+        template = config.get("judge_context_template") or _load_verifier_prompt("flowforge.verifier.judge_context_template")
 
         # 6. 渲染模板（加 try/except 保护，避免 KeyError 中断整个迭代）
         try:
@@ -663,7 +675,8 @@ class MultiJudgeVerifier(LoopVerifier):
                 f"回退到默认模板。自定义模板前300字符: {template[:300]!r}"
             )
             try:
-                prompt = self.DEFAULT_JUDGE_CONTEXT_TEMPLATE.format(
+                fallback_template = _load_verifier_prompt("flowforge.verifier.judge_context_template")
+                prompt = fallback_template.format(
                     judge_role=judge_role,
                     context_sections=context_sections_str,
                     dimension_lines="\n".join(dim_lines),
@@ -671,16 +684,23 @@ class MultiJudgeVerifier(LoopVerifier):
                     score_fields=score_fields,
                 )
             except Exception as fallback_e:
-                # 默认模板也失败，构造最小可用 prompt
+                # 默认模板也失败，构造最小可用 prompt（从 prompts.yaml 加载）
                 logger.error(
                     f"[verifier-diag] 默认模板也失败: {fallback_e}, 构造最小可用 prompt"
                 )
-                prompt = (
-                    f"你是{judge_role}。\n\n"
-                    f"评审维度:\n{chr(10).join(dim_lines)}\n\n"
-                    f"待评审内容:\n{content[:8000]}\n\n"
-                    f'输出JSON: {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1"]}}'
-                )
+                minimal_template = _load_verifier_prompt("flowforge.verifier.minimal_prompt")
+                try:
+                    prompt = minimal_template.format(
+                        judge_role=judge_role,
+                        dimension_lines="\n".join(dim_lines),
+                        content=content[:8000],
+                        score_fields=score_fields,
+                    )
+                except Exception as minimal_e:
+                    logger.error(
+                        f"[verifier-diag] minimal_prompt format failed: {minimal_e}"
+                    )
+                    prompt = ""
 
         # [诊断日志] 记录渲染后的 prompt 关键信息
         # 验证 content 是否正确注入到 prompt 中（用户反馈"传给llm评审的提示词里没有被评审的内容"）
@@ -712,15 +732,9 @@ class MultiJudgeVerifier(LoopVerifier):
         match = _re.search(r"\{(\w+)\}", template)
         return match.group(1) if match else ""
 
-    # 默认 system message（明确任务角色 + JSON 格式约束，避免 LLM 误解为"等待输入"）
-    # v2: 修复评委返回"我需要看到内容"的问题 — 原 system_msg 过于强硬，
-    #     让某些 LLM 误以为自己是"JSON 输出器"而非"评审员"，导致拒绝评审。
-    DEFAULT_JUDGE_SYSTEM_MESSAGE: str = (
-        "你是资深内容质量评审员。用户消息中已包含待评审的文章内容和评审维度，"
-        "请仔细阅读后给出每个维度的评分（0.00-1.00）和具体改进建议。"
-        "最终只输出一个JSON对象，不要输出解释、前缀或markdown代码块，"
-        '以 {"scores":{...}} 开头，以 } 结尾。'
-    )
+    def _get_judge_system_message(self) -> str:
+        """加载评委 system message — 从 prompts.yaml 加载，fail-open 返回空字符串。"""
+        return _load_verifier_prompt("flowforge.verifier.judge_system_message")
 
     async def _call_judge(self, model: str, prompt: str, task: TaskContext, prefer_api: bool = False) -> dict:
         """调用单个评委模型，返回解析后的评分字典。
@@ -736,7 +750,8 @@ class MultiJudgeVerifier(LoopVerifier):
             raise RuntimeError("TaskContext.tools is not available for judge invocation")
 
         # 使用 system message 强制 JSON 输出（针对 WebChat 模型优化）
-        system_msg = self.DEFAULT_JUDGE_SYSTEM_MESSAGE
+        # 从 prompts.yaml 加载（flowforge.verifier.judge_system_message）
+        system_msg = self._get_judge_system_message()
         judge_params = {
             "model": model,
             "messages": [

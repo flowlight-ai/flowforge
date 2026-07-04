@@ -21,12 +21,12 @@ class ReactActorAgent(GenericAgent):
                 state_updates={"last_action": next_action}
             )
         except Exception as e:
-            prompt = (
-                f"Execute the following action and describe the result:\n"
-                f"Action: {next_action}\nInput: {action_input}\n"
-                f"If you cannot execute the action directly, describe what should happen."
+            prompt = self._get_prompt(
+                "flowforge.agent.react_actor.fallback",
+                next_action=next_action,
+                action_input=action_input,
             )
-            content = await self._call_llm(context, prompt)
+            content = await self._call_llm(context, prompt) if prompt else ""
             return AgentOutput(
                 result={"action_taken": next_action, "action_output": content, "simulated": True},
                 state_updates={"last_action": next_action}

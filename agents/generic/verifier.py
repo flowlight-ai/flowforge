@@ -15,14 +15,6 @@ class VerifierAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.verifier",
-            "You are a verification agent. Check whether the execution results meet the task requirements.\n"
-            "Original task: {task}\n"
-            "Execution result: {execution_result}\n"
-            "{plan_section}"
-            "{criteria_section}"
-            "\nOutput verification as JSON:\n"
-            '{{"is_valid": true/false, "score": 0.0-1.0, "issues": ["issue1"], '
-            '"strengths": ["strength1"], "recommendation": "accept/reject/revise"}}',
             task=task,
             execution_result=execution_result,
             plan_section=f"Original plan: {plan}\n" if plan else "",

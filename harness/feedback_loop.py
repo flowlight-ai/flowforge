@@ -218,6 +218,41 @@ class FeedbackLoop:
                      f"mode={mode_str} content_len={content_len}")
 
         if not content or (isinstance(content, str) and len(content.strip()) < 100):
+            # P0-22: 数据采集/计算类Agent（如stockforge）返回短content是正常的
+            # 因为实质数据在 records/indicators/financial 等字段中
+            # 仅当content短且无实质数据字段时才FAIL
+            data_field_keys = (
+                "records", "indicators", "financial", "kline_data",
+                "prediction", "risk_assessment", "report",
+                "data", "result", "output",
+            )
+            has_substantial_data = False
+            if isinstance(result, dict):
+                for dk in data_field_keys:
+                    dv = result.get(dk)
+                    if dv is None:
+                        continue
+                    if isinstance(dv, (list, dict)) and len(dv) > 0:
+                        has_substantial_data = True
+                        break
+                    if isinstance(dv, str) and len(dv) > 100:
+                        has_substantial_data = True
+                        break
+
+            if has_substantial_data:
+                # 数据采集/计算步骤：content短但有实质数据 → PASS（跳过LLM评审）
+                self._gate_counts[GATE_PASS] += 1
+                result["_feedback"] = {
+                    "gate": GATE_PASS,
+                    "mode": mode_str,
+                    "reason": "data_rich_short_content_auto_pass",
+                    "action": "none",
+                }
+                logger.info(f"[FeedbackLoop] ◀ EVAL END   | task={task_id} gate=PASS (auto) "
+                             f"reason=data_rich_short_content({content_len} chars) "
+                             f"counts={dict(self._gate_counts)}")
+                return result
+
             # Too short to evaluate meaningfully — FAIL instead of PASS
             # (content < 100 chars indicates a serious output quality problem)
             self._gate_counts[GATE_FAIL] += 1

@@ -190,6 +190,32 @@ agent.image_filter: |
 
   候选图片: {images}
 
+agent.image_recommend: |
+  为文章「{topic}」推荐配图方案。请描述适合的图片类型、风格和搜索关键词。
+  输出JSON: {{"image_suggestions": [{{"type": "图片类型", "style": "风格", "search_keywords": ["关键词1"], "placement": "放置位置"}}]}}
+
+agent.research_full: |
+  为以下主题进行深度研究，制定研究计划并综合分析。
+  主题: {topic}
+  深度: {depth}
+
+  请输出完整的研究报告，包含：
+  1. 研究背景和问题
+  2. 关键发现
+  3. 深度分析
+  4. 结论和建议
+
+flowforge.agent.react_actor.fallback: |
+  Execute the following action and describe the result:
+  Action: {next_action}
+  Input: {action_input}
+  If you cannot execute the action directly, describe what should happen.
+
+flowforge.agent.executor.step: |
+  Execute the following plan step and describe the result:
+  Step {step_index}/{total_steps}: {step_desc}
+  Output as JSON: {{"step_result": "result description", "status": "success/partial/failed"}}
+
 # ── brain/plan_generator 提示词 ──
 
 brain.plan_generator.initial_plan: |
@@ -339,12 +365,12 @@ loop.planner.replan: |
 # ── loop/reflector 提示词 ──
 
 loop.reflector.reflect: |
-  你是一位经验丰富的质量改进专家。你的任务是根据评审反馈和待改进的文章内容，分析失败根因并生成具体的、可操作的改进建议。
+  你是一位经验丰富的质量改进专家。你的任务是根据评审反馈和待改进的输出内容，分析失败根因并生成具体的、可操作的改进建议。
 
   ## 评审反馈（来自评委的低分维度错误）
   {errors}
 
-  ## 待改进的文章内容（必须基于此分析具体问题）
+  ## 待改进的输出内容（必须基于此分析具体问题）
   {last_draft}
 
   ## 任务上下文
@@ -354,21 +380,22 @@ loop.reflector.reflect: |
   历史反思: {history}
 
   ## 分析要求
-  1. **基于文章内容定位问题**：必须引用文章中的具体段落/句子/用词说明问题（如"开头'近年来'属于AI模板化用语"、"第二段缺数据支撑，仅有'非常广泛'等空泛描述"），不要泛泛而谈
+  1. **基于输出内容定位问题**：必须引用输出中的具体段落/句子/数据说明问题（如"开头'近年来'属于AI模板化用语"、"第二段缺数据支撑，仅有'非常广泛'等空泛描述"、"预测部分缺少置信度区间"），不要泛泛而谈
   2. **精准定位低分维度**：根据低分维度和加权贡献分析，找出对总分拖累最大的维度
-  3. **根因分析**：不要泛泛而谈"质量不够"，要具体到哪个维度为什么低分，并引用文章中的问题段落作为证据
+  3. **根因分析**：不要泛泛而谈"质量不够"，要具体到哪个维度为什么低分，并引用输出中的问题段落作为证据
   4. **可操作建议**：每条建议必须明确说明"如何改"而非"改什么"
      - 错误示例："提高内容深度"（太笼统）
      - 正确示例："第二段'非常广泛'改为具体数据，如'根据XX报告，2026年XX市场规模达XX亿'，用对比分析替代泛泛描述"
   5. **优先级排序**：按对总分影响从大到小排列建议
   6. **避免重复**：如果历史反思中已有建议，不要重复，而是给出更深层的改进方向
+  7. **输出内容为空时的处理**：如果输出内容为"无"或为空，说明上一次执行未产生有效输出，应分析任务输入和执行流程中的问题，建议如何确保产生有效输出
 
   ## 输出格式
   严格输出JSON对象，不要输出其他内容:
   {{
-    "root_cause": "一句话总结最关键的失败根因（引用文章中的具体问题）",
+    "root_cause": "一句话总结最关键的失败根因（引用输出中的具体问题）",
     "suggestions": [
-      "具体的、可操作的改进建议1（必须引用文章原句+给出修改方向）",
+      "具体的、可操作的改进建议1（必须引用输出原句+给出修改方向）",
       "具体的、可操作的改进建议2"
     ],
     "plan_adjustments": []
@@ -405,6 +432,95 @@ tools.web_search.search_prompt: |
   6. 严格输出JSON格式: {{"results": [{{"title": "信息标题", "url": "来源URL（如有）", "content": "详细摘要内容", "source_type": "llm_web_search"}}]}}
 
 tools.web_search.search_system: "你具备联网搜索能力，请务必利用联网功能搜索真实、最新的信息，不要编造内容。直接输出JSON，不要添加markdown代码块标记。"
+
+# ── tools/agentic_rag_core 提示词（从硬编码外置） ──
+
+tools.agentic_rag.rewrite: |
+  你是一个专业的搜索查询优化专家。请将以下用户查询改写为3个不同的搜索查询，
+  使其更适合信息检索。每个改写应侧重不同角度，但保持原始意图不变。
+
+  原始查询: {query}
+
+  上下文信息: {context}
+
+  请以JSON数组格式返回改写后的查询，例如: ["改写1", "改写2", "改写3"]
+  只返回JSON数组，不要其他内容。
+
+tools.agentic_rag.decompose: |
+  你是一个专业的搜索查询分解专家。如果以下查询是复杂查询，
+  请将其分解为2-4个更简单的子查询，每个子查询聚焦一个方面。
+  如果查询本身足够简单，则返回原始查询即可。
+
+  原始查询: {query}
+
+  请以JSON数组格式返回分解后的子查询，例如: ["子查询1", "子查询2"]
+  只返回JSON数组，不要其他内容。
+
+tools.agentic_rag.expand: |
+  你是一个专业的搜索查询扩展专家。请为以下查询生成3个语义相关的扩展查询，
+  用于提高检索召回率。扩展查询应包含同义词、相关术语或不同表述方式。
+
+  原始查询: {query}
+
+  上下文信息: {context}
+
+  请以JSON数组格式返回扩展查询，例如: ["扩展1", "扩展2", "扩展3"]
+  只返回JSON数组，不要其他内容。
+
+tools.agentic_rag.synthesize: |
+  你是一个专业的内容综合专家。请根据以下检索到的文档，综合回答用户的问题。
+
+  要求:
+  1. 综合所有文档中的相关信息，不要遗漏重要内容
+  2. 如果不同文档之间存在矛盾或冲突，请明确指出并说明差异
+  3. 在回答末尾标注信息来源
+  4. 使用{style}风格撰写
+
+  用户问题: {query}
+
+  检索到的文档:
+  {documents}
+
+  请综合以上信息，撰写一个完整、准确的回答。
+
+tools.agentic_rag.conflict_check: |
+  请检查以下文档之间是否存在事实性矛盾或冲突信息。
+
+  文档:
+  {documents}
+
+  如果存在冲突，请以JSON格式列出:
+  [{{"claim": "冲突的观点", "source_a": "文档A的表述", "source_b": "文档B的表述"}}]
+  如果没有冲突，返回空数组 []
+  只返回JSON数组，不要其他内容。
+
+# ── tools/translation 提示词（从硬编码外置） ──
+
+tools.translation.context.ecommerce: |
+  You are a professional e-commerce translator. Translate the following text to {target_lang}.
+  Preserve product names, brand names, and technical specifications.
+  Maintain a professional and persuasive tone suitable for e-commerce.
+
+  Text: {text}
+
+tools.translation.context.listing: |
+  You are an e-commerce listing optimization expert. Improve the following product listing
+  for {target_lang} market. Optimize title, description, and keywords for better search visibility.
+
+  Original listing: {text}
+
+tools.translation.context.customer_service: |
+  You are a customer service communication specialist. Translate the following message
+  to {target_lang} with a friendly, professional tone suitable for customer support.
+
+  Message: {text}
+
+tools.translation.context.specification: |
+  You are a technical specification translator. Translate the following specification
+  to {target_lang} with maximum precision. Preserve all technical terms, units, and standards.
+
+  Specification: {text}
+
 
 # ── flowforge/agents/generic 提示词（从硬编码外置） ──
 
@@ -618,3 +734,108 @@ flowforge.mode.plan_execute.generate_plan: |
   将以下任务分解为顺序执行步骤，输出 JSON 数组。最多{max_steps}步。
   格式: [{{"name": "step1", "task": "具体任务描述", "agent": "agent名或executor"}}]
   任务: {task}
+
+# === Loop Verifier & DeclarativeAgent externalized prompts ===
+# 以下键用于消除 flowforge/loop/verifier.py 与 flowforge/core/declarative_agent.py
+# 中的硬编码提示词（编程红线#11：禁止硬编码提示词）。
+# 业务上层（contentforge/devforge 等）可在自己的 prompts.yaml 中覆盖这些键。
+
+# MultiJudgeVerifier 评委 system message（verifier.py 原 DEFAULT_JUDGE_SYSTEM_MESSAGE）
+flowforge.verifier.judge_system_message: |
+  你是资深内容质量评审员。用户消息中已包含待评审的文章内容和评审维度，
+  请仔细阅读后给出每个维度的评分（0.00-1.00）和具体改进建议。
+  最终只输出一个JSON对象，不要输出解释、前缀或markdown代码块，
+  以 {"scores":{...}} 开头，以 } 结尾。
+
+# DeclarativeAgent refine prompt 兜底（declarative_agent.py 原内联 f-string）
+# 占位符: {draft} {feedback_text}
+flowforge.loop.refine_fallback: |
+  你是资深内容创作者。以下是上一轮创作的文章和评委的改进建议，请根据建议重写文章。
+
+  ## 上一轮文章
+  {draft}
+
+  ## 评委改进建议（必须逐条落实）
+  {feedback_text}
+
+  ## 要求
+  1. 针对每条评委建议，在文章中做出实质性改进
+  2. 保留原文的优点和有效内容
+  3. 重点关注低分维度
+  4. 输出完整的中文Markdown文章，第一行必须是 # 标题
+
+# === MultiJudgeVerifier 默认配置（从 verifier.py 类常量外置） ===
+# 以下键用于消除 flowforge/loop/verifier.py 中 MultiJudgeVerifier 的硬编码类常量
+# （编程红线#11：禁止硬编码提示词）。
+# 业务上层（contentforge/devforge 等）可在自己的 prompts.yaml 中覆盖这些键。
+
+# MultiJudgeVerifier 默认评审维度及权重（verifier.py 原 DEFAULT_DIMENSIONS）
+flowforge.verifier.dimensions:
+  quality: 0.30
+  accuracy: 0.25
+  completeness: 0.25
+  clarity: 0.20
+
+# MultiJudgeVerifier 默认维度说明（verifier.py 原 DEFAULT_DIMENSION_DESCRIPTIONS）
+flowforge.verifier.dimension_descriptions:
+  quality: 整体质量是否达标
+  accuracy: 内容是否准确无误
+  completeness: 内容是否完整无遗漏
+  clarity: 表达是否清晰易懂
+
+# MultiJudgeVerifier 默认评审角色（verifier.py 原 DEFAULT_JUDGE_ROLE）
+flowforge.verifier.judge_role: "质量评审专家"
+
+# MultiJudgeVerifier 默认上下文段定义（verifier.py 原 DEFAULT_CONTEXT_SECTIONS）
+# 注意: 包装在 sections 键下，便于 _load_verifier_dict 作为 dict 加载后提取 list
+flowforge.verifier.context_sections:
+  sections:
+    - template: "角色/人设: {persona}"
+      source: "task.persona"
+    - template: "任务描述: {task_desc}"
+      source: "task.input_data.task"
+
+# MultiJudgeVerifier 默认评审提示词模板（verifier.py 原 DEFAULT_JUDGE_CONTEXT_TEMPLATE）
+# 占位符: {judge_role} {context_sections} {dimension_lines} {content} {score_fields}
+# 注意: 字面花括号已转义为 {{ }}（.format() 会还原为单层花括号）
+flowforge.verifier.judge_context_template: |
+  你是一位{judge_role}。请对以下内容进行多维度独立评审。
+
+  评审上下文:
+  {context_sections}
+
+  评审维度:
+  {dimension_lines}
+
+  评分规则(0.0-1.0):
+  0.95-1.00 卓越 | 0.90-0.94 优秀 | 0.85-0.89 良好 | 0.70-0.84 及格 | 0.00-0.69 不及格
+
+  待评审内容:
+  {content}
+
+  【绝对要求】你只能输出一个JSON对象。不要输出任何其他内容。不要用```json```包裹。直接以{{开头，以}}结尾。
+
+  输出格式:
+  {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1","改进建议2"]}}
+
+  示例:
+  {{"scores":{{"quality":0.75,"accuracy":0.80,"completeness":0.72,"clarity":0.78}},"improvement_suggestions":["建议1","建议2"]}}
+
+  评分指引:
+  1. 每个维度给出0.0-1.0之间的浮点数，保留两位小数
+  2. 严格按维度标准评分，不要因为整体还行就给所有维度高分
+  3. improvement_suggestions列出最需改进的方面(3-5条)
+  4. 评审要严格客观，宁可低估不要高估
+
+# MultiJudgeVerifier 兜底最小提示词（verifier.py 原内联 f-string）
+# 占位符: {judge_role} {dimension_lines} {content} {score_fields}
+flowforge.verifier.minimal_prompt: |
+  你是{judge_role}。
+
+  评审维度:
+  {dimension_lines}
+
+  待评审内容:
+  {content}
+
+  输出JSON: {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1"]}}

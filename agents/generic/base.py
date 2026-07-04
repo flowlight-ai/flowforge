@@ -79,20 +79,31 @@ class GenericAgent(BaseAgent, ABC):
         raise RuntimeError(f"Tool '{tool_name}' not available")
 
     def _get_prompt(self, key: str, fallback: str = "", **kwargs) -> str:
-        """从 PromptManager 加载提示词，失败时使用 fallback。"""
+        """从 PromptManager 加载提示词（红线#11：禁止硬编码提示词）.
+
+        Args:
+            key: PromptManager 中的提示词 key
+            fallback: 兼容旧调用签名的忽略参数（已弃用，保留仅为向后兼容）
+            **kwargs: 模板格式化参数
+
+        Returns:
+            渲染后的提示词字符串，未命中则返回空字符串（fail-open）
+        """
+        from flowforge.core.tracing import get_logger
+        logger = get_logger("flowforge.agents.generic.base")
         try:
             from flowforge.core.prompt_manager import get_prompt
             result = get_prompt(key, **kwargs)
             if result:
                 return result
-        except Exception:
-            pass
-        if fallback and kwargs:
-            try:
-                return fallback.format(**kwargs)
-            except (KeyError, ValueError, IndexError):
-                pass
-        return fallback or ""
+            logger.error(
+                f"prompt '{key}' not found in prompts.yaml (fail-open)"
+            )
+        except Exception as e:
+            logger.error(
+                f"failed to load prompt '{key}': {e} (fail-open)"
+            )
+        return ""
 
     @staticmethod
     def _extract_json(text: str) -> Any:

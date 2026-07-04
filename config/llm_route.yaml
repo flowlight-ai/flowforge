@@ -28,8 +28,10 @@ routes:
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # writer 创作需要较长时间(OpenRoute WebChat 推理 90s+,含锁等待可能 200s+)
-  # 提升 timeout 到 300s 避免超时（用户 memory: 长文章 LLM timeout 应为 2 分钟+）
+  # v3.2: timeout 300→90, max_retries 2→0 — 用户要求3分钟内完成创作
+  # 原配置 timeout=300s×max_retries=2=900s 导致writer阶段548s
+  # 新配置: 单次90s不重试，直接fallback；2个模型=180s(3分钟)上限
+  # primary(Doubao-Seed2.0)正常30-60s返回，不需300s超时
   creative:
     primary_provider: openroute
     primary_model: Doubao-Seed2.0
@@ -44,8 +46,8 @@ routes:
       conditions:
         - rate_limited
         - timeout
-      timeout_seconds: 300
-      max_retries: 2
+      timeout_seconds: 90
+      max_retries: 0
     default_temperature: 0.9
     default_max_tokens: 8192
 
@@ -104,21 +106,41 @@ routes:
   # reflector 只需生成 3-5 条改进建议，不需要长文生成
   reflector:
     primary_provider: openroute
-    primary_model: Doubao-Seed2.0
+    primary_model: DeepSeek-V4-Pro
     fallback_providers:
       - openroute
     fallback_models:
-      - DeepSeek-V4-Pro
       - GLM-5.1
+      - Doubao-Seed2.0
     failover_policy:
       conditions:
         - rate_limited
         - timeout
       timeout_seconds: 90
+
+  # StockForge 股票分析路由（P0-21 新增）
+  # 原: stockforge agents 走 default 路由 → Doubao-Seed2.0 echo_response 导致失败
+  # 新: DeepSeek-V4-Pro 为主（稳定6-10s响应），Doubao-Seed2.0 降为 fallback
+  # 超时120s + max_retries=1，总上限240s（单步工具调用+LLM推理）
+  stock_analysis:
+    primary_provider: openroute
+    primary_model: DeepSeek-V4-Pro
+    fallback_providers:
+      - openroute
+    fallback_models:
+      - GLM-5.1
+      - Doubao-Seed2.0
+      - MiniMax-M3
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+        - echo_response
+      timeout_seconds: 120
       max_retries: 1
       retry_delay_seconds: 1.0
-    default_temperature: 0.5
-    default_max_tokens: 2048
+    default_temperature: 0.3
+    default_max_tokens: 4096
 
 # ==================== Agent 路由映射 ====================
 # Agent 命名空间 -> 路由名
@@ -172,6 +194,17 @@ agent_routes:
   mallforge:support_agent: default
   mallforge:report_generator: default
 
+  # StockForge Agent
+  # P0-21: stockforge agents 原走 default 路由 → Doubao-Seed2.0 echo_response 导致失败
+  # 改为走 stock_analysis 路由 → DeepSeek-V4-Pro（更稳定，无 echo 问题）
+  stockforge:stock_data: stock_analysis
+  stockforge:technical_indicator: stock_analysis
+  stockforge:prediction: stock_analysis
+  stockforge:risk: stock_analysis
+  stockforge:report: stock_analysis
+  stockforge:screening: stock_analysis
+  stockforge:bull_bear_debate: stock_analysis
+
 # ==================== Agent 模型参数覆盖 ====================
 # Agent 命名空间 -> 模型参数覆盖
 agent_model_params:
@@ -217,6 +250,26 @@ agent_model_params:
   mallforge:report_generator:
     temperature: 0.4
     json_mode: true
+
+  # StockForge Agent 模型参数（P0-21）
+  stockforge:stock_data:
+    temperature: 0.0
+    max_tokens: 2048
+  stockforge:technical_indicator:
+    temperature: 0.0
+    max_tokens: 2048
+  stockforge:prediction:
+    temperature: 0.3
+    max_tokens: 4096
+  stockforge:risk:
+    temperature: 0.3
+    max_tokens: 4096
+  stockforge:report:
+    temperature: 0.5
+    max_tokens: 8192
+  stockforge:screening:
+    temperature: 0.3
+    max_tokens: 4096
 
 # ==================== 故障转移条件定义 ====================
 failover_conditions:

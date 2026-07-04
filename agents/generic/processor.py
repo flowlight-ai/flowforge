@@ -14,13 +14,6 @@ class ProcessorAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.processor",
-            "You are a processing agent. Execute the core processing based on the analysis.\n"
-            "Task: {task}\n"
-            "Analysis: {analysis}\n"
-            "Method: {method}\n\n"
-            "Produce the processed result as JSON:\n"
-            '{{"result": "processed output", "method_used": "description of method", '
-            '"intermediate_steps": ["step1"], "confidence": 0.0-1.0}}',
             task=task,
             analysis=analysis,
             method=method,

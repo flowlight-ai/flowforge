@@ -14,14 +14,6 @@ class AnalystAgent(GenericAgent):
 
         prompt = self._get_prompt(
             "flowforge.agent.analyst",
-            "You are an analysis agent. Thoroughly analyze the task requirements.\n"
-            "Task: {task}\n"
-            "{background_section}"
-            "{constraints_section}"
-            "\nProvide analysis as JSON:\n"
-            '{{"summary": "task summary", "key_requirements": ["req1"], "constraints": ["constraint1"], '
-            '"assumptions": ["assumption1"], "scope": "scope description", '
-            '"dependencies": ["dep1"], "risks": ["risk1"]}}',
             task=task,
             background_section=f"Background: {background}\n" if background else "",
             constraints_section=f"Constraints: {constraints}\n" if constraints else "",

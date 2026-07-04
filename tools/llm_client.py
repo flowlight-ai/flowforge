@@ -1141,6 +1141,8 @@ class LLMClient(BaseTool):
                     # 或content是user message的子串（被复制）
                     # Phase 5.5 修复: 移除 prompt_section_count 检测，因为正常 Markdown 文章
                     # 也包含多个 ### 标题，会导致误判。只有 content_in_user=True 才触发 Echo
+                    # v3.4 修复: Doubao webchat后端将prompt中换行替换为空格,导致精确匹配失败
+                    # 改用"移除空白后比较"识别变形echo响应
                     try:
                         user_msgs = [m for m in messages if m.get("role") == "user"]
                         is_echo = False
@@ -1154,9 +1156,15 @@ class LLMClient(BaseTool):
                             # 强检测1：tokens极少（<50）但content很长（>500）
                             # 正常长文生成tokens应>100，tokens<50且content>500基本是echo
                             if tokens < 50 and len(content_text) > 500 and last_user_msg:
-                                # Phase 5.5 修复: 只有 content 确实是 user message 的子串时才触发 Echo
-                                # 移除 prompt_section_count 检测（正常 Markdown 文章也有多个 ### 标题）
+                                # v3.4: 双重检测 — 精确匹配 OR 移除空白后匹配
+                                # Doubao webchat会将prompt换行替换为空格,需移除空白后比较
                                 content_in_user = content_text[:200] in last_user_msg
+                                if not content_in_user:
+                                    # 变形echo检测: 移除所有空白字符后比较前200字符
+                                    import re as _re
+                                    content_compact = _re.sub(r'\s+', '', content_text[:300])
+                                    user_compact = _re.sub(r'\s+', '', last_user_msg)
+                                    content_in_user = len(content_compact) > 50 and content_compact[:200] in user_compact
                                 if content_in_user:
                                     is_echo = True
                                     echo_reason = (f"strong_echo tokens={tokens} content_len={len(content_text)} "
@@ -1171,6 +1179,21 @@ class LLMClient(BaseTool):
                                     echo_reason = (f"prefix_match tokens={tokens} "
                                                   f"content_len={len(content_text)} "
                                                   f"user_msg_len={len(last_user_msg)}")
+                            # v3.4 新增检测3: tokens极少(<10)且content以prompt模板标题开头
+                            # Doubao webchat返回"### 合规红线..."等prompt模板片段,tokens=2
+                            # 这是最常见的echo变形,直接判定为echo
+                            elif tokens < 10 and len(content_text) > 100:
+                                _prompt_section_patterns = (
+                                    "### 合规红线", "### 创作法则", "## 创作法则",
+                                    "## 📊 创作法则", "## 🚫 反抄袭", "## 🔄 差异化",
+                                    "## ⚡ 去AI味", "## 🎯 评委评分", "## 📊 质量评分",
+                                    "## ⚠️ 时效性", "## 你的创作人格", "## 你的爆款方法论",
+                                )
+                                if any(content_text.startswith(p) for p in _prompt_section_patterns):
+                                    is_echo = True
+                                    echo_reason = (f"prompt_section_echo tokens={tokens} "
+                                                  f"content_len={len(content_text)} "
+                                                  f"preview='{content_text[:60]}'")
                         if is_echo:
                             logger.warning(
                                 f"[Echo响应] {provider}/{model_id} 返回user message内容而非生成内容, "
