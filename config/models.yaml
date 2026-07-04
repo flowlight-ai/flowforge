@@ -190,44 +190,22 @@ models:
 assignments:
   default:
     primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - Kimi-K2.6
+    fallbacks: []
   lightweight:
     primary: Doubao-Seed2.0
-    fallbacks:
-    - GLM-5.1
-    - DeepSeek-V4-Pro
-    - Gemini-3.3-Pro
+    fallbacks: []
   coding:
     primary: DeepSeek-V4-Pro
-    fallbacks:
-    - GLM-5.1
-    - Qwen3.6-Plus
-    - Kimi-K2.6
+    fallbacks: []
   judge:
     primary: DeepSeek-V4-Pro
-    fallbacks:
-    - GLM-5.1
-    - Qwen3.6-Plus
-    - HunYuan3
+    fallbacks: []
   content_create:
     primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - Gemini-3.3-Pro
+    fallbacks: []
   content_refine:
     primary: DeepSeek-V4-Pro
-    fallbacks:
-    - Doubao-Seed2.0
-    - GLM-5.1
-    - Gemini-3.3-Pro
+    fallbacks: []
   content_eval:
     primary: DeepSeek-V4-Pro
-    fallbacks:
-    - GLM-5.1
-    - Qwen3.6-Plus
-    - HunYuan3
-    - Gemini-3.3-Pro
+    fallbacks: []
