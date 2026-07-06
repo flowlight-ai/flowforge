@@ -1,3 +1,4 @@
+import time
 from flowforge.core.base_mode_executor import BaseModeExecutor
 from flowforge.core.base_agent import AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
@@ -13,15 +14,16 @@ class ReflexionExecutor(BaseModeExecutor):
     mode_name = "reflexion"
     capabilities = ["generation", "evaluation", "refinement"]
     MAX_ITERATIONS = 3
-    QUALITY_THRESHOLD = 0.85
-    # 单次LLM调用超时（秒）— 需要足够长以覆盖OpenRoute代理延迟
-    STEP_TIMEOUT = 300
-    # evaluator/reflector 是评审/反思，不需要太长超时
-    # 修复：原 evaluator 用 STEP_TIMEOUT=300s，DeepSeek-V4-Pro 重试3次=280s 阻塞
-    # 导致 actor 25s + evaluator 280s + reflector 20s = 325s > 360s 迭代超时
-    # 降低到 90s，配合 precise 路由 max_retries=2，单次 evaluator 最多 90s+90s=180s
-    EVALUATOR_TIMEOUT = 90
-    REFLECTOR_TIMEOUT = 90
+    # P33铁律：质量分阈值必须0.9（禁止私自降低）
+    QUALITY_THRESHOLD = 0.9
+    # 单次工具执行超时（秒）
+    # v3.4: 120→60s — 实测 writer LLM 14-15s，60s 足够容错 3 次重试
+    #       原 120s 掩盖了 LLM 性能问题
+    STEP_TIMEOUT = 60
+    # evaluator/reflector 单次 LLM 调用超时
+    # v3.4: 60→30s — webchat 单次应 <30s，30s 容错（API 模式 2-4s）
+    EVALUATOR_TIMEOUT = 30
+    REFLECTOR_TIMEOUT = 30
 
     async def _execute_core(self, ctx: TaskContext) -> dict:
         import asyncio
@@ -51,6 +53,7 @@ class ReflexionExecutor(BaseModeExecutor):
                 ctx.event_bus.emit(ctx.task_id, event_type, data)
 
         for iteration in range(self.MAX_ITERATIONS):
+            _iter_start = time.time()
             _emit("reflexion.iteration_start", {"iteration": iteration + 1})
             actor_output = None
 
@@ -60,6 +63,7 @@ class ReflexionExecutor(BaseModeExecutor):
             # 原 DefaultLLMActor 用残缺的 prompt_template 导致 LLM 返回 "OK"
             allowed_tools = getattr(ctx, 'allowed_tools', None) or []
             ctx_tools = getattr(ctx, 'tools', None)
+            _actor_start = time.time()
             # 诊断日志：确认 actor 阶段每个条件是否满足
             logger.info(
                 f"[reflexion_actor_diag] task_id={ctx.task_id} iter={iteration+1} "
@@ -92,8 +96,16 @@ class ReflexionExecutor(BaseModeExecutor):
                         f"params_keys={list(tool_params.keys())[:15]}",
                         task_id=ctx.task_id,
                     )
+                    _tool_call_start = time.time()
                     tool_result = await asyncio.wait_for(
                         ctx_tools.execute(actor_tool, tool_input), timeout=self.STEP_TIMEOUT)
+                    _tool_call_dur = time.time() - _tool_call_start
+                    logger.info(
+                        f"[⏱️ PERF] actor_tool_call task_id={ctx.task_id} iter={iteration+1} "
+                        f"tool={actor_tool} 耗时={_tool_call_dur:.2f}s "
+                        f"timeout_limit={self.STEP_TIMEOUT}s",
+                        task_id=ctx.task_id,
+                    )
                     if tool_result and hasattr(tool_result, 'result'):
                         result_dict = tool_result.result if isinstance(tool_result.result, dict) else {"output": str(tool_result.result)}
                         # v2.3 修复: 兼容 editor_engine 返回的 edited_draft 字段
@@ -252,17 +264,28 @@ class ReflexionExecutor(BaseModeExecutor):
                 )
 
             # Evaluator阶段
+            _eval_start = time.time()
             try:
                 evaluator = ctx.agents.get("reflexion_evaluator") if ctx.agents else None
                 if evaluator is None:
                     evaluator = DefaultLLMEvaluator()
-                eval_input = AgentInput(params={"output": actor_output.result, "persona": "judge"})
+                # v3.4 修复: 移除 persona="judge"
+                # 原bug: persona="judge" 被 _build_assignment_chain 匹配到 assignments['judge']
+                # → primary=DeepSeek-V4-Pro（webchat 返回"无法回答"）
+                # evaluator 应走 agent_name='reflexion_evaluator' → reflector 路由（Doubao-Seed2.0）
+                eval_input = AgentInput(params={"output": actor_output.result, "persona": "default"})
                 if hasattr(evaluator, 'execute_with_context'):
                     eval_output = await asyncio.wait_for(
                         evaluator.execute_with_context(eval_input, ctx), timeout=self.EVALUATOR_TIMEOUT)
                 else:
                     eval_output = await asyncio.wait_for(
                         evaluator.execute(eval_input), timeout=self.EVALUATOR_TIMEOUT)
+                _eval_dur = time.time() - _eval_start
+                logger.info(
+                    f"[⏱️ PERF] evaluator task_id={ctx.task_id} iter={iteration+1} "
+                    f"耗时={_eval_dur:.2f}s score={eval_output.result.get('score', '?')}",
+                    task_id=ctx.task_id,
+                )
             except (asyncio.TimeoutError, Exception) as e:
                 logger.warning(f"Reflexion evaluator failed at iteration {iteration+1}: {e}", task_id=ctx.task_id)
                 score = 0.5
@@ -312,6 +335,7 @@ class ReflexionExecutor(BaseModeExecutor):
                 break
 
             # Reflector阶段
+            _reflect_start = time.time()
             try:
                 reflector = ctx.agents.get("reflexion_reflector") if ctx.agents else None
                 if reflector is None:
@@ -323,6 +347,12 @@ class ReflexionExecutor(BaseModeExecutor):
                 else:
                     reflect_output = await asyncio.wait_for(
                         reflector.execute(reflect_input), timeout=self.REFLECTOR_TIMEOUT)
+                _reflect_dur = time.time() - _reflect_start
+                logger.info(
+                    f"[⏱️ PERF] reflector task_id={ctx.task_id} iter={iteration+1} "
+                    f"耗时={_reflect_dur:.2f}s",
+                    task_id=ctx.task_id,
+                )
                 reflection_text = reflect_output.result.get("reflection", "")
                 memory.append(reflection_text)
                 # v2.5 关键修复: 把 reflection 和 issues 写入 ctx.metadata
@@ -351,6 +381,13 @@ class ReflexionExecutor(BaseModeExecutor):
                 "iteration": iteration + 1,
                 "reflection_preview": str(memory[-1])[:300] if memory else "",
             })
+            _iter_dur = time.time() - _iter_start
+            logger.info(
+                f"[⏱️ PERF] iteration_total task_id={ctx.task_id} iter={iteration+1} "
+                f"总耗时={_iter_dur:.2f}s (actor+evaluator+reflector) "
+                f"best_score={best_score}",
+                task_id=ctx.task_id,
+            )
 
         _emit("reflexion.complete", {
             "iterations": iteration + 1, "best_score": best_score,

@@ -190,39 +190,29 @@ models:
 assignments:
   default:
     primary: Doubao-Seed2.0
-    fallbacks: []
+    fallbacks:
+    - free
   lightweight:
     primary: Doubao-Seed2.0
-    fallbacks: []
+    fallbacks:
+    - free
   coding:
     primary: DeepSeek-V4-Pro
-    fallbacks: []
+    fallbacks:
+    - free
   judge:
     primary: DeepSeek-V4-Pro
-    fallbacks: []
+    fallbacks:
+    - free
   content_create:
     primary: Doubao-Seed2.0
-    # v3.4 修复: 添加fallbacks — Doubao-Seed2.0 webchat后端偶发返回prompt片段(echo response)
-    # 导致writer_engine收到无效内容,需fallback到其他webchat模型
-    # 顺序: DeepSeek-V4-Pro(稳定) → Kimi-K2.6 → GLM-5.1 → MiniMax-M3 → HunYuan3 → Qwen3.6-Plus
     fallbacks:
-      - DeepSeek-V4-Pro
-      - Kimi-K2.6
-      - GLM-5.1
-      - MiniMax-M3
-      - HunYuan3
-      - Qwen3.6-Plus
+    - free
   content_refine:
     primary: DeepSeek-V4-Pro
-    # v3.4: 添加fallbacks,与content_create保持一致
     fallbacks:
-      - Kimi-K2.6
-      - GLM-5.1
-      - Doubao-Seed2.0
-      - MiniMax-M3
+    - free
   content_eval:
     primary: DeepSeek-V4-Pro
     fallbacks:
-      - Kimi-K2.6
-      - GLM-5.1
-      - Doubao-Seed2.0
+    - free
