@@ -127,6 +127,14 @@ def classify_error(error_msg: str) -> str:
         return "model_not_found"
     if any(k in msg for k in ["insufficient", "no quota", "no credits", "402"]):
         return "no_quota"
+    # v3.8 性能优化: 连接错误单独分类（"All connection attempts failed" / "ConnectError"）
+    # 原分类为 timeout 导致：1) 30s cooldown 2) 重试同一模型2次浪费15s
+    # 连接错误特点：快速失败(3-6s)，服务器不可达，重试同一模型无意义
+    # 改为 server_error：15s cooldown，仍重试1次（可能是瞬时网络抖动）
+    if any(k in msg for k in ["all connection attempts failed", "connecterror",
+                                "connection refused", "connection reset", "connection aborted",
+                                "max retries exceeded", "pool", "socket"]):
+        return "server_error"
     if any(k in msg for k in ["timeout", "timed out", "connection"]):
         return "timeout"
     if any(k in msg for k in ["500", "502", "503", "server error"]):
@@ -234,11 +242,14 @@ def build_cross_fallback_chain(
                 if i < len(models):
                     chain.append(models[i])
 
-    # 追加 openroute 特殊入口作为最末兜底（老版本100%成功率的关键设计）
-    # openroute/free: 自动尝试所有可用免费模型
-    # openroute/auto: 按auto.order智能路由尝试所有一级模型
+    # v3: 只追加 openroute/auto 作为最末兜底，不再追加 openroute/free。
+    # 原因：openroute/free 会路由到 openrouter.ai 的 free 模型（kimi-k2.6:free 等），
+    # 这些 free 模型大量返回 404/429/suspended，导致评委和 T7 审核质量分 0.0，
+    # 浪费大量时间（17个free模型全部失败后才结束）。
+    # openroute/auto 按 auto.order 智能路由尝试所有本地一级 webchat 模型，
+    # 是更可靠的兜底方案（用户要求：创作/润色/评委只用 webchat 模型）。
     openroute_models = available_models.get("openroute", [])
-    for special in ("free", "auto"):
+    for special in ("auto",):  # 仅保留 auto，移除 free
         if special in openroute_models:
             chain.append(f"openroute/{special}")
 
@@ -1170,9 +1181,11 @@ class LLMClient(BaseTool):
                                 )
                             # 强检测1：tokens极少（<50）但content很长（>500）
                             # 正常长文生成tokens应>100，tokens<50且content>500基本是echo
+                            # 注意：openroute webchat后端的token计数始终返回0（已知bug），
+                            # 所以tokens==0不能单独作为echo_response判据，必须配合content_in_user检测
                             if tokens < 50 and len(content_text) > 500 and last_user_msg:
-                                # v3.4: 双重检测 — 精确匹配 OR 移除空白后匹配
-                                # Doubao webchat会将prompt换行替换为空格,需移除空白后比较
+                                # v3.6: 多重检测 — 精确匹配 OR 移除空白后匹配 OR 模糊前缀匹配
+                                # Doubao webchat会将prompt换行替换为空格,且可能产生"你是你是"等变形
                                 content_in_user = content_text[:200] in last_user_msg
                                 if not content_in_user:
                                     # 变形echo检测: 移除所有空白字符后比较前200字符
@@ -1180,6 +1193,17 @@ class LLMClient(BaseTool):
                                     content_compact = _re.sub(r'\s+', '', content_text[:300])
                                     user_compact = _re.sub(r'\s+', '', last_user_msg)
                                     content_in_user = len(content_compact) > 50 and content_compact[:200] in user_compact
+                                if not content_in_user:
+                                    # v3.6 新增: 模糊前缀匹配 — 检测content前80字符是否与user message前80字符高度相似
+                                    # 用于检测"你是你是"等变形echo（content开头与prompt开头相似但有重复/变形）
+                                    content_head = _re.sub(r'\s+', '', content_text[:80])
+                                    user_head = _re.sub(r'\s+', '', last_user_msg[:80])
+                                    if len(content_head) > 30 and len(user_head) > 30:
+                                        # 计算前缀相似度（前40字符的相同字符数）
+                                        match_chars = sum(1 for c1, c2 in zip(content_head[:40], user_head[:40]) if c1 == c2)
+                                        similarity = match_chars / 40.0
+                                        if similarity > 0.7:  # 70%相似度
+                                            content_in_user = True
                                 if content_in_user:
                                     is_echo = True
                                     echo_reason = (f"strong_echo tokens={tokens} content_len={len(content_text)} "
@@ -1674,10 +1698,18 @@ class LLMClient(BaseTool):
 
     def _update_health(self, provider: str, model_id: str, success: bool, error: str = ""):
         key = f"{provider}/{model_id}"
-        current = self._health_status.get(key, {
+        # P0-32/P0-33 FIX: 使用 setdefault 确保 key 存在并存储到 _health_status，
+        # 然后防御性 setdefault 所有必需字段（_sync_health_from_model_service 可能创建不完整 dict）
+        current = self._health_status.setdefault(key, {
             "success_count": 0, "error_count": 0,
             "last_error": "", "last_check": "", "cooldown_until": 0,
         })
+        # 防御性确保所有必需键存在（修复 _sync_health_from_model_service 的部分 dict 问题）
+        current.setdefault("success_count", 0)
+        current.setdefault("error_count", 0)
+        current.setdefault("last_error", "")
+        current.setdefault("last_check", "")
+        current.setdefault("cooldown_until", 0)
         if success:
             current["success_count"] += 1
             current["last_error"] = ""
@@ -1727,20 +1759,37 @@ class LLMClient(BaseTool):
                 status = persistent_state.get("status", "unknown")
                 if status == "disabled":
                     # 永久禁用：设长 cooldown 避免重试
-                    self._health_status[model_key] = self._health_status.get(model_key, {})
-                    self._health_status[model_key]["cooldown_until"] = time.time() + 86400
-                    self._health_status[model_key]["error_count"] = 999
+                    # P0-32 FIX: 使用 setdefault + 完整字段初始化，避免创建不完整 dict
+                    # 导致后续 _update_health 的 KeyError('success_count') 崩溃
+                    current = self._health_status.setdefault(model_key, {
+                        "success_count": 0, "error_count": 0,
+                        "last_error": "", "last_check": "", "cooldown_until": 0,
+                    })
+                    current.setdefault("success_count", 0)
+                    current.setdefault("error_count", 0)
+                    current["cooldown_until"] = time.time() + 86400
+                    current["error_count"] = 999
                 elif status == "suspended":
                     # 挂起：同步 cooldown
                     suspended_until = persistent_state.get("suspended_until_ts", 0)
                     if suspended_until > time.time():
-                        self._health_status[model_key] = self._health_status.get(model_key, {})
-                        self._health_status[model_key]["cooldown_until"] = suspended_until
+                        current = self._health_status.setdefault(model_key, {
+                            "success_count": 0, "error_count": 0,
+                            "last_error": "", "last_check": "", "cooldown_until": 0,
+                        })
+                        current.setdefault("success_count", 0)
+                        current.setdefault("error_count", 0)
+                        current["cooldown_until"] = suspended_until
                 elif status == "available":
                     # 永远可用（openrouter/:free 兜底）：清除 cooldown
-                    self._health_status[model_key] = self._health_status.get(model_key, {})
-                    self._health_status[model_key]["cooldown_until"] = 0
-                    self._health_status[model_key]["error_count"] = 0
+                    current = self._health_status.setdefault(model_key, {
+                        "success_count": 0, "error_count": 0,
+                        "last_error": "", "last_check": "", "cooldown_until": 0,
+                    })
+                    current.setdefault("success_count", 0)
+                    current.setdefault("error_count", 0)
+                    current["cooldown_until"] = 0
+                    current["error_count"] = 0
         except Exception as e:
             logger.debug(f"[断点B] 同步 model_service 健康状态失败: {e}")
 

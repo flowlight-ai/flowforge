@@ -3,6 +3,7 @@
 import asyncio
 import json
 import re
+import time
 import yaml
 from collections import Counter
 from abc import ABC, abstractmethod
@@ -394,9 +395,11 @@ class MultiJudgeVerifier(LoopVerifier):
             logger.info(f"[verifier-diag] verify() result type={type(result).__name__}, not dict")
 
         if isinstance(result, dict):
-            # 优先级: content > edited_draft > response > output > draft > final_answer
+            # P0-29 修复: "report" 优先于 "content", 因为 stockforge:report agent 的
+            # result["content"] 是简短描述(36字符), result["report"] 是完整报告(2000+字符)
+            # 原列表 "content" 在首位, 提取到36字符描述后停止, 跳过评审
             extracted_from_key = ""
-            for key in ("content", "edited_draft", "response", "output", "draft", "final_answer"):
+            for key in ("report", "edited_draft", "content", "response", "output", "draft", "final_answer"):
                 val = result.get(key, "")
                 if isinstance(val, str) and val.strip():
                     content = val
@@ -434,6 +437,47 @@ class MultiJudgeVerifier(LoopVerifier):
                     f"[verifier-diag] NO content extracted! result_keys={list(result.keys())}, "
                     f"checked_keys=('content','edited_draft','response','output','draft','final_answer')"
                 )
+
+            # v2.8 修复: content 可能是多层嵌套JSON字符串（如 '{"draft": "{\"draft\": \"...\"}"}'），
+            # webchat评委模型收到JSON后会困惑（误认为是代码片段），导致评审失败。
+            # 循环解析JSON直到提取出纯文本文章内容（最多3层防止无限循环）。
+            for _json_depth in range(3):
+                if not (content and isinstance(content, str) and content.strip().startswith("{")):
+                    break
+                try:
+                    parsed = json.loads(content)
+                    if not isinstance(parsed, dict):
+                        break
+                    # 按优先级提取文章正文
+                    extracted = None
+                    for draft_key in ("draft", "content", "edited_draft", "output", "response", "result"):
+                        draft_val = parsed.get(draft_key, "")
+                        if isinstance(draft_val, str) and draft_val.strip():
+                            extracted = draft_val
+                            logger.info(
+                                f"[verifier-diag] content was JSON (depth={_json_depth+1}), extracted '{draft_key}' field, "
+                                f"len={len(draft_val)}, preview={draft_val[:200]!r}"
+                            )
+                            break
+                        elif isinstance(draft_val, dict):
+                            for sub_key in ("draft", "content", "output"):
+                                sub_val = draft_val.get(sub_key, "")
+                                if isinstance(sub_val, str) and sub_val.strip():
+                                    extracted = sub_val
+                                    logger.info(
+                                        f"[verifier-diag] content was JSON (depth={_json_depth+1}), extracted '{draft_key}.{sub_key}' field, "
+                                        f"len={len(sub_val)}, preview={sub_val[:200]!r}"
+                                    )
+                                    break
+                            if extracted:
+                                break
+                    if extracted:
+                        content = extracted
+                    else:
+                        break  # JSON dict但没找到已知字段，停止解析
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.debug(f"[verifier-diag] content starts with '{{' but not valid JSON (depth={_json_depth+1}): {e}")
+                    break
 
             if not content:
                 logger.warning(
@@ -484,9 +528,9 @@ class MultiJudgeVerifier(LoopVerifier):
         max_concurrency = int(config.get("max_judge_concurrency", 2))
         judge_semaphore = asyncio.Semaphore(max_concurrency)
 
-        async def _limited_call_judge(judge_model: str, judge_prompt: str, _task, _prefer_api: bool):
+        async def _limited_call_judge(judge_model: str, judge_prompt: str, _task, _prefer_api: bool, _judge_timeout: int):
             async with judge_semaphore:
-                return await self._call_judge(judge_model, judge_prompt, _task, _prefer_api)
+                return await self._call_judge(judge_model, judge_prompt, _task, _prefer_api, _judge_timeout)
 
         # active_judges 是 (model, prefer_api) 元组列表
         judge_names = [m for m, _ in active_judges]
@@ -500,7 +544,7 @@ class MultiJudgeVerifier(LoopVerifier):
                 "judge_timeout": judge_timeout, "content_len": len(content),
                 "max_concurrency": max_concurrency,
             })
-        judge_tasks = [_limited_call_judge(m, prompt, task, pa) for m, pa in active_judges]
+        judge_tasks = [_limited_call_judge(m, prompt, task, pa, judge_timeout) for m, pa in active_judges]
         judge_results = await asyncio.gather(
             *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
             return_exceptions=True,
@@ -736,7 +780,7 @@ class MultiJudgeVerifier(LoopVerifier):
         """加载评委 system message — 从 prompts.yaml 加载，fail-open 返回空字符串。"""
         return _load_verifier_prompt("flowforge.verifier.judge_system_message")
 
-    async def _call_judge(self, model: str, prompt: str, task: TaskContext, prefer_api: bool = False) -> dict:
+    async def _call_judge(self, model: str, prompt: str, task: TaskContext, prefer_api: bool = False, judge_timeout: int = 180) -> dict:
         """调用单个评委模型，返回解析后的评分字典。
 
         Args:
@@ -745,6 +789,8 @@ class MultiJudgeVerifier(LoopVerifier):
             task: 任务上下文，提供 tools/persona/task_id。
             prefer_api: 为 True 时强制使用 API backend，排除 WebChat backend，
                 避免 8000 token 限制和 CoT 干扰导致评委失败。
+            judge_timeout: 单个评委调用超时秒数（来自 loop YAML verifier.judge_timeout）。
+                替代历史硬编码 60s，使 webchat 模型有足够时间返回。
         """
         if not task.tools:
             raise RuntimeError("TaskContext.tools is not available for judge invocation")
@@ -775,7 +821,29 @@ class MultiJudgeVerifier(LoopVerifier):
             f"user_msg_preview={prompt[:300]!r}"
         )
 
-        tool_output = await task.tools.execute("llm", ToolInput(params=judge_params))
+        # 评委调用超时保护（使用 yaml 配置的 judge_timeout，默认180s）：
+        # 修复历史 BUG：原硬编码 timeout=60 覆盖了 loop YAML 的 judge_timeout=180，
+        # 导致所有 webchat 评委 60s 全部超时，质量分 0.0。
+        # 现在使用传入的 judge_timeout 参数（来自 config.get("judge_timeout", 180)），
+        # 让 webchat 模型有足够时间返回。超时后抛出 TimeoutError，被上层 gather 的
+        # return_exceptions=True 捕获，该评委标记为失败，其他评委结果继续参与聚合。
+        _judge_call_start = time.monotonic()
+        try:
+            tool_output = await asyncio.wait_for(
+                task.tools.execute("llm", ToolInput(params=judge_params)),
+                timeout=judge_timeout,
+            )
+        except asyncio.TimeoutError:
+            _elapsed = time.monotonic() - _judge_call_start
+            logger.warning(
+                f"[评委超时] model={model} 超时({judge_timeout}s)，实际耗时={_elapsed:.1f}s，"
+                f"触发fallback到其他评委"
+            )
+            raise asyncio.TimeoutError(
+                f"Judge '{model}' timed out after {judge_timeout}s (elapsed={_elapsed:.1f}s)"
+            )
+        _judge_elapsed = time.monotonic() - _judge_call_start
+        logger.info(f"[评委耗时] model={model}, elapsed={_judge_elapsed:.1f}s")
 
         # P-WIN-FIX: 检查 tool_output.error — 当 LLM 调用失败时（超时/空响应/WebChat崩溃），
         # LLMClient 返回 ToolOutput(result={"content":"","error":...}, error=...)。

@@ -188,65 +188,61 @@ models:
   display_name: GLM-4 Flash
   enabled: true
 assignments:
+  # v3: 移除所有 free fallback — openroute/free 会路由到 openrouter.ai 的 free 模型，
+  # 导致评委/T7审核使用 free 模型（404/429 大量失败，质量分0.0）。
+  # 改为只用本地 openroute webchat 模型作为 fallback，确保 100% 本地稳定性。
+  # 兜底由 llm_client.py 的 build_cross_fallback_chain 追加 openroute/auto 完成。
   default:
     primary: Doubao-Seed2.0
     fallbacks:
     - DeepSeek-V4-Pro
     - GLM-5.1
+    - Kimi-K2.6
     - MiniMax-M3
-    - free
+    - HunYuan3
+    - Qwen3.6-Plus
   lightweight:
     primary: Doubao-Seed2.0
     fallbacks:
     - DeepSeek-V4-Pro
-    - free
+    - GLM-5.1
+    - Kimi-K2.6
   coding:
     primary: DeepSeek-V4-Pro
     fallbacks:
     - Doubao-Seed2.0
-    - free
+    - GLM-5.1
+    - Kimi-K2.6
+  # 评委路由：跨厂商排序，避免单厂商故障导致所有评委失败
+  # primary=Doubao-Seed2.0（豆包webchat最稳定）
   judge:
-    # 评委 fallback 必须全部为 webchat 模型（用户要求：评委必须是 web chat 模型）
-    # primary=Doubao-Seed2.0（最稳定，烟雾测试12s成功）；DeepSeek-V4-Pro 当前账号被禁言，放最后
     primary: Doubao-Seed2.0
     fallbacks:
     - Kimi-K2.6
     - GLM-5.1
-    - MiniMax-M3
-    - HunYuan3
     - Qwen3.6-Plus
+    - HunYuan3
+    - MiniMax-M3
     - DeepSeek-V4-Pro
   content_create:
-    # 创作 fallback 必须全部为 webchat 模型（用户要求：创作必须是 web chat 模型）
-    primary: Doubao-Seed2.0
+    # v2: DeepSeek-V4-Pro 更稳定（Doubao-Seed2.0 偶发 echo_response 浪费 70s+）
+    primary: DeepSeek-V4-Pro
     fallbacks:
-    - DeepSeek-V4-Pro
+    - Doubao-Seed2.0
     - Kimi-K2.6
     - GLM-5.1
-    - MiniMax-M3
-    - HunYuan3
-    - Qwen3.6-Plus
   content_refine:
-    # 润色 fallback 必须全部为 webchat 模型（用户要求：润色必须是 web chat 模型）
-    # primary=Doubao-Seed2.0（DeepSeek 账号被禁言，不能用 DeepSeek-V4-Pro）
-    primary: Doubao-Seed2.0
+    primary: DeepSeek-V4-Pro
     fallbacks:
+    - Doubao-Seed2.0
     - Kimi-K2.6
     - GLM-5.1
-    - MiniMax-M3
-    - HunYuan3
-    - Qwen3.6-Plus
-    - DeepSeek-V4-Pro
   content_eval:
-    # 评审 fallback 必须全部为 webchat 模型（用户要求：评委必须是 web chat 模型）
-    primary: Doubao-Seed2.0
+    primary: DeepSeek-V4-Pro
     fallbacks:
-    - Kimi-K2.6
+    - Doubao-Seed2.0
     - GLM-5.1
-    - MiniMax-M3
-    - HunYuan3
-    - Qwen3.6-Plus
-    - DeepSeek-V4-Pro
+    - Kimi-K2.6
   stockforge:stock_data:
     primary: Doubao-Seed2.0
     fallbacks:
@@ -290,15 +286,17 @@ assignments:
     - GLM-5.1
     - MiniMax-M3
   # P0-27: reflexion_evaluator/reflexion_reflector 显式 assignments
+  # v2: 移除 MiniMax-M3（openroute minimax 平台持续 connection failed），
+  # 替换为 Kimi-K2.6（更稳定的 webchat 模型）
   reflexion_evaluator:
     primary: Doubao-Seed2.0
     fallbacks:
     - DeepSeek-V4-Pro
     - GLM-5.1
-    - MiniMax-M3
+    - Kimi-K2.6
   reflexion_reflector:
     primary: Doubao-Seed2.0
     fallbacks:
     - DeepSeek-V4-Pro
     - GLM-5.1
-    - MiniMax-M3
+    - Kimi-K2.6

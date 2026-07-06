@@ -170,6 +170,12 @@ class AgentConfig(BaseModel):
         default=None,
         description="Prefer API backend over WebChat backend to avoid session timeout (P0-5)",
     )
+    prefer_tool_direct: bool = Field(
+        default=False,
+        description="Skip initial LLM call and directly execute first tool in fallback_chain. "
+                    "Useful when agent is a tool wrapper (e.g., writer_engine, editor_engine) "
+                    "and the webchat LLM doesn't reliably call tools. Saves ~50s per agent.",
+    )
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Arbitrary metadata"
     )
@@ -391,6 +397,19 @@ class DeclarativeAgent(BaseAgent):
                 return mode_output
 
         # 6. Default single-shot LLM execution
+        # v2.6 性能优化: prefer_tool_direct=True 时跳过初始 LLM 调用，直接执行 fallback_chain 中的工具
+        # 原因: webchat 模型（如 Doubao-Seed2.0）不 reliably 调用 function-calling tools，
+        # 初始 LLM 调用（~50s）被浪费。跳过后直接调用 writer_engine/editor_engine 节省时间。
+        if self.config.prefer_tool_direct and self.config.fallback_chain:
+            logger.info(
+                f"Agent '{self.name}': prefer_tool_direct=True, skipping initial LLM call, "
+                f"directly executing fallback_chain={self.config.fallback_chain}"
+            )
+            fallback_result = await self._execute_fallback_chain(input, instructions)
+            if fallback_result is not None:
+                return await self._apply_post_processors(fallback_result)
+            return AgentOutput(result={"error": "prefer_tool_direct fallback returned None", "content": ""})
+
         task = input.params.get("task", input.params.get("intent", ""))
         if not task:
             task = str(input.params)[:2000]
@@ -892,38 +911,130 @@ class DeclarativeAgent(BaseAgent):
     async def _execute_fallback_chain(
         self, input: AgentInput, instructions: str
     ) -> Optional[AgentOutput]:
-        """Execute tools in fallback_chain order until one succeeds."""
+        """Execute tools in fallback_chain order until one succeeds.
+
+        P0-35 修复：
+        1. 增加 warning 级诊断日志（原 debug 级在 INFO 日志级别下不可见，
+           导致 fallback_chain 静默返回 None 无法排查）
+        2. 修复 `not output.error` 逻辑：当工具返回 result 且含 content 字段时，
+           即使 error 被设置（部分成功场景，如"no data returned"但仍有元数据），
+           也应使用 result 而非跳过
+        3. 详细记录每步：tool 查找/执行/结果/content 提取
+        """
         from flowforge.core.base_tool import ToolInput
         from flowforge.core.tool_decorator import get_tool_registry
 
         registry = get_tool_registry()
         if registry is None:
+            logger.warning(
+                f"Agent '{self.name}': _execute_fallback_chain ABORT — "
+                f"get_tool_registry() returned None"
+            )
             return None
 
         task = input.params.get("task", input.params.get("intent", ""))
+        logger.info(
+            f"Agent '{self.name}': _execute_fallback_chain START — "
+            f"chain={self.config.fallback_chain}, task_len={len(task) if task else 0}, "
+            f"params_keys={list(input.params.keys()) if input.params else []}"
+        )
 
         for tool_name in self.config.fallback_chain:
             try:
+                # 1. 检查工具是否注册
                 tool = registry.get_tool(tool_name)
+                if tool is None:
+                    logger.warning(
+                        f"Agent '{self.name}': fallback tool '{tool_name}' "
+                        f"NOT FOUND in registry — skipping"
+                    )
+                    continue
+
+                # 2. 构造参数（保留原始 params，补充 query/prompt）
                 params = dict(input.params)
                 params["query"] = task
                 params["prompt"] = instructions
+
+                # 3. 执行工具
+                logger.info(
+                    f"Agent '{self.name}': fallback executing tool '{tool_name}' "
+                    f"with params_keys={list(params.keys())}"
+                )
                 output = await registry.execute(tool_name, ToolInput(params=params))
-                if output.result and not output.error:
-                    content = output.result.get("content", output.result.get("result", ""))
-                    if content:
-                        state_updates = {}
-                        if self.config.output_key:
-                            state_updates[self.config.output_key] = output.result
-                        return AgentOutput(
-                            result=output.result,
-                            metadata={"fallback_tool": tool_name},
-                            state_updates=state_updates,
-                        )
+
+                # 4. 诊断日志：result/error/content 详情
+                result_keys = list(output.result.keys()) if output.result else []
+                logger.info(
+                    f"Agent '{self.name}': fallback tool '{tool_name}' result: "
+                    f"result_keys={result_keys}, error={output.error!r}, "
+                    f"result_truthy={bool(output.result)}"
+                )
+
+                # P0-35 FIX: 即使 output.error 被设置（部分成功），
+                # 只要 result 含 content 字段且有实际内容，就应使用
+                if not output.result:
+                    logger.warning(
+                        f"Agent '{self.name}': fallback tool '{tool_name}' "
+                        f"returned empty result, error={output.error!r}"
+                    )
+                    continue
+
+                content = output.result.get("content", output.result.get("result", ""))
+                if content:
+                    logger.info(
+                        f"Agent '{self.name}': fallback tool '{tool_name}' SUCCESS — "
+                        f"content_len={len(str(content))}, "
+                        f"content_preview={str(content)[:80]!r}"
+                    )
+                    state_updates = {}
+                    if self.config.output_key:
+                        state_updates[self.config.output_key] = output.result
+                    return AgentOutput(
+                        result=output.result,
+                        metadata={"fallback_tool": tool_name},
+                        state_updates=state_updates,
+                    )
+                else:
+                    # result 存在但无 content/result 字段 — 可能是工具返回了
+                    # 自定义 schema（如 records/total_records），仍可使用
+                    # P0-35: 改为使用整个 result dict 而非跳过
+                    logger.warning(
+                        f"Agent '{self.name}': fallback tool '{tool_name}' "
+                        f"result has no 'content'/'result' key, "
+                        f"using full result dict as fallback output, "
+                        f"result_keys={result_keys}, error={output.error!r}"
+                    )
+                    # 构造 content 字段供后续检查
+                    enriched_result = dict(output.result)
+                    if "content" not in enriched_result:
+                        # 将 result dict 序列化为 content 供 FeedbackLoop/Verifier 提取
+                        import json as _json
+                        try:
+                            enriched_result["content"] = _json.dumps(
+                                output.result, ensure_ascii=False, default=str
+                            )[:2000]
+                        except Exception:
+                            enriched_result["content"] = str(output.result)[:2000]
+                    state_updates = {}
+                    if self.config.output_key:
+                        state_updates[self.config.output_key] = enriched_result
+                    return AgentOutput(
+                        result=enriched_result,
+                        metadata={"fallback_tool": tool_name, "fallback_synthesized": True},
+                        state_updates=state_updates,
+                    )
             except Exception as e:
-                logger.debug(f"Agent '{self.name}': fallback tool '{tool_name}' failed: {e}")
+                logger.warning(
+                    f"Agent '{self.name}': fallback tool '{tool_name}' "
+                    f"RAISED EXCEPTION: {type(e).__name__}: {e}",
+                    exc_info=True
+                )
                 continue
 
+        logger.warning(
+            f"Agent '{self.name}': _execute_fallback_chain EXHAUSTED — "
+            f"all {len(self.config.fallback_chain)} fallback tools failed, returning None"
+        )
         return None
 
     async def _apply_post_processors(self, output: AgentOutput) -> AgentOutput:
@@ -1047,8 +1158,10 @@ class DeclarativeAgent(BaseAgent):
         _LOOP_FORWARD_KEYS = ('loop_reflections', 'loop_verifier_errors', 'draft')
 
         for tc in tool_calls:
-            tool_name = tc.get("name", "")
-            arguments = tc.get("arguments", {})
+            # P0-41: 兼容 OpenAI 标准嵌套格式 {"function": {"name": ..., "arguments": ...}}
+            # 与 flowforge/agents/declarative.py:343-345 保持一致
+            tool_name = tc.get("name", tc.get("function", {}).get("name", ""))
+            arguments = tc.get("arguments", tc.get("function", {}).get("arguments", {}))
             if isinstance(arguments, str):
                 import json
                 try:

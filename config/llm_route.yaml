@@ -76,10 +76,9 @@ routes:
 
   # 评委路由：适合 MultiJudge 评委并行评审
   # 评委 agent_name 为 multi_judge_<model>，前缀匹配 multi_judge_ → judge 路由
-  # timeout=180s（单模型超时），max_retries=0（失败立即换下一个模型，不重试）
-  # verifier judge_timeout=240s 为 asyncio.wait_for 上限，允许 1 次模型尝试
-  # v3.5: webchat模型响应133-136s，原120s导致全失败，提升至180s
-  # v3.6: primary 改为 Doubao-Seed2.0（DeepSeek 账号被禁言，不能用）
+  # v3.7: timeout 120→90s — webchat模型正常30s返回，90s足够；超时快速切换下一个候选
+  # max_retries=0（失败立即换下一个模型，不重试）
+  # primary=Doubao-Seed2.0（DeepSeek账号被禁言）
   # fallback 链由 models.yaml assignments.judge 提供，FlowForge 统一管理
   judge:
     primary_provider: openroute
@@ -97,7 +96,7 @@ routes:
       conditions:
         - rate_limited
         - timeout
-      timeout_seconds: 180  # 单模型最多180s（webchat需要133-136s），剩余60s给fallback
+      timeout_seconds: 90  # v3.7: 90s足够webchat返回，超时快速切换
       max_retries: 0
       retry_delay_seconds: 1.0
     default_temperature: 0.3
@@ -105,17 +104,15 @@ routes:
 
   # 反思路由：reflector 生成改进建议（原用 default 200s 超时，实际耗时 300s+）
   # v2.1 修复: 限制到 90s + max_retries=1, 总上限 180s（原 300s 导致总超时）
-  # v3.6: primary 改为 Doubao-Seed2.0（DeepSeek 账号被禁言）
   # reflector 只需生成 3-5 条改进建议，不需要长文生成
   reflector:
     primary_provider: openroute
-    primary_model: Doubao-Seed2.0
+    primary_model: DeepSeek-V4-Pro
     fallback_providers:
       - openroute
     fallback_models:
       - GLM-5.1
-      - Kimi-K2.6
-      - DeepSeek-V4-Pro
+      - Doubao-Seed2.0
     failover_policy:
       conditions:
         - rate_limited
