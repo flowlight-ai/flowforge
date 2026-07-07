@@ -28,10 +28,9 @@ routes:
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # v3.2: timeout 300→90, max_retries 2→0 — 用户要求3分钟内完成创作
-  # 原配置 timeout=300s×max_retries=2=900s 导致writer阶段548s
-  # 新配置: 单次90s不重试，直接fallback；2个模型=180s(3分钟)上限
-  # primary(Doubao-Seed2.0)正常30-60s返回，不需300s超时
+  # v3.4: 性能优化 — timeout 90→60s（实测 writer LLM 调用 14-15s，60s 足够）
+  # primary(Doubao-Seed2.0)正常15s返回，60s超时容错2次
+  # max_retries=0 不重试，直接 fallback（避免单次90s×2=180s阻塞）
   creative:
     primary_provider: openroute
     primary_model: Doubao-Seed2.0
@@ -46,7 +45,8 @@ routes:
       conditions:
         - rate_limited
         - timeout
-      timeout_seconds: 90
+        - invalid_response
+      timeout_seconds: 60
       max_retries: 0
     default_temperature: 0.9
     default_max_tokens: 8192
@@ -105,19 +105,21 @@ routes:
   # 反思路由：reflector 生成改进建议（原用 default 200s 超时，实际耗时 300s+）
   # v2.1 修复: 限制到 90s + max_retries=1, 总上限 180s（原 300s 导致总超时）
   # reflector 只需生成 3-5 条改进建议，不需要长文生成
+  # v3.4 修复: primary 改为 Doubao-Seed2.0（DeepSeek-V4-Pro webchat 返回"无法回答"）
   reflector:
     primary_provider: openroute
-    primary_model: DeepSeek-V4-Pro
+    primary_model: Doubao-Seed2.0
     fallback_providers:
       - openroute
     fallback_models:
       - GLM-5.1
-      - Doubao-Seed2.0
+      - DeepSeek-V4-Pro
     failover_policy:
       conditions:
         - rate_limited
         - timeout
-      timeout_seconds: 90
+        - invalid_response
+      timeout_seconds: 60
 
   # StockForge 股票分析路由（P0-21 新增）
   # 原: stockforge agents 走 default 路由 → Doubao-Seed2.0 echo_response 导致失败

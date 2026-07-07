@@ -544,10 +544,22 @@ class MultiJudgeVerifier(LoopVerifier):
                 "judge_timeout": judge_timeout, "content_len": len(content),
                 "max_concurrency": max_concurrency,
             })
+<<<<<<< HEAD
+        judge_tasks = [_limited_call_judge(m, prompt, task, pa) for m, pa in active_judges]
+        _judges_start = time.time()
+=======
         judge_tasks = [_limited_call_judge(m, prompt, task, pa, judge_timeout) for m, pa in active_judges]
+>>>>>>> f361569c85088e5a44920ce6838e740526afb3fb
         judge_results = await asyncio.gather(
             *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
             return_exceptions=True,
+        )
+        _judges_dur = time.time() - _judges_start
+        _success_count = sum(1 for r in judge_results if r and not isinstance(r, Exception))
+        logger.info(
+            f"[⏱️ PERF] verifier_judges task_id={task.task_id} "
+            f"总耗时={_judges_dur:.2f}s judge_timeout={judge_timeout}s "
+            f"成功={_success_count}/{len(judge_results)} 并发={max_concurrency}"
         )
         # SSE修复：评委调用后发射事件，汇报评委成功/失败情况
         if task.event_bus:
@@ -984,6 +996,19 @@ class MultiJudgeVerifier(LoopVerifier):
         except (json.JSONDecodeError, TypeError):
             pass
 
+        # 策略1b: v3.4 修复 — 移除末尾多余的 }（小模型常见输出错误）
+        # 示例: {"scores":{...},"improvement_suggestions":["..."]} }  ← 末尾多一个 }
+        # 原bug: cohere/north-mini-code:free 返回有效JSON但末尾多 }，导致所有策略都失败
+        if text.rstrip().endswith("}}"):
+            for trim_count in (1, 2):
+                candidate = text.rstrip()[:-trim_count].rstrip()
+                try:
+                    result = json.loads(candidate)
+                    if isinstance(result, dict):
+                        return result
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
         # 策略2: 修复单引号 → 双引号
         fixed = text.replace("'", '"')
         try:
@@ -1013,11 +1038,14 @@ class MultiJudgeVerifier(LoopVerifier):
         except (json.JSONDecodeError, TypeError):
             pass
 
-        # 策略5: 组合修复 — 单引号 + 尾部逗号 + 未加引号的键
+        # 策略5: 组合修复 — 单引号 + 尾部逗号 + 未加引号的键 + 移除末尾多余}
         fixed = text.replace("'", '"')
         fixed = re.sub(r",\s*([}\]])", r"\1", fixed)
         fixed = re.sub(r'(?<=[{,])\s*(\w+)\s*:', r' "\1":', fixed)
         fixed = fixed.replace('""', '"')
+        # 移除末尾多余的 }
+        while fixed.rstrip().endswith("}}"):
+            fixed = fixed.rstrip()[:-1]
         try:
             result = json.loads(fixed)
             if isinstance(result, dict):
