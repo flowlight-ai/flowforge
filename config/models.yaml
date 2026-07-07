@@ -192,36 +192,10 @@ assignments:
   # 导致评委/T7审核使用 free 模型（404/429 大量失败，质量分0.0）。
   # 改为只用本地 openroute webchat 模型作为 fallback，确保 100% 本地稳定性。
   # 兜底由 llm_client.py 的 build_cross_fallback_chain 追加 openroute/auto 完成。
+  # v3.4 合并: 采用远程多模型 fallback 链（跨厂商排序避免单点故障）+ stockforge/reflexion assignments
   default:
     primary: Doubao-Seed2.0
     fallbacks:
-<<<<<<< HEAD
-    - free
-  lightweight:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - free
-  coding:
-    primary: DeepSeek-V4-Pro
-    fallbacks:
-    - free
-  judge:
-    primary: DeepSeek-V4-Pro
-    fallbacks:
-    - free
-  content_create:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - free
-  content_refine:
-    primary: DeepSeek-V4-Pro
-    fallbacks:
-    - free
-  content_eval:
-    primary: DeepSeek-V4-Pro
-    fallbacks:
-    - free
-=======
     - DeepSeek-V4-Pro
     - GLM-5.1
     - Kimi-K2.6
@@ -327,4 +301,3 @@ assignments:
     - DeepSeek-V4-Pro
     - GLM-5.1
     - Kimi-K2.6
->>>>>>> f361569c85088e5a44920ce6838e740526afb3fb

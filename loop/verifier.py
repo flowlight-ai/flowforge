@@ -544,12 +544,8 @@ class MultiJudgeVerifier(LoopVerifier):
                 "judge_timeout": judge_timeout, "content_len": len(content),
                 "max_concurrency": max_concurrency,
             })
-<<<<<<< HEAD
-        judge_tasks = [_limited_call_judge(m, prompt, task, pa) for m, pa in active_judges]
-        _judges_start = time.time()
-=======
         judge_tasks = [_limited_call_judge(m, prompt, task, pa, judge_timeout) for m, pa in active_judges]
->>>>>>> f361569c85088e5a44920ce6838e740526afb3fb
+        _judges_start = time.time()
         judge_results = await asyncio.gather(
             *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
             return_exceptions=True,
