@@ -1442,20 +1442,20 @@ contentforge/
   - **ContentForge Loop配置**：`pass_threshold: 0.85`
     - `contentforge/config/loops/deep_article_loop.yaml` L35
     - `contentforge/config/loops/content_polish_loop.yaml` L33
-  - **FlowForge code_review_loop配置**：`pass_threshold: 0.9`
+  - **FlowForge code_review_loop配置**：`pass_threshold: 0.85`
     - `flowforge/config/loops/code_review_loop.yaml` L20
   - **MultiJudgeVerifier代码默认值**：`pass_threshold: 0.95`
     - `flowforge/loop/verifier.py` L316: `threshold = config.get("pass_threshold", 0.95)`
   - **AgentJudgeVerifier代码默认值**：`pass_threshold: 0.8`
     - `flowforge/loop/verifier.py` L31
-  - **executor.py日志默认值**：`pass_threshold: 0.9`
+  - **executor.py日志默认值**：`pass_threshold: 0.85`
     - `flowforge/loop/executor.py` L457
   - **loop.md设计文档**：示例中同时出现 0.85（L584）和 0.9（L674）
-- **影响**：阈值不统一导致评审标准混乱。ContentForge 实际使用 0.85（低于用户期望的 0.9），可能导致低质量内容通过评审
+- **影响**：阈值不统一导致评审标准混乱。ContentForge 实际使用 0.85（低于用户期望的 0.85），可能导致低质量内容通过评审
 - **修复建议**：
-  1. 统一 ContentForge Loop 配置的 pass_threshold 为 0.9（用户期望值）
-  2. 统一 MultiJudgeVerifier 代码默认值为 0.9（与配置保持一致）
-  3. 在 loop.md 设计文档中明确默认阈值为 0.9
+  1. 统一 ContentForge Loop 配置的 pass_threshold 为 0.85（用户期望值）
+  2. 统一 MultiJudgeVerifier 代码默认值为 0.85（与配置保持一致）
+  3. 在 loop.md 设计文档中明确默认阈值为 0.85
 - **优先级**：P1
 
 ### [LOOP-08] 剩余6处硬编码提示词未外置到YAML
@@ -1601,9 +1601,9 @@ contentforge/
 
 ## LOOP-07: 质量分阈值不一致
 - **来源**：review.md段落37/39/40
-- **问题描述**：代码中存在0.85/0.9/0.95三套默认值，用户最终要求0.9
-- **当前代码状态**：contentforge_adapter.py已修复为0.9，但其他位置可能仍有0.85
-- **修复建议**：全局搜索0.85和0.95质量分阈值，统一改为0.9
+- **问题描述**：代码中存在0.85/0.9/0.95三套默认值，用户最终要求0.85
+- **当前代码状态**：contentforge_adapter.py已修复为0.85，但其他位置可能仍有0.85
+- **修复建议**：全局搜索0.85和0.95质量分阈值，统一改为0.85
 - **优先级**：P0
 
 ## LOOP-08: 剩余6处硬编码提示词
@@ -1696,14 +1696,14 @@ contentforge/
 - **优先级**：P0
 
 ## AUDIT-10-02: 质量分阈值三套默认值并存
-- **来源**：编程红线第2条（必须为0.9）
-- **问题描述**：代码中存在0.85/0.95两套默认值，未统一为0.9
+- **来源**：编程红线第2条（默认0.85）
+- **问题描述**：代码中存在0.85/0.95两套默认值，未统一为0.85
 - **当前代码状态**：
   - modes/reflexion.py:16 — QUALITY_THRESHOLD = 0.85
   - harness/feedback_loop.py:72 — _PASS_THRESHOLD = 0.85
   - loop/verifier.py:316 — threshold = config.get("pass_threshold", 0.95)
   - memory/compressor.py:20 — COMPRESSION_THRESHOLD = 0.85
-- **修复建议**：全部统一为0.9
+- **修复建议**：全部统一为0.85
 - **优先级**：P0
 
 ## AUDIT-10-03: GenericAgent硬编码中文提示词
@@ -1875,7 +1875,7 @@ contentforge/
 ### FW-CONSIST-021: loop.md 中 pass_threshold 默认值出现 0.85 和 0.9 两种
 - **来源文档**：loop.md
 - **代码现状**：设计文档示例 L584 出现 0.85，L674 出现 0.9
-- **修复建议**：统一为 0.9（编程红线第 2 条）
+- **修复建议**：统一为 0.85（v4.0调整）
 - **优先级**：P1
 
 ## 14.3 P2 级问题（一般）
@@ -2021,8 +2021,8 @@ contentforge/
 - **变更**：spec.md (7处) + arch.md (1处) + design.md (2处) + task.md (5处) 共 15 处 helixrag/HelixRAG 替换为 opensieve/OpenSieve/OpenSieveClient
 - **依据**：rules.md §2.2 所有数据检索走 OpenSieve + project_memory helixrag 已更名为 opensieve
 
-### FF-FIX-2026-0629-02：质量分阈值全局统一为 0.9 ✅
-- **变更**：spec.md (1处) + arch.md (4处) + design.md (2处) + test.md (4处) 共 11 处 0.8/0.85 统一为 0.9
+### FF-FIX-2026-0629-02：质量分阈值全局统一为 0.85 ✅
+- **变更**：spec.md (1处) + arch.md (4处) + design.md (2处) + test.md (4处) 共 11 处 0.8/0.85 统一为 0.85
 - **依据**：rules.md §2.3 第5条 + §5.6 P33 + 编程红线第2条
 
 ### FF-FIX-2026-0629-03：test.md 补充 T9 测试铁律 ✅

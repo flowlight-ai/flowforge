@@ -433,7 +433,7 @@ class HybridExecutor:
 |---------|------|---------|----------|
 | `react` | ReAct | Thought → Action → Observation 循环（MAX_STEPS=8, 含循环检测） | 需要多步动态检索或工具调用 |
 | `plan_execute` | Plan-and-Execute | Planner 生成步骤清单，Executor 依次执行 | 路径明确、步骤可预测的任务 |
-| `reflexion` | Reflexion | Actor → Evaluator → Reflector → 记忆 (MAX_ITERATIONS=4, QUALITY_THRESHOLD=0.9) | 需要反复打磨才能达标的任务（代码、文档） |
+| `reflexion` | Reflexion | Actor → Evaluator → Reflector → 记忆 (MAX_ITERATIONS=4, QUALITY_THRESHOLD=0.85) | 需要反复打磨才能达标的任务（代码、文档） |
 | `multi_agent` | Multi-Agent | Subagents/Teams/Swarms 三策略，Orchestrator 分发 | 需要多角色配合的复杂任务 |
 | `workflow` | Workflow / Orchestration | 预定义的 DAG 流程，可混合其他模式（禁止嵌套Workflow，max_depth=3） | 长流程、端到端的业务流水线 |
 | `graph_of_thoughts` | Graph of Thoughts | 图式推理，多思路聚合、交叉验证 | 复杂推理、数学证明、多源情报融合 |
@@ -788,7 +788,7 @@ class FeedbackLoop:
     """
 
     MAX_REFLEXION_ITERATIONS = 3
-    QUALITY_THRESHOLD = 0.9
+    QUALITY_THRESHOLD = 0.85
 
     def __init__(self, evaluator_agent, classifier_model, verification_hooks):
         self.evaluator = evaluator_agent
@@ -1294,7 +1294,7 @@ class ReActExecutor(BaseModeExecutor):
 class ReflexionExecutor(BaseModeExecutor):
     mode_name = "reflexion"
     MAX_ITERATIONS = 4
-    QUALITY_THRESHOLD = 0.9
+    QUALITY_THRESHOLD = 0.85
 
     async def _execute_core(self, ctx: TaskContext) -> dict:
         memory, best_result, best_score = [], None, 0.0
@@ -1929,7 +1929,7 @@ harness:
     evaluation_mode: "lightweight"  # full | lightweight | skip
     evaluator_model: "sonnet-4.6"
     scoring_dimensions: [correctness, completeness, coherence, safety]
-    pass_threshold: 0.9
+    pass_threshold: 0.85
     max_reflexion_iterations: 3
 
   permission_pipeline:

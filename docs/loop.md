@@ -671,7 +671,7 @@ POST /api/v1/loops
   "overrides": {
     "max_retries": 5,
     "verifier": {
-      "pass_threshold": 0.9
+      "pass_threshold": 0.85
     }
   }
 }

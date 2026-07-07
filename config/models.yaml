@@ -195,33 +195,6 @@ assignments:
   default:
     primary: Doubao-Seed2.0
     fallbacks:
-<<<<<<< HEAD
-    - free
-  lightweight:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - free
-  coding:
-    primary: DeepSeek-V4-Pro
-    fallbacks:
-    - free
-  judge:
-    primary: DeepSeek-V4-Pro
-    fallbacks:
-    - free
-  content_create:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - free
-  content_refine:
-    primary: DeepSeek-V4-Pro
-    fallbacks:
-    - free
-  content_eval:
-    primary: DeepSeek-V4-Pro
-    fallbacks:
-    - free
-=======
     - DeepSeek-V4-Pro
     - GLM-5.1
     - Kimi-K2.6
@@ -327,4 +300,3 @@ assignments:
     - DeepSeek-V4-Pro
     - GLM-5.1
     - Kimi-K2.6
->>>>>>> f361569c85088e5a44920ce6838e740526afb3fb

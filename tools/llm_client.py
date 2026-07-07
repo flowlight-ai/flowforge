@@ -1698,21 +1698,15 @@ class LLMClient(BaseTool):
 
     def _update_health(self, provider: str, model_id: str, success: bool, error: str = ""):
         key = f"{provider}/{model_id}"
-<<<<<<< HEAD
-        # v3.4 修复: 用 setdefault 确保所有键存在
+        # v3.4 修复 + P0-32/P0-33 FIX: 用 setdefault 确保 key 存在并初始化完整 dict
         # 原bug: _sync_health_from_model_service 只设置 cooldown_until/error_count，
         # 不设置 success_count，导致 current["success_count"] += 1 抛 KeyError('success_count')
         # 被外层 except 捕获，把成功响应误标记为失败（错误='success_count'）
-        current = self._health_status.get(key) or {}
-=======
-        # P0-32/P0-33 FIX: 使用 setdefault 确保 key 存在并存储到 _health_status，
-        # 然后防御性 setdefault 所有必需字段（_sync_health_from_model_service 可能创建不完整 dict）
+        # 使用 setdefault 确保所有必需字段存在（防御 _sync_health_from_model_service 的部分 dict 问题）
         current = self._health_status.setdefault(key, {
             "success_count": 0, "error_count": 0,
             "last_error": "", "last_check": "", "cooldown_until": 0,
         })
-        # 防御性确保所有必需键存在（修复 _sync_health_from_model_service 的部分 dict 问题）
->>>>>>> f361569c85088e5a44920ce6838e740526afb3fb
         current.setdefault("success_count", 0)
         current.setdefault("error_count", 0)
         current.setdefault("last_error", "")

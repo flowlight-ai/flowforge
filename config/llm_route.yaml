@@ -28,9 +28,10 @@ routes:
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # v3.4: 性能优化 — timeout 90→60s（实测 writer LLM 调用 14-15s，60s 足够）
-  # primary(Doubao-Seed2.0)正常15s返回，60s超时容错2次
-  # max_retries=0 不重试，直接 fallback（避免单次90s×2=180s阻塞）
+  # v4.0: timeout 60→90s — writer prompt 长达 4500+ 字符，Doubao-Seed2.0 实测 63s
+  # 60s 太紧导致 timeout→fallback→健康检查雪崩。90s 给长 prompt 足够时间
+  # max_retries=0 不重试，直接 fallback（避免单次 90s×2=180s 阻塞）
+  # 90s 仍可在 540s total_timeout 内完成 2 轮（90+90+60×2=300s < 540s）
   creative:
     primary_provider: openroute
     primary_model: Doubao-Seed2.0
@@ -46,7 +47,7 @@ routes:
         - rate_limited
         - timeout
         - invalid_response
-      timeout_seconds: 60
+      timeout_seconds: 90
       max_retries: 0
     default_temperature: 0.9
     default_max_tokens: 8192
