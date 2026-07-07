@@ -47,18 +47,6 @@ models:
   provider: openroute
   display_name: Auto 智能路由
   enabled: true
-- id: moonshotai/kimi-k2.6:free
-  provider: openrouter
-  display_name: Kimi K2.6 (Free)
-  enabled: true
-- id: minimax/minimax-m2.5:free
-  provider: openrouter
-  display_name: MiniMax M2.5 (Free)
-  enabled: true
-- id: z-ai/glm-4.5-air:free
-  provider: openrouter
-  display_name: GLM 4.5 Air (Free)
-  enabled: true
 - id: qwen/qwen3-coder:free
   provider: openrouter
   display_name: Qwen3 Coder (Free)
@@ -90,6 +78,14 @@ models:
 - id: nvidia/nemotron-3-super-120b-a12b:free
   provider: openrouter
   display_name: Nemotron 3 Super (Free)
+  enabled: true
+- id: nvidia/nemotron-3-nano-30b-a3b:free
+  provider: openrouter
+  display_name: Nemotron 3 Nano 30B (Free)
+  enabled: true
+- id: nvidia/nemotron-3-ultra-550b-a55b:free
+  provider: openrouter
+  display_name: Nemotron 3 Ultra (Free)
   enabled: true
 - id: meta-llama/llama-3.3-70b-instruct:free
   provider: openrouter
@@ -192,6 +188,7 @@ assignments:
   # 导致评委/T7审核使用 free 模型（404/429 大量失败，质量分0.0）。
   # 改为只用本地 openroute webchat 模型作为 fallback，确保 100% 本地稳定性。
   # 兜底由 llm_client.py 的 build_cross_fallback_chain 追加 openroute/auto 完成。
+  # v3.4 合并: 采用远程多模型 fallback 链（跨厂商排序避免单点故障）+ stockforge/reflexion assignments
   default:
     primary: Doubao-Seed2.0
     fallbacks:
@@ -225,24 +222,28 @@ assignments:
     - MiniMax-M3
     - DeepSeek-V4-Pro
   content_create:
-    # v2: DeepSeek-V4-Pro 更稳定（Doubao-Seed2.0 偶发 echo_response 浪费 70s+）
-    primary: DeepSeek-V4-Pro
+    # v3.4.1 性能修复: primary 改为 nemotron-3-super-120b（避免和 refine/eval 冲突导致 429）
+    # 不同 assignment 用不同 primary，分散 OpenRouter 并发请求
+    primary: openrouter/nvidia/nemotron-3-super-120b-a12b:free
     fallbacks:
-    - Doubao-Seed2.0
-    - Kimi-K2.6
-    - GLM-5.1
+    - openrouter/openai/gpt-oss-120b:free
+    - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+    - openroute/DeepSeek-V4-Pro
+    - openroute/Doubao-Seed2.0
   content_refine:
-    primary: DeepSeek-V4-Pro
+    # v3.4.1 性能修复: primary 改为 gpt-oss-20b（快速润色，避免和 create 冲突）
+    primary: openrouter/openai/gpt-oss-20b:free
     fallbacks:
-    - Doubao-Seed2.0
-    - Kimi-K2.6
-    - GLM-5.1
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - openroute/DeepSeek-V4-Pro
+    - openroute/Doubao-Seed2.0
   content_eval:
-    primary: DeepSeek-V4-Pro
+    # v3.4.1 性能修复: primary 改为 llama-3.3-70b（评估专用，避免和 create 冲突）
+    primary: openrouter/meta-llama/llama-3.3-70b-instruct:free
     fallbacks:
-    - Doubao-Seed2.0
-    - GLM-5.1
-    - Kimi-K2.6
+    - openrouter/openai/gpt-oss-20b:free
+    - openroute/DeepSeek-V4-Pro
+    - openroute/Doubao-Seed2.0
   stockforge:stock_data:
     primary: Doubao-Seed2.0
     fallbacks:
@@ -288,14 +289,17 @@ assignments:
   # P0-27: reflexion_evaluator/reflexion_reflector 显式 assignments
   # v2: 移除 MiniMax-M3（openroute minimax 平台持续 connection failed），
   # 替换为 Kimi-K2.6（更稳定的 webchat 模型）
+  # v3.4 性能修复: API优先 — webchat模型60s超时导致reflector卡死
   reflexion_evaluator:
-    primary: Doubao-Seed2.0
+    # v3.4.1: primary 改为 hermes-3-405b（深度反思，405B 大模型）
+    primary: openrouter/nousresearch/hermes-3-llama-3.1-405b:free
     fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - Kimi-K2.6
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - openroute/DeepSeek-V4-Pro
+    - openroute/Doubao-Seed2.0
   reflexion_reflector:
-    primary: Doubao-Seed2.0
+    # v3.4.1: primary 改为 qwen3-next-80b（反思生成，80B 指令模型）
+    primary: openrouter/qwen/qwen3-next-80b-a3b-instruct:free
     fallbacks:
     - DeepSeek-V4-Pro
     - GLM-5.1
