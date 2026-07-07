@@ -38,7 +38,10 @@ _SEARCH_TOOLS = {"web_search", "opensieve_search", "tavily_search", "duckduckgo_
 _SEARCH_AGENTS = {"topic_research", "web_search_agent", "research_agent"}
 
 TASK_TIMEOUT_SECONDS = 1200
-STEP_TIMEOUT_SECONDS = 300
+# P0-30: 原 300s 过短，OpenRoute WebChat LLM 单次调用 50-150s，
+# 3 模型顺序重试约 5-7 分钟 > 300s 导致 step2 calc_indicators 超时。
+# 提升到 600s 与 timeout_per_iteration 对齐，确保 6 步 workflow 顺利完成。
+STEP_TIMEOUT_SECONDS = 600
 
 
 def is_error_content(text: str) -> bool:

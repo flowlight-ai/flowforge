@@ -828,6 +828,16 @@ class LoopExecutor:
                         "final_score": verdict.score,
                     })
 
+                # v3.8 性能分析: Loop总耗时汇总
+                _loop_total_duration = time.monotonic() - total_start
+                _plan_total = _plan_duration
+                logger.info(f"[loop][性能汇总] task_id={task.task_id} 成功 | "
+                             f"总耗时={_loop_total_duration:.2f}s | "
+                             f"规划={_plan_total:.2f}s | "
+                             f"迭代次数={attempt + 1} | "
+                             f"最终评分={verdict.score:.3f} | "
+                             f"total_timeout={total_timeout}s")
+
                 # [loop-trace] Loop成功返回前详细日志
                 _loop_result = LoopResult(success=True, output=result, total_attempts=attempt + 1, state=state)
                 logger.info(f"[loop-trace] task_id={task.task_id} Loop成功返回: "
@@ -956,6 +966,14 @@ class LoopExecutor:
 
         # 耗尽重试次数或总超时
         state.phase = LoopPhase.FAILED
+        # v3.8 性能分析: Loop失败总耗时汇总
+        _loop_total_duration = time.monotonic() - total_start
+        logger.info(f"[loop][性能汇总] task_id={task.task_id} 失败 | "
+                     f"总耗时={_loop_total_duration:.2f}s | "
+                     f"规划={_plan_duration:.2f}s | "
+                     f"迭代次数={state.attempt} | "
+                     f"total_timeout={total_timeout}s | "
+                     f"错误数={len(state.past_errors)}")
         self.turn_engine.try_transition(TurnState.FAILED, reason="max retries exceeded or total timeout")
         self.checkpoint_mgr.save(
             task_id=state.task_id,

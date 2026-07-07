@@ -938,31 +938,28 @@ class ModelService:
         return {"model_key": model_key, "consecutive_failures_reset": True}
 
     def _remove_from_fallbacks(self, model_key: str) -> bool:
-        """Remove a model from all fallback lists in assignments.
+        """P0-28 修复: 不再从 fallback 列表移除模型, 只记录日志。
+
+        原行为: 从所有 assignments.fallbacks 列表移除失败模型(内存+持久化),
+        导致 fallbacks 被清空, 所有 agent 只剩 primary 单点,
+        一旦 primary 失败就无 fallback 可用, 输出为空。
+
+        正确行为: 模型失败通过 health_state 标记为 suspended,
+        LLMClient 调用时按候选链顺序尝试, 失败就跳到下一个。
+        候选链设计本身就是"即使模型可能失败也放在链中, 调用时按序尝试"。
+        _remove_from_fallbacks 是多余且有害的——它提前移除了可能恢复的模型。
 
         Args:
-            model_key: The model key to remove (e.g., 'openrouter/baidu/cobuddy:free').
+            model_key: The model key that failed (e.g., 'openroute/DeepSeek-V4-Pro').
 
         Returns:
-            True if the model was removed from any fallback list.
+            False (不再移除任何 fallback, 返回 False 表示未移除)
         """
-        removed = False
-        model_id = model_key.split("/", 1)[-1] if "/" in model_key else model_key
-
-        for assignment_key, assignment in self.assignments.items():
-            fallbacks = assignment.get("fallbacks", [])
-            if model_id in fallbacks:
-                assignment["fallbacks"] = [fb for fb in fallbacks if fb != model_id]
-                removed = True
-            if model_key in fallbacks:
-                assignment["fallbacks"] = [fb for fb in fallbacks if fb != model_key]
-                removed = True
-
-        if removed:
-            self._save_config()
-            logger.info(f"Model {model_key} removed from fallback lists due to consecutive failures")
-
-        return removed
+        logger.info(
+            f"[P0-28] 模型 {model_key} 连续失败, 但保留在 fallback 列表中 "
+            f"(不移除, 调用时按候选链顺序尝试, 失败自动跳到下一个)"
+        )
+        return False
 
     async def force_update_models(self) -> dict:
         """Force update health status of active provider models concurrently.
@@ -1046,7 +1043,12 @@ class ModelService:
                 chains_rebuilt += 1
 
         if chains_rebuilt > 0:
-            self._save_config()
+            # P0-28 修复: 不持久化 fallback 重建到 models.yaml
+            # 原行为: _save_config() 会把根据健康状态过滤后的 fallbacks 写回 models.yaml,
+            # 当所有 fallback 模型暂时不可用时, fallbacks 被清空为 [], 永久丢失配置。
+            # 正确行为: 只在内存中重建 fallback 链, 保留 models.yaml 原始配置,
+            # 重启后从 yaml 重新加载完整 fallbacks。
+            logger.info(f"[force_update] 重建 {chains_rebuilt} 个 fallback 链 (仅内存, 不持久化)")
 
         logger.info(f"Force update complete: {available_count} available, {disabled_count} disabled, {suspended_count} suspended, {chains_rebuilt} chains rebuilt")
         return {

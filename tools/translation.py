@@ -8,12 +8,57 @@ Languages: en, zh, ja, ko, de, fr, es, it, pt, ar, ru
 from __future__ import annotations
 
 import json
+import os
 from typing import Any, Dict, List, Optional
+
+import yaml
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.tools.translation")
+
+
+# 提示词配置文件路径（红线#11：禁止硬编码提示词）
+_PROMPTS_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "config",
+    "prompts.yaml",
+)
+
+
+def _load_translation_context_prompt(context_type: str, target_lang: str = "", text: str = "") -> str:
+    """从 config/prompts.yaml 加载 tools.translation.context.* 提示词.
+
+    Args:
+        context_type: 场景类型（ecommerce/listing/customer_service/specification）
+        target_lang: 目标语言（用于模板渲染）
+        text: 待翻译文本（用于模板渲染）
+
+    Returns:
+        渲染后的提示词字符串，未命中则返回空字符串（fail-open）
+    """
+    full_key = f"tools.translation.context.{context_type}"
+    try:
+        if not os.path.exists(_PROMPTS_PATH):
+            logger.error(f"[translation] prompts file not found: {_PROMPTS_PATH} (fail-open)")
+            return ""
+        with open(_PROMPTS_PATH, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        template = data.get(full_key, "")
+        if not template:
+            logger.error(f"[translation] prompt '{full_key}' not found in prompts.yaml (fail-open)")
+            return ""
+        if target_lang or text:
+            try:
+                return template.format(target_lang=target_lang, text=text)
+            except (KeyError, ValueError, IndexError) as e:
+                logger.warning(f"[translation] prompt '{full_key}' format error: {e}")
+                return template
+        return template
+    except Exception as e:
+        logger.error(f"[translation] failed to load prompt '{full_key}': {e} (fail-open)")
+        return ""
 
 
 class TranslationTool(BaseTool):
@@ -78,36 +123,8 @@ class TranslationTool(BaseTool):
         "ru": "Русский",
     }
 
-    CONTEXT_PROMPTS: Dict[str, str] = {
-        "ecommerce": (
-            "You are a professional e-commerce translator. "
-            "Translate the text for cross-border e-commerce use. "
-            "Keep product names, brand names, and technical specifications untranslated. "
-            "Adapt idioms and marketing language to the target culture. "
-            "Maintain a professional and persuasive tone."
-        ),
-        "listing": (
-            "You are an e-commerce listing optimization expert. "
-            "Translate the product listing text (title, bullet points, description) "
-            "for the target market. Optimize for local search keywords. "
-            "Keep brand names and model numbers untranslated. "
-            "Ensure the translation reads naturally for local consumers."
-        ),
-        "customer_service": (
-            "You are a multilingual customer service translator. "
-            "Translate customer service messages maintaining a polite, "
-            "professional, and empathetic tone. Adapt cultural nuances "
-            "appropriately (e.g., honorifics in Japanese/Korean). "
-            "Keep order numbers and product codes untranslated."
-        ),
-        "specification": (
-            "You are a technical specification translator for e-commerce products. "
-            "Translate product specifications precisely. Keep all numbers, "
-            "units, and technical terms accurate. Use standard industry "
-            "terminology in the target language. Do not localize units "
-            "unless explicitly requested."
-        ),
-    }
+    CONTEXT_PROMPTS: Dict[str, str] = {}  # 外置到 config/prompts.yaml（tools.translation.context.*）
+    # 调用处通过 _load_translation_context_prompt() 加载
 
     def __init__(self, tool_registry=None):
         self._tool_registry = tool_registry
@@ -143,7 +160,10 @@ class TranslationTool(BaseTool):
 
         source_desc = self.SUPPORTED_LANGUAGES.get(source_lang, source_lang) if source_lang != "auto" else "auto-detect"
         target_desc = self.SUPPORTED_LANGUAGES.get(target_lang, target_lang)
-        context_prompt = self.CONTEXT_PROMPTS.get(context_type, self.CONTEXT_PROMPTS["ecommerce"])
+        context_prompt = _load_translation_context_prompt(context_type, target_lang=target_desc, text=text)
+        if not context_prompt:
+            # fail-open: 使用 ecommerce 作为默认场景
+            context_prompt = _load_translation_context_prompt("ecommerce", target_lang=target_desc, text=text)
 
         prompt = (
             f"{context_prompt}\n\n"
@@ -190,7 +210,10 @@ class TranslationTool(BaseTool):
 
         source_desc = self.SUPPORTED_LANGUAGES.get(source_lang, source_lang) if source_lang != "auto" else "auto-detect"
         target_desc = self.SUPPORTED_LANGUAGES.get(target_lang, target_lang)
-        context_prompt = self.CONTEXT_PROMPTS.get(context_type, self.CONTEXT_PROMPTS["ecommerce"])
+        context_prompt = _load_translation_context_prompt(context_type, target_lang=target_desc, text=text)
+        if not context_prompt:
+            # fail-open: 使用 ecommerce 作为默认场景
+            context_prompt = _load_translation_context_prompt("ecommerce", target_lang=target_desc, text=text)
 
         # Build a structured prompt for batch translation
         numbered_texts = "\n".join(f"{i+1}. {t}" for i, t in enumerate(texts))

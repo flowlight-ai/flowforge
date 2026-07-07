@@ -467,8 +467,11 @@ class WorkflowExecutor(BaseModeExecutor):
         if not condition:
             return True, ""
 
-        # Parse ${var:default} or ${var} syntax
-        match = _re.match(r'^\$\{(\w+)(?::([^}]*))?\}$', condition.strip())
+        # Parse ${var:default} or ${var} syntax (支持单/双花括号: ${...} 和 ${{...}})
+        # v3.8 性能修复: 原正则只匹配单花括号 ${...}，不匹配项目规范的双花括号 ${{...}}
+        # 导致 condition="${{publish_after_write:false}}" 解析失败，fallback 把整个字符串
+        # 当作 truthy 值，publish 步骤被错误执行，writer 阶段从 30s 增加到 90s
+        match = _re.match(r'^\$\{{1,2}(\w+)(?::([^}]*))?\}{1,2}$', condition.strip())
         if not match:
             # Not a variable expression — treat as literal truthy/falsy
             val = condition.strip().lower()
