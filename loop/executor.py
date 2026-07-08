@@ -723,6 +723,14 @@ class LoopExecutor:
                 _current_draft = ""
                 for _dk in ("draft", "edited_draft", "content", "response", "output"):
                     _dv = result.get(_dk, "")
+                    # v4.7 修复: result["draft"] 可能是 dict 而非 str，
+                    # 此时需递归提取内层 draft/content 字符串
+                    if isinstance(_dv, dict):
+                        for _inner_k in ("draft", "edited_draft", "content", "output", "result"):
+                            _inner_v = _dv.get(_inner_k, "")
+                            if isinstance(_inner_v, str) and len(_inner_v.strip()) >= 50:
+                                _dv = _inner_v
+                                break
                     if isinstance(_dv, str) and len(_dv.strip()) >= 50:
                         # v4.6 修复: 剥离可能存在的 JSON 包装
                         _dv = _strip_json_wrapper_exec(_dv)
@@ -739,20 +747,46 @@ class LoopExecutor:
                                     f"preview={_current_draft[:150]!r}")
 
             # v3.4.3: 发射 worker 完成事件 — 让终端能看到 writer 输出预览
+            # v4.7: 即使内容为空或过短也发射事件（标注 content_len=0 + 失败原因），
+            #        否则用户看不到 writer 失败的原因（如所有模型返回"无法回答"）
             if task.event_bus and isinstance(result, dict):
                 writer_output = ""
+                writer_output_key = ""
                 for k in ("draft", "edited_draft", "content", "output"):
                     v = result.get(k)
                     if isinstance(v, str) and len(v.strip()) >= 50:
-                        writer_output = v
-                        break
+                        # v4.7: 剥离 JSON 包装，让预览显示纯 markdown
+                        v = _strip_json_wrapper_exec(v)
+                        if isinstance(v, str) and len(v.strip()) >= 50:
+                            writer_output = v
+                            writer_output_key = k
+                            break
+                used_model = result.get("_model", task.metadata.get("last_used_model", ""))
                 if writer_output:
                     task.event_bus.emit(task.task_id, "loop.worker.complete", {
                         "loop_id": state.loop_id,
                         "attempt": state.attempt,
                         "content_len": len(writer_output),
                         "output_preview": writer_output[:300],
-                        "model": result.get("_model", task.metadata.get("last_used_model", "")),
+                        "model": used_model,
+                    })
+                else:
+                    # v4.7: 内容为空或过短 — 也发射事件，让用户看到失败
+                    # 尝试提取任何内容（即使很短）作为预览
+                    short_preview = ""
+                    for k in ("draft", "edited_draft", "content", "output", "error", "error_message"):
+                        v = result.get(k)
+                        if isinstance(v, str) and v.strip():
+                            short_preview = v[:300]
+                            break
+                    task.event_bus.emit(task.task_id, "loop.worker.complete", {
+                        "loop_id": state.loop_id,
+                        "attempt": state.attempt,
+                        "content_len": 0,
+                        "output_preview": f"[内容为空或过短] {short_preview}" if short_preview else "[内容为空]",
+                        "model": used_model,
+                        "failed": True,
+                        "reason": "content_empty_or_too_short",
                     })
 
             # === 详细日志：定位执行结果内容 ===
