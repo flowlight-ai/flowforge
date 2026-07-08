@@ -109,6 +109,9 @@ INVALID_RESPONSE_PATTERNS = (
     # 必须对所有 agent 识别(否则非创作类 agent 会把错误文案当正常响应返回)
     "当前不可用，请稍后重试",
     "当前不可用,请稍后重试",
+    # openroute webchat backend 会话失效时返回 {"msg":"请输入你需要处理的问题..."}
+    # HTTP 200 + tokens=2 但内容是占位符,不是实际生成内容
+    "请输入你需要处理的问题",
 )
 
 
@@ -1517,6 +1520,13 @@ class LLMClient(BaseTool):
                     raise RuntimeError(
                         f"openroute_silent_failure: model disabled - {content[:120]}"
                     )
+                # openroute webchat backend 会话失效时返回 {"msg":"请输入你需要处理的问题..."}
+                # tokens=2 (prompt=1, completion=1) 但内容是占位符,不是实际生成内容
+                # 抛出含 "model disabled" 的错误,让 classify_error 识别为 model_not_found 触发模型切换
+                if content and isinstance(content, str) and "请输入你需要处理的问题" in content[:200]:
+                    raise RuntimeError(
+                        f"openroute_silent_failure: model disabled - webchat session invalid - {content[:120]}"
+                    )
                 usage = data.get("usage", {}) or {}
                 tokens = usage.get("total_tokens", 0)
                 prompt_tokens = usage.get("prompt_tokens", 0)
@@ -1584,6 +1594,11 @@ class LLMClient(BaseTool):
             if full_text and "当前不可用" in full_text and "请稍后重试" in full_text:
                 raise RuntimeError(
                     f"openroute_silent_failure: model disabled - {full_text[:120]}"
+                )
+            # openroute webchat backend 会话失效时返回 {"msg":"请输入你需要处理的问题..."}
+            if full_text and "请输入你需要处理的问题" in full_text[:200]:
+                raise RuntimeError(
+                    f"openroute_silent_failure: model disabled - webchat session invalid - {full_text[:120]}"
                 )
             return full_text
         except Exception as e:
