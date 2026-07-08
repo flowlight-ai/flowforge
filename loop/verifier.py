@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import re
 import time
 import yaml
@@ -15,6 +16,9 @@ from flowforge.loop.state import Verdict
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("loop.verifier")
+
+# v4.6 调试日志开关：设置 CF_DEBUG=1 或 CF_DEBUG=true 启用详细日志
+CF_DEBUG = os.environ.get("CF_DEBUG", "").lower() in ("1", "true", "yes")
 
 # 配置文件路径（flowforge/loop/verifier.py → flowforge/config/prompts.yaml）
 _VERIFIER_PROMPTS_PATH = Path(__file__).parent.parent / "config" / "prompts.yaml"
@@ -617,6 +621,13 @@ class MultiJudgeVerifier(LoopVerifier):
                 except (ValueError, TypeError):
                     score_parts.append(f"{k}={v}")
             logger.info(f"MultiJudgeVerifier: judge '{model_name}' scores: " + ", ".join(score_parts))
+            # v4.6 CF_DEBUG: 记录每个评委的改进建议
+            if CF_DEBUG:
+                _vr_sugg = vr.get("improvement_suggestions", [])
+                if _vr_sugg:
+                    logger.info(f"[CF-DEBUG] 评委 '{model_name}' 改进建议: "
+                                f"count={len(_vr_sugg)}, "
+                                f"top3={_vr_sugg[:3]}")
         dim_scores = aggregated.get("dimension_scores", {})
         dim_parts = []
         for k, v in dim_scores.items():
@@ -629,6 +640,11 @@ class MultiJudgeVerifier(LoopVerifier):
             f"MultiJudgeVerifier: {len(valid_results)}/{len(active_judges)} judges succeeded, "
             f"weighted_score={aggregated['weighted_score']:.4f}, threshold={threshold}"
         )
+        if CF_DEBUG:
+            logger.info(f"[CF-DEBUG] 评委聚合结果: weighted_score={aggregated['weighted_score']:.4f}, "
+                        f"passed={aggregated['weighted_score'] >= threshold}, "
+                        f"threshold={threshold}, "
+                        f"valid_judges={len(valid_results)}/{len(active_judges)}")
 
         # 构建详细的 errors 列表 — 包含低分维度和改进建议，供 Reflector 精准反思
         if aggregated["weighted_score"] < threshold:
@@ -869,6 +885,10 @@ class MultiJudgeVerifier(LoopVerifier):
             )
         _judge_elapsed = time.monotonic() - _judge_call_start
         logger.info(f"[评委耗时] model={model}, elapsed={_judge_elapsed:.1f}s")
+        if CF_DEBUG:
+            logger.info(f"[CF-DEBUG] 评委调用: model={model}, prefer_api={prefer_api}, "
+                        f"assignment=judge, 耗时={_judge_elapsed:.1f}s, "
+                        f"prompt_len={len(prompt)}")
 
         # P-WIN-FIX: 检查 tool_output.error — 当 LLM 调用失败时（超时/空响应/WebChat崩溃），
         # LLMClient 返回 ToolOutput(result={"content":"","error":...}, error=...)。
@@ -1117,6 +1137,15 @@ class MultiJudgeVerifier(LoopVerifier):
                 f"raw parsed keys: {list(parsed.keys())}"
             )
             raise ValueError(f"Judge '{model}' returned no valid scores")
+
+        # v4.6 CF_DEBUG: 记录每个评委的详细评分和建议
+        if CF_DEBUG:
+            _score_parts = [f"{k}={v:.2f}" for k, v in normalized_scores.items()]
+            _sugg_preview = suggestions[:3] if isinstance(suggestions, list) else []
+            logger.info(f"[CF-DEBUG] 评委 '{model}' 详细: "
+                        f"scores=[{', '.join(_score_parts)}], "
+                        f"suggestions_count={len(suggestions) if isinstance(suggestions, list) else 0}, "
+                        f"suggestions_preview={_sugg_preview}")
 
         return {
             "model": model,

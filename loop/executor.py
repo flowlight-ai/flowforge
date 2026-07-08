@@ -13,6 +13,7 @@ LoopExecutor 是 Harness 驾驭层的子模块，每次迭代：
 
 import asyncio
 import json
+import os
 import time
 from datetime import datetime
 from typing import Optional, Callable, Any
@@ -32,6 +33,43 @@ from flowforge.loop.turn_transition import TurnTransitionEngine, TurnState
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("loop.executor")
+
+# v4.6 调试日志开关：设置 CF_DEBUG=1 或 CF_DEBUG=true 启用详细日志
+CF_DEBUG = os.environ.get("CF_DEBUG", "").lower() in ("1", "true", "yes")
+
+
+def _strip_json_wrapper_exec(content: str) -> str:
+    """剥离内容中的 JSON 包装，提取纯文本/markdown（executor 内联版）。
+
+    ToolOutput result dict 在管道中可能被序列化为 JSON 字符串，
+    导致 last_draft 提取到 '{"draft": "# ...", "seo_title": "..."}' 而非纯 markdown。
+    """
+    if not content or not isinstance(content, str):
+        return content
+    stripped = content.strip()
+    if not stripped.startswith("{"):
+        return content
+    for _ in range(3):
+        try:
+            parsed = json.loads(stripped)
+            if not isinstance(parsed, dict):
+                break
+            extracted = ""
+            for key in ("edited_draft", "draft", "content", "polished_content",
+                        "output", "response", "result", "article", "text"):
+                val = parsed.get(key, "")
+                if isinstance(val, str) and val.strip():
+                    extracted = val
+                    break
+            if not extracted:
+                break
+            stripped = extracted.strip()
+            if not stripped.startswith("{"):
+                return stripped
+        except (json.JSONDecodeError, TypeError):
+            break
+    return content
+
 
 # 迭代记录回调类型：接收 loop_id, attempt, 阶段数据，由 Repository 层实现
 IterationCallback = Callable[..., Any]
@@ -509,6 +547,10 @@ class LoopExecutor:
             self.turn_engine.try_transition(TurnState.EXECUTING, reason=f"iteration {attempt + 1} executing")
             iter_timeout = min(timeout_per_iteration, remaining)
             _exec_start = time.monotonic()
+            if CF_DEBUG:
+                logger.info(f"[CF-DEBUG] 迭代{attempt + 1} 开始执行: "
+                            f"worker_mode={worker_mode}, iter_timeout={iter_timeout:.1f}s, "
+                            f"remaining={remaining:.1f}s, task_id={task.task_id}")
 
             try:
                 if worker_mode == "loop":
@@ -672,6 +714,30 @@ class LoopExecutor:
                 if not result.get("error") or has_content:
                     last_good_result = result
 
+            # v4.6 修复Bug#3: 每次迭代worker完成后都设置 last_draft，让Reflector能看到当前内容
+            # 原bug: task.metadata["last_draft"] 仅在 attempt > 0 的注入块中设置（line 493），
+            # 导致首轮迭代 Reflector 通过 task.metadata.get("last_draft", "") 取到空字符串，
+            # 误判为"输出内容为空"，给出与实际情况不符的根因分析。
+            # 修复: 无论 attempt==0 还是 attempt>0，只要 worker 产出了有效内容，立即写入 last_draft。
+            if isinstance(result, dict):
+                _current_draft = ""
+                for _dk in ("draft", "edited_draft", "content", "response", "output"):
+                    _dv = result.get(_dk, "")
+                    if isinstance(_dv, str) and len(_dv.strip()) >= 50:
+                        # v4.6 修复: 剥离可能存在的 JSON 包装
+                        _dv = _strip_json_wrapper_exec(_dv)
+                        if isinstance(_dv, str) and len(_dv.strip()) >= 50:
+                            _current_draft = _dv
+                            break
+                if _current_draft:
+                    if not hasattr(task, "metadata") or task.metadata is None:
+                        task.metadata = {}
+                    task.metadata["last_draft"] = _current_draft
+                    if CF_DEBUG:
+                        logger.info(f"[CF-DEBUG] 迭代{attempt + 1} 设置 last_draft: "
+                                    f"len={len(_current_draft)}, attempt={attempt}, "
+                                    f"preview={_current_draft[:150]!r}")
+
             # v3.4.3: 发射 worker 完成事件 — 让终端能看到 writer 输出预览
             if task.event_bus and isinstance(result, dict):
                 writer_output = ""
@@ -757,6 +823,10 @@ class LoopExecutor:
                 verdict = await active_verifier.verify(result, task, verifier_config)
                 _verify_duration = time.monotonic() - _verify_start
                 logger.info(f"[loop][阶段耗时] verifier.verify({verifier_mode or 'default'}): {_verify_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}, score={verdict.score:.3f}, passed={verdict.passed}")
+                if CF_DEBUG and hasattr(verdict, 'details') and verdict.details:
+                    logger.info(f"[CF-DEBUG] 迭代{attempt + 1} 评委详细: "
+                                f"verifier={type(active_verifier).__name__}, "
+                                f"details={str(verdict.details)[:500]}")
             state.verification_history.append(verdict.model_dump())
 
             # 详细日志：评审结果
@@ -764,6 +834,9 @@ class LoopExecutor:
                          f"score={verdict.score:.3f}, threshold={verifier_config.get('pass_threshold', 0.85)}, "
                          f"errors_count={len(verdict.errors)}, "
                          f"errors_top3={verdict.errors[:3] if verdict.errors else '[]'}")
+            if CF_DEBUG and verdict.errors:
+                logger.info(f"[CF-DEBUG] 迭代{attempt + 1} 评委全部errors: "
+                            f"{verdict.errors[:10]}")
 
             # [loop-trace] 评审结果详细日志
             logger.info(f"[loop-trace] task_id={task.task_id} 迭代{attempt + 1}评审结果: "
@@ -883,6 +956,11 @@ class LoopExecutor:
             reflection = await self.reflector.reflect(verdict.errors, task, state)
             _reflect_duration = time.monotonic() - _reflect_start
             logger.info(f"[loop][阶段耗时] reflector.reflect: {_reflect_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}")
+            if CF_DEBUG:
+                logger.info(f"[CF-DEBUG] 迭代{attempt + 1} 反思结果: "
+                            f"root_cause={reflection.root_cause[:200]!r}, "
+                            f"suggestions_count={len(reflection.suggestions)}, "
+                            f"suggestions={reflection.suggestions[:3]}")
             state.reflection_history.append(reflection.model_dump())
             state.past_errors.extend(verdict.errors)
 

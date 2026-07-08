@@ -2,6 +2,8 @@
 
 import json
 import logging
+import os
+import time
 
 from abc import ABC, abstractmethod
 from flowforge.core.prompt_manager import get_prompt
@@ -9,6 +11,9 @@ from flowforge.core.task_context import TaskContext
 from flowforge.loop.state import LoopState, Reflection
 
 logger = logging.getLogger(__name__)
+
+# v4.6 调试日志开关：设置 CF_DEBUG=1 或 CF_DEBUG=true 启用详细日志
+CF_DEBUG = os.environ.get("CF_DEBUG", "").lower() in ("1", "true", "yes")
 
 # Keyword-based root cause inference rules for fallback logic
 # 支持中英文关键词匹配，确保中文错误信息也能被正确分类
@@ -56,6 +61,10 @@ class ReflexionReflector(LoopReflector):
 
         logger.info(f"[reflector] 开始反思: task_id={task.task_id}, attempt={state.attempt}, "
                      f"errors_count={len(errors)}, errors_top3={errors[:3]}")
+        if CF_DEBUG:
+            logger.info(f"[CF-DEBUG] reflector 启动: task_id={task.task_id}, attempt={state.attempt}, "
+                        f"has_llm_client={self.llm_client is not None}, "
+                        f"errors_count={len(errors)}")
 
         if self.llm_client is not None:
             try:
@@ -64,6 +73,10 @@ class ReflexionReflector(LoopReflector):
                     logger.info(f"[reflector] LLM反思完成: root_cause={reflection.root_cause[:100]}, "
                                  f"suggestions_count={len(reflection.suggestions)}, "
                                  f"suggestions={reflection.suggestions[:3]}")
+                    if CF_DEBUG:
+                        logger.info(f"[CF-DEBUG] reflector 完成: root_cause={reflection.root_cause[:200]!r}, "
+                                    f"suggestions_count={len(reflection.suggestions)}, "
+                                    f"all_suggestions={reflection.suggestions}")
                     return reflection
                 logger.warning("LLM reflect response could not be parsed, falling back to rule-based logic")
             except Exception as e:
@@ -85,6 +98,13 @@ class ReflexionReflector(LoopReflector):
             last_draft = task.metadata.get("last_draft", "")
         last_draft_preview = last_draft[:2000] if last_draft else "无"
 
+        if CF_DEBUG:
+            _draft_preview = repr(last_draft[:200]) if last_draft else "None"
+            logger.info(f"[CF-DEBUG] reflector 输入: task_id={task.task_id}, attempt={state.attempt}, "
+                        f"errors_count={len(errors)}, errors_top3={errors[:3]}, "
+                        f"last_draft_len={len(last_draft)}, "
+                        f"last_draft_preview={_draft_preview}")
+
         prompt = get_prompt("loop.reflector.reflect",
                             errors=json.dumps(errors, ensure_ascii=False),
                             task_id=task.task_id,
@@ -97,16 +117,28 @@ class ReflexionReflector(LoopReflector):
         # llm_route.yaml 中 agent_routes.reflexion_evaluator → reflector 路由 (timeout_seconds=90)
         # v4.6 性能修复: 添加 prefer_api=True，让反思器走 API backend (2-10s/模型)
         # 原本走 WebChat 通道，4个模型各超时30s = 120s+，导致总超时900s触发
+        _reflect_llm_start = time.monotonic()
         response = await self.llm_client.chat(
             prompt,
             agent_name="reflexion_evaluator",
             task_id=task.task_id,
             prefer_api=True,
         )
+        _reflect_llm_dur = time.monotonic() - _reflect_llm_start
         # ModelCapability.chat returns a dict with "content" key;
         # LLMClient-style clients return a string. Handle both.
+        _used_model = ""
         if isinstance(response, dict):
+            _used_model = response.get("model", "?")
             response = response.get("content", "")
+        logger.info(f"[⏱️ PERF] reflector.llm_chat task_id={task.task_id} 耗时={_reflect_llm_dur:.2f}s")
+        if CF_DEBUG:
+            _resp_preview = repr(response[:200]) if response else "EMPTY"
+            logger.info(f"[CF-DEBUG] reflector LLM响应: model={_used_model or '?'}, "
+                        f"assignment=reflexion_evaluator, prefer_api=True, "
+                        f"耗时={_reflect_llm_dur:.2f}s, "
+                        f"response_len={len(response) if response else 0}, "
+                        f"response_preview={_resp_preview}")
         return self._parse_reflection_response(response)
 
     def _parse_reflection_response(self, response: str) -> Reflection | None:
