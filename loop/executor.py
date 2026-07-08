@@ -761,7 +761,7 @@ class LoopExecutor:
 
             # 详细日志：评审结果
             logger.info(f"[loop] 迭代{attempt + 1}评审结果: passed={verdict.passed}, "
-                         f"score={verdict.score:.3f}, threshold={verifier_config.get('pass_threshold', 0.9)}, "
+                         f"score={verdict.score:.3f}, threshold={verifier_config.get('pass_threshold', 0.85)}, "
                          f"errors_count={len(verdict.errors)}, "
                          f"errors_top3={verdict.errors[:3] if verdict.errors else '[]'}")
 

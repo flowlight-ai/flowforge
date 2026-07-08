@@ -28,12 +28,10 @@ routes:
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # v3.4: 性能优化 — timeout 90→60s（实测 writer LLM 调用 14-15s，60s 足够）
-  # primary(Doubao-Seed2.0)正常15s返回，60s超时容错2次
-  # max_retries=0 不重试，直接 fallback（避免单次90s×2=180s阻塞）
-  # v3.4 修复: timeout 60→30s — webchat铁律30s，超时快速切换到API fallback
-  # 根因: openroute webchat模型全部60s超时，4模型×60s=240s导致writer_engine 300s工具超时
-  # 解决: 30s超时 + content_create assignment API优先（OpenRouter API 2-4s）
+  # v4.0: timeout 60→90s — writer prompt 长达 4500+ 字符，Doubao-Seed2.0 实测 63s
+  # 60s 太紧导致 timeout→fallback→健康检查雪崩。90s 给长 prompt 足够时间
+  # max_retries=0 不重试，直接 fallback（避免单次 90s×2=180s 阻塞）
+  # 90s 仍可在 540s total_timeout 内完成 2 轮（90+90+60×2=300s < 540s）
   creative:
     primary_provider: openroute
     primary_model: Doubao-Seed2.0
@@ -49,7 +47,7 @@ routes:
         - rate_limited
         - timeout
         - invalid_response
-      timeout_seconds: 30
+      timeout_seconds: 90
       max_retries: 0
     default_temperature: 0.9
     default_max_tokens: 8192
@@ -110,6 +108,8 @@ routes:
   # reflector 只需生成 3-5 条改进建议，不需要长文生成
   # v3.4 修复: primary 改为 Doubao-Seed2.0（DeepSeek-V4-Pro webchat 返回"无法回答"）
   # v3.4 性能修复: timeout 60→30s — webchat铁律30s，API优先(2-4s)
+  # v4.6 修复: timeout 30→60s — 配合 prefer_api=True 走 API backend，
+  # API backend 偶尔较慢（10-20s），30s 太紧导致误判超时触发 fallback
   reflector:
     primary_provider: openroute
     primary_model: Doubao-Seed2.0
@@ -123,7 +123,7 @@ routes:
         - rate_limited
         - timeout
         - invalid_response
-      timeout_seconds: 30
+      timeout_seconds: 60
 
   # StockForge 股票分析路由（P0-21 新增）
   # 原: stockforge agents 走 default 路由 → Doubao-Seed2.0 echo_response 导致失败

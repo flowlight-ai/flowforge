@@ -222,28 +222,28 @@ assignments:
     - MiniMax-M3
     - DeepSeek-V4-Pro
   content_create:
-    # v3.4.1 性能修复: primary 改为 nemotron-3-super-120b（避免和 refine/eval 冲突导致 429）
-    # 不同 assignment 用不同 primary，分散 OpenRouter 并发请求
-    primary: openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    # v4.5: primary 改为 openroute/Doubao-Seed2.0（配合 prefer_api=True 走 siliconflow API, 1.8s）
+    # 原 openrouter/nvidia/nemotron-3-super-120b-a12b:free 免费模型不可靠，常返回空内容
+    # 不同 assignment 用不同 primary，跨厂商排序避免单点故障
+    primary: openroute/Doubao-Seed2.0
     fallbacks:
-    - openrouter/openai/gpt-oss-120b:free
-    - openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
     - openroute/DeepSeek-V4-Pro
-    - openroute/Doubao-Seed2.0
+    - openroute/GLM-5.1
+    - openroute/Kimi-K2.6
   content_refine:
-    # v3.4.1 性能修复: primary 改为 gpt-oss-20b（快速润色，避免和 create 冲突）
-    primary: openrouter/openai/gpt-oss-20b:free
+    # v4.5: primary 改为 openroute/DeepSeek-V4-Pro（润色专用，配合 prefer_api=True 走 siliconflow API, 2.6s）
+    primary: openroute/DeepSeek-V4-Pro
     fallbacks:
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
-    - openroute/DeepSeek-V4-Pro
     - openroute/Doubao-Seed2.0
+    - openroute/GLM-5.1
+    - openroute/Kimi-K2.6
   content_eval:
-    # v3.4.1 性能修复: primary 改为 llama-3.3-70b（评估专用，避免和 create 冲突）
-    primary: openrouter/meta-llama/llama-3.3-70b-instruct:free
+    # v4.5: primary 改为 openroute/GLM-5.1（评估专用，配合 prefer_api=True 走 zhipu API, 1.4s）
+    primary: openroute/GLM-5.1
     fallbacks:
-    - openrouter/openai/gpt-oss-20b:free
-    - openroute/DeepSeek-V4-Pro
     - openroute/Doubao-Seed2.0
+    - openroute/DeepSeek-V4-Pro
+    - openroute/Kimi-K2.6
   stockforge:stock_data:
     primary: Doubao-Seed2.0
     fallbacks:
@@ -291,16 +291,16 @@ assignments:
   # 替换为 Kimi-K2.6（更稳定的 webchat 模型）
   # v3.4 性能修复: API优先 — webchat模型60s超时导致reflector卡死
   reflexion_evaluator:
-    # v3.4.1: primary 改为 hermes-3-405b（深度反思，405B 大模型）
-    primary: openrouter/nousresearch/hermes-3-llama-3.1-405b:free
+    # v4.5: primary 改为 openroute/Kimi-K2.6（深度反思，配合 prefer_api=True 走 siliconflow API, 1.8s）
+    primary: openroute/Kimi-K2.6
     fallbacks:
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
-    - openroute/DeepSeek-V4-Pro
     - openroute/Doubao-Seed2.0
+    - openroute/DeepSeek-V4-Pro
+    - openroute/GLM-5.1
   reflexion_reflector:
-    # v3.4.1: primary 改为 qwen3-next-80b（反思生成，80B 指令模型）
-    primary: openrouter/qwen/qwen3-next-80b-a3b-instruct:free
+    # v4.5: primary 改为 openroute/Qwen3.6-Plus（反思生成，配合 prefer_api=True 走 siliconflow API, 1.8s）
+    primary: openroute/Qwen3.6-Plus
     fallbacks:
-    - openrouter/openai/gpt-oss-20b:free
-    - openroute/DeepSeek-V4-Pro
     - openroute/Doubao-Seed2.0
+    - openroute/DeepSeek-V4-Pro
+    - openroute/GLM-5.1

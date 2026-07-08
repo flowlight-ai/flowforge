@@ -122,6 +122,9 @@ class DefaultLLMEvaluator(BaseAgent):
             "stream": False, "task_id": context.task_id,
             "agent_name": "reflexion_evaluator", "persona": input.params.get("persona", context.persona or "default"),
             "temperature": 0.1,  # v2.7: 低温提高 JSON 输出稳定性
+            # v4.6 性能修复: prefer_api=True 走 API backend (2-10s/模型)
+            # 原本走 WebChat 通道，4个模型各超时30s = 120s+，导致总超时900s触发
+            "prefer_api": True,
         }
         # 支持外部指定模型（如agent_judge传入deepseek-web/chat）
         model_hint = input.params.get("model")
@@ -202,6 +205,9 @@ class DefaultLLMReflector(BaseAgent):
             "stream": False, "task_id": context.task_id,
             "agent_name": "reflexion_reflector", "persona": input.params.get("persona", context.persona or "default"),
             "temperature": 0.1,
+            # v4.6 性能修复: prefer_api=True 走 API backend (2-10s/模型)
+            # 原本走 WebChat 通道，4个模型各超时30s = 120s+，导致总超时900s触发
+            "prefer_api": True,
         }))
         content = result.result.get("content", "{}")
         match = re.search(r'\{[^{}]*"reflection"[^{}]*\}', content, re.DOTALL)

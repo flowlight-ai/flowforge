@@ -998,9 +998,14 @@ class LLMClient(BaseTool):
                     headers["X-Scene"] = "openroute_combine"
                 elif model_id in ("auto", "proxy", "free"):
                     headers["X-Scene"] = "auto"
+                elif prefer_api:
+                    # Phase 5.5: prefer_api=true 时使用 passthrough 场景
+                    # 让 SceneRouter 走 API_FORWARD 通道，避免 caller_combine 强制走 WebChat
+                    # 评委场景：caller_combine 会忽略 API 模型，强制用 WebChat 导致超时/截断
+                    headers["X-Scene"] = "passthrough"
                 else:
                     headers["X-Scene"] = "caller_combine"
-                logger.debug(f"[X-Scene] provider=openroute model={model_id} has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
+                logger.debug(f"[X-Scene] provider=openroute model={model_id} has_tools={bool(tools)} prefer_api={prefer_api} → X-Scene={headers['X-Scene']}")
 
             payload = {
                 "model": model_id, "messages": messages,
@@ -1362,10 +1367,13 @@ class LLMClient(BaseTool):
                             headers["X-Scene"] = "openroute_combine"
                         elif model_id in ("auto", "proxy", "free"):
                             headers["X-Scene"] = "auto"
+                        elif prefer_api:
+                            # Phase 5.5: prefer_api=true 时使用 passthrough 场景（评委 fallback）
+                            headers["X-Scene"] = "passthrough"
                         else:
                             headers["X-Scene"] = "caller_combine"
                         logger.info(f"🌐 [X-Scene] fallback provider=openroute model={model_id} "
-                                    f"has_tools={bool(tools)} → X-Scene={headers['X-Scene']}")
+                                    f"has_tools={bool(tools)} prefer_api={prefer_api} → X-Scene={headers['X-Scene']}")
                     payload_fb = {"model": model_id, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "stream": stream}
                     if top_p is not None:
                         payload_fb["top_p"] = top_p
@@ -1592,6 +1600,7 @@ class LLMClient(BaseTool):
         persona = input.params.get("persona")
         agent_name = input.params.get("agent_name")
         task_id = input.params.get("task_id", "unknown")
+        prefer_api = input.params.get("prefer_api", False)
         # P0-4: 根据 agent_name 查找对应路由的 timeout
         agent_timeout = self._get_timeout_for_agent(agent_name or "")
 
@@ -1624,10 +1633,13 @@ class LLMClient(BaseTool):
             if provider == "openroute":
                 if model_id in ("auto", "proxy", "free"):
                     headers["X-Scene"] = "auto"
+                elif prefer_api:
+                    # Phase 5.5: prefer_api=true 时使用 passthrough 场景（评委 stream）
+                    headers["X-Scene"] = "passthrough"
                 else:
                     headers["X-Scene"] = "caller_combine"
                 logger.info(f"🌐 [X-Scene] stream provider=openroute model={model_id} "
-                            f"→ X-Scene={headers['X-Scene']}")
+                            f"prefer_api={prefer_api} → X-Scene={headers['X-Scene']}")
 
             payload = {
                 "model": model_id, "messages": messages,
@@ -1698,10 +1710,11 @@ class LLMClient(BaseTool):
 
     def _update_health(self, provider: str, model_id: str, success: bool, error: str = ""):
         key = f"{provider}/{model_id}"
-        # v3.4 修复: 用 setdefault 确保所有键存在
+        # v3.4 修复 + P0-32/P0-33 FIX: 用 setdefault 确保 key 存在并初始化完整 dict
         # 原bug: _sync_health_from_model_service 只设置 cooldown_until/error_count，
         # 不设置 success_count，导致 current["success_count"] += 1 抛 KeyError('success_count')
         # 被外层 except 捕获，把成功响应误标记为失败（错误='success_count'）
+        # 使用 setdefault 确保所有必需字段存在（防御 _sync_health_from_model_service 的部分 dict 问题）
         current = self._health_status.setdefault(key, {
             "success_count": 0, "error_count": 0,
             "last_error": "", "last_check": "", "cooldown_until": 0,

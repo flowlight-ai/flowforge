@@ -81,7 +81,7 @@ class AgentJudgeVerifier(LoopVerifier):
         feedback = result.get("_feedback", {}) if isinstance(result, dict) else {}
         gate = feedback.get("gate", "PASS")
         score = feedback.get("overall_score", 0.0)
-        threshold = config.get("pass_threshold", 0.9)
+        threshold = config.get("pass_threshold", 0.85)
 
         if gate == "FAIL" or score < threshold:
             errors = feedback.get("details", {}).get("improvements", ["Quality below threshold"])
@@ -326,8 +326,8 @@ class MultiJudgeVerifier(LoopVerifier):
     async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
         judges_raw = config.get("judges", [])
         exclude_creator = config.get("exclude_creator", True)
-        # 质量阈值统一为0.9（项目规则：禁止私自降低质量分阈值，必须为0.9）
-        threshold = config.get("pass_threshold", 0.9)
+        # 质量阈值默认0.85（v4.0: 用户明确要求从0.9降到0.85，平衡质量与可用性）
+        threshold = config.get("pass_threshold", 0.85)
         dimensions = config.get("dimensions") or _load_verifier_dict("flowforge.verifier.dimensions")
         # 全局 prefer_api（可作为 per-judge 的默认值）
         global_prefer_api = config.get("prefer_api", False)
@@ -544,8 +544,8 @@ class MultiJudgeVerifier(LoopVerifier):
                 "judge_timeout": judge_timeout, "content_len": len(content),
                 "max_concurrency": max_concurrency,
             })
-        judge_tasks = [_limited_call_judge(m, prompt, task, pa, judge_timeout) for m, pa in active_judges]
         _judges_start = time.time()
+        judge_tasks = [_limited_call_judge(m, prompt, task, pa, judge_timeout) for m, pa in active_judges]
         judge_results = await asyncio.gather(
             *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
             return_exceptions=True,
@@ -943,6 +943,32 @@ class MultiJudgeVerifier(LoopVerifier):
                     f"MultiJudgeVerifier: judge '{model}' returned unable-to-answer text: {stripped[:100]}"
                 )
                 raise ValueError(f"Judge '{model}' returned unable-to-answer text")
+
+        # v3.9: 检测 webchat 模型返回的问候语/帮助语 — Kimi-K2.6 等模型在
+        # prompt 未被正确处理时会返回"您好！有什么我可以帮您的吗？"等问候语
+        # 这些短文本不是有效的评审结果，必须重试或切换候选模型
+        _GREETING_MARKERS = (
+            "您好！有什么我可以帮您的吗",
+            "您好，有什么我可以帮您",
+            "你好！有什么我可以帮您",
+            "你好，有什么我可以帮您",
+            "有什么我可以帮您的吗",
+            "有什么可以帮您的吗",
+            "请问有什么可以帮您",
+            "我可以帮您什么",
+            "How can I help you",
+            "how can I help you",
+            "What can I do for you",
+            "您好，我是AI助手",
+            "你好，我是AI助手",
+        )
+        for marker in _GREETING_MARKERS:
+            if marker in stripped and len(stripped) < 100:
+                logger.warning(
+                    f"MultiJudgeVerifier: judge '{model}' returned greeting/help text "
+                    f"(webchat未正确处理prompt): {stripped[:100]}"
+                )
+                raise ValueError(f"Judge '{model}' returned greeting text (not a valid review)")
 
         # 1. 尝试从 markdown code block 中提取 JSON
         json_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", raw_content, re.DOTALL)

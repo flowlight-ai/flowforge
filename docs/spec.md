@@ -662,7 +662,7 @@ harness:
     evaluation_mode: "lightweight"  # full | lightweight | skip
     evaluator_model: "sonnet-4.6"
     scoring_dimensions: [design_quality, originality, craft, functionality]
-    pass_threshold: 0.9
+    pass_threshold: 0.85
     max_reflexion_iterations: 3
     cross_validation: true
 
@@ -2703,7 +2703,7 @@ skill_precipitation:
 | StockForge能力 | FlowForge底座支持 |
 |---------------|------------------|
 | 多Agent协作分析 | 9大执行模式（react/plan_execute/multi_agent等） |
-| 全周期预测Loop | LoopExecutor + 质量分阈值0.9 |
+| 全周期预测Loop | LoopExecutor + 质量分阈值0.85 |
 | 多空辩论机制 | multi_agent模式 + Agent Handoff |
 | 技术指标计算 | ToolRegistry + BaseTool |
 | 投资报告生成 | DeclarativeAgent + YAML配置 |
@@ -2727,7 +2727,7 @@ StockForge: 后端8005 / 前端5179
 - Plugin钩子修正为V2协议（register_workflows/register_gates/register_schedules/register_evaluators/register_event_handlers）；register_helm_handlers 不属于 V2 协议，Helm 事件处理器应通过 register_event_handlers 注册，权限策略应通过 register_gates 挂载
 - 所有Loop走loop模式，worker.mode禁止使用workflow/reflexion
 - Loop超时分档（快速180s / 内容720s / 长文7200s，详见 rules.md §2.3 第6条）
-- 质量分阈值0.9在config/default.yaml中显式声明
+- 质量分阈值0.85在config/default.yaml中显式声明
 - 实盘交易隔离：ArchConstraintEngine增加deny规则+CI静态检查
 
 ---
