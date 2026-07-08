@@ -95,10 +95,13 @@ class ReflexionReflector(LoopReflector):
         # v2.2 修复: 显式传入 agent_name="reflexion_evaluator"，让 LLMClient 走 reflector 路由(90s 超时)
         # 原来不传 agent_name 导致 LLMClient 走 default 路由(200s 超时)，实际耗时 124s+
         # llm_route.yaml 中 agent_routes.reflexion_evaluator → reflector 路由 (timeout_seconds=90)
+        # v4.6 性能修复: 添加 prefer_api=True，让反思器走 API backend (2-10s/模型)
+        # 原本走 WebChat 通道，4个模型各超时30s = 120s+，导致总超时900s触发
         response = await self.llm_client.chat(
             prompt,
             agent_name="reflexion_evaluator",
             task_id=task.task_id,
+            prefer_api=True,
         )
         # ModelCapability.chat returns a dict with "content" key;
         # LLMClient-style clients return a string. Handle both.

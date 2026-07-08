@@ -108,6 +108,8 @@ routes:
   # reflector 只需生成 3-5 条改进建议，不需要长文生成
   # v3.4 修复: primary 改为 Doubao-Seed2.0（DeepSeek-V4-Pro webchat 返回"无法回答"）
   # v3.4 性能修复: timeout 60→30s — webchat铁律30s，API优先(2-4s)
+  # v4.6 修复: timeout 30→60s — 配合 prefer_api=True 走 API backend，
+  # API backend 偶尔较慢（10-20s），30s 太紧导致误判超时触发 fallback
   reflector:
     primary_provider: openroute
     primary_model: Doubao-Seed2.0
@@ -121,7 +123,7 @@ routes:
         - rate_limited
         - timeout
         - invalid_response
-      timeout_seconds: 30
+      timeout_seconds: 60
 
   # StockForge 股票分析路由（P0-21 新增）
   # 原: stockforge agents 走 default 路由 → Doubao-Seed2.0 echo_response 导致失败
