@@ -672,6 +672,23 @@ class LoopExecutor:
                 if not result.get("error") or has_content:
                     last_good_result = result
 
+            # v3.4.3: 发射 worker 完成事件 — 让终端能看到 writer 输出预览
+            if task.event_bus and isinstance(result, dict):
+                writer_output = ""
+                for k in ("draft", "edited_draft", "content", "output"):
+                    v = result.get(k)
+                    if isinstance(v, str) and len(v.strip()) >= 50:
+                        writer_output = v
+                        break
+                if writer_output:
+                    task.event_bus.emit(task.task_id, "loop.worker.complete", {
+                        "loop_id": state.loop_id,
+                        "attempt": state.attempt,
+                        "content_len": len(writer_output),
+                        "output_preview": writer_output[:300],
+                        "model": result.get("_model", task.metadata.get("last_used_model", "")),
+                    })
+
             # === 详细日志：定位执行结果内容 ===
             logger.info(f"[loop][DEBUG] 迭代{attempt + 1}执行结果: type={type(result).__name__}")
             if isinstance(result, dict):

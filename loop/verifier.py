@@ -558,13 +558,30 @@ class MultiJudgeVerifier(LoopVerifier):
             f"成功={_success_count}/{len(judge_results)} 并发={max_concurrency}"
         )
         # SSE修复：评委调用后发射事件，汇报评委成功/失败情况
+        # v3.4.3: 增强事件 — 包含每个评委的分数详情，让终端能看到每个评委的打分
         if task.event_bus:
             judge_status = []
             for i, r in enumerate(judge_results):
                 if isinstance(r, Exception):
                     judge_status.append({"judge": judge_names[i], "status": "failed", "error": str(r)[:100]})
                 elif isinstance(r, dict):
-                    judge_status.append({"judge": judge_names[i], "status": "ok"})
+                    # 提取评委分数详情
+                    scores = r.get("scores", {})
+                    # 计算评委加权分数（如果有）
+                    judge_score = r.get("overall_score", 0)
+                    if not judge_score and scores:
+                        try:
+                            judge_score = sum(float(v) for v in scores.values() if isinstance(v, (int, float, str))) / max(len(scores), 1)
+                        except (ValueError, TypeError):
+                            judge_score = 0
+                    suggestions = r.get("improvement_suggestions", [])
+                    judge_status.append({
+                        "judge": judge_names[i],
+                        "status": "ok",
+                        "score": round(float(judge_score), 3) if judge_score else 0,
+                        "scores": {k: round(float(v), 2) if isinstance(v, (int, float)) else v for k, v in scores.items()} if scores else {},
+                        "suggestions_count": len(suggestions) if isinstance(suggestions, list) else 0,
+                    })
                 else:
                     judge_status.append({"judge": judge_names[i], "status": "invalid"})
             task.event_bus.emit(task.task_id, "verify.judges.complete", {
