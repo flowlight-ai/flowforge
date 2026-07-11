@@ -731,13 +731,13 @@ class MultiJudgeVerifier(LoopVerifier):
             else:
                 dim_lines.append(f"  - {dim} (权重 {weight:.2f})")
 
-        # 4. 动态生成 score_fields — 用示例值 0.85（非 0.0）
-        # v3 修复: 原 0.0 会导致 GLM-5.1 API 空响应时, OpenRoute 网关返回 prompt 中的
+        # 4. 动态生成 score_fields — 用示例值 0.50（中性值）
+        # v5 修复: 原 0.85 导致 LLM 锚定效应，评委倾向给0.85分，低质量文章也能通过
+        #   改为 0.50（中性值），LLM 不会锚定到高分，更客观评分
+        # v3 历史: 原 0.0 会导致 GLM-5.1 API 空响应时, OpenRoute 网关返回 prompt 中的
         #   JSON 模板(scores 全 0.0)作为响应, 浪费 230s 后才被 Echo 检测捕获
-        # v3 改为 0.85 (示例值), LLM 看到具体数值会理解需替换为实际评分;
-        #   若 LLM echo 模板, scores 全 0.85 (明显非真实评分), 容易检测
         # v2 历史: 原 <your_score 0.0-1.0> 占位符让某些 LLM 误以为要输出占位符本身
-        score_field_lines = [f'"{dim}": 0.85' for dim in dimensions.keys()]
+        score_field_lines = [f'"{dim}": 0.50' for dim in dimensions.keys()]
         score_fields = ",\n    ".join(score_field_lines)
 
         # 5. 读取提示词模板
@@ -1154,7 +1154,12 @@ class MultiJudgeVerifier(LoopVerifier):
         }
 
     def _aggregate_scores(self, results: list[dict], dimensions: dict) -> dict:
-        """聚合多个评委的评分，使用 trimmed mean（>=3评委时去除最高最低）。"""
+        """聚合多个评委的评分，使用 trimmed mean（>=3评委时去除最高最低）。
+
+        v5 新增一票否决机制: 关键维度（ai_flavor, compliance, fact_accuracy）
+        任一维度均分低于0.50时，总分上限锁定0.69（自动不通过），
+        防止"AI味重但其他维度尚可"的文章通过0.85阈值。
+        """
         dim_scores: dict[str, list[float]] = {}
         for r in results:
             for dim, score in r.get("scores", {}).items():
@@ -1180,6 +1185,26 @@ class MultiJudgeVerifier(LoopVerifier):
             aggregated_dims.get(dim, 0.0) * weight
             for dim, weight in dimensions.items()
         ) / total_weight
+
+        # v5 一票否决机制: 关键维度低于阈值，总分上限0.69
+        # v5.1 修复: ai_flavor阈值从0.50提高到0.65（T7对AI痕迹极敏感，评委给0.6也应触发否决）
+        veto_thresholds = {
+            "ai_flavor": 0.65,        # AI痕迹是T7审核的常见失败原因，阈值提高
+            "compliance": 0.50,        # 合规问题直接否决
+            "fact_accuracy": 0.50,     # 事实错误直接否决
+        }
+        veto_triggered = []
+        for vdim, vthresh in veto_thresholds.items():
+            if vdim in aggregated_dims and aggregated_dims[vdim] < vthresh:
+                veto_triggered.append(f"{vdim}={aggregated_dims[vdim]:.2f}(阈值{vthresh})")
+
+        if veto_triggered:
+            original_score = weighted_score
+            weighted_score = min(weighted_score, 0.69)
+            logger.warning(
+                f"[verifier-veto] 一票否决触发: {', '.join(veto_triggered)}, "
+                f"原始分={original_score:.3f} → 否决后={weighted_score:.3f}"
+            )
 
         return {
             "weighted_score": weighted_score,

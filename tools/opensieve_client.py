@@ -224,6 +224,12 @@ class OpenSieveClient(BaseTool):
             "min_score": params.get("min_score", 0.3),
             "max_age_days": params.get("max_age_days", 30),
         }
+        # v2.0: 传递 source_filter 参数（OpenSieve /api/v1/retrieve 支持）
+        # source_filter: all(默认)/preselect/web/local
+        # preselect=仅预选题库(URL向量化入库), 用于URL选题模式
+        source_filter = params.get("source_filter")
+        if source_filter and source_filter != "all":
+            payload["source_filter"] = source_filter
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             resp = await client.post(
                 f"{self.base_url}/api/v1/retrieve",

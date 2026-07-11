@@ -164,7 +164,10 @@ agent_routes:
   reflexion_reflector: reflector
 
   # ContentForge Agent
-  contentforge:topic: default
+  # v4.1: topic 走 creative 路由(90s timeout) — default 路由 200s > worker timeout 180s 导致超时
+  # topic_strategist 内部调用 LLM agent_name="topic"，需同时映射
+  contentforge:topic: creative
+  topic: creative
   contentforge:research: default
   # v2.4 修复: editor 也走 creative 路由(300s timeout)
   # 原: 未映射 → default 200s → OpenRoute webchat 推理>200s 超时
