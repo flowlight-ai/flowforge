@@ -246,28 +246,34 @@ assignments:
   # 原因：OpenRoute Playwright在高负载(14次LLM调用)下可能崩溃，导致所有webchat评委失败
   # 约束：webchat模型优先（用户要求5评委评审只用webchat），free模型仅作backup
   judge:
-    # v5.13: webchat primary — ark API达到限额(429 Safe Experience Mode)
-    # 评委只用3个webchat模型+2个free API保底，降低并发到2避免OpenRoute崩溃
-    primary: openroute/GLM-5.1
+    # v5.16: 基于 v515 单评委测试数据调整
+    # 移除 Kimi-K2.6（300s 超时不可用），保留 Qwen3.6-Plus（89s 最快）
+    # webchat 模型优先（用户要求5评委评审只用webchat）
+    primary: Doubao-Seed2.0
     fallbacks:
-    - openroute/Doubao-Seed2.0
-    - openroute/Kimi-K2.6
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
-    - openrouter/openai/gpt-oss-120b:free
+    - Qwen3.6-Plus
+    - HunYuan3
+    - GLM-5.1
+    - MiniMax-M3
+    - DeepSeek-V4-Pro
   content_create:
-    # v5.13: webchat primary — ark API限额，webchat在低并发时可用(Test 7 Writer成功)
-    primary: openroute/GLM-5.1
+    # v5.16: webchat primary（用户要求创作只用webchat模型）
+    # Doubao-Seed2.0 作为 primary，跨厂商 fallback 避免单点故障
+    primary: openroute/Doubao-Seed2.0
     fallbacks:
+    - openroute/Qwen3.6-Plus
+    - openroute/HunYuan3
     - openroute/DeepSeek-V4-Pro
-    - openroute/Doubao-Seed2.0
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
-    - openrouter/openai/gpt-oss-120b:free
+    - openroute/GLM-5.1
+    - openroute/MiniMax-M3
   content_refine:
-    primary: openroute/GLM-5.1
+    # v5.16: Kimi-K2.6 超时不可用，改用 Doubao-Seed2.0 作为 primary
+    primary: openroute/Doubao-Seed2.0
     fallbacks:
+    - openroute/Qwen3.6-Plus
+    - openroute/HunYuan3
+    - openroute/GLM-5.1
     - openroute/DeepSeek-V4-Pro
-    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
-    - openrouter/openai/gpt-oss-120b:free
   content_eval:
     primary: openroute/GLM-5.1
     fallbacks:

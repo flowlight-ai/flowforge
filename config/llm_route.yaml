@@ -28,16 +28,18 @@ routes:
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # v4.0: timeout 60→90s — writer prompt 长达 4500+ 字符，Doubao-Seed2.0 实测 63s
-  # 60s 太紧导致 timeout→fallback→健康检查雪崩。90s 给长 prompt 足够时间
-  # max_retries=0 不重试，直接 fallback（避免单次 90s×2=180s 阻塞）
-  # 90s 仍可在 540s total_timeout 内完成 2 轮（90+90+60×2=300s < 540s）
+  # v5.16: timeout 90→300s — v515 实测 webchat 耗时 89-283s
+  # 90s 导致 Doubao(246s)/GLM(283s)/HunYuan(125s) 全部超时，fallback 链串行 5×90s=450s 后失败
+  # 300s 覆盖最慢的 GLM 283s + 17s 缓冲
+  # max_retries=0 不重试，直接 fallback（避免单次 300s×2=600s 阻塞）
   creative:
     primary_provider: openroute
     primary_model: Doubao-Seed2.0
     fallback_providers:
       - openroute
     fallback_models:
+      - Qwen3.6-Plus
+      - HunYuan3
       - DeepSeek-V4-Pro
       - Kimi-K2.6
       - GLM-5.1
@@ -47,7 +49,7 @@ routes:
         - rate_limited
         - timeout
         - invalid_response
-      timeout_seconds: 90
+      timeout_seconds: 300
       max_retries: 0
     default_temperature: 0.9
     default_max_tokens: 8192
