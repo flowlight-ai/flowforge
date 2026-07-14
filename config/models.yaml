@@ -231,12 +231,13 @@ assignments:
     - openroute/GLM-5.1
     - openroute/Kimi-K2.6
   content_refine:
-    # v4.5: primary 改为 openroute/DeepSeek-V4-Pro（润色专用，配合 prefer_api=True 走 siliconflow API, 2.6s）
-    primary: openroute/DeepSeek-V4-Pro
+    # 铁律: polisher 必须使用 Kimi-K2.6
+    # 实测 DeepSeek-V4-Pro 润色会降低质量(创作0.85→润色0.57)，Kimi-K2.6 润色保持高质量
+    primary: openroute/Kimi-K2.6
     fallbacks:
     - openroute/Doubao-Seed2.0
     - openroute/GLM-5.1
-    - openroute/Kimi-K2.6
+    - openroute/DeepSeek-V4-Pro
   content_eval:
     # v4.5: primary 改为 openroute/GLM-5.1（评估专用，配合 prefer_api=True 走 zhipu API, 1.4s）
     primary: openroute/GLM-5.1
