@@ -42,6 +42,14 @@ providers:
     base_url: https://ark.cn-beijing.volces.com/api/v3
     api_key_env: ARK_API_KEY
     description: 豆包大模型官方API（火山引擎Ark平台）
+  trae:
+    mode: bridge
+    bridge_dir: data/trae_bridge
+    bridge_timeout: 300
+    bridge_poll_interval: 2
+    default_model: trae
+    session_persistence: true
+    description: Trae AI 编码助手（文件桥接模式，让 devforge 能调用 Trae 进行编码）
 models:
 - id: auto
   provider: openroute
@@ -183,6 +191,10 @@ models:
   provider: zhipu
   display_name: GLM-4 Flash
   enabled: true
+- id: trae
+  provider: trae
+  display_name: Trae AI 编码助手
+  enabled: true
 assignments:
   # v3: 移除所有 free fallback — openroute/free 会路由到 openrouter.ai 的 free 模型，
   # 导致评委/T7审核使用 free 模型（404/429 大量失败，质量分0.0）。
@@ -210,6 +222,24 @@ assignments:
     - Doubao-Seed2.0
     - GLM-5.1
     - Kimi-K2.6
+  # devforge 编码任务：优先使用 Trae AI 助手（文件桥接模式）
+  # Trae 不可用时 fallback 到常规编码模型链
+  devforge:coding:
+    primary: trae
+    fallbacks:
+    - DeepSeek-V4-Pro
+    - Doubao-Seed2.0
+    - GLM-5.1
+  devforge:code_review:
+    primary: trae
+    fallbacks:
+    - DeepSeek-V4-Pro
+    - Doubao-Seed2.0
+  devforge:architect:
+    primary: trae
+    fallbacks:
+    - DeepSeek-V4-Pro
+    - GLM-5.1
   # 评委路由：跨厂商排序，避免单厂商故障导致所有评委失败
   # primary=Doubao-Seed2.0（豆包webchat最稳定）
   # v5.8: 末尾追加 openrouter 直接API模型作为保底（不经过本地OpenRoute webchat代理）
