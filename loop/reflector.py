@@ -115,14 +115,15 @@ class ReflexionReflector(LoopReflector):
         # v2.2 修复: 显式传入 agent_name="reflexion_evaluator"，让 LLMClient 走 reflector 路由(90s 超时)
         # 原来不传 agent_name 导致 LLMClient 走 default 路由(200s 超时)，实际耗时 124s+
         # llm_route.yaml 中 agent_routes.reflexion_evaluator → reflector 路由 (timeout_seconds=90)
-        # v4.6 性能修复: 添加 prefer_api=True，让反思器走 API backend (2-10s/模型)
-        # 原本走 WebChat 通道，4个模型各超时30s = 120s+，导致总超时900s触发
+        # v4.9: 移除 prefer_api=True — 用户要求评委/润色/反思使用 webchat 模型
+        # 原因: API 供应商(ark/kimi/tencent)持续429限流，prefer_api=true导致反思器
+        #   被路由到 openrouter/poolside/laguna-xs-2.1:free（编程模型），
+        #   无法处理中文内容，返回无效反思建议
         _reflect_llm_start = time.monotonic()
         response = await self.llm_client.chat(
             prompt,
             agent_name="reflexion_evaluator",
             task_id=task.task_id,
-            prefer_api=True,
         )
         _reflect_llm_dur = time.monotonic() - _reflect_llm_start
         # ModelCapability.chat returns a dict with "content" key;
@@ -135,7 +136,7 @@ class ReflexionReflector(LoopReflector):
         if CF_DEBUG:
             _resp_preview = repr(response[:200]) if response else "EMPTY"
             logger.info(f"[CF-DEBUG] reflector LLM响应: model={_used_model or '?'}, "
-                        f"assignment=reflexion_evaluator, prefer_api=True, "
+                        f"assignment=reflexion_evaluator, prefer_api=False(webchat), "
                         f"耗时={_reflect_llm_dur:.2f}s, "
                         f"response_len={len(response) if response else 0}, "
                         f"response_preview={_resp_preview}")

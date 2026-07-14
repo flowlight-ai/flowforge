@@ -212,38 +212,39 @@ assignments:
     - Kimi-K2.6
   # 评委路由：跨厂商排序，避免单厂商故障导致所有评委失败
   # primary=Doubao-Seed2.0（豆包webchat最稳定）
+  # v5.8: 末尾追加 openrouter 直接API模型作为保底（不经过本地OpenRoute webchat代理）
+  # 原因：OpenRoute Playwright在高负载(14次LLM调用)下可能崩溃，导致所有webchat评委失败
+  # 约束：webchat模型优先（用户要求5评委评审只用webchat），free模型仅作backup
   judge:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - Kimi-K2.6
-    - GLM-5.1
-    - Qwen3.6-Plus
-    - HunYuan3
-    - MiniMax-M3
-    - DeepSeek-V4-Pro
-  content_create:
-    # v4.5: primary 改为 openroute/Doubao-Seed2.0（配合 prefer_api=True 走 siliconflow API, 1.8s）
-    # 原 openrouter/nvidia/nemotron-3-super-120b-a12b:free 免费模型不可靠，常返回空内容
-    # 不同 assignment 用不同 primary，跨厂商排序避免单点故障
-    primary: openroute/Doubao-Seed2.0
-    fallbacks:
-    - openroute/DeepSeek-V4-Pro
-    - openroute/GLM-5.1
-    - openroute/Kimi-K2.6
-  content_refine:
-    # v4.5: primary 改为 openroute/DeepSeek-V4-Pro（润色专用，配合 prefer_api=True 走 siliconflow API, 2.6s）
-    primary: openroute/DeepSeek-V4-Pro
+    # v5.13: webchat primary — ark API达到限额(429 Safe Experience Mode)
+    # 评委只用3个webchat模型+2个free API保底，降低并发到2避免OpenRoute崩溃
+    primary: openroute/GLM-5.1
     fallbacks:
     - openroute/Doubao-Seed2.0
-    - openroute/GLM-5.1
     - openroute/Kimi-K2.6
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - openrouter/openai/gpt-oss-120b:free
+  content_create:
+    # v5.13: webchat primary — ark API限额，webchat在低并发时可用(Test 7 Writer成功)
+    primary: openroute/GLM-5.1
+    fallbacks:
+    - openroute/DeepSeek-V4-Pro
+    - openroute/Doubao-Seed2.0
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - openrouter/openai/gpt-oss-120b:free
+  content_refine:
+    primary: openroute/GLM-5.1
+    fallbacks:
+    - openroute/DeepSeek-V4-Pro
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - openrouter/openai/gpt-oss-120b:free
   content_eval:
-    # v4.5: primary 改为 openroute/GLM-5.1（评估专用，配合 prefer_api=True 走 zhipu API, 1.4s）
     primary: openroute/GLM-5.1
     fallbacks:
     - openroute/Doubao-Seed2.0
     - openroute/DeepSeek-V4-Pro
-    - openroute/Kimi-K2.6
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - openrouter/openai/gpt-oss-120b:free
   stockforge:stock_data:
     primary: Doubao-Seed2.0
     fallbacks:
@@ -291,16 +292,16 @@ assignments:
   # 替换为 Kimi-K2.6（更稳定的 webchat 模型）
   # v3.4 性能修复: API优先 — webchat模型60s超时导致reflector卡死
   reflexion_evaluator:
-    # v4.5: primary 改为 openroute/Kimi-K2.6（深度反思，配合 prefer_api=True 走 siliconflow API, 1.8s）
-    primary: openroute/Kimi-K2.6
+    # v5.13: free API primary — ark API限额(429)
+    primary: openrouter/nvidia/nemotron-3-super-120b-a12b:free
     fallbacks:
+    - openrouter/openai/gpt-oss-120b:free
+    - openroute/Kimi-K2.6
     - openroute/Doubao-Seed2.0
-    - openroute/DeepSeek-V4-Pro
-    - openroute/GLM-5.1
   reflexion_reflector:
-    # v4.5: primary 改为 openroute/Qwen3.6-Plus（反思生成，配合 prefer_api=True 走 siliconflow API, 1.8s）
-    primary: openroute/Qwen3.6-Plus
+    # v5.13: free API primary — ark API限额(429)
+    primary: openrouter/nvidia/nemotron-3-super-120b-a12b:free
     fallbacks:
+    - openrouter/openai/gpt-oss-120b:free
+    - openroute/Qwen3.6-Plus
     - openroute/Doubao-Seed2.0
-    - openroute/DeepSeek-V4-Pro
-    - openroute/GLM-5.1

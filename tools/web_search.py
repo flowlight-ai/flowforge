@@ -8,7 +8,7 @@ from flowforge.core.tracing import get_logger
 logger = get_logger("web_search")
 
 _ENGINE_TIMEOUTS: dict[str, float] = {
-    "opensieve_search": 10.0,
+    "opensieve_search": 45.0,  # v2.1: 双端点策略（retrieve 15s + search fallback 30s）
     "duckduckgo_search": 8.0,
 }
 

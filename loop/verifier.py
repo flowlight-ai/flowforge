@@ -1012,6 +1012,14 @@ class MultiJudgeVerifier(LoopVerifier):
         if parsed is not None:
             return self._extract_judge_result(parsed, model)
 
+        # 4. v5.1: JSON 解析失败时，尝试从 Markdown/自然语言评审中提取评分
+        # 原因: webchat 模型（豆包/Kimi/GLM等）经常忽略 JSON 输出要求，返回 Markdown 评审报告
+        # 示例: "# 文章评审结果\n1. 信息准确性（25 分）：15 分\n..."
+        # 此 fallback 从 Markdown 中提取各维度得分和满分，计算比例后映射到评委维度
+        markdown_result = self._parse_markdown_review(raw_content, model)
+        if markdown_result is not None:
+            return markdown_result
+
         logger.warning(
             f"MultiJudgeVerifier: judge '{model}' returned no parseable JSON, "
             f"raw preview: {raw_content[:500]}"
@@ -1098,6 +1106,161 @@ class MultiJudgeVerifier(LoopVerifier):
             pass
 
         return None
+
+    def _parse_markdown_review(self, raw_content: str, model: str) -> dict | None:
+        """v5.1: 从 Markdown/自然语言评审报告中提取评分。
+
+        webchat 模型（豆包/Kimi/GLM等）经常忽略 JSON 输出要求，返回 Markdown 评审报告。
+        此方法从 Markdown 中提取各维度得分和满分，计算比例后映射到评委维度。
+
+        支持的格式:
+        1. "1. 信息准确性（25 分）：15 分"
+        2. "信息准确性: 15/25"
+        3. "信息准确性：15分（满分25分）"
+        4. "## 信息准确性\n... 15/25"
+        """
+        if not raw_content or len(raw_content) < 20:
+            return None
+
+        # 维度名称映射（webchat 模型使用的自然语言维度 → 评委配置维度）
+        DIMENSION_MAPPING = {
+            "信息准确性": "fact_accuracy",
+            "准确性": "fact_accuracy",
+            "事实准确": "fact_accuracy",
+            "内容深度": "content_depth",
+            "深度": "content_depth",
+            "可读性": "structure_clarity",
+            "流畅度": "structure_clarity",
+            "结构": "structure_clarity",
+            "时效性": "timeliness",
+            "时效": "timeliness",
+            "吸引力": "title_attractiveness",
+            "标题": "title_attractiveness",
+            "开头": "opening_hook",
+            "钩子": "opening_hook",
+            "AI味": "ai_flavor",
+            "AI痕迹": "ai_flavor",
+            "人设": "persona_fit",
+            "风格": "persona_fit",
+            "差异化": "differentiation",
+            "原创": "originality",
+            "原创性": "originality",
+            "传播": "viral_potential",
+            "互动": "engagement",
+            "平台": "platform_fit",
+            "合规": "compliance",
+        }
+
+        # 提取各维度得分和满分
+        # 格式1: "1. 信息准确性（25 分）：15 分"
+        pattern1 = re.compile(
+            r'(?:\d+\.?\s*)?([\u4e00-\u9fffA-Za-z]{2,10})\s*[（(]\s*(\d+(?:\.\d+)?)\s*分?\s*[）)]\s*[：:]\s*(\d+(?:\.\d+)?)\s*分?'
+        )
+        # 格式2: "信息准确性: 15/25" 或 "信息准确性：15/25分"
+        pattern2 = re.compile(
+            r'([\u4e00-\u9fffA-Za-z]{2,10})\s*[：:]\s*(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)'
+        )
+        # 格式3: "信息准确性：15分（满分25分）"
+        pattern3 = re.compile(
+            r'([\u4e00-\u9fffA-Za-z]{2,10})\s*[：:]\s*(\d+(?:\.\d+)?)\s*分?\s*[（(]\s*满分\s*(\d+(?:\.\d+)?)\s*分?\s*[）)]'
+        )
+
+        dimension_scores = {}  # {评委维度名: 比例分}
+        total_score = 0.0
+        total_max = 0.0
+        matched_dims = set()
+
+        for pattern in [pattern1, pattern2, pattern3]:
+            for match in pattern.finditer(raw_content):
+                dim_name_raw = match.group(1).strip()
+                score = float(match.group(2))
+                max_score = float(match.group(3))
+
+                if max_score <= 0 or score < 0 or score > max_score:
+                    continue
+
+                ratio = score / max_score
+
+                # 映射到评委维度
+                mapped_dim = None
+                for cn_name, en_dim in DIMENSION_MAPPING.items():
+                    if cn_name in dim_name_raw:
+                        mapped_dim = en_dim
+                        break
+
+                if mapped_dim and mapped_dim not in matched_dims:
+                    dimension_scores[mapped_dim] = round(ratio, 2)
+                    matched_dims.add(mapped_dim)
+                    total_score += score
+                    total_max += max_score
+                    logger.info(
+                        f"[v5.1-Markdown解析] 评委 '{model}': "
+                        f"维度='{dim_name_raw}' → '{mapped_dim}', "
+                        f"得分={score}/{max_score}={ratio:.2f}"
+                    )
+
+        if not dimension_scores:
+            # 尝试提取总分（如 "总分: 45/100"）
+            total_pattern = re.compile(r'(?:总分|总评|综合分|总分）)[：:]\s*(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)')
+            total_match = total_pattern.search(raw_content)
+            if total_match:
+                total_score = float(total_match.group(1))
+                total_max = float(total_match.group(2))
+                if total_max > 0 and total_score <= total_max:
+                    overall_ratio = round(total_score / total_max, 2)
+                    logger.info(
+                        f"[v5.1-Markdown解析] 评委 '{model}': 提取总分 "
+                        f"{total_score}/{total_max}={overall_ratio:.2f}, "
+                        f"应用于所有维度"
+                    )
+                    # 将总分比例应用到所有标准维度
+                    all_dims = [
+                        "title_attractiveness", "opening_hook", "content_depth",
+                        "structure_clarity", "ai_flavor", "persona_fit",
+                        "fact_accuracy", "differentiation", "timeliness",
+                        "viral_potential", "platform_fit", "originality",
+                        "engagement", "compliance"
+                    ]
+                    for dim in all_dims:
+                        dimension_scores[dim] = overall_ratio
+            else:
+                logger.warning(
+                    f"[v5.1-Markdown解析] 评委 '{model}': 未找到任何评分维度, "
+                    f"raw preview: {raw_content[:300]}"
+                )
+                return None
+
+        # 提取改进建议（从"建议"/"改进"等关键词后提取）
+        suggestions = []
+        suggestion_patterns = [
+            r'(?:改进建议|建议|改进|不足|扣分原因)[：:]\s*\n((?:[\s\S]*?)(?=\n\s*\n|\n\d+\.|$))',
+            r'(?:建议|改进)[：:]\s*([^\n]+)',
+        ]
+        for spattern in suggestion_patterns:
+            smatches = re.findall(spattern, raw_content)
+            for smatch in smatches:
+                for line in smatch.strip().split('\n'):
+                    line = line.strip().lstrip('-*•').strip()
+                    if line and len(line) > 5 and line not in suggestions:
+                        suggestions.append(line[:200])
+            if suggestions:
+                break
+
+        # 如果没有提取到建议，添加默认建议
+        if not suggestions:
+            suggestions = ["评审基于Markdown格式解析，建议参考具体扣分原因"]
+
+        logger.info(
+            f"[v5.1-Markdown解析] 评委 '{model}': 成功从Markdown提取评分, "
+            f"维度数={len(dimension_scores)}, "
+            f"维度={list(dimension_scores.keys())[:5]}..."
+        )
+
+        return {
+            "model": model,
+            "scores": dimension_scores,
+            "improvement_suggestions": suggestions[:5],
+        }
 
     def _extract_judge_result(self, parsed: dict, model: str) -> dict:
         """从解析后的字典中提取评分和建议，处理多种字段命名风格。"""

@@ -379,18 +379,25 @@ class ModelService:
 
         # 降级：plugin_registry 不可用时直接 HTTP 探测 openroute /health 端点
         # 这是关键修复：避免 contentforge 通过 SDK 启动时所有 openroute 模型被误挂起
+        # v2: timeout 从 5s 提升到 15s + 2次重试，避免 OpenRoute 忙时 /health 响应慢导致误挂起
         if not proxy_healthy:
             openroute_cfg_fallback = self.providers.get("openroute", {})
             probe_base_url = openroute_cfg_fallback.get("base_url", "http://127.0.0.1:13001/v1").removesuffix("/v1").rstrip("/")
             probe_url = f"{probe_base_url}/health"
-            try:
-                async with httpx.AsyncClient(timeout=5) as probe_client:
-                    probe_resp = await probe_client.get(probe_url)
-                    proxy_healthy = probe_resp.status_code == 200
-                    logger.info(f"[健康检查] openroute HTTP探测 {probe_url} → {probe_resp.status_code} healthy={proxy_healthy}")
-            except Exception as probe_err:
-                logger.warning(f"[健康检查] openroute HTTP探测失败: {probe_err}")
-                proxy_healthy = False
+            for probe_attempt in range(3):
+                try:
+                    async with httpx.AsyncClient(timeout=15) as probe_client:
+                        probe_resp = await probe_client.get(probe_url)
+                        proxy_healthy = probe_resp.status_code == 200
+                        logger.info(f"[健康检查] openroute HTTP探测(第{probe_attempt+1}次) {probe_url} → {probe_resp.status_code} healthy={proxy_healthy}")
+                        if proxy_healthy:
+                            break
+                except Exception as probe_err:
+                    logger.warning(f"[健康检查] openroute HTTP探测(第{probe_attempt+1}次)失败: {probe_err}")
+                    proxy_healthy = False
+                    if probe_attempt < 2:
+                        import asyncio
+                        await asyncio.sleep(2)
 
         if not proxy_healthy:
             suspended_until = datetime.utcnow() + timedelta(seconds=self.ERROR_COOLDOWNS["server_error"])

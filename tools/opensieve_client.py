@@ -230,16 +230,46 @@ class OpenSieveClient(BaseTool):
         source_filter = params.get("source_filter")
         if source_filter and source_filter != "all":
             payload["source_filter"] = source_filter
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.post(
-                f"{self.base_url}/api/v1/retrieve",
-                json=payload,
-                headers=self._headers(),
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            results = data.get("results", data.get("items", []))
-            return ToolOutput(result={"results": results, "source": "opensieve"})
+
+        # v2.1: 双端点策略 — 先尝试 /api/v1/retrieve（完整Pipeline，含向量检索+知识图谱），
+        # 超时(15s)后 fallback 到 /api/v1/search（纯网络搜索，快速）
+        # 原因：/api/v1/retrieve 的查询理解阶段 LLM 调用可能耗时 90s，导致 ContentForge 素材获取超时
+        retrieve_timeout = 15  # /api/v1/retrieve 超时阈值（秒）
+        try:
+            async with httpx.AsyncClient(timeout=retrieve_timeout) as client:
+                resp = await client.post(
+                    f"{self.base_url}/api/v1/retrieve",
+                    json=payload,
+                    headers=self._headers(),
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                results = data.get("results", data.get("items", []))
+                if results:
+                    logger.info(f"OpenSieve /api/v1/retrieve returned {len(results)} results")
+                    return ToolOutput(result={"results": results, "source": "opensieve"})
+                logger.info("OpenSieve /api/v1/retrieve returned empty, trying /api/v1/search")
+        except httpx.TimeoutException:
+            logger.warning(f"OpenSieve /api/v1/retrieve timed out after {retrieve_timeout}s, falling back to /api/v1/search")
+        except Exception as e:
+            logger.warning(f"OpenSieve /api/v1/retrieve failed: {e}, falling back to /api/v1/search")
+
+        # Fallback: /api/v1/search（纯网络搜索，不经过 LLM 查询理解，快速）
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(
+                    f"{self.base_url}/api/v1/search",
+                    json=payload,
+                    headers=self._headers(),
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                results = data.get("results", [])
+                logger.info(f"OpenSieve /api/v1/search returned {len(results)} results")
+                return ToolOutput(result={"results": results, "source": "opensieve"})
+        except Exception as e:
+            logger.error(f"OpenSieve /api/v1/search also failed: {e}")
+            return ToolOutput(error=str(e), result={"results": []})
 
     async def _do_fetch_data(self, params: Dict[str, Any]) -> ToolOutput:
         data_type = params.get("data_type")
