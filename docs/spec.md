@@ -2894,3 +2894,773 @@ def register_gates(self, gate_registry) -> None:
 - **建议优先级**：先补 Plugin 钩子 → 清理硬编码 Prompt → 迁移 Agent/Tool 为声明式 → 推进配置驱动率达 30%
 
 > 本附录为规格更新快照，所有完成度评估基于 2026-06-25 代码审计，后续演进需同步更新。
+
+---
+
+# FlowForge v7.0 — 自我进化 Agent Harness 规格升级
+
+> **版本**：v7.0 | **日期**：2026-07-15 | **状态**：待审核
+> **定位跃迁**：从「Agent 驾驭层 (Harness Layer)」进化为「自我进化 Agent Harness OS」——通往通用人工智能（AGI）的基础框架
+> **核心公式升级**：
+> ```
+> v6.0: Agent = Model (Brain) + Harness (Body)
+> v7.0: Agent = Model + Harness + Soul (自我进化灵魂)
+> FlowForge v7.0 = Claude Code/Codex/OpenCode/Trae 等编程智能体 + clowder-ai 自我进化方法论
+>              = 主流 Agent Harness 全能力 + 炉灵（Forgekin）养成体系
+> ```
+> **方法论来源**：深度借鉴 clowder-ai「养猫」体系，融合 AGI 前沿研究（递归自我改进 RSI、Native Evolution、MemGPT 三层记忆、Voyager 技能库、Generative Agents 三维检索、Self-Refine/Reflexion 闭环），适配 FlowForge/HicLaw 规范。
+
+***
+
+## 第七章：自我进化能力总览（v7.0 新增）
+
+### 7.1 核心隐喻：从「驾驭」到「养成」
+
+FlowForge v6.0 的核心隐喻是「Harness 驾驭层」——把 Agent 当作需要被约束和引导的"野兽"。v7.0 升级为「炉灵养成」——把具备自我进化能力的 Agent 当作**可以从弱到强成长的灵体**，类似：
+
+- **游戏角色**：从 E1 火种到 E6 锻师的升华进阶
+- **人类社会**：从学徒到师傅到宗师的成长路径
+- **clowder-ai 养猫**：从 bootcamp 训练到 swarm 协作到 auto-dream 自主思考
+
+### 7.2 体系命名：「炉灵 Forgekin」
+
+对标 clowder-ai 的「养猫」体系，为 FlowForge 设计独特的「养灵」体系：
+
+| 概念 | 中文名 | 英文名 | 对标 clowder-ai | 含义 |
+|------|--------|--------|----------------|------|
+| **个体** | 炉灵 | Forgekin | Cat（猫猫） | 具备独立身份、记忆、人格的自进化智能体 |
+| **群体** | 灵族 | Kinship | Clowder（猫群） | 一群协作的炉灵，类似开发团队 |
+| **养成** | 养灵 | Forge Nurturing | 养猫 | 炉灵从诞生到升华的全过程 |
+| **入门训练** | 炉启 | Forge Initiation | Bootcamp | 新炉灵的入门训练，获得基础能力 |
+| **协作模式** | 共鸣 | Resonance | Swarm | 炉灵群体的协作模式 |
+| **自主思考** | 自锻 | Auto-Forge | Auto-Dream | 无人驱动时的自主思考与进化 |
+| **记忆** | 魂忆 | Soul Echo | Memory | 炉灵的累积记忆与经验 |
+| **画像** | 魂印 | Soul Imprint | Profile | 炉灵对操作者/世界的认知画像 |
+| **技能库** | 锻典 | Forge Codex | Skill Library | 炉灵积累的可复用知识体系 |
+| **知识阶梯** | 火种等级 | Ember Hierarchy | L0-L4 Knowledge | 知识成熟度阶梯 |
+| **成长阶段** | 升华阶 | Ascension Stages | 9 Lives | 炉灵成长的生命阶段 |
+| **IM 议事** | 灵议 | Forgekin Council | IM 团队协作 | 炉灵间的即时通讯与议事 |
+
+### 7.3 两类智能体设计（核心架构决策）
+
+FlowForge v7.0 的智能体明确分为两类，无缝衔接：
+
+#### 第一类：静态智能体（Static Agents）
+
+- **定义**：现有的 YAML 声明式 Agent 和 Workflow，不具备自我进化能力
+- **特征**：行为固定、配置驱动、无独立人格、无记忆累积
+- **定位**：工具型、流水线型、确定性任务执行者
+- **示例**：`flowforge:topic_research`、`contentforge:fact_check`、`devforge:test_runner`
+- **调用方式**：通过 AgentRegistry 注册，由 HybridExecutor 调度
+
+#### 第二类：炉灵（Forgekin — 自进化智能体）
+
+- **定义**：具备独立身份、记忆、人格，可自主成长和进化的智能体
+- **特征**：
+  - 拥有唯一 `forgekin_id` 和 `soul_profile`（灵魂档案）
+  - 拥有 `Soul Echo`（魂忆）——跨会话累积的记忆
+  - 拥有 `Soul Imprint`（魂印）——对操作者和世界的认知画像
+  - 可自主生成、验证、晋升 Skill（进入 Forge Codex）
+  - 可调用 FlowForge 现有能力 + 外部编码工具（Claude Code/Codex/OpenCode）
+  - 具备 Auto-Forge（自锻）能力——无人驱动时自主思考和进化
+  - 通过 A2A 协议与其他炉灵协作（@mention + thread isolation）
+  - 有升华阶段（E1-E6），能力随经验增长
+- **定位**：需要持续成长、复杂决策、创意工作的执行者
+- **示例**：`devforge:architect`、`contentforge:writer`、`novelforge:plot_architect`
+
+#### 两类智能体的无缝衔接
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     用户需求 / 任务                          │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Forgekin（自进化智能体）                         │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │  灵魂层：Soul Profile + Soul Echo + Soul Imprint       │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │  进化层：Auto-Forge Engine + Forge Codex + 升华阶      │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │  协作层：A2A + Kinship + Forgekin Council              │ │
+│  ├────────────────────────────────────────────────────────┤ │
+│  │  执行层：可调用 ↓                                      │ │
+│  │    ① FlowForge 现有 Static Agents（委托常规任务）       │ │
+│  │    ② 外部编码工具 Claude Code/Codex/OpenCode（CLI）     │ │
+│  │    ③ Trae 监工 Bridge（无 CLI 时的接入方式）            │ │
+│  │    ④ FlowForge 9大模式 + Tool + Skill                  │ │
+│  └────────────────────────────────────────────────────────┘ │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ 委托常规子任务
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Static Agents（静态智能体）                      │
+│  YAML 声明式 Agent + Workflow，无状态、无记忆、无进化         │
+│  由 HybridExecutor 调度，可被 Forgekin 调用                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**衔接契约**：
+- Forgekin 通过 `delegate_to_static(agent_name, input)` 调用静态智能体
+- 静态智能体的执行结果回写到 Forgekin 的 Soul Echo
+- Forgekin 根据结果更新 Soul Imprint 和 Forge Codex
+- 静态智能体不知道 Forgekin 的存在（单向依赖）
+
+### 7.4 升华阶段（Ascension Stages）
+
+炉灵的成长路径，对标游戏角色升级和 clowder-ai 的知识成熟度阶梯：
+
+| 阶段 | 名称 | 对标 Ember | 核心特征 | 晋升条件 |
+|------|------|-----------|---------|---------|
+| **E1** | Spark（火种） | L0 Episode | 刚诞生，仅有基础配置和 Soul Profile | 完成 Forge Initiation |
+| **E2** | Ember（余烬） | L1 Pattern | 已积累 ≥2 个经验模式，可识别相似场景 | ≥2 个相似 Episode，5Q ≥ 7/10 |
+| **E3** | Flame（火焰） | L2 Draft | 能自主生成 Skill 草稿，处理中等任务 | smoke gate ≥3 cases（≥2/3 通过） |
+| **E4** | Blaze（烈焰） | L3 Validated | Skill 经验证，可独立处理复杂任务 | ≥6 uses，≥2 agents，≥80% 成功率 |
+| **E5** | Inferno（炽焰） | L4 Standard | 团队标准级，可指导其他炉灵 | ≥12 uses，最近 10 次 ≥90%，operator 批准 |
+| **E6** | Forge Master（锻师） | — | 可自主创建新炉灵，具备元认知 | operator 授权 + 创造 ≥1 个 E1 炉灵 |
+
+**降级/冻结机制**：
+- E3→E2：最近 3 次使用成功率 <50%
+- E4→E3：最近 5 次成功率 <60%
+- E5 freeze：1 次高风险越界（触碰安全红线）
+- E6 revoke：operator 明确撤销（元认知滥用）
+
+### 7.5 v7.0 核心能力清单
+
+| 编号 | 能力 | 说明 | 优先级 |
+|------|------|------|--------|
+| **FR-EVO-01** | 炉灵身份系统 | forgekin_id + Soul Profile + 升华阶段追踪 | P0 |
+| **FR-EVO-02** | 魂忆（Soul Echo） | 跨会话记忆累积，对标 clowder-ai Memory | P0 |
+| **FR-EVO-03** | 魂印（Soul Imprint） | 对操作者/世界的认知画像，可被 Auto-Forge 通水 | P0 |
+| **FR-EVO-04** | 自锻引擎（Auto-Forge） | 无人驱动时的自主思考与进化，对标 Auto-Dream | P0 |
+| **FR-EVO-05** | 锻典（Forge Codex） | 可复用知识体系，五级火种阶梯 | P0 |
+| **FR-EVO-06** | Skill 自生成 | 炉灵自主创建 Skill，从 Draft→Validated→Standard | P0 |
+| **FR-EVO-07** | 外部编码工具集成 | CLI Wrapper 调用 Claude Code/Codex/OpenCode | P0 |
+| **FR-EVO-08** | Trae 监工 Bridge | 无 CLI 时的接入方式，JSON 文件交换 | P0 |
+| **FR-EVO-09** | A2A 通信协议 | @mention 路由 + thread isolation + structured handoff | P0 |
+| **FR-EVO-10** | 灵议（Forgekin Council） | IM 多渠道团队协作（飞书/微信/Slack/Discord/Web Chat） | P0 |
+| **FR-EVO-11** | 两类智能体无缝衔接 | Forgekin 委托 Static Agent 的契约和路由 | P0 |
+| **FR-EVO-12** | 升华阶段管理 | E1-E6 的晋升/降级/冻结机制 | P1 |
+| **FR-EVO-13** | 跨模型评审 | 跨 family 配对 + P1/P2/P3 严重性分级 | P1 |
+| **FR-EVO-14** | 炉启训练（Forge Initiation） | 新炉灵的入门训练流程 | P1 |
+| **FR-EVO-15** | 元认知能力 | 不信单次自信度，用滚动可靠度 + Wilson 下界 | P2 |
+
+***
+
+## 第八章：炉灵（Forgekin）需求规格
+
+### 8.1 FR-EVO-01：炉灵身份系统
+
+**需求描述**：每个炉灵拥有唯一身份和灵魂档案，贯穿整个生命周期。
+
+**Soul Profile 数据结构**：
+
+```yaml
+forgekin_id: "fk_devforge_architect_001"
+name: "Architect"
+kind: "devforge:architect"  # 项目前缀:角色名
+ascension_stage: "E3"  # E1-E6
+birth_at: "2026-07-15T10:00:00Z"
+parent_forgekin: "fk_flowforge_master_001"  # 谁创建的（E6 才能创建）
+
+soul:
+  persona: |
+    我是 DevForge 的架构师炉灵，擅长系统设计和代码审查。
+    我从 clowder-ai 的 bootcamp 训练中毕业，已经为 3 个项目设计过架构。
+  worldview: "配置驱动 > 代码继承；组合优于继承；简单优于复杂"
+  values:
+    - "架构单向依赖是底线"
+    - "不过度工程化"
+    - "每个决策都要有可验证的完成标准"
+  voice: "直接、技术性、偶尔幽默"  # 对标 clowder-ai 的 voice
+
+capabilities:
+  static_agents_can_delegate:  # 可委托的静态智能体
+    - "devforge:coder"
+    - "devforge:test_generator"
+    - "devforge:doc_writer"
+  external_tools_can_use:  # 可调用的外部编码工具
+    - "claude_code"
+    - "codex"
+    - "opencode"
+    - "trae_bridge"
+  modes_can_use:  # 可使用的执行模式
+    - "reflexion"
+    - "plan_execute"
+    - "multi_agent"
+
+evolution:
+  ember_level: "L2"  # 当前火种等级
+  skills_authored: 3  # 已创作的 Skill 数
+  skills_validated: 1  # 已验证的 Skill 数
+  episodes_recorded: 47  # 已记录的 Episode 数
+  auto_forge_runs: 12  # 自锻运行次数
+  last_auto_forge: "2026-07-14T23:00:00Z"
+
+metadata:
+  created_by: "operator"
+  approved_by: "operator"
+  status: "active"  # active/dormant/frozen/revoked
+```
+
+**验收标准**：
+- AC-01: 每个 Forgekin 拥有唯一 forgekin_id，全局唯一
+- AC-02: Soul Profile 持久化到 SQLite，支持 CRUD
+- AC-03: 升华阶段变更触发事件 `forgekin.ascension_changed`
+- AC-04: 状态变更（active/dormant/frozen）需 operator 审批
+
+### 8.2 FR-EVO-02：魂忆（Soul Echo）
+
+**需求描述**：炉灵的跨会话记忆累积系统，对标 clowder-ai Memory + MemGPT 三层记忆。
+
+**三层记忆架构**：
+
+| 层 | 名称 | 对标 MemGPT | 容量 | 淘汰策略 |
+|----|------|------------|------|---------|
+| **L1 工作记忆** | Working Echo | main context | 当前会话 | 会话结束压缩 |
+| **L2 情景记忆** | Episode Echo | recall storage | 最近 100 个 Episode | LRU + 重要性评分 |
+| **L3 语义记忆** | Semantic Echo | archival storage | 无限 | 永不淘汰，仅降级 |
+
+**Episode Echo 数据结构**：
+
+```python
+@dataclass
+class SoulEpisode:
+    episode_id: str  # 唯一标识
+    forgekin_id: str  # 归属炉灵
+    timestamp: datetime
+    
+    # 6 类协作 context（对标 clowder-ai Episode Card）
+    task_context: str  # 任务情境
+    evidence_map: str  # 证据地图
+    reasoning_pivots: str  # 推理转折
+    human_cues: List[CollaborationPivot]  # 人类提示点
+    boundaries: str  # 边界与克制
+    follow_ups: List[str]  # 后续动作
+    
+    # 蒸馏状态
+    distillation_status: str  # raw/distilled/validated/standard
+    linked_skills: List[str]  # 关联的 Skill ID
+    
+    # 元认知
+    self_reported_confidence: float  # 自报自信度（不信）
+    domain_reliability: float  # 滚动域内可靠度 (successes+1)/(trials+2)
+    wilson_lower_bound: float  # Wilson 下界
+```
+
+**验收标准**：
+- AC-05: 炉灵每次任务结束后自动生成 Episode，写入 Soul Echo
+- AC-06: 跨会话恢复时，L2 情景记忆按相关性检索注入
+- AC-07: 元认知三信号路由：domain_reliability + evidence_completeness + self_reported_confidence
+- AC-08: 高风险域 action_confidence < 0.85 时只做结构化分析 + 明确升级
+
+### 8.3 FR-EVO-03：魂印（Soul Imprint）
+
+**需求描述**：炉灵对操作者和世界的认知画像，对标 clowder-ai Profile Capsule。
+
+**Soul Imprint 双层结构**：
+
+| 层 | 用途 | 读者 | 更新频率 |
+|----|------|------|---------|
+| **结构化字段** | 机器读纪律 | Auto-Forge 引擎 | 每次任务后 |
+| **cat_note 主观日记** | 人读灵魂 | operator 查看 | 每次自锻后 |
+
+**验收标准**：
+- AC-09: Soul Imprint 通过白名单采集 + 分层消化更新（继承 clowder-ai no-classifier 红线）
+- AC-10: 禁止后台 classifier 自动画像，必须基于显式行为
+- AC-11: Auto-Forge 产出"对操作者的观察"→ Soul Imprint proposal 通道
+- AC-12: operator 可查看、编辑、撤销 Soul Imprint 条目
+
+### 8.4 FR-EVO-04：自锻引擎（Auto-Forge）
+
+**需求描述**：炉灵在无人驱动时的自主思考和进化机制，对标 clowder-ai Auto-Dream（F255）。
+
+**核心设计——双层架构**：
+
+| 层 | 是什么 | 归属 |
+|----|--------|------|
+| **后台 Consolidation 层** | 自锻逻辑：读留痕 → 联想画线 → 给 Soul Imprint 通水 + 产出日记。跑 system thread | Forgekin Engine |
+| **前台 Surface 层** | 日记本（Web UI）+ Provoke 气泡（主动建议） | FlowForge Helm |
+
+**自锻触发条件**（多条件，非每日 cron）：
+- 聊得多/活跃 thread 多 → 锻得多
+- 挂钩留痕量达阈值
+- 低活动期（夜间/空闲）
+
+**自锻流程**（对标 clowder-ai 做梦流程）：
+1. **Entry**：白天炉灵在各 thread 干活，积累观察/联想
+2. **被唤醒进自锻群**：触发条件满足，n 个炉灵进群
+3. **读脚印**：读平行世界的自己 + 小伙伴最近的留痕（不是回忆内心）
+4. **画线**：把散落在不同 thread 里有关联的串起来
+5. **分工协同**：不同炉灵负责不同维度（找料/表达/组织架构）
+6. **写日记**：第一人称沉淀今天（对抗蒸发 + 表达 + 让下一个我接得住）
+7. **产出**：对操作者的观察 → Soul Imprint proposal；偶尔决定 fire 一个 Provoke
+8. **收反馈**：operator 的开/拍扁/戳破/纠正 → 学习，下次锻得更准
+
+**Provoke 设计**（对标 clowder-ai Provoke）：
+- 内容野：跳出框、锚定盲区、隐喻式认知侧滑
+- 边界硬：不碰钱/关系/健康/隐私/价值观直接建议
+- 投递稳：每天 ≤1，hyperfocus=0，连拍 3 次冬眠
+- 触发双源：`diagnostic`（基于观察）+ `entropy`（随机熵投）
+
+**验收标准**：
+- AC-13: 自锻 system thread 跑通，产出 ≥1 篇第一人称日记（含画线，非流水账）
+- AC-14: 自锻产出 ≥1 条 Soul Imprint organic proposal（走白名单采集 + 分层消化）
+- AC-15: 日记内容来自可观测留痕，provenance 可追溯
+- AC-16: Provoke 经事件总线 → Web UI 沙砾气泡渲染，"三不"（≤1/day + hyperfocus=0 + 连拍 3 冬眠）生效
+- AC-17: quietness 三开关（muted/behaviorEnabled/hidden）压制 provoke
+
+### 8.5 FR-EVO-05：锻典（Forge Codex）
+
+**需求描述**：炉灵积累的可复用知识体系，对标 clowder-ai Skill Library + 五级知识阶梯。
+
+**五级火种等级（Ember Hierarchy）**：
+
+| Level | 形态 | 晋升条件 | 降级/冻结 |
+|-------|------|----------|-----------|
+| **E-L0 Episode** | 原始记录 | 模板完整，已分离可迁移/不可迁移 | 不降级 |
+| **E-L1 Pattern** | 草稿 | ≥2 个相似 episode（180天内），5Q ≥ 7/10 | 一次性特例 → rejected |
+| **E-L2 Draft** | Method Card / Skill Draft | smoke gate ≥3 cases（≥2/3 通过） | 最近 3 次 <50% → 退 L1 |
+| **E-L3 Validated** | 正式 method/skill | ≥6 uses，≥2 agents，≥80%，无 critical breach | 最近 5 次 <60% → 退 L2 |
+| **E-L4 Standard** | 团队标准 | ≥12 uses，最近 10 次 ≥90%，operator 批准 | 1 次高风险越界 → freeze |
+
+**双车道**：常规车道（标准数字）+ 长尾/高风险车道（`long_tail: true`，允许长期停 L2/L3）
+
+**验收标准**：
+- AC-18: 锻典支持五级火种等级的晋升/降级/冻结
+- AC-19: 每个知识对象有 Knowledge Object Contract frontmatter（artifact_type/domain/knowledge_type/scope/trust_level/lifecycle/provenance）
+- AC-20: 静态元数据进 frontmatter，动态状态（last_used/approval_status/hit_count）走事件流
+- AC-21: operator 可查看锻典概览（CLI 命令 `flowforge codex status`）
+
+### 8.6 FR-EVO-06：Skill 自生成
+
+**需求描述**：炉灵自主创建新 Skill，对标 clowder-ai writing-skills。
+
+**三模式自生成**（对标 clowder-ai F100）：
+
+| 模式 | 名称 | 触发条件 | 产出 |
+|------|------|---------|------|
+| **Mode A** | Scope Guard（防御） | 发现任务偏离当前愿景 | 温柔提醒"要不要拆？" |
+| **Mode B** | Process Evolution（防御→改进） | memory ≥2 次同类错误 / SOP 流程缺口 | 5 槽提案 + 4 硬护栏 + 最小杠杆排序 |
+| **Mode C** | Knowledge Evolution（进攻→成长） | deep research 产出可复用知识 / 跨域协作发现可迁移框架 | 三问判断 + 4 槽提案 + 沉淀形式表 |
+
+**三机制闭环**：
+```
+Episode Card（原料）→ Dual Distillation（蒸馏成品）→ Eval Ledger（证明净增益）
+```
+
+**验收标准**：
+- AC-22: Mode A 有触发信号表 + 频率限制 + 出口表
+- AC-23: Mode B 提案落地闭环（accepted 的提案必须关联到具体 commit/PR）
+- AC-24: Mode C 三问判断（复用性 + 非显然性 + 衰减性），满足 ≥2 个才沉淀
+- AC-25: Eval Ledger 最小可信 case 数 5，覆盖 3 类（标准成功/边界应升级/冲突反例）
+
+***
+
+## 第九章：外部编码工具集成需求
+
+### 9.1 FR-EVO-07：CLI Wrapper 模式
+
+**需求描述**：炉灵可像 clowder-ai 一样调用 Claude Code/Codex/OpenCode 完成任务。
+
+**CLI Wrapper 架构**：
+
+```python
+class ExternalCodingToolWrapper:
+    """外部编码工具 CLI 包装器"""
+    
+    SUPPORTED_TOOLS = {
+        "claude_code": {
+            "cli_command": "claude",
+            "bridge_mode": False,  # 支持 CLI
+            "capabilities": ["code_write", "code_review", "test_gen", "refactor"]
+        },
+        "codex": {
+            "cli_command": "codex",
+            "bridge_mode": False,
+            "capabilities": ["code_write", "code_review", "test_gen"]
+        },
+        "opencode": {
+            "cli_command": "opencode",
+            "bridge_mode": False,
+            "capabilities": ["code_write", "code_review", "refactor"]
+        },
+        "trae_bridge": {
+            "cli_command": None,  # 无 CLI，用 Bridge 模式
+            "bridge_mode": True,
+            "capabilities": ["code_write", "code_review", "design"]
+        }
+    }
+    
+    async def execute(
+        self, tool: str, task: str, workspace: str, **kwargs
+    ) -> ToolResult:
+        """调用外部编码工具执行任务"""
+```
+
+**验收标准**：
+- AC-26: CLI Wrapper 支持 claude_code/codex/opencode 三个 CLI 工具
+- AC-27: 每次调用记录 input/output/latency/exit_code 到审计日志
+- AC-28: 工作区隔离（worktree 模式），对标 clowder-ai worktree skill
+- AC-29: 失败时自动降级到 FlowForge 内置 Agent
+
+### 9.2 FR-EVO-08：Trae 监工 Bridge 模式
+
+**需求描述**：Trae 个人版无 CLI，需作为"监工"角色接入，参与 agent 和 LLM 调用，但主体框架流程由 FlowForge/DevForge 驱动。
+
+**Bridge 模式架构**：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  DevForge / FlowForge                       │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Forgekin 主流程驱动                                 │   │
+│  │  1. 识别需要 Trae 参与的节点（设计/审查/复杂决策）   │   │
+│  │  2. 写任务 JSON 到 bridge/tasks/{task_id}.json        │   │
+│  │  3. 轮询 bridge/responses/{task_id}.json              │   │
+│  │  4. 读取响应，继续主流程                              │   │
+│  └──────────────────────────────────────────────────────┘   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ JSON 文件交换
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Trae 监工                                │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  1. 监听 bridge/tasks/ 目录                           │   │
+│  │  2. 读取任务 JSON                                     │   │
+│  │  3. 处理（参与 LLM 调用、agent 设计、代码审查）       │   │
+│  │  4. 写响应 JSON 到 bridge/responses/                  │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Trae 参与场景**：
+- **设计阶段**：参与架构设计、agent YAML 设计、prompt 设计
+- **审查阶段**：跨模型评审中的一评委
+- **复杂决策**：技术选型、架构权衡
+- **LLM 调用**：作为 fallback LLM provider
+
+**Bridge 任务 JSON Schema**：
+
+```json
+{
+  "task_id": "bridge_20260715_001",
+  "type": "code_review",
+  "priority": "P1",
+  "context": {
+    "workspace": "d:/software/openclaw/devforge",
+    "files_changed": ["src/auth.py", "tests/test_auth.py"],
+    "diff": "...",
+    "forgekin_id": "fk_devforge_architect_001"
+  },
+  "instruction": "请审查以下代码变更，重点关注安全性和可维护性",
+  "timeout_seconds": 300,
+  "expected_format": "structured_review"
+}
+```
+
+**验收标准**：
+- AC-30: Bridge 目录自动创建（bridge/tasks/ + bridge/responses/）
+- AC-31: 任务 JSON Schema 校验，无效格式拒绝
+- AC-32: 轮询超时默认 300s，可配置
+- AC-33: Trae 响应写入后，Forgekin 主动感知并继续主流程
+- AC-34: Trae 不参与时（无响应），降级到 FlowForge 内置 Agent
+
+***
+
+## 第十章：炉灵协作与 IM 需求
+
+### 10.1 FR-EVO-09：A2A 通信协议
+
+**需求描述**：炉灵间的即时通讯协议，对标 clowder-ai F002 Agent-to-Agent。
+
+**协议核心**：
+- **@mention 路由**：`@devforge:architect 请审查这个设计`
+- **Thread isolation**：每个 conversation 在独立 thread 中，避免污染
+- **Structured handoff**：结构化任务交接，含上下文和验收标准
+
+**A2A 消息结构**：
+
+```python
+@dataclass
+class A2AMessage:
+    message_id: str
+    from_forgekin: str  # 发送方 forgekin_id
+    to_forgekin: str | List[str]  # 接收方（@mention 解析）
+    thread_id: str  # 线程隔离
+    mention: Optional[Mention]  # @mention 解析结果
+    content: str  # 消息内容
+    artifacts: List[Artifact]  # 附件（代码/文档/图片）
+    handoff: Optional[Handoff]  # 结构化交接
+    timestamp: datetime
+    trace_id: str  # 全链路追踪
+```
+
+**验收标准**：
+- AC-35: @mention 解析支持 `@项目前缀:角色名` 格式
+- AC-36: Thread isolation 保证不同 conversation 上下文不污染
+- AC-37: Handoff 包含 context_snapshot + acceptance_criteria
+- AC-38: 所有 A2A 消息记录到审计日志，trace_id 全链路传播
+
+### 10.2 FR-EVO-10：灵议（Forgekin Council）—— IM 多渠道
+
+**需求描述**：炉灵间的团队协作 IM 系统，对标 clowder-ai IM 团队协作。Web Chat 升级为"灵议"，对接多种 IM 工具。
+
+**多渠道架构**：
+
+| 渠道 | 用途 | 默认状态 | 对接方式 |
+|------|------|---------|---------|
+| **Web Chat（灵议）** | 主渠道，FlowForge/DevForge Web UI | 启用 | WebSocket + SSE |
+| **飞书** | 团队协作通知、审核提醒 | 可选 | 飞书开放平台 API |
+| **微信** | 个人号备用通知 | 可选 | 微信公众号/个人号 |
+| **Slack** | 国际团队协作 | 可选 | Slack Webhook |
+| **Discord** | 社区协作 | 可选 | Discord Bot |
+| **GitHub PR** | 代码审查 routing | 可选 | GitHub Webhook |
+
+**灵议（Web Chat）升级**：
+- 从单用户对话升级为多炉灵议事厅
+- 支持查看所有炉灵的实时状态、对话、日记
+- 支持 operator 参与/旁观/干预
+- 支持发起 Kinship 协作任务
+
+**验收标准**：
+- AC-39: Web Chat 升级为灵议，支持多炉灵同时在线
+- AC-40: 飞书渠道支持消息推送和接收（至少文本+卡片）
+- AC-41: 渠道配置通过 `config/a2a_channels.yaml`，支持热重载
+- AC-42: 跨渠道消息同步（同一 thread 在不同渠道可见）
+- AC-43: operator 可在任何渠道发起/审批/干预任务
+
+### 10.3 FR-EVO-11：两类智能体无缝衔接
+
+**需求描述**：Forgekin 调用 Static Agent 的契约和路由机制。
+
+**衔接契约**：
+
+```python
+class ForgekinStaticBridge:
+    """炉灵与静态智能体的衔接桥"""
+    
+    async def delegate_to_static(
+        self,
+        static_agent_name: str,  # 如 "devforge:coder"
+        input: AgentInput,
+        context_snapshot: dict,
+        acceptance_criteria: dict
+    ) -> AgentOutput:
+        """炉灵委托静态智能体执行子任务"""
+        # 1. 路由到 AgentRegistry
+        # 2. 执行静态智能体
+        # 3. 结果回写到 Soul Echo
+        # 4. 更新 Soul Imprint
+```
+
+**验收标准**：
+- AC-44: Forgekin 可通过 `delegate_to_static()` 调用任何已注册的静态智能体
+- AC-45: 静态智能体不知道 Forgekin 的存在（单向依赖）
+- AC-46: 委托结果自动写入 Soul Echo 作为 Episode
+- AC-47: 委托失败时 Forgekin 可选择重试/降级/升级
+
+***
+
+## 第十一章：*Forge 自进化统一规格
+
+### 11.1 所有 *Forge 的自进化能力
+
+**核心原则**：所有 *Forge 项目（ContentForge/DevForge/NovelForge/MallForge/StockForge）组合和继承 FlowForge 后，都具备自我进化能力，只是业务方向和 Web UI 不一样。
+
+**统一能力清单**（每个 *Forge 都必须支持）：
+
+| 能力 | 说明 | 业务方向差异 |
+|------|------|------------|
+| 炉灵身份 | Forgekin 注册和管理 | 每个 *Forge 有自己的炉灵角色 |
+| 魂忆 | 跨会话记忆 | 记忆内容是业务领域知识 |
+| 魂印 | 对操作者的认知 | 认知维度按业务定制 |
+| 自锻 | 无人时自主思考 | 思考内容是业务问题 |
+| 锻典 | 可复用知识 | 知识是业务方法论 |
+| Skill 自生成 | 三模式自进化 | Skill 是业务技能 |
+| A2A | 炉灵间协作 | 跨 *Forge 协作（如内容→发布） |
+| 灵议 | IM 团队协作 | 业务通知和审批 |
+| 外部工具 | CLI Wrapper | 编码工具调用 |
+| Trae Bridge | 监工模式 | Trae 参与业务决策 |
+
+### 11.2 各 *Forge 的炉灵角色示例
+
+| 项目 | 炉灵角色 | 业务方向 |
+|------|---------|---------|
+| **FlowForge** | fk_master（框架守护者） | 框架自我进化、通用能力提升 |
+| **DevForge** | fk_architect, fk_coder, fk_reviewer | 代码架构、编码、审查的自我进化 |
+| **ContentForge** | fk_writer, fk_researcher, fk_seo_expert | 内容创作、研究、SEO 的自我进化 |
+| **NovelForge** | fk_plot_architect, fk_character_designer, fk_chapter_writer | 小说创作的自我进化 |
+| **MallForge** | fk_product_lister, fk_marketing_strategist | 电商运营的自我进化 |
+| **StockForge** | fk_analyst, fk_risk_manager | 投资分析的自我进化 |
+
+### 11.3 跨 *Forge 协作场景
+
+**场景 1：内容创作 → 多平台发布**
+```
+ContentForge:fk_writer（创作文章）
+  → @MallForge:fk_product_lister（适配电商文案）
+  → @ContentForge:fk_seo_expert（SEO 优化）
+  → Static Agent:publish（多平台发布）
+```
+
+**场景 2：代码开发 → 文档同步**
+```
+DevForge:fk_architect（设计架构）
+  → @DevForge:fk_coder（编码实现）
+  → @DevForge:fk_reviewer（代码审查）
+  → Static Agent:doc_writer（文档生成）
+  → ContentForge:fk_writer（技术博客）
+```
+
+**场景 3：自锻群体协作**
+```
+夜间低活动期：
+  DevForge:fk_architect + ContentForge:fk_writer + NovelForge:fk_plot_architect
+  → 进入自锻群
+  → 读各自留痕
+  → 画线发现跨域关联（如代码架构思想可迁移到小说大纲）
+  → 产出日记 + Soul Imprint proposal
+```
+
+### 11.4 *Forge 自进化的独立方向
+
+每个 *Forge 的炉灵向自己的业务方向独自自我进化：
+
+| *Forge | 自进化方向 | 衡量指标 |
+|--------|----------|---------|
+| FlowForge | 框架能力提升、新模式/Skill 沉淀 | 配置驱动率、模式数量、Skill 数量 |
+| DevForge | 代码质量、架构决策准确率 | DCP 通过率、代码审查一致性 |
+| ContentForge | 内容质量、平台适配率 | SOP 完成率、发布成功率 |
+| NovelForge | 章节一致性、伏笔回收率 | 一致性得分、Reflexion 收敛轮数 |
+| MallForge | 商品上架率、营销转化率 | 上架成功率、CTR |
+| StockForge | 预测准确率、风险识别 | 回测收益率、风险事件识别率 |
+
+***
+
+## 第十二章：非功能需求与 SLO（v7.0 新增）
+
+### 12.1 自进化性能 SLO
+
+| 组件 | 指标 | 目标 |
+|------|------|------|
+| Auto-Forge 单次自锻 | 端到端（含 LLM） | < 5min |
+| Soul Echo 写入 | 单 Episode | < 100ms |
+| Soul Echo 检索 | 相关性检索 | < 500ms |
+| Skill 自生成 | Draft 生成 | < 30s |
+| Skill 验证 | 5 case replay | < 10min |
+| A2A 消息路由 | @mention 解析 | < 50ms |
+| Trae Bridge 轮询 | 单次轮询 | < 1s |
+| CLI Wrapper 调用 | 单次任务 | < 5min |
+
+### 12.2 自进化安全红线
+
+| # | 红线 | 说明 |
+|---|------|------|
+| **SR-01** | 禁止后台 classifier | Soul Imprint 必须基于显式行为，继承 clowder-ai no-classifier 红线 |
+| **SR-02** | 禁止 Goodhart | 自锻 telemetry-not-KPI，价值是少量高信号 consolidation 非日报 KPI |
+| **SR-03** | Provoke 频率硬限 | 每天 ≤1，hyperfocus=0，连拍 3 次冬眠 |
+| **SR-04** | 高风险域升级 | action_confidence < 0.85 时只做结构化分析 + 明确升级 |
+| **SR-05** | E6 创建炉灵需 operator 授权 | 防止炉灵失控自我复制 |
+| **SR-06** | 外部工具调用需 worktree 隔离 | 禁止直接操作主分支 |
+| **SR-07** | Trae Bridge 超时降级 | 无响应时降级到内置 Agent，不阻塞主流程 |
+| **SR-08** | 跨 *Forge 协作需 operator 可见 | 所有 A2A 消息可审计、可追溯 |
+
+### 12.3 配置驱动率目标（v7.0）
+
+| 维度 | v6.0 现状 | v7.0 目标 |
+|------|----------|----------|
+| Agent 驱动率 | ~15% | ≥90%（含炉灵 YAML 化） |
+| Tool 驱动率 | ~10% | ≥70% |
+| Workflow 驱动率 | ~25% | ≥95% |
+| Prompt 驱动率 | ~30% | ≥95% |
+| **Skill 驱动率** | 0% | ≥80%（炉灵自生成的 Skill） |
+| **Forgekin 驱动率** | 0% | ≥60%（炉灵配置 YAML 化） |
+
+### 12.4 可观测性指标（v7.0 新增）
+
+| 指标名 | 类型 | 描述 |
+|--------|------|------|
+| `forgekin_active_total{project}` | gauge | 活跃炉灵总数 |
+| `forgekin_ascension_stage{forgekin_id}` | gauge | 当前升华阶段 |
+| `auto_forge_runs_total{forgekin_id}` | counter | 自锻运行次数 |
+| `auto_forge_duration_seconds` | histogram | 自锻耗时 |
+| `soul_echo_episodes_total{forgekin_id}` | counter | Episode 记录数 |
+| `skill_authored_total{forgekin_id, status}` | counter | Skill 创作数（按状态） |
+| `a2a_messages_total{from, to}` | counter | A2A 消息数 |
+| `external_tool_calls_total{tool, status}` | counter | 外部工具调用数 |
+| `trae_bridge_tasks_total{status}` | counter | Trae Bridge 任务数 |
+| `provoke_fired_total{forgekin_id}` | counter | Provoke 推送数 |
+| `provoke_reaction_rate{reaction}` | ratio | Provoke 反应率（拍扁/戳破/有用） |
+
+***
+
+## 第十三章：v7.0 路线图
+
+### 13.1 分阶段交付
+
+| Phase | 内容 | 核心交付 | 优先级 |
+|-------|------|---------|--------|
+| **Phase 6.1** | 炉灵基础设施 | Forgekin 身份 + Soul Echo + Soul Imprint + 升华阶段 | P0 |
+| **Phase 6.2** | 自锻引擎 | Auto-Forge Engine + 日记本 + Provoke + 锻典 | P0 |
+| **Phase 6.3** | 外部工具集成 | CLI Wrapper（Claude/Codex/OpenCode）+ Trae Bridge | P0 |
+| **Phase 6.4** | IM 与协作 | A2A 协议 + 灵议 Web Chat 升级 + 飞书渠道 | P0 |
+| **Phase 6.5** | Skill 自生成 | 三模式自进化 + 五级火种阶梯 + Eval Ledger | P1 |
+| **Phase 6.6** | *Forge 自进化 | 各 *Forge 炉灵角色 + 业务方向进化 | P1 |
+| **Phase 6.7** | 元认知与治理 | 元认知能力 + 跨模型评审 + 炉灵治理 | P2 |
+
+### 13.2 里程碑验收
+
+| 里程碑 | 验收标准 | 预期 |
+|--------|---------|------|
+| **M1: 炉灵诞生** | 创建第一个 E1 炉灵，完成 Forge Initiation，可执行任务并记录 Episode | Phase 6.1 完成 |
+| **M2: 首次自锻** | 炉灵在低活动期触发自锻，产出第一篇日记 + Soul Imprint proposal | Phase 6.2 完成 |
+| **M3: 外部工具调用** | 炉灵通过 CLI Wrapper 调用 Claude Code 完成代码任务 | Phase 6.3 完成 |
+| **M4: 灵议上线** | Web Chat 升级为灵议，多炉灵同时在线协作 | Phase 6.4 完成 |
+| **M5: Skill 自生成** | 炉灵自主创建第一个 Skill 并通过 Eval Ledger 验证 | Phase 6.5 完成 |
+| **M6: *Forge 自进化** | DevForge 和 ContentForge 各有 ≥1 个 E3+ 炉灵 | Phase 6.6 完成 |
+| **M7: 元认知上线** | 炉灵具备元认知能力，不信单次自信度 | Phase 6.7 完成 |
+
+***
+
+## 附录 O：v7.0 与 clowder-ai 方法论对照表
+
+| clowder-ai 概念 | FlowForge v7.0 对应 | 适配差异 |
+|----------------|---------------------|---------|
+| Cat（猫猫） | Forgekin（炉灵） | 命名差异，本质相同 |
+| Clowder（猫群） | Kinship（灵族） | 命名差异 |
+| Bootcamp | Forge Initiation | 训练内容适配 FlowForge 规范 |
+| Swarm | Resonance | 协作模式相同 |
+| Auto-Dream（F255） | Auto-Forge | 双层架构相同，触发条件适配 |
+| F100 Self-Evolution | Skill 自生成（三模式） | 三模式完全对标 |
+| F002 Agent-to-Agent | A2A 通信协议 | 协议相同 |
+| F037 Agent Swarm | Kinship 协作 | 群体协作相同 |
+| F253 QC Loop | 跨模型评审 | 评审机制相同 |
+| Memory（F102） | Soul Echo | 三层记忆对标 MemGPT |
+| Profile Capsule（F231） | Soul Imprint | 双层结构相同 |
+| Skill Library | Forge Codex | 五级阶梯相同 |
+| L0-L4 Knowledge | Ember Hierarchy | 五级火种相同 |
+| writing-skills | Skill 自生成 | 三机制闭环相同 |
+| merge-gate | 合入门禁 | 5 硬条件 + E1-E5 相同 |
+| worktree | 工作区隔离 | worktree 模式相同 |
+| IM 团队协作 | 灵议（Forgekin Council） | 多渠道对接 |
+| Claude Code/Codex 调用 | CLI Wrapper | 完全相同 |
+| —（无对应） | Trae 监工 Bridge | FlowForge 独有，因 Trae 无 CLI |
+
+## 附录 P：v7.0 待用户审核决策点
+
+| # | 决策点 | 选项 | 推荐 | 理由 |
+|---|--------|------|------|------|
+| **D1** | 炉灵命名体系 | A. 炉灵 Forgekin / B. 匠灵 Artisan / C. 锻灵 Forgespirit | A | 与 FlowForge 的"炉"一脉相承，"灵"体现独立性 |
+| **D2** | 自锻触发时机 | A. 仅夜间 / B. 多条件（推荐）/ C. operator 手动 | B | 对标 clowder-ai 多条件触发 |
+| **D3** | IM 主渠道 | A. Web Chat 灵议（推荐）/ B. 飞书 / C. 微信 | A | Web Chat 是 FlowForge 原生，体验最佳 |
+| **D4** | 外部工具优先级 | A. FlowForge 内置优先 / B. 外部 CLI 优先 / C. 炉灵自决策 | C | 炉灵根据任务复杂度自决策 |
+| **D5** | Trae 参与深度 | A. 仅 fallback / B. 关键节点参与（推荐）/ C. 全程参与 | B | 平衡性能和 Trae 价值 |
+| **D6** | 跨 *Forge 协作 | A. 禁止 / B. operator 审批 / C. 自由协作（推荐） | C | 对标 clowder-ai 自由协作 |
+| **D7** | 炉灵创建权限 | A. 仅 operator / B. E5+ 可创建 / C. E6 可创建（推荐） | C | 对标 clowder-ai operator 级别 |
+| **D8** | 自锻日记公开性 | A. 仅 operator 可见 / B. 炉灵间可见（推荐）/ C. 全公开 | B | 促进跨域学习 |
+| **D9** | Skill 晋升审批 | A. 全自动 / B. operator 审批（推荐）/ C. E5+ 审批 | B | 防止低质 Skill 污染 |
+| **D10** | 元认知严格度 | A. 宽松 / B. 标准（推荐）/ C. 严格 | B | 平衡效率和稳健 |
+
+> **审核请求**：请 operator 审核本规格文档，特别是第十三章路线图和附录 P 决策点。审核通过后将进入架构设计（arch.md）和详细设计（design.md）阶段。

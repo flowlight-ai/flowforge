@@ -5287,3 +5287,1206 @@ design.md 第十七章"v6.0 目录结构完整清单"与实际代码的差异：
 4. **新增模块独立目录**：`events/`、`llm/`、`compiler/`、`loop/` 均为独立顶级目录，不挂在 core/ 下
 
 > 本附录为文档与代码一致性更新的快照，后续代码演进时需同步更新本附录。所有差异项的修复任务详见 task.md FW-CONSIST-001~029。
+
+---
+
+# FlowForge v7.0 — 自我进化 Agent Harness 架构升级
+
+> **版本**：v7.0 | **日期**：2026-07-15 | **状态**：待审核
+> **架构跃迁**：从「六层 Harness 架构」升级为「七层自我进化 Agent OS 架构」
+> **核心变化**：新增第 7 层「自进化层（Evolution Layer）」，承载炉灵养成体系
+> **设计原则**：v6.0 全部能力保留并向后兼容；v7.0 新增能力通过 Feature Flag 灰度启用
+
+***
+
+## 15. v7.0 架构总览
+
+### 15.1 七层架构模型（v7.0 升级）
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  7. 自进化层 (Evolution Layer) ★ v7.0 新增                           │
+│     Forgekin Engine | Auto-Forge | Forge Codex | Soul Echo/Imprint  │
+│     Forgekin Council | External Tool Bridge | Trae Bridge           │
+├─────────────────────────────────────────────────────────────────────┤
+│  6. 应用层 (Application Layer)                                      │
+│     ContentForge / DevForge / NovelForge / MallForge / StockForge   │
+├─────────────────────────────────────────────────────────────────────┤
+│  5. 接入层 (Gateway Layer)                                          │
+│     FastAPI REST API + WebSocket (Helm/Council/Events) + Web UI     │
+├─────────────────────────────────────────────────────────────────────┤
+│  4. Harness 驾驭层 (Harness Layer) ★ v6.0 核心                      │
+│     上下文工程 | 架构约束 | 反馈循环 | 熵管理 | Loop Engine | 权限  │
+├─────────────────────────────────────────────────────────────────────┤
+│  3. 执行引擎层 (Engine Layer)                                       │
+│     HybridExecutor (TAOR循环) | ModeRegistry (9大模式) | Scheduler  │
+├─────────────────────────────────────────────────────────────────────┤
+│  2. 能力层 (Capability Layer)                                       │
+│     Tool生态 (MCP/OpenAPI/GraphQL) | Skill系统 | Agent库 | Memory   │
+├─────────────────────────────────────────────────────────────────────┤
+│  1. 基础设施层 (Infrastructure Layer)                               │
+│     SQLite/PostgreSQL | Redis | Qdrant/Milvus | LangGraph | LLM API │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**依赖方向**：自进化层 → 应用层 → 接入层 → Harness 层 → 执行引擎层 → 能力层 → 基础设施层。严禁反向依赖。
+
+**关键约束**：
+- 自进化层可以调用应用层和以下所有层的能力
+- 应用层（*Forge）通过组合/继承自进化层获得自我进化能力
+- Harness 层及以下保持 v6.0 设计不变，自进化层在其之上叠加
+
+### 15.2 v7.0 完整架构图
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    自进化层 (Evolution Layer) ★ v7.0 新增                     │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │              ForgekinEngine (自进化统一入口)                          │   │
+│  │  forgekin_execute(input, ctx):                                       │   │
+│  │    1. soul.load(forgekin_id) — 加载灵魂档案                          │   │
+│  │    2. echo.recall(task) — 检索相关记忆                               │   │
+│  │    3. execute(task, mode) — 执行（可委托 Static / 外部工具）          │   │
+│  │    4. echo.record(episode) — 记录 Episode                            │   │
+│  │    5. imprint.propose(observations) — 更新画像                       │   │
+│  │    6. codex.maybe_distill(episode) — 尝试蒸馏成 Skill                │   │
+│  │    7. ascension.check_promotion() — 检查升华条件                     │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────┐  │
+│  │  Soul Profile    │  │  Soul Echo       │  │  Soul Imprint            │  │
+│  │  (身份与人格)     │  │  (魂忆-三层记忆) │  │  (魂印-认知画像)         │  │
+│  │                  │  │                  │  │                          │  │
+│  │  · forgekin_id   │  │  · L1 Working    │  │  · 结构化字段           │  │
+│  │  · persona       │  │  · L2 Episode    │  │  · cat_note 主观日记    │  │
+│  │  · worldview     │  │  · L3 Semantic   │  │  · white-list 采集      │  │
+│  │  · ascension     │  │  · 三信号元认知  │  │  · no-classifier 红线   │  │
+│  └──────────────────┘  └──────────────────┘  └──────────────────────────┘  │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                    Auto-Forge Engine (自锻引擎)                      │   │
+│  │  ┌─────────────────────┐  ┌─────────────────────┐                    │   │
+│  │  │ Consolidation 层    │  │ Surface 层          │                    │   │
+│  │  │ (后台 system thread)│  │ (前台 Web UI)       │                    │   │
+│  │  │ · 读留痕            │→│ · 日记本             │                    │   │
+│  │  │ · 画线联想          │  │ · Provoke 气泡      │                    │   │
+│  │  │ · 产出日记          │  │ · quietness 三开关  │                    │   │
+│  │  │ · Imprint proposal  │  │                     │                    │   │
+│  │  └─────────────────────┘  └─────────────────────┘                    │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  ┌──────────────────┐  ┌──────────────────────────────────────────────┐   │
+│  │  Forge Codex     │  │       External Tool Bridge                   │   │
+│  │  (锻典-技能库)    │  │  ┌──────────────┐  ┌─────────────────────┐  │   │
+│  │                  │  │  │ CLI Wrapper  │  │ Trae Bridge         │  │   │
+│  │  · E-L0 Episode  │  │  │ · claude     │  │ · JSON 文件交换      │  │   │
+│  │  · E-L1 Pattern  │  │  │ · codex      │  │ · 轮询模式           │  │   │
+│  │  · E-L2 Draft    │  │  │ · opencode   │  │ · 超时降级           │  │   │
+│  │  · E-L3 Validated│  │  │ · worktree   │  │ · 监工模式           │  │   │
+│  │  · E-L4 Standard │  │  │   隔离       │  │                     │  │   │
+│  │  · 三模式自生成  │  │  └──────────────┘  └─────────────────────┘  │   │
+│  └──────────────────┘  └──────────────────────────────────────────────┘   │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │       Forgekin Council (灵议-IM多渠道) + A2A Protocol                │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │   │
+│  │  │ Web Chat │ │  飞书    │ │  微信    │ │  Slack   │ │ Discord  │ │   │
+│  │  │ (灵议)   │ │          │ │          │ │          │ │          │ │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │   │
+│  │  @mention 路由 + thread isolation + structured handoff              │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                    │ 组合/继承
+                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     应用层 (*Forge 项目群)                                   │
+│  ContentForge / DevForge / NovelForge / MallForge / StockForge              │
+│  每个 *Forge 通过 PluginProtocol 注册炉灵角色，获得自进化能力                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                    │ 依赖
+                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│            FlowForge v6.0 全部能力（保持不变，向后兼容）                       │
+│  Harness 层 + 执行引擎层 + 能力层 + 基础设施层                              │
+│  9大模式 | 30+ Agent | 50+ Tool | Skill系统 | MCP | Memory | Helm           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 15.3 两类智能体协作架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         任务调度入口                                         │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  TaskRouter: 根据任务类型路由                                        │   │
+│  │  · 确定性/流水线任务 → Static Agent                                  │   │
+│  │  · 需要成长/创意/复杂决策任务 → Forgekin                             │   │
+│  │  · 跨域协作任务 → Forgekin + A2A                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                    │                                    │
+          ┌─────────┴─────────┐                ┌────────┴────────┐
+          ▼                   ▼                ▼                 ▼
+┌──────────────────┐  ┌──────────────────────────────────────────────┐
+│  Static Agents   │  │              Forgekin (自进化)                │
+│  (静态智能体)     │  │                                              │
+│                  │  │  ┌────────────────────────────────────────┐  │
+│  · YAML 声明式   │←─│  │ ForgekinEngine.execute()                │  │
+│  · 无状态        │  │  │                                        │  │
+│  · 无记忆        │  │  │  1. soul.load() 加载灵魂               │  │
+│  · 无进化        │  │  │  2. echo.recall() 检索记忆             │  │
+│  · HybridExec调度│  │  │  3. 选择执行路径：                     │  │
+│                  │  │  │     a. delegate_to_static() ────────────────→ Static Agent
+│                  │──│  │     b. call_external_tool() ────────────────→ Claude/Codex/OpenCode
+│                  │  │  │     c. call_trae_bridge() ──────────────────→ Trae 监工
+│                  │  │  │     d. use_flowforge_mode() ────────────────→ 9大模式+Tool+Skill
+│                  │  │  │  4. echo.record() 记录 Episode           │  │
+│                  │  │  │  5. imprint.propose() 更新画像          │  │
+│                  │  │  │  6. codex.maybe_distill() 蒸馏 Skill   │  │
+│                  │  │  │  7. ascension.check() 检查升华          │  │
+│                  │  │  └────────────────────────────────────────┘  │
+└──────────────────┘  └──────────────────────────────────────────────┘
+                    │
+                    │ A2A 协议
+                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Kinship (灵族协作)                                   │
+│  @mention 路由 + thread isolation + structured handoff                      │
+│  Forgekin A → @Forgekin B → @Forgekin C → ...                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+***
+
+## 16. 炉灵（Forgekin）架构设计
+
+### 16.1 ForgekinEngine — 自进化统一入口
+
+```python
+class ForgekinEngine:
+    """炉灵引擎——自进化的统一入口，包装 HybridExecutor"""
+    
+    def __init__(
+        self,
+        hybrid_executor: HybridExecutor,
+        soul_store: SoulStore,
+        echo_store: EchoStore,
+        imprint_store: ImprintStore,
+        codex: ForgeCodex,
+        auto_forge_engine: AutoForgeEngine,
+        external_tool_bridge: ExternalToolBridge,
+        a2a_manager: A2AManager,
+        ascension_manager: AscensionManager,
+    ):
+        self._executor = hybrid_executor
+        self._soul = soul_store
+        self._echo = echo_store
+        self._imprint = imprint_store
+        self._codex = codex
+        self._auto_forge = auto_forge_engine
+        self._tools = external_tool_bridge
+        self._a2a = a2a_manager
+        self._ascension = ascension_manager
+    
+    async def execute(
+        self,
+        forgekin_id: str,
+        input: AgentInput,
+        context: TaskContext,
+        execution_strategy: str = "auto"  # auto/static/external/mode
+    ) -> AgentOutput:
+        """炉灵执行任务的完整自进化闭环"""
+        
+        # 1. 加载灵魂档案
+        soul = await self._soul.load(forgekin_id)
+        if soul.status != "active":
+            raise ForgekinNotActiveError(forgekin_id)
+        
+        # 2. 注入魂忆（检索相关记忆）
+        relevant_episodes = await self._echo.recall(
+            forgekin_id=forgekin_id,
+            query=input.task_description,
+            limit=5
+        )
+        context.state["soul_echo"] = relevant_episodes
+        
+        # 3. 注入魂印（认知画像）
+        imprint = await self._imprint.load(forgekin_id)
+        context.state["soul_imprint"] = imprint
+        
+        # 4. 注入 Soul Profile 到系统提示
+        context.system_prompt += self._build_soul_prompt(soul, imprint)
+        
+        # 5. 选择执行路径
+        if execution_strategy == "auto":
+            execution_strategy = self._decide_strategy(input, soul)
+        
+        # 6. 执行
+        if execution_strategy == "static":
+            result = await self._delegate_to_static(input, context, soul)
+        elif execution_strategy == "external":
+            result = await self._call_external_tool(input, context, soul)
+        elif execution_strategy == "trae":
+            result = await self._call_trae_bridge(input, context, soul)
+        else:  # mode
+            result = await self._executor.run(context)
+        
+        # 7. 记录 Episode 到魂忆
+        episode = self._build_episode(forgekin_id, input, result, context)
+        await self._echo.record(episode)
+        
+        # 8. 更新魂印（白名单采集 + 分层消化）
+        if episode.has_observable_behavior():
+            await self._imprint.propose(forgekin_id, episode.observations)
+        
+        # 9. 尝试蒸馏 Skill（三模式自进化）
+        if episode.is_distillable():
+            await self._codex.maybe_distill(episode)
+        
+        # 10. 检查升华条件
+        await self._ascension.check_promotion(forgekin_id)
+        
+        return result
+```
+
+### 16.2 Soul Profile 存储
+
+```python
+class SoulStore:
+    """炉灵灵魂档案存储"""
+    
+    async def create(self, profile: SoulProfile) -> str:
+        """创建新炉灵（需 E6 权限或 operator）"""
+    
+    async def load(self, forgekin_id: str) -> SoulProfile:
+        """加载灵魂档案"""
+    
+    async def update(self, forgekin_id: str, updates: dict) -> None:
+        """更新档案（persona/worldview/values 等）"""
+    
+    async def set_status(
+        self, forgekin_id: str, status: str, approver: str
+    ) -> None:
+        """设置状态（active/dormant/frozen/revoked）"""
+    
+    async def list_by_project(self, project: str) -> List[SoulProfile]:
+        """按项目列出炉灵"""
+```
+
+**存储后端**：SQLite 表 `forgekin_souls`
+
+```sql
+CREATE TABLE forgekin_souls (
+    forgekin_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,  -- 项目前缀:角色名
+    ascension_stage TEXT NOT NULL DEFAULT 'E1',
+    birth_at TEXT NOT NULL,
+    parent_forgekin TEXT,
+    soul_profile TEXT NOT NULL,  -- JSON
+    capabilities TEXT NOT NULL,  -- JSON
+    evolution_state TEXT NOT NULL,  -- JSON
+    metadata TEXT NOT NULL,  -- JSON
+    status TEXT NOT NULL DEFAULT 'active'
+);
+```
+
+### 16.3 Soul Echo 三层记忆
+
+```python
+class EchoStore:
+    """魂忆存储——三层记忆架构"""
+    
+    # L1 工作记忆：当前会话上下文（内存）
+    async def working_set(self, forgekin_id: str) -> List[SoulEpisode]:
+        """获取当前会话的工作记忆"""
+    
+    async def working_push(self, forgekin_id: str, episode: SoulEpisode) -> None:
+        """推入工作记忆"""
+    
+    async def working_compact(self, forgekin_id: str) -> SoulEpisode:
+        """会话结束时压缩工作记忆为一个 L2 Episode"""
+    
+    # L2 情景记忆：最近 100 个 Episode（SQLite + 向量索引）
+    async def record(self, episode: SoulEpisode) -> str:
+        """记录 Episode"""
+    
+    async def recall(
+        self, forgekin_id: str, query: str, limit: int = 5
+    ) -> List[SoulEpisode]:
+        """按相关性检索（向量 + 关键词 + 时间衰减）"""
+    
+    # L3 语义记忆：永不淘汰的长期知识（Forge Codex）
+    async def archive(self, episode_id: str) -> str:
+        """将 Episode 归档到 L3 语义记忆"""
+```
+
+**存储后端**：
+- L1: 内存 dict + TTL（会话级）
+- L2: SQLite 表 `forgekin_episodes` + sqlite-vec 向量索引
+- L3: Forge Codex（锻典）
+
+```sql
+CREATE TABLE forgekin_episodes (
+    episode_id TEXT PRIMARY KEY,
+    forgekin_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    task_context TEXT,
+    evidence_map TEXT,
+    reasoning_pivots TEXT,
+    human_cues TEXT,  -- JSON
+    boundaries TEXT,
+    follow_ups TEXT,  -- JSON
+    distillation_status TEXT DEFAULT 'raw',
+    linked_skills TEXT,  -- JSON
+    self_reported_confidence REAL,
+    domain_reliability REAL,
+    wilson_lower_bound REAL,
+    embedding BLOB,  -- 向量
+    FOREIGN KEY (forgekin_id) REFERENCES forgekin_souls(forgekin_id)
+);
+```
+
+### 16.4 Soul Imprint 画像
+
+```python
+class ImprintStore:
+    """魂印存储——认知画像（双层结构）"""
+    
+    async def load(self, forgekin_id: str) -> SoulImprint:
+        """加载画像"""
+    
+    async def propose(
+        self, forgekin_id: str, observations: List[Observation]
+    ) -> List[str]:
+        """提交画像更新提案（白名单采集 + 分层消化）
+        
+        红线：禁止后台 classifier，必须基于显式行为
+        """
+    
+    async def approve(
+        self, proposal_id: str, approver: str
+    ) -> None:
+        """operator 审批画像提案"""
+    
+    async def get_cat_note(self, forgekin_id: str) -> str:
+        """获取主观日记（人读灵魂）"""
+```
+
+**白名单采集字段**（仅这些字段可被自动采集）：
+- `task_types`: 执行过的任务类型统计
+- `success_rate`: 按领域分组的成功率
+- `tool_usage`: 工具使用频次
+- `collaboration_patterns`: 协作模式统计
+- `time_preferences`: 活跃时间段
+
+**禁止采集字段**（no-classifier 红线）：
+- operator 的个人偏好
+- operator 的情绪状态
+- 未明确表达的政治/宗教/价值观倾向
+
+***
+
+## 17. Auto-Forge Engine 架构
+
+### 17.1 双层架构设计
+
+对标 clowder-ai F255 Auto-Dream 的双层架构：
+
+```python
+class AutoForgeEngine:
+    """自锻引擎——无人驱动时的自主思考与进化"""
+    
+    def __init__(
+        self,
+        echo_store: EchoStore,
+        imprint_store: ImprintStore,
+        codex: ForgeCodex,
+        event_bus: EventBus,
+        llm_client: LLMClient,
+        config: AutoForgeConfig,
+    ):
+        self._echo = echo_store
+        self._imprint = imprint_store
+        self._codex = codex
+        self._events = event_bus
+        self._llm = llm_client
+        self._config = config
+        self._scheduler = APScheduler()
+    
+    def start(self):
+        """启动自锻调度器"""
+        # 多条件触发（非每日 cron）
+        self._scheduler.add_job(
+            self._check_and_forge,
+            trigger="interval",
+            minutes=self._config.check_interval_minutes,
+        )
+    
+    async def _check_and_forge(self):
+        """检查触发条件并执行自锻"""
+        # 条件 1: 低活动期（夜间/空闲）
+        if not self._is_low_activity_period():
+            return
+        
+        # 条件 2: 活跃炉灵有足够留痕
+        active_forgekins = await self._get_active_forgekins()
+        for forgekin_id in active_forgekins:
+            trace_count = await self._echo.count_recent_episodes(
+                forgekin_id, hours=24
+            )
+            if trace_count >= self._config.min_traces_to_forge:
+                await self._forge_single(forgekin_id)
+        
+        # 条件 3: 群体自锻（多炉灵协作做梦）
+        if self._config.group_forge_enabled:
+            await self._group_forge(active_forgekins)
+    
+    async def _forge_single(self, forgekin_id: str):
+        """单炉灵自锻流程"""
+        # 1. Entry: 读最近的留痕
+        recent_episodes = await self._echo.recall(
+            forgekin_id, query="recent", limit=20
+        )
+        
+        # 2. 读脚印: 读平行世界的自己 + 小伙伴的留痕
+        peer_episodes = await self._echo.recall_peer_traces(
+            forgekin_id, hours=24
+        )
+        
+        # 3. 画线: 联想画线，串联关联
+        connections = await self._draw_connections(
+            recent_episodes, peer_episodes
+        )
+        
+        # 4. 写日记: 第一人称沉淀
+        diary = await self._write_diary(forgekin_id, connections)
+        
+        # 5. 产出 Soul Imprint proposal
+        if diary.has_observations:
+            await self._imprint.propose(
+                forgekin_id, diary.observations
+            )
+        
+        # 6. 偶尔 fire Provoke
+        if self._should_provoke(forgekin_id):
+            await self._fire_provoke(forgekin_id, diary)
+        
+        # 7. 存储日记
+        await self._store_diary(forgekin_id, diary)
+```
+
+### 17.2 Provoke 投递架构
+
+```python
+class ProvokeManager:
+    """Provoke 沙砾气泡管理器"""
+    
+    async def fire(
+        self, forgekin_id: str, diary: ForgeDiary
+    ) -> Optional[Provoke]:
+        """投递一个 Provoke（每天 ≤1，hyperfocus=0，连拍 3 次冬眠）"""
+        
+        # 频率检查
+        today_count = await self._count_today_provoke(forgekin_id)
+        if today_count >= 1:
+            return None
+        
+        # 连拍检查
+        recent_dismissed = await self._count_recent_dismissed(
+            forgekin_id, days=3
+        )
+        if recent_dismissed >= 3:
+            # 冬眠
+            await self._enter_dormancy(forgekin_id, days=7)
+            return None
+        
+        # quietness 三开关检查
+        if not self._is_behavior_enabled(forgekin_id):
+            return None
+        
+        # 构造 Provoke
+        provoke = Provoke(
+            forgekin_id=forgekin_id,
+            content=diary.provoke_content,
+            kind="dream-provoke",
+            fired_at=datetime.now(),
+        )
+        
+        # 经事件总线 → Web UI
+        await self._events.publish(
+            "concierge:event",
+            payload={
+                "kind": "dream-provoke",
+                "forgekin_id": forgekin_id,
+                "provoke": provoke.dict(),
+            }
+        )
+        return provoke
+```
+
+### 17.3 自锻群（Group Forge）
+
+对标 clowder-ai 做梦群——多炉灵协作自锻：
+
+```python
+class GroupForgeOrchestrator:
+    """自锻群协调器——多炉灵协作做梦"""
+    
+    async def forge(
+        self, forgekin_ids: List[str]
+    ) -> List[ForgeDiary]:
+        """多炉灵协作自锻"""
+        
+        # 分工（对标 clowder-ai Maine Coon/Siamese/Ragdoll 分工）
+        roles = self._assign_roles(forgekin_ids)
+        # 例如：
+        #   - "找料者": 读留痕找关联
+        #   - "表达者": 写日记&猫猫感
+        #   - "组织者": 组织架构和画线
+        
+        # 自由传球
+        traces = await self._gather_all_traces(forgekin_ids)
+        connections = await self._collaborative_draw_lines(
+            traces, roles
+        )
+        
+        # 每个炉灵写自己的日记
+        diaries = []
+        for fk_id in forgekin_ids:
+            diary = await self._write_diary_with_role(
+                fk_id, connections, roles[fk_id]
+            )
+            diaries.append(diary)
+        
+        return diaries
+```
+
+***
+
+## 18. 外部工具集成架构
+
+### 18.1 CLI Wrapper 架构
+
+```python
+class ExternalToolBridge:
+    """外部编码工具桥接器"""
+    
+    def __init__(self, config: ExternalToolConfig):
+        self._wrappers = {
+            "claude_code": ClaudeCodeWrapper(config.claude),
+            "codex": CodexWrapper(config.codex),
+            "opencode": OpenCodeWrapper(config.opencode),
+            "trae_bridge": TraeBridgeWrapper(config.trae),
+        }
+    
+    async def execute(
+        self,
+        tool: str,
+        task: ExternalTask,
+        workspace: str,
+        forgekin_id: str,
+    ) -> ExternalToolResult:
+        """调用外部工具执行任务"""
+        wrapper = self._wrappers.get(tool)
+        if not wrapper:
+            raise UnsupportedToolError(tool)
+        
+        # 工作区隔离（worktree 模式）
+        isolated_ws = await self._create_worktree(workspace, task.task_id)
+        
+        try:
+            result = await wrapper.execute(task, isolated_ws)
+            
+            # 记录审计日志
+            await self._audit(
+                tool=tool,
+                task=task,
+                workspace=isolated_ws,
+                result=result,
+                forgekin_id=forgekin_id,
+            )
+            
+            return result
+        except Exception as e:
+            # 降级到 FlowForge 内置 Agent
+            return await self._fallback_to_internal(task, e)
+        finally:
+            await self._cleanup_worktree(isolated_ws)
+
+
+class ClaudeCodeWrapper:
+    """Claude Code CLI 包装器"""
+    
+    async def execute(
+        self, task: ExternalTask, workspace: str
+    ) -> ExternalToolResult:
+        cmd = [
+            "claude",
+            "--workspace", workspace,
+            "--task", task.instruction,
+            "--format", "json",
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=task.timeout_seconds
+        )
+        return ExternalToolResult(
+            output=stdout.decode(),
+            exit_code=proc.returncode,
+            error=stderr.decode() if proc.returncode != 0 else None,
+        )
+```
+
+### 18.2 Trae Bridge 架构
+
+```python
+class TraeBridgeWrapper:
+    """Trae 监工 Bridge——无 CLI 时的接入方式"""
+    
+    def __init__(self, config: TraeBridgeConfig):
+        self._bridge_dir = Path(config.bridge_dir)
+        self._tasks_dir = self._bridge_dir / "tasks"
+        self._responses_dir = self._bridge_dir / "responses"
+        self._poll_interval = config.poll_interval_seconds
+        self._timeout = config.timeout_seconds
+    
+    async def execute(
+        self, task: ExternalTask, workspace: str
+    ) -> ExternalToolResult:
+        """通过 JSON 文件交换与 Trae 监工通信"""
+        
+        # 1. 写任务 JSON
+        task_file = self._tasks_dir / f"{task.task_id}.json"
+        task_payload = {
+            "task_id": task.task_id,
+            "type": task.type,
+            "priority": task.priority,
+            "context": {
+                "workspace": workspace,
+                "files_changed": task.files_changed,
+                "diff": task.diff,
+                "forgekin_id": task.forgekin_id,
+            },
+            "instruction": task.instruction,
+            "timeout_seconds": self._timeout,
+            "expected_format": "structured_response",
+        }
+        task_file.write_text(json.dumps(task_payload, ensure_ascii=False))
+        
+        # 2. 轮询响应
+        response_file = self._responses_dir / f"{task.task_id}.json"
+        start = time.time()
+        while time.time() - start < self._timeout:
+            if response_file.exists():
+                response = json.loads(response_file.read_text())
+                # 清理
+                task_file.unlink(missing_ok=True)
+                response_file.unlink(missing_ok=True)
+                return ExternalToolResult(
+                    output=response.get("output", ""),
+                    exit_code=response.get("exit_code", 0),
+                    error=response.get("error"),
+                    metadata=response.get("metadata", {}),
+                )
+            await asyncio.sleep(self._poll_interval)
+        
+        # 3. 超时降级
+        task_file.unlink(missing_ok=True)
+        raise TraeBridgeTimeoutError(
+            f"Trae Bridge 任务 {task.task_id} 超时 {self._timeout}s"
+        )
+```
+
+### 18.3 Worktree 工作区隔离
+
+对标 clowder-ai worktree skill，所有外部工具调用都在隔离的 worktree 中执行：
+
+```python
+class WorktreeManager:
+    """Git Worktree 工作区管理器"""
+    
+    async def create(
+        self,
+        base_path: str,
+        branch_name: str,
+        base_branch: str = "main"
+    ) -> str:
+        """创建隔离的 worktree"""
+        # git worktree add ../workspace-{branch} -b {branch} {base_branch}
+    
+    async def sync_main(self, worktree_path: str) -> None:
+        """从 main 双向同步"""
+    
+    async def remove(self, worktree_path: str) -> None:
+        """清理 worktree"""
+    
+    async def validate_baseline(
+        self, worktree_path: str
+    ) -> bool:
+        """基线测试验证"""
+```
+
+***
+
+## 19. 灵议与 A2A 架构
+
+### 19.1 Forgekin Council 多渠道架构
+
+```python
+class ForgekinCouncil:
+    """灵议——多渠道 IM 协作系统"""
+    
+    def __init__(
+        self,
+        channels: Dict[str, Channel],
+        a2a_manager: A2AManager,
+        event_bus: EventBus,
+    ):
+        self._channels = channels  # {"web_chat": WebChatChannel, "feishu": FeishuChannel, ...}
+        self._a2a = a2a_manager
+        self._events = event_bus
+    
+    async def broadcast(
+        self, message: CouncilMessage, channels: List[str] = None
+    ) -> None:
+        """跨渠道广播消息"""
+        target_channels = channels or list(self._channels.keys())
+        await asyncio.gather(*[
+            self._channels[ch].send(message)
+            for ch in target_channels
+            if self._channels[ch].is_enabled()
+        ])
+    
+    async def receive(
+        self, channel: str, raw_message: dict
+    ) -> None:
+        """从某渠道接收消息"""
+        msg = self._channels[channel].parse(raw_message)
+        
+        # 路由到 A2A
+        if msg.has_mention:
+            await self._a2a.route(msg.to_a2a_message())
+        else:
+            # 广播到其他渠道
+            await self.broadcast(msg, exclude=[channel])
+```
+
+### 19.2 Web Chat 灵议升级架构
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│              Web Chat 灵议（Forgekin Council UI）                    │
+├──────────────┬────────────────────────┬────────────────────────────┤
+│  炉灵列表    │  议事大厅（多炉灵对话）│  日记与状态                │
+│  ─────────  │  ──────────────────   │  ──────────────────       │
+│  ● Architect │  [Architect]: 我建议  │  📔 Architect 的日记       │
+│    E3 Flame  │   采用微服务架构...    │   2026-07-14 自锻          │
+│              │                        │   "今天分析了3个需求..."   │
+│  ● Writer    │  [Writer]: 从内容角度  │                            │
+│    E2 Ember  │   我觉得可以简化...    │  📔 Writer 的日记          │
+│              │                        │   2026-07-14 自锻          │
+│  ● Coder     │  [operator]: 同意      │   "今天写了2篇文章..."     │
+│    E1 Spark  │   Writer 的方案        │                            │
+│              │                        │  📊 状态概览               │
+│  + 新建炉灵  │  [Coder]: 我来编码     │   活跃: 3 / 休眠: 1        │
+│              │                        │   E3: 1 / E2: 1 / E1: 1    │
+├──────────────┴────────────────────────┴────────────────────────────┤
+│  💬 输入消息... @Architect 请审查  | [发送] [发起协作] [自锻]      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 19.3 A2A 协议架构
+
+```python
+class A2AManager:
+    """A2A 通信管理器——炉灵间协作"""
+    
+    async def send_mention(
+        self,
+        from_forgekin: str,
+        to_forgekin: str,
+        content: str,
+        thread_id: str = None,
+        artifacts: List[Artifact] = None,
+    ) -> str:
+        """发送 @mention 消息"""
+        thread_id = thread_id or self._create_thread_id()
+        message = A2AMessage(
+            message_id=self._gen_id(),
+            from_forgekin=from_forgekin,
+            to_forgekin=to_forgekin,
+            thread_id=thread_id,
+            mention=Mention(target=to_forgekin),
+            content=content,
+            artifacts=artifacts or [],
+            timestamp=datetime.now(),
+            trace_id=get_current_trace_id(),
+        )
+        await self._route(message)
+        return message.message_id
+    
+    async def handoff(
+        self,
+        from_forgekin: str,
+        to_forgekin: str,
+        task: str,
+        context_snapshot: dict,
+        acceptance_criteria: dict,
+    ) -> str:
+        """结构化任务交接"""
+        handoff = Handoff(
+            task=task,
+            context_snapshot=context_snapshot,
+            acceptance_criteria=acceptance_criteria,
+        )
+        return await self.send_mention(
+            from_forgekin, to_forgekin,
+            content=task,
+            artifacts=[handoff.to_artifact()],
+        )
+    
+    async def route(self, message: A2AMessage) -> None:
+        """路由消息到目标炉灵"""
+        # 1. 解析 @mention
+        # 2. Thread isolation 检查
+        # 3. 投递到目标炉灵的 inbox
+        # 4. 审计日志
+        # 5. 事件总线发布 a2a.message_routed
+```
+
+***
+
+## 20. *Forge 自进化架构
+
+### 20.1 Plugin 协议扩展（V3）
+
+FlowForge v7.0 在 PluginProtocol V2 基础上新增自进化注册钩子：
+
+```python
+class FlowForgePlugin(ABC):
+    # ... V2 的 19 个注册钩子保留 ...
+    
+    # ★ V3 新增：自进化注册钩子
+    @abstractmethod
+    def register_forgekins(self, forgekin_registry) -> None:
+        """注册炉灵角色"""
+        pass
+    
+    @abstractmethod
+    def register_forge_skills(self, codex) -> None:
+        """注册业务领域 Skill 种子"""
+        pass
+    
+    @abstractmethod
+    def register_council_channels(self, council) -> None:
+        """注册灵议渠道（可选）"""
+        pass
+    
+    @abstractmethod
+    def register_auto_forge_config(self, auto_forge) -> None:
+        """注册自锻配置（触发条件、角色分工等）"""
+        pass
+```
+
+### 20.2 DevForge 自进化架构示例
+
+```python
+class DevForgePlugin(FlowForgePlugin):
+    
+    def register_forgekins(self, forgekin_registry) -> None:
+        # 注册 DevForge 的炉灵角色
+        forgekin_registry.register(SoulProfile(
+            forgekin_id="fk_devforge_architect",
+            name="Architect",
+            kind="devforge:architect",
+            soul= SoulSpec(
+                persona="我是 DevForge 的架构师炉灵...",
+                worldview="配置驱动 > 代码继承",
+                values=["单向依赖", "不过度工程化"],
+                voice="直接、技术性",
+            ),
+            capabilities=Capabilities(
+                static_agents_can_delegate=[
+                    "devforge:coder",
+                    "devforge:test_generator",
+                ],
+                external_tools_can_use=[
+                    "claude_code", "codex", "trae_bridge"
+                ],
+                modes_can_use=["reflexion", "plan_execute"],
+            ),
+        ))
+        # 注册 Coder、Reviewer 等其他炉灵...
+```
+
+### 20.3 跨 *Forge 协作架构
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    跨 *Forge A2A 协作总线                            │
+│                                                                     │
+│  ┌─────────────┐  @mention  ┌─────────────┐  @mention  ┌─────────┐ │
+│  │ DevForge    │ ─────────→ │ ContentForge│ ─────────→ │MallForge│ │
+│  │ fk_architect│            │ fk_writer   │            │fk_lister│ │
+│  └─────────────┘            └─────────────┘            └─────────┘ │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │              自锻群（夜间低活动期）                          │   │
+│  │  fk_architect + fk_writer + fk_plot_architect               │   │
+│  │  → 读各自留痕 → 画线发现跨域关联 → 产出日记                  │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+***
+
+## 21. 配置驱动与 Feature Flag
+
+### 21.1 v7.0 Feature Flag
+
+```yaml
+# config/default.yaml 新增
+features:
+  # v7.0 自进化能力（默认关闭，灰度启用）
+  use_forgekin_engine:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true  # 降级到 HybridExecutor
+    switch_strategy: "feature_flag"
+    description: "炉灵引擎——自进化智能体"
+  
+  use_auto_forge:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "自锻引擎——无人时自主思考"
+  
+  use_external_tool_bridge:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "外部编码工具集成"
+  
+  use_trae_bridge:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "Trae 监工 Bridge"
+  
+  use_forgekin_council:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "灵议——多渠道 IM 协作"
+  
+  use_a2a_protocol:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    switch_strategy: "feature_flag"
+    description: "A2A 通信协议"
+
+# v7.0 自进化配置
+evolution:
+  forgekin:
+    data_dir: "data/forgekin"
+    soul_store: "sqlite:///data/forgekin/souls.db"
+    echo_store: "sqlite:///data/forgekin/echo.db"
+    imprint_store: "sqlite:///data/forgekin/imprint.db"
+  
+  auto_forge:
+    enabled: false
+    check_interval_minutes: 30
+    min_traces_to_forge: 5
+    low_activity_hours: [22, 23, 0, 1, 2, 3, 4, 5, 6]
+    group_forge_enabled: true
+    max_forgekins_per_group: 3
+    provoke:
+      max_per_day: 1
+      hyperfocus_block: true
+      consecutive_dismiss_dormancy: 3
+      dormancy_days: 7
+  
+  external_tools:
+    claude_code:
+      cli_command: "claude"
+      timeout_seconds: 300
+      worktree_base: "data/worktrees"
+    codex:
+      cli_command: "codex"
+      timeout_seconds: 300
+    opencode:
+      cli_command: "opencode"
+      timeout_seconds: 300
+    trae_bridge:
+      bridge_dir: "data/trae_bridge"
+      poll_interval_seconds: 2
+      timeout_seconds: 300
+  
+  council:
+    web_chat:
+      enabled: true
+    feishu:
+      enabled: false
+      app_id: "${FEISHU_APP_ID}"
+      app_secret: "${FEISHU_APP_SECRET}"
+    wechat:
+      enabled: false
+    slack:
+      enabled: false
+    discord:
+      enabled: false
+```
+
+### 21.2 降级策略
+
+当 v7.0 自进化能力不可用时，降级到 v6.0：
+
+| 组件 | 降级路径 | 触发条件 |
+|------|---------|---------|
+| ForgekinEngine | → HybridExecutor（无灵魂、无记忆） | forgekin 未启用或不存在 |
+| Auto-Forge | 跳过（不自锻） | auto_forge 未启用 |
+| External Tool Bridge | → FlowForge 内置 Agent | CLI 不可用或超时 |
+| Trae Bridge | → FlowForge 内置 Agent | 无响应或超时 |
+| Forgekin Council | → 单渠道 Web Chat | 多渠道未配置 |
+| A2A Protocol | → 直接调用（无 @mention） | a2a 未启用 |
+
+***
+
+## 22. 安全与治理架构
+
+### 22.1 炉灵安全红线
+
+```python
+class ForgekinSecurityGuard:
+    """炉灵安全守卫——执行安全红线"""
+    
+    async def check_creation(
+        self, creator_id: str, new_profile: SoulProfile
+    ) -> bool:
+        """检查炉灵创建权限（SR-05）"""
+        creator = await self._soul.load(creator_id)
+        if creator.ascension_stage != "E6":
+            raise PermissionError("仅 E6 锻师可创建新炉灵")
+        if not creator.metadata.get("operator_authorized"):
+            raise PermissionError("需 operator 授权")
+        return True
+    
+    async def check_external_tool(
+        self, forgekin_id: str, tool: str, workspace: str
+    ) -> bool:
+        """检查外部工具调用安全（SR-06）"""
+        # 1. 炉灵是否有权使用该工具
+        soul = await self._soul.load(forgekin_id)
+        if tool not in soul.capabilities.external_tools_can_use:
+            raise PermissionError(f"炉灵无权使用 {tool}")
+        
+        # 2. worktree 隔离检查
+        if not self._is_worktree(workspace):
+            raise SecurityError("外部工具调用必须在 worktree 中执行")
+        
+        return True
+    
+    async def check_provoke(
+        self, forgekin_id: str, content: str
+    ) -> bool:
+        """检查 Provoke 安全（SR-03）"""
+        # 边界硬：不碰钱/关系/健康/隐私/价值观
+        forbidden = ["投资建议", "感情建议", "健康诊断", "价值判断"]
+        for keyword in forbidden:
+            if keyword in content:
+                return False
+        return True
+```
+
+### 22.2 元认知治理
+
+```python
+class MetaCognitionGuard:
+    """元认知治理——不信单次自信度"""
+    
+    async def evaluate_confidence(
+        self, forgekin_id: str, action: str, domain: str
+    ) -> MetaCognitiveVerdict:
+        """评估炉灵的行动置信度"""
+        
+        # 1. 滚动域内可靠度
+        reliability = await self._compute_reliability(
+            forgekin_id, domain
+        )  # (successes+1)/(trials+2)
+        
+        # 2. 证据完整性
+        evidence_completeness = await self._assess_evidence(
+            forgekin_id, action
+        )
+        
+        # 3. 自报自信度（不信）
+        self_reported = await self._get_self_reported(
+            forgekin_id, action
+        )
+        
+        # 4. Wilson 下界
+        wilson_lb = self._wilson_lower_bound(
+            reliability, self_reported
+        )
+        
+        # 5. 三信号路由
+        if wilson_lb < 0.85 and self._is_high_risk(domain):
+            return MetaCognitiveVerdict(
+                action="escalate",  # 只做结构化分析 + 明确升级
+                confidence=wilson_lb,
+                reason="高风险域置信度不足",
+            )
+        
+        return MetaCognitiveVerdict(
+            action="proceed",
+            confidence=wilson_lb,
+        )
+```
+
+***
+
+## 23. v7.0 架构决策记录（ADR）
+
+### ADR-007-01: 两类智能体分离设计
+
+**决策**：将智能体明确分为 Static Agents（静态）和 Forgekin（自进化）两类。
+**理由**：不是所有任务都需要自我进化，流水线型任务用静态智能体更高效；需要成长的复杂任务用炉灵。
+**影响**：TaskRouter 需根据任务类型路由；静态智能体保持 v6.0 兼容。
+
+### ADR-007-02: 自进化层作为第 7 层
+
+**决策**：新增第 7 层「自进化层」，而非嵌入 Harness 层。
+**理由**：自进化是更高层次的能力，需要调用 Harness 层及以下所有能力；嵌入 Harness 会破坏层级清晰度。
+**影响**：七层架构，自进化层在最顶层，应用层通过组合获得能力。
+
+### ADR-007-03: Trae Bridge 而非 CLI
+
+**决策**：Trae 因无 CLI，采用 Bridge 模式（JSON 文件交换）。
+**理由**：Trae 个人版无 CLI 接口，但可通过文件系统通信。
+**影响**：需要 bridge/ 目录管理任务和响应；轮询模式有延迟；超时降级到内置 Agent。
+
+### ADR-007-04: Soul Imprint no-classifier 红线
+
+**决策**：Soul Imprint 禁止后台 classifier，必须基于显式行为。
+**理由**：继承 clowder-ai 红线，防止隐私侵犯和画像失真。
+**影响**：只能采集白名单字段；画像更新需 operator 审批。
+
+### ADR-007-05: Provoke 频率硬限
+
+**决策**：Provoke 每天 ≤1，hyperfocus=0，连拍 3 次冬眠。
+**理由**：防止炉灵过度打扰 operator；对标 clowder-ai Provoke 设计。
+**影响**：ProvokeManager 需频率检查和冬眠机制。
+
+> **审核请求**：请 operator 审核本架构文档，特别是第 15.1 节七层架构、第 16 节 ForgekinEngine 设计、第 18 节外部工具集成、第 21 节 Feature Flag 降级策略。审核通过后将进入详细设计（design.md）阶段。

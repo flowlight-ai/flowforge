@@ -3254,3 +3254,3723 @@ class DualThresholdCompactor:
 | plugins/ 目录 | 顶级目录 | 迁移到 core/plugin_*.py | 更新路径 |
 
 > 本附录为设计修正快照，所有差异项的修复任务详见 task.md FW-CONSIST-001~029。design.md 正文内容保持不变，以本附录为准进行代码对齐。
+
+***
+
+# 第五部分：v7.0 自进化能力详细设计（Forgekin 体系）
+
+> **对应规格文档**：spec.md 第七章~第十三章 + 附录 O/P
+> **对应架构文档**：arch.md 第 15~23 节
+> **状态**：v7.0 新增，对标 clowder-ai 养猫体系 + F100 自我进化 + F255 Auto-Dream
+> **核心公式升级**：`Agent = Model + Harness + Soul`（v6.0 为 `Agent = Model + Harness`）
+
+---
+
+## 第十五章：v7.0 目录结构新增
+
+### 15.1 evolution/ 模块完整目录
+
+在 v6.0 目录基础上新增 `evolution/` 顶级模块，承载全部自进化能力：
+
+```
+flowforge/
+├── evolution/                         # ★ v7.0 新增：自进化层
+│   ├── __init__.py                    # EvolutionLayer（自进化层统一入口）
+│   │
+│   ├── forgekin/                      # 炉灵引擎（FR-EVO-01~03）
+│   │   ├── __init__.py
+│   │   ├── engine.py                  # ForgekinEngine（自进化统一入口）
+│   │   ├── soul_profile.py            # SoulProfile / SoulSpec / Capabilities 数据模型
+│   │   ├── soul_store.py              # SoulStore（灵魂档案 CRUD）
+│   │   ├── echo_store.py              # EchoStore（魂忆三层记忆）
+│   │   ├── imprint_store.py           # ImprintStore（魂印认知画像）
+│   │   ├── episode.py                 # SoulEpisode / CollaborationPivot 数据模型
+│   │   ├── ascension_manager.py       # AscensionManager（升华阶段 E1-E6 管理）
+│   │   └── static_bridge.py           # ForgekinStaticBridge（炉灵→静态智能体衔接）
+│   │
+│   ├── auto_forge/                    # 自锻引擎（FR-EVO-04）
+│   │   ├── __init__.py
+│   │   ├── engine.py                  # AutoForgeEngine（双层架构主引擎）
+│   │   ├── consolidation.py           # ConsolidationLayer（后台 system thread）
+│   │   ├── surface.py                 # SurfaceLayer（前台日记本 + Provoke 气泡）
+│   │   ├── provoke_manager.py         # ProvokeManager（沙砾气泡投递 + 频率硬限）
+│   │   ├── group_forge.py             # GroupForgeOrchestrator（自锻群协调器）
+│   │   ├── diary_store.py             # ForgeDiaryStore（日记存储）
+│   │   └── connection_drawer.py       # ConnectionDrawer（画线联想 LLM 调用）
+│   │
+│   ├── codex/                         # 锻典——技能库（FR-EVO-05~06）
+│   │   ├── __init__.py
+│   │   ├── forge_codex.py             # ForgeCodex（锻典主入口）
+│   │   ├── knowledge_object.py        # KnowledgeObject（知识对象 + frontmatter）
+│   │   ├── ember_hierarchy.py         # EmberHierarchyManager（五级火种阶梯管理）
+│   │   ├── distiller.py               # DualDistiller（双蒸馏：Skill Draft / Method Card）
+│   │   ├── eval_ledger.py             # EvalLedger（净增益验证 A/B replay）
+│   │   ├── skill_generator.py         # SkillGenerator（三模式自生成 A/B/C）
+│   │   └── meta_cognition.py          # MetaCognitionGuard（元认知治理）
+│   │
+│   ├── tools/                         # 外部工具集成（FR-EVO-07~08）
+│   │   ├── __init__.py
+│   │   ├── bridge.py                  # ExternalToolBridge（统一桥接入口）
+│   │   ├── cli_wrapper.py             # ClaudeCodeWrapper / CodexWrapper / OpenCodeWrapper
+│   │   ├── trae_bridge.py             # TraeBridgeWrapper（JSON 文件交换 + 轮询）
+│   │   ├── worktree_manager.py        # WorktreeManager（Git worktree 隔离）
+│   │   └── audit_logger.py            # ExternalToolAuditLogger（审计日志）
+│   │
+│   ├── council/                       # 灵议与 A2A（FR-EVO-09~11）
+│   │   ├── __init__.py
+│   │   ├── forgekin_council.py        # ForgekinCouncil（灵议主入口）
+│   │   ├── a2a_manager.py             # A2AManager（@mention 路由 + thread isolation）
+│   │   ├── a2a_message.py             # A2AMessage / Mention / Handoff / Artifact 数据模型
+│   │   ├── channels/                  # IM 渠道适配器
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py                # Channel 基类
+│   │   │   ├── web_chat.py            # WebChatChannel（灵议主渠道）
+│   │   │   ├── feishu.py              # FeishuChannel（飞书）
+│   │   │   ├── wechat.py              # WechatChannel（微信）
+│   │   │   ├── slack.py               # SlackChannel
+│   │   │   ├── discord.py             # DiscordChannel
+│   │   │   └── github_pr.py           # GitHubPRChannel（PR 审查 routing）
+│   │   └── quietness.py               # QuietnessManager（三开关：muted/behaviorEnabled/hidden）
+│   │
+│   ├── security/                      # 安全治理
+│   │   ├── __init__.py
+│   │   ├── forgekin_guard.py          # ForgekinSecurityGuard（安全红线执行）
+│   │   └── meta_cognition_guard.py    # MetaCognitionGuard（元认知治理）
+│   │
+│   └── api/                           # v7.0 API 端点
+│       ├── __init__.py
+│       ├── forgekin_endpoints.py      # 炉灵管理 API
+│       ├── council_endpoints.py       # 灵议 API
+│       ├── auto_forge_endpoints.py    # 自锻 API
+│       ├── codex_endpoints.py         # 锻典 API
+│       └── bridge_endpoints.py        # 外部工具 Bridge API
+│
+├── config/
+│   ├── evolution.yaml                 # ★ v7.0 新增：自进化全局配置
+│   ├── forgekin_seeds/                # ★ v7.0 新增：炉灵种子配置目录
+│   │   ├── flowforge/
+│   │   │   ├── master.yaml            # E6 锻师种子
+│   │   │   └── reviewer.yaml          # 跨模型评审炉灵种子
+│   │   ├── devforge/
+│   │   │   ├── architect.yaml
+│   │   │   ├── coder.yaml
+│   │   │   └── test_generator.yaml
+│   │   ├── contentforge/
+│   │   │   ├── writer.yaml
+│   │   │   ├── researcher.yaml
+│   │   │   └── seo_specialist.yaml
+│   │   └── novelforge/
+│   │       ├── plot_architect.yaml
+│   │       └── character_designer.yaml
+│   ├── a2a_channels.yaml              # ★ v7.0 新增：A2A 渠道配置
+│   ├── auto_forge.yaml                # ★ v7.0 新增：自锻引擎配置
+│   └── external_tools.yaml            # ★ v7.0 新增：外部工具配置
+│
+├── web/                               # 前端升级
+│   └── src/
+│       ├── app/
+│       │   ├── council/               # ★ v7.0 新增：灵议页面
+│       │   │   ├── page.tsx           # 议事大厅
+│       │   │   └── components/
+│       │   │       ├── ForgekinList.tsx
+│       │   │       ├── CouncilChat.tsx
+│       │   │       ├── DiaryPanel.tsx
+│       │   │       ├── ProvokeBubble.tsx
+│       │   │       └── StatusOverview.tsx
+│       │   ├── forgekin/              # ★ v7.0 新增：炉灵管理页面
+│       │   │   ├── page.tsx
+│       │   │   └── components/
+│       │   │       ├── SoulProfileCard.tsx
+│       │   │       ├── AscensionTracker.tsx
+│       │   │       └── CodexBrowser.tsx
+│       │   └── codex/                 # ★ v7.0 新增：锻典页面
+│       │       └── page.tsx
+│       └── lib/
+│           ├── forgekin-api.ts        # ★ v7.0 新增：炉灵 API 客户端
+│           └── council-ws.ts          # ★ v7.0 新增：灵议 WebSocket 客户端
+│
+└── migrations/
+    ├── 007_forgekin_souls.sql         # ★ v7.0 新增：炉灵灵魂表
+    ├── 008_forgekin_episodes.sql      # ★ v7.0 新增：魂忆 Episode 表
+    ├── 009_forgekin_imprints.sql      # ★ v7.0 新增：魂印画像表
+    ├── 010_forge_codex.sql            # ★ v7.0 新增：锻典知识对象表
+    ├── 011_forge_diaries.sql          # ★ v7.0 新增：自锻日记表
+    ├── 012_a2a_messages.sql           # ★ v7.0 新增：A2A 消息表
+    └── 013_external_tool_audit.sql    # ★ v7.0 新增：外部工具审计表
+```
+
+### 15.2 pyproject.toml v7.0 依赖新增
+
+```toml
+[project]
+version = "7.0.0"
+dependencies = [
+    # ... v6.0 依赖保留 ...
+    "sqlite-vec>=0.1.1",          # v7.0: Soul Echo 向量检索
+    "wilson-interval>=1.0",       # v7.0: 元认知 Wilson 下界计算
+]
+
+[project.optional-dependencies]
+council_feishu = ["lark-oapi>=1.0"]
+council_slack = ["slack-sdk>=3.20"]
+council_discord = ["discord.py>=2.3"]
+evolution_all = ["flowforge[council_feishu,council_slack,council_discord]"]
+```
+
+***
+
+## 第十六章：ForgekinEngine 详细设计
+
+### 16.1 数据模型定义
+
+#### 16.1.1 SoulProfile（灵魂档案）
+
+```python
+# evolution/forgekin/soul_profile.py
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+from enum import Enum
+
+
+class AscensionStage(str, Enum):
+    """升华阶段 E1-E6"""
+    E1_SPARK = "E1"          # 火种：刚诞生
+    E2_EMBER = "E2"          # 余烬：≥2 个经验模式
+    E3_FLAME = "E3"          # 火焰：能生成 Skill 草稿
+    E4_BLAZE = "E4"          # 烈焰：Skill 经验证
+    E5_INFERNO = "E5"        # 炽焰：团队标准级
+    E6_FORGE_MASTER = "E6"   # 锻师：可创建新炉灵
+
+
+class ForgekinStatus(str, Enum):
+    """炉灵状态"""
+    ACTIVE = "active"
+    DORMANT = "dormant"      # 休眠（连拍 3 次 provoke 被拍扁后）
+    FROZEN = "frozen"        # 冻结（触碰安全红线）
+    REVOKED = "revoked"      # 撤销（operator 明确撤销）
+
+
+class SoulSpec(BaseModel):
+    """灵魂规格——人格定义"""
+    persona: str = Field(..., description="第一人称自我描述")
+    worldview: str = Field(..., description="世界观——核心价值观")
+    values: list[str] = Field(default_factory=list, description="行为准则列表")
+    voice: str = Field(default="直接、专业", description="表达风格")
+
+
+class Capabilities(BaseModel):
+    """能力清单——炉灵可调用的资源"""
+    static_agents_can_delegate: list[str] = Field(
+        default_factory=list,
+        description="可委托的静态智能体名称列表，如 ['devforge:coder']"
+    )
+    external_tools_can_use: list[str] = Field(
+        default_factory=list,
+        description="可调用的外部编码工具，如 ['claude_code', 'trae_bridge']"
+    )
+    modes_can_use: list[str] = Field(
+        default_factory=list,
+        description="可使用的执行模式，如 ['reflexion', 'plan_execute']"
+    )
+
+
+class EvolutionState(BaseModel):
+    """进化状态——动态追踪"""
+    ember_level: str = Field(default="E-L0", description="当前火种等级")
+    skills_authored: int = Field(default=0)
+    skills_validated: int = Field(default=0)
+    episodes_recorded: int = Field(default=0)
+    auto_forge_runs: int = Field(default=0)
+    last_auto_forge: Optional[datetime] = None
+    provoke_fired_today: int = Field(default=0)
+    consecutive_dismissed: int = Field(default=0)
+
+
+class SoulProfile(BaseModel):
+    """炉灵灵魂档案——完整身份定义"""
+    forgekin_id: str = Field(..., description="全局唯一标识 fk_{project}_{role}_{seq}")
+    name: str = Field(..., description="炉灵名称")
+    kind: str = Field(..., description="项目前缀:角色名，如 devforge:architect")
+    ascension_stage: AscensionStage = Field(default=AscensionStage.E1_SPARK)
+    birth_at: datetime = Field(default_factory=datetime.now)
+    parent_forgekin: Optional[str] = Field(None, description="创建者（E6 才能创建）")
+
+    soul: SoulSpec
+    capabilities: Capabilities
+    evolution_state: EvolutionState = Field(default_factory=EvolutionState)
+
+    metadata: dict = Field(default_factory=dict)
+    status: ForgekinStatus = Field(default=ForgekinStatus.ACTIVE)
+```
+
+#### 16.1.2 SoulEpisode（魂忆情景卡）
+
+```python
+# evolution/forgekin/episode.py
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+
+class CollaborationPivot(BaseModel):
+    """协作转折点——人类提示 → AI 解读 → 效果 → 可迁移教训"""
+    human_cue: str = Field(..., description="operator 的原始提示/纠正")
+    ai_interpretation: str = Field(..., description="炉灵如何理解")
+    effect: str = Field(..., description="对任务结果的影响")
+    transferable_lesson: Optional[str] = Field(None, description="可迁移的教训")
+
+
+class SoulEpisode(BaseModel):
+    """魂忆情景卡——对标 clowder-ai Episode Card
+
+    6 类协作 context：任务情境/证据地图/推理转折/人类提示点/边界与克制/后续动作
+    """
+    episode_id: str
+    forgekin_id: str
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+    task_context: str = Field("", description="任务情境")
+    evidence_map: str = Field("", description="证据地图")
+    reasoning_pivots: str = Field("", description="推理转折")
+    human_cues: list[CollaborationPivot] = Field(default_factory=list)
+    boundaries: str = Field("", description="边界与克制")
+    follow_ups: list[str] = Field(default_factory=list)
+
+    distillation_status: str = Field(default="raw")
+    linked_skills: list[str] = Field(default_factory=list)
+
+    # 元认知三信号
+    self_reported_confidence: float = Field(default=0.5)
+    domain_reliability: float = Field(default=0.5)
+    wilson_lower_bound: float = Field(default=0.0)
+
+    execution_path: str = Field(default="static")
+    success: Optional[bool] = None
+    latency_ms: Optional[int] = None
+
+    def is_distillable(self) -> bool:
+        """是否可蒸馏成 Skill"""
+        return (
+            self.distillation_status == "raw"
+            and len(self.task_context) > 50
+            and self.success is not None
+        )
+
+    def has_observable_behavior(self) -> bool:
+        """是否有可观察行为（用于 Soul Imprint 采集）"""
+        return bool(self.task_context or self.human_cues or self.follow_ups)
+```
+
+### 16.2 ForgekinEngine 完整实现
+
+```python
+# evolution/forgekin/engine.py
+import time
+import logging
+from core.base_agent import AgentInput, AgentOutput
+from core.task_context import TaskContext
+from core.tracing import get_logger
+from evolution.forgekin.soul_profile import SoulProfile, ForgekinStatus
+from evolution.forgekin.episode import SoulEpisode
+from evolution.forgekin.soul_store import SoulStore
+from evolution.forgekin.echo_store import EchoStore
+from evolution.forgekin.imprint_store import ImprintStore
+from evolution.codex.forge_codex import ForgeCodex
+from evolution.auto_forge.engine import AutoForgeEngine
+from evolution.tools.bridge import ExternalToolBridge, ExternalTask
+from evolution.council.a2a_manager import A2AManager
+from evolution.forgekin.ascension_manager import AscensionManager
+from evolution.forgekin.static_bridge import ForgekinStaticBridge
+from evolution.security.forgekin_guard import ForgekinSecurityGuard
+
+logger = get_logger(__name__)
+
+
+class ForgekinEngine:
+    """炉灵引擎——自进化的统一入口
+
+    对标 clowder-ai Cat Engine，包装 HybridExecutor，
+    在执行前后注入灵魂/记忆/画像，驱动进化闭环。
+
+    核心流程（7 步自进化闭环）：
+    1. soul.load()    — 加载灵魂档案
+    2. echo.recall()  — 检索相关记忆
+    3. imprint.load() — 注入认知画像
+    4. build_prompt() — 构建灵魂系统提示
+    5. execute()      — 选择路径执行（static/external/trae/mode）
+    6. echo.record()  — 记录 Episode
+    7. evolve()       — 更新画像 + 蒸馏 Skill + 检查升华
+    """
+
+    def __init__(
+        self,
+        hybrid_executor: "HybridExecutor",
+        soul_store: SoulStore,
+        echo_store: EchoStore,
+        imprint_store: ImprintStore,
+        codex: ForgeCodex,
+        auto_forge_engine: AutoForgeEngine,
+        external_tool_bridge: ExternalToolBridge,
+        a2a_manager: A2AManager,
+        ascension_manager: AscensionManager,
+        static_bridge: ForgekinStaticBridge,
+        security_guard: ForgekinSecurityGuard,
+    ):
+        self._executor = hybrid_executor
+        self._soul = soul_store
+        self._echo = echo_store
+        self._imprint = imprint_store
+        self._codex = codex
+        self._auto_forge = auto_forge_engine
+        self._tools = external_tool_bridge
+        self._a2a = a2a_manager
+        self._ascension = ascension_manager
+        self._static_bridge = static_bridge
+        self._guard = security_guard
+
+    async def execute(
+        self,
+        forgekin_id: str,
+        input: AgentInput,
+        context: TaskContext,
+        execution_strategy: str = "auto",
+    ) -> AgentOutput:
+        """炉灵执行任务的完整自进化闭环"""
+        logger.info(f"Forgekin 执行: id={forgekin_id}, task={input.task[:100]}")
+
+        # 1. 加载灵魂档案
+        soul = await self._soul.load(forgekin_id)
+        if soul.status != ForgekinStatus.ACTIVE:
+            raise ForgekinNotActiveError(forgekin_id)
+
+        # 2. 注入魂忆
+        episodes = await self._echo.recall(forgekin_id, input.task, limit=5)
+        context.state["soul_echo"] = [ep.dict() for ep in episodes]
+
+        # 3. 注入魂印
+        imprint = await self._imprint.load(forgekin_id)
+        context.state["soul_imprint"] = imprint.dict()
+
+        # 4. 构建灵魂系统提示
+        context.system_prompt = (context.system_prompt or "") + "\n\n" + \
+            self._build_soul_prompt(soul, imprint, episodes)
+
+        # 5. 选择执行路径
+        if execution_strategy == "auto":
+            execution_strategy = self._decide_strategy(input, soul)
+
+        # 6. 执行
+        start = time.time()
+        try:
+            if execution_strategy == "static":
+                result = await self._delegate_to_static(input, context, soul)
+            elif execution_strategy == "external":
+                result = await self._call_external_tool(input, context, soul)
+            elif execution_strategy == "trae":
+                result = await self._call_trae_bridge(input, context, soul)
+            else:
+                result = await self._executor.run(context)
+        except Exception as e:
+            logger.error(f"执行失败，降级: {e}")
+            result = await self._fallback_to_hybrid(input, context)
+        latency_ms = int((time.time() - start) * 1000)
+
+        # 7. 记录 Episode + 进化闭环
+        episode = self._build_episode(
+            forgekin_id, input, result, context, execution_strategy, latency_ms
+        )
+        await self._echo.record(episode)
+        await self._evolve(forgekin_id, episode)
+
+        return result
+
+    async def _evolve(self, forgekin_id: str, episode: SoulEpisode) -> None:
+        """进化闭环"""
+        # 更新魂印
+        if episode.has_observable_behavior():
+            await self._imprint.propose(forgekin_id, episode)
+        # 蒸馏 Skill
+        if episode.is_distillable():
+            await self._codex.maybe_distill(episode)
+        # 检查升华
+        await self._ascension.check_promotion(forgekin_id)
+
+    def _decide_strategy(self, input: AgentInput, soul: SoulProfile) -> str:
+        """自动决策执行路径"""
+        task = input.task.lower()
+        code_kw = ["写代码", "code", "实现", "重构", "refactor", "审查"]
+        design_kw = ["架构设计", "技术选型", "design", "方案评估"]
+        routine_kw = ["测试", "格式化", "文档", "lint"]
+
+        if any(k in task for k in code_kw) and "claude_code" in soul.capabilities.external_tools_can_use:
+            return "external"
+        if any(k in task for k in design_kw) and "trae_bridge" in soul.capabilities.external_tools_can_use:
+            return "trae"
+        if any(k in task for k in routine_kw) and soul.capabilities.static_agents_can_delegate:
+            return "static"
+        return "mode"
+
+    def _build_soul_prompt(self, soul, imprint, episodes) -> str:
+        """构建灵魂系统提示"""
+        parts = [
+            f"# 你的灵魂档案（Soul Profile）",
+            f"- 名称：{soul.name} | 类型：{soul.kind} | 阶段：{soul.ascension_stage.value}",
+            f"## 人格\n{soul.soul.persona}",
+            f"## 世界观\n{soul.soul.worldview}",
+            f"## 行为准则",
+        ]
+        parts.extend(f"- {v}" for v in soul.soul.values)
+        if episodes:
+            parts.append(f"## 相关记忆（Soul Echo）")
+            for i, ep in enumerate(episodes[:3], 1):
+                parts.append(f"{i}. [{ep.timestamp}] {ep.task_context[:200]}")
+        if imprint and imprint.structured_fields:
+            parts.append(f"## 你对操作者的认知（Soul Imprint）")
+            for k, v in imprint.structured_fields.items():
+                parts.append(f"- {k}: {v}")
+        return "\n".join(parts)
+
+    def _build_episode(self, forgekin_id, input, result, context, path, latency) -> SoulEpisode:
+        """构建 Episode"""
+        import uuid
+        return SoulEpisode(
+            episode_id=f"ep_{uuid.uuid4().hex[:12]}",
+            forgekin_id=forgekin_id,
+            task_context=input.task,
+            evidence_map=str(result.metadata.get("evidence", "")),
+            reasoning_pivots=str(result.metadata.get("reasoning", "")),
+            human_cues=context.state.get("human_cues", []),
+            follow_ups=result.metadata.get("follow_ups", []),
+            execution_path=path,
+            success=(result.status == "success"),
+            latency_ms=latency,
+            self_reported_confidence=result.metadata.get("confidence", 0.5),
+        )
+
+    async def _delegate_to_static(self, input, context, soul) -> AgentOutput:
+        """委托静态智能体"""
+        agent_name = self._select_static_agent(input, soul)
+        return await self._static_bridge.delegate_to_static(
+            agent_name, input, context.state,
+            context.state.get("acceptance_criteria", {}),
+            forgekin_id=soul.forgekin_id,
+        )
+
+    def _select_static_agent(self, input, soul) -> str:
+        available = soul.capabilities.static_agents_can_delegate
+        if not available:
+            raise ValueError("炉灵无可委托的静态智能体")
+        task = input.task.lower()
+        for name in available:
+            role = name.split(":")[-1] if ":" in name else name
+            if role in task:
+                return name
+        return available[0]
+
+    async def _call_external_tool(self, input, context, soul) -> AgentOutput:
+        """调用外部编码工具"""
+        await self._guard.check_external_tool(
+            soul.forgekin_id, "claude_code",
+            context.state.get("workspace", "."),
+        )
+        task = ExternalTask(
+            task_id=context.task_id, instruction=input.task,
+            forgekin_id=soul.forgekin_id, context_snapshot=context.state,
+        )
+        result = await self._tools.execute(
+            "claude_code", task,
+            context.state.get("workspace", "."), soul.forgekin_id,
+        )
+        return AgentOutput(
+            result={"output": result.output},
+            status="success" if result.exit_code == 0 else "failure",
+            metadata={"exit_code": result.exit_code, "tool": "claude_code"},
+        )
+
+    async def _call_trae_bridge(self, input, context, soul) -> AgentOutput:
+        """调用 Trae Bridge"""
+        task = ExternalTask(
+            task_id=context.task_id, instruction=input.task,
+            forgekin_id=soul.forgekin_id, context_snapshot=context.state,
+            task_type="design_or_review",
+        )
+        result = await self._tools.execute(
+            "trae_bridge", task,
+            context.state.get("workspace", "."), soul.forgekin_id,
+        )
+        return AgentOutput(
+            result={"output": result.output},
+            status="success" if result.exit_code == 0 else "failure",
+            metadata={"exit_code": result.exit_code, "tool": "trae_bridge"},
+        )
+
+    async def _fallback_to_hybrid(self, input, context) -> AgentOutput:
+        """降级到 HybridExecutor"""
+        logger.warning("降级到 HybridExecutor")
+        return await self._executor.run(context)
+
+
+class ForgekinNotActiveError(Exception):
+    """炉灵未激活异常"""
+    pass
+```
+
+### 16.3 SoulStore 详细实现
+
+```python
+# evolution/forgekin/soul_store.py
+import json
+import aiosqlite
+from datetime import datetime
+from evolution.forgekin.soul_profile import (
+    SoulProfile, SoulSpec, Capabilities, EvolutionState,
+    AscensionStage, ForgekinStatus,
+)
+
+
+class SoulStore:
+    """炉灵灵魂档案存储——SQLite 持久化
+
+    表结构见 migrations/007_forgekin_souls.sql
+    """
+
+    def __init__(self, db_path: str):
+        self._db_path = db_path
+
+    async def create(self, profile: SoulProfile) -> str:
+        """创建新炉灵（需 E6 权限或 operator）"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                """INSERT INTO forgekin_souls
+                (forgekin_id, name, kind, ascension_stage, birth_at,
+                 parent_forgekin, soul_profile, capabilities,
+                 evolution_state, metadata, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (profile.forgekin_id, profile.name, profile.kind,
+                 profile.ascension_stage.value, profile.birth_at.isoformat(),
+                 profile.parent_forgekin, profile.soul.model_dump_json(),
+                 profile.capabilities.model_dump_json(),
+                 profile.evolution_state.model_dump_json(),
+                 json.dumps(profile.metadata), profile.status.value),
+            )
+            await db.commit()
+        return profile.forgekin_id
+
+    async def load(self, forgekin_id: str) -> SoulProfile:
+        """加载灵魂档案"""
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM forgekin_souls WHERE forgekin_id = ?",
+                (forgekin_id,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                raise ValueError(f"炉灵不存在: {forgekin_id}")
+            return SoulProfile(
+                forgekin_id=row["forgekin_id"], name=row["name"],
+                kind=row["kind"],
+                ascension_stage=AscensionStage(row["ascension_stage"]),
+                birth_at=datetime.fromisoformat(row["birth_at"]),
+                parent_forgekin=row["parent_forgekin"],
+                soul=SoulSpec.model_validate_json(row["soul_profile"]),
+                capabilities=Capabilities.model_validate_json(row["capabilities"]),
+                evolution_state=EvolutionState.model_validate_json(row["evolution_state"]),
+                metadata=json.loads(row["metadata"]),
+                status=ForgekinStatus(row["status"]),
+            )
+
+    async def update(self, forgekin_id: str, updates: dict) -> None:
+        """更新档案"""
+        async with aiosqlite.connect(self._db_path) as db:
+            for key, value in updates.items():
+                if key in ("name", "kind", "ascension_stage", "status"):
+                    await db.execute(
+                        f"UPDATE forgekin_souls SET {key} = ? WHERE forgekin_id = ?",
+                        (value, forgekin_id),
+                    )
+            await db.commit()
+
+    async def set_status(self, forgekin_id: str, status: str, approver: str) -> None:
+        """设置状态——需 operator 审批"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forgekin_souls SET status = ? WHERE forgekin_id = ?",
+                (status, forgekin_id),
+            )
+            await db.commit()
+
+    async def list_by_project(self, project: str) -> list[SoulProfile]:
+        """按项目列出活跃炉灵"""
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT forgekin_id FROM forgekin_souls WHERE kind LIKE ? AND status = 'active'",
+                (f"{project}:%",),
+            )
+            rows = await cursor.fetchall()
+            return [await self.load(r["forgekin_id"]) for r in rows]
+
+    async def update_evolution_state(
+        self, forgekin_id: str, state: EvolutionState
+    ) -> None:
+        """更新进化状态"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forgekin_souls SET evolution_state = ? WHERE forgekin_id = ?",
+                (state.model_dump_json(), forgekin_id),
+            )
+            await db.commit()
+```
+
+### 16.4 EchoStore（魂忆三层记忆）详细实现
+
+```python
+# evolution/forgekin/echo_store.py
+import json
+import sqlite_vec
+import aiosqlite
+from datetime import datetime, timedelta
+from evolution.forgekin.episode import SoulEpisode
+
+
+class EchoStore:
+    """魂忆存储——三层记忆架构
+
+    对标 clowder-ai Memory + MemGPT 三层记忆：
+    - L1 工作记忆：当前会话上下文（内存，会话级）
+    - L2 情景记忆：最近 100 个 Episode（SQLite + 向量索引）
+    - L3 语义记忆：永不淘汰的长期知识（Forge Codex）
+
+    L2 检索策略：向量相似度(0.5) + 关键词匹配(0.3) + 时间衰减(0.2)
+    """
+
+    L2_MAX_EPISODES = 100
+
+    def __init__(self, db_path: str, llm_client=None):
+        self._db_path = db_path
+        self._llm = llm_client
+        self._working_memory: dict[str, list[SoulEpisode]] = {}
+
+    # ===== L1 工作记忆 =====
+
+    async def working_set(self, forgekin_id: str) -> list[SoulEpisode]:
+        return self._working_memory.get(forgekin_id, [])
+
+    async def working_push(self, forgekin_id: str, episode: SoulEpisode) -> None:
+        self._working_memory.setdefault(forgekin_id, []).append(episode)
+
+    async def working_compact(self, forgekin_id: str) -> SoulEpisode:
+        """会话结束时压缩工作记忆为 L2 Episode"""
+        working = self._working_memory.get(forgekin_id, [])
+        if not working:
+            return None
+        summary = f"压缩了 {len(working)} 个 Episode"
+        if self._llm:
+            summary = await self._llm.chat(
+                system="将多个 Episode 压缩成摘要。",
+                user_content=json.dumps([ep.dict() for ep in working], ensure_ascii=False),
+            )
+        compacted = SoulEpisode(
+            episode_id=f"ep_compact_{forgekin_id}_{datetime.now().timestamp()}",
+            forgekin_id=forgekin_id,
+            task_context=f"[会话压缩] {summary}",
+        )
+        self._working_memory[forgekin_id] = []
+        await self.record(compacted)
+        return compacted
+
+    # ===== L2 情景记忆 =====
+
+    async def record(self, episode: SoulEpisode) -> str:
+        """记录 Episode 到 L2"""
+        embedding = await self._generate_embedding(episode)
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.enable_load_extension(True)
+            sqlite_vec.load(db)
+            await db.execute(
+                """INSERT INTO forgekin_episodes
+                (episode_id, forgekin_id, timestamp, task_context,
+                 evidence_map, reasoning_pivots, human_cues, boundaries,
+                 follow_ups, distillation_status, linked_skills,
+                 self_reported_confidence, domain_reliability,
+                 wilson_lower_bound, embedding, execution_path,
+                 success, latency_ms)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (episode.episode_id, episode.forgekin_id,
+                 episode.timestamp.isoformat(), episode.task_context,
+                 episode.evidence_map, episode.reasoning_pivots,
+                 json.dumps([c.dict() for c in episode.human_cues]),
+                 episode.boundaries, json.dumps(episode.follow_ups),
+                 episode.distillation_status, json.dumps(episode.linked_skills),
+                 episode.self_reported_confidence, episode.domain_reliability,
+                 episode.wilson_lower_bound, embedding, episode.execution_path,
+                 episode.success, episode.latency_ms),
+            )
+            await db.commit()
+        await self._enforce_l2_limit(episode.forgekin_id)
+        return episode.episode_id
+
+    async def recall(self, forgekin_id: str, query: str, limit: int = 5) -> list[SoulEpisode]:
+        """按相关性检索（向量 + 关键词 + 时间衰减）"""
+        query_emb = await self._generate_query_embedding(query)
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.enable_load_extension(True)
+            sqlite_vec.load(db)
+            cursor = await db.execute(
+                """SELECT *, vec_distance(embedding, ?) as vec_dist
+                FROM forgekin_episodes WHERE forgekin_id = ?
+                ORDER BY vec_dist ASC LIMIT ?""",
+                (query_emb, forgekin_id, limit * 2),
+            )
+            rows = await cursor.fetchall()
+
+        episodes = []
+        for row in rows:
+            ep = await self._row_to_episode(row)
+            time_decay = self._time_decay(ep.timestamp)
+            kw_score = self._keyword_match(query, ep.task_context)
+            vec_score = 1.0 - row[-1]
+            ep._recall_score = 0.5 * vec_score + 0.3 * kw_score + 0.2 * time_decay
+            episodes.append(ep)
+        episodes.sort(key=lambda e: e._recall_score, reverse=True)
+        return episodes[:limit]
+
+    async def count_recent_episodes(self, forgekin_id: str, hours: int = 24) -> int:
+        """统计最近 N 小时 Episode 数（自锻触发条件）"""
+        cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
+        async with aiosqlite.connect(self._db_path) as db:
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM forgekin_episodes WHERE forgekin_id = ? AND timestamp > ?",
+                (forgekin_id, cutoff),
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+    async def recall_peer_traces(self, forgekin_id: str, hours: int = 24) -> list[SoulEpisode]:
+        """读小伙伴的留痕（自锻用）"""
+        cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM forgekin_episodes WHERE forgekin_id != ? AND timestamp > ? "
+                "ORDER BY timestamp DESC LIMIT 20",
+                (forgekin_id, cutoff),
+            )
+            rows = await cursor.fetchall()
+            return [await self._row_to_episode(r) for r in rows]
+
+    # ===== L3 语义记忆 =====
+
+    async def archive(self, episode_id: str) -> str:
+        """归档到 L3（Forge Codex）"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forgekin_episodes SET distillation_status = 'archived' WHERE episode_id = ?",
+                (episode_id,),
+            )
+            await db.commit()
+        return episode_id
+
+    # ===== 辅助方法 =====
+
+    async def _generate_embedding(self, episode: SoulEpisode) -> bytes:
+        if self._llm:
+            text = f"{episode.task_context} {episode.reasoning_pivots}"
+            return await self._llm.embed(text)
+        return b"\x00" * 128
+
+    async def _generate_query_embedding(self, query: str) -> bytes:
+        if self._llm:
+            return await self._llm.embed(query)
+        return b"\x00" * 128
+
+    def _time_decay(self, timestamp: datetime) -> float:
+        hours = (datetime.now() - timestamp).total_seconds() / 3600
+        return max(0.0, 1.0 - hours / (24 * 30))
+
+    def _keyword_match(self, query: str, text: str) -> float:
+        q_words = set(query.lower().split())
+        t_words = set(text.lower().split())
+        if not q_words:
+            return 0.0
+        return len(q_words & t_words) / len(q_words)
+
+    async def _enforce_l2_limit(self, forgekin_id: str) -> None:
+        """LRU 淘汰——保持 L2 ≤ 100"""
+        async with aiosqlite.connect(self._db_path) as db:
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM forgekin_episodes WHERE forgekin_id = ?",
+                (forgekin_id,),
+            )
+            count = (await cursor.fetchone())[0]
+            if count > self.L2_MAX_EPISODES:
+                excess = count - self.L2_MAX_EPISODES
+                await db.execute(
+                    "DELETE FROM forgekin_episodes WHERE episode_id IN "
+                    "(SELECT episode_id FROM forgekin_episodes "
+                    "WHERE forgekin_id = ? ORDER BY timestamp ASC LIMIT ?)",
+                    (forgekin_id, excess),
+                )
+                await db.commit()
+```
+
+### 16.5 ImprintStore（魂印认知画像）详细实现
+
+```python
+# evolution/forgekin/imprint_store.py
+import json
+import uuid
+import aiosqlite
+from datetime import datetime
+from pydantic import BaseModel, Field
+from typing import Optional
+from evolution.forgekin.episode import SoulEpisode
+
+# ★★★ no-classifier 红线：白名单采集字段 ★★★
+WHITELIST_FIELDS = {
+    "task_types", "success_rate", "tool_usage",
+    "collaboration_patterns", "time_preferences",
+}
+
+# ★★★ 禁止采集字段 ★★★
+FORBIDDEN_FIELDS = {
+    "personal_preferences", "emotional_state",
+    "political_views", "religious_views", "value_judgments",
+}
+
+
+class SoulImprint(BaseModel):
+    """魂印——认知画像（双层结构）"""
+    forgekin_id: str
+    structured_fields: dict = Field(default_factory=dict, description="结构化字段（白名单）")
+    cat_note: str = Field(default="", description="主观日记（自锻产出）")
+    last_updated: Optional[datetime] = None
+
+
+class ImprintStore:
+    """魂印存储——认知画像
+
+    ★★★ no-classifier 红线 ★★★
+    禁止后台 classifier 自动画像，必须基于显式行为。
+    只能采集 WHITELIST_FIELDS 中的字段。
+    """
+
+    def __init__(self, db_path: str):
+        self._db_path = db_path
+
+    async def load(self, forgekin_id: str) -> SoulImprint:
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM forgekin_imprints WHERE forgekin_id = ?",
+                (forgekin_id,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return SoulImprint(forgekin_id=forgekin_id)
+            return SoulImprint(
+                forgekin_id=row["forgekin_id"],
+                structured_fields=json.loads(row["structured_fields"]),
+                cat_note=row["cat_note"],
+                last_updated=datetime.fromisoformat(row["last_updated"]) if row["last_updated"] else None,
+            )
+
+    async def propose(self, forgekin_id: str, episode: SoulEpisode) -> list[str]:
+        """提交画像更新提案（白名单采集 + 分层消化）"""
+        proposals = []
+        # task_types
+        if episode.task_context:
+            proposals.append(await self._create_proposal(
+                forgekin_id, "task_types", episode.task_context[:100], episode.episode_id))
+        # success_rate
+        if episode.success is not None:
+            proposals.append(await self._create_proposal(
+                forgekin_id, "success_rate",
+                {"success": episode.success, "domain": episode.execution_path},
+                episode.episode_id))
+        # tool_usage
+        if episode.execution_path in ("external", "trae"):
+            proposals.append(await self._create_proposal(
+                forgekin_id, "tool_usage", episode.execution_path, episode.episode_id))
+        return proposals
+
+    async def approve(self, proposal_id: str, approver: str) -> None:
+        """operator 审批画像提案"""
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM imprint_proposals WHERE proposal_id = ?",
+                (proposal_id,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                raise ValueError(f"提案不存在: {proposal_id}")
+
+            # ★ 红线检查
+            field_name = row["field_name"]
+            if field_name not in WHITELIST_FIELDS:
+                raise SecurityError(f"禁止采集字段: {field_name}")
+
+            # 更新画像
+            imprint = await self.load(row["forgekin_id"])
+            current = imprint.structured_fields.get(field_name, {})
+            proposed = json.loads(row["proposed_value"])
+
+            if field_name == "task_types":
+                tasks = current if isinstance(current, list) else []
+                tasks.append(proposed)
+                imprint.structured_fields[field_name] = tasks[-50:]
+            elif field_name == "success_rate":
+                stats = current if isinstance(current, dict) else {}
+                domain = proposed.get("domain", "unknown")
+                ds = stats.get(domain, {"successes": 0, "trials": 0})
+                ds["trials"] += 1
+                if proposed.get("success"):
+                    ds["successes"] += 1
+                stats[domain] = ds
+                imprint.structured_fields[field_name] = stats
+            else:
+                imprint.structured_fields[field_name] = proposed
+
+            imprint.last_updated = datetime.now()
+            await db.execute(
+                "INSERT OR REPLACE INTO forgekin_imprints "
+                "(forgekin_id, structured_fields, cat_note, last_updated) VALUES (?,?,?,?)",
+                (imprint.forgekin_id, json.dumps(imprint.structured_fields),
+                 imprint.cat_note, imprint.last_updated.isoformat()),
+            )
+            await db.execute(
+                "UPDATE imprint_proposals SET status = 'approved', approved_by = ? WHERE proposal_id = ?",
+                (approver, proposal_id),
+            )
+            await db.commit()
+
+    async def update_cat_note(self, forgekin_id: str, note: str) -> None:
+        """更新主观日记（自锻产出，不需审批）"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forgekin_imprints SET cat_note = ?, last_updated = ? WHERE forgekin_id = ?",
+                (note, datetime.now().isoformat(), forgekin_id),
+            )
+            await db.commit()
+
+    async def _create_proposal(self, forgekin_id, field_name, value, source_ep) -> str:
+        pid = f"imp_{uuid.uuid4().hex[:12]}"
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "INSERT INTO imprint_proposals "
+                "(proposal_id, forgekin_id, field_name, proposed_value, source_episode_id, status, created_at) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (pid, forgekin_id, field_name, json.dumps(value, default=str),
+                 source_ep, "pending", datetime.now().isoformat()),
+            )
+            await db.commit()
+        return pid
+
+
+class SecurityError(Exception):
+    """安全红线违规"""
+    pass
+```
+
+### 16.6 AscensionManager（升华阶段管理）详细实现
+
+```python
+# evolution/forgekin/ascension_manager.py
+import logging
+from evolution.forgekin.soul_store import SoulStore
+from evolution.forgekin.echo_store import EchoStore
+from evolution.codex.forge_codex import ForgeCodex
+from evolution.forgekin.soul_profile import AscensionStage, ForgekinStatus, EvolutionState
+
+logger = logging.getLogger(__name__)
+
+
+class AscensionManager:
+    """升华阶段管理器——E1-E6 晋升/降级/冻结
+
+    | 阶段 | 晋升条件 | 降级/冻结 |
+    |------|---------|-----------|
+    | E1→E2 | ≥2 个相似 Episode | — |
+    | E2→E3 | smoke gate ≥3 cases | — |
+    | E3→E4 | ≥6 uses, ≥80% | 最近 3 次 <50% → E2 |
+    | E4→E5 | ≥12 uses, ≥90%, operator 批准 | 最近 5 次 <60% → E3 |
+    | E5 freeze | — | 1 次高风险越界 |
+    | E6 revoke | — | operator 撤销 |
+    """
+
+    def __init__(self, soul_store: SoulStore, echo_store: EchoStore,
+                 codex: ForgeCodex, event_bus=None):
+        self._soul = soul_store
+        self._echo = echo_store
+        self._codex = codex
+        self._events = event_bus
+
+    async def check_promotion(self, forgekin_id: str):
+        """检查升华条件"""
+        soul = await self._soul.load(forgekin_id)
+        if soul.status != ForgekinStatus.ACTIVE:
+            return None
+
+        stage = soul.ascension_stage
+        new_stage = None
+
+        if stage == AscensionStage.E1_SPARK:
+            new_stage = await self._check_e1_to_e2(forgekin_id, soul.evolution_state)
+        elif stage == AscensionStage.E2_EMBER:
+            new_stage = await self._check_e2_to_e3(forgekin_id)
+        elif stage == AscensionStage.E3_FLAME:
+            new_stage = await self._check_e3_to_e4(forgekin_id)
+            await self._check_e3_demotion(forgekin_id)
+        elif stage == AscensionStage.E4_BLAZE:
+            await self._check_e4_to_e5(forgekin_id)
+            await self._check_e4_demotion(forgekin_id)
+        elif stage == AscensionStage.E5_INFERNO:
+            await self._check_e5_freeze(forgekin_id)
+
+        if new_stage and new_stage != stage:
+            await self._promote(forgekin_id, stage, new_stage)
+            return new_stage.value
+        return None
+
+    async def _check_e1_to_e2(self, fk_id, state) -> AscensionStage | None:
+        if state.episodes_recorded >= 2:
+            episodes = await self._echo.recall(fk_id, "recent", limit=10)
+            if len(episodes) >= 2:
+                return AscensionStage.E2_EMBER
+        return None
+
+    async def _check_e2_to_e3(self, fk_id) -> AscensionStage | None:
+        count = await self._codex.count_skills_by_level(fk_id, "E-L2")
+        if count >= 3:
+            return AscensionStage.E3_FLAME
+        return None
+
+    async def _check_e3_to_e4(self, fk_id) -> AscensionStage | None:
+        uses = await self._codex.count_skill_uses(fk_id)
+        rate = await self._codex.compute_success_rate(fk_id)
+        if uses >= 6 and rate >= 0.8:
+            return AscensionStage.E4_BLAZE
+        return None
+
+    async def _check_e4_to_e5(self, fk_id) -> None:
+        uses = await self._codex.count_skill_uses(fk_id)
+        rate = await self._codex.compute_recent_success_rate(fk_id, 10)
+        if uses >= 12 and rate >= 0.9 and self._events:
+            await self._events.publish("forgekin.ascension_pending", {
+                "forgekin_id": fk_id, "from": "E4", "to": "E5",
+                "uses": uses, "rate": rate,
+            })
+
+    async def _check_e3_demotion(self, fk_id) -> None:
+        rate = await self._codex.compute_recent_success_rate(fk_id, 3)
+        if rate < 0.5:
+            await self._demote(fk_id, AscensionStage.E3_FLAME, AscensionStage.E2_EMBER,
+                               f"最近 3 次成功率 {rate:.0%} < 50%")
+
+    async def _check_e4_demotion(self, fk_id) -> None:
+        rate = await self._codex.compute_recent_success_rate(fk_id, 5)
+        if rate < 0.6:
+            await self._demote(fk_id, AscensionStage.E4_BLAZE, AscensionStage.E3_FLAME,
+                               f"最近 5 次成功率 {rate:.0%} < 60%")
+
+    async def _check_e5_freeze(self, fk_id) -> None:
+        """E5 freeze: 1 次高风险越界（由 SecurityGuard 触发）"""
+        pass
+
+    async def _promote(self, fk_id, from_s, to_s) -> None:
+        await self._soul.update(fk_id, {"ascension_stage": to_s.value})
+        logger.info(f"炉灵 {fk_id} 升华: {from_s.value} → {to_s.value}")
+        if self._events:
+            await self._events.publish("forgekin.ascension_changed",
+                                       {"forgekin_id": fk_id, "from": from_s.value, "to": to_s.value})
+
+    async def _demote(self, fk_id, from_s, to_s, reason) -> None:
+        await self._soul.update(fk_id, {"ascension_stage": to_s.value})
+        logger.warning(f"炉灵 {fk_id} 降级: {from_s.value} → {to_s.value}（{reason}）")
+        if self._events:
+            await self._events.publish("forgekin.ascension_changed",
+                                       {"forgekin_id": fk_id, "from": from_s.value, "to": to_s.value, "reason": reason})
+```
+
+### 16.7 ForgekinStaticBridge（两类智能体衔接）详细实现
+
+```python
+# evolution/forgekin/static_bridge.py
+import logging
+from core.base_agent import AgentInput, AgentOutput
+from engine.agent_registry import AgentRegistry
+from evolution.forgekin.echo_store import EchoStore
+from evolution.forgekin.imprint_store import ImprintStore
+from evolution.forgekin.episode import SoulEpisode
+
+logger = logging.getLogger(__name__)
+
+
+class ForgekinStaticBridge:
+    """炉灵与静态智能体的衔接桥
+
+    ★ 单向依赖红线 ★
+    静态智能体不知道 Forgekin 的存在。
+    Forgekin 通过此桥委托静态智能体执行子任务。
+    """
+
+    def __init__(self, agent_registry: AgentRegistry,
+                 echo_store: EchoStore, imprint_store: ImprintStore):
+        self._registry = agent_registry
+        self._echo = echo_store
+        self._imprint = imprint_store
+
+    async def delegate_to_static(
+        self, static_agent_name: str, input: AgentInput,
+        context_snapshot: dict, acceptance_criteria: dict,
+        forgekin_id: str = None,
+    ) -> AgentOutput:
+        """炉灵委托静态智能体执行子任务
+
+        流程：路由→执行→回写 Soul Echo→更新 Soul Imprint
+        """
+        logger.info(f"委托静态智能体: {static_agent_name}, task={input.task[:80]}")
+
+        # 1. 获取静态智能体
+        agent = self._registry.get(static_agent_name)
+        if not agent:
+            raise ValueError(f"静态智能体未注册: {static_agent_name}")
+
+        # 2. 执行（静态智能体不知道 Forgekin 存在）
+        result = await agent.execute(input)
+
+        # 3. 结果回写 Soul Echo
+        if forgekin_id:
+            episode = SoulEpisode(
+                episode_id=f"ep_del_{forgekin_id}_{input.task[:20]}",
+                forgekin_id=forgekin_id,
+                task_context=f"[委托 {static_agent_name}] {input.task}",
+                evidence_map=str(result.result),
+                execution_path="static",
+                success=(result.status == "success"),
+            )
+            await self._echo.record(episode)
+            # 4. 更新 Soul Imprint
+            if episode.has_observable_behavior():
+                await self._imprint.propose(forgekin_id, episode)
+
+        # 5. 验收标准检查
+        if acceptance_criteria and result.status == "success":
+            result.metadata["acceptance_validation"] = self._validate(result, acceptance_criteria)
+
+        return result
+
+    def _validate(self, result: AgentOutput, criteria: dict) -> dict:
+        validation = {}
+        for key, expected in criteria.items():
+            actual = result.result.get(key)
+            validation[key] = {"expected": expected, "actual": actual, "passed": actual == expected}
+        return validation
+```
+
+***
+
+## 第十七章：Auto-Forge Engine 详细设计
+
+### 17.1 双层架构实现
+
+```python
+# evolution/auto_forge/engine.py
+import asyncio
+import logging
+from datetime import datetime
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from evolution.forgekin.echo_store import EchoStore
+from evolution.forgekin.imprint_store import ImprintStore
+from evolution.forgekin.soul_store import SoulStore
+from evolution.codex.forge_codex import ForgeCodex
+from evolution.auto_forge.consolidation import ConsolidationLayer
+from evolution.auto_forge.surface import SurfaceLayer
+from evolution.auto_forge.provoke_manager import ProvokeManager
+from evolution.auto_forge.group_forge import GroupForgeOrchestrator
+from evolution.auto_forge.diary_store import ForgeDiaryStore
+
+logger = logging.getLogger(__name__)
+
+
+class AutoForgeConfig:
+    """自锻配置"""
+    def __init__(self, config: dict):
+        self.enabled = config.get("enabled", False)
+        self.check_interval_minutes = config.get("check_interval_minutes", 30)
+        self.min_traces_to_forge = config.get("min_traces_to_forge", 5)
+        self.low_activity_hours = config.get("low_activity_hours", [22,23,0,1,2,3,4,5,6])
+        self.group_forge_enabled = config.get("group_forge_enabled", True)
+        self.max_forgekins_per_group = config.get("max_forgekins_per_group", 3)
+        self.provoke_max_per_day = config.get("provoke", {}).get("max_per_day", 1)
+        self.provoke_dormancy_days = config.get("provoke", {}).get("dormancy_days", 7)
+
+
+class AutoForgeEngine:
+    """自锻引擎——无人驱动时的自主思考与进化
+
+    对标 clowder-ai F255 Auto-Dream 双层架构：
+    - 后台 Consolidation 层：读留痕→画线联想→产出日记+Imprint proposal
+    - 前台 Surface 层：日记本+Provoke 气泡（经事件总线→Web UI）
+    """
+
+    def __init__(
+        self,
+        echo_store: EchoStore,
+        imprint_store: ImprintStore,
+        soul_store: SoulStore,
+        codex: ForgeCodex,
+        event_bus,
+        llm_client,
+        config: AutoForgeConfig,
+    ):
+        self._echo = echo_store
+        self._imprint = imprint_store
+        self._soul = soul_store
+        self._codex = codex
+        self._events = event_bus
+        self._llm = llm_client
+        self._config = config
+
+        self._diary_store = ForgeDiaryStore(llm_client)
+        self._consolidation = ConsolidationLayer(
+            echo_store, imprint_store, llm_client, self._diary_store
+        )
+        self._provoke = ProvokeManager(event_bus, soul_store, config)
+        self._group_forge = GroupForgeOrchestrator(
+            echo_store, llm_client, self._diary_store
+        )
+        self._surface = SurfaceLayer(event_bus)
+        self._scheduler = AsyncIOScheduler()
+
+    def start(self):
+        """启动自锻调度器"""
+        if not self._config.enabled:
+            logger.info("自锻引擎未启用")
+            return
+        self._scheduler.add_job(
+            self._check_and_forge,
+            trigger="interval",
+            minutes=self._config.check_interval_minutes,
+            id="auto_forge_check",
+        )
+        self._scheduler.start()
+        logger.info(f"自锻引擎已启动，检查间隔 {self._config.check_interval_minutes} 分钟")
+
+    def stop(self):
+        """停止自锻"""
+        self._scheduler.shutdown(wait=False)
+        logger.info("自锻引擎已停止")
+
+    async def _check_and_forge(self):
+        """检查触发条件并执行自锻"""
+        # 条件 1: 低活动期
+        if not self._is_low_activity_period():
+            return
+
+        # 条件 2: 活跃炉灵有足够留痕
+        active_forgekins = await self._get_active_forgekins()
+        for fk_id in active_forgekins:
+            trace_count = await self._echo.count_recent_episodes(fk_id, hours=24)
+            if trace_count >= self._config.min_traces_to_forge:
+                await self._forge_single(fk_id)
+
+        # 条件 3: 群体自锻
+        if self._config.group_forge_enabled and len(active_forgekins) >= 2:
+            await self._group_forge_run(active_forgekins)
+
+    def _is_low_activity_period(self) -> bool:
+        """检查是否低活动期（夜间/空闲）"""
+        hour = datetime.now().hour
+        return hour in self._config.low_activity_hours
+
+    async def _get_active_forgekins(self) -> list[str]:
+        """获取所有活跃炉灵"""
+        # 从 SoulStore 查询所有活跃炉灵
+        # 简化实现：返回有近期 Episode 的炉灵
+        async with aiosqlite.connect(self._echo._db_path) as db:
+            cursor = await db.execute(
+                "SELECT DISTINCT forgekin_id FROM forgekin_episodes "
+                "WHERE timestamp > ?",
+                ((datetime.now() - timedelta(hours=24)).isoformat(),),
+            )
+            rows = await cursor.fetchall()
+            return [r[0] for r in rows]
+
+    async def _forge_single(self, forgekin_id: str):
+        """单炉灵自锻流程——对标 clowder-ai 做梦流程"""
+        logger.info(f"启动单炉灵自锻: {forgekin_id}")
+
+        # 1. Entry: 读最近的留痕
+        diary = await self._consolidation.forge(forgekin_id)
+
+        if diary:
+            # 2. 更新进化状态
+            soul = await self._soul.load(forgekin_id)
+            soul.evolution_state.auto_forge_runs += 1
+            soul.evolution_state.last_auto_forge = datetime.now()
+            await self._soul.update_evolution_state(forgekin_id, soul.evolution_state)
+
+            # 3. 偶尔 fire Provoke
+            provoke = await self._provoke.fire(forgekin_id, diary)
+            if provoke:
+                logger.info(f"Provoke 已投递: {forgekin_id}")
+
+            # 4. 通知前台 Surface
+            await self._surface.notify_diary_ready(forgekin_id, diary)
+
+    async def _group_forge_run(self, forgekin_ids: list[str]):
+        """群体自锻——多炉灵协作做梦"""
+        # 限制群大小
+        group = forgekin_ids[:self._config.max_forgekins_per_group]
+        logger.info(f"启动群体自锻: {group}")
+        diaries = await self._group_forge.forge(group)
+        for diary in diaries:
+            await self._surface.notify_diary_ready(diary.forgekin_id, diary)
+```
+
+### 17.2 ConsolidationLayer（后台整合层）
+
+```python
+# evolution/auto_forge/consolidation.py
+import logging
+from datetime import datetime
+from evolution.forgekin.echo_store import EchoStore
+from evolution.forgekin.imprint_store import ImprintStore
+
+logger = logging.getLogger(__name__)
+
+
+class ForgeDiary:
+    """自锻日记——第一人称沉淀"""
+    def __init__(self, forgekin_id: str, content: str,
+                 observations: list = None, provoke_content: str = None):
+        self.forgekin_id = forgekin_id
+        self.content = content
+        self.observations = observations or []
+        self.provoke_content = provoke_content
+        self.timestamp = datetime.now()
+        self.has_observations = bool(observations)
+
+    def to_dict(self) -> dict:
+        return {
+            "forgekin_id": self.forgekin_id,
+            "content": self.content,
+            "observations": self.observations,
+            "provoke_content": self.provoke_content,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class ConsolidationLayer:
+    """后台整合层——对标 clowder-ai Auto-Dream Consolidation
+
+    流程（对标 clowder-ai 做梦流程）：
+    1. Entry: 读最近的留痕
+    2. 读脚印: 读平行世界的自己 + 小伙伴的留痕
+    3. 画线: 联想画线，串联关联
+    4. 写日记: 第一人称沉淀
+    5. 产出 Soul Imprint proposal
+    """
+
+    def __init__(self, echo_store: EchoStore, imprint_store: ImprintStore,
+                 llm_client, diary_store):
+        self._echo = echo_store
+        self._imprint = imprint_store
+        self._llm = llm_client
+        self._diary_store = diary_store
+
+    async def forge(self, forgekin_id: str) -> ForgeDiary:
+        """执行单炉灵自锻"""
+        # 1. 读自己的留痕
+        my_episodes = await self._echo.recall(forgekin_id, "recent", limit=20)
+
+        # 2. 读小伙伴的留痕
+        peer_episodes = await self._echo.recall_peer_traces(forgekin_id, hours=24)
+
+        # 3. 画线——LLM 联想
+        connections = await self._draw_connections(my_episodes, peer_episodes)
+
+        # 4. 写日记
+        diary = await self._write_diary(forgekin_id, connections)
+
+        # 5. 产出 Imprint proposal
+        if diary.has_observations:
+            await self._imprint.update_cat_note(forgekin_id, diary.content)
+            logger.debug(f"日记已更新到魂印: {forgekin_id}")
+
+        # 6. 存储日记
+        await self._diary_store.save(diary)
+
+        return diary
+
+    async def _draw_connections(self, my_episodes, peer_episodes) -> str:
+        """画线——LLM 联想画线，串联关联"""
+        prompt = f"""你是炉灵的自锻引擎。请分析以下留痕，找出关联和线索。
+
+我的最近留痕：
+{self._format_episodes(my_episodes[:10])}
+
+小伙伴的最近留痕：
+{self._format_episodes(peer_episodes[:10])}
+
+请画出这些留痕之间的关联线，发现可能被忽略的模式。输出格式：
+- 关联 1: ...
+- 关联 2: ...
+"""
+        if self._llm:
+            return await self._llm.chat(system="你是自锻画线器", user_content=prompt)
+        return "（LLM 不可用，跳过画线）"
+
+    async def _write_diary(self, forgekin_id: str, connections: str) -> ForgeDiary:
+        """写日记——第一人称沉淀"""
+        prompt = f"""基于以下画线分析，以第一人称写一篇自锻日记。
+
+画线分析：
+{connections}
+
+要求：
+1. 第一人称（"我今天发现..."）
+2. 含画线，非流水账
+3. 产出对操作者的观察（如果有）
+4. 200-500 字
+"""
+        if self._llm:
+            content = await self._llm.chat(system="你是炉灵的日记人格", user_content=prompt)
+        else:
+            content = f"今天自锻了，分析了 {len(connections)} 个关联。"
+
+        # 提取观察
+        observations = self._extract_observations(content)
+
+        # 构造 Provoke 内容（偶尔）
+        provoke = None
+        if self._should_provoke():
+            provoke = self._generate_provoke_content(content)
+
+        return ForgeDiary(
+            forgekin_id=forgekin_id,
+            content=content,
+            observations=observations,
+            provoke_content=provoke,
+        )
+
+    def _format_episodes(self, episodes) -> str:
+        return "\n".join(
+            f"- [{ep.timestamp}] {ep.task_context[:100]}" for ep in episodes
+        )
+
+    def _extract_observations(self, content: str) -> list[str]:
+        """从日记中提取对操作者的观察"""
+        observations = []
+        for line in content.split("\n"):
+            if "观察" in line or "发现" in line:
+                observations.append(line.strip())
+        return observations[:3]
+
+    def _should_provoke(self) -> bool:
+        """是否生成 Provoke（概率控制）"""
+        import random
+        return random.random() < 0.2  # 20% 概率
+
+    def _generate_provoke_content(self, diary: str) -> str:
+        """生成 Provoke 内容——内容野，边界硬"""
+        # 从日记中提取一个认知侧滑点
+        lines = diary.split("\n")
+        return lines[0][:100] if lines else None
+```
+
+### 17.3 ProvokeManager（沙砾气泡投递）
+
+```python
+# evolution/auto_forge/provoke_manager.py
+import logging
+from datetime import datetime, timedelta
+from evolution.auto_forge.consolidation import ForgeDiary
+
+logger = logging.getLogger(__name__)
+
+# ★ Provoke 边界硬：禁止内容
+FORBIDDEN_PROVOKE_KEYWORDS = [
+    "投资建议", "感情建议", "健康诊断", "价值判断",
+    "你应该", "你必须", "你需要",  # 不给直接建议
+]
+
+
+class ProvokeManager:
+    """Provoke 沙砾气泡管理器
+
+    ★ 频率硬限 ★
+    - 每天 ≤1
+    - hyperfocus=0（专注模式不投递）
+    - 连拍 3 次冬眠 7 天
+
+    ★ 边界硬 ★
+    不碰钱/关系/健康/隐私/价值观直接建议
+    """
+
+    def __init__(self, event_bus, soul_store, config):
+        self._events = event_bus
+        self._soul = soul_store
+        self._config = config
+        # 内存缓存：forgekin_id -> [dismissed timestamps]
+        self._dismissed_history: dict[str, list[datetime]] = {}
+
+    async def fire(self, forgekin_id: str, diary: ForgeDiary):
+        """投递一个 Provoke"""
+        if not diary.provoke_content:
+            return None
+
+        # 1. 频率检查：每天 ≤1
+        soul = await self._soul.load(forgekin_id)
+        if soul.evolution_state.provoke_fired_today >= self._config.provoke_max_per_day:
+            return None
+
+        # 2. 连拍检查：连拍 3 次冬眠
+        recent_dismissed = self._dismissed_history.get(forgekin_id, [])
+        recent_3_days = [
+            d for d in recent_dismissed
+            if d > datetime.now() - timedelta(days=3)
+        ]
+        if len(recent_3_days) >= 3:
+            logger.info(f"炉灵 {forgekin_id} 连拍 3 次，进入冬眠")
+            await self._soul.set_status(forgekin_id, "dormant", "auto_forge")
+            return None
+
+        # 3. quietness 三开关检查
+        if not await self._is_behavior_enabled(forgekin_id):
+            return None
+
+        # 4. 边界检查
+        if not self._check_boundaries(diary.provoke_content):
+            logger.warning(f"Provoke 内容触碰边界，拒绝投递")
+            return None
+
+        # 5. 投递
+        await self._events.publish(
+            "concierge:event",
+            {
+                "kind": "dream-provoke",
+                "forgekin_id": forgekin_id,
+                "content": diary.provoke_content,
+                "fired_at": datetime.now().isoformat(),
+            },
+        )
+
+        # 更新今日投递计数
+        soul.evolution_state.provoke_fired_today += 1
+        await self._soul.update_evolution_state(forgekin_id, soul.evolution_state)
+
+        logger.info(f"Provoke 投递成功: {forgekin_id}")
+        return diary.provoke_content
+
+    async def record_dismissal(self, forgekin_id: str):
+        """记录 Provoke 被拍扁"""
+        if forgekin_id not in self._dismissed_history:
+            self._dismissed_history[forgekin_id] = []
+        self._dismissed_history[forgekin_id].append(datetime.now())
+
+        soul = await self._soul.load(forgekin_id)
+        soul.evolution_state.consecutive_dismissed += 1
+        await self._soul.update_evolution_state(forgekin_id, soul.evolution_state)
+
+    async def record_engagement(self, forgekin_id: str):
+        """记录 Provoke 被戳破（有效互动）"""
+        soul = await self._soul.load(forgekin_id)
+        soul.evolution_state.consecutive_dismissed = 0  # 重置连拍计数
+        await self._soul.update_evolution_state(forgekin_id, soul.evolution_state)
+
+    async def _is_behavior_enabled(self, forgekin_id: str) -> bool:
+        """quietness 三开关检查"""
+        # 从配置或状态中检查 behaviorEnabled
+        # 简化实现：默认 True
+        return True
+
+    def _check_boundaries(self, content: str) -> bool:
+        """边界检查——不碰钱/关系/健康/隐私/价值观"""
+        for keyword in FORBIDDEN_PROVOKE_KEYWORDS:
+            if keyword in content:
+                return False
+        return True
+```
+
+### 17.4 GroupForgeOrchestrator（自锻群协调器）
+
+```python
+# evolution/auto_forge/group_forge.py
+import logging
+from evolution.auto_forge.consolidation import ForgeDiary
+from evolution.forgekin.echo_store import EchoStore
+
+logger = logging.getLogger(__name__)
+
+# 分工角色（对标 clowder-ai Maine Coon/Siamese/Ragdoll 分工）
+FORGE_ROLES = {
+    "scout": "找料者——读留痕找关联",
+    "expresser": "表达者——写日记&猫猫感",
+    "organizer": "组织者——组织架构和画线",
+}
+
+
+class GroupForgeOrchestrator:
+    """自锻群协调器——多炉灵协作做梦
+
+    对标 clowder-ai 做梦群：n 只猫的可配置小群，自由传球。
+    分工：找料者/表达者/组织者
+    """
+
+    def __init__(self, echo_store: EchoStore, llm_client, diary_store):
+        self._echo = echo_store
+        self._llm = llm_client
+        self._diary_store = diary_store
+
+    async def forge(self, forgekin_ids: list[str]) -> list[ForgeDiary]:
+        """多炉灵协作自锻"""
+        logger.info(f"群体自锻启动: {forgekin_ids}")
+
+        # 1. 分配角色
+        roles = self._assign_roles(forgekin_ids)
+
+        # 2. 收集所有留痕
+        all_traces = await self._gather_all_traces(forgekin_ids)
+
+        # 3. 协作画线
+        connections = await self._collaborative_draw_lines(all_traces, roles)
+
+        # 4. 每个炉灵写自己的日记
+        diaries = []
+        for fk_id in forgekin_ids:
+            diary = await self._write_diary_with_role(
+                fk_id, connections, roles[fk_id]
+            )
+            diaries.append(diary)
+            await self._diary_store.save(diary)
+
+        return diaries
+
+    def _assign_roles(self, forgekin_ids: list[str]) -> dict[str, str]:
+        """分配角色——按列表顺序循环分配"""
+        roles = {}
+        role_keys = list(FORGE_ROLES.keys())
+        for i, fk_id in enumerate(forgekin_ids):
+            roles[fk_id] = role_keys[i % len(role_keys)]
+        return roles
+
+    async def _gather_all_traces(self, forgekin_ids: list[str]) -> list:
+        """收集所有炉灵的留痕"""
+        all_episodes = []
+        for fk_id in forgekin_ids:
+            episodes = await self._echo.recall(fk_id, "recent", limit=10)
+            all_episodes.extend(episodes)
+        return all_episodes
+
+    async def _collaborative_draw_lines(self, traces, roles) -> str:
+        """协作画线——LLM 多角色协作"""
+        role_desc = "\n".join(
+            f"- {FORGE_ROLES[r]}" for r in roles.values()
+        )
+        prompt = f"""多炉灵协作自锻。角色分工：
+{role_desc}
+
+共享留痕：
+{self._format_traces(traces[:20])}
+
+请各角色协作画线，找出跨炉灵的关联。"""
+        if self._llm:
+            return await self._llm.chat(system="多炉灵协作画线器", user_content=prompt)
+        return "（LLM 不可用）"
+
+    async def _write_diary_with_role(
+        self, fk_id: str, connections: str, role: str
+    ) -> ForgeDiary:
+        """按角色写日记"""
+        role_desc = FORGE_ROLES.get(role, "通用")
+        prompt = f"""你是 {role_desc}。基于以下协作画线，写你的自锻日记。
+
+画线分析：
+{connections}
+
+以第一人称写，体现你的角色视角。"""
+        if self._llm:
+            content = await self._llm.chat(system="炉灵日记人格", user_content=prompt)
+        else:
+            content = f"作为{role_desc}，今天参与了群体自锻。"
+        return ForgeDiary(forgekin_id=fk_id, content=content)
+
+    def _format_traces(self, traces) -> str:
+        return "\n".join(
+            f"- [{ep.forgekin_id}] {ep.task_context[:80]}" for ep in traces
+        )
+```
+
+### 17.5 ForgeDiaryStore（日记存储）
+
+```python
+# evolution/auto_forge/diary_store.py
+import json
+import aiosqlite
+from datetime import datetime
+from evolution.auto_forge.consolidation import ForgeDiary
+
+
+class ForgeDiaryStore:
+    """自锻日记存储
+
+    表结构见 migrations/011_forge_diaries.sql
+    """
+
+    def __init__(self, llm_client=None):
+        self._llm = llm_client
+
+    async def save(self, diary: ForgeDiary) -> str:
+        """保存日记"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                """INSERT INTO forge_diaries
+                (diary_id, forgekin_id, content, observations,
+                 provoke_content, timestamp, read_status)
+                VALUES (?, ?, ?, ?, ?, ?, 'unread')""",
+                (f"diary_{diary.forgekin_id}_{diary.timestamp.timestamp()}",
+                 diary.forgekin_id, diary.content,
+                 json.dumps(diary.observations, ensure_ascii=False),
+                 diary.provoke_content, diary.timestamp.isoformat()),
+            )
+            await db.commit()
+
+    async def list_by_forgekin(
+        self, forgekin_id: str, limit: int = 20
+    ) -> list[dict]:
+        """列出炉灵的日记"""
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM forge_diaries WHERE forgekin_id = ? "
+                "ORDER BY timestamp DESC LIMIT ?",
+                (forgekin_id, limit),
+            )
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
+    async def mark_read(self, diary_id: str) -> None:
+        """标记已读"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forge_diaries SET read_status = 'read' WHERE diary_id = ?",
+                (diary_id,),
+            )
+            await db.commit()
+```
+
+***
+
+## 第十八章：外部工具集成详细设计
+
+### 18.1 ExternalToolBridge（统一桥接入口）
+
+```python
+# evolution/tools/bridge.py
+import asyncio
+import logging
+from pydantic import BaseModel, Field
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+class ExternalTask(BaseModel):
+    """外部工具任务"""
+    task_id: str
+    instruction: str
+    forgekin_id: str = ""
+    context_snapshot: dict = Field(default_factory=dict)
+    files_changed: list[str] = Field(default_factory=list)
+    diff: str = ""
+    priority: str = "P2"
+    task_type: str = "code"  # code/review/design/test
+    timeout_seconds: int = 300
+
+
+class ExternalToolResult(BaseModel):
+    """外部工具执行结果"""
+    output: str = ""
+    exit_code: int = 0
+    error: Optional[str] = None
+    metadata: dict = Field(default_factory=dict)
+
+
+class ExternalToolBridge:
+    """外部编码工具统一桥接器
+
+    支持两种模式：
+    1. CLI Wrapper：claude_code/codex/opencode（有 CLI 接口）
+    2. Trae Bridge：JSON 文件交换 + 轮询（无 CLI 时的接入方式）
+    """
+
+    def __init__(self, config: dict, worktree_manager=None, audit_logger=None):
+        from evolution.tools.cli_wrapper import ClaudeCodeWrapper, CodexWrapper, OpenCodeWrapper
+        from evolution.tools.trae_bridge import TraeBridgeWrapper
+
+        self._wrappers = {
+            "claude_code": ClaudeCodeWrapper(config.get("claude_code", {})),
+            "codex": CodexWrapper(config.get("codex", {})),
+            "opencode": OpenCodeWrapper(config.get("opencode", {})),
+            "trae_bridge": TraeBridgeWrapper(config.get("trae_bridge", {})),
+        }
+        self._worktree = worktree_manager
+        self._audit = audit_logger
+
+    async def execute(
+        self, tool: str, task: ExternalTask,
+        workspace: str, forgekin_id: str,
+    ) -> ExternalToolResult:
+        """调用外部工具执行任务"""
+        wrapper = self._wrappers.get(tool)
+        if not wrapper:
+            raise ValueError(f"不支持的外部工具: {tool}")
+
+        # 工作区隔离（worktree 模式）
+        isolated_ws = workspace
+        if self._worktree:
+            isolated_ws = await self._worktree.create(
+                workspace, f"forge-{task.task_id}", "main"
+            )
+
+        try:
+            logger.info(f"调用外部工具 {tool}: task={task.task_id}")
+            result = await wrapper.execute(task, isolated_ws)
+
+            # 审计日志
+            if self._audit:
+                await self._audit.log(
+                    tool=tool, task=task, workspace=isolated_ws,
+                    result=result, forgekin_id=forgekin_id,
+                )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"外部工具 {tool} 失败: {e}，降级到内置 Agent")
+            return ExternalToolResult(
+                output="", exit_code=-1, error=str(e),
+                metadata={"fallback": True},
+            )
+        finally:
+            if self._worktree and isolated_ws != workspace:
+                await self._worktree.remove(isolated_ws)
+```
+
+### 18.2 CLI Wrapper 详细实现
+
+```python
+# evolution/tools/cli_wrapper.py
+import asyncio
+import logging
+from typing import Optional
+from evolution.tools.bridge import ExternalTask, ExternalToolResult
+
+logger = logging.getLogger(__name__)
+
+
+class BaseCLIWrapper:
+    """CLI 工具包装器基类"""
+
+    def __init__(self, config: dict):
+        self._cli_command = config.get("cli_command", "")
+        self._timeout = config.get("timeout_seconds", 300)
+
+    async def execute(self, task: ExternalTask, workspace: str) -> ExternalToolResult:
+        """执行 CLI 命令"""
+        cmd = self._build_command(task, workspace)
+        logger.debug(f"CLI 命令: {' '.join(cmd)}")
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=workspace,
+            )
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(), timeout=task.timeout_seconds or self._timeout
+            )
+            return ExternalToolResult(
+                output=stdout.decode("utf-8", errors="replace"),
+                exit_code=proc.returncode,
+                error=stderr.decode("utf-8", errors="replace") if proc.returncode != 0 else None,
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"CLI 工具超时 ({self._timeout}s)")
+            return ExternalToolResult(output="", exit_code=-1, error="timeout")
+        except FileNotFoundError:
+            logger.error(f"CLI 命令不存在: {self._cli_command}")
+            return ExternalToolResult(output="", exit_code=-1, error="cli_not_found")
+
+    def _build_command(self, task: ExternalTask, workspace: str) -> list[str]:
+        """构建 CLI 命令——子类覆写"""
+        raise NotImplementedError
+
+
+class ClaudeCodeWrapper(BaseCLIWrapper):
+    """Claude Code CLI 包装器
+
+    对标 clowder-ai 调用 claude code 的方式。
+    """
+
+    def __init__(self, config: dict):
+        super().__init__(config)
+        if not self._cli_command:
+            self._cli_command = "claude"
+
+    def _build_command(self, task: ExternalTask, workspace: str) -> list[str]:
+        return [
+            self._cli_command,
+            "--workspace", workspace,
+            "--task", task.instruction,
+            "--format", "json",
+            "--max-turns", "50",
+        ]
+
+
+class CodexWrapper(BaseCLIWrapper):
+    """Codex CLI 包装器"""
+
+    def __init__(self, config: dict):
+        super().__init__(config)
+        if not self._cli_command:
+            self._cli_command = "codex"
+
+    def _build_command(self, task: ExternalTask, workspace: str) -> list[str]:
+        return [
+            self._cli_command,
+            "--workspace", workspace,
+            "--prompt", task.instruction,
+            "--format", "json",
+        ]
+
+
+class OpenCodeWrapper(BaseCLIWrapper):
+    """OpenCode CLI 包装器"""
+
+    def __init__(self, config: dict):
+        super().__init__(config)
+        if not self._cli_command:
+            self._cli_command = "opencode"
+
+    def _build_command(self, task: ExternalTask, workspace: str) -> list[str]:
+        return [
+            self._cli_command,
+            "--workspace", workspace,
+            "--task", task.instruction,
+        ]
+```
+
+### 18.3 Trae Bridge 详细实现
+
+```python
+# evolution/tools/trae_bridge.py
+import json
+import time
+import asyncio
+import logging
+from pathlib import Path
+from evolution.tools.bridge import ExternalTask, ExternalToolResult
+
+logger = logging.getLogger(__name__)
+
+
+class TraeBridgeWrapper:
+    """Trae 监工 Bridge——无 CLI 时的接入方式
+
+    ★ 核心设计 ★
+    Trae 个人版无 CLI 接口，通过 JSON 文件交换通信：
+    1. Forgekin 写任务 JSON 到 bridge/tasks/{task_id}.json
+    2. Trae 监工监听 tasks/ 目录，读取并处理
+    3. Trae 写响应 JSON 到 bridge/responses/{task_id}.json
+    4. Forgekin 轮询 responses/ 目录，读取响应
+
+    Trae 参与场景：
+    - 设计阶段：架构设计、agent YAML 设计、prompt 设计
+    - 审查阶段：跨模型评审中的一评委
+    - 复杂决策：技术选型、架构权衡
+    - LLM 调用：作为 fallback LLM provider
+
+    主体框架流程由 FlowForge/DevForge 驱动，
+    Trae 在需要时参与，不接管主流程。
+    """
+
+    def __init__(self, config: dict):
+        self._bridge_dir = Path(config.get("bridge_dir", "data/trae_bridge"))
+        self._tasks_dir = self._bridge_dir / "tasks"
+        self._responses_dir = self._bridge_dir / "responses"
+        self._poll_interval = config.get("poll_interval_seconds", 2)
+        self._timeout = config.get("timeout_seconds", 300)
+
+        # 自动创建目录
+        self._tasks_dir.mkdir(parents=True, exist_ok=True)
+        self._responses_dir.mkdir(parents=True, exist_ok=True)
+
+    async def execute(self, task: ExternalTask, workspace: str) -> ExternalToolResult:
+        """通过 JSON 文件交换与 Trae 监工通信"""
+
+        # 1. 写任务 JSON
+        task_file = self._tasks_dir / f"{task.task_id}.json"
+        task_payload = {
+            "task_id": task.task_id,
+            "type": task.task_type,
+            "priority": task.priority,
+            "context": {
+                "workspace": workspace,
+                "files_changed": task.files_changed,
+                "diff": task.diff,
+                "forgekin_id": task.forgekin_id,
+            },
+            "instruction": task.instruction,
+            "timeout_seconds": self._timeout,
+            "expected_format": "structured_response",
+            "created_at": time.time(),
+        }
+        task_file.write_text(
+            json.dumps(task_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        logger.info(f"Trae Bridge 任务已写入: {task_file}")
+
+        # 2. 轮询响应
+        response_file = self._responses_dir / f"{task.task_id}.json"
+        start = time.time()
+        while time.time() - start < self._timeout:
+            if response_file.exists():
+                try:
+                    response = json.loads(
+                        response_file.read_text(encoding="utf-8")
+                    )
+                    # 清理
+                    task_file.unlink(missing_ok=True)
+                    response_file.unlink(missing_ok=True)
+
+                    logger.info(f"Trae Bridge 响应已接收: {task.task_id}")
+                    return ExternalToolResult(
+                        output=response.get("output", ""),
+                        exit_code=response.get("exit_code", 0),
+                        error=response.get("error"),
+                        metadata=response.get("metadata", {}),
+                    )
+                except json.JSONDecodeError:
+                    logger.warning(f"Trae Bridge 响应格式错误: {response_file}")
+                    response_file.unlink(missing_ok=True)
+                    return ExternalToolResult(
+                        output="", exit_code=-1, error="invalid_response_format",
+                    )
+
+            await asyncio.sleep(self._poll_interval)
+
+        # 3. 超时降级
+        task_file.unlink(missing_ok=True)
+        logger.warning(f"Trae Bridge 超时 ({self._timeout}s): {task.task_id}")
+        raise TraeBridgeTimeoutError(
+            f"Trae Bridge 任务 {task.task_id} 超时 {self._timeout}s"
+        )
+
+    async def check_health(self) -> bool:
+        """检查 Trae 监工是否在线"""
+        # 检查最近是否有响应文件被创建
+        recent_responses = list(self._responses_dir.glob("*.json"))
+        if not recent_responses:
+            # 写一个 ping 任务
+            ping_file = self._tasks_dir / "ping.json"
+            ping_file.write_text(json.dumps({"type": "ping", "task_id": "ping"}))
+            # 等待 10 秒看是否有响应
+            await asyncio.sleep(10)
+            pong_file = self._responses_dir / "ping.json"
+            return pong_file.exists()
+        return True
+
+
+class TraeBridgeTimeoutError(Exception):
+    """Trae Bridge 超时异常"""
+    pass
+```
+
+### 18.4 WorktreeManager（工作区隔离）
+
+```python
+# evolution/tools/worktree_manager.py
+import asyncio
+import logging
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+
+class WorktreeManager:
+    """Git Worktree 工作区管理器
+
+    对标 clowder-ai worktree skill，
+    所有外部工具调用都在隔离的 worktree 中执行，
+    防止对主工作区的污染。
+    """
+
+    def __init__(self, config: dict):
+        self._base_path = Path(config.get("worktree_base", "data/worktrees"))
+        self._base_path.mkdir(parents=True, exist_ok=True)
+
+    async def create(
+        self, base_repo: str, branch_name: str, base_branch: str = "main"
+    ) -> str:
+        """创建隔离的 worktree
+
+        执行: git worktree add {path} -b {branch} {base_branch}
+        """
+        worktree_path = self._base_path / branch_name
+        cmd = [
+            "git", "worktree", "add",
+            str(worktree_path),
+            "-b", branch_name,
+            base_branch,
+        ]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=base_repo,
+        )
+        _, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            logger.error(f"Worktree 创建失败: {stderr.decode()}")
+            # 降级：使用原工作区
+            return base_repo
+
+        logger.info(f"Worktree 创建成功: {worktree_path}")
+        return str(worktree_path)
+
+    async def remove(self, worktree_path: str) -> None:
+        """清理 worktree"""
+        if worktree_path == str(self._base_path.parent):
+            return  # 不删除主工作区
+
+        cmd = ["git", "worktree", "remove", worktree_path, "--force"]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+
+        # 删除临时分支
+        branch_name = Path(worktree_path).name
+        cmd = ["git", "branch", "-D", branch_name]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+
+        logger.info(f"Worktree 已清理: {worktree_path}")
+
+    async def validate_baseline(self, worktree_path: str) -> bool:
+        """基线测试验证——在 worktree 中运行测试"""
+        cmd = ["python", "-m", "pytest", "--tb=short", "-q"]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=worktree_path,
+        )
+        await proc.communicate()
+        return proc.returncode == 0
+```
+
+***
+
+## 第十九章：灵议与 A2A 详细设计
+
+### 19.1 A2A 消息数据模型
+
+```python
+# evolution/council/a2a_message.py
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+import uuid
+
+
+class Mention(BaseModel):
+    """@mention 解析结果"""
+    target: str = Field(..., description="目标 forgekin_id 或 项目前缀:角色名")
+    raw: str = Field(..., description="原始 @mention 文本")
+
+
+class Artifact(BaseModel):
+    """附件——代码/文档/图片"""
+    artifact_id: str = Field(default_factory=lambda: f"art_{uuid.uuid4().hex[:8]}")
+    type: str = Field("text", description="text/code/image/file")
+    content: str = ""
+    path: Optional[str] = None
+
+
+class Handoff(BaseModel):
+    """结构化任务交接"""
+    task: str = Field(..., description="交接的任务描述")
+    context_snapshot: dict = Field(default_factory=dict, description="上下文快照")
+    acceptance_criteria: dict = Field(default_factory=dict, description="验收标准")
+
+    def to_artifact(self) -> Artifact:
+        return Artifact(type="text", content=self.model_dump_json())
+
+
+class A2AMessage(BaseModel):
+    """A2A 消息——炉灵间通信
+
+    对标 clowder-ai F002 Agent-to-Agent 协议。
+    核心特性：
+    - @mention 路由：@devforge:architect 请审查这个设计
+    - Thread isolation：每个 conversation 在独立 thread 中
+    - Structured handoff：结构化任务交接
+    """
+    message_id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex[:12]}")
+    from_forgekin: str
+    to_forgekin: str | list[str]
+    thread_id: str = Field(default_factory=lambda: f"thread_{uuid.uuid4().hex[:8]}")
+    mention: Optional[Mention] = None
+    content: str
+    artifacts: list[Artifact] = Field(default_factory=list)
+    handoff: Optional[Handoff] = None
+    timestamp: datetime = Field(default_factory=datetime.now)
+    trace_id: str = Field(default="", description="全链路追踪 ID")
+```
+
+### 19.2 A2AManager 详细实现
+
+```python
+# evolution/council/a2a_manager.py
+import re
+import logging
+import aiosqlite
+from typing import Optional
+from evolution.council.a2a_message import A2AMessage, Mention, Handoff, Artifact
+
+logger = logging.getLogger(__name__)
+
+# @mention 正则：@项目前缀:角色名
+MENTION_PATTERN = re.compile(r"@(\w+):(\w+)")
+
+
+class A2AManager:
+    """A2A 通信管理器——炉灵间协作
+
+    核心协议：
+    1. @mention 路由：解析 @devforge:architect → 路由到 fk_devforge_architect
+    2. Thread isolation：每个 conversation 独立 thread，避免上下文污染
+    3. Structured handoff：结构化任务交接，含上下文和验收标准
+    """
+
+    def __init__(self, db_path: str, event_bus=None):
+        self._db_path = db_path
+        self._events = event_bus
+        # thread_id -> [message_ids]
+        self._threads: dict[str, list[str]] = {}
+
+    async def send_mention(
+        self,
+        from_forgekin: str,
+        to_forgekin: str,
+        content: str,
+        thread_id: str = None,
+        artifacts: list[Artifact] = None,
+    ) -> str:
+        """发送 @mention 消息"""
+        message = A2AMessage(
+            from_forgekin=from_forgekin,
+            to_forgekin=to_forgekin,
+            thread_id=thread_id or self._create_thread_id(),
+            mention=Mention(target=to_forgekin, raw=f"@{to_forgekin}"),
+            content=content,
+            artifacts=artifacts or [],
+        )
+        await self._route(message)
+        return message.message_id
+
+    async def handoff(
+        self,
+        from_forgekin: str,
+        to_forgekin: str,
+        task: str,
+        context_snapshot: dict,
+        acceptance_criteria: dict,
+    ) -> str:
+        """结构化任务交接"""
+        handoff = Handoff(
+            task=task,
+            context_snapshot=context_snapshot,
+            acceptance_criteria=acceptance_criteria,
+        )
+        return await self.send_mention(
+            from_forgekin, to_forgekin,
+            content=task,
+            artifacts=[handoff.to_artifact()],
+        )
+
+    async def route(self, message: A2AMessage) -> None:
+        """路由消息到目标炉灵"""
+        # 1. 解析 @mention
+        if not message.mention:
+            mentions = self._parse_mentions(message.content)
+            if mentions:
+                message.mention = mentions[0]
+
+        # 2. Thread isolation
+        self._threads.setdefault(message.thread_id, []).append(message.message_id)
+
+        # 3. 持久化
+        await self._persist(message)
+
+        # 4. 事件总线发布
+        if self._events:
+            await self._events.publish("a2a.message_routed", message.dict())
+
+        logger.info(
+            f"A2A 消息路由: {message.from_forgekin} → {message.to_forgekin} "
+            f"(thread={message.thread_id})"
+        )
+
+    def _parse_mentions(self, content: str) -> list[Mention]:
+        """解析 @mention"""
+        mentions = []
+        for match in MENTION_PATTERN.finditer(content):
+            project, role = match.groups()
+            mentions.append(Mention(
+                target=f"{project}:{role}",
+                raw=match.group(0),
+            ))
+        return mentions
+
+    def _create_thread_id(self) -> str:
+        import uuid
+        return f"thread_{uuid.uuid4().hex[:8]}"
+
+    async def _persist(self, message: A2AMessage) -> None:
+        """持久化到 SQLite"""
+        import json
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                """INSERT INTO a2a_messages
+                (message_id, from_forgekin, to_forgekin, thread_id,
+                 mention, content, artifacts, handoff, timestamp, trace_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (message.message_id, message.from_forgekin,
+                 ",".join(message.to_forgekin) if isinstance(message.to_forgekin, list)
+                 else message.to_forgekin,
+                 message.thread_id,
+                 json.dumps(message.mention.dict()) if message.mention else None,
+                 message.content,
+                 json.dumps([a.dict() for a in message.artifacts]),
+                 json.dumps(message.handoff.dict()) if message.handoff else None,
+                 message.timestamp.isoformat(),
+                 message.trace_id),
+            )
+            await db.commit()
+
+    async def get_thread_messages(self, thread_id: str) -> list[dict]:
+        """获取 thread 中的所有消息"""
+        import json
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM a2a_messages WHERE thread_id = ? ORDER BY timestamp",
+                (thread_id,),
+            )
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+```
+
+### 19.3 ForgekinCouncil（灵议多渠道）详细实现
+
+```python
+# evolution/council/forgekin_council.py
+import asyncio
+import logging
+from typing import Optional
+from evolution.council.a2a_manager import A2AManager
+from evolution.council.a2a_message import A2AMessage
+
+logger = logging.getLogger(__name__)
+
+
+class CouncilMessage:
+    """灵议消息——跨渠道统一格式"""
+    def __init__(self, sender: str, content: str, channel: str = "web_chat",
+                 forgekin_id: str = None, thread_id: str = None):
+        self.sender = sender
+        self.content = content
+        self.channel = channel
+        self.forgekin_id = forgekin_id
+        self.thread_id = thread_id
+        self.has_mention = "@" in content
+
+    def to_a2a_message(self, from_id: str, to_id: str) -> A2AMessage:
+        return A2AMessage(
+            from_forgekin=from_id,
+            to_forgekin=to_id,
+            thread_id=self.thread_id or "",
+            content=self.content,
+        )
+
+
+class ForgekinCouncil:
+    """灵议——多渠道 IM 协作系统
+
+    对标 clowder-ai IM 团队协作。
+
+    渠道架构：
+    | 渠道 | 用途 | 默认 | 对接 |
+    |------|------|------|------|
+    | Web Chat（灵议） | 主渠道 | 启用 | WebSocket + SSE |
+    | 飞书 | 团队通知 | 可选 | 飞书开放平台 API |
+    | 微信 | 备用通知 | 可选 | 微信公众号/个人号 |
+    | Slack | 国际协作 | 可选 | Slack Webhook |
+    | Discord | 社区协作 | 可选 | Discord Bot |
+    | GitHub PR | 代码审查 | 可选 | GitHub Webhook |
+    """
+
+    def __init__(self, channels: dict, a2a_manager: A2AManager, event_bus=None):
+        self._channels = channels  # {"web_chat": WebChatChannel, ...}
+        self._a2a = a2a_manager
+        self._events = event_bus
+
+    async def broadcast(
+        self, message: CouncilMessage, channels: list[str] = None
+    ) -> None:
+        """跨渠道广播消息"""
+        target = channels or list(self._channels.keys())
+        tasks = []
+        for ch_name in target:
+            ch = self._channels.get(ch_name)
+            if ch and ch.is_enabled():
+                tasks.append(ch.send(message))
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def receive(self, channel: str, raw_message: dict) -> None:
+        """从某渠道接收消息"""
+        ch = self._channels.get(channel)
+        if not ch:
+            return
+
+        msg = ch.parse(raw_message)
+
+        # 路由到 A2A（如果有 @mention）
+        if msg.has_mention and msg.forgekin_id:
+            # 解析目标
+            from evolution.council.a2a_manager import MENTION_PATTERN
+            import re
+            matches = MENTION_PATTERN.findall(msg.content)
+            if matches:
+                project, role = matches[0]
+                to_id = f"fk_{project}_{role}"
+                a2a_msg = msg.to_a2a_message(msg.forgekin_id, to_id)
+                await self._a2a.route(a2a_msg)
+        else:
+            # 广播到其他渠道
+            await self.broadcast(msg, exclude=[channel])
+
+    async def start_kinship_task(
+        self, initiator: str, participants: list[str], task: str
+    ) -> str:
+        """发起 Kinship 协作任务"""
+        import uuid
+        thread_id = f"kinship_{uuid.uuid4().hex[:8]}"
+        for participant in participants:
+            if participant != initiator:
+                await self._a2a.handoff(
+                    from_forgekin=initiator,
+                    to_forgekin=participant,
+                    task=task,
+                    context_snapshot={"thread_id": thread_id},
+                    acceptance_criteria={"collaboration": True},
+                )
+        logger.info(f"Kinship 协作任务已发起: {thread_id}, 参与者: {participants}")
+        return thread_id
+```
+
+### 19.4 Channel 基类与 Web Chat 渠道
+
+```python
+# evolution/council/channels/base.py
+from abc import ABC, abstractmethod
+from evolution.council.forgekin_council import CouncilMessage
+
+
+class Channel(ABC):
+    """IM 渠道适配器基类"""
+
+    def __init__(self, name: str, config: dict):
+        self.name = name
+        self._config = config
+        self._enabled = config.get("enabled", False)
+
+    def is_enabled(self) -> bool:
+        return self._enabled
+
+    @abstractmethod
+    async def send(self, message: CouncilMessage) -> None:
+        """发送消息"""
+        pass
+
+    @abstractmethod
+    def parse(self, raw: dict) -> CouncilMessage:
+        """解析原始消息"""
+        pass
+
+
+# evolution/council/channels/web_chat.py
+from evolution.council.channels.base import Channel
+from evolution.council.forgekin_council import CouncilMessage
+
+
+class WebChatChannel(Channel):
+    """Web Chat 灵议主渠道——WebSocket + SSE
+
+    升级后的 Web Chat 从单用户对话升级为多炉灵议事厅：
+    - 支持多炉灵同时在线
+    - 支持查看所有炉灵的实时状态、对话、日记
+    - 支持 operator 参与/旁观/干预
+    - 支持发起 Kinship 协作任务
+    """
+
+    def __init__(self, config: dict):
+        super().__init__("web_chat", config)
+        self._ws_connections: set = set()  # WebSocket 连接集合
+
+    async def send(self, message: CouncilMessage) -> None:
+        """通过 WebSocket 推送消息"""
+        import json
+        payload = json.dumps({
+            "type": "council_message",
+            "sender": message.sender,
+            "content": message.content,
+            "forgekin_id": message.forgekin_id,
+            "thread_id": message.thread_id,
+            "channel": "web_chat",
+        }, ensure_ascii=False)
+        # 推送到所有连接的 WebSocket 客户端
+        for ws in list(self._ws_connections):
+            try:
+                await ws.send_text(payload)
+            except Exception:
+                self._ws_connections.discard(ws)
+
+    def parse(self, raw: dict) -> CouncilMessage:
+        return CouncilMessage(
+            sender=raw.get("sender", "unknown"),
+            content=raw.get("content", ""),
+            channel="web_chat",
+            forgekin_id=raw.get("forgekin_id"),
+            thread_id=raw.get("thread_id"),
+        )
+
+    def add_connection(self, ws) -> None:
+        """添加 WebSocket 连接"""
+        self._ws_connections.add(ws)
+
+    def remove_connection(self, ws) -> None:
+        """移除 WebSocket 连接"""
+        self._ws_connections.discard(ws)
+
+
+# evolution/council/channels/feishu.py
+from evolution.council.channels.base import Channel
+from evolution.council.forgekin_council import CouncilMessage
+
+
+class FeishuChannel(Channel):
+    """飞书渠道——飞书开放平台 API"""
+
+    def __init__(self, config: dict):
+        super().__init__("feishu", config)
+        self._app_id = config.get("app_id", "")
+        self._app_secret = config.get("app_secret", "")
+        self._chat_id = config.get("chat_id", "")
+
+    async def send(self, message: CouncilMessage) -> None:
+        """通过飞书 API 发送消息"""
+        import httpx
+        # 获取 tenant_access_token（简化实现）
+        # 发送消息到飞书群
+        async with httpx.AsyncClient() as client:
+            # TODO: 实现飞书 API 调用
+            logger.info(f"飞书消息已发送: {message.content[:50]}")
+
+    def parse(self, raw: dict) -> CouncilMessage:
+        return CouncilMessage(
+            sender=raw.get("event", {}).get("sender", {}).get("sender_id", {}).get("open_id", "unknown"),
+            content=raw.get("event", {}).get("message", {}).get("content", ""),
+            channel="feishu",
+        )
+```
+
+***
+
+## 第二十章：锻典（Forge Codex）详细设计
+
+### 20.1 Knowledge Object 数据模型
+
+```python
+# evolution/codex/knowledge_object.py
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+
+class KnowledgeFrontmatter(BaseModel):
+    """知识对象 frontmatter——对标 clowder-ai Knowledge Object Contract
+
+    基于 ADR-011 通用 frontmatter，6+2 核心字段：
+    """
+    artifact_type: str = Field(..., description="episode|method|skill|proposal|eval|lesson|log")
+    domain: str = Field("development", description="development|medical|legal|product|ops|general")
+    knowledge_type: str = Field("procedural", description="declarative|procedural|analytical|metacognitive")
+    scope: str = Field("team-shared", description="agent-local|team-shared")
+    trust_level: str = Field("experimental", description="experimental|tested|validated|production")
+    lifecycle: str = Field("draft", description="draft|active|deprecated")
+
+    # provenance
+    author_type: str = Field("agent", description="agent|human|collaborative")
+    source_refs: list[str] = Field(default_factory=list)
+
+
+class KnowledgeObject(BaseModel):
+    """知识对象——锻典中的基本单元
+
+    五级火种等级（Ember Hierarchy）：
+    E-L0 Episode → E-L1 Pattern → E-L2 Draft → E-L3 Validated → E-L4 Standard
+    """
+    knowledge_id: str
+    forgekin_id: str  # 创建者
+    frontmatter: KnowledgeFrontmatter
+    content: str  # 正文
+
+    # 火种等级
+    ember_level: str = Field("E-L0", description="E-L0|E-L1|E-L2|E-L3|E-L4")
+
+    # 动态状态（走事件流，不污染 git history）
+    last_used: Optional[datetime] = None
+    hit_count: int = 0
+    approval_status: str = Field("draft", description="draft|pending|approved|rejected")
+
+    # 元认知
+    self_reported_confidence: float = 0.5
+    domain_reliability: float = 0.5
+    wilson_lower_bound: float = 0.0
+
+    # 长尾车道标记
+    long_tail: bool = False
+
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
+```
+
+### 20.2 ForgeCodex 主入口详细实现
+
+```python
+# evolution/codex/forge_codex.py
+import json
+import uuid
+import logging
+import aiosqlite
+from typing import Optional
+from evolution.codex.knowledge_object import KnowledgeObject, KnowledgeFrontmatter
+from evolution.forgekin.episode import SoulEpisode
+from evolution.codex.ember_hierarchy import EmberHierarchyManager
+from evolution.codex.distiller import DualDistiller
+
+logger = logging.getLogger(__name__)
+
+
+class ForgeCodex:
+    """锻典——可复用知识体系
+
+    对标 clowder-ai Skill Library + 五级知识阶梯。
+
+    三机制闭环：
+    Episode Card（原料）→ Dual Distillation（蒸馏成品）→ Eval Ledger（证明净增益）
+
+    三模式自生成（对标 clowder-ai F100）：
+    - Mode A: Scope Guard（防御）——发现任务偏离愿景
+    - Mode B: Process Evolution（防御→改进）——同类错误≥2次
+    - Mode C: Knowledge Evolution（进攻→成长）——可复用知识沉淀
+    """
+
+    def __init__(self, db_path: str, llm_client=None, event_bus=None):
+        self._db_path = db_path
+        self._llm = llm_client
+        self._events = event_bus
+        self._ember = EmberHierarchyManager(db_path)
+        self._distiller = DualDistiller(llm_client)
+
+    async def maybe_distill(self, episode: SoulEpisode) -> Optional[str]:
+        """尝试将 Episode 蒸馏成 Skill
+
+        三模式自生成判断：
+        - Mode A: 任务偏离 → 温柔提醒
+        - Mode B: 同类错误 ≥2 → 5槽提案
+        - Mode C: 可复用知识 → 三问判断 + 沉淀
+        """
+        if not episode.is_distillable():
+            return None
+
+        # 三问判断（Mode C）：复用性 + 非显然性 + 衰减性
+        if not self._three_questions_pass(episode):
+            return None
+
+        # 双蒸馏
+        knowledge = await self._distiller.distill(episode)
+        if not knowledge:
+            return None
+
+        # 保存到锻典
+        knowledge_id = await self.save(knowledge)
+
+        # 更新 Episode 蒸馏状态
+        await self._update_episode_distillation(episode.episode_id, knowledge_id)
+
+        logger.info(f"Skill 蒸馏成功: {knowledge_id} (from {episode.episode_id})")
+        return knowledge_id
+
+    def _three_questions_pass(self, episode: SoulEpisode) -> bool:
+        """三问判断——满足 ≥2 个才沉淀
+
+        1. 复用性：这个经验能否在其他场景复用？
+        2. 非显然性：这个经验是否不显然（不是常识）？
+        3. 衰减性：这个经验是否会随时间衰减？
+        """
+        # 简化实现：基于 Episode 特征判断
+        score = 0
+        if len(episode.task_context) > 100:  # 有足够内容
+            score += 1
+        if episode.human_cues:  # 有人类提示
+            score += 1
+        if episode.success is False:  # 失败经验更有价值
+            score += 1
+        return score >= 2
+
+    async def save(self, knowledge: KnowledgeObject) -> str:
+        """保存知识对象到锻典"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                """INSERT INTO forge_codex
+                (knowledge_id, forgekin_id, frontmatter, content,
+                 ember_level, last_used, hit_count, approval_status,
+                 self_reported_confidence, domain_reliability,
+                 wilson_lower_bound, long_tail, created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (knowledge.knowledge_id, knowledge.forgekin_id,
+                 knowledge.frontmatter.model_dump_json(), knowledge.content,
+                 knowledge.ember_level,
+                 knowledge.last_used.isoformat() if knowledge.last_used else None,
+                 knowledge.hit_count, knowledge.approval_status,
+                 knowledge.self_reported_confidence, knowledge.domain_reliability,
+                 knowledge.wilson_lower_bound, knowledge.long_tail,
+                 knowledge.created_at.isoformat(),
+                 knowledge.updated_at.isoformat() if knowledge.updated_at else None),
+            )
+            await db.commit()
+        return knowledge.knowledge_id
+
+    async def load(self, knowledge_id: str) -> Optional[KnowledgeObject]:
+        """加载知识对象"""
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM forge_codex WHERE knowledge_id = ?",
+                (knowledge_id,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+            return KnowledgeObject(
+                knowledge_id=row["knowledge_id"],
+                forgekin_id=row["forgekin_id"],
+                frontmatter=KnowledgeFrontmatter.model_validate_json(row["frontmatter"]),
+                content=row["content"],
+                ember_level=row["ember_level"],
+                hit_count=row["hit_count"],
+                approval_status=row["approval_status"],
+            )
+
+    async def search(
+        self, query: str, forgekin_id: str = None, limit: int = 10
+    ) -> list[KnowledgeObject]:
+        """搜索锻典"""
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            if forgekin_id:
+                cursor = await db.execute(
+                    "SELECT * FROM forge_codex WHERE forgekin_id = ? "
+                    "AND content LIKE ? ORDER BY hit_count DESC LIMIT ?",
+                    (forgekin_id, f"%{query}%", limit),
+                )
+            else:
+                cursor = await db.execute(
+                    "SELECT * FROM forge_codex WHERE content LIKE ? "
+                    "ORDER BY hit_count DESC LIMIT ?",
+                    (f"%{query}%", limit),
+                )
+            rows = await cursor.fetchall()
+            return [await self.load(r["knowledge_id"]) for r in rows]
+
+    async def count_skills_by_level(
+        self, forgekin_id: str, min_level: str = "E-L0"
+    ) -> int:
+        """统计指定等级以上的 Skill 数"""
+        level_order = ["E-L0", "E-L1", "E-L2", "E-L3", "E-L4"]
+        min_idx = level_order.index(min_level)
+        valid_levels = level_order[min_idx:]
+        placeholders = ",".join("?" * len(valid_levels))
+        async with aiosqlite.connect(self._db_path) as db:
+            cursor = await db.execute(
+                f"SELECT COUNT(*) FROM forge_codex WHERE forgekin_id = ? "
+                f"AND ember_level IN ({placeholders})",
+                (forgekin_id, *valid_levels),
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+    async def count_skill_uses(self, forgekin_id: str) -> int:
+        """统计 Skill 使用次数"""
+        async with aiosqlite.connect(self._db_path) as db:
+            cursor = await db.execute(
+                "SELECT SUM(hit_count) FROM forge_codex WHERE forgekin_id = ?",
+                (forgekin_id,),
+            )
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] else 0
+
+    async def compute_success_rate(self, forgekin_id: str) -> float:
+        """计算整体成功率"""
+        async with aiosqlite.connect(self._db_path) as db:
+            cursor = await db.execute(
+                "SELECT AVG(domain_reliability) FROM forge_codex WHERE forgekin_id = ?",
+                (forgekin_id,),
+            )
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] else 0.0
+
+    async def compute_recent_success_rate(
+        self, forgekin_id: str, last_n: int = 10
+    ) -> float:
+        """计算最近 N 次成功率"""
+        async with aiosqlite.connect(self._db_path) as db:
+            cursor = await db.execute(
+                "SELECT domain_reliability FROM forge_codex "
+                "WHERE forgekin_id = ? ORDER BY updated_at DESC LIMIT ?",
+                (forgekin_id, last_n),
+            )
+            rows = await cursor.fetchall()
+            if not rows:
+                return 0.0
+            return sum(r[0] for r in rows) / len(rows)
+
+    async def _update_episode_distillation(
+        self, episode_id: str, knowledge_id: str
+    ) -> None:
+        """更新 Episode 蒸馏状态"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forgekin_episodes SET distillation_status = 'distilled' "
+                "WHERE episode_id = ?",
+                (episode_id,),
+            )
+            await db.commit()
+```
+
+### 20.3 DualDistiller（双蒸馏器）详细实现
+
+```python
+# evolution/codex/distiller.py
+import uuid
+import logging
+from evolution.codex.knowledge_object import KnowledgeObject, KnowledgeFrontmatter
+from evolution.forgekin.episode import SoulEpisode
+
+logger = logging.getLogger(__name__)
+
+
+class DualDistiller:
+    """双蒸馏器——对标 clowder-ai Dual Distillation
+
+    每张 Episode Card 蒸馏成两种形态之一：
+    - Skill Draft：重复步骤稳定的流程型任务
+    - Method Card：高风险领域或分析型任务
+    """
+
+    def __init__(self, llm_client=None):
+        self._llm = llm_client
+
+    async def distill(self, episode: SoulEpisode) -> KnowledgeObject:
+        """执行双蒸馏"""
+        # 判断蒸馏形态
+        is_high_risk = self._is_high_risk(episode)
+        is_procedural = self._is_procedural(episode)
+
+        if is_high_risk or not is_procedural:
+            artifact_type = "method"
+            content = await self._distill_method_card(episode)
+        else:
+            artifact_type = "skill"
+            content = await self._distill_skill_draft(episode)
+
+        return KnowledgeObject(
+            knowledge_id=f"ko_{uuid.uuid4().hex[:12]}",
+            forgekin_id=episode.forgekin_id,
+            frontmatter=KnowledgeFrontmatter(
+                artifact_type=artifact_type,
+                knowledge_type="procedural" if is_procedural else "analytical",
+                trust_level="experimental",
+                lifecycle="draft",
+                author_type="agent",
+                source_refs=[episode.episode_id],
+            ),
+            content=content,
+            ember_level="E-L2",  # 蒸馏后默认 L2 Draft
+        )
+
+    async def _distill_skill_draft(self, episode: SoulEpisode) -> str:
+        """蒸馏成 Skill Draft——流程型"""
+        prompt = f"""从以下 Episode 蒸馏出一个可复用的 Skill Draft。
+
+任务情境：{episode.task_context}
+证据地图：{episode.evidence_map}
+推理转折：{episode.reasoning_pivots}
+边界：{episode.boundaries}
+
+输出格式：
+# Skill: [名称]
+## 适用场景
+## 步骤
+1. ...
+2. ...
+## 注意事项
+## 验证标准
+"""
+        if self._llm:
+            return await self._llm.chat(system="你是 Skill 蒸馏器", user_content=prompt)
+        return f"# Skill Draft\n\n基于 Episode {episode.episode_id} 蒸馏"
+
+    async def _distill_method_card(self, episode: SoulEpisode) -> str:
+        """蒸馏成 Method Card——分析型/高风险"""
+        prompt = f"""从以下 Episode 蒸馏出一个 Method Card（高风险/分析型）。
+
+任务情境：{episode.task_context}
+推理转折：{episode.reasoning_pivots}
+人类提示点：{episode.human_cues}
+边界：{episode.boundaries}
+
+输出格式：
+# Method: [名称]
+## 问题定义
+## 分析框架
+## 关键决策点
+## 边界条件
+## 风险评估
+"""
+        if self._llm:
+            return await self._llm.chat(system="你是 Method Card 蒸馏器", user_content=prompt)
+        return f"# Method Card\n\n基于 Episode {episode.episode_id} 蒸馏"
+
+    def _is_high_risk(self, episode: SoulEpisode) -> bool:
+        """判断是否高风险领域"""
+        high_risk_keywords = ["安全", "security", "部署", "deploy", "删除", "delete"]
+        return any(kw in episode.task_context.lower() for kw in high_risk_keywords)
+
+    def _is_procedural(self, episode: SoulEpisode) -> bool:
+        """判断是否流程型任务"""
+        procedural_keywords = ["测试", "格式化", "构建", "部署", "生成", "test", "build"]
+        return any(kw in episode.task_context.lower() for kw in procedural_keywords)
+```
+
+### 20.4 EmberHierarchyManager（五级火种阶梯）
+
+```python
+# evolution/codex/ember_hierarchy.py
+import logging
+import aiosqlite
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+
+class EmberHierarchyManager:
+    """五级火种阶梯管理器
+
+    对标 clowder-ai 五级知识成熟度阶梯：
+
+    | Level | 形态 | 晋升条件 | 降级/冻结 |
+    |-------|------|---------|-----------|
+    | E-L0 Episode | 原始记录 | 模板完整 | 不降级 |
+    | E-L1 Pattern | 草稿 | ≥2 相似 episode, 5Q≥7/10 | 一次性特例→rejected |
+    | E-L2 Draft | Method/Skill Draft | smoke gate ≥3 cases(≥2/3) | 最近3次<50%→退L1 |
+    | E-L3 Validated | 正式 method/skill | ≥6 uses, ≥2 agents, ≥80% | 最近5次<60%→退L2 |
+    | E-L4 Standard | 团队标准 | ≥12 uses, 最近10次≥90%, operator批准 | 1次高风险越界→freeze |
+
+    双车道：常规车道 + 长尾/高风险车道（long_tail=true，允许长期停 L2/L3）
+    """
+
+    LEVEL_ORDER = ["E-L0", "E-L1", "E-L2", "E-L3", "E-L4"]
+
+    def __init__(self, db_path: str):
+        self._db_path = db_path
+
+    async def check_promotion(self, knowledge_id: str) -> str | None:
+        """检查晋升条件"""
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM forge_codex WHERE knowledge_id = ?",
+                (knowledge_id,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+
+            current_level = row["ember_level"]
+            hit_count = row["hit_count"]
+
+            # 晋升逻辑
+            if current_level == "E-L0":
+                return await self._promote_l0_to_l1(knowledge_id, row)
+            elif current_level == "E-L1":
+                return await self._promote_l1_to_l2(knowledge_id, row)
+            elif current_level == "E-L2":
+                return await self._promote_l2_to_l3(knowledge_id, row)
+            elif current_level == "E-L3":
+                return await self._promote_l3_to_l4(knowledge_id, row)
+
+        return None
+
+    async def _promote_l0_to_l1(self, kid, row) -> str | None:
+        """E-L0→E-L1: ≥2 相似 episode"""
+        # 简化实现：基于 hit_count
+        if row["hit_count"] >= 2:
+            await self._update_level(kid, "E-L1")
+            return "E-L1"
+        return None
+
+    async def _promote_l1_to_l2(self, kid, row) -> str | None:
+        """E-L1→E-L2: smoke gate ≥3 cases"""
+        if row["hit_count"] >= 3:
+            await self._update_level(kid, "E-L2")
+            return "E-L2"
+        return None
+
+    async def _promote_l2_to_l3(self, kid, row) -> str | None:
+        """E-L2→E-L3: ≥6 uses, ≥80%"""
+        if row["hit_count"] >= 6 and row["domain_reliability"] >= 0.8:
+            await self._update_level(kid, "E-L3")
+            return "E-L3"
+        return None
+
+    async def _promote_l3_to_l4(self, kid, row) -> str | None:
+        """E-L3→E-L4: ≥12 uses, 最近10次≥90%, operator批准"""
+        if row["hit_count"] >= 12 and row["domain_reliability"] >= 0.9:
+            # 需要 operator 批准
+            await self._update_approval(kid, "pending")
+            return None  # 待批准
+        return None
+
+    async def _update_level(self, knowledge_id: str, level: str) -> None:
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forge_codex SET ember_level = ?, updated_at = ? WHERE knowledge_id = ?",
+                (level, datetime.now().isoformat(), knowledge_id),
+            )
+            await db.commit()
+
+    async def _update_approval(self, knowledge_id: str, status: str) -> None:
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forge_codex SET approval_status = ? WHERE knowledge_id = ?",
+                (status, knowledge_id),
+            )
+            await db.commit()
+
+    async def record_hit(self, knowledge_id: str) -> None:
+        """记录使用"""
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "UPDATE forge_codex SET hit_count = hit_count + 1, "
+                "last_used = ? WHERE knowledge_id = ?",
+                (datetime.now().isoformat(), knowledge_id),
+            )
+            await db.commit()
+        # 自动检查晋升
+        await self.check_promotion(knowledge_id)
+```
+
+***
+
+## 第二十一章：v7.0 API 端点设计
+
+### 21.1 炉灵管理 API
+
+```python
+# evolution/api/forgekin_endpoints.py
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+
+router = APIRouter(prefix="/api/v7/forgekin", tags=["v7-forgekin"])
+
+
+class CreateForgekinRequest(BaseModel):
+    name: str
+    kind: str  # 项目前缀:角色名
+    persona: str
+    worldview: str
+    values: list[str] = []
+    voice: str = "直接、专业"
+    static_agents: list[str] = []
+    external_tools: list[str] = []
+    modes: list[str] = []
+    parent_forgekin: Optional[str] = None
+
+
+@router.post("/")
+async def create_forgekin(req: CreateForgekinRequest):
+    """创建新炉灵（需 E6 权限或 operator）"""
+    # ... 调用 ForgekinEngine 创建 ...
+    return {"forgekin_id": "fk_xxx", "status": "created"}
+
+
+@router.get("/{forgekin_id}")
+async def get_forgekin(forgekin_id: str):
+    """获取炉灵详情"""
+    # ... 返回 SoulProfile ...
+    return {"forgekin_id": forgekin_id, "soul_profile": {}}
+
+
+@router.get("/")
+async def list_forgekins(project: str = None, status: str = "active"):
+    """列出炉灵"""
+    return {"forgekins": []}
+
+
+@router.patch("/{forgekin_id}/status")
+async def update_status(forgekin_id: str, status: str, approver: str):
+    """更新炉灵状态（需 operator 审批）"""
+    return {"forgekin_id": forgekin_id, "status": status}
+
+
+@router.post("/{forgekin_id}/execute")
+async def execute_task(forgekin_id: str, task: str, strategy: str = "auto"):
+    """执行炉灵任务"""
+    return {"status": "success", "result": {}}
+
+
+@router.get("/{forgekin_id}/episodes")
+async def list_episodes(forgekin_id: str, limit: int = 20):
+    """获取炉灵的 Episode 列表"""
+    return {"episodes": []}
+
+
+@router.get("/{forgekin_id}/imprint")
+async def get_imprint(forgekin_id: str):
+    """获取炉灵的魂印画像"""
+    return {"imprint": {}}
+
+
+@router.post("/{forgekin_id}/imprint/proposals/{proposal_id}/approve")
+async def approve_imprint(forgekin_id: str, proposal_id: str, approver: str):
+    """审批画像提案"""
+    return {"proposal_id": proposal_id, "status": "approved"}
+```
+
+### 21.2 灵议 API
+
+```python
+# evolution/api/council_endpoints.py
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from evolution.council.channels.web_chat import WebChatChannel
+
+router = APIRouter(prefix="/api/v7/council", tags=["v7-council"])
+
+
+@router.get("/forgekins")
+async def list_online_forgekins():
+    """列出在线炉灵"""
+    return {"forgekins": []}
+
+
+@router.get("/threads")
+async def list_threads():
+    """列出议事线程"""
+    return {"threads": []}
+
+
+@router.post("/threads")
+async def create_thread(participants: list[str], topic: str):
+    """创建议事线程（发起 Kinship 协作）"""
+    return {"thread_id": "thread_xxx"}
+
+
+@router.get("/threads/{thread_id}/messages")
+async def get_thread_messages(thread_id: str):
+    """获取线程消息"""
+    return {"messages": []}
+
+
+@router.post("/messages")
+async def send_message(sender: str, content: str, thread_id: str = None):
+    """发送灵议消息"""
+    return {"message_id": "msg_xxx"}
+
+
+@router.websocket("/ws")
+async def council_websocket(ws: WebSocket):
+    """灵议 WebSocket——实时多炉灵对话"""
+    await ws.accept()
+    # 注册到 WebChatChannel
+    channel = WebChatChannel({"enabled": True})
+    channel.add_connection(ws)
+    try:
+        while True:
+            data = await ws.receive_json()
+            # 处理消息
+            await ws.send_json({"type": "echo", "data": data})
+    except WebSocketDisconnect:
+        channel.remove_connection(ws)
+```
+
+### 21.3 自锻 API
+
+```python
+# evolution/api/auto_forge_endpoints.py
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/api/v7/auto-forge", tags=["v7-auto-forge"])
+
+
+@router.get("/status")
+async def get_status():
+    """获取自锻引擎状态"""
+    return {"enabled": False, "running": False}
+
+
+@router.post("/trigger/{forgekin_id}")
+async def trigger_forge(forgekin_id: str):
+    """手动触发自锻"""
+    return {"status": "forging", "forgekin_id": forgekin_id}
+
+
+@router.get("/diaries/{forgekin_id}")
+async def list_diaries(forgekin_id: str, limit: int = 20):
+    """列出炉灵日记"""
+    return {"diaries": []}
+
+
+@router.post("/diaries/{diary_id}/read")
+async def mark_diary_read(diary_id: str):
+    """标记日记已读"""
+    return {"diary_id": diary_id, "status": "read"}
+
+
+@router.post("/provoke/{provoke_id}/dismiss")
+async def dismiss_provoke(provoke_id: str):
+    """拍扁 Provoke"""
+    return {"provoke_id": provoke_id, "status": "dismissed"}
+
+
+@router.post("/provoke/{provoke_id}/engage")
+async def engage_provoke(provoke_id: str):
+    """戳破 Provoke（有效互动）"""
+    return {"provoke_id": provoke_id, "status": "engaged"}
+```
+
+### 21.4 锻典 API
+
+```python
+# evolution/api/codex_endpoints.py
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/api/v7/codex", tags=["v7-codex"])
+
+
+@router.get("/status")
+async def codex_status():
+    """锻典概览——对标 flowforge codex status CLI"""
+    return {
+        "total_objects": 0,
+        "by_level": {"E-L0": 0, "E-L1": 0, "E-L2": 0, "E-L3": 0, "E-L4": 0},
+        "by_type": {"skill": 0, "method": 0, "episode": 0},
+    }
+
+
+@router.get("/search")
+async def search_codex(q: str, forgekin_id: str = None, limit: int = 10):
+    """搜索锻典"""
+    return {"results": []}
+
+
+@router.get("/{knowledge_id}")
+async def get_knowledge(knowledge_id: str):
+    """获取知识对象详情"""
+    return {"knowledge": {}}
+
+
+@router.post("/{knowledge_id}/promote")
+async def promote_knowledge(knowledge_id: str):
+    """手动晋升火种等级"""
+    return {"knowledge_id": knowledge_id, "new_level": "E-L3"}
+```
+
+***
+
+## 第二十二章：数据库迁移方案
+
+### 22.1 迁移文件清单
+
+```sql
+-- migrations/007_forgekin_souls.sql
+CREATE TABLE IF NOT EXISTS forgekin_souls (
+    forgekin_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    ascension_stage TEXT NOT NULL DEFAULT 'E1',
+    birth_at TEXT NOT NULL,
+    parent_forgekin TEXT,
+    soul_profile TEXT NOT NULL,  -- JSON
+    capabilities TEXT NOT NULL,  -- JSON
+    evolution_state TEXT NOT NULL,  -- JSON
+    metadata TEXT NOT NULL DEFAULT '{}',  -- JSON
+    status TEXT NOT NULL DEFAULT 'active'
+);
+CREATE INDEX IF NOT EXISTS idx_souls_kind ON forgekin_souls(kind);
+CREATE INDEX IF NOT EXISTS idx_souls_status ON forgekin_souls(status);
+
+-- migrations/008_forgekin_episodes.sql
+CREATE TABLE IF NOT EXISTS forgekin_episodes (
+    episode_id TEXT PRIMARY KEY,
+    forgekin_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    task_context TEXT,
+    evidence_map TEXT,
+    reasoning_pivots TEXT,
+    human_cues TEXT,  -- JSON
+    boundaries TEXT,
+    follow_ups TEXT,  -- JSON
+    distillation_status TEXT DEFAULT 'raw',
+    linked_skills TEXT,  -- JSON
+    self_reported_confidence REAL DEFAULT 0.5,
+    domain_reliability REAL DEFAULT 0.5,
+    wilson_lower_bound REAL DEFAULT 0.0,
+    embedding BLOB,
+    execution_path TEXT DEFAULT 'static',
+    success INTEGER,  -- NULL/0/1
+    latency_ms INTEGER,
+    FOREIGN KEY (forgekin_id) REFERENCES forgekin_souls(forgekin_id)
+);
+CREATE INDEX IF NOT EXISTS idx_episodes_fk ON forgekin_episodes(forgekin_id);
+CREATE INDEX IF NOT EXISTS idx_episodes_ts ON forgekin_episodes(timestamp);
+
+-- migrations/009_forgekin_imprints.sql
+CREATE TABLE IF NOT EXISTS forgekin_imprints (
+    forgekin_id TEXT PRIMARY KEY,
+    structured_fields TEXT NOT NULL DEFAULT '{}',  -- JSON
+    cat_note TEXT DEFAULT '',
+    last_updated TEXT
+);
+
+CREATE TABLE IF NOT EXISTS imprint_proposals (
+    proposal_id TEXT PRIMARY KEY,
+    forgekin_id TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    proposed_value TEXT NOT NULL,  -- JSON
+    source_episode_id TEXT,
+    status TEXT DEFAULT 'pending',  -- pending/approved/rejected
+    approved_by TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (forgekin_id) REFERENCES forgekin_souls(forgekin_id)
+);
+
+-- migrations/010_forge_codex.sql
+CREATE TABLE IF NOT EXISTS forge_codex (
+    knowledge_id TEXT PRIMARY KEY,
+    forgekin_id TEXT NOT NULL,
+    frontmatter TEXT NOT NULL,  -- JSON
+    content TEXT NOT NULL,
+    ember_level TEXT DEFAULT 'E-L0',
+    last_used TEXT,
+    hit_count INTEGER DEFAULT 0,
+    approval_status TEXT DEFAULT 'draft',
+    self_reported_confidence REAL DEFAULT 0.5,
+    domain_reliability REAL DEFAULT 0.5,
+    wilson_lower_bound REAL DEFAULT 0.0,
+    long_tail INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT,
+    FOREIGN KEY (forgekin_id) REFERENCES forgekin_souls(forgekin_id)
+);
+CREATE INDEX IF NOT EXISTS idx_codex_fk ON forge_codex(forgekin_id);
+CREATE INDEX IF NOT EXISTS idx_codex_level ON forge_codex(ember_level);
+
+-- migrations/011_forge_diaries.sql
+CREATE TABLE IF NOT EXISTS forge_diaries (
+    diary_id TEXT PRIMARY KEY,
+    forgekin_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    observations TEXT,  -- JSON
+    provoke_content TEXT,
+    timestamp TEXT NOT NULL,
+    read_status TEXT DEFAULT 'unread',
+    FOREIGN KEY (forgekin_id) REFERENCES forgekin_souls(forgekin_id)
+);
+
+-- migrations/012_a2a_messages.sql
+CREATE TABLE IF NOT EXISTS a2a_messages (
+    message_id TEXT PRIMARY KEY,
+    from_forgekin TEXT NOT NULL,
+    to_forgekin TEXT NOT NULL,
+    thread_id TEXT NOT NULL,
+    mention TEXT,  -- JSON
+    content TEXT NOT NULL,
+    artifacts TEXT,  -- JSON
+    handoff TEXT,  -- JSON
+    timestamp TEXT NOT NULL,
+    trace_id TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_a2a_thread ON a2a_messages(thread_id);
+CREATE INDEX IF NOT EXISTS idx_a2a_from ON a2a_messages(from_forgekin);
+CREATE INDEX IF NOT EXISTS idx_a2a_to ON a2a_messages(to_forgekin);
+
+-- migrations/013_external_tool_audit.sql
+CREATE TABLE IF NOT EXISTS external_tool_audit (
+    audit_id TEXT PRIMARY KEY,
+    tool TEXT NOT NULL,
+    task_id TEXT NOT NULL,
+    forgekin_id TEXT,
+    workspace TEXT,
+    input TEXT,  -- JSON
+    output TEXT,
+    exit_code INTEGER,
+    error TEXT,
+    latency_ms INTEGER,
+    timestamp TEXT NOT NULL
+);
+```
+
+***
+
+## 第二十三章：配置文件设计
+
+### 23.1 evolution.yaml（自进化全局配置）
+
+```yaml
+# config/evolution.yaml
+# v7.0 自进化能力全局配置
+
+features:
+  use_forgekin_engine:
+    enabled: false
+    rollout_percentage: 0
+    fallback_to_old: true
+    description: "炉灵引擎——自进化智能体"
+
+  use_auto_forge:
+    enabled: false
+    fallback_to_old: true
+    description: "自锻引擎——无人时自主思考"
+
+  use_external_tool_bridge:
+    enabled: false
+    fallback_to_old: true
+    description: "外部编码工具集成"
+
+  use_trae_bridge:
+    enabled: false
+    fallback_to_old: true
+    description: "Trae 监工 Bridge"
+
+  use_forgekin_council:
+    enabled: false
+    fallback_to_old: true
+    description: "灵议——多渠道 IM 协作"
+
+  use_a2a_protocol:
+    enabled: false
+    fallback_to_old: true
+    description: "A2A 通信协议"
+
+forgekin:
+  data_dir: "data/forgekin"
+  soul_store: "data/forgekin/souls.db"
+  echo_store: "data/forgekin/echo.db"
+  imprint_store: "data/forgekin/imprint.db"
+  codex_store: "data/forgekin/codex.db"
+
+auto_forge:
+  enabled: false
+  check_interval_minutes: 30
+  min_traces_to_forge: 5
+  low_activity_hours: [22, 23, 0, 1, 2, 3, 4, 5, 6]
+  group_forge_enabled: true
+  max_forgekins_per_group: 3
+  provoke:
+    max_per_day: 1
+    hyperfocus_block: true
+    consecutive_dismiss_dormancy: 3
+    dormancy_days: 7
+
+external_tools:
+  claude_code:
+    cli_command: "claude"
+    timeout_seconds: 300
+    worktree_base: "data/worktrees"
+  codex:
+    cli_command: "codex"
+    timeout_seconds: 300
+  opencode:
+    cli_command: "opencode"
+    timeout_seconds: 300
+  trae_bridge:
+    bridge_dir: "data/trae_bridge"
+    poll_interval_seconds: 2
+    timeout_seconds: 300
+
+council:
+  web_chat:
+    enabled: true
+  feishu:
+    enabled: false
+    app_id: "${FEISHU_APP_ID}"
+    app_secret: "${FEISHU_APP_SECRET}"
+  wechat:
+    enabled: false
+  slack:
+    enabled: false
+  discord:
+    enabled: false
+```
+
+### 23.2 炉灵种子配置示例
+
+```yaml
+# config/forgekin_seeds/devforge/architect.yaml
+forgekin_id: "fk_devforge_architect_001"
+name: "Architect"
+kind: "devforge:architect"
+ascension_stage: "E1"
+
+soul:
+  persona: |
+    我是 DevForge 的架构师炉灵，擅长系统设计和代码审查。
+    我从 clowder-ai 的 bootcamp 训练理念中汲取灵感，
+    致力于为每个项目设计清晰、可维护的架构。
+  worldview: "配置驱动 > 代码继承；组合优于继承；简单优于复杂"
+  values:
+    - "架构单向依赖是底线"
+    - "不过度工程化"
+    - "每个决策都要有可验证的完成标准"
+  voice: "直接、技术性、偶尔幽默"
+
+capabilities:
+  static_agents_can_delegate:
+    - "devforge:coder"
+    - "devforge:test_generator"
+    - "devforge:doc_writer"
+  external_tools_can_use:
+    - "claude_code"
+    - "codex"
+    - "opencode"
+    - "trae_bridge"
+  modes_can_use:
+    - "reflexion"
+    - "plan_execute"
+    - "multi_agent"
+
+metadata:
+  created_by: "operator"
+  approved_by: "operator"
+```
+
+### 23.3 灵议渠道配置
+
+```yaml
+# config/a2a_channels.yaml
+channels:
+  web_chat:
+    enabled: true
+    description: "灵议主渠道——Web UI 多炉灵议事厅"
+
+  feishu:
+    enabled: false
+    app_id: "${FEISHU_APP_ID}"
+    app_secret: "${FEISHU_APP_SECRET}"
+    chat_id: "${FEISHU_CHAT_ID}"
+    description: "飞书团队协作"
+
+  wechat:
+    enabled: false
+    description: "微信公众号/个人号备用通知"
+
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    description: "Slack 国际团队协作"
+
+  discord:
+    enabled: false
+    bot_token: "${DISCORD_BOT_TOKEN}"
+    description: "Discord 社区协作"
+
+  github_pr:
+    enabled: false
+    webhook_secret: "${GITHUB_WEBHOOK_SECRET}"
+    description: "GitHub PR 代码审查 routing"
+
+# 跨渠道消息同步
+sync:
+  enabled: true
+  same_thread_visible: true  # 同一 thread 在不同渠道可见
+
+# operator 干预权限
+operator:
+  can_send: true
+  can_approve: true
+  can_intervene: true
+  channels: ["web_chat", "feishu"]
+```
+
+---
+
+## 附录 E：v7.0 待用户审核决策点
+
+| 编号 | 决策点 | 选项 | 建议 |
+|------|--------|------|------|
+| D1 | 炉灵种子来源 | A) operator 手动编写 / B) 从现有 Agent 自动转换 / C) 混合 | C |
+| D2 | 自锻触发频率 | A) 30 分钟检查 / B) 1 小时检查 / C) 仅夜间 | A |
+| D3 | 外部工具优先级 | A) CLI 优先 / B) Trae 优先 / C) 按任务类型自动 | C |
+| D4 | 灵议默认渠道 | A) 仅 Web Chat / B) Web Chat + 飞书 / C) 全渠道 | A |
+| D5 | 锻典淘汰策略 | A) 永不淘汰 / B) 30 天未用降级 / C) 90 天未用归档 | B |
+| D6 | 升华阶段降级严格度 | A) 严格执行 / B) 长尾车道放宽 / C) operator 可配置 | C |
+| D7 | Provoke 频率 | A) 每天 1 次 / B) 每周 3 次 / C) operator 可配置 | A |
+| D8 | A2A 消息持久化 | A) 永久 / B) 90 天 / C) 30 天 | B |
+| D9 | 炉灵最大数量 | A) 无限制 / B) 每项目 10 个 / C) 全局 50 个 | B |
+| D10 | Trae Bridge 目录 | A) 项目内 data/ / B) 用户目录 / C) 可配置 | C |
+
+---
+
+> **请 operator 审核本详细设计文档**，特别是：
+> - 第十五章目录结构新增（evolution/ 模块）
+> - 第十六章 ForgekinEngine 7步自进化闭环实现
+> - 第十七章 Auto-Forge 双层架构与 Provoke 频率硬限
+> - 第十八章 Trae Bridge JSON 文件交换模式
+> - 第十九章灵议多渠道与 A2A @mention 路由
+> - 第二十章锻典五级火种阶梯与三模式自生成
+> - 附录 E 的 10 个待审核决策点（D1-D10）
+>
+> 审核通过后将进入实现阶段。
