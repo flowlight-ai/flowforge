@@ -267,9 +267,12 @@ assignments:
     - openroute/GLM-5.1
     - openroute/MiniMax-M3
   content_refine:
-    # v5.16: Kimi-K2.6 超时不可用，改用 Doubao-Seed2.0 作为 primary
-    primary: openroute/Doubao-Seed2.0
+    # 铁律: polisher 必须使用 Kimi-K2.6
+    # 实测 DeepSeek-V4-Pro/Doubao-Seed2.0 润色会降低质量(创作0.85→润色0.57)
+    # Kimi-K2.6 超时时 fallback 到 Doubao-Seed2.0
+    primary: openroute/Kimi-K2.6
     fallbacks:
+    - openroute/Doubao-Seed2.0
     - openroute/Qwen3.6-Plus
     - openroute/HunYuan3
     - openroute/GLM-5.1
