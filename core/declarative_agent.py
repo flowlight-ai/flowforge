@@ -1055,7 +1055,7 @@ class DeclarativeAgent(BaseAgent):
                 else:
                     logger.debug(f"Agent '{self.name}': unknown post_processor '{processor_name}'")
             except Exception as e:
-                logger.warning(f"Agent '{self.name}': post_processor '{processor_name}' failed: {e}")
+                logger.debug(f"Agent '{self.name}': post_processor '{processor_name}' failed: {e}")
 
         if isinstance(output.result, dict) and content:
             output.result["content"] = content
@@ -1063,111 +1063,24 @@ class DeclarativeAgent(BaseAgent):
 
     @staticmethod
     def _deai_postprocess(content: str) -> str:
-        """Remove common AI-generated phrases and patterns.
-
-        增强版：覆盖序数词、Markdown标题、加粗标记、AI范式短语、结尾套话等。
-        目标：让 ai_flavor 评分从 0.3-0.4 提升到 0.7+。
-        """
+        """Remove common AI-generated phrases and patterns."""
         import re
-
-        # === 1. AI身份声明 ===
-        ai_identity = [
+        # Common AI-isms to remove
+        ai_patterns = [
             (r"作为一名AI[，,]?\s*", ""),
             (r"作为AI[，,]?\s*", ""),
-            (r"我是一个AI[，,]?\s*", ""),
-            (r"我是AI助手[，,]?\s*", ""),
-        ]
-
-        # === 2. 序数词/过渡词（AI最典型的结构化痕迹）===
-        ordinal_patterns = [
-            (r"^[ \t]*首先[，,：:\s]*", ""),
-            (r"^[ \t]*其次[，,：:\s]*", ""),
-            (r"^[ \t]*再次[，,：:\s]*", ""),
-            (r"^[ \t]*然后[，,：:\s]*", ""),
-            (r"^[ \t]*最后[，,：:\s]*", ""),
-            (r"^[ \t]*第一[，,，：:\s]*", ""),
-            (r"^[ \t]*第二[，,，：:\s]*", ""),
-            (r"^[ \t]*第三[，,，：:\s]*", ""),
-            (r"^[ \t]*其一[，,：:\s]*", ""),
-            (r"^[ \t]*其二[，,：:\s]*", ""),
-            (r"^[ \t]*其三[，,：:\s]*", ""),
-            (r"^[ \t]*一方面[，,：:\s]*", ""),
-            (r"^[ \t]*另一方面[，,：:\s]*", ""),
-            (r"^[ \t]*与此同时[，,：:\s]*", ""),
-            # 句中的序数词也处理
-            (r"[，,]\s*首先[，,：:\s]*", "，"),
-            (r"[，,]\s*其次[，,：:\s]*", "，"),
-            (r"[，,]\s*再次[，,：:\s]*", "，"),
-            (r"[，,]\s*最后[，,：:\s]*", "，"),
-        ]
-
-        # === 3. Markdown标题（## 标题、### 标题）===
-        markdown_patterns = [
-            (r"^#{1,6}\s+", ""),  # 行首的 # 标题
-            (r"\n#{1,6}\s+", "\n"),  # 段落间的 # 标题
-        ]
-
-        # === 4. 加粗标记（**text**）===
-        bold_patterns = [
-            (r"\*\*(.+?)\*\*", r"\1"),  # **text** → text
-            (r"__(.+?)__", r"\1"),  # __text__ → text
-        ]
-
-        # === 5. AI范式短语 ===
-        ai_phrases = [
             (r"总之[，,]?\s*", ""),
             (r"综上所述[，,]?\s*", ""),
             (r"总的来说[，,]?\s*", ""),
-            (r"总体而言[，,]?\s*", ""),
-            (r"综合来看[，,]?\s*", ""),
             (r"值得注意的是[，,]?\s*", ""),
             (r"需要指出的是[，,]?\s*", ""),
-            (r"需要强调的是[，,]?\s*", ""),
             (r"不可否认[，,]?\s*", ""),
             (r"毋庸置疑[，,]?\s*", ""),
-            (r"众所周知[，,]?\s*", ""),
-            (r"不可否认的是[，,]?\s*", ""),
             (r"在这个.*的时代[，,]?\s*", ""),
-            (r"在当今.*的背景下[，,]?\s*", ""),
-            (r"随着.*的发展[，,]?\s*", ""),
-            (r"近年来[，,]?\s*", ""),
-            (r"当下[，,]?\s*", ""),
             (r"让我们.*吧[。.]?\s*", ""),
-            (r"让我们共同.*[。.]?\s*", ""),
-            (r"不仅.*而且.*[。.]?", ""),  # 过于模式化，直接移除整句
         ]
-
-        # === 6. 结尾套话 ===
-        ending_phrases = [
-            (r"希望本文.*?有帮助[。.]?\s*", ""),
-            (r"以上就是.*[。.]?\s*$", ""),
-            (r"让我们一起.*吧[。.]?\s*$", ""),
-            (r"相信在.*的努力下.*[。.]?\s*$", ""),
-            (r"以上内容仅供参考[。.]?\s*", ""),
-        ]
-
-        # === 7. 编号符号（① ② ⑴ ⑵ 1. 2.）===
-        numbering_patterns = [
-            (r"^[ \t]*[①②③④⑤⑥⑦⑧⑨⑩]\s*", ""),
-            (r"^[ \t]*[⑴⑵⑶⑷⑸⑹⑺⑻⑼⑽]\s*", ""),
-            (r"^[ \t]*\d+[.、）)]\s*", ""),  # 1. 2. 3. 或 1、2、3、
-        ]
-
-        all_patterns = (
-            ai_identity
-            + ordinal_patterns
-            + markdown_patterns
-            + bold_patterns
-            + ai_phrases
-            + ending_phrases
-            + numbering_patterns
-        )
-
-        for pattern, replacement in all_patterns:
-            content = re.sub(pattern, replacement, content, flags=re.IGNORECASE | re.MULTILINE)
-
-        # 清理多余空行
-        content = re.sub(r"\n{3,}", "\n\n", content)
+        for pattern, replacement in ai_patterns:
+            content = re.sub(pattern, replacement, content, flags=re.IGNORECASE)
         return content.strip()
 
     @staticmethod
