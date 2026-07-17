@@ -1,9 +1,616 @@
-# FlowForge v6.0 详细设计说明书
+# FlowForge v7.0 设计规范（万物灵智体世界愿景）
 
-> **对应架构文档**：FlowForge v6.0 架构设计
-> **对应规格文档**：FlowForge v6.0 功能特性规格说明书
-> **状态**：v6.0 正式版，合并 v2.0 + v5.0 全部内容并新增 Harness/Skill/MCP 模块
-> **日期**：2026-05-12
+> **版本**：v7.0（融合 v6.0 全部内容 + v7.0 万物灵智体重构 + forgemind 应用层 + roleagent 七大工程路径 + 三方 Agent 集成）
+> **对应架构文档**：FlowForge v7.0 架构设计（`arch.md`）
+> **对应规格文档**：FlowForge v7.0 功能特性规格说明书（`spec.md`）
+> **状态**：v7.0 设计态——✅ operator 已审核通过命名方案 + 体系设计；E6 由"灵匠 Mind Artisan"修订为"灵智 ForgeMind（最终形态）"；其余待决策项按推荐执行（详见 `review/review.md` 第十章 10.1 节）。
+> **拆分声明**：本文档头部为 v7.0 增补章节（§0.1-§0.9，万物灵智体重构权威更新，优先级高于后续所有历史章节）；后续章节为 v6.0 历史内容，保留作为背景资料，术语已按 `decisions/012-naming-fusion.md` §6.9 全局替换映射表统一替换为新术语。
+> **日期**：2026-07-17
+
+***
+
+# v7.0 增补章节（万物灵智体重构）
+
+> **章节定位**：本增补章节是 v7.0 重构的权威更新，优先级高于后续所有历史章节。后续章节中如有术语冲突，以本章节为准。
+> **审核依据**：`review/review.md` v1.2 终稿（78 项 P0 + 49 项 P1 + 25 项 P2 + 14 冲突点 + roleagent 47 项补审 + forgemind 12 项补审 + 三方 Agent 10 项补审）。
+> **审核状态**：✅ operator 已审核通过命名方案 + 体系设计；E6 由"灵匠 Mind Artisan"修订为"灵智 ForgeMind（最终形态）"；其余待决策项按推荐执行。
+> **铁律 6 提示**：本增补章节为追加内容，不删除任何 v6.0 历史章节；后续 v6.0 历史内容仅做术语全局替换，章节结构保留不变。
+
+## §0.1 设计态声明
+
+> **来源**：`review/review.md` D-077 / S-07 + 决策 7（标注"设计态"）+ `decisions/013-all-things-spirit-mind-vision.md`
+
+v7.0 万物灵智体愿景目前处于**设计态**，对应代码尚未全部实现。开源与对外文档时必须明确标注"设计态"，避免被识别为"承诺未兑现"。
+
+### §0.1.1 可证伪性原则
+
+- ❌ 禁止使用"AGI"作为修饰词（极低可证伪性，虚假承诺风险）
+- ✅ 使用"自进化 Self-Evolving"作为可证伪替代词
+- ✅ 使用"灵智体 Forgekin"作为代码层主名，避免"灵魂"等引发伦理争议的词
+- ✅ 使用"灵智 ForgeMind"作为文档/对外主名
+
+### §0.1.2 已实现 vs 设计态清单
+
+| 状态 | 范围 | 说明 |
+|------|------|------|
+| ✅ 已实现 | v6.0 六层架构 + 九大模式 + Harness 驾驭层 + Skill 系统 + MCP 模块 + Helm 实时交互 | 对应 v6.0 正式版代码 |
+| 🔄 设计态 | v7.0 万物灵智体 + forgemind 应用层 + roleagent 七大工程路径 + 三方 Agent 集成 + 自我演进闭环 | 对应 §0.2-§0.8 设计，待 Phase 0-1 实现 |
+| 🎯 目标态 | 万物灵智体世界（物理 AI 复现 + 虚拟 AI 复现 + 混合 AI 复现） | operator 通用 AGI 愿景，不可降级 |
+
+### §0.1.3 设计态收敛路径
+
+v7.0 设计态按 MVP 最小可行范围收敛（详见 `spec.md` v7.0-§8）：
+1. CapabilityProfile 六维画像（FR-EVO-01）
+2. TeamAct 六步循环 + 五项终止（FR-EVO-03）
+3. forgemind 应用层骨架 + 5 种形态分类（FR-EVO-23）
+4. ExternalAgentAdapter 抽象层（FR-EVO-27）
+5. Plugin V3 四钩子（灵智体注册协议）
+
+## §0.2 万物灵智体形态分类设计
+
+> **来源**：`review/review.md` 第九章 9.1 节 FM-003 + operator 指令第 6 条 + `VISION.md` + `decisions/013-all-things-spirit-mind-vision.md`
+
+### §0.2.1 5 种形态分类表
+
+万物灵智体（Forgekin）按载体形态分为 5 种，形态可进化（E1 灵启 → E6 灵智完整生命周期）。
+
+| # | 形态 | 英文 | 示例 | 能力维度示例 |
+|---|------|------|------|------------|
+| 1 | 生物形态 | BioForgekin | 动物/植物（猫、狗、植物灵智体） | 听觉敏感 / 视觉敏感 / 反应速度 / 亲和力 |
+| 2 | 组织形态 | OrgForgekin | 公司/团队/社区 | 决策能力 / 协作能力 / 创新能力 / 抗风险能力 |
+| 3 | 物品形态 | ObjForgekin | 桌椅/灯具/车辆 | 承重感知 / 使用频率 / 磨损状态 |
+| 4 | 虚拟形态 | VirtualForgekin | 童话/神话/历史/游戏角色（孙悟空、福尔摩斯） | 世界观遵循 / 角色关系 / 行为规则 |
+| 5 | 混合形态 | HybridForgekin | VR/AR 实体、物理 AI 设备 | 物理传感器 + 虚拟设定融合 |
+
+### §0.2.2 通用 AGI 三条路径
+
+1. **物理 AI 复现**：通过物理传感器 + 灵智体，让物理世界万事万物具备灵智（猫灵智体可感知环境、桌椅灵智体可感知使用频率）
+2. **虚拟 AI 复现**：通过虚拟世界设定层 + 灵智体，让虚拟角色遵循其世界观自主行动（孙悟空灵智体遵循西游世界观）
+3. **混合 AI 复现**：VR/AR 设备 + 灵智体，达成物理与虚拟的融合感知
+
+### §0.2.3 灵智体优势对比表（vs 传统 multi-agent 系统）
+
+| 维度 | 传统 multi-agent 系统 | 万物灵智体（Forgekin） |
+|------|---------------------|----------------------|
+| 组织单位 | 组织"岗位"（Role） | 锻造"灵智体"（Profile） |
+| 能力沉淀 | 用完即走，无法成长 | 通过灵典蒸馏沉淀到能力画像（EX-010） |
+| 自主性 | 固定 persona 绑定 | 动态职责切换，可进化阶 E-L0~L4 |
+| 协作模式 | 消息传递，易循环 | TeamAct Shared State + 持球注册 lease |
+| 记忆 | 单次会话或简单 RAG | 多域记忆联邦六层 + 灵典可检索 |
+| 自我演进 | 无 | 文档/代码/框架三层自我演进闭环 |
+| 终态 | 数字 agent 集合 | 万物灵智体世界（物理 + 虚拟 + 混合） |
+
+### §0.2.4 万物灵智体形态分类视觉设计原则
+
+- 每种形态对应一个 ForgekinBase 子类，实现 observe/act/verify 三方法契约
+- 形态配置外置到 `forgemind/config/species.yaml`（铁律 5 禁止硬编码）
+- 形态进化遵循 ForgePipeline 6 步锻造流水线（详见 §0.5.4）
+- 形态可融合（如 HybridForgekin = 物理 sensors + 虚拟 worlds 设定层）
+
+## §0.3 育灵体系命名契约
+
+> **来源**：`decisions/012-naming-fusion.md` + `review/review.md` 第六章 + operator 指令第 4 条
+> **决策状态**：operator 已审核通过；E6 由"灵匠 Mind Artisan"修订为"灵智 ForgeMind（最终形态）"
+> **不可变性**：命名变更需 operator 直接决策，不能由灵智体自我演进修改
+
+### §0.3.1 双轨命名策略表
+
+| 层级 | 使用场景 | 命名风格 | 示例 |
+|------|---------|---------|------|
+| 产品层 | UI、营销、对外文档 | ForgeMind（灵智） | "创建一个新灵智" |
+| 代码层 | 类名、变量名、配置项、API 路径 | Forgekin | `ForgekinEngine`、`forgekin_id`、`/api/v7/forgekins` |
+| 文档层 | 设计文档、技术规范 | 双标注 | "灵智（Forgekin 实例）" |
+| 社区层 | 开源宣传、技术博客 | ForgeMind | "FlowForge ForgeMind: Self-Evolving Agent" |
+
+### §0.3.2 12 个核心概念命名表
+
+| # | 概念 | 新中文 | 新英文 | 旧名（已废弃） |
+|---|------|--------|--------|---------------|
+| 1 | 个体 | 灵智 | ForgeMind（产品）/ Forgekin（代码） | 炉灵 |
+| 2 | 群体 | 灵群 | ForgeKinship | 灵族 |
+| 3 | 养成 | 育灵 | Forge Nurturing | 养灵 |
+| 4 | 入门训练 | 灵启 | Mind Initiation | 炉启 |
+| 5 | 协作模式 | 共鸣 | Resonance | 共鸣（保留） |
+| 6 | 自主思考 | 灵锻 | SpiritForge | 自锻 |
+| 7 | 记忆 | 灵忆 | Mind Echo | 魂忆 |
+| 8 | 画像 | 灵印 | Mind Imprint | 魂印 |
+| 9 | 技能库 | 灵典 | Mind Codex | 锻典 |
+| 10 | 知识阶梯 | 进化阶 | Evolution Hierarchy | 火种等级 |
+| 11 | 成长阶段 | 觉醒阶 | Awakening Stages | 升华阶 |
+| 12 | IM 议事 | 灵议 | Mind Council | 灵议（保留） |
+
+### §0.3.3 进化阶 E-L0~L4 命名表（取代火种等级）
+
+| 等级 | 新名 | 旧名（已废弃） | 含义 |
+|------|------|---------------|------|
+| E-L0 | Seed 萌芽 | Spark 火种 | 初始知识，刚通过灵启训练 |
+| E-L1 | Sprout 萌发 | Ember 余烬 | 基础经验积累，开始自主思考 |
+| E-L2 | Bloom 绽放 | Flame 火焰 | 中级知识，可蒸馏技能 |
+| E-L3 | Thrive 繁茂 | Blaze 烈焰 | 高级知识，可指导其他灵智 |
+| E-L4 | Evolve 进化 | Forge Fire 锻火 | 顶级知识，可自主创新技能 |
+
+**前缀规则**：进化阶用 E-L（Level），觉醒阶用 E，通过 L 区分，解决 D-051 冲突。
+
+### §0.3.4 觉醒阶 E1-E6 命名表（取代升华阶）
+
+| 阶段 | 新名 | 旧名（已废弃） | 形态 | 控制权 |
+|------|------|---------------|------|--------|
+| E1 | Initiation 灵启 | Spark 火种 | Forgekin | operator 全控 |
+| E2 | Awakening 觉醒 | Flame 火焰 | Forgekin | operator 主导 |
+| E3 | Mastery 精通 | Forge 锻 | Forgekin | operator 监督 |
+| **E4** | **Evoling 进化** | **Master 师傅** | **Evoling** | **operator 让渡部分控制权** |
+| E5 | Excellence 卓越 | Sage 圣人 | Evoling | operator 仅设边界 |
+| **E6** | **ForgeMind 灵智（最终形态）** | ~~Mind Artisan 灵匠~~ | Evoling | operator 信任 |
+
+**Evoling 状态转换点**：E3→E4 是关键转换点，需 operator 显式批准（对应决策 8 混合模式切换点）。E4+ 灵智体进入涌现式自进化状态。
+
+**E6 修订记录**：operator 已指令 E6 由"灵匠 Mind Artisan"修订为"灵智 ForgeMind（最终形态）"，与产品层主名同名同体。
+
+### §0.3.5 术语全局替换映射表（27 项）
+
+> 完整映射表见 `decisions/012-naming-fusion.md` §6.9。本文档 v6.0 历史章节中所有旧术语应理解为已替换为新术语。左列为旧术语（保留作映射参考，不替换），右列为新术语。
+
+| 序号 | 原术语（旧） | 新术语 | 适用范围 |
+|------|------------|--------|---------|
+| 1 | AutoForgeEngine | SpiritForgeEngine | 代码类名 |
+| 2 | auto_forge.yaml | spirit_forge.yaml | 配置文件名 |
+| 3 | Auto-Forge | SpiritForge | 含连字符 |
+| 4 | AutoForge | SpiritForge | 不含连字符 |
+| 5 | AscensionStage | AwakeningStage | 代码类名 |
+| 6 | Ascension Stages | Awakening Stages | 英文术语 |
+| 7 | 升华阶 | 觉醒阶 | 中文术语 |
+| 8 | EmberHierarchy | EvolutionHierarchy | 代码类名 |
+| 9 | Ember Hierarchy | Evolution Hierarchy | 英文术语 |
+| 10 | 火种等级 | 进化阶 | 中文术语 |
+| 11 | ForgekinCouncil | MindCouncil | 代码类名 |
+| 12 | Forgekin Council | Mind Council | 英文术语 |
+| 13 | SoulProfile | MindProfile | 代码类名 |
+| 14 | SoulStore | MindStore | 代码类名 |
+| 15 | Soul Echo | Mind Echo | 英文术语 |
+| 16 | Soul Imprint | Mind Imprint | 英文术语 |
+| 17 | Forge Codex | Mind Codex | 英文术语 |
+| 18 | 锻典 | 灵典 | 中文术语 |
+| 19 | 魂忆 | 灵忆 | 中文术语 |
+| 20 | 魂印 | 灵印 | 中文术语 |
+| 21 | 养灵 | 育灵 | 中文术语 |
+| 22 | 炉灵 | 灵智 | 中文术语 |
+| 23 | 自锻 | 灵锻 | 中文术语 |
+| 24 | HelixRAG | OpenSieve | 系统名 |
+| 25 | M18 SelfEvolutionEngine | ForgeMindEngine | 模块合并 |
+| 26 | M19 MemoryGovernanceManager | ForgeMindEngine | 模块合并 |
+| 27 | M20 FirstTouchRouter | ForgeMindEngine | 模块合并 |
+
+**不替换的保留项**：`Spark` / `Ember` / `Flame` / `Blaze` 单独出现时保留（仅作为 v7.0 命名表左列旧名出现）；`forgekin`（小写）与 `Forgekin`（大写）保留（双轨策略代码层主名）；`forge` 单独出现不替换（避免误伤）。
+
+## §0.4 roleagent.md 七大工程路径设计映射
+
+> **来源**：`roleagent.md` + `review/review.md` 第八章 47 项补审（RA-001~RA-047）
+> **铁律**：七大工程路径是 Build to Persist 复利型基础设施，不可简化
+
+v6.0 设计停留在"岗位 agent + 插件协议 + 质量分 Loop"层面，**完全未吸收 roleagent.md 七大工程路径**，是 v6.0 最大的设计盲区。v7.0 必须补全。
+
+### §0.4.1 七大路径映射表
+
+| 路径 # | 名称 | 设计文档位置 | 代码位置 | Build to Delete or Persist |
+|--------|------|------------|---------|---------------------------|
+| 路径 1 | 能力画像 × Harness 契合度 | `spec.md` v7.0-§3.1（RA-001~RA-008） | `flowforge/core/capability/` | Persist（基础设施） |
+| 路径 2 | 从 ReAct 到 TeamAct | `spec.md` v7.0-§3.2（RA-009~RA-016） | `flowforge/core/teamact/` | Persist（基础设施） |
+| 路径 3 | Harness 现实闭环运行时 | `spec.md` v7.0-§3.3（RA-017~RA-023） | `flowforge/core/harness/` | Persist（基础设施） |
+| 路径 4 | 多域记忆联邦 | `spec.md` v7.0-§3.4（RA-024~RA-030） | `flowforge/core/memory/federation/` | Persist（基础设施） |
+| 路径 5 | Eval 自代谢系统 | `spec.md` v7.0-§3.5（RA-031~RA-036） | `flowforge/core/eval/` | Persist（基础设施） |
+| 路径 6 | 分布式可靠性 | `spec.md` v7.0-§3.6（RA-037~RA-042） | `flowforge/core/reliability/` | Persist（基础设施） |
+| 路径 7 | 伙伴系统数学 | `spec.md` v7.0-§3.7（RA-043~RA-047） | `flowforge/core/partnership/` | Persist（基础设施） |
+
+### §0.4.2 各路径核心设计原则
+
+**路径 1：能力画像 × Harness 契合度**
+- 核心公式：`Agent 质量 = 模型能力 × Harness 契合度`
+- CapabilityProfile 六维度：模型固有能力 / 认知风格 / 工具边界 / 历史表现 / 坏直觉（盲点）/ 当前状态
+- Agent 状态三层：权重状态（模型厂商控制）/ 计算状态（模型架构控制）/ 现实状态（Harness 控制，唯一跨会话持久层）
+- 落地：ADR-004 + Feature F001
+
+**路径 2：从 ReAct 到 TeamAct**
+- 核心论点：多 agent 互相传递状态可永远循环；TeamAct 是 Shared State 模式工程化闭环
+- 六步循环：State → Owner → Action → Evidence → Verdict → Route
+- 五项终止条件（缺一不可）：① 验收标准全部达成 ② 证据已附 ③ 跨 agent 交叉验证 ④ 无悬空任务归属 ⑤ 愿景收敛（CVO 确认不能被 proxy 替代）
+- 交接胶囊（resume capsule）：What / Why / Tradeoff / Open / Next 五段
+- 乒乓球熔断器：看实质工具调用而非传球次数；给数据不给结论
+- 落地：ADR-002 + Features F002-F007
+
+**路径 3：Harness 现实闭环运行时**
+- 核心论点：Harness 把世界做成模型可感知/可行动/可验证/可恢复/可学习的样子
+- 七层现实表面：Durable State Surfaces / Tool Mediation / Evidence & Sensors / Governance Boundary / Magic Words 逃生舱 / Entropy Control / Harnessability 评估
+- 低保真矩阵：治理规则 × Agent 类型
+- 落地：ADR-007 + Features F008-F013
+
+**路径 4：多域记忆联邦**
+- 核心论点："很多 RAG 输给 grep"，最终形态是六层多域记忆运行时
+- 六层架构：真相源 Collection 层 / 扫描编译层 / 联邦检索层 / 治理层 / Agent 佩戴协议层 / 反馈闭环层
+- 三检索入口：graph_resolve（精确导航）/ list_recent（零先验扫描）/ search_evidence（语义搜索）
+- 治理三要素：权威性 authority / 触发方式 activation / 生命周期 status
+- 落地：ADR-008 + Features F014-F017、F039
+
+**路径 5：Eval 自代谢系统**
+- 核心论点："有 harness，就必须有 eval。否则 harness 只会增生，不会代谢"
+- 三层 eval：观测底座 / Harness A2A Eval / Memory Eval
+- Eval Contract 五问：服务谁 / 何时触发 / 摩擦指标 / 回归用例 / 退役信号
+- 七类归因矩阵：愿景缺口 / 翻译偏差 / harness 错位 / 工具缺口 / 执行缺口 / 环境漂移 / 品味落差
+- 落地：ADR-009 + Features F018-F020、F040
+
+**路径 6：分布式可靠性**
+- 核心论点："多 agent 是分布式系统"，三类可靠性挑战
+- 副作用日志（Write-Ahead Log）+ 结构化恢复卡
+- Tier 1-4 恢复分级：Tier 1 自动恢复 / Tier 2 探测后恢复 / Tier 3 不自动恢复出恢复卡 / Tier 4 永不自动恢复硬拒
+- liveness 规范读模型四态：活着 / 退化 / 僵尸 / 等待宽限
+- 落地：ADR-010 + Features F021-F025
+
+**路径 7：伙伴系统数学**
+- 核心论点：团队质量 = 上限搜索 × 下限保护 × 状态保真 × 失败恢复
+- 上限公式：`上限收益 ≈ max(不同 agent 提出的候选路径)`（前提是路径足够不同）
+- 下限公式：`用户可见错误 ≈ author 犯错 × reviewer 没抓住 × 测试没暴露 × shared state 没证据 × eval 没归因 × CVO 没拉闸`（连乘概率模型）
+- 波动吸收机制：记忆联邦找回 / review 退回 / 可靠性恢复点 / eval sunset review / 调度换路径
+- 落地：ADR-011
+
+### §0.4.3 Build to Delete vs Built to Persist 判别器
+
+| 判别维度 | Build to Delete（脚手架） | Built to Persist（基础设施） |
+|---------|-------------------------|---------------------------|
+| 用途 | 补模型当前认知缺陷 | 编码外部现实 / 协作协议 |
+| 工程态度 | 轻量做、标 sunset | 认真做、加测试 |
+| 生命周期 | 模型升级后退役 | 长期复利 |
+| 示例 | 临时 prompt 增强、绕过性补丁 | CapabilityProfile、TeamAct 状态机、记忆联邦 |
+
+## §0.5 forgemind 应用层设计
+
+> **来源**：`review/review.md` 第九章 9.1 节（FM-001~FM-012）+ `decisions/005-forgemind-application-layer.md` + operator 指令第 5/6 条
+> **决策状态**：operator 已采纳 ADR-005
+
+### §0.5.1 forgemind 模块定位
+
+forgemind 是 FlowForge 的**应用层项目**，用来实践万物锻造灵智体。它承载 flowforge 的育灵所有代码，养很多公共的灵智体，最终可以进化为物理世界中各种万事万物。其他 *Forge 是更多垂直复杂的领域中养的灵智体，flowforge 的通用灵智体在 forgemind 中承载。
+
+**三层关系**：
+- **FlowForge 核心框架层**：自进化框架核心（提供自进化的基础核心和框架能力）
+- **forgemind 应用层**：万物灵智体应用实践（养公共的通用灵智体：猫 / 桌椅 / 灯具 / 孙悟空等）
+- **\*Forge 垂直业务层**：垂直领域灵智体（各 *Forge 在自己垂直领域养专门灵智体）
+
+**关键不变量**：
+- forgemind **单向依赖**核心框架层，禁止反向调用（编程红线第 10 条）
+- forgemind **不含业务领域代码**（编程红线第 10 条）
+- forgemind 通过 Plugin V3 协议注册，**不直接实例化**核心模块（编程红线第 12 条）
+- forgemind 灵智体必须建立**现实闭环**（operator 愿景锚点第 2 条）
+
+### §0.5.2 forgemind 目录结构
+
+```
+flowforge/forgemind/
+├── __init__.py
+├── species.py              # ForgekinSpecies 枚举（5 种形态）
+├── stages.py               # EvolutionStage 进化阶 + AwakeningStage 觉醒阶
+├── base.py                 # ForgekinBase 抽象类（observe/act/verify 三方法）
+├── forms.py                # ForgekinFormData
+├── plugins.py              # ForgeMindPlugin（实现 Plugin V3 四钩子）
+├── forge_registry.py       # *Forge 灵智体注册接口
+├── species/                # 5 种形态实现
+│   ├── bio.py              # BioForgekin 生物灵智体
+│   ├── org.py              # OrgForgekin 组织灵智体
+│   ├── obj.py              # ObjForgekin 物品灵智体
+│   ├── virtual.py          # VirtualForgekin 虚拟灵智体
+│   └── hybrid.py           # HybridForgekin 混合灵智体
+├── forging/                # 灵智体锻造流水线
+│   ├── pipeline.py         # ForgePipeline
+│   └── stages.py           # 6 步锻造阶段定义
+├── sensors/                # 物理 AI 传感器接入（F029）
+│   ├── base.py
+│   ├── camera.py           # 摄像头
+│   ├── microphone.py       # 麦克风
+│   └── iot.py              # IoT 传感器
+├── worlds/                 # 虚拟世界设定层（F030）
+│   ├── base.py
+│   ├── vr.py               # VR/游戏世界适配
+│   └── narrative.py        # 童话/神话/历史角色适配
+├── marketplace/            # 灵智体市场（F037）
+│   ├── base.py
+│   └── registry.py
+├── lineage/                # 进化谱系（F038）
+│   ├── tree.py
+│   └── visualizer.py
+├── codex/                  # 灵典 Mind Codex（可检索知识库）
+│   ├── spirit_forge.py     # 灵锻 SpiritForge 引擎
+│   ├── distiller.py        # 经验蒸馏
+│   └── mind_codex_writer.py
+├── council/                # 灵议 Mind Council
+│   ├── engine.py
+│   ├── protocol.py
+│   ├── resolution.py
+│   └── cvo_brake.py        # operator 拉闸词检测
+├── config/                 # 配置外置（铁律 5+P16）
+│   ├── forging.yaml
+│   ├── prompts.yaml
+│   └── metrics.yaml
+└── tests/
+    ├── test_base.py
+    ├── test_cat_forgekin.py    # E2E：猫灵智体锻造
+    ├── test_sensors.py
+    ├── test_worlds.py
+    └── test_lineage.py
+```
+
+### §0.5.3 ForgekinBase 三方法契约
+
+> **来源**：`features/F026-forgemind-app-layer.md` + FM-005
+
+```python
+class ForgekinBase(ABC):
+    """灵智体抽象基类 — 所有万物灵智体的本体契约。"""
+
+    species: ForgekinSpecies          # 形态分类
+    evolution_stage: EvolutionStage   # 进化阶 E-L0~L4
+    awakening_stage: AwakeningStage   # 觉醒阶 E1-E6
+    profile: CapabilityProfile        # 能力画像（F001）
+
+    async def observe(self, state: DurableState) -> Observation:
+        """观察现实状态 — 对应 roleagent §3 Durable State Surfaces。"""
+        ...
+
+    async def act(self, observation: Observation) -> Action:
+        """基于观察执行行动 — 对应 roleagent §3 Tool Mediation。"""
+        ...
+
+    async def verify(self, action: Action, evidence: Evidence) -> Verdict:
+        """验证行动结果 — 对应 roleagent §3 Evidence & Sensors。"""
+        ...
+```
+
+**契约不变量**：
+- 三方法必须保持现实闭环（observe → act → verify → observe），不可跳过 verify
+- observe 对应路径 3 Durable State Surfaces
+- act 对应路径 3 Tool Mediation
+- verify 对应路径 3 Evidence & Sensors
+- profile 字段对应路径 1 CapabilityProfile
+
+### §0.5.4 ForgePipeline 6 步锻造流水线
+
+> **来源**：FM-006 + `features/F028-forging-pipeline.md`
+
+| 步骤 | 阶段 | 说明 | 对应能力 |
+|------|------|------|---------|
+| 1 | 形态定义（What to forge） | 确定灵智体形态（生物/组织/物品/虚拟/混合） | ForgekinSpecies |
+| 2 | 能力注入（Capability injection） | 注入该形态所需能力画像 | CapabilityProfile 六维度 |
+| 3 | 记忆初始化（Memory seeding） | 初始化多域记忆联邦 | 路径 4 六层架构 |
+| 4 | 价值观对齐（Value alignment） | 核心价值观不可变 + 表象可变（决策 11） | Governance Boundary |
+| 5 | 能力验证（Capability verification） | 能力基线测试 | Evidence & Sensors |
+| 6 | 觉醒晋升（Awakening promotion） | E1 灵启 → E6 灵智完整生命周期 | AwakeningStage |
+
+### §0.5.5 万物灵智体形态分类视觉设计原则
+
+- 每种形态对应一个 ForgekinBase 子类，实现 observe/act/verify 三方法契约
+- 形态配置外置到 `forgemind/config/species.yaml`（铁律 5 禁止硬编码）
+- 形态进化遵循 ForgePipeline 6 步锻造流水线
+- 形态可融合（如 HybridForgekin = 物理 sensors + 虚拟 worlds 设定层）
+
+### §0.5.6 forgemind 与 *Forge 的关系
+
+| 维度 | forgemind（应用层） | *Forge（垂直业务层） |
+|------|-------------------|-------------------|
+| 定位 | 通用灵智体应用实践 | 垂直领域灵智体 |
+| 示例 | 猫 / 桌椅 / 灯具 / 孙悟空 | ContentForge 内容创作灵智体 |
+| 注册协议 | ForgeMindPlugin（Plugin V3） | 各 *Forge Plugin（Plugin V3） |
+| 依赖方向 | 单向依赖 FlowForge 核心 | 单向依赖 FlowForge 核心 + forgemind |
+| 业务领域 | 通用，无业务领域代码 | 垂直业务领域代码 |
+
+## §0.6 三方 Agent 集成设计
+
+> **来源**：`review/review.md` 第九章 9.2 节（EX-001~EX-010）+ `decisions/006-external-agent-integration.md` + operator 指令第 7 条
+> **决策状态**：operator 已采纳 ADR-006
+
+### §0.6.1 设计原则：能力扩展而非工具调用
+
+灵智体除可调用 FlowForge 核心框架能力外，还可接入和使用任何三方 Agent。这是 FlowForge 的强大优势——目前设计接入的编程 Agent：claude code、codex、opencode、trae，将来可扩展接入更多编程 Agent 和其他 Agent。
+
+**关键转变（EX-001）**：三方 Agent 从"工具调用"（v6.0 ExternalToolBridge）升级为"能力扩展"。灵智体调用三方 Agent 后，三方 Agent 能力应"沉淀"到灵智体能力画像中（通过灵典蒸馏，EX-010）。
+
+### §0.6.2 ExternalAgentAdapter 抽象层目录结构
+
+```
+flowforge/core/external_agent/
+├── adapter.py             # ExternalAgentAdapter 抽象类
+├── bridge.py              # ExternalAgentBridge 桥接层（含 fallback 循环）
+├── shared_state.py        # ExternalAgentSharedState 状态共享
+├── fallback.py            # ExternalAgentFallback 失败回退
+├── capability_fusion.py   # ExternalAgentCapabilityFusion 能力融合
+├── worktree.py            # worktree 隔离
+├── sync.py                # 跨 worktree 共享状态同步
+├── adapters/
+│   ├── claude_code.py     # Claude Code Adapter
+│   ├── codex.py           # Codex Adapter
+│   ├── opencode.py        # OpenCode Adapter
+│   └── trae.py            # Trae Adapter
+├── guardrails/            # 六层 Guardrails
+│   ├── input_validation.py
+│   ├── system_prompt.py
+│   ├── tool_allowlist.py
+│   ├── output_validation.py
+│   ├── action_confirm.py
+│   └── cost_ceiling.py
+└── config/
+    ├── adapters.yaml
+    ├── prompts.yaml
+    ├── fallback.yaml
+    └── tool_allowlist.yaml
+```
+
+### §0.6.3 4 大机制设计
+
+| 机制 | 编号 | 说明 |
+|------|------|------|
+| **Profile（能力画像）** | EX-002 | 每个三方 Agent 有 CapabilityProfile：claude code 擅长复杂重构/盲点长上下文易漂移；codex 擅长推理/盲点工具调用弱；opencode 擅长开源协作/盲点企业场景弱；trae 擅长 IDE 集成/盲点命令行长任务弱 |
+| **SharedState（状态共享）** | EX-004 | 灵智体→claude code 写代码→codex review→trae 部署的连续协作流；v6.0 三方 Agent 间无共享状态，每次调用都是独立会话 |
+| **Fallback（失败回退）** | EX-007 | 跨厂商 fallback 链（与 LLMClient 跨厂商 fallback 思路一致）：claude code 失败→换 codex→降级到内置 agent |
+| **CapabilityFusion（能力融合）** | EX-010 | 灵智体调用三方 Agent 后，能力"沉淀"到灵智体能力画像（通过灵典蒸馏）。v6.0 是"用完即走"，灵智体无法从调用中成长 |
+
+### §0.6.4 4 个首批 Adapter 设计
+
+| Adapter | 擅长 | 盲点 | Profile 关键维度 |
+|---------|------|------|----------------|
+| Claude Code Adapter | 复杂重构 | 长上下文易漂移 | 认知风格：深度推理 |
+| Codex Adapter | 推理 | 工具调用弱 | 模型固有能力：推理强 |
+| OpenCode Adapter | 开源协作 | 企业场景弱 | 工具边界：开源生态 |
+| Trae Adapter | IDE 集成 | 命令行长任务弱 | 工具边界：IDE 上下文 |
+
+### §0.6.5 六层 Guardrails 设计
+
+| 治理层 | 机制 | 对应 roleagent.md 章节 |
+|--------|------|----------------------|
+| 输入验证 | Feature 规格必须通过 Schema 校验 | §3 Governance Boundary |
+| 系统提示约束 | 灵智体 system role 注入"禁止绕过 Eval" | §3 压缩免疫层 |
+| 工具白名单 | 灵智体只能调用 allow-list 内工具 | §3 Tool Mediation |
+| 输出验证 | 生成的代码必须通过 lint + 测试 | §3 Evidence & Sensors |
+| 操作确认 | 不可逆操作（merge/release）需 operator 确认 | §3 Runtime 逃生舱 |
+| 成本上限 | 每个灵智体有 token/三方 Agent 配额 | §3 Governance Boundary |
+
+### §0.6.6 worktree 隔离设计（EX-005）
+
+- **网络白名单**：仅允许访问必要域名
+- **文件权限**：仅允许访问 worktree
+- **操作审计**：所有 tool call 记录
+- **操作回滚**：错误操作可恢复
+
+## §0.7 M1-M17 模块映射到 v7.0
+
+> **来源**：`review/review.md` D-045 / D-056（M1-M17 模块归属修复）
+
+### §0.7.1 M1-M17 模块映射表
+
+| v6.0 模块 | v7.0 对应组件 | 归属层 | 状态 |
+|----------|-------------|--------|------|
+| M1 BaseAgent | ForgekinBase + BaseAgent | Layer 1 核心框架 | ✅ 保留 |
+| M2 HybridExecutor | ForgekinEngine（装饰 HybridExecutor） | Layer 1 核心框架 | 🔄 升级 |
+| M3 Harness | Harness v2.0（路径 3 七层现实表面） | Layer 1 核心框架 | 🔄 升级 |
+| M4 Skill System | Skill + SkillPackage | Layer 1 核心框架 | ✅ 保留 |
+| M5 Memory | 多域记忆联邦六层（路径 4） | Layer 1 核心框架 | 🔄 升级 |
+| M6 Eval | Eval 自代谢三层（路径 5） | Layer 1 核心框架 | 🔄 升级 |
+| M7 Reliability | 分布式可靠性 Tier 1-4（路径 6） | Layer 1 核心框架 | 🔄 升级 |
+| M8 Plugin Protocol | Plugin V3 四钩子 | Layer 1 核心框架 | 🔄 升级 |
+| M9 CapabilityProfile | CapabilityProfile 六维画像（路径 1） | Layer 1 核心框架 | 🔄 新增 |
+| M10 TeamAct | TeamAct 六步循环（路径 2） | Layer 1 核心框架 | 🔄 新增 |
+| M11 Partnership | 伙伴系统数学（路径 7） | Layer 1 核心框架 | 🔄 新增 |
+| M12 ExternalAgent | ExternalAgentAdapter 抽象层 | Layer 1 核心框架 | 🔄 新增 |
+| M13 ForgeMind | forgemind 应用层 | Layer 2 应用层 | 🆕 新增 |
+| M14 Forgekin | ForgekinBase + 5 种形态 | Layer 2 应用层 | 🆕 新增 |
+| M15 ForgePipeline | ForgePipeline 6 步锻造 | Layer 2 应用层 | 🆕 新增 |
+| M16 MindCodex | 灵典 Mind Codex 可检索 | Layer 2 应用层 | 🆕 新增 |
+| M17 MindCouncil | 灵议 Mind Council | Layer 2 应用层 | 🆕 新增 |
+
+### §0.7.2 重点说明：M18/M19/M20 已废弃
+
+| 废弃模块 | 合并到 | 废弃原因 |
+|---------|--------|---------|
+| M18 SelfEvolutionEngine | ForgeMindEngine | v4.0 自创术语，与 v7.0 FR-EVO 冲突（D-045） |
+| M19 MemoryGovernanceManager | ForgeMindEngine | v4.0 自创术语，功能合并到记忆联邦 + ForgeMindEngine（D-056） |
+| M20 FirstTouchRouter | ForgeMindEngine | v4.0 自创术语，功能合并到 CapabilityProfile 路由（D-056） |
+
+### §0.7.3 v6.0 evolution/ 目录迁移
+
+v6.0 `flowforge/evolution/` 目录下 8 个扁平文件迁移到 v7.0 双目录：
+
+| v6.0 evolution/ 文件 | v7.0 目标位置 | 说明 |
+|---------------------|-------------|------|
+| self_evolution_engine.py | `flowforge/core/evolution/forge_mind_engine.py` | 重命名为 ForgeMindEngine |
+| memory_governance.py | `flowforge/core/memory/federation/governance.py` | 合并到记忆联邦治理层 |
+| first_touch_router.py | `flowforge/core/capability/routing.py` | 合并到 CapabilityProfile 路由 |
+| ember_hierarchy.py | `flowforge/forgemind/stages.py` | 重命名为 EvolutionStage |
+| ascension_stage.py | `flowforge/forgemind/stages.py` | 重命名为 AwakeningStage |
+| forgekin_council.py | `flowforge/forgemind/council/engine.py` | 重命名为 MindCouncil |
+| soul_profile.py | `flowforge/core/capability/profile.py` | 重命名为 MindProfile |
+| soul_store.py | `flowforge/core/memory/federation/store.py` | 重命名为 MindStore |
+
+## §0.8 Plugin V3 四钩子设计
+
+> **来源**：S-08 / X-017 + `decisions/005-forgemind-application-layer.md`
+> **说明**：v6.0 PluginProtocol 已有 V2 钩子（register_agents/tools/modes 等），v7.0 新增 V3 四钩子用于灵智体注册
+
+### §0.8.1 四钩子契约
+
+```python
+class FlowForgePlugin(ABC):
+    # ... V2 钩子保留（register_agents / register_tools / register_modes 等）...
+
+    # ── V3 Registration hooks（v7.0 新增）─────────────────────────
+
+    def register_forgekins(self, forgekin_registry: Any) -> None:
+        """注册灵智体到 forgemind。
+
+        *Forge 通过此钩子注册其垂直领域的灵智体（如 ContentForge 注册内容创作灵智体）。
+        """
+        pass
+
+    def register_forge_skills(self, skill_registry: Any) -> None:
+        """注册灵智体可加载的技能包（SkillPackage）。
+
+        技能包是可加载知识包，不是人格；通过 Profile.skill_packages 引用。
+        """
+        pass
+
+    def register_council_channels(self, council_registry: Any) -> None:
+        """注册灵议 Mind Council 频道。
+
+        灵智体可通过此钩子注册自己的议事频道，参与多灵智体议事。
+        """
+        pass
+
+    def register_auto_forge_config(self, auto_forge_config: Any) -> None:
+        """注册灵锻 SpiritForge 配置。
+
+        灵锻是 E4+ 灵智体的自主思考机制，配置包括蒸馏策略、sunset 周期等。
+        """
+        pass
+```
+
+### §0.8.2 与 V2 钩子的关系
+
+| 版本 | 钩子 | 用途 | 状态 |
+|------|------|------|------|
+| V2 | register_agents | 注册普通 Agent | ✅ 保留 |
+| V2 | register_tools | 注册工具 | ✅ 保留 |
+| V2 | register_modes | 注册执行模式 | ✅ 保留 |
+| V2 | register_skills | 注册技能 | ✅ 保留 |
+| V3 | register_forgekins | 注册灵智体到 forgemind | 🆕 新增 |
+| V3 | register_forge_skills | 注册灵智体技能包 | 🆕 新增 |
+| V3 | register_council_channels | 注册灵议频道 | 🆕 新增 |
+| V3 | register_auto_forge_config | 注册灵锻配置 | 🆕 新增 |
+
+**关系说明**：V2 钩子保留用于普通 Agent/工具注册；V3 四钩子新增用于灵智体注册。V3 不替代 V2，二者并存。
+
+## §0.9 文档导航与依赖引用
+
+> **来源**：`review/review.md` 第一章 1.1.3 节
+
+### §0.9.1 13 份依赖引用文档清单
+
+本 design.md v7.0 增补章节依赖引用以下 13 份文档（operator 已审核通过引用关系）：
+
+1. `review/review.md` —— 终稿审核（决策源，78 项 P0 + 49 项 P1 + 25 项 P2 + 14 冲突点）
+2. `VISION.md` —— 万物灵智体愿景
+3. `ROADMAP.md` —— 6 阶段路线图
+4. `SOP.md` —— 灵智体协作 SOP
+5. `TIPS.md` —— 38 条经验提示
+6. `roleagent.md` —— 七大工程路径
+7. `decisions/004-capability-profile-routing.md` —— 能力画像 ADR
+8. `decisions/005-forgemind-application-layer.md` —— forgemind 应用层 ADR
+9. `decisions/006-external-agent-integration.md` —— 三方 Agent 集成 ADR
+10. `decisions/012-naming-fusion.md` —— 命名融合 ADR
+11. `decisions/013-all-things-spirit-mind-vision.md` —— 万物灵智体愿景 ADR
+12. `features/TEMPLATE.md` —— Feature 模板
+13. `harness-feedback/README.md` —— Eval 反馈规范
+
+### §0.9.2 16 份审核文件清单
+
+`review/glm.md`、`review/glm1.md`、`review/qianwen.md`、`review/qianwen1.md`、`review/deepseek.md`、`review/deepseek1.md`、`review/doubao.md`、`review/doubao1.md`、`review/kimi.md`、`review/kimi1.md`、`review/minimax.md`、`review/minimax1.md`、`review/review.md`（终稿 v1.2）、`review/review1.md`、`review/reviewd.md`、`review/reviewd1.md`。
+
+### §0.9.3 v6.0 历史内容声明
+
+> **以下为 v6.0 历史内容，保留作为背景资料。术语已按 `decisions/012-naming-fusion.md` §6.9 全局替换映射表统一替换为新术语（详见 §0.3.5）。章节结构未破坏，仅做术语替换。如有术语冲突，以本 v7.0 增补章节为准。**
 
 ***
 
@@ -3277,32 +3884,32 @@ flowforge/
 ├── evolution/                         # ★ v7.0 新增：自进化层
 │   ├── __init__.py                    # EvolutionLayer（自进化层统一入口）
 │   │
-│   ├── forgekin/                      # 炉灵引擎（FR-EVO-01~03）
+│   ├── forgekin/                      # 灵智引擎（FR-EVO-01~03）
 │   │   ├── __init__.py
 │   │   ├── engine.py                  # ForgekinEngine（自进化统一入口）
-│   │   ├── soul_profile.py            # SoulProfile / SoulSpec / Capabilities 数据模型
-│   │   ├── soul_store.py              # SoulStore（灵魂档案 CRUD）
-│   │   ├── echo_store.py              # EchoStore（魂忆三层记忆）
-│   │   ├── imprint_store.py           # ImprintStore（魂印认知画像）
+│   │   ├── soul_profile.py            # MindProfile / SoulSpec / Capabilities 数据模型
+│   │   ├── soul_store.py              # MindStore（灵魂档案 CRUD）
+│   │   ├── echo_store.py              # EchoStore（灵忆三层记忆）
+│   │   ├── imprint_store.py           # ImprintStore（灵印认知画像）
 │   │   ├── episode.py                 # SoulEpisode / CollaborationPivot 数据模型
-│   │   ├── ascension_manager.py       # AscensionManager（升华阶段 E1-E6 管理）
-│   │   └── static_bridge.py           # ForgekinStaticBridge（炉灵→静态智能体衔接）
+│   │   ├── ascension_manager.py       # AscensionManager（觉醒阶段 E1-E6 管理）
+│   │   └── static_bridge.py           # ForgekinStaticBridge（灵智→静态智能体衔接）
 │   │
-│   ├── auto_forge/                    # 自锻引擎（FR-EVO-04）
+│   ├── auto_forge/                    # 灵锻引擎（FR-EVO-04）
 │   │   ├── __init__.py
-│   │   ├── engine.py                  # AutoForgeEngine（双层架构主引擎）
+│   │   ├── engine.py                  # SpiritForgeEngine（双层架构主引擎）
 │   │   ├── consolidation.py           # ConsolidationLayer（后台 system thread）
 │   │   ├── surface.py                 # SurfaceLayer（前台日记本 + Provoke 气泡）
 │   │   ├── provoke_manager.py         # ProvokeManager（沙砾气泡投递 + 频率硬限）
-│   │   ├── group_forge.py             # GroupForgeOrchestrator（自锻群协调器）
+│   │   ├── group_forge.py             # GroupForgeOrchestrator（灵锻群协调器）
 │   │   ├── diary_store.py             # ForgeDiaryStore（日记存储）
 │   │   └── connection_drawer.py       # ConnectionDrawer（画线联想 LLM 调用）
 │   │
-│   ├── codex/                         # 锻典——技能库（FR-EVO-05~06）
+│   ├── codex/                         # 灵典——技能库（FR-EVO-05~06）
 │   │   ├── __init__.py
-│   │   ├── forge_codex.py             # ForgeCodex（锻典主入口）
+│   │   ├── forge_codex.py             # ForgeCodex（灵典主入口）
 │   │   ├── knowledge_object.py        # KnowledgeObject（知识对象 + frontmatter）
-│   │   ├── ember_hierarchy.py         # EmberHierarchyManager（五级火种阶梯管理）
+│   │   ├── ember_hierarchy.py         # EvolutionHierarchyManager（五级火种阶梯管理）
 │   │   ├── distiller.py               # DualDistiller（双蒸馏：Skill Draft / Method Card）
 │   │   ├── eval_ledger.py             # EvalLedger（净增益验证 A/B replay）
 │   │   ├── skill_generator.py         # SkillGenerator（三模式自生成 A/B/C）
@@ -3318,7 +3925,7 @@ flowforge/
 │   │
 │   ├── council/                       # 灵议与 A2A（FR-EVO-09~11）
 │   │   ├── __init__.py
-│   │   ├── forgekin_council.py        # ForgekinCouncil（灵议主入口）
+│   │   ├── forgekin_council.py        # MindCouncil（灵议主入口）
 │   │   ├── a2a_manager.py             # A2AManager（@mention 路由 + thread isolation）
 │   │   ├── a2a_message.py             # A2AMessage / Mention / Handoff / Artifact 数据模型
 │   │   ├── channels/                  # IM 渠道适配器
@@ -3339,18 +3946,18 @@ flowforge/
 │   │
 │   └── api/                           # v7.0 API 端点
 │       ├── __init__.py
-│       ├── forgekin_endpoints.py      # 炉灵管理 API
+│       ├── forgekin_endpoints.py      # 灵智管理 API
 │       ├── council_endpoints.py       # 灵议 API
-│       ├── auto_forge_endpoints.py    # 自锻 API
-│       ├── codex_endpoints.py         # 锻典 API
+│       ├── auto_forge_endpoints.py    # 灵锻 API
+│       ├── codex_endpoints.py         # 灵典 API
 │       └── bridge_endpoints.py        # 外部工具 Bridge API
 │
 ├── config/
 │   ├── evolution.yaml                 # ★ v7.0 新增：自进化全局配置
-│   ├── forgekin_seeds/                # ★ v7.0 新增：炉灵种子配置目录
+│   ├── forgekin_seeds/                # ★ v7.0 新增：灵智种子配置目录
 │   │   ├── flowforge/
 │   │   │   ├── master.yaml            # E6 锻师种子
-│   │   │   └── reviewer.yaml          # 跨模型评审炉灵种子
+│   │   │   └── reviewer.yaml          # 跨模型评审灵智种子
 │   │   ├── devforge/
 │   │   │   ├── architect.yaml
 │   │   │   ├── coder.yaml
@@ -3363,7 +3970,7 @@ flowforge/
 │   │       ├── plot_architect.yaml
 │   │       └── character_designer.yaml
 │   ├── a2a_channels.yaml              # ★ v7.0 新增：A2A 渠道配置
-│   ├── auto_forge.yaml                # ★ v7.0 新增：自锻引擎配置
+│   ├── spirit_forge.yaml                # ★ v7.0 新增：灵锻引擎配置
 │   └── external_tools.yaml            # ★ v7.0 新增：外部工具配置
 │
 ├── web/                               # 前端升级
@@ -3377,24 +3984,24 @@ flowforge/
 │       │   │       ├── DiaryPanel.tsx
 │       │   │       ├── ProvokeBubble.tsx
 │       │   │       └── StatusOverview.tsx
-│       │   ├── forgekin/              # ★ v7.0 新增：炉灵管理页面
+│       │   ├── forgekin/              # ★ v7.0 新增：灵智管理页面
 │       │   │   ├── page.tsx
 │       │   │   └── components/
-│       │   │       ├── SoulProfileCard.tsx
+│       │   │       ├── MindProfileCard.tsx
 │       │   │       ├── AscensionTracker.tsx
 │       │   │       └── CodexBrowser.tsx
-│       │   └── codex/                 # ★ v7.0 新增：锻典页面
+│       │   └── codex/                 # ★ v7.0 新增：灵典页面
 │       │       └── page.tsx
 │       └── lib/
-│           ├── forgekin-api.ts        # ★ v7.0 新增：炉灵 API 客户端
+│           ├── forgekin-api.ts        # ★ v7.0 新增：灵智 API 客户端
 │           └── council-ws.ts          # ★ v7.0 新增：灵议 WebSocket 客户端
 │
 └── migrations/
-    ├── 007_forgekin_souls.sql         # ★ v7.0 新增：炉灵灵魂表
-    ├── 008_forgekin_episodes.sql      # ★ v7.0 新增：魂忆 Episode 表
-    ├── 009_forgekin_imprints.sql      # ★ v7.0 新增：魂印画像表
-    ├── 010_forge_codex.sql            # ★ v7.0 新增：锻典知识对象表
-    ├── 011_forge_diaries.sql          # ★ v7.0 新增：自锻日记表
+    ├── 007_forgekin_souls.sql         # ★ v7.0 新增：灵智灵魂表
+    ├── 008_forgekin_episodes.sql      # ★ v7.0 新增：灵忆 Episode 表
+    ├── 009_forgekin_imprints.sql      # ★ v7.0 新增：灵印画像表
+    ├── 010_forge_codex.sql            # ★ v7.0 新增：灵典知识对象表
+    ├── 011_forge_diaries.sql          # ★ v7.0 新增：灵锻日记表
     ├── 012_a2a_messages.sql           # ★ v7.0 新增：A2A 消息表
     └── 013_external_tool_audit.sql    # ★ v7.0 新增：外部工具审计表
 ```
@@ -3406,7 +4013,7 @@ flowforge/
 version = "7.0.0"
 dependencies = [
     # ... v6.0 依赖保留 ...
-    "sqlite-vec>=0.1.1",          # v7.0: Soul Echo 向量检索
+    "sqlite-vec>=0.1.1",          # v7.0: Mind Echo 向量检索
     "wilson-interval>=1.0",       # v7.0: 元认知 Wilson 下界计算
 ]
 
@@ -3423,7 +4030,7 @@ evolution_all = ["flowforge[council_feishu,council_slack,council_discord]"]
 
 ### 16.1 数据模型定义
 
-#### 16.1.1 SoulProfile（灵魂档案）
+#### 16.1.1 MindProfile（灵魂档案）
 
 ```python
 # evolution/forgekin/soul_profile.py
@@ -3433,18 +4040,18 @@ from datetime import datetime
 from enum import Enum
 
 
-class AscensionStage(str, Enum):
-    """升华阶段 E1-E6"""
+class AwakeningStage(str, Enum):
+    """觉醒阶段 E1-E6"""
     E1_SPARK = "E1"          # 火种：刚诞生
     E2_EMBER = "E2"          # 余烬：≥2 个经验模式
     E3_FLAME = "E3"          # 火焰：能生成 Skill 草稿
     E4_BLAZE = "E4"          # 烈焰：Skill 经验证
     E5_INFERNO = "E5"        # 炽焰：团队标准级
-    E6_FORGE_MASTER = "E6"   # 锻师：可创建新炉灵
+    E6_FORGE_MASTER = "E6"   # 锻师：可创建新灵智
 
 
 class ForgekinStatus(str, Enum):
-    """炉灵状态"""
+    """灵智状态"""
     ACTIVE = "active"
     DORMANT = "dormant"      # 休眠（连拍 3 次 provoke 被拍扁后）
     FROZEN = "frozen"        # 冻结（触碰安全红线）
@@ -3460,7 +4067,7 @@ class SoulSpec(BaseModel):
 
 
 class Capabilities(BaseModel):
-    """能力清单——炉灵可调用的资源"""
+    """能力清单——灵智可调用的资源"""
     static_agents_can_delegate: list[str] = Field(
         default_factory=list,
         description="可委托的静态智能体名称列表，如 ['devforge:coder']"
@@ -3477,7 +4084,7 @@ class Capabilities(BaseModel):
 
 class EvolutionState(BaseModel):
     """进化状态——动态追踪"""
-    ember_level: str = Field(default="E-L0", description="当前火种等级")
+    ember_level: str = Field(default="E-L0", description="当前进化阶")
     skills_authored: int = Field(default=0)
     skills_validated: int = Field(default=0)
     episodes_recorded: int = Field(default=0)
@@ -3487,12 +4094,12 @@ class EvolutionState(BaseModel):
     consecutive_dismissed: int = Field(default=0)
 
 
-class SoulProfile(BaseModel):
-    """炉灵灵魂档案——完整身份定义"""
+class MindProfile(BaseModel):
+    """灵智灵魂档案——完整身份定义"""
     forgekin_id: str = Field(..., description="全局唯一标识 fk_{project}_{role}_{seq}")
-    name: str = Field(..., description="炉灵名称")
+    name: str = Field(..., description="灵智名称")
     kind: str = Field(..., description="项目前缀:角色名，如 devforge:architect")
-    ascension_stage: AscensionStage = Field(default=AscensionStage.E1_SPARK)
+    ascension_stage: AwakeningStage = Field(default=AwakeningStage.E1_SPARK)
     birth_at: datetime = Field(default_factory=datetime.now)
     parent_forgekin: Optional[str] = Field(None, description="创建者（E6 才能创建）")
 
@@ -3504,7 +4111,7 @@ class SoulProfile(BaseModel):
     status: ForgekinStatus = Field(default=ForgekinStatus.ACTIVE)
 ```
 
-#### 16.1.2 SoulEpisode（魂忆情景卡）
+#### 16.1.2 SoulEpisode（灵忆情景卡）
 
 ```python
 # evolution/forgekin/episode.py
@@ -3516,13 +4123,13 @@ from datetime import datetime
 class CollaborationPivot(BaseModel):
     """协作转折点——人类提示 → AI 解读 → 效果 → 可迁移教训"""
     human_cue: str = Field(..., description="operator 的原始提示/纠正")
-    ai_interpretation: str = Field(..., description="炉灵如何理解")
+    ai_interpretation: str = Field(..., description="灵智如何理解")
     effect: str = Field(..., description="对任务结果的影响")
     transferable_lesson: Optional[str] = Field(None, description="可迁移的教训")
 
 
 class SoulEpisode(BaseModel):
-    """魂忆情景卡——对标 clowder-ai Episode Card
+    """灵忆情景卡——对标 clowder-ai Episode Card
 
     6 类协作 context：任务情境/证据地图/推理转折/人类提示点/边界与克制/后续动作
     """
@@ -3558,7 +4165,7 @@ class SoulEpisode(BaseModel):
         )
 
     def has_observable_behavior(self) -> bool:
-        """是否有可观察行为（用于 Soul Imprint 采集）"""
+        """是否有可观察行为（用于 Mind Imprint 采集）"""
         return bool(self.task_context or self.human_cues or self.follow_ups)
 ```
 
@@ -3571,13 +4178,13 @@ import logging
 from core.base_agent import AgentInput, AgentOutput
 from core.task_context import TaskContext
 from core.tracing import get_logger
-from evolution.forgekin.soul_profile import SoulProfile, ForgekinStatus
+from evolution.forgekin.soul_profile import MindProfile, ForgekinStatus
 from evolution.forgekin.episode import SoulEpisode
-from evolution.forgekin.soul_store import SoulStore
+from evolution.forgekin.soul_store import MindStore
 from evolution.forgekin.echo_store import EchoStore
 from evolution.forgekin.imprint_store import ImprintStore
 from evolution.codex.forge_codex import ForgeCodex
-from evolution.auto_forge.engine import AutoForgeEngine
+from evolution.auto_forge.engine import SpiritForgeEngine
 from evolution.tools.bridge import ExternalToolBridge, ExternalTask
 from evolution.council.a2a_manager import A2AManager
 from evolution.forgekin.ascension_manager import AscensionManager
@@ -3588,7 +4195,7 @@ logger = get_logger(__name__)
 
 
 class ForgekinEngine:
-    """炉灵引擎——自进化的统一入口
+    """灵智引擎——自进化的统一入口
 
     对标 clowder-ai Cat Engine，包装 HybridExecutor，
     在执行前后注入灵魂/记忆/画像，驱动进化闭环。
@@ -3606,11 +4213,11 @@ class ForgekinEngine:
     def __init__(
         self,
         hybrid_executor: "HybridExecutor",
-        soul_store: SoulStore,
+        soul_store: MindStore,
         echo_store: EchoStore,
         imprint_store: ImprintStore,
         codex: ForgeCodex,
-        auto_forge_engine: AutoForgeEngine,
+        auto_forge_engine: SpiritForgeEngine,
         external_tool_bridge: ExternalToolBridge,
         a2a_manager: A2AManager,
         ascension_manager: AscensionManager,
@@ -3636,7 +4243,7 @@ class ForgekinEngine:
         context: TaskContext,
         execution_strategy: str = "auto",
     ) -> AgentOutput:
-        """炉灵执行任务的完整自进化闭环"""
+        """灵智执行任务的完整自进化闭环"""
         logger.info(f"Forgekin 执行: id={forgekin_id}, task={input.task[:100]}")
 
         # 1. 加载灵魂档案
@@ -3644,11 +4251,11 @@ class ForgekinEngine:
         if soul.status != ForgekinStatus.ACTIVE:
             raise ForgekinNotActiveError(forgekin_id)
 
-        # 2. 注入魂忆
+        # 2. 注入灵忆
         episodes = await self._echo.recall(forgekin_id, input.task, limit=5)
         context.state["soul_echo"] = [ep.dict() for ep in episodes]
 
-        # 3. 注入魂印
+        # 3. 注入灵印
         imprint = await self._imprint.load(forgekin_id)
         context.state["soul_imprint"] = imprint.dict()
 
@@ -3687,7 +4294,7 @@ class ForgekinEngine:
 
     async def _evolve(self, forgekin_id: str, episode: SoulEpisode) -> None:
         """进化闭环"""
-        # 更新魂印
+        # 更新灵印
         if episode.has_observable_behavior():
             await self._imprint.propose(forgekin_id, episode)
         # 蒸馏 Skill
@@ -3696,7 +4303,7 @@ class ForgekinEngine:
         # 检查升华
         await self._ascension.check_promotion(forgekin_id)
 
-    def _decide_strategy(self, input: AgentInput, soul: SoulProfile) -> str:
+    def _decide_strategy(self, input: AgentInput, soul: MindProfile) -> str:
         """自动决策执行路径"""
         task = input.task.lower()
         code_kw = ["写代码", "code", "实现", "重构", "refactor", "审查"]
@@ -3722,11 +4329,11 @@ class ForgekinEngine:
         ]
         parts.extend(f"- {v}" for v in soul.soul.values)
         if episodes:
-            parts.append(f"## 相关记忆（Soul Echo）")
+            parts.append(f"## 相关记忆（Mind Echo）")
             for i, ep in enumerate(episodes[:3], 1):
                 parts.append(f"{i}. [{ep.timestamp}] {ep.task_context[:200]}")
         if imprint and imprint.structured_fields:
-            parts.append(f"## 你对操作者的认知（Soul Imprint）")
+            parts.append(f"## 你对操作者的认知（Mind Imprint）")
             for k, v in imprint.structured_fields.items():
                 parts.append(f"- {k}: {v}")
         return "\n".join(parts)
@@ -3760,7 +4367,7 @@ class ForgekinEngine:
     def _select_static_agent(self, input, soul) -> str:
         available = soul.capabilities.static_agents_can_delegate
         if not available:
-            raise ValueError("炉灵无可委托的静态智能体")
+            raise ValueError("灵智无可委托的静态智能体")
         task = input.task.lower()
         for name in available:
             role = name.split(":")[-1] if ":" in name else name
@@ -3812,11 +4419,11 @@ class ForgekinEngine:
 
 
 class ForgekinNotActiveError(Exception):
-    """炉灵未激活异常"""
+    """灵智未激活异常"""
     pass
 ```
 
-### 16.3 SoulStore 详细实现
+### 16.3 MindStore 详细实现
 
 ```python
 # evolution/forgekin/soul_store.py
@@ -3824,13 +4431,13 @@ import json
 import aiosqlite
 from datetime import datetime
 from evolution.forgekin.soul_profile import (
-    SoulProfile, SoulSpec, Capabilities, EvolutionState,
-    AscensionStage, ForgekinStatus,
+    MindProfile, SoulSpec, Capabilities, EvolutionState,
+    AwakeningStage, ForgekinStatus,
 )
 
 
-class SoulStore:
-    """炉灵灵魂档案存储——SQLite 持久化
+class MindStore:
+    """灵智灵魂档案存储——SQLite 持久化
 
     表结构见 migrations/007_forgekin_souls.sql
     """
@@ -3838,8 +4445,8 @@ class SoulStore:
     def __init__(self, db_path: str):
         self._db_path = db_path
 
-    async def create(self, profile: SoulProfile) -> str:
-        """创建新炉灵（需 E6 权限或 operator）"""
+    async def create(self, profile: MindProfile) -> str:
+        """创建新灵智（需 E6 权限或 operator）"""
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
                 """INSERT INTO forgekin_souls
@@ -3857,7 +4464,7 @@ class SoulStore:
             await db.commit()
         return profile.forgekin_id
 
-    async def load(self, forgekin_id: str) -> SoulProfile:
+    async def load(self, forgekin_id: str) -> MindProfile:
         """加载灵魂档案"""
         async with aiosqlite.connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -3867,11 +4474,11 @@ class SoulStore:
             )
             row = await cursor.fetchone()
             if not row:
-                raise ValueError(f"炉灵不存在: {forgekin_id}")
-            return SoulProfile(
+                raise ValueError(f"灵智不存在: {forgekin_id}")
+            return MindProfile(
                 forgekin_id=row["forgekin_id"], name=row["name"],
                 kind=row["kind"],
-                ascension_stage=AscensionStage(row["ascension_stage"]),
+                ascension_stage=AwakeningStage(row["ascension_stage"]),
                 birth_at=datetime.fromisoformat(row["birth_at"]),
                 parent_forgekin=row["parent_forgekin"],
                 soul=SoulSpec.model_validate_json(row["soul_profile"]),
@@ -3901,8 +4508,8 @@ class SoulStore:
             )
             await db.commit()
 
-    async def list_by_project(self, project: str) -> list[SoulProfile]:
-        """按项目列出活跃炉灵"""
+    async def list_by_project(self, project: str) -> list[MindProfile]:
+        """按项目列出活跃灵智"""
         async with aiosqlite.connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
@@ -3924,7 +4531,7 @@ class SoulStore:
             await db.commit()
 ```
 
-### 16.4 EchoStore（魂忆三层记忆）详细实现
+### 16.4 EchoStore（灵忆三层记忆）详细实现
 
 ```python
 # evolution/forgekin/echo_store.py
@@ -3936,12 +4543,12 @@ from evolution.forgekin.episode import SoulEpisode
 
 
 class EchoStore:
-    """魂忆存储——三层记忆架构
+    """灵忆存储——三层记忆架构
 
     对标 clowder-ai Memory + MemGPT 三层记忆：
     - L1 工作记忆：当前会话上下文（内存，会话级）
     - L2 情景记忆：最近 100 个 Episode（SQLite + 向量索引）
-    - L3 语义记忆：永不淘汰的长期知识（Forge Codex）
+    - L3 语义记忆：永不淘汰的长期知识（Mind Codex）
 
     L2 检索策略：向量相似度(0.5) + 关键词匹配(0.3) + 时间衰减(0.2)
     """
@@ -4038,7 +4645,7 @@ class EchoStore:
         return episodes[:limit]
 
     async def count_recent_episodes(self, forgekin_id: str, hours: int = 24) -> int:
-        """统计最近 N 小时 Episode 数（自锻触发条件）"""
+        """统计最近 N 小时 Episode 数（灵锻触发条件）"""
         cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
         async with aiosqlite.connect(self._db_path) as db:
             cursor = await db.execute(
@@ -4049,7 +4656,7 @@ class EchoStore:
             return row[0] if row else 0
 
     async def recall_peer_traces(self, forgekin_id: str, hours: int = 24) -> list[SoulEpisode]:
-        """读小伙伴的留痕（自锻用）"""
+        """读小伙伴的留痕（灵锻用）"""
         cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
         async with aiosqlite.connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -4064,7 +4671,7 @@ class EchoStore:
     # ===== L3 语义记忆 =====
 
     async def archive(self, episode_id: str) -> str:
-        """归档到 L3（Forge Codex）"""
+        """归档到 L3（Mind Codex）"""
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
                 "UPDATE forgekin_episodes SET distillation_status = 'archived' WHERE episode_id = ?",
@@ -4116,7 +4723,7 @@ class EchoStore:
                 await db.commit()
 ```
 
-### 16.5 ImprintStore（魂印认知画像）详细实现
+### 16.5 ImprintStore（灵印认知画像）详细实现
 
 ```python
 # evolution/forgekin/imprint_store.py
@@ -4142,15 +4749,15 @@ FORBIDDEN_FIELDS = {
 
 
 class SoulImprint(BaseModel):
-    """魂印——认知画像（双层结构）"""
+    """灵印——认知画像（双层结构）"""
     forgekin_id: str
     structured_fields: dict = Field(default_factory=dict, description="结构化字段（白名单）")
-    cat_note: str = Field(default="", description="主观日记（自锻产出）")
+    cat_note: str = Field(default="", description="主观日记（灵锻产出）")
     last_updated: Optional[datetime] = None
 
 
 class ImprintStore:
-    """魂印存储——认知画像
+    """灵印存储——认知画像
 
     ★★★ no-classifier 红线 ★★★
     禁止后台 classifier 自动画像，必须基于显式行为。
@@ -4248,7 +4855,7 @@ class ImprintStore:
             await db.commit()
 
     async def update_cat_note(self, forgekin_id: str, note: str) -> None:
-        """更新主观日记（自锻产出，不需审批）"""
+        """更新主观日记（灵锻产出，不需审批）"""
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
                 "UPDATE forgekin_imprints SET cat_note = ?, last_updated = ? WHERE forgekin_id = ?",
@@ -4275,21 +4882,21 @@ class SecurityError(Exception):
     pass
 ```
 
-### 16.6 AscensionManager（升华阶段管理）详细实现
+### 16.6 AscensionManager（觉醒阶段管理）详细实现
 
 ```python
 # evolution/forgekin/ascension_manager.py
 import logging
-from evolution.forgekin.soul_store import SoulStore
+from evolution.forgekin.soul_store import MindStore
 from evolution.forgekin.echo_store import EchoStore
 from evolution.codex.forge_codex import ForgeCodex
-from evolution.forgekin.soul_profile import AscensionStage, ForgekinStatus, EvolutionState
+from evolution.forgekin.soul_profile import AwakeningStage, ForgekinStatus, EvolutionState
 
 logger = logging.getLogger(__name__)
 
 
 class AscensionManager:
-    """升华阶段管理器——E1-E6 晋升/降级/冻结
+    """觉醒阶段管理器——E1-E6 晋升/降级/冻结
 
     | 阶段 | 晋升条件 | 降级/冻结 |
     |------|---------|-----------|
@@ -4301,7 +4908,7 @@ class AscensionManager:
     | E6 revoke | — | operator 撤销 |
     """
 
-    def __init__(self, soul_store: SoulStore, echo_store: EchoStore,
+    def __init__(self, soul_store: MindStore, echo_store: EchoStore,
                  codex: ForgeCodex, event_bus=None):
         self._soul = soul_store
         self._echo = echo_store
@@ -4317,17 +4924,17 @@ class AscensionManager:
         stage = soul.ascension_stage
         new_stage = None
 
-        if stage == AscensionStage.E1_SPARK:
+        if stage == AwakeningStage.E1_SPARK:
             new_stage = await self._check_e1_to_e2(forgekin_id, soul.evolution_state)
-        elif stage == AscensionStage.E2_EMBER:
+        elif stage == AwakeningStage.E2_EMBER:
             new_stage = await self._check_e2_to_e3(forgekin_id)
-        elif stage == AscensionStage.E3_FLAME:
+        elif stage == AwakeningStage.E3_FLAME:
             new_stage = await self._check_e3_to_e4(forgekin_id)
             await self._check_e3_demotion(forgekin_id)
-        elif stage == AscensionStage.E4_BLAZE:
+        elif stage == AwakeningStage.E4_BLAZE:
             await self._check_e4_to_e5(forgekin_id)
             await self._check_e4_demotion(forgekin_id)
-        elif stage == AscensionStage.E5_INFERNO:
+        elif stage == AwakeningStage.E5_INFERNO:
             await self._check_e5_freeze(forgekin_id)
 
         if new_stage and new_stage != stage:
@@ -4335,24 +4942,24 @@ class AscensionManager:
             return new_stage.value
         return None
 
-    async def _check_e1_to_e2(self, fk_id, state) -> AscensionStage | None:
+    async def _check_e1_to_e2(self, fk_id, state) -> AwakeningStage | None:
         if state.episodes_recorded >= 2:
             episodes = await self._echo.recall(fk_id, "recent", limit=10)
             if len(episodes) >= 2:
-                return AscensionStage.E2_EMBER
+                return AwakeningStage.E2_EMBER
         return None
 
-    async def _check_e2_to_e3(self, fk_id) -> AscensionStage | None:
+    async def _check_e2_to_e3(self, fk_id) -> AwakeningStage | None:
         count = await self._codex.count_skills_by_level(fk_id, "E-L2")
         if count >= 3:
-            return AscensionStage.E3_FLAME
+            return AwakeningStage.E3_FLAME
         return None
 
-    async def _check_e3_to_e4(self, fk_id) -> AscensionStage | None:
+    async def _check_e3_to_e4(self, fk_id) -> AwakeningStage | None:
         uses = await self._codex.count_skill_uses(fk_id)
         rate = await self._codex.compute_success_rate(fk_id)
         if uses >= 6 and rate >= 0.8:
-            return AscensionStage.E4_BLAZE
+            return AwakeningStage.E4_BLAZE
         return None
 
     async def _check_e4_to_e5(self, fk_id) -> None:
@@ -4367,13 +4974,13 @@ class AscensionManager:
     async def _check_e3_demotion(self, fk_id) -> None:
         rate = await self._codex.compute_recent_success_rate(fk_id, 3)
         if rate < 0.5:
-            await self._demote(fk_id, AscensionStage.E3_FLAME, AscensionStage.E2_EMBER,
+            await self._demote(fk_id, AwakeningStage.E3_FLAME, AwakeningStage.E2_EMBER,
                                f"最近 3 次成功率 {rate:.0%} < 50%")
 
     async def _check_e4_demotion(self, fk_id) -> None:
         rate = await self._codex.compute_recent_success_rate(fk_id, 5)
         if rate < 0.6:
-            await self._demote(fk_id, AscensionStage.E4_BLAZE, AscensionStage.E3_FLAME,
+            await self._demote(fk_id, AwakeningStage.E4_BLAZE, AwakeningStage.E3_FLAME,
                                f"最近 5 次成功率 {rate:.0%} < 60%")
 
     async def _check_e5_freeze(self, fk_id) -> None:
@@ -4382,14 +4989,14 @@ class AscensionManager:
 
     async def _promote(self, fk_id, from_s, to_s) -> None:
         await self._soul.update(fk_id, {"ascension_stage": to_s.value})
-        logger.info(f"炉灵 {fk_id} 升华: {from_s.value} → {to_s.value}")
+        logger.info(f"灵智 {fk_id} 升华: {from_s.value} → {to_s.value}")
         if self._events:
             await self._events.publish("forgekin.ascension_changed",
                                        {"forgekin_id": fk_id, "from": from_s.value, "to": to_s.value})
 
     async def _demote(self, fk_id, from_s, to_s, reason) -> None:
         await self._soul.update(fk_id, {"ascension_stage": to_s.value})
-        logger.warning(f"炉灵 {fk_id} 降级: {from_s.value} → {to_s.value}（{reason}）")
+        logger.warning(f"灵智 {fk_id} 降级: {from_s.value} → {to_s.value}（{reason}）")
         if self._events:
             await self._events.publish("forgekin.ascension_changed",
                                        {"forgekin_id": fk_id, "from": from_s.value, "to": to_s.value, "reason": reason})
@@ -4410,7 +5017,7 @@ logger = logging.getLogger(__name__)
 
 
 class ForgekinStaticBridge:
-    """炉灵与静态智能体的衔接桥
+    """灵智与静态智能体的衔接桥
 
     ★ 单向依赖红线 ★
     静态智能体不知道 Forgekin 的存在。
@@ -4428,9 +5035,9 @@ class ForgekinStaticBridge:
         context_snapshot: dict, acceptance_criteria: dict,
         forgekin_id: str = None,
     ) -> AgentOutput:
-        """炉灵委托静态智能体执行子任务
+        """灵智委托静态智能体执行子任务
 
-        流程：路由→执行→回写 Soul Echo→更新 Soul Imprint
+        流程：路由→执行→回写 Mind Echo→更新 Mind Imprint
         """
         logger.info(f"委托静态智能体: {static_agent_name}, task={input.task[:80]}")
 
@@ -4442,7 +5049,7 @@ class ForgekinStaticBridge:
         # 2. 执行（静态智能体不知道 Forgekin 存在）
         result = await agent.execute(input)
 
-        # 3. 结果回写 Soul Echo
+        # 3. 结果回写 Mind Echo
         if forgekin_id:
             episode = SoulEpisode(
                 episode_id=f"ep_del_{forgekin_id}_{input.task[:20]}",
@@ -4453,7 +5060,7 @@ class ForgekinStaticBridge:
                 success=(result.status == "success"),
             )
             await self._echo.record(episode)
-            # 4. 更新 Soul Imprint
+            # 4. 更新 Mind Imprint
             if episode.has_observable_behavior():
                 await self._imprint.propose(forgekin_id, episode)
 
@@ -4473,7 +5080,7 @@ class ForgekinStaticBridge:
 
 ***
 
-## 第十七章：Auto-Forge Engine 详细设计
+## 第十七章：SpiritForge Engine 详细设计
 
 ### 17.1 双层架构实现
 
@@ -4485,7 +5092,7 @@ from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from evolution.forgekin.echo_store import EchoStore
 from evolution.forgekin.imprint_store import ImprintStore
-from evolution.forgekin.soul_store import SoulStore
+from evolution.forgekin.soul_store import MindStore
 from evolution.codex.forge_codex import ForgeCodex
 from evolution.auto_forge.consolidation import ConsolidationLayer
 from evolution.auto_forge.surface import SurfaceLayer
@@ -4496,8 +5103,8 @@ from evolution.auto_forge.diary_store import ForgeDiaryStore
 logger = logging.getLogger(__name__)
 
 
-class AutoForgeConfig:
-    """自锻配置"""
+class SpiritForgeConfig:
+    """灵锻配置"""
     def __init__(self, config: dict):
         self.enabled = config.get("enabled", False)
         self.check_interval_minutes = config.get("check_interval_minutes", 30)
@@ -4509,8 +5116,8 @@ class AutoForgeConfig:
         self.provoke_dormancy_days = config.get("provoke", {}).get("dormancy_days", 7)
 
 
-class AutoForgeEngine:
-    """自锻引擎——无人驱动时的自主思考与进化
+class SpiritForgeEngine:
+    """灵锻引擎——无人驱动时的自主思考与进化
 
     对标 clowder-ai F255 Auto-Dream 双层架构：
     - 后台 Consolidation 层：读留痕→画线联想→产出日记+Imprint proposal
@@ -4521,11 +5128,11 @@ class AutoForgeEngine:
         self,
         echo_store: EchoStore,
         imprint_store: ImprintStore,
-        soul_store: SoulStore,
+        soul_store: MindStore,
         codex: ForgeCodex,
         event_bus,
         llm_client,
-        config: AutoForgeConfig,
+        config: SpiritForgeConfig,
     ):
         self._echo = echo_store
         self._imprint = imprint_store
@@ -4547,9 +5154,9 @@ class AutoForgeEngine:
         self._scheduler = AsyncIOScheduler()
 
     def start(self):
-        """启动自锻调度器"""
+        """启动灵锻调度器"""
         if not self._config.enabled:
-            logger.info("自锻引擎未启用")
+            logger.info("灵锻引擎未启用")
             return
         self._scheduler.add_job(
             self._check_and_forge,
@@ -4558,27 +5165,27 @@ class AutoForgeEngine:
             id="auto_forge_check",
         )
         self._scheduler.start()
-        logger.info(f"自锻引擎已启动，检查间隔 {self._config.check_interval_minutes} 分钟")
+        logger.info(f"灵锻引擎已启动，检查间隔 {self._config.check_interval_minutes} 分钟")
 
     def stop(self):
-        """停止自锻"""
+        """停止灵锻"""
         self._scheduler.shutdown(wait=False)
-        logger.info("自锻引擎已停止")
+        logger.info("灵锻引擎已停止")
 
     async def _check_and_forge(self):
-        """检查触发条件并执行自锻"""
+        """检查触发条件并执行灵锻"""
         # 条件 1: 低活动期
         if not self._is_low_activity_period():
             return
 
-        # 条件 2: 活跃炉灵有足够留痕
+        # 条件 2: 活跃灵智有足够留痕
         active_forgekins = await self._get_active_forgekins()
         for fk_id in active_forgekins:
             trace_count = await self._echo.count_recent_episodes(fk_id, hours=24)
             if trace_count >= self._config.min_traces_to_forge:
                 await self._forge_single(fk_id)
 
-        # 条件 3: 群体自锻
+        # 条件 3: 群体灵锻
         if self._config.group_forge_enabled and len(active_forgekins) >= 2:
             await self._group_forge_run(active_forgekins)
 
@@ -4588,9 +5195,9 @@ class AutoForgeEngine:
         return hour in self._config.low_activity_hours
 
     async def _get_active_forgekins(self) -> list[str]:
-        """获取所有活跃炉灵"""
-        # 从 SoulStore 查询所有活跃炉灵
-        # 简化实现：返回有近期 Episode 的炉灵
+        """获取所有活跃灵智"""
+        # 从 MindStore 查询所有活跃灵智
+        # 简化实现：返回有近期 Episode 的灵智
         async with aiosqlite.connect(self._echo._db_path) as db:
             cursor = await db.execute(
                 "SELECT DISTINCT forgekin_id FROM forgekin_episodes "
@@ -4601,8 +5208,8 @@ class AutoForgeEngine:
             return [r[0] for r in rows]
 
     async def _forge_single(self, forgekin_id: str):
-        """单炉灵自锻流程——对标 clowder-ai 做梦流程"""
-        logger.info(f"启动单炉灵自锻: {forgekin_id}")
+        """单灵智灵锻流程——对标 clowder-ai 做梦流程"""
+        logger.info(f"启动单灵智灵锻: {forgekin_id}")
 
         # 1. Entry: 读最近的留痕
         diary = await self._consolidation.forge(forgekin_id)
@@ -4623,10 +5230,10 @@ class AutoForgeEngine:
             await self._surface.notify_diary_ready(forgekin_id, diary)
 
     async def _group_forge_run(self, forgekin_ids: list[str]):
-        """群体自锻——多炉灵协作做梦"""
+        """群体灵锻——多灵智协作做梦"""
         # 限制群大小
         group = forgekin_ids[:self._config.max_forgekins_per_group]
-        logger.info(f"启动群体自锻: {group}")
+        logger.info(f"启动群体灵锻: {group}")
         diaries = await self._group_forge.forge(group)
         for diary in diaries:
             await self._surface.notify_diary_ready(diary.forgekin_id, diary)
@@ -4645,7 +5252,7 @@ logger = logging.getLogger(__name__)
 
 
 class ForgeDiary:
-    """自锻日记——第一人称沉淀"""
+    """灵锻日记——第一人称沉淀"""
     def __init__(self, forgekin_id: str, content: str,
                  observations: list = None, provoke_content: str = None):
         self.forgekin_id = forgekin_id
@@ -4673,7 +5280,7 @@ class ConsolidationLayer:
     2. 读脚印: 读平行世界的自己 + 小伙伴的留痕
     3. 画线: 联想画线，串联关联
     4. 写日记: 第一人称沉淀
-    5. 产出 Soul Imprint proposal
+    5. 产出 Mind Imprint proposal
     """
 
     def __init__(self, echo_store: EchoStore, imprint_store: ImprintStore,
@@ -4684,7 +5291,7 @@ class ConsolidationLayer:
         self._diary_store = diary_store
 
     async def forge(self, forgekin_id: str) -> ForgeDiary:
-        """执行单炉灵自锻"""
+        """执行单灵智灵锻"""
         # 1. 读自己的留痕
         my_episodes = await self._echo.recall(forgekin_id, "recent", limit=20)
 
@@ -4700,7 +5307,7 @@ class ConsolidationLayer:
         # 5. 产出 Imprint proposal
         if diary.has_observations:
             await self._imprint.update_cat_note(forgekin_id, diary.content)
-            logger.debug(f"日记已更新到魂印: {forgekin_id}")
+            logger.debug(f"日记已更新到灵印: {forgekin_id}")
 
         # 6. 存储日记
         await self._diary_store.save(diary)
@@ -4709,7 +5316,7 @@ class ConsolidationLayer:
 
     async def _draw_connections(self, my_episodes, peer_episodes) -> str:
         """画线——LLM 联想画线，串联关联"""
-        prompt = f"""你是炉灵的自锻引擎。请分析以下留痕，找出关联和线索。
+        prompt = f"""你是灵智的灵锻引擎。请分析以下留痕，找出关联和线索。
 
 我的最近留痕：
 {self._format_episodes(my_episodes[:10])}
@@ -4722,12 +5329,12 @@ class ConsolidationLayer:
 - 关联 2: ...
 """
         if self._llm:
-            return await self._llm.chat(system="你是自锻画线器", user_content=prompt)
+            return await self._llm.chat(system="你是灵锻画线器", user_content=prompt)
         return "（LLM 不可用，跳过画线）"
 
     async def _write_diary(self, forgekin_id: str, connections: str) -> ForgeDiary:
         """写日记——第一人称沉淀"""
-        prompt = f"""基于以下画线分析，以第一人称写一篇自锻日记。
+        prompt = f"""基于以下画线分析，以第一人称写一篇灵锻日记。
 
 画线分析：
 {connections}
@@ -4739,9 +5346,9 @@ class ConsolidationLayer:
 4. 200-500 字
 """
         if self._llm:
-            content = await self._llm.chat(system="你是炉灵的日记人格", user_content=prompt)
+            content = await self._llm.chat(system="你是灵智的日记人格", user_content=prompt)
         else:
-            content = f"今天自锻了，分析了 {len(connections)} 个关联。"
+            content = f"今天灵锻了，分析了 {len(connections)} 个关联。"
 
         # 提取观察
         observations = self._extract_observations(content)
@@ -4836,7 +5443,7 @@ class ProvokeManager:
             if d > datetime.now() - timedelta(days=3)
         ]
         if len(recent_3_days) >= 3:
-            logger.info(f"炉灵 {forgekin_id} 连拍 3 次，进入冬眠")
+            logger.info(f"灵智 {forgekin_id} 连拍 3 次，进入冬眠")
             await self._soul.set_status(forgekin_id, "dormant", "auto_forge")
             return None
 
@@ -4897,7 +5504,7 @@ class ProvokeManager:
         return True
 ```
 
-### 17.4 GroupForgeOrchestrator（自锻群协调器）
+### 17.4 GroupForgeOrchestrator（灵锻群协调器）
 
 ```python
 # evolution/auto_forge/group_forge.py
@@ -4916,7 +5523,7 @@ FORGE_ROLES = {
 
 
 class GroupForgeOrchestrator:
-    """自锻群协调器——多炉灵协作做梦
+    """灵锻群协调器——多灵智协作做梦
 
     对标 clowder-ai 做梦群：n 只猫的可配置小群，自由传球。
     分工：找料者/表达者/组织者
@@ -4928,8 +5535,8 @@ class GroupForgeOrchestrator:
         self._diary_store = diary_store
 
     async def forge(self, forgekin_ids: list[str]) -> list[ForgeDiary]:
-        """多炉灵协作自锻"""
-        logger.info(f"群体自锻启动: {forgekin_ids}")
+        """多灵智协作灵锻"""
+        logger.info(f"群体灵锻启动: {forgekin_ids}")
 
         # 1. 分配角色
         roles = self._assign_roles(forgekin_ids)
@@ -4940,7 +5547,7 @@ class GroupForgeOrchestrator:
         # 3. 协作画线
         connections = await self._collaborative_draw_lines(all_traces, roles)
 
-        # 4. 每个炉灵写自己的日记
+        # 4. 每个灵智写自己的日记
         diaries = []
         for fk_id in forgekin_ids:
             diary = await self._write_diary_with_role(
@@ -4960,7 +5567,7 @@ class GroupForgeOrchestrator:
         return roles
 
     async def _gather_all_traces(self, forgekin_ids: list[str]) -> list:
-        """收集所有炉灵的留痕"""
+        """收集所有灵智的留痕"""
         all_episodes = []
         for fk_id in forgekin_ids:
             episodes = await self._echo.recall(fk_id, "recent", limit=10)
@@ -4972,15 +5579,15 @@ class GroupForgeOrchestrator:
         role_desc = "\n".join(
             f"- {FORGE_ROLES[r]}" for r in roles.values()
         )
-        prompt = f"""多炉灵协作自锻。角色分工：
+        prompt = f"""多灵智协作灵锻。角色分工：
 {role_desc}
 
 共享留痕：
 {self._format_traces(traces[:20])}
 
-请各角色协作画线，找出跨炉灵的关联。"""
+请各角色协作画线，找出跨灵智的关联。"""
         if self._llm:
-            return await self._llm.chat(system="多炉灵协作画线器", user_content=prompt)
+            return await self._llm.chat(system="多灵智协作画线器", user_content=prompt)
         return "（LLM 不可用）"
 
     async def _write_diary_with_role(
@@ -4988,16 +5595,16 @@ class GroupForgeOrchestrator:
     ) -> ForgeDiary:
         """按角色写日记"""
         role_desc = FORGE_ROLES.get(role, "通用")
-        prompt = f"""你是 {role_desc}。基于以下协作画线，写你的自锻日记。
+        prompt = f"""你是 {role_desc}。基于以下协作画线，写你的灵锻日记。
 
 画线分析：
 {connections}
 
 以第一人称写，体现你的角色视角。"""
         if self._llm:
-            content = await self._llm.chat(system="炉灵日记人格", user_content=prompt)
+            content = await self._llm.chat(system="灵智日记人格", user_content=prompt)
         else:
-            content = f"作为{role_desc}，今天参与了群体自锻。"
+            content = f"作为{role_desc}，今天参与了群体灵锻。"
         return ForgeDiary(forgekin_id=fk_id, content=content)
 
     def _format_traces(self, traces) -> str:
@@ -5017,7 +5624,7 @@ from evolution.auto_forge.consolidation import ForgeDiary
 
 
 class ForgeDiaryStore:
-    """自锻日记存储
+    """灵锻日记存储
 
     表结构见 migrations/011_forge_diaries.sql
     """
@@ -5043,7 +5650,7 @@ class ForgeDiaryStore:
     async def list_by_forgekin(
         self, forgekin_id: str, limit: int = 20
     ) -> list[dict]:
-        """列出炉灵的日记"""
+        """列出灵智的日记"""
         async with aiosqlite.connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
@@ -5525,7 +6132,7 @@ class Handoff(BaseModel):
 
 
 class A2AMessage(BaseModel):
-    """A2A 消息——炉灵间通信
+    """A2A 消息——灵智间通信
 
     对标 clowder-ai F002 Agent-to-Agent 协议。
     核心特性：
@@ -5562,7 +6169,7 @@ MENTION_PATTERN = re.compile(r"@(\w+):(\w+)")
 
 
 class A2AManager:
-    """A2A 通信管理器——炉灵间协作
+    """A2A 通信管理器——灵智间协作
 
     核心协议：
     1. @mention 路由：解析 @devforge:architect → 路由到 fk_devforge_architect
@@ -5617,7 +6224,7 @@ class A2AManager:
         )
 
     async def route(self, message: A2AMessage) -> None:
-        """路由消息到目标炉灵"""
+        """路由消息到目标灵智"""
         # 1. 解析 @mention
         if not message.mention:
             mentions = self._parse_mentions(message.content)
@@ -5689,7 +6296,7 @@ class A2AManager:
             return [dict(r) for r in rows]
 ```
 
-### 19.3 ForgekinCouncil（灵议多渠道）详细实现
+### 19.3 MindCouncil（灵议多渠道）详细实现
 
 ```python
 # evolution/council/forgekin_council.py
@@ -5722,7 +6329,7 @@ class CouncilMessage:
         )
 
 
-class ForgekinCouncil:
+class MindCouncil:
     """灵议——多渠道 IM 协作系统
 
     对标 clowder-ai IM 团队协作。
@@ -5836,9 +6443,9 @@ from evolution.council.forgekin_council import CouncilMessage
 class WebChatChannel(Channel):
     """Web Chat 灵议主渠道——WebSocket + SSE
 
-    升级后的 Web Chat 从单用户对话升级为多炉灵议事厅：
-    - 支持多炉灵同时在线
-    - 支持查看所有炉灵的实时状态、对话、日记
+    升级后的 Web Chat 从单用户对话升级为多灵智议事厅：
+    - 支持多灵智同时在线
+    - 支持查看所有灵智的实时状态、对话、日记
     - 支持 operator 参与/旁观/干预
     - 支持发起 Kinship 协作任务
     """
@@ -5916,7 +6523,7 @@ class FeishuChannel(Channel):
 
 ***
 
-## 第二十章：锻典（Forge Codex）详细设计
+## 第二十章：灵典（Mind Codex）详细设计
 
 ### 20.1 Knowledge Object 数据模型
 
@@ -5945,9 +6552,9 @@ class KnowledgeFrontmatter(BaseModel):
 
 
 class KnowledgeObject(BaseModel):
-    """知识对象——锻典中的基本单元
+    """知识对象——灵典中的基本单元
 
-    五级火种等级（Ember Hierarchy）：
+    五级进化阶（Evolution Hierarchy）：
     E-L0 Episode → E-L1 Pattern → E-L2 Draft → E-L3 Validated → E-L4 Standard
     """
     knowledge_id: str
@@ -5955,7 +6562,7 @@ class KnowledgeObject(BaseModel):
     frontmatter: KnowledgeFrontmatter
     content: str  # 正文
 
-    # 火种等级
+    # 进化阶
     ember_level: str = Field("E-L0", description="E-L0|E-L1|E-L2|E-L3|E-L4")
 
     # 动态状态（走事件流，不污染 git history）
@@ -5986,14 +6593,14 @@ import aiosqlite
 from typing import Optional
 from evolution.codex.knowledge_object import KnowledgeObject, KnowledgeFrontmatter
 from evolution.forgekin.episode import SoulEpisode
-from evolution.codex.ember_hierarchy import EmberHierarchyManager
+from evolution.codex.ember_hierarchy import EvolutionHierarchyManager
 from evolution.codex.distiller import DualDistiller
 
 logger = logging.getLogger(__name__)
 
 
 class ForgeCodex:
-    """锻典——可复用知识体系
+    """灵典——可复用知识体系
 
     对标 clowder-ai Skill Library + 五级知识阶梯。
 
@@ -6010,7 +6617,7 @@ class ForgeCodex:
         self._db_path = db_path
         self._llm = llm_client
         self._events = event_bus
-        self._ember = EmberHierarchyManager(db_path)
+        self._ember = EvolutionHierarchyManager(db_path)
         self._distiller = DualDistiller(llm_client)
 
     async def maybe_distill(self, episode: SoulEpisode) -> Optional[str]:
@@ -6033,7 +6640,7 @@ class ForgeCodex:
         if not knowledge:
             return None
 
-        # 保存到锻典
+        # 保存到灵典
         knowledge_id = await self.save(knowledge)
 
         # 更新 Episode 蒸馏状态
@@ -6060,7 +6667,7 @@ class ForgeCodex:
         return score >= 2
 
     async def save(self, knowledge: KnowledgeObject) -> str:
-        """保存知识对象到锻典"""
+        """保存知识对象到灵典"""
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
                 """INSERT INTO forge_codex
@@ -6106,7 +6713,7 @@ class ForgeCodex:
     async def search(
         self, query: str, forgekin_id: str = None, limit: int = 10
     ) -> list[KnowledgeObject]:
-        """搜索锻典"""
+        """搜索灵典"""
         async with aiosqlite.connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
             if forgekin_id:
@@ -6294,7 +6901,7 @@ class DualDistiller:
         return any(kw in episode.task_context.lower() for kw in procedural_keywords)
 ```
 
-### 20.4 EmberHierarchyManager（五级火种阶梯）
+### 20.4 EvolutionHierarchyManager（五级火种阶梯）
 
 ```python
 # evolution/codex/ember_hierarchy.py
@@ -6305,7 +6912,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
-class EmberHierarchyManager:
+class EvolutionHierarchyManager:
     """五级火种阶梯管理器
 
     对标 clowder-ai 五级知识成熟度阶梯：
@@ -6416,7 +7023,7 @@ class EmberHierarchyManager:
 
 ## 第二十一章：v7.0 API 端点设计
 
-### 21.1 炉灵管理 API
+### 21.1 灵智管理 API
 
 ```python
 # evolution/api/forgekin_endpoints.py
@@ -6442,45 +7049,45 @@ class CreateForgekinRequest(BaseModel):
 
 @router.post("/")
 async def create_forgekin(req: CreateForgekinRequest):
-    """创建新炉灵（需 E6 权限或 operator）"""
+    """创建新灵智（需 E6 权限或 operator）"""
     # ... 调用 ForgekinEngine 创建 ...
     return {"forgekin_id": "fk_xxx", "status": "created"}
 
 
 @router.get("/{forgekin_id}")
 async def get_forgekin(forgekin_id: str):
-    """获取炉灵详情"""
-    # ... 返回 SoulProfile ...
+    """获取灵智详情"""
+    # ... 返回 MindProfile ...
     return {"forgekin_id": forgekin_id, "soul_profile": {}}
 
 
 @router.get("/")
 async def list_forgekins(project: str = None, status: str = "active"):
-    """列出炉灵"""
+    """列出灵智"""
     return {"forgekins": []}
 
 
 @router.patch("/{forgekin_id}/status")
 async def update_status(forgekin_id: str, status: str, approver: str):
-    """更新炉灵状态（需 operator 审批）"""
+    """更新灵智状态（需 operator 审批）"""
     return {"forgekin_id": forgekin_id, "status": status}
 
 
 @router.post("/{forgekin_id}/execute")
 async def execute_task(forgekin_id: str, task: str, strategy: str = "auto"):
-    """执行炉灵任务"""
+    """执行灵智任务"""
     return {"status": "success", "result": {}}
 
 
 @router.get("/{forgekin_id}/episodes")
 async def list_episodes(forgekin_id: str, limit: int = 20):
-    """获取炉灵的 Episode 列表"""
+    """获取灵智的 Episode 列表"""
     return {"episodes": []}
 
 
 @router.get("/{forgekin_id}/imprint")
 async def get_imprint(forgekin_id: str):
-    """获取炉灵的魂印画像"""
+    """获取灵智的灵印画像"""
     return {"imprint": {}}
 
 
@@ -6502,7 +7109,7 @@ router = APIRouter(prefix="/api/v7/council", tags=["v7-council"])
 
 @router.get("/forgekins")
 async def list_online_forgekins():
-    """列出在线炉灵"""
+    """列出在线灵智"""
     return {"forgekins": []}
 
 
@@ -6532,7 +7139,7 @@ async def send_message(sender: str, content: str, thread_id: str = None):
 
 @router.websocket("/ws")
 async def council_websocket(ws: WebSocket):
-    """灵议 WebSocket——实时多炉灵对话"""
+    """灵议 WebSocket——实时多灵智对话"""
     await ws.accept()
     # 注册到 WebChatChannel
     channel = WebChatChannel({"enabled": True})
@@ -6546,7 +7153,7 @@ async def council_websocket(ws: WebSocket):
         channel.remove_connection(ws)
 ```
 
-### 21.3 自锻 API
+### 21.3 灵锻 API
 
 ```python
 # evolution/api/auto_forge_endpoints.py
@@ -6557,19 +7164,19 @@ router = APIRouter(prefix="/api/v7/auto-forge", tags=["v7-auto-forge"])
 
 @router.get("/status")
 async def get_status():
-    """获取自锻引擎状态"""
+    """获取灵锻引擎状态"""
     return {"enabled": False, "running": False}
 
 
 @router.post("/trigger/{forgekin_id}")
 async def trigger_forge(forgekin_id: str):
-    """手动触发自锻"""
+    """手动触发灵锻"""
     return {"status": "forging", "forgekin_id": forgekin_id}
 
 
 @router.get("/diaries/{forgekin_id}")
 async def list_diaries(forgekin_id: str, limit: int = 20):
-    """列出炉灵日记"""
+    """列出灵智日记"""
     return {"diaries": []}
 
 
@@ -6591,7 +7198,7 @@ async def engage_provoke(provoke_id: str):
     return {"provoke_id": provoke_id, "status": "engaged"}
 ```
 
-### 21.4 锻典 API
+### 21.4 灵典 API
 
 ```python
 # evolution/api/codex_endpoints.py
@@ -6602,7 +7209,7 @@ router = APIRouter(prefix="/api/v7/codex", tags=["v7-codex"])
 
 @router.get("/status")
 async def codex_status():
-    """锻典概览——对标 flowforge codex status CLI"""
+    """灵典概览——对标 flowforge codex status CLI"""
     return {
         "total_objects": 0,
         "by_level": {"E-L0": 0, "E-L1": 0, "E-L2": 0, "E-L3": 0, "E-L4": 0},
@@ -6612,7 +7219,7 @@ async def codex_status():
 
 @router.get("/search")
 async def search_codex(q: str, forgekin_id: str = None, limit: int = 10):
-    """搜索锻典"""
+    """搜索灵典"""
     return {"results": []}
 
 
@@ -6624,7 +7231,7 @@ async def get_knowledge(knowledge_id: str):
 
 @router.post("/{knowledge_id}/promote")
 async def promote_knowledge(knowledge_id: str):
-    """手动晋升火种等级"""
+    """手动晋升进化阶"""
     return {"knowledge_id": knowledge_id, "new_level": "E-L3"}
 ```
 
@@ -6778,12 +7385,12 @@ features:
     enabled: false
     rollout_percentage: 0
     fallback_to_old: true
-    description: "炉灵引擎——自进化智能体"
+    description: "灵智引擎——自进化智能体"
 
   use_auto_forge:
     enabled: false
     fallback_to_old: true
-    description: "自锻引擎——无人时自主思考"
+    description: "灵锻引擎——无人时自主思考"
 
   use_external_tool_bridge:
     enabled: false
@@ -6856,7 +7463,7 @@ council:
     enabled: false
 ```
 
-### 23.2 炉灵种子配置示例
+### 23.2 灵智种子配置示例
 
 ```yaml
 # config/forgekin_seeds/devforge/architect.yaml
@@ -6867,7 +7474,7 @@ ascension_stage: "E1"
 
 soul:
   persona: |
-    我是 DevForge 的架构师炉灵，擅长系统设计和代码审查。
+    我是 DevForge 的架构师灵智，擅长系统设计和代码审查。
     我从 clowder-ai 的 bootcamp 训练理念中汲取灵感，
     致力于为每个项目设计清晰、可维护的架构。
   worldview: "配置驱动 > 代码继承；组合优于继承；简单优于复杂"
@@ -6904,7 +7511,7 @@ metadata:
 channels:
   web_chat:
     enabled: true
-    description: "灵议主渠道——Web UI 多炉灵议事厅"
+    description: "灵议主渠道——Web UI 多灵智议事厅"
 
   feishu:
     enabled: false
@@ -6951,15 +7558,15 @@ operator:
 
 | 编号 | 决策点 | 选项 | 建议 |
 |------|--------|------|------|
-| D1 | 炉灵种子来源 | A) operator 手动编写 / B) 从现有 Agent 自动转换 / C) 混合 | C |
-| D2 | 自锻触发频率 | A) 30 分钟检查 / B) 1 小时检查 / C) 仅夜间 | A |
+| D1 | 灵智种子来源 | A) operator 手动编写 / B) 从现有 Agent 自动转换 / C) 混合 | C |
+| D2 | 灵锻触发频率 | A) 30 分钟检查 / B) 1 小时检查 / C) 仅夜间 | A |
 | D3 | 外部工具优先级 | A) CLI 优先 / B) Trae 优先 / C) 按任务类型自动 | C |
 | D4 | 灵议默认渠道 | A) 仅 Web Chat / B) Web Chat + 飞书 / C) 全渠道 | A |
-| D5 | 锻典淘汰策略 | A) 永不淘汰 / B) 30 天未用降级 / C) 90 天未用归档 | B |
-| D6 | 升华阶段降级严格度 | A) 严格执行 / B) 长尾车道放宽 / C) operator 可配置 | C |
+| D5 | 灵典淘汰策略 | A) 永不淘汰 / B) 30 天未用降级 / C) 90 天未用归档 | B |
+| D6 | 觉醒阶段降级严格度 | A) 严格执行 / B) 长尾车道放宽 / C) operator 可配置 | C |
 | D7 | Provoke 频率 | A) 每天 1 次 / B) 每周 3 次 / C) operator 可配置 | A |
 | D8 | A2A 消息持久化 | A) 永久 / B) 90 天 / C) 30 天 | B |
-| D9 | 炉灵最大数量 | A) 无限制 / B) 每项目 10 个 / C) 全局 50 个 | B |
+| D9 | 灵智最大数量 | A) 无限制 / B) 每项目 10 个 / C) 全局 50 个 | B |
 | D10 | Trae Bridge 目录 | A) 项目内 data/ / B) 用户目录 / C) 可配置 | C |
 
 ---
@@ -6967,10 +7574,10 @@ operator:
 > **请 operator 审核本详细设计文档**，特别是：
 > - 第十五章目录结构新增（evolution/ 模块）
 > - 第十六章 ForgekinEngine 7步自进化闭环实现
-> - 第十七章 Auto-Forge 双层架构与 Provoke 频率硬限
+> - 第十七章 SpiritForge 双层架构与 Provoke 频率硬限
 > - 第十八章 Trae Bridge JSON 文件交换模式
 > - 第十九章灵议多渠道与 A2A @mention 路由
-> - 第二十章锻典五级火种阶梯与三模式自生成
+> - 第二十章灵典五级火种阶梯与三模式自生成
 > - 附录 E 的 10 个待审核决策点（D1-D10）
 >
 > 审核通过后将进入实现阶段。

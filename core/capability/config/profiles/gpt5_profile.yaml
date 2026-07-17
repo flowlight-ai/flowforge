@@ -1,0 +1,142 @@
+# 示例 CapabilityProfile YAML — GPT-5 灵智体
+#
+# 用于跨厂商 review 演示：本画像与 claude_code_profile.yaml 共享同一类别盲点
+# (self_referential_logic)，但厂商不同（openai vs anthropic），
+# 故 has_blind_spot_conflict 应返回 False（不同厂商天然分散盲点）。
+#
+# 当与另一个 openai 厂商的灵智体（如同为 gpt 系列的 gpt-4o）配对 review 时，
+# 因同类别盲点应返回 True，需要升级到跨厂商 review。
+#
+# 字段说明详见 loader.py docstring。
+
+profile_id: "gpt5-researcher-001"
+agent_id: "gpt5-researcher-forgekin"
+created_at: "2026-07-17T00:00:00Z"
+updated_at: "2026-07-17T00:00:00Z"
+
+model_capability:
+  provider: "openai"
+  model_name: "gpt-5"
+  context_window: 128000
+  strengths:
+    - "creative_writing"
+    - "multimodal_reasoning"
+    - "tool_orchestration"
+  limitations:
+    - "long_context_compression_loss"
+    - "temporal_reasoning"
+  supports_tool_call: true
+  supports_vision: true
+  reasoning_capability: 0.95
+  creativity_capability: 0.9
+
+cognitive_style:
+  reasoning_depth: 0.85
+  abstraction_level: 0.9
+  risk_appetite: 0.5
+  explanation_style: "narrative"
+
+blind_spots:
+  - category: "self_referential_logic"
+    description: >-
+      对自身生成的论证链过度信任，在 review 自身长文时会漏掉
+      循环论证与同源前提假设
+    example: >-
+      review 自己写的论证文章时，未发现"结论已隐含在前提中"的
+      循环论证（因为生成时已假设该前提成立）
+    scenario: "self_writing_review"
+    detected_at: "2026-07-17T00:00:00Z"
+    evidence:
+      - "trace-eval-2026-07-17-gpt5-001"
+    compensation_strategy: "cross_vendor_review"
+    confidence: 0.82
+
+  - category: "context_compression_loss"
+    description: >-
+      长上下文中，治理规则与早期约束容易被压缩丢失，
+      导致后续输出违反先前确立的约束
+    example: >-
+      在 60K+ token 的长对话中，遗忘早期 system role 中的
+      "禁止使用 mock"约束，开始生成 mock 代码
+    scenario: "long_session_governance"
+    detected_at: "2026-07-17T00:00:00Z"
+    evidence:
+      - "trace-eval-2026-07-17-gpt5-002"
+      - "trace-eval-2026-07-17-gpt5-003"
+    compensation_strategy: "system_role_injection"
+    confidence: 0.88
+
+  - category: "hallucination_prone"
+    description: "在事实检索不足时倾向生成看似合理但不存在的引用"
+    example: "生成不存在的论文标题与作者组合"
+    scenario: "literature_review"
+    detected_at: "2026-07-17T00:00:00Z"
+    evidence:
+      - "trace-eval-2026-07-17-gpt5-004"
+    compensation_strategy: "fact_check_tool"
+    confidence: 0.75
+
+skill_packages:
+  - name: "academic_research"
+    domain: "research"
+    version: "2.0.0"
+    loader: "flowforge.skills.AcademicResearchLoader"
+    proficiency: 0.92
+    last_used: "2026-07-17T08:00:00Z"
+    usage_count: 256
+  - name: "creative_writing"
+    domain: "writing"
+    version: "1.5.0"
+    loader: "flowforge.skills.CreativeWritingLoader"
+    proficiency: 0.88
+    last_used: "2026-07-16T20:00:00Z"
+    usage_count: 89
+
+tool_boundary:
+  allowed_tools:
+    - "web_search"
+    - "file_read"
+    - "file_write"
+    - "fact_check"
+    - "citation_lookup"
+  forbidden_tools:
+    - "shell_exec"
+    - "deploy_production"
+  prefer_tools:
+    - "fact_check"
+    - "citation_lookup"
+  tool_proficiency:
+    web_search: 0.9
+    fact_check: 0.85
+    file_read: 0.8
+
+historical_performance:
+  - task_type: "research_writing"
+    success_rate: 0.88
+    avg_latency: 3.2
+    token_usage: 2200000
+    last_updated: "2026-07-17T00:00:00Z"
+    sample_count: 410
+    wilson_lower_bound: 0.84
+  - task_type: "creative_writing"
+    success_rate: 0.91
+    avg_latency: 2.8
+    token_usage: 1100000
+    last_updated: "2026-07-17T00:00:00Z"
+    sample_count: 280
+    wilson_lower_bound: 0.87
+
+current_state:
+  current_load: 0.5
+  fatigue: 0.2
+  mood: "fresh"
+  active_tasks: 3
+  last_break: "2026-07-17T09:00:00Z"
+
+harness_fit_score:
+  overall: 0.88
+  durable_state: 0.82
+  tool_mediation: 0.9
+  governance: 0.75
+  retrieval: 0.92
+  observability: 0.88

@@ -1,0 +1,25 @@
+# FlowForge MemoryFederation 提示词模板
+#
+# 铁律 5+P16：禁止硬编码提示词。所有 LLM 调用提示词外置到此文件。
+# 模板使用 {placeholder} 占位符，由 MindCodex._llm_distill 渲染。
+#
+# 加载入口：flowforge.core.memory_federation.mind_codex._load_codex_prompts(path)
+
+mind_codex:
+  # 从经验蒸馏灵典条目的提示词（v7.0 育灵体系：灵锻 SpiritForge 蒸馏经验）
+  derive_from_experience: |-
+    你是灵锻 SpiritForge 的蒸馏器。请将以下任务经验蒸馏为可复用的灵典条目。
+
+    【经验标题】{title}
+    【所属领域】{domain}
+    【经验内容】
+    {content}
+
+    【现有标签】{skill_tags}
+
+    请输出 JSON 格式（仅输出 JSON，不要其他文字）：
+    {{
+      "title": "精炼后的标题（不超过 50 字，突出可复用的核心经验）",
+      "content": "可复用的经验内容（包含情境 / 动作 / 结果三要素，结构化呈现）",
+      "skill_tags": ["标签1", "标签2", "标签3"]
+    }}

@@ -202,8 +202,11 @@ assignments:
   # 兜底由 llm_client.py 的 build_cross_fallback_chain 追加 openroute/auto 完成。
   # v3.4 合并: 采用远程多模型 fallback 链（跨厂商排序避免单点故障）+ stockforge/reflexion assignments
   default:
-    primary: Doubao-Seed2.0
+    # v5.1临时: API配额全面耗尽(ark 429/kimi 429/aliyuncs 401/siliconflow 403/openrouter 404)
+    # 唯一可用API: zhipu/glm-4-flash。待API配额恢复后改回 Doubao-Seed2.0
+    primary: zhipu/glm-4-flash
     fallbacks:
+    - Doubao-Seed2.0
     - DeepSeek-V4-Pro
     - GLM-5.1
     - Kimi-K2.6
@@ -211,8 +214,9 @@ assignments:
     - HunYuan3
     - Qwen3.6-Plus
   lightweight:
-    primary: Doubao-Seed2.0
+    primary: zhipu/glm-4-flash
     fallbacks:
+    - Doubao-Seed2.0
     - DeepSeek-V4-Pro
     - GLM-5.1
     - Kimi-K2.6
@@ -257,14 +261,17 @@ assignments:
     - MiniMax-M3
     - DeepSeek-V4-Pro
   content_create:
-    # v5.16: webchat primary（用户要求创作只用webchat模型）
-    # Doubao-Seed2.0 作为 primary，跨厂商 fallback 避免单点故障
-    primary: openroute/Doubao-Seed2.0
+    # v5.20修复: primary从Doubao-Seed2.0改为Qwen3.6-Plus — Doubao via caller_combine超时300s
+    # Qwen3.6-Plus v515实测webchat89s(最快)+API通道4-8s, 更稳定可靠
+    # prefer_api=True让Writer走API passthrough通道(避免webchat截断/超时)
+    # Doubao-Seed2.0降为fallback(via caller_combine偶尔可用)
+    primary: openroute/Qwen3.6-Plus
     fallbacks:
-    - openroute/Qwen3.6-Plus
+    - openroute/Doubao-Seed2.0
     - openroute/HunYuan3
     - openroute/DeepSeek-V4-Pro
     - openroute/GLM-5.1
+    - openroute/Kimi-K2.6
     - openroute/MiniMax-M3
   content_refine:
     # 铁律: polisher 必须使用 Kimi-K2.6
@@ -331,15 +338,15 @@ assignments:
   # 替换为 Kimi-K2.6（更稳定的 webchat 模型）
   # v3.4 性能修复: API优先 — webchat模型60s超时导致reflector卡死
   reflexion_evaluator:
-    # v5.13: free API primary — ark API限额(429)
-    primary: openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    # v5.1临时: API配额耗尽，改用 zhipu/glm-4-flash
+    primary: zhipu/glm-4-flash
     fallbacks:
     - openrouter/openai/gpt-oss-120b:free
     - openroute/Kimi-K2.6
     - openroute/Doubao-Seed2.0
   reflexion_reflector:
-    # v5.13: free API primary — ark API限额(429)
-    primary: openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    # v5.1临时: API配额耗尽，改用 zhipu/glm-4-flash
+    primary: zhipu/glm-4-flash
     fallbacks:
     - openrouter/openai/gpt-oss-120b:free
     - openroute/Qwen3.6-Plus
