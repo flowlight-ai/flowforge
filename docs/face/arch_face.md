@@ -1393,20 +1393,20 @@ class IA2AServer(Protocol):
 
 ---
 
-## 附录：v7.0 炉灵养成体系融合架构对齐
+## 附录：v7.0 灵智养成体系融合架构对齐
 
 > **版本**：v7.0 融合对齐 | **日期**：2026-07-15
-> **目的**：将 face v3.0 架构（M1-M17）与 v7.0 炉灵养成体系（ForgekinEngine / Soul Echo / Auto-Forge / Forge Codex / Forgekin Council）对齐
+> **目的**：将 face v3.0 架构（M1-M17）与 v7.0 灵智养成体系（ForgekinEngine / Mind Echo / SpiritForge / Mind Codex / Mind Council）对齐
 > **参考**：`flowforge/docs/arch.md` 第 15-22 章（v7.0 自我进化 Agent Harness 架构升级）
 
 ### 1. v7.0 七层架构模型
 
-v7.0 在 v3.0 七层架构基础上，将第 7 层"互联层"升级为"自进化层（Evolution Layer）"，承载炉灵养成体系：
+v7.0 在 v3.0 七层架构基础上，将第 7 层"互联层"升级为"自进化层（Evolution Layer）"，承载灵智养成体系：
 
 ```
 7. 自进化层 (Evolution Layer) ★ v7.0
-   ForgekinEngine | Auto-Forge | Forge Codex | Soul Echo/Imprint
-   Forgekin Council | External Tool Bridge | Trae Bridge
+   ForgekinEngine | SpiritForge | Mind Codex | Mind Echo/Imprint
+   Mind Council | External Tool Bridge | Trae Bridge
 6. 应用层 (*Forge 项目群)
    ContentForge / DevForge / NovelForge / MallForge / StockForge
 5. 接入层 (FastAPI + WebSocket + Web UI)
@@ -1420,31 +1420,31 @@ v7.0 在 v3.0 七层架构基础上，将第 7 层"互联层"升级为"自进化
 
 **关键约束**：
 - 自进化层可以调用应用层及以下所有层的能力
-- 应用层（*Forge）通过 PluginProtocol 注册炉灵角色，组合获得自进化能力
+- 应用层（*Forge）通过 PluginProtocol 注册灵智角色，组合获得自进化能力
 - Harness 层及以下保持 v6.0/v3.0 设计不变，自进化层在其之上叠加
 
 ### 2. ForgekinEngine 架构（自进化统一入口）
 
-参考 `flowforge/docs/arch.md` 第 16 章，ForgekinEngine 是炉灵引擎——自进化的统一入口，包装 HybridExecutor，在每次任务执行中完成"灵魂加载 → 记忆召回 → 执行 → 记录 → 进化"闭环。
+参考 `flowforge/docs/arch.md` 第 16 章，ForgekinEngine 是灵智引擎——自进化的统一入口，包装 HybridExecutor，在每次任务执行中完成"灵魂加载 → 记忆召回 → 执行 → 记录 → 进化"闭环。
 
 #### 2.1 ForgekinEngine 10 步闭环
 
 ```
-1. soul.load(forgekin_id)          — 加载灵魂档案（Soul Profile）
-2. echo.recall(task)               — 检索相关魂忆（Soul Echo L2 Episode）
-3. imprint.load(forgekin_id)       — 注入魂印（Soul Imprint 认知画像）
-4. soul_prompt                     — 注入 Soul Profile 到系统提示
+1. soul.load(forgekin_id)          — 加载灵魂档案（Mind Profile）
+2. echo.recall(task)               — 检索相关灵忆（Mind Echo L2 Episode）
+3. imprint.load(forgekin_id)       — 注入灵印（Mind Imprint 认知画像）
+4. soul_prompt                     — 注入 Mind Profile 到系统提示
 5. decide_strategy                 — 选择执行路径（auto/static/external/trae/mode）
 6. execute                         — 执行任务
-7. echo.record(episode)            — 记录 Episode 到魂忆
-8. imprint.propose(observations)   — 更新魂印（白名单采集 + 分层消化）
-9. codex.maybe_distill(episode)    — 尝试蒸馏 Skill 到 Forge Codex
-10. ascension.check_promotion()    — 检查升华条件（E1→E2→...→E6）
+7. echo.record(episode)            — 记录 Episode 到灵忆
+8. imprint.propose(observations)   — 更新灵印（白名单采集 + 分层消化）
+9. codex.maybe_distill(episode)    — 尝试蒸馏 Skill 到 Mind Codex
+10. awakening.check_promotion()    — 检查觉醒条件（E1→E2→...→E6）
 ```
 
 #### 2.2 四类执行路径
 
-ForgekinEngine 在步骤 5-6 根据任务类型和炉灵能力选择执行路径：
+ForgekinEngine 在步骤 5-6 根据任务类型和灵智能力选择执行路径：
 
 ```python
 # 路径 a：委托给静态 Agent（YAML 声明式、无状态、无记忆）
@@ -1470,18 +1470,18 @@ result = await self._executor.run(context)
 
 | 组件 | 说明 | 存储后端 |
 |------|------|---------|
-| Soul Profile | 身份与人格（forgekin_id / persona / worldview / ascension） | SQLite 表 `forgekin_souls` |
-| Soul Echo | 魂忆-三层记忆（L1 Working / L2 Episode / L3 Semantic） | L1 内存 + L2 SQLite+sqlite-vec + L3 Forge Codex |
-| Soul Imprint | 魂印-认知画像（结构化字段 + cat_note 主观日记 + white-list 采集） | SQLite 表 `forgekin_imprints` |
+| Mind Profile | 身份与人格（forgekin_id / persona / worldview / awakening） | SQLite 表 `forgekin_souls` |
+| Mind Echo | 灵忆-三层记忆（L1 Working / L2 Episode / L3 Semantic） | L1 内存 + L2 SQLite+sqlite-vec + L3 Mind Codex |
+| Mind Imprint | 灵印-认知画像（结构化字段 + cat_note 主观日记 + white-list 采集） | SQLite 表 `forgekin_imprints` |
 
 ### 3. face M1-M17 到 v7.0 架构融合映射
 
 | face 架构组件 | v7.0 对应组件 | 融合方式 |
 |--------------|--------------|---------|
-| A2A Server/Client (M1) | FR-EVO-09 A2A 通信协议 | Forgekin Council 间 @mention 路由 + thread isolation + structured handoff；A2A Manager 投递消息到目标炉灵 inbox |
-| Context Engineering 2.0 (M3) | ForgekinEngine 步骤 1-4 | soul.load / echo.recall / imprint.load / soul_prompt 替代原 JIT Context 注入，注入灵魂档案与魂忆 |
-| 六层 Guardrails (M4) | ForgekinSecurityGuard + SR-01~08 安全红线 | 炉灵安全守卫执行 SR-05 创建权限 / SR-06 外部工具 worktree 检查 / SR-03 Provoke 边界（不碰钱/关系/健康/隐私/价值观） |
-| OTel GenAI v1.30 (M5) | forgekin_ascension_stage / auto_forge_runs_total 等指标 | 炉灵升华阶段、自锻运行次数、Episode 记录数等 v7.0 指标纳入 OTel GenAI Span 导出 |
+| A2A Server/Client (M1) | FR-EVO-09 A2A 通信协议 | Mind Council 间 @mention 路由 + thread isolation + structured handoff；A2A Manager 投递消息到目标灵智 inbox |
+| Context Engineering 2.0 (M3) | ForgekinEngine 步骤 1-4 | soul.load / echo.recall / imprint.load / soul_prompt 替代原 JIT Context 注入，注入灵魂档案与灵忆 |
+| 六层 Guardrails (M4) | ForgekinSecurityGuard + SR-01~08 安全红线 | 灵智安全守卫执行 SR-05 创建权限 / SR-06 外部工具 worktree 检查 / SR-03 Provoke 边界（不碰钱/关系/健康/隐私/价值观） |
+| OTel GenAI v1.30 (M5) | forgekin_awakening_stage / spirit_forge_runs_total 等指标 | 灵智觉醒阶段、灵锻运行次数、Episode 记录数等 v7.0 指标纳入 OTel GenAI Span 导出 |
 | HybridExecutor | ForgekinEngine 的执行底座 | ForgekinEngine 包装 HybridExecutor，在 mode 路径下调用 `_executor.run(context)`；降级时直接回退到 HybridExecutor |
 
 ### 4. 降级策略对齐
@@ -1491,13 +1491,13 @@ v7.0 降级路径（来自 `arch.md` 第 21 章）：当 v7.0 自进化能力不
 | 组件 | 降级路径 | 触发条件 |
 |------|---------|---------|
 | ForgekinEngine | → HybridExecutor（无灵魂、无记忆） | forgekin 未启用或不存在 |
-| Auto-Forge | 跳过（不自锻） | auto_forge 未启用 |
+| SpiritForge | 跳过（不灵锻） | auto_forge 未启用 |
 | External Tool Bridge | → FlowForge 内置 Agent | CLI 不可用或超时 |
 | Trae Bridge | → FlowForge 内置 Agent | 无响应或超时 |
-| Forgekin Council | → 单渠道 Web Chat | 多渠道未配置 |
+| Mind Council | → 单渠道 Web Chat | 多渠道未配置 |
 | A2A Protocol | → 直接调用（无 @mention） | a2a 未启用 |
 
-**设计原则**：v6.0/v3.0 全部能力保留并向后兼容；v7.0 新增能力通过 Feature Flag 灰度启用。不是所有任务都需要自我进化，流水线型任务用静态智能体更高效；需要成长的复杂任务用炉灵。
+**设计原则**：v6.0/v3.0 全部能力保留并向后兼容；v7.0 新增能力通过 Feature Flag 灰度启用。不是所有任务都需要自我进化，流水线型任务用静态智能体更高效；需要成长的复杂任务用灵智。
 
 ---
 

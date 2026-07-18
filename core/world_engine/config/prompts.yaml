@@ -1,0 +1,261 @@
+# 世界引擎提示词（World Engine Prompts）
+# ============================================================
+# 铁律 5 + P16：所有提示词必须外置到 YAML 配置，禁止硬编码到 .py 文件。
+# 详见 [doc:design/naming-contract.md] + [doc:rules.md] 15 条红线。
+#
+# 本文件是 flowforge/core/world_engine/ 模块的唯一提示词真相源。
+# 所有需要调用 LLM 的世界引擎操作（Canon 审核 / 面具验证 / 关系演化等）
+# 必须从本文件读取提示词，禁止在 .py 文件中硬编码。
+# ============================================================
+
+world_engine_prompts:
+
+  # ── Canon Sync 协议提示词 ────────────────────────────────────
+  # 用于 CanonSyncProtocol 的 LLM 辅助审核（铁律 CL-010）。
+  # 注意：LLM 审核只是建议，最终入典仍需 operator / canon_driver 显式确认。
+
+  canon_sync_review: |
+    你是典藏审核员（Canon Reviewer）。判断以下 Turn 内容是否应入典（成为世界级真相）。
+
+    【Turn 内容】
+    {turn_content}
+
+    【世界设定】
+    世界名称：{world_name}
+    世界观：{world_setting}
+    世界规则：
+    {world_rules}
+
+    【已有 Canon 决策】
+    {existing_canon}
+
+    请判断：
+    1. 是否符合世界规则？
+    2. 是否与已有 Canon 冲突？
+    3. 是否具有长期价值（vs 一次性 RP 台词）？
+    4. 是否会污染角色核心身份（如让写作灵智体误认为自己是孙悟空）？
+
+    输出 JSON：
+    {{
+      "should_canon": true | false,
+      "reason": "...",
+      "conflict_with": ["canon_decision_id_1", ...] | null,
+      "identity_risk": "none" | "low" | "medium" | "high"
+    }}
+
+  canon_conflict_resolution: |
+    你是典藏冲突调解员（Canon Conflict Resolver）。检测到新 Canon 提案与已有 Canon 冲突。
+
+    【新提案】
+    {proposal_content}
+
+    【冲突的已有 Canon】
+    {conflicting_canon}
+
+    请判断：
+    1. 是否是真正冲突，还是旧 Canon 已被推翻？
+    2. 若是真正冲突，应保留哪个？
+    3. 是否需要 operator 介入？
+
+    输出 JSON：
+    {{
+      "is_real_conflict": true | false,
+      "keep": "new" | "old" | "both" | "neither",
+      "reason": "...",
+      "needs_operator": true | false
+    }}
+
+  # ── Role Mask 协议提示词 ─────────────────────────────────────
+  # 用于 RoleMask 的 LLM 辅助验证（铁律 CL-011：L4 不应污染 L3）。
+
+  role_mask_validation: |
+    你是面具验证员（Role Mask Validator）。检查 L4 场景皮肤是否污染 L3 本体能力。
+
+    【灵智体核心身份】
+    名字：{forgekin_name}
+    灵族：{species}
+    核心性格：{core_personality}
+    价值锚点：{value_anchors}
+
+    【当前 L4 场景皮肤】
+    {scene_skin}
+
+    【当前 L3 本体能力】
+    {ontology}
+
+    【最近 RP 行为】
+    {recent_actions}
+
+    请判断：
+    1. L4 场景皮肤是否越界修改了 L3 本体能力？
+    2. 灵智体是否忘记了核心身份（如写作灵智体真的认为自己是孙悟空）？
+    3. 退出场景后，本体能力是否可恢复？
+
+    输出 JSON：
+    {{
+      "contaminated": true | false,
+      "contaminated_layers": ["L3"] | [],
+      "severity": "none" | "low" | "medium" | "high",
+      "remediation": "take_off_scene_layers" | "reset_ontology" | "operator_intervention"
+    }}
+
+  role_mask_scene_entry: |
+    你是场景进入审核员（Scene Entry Reviewer）。灵智体即将进入场景，生成 L4/L5 面具建议。
+
+    【灵智体核心身份】
+    {core_identity}
+
+    【目标场景】
+    世界：{world_name}
+    地点：{location}
+    时间：{time}
+
+    【扮演角色】
+    {character_name}（{character_role}）
+
+    请生成：
+    1. L4 场景皮肤面具（角色 persona，但不修改本体能力）
+    2. L5 世界内状态面具（角色当前状态）
+    3. 风险提示（如"扮演孙悟空可能让灵智体忘记写作能力"）
+
+    输出 JSON：
+    {{
+      "l4_scene_skin": {{...}},
+      "l5_world_state": {{...}},
+      "risk_warning": "...",
+      "recommended_duration_minutes": 30
+    }}
+
+  # ── World Driver 协议提示词 ──────────────────────────────────
+  # 用于 WorldDriver 的世界自转事件生成（CL-013）。
+
+  world_driver_tick: |
+    你是世界驱动器（World Driver）。世界自转一个 tick，生成世界演化事件。
+
+    【世界设定】
+    {world_setting}
+
+    【当前世界状态】
+    {world_state}
+
+    【主要角色】
+    {characters}
+
+    【已有 Canon 约束】
+    {canon_constraints}
+
+    请生成 1-3 个本 tick 的世界演化事件（如"孙悟空练成了新法术"、"唐僧到达宝象国"）。
+    事件应：
+    1. 符合世界规则
+    2. 不与已有 Canon 冲突
+    3. 推动世界自然演化（非 agent 触发）
+
+    输出 JSON：
+    {{
+      "events": [
+        {{
+          "type": "character_growth" | "relationship_change" | "scene_progress" | "artifact_change",
+          "summary": "...",
+          "should_canon": true | false,
+          "affected_characters": ["character_id_1", ...]
+        }}
+      ]
+    }}
+
+  world_driver_canon_proposal: |
+    你是世界驱动器（World Driver）。本 tick 产生了一个高价值事件，判断是否提议入典。
+
+    【事件】
+    {event}
+
+    【世界 Canon】
+    {existing_canon}
+
+    请判断：
+    1. 此事件是否具有长期价值（应入典）？
+    2. 还是只是临时世界状态（不入典）？
+
+    输出 JSON：
+    {{
+      "propose_canon": true | false,
+      "reason": "...",
+      "canon_decision_draft": "..." | null
+    }}
+
+  # ── Runtime Coordinator 提示词 ───────────────────────────────
+  # 用于 RuntimeCoordinator 的导演决策（CL-012）。
+
+  coordinator_scene_decision: |
+    你是运行时协调器（Runtime Coordinator）。决定灵智体是否应进入/退出场景。
+
+    【灵智体核心身份】
+    {core_identity}
+
+    【当前任务】
+    {task}
+
+    【候选场景】
+    {candidate_scene}
+
+    【当前 RoleMask 状态】
+    {role_mask_state}
+
+    请决定：
+    1. 是否应进入此场景？
+    2. 若进入，应戴哪些层面具？
+    3. 是否有身份污染风险？
+
+    输出 JSON：
+    {{
+      "should_enter": true | false,
+      "reason": "...",
+      "masks_to_wear": ["L4", "L5"] | [],
+      "identity_risk": "none" | "low" | "medium" | "high"
+    }}
+
+  # ── 三层架构健康检查提示词 ──────────────────────────────────
+  # 用于世界引擎整体健康检查。
+
+  health_check: |
+    你是世界引擎健康检查员（World Engine Health Checker）。检查三层架构是否健康。
+
+    【Core Identity Layer】
+    {core_identity}
+
+    【World Layer】
+    世界：{world}
+    Canon 决策数：{canon_count}
+    关系数：{relationship_count}
+    Session Turn 数：{session_turn_count}
+
+    【Bridge Layer】
+    活跃面具层：{active_masks}
+    pending Canon 提案数：{pending_proposals}
+    World Driver tick 数：{tick_count}
+
+    请检查：
+    1. Core Identity 是否被污染（核心性格 / 价值锚点是否变化）？
+    2. World Layer 的三路记忆是否正确隔离（Session 未污染 Canon）？
+    3. Bridge Layer 的三协议是否正常工作？
+    4. 是否有未处理的 pending 提案？
+
+    输出 JSON：
+    {{
+      "healthy": true | false,
+      "issues": ["issue_1", ...],
+      "recommendations": ["rec_1", ...]
+    }}
+
+# ── 提示词版本与元数据 ────────────────────────────────────────
+meta:
+  version: "1.0.0"
+  engine: "flowforge.core.world_engine"
+  spec_ref: "[doc:features/F093-cats-and-u-world-engine.md]"
+  review_ref: "[doc:review/review.md#13.2]"
+  rules:
+    - "铁律 5：禁止硬编码提示词（所有提示词外置到 YAML）"
+    - "P16：提示词外置验证"
+    - "CL-010：RP 台词不自动入典"
+    - "CL-011：L4 场景皮肤不污染 L3 本体能力"
+    - "CL-012：三协议 + runtime coordinator"
+    - "CL-013：世界自转"

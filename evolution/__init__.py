@@ -1,4 +1,4 @@
-"""FlowForge F100 Self-Evolution — 自我进化机制。
+"""FlowForge F100 Self-Evolution — 自我进化机制（v7.0 ForgeMindEngine）。
 
 移植自 clowder-ai 的三模式自我进化机制：
 - Mode A (Scope Guard): 防御 — 当讨论偏离当前 feat 愿景时温柔提醒
@@ -7,10 +7,10 @@
 
 三模式共享：五级知识成熟度阶梯、知识层级分工、元认知路由、知识对象契约。
 
-统一入口：SelfEvolutionEngine
+统一入口：ForgeMindEngine（按 ADR-012 命名融合，原 SelfEvolutionEngine/M18 已废弃）
 """
 
-from flowforge.evolution.engine import SelfEvolutionEngine
+from flowforge.evolution.engine import ForgeMindEngine
 from flowforge.evolution.knowledge_evolution import KnowledgeEvolution
 from flowforge.evolution.maturity import KnowledgeMaturityLadder
 from flowforge.evolution.metacognition import MetacognitionRouter
@@ -29,7 +29,7 @@ from flowforge.evolution.scope_guard import ScopeGuard
 
 __all__ = [
     # Engine
-    "SelfEvolutionEngine",
+    "ForgeMindEngine",
     # Mode A
     "ScopeGuard",
     "ScopeGuardSignal",

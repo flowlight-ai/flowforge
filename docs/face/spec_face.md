@@ -1,10 +1,10 @@
-﻿﻿﻿﻿# FlowForge v3.0 Agent Harness 进化需求规格说明书 — spec_face
+﻿﻿﻿# FlowForge v3.0 Agent Harness 进化需求规格说明书 — spec_face
 
 > **版本**：v3.0 (face)
 > **日期**：2026-07-14
 > **状态**：待用户审核
 > **定位**：本文档为 FlowForge v3.0 Agent Harness 进化需求规格说明书，基于 2025-2026 年国内主流大厂 Agent Harness 岗位面试信息创建，是 `flowforge/docs/face/` 目录下的补充规格文档。
-> **权威源声明**：本文档与 `flowforge/docs/spec.md` v7.0（炉灵养成体系权威源）、`flowforge/docs/arch.md` v7.0（七层架构权威源）、`hiclaw/rules.md`（开发规范）、`hiclaw/prompts.md`（提示词模板库）共同构成完整规格体系。当本文档与 v7.0 权威源发生冲突时，以 v7.0 为准；本文档负责将大厂面试诉求落地为 v3.0 工程需求，并通过"M18-M20 v7.0 融合映射"章节与炉灵养成体系无缝对齐。
+> **权威源声明**：本文档与 `flowforge/docs/spec.md` v7.0（灵智养成体系权威源）、`flowforge/docs/arch.md` v7.0（七层架构权威源）、`hiclaw/rules.md`（开发规范）、`hiclaw/prompts.md`（提示词模板库）共同构成完整规格体系。当本文档与 v7.0 权威源发生冲突时，以 v7.0 为准；本文档负责将大厂面试诉求落地为 v3.0 工程需求，并通过"M18-M20 v7.0 融合映射"章节与灵智养成体系无缝对齐。
 > **规范约束**：严格遵守 `hiclaw/rules.md`、`hiclaw/prompts.md`、单向依赖、DI 合规、配置驱动、测试铁律 T1-T15。所有实现禁止使用 Mock LLM / 假数据 / 跳过验证。
 
 ---
@@ -29,7 +29,7 @@ v3.0 的总目标是从 v2.1 的"Agent 驾驭层"进化为"工业级 Agent OS + 
 
 1. **工业级 Agent OS**：补齐 Durable Execution、六层 Guardrails 闭环、OTel GenAI 标准化可观测、Eval-gated 发布门禁、AgentBOM 治理、HITL 中断恢复、成本治理、多租户隔离等工业级能力，达到 CSA AGMM Level 4（工业可用）。
 2. **Agent 互联网节点**：通过 A2A 协议实现跨厂 Agent 互联，通过 MCP 2026 Spec RC 实现标准化工具生态，通过三层协议栈（ACP/MCP/A2A）实现完整协议覆盖，让 FlowForge 成为 Agent 互联网的联邦节点。
-3. **为 v7.0 炉灵养成体系提供工程支撑**：v3.0 的 M1-M17 是 v7.0 七层架构第 1-6 层的工程实现，为第 7 层（自进化层）的 ForgekinEngine / AutoForge / SoulEcho / ForgekinCouncil 提供协议、上下文、安全、可观测、评估、长程、纠错、成本、部署、HITL、治理、Computer Use、协议栈、故障恢复、多租户、Skill 市场等基础能力支撑。
+3. **为 v7.0 灵智养成体系提供工程支撑**：v3.0 的 M1-M17 是 v7.0 七层架构第 1-6 层的工程实现，为第 7 层（自进化层）的 ForgekinEngine / SpiritForge / MindEcho / MindCouncil 提供协议、上下文、安全、可观测、评估、长程、纠错、成本、部署、HITL、治理、Computer Use、协议栈、故障恢复、多租户、Skill 市场等基础能力支撑。
 
 ### 1.4 设计原则
 
@@ -153,7 +153,7 @@ v3.0 的总目标是从 v2.1 的"Agent 驾驭层"进化为"工业级 Agent OS + 
 | G15 | 故障恢复薄弱（无 Self-healing / Saga） | M15 恢复 | P1 | 字节一面"failure mode" |
 | G16 | 多租户未隔离 | M16 多租户 | P2 | 腾讯"云端逻辑多租户" |
 | G17 | Skill 无市场（无打包 / 签名 / 分发） | M17 Skill | P2 | 阿里"能力市场" |
-| G18 | v3.0 能力与 v7.0 炉灵体系融合路径不清 | M18-M20 融合 | P0 | 全六厂"自进化如何实现" |
+| G18 | v3.0 能力与 v7.0 灵智体系融合路径不清 | M18-M20 融合 | P0 | 全六厂"自进化如何实现" |
 
 ---
 
@@ -161,7 +161,7 @@ v3.0 的总目标是从 v2.1 的"Agent 驾驭层"进化为"工业级 Agent OS + 
 
 ### 3.1 七层架构模型（v2.1 六层 + 互联层）
 
-v3.0 在 v2.1 六层架构基础上新增第 7 层"互联层"，并强化 2/3/4 层。第 7 层"自进化层"由 v7.0 炉灵养成体系承接，v3.0 通过 M1-M17 为其提供工程支撑（详见 M18-M20 融合映射章节）。
+v3.0 在 v2.1 六层架构基础上新增第 7 层"互联层"，并强化 2/3/4 层。第 7 层"自进化层"由 v7.0 灵智养成体系承接，v3.0 通过 M1-M17 为其提供工程支撑（详见 M18-M20 融合映射章节）。
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -224,7 +224,7 @@ v2.1 控制回路（前馈 + 反馈 + 熵管理）→ v3.0 新增 4 条回路：
 | 层级 | v2.1 现有组件 | v3.0 新增 / 升级组件 | 对应模块 |
 |------|-------------|-------------------|---------|
 | **7. 互联层** | 无（v3.0 新增层） | A2A Server / Client / Directory / Agent Card / 跨厂鉴权 / ACP Orchestrator / 协议适配器 / 租户路由 | M1 / M14 / M16 |
-| **6. 应用层** | ContentForge / DevForge / NovelForge / MallForge / StockForge | Plugin V3 协议升级（支持 A2A / Skill 市场组合）/ 炉灵角色注册 | M17 / v7.0 FR-EVO |
+| **6. 应用层** | ContentForge / DevForge / NovelForge / MallForge / StockForge | Plugin V3 协议升级（支持 A2A / Skill 市场组合）/ 灵智角色注册 | M17 / v7.0 FR-EVO |
 | **5. 接入层** | FastAPI REST / WebSocket / Helm Web UI / CLI | A2A Endpoint（`/.well-known/agent.json` / `/a2a/`）/ MCP Manifest Endpoint / Marketplace API / 健康检查端点（`/health` `/ready` `/live`）| M1 / M2 / M15 |
 | **4. Harness 驾驭层** | PermissionPipeline / ContextLayerManager | Context Eng 2.0（JIT / Memory Tool / Editing / Caching）/ 六层 Guardrails Orchestrator / HITL CHEQ / AgentBOM / Blast-radius / Prompt Cache / Cost Router | M3 / M4 / M9 / M11 / M12 |
 | **3. 执行引擎层** | HybridExecutor / 9 大模式 / LoopExecutor | Durable Execution（Event Log / Checkpoint / Saga / Outbox）/ PreFlect / VIGIL / SAGE / Long-Run Manager | M7 / M8 |
@@ -368,7 +368,7 @@ flowforge/
 
 **集成点**：`harness/context_engine.py` 升级为 JIT 模式、`core/context_layer_manager.py` 升级支持 lazy + priority、`memory/` 全部 Memory store 增强 + Memory Tool API、`tools/registry.py` 注册 context_fetch / memory_* 工具、`loop/executor.py` Loop 每步构建 Context、`core/tracing.py` Context 操作 OTel Span、`core/di.py` Context 组件 DI 注入。
 
-**设计要点**：Loop 每步构建 Context，T7 审核通过率不下降（质量底线）。与 v7.0 FR-EVO-02 Soul Echo + ForgekinEngine 步骤 1-4 深度融合（JIT Context / Memory Tool / Context Editor 直接服务于 ForgekinEngine.execute() 的 soul.load() + echo.recall() + imprint.load() + build_soul_prompt() 步骤；M3 五层 Context Layer 对应 Soul Echo 三层记忆 L1 Working / L2 Episode / L3 Semantic）。
+**设计要点**：Loop 每步构建 Context，T7 审核通过率不下降（质量底线）。与 v7.0 FR-EVO-02 Mind Echo + ForgekinEngine 步骤 1-4 深度融合（JIT Context / Memory Tool / Context Editor 直接服务于 ForgekinEngine.execute() 的 soul.load() + echo.recall() + imprint.load() + build_soul_prompt() 步骤；M3 五层 Context Layer 对应 Mind Echo 三层记忆 L1 Working / L2 Episode / L3 Semantic）。
 
 **验收标准**：JIT 模式 Token 下降 ≥ 40%（决策 4 渐进式目标 20-30%，全 JIT 目标 40%+）；Memory Tool 4 API 全部可用；50 轮对话 Token 稳定 32K 内；Cache 命中率 ≥ 60%；T7 审核通过率不下降（质量底线）；Context 操作 OTel Span 完整（T10 协同）。
 
@@ -425,7 +425,7 @@ flowforge/
 - **M6.5 Memory / Skill 沉淀评估**：衡量 Memory / Skill 沉淀以后真的被召回、被使用并改善结果，而非堆积日志。指标：Memory 召回率（被检索 / 总存储）、Memory 命中率（被检索且被 LLM 引用 / 被检索）、Skill 使用频率、Skill 成功率（成功执行 / 总调用）、Skill 质量分趋势（是否随版本提升）。
 - **M6.6 组织提效衡量**：速度（任务完成时间 / P50 / P95）、质量（一次性通过率 / 返工率）、合入率（PR merge / PR total）、人工检查点占比（需人工介入 / 总步骤）、业务结果（ContentForge 文章通过率 / DevForge 代码合入率）。按 tenant / project / agent 维度归因。
 
-**设计要点**：新增 `eval/` 模块（benchmarks / regression / online / metrics / report），与 M5 OTel 集成（评估报告 Trace 化，每个 Eval case 生成独立 Span）。不做每日曲线（避免 Goodhart，SR-02 协同），只采高信号样本。与 M10 生产化部署协同（Eval-gated 门禁）。与 v7.0 FR-EVO-06 Skill 自生成的 Eval Ledger 深度融合（最小可信 case 数 5，覆盖 3 类），与 FR-EVO-14 炉启训练协同（新炉灵入门评估）。
+**设计要点**：新增 `eval/` 模块（benchmarks / regression / online / metrics / report），与 M5 OTel 集成（评估报告 Trace 化，每个 Eval case 生成独立 Span）。不做每日曲线（避免 Goodhart，SR-02 协同），只采高信号样本。与 M10 生产化部署协同（Eval-gated 门禁）。与 v7.0 FR-EVO-06 Skill 自生成的 Eval Ledger 深度融合（最小可信 case 数 5，覆盖 3 类），与 FR-EVO-14 炉启训练协同（新灵智入门评估）。
 
 **集成点**：`eval/runner.py` 评估执行器、`eval/benchmarks/` τ-bench / SWE-bench Pro 集成、`eval/regression/` 回归套件、`eval/metrics/` 指标采集（复用 M5 OTel Metric）、`eval/report/` 报告生成（OTel Trace + Markdown）、CI/CD pipeline 集成（GitHub Actions / GitLab CI）。
 
@@ -460,7 +460,7 @@ flowforge/
 - **M8.4 迭代上限**：Error-driven Reflection 迭代上限 3-5 次（可配置 `config/engine/reflection.yaml`），避免无限循环。每次 Reflection 记录原因和改进措施，超过上限后升级为 SAGE 事故处理（触发人工介入 M11 CHEQ）。
 - **M8.5 弱模型 Tool Calling 治理**：针对 GLM 等较弱模型 Tool calling 不准确问题（深信服面试信号），实现 Tool Schema 简化（弱模型用简化版 Schema）、Tool Call 验证（调用前参数校验）、Tool Call 重试（参数错误自动修正重试 ≤ 2 次）、Tool Call 降级（连续失败后降级为内置工具或人工介入）。
 
-**设计要点**：新增 `engine/preflect.py`（事前预检）、`engine/vigil.py`（事中多假设监控）、`engine/sage.py`（事故驱动护栏生成）。与 M4 Guardrails Orchestrator 协同（SAGE 产出护栏规则注入 M4 六层 Guardrails）。与 M5 OTel 协同（VIGIL 基于 OTel Span 异常检测）。与 v7.0 FR-EVO-04 Auto-Forge 深度融合（PreFlect 对应自锻"读留痕"、VIGIL 对应"画线"、SAGE 对应"写日记"——详见 M18-M20 融合映射）。
+**设计要点**：新增 `engine/preflect.py`（事前预检）、`engine/vigil.py`（事中多假设监控）、`engine/sage.py`（事故驱动护栏生成）。与 M4 Guardrails Orchestrator 协同（SAGE 产出护栏规则注入 M4 六层 Guardrails）。与 M5 OTel 协同（VIGIL 基于 OTel Span 异常检测）。与 v7.0 FR-EVO-04 SpiritForge 深度融合（PreFlect 对应灵锻"读留痕"、VIGIL 对应"画线"、SAGE 对应"写日记"——详见 M18-M20 融合映射）。
 
 **集成点**：`engine/preflect.py` 事前预检模块、`engine/vigil.py` 多假设监控模块、`engine/sage.py` 事故驱动模块、`config/engine/reflection.yaml` 反射配置、`config/guardrails/sage_rules/` SAGE 生成的护栏规则存储、`core/tracing.py` 日志协同（OTel Span 异常检测）。
 
@@ -477,7 +477,7 @@ flowforge/
 - **M9.4 成本归因**：按 tenant / project / agent / task / tool 维度归因成本，预留 tenant_id 字段（M16 协同），实时成本仪表盘（Helm UI）。成本记录表 `cost_ledger`（tenant_id / project_id / agent_id / task_id / tool_name / model / input_tokens / output_tokens / cost / timestamp）。成本告警（日预算超限 / 单任务成本超限 / 配额即将耗尽）。
 - **M9.5 Sandbox 成本优化**：轻量化隔离方案（阿里问"一人一 Sandbox 成本过高"）：容器共享（同租户共享容器，进程级隔离）、按需启动（空闲超 30min 自动关闭）、冷启动优化（预热镜像 / layered cache）、成本归因到租户（M16 协同）。与 M2 工具沙箱协同。
 
-**设计要点**：新增 `harness/prompt_cache.py`（Redis Cache + 失效策略）、`harness/cost_router.py`（复杂度评估 + 模型路由）、`harness/quota_pool.py`（配额池管理 + 自动切换）、`harness/cost_ledger.py`（成本归因 + 仪表盘数据）。Cache 失效率监控（OTel Metric）。与 M5 OTel 协同（Cache 命中率 / 成本 Metric）。与 v7.0 性能 SLO 协同（Auto-Forge < 5min / Soul Echo 写入 < 100ms / Skill 验证 < 10min 需要成本优化支撑）。
+**设计要点**：新增 `harness/prompt_cache.py`（Redis Cache + 失效策略）、`harness/cost_router.py`（复杂度评估 + 模型路由）、`harness/quota_pool.py`（配额池管理 + 自动切换）、`harness/cost_ledger.py`（成本归因 + 仪表盘数据）。Cache 失效率监控（OTel Metric）。与 M5 OTel 协同（Cache 命中率 / 成本 Metric）。与 v7.0 性能 SLO 协同（SpiritForge < 5min / Mind Echo 写入 < 100ms / Skill 验证 < 10min 需要成本优化支撑）。
 
 **集成点**：`harness/prompt_cache.py` Prompt 缓存、`harness/cost_router.py` 成本路由、`harness/quota_pool.py` 配额池、`harness/cost_ledger.py` 成本归因、`config/harness/prompt_cache.yaml` 缓存配置、`config/harness/cost_router.yaml` 路由配置、`config/models/quota_pool.yaml` 配额池配置、`core/llm_client.py` LLM 客户端集成（Cache + Routing 透明注入）、Helm UI 成本仪表盘组件。
 
@@ -491,10 +491,10 @@ flowforge/
 - **M10.1 灰度发布**：1% → 10% → 50% → 100% 渐进发布（可配置阶段 `config/deploy/canary.yaml`），与 M5 Eval-gated 协同，线上监控异常自动回滚。灰度策略：按 tenant 灰度（先内部租户后外部租户）、按流量灰度（百分比路由）、按功能灰度（Feature Flag 控制新功能可见性）。灰度期间监控指标：错误率 / 延迟 P95 / τ-bench pass^k / 用户满意度，任一指标恶化 > 阈值自动回滚。
 - **M10.2 A/B 测试**：新旧版本并行，按流量比例分流（50/50 或自定义比例），统计显著性检验（t-test / Mann-Whitney U，p < 0.05 视为显著），自动选择优胜版本。A/B 测试配置：`config/deploy/ab_test.yaml` 定义 experiment_id / variant_a / variant_b / traffic_split / metrics / duration / significance_threshold。A/B 测试结果记录完整，支持回溯分析。
 - **M10.3 Eval-gated 自动回滚**：发布前自动跑 τ-bench（M5.5），pass^k 未达标自动回滚，评估报告 OTel Trace 化。Eval-gated 配置：`config/deploy/eval_gate.yaml` 定义 benchmark / pass_threshold / k_value / timeout / on_fail（block / rollback / notify）。支持多层门禁：单元测试 → 集成测试 → 回归套件 → τ-bench → 灰度监控，任一层失败阻断后续。
-- **M10.4 自指修改防漂移**：Agent 修改 Harness 配置时触发检查链：①Eval 回归测试（金标准任务集 M6.3，分数下降 > 5% 阻断）；②人工审批（M11 CHEQ，高风险修改需 operator 确认）；③灰度发布（先 1% 流量验证）；④线上监控异常自动回滚；⑤完整审计记录（谁改了什么 / 为什么改 / 何时改 / 影响范围）。与 v7.0 FR-EVO-04 Auto-Forge 协同（自指修改 100% 经 Eval + 审批 + 灰度）。
+- **M10.4 自指修改防漂移**：Agent 修改 Harness 配置时触发检查链：①Eval 回归测试（金标准任务集 M6.3，分数下降 > 5% 阻断）；②人工审批（M11 CHEQ，高风险修改需 operator 确认）；③灰度发布（先 1% 流量验证）；④线上监控异常自动回滚；⑤完整审计记录（谁改了什么 / 为什么改 / 何时改 / 影响范围）。与 v7.0 FR-EVO-04 SpiritForge 协同（自指修改 100% 经 Eval + 审批 + 灰度）。
 - **M10.5 CI/CD Pipeline 集成**：与 GitHub Actions / GitLab CI 集成，PR 提交触发：lint → type check → unit test → integration test → regression test → τ-bench → SWE-bench Pro → build → deploy canary → monitor → promote / rollback。Pipeline 配置 YAML 化，支持并行执行加速。
 
-**设计要点**：新增 `deploy/` 模块（canary / ab_test / eval_gate / drift_prevention / pipeline）。与 M5 Eval-gated / M6 τ-bench / M11 CHEQ 协同。与 v7.0 FR-EVO-04 Auto-Forge 融合（自指修改防漂移是自进化的安全护栏，自锻产出的代码修改必须经 Eval-gated + 审批 + 灰度才能合入）。
+**设计要点**：新增 `deploy/` 模块（canary / ab_test / eval_gate / drift_prevention / pipeline）。与 M5 Eval-gated / M6 τ-bench / M11 CHEQ 协同。与 v7.0 FR-EVO-04 SpiritForge 融合（自指修改防漂移是自进化的安全护栏，灵锻产出的代码修改必须经 Eval-gated + 审批 + 灰度才能合入）。
 
 **集成点**：`deploy/canary_manager.py` 灰度发布管理、`deploy/ab_test_manager.py` A/B 测试管理、`deploy/eval_gate.py` Eval 门禁、`deploy/drift_prevention.py` 防漂移检查、`deploy/pipeline.py` CI/CD 集成、`config/deploy/canary.yaml` / `ab_test.yaml` / `eval_gate.yaml` 配置、`core/feature_flag.py` Feature Flag 管理、GitHub Actions / GitLab CI workflow 文件。
 
@@ -511,7 +511,7 @@ flowforge/
 - **M11.4 DevForge IPD 对接**：与 DevForge IPD（集成产品开发）流程对接，产品经理 / SE / 开发 / 测试与 Agent 协同。IPD 检查点矩阵：需求评审（人主导，Agent 辅助）/ 架构设计（Agent 提案，人审批）/ 编码实现（Agent 主导，人 Review）/ 测试验证（Agent 自动化，人确认关键路径）/ 发布部署（人审批，Agent 执行）。哪些环节可以闭环（编码 / 测试），哪些检查点必须由人负责（需求 / 架构 / 发布）。
 - **M11.5 中断上下文管理**：中断时保存完整上下文（Agent State + Working Memory + Tool State + Trace），恢复时完整重建。与 M7 Durable Execution 协同（HITL 中断是 Durable 的特殊事件类型）。与 M3 Context Editor 协同（长任务中断恢复后，上下文可能需要压缩 + 增量补齐）。
 
-**设计要点**：新增 `harness/hitl_cheq.py`（CHEQ 标准中断恢复 + HotL / HoverL 调度）。与 M4 L5 Action Confirmation / M7 Durable Execution / M10 灰度发布协同。与 v7.0 operator 审批节点直接融合（E6 创建炉灵需 operator 授权 / Soul Imprint proposal 需 operator 审批 / Provoke 需 operator 反馈——详见 M18-M20 融合映射）。
+**设计要点**：新增 `harness/hitl_cheq.py`（CHEQ 标准中断恢复 + HotL / HoverL 调度）。与 M4 L5 Action Confirmation / M7 Durable Execution / M10 灰度发布协同。与 v7.0 operator 审批节点直接融合（E6 创建灵智需 operator 授权 / Mind Imprint proposal 需 operator 审批 / Provoke 需 operator 反馈——详见 M18-M20 融合映射）。
 
 **集成点**：`harness/hitl_cheq.py` HITL CHEQ 管理器、`config/harness/hitl_channels.yaml` 通知渠道配置、`config/harness/hitl_policy.yaml` 中断策略（HotL / HoverL 触发条件）、Helm UI 中断等待界面组件、`middleware/notify.py` 多渠道通知（飞书 / 邮件 / Webhook）、`engine/durable/event_log.py` Durable 事件协同。
 
@@ -528,7 +528,7 @@ flowforge/
 - **M12.4 治理即代码**：策略 YAML + CI/CD 门禁，AgentBOM 变更需审批，治理规则版本化。治理策略存储 `config/governance/policies/*.yaml`，每次变更 Git 版本化 + PR 审批。CI/CD 门禁：PR 提交时检查 AgentBOM 完整性 / 权限变更 / 依赖变更 / Blast-radius 评估，高风险变更触发人工审批。治理规则热加载（不停机更新）。
 - **M12.5 测试 Agent**：专门的测试 Agent（腾讯问"是否有专门的测试 Agent"），负责回归测试 / 集成测试 / Eval 执行 / 质量监控。测试 Agent 配置：`config/agents/test_agent.yaml`，能力：自动运行 M6 回归套件、τ-bench 评估、SWE-bench Pro、生成测试报告、触发回滚（M10 协同）。
 
-**设计要点**：新增 `governance/` 模块（agent_bom / blast_radius / policy_manager / audit_trail）。与 M4 Guardrails / M5 OTel / M6 Eval / M10 生产化部署协同。与 v7.0 FR-EVO-01 炉灵身份系统融合（AgentBOM 为 forgekin_id / Soul Profile / 升华阶段追踪提供治理基础），与 SR-05 E6 创建炉灵需 operator 授权协同（详见 M18-M20 融合映射）。
+**设计要点**：新增 `governance/` 模块（agent_bom / blast_radius / policy_manager / audit_trail）。与 M4 Guardrails / M5 OTel / M6 Eval / M10 生产化部署协同。与 v7.0 FR-EVO-01 灵智身份系统融合（AgentBOM 为 forgekin_id / Mind Profile / 觉醒阶段追踪提供治理基础），与 SR-05 E6 创建灵智需 operator 授权协同（详见 M18-M20 融合映射）。
 
 **集成点**：`governance/agent_bom.py` AgentBOM 管理、`governance/blast_radius.py` Blast-radius 评估、`governance/policy_manager.py` 策略管理、`governance/audit_trail.py` 审计追踪、`config/governance/policies/` 策略 YAML 存储、`config/agents/test_agent.yaml` 测试 Agent 配置、CI/CD 门禁集成、Helm UI 治理仪表盘组件。
 
@@ -579,7 +579,7 @@ flowforge/
 - **M15.5 降级链路**：完整降级链路，逐级降级保证核心功能可用。①A2A 不可用 → 内部 Agent（M1 协同，跨厂调用失败回退到内部 Agent）；②MCP 工具不可用 → 内置工具（M2 协同，外部工具超时回退到内置工具）；③外部 LLM 不可用 → 备用 Provider（M9.3 协同，主 Provider 耗尽切换备用）；④Memory 不可用 → 短期上下文（M3 协同，长期记忆不可用时只用 Working Memory）；⑤Browser Agent 不可用 → HTTP 请求（M13 协同，浏览器自动化失败回退到简单 HTTP）；⑥Trae Bridge 超时 → 内置 Agent（SR-07 协同，外部编码工具超时降级）。
 - **M15.6 终止条件治理**：两个 Agent 自由协同时防止无限聊天（阿里问"一直瞎聊如何终止"）。终止条件：轮数上限（默认 10 轮，可配置）、工具进展检测（连续 3 轮无工具调用 → 终止）、任务状态检测（task_state = completed / failed → 终止）、外部事件（用户取消 / 超时 → 终止）、循环检测（相同消息重复 ≥ 3 次 → 终止）。
 
-**设计要点**：新增 `runtime/self_healing.py`（健康检查 + 自愈）、`runtime/bulkhead.py`（资源隔离）、`runtime/degradation.py`（降级链路管理）。与 M7 Durable / M1 A2A / M2 MCP / M3 Context / M9 Cost / M13 Computer Use 协同。与 v7.0 降级策略协同（ForgekinEngine → HybridExecutor，Auto-Forge → 跳过，External Tool → 内置 Agent，Trae Bridge → 内置 Agent，Council → 单渠道，A2A → 直接调用——详见 M18-M20 融合映射）。
+**设计要点**：新增 `runtime/self_healing.py`（健康检查 + 自愈）、`runtime/bulkhead.py`（资源隔离）、`runtime/degradation.py`（降级链路管理）。与 M7 Durable / M1 A2A / M2 MCP / M3 Context / M9 Cost / M13 Computer Use 协同。与 v7.0 降级策略协同（ForgekinEngine → HybridExecutor，SpiritForge → 跳过，External Tool → 内置 Agent，Trae Bridge → 内置 Agent，Council → 单渠道，A2A → 直接调用——详见 M18-M20 融合映射）。
 
 **集成点**：`runtime/self_healing.py` 自愈管理器、`runtime/bulkhead.py` Bulkhead 隔离、`runtime/degradation.py` 降级链路、`runtime/health_check.py` 健康检查、`config/runtime/bulkhead.yaml` 隔离配置、`config/runtime/degradation.yaml` 降级策略配置、`middleware/health.py` 健康检查端点（`/health` / `/ready` / `/live`）。
 
@@ -614,7 +614,7 @@ flowforge/
 - **M17.5 Skill 沙箱**：Skill 在沙箱中执行（M2 工具沙箱协同），限制权限。沙箱策略：Container Isolation（Docker per Skill，M2.5 协同）、Resource Limit（CPU / Memory / Network / Timeout）、Permission Limit（文件系统白名单 / 网络白名单 / 环境变量白名单）、Skill 间隔离（Skill A 不能访问 Skill B 的内部状态）。沙箱策略配置：`config/marketplace/sandbox_policy.yaml`。
 - **M17.6 组织经验推广**：个人 Skill → 组织 Skill 推广机制（小米问"个人 AI-native 经验推广成组织经验"）。推广流程：个人创建 Skill → 内部 Marketplace 发布 → 组织评审（质量 / 安全 / 复用性）→ 通过后标记为"组织推荐" → 全组织可见可安装 → 使用数据反馈 → 持续优化。组织级 Skill 优先级高于个人 Skill（路由优先级排序）。
 
-**设计要点**：决策 6 推荐"v3.0 内部，v3.1 开放"。与 M2 MCP Apps（Manifest 自动发现）协同、M6 Eval（Skill 评价）协同、M12 AgentBOM（Skill 依赖追踪）协同。与 v7.0 FR-EVO-05 锻典（Forge Codex）五级火种阶梯和 FR-EVO-06 三模式自生成的 Skill 入库与分发直接融合（详见 M18-M20 融合映射）。
+**设计要点**：决策 6 推荐"v3.0 内部，v3.1 开放"。与 M2 MCP Apps（Manifest 自动发现）协同、M6 Eval（Skill 评价）协同、M12 AgentBOM（Skill 依赖追踪）协同。与 v7.0 FR-EVO-05 灵典（Mind Codex）五级进化阶梯和 FR-EVO-06 三模式自生成的 Skill 入库与分发直接融合（详见 M18-M20 融合映射）。
 
 **集成点**：`marketplace/registry.py` Skill 注册中心、`marketplace/packager.py` 打包工具、`marketplace/signer.py` 签名验签、`marketplace/distributor.py` 分发管理、`marketplace/rating.py` 评价系统、`marketplace/sandbox.py` Skill 沙箱（复用 M2.5）、`config/marketplace/sandbox_policy.yaml` 沙箱策略、CLI 工具 `flowforge skill` 命令、Helm UI Marketplace 界面、API 端点 `/api/v1/marketplace/`。
 
@@ -622,39 +622,39 @@ flowforge/
 
 ---
 
-## 模块 M18-M20：v7.0 炉灵养成体系融合映射（★ 核心修正章节）
+## 模块 M18-M20：v7.0 灵智养成体系融合映射（★ 核心修正章节）
 
-> **本章是本次修正的核心章节**。原 M18（SelfEvolutionEngine）/ M19（MemoryGovernanceManager）/ M20（FirstTouchRouter）三个模块已删除，因为与 `flowforge/docs/spec.md` v7.0 已设计的炉灵养成体系（FR-EVO-01~15）完全重复且术语冲突。本节改为融合映射，说明 face 目录下 M1-M17 如何融入 v7.0 炉灵养成体系，避免重复设计和术语冲突。
+> **本章是本次修正的核心章节**。原 M18（ForgeMindEngine）/ M19（ForgeMindEngine）/ M20（ForgeMindEngine）三个模块已删除，因为与 `flowforge/docs/spec.md` v7.0 已设计的灵智养成体系（FR-EVO-01~15）完全重复且术语冲突。本节改为融合映射，说明 face 目录下 M1-M17 如何融入 v7.0 灵智养成体系，避免重复设计和术语冲突。
 
 ### 修正说明
 
-在 v3.0 早期设计过程中，face 目录曾基于大厂面试中"自进化"信号设计 M18 SelfEvolutionEngine、M19 MemoryGovernanceManager、M20 FirstTouchRouter 三个模块。但随后 `flowforge/docs/spec.md` 升级到 v7.0，正式引入"炉灵养成体系"（FR-EVO-01~15），覆盖了自我进化、记忆治理、协作决策的全部能力，并采用"炉灵 / 魂忆 / 魂印 / 自锻 / 锻典 / 灵议 / 升华阶"等更体系化的术语。
+在 v3.0 早期设计过程中，face 目录曾基于大厂面试中"自进化"信号设计 M18 ForgeMindEngine、M19 ForgeMindEngine、M20 ForgeMindEngine 三个模块。但随后 `flowforge/docs/spec.md` 升级到 v7.0，正式引入"灵智养成体系"（FR-EVO-01~15），覆盖了自我进化、记忆治理、协作决策的全部能力，并采用"灵智 / 灵忆 / 灵印 / 灵锻 / 灵典 / 灵议 / 觉醒阶"等更体系化的术语。
 
 经审核，原 M18 / M19 / M20 的需求与 v7.0 FR-EVO 体系完全重复且术语冲突：
 
 | 原 face 模块 | 重复的 v7.0 需求 | 冲突点 |
 |-------------|----------------|--------|
-| M18 SelfEvolutionEngine（三层 Harness + Skill 自动提取 + 经验逐级固化 + 事故驱动护栏 + 自指修改防漂移 + VDD） | FR-EVO-04 Auto-Forge + FR-EVO-05 Forge Codex + FR-EVO-06 Skill 自生成 | "SelfEvolution" 与 "Auto-Forge" 术语冲突；"Skill 自动提取" 与 "三模式自生成" 重复 |
-| M19 MemoryGovernanceManager（4 级权威 + 晋级退役 + 冲突仲裁 + 五层记忆 + Shared State） | FR-EVO-02 Soul Echo + FR-EVO-03 Soul Imprint + FR-EVO-05 Forge Codex 五级火种 | "MemoryGovernance" 与 "Soul Echo / Soul Imprint" 术语冲突；"4 级权威" 与 "五级火种 Ember Hierarchy" 重复 |
-| M20 FirstTouchRouter（首接路由 + 动态拉入门 + 终止条件 + 球权契约） | FR-EVO-09 A2A 通信协议 + FR-EVO-10 灵议 Forgekin Council + FR-EVO-11 两类智能体无缝衔接 | "FirstTouchRouter" 与 "A2A @mention 路由 + TaskRouter" 重复；"球权契约" 与 "structured handoff" 重复 |
+| M18 SelfEvolutionEngine（三层 Harness + Skill 自动提取 + 经验逐级固化 + 事故驱动护栏 + 自指修改防漂移 + VDD） | FR-EVO-04 SpiritForge + FR-EVO-05 Mind Codex + FR-EVO-06 Skill 自生成 | "SelfEvolution" 与 "SpiritForge" 术语冲突；"Skill 自动提取" 与 "三模式自生成" 重复 |
+| M19 MemoryGovernanceManager（4 级权威 + 晋级退役 + 冲突仲裁 + 五层记忆 + Shared State） | FR-EVO-02 Mind Echo + FR-EVO-03 Mind Imprint + FR-EVO-05 Mind Codex 五级进化阶 | "MemoryGovernance" 与 "Mind Echo / Mind Imprint" 术语冲突；"4 级权威" 与 "五级进化阶 Evolution Hierarchy" 重复 |
+| M20 FirstTouchRouter（首接路由 + 动态拉入门 + 终止条件 + 球权契约） | FR-EVO-09 A2A 通信协议 + FR-EVO-10 灵议 Mind Council + FR-EVO-11 两类智能体无缝衔接 | "FirstTouchRouter" 与 "A2A @mention 路由 + TaskRouter" 重复；"球权契约" 与 "structured handoff" 重复 |
 
-**修正决策**：删除原 M18 / M19 / M20 三个模块的详细需求，改为本融合映射章节。M1-M17 作为 v3.0 的工程实现，为 v7.0 第 7 层（自进化层）的 ForgekinEngine / AutoForge / SoulEcho / ForgekinCouncil 提供支撑。原 M18 / M19 / M20 的工程任务保留在 `task_face.md` 中（已标注"v4.0 融合"），但其需求规格统一由 v7.0 FR-EVO-01~15 承接，face 目录不再重复定义。
+**修正决策**：删除原 M18 / M19 / M20 三个模块的详细需求，改为本融合映射章节。M1-M17 作为 v3.0 的工程实现，为 v7.0 第 7 层（自进化层）的 ForgekinEngine / SpiritForge / MindEcho / MindCouncil 提供支撑。原 M18 / M19 / M20 的工程任务保留在 `task_face.md` 中（已标注"v4.0 融合"），但其需求规格统一由 v7.0 FR-EVO-01~15 承接，face 目录不再重复定义。
 
 ### v7.0 术语对齐表
 
-face 目录与 v7.0 炉灵养成体系的术语对齐如下，所有 face 目录文档（spec_face / arch_face / task_face）在涉及自进化、记忆、协作概念时，必须使用 v7.0 术语，禁止使用原 M18 / M19 / M20 术语。
+face 目录与 v7.0 灵智养成体系的术语对齐如下，所有 face 目录文档（spec_face / arch_face / task_face）在涉及自进化、记忆、协作概念时，必须使用 v7.0 术语，禁止使用原 M18 / M19 / M20 术语。
 
 | v7.0 术语 | 含义 | 对标 clowder-ai | 原 face 术语（已废弃） |
 |----------|------|----------------|----------------------|
-| 炉灵 Forgekin | 自进化智能体（具备独立身份、记忆、人格，可自主成长和进化） | Cat（猫猫） | SelfEvolutionAgent |
-| 灵族 Kinship | 协作的炉灵群（类似开发团队） | Clowder（猫群） | Multi-agent Team |
-| 养灵 Forge Nurturing | 炉灵从诞生到升华的全过程 | 养猫 | Agent Lifecycle |
-| 魂忆 Soul Echo | 三层记忆（L1 Working / L2 Episode / L3 Semantic），对标 MemGPT | Memory（F102） | MemoryGovernance |
-| 魂印 Soul Imprint | 认知画像（双层：结构化字段 + cat_note 主观日记），no-classifier 红线 | Profile Capsule（F231） | Agent Profile |
-| 自锻 Auto-Forge | 无人驱动时的自主思考与进化（双层：Consolidation 后台 + Surface 前台），对标 Auto-Dream F255 | Auto-Dream | SelfEvolutionEngine |
-| 锻典 Forge Codex | 五级火种知识库（E-L0 Episode / E-L1 Pattern / E-L2 Draft / E-L3 Validated / E-L4 Standard） | Skill Library + L0-L4 Knowledge | Skill Library |
-| 灵议 Forgekin Council | IM 多渠道协作（Web Chat 灵议 / 飞书 / 微信 / Slack / Discord / GitHub PR） | IM 团队协作 | CollaborationGate |
-| 升华阶 E1-E6 | 成长阶段（E1 Spark / E2 Ember / E3 Flame / E4 Blaze / E5 Inferno / E6 Forge Master） | 9 Lives | Agent Maturity Level |
+| 灵智 Forgekin | 自进化智能体（具备独立身份、记忆、人格，可自主成长和进化） | Cat（猫猫） | SelfEvolutionAgent |
+| 灵群 Kinship | 协作的灵智群（类似开发团队） | Clowder（猫群） | Multi-agent Team |
+| 育灵 Forge Nurturing | 灵智从诞生到升华的全过程 | 养猫 | Agent Lifecycle |
+| 灵忆 Mind Echo | 三层记忆（L1 Working / L2 Episode / L3 Semantic），对标 MemGPT | Memory（F102） | MemoryGovernance |
+| 灵印 Mind Imprint | 认知画像（双层：结构化字段 + cat_note 主观日记），no-classifier 红线 | Profile Capsule（F231） | Agent Profile |
+| 灵锻 SpiritForge | 无人驱动时的自主思考与进化（双层：Consolidation 后台 + Surface 前台），对标 Auto-Dream F255 | Auto-Dream | SelfEvolutionEngine |
+| 灵典 Mind Codex | 五级进化阶知识库（E-L0 Episode / E-L1 Pattern / E-L2 Draft / E-L3 Validated / E-L4 Standard） | Skill Library + L0-L4 Knowledge | Skill Library |
+| 灵议 Mind Council | IM 多渠道协作（Web Chat 灵议 / 飞书 / 微信 / Slack / Discord / GitHub PR） | IM 团队协作 | CollaborationGate |
+| 觉醒阶 E1-E6 | 成长阶段（E1 Initiation 灵启 / E2 Awakening 觉醒 / E3 Mastery 精通 / E4 Evoling 进化 / E5 Excellence 卓越 / E6 ForgeMind 灵智） | 9 Lives | Agent Maturity Level |
 
 ### M1-M17 到 v7.0 FR-EVO 体系融合映射表
 
@@ -662,31 +662,31 @@ face 目录与 v7.0 炉灵养成体系的术语对齐如下，所有 face 目录
 
 | face 模块 | 对应 v7.0 FR-EVO 需求 | 融合方式 | 优先级 | 融合说明 |
 |---------|---------------------|---------|--------|---------|
-| **M1 A2A 协议集成** | FR-EVO-09 A2A 通信协议 | 直接融合 | P0 | M1 是 FR-EVO-09 的工程实现：@mention 路由 + thread isolation + structured handoff，M1 的 Agent Card / Directory / 跨厂鉴权直接服务于炉灵间协作 |
+| **M1 A2A 协议集成** | FR-EVO-09 A2A 通信协议 | 直接融合 | P0 | M1 是 FR-EVO-09 的工程实现：@mention 路由 + thread isolation + structured handoff，M1 的 Agent Card / Directory / 跨厂鉴权直接服务于灵智间协作 |
 | **M2 MCP 2026 升级** | FR-EVO-07 外部编码工具集成（间接） | 延伸融合 | P0 | M2 的 Stateless Core / Sandbox 为 FR-EVO-07 CLI Wrapper（Claude Code / Codex / OpenCode）和 FR-EVO-08 Trae Bridge 提供工具沙箱基础 |
-| **M3 Context Eng 2.0** | FR-EVO-02 Soul Echo（魂忆）+ ForgekinEngine 步骤 1-4 | 深度融合 | P0 | M3 的 JIT Context / Memory Tool / Context Editor 直接服务于 ForgekinEngine.execute() 的 soul.load() + echo.recall() + imprint.load() + build_soul_prompt() 步骤；M3 五层 Context Layer 对应 Soul Echo 三层记忆 |
+| **M3 Context Eng 2.0** | FR-EVO-02 Mind Echo（灵忆）+ ForgekinEngine 步骤 1-4 | 深度融合 | P0 | M3 的 JIT Context / Memory Tool / Context Editor 直接服务于 ForgekinEngine.execute() 的 soul.load() + echo.recall() + imprint.load() + build_soul_prompt() 步骤；M3 五层 Context Layer 对应 Mind Echo 三层记忆 |
 | **M4 六层 Guardrails** | SR-01~08 安全红线 | 延伸融合 | P0 | M4 六层 Guardrails 是 v7.0 安全红线（SR-01 no-classifier / SR-03 Provoke 频率硬限 / SR-04 高风险域升级 / SR-06 worktree 隔离 / SR-08 跨 *Forge 可审计）的工程落地 |
 | **M5 OTel GenAI** | v7.0 可观测性指标（附录 12.4） | 直接融合 | P0 | M5 的 gen_ai.* Span / Metrics 直接对应 v7.0 的 forgekin_active_total / auto_forge_runs_total / soul_echo_episodes_total / a2a_messages_total 等指标 |
 | **M6 评估与基准** | FR-EVO-06 Skill 自生成（Eval Ledger）+ FR-EVO-14 炉启训练 | 深度融合 | P1 | M6 的 τ-bench / SWE-bench Pro / 回归套件直接服务于 FR-EVO-06 的 Eval Ledger（最小可信 case 数 5，覆盖 3 类）和 FR-EVO-14 Forge Initiation 入门训练 |
-| **M7 Durable Execution** | ForgekinEngine 长程任务（间接） | 延伸融合 | P1 | M7 的 Durable Event Log / Checkpoint / Saga 为 ForgekinEngine 的长程自进化任务（如多日 Auto-Forge）提供持久化基础 |
-| **M8 自我纠错 2.0** | FR-EVO-04 Auto-Forge（自锻）+ FR-EVO-06 Skill 蒸馏 | 深度融合 | P1 | M8 的 PreFlect / VIGIL / SAGE 三层纠错与 FR-EVO-04 Auto-Forge 的"读留痕 → 画线 → 写日记"深度融合；SAGE 事故驱动护栏与 FR-EVO-06 Mode B Process Evolution 协同 |
-| **M9 Prompt Caching + 成本** | v7.0 性能 SLO（附录 12.1） | 延伸融合 | P1 | M9 的 Prompt Caching / Cost-Aware Routing / 配额池为 v7.0 的 Auto-Forge < 5min / Soul Echo 写入 < 100ms / Skill 验证 < 10min 等 SLO 提供成本基础 |
-| **M10 生产化部署** | FR-EVO-04 Auto-Forge（自指修改防漂移） | 深度融合 | P1 | M10 的灰度发布 / Eval-gated 自动回滚 / 自指修改防漂移直接服务于 FR-EVO-04 的自锻安全（自指修改 100% 经 Eval + 审批 + 灰度） |
-| **M11 HITL 2.0（CHEQ）** | v7.0 operator 审批节点 | 直接融合 | P1 | M11 的 CHEQ 中断恢复 / HotL / HoverL 直接对应 v7.0 的 operator 审批节点（E6 创建炉灵需 operator 授权 / Soul Imprint proposal 需 operator 审批 / Provoke 需 operator 反馈） |
-| **M12 Agent 治理** | FR-EVO-01 炉灵身份系统 + SR-05 E6 创建授权 | 延伸融合 | P2 | M12 的 AgentBOM / Blast-radius Gate 为 FR-EVO-01 的 forgekin_id / Soul Profile / 升华阶段追踪提供治理基础；SR-05 E6 创建炉灵需 operator 授权依赖 M12 |
+| **M7 Durable Execution** | ForgekinEngine 长程任务（间接） | 延伸融合 | P1 | M7 的 Durable Event Log / Checkpoint / Saga 为 ForgekinEngine 的长程自进化任务（如多日 SpiritForge）提供持久化基础 |
+| **M8 自我纠错 2.0** | FR-EVO-04 SpiritForge（灵锻）+ FR-EVO-06 Skill 蒸馏 | 深度融合 | P1 | M8 的 PreFlect / VIGIL / SAGE 三层纠错与 FR-EVO-04 SpiritForge 的"读留痕 → 画线 → 写日记"深度融合；SAGE 事故驱动护栏与 FR-EVO-06 Mode B Process Evolution 协同 |
+| **M9 Prompt Caching + 成本** | v7.0 性能 SLO（附录 12.1） | 延伸融合 | P1 | M9 的 Prompt Caching / Cost-Aware Routing / 配额池为 v7.0 的 SpiritForge < 5min / Mind Echo 写入 < 100ms / Skill 验证 < 10min 等 SLO 提供成本基础 |
+| **M10 生产化部署** | FR-EVO-04 SpiritForge（自指修改防漂移） | 深度融合 | P1 | M10 的灰度发布 / Eval-gated 自动回滚 / 自指修改防漂移直接服务于 FR-EVO-04 的灵锻安全（自指修改 100% 经 Eval + 审批 + 灰度） |
+| **M11 HITL 2.0（CHEQ）** | v7.0 operator 审批节点 | 直接融合 | P1 | M11 的 CHEQ 中断恢复 / HotL / HoverL 直接对应 v7.0 的 operator 审批节点（E6 创建灵智需 operator 授权 / Mind Imprint proposal 需 operator 审批 / Provoke 需 operator 反馈） |
+| **M12 Agent 治理** | FR-EVO-01 灵智身份系统 + SR-05 E6 创建授权 | 延伸融合 | P2 | M12 的 AgentBOM / Blast-radius Gate 为 FR-EVO-01 的 forgekin_id / Mind Profile / 觉醒阶段追踪提供治理基础；SR-05 E6 创建灵智需 operator 授权依赖 M12 |
 | **M13 Computer Use** | FR-EVO-07 外部编码工具（间接）+ T8 DOM 验证 | 延伸融合 | P2 | M13 的 Browser Agent 为 T8 测试铁律（Web 功能必须操控浏览器验证 DOM）提供基础；GUI Agent 为 FR-EVO-07 CLI Wrapper 的桌面场景扩展 |
 | **M14 三层协议栈** | FR-EVO-09 A2A + FR-EVO-10 灵议 | 延伸融合 | P2 | M14 的 ACP / MCP / A2A 三层协议栈为 FR-EVO-09 A2A 通信协议和 FR-EVO-10 灵议多渠道协作提供协议基础 |
-| **M15 故障恢复与降级** | v7.0 降级策略（arch 21.2） | 直接融合 | P1 | M15 的降级链路直接对应 v7.0 的降级策略（ForgekinEngine → HybridExecutor / Auto-Forge → 跳过 / External Tool → 内置 Agent / Trae Bridge → 内置 Agent / Council → 单渠道 / A2A → 直接调用） |
+| **M15 故障恢复与降级** | v7.0 降级策略（arch 21.2） | 直接融合 | P1 | M15 的降级链路直接对应 v7.0 的降级策略（ForgekinEngine → HybridExecutor / SpiritForge → 跳过 / External Tool → 内置 Agent / Trae Bridge → 内置 Agent / Council → 单渠道 / A2A → 直接调用） |
 | **M16 多租户隔离** | FR-EVO-11 两类智能体衔接（间接） | 延伸融合 | P2 | M16 的数据 / 资源 / 配置隔离为 FR-EVO-11 Forgekin 委托 Static Agent 的多租户场景提供隔离基础（v3.1 商业化时启用） |
-| **M17 Skill 市场** | FR-EVO-05 锻典（Forge Codex）+ FR-EVO-06 Skill 自生成 | 直接融合 | P2 | M17 的 Skill 打包 / 签名 / 分发 / 评价 / 沙箱直接服务于 FR-EVO-05 Forge Codex 五级火种阶梯和 FR-EVO-06 三模式自生成的 Skill 入库与分发 |
+| **M17 Skill 市场** | FR-EVO-05 灵典（Mind Codex）+ FR-EVO-06 Skill 自生成 | 直接融合 | P2 | M17 的 Skill 打包 / 签名 / 分发 / 评价 / 沙箱直接服务于 FR-EVO-05 Mind Codex 五级进化阶梯和 FR-EVO-06 三模式自生成的 Skill 入库与分发 |
 
 ### 融合结论
 
-M1-M17 完美融入 v7.0 炉灵养成体系，无需新增 M18 / M19 / M20 三个模块。具体结论：
+M1-M17 完美融入 v7.0 灵智养成体系，无需新增 M18 / M19 / M20 三个模块。具体结论：
 
-1. **M1-M17 是 v7.0 七层架构第 1-6 层的工程实现**：v3.0 的互联层 / 应用层 / 接入层 / Harness 驾驭层 / 执行引擎层 / 能力层 / 基础设施层对应 v7.0 七层架构的第 1-6 层（v7.0 第 7 层"自进化层"由 ForgekinEngine / AutoForge / SoulEcho / ForgekinCouncil 承接）。
+1. **M1-M17 是 v7.0 七层架构第 1-6 层的工程实现**：v3.0 的互联层 / 应用层 / 接入层 / Harness 驾驭层 / 执行引擎层 / 能力层 / 基础设施层对应 v7.0 七层架构的第 1-6 层（v7.0 第 7 层"自进化层"由 ForgekinEngine / SpiritForge / MindEcho / MindCouncil 承接）。
 2. **M1-M17 为第 7 层（自进化层）提供支撑**：协议（M1 A2A / M2 MCP / M14 三层协议栈）、上下文（M3 Context Eng）、安全（M4 Guardrails）、可观测（M5 OTel）、评估（M6 Eval）、长程（M7 Durable）、纠错（M8 自我纠错）、成本（M9 Cost）、部署（M10 生产化）、HITL（M11 CHEQ）、治理（M12 AgentBOM）、Computer Use（M13）、故障恢复（M15）、多租户（M16）、Skill 市场（M17）共 15 类基础能力，为 ForgekinEngine 的自进化闭环提供工程支撑。
-3. **原 M18 / M19 / M20 的需求由 v7.0 FR-EVO-01~15 承接**：自我进化 → FR-EVO-04 Auto-Forge；记忆治理 → FR-EVO-02 Soul Echo + FR-EVO-03 Soul Imprint + FR-EVO-05 Forge Codex；协作决策 → FR-EVO-09 A2A + FR-EVO-10 灵议 + FR-EVO-11 两类智能体衔接。face 目录不再重复定义，避免术语冲突。
+3. **原 M18 / M19 / M20 的需求由 v7.0 FR-EVO-01~15 承接**：自我进化 → FR-EVO-04 SpiritForge；记忆治理 → FR-EVO-02 Mind Echo + FR-EVO-03 Mind Imprint + FR-EVO-05 Mind Codex；协作决策 → FR-EVO-09 A2A + FR-EVO-10 灵议 + FR-EVO-11 两类智能体衔接。face 目录不再重复定义，避免术语冲突。
 4. **原 M18 / M19 / M20 的工程任务保留在 task_face.md**：task_face.md 中标注"v4.0 融合"的 M18 / M19 / M20 任务（如 M19-I-01 记忆权威分级、M18-I-02 Skill 自动提取）仍然需要执行，但其需求规格和验收标准统一引用 v7.0 FR-EVO-01~15，face 目录不重复定义。
 
 ### v7.0 Phase 路线对齐表
@@ -695,39 +695,39 @@ v7.0 路线图（spec.md 第十三章）的 Phase 6.1-6.7 与 face 目录 M1-M17
 
 | v7.0 Phase | 内容 | 核心交付 | face 目录支撑模块 | 优先级 |
 |-----------|------|---------|-----------------|--------|
-| **Phase 6.1** | 炉灵基础设施 | Forgekin 身份 + Soul Echo + Soul Imprint + 升华阶段 | M3 Context Eng（Soul Echo 三层记忆）+ M5 OTel（forgekin 指标）+ M12 AgentBOM（身份治理） | P0 |
-| **Phase 6.2** | 自锻引擎 | Auto-Forge Engine + 日记本 + Provoke + 锻典 | M8 自我纠错（PreFlect / VIGIL / SAGE 与自锻协同）+ M10 生产化（自指修改防漂移）+ M17 Skill 市场（锻典分发） | P0 |
+| **Phase 6.1** | 灵智基础设施 | Forgekin 身份 + Mind Echo + Mind Imprint + 觉醒阶段 | M3 Context Eng（Mind Echo 三层记忆）+ M5 OTel（forgekin 指标）+ M12 AgentBOM（身份治理） | P0 |
+| **Phase 6.2** | 灵锻引擎 | SpiritForge Engine + 日记本 + Provoke + 灵典 | M8 自我纠错（PreFlect / VIGIL / SAGE 与灵锻协同）+ M10 生产化（自指修改防漂移）+ M17 Skill 市场（灵典分发） | P0 |
 | **Phase 6.3** | 外部工具集成 | CLI Wrapper（Claude / Codex / OpenCode）+ Trae Bridge | M2 MCP 2026（工具沙箱）+ M13 Computer Use（桌面扩展）+ M15 故障恢复（CLI 超时降级） | P0 |
 | **Phase 6.4** | IM 与协作 | A2A 协议 + 灵议 Web Chat 升级 + 飞书渠道 | M1 A2A 协议（@mention / thread / handoff）+ M14 三层协议栈（ACP / MCP / A2A） | P0 |
-| **Phase 6.5** | Skill 自生成 | 三模式自进化 + 五级火种阶梯 + Eval Ledger | M6 评估（τ-bench / Eval Ledger）+ M17 Skill 市场（打包 / 评价）+ M8 SAGE（事故驱动护栏） | P1 |
-| **Phase 6.6** | *Forge 自进化 | 各 *Forge 炉灵角色 + 业务方向进化 | M1-M17 全部（各 *Forge 通过 Plugin V3 协议组合 M1-M17 能力 + 注册炉灵角色） | P1 |
-| **Phase 6.7** | 元认知与治理 | 元认知能力 + 跨模型评审 + 炉灵治理 | M12 Agent 治理（AgentBOM / Blast-radius）+ M6 评估（跨模型评审）+ M4 Guardrails（元认知红线） | P2 |
+| **Phase 6.5** | Skill 自生成 | 三模式自进化 + 五级进化阶梯 + Eval Ledger | M6 评估（τ-bench / Eval Ledger）+ M17 Skill 市场（打包 / 评价）+ M8 SAGE（事故驱动护栏） | P1 |
+| **Phase 6.6** | *Forge 自进化 | 各 *Forge 灵智角色 + 业务方向进化 | M1-M17 全部（各 *Forge 通过 Plugin V3 协议组合 M1-M17 能力 + 注册灵智角色） | P1 |
+| **Phase 6.7** | 元认知与治理 | 元认知能力 + 跨模型评审 + 灵智治理 | M12 Agent 治理（AgentBOM / Blast-radius）+ M6 评估（跨模型评审）+ M4 Guardrails（元认知红线） | P2 |
 
 ### 融合迁移策略
 
-v3.0 M1-M17 与 v7.0 炉灵养成体系的融合不是一次性迁移，而是按 Phase 渐进式融合。以下是每个 Phase 的融合迁移步骤：
+v3.0 M1-M17 与 v7.0 灵智养成体系的融合不是一次性迁移，而是按 Phase 渐进式融合。以下是每个 Phase 的融合迁移步骤：
 
 **Phase 6.0 融合迁移（P0 基础）**：
 1. **M5 OTel → v7.0 可观测性指标**：M5 的 gen_ai.* Span / Metrics 上报后，v7.0 的 forgekin_active_total / auto_forge_runs_total / soul_echo_episodes_total / a2a_messages_total 指标自动可用（同一指标体系）。
-2. **M3 Context Eng → v7.0 Soul Echo**：M3 的五层 Context Layer 升级后，将 Working 层映射到 Soul Echo L1 Working Memory，Episodic 层映射到 L2 Episode Memory，Semantic 层映射到 L3 Semantic Memory。迁移步骤：①M3 实现五层 Context Layer；②v7.0 ForgekinEngine 步骤 1-4（soul.load + echo.recall + imprint.load + build_soul_prompt）调用 M3 Context Layer API；③数据双向同步（M3 Memory ↔ Soul Echo）。
+2. **M3 Context Eng → v7.0 Mind Echo**：M3 的五层 Context Layer 升级后，将 Working 层映射到 Mind Echo L1 Working Memory，Episodic 层映射到 L2 Episode Memory，Semantic 层映射到 L3 Semantic Memory。迁移步骤：①M3 实现五层 Context Layer；②v7.0 ForgekinEngine 步骤 1-4（soul.load + echo.recall + imprint.load + build_soul_prompt）调用 M3 Context Layer API；③数据双向同步（M3 Memory ↔ Mind Echo）。
 3. **M4 Guardrails → v7.0 SR-01~08**：M4 六层 Guardrails 实现后，v7.0 安全红线 SR-01~08 自动落地（M4 是 SR 的工程实现）。无需额外迁移，M4 配置即 SR 配置。
 
 **Phase 6.1 融合迁移（P1 复杂）**：
-1. **M8 自我纠错 → v7.0 Auto-Forge**：M8 的 PreFlect / VIGIL / SAGE 三层纠错与 v7.0 Auto-Forge 的"读留痕 → 画线 → 写日记"深度融合。迁移步骤：①M8 实现 PreFlect / VIGIL / SAGE；②v7.0 Auto-Forge 的 Consolidation 后台调用 M8 SAGE（事故驱动护栏生成）；③v7.0 Auto-Forge 的 Surface 前台调用 M8 PreFlect（事前预检）。
-2. **M10 生产化 → v7.0 自指修改防漂移**：M10 的 Eval-gated + 审批 + 灰度直接服务于 v7.0 Auto-Forge 的自指修改安全。迁移步骤：①M10 实现灰度 + Eval-gated；②v7.0 Auto-Forge 的自锻代码修改经 M10 Eval-gated 门禁；③SAGE 产出的事故护栏经 M10 灰度发布。
-3. **M11 HITL → v7.0 operator 审批**：M11 的 CHEQ / HotL / HoverL 直接对应 v7.0 operator 审批节点。迁移步骤：①M11 实现 CHEQ 中断恢复；②v7.0 E6 创建炉灵 / Soul Imprint proposal / Provoke 经 M11 HITL 审批。
-4. **M7 Durable → v7.0 长程自进化**：M7 的 Durable Event Log / Checkpoint 为 v7.0 ForgekinEngine 长程自进化任务提供持久化。迁移步骤：①M7 实现 Durable Execution；②v7.0 多日 Auto-Forge 任务经 M7 Checkpoint 持久化。
+1. **M8 自我纠错 → v7.0 SpiritForge**：M8 的 PreFlect / VIGIL / SAGE 三层纠错与 v7.0 SpiritForge 的"读留痕 → 画线 → 写日记"深度融合。迁移步骤：①M8 实现 PreFlect / VIGIL / SAGE；②v7.0 SpiritForge 的 Consolidation 后台调用 M8 SAGE（事故驱动护栏生成）；③v7.0 SpiritForge 的 Surface 前台调用 M8 PreFlect（事前预检）。
+2. **M10 生产化 → v7.0 自指修改防漂移**：M10 的 Eval-gated + 审批 + 灰度直接服务于 v7.0 SpiritForge 的自指修改安全。迁移步骤：①M10 实现灰度 + Eval-gated；②v7.0 SpiritForge 的灵锻代码修改经 M10 Eval-gated 门禁；③SAGE 产出的事故护栏经 M10 灰度发布。
+3. **M11 HITL → v7.0 operator 审批**：M11 的 CHEQ / HotL / HoverL 直接对应 v7.0 operator 审批节点。迁移步骤：①M11 实现 CHEQ 中断恢复；②v7.0 E6 创建灵智 / Mind Imprint proposal / Provoke 经 M11 HITL 审批。
+4. **M7 Durable → v7.0 长程自进化**：M7 的 Durable Event Log / Checkpoint 为 v7.0 ForgekinEngine 长程自进化任务提供持久化。迁移步骤：①M7 实现 Durable Execution；②v7.0 多日 SpiritForge 任务经 M7 Checkpoint 持久化。
 
 **Phase 6.2 融合迁移（P2 增强）**：
-1. **M17 Skill 市场 → v7.0 Forge Codex**：M17 的 Skill 打包 / 签名 / 分发 / 评价直接服务于 v7.0 Forge Codex 五级火种阶梯。迁移步骤：①M17 实现 Skill 市场；②v7.0 Forge Codex 的 E-L3 Validated / E-L4 Standard 火种通过 M17 Marketplace 分发；③FR-EVO-06 三模式自生成的 Skill 经 M17 打包入库。
-2. **M12 Agent 治理 → v7.0 炉灵身份**：M12 的 AgentBOM / Blast-radius 为 v7.0 FR-EVO-01 炉灵身份系统提供治理基础。迁移步骤：①M12 实现 AgentBOM；②v7.0 forgekin_id 关联 AgentBOM；③SR-05 E6 创建炉灵需 operator 授权经 M12 Blast-radius Gate。
-3. **M1 A2A → v7.0 FR-EVO-09**：M1 的 A2A 协议直接服务于 v7.0 炉灵间协作。迁移步骤：①M1 实现 A2A Server / Client；②v7.0 Forgekin Council 的 @mention 路由 / thread isolation / structured handoff 经 M1 A2A 协议传输。
-4. **M15 故障恢复 → v7.0 降级策略**：M15 的降级链路直接对应 v7.0 降级策略。迁移步骤：①M15 实现 6 条降级路径；②v7.0 ForgekinEngine → HybridExecutor / Auto-Forge → 跳过 / External Tool → 内置 Agent / Trae Bridge → 内置 Agent / Council → 单渠道 / A2A → 直接调用，全部经 M15 降级链路管理。
+1. **M17 Skill 市场 → v7.0 Mind Codex**：M17 的 Skill 打包 / 签名 / 分发 / 评价直接服务于 v7.0 Mind Codex 五级进化阶梯。迁移步骤：①M17 实现 Skill 市场；②v7.0 Mind Codex 的 E-L3 Validated / E-L4 Standard 火种通过 M17 Marketplace 分发；③FR-EVO-06 三模式自生成的 Skill 经 M17 打包入库。
+2. **M12 Agent 治理 → v7.0 灵智身份**：M12 的 AgentBOM / Blast-radius 为 v7.0 FR-EVO-01 灵智身份系统提供治理基础。迁移步骤：①M12 实现 AgentBOM；②v7.0 forgekin_id 关联 AgentBOM；③SR-05 E6 创建灵智需 operator 授权经 M12 Blast-radius Gate。
+3. **M1 A2A → v7.0 FR-EVO-09**：M1 的 A2A 协议直接服务于 v7.0 灵智间协作。迁移步骤：①M1 实现 A2A Server / Client；②v7.0 Mind Council 的 @mention 路由 / thread isolation / structured handoff 经 M1 A2A 协议传输。
+4. **M15 故障恢复 → v7.0 降级策略**：M15 的降级链路直接对应 v7.0 降级策略。迁移步骤：①M15 实现 6 条降级路径；②v7.0 ForgekinEngine → HybridExecutor / SpiritForge → 跳过 / External Tool → 内置 Agent / Trae Bridge → 内置 Agent / Council → 单渠道 / A2A → 直接调用，全部经 M15 降级链路管理。
 
 **融合迁移原则**：
 - **渐进式**：每个 Phase 只迁移该 Phase 完成的模块，不提前迁移未完成模块。
 - **双向兼容**：迁移期间 v3.0 和 v7.0 并存，v7.0 未完成的模块由 v3.0 降级支撑。
-- **术语统一**：迁移期间所有文档（spec_face / arch_face / task_face）必须使用 v7.0 术语（炉灵 / 魂忆 / 魂印 / 自锻 / 锻典 / 灵议 / 升华阶），禁止使用原 M18 / M19 / M20 术语。
+- **术语统一**：迁移期间所有文档（spec_face / arch_face / task_face）必须使用 v7.0 术语（灵智 / 灵忆 / 灵印 / 灵锻 / 灵典 / 灵议 / 觉醒阶），禁止使用原 M18 / M19 / M20 术语。
 - **审计可追溯**：每个迁移步骤记录审计日志（迁移时间 / 迁移内容 / 迁移结果 / 回滚方案）。
 
 ---
@@ -788,11 +788,11 @@ v3.0 在 project_rules.md 15 条编程红线基础上，扩展安全红线（SR-
 
 | 红线 | 说明 | 来源 |
 |------|------|------|
-| SR-01 | 禁止后台 classifier | v7.0（Soul Imprint no-classifier） |
-| SR-02 | 禁止 Goodhart（telemetry-not-KPI） | v7.0（自锻价值是少量高信号 consolidation） |
+| SR-01 | 禁止后台 classifier | v7.0（Mind Imprint no-classifier） |
+| SR-02 | 禁止 Goodhart（telemetry-not-KPI） | v7.0（灵锻价值是少量高信号 consolidation） |
 | SR-03 | Provoke 频率硬限（每天 ≤1，hyperfocus=0，连拍 3 次冬眠） | v7.0 |
 | SR-04 | 高风险域升级（action_confidence < 0.85 时只做结构化分析 + 明确升级） | v7.0 |
-| SR-05 | E6 创建炉灵需 operator 授权 | v7.0 |
+| SR-05 | E6 创建灵智需 operator 授权 | v7.0 |
 | SR-06 | 外部工具调用需 worktree 隔离 | v7.0 |
 | SR-07 | Trae Bridge 超时降级 | v7.0 |
 | SR-08 | 跨 *Forge 协作需 operator 可见 | v7.0 |
@@ -1204,12 +1204,12 @@ M5 OTel → M4 Guardrails → M3 Context Eng → M2 MCP 2026 → M1 A2A → 集�
 | Durable Exec | Durable Execution | 持久化执行 |
 | EMA | Enterprise MCP Aggregator | 企业 MCP 网关聚合 |
 | Eval-gated | Evaluation-gated | 评估驱动发布门禁 |
-| Forgekin | 炉灵 | v7.0 自进化智能体（对标 clowder-ai Cat） |
-| Forgekin Council | 灵议 | v7.0 IM 多渠道协作（对标 clowder-ai IM 团队协作） |
-| Forge Codex | 锻典 | v7.0 五级火种知识库（对标 Skill Library + L0-L4） |
-| Auto-Forge | 自锻 | v7.0 无人驱动时自主思考与进化（对标 Auto-Dream） |
-| Soul Echo | 魂忆 | v7.0 三层记忆（对标 Memory） |
-| Soul Imprint | 魂印 | v7.0 认知画像（对标 Profile Capsule） |
+| Forgekin | 灵智 | v7.0 自进化智能体（对标 clowder-ai Cat） |
+| Mind Council | 灵议 | v7.0 IM 多渠道协作（对标 clowder-ai IM 团队协作） |
+| Mind Codex | 灵典 | v7.0 五级进化阶知识库（对标 Skill Library + L0-L4） |
+| SpiritForge | 灵锻 | v7.0 无人驱动时自主思考与进化（对标 Auto-Dream） |
+| Mind Echo | 灵忆 | v7.0 三层记忆（对标 Memory） |
+| Mind Imprint | 灵印 | v7.0 认知画像（对标 Profile Capsule） |
 | HITL | Human-in-the-Loop | 人在环中 |
 | HotL | Human-on-the-Loop | 人在环上（异步通知） |
 | HoverL | Human-over-the-Loop | 人在环上方（同步干预） |
@@ -1217,7 +1217,7 @@ M5 OTel → M4 Guardrails → M3 Context Eng → M2 MCP 2026 → M1 A2A → 集�
 | MCP | Model Context Protocol | 模型上下文协议（2026 Spec RC） |
 | OTel | OpenTelemetry | 开放遥测（GenAI v1.30） |
 | PreFlect | 事前预防 | M8 自我纠错事前预检 |
-| Provoke | 沙砾气泡 | v7.0 自锻产出的主动建议（每天 ≤1） |
+| Provoke | 沙砾气泡 | v7.0 灵锻产出的主动建议（每天 ≤1） |
 | SAGE | 事故驱动 | M8 自我纠错事故驱动护栏 |
 | Skill | 技能 | 可复用能力单元 |
 | SOP | Standard Operating Procedure | 标准作业程序 |
@@ -1229,12 +1229,12 @@ M5 OTel → M4 Guardrails → M3 Context Eng → M2 MCP 2026 → M1 A2A → 集�
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| **v7.0 炉灵养成体系权威源** | `flowforge/docs/spec.md` 第七章~第十三章 | FR-EVO-01~15 需求规格（line 2900-3640） |
-| **v7.0 七层架构权威源** | `flowforge/docs/arch.md` 第 15-23 章 | ForgekinEngine / AutoForge / SoulEcho / ForgekinCouncil 架构（line 5290-6500） |
+| **v7.0 灵智养成体系权威源** | `flowforge/docs/spec.md` 第七章~第十三章 | FR-EVO-01~15 需求规格（line 2900-3640） |
+| **v7.0 七层架构权威源** | `flowforge/docs/arch.md` 第 15-23 章 | ForgekinEngine / SpiritForge / MindEcho / MindCouncil 架构（line 5290-6500） |
 | **v3.0 架构详设** | `flowforge/docs/face/arch_face.md` | M1-M5 + M18/M19/M20 架构详设 |
 | **v3.0 任务清单** | `flowforge/docs/face/task_face.md` | 12+3 项决策对比 + P0 详细任务 + 依赖分析 |
 | **大厂面试原始信息** | `flowforge/docs/face/face.md` | 字节 / 阿里 / 腾讯 / 百度 / 华为 / 网易 / 商汤 / 小米 / 深信服面试记录 |
-| **v4.0 下一代需求** | `flowforge/docs/face/ds.md` | 自我进化与养灵体系权威源（EVO / MEM / COL 九大能力维度） |
+| **v4.0 下一代需求** | `flowforge/docs/face/ds.md` | 自我进化与育灵体系权威源（EVO / MEM / COL 九大能力维度） |
 | **开发规范** | `hiclaw/rules.md` | 架构总览 / 实例定位 / 文件差异 / 代码风格 / 开发规范 / AI 行为准则 |
 | **提示词模板库** | `hiclaw/prompts.md` | 13 大类 100+ 模板（公共 P1-P40 / FlowForge FF1-FF21 / *Forge / HicLaw） |
 | **项目规则** | `.trae/rules/project_rules.md` | FlowForge 生态项目规则（测试铁律 T1-T8 + 编程红线 15 条） |
@@ -1394,5 +1394,5 @@ v3.0 新增 / 升级的 API 端点清单：
 > **本文档为 FlowForge v3.0 Agent Harness 进化需求规格说明书（spec_face），待用户审核。**
 > **请先审核第八章 12 项决策点，标注"同意 / 调整"。**
 > **审核通过后按第六章路线图启动 Phase 6.0（P0 基础）实施。**
-> **M1-M17 是 v7.0 炉灵养成体系的工程支撑，原 M18 / M19 / M20 已删除并融合映射到 v7.0 FR-EVO-01~15。**
+> **M1-M17 是 v7.0 灵智养成体系的工程支撑，原 M18 / M19 / M20 已删除并融合映射到 v7.0 FR-EVO-01~15。**
 > **所有实现必须严格遵守 `hiclaw/rules.md` 和 `hiclaw/prompts.md`。**

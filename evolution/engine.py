@@ -1,9 +1,12 @@
-"""Self-Evolution Engine — 统一管理三模式自我进化。
+"""ForgeMind Engine — 统一管理三模式自我进化（v7.0 育灵体系主引擎）。
+
+按 ADR-012 命名融合：SelfEvolutionEngine → ForgeMindEngine
+（M18/M19/M20 三个 v4.0 自创术语合并为 v7.0 ForgeMindEngine）。
 
 集成 Scope Guard (Mode A) + Process Evolution (Mode B) + Knowledge Evolution (Mode C)，
 共享五级知识成熟度阶梯 (KnowledgeMaturityLadder) 和元认知路由 (MetacognitionRouter)。
 
-三模式分工：
+三模式分工（详见 `hiclaw/rules.md#§0.10.1`）：
 - Mode A (Scope Guard): 防御 — 偏离愿景时温柔提醒
 - Mode B (Process Evolution): 防御→改进 — 同类错误反复出现时提流程改进
 - Mode C (Knowledge Evolution): 进攻→成长 — 有价值知识沉淀为可复用资产
@@ -26,8 +29,10 @@ from flowforge.evolution.scope_guard import ScopeGuard
 logger = get_logger("flowforge.evolution.engine")
 
 
-class SelfEvolutionEngine:
-    """Self-Evolution Engine — 统一管理三模式自我进化。
+class ForgeMindEngine:
+    """ForgeMind Engine — 统一管理三模式自我进化（v7.0 育灵体系主引擎）。
+
+    按 ADR-012 命名融合：原 SelfEvolutionEngine（M18）已废弃，合并 M18/M19/M20 为 ForgeMindEngine。
 
     集成三模式 + 共享成熟度阶梯 + 元认知路由。
     evaluate(context) 评估上下文返回建议动作；execute(action) 执行动作。

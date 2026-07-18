@@ -33,12 +33,15 @@ routes:
   # 300s 覆盖最慢的 GLM 283s + 17s 缓冲
   # max_retries=0 不重试，直接 fallback（避免单次 300s×2=600s 阻塞）
   creative:
+    # v5.7: primary改为Qwen3.6-Plus（Doubao-Seed2.0频繁echo/超时）
+    # Qwen实测稳定：228s产出1445字，0.832分
+    # Doubao降为fallback，echo_response加入failover条件
     primary_provider: openroute
-    primary_model: Doubao-Seed2.0
+    primary_model: Qwen3.6-Plus
     fallback_providers:
       - openroute
     fallback_models:
-      - Qwen3.6-Plus
+      - Doubao-Seed2.0
       - HunYuan3
       - DeepSeek-V4-Pro
       - Kimi-K2.6
@@ -49,6 +52,7 @@ routes:
         - rate_limited
         - timeout
         - invalid_response
+        - echo_response
       timeout_seconds: 300
       max_retries: 0
     default_temperature: 0.9
@@ -115,11 +119,13 @@ routes:
   # v4.6 修复: timeout 30→60s — 配合 prefer_api=True 走 API backend，
   # API backend 偶尔较慢（10-20s），30s 太紧导致误判超时触发 fallback
   reflector:
+    # v5.7: primary改为Qwen3.6-Plus（Doubao-Seed2.0反思阶段echo+超时1113s）
     primary_provider: openroute
-    primary_model: Doubao-Seed2.0
+    primary_model: Qwen3.6-Plus
     fallback_providers:
       - openroute
     fallback_models:
+      - Doubao-Seed2.0
       - GLM-5.1
       - DeepSeek-V4-Pro
     failover_policy:
@@ -127,6 +133,7 @@ routes:
         - rate_limited
         - timeout
         - invalid_response
+        - echo_response
       timeout_seconds: 60
 
   # StockForge 股票分析路由（P0-21 新增）

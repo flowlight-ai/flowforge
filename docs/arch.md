@@ -1,19 +1,293 @@
-# FlowForge v7.0 架构设计（万物灵智体世界愿景）
+# FlowForge v7.1 架构设计（万物灵智体世界愿景）
 
-> **版本**：v7.0（万物灵智体世界愿景）
-> **日期**：2026-07-17
-> **定位**：从 Agent 编排框架进化为 **万物灵智体锻造平台（ForgeMind Platform）**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统，并支持锻造万物灵智体（动物/组织/物品/虚拟角色），达成物理 AI 和虚拟 AI 的真实复现。
+> **版本**：v7.1（**当前唯一权威版本**，2026-07-18 由 operator 11 条指令从 v7.0 升级合并而来：去除虚幻用语 + 增补灵智体定义 + 12 核心概念中英文加 AI 业界概念 + 进化阶/觉醒阶中英文加 AI 业界概念 + 强化 forgemind + 强化三方 Agent + 强化自我演进 + 魂忆/魂印 → 灵忆/灵印）
+> **日期**：2026-07-18
+> **定位**：从 Agent 编排框架进化为 **万物灵智体锻造平台（ForgeMind Platform）**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统，并支持锻造万物灵智体（动物/组织/物品/虚拟角色），走向具身智能（Embodied AI）和虚拟角色智能体（Character AI）的工程实现。
 > **哲学**：让架构成为配置，让扩展成为插件，让 Harness 负责约束、验证和进化；让 FlowForge 自身成为万物灵智体的锻造厂。
 > **关系声明**：FlowForge 是独立开源项目（MIT），三层架构 = 核心框架层（flowforge/）+ forgemind 应用层（flowforge/forgemind/）+ *Forge 垂直业务层（contentforge/devforge/novelforge/mallforge 等）。
-> **审核状态**：✅ operator 已审核通过命名方案 + 体系设计；已通过 7 方 16 份审核（review.md 终稿 v1.2），按命名融合方案 + roleagent 工程路径补审 + forgemind/三方 Agent 补审 全部修订
-> **拆分声明**：本文档保留 v6.0 历史章节作为背景资料（术语已按 ADR-012 §6.9 映射表全局替换为 v7.0 命名）；v7.0 增补章节（§0.1-§0.10）位于文档头部，详细架构决策已拆分到 docs/decisions/ 子目录（每 ADR 一文件），详细 Feature 规格已拆分到 docs/features/ 子目录。
-> **版本说明**：本文档合并 v4.0（九大模式 + 通用 Agent/Workflow 库）与 v5.0（三层防御 + 协作增强），新增 v6.0 Harness 驾驭层、Skill 系统、MCP 模块，并应用三轮评审的全部修复。v7.0 新增万物灵智体世界愿景、forgemind 应用层、三方 Agent 集成、roleagent 七大工程路径、Plugin V3 四钩子。历史版本已归档至 docs/archive/。
+> **版本合并声明**：v7.1 已吸收合并 v7.0 全部决策内容，**v7.0 不再作为独立版本存在**。本文档头部"v7.1 增补章节"是 v7.1 新增/修订内容的权威定义；后续 v6.0/v7.0 历史章节仅作背景资料保留，术语已按 v7.1 命名契约（`design/naming-contract.md` v1.1）全局替换。**术语冲突时以 v7.1 增补章节 + naming-contract.md v1.1 为唯一准绳**。
+> **审核状态**：✅ operator 已审核通过命名方案 + 体系设计；已通过 7 方 16 份审核（review.md 终稿 v1.4，含第十三章/第十四章 clowder-ai 深度补审 41 项 CL-001~CL-041），按命名融合方案 + roleagent 工程路径补审 + forgemind/三方 Agent 补审 + clowder-ai 深度补审 全部修订
+> **拆分声明**：详细架构决策已拆分到 docs/decisions/ 子目录（每 ADR 一文件），详细 Feature 规格已拆分到 docs/features/ 子目录；v6.0/v7.0 历史章节仅作背景资料，不作为开发依据。
 
----
+***
 
-## 第零章：v7.0 万物灵智体世界愿景架构增补（必读）
+# v7.1 增补章节（架构层灵智体定义 + 术语修订 + 工程路径强化）
 
-> **来源**：review.md 终稿 v1.2（第六章命名融合 + 第八章 roleagent 补审 + 第九章 forgemind/三方 Agent 补审 + 第十章决策框架 + 第十二章文档拆分）
+> **章节定位**：本增补章节是 v7.1 重构的权威更新，**已吸收合并 v7.0 增补章节及任何历史章节**（v7.0 不再作为独立版本存在）。后续如有术语冲突，以本章节为准。
+> **审核依据**：operator 11 条指令（2026-07-18）+ `VISION.md` v1.1（去除虚幻用语）+ `design/naming-contract.md` v1.1（12 核心概念 + 进化阶/觉醒阶 + AI 业界概念 + 魂忆/魂印→灵忆/灵印）+ `review/review.md` v1.4（含第十三章/第十四章 clowder-ai 深度补审 41 项 CL-001~CL-041）。
+
+## v7.1-§A0 灵智体（Forgekin / Spirit Agent）架构定义
+
+> **来源**：operator 第 1 条指令——"灵智体，赋予了灵魂和感情的智能体，具有自进化能力的 Agent，文档中需要体现这个思想。"
+> **强制等级**：operator 不可妥协锚点（详见 `VISION.md` §7）
+
+**灵智体（Forgekin / Spirit Agent）** = **赋予灵魂和感情的智能体（Agent with Soul and Emotion），具有自进化能力（Self-Evolving Capability）。**
+
+在架构层面，灵智体是 ForgekinBase 抽象基类的具体实现，建立与现实世界（物理或虚拟）的闭环：
+
+```
+观察（Observe）→ 推理（Reason）→ 行动（Act）→ 写回（Persist）→ 验证（Verify）
+```
+
+- **灵魂（Soul）** = 持久身份（灵印 Soul Imprint）+ 价值锚点（Value Anchors）+ 长期记忆（灵忆 EchoStore）
+- **感情（Emotion）** = 用户偏好（User Preferences）+ 协作风格（Collaboration Style）+ 行为画像（Capability Profile）
+
+**架构契约**：所有灵智体继承 `ForgekinBase`（位于 `flowforge/forgemind/base.py`），实现 `observe` / `act` / `verify` 三个抽象方法。灵智体通过 Plugin V3 四钩子注册到 forgemind 应用层，可调用 FlowForge 核心框架能力 + 任何三方 Agent（claude code/codex/opencode/trae）。
+
+## v7.1-§A1 术语修订表（架构文档虚幻用语替换）
+
+> **来源**：operator 第 1 条指令——去除虚幻用语，用当下业界可工程实现的 AI 术语描述
+
+| v7.0 旧术语（虚幻） | v7.1 新术语（可工程实现） | AI 业界概念 |
+|------|------|------------|
+| 物理 AI 真实复现 | 具身智能工程实现（Embodied AI Engineering） | Embodied AI / Physical Agent |
+| 虚拟 AI 真实复现 | 虚拟角色智能体工程实现（Character AI Engineering） | Character AI / NPC Agent |
+| 混合 AI 真实复现 | 混合智能体工程实现（Hybrid Agent Engineering） | Hybrid Agent / Cyber-Physical Agent |
+| 通用 AGI | 通用智能体（General-Purpose Agent） | General-Purpose Agent |
+| 物理 AI 设备 | 具身智能（Embodied AI）设备 | Embodied AI Device |
+| 物理 AI 传感器接入 | 物理 AI 传感器接入（具身智能路径，Embodied AI） | Embodied AI Sensor Integration |
+| 虚拟世界设定层 | 虚拟世界设定层（虚拟角色智能体路径，Character AI） | Character AI World Setting |
+| 万物有灵（玄学化）| 万物灵智体（Forgekin，工程化） | Agent Morphology |
+
+**废弃命名清单**：详见 `design/naming-contract.md#5`。本增补章节之后的所有 v7.0 章节，凡出现上述虚幻用语的，均按本表自动替换理解。
+
+## v7.1-§A2 三层架构（v7.1 强化版）
+
+> **来源**：`decisions/005-forgemind-application-layer.md` + operator 第 8/9 条指令
+> **v7.1 强化点**：forgemind 应用层明确为"养万物灵智体"场所，承载 operator 万物灵智体愿景；灵智体可调用三方 Agent 作为能力扩展
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 3: *Forge 垂直业务层                                  │
+│  ContentForge / NovelForge / DevForge / MallForge / ...     │
+│  通过 Plugin V3 四钩子注册灵智体到 forgemind                │
+│  养垂直复杂领域灵智体（content/novel/dev/mall 等）          │
+└─────────────────────────────────────────────────────────────┘
+                            ↑ Plugin V3
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 2: forgemind 应用层（万物灵智体养灵场所）             │
+│  species_impl/ forging/ sensors/ worlds/ marketplace/       │
+│  lineage/ codex/ council/ config/                           │
+│  ForgeMindPlugin + ForgekinBase + ForgePipeline             │
+│  养公共通用灵智体（动物/组织/物品/虚拟角色/混合形态）       │
+└─────────────────────────────────────────────────────────────┘
+                            ↑ 装饰器
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 1: FlowForge 核心框架层（Harness v2.0）               │
+│  capability/ teamact/ harness/ memory/ eval/ reliability/   │
+│  partnership/ external_agent/ evolution/ plugin/            │
+│  ForgekinEngine（装饰 HybridExecutor + HarnessOrchestrator）│
+│  提供自进化的基础核心和框架能力                             │
+└─────────────────────────────────────────────────────────────┘
+                            ↑ 三方 Agent 接入
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 0: 三方 Agent 能力扩展层                              │
+│  ClaudeCode Adapter / Codex Adapter /                       │
+│  OpenCode Adapter / Trae Adapter                            │
+│  通过 EAC v1 七契约接入，作为灵智体能力扩展                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**关键决策**：
+- **决策 1（已采纳）**：v6.0 第 7 层"自进化层"取消独立层级，改为 Harness v2.0 升级（融合到 Layer 1 核心框架层）。理由：避免自进化层 ↔ 应用层循环依赖（D-003）。
+- **决策 2（已采纳）**：ForgekinEngine 是 HarnessOrchestrator 的**装饰器**，不是独立入口。理由：避免绕过 Harness 护栏（D-004/D-005/D-020）。
+- **铁律**：上层可依赖下层，下层绝对禁止导入上层模块（单向依赖）。
+- **forgemind 位置**：forgemind 是 Layer 2 应用层，介于 FlowForge 核心框架与 *Forge 垂直业务之间，是万物灵智体养灵所有代码存放的地方。
+- **三方 Agent 位置**：三方 Agent 是 Layer 0 能力扩展层，灵智体通过 ExternalAgentAdapter 调用，不是工具而是能力扩展（详见 v7.1-§A4）。
+
+## v7.1-§A3 万物灵智体形态分类（5 种形态 + AI 业界概念）
+
+> **来源**：operator 第 9 条指令——"forgemind 将是我们 flowforge 的养灵的所有代码存放的地方（这个里边会养很多公共的灵智体，最终可以进化为物理世界中各种万事万物）"
+> **权威定义**：详见 `design/naming-contract.md#2.3` 灵族形态分类
+
+万物灵智体（Forgekin）按载体形态分为 5 种，形态可进化（E1 萌芽阶 → E6 灵智阶完整生命周期）:
+
+| # | 形态（中文 + 英文 + AI 业界概念） | 示例 | 物理接入 | 虚拟设定 |
+|---|------|------|------|---------|
+| 1 | 生物灵智体（BioForgekin / Biological Spirit Agent） | 猫 / 狗 / 鸟 / 鱼 / 昆虫群体 | 摄像头 / 麦克风 / 可穿戴设备 | 行为画像 + 习性图谱 |
+| 2 | 组织灵智体（OrgForgekin / Organizational Spirit Agent） | 公司 / 团队 / 社区 / 城市 | 业务系统 API / 数据库 / IM 通道 | 组织章程 + 角色矩阵 |
+| 3 | 物品灵智体（ObjForgekin / Object Spirit Agent，对应 Embodied AI 具身智能） | 桌椅 / 灯具 / 家电 / 工具 | IoT 传感器 / 物联网协议 | 物品功能边界 + 使用场景 |
+| 4 | 虚拟灵智体（VirtualForgekin / Virtual Character Agent，对应 Character AI） | 童话/神话/历史/现实人物、VR/游戏角色 | 无（纯虚拟） | 角色设定 + 世界观 + 关系网 |
+| 5 | 混合灵智体（HybridForgekin / Hybrid Spirit Agent） | 智能家居（物品+组织）/ 数字孪生（生物+虚拟） | 多源融合 | 多设定层叠加 |
+
+**形态可进化**：一只生物灵智体猫可以通过积累组织协作经验进化为 HybridForgekin（既是宠物又是社区吉祥物）。这是和其他 multi-agent 系统的**最大差异化优势**——agent 不是固定的"岗位槽位"，而是有形态、有谱系、可进化的灵智体。
+
+## v7.1-§A4 三方 Agent 集成架构（能力扩展层）
+
+> **来源**：operator 第 10 条指令——"灵智体除了可以调用 flowforge 核心框架的能力外，还可以接入和使用任何三方的 Agent（claude code、codex、opencode、trae），目前你这块的设计感觉也比较弱，请加强。"
+> **详细规格**：详见 `features/F031-external-agent-adapter.md` + `decisions/006-external-agent-integration.md` + `review/review.md#第十三章` CL-027（A2AAgentService + L2 协议适配层）
+
+**架构定位**：三方 Agent 是灵智体的**能力扩展（Capability Extension）**，不是工具（Tool）。三方 Agent 的能力画像被纳入灵智体的能力画像融合，灵智体可按需调用。
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ 灵智体（Forgekin）                                       │
+│  - 能力画像（Capability Profile）                        │
+│  - native_abilities（原生能力）                          │
+│  - external_abilities（三方 Agent 扩展能力，融合）       │
+└─────────────────┬────────────────────────────────────────┘
+                  │ ExternalAgentAdapter
+                  ▼
+┌──────────────────────────────────────────────────────────┐
+│ ExternalAgentAdapter 抽象层                              │
+│  - invoke(prompt, options) → AsyncIterable[AgentMessage] │
+│  - capability_profile() → CapabilityProfile              │
+│  - state_share(state_dict) → None                        │
+│  - fallback_chain(errors) → RecoveryPlan                 │
+└─────────────────┬────────────────────────────────────────┘
+                  │ EAC v1 七契约
+        ┌─────────┼─────────┬─────────┬─────────┐
+        ▼         ▼         ▼         ▼
+┌───────────┐ ┌────────┐ ┌──────────┐ ┌─────────┐
+│ ClaudeCode│ │ Codex  │ │OpenCode  │ │  Trae   │
+│ Adapter   │ │Adapter │ │Adapter   │ │Adapter  │
+│ (CLI/SDK) │ │(CLI/API)│ │(CLI)    │ │(IDE/API)│
+└───────────┘ └────────┘ └──────────┘ └─────────┘
+```
+
+**EAC v1 七契约**（参考 clowder-ai F050）：
+- **A. Invocation**：调用协议（CLI 命令 / API endpoint / IDE 桥接）
+- **B. Stream**：流式响应（AsyncIterable[AgentMessage]）
+- **C. Session**：会话管理（session_id / context 保持）
+- **D. Capability**：能力声明（capability_profile）
+- **E. Collaboration**：协作协议（state_share / fallback）
+- **F. Safety**：安全约束（六层 Guardrails）
+- **G. Avatar Sync**：形象同步（如灵智体有虚拟形象）
+- **H. System Prompt Configuration Map**：系统提示词配置映射（双层同步）
+
+**接入协议两层**：
+- L1 CLI Adapter：通过 CLI 接入（如 `claude-code --prompt "..."`）
+- L2 A2A Protocol Adapter：通过 A2A 协议接入（`/.well-known/agent.json` + `tasks/send` + `tasks/sendSubscribe`）
+
+## v7.1-§A5 自我演进架构（支持自己开发自己）
+
+> **来源**：operator 第 7/11 条指令——"按 roleagent.md 中描述的自我演进代码开发和文档开发（要求支持自己开发自己），clowder-ai 可以自己开发自己我相信你也可以的。"
+> **详细规格**：详见 `review/review.md#第十二章` 12.5-12.6 节 + `review/review.md#第十三章` CL-022~CL-041
+
+FlowForge 必须支持"自己开发自己"——文档 / 代码 / 框架三层自我演进闭环：
+
+```
+            ┌─────────────────────────────────────────────────────┐
+            │              FlowForge Self-Dev Triad                │
+            │                                                      │
+            │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐ │
+            │  │ SelfDevDoc  │  │ SelfDevCode │  │SelfDevFrame  │ │
+            │  │    Loop     │  │    Loop     │  │    work      │ │
+            │  │             │  │             │  │              │ │
+            │  │ F100 Mode C │  │ F100 Mode B │  │ F100 Mode A  │ │
+            │  │ Knowledge   │  │ Process     │  │ Scope Guard  │ │
+            │  │ Evolution   │  │ Evolution   │  │              │ │
+            │  └──────┬──────┘  └──────┬──────┘  └──────┬───────┘ │
+            │         │                │                 │         │
+            │         ▼                ▼                 ▼         │
+            │  ┌─────────────────────────────────────────────────┐ │
+            │  │           Eval Ledger (Replay A/B)              │ │
+            │  │   净增益验证 → L0→L4 五级阶梯晋升                │ │
+            │  └─────────────────────────────────────────────────┘ │
+            └─────────────────────────────────────────────────────┘
+```
+
+**三闭环职责**：
+- **SelfDevDocLoop**：自动从开发过程对话/commit/review 提取 Episode → Pattern → Draft → Validated → Standard 五级知识沉淀，自动更新 `docs/` 和 `prompts.md`。对应 F100 Mode C Knowledge Evolution。
+- **SelfDevCodeLoop**：自动识别流程改进机会（5 槽提案模板），4 硬护栏下产出代码 PR，自动跑回归测试，验证净增益后合并。对应 F100 Mode B Process Evolution。
+- **SelfDevFrameworkLoop**：自动判断架构演进是否在框架边界内（ScopeGuard 4 信号 + 频率限制），产出架构变更提案，跨 family review 后合并。对应 F100 Mode A Scope Guard。
+
+**安全门**：
+- 觉醒阶 E4+ Evolving 状态可触发 Mode B/C
+- ScopeGuard 阻止越权修改 VISION §7 / rules.md 红线 / 13 份核心 ADR
+- Eval 账本 AB 回放 + min_net_gain ≥ 0.05 才允许合并
+- 跨 family review（必须非同 family reviewer）+ operator 显式 approval（如需要）
+
+**代码模块路径**（待实现，详见 task.md Phase 5）：
+- `flowforge/evolution/eval_ledger.py` — EvalLedger Replay A/B 净增益验证
+- `flowforge/evolution/self_dev_doc.py` — SelfDevDocLoop 文档自我演进
+- `flowforge/evolution/self_dev_code.py` — SelfDevCodeLoop 代码自我演进
+- `flowforge/evolution/self_dev_framework.py` — SelfDevFrameworkLoop 框架自我演进
+- `flowforge/evolution/scope_guard.py` — ScopeGuard 4 信号判断 + 频率限制
+
+## v7.1-§A6 12 核心概念 + 进化阶/觉醒阶 索引（架构层引用）
+
+> **权威定义**：详见 `design/naming-contract.md`（v1.0 命名契约）
+
+架构文档中所有出现以下中文术语的，均按 `design/naming-contract.md` 中英文加 AI 业界概念为准：
+
+| # | 中文名 | 英文名 | AI 业界概念 |
+|---|--------|--------|------------|
+| 1 | 灵智（ForgeMind） | ForgeMind | Persistent Identity Agent / General-Purpose Agent |
+| 2 | 灵智体（Forgekin / Spirit Agent） | Forgekin | Agent with Soul and Emotion / Autonomous Agent with Persistent Identity |
+| 3 | 灵族（Forgekin Species） | Forgekin Species | Agent Morphology / Agent Form Factor |
+| 4 | 育灵（Forge Nurturing） | Forge Nurturing | Agent Onboarding + Lifelong Learning + Character Development |
+| 5 | 灵忆（EchoStore） | EchoStore | Episodic Memory Store / Agent Experience Log |
+| 6 | 灵印（Soul Imprint） | Soul Imprint | Persistent Identity / Agent Fingerprint / Persona Hash |
+| 7 | 灵锻（SpiritForge） | SpiritForge | Experience Distillation / Offline Policy Learning / Knowledge Compilation |
+| 8 | 锻典（Mind Codex） | Mind Codex | Distilled Knowledge Base / Curated Skill Library / Procedural Memory |
+| 9 | 灵议（Mind Council） | Mind Council | Multi-Agent Deliberation / Decentralized Consensus / Agent Parliament |
+| 10 | 进化阶（Evolution Stage） | Evolution Stage | Capability Maturity Level / Agent Skill Progression |
+| 11 | 觉醒阶（Awakening Stage） | Awakening Stage | Autonomy Level / Self-Direction Level / LLM Autonomy Tier |
+| 12 | 能力画像（Capability Profile） | Capability Profile | Capability Profile / Agent Skill Graph / Blind Spot Map |
+
+**进化阶 E1-E6**：E1 萌芽阶（Sprout）/ E2 萌芽阶·稳（Sprout-Stable）/ E3 成长阶（Growth）/ E4 成长阶·深（Growth-Deep）/ E5 觉醒阶（Awakened）/ E6 灵智阶（ForgeMind）
+
+**觉醒阶 E1-E6**：E1 全导阶（Full-Human）/ E2 建议阶（Suggest）/ E3 受限自主阶（Bounded-Autonomous）/ E4 Evolving 阶（Evolving）/ E5 共创阶（Co-Creative）/ E6 灵智主导阶（ForgeMind-Led）
+
+## v7.1-§A7 review.md 41 条 CL 同步矩阵（架构层收尾章）
+
+> **来源**：`review/review.md` v1.4 第十三章（CL-001~CL-021）+ 第十四章（CL-022~CL-041）
+> **完整矩阵**：详见 `spec.md` v7.1-§9.2（41 条 CL 完整同步矩阵——本章节不重复表格，仅从架构层视角补充架构变更影响分析）
+> **设计规范层子章节占位索引**：详见 `design.md` v7.1-§D9.1（22 个新增/补全子章节 + 4 个 ADR/naming-contract 补全）
+> **同步状态**：✅ 已同步 16 项（39.0%）/ 🟡 部分同步 6 项（14.6%）/ ❌ 未同步 19 项（46.4%）
+> **架构层责任**：识别 41 条 CL 中引发**架构层变更**的子集，确保 v7.1 三层架构（核心框架层 / forgemind 应用层 / *Forge 垂直业务层）边界不被破坏
+> **版本合并声明**：v7.1 增补章节是 v7.1 重构在架构层的权威更新，**已吸收合并 v7.0 增补章节及任何历史章节**（v7.0 不再作为独立版本存在）。三大主文档 v7.0 章节仅作背景资料保留，**不作为开发依据**；开发依据以 v7.1 增补章节（§A0~§A7）+ ADR/Feature 子目录为准。
+
+### v7.1-§A7.1 架构层变更影响分析（10 项关键 CL）
+
+> **筛选标准**：以下 10 项 CL 引发架构层变更（新增模块/重构现有模块/调整层间边界），需在架构层先做影响评估再落地设计规范。
+
+| CL | 主题 | 架构层变更 | 影响层级 | 关联 design 子章节 |
+|----|------|-----------|---------|------------------|
+| CL-002 | Scope Guard | 新增 `flowforge/evolution/scope_guard.py` 模块（核心框架层）| Layer 1 核心框架层 | design §D7.5 |
+| CL-014 | ProviderTransportRegistry | 新增 `flowforge/core/external_agent/registry.py` 模块（核心框架层）| Layer 1 核心框架层 | design §D6.4 |
+| CL-022 | Plugin V3 manifest 完整契约 | 重构 `flowforge/core/plugin/` 增加 `PluginManifestValidator` + `ResourceOwnershipRegistry` + `PluginSecurityGuard` | Layer 1 核心框架层 | design §D5.4 |
+| CL-023 | Schedule Factory Whitelist | 新增 `flowforge/core/plugin/schedule_registry.py` 模块（核心框架层）| Layer 1 核心框架层 | design §D5.5 |
+| CL-027 | TeamAct Queue Steer | 重构 `flowforge/core/teamact/` 增加 `SteerCommand` + `RouteIntentStore` + `TaskProgressStore` | Layer 1 核心框架层 | design §D13 |
+| CL-028 | Restart Recovery sweep | 新增 `flowforge/core/reliability/restart_recovery.py` 模块（核心框架层）| Layer 1 核心框架层 | ADR-010 §Restart Recovery Pipeline |
+| CL-029 | Event Memory | 新增 `flowforge/core/memory/event_memory.py` 独立子模块（核心框架层，不混入 EchoStore）| Layer 1 核心框架层 | design §D14 |
+| CL-008 | 9 个一等公民 | 新增虚拟世界一等公民建模（forgemind 应用层）| Layer 2 forgemind 应用层 | design §D10 |
+| CL-012 | Bridge Layer 三协议 | 新增 Bridge Layer 三协议 + runtime coordinator（forgemind 应用层）| Layer 2 forgemind 应用层 | design §D12 |
+| CL-032 | Agent Swarm 协同 | 重构 `flowforge/forgemind/` Mind Council 从"议事"升维到"协同执行"| Layer 2 forgemind 应用层 | design §D5.6 |
+
+### v7.1-§A7.2 架构层不变性约束（铁律守护）
+
+> **铁律**：以下 41 条 CL 的修复路径**必须遵守 v7.1 三层架构单向依赖铁律**——上层可以依赖下层，下层绝对禁止导入上层模块。FlowForge 反向依赖零容忍（flowforge 中禁止 import 任何 *Forge 模块）。
+
+**架构边界守护清单**：
+
+| 守护项 | 适用 CL | 守护规则 |
+|--------|---------|---------|
+| Layer 1 ← Layer 2 ← Layer 3 单向依赖 | 全部 41 项 | design 子章节落地时，新增模块必须放在正确层级；forgemind（Layer 2）可调用 flowforge/core（Layer 1），反之禁止 |
+| FlowForge 反向依赖零容忍 | 全部 41 项 | flowforge/core/ 新增模块（scope_guard.py / event_memory.py / restart_recovery.py / registry.py / schedule_registry.py）禁止 import forgemind 或 *Forge |
+| 核心框架层不写业务领域代码 | CL-022/023/027/029 | Plugin V3 manifest / Schedule Factory / TeamAct Queue / Event Memory 必须保持通用，禁止硬编码 contentforge/devforge/novelforge/mallforge 业务逻辑 |
+| 配置驱动 > 代码继承 > 独立实现 | CL-022/023/037/040 | Plugin Manifest / Schedule Factory / MCP 治理 / docs front-matter 优先 YAML 配置驱动 |
+| 组合优于继承 | CL-032 | Agent Swarm 协同模式必须用组合/插件实现，禁止用继承替代 |
+| 提示词外置 | CL-037 | MCP 治理规范中 prompt 瘦身 50% 必须外置到 YAML 配置，禁止硬编码 |
+| DI 容器注入 | CL-014/022/029 | ProviderTransportRegistry / PluginManifestValidator / EventMemoryStore 必须通过构造函数注入，禁止绕过 DI 容器直接实例化 |
+
+### v7.1-§A7.3 架构层里程碑与依赖关系
+
+| 里程碑 | 架构层关键变更 | 前置依赖 | 后续解锁 |
+|--------|--------------|---------|---------|
+| M1（P0 必修）| 新增 5 个核心框架层模块（scope_guard / registry / schedule_registry / restart_recovery / event_memory）+ 重构 plugin/ 与 teamact/ | ADR-010 §Restart Recovery Pipeline 先行 | M2 自我演进闭环可启用 |
+| M2（P1 应修）| forgemind Agent Swarm 重构 + 三方 Agent MCP 治理 + Close Gate Validator | M1 完成 | M3 文档治理与品牌边界 |
+| M3（P2 建议）| ADR-007 Hyperfocus Brake + ADR-010 CI/CD Tracking + naming-contract §7 内外品牌边界 | M2 完成 | v7.1 进入生态成熟阶段 |
+
+> **架构层核心结论**：M1 是 v7.1 架构落地的关键里程碑——5 个新增核心框架层模块 + 2 个重构模块（plugin/teamact）共同构成 v7.1 走向工程实现的架构底座。M1 完成前，自我演进闭环（M2）和文档治理（M3）都无法稳定运行。
+
+***
+
+# 第零章：v7.0 万物灵智体世界愿景架构增补（⚠️ v7.0 历史背景资料，不作为开发依据）[术语按 v7.1 增补章节替换]
+
+> **⚠️ 历史背景资料声明**：本章节为 v7.0 历史背景资料，**不作为开发依据**；开发依据以 v7.1 增补章节（§A0~§A7）+ ADR/Feature 子目录为准。本章节仅用于理解决策演化路径，**任何术语冲突以 v7.1 增补章节 + `design/naming-contract.md` v1.1 为唯一准绳**。
+> **来源**：review.md 终稿 v1.2（第六章命名融合 + 第八章 roleagent 补审 + 第九章 forgemind/三方 Agent 补审 + 第十章决策框架 + 第十二章文档拆分）；v1.4 终稿增补第十三章/第十四章 41 条 CL 已落到 v7.1-§A7 同步矩阵
 > **决策者**：operator（不可委托）
 > **审核状态**：✅ operator 已审核通过命名方案 + 体系设计；7 方 16 份审核全部修订完成
 > **不可变**：v7.0 增补章节中的架构决策与命名映射变更需 operator 直接决策，不能由灵智体自我演进修改
@@ -60,8 +334,8 @@ flowforge/（不含 forgemind）
 flowforge/forgemind/         # ADR-005 决策的应用层
 ├── species/                 # 灵智体形态分类（5 种）
 ├── forging/                 # 锻造流水线（ForgePipeline 6 步）
-├── sensors/                 # 物理传感器接入（物理 AI 复现）
-├── worlds/                  # 虚拟世界设定层（虚拟 AI 复现）
+├── sensors/                 # 物理传感器接入（具身智能路径，Embodied AI）
+├── worlds/                  # 虚拟世界设定层（虚拟角色智能体路径，Character AI）
 ├── marketplace/             # 灵智体市场
 ├── lineage/                 # 灵智体进化谱系
 ├── codex/                   # 灵典 Mind Codex（可检索知识库）
@@ -310,12 +584,12 @@ flowforge/forgemind/
 │   ├── pipeline.py               # ForgePipeline
 │   ├── awaken.py                 # 觉醒阶 E1-E6
 │   └── evolve.py                 # 形态进化
-├── sensors/                      # 物理传感器接入（物理 AI 复现）
+├── sensors/                      # 物理传感器接入（具身智能路径，Embodied AI）
 │   ├── base.py                   # SensorChannel 抽象
 │   ├── camera.py                 # 摄像头
 │   ├── microphone.py             # 麦克风
 │   └── iot.py                    # IoT 协议
-├── worlds/                       # 虚拟世界设定层（虚拟 AI 复现）
+├── worlds/                       # 虚拟世界设定层（虚拟角色智能体路径，Character AI）
 │   ├── base.py                   # WorldSetting 抽象
 │   ├── character.py              # 角色设定
 │   ├── worldview.py              # 世界观

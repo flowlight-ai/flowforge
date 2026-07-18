@@ -53,7 +53,7 @@ operator（用户）看到的 FlowForge：
 灵智体看到的 FlowForge：
 - "我"的身份（Forgekin ID + 形态 + 谱系）
 - "我"的能力画像（必杀技 + 致命弱点）
-- "我"的记忆（魂忆 EchoStore + 灵典 Mind Codex）
+- "我"的记忆（灵忆 EchoStore + 灵典 Mind Codex）
 - "我"的协作伙伴（TeamAct + 伙伴系统数学）
 - "我"的进化路径（觉醒阶 E1-E6 + 灵锻 SpiritForge）
 

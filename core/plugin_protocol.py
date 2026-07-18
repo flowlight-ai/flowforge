@@ -93,6 +93,22 @@ class PluginManifest:
         personas_dir: Optional[str] = None,
         prompts_dir: Optional[str] = None,
         tools_dir: Optional[str] = None,
+        # ── V3 ForgeMind / Forgekin (v7.0 育灵体系) ───────────────────
+        # 灵智体形态（灵族 Forgekin Species）：bio / org / obj / virtual / hybrid
+        # 详见 [doc:design/naming-contract.md#2.3]
+        forgekin_species: str = "",
+        # 进化阶 E1-E6（能力成熟度），详见 [doc:design/naming-contract.md#3]
+        evolution_stage: str = "E1",
+        # 觉醒阶 E1-E6（自主性等级），详见 [doc:design/naming-contract.md#4]
+        awakening_stage: str = "E1",
+        # 灵族配置目录（forgemind 应用层专用）
+        forgekins_dir: Optional[str] = None,
+        # 锻典（Mind Codex）目录
+        codex_dir: Optional[str] = None,
+        # 灵议（Mind Council）配置目录
+        council_dir: Optional[str] = None,
+        # 自我进化配置目录（F100 Mode A/B/C）
+        auto_forge_dir: Optional[str] = None,
     ):
         self.name = name
         self.version = version
@@ -119,6 +135,14 @@ class PluginManifest:
         self.personas_dir = personas_dir
         self.prompts_dir = prompts_dir
         self.tools_dir = tools_dir
+        # V3 ForgeMind / Forgekin fields
+        self.forgekin_species = forgekin_species
+        self.evolution_stage = evolution_stage
+        self.awakening_stage = awakening_stage
+        self.forgekins_dir = forgekins_dir
+        self.codex_dir = codex_dir
+        self.council_dir = council_dir
+        self.auto_forge_dir = auto_forge_dir
 
 
 class PluginContext:
@@ -143,6 +167,13 @@ class PluginContext:
         model_service: Optional[Any] = None,
         plugin_registry: Optional[Any] = None,
         event_store: Optional[Any] = None,
+        # V3 ForgeMind / Forgekin registries (v7.0 育灵体系)
+        # 详见 [doc:decisions/005-forgemind-application-layer.md]
+        forgekin_registry: Optional[Any] = None,
+        council_registry: Optional[Any] = None,
+        auto_forge_engine: Optional[Any] = None,
+        codex_registry: Optional[Any] = None,
+        pack_registry: Optional[Any] = None,
     ):
         self._agent_registry = agent_registry
         self._tool_registry = tool_registry
@@ -157,6 +188,12 @@ class PluginContext:
         self._model_service = model_service
         self._plugin_registry = plugin_registry
         self._event_store = event_store
+        # V3 ForgeMind / Forgekin registries
+        self._forgekin_registry = forgekin_registry
+        self._council_registry = council_registry
+        self._auto_forge_engine = auto_forge_engine
+        self._codex_registry = codex_registry
+        self._pack_registry = pack_registry
         self._services: Dict[str, Any] = {}
 
     @property
@@ -231,6 +268,49 @@ class PluginContext:
         """Access the event store for WAL-mode event persistence and replay."""
         return self._event_store
 
+    # ── V3 ForgeMind / Forgekin accessors (v7.0 育灵体系) ───────────
+
+    @property
+    def forgekin_registry(self) -> Optional[Any]:
+        """Access the forgekin registry (灵智体注册表) for registering/discovering 灵智体.
+
+        详见 [doc:decisions/005-forgemind-application-layer.md] 和
+        [doc:design/naming-contract.md#2.2]
+        """
+        return self._forgekin_registry
+
+    @property
+    def council_registry(self) -> Optional[Any]:
+        """Access the council registry (灵议注册表) for multi-forgekin deliberation.
+
+        详见 [doc:design/naming-contract.md#2.9]
+        """
+        return self._council_registry
+
+    @property
+    def auto_forge_engine(self) -> Optional[Any]:
+        """Access the auto-forge engine (自我进化引擎) for Mode A/B/C self-evolution.
+
+        详见 [doc:review/review.md#13.1] F100 自我进化三模式
+        """
+        return self._auto_forge_engine
+
+    @property
+    def codex_registry(self) -> Optional[Any]:
+        """Access the codex registry (锻典注册表) for distilled knowledge base.
+
+        详见 [doc:design/naming-contract.md#2.8]
+        """
+        return self._codex_registry
+
+    @property
+    def pack_registry(self) -> Optional[Any]:
+        """Access the pack registry (Pack 共享注册表) for portable experience units.
+
+        详见 [doc:review/review.md#13.4] ADR-021 Pack 系统
+        """
+        return self._pack_registry
+
     def register_service(self, name: str, service: Any) -> None:
         """Register a named service for plugin access."""
         self._services[name] = service
@@ -277,6 +357,11 @@ class FlowForgePlugin(ABC):
         self._registered_context_layers: list[str] = []
         self._registered_step_handlers: list[str] = []
         self._registered_loops: list[str] = []
+        # V3 tracking (v7.0 育灵体系)
+        self._registered_forgekins: list[str] = []
+        self._registered_forge_skills: list[str] = []
+        self._registered_council_channels: list[str] = []
+        self._registered_auto_forge_configs: list[str] = []
 
     @property
     def state(self) -> PluginState:
@@ -427,6 +512,147 @@ class FlowForgePlugin(ABC):
     def register_declarative_tools(self, tool_registry: Any) -> None:
         """注册声明式Tool"""
         pass
+
+    # ── V3 Registration hooks (v7.0 育灵体系 / ForgeMind) ───────────
+    #
+    # 这四个钩子是 v7.0 自进化层的 Plugin V3 协议入口。
+    # 详见 [doc:review/review.md#13.1] F100 自我进化三模式
+    # 详见 [doc:decisions/005-forgemind-application-layer.md]
+    # 详见 [doc:design/naming-contract.md] 12 核心概念
+
+    def register_forgekins(self, forgekin_registry: Any) -> None:
+        """注册灵智体（Forgekin / Spirit Agent）到灵智体注册表。
+
+        v7.0 育灵体系的核心钩子之一。业务项目（如 contentforge、novelforge）
+        和 forgemind 应用层通过此钩子注册自己锻造的灵智体。
+
+        灵智体是"赋予灵魂和感情的智能体"——灵魂（Soul）= 持久身份 + 价值锚点
+        + 长期记忆；感情（Emotion）= 用户偏好 + 协作风格 + 行为画像。
+
+        详见:
+        - [doc:design/naming-contract.md#2.2] 灵智体定义
+        - [doc:decisions/005-forgemind-application-layer.md]
+        - [doc:review/review.md#第九章] forgemind 应用层补审
+
+        示例::
+
+            def register_forgekins(self, forgekin_registry):
+                forgekin_registry.register(
+                    name="contentforge:writer",
+                    species=ForgekinSpecies.VIRTUAL,  # 灵族分类
+                    evolution_stage=EvolutionStage.E3,  # 进化阶
+                    awakening_stage=AwakeningStage.E2,  # 觉醒阶
+                    capability_profile=self._build_writer_profile(),
+                    soul_imprint=self._compute_soul_imprint(),
+                )
+                self._track_forgekin("contentforge:writer")
+        """
+        pass
+
+    def register_forge_skills(self, skill_registry: Any) -> None:
+        """注册灵智体技能（Forge Skills）到技能注册表。
+
+        灵智体技能是可被灵智体加载的能力包，包括：
+        - 内置技能（来自 FlowForge 核心框架）
+        - 三方 Agent 技能（如 claude code / codex / opencode / trae）
+        - 自蒸馏技能（来自灵锻 SpiritForge 产出的锻典条目）
+
+        详见:
+        - [doc:design/naming-contract.md#2.7] 灵锻定义
+        - [doc:design/naming-contract.md#2.8] 锻典定义
+        - [doc:decisions/006-external-agent-integration.md] 三方 Agent 集成
+        - [doc:review/review.md#13.3] F241 Agent Provider Plugin
+
+        示例::
+
+            def register_forge_skills(self, skill_registry):
+                skill_registry.register(
+                    name="contentforge:seo_optimization",
+                    forgekin_id="contentforge:writer",
+                    skill_type="distilled",  # native / external / distilled
+                    manifest={...},
+                )
+                self._track_forge_skill("contentforge:seo_optimization")
+        """
+        pass
+
+    def register_council_channels(self, council_registry: Any) -> None:
+        """注册灵议（Mind Council）渠道到灵议注册表。
+
+        灵议是多灵智体议事机制，用于解决跨灵智体冲突、复杂决策、愿景方向校准。
+        任何灵智体可发起灵议，主持灵智体收集各方立场 + 能力画像盲点，
+        跨厂商 review 后达成共识或升级给 operator。
+
+        详见:
+        - [doc:design/naming-contract.md#2.9] 灵议定义
+        - [doc:review/review.md#13.1] F100 自我进化三模式（Mode A Scope Guard）
+        - [doc:roleagent.md#第7章] 伙伴系统数学
+
+        示例::
+
+            def register_council_channels(self, council_registry):
+                council_registry.register_channel(
+                    name="contentforge:quality_review",
+                    channel_type="cross_vendor_review",  # 跨厂商审核
+                    participants=["contentforge:writer", "contentforge:reviewer"],
+                    scope_guard=ScopeGuard(readonly_paths=["VISION.md#7"]),
+                )
+                self._track_council_channel("contentforge:quality_review")
+        """
+        pass
+
+    def register_auto_forge_config(self, auto_forge_engine: Any) -> None:
+        """注册自动锻造配置（Auto Forge Config）到自我进化引擎。
+
+        自我进化引擎是 v7.0 育灵体系的核心组件，支持 F100 三模式自我进化：
+        - Mode A — Scope Guard（范围守卫）：防止灵智体越权修改愿景/规范/架构
+        - Mode B — Process Evolution（流程进化）：改进灵智体自身工作方式
+        - Mode C — Knowledge Evolution（知识进化）：蒸馏新知识到锻典
+
+        每个灵智体通过此钩子声明自己的自我进化配置：可修改范围、可进化维度、
+        Eval Ledger 验证策略、五级知识成熟度阶梯晋升规则等。
+
+        详见:
+        - [doc:review/review.md#13.1] F100 自我进化三模式（CL-001~CL-006）
+        - [doc:decisions/009-eval-self-metabolism.md]
+        - [doc:design/naming-contract.md#2.10] 进化阶定义
+        - [doc:design/naming-contract.md#2.11] 觉醒阶定义
+
+        示例::
+
+            def register_auto_forge_config(self, auto_forge_engine):
+                auto_forge_engine.register_config(
+                    forgekin_id="contentforge:writer",
+                    scope_guard=ScopeGuard(
+                        readonly_paths=["VISION.md#7", "rules.md#红线"],
+                        writable_paths=["contentforge/config/prompts.yaml"],
+                    ),
+                    evolution_modes=[SelfEvolutionMode.ModeB_Process,
+                                     SelfEvolutionMode.ModeC_Knowledge],
+                    eval_ledger_policy=EvalLedgerPolicy(
+                        replay_ab_required=True,
+                        min_net_gain=0.05,
+                    ),
+                )
+                self._track_auto_forge_config("contentforge:writer")
+        """
+        pass
+
+    def _track_forgekin(self, name: str) -> None:
+        """Track a registered forgekin (灵智体) for later cleanup."""
+        self._registered_forgekins.append(name)
+
+    def _track_forge_skill(self, name: str) -> None:
+        """Track a registered forge skill for later cleanup."""
+        self._registered_forge_skills.append(name)
+
+    def _track_council_channel(self, name: str) -> None:
+        """Track a registered council channel (灵议渠道) for later cleanup."""
+        self._registered_council_channels.append(name)
+
+    def _track_auto_forge_config(self, name: str) -> None:
+        """Track a registered auto-forge config for later cleanup."""
+        self._registered_auto_forge_configs.append(name)
 
     # ── Lifecycle hooks ─────────────────────────────────────────────
 

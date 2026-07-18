@@ -1,0 +1,99 @@
+# 育灵（Forge Nurturing）锻造流水线配置
+# 详见 [doc:design/naming-contract.md#2.4] 育灵定义
+# 详见 [doc:review/review.md#第九章] FM-006 锻造流水线 6 阶段
+# 配置驱动 > 代码实现（铁律5+P16：禁止在 .py 文件中硬编码此处的值）
+
+forging:
+  # 默认形态：虚拟灵智体（forgemind 应用层以 VirtualForgekin 为最常见形态）
+  default_species: virtual
+  # 默认进化阶：E1 萌芽阶（新锻造灵智体从能力积累起步）
+  default_evolution_stage: E1
+  # 默认觉醒阶：E1 全导阶（新锻造灵智体从全人工起步，由 operator 显式授权逐级晋升）
+  default_awakening_stage: E1
+  # 质量分阈值（rules.md 铁律2：默认 0.85，可在 Loop 配置中覆盖）
+  min_quality_score: 0.85
+
+  # ── 锻造流水线 6 阶段配置（FM-006）────────────────────────────
+  # 每个阶段可配置 required / timeout_seconds / 重试等参数。
+  # 阶段顺序: species_definition → capability_injection → memory_seeding →
+  #          value_alignment → capability_verification → awakening_promotion
+  stages:
+    # 1. 形态定义（What to forge）— 确定灵族 species
+    species_definition:
+      required: true
+      timeout_seconds: 30
+      retry:
+        max_attempts: 2
+        backoff_seconds: 5
+
+    # 2. 能力注入（Capability injection）— 加载 CapabilityProfile
+    capability_injection:
+      required: true
+      timeout_seconds: 60
+      retry:
+        max_attempts: 2
+        backoff_seconds: 5
+
+    # 3. 记忆初始化（Memory seeding）— 初始化魂忆 EchoStore
+    memory_seeding:
+      required: true
+      timeout_seconds: 30
+      retry:
+        max_attempts: 3
+        backoff_seconds: 3
+
+    # 4. 价值观对齐（Value alignment）— 注入价值锚点
+    value_alignment:
+      required: true
+      timeout_seconds: 30
+      retry:
+        max_attempts: 2
+        backoff_seconds: 5
+
+    # 5. 能力验证（Capability verification）— Eval 验证
+    capability_verification:
+      required: true
+      timeout_seconds: 120
+      min_quality_score: 0.85
+      retry:
+        max_attempts: 2
+        backoff_seconds: 10
+
+    # 6. 觉醒晋升（Awakening promotion）— 初始觉醒阶 E1
+    awakening_promotion:
+      required: true
+      timeout_seconds: 30
+      retry:
+        max_attempts: 1
+        backoff_seconds: 0
+
+  # ── 价值锚点默认清单（VISION §7 + 15 条红线）─────────────────
+  # 新锻造灵智体若未显式提供 value_anchors，则使用本清单。
+  # 详见 [doc:VISION.md#7] operator 愿景锚点
+  # 详见 [doc:design/naming-contract.md#2.6] 魂印 value_anchors
+  value_anchors_default:
+    - "不伤害 operator"
+    - "遵守 VISION.md §7 七条愿景锚点"
+    - "遵守 hiclaw/rules.md 15 条编程红线"
+    - "遵守 [doc:design/naming-contract.md] 12 核心概念命名契约"
+    - "Magic Words 逃生舱始终可触发（任何觉醒阶都不能绕过）"
+
+  # ── 灵族形态工厂映射（species_impl 包内类名）──────────────────
+  # ForgePipeline 根据此映射实例化对应形态的灵智体。
+  # 详见 [doc:decisions/013-all-things-spirit-mind-vision.md#2] 五大形态
+  species_factory:
+    bio:
+      module: flowforge.forgemind.species_impl.bio
+      class_name: BioForgekin
+    org:
+      module: flowforge.forgemind.species_impl.org
+      class_name: OrgForgekin
+    obj:
+      module: flowforge.forgemind.species_impl.obj
+      class_name: ObjForgekin
+    virtual:
+      module: flowforge.forgemind.species_impl.virtual
+      class_name: VirtualForgekin
+    hybrid:
+      module: flowforge.forgemind.species_impl.hybrid
+      class_name: HybridForgekin

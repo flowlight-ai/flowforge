@@ -80,7 +80,7 @@ class ForgekinFormData(BaseModel):
 class ForgekinBase(BaseModel):
     """灵智体基类"""
     forgekin_id: str
-    soul_imprint: str               # 魂印（身份标识）
+    soul_imprint: str               # 灵印（身份标识）
     form_data: ForgekinFormData
     evolution_stage: EvolutionStage = EvolutionStage.E1_DORMANT
     created_at: datetime = Field(default_factory=datetime.now)

@@ -50,8 +50,8 @@
 | 灵智体 Forgekin | 代码层主名 |
 | 灵族 Forgekin Species | 灵智体形态分类（5 种） |
 | 育灵 Forge Nurturing | 灵智体锻造过程 |
-| 魂忆 EchoStore | 灵智体经验记忆 |
-| 魂印 Soul Imprint | 灵智体身份标识 |
+| 灵忆 EchoStore | 灵智体经验记忆 |
+| 灵印 Soul Imprint | 灵智体身份标识 |
 | 灵锻 SpiritForge | 经验蒸馏到灵典 |
 | 锻典 Mind Codex | 蒸馏经验知识库 |
 | 灵议 Mind Council | 多灵智体议事 |
