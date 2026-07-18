@@ -206,7 +206,7 @@ async def forge_forgekin(forgekin_id: str) -> ForgeResponse:
     """从 YAML 配置锻造灵智体.
 
     Args:
-        forgekin_id: 预置灵智体 ID（如 ``luban`` / ``yanyan`` / ``shuoshuo``）。
+        forgekin_id: 预置灵智体 ID（如 ``luban`` / ``sherlock`` / ``vangogh``）。
 
     Returns:
         锻造结果。

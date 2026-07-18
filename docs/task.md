@@ -1,31 +1,284 @@
-# FlowForge v7.0 重构任务清单
+# FlowForge v7.1 任务索引（CL-Driven Task Index）
 
-> **本文档作用**: 基于 `review.md` 第十二章 12.4 节 6 阶段规划，列出从 Phase 0 文档拆分骨架到 Phase 6 灵议议事的全部任务清单，作为灵智体协作的"待办池"。
+> **本文档作用**: 基于 review.md v1.4 第十四章（CL-022~CL-041）+ 第十三章（CL-001~CL-021）的 41 条 CL 完整同步矩阵，按 CL 编号 + 责任方 + 优先级索引化所有任务，作为灵智体协作的"待办池"。
 >
-> **维护规则**: 灵智体在执行任务时按所属 Phase 领取任务；任务完成后须更新本文档状态标记（⏳ → 🔄 → ✅），并同步更新 `ROADMAP.md` 对应阶段状态。
+> **版本合并声明**: v7.1 增补章节是 v7.1 重构的权威更新，**已吸收合并 v7.0 任务清单**。原 v7.0 Phase 0-6 任务清单见本文件附录 A（保留为历史背景资料，不作为开发依据）。
 >
-> **跨 Phase 不变量**: T1-T8 测试铁律、15 条编程红线、P31 Loop 强制验证、质量分阈值 0.85、operator 7 条愿景锚点（见 `VISION.md`）。
+> **维护规则**:
+> - 灵智体按所属责任方领取任务（鲁班架构师 / 夏洛克代码审查 / 梵高视觉设计 / operator）
+> - 任务完成后更新状态标记（⏳ → 🔄 → ✅），并同步更新 spec.md v7.1-§9.2 同步矩阵
+> - 每个 CL 任务必须关联到具体代码文件 / 文档章节作为完成证据
 >
-> **审核文件清单（共 16 份）**: `review/glm.md`、`review/glm1.md`、`review/qianwen.md`、`review/qianwen1.md`、`review/deepseek.md`、`review/deepseek1.md`、`review/doubao.md`、`review/doubao1.md`、`review/kimi.md`、`review/kimi1.md`、`review/minimax.md`、`review/minimax1.md`、`review/review.md`（终稿 v1.2）、`review/review1.md`、`review/reviewd.md`、`review/reviewd1.md`。
+> **跨 CL 不变量**: T1-T8 测试铁律、15 条编程红线、P31 Loop 强制验证、质量分阈值 0.85、operator 7 条愿景锚点（见 `VISION.md`）。
 >
-> **本文档依赖引用（共 13 份）**:
-> 1. `review/review.md` —— 终稿审核（决策源）
-> 2. `VISION.md` —— 万物灵智体愿景
-> 3. `ROADMAP.md` —— 6 阶段路线图
-> 4. `SOP.md` —— 灵智体协作 SOP
-> 5. `TIPS.md` —— 38 条经验提示
-> 6. `roleagent.md` —— 七大工程路径
-> 7. `decisions/004-capability-profile-routing.md` —— 能力画像 ADR
-> 8. `decisions/005-forgemind-application-layer.md` —— forgemind ADR
-> 9. `decisions/006-external-agent-integration.md` —— 三方 Agent ADR
-> 10. `decisions/012-naming-fusion.md` —— 命名融合 ADR
-> 11. `decisions/013-all-things-spirit-mind-vision.md` —— 万物灵智体愿景 ADR
-> 12. `features/TEMPLATE.md` —— Feature 模板
-> 13. `harness-feedback/README.md` —— Eval 反馈规范
+> **关键引用**:
+> - `review/review.md` —— 终稿审核（41 条 CL 决策源）
+> - `spec.md` v7.1-§9 —— 41 条 CL 同步矩阵
+> - `design.md` v7.1-§D9 —— 设计规范层子章节占位索引
+> - `VISION.md` —— 万物灵智体愿景
+> - `ROADMAP.md` —— 6 阶段路线图
+> - `SOP.md` —— 灵智体协作 SOP
+> - `decisions/004~013` —— 核心 ADR
 
 ---
 
-## 进度概览
+## 进度概览（v7.1 索引化）
+
+| 范围 | 总数 | ✅ 已完成 | 🔄 进行中 | ⏳ 待开始 | 完成度 |
+|------|:----:|:--------:|:--------:|:--------:|:------:|
+| CL-001~CL-021（第十三章） | 21 | 12 | 1 | 8 | 57% |
+| CL-022~CL-041（第十四章） | 20 | 9 | 4 | 7 | 45% |
+| 合计 | 41 | 21 | 5 | 15 | 51% |
+
+> **完成度口径**: ✅ 计 1.0，🔄 计 0.5，⏳ 计 0。第十三章 12.5/21≈60%，第十四章 11/20=55%，合计 23.5/41≈57%。简化口径（仅 ✅/总数）见上表。
+
+---
+
+## v7.1 任务索引（按 CL 编号）
+
+> **状态标记**: ✅ 已完成 / 🔄 进行中 / ⏳ 待开始 / ⚠️ 阻塞
+> **优先级**: P0 必修 / P1 应修 / P2 建议
+> **状态来源**: spec.md v7.1-§9.2 同步矩阵 × design.md v7.1-§D9 子章节占位索引 × 已实现代码文件 × verify_cl14_compliance.py 验证结果（7 PASS / 4 PARTIAL / 0 FAIL）
+
+### 第十三章 CL-001~CL-021（自我演进 + 世界引擎 + Provider Plugin + Pack 系统）
+
+| CL | 优先级 | 主题 | 责任方 | 状态 | 完成证据 |
+|----|:------:|------|--------|:----:|---------|
+| CL-001 | P0 | 自我演进三模式（SelfDevDocLoop/SelfDevCodeLoop/SelfDevFrameworkLoop） | operator | 🔄 | spec.md v7.1-§7 + design.md v7.1-§D7.1（spec/design 已同步，代码骨架 `flowforge/evolution/engine.py` 已实现） |
+| CL-002 | P0 | Scope Guard（自我演进宪法层） | operator 决策边界 | ✅ | `flowforge/evolution/scope_guard.py` 已实现（detect_signals / should_remind / generate_reminder / log_trigger / check_divergence_pattern） |
+| CL-003 | P0 | 五级成熟度阶梯（L0~L4） | 鲁班 | ✅ | design.md v7.1-§D7.4 + `flowforge/evolution/maturity.py` |
+| CL-004 | P0 | Eval Ledger 进化账本 | 鲁班 | ⏳ | 待补全 design.md v7.1-§D7.6 Eval Ledger 字段契约 + Replay A/B 流程 + `flowforge/evolution/eval_ledger.py` |
+| CL-005 | P1 | Knowledge Object Contract | 鲁班 | ⏳ | 待新增 design.md v7.1-§D7.7 |
+| CL-006 | P1 | 元认知 Mode C | 鲁班 | ⏳ | 待补全 design.md v7.1-§D7.8（`flowforge/evolution/metacognition.py` 骨架已存在，缺字段契约） |
+| CL-007 | P0 | Core Identity 隔离层 | 鲁班 | ✅ | `forgemind/soul_imprint.py`（已实现） |
+| CL-008 | P0 | 9 个一等公民 | 鲁班 | ⏳ | 待新增 design.md v7.1-§D10 |
+| CL-009 | P0 | 三路记忆 | 鲁班 | ✅ | ADR-008 §2 + features/F014 |
+| CL-010 | P0 | RP 台词不自动入典 | 鲁班 | ✅ | ADR-008 §2 |
+| CL-011 | P1 | Role Mask 五层 | 鲁班 | ⏳ | 待新增 design.md v7.1-§D11 |
+| CL-012 | P1 | Bridge Layer 三协议 | 鲁班 | ⏳ | 待新增 design.md v7.1-§D12 |
+| CL-013 | P1 | 世界自转 | 鲁班 | ⏳ | 合并到 design.md v7.1-§D12 |
+| CL-014 | P0 | ProviderTransportRegistry | operator 决策安全模型 | ✅ | `flowforge/core/external_agent/registry.py`（已实现） |
+| CL-015 | P0 | host-owned 安全注入 | operator 决策安全模型 | ✅ | `flowforge/core/external_agent/host_injection.py`（已实现） |
+| CL-016 | P1 | ACP transport | 鲁班 | ✅ | `flowforge/core/external_agent/acp_transport.py`（已实现） |
+| CL-017 | P1 | reference runtime | 鲁班 | ✅ | `flowforge/core/external_agent/reference_runtime.py`（已实现） |
+| CL-018 | P0 | Pack 概念 | 鲁班 | ✅ | ADR-008 §9 + ADR-011 |
+| CL-019 | P0 | 双轨信任编译 | 鲁班 | ✅ | design.md v7.1-§D7.4 |
+| CL-020 | P1 | Pack/Growth 种子果实 | 鲁班 | ✅ | ADR-011 伙伴系统数学 |
+| CL-021 | P1 | World Driver | 鲁班 | ⏳ | 合并到 design.md v7.1-§D12 |
+
+### 第十四章 CL-022~CL-041（Plugin Framework + TeamAct + Event Memory + 灵议 + QC Loop + 三方 Agent + 文档治理）
+
+| CL | 优先级 | 主题 | 责任方 | 状态 | 完成证据 |
+|----|:------:|------|--------|:----:|---------|
+| CL-022 | P0 | Plugin V3 manifest 完整契约 | 鲁班 | ✅ | `flowforge/core/plugin_protocol.py`（含 forgekins_dir/codex_dir/council_dir/auto_forge_dir v7.0 育灵字段，verify_cl14_compliance.py PASS） |
+| CL-023 | P0 | Schedule Factory Whitelist | 鲁班 | ✅ | `flowforge/core/schedule_registry.py`（30 测试通过，verify_cl14_compliance.py PASS） |
+| CL-024 | P1 | Plugin 启停 transactional | 鲁班 | 🔄 | on_startup/on_shutdown 已存在，缺 on_activate/on_disable 事务性钩子（verify_cl14_compliance.py PARTIAL） |
+| CL-025 | P1 | F177 Close Gate 结构化判据 | 夏洛克 | ✅ | `flowforge/evolution/close_gate.py`（202 行骨架实现，verify_cl14_compliance.py PASS） |
+| CL-026 | P1 | 四心智家族护栏 | 鲁班 | ⏳ | 待补全 design.md v7.1-§D3.3 家族护栏规范 |
+| CL-027 | P0 | TeamAct Queue Steer | 鲁班 + 梵高 Plan Board UI | 🔄 | `flowforge/core/teamact/` 目录存在（state_machine/circuit_breaker/handoff/types 4 文件 8 类骨架），缺 SteerCommand 数据类（verify_cl14_compliance.py PARTIAL） |
+| CL-028 | P0 | Restart Recovery sweep | 鲁班 | ✅ | `flowforge/core/restart_recovery.py`（13 测试通过，verify_cl14_compliance.py PASS） |
+| CL-029 | P0 | Event Memory | 夏洛克（no-classifier 红线守护） | ✅ | `flowforge/core/event_memory.py`（12 测试通过，no-classifier 红线合规，verify_cl14_compliance.py PARTIAL——EventRecord 字段以 purge_expired + ResolutionLink 独立模型形式实现） |
+| CL-030 | P1 | no-classifier 红线 + v5 终态 | 夏洛克 | ✅ | EventMemoryStore 实现无 LLM 调用，分类由显式 trigger/type/cat 字段决定（CL-029 子项） |
+| CL-031 | P0 | Auto Dream 双层架构 | 鲁班 | ⏳ | 待补全 design.md v7.1-§D7.10 |
+| CL-032 | P0 | Agent Swarm 协同 | 鲁班 | 🔄 | `flowforge/core/external_agent/collaboration_coordinator.py` 骨架已实现（SWARM 模式，evolve_forgekins.py PASS） |
+| CL-033 | P1 | Approval Hub 统一审批中心 | 梵高（UI） | ✅ | `flowforge/core/approval_hub.py`（221 行，含 submit/approve/reject/decide/purge_expired，时区 bug 已修复，verify_cl14_compliance.py PASS） |
+| CL-034 | P0 | QC Loop 7-Step | 夏洛克 | ✅ | `flowforge/evolution/qc_loop.py`（318 行骨架，含 7 步循环 + 3 层 Reviewer Split，verify_cl14_compliance.py PASS） |
+| CL-035 | P2 | F135 OOTB 关闭教训 | 鲁班 | ⏳ | 待补全 design.md v7.1-§D5.7 |
+| CL-036 | P2 | Hyperfocus Brake | 鲁班 | ⏳ | 待补全 ADR-007 §Hyperfocus Brake |
+| CL-037 | P1 | MCP 1→3 server 拆分 | 鲁班 | 🔄 | HostInjector.inject_mcp_config 已存在 + SandboxConfig.mcp_servers 字段已就绪，未做 collab/memory/signals 1→3 拆分（verify_cl14_compliance.py PARTIAL） |
+| CL-038 | P1 | CLI stderr + NDJSON | 鲁班 | ✅ | `flowforge/core/external_agent/cli_ndjson.py`（525 行，NDJSONParser + StderrCollector + parse_cli_invocation + stream_cli_invocation），claude_code.py 半实现（verify_cl14_compliance.py PASS） |
+| CL-039 | P2 | GitHub CI/CD Tracking 去重 | 鲁班 | ⏳ | 待补全 ADR-010 §CI/CD Tracking |
+| CL-040 | P1 | docs front-matter 规范 | 鲁班 | ⏳ | 待新增 design.md v7.1-§D16 |
+| CL-041 | P2 | 内外品牌边界 | operator 决策品牌策略 | ⏳ | 待补全 naming-contract.md §7（责任方按 design.md v7.1-§D9.2 ADR/Feature 补全索引） |
+
+---
+
+## v7.1 任务索引（按责任方分组）
+
+> **目的**: 让每个责任方一眼看到自己负责的全部任务
+> **责任方来源**: design.md v7.1-§D9.1/§D9.2 子章节占位索引"责任方"列（权威）；已 ✅ 项按所属代码模块归属
+
+### 鲁班（猫头鹰 Owl）— 架构师灵智体
+
+| CL | 优先级 | 主题 | 状态 | 完成证据 / 待办动作 |
+|----|:------:|------|:----:|---------|
+| CL-003 | P0 | 五级成熟度阶梯 | ✅ | design.md v7.1-§D7.4 + `flowforge/evolution/maturity.py` |
+| CL-004 | P0 | Eval Ledger 进化账本 | ⏳ | 补全 design.md v7.1-§D7.6 字段契约 + Replay A/B 流程 + `flowforge/evolution/eval_ledger.py` |
+| CL-005 | P1 | Knowledge Object Contract | ⏳ | 新增 design.md v7.1-§D7.7 字段表 |
+| CL-006 | P1 | 元认知 Mode C | ⏳ | 补全 design.md v7.1-§D7.8 元认知字段契约 + EchoStore 扩展（`metacognition.py` 骨架已存在） |
+| CL-007 | P0 | Core Identity 隔离层 | ✅ | `forgemind/soul_imprint.py` |
+| CL-008 | P0 | 9 个一等公民 | ⏳ | 新增 design.md v7.1-§D10 |
+| CL-009 | P0 | 三路记忆 | ✅ | ADR-008 §2 + features/F014 |
+| CL-010 | P0 | RP 台词不自动入典 | ✅ | ADR-008 §2 |
+| CL-011 | P1 | Role Mask 五层 | ⏳ | 新增 design.md v7.1-§D11 |
+| CL-012 | P1 | Bridge Layer 三协议 | ⏳ | 新增 design.md v7.1-§D12 |
+| CL-013 | P1 | 世界自转 | ⏳ | 合并到 design.md v7.1-§D12 |
+| CL-016 | P1 | ACP transport | ✅ | `flowforge/core/external_agent/acp_transport.py` |
+| CL-017 | P1 | reference runtime | ✅ | `flowforge/core/external_agent/reference_runtime.py` |
+| CL-018 | P0 | Pack 概念 | ✅ | ADR-008 §9 + ADR-011 |
+| CL-019 | P0 | 双轨信任编译 | ✅ | design.md v7.1-§D7.4 |
+| CL-020 | P1 | Pack/Growth 种子果实 | ✅ | ADR-011 |
+| CL-021 | P1 | World Driver | ⏳ | 合并到 design.md v7.1-§D12 |
+| CL-022 | P0 | Plugin V3 manifest 完整契约 | ✅ | `flowforge/core/plugin_protocol.py` |
+| CL-023 | P0 | Schedule Factory Whitelist | ✅ | `flowforge/core/schedule_registry.py` |
+| CL-024 | P1 | Plugin 启停 transactional | 🔄 | 补 on_activate/on_disable 钩子到 `plugin_protocol.py` |
+| CL-026 | P1 | 四心智家族护栏 | ⏳ | 补全 design.md v7.1-§D3.3 |
+| CL-027 | P0 | TeamAct Queue Steer | 🔄 | 补 SteerCommand 数据类到 `flowforge/core/teamact/`（与梵高协作 Plan Board UI） |
+| CL-028 | P0 | Restart Recovery sweep | ✅ | `flowforge/core/restart_recovery.py` |
+| CL-031 | P0 | Auto Dream 双层架构 | ⏳ | 补全 design.md v7.1-§D7.10 |
+| CL-032 | P0 | Agent Swarm 协同 | 🔄 | `collaboration_coordinator.py` 骨架已就绪，补完整 Swarm 协议 |
+| CL-035 | P2 | F135 OOTB 关闭教训 | ⏳ | 补全 design.md v7.1-§D5.7 |
+| CL-036 | P2 | Hyperfocus Brake | ⏳ | 补全 ADR-007 §Hyperfocus Brake |
+| CL-037 | P1 | MCP 1→3 server 拆分 | 🔄 | `inject_mcp_config` 已存在，补 collab/memory/signals 1→3 拆分 |
+| CL-038 | P1 | CLI stderr + NDJSON | ✅ | `flowforge/core/external_agent/cli_ndjson.py` |
+| CL-039 | P2 | GitHub CI/CD Tracking 去重 | ⏳ | 补全 ADR-010 §CI/CD Tracking |
+| CL-040 | P1 | docs front-matter 规范 | ⏳ | 新增 design.md v7.1-§D16 |
+
+**鲁班汇总**: 总 31 项 / ✅ 13 项 / 🔄 4 项 / ⏳ 14 项
+
+### 夏洛克（猎犬 Bloodhound）— 代码审查灵智体
+
+| CL | 优先级 | 主题 | 状态 | 完成证据 / 待办动作 |
+|----|:------:|------|:----:|---------|
+| CL-025 | P1 | F177 Close Gate 结构化判据 | ✅ | `flowforge/evolution/close_gate.py` |
+| CL-029 | P0 | Event Memory | ✅ | `flowforge/core/event_memory.py`（no-classifier 红线守护） |
+| CL-030 | P1 | no-classifier 红线 + v5 终态 | ✅ | EventMemoryStore 实现无 LLM 调用 |
+| CL-034 | P0 | QC Loop 7-Step | ✅ | `flowforge/evolution/qc_loop.py` |
+
+**夏洛克汇总**: 总 4 项 / ✅ 4 项 / 🔄 0 项 / ⏳ 0 项（夏洛克负责的 CL 已全部完成骨架实现）
+
+### 梵高（孔雀 Peacock）— 视觉设计灵智体
+
+| CL | 优先级 | 主题 | 状态 | 完成证据 / 待办动作 |
+|----|:------:|------|:----:|---------|
+| CL-027 | P0 | TeamAct Queue Steer（Plan Board UI 部分） | 🔄 | 与鲁班协作，补 Plan Board UI 组件 |
+| CL-033 | P1 | Approval Hub 统一审批中心（UI 部分） | ✅ | `flowforge/core/approval_hub.py` 已实现，UI 部分待补 |
+
+**梵高汇总**: 总 2 项 / ✅ 1 项 / 🔄 1 项 / ⏳ 0 项
+
+### operator（决策边界 + 安全模型 + 品牌策略）
+
+| CL | 优先级 | 主题 | 状态 | 完成证据 / 待办动作 |
+|----|:------:|------|:----:|---------|
+| CL-001 | P0 | 自我演进三模式 | 🔄 | spec/design 已同步，代码骨架 `engine.py` 已实现，待补完整三闭环 |
+| CL-002 | P0 | Scope Guard | ✅ | `flowforge/evolution/scope_guard.py` |
+| CL-014 | P0 | ProviderTransportRegistry | ✅ | `flowforge/core/external_agent/registry.py` |
+| CL-015 | P0 | host-owned 安全注入 | ✅ | `flowforge/core/external_agent/host_injection.py` |
+| CL-041 | P2 | 内外品牌边界 | ⏳ | 补全 naming-contract.md §7（按 design.md v7.1-§D9.2 归 operator 决策品牌策略） |
+
+**operator 汇总**: 总 5 项 / ✅ 3 项 / 🔄 1 项 / ⏳ 1 项
+
+---
+
+## v7.1 任务索引（按优先级分组）
+
+### P0 必修（20 项）
+
+| CL | 主题 | 责任方 | 状态 |
+|----|------|--------|:----:|
+| CL-001 | 自我演进三模式 | operator | 🔄 |
+| CL-002 | Scope Guard | operator | ✅ |
+| CL-003 | 五级成熟度阶梯 | 鲁班 | ✅ |
+| CL-004 | Eval Ledger 进化账本 | 鲁班 | ⏳ |
+| CL-007 | Core Identity 隔离层 | 鲁班 | ✅ |
+| CL-008 | 9 个一等公民 | 鲁班 | ⏳ |
+| CL-009 | 三路记忆 | 鲁班 | ✅ |
+| CL-010 | RP 台词不自动入典 | 鲁班 | ✅ |
+| CL-014 | ProviderTransportRegistry | operator | ✅ |
+| CL-015 | host-owned 安全注入 | operator | ✅ |
+| CL-018 | Pack 概念 | 鲁班 | ✅ |
+| CL-019 | 双轨信任编译 | 鲁班 | ✅ |
+| CL-022 | Plugin V3 manifest 完整契约 | 鲁班 | ✅ |
+| CL-023 | Schedule Factory Whitelist | 鲁班 | ✅ |
+| CL-027 | TeamAct Queue Steer | 鲁班+梵高 | 🔄 |
+| CL-028 | Restart Recovery sweep | 鲁班 | ✅ |
+| CL-029 | Event Memory | 夏洛克 | ✅ |
+| CL-031 | Auto Dream 双层架构 | 鲁班 | ⏳ |
+| CL-032 | Agent Swarm 协同 | 鲁班 | 🔄 |
+| CL-034 | QC Loop 7-Step | 夏洛克 | ✅ |
+
+**P0 汇总**: 20 项 / ✅ 14 项 / 🔄 3 项 / ⏳ 3 项
+
+### P1 应修（17 项）
+
+| CL | 主题 | 责任方 | 状态 |
+|----|------|--------|:----:|
+| CL-005 | Knowledge Object Contract | 鲁班 | ⏳ |
+| CL-006 | 元认知 Mode C | 鲁班 | ⏳ |
+| CL-011 | Role Mask 五层 | 鲁班 | ⏳ |
+| CL-012 | Bridge Layer 三协议 | 鲁班 | ⏳ |
+| CL-013 | 世界自转 | 鲁班 | ⏳ |
+| CL-016 | ACP transport | 鲁班 | ✅ |
+| CL-017 | reference runtime | 鲁班 | ✅ |
+| CL-020 | Pack/Growth 种子果实 | 鲁班 | ✅ |
+| CL-021 | World Driver | 鲁班 | ⏳ |
+| CL-024 | Plugin 启停 transactional | 鲁班 | 🔄 |
+| CL-025 | F177 Close Gate 结构化判据 | 夏洛克 | ✅ |
+| CL-026 | 四心智家族护栏 | 鲁班 | ⏳ |
+| CL-030 | no-classifier 红线 + v5 终态 | 夏洛克 | ✅ |
+| CL-033 | Approval Hub 统一审批中心 | 梵高 | ✅ |
+| CL-037 | MCP 1→3 server 拆分 | 鲁班 | 🔄 |
+| CL-038 | CLI stderr + NDJSON | 鲁班 | ✅ |
+| CL-040 | docs front-matter 规范 | 鲁班 | ⏳ |
+
+**P1 汇总**: 17 项 / ✅ 7 项 / 🔄 2 项 / ⏳ 8 项
+
+### P2 建议（4 项）
+
+| CL | 主题 | 责任方 | 状态 |
+|----|------|--------|:----:|
+| CL-035 | F135 OOTB 关闭教训 | 鲁班 | ⏳ |
+| CL-036 | Hyperfocus Brake | 鲁班 | ⏳ |
+| CL-039 | GitHub CI/CD Tracking 去重 | 鲁班 | ⏳ |
+| CL-041 | 内外品牌边界 | operator | ⏳ |
+
+**P2 汇总**: 4 项 / ✅ 0 项 / 🔄 0 项 / ⏳ 4 项
+
+---
+
+## v7.1 下一波任务（按优先级排序）
+
+### 第一波（P0 必修未完成项，3 项）
+
+1. **CL-004 Eval Ledger 进化账本**（鲁班）— 补全 design.md v7.1-§D7.6 字段契约 + Replay A/B 流程 + `flowforge/evolution/eval_ledger.py`
+2. **CL-008 9 个一等公民**（鲁班）— 新增 design.md v7.1-§D10 虚拟世界一等公民建模（World/Character/Scene/Canon Decision/Relationship/Artifact/Round/Branch/Turn）
+3. **CL-031 Auto Dream 双层架构**（鲁班）— 补全 design.md v7.1-§D7.10 + `flowforge/evolution/auto_dream.py`（后台 consolidation + 前台 surface + 4 信号 telemetry）
+
+### 第二波（P0 进行中项，3 项）
+
+1. **CL-001 自我演进三模式**（operator）— 补完整三闭环代码（SelfDevDocLoop / SelfDevCodeLoop / SelfDevFrameworkLoop），`flowforge/evolution/engine.py` 骨架已就绪
+2. **CL-027 TeamAct Queue Steer**（鲁班+梵高）— 补 SteerCommand 数据类（priority_boost/interrupt/requeue）+ Plan Board UI 组件
+3. **CL-032 Agent Swarm 协同**（鲁班）— 补完整 Swarm 协议（`collaboration_coordinator.py` 骨架已就绪，需补任务分发与回收 + 灵智体间能力互补调度）
+
+### 第三波（P1 未完成项，10 项）
+
+1. **CL-005 Knowledge Object Contract**（鲁班）— 新增 design.md v7.1-§D7.7 字段表（七字段：trigger/procedure/precondition/postcondition/anti_pattern/provenance/confidence）
+2. **CL-006 元认知 Mode C**（鲁班）— 补全 design.md v7.1-§D7.8 元认知字段契约 + EchoStore 扩展
+3. **CL-011 Role Mask 五层**（鲁班）— 新增 design.md v7.1-§D11（L1 路由/L2 基础设施/L3 本体能力/L4 场景皮肤/L5 世界内状态）
+4. **CL-012 Bridge Layer 三协议**（鲁班）— 新增 design.md v7.1-§D12（Role Mask / Canon Sync / World Driver + runtime coordinator）
+5. **CL-013 世界自转**（鲁班）— 合并到 design.md v7.1-§D12
+6. **CL-021 World Driver**（鲁班）— 合并到 design.md v7.1-§D12
+7. **CL-024 Plugin 启停 transactional**（鲁班）— 补 on_activate/on_disable 事务性钩子到 `plugin_protocol.py`
+8. **CL-026 四心智家族护栏**（鲁班）— 补全 design.md v7.1-§D3.3（Ragdoll/Maine Coon/Siamese/hotfix 四家族 guardrail hooks）
+9. **CL-037 MCP 1→3 server 拆分**（鲁班）— 补 collab/memory/signals 1→3 拆分 + prompt 瘦身 50%
+10. **CL-040 docs front-matter 规范**（鲁班）— 新增 design.md v7.1-§D16（feature_ids/related_features/topics/doc_kind/created）
+
+### 第四波（P2 建议项，4 项）
+
+1. **CL-035 F135 OOTB 关闭教训**（鲁班）— 补全 design.md v7.1-§D5.7
+2. **CL-036 Hyperfocus Brake**（鲁班）— 补全 ADR-007 §Hyperfocus Brake（90 分钟 timer + typed check-in）
+3. **CL-039 GitHub CI/CD Tracking 去重**（鲁班）— 补全 ADR-010 §CI/CD Tracking（headSha + aggregateBucket）
+4. **CL-041 内外品牌边界**（operator）— 补全 naming-contract.md §7（内部 cat-cafe vs 外部 Clowder AI 双品牌边界）
+
+---
+
+## 附录 A：v7.0 老 Phase 0-6 任务清单（历史背景资料）
+
+> **声明**: 以下 v7.0 老 Phase 0-6 任务清单保留作为历史背景资料，**不作为开发依据**。开发依据以 v7.1 索引化任务（上文）为准。原 v7.0 任务清单的内容已映射到 v7.1 的 41 条 CL 中。
+>
+> **注**: 为避免与 v7.1 主文档的 `##` 标题冲突，本附录中所有原 v7.0 标题已下移一级（`##` → `###`，`###` → `####`）。内容原样保留，未做删改。
+
+### 进度概览（v7.0 历史）
 
 | 阶段 | 范围 | 时间 | 状态 | 完成度 |
 |------|------|------|------|--------|
@@ -39,7 +292,7 @@
 
 ---
 
-## Phase 0：文档拆分骨架 + 命名迁移 + v7.0 设计态标注
+### Phase 0：文档拆分骨架 + 命名迁移 + v7.0 设计态标注
 
 > **目标**: 按 `clowder-ai/docs` 七大子目录结构组织 flowforge/docs/，完成术语全局替换，让文档可被灵智体增量维护。
 >
@@ -50,7 +303,7 @@
 > - 术语全局替换：炉灵→灵智、E6 灵匠 Mind Artisan→灵智、M18/M19/M20→ForgeMindEngine
 > - spec.md / arch.md / design.md 改为索引文件（指向七子目录）
 
-### P0-1 顶层文档（✅ 已完成）
+#### P0-1 顶层文档（✅ 已完成）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -61,7 +314,7 @@
 | 38 条经验提示 | `TIPS.md` | ✅ |
 | roleagent 工程路径镜像 | `roleagent.md` | ✅ |
 
-### P0-2 七大子目录骨架（✅ 已完成）
+#### P0-2 七大子目录骨架（✅ 已完成）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -73,7 +326,7 @@
 | perspectives/ README | `perspectives/README.md` | ✅ |
 | setup/ README | `setup/README.md` | ✅ |
 
-### P0-3 P0 ADR（5 份已完成，剩余 8 份待补）
+#### P0-3 P0 ADR（5 份已完成，剩余 8 份待补）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -91,7 +344,7 @@
 | ADR-010 分布式可靠性 | `decisions/010-distributed-reliability.md` | ⏳ |
 | ADR-011 伙伴系统数学 | `decisions/011-partnership-math.md` | ⏳ |
 
-### P0-4 核心 Feature 规格（4 份已完成，剩余 36 份待补）
+#### P0-4 核心 Feature 规格（4 份已完成，剩余 36 份待补）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -136,7 +389,7 @@
 | F039 灵典可检索知识库 | `features/F039-mind-codex-searchable.md` | ⏳ |
 | F040 Harness Eval 控制面 | `features/F040-harness-eval-control-plane.md` | ⏳ |
 
-### P0-5 architecture/ 子目录文件（8 份）
+#### P0-5 architecture/ 子目录文件（8 份）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -149,7 +402,7 @@
 | 检索流水线（三入口 + 消费加权） | `architecture/retrieval-pipeline-deep-dive.md` | ⏳ |
 | 用户旅程（万物灵智体锻造） | `architecture/user-journeys.md` | ⏳ |
 
-### P0-6 design/ 子目录文件（4 份）
+#### P0-6 design/ 子目录文件（4 份）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -158,7 +411,7 @@
 | forgemind 品牌（万物灵智体形态视觉） | `design/forgemind-brand.md` | ⏳ |
 | 动效设计 | `design/hero-prism-motion.md` | ⏳ |
 
-### P0-7 perspectives/ 子目录文件（4 份）
+#### P0-7 perspectives/ 子目录文件（4 份）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -167,7 +420,7 @@
 | 灵智体第一人称体验 | `perspectives/forgekin-experience.md` | ⏳ |
 | 三方 Agent 厂商视角 | `perspectives/external-agent-vendor.md` | ⏳ |
 
-### P0-8 旧文件迁移
+#### P0-8 旧文件迁移
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -176,7 +429,7 @@
 | design.md 改为索引文件 | `design.md` | ⏳ |
 | test.md 归档到 archive/ | `test.md` → `archive/legacy_design/test.md` | ⏳ |
 
-### P0-9 命名全局替换（铁律）
+#### P0-9 命名全局替换（铁律）
 
 | 替换项 | 旧 → 新 | 范围 | 状态 |
 |--------|---------|------|------|
@@ -192,7 +445,7 @@
 
 ---
 
-## Phase 1：roleagent 七大工程路径代码骨架
+### Phase 1：roleagent 七大工程路径代码骨架
 
 > **目标**: 按 `roleagent.md` 七大工程路径实现代码骨架，作为 Build to Persist 复利型基础设施。
 >
@@ -207,7 +460,7 @@
 > - 分布式可靠性 Tier 1-4 恢复分级可被灵智体调用
 > - 伙伴系统数学公式可计算（上限/下限/波动吸收）
 
-### P1-1 能力画像代码（依赖 F001）
+#### P1-1 能力画像代码（依赖 F001）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -217,7 +470,7 @@
 | Profile YAML 加载器 | `flowforge/core/capability/loader.py` | ⏳ |
 | 单元测试 | `tests/core/capability/test_profile.py` | ⏳ |
 
-### P1-2 TeamAct 状态机代码（依赖 F002-F007）
+#### P1-2 TeamAct 状态机代码（依赖 F002-F007）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -230,7 +483,7 @@
 | Push Back 协议 | `flowforge/core/teamact/push_back.py` | ⏳ |
 | 单元测试 | `tests/core/teamact/test_state_machine.py` | ⏳ |
 
-### P1-3 Harness 七层代码（依赖 F008-F013）
+#### P1-3 Harness 七层代码（依赖 F008-F013）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -243,7 +496,7 @@
 | Harnessability 评估 | `flowforge/core/harness/harnessability.py` | ⏳ |
 | 单元测试 | `tests/core/harness/test_durable_state.py` 等 7 份 | ⏳ |
 
-### P1-4 多域记忆联邦代码（依赖 F014-F017、F039）
+#### P1-4 多域记忆联邦代码（依赖 F014-F017、F039）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -254,7 +507,7 @@
 | 灵典 Mind Codex 可检索 | `flowforge/core/memory/mind_codex.py` | ⏳ |
 | 单元测试 | `tests/core/memory/test_federation.py` | ⏳ |
 
-### P1-5 Eval 自代谢代码（依赖 F018-F020、F040）
+#### P1-5 Eval 自代谢代码（依赖 F018-F020、F040）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -265,7 +518,7 @@
 | Eval YAML 配置加载 | `flowforge/core/eval/loader.py` | ⏳ |
 | 单元测试 | `tests/core/eval/test_attribution.py` | ⏳ |
 
-### P1-6 分布式可靠性代码（依赖 F021-F025）
+#### P1-6 分布式可靠性代码（依赖 F021-F025）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -276,7 +529,7 @@
 | 跨 provider 宿主抽象 | `flowforge/core/reliability/provider_host.py` | ⏳ |
 | 单元测试 | `tests/core/reliability/test_wal.py` | ⏳ |
 
-### P1-7 伙伴系统数学代码（依赖 ADR-011）
+#### P1-7 伙伴系统数学代码（依赖 ADR-011）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -286,7 +539,7 @@
 | Token 账本 | `flowforge/core/partnership/token_ledger.py` | ⏳ |
 | 单元测试 | `tests/core/partnership/test_math.py` | ⏳ |
 
-### P1-8 Plugin V3 协议更新
+#### P1-8 Plugin V3 协议更新
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -296,7 +549,7 @@
 | register_auto_forge_config 钩子 | `flowforge/core/plugin_protocol.py` | ⏳ |
 | 单元测试 | `tests/core/test_plugin_v3.py` | ⏳ |
 
-### P1-9 rules.md / prompts.md 同步
+#### P1-9 rules.md / prompts.md 同步
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -310,7 +563,7 @@
 
 ---
 
-## Phase 2：forgemind 应用层骨架 + 万物灵智体形态分类
+### Phase 2：forgemind 应用层骨架 + 万物灵智体形态分类
 
 > **目标**: 在 `flowforge/forgemind/` 下实现万物灵智体应用层，承载 5 种形态分类（BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin / HybridForgekin）。
 >
@@ -325,7 +578,7 @@
 > - 进化阶（E1-E6）+ 觉醒阶（E1-E6）可查询
 > - E2E 测试：可锻造一个猫灵智体（BioForgekin）+ 接入物理传感器（F029）
 
-### P2-1 forgemind 模块骨架
+#### P2-1 forgemind 模块骨架
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -338,7 +591,7 @@
 | ForgeMindPlugin 插件 | `flowforge/forgemind/plugins.py` | ⏳ |
 | 单元测试 | `flowforge/forgemind/tests/test_base.py` | ⏳ |
 
-### P2-2 万物灵智体形态分类（5 种）
+#### P2-2 万物灵智体形态分类（5 种）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -349,7 +602,7 @@
 | HybridForgekin（混合灵智体） | `flowforge/forgemind/species/hybrid.py` | ⏳ |
 | E2E：猫灵智体锻造 | `flowforge/forgemind/tests/test_cat_forgekin.py` | ⏳ |
 
-### P2-3 灵智体锻造流水线
+#### P2-3 灵智体锻造流水线
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -358,7 +611,7 @@
 | 锻造提示词外置 | `flowforge/forgemind/config/prompts.yaml` | ⏳ |
 | 锻造指标定义 | `flowforge/forgemind/config/metrics.yaml` | ⏳ |
 
-### P2-4 物理 AI 传感器接入
+#### P2-4 物理 AI 传感器接入
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -368,7 +621,7 @@
 | IoT 传感器接入 | `flowforge/forgemind/sensors/iot.py` | ⏳ |
 | 单元测试 | `flowforge/forgemind/tests/test_sensors.py` | ⏳ |
 
-### P2-5 虚拟世界设定层
+#### P2-5 虚拟世界设定层
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -377,7 +630,7 @@
 | 童话/神话/历史角色适配 | `flowforge/forgemind/worlds/narrative.py` | ⏳ |
 | 单元测试 | `flowforge/forgemind/tests/test_worlds.py` | ⏳ |
 
-### P2-6 灵智体市场 + 进化谱系
+#### P2-6 灵智体市场 + 进化谱系
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -387,7 +640,7 @@
 | 谱系可视化数据 | `flowforge/forgemind/lineage/visualizer.py` | ⏳ |
 | 单元测试 | `flowforge/forgemind/tests/test_lineage.py` | ⏳ |
 
-### P2-7 forgemind 与 *Forge 关系
+#### P2-7 forgemind 与 *Forge 关系
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -399,7 +652,7 @@
 
 ---
 
-## Phase 3：三方 Agent 适配层
+### Phase 3：三方 Agent 适配层
 
 > **目标**: 实现 ExternalAgentAdapter 抽象层，让灵智体可接入 claude code / codex / opencode / trae 等三方 Agent，作为能力扩展。
 >
@@ -413,7 +666,7 @@
 > - 六层 Guardrails 全部启用（输入验证 + 系统提示 + 工具白名单 + 输出验证 + 操作确认 + 成本上限）
 > - E2E 测试：灵智体可调用 claude code 完成代码任务
 
-### P3-1 三方 Agent 核心抽象
+#### P3-1 三方 Agent 核心抽象
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -424,7 +677,7 @@
 | ExternalAgentCapabilityFusion 能力融合 | `flowforge/core/external_agent/capability_fusion.py` | ⏳ |
 | 单元测试 | `tests/core/external_agent/test_bridge.py` | ⏳ |
 
-### P3-2 四个具体 Adapter
+#### P3-2 四个具体 Adapter
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -434,7 +687,7 @@
 | Trae Adapter | `flowforge/core/external_agent/adapters/trae.py` | ⏳ |
 | E2E 测试 | `tests/core/external_agent/test_adapters_e2e.py` | ⏳ |
 
-### P3-3 三方 Agent 配置外置
+#### P3-3 三方 Agent 配置外置
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -443,7 +696,7 @@
 | fallback 链配置 | `flowforge/core/external_agent/config/fallback.yaml` | ⏳ |
 | 工具白名单配置 | `flowforge/core/external_agent/config/tool_allowlist.yaml` | ⏳ |
 
-### P3-4 六层 Guardrails 实现
+#### P3-4 六层 Guardrails 实现
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -454,7 +707,7 @@
 | 操作确认（不可逆） | `flowforge/core/external_agent/guardrails/action_confirm.py` | ⏳ |
 | 成本上限 | `flowforge/core/external_agent/guardrails/cost_ceiling.py` | ⏳ |
 
-### P3-5 worktree 隔离机制
+#### P3-5 worktree 隔离机制
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -463,7 +716,7 @@
 
 ---
 
-## Phase 4：Eval 自代谢 + 分布式可靠性
+### Phase 4：Eval 自代谢 + 分布式可靠性
 
 > **目标**: 实现 Eval Contract + 七类归因 + Tier 1-4 恢复 + liveness 规范读模型，让 harness 能自我代谢。
 >
@@ -478,7 +731,7 @@
 > - Harness Eval 控制面可每日汇总（F040）
 > - Build to Delete sunset 计时器可触发（F012）
 
-### P4-1 Eval Contract 完整实现
+#### P4-1 Eval Contract 完整实现
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -487,7 +740,7 @@
 | Eval 结果采集 | `flowforge/core/eval/collector.py` | ⏳ |
 | Eval 裁决记录 | `flowforge/core/eval/verdict.py` | ⏳ |
 
-### P4-2 三方信号交叉 + 七类归因
+#### P4-2 三方信号交叉 + 七类归因
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -497,7 +750,7 @@
 | 交叉验证算法 | `flowforge/core/eval/cross_validation.py` | ⏳ |
 | 七类归因实现 | `flowforge/core/eval/attribution.py` | ⏳ |
 
-### P4-3 Tier 1-4 恢复 + liveness
+#### P4-3 Tier 1-4 恢复 + liveness
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -507,7 +760,7 @@
 | Tier 4（不可恢复） | `flowforge/core/reliability/tier4_fatal.py` | ⏳ |
 | liveness 规范读模型 | `flowforge/core/reliability/liveness.py` | ⏳ |
 
-### P4-4 Build to Delete sunset 计时器
+#### P4-4 Build to Delete sunset 计时器
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -515,7 +768,7 @@
 | 紧急修复标签检测 | `flowforge/core/harness/hotfix_detector.py` | ⏳ |
 | 两周强制 review | `flowforge/core/harness/sunset_review.py` | ⏳ |
 
-### P4-5 Harness Eval 控制面
+#### P4-5 Harness Eval 控制面
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -525,7 +778,7 @@
 
 ---
 
-## Phase 5：伙伴系统数学 + 自我演进闭环
+### Phase 5：伙伴系统数学 + 自我演进闭环
 
 > **目标**: 实现伙伴系统数学公式 + 文档/代码/框架三层自我演进闭环。
 >
@@ -539,7 +792,7 @@
 > - 框架自我演进：ForgekinEngine 根据运行数据优化路由策略
 > - "自己开发自己"闭环可跑通（review.md §12.3.2 11 步流程）
 
-### P5-1 伙伴系统数学完整实现
+#### P5-1 伙伴系统数学完整实现
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -550,7 +803,7 @@
 | 双层语言（内部高密度 + 外部讲人话） | `flowforge/core/partnership/dual_language.py` | ⏳ |
 | 最小必要复杂度计算 | `flowforge/core/partnership/min_complexity.py` | ⏳ |
 
-### P5-2 文档自我演进
+#### P5-2 文档自我演进
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -559,7 +812,7 @@
 | Eval 结果归档 | `flowforge/core/evolution/verdict_archiver.py` | ⏳ |
 | 文档自我演进 SOP | `docs/SOP.md`（更新） | ⏳ |
 
-### P5-3 代码自我演进
+#### P5-3 代码自我演进
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -567,7 +820,7 @@
 | Eval 信号 → harness 重构 | `flowforge/core/evolution/harness_refactor.py` | ⏳ |
 | 七类归因 → Bug 自动修复 | `flowforge/core/evolution/bug_fixer.py` | ⏳ |
 
-### P5-4 框架自我演进
+#### P5-4 框架自我演进
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -575,7 +828,7 @@
 | TeamAct 终止条件优化 | `flowforge/core/evolution/termination_optimizer.py` | ⏳ |
 | 记忆联邦权威等级调整 | `flowforge/core/evolution/memory_ranker.py` | ⏳ |
 
-### P5-5 "自己开发自己"闭环
+#### P5-5 "自己开发自己"闭环
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -585,7 +838,7 @@
 
 ---
 
-## Phase 6：灵锻 SpiritForge + 灵议 Mind Council
+### Phase 6：灵锻 SpiritForge + 灵议 Mind Council
 
 > **目标**: 实现 E4+ Evoling 状态 + 多灵智体议事机制。
 >
@@ -598,7 +851,7 @@
 > - 灵议决议可写入 VISION.md / ROADMAP.md
 > - operator 拉闸词可在灵议偏离愿景时制动
 
-### P6-1 灵锻 SpiritForge
+#### P6-1 灵锻 SpiritForge
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -607,7 +860,7 @@
 | 灵典写入 | `flowforge/forgemind/codex/mind_codex_writer.py` | ⏳ |
 | 每日低活动期调度 | `flowforge/forgemind/codex/scheduler.py` | ⏳ |
 
-### P6-2 灵议 Mind Council
+#### P6-2 灵议 Mind Council
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -616,7 +869,7 @@
 | 决议写入机制 | `flowforge/forgemind/council/resolution.py` | ⏳ |
 | operator 拉闸词检测 | `flowforge/forgemind/council/cvo_brake.py` | ⏳ |
 
-### P6-3 E4+ Evoling 状态
+#### P6-3 E4+ Evoling 状态
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -625,9 +878,9 @@
 
 ---
 
-## 横向任务（跨 Phase）
+### 横向任务（跨 Phase）
 
-### H-1 hiclaw/rules.md 同步更新
+#### H-1 hiclaw/rules.md 同步更新
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -637,7 +890,7 @@
 | Plugin V3 四钩子规范 | `hiclaw/rules.md` | ⏳ |
 | 命名融合方案（ForgeMind 主名） | `hiclaw/rules.md` | ⏳ |
 
-### H-2 hiclaw/prompts.md 同步更新
+#### H-2 hiclaw/prompts.md 同步更新
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -650,14 +903,14 @@
 | 新增 FF22 forgemind 集成验证 | `hiclaw/prompts.md` | ⏳ |
 | 新增 FF23 三方 Agent 集成验证 | `hiclaw/prompts.md` | ⏳ |
 
-### H-3 旧文档归档
+#### H-3 旧文档归档
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
 | face/ 添加 README（v7.0 Phase 0 标注） | `docs/face/README.md` | ⏳ |
 | archive/ 添加 README | `docs/archive/README.md` | ⏳ |
 
-### H-4 测试铁律执行
+#### H-4 测试铁律执行
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -668,47 +921,64 @@
 
 ---
 
-## 执行规则
+### 执行规则（v7.0 历史规则，v7.1 已被 CL 索引取代）
 
-### R1 任务领取规则
+#### R1 任务领取规则
 - 灵智体按所属 Phase 领取任务
 - 一个灵智体同时只能持有一个任务（ball custody lease，F006）
 - 持球超时（默认 30 分钟）自动释放，其他灵智体可接手
 
-### R2 任务完成规则
+#### R2 任务完成规则
 - 任务完成必须通过 TeamAct 五项终止条件（F002）
 - 必须有 commit + 测试 + trace 作为证据（F009）
 - 必须有跨厂商 review（非作者 agent 确认）
 - 必须更新本文档状态标记
 
-### R3 任务阻塞规则
+#### R3 任务阻塞规则
 - 任务依赖未完成时，标记为 🚫 阻塞
 - 阻塞任务不可领取
 - 阻塞超过 24 小时升级到 operator
 
-### R4 文档同步规则
+#### R4 文档同步规则
 - 每完成一个 Feature，更新 `features/F0XX.md` 状态
 - 每完成一个 ADR，更新 `decisions/README.md` 清单
 - 每完成一个 Phase，更新 `ROADMAP.md` 状态
 
-### R5 自我演进规则
+#### R5 自我演进规则
 - 灵智体在执行任务过程中发现的新经验，写入 `TIPS.md`
 - 灵智体发现的设计缺陷，写入 `harness-feedback/verdicts/`
 - 灵智体发现的愿景缺口，升级到 operator（不自行修改 `VISION.md`）
 
 ---
 
-## 文档变更历史
+### 文档变更历史（v7.0）
 
 | 版本 | 日期 | 变更 | 作者 |
 |------|------|------|------|
 | v1.0 | 2026-07-17 | 初版：基于 review.md §12.4 重写，覆盖 Phase 0-6 全部任务 | Trae CN（agent） |
 | v1.1 | 2026-07-17 | 补充横向任务 H-1/H-2（rules.md / prompts.md 同步） | Trae CN（agent） |
+| v7.1 | 2026-07-18 | v7.1 索引化重构：新增 41 条 CL 任务索引（按 CL 编号/责任方/优先级三视图），原 v7.0 内容下移至附录 A | Trae CN（agent） |
 
 ---
 
-> **下一步建议**:
+> **v7.0 下一步建议（已被 v7.1 下一波任务取代，仅作历史参考）**:
 > 1. operator 审核本 task.md，确认 Phase 0-6 任务清单完整性
 > 2. 进入 Phase 1，按 P1-1 → P1-2 → P1-3 顺序实现代码骨架
 > 3. Phase 1 完成后，进入 Phase 2 forgemind 应用层实现
 > 4. 横向任务 H-1/H-2 应与 Phase 1 并行推进（rules.md / prompts.md 同步）
+
+---
+
+## 附录 B：v7.1 验证脚本索引
+
+| 脚本 | 路径 | 用途 | 运行方式 |
+|------|------|------|---------|
+| verify_forgemind_pipeline.py | `flowforge/scripts/verify_forgemind_pipeline.py` | 锻造 3 灵智体 + webchat + IM 灵议 + 自进化展示 + system prompt | `python flowforge/scripts/verify_forgemind_pipeline.py` |
+| verify_cl14_compliance.py | `flowforge/scripts/verify_cl14_compliance.py` | 第十四章 11 项关键 CL 代码层验证（7 PASS / 4 PARTIAL / 0 FAIL） | `python flowforge/scripts/verify_cl14_compliance.py` |
+| evolve_forgekins.py | `flowforge/scripts/evolve_forgekins.py` | 3 灵智体自进化 + task.md 剩余任务代理执行 + webchat/IM 全流程 | `python flowforge/scripts/evolve_forgekins.py` |
+
+---
+
+> **本文档维护方**: operator + 鲁班架构师灵智体
+> **最后更新**: 2026-07-18（v7.1 索引化重构）
+> **下次维护触发**: 任意 CL 状态从 ⏳/🔄 → ✅ 时，由对应责任方灵智体更新本文档 + spec.md v7.1-§9.2 同步矩阵

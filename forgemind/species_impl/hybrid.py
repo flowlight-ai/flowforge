@@ -53,6 +53,8 @@ class HybridForgekin(ForgekinBase):
         capability_profile: dict[str, Any] | None = None,
         *,
         components: list[ForgekinBase] | None = None,
+        forgekin_config: dict[str, Any] | None = None,
+        llm_client: Any | None = None,
     ) -> None:
         """初始化混合灵智体。
 
@@ -74,6 +76,8 @@ class HybridForgekin(ForgekinBase):
             evolution_stage=evolution_stage,
             awakening_stage=awakening_stage,
             capability_profile=capability_profile,
+            forgekin_config=forgekin_config,
+            llm_client=llm_client,
         )
         self.components: list[ForgekinBase] = list(components or [])
         self._validate_components()

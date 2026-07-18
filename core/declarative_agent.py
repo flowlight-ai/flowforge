@@ -763,10 +763,18 @@ class DeclarativeAgent(BaseAgent):
 """
 
     def _resolve_ref(self, ref: str, input: AgentInput) -> Any:
-        """Resolve a variable reference like '${state.xxx}' or '${params.xxx}'."""
+        """Resolve a variable reference like '${{state.xxx}}' or '${params.xxx}'.
+
+        Supports both ${{prefix.path}} (project standard) and ${prefix.path} (legacy) formats.
+        """
         if not ref.startswith("${") or not ref.endswith("}"):
             return ref
+        # v5.9修复: 支持 ${{...}} 双花括号格式（项目标准）
+        # 原代码只处理 ${...} 单花括号，导致 ${{params.draft}} 解析失败返回None
         path = ref[2:-1]  # Remove ${ and }
+        # 去除可能的内层花括号: {params.draft} → params.draft
+        if path.startswith("{") and path.endswith("}"):
+            path = path[1:-1]
         parts = path.split(".", 1)
         if len(parts) != 2:
             return None
@@ -787,6 +795,9 @@ class DeclarativeAgent(BaseAgent):
             if val is None and hasattr(input, 'params') and input.params:
                 val = input.params.get(key)
             return val
+        elif source == "config":
+            # config来源: 从input.params中查找（通常在初始化时注入）
+            return input.params.get(key)
         return None
 
     async def _execute_via_mode(

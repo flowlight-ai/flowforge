@@ -571,6 +571,11 @@ class MultiJudgeVerifier(LoopVerifier):
                 elif isinstance(r, dict):
                     # 提取评委分数详情
                     scores = r.get("scores", {})
+                    # v5.9修复: scores可能是int/float而非dict（HunYuan3等模型）
+                    if isinstance(scores, (int, float)):
+                        scores = {"overall": float(scores)}
+                    elif not isinstance(scores, dict):
+                        scores = {}
                     # 计算评委加权分数（如果有）
                     judge_score = r.get("overall_score", 0)
                     if not judge_score and scores:
@@ -614,6 +619,11 @@ class MultiJudgeVerifier(LoopVerifier):
         for vr in valid_results:
             model_name = vr.get("model", "?")
             scores = vr.get("scores", {})
+            # v5.9修复: scores可能是int/float
+            if isinstance(scores, (int, float)):
+                scores = {"overall": float(scores)}
+            elif not isinstance(scores, dict):
+                scores = {}
             score_parts = []
             for k, v in scores.items():
                 try:
@@ -1266,6 +1276,22 @@ class MultiJudgeVerifier(LoopVerifier):
         """从解析后的字典中提取评分和建议，处理多种字段命名风格。"""
         # 兼容多种字段名: scores / score / 评分
         scores = parsed.get("scores") or parsed.get("score") or parsed.get("评分") or {}
+        # v5.9修复: 当LLM返回 {"score": 5} 而非 {"scores": {"dim": 0.8}} 时，
+        # scores 可能是 int/float 而非 dict，调用 .items() 会报错
+        # 例如 HunYuan3 返回 {"scores": 0.8} 或 {"score": 5}
+        if isinstance(scores, (int, float)):
+            logger.warning(
+                f"MultiJudgeVerifier: judge '{model}' returned numeric scores "
+                f"({type(scores).__name__}: {scores}), converting to uniform dict"
+            )
+            # 将数字分数转为所有维度统一分数
+            scores = {"overall": float(scores)}
+        elif not isinstance(scores, dict):
+            logger.warning(
+                f"MultiJudgeVerifier: judge '{model}' returned non-dict scores "
+                f"(type={type(scores).__name__}: {scores}), treating as empty"
+            )
+            scores = {}
         # 兼容多种字段名: improvement_suggestions / suggestions / improvements / 建议
         suggestions = (
             parsed.get("improvement_suggestions")
@@ -1325,7 +1351,13 @@ class MultiJudgeVerifier(LoopVerifier):
         """
         dim_scores: dict[str, list[float]] = {}
         for r in results:
-            for dim, score in r.get("scores", {}).items():
+            _r_scores = r.get("scores", {})
+            # v5.9修复: scores可能是int/float
+            if isinstance(_r_scores, (int, float)):
+                _r_scores = {"overall": float(_r_scores)}
+            elif not isinstance(_r_scores, dict):
+                _r_scores = {}
+            for dim, score in _r_scores.items():
                 dim_scores.setdefault(dim, []).append(score)
 
         aggregated_dims: dict[str, float] = {}

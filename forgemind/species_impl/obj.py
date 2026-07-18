@@ -51,6 +51,8 @@ class ObjForgekin(ForgekinBase):
         device_id: str | None = None,
         iot_protocol: str | None = None,
         function_boundary: list[str] | None = None,
+        forgekin_config: dict[str, Any] | None = None,
+        llm_client: Any | None = None,
     ) -> None:
         """初始化物品灵智体。
 
@@ -75,6 +77,8 @@ class ObjForgekin(ForgekinBase):
             evolution_stage=evolution_stage,
             awakening_stage=awakening_stage,
             capability_profile=capability_profile,
+            forgekin_config=forgekin_config,
+            llm_client=llm_client,
         )
         self.device_id: str | None = device_id
         self.iot_protocol: str | None = iot_protocol

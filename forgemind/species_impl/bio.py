@@ -48,6 +48,8 @@ class BioForgekin(ForgekinBase):
         *,
         biological_subject: str | None = None,
         sensor_channels: list[str] | None = None,
+        forgekin_config: dict[str, Any] | None = None,
+        llm_client: Any | None = None,
     ) -> None:
         """初始化生物灵智体。
 
@@ -70,6 +72,8 @@ class BioForgekin(ForgekinBase):
             evolution_stage=evolution_stage,
             awakening_stage=awakening_stage,
             capability_profile=capability_profile,
+            forgekin_config=forgekin_config,
+            llm_client=llm_client,
         )
         self.biological_subject: str | None = biological_subject
         self.sensor_channels: list[str] = list(sensor_channels or [])

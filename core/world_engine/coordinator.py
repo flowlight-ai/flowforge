@@ -14,7 +14,7 @@ F093 Bridge Layer 的"导演"角色。Runtime Coordinator 决定：
     - **Canon 提议**：``propose_canon`` 委托给
       :class:`~flowforge.core.world_engine.canon_sync.CanonSyncProtocol`，
       不直接写入 CanonMemory（CL-010 铁律）。
-    - **身份校验**：每次进入场景前，校验 Core Identity 的魂印一致性。
+    - **身份校验**：每次进入场景前，校验 Core Identity 的灵印一致性。
 
 修复的问题:
     - CL-012：v7.0 无 Bridge Layer / runtime coordinator，灵智体直接用

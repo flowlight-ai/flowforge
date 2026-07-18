@@ -9,7 +9,7 @@ F093 三层世界引擎的第一层。此层**不可被任何 Episode 污染**�
     - **与 MindProfile 分离**：v7.0 的 MindProfile 是可变结构（任务经验
       可修改 persona/values/skills），无法承担 Core Identity 职责。本类
       与 MindProfile 严格分离，只承载不可变身份。
-    - **魂印引用**：``soul_imprint_hash`` 引用
+    - **灵印引用**：``soul_imprint_hash`` 引用
       :class:`~flowforge.forgemind.soul_imprint.SoulImprint` 的哈希，作为
       谱系追踪的锚点。
 
@@ -19,7 +19,7 @@ F093 三层世界引擎的第一层。此层**不可被任何 Episode 污染**�
 
 详见:
     - [doc:review/review.md#13.2] CL-007（v7.0 灵智体无 Core Identity 隔离层）
-    - [doc:design/naming-contract.md#2.6] 魂印定义
+    - [doc:design/naming-contract.md#2.6] 灵印定义
     - [doc:features/F093-cats-and-u-world-engine.md] 世界引擎 Feature 规格
 """
 
@@ -55,12 +55,12 @@ class CoreIdentityLayer(BaseModel):
         birth_timestamp: 出生时间（UTC）。
         core_personality: 核心性格列表（不可变，如 ``["沉稳", "好奇"]``）。
         value_anchors: 价值锚点列表（不可变，对齐 VISION §7 + 15 条红线）。
-        soul_imprint_hash: 魂印哈希（引用
+        soul_imprint_hash: 灵印哈希（引用
             :class:`~flowforge.forgemind.soul_imprint.SoulImprint.imprint_hash`）。
 
     详见:
         - [doc:review/review.md#13.2] CL-007
-        - [doc:design/naming-contract.md#2.6] 魂印
+        - [doc:design/naming-contract.md#2.6] 灵印
     """
 
     model_config = ConfigDict(
@@ -86,7 +86,7 @@ class CoreIdentityLayer(BaseModel):
     )
     soul_imprint_hash: str = Field(
         ...,
-        description="魂印哈希（引用 SoulImprint.imprint_hash，谱系追踪锚点）。",
+        description="灵印哈希（引用 SoulImprint.imprint_hash，谱系追踪锚点）。",
     )
 
     @field_validator("forgekin_id", "name", "species", "soul_imprint_hash")
@@ -125,13 +125,13 @@ class CoreIdentityLayer(BaseModel):
         }
 
     def verify_imprint(self, soul_imprint_hash: str) -> bool:
-        """校验传入的魂印哈希是否与核心身份记录的一致。
+        """校验传入的灵印哈希是否与核心身份记录的一致。
 
         用于跨 session / 跨代际身份验证。如果返回 ``False``，说明核心身份
-        与魂印不一致，身份可信度受损。
+        与灵印不一致，身份可信度受损。
 
         Args:
-            soul_imprint_hash: 待校验的魂印哈希。
+            soul_imprint_hash: 待校验的灵印哈希。
 
         Returns:
             ``True`` 表示哈希一致，身份可信。

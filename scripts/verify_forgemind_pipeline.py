@@ -1,7 +1,7 @@
 """ForgeMind v7.0 全流程验证脚本.
 
 验证:
-    1. 3 只灵智体（鲁班/砚砚/烁烁）通过 YAML 配置锻造
+    1. 3 只灵智体（鲁班/夏洛克/梵高）通过 YAML 配置锻造
     2. webchat — 与灵智体对话（Trae CN 桥接，降级模式）
     3. IM 灵议 — 3 只灵智体共同讨论
     4. 自进化触发 — ForgeMindEngine Mode A/B/C
@@ -32,7 +32,7 @@ from flowforge.forgemind.forging.pipeline import ForgePipeline
 async def verify_forge_all() -> dict:
     """验证 1: 锻造 3 只灵智体."""
     print("\n" + "=" * 70)
-    print("验证 1: 锻造 3 只灵智体（鲁班/砚砚/烁烁）")
+    print("验证 1: 锻造 3 只灵智体（鲁班/夏洛克/梵高）")
     print("=" * 70)
 
     pipeline = ForgePipeline()
@@ -48,7 +48,7 @@ async def verify_forge_all() -> dict:
             print(f"     forgekin_id: {desc['forgekin_id']}")
             print(f"     进化阶: {desc['evolution_stage']} ({desc['evolution_stage_chinese']})")
             print(f"     觉醒阶: {desc['awakening_stage']} ({desc['awakening_stage_chinese']})")
-            print(f"     魂印哈希: {desc['imprint_hash'][:16]}...")
+            print(f"     灵印哈希: {desc['imprint_hash'][:16]}...")
             print(f"     可自进化: {desc['can_self_evolve']}")
             print(f"     可锻造新灵智体: {desc['can_forge_new_forgekin']}")
         except Exception as exc:  # noqa: BLE001
@@ -178,10 +178,10 @@ async def main() -> None:
     print("=" * 70)
     print("\n下一步:")
     print("  1. 启动 FastAPI: cd flowforge && python -m flowforge.app.main")
-    print("  2. 锻造灵智体: POST /api/v1/forgemind/forge/xianxian")
-    print("  3. webchat: POST /api/v1/forgemind/webchat/xianxian")
+    print("  2. 锻造灵智体: POST /api/v1/forgemind/forge/luban")
+    print("  3. webchat: POST /api/v1/forgemind/webchat/luban")
     print("  4. IM 灵议: POST /api/v1/forgemind/council")
-    print("  5. 自进化: POST /api/v1/forgemind/evolve/xianxian")
+    print("  5. 自进化: POST /api/v1/forgemind/evolve/luban")
 
 
 if __name__ == "__main__":

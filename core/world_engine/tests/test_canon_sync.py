@@ -641,7 +641,7 @@ def test_core_identity_is_immutable(wukong_identity: CoreIdentityLayer) -> None:
 
 
 def test_core_identity_verify_imprint(wukong_identity: CoreIdentityLayer) -> None:
-    """verify_imprint 校验魂印一致性。"""
+    """verify_imprint 校验灵印一致性。"""
     assert wukong_identity.verify_imprint("a" * 64) is True
     assert wukong_identity.verify_imprint("b" * 64) is False
 

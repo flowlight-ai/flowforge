@@ -52,6 +52,8 @@ class VirtualForgekin(ForgekinBase):
         character_setting: dict[str, Any] | None = None,
         worldview: str | None = None,
         relationship_graph: dict[str, Any] | None = None,
+        forgekin_config: dict[str, Any] | None = None,
+        llm_client: Any | None = None,
     ) -> None:
         """初始化虚拟灵智体。
 
@@ -74,6 +76,8 @@ class VirtualForgekin(ForgekinBase):
             evolution_stage=evolution_stage,
             awakening_stage=awakening_stage,
             capability_profile=capability_profile,
+            forgekin_config=forgekin_config,
+            llm_client=llm_client,
         )
         self.character_setting: dict[str, Any] = dict(character_setting or {})
         self.worldview: str | None = worldview

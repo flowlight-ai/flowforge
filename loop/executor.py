@@ -249,7 +249,10 @@ class LoopExecutor:
             src = getattr(task, src_attr, None)
             if not isinstance(src, dict):
                 continue
-            for ctx_key in ("draft", "edited_draft", "content", "result"):
+            # v5.9修复: edited_draft优先于draft — 润色结果应优先于原始草稿
+            # 原bug: draft在前导致每次迭代都传回原始draft给editor，editor产出被忽略
+            # 结果: polish loop "变化=0字符" — editor反复收到同一份原始draft
+            for ctx_key in ("edited_draft", "draft", "content", "result"):
                 ctx_val = src.get(ctx_key)
                 if not ctx_val:
                     continue
@@ -504,8 +507,8 @@ class LoopExecutor:
                 # [修复Bug#1] 将上一轮draft注入到task.input_data，让反思→重写流程生效
                 if last_good_result and isinstance(last_good_result, dict):
                     draft_content = ""
-                    # 优先查找已知内容键
-                    for dk in ("draft", "edited_draft", "content", "response"):
+                    # v5.9修复: edited_draft优先于draft — 润色结果应优先于原始草稿
+                    for dk in ("edited_draft", "draft", "content", "response"):
                         dv = last_good_result.get(dk, "")
                         if isinstance(dv, str) and dv.strip():
                             draft_content = dv
@@ -519,7 +522,8 @@ class LoopExecutor:
                                 draft_content = dv
                                 break
                             if isinstance(dv, dict):
-                                for dk2 in ("draft", "edited_draft", "content", "response", "output"):
+                                # v5.9修复: edited_draft优先于draft
+                                for dk2 in ("edited_draft", "draft", "content", "response", "output"):
                                     dv2 = dv.get(dk2, "")
                                     if isinstance(dv2, str) and dv2.strip():
                                         draft_content = dv2
@@ -593,7 +597,8 @@ class LoopExecutor:
                         src = getattr(task, src_attr, None)
                         if not isinstance(src, dict):
                             continue
-                        for ctx_key in ("draft", "edited_draft", "result", "content"):
+                        # v5.9修复: edited_draft优先于draft
+                        for ctx_key in ("edited_draft", "draft", "result", "content"):
                             ctx_val = src.get(ctx_key)
                             if not ctx_val:
                                 continue
@@ -651,7 +656,8 @@ class LoopExecutor:
                         src = getattr(task, src_attr, None)
                         if not isinstance(src, dict):
                             continue
-                        for ctx_key in ("draft", "edited_draft", "content", "result"):
+                        # v5.9修复: edited_draft优先于draft
+                        for ctx_key in ("edited_draft", "draft", "content", "result"):
                             ctx_val = src.get(ctx_key)
                             if not ctx_val:
                                 continue
@@ -706,7 +712,8 @@ class LoopExecutor:
             # 短内容会导致verifier触发"内容过短"保护，从而短路跳过评委
             if isinstance(result, dict):
                 has_content = False
-                for k in ("content", "draft", "edited_draft", "output"):
+                # v5.9修复: edited_draft优先于draft
+                for k in ("edited_draft", "content", "draft", "output"):
                     v = result.get(k)
                     if isinstance(v, str) and len(v.strip()) >= 50:
                         has_content = True
@@ -721,12 +728,14 @@ class LoopExecutor:
             # 修复: 无论 attempt==0 还是 attempt>0，只要 worker 产出了有效内容，立即写入 last_draft。
             if isinstance(result, dict):
                 _current_draft = ""
-                for _dk in ("draft", "edited_draft", "content", "response", "output"):
+                # v5.9修复: edited_draft优先于draft
+                for _dk in ("edited_draft", "draft", "content", "response", "output"):
                     _dv = result.get(_dk, "")
                     # v4.7 修复: result["draft"] 可能是 dict 而非 str，
                     # 此时需递归提取内层 draft/content 字符串
                     if isinstance(_dv, dict):
-                        for _inner_k in ("draft", "edited_draft", "content", "output", "result"):
+                        # v5.9修复: edited_draft优先于draft
+                        for _inner_k in ("edited_draft", "draft", "content", "output", "result"):
                             _inner_v = _dv.get(_inner_k, "")
                             if isinstance(_inner_v, str) and len(_inner_v.strip()) >= 50:
                                 _dv = _inner_v
@@ -752,7 +761,8 @@ class LoopExecutor:
             if task.event_bus and isinstance(result, dict):
                 writer_output = ""
                 writer_output_key = ""
-                for k in ("draft", "edited_draft", "content", "output"):
+                # v5.9修复: edited_draft优先于draft
+                for k in ("edited_draft", "draft", "content", "output"):
                     v = result.get(k)
                     if isinstance(v, str) and len(v.strip()) >= 50:
                         # v4.7: 剥离 JSON 包装，让预览显示纯 markdown
@@ -774,7 +784,8 @@ class LoopExecutor:
                     # v4.7: 内容为空或过短 — 也发射事件，让用户看到失败
                     # 尝试提取任何内容（即使很短）作为预览
                     short_preview = ""
-                    for k in ("draft", "edited_draft", "content", "output", "error", "error_message"):
+                    # v5.9修复: edited_draft优先于draft
+                    for k in ("edited_draft", "draft", "content", "output", "error", "error_message"):
                         v = result.get(k)
                         if isinstance(v, str) and v.strip():
                             short_preview = v[:300]

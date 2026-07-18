@@ -116,14 +116,15 @@ class ReflexionReflector(LoopReflector):
         # 原来不传 agent_name 导致 LLMClient 走 default 路由(200s 超时)，实际耗时 124s+
         # llm_route.yaml 中 agent_routes.reflexion_evaluator → reflector 路由 (timeout_seconds=90)
         # v4.9: 移除 prefer_api=True — 用户要求评委/润色/反思使用 webchat 模型
-        # 原因: API 供应商(ark/kimi/tencent)持续429限流，prefer_api=true导致反思器
-        #   被路由到 openrouter/poolside/laguna-xs-2.1:free（编程模型），
-        #   无法处理中文内容，返回无效反思建议
+        # v5.25: 恢复 prefer_api=True — webchat浏览器全面崩溃(echo/token=0/1)，
+        #   Reflector用webchat导致Doubao-Seed2.0连续超时60s×9次=540s，必须走API通道
+        #   API后端(siliconflow/aliyuncs/zhipu)响应1-3s，远快于webchat 120-300s
         _reflect_llm_start = time.monotonic()
         response = await self.llm_client.chat(
             prompt,
             agent_name="reflexion_evaluator",
             task_id=task.task_id,
+            prefer_api=True,
         )
         _reflect_llm_dur = time.monotonic() - _reflect_llm_start
         # ModelCapability.chat returns a dict with "content" key;
