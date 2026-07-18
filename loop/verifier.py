@@ -1115,6 +1115,47 @@ class MultiJudgeVerifier(LoopVerifier):
         except (json.JSONDecodeError, TypeError):
             pass
 
+        # 策略7: v5.30 补全缺失的闭合括号（针对 webchat 输出截断）
+        # 场景: {"scores":{"title_attractiveness":0.65,...,"compliance":0.85
+        # 根因: webchat 平台输出长度限制(~500 token)导致 JSON 在 compliance 维度附近被截断
+        # 处理: 统计未匹配的 { 数量，追加对应数量的 } 闭合
+        if text.lstrip().startswith("{"):
+            open_count = text.count("{") - text.count("}")
+            if open_count > 0:
+                for close_count in range(1, min(open_count, 3) + 1):
+                    candidate = text.rstrip().rstrip(",").rstrip() + ("}" * close_count)
+                    try:
+                        result = json.loads(candidate)
+                        if isinstance(result, dict):
+                            # 截断响应通常缺少 improvement_suggestions，补空数组
+                            if "improvement_suggestions" not in result:
+                                result["improvement_suggestions"] = []
+                            logger.info(
+                                f"MultiJudgeVerifier: 策略7成功补全截断JSON "
+                                f"(close_count={close_count}, open_count={open_count})"
+                            )
+                            return result
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+
+        # 策略8: v5.30 从截断的 scores JSON 中提取已成功输出的维度（最终兜底）
+        # 场景: {"scores":{"title_attractiveness":0.65,...,"engagement":0.60,"com
+        # 处理: 用正则提取所有 "key":0.XX 模式，构造部分 scores 字典
+        scores_match = re.search(r'"scores"\s*:\s*\{([^}]*)', text)
+        if scores_match:
+            scores_body = scores_match.group(1)
+            pairs = re.findall(r'"(\w+)"\s*:\s*([01]?\.\d+)', scores_body)
+            if len(pairs) >= 5:  # 至少 5 个维度才有统计意义
+                scores = {k: float(v) for k, v in pairs}
+                logger.info(
+                    f"MultiJudgeVerifier: 策略8从截断JSON提取部分scores "
+                    f"(维度数={len(scores)}, keys={list(scores.keys())[:5]})"
+                )
+                return {
+                    "scores": scores,
+                    "improvement_suggestions": [],
+                }
+
         return None
 
     def _parse_markdown_review(self, raw_content: str, model: str) -> dict | None:
