@@ -14,6 +14,8 @@ from flowforge.core.task_context import TaskContext
 from flowforge.core.base_tool import ToolInput
 from flowforge.loop.state import Verdict
 from flowforge.core.tracing import get_logger
+# v5.33 反馈链修复: 复用 reflector 的 AI pattern 过滤函数
+from flowforge.loop.reflector import filter_ai_pattern_suggestions
 
 logger = get_logger("loop.verifier")
 
@@ -1412,7 +1414,11 @@ class MultiJudgeVerifier(LoopVerifier):
         }
 
     def _merge_suggestions(self, results: list[dict]) -> list[str]:
-        """合并去重多个评委的改进建议，按出现频率排序。"""
+        """合并去重多个评委的改进建议，按出现频率排序。
+
+        v5.33 反馈链修复: 在合并后应用 AI 模式过滤，
+        防止评委的"增加悬念/数字/互动"等建议污染下一轮 writer。
+        """
         suggestion_counter: Counter = Counter()
         for r in results:
             for s in r.get("improvement_suggestions", []):
@@ -1423,6 +1429,22 @@ class MultiJudgeVerifier(LoopVerifier):
 
         # 按频率降序排列
         merged = [s for s, _ in suggestion_counter.most_common()]
+
+        # v5.33 反馈链修复: 应用 AI 模式过滤
+        if merged:
+            kept, dropped = filter_ai_pattern_suggestions(merged)
+            if dropped:
+                logger.info(f"[verifier] 评委建议合并后过滤AI模式: "
+                            f"原始{len(merged)}条, 保留{len(kept)}条, 过滤{len(dropped)}条")
+                if CF_DEBUG:
+                    for d in dropped:
+                        logger.info(f"[CF-DEBUG] verifier 过滤建议: {d[:100]!r}")
+                # 如果全部被过滤，保留原始前2条作为兜底（避免 Reflector 完全没有评委输入）
+                if not kept:
+                    kept = merged[:2]
+                    logger.warning(f"[verifier] 所有评委建议都被AI过滤，使用原始前2条作为兜底")
+            merged = kept
+
         return merged[:10]  # 最多返回10条
 
     def _build_detailed_errors(

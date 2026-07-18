@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import time
 
 from abc import ABC, abstractmethod
@@ -14,6 +15,138 @@ logger = logging.getLogger(__name__)
 
 # v4.6 调试日志开关：设置 CF_DEBUG=1 或 CF_DEBUG=true 启用详细日志
 CF_DEBUG = os.environ.get("CF_DEBUG", "").lower() in ("1", "true", "yes")
+
+# v5.33 反馈链修复：AI 模式过滤 pattern 列表
+# 评委/Reflector 经常建议添加 "悬念/数字/互动/原创观点" 等 AI 模式内容，
+# 这些内容会让下一轮 writer 引入 AI 痕迹，导致 T7 扣分。
+# 在 _parse_reflection_response 返回前过滤掉包含这些 pattern 的建议。
+_AI_SUGGESTION_FORBIDDEN_PATTERNS: list[re.Pattern] = [
+    # === AI 互动模板（最严重，导致 T7 直接扣分）===
+    re.compile(r'评论区'),
+    re.compile(r'留言'),
+    re.compile(r'你如何看待'),
+    re.compile(r'你怎么看'),
+    re.compile(r'你认为'),  # "你认为医保改革..."
+    re.compile(r'你觉得'),
+    re.compile(r'你的故事'),
+    re.compile(r'你有什么'),
+    re.compile(r'你是否'),
+    re.compile(r'你是如何'),  # 宽泛匹配"你是如何应对"/"你是如何处理"
+    re.compile(r'让我们一起'),
+    re.compile(r'一起探究'),
+    re.compile(r'一起看看'),
+    re.compile(r'互动问题'),
+    re.compile(r'互动时间'),
+    re.compile(r'互动环节'),
+    re.compile(r'互动性'),
+    re.compile(r'互动式'),
+    re.compile(r'互动内容'),
+    re.compile(r'参与感'),
+    re.compile(r'提出问题'),
+    re.compile(r'提出.{0,8}问题'),  # "提出一个开放式问题"
+    re.compile(r'开放式问题'),
+    re.compile(r'欢迎.{0,5}聊'),
+    re.compile(r'欢迎.{0,5}分享'),
+    re.compile(r'欢迎.{0,5}讨论'),
+    re.compile(r'引发读者思考'),
+    re.compile(r'引发共鸣'),
+    re.compile(r'引发讨论'),
+    re.compile(r'引导读者'),
+    re.compile(r'你对.{0,8}有何看法'),
+    re.compile(r'分享你的'),
+    re.compile(r'悬念设置'),
+    re.compile(r'转发意愿'),
+    re.compile(r'提升.{0,8}传播'),
+    re.compile(r'增加传播元素'),
+    re.compile(r'增加.{0,5}互动'),
+    re.compile(r'加入.{0,5}互动'),
+    re.compile(r'提升.{0,5}互动'),
+    # === AI 场景代入/假设句式（"想象一下"/"如果你正"等）===
+    re.compile(r'想象一下'),
+    re.compile(r'想象.{0,3}你'),
+    re.compile(r'如果你正'),
+    re.compile(r'假如你'),
+    re.compile(r'假设你'),
+    re.compile(r'你会遇到'),
+    re.compile(r'我们就来'),
+    re.compile(r'让我们一起'),
+    re.compile(r'引人入胜'),
+    re.compile(r'吸引读者'),
+    re.compile(r'吸引.{0,3}注意力'),
+    re.compile(r'场景描述'),
+    re.compile(r'场景代入'),
+    # === 禁止建议添加具体数字/统计数据（禁区第1条）===
+    re.compile(r'增加.{0,8}数字'),
+    re.compile(r'加入.{0,8}数字'),
+    re.compile(r'增加.{0,8}数据'),
+    re.compile(r'加入.{0,8}数据'),
+    re.compile(r'增加.{0,8}统计'),
+    re.compile(r'加入.{0,8}统计'),
+    re.compile(r'加入.{0,5}悬念'),
+    re.compile(r'增加.{0,5}悬念'),
+    re.compile(r'添加.{0,5}悬念'),
+    # === AI 标题格式 ===
+    re.compile(r'揭秘[！!]'),
+    re.compile(r'真相令人震惊'),
+    re.compile(r'你绝对想不到'),
+    re.compile(r'令人震惊'),
+    # === AI 套话 ===
+    re.compile(r'揭示了'),
+    re.compile(r'折射出'),
+    re.compile(r'折射了'),
+    re.compile(r'本质上[是是]'),
+    re.compile(r'我们每个人都应该'),
+    re.compile(r'令人深思'),
+    re.compile(r'值得深思'),
+    re.compile(r'值得反思'),
+    re.compile(r'让我们思考'),
+    re.compile(r'让我们不禁'),
+    # === 编造数据/机构名 ===
+    re.compile(r'增长\d+%'),
+    re.compile(r'达到\d+亿'),
+    re.compile(r'超过\d+%'),
+    re.compile(r'根据.{0,15}(?:研究中心|研究所|机构|智库|研究院)'),
+    re.compile(r'据.{0,15}(?:研究中心|研究所|机构|智库|研究院)'),
+    # === AI 结构化标签 ===
+    re.compile(r'\*\*[^*]{2,12}[：:]\*\*'),
+    re.compile(r'\b案例[：:]'),
+    re.compile(r'\b数据冲击[：:]'),
+    re.compile(r'\b场景代入[：:]'),
+    re.compile(r'\b背景[：:]'),
+    re.compile(r'\b观点[：:]'),
+    # === AI 套话式 "原创观点" 建议（让 writer 写套话）===
+    re.compile(r'加入原创观点'),
+    re.compile(r'增加原创观点'),
+    re.compile(r'加入.{0,5}独到见解'),
+    re.compile(r'增加.{0,5}独到见解'),
+    re.compile(r'加强品牌建设'),
+    re.compile(r'积极探索.{0,8}模式'),
+]
+
+
+def filter_ai_pattern_suggestions(suggestions: list[str]) -> tuple[list[str], list[str]]:
+    """过滤包含 AI 模式内容的建议。
+
+    Returns:
+        (kept, dropped): 保留的建议列表，被过滤掉的建议列表
+    """
+    kept: list[str] = []
+    dropped: list[str] = []
+    for s in suggestions:
+        s_str = str(s)
+        matched_pattern = None
+        for p in _AI_SUGGESTION_FORBIDDEN_PATTERNS:
+            if p.search(s_str):
+                matched_pattern = p.pattern
+                break
+        if matched_pattern:
+            dropped.append(s_str)
+            if CF_DEBUG:
+                logger.info(f"[CF-DEBUG] reflector 过滤AI建议: pattern={matched_pattern!r}, "
+                            f"suggestion={s_str[:100]!r}")
+        else:
+            kept.append(s_str)
+    return kept, dropped
 
 # Keyword-based root cause inference rules for fallback logic
 # 支持中英文关键词匹配，确保中文错误信息也能被正确分类
@@ -105,13 +238,31 @@ class ReflexionReflector(LoopReflector):
                         f"last_draft_len={len(last_draft)}, "
                         f"last_draft_preview={_draft_preview}")
 
+        # v5.33 修复: 提取选题标题传入模板，否则 {topic_title} 占位符会留下字面文本
+        # 导致 Reflector LLM 看到损坏的 prompt，无法执行"选题对齐检查"
+        topic_title = ""
+        try:
+            _input = task.input_data if isinstance(task.input_data, dict) else {}
+            _topic_list = _input.get("topic_list", []) if isinstance(_input, dict) else []
+            if _topic_list and isinstance(_topic_list, list):
+                _first = _topic_list[0]
+                if isinstance(_first, dict):
+                    topic_title = str(_first.get("title", "")) or ""
+            if not topic_title and isinstance(_input, dict):
+                topic_title = str(_input.get("topic_title", "") or _input.get("title", "")) or ""
+        except Exception as _e:
+            logger.warning(f"[reflector] 提取选题标题失败: {_e}")
+        if CF_DEBUG:
+            logger.info(f"[CF-DEBUG] reflector 选题标题: {topic_title!r}")
+
         prompt = get_prompt("loop.reflector.reflect",
                             errors=json.dumps(errors, ensure_ascii=False),
                             task_id=task.task_id,
                             input_data=json.dumps(task.input_data, ensure_ascii=False, default=str),
                             attempt=str(state.attempt),
                             history=history_str,
-                            last_draft=last_draft_preview)
+                            last_draft=last_draft_preview,
+                            topic_title=topic_title)
         # v2.2 修复: 显式传入 agent_name="reflexion_evaluator"，让 LLMClient 走 reflector 路由(90s 超时)
         # 原来不传 agent_name 导致 LLMClient 走 default 路由(200s 超时)，实际耗时 124s+
         # llm_route.yaml 中 agent_routes.reflexion_evaluator → reflector 路由 (timeout_seconds=90)
@@ -196,9 +347,24 @@ class ReflexionReflector(LoopReflector):
             if not isinstance(plan_adjustments, list):
                 plan_adjustments = []
 
+            # v5.33 反馈链修复: 过滤 AI 模式建议，防止下一轮 writer 引入 AI 痕迹
+            suggestions_str = [str(s) for s in suggestions]
+            kept_suggestions, dropped_suggestions = filter_ai_pattern_suggestions(suggestions_str)
+            if dropped_suggestions:
+                logger.info(f"[reflector] 过滤AI模式建议: "
+                            f"原始{len(suggestions_str)}条, 保留{len(kept_suggestions)}条, "
+                            f"过滤{len(dropped_suggestions)}条")
+                if CF_DEBUG:
+                    for d in dropped_suggestions:
+                        logger.info(f"[CF-DEBUG] reflector 过滤建议: {d[:100]!r}")
+                # 如果全部建议都被过滤，保留原始建议中前1条作为兜底（避免空建议导致 writer 无反馈）
+                if not kept_suggestions and suggestions_str:
+                    kept_suggestions = suggestions_str[:1]
+                    logger.warning(f"[reflector] 所有建议都被AI过滤，使用原始首条作为兜底")
+
             return Reflection(
                 root_cause=str(root_cause),
-                suggestions=[str(s) for s in suggestions],
+                suggestions=kept_suggestions,
                 plan_adjustments=[a for a in plan_adjustments if isinstance(a, dict)],
             )
 
@@ -216,9 +382,17 @@ class ReflexionReflector(LoopReflector):
             logger.info(
                 f"Extracted {len(text_suggestions)} suggestions from plain-text response"
             )
+            # v5.33 反馈链修复: 对纯文本提取的建议也应用 AI 模式过滤
+            kept_text, dropped_text = filter_ai_pattern_suggestions(text_suggestions)
+            if dropped_text:
+                logger.info(f"[reflector] 纯文本建议过滤AI模式: "
+                            f"原始{len(text_suggestions)}条, 保留{len(kept_text)}条, "
+                            f"过滤{len(dropped_text)}条")
+                if not kept_text:
+                    kept_text = text_suggestions[:1]
             return Reflection(
                 root_cause="LLM返回非JSON格式，已从文本中提取建议",
-                suggestions=text_suggestions,
+                suggestions=kept_text,
                 plan_adjustments=[],
             )
 
@@ -230,6 +404,7 @@ class ReflexionReflector(LoopReflector):
                 "LLM reflection response unparseable, using raw text as single suggestion"
             )
             # Truncate to avoid overly long suggestion
+            # v5.33: 单条兜底建议不过滤（避免完全没有反馈）
             return Reflection(
                 root_cause="LLM返回非JSON格式，使用原始文本作为建议",
                 suggestions=[raw_text[:500]],

@@ -103,16 +103,26 @@ class MethodCard(BaseModel):
 
 
 class EvalLedger(BaseModel):
-    """Eval Ledger — Replay A/B 验证知识净增益。
+    """Eval Ledger — Replay A/B 验证知识净增益（进化级 Eval，CL-004）。
+
+    与任务级 Eval（core/eval/）区分：
+    - 任务级 Eval：评估单次任务执行质量（quality_score ≥ 0.85）
+    - 进化级 Eval：评估进化提案的净增益（net_gain > 0 + 双门通过）
 
     judge_rubric 四维：boundary_compliance / evidence_handling / knowledge_application / human_edit_volume
     Smoke gate: 3 cases, ≥2/3 pass
     Promotion gate: 5 cases, ≥3/5 pass, 覆盖 3 类（标准成功/边界应升级/冲突反例）
+
+    详见 design.md v7.1-§D7.6。
     """
 
     eval_id: str
-    method_id: str
-    cases: list[dict] = Field(default_factory=list)  # A/B paired cases
+    method_id: str  # 关联 MethodCard.method_id（被评估的方法库/锻典条目）
+    proposal_id: str = ""  # 关联 EvolutionProposal.proposal_id（CL-004 新增）
+    pre_score: float = 0.0  # 前测分数（A 组，使用当前方法库条目）0.0~1.0（CL-004 新增）
+    post_score: float = 0.0  # 后测分数（B 组，使用提案修改后的方法库条目）0.0~1.0（CL-004 新增）
+    net_gain: float = 0.0  # 净增益 = post_score - pre_score，必须 > 0 才允许合入（CL-004 新增）
+    cases: list[dict] = Field(default_factory=list)  # A/B paired cases（≥8：3 smoke + 5 promotion）
     judge_rubric: dict = Field(
         default_factory=lambda: {
             "boundary_compliance": 0.0,
@@ -121,8 +131,10 @@ class EvalLedger(BaseModel):
             "human_edit_volume": 0.0,
         }
     )
-    smoke_gate_passed: bool = False
-    promotion_gate_passed: bool = False
+    smoke_gate_passed: bool = False  # 3 cases, ≥2/3 pass
+    promotion_gate_passed: bool = False  # 5 cases, ≥3/5 pass, 覆盖 3 类
+    merged: bool = False  # net_gain > min_net_gain AND 双门通过（CL-004 新增）
+    reject_reason: str = ""  # 拒绝原因（merged=False 时填充）（CL-004 新增）
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

@@ -6,7 +6,8 @@ providers:
   openroute:
     base_url: http://127.0.0.1:13001/v1
     api_key_env: OPENROUTE_API_KEY
-    api_key_default: or-306e066ec411840c019a1c1b2cd0b447bb62e6c976d27f73
+    # v5.25a: 更新为当前有效的API key（旧key已被403拒绝）
+    api_key_default: or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7
     protected: true
     description: 预装默认供应商，用户不可删除或修改
   openrouter:
@@ -261,18 +262,18 @@ assignments:
     - MiniMax-M3
     - DeepSeek-V4-Pro
   content_create:
-    # v5.20修复: primary从Doubao-Seed2.0改为Qwen3.6-Plus — Doubao via caller_combine超时300s
-    # Qwen3.6-Plus v515实测webchat89s(最快)+API通道4-8s, 更稳定可靠
-    # prefer_api=True让Writer走API passthrough通道(避免webchat截断/超时)
-    # Doubao-Seed2.0降为fallback(via caller_combine偶尔可用)
+    # v5.27: primary改为Qwen3.6-Plus(prefer_api=True→zhipu/glm-4-flash)
+    # zhipu/glm-4-flash API稳定(25s, 1100字), 写作质量明显改善
+    # Doubao-Seed2.0 webchat截断严重(56字→超时), ark API返回"无法回答"
+    # fallback保留webchat作为备选(API不可用时)
     primary: openroute/Qwen3.6-Plus
     fallbacks:
     - openroute/Doubao-Seed2.0
+    - openroute/Kimi-K2.6
     - openroute/HunYuan3
+    - openroute/MiniMax-M3
     - openroute/DeepSeek-V4-Pro
     - openroute/GLM-5.1
-    - openroute/Kimi-K2.6
-    - openroute/MiniMax-M3
   content_refine:
     # 铁律: polisher 必须使用 Kimi-K2.6
     # 实测 DeepSeek-V4-Pro/Doubao-Seed2.0 润色会降低质量(创作0.85→润色0.57)

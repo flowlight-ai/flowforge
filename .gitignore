@@ -149,3 +149,4 @@ run_port_check.ps1
 
 # ==================== Workflow artifacts (generated, not source) ====================
 workflows/*.yaml
+docs/_archive
