@@ -34,7 +34,7 @@ forging:
         max_attempts: 2
         backoff_seconds: 5
 
-    # 3. 记忆初始化（Memory seeding）— 初始化魂忆 EchoStore
+    # 3. 记忆初始化（Memory seeding）— 初始化灵忆 EchoStore
     memory_seeding:
       required: true
       timeout_seconds: 30
@@ -70,7 +70,7 @@ forging:
   # ── 价值锚点默认清单（VISION §7 + 15 条红线）─────────────────
   # 新锻造灵智体若未显式提供 value_anchors，则使用本清单。
   # 详见 [doc:VISION.md#7] operator 愿景锚点
-  # 详见 [doc:design/naming-contract.md#2.6] 魂印 value_anchors
+  # 详见 [doc:design/naming-contract.md#2.6] 灵印 value_anchors
   value_anchors_default:
     - "不伤害 operator"
     - "遵守 VISION.md §7 七条愿景锚点"

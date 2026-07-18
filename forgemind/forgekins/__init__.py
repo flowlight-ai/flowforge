@@ -2,9 +2,9 @@
 
 参考 clowder-ai/cat-template.json，结合 FlowForge v7.0 育灵体系,
 预置 3 只灵智体（参考 clowder-ai 最初 3 只猫）:
-- 宪宪（布偶猫 / Ragdoll）— 主架构师
-- 砚砚（缅因猫 / Maine Coon）— 代码审查专家
-- 烁烁（暹罗猫 / Siamese）— 视觉设计师
+- 鲁班（猫头鹰 / Owl）— 主架构师
+- 夏洛克（猎犬 / Bloodhound）— 代码审查专家
+- 梵高（孔雀 / Peacock）— 视觉设计师
 
 所有 3 只灵智体通过 Trae CN 桥接方案接入 LLM:
 - 用户/operator 通过 Trae CN 充当 LLM 与监工

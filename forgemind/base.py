@@ -5,7 +5,7 @@
 观察 → 推理 → 行动 → 写回 → 验证。
 
 灵魂（Soul）与感情（Emotion）:
-    - **灵魂（Soul）** = 持久身份（魂印）+ 价值锚点 + 长期记忆（魂忆）
+    - **灵魂（Soul）** = 持久身份（灵印）+ 价值锚点 + 长期记忆（灵忆）
     - **感情（Emotion）** = 用户偏好 + 协作风格 + 行为画像（能力画像）
 
 核心抽象方法:
@@ -49,14 +49,14 @@ class ForgekinBase(ABC):
 
     详见:
         - [doc:design/naming-contract.md#2.2] 灵智体定义
-        - [doc:design/naming-contract.md#2.6] 魂印（不可变身份）
+        - [doc:design/naming-contract.md#2.6] 灵印（不可变身份）
         - [doc:design/naming-contract.md#2.12] 能力画像
 
     属性:
         forgekin_id: 灵智体唯一 ID（如 ``"forgemind:sun_wukong"``）。
         name: 灵智体显示名。
         species: 灵族形态（bio / org / obj / virtual / hybrid）。
-        soul_imprint: 魂印（不可变身份标识，谱系追踪锚点）。
+        soul_imprint: 灵印（不可变身份标识，谱系追踪锚点）。
         evolution_stage: 当前进化阶（E1-E6，能力成熟度）。
         awakening_stage: 当前觉醒阶（E1-E6，自主性等级）。
         capability_profile: 能力画像（长期能力主体，区别于 role 运行时标签）。
@@ -80,7 +80,7 @@ class ForgekinBase(ABC):
             raise ValueError("name 不能为空。")
         if soul_imprint is None:
             raise ValueError(
-                "soul_imprint 不能为 None——灵智体必须有魂印。"
+                "soul_imprint 不能为 None——灵智体必须有灵印。"
                 "详见 [doc:design/naming-contract.md#2.6]"
             )
 
@@ -353,7 +353,7 @@ class ForgekinBase(ABC):
         """返回灵智体的描述字典（用于日志 / 谱系追踪 / UI 展示）。
 
         Returns:
-            包含 id / name / species / 进化阶 / 觉醒阶 / 魂印哈希 的字典。
+            包含 id / name / species / 进化阶 / 觉醒阶 / 灵印哈希 的字典。
         """
         return {
             "forgekin_id": self.forgekin_id,

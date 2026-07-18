@@ -28,8 +28,8 @@ class BioForgekin(ForgekinBase):
     """生物灵智体（BioForgekin / Biological Spirit Agent）。
 
     承载于物理世界生物体（猫 / 狗 / 鸟 / 鱼等），通过传感器建立现实
-    闭环。区别于主流 IoT 工具调用，生物灵智体有自己的身份（魂印）、
-    记忆（魂忆）、价值锚点（不伤害生物体）、协作能力（与其他生物或
+    闭环。区别于主流 IoT 工具调用，生物灵智体有自己的身份（灵印）、
+    记忆（灵忆）、价值锚点（不伤害生物体）、协作能力（与其他生物或
     物品灵智体组队）。
 
     详见:
@@ -54,7 +54,7 @@ class BioForgekin(ForgekinBase):
         Args:
             forgekin_id: 灵智体唯一 ID。
             name: 灵智体显示名（如 ``"家猫橘子"``）。
-            soul_imprint: 魂印（不可变身份）。
+            soul_imprint: 灵印（不可变身份）。
             evolution_stage: 进化阶。
             awakening_stage: 觉醒阶。
             capability_profile: 能力画像。

@@ -19,12 +19,12 @@ import yaml
 _ROSTER_DIR = Path(__file__).resolve().parent
 
 # 3 只预置灵智体（参考 clowder-ai 最初的 3 只猫）
-BUILTIN_FORGEKINS: list[str] = ["xianxian", "yanyan", "shuoshuo"]
+BUILTIN_FORGEKINS: list[str] = ["luban", "sherlock", "vangogh"]
 
 ROSTER_FILES: dict[str, Path] = {
-    "xianxian": _ROSTER_DIR / "xianxian.yaml",
-    "yanyan": _ROSTER_DIR / "yanyan.yaml",
-    "shuoshuo": _ROSTER_DIR / "shuoshuo.yaml",
+    "luban": _ROSTER_DIR / "luban.yaml",
+    "sherlock": _ROSTER_DIR / "sherlock.yaml",
+    "vangogh": _ROSTER_DIR / "vangogh.yaml",
 }
 
 
@@ -32,7 +32,7 @@ def load_forgekin_config(forgekin_id: str) -> dict[str, Any]:
     """加载单个预置灵智体的 YAML 配置.
 
     Args:
-        forgekin_id: 灵智体 ID（如 "xianxian"）
+        forgekin_id: 灵智体 ID（如 "luban"）
 
     Returns:
         完整的灵智体配置字典

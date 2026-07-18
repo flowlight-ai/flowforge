@@ -7,7 +7,7 @@
     - EvolutionStage 6 个枚举值存在
     - AwakeningStage 6 个枚举值存在
     - SoulImprint.compute_hash() 返回稳定哈希
-    - SoulImprint.forge() 创建不可变魂印且 verify() 通过
+    - SoulImprint.forge() 创建不可变灵印且 verify() 通过
     - ForgekinBase.can_self_evolve() 在觉醒阶 E4+ 返回 True
     - ForgekinBase.can_forge_new_forgekin() 仅在进化阶 E6 返回 True
     - 5 种形态灵智体（BioForgekin / OrgForgekin / ObjForgekin /
@@ -24,7 +24,7 @@
 
 详见:
     - [doc:design/naming-contract.md#2.2] 灵智体定义
-    - [doc:design/naming-contract.md#2.6] 魂印定义
+    - [doc:design/naming-contract.md#2.6] 灵印定义
     - [doc:design/naming-contract.md#3] 进化阶详细定义
     - [doc:design/naming-contract.md#4] 觉醒阶详细定义
     - [doc:project_rules.md#测试铁律] T1-T8
@@ -57,7 +57,7 @@ def _make_imprint(
     namespace: str = "forgemind",
     value_anchors: list[str] | None = None,
 ) -> SoulImprint:
-    """构造测试用魂印。"""
+    """构造测试用灵印。"""
     if value_anchors is None:
         value_anchors = ["不伤害 operator", "遵守 VISION.md §7"]
     return SoulImprint.forge(
@@ -205,11 +205,11 @@ class TestAwakeningStageEnum:
         assert AwakeningStage.E2.is_full_human_control() is False
 
 
-# ── 魂印（SoulImprint）测试 ───────────────────────────────────────
+# ── 灵印（SoulImprint）测试 ───────────────────────────────────────
 
 
 class TestSoulImprint:
-    """SoulImprint 魂印测试（详见 naming-contract.md §2.6）。"""
+    """SoulImprint 灵印测试（详见 naming-contract.md §2.6）。"""
 
     def test_compute_hash_is_stable(self) -> None:
         """compute_hash 对相同输入应返回相同哈希。"""
@@ -246,7 +246,7 @@ class TestSoulImprint:
         assert h1 != h2
 
     def test_forge_creates_immutable_imprint(self) -> None:
-        """forge 创建的魂印应不可变（frozen=True）。"""
+        """forge 创建的灵印应不可变（frozen=True）。"""
         imprint = SoulImprint.forge(
             seed_params={"name": "孙悟空"},
             value_anchors=["不伤害 operator"],
@@ -256,7 +256,7 @@ class TestSoulImprint:
             imprint.namespace = "contentforge"  # type: ignore[misc]
 
     def test_forge_verify_passes(self) -> None:
-        """forge 创建的魂印 verify() 应通过（哈希一致）。"""
+        """forge 创建的灵印 verify() 应通过（哈希一致）。"""
         imprint = SoulImprint.forge(
             seed_params={"name": "孙悟空"},
             value_anchors=["不伤害 operator"],

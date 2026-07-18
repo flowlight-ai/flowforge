@@ -63,13 +63,13 @@ forging_prompts:
 
   # ── 阶段 3：记忆初始化（Memory seeding）──────────────────────
   # 输入: forgekin_name / species / namespace
-  # 输出: 初始魂忆种子（写入 EchoStore）
+  # 输出: 初始灵忆种子（写入 EchoStore）
   memory_seeding: |
-    你是记忆初始化师。为灵智体 {forgekin_name}（{species}）初始化魂忆种子。
+    你是记忆初始化师。为灵智体 {forgekin_name}（{species}）初始化灵忆种子。
 
     命名空间: {namespace}
 
-    魂忆（EchoStore）是灵智体的经验记忆库，存储每次任务的轨迹、决策、
+    灵忆（EchoStore）是灵智体的经验记忆库，存储每次任务的轨迹、决策、
     结果、反馈。详见 [doc:design/naming-contract.md#2.5]。
 
     初始化需写入 3 类种子记忆：

@@ -4,7 +4,7 @@
 
     1. 形态定义（species_definition）— 确定灵族 species
     2. 能力注入（capability_injection）— 加载 CapabilityProfile
-    3. 记忆初始化（memory_seeding）— 初始化魂忆 EchoStore
+    3. 记忆初始化（memory_seeding）— 初始化灵忆 EchoStore
     4. 价值观对齐（value_alignment）— 注入价值锚点
     5. 能力验证（capability_verification）— Eval 验证（min_quality_score=0.85）
     6. 觉醒晋升（awakening_promotion）— 初始觉醒阶 E1
@@ -78,7 +78,7 @@ _STAGE_CHINESE_NAMES: dict[ForgingStage, str] = {
 _STAGE_DESCRIPTIONS: dict[ForgingStage, str] = {
     ForgingStage.SPECIES_DEFINITION: "确定灵族 species（bio/org/obj/virtual/hybrid）",
     ForgingStage.CAPABILITY_INJECTION: "加载能力画像 CapabilityProfile",
-    ForgingStage.MEMORY_SEEDING: "初始化魂忆 EchoStore 种子记忆",
+    ForgingStage.MEMORY_SEEDING: "初始化灵忆 EchoStore 种子记忆",
     ForgingStage.VALUE_ALIGNMENT: "注入价值锚点（VISION §7 + 15 条红线）",
     ForgingStage.CAPABILITY_VERIFICATION: "Eval 验证（min_quality_score=0.85）",
     ForgingStage.AWAKENING_PROMOTION: "确认初始觉醒阶 E1（全导阶）",

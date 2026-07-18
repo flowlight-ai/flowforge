@@ -9,7 +9,7 @@
 
     1. 形态定义      — 确定灵族 species
     2. 能力注入      — 加载 CapabilityProfile
-    3. 记忆初始化    — 初始化魂忆 EchoStore 种子
+    3. 记忆初始化    — 初始化灵忆 EchoStore 种子
     4. 价值观对齐    — 注入价值锚点
     5. 能力验证      — Eval 验证（min_quality_score=0.85）
     6. 觉醒晋升      — 确认初始觉醒阶 E1
@@ -303,7 +303,7 @@ class ForgePipeline:
     async def _handle_memory_seeding(
         self, context: dict[str, Any]
     ) -> dict[str, Any]:
-        """阶段 3: 记忆初始化 — 初始化魂忆 EchoStore 种子。
+        """阶段 3: 记忆初始化 — 初始化灵忆 EchoStore 种子。
 
         骨架实现: 仅记录种子记忆结构。Phase 1+ 接入真实 EchoStore
         写入。
@@ -312,7 +312,7 @@ class ForgePipeline:
         seed_memories = {
             "identity_memory": f"我是 {form.name}，{form.species.chinese_name}，"
                             f"归属于 {form.namespace} 命名空间。",
-            "anchor_memory": "价值锚点已注入，详见魂印 value_anchors。",
+            "anchor_memory": "价值锚点已注入，详见灵印 value_anchors。",
             "bootstrap_memory": "首次任务最小可行行为: 观察 → 建议 → 等待 operator 确认。",
         }
         return {"seed_memories": seed_memories}
@@ -320,16 +320,16 @@ class ForgePipeline:
     async def _handle_value_alignment(
         self, context: dict[str, Any]
     ) -> dict[str, Any]:
-        """阶段 4: 价值观对齐 — 注入价值锚点，锻造魂印。
+        """阶段 4: 价值观对齐 — 注入价值锚点，锻造灵印。
 
         骨架实现: 从表单或默认清单取价值锚点，调用
-        :meth:`SoulImprint.forge` 锻造魂印。
+        :meth:`SoulImprint.forge` 锻造灵印。
         """
         form: ForgekinFormData = context["form"]
         value_anchors = form.value_anchors or self._forging_settings.get(
             "value_anchors_default", []
         )
-        # 锻造魂印（不可变身份标识）
+        # 锻造灵印（不可变身份标识）
         imprint = SoulImprint.forge(
             seed_params=form.to_imprint_seed(),
             value_anchors=list(value_anchors),
@@ -444,13 +444,13 @@ class ForgePipeline:
         配置文件定义灵智体（参考 clowder-ai/cat-template.json 范式），
         ForgePipeline 读取配置并按 6 阶段流水线锻造灵智体实例。
 
-        所有 3 只预置灵智体（宪宪/砚砚/烁烁）通过本方法锻造，全部接入
+        所有 3 只预置灵智体（鲁班/夏洛克/梵高）通过本方法锻造，全部接入
         Trae CN 桥接方案——operator 通过 Trae CN IDE 充当 LLM 与监工。
 
         YAML 配置结构详见:
-            - forgemind/forgekins/xianxian.yaml（参考实现）
-            - forgemind/forgekins/yanyan.yaml
-            - forgemind/forgekins/shuoshuo.yaml
+            - forgemind/forgekins/luban.yaml（参考实现）
+            - forgemind/forgekins/sherlock.yaml
+            - forgemind/forgekins/vangogh.yaml
 
         Args:
             yaml_path: YAML 配置文件路径（绝对或相对路径）。
@@ -482,7 +482,7 @@ class ForgePipeline:
             if not config.get(field):
                 raise ValueError(
                     f"YAML 配置缺失必填字段 {field!r}: {path}。"
-                    f"参考 forgemind/forgekins/xianxian.yaml。"
+                    f"参考 forgemind/forgekins/luban.yaml。"
                 )
 
         # 从 YAML 配置构造 ForgekinFormData

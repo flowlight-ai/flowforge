@@ -58,7 +58,7 @@ class VirtualForgekin(ForgekinBase):
         Args:
             forgekin_id: 灵智体唯一 ID。
             name: 灵智体显示名（如 ``"孙悟空"``）。
-            soul_imprint: 魂印（不可变身份）。
+            soul_imprint: 灵印（不可变身份）。
             evolution_stage: 进化阶。
             awakening_stage: 觉醒阶。
             capability_profile: 能力画像。

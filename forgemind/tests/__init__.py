@@ -14,6 +14,6 @@
     - T8: Web 功能必须操控浏览器验证 DOM
 
 注: 本测试包为骨架，仅覆盖 :class:`ForgekinBase` 及其依赖的纯逻辑层
-（枚举 / 魂印哈希 / 能力判定）。涉及真实 LLM / EchoStore / Eval 的
+（枚举 / 灵印哈希 / 能力判定）。涉及真实 LLM / EchoStore / Eval 的
 E2E 测试在 Phase 1+ 接入真实实现后补全（遵守 T1/T4 铁律，禁止 Mock）。
 """

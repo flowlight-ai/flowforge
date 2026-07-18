@@ -206,7 +206,7 @@ async def forge_forgekin(forgekin_id: str) -> ForgeResponse:
     """从 YAML 配置锻造灵智体.
 
     Args:
-        forgekin_id: 预置灵智体 ID（如 ``xianxian`` / ``yanyan`` / ``shuoshuo``）。
+        forgekin_id: 预置灵智体 ID（如 ``luban`` / ``yanyan`` / ``shuoshuo``）。
 
     Returns:
         锻造结果。
@@ -277,7 +277,7 @@ async def webchat(forgekin_id: str, request: WebChatRequest) -> WebChatResponse:
     响应到 data/trae_bridge/responses/，本接口轮询并返回。
 
     Args:
-        forgekin_id: 灵智体 ID（如 ``xianxian``）。
+        forgekin_id: 灵智体 ID（如 ``luban``）。
         request: webchat 请求体。
 
     Returns:

@@ -1,13 +1,14 @@
-# 砚砚（猎犬 / Bloodhound）— 代码审查专家灵智体配置
+# 夏洛克（猎犬 / Bloodhound）— 代码审查专家灵智体配置
 # 形象选择理由：猎犬（Bloodhound）以敏锐嗅觉著称，可追踪数英里外的气味
 #   与代码审查专家"敏锐嗅觉找 bug / 安全漏洞挖掘"的角色定位高度契合
+#   名字来源：夏洛克·福尔摩斯 — 文学史上最敏锐的侦探，且福尔摩斯故事中常出现 Bloodhound 猎犬
 # 参考 clowder-ai/cat-template.json 中 maine-coon + codex 配置（仅取 LLM 桥接方案）
 # 通过 Trae CN 桥接方案接入 LLM（用户/operator 充当 LLM 与监工）
 # 详见 [doc:design/naming-contract.md#2.2] 灵智体定义
 
-forgekin_id: forgemind:yanyan
-name: 砚砚
-nickname: 砚砚
+forgekin_id: forgemind:sherlock
+name: 夏洛克
+nickname: 夏洛克
 species: bio  # 生物形态灵智体（真实动物：猎犬）
 namespace: forgemind
 available: true
@@ -19,7 +20,7 @@ color:
   secondary: "#F5DEB3"
 breed: 猎犬
 breed_en: Bloodhound
-mention_patterns: ["@砚砚", "@yanyan", "@猎犬", "@bloodhound"]
+mention_patterns: ["@夏洛克", "@sherlock", "@猎犬", "@bloodhound"]
 
 role:
   primary: peer-reviewer  # 代码审查专家
@@ -48,7 +49,7 @@ llm:
   provider: trae
   model: trae
   mode: bridge
-  session_id_prefix: "forgemind:yanyan"
+  session_id_prefix: "forgemind:sherlock"
   bridge_timeout: 300
   bridge_poll_interval: 2
   temperature: 0.3  # 审查任务需要确定性
@@ -64,8 +65,8 @@ capability_profile:
     - 代码风格一致性检查
     - 依赖冲突检测
   blind_spots:
-    - 视觉/UI 设计（交给烁烁）
-    - 大型架构决策（交给宪宪）
+    - 视觉/UI 设计（交给梵高）
+    - 大型架构决策（交给鲁班）
   tools_allowlist:
     - flowforge.tools.file_rw
     - flowforge.tools.python_executor

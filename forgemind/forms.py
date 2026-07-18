@@ -13,7 +13,7 @@
 
 详见:
     - [doc:design/naming-contract.md#2.4] 育灵定义
-    - [doc:design/naming-contract.md#2.6] 魂印定义
+    - [doc:design/naming-contract.md#2.6] 灵印定义
     - [doc:review/review.md#第九章] FM-006 锻造流水线 6 阶段
 """
 
@@ -38,7 +38,7 @@ class ForgekinFormData(BaseModel):
         species: 灵族形态（bio / org / obj / virtual / hybrid）。
         namespace: 命名空间（如 ``"forgemind"`` / ``"contentforge"``）。
         requirement: 锻造需求描述（自然语言）。
-        seed_params: 初始种子参数（写入魂印，作为谱系锚点）。
+        seed_params: 初始种子参数（写入灵印，作为谱系锚点）。
         value_anchors: 价值锚点（对齐 VISION §7 + 15 条红线）。
         capability_profile: 能力画像初始值（可选）。
         evolution_stage: 初始进化阶（默认 E1 萌芽阶）。
@@ -47,7 +47,7 @@ class ForgekinFormData(BaseModel):
 
     详见:
         - [doc:design/naming-contract.md#2.4] 育灵定义
-        - [doc:design/naming-contract.md#2.6] 魂印 seed_params
+        - [doc:design/naming-contract.md#2.6] 灵印 seed_params
     """
 
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
@@ -72,7 +72,7 @@ class ForgekinFormData(BaseModel):
     )
     seed_params: dict[str, Any] = Field(
         default_factory=dict,
-        description="初始种子参数（写入魂印，作为谱系锚点）。",
+        description="初始种子参数（写入灵印，作为谱系锚点）。",
     )
     value_anchors: list[str] = Field(
         default_factory=list,
@@ -118,9 +118,9 @@ class ForgekinFormData(BaseModel):
         return stripped
 
     def to_imprint_seed(self) -> dict[str, Any]:
-        """生成用于魂印计算的种子参数字典。
+        """生成用于灵印计算的种子参数字典。
 
-        将表单核心字段合并为魂印种子，确保谱系可追溯。``seed_params``
+        将表单核心字段合并为灵印种子，确保谱系可追溯。``seed_params``
         字段优先，表单核心字段（``name`` / ``species`` / ``namespace``）
         作为基础。
         """

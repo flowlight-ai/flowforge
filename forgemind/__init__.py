@@ -17,7 +17,7 @@ forgemind 是 FlowForge v7.0 的应用层项目，用来实践"万物锻造灵�
     - :class:`~flowforge.forgemind.species.ForgekinSpecies` — 灵族五大形态枚举
     - :class:`~flowforge.forgemind.stages.EvolutionStage`   — 进化阶 E1-E6
     - :class:`~flowforge.forgemind.stages.AwakeningStage`   — 觉醒阶 E1-E6
-    - :class:`~flowforge.forgemind.soul_imprint.SoulImprint` — 魂印（不可变身份）
+    - :class:`~flowforge.forgemind.soul_imprint.SoulImprint` — 灵印（不可变身份）
     - :class:`~flowforge.forgemind.base.ForgekinBase`       — 灵智体抽象基类
     - :class:`~flowforge.forgemind.forms.ForgekinFormData`  — 锻造表单
     - :class:`~flowforge.forgemind.forging.pipeline.ForgePipeline` — 育灵流水线

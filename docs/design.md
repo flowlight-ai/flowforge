@@ -54,9 +54,9 @@ ForgekinBase（抽象基类，位于 flowforge/forgemind/base.py）
 灵智体配置外置到 `flowforge/forgemind/forgekins/*.yaml`（铁律 5 禁止硬编码），配置契约详见 `forgekins/xianxian.yaml`（猫头鹰）/ `yanyan.yaml`（猎犬）/ `shuoshuo.yaml`（孔雀）三个预置灵智体。
 
 **3 个预置灵智体设计理由**（operator 第 2 条指令强调"不要都是猫"）：
-- **宪宪 = 猫头鹰（Owl，智慧象征）**：主架构师，深度思考与全局视野，对应 `species: bio`，配 `opus` LLM 桥接
-- **砚砚 = 猎犬（Bloodhound，敏锐嗅觉）**：代码审查专家，敏锐找 bug 与安全漏洞，对应 `species: bio`，配 `codex` LLM 桥接
-- **烁烁 = 孔雀（Peacock，审美象征）**：视觉设计师，视觉表达与创意展示，对应 `species: bio`，配 `gemini` LLM 桥接
+- **鲁班 = 猫头鹰（Owl，智慧象征）**：主架构师，深度思考与全局视野，对应 `species: bio`，配 `opus` LLM 桥接
+- **夏洛克 = 猎犬（Bloodhound，敏锐嗅觉）**：代码审查专家，敏锐找 bug 与安全漏洞，对应 `species: bio`，配 `codex` LLM 桥接
+- **梵高 = 孔雀（Peacock，审美象征）**：视觉设计师，视觉表达与创意展示，对应 `species: bio`，配 `gemini` LLM 桥接
 
 详见 `design/naming-contract.md#2.2` 灵智体定义 + `forgemind/forgekins/*.yaml` 预置灵智体配置。
 
@@ -78,7 +78,7 @@ ForgekinBase（抽象基类，位于 flowforge/forgemind/base.py）
 **设计规范层执行规则**：
 - 本文档 v7.0 历史章节中所有虚幻用语，按本表自动替换理解
 - 后续代码注释、YAML 配置、设计文档中禁止使用 v7.0 旧术语
-- Code Review 阶段（砚砚灵智体）必须检查术语合规性
+- Code Review 阶段（夏洛克灵智体）必须检查术语合规性
 
 ## v7.1-§D2 12 核心概念命名表（设计规范层应用）
 
@@ -198,9 +198,9 @@ flowforge/forgemind/
 │   ├── virtual.py           # VirtualForgekin 虚拟形态灵智体
 │   └── hybrid.py            # HybridForgekin 混合形态灵智体
 ├── forgekins/               # 预置灵智体 YAML 配置
-│   ├── xianxian.yaml        # 宪宪=猫头鹰（主架构师，species: bio）
-│   ├── yanyan.yaml          # 砚砚=猎犬（代码审查专家，species: bio）
-│   └── shuoshuo.yaml        # 烁烁=孔雀（视觉设计师，species: bio）
+│   ├── luban.yaml           # 鲁班=猫头鹰（主架构师，species: bio）
+│   ├── sherlock.yaml        # 夏洛克=猎犬（代码审查专家，species: bio）
+│   └── vangogh.yaml         # 梵高=孔雀（视觉设计师，species: bio）
 └── config/
     ├── forging.yaml         # 育灵流水线配置
     └── prompts.yaml         # 育灵提示词模板（外置，铁律 5）
@@ -358,56 +358,56 @@ v7.0/v7.1 万物灵智体愿景目前处于**设计态**，对应代码尚未全
 
 ### v7.1-§D9.1 设计规范层子章节占位索引（22 个新增/补全）
 
-> **占位规则**：以下 22 个子章节为 v7.1-§9.6 修复路径在本设计规范文档的具体落地索引，**当前为占位声明**，详细规格将在 M1/M2/M3 里程碑中由对应责任方（宪宪架构师灵智体/砚砚代码审查灵智体/烁烁视觉设计灵智体/operator）逐步补全。每个子章节占位包含：CL 编号、责任方、规格大纲。
+> **占位规则**：以下 22 个子章节为 v7.1-§9.6 修复路径在本设计规范文档的具体落地索引，**当前为占位声明**，详细规格将在 M1/M2/M3 里程碑中由对应责任方（鲁班架构师灵智体/夏洛克代码审查灵智体/梵高视觉设计灵智体/operator）逐步补全。每个子章节占位包含：CL 编号、责任方、规格大纲。
 
 #### §D3 觉醒阶（补全子章节）
 
 | 子章节 | CL | 责任方 | 规格大纲 |
 |--------|----|--------|---------|
-| §D3.3 四心智家族护栏规范 | CL-026 | 宪宪（猫头鹰） | Ragdoll（碎片推理癖）/ Maine Coon（fallback 糊锅匠）/ Siamese（热情直改）/ hotfix（糊弄尾巴）四家族 guardrail hooks + per-family telemetry + CI fallback 层数检测器 + search→Read 调用链检测 |
+| §D3.3 四心智家族护栏规范 | CL-026 | 鲁班（猫头鹰） | Ragdoll（碎片推理癖）/ Maine Coon（fallback 糊锅匠）/ Siamese（热情直改）/ hotfix（糊弄尾巴）四家族 guardrail hooks + per-family telemetry + CI fallback 层数检测器 + search→Read 调用链检测 |
 
 #### §D5 forgemind 应用层设计规范（补全子章节）
 
 | 子章节 | CL | 责任方 | 规格大纲 |
 |--------|----|--------|---------|
-| §D5.4 Plugin Manifest 完整契约 | CL-022/024 | 宪宪（猫头鹰） | 对齐 F202 AC-A1~A4（Manifest Discovery）+ AC-B1~B5（Resource Ownership）+ AC-C1~C4（Security Boundary）+ AC-D1~D3（Hub UX）+ AC-E1~E4（Review Gate）+ AC-F3/F4（transactional 启停 + ValidateBeforeRehydrate）+ `PluginManifestValidator` + `ResourceOwnershipRegistry` + `PluginSecurityGuard` |
-| §D5.5 ScheduleFactoryRegistry 规范 | CL-023 | 宪宪（猫头鹰） | plugin-owned factory 边界 + deterministic runtime task id + cross-plugin ownership collision 检测 + Schedule Factory Whitelist + AC-F1~F5 完整对齐 |
-| §D5.6 Agent Swarm 协同模式规范 | CL-032 | 宪宪（猫头鹰） | Mind Council 从"议事"层升维到"协同执行"层 + Swarm 协议 + 任务分发与回收 + 灵智体间能力互补调度 |
-| §D5.7 预置灵智体 OOTB 配置规范 | CL-035 | 宪宪（猫头鹰） | F135 DARE OOTB 关闭教训 + 预置灵智体配置应避免 OOTB 默认开启风险 + 宪宪/砚砚/烁烁 3 个预置灵智体的 OOTB 配置规范 |
+| §D5.4 Plugin Manifest 完整契约 | CL-022/024 | 鲁班（猫头鹰） | 对齐 F202 AC-A1~A4（Manifest Discovery）+ AC-B1~B5（Resource Ownership）+ AC-C1~C4（Security Boundary）+ AC-D1~D3（Hub UX）+ AC-E1~E4（Review Gate）+ AC-F3/F4（transactional 启停 + ValidateBeforeRehydrate）+ `PluginManifestValidator` + `ResourceOwnershipRegistry` + `PluginSecurityGuard` |
+| §D5.5 ScheduleFactoryRegistry 规范 | CL-023 | 鲁班（猫头鹰） | plugin-owned factory 边界 + deterministic runtime task id + cross-plugin ownership collision 检测 + Schedule Factory Whitelist + AC-F1~F5 完整对齐 |
+| §D5.6 Agent Swarm 协同模式规范 | CL-032 | 鲁班（猫头鹰） | Mind Council 从"议事"层升维到"协同执行"层 + Swarm 协议 + 任务分发与回收 + 灵智体间能力互补调度 |
+| §D5.7 预置灵智体 OOTB 配置规范 | CL-035 | 鲁班（猫头鹰） | F135 DARE OOTB 关闭教训 + 预置灵智体配置应避免 OOTB 默认开启风险 + 鲁班/夏洛克/梵高 3 个预置灵智体的 OOTB 配置规范 |
 
 #### §D6 三方 Agent 集成设计规范（补全子章节）
 
 | 子章节 | CL | 责任方 | 规格大纲 |
 |--------|----|--------|---------|
-| §D6.1 三方编程 Agent 设计（补全 stderr + NDJSON） | CL-038 | 宪宪（猫头鹰） | CLI Adapter 增加 stderr 解析（"stderr 也算活着"教训）+ NDJSON 流式输出 + cli-integration.md NDJSON 解析器规范 |
+| §D6.1 三方编程 Agent 设计（补全 stderr + NDJSON） | CL-038 | 鲁班（猫头鹰） | CLI Adapter 增加 stderr 解析（"stderr 也算活着"教训）+ NDJSON 流式输出 + cli-integration.md NDJSON 解析器规范 |
 | §D6.4 ProviderTransportRegistry 规范 | CL-014 | operator 决策安全模型 | 声明式 Manifest（能力/协议/传输方式/超时/重试策略）+ host 维护注册表 + `flowforge/core/external_agent/registry.py` + 灵智体通过查询注册表发现能力 |
 | §D6.5 host-owned 注入契约 | CL-015 | operator 决策安全模型 | token/MCP/sandbox/cwd **全部由 host 代码注入** + plugin 只声明"我需要 token"但不自己获取 + 重构 ExternalToolBridge + 防止三方 Agent 越权 |
-| §D6.6 reference_runtime.py 规范 | CL-017 | 宪宪（猫头鹰） | 三方 Agent 厂商可参照的参考实现 + 文档化的 Manifest 规范 + `flowforge/core/external_agent/reference_runtime.py` |
-| §D6.7 MCP 治理规范 | CL-037 | 宪宪（猫头鹰） | MCP 1→3 server 拆分（按职能分离）+ prompt 瘦身 50% + MCP server 白名单 + 跨 plugin MCP 资源治理 |
+| §D6.6 reference_runtime.py 规范 | CL-017 | 鲁班（猫头鹰） | 三方 Agent 厂商可参照的参考实现 + 文档化的 Manifest 规范 + `flowforge/core/external_agent/reference_runtime.py` |
+| §D6.7 MCP 治理规范 | CL-037 | 鲁班（猫头鹰） | MCP 1→3 server 拆分（按职能分离）+ prompt 瘦身 50% + MCP server 白名单 + 跨 plugin MCP 资源治理 |
 
 #### §D7 自我演进闭环设计规范（补全子章节）
 
 | 子章节 | CL | 责任方 | 规格大纲 |
 |--------|----|--------|---------|
 | §D7.5 Scope Guard 规范 | CL-002 | operator 决策边界 | 自我演进宪法层 + agent 提出修改前声明范围 + Scope Guard 拒绝越权范围 + VISION §7 不可被灵智体修改 + `flowforge/evolution/scope_guard.py` |
-| §D7.6 Eval Ledger 字段契约 | CL-004 | 宪宪（猫头鹰） | 每次进化提案记录"提案内容/前测分数/后测分数/净增益/是否合入" + 净增益 > 0 才允许合入 + Replay A/B 流程 + 进化级 Eval 区分任务级 Eval |
-| §D7.7 Knowledge Object Contract 字段表 | CL-005 | 宪宪（猫头鹰） | 锻典条目七字段（trigger/procedure/precondition/postcondition/anti_pattern/provenance/confidence）+ 灵智体判断"知识是否适用于当前场景"的契约 |
-| §D7.8 元认知字段契约 + EchoStore 扩展 | CL-006 | 宪宪（猫头鹰） | agent 记录"为什么选这个工具/预期什么结果/实际什么结果/学到什么"四元组 + EchoStore 扩展支持元认知字段 + Mode C 知识进化原料 |
-| §D7.9 Close Gate Validator 规范 | CL-025 | 砚砚（猎犬） | AC → evidence 矩阵（每条 AC 标注 ✅/❌ + commit/test/screenshot 证据）+ ❌ 强制三选一（immediate/delete/cvo_signoff）+ 禁止 follow-up/next phase/P2 字样 + `flowforge/evolution/close_gate.py` + CI follow-up-detector.mjs |
-| §D7.10 Auto Dream 双层架构规范 | CL-031 | 宪宪（猫头鹰） | 后台 consolidation（睡眠态记忆巩固）+ 前台 surface（在线联想触发）+ 4 信号 telemetry + Auto Dream 与灵议 Mind Council 的协议接口 |
-| §D7.11 QC Loop 7-Step 规范 | CL-034 | 砚砚（猎犬） | Maine Coon 3-Layer Reviewer Split（架构/逻辑/细节三层独立审查）+ 7 步 QC 循环 + 与 Eval 自代谢的协议接口 |
+| §D7.6 Eval Ledger 字段契约 | CL-004 | 鲁班（猫头鹰） | 每次进化提案记录"提案内容/前测分数/后测分数/净增益/是否合入" + 净增益 > 0 才允许合入 + Replay A/B 流程 + 进化级 Eval 区分任务级 Eval |
+| §D7.7 Knowledge Object Contract 字段表 | CL-005 | 鲁班（猫头鹰） | 锻典条目七字段（trigger/procedure/precondition/postcondition/anti_pattern/provenance/confidence）+ 灵智体判断"知识是否适用于当前场景"的契约 |
+| §D7.8 元认知字段契约 + EchoStore 扩展 | CL-006 | 鲁班（猫头鹰） | agent 记录"为什么选这个工具/预期什么结果/实际什么结果/学到什么"四元组 + EchoStore 扩展支持元认知字段 + Mode C 知识进化原料 |
+| §D7.9 Close Gate Validator 规范 | CL-025 | 夏洛克（猎犬） | AC → evidence 矩阵（每条 AC 标注 ✅/❌ + commit/test/screenshot 证据）+ ❌ 强制三选一（immediate/delete/cvo_signoff）+ 禁止 follow-up/next phase/P2 字样 + `flowforge/evolution/close_gate.py` + CI follow-up-detector.mjs |
+| §D7.10 Auto Dream 双层架构规范 | CL-031 | 鲁班（猫头鹰） | 后台 consolidation（睡眠态记忆巩固）+ 前台 surface（在线联想触发）+ 4 信号 telemetry + Auto Dream 与灵议 Mind Council 的协议接口 |
+| §D7.11 QC Loop 7-Step 规范 | CL-034 | 夏洛克（猎犬） | Maine Coon 3-Layer Reviewer Split（架构/逻辑/细节三层独立审查）+ 7 步 QC 循环 + 与 Eval 自代谢的协议接口 |
 
 #### §D10-§D16 新增子章节
 
 | 子章节 | CL | 责任方 | 规格大纲 |
 |--------|----|--------|---------|
-| §D10 虚拟世界一等公民建模 | CL-008 | 宪宪（猫头鹰） | 9 个一等公民：World/Character/Scene/Canon Decision/Relationship/Artifact/Round/Branch/Turn + VirtualForgekin 虚拟角色灵智体承载虚拟世界 + 一等公民字段契约 |
-| §D11 Role Mask 五层规范 | CL-011 | 宪宪（猫头鹰） | L1 路由身份/L2 基础设施/L3 本体能力/L4 场景皮肤/L5 世界内状态 + Role Mask 独立加载/卸载 + L4 场景皮肤不污染 L3 本体能力 |
-| §D12 Bridge Layer 协议规范 | CL-012/013/021 | 宪宪（猫头鹰） | Bridge Layer 三协议（Role Mask Protocol / Canon Sync Protocol / World Driver Protocol）+ runtime coordinator + 世界自转（World Driver + 定时事件源 + Canon 写入权限）+ 每个虚拟世界一个 Driver 实例 |
-| §D13 TeamAct Queue Steer 规范 | CL-027 | 宪宪（猫头鹰） + 烁烁（孔雀）UI | SteerCommand（priority_boost/interrupt/requeue）+ RouteIntentStore 与 TaskProgressStore 解耦 + PlanBoardPanel 独立 section + 拖拽排序 + interrupted 任务"继续"按钮 |
-| §D14 Event Memory 规范 | CL-029/030 | 砚砚（猎犬） | EventMemoryStore 独立子模块（不混入 EchoStore）+ 10 字段 schema（type/trigger/cat/threadId/messageId/timestamp/summary/cognitiveTransition/relatedHarness/confidence + ownerUserId）+ no-classifier 红线 + teleport(threadId, messageId) 精确跳转 + v1 schema 面向 v5 终态 + Phase C 趋势配 resolution 链 |
-| §D15 Approval Hub 规范 | CL-033 | 烁烁（孔雀）UI | 跨 thread 审批入口 + operator 一键批准/拒绝 + Approval Hub 统一审批中心 + 与 SelfDevCodeLoop Close Gate 联动 |
-| §D16 docs front-matter 规范 | CL-040 | 宪宪（猫头鹰） | 32 份 docs 文件 front-matter（feature_ids/related_features/topics/doc_kind/created）+ front-matter 校验脚本 + docs 索引自动化 |
+| §D10 虚拟世界一等公民建模 | CL-008 | 鲁班（猫头鹰） | 9 个一等公民：World/Character/Scene/Canon Decision/Relationship/Artifact/Round/Branch/Turn + VirtualForgekin 虚拟角色灵智体承载虚拟世界 + 一等公民字段契约 |
+| §D11 Role Mask 五层规范 | CL-011 | 鲁班（猫头鹰） | L1 路由身份/L2 基础设施/L3 本体能力/L4 场景皮肤/L5 世界内状态 + Role Mask 独立加载/卸载 + L4 场景皮肤不污染 L3 本体能力 |
+| §D12 Bridge Layer 协议规范 | CL-012/013/021 | 鲁班（猫头鹰） | Bridge Layer 三协议（Role Mask Protocol / Canon Sync Protocol / World Driver Protocol）+ runtime coordinator + 世界自转（World Driver + 定时事件源 + Canon 写入权限）+ 每个虚拟世界一个 Driver 实例 |
+| §D13 TeamAct Queue Steer 规范 | CL-027 | 鲁班（猫头鹰） + 梵高（孔雀）UI | SteerCommand（priority_boost/interrupt/requeue）+ RouteIntentStore 与 TaskProgressStore 解耦 + PlanBoardPanel 独立 section + 拖拽排序 + interrupted 任务"继续"按钮 |
+| §D14 Event Memory 规范 | CL-029/030 | 夏洛克（猎犬） | EventMemoryStore 独立子模块（不混入 EchoStore）+ 10 字段 schema（type/trigger/cat/threadId/messageId/timestamp/summary/cognitiveTransition/relatedHarness/confidence + ownerUserId）+ no-classifier 红线 + teleport(threadId, messageId) 精确跳转 + v1 schema 面向 v5 终态 + Phase C 趋势配 resolution 链 |
+| §D15 Approval Hub 规范 | CL-033 | 梵高（孔雀）UI | 跨 thread 审批入口 + operator 一键批准/拒绝 + Approval Hub 统一审批中心 + 与 SelfDevCodeLoop Close Gate 联动 |
+| §D16 docs front-matter 规范 | CL-040 | 鲁班（猫头鹰） | 32 份 docs 文件 front-matter（feature_ids/related_features/topics/doc_kind/created）+ front-matter 校验脚本 + docs 索引自动化 |
 
 ### v7.1-§D9.2 ADR/Feature 补全索引（4 项）
 
@@ -415,18 +415,18 @@ v7.0/v7.1 万物灵智体愿景目前处于**设计态**，对应代码尚未全
 
 | 文档 | 补全章节 | CL | 责任方 | 规格大纲 |
 |------|---------|----|--------|---------|
-| `decisions/010-distributed-reliability.md` | §Restart Recovery Pipeline | CL-028 | 宪宪（猫头鹰） | Phase A sweep Redis stale records（按 TTL + status 字段过滤）+ Phase A+ emit `restart_notification` event + Phase B 队列状态持久化（AOF + RDB 双层）+ 强制所有 Redis key 显式 TTL（默认 24h，禁止 0） |
-| `decisions/010-distributed-reliability.md` | §CI/CD Tracking 去重规范 | CL-039 | 宪宪（猫头鹰） | headSha + aggregateBucket PR 级 rollup + F133 GitHub CI/CD Tracking 状态迁移去重 + F021 Side-Effect WAL 补 PR 级 rollup |
-| `decisions/007-harness-engineering.md` | §Hyperfocus Brake 规范 | CL-036 | 宪宪（猫头鹰） | 90 分钟活跃触发三猫撒娇 + typed check-in + F085 Hyperfocus Brake 与 F012 Entropy Control 的接口 |
+| `decisions/010-distributed-reliability.md` | §Restart Recovery Pipeline | CL-028 | 鲁班（猫头鹰） | Phase A sweep Redis stale records（按 TTL + status 字段过滤）+ Phase A+ emit `restart_notification` event + Phase B 队列状态持久化（AOF + RDB 双层）+ 强制所有 Redis key 显式 TTL（默认 24h，禁止 0） |
+| `decisions/010-distributed-reliability.md` | §CI/CD Tracking 去重规范 | CL-039 | 鲁班（猫头鹰） | headSha + aggregateBucket PR 级 rollup + F133 GitHub CI/CD Tracking 状态迁移去重 + F021 Side-Effect WAL 补 PR 级 rollup |
+| `decisions/007-harness-engineering.md` | §Hyperfocus Brake 规范 | CL-036 | 鲁班（猫头鹰） | 90 分钟活跃触发三猫撒娇 + typed check-in + F085 Hyperfocus Brake 与 F012 Entropy Control 的接口 |
 | `design/naming-contract.md` | §7 内外品牌边界 | CL-041 | operator 决策品牌策略 | 内部 cat-cafe vs 外部 Clowder AI 双品牌边界 + 命名内外一致性规则 + 开源对外文档的边界声明 |
 
 ### v7.1-§D9.3 设计规范层里程碑与责任方
 
 | 里程碑 | 子章节数量 | 责任方 | 涉及 CL |
 |--------|-----------|--------|---------|
-| M1（P0 必修）| 14 个子章节 | 宪宪 11 + 砚砚 1 + operator 2 | CL-002/008/011/012/013/014/017/021/022/023/027/028/029/034 + CL-004/015/031/032 部分同步补全 |
-| M2（P1 应修）| 8 个子章节 | 宪宪 6 + 砚砚 2 + 烁烁 1 | CL-005/024/025/033/037/038/040 + CL-006/026/030 部分同步补全 |
-| M3（P2 建议）| 4 个子章节（含 ADR/naming-contract） | 宪宪 3 + operator 1 | CL-035/036/039/041 |
+| M1（P0 必修）| 14 个子章节 | 鲁班 11 + 夏洛克 1 + operator 2 | CL-002/008/011/012/013/014/017/021/022/023/027/028/029/034 + CL-004/015/031/032 部分同步补全 |
+| M2（P1 应修）| 8 个子章节 | 鲁班 6 + 夏洛克 2 + 梵高 1 | CL-005/024/025/033/037/038/040 + CL-006/026/030 部分同步补全 |
+| M3（P2 建议）| 4 个子章节（含 ADR/naming-contract） | 鲁班 3 + operator 1 | CL-035/036/039/041 |
 
 > **注**：M1 完成后，22 个子章节中 14 个落地；M2 完成后 22 个全部落地。M3 在 ADR/naming-contract 中落地。
 

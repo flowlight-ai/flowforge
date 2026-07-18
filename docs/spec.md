@@ -175,7 +175,7 @@
 - `flowforge/forgemind/forging/pipeline.py` — ForgePipeline 6 阶段育灵流水线
 - `flowforge/forgemind/plugins.py` — ForgeMindPlugin Plugin V3 入口
 - `flowforge/forgemind/species_impl/` — 5 形态灵智体实现（bio/org/obj/virtual/hybrid）
-- `flowforge/forgemind/forgekins/` — 预置灵智体 YAML 配置（宪宪=猫头鹰 / 砚砚=猎犬 / 烁烁=孔雀）
+- `flowforge/forgemind/forgekins/` — 预置灵智体 YAML 配置（鲁班=猫头鹰 / 夏洛克=猎犬 / 梵高=孔雀）
 - `flowforge/forgemind/config/` — 育灵配置（forging.yaml + prompts.yaml）
 
 ## v7.1-§6 三方 Agent 集成（灵智体能力扩展）
@@ -333,23 +333,23 @@ v7.0/v7.1 万物灵智体愿景目前处于**设计态**，对应代码尚未全
 | CL | 主题 | 同步状态 | 待办动作 | 责任方 |
 |----|------|:--------:|---------|--------|
 | CL-002 | Scope Guard | ❌ | 新增 design v7.1-§D7.5 + `flowforge/evolution/scope_guard.py` | operator 决策边界 |
-| CL-008 | 9 个一等公民 | ❌ | 新增 design v7.1-§D10 虚拟世界一等公民建模 | 架构师灵智体（宪宪） |
-| CL-011 | Role Mask 五层 | ❌ | 新增 design v7.1-§D11 Role Mask 五层规范 | 架构师灵智体（宪宪） |
-| CL-012 | Bridge Layer 三协议 | ❌ | 新增 design v7.1-§D12 Bridge Layer 协议规范 | 架构师灵智体（宪宪） |
-| CL-013 | 世界自转 | ❌ | 合并到 design v7.1-§D12 Bridge Layer | 架构师灵智体（宪宪） |
+| CL-008 | 9 个一等公民 | ❌ | 新增 design v7.1-§D10 虚拟世界一等公民建模 | 架构师灵智体（鲁班） |
+| CL-011 | Role Mask 五层 | ❌ | 新增 design v7.1-§D11 Role Mask 五层规范 | 架构师灵智体（鲁班） |
+| CL-012 | Bridge Layer 三协议 | ❌ | 新增 design v7.1-§D12 Bridge Layer 协议规范 | 架构师灵智体（鲁班） |
+| CL-013 | 世界自转 | ❌ | 合并到 design v7.1-§D12 Bridge Layer | 架构师灵智体（鲁班） |
 | CL-014 | ProviderTransportRegistry | ❌ | 新增 design v7.1-§D6.4 ProviderTransportRegistry 规范 | operator 决策安全模型 |
-| CL-017 | reference runtime | ❌ | 新增 design v7.1-§D6.6 reference_runtime.py 规范 | 架构师灵智体（宪宪） |
-| CL-021 | World Driver | ❌ | 合并到 design v7.1-§D12 Bridge Layer | 架构师灵智体（宪宪） |
-| CL-022 | Plugin V3 manifest 完整契约 | ❌ | 新增 design v7.1-§D5.4（对齐 F202 AC-A1~A4/B1~B5/C1~C4/D1~D3/E1~E4） | 架构师灵智体（宪宪） |
-| CL-023 | Schedule Factory Whitelist | ❌ | 新增 design v7.1-§D5.5 ScheduleFactoryRegistry 规范 | 架构师灵智体（宪宪） |
-| CL-027 | TeamAct Queue Steer | ❌ | 新增 design v7.1-§D13 TeamAct Queue Steer 规范 | 架构师灵智体（宪宪） + 视觉设计灵智体（烁烁）Plan Board UI |
-| CL-028 | Restart Recovery sweep | ❌ | 补全 ADR-010 §Restart Recovery Pipeline | 架构师灵智体（宪宪） |
-| CL-029 | Event Memory | ❌ | 新增 design v7.1-§D14 Event Memory 规范 | 代码审查灵智体（砚砚）no-classifier 红线守护 |
-| CL-034 | QC Loop 7-Step | ❌ | 新增 design v7.1-§D7.11 QC Loop 7-Step 规范 | 代码审查灵智体（砚砚） |
-| CL-004 | Eval Ledger | 🟡 | 补全 design v7.1-§D7.6 Eval Ledger 字段契约 | 架构师灵智体（宪宪） |
+| CL-017 | reference runtime | ❌ | 新增 design v7.1-§D6.6 reference_runtime.py 规范 | 架构师灵智体（鲁班） |
+| CL-021 | World Driver | ❌ | 合并到 design v7.1-§D12 Bridge Layer | 架构师灵智体（鲁班） |
+| CL-022 | Plugin V3 manifest 完整契约 | ❌ | 新增 design v7.1-§D5.4（对齐 F202 AC-A1~A4/B1~B5/C1~C4/D1~D3/E1~E4） | 架构师灵智体（鲁班） |
+| CL-023 | Schedule Factory Whitelist | ❌ | 新增 design v7.1-§D5.5 ScheduleFactoryRegistry 规范 | 架构师灵智体（鲁班） |
+| CL-027 | TeamAct Queue Steer | ❌ | 新增 design v7.1-§D13 TeamAct Queue Steer 规范 | 架构师灵智体（鲁班） + 视觉设计灵智体（梵高）Plan Board UI |
+| CL-028 | Restart Recovery sweep | ❌ | 补全 ADR-010 §Restart Recovery Pipeline | 架构师灵智体（鲁班） |
+| CL-029 | Event Memory | ❌ | 新增 design v7.1-§D14 Event Memory 规范 | 代码审查灵智体（夏洛克）no-classifier 红线守护 |
+| CL-034 | QC Loop 7-Step | ❌ | 新增 design v7.1-§D7.11 QC Loop 7-Step 规范 | 代码审查灵智体（夏洛克） |
+| CL-004 | Eval Ledger | 🟡 | 补全 design v7.1-§D7.6 Eval Ledger 字段契约 | 架构师灵智体（鲁班） |
 | CL-015 | host-owned 安全注入 | 🟡 | 补全 design v7.1-§D6.5 host-owned 注入契约 | operator 决策安全模型 |
-| CL-031 | Auto Dream 双层架构 | 🟡 | 补全 design v7.1-§D7.10 Auto Dream 双层架构规范 | 架构师灵智体（宪宪） |
-| CL-032 | Agent Swarm 协同 | 🟡 | 补全 design v7.1-§D5.6 Agent Swarm 协同模式规范 | 架构师灵智体（宪宪） |
+| CL-031 | Auto Dream 双层架构 | 🟡 | 补全 design v7.1-§D7.10 Auto Dream 双层架构规范 | 架构师灵智体（鲁班） |
+| CL-032 | Agent Swarm 协同 | 🟡 | 补全 design v7.1-§D5.6 Agent Swarm 协同模式规范 | 架构师灵智体（鲁班） |
 
 ### v7.1-§9.4 P1 未同步清单（应修，14 项）
 
@@ -357,17 +357,17 @@ v7.0/v7.1 万物灵智体愿景目前处于**设计态**，对应代码尚未全
 
 | CL | 主题 | 同步状态 | 待办动作 | 责任方 |
 |----|------|:--------:|---------|--------|
-| CL-005 | Knowledge Object Contract | ❌ | 新增 design v7.1-§D7.7 Knowledge Object Contract 字段表 | 架构师灵智体（宪宪） |
-| CL-024 | Plugin 启停 transactional | ❌ | 合并到 design v7.1-§D5.4 Plugin Manifest 完整契约 | 架构师灵智体（宪宪） |
-| CL-025 | F177 Close Gate 结构化判据 | ❌ | 新增 design v7.1-§D7.9 Close Gate Validator 规范 | 代码审查灵智体（砚砚） |
-| CL-033 | Approval Hub 统一审批中心 | ❌ | 新增 design v7.1-§D15 Approval Hub 规范 | 视觉设计灵智体（烁烁）UI |
-| CL-037 | MCP 1→3 server 拆分 | ❌ | 新增 design v7.1-§D6.7 MCP 治理规范 | 架构师灵智体（宪宪） |
-| CL-038 | CLI stderr + NDJSON | ❌ | 补全 design v7.1-§D6.1 三方编程 Agent 设计 | 架构师灵智体（宪宪） |
-| CL-040 | docs front-matter 规范 | ❌ | 新增 design v7.1-§D16 docs front-matter 规范 | 架构师灵智体（宪宪） |
-| CL-016 | ACP transport | ✅ | （已同步于 design v7.1-§D6.2 EAC v1 七契约，需补 ACP 1.0 over stdio/SSE/WebSocket 传输层细节） | 架构师灵智体（宪宪） |
-| CL-006 | 元认知 Mode C | 🟡 | 补全 design v7.1-§D7.8 元认知字段契约 + EchoStore 扩展 | 架构师灵智体（宪宪） |
-| CL-026 | 四心智家族护栏 | 🟡 | 补全 design v7.1-§D3.3 家族护栏规范 | 架构师灵智体（宪宪） |
-| CL-030 | no-classifier 红线 + v5 终态 | 🟡 | 合并到 design v7.1-§D14 Event Memory 规范 | 代码审查灵智体（砚砚） |
+| CL-005 | Knowledge Object Contract | ❌ | 新增 design v7.1-§D7.7 Knowledge Object Contract 字段表 | 架构师灵智体（鲁班） |
+| CL-024 | Plugin 启停 transactional | ❌ | 合并到 design v7.1-§D5.4 Plugin Manifest 完整契约 | 架构师灵智体（鲁班） |
+| CL-025 | F177 Close Gate 结构化判据 | ❌ | 新增 design v7.1-§D7.9 Close Gate Validator 规范 | 代码审查灵智体（夏洛克） |
+| CL-033 | Approval Hub 统一审批中心 | ❌ | 新增 design v7.1-§D15 Approval Hub 规范 | 视觉设计灵智体（梵高）UI |
+| CL-037 | MCP 1→3 server 拆分 | ❌ | 新增 design v7.1-§D6.7 MCP 治理规范 | 架构师灵智体（鲁班） |
+| CL-038 | CLI stderr + NDJSON | ❌ | 补全 design v7.1-§D6.1 三方编程 Agent 设计 | 架构师灵智体（鲁班） |
+| CL-040 | docs front-matter 规范 | ❌ | 新增 design v7.1-§D16 docs front-matter 规范 | 架构师灵智体（鲁班） |
+| CL-016 | ACP transport | ✅ | （已同步于 design v7.1-§D6.2 EAC v1 七契约，需补 ACP 1.0 over stdio/SSE/WebSocket 传输层细节） | 架构师灵智体（鲁班） |
+| CL-006 | 元认知 Mode C | 🟡 | 补全 design v7.1-§D7.8 元认知字段契约 + EchoStore 扩展 | 架构师灵智体（鲁班） |
+| CL-026 | 四心智家族护栏 | 🟡 | 补全 design v7.1-§D3.3 家族护栏规范 | 架构师灵智体（鲁班） |
+| CL-030 | no-classifier 红线 + v5 终态 | 🟡 | 合并到 design v7.1-§D14 Event Memory 规范 | 代码审查灵智体（夏洛克） |
 
 ### v7.1-§9.5 P2 未同步清单（建议，4 项）
 
@@ -375,9 +375,9 @@ v7.0/v7.1 万物灵智体愿景目前处于**设计态**，对应代码尚未全
 
 | CL | 主题 | 同步状态 | 待办动作 | 责任方 |
 |----|------|:--------:|---------|--------|
-| CL-035 | F135 DARE OOTB 关闭教训 | ❌ | 补全 design v7.1-§D5.7 预置灵智体 OOTB 配置规范 | 架构师灵智体（宪宪） |
-| CL-036 | Hyperfocus Brake | ❌ | 补全 ADR-007 §Hyperfocus Brake 规范 | 架构师灵智体（宪宪） |
-| CL-039 | GitHub CI/CD Tracking 去重 | ❌ | 补全 ADR-010 §CI/CD Tracking 去重规范 | 架构师灵智体（宪宪） |
+| CL-035 | F135 DARE OOTB 关闭教训 | ❌ | 补全 design v7.1-§D5.7 预置灵智体 OOTB 配置规范 | 架构师灵智体（鲁班） |
+| CL-036 | Hyperfocus Brake | ❌ | 补全 ADR-007 §Hyperfocus Brake 规范 | 架构师灵智体（鲁班） |
+| CL-039 | GitHub CI/CD Tracking 去重 | ❌ | 补全 ADR-010 §CI/CD Tracking 去重规范 | 架构师灵智体（鲁班） |
 | CL-041 | 命名边界内外品牌 | ❌ | 补全 naming-contract.md §7 内外品牌边界 | operator 决策品牌策略 |
 
 ### v7.1-§9.6 修复路径与责任分配
@@ -393,9 +393,9 @@ v7.0/v7.1 万物灵智体愿景目前处于**设计态**，对应代码尚未全
 
 | 灵智体 | 物种 | 负责范围 | 涉及 CL |
 |--------|------|---------|---------|
-| 宪宪（架构师灵智体） | 猫头鹰 | 架构设计 + 工程规范 + 虚拟世界建模 | CL-008/011/012/013/017/021/022/023/024/027/028/031/032/037/038/040/035/036/039 |
-| 砚砚（代码审查灵智体） | 猎犬 | Close Gate + QC Loop + Event Memory no-classifier 红线守护 | CL-025/029/030/034 |
-| 烁烁（视觉设计灵智体） | 孔雀 | Plan Board UI + Approval Hub UI | CL-027（Plan Board UI 部分）/033 |
+| 鲁班（架构师灵智体） | 猫头鹰 | 架构设计 + 工程规范 + 虚拟世界建模 | CL-008/011/012/013/017/021/022/023/024/027/028/031/032/037/038/040/035/036/039 |
+| 夏洛克（代码审查灵智体） | 猎犬 | Close Gate + QC Loop + Event Memory no-classifier 红线守护 | CL-025/029/030/034 |
+| 梵高（视觉设计灵智体） | 孔雀 | Plan Board UI + Approval Hub UI | CL-027（Plan Board UI 部分）/033 |
 | operator | — | 安全模型 + 品牌策略 + 愿景锚点守护 | CL-002/014/015/041 |
 
 **里程碑**：
