@@ -8,6 +8,10 @@
 > **依赖 Feature**: [doc:features/F001-capability-profile.md] + [doc:features/F027-all-things-spirit-species.md]
 > **依据**: [doc:review/review.md#第九章] FM-001~FM-012
 > **关联 VISION**: [doc:VISION.md#6]（三个层次的能力承载）
+> **对应 spec.md**: [doc:../spec.md#§3.8]（FR-CORE-008，与本文档同号对应）
+> **对应 arch.md**: [doc:../arch.md#§3.8]（待创建）
+> **对应 design.md**: [doc:../design.md#§3.8]（待创建）
+> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -15,7 +19,7 @@
 
 ### 1.1 问题陈述
 
-FlowForge 当前缺少应用层——万物灵智体愿景无处落地。operator 指示（2026-07-17）：
+FlowForge 当前缺少应用层——万物灵智体（即多形态智能体 Multi-Form Agent）愿景无处落地。operator 指示（2026-07-17）：
 
 > flowforge 中需要新增一个 forgemind 模块，其是 flowforge 的应用层项目（用来实践万物锻造灵智体的应用）...forgemind 将是我们 flowforge 的养灵的所有代码存放的地方
 
@@ -27,9 +31,9 @@ FlowForge 当前缺少应用层——万物灵智体愿景无处落地。operato
 
 ### 1.3 不做的影响
 
-- 无法实现 operator 通用 AGI 愿景
+- 无法实现 operator 通用智能体（General-Purpose Agent）愿景
 - FlowForge 不能"自己开发自己"（缺练兵场）
-- 物理 AI + 虚拟 AI 真实复现无法达成
+- 物理 AI + 虚拟 AI 真实复现无法达成（对应业界 Embodied AI / Character AI 工程实现）
 
 ---
 
@@ -309,7 +313,7 @@ flowforge/forgemind/
 
 ### 7.2 理由
 
-forgemind 是 operator 通用 AGI 愿景的实践场，是 FlowForge 自我进化的练兵场。模型越强，灵智体形态分类 + 锻造流水线越值钱。
+forgemind 是 operator 通用智能体（General-Purpose Agent）愿景的实践场，是 FlowForge 自我进化的练兵场。模型越强，灵智体形态分类 + 锻造流水线越值钱。
 
 ---
 
@@ -369,3 +373,4 @@ forgemind 是 operator 通用 AGI 愿景的实践场，是 FlowForge 自我进�
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
 | 2026-07-17 | v0.1 | 初始创建 | operator + 架构师灵智体 |
+| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.8 同号映射 | 文档员灵智体（钢笔·文心） |

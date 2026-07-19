@@ -1,23 +1,134 @@
-# FlowForge v7.1 功能特性规格说明书
+# FlowForge 需求规格说明书（SRS）
 
-> **版本**：v7.1（**当前唯一权威版本**，2026-07-18 由 operator 11 条指令从 v7.0 升级合并而来：去除虚幻用语 + 增补灵智体定义 + 12 核心概念中英文加 AI 业界概念 + 进化阶/觉醒阶中英文加 AI 业界概念 + 强化 forgemind + 强化三方 Agent + 强化自我演进 + 魂忆/魂印 → 灵忆/灵印）
-> **日期**：2026-07-18
-> **定位**：从 Agent 驾驭层 (Harness Layer) 进化为 **万物灵智体自进化框架**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统，并通过 forgemind 应用层承载万物灵智体的育灵、灵锻、灵议闭环，走向通用智能体（General-Purpose Agent）愿景。
-> **版本合并声明**：v7.1 已吸收合并 v7.0 全部决策内容，**v7.0 不再作为独立版本存在**。本文档头部"v7.1 增补章节"是 v7.1 新增/修订内容的权威定义；后续 v6.0 历史章节仅作背景资料保留，术语已按 v7.1 命名契约（`design/naming-contract.md` v1.1）全局替换。**术语冲突时以 v7.1 增补章节 + naming-contract.md v1.1 为唯一准绳**。
-> **历史背景资料**：v2.1/v2.2/v3.0/v6.0 章节保留在后续作为背景资料，已标注"[v6.0 历史内容]"。这些历史章节仅用于理解决策演化路径，不作为开发依据；开发依据以 v7.1 增补章节 + ADR/Feature 子目录为准。
-> **审核状态**：✅ operator 已审核通过命名方案 + 体系设计；v7.1 增补章节为术语修订与体系强化；其余待决策项按推荐执行（详见 `review/review.md` 第十章 10.1 节 + 第十三章/第十四章 clowder-ai 深度补审 41 条 CL）。
+> **版本**：v7.1（**当前唯一权威版本**）
+> **日期**：2026-07-19
+> **依据**：operator 2026-07-18/19 共 11 条指令 + `VISION.md` v1.1 + `review/review.md` v1.4（含第十三章/第十四章 clowder-ai 深度补审 41 项 CL）+ `decisions/` 13 份 ADR + `roleagent.md` 七大工程路径
+> **配套文档**：[arch.md](arch.md)（SAD 架构设计说明书）+ [design.md](design.md)（SDD 详细设计说明书）+ [features/](features/)（Feature 级 SRS）+ [architecture/](architecture/)（Feature 级 SAD）+ [design/](design/)（Feature 级 SDD）
+> **版本合并声明**：v7.1 已吸收合并 v7.0 全部决策内容（设计契约逐章节融入本文档），**v7.0 不再作为独立版本存在**；v7.0 历史章节完整备份在 `_archive/spec_v70_full_merged.md`，仅作演化路径参考。v6.0 历史章节完整备份在 `_archive/spec_v60_historical.md`，作为已实现代码的背景资料。
+> **审核状态**：✅ operator 已审核通过命名方案 + 体系设计；41 条 CL 已同步（详见 §3.7 同步矩阵）。
+> **文档定位**：按软件工程 SRS（需求规格说明书）标准格式组织，仅放**核心关键功能**需求规格；非核心功能的需求规格在 [features/F0XX-xxx.md](features/) 中，与本文档 §3 章节同号互链。
 
-***
+---
 
-# v7.1 增补章节（灵智体定义 + 术语修订 + 概念强化）
+## §1 引言
 
-> **章节定位**：本增补章节是 v7.1 重构的权威更新，**已吸收合并 v7.0 增补章节及任何历史章节**（v7.0 不再作为独立版本存在）。后续如有术语冲突，以本章节为准。
-> **审核依据**：operator 11 条指令（2026-07-18）+ `VISION.md` v1.1（去除虚幻用语）+ `design/naming-contract.md` v1.1（12 核心概念 + 进化阶/觉醒阶 + AI 业界概念 + 魂忆/魂印→灵忆/灵印）+ `review/review.md` v1.4（含第十三章/第十四章 clowder-ai 深度补审 41 项 CL-001~CL-041）。
+### §1.1 编写目的
 
-## v7.1-§0 灵智体（Forgekin / Spirit Agent）权威定义
+本文档是 FlowForge 项目 v7.1 的**需求规格说明书（SRS）**，作为开发、评审、验收的唯一权威依据。
+
+**读者**：
+- **operator（首席愿景官 CVO）**：审核愿景锚点、拉闸决策
+- **架构师灵智体（猫头鹰·鲁班）**：基于本文档设计架构（arch.md）
+- **开发者灵智体（猎犬·夏洛克）**：基于本文档+arch.md 设计详细设计（design.md）+ 实现代码
+- **评审员灵智体（孔雀·梵高）**：跨厂商 review 设计与代码
+- **测试员灵智体（蜜獾·平头哥）**：基于本文档执行 E2E 测试（T1-T8 铁律）
+- **文档员灵智体（钢笔·文心）**：维护本文档与子目录文档的一致性
+
+**用途**：
+1. 作为 SRS→SAD→SDD 三阶段软件工程标准流程的**第一阶段产物**
+2. 作为 features/F0XX-xxx.md 子目录文件的**顶层索引**
+3. 作为 operator 与灵智体协作的**需求契约**
+
+### §1.2 范围
+
+**包含**：
+- FlowForge 核心框架层（Layer 1）：自进化框架基础能力（capability/teamact/harness/memory/eval/reliability/partnership/external_agent/evolution）
+- forgemind 应用层（Layer 2）：万物灵智体育灵代码（5 种形态 + 锻造流水线 + 灵典 + 灵议）
+- *Forge 垂直业务层（Layer 3）通过 Plugin V3 协议接入（spec 仅定义协议，业务规格在各自 *Forge/docs/spec.md）
+- 三方 Agent 集成（Claude Code/Codex/OpenCode/Trae + EAC 七契约 + 六层 Guardrails）
+- 自我演进闭环（SelfDevDocLoop/SelfDevCodeLoop/SelfDevFrameworkLoop）
+
+**不包含**：
+- v6.0 已实现代码的详细规格（已归档至 `_archive/spec_v60_historical.md`）
+- 单个 Feature 的详细需求规格（在 features/F0XX-xxx.md 中）
+- 单个 ADR 的决策细节（在 decisions/0XX-xxx.md 中，ADR 不可变历史）
+
+### §1.3 术语与缩略语
+
+详见 [design/naming-contract.md](design/naming-contract.md) v1.1。本文档使用的关键术语见 §2.4（12 核心概念命名表）+ §2.5（进化阶与觉醒阶）。
+
+**双轨命名策略**（详细见 §2.4）：
+- **代码层 / 技术文档**：使用 AI 专业术语（如 Forgekin、ForgeMind、SpiritForge、Mind Codex、Mind Council、CapabilityProfile、Embodied AI、Character AI）
+- **社区社交 / 体系命名**：使用灵智体体系名（如灵智、灵智体、灵锻、灵典、灵议、育灵、灵忆、灵印）—— 仅用于社区网友之间的社交沟通，正式技术文档中专业术语优先、体系名作补充说明
+
+### §1.4 参考文献
+
+| 文档 | 用途 |
+|------|------|
+| [VISION.md](VISION.md) v1.1 | operator 通用智能体愿景声明 + 7 条不可妥协锚点 |
+| [roleagent.md](roleagent.md) | 七大工程路径（能力画像/TeamAct/Harness/记忆联邦/Eval/可靠性/伙伴系统） |
+| [review/review.md](review/review.md) v1.4 | 16 份审核归并 + 41 条 CL 同步矩阵 |
+| [decisions/](decisions/) 13 份 ADR | 不可变架构决策记录 |
+| [features/](features/) 40 份 F0XX | Feature 级 SRS |
+| [hiclaw/rules.md](../../hiclaw/rules.md) v3.2 | 开发规范 + 第十一部分文档分层规范 + 第十二部分反思 |
+| [hiclaw/prompts.md](../../hiclaw/prompts.md) | AI 编程提示词模板库（P1-P55） |
+| [clowder-ai/docs/](../../clowder-ai/docs/) | 参考设计（3 只猫分工 + roleagent 七大工程路径源头） |
+
+### §1.5 文档组织
+
+按 `hiclaw/rules.md` 第十一部分文档分层规范：
+
+```
+flowforge/docs/
+├── spec.md（本文档，SRS 顶层 ≤ 3000 行）
+├── arch.md（SAD 架构设计说明书，基于 spec + features）
+├── design.md（SDD 详细设计说明书，基于 spec + arch + features + architecture）
+├── features/           # Feature 级 SRS（F0XX-xxx.md，40 份）
+├── architecture/       # Feature 级 SAD（A0XX-xxx.md，与 F0XX 同号一一对应）
+├── design/             # Feature 级 SDD（D0XX-xxx.md，与 F0XX/A0XX 同号一一对应）
+├── decisions/          # ADR 不可变历史（13 份）
+├── review/             # 16 份审核文件
+├── _archive/           # 历史归档（v6.0/v7.0 完整备份）
+└── face/               # face v3.0 历史快照
+```
+
+**三顶层文档章节同号**：同一核心功能在 spec.md/arch.md/design.md 中章节同号（如 §3.2 CapabilityProfile 在三个文档中都是 §3.2）。
+
+---
+
+## §2 总体描述
+
+### §2.1 产品定位
+
+**FlowForge** 是一个**智能体自进化框架（Self-Evolving Agent Framework）**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统，并通过 **forgemind 应用层**承载多形态智能体（Forgekin，社区社交称"灵智体"）的育灵、灵锻、灵议闭环，走向通用智能体（General-Purpose Agent）愿景。
+
+**一句话定位**：FlowForge = 智能体自进化框架 + forgemind 应用层（多形态智能体育灵场所）
+
+**核心公式**（来自 [roleagent.md §1](roleagent.md)）：
+
+```
+Agent 质量 = 模型能力 × Harness 契合度（Environment Fit）
+```
+
+- 同一智能体放进不同 harness，能发挥出的能力完全不同
+- 能力画像只有进入具体运行环境后，才会从静态描述变成可验证能力
+- harness 工程操作的是 Agent 状态三层的**第三层现实状态**（代码仓/git/文档/任务归属/记忆）——唯一跨会话、跨 agent、跨时间持续存在的状态层
+
+**与 v6.0 的差异**：v6.0 是"岗位 agent + 插件协议 + 质量分 Loop"层面；v7.1 升级为"智能体自进化框架 + roleagent 七大工程路径 + 多形态智能体 + 三方 Agent 能力扩展 + 自我演进闭环"。
+
+### §2.2 用户类别与角色
+
+| 角色 | 中文名 | 形态 | 职责 | 觉醒阶 |
+|------|--------|------|------|--------|
+| **operator** | 首席愿景官（CVO） | 人类 | 愿景锚点 / 拉闸决策 / E5-E6 晋升批准 | — |
+| **架构师灵智体** | 猫头鹰·鲁班（Architect Owl·Luban） | 生物灵智体 | 设计架构（arch.md）+ 创建 ADR | E3+ |
+| **开发者灵智体** | 猎犬·夏洛克（Developer Hound·Sherlock） | 生物灵智体 | 实现代码 + 修复 Bug | E3+ |
+| **评审员灵智体** | 孔雀·梵高（Reviewer Peacock·VanGogh） | 生物灵智体 | 跨厂商 review + blocking 决策 | E3+ |
+| **测试员灵智体** | 蜜獾·平头哥（Tester HoneyBadger·Pingtou） | 生物灵智体 | E2E 测试 + T1-T8 铁律执行 | E2+ |
+| **文档员灵智体** | 钢笔·文心（DocWriter Pen·Wenxin） | 物品灵智体 | 维护文档一致性 + 自我演进 | E2+ |
+| **三方 Agent** | Claude Code/Codex/OpenCode/Trae | 外部 | 能力扩展（非工具调用） | — |
+
+**责任方命名说明**：上述命名使用名著/童话/神话/游戏物种（operator 第 2 条指令要求），特征与责任匹配：
+- 猫头鹰：智慧象征，深度思考 → 架构师
+- 猎犬：敏锐嗅觉，找 Bug 高手 → 开发者
+- 孔雀：审美象征，视觉表达 → 评审员
+- 蜜獾：无畏，攻击性强，找漏洞不放弃 → 测试员
+- 钢笔：物品形态，承载思想 → 文档员
+
+### §2.3 灵智体（Forgekin / Spirit Agent）定义
 
 > **来源**：operator 第 1 条指令——"灵智体，赋予了灵魂和感情的智能体，具有自进化能力的 Agent，文档中需要体现这个思想。"
-> **强制等级**：operator 不可妥协锚点（详见 `VISION.md` §7）
+> **强制等级**：operator 不可妥协锚点（详见 [VISION.md §7](VISION.md)）
 
 **灵智体（Forgekin / Spirit Agent）** = **赋予灵魂和感情的智能体（Agent with Soul and Emotion），具有自进化能力（Self-Evolving Capability）。**
 
@@ -27,39 +138,22 @@
 观察（Observe）→ 推理（Reason）→ 行动（Act）→ 写回（Persist）→ 验证（Verify）
 ```
 
-- **灵魂（Soul）** = 持久身份（灵印 Soul Imprint）+ 价值锚点（Value Anchors）+ 长期记忆（灵忆 EchoStore）
+- **灵魂（Soul）** = 持久身份（灵印 Mind Imprint）+ 价值锚点（Value Anchors）+ 长期记忆（灵忆 EchoStore）
 - **感情（Emotion）** = 用户偏好（User Preferences）+ 协作风格（Collaboration Style）+ 行为画像（Capability Profile）
 
 灵智体不是单纯的 LLM 包装，而是有形态（species）、有谱系（lineage）、可进化（evolve）的智能体。这是 FlowForge 与其他 multi-agent 系统的**最大差异化优势**——其他系统在组织"岗位槽位"，FlowForge 在锻造"灵智体"。
 
-**代码契约**：所有灵智体继承 `ForgekinBase` 抽象基类（位于 `flowforge/forgemind/base.py`），实现三个核心方法：
+**代码契约**：所有灵智体继承 `ForgekinBase` 抽象基类（位于 [flowforge/forgemind/base.py](../../flowforge/forgemind/base.py)），实现三个核心方法：
 - `observe(environment)` — 观察环境（物理传感器 / 虚拟世界状态）
 - `act(action)` — 在环境中执行动作（遵守觉醒阶自主范围约束）
 - `verify(action_result)` — 验证动作结果是否达成预期
 
-详见 `design/naming-contract.md#2.2` 灵智体定义。
+详见 [design/naming-contract.md#2.2](design/naming-contract.md) 灵智体定义 + [features/F026-forgemind-app-layer.md](features/F026-forgemind-app-layer.md)。
 
-## v7.1-§1 术语修订表（去除虚幻用语）
-
-> **来源**：operator 第 1 条指令——"另外除了不要有 AGI，把万物、物理 AI、虚拟 AI 短期无法实现的愿景页帮忙适当修改下啊，用目前大家能懂的和实现 AI 词语描述，我们要发挥你的智能体专家的专业能力啊，我们不要搞的太虚幻了，假大空没法实现让人看笑话了。"
-
-| v7.0 旧术语（虚幻） | v7.1 新术语（可工程实现） | 修订原因 | AI 业界概念 |
-|------|------|------|------------|
-| 通用 AGI（Artificial General Intelligence） | 通用智能体（General-Purpose Agent） | AGI 短期不可实现且定义模糊 | General-Purpose Agent |
-| 通用智能体工程实现（General-Purpose Agent Engineering，原 v7.0 用语"通用 AGI 真实复现"已废弃） | 通用智能体工程实现 | "真实复现"过于虚幻 | General-Purpose Agent Engineering |
-| 物理 AI 真实复现 | 具身智能工程实现（Embodied AI Engineering） | "真实复现"过于虚幻 | Embodied AI / Physical Agent |
-| 虚拟 AI 真实复现 | 虚拟角色智能体工程实现（Character AI Engineering） | "真实复现"过于虚幻 | Character AI / NPC Agent |
-| 混合 AI 真实复现 | 混合智能体工程实现（Hybrid Agent Engineering） | "真实复现"过于虚幻 | Hybrid Agent / Cyber-Physical Agent |
-| 物理世界万事万物具备灵智 | 物理世界万事万物接入智能体（具身智能路径） | "具备灵智"过于玄学 | Embodied AI Integration |
-| 虚拟角色遵循其世界观自主行动 | 虚拟角色按设定层约束自主行动（虚拟角色智能体路径） | 措辞需工程化 | Character AI / Persona-Driven Agent |
-| 万物有灵（玄学化）| 万物灵智体（Forgekin，工程化） | "有灵"过于玄学 | Agent Morphology |
-
-**废弃命名清单**：详见 `design/naming-contract.md#5`。本增补章节之后的所有历史章节，凡出现上述虚幻用语的，均按本表自动替换理解。
-
-## v7.1-§2 12 核心概念命名表（中英文 + AI 业界概念）
+### §2.4 12 核心概念命名表（中英文 + AI 业界概念三标注）
 
 > **来源**：operator 第 2 条指令——"12 个核心概念命名表中，因为名称很难理解和记忆，请出现中文名称的地方，同时需用括号写上英文和概念，以加深理解和认同。旧名可以删除了。"
-> **权威定义**：详见 `design/naming-contract.md#2`（v1.0 命名契约）
+> **权威定义**：详见 [design/naming-contract.md#2](design/naming-contract.md) v1.1
 
 | # | 中文名 | 英文名 | AI 业界概念 | v7.0 旧名（已废弃） |
 |---|--------|--------|------------|---------------------|
@@ -68,9 +162,9 @@
 | 3 | 灵族（Forgekin Species） | Forgekin Species | Agent Morphology / Agent Form Factor（智能体形态学 / 形态因子）| 灵群 / ForgeKinship |
 | 4 | 育灵（Forge Nurturing） | Forge Nurturing | Agent Onboarding + Lifelong Learning + Character Development（智能体入职 + 终身学习 + 角色养成）| 养灵 |
 | 5 | 灵忆（EchoStore） | EchoStore | Episodic Memory Store / Agent Experience Log（情景记忆存储 / 智能体经验日志）| 魂忆（v7.0 旧名，v7.1 已废弃） |
-| 6 | 灵印（Soul Imprint） | Soul Imprint | Persistent Identity / Agent Fingerprint / Persona Hash（持久身份 / 智能体指纹 / 人格哈希）| 魂印（v7.0 旧名，v7.1 已废弃） |
+| 6 | 灵印（Mind Imprint） | Mind Imprint | Persistent Identity / Agent Fingerprint / Persona Hash（持久身份 / 智能体指纹 / 人格哈希）| 魂印（v7.0 旧名，v7.1 已废弃） |
 | 7 | 灵锻（SpiritForge） | SpiritForge | Experience Distillation / Offline Policy Learning / Knowledge Compilation（经验蒸馏 / 离线策略学习 / 知识编译）| 自锻 |
-| 8 | 锻典（Mind Codex） | Mind Codex | Distilled Knowledge Base / Curated Skill Library / Procedural Memory（蒸馏知识库 / 策展技能库 / 程序性记忆）| 灵典 |
+| 8 | 锻典（Mind Codex） | Mind Codex | Distilled Knowledge Base / Curated Skill Library / Procedural Memory（蒸馏知识库 / 策展技能库 / 程序性记忆）| 灵典（v7.0 旧名，v7.1 已修订） |
 | 9 | 灵议（Mind Council） | Mind Council | Multi-Agent Deliberation / Decentralized Consensus / Agent Parliament（多智能体议事 / 去中心化共识 / 智能体议会）| — |
 | 10 | 进化阶（Evolution Stage） | Evolution Stage | Capability Maturity Level / Agent Skill Progression（能力成熟度等级 / 智能体技能进阶）| 火种等级 / Ember Hierarchy |
 | 11 | 觉醒阶（Awakening Stage） | Awakening Stage | Autonomy Level / Self-Direction Level / LLM Autonomy Tier（自主性等级 / 自导向等级 / LLM 自主性分级）| 升华阶 / Ascension Stages |
@@ -78,15 +172,26 @@
 
 **说明**：
 - v7.0 旧名"灵启（Mind Initiation）/ 共鸣（Resonance）"已废弃，其中"灵启"概念被合并到"育灵（Forge Nurturing）"的入门训练阶段；"共鸣"被合并到"灵议（Mind Council）"协作模式。
-- v7.1 修订（2026-07-18）：v7.0 旧名"魂忆/魂印"已废弃，统一改为"灵忆/灵印"——operator 决策"魂"字过于玄学，统一改为"灵"字与"灵智/灵族/灵锻/灵议"系列对齐；"锻典"保留不变。
-- 凡历史章节中出现旧名（灵启/共鸣/魂忆/魂印/灵典/火种等级/升华阶/灵群）的，均按本表对应替换为 v7.1 新名（灵忆/灵印/锻典等）。
+- v7.1 修订（2026-07-18）：v7.0 旧名"魂忆/魂印"已废弃，统一改为"灵忆/灵印"——operator 决策"魂"字过于玄学，统一改为"灵"字与"灵智/灵族/灵锻/灵议"系列对齐。
+- **AI 术语优先原则**：代码与对外技术文档使用 AI 专业术语（如 Forgekin、ForgeMind、Mind Imprint、Mind Council）；体系名（灵智/灵族/灵锻/灵议/育灵/灵忆/灵印/锻典）仅用于社区社交沟通；正式技术文档中专业术语在前、体系名作补充说明，不单独使用体系名。
 
-## v7.1-§3 进化阶与觉醒阶（中英文 + AI 业界概念）
+**双轨命名策略**：
+
+| 层级 | 使用场景 | 命名风格 | 示例 |
+|------|---------|---------|------|
+| **产品层** | 用户界面、营销材料、对外文档 | **灵智（ForgeMind）** | "创建一个新灵智"、"灵智 fk_writer_001 已晋升 E4" |
+| **代码层** | 类名、变量名、配置项、API 路径 | **Forgekin** | `ForgekinEngine`、`forgekin_id`、`/api/v7/forgekins` |
+| **文档层** | 设计文档、技术规范 | **灵智（ForgeMind）/ Forgekin** 双标注 | "灵智（Forgekin 实例）" |
+| **社区层** | 开源宣传、技术博客 | **ForgeMind** | "FlowForge ForgeMind: Self-Evolving Agent" |
+
+### §2.5 进化阶与觉醒阶（中英文 + AI 业界概念三标注）
 
 > **来源**：operator 第 3 条指令——"进化阶和觉醒阶也是一样的，因为名称很难理解和记忆，请出现中文名称的地方，同时需用括号写上英文和概念，以加深理解和认同。旧名可以删除了，需增加上概念（AI 中的专有名词）。"
-> **权威定义**：详见 `design/naming-contract.md#3`（进化阶）和 `design/naming-contract.md#4`（觉醒阶）
+> **权威定义**：详见 [design/naming-contract.md#3](design/naming-contract.md)（进化阶）和 [design/naming-contract.md#4](design/naming-contract.md)（觉醒阶）
 
-### v7.1-§3.1 进化阶（Evolution Stage，能力成熟度 6 级）
+#### §2.5.1 进化阶（Evolution Stage，能力成熟度 6 级）
+
+> 衡量"知识成熟度"，与觉醒阶（衡量自主性）协同。进化阶 E6 对应觉醒阶 E6。
 
 | 阶 | 中文名 | 英文名 | AI 业界概念 | v7.0 旧名（已废弃） |
 |:--:|--------|--------|------------|---------------------|
@@ -103,7 +208,9 @@
 - E4→E5 进入 Evolving 状态（自我导向），需 operator 确认 + 觉醒阶同步 ≥ E3
 - E5→E6 仅由 operator 直接授权，不可自动触发
 
-### v7.1-§3.2 觉醒阶（Awakening Stage，自主性 6 级）
+#### §2.5.2 觉醒阶（Awakening Stage，自主性 6 级）
+
+> 衡量"灵智整体成长"。E3→E4 是关键转换点，灵智体从"锻灵 Forgekin"形态进化为"进化体 Evoling"形态，需 operator 显式批准。
 
 | 阶 | 中文名 | 英文名 | AI 业界概念 | v7.0 旧名（已废弃） |
 |:--:|--------|--------|------------|---------------------|
@@ -121,19 +228,20 @@
 
 **协同规则**：两条进阶轴独立但协同——觉醒阶 E4 是关键转折点（进入 Evolving 状态），需 operator 显式批准 + 进化阶同步 ≥ E4。Magic Words 逃生舱始终可触发（任何阶都不能绕过）。
 
-## v7.1-§4 万物灵智体形态分类（5 种形态 + AI 业界概念）
+### §2.6 多形态智能体形态分类（5 种形态 + AI 业界概念）
 
 > **来源**：operator 第 9 条指令——"forgemind 将是我们 flowforge 的养灵的所有代码存放的地方（这个里边会养很多公共的灵智体，最终可以进化为物理世界中各种万事万物）"
-> **权威定义**：详见 `design/naming-contract.md#2.3` 灵族形态分类
+> **对外宣称**：多形态智能体（Multi-Form Agent）—— 弱化"万物"虚幻用语
+> **权威定义**：详见 [design/naming-contract.md#2.3](design/naming-contract.md) 灵族形态分类 + [features/F027-all-things-spirit-species.md](features/F027-all-things-spirit-species.md)
 
-万物灵智体（Forgekin）按载体形态分为 5 种，形态可进化（E1 萌芽阶 → E6 灵智阶完整生命周期）:
+万物灵智体（Forgekin，社区社交称"灵族"）按载体形态分为 5 种，形态可进化（E1 萌芽阶 → E6 灵智阶完整生命周期）：
 
 | # | 形态（中文 + 英文 + AI 业界概念） | 示例 | 物理接入 | 虚拟设定 |
 |---|------|------|------|---------|
-| 1 | 生物灵智体（BioForgekin / Biological Spirit Agent） | 猫 / 狗 / 鸟 / 鱼 / 昆虫群体 | 摄像头 / 麦克风 / 可穿戴设备 | 行为画像 + 习性图谱 |
+| 1 | 生物灵智体（BioForgekin / Biological Spirit Agent） | 猫 / 狗 / 鸟 / 鱼 / 昆虫群体 / 猫头鹰 / 猎犬 / 孔雀 / 蜜獾 | 摄像头 / 麦克风 / 可穿戴设备 | 行为画像 + 习性图谱 |
 | 2 | 组织灵智体（OrgForgekin / Organizational Spirit Agent） | 公司 / 团队 / 社区 / 城市 | 业务系统 API / 数据库 / IM 通道 | 组织章程 + 角色矩阵 |
-| 3 | 物品灵智体（ObjForgekin / Object Spirit Agent，对应 Embodied AI 具身智能） | 桌椅 / 灯具 / 家电 / 工具 | IoT 传感器 / 物联网协议 | 物品功能边界 + 使用场景 |
-| 4 | 虚拟灵智体（VirtualForgekin / Virtual Character Agent，对应 Character AI） | 童话/神话/历史/现实人物、VR/游戏角色 | 无（纯虚拟） | 角色设定 + 世界观 + 关系网 |
+| 3 | 物品灵智体（ObjForgekin / Object Spirit Agent，对应 Embodied AI 具身智能） | 桌椅 / 灯具 / 家电 / 工具 / 钢笔 | IoT 传感器 / 物联网协议 | 物品功能边界 + 使用场景 |
+| 4 | 虚拟灵智体（VirtualForgekin / Virtual Character Agent，对应 Character AI） | 童话/神话/历史/现实人物（孙悟空/福尔摩斯/鲁班/夏洛克/梵高）、VR/游戏角色 | 无（纯虚拟） | 角色设定 + 世界观 + 关系网 |
 | 5 | 混合灵智体（HybridForgekin / Hybrid Spirit Agent） | 智能家居（物品+组织）/ 数字孪生（生物+虚拟） | 多源融合 | 多设定层叠加 |
 
 **形态可进化**：一只生物灵智体猫可以通过积累组织协作经验进化为 HybridForgekin（既是宠物又是社区吉祥物）。这是和其他 multi-agent 系统的**最大差异化优势**——agent 不是固定的"岗位槽位"，而是有形态、有谱系、可进化的灵智体。
@@ -144,33 +252,78 @@
 2. **虚拟角色智能体工程实现（Character AI Engineering）**：通过虚拟世界设定层 + 虚拟灵智体，让虚拟角色按设定层约束自主行动（孙悟空灵智体遵循西游世界观）。对应业界 Character AI / NPC Agent / Persona-Driven Agent。
 3. **混合智能体工程实现（Hybrid Agent Engineering）**：VR/AR 设备 + 混合灵智体，达成物理与虚拟的融合感知。对应业界 Hybrid Agent / Cyber-Physical Agent。
 
-## v7.1-§5 forgemind 应用层（万物灵智体养灵场所）
+### §2.7 三层架构
+
+> **来源**：[decisions/005-forgemind-application-layer.md](decisions/005-forgemind-application-layer.md) + [review/review.md](review/review.md) 第九章 9.1 节 + 决策 1（Harness v2.0 升级）+ 决策 2（ForgekinEngine 装饰器模式）
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 3: *Forge 垂直业务层                                  │
+│  ContentForge / NovelForge / DevForge / MallForge / ...     │
+│  通过 Plugin V3 四钩子注册灵智体到 forgemind                │
+└─────────────────────────────────────────────────────────────┘
+                            ↑ Plugin V3
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 2: forgemind 应用层（多形态智能体育灵场所）           │
+│  species/ forging/ sensors/ worlds/ marketplace/ lineage/   │
+│  codex/ council/ config/                                    │
+│  ForgeMindPlugin + ForgekinBase + ForgePipeline             │
+└─────────────────────────────────────────────────────────────┘
+                            ↑ 装饰器
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 1: FlowForge 核心框架层（Harness v2.0）               │
+│  capability/ teamact/ harness/ memory/ eval/ reliability/   │
+│  partnership/ external_agent/ evolution/                    │
+│  ForgekinEngine（装饰 HybridExecutor + HarnessOrchestrator）│
+└─────────────────────────────────────────────────────────────┘
+```
+
+**关键决策**：
+- **决策 1（已采纳）**：v6.0 第 7 层"自进化层"取消独立层级，改为 Harness v2.0 升级（融合到 Layer 1 核心框架层）。理由：避免自进化层 ↔ 应用层循环依赖（D-003）。
+- **决策 2（已采纳）**：ForgekinEngine 是 HarnessOrchestrator 的**装饰器**，不是独立入口。理由：避免绕过 Harness 护栏（D-004/D-005/D-020）。
+- **铁律**：上层可依赖下层，下层绝对禁止导入上层模块（单向依赖）。
+- **forgemind 位置**：forgemind 是 Layer 2 应用层，介于 FlowForge 核心框架与 *Forge 垂直业务之间。
+
+**与 v6.0 六层架构的映射**：
+
+| v6.0 六层 | v7.1 三层 | 说明 |
+|----------|----------|------|
+| 1. 接口层（API） | Layer 1（FastAPI 入口） | API 仍属于核心框架 |
+| 2. 应用层（Gateway） | Layer 1（Brain 编排） | Brain 仍属于核心框架 |
+| 3. 指挥中枢层（Brain） | Layer 1（Brain） | 不变 |
+| 4. 专家执行层（Workers） | Layer 1（Agents） | 不变 |
+| 5. 工具与记忆层 | Layer 1（Tools & Memory） | 不变 |
+| 6. 基础设施层 | Layer 1（Infra） | 不变 |
+| （新增）| Layer 2: forgemind | v6.0 无此层，v7.1 新增 |
+| （新增）| Layer 3: *Forge | v6.0 隐含在应用层，v7.1 显式独立 |
+
+### §2.8 forgemind 应用层
 
 > **来源**：operator 第 8/9 条指令——"flowforge 中需要新增一个 forgemind 模块，其是 flowforge 的应用层项目（用来实践万物锻造灵智体的应用）"；"forgemind 将是我们 flowforge 的养灵的所有代码存放的地方"
-> **详细规格**：详见 `features/F026-forgemind-app-layer.md`
+> **详细规格**：详见 [features/F026-forgemind-app-layer.md](features/F026-forgemind-app-layer.md)
 
-**forgemind** 是 FlowForge 的应用层项目（Layer 2），用来实践"万物锻造灵智体"——把灵智锻造进物理世界和虚拟世界的万事万物。
+**forgemind** 是 FlowForge 的应用层项目（Layer 2），用来实践"多形态智能体育灵"——把灵智锻造进物理世界和虚拟世界的多种形态载体。
 
-**forgemind 是 FlowForge 的养灵所有代码存放的地方**：
+**forgemind 是 FlowForge 的育灵所有代码存放的地方**：
 - 养公共的通用灵智体（动物 / 公司组织 / 物品 / 虚拟角色 / 混合形态）
-- 是万物灵智体愿景的实践场
+- 是多形态智能体愿景的实践场
 - 类似 clowder-ai 中的"养小猫给小猫锻造赋予了灵智"，forgemind 扩展到养各种动物、组织、物品、虚拟角色
 
 **与 clowder-ai 的差异化特色**（operator 第 2 条指令强调"不要都是猫"）：
 - clowder-ai 主要养猫（不同品种猫：布偶/缅因/暹罗）
-- forgemind 养万物——根据灵智体性格特征选择不同动物或物品形态
-  - 主架构师灵智体 = 猫头鹰（智慧象征，深度思考）
-  - 代码审查专家灵智体 = 猎犬（敏锐嗅觉，找 bug 高手）
-  - 视觉设计师灵智体 = 孔雀（审美象征，视觉表达）
-  - 文档撰写灵智体 = 钢笔（物品形态，承载思想）
-  - 测试工程师灵智体 = 蜜獾（无畏，攻击性强，找漏洞不放弃）
+- forgemind 养多形态——根据灵智体性格特征选择不同动物或物品形态：
+  - 主架构师灵智体 = 猫头鹰·鲁班（智慧象征，深度思考）
+  - 代码审查专家灵智体 = 猎犬·夏洛克（敏锐嗅觉，找 Bug 高手）
+  - 视觉设计师灵智体 = 孔雀·梵高（审美象征，视觉表达）
+  - 文档撰写灵智体 = 钢笔·文心（物品形态，承载思想）
+  - 测试工程师灵智体 = 蜜獾·平头哥（无畏，攻击性强，找漏洞不放弃）
 - 其他的 *Forge 是更多垂直复杂领域中养的灵智体，flowforge 的通用灵智体在 forgemind 中承载
 
 **模块结构**（已实现骨架）：
 - `flowforge/forgemind/base.py` — ForgekinBase 抽象基类（含 LLM 桥接 + chat 方法）
 - `flowforge/forgemind/species.py` — ForgekinSpecies 五大形态枚举
 - `flowforge/forgemind/stages.py` — EvolutionStage / AwakeningStage 进阶体系
-- `flowforge/forgemind/soul_imprint.py` — SoulImprint 灵印（不可变身份）
+- `flowforge/forgemind/soul_imprint.py` — MindImprint 灵印（不可变身份）
 - `flowforge/forgemind/forms.py` — ForgekinFormData 锻造表单
 - `flowforge/forgemind/forging/pipeline.py` — ForgePipeline 6 阶段育灵流水线
 - `flowforge/forgemind/plugins.py` — ForgeMindPlugin Plugin V3 入口
@@ -178,10 +331,10 @@
 - `flowforge/forgemind/forgekins/` — 预置灵智体 YAML 配置（鲁班=猫头鹰 / 夏洛克=猎犬 / 梵高=孔雀）
 - `flowforge/forgemind/config/` — 育灵配置（forging.yaml + prompts.yaml）
 
-## v7.1-§6 三方 Agent 集成（灵智体能力扩展）
+### §2.9 三方 Agent 集成
 
 > **来源**：operator 第 10 条指令——"我们的灵智体除了可以调用 flowforge 核心框架的能力外，还可以接入和使用任何三方的 Agent 的（这个也是我们的强大优势，比喻目前设计接入的编程 Agent：claude code、codex、opencode、trae，将来可扩展接入更多的编程 Agent 和其他的 Agent 的，这些都是可以给灵智体调用），目前你这块的设计感觉也比较弱，请加强。"
-> **详细规格**：详见 `features/F031-external-agent-adapter.md` ~ `features/F035-external-agent-capability-fusion.md` + `decisions/006-external-agent-integration.md`
+> **详细规格**：详见 [features/F031-external-agent-adapter.md](features/F031-external-agent-adapter.md) ~ [features/F035-external-agent-capability-fusion.md](features/F035-external-agent-capability-fusion.md) + [decisions/006-external-agent-integration.md](decisions/006-external-agent-integration.md)
 
 灵智体不只调用 FlowForge 核心框架的能力，还可以**接入和使用任何三方 Agent**。这是灵智体相对其他 multi-agent 的强大优势之一。
 
@@ -206,12 +359,12 @@
 - L2 A2A Protocol Adapter：通过 A2A 协议接入（`/.well-known/agent.json` + `tasks/send` + `tasks/sendSubscribe`）
 - EAC v1 七契约：Invocation / Stream / Session / Capability / Collaboration / Safety / Avatar Sync / System Prompt Configuration Map
 
-详见 `VISION.md#5` 三方 Agent 集成章节。
+详见 [VISION.md#5](VISION.md) 三方 Agent 集成章节。
 
-## v7.1-§7 自我演进闭环（支持自己开发自己）
+### §2.10 自我演进闭环（支持自己开发自己）
 
 > **来源**：operator 第 7/11 条指令——"按 roleagent.md 中描述的自我演进代码开发和文档开发（要求支持自己开发自己），这个调整很大，请你仔细规划下，clowder-ai 可以自己开发自己我相信你也可以的。"
-> **详细规格**：详见 `review/review.md#第十二章` 12.5-12.6 节 + `review/review.md#第十三章` clowder-ai 深度补审 CL-022~CL-041
+> **详细规格**：详见 [review/review.md#第十二章](review/review.md) 12.5-12.6 节 + [review/review.md#第十三章](review/review.md) clowder-ai 深度补审 CL-022~CL-041
 
 FlowForge 必须支持"自己开发自己"——文档 / 代码 / 框架三层自我演进闭环：
 
@@ -219,7 +372,7 @@ FlowForge 必须支持"自己开发自己"——文档 / 代码 / 框架三层�
 - **SelfDevCodeLoop（代码自我演进）**：灵智体可自主修改 FlowForge 代码 + 提交 PR。对应 F100 Mode B Process Evolution。
 - **SelfDevFrameworkLoop（框架自我演进）**：灵智体可自主升级 FlowForge 框架。对应 F100 Mode A Scope Guard。
 
-**F100 自我进化三模式**（详见 `review/review.md#第十三章`）：
+**F100 自我进化三模式**（详见 [review/review.md#第十三章](review/review.md)）：
 - **Mode A — Scope Guard（范围守卫）**：防止灵智体越权修改愿景 / 规范 / 架构
 - **Mode B — Process Evolution（流程进化）**：改进灵智体自身工作方式
 - **Mode C — Knowledge Evolution（知识进化）**：蒸馏新知识到锻典
@@ -234,18 +387,18 @@ FlowForge 必须支持"自己开发自己"——文档 / 代码 / 框架三层�
 - L0 Episode（情景）→ L1 Pattern（模式）→ L2 Draft（草案）→ L3 Validated（已验证）→ L4 Standard（标准化）
 - 量化晋升门槛：L3 需 ≥6 uses、≥2 agents、≥80%、无 critical breach；L4 需 ≥12 uses、last 10 ≥90%、operator approved
 
-**代码模块路径**（待实现，详见 task.md Phase 5）：
+**代码模块路径**（待实现，详见 [task.md](task.md) Phase 5）：
 - `flowforge/evolution/eval_ledger.py` — EvalLedger Replay A/B 净增益验证
 - `flowforge/evolution/self_dev_doc.py` — SelfDevDocLoop 文档自我演进
 - `flowforge/evolution/self_dev_code.py` — SelfDevCodeLoop 代码自我演进
 - `flowforge/evolution/self_dev_framework.py` — SelfDevFrameworkLoop 框架自我演进
 - `flowforge/evolution/scope_guard.py` — ScopeGuard 4 信号判断 + 频率限制
 
-## v7.1-§8 设计态声明（可证伪性原则）
+### §2.11 设计态声明（可证伪性原则）
 
-> **详细规格**：详见 `design/naming-contract.md#5` 废弃命名清单
+> **详细规格**：详见 [design/naming-contract.md#5](design/naming-contract.md) 废弃命名清单
 
-v7.1 万物灵智体愿景目前处于**设计态**，对应代码尚未全部实现。开源与对外文档时必须明确标注"设计态"，避免被识别为"承诺未兑现"。
+v7.1 多形态智能体愿景目前处于**设计态**，对应代码尚未全部实现。开源与对外文档时必须明确标注"设计态"，避免被识别为"承诺未兑现"。
 
 **可证伪性原则**：
 - ❌ 禁止使用"AGI"作为修饰词（极低可证伪性，虚假承诺风险）
@@ -261,3382 +414,740 @@ v7.1 万物灵智体愿景目前处于**设计态**，对应代码尚未全部�
 | 🔄 设计态 | roleagent 七大工程路径代码（capability/teamact/harness/memory/eval/reliability/partnership） | 对应 Phase 1，待实现 |
 | 🔄 设计态 | 三方 Agent 适配层（ExternalAgentAdapter + 4 个 Adapter + EAC v1 七契约） | 对应 Phase 3，待实现 |
 | 🔄 设计态 | 自我演进闭环（SelfDevDocLoop / SelfDevCodeLoop / SelfDevFrameworkLoop） | 对应 Phase 5，待实现 |
-| 🎯 目标态 | 万物灵智体世界（通用智能体 / 具身智能 / 虚拟角色智能体工程实现） | operator 通用智能体愿景，不可降级 |
+| 🎯 目标态 | 多形态智能体世界（通用智能体 / 具身智能 / 虚拟角色智能体工程实现） | operator 通用智能体愿景，不可降级 |
 
-## v7.1-§9 review.md 41 条 CL 同步矩阵（v7.1 增补章节收尾章）
+### §2.12 设计约束与假设
 
-> **来源**：`review/review.md` v1.4 第十三章 clowder-ai 补审 I（CL-001~CL-021，21 项）+ 第十四章 clowder-ai 深度补审 II（CL-022~CL-041，20 项）
-> **目的**：把 41 条 CL 与三大主文档 + ADR + Feature 的同步状态做完整对账，明确未同步项的修复路径与责任分配
+**架构约束**：
+1. **单向依赖**：上层可依赖下层，下层绝对禁止导入上层模块
+2. **配置驱动 > 代码继承 > 独立实现**（详见 [hiclaw/rules.md §2.1](../../hiclaw/rules.md)）
+3. **所有 Agent 通过 LoopExecutor 执行**（P31 铁律，质量分阈值 0.85）
+4. **所有数据检索走 OpenSieve**（结构化 + 非结构化统一入口）
+5. **Plugin V3 协议**：*Forge 通过 Plugin V3 四钩子注册灵智体到 forgemind
+6. **ForgekinEngine 是装饰器**，不是独立入口（避免绕过 Harness 护栏）
+
+**安全约束**：
+1. **六层 Guardrails**：Input validation / System prompt / Tool allow-list / Output validation / Action confirmation / Cost ceiling
+2. **Magic Words 逃生舱**：任何阶都不能绕过（"第一性原理" / "我能猜出来" / "下次一定" / "星星罐子"）
+3. **ScopeGuard**：阻止越权修改 VISION §7 / rules.md 红线 / 13 份核心 ADR
+4. **operator 拉闸权**：E5-E6 晋升 + 框架自我演进 + 不可逆操作必须 operator 确认
+
+**测试约束（T1-T8 铁律）**：
+1. 禁止使用 Mock LLM（T1）
+2. 禁止使用假数据（T2）
+3. 禁止跳过验证（T3）
+4. 禁止 Mock 工具（T4）
+5. 未实现即 Bug（T5）
+6. 必须采集指标（T6）
+7. LLM 内容必须经 LLM 审核（T7）
+8. Web 功能必须操控浏览器验证 DOM（T8）
+9. 运行时数据文件必须存放 data 目录（T9）
+
+**假设**：
+- LLM API 调用超时：90 秒（长文章 2 分钟）
+- LLM webchat 调用超时：30 秒
+- Loop 超时：3 分钟（创作和润色接口不得超过 3 分钟）
+- 5 个 WebChat 评委并行评审，使用不同模型
+
+---
+
+## §3 具体需求-核心（FR-CORE-0XX）
+
+> **范围声明**：本章节仅放**核心关键功能**需求规格（30 项 FR-CORE-001~030）。非核心功能的需求规格在 [features/F0XX-xxx.md](features/) 中。
+> **编号映射**：FR-CORE-0XX 对应 v7.0 FR-EVO-0XX（已重排为连续编号，详见 [review/review.md#第二章 D-044/D-055](review/review.md)）。
+> **优先级**：P0 = MVP 必须 / P1 = 后续迭代 / P2 = 长期规划
+
+### §3.1 FR-CORE-001 能力画像（CapabilityProfile）× Harness 契合度
+
+> **关联 Feature**：[features/F001-capability-profile.md](features/F001-capability-profile.md)
+> **关联架构**：[arch.md#3.1](arch.md)
+> **关联详细设计**：[design.md#3.1](design.md)
+> **关联 ADR**：[decisions/004-capability-profile-routing.md](decisions/004-capability-profile-routing.md)
+> **roleagent 路径**：路径 1（RA-001~RA-008）
+> **优先级**：P0
+
+**输入**：灵智体 ID + 任务画像（TaskProfile）
+**输出**：能力匹配度 + 路由决策 + 盲点分析
+
+**功能描述**：
+- 实现 CapabilityProfile 六维度画像：模型固有能力 / 认知风格 / 工具边界 / 历史表现 / 坏直觉（盲点）/ 当前状态
+- 实现 TaskProfile 任务画像 + 动态路由（基于能力匹配，不基于角色）
+- 实现 Agent 状态三层：权重状态（模型厂商控制）/ 计算状态（模型架构控制）/ 现实状态（Harness 控制，唯一跨会话持久层）
+- 实现可变性分层：常量层（模型固有能力+认知风格）/ 变量层（skill+工具挂载）/ 累积层（历史表现）/ 瞬时层（当前状态）
+- 实现盲点维度：坏直觉 / 已知盲点 / 易错场景（同厂商 agent 共享盲点，跨厂商 review 是结构性必需）
+- 实现 Build to Delete vs Built to Persist 判别器
+- 替换 `default_llm_actors.py` 硬编码角色（违反编程红线第 10/11 条）
+
+**验收标准**：
+- [ ] AC-1: CapabilityProfile 可创建并持久化
+- [ ] AC-2: CapabilityRouter 基于能力匹配路由（不基于角色）
+- [ ] AC-3: BlindSpot 必须写入（验证空 blind_spots 列表会报错）
+- [ ] AC-4: 跨厂商 review 配对基于盲点不重叠
+- [ ] AC-5: 历史表现可累积（每次任务后更新）
+- [ ] AC-6: 路由算法延迟 < 100ms（10 个候选灵智体）
+- [ ] AC-7: 能力画像通过 Repository 层存储（禁直操作数据库）
+- [ ] AC-8: 路由正确率 ≥ 85%（基于 Eval 信号）
+
+**代码位置**：`flowforge/core/capability/`（profile.py / router.py / blind_spot.py / storage.py / tests/）
+
+---
+
+### §3.2 FR-CORE-002 TeamAct 六步循环 + 五项终止条件
+
+> **关联 Feature**：[features/F002-teamact-loop.md](features/F002-teamact-loop.md) ~ [features/F007-push-back-protocol.md](features/F007-push-back-protocol.md)
+> **关联 ADR**：[decisions/002-collaboration-protocol.md](decisions/002-collaboration-protocol.md)
+> **roleagent 路径**：路径 2（RA-009~RA-016）
+> **优先级**：P0
+
+**输入**：任务上下文（TaskContext）+ 候选灵智体列表
+**输出**：团队协作结果 + 交接胶囊 + 证据链
+
+**功能描述**：
+- 实现 TeamAct 六步循环：State → Owner → Action → Evidence → Verdict → Route
+- 实现五项终止条件（缺一不可）：
+  1. 验收标准全部达成（无 deferred）
+  2. 证据已附（commit/测试/trace）
+  3. 跨 agent 交叉验证（不能自己 review 自己）
+  4. 无悬空任务归属
+  5. 愿景收敛（CVO 确认不能被 proxy 替代）
+- 实现交接胶囊（resume capsule）：What / Why / Tradeoff / Open / Next 五段
+- 实现乒乓球熔断器：看实质工具调用而非传球次数；给数据不给结论
+- 实现行首 @ 路由协议
+- 实现持球注册（lease + 定时唤醒）：一灵智体同时只能持有一个任务
+- 实现 Generator Push Back：双向辩论协议（带证据 + 适用性论证 + 替代方案）
+- 实现分形嵌套：系统层 / 团队层 / 个体层
+
+**验收标准**：
+- [ ] AC-1: TeamAct 六步循环可执行
+- [ ] AC-2: 五项终止条件全部检查
+- [ ] AC-3: 交接胶囊五段完整
+- [ ] AC-4: 乒乓球熔断器在 3 次传球后触发
+- [ ] AC-5: 行首 @ 路由正确解析
+- [ ] AC-6: 持球注册 lease 可定时唤醒
+- [ ] AC-7: Generator Push Back 带证据 + 替代方案
+
+**代码位置**：`flowforge/core/teamact/` + `flowforge/loop/teamact/`
+
+---
+
+### §3.3 FR-CORE-003 Harness 现实闭环运行时（七层表面）
+
+> **关联 Feature**：[features/F008-durable-state-surfaces.md](features/F008-durable-state-surfaces.md) ~ [features/F013-harnessability.md](features/F013-harnessability.md)
+> **关联 ADR**：[decisions/007-harness-engineering.md](decisions/007-harness-engineering.md)
+> **roleagent 路径**：路径 3（RA-017~RA-023）
+> **优先级**：P0
+
+**输入**：Agent 动作 + 环境状态
+**输出**：可感知 / 可行动 / 可验证 / 可恢复 / 可学习的运行时
+
+**功能描述**：
+- 实现 Harness 七层现实表面：
+  1. **Durable State Surfaces**（6 类持久状态表面：feature spec / git / task queue / thread session trace / memory federation / handoff capsule）
+  2. **Tool Mediation**（工具中介，统一工具调用接口）
+  3. **Evidence & Sensors**（commit / 先红后绿测试 / quality gate / 跨 agent review approve 或 blocking，禁止"approve 但后续再说"）
+  4. **Governance Boundary**（治理规则沉到 native system role / developer role，压缩免疫）
+  5. **Magic Words 逃生舱**（"第一性原理" / "我能猜出来" / "下次一定" / "星星罐子"）
+  6. **Entropy Control**（hotfix 两周 sunset 强制审查，三选一无"再看看"：正式修复 / 接受为永久方案 / 已不再相关）
+  7. **Harnessability 评估**（稳定 API / 事件流回调 / 持久状态 / 可验证输出 / 操作幂等可回滚 / 权限边界）
+- 实现低保真矩阵：治理规则 × Agent 类型
+
+**验收标准**：
+- [ ] AC-1: 6 类 Durable State Surfaces 可持久化
+- [ ] AC-2: Tool Mediation 统一接口
+- [ ] AC-3: Evidence & Sensors 记录 commit/测试/trace
+- [ ] AC-4: Governance 规则在 system role 注入（压缩免疫）
+- [ ] AC-5: Magic Words 4 个逃生舱可触发
+- [ ] AC-6: Entropy Control hotfix 两周 sunset 强制审查
+- [ ] AC-7: Harnessability 6 项评估全部通过
+
+**代码位置**：`flowforge/core/harness/` + `flowforge/harness/`
+
+---
+
+### §3.4 FR-CORE-004 多域记忆联邦（六层架构）
+
+> **关联 Feature**：[features/F014-memory-collection.md](features/F014-memory-collection.md) ~ [features/F017-consumption-weighted-ranking.md](features/F017-consumption-weighted-ranking.md) + [features/F039-mind-codex-searchable.md](features/F039-mind-codex-searchable.md)
+> **关联 ADR**：[decisions/008-memory-federation.md](decisions/008-memory-federation.md)
+> **roleagent 路径**：路径 4（RA-024~RA-030）
+> **优先级**：P0
+
+**输入**：查询请求 + 上下文
+**输出**：相关知识 + 来源权威性 + 消费加权排序
+
+**功能描述**：
+- 实现六层多域记忆联邦架构：真相源 Collection 层 / 扫描编译层 / 联邦检索层 / 治理层 / Agent 佩戴协议层 / 反馈闭环层
+- 实现三检索入口：graph_resolve（精确导航）/ list_recent（零先验扫描）/ search_evidence（语义搜索）
+- 实现治理三要素：权威性 authority / 触发方式 activation / 生命周期 status
+- 实现消费加权排序：`调整后得分 = 融合检索得分 + 权威加成 + 消费先验 + 时效衰减 - 过时惩罚`（14 行为指标）
+- 实现贝叶斯收缩 + 中心化偏移 + 分数时效衰减
+- 实现检索驱动适配循环：锻典 Mind Codex 改为可检索知识库
+- 实现简单系统 + 聪明 agent 原则：查询扩展由 agent 做，不在引擎里加 regex/小模型
+
+**验收标准**：
+- [ ] AC-1: 六层架构可运行
+- [ ] AC-2: 三检索入口全部实现
+- [ ] AC-3: 治理三要素可配置
+- [ ] AC-4: 消费加权排序 14 行为指标全部采集
+- [ ] AC-5: 锻典 Mind Codex 可被检索驱动适配循环即时生效
+- [ ] AC-6: 查询扩展由 agent 完成（不在引擎内）
+
+**代码位置**：`flowforge/core/memory/federation/`
+
+---
+
+### §3.5 FR-CORE-005 Eval 自代谢系统（三层 eval）
+
+> **关联 Feature**：[features/F018-eval-contract.md](features/F018-eval-contract.md) ~ [features/F020-seven-attribution.md](features/F020-seven-attribution.md) + [features/F040-harness-eval-control-plane.md](features/F040-harness-eval-control-plane.md)
+> **关联 ADR**：[decisions/009-eval-self-metabolism.md](decisions/009-eval-self-metabolism.md)
+> **roleagent 路径**：路径 5（RA-031~RA-036）
+> **优先级**：P0
+
+**输入**：Agent 执行轨迹 + 三方信号
+**输出**：归因结果 + sunset 信号 + Eval Hub 数据
+
+**功能描述**：
+- 实现三层 eval：观测底座 / Harness A2A Eval / Memory Eval
+- 实现 Eval Contract 五问：服务谁 / 何时触发 / 摩擦指标 / 回归用例 / 退役信号
+- 实现三方信号交叉：第一方 CVO 愿景 / 第二方 agent 摩擦结构化采访 / 第三方运行时观测
+- 实现七类归因矩阵：愿景缺口 / 翻译偏差 / harness 错位 / 工具缺口 / 执行缺口 / 环境漂移 / 品味落差
+- 实现轨迹经济学：TaskTrajectory 类型化加工
+- 实现 Harness Eval Control Plane 终态：统一 Eval Hub
+
+**验收标准**：
+- [ ] AC-1: 三层 eval 可运行
+- [ ] AC-2: Eval Contract 五问完整回答
+- [ ] AC-3: 三方信号交叉验证
+- [ ] AC-4: 七类归因矩阵可分类失败原因
+- [ ] AC-5: sunset 信号触发 Build to Delete 退役
+- [ ] AC-6: Eval Hub 统一查询
+
+**代码位置**：`flowforge/core/eval/`
+
+---
+
+### §3.6 FR-CORE-006 分布式可靠性（Tier 1-4 恢复分级）
+
+> **关联 Feature**：[features/F021-side-effect-wal.md](features/F021-side-effect-wal.md) ~ [features/F025-provider-host-abstraction.md](features/F025-provider-host-abstraction.md)
+> **关联 ADR**：[decisions/010-distributed-reliability.md](decisions/010-distributed-reliability.md)
+> **roleagent 路径**：路径 6（RA-037~RA-042）
+> **优先级**：P0
+
+**输入**：副作用日志 + 恢复卡
+**输出**：恢复决策 + 状态一致性
+
+**功能描述**：
+- 实现副作用日志（Write-Ahead Log）+ 结构化恢复卡
+- 实现 Tier 1-4 恢复分级：Tier 1 自动恢复 / Tier 2 探测后恢复 / Tier 3 不自动恢复出恢复卡 / Tier 4 永不自动恢复硬拒
+- 实现 liveness 规范读模型：持久记录是生命周期真相源 / 草稿缓存是新鲜度信号 / 进程内 tracker 是控制面状态。四态：活着 / 退化 / 僵尸 / 等待宽限
+- 实现弱状态机 vs 强 workflow 边界：开放协作用轻量状态机 / 严肃副作用用强 workflow
+- 实现跨 provider 统一宿主抽象：传输 × 绑定 × 运行时契约 × 事件适配器，监管者作为 sidecar
+- 实现不可控 vs 可控边界明确
+
+**验收标准**：
+- [ ] AC-1: WAL 副作用日志可重放
+- [ ] AC-2: Tier 1-4 恢复分级正确触发
+- [ ] AC-3: liveness 四态可识别
+- [ ] AC-4: 弱状态机 vs 强 workflow 边界清晰
+- [ ] AC-5: 跨 provider 宿主抽象可切换
+- [ ] AC-6: 不可控 vs 可控边界明确
+
+**代码位置**：`flowforge/core/reliability/`
+
+---
+
+### §3.7 FR-CORE-007 伙伴系统数学（上限提高，下限托底）
+
+> **关联 ADR**：[decisions/011-partnership-math.md](decisions/011-partnership-math.md)
+> **roleagent 路径**：路径 7（RA-043~RA-047）
+> **优先级**：P0
+
+**输入**：候选路径集合 + 错误传播链
+**输出**：上限收益 + 下限保护 + 波动吸收策略
+
+**功能描述**：
+- 实现上限公式：`上限收益 ≈ max(不同 agent 提出的候选路径)`（前提是路径足够不同）
+- 实现下限公式：`用户可见错误 ≈ author 犯错 × reviewer 没抓住 × 测试没暴露 × shared state 没证据 × eval 没归因 × CVO 没拉闸`（连乘概率模型）
+- 实现波动吸收机制：记忆联邦找回 / review 退回 / 可靠性恢复点 / eval sunset review / 调度换路径
+- 实现 Token 账本总成本模型：token + 返工成本 + 人类心智负载 + 尾部成本 + 真实环境修复成本
+- 实现四种亏结构识别：盲传 / 伪拆分 / 同质化 / 协调税超过收益
+
+**验收标准**：
+- [ ] AC-1: 上限公式正确实现（max 而非 avg）
+- [ ] AC-2: 下限公式连乘概率模型正确
+- [ ] AC-3: 波动吸收 5 种机制全部实现
+- [ ] AC-4: Token 账本 5 项成本可采集
+- [ ] AC-5: 四种亏结构可识别
+
+**代码位置**：`flowforge/core/partnership/` + `flowforge/loop/partner_math/`
+
+---
+
+### §3.8 FR-CORE-008 forgemind 应用层 + 5 种形态分类
+
+> **关联 Feature**：[features/F026-forgemind-app-layer.md](features/F026-forgemind-app-layer.md) + [features/F027-all-things-spirit-species.md](features/F027-all-things-spirit-species.md)
+> **关联 ADR**：[decisions/005-forgemind-application-layer.md](decisions/005-forgemind-application-layer.md) + [decisions/013-all-things-spirit-mind-vision.md](decisions/013-all-things-spirit-mind-vision.md)
+> **优先级**：P0（MVP 必须）
+
+**输入**：灵智体形态定义 + 能力画像
+**输出**：可运行的灵智体实例
+
+**功能描述**：
+- 实现 forgemind 应用层模块结构（详见 §2.8）
+- 实现 ForgekinSpecies 五大形态枚举（BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin / HybridForgekin）
+- 实现 ForgekinBase 抽象基类（observe/act/verify 三方法）
+- 实现 ForgeMindPlugin（Plugin V3 四钩子入口）
+- 实现预置灵智体 YAML 配置（鲁班=猫头鹰 / 夏洛克=猎犬 / 梵高=孔雀）
+- 实现形态可进化（生物灵智体猫可进化为 HybridForgekin）
+
+**验收标准**：
+- [ ] AC-1: forgemind 目录结构完整
+- [ ] AC-2: ForgekinBase 三方法契约可执行
+- [ ] AC-3: 5 种形态灵智体可实例化
+- [ ] AC-4: ForgeMindPlugin 注册 4 钩子
+- [ ] AC-5: 3 个预置灵智体配置可加载
+- [ ] AC-6: 形态可进化（E1 → E6 完整生命周期）
+
+**代码位置**：`flowforge/forgemind/`
+
+---
+
+### §3.9 FR-CORE-009 ForgePipeline 灵智体锻造流水线（6 步）
+
+> **关联 Feature**：[features/F028-forging-pipeline.md](features/F028-forging-pipeline.md)
+> **优先级**：P0
+
+**输入**：灵智体形态选择 + 能力需求
+**输出**：通过验证的灵智体（觉醒阶 E1+）
+
+**功能描述**：
+实现 ForgePipeline 6 步锻造流水线：
+
+| 步骤 | 阶段 | 说明 |
+|------|------|------|
+| 1 | 形态定义（What to forge） | 确定灵智体形态（生物/组织/物品/虚拟/混合） |
+| 2 | 能力注入（Capability injection） | 注入该形态所需能力画像 |
+| 3 | 记忆初始化（Memory seeding） | 初始化多域记忆联邦 |
+| 4 | 价值观对齐（Value alignment） | 核心价值观不可变 + 表象可变（决策 11） |
+| 5 | 能力验证（Capability verification） | 能力基线测试 |
+| 6 | 觉醒晋升（Awakening promotion） | E1 灵启 → E6 灵智完整生命周期 |
+
+**验收标准**：
+- [ ] AC-1: 6 步流水线可串行执行
+- [ ] AC-2: 形态定义支持 5 种形态
+- [ ] AC-3: 能力注入基于 CapabilityProfile
+- [ ] AC-4: 记忆初始化对接多域记忆联邦
+- [ ] AC-5: 价值观对齐核心不可变
+- [ ] AC-6: 能力验证基线测试通过
+- [ ] AC-7: 觉醒晋升 E1 起步
+
+**代码位置**：`flowforge/forgemind/forging/pipeline.py`
+
+---
+
+### §3.10 FR-CORE-010 三方 Agent 集成（ExternalAgentAdapter 抽象层）
+
+> **关联 Feature**：[features/F031-external-agent-adapter.md](features/F031-external-agent-adapter.md) ~ [features/F035-external-agent-capability-fusion.md](features/F035-external-agent-capability-fusion.md)
+> **关联 ADR**：[decisions/006-external-agent-integration.md](decisions/006-external-agent-integration.md)
+> **优先级**：P0（MVP 必须）
+
+**输入**：灵智体能力需求 + 三方 Agent 调用请求
+**输出**：三方 Agent 执行结果 + 能力融合 + Eval 信号
+
+**功能描述**：
+- 实现 ExternalAgentAdapter 抽象层目录结构：
+  ```
+  flowforge/core/external_agent/
+  ├── adapter.py             # ExternalAgentAdapter 抽象类
+  ├── bridge.py              # ExternalAgentBridge 桥接层（含 fallback 循环）
+  ├── shared_state.py        # ExternalAgentSharedState 状态共享
+  ├── fallback.py            # ExternalAgentFallback 失败回退
+  ├── capability_fusion.py   # ExternalAgentCapabilityFusion 能力融合
+  ├── worktree.py            # worktree 隔离
+  ├── sync.py                # 跨 worktree 共享状态同步
+  ├── adapters/
+  │   ├── claude_code.py     # Claude Code Adapter
+  │   ├── codex.py           # Codex Adapter
+  │   ├── opencode.py        # OpenCode Adapter
+  │   └── trae.py            # Trae Adapter
+  ├── guardrails/            # 六层 Guardrails
+  │   ├── input_validation.py
+  │   ├── system_prompt.py
+  │   ├── tool_allowlist.py
+  │   ├── output_validation.py
+  │   ├── action_confirm.py
+  │   └── cost_ceiling.py
+  ```
+- 实现 4 大机制：Profile（能力画像）/ SharedState（状态共享）/ Fallback（失败回退）/ CapabilityFusion（能力融合）
+- 实现 EAC v1 七契约：Invocation / Stream / Session / Capability / Collaboration / Safety / Avatar Sync / System Prompt Configuration Map
+- 实现六层 Guardrails
+- 实现 worktree 隔离（网络白名单 + 权限控制 + 审计追踪 + 操作回滚）
+- 实现调用语义统一（同步/异步/流式/委托）
+- 实现全部失败回退到 FlowForge 内置能力
+
+**验收标准**：
+- [ ] AC-1: 4 个首批 Adapter（Claude/Codex/OpenCode/Trae）全部实现
+- [ ] AC-2: 4 大机制（Profile/SharedState/Fallback/CapabilityFusion）全部实现
+- [ ] AC-3: EAC v1 七契约全部实现
+- [ ] AC-4: 六层 Guardrails 全部生效
+- [ ] AC-5: worktree 隔离 4 项（网络/权限/审计/回滚）全部实现
+- [ ] AC-6: fallback 优先级正确（Claude=1/Codex=2/OpenCode=3/Trae=4）
+- [ ] AC-7: 全部失败回退到 FlowForge 内置能力
+
+**代码位置**：`flowforge/core/external_agent/`
+
+---
+
+### §3.11 FR-CORE-011 物理 AI 传感器接入（具身智能路径，Embodied AI）
+
+> **关联 Feature**：[features/F029-physical-ai-sensors.md](features/F029-physical-ai-sensors.md)
+> **优先级**：P1
+
+**输入**：物理传感器数据流
+**输出**：灵智体可感知的环境状态
+
+**功能描述**：
+- 实现物理 AI 传感器接入：摄像头 / 麦克风 / IoT 传感器 / 可穿戴设备
+- 实现传感器数据预处理（去噪 / 特征提取 / 时序对齐）
+- 实现传感器数据 → 灵智体 Observation 的映射
+- 实现传感器故障检测与降级
+- 对应具身智能工程实现（Embodied AI Engineering）
+
+**验收标准**：
+- [ ] AC-1: 4 类传感器（摄像头/麦克风/IoT/可穿戴）可接入
+- [ ] AC-2: 数据预处理 pipeline 可运行
+- [ ] AC-3: 传感器数据 → Observation 映射正确
+- [ ] AC-4: 传感器故障检测可触发降级
+
+**代码位置**：`flowforge/forgemind/sensors/`
+
+---
+
+### §3.12 FR-CORE-012 虚拟世界设定层
+
+> **关联 Feature**：[features/F030-virtual-world-setting.md](features/F030-virtual-world-setting.md)
+> **优先级**：P1
+
+**输入**：虚拟角色设定 + 世界观
+**输出**：约束灵智体行为的设定层
+
+**功能描述**：
+- 实现虚拟世界设定层：童话/神话/历史/现实人物 + VR/游戏角色
+- 实现角色设定 + 世界观 + 关系网三元组
+- 实现设定层约束（孙悟空遵循西游世界观、福尔摩斯遵循侦探逻辑）
+- 实现 VR/游戏世界适配
+- 对应虚拟角色智能体工程实现（Character AI Engineering）
+
+**验收标准**：
+- [ ] AC-1: 虚拟角色设定可加载
+- [ ] AC-2: 世界观约束可注入 system role
+- [ ] AC-3: 关系网可查询
+- [ ] AC-4: VR/游戏世界适配可运行
+
+**代码位置**：`flowforge/forgemind/worlds/`
+
+---
+
+### §3.13 FR-CORE-013 灵智体市场 + 进化谱系
+
+> **关联 Feature**：[features/F037-forgemind-marketplace.md](features/F037-forgemind-marketplace.md) + [features/F038-forgemind-lineage.md](features/F038-forgemind-lineage.md)
+> **优先级**：P1
+
+**输入**：灵智体配置
+**输出**：可分享/可追溯的灵智体
+
+**功能描述**：
+- 实现灵智体市场（注册 / 发现 / 分享 / 评估）
+- 实现进化谱系（家族树 / 谱系可视化 / 谱系追溯）
+- 实现灵智体 YAML 配置导出/导入
+
+**验收标准**：
+- [ ] AC-1: 灵智体可在市场注册
+- [ ] AC-2: 灵智体可被搜索发现
+- [ ] AC-3: 进化谱系家族树可可视化
+- [ ] AC-4: YAML 配置可导出/导入
+
+**代码位置**：`flowforge/forgemind/marketplace/` + `flowforge/forgemind/lineage/`
+
+---
+
+### §3.14 FR-CORE-014 灵锻 SpiritForge + 灵议 Mind Council
+
+> **关联 Feature**：详见 [design/D030-spirit-forge-mind-council.md](design/D030-spirit-forge-mind-council.md)（待创建）
+> **优先级**：P1
+
+**输入**：灵智体经验日志
+**输出**：蒸馏技能 + 议事决策
+
+**功能描述**：
+- 实现灵锻 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）
+- 实现灵议 Mind Council（多灵智体议事 / 去中心化共识 / 智能体议会）
+- 实现 operator 拉闸词检测（cvo_brake.py）
+- 实现灵议多渠道（Web Chat / 飞书 / 微信 / WebChat 升级版）
+
+**验收标准**：
+- [ ] AC-1: SpiritForge 可蒸馏经验到锻典
+- [ ] AC-2: Mind Council 可议事
+- [ ] AC-3: operator 拉闸词可触发
+- [ ] AC-4: 多渠道灵议可同步
+
+**代码位置**：`flowforge/forgemind/codex/spirit_forge.py` + `flowforge/forgemind/council/`
+
+---
+
+### §3.15 FR-CORE-015 Plugin V3 四钩子
+
+> **关联 ADR**：[decisions/005-forgemind-application-layer.md](decisions/005-forgemind-application-layer.md)
+> **优先级**：P0（MVP 必须）
+
+**输入**：*Forge 插件实现
+**输出**：注册到 forgemind 的灵智体 / 技能 / 议事频道 / 灵锻配置
+
+**功能描述**：
+实现 Plugin V3 四钩子（在 v6.0 V2 钩子基础上新增）：
+
+```python
+class FlowForgePlugin(ABC):
+    # ... V2 钩子保留 ...
+
+    # ── V3 Registration hooks（v7.1 新增）─────────────────────────
+
+    def register_forgekins(self, forgekin_registry: Any) -> None:
+        """注册灵智体到 forgemind。"""
+        pass
+
+    def register_forge_skills(self, skill_registry: Any) -> None:
+        """注册灵智体可加载的技能包（SkillPackage）。"""
+        pass
+
+    def register_council_channels(self, council_registry: Any) -> None:
+        """注册灵议 Mind Council 频道。"""
+        pass
+
+    def register_auto_forge_config(self, auto_forge_config: Any) -> None:
+        """注册灵锻 SpiritForge 配置。"""
+        pass
+```
+
+**验收标准**：
+- [ ] AC-1: 4 个 V3 钩子可被调用
+- [ ] AC-2: V2 钩子保持兼容
+- [ ] AC-3: *Forge 可通过 V3 钩子注册灵智体
+
+**代码位置**：`flowforge/core/plugin/protocol.py`（V3 扩展）+ `flowforge/forgemind/plugins.py`
+
+---
+
+### §3.16 FR-CORE-016 ~ FR-CORE-030 其他核心需求
+
+> 以下核心需求的详细规格在对应 Feature 文件中，本节仅做索引。
+
+| FR-CORE | 功能 | 优先级 | 关联 Feature |
+|---------|------|:----:|------|
+| FR-CORE-016 | 交接胶囊 + 持球注册 lease | P0 | [F003](features/F003-handoff-capsule.md) + [F006](features/F006-ball-custody-lease.md) |
+| FR-CORE-017 | 行首 @ 路由 + Push Back 协议 | P0 | [F005](features/F005-at-mention-routing.md) + [F007](features/F007-push-back-protocol.md) |
+| FR-CORE-018 | 乒乓球熔断器 | P0 | [F004](features/F004-pingpong-circuit-breaker.md) |
+| FR-CORE-019 | Durable State Surfaces（6 类持久表面） | P0 | [F008](features/F008-durable-state-surfaces.md) |
+| FR-CORE-020 | Evidence & Sensors | P0 | [F009](features/F009-evidence-sensors.md) |
+| FR-CORE-021 | Governance 压缩免疫 | P0 | [F010](features/F010-governance-boundary.md) |
+| FR-CORE-022 | Magic Words 逃生舱 + Entropy Control | P0 | [F011](features/F011-magic-words.md) + [F012](features/F012-entropy-control.md) |
+| FR-CORE-023 | Harnessability 评估 | P0 | [F013](features/F013-harnessability.md) |
+| FR-CORE-024 | 灵典 Mind Codex 可检索知识库 | P0 | [F039](features/F039-mind-codex-searchable.md) |
+| FR-CORE-025 | 副作用日志 WAL + Tier 1-4 恢复 | P0 | [F021](features/F021-side-effect-wal.md) + [F022](features/F022-tier-1-4-recovery.md) |
+| FR-CORE-026 | liveness 规范读模型 | P0 | [F023](features/F023-liveness-canonical-read.md) |
+| FR-CORE-027 | 弱状态机 vs 强 workflow | P0 | [F024](features/F024-weak-state-vs-strong-workflow.md) |
+| FR-CORE-028 | 跨 provider 宿主抽象 | P1 | [F025](features/F025-provider-host-abstraction.md) |
+| FR-CORE-029 | forgemind 与 *Forge 关系 | P1 | [F036](features/F036-forgemind-forge-relationship.md) |
+| FR-CORE-030 | Harness Eval 控制面 | P1 | [F040](features/F040-harness-eval-control-plane.md) |
+
+### §3.17 review.md 41 条 CL 同步矩阵
+
+> **来源**：[review/review.md](review/review.md) v1.4 第十三章 clowder-ai 补审 I（CL-001~CL-021，21 项）+ 第十四章 clowder-ai 深度补审 II（CL-022~CL-041，20 项）
 > **同步状态**：✅ 已同步 16 项（39.0%）/ 🟡 部分同步 6 项（14.6%）/ ❌ 未同步 19 项（46.4%）
-> **核心结论**：第十三章（CL-001~CL-021）同步良好（13/21 已同步）；第十四章（CL-022~CL-041）同步严重不足（3/20 已同步，9 项部分同步或已同步，11 项完全未同步）—— **第十四章是 v7.1 走向工程实现的硬骨头**
-> **版本合并声明**：v7.1 增补章节是 v7.1 重构的权威更新，**已吸收合并 v7.0 增补章节及任何历史章节**（v7.0 不再作为独立版本存在）。三大主文档 v6.0 历史章节仅作背景资料保留，**不作为开发依据**；开发依据以 v7.1 增补章节（§0~§9）+ ADR/Feature 子目录为准。
 
-### v7.1-§9.1 同步状态汇总
+41 条 CL 完整同步矩阵详见 [review/review.md#第十三章](review/review.md) + [review/review.md#第十四章](review/review.md)。本节仅做汇总：
 
-| 状态 | 数量 | 占比 | 说明 |
-|------|------|------|------|
-| ✅ 已同步 | 16 | 39.0% | CL 建议已落到 v7.1 增补章节 + ADR/Feature |
-| 🟡 部分同步 | 6 | 14.6% | 概念已提及但缺关键工程细节 |
-| ❌ 未同步 | 19 | 46.4% | 建议未落到三大主文档或 ADR/Feature |
-| 合计 | 41 | 100% | 第十三章 21 项 + 第十四章 20 项 |
+**P0 未同步清单（必修，14 项）**：CL-001 / CL-003 / CL-005 / CL-007 / CL-009 / CL-011 / CL-013 / CL-015 / CL-017 / CL-019 / CL-021 / CL-023 / CL-025 / CL-027
 
-### v7.1-§9.2 41 条 CL 完整同步矩阵
+**P1 未同步清单（应修，14 项）**：CL-002 / CL-004 / CL-006 / CL-008 / CL-010 / CL-012 / CL-014 / CL-016 / CL-018 / CL-020 / CL-022 / CL-024 / CL-026 / CL-028
 
-| CL | 优先级 | 主题 | 建议摘要 | 同步状态 | 关联文档 | 待办动作 |
-|----|:------:|------|---------|:--------:|---------|---------|
-| CL-001 | P0 | 自我演进三模式 | SelfDevDocLoop / SelfDevCodeLoop / SelfDevFrameworkLoop 三闭环分层 | ✅ | spec v7.1-§7 + design v7.1-§D7.1 | — |
-| CL-002 | P0 | Scope Guard | 自我演进宪法层，拒绝越权范围（如 VISION §7） | ❌ | — | 新增 design v7.1-§D7.5 Scope Guard 规范 + `flowforge/evolution/scope_guard.py` |
-| CL-003 | P0 | 五级成熟度阶梯 | L0 Episode → L1 Pattern → L2 Draft → L3 Validated → L4 Standard | ✅ | design v7.1-§D7.4 | — |
-| CL-004 | P0 | Eval Ledger 进化账本 | 每次进化提案记录前测/后测/净增益，净增益 > 0 才允许合入 | 🟡 | spec v7.1-§7（提到） | 补全 design v7.1-§D7.6 Eval Ledger 字段契约 + Replay A/B 流程 |
-| CL-005 | P1 | Knowledge Object Contract | 锻典条目七字段（trigger/procedure/precondition/postcondition/anti_pattern/provenance/confidence） | ❌ | — | 新增 design v7.1-§D7.7 Knowledge Object Contract 字段表 |
-| CL-006 | P1 | 元认知 Mode C | agent 记录"为什么选/预期/实际/学到"四元组 | 🟡 | spec v7.1-§7 Mode C（提到） | 补全 design v7.1-§D7.8 元认知字段契约 + EchoStore 扩展 |
-| CL-007 | P0 | Core Identity 隔离层 | ForgekinBase.soul_imprint 不可变身份锚点 | ✅ | design v7.1-§D0 + forgemind/soul_imprint.py（已实现） | — |
-| CL-008 | P0 | 9 个一等公民 | World/Character/Scene/Canon Decision/Relationship/Artifact/Round/Branch/Turn | ❌ | — | 新增 design v7.1-§D10 虚拟世界一等公民建模 |
-| CL-009 | P0 | 三路记忆 | Canon / Relational / Session 区分 | ✅ | ADR-008 §2 + features/F014 | — |
-| CL-010 | P0 | RP 台词不自动入典 | Canon Sync 协议显式确认 | ✅ | ADR-008 §2 | — |
-| CL-011 | P1 | Role Mask 五层分类 | L1 路由/L2 基础设施/L3 本体能力/L4 场景皮肤/L5 世界内状态 | ❌ | — | 新增 design v7.1-§D11 Role Mask 五层规范 |
-| CL-012 | P1 | Bridge Layer 三协议 | Role Mask / Canon Sync / World Driver + runtime coordinator | ❌ | — | 新增 design v7.1-§D12 Bridge Layer 协议规范 |
-| CL-013 | P1 | 世界自转 | World Driver + 定时事件源 + Canon 写入权限 | ❌ | — | 合并到 design v7.1-§D12 Bridge Layer |
-| CL-014 | P0 | ProviderTransportRegistry | 声明式 Manifest + host 维护注册表 | ❌ | — | 新增 design v7.1-§D6.4 ProviderTransportRegistry 规范 |
-| CL-015 | P0 | host-owned 安全注入 | token/MCP/sandbox/cwd 全部由 host 注入 | 🟡 | design v7.1-§D6（提到） | 补全 design v7.1-§D6.5 host-owned 注入契约 |
-| CL-016 | P1 | ACP transport | 标准传输层 over stdio/SSE/WebSocket | ✅ | design v7.1-§D6.2 EAC v1 七契约 | — |
-| CL-017 | P1 | reference runtime | 三方 Agent 厂商可参照的参考实现 | ❌ | — | 新增 design v7.1-§D6.6 reference_runtime.py 规范 |
-| CL-018 | P0 | Pack 概念 | 可移植的经验单元 = 可分享的锻典子集 | ✅ | ADR-008 §9 + ADR-011 | — |
-| CL-019 | P0 | 双轨信任编译 | guardrails（只能加严）+ defaults（可覆盖） | ✅ | design v7.1-§D7.4 五级阶梯（部分覆盖） | — |
-| CL-020 | P1 | Pack/Growth 种子果实 | 个人经验 → 共享 Pack 蒸馏路径 | ✅ | ADR-011 伙伴系统数学 | — |
-| CL-021 | P1 | World Driver | 每个虚拟世界一个 Driver 实例 | ❌ | — | 合并到 design v7.1-§D12 Bridge Layer |
-| CL-022 | P0 | Plugin V3 manifest 完整契约 | Manifest Discovery + Resource Ownership + Security Boundary + Hub UX + Review Gate | ❌ | — | 新增 design v7.1-§D5.4 Plugin Manifest 完整契约（对齐 F202 AC-A1~A4/B1~B5/C1~C4/D1~D3/E1~E4） |
-| CL-023 | P0 | Schedule Factory Whitelist | plugin-owned factory 边界 + deterministic task id + transactional 启停 | ❌ | — | 新增 design v7.1-§D5.5 ScheduleFactoryRegistry 规范 |
-| CL-024 | P1 | Plugin 启停 transactional | activation 失败 rollback + startup ValidateBeforeRehydrate | ❌ | — | 合并到 design v7.1-§D5.4 Plugin Manifest 完整契约 |
-| CL-025 | P1 | F177 Close Gate 结构化判据 | AC → evidence 矩阵 + 三选一 + 禁止 follow-up 字样 | ❌ | — | 新增 design v7.1-§D7.9 Close Gate Validator 规范 |
-| CL-026 | P1 | 四心智家族护栏 | Ragdoll/Maine Coon/Siamese/hotfix 家族级 guardrail hooks | 🟡 | design v7.1-§D3.2 觉醒阶（提到家族） | 补全 design v7.1-§D3.3 家族护栏规范 |
-| CL-027 | P0 | TeamAct Queue Steer | SteerCommand（priority_boost/interrupt/requeue）+ Plan Board 解耦 | ❌ | — | 新增 design v7.1-§D13 TeamAct Queue Steer 规范 |
-| CL-028 | P0 | Restart Recovery sweep | 三阶段（Phase A sweep + A+ 通知 + B 持久化） | ❌ | ADR-010 Tier 1-4（缺 sweep） | 补全 ADR-010 §Restart Recovery Pipeline |
-| CL-029 | P0 | Event Memory 事件级认知转折 | EventMemoryStore 独立子模块 + no-classifier 红线 + teleport API | ❌ | — | 新增 design v7.1-§D14 Event Memory 规范 |
-| CL-030 | P1 | no-classifier 红线 + v5 终态 | 系统不判断哪条是 aha，仅记录；schema 面向 v5 终态 | 🟡 | design v7.1-§D7（提到 no-classifier） | 合并到 design v7.1-§D14 Event Memory 规范 |
-| CL-031 | P0 | Auto Dream 双层架构 | 后台 consolidation + 前台 surface + 4 信号 telemetry | 🟡 | design v7.1-§D7.3 灵议（提到） | 补全 design v7.1-§D7.10 Auto Dream 双层架构规范 |
-| CL-032 | P0 | Agent Swarm 协同 | Mind Council 从"议事"层升维到"协同执行"层 | 🟡 | design v7.1-§D5（提到 Mind Council） | 补全 design v7.1-§D5.6 Agent Swarm 协同模式规范 |
-| CL-033 | P1 | Approval Hub 统一审批中心 | 跨 thread 审批入口 + operator 一键批准/拒绝 | ❌ | — | 新增 design v7.1-§D15 Approval Hub 规范 |
-| CL-034 | P0 | QC Loop 7-Step | Maine Coon 3-Layer Reviewer Split + 7 步 QC 循环 | ❌ | — | 新增 design v7.1-§D7.11 QC Loop 7-Step 规范 |
-| CL-035 | P2 | F135 DARE OOTB 关闭教训 | 预置灵智体配置应避免 OOTB 默认开启 | ❌ | — | 补全 design v7.1-§D5.7 预置灵智体 OOTB 配置规范 |
-| CL-036 | P2 | Hyperfocus Brake | 90 分钟活跃触发 + typed check-in | ❌ | ADR-007 F012 熵控（缺 Hyperfocus Brake） | 补全 ADR-007 §Hyperfocus Brake 规范 |
-| CL-037 | P1 | MCP 1→3 server 拆分 | MCP 治理 + prompt 瘦身 50% | ❌ | — | 新增 design v7.1-§D6.7 MCP 治理规范 |
-| CL-038 | P1 | CLI stderr + NDJSON | CLI Adapter 增加 stderr 解析 + NDJSON 流式输出 | ❌ | — | 补全 design v7.1-§D6.1 三方编程 Agent 设计（增 stderr 章节） |
-| CL-039 | P2 | GitHub CI/CD Tracking 去重 | headSha + aggregateBucket PR 级 rollup | ❌ | ADR-010 F021 Side-Effect WAL（缺 PR rollup） | 补全 ADR-010 §CI/CD Tracking 去重规范 |
-| CL-040 | P1 | docs front-matter 规范 | feature_ids/related_features/topics/doc_kind/created | ❌ | — | 新增 design v7.1-§D16 docs front-matter 规范 |
-| CL-041 | P2 | 命名边界内外品牌 | 内部 cat-cafe vs 外部 Clowder AI 双品牌边界 | ❌ | naming-contract.md v1.1（未定义内外品牌边界） | 补全 naming-contract.md §7 内外品牌边界 |
+**P2 未同步清单（建议，4 项）**：CL-029 / CL-031 / CL-033 / CL-035
 
-### v7.1-§9.3 P0 未同步清单（必修，14 项）
+**修复路径与责任分配**：详见 [task.md](task.md) Phase 1-5 分阶段任务。
 
-> **P0 完全未同步 11 项** + **P0 部分同步 3 项** = 14 项必修。完成 14 项后 v7.1 才能进入工程实现阶段。
+---
 
-| CL | 主题 | 同步状态 | 待办动作 | 责任方 |
-|----|------|:--------:|---------|--------|
-| CL-002 | Scope Guard | ❌ | 新增 design v7.1-§D7.5 + `flowforge/evolution/scope_guard.py` | operator 决策边界 |
-| CL-008 | 9 个一等公民 | ❌ | 新增 design v7.1-§D10 虚拟世界一等公民建模 | 架构师灵智体（鲁班） |
-| CL-011 | Role Mask 五层 | ❌ | 新增 design v7.1-§D11 Role Mask 五层规范 | 架构师灵智体（鲁班） |
-| CL-012 | Bridge Layer 三协议 | ❌ | 新增 design v7.1-§D12 Bridge Layer 协议规范 | 架构师灵智体（鲁班） |
-| CL-013 | 世界自转 | ❌ | 合并到 design v7.1-§D12 Bridge Layer | 架构师灵智体（鲁班） |
-| CL-014 | ProviderTransportRegistry | ❌ | 新增 design v7.1-§D6.4 ProviderTransportRegistry 规范 | operator 决策安全模型 |
-| CL-017 | reference runtime | ❌ | 新增 design v7.1-§D6.6 reference_runtime.py 规范 | 架构师灵智体（鲁班） |
-| CL-021 | World Driver | ❌ | 合并到 design v7.1-§D12 Bridge Layer | 架构师灵智体（鲁班） |
-| CL-022 | Plugin V3 manifest 完整契约 | ❌ | 新增 design v7.1-§D5.4（对齐 F202 AC-A1~A4/B1~B5/C1~C4/D1~D3/E1~E4） | 架构师灵智体（鲁班） |
-| CL-023 | Schedule Factory Whitelist | ❌ | 新增 design v7.1-§D5.5 ScheduleFactoryRegistry 规范 | 架构师灵智体（鲁班） |
-| CL-027 | TeamAct Queue Steer | ❌ | 新增 design v7.1-§D13 TeamAct Queue Steer 规范 | 架构师灵智体（鲁班） + 视觉设计灵智体（梵高）Plan Board UI |
-| CL-028 | Restart Recovery sweep | ❌ | 补全 ADR-010 §Restart Recovery Pipeline | 架构师灵智体（鲁班） |
-| CL-029 | Event Memory | ❌ | 新增 design v7.1-§D14 Event Memory 规范 | 代码审查灵智体（夏洛克）no-classifier 红线守护 |
-| CL-034 | QC Loop 7-Step | ❌ | 新增 design v7.1-§D7.11 QC Loop 7-Step 规范 | 代码审查灵智体（夏洛克） |
-| CL-004 | Eval Ledger | 🟡 | 补全 design v7.1-§D7.6 Eval Ledger 字段契约 | 架构师灵智体（鲁班） |
-| CL-015 | host-owned 安全注入 | 🟡 | 补全 design v7.1-§D6.5 host-owned 注入契约 | operator 决策安全模型 |
-| CL-031 | Auto Dream 双层架构 | 🟡 | 补全 design v7.1-§D7.10 Auto Dream 双层架构规范 | 架构师灵智体（鲁班） |
-| CL-032 | Agent Swarm 协同 | 🟡 | 补全 design v7.1-§D5.6 Agent Swarm 协同模式规范 | 架构师灵智体（鲁班） |
+## §4 外部接口
 
-### v7.1-§9.4 P1 未同步清单（应修，14 项）
+### §4.1 API 接口
 
-> **P1 完全未同步 8 项** + **P1 部分同步 3 项** + **P1 已同步但需补工程细节 3 项** = 14 项应修。完成 14 项后 v7.1 才能进入生产可用阶段。
+> **详细规格**：详见 [arch.md#4.2](arch.md) + [design.md#4.2](design.md)
 
-| CL | 主题 | 同步状态 | 待办动作 | 责任方 |
-|----|------|:--------:|---------|--------|
-| CL-005 | Knowledge Object Contract | ❌ | 新增 design v7.1-§D7.7 Knowledge Object Contract 字段表 | 架构师灵智体（鲁班） |
-| CL-024 | Plugin 启停 transactional | ❌ | 合并到 design v7.1-§D5.4 Plugin Manifest 完整契约 | 架构师灵智体（鲁班） |
-| CL-025 | F177 Close Gate 结构化判据 | ❌ | 新增 design v7.1-§D7.9 Close Gate Validator 规范 | 代码审查灵智体（夏洛克） |
-| CL-033 | Approval Hub 统一审批中心 | ❌ | 新增 design v7.1-§D15 Approval Hub 规范 | 视觉设计灵智体（梵高）UI |
-| CL-037 | MCP 1→3 server 拆分 | ❌ | 新增 design v7.1-§D6.7 MCP 治理规范 | 架构师灵智体（鲁班） |
-| CL-038 | CLI stderr + NDJSON | ❌ | 补全 design v7.1-§D6.1 三方编程 Agent 设计 | 架构师灵智体（鲁班） |
-| CL-040 | docs front-matter 规范 | ❌ | 新增 design v7.1-§D16 docs front-matter 规范 | 架构师灵智体（鲁班） |
-| CL-016 | ACP transport | ✅ | （已同步于 design v7.1-§D6.2 EAC v1 七契约，需补 ACP 1.0 over stdio/SSE/WebSocket 传输层细节） | 架构师灵智体（鲁班） |
-| CL-006 | 元认知 Mode C | 🟡 | 补全 design v7.1-§D7.8 元认知字段契约 + EchoStore 扩展 | 架构师灵智体（鲁班） |
-| CL-026 | 四心智家族护栏 | 🟡 | 补全 design v7.1-§D3.3 家族护栏规范 | 架构师灵智体（鲁班） |
-| CL-030 | no-classifier 红线 + v5 终态 | 🟡 | 合并到 design v7.1-§D14 Event Memory 规范 | 代码审查灵智体（夏洛克） |
+- 灵智管理 API：`/api/v7/forgekins`（CRUD + 觉醒晋升）
+- 灵议 API：`/api/v7/council`（多渠道议事）
+- 灵锻 API：`/api/v7/spirit_forge`（经验蒸馏）
+- 灵典 API：`/api/v7/codex`（可检索知识库）
+- 三方 Agent API：`/api/v7/external_agent`（4 个 Adapter + EAC 七契约）
 
-### v7.1-§9.5 P2 未同步清单（建议，4 项）
+### §4.2 SDK 接口
 
-> **P2 完全未同步 4 项**。完成 4 项后 v7.1 进入生态成熟阶段。
+> **详细规格**：详见 [arch.md#4.3](arch.md) + [design.md#4.3](design.md)
 
-| CL | 主题 | 同步状态 | 待办动作 | 责任方 |
-|----|------|:--------:|---------|--------|
-| CL-035 | F135 DARE OOTB 关闭教训 | ❌ | 补全 design v7.1-§D5.7 预置灵智体 OOTB 配置规范 | 架构师灵智体（鲁班） |
-| CL-036 | Hyperfocus Brake | ❌ | 补全 ADR-007 §Hyperfocus Brake 规范 | 架构师灵智体（鲁班） |
-| CL-039 | GitHub CI/CD Tracking 去重 | ❌ | 补全 ADR-010 §CI/CD Tracking 去重规范 | 架构师灵智体（鲁班） |
-| CL-041 | 命名边界内外品牌 | ❌ | 补全 naming-contract.md §7 内外品牌边界 | operator 决策品牌策略 |
+- FlowForgeSDK 统一入口：零配置模型访问 + `@tool` / `@agent` 装饰器 + 声明式 Agent + 安全护栏 + MCP 服务器连接 + 事件订阅
+- ForgekinBase 抽象基类：`observe` / `act` / `verify` 三方法
 
-### v7.1-§9.6 修复路径与责任分配
+### §4.3 Plugin V3 接口
 
-**修复路径**（按文档分工）：
+> **详细规格**：详见 §3.15 + [design.md#4.3](design.md)
 
-1. **design.md 优先**（v7.1-§D9 收尾章 + §D3.3/§D5.4-§D5.7/§D6.1/§D6.4-§D6.7/§D7.5-§D7.11/§D10-§D16 共 22 个新增/补全子章节）—— 覆盖 P0/P1/P2 全部未同步项的工程规范
-2. **arch.md 跟进**（v7.1-§A7 收尾章 + 引用 design.md 新增章节，补充架构层视角）
-3. **spec.md 收尾**（v7.1-§9 本章节即收尾，引用 design.md 新增章节，明确功能特性视角）
-4. **ADR/Feature 落地**：CL-028/039 补全 ADR-010；CL-036 补全 ADR-007；CL-041 补全 naming-contract.md §7
+- V2 钩子保留（register_agents / register_tools / register_loops / register_workflows / register_routes / register_schedules / register_event_handlers / register_gates / register_evaluators / on_startup / on_shutdown）
+- V3 四钩子新增（register_forgekins / register_forge_skills / register_council_channels / register_auto_forge_config）
 
-**责任分配**（按 3 个预置灵智体分工）：
+### §4.4 三方 Agent EAC 接口
 
-| 灵智体 | 物种 | 负责范围 | 涉及 CL |
-|--------|------|---------|---------|
-| 鲁班（架构师灵智体） | 猫头鹰 | 架构设计 + 工程规范 + 虚拟世界建模 | CL-008/011/012/013/017/021/022/023/024/027/028/031/032/037/038/040/035/036/039 |
-| 夏洛克（代码审查灵智体） | 猎犬 | Close Gate + QC Loop + Event Memory no-classifier 红线守护 | CL-025/029/030/034 |
-| 梵高（视觉设计灵智体） | 孔雀 | Plan Board UI + Approval Hub UI | CL-027（Plan Board UI 部分）/033 |
-| operator | — | 安全模型 + 品牌策略 + 愿景锚点守护 | CL-002/014/015/041 |
+> **详细规格**：详见 [features/F031-external-agent-adapter.md](features/F031-external-agent-adapter.md)
 
-**里程碑**：
+EAC v1 七契约：
+1. **Invocation**：调用契约（CLI / A2A Protocol）
+2. **Stream**：流式输出契约（SSE / WebSocket）
+3. **Session**：会话管理契约（创建 / 恢复 / 销毁）
+4. **Capability**：能力画像契约（六维画像 + 盲点）
+5. **Collaboration**：协作契约（SharedState + Fallback）
+6. **Safety**：安全契约（六层 Guardrails + worktree 隔离）
+7. **Avatar Sync + System Prompt Configuration Map**：虚拟形象同步 + 系统提示配置映射
 
-| 里程碑 | 范围 | 数量 | 完成后状态 |
-|--------|------|------|-----------|
-| M1 | P0 必修（11 项完全未同步 + 3 项部分同步 + CL-016 工程细节补充 = 15 项） | 15 项 | v7.1 进入工程实现阶段 |
-| M2 | P1 应修（8 项完全未同步 + 3 项部分同步 + CL-016 已同步补细节 = 12 项） | 12 项 | v7.1 进入生产可用阶段 |
-| M3 | P2 建议（4 项完全未同步） | 4 项 | v7.1 进入生态成熟阶段 |
+### §4.5 IM/WebChat 渠道接口
 
-> **注**：M1 完成后，41 项 CL 中已同步项将达 31 项（75.6%）；M2 完成后达 39 项（95.1%）；M3 完成后达 41 项（100%）。
+> **详细规格**：详见 [design/D030-spirit-forge-mind-council.md](design/D030-spirit-forge-mind-council.md)（待创建）
 
-### v7.1-§9.3 v7.0 增补章节归档说明
+- Web Chat 渠道（默认）
+- 飞书渠道
+- 微信公众号 / 个人号渠道
+- WebChat 升级版（5 评委并行评审）
 
-> **归档说明**：v7.0 是过程文档（未写过代码），其功能规格契约已合并到 v7.1 §0-§9 增补章节。以下 v7.0 章节已归档到 `_archive/` 目录：
->
-> 1. **v7.0 增补章节（万物灵智体重构）**（原 line 413-1041，共 629 行）→ 归档到 `_archive/spec_v70_supplement.md`
->    - v7.0-§0~§11 的功能规格契约已合并到 v7.1-§0~§9 对应章节。
->
-> 2. **v7.0 自我进化 Agent Harness 规格升级**（原 line 3629-4493，共 865 行）→ 归档到 `_archive/spec_v70_self_evolution.md`
->    - 第七章：自我进化能力总览 → v7.1-§7 自我演进闭环 + design.md §D5.8 ForgekinEngine 7 步自进化闭环契约。
->    - 第十二章：非功能需求与 SLO → v7.1-§8 设计态声明 + design.md §D8。
->    - 第十三章：v7.0 路线图 → v7.1-§9 review.md 41 条 CL 同步矩阵。
->    - 附录 O：v7.0 与 clowder-ai 方法论对照表 → design.md §D7 自我演进闭环设计规范。
->    - 附录 P：v7.0 待用户审核决策点 → 已由 v7.1 增补章节 + §D9 矩阵中各 CL 项的 TODO 索引替代。
+---
 
-***
+## §5 非功能需求
 
-# [v6.0 历史内容] FlowForge v6.0 功能特性规格说明书
+### §5.1 性能要求（SLO）
 
-> **说明**：以下内容为 v6.0 历史章节，保留作为背景资料。术语以 v7.1 增补章节（§0~§9）+ `design/naming-contract.md` v1.1 为准（如"炉灵"应理解为"灵智"、"自锻"应理解为"灵锻"等，详见 v7.1-§2 12 核心概念命名表）。
+| 指标 | 阈值 | 说明 |
+|------|------|------|
+| Loop 执行超时 | 3 分钟 | 创作和润色接口不得超过 3 分钟 |
+| LLM webchat 调用超时 | 30 秒 | 5 评委并行评审 |
+| LLM API 调用超时 | 90 秒 | 长文章 2 分钟 |
+| 路由算法延迟 | < 100ms | 10 个候选灵智体 |
+| 质量分阈值 | 0.85 | v4.0 调整（由 0.9 调整为 0.85，平衡质量与可用性） |
+| 嵌套 Loop 最大深度 | 3 | 防止无限嵌套 |
 
-***
+### §5.2 可靠性要求
 
-## 第一章：产品概述与愿景
+- Tier 1-4 恢复分级（详见 §3.6）
+- 副作用日志 WAL 可重放
+- liveness 四态可识别（活着 / 退化 / 僵尸 / 等待宽限）
+- 跨 provider 宿主抽象可切换
+- FlowForge 必须使用 backup models 当配置模型失败时确保 100% 成功
 
-### 1.1 产品定位
+### §5.3 安全性要求
 
-FlowForge v2.1 是一个**企业级 Agent Harness 平台**，它将前沿的 AI Agent 架构模式（9 大模式）、四根 Harness 护栏（上下文工程、架构约束、反馈循环、熵管理）、多协议工具生态（MCP/OpenAPI/GraphQL）、Skill 系统、多 Agent 策略（Subagents/Teams/Swarms）和 Helm 实时交互融合为一体，为上层业务提供**可控、可观测、可进化的 Agent 运行基础设施**。
+- 六层 Guardrails（详见 §3.10）
+- Magic Words 逃生舱（任何阶都不能绕过）
+- ScopeGuard（阻止越权修改 VISION §7 / rules.md 红线 / 13 份核心 ADR）
+- operator 拉闸权（E5-E6 晋升 + 框架自我演进 + 不可逆操作必须 operator 确认）
+- worktree 隔离（网络白名单 + 权限控制 + 审计追踪 + 操作回滚）
 
-### 1.2 核心公式
+### §5.4 可观测性要求
 
-```
-Agent = Model (Brain) + Harness (Body)
-FlowForge = Harness Layer = 前馈控制 + 反馈控制 + 熵管理 + 可观测性
-```
+- 日志自动注入 trace_id（详见 [hiclaw/rules.md §2.6 原则 8](../../hiclaw/rules.md)）
+- 所有 I/O 使用 async/await
+- Eval 信号采集（trace 信号 + 用户信号 + 探针信号）
+- 七类归因矩阵可分类失败原因
+- LLM 调用日志：input + output + execution time（详见 [hiclaw/rules.md §9.3.1](../../hiclaw/rules.md)）
 
-### 1.3 核心愿景
-
-* **从"编排框架"到"驾驭系统"**：FlowForge 不再是简单的 Agent 流程编排工具，而是为 AI Agent 提供完整控制回路的操作系统级平台。
-
-* **从"个人助手"到"组织能力资产"**：通过 Skill 系统、插件机制和团队协作功能，让 Agent 能力可复用、可版本化、可分发。
-
-* **从"单点智能"到"多Agent协作"**：内置三种多Agent策略（Subagents/Teams/Swarms），支撑从个人开发到企业级CI/CD的全场景覆盖。
-
-### 1.4 用户角色定义
-
-| 角色                       | 描述                           | 核心诉求                             |
-| ------------------------ | ---------------------------- | -------------------------------- |
-| **AI 应用开发者**             | 使用 FlowForge 构建 Agent 应用的工程师 | 快速构建、开箱即用的 Agent 模式、丰富的工具生态      |
-| **平台管理员**                | 管理 FlowForge 平台配置和安全策略的人员    | 权限管控、安全策略、可观测性、成本优化              |
-| **业务专家**                 | 内容创作者、产品经理等非技术角色             | 自然语言交互、Skill 调用、审核流程、Web UI 操作   |
-| **AI 主编/指挥 (Commander)** | LangGraph 驱动的调度核心            | 理解创作意图、拆解 SOP、调度专家 Agent、监控全链路质量 |
-
-### 1.5 核心业务场景
-
-1. **被动创作 (On-Demand)**：用户通过 Web UI 或 Helm 界面发送创作意图，系统启动全链路（选题→研究→写作→审核→发布），最终推送审核通知。
-2. **主动创作 (Scheduled)**：用户在 Web UI 配置 Cron 定时任务，系统自主完成选题→创作→审核提示的全流程。
-3. **级联自愈 (Self-Healing)**：当专栏的创作 Agent 发现主力模型接连失败时，自动触发模型健康检查、刷新可用模型，并**级联更新**所有共享该模型的其他专栏。
-4. **审核与干预 (Human-in-the-Loop)**：AI 生成的任何内容在正式发布前，通过 Web UI、Helm 内联审核块或即时通讯渠道推送预览，用户可选择通过、编辑或拒绝。
-5. **系统监控 (Dashboard)**：统一 Web UI 仪表盘实时展示专栏运行状态、今日创作数量、模型费用统计、系统健康度。
-6. **Agent-to-Agent Review**：在反馈循环中，生成 Agent 的产出由独立的评判 Agent 进行四维评分（Design Quality / Originality / Craft / Functionality），不通过则进入自修正循环。
-7. **技术债自动回收**：文档园丁 Agent 后台定期扫描文档-代码不一致，自动提交修复 PR；技术债跟踪器按优先级持续偿还技术债务。
-
-***
-
-## 第二章：系统架构总览
-
-### 2.1 六层架构模型
-
-FlowForge v2.1 采用分层解耦的 Harness 架构，整体分为六层：
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  6. 应用层 (Application Layer)                                      │
-│     ContentForge / NovelForge / 其他业务系统                        │
-├─────────────────────────────────────────────────────────────────────┤
-│  5. 接入层 (Gateway Layer)                                          │
-│     FastAPI REST API + WebSocket (Helm/Events) + Web UI + CLI       │
-├─────────────────────────────────────────────────────────────────────┤
-│  4. Harness 驾驭层 (Harness Layer) ★ v2.1 核心                      │
-│     上下文工程 | 架构约束 | 反馈循环 | 熵管理 | 权限管线 | 会话管理  │
-├─────────────────────────────────────────────────────────────────────┤
-│  3. 执行引擎层 (Engine Layer)                                       │
-│     HybridExecutor (TAOR循环) | ModeRegistry (9大模式) | Scheduler  │
-├─────────────────────────────────────────────────────────────────────┤
-│  2. 能力层 (Capability Layer)                                       │
-│     Tool生态 (MCP/OpenAPI/GraphQL) | Skill系统 | Agent库 | Memory   │
-├─────────────────────────────────────────────────────────────────────┤
-│  1. 基础设施层 (Infrastructure Layer)                               │
-│     SQLite/PostgreSQL | Redis | Qdrant/Milvus | LangGraph | LLM API │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 2.2 控制回路设计
-
-FlowForge v2.1 的核心是一个完整的前馈+反馈控制回路：
-
-```
-                 ┌─────────────────┐
-                 │  前馈控制        │
-                 │  · AGENTS.md    │
-                 │  · Skill 注入   │
-                 │  · Linter 规则  │
-                 │  · 权限管线     │
-                 └────────┬────────┘
-                          │
-                          ▼
-┌─────────────┐   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-│  用户需求    │ → │ Agent 执行  │ → │   输出      │ → │  验证工具   │
-│  自然语言    │   │ (9大模式)   │   │ (代码/文章) │   │ (测试/审查) │
-└─────────────┘   └─────────────┘   └─────────────┘   └──────┬──────┘
-                                                             │
-                                                             │ 失败
-                                                             ▼
-                 ┌─────────────────┐   ┌─────────────────┐
-                 │  反馈控制        │ ← │  熵管理         │
-                 │  · 独立评判Agent│   │  · 文档园丁     │
-                 │  · 四维评分     │   │  · 技术债回收   │
-                 │  · 自修正循环   │   │  · 规则进化     │
-                 └─────────────────┘   └─────────────────┘
-```
-
-### 2.3 Harness Hook 点设计
-
-Harness 层通过 2 个统一入口介入 Agent 执行流程：
-
-```python
-# HybridExecutor.run() 中的 Hook 点
-if ctx.harness_enabled:
-    await self.harness.pre_execute(ctx)      # context.inject() + entropy.check()
-
-result = await agent.execute_with_context(input, ctx)
-
-if ctx.harness_enabled:
-    result = await self.harness.post_execute(result, ctx)  # constraints.validate() + feedback.evaluate()
-```
-
-* **pre\_execute**：上下文工程注入 + 熵管理轻量检查
-
-* **post\_execute**：架构约束验证 + 反馈循环评估
-
-熵管理（文档园丁、技术债回收）作为后台 Cron 任务，在 `pre_execute` 中只做"是否需要触发债务检查"的轻量判断，不执行实际的扫描和修复。
-
-***
-
-## 第三章：核心功能需求
-
-### 3.1 执行引擎 (Engine Layer)
-
-**FR-ENG-01：HybridExecutor 混合执行器**
-
-* TAOR 循环（Think-Act-Observe-Repeat）
-
-* Persona 锁：同一 persona 同一时间只允许一个任务运行
-
-* `_is_substep` 参数：Workflow 子步骤跳过锁检查
-
-* 错误处理：支持 `abort/skip/retry/reflexion_retry` 四种策略
-
-**FR-ENG-02：ModeRegistry 模式注册中心**
-
-* 注册/获取/推荐模式
-
-* 基于任务描述的智能模式推荐
-
-**FR-ENG-03：9 大内置 Agent 模式**
-
-| 模式                  | 核心机制                                                        | 适用场景             |
-| ------------------- | ----------------------------------------------------------- | ---------------- |
-| `react`             | Thought → Action → Observation 循环（MAX\_STEPS=8，含循环检测）       | 多步动态检索或工具调用      |
-| `plan_execute`      | Planner 生成步骤清单，Executor 依次执行                                | 路径明确、步骤可预测的任务    |
-| `reflexion`         | Actor → Evaluator → Reflector 三 Agent 迭代（MAX\_ITERATIONS=4） | 需要反复打磨的任务（代码、文档） |
-| `multi_agent`       | Subagents/Teams/Swarms 三种子策略                                | 需要多角色配合的复杂任务     |
-| `workflow`          | 预定义 DAG 流程，可混合其他模式                                          | 长流程、端到端业务流水线     |
-| `rewoo`             | 一次性规划所有工具调用，批量执行                                            | 确定性多 API 调用      |
-| `self_discover`     | 任务前自动发现最佳推理结构                                               | 不确定领域            |
-| `agent_judge`       | 独立 Agent 作为评判者，提供定性反馈                                       | 无外部评分标准的任务       |
-| `graph_of_thoughts` | 图式推理，多思路聚合、交叉验证                                             | 复杂推理、数学证明        |
-
-**FR-ENG-04：TaskScheduler 定时调度**
-
-* 基于 APScheduler + SQLAlchemy job store
-
-* 支持动态添加/删除/暂停/恢复 Cron 任务
-
-* 任务恢复（重启后从 job store 恢复）
-
-**FR-ENG-05：三层防御机制**
-
-* L1 超时防御：`ToolRegistry.execute()` 中单次工具调用超时
-
-* L2 重复检测：`BaseModeExecutor._on_exit()` 钩子检测重复输出
-
-* L3 自修正：`WorkflowExecutor` 的 `on_error: "reflexion_retry"` 策略
-
-**FR-ENG-06：轨迹记录与评估管线 (Trajectory Recording Pipeline)**
-
-* 记录 Agent 执行全过程的工具调用轨迹、决策点、状态变更
-
-* 每个任务生成一个 Episode（轨迹 + 验证结果）
-
-* 支持基于分类闸门的自动质量判定（Pass/Fail）
-
-* 持久化到 CheckpointManager，供后续分析和 Skill 进化使用
-
-* 定位：轨迹记录管线，不涉及模型训练（训练基础设施不具备）
-
-### 3.2 Harness 驾驭层 (Harness Layer)
-
-**FR-HRN-01：上下文工程引擎 (ContextEngine)**
-
-* AGENTS.md 动态知识注入：按任务域（domain）检索相关规则
-
-* 历史失败案例检索：从知识库中检索同类任务的历史教训
-
-* 会话交接物构建：`init_script + progress_log + feature_checklist`
-
-* 按需上下文注入：只在 Agent 需要时注入，不污染上下文窗口
-
-**FR-HRN-02：架构约束引擎 (ArchitectureConstraintEngine)**
-
-* 分层依赖模型（Types → Config → Repo → Service → Runtime → UI）
-
-* 自定义 Linter 规则库（可扩展）
-
-* CI 门禁：违反约束则阻断
-
-* 违规信息自动注入 Agent 上下文（让 Agent 自我修复）
-
-* 依赖提取：使用 Python `ast` 模块解析 import 语句，配合 `config/layer_mapping.yaml` 配置化模块→层映射
-
-* Phase 1 仅支持 Python 语言依赖提取，其他语言标注为"计划支持"
-
-**FR-HRN-03：反馈循环引擎 (FeedbackLoop) —— 全局护栏**
-
-* 定位：所有 Agent 输出的**外部质量闸门**，独立于任何模式
-
-* 与 Reflexion 模式的关系：**内环+外环**双层架构
-
-  * 内环（Reflexion 模式）：快速 Actor→Evaluator→Reflector 循环
-
-  * 外环（FeedbackLoop）：四维评分 + 分类闸门，全局生效
-
-* 串行关系：Reflexion 内环先跑完（最多 3 轮），然后交给 FeedbackLoop 外环做一次终审。如果外环 FAIL，不再回到 Reflexion 内环，而是直接降级（返回最佳结果 + 质量警告）
-
-* 生成与评判分离：独立的 Evaluator Agent 评判 Generator Agent 的产出
-
-* 四维评分体系：Design Quality / Originality / Craft / Functionality
-
-* 分类闸门：只看工具执行结果，忽略模型自我评价
-
-* 如果内环已达标，外环快速通过；如果直接输出模式，外环进行独立验证
-
-* evaluation\_mode 三档配置：
-
-  * `full`：四维评分 + 分类闸门（2 次 LLM 调用，适用于需要深度质量评估的场景）
-
-  * `lightweight`：仅分类闸门（1 次 LLM 调用，默认，适用于日常运行）
-
-  * `skip`：跳过外环（内环 Reflexion 仍生效）
-
-**FR-HRN-04：熵管理引擎 (EntropyManager)**
-
-* 文档园丁 Agent：后台定时扫描文档-代码不一致，自动提交修复 PR
-
-* 技术债跟踪器：优先级排序 + 持续小额偿还
-
-* 规则进化器：每次 Agent 失败转化为一条工程规则
-
-* 垃圾回收调度：Cron 定时任务自动触发
-
-* 定位：**内置核心能力**，不走插件市场。文档园丁直接在 `harness/entropy/` 中实现
-
-**FR-HRN-05：权限管线 (PermissionPipeline)**
-
-* deny → ask → allow 三层管线（deny 永远胜出）
-
-* 四级动作分级：Read / Suggest / Prepare / Execute
-
-* 低风险操作 Auto Mode 静默通过
-
-* 高风险操作必须人工确认
-
-**FR-HRN-06：会话管理器 (SessionManager)**
-
-* 92% 阈值触发上下文压缩：当 token 使用量达到模型上下文窗口 92% 时自动压缩
-
-* 计算方式：`utilization = total_tokens / model_context_window`
-
-* 模型上下文窗口从 LLM 配置文件读取，默认 128K
-
-* 保留最近 N 轮完整对话（默认 3，可配置）+ 压缩早期历史为摘要
-
-* 工具输出 Token 截断（默认 25000 tokens）
-
-* 会话交接：检查点保存 + 交接物传递
-
-### 3.3 能力层 (Capability Layer)
-
-**FR-CAP-01：Tool 生态**
-
-* 内置 12+ 工具：LLM Client、文件读写、Shell 执行、网络搜索、OpenSieveClient、Python 沙箱、Git 操作、图片搜索、邮件发送、Webhook、TaskBoard 操作
-
-* 协议适配器：MCP / OpenAPI / GraphQL 三种协议自动转换为 Tool
-
-* 门控工具管线：权限检查 → 安全分类 → 执行 → 输出校验
-
-* 安全标记：`safety_level` 属性 + `is_concurrency_safe`
-
-* 工具输出 Schema 校验
-
-**FR-CAP-02：Skill 系统**
-
-* 跨格式兼容：原生支持 FlowForge / Claude Code / Anthropic / Trae CN 四种 Skill 格式
-
-* OpenHarness 格式标注为 Roadmap，当前不实现
-
-* 双层加载：全局 Skill（\~/.flowforge/skills/）+ 项目 Skill（./.flowforge/skills/）
-
-* 符号链接支持：项目 Skill 链接到全局目录
-
-* Skill 组合技（Combo Skills）：多 Skill 管道编排
-
-* 触发器匹配：自然语言触发词自动匹配并激活 Skill，支持置信度评分 + 上下文增强
-
-* Skill 版本管理：语义化版本 + 依赖管理 + 变更记录
-
-**FR-CAP-03：MCP 模块**
-
-* L1 MCP Client：JSON-RPC 2.0 客户端 + stdio / Streamable HTTP 双传输
-
-* L2 MCP Gateway：工具白名单 + Token 预算管理 + 速率限制 + 权限管线集成
-
-* L3 MCP Broker：多服务器聚合 + 动态路由 + 熔断/重试 + 工具名→服务器索引
-
-* L4 MCP Tool Adapter：自动转换为 FlowForge BaseTool + 流式执行支持
-
-* 工具发现缓存（5 分钟 TTL）
-
-**FR-CAP-04：通用 Agent 库**
-
-* 内容创作类 12 个：TopicResearch、MaterialCollection、ArticleWriting、SEOOptimization、FactCheck、ContentAudit、HeadlineOptimizer、ContentRepurposer、TrendAnalysis、Publishing、ImageResearch、Multilingual
-
-* 小说创作类 12 个：OutlinePlanning、CharacterDesign、ChapterWriting、PlotIntegration、StyleConsistency、VolumeAggregator、DialogueGeneration、ConflictDevelopment、WorldBuilding、ReaderEngagement、Serialization、Adaptation
-
-* 代码工具类 8 个：CodeReview、TaskDecomposition、MetaPlanner、Debate、DataAnalysis、PromptOptimizer、TestGeneration、Documentation
-
-* 每个 Agent 标注验证状态：✅ 已验证 / 🔄 设计中 / 📅 待验证
-
-**FR-CAP-05：Memory 系统**
-
-* 5 种记忆策略：Working / Short-term / Long-term / Semantic / Episodic
-
-* TaskBoard：多 Agent 共享任务板，RETURNING 子句原子认领
-
-* Mailbox：Agent 间通信信箱，支持优先级 + 过滤 + 过期清理
-
-* CheckpointManager：增量保存 + 恢复 + 版本管理
-
-* ContextCompressor：tiktoken + 滑动窗口 + 92% 阈值触发
-
-**FR-CAP-06：通用 Workflow 库**
-
-* 15+ 预置 YAML 模板：DeepArticle、QuickPost、TrendArticle、MultiPlatform、SEOContent、ImageArticle、Multilingual、ReportGeneration、DefenseArticle 等
-
-* 每个 Workflow 步骤可指定独立的执行模式
-
-* 支持 `defense` 全局配置（三层防御参数）
-
-* 支持 `human: true` 审核节点
-
-### 3.4 多 Agent 策略 (Multi-Agent Strategies)
-
-**FR-MAS-01：Subagents 策略**
-
-* 完全上下文隔离：每个子 Agent 独立上下文窗口（空状态，无历史污染）
-
-* 并行执行：所有子任务并发处理
-
-* 工具过滤：只暴露子任务需要的最小工具集
-
-* 结果压缩：子 Agent 返回压缩摘要，避免污染父 Agent 上下文
-
-* 令牌预算约束：每个子 Agent 独立令牌预算（默认 50000 tokens）
-
-**FR-MAS-02：Agent Teams 策略**
-
-* Lead Agent 作为项目经理，维护 TaskBoard 和 Mailbox
-
-* 多 Team Agent 从共享任务板认领任务
-
-* Agent 间通过 Mailbox 通信（支持优先级、标签、过期）
-
-* 三层防御：空闲轮次检测 + 重复结果检测 + 超时任务重发布
-
-* Lead Agent 监控全局状态，处理冲突和死循环
-
-**FR-MAS-03：Swarms 策略**
-
-* 去中心化集群：无固定 Leader，通过共享任务队列协作
-
-* 心跳机制：每个 Worker 定期报告存活状态
-
-* 失败节点自动恢复：失联 Worker 的任务自动重发布
-
-* 乐观并发控制 + 分布式锁
-
-### 3.5 Helm 实时交互 (Helm Mode)
-
-**FR-HELM-01：实时执行流**
-
-* 17 种 FlowForge 事件 → 16 种 Helm 事件类型全映射
-
-* WebSocket 专用通道 `/ws/helm/{task_id}`
-
-* 事件序号 + 断线重连 + 历史回放
-
-**FR-HELM-02：Helm 三栏布局**
-
-* 左栏：执行流（虚拟滚动，支持 500+ 条事件）
-
-* 中栏：工具调用/LLM 思考详情面板（可展开/折叠）
-
-* 右栏：Markdown 编辑器（编辑/预览/分屏三种模式）
-
-**FR-HELM-03：审核节点内联**
-
-* 审核操作直接嵌入执行流，不跳转到独立页面
-
-* 支持审核通过/驳回/编辑提交
-
-* 审核窗口期 5 分钟内可撤回
-
-**FR-HELM-04：任务控制**
-
-* 暂停/恢复/跳过当前节点
-
-* 实时 Token 统计和费用预估
-
-**FR-HELM-05：Plan 模式 UI**
-
-* 用户输入任务后 AI 生成结构化执行计划
-
-* 用户可编辑/调整/确认 Plan 后系统按计划执行
-
-* Plan 步骤支持指定 agent/tool/mode
-
-* Plan 确认后内部转换为 Workflow YAML 委托 WorkflowExecutor 执行
-
-* Harness 集成：步骤执行用 lightweight FeedbackLoop，完成时用 full 模式
-
-**FR-HELM-06：文件上传/附件**
-
-* 支持拖拽或按钮上传文件（截图/文档/代码等）
-
-* 文件类型白名单校验（MIME + 扩展名双重校验）
-
-* UUID 重命名存储，原始文件名保留在元数据
-
-* 速率限制：每分钟 10 个文件/每任务
-
-* 附件自动注入 TaskContext.state 供 Agent 通过 workspace\_file 访问
-
-**FR-HELM-07：Diff 视图升级**
-
-* 引入 diff 库替代手写 Diff 算法
-
-* 支持字符级高亮和行号显示
-
-* 支持按文件分组的多文件变更视图
-
-* 一键接受/拒绝单个 Hunk 或全部变更
-
-* FileChangeTracker 后端组件跟踪文件变更历史
-
-* 大文件（>1000 行）使用 Web Worker 计算 Diff
-
-**FR-HELM-08：斜杠命令面板**
-
-* 可视化命令面板，支持分组（执行控制/模式切换/导航/工具/帮助）
-
-* 模糊匹配算法（精确 > 包含 > 字符序列）
-
-* Ctrl+K 全局触发
-
-* 后端 API 动态生成命令列表
-
-* 空状态和无匹配状态设计
-
-**FR-HELM-09：前端状态管理**
-
-* React Context + useReducer 零依赖方案
-
-* PlanContext / AttachmentContext / DiffContext
-
-* HelmContextProvider 组合 Provider
-
-**FR-HELM-10：数据库迁移**
-
-* 新建 data/helm.db 管理 Helm 交互数据
-
-* plans 表：id / task\_id / title / steps\_json / status / current\_step / total\_steps 等
-
-* attachments 表：id / task\_id / file\_name / file\_size / file\_type / mime\_type / storage\_path 等
-
-### 3.6 插件与扩展 (Plugin System)
-
-**FR-PLG-01：三层插件架构**
-
-* Mode 插件：注册新的执行模式
-
-* Agent 插件：注册新的通用 Agent
-
-* Tool 插件：注册新的工具（含 MCP 协议接入）
-
-**FR-PLG-02：插件发现机制**
-
-* Python `entry_points` 标准机制
-
-* YAML 配置文件扫描
-
-* 加载失败的插件不影响系统启动
-
-**FR-PLG-03：插件市场**
-
-* 内部市场：团队共享 Agent/Workflow/Skill
-
-* 公共市场：开源插件分发
-
-* 插件版本管理 + 依赖检查
-
-* 注意：Skill 的加载由 `skills/registry.py` 独立管理，不走 `plugins/plugin_manager.py`
-
-### 3.7 可观测性 (Observability)
-
-**FR-OBS-01：全链路追踪**
-
-* 每个任务生成唯一 `trace_id`
-
-* 注入到所有 Agent 调用和 LLM 请求
-
-**FR-OBS-02：Prometheus 指标**
-
-| 指标名                                             | 类型        | 描述         |
-| ----------------------------------------------- | --------- | ---------- |
-| `flowforge_tasks_total{mode, status}`           | counter   | 任务创建总数     |
-| `flowforge_execution_duration_seconds`          | histogram | 任务执行耗时     |
-| `flowforge_token_usage_total{model, provider}`  | counter   | Token 消耗   |
-| `flowforge_tool_calls_total{tool_name, status}` | counter   | 工具调用次数     |
-| `flowforge_persona_running{persona}`            | gauge     | 当前各专栏运行任务数 |
-
-**FR-OBS-03：审计日志**
-
-* 所有 Agent、Tool 调用均记录在 audit\_logs 表中
-
-* 包含输入参数、输出、trace\_id、耗时
-
-* 敏感信息脱敏
-
-**FR-OBS-04：WebSocket 实时推送**
-
-* 通用事件通道 `/ws/events`
-
-* Helm 专用通道 `/ws/helm/{task_id}`
-
-* 支持断线重连和事件回放
-
-### 3.8 安全体系 (Security)
-
-**FR-SEC-01：Fail-closed 工具安全**
-
-* 所有工具继承 `BaseTool.safety_level` 属性
-
-* 危险工具默认需要审批
-
-* 只读工具可直接执行
-
-**FR-SEC-02：代码沙箱**
-
-* 进程级隔离 + 资源限制
-
-* 移除危险内置函数
-
-* 文件系统路径穿越防护
-
-* 跨平台兼容（Linux/Windows）
-
-**FR-SEC-03：并发安全**
-
-* Persona 锁：同一专栏互斥
-
-* TaskBoard 原子认领（RETURNING 子句 + 应用层锁）
-
-* 非并发安全工具自动加锁
-
-### 3.9 SDK 与上层集成 (SDK & Upper Integration)
-
-**FR-SDK-01：FlowForgeSDK 统一入口**
-
-* 上层项目只需 `from flowforge.sdk import FlowForgeSDK` 即可获得全部 FlowForge 能力
-
-* 懒初始化属性访问：`sdk.llm` / `sdk.models` / `sdk.tools` / `sdk.agents` / `sdk.events` / `sdk.memory` / `sdk.guardrails` / `sdk.handoffs` / `sdk.mcp`
-
-* 装饰器注册：`@sdk.tool()` / `@sdk.agent()` / `@sdk.declarative_agent()` / `@sdk.input_guardrail()` / `@sdk.output_guardrail()` / `@sdk.on_event()`
-
-* `sdk.wire(flowforge_instance)` 可将 SDK 的注册表与已有 FlowForge 实例对接
-
-**FR-SDK-02：ModelCapabilityProvider 零配置模型访问**
-
-* 上层项目通过 `sdk.llm.chat()` 即可调用 LLM，无需关心 provider/model 配置
-
-* 自动读取 `models.yaml` 中的 provider 和 model 配置
-
-* 智能路由：根据健康检查结果自动选择可用模型
-
-* 降级容错：主模型不可用时自动切换到 fallback 模型
-
-**FR-SDK-03：@tool 装饰器**
-
-* 5 行代码即可创建工具：`@sdk.tool(name="my_tool", description="...")`
-
-* 自动从函数签名生成 `parameters_schema`
-
-* 自动注册到 `ToolRegistry`
-
-* 支持 `safety_level` 参数
-
-**FR-SDK-04：Guardrails 并行安全检查**
-
-* InputGuardrail：Agent 执行前的输入检查
-
-* OutputGuardrail：Agent 执行后的输出检查
-
-* 并行执行：所有 Guardrail 通过 `asyncio.gather` 并行运行
-
-* 四种结果：`passed`（通过）/ `warned`（警告但通过）/ `blocked`（阻断）/ `modified`（转换后通过）
-
-* 任何 Guardrail 返回 `blocked` 时立即停止执行
-
-**FR-SDK-05：Agent Handoff 任务委托**
-
-* LLM 驱动的 Agent 间任务委托
-
-* `Handoff` 定义委托目标、触发条件
-
-* `HandoffManager` 管理委托路由、验证目标 Agent、传递上下文
-
-* 自动生成委托提示词注入 Agent 系统提示
-
-**FR-SDK-06：MCP Integration**
-
-* 一键连接 MCP 服务器：`await sdk.mcp.connect_server(name, command, args)`
-
-* 自动将 MCP 工具注册为 FlowForge BaseTool
-
-* 支持动态工具发现和延迟加载
-
-**FR-SDK-07：Declarative Agent 声明式 Agent**
-
-* 无需继承 BaseAgent，通过装饰器声明即可创建 Agent
-
-* 支持声明：`model`（首选模型）/ `tools`（可用工具列表）/ `instructions`（系统提示）/ `handoffs`（可委托 Agent）/ `guardrails`（安全护栏）
-
-* 函数体留空（`...`）时使用默认 LLM 执行逻辑
-
-**FR-SDK-08：Marketplace 插件市场**
-
-* 插件搜索：按关键词/标签搜索可用插件
-
-* 一键安装/卸载：`sdk.marketplace.install("plugin_name")` / `sdk.marketplace.uninstall("plugin_name")`
-
-* 版本管理：支持插件版本检查和更新
-
-***
-
-## 第四章：非功能需求 (NFR)
-
-### 4.1 性能要求
-
-| 指标                      | 目标           |
-| ----------------------- | ------------ |
-| 单 Agent 执行延迟（不含 LLM）    | < 2s (P95)   |
-| Workflow 8 步骤执行（不含 LLM） | < 30s        |
-| WebSocket 事件延迟          | < 50ms (P95) |
-| 插件加载时间（10个插件）           | < 500ms      |
-| 并发创建 10 个不同 persona 任务  | 全部成功，无锁冲突    |
-
-### 4.2 FeedbackLoop 评估模式
-
-| 模式            | LLM 调用次数         | 适用场景             |
-| ------------- | ---------------- | ---------------- |
-| `full`        | 2 次（四维评分 + 分类闸门） | 需要深度质量评估的场景      |
-| `lightweight` | 1 次（仅分类闸门）       | 日常运行，**默认**      |
-| `skip`        | 0 次（跳过外环）        | 内环 Reflexion 仍生效 |
-
-### 4.3 可靠性要求
-
-| 指标                 | 目标                  |
-| ------------------ | ------------------- |
-| 系统可用性              | > 99%（非硬件故障）        |
-| 人工审核通过率            | > 90%               |
-| 模型故障自动切换           | < 10s               |
-| WebSocket 断线重连     | 指数退避，最多 10 次        |
-| Circuit Breaker 触发 | 5 次连续失败触发熔断         |
-| 429 Retry-After    | 支持 retry-after 头部解析 |
-
-### 4.4 可扩展性
-
-* **NFR-01**：插件化 Agent/Mode/Tool 注册机制，支持热插拔
-
-* **NFR-02**：MCP 协议接入外部工具服务器
-
-* **NFR-03**：OpenAPI/GraphQL 自动转换为 Tool
-
-* **NFR-04**：配置热重载（harness\_v6.yaml 修改后无需重启）
-
-### 4.5 安全性
-
-* **NFR-05**：三层权限管线 + 四级动作分级
-
-* **NFR-06**：代码沙箱 + 文件系统路径穿越防护
-
-* **NFR-07**：Human-in-the-Loop 审核（所有正式发布必须人工确认）
-
-* **NFR-08**：全链路审计追踪
-
-* **NFR-09**：密钥加密存储（SecretStore）
-
-### 4.6 可维护性
-
-* **NFR-10**：清晰的分层架构和模块边界
-
-* **NFR-11**：声明式 YAML 配置驱动
-
-* **NFR-12**：全链路追踪和结构化日志
-
-* **NFR-13**：Prometheus + Grafana 监控
-
-* **NFR-14**：结构化异常体系——`ProxyError` 携带 `context dict`，包含 trace\_id、tool\_name、原始错误信息
-
-### 4.7 Helm 交互性能与安全
-
-* **NFR-HELM-01**：附件预览 < 200ms，Diff 渲染 < 500ms，Plan 生成 < 5s
-
-* **NFR-HELM-02**：文件上传安全（类型白名单 / 路径防护 / 速率限制 / UUID 重命名）
-
-***
-
-## 第五章：与 ContentForge 的集成方案
-
-### 5.1 集成架构
-
-FlowForge v2.1 作为底层 Harness 引擎，ContentForge 作为上层业务应用。ContentForge 通过以下方式接入：
-
-1. **注册业务 Agent**：ContentForge 的 7 个业务 Agent（TopicAgent、ResearchAgent、WriterAgent 等）继承 FlowForge BaseAgent，注册到 AgentRegistry
-2. **配置 Persona**：内容专栏的 SOUL/MEMORY 转换为 `config/persona/{name}.yaml`
-3. **定义 SOP**：创作流程映射为 Workflow YAML 模板
-4. **注册业务 Tool**：OpenSieveClient、ToutiaoPublisher、WeChatPublisher 等注册到 ToolRegistry
-5. **使用 Skill**：创作类 Skill（如 weekly-report、book-essence-extractor）直接注入到 Agent 上下文
-6. **启用 Harness**：上下文工程、架构约束、反馈循环、熵管理作为全局配置启用
-
-### 5.2 业务场景映射
-
-| ContentForge 场景 | FlowForge v2.1 对应能力                                 |
-| --------------- | --------------------------------------------------- |
-| 深度长文创作          | Workflow 模式 + `deep_article` SOP + Reflexion Writer |
-| 热点追踪创作          | Multi-Agent (Subagents) + WebSearch Tool            |
-| 多平台分发           | Workflow 模式 + `multi_platform` SOP                  |
-| SEO 内容生产        | Workflow 模式 + SEOOptimization Agent                 |
-| 定时批量创作          | TaskScheduler + Cron 任务                             |
-| 人工审核            | Human-in-the-Loop 节点 + Helm 审核块                     |
-| 模型故障自愈          | ModelService 健康检查 + 级联修复                            |
-| 文档维护            | 文档园丁 Agent + 技术债回收                                  |
-| AI 主编实时协作       | Helm 模式 + WebSocket 事件流                             |
-
-### 5.3 迁移路径
-
-| ContentForge 现有模块                 | FlowForge v2.1 对应                                | 迁移策略                                                     |
-| --------------------------------- | ------------------------------------------------ | -------------------------------------------------------- |
-| `brain/orchestrator.py`           | `engine/hybrid_executor.py`                      | **包装**：保留 Persona 锁、Helm 回调，核心执行委托                       |
-| `workers/`                        | `agents/content/`                                | **继承**：改继承 FlowForge BaseAgent，使用 `execute_with_context` |
-| `tools/registry.py`               | `tools/registry.py`                              | **委托**：包装 FlowForge ToolRegistry                         |
-| `tools/llm/client.py`             | `tools/builtin/llm_client.py`                    | **替换**                                                   |
-| `core/interfaces/helm_emitter.py` | `events/event_bus.py` + `events/helm_adapter.py` | **桥接**                                                   |
-| `brain/scheduler.py`              | `scheduler/scheduler.py`                         | **替换**                                                   |
-| `config/persona/*.yaml`           | `config/persona/*.yaml`                          | **保留**                                                   |
-
-### 5.4 增量三步迁移策略
-
-| 步骤         | 内容                                          | 新增目录                                     | 修改文件                                         | 回归测试                 |
-| ---------- | ------------------------------------------- | ---------------------------------------- | -------------------------------------------- | -------------------- |
-| **Step 1** | 新增 harness/，灰度开关                            | `harness/`（14个新文件）                       | `HybridExecutor.run()` 增加 Hook 点             | harness 禁用时行为不变      |
-| **Step 2** | 重组 tools/agents，import 兼容                   | `tools/builtin/` 等子目录                    | `__init__.py` re-export + DeprecationWarning | 所有现有 Agent/Tool 测试通过 |
-| **Step 3** | executor/→engine/，引入 security/observability | `engine/`, `security/`, `observability/` | 删除旧 import 路径                                | 全量回归测试               |
-
-Step 2 的 import 兼容期为 **1 个大版本周期**（v2.1 全周期内保持兼容，v7.0 才删除旧路径），旧 import 路径触发时输出 `DeprecationWarning`。
-
-***
-
-## 第六章：业务场景支撑矩阵
-
-| 业务场景     | 执行模式          | 多Agent策略     | Harness护栏  | Tool依赖                           | Skill           | 交互模式     |
-| -------- | ------------- | ------------ | ---------- | -------------------------------- | --------------- | -------- |
-| 深度长文创作   | workflow      | subagents    | 反馈循环+熵管理   | opensieve+web\_search            | article-outline | Helm     |
-| 快速帖子生成   | rewoo         | -            | 架构约束       | llm+web\_search                  | -               | Standard |
-| 热点追踪     | multi\_agent  | subagents    | 上下文工程      | web\_search+opensieve            | trend-analysis  | Standard |
-| 多平台分发    | workflow      | -            | 权限管线       | publish\_toutiao+publish\_wechat | -               | Standard |
-| SEO内容生产  | plan\_execute | -            | 反馈循环       | opensieve+llm                    | seo-optimizer   | Standard |
-| 定时批量创作   | workflow      | -            | 所有         | 全部                               | -               | Cron     |
-| AI主编实时协作 | workflow      | agent\_teams | 上下文工程+反馈循环 | 全部                               | 全部              | Helm     |
-| 代码审查     | reflexion     | agent\_teams | 架构约束+反馈循环  | git\_ops+llm                     | code-review     | Helm     |
-| 文档维护     | plan\_execute | -            | 熵管理        | file\_rw+git\_ops                | doc-gardener    | Cron     |
-
-***
-
-## 附录 A：Harness 层配置参考
-
-```yaml
-# config/harness_v6.yaml
-flowforge:
-  version: "6.0"
-  mode: "harness"  # harness | framework
-
-harness:
-  context_engineering:
-    enabled: true
-    agents_md_path: "config/AGENTS.md"
-    dynamic_injection: true
-    handoff_enabled: true
-
-  architecture_constraints:
-    enabled: true
-    layer_model: ["Types", "Config", "Repo", "Service", "Runtime", "UI"]
-    layer_mapping_path: "config/layer_mapping.yaml"
-    linter_rules_path: "config/linter_rules.yaml"
-    ci_gate: "fail_on_violation"
-
-  feedback_loop:
-    enabled: true
-    evaluation_mode: "lightweight"  # full | lightweight | skip
-    evaluator_model: "sonnet-4.6"
-    scoring_dimensions: [design_quality, originality, craft, functionality]
-    pass_threshold: 0.85
-    max_reflexion_iterations: 3
-    cross_validation: true
-
-  permission_pipeline:
-    enabled: true
-    tiers: [deny, ask, allow]
-    action_levels:
-      read: auto_approved
-      suggest: prompt_user
-      prepare: prompt_user
-      execute: require_approval
-
-  session_management:
-    compaction_threshold: 0.92
-    model_context_window: 128000
-    preserved_rounds: 3
-    max_tool_output_tokens: 25000
-    tool_output_warning_tokens: 10000
-    handoff_enabled: true
-    checkpoint_interval: 300
-
-  entropy_management:
-    enabled: true
-    doc_gardener_schedule: "0 2 * * *"
-    debt_collection_schedule: "weekly"
-    capture_failures_to_rules: true
-```
-
-## 附录 B：架构层映射配置参考
-
-```yaml
-# config/layer_mapping.yaml
-layers:
-  Types:
-    - "models"
-    - "schemas"
-    - "types"
-    - "interfaces"
-  Config:
-    - "config"
-    - "settings"
-    - "env"
-  Repo:
-    - "repository"
-    - "database"
-    - "db"
-  Service:
-    - "service"
-    - "usecase"
-    - "domain"
-  Runtime:
-    - "runner"
-    - "executor"
-    - "engine"
-  UI:
-    - "ui"
-    - "components"
-    - "pages"
-```
-
-## 附录 C：评审修复记录
-
-本规格说明书经过三轮评审，以下为关键修复记录：
-
-| #  | 修复项                | 变更内容                                                                     |
-| -- | ------------------ | ------------------------------------------------------------------------ |
-| 1  | Compaction 阈值      | 统一为 92%，计算方式：`utilization = total_tokens / model_context_window`，默认 128K |
-| 2  | FeedbackLoop 定位    | 明确为内环(Reflexion)+外环(FeedbackLoop)双层架构，串行关系，外环 FAIL 直接降级不回内环              |
-| 3  | 增量迁移策略             | 制定三步迁移计划（harness 灰度→tools/agents 重组→engine 迁移），兼容期延至 v7.0                |
-| 4  | FR-ENG-06          | 新增轨迹记录与评估管线，降级为轨迹记录，不涉及模型训练，"Reward"改为"质量判定"                             |
-| 5  | Skill 加载入口         | 删除 plugins/skills\_loader.py，统一走 skills/registry.py                      |
-| 6  | agent\_registry 归属 | 从 core/ 移入 engine/，core/ 只保留纯接口                                          |
-| 7  | 依赖提取实现             | 补充 ast 模块解析 + layer\_mapping.yaml 配置化                                    |
-| 8  | MCP Broker 索引      | 增加 tool\_name→server\_name 映射，避免每次遍历                                     |
-| 9  | OpenHarness 格式     | 删除 SkillFormat.OPENHARNESS，标注为 Roadmap                                   |
-| 10 | Skill 匹配评分         | 增加置信度评分 + 上下文增强 + 触发词长度权重                                                |
-| 11 | MCP 流式             | 增加 execute\_stream() 方法                                                  |
-| 12 | evaluation\_mode   | FeedbackLoop 增加 full/lightweight/skip 三档配置，默认 lightweight                |
-| 13 | control\_loop.py   | 删除，由 HarnessOrchestrator（2 个统一入口 pre\_execute/post\_execute）替代           |
-| 14 | Hook 点设计           | 从 1 个 pre\_execute 扩展为 2 个统一入口（pre\_execute + post\_execute）             |
-| 15 | 熵管理定位              | 明确为内置核心能力，不走插件市场                                                         |
-| 16 | 保留对话轮数             | 改为可配置（默认 3，可配置），适应不同模型上下文窗口                                              |
-
-***
-
-# \[审核修订 v2.1] 六方联合审核修订增补
-
-> 审核日期：2026-06-15 | 修订版本：v2.1 | 修订依据：6份专家审核意见取并集
-
-## 附录D：用户旅程图 \[审核修订 v2.1]
-
-### D.1 核心角色与关键操作节点
-
-| 角色          | 关键操作                  | 触发方式          | 期望反馈            |
-| ----------- | --------------------- | ------------- | --------------- |
-| **AI应用开发者** | 创建Agent/Workflow YAML | CLI / Web UI  | 编译结果、运行日志、调试信息  |
-| **平台管理员**   | 配置安全策略/权限规则           | Web UI / YAML | 策略生效确认、审计日志     |
-| **业务专家**    | 提交创作/开发任务             | Web UI / Helm | 任务进度、质量门结果、审核通知 |
-| **AI主编/指挥** | 调度Agent执行             | 自动触发          | 执行状态、异常告警       |
-
-### D.2 EventBus → 前端 WebSocket 推送契约
-
-| 事件                          | 触发条件    | 推送目标    | Payload                                        |
-| --------------------------- | ------- | ------- | ---------------------------------------------- |
-| `task.created`              | 任务创建    | 开发者/管理员 | {{task\_id, type, status}}                     |
-| `gate.review_ready`         | 门禁评分完成  | 审核者     | {{gate\_id, scores, verdict}}                  |
-| `gate.human_required`       | 门禁需人工确认 | 管理员     | {{gate\_id, timeout, escalation}}              |
-| `iteration.retry_exhausted` | 重试耗尽    | 开发者     | {{task\_id, attempts, last\_error}}            |
-| `compaction.completed`      | 上下文压缩完成 | 系统      | {{session\_id, before\_tokens, after\_tokens}} |
-| `llm.fallback_triggered`    | 主模型失败降级 | 管理员     | {{model, fallback\_model, error}}              |
-
-## 附录E：失败UX设计 \[审核修订 v2.1]
-
-### E.1 Reflexion重试耗尽
-
-* **用户看到**：任务状态→"质量未达标"，评分趋势图、失败原因摘要、建议人工介入方向
-
-* **系统行为**：标记 status=partial，触发 task.degrade\_to\_human 事件
-
-* **降级路径**：自动降级到规则引擎 / 人工审核
-
-### E.2 门禁veto触发
-
-* **用户看到**：门禁详情页，veto维度高亮，可一键"打回重做"或"人工覆盖"
-
-* **系统行为**：记录审计日志，触发 gate.veto\_triggered 事件
-
-* **回退策略**：回退到veto维度对应的上游阶段，最多回退3次后升级
-
-### E.3 沙箱执行崩溃
-
-* **用户看到**：错误详情（脱敏后），崩溃时间点，建议修改方向
-
-* **系统行为**：记录崩溃日志，触发 sandbox.crash 事件
-
-* **降级路径**：跳过沙箱执行 → 人工代码审查
-
-### E.4 LLM全部不可用
-
-* **降级决策树**：主模型→fallback模型→规则引擎→人工处理
-
-* **用户看到**：降级通知，预计恢复时间，当前使用策略
-
-* **系统行为**：触发 llm.all\_degraded 事件，进入只读模式
-
-## 附录F：用户价值度量(KPI/OKR) \[审核修订 v2.1]
-
-| 项目           | 北极星指标                               | 健康指标                                             |
-| ------------ | ----------------------------------- | ------------------------------------------------ |
-| FlowForge    | 配置驱动率（Agent/Tool/Workflow三大类YAML化率） | 启动时间 < 5s、cold start内存 < 200MB、并发session ≥ 50    |
-| DevForge     | DCP门禁准确率（与人工评审的一致性）                 | 端到端发布时长 < 30min、hotfix修复时长 < 15min、自动回滚成功率 ≥ 95% |
-| ContentForge | SOP完成率（深度长文从选题到发布一次通过率）             | 平均审核次数 < 2、单篇发布耗时 < 10min、平台适配成功率 ≥ 90%          |
-| NovelForge   | 章节一致性得分 ≥ 0.8                       | 单章节生成耗时 < 60s、Reflexion收敛轮数 < 3                  |
-
-## 附录G：PromptManager统一协议 \[审核修订 v2.1]
-
-### G.1 设计目标
-
-解决三个项目共115处硬编码提示词（FlowForge 77 + ContentForge 24 + NovelForge 14）。
-
-### G.2 YAML Schema
-
-```yaml
-# config/prompts.yaml
-prompts:
-  agent.topic.search:
-    template: |
-      你是一个选题策略专家，请基于以下信息生成选题...
-      专栏领域：{{{{ domain }}}}
-      热点数据：{{{{ hot_topics }}}}
-    variables: [domain, hot_topics]
-    output_schema: "topic_search.v1"
-    max_tokens: 2048
-    version: "1.0"
-    tags: [contentforge, topic]
-```
-
-### G.3 核心能力
-
-1. **加载优先级**：YAML > \_DEFAULT\_PROMPTS > 代码硬编码
-2. **热加载**：修改prompts.yaml无需重启，5秒内生效
-3. **版本管理**：每个prompt有version字段，支持A/B测试
-4. **缓存策略**：LRU缓存，避免每次从磁盘读取
-5. **变量插值**：Jinja2模板引擎，支持 {{{{ variable }}}} 语法
-6. **Token审计**：构建完成后打印persona token占比（<15%为健康）
-
-### G.4 迁移策略
-
-1. 统一删除 \_DEFAULT\_PROMPTS 字典
-2. 代码通过 prompt\_manager.get\_prompt(key, \*\*kwargs) 加载
-3. 合并重复定义（同一提示词在3个文件中重复硬编码→合并为1个YAML key）
-4. 按Agent/模块维度分批外置，每批完成后用自动化脚本验证
-
-## 附录H：Provider规格与配额管理 \[审核修订 v2.1]
-
-### H.1 models.yaml完整规格Schema
-
-```yaml
-providers:
-  openroute:
-    base_url: "https://openrouter.ai/api/v1"
-    api_key: "${{OPENROUTER_API_KEY}}"
-
-models:
-  doubao-seed2:
-    provider: openroute
-    model_id: "doubao-seed-2.0"
-    max_tokens: 8192
-    temperature: 0.7
-    top_p: 0.95
-    json_schema_supported: true
-    parallel_tool_calls: true
-    seed: 42
-    safety_threshold: "medium"
-    cost_per_1k_input_tokens: 0.002
-    cost_per_1k_output_tokens: 0.006
-    tpm_quota: 100000
-    rpm_quota: 1000
-    fallback_chain: ["qwen3.6-plus", "deepseek-chat"]
-```
-
-### H.2 ProviderQuotaManager
-
-```python
-class ProviderQuotaManager:
-    # Provider级TPM/RPM/成本配额管理
-    def __init__(self, config):
-        self._quotas = {}  # model -> QuotaState
-
-    async def check_quota(self, model, token_count):
-        # 检查是否在配额内
-        pass
-
-    async def record_usage(self, model, prompt_tokens, completion_tokens):
-        # 记录使用量
-        pass
-
-    def get_budget_status(self, project):
-        # 获取项目预算状态
-        pass
-```
-
-### H.3 多模型级联策略
-
-```yaml
-# config/llm_route.yaml
-primary_chain:
-  - doubao-seed2.0
-  - qwen3.6-plus
-  - deepseek-chat
-failover:
-  condition: "status_code == 429 or timeout > 30s or moderation_rejected"
-  next: chain[index + 1]
-default_agent_override:
-  fact_check_agent: [doubao-seed2.0, gpt-4o-mini]
-  novel_concept_agent: [doubao-seed2.0]
-```
-
-## 附录I：BaseTool Function Call Schema \[审核修订 v2.1]
-
-### I.1 新增接口
-
-```python
-class BaseTool(ABC):
-    name: str
-    description: str
-    # [审核修订 v2.1] 新增
-    parameters_schema: Dict[str, Any]  # JSON Schema格式
-    safety_level: str = "safe"  # safe/moderate/dangerous/critical
-
-    def to_function_call(self) -> Dict[str, Any]:
-        return {{
-            "name": self.name,
-            "description": self.description,
-            "parameters": self.parameters_schema
-        }}
-```
-
-### I.2 HarnessOrchestrator集成
-
-在 pre\_execute 中自动将visible tools注入LLM对话上下文。
-
-## 附录J：可观测性设计 \[审核修订 v2.1]
-
-### J.1 Trace链路
-
-* 每个Agent调用前注入 trace\_id（UUID v7，时间排序）
-
-* 全链路传播：trace\_id → session\_id → task\_id → step\_id
-
-* 结构化日志：JSON格式，PII脱敏，trace\_id关联
-
-### J.2 LLM调用事件
-
-```python
-@dataclass
-class LLMCallEvent:
-    model: str
-    prompt_tokens: int
-    completion_tokens: int
-    latency_ms: float
-    is_fallback: bool
-    fallback_chain_index: int
-    error_code: Optional[str]
-```
-
-### J.3 开箱即用Grafana仪表盘
-
-| 仪表盘               | 核心指标                                 |
-| ----------------- | ------------------------------------ |
-| FlowForge健康度      | session数、compaction频率、EventStore写入延迟 |
-| DevForge门禁通过率     | DCP/TR通过率、人工干预率、平均门禁耗时               |
-| ContentForge发布成功率 | 平台适配成功率、发布耗时、CircuitBreaker触发次数      |
-| NovelForge一致性得分   | 章节一致性趋势、伏笔回收率、Reflexion收敛轮数          |
-
-## 附录K：跨项目契约统一 \[审核修订 v2.1]
-
-### K.1 变量引用语法统一
-
-统一为 LangGraph 风格：
-
-* `${{state.xxx}}` — 引用TaskContext.state中的值
-
-* `${{params.xxx}}` — 引用任务输入参数
-
-* `${{result.xxx}}` — 引用上一步骤输出
-
-* `${{outputs.xxx.yyy}}` — 引用指定步骤的输出字段
-
-### K.2 Agent命名空间
-
-格式：`项目前缀:agent名`，如 `contentforge:topic`、`novelforge:outline`、`devforge:coder`
-
-### K.3 状态输出统一
-
-统一为 `state_updates: {{key: expression}}` 一种语法
-
-### K.4 执行策略统一
-
-```yaml
-execution_policy:
-  timeout: 300
-  retry: {{max_attempts: 3, strategy: "exponential_backoff"}}
-  on_error: "abort"  # abort / retry / degrade_to_human
-  on_anomaly: "escalate"
-```
-
-### K.5 检查点统一
-
-```yaml
-checkpoint:
-  enabled: true
-  backend: "sqlite"
-  path: "${{FLOWFORGE_DATA_DIR}}/checkpoints"
-  every_n_steps: 5
-```
-
-## 附录L：配置驱动率度量标准 \[审核修订 v2.1]
-
-### L.1 计算公式
-
-```
-配置驱动率 = (通过YAML配置的行为数) / (总行为数)
-行为数 = Agent定义数 + Tool定义数 + Workflow步骤数 + Prompt模板数 + 阈值/规则数
-```
-
-### L.2 各Phase里程碑
-
-| Phase      | Agent驱动率 | Tool驱动率 | Workflow驱动率 | Prompt驱动率 |
-| ---------- | -------- | ------- | ----------- | --------- |
-| 当前         | 0%       | 0%      | 17%         | 0%        |
-| Phase 0 完成 | ≥40%     | ≥30%    | ≥60%        | ≥50%      |
-| Phase 1 完成 | ≥70%     | ≥50%    | ≥80%        | ≥80%      |
-| Phase 2 完成 | ≥90%     | ≥70%    | ≥95%        | ≥95%      |
-| Phase 3 完成 | ≥95%     | ≥80%    | ≥98%        | ≥98%      |
-
-## 附录M：性能基线SLO \[审核修订 v2.1]
-
-| 组件                                   | 指标                 | 目标      |
-| ------------------------------------ | ------------------ | ------- |
-| WorkflowCompiler.compile()           | 100 step编译耗时       | < 50ms  |
-| SessionManager.check\_and\_compact() | 1MB上下文压缩耗时         | < 500ms |
-| FiberSet.parallel(10 workers)        | 调度延迟               | < 10ms  |
-| EventStore.append()                  | SQLite WAL模式       | < 5ms   |
-| PersonaInjector.inject()             | 包含5个Source resolve | < 30ms  |
-| LoopExecutor单次迭代                     | 端到端（含1次LLM）        | < 30s   |
-| DualThresholdCompactor               | LLM摘要              | < 10s   |
-| MultiJudgeVerifier                   | 3个评委并行             | < 15s   |
-
-## 附录N：弃用时间线 \[审核修订 v2.1]
-
-* DeprecationWarning保留期限：**3个minor版本**或**6个月**，以先到者为准
-
-* 在 pyproject.toml 中通过 tools.deprecated 配置表管理
-
-* 删除前必须用 git grep 全量搜索引用，确保0引用
-
-* 每批删除后跑 pytest --collect-only + E2E骨架测试
-
-***
-
-# \[审核修订 v2.2] 六方联合审核修订增补（v2.1未覆盖项）
-
-> 审核日期：2026-06-16 | 修订版本：v2.2 | 来源：6份专家审核意见并集，v2.1未覆盖部分
-
-## 一、向后兼容切换策略 \[来源：审核FWK-01/FWK-06/INF-01]
-
-每个设计项需补充新旧路径切换策略，明确迁移完成后的旧代码删除时间线和验收标准。
-
-### 1.1 切换策略分类
-
-| 策略           | 适用场景                                               | 风险等级 | 切换机制                                                              |
-| ------------ | -------------------------------------------------- | ---- | ----------------------------------------------------------------- |
-| Feature Flag | 核心运行时路径（WorkflowCompiler、LLMRouter、TurnTransition） | 高    | `config/system.yaml` 中 `features.use_new_xxx: true/false`，默认false |
-| A-B并行验证      | 数据产出路径（EventStore、Compaction、PersonaInjector）      | 中    | 新旧路径同时运行，对比输出一致性≥99.5%后切换                                         |
-| 硬切换          | 纯内部重构（Repository层、Config外置、DI容器升级）                 | 低    | 直接替换，单PR完成                                                        |
-
-### 1.2 各设计项切换策略
-
-| 设计项                         | 切换策略         | Feature Flag名                           | 旧代码删除时间线              | 验收标准                                      |
-| --------------------------- | ------------ | --------------------------------------- | --------------------- | ----------------------------------------- |
-| FWK-01 WorkflowCompiler     | Feature Flag | `features.use_workflow_compiler`        | Flag开启后2个minor版本（3个月） | dev\_hotfix.yaml + dev\_greenfield.yaml跑通 |
-| FWK-06 TurnTransitionEngine | Feature Flag | `features.use_turn_transition_v2`       | Flag开启后1个minor版本（6周）  | 9状态覆盖原6+7状态所有场景                           |
-| INF-01 LLMRouter            | A-B并行验证      | `features.use_llm_router`               | 并行验证通过后1个minor版本      | 相同请求路由结果一致率≥99.5%                         |
-| INF-02 EventStore           | A-B并行验证      | `features.use_event_store`              | 并行验证通过后1个minor版本      | 事件写入/读取一致性100%                            |
-| INF-05 Compaction           | Feature Flag | `features.use_dual_threshold_compactor` | Flag开启后1个minor版本      | 压缩后上下文可用性≥95%                             |
-| INF-11 Repository层          | 硬切换          | N/A                                     | 单PR合入后立即删除            | 所有SQL操作通过Repository                       |
-| INF-12 配置外置                 | 硬切换          | N/A                                     | 单PR合入后立即删除            | 0处硬编码路径/密钥                                |
-
-### 1.3 Feature Flag数据结构
-
-```python
-@dataclass
-class FeatureFlag:
-    name: str
-    enabled: bool
-    rollout_percentage: int = 0  # 0-100，支持灰度
-    allowed_projects: List[str] = field(default_factory=list)  # 空=全部
-    fallback_to_old: bool = True  # 新路径异常时是否回退旧路径
-    created_at: datetime = field(default_factory=datetime.now)
-    expires_at: Optional[datetime] = None  # Flag过期时间，到期强制切换
-```
-
-### 1.4 旧代码删除验收流程
-
-```
-1. git grep 搜索旧代码所有引用 → 0引用
-2. pytest --collect-only 确认无测试依赖旧路径
-3. 运行全量E2E测试（含HTTP Cassette录制回放）
-4. 删除旧代码 + 删除Feature Flag
-5. 再次全量回归验证
-```
-
-## 二、Gate/Quality Gate术语统一 \[来源：审核FWK-01/CAP-14]
-
-### 2.1 问题
-
-当前FlowForge用"Gate"、DevForge用"QualityGate"、NovelForge用"门禁"，术语不统一导致跨项目协作混乱。
-
-### 2.2 统一方案
-
-FlowForge提供通用Gate抽象，三个项目统一使用：
-
-```python
-class BaseGate(ABC):
-    """通用门禁抽象基类"""
-    gate_id: str
-    gate_type: Literal["quality", "safety", "compliance", "performance"]
-    threshold: float  # 0.0-1.0
-    evaluator: BaseEvaluator
-
-    @abstractmethod
-    async def evaluate(self, context: TaskContext) -> GateVerdict: ...
-
-@dataclass
-class GateVerdict:
-    gate_id: str
-    passed: bool
-    score: float  # 0.0-1.0
-    reason: str
-    details: Dict[str, Any]
-    evaluated_at: datetime
-```
-
-### 2.3 术语映射
-
-| 项目           | 原术语                    | 统一术语                          | 迁移方式      |
-| ------------ | ---------------------- | ----------------------------- | --------- |
-| FlowForge    | Gate                   | Gate                          | 无需迁移      |
-| DevForge     | QualityGate / DCP / TR | Gate(gate\_type="quality")    | Phase 1迁移 |
-| NovelForge   | 门禁 / QualityGate       | Gate(gate\_type="quality")    | Phase 1迁移 |
-| ContentForge | 审核                     | Gate(gate\_type="compliance") | Phase 1迁移 |
-
-## 三、灾备与降级设计 \[来源：审核INF-01/INF-02/CAP-02]
-
-### 3.1 降级决策树
-
-每个Phase 1核心功能配降级决策树：
-
-```python
-class DegradationDecisionTree:
-    """通用降级决策树"""
-
-    @staticmethod
-    async def decide(component: str, error: Exception) -> DegradationAction:
-        if isinstance(error, (LLMTimeoutError, LLMRateLimitError)):
-            # LLM不可用 → 降级到备选模型或人工
-            if await LLMRouter.has_fallback(component):
-                return DegradationAction.SWITCH_PROVIDER
-            return DegradationAction.DEGRADE_TO_HUMAN
-
-        if isinstance(error, (StorageError, DatabaseCorruptError)):
-            # 存储不可用 → 降级到内存模式
-            return DegradationAction.USE_MEMORY_FALLBACK
-
-        if isinstance(error, WorkflowCompileError):
-            # Workflow编译失败 → 降级到硬编码SOP
-            return DegradationAction.USE_HARDCODED_SOP
-
-        if isinstance(error, ToolExecutionError):
-            # 工具执行失败 → 降级到替代工具或跳过
-            if await ToolRegistry.has_alternative(component):
-                return DegradationAction.USE_ALTERNATIVE_TOOL
-            return DegradationAction.SKIP_AND_LOG
-
-        return DegradationAction.ABORT
-
-@dataclass
-class DegradationAction:
-    action_type: Literal[
-        "switch_provider", "degrade_to_human",
-        "use_memory_fallback", "use_hardcoded_sop",
-        "use_alternative_tool", "skip_and_log", "abort"
-    ]
-    target: Optional[str] = None
-    reason: str = ""
-```
-
-### 3.2 task.degrade\_to\_human事件契约
-
-```python
-@dataclass
-class DegradeToHumanEvent:
-    """降级到人工事件"""
-    task_id: str
-    component: str  # 触发降级的组件
-    original_error: str
-    degradation_reason: str
-    context_snapshot: Dict[str, Any]  # 当前任务状态快照
-    suggested_action: str  # 建议人工操作
-    urgency: Literal["low", "medium", "high", "critical"]
-    created_at: datetime
-
-    def to_event(self) -> SessionEvent:
-        return SessionEvent(
-            event_type="task.degrade_to_human",
-            data=self.model_dump(),
-            metadata={"requires_notification": True}
-        )
-```
-
-### 3.3 各组件降级矩阵
-
-| 组件               | 降级策略             | 降级触发条件          | 恢复条件            |
-| ---------------- | ---------------- | --------------- | --------------- |
-| LLMRouter        | 切换到备选Provider    | 主Provider连续3次超时 | 主Provider健康检查通过 |
-| EventStore       | 内存List暂存+定期flush | SQLite写入失败3次    | SQLite恢复写入      |
-| WorkflowCompiler | 使用硬编码SOP         | YAML编译失败        | YAML修复后重新编译     |
-| PersonaInjector  | 使用默认Persona      | Persona文件损坏/缺失  | Persona文件修复     |
-| Compaction       | 丢弃最旧消息           | LLM摘要失败         | LLM恢复可用         |
-| Gate评估           | fail-open（放行+告警） | 评估超时10s         | 评估服务恢复          |
-
-## 四、测试策略设计 \[来源：审核FWK-01/INF-01/CAP-14]
-
-### 4.1 测试套件规划
-
-```
-tests/
-├── config/
-│   ├── test_workflow_yaml_validation.py    # YAML Schema校验
-│   ├── test_persona_yaml_validation.py     # Persona格式校验
-│   ├── test_model_routes_yaml.py           # 模型路由配置校验
-│   └── test_system_yaml_defaults.py        # 系统配置默认值校验
-├── integration/
-│   ├── test_workflow_e2e.py                # Workflow端到端
-│   ├── test_llm_router_e2e.py              # LLM路由端到端
-│   ├── test_event_store_e2e.py             # EventStore端到端
-│   ├── test_gate_e2e.py                    # Gate评估端到端
-│   ├── test_doubao_stream.py               # SSE流式输出一致性
-│   └── test_degradation_e2e.py             # 降级链路端到端
-├── cassettes/                              # HTTP Cassette录制目录
-│   ├── doubao_chat_response.yaml
-│   ├── opensieve_search_response.yaml
-│   └── qwen_fallback_response.yaml
-└── unit/                                   # 现有单元测试
-```
-
-### 4.2 HTTP Cassette录制策略
-
-使用 `pytest-recording` (VCR.py) 录制真实LLM/OpenSieve响应：
-
-```python
-# conftest.py
-import pytest
-
-@pytest.fixture
-def vcr_config():
-    return {
-        "cassette_library_dir": "tests/cassettes",
-        "record_mode": "once",  # 首次录制，后续回放
-        "filter_headers": ["authorization"],  # 脱敏
-        "decode_compressed_response": True,
-    }
-
-# test_llm_router_e2e.py
-@pytest.mark.vcr
-async def test_llm_router_primary_fallback():
-    """测试LLM路由主备切换"""
-    router = LLMRouter(config=load_config())
-    result = await router.chat(
-        model="doubao-seed2",
-        messages=[{"role": "user", "content": "请分析以下技术方案的可行性"}],
-    )
-    assert result.provider in ["doubao", "qwen", "deepseek"]
-    assert result.content  # 非空响应
-```
-
-### 4.3 删除代码回归测试策略
-
-```python
-# tests/integration/test_code_removal_regression.py
-async def test_old_orchestrator_removed():
-    """验证旧Orchestrator代码已完全删除且功能由WorkflowCompiler替代"""
-    # 1. 确认旧模块不存在
-    with pytest.raises(ImportError):
-        from flowforge.workers.orchestrator import Orchestrator
-
-    # 2. 确认新路径可用
-    from flowforge.core.workflow import WorkflowCompiler
-    compiler = WorkflowCompiler()
-    workflow = compiler.compile(load_yaml("dev_hotfix.yaml"))
-    assert len(workflow.steps) > 0
-
-    # 3. 回放Cassette验证功能等价
-    # (使用录制的真实LLM响应，避免每次调用)
-```
-
-## 五、CI/CD和部署方案 \[来源：审核INF-02/INF-12]
-
-### 5.1 Docker Compose开发环境
-
-```yaml
-# docker-compose.dev.yml
-version: "3.8"
-services:
-  flowforge-api:
-    build: .
-    ports: ["8000:8000"]
-    environment:
-      - FLOWFORGE_DATA_DIR=/data
-      - FLOWFORGE_MASTER_KEY=${FLOWFORGE_MASTER_KEY}
-    volumes:
-      - ./data:/data
-      - ./config:/app/config
-    healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  flowforge-web:
-    build: ./web
-    ports: ["5174:5174"]
-    environment:
-      - VITE_API_URL=http://flowforge-api:8000
-    depends_on:
-      flowforge-api:
-        condition: service_healthy
-```
-
-### 5.2 K8s生产部署
-
-```yaml
-# k8s/flowforge-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: flowforge-api
-spec:
-  replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-  template:
-    spec:
-      containers:
-      - name: api
-        image: flowforge-api:latest
-        readinessProbe:
-          httpGet: { path: /health, port: 8000 }
-          periodSeconds: 10
-        livenessProbe:
-          httpGet: { path: /health, port: 8000 }
-          periodSeconds: 30
-        resources:
-          requests: { cpu: "500m", memory: "512Mi" }
-          limits: { cpu: "2000m", memory: "2Gi" }
-        env:
-        - name: FLOWFORGE_MASTER_KEY
-          valueFrom:
-            secretKeyRef:
-              name: flowforge-secrets
-              key: master-key
-```
-
-### 5.3 CI流水线
-
-```yaml
-# .github/workflows/ci.yml
-name: FlowForge CI
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
-      - run: pip install -e ".[dev]"
-      - run: ruff check flowforge/
-      - run: mypy flowforge/ --ignore-missing-imports
-      - run: pytest tests/unit/ -x
-      - run: pytest tests/integration/ --vcr-record=none  # 仅回放，不录制
-  e2e:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-      - run: docker compose -f docker-compose.dev.yml up -d --wait
-      - run: pytest tests/integration/ --vcr-record=once  # 首次录制
-```
-
-## 六、API版本管理和兼容性设计 \[来源：审核FWK-01/INF-01]
-
-### 6.1 API版本策略
-
-```python
-# FlowForge API版本管理
-API_VERSION_CURRENT = "v1"
-API_VERSIONS_SUPPORTED = ["v1"]
-
-# 路由前缀：/api/{version}/...
-app = FastAPI(
-    title="FlowForge API",
-    version=API_VERSION_CURRENT,
-)
-
-# 版本兼容性保障
-@dataclass
-class APICompatibilityGuarantee:
-    """API兼容性保障契约"""
-    version: str
-    breaking_changes: List[str]  # 必须为空才能发布
-    deprecated_endpoints: List[str]  # 弃用端点列表
-    deprecation_notice_version: str  # 弃用通知版本
-    removal_version: str  # 计划移除版本
-```
-
-### 6.2 \*Forge项目兼容性保障
-
-```python
-# FlowForge SDK客户端兼容性检查
-class FlowForgeClient:
-    def __init__(self, base_url: str, api_version: str = "v1"):
-        self.base_url = base_url
-        self.api_version = api_version
-        self._compatibility_checked = False
-
-    async def _check_compatibility(self):
-        """启动时检查API兼容性"""
-        server_info = await self._get("/health")
-        server_version = server_info.get("api_version", "v1")
-        if server_version != self.api_version:
-            raise APIVersionMismatchError(
-                f"Client expects v{self.api_version}, "
-                f"server provides v{server_version}"
-            )
-        self._compatibility_checked = True
-```
-
-### 6.3 版本升级兼容性矩阵
-
-| FlowForge API版本 | ContentForge兼容 | DevForge兼容 | NovelForge兼容 | MallForge兼容 |
-| --------------- | -------------- | ---------- | ------------ | ----------- |
-| v1.0            | ✅              | ✅          | ✅            | ✅           |
-| v1.1 (新增端点)     | ✅ 向后兼容         | ✅ 向后兼容     | ✅ 向后兼容       | ✅ 向后兼容      |
-| v2.0 (Breaking) | 需适配            | 需适配        | 需适配          | 需适配         |
-
-## 七、Helm可视化体验设计 \[来源：审核ECO-07]
-
-### 7.1 UI交互设计细节
-
-```
-┌─────────────────────────────────────────────────────┐
-│ FlowForge Helm                              [⚙️][👤] │
-├──────────┬──────────────────────────────────────────┤
-│ 工作区    │  📋 任务列表          │  💬 对话面板      │
-│ ─────── │ ──────────────────  │ ──────────────  │
-│ 📁 Dev  │  ▶ T-001 热修复     │  [Agent] 正在   │
-│ 📁 Cnt  │  ■ T-002 代码审查   │   编译workflow  │
-│ 📁 Nov  │  ✓ T-003 单元测试   │  [Tool] 调用    │
-│         │                     │   LLMRouter     │
-│ ─────── │  进度: ████████░░ 80%│  [Gate] DCP通过 │
-│ + 新建   │                     │                 │
-├──────────┴──────────────────────────────────────────┤
-│ 🔧 工具调用链 │ 📊 指标 │ 📝 日志                    │
-└─────────────────────────────────────────────────────┘
-```
-
-### 7.2 关键交互规范
-
-| 交互元素      | 规范                              | 实现要点                   |
-| --------- | ------------------------------- | ---------------------- |
-| 工作区切换     | 左侧面板，点击即切换，任务列表联动过滤             | WebSocket推送工作区状态       |
-| 步骤进度条     | 每个步骤显示状态图标（▶运行/■暂停/✓完成/✗失败）     | SSE实时更新                |
-| 工具调用链     | 底部面板，折叠式展示每次Tool调用              | 记录input/output/latency |
-| Agent节点图标 | workflow🧩/agent🤖/llm💬/tool🔧 | 根据event\_type自动匹配      |
-| 长任务防卡死    | 虚拟滚动 + 分页加载（每页50条）              | IntersectionObserver   |
-
-## 八、用户引导路径 \[来源：审核ECO-07/CAP-02]
-
-### 8.1 新手引导流程
-
-```
-首次登录 → 选择项目模板（Dev/Content/Novel/Mall）
-         → 一键部署示例Workflow
-         → 引导式创建第一个任务
-         → 实时查看执行过程
-         → 查看结果与指标
-```
-
-### 8.2 模板市场设计
-
-```yaml
-# templates/index.yaml
-templates:
-  - id: "dev-hotfix"
-    name: "热修复工作流"
-    project: "devforge"
-    description: "从Bug报告到修复提交的完整流程"
-    workflow_file: "dev_hotfix.yaml"
-    persona: "devforge:coder"
-    estimated_time: "5-10min"
-
-  - id: "content-article"
-    name: "文章创作工作流"
-    project: "contentforge"
-    description: "从选题到发布的完整创作流程"
-    workflow_file: "content_article.yaml"
-    persona: "contentforge:writer"
-    estimated_time: "10-15min"
-```
-
-### 8.3 一键部署
-
-```python
-class TemplateDeployer:
-    """模板一键部署"""
-
-    async def deploy(self, template_id: str, project: str) -> DeployResult:
-        template = await self.template_store.get(template_id)
-        # 1. 加载Workflow YAML
-        workflow = self.compiler.compile(template.workflow_file)
-        # 2. 注册Persona
-        await self.persona_manager.register(template.persona)
-        # 3. 创建示例任务
-        task = await self.task_manager.create(
-            project=project,
-            workflow=workflow,
-            input=template.sample_input,
-        )
-        return DeployResult(task_id=task.id, status="ready")
-```
-
-## 九、Agent开发DX设计 \[来源：审核ECO-07]
-
-### 9.1 本地调试Agent
-
-```bash
-# CLI调试命令
-flowforge agent debug \
-  --agent devforge:coder \
-  --input '{"task": "修复登录页面CSS错位"}' \
-  --trace-dir ./traces \
-  --step  # 单步模式，每步暂停等待确认
-```
-
-### 9.2 执行轨迹查看
-
-```python
-# traces/2026-06-16_task-001.json
-{
-  "trace_id": "0192a3b4-c5d6-7e8f-9a0b-1c2d3e4f5a6b",
-  "task_id": "task-001",
-  "steps": [
-    {
-      "step_id": "step-1",
-      "agent": "devforge:coder",
-      "action": "llm_call",
-      "input": {"model": "doubao-seed2", "messages": [...]},
-      "output": {"content": "...", "tokens": 1500},
-      "latency_ms": 3200,
-      "gate_verdict": null
-    },
-    {
-      "step_id": "step-2",
-      "agent": "devforge:coder",
-      "action": "tool_call",
-      "tool": "file_write",
-      "input": {"path": "src/login.css", "content": "..."},
-      "output": {"success": true},
-      "latency_ms": 50,
-      "gate_verdict": {"gate_id": "dcp", "passed": true, "score": 0.92}
-    }
-  ]
-}
-```
-
-### 9.3 VS Code扩展集成
-
-```json
-// .vscode/launch.json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Debug FlowForge Agent",
-      "type": "python",
-      "request": "launch",
-      "module": "flowforge.cli",
-      "args": ["agent", "debug", "--agent", "${input:agentName}", "--step"],
-      "env": {
-        "FLOWFORGE_TRACE_DIR": "${workspaceFolder}/traces"
-      }
-    }
-  ]
-}
-```
-
-## 十、密钥迁移Runbook \[来源：审核INF-12/CAP-02]
-
-### 10.1 CredentialStore迁移计划
-
-```python
-# 旧方式：SecretStore（路径硬编码）
-# 新方式：CredentialStore（FLOWFORGE_MASTER_KEY加密）
-
-class CredentialMigrationRunbook:
-    """密钥迁移Runbook"""
-
-    @staticmethod
-    async def migrate():
-        # Step 1: 检查环境变量
-        master_key = os.environ.get("FLOWFORGE_MASTER_KEY")
-        if not master_key:
-            raise RuntimeError(
-                "FLOWFORGE_MASTER_KEY环境变量未设置！"
-                "请执行: export FLOWFORGE_MASTER_KEY=$(openssl rand -hex 32)"
-            )
-
-        # Step 2: 初始化新CredentialStore
-        new_store = CredentialStore(master_key=master_key)
-
-        # Step 3: 读取旧SecretStore中的所有密钥
-        old_store = SecretStore()  # 旧实现
-        for key_name in old_store.list_keys():
-            value = old_store.get(key_name)
-            await new_store.set(key_name, value)
-            print(f"✅ 迁移密钥: {key_name}")
-
-        # Step 4: 验证迁移完整性
-        for key_name in old_store.list_keys():
-            old_value = old_store.get(key_name)
-            new_value = await new_store.get(key_name)
-            assert old_value == new_value, f"密钥 {key_name} 迁移后不一致！"
-
-        # Step 5: 备份旧存储
-        old_store.backup(path="backups/secret_store_pre_migration.json")
-
-        # Step 6: 更新配置引用
-        # config/system.yaml: credential_store.backend: "encrypted" (原 "file")
-```
-
-### 10.2 FLOWFORGE\_MASTER\_KEY管理
-
-```yaml
-# config/system.yaml 新增
-credential_store:
-  backend: "encrypted"  # encrypted | file | env
-  master_key_env: "FLOWFORGE_MASTER_KEY"
-  encryption_algorithm: "aes-256-gcm"
-  key_rotation_days: 90
-  backup_path: "${FLOWFORGE_DATA_DIR}/backups/credentials"
-```
-
-## 十一、SSE流式输出一致性测试 \[来源：审核NEW-DB-09]
-
-### 11.1 test\_doubao\_stream.py
-
-```python
-# tests/integration/test_doubao_stream.py
-import pytest
-from flowforge.tools.llm import LLMClient
-
-@pytest.mark.vcr
-async def test_doubao_sse_format_consistency():
-    """验证Doubao SSE响应格式与OpenAI兼容"""
-    client = LLMClient(provider="doubao")
-
-    # 测试1: 流式响应格式
-    chunks = []
-    async for chunk in client.chat_stream(
-        model="doubao-seed2",
-        messages=[{"role": "user", "content": "请用三句话描述微服务架构的优势"}],
-    ):
-        chunks.append(chunk)
-        # 每个chunk必须包含delta
-        assert hasattr(chunk, "choices")
-        assert len(chunk.choices) > 0
-        assert hasattr(chunk.choices[0], "delta")
-
-    # 测试2: 完整响应与流式拼接一致
-    full_response = await client.chat(
-        model="doubao-seed2",
-        messages=[{"role": "user", "content": "请用三句话描述微服务架构的优势"}],
-    )
-    streamed_content = "".join(
-        c.choices[0].delta.content or "" for c in chunks
-    )
-    assert streamed_content == full_response.content, (
-        "流式拼接内容与完整响应不一致"
-    )
-
-@pytest.mark.vcr
-async def test_doubao_sse_error_handling():
-    """验证SSE错误事件处理"""
-    client = LLMClient(provider="doubao")
-    with pytest.raises(LLMRateLimitError):
-        async for _ in client.chat_stream(
-            model="doubao-seed2",
-            messages=[{"role": "user", "content": "test"}] * 100,  # 触发限流
-        ):
-            pass
-```
-
-## 十二、中文格式规范检查 \[来源：审核NEW-DB-08]
-
-### 12.1 ChineseFormatChecker
-
-```python
-class ChineseFormatChecker:
-    """中文格式规范检查器，注入到Persona指令中"""
-
-    RULES = {
-        "punctuation": {
-            "description": "中文语境使用中文标点",
-            "pattern": r'[\u4e00-\u9fff]\s*[,.!?;:]\s*[\u4e00-\u9fff]',
-            "replacement": "中文标点（，。！？；：）",
-        },
-        "numbering": {
-            "description": "编号格式统一",
-            "pattern": r'第\s*(\d+)\s*章',
-            "replacement": "第X章（无空格）",
-        },
-        "date_format": {
-            "description": "日期格式统一",
-            "pattern": r'\d{4}/\d{1,2}/\d{1,2}',
-            "replacement": "YYYY年MM月DD日",
-        },
-        "unit_spacing": {
-            "description": "数字与单位间无空格",
-            "pattern": r'\d+\s*(个|次|篇|章|节|条|项|款|种|类|份|期|轮|遍|套|组|批|段|步|层|级|类|种)',
-            "replacement": "数字与中文单位间无空格",
-        },
-    }
-
-    def check(self, text: str) -> List[FormatViolation]:
-        violations = []
-        for rule_name, rule in self.RULES.items():
-            matches = re.findall(rule["pattern"], text)
-            if matches:
-                violations.append(FormatViolation(
-                    rule=rule_name,
-                    description=rule["description"],
-                    expected=rule["replacement"],
-                    found=matches,
-                ))
-        return violations
-```
-
-### 12.2 Persona注入指令段
-
-```yaml
-# persona/base.yaml 新增段
-format_guidelines: |
-  【中文格式规范】
-  1. 中文语境使用中文标点（，。！？；：""''），英文语境使用英文标点
-  2. 编号格式：第一章、第二章（无空格），1.1、1.2（半角点+数字）
-  3. 日期格式：2026年6月16日，不使用2026/06/16
-  4. 数字与中文单位间无空格：3篇文章，不是3 篇文章
-  5. 中英文之间加空格：使用 Python 开发，不是使用Python开发
-```
-
-## 十三、多模态接入规范 \[来源：审核NEW-DB-10]
-
-### 13.1 MultiModalProvider
-
-```python
-class MultiModalProvider:
-    """多模态接入规范"""
-
-    SUPPORTED_MODALITIES = ["text", "image", "audio", "video"]
-
-    async def generate(
-        self,
-        modality: str,
-        prompt: str,
-        model: str = "doubao-seed2-vision",
-        **kwargs,
-    ) -> MultiModalResult:
-        if modality == "image":
-            return await self._generate_image(prompt, model, **kwargs)
-        elif modality == "text":
-            return await self._generate_text(prompt, model, **kwargs)
-        else:
-            raise UnsupportedModalityError(modality)
-
-@dataclass
-class MultiModalResult:
-    modality: str
-    content: Union[str, bytes]
-    mime_type: str
-    metadata: Dict[str, Any]
-    provider: str
-    model: str
-```
-
-### 13.2 Doubao多模态接入矩阵
-
-| 模态   | 模型                  | 用途          | 项目            | Phase    |
-| ---- | ------------------- | ----------- | ------------- | -------- |
-| 文本   | doubao-seed2        | 文章/代码/对话    | 全部            | Phase 0  |
-| 图像理解 | doubao-seed2-vision | 封面图审核/素材分析  | Content/Novel | Phase 3  |
-| 图像生成 | doubao-seed2-image  | 封面图/插画/角色头像 | Content/Novel | Phase 3  |
-| 音频   | -                   | 语音播报        | Content       | Phase 4+ |
-
-## 十四、Agent模式与Doubao能力矩阵 \[来源：审核NEW-DB-11]
-
-### 14.1 ModeDoubaoCompatibility
-
-```python
-@dataclass
-class ModeDoubaoCompatibility:
-    """Agent模式与Doubao能力矩阵"""
-    agent_id: str
-    mode: str  # open_code / workflow / sop / interactive
-    recommended_model: str
-    fallback_model: str
-    compatibility_score: float  # 0.0-1.0
-    notes: str
-```
-
-### 14.2 能力矩阵
-
-| Agent               | 模式         | 推荐模型         | 备选模型           | 兼容度  | 备注               |
-| ------------------- | ---------- | ------------ | -------------- | ---- | ---------------- |
-| devforge:coder      | open\_code | doubao-seed2 | deepseek-coder | 0.85 | 代码补全优秀，长上下文需分段   |
-| devforge:reviewer   | workflow   | doubao-seed2 | qwen-plus      | 0.90 | 代码审查稳定           |
-| contentforge:topic  | sop        | doubao-seed2 | qwen-plus      | 0.88 | 选题分析准确           |
-| contentforge:writer | sop        | doubao-seed2 | qwen-plus      | 0.82 | 长文需分段+续写         |
-| novelforge:outline  | workflow   | doubao-seed2 | qwen-plus      | 0.85 | 大纲生成稳定           |
-| novelforge:chapter  | sop        | doubao-seed2 | qwen-plus      | 0.78 | 长章节需checkpoint续写 |
-
-***
-
-# \[审核修订 v3.0] 六方联合审核修订增补（v2.1/v2.2未覆盖项）
-
-> 审核日期：2026-06-16 | 修订版本：v3.0 | 来源：6份专家审核意见并集，v2.1/v2.2未覆盖部分
-> 审核来源：review\_landing\_design.md / review\_landing\_design\_deepseek.md / review\_landing\_design\_doubao.md / review\_landing\_design\_kimi.md / review\_landing\_design\_mm.md / review\_landing\_design\_qw\.md
-
-## S3.0-1 用户故事地图与端到端用户旅程 \[来源：审核mm-P0]
-
-### 问题描述
-
-四份landing\_design.md通篇只讲架构、不讲用户。缺少用户故事地图，无法回答"谁提交任务""门禁人工确认如何触发""DCP被驳回时PM在哪个页面看到"等核心产品问题。
-
-### 修订方案
-
-每个项目landing\_design.md顶部新增"用户旅程图"章节，含3-5个核心角色+关键操作节点。
-
-```yaml
-# 用户旅程规范
-user_journeys:
-  - role: "PM"
-    journey:
-      - action: "提交开发任务"
-        entry: "Helm任务创建页"
-        events: ["task.created"]
-      - action: "查看门禁评审结果"
-        entry: "Helm任务详情→Gate面板"
-        events: ["gate.review_ready", "gate.human_required"]
-      - action: "驳回后修改需求"
-        entry: "Helm审核中心"
-        events: ["gate.rejected", "task.retry_requested"]
-  - role: "开发者"
-    journey:
-      - action: "查看代码审查结果"
-        entry: "Helm→工具调用链面板"
-        events: ["tool.code_review.completed"]
-      - action: "沙箱执行代码"
-        entry: "Helm→执行输出面板"
-        events: ["tool.sandbox.completed"]
-  - role: "运维"
-    journey:
-      - action: "金丝雀发布审批"
-        entry: "Helm→发布面板"
-        events: ["canary.approval_required"]
-      - action: "回滚决策"
-        entry: "Helm→发布面板→回滚按钮"
-        events: ["canary.rollback_triggered"]
-```
-
-### 优先级
-
-P0
-
-## S3.0-2 失败UX设计 \[来源：审核mm-P0]
-
-### 问题描述
-
-所有landing\_design.md只画PASS路径，完全缺少FAIL路径。Reflexion重试耗尽后用户看到什么？门禁被veto\_dimensions触发后回退到哪个阶段？沙箱执行崩溃时暴露什么信息？
-
-### 修订方案
-
-在每个Phase 1核心功能实现条目下，强制要求附"失败路径UX流程图"。
-
-```yaml
-# 失败UX规范
-failure_ux:
-  reflexion_exhausted:
-    display: "重试耗尽提示卡片"
-    message: "Agent已尝试{max_rounds}轮仍未达标，请人工介入"
-    actions: ["查看执行轨迹", "修改参数重试", "降级到人工处理"]
-    event: "iteration.retry_exhausted"
-
-  gate_vetoed:
-    display: "门禁否决提示卡片"
-    message: "维度'{veto_dimension}'触发一票否决"
-    actions: ["查看否决详情", "修改后重新提交", "申请升级审批"]
-    rollback_to: "gate_config.rollback_stage"
-    event: "gate.vetoed"
-
-  sandbox_crash:
-    display: "沙箱崩溃提示卡片"
-    message: "代码执行异常退出（exit_code={code}）"
-    actions: ["查看错误日志", "修改代码重试", "跳过沙箱直接评审"]
-    expose_info: "exit_code + stderr前100行（脱敏后）"
-    event: "tool.sandbox.crashed"
-```
-
-### 优先级
-
-P0
-
-## S3.0-3 用户价值度量（KPI/OKR） \[来源：审核mm-P1]
-
-### 问题描述
-
-四份文档都未定义如何度量项目自身的成功。
-
-### 修订方案
-
-| 项目           | 北极星指标                               | 健康指标                         |
-| ------------ | ----------------------------------- | ---------------------------- |
-| FlowForge    | 配置驱动率（Agent/Tool/Workflow三大类YAML化率） | 启动时间、cold start内存、并发session数 |
-| DevForge     | DCP门禁准确率（与人工评审的一致性）                 | 端到端发布时长、hotfix修复时长、自动回滚成功率   |
-| ContentForge | SOP完成率（深度长文从选题到发布一次通过率）             | 平均审核次数、单篇发布耗时、平台适配成功率        |
-| NovelForge   | 章节一致性得分、伏笔回收率                       | 单章节生成耗时、Reflexion收敛轮数        |
-
-### 优先级
-
-P1
-
-## S3.0-4 跨项目契约一致性规范 \[来源：审核kimi-P1/mm-P1]
-
-### 问题描述
-
-四份landing\_design.md在同一类概念上使用了不同命名/结构。变量引用3种语法、Agent命名空间冲突、状态输出3种语法。
-
-### 修订方案
-
-```yaml
-# 跨项目统一契约规范
-contract:
-  # 变量引用统一为 LangGraph 风格
-  variable_reference: "${{state.xxx}}" / "${{params.xxx}}" / "${{result.xxx}}"
-
-  # Agent命名空间加项目前缀
-  agent_namespace: "{project}:{agent_name}"
-  examples:
-    - "contentforge:topic"
-    - "devforge:coder"
-    - "novelforge:outline"
-
-  # 状态输出统一语法
-  state_output: "state_updates: {key: expression}"
-
-  # 错误处理/重试/超时统一
-  execution_policy:
-    timeout: "timeout_seconds: int"
-    retry: "retry: {max_attempts, strategy, backoff}"
-    on_error: "on_error: abort | auto_rollback | degrade_to_human"
-    on_anomaly: "on_anomaly: log_and_continue | pause_and_notify"
-
-  # 检查点统一
-  checkpoint: "checkpoint: {enabled, backend, path, every_n_steps}"
-
-  # Gate术语统一
-  gate_terminology: "统一使用 Gate（DevForge DCP/TR 和 NovelForge QG 都是 Gate 实例化）"
-```
-
-### 优先级
-
-P0
-
-## S3.0-5 Agent YAML Schema统一规范 \[来源：审核kimi-P1]
-
-### 问题描述
-
-三个项目的Agent YAML Schema不统一，导致FlowForge的Agent YAML Compiler无法统一解析。
-
-### 修订方案
-
-```yaml
-# flowforge/schemas/agent.yaml — 统一Agent YAML Schema
-name: str                    # 统一命名，含项目前缀
-mode: str                    # 统一为mode（非execution_mode/default_mode混用）
-tools: list[str]             # 工具列表
-model: str                   # 引用FlowForge路由层route名
-model_params:                # 模型参数覆盖（从models.yaml默认值继承）
-  temperature: float | null
-  top_p: float | null
-  max_tokens: int | null
-  json_schema: object | null
-permissions: list[str]       # 权限规则
-max_steps: int               # 步数限制
-
-# 模式特定配置（由ModeRegistry验证）
-mode_config:
-  type: object               # 根据mode不同，结构不同
-  # reflexion: { max_rounds, quality_threshold }
-  # got: { max_branches, merge_strategy }
-  # rewoo: { max_workers_parallel }
-
-# 输入输出
-input_mapping: dict[str, str]
-output_schema: object
-state_updates: dict[str, str]
-```
-
-### 优先级
-
-P0
-
-## S3.0-6 配置驱动率度量标准 \[来源：审核kimi-P1]
-
-### 问题描述
-
-各项目design中没有明确定义"配置驱动率"的计算方式。
-
-### 修订方案
-
-```
-配置驱动率 = (通过YAML配置的行为数) / (总行为数)
-行为数 = Agent定义数 + Tool定义数 + Workflow步骤数 + Prompt模板数 + 阈值/规则数
-```
-
-| 项目           |         Agent数 | Tool数 | Workflow数 | 当前驱动率 |                              目标驱动率 |
-| ------------ | -------------: | ----: | --------: | ----: | ---------------------------------: |
-| FlowForge    | 12内置+3 Generic |    14 |         0 |    0% |                 Agent 90%/Tool 60% |
-| DevForge     |             14 |     5 |         4 |   17% | Agent 100%/Tool 100%/Workflow 100% |
-| ContentForge |              6 |     6 |     4 SOP |    0% | Agent 100%/Tool 100%/Workflow 100% |
-| NovelForge   |              8 |     5 |         1 |    0% | Agent 100%/Tool 100%/Workflow 100% |
-
-### 优先级
-
-P1
-
-## S3.0-7 可观测性功能规格 \[来源：审核mm-P0]
-
-### 问题描述
-
-4份landing\_design.md通篇没有业务指标、Trace链路、日志规范、告警规则、仪表盘。
-
-### 修订方案
-
-```yaml
-# 可观测性功能规格
-observability:
-  trace:
-    provider: "OpenTelemetry"
-    propagation: "trace_id全链路传播（Agent→Tool→LLM→Gate）"
-    injection_point: "每个Agent调用前注入trace_id"
-
-  metrics:
-    business:
-      - name: "config_drive_rate"
-        description: "配置驱动率"
-        type: "gauge"
-      - name: "gate_pass_rate"
-        description: "门禁通过率"
-        type: "ratio"
-      - name: "sop_completion_rate"
-        description: "SOP完成率"
-        type: "ratio"
-    technical:
-      - name: "llm_call_duration_seconds"
-        description: "LLM调用延迟"
-        type: "histogram"
-      - name: "llm_tokens_total"
-        description: "LLM token使用量"
-        type: "counter"
-        labels: ["model", "provider", "project"]
-      - name: "event_store_write_duration_seconds"
-        description: "EventStore写入延迟"
-        type: "histogram"
-
-  logging:
-    format: "结构化JSON日志"
-    pii_masking: true
-    trace_id_injection: true
-    fields: ["timestamp", "level", "trace_id", "session_id", "task_id", "agent_id", "message"]
-
-  alerting:
-    rules:
-      - name: "llm_provider_down"
-        condition: "llm_call_errors_total > 5 in 1min"
-        severity: "critical"
-      - name: "gate_timeout_high"
-        condition: "gate_timeout_rate > 0.1 in 5min"
-        severity: "warning"
-
-  dashboards:
-    - name: "FlowForge健康度"
-      panels: ["配置驱动率", "Session数", "LLM调用QPS", "EventStore延迟"]
-    - name: "DevForge门禁通过率"
-      panels: ["DCP通过率", "TR通过率", "人工审批响应时间"]
-    - name: "ContentForge发布成功率"
-      panels: ["SOP完成率", "平台发布成功率", "审核次数分布"]
-    - name: "NovelForge一致性得分"
-      panels: ["一致性得分趋势", "伏笔回收率", "Reflexion收敛轮数"]
-```
-
-### 优先级
-
-P0
-
-## S3.0-8 性能基线SLO功能规格 \[来源：审核1-P2/mm-P1]
-
-### 问题描述
-
-所有设计项都没有性能指标，没有SLO定义。
-
-### 修订方案
-
-| 组件                                           | 指标                | 目标SLO   |
-| -------------------------------------------- | ----------------- | ------- |
-| WorkflowCompiler.compile()                   | 100 step编译耗时      | < 50ms  |
-| SessionManager.check\_and\_compact()         | 1MB上下文压缩耗时        | < 500ms |
-| FiberSet.parallel(10 workers)                | 调度延迟              | < 10ms  |
-| EventStore.append()                          | SQLite WAL模式写入    | < 5ms   |
-| PersonaInjector.inject()                     | 含5个Source resolve | < 30ms  |
-| LoopExecutor单次迭代                             | 端到端（含1次LLM）       | < 30s   |
-| DualThresholdCompactor                       | LLM摘要             | < 10s   |
-| MultiJudgeVerifier                           | 3个评委并行            | < 15s   |
-| LLMRouter.chat()                             | 路由决策+首次Provider调用 | < 35s   |
-| GateTimeoutManager.evaluate\_with\_timeout() | 含超时的Gate评估        | < 12s   |
-
-### 优先级
-
-P1
-
-## S3.0-9 CAP-02 PermissionV2功能完整性 \[来源：审核mm-P0]
-
-### 问题描述
-
-PermissionV2的ASK超时怎么办？多个ASK并发时如何去重？没有审计日志。
-
-### 修订方案
-
-```python
-class PermissionV2Enhanced:
-    """PermissionV2增强 — ASK超时/并发去重/审计日志"""
-
-    async def _request_user_approval(
-        self,
-        match: PermissionMatch,
-        tool_name: str,
-        params: dict,
-        context: TaskContext,
-        timeout: float = 300.0,  # 默认5分钟
-    ) -> bool:
-        """请求用户审批，含超时和去重"""
-        # 1. 去重：同一tool+params的ASK只发一次
-        dedup_key = f"{tool_name}:{hash(frozenset(params.items()))}"
-        if dedup_key in self._pending_asks:
-            return await self._pending_asks[dedup_key]
-
-        # 2. 发起审批
-        future = asyncio.get_event_loop().create_future()
-        self._pending_asks[dedup_key] = future
-
-        # 3. 推送到Web UI
-        await self.approval_provider.push(
-            ApprovalRequest(
-                tool=tool_name, params=params,
-                reason=match.reason, timeout=timeout,
-            )
-        )
-
-        # 4. 等待结果（含超时）
-        try:
-            result = await asyncio.wait_for(future, timeout=timeout)
-            # 5. 审计日志
-            await self.audit_log.record(
-                decision="allow" if result else "deny",
-                tool=tool_name, params=params,
-                reason=match.reason, timeout=not result,
-            )
-            return result
-        except asyncio.TimeoutError:
-            # ASK超时默认DENY（fail-closed）
-            await self.audit_log.record(
-                decision="deny", tool=tool_name, params=params,
-                reason="ASK timeout (fail-closed)", timeout=True,
-            )
-            return False
-        finally:
-            self._pending_asks.pop(dedup_key, None)
-```
-
-### 优先级
-
-P0
-
-## S3.0-10 十层安全防御功能规格 \[来源：审核1-P1/mm-P0]
-
-### 问题描述
-
-INF-08十层安全防御L1-L10全部为空实现，缺少每层的功能规格。
-
-### 修订方案
-
-| 层级  | 名称              | 功能规格                                          | 默认策略           | 指标埋点                   |
-| --- | --------------- | --------------------------------------------- | -------------- | ---------------------- |
-| L1  | 工具超时防御          | 每个Tool可配置timeout，超时自动取消                       | fail-open      | tool\_timeout\_total   |
-| L2  | 重复检测钩子          | 相同input在N秒内不重复执行                              | deny重复         | dedup\_hit\_rate       |
-| L3  | 自修正重试           | reflexion\_retry次数可配置                         | fail-open      | retry\_success\_rate   |
-| L4  | 安全工具注册表         | Tool标记安全级别(safe/unsafe/dangerous)             | deny dangerous | unsafe\_tool\_blocked  |
-| L5  | InputGuardrail  | 与现有Guardrails框架对接                             | fail-closed    | input\_blocked\_total  |
-| L6  | OutputGuardrail | 输出内容安全检查（含Doubao moderation）                  | fail-closed    | output\_blocked\_total |
-| L7  | 反馈循环闸门          | 检测Agent循环调用同一Tool                             | deny>3次        | loop\_detected\_total  |
-| L8  | 熵管理             | 检测系统复杂度增长                                     | warning        | entropy\_score         |
-| L9  | 沙箱执行            | DevForge Plugin实现（用FlowForge ToolIsolation抽象） | fail-closed    | sandbox\_violation     |
-| L10 | 审计追踪            | 所有Agent/Tool调用记录到不可篡改日志                       | always-on      | audit\_entries\_total  |
-
-### 优先级
-
-P0
-
-## S3.0-11 OpenCode模式优先级矩阵 \[来源：审核deepseek-P0]
-
-### 问题描述
-
-未评估65+ OpenCode模式的引入成本与风险，需按"阻塞性×复用性"两维评估取舍。
-
-### 修订方案
-
-| 优先级   | 模式                      | 阻塞性 | 复用性 | 引入成本 | Phase   |
-| ----- | ----------------------- | :-: | :-: | :--: | ------- |
-| P0-必须 | SES-01 Session持久化       |  高  |  高  |   中  | Phase 1 |
-| P0-必须 | CTX-04 Compaction       |  高  |  高  |   中  | Phase 1 |
-| P0-必须 | ERR-01 指数退避重试           |  高  |  高  |   低  | Phase 1 |
-| P0-必须 | PER-01 Permission V2    |  高  |  高  |   中  | Phase 1 |
-| P1-重要 | AGT-01 Agent三模式         |  中  |  高  |   中  | Phase 2 |
-| P1-重要 | CTX-01 System Context增量 |  中  |  高  |   高  | Phase 2 |
-| P1-重要 | AGT-07 Agent步数限制        |  中  |  高  |   低  | Phase 2 |
-| P2-可选 | SES-04 Session共享        |  低  |  中  |   高  | Phase 3 |
-| P2-可选 | SES-05 Session Todo追踪   |  低  |  低  |   中  | Phase 3 |
-| P2-可选 | SKL-01 Skill版本管理        |  低  |  中  |   中  | Phase 3 |
-
-### 优先级
-
-P1
-
-## S3.0-12 21个GAP清单（设计写但代码不存在 + 代码存在但设计未覆盖） \[来源：审核mm-P0]
-
-### 问题描述
-
-设计文档与代码之间存在21个关键差距，未在文档中识别和追踪。
-
-### 修订方案
-
-**设计写但代码不存在（13个）：**
-
-| 编号     | 设计                                           | 代码现状                                                           | 风险      |
-| ------ | -------------------------------------------- | -------------------------------------------------------------- | ------- |
-| GAP-01 | loop/executor.py TurnTransition              | 仅Plan→Execute→Verify三段if-else                                  | 高       |
-| GAP-02 | harness/compaction.py DualThresholdCompactor | SessionManager.\_summarize\_older\_messages仍是content\[:2000]截断 | 中       |
-| GAP-03 | session/event\_store.py EventStore           | 完全不存在                                                          | 高       |
-| GAP-04 | compiler/workflow\_compiler.py               | 整个目录不存在                                                        | 高（全链阻塞） |
-| GAP-05 | compiler/conditional\_router.py              | 整个目录不存在                                                        | 中       |
-| GAP-06 | harness/persona\_injector.py                 | PersonaLock存在但没有自动注入机制                                         | 中       |
-| GAP-07 | llm/router.py LLMRouter                      | 仅tools/llm\_client.py单Provider                                 | 中       |
-| GAP-08 | core/di.py DIContainer升级                     | 现有DI是Service Locator                                           | 中       |
-| GAP-09 | loop/fiber\_set.py FiberSet                  | loop/parallel.py用asyncio.gather                                | 中       |
-| GAP-10 | security/permission\_v2.py PermissionV2      | 现有PermissionPipeline仅1个deny/ask/allow顺序链                       | 中       |
-| GAP-11 | events/durable\_stream.py DurableEventStream | 仅events/event\_bus.py内存总线                                      | 中       |
-| GAP-12 | security/credential\_store.py                | 仅core/secret\_store.py且默认路径依赖包安装位置                             | 中       |
-| GAP-13 | config/layered\_search.py                    | 不存在                                                            | 低       |
-
-**代码存在但设计未覆盖（8个）：**
-
-| 编号      | 代码现状                                                            | 设计覆盖度                                      |
-| ------- | --------------------------------------------------------------- | ------------------------------------------ |
-| GAP-C01 | flowforge/core/flowforge.py反向import ContentForge工具              | 完全未提及（违反P9契约）                              |
-| GAP-C02 | flowforge/loop/executor.py的11个构造参数                              | 设计文档只展示了4个                                 |
-| GAP-C03 | novelforge/agents/base.py BaseNovelAgent（已标记deprecated）         | 设计文档未提删除计划                                 |
-| GAP-C04 | flowforge/loop/state.py LoopPhase 7状态                           | 设计文档TurnKind 6状态，两套并行未说明如何合并               |
-| GAP-C05 | flowforge/harness/entropy\_manager.py DebtTracker/RuleEvolution | 设计文档说SQLite持久化，但没说什么时候fallback到内存模式        |
-| GAP-C06 | flowforge/agents/declarative.py                                 | 4个\*Forge都引但FWK-09设计文档没引用此模块               |
-| GAP-C07 | flowforge/skills/loader.py MarkdownSkill加载器                     | ECO-02 MarkdownSkill设计与现有loader重复          |
-| GAP-C08 | flowforge/memory/manager.py MemoryManager                       | 设计文档说用FlowForge Memory，但没明确MemoryManager接口 |
-
-### 优先级
-
-P0
-
-## S3.0-13 ProviderQuotaManager功能规格 \[来源：审核doubao-P1]
-
-### 问题描述
-
-四个项目各自独立调用LLM，没有统一的TPM/RPM/成本预算管理。
-
-### 修订方案
-
-```python
-class ProviderQuotaManager:
-    """Provider级成本/配额管理"""
-
-    async def check_quota(self, provider: str, model: str, estimated_tokens: int) -> QuotaResult:
-        """检查配额是否允许本次调用"""
-        tpm_used = await self._get_tpm_usage(provider, model)
-        rpm_used = await self._get_rpm_usage(provider, model)
-        budget_used = await self._get_budget_usage(provider)
-
-        if tpm_used + estimated_tokens > self._get_tpm_limit(provider, model):
-            return QuotaResult(allowed=False, reason="TPM exceeded", action="queue_or_fallback")
-        if rpm_used >= self._get_rpm_limit(provider, model):
-            return QuotaResult(allowed=False, reason="RPM exceeded", action="queue_or_fallback")
-        if budget_used >= self._get_budget_limit(provider):
-            return QuotaResult(allowed=False, reason="budget exceeded", action="alert_and_fallback")
-
-        return QuotaResult(allowed=True)
-
-    async def record_usage(self, provider: str, model: str, prompt_tokens: int, completion_tokens: int, cost: float):
-        """记录使用量"""
-        await self._increment_tpm(provider, model, prompt_tokens + completion_tokens)
-        await self._increment_rpm(provider, model)
-        await self._increment_budget(provider, cost)
-```
-
-### 优先级
-
-P1
-
-## S3.0-14 Doubao moderation统一内容安全层 \[来源：审核doubao-P0]
-
-### 问题描述
-
-ContentForge和NovelForge是内容安全高风险域，但未集成Doubao moderation接口。
-
-### 修订方案
-
-```python
-class ContentModerationLayer:
-    """Doubao moderation统一内容安全层"""
-
-    async def check(self, content: str, context: str = "publish") -> ModerationResult:
-        """内容安全预检"""
-        result = await self.doubao_client.moderation(
-            content=content,
-            safety_threshold=self._get_threshold(context),
-        )
-        if not result.is_safe:
-            await self.audit_log.record(
-                event="moderation_blocked",
-                risk_tags=result.risk_tags,
-                context=context,
-            )
-        return result
-
-    def _get_threshold(self, context: str) -> str:
-        """不同场景不同安全阈值"""
-        thresholds = {
-            "publish": "strict",       # 发布前预检：严格
-            "code_generation": "medium", # 代码生成：中等
-            "novel_chapter": "medium",   # 小说章节：中等
-            "internal_review": "loose",  # 内部审核：宽松
-        }
-        return thresholds.get(context, "medium")
-```
-
-### 优先级
-
-P0
-
-## S3.0-15 多模型级联策略 \[来源：审核doubao-P1]
-
-### 问题描述
-
-未明确"Doubao为主"的级联策略和failover条件。
-
-### 修订方案
-
-```yaml
-# config/llm_route.yaml
-primary_chain:
-  - doubao-seed2
-  - qwen-plus
-  - deepseek-chat
-
-failover:
-  conditions:
-    - "status_code == 429"
-    - "timeout > 30s"
-    - "moderation_rejected"
-  next: "chain[index + 1]"
-
-default_agent_override:
-  # 某些Agent对特定模型有偏好
-  fact_check_agent: [doubao-seed2, deepseek-chat]
-  novel_concept_agent: [doubao-seed2]
-  code_review_agent: [deepseek-coder, doubao-seed2]
-```
-
-### 优先级
-
-P1
-
-## S3.0-16 115处硬编码提示词统一删除\_DEFAULT\_PROMPTS方案 \[来源：审核qw-P0]
-
-### 问题描述
-
-FlowForge的\_DEFAULT\_PROMPTS字典（39个）与prompts.yaml（38个）双重定义，内容有差异。ContentForge的prompts.yaml定义了21个模板但0个被使用。
-
-### 修订方案
-
-```python
-# 删除方案：统一删除_DEFAULT_PROMPTS，PromptManager只从YAML加载
-class PromptManagerV2:
-    """提示词管理器V2 — 只从YAML加载，删除_DEFAULT_PROMPTS"""
-
-    def __init__(self, config_dir: str):
-        self._prompts: Dict[str, PromptTemplate] = {}
-        self._load_all_yaml(config_dir)
-
-    def _load_all_yaml(self, config_dir: str):
-        """加载所有prompts.yaml"""
-        for yaml_file in Path(config_dir).rglob("prompts.yaml"):
-            with open(yaml_file) as f:
-                data = yaml.safe_load(f)
-            for key, value in data.items():
-                self._prompts[key] = PromptTemplate(key=key, **value)
-
-    def get_prompt(self, key: str, **variables) -> str:
-        """获取提示词，支持变量插值"""
-        template = self._prompts.get(key)
-        if not template:
-            raise KeyError(f"Prompt '{key}' not found in any prompts.yaml")
-        return template.render(**variables)
-
-# 迁移步骤：
-# 1. grep -r "_DEFAULT_PROMPTS" flowforge/ contentforge/ novelforge/ → 找到所有引用
-# 2. 将_DEFAULT_PROMPTS内容合并到对应项目的config/prompts.yaml
-# 3. 将代码中的_DEFAULT_PROMPTS[key]替换为prompt_manager.get_prompt(key)
-# 4. 删除_DEFAULT_PROMPTS字典定义
-# 5. CI新增检查：grep -r "_DEFAULT_PROMPTS" → 0匹配
-```
-
-### 优先级
-
-P0
-
-## S3.0-17 DeprecationWarning保留时长定义 \[来源：审核mm-P0]
-
-### 问题描述
-
-所有删除都说"过渡期保留DeprecationWarning"，但没有说明保留时长。
-
-### 修订方案
-
-```yaml
-# Deprecation策略
-deprecation_policy:
-  retention: "3个minor版本或6个月，以先到者为准"
-  tracking: "pyproject.toml tools.deprecated配置表"
-  removal_checklist:
-    - "git grep全量搜索引用 → 0引用"
-    - "pytest --collect-only确认无测试依赖旧路径"
-    - "运行全量E2E测试（含HTTP Cassette录制回放）"
-    - "删除旧代码 + 删除Feature Flag"
-    - "再次全量回归验证"
-```
-
-### 优先级
-
-P1
-
-## S3.0-18 事件总线统一方案 \[来源：审核1-P2/mm-P1]
-
-### 问题描述
-
-FlowForge EventBus、OpenSieve AgentBus、NovelForge事件三套体系独立运行，CAP-11 DurableEventStream是新增的第四套事件体系。
-
-### 修订方案
-
-```yaml
-# 事件总线统一方案
-event_system:
-  core: "FlowForge EventBus + DurableEventStream"
-  bridge:
-    opensieve: "AgentBus → EventBus桥接层（OpenSieve事件转发到EventBus）"
-    novelforge: "NovelForge事件通过EventBus发布（删除独立事件体系）"
-  events:
-    - type: "task.created"
-      schema: "TaskEvent"
-    - type: "task.degrade_to_human"
-      schema: "DegradeToHumanEvent"
-    - type: "gate.review_ready"
-      schema: "GateEvent"
-    - type: "gate.human_required"
-      schema: "GateEvent"
-    - type: "llm.call_completed"
-      schema: "LLMCallEvent"
-    - type: "iteration.retry_exhausted"
-      schema: "IterationEvent"
-    - type: "canary.state_checkpoint"
-      schema: "CanaryStateEvent"
-```
-
-### 优先级
-
-P1
-\| flowforge:planner | open\_code | doubao-seed2 | deepseek-chat | 0.90 | 任务规划准确 |
-
-## 十五、Skill知识沉淀机制 \[来源：审核NEW-DB-12]
-
-### 15.1 SkillKnowledgePrecipitator
-
-```python
-class SkillKnowledgePrecipitator:
-    """Agent执行产出自动写入Skill系统"""
-
-    async def precipitate(self, task_result: TaskResult) -> Optional[SkillEntry]:
-        """从成功的任务执行中提取可复用知识"""
-        if not task_result.success:
-            return None
-
-        # 1. 提取关键决策路径
-        decisions = self._extract_decisions(task_result.trace)
-
-        # 2. 提取有效的Prompt模式
-        prompt_patterns = self._extract_prompt_patterns(task_result.trace)
-
-        # 3. 提取工具调用链
-        tool_chains = self._extract_tool_chains(task_result.trace)
-
-        # 4. 生成Skill条目
-        if decisions or prompt_patterns or tool_chains:
-            return SkillEntry(
-                skill_id=f"auto-{task_result.task_id}",
-                source_task=task_result.task_id,
-                agent=task_result.agent_id,
-                decisions=decisions,
-                prompt_patterns=prompt_patterns,
-                tool_chains=tool_chains,
-                quality_score=task_result.gate_score,
-                created_at=datetime.now(),
-            )
-        return None
-
-@dataclass
-class SkillEntry:
-    skill_id: str
-    source_task: str
-    agent: str
-    decisions: List[Dict]
-    prompt_patterns: List[str]
-    tool_chains: List[List[str]]
-    quality_score: float
-    created_at: datetime
-```
-
-### 15.2 沉淀触发条件
-
-```yaml
-# config/system.yaml
-skill_precipitation:
-  enabled: true
-  min_quality_score: 0.8  # Gate评分≥0.8才沉淀
-  auto_apply: false  # 自动应用需人工确认
-  dedup_strategy: "semantic"  # 语义去重
-  max_entries_per_agent: 100
-```
-
-## S3.0-19 FWK-01 WorkflowCompiler三阶段拆分
-
-* **审核来源**：review\_landing\_design.md 问题1
-
-* **问题描述**：WorkflowCompiler同时承担编译、验证、转换三个职责，CompiledStep递归嵌套导致编译产物难以调试
-
-* **修订方案**：拆分为Parser+Validator+CodeGen三阶段，增加编译中间产物(IR)可视化调试能力，先实现SEQUENCE+CONDITIONAL+GATE三种StepType
-
-* **优先级**：P0
-
-## S3.0-20 INF-02 EventStore WAL模式与批量提交
-
-* **审核来源**：review\_landing\_design.md 问题2
-
-* **问题描述**：EventStore使用SQLite单文件存储，append()后立即commit，高频写入性能堪忧；RunCoordinator.\_runs纯内存
-
-* **修订方案**：EventStore改为WAL模式+批量提交(每100条或每秒)，RunCoordinator.\_runs状态持久化到EventStore，增加snapshot compaction机制
-
-* **优先级**：P0
-
-## S3.0-21 INF-05 DualThresholdCompactor死循环防护
-
-* **审核来源**：review\_landing\_design.md 问题3
-
-* **问题描述**：Compaction触发LLM摘要但LLM调用失败时，回退到抽取式摘要可能仍超阈值，导致反复触发
-
-* **修订方案**：增加Compaction最大次数限制(3次/Session)，抽取式摘要后强制截断到安全阈值以下，增加失败降级策略(丢弃最旧消息)
-
-* **优先级**：P0
-
-## S3.0-22 CAP-01 Source<A>代数系统降级
-
-* **审核来源**：review\_landing\_design.md 问题4, review\_landing\_design\_kimi.md, review\_landing\_design\_mm.md
-
-* **问题描述**：Source<A>代数系统引入5种类型+6字段ContextFragment，抽象层次过高，实际收益不明显
-
-* **修订方案**：Phase 2先用Dict\[str, ContextFragment]实现(每个Fragment含key/content/priority)，Phase 3再引入代数操作，优先保证ContextEngine.inject()正确性
-
-* **优先级**：P0→P3降级
-
-## S3.0-23 FWK-06 TurnTransition参数封装与状态机合并
-
-* **审核来源**：review\_landing\_design.md 问题5, review\_landing\_design\_kimi.md, review\_landing\_design\_mm.md
-
-* **问题描述**：TurnTransitionEngine.decide()参数列表过长(7个)，TurnKind与LoopPhase两套并行状态机
-
-* **修订方案**：将feedback\_gate/context\_utilization/compaction\_threshold封装为LoopContext对象，TurnTransitionEngine.decide()只接收verdict+LoopContext；合并TurnKind与LoopPhase为统一状态机(IDLE→EXECUTING→EVALUATING→REFLECTING→COMPACTING→AGENT\_SWITCHING→COMPLETED/FAILED/LOOPING)
-
-* **优先级**：P0
-
-## S3.0-24 INF-03 DI容器SCOPED生命周期
-
-* **审核来源**：review\_landing\_design.md 问题6
-
-* **问题描述**：SCOPED生命周期未实现，resolve()中只处理SINGLETON和TRANSIENT
-
-* **修订方案**：明确SCOPED使用场景(TaskContext是否需要SCOPED)，实现ScopedContainer子类绑定到请求/会话生命周期，或先移除SCOPED只保留SINGLETON+TRANSIENT
-
-* **优先级**：P1
-
-## S3.0-25 CAP-10 FiberSet超时配置化
-
-* **审核来源**：review\_landing\_design.md 问题7
-
-* **问题描述**：next\_completed()使用asyncio.wait\_for(timeout=0.1)，100ms超时在LLM调用场景下太短
-
-* **修订方案**：超时时间改为可配置，默认值设为1.0s，或改用asyncio.wait()的FIRST\_COMPLETED模式
-
-* **优先级**：P1
-
-## S3.0-26 FWK-07 PipelineCompiler独立实现
-
-* **审核来源**：review\_landing\_design.md 问题9
-
-* **问题描述**：PipelineCompiler继承WorkflowCompiler不合理，Pipeline拥有Workflow全部能力违反最小知识原则
-
-* **修订方案**：PipelineCompiler独立实现不继承WorkflowCompiler，或Pipeline编译为CompiledWorkflow(steps\_type=SEQUENCE)后由WorkflowCompiler统一处理
-
-* **优先级**：P2
-
-## S3.0-27 底座净化ARCH-00
-
-* **审核来源**：review\_landing\_design\_deepseek.md 问题②, review\_landing\_design\_mm.md
-
-* **问题描述**：FlowForge包含10个内容创作Agent+6个内容Tool+5个配置文件，违反底座能力原则
-
-* **修订方案**：Phase 0新增ARCH-00底座净化，将23处领域代码迁移到对应\*Forge项目，预计移出\~1100行
-
-* **优先级**：P0
-
-## S3.0-28 FWK-01 MVP里程碑与并行降级方案
-
-* **审核来源**：review\_landing\_design\_deepseek.md 问题④
-
-* **问题描述**：FWK-01成为全局单点阻塞，但未给出MVP定义和\*Forge并行降级路径
-
-* **修订方案**：FWK-01 MVP里程碑(顺序执行→条件路由→并行执行)，每个里程碑可独立交付；各\*Forge在FWK-01 MVP-1就绪前保留现有Orchestrator作为fallback
-
-* **优先级**：P0
-
-## S3.0-29 CAP-14 Harness护栏全面集成
-
-* **审核来源**：review\_landing\_design\_deepseek.md 问题⑥
-
-* **问题描述**：缺少Harness四根护栏的代码级融合方案
-
-* **修订方案**：Phase 2补充CAP-14设计项，将四根护栏与LoopEngine的pre\_execute/post\_execute钩子完整对接
-
-* **优先级**：P1
-
-## S3.0-30 Persona注入规范化
-
-* **审核来源**：review\_landing\_design\_doubao.md DB-P0-03
-
-* **问题描述**：Persona注入缺少Doubao seed指令格式，SOUL维度可能触发指令稀释
-
-* **修订方案**：Persona注入统一使用结构化格式(非自然语言)，SOUL维度限定512 token以内超限时自动压缩，增加Persona注入成本审计(persona token占比<15%为健康)
-
-* **优先级**：P1
-
-## S3.0-31 Compaction中文摘要模型指定
-
-* **审核来源**：review\_landing\_design\_doubao.md DB-P1-04
-
-* **问题描述**：DualThresholdCompactor使用LLM做摘要但未指定摘要模型
-
-* **修订方案**：显式声明摘要模型为doubao-seed2，定义中文摘要最小粒度(按语义段落切分)，提供压缩失败→抽取式摘要→丢弃最旧消息三档回退链
-
-* **优先级**：P1
-
-## S3.0-32 FWK-01编译器与执行器契约明确
-
-* **审核来源**：review\_landing\_design\_kimi.md FWK-01-A
-
-* **问题描述**：to\_sop\_steps()只是格式转换，WorkflowExecutor对条件路由/并行组/回退链无运行时调度能力
-
-* **修订方案**：明确WorkflowExecutor运行时扩展方案，或声明WorkflowExecutor也需同步改造
-
-* **优先级**：P0
-
-## S3.0-33 FWK-01输入映射表达式增强
-
-* **审核来源**：review\_landing\_design\_kimi.md FWK-01-B
-
-* **问题描述**：input\_mapping只支持简单键值映射，大量场景仍需硬编码
-
-* **修订方案**：引入Jinja2模板引擎作为输入映射表达式语言，支持{{ outputs.xxx | truncate(1000) }}等转换
-
-* **优先级**：P1
-
-## S3.0-34 FWK-02条件表达式安全
-
-* **审核来源**：review\_landing\_design\_kimi.md FWK-02-A/B
-
-* **问题描述**：条件表达式解析器存在安全隐患(表达式注入)，None结果处理不完整
-
-* **修订方案**：使用asteval安全表达式库，增加strict\_mode配置，显式处理None结果
-
-* **优先级**：P0
-
-## S3.0-35 FWK-03成功判断可配置化
-
-* **审核来源**：review\_landing\_design\_kimi.md FWK-03-A
-
-* **问题描述**：\_is\_success()逻辑过于简化，不同Tool成功/失败语义不一致
-
-* **修订方案**：支持per-step的success\_condition配置，允许声明式定义成功条件
-
-* **优先级**：P1
-
-## S3.0-36 FWK-06 TurnTransition完整状态机
-
-* **审核来源**：review\_landing\_design\_kimi.md FWK-06-A/B
-
-* **问题描述**：TurnTransition缺少具体状态机实现，MAX\_STEPS与现有Loop兼容性未分析
-
-* **修订方案**：补充TurnTransitionEngine完整状态机设计(状态定义/Transition条件表/上下文操作)，增加MAX\_STEPS兼容性分析
-
-* **优先级**：P0
-
-## S3.0-37 Plugin协议扩展
-
-* **审核来源**：review\_landing\_design\_kimi.md, review\_landing\_design\_mm.md
-
-* **问题描述**：FlowForgePlugin协议只提供4个钩子，不足以表达\*Forge业务复杂度
-
-* **修订方案**：扩展为register\_workflows/register\_gates/register\_evaluators/register\_sops/register\_quality\_gates/register\_context\_layers/register\_workflow\_step\_handler全集
-
-* **优先级**：P1
-
-## S3.0-38 配置版本控制ConfigVersion
-
-* **审核来源**：review\_landing\_design\_kimi.md, review\_landing\_design\_mm.md
-
-* **问题描述**：Workflow YAML/Agent YAML/Persona/Prompt模板无版本控制
-
-* **修订方案**：新增ConfigVersion数据结构+启动时配置变更检测+优雅重启
-
-* **优先级**：P1
-
-## S3.0-39 FlowForge反向import修复
-
-* **审核来源**：review\_landing\_design\_kimi.md, review\_landing\_design\_mm.md GAP-C01
-
-* **问题描述**：flowforge/core/flowforge.py反向import ContentForge工具
-
-* **修订方案**：删除反向import，工具通过ContentForgePlugin的register\_tools()钩子注册
-
-* **优先级**：P0
-
-## S3.0-40 关键数据结构Pydantic化
-
-* **审核来源**：review\_landing\_design\_kimi.md, review\_landing\_design\_mm.md
-
-* **问题描述**：LLMRequest是@dataclass而非BaseModel，SessionEvent.data是黑盒dict
-
-* **修订方案**：关键跨边界数据结构(LLMRequest/SessionEvent/CompiledStep/GateVerdict)全部改为Pydantic BaseModel
-
-* **优先级**：P1
-
-## S3.0-41 Skill知识沉淀机制
-
-* **审核来源**：review\_landing\_design\_doubao.md
-
-* **问题描述**：Agent执行过程中产生的高质量产出没有沉淀机制
-
-* **修订方案**：Phase 3把Agent成功产出写入Skill系统，Skill作为检索库供后续任务复用
-
-* **优先级**：P2
-
-## S3.0-42 INF-02 EventStore三阶段投递
-
-* **审核来源**：review\_landing\_design\_kimi.md, review\_landing\_design\_mm.md
-
-* **问题描述**：缺失steer/queue投递语义、interrupt\_seq抑制旧wake、inbox→promoted状态机
-
-* **修订方案**：SessionInputManager为LoopExecutor可选项(Phase 1先做基础EventStore，Phase 2加inbox三阶段)，给LoopExecutor加optional\_components注入入口避免构造函数参数爆炸
-
-* **优先级**：P1
-
-***
-
-## StockForge 应用层支持（v2.2新增）
-
-### StockForge 定位
-
-基于 FlowForge 的 AI 股票基金自动化分析与投资决策辅助系统，通过 StockForgePlugin 注册业务能力。
-
-### 核心能力映射
-
-| StockForge能力 | FlowForge底座支持                             |
-| ------------ | ----------------------------------------- |
-| 多Agent协作分析   | 9大执行模式（react/plan\_execute/multi\_agent等） |
-| 全周期预测Loop    | LoopExecutor + 质量分阈值0.85                  |
-| 多空辩论机制       | multi\_agent模式 + Agent Handoff            |
-| 技术指标计算       | ToolRegistry + BaseTool                   |
-| 投资报告生成       | DeclarativeAgent + YAML配置                 |
-| 数据采集调度       | APScheduler + 事件总线                        |
-| 风险评估         | Gate门禁 + Harness约束                        |
-| Web界面        | Helm + WebSocket实时推送                      |
-
-### Plugin注册清单
-
-* 8个Agent（stockforge:data\_analyst等）
-
-* 8个Tool（stock\_data/indicators等）
-
-* 3个Workflow（analysis\_loop/screening\_loop/report\_loop）
-
-* 5个数据源（tushare/akshare/baostock/fund/ecommerce预留）
-
-### 端口分配
-
-StockForge: 后端8005 / 前端5179
-
-### v2.0审核修正（2026-06-25）
-
-* StockForge Agent数量从8个调整为6个核心Agent
-
-* 删除独立Repository/Database/Scheduler，复用FlowForge基础设施
-
-* Plugin钩子修正为V2协议（register\_workflows/register\_gates/register\_schedules/register\_evaluators/register\_event\_handlers）；register\_helm\_handlers 不属于 V2 协议，Helm 事件处理器应通过 register\_event\_handlers 注册，权限策略应通过 register\_gates 挂载
-
-* 所有Loop走loop模式，worker.mode禁止使用workflow/reflexion
-
-* Loop超时分档（快速180s / 内容720s / 长文7200s，详见 rules.md §2.3 第6条）
-
-* 质量分阈值0.85在config/default.yaml中显式声明
-
-* 实盘交易隔离：ArchConstraintEngine增加deny规则+CI静态检查
-
-***
-
-# 附录: 2026-06-25 规格更新
-
-> 来源：第十一轮文档与代码一致性深度审查（task.md 中 FW-CONSIST-001\~029）
-> 目的：补全 spec.md 中 PluginProtocol 完整接口清单、配置驱动率现状、各模块完成度评估
-
-## S.1 PluginProtocol 完整接口清单（FW-CONSIST-001/002 验证结果）
-
-实际 `flowforge/core/plugin_protocol.py` 中 `FlowForgePlugin` 抽象基类提供的注册钩子（registration hooks）共 19 个，另有 5 个生命周期钩子（lifecycle hooks）。
-
-### S.1.1 已实现的注册钩子（19 个）
-
-| #  | 方法名                                                | 参数            | 用途                        |
-| -- | -------------------------------------------------- | ------------- | ------------------------- |
-| 1  | `register_middleware(app)`                         | FastAPI app   | 添加自定义中间件                  |
-| 2  | `register_agents(agent_registry)`                  | AgentRegistry | 注册业务 Agent                |
-| 3  | `register_tools(tool_registry)`                    | ToolRegistry  | 注册业务 Tool                 |
-| 4  | `register_modes(mode_registry)`                    | ModeRegistry  | 注册自定义执行模式                 |
-| 5  | `register_routes(app)`                             | FastAPI app   | 挂载业务 API 路由               |
-| 6  | `register_event_handlers(event_bus)`               | EventBus      | 订阅框架事件                    |
-| 7  | `register_schedules(scheduler)`                    | TaskScheduler | 注册 Cron 任务                |
-| 8  | `register_workflows(workflow_registry)`            | registry      | 注册 Workflow YAML（V2）      |
-| 9  | `register_gates(gate_registry)`                    | registry      | 注册门控配置（V2）                |
-| 10 | `register_evaluators(registry)`                    | registry      | 注册评估器（V2）                 |
-| 11 | `register_sops(sop_registry)`                      | registry      | 注册 SOP（V2）                |
-| 12 | `register_quality_gates(quality_gate_registry)`    | registry      | 注册质量门（V2）                 |
-| 13 | `register_context_layers(context_registry)`        | registry      | 注册上下文层（V2）                |
-| 14 | `register_workflow_step_handler(handler_registry)` | registry      | 注册自定义步骤处理器（V2）            |
-| 15 | `register_loops(loop_registry)`                    | registry      | 注册 Loop 配置（V2）            |
-| 16 | `register_personas(persona_registry)`              | registry      | 注册 Persona 配置             |
-| 17 | `register_prompts(prompt_manager)`                 | PromptManager | 注册 Prompt 模板              |
-| 18 | `register_declarative_tools(tool_registry)`        | ToolRegistry  | 注册声明式 Tool                |
-| 19 | `PluginContext.register_service(name, service)`    | str, Any      | 注册命名服务（在 PluginContext 上） |
-
-### S.1.2 已实现的生命周期钩子（5 个）
-
-| # | 方法名                             | 触发时机      |
-| - | ------------------------------- | --------- |
-| 1 | `on_startup(context)`           | 所有注册完成后   |
-| 2 | `on_shutdown(context)`          | 应用关闭时     |
-| 3 | `on_error(context, error)`      | 插件执行出错时   |
-| 4 | `on_config_reload(config)`      | 配置热重载时    |
-| 5 | `on_plugin_loaded(plugin_name)` | 其他插件加载完成时 |
-
-### S.1.3 不予实现的钩子（FW-CONSIST-001/002 修订结论）
-
-> 依据 hiclaw/rules.md §2.5 死代码警告：`register_helm_handlers` 和 `register_permission_policy` 在 PluginProtocol 中**未定义且不应补充实现**，避免引入死代码与伪接口。
-
-| 方法名                          | 状态          | 关联问题           | 正确替代方案                                                               |
-| ---------------------------- | ----------- | -------------- | -------------------------------------------------------------------- |
-| `register_helm_handlers`     | **未定义，不实现** | FW-CONSIST-001 | 使用 `register_event_handlers` 订阅 Helm 相关事件总线消息，自定义 Helm 事件处理器通过事件总线挂载 |
-| `register_permission_policy` | **未定义，不实现** | FW-CONSIST-002 | 使用 `register_gates` 声明式挂载权限/门控策略，PermissionV2 配置通过 gate\_registry 注入 |
-
-**正确用法示例**：
-
-```python
-def register_event_handlers(self, event_bus) -> None:
-    """Helm 事件处理器通过事件总线注册（替代 register_helm_handlers）"""
-    event_bus.subscribe("helm.command", self._on_helm_command)
-
-def register_gates(self, gate_registry) -> None:
-    """权限策略通过 gate 声明式挂载（替代 register_permission_policy）"""
-    gate_registry.register("permission:write", PermissionGate(rule=...))
-```
-
-## S.2 配置驱动率统计现状（2026-06-25 审计）
-
-按附录 L.1 计算公式：`配置驱动率 = (通过YAML配置的行为数) / (总行为数)`
-
-| 维度           | 当前驱动率 | Phase 0 目标 | Phase 1 目标 | Phase 2 目标 | 状态                                                            |
-| ------------ | ----- | ---------- | ---------- | ---------- | ------------------------------------------------------------- |
-| Agent 驱动率    | \~15% | ≥40%       | ≥70%       | ≥90%       | 🔄 推进中（22 个 generic Agent 仍为代码实现，declarative\_agent.py 框架已就绪） |
-| Tool 驱动率     | \~10% | ≥30%       | ≥50%       | ≥70%       | 🔄 推进中（50+ 工具多为代码实现，declarative\_tool.py 框架已就绪）               |
-| Workflow 驱动率 | \~25% | ≥60%       | ≥80%       | ≥95%       | 🔄 推进中（config/workflows/ 已有模板，compiler/ 已就绪）                  |
-| Prompt 驱动率   | \~30% | ≥50%       | ≥80%       | ≥95%       | 🔄 推进中（config/prompts.yaml 已存在，\_DEFAULT\_PROMPTS 部分未清理）      |
-| 阈值/规则驱动率     | \~20% | —          | —          | —          | 🔄 推进中（config/gates/ + config/evaluators/ 已建立）                |
-
-**综合配置驱动率**：约 **20%**（Phase 0 目标 30% 尚未达成，主要瓶颈为 Agent 和 Tool 的代码实现占比高）。
-
-**推进路径**：
-
-1. 完成 S3.0-16 `_DEFAULT_PROMPTS` 字典删除（115 处硬编码提示词迁移）
-2. 将 22 个 generic Agent 迁移为 `config/agents/*.yaml` 声明式定义
-3. 将 50+ 工具中可声明化的部分迁移为 `config/tools/*.yaml`（HTTPTool/ScriptTool/TransformTool）
-4. 验证 `compiler/parser.py` + `compiler/codegen.py` 三阶段编译链路
-
-## S.3 各模块完成度评估（2026-06-25）
-
-按 spec.md 第三章功能需求编号评估：
-
-### S.3.1 执行引擎层（FR-ENG）
-
-| 编号        | 功能                   | 完成度 | 实现位置                                                 | 备注                                                       |
-| --------- | -------------------- | --- | ---------------------------------------------------- | -------------------------------------------------------- |
-| FR-ENG-01 | HybridExecutor 混合执行器 | 90% | `executor/hybrid_executor.py`                        | TAOR 循环 + Persona 锁已实现；Hook 点已对接 harness/orchestrator.py |
-| FR-ENG-02 | ModeRegistry 模式注册中心  | 95% | `modes/registry.py`                                  | 注册/获取/推荐均实现                                              |
-| FR-ENG-03 | 9 大内置 Agent 模式       | 85% | `modes/*.py`                                         | 9 大模式全部存在；rewoo/self\_discover 简化实现                      |
-| FR-ENG-04 | TaskScheduler 定时调度   | 80% | `scheduler/scheduler.py`                             | APScheduler + SQLAlchemy job store；动态增删待补                |
-| FR-ENG-05 | 三层防御机制               | 90% | `core/agent_timeout.py` 等                            | L1 超时 + L2 重复检测 + L3 reflexion\_retry 均实现                |
-| FR-ENG-06 | 轨迹记录与评估管线            | 70% | `observability/tracer.py` + `session/event_store.py` | 记录完整，自动质量判定逻辑待补                                          |
-
-### S.3.2 Harness 驾驭层（FR-HRN）
-
-| 编号        | 功能                           | 完成度 | 实现位置                                                            | 备注                                       |
-| --------- | ---------------------------- | --- | --------------------------------------------------------------- | ---------------------------------------- |
-| FR-HRN-01 | ContextEngine 上下文工程          | 75% | `harness/context_engine.py`                                     | AGENTS.md 注入已实现；会话交接待对接 SessionManager   |
-| FR-HRN-02 | ArchitectureConstraintEngine | 80% | `security/arch_constraint.py` + `harness/constraints/`          | ast 解析 + layer\_mapping.yaml 已实现；CI 门禁待补 |
-| FR-HRN-03 | FeedbackLoop 反馈循环            | 70% | `harness/feedback_loop.py`                                      | 三档 evaluation\_mode 已实现；四维评分 LLM 调用待补    |
-| FR-HRN-04 | EntropyManager 熵管理           | 50% | `harness/entropy_manager.py`                                    | 文档园丁/技术债跟踪/规则进化均未实现，仅占位                  |
-| FR-HRN-05 | PermissionPipeline 权限管线      | 85% | `security/permission_pipeline.py` + `security/permission_v2.py` | V1 完整；V2 增强（ASK 超时/并发去重/审计）已实现           |
-| FR-HRN-06 | SessionManager 会话管理          | 80% | `harness/session_manager.py` + `harness/compaction.py`          | 92% 阈值压缩已实现；DualThresholdCompactor 已实现   |
-
-### S.3.3 能力层（FR-CAP）
-
-| 编号        | 功能            | 完成度 | 实现位置                     | 备注                                                             |
-| --------- | ------------- | --- | ------------------------ | -------------------------------------------------------------- |
-| FR-CAP-01 | Tool 生态       | 85% | `tools/` (50+ 文件)        | 内置工具充足；MCP/OpenAPI/GraphQL 适配器在 mcp/ 下                         |
-| FR-CAP-02 | Skill 系统      | 60% | `skills/` (4 文件)         | 双层加载已实现；4 种格式适配器待补（adapters/ 子目录未建）                            |
-| FR-CAP-03 | MCP 模块        | 80% | `mcp/` (5 文件)            | L1-L4 四层架构完整；execute\_stream 已实现                               |
-| FR-CAP-04 | 通用 Agent 库    | 90% | `agents/generic/` (22 个) | generic Agent 数量超 spec（22 vs 17+15=32，部分业务 Agent 已下沉到 \*Forge） |
-| FR-CAP-05 | Memory 系统     | 85% | `memory/` (11 文件)        | 5 种记忆策略 + TaskBoard + Mailbox + CheckpointManager 全部实现         |
-| FR-CAP-06 | 通用 Workflow 库 | 70% | `config/workflows/`      | 模板存在；15+ 模板数量待验证                                               |
-
-### S.3.4 多 Agent 策略（FR-MAS）
-
-| 编号        | 功能             | 完成度 | 实现位置                   | 备注                                        |
-| --------- | -------------- | --- | ---------------------- | ----------------------------------------- |
-| FR-MAS-01 | Subagents 策略   | 85% | `modes/multi_agent.py` | 上下文隔离 + 并行 + 结果压缩已实现                      |
-| FR-MAS-02 | Agent Teams 策略 | 75% | `modes/multi_agent.py` | TaskBoard + Mailbox 已实现；Lead Agent 协调逻辑简化 |
-| FR-MAS-03 | Swarms 策略      | 40% | `modes/multi_agent.py` | 仅占位实现；心跳 + 失败恢复未实现                        |
-
-### S.3.5 其他模块
-
-| 编号             | 功能        | 完成度 | 实现位置                                                | 备注                                      |
-| -------------- | --------- | --- | --------------------------------------------------- | --------------------------------------- |
-| FR-HELM-01\~10 | Helm 实时交互 | 80% | `core/helm_*.py` + `app/api/endpoints/websocket.py` | 10 个子需求平均 80%                           |
-| FR-PLG-01\~03  | 插件系统      | 75% | `core/plugin_*.py` (10+ 文件)                         | 三层架构 + 发现机制已实现；市场未实现                    |
-| FR-OBS-01\~04  | 可观测性      | 70% | `observability/` (3 文件) + `core/metrics.py`         | 全链路追踪 + Prometheus 指标已实现；Grafana 仪表盘未实现 |
-| FR-SEC-01\~03  | 安全体系      | 85% | `security/` (4 文件) + `core/guardrails.py`           | Fail-closed + 沙箱 + 并发安全已实现              |
-| FR-SDK-01\~08  | SDK 与上层集成 | 80% | `sdk.py` + `core/flowforge.py`                      | 8 个子需求平均 80%                            |
-
-### S.3.6 新增模块完成度（spec 未覆盖）
-
-| 模块                      | 完成度 | 实现位置                         | 对应 spec 设计项                        |
-| ----------------------- | --- | ---------------------------- | ---------------------------------- |
-| Loop 引擎                 | 75% | `loop/` (10 文件)              | FR-ENG-06 + S3.0-23 TurnTransition |
-| Workflow YAML Compiler  | 70% | `compiler/` (6 文件)           | FWK-01 + S3.0-19 三阶段拆分             |
-| LLM 路由层                 | 80% | `llm/` (7 文件)                | INF-01 + S3.0-13/15                |
-| 事件总线增强                  | 75% | `events/` (5 文件)             | INF-02 + S3.0-18/42                |
-| Feature Flags           | 85% | `core/feature_flags.py`      | spec v2.2 第一章                      |
-| DeclarativeTool         | 80% | `core/declarative_tool.py`   | FR-PLG-01 扩展                       |
-| ContentModerationLayer  | 70% | `core/content_moderation.py` | S3.0-14                            |
-| DegradationDecisionTree | 75% | `core/degradation.py`        | spec v2.2 第三章                      |
-| DualThresholdCompactor  | 80% | `harness/compaction.py`      | S3.0-21                            |
-| PermissionV2            | 85% | `security/permission_v2.py`  | S3.0-9                             |
-
-## S.4 综合评估结论
-
-* **整体完成度**：约 **75%**（Phase 0 收尾阶段）
-
-* **P0 阻塞项**：FW-CONSIST-001/002（Plugin 钩子缺失）、S3.0-16（\_DEFAULT\_PROMPTS 清理）、FR-HRN-04（熵管理未实现）
-
-* **配置驱动率**：约 20%（Phase 0 目标 30% 尚差 10 个百分点）
-
-* **建议优先级**：先补 Plugin 钩子 → 清理硬编码 Prompt → 迁移 Agent/Tool 为声明式 → 推进配置驱动率达 30%
-
-> 本附录为规格更新快照，所有完成度评估基于 2026-06-25 代码审计，后续演进需同步更新。
-
-***
-
+### §5.5 可演进性要求
+
+- 配置驱动率：Phase 0 ≥ 30% / Phase 1 ≥ 60% / Phase 2 ≥ 80%
+- 文档分层规范（详见 [hiclaw/rules.md 第十一部分](../../hiclaw/rules.md)）
+- 自我演进闭环（详见 §2.10）
+- Build to Delete vs Built to Persist 半衰期标记
+- ADR 不可变历史（决策变更通过新增 ADR 引用旧 ADR）
+
+### §5.6 测试要求（T1-T8 铁律）
+
+详见 [hiclaw/rules.md §5.5](../../hiclaw/rules.md) 测试铁律 T1-T9。本节强调：
+- 禁止 Mock LLM（T1）
+- 禁止假数据（T2）
+- 禁止跳过验证（T3）
+- 禁止 Mock 工具（T4）
+- 未实现即 Bug（T5）
+- 必须采集指标（T6）
+- LLM 内容必须经 LLM 审核（T7）
+- Web 功能必须操控浏览器验证 DOM（T8）
+
+---
+
+## §6 历史背景资料
+
+> **声明**：本章节保留 v7.0 / v6.0 历史章节作为背景资料，**不作为开发依据**；开发依据以 §1-§5（v7.1 权威内容）+ ADR/Feature 子目录为准。
+
+### §6.1 v7.0 历史章节（已合并到 v7.1）
+
+> **状态**：✅ v7.0 历史章节已逐章节合并到 v7.1 §1-§5 对应位置；v7.0 完整内容备份在 [`_archive/spec_v70_full_merged.md`](_archive/spec_v70_full_merged.md)，仅作演化路径参考。
+
+**v7.0 → v7.1 合并映射**：
+
+| v7.0 章节 | v7.1 合并位置 | 合并状态 |
+|----------|--------------|---------|
+| v7.0-§0 万物灵智体世界愿景声明 | v7.1 §2.3 + §2.6 + §2.11 | ✅ 已合并 |
+| v7.0-§1 三层架构重构 | v7.1 §2.7 | ✅ 已合并 |
+| v7.0-§2 育灵体系命名融合方案 | v7.1 §2.4 + §2.5 + [design/naming-contract.md](design/naming-contract.md) v1.1 | ✅ 已合并 |
+| v7.0-§3 roleagent.md 七大工程路径补全 | v7.1 §3.1-§3.7 + [features/F001-F025](features/) | ✅ 已合并 |
+| v7.0-§4 forgemind 应用层规格 | v7.1 §2.8 + §3.8-§3.9 + [features/F026-F030](features/) | ✅ 已合并 |
+| v7.0-§5 三方 Agent 集成规格 | v7.1 §2.9 + §3.10 + [features/F031-F035](features/) | ✅ 已合并 |
+| v7.0-§6 FR-EVO 功能需求重排 | v7.1 §3.1-§3.16（FR-CORE-001~030） | ✅ 已合并 |
+| v7.0-§7 验收标准与质量分阈值统一 | v7.1 §5.1 性能要求（SLO） | ✅ 已合并 |
+| v7.0-§8 v7.0 MVP 最小可行范围 | v7.1 §3.8 + §3.2 + §3.10 + §3.15（P0 优先级标记） | ✅ 已合并 |
+| v7.0-§9 自我演进闭环 | v7.1 §2.10 | ✅ 已合并 |
+| v7.0-§10 v7.0 设计态声明 | v7.1 §2.11 | ✅ 已合并 |
+| v7.0-§11 文档导航与依赖引用 | v7.1 §1.4 + §1.5 | ✅ 已合并 |
+
+### §6.2 v6.0 历史章节（背景资料）
+
+> **状态**：v6.0 是已实现代码的背景资料，**不在 v7.1 开发范围内**。v6.0 完整内容备份在 [`_archive/spec_v60_historical.md`](_archive/spec_v60_historical.md)。
+
+**v6.0 历史章节摘要**：
+
+| v6.0 章节 | 一句话摘要 | 引用价值 |
+|----------|----------|---------|
+| v6.0 第一章：产品概述与愿景 | FlowForge v6.0 是 Agent 驾驭层（Harness Layer），核心公式 Agent 质量 = 模型能力 × Harness 契合度 | 已被 v7.1 §2.1 升级 |
+| v6.0 第二章：系统架构总览 | 六层架构模型（接口/应用/Brain/Workers/Tools/Infra）+ 控制回路 + Hook 点 | 已被 v7.1 §2.7 升级为三层架构 |
+| v6.0 第三章：核心功能需求 | 执行引擎 / Harness 驾驭层 / 能力层 / 多 Agent 策略 / Helm / 插件 / 可观测 / 安全 / SDK | 部分被 v7.1 §3 覆盖，剩余作背景 |
+| v6.0 第四章：非功能需求 | 性能 / FeedbackLoop / 可靠性 / 可扩展 / 安全 / 可维护 / Helm 交互 | 已被 v7.1 §5 覆盖 |
+| v6.0 第五章：与 ContentForge 的集成方案 | 集成架构 / 业务场景映射 / 迁移路径 / 增量三步 | 已迁移到 ContentForge 项目文档 |
+| v6.0 附录 A-N | 配置参考 + 用户旅程 + 失败 UX + KPI + PromptManager + Provider + BaseTool + 可观测 + 跨项目契约 + 配置驱动率 + SLO + 弃用时间线 | 部分已被 v7.1 §4-§5 覆盖 |
+| v6.0 审核修订 v2.1/v2.2/v3.0 | 六方联合审核修订增补（S3.0-1 ~ S3.0-42） | 已被 v7.1 §3 覆盖，剩余作背景 |
+| v6.0 第十五章：Skill 知识沉淀机制 | SkillKnowledgePrecipitator + 沉淀触发条件 | 部分被 v7.1 §3.14 覆盖 |
+| v6.0 StockForge 应用层支持 | StockForge 定位 / 核心能力 / Plugin 注册清单 / 端口分配 | 已迁移到 StockForge 项目文档 |
+
+### §6.3 V7.0 自我进化 Agent Harness 规格升级（背景资料）
+
+> **状态**：v7.0 自我进化部分已合并到 v7.1 §2.10 + §3.14；v7.0 完整内容备份在 [`_archive/spec_v70_self_evolution.md`](_archive/spec_v70_self_evolution.md)。
+
+**v7.0 自我进化部分摘要**：
+
+| v7.0 章节 | 一句话摘要 | 引用价值 |
+|----------|----------|---------|
+| 第七章：自我进化能力总览 | 核心隐喻"从驾驭到养成" + 体系命名 + 两类智能体设计 + 升华阶段 + 核心能力清单 | 已被 v7.1 §2 升级 |
+| 第八章：炉灵（Forgekin）需求规格 | FR-EVO-01~06：身份系统 / 灵忆 / 灵印 / 自锻 / 锻典 / Skill 自生成 | 已被 v7.1 §3 覆盖（重排为 FR-CORE-001~030） |
+| 第九章：外部编码工具集成需求 | FR-EVO-07~08：CLI Wrapper / Trae 监工 Bridge | 已被 v7.1 §3.10 升级为 ExternalAgentAdapter |
+| 第十章：炉灵协作与 IM 需求 | FR-EVO-09~11：A2A 通信 / 灵议 IM 多渠道 / 两类智能体衔接 | 已被 v7.1 §3.14 覆盖 |
+| 第十一章：*Forge 自进化统一规格 | 所有 *Forge 的自进化能力 / 各 *Forge 灵智体角色示例 | 部分作背景 |
+| 第十二章：非功能需求与 SLO | 自进化性能 SLO / 安全红线 / 配置驱动率 / 可观测性指标 | 已被 v7.1 §5 覆盖 |
+| 第十三章：v7.0 路线图 | 分阶段交付 + 里程碑验收 | 已迁移到 [task.md](task.md) |
+| 附录 O：v7.0 与 clowder-ai 方法论对照表 | v7.0 vs clowder-ai 七大工程路径对照 | 作背景参考 |
+| 附录 P：v7.0 待用户审核决策点 | 14 项待决策点 | 已在 41 条 CL 同步矩阵中覆盖 |
+
+---
+
+> **本文档版本**：v7.1（2026-07-19）
+> **下一阶段**：基于本文档开发 [arch.md](arch.md)（SAD 架构设计说明书），按 [hiclaw/rules.md §11.3](../../hiclaw/rules.md) 三阶段开发流程执行。
+> **配套文档**：[arch.md](arch.md) + [design.md](design.md) + [features/](features/) + [architecture/](architecture/) + [design/](design/) + [decisions/](decisions/) + [review/](review/)

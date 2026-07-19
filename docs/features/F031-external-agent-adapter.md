@@ -3,11 +3,15 @@
 > **状态**: ⏳ pending
 > **类型**: external_agent
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体
+> **负责人**: 架构师灵智体（猫头鹰·鲁班）
 > **依赖 ADR**: [doc:decisions/006-external-agent-integration.md]
 > **依赖 Feature**: [doc:features/F001-capability-profile.md]
 > **依据**: [doc:review/review.md#第九章] EX-001~EX-010
 > **关联 VISION**: [doc:VISION.md#5]（三方 Agent 集成：灵智体的能力扩展）
+> **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010，与本文档同号对应）
+> **对应 arch.md**: [doc:../arch.md#§3.10]（待创建）
+> **对应 design.md**: [doc:../design.md#§3.10]（待创建）
+> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -39,6 +43,25 @@
 ### 2.1 核心设计
 
 ExternalAgentAdapter 抽象层 + 4 大机制（能力画像 / 共享状态 / 失败回退 / 能力融合）+ 4 个具体 Adapter（Claude Code / Codex / OpenCode / Trae）。
+
+**EAC v1 七契约（External Agent Contract v1）**——所有三方 Agent Adapter 必须实现以下七个契约才能纳入 ExternalAgentBridge：
+
+1. **Invocation Contract**：同步调用契约（`invoke(task) -> result`），定义任务输入/输出 schema、超时、错误码。
+2. **Stream Contract**：流式输出契约（SSE/WebSocket），支持增量 token、工具调用事件、思考过程事件。
+3. **Session Contract**：会话契约，三方 Agent 必须支持 session_id 复用、上下文延续、会话级取消。
+4. **Capability Contract**：能力声明契约，三方 Agent 必须暴露 `get_profile()` 返回能力画像（capabilities / proficiency / cost / latency / reliability）。
+5. **Collaboration Contract**：协作契约，三方 Agent 必须支持与 FlowForge 灵智体的 Handoff Capsule（F003）交接、Ping-Pong 心跳（F004）、@-mention 路由（F005）。
+6. **Safety Contract**：安全契约，三方 Agent 必须接受六层 Guardrails 包裹（详见下文），并暴露 `health_check()` 与审计日志 hook。
+7. **Avatar Sync + System Prompt Configuration Map**：化身同步与系统提示词配置契约，三方 Agent 必须接受 FlowForge 下发的 System Prompt 配置图（包含 Role Mask 五层 / Core Identity / World Setting 引用），并在执行期间保持化身一致性（Avatar Sync）。
+
+**六层 Guardrails（Six-Layer Guardrails）**——三方 Agent 调用必须穿过以下六层防护，缺一不可：
+
+1. **Input Validation**：输入校验层，校验 task.input_data 的 schema、长度、敏感字段、注入风险。
+2. **System Prompt Constraints**：系统提示词约束层，通过 System Prompt Configuration Map 注入 Core Identity / Role Mask / World Setting / 不可越界指令。
+3. **Tool Allow-Lists**：工具白名单层，三方 Agent 仅可调用 allow-list 中的工具/文件路径/网络出口，禁止越权。
+4. **Output Validation**：输出校验层，校验 result.output 的 schema、内容安全、PII 脱敏、有害内容过滤。
+5. **Action Confirmation**：操作确认层，对副作用操作（写入文件 / 提交代码 / 发送消息）必须经 operator 或评审员灵智体二次确认。
+6. **Cost Ceiling**：成本上限层，单次调用 cost_incurred 不得超过预算上限，超限自动熔断并触发 fallback。
 
 ### 2.2 关键接口
 
@@ -413,3 +436,4 @@ ExternalAgentAdapter 是 roleagent.md 第 1 章明确的"agent 交接协议与�
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
 | 2026-07-17 | v0.1 | 初始创建 | 架构师灵智体 |
+| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.10 同号映射 + §2.1 强化 EAC v1 七契约与六层 Guardrails | 文档员灵智体（钢笔·文心） |

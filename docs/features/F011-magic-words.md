@@ -6,7 +6,11 @@
 > **关联 ADR**: [doc:decisions/007-harness-engineering.md]
 > **类型**: harness
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体
+> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，与本文档同号对应）
+> **对应 arch.md**: [doc:../arch.md#§3.3]（待创建）
+> **对应 design.md**: [doc:../design.md#§3.3]（待创建）
+> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -114,3 +118,11 @@ magic_words:
 - [doc:features/F008-durable-state-surfaces.md]
 - [doc:features/F022-tier-1-4-recovery.md]
 - [doc:project_rules.md#T1-T8]
+
+---
+
+## 7. 变更历史
+
+| 日期 | 版本 | 变更 | 变更者 |
+|------|:----:|------|--------|
+| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.3 同号映射 | 文档员灵智体（钢笔·文心） |

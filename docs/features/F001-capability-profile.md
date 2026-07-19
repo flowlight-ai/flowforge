@@ -3,12 +3,16 @@
 > **状态**: ⏳ pending
 > **类型**: core
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体
+> **负责人**: 架构师灵智体（猫头鹰·鲁班）
 > **依赖 ADR**: [doc:decisions/004-capability-profile-routing.md]
 > **依赖 Feature**: 无（F001 是基础 Feature）
 > **依据**: [doc:review/review.md#第八章] RA-001~RA-008
 > **roleagent 章节**: [doc:roleagent.md#第0章] + [doc:roleagent.md#第1章]
 > **关联 VISION**: [doc:VISION.md#4]（灵智体相对其他 multi-agent 的核心优势）
+> **对应 spec.md**: [doc:../spec.md#§3.1]（FR-CORE-001，与本文档同号对应）
+> **对应 arch.md**: [doc:../arch.md#§3.1]（待创建）
+> **对应 design.md**: [doc:../design.md#§3.1]（待创建）
+> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -337,3 +341,4 @@ class CapabilityProfile(BaseModel):
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
 | 2026-07-17 | v0.1 | 初始创建 | 架构师灵智体 |
+| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.1 同号映射 | 文档员灵智体（钢笔·文心） |

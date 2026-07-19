@@ -3,12 +3,16 @@
 > **状态**: ⏳ pending
 > **类型**: collaboration
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体
+> **负责人**: 架构师灵智体（猫头鹰·鲁班）
 > **依赖 ADR**: [doc:decisions/002-collaboration-protocol.md]
 > **依赖 Feature**: [doc:features/F001-capability-profile.md]
 > **依据**: [doc:review/review.md#第八章] RA-009~RA-016
 > **roleagent 章节**: [doc:roleagent.md#第2章]
 > **关联 VISION**: [doc:VISION.md#4]（协作单位：动态能力画像路由）
+> **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，与本文档同号对应）
+> **对应 arch.md**: [doc:../arch.md#§3.2]（待创建）
+> **对应 design.md**: [doc:../design.md#§3.2]（待创建）
+> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -314,3 +318,4 @@ TeamAct 是 roleagent.md 第 1 章明确列出的"agent 交接协议"——编�
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
 | 2026-07-17 | v0.1 | 初始创建 | 架构师灵智体 |
+| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.2 同号映射 | 文档员灵智体（钢笔·文心） |

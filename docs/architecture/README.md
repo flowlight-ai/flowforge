@@ -1,94 +1,139 @@
-# FlowForge 架构文档导航
+# FlowForge Architecture Feature 规格
 
-> **文档编号**: architecture/README.md（v1.0）
-> **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构 + `[doc:roleagent.md]` 七章工程路径
-> **参考**: `[doc:clowder-ai/docs/architecture/]` 目录结构
+> **文档编号**: README.md（v1.0）
+> **更新日期**: 2026-07-19
+> **用途**: 40 份 A0XX 文件的索引（Feature 级 SAD），与 [features/F0XX-xxx.md](../features/) 同号一一对应
+> **依赖**: `[doc:../spec.md]` + `[doc:../arch.md]` + `[doc:../features/]` + `[doc:../../../hiclaw/rules.md#第十一部分]`
 
 ---
 
-## 1. 架构总览
+## 1. Architecture Feature 规范
 
-FlowForge 采用**七层架构 + forgemind 应用层**设计：
+每个 Architecture Feature 文件（A0XX-xxx.md）是 [features/F0XX-xxx.md](../features/) 的**架构层补充**，与 F0XX 同号一一对应。**单文件 < 50KB**，仅放架构视角设计。
+
+### 1.1 文件命名
 
 ```
-应用层 (forgemind) — 万物灵智体应用实践（动物/组织/物品/虚拟/混合）
-   ↓ 单向依赖
-第 7 层：自进化层（ForgeMindEngine + 灵锻 SpiritForge + 灵议 Mind Council）
-   ↓ 嵌入式升级（非独立层）
-第 6 层：协作层（TeamAct 状态机 + 交接胶囊 + 路由协议）
-第 5 层：能力画像层（CapabilityProfile + 动态路由 + 灵智体形态）
-第 4 层：Harness 七层（Durable State / Tool / Evidence / Governance / 逃生舱 / Entropy / Harnessability）
-第 3 层：记忆联邦层（多域记忆 + 三入口 + 消费加权 + 灵典 Mind Codex）
-第 2 层：Eval 自代谢层（Eval Contract + 三方信号 + 七类归因 + Harness Eval 控制面）
-第 1 层：可靠性层（Tier 1-4 恢复 + liveness 规范读 + 弱状态机）
-   ↓ 单向依赖
-核心层 (core/) — 共享内核（plugin / gate / context / memory / tracing）
+A0XX-kebab-case-name.md
 ```
 
-**关键约束**：
-- 上层可以依赖下层，下层**绝对禁止**导入上层模块（单向依赖铁律）
-- forgemind 应用层通过 Plugin V3 协议注册到核心框架层
-- 自进化层作为"Harness v2.0 升级"嵌入到第 6 层，**不是独立第 7 层**（解决 D-003 循环依赖）
+### 1.2 编号规则
+
+| 编号范围 | 类别 | 对应 F0XX |
+|---------|------|----------|
+| A001-A007 | TeamAct 协作 | F001-F007 |
+| A008-A013 | Harness 七层 | F008-F013 |
+| A014-A017 | 多域记忆 | F014-F017 |
+| A018-A020 | Eval 自代谢 | F018-F020 |
+| A021-A025 | 分布式可靠性 | F021-F025 |
+| A026-A030 | forgemind 应用层 | F026-F030 |
+| A031-A035 | 三方 Agent 集成 | F031-F035 |
+| A036-A040 | 其他 | F036-F040 |
+
+### 1.3 模板
+
+详见 [TEMPLATE.md](TEMPLATE.md)。
 
 ---
 
-## 2. 文件清单
+## 2. Architecture Feature 清单（40 份）
 
-| 文件 | 内容 | 状态 |
-|------|------|:----:|
-| [README.md](README.md) | 架构总览（本文件） | ✅ v1.0 |
-| [2026-07-17-architecture-views.md](2026-07-17-architecture-views.md) | 架构视图（七层 + forgemind + 三方 Agent） | ⏳ Phase 1 |
-| [at-mention-routing-system.md](at-mention-routing-system.md) | 行首 @ 路由协议（RA-013） | ⏳ Phase 1 |
-| [cli-integration.md](cli-integration.md) | CLI 集成（三方 Agent） | ⏳ Phase 3 |
-| [collaboration-landscape.md](collaboration-landscape.md) | 协作全景（TeamAct + 共鸣 + 灵议） | ⏳ Phase 1 |
-| [feature-placement.md](feature-placement.md) | Feature 在七层架构中的归属 | ⏳ Phase 0 |
-| [memory-system-overview.md](memory-system-overview.md) | 多域记忆联邦架构 | ⏳ Phase 1 |
-| [retrieval-pipeline-deep-dive.md](retrieval-pipeline-deep-dive.md) | 检索流水线 | ⏳ Phase 1 |
-| [user-journeys.md](user-journeys.md) | 用户旅程（万物灵智体锻造 → 育灵 → 进化） | ⏳ Phase 2 |
-| [ownership/](ownership/) | 所有权矩阵（16 cells） | ⏳ Phase 5 |
-| [assets/](assets/) | 架构图（PNG/SVG） | ⏳ Phase 1 |
+### 2.1 TeamAct 协作（A001-A007）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
+|-------------|------|:----:|-------------|-------------|
+| [A001-capability-profile.md](A001-capability-profile.md) | 能力画像架构 | ⏳ | F001 | §3.1 |
+| [A002-teamact-loop.md](A002-teamact-loop.md) | TeamAct 六步循环架构 | ⏳ | F002 | §3.2 |
+| [A003-handoff-capsule.md](A003-handoff-capsule.md) | 交接胶囊架构 | ⏳ | F003 | §3.2 |
+| [A004-pingpong-circuit-breaker.md](A004-pingpong-circuit-breaker.md) | 乒乓球熔断器架构 | ⏳ | F004 | §3.2 |
+| [A005-at-mention-routing.md](A005-at-mention-routing.md) | 行首 @ 路由架构 | ⏳ | F005 | §3.2 |
+| [A006-ball-custody-lease.md](A006-ball-custody-lease.md) | 持球注册 lease 架构 | ⏳ | F006 | §3.2 |
+| [A007-push-back-protocol.md](A007-push-back-protocol.md) | Generator Push Back 架构 | ⏳ | F007 | §3.2 / §3.7 |
+
+### 2.2 Harness 七层（A008-A013）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
+|-------------|------|:----:|-------------|-------------|
+| [A008-durable-state-surfaces.md](A008-durable-state-surfaces.md) | Durable State Surfaces 架构 | ⏳ | F008 | §3.3 |
+| [A009-evidence-sensors.md](A009-evidence-sensors.md) | Evidence & Sensors 架构 | ⏳ | F009 | §3.3 |
+| [A010-governance-boundary.md](A010-governance-boundary.md) | Governance 压缩免疫架构 | ⏳ | F010 | §3.3 |
+| [A011-magic-words.md](A011-magic-words.md) | Magic Words 逃生舱架构 | ⏳ | F011 | §3.3 |
+| [A012-entropy-control.md](A012-entropy-control.md) | Entropy Control 退役架构 | ⏳ | F012 | §3.3 |
+| [A013-harnessability.md](A013-harnessability.md) | Harnessability 评估架构 | ⏳ | F013 | §3.3 |
+
+### 2.3 多域记忆（A014-A017）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
+|-------------|------|:----:|-------------|-------------|
+| [A014-memory-collection.md](A014-memory-collection.md) | 多域记忆 Collection 架构 | ⏳ | F014 | §3.4 |
+| [A015-three-retrieval-entry.md](A015-three-retrieval-entry.md) | 三检索入口架构 | ⏳ | F015 | §3.4 |
+| [A016-memory-governance.md](A016-memory-governance.md) | 记忆治理三要素架构 | ⏳ | F016 | §3.4 |
+| [A017-consumption-weighted-ranking.md](A017-consumption-weighted-ranking.md) | 消费加权排序架构 | ⏳ | F017 | §3.4 |
+
+### 2.4 Eval 自代谢（A018-A020）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
+|-------------|------|:----:|-------------|-------------|
+| [A018-eval-contract.md](A018-eval-contract.md) | Eval Contract 五问架构 | ⏳ | F018 | §3.5 |
+| [A019-three-signal-cross.md](A019-three-signal-cross.md) | 三方信号交叉架构 | ⏳ | F019 | §3.5 |
+| [A020-seven-attribution.md](A020-seven-attribution.md) | 七类归因矩阵架构 | ⏳ | F020 | §3.5 |
+
+### 2.5 分布式可靠性（A021-A025）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
+|-------------|------|:----:|-------------|-------------|
+| [A021-side-effect-wal.md](A021-side-effect-wal.md) | 副作用日志 WAL 架构 | ⏳ | F021 | §3.6 |
+| [A022-tier-1-4-recovery.md](A022-tier-1-4-recovery.md) | Tier 1-4 恢复分级架构 | ⏳ | F022 | §3.6 |
+| [A023-liveness-canonical-read.md](A023-liveness-canonical-read.md) | liveness 规范读模型架构 | ⏳ | F023 | §3.6 |
+| [A024-weak-state-vs-strong-workflow.md](A024-weak-state-vs-strong-workflow.md) | 弱状态机 vs 强 workflow 架构 | ⏳ | F024 | §3.6 |
+| [A025-provider-host-abstraction.md](A025-provider-host-abstraction.md) | 跨 provider 宿主抽象架构 | ⏳ | F025 | §3.6 |
+
+### 2.6 forgemind 应用层（A026-A030）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
+|-------------|------|:----:|-------------|-------------|
+| [A026-forgemind-app-layer.md](A026-forgemind-app-layer.md) | forgemind 应用层架构 | ⏳ | F026 | §3.8 |
+| [A027-all-things-spirit-species.md](A027-all-things-spirit-species.md) | 多形态智能体形态分类架构 | ⏳ | F027 | §3.8 |
+| [A028-forging-pipeline.md](A028-forging-pipeline.md) | 灵智体锻造流水线架构 | ⏳ | F028 | §3.9 |
+| [A029-physical-ai-sensors.md](A029-physical-ai-sensors.md) | 物理 AI 传感器接入架构 | ⏳ | F029 | §3.11 |
+| [A030-virtual-world-setting.md](A030-virtual-world-setting.md) | 虚拟世界设定层架构 | ⏳ | F030 | §3.12 |
+
+### 2.7 三方 Agent 集成（A031-A035）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
+|-------------|------|:----:|-------------|-------------|
+| [A031-external-agent-adapter.md](A031-external-agent-adapter.md) | 三方 Agent 适配层架构 | ⏳ | F031 | §3.10 |
+| [A032-external-agent-profile.md](A032-external-agent-profile.md) | 三方 Agent 能力画像架构 | ⏳ | F032 | §3.10 |
+| [A033-external-agent-shared-state.md](A033-external-agent-shared-state.md) | 三方 Agent 状态共享架构 | ⏳ | F033 | §3.10 |
+| [A034-external-agent-fallback.md](A034-external-agent-fallback.md) | 三方 Agent 失败回退架构 | ⏳ | F034 | §3.10 |
+| [A035-external-agent-capability-fusion.md](A035-external-agent-capability-fusion.md) | 三方 Agent 能力融合架构 | ⏳ | F035 | §3.10 |
+
+### 2.8 其他（A036-A040）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
+|-------------|------|:----:|-------------|-------------|
+| [A036-forgemind-forge-relationship.md](A036-forgemind-forge-relationship.md) | forgemind 与 *Forge 关系架构 | ⏳ | F036 | §3.8 |
+| [A037-forgemind-marketplace.md](A037-forgemind-marketplace.md) | 灵智体市场架构 | ⏳ | F037 | §3.13 |
+| [A038-forgemind-lineage.md](A038-forgemind-lineage.md) | 灵智体进化谱系架构 | ⏳ | F038 | §3.13 |
+| [A039-mind-codex-searchable.md](A039-mind-codex-searchable.md) | 灵典可检索知识库架构 | ⏳ | F039 | §3.4 / §3.14 |
+| [A040-harness-eval-control-plane.md](A040-harness-eval-control-plane.md) | Harness Eval 控制面架构 | ⏳ | F040 | §3.5 |
 
 ---
 
-## 3. 关键架构决策
+## 3. 与顶层 arch.md 的关系
 
-以下架构决策已通过 ADR 固化，详见 `[doc:decisions/]`：
-
-- **ADR 004**: 能力画像路由（CapabilityProfile + 动态路由）—— 对应第 5 层
-- **ADR 005**: forgemind 应用层 —— 对应应用层
-- **ADR 006**: 三方 Agent 集成 —— 对应第 4 层 + 第 5 层
-- **ADR 007**: Harness 工程路径 —— 对应第 4 层
-- **ADR 008**: 多域记忆联邦 —— 对应第 3 层
-- **ADR 009**: Eval 自代谢 —— 对应第 2 层
-- **ADR 010**: 分布式可靠性 —— 对应第 1 层
-- **ADR 011**: 伙伴系统数学 —— 跨层
-- **ADR 012**: 命名融合（ForgeMind 主名）—— 跨层
-- **ADR 013**: 万物灵智体愿景 —— 应用层 + 全层
+- **顶层 [arch.md](../arch.md)**：放核心关键功能架构设计（§3.1-§3.17），章节与 [spec.md §3](../spec.md) 同号
+- **本目录 A0XX**：放对应 Feature 的详细架构设计，与 F0XX 同号一一对应
+- **跨文档引用**：A0XX 引用 F0XX（Feature 级 SRS）+ arch.md §3.X（顶层 SAD）+ D0XX（Feature 级 SDD，待创建）
 
 ---
 
-## 4. 架构不变量
+## 4. 状态定义
 
-以下不变量必须严格遵守，违反任一即架构腐化：
-
-1. **单向依赖**：上层 → 下层，下层禁止 import 上层
-2. **flowforge 禁止业务代码**：核心框架层不含任何特定领域业务逻辑（编程红线第 10 条）
-3. **flowforge 禁止 import *Forge**：反向依赖零容忍
-4. **ForgekinEngine 不绕过 Harness 护栏**：必须是装饰器，不是独立入口（D-004/D-005）
-5. **治理规则走 system role**：禁止 user message prepend（压缩免疫层）
-6. **forgemind 通过 Plugin V3 注册**：单向依赖，不能反向调用 flowforge 内部模块
-7. **三方 Agent 通过 ExternalAgentAdapter 接入**：能力扩展，不是工具调用
-
----
-
-## 5. 与 v6.0 架构的映射
-
-| v6.0 层 | v7.0 层 | 变化 |
-|---|---|---|
-| 应用层（Gateway） | forgemind 应用层 | 新增万物灵智体应用实践 |
-| 指挥中枢层（Brain） | 第 6 层 协作层 | 升级为 TeamAct 状态机 |
-| 专家执行层（Workers） | 第 5 层 能力画像层 | 升级为 CapabilityProfile 动态路由 |
-| 工具与记忆层 | 第 4 层 Harness + 第 3 层 记忆联邦 | 拆分 + 升级 |
-| — | 第 2 层 Eval 自代谢 | **新增** |
-| — | 第 1 层 可靠性 | **新增** |
-| — | 第 7 层 自进化层 | **新增**（嵌入第 6 层，非独立） |
+| 状态 | 含义 |
+|------|------|
+| ⏳ pending | 未开始 |
+| 🔄 in_progress | 开发中 |
+| ✅ done | 已完成并通过架构 review |
+| ❌ deprecated | 已废弃 |
+| 🚫 blocked | 被阻塞（需依赖解决） |
