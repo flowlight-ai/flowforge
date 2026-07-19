@@ -1,4 +1,4 @@
-# ⛔⛔⛔ 测试铁律 — 违反即作废 ⛔⛔⛔
+﻿# ⛔⛔⛔ 测试铁律 — 违反即作废 ⛔⛔⛔
 
 > **以下规则是本项目测试的绝对底线，任何测试用例违反以下任何一条，该测试用例视为无效，必须重写。**
 > **无论任何人（包括AI助手）编写测试代码，都必须严格遵守以下铁律，不得以任何理由违反。**
@@ -19,12 +19,9 @@
 
 ---
 
-# FlowForge 完整测试用例规格说明书 (v9.0 审核修订版)
+# FlowForge 完整测试用例规格说明书 (v9.1)
 
-> **版本**: 9.0 | **日期**: 2026-05-24 | **状态**: 待评审
-> **合并来源**: v1.1 单元/集成测试 + v5.0 防御/协作测试 + test1.md (v6.0) Workflow E2E + v6.1 两条路径修正
-> **v8.0 变化**: 6份专家审核（deepseek/doubao/glm/kimi/m27/qwen）→ 14项修订
-> **v9.0 变化**: 6份专家二次审核并集 → 23项修订（含Harness/Skill/MCP/状态机/轨迹记录新增章节）
+> **版本**: 9.1 | **日期**: 2026-07-19 | **状态**: 待评审
 > **设计基础**: 逐文件审查 `flowforge/agents/*.py` + `flowforge/modes/*.py` + `flowforge/workflows/*.yaml`
 > **重要发现**: WorkflowExecutor 在步骤有 agent 时跳过 mode executor 直接调用 agent.execute_with_context()
 
@@ -44,105 +41,6 @@
 ---
 
 # 第一部分：测试基础与策略
-
----
-
-## 第〇章：版本说明与合并清单
-
-### 0.1 三版本来源
-
-| 版本 | 原始位置 | 核心内容 | 行数 |
-|------|---------|---------|------|
-| **v1.1 + v5.0** | test_v6.1_backup.md L1-L525 | 单元测试(UT-CORE-01~UT-LLM-05)、集成测试(API/SOP/插件/跨平台)、E2E Web UI、性能、防御层、Multi-Agent(TaskBoard/Mailbox/Swarms)、压缩器、Checkpoint | 525 |
-| **v6.0 (test1.md)** | test1.md 全文 | 8 WF E2E 含 spec/arch 引用、模式执行器专项、Helm WebSocket E2E、模型通道矩阵、并发/熔断、跨 WF、API 业务验证、需求追溯矩阵、6 维指标体系 | 915 |
-| **v6.1** | test_v6.1_backup.md L527-L1411 | 两条执行路径分析、基于源码的 WF Agent 链路、Helm UI 路径、Playwright 断言代码、MetricsCollector 设计、"测试通过"定义、架构问题 | 885 |
-
-### 0.2 合并时应用的 5 项关键修正（v7.0）
-
-| # | 修正项 | 原值 | 修正值 | 来源 |
-|---|--------|------|--------|------|
-| 1 | LLM 调用次数 | 基于模式执行器假设（deep_article≥12, quick_post≥5, trend_article≥8） | 基于 Agent 源码（deep_article 8~11, quick_post 1~2, trend_article 3~5） | testreview1.md 问题1 |
-| 2 | Reflexion 迭代在 Workflow API 路径不生效 | writing 阶段 Reflexion 1+N(1~3) | Workflow API 路径 writing=1次LLM，无迭代 | testreview1.md 问题2 |
-| 3 | content_audit 独立 Judge 模型需代码修复 | 假设 audit 使用不同模型 | 标注"需代码修复前置条件" | testreview1.md 问题3 |
-| 4 | 两条执行路径必须区分 | 混用事件格式 | Workflow API 路径 vs Helm UI 路径分别测试 | testreview1.md 问题5 |
-| 5 | Reflexion 独立 Agent 条件修正 | "三个角色使用独立 Agent" | "三种 Prompt 不同"（DefaultLLMActor/Evaluator 共用 LLM Tool） | testreview1.md 问题4 |
-
-### 0.3 v8.0 审核修订清单（6份专家审核）
-
-> 审核文件：`flowforge/docs/review/testreview_{deepseek,doubao,glm,kimi,m27,qwen}.md`
-
-| # | 修订项 | 严重度 | 修改章节 | 审核来源 |
-|---|--------|--------|---------|---------|
-| 1 | 新增代码修复前置清单（B1-B4） | P0 | 文档头部 | 全部6份 |
-| 2 | Helm UI路径按意图类型设计（非Workflow名称） | P0 | 第十七章 | qwen(R1), glm(P0-2), deepseek(ARCH-1) |
-| 3 | FactCheckAgent用httpx HEAD（非web_search） | P0 | 第十六章 | qwen(架构问题4), glm(P0-4) |
-| 4 | TrendAnalysisAgent web_search必须成功断言 | P0 | 第十六章16.3 | qwen(架构问题5) |
-| 5 | MetricsCollector升级为可执行代码 | P0 | 第二十八章 | 全部6份 |
-| 6 | 新增conftest_e2e.py真实LLM基础设施 | P0 | 第一章1.4 | deepseek(FATAL-1), doubao(问题1) |
-| 7 | 补全4个模式执行器测试（ReWOO/SelfDiscover/GoT/on_error） | P1 | 第十八章 | glm(P1-4) |
-| 8 | 每个Workflow增加调用路径验证表 | P0 | 第十六章 | glm(P1-3), kimi(问题13) |
-| 9 | 每个Workflow增加预期输出JSON结构 | P0 | 第十六章 | glm(P0-6), kimi(问题20) |
-| 10 | 所有Workflow增加Memory指标验证 | P1 | 第十六章 | glm(P1-8) |
-| 11 | 新增通用Agent+通用Workflow测试 | P2 | 新增第二十九章 | glm(P1-5/6) |
-| 12 | 模型名无seed-2.0残留+Phase 0-Pre验证 | ✅ 已完成 | 第十六章16.0 | doubao(问题4), m27(4.1) |
-| 13 | 附录B架构问题vs Bug分类（A1-A4+B1-B4） | P1 | 附录B | glm(P1-12) |
-| 14 | 并行步骤数据竞争标注（B2） | P0 | 第十六章16.5 | qwen(R3) |
-
-### 0.3 各版本独有内容保留映射
-
-### 0.4 v9.0 审核修订清单（6份专家二次审核并集）
-
-> 审核文件：`flowforge/docs/review/testreview_{deepseek,doubao,glm,kimi,m27,qwen}.md`
-
-| # | 修订项 | 修改章节 | 审核来源 |
-|---|--------|---------|---------|
-| 1 | 版本号更新v8.0→v9.0 | 文档头部 | 全部 |
-| 2 | 16.0模型名称修正（doubao-api→openroute/auto等） | 16.0 | DeepSeek E1 |
-| 3 | IT-WF-API-02~08补全调用路径验证表 | 16.2~16.8 | GLM P0-1, Kimi P0-2 |
-| 4 | IT-WF-API-02~08补全预期输出JSON结构 | 16.2~16.8 | GLM P0-1, Kimi P0-2 |
-| 5 | IT-HELM-03~09补全WebSocket事件序列 | 17.3~17.9 | GLM P0-2, Kimi P1-2 |
-| 6 | IT-HELM-05翻译意图修正（走Planning路径） | 17.5 | GLM P1-5 |
-| 7 | 修复MetricsCollector EventBus订阅（通配符+过滤） | 28.1 | DeepSeek Z.1-9, GLM P1-6, M27 2.1 |
-| 8 | 新增第三十二章Harness驾驭层测试 | 32 | DeepSeek F1, GLM P1-2 |
-| 9 | 新增第三十三章Skill系统测试 | 33 | DeepSeek F1, GLM P1-3 |
-| 10 | 新增第三十四章MCP模块测试 | 34 | DeepSeek F1 |
-| 11 | 新增第三十五章任务状态机测试 | 35 | DeepSeek F5 |
-| 12 | 新增负向测试（16.9+17.10） | 16.9, 17.10 | DeepSeek F2 |
-| 13 | TrendAnalysisAgent fallback验证修正 | 16.3 | Qwen 3.2 |
-| 14 | 附录A报告模板同步v9.0 | 附录A | DeepSeek E3/E4, GLM P0-3, Kimi P1-3 |
-| 15 | 第三十章执行顺序同步（按意图类型Helm+IT-MODE-06~09） | 30 | DeepSeek E3, GLM P1-4, Kimi |
-| 16 | 第二十九章通用Agent增加预期输出JSON | 29.1 | Qwen 3.3 |
-| 17 | 第三章7维定义增加量化阈值 | 3 | DeepSeek F3, Kimi P1-4, M27 1.1 |
-| 18 | 新增3.5测试失败处理规范 | 3.5 | Kimi P1-5 |
-| 19 | MetricsCollector补全Memory/WebSocket维度采集 | 28.1 | Kimi P1-1, Qwen 3.4 |
-| 20 | 新增28.4事件序列顺序验证代码 | 28.4 | Qwen 3.5 |
-| 21 | 新增第三十六章轨迹记录测试 | 36 | DeepSeek FR-ENG-06 |
-| 22 | 16.5并行验证逻辑修正（启动时间差+重叠验证） | 16.5 | DeepSeek 第十六章问题2 |
-| 23 | 第0.3节增加v9.0审核修订清单 | 0.4 | 全部 |
-
-| 独有内容 | v1.1+v5.0 | test1.md v6.0 | v6.1 | 合并章节 |
-|---------|:---:|:---:|:---:|---------|
-| 15+ 单元测试 (core/di/events/modes/sandbox/llm/memory) | ✅ | ❌ | ❌ | 第四~九章 |
-| 27 个 API 集成测试 | ✅ | 部分 | ❌ | 第十一章 |
-| E2E Web UI 8 个场景 | ✅ | ❌ | ❌ | 第二十六章 |
-| 性能测试基准 | ✅ | ❌ | ❌ | 第二十七章 |
-| v5.0 防御层 (L1/L2/L3) | ✅ | ❌ | ❌ | 第十章、第二十三章 |
-| v5.0 安全工具注册表 | ✅ | ❌ | ❌ | 第十章 |
-| v5.0 TaskBoard + Mailbox + ContextCompressor | ✅ | ❌ | ❌ | 第十章 |
-| v5.0 Multi-Agent 三策略 | ✅ | ❌ | ❌ | 第二十二章 |
-| v5.0 CheckpointManager 增强 | ✅ | ❌ | ❌ | 第十章 |
-| 8 WF 含 spec/arch/design 出处引用 | ❌ | ✅ | ❌ | 第十六章 |
-| 6 维 25+ 指标定义表 | ❌ | ✅ | ❌ | 第二章 |
-| 每个 WF 的详细模型分配表 | ❌ | ✅ | ❌ | 第十六章 |
-| 每个 WF 的失败处理流程 | ❌ | ✅ | ❌ | 第十六章 |
-| 模式执行器专项 | ❌ | ✅ | ❌ | 第十八章 |
-| 需求追溯矩阵 | ❌ | ✅ | ❌ | 第三十章 |
-| 两条执行路径分析 | ❌ | ❌ | ✅ | 第十五章 |
-| Agent 源码真实 LLM 调用次数 | ❌ | ❌ | ✅ | 第十六章 |
-| Playwright 前端断言代码 | ❌ | ❌ | ✅ | 第十九章 |
-| MetricsCollector 采集器设计 | ❌ | ❌ | ✅ | 第二十八章 |
-| "测试通过"7 维定义 | ❌ | ❌ | ✅ | 第三章 |
-| 3 个架构问题 | ❌ | ❌ | ✅ | 附录B |
 
 ---
 
@@ -222,7 +120,7 @@ def mock_llm_tool():
 ```
 
 ```python
-# tests/conftest_e2e.py — 真实LLM测试基础设施（v8.0 新增）
+# tests/conftest_e2e.py — 真实LLM测试基础设施
 
 import os
 import time
@@ -350,7 +248,7 @@ async def real_llm_context(use_real_llm):
 
 ---
 
-# 第二部分：单元测试 (来源: v1.1+v5.0)
+# 第二部分：单元测试
 
 ---
 
@@ -538,7 +436,7 @@ async def real_llm_context(use_real_llm):
 
 ---
 
-## 第十章：v5.0 防御+安全+协作测试
+## 第十章：防御+安全+协作测试
 
 ### 10.1 三层防御测试 (test_defense.py)
 
@@ -612,7 +510,7 @@ async def real_llm_context(use_real_llm):
 
 ---
 
-# 第三部分：集成测试 (来源: v1.1)
+# 第三部分：集成测试
 
 ---
 
@@ -1418,7 +1316,7 @@ Stage 4: Save (file I/O) — 保存文件（仅长内容）
 
 ## 第十七章：Helm UI 路径测试用例（按意图类型设计）
 
-> **v8.0 关键修订**：Helm UI路径不走Workflow YAML，走的是Planner LLM动态规划 + `_infer_steps_from_intent`降级模板。因此测试用例按**用户输入意图类型**设计，而非按Workflow名称。
+> **说明**：Helm UI路径不走Workflow YAML，走的是Planner LLM动态规划 + `_infer_steps_from_intent`降级模板。因此测试用例按**用户输入意图类型**设计，而非按Workflow名称。
 > 
 > **Helm UI 执行流程**：
 > 1. 用户输入 → `_is_simple_message()` → True走Fast-path（1次LLM）
@@ -2240,7 +2138,7 @@ review.ready → task.paused → (用户操作) → review.submitted(verdict=rej
 
 ---
 
-## 第二十二章：v5.0 Multi-Agent 集成测试
+## 第二十二章：Multi-Agent 集成测试
 
 ### 22.1 Subagents 策略测试
 
@@ -2272,7 +2170,7 @@ review.ready → task.paused → (用户操作) → review.submitted(verdict=rej
 
 ---
 
-## 第二十三章：v5.0 防御集成测试
+## 第二十三章：防御集成测试
 
 ### 23.1 三层防御联合测试
 
@@ -2424,8 +2322,6 @@ async def test_concurrent_create():
 
 ## 第二十八章：MetricsCollector 可执行实现
 
-> **v8.0 修订**：从"设计文档"升级为"可执行代码"，包含EventBus订阅、pytest fixture集成、自动报告生成。
-
 ### 28.1 TestMetricsCollector 类实现
 
 ```python
@@ -2453,7 +2349,7 @@ class TestMetricsCollector:
         self.start_time: float = time.time()
         self.end_time: float = None
 
-        # 订阅所有事件（v9.0修正：使用通配符订阅，在回调中过滤task_id）
+        # 订阅所有事件（使用通配符订阅，在回调中过滤task_id）
         event_bus.subscribe("*", self._on_event)
         event_bus.subscribe("llm.start", self._on_llm_start)
         event_bus.subscribe("llm.end", self._on_llm_end)
@@ -2464,13 +2360,13 @@ class TestMetricsCollector:
         event_bus.subscribe("workflow.step.start", self._on_step_start)
         event_bus.subscribe("workflow.step.complete", self._on_step_complete)
 
-        # Memory维度采集（v9.0新增）
+        # Memory维度采集
         event_bus.subscribe("memory.retrieve", self._on_memory_retrieve)
         event_bus.subscribe("memory.save", self._on_memory_save)
         event_bus.subscribe("context.warning", self._on_compaction)
 
     def _on_event(self, data: Any):
-        # v9.0修正：在回调中过滤task_id
+        # 在回调中过滤task_id
         if isinstance(data, dict) and data.get("task_id") != self.task_id:
             return
         self.events.append({"time": time.time(), "data": data})
@@ -2688,7 +2584,7 @@ def assert_metrics(report: dict, expected: dict):
             f"Memory查询次数{report['memory']['queries']}<{expected['memory_min_queries']}"
 ```
 
-### 28.4 事件序列顺序验证（v9.0新增）
+### 28.4 事件序列顺序验证
 
 ```python
 def assert_event_order(events: list, expected_sequence: list[str]):
@@ -2706,8 +2602,6 @@ def assert_event_order(events: list, expected_sequence: list[str]):
 ---
 
 ## 第二十九章：通用 Agent 与通用 Workflow 测试
-
-> **v8.0 新增**：覆盖14个通用Agent和5个通用Workflow模板（glm审核P1-5/P1-6）
 
 ### 29.1 通用 Agent 单元测试
 

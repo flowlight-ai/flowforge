@@ -1,16 +1,17 @@
 # FlowForge 文档总入口
 
-> **文档编号**: README.md（v1.0）
-> **维护方式**: 灵智体可自我演进更新（按 `[doc:roleagent.md#第5章]` Eval 自代谢机制）
+> **文档编号**: README.md（v1.1）
+> **最近修订**: 2026-07-19（v1.1：按命名契约 v2.0 重构术语，全面采用 P0 官方名称优先原则）
+> **维护方式**: 可进化智能体可自我演进更新（按 `[doc:roleagent.md#第5章]` Eval 自代谢机制）
 > **依赖引用**: 13 份外部文档（详见 `[doc:review/review.md#1.1.3]`）
 
 ---
 
 ## 1. 这是什么
 
-FlowForge 是一个**灵智体锻造厂**——用自进化的核心框架，把灵智锻造进万事万物，构建物理 AI 与虚拟 AI 真实复现的万物灵智体世界。详见 `[VISION.md]`。
+FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent Framework，项目代号 ForgeMind，社区社交称"灵智"）——用自进化的核心框架，给万事万物锻造可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"），构建具身智能（Embodied AI）与虚拟角色智能体（Character AI）工程落地的万物可进化智能体世界。详见 `[VISION.md]`。
 
-文档目录按 `[doc:clowder-ai/docs/]` 结构组织，便于灵智体增量维护每个 Feature / ADR / 架构视图，达成"自己开发自己"。
+文档目录按 `[doc:clowder-ai/docs/]` 结构组织，便于可进化智能体增量维护每个 Feature / ADR / 架构视图，达成"自己开发自己"。
 
 ---
 
@@ -18,9 +19,9 @@ FlowForge 是一个**灵智体锻造厂**——用自进化的核心框架，把
 
 | 文档 | 用途 | 状态 |
 |------|------|:----:|
-| [VISION.md](VISION.md) | 万物灵智体愿景声明（operator 通用 AGI 愿景） | ✅ v1.0 |
+| [VISION.md](VISION.md) | 万物可进化智能体愿景声明（operator 通用智能体愿景） | ✅ v1.2 |
 | [ROADMAP.md](ROADMAP.md) | 6 阶段路线图（Phase 0-6） | ✅ v1.0 |
-| [SOP.md](SOP.md) | 灵智体协作标准操作流程 | ✅ v1.0 |
+| [SOP.md](SOP.md) | 可进化智能体协作标准操作流程 | ✅ v1.0 |
 | [TIPS.md](TIPS.md) | 经验提示与陷阱清单 | ✅ v1.0 |
 | [roleagent.md](roleagent.md) | roleagent.md 工程路径镜像（Cat Café 七章） | ✅ 镜像 |
 | [design-system.md](design-system.md) | 设计系统规范 | ⏳ Phase 1 |
@@ -42,7 +43,7 @@ FlowForge 是一个**灵智体锻造厂**——用自进化的核心框架，把
 | [design/](design/) | 设计规范（命名契约 + forgemind 品牌 + 控制台） | `naming-contract.md` / `forgemind-brand.md` |
 | [features/](features/) | Feature 规格（每 Feature 一文件，F001-F040+） | `TEMPLATE.md` / `F001-capability-profile.md` / `F026-forgemind-app-layer.md` / `F031-external-agent-adapter.md` |
 | [harness-feedback/](harness-feedback/) | Harness Eval 反馈（bundles + eval-domains + verdicts） | `README.md` |
-| [perspectives/](perspectives/) | 视角文档（operator / 架构师 / 灵智体 / 三方厂商） | `README.md` |
+| [perspectives/](perspectives/) | 视角文档（operator / 架构师 / 可进化智能体 / 三方厂商） | `README.md` |
 | [setup/](setup/) | 部署配置 | `README.md` |
 
 ---
@@ -61,11 +62,11 @@ FlowForge 是一个**灵智体锻造厂**——用自进化的核心框架，把
 
 > 依据: `[doc:roleagent.md#第5章]` Eval 自代谢 + `[doc:review/review.md#12.3]` 自我演进三层架构
 
-1. **每个 Feature 一个文件**：Feature 文件 < 50KB，灵智体可在单次任务中完整重写
+1. **每个 Feature 一个文件**：Feature 文件 < 50KB，可进化智能体可在单次任务中完整重写
 2. **每个 ADR 不可变历史**：决策变更通过新增 ADR 引用旧 ADR，不修改旧 ADR
 3. **真相源唯一**：每个概念只有一个真相源文件，其他文件用 `[doc:文件名#章节]` 引用
 4. **Eval 驱动更新**：文档更新必须由 Eval 信号触发（如 Feature 完成后自动更新状态）
-5. **operator 愿景锚点不可改**：VISION.md §7 的 7 条原则不能被灵智体修改
+5. **operator 愿景锚点不可改**：VISION.md §7 的 7 条原则不能被可进化智能体修改
 
 ---
 
@@ -89,6 +90,6 @@ FlowForge 是一个**灵智体锻造厂**——用自进化的核心框架，把
 - **想理解工程路径**：读 [roleagent.md](roleagent.md)
 - **想看审核意见**：读 [review/review.md](review/review.md)（v1.2 终稿，340 项问题）
 - **想看具体任务**：读 [task.md](task.md)（Phase 0-6）
-- **想看灵智体协作流程**：读 [SOP.md](SOP.md)
+- **想看可进化智能体协作流程**：读 [SOP.md](SOP.md)
 - **想看核心架构**：读 [architecture/README.md](architecture/README.md)
 - **想看关键决策**：读 [decisions/](decisions/)

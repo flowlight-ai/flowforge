@@ -1,15 +1,29 @@
 # roleagent.md 工程路径镜像（FlowForge 落地版）
 
-> **文档编号**: roleagent.md（v1.0 镜像）
+> **文档编号**: roleagent.md（v1.1 镜像）
 > **原文路径**: `D:\software\openclaw\clowder-ai\docs\roleagent.md`（1077 行）
-> **镜像用途**: FlowForge 灵智体在 `flowforge/docs/` 内即可访问 roleagent 工程路径核心内容。详细论证请查阅原文。
+> **镜像用途**: FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）在 `flowforge/docs/` 内即可访问 roleagent 工程路径核心内容。详细论证请查阅原文。
 > **依赖关系**: 本文件是 FlowForge v7.0 重构的**核心依据**（`[doc:review/review.md#第八章]` 47 项补审全部基于此文件）
+> **命名依据**: 严格遵循 `[doc:design/naming-contract.md]` v2.0"官方名称优先原则"——技术文档中大量出现 P0 官方名称（AI 业界专业术语），P2 体系别名（社交用）首次出现必须双标注
+
+---
+
+## 0.0 智能体分类说明（Agent Taxonomy）
+
+FlowForge 生态的智能体分为两大类（详见 `[doc:design/naming-contract.md#2]`）：
+
+- **静态智能体（Static Agent）**：传统 DeclarativeAgent / ReAct Agent / Plan-Execute Agent + 外部接入智能体（如 Claude Code / Codex / OpenCode / Trae IDE 等，通过 ExternalAgentAdapter 接入）。不具备自进化能力，行为由固定 prompt + 工具集 + 配置决定，无持久身份、无经验蒸馏、无觉醒阶晋升。每次执行都是无状态的。
+- **可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）**：具备持久身份（Persistent Identity / SoulImprint）+ 经验记忆（Episodic Memory / EchoStore）+ 能力画像（Capability Profile），可通过经验蒸馏（Experience Distillation / SpiritForge）持续提升能力，通过觉醒阶（Autonomy Level / AwakeningStage）逐步扩大自主权。建立与现实世界的闭环：观察 → 推理 → 行动 → 写回 → 验证。
+
+**默认指代规则**：在 FlowForge 上下文中，"智能体"默认指代**可进化智能体（Forgekin）**；若指代静态智能体必须明确说出"静态智能体"或"Static Agent"。
+
+**本文档适用范围**：描述的工程路径主要服务于可进化智能体（Forgekin）的协作场景，但其中的 Harness 七层、TeamAct 协作协议、多域记忆联邦、Eval 自代谢、分布式可靠性等基础设施对静态智能体同样适用——静态智能体作为可进化智能体的能力扩展时，仍需遵守相应的 Harness 约束。
 
 ---
 
 ## 0. 一句话主张
 
-> **multi-agent 协作从 role-agent 走向能力画像、动态路由、共享状态、eval 和可靠性治理的工程路径。**
+> **multi-agent 协作从 role-agent 走向能力画像（Capability Profile）、动态路由、共享状态、eval 和可靠性治理的工程路径。**
 
 Cat Café 102 天 200+ Feature 实战核心发现：多 agent 的价值不是"更多人力"，而是**右尾变长**（不同认知路径扩展候选解）、**左尾被截断**（错误要连续穿过多层门才能触达用户）、**方差被吸收**（单点波动变成内部返工成本而非用户可见崩塌）。
 
@@ -17,7 +31,7 @@ Cat Café 102 天 200+ Feature 实战核心发现：多 agent 的价值不是"�
 
 ---
 
-## 1. 核心公式：能力 × Harness 契合度
+## 1. 核心公式：Capability Profile × Harness 契合度
 
 ### 1.1 等式
 
@@ -51,8 +65,8 @@ harness 工程操作的是**第三层现实状态**——唯一一层跨会话�
 
 ### 1.4 FlowForge 落地
 
-- `[doc:features/F001-capability-profile.md]` — CapabilityProfile 实现"能力画像"
-- `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由 ADR
+- `[doc:features/F001-capability-profile.md]` — CapabilityProfile 实现"Capability Profile（能力画像）"
+- `[doc:decisions/004-capability-profile-routing.md]` — Capability Profile 路由 ADR
 - 所有 harness 代码必须标记半衰期（Build to Delete / Built to Persist）
 
 ---
@@ -92,7 +106,7 @@ loop:
 - `[doc:features/F006-ball-custody-lease.md]` — 持球注册 lease
 - `[doc:features/F007-push-back-protocol.md]` — Generator Push Back 权利
 - `[doc:decisions/002-collaboration-protocol.md]` — TeamAct 协作协议 ADR
-- `[doc:SOP.md]` — FlowForge 灵智体协作 SOP
+- `[doc:SOP.md]` — FlowForge 可进化智能体（Forgekin）协作 SOP
 
 ---
 
@@ -155,7 +169,7 @@ RAG 假设所有记忆都是同质的向量空间。但 agent 记忆有多种认
 | L2 Episode | 具体任务经历 | 跨 session |
 | L3 Skill | 可加载知识包 | 跨 agent |
 | L4 Collection | 沉淀领域知识 | 跨项目 |
-| L5 灵典 Mind Codex | 蒸馏经验 | 跨代际 |
+| L5 蒸馏知识库（MindCodex） | 蒸馏经验 | 跨代际 |
 | L6 文化 | 团队规范 | 永久 |
 
 ### 4.4 消费加权排序
@@ -168,7 +182,7 @@ RAG 假设所有记忆都是同质的向量空间。但 agent 记忆有多种认
 - `[doc:features/F015-three-retrieval-entry.md]` — 三检索入口
 - `[doc:features/F016-memory-governance.md]` — 记忆治理三要素
 - `[doc:features/F017-consumption-weighted-ranking.md]` — 消费加权排序
-- `[doc:features/F039-mind-codex-searchable.md]` — 灵典可检索知识库
+- `[doc:features/F039-mind-codex-searchable.md]` — 蒸馏知识库可检索（MindCodex Searchable）
 - `[doc:decisions/008-memory-federation.md]` — 多域记忆联邦 ADR
 
 ---
@@ -246,7 +260,7 @@ agent 是否存活不能靠心跳，必须靠"规范读模型"——通过读取
 - **强 workflow**：固定流程，适合稳定任务
 - **弱状态机**：状态可变 + 路由动态，适合开放任务
 
-FlowForge 灵智体协作用弱状态机（TeamAct 状态可路由），垂直业务流程用强 workflow（LoopExecutor）。
+FlowForge 可进化智能体（Forgekin）协作用弱状态机（TeamAct 状态可路由），垂直业务流程用强 workflow（LoopExecutor）。
 
 ### 6.5 FlowForge 落地
 
@@ -322,7 +336,7 @@ P(错误抵达用户) = ∏(每层门防漏过概率)
 
 1. **不复制原文全文**：避免副本漂移
 2. **每章保留核心摘要 + 关键公式 + FlowForge 落地映射**
-3. **原文更新时同步更新本镜像**（由灵智体在 Eval 信号触发下完成）
+3. **原文更新时同步更新本镜像**（由可进化智能体 Forgekin 在 Eval 信号触发下完成）
 4. **本镜像与原文冲突时以原文为准**：`D:\software\openclaw\clowder-ai\docs\roleagent.md`
 
 如需查阅完整论证、案例、图表，请直接阅读原文。

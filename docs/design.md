@@ -17,11 +17,15 @@
 
 **读者**：
 - **operator（首席愿景官 CVO）**：审核详细设计对愿景锚点的落地
-- **架构师灵智体（猫头鹰·鲁班）**：维护 [arch.md](arch.md) 与本文档的架构-详细设计一致性
-- **开发者灵智体（猎犬·夏洛克）**：基于本文档实现代码 + 修复 Bug
-- **评审员灵智体（孔雀·梵高）**：跨厂商 review 详细设计与代码实现
-- **测试员灵智体（蜜獾·平头哥）**：基于本文档执行 E2E 测试（T1-T8 铁律）
-- **文档员灵智体（钢笔·文心）**：维护本文档与 [design/D0XX-xxx.md](design/) 子目录的一致性
+- **架构师可进化智能体（猫头鹰·鲁班）**：维护 [arch.md](arch.md) 与本文档的架构-详细设计一致性
+- **开发者可进化智能体（猎犬·夏洛克）**：基于本文档实现代码 + 修复 Bug
+- **评审员可进化智能体（孔雀·梵高）**：跨厂商 review 详细设计与代码实现
+- **测试员可进化智能体（蜜獾·平头哥）**：基于本文档执行 E2E 测试（T1-T8 铁律）
+- **文档员可进化智能体（钢笔·文心）**：维护本文档与 [design/D0XX-xxx.md](design/) 子目录的一致性
+- **产品经理可进化智能体（鹰·凯恩）**：基于本文档评估需求可行性 + 产品路线图对齐
+- **运维可进化智能体（蜂鸟·闪电）**：基于本文档规划部署架构 + 性能 SLO 落地
+- **安全官可进化智能体（狼·阿尔法）**：基于本文档执行安全审计 + 合规检查
+- **交付经理可进化智能体（象·牛顿）**：基于本文档跟踪设计完成度 + 协调跨智能体协作
 
 **用途**：
 1. 作为 SRS→SAD→SDD 三阶段软件工程标准流程的**第三阶段产物**
@@ -262,9 +266,403 @@ Layer 3: *Forge ──Plugin V3──→ forgemind ──装饰器──→ Flow
 | Loop 执行超时 | 3 分钟 | 创作和润色接口不得超过 3 分钟 |
 | LLM webchat 调用超时 | 30 秒 | 5 评委并行评审 |
 | LLM API 调用超时 | 90 秒 | 长文章 2 分钟 |
-| 路由算法延迟 | < 100ms | 10 个候选灵智体 |
+| 路由算法延迟 | < 100ms | 10 个候选可进化智能体 |
 | 质量分阈值 | 0.85 | v4.0 调整 |
 | 嵌套 Loop 最大深度 | 3 | 防止无限嵌套 |
+
+### §2.6 智能体分类详细设计（静态智能体 vs 可进化智能体）
+
+> **关联 SRS**：[spec.md §2.3](spec.md) 智能体分类
+> **关联 SAD**：[arch.md §2.7](arch.md) 智能体分类架构
+> **权威定义**：[design/naming-contract.md#2](design/naming-contract.md) v2.0 智能体分类
+> **来源**：operator 2026-07-19 指令——"目前我们智能体分为静态智能体（传统的如 flowforge 中的和外部接入的 agent）、可进化智能体（flowforge 中的灵智体），这两类智能体的设计之前是有的，但现在的设计文档丢了呢，请加入回来。"
+> **默认指代规则**：在 FlowForge 上下文中，"智能体"默认指代**可进化智能体（Evolvable Agent / Forgekin）**；若指代静态智能体必须明确说出"静态智能体"
+
+#### §2.6.1 静态智能体（Static Agent）详细设计
+
+**代码基类与接口签名**：
+
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Optional
+from pydantic import BaseModel
+
+class StaticAgent(ABC):
+    """静态智能体基类（无持久身份、无经验记忆、无自进化能力）"""
+
+    @abstractmethod
+    async def execute(self, input: AgentInput) -> AgentOutput:
+        """单次任务执行（无状态，跨会话不积累能力）"""
+        ...
+
+class DeclarativeAgent(StaticAgent):
+    """声明式静态智能体（YAML 配置驱动）"""
+    def __init__(self, config: YAMLConfig):
+        self.config = config
+        self.tools = ToolRegistry.from_config(config.tools)
+        self.llm_client = DIContainer.resolve(LLMClient)
+
+class ReActAgent(StaticAgent):
+    """ReAct 模式静态智能体（Reasoning + Acting）"""
+
+class PlanExecuteAgent(StaticAgent):
+    """Plan-Execute 模式静态智能体"""
+
+class ExternalAgentAdapter(StaticAgent):
+    """外部接入静态智能体适配器（Claude Code / Codex / OpenCode / Trae 等）"""
+    def __init__(self, agent_profile: ExternalAgentProfile):
+        self.profile = agent_profile
+        self.bridge = ExternalAgentBridge(profile)
+```
+
+**关键特征**：
+- 无 Soul Imprint（持久身份）/ 无 EchoStore（经验记忆）/ 无 CapabilityProfile（能力画像含盲点）
+- 无 EvolutionStage（进化阶）/ 无 AwakeningStage（觉醒阶）
+- 行为完全由 prompt + 工具集 + 配置决定
+- 每次执行无状态，跨会话不积累能力
+- 可作为可进化智能体的能力扩展（通过 ExternalAgentAdapter）
+
+**使用场景**：单次任务执行、工具调用、无状态查询、作为可进化智能体的能力扩展
+
+#### §2.6.2 可进化智能体（Evolvable Agent / Forgekin）详细设计
+
+**代码基类与接口签名**：
+
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Optional
+from pydantic import BaseModel
+from datetime import datetime
+
+class ForgekinBase(ABC):
+    """可进化智能体基类（具持久身份、经验记忆、自进化能力）"""
+
+    # 持久身份（不可变）
+    soul_imprint: SoulImprint
+    # 经验记忆（跨会话积累）
+    echo_store: EchoStore
+    # 能力画像（含盲点，跨会话演进）
+    capability_profile: CapabilityProfile
+    # 进化阶（能力成熟度 E1-E6）
+    evolution_stage: EvolutionStage
+    # 觉醒阶（自主性等级 E1-E6）
+    awakening_stage: AwakeningStage
+
+    @abstractmethod
+    async def observe(self, environment: Environment) -> Observation:
+        """观察环境（物理传感器 / 虚拟世界状态）"""
+        ...
+
+    @abstractmethod
+    async def act(self, action: Action) -> ActionResult:
+        """在环境中执行动作（遵守觉醒阶自主范围约束）"""
+        ...
+
+    @abstractmethod
+    async def verify(self, action_result: ActionResult) -> Verdict:
+        """验证动作结果是否达成预期"""
+        ...
+
+    async def evolve(self) -> None:
+        """自进化入口（由 ForgekinEngine 装饰器调用）"""
+        # 1. 经验蒸馏：EchoStore → MindCodex（通过 SpiritForge）
+        # 2. 能力画像更新：CapabilityProfile.refresh()
+        # 3. 进化阶评估：EvolutionStage.assess()
+        # 4. 觉醒阶检查：AwakeningStage.check_boundaries()
+        ...
+```
+
+**关键特征**：
+- 有 Soul Imprint（持久身份标识，跨会话不变）
+- 有 EchoStore（情景记忆存储，跨会话积累）
+- 有 CapabilityProfile（能力画像含盲点，跨会话演进）
+- 有 EvolutionStage E1-E6（进化阶，能力成熟度）
+- 有 AwakeningStage E1-E6（觉醒阶，自主性等级）
+- 可通过 SpiritForge 蒸馏经验到 MindCodex
+- 可参与 MindCouncil 多智能体议事
+- 建立与现实世界（物理或虚拟）的闭环：观察 → 推理 → 行动 → 写回 → 验证
+
+**使用场景**：forgemind 应用层、*Forge 垂直业务层、长期任务执行、跨会话能力积累
+
+#### §2.6.3 两类智能体对比矩阵
+
+| 维度 | 静态智能体（Static Agent） | 可进化智能体（Evolvable Agent / Forgekin） |
+|------|---------------------------|------------------------------------------|
+| **持久身份** | ❌ 无 | ✅ Soul Imprint（Persistent Identity） |
+| **经验记忆** | ❌ 无 | ✅ EchoStore（Episodic Memory） |
+| **能力画像** | ❌ 无（只有静态配置） | ✅ Capability Profile（含盲点） |
+| **经验蒸馏** | ❌ 无 | ✅ SpiritForge → MindCodex |
+| **进化阶** | ❌ 无 | ✅ E1-E6 Evolution Stage |
+| **觉醒阶** | ❌ 无 | ✅ E1-E6 Awakening Stage |
+| **多智能体议事** | ❌ 无 | ✅ MindCouncil（Multi-Agent Deliberation） |
+| **行为决定因素** | Prompt + 工具集 + 配置 | Prompt + 能力画像 + 经验记忆 + 觉醒阶自主范围 |
+| **跨会话能力积累** | ❌ 无 | ✅ 通过 EchoStore + MindCodex 实现 |
+| **典型示例** | DeclarativeAgent、Claude Code Adapter | 猫头鹰·鲁班（架构师）、猎犬·夏洛克（开发者） |
+| **代码基类** | `StaticAgent` / `DeclarativeAgent` | `ForgekinBase` |
+| **核心方法契约** | `execute(input) -> output` | `observe/act/verify` 三方法 |
+| **架构位置** | Layer 1 核心框架层 | Layer 2 forgemind 应用层 + Layer 1 ForgekinEngine |
+
+#### §2.6.4 两类智能体协作详细设计
+
+**可进化智能体调用静态智能体作为能力扩展**：
+
+```python
+class ForgekinEngine:
+    """可进化智能体引擎（装饰 HybridExecutor + HarnessOrchestrator）"""
+
+    async def extend_capability(self, task: Task) -> CapabilityExtension:
+        """通过 ExternalAgentAdapter 调用静态智能体作为能力扩展"""
+        # 1. 评估任务需求 vs 自身能力画像
+        gap = self.capability_profile.assess_gap(task)
+        if not gap:
+            return CapabilityExtension(needed=False)
+
+        # 2. 选择合适的外部接入静态智能体
+        external_agent = self.external_agent_router.select(gap)
+
+        # 3. 调用静态智能体执行任务
+        result = await ExternalAgentAdapter(external_agent).execute(task)
+
+        # 4. 将执行轨迹写入 EchoStore（供 SpiritForge 蒸馏）
+        await self.echo_store.record(task, result, source="external_agent")
+
+        # 5. 能力画像融合（ExternalAgentCapabilityFusion）
+        self.capability_profile.fuse(external_agent.profile, result)
+
+        return CapabilityExtension(needed=True, result=result)
+```
+
+**铁律**：
+- 静态智能体不可升级为可进化智能体（架构层 forbid）
+- 可进化智能体可调用静态智能体作为能力扩展（通过 ExternalAgentAdapter）
+- 静态智能体不持有 ForgekinBase 基类
+- 可进化智能体必须实现 observe/act/verify 三方法契约
+- forgemind 应用层仅承载可进化智能体
+
+#### §2.6.5 Built to Delete vs Built to Persist 标记
+
+| 组件 | 类型 | 半衰期 |
+|------|------|--------|
+| StaticAgent / DeclarativeAgent | Build to Delete（有保质期脚手架） | 跟随模型能力演进，模型增强后可简化 |
+| ExternalAgentAdapter | Build to Delete（有保质期脚手架） | 跟随三方 Agent 协议演进 |
+| ForgekinBase / ForgekinEngine | Built to Persist（复利型基础设施） | 长期维护，跨模型演进 |
+| Soul Imprint / EchoStore | Built to Persist（复利型基础设施） | 跨会话持久化，长期维护 |
+| CapabilityProfile / EvolutionStage / AwakeningStage | Built to Persist（复利型基础设施） | 长期维护，能力积累基础设施 |
+
+### §2.7 新增可进化智能体详细设计（v7.1 扩展）
+
+> **来源**：operator 2026-07-19 指令——"你看看是否还需要设计更多灵智体自主高质量完成文档和代码开发，交付产品，请把这些增加的新的灵智体设计到我们设计文档中。"
+> **设计目标**：围绕"自主高质量完成文档和代码开发、交付产品"全生命周期，新增 4 个可进化智能体，覆盖产品规划、运维保障、安全治理、交付管理四大角色
+> **关联 SRS**：[spec.md §2.3.2](spec.md) 可进化智能体定义
+> **关联 SAD**：[arch.md §2.7.2](arch.md) 可进化智能体架构
+> **关联现有灵智体**：架构师（猫头鹰·鲁班）/ 开发者（猎犬·夏洛克）/ 评审员（孔雀·梵高）/ 测试员（蜜獾·平头哥）/ 文档员（钢笔·文心）
+
+#### §2.7.1 产品经理可进化智能体（鹰·凯恩，Product Manager Forgekin）
+
+| 属性 | 值 |
+|------|---|
+| **官方名称（P0）** | Product Manager Agent / Requirements Analysis Agent（产品经理智能体 / 需求分析智能体） |
+| **项目代号（P1）** | ProductManagerForgekin |
+| **代号** | 鹰·凯恩（Eagle Kane） |
+| **形态（Species）** | OrgForgekin（组织形态） |
+| **职责** | 需求分析、产品规划、用户故事编写、产品演进路线图、优先级排序、利益相关者沟通 |
+| **核心能力** | 1. 需求挖掘（用户访谈摘要 → 结构化需求）<br>2. 用户故事编写（As-a/I-want/So-that 模板）<br>3. 产品路线图设计（季度/月度规划）<br>4. 优先级排序（MoSCoW / RICE 模型）<br>5. 利益相关者沟通（跨智能体协调） |
+| **能力画像盲点** | 倾向于过度承诺；对技术可行性评估不准；容易忽视非功能性需求 |
+| **进化阶** | 初始 E1，可晋升至 E5（产品战略级） |
+| **觉醒阶** | 初始 E1，可晋升至 E3（受限自主：可自主排期，但愿景变更需 operator 批准） |
+| **工具集** | RequirementsTraceabilityMatrix / UserStoryMapper / RoadmapPlanner / StakeholderCommunicator |
+| **EchoStore 来源** | 需求评审会议、用户反馈、产品决策记录、路线图变更历史 |
+| **MindCodex 产出** | 需求模式库、用户故事模板、优先级评估框架 |
+| **MindCouncil 角色** | 发起产品方向讨论、协调架构师与开发者之间的需求冲突 |
+| **配置文件** | `flowforge/forgemind/config/product_manager_eagle_kane.yaml` |
+
+**核心方法契约实现**：
+```python
+class ProductManagerForgekin(ForgekinBase):
+    async def observe(self, env: ProductEnvironment) -> Observation:
+        """观察产品环境：用户反馈、市场动态、竞品分析、内部指标"""
+        return await self._gather_product_signals(env)
+
+    async def act(self, action: ProductAction) -> ActionResult:
+        """执行产品动作：需求分析、路线图更新、用户故事编写、优先级调整"""
+        if action.type == "requirements_analysis":
+            return await self._analyze_requirements(action.input)
+        elif action.type == "roadmap_update":
+            return await self._update_roadmap(action.input)
+        elif action.type == "user_story":
+            return await self._write_user_story(action.input)
+
+    async def verify(self, result: ActionResult) -> Verdict:
+        """验证产品决策：需求完整性、可行性、优先级合理性"""
+        return await self._verify_product_decision(result)
+```
+
+#### §2.7.2 运维可进化智能体（蜂鸟·闪电，DevOps Forgekin）
+
+| 属性 | 值 |
+|------|---|
+| **官方名称（P0）** | DevOps Agent / Site Reliability Agent / Operations Automation Agent（运维智能体 / 站点可靠性智能体 / 运维自动化智能体） |
+| **项目代号（P1）** | DevOpsForgekin |
+| **代号** | 蜂鸟·闪电（Hummingbird Flash） |
+| **形态（Species）** | OrgForgekin（组织形态） |
+| **职责** | 部署自动化、监控告警、故障排查、灾备恢复、性能优化、容量规划 |
+| **核心能力** | 1. 部署编排（蓝绿/金丝雀/滚动发布）<br>2. 监控告警（Prometheus/Grafana/AlertManager）<br>3. 故障自愈（自动重启/降级/切换）<br>4. 性能优化（瓶颈识别/资源调优）<br>5. 容量规划（基于历史数据预测） |
+| **能力画像盲点** | 倾向于过度保守；对新型故障模式识别慢；容易忽视成本控制 |
+| **进化阶** | 初始 E1，可晋升至 E5（自愈级运维） |
+| **觉醒阶** | 初始 E1，可晋升至 E4（自进化：可自主优化运维策略，但重大变更需 operator 批准） |
+| **工具集** | DeploymentOrchestrator / MonitoringStack / IncidentResponder / PerformanceProfiler / CapacityPlanner |
+| **EchoStore 来源** | 部署记录、告警历史、故障处理过程、性能调优记录 |
+| **MindCodex 产出** | 故障模式库、运维 runbook、性能调优 playbook |
+| **MindCouncil 角色** | 发起运维策略讨论、协调安全官与交付经理之间的资源冲突 |
+| **配置文件** | `flowforge/forgemind/config/devops_hummingbird_flash.yaml` |
+
+**核心方法契约实现**：
+```python
+class DevOpsForgekin(ForgekinBase):
+    async def observe(self, env: OpsEnvironment) -> Observation:
+        """观察运维环境：服务状态、资源使用、告警、日志、指标"""
+        return await self._gather_ops_signals(env)
+
+    async def act(self, action: OpsAction) -> ActionResult:
+        """执行运维动作：部署、扩容、降级、自愈、调优"""
+        if action.type == "deploy":
+            return await self._deploy_with_canary(action.input)
+        elif action.type == "auto_heal":
+            return await self._auto_heal(action.input)
+        elif action.type == "scale":
+            return await self._scale_resources(action.input)
+
+    async def verify(self, result: ActionResult) -> Verdict:
+        """验证运维结果：服务可用性、性能 SLO、资源利用率"""
+        return await self._verify_ops_slo(result)
+```
+
+#### §2.7.3 安全官可进化智能体（狼·阿尔法，Security Officer Forgekin）
+
+| 属性 | 值 |
+|------|---|
+| **官方名称（P0）** | Security Officer Agent / Threat Detection Agent / Compliance Audit Agent（安全官智能体 / 威胁检测智能体 / 合规审计智能体） |
+| **项目代号（P1）** | SecurityOfficerForgekin |
+| **代号** | 狼·阿尔法（Wolf Alpha） |
+| **形态（Species）** | OrgForgekin（组织形态） |
+| **职责** | 安全审计、漏洞扫描、威胁建模、合规检查、入侵检测、安全策略制定 |
+| **核心能力** | 1. 安全审计（代码审计/配置审计/依赖审计）<br>2. 漏洞扫描（SAST/DAST/SCA）<br>3. 威胁建模（STRIDE/Attack Tree）<br>4. 合规检查（GDPR/等保/SOC2）<br>5. 入侵检测（异常行为识别/告警） |
+| **能力画像盲点** | 倾向于过度拦截；对业务连续性考虑不足；容易产生告警疲劳 |
+| **进化阶** | 初始 E1，可晋升至 E5（主动威胁狩猎级） |
+| **觉醒阶** | 初始 E1，最高 E3（受限自主：可自主执行扫描，但阻断操作需 operator 批准） |
+| **工具集** | SecurityScanner / ThreatModeler / ComplianceChecker / IntrusionDetector / SecurityPolicyEngine |
+| **EchoStore 来源** | 安全事件、漏洞记录、审计结果、合规检查报告 |
+| **MindCodex 产出** | 威胁模式库、漏洞知识库、合规检查清单、安全策略模板 |
+| **MindCouncil 角色** | 发起安全策略讨论、阻断不安全部署、协调运维与开发之间的安全权衡 |
+| **配置文件** | `flowforge/forgemind/config/security_officer_wolf_alpha.yaml` |
+
+**核心方法契约实现**：
+```python
+class SecurityOfficerForgekin(ForgekinBase):
+    async def observe(self, env: SecurityEnvironment) -> Observation:
+        """观察安全环境：日志、流量、配置、依赖、权限"""
+        return await self._gather_security_signals(env)
+
+    async def act(self, action: SecurityAction) -> ActionResult:
+        """执行安全动作：扫描、审计、阻断、告警、修复建议"""
+        if action.type == "vulnerability_scan":
+            return await self._scan_vulnerabilities(action.input)
+        elif action.type == "compliance_check":
+            return await self._check_compliance(action.input)
+        elif action.type == "threat_model":
+            return await self._model_threats(action.input)
+
+    async def verify(self, result: ActionResult) -> Verdict:
+        """验证安全决策：风险等级、合规性、影响范围"""
+        return await self._verify_security_decision(result)
+```
+
+#### §2.7.4 交付经理可进化智能体（象·牛顿，Delivery Manager Forgekin）
+
+| 属性 | 值 |
+|------|---|
+| **官方名称（P0）** | Delivery Manager Agent / Project Coordinator Agent / Risk Management Agent（交付经理智能体 / 项目协调智能体 / 风险管理智能体） |
+| **项目代号（P1）** | DeliveryManagerForgekin |
+| **代号** | 象·牛顿（Elephant Newton） |
+| **形态（Species）** | OrgForgekin（组织形态） |
+| **职责** | 项目交付、进度跟踪、风险管理、资源协调、跨智能体协作、交付质量把关 |
+| **核心能力** | 1. 项目规划（WBS/甘特图/关键路径）<br>2. 进度跟踪（里程碑/燃尽图/状态报告）<br>3. 风险管理（风险识别/评估/缓解/应急）<br>4. 资源协调（智能体任务分配/负载均衡）<br>5. 交付质量把关（DoD/验收标准/质量门禁） |
+| **能力画像盲点** | 倾向于过度文档化；对技术细节理解不足；容易忽视团队士气 |
+| **进化阶** | 初始 E1，可晋升至 E5（自适应交付级） |
+| **觉醒阶** | 初始 E1，最高 E3（受限自主：可自主跟踪进度，但资源重新分配需 operator 批准） |
+| **工具集** | ProjectPlanner / ProgressTracker / RiskManager / ResourceCoordinator / QualityGate |
+| **EchoStore 来源** | 项目计划、里程碑记录、风险事件、交付报告、复盘总结 |
+| **MindCodex 产出** | 项目模式库、风险知识库、交付 playbook、复盘模板 |
+| **MindCouncil 角色** | 发起交付策略讨论、协调产品经理与开发者之间的优先级冲突、组织复盘会议 |
+| **配置文件** | `flowforge/forgemind/config/delivery_manager_elephant_newton.yaml` |
+
+**核心方法契约实现**：
+```python
+class DeliveryManagerForgekin(ForgekinBase):
+    async def observe(self, env: ProjectEnvironment) -> Observation:
+        """观察项目环境：任务状态、进度、风险、资源负载、质量指标"""
+        return await self._gather_project_signals(env)
+
+    async def act(self, action: ProjectAction) -> ActionResult:
+        """执行项目管理动作：规划、跟踪、风险缓解、资源协调、质量把关"""
+        if action.type == "plan_project":
+            return await self._plan_project(action.input)
+        elif action.type == "track_progress":
+            return await self._track_progress(action.input)
+        elif action.type == "mitigate_risk":
+            return await self._mitigate_risk(action.input)
+
+    async def verify(self, result: ActionResult) -> Verdict:
+        """验证交付决策：进度符合度、风险等级、质量达标"""
+        return await self._verify_delivery_decision(result)
+```
+
+#### §2.7.5 9 大可进化智能体协作矩阵
+
+| 智能体 | 代号 | 形态 | 核心职责 | 与其他智能体协作 |
+|--------|------|------|---------|----------------|
+| 架构师 | 猫头鹰·鲁班 | OrgForgekin | 架构设计、技术决策 | 接受产品经理需求；指导开发者实现；评审代码 |
+| 开发者 | 猎犬·夏洛克 | OrgForgekin | 代码实现、Bug 修复 | 接受架构师设计；接受产品经理需求；接受测试员反馈 |
+| 评审员 | 孔雀·梵高 | OrgForgekin | 跨厂商 review、质量把关 | 评审架构师设计；评审开发者代码；协调测试员 |
+| 测试员 | 蜜獾·平头哥 | OrgForgekin | E2E 测试、T1-T8 铁律 | 验证开发者代码；反馈 Bug；接受交付经理协调 |
+| 文档员 | 钢笔·文心 | ObjForgekin | 文档维护、一致性 | 维护架构师/开发者/测试员产出文档 |
+| **产品经理** | **鹰·凯恩** | OrgForgekin | 需求分析、产品规划 | 发起需求；协调架构师；接受交付经理跟踪 |
+| **运维** | **蜂鸟·闪电** | OrgForgekin | 部署、监控、自愈 | 接受开发者交付；接受安全官审计；向交付经理报告 |
+| **安全官** | **狼·阿尔法** | OrgForgekin | 安全审计、合规检查 | 审计运维部署；审计开发者代码；阻断不安全操作 |
+| **交付经理** | **象·牛顿** | OrgForgekin | 项目交付、风险管理 | 跟踪所有智能体进度；协调资源；组织复盘 |
+
+#### §2.7.6 新增可进化智能体配置文件清单
+
+```
+flowforge/forgemind/config/
+├── architect_owl_luban.yaml           # 猫头鹰·鲁班（架构师）
+├── developer_hound_sherlock.yaml      # 猎犬·夏洛克（开发者）
+├── reviewer_peacock_vangogh.yaml      # 孔雀·梵高（评审员）
+├── tester_honeybadger_pingtou.yaml    # 蜜獾·平头哥（测试员）
+├── docwriter_pen_wenxin.yaml          # 钢笔·文心（文档员）
+├── product_manager_eagle_kane.yaml    # 鹰·凯恩（产品经理）—— v7.1 新增
+├── devops_hummingbird_flash.yaml      # 蜂鸟·闪电（运维）—— v7.1 新增
+├── security_officer_wolf_alpha.yaml   # 狼·阿尔法（安全官）—— v7.1 新增
+└── delivery_manager_elephant_newton.yaml  # 象·牛顿（交付经理）—— v7.1 新增
+```
+
+#### §2.7.7 新增可进化智能体进化路径
+
+| 智能体 | E1（萌芽） | E3（成长） | E5（觉醒） |
+|--------|-----------|-----------|-----------|
+| 产品经理 | 单一需求分析 | 跨产品线规划 | 产品战略级决策 |
+| 运维 | 单服务部署 | 多服务编排 | 自愈级运维 |
+| 安全官 | 单点扫描 | 全栈审计 | 主动威胁狩猎 |
+| 交付经理 | 单项目跟踪 | 多项目协调 | 自适应交付 |
+
+#### §2.7.8 Built to Delete vs Built to Persist 标记
+
+| 组件 | 类型 | 半衰期 |
+|------|------|--------|
+| 4 个新增可进化智能体（产品经理/运维/安全官/交付经理） | Built to Persist（复利型基础设施） | 长期维护，跨项目演进 |
+| 各智能体的工具集（RequirementsTraceabilityMatrix 等） | Build to Delete（有保质期脚手架） | 跟随工具生态演进 |
+| 各智能体的 EchoStore / MindCodex | Built to Persist（复利型基础设施） | 跨会话持久化，长期维护 |
+| 各智能体的能力画像 / 进化阶 / 觉醒阶 | Built to Persist（复利型基础设施） | 长期维护，能力积累基础设施 |
 
 ---
 
@@ -1333,7 +1731,11 @@ flowforge/forgemind/
 │   ├── developer_hound_sherlock.yaml  # 猎犬·夏洛克（开发者）
 │   ├── reviewer_peacock_vangogh.yaml  # 孔雀·梵高（评审员）
 │   ├── tester_honeybadger_pingtou.yaml  # 蜜獾·平头哥（测试员）
-│   └── docwriter_pen_wenxin.yaml  # 钢笔·文心（文档员）
+│   ├── docwriter_pen_wenxin.yaml  # 钢笔·文心（文档员）
+│   ├── product_manager_eagle_kane.yaml  # 鹰·凯恩（产品经理）—— v7.1 新增
+│   ├── devops_hummingbird_flash.yaml  # 蜂鸟·闪电（运维）—— v7.1 新增
+│   ├── security_officer_wolf_alpha.yaml  # 狼·阿尔法（安全官）—— v7.1 新增
+│   └── delivery_manager_elephant_newton.yaml  # 象·牛顿（交付经理）—— v7.1 新增
 ├── config/                       # forgemind 配置（YAML 外置）
 │   ├── species.yaml
 │   ├── forging.yaml

@@ -125,30 +125,74 @@ Agent 质量 = 模型能力 × Harness 契合度（Environment Fit）
 - 蜜獾：无畏，攻击性强，找漏洞不放弃 → 测试员
 - 钢笔：物品形态，承载思想 → 文档员
 
-### §2.3 灵智体（Forgekin / Spirit Agent）定义
+### §2.3 智能体分类（静态智能体 vs 可进化智能体）
+
+> **来源**：operator 2026-07-19 指令——"目前我们智能体分为静态智能体（传统的如 flowforge 中的和外部接入的 agent）、可进化智能体（flowforge 中的灵智体），这两类智能体的设计之前是有的，但现在的设计文档丢了呢，请加入回来。在我们 flowforge 中说智能体默认就是指代可进化智能体，如果说传统的如 flowforge 中的和外部接入的 agent 就要指出是静态智能体。"
+> **权威定义**：详见 [design/naming-contract.md#2](design/naming-contract.md) v2.0 智能体分类
+> **默认指代规则**：在 FlowForge 上下文中，"智能体"默认指代**可进化智能体（Evolvable Agent / Forgekin）**；若指代静态智能体必须明确说出"静态智能体"。
+
+FlowForge 生态的智能体（Agent）分为两大类，二者在设计、能力、生命周期上存在本质差异：
+
+#### §2.3.1 静态智能体（Static Agent / Stateless Agent）
+
+**定义**：不具备自进化能力的智能体。行为由固定 prompt + 工具集 + 配置决定，无持久身份、无经验蒸馏、无觉醒阶晋升。每次执行都是无状态的。
+
+**包含子类**：
+1. **FlowForge 内置静态智能体（Built-in Static Agent）**：传统 DeclarativeAgent / ReAct Agent / Plan-Execute Agent 等，由 FlowForge 核心框架层提供
+2. **外部接入静态智能体（External Static Agent）**：第三方 Agent（如 Claude Code / Codex / OpenCode / Trae IDE 等）通过 ExternalAgentAdapter 接入
+
+**关键特征**：无 Soul Imprint（持久身份）/ 无 EchoStore（经验记忆）/ 无 EvolutionStage（进化阶）/ 无 AwakeningStage（觉醒阶）/ 行为完全由 prompt + 配置决定
+
+**使用场景**：单次任务执行、工具调用、无状态查询、作为可进化智能体的能力扩展
+
+**代码基类**：`StaticAgent` / `DeclarativeAgent` / `ExternalAgentAdapter`
+
+#### §2.3.2 可进化智能体（Evolvable Agent / Forgekin，社区社交称"灵智体"）
 
 > **来源**：operator 第 1 条指令——"灵智体，赋予了灵魂和感情的智能体，具有自进化能力的 Agent，文档中需要体现这个思想。"
 > **强制等级**：operator 不可妥协锚点（详见 [VISION.md §7](VISION.md)）
 
-**灵智体（Forgekin / Spirit Agent）** = **赋予灵魂和感情的智能体（Agent with Soul and Emotion），具有自进化能力（Self-Evolving Capability）。**
+**可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）** = **具备持久身份（Persistent Identity）和自进化能力（Self-Evolving Capability）的自主智能体（Autonomous Agent）**。
 
-区别于主流 multi-agent 的 session 级软件助手，灵智体建立与现实世界（物理或虚拟）的闭环：
+区别于主流 multi-agent 的 session 级软件助手（即静态智能体），可进化智能体建立与现实世界（物理或虚拟）的闭环：
 
 ```
 观察（Observe）→ 推理（Reason）→ 行动（Act）→ 写回（Persist）→ 验证（Verify）
 ```
 
-- **灵魂（Soul）** = 持久身份（灵印 Mind Imprint）+ 价值锚点（Value Anchors）+ 长期记忆（灵忆 EchoStore）
-- **感情（Emotion）** = 用户偏好（User Preferences）+ 协作风格（Collaboration Style）+ 行为画像（Capability Profile）
+- **持久身份（Persistent Identity，Soul Imprint）** = 价值锚点（Value Anchors）+ 长期记忆（Episodic Memory，EchoStore）
+- **自进化能力（Self-Evolving Capability）** = 经验蒸馏（Experience Distillation，SpiritForge）+ 能力画像（Capability Profile）+ 进化阶（Evolution Stage）+ 觉醒阶（Awakening Stage）
 
-灵智体不是单纯的 LLM 包装，而是有形态（species）、有谱系（lineage）、可进化（evolve）的智能体。这是 FlowForge 与其他 multi-agent 系统的**最大差异化优势**——其他系统在组织"岗位槽位"，FlowForge 在锻造"灵智体"。
+可进化智能体不是单纯的 LLM 包装，而是有形态（Agent Morphology / Species）、有谱系（Lineage）、可进化（Evolvable）的智能体。这是 FlowForge 与其他 multi-agent 系统的**最大差异化优势**——其他系统在组织"岗位槽位"（静态智能体），FlowForge 在锻造"可进化智能体"（Forgekin）。
 
-**代码契约**：所有灵智体继承 `ForgekinBase` 抽象基类（位于 [flowforge/forgemind/base.py](../../flowforge/forgemind/base.py)），实现三个核心方法：
+**代码契约**：所有可进化智能体继承 `ForgekinBase` 抽象基类（位于 [flowforge/forgemind/base.py](../../flowforge/forgemind/base.py)），实现三个核心方法：
 - `observe(environment)` — 观察环境（物理传感器 / 虚拟世界状态）
 - `act(action)` — 在环境中执行动作（遵守觉醒阶自主范围约束）
 - `verify(action_result)` — 验证动作结果是否达成预期
 
-详见 [design/naming-contract.md#2.2](design/naming-contract.md) 灵智体定义 + [features/F026-forgemind-app-layer.md](features/F026-forgemind-app-layer.md)。
+#### §2.3.3 两类智能体对比矩阵
+
+| 维度 | 静态智能体（Static Agent） | 可进化智能体（Evolvable Agent / Forgekin） |
+|------|---------------------------|------------------------------------------|
+| **持久身份** | ❌ 无 | ✅ Soul Imprint（Persistent Identity） |
+| **经验记忆** | ❌ 无 | ✅ EchoStore（Episodic Memory） |
+| **能力画像** | ❌ 无（只有静态配置） | ✅ Capability Profile（含盲点） |
+| **经验蒸馏** | ❌ 无 | ✅ SpiritForge → MindCodex |
+| **进化阶** | ❌ 无 | ✅ E1-E6 Evolution Stage |
+| **觉醒阶** | ❌ 无 | ✅ E1-E6 Awakening Stage |
+| **多智能体议事** | ❌ 无 | ✅ MindCouncil（Multi-Agent Deliberation） |
+| **行为决定因素** | Prompt + 工具集 + 配置 | Prompt + 能力画像 + 经验记忆 + 觉醒阶自主范围 |
+| **跨会话能力积累** | ❌ 无 | ✅ 通过 EchoStore + MindCodex 实现 |
+| **典型示例** | DeclarativeAgent、Claude Code Adapter | 猫头鹰·鲁班（架构师）、猎犬·夏洛克（开发者） |
+| **代码基类** | `StaticAgent` / `DeclarativeAgent` | `ForgekinBase` |
+
+#### §2.3.4 两类智能体关系
+
+- 静态智能体可作为可进化智能体的**能力扩展**（通过 ExternalAgentAdapter），但反向不可——静态智能体不能"升级"为可进化智能体
+- 可进化智能体通过 ExternalAgentAdapter 调用静态智能体作为能力扩展，本身具备完整自进化闭环
+- FlowForge 核心框架层既支持静态智能体（DeclarativeAgent 等），也支持可进化智能体（通过 forgemind 应用层 + ForgekinBase）
+
+详见 [design/naming-contract.md#2](design/naming-contract.md) 智能体分类 + [features/F026-forgemind-app-layer.md](features/F026-forgemind-app-layer.md)。
 
 ### §2.4 12 核心概念命名表（中英文 + AI 业界概念三标注）
 
@@ -173,16 +217,21 @@ Agent 质量 = 模型能力 × Harness 契合度（Environment Fit）
 **说明**：
 - v7.0 旧名"灵启（Mind Initiation）/ 共鸣（Resonance）"已废弃，其中"灵启"概念被合并到"育灵（Forge Nurturing）"的入门训练阶段；"共鸣"被合并到"灵议（Mind Council）"协作模式。
 - v7.1 修订（2026-07-18）：v7.0 旧名"魂忆/魂印"已废弃，统一改为"灵忆/灵印"——operator 决策"魂"字过于玄学，统一改为"灵"字与"灵智/灵族/灵锻/灵议"系列对齐。
-- **AI 术语优先原则**：代码与对外技术文档使用 AI 专业术语（如 Forgekin、ForgeMind、Mind Imprint、Mind Council）；体系名（灵智/灵族/灵锻/灵议/育灵/灵忆/灵印/锻典）仅用于社区社交沟通；正式技术文档中专业术语在前、体系名作补充说明，不单独使用体系名。
+- **官方名称优先原则（v2.0 强化）**：技术设计文档、代码、API、对外宣传中**大量出现的必须是 P0 官方名称（AI 业界专业术语）**；P2 体系别名（灵智/灵族/灵锻/灵议/育灵/灵忆/灵印/锻典/灵智体）**仅用于社区社交沟通**；正式文档中如出现 P2 别名必须首次标注 P0 官方名称。详见 [design/naming-contract.md#1.1](design/naming-contract.md) 官方名称优先原则。
 
-**双轨命名策略**：
+**三层命名体系（P0/P1/P2）**：
 
-| 层级 | 使用场景 | 命名风格 | 示例 |
-|------|---------|---------|------|
-| **产品层** | 用户界面、营销材料、对外文档 | **灵智（ForgeMind）** | "创建一个新灵智"、"灵智 fk_writer_001 已晋升 E4" |
-| **代码层** | 类名、变量名、配置项、API 路径 | **Forgekin** | `ForgekinEngine`、`forgekin_id`、`/api/v7/forgekins` |
-| **文档层** | 设计文档、技术规范 | **灵智（ForgeMind）/ Forgekin** 双标注 | "灵智（Forgekin 实例）" |
-| **社区层** | 开源宣传、技术博客 | **ForgeMind** | "FlowForge ForgeMind: Self-Evolving Agent" |
+| 优先级 | 名称类型 | 使用场景 | 示例 |
+|:------:|---------|---------|------|
+| **P0** | **官方名称（AI 业界专业术语）** | 技术设计文档、代码、API、对外宣传、README、VISION | Agent / Multi-Agent System / Capability Profile / Episodic Memory / Skill Library / Multi-Agent Deliberation |
+| **P1** | **项目英文名** | 代码类名、模块名、配置项、API 路径 | `ForgekinEngine` / `EchoStore` / `MindCodex` / `CapabilityProfile` / `MindCouncil` |
+| **P2** | **体系别名（仅社交用）** | 社区讨论、技术博客口语化表达、网友交流 | 灵智 / 灵智体 / 灵忆 / 灵印 / 灵锻 / 灵典 / 灵议 / 育灵 |
+
+**铁律**：
+1. 正式文档优先使用 P0 官方名称
+2. P2 体系别名仅用于社交，首次出现时必须标注 P0 官方名称
+3. 正式文档中如出现 P2 别名必须双标注（如"灵智体（Forgekin / Evolvable Agent）"）
+4. 代码层严禁使用 P2 别名作为标识符
 
 ### §2.5 进化阶与觉醒阶（中英文 + AI 业界概念三标注）
 

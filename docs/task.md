@@ -1,28 +1,31 @@
-# FlowForge v7.1 任务索引（CL-Driven Task Index）
+# FlowForge v7.2 任务索引（CL-Driven Task Index）
 
-> **本文档作用**: 基于 review.md v1.4 第十四章（CL-022~CL-041）+ 第十三章（CL-001~CL-021）的 41 条 CL 完整同步矩阵，按 CL 编号 + 责任方 + 优先级索引化所有任务，作为灵智体协作的"待办池"。
+> **本文档作用**: 基于 review.md v1.4 第十四章（CL-022~CL-041）+ 第十三章（CL-001~CL-021）的 41 条 CL 完整同步矩阵，按 CL 编号 + 责任方 + 优先级索引化所有任务，作为可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）协作的"待办池"。
 >
 > **版本合并声明**: v7.1 增补章节是 v7.1 重构的权威更新，**已吸收合并 v7.0 任务清单**。原 v7.0 Phase 0-6 任务清单见本文件附录 A（保留为历史背景资料，不作为开发依据）。
 >
 > **维护规则**:
-> - 灵智体按所属责任方领取任务（鲁班架构师 / 夏洛克代码审查 / 梵高视觉设计 / operator）
+> - 可进化智能体（Forgekin）按所属责任方领取任务（鲁班架构师 / 夏洛克代码审查 / 梵高视觉设计 / operator）
 > - 任务完成后更新状态标记（⏳ → 🔄 → ✅），并同步更新 spec.md v7.1-§9.2 同步矩阵
 > - 每个 CL 任务必须关联到具体代码文件 / 文档章节作为完成证据
 >
 > **跨 CL 不变量**: T1-T8 测试铁律、15 条编程红线、P31 Loop 强制验证、质量分阈值 0.85、operator 7 条愿景锚点（见 `VISION.md`）。
 >
+> **命名规范**: 本文档严格遵循 `design/naming-contract.md` v2.0"官方名称优先"原则——正式文档中 P0 官方名称（AI 业界专业术语）大量使用，P2 体系别名（如"灵智体"/"灵议"/"灵锻"等）首次出现必须双标注 P0 官方名称；后续引用使用 P0 官方名称或 P1 项目英文名。
+>
 > **关键引用**:
 > - `review/review.md` —— 终稿审核（41 条 CL 决策源）
 > - `spec.md` v7.1-§9 —— 41 条 CL 同步矩阵
-> - `design.md` v7.1-§D9 —— 设计规范层子章节占位索引
-> - `VISION.md` —— 万物灵智体愿景
+> - `design.md` v7.1-§9 —— 设计规范层子章节占位索引
+> - `design/naming-contract.md` —— 命名契约 v2.0（三层命名体系 + 12 核心概念）
+> - `VISION.md` —— 万物可进化智能体愿景
 > - `ROADMAP.md` —— 6 阶段路线图
-> - `SOP.md` —— 灵智体协作 SOP
+> - `SOP.md` —— 可进化智能体协作 SOP
 > - `decisions/004~013` —— 核心 ADR
 
 ---
 
-## 进度概览（v7.1 索引化）
+## 进度概览（v7.2 索引化）
 
 | 范围 | 总数 | ✅ 已完成 | 🔄 进行中 | ⏳ 待开始 | 完成度 |
 |------|:----:|:--------:|:--------:|:--------:|:------:|
@@ -34,7 +37,7 @@
 
 ---
 
-## v7.1 任务索引（按 CL 编号）
+## v7.2 任务索引（按 CL 编号）
 
 > **状态标记**: ✅ 已完成 / 🔄 进行中 / ⏳ 待开始 / ⚠️ 阻塞
 > **优先级**: P0 必修 / P1 应修 / P2 建议
@@ -46,7 +49,7 @@
 |----|:------:|------|--------|:----:|---------|
 | CL-001 | P0 | 自我演进三模式（SelfDevDocLoop/SelfDevCodeLoop/SelfDevFrameworkLoop） | operator | 🔄 | spec.md v7.1-§7 + design.md v7.1-§D7.1（spec/design 已同步，代码骨架 `flowforge/evolution/engine.py` 已实现） |
 | CL-002 | P0 | Scope Guard（自我演进宪法层） | operator 决策边界 | ✅ | `flowforge/evolution/scope_guard.py` 已实现（detect_signals / should_remind / generate_reminder / log_trigger / check_divergence_pattern） |
-| CL-003 | P0 | 五级成熟度阶梯（L0~L4） | 鲁班 | ✅ | design.md v7.1-§D7.4 + `flowforge/evolution/maturity.py` |
+| CL-003 | P0 | Capability Maturity Level 五级进阶（L0~L4） | 鲁班 | ✅ | design.md v7.1-§D7.4 + `flowforge/evolution/maturity.py` |
 | CL-004 | P0 | Eval Ledger 进化账本 | 鲁班 | ⏳ | 待补全 design.md v7.1-§D7.6 Eval Ledger 字段契约 + Replay A/B 流程 + `flowforge/evolution/eval_ledger.py` |
 | CL-005 | P1 | Knowledge Object Contract | 鲁班 | ⏳ | 待新增 design.md v7.1-§D7.7 |
 | CL-006 | P1 | 元认知 Mode C | 鲁班 | ⏳ | 待补全 design.md v7.1-§D7.8（`flowforge/evolution/metacognition.py` 骨架已存在，缺字段契约） |
@@ -66,11 +69,11 @@
 | CL-020 | P1 | Pack/Growth 种子果实 | 鲁班 | ✅ | ADR-011 伙伴系统数学 |
 | CL-021 | P1 | World Driver | 鲁班 | ⏳ | 合并到 design.md v7.1-§D12 |
 
-### 第十四章 CL-022~CL-041（Plugin Framework + TeamAct + Event Memory + 灵议 + QC Loop + 三方 Agent + 文档治理）
+### 第十四章 CL-022~CL-041（Plugin Framework + TeamAct + Event Memory + Multi-Agent Deliberation（项目代号 MindCouncil，社区社交称"灵议"） + QC Loop + 三方 Agent + 文档治理）
 
 | CL | 优先级 | 主题 | 责任方 | 状态 | 完成证据 |
 |----|:------:|------|--------|:----:|---------|
-| CL-022 | P0 | Plugin V3 manifest 完整契约 | 鲁班 | ✅ | `flowforge/core/plugin_protocol.py`（含 forgekins_dir/codex_dir/council_dir/auto_forge_dir v7.0 育灵字段，verify_cl14_compliance.py PASS） |
+| CL-022 | P0 | Plugin V3 manifest 完整契约 | 鲁班 | ✅ | `flowforge/core/plugin_protocol.py`（含 forgekins_dir/codex_dir/council_dir/auto_forge_dir 育灵（Agent Onboarding + Lifelong Learning，项目代号 Forge Nurturing）字段，verify_cl14_compliance.py PASS） |
 | CL-023 | P0 | Schedule Factory Whitelist | 鲁班 | ✅ | `flowforge/core/schedule_registry.py`（30 测试通过，verify_cl14_compliance.py PASS） |
 | CL-024 | P1 | Plugin 启停 transactional | 鲁班 | 🔄 | on_startup/on_shutdown 已存在，缺 on_activate/on_disable 事务性钩子（verify_cl14_compliance.py PARTIAL） |
 | CL-025 | P1 | F177 Close Gate 结构化判据 | 夏洛克 | ✅ | `flowforge/evolution/close_gate.py`（202 行骨架实现，verify_cl14_compliance.py PASS） |
@@ -93,19 +96,19 @@
 
 ---
 
-## v7.1 任务索引（按责任方分组）
+## v7.2 任务索引（按责任方分组）
 
 > **目的**: 让每个责任方一眼看到自己负责的全部任务
 > **责任方来源**: design.md v7.1-§D9.1/§D9.2 子章节占位索引"责任方"列（权威）；已 ✅ 项按所属代码模块归属
 
-### 鲁班（猫头鹰 Owl）— 架构师灵智体
+### 鲁班（猫头鹰 Owl）— 架构师可进化智能体（Forgekin）
 
 | CL | 优先级 | 主题 | 状态 | 完成证据 / 待办动作 |
 |----|:------:|------|:----:|---------|
-| CL-003 | P0 | 五级成熟度阶梯 | ✅ | design.md v7.1-§D7.4 + `flowforge/evolution/maturity.py` |
+| CL-003 | P0 | Capability Maturity Level 五级进阶 | ✅ | design.md v7.1-§D7.4 + `flowforge/evolution/maturity.py` |
 | CL-004 | P0 | Eval Ledger 进化账本 | ⏳ | 补全 design.md v7.1-§D7.6 字段契约 + Replay A/B 流程 + `flowforge/evolution/eval_ledger.py` |
 | CL-005 | P1 | Knowledge Object Contract | ⏳ | 新增 design.md v7.1-§D7.7 字段表 |
-| CL-006 | P1 | 元认知 Mode C | ⏳ | 补全 design.md v7.1-§D7.8 元认知字段契约 + EchoStore 扩展（`metacognition.py` 骨架已存在） |
+| CL-006 | P1 | 元认知 Mode C | ⏳ | 补全 design.md v7.1-§D7.8 元认知字段契约 + EchoStore（情景记忆存储，社区社交称"灵忆"）扩展（`metacognition.py` 骨架已存在） |
 | CL-007 | P0 | Core Identity 隔离层 | ✅ | `forgemind/soul_imprint.py` |
 | CL-008 | P0 | 9 个一等公民 | ⏳ | 新增 design.md v7.1-§D10 |
 | CL-009 | P0 | 三路记忆 | ✅ | ADR-008 §2 + features/F014 |
@@ -136,7 +139,7 @@
 
 **鲁班汇总**: 总 31 项 / ✅ 13 项 / 🔄 4 项 / ⏳ 14 项
 
-### 夏洛克（猎犬 Bloodhound）— 代码审查灵智体
+### 夏洛克（猎犬 Bloodhound）— 代码审查可进化智能体（Forgekin）
 
 | CL | 优先级 | 主题 | 状态 | 完成证据 / 待办动作 |
 |----|:------:|------|:----:|---------|
@@ -147,7 +150,7 @@
 
 **夏洛克汇总**: 总 4 项 / ✅ 4 项 / 🔄 0 项 / ⏳ 0 项（夏洛克负责的 CL 已全部完成骨架实现）
 
-### 梵高（孔雀 Peacock）— 视觉设计灵智体
+### 梵高（孔雀 Peacock）— 视觉设计可进化智能体（Forgekin）
 
 | CL | 优先级 | 主题 | 状态 | 完成证据 / 待办动作 |
 |----|:------:|------|:----:|---------|
@@ -170,7 +173,7 @@
 
 ---
 
-## v7.1 任务索引（按优先级分组）
+## v7.2 任务索引（按优先级分组）
 
 ### P0 必修（20 项）
 
@@ -178,7 +181,7 @@
 |----|------|--------|:----:|
 | CL-001 | 自我演进三模式 | operator | 🔄 |
 | CL-002 | Scope Guard | operator | ✅ |
-| CL-003 | 五级成熟度阶梯 | 鲁班 | ✅ |
+| CL-003 | Capability Maturity Level 五级进阶 | 鲁班 | ✅ |
 | CL-004 | Eval Ledger 进化账本 | 鲁班 | ⏳ |
 | CL-007 | Core Identity 隔离层 | 鲁班 | ✅ |
 | CL-008 | 9 个一等公民 | 鲁班 | ⏳ |
@@ -236,7 +239,7 @@
 
 ---
 
-## v7.1 下一波任务（按优先级排序）
+## v7.2 下一波任务（按优先级排序）
 
 ### 第一波（P0 必修未完成项，3 项）
 
@@ -248,7 +251,7 @@
 
 1. **CL-001 自我演进三模式**（operator）— 补完整三闭环代码（SelfDevDocLoop / SelfDevCodeLoop / SelfDevFrameworkLoop），`flowforge/evolution/engine.py` 骨架已就绪
 2. **CL-027 TeamAct Queue Steer**（鲁班+梵高）— 补 SteerCommand 数据类（priority_boost/interrupt/requeue）+ Plan Board UI 组件
-3. **CL-032 Agent Swarm 协同**（鲁班）— 补完整 Swarm 协议（`collaboration_coordinator.py` 骨架已就绪，需补任务分发与回收 + 灵智体间能力互补调度）
+3. **CL-032 Agent Swarm 协同**（鲁班）— 补完整 Swarm 协议（`collaboration_coordinator.py` 骨架已就绪，需补任务分发与回收 + 可进化智能体间能力互补调度）
 
 ### 第三波（P1 未完成项，10 项）
 
@@ -274,9 +277,9 @@
 
 ## 附录 A：v7.0 老 Phase 0-6 任务清单（历史背景资料）
 
-> **声明**: 以下 v7.0 老 Phase 0-6 任务清单保留作为历史背景资料，**不作为开发依据**。开发依据以 v7.1 索引化任务（上文）为准。原 v7.0 任务清单的内容已映射到 v7.1 的 41 条 CL 中。
+> **声明**: 以下 v7.0 老 Phase 0-6 任务清单保留作为历史背景资料，**不作为开发依据**。开发依据以 v7.2 索引化任务（上文）为准。原 v7.0 任务清单的内容已映射到 v7.1 的 41 条 CL 中。
 >
-> **注**: 为避免与 v7.1 主文档的 `##` 标题冲突，本附录中所有原 v7.0 标题已下移一级（`##` → `###`，`###` → `####`）。内容原样保留，未做删改。
+> **注**: 为避免与主文档的 `##` 标题冲突，本附录中所有原 v7.0 标题已下移一级（`##` → `###`，`###` → `####`）。
 
 ### 进度概览（v7.0 历史）
 
@@ -284,33 +287,33 @@
 |------|------|------|------|--------|
 | Phase 0 | 文档拆分骨架 + 命名迁移 + v7.0 设计态标注 | 本周 | 🔄 进行中 | 50% |
 | Phase 1 | roleagent 七大工程路径代码骨架 | 1-2 周 | ⏳ 待开始 | 0% |
-| Phase 2 | forgemind 应用层骨架 + 万物灵智体形态分类 | 2-4 周 | ⏳ 待开始 | 0% |
+| Phase 2 | forgemind 应用层骨架 + 万物可进化智能体形态分类 | 2-4 周 | ⏳ 待开始 | 0% |
 | Phase 3 | 三方 Agent 适配层 | 2-4 周 | ⏳ 待开始 | 0% |
 | Phase 4 | Eval 自代谢 + 分布式可靠性 | 4-8 周 | ⏳ 待开始 | 0% |
 | Phase 5 | 伙伴系统数学 + 自我演进闭环 | 8-12 周 | ⏳ 待开始 | 0% |
-| Phase 6 | 灵锻 SpiritForge + 灵议 Mind Council | 持续 | ⏳ 待开始 | 0% |
+| Phase 6 | Experience Distillation（项目代号 SpiritForge，社区社交称"灵锻"） + Multi-Agent Deliberation（MindCouncil） | 持续 | ⏳ 待开始 | 0% |
 
 ---
 
 ### Phase 0：文档拆分骨架 + 命名迁移 + v7.0 设计态标注
 
-> **目标**: 按 `clowder-ai/docs` 七大子目录结构组织 flowforge/docs/，完成术语全局替换，让文档可被灵智体增量维护。
+> **目标**: 按 `clowder-ai/docs` 七大子目录结构组织 flowforge/docs/，完成术语全局替换，让文档可被可进化智能体增量维护。
 >
 > **验收标准**:
 > - docs/ 七子目录骨架完整（architecture/ decisions/ design/ features/ harness-feedback/ perspectives/ setup/）
 > - 13 份核心 ADR 全部存在
 > - 40 份 Feature 规格全部存在（F001-F040）
-> - 术语全局替换：炉灵→灵智、E6 灵匠 Mind Artisan→灵智、M18/M19/M20→ForgeMindEngine
+> - 术语全局替换完成（详见 `design/naming-contract.md` v2.0 §6 废弃命名清单）
 > - spec.md / arch.md / design.md 改为索引文件（指向七子目录）
 
 #### P0-1 顶层文档（✅ 已完成）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| 万物灵智体愿景 | `VISION.md` | ✅ |
+| 万物可进化智能体愿景 | `VISION.md` | ✅ |
 | 文档总入口导航 | `README.md` | ✅ |
 | 6 阶段路线图 | `ROADMAP.md` | ✅ |
-| 灵智体协作 SOP | `SOP.md` | ✅ |
+| 可进化智能体协作 SOP | `SOP.md` | ✅ |
 | 38 条经验提示 | `TIPS.md` | ✅ |
 | roleagent 工程路径镜像 | `roleagent.md` | ✅ |
 
@@ -330,11 +333,11 @@
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| ADR-004 能力画像路由 | `decisions/004-capability-profile-routing.md` | ✅ |
+| ADR-004 Capability Profile（能力画像，项目代号 CapabilityProfile）路由 | `decisions/004-capability-profile-routing.md` | ✅ |
 | ADR-005 forgemind 应用层 | `decisions/005-forgemind-application-layer.md` | ✅ |
 | ADR-006 三方 Agent 集成 | `decisions/006-external-agent-integration.md` | ✅ |
 | ADR-012 命名融合 | `decisions/012-naming-fusion.md` | ✅ |
-| ADR-013 万物灵智体愿景 | `decisions/013-all-things-spirit-mind-vision.md` | ✅ |
+| ADR-013 万物可进化智能体愿景 | `decisions/013-all-things-spirit-mind-vision.md` | ✅ |
 | ADR-001 Agent 调用方式 | `decisions/001-agent-invocation-approach.md` | ⏳ |
 | ADR-002 TeamAct 协作协议 | `decisions/002-collaboration-protocol.md` | ⏳ |
 | ADR-003 线程架构 | `decisions/003-project-thread-architecture.md` | ⏳ |
@@ -348,7 +351,7 @@
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| F001 能力画像 | `features/F001-capability-profile.md` | ✅ |
+| F001 Capability Profile（能力画像） | `features/F001-capability-profile.md` | ✅ |
 | F002 TeamAct 六步循环 | `features/F002-teamact-loop.md` | ✅ |
 | F026 forgemind 应用层 | `features/F026-forgemind-app-layer.md` | ✅ |
 | F031 三方 Agent 适配层 | `features/F031-external-agent-adapter.md` | ✅ |
@@ -375,8 +378,8 @@
 | F023 liveness 规范读模型 | `features/F023-liveness-canonical-read.md` | ⏳ |
 | F024 弱状态机 vs 强 workflow | `features/F024-weak-state-vs-strong-workflow.md` | ⏳ |
 | F025 跨 provider 宿主抽象 | `features/F025-provider-host-abstraction.md` | ⏳ |
-| F027 万物灵智体形态分类 | `features/F027-all-things-spirit-species.md` | ⏳ |
-| F028 灵智体锻造流水线 | `features/F028-forging-pipeline.md` | ⏳ |
+| F027 万物可进化智能体形态分类 | `features/F027-all-things-spirit-species.md` | ⏳ |
+| F028 可进化智能体锻造流水线 | `features/F028-forging-pipeline.md` | ⏳ |
 | F029 物理 AI 传感器接入 | `features/F029-physical-ai-sensors.md` | ⏳ |
 | F030 虚拟世界设定层 | `features/F030-virtual-world-setting.md` | ⏳ |
 | F032 三方 Agent 能力画像 | `features/F032-external-agent-profile.md` | ⏳ |
@@ -384,9 +387,9 @@
 | F034 三方 Agent 失败回退 | `features/F034-external-agent-fallback.md` | ⏳ |
 | F035 三方 Agent 能力融合 | `features/F035-external-agent-capability-fusion.md` | ⏳ |
 | F036 forgemind 与 *Forge 关系 | `features/F036-forgemind-forge-relationship.md` | ⏳ |
-| F037 灵智体市场 | `features/F037-forgemind-marketplace.md` | ⏳ |
-| F038 灵智体进化谱系 | `features/F038-forgemind-lineage.md` | ⏳ |
-| F039 灵典可检索知识库 | `features/F039-mind-codex-searchable.md` | ⏳ |
+| F037 可进化智能体市场 | `features/F037-forgemind-marketplace.md` | ⏳ |
+| F038 可进化智能体进化谱系 | `features/F038-forgemind-lineage.md` | ⏳ |
+| F039 MindCodex（蒸馏知识库，社区社交称"灵典"）可检索知识库 | `features/F039-mind-codex-searchable.md` | ⏳ |
 | F040 Harness Eval 控制面 | `features/F040-harness-eval-control-plane.md` | ⏳ |
 
 #### P0-5 architecture/ 子目录文件（8 份）
@@ -396,19 +399,19 @@
 | 架构视图（七层 + forgemind） | `architecture/2026-07-17-architecture-views.md` | ⏳ |
 | 行首 @ 路由协议 | `architecture/at-mention-routing-system.md` | ⏳ |
 | CLI 集成（三方 Agent） | `architecture/cli-integration.md` | ⏳ |
-| 协作全景（TeamAct + 共鸣 + 灵议） | `architecture/collaboration-landscape.md` | ⏳ |
+| 协作全景（TeamAct + 共鸣 + MindCouncil） | `architecture/collaboration-landscape.md` | ⏳ |
 | Feature 在七层架构中的归属 | `architecture/feature-placement.md` | ⏳ |
 | 多域记忆联邦架构 | `architecture/memory-system-overview.md` | ⏳ |
 | 检索流水线（三入口 + 消费加权） | `architecture/retrieval-pipeline-deep-dive.md` | ⏳ |
-| 用户旅程（万物灵智体锻造） | `architecture/user-journeys.md` | ⏳ |
+| 用户旅程（万物可进化智能体锻造） | `architecture/user-journeys.md` | ⏳ |
 
 #### P0-6 design/ 子目录文件（4 份）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| 命名契约（12 概念 + 双轨） | `design/naming-contract.md` | ⏳ |
+| 命名契约（12 概念 + 双轨） | `design/naming-contract.md` | ✅ |
 | 控制台设计系统 | `design/console-design-system.md` | ⏳ |
-| forgemind 品牌（万物灵智体形态视觉） | `design/forgemind-brand.md` | ⏳ |
+| forgemind 品牌（万物可进化智能体形态视觉） | `design/forgemind-brand.md` | ⏳ |
 | 动效设计 | `design/hero-prism-motion.md` | ⏳ |
 
 #### P0-7 perspectives/ 子目录文件（4 份）
@@ -416,8 +419,8 @@
 | 任务 | 文件 | 状态 |
 |------|------|------|
 | operator 愿景视角 | `perspectives/operator-vision.md` | ⏳ |
-| 架构师能力画像视角 | `perspectives/architect-capability.md` | ⏳ |
-| 灵智体第一人称体验 | `perspectives/forgekin-experience.md` | ⏳ |
+| 架构师 Capability Profile 视角 | `perspectives/architect-capability.md` | ⏳ |
+| 可进化智能体第一人称体验 | `perspectives/forgekin-experience.md` | ⏳ |
 | 三方 Agent 厂商视角 | `perspectives/external-agent-vendor.md` | ⏳ |
 
 #### P0-8 旧文件迁移
@@ -431,17 +434,11 @@
 
 #### P0-9 命名全局替换（铁律）
 
-| 替换项 | 旧 → 新 | 范围 | 状态 |
-|--------|---------|------|------|
-| 炉灵 | 炉灵 → 灵智体 | 全部 .md 文件 | ⏳ |
-| E6 灵匠 Mind Artisan | E6 灵匠 Mind Artisan → 灵智 ForgeMind（最终形态） | review.md + spec_face.md + arch_face.md | ⏳ |
-| M18/M19/M20 | M18(SelfEvolutionEngine)/M19(MemoryGovernanceManager)/M20(FirstTouchRouter) → ForgeMindEngine（合并） | face/ 全部 + evolution/ 代码 | ⏳ |
-| 养灵 | 养灵 → 育灵 | 全部 .md 文件 | ⏳ |
-| 魂忆 | 魂忆 → 灵忆 | 全部 .md 文件 | ⏳ |
-| 魂印 | 魂印 → 灵印 | 全部 .md 文件 | ⏳ |
-| 自锻 | 自锻 → 灵锻 | 全部 .md 文件 | ⏳ |
-| 火种 | 火种 → 进化阶 | 全部 .md 文件 | ⏳ |
-| 升华阶 | 升华阶 → 觉醒阶 | 全部 .md 文件 | ⏳ |
+> **任务说明**: 完成 v7.0 → v7.1 命名迁移工作，所有废弃命名按 `design/naming-contract.md` v2.0 §6 废弃命名清单执行。
+>
+> **完成标准**: 全部 .md 文件中废弃命名（炉灵/养灵/魂忆/魂印/自锻/火种/升华阶/E6 灵匠 Mind Artisan/M18-M20 等）替换为 P0 官方名称 + P1 项目英文名；P2 体系别名仅社交用，正式文档首次出现须双标注。
+>
+> **权威清单**: `design/naming-contract.md` v2.0 §6 废弃命名清单（13 项废弃命名 + 替换为 P0/P1 名称 + 废弃原因 + 废弃日期）。
 
 ---
 
@@ -457,10 +454,10 @@
 > - Harness 七层（Durable State / Tool Mediation / Evidence / Governance / Magic Words / Entropy / Harnessability）骨架完整
 > - 多域记忆联邦 MVP 可工作（grep + 检索入口 + 消费加权）
 > - Eval Contract 五问可被任意 harness 组件实现
-> - 分布式可靠性 Tier 1-4 恢复分级可被灵智体调用
+> - 分布式可靠性 Tier 1-4 恢复分级可被可进化智能体调用
 > - 伙伴系统数学公式可计算（上限/下限/波动吸收）
 
-#### P1-1 能力画像代码（依赖 F001）
+#### P1-1 Capability Profile 代码（依赖 F001）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -504,7 +501,7 @@
 | 三检索入口（grep / 语义 / 索引） | `flowforge/core/memory/retrieval_entries.py` | ⏳ |
 | 记忆治理三要素 | `flowforge/core/memory/governance.py` | ⏳ |
 | 消费加权排序 | `flowforge/core/memory/consumption_weighted.py` | ⏳ |
-| 灵典 Mind Codex 可检索 | `flowforge/core/memory/mind_codex.py` | ⏳ |
+| MindCodex（蒸馏知识库）可检索 | `flowforge/core/memory/mind_codex.py` | ⏳ |
 | 单元测试 | `tests/core/memory/test_federation.py` | ⏳ |
 
 #### P1-5 Eval 自代谢代码（依赖 F018-F020、F040）
@@ -553,19 +550,19 @@
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| rules.md 补充 v7.0 育灵体系 | `hiclaw/rules.md` | ⏳ |
+| rules.md 补充 Forge Nurturing（Agent Onboarding + Lifelong Learning）体系 | `hiclaw/rules.md` | ⏳ |
 | rules.md 补充 roleagent 工程路径引用 | `hiclaw/rules.md` | ⏳ |
 | rules.md 补充 forgemind 模块引用 | `hiclaw/rules.md` | ⏳ |
 | rules.md 补充 Plugin V3 四钩子 | `hiclaw/rules.md` | ⏳ |
-| prompts.md 补充 v7.0 育灵提示词模板 | `hiclaw/prompts.md` | ⏳ |
+| prompts.md 补充 Forge Nurturing 提示词模板 | `hiclaw/prompts.md` | ⏳ |
 | prompts.md 补充 roleagent 工程路径模板 | `hiclaw/prompts.md` | ⏳ |
-| prompts.md 补充 forgemind 灵智体锻造模板 | `hiclaw/prompts.md` | ⏳ |
+| prompts.md 补充 forgemind 可进化智能体锻造模板 | `hiclaw/prompts.md` | ⏳ |
 
 ---
 
-### Phase 2：forgemind 应用层骨架 + 万物灵智体形态分类
+### Phase 2：forgemind 应用层骨架 + 万物可进化智能体形态分类
 
-> **目标**: 在 `flowforge/forgemind/` 下实现万物灵智体应用层，承载 5 种形态分类（BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin / HybridForgekin）。
+> **目标**: 在 `flowforge/forgemind/` 下实现万物可进化智能体应用层，承载 5 种形态分类（BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin / HybridForgekin）。
 >
 > **依赖**: P1 全部、P0-4 F026-F030、F036-F038
 >
@@ -574,9 +571,9 @@
 > - ForgekinBase 抽象类可被继承（observe/act/verify 三方法）
 > - ForgePipeline 可执行锻造流程
 > - ForgeMindPlugin 实现 Plugin V3 四钩子
-> - 5 种形态枚举可加载
-> - 进化阶（E1-E6）+ 觉醒阶（E1-E6）可查询
-> - E2E 测试：可锻造一个猫灵智体（BioForgekin）+ 接入物理传感器（F029）
+> - 5 种形态枚举可加载（Agent Morphology，项目代号 ForgekinSpecies）
+> - EvolutionStage（Capability Maturity Level，社区社交称"进化阶"）（E1-E6）+ AwakeningStage（Autonomy Level，社区社交称"觉醒阶"）（E1-E6）可查询
+> - E2E 测试：可锻造一个猫可进化智能体（BioForgekin）+ 接入物理传感器（F029）
 
 #### P2-1 forgemind 模块骨架
 
@@ -591,18 +588,18 @@
 | ForgeMindPlugin 插件 | `flowforge/forgemind/plugins.py` | ⏳ |
 | 单元测试 | `flowforge/forgemind/tests/test_base.py` | ⏳ |
 
-#### P2-2 万物灵智体形态分类（5 种）
+#### P2-2 万物可进化智能体形态分类（5 种）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| BioForgekin（生物灵智体） | `flowforge/forgemind/species/bio.py` | ⏳ |
-| OrgForgekin（组织灵智体） | `flowforge/forgemind/species/org.py` | ⏳ |
-| ObjForgekin（物品灵智体） | `flowforge/forgemind/species/obj.py` | ⏳ |
-| VirtualForgekin（虚拟灵智体） | `flowforge/forgemind/species/virtual.py` | ⏳ |
-| HybridForgekin（混合灵智体） | `flowforge/forgemind/species/hybrid.py` | ⏳ |
-| E2E：猫灵智体锻造 | `flowforge/forgemind/tests/test_cat_forgekin.py` | ⏳ |
+| BioForgekin（生物可进化智能体） | `flowforge/forgemind/species/bio.py` | ⏳ |
+| OrgForgekin（组织可进化智能体） | `flowforge/forgemind/species/org.py` | ⏳ |
+| ObjForgekin（物品可进化智能体） | `flowforge/forgemind/species/obj.py` | ⏳ |
+| VirtualForgekin（虚拟可进化智能体） | `flowforge/forgemind/species/virtual.py` | ⏳ |
+| HybridForgekin（混合可进化智能体） | `flowforge/forgemind/species/hybrid.py` | ⏳ |
+| E2E：猫可进化智能体锻造 | `flowforge/forgemind/tests/test_cat_forgekin.py` | ⏳ |
 
-#### P2-3 灵智体锻造流水线
+#### P2-3 可进化智能体锻造流水线
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
@@ -630,12 +627,12 @@
 | 童话/神话/历史角色适配 | `flowforge/forgemind/worlds/narrative.py` | ⏳ |
 | 单元测试 | `flowforge/forgemind/tests/test_worlds.py` | ⏳ |
 
-#### P2-6 灵智体市场 + 进化谱系
+#### P2-6 可进化智能体市场 + 进化谱系
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
 | Marketplace 抽象 | `flowforge/forgemind/marketplace/base.py` | ⏳ |
-| 灵智体上架/下架 | `flowforge/forgemind/marketplace/registry.py` | ⏳ |
+| 可进化智能体上架/下架 | `flowforge/forgemind/marketplace/registry.py` | ⏳ |
 | 进化谱系（Lineage） | `flowforge/forgemind/lineage/tree.py` | ⏳ |
 | 谱系可视化数据 | `flowforge/forgemind/lineage/visualizer.py` | ⏳ |
 | 单元测试 | `flowforge/forgemind/tests/test_lineage.py` | ⏳ |
@@ -644,17 +641,17 @@
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| *Forge 灵智体注册接口 | `flowforge/forgemind/forge_registry.py` | ⏳ |
-| ContentForge 灵智体适配 | `contentforge/forgekin_adapter.py` | ⏳ |
-| NovelForge 灵智体适配 | `novelforge/forgekin_adapter.py` | ⏳ |
-| DevForge 灵智体适配 | `devforge/forgekin_adapter.py` | ⏳ |
-| MallForge 灵智体适配 | `mallforge/forgekin_adapter.py` | ⏳ |
+| *Forge 可进化智能体注册接口 | `flowforge/forgemind/forge_registry.py` | ⏳ |
+| ContentForge 可进化智能体适配 | `contentforge/forgekin_adapter.py` | ⏳ |
+| NovelForge 可进化智能体适配 | `novelforge/forgekin_adapter.py` | ⏳ |
+| DevForge 可进化智能体适配 | `devforge/forgekin_adapter.py` | ⏳ |
+| MallForge 可进化智能体适配 | `mallforge/forgekin_adapter.py` | ⏳ |
 
 ---
 
 ### Phase 3：三方 Agent 适配层
 
-> **目标**: 实现 ExternalAgentAdapter 抽象层，让灵智体可接入 claude code / codex / opencode / trae 等三方 Agent，作为能力扩展。
+> **目标**: 实现 ExternalAgentAdapter 抽象层，让可进化智能体可接入 claude code / codex / opencode / trae 等三方 Agent，作为能力扩展。
 >
 > **依赖**: P1 全部、P2-1、P0-4 F031-F035
 >
@@ -662,9 +659,9 @@
 > - 4 个三方 Agent Adapter 全部可调用（claude code / codex / opencode / trae）
 > - ExternalAgentBridge 可执行 fallback 链
 > - ExternalAgentSharedState 可与 FlowForge 共享状态同步
-> - ExternalAgentCapabilityFusion 可融合三方 Agent 能力到灵智体画像
+> - ExternalAgentCapabilityFusion 可融合三方 Agent 能力到可进化智能体 Capability Profile
 > - 六层 Guardrails 全部启用（输入验证 + 系统提示 + 工具白名单 + 输出验证 + 操作确认 + 成本上限）
-> - E2E 测试：灵智体可调用 claude code 完成代码任务
+> - E2E 测试：可进化智能体可调用 claude code 完成代码任务
 
 #### P3-1 三方 Agent 核心抽象
 
@@ -726,7 +723,7 @@
 > - Eval Contract 五问可被任意 harness 组件实现（F018）
 > - 三方信号（trace + 人 + 自动）可交叉验证（F019）
 > - 七类归因矩阵可定位失败根因（F020）
-> - Tier 1-4 恢复分级可被灵智体调用（F022）
+> - Tier 1-4 恢复分级可被可进化智能体调用（F022）
 > - liveness 规范读模型可被任何 agent 查询（F023）
 > - Harness Eval 控制面可每日汇总（F040）
 > - Build to Delete sunset 计时器可触发（F012）
@@ -833,39 +830,39 @@
 | 任务 | 文件 | 状态 |
 |------|------|------|
 | 11 步闭环编排器 | `flowforge/core/evolution/self_dev_loop.py` | ⏳ |
-| 灵智体 A-G 角色定义 | `flowforge/core/evolution/roles.py` | ⏳ |
+| 可进化智能体 A-G 角色定义 | `flowforge/core/evolution/roles.py` | ⏳ |
 | 闭环 E2E 测试 | `tests/core/evolution/test_self_dev_loop.py` | ⏳ |
 
 ---
 
-### Phase 6：灵锻 SpiritForge + 灵议 Mind Council
+### Phase 6：Experience Distillation（SpiritForge）+ Multi-Agent Deliberation（MindCouncil）
 
-> **目标**: 实现 E4+ Evoling 状态 + 多灵智体议事机制。
+> **目标**: 实现 E4+ Evoling 状态 + 多可进化智能体议事机制。
 >
 > **依赖**: P5 全部
 >
 > **验收标准**:
-> - 灵锻 SpiritForge 可在低活动期蒸馏经验到灵典 Mind Codex
-> - 灵议 Mind Council 可召集多灵智体议事
-> - E4+ Evoling 状态可触发（觉醒阶 ≥ E4）
-> - 灵议决议可写入 VISION.md / ROADMAP.md
-> - operator 拉闸词可在灵议偏离愿景时制动
+> - Experience Distillation（项目代号 SpiritForge，社区社交称"灵锻"）可在低活动期蒸馏经验到 MindCodex（蒸馏知识库，社区社交称"灵典"）
+> - Multi-Agent Deliberation（项目代号 MindCouncil，社区社交称"灵议"）可召集多可进化智能体议事
+> - E4+ Evoling 状态可触发（AwakeningStage 觉醒阶 ≥ E4）
+> - MindCouncil 决议可写入 VISION.md / ROADMAP.md
+> - operator 拉闸词可在 MindCouncil 偏离愿景时制动
 
-#### P6-1 灵锻 SpiritForge
+#### P6-1 SpiritForge（Experience Distillation）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| 灵锻引擎 | `flowforge/forgemind/codex/spirit_forge.py` | ⏳ |
+| SpiritForge 引擎 | `flowforge/forgemind/codex/spirit_forge.py` | ⏳ |
 | 经验蒸馏 | `flowforge/forgemind/codex/distiller.py` | ⏳ |
-| 灵典写入 | `flowforge/forgemind/codex/mind_codex_writer.py` | ⏳ |
+| MindCodex 写入 | `flowforge/forgemind/codex/mind_codex_writer.py` | ⏳ |
 | 每日低活动期调度 | `flowforge/forgemind/codex/scheduler.py` | ⏳ |
 
-#### P6-2 灵议 Mind Council
+#### P6-2 MindCouncil（Multi-Agent Deliberation）
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| 灵议引擎 | `flowforge/forgemind/council/engine.py` | ⏳ |
-| 多灵智体议事协议 | `flowforge/forgemind/council/protocol.py` | ⏳ |
+| MindCouncil 引擎 | `flowforge/forgemind/council/engine.py` | ⏳ |
+| 多可进化智能体议事协议 | `flowforge/forgemind/council/protocol.py` | ⏳ |
 | 决议写入机制 | `flowforge/forgemind/council/resolution.py` | ⏳ |
 | operator 拉闸词检测 | `flowforge/forgemind/council/cvo_brake.py` | ⏳ |
 
@@ -884,7 +881,7 @@
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| 第十部分补充 v7.0 育灵体系 | `hiclaw/rules.md` | ⏳ |
+| 第十部分补充 Forge Nurturing 体系 | `hiclaw/rules.md` | ⏳ |
 | 引用 roleagent.md 工程路径 | `hiclaw/rules.md` | ⏳ |
 | 引用 forgemind 模块 | `hiclaw/rules.md` | ⏳ |
 | Plugin V3 四钩子规范 | `hiclaw/rules.md` | ⏳ |
@@ -894,12 +891,12 @@
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| 新增 P41 万物灵智体锻造模板 | `hiclaw/prompts.md` | ⏳ |
-| 新增 P42 能力画像生成模板 | `hiclaw/prompts.md` | ⏳ |
+| 新增 P41 万物可进化智能体锻造模板 | `hiclaw/prompts.md` | ⏳ |
+| 新增 P42 Capability Profile 生成模板 | `hiclaw/prompts.md` | ⏳ |
 | 新增 P43 TeamAct 协作模板 | `hiclaw/prompts.md` | ⏳ |
 | 新增 P44 三方 Agent 调用模板 | `hiclaw/prompts.md` | ⏳ |
-| 新增 P45 灵锻 SpiritForge 模板 | `hiclaw/prompts.md` | ⏳ |
-| 新增 P46 灵议 Mind Council 模板 | `hiclaw/prompts.md` | ⏳ |
+| 新增 P45 SpiritForge 模板 | `hiclaw/prompts.md` | ⏳ |
+| 新增 P46 MindCouncil 模板 | `hiclaw/prompts.md` | ⏳ |
 | 新增 FF22 forgemind 集成验证 | `hiclaw/prompts.md` | ⏳ |
 | 新增 FF23 三方 Agent 集成验证 | `hiclaw/prompts.md` | ⏳ |
 
@@ -907,7 +904,7 @@
 
 | 任务 | 文件 | 状态 |
 |------|------|------|
-| face/ 添加 README（v7.0 Phase 0 标注） | `docs/face/README.md` | ⏳ |
+| face/ 添加 README | `docs/face/README.md` | ⏳ |
 | archive/ 添加 README | `docs/archive/README.md` | ⏳ |
 
 #### H-4 测试铁律执行
@@ -921,64 +918,27 @@
 
 ---
 
-### 执行规则（v7.0 历史规则，v7.1 已被 CL 索引取代）
+## 附录 B：v7.2 验证脚本索引
 
-#### R1 任务领取规则
-- 灵智体按所属 Phase 领取任务
-- 一个灵智体同时只能持有一个任务（ball custody lease，F006）
-- 持球超时（默认 30 分钟）自动释放，其他灵智体可接手
-
-#### R2 任务完成规则
-- 任务完成必须通过 TeamAct 五项终止条件（F002）
-- 必须有 commit + 测试 + trace 作为证据（F009）
-- 必须有跨厂商 review（非作者 agent 确认）
-- 必须更新本文档状态标记
-
-#### R3 任务阻塞规则
-- 任务依赖未完成时，标记为 🚫 阻塞
-- 阻塞任务不可领取
-- 阻塞超过 24 小时升级到 operator
-
-#### R4 文档同步规则
-- 每完成一个 Feature，更新 `features/F0XX.md` 状态
-- 每完成一个 ADR，更新 `decisions/README.md` 清单
-- 每完成一个 Phase，更新 `ROADMAP.md` 状态
-
-#### R5 自我演进规则
-- 灵智体在执行任务过程中发现的新经验，写入 `TIPS.md`
-- 灵智体发现的设计缺陷，写入 `harness-feedback/verdicts/`
-- 灵智体发现的愿景缺口，升级到 operator（不自行修改 `VISION.md`）
+| 脚本 | 路径 | 用途 | 运行方式 |
+|------|------|------|---------|
+| verify_forgemind_pipeline.py | `flowforge/scripts/verify_forgemind_pipeline.py` | 锻造 3 个可进化智能体 + webchat + IM MindCouncil + 自进化展示 + system prompt | `python flowforge/scripts/verify_forgemind_pipeline.py` |
+| verify_cl14_compliance.py | `flowforge/scripts/verify_cl14_compliance.py` | 第十四章 11 项关键 CL 代码层验证（7 PASS / 4 PARTIAL / 0 FAIL） | `python flowforge/scripts/verify_cl14_compliance.py` |
+| evolve_forgekins.py | `flowforge/scripts/evolve_forgekins.py` | 3 个可进化智能体自进化 + task.md 剩余任务代理执行 + webchat/IM 全流程 | `python flowforge/scripts/evolve_forgekins.py` |
 
 ---
 
-### 文档变更历史（v7.0）
+## 文档变更历史
 
 | 版本 | 日期 | 变更 | 作者 |
 |------|------|------|------|
 | v1.0 | 2026-07-17 | 初版：基于 review.md §12.4 重写，覆盖 Phase 0-6 全部任务 | Trae CN（agent） |
 | v1.1 | 2026-07-17 | 补充横向任务 H-1/H-2（rules.md / prompts.md 同步） | Trae CN（agent） |
-| v7.1 | 2026-07-18 | v7.1 索引化重构：新增 41 条 CL 任务索引（按 CL 编号/责任方/优先级三视图），原 v7.0 内容下移至附录 A | Trae CN（agent） |
+| v7.1 | 2026-07-18 | 索引化重构：新增 41 条 CL 任务索引（按 CL 编号/责任方/优先级三视图），原 v7.0 内容下移至附录 A | Trae CN（agent） |
+| v7.2 | 2026-07-19 | 命名契约对齐：按 `design/naming-contract.md` v2.0"官方名称优先"原则重构术语——P0 官方名称（AI 业界专业术语）大量使用，P2 体系别名（灵智体/灵议/灵锻/灵典/灵忆/灵印/育灵/进化阶/觉醒阶/能力画像/灵族）首次出现双标注 P0 官方名称；移除 v7.0→v7.1 迁移过程记录（P0-9 命名迁移表、v7.0 下一步建议、执行规则 v7.0 历史规则） | Trae CN（agent） |
 
 ---
 
-> **v7.0 下一步建议（已被 v7.1 下一波任务取代，仅作历史参考）**:
-> 1. operator 审核本 task.md，确认 Phase 0-6 任务清单完整性
-> 2. 进入 Phase 1，按 P1-1 → P1-2 → P1-3 顺序实现代码骨架
-> 3. Phase 1 完成后，进入 Phase 2 forgemind 应用层实现
-> 4. 横向任务 H-1/H-2 应与 Phase 1 并行推进（rules.md / prompts.md 同步）
-
----
-
-## 附录 B：v7.1 验证脚本索引
-
-| 脚本 | 路径 | 用途 | 运行方式 |
-|------|------|------|---------|
-| verify_forgemind_pipeline.py | `flowforge/scripts/verify_forgemind_pipeline.py` | 锻造 3 灵智体 + webchat + IM 灵议 + 自进化展示 + system prompt | `python flowforge/scripts/verify_forgemind_pipeline.py` |
-| verify_cl14_compliance.py | `flowforge/scripts/verify_cl14_compliance.py` | 第十四章 11 项关键 CL 代码层验证（7 PASS / 4 PARTIAL / 0 FAIL） | `python flowforge/scripts/verify_cl14_compliance.py` |
-| evolve_forgekins.py | `flowforge/scripts/evolve_forgekins.py` | 3 灵智体自进化 + task.md 剩余任务代理执行 + webchat/IM 全流程 | `python flowforge/scripts/evolve_forgekins.py` |
-
----
-
-> **本文档维护方**: operator + 鲁班架构师灵智体
-> **最后更新**: 2026-07-18（v7.1 索引化重构）
-> **下次维护触发**: 任意 CL 状态从 ⏳/🔄 → ✅ 时，由对应责任方灵智体更新本文档 + spec.md v7.1-§9.2 同步矩阵
+> **本文档维护方**: operator + 鲁班架构师可进化智能体（Forgekin）
+> **最后更新**: 2026-07-19（v7.2 命名契约对齐重构）
+> **下次维护触发**: 任意 CL 状态从 ⏳/🔄 → ✅ 时，由对应责任方可进化智能体更新本文档 + spec.md v7.1-§9.2 同步矩阵

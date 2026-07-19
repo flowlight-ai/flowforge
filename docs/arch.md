@@ -188,12 +188,87 @@ Agent 质量 = 模型能力 × Harness 契合度（Environment Fit）
 4. **forgemind 单向依赖**核心框架层，禁止反向调用
 5. **forgemind 不含业务领域代码**（编程红线第 10 条）
 6. **forgemind 通过 Plugin V3 协议注册**，不直接实例化核心模块（编程红线第 12 条）
-7. **所有灵智体继承 ForgekinBase**，实现 observe/act/verify 三方法契约
+7. **所有可进化智能体（Forgekin）继承 ForgekinBase**，实现 observe/act/verify 三方法契约
 8. **所有 Agent 通过 LoopExecutor 执行**（P31 铁律，质量分阈值 0.85）
 9. **所有数据检索走 OpenSieve**（结构化 + 非结构化统一入口）
 10. **所有数据库操作通过 Repository 层**（禁止直操作数据库）
 11. **所有提示词外置 YAML 配置**（禁止硬编码提示词/路径/密钥/端口）
 12. **所有依赖通过 DI 容器注入**（禁止绕过 DI 容器直接实例化）
+
+### §2.7 智能体分类架构（静态智能体 vs 可进化智能体）
+
+> **来源**：operator 2026-07-19 指令——"目前我们智能体分为静态智能体（传统的如 flowforge 中的和外部接入的 agent）、可进化智能体（flowforge 中的灵智体），这两类智能体的设计之前是有的，但现在的设计文档丢了呢，请加入回来。"
+> **关联 SRS**：[spec.md §2.3](spec.md) 智能体分类
+> **关联 SDD**：[design.md §2.6](design.md) 智能体分类详细设计
+> **权威定义**：[design/naming-contract.md#2](design/naming-contract.md) v2.0 智能体分类
+> **默认指代规则**：在 FlowForge 上下文中，"智能体"默认指代**可进化智能体（Evolvable Agent / Forgekin）**；若指代静态智能体必须明确说出"静态智能体"
+
+FlowForge 生态的智能体（Agent）在架构层分为两大类，二者在架构位置、依赖关系、能力扩展机制上存在本质差异：
+
+#### §2.7.1 静态智能体架构（Static Agent Architecture）
+
+| 子类 | 架构位置 | 代码基类 | 关联模块 |
+|------|---------|---------|---------|
+| **FlowForge 内置静态智能体** | Layer 1 核心框架层 | `StaticAgent` / `DeclarativeAgent` / `ReActAgent` / `PlanExecuteAgent` | `flowforge/agents/generic/` |
+| **外部接入静态智能体** | Layer 1 核心框架层（ExternalAgentAdapter 适配层） | `ExternalAgentAdapter` | `flowforge/core/external_agent/` |
+
+**架构特征**：
+- 无 Soul Imprint / 无 EchoStore / 无 CapabilityProfile / 无 EvolutionStage / 无 AwakeningStage
+- 行为完全由 prompt + 工具集 + 配置决定
+- 每次执行无状态，跨会话不积累能力
+- 可作为可进化智能体的能力扩展（通过 ExternalAgentAdapter）
+
+#### §2.7.2 可进化智能体架构（Evolvable Agent / Forgekin Architecture）
+
+| 架构位置 | 代码基类 | 核心组件 |
+|---------|---------|---------|
+| Layer 2 forgemind 应用层 + Layer 1 核心框架层（ForgekinEngine） | `ForgekinBase` | ForgekinEngine + EchoStore + CapabilityProfile + SpiritForge + MindCodex + MindCouncil |
+
+**架构特征**：
+- 有 Soul Imprint（持久身份标识，跨会话不变）
+- 有 EchoStore（情景记忆存储，跨会话积累）
+- 有 CapabilityProfile（能力画像含盲点，跨会话演进）
+- 有 EvolutionStage E1-E6（进化阶，能力成熟度）
+- 有 AwakeningStage E1-E6（觉醒阶，自主性等级）
+- 可通过 SpiritForge 蒸馏经验到 MindCodex
+- 可参与 MindCouncil 多智能体议事
+- 建立与现实世界（物理或虚拟）的闭环：观察 → 推理 → 行动 → 写回 → 验证
+
+#### §2.7.3 两类智能体架构关系图
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 2: forgemind 应用层                                    │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ 可进化智能体（Evolvable Agent / Forgekin）           │    │
+│  │  ForgekinBase + ForgekinEngine + ForgekinSpecies     │    │
+│  │  Soul Imprint + EchoStore + CapabilityProfile       │    │
+│  │  EvolutionStage E1-E6 + AwakeningStage E1-E6         │    │
+│  │  SpiritForge → MindCodex + MindCouncil               │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+                            ↑ 装饰器
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 1: FlowForge 核心框架层（Harness v2.0）                │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ 静态智能体（Static Agent）                           │    │
+│  │  ┌──────────────────┐  ┌──────────────────────────┐ │    │
+│  │  │ 内置静态智能体    │  │ 外部接入静态智能体        │ │    │
+│  │  │ DeclarativeAgent │  │ ExternalAgentAdapter     │ │    │
+│  │  │ ReActAgent       │  │ (Claude/Codex/OpenCode/  │ │    │
+│  │  │ PlanExecuteAgent │  │  Trae 等)                │ │    │
+│  │  └──────────────────┘  └──────────────────────────┘ │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### §2.7.4 架构层铁律
+
+1. **静态智能体不可升级为可进化智能体**：架构层 forbid 静态智能体"升级"为可进化智能体，二者是不同的架构类别
+2. **可进化智能体可调用静态智能体作为能力扩展**：通过 ExternalAgentAdapter，可进化智能体可调用任何静态智能体（内置或外部接入）作为自身能力扩展
+3. **静态智能体不持有 ForgekinBase 基类**：静态智能体继承 `StaticAgent` 或 `DeclarativeAgent`，不继承 `ForgekinBase`
+4. **可进化智能体必须实现 observe/act/verify 三方法契约**：静态智能体无此契约要求
+5. **forgemind 应用层仅承载可进化智能体**：静态智能体在 Layer 1 核心框架层，不进入 forgemind 应用层
 
 ---
 
