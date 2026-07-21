@@ -147,6 +147,13 @@ routing:
       - "web_group:test_reports"
       - "feishu_group:forgekin_council"
 
+  # 审查报告 → 梵高主导 (review report 由审查员主动发起)
+  review_report:
+    primary: "fk-vangogh"
+    channels:
+      - "web_group:code_review"
+      - "feishu_group:forgekin_council"
+
 # ===== 议事协议 =====
 protocol:
   # 五步闭环 (Discover → Plan → Act → Verify → Persist)
