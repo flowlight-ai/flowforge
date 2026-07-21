@@ -1,0 +1,140 @@
+# FlowForge Release - 自动发布到 PyPI 和 GitHub Releases
+# Triggers on version tags (v0.1.0, v1.0.0, etc.)
+# 1. Builds package
+# 2. Publishes to PyPI (via trusted publisher)
+# 3. Creates GitHub Release with auto-generated notes
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  validate-tag:
+    name: Validate Version Tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - name: Validate semver
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Tag $TAG is not a valid semver (expected vX.Y.Z or vX.Y.Z-rc.1)"
+            exit 1
+          fi
+          echo "Tag $TAG is valid"
+
+      - name: Parse version
+        id: parse
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Parsed version: $VERSION"
+
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: |
+          pip install --upgrade pip
+          pip install build
+
+      - name: Build package
+        run: python -m build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: pypi
+      url: https://pypi.org/p/flowforge
+    permissions:
+      id-token: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Uses trusted publishing (no API token needed)
+        # Configure at: https://pypi.org/manage/account/publishing/
+
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate-tag, build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: FlowForge ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          body: |
+            ## FlowForge ${{ github.ref_name }}
+
+            ### Installation
+
+            ```bash
+            pip install flowforge==${{ needs.validate-tag.outputs.version }}
+            ```
+
+            ### What's Changed
+            (Auto-generated from commits)
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/...${{ github.ref_name }}
+
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [publish-pypi, github-release]
+    if: always()
+    steps:
+      - name: Release Status
+        run: |
+          echo "Release ${{ github.ref_name }} completed"
+          echo "PyPI: ${{ needs.publish-pypi.result }}"
+          echo "GitHub Release: ${{ needs.github-release.result }}"

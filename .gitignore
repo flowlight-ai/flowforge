@@ -1,0 +1,152 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing & coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+dephell/
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# ===== IDEs =====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== Project data =====
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== Logs =====
+logs/
+*.log
+*.err
+
+# ===== Secrets =====
+.env
+.env.*
+!.env.template
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.yaml
+credentials.json
+
+# ===== Build artifacts =====
+*.whl
+*.tar.gz
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Temporary =====
+tmp/
+.tmp_*
+_*.py
+_*.ps1
+
+# ===== Internal migration documents (not for public GitHub) =====
+# These files reveal migration from legacy project — keep locally for reference
+# but exclude from public commits so GitHub users see a clean new project.
+docs/task.md
+docs/legacy-projects.md
+docs/reflection/
+docs/archive/
+docs/_archive/
+docs/design/minimal-skeleton-proposal.md
+
+# Migration notes (root-level, contains legacy project paths and references)
+MIGRATION-NOTES.md
+*.migration.md
+*.migration.*
+.migration_*
+
+# ===== FlowForge runtime working directory =====
+.work/
+
+# ===== Local forgekin runtime state (energy/mood/history snapshots) =====
+.runtime/
+.runtime_state/
+*.forgekin-state.json
+
+# ===== Local IM channel credentials (web群/飞信群 tokens) =====
+config/im_channels.local.yaml
+config/secrets.local.yaml
+*.local.yaml
+
+# ===== Local external agent credentials =====
+config/external_agents.local.yaml
+
+# ===== Local test artifacts and demo outputs =====
+demo_outputs/
+test_outputs/
+*.demo.json
+*.demo.log
+
+# ===== Backup files =====
+*.bak
+*.backup
+*.orig
+
+# ===== Editor local overrides =====
+*.code-workspace
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+

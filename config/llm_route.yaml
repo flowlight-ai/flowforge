@@ -1,0 +1,114 @@
+# FlowForge LLM routing configuration.
+#
+# The fallback chain is cross-vendor ordered so that vendor-specific outages
+# don't take down the entire system. Production deployments should override
+# the api_key values via environment variables (FLOWFORGE_LLM_ROUTE_*).
+
+version: "0.1.0"
+
+# Active providers — set to true to enable
+providers:
+  openroute:
+    enabled: true
+    base_url: "http://localhost:13000"  # override via FLOWFORGE_LLM_ROUTE_OPENROUTE_BASE_URL
+    api_key: ""                          # override via FLOWFORGE_LLM_ROUTE_OPENROUTE_API_KEY
+    kind: "openroute"
+
+  direct_anthropic:
+    enabled: false
+    base_url: "https://api.anthropic.com"
+    api_key: ""
+    kind: "direct"
+    vendor: "anthropic"
+
+  direct_openai:
+    enabled: false
+    base_url: "https://api.openai.com"
+    api_key: ""
+    kind: "direct"
+    vendor: "openai"
+
+  direct_zhipu:
+    enabled: false
+    base_url: "https://open.bigmodel.cn/api/paas/v4"
+    api_key: ""
+    kind: "direct"
+    vendor: "zhipu"
+
+  webchat_doubao:
+    enabled: false
+    kind: "webchat"
+    vendor: "doubao"
+
+  webchat_kimi:
+    enabled: false
+    kind: "webchat"
+    vendor: "kimi"
+
+# Fallback chains per role — cross-vendor ordered
+# (eval/designate models from different vendors to prevent vendor-wide outages)
+fallback_chains:
+  content_create:
+    - model: "DeepSeek-V4-Pro"
+      provider: "openroute"
+      priority: 0
+    - model: "Qwen3.6-Plus"
+      provider: "direct_zhipu"
+      priority: 1
+    - model: "HunYuan3"
+      provider: "direct_tencent"
+      priority: 2
+
+  judge:
+    - model: "Qwen3.6-Plus"
+      provider: "direct_zhipu"
+      priority: 0
+    - model: "Kimi-K2.6"
+      provider: "direct_moonshot"
+      priority: 1
+    - model: "HunYuan3"
+      provider: "direct_tencent"
+      priority: 2
+
+  review:
+    - model: "Kimi-K2.6"
+      provider: "direct_moonshot"
+      priority: 0
+    - model: "Qwen3.6-Plus"
+      provider: "direct_zhipu"
+      priority: 1
+    - model: "GLM-5.1"
+      provider: "direct_zhipu"
+      priority: 2
+
+  t7_audit:
+    - model: "Qwen3.6-Plus"
+      provider: "direct_zhipu"
+      priority: 0
+    - model: "Kimi-K2.6"
+      provider: "direct_moonshot"
+      priority: 1
+    - model: "HunYuan3"
+      provider: "direct_tencent"
+      priority: 2
+
+# Caller preferences
+prefer_api: true  # API providers preferred over webchat for content_create/judge/review
+
+# Silent-failure patterns — HTTP 200 with disguised error text
+silent_failure_patterns:
+  - "当前不可用，请稍后重试"
+  - "当前不可用,请稍后重试"
+  - "当前不可用，请稍后"
+  - "当前不可用,请稍后"
+  - "model disabled"
+  - "all_backends_failed"
+
+# Refusal patterns — trigger fallback to next provider
+refusal_patterns:
+  - "无法回答"
+  - "无法回答这个问题"
+  - "我暂时无法回答"
+  - "我不能回答"
+  - "我无法提供"
+  - "我无法完成"

@@ -1,0 +1,153 @@
+# Label Definitions for FlowForge
+# Used by crazy-max/ghaction-github-labeler to sync labels
+# https://github.com/crazy-max/ghaction-github-labeler
+
+# Type labels
+- name: "type: bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "type: enhancement"
+  color: "a2eeef"
+  description: "New feature or improvement"
+
+- name: "type: documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "type: question"
+  color: "d876e3"
+  description: "Further information is requested"
+
+- name: "type: security"
+  color: "b60205"
+  description: "Security related issue"
+
+- name: "type: performance"
+  color: "fbca04"
+  description: "Performance related issue"
+
+- name: "type: refactor"
+  color: "1d76db"
+  description: "Code refactoring"
+
+- name: "type: test"
+  color: "0e8a16"
+  description: "Test improvements"
+
+- name: "type: chore"
+  color: "c5def5"
+  description: "Maintenance, dependencies, CI/CD"
+
+# Module labels
+- name: "module: evolution"
+  color: "5319e7"
+  description: "Self-evolution engine"
+
+- name: "module: loop"
+  color: "5319e7"
+  description: "Loop executor"
+
+- name: "module: core"
+  color: "5319e7"
+  description: "Core shared kernel (DI, plugin, tracing)"
+
+- name: "module: compiler"
+  color: "5319e7"
+  description: "YAML workflow compiler"
+
+- name: "module: tools"
+  color: "5319e7"
+  description: "Tools (RAG, publish, web search)"
+
+- name: "module: agents"
+  color: "5319e7"
+  description: "Agent implementations"
+
+- name: "module: modes"
+  color: "5319e7"
+  description: "Execution modes (react, plan_execute, reflexion)"
+
+- name: "module: config"
+  color: "5319e7"
+  description: "Configuration files"
+
+# Priority labels
+- name: "priority: critical"
+  color: "b60205"
+  description: "Critical priority — fix immediately"
+
+- name: "priority: high"
+  color: "d93f0b"
+  description: "High priority"
+
+- name: "priority: medium"
+  color: "fbca04"
+  description: "Medium priority"
+
+- name: "priority: low"
+  color: "0e8a16"
+  description: "Low priority"
+
+# Status labels
+- name: "status: blocked"
+  color: "b60205"
+  description: "Blocked by external dependency or decision"
+
+- name: "status: needs-info"
+  color: "fbca04"
+  description: "Needs more information from reporter"
+
+- name: "status: in-progress"
+  color: "0e8a16"
+  description: "Currently being worked on"
+
+- name: "status: needs-review"
+  color: "fbca04"
+  description: "Needs code review"
+
+- name: "status: needs-testing"
+  color: "fbca04"
+  description: "Needs testing"
+
+- name: "status: wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "status: duplicate"
+  color: "cfd3d7"
+  description: "Duplicate of another issue"
+
+# Community labels
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "stale"
+  color: "eeeeee"
+  description: "No activity for 30 days"
+
+# Misc labels
+- name: "breaking-change"
+  color: "b60205"
+  description: "Breaking change — requires major version bump"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Dependency updates"
+
+- name: "github-actions"
+  color: "0366d6"
+  description: "GitHub Actions related"
+
+- name: "python"
+  color: "0366d6"
+  description: "Python code changes"
+
+- name: "docker"
+  color: "0366d6"
+  description: "Docker related"

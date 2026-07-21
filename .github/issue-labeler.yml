@@ -1,0 +1,31 @@
+# Issue Labeler Configuration
+# https://github.com/github/issue-labeler
+# Labels issues based on title and body regex patterns
+
+# Format: "label": ["regex1", "regex2"]
+
+bug:
+  - "(?i)(bug|crash|error|fail|broken|issue|problem|wrong|unexpected)"
+  - "(?i)(traceback|exception|stack trace|segfault)"
+
+enhancement:
+  - "(?i)(feature|enhance|improve|add|support|ability)"
+  - "(?i)(would be nice|request|proposal|idea)"
+
+documentation:
+  - "(?i)(doc|documentation|readme|typo|spelling|grammar)"
+
+question:
+  - "(?i)(how (do|to|can)|what (is|does)|where (is|can)|why|help|question|understand)"
+
+security:
+  - "(?i)(security|vulnerability|cve|exploit|xss|injection|csrf)"
+
+performance:
+  - "(?i)(slow|performance|speed|latency|memory|cpu|optimization|bottleneck)"
+
+good first issue:
+  - "(?i)(beginner|starter|easy|simple|first|newcomer|入门|新手|简单)"
+
+help wanted:
+  - "(?i)(help wanted|need help|assistance|contributor needed|需要帮助)"

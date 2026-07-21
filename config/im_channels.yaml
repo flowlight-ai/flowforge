@@ -1,0 +1,185 @@
+# IM Channels — web群 + 飞信群 议事通道配置
+# 5 灵智体 (文心/夏洛克/梵高/达芬奇/鲁班) 通过此通道协作完成自我开发任务.
+# 参考架构: clowder-ai connect-feishu.yaml + connect-wechat.yaml.
+
+version: "0.1.0"
+
+# ===== Web 群 (内置 WebChat 议事通道) =====
+web_group:
+  enabled: true
+  base_url: "http://localhost:8000/webchat"
+  auth:
+    type: "bearer"
+    token_env: "FLOWFORGE_WEBCHAT_TOKEN"  # 从环境变量读取，不硬编码
+  channels:
+    forgekin_council:
+      description: "灵智体议事大厅 — 5 灵智体协作主通道"
+      subscribers:
+        - "fk-wenxin"
+        - "fk-sherlock"
+        - "fk-vangogh"
+        - "fk-davinci"
+        - "fk-luban"
+      message_retention_hours: 168  # 7 天
+      push_back_enabled: true  # I11 push back 协议
+      council_quorum: 2  # 最少 2 人评审 (council.min_reviewers)
+
+    doc_review:
+      description: "文档审核通道 — 文心主审，梵高/达芬奇会审"
+      subscribers:
+        - "fk-wenxin"
+        - "fk-vangogh"
+        - "fk-davinci"
+      message_retention_hours: 72
+
+    code_review:
+      description: "代码审核通道 — 梵高主审，达芬奇会审"
+      subscribers:
+        - "fk-vangogh"
+        - "fk-davinci"
+      message_retention_hours: 72
+
+    test_reports:
+      description: "测试报告通道 — 达芬奇主导"
+      subscribers:
+        - "fk-davinci"
+        - "fk-sherlock"
+      message_retention_hours: 168
+
+    framework_changes:
+      description: "框架变更通道 — 鲁班主导，需 operator 批准 (I8)"
+      subscribers:
+        - "fk-luban"
+        - "fk-vangogh"
+      message_retention_hours: 720  # 30 天
+      require_operator_approval: true
+
+# ===== 飞信群 (Feishu 群) =====
+# 通过 Feishu OpenAPI v2 接入，参考 clowder-ai connect-feishu.yaml.
+feishu_group:
+  enabled: true
+  base_url: "https://open.feishu.cn/open-apis"
+  auth:
+    type: "app"
+    app_id_env: "FEISHU_APP_ID"        # 从环境变量读取
+    app_secret_env: "FEISHU_APP_SECRET"
+    chat_id_env: "FEISHU_CHAT_ID"      # 灵智体议事群 chat_id
+  channels:
+    forgekin_council:
+      description: "飞信灵智体议事群 — 与 web_group:forgekin_council 双向镜像"
+      mirror_of: "web_group:forgekin_council"
+      subscribers:
+        - "fk-wenxin"
+        - "fk-sherlock"
+        - "fk-vangogh"
+        - "fk-davinci"
+        - "fk-luban"
+      # 飞信群消息格式: card 模式 (rich text)
+      message_format: "interactive_card"
+      # 每条消息带 trace_id (规范要求)
+      include_trace_id: true
+      push_back_enabled: true
+      # 飞信群 @ 提及路由 (F004 At-Mention Router)
+      at_mention_routing:
+        enabled: true
+        patterns:
+          - "@文心": "fk-wenxin"
+          - "@夏洛克": "fk-sherlock"
+          - "@梵高": "fk-vangogh"
+          - "@达芬奇": "fk-davinci"
+          - "@鲁班": "fk-luban"
+          - "@operator": "human_operator"
+
+    framework_changes:
+      description: "飞信框架变更通知群 — operator 必须在此群批准 (I8)"
+      mirror_of: "web_group:framework_changes"
+      subscribers:
+        - "fk-luban"
+        - "fk-vangogh"
+      message_format: "interactive_card"
+      require_operator_approval: true
+      # I8 批准按钮 — 飞信卡片按钮回调
+      approval_buttons:
+        - label: "批准 (Approve)"
+          action: "approve"
+          callback_url_env: "FEISHU_APPROVAL_CALLBACK_URL"
+        - label: "拒绝 (Reject)"
+          action: "reject"
+          callback_url_env: "FEISHU_APPROVAL_CALLBACK_URL"
+
+# ===== 路由规则 =====
+routing:
+  # 文档变更 → 文心主导，梵高/达芬奇会审
+  doc_change:
+    primary: "fk-wenxin"
+    reviewers:
+      - "fk-vangogh"
+      - "fk-davinci"
+    channels:
+      - "web_group:doc_review"
+      - "feishu_group:forgekin_council"
+
+  # 代码变更 → 夏洛克实现，梵高审查，达芬奇测试
+  code_change:
+    primary: "fk-sherlock"
+    reviewers:
+      - "fk-vangogh"
+    testers:
+      - "fk-davinci"
+    channels:
+      - "web_group:code_review"
+      - "feishu_group:forgekin_council"
+
+  # 框架变更 → 鲁班主导，必须 operator 批准 (I8)
+  framework_change:
+    primary: "fk-luban"
+    reviewers:
+      - "fk-vangogh"
+    requires_operator_approval: true  # I8 invariant
+    channels:
+      - "web_group:framework_changes"
+      - "feishu_group:framework_changes"
+
+  # 测试报告 → 达芬奇主导
+  test_report:
+    primary: "fk-davinci"
+    channels:
+      - "web_group:test_reports"
+      - "feishu_group:forgekin_council"
+
+# ===== 议事协议 =====
+protocol:
+  # 五步闭环 (Discover → Plan → Act → Verify → Persist)
+  five_step_loop: true
+
+  # I9 no-self-review: 审查员必须与 author 不同 vendor
+  no_self_review: true
+  vendor_distinct_required: true
+
+  # I11 push back 协议
+  push_back:
+    enabled: true
+    max_rounds: 3  # 最多 3 轮 push back
+    escalate_after: 3  # 3 轮后升级到 operator
+
+  # 议事超时 (P31 — Loop 流程 3 分钟内完成)
+  council_timeout_seconds: 180
+  individual_review_timeout_seconds: 30
+
+  # 质量阈值 (P33 — 默认 0.85)
+  quality_threshold: 0.85
+
+# ===== Trae CN 桥接配置 =====
+# 5 灵智体通过 TraeLLMClient 桥接 Trae CN IDE 执行实际任务.
+trae_bridge:
+  enabled: true
+  protocol: "stdio"  # or "http"
+  # TraeLLMClient 实例注入所有 5 个 forgekin
+  inject_to:
+    - "fk-wenxin"
+    - "fk-sherlock"
+    - "fk-vangogh"
+    - "fk-davinci"
+    - "fk-luban"
+  # I8 框架变更批准回调
+  approval_callback: "operator_approval"
