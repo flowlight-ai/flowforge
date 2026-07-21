@@ -138,6 +138,9 @@ demo_outputs/
 test_outputs/
 *.demo.json
 *.demo.log
+pytest_clean.txt
+pytest_*.txt
+*.pytest_cache
 
 # ===== Backup files =====
 *.bak

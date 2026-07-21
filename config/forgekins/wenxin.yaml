@@ -28,7 +28,7 @@ capabilities:
     proficiency: 0.88
     evidence:
       - "Front-matter validation + heading hierarchy + link liveness checks"
-      - "Identified 3 养灵→育灵 colloquial name violations"
+      - "Identified 3 colloquial-term violations and replaced with professional AI terminology"
     last_assessed_at: "2026-07-21T00:00:00Z"
   - name: "code_reading"
     proficiency: 0.75

@@ -1,6 +1,6 @@
 # IM Channels — web群 + 飞信群 议事通道配置
 # 5 灵智体 (文心/夏洛克/梵高/达芬奇/鲁班) 通过此通道协作完成自我开发任务.
-# 参考架构: clowder-ai connect-feishu.yaml + connect-wechat.yaml.
+# Design inspired by industry-standard multi-agent IM patterns (Feishu bot + WebChat mirror).
 
 version: "0.1.0"
 
@@ -55,7 +55,7 @@ web_group:
       require_operator_approval: true
 
 # ===== 飞信群 (Feishu 群) =====
-# 通过 Feishu OpenAPI v2 接入，参考 clowder-ai connect-feishu.yaml.
+# 通过 Feishu OpenAPI v2 接入 (industry-standard Feishu bot integration pattern).
 feishu_group:
   enabled: true
   base_url: "https://open.feishu.cn/open-apis"
