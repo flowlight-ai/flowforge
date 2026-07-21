@@ -1,0 +1,391 @@
+/* FlowForge Forgekin Council Chat — UI styles
+ * Inspired by clowder-ai's chat design: message bubbles, avatar strip,
+ * sidebar with online forgekins, @mention dropdown.
+ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #0f1117;
+  --bg-secondary: #1a1d27;
+  --bg-tertiary: #252836;
+  --bg-input: #2a2e3e;
+  --text-primary: #e4e6eb;
+  --text-secondary: #a0a3b1;
+  --text-muted: #6b6f80;
+  --accent: #7c5cff;
+  --accent-hover: #6b4dff;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --border: #2a2e3e;
+  --bubble-forgekin: #1f2937;
+  --bubble-operator: #3b3580;
+  --shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.app-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+.app-header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.app-header h1 .subtitle {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 13px;
+  margin-left: 8px;
+}
+.app-header .header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.app-header .status-badge {
+  font-size: 12px;
+  color: var(--success);
+  padding: 4px 10px;
+  background: rgba(74, 222, 128, 0.1);
+  border-radius: 12px;
+}
+
+/* Layout */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.council-sidebar {
+  width: 280px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+}
+.council-sidebar h2 {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+.forgekin-card {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+.forgekin-card:hover {
+  background: var(--bg-input);
+  border-color: var(--accent);
+}
+.forgekin-card .avatar {
+  font-size: 28px;
+  margin-right: 12px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-input);
+  border-radius: 50%;
+}
+.forgekin-card .info {
+  flex: 1;
+  min-width: 0;
+}
+.forgekin-card .name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.forgekin-card .meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.forgekin-card .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  margin-left: auto;
+}
+.forgekin-card .approval-badge {
+  background: var(--warning);
+  color: #000;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+}
+
+/* Chat area */
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message-bubble {
+  max-width: 75%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  position: relative;
+  word-wrap: break-word;
+  animation: fadeIn 0.2s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.message-bubble.forgekin {
+  background: var(--bubble-forgekin);
+  align-self: flex-start;
+  border-top-left-radius: 4px;
+}
+.message-bubble.operator {
+  background: var(--bubble-operator);
+  color: #fff;
+  align-self: flex-end;
+  border-top-right-radius: 4px;
+}
+.message-bubble .author {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.message-bubble.operator .author {
+  color: #c8c1ff;
+}
+.message-bubble .author .avatar {
+  font-size: 16px;
+}
+.message-bubble .content {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.message-bubble .timestamp {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  text-align: right;
+}
+.message-bubble .trace-id {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: monospace;
+  margin-top: 2px;
+}
+
+/* Mentions in content */
+.message-bubble .content .mention {
+  color: var(--accent);
+  font-weight: 600;
+  background: rgba(124, 92, 255, 0.15);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Input area */
+.chat-input-area {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding: 16px 20px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.chat-input-area textarea#message-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  min-height: 44px;
+  max-height: 120px;
+  transition: border-color 0.15s;
+}
+.chat-input-area textarea#message-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.chat-input-area button#send-button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.chat-input-area button#send-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.chat-input-area button#send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mention dropdown */
+.mention-dropdown {
+  position: absolute;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+}
+.mention-dropdown.visible {
+  display: block;
+}
+.mention-dropdown .mention-item {
+  padding: 8px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.mention-dropdown .mention-item:hover {
+  background: var(--bg-input);
+}
+
+/* Verify buttons */
+.verify-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 20px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.verify-bar button {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.verify-bar button:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+.verify-bar .verify-result {
+  color: var(--text-muted);
+  margin-left: 8px;
+  font-family: monospace;
+}
+.verify-bar .verify-result.pass {
+  color: var(--success);
+}
+.verify-bar .verify-result.fail {
+  color: var(--danger);
+}
+
+/* Scrollbar */
+.chat-messages::-webkit-scrollbar,
+.council-sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+.chat-messages::-webkit-scrollbar-track,
+.council-sidebar::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+.chat-messages::-webkit-scrollbar-thumb,
+.council-sidebar::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover,
+.council-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-input);
+}
+
+/* Typing indicator */
+.typing-indicator {
+  align-self: flex-start;
+  background: var(--bubble-forgekin);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border-top-left-radius: 4px;
+  display: none;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.typing-indicator.visible {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.typing-indicator .dots {
+  display: inline-flex;
+  gap: 3px;
+}
+.typing-indicator .dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: bounce 1.2s infinite;
+}
+.typing-indicator .dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator .dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
