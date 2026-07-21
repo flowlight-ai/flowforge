@@ -1,15 +1,14 @@
-# D037: 灵智体市场详细设计
+# D037: Forgekin市场详细设计
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.13]（FR-CORE-013）
 > **对应 arch.md**: [doc:../arch.md#§3.13]
 > **对应 design.md**: [doc:../design.md#§3.13]
 > **对应 Feature**: [doc:../features/F037-forgemind-marketplace.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A037-forgemind-marketplace.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/005-forgemind-application-layer.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,13 +16,13 @@
 
 ### 1.1 设计问题
 
-本详细设计在 A037 架构设计基础上，深入到代码层落地灵智体市场（Forgekin Marketplace）系统，需解决以下工程问题：
+本详细设计在 A037 架构设计基础上，深入到代码层落地Forgekin市场（Forgekin Marketplace）系统，需解决以下工程问题：
 
 - **上架契约工程化**：MarketplaceListing 必须包含 seller / species / capability_summary / layer / evolution_stage / awakening_stage / soul_imprint_hash / listing_artifact_ref 八大字段，缺字段拒绝上架。Wilson 下界摘要如何自动从 F001 CapabilityProfile 生成?
-- **克隆保留血缘实现**：订阅时如何深拷贝灵智体并保留父灵印血缘? 克隆体如何生成新灵印（Soul Imprint）? 父灵印如何写入克隆体血缘字段?
-- **交易转移所有权**：交易时灵印如何随之转移（原 operator 失去控制权）? 原 operator 保留什么交易记录? 哈希校验如何防篡改?
-- **OpenSieve 三入口融合检索**：全文（ES BM25）+ 语义（Milvus 向量）+ 图谱（按 species/layer/domain 索引）三入口如何通过 RRF 融合?
-- **觉醒阶上架门控**：E4+ Evolving 状态灵智体不可上架，如何在校验链中拦截?
+- **克隆保留血缘实现**：订阅时如何深拷贝Forgekin并保留父SoulImprint血缘? 克隆体如何生成新SoulImprint（Soul Imprint）? 父SoulImprint如何写入克隆体血缘字段?
+- **交易转移所有权**：交易时SoulImprint如何随之转移（原 operator 失去控制权）? 原 operator 保留什么交易记录? 哈希校验如何防篡改?
+- **可插拔数据源适配器三入口融合检索**：全文（ES BM25）+ 语义（Milvus 向量）+ 图谱（按 species/layer/domain 索引）三入口如何通过 RRF 融合?
+- **觉醒阶上架门控**：E4+ Evolving 状态Forgekin不可上架，如何在校验链中拦截?
 
 ### 1.2 设计约束
 
@@ -31,10 +30,9 @@
 - **DI 容器**：MarketplaceRegistry / ForgekinCloner / OwnershipTransferor / MarketplaceSearcher / SoulImprintHasher 必须由 DI 容器注入
 - **Repository 层**：所有上架 / 订阅 / 交易记录必须经 MarketplaceRepository 抽象，禁止直接操作数据库
 - **配置驱动**：listing / subscription / trade / search 规则必须外置 YAML（`flowforge/forgemind/config/marketplace.yaml`）
-- **灵印不可变**：上架时 `SoulImprintHasher.compute_hash(soul_imprint)` 写入 listing，交易 / 订阅时 `verify_hash()` 校验，不一致拒绝
-- **OpenSieve 统一入口**：检索必须走 OpenSieve 客户端，禁止市场自建检索引擎
-- **觉醒阶上限**：`listing.awakening_stage` ≤ E3，E4+ 灵智体上架被拒绝
-- **9 大点名称修订**：代码层使用 Forgekin / MarketplaceListing / SoulImprint；文档层使用"灵智体 / 灵智体市场 / 灵印"
+- **SoulImprint不可变**：上架时 `SoulImprintHasher.compute_hash(soul_imprint)` 写入 listing，交易 / 订阅时 `verify_hash` 校验，不一致拒绝
+- **可插拔数据源适配器统一入口**：检索必须通过 Repository 层抽象调用可插拔数据源适配器，禁止市场自建检索引擎
+- **觉醒阶上限**：`listing.awakening_stage` ≤ E3，E4+ Forgekin上架被拒绝
 
 ### 1.3 设计影响
 
@@ -42,8 +40,8 @@
 - **修改 F001 CapabilityProfile**：新增 `generate_summary(wilson_lower_bound=True)` 接口
 - **修改 F038 LineageStore**：新增 CLONED / TRADED 谱系边写入入口
 - **影响 F036 ForgeRelationship**：MarketplaceListing 新增 `layer: ForgeLayer` 字段，市场查询支持按层过滤
-- **影响 OpenSieve 客户端**：市场作为消费方，通过 OpenSieve SDK 调用三入口 + RRF 融合
-- **影响 F028 ForgePipeline**：流水线产出的灵智体可作为市场上架源（通过 `pipeline.output.listing_artifact_ref`）
+- **影响可插拔数据源适配器**：市场作为消费方，通过 Repository 层抽象调用可插拔数据源适配器三入口 + RRF 融合
+- **影响 F028 ForgePipeline**：流水线产出的Forgekin可作为市场上架源（通过 `pipeline.output.listing_artifact_ref`）
 
 ---
 
@@ -103,8 +101,8 @@
                      │
        ┌──────────────────────────────────────────────────────────────┐
        │ <<abstract>> MarketplaceSearcher (searcher.py)                │
-       │ + search_by_keyword(query) → OpenSieve 全文                   │
-       │ + search_by_capability(query) → OpenSieve 语义                │
+       │ + search_by_keyword(query) → 可插拔适配器全文                 │
+       │ + search_by_capability(query) → 可插拔适配器语义              │
        │ + search_by_filter(species, layer, stage) → 图谱              │
        │ + search_federated(query) → RRF 融合                          │
        └──────────────────────────────────────────────────────────────┘
@@ -145,7 +143,7 @@ class MarketplaceListing(BaseModel):
     listing_type: str = Field(description="share | subscribe | trade")
     price_tokens: Optional[int] = None
     soul_imprint_hash: str = Field(
-        description="灵印哈希（SHA-256，防篡改锚点）"
+        description="SoulImprint哈希（SHA-256，防篡改锚点）"
     )
     listing_artifact_ref: str = Field(
         description="上架产物包引用（YAML 配置 + 能力快照）"
@@ -162,10 +160,10 @@ class MarketplaceSubscription(BaseModel):
     subscribed_at: datetime = Field(default_factory=datetime.utcnow)
     cloned_forgekin_id: str
     parent_soul_imprint: str = Field(
-        description="原灵智体的灵印（父灵印）"
+        description="原Forgekin的SoulImprint（父SoulImprint）"
     )
     new_soul_imprint: str = Field(
-        description="克隆体生成的新灵印"
+        description="克隆体生成的新SoulImprint"
     )
     lineage_edge_id: str = Field(description="F038 谱系边 ID（CLONED）")
 
@@ -179,7 +177,7 @@ class MarketplaceTrade(BaseModel):
     price_tokens: int
     traded_at: datetime = Field(default_factory=datetime.utcnow)
     soul_imprint_transferred: str = Field(
-        description="灵印转移记录（原 operator → 新 operator）"
+        description="SoulImprint转移记录（原 operator → 新 operator）"
     )
     lineage_edge_id: str = Field(description="F038 谱系边 ID（TRADED）")
 
@@ -223,12 +221,12 @@ class MarketplaceRegistry(ABC):
         self,
         listing: MarketplaceListing,
     ) -> str:
-        """上架灵智体
+        """上架Forgekin
 
         前置条件:
         - awakening_stage <= E3（E4+ Evolving 不可上架）
         - evolution_stage >= E2（最低萌芽阶·稳）
-        - soul_imprint_hash 已计算且与当前灵印一致
+        - soul_imprint_hash 已计算且与当前SoulImprint一致
         - capability_summary 已由 F001 生成（Wilson 下界）
         - listing_artifact_ref 指向有效的 YAML 产物包
         - 同一 forgekin_id 无在售 listing
@@ -242,7 +240,7 @@ class MarketplaceRegistry(ABC):
         self,
         query: MarketplaceQuery,
     ) -> list[MarketplaceListing]:
-        """搜索上架条目（接入 OpenSieve 三入口 + RRF 融合）"""
+        """搜索上架条目（通过 Repository 层抽象调用可插拔数据源适配器三入口 + RRF 融合）"""
         ...
 
     @abstractmethod
@@ -305,7 +303,7 @@ class CloneError(Exception):
 
 
 class ForgekinCloner(ABC):
-    """灵智体克隆器（订阅时克隆保留血缘）"""
+    """Forgekin克隆器（订阅时克隆保留血缘）"""
 
     @abstractmethod
     async def clone_for_subscriber(
@@ -313,12 +311,12 @@ class ForgekinCloner(ABC):
         source_forgekin_id: str,
         subscriber_operator_id: str,
     ) -> str:
-        """克隆灵智体
+        """克隆Forgekin
 
         步骤:
         1. 读取 source_forgekin 的完整 CapabilityProfile + 配置
         2. 深拷贝到 subscriber_operator_id 的命名空间
-        3. 生成新灵印 new_soul_imprint = SoulImprintGenerator.generate(
+        3. 生成新SoulImprint new_soul_imprint = SoulImprintGenerator.generate(
               parent=source.soul_imprint, species=source.species)
         4. 写入克隆体血缘字段 parent_soul_imprint = source.soul_imprint
         5. 写入 F038 谱系边（relation=CLONED,
@@ -330,7 +328,7 @@ class ForgekinCloner(ABC):
 
 
 class OwnershipTransferor(ABC):
-    """所有权转移器（交易时转移灵印）"""
+    """所有权转移器（交易时转移SoulImprint）"""
 
     @abstractmethod
     async def transfer_ownership(
@@ -338,7 +336,7 @@ class OwnershipTransferor(ABC):
         forgekin_id: str,
         new_operator_id: str,
     ) -> str:
-        """转移灵印所有权
+        """转移SoulImprint所有权
 
         步骤:
         1. 校验 forgekin_id 当前 operator 拥有所有权
@@ -360,11 +358,11 @@ import hashlib
 
 
 class SoulImprintHasher(ABC):
-    """灵印哈希校验器（防篡改锚点）"""
+    """SoulImprint哈希校验器（防篡改锚点）"""
 
     @abstractmethod
     async def compute_hash(self, soul_imprint: str) -> str:
-        """计算灵印 SHA-256 哈希"""
+        """计算SoulImprint SHA-256 哈希"""
         ...
 
     @abstractmethod
@@ -373,7 +371,7 @@ class SoulImprintHasher(ABC):
         soul_imprint: str,
         expected_hash: str,
     ) -> bool:
-        """校验灵印哈希一致性"""
+        """校验SoulImprint哈希一致性"""
         ...
 
 
@@ -381,7 +379,7 @@ class SoulImprintHasherImpl(SoulImprintHasher):
     """默认实现：SHA-256"""
 
     async def compute_hash(self, soul_imprint: str) -> str:
-        return hashlib.sha256(soul_imprint.encode("utf-8")).hexdigest()
+        return hashlib.sha256(soul_imprint.encode("utf-8")).hexdigest
 
     async def verify_hash(
         self,
@@ -456,7 +454,7 @@ from .models import MarketplaceListing, MarketplaceQuery
 
 
 class MarketplaceSearcher(ABC):
-    """市场检索器（接入 OpenSieve 三入口）"""
+    """市场检索器（通过 Repository 层抽象调用可插拔数据源适配器三入口）"""
 
     @abstractmethod
     async def search_by_keyword(
@@ -464,7 +462,7 @@ class MarketplaceSearcher(ABC):
         keyword: str,
         top_k: int = 20,
     ) -> list[MarketplaceListing]:
-        """全文关键词检索（OpenSieve ES BM25）
+        """全文关键词检索（通过可插拔适配器调用 ES BM25）
 
         索引字段: title / description / capability_summary.strengths
         """
@@ -476,7 +474,7 @@ class MarketplaceSearcher(ABC):
         capability_query: str,
         top_k: int = 20,
     ) -> list[MarketplaceListing]:
-        """语义向量检索（OpenSieve Milvus）
+        """语义向量检索（通过可插拔适配器调用 Milvus）
 
         向量来源: capability_summary 的 embedding
         """
@@ -606,19 +604,19 @@ class MarketplaceRepository(ABC):
 2. // 校验进化阶下限（E2+）
    IF _stage_rank(listing.evolution_stage) < 2:
       raise ListingValidationError("evolution_stage < E2 not allowed")
-3. // 校验灵印哈希一致性
+3. // 校验SoulImprint哈希一致性
    forgekin ← forgekin_repo.get(listing.seller_forgekin_id)
    IF NOT await soul_imprint_hasher.verify_hash(
           forgekin.soul_imprint, listing.soul_imprint_hash):
       raise ListingValidationError("soul_imprint_hash mismatch (tamper suspected)")
-4. // 校验同一灵智体无在售 listing
+4. // 校验同一Forgekin无在售 listing
    existing ← repository.query_listings(
        MarketplaceQuery(species=None, layer=None, ...))
    FOR l IN existing:
        IF l.seller_forgekin_id == listing.seller_forgekin_id
           AND l.delisted_at IS None:
           raise ListingValidationError("forgekin already listed")
-5. listing.created_at ← now()
+5. listing.created_at ← now
 6. await repository.save_listing(listing)
 7. event_bus.publish(ListingCreatedEvent(listing_id=listing.listing_id))
 8. RETURN listing.listing_id
@@ -642,12 +640,12 @@ class MarketplaceRepository(ABC):
        source_forgekin_id=listing.seller_forgekin_id,
        subscriber_operator_id=subscriber_operator_id)
    // cloner 内部已:
-   //   - 生成新灵印 new_soul_imprint
+   //   - 生成新SoulImprint new_soul_imprint
    //   - 写入克隆体 parent_soul_imprint
    //   - 调用 F038 LineageStore.add_edge(CLONED)
 5. cloned ← forgekin_repo.get(cloned_forgekin_id)
 6. subscription ← MarketplaceSubscription(
-       subscription_id=uuid4(),
+       subscription_id=uuid4,
        listing_id=listing_id,
        subscriber_operator_id=subscriber_operator_id,
        cloned_forgekin_id=cloned_forgekin_id,
@@ -680,7 +678,7 @@ class MarketplaceRepository(ABC):
        FOR rank, listing IN enumerate(results, start=1):
            rrf_scores[listing.listing_id] += 1.0 / (60 + rank)
 3. // 取 top_k
-   sorted_ids ← sorted(rrf_scores.keys(),
+   sorted_ids ← sorted(rrf_scores.keys,
                         key=lambda i: rrf_scores[i], reverse=True)[:top_k]
 4. listings ← await repository.get_listings_batch(sorted_ids)
 5. // 觉醒阶门控（仅返回 E3 及以下）
@@ -770,7 +768,7 @@ class MarketplaceRegistryImpl(MarketplaceRegistry):
                 "soul_imprint_hash mismatch (tamper suspected)"
             )
 
-        # 同一灵智体无在售
+        # 同一Forgekin无在售
         existing = await self._repo.list_listings_by_seller(
             listing.seller_operator_id
         )
@@ -841,7 +839,7 @@ class MarketplaceRegistryImpl(MarketplaceRegistry):
 
         import uuid
         subscription = MarketplaceSubscription(
-            subscription_id=str(uuid.uuid4()),
+            subscription_id=str(uuid.uuid4),
             listing_id=listing_id,
             subscriber_operator_id=subscriber_operator_id,
             cloned_forgekin_id=cloned_id,
@@ -882,7 +880,7 @@ class MarketplaceRegistryImpl(MarketplaceRegistry):
 
         import uuid
         trade = MarketplaceTrade(
-            trade_id=str(uuid.uuid4()),
+            trade_id=str(uuid.uuid4),
             listing_id=listing_id,
             buyer_operator_id=buyer_operator_id,
             seller_operator_id=listing.seller_operator_id,
@@ -938,10 +936,10 @@ operator B  MarketplaceRegistry   ForgekinCloner   F038 LineageStore   F028 Forg
 |---------|---------|---------|
 | `ListingValidationError` | 觉醒阶 > E3 / 进化阶 < E2 / 哈希不匹配 / 已在售 / listing_type 不匹配 | 返回 422，附详细错误字段 |
 | `ListingNotFoundError` | listing_id 不存在 / 已下架 | 返回 404 |
-| `SoulImprintTamperError` | 灵印哈希校验失败 | 返回 403，记录安全审计日志（疑似篡改） |
-| `CloneError` | 克隆过程中 F028 ForgekinRepo 写入失败 | 回滚已生成的新灵印，订阅失败 |
-| `OwnershipTransferError` | 灵印所有权转移失败 / F038 谱系边写入失败 | 交易回滚，原 operator 保留控制权 |
-| `OpenSieveUnavailableError` | OpenSieve 服务不可用 | 检索降级为仅图谱过滤（filter-only），返回 503 提示"语义检索暂不可用" |
+| `SoulImprintTamperError` | SoulImprint哈希校验失败 | 返回 403，记录安全审计日志（疑似篡改） |
+| `CloneError` | 克隆过程中 F028 ForgekinRepo 写入失败 | 回滚已生成的新SoulImprint，订阅失败 |
+| `OwnershipTransferError` | SoulImprint所有权转移失败 / F038 谱系边写入失败 | 交易回滚，原 operator 保留控制权 |
+| `AdapterUnavailableError` | 可插拔数据源适配器服务不可用 | 检索降级为仅图谱过滤（filter-only），返回 503 提示"语义检索暂不可用" |
 | `RepositoryTimeoutError` | 持久层超时 | 重试 3 次后返回 503 |
 | `StageRankError` | awakening_stage / evolution_stage 字段值不在 E1-E6 范围 | 返回 422 |
 
@@ -954,17 +952,17 @@ operator B  MarketplaceRegistry   ForgekinCloner   F038 LineageStore   F028 Forg
 | 性能指标 | SLO | 优化手段 |
 |---------|:----:|---------|
 | `list_item` 延迟 | P95 < 300ms | 哈希计算 SHA-256 微秒级；Repository 单表 INSERT |
-| `search` 延迟 | P95 < 500ms | OpenSieve 三入口并发（asyncio.gather）；RRF 融合 O(n) |
+| `search` 延迟 | P95 < 500ms | 可插拔数据源适配器三入口并发（asyncio.gather）；RRF 融合 O(n) |
 | `subscribe` 延迟 | P95 < 1s | 克隆涉及深拷贝 + 谱系写入，建议拆分为异步任务 |
 | `trade` 延迟 | P95 < 500ms | 转移所有权仅更新 operator_id + 谱系边 |
 | 上架条目列表查询 | P95 < 100ms | seller_operator_id / species / layer 建索引 |
 
 **优化策略**：
 1. **异步克隆**：`subscribe` 提供 `subscribe_async` 版本，返回 task_id，通过 `get_subscribe_status(task_id)` 查询进度
-2. **OpenSieve 三入口并发**：使用 `asyncio.gather` 并发调用，任一入口失败则降级为剩余入口融合
+2. **可插拔数据源适配器三入口并发**：使用 `asyncio.gather` 并发调用，任一入口失败则降级为剩余入口融合
 3. **缓存**：`get_listing(listing_id)` 结果以 listing_id 为 key 缓存 5 分钟，下架 / 交易后失效
-4. **批量上架**：`list_items_batch(listings)` 支持一次上架多个灵智体（最多 20 个）
-5. **检索降级**：OpenSieve 不可用时自动降级为仅图谱过滤（不报错）
+4. **批量上架**：`list_items_batch(listings)` 支持一次上架多个Forgekin（最多 20 个）
+5. **检索降级**：可插拔数据源适配器不可用时自动降级为仅图谱过滤（不报错）
 
 ### 3.5 配置示例
 
@@ -999,7 +997,7 @@ forgekin_marketplace:
     rrf_k: 60
     top_k_default: 20
     top_k_max: 200
-    opensieve:
+    adapter:
       endpoint: http://localhost:8100
       timeout_seconds: 5
       fallback_to_filter_only: true
@@ -1027,10 +1025,10 @@ forgekin_marketplace:
 | **F001 CapabilityProfile** | `CapabilityProfile.generate_summary(wilson_lower_bound=True)` | 上架时由 CapabilitySummaryGenerator 调用 | 单向：读 |
 | **F008 Durable State Surfaces** | `DurableStateStore.save("marketplace_listing", ...)` | 持久化 listing / subscription / trade | 单向：写 |
 | **F027 多形态智能体** | `ForgekinSpecies` 枚举值 | 上架时记录 species 字段 | 单向：读 |
-| **F028 ForgePipeline** | `ForgekinRepo.get(forgekin_id)` | 上架 / 订阅 / 交易时读取灵智体 | 单向：读 |
+| **F028 ForgePipeline** | `ForgekinRepo.get(forgekin_id)` | 上架 / 订阅 / 交易时读取Forgekin | 单向：读 |
 | **F036 ForgeRelationship** | `ForgeRelationshipManager.get_relationship(forgekin_id)` | 上架时校验 layer 字段 | 单向：读 |
 | **F038 LineageStore** | `LineageStore.add_edge(CLONED / TRADED)` | 订阅 / 交易时写入谱系边 | 单向：写 |
-| **OpenSieve** | `OpenSieveClient.search_grep() / search_semantic() / search_index()` | 检索时通过三入口 + RRF | 单向：读 |
+| **可插拔数据源适配器** | `PluggableAdapterClient.search_grep / search_semantic / search_index` | 检索时通过三入口 + RRF | 单向：读 |
 | **EventBus** | `EventBus.publish(ListingCreatedEvent / ...)` | 上架 / 订阅 / 交易完成时 | 单向：发布 |
 
 ### 4.2 下游影响如何被调用
@@ -1038,8 +1036,8 @@ forgekin_marketplace:
 | 下游模块 | 被调用入口 | 调用方 | 时机 |
 |---------|-----------|-------|------|
 | **F038 LineageStore** | `add_edge(CLONED)` / `add_edge(TRADED)` | ForgekinCloner / OwnershipTransferor | 订阅 / 交易时 |
-| **F039 Mind Codex** | `MindCodexStore.add_entry()` | 新 operator 订阅后可选 | 将灵智体的 SkillPackage 写入自己的锻典 |
-| **F028 ForgePipeline** | — | ForgekinCloner 内部 | 克隆时调用流水线第 3 步预加载相关锻典条目 |
+| **F039 MindCodex** | `MindCodexStore.add_entry` | 新 operator 订阅后可选 | 将Forgekin的 SkillPackage 写入自己的蒸馏知识库 |
+| **F028 ForgePipeline** | — | ForgekinCloner 内部 | 克隆时调用流水线第 3 步预加载相关蒸馏知识库条目 |
 | **operator 控制台** | HTTP API `GET /api/v7/marketplace/listings` | operator UI | 市场浏览 / 上架 / 订阅 |
 | **EventBus 订阅者** | `ListingCreatedEvent` / `SubscriptionCreatedEvent` / `TradeCompletedEvent` | dashboard / 通知系统 | 异步消费 |
 
@@ -1051,18 +1049,18 @@ forgekin_marketplace:
   - `search_federated` RRF 融合算法单测（三入口结果聚合）
 - **T2 跨模块集成层**：
   - `subscribe` 全链路：F028 → F038 → F008 三方原子写入
-  - `trade` 全链路：F028 灵印转移 + F038 谱系边 + 自动下架
-  - `search` 接入 OpenSieve 真实服务（localhost:8100），三入口返回真实结果
-- **T3 E2E 层（遵守 T1-T8 测试铁律）**：
-  - 真实 operator A 通过 F028 锻造灵智体（六步流水线完整执行，真实 LLM 生成能力画像）
+  - `trade` 全链路：F028 SoulImprint转移 + F038 谱系边 + 自动下架
+  - `search` 通过 Repository 层抽象调用可插拔数据源适配器真实服务（localhost:8100），三入口返回真实结果
+- **T3 E2E 层（遵守 T1-T8 测试铁律）**:
+  - 真实 operator A 通过 F028 锻造Forgekin（六步流水线完整执行，真实 LLM 生成能力画像）
   - 真实 operator A 上架到市场，验证 listing 字段完整 + 哈希正确
-  - 真实 operator B 通过市场检索发现该 listing（OpenSieve 三入口真实调用）
-  - 真实 operator B 订阅，验证克隆体新灵印生成 + F038 谱系边 CLONED 写入
-  - 真实 operator B 购买另一个 trade 类型 listing，验证灵印转移 + 原 operator 保留交易记录
-  - 验证 E4+ 灵智体上架被拒绝
+  - 真实 operator B 通过市场检索发现该 listing（可插拔数据源适配器三入口真实调用）
+  - 真实 operator B 订阅，验证克隆体新SoulImprint生成 + F038 谱系边 CLONED 写入
+  - 真实 operator B 购买另一个 trade 类型 listing，验证SoulImprint转移 + 原 operator 保留交易记录
+  - 验证 E4+ Forgekin上架被拒绝
 - **T4 异常路径**：
-  - 篡改灵印后哈希不匹配，上架被拒绝且审计日志记录
-  - OpenSieve 不可用时检索降级为 filter-only
+  - 篡改SoulImprint后哈希不匹配，上架被拒绝且审计日志记录
+  - 可插拔数据源适配器不可用时检索降级为 filter-only
   - 克隆过程中 F038 写入失败 → 回滚已生成的克隆体
 
 ---
@@ -1074,11 +1072,11 @@ forgekin_marketplace:
 - [ ] **AC-1**：`MarketplaceListing` 字段完整（含 soul_imprint_hash / capability_summary / layer / evolution_stage / awakening_stage / species / listing_artifact_ref）
 - [ ] **AC-2**：`list_item` 觉醒阶 > E3 上架被拒绝（ListingValidationError）
 - [ ] **AC-3**：`list_item` 进化阶 < E2 上架被拒绝
-- [ ] **AC-4**：`list_item` 灵印哈希不一致上架被拒绝（防篡改）
-- [ ] **AC-5**：`list_item` 同一灵智体无在售 listing 校验通过
-- [ ] **AC-6**：`subscribe` 克隆保留父灵印血缘，克隆体生成新灵印
+- [ ] **AC-4**：`list_item` SoulImprint哈希不一致上架被拒绝（防篡改）
+- [ ] **AC-5**：`list_item` 同一Forgekin无在售 listing 校验通过
+- [ ] **AC-6**：`subscribe` 克隆保留父SoulImprint血缘，克隆体生成新SoulImprint
 - [ ] **AC-7**：`subscribe` 写入 F038 谱系边（CLONED 关系）
-- [ ] **AC-8**：`trade` 转移灵印所有权，原 operator 保留交易记录
+- [ ] **AC-8**：`trade` 转移SoulImprint所有权，原 operator 保留交易记录
 - [ ] **AC-9**：`trade` 写入 F038 谱系边（TRADED 关系）+ 自动下架 listing
 - [ ] **AC-10**：`search_federated` 三入口 RRF 融合，仅返回 E3 及以下 listing
 - [ ] **AC-11**：`delist` 仅 seller 可下架
@@ -1087,7 +1085,7 @@ forgekin_marketplace:
 ### 5.2 性能验收
 
 - [ ] **AC-13**：`list_item` P95 延迟 < 300ms
-- [ ] **AC-14**：`search` P95 延迟 < 500ms（OpenSieve 三入口并发）
+- [ ] **AC-14**：`search` P95 延迟 < 500ms（可插拔数据源适配器三入口并发）
 - [ ] **AC-15**：`subscribe` 异步版本提交后 1s 内返回 task_id，整个克隆 P95 < 60s
 - [ ] **AC-16**：`trade` P95 延迟 < 500ms
 - [ ] **AC-17**：`get_listing` 缓存命中率 > 80%
@@ -1095,24 +1093,24 @@ forgekin_marketplace:
 ### 5.3 安全验收
 
 - [ ] **AC-18**：所有上架 / 订阅 / 交易记录通过 Repository 层持久化（无直接数据库操作）
-- [ ] **AC-19**：灵印哈希使用 SHA-256 + 恒定时间比较（防时序攻击）
+- [ ] **AC-19**：SoulImprint哈希使用 SHA-256 + 恒定时间比较（防时序攻击）
 - [ ] **AC-20**：哈希不匹配触发安全审计日志（疑似篡改告警）
-- [ ] **AC-21**：原 operator 在交易后失去灵智体控制权（forgekin.operator_id 更新）
+- [ ] **AC-21**：原 operator 在交易后失去Forgekin控制权（forgekin.operator_id 更新）
 - [ ] **AC-22**：operator_id 字段不可由 listing 修改（仅由 transfer_ownership 修改）
 
 ### 5.4 Eval 验收
 
-- [ ] **AC-23**：上架灵智体的 capability_summary 包含 Wilson 下界（保守估计，避免小样本高估）
-- [ ] **AC-24**：订阅后克隆体的初始 Eval 分数继承自父灵智体
-- [ ] **AC-25**：F040 控制面将市场流通次数作为灵智体增值信号（marketplace_circulation_count）
+- [ ] **AC-23**：上架Forgekin的 capability_summary 包含 Wilson 下界（保守估计，避免小样本高估）
+- [ ] **AC-24**：订阅后克隆体的初始 Eval 分数继承自父Forgekin
+- [ ] **AC-25**：F040 控制面将市场流通次数作为Forgekin增值信号（marketplace_circulation_count）
 - [ ] **AC-26**：订阅克隆成功率作为 F040 市场组件健康指标
 
 ---
 
 ## 6. 引用
 
-- [doc:../spec.md#§3.13]（FR-CORE-013 灵智体市场 + 进化谱系）
-- [doc:../arch.md#§3.13]（灵智体市场 + 进化谱系架构）
+- [doc:../spec.md#§3.13]（FR-CORE-013 Forgekin市场 + 进化谱系）
+- [doc:../arch.md#§3.13]（Forgekin市场 + 进化谱系架构）
 - [doc:../architecture/A037-forgemind-marketplace.md]（同号 Feature 级 SAD）
 - [doc:../features/F037-forgemind-marketplace.md]（同号 Feature 级 SRS）
 - [doc:../features/F001-capability-profile.md]（能力画像）
@@ -1121,13 +1119,13 @@ forgekin_marketplace:
 - [doc:../features/F028-forging-pipeline.md]（锻造流水线）
 - [doc:../features/F036-forgemind-forge-relationship.md]（forgemind 与 *Forge 关系）
 - [doc:../features/F038-forgemind-lineage.md]（进化谱系）
-- [doc:../features/F039-mind-codex-searchable.md]（灵典可检索知识库）
+- [doc:../features/F039-mind-codex-searchable.md]（MindCodex可检索知识库）
 - [doc:../features/F040-harness-eval-control-plane.md]（Harness Eval 控制面）
 - [doc:../decisions/005-forgemind-application-layer.md]（forgemind 应用层 ADR）
-- [doc:../design/naming-contract.md#2.6]（灵印 Soul Imprint）
+- [doc:../design/naming-contract.md#2.6]（SoulImprint）
 - [doc:../design/naming-contract.md#2.10]（进化阶 Evolution Stage）
 - [doc:../design/naming-contract.md#2.11]（觉醒阶 Awakening Stage）
-- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 所有数据检索走 OpenSieve）
+- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
 - [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
 - [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
 
@@ -1137,4 +1135,4 @@ forgekin_marketplace:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，应用 9 大点名称修订；含 Pydantic Models / 接口实现 / RRF 算法 / 时序图 / 配置示例 / 跨模块协作 / 验收 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，） | 开发者 Forgekin（猎犬·夏洛克） |

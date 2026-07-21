@@ -2,15 +2,14 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010）
 > **对应 arch.md**: [doc:../arch.md#§3.10]（三方 Agent 集成）
 > **对应 design.md**: [doc:../design.md#§3.10]
 > **对应 Feature**: [doc:../features/F033-external-agent-shared-state.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A033-external-agent-shared-state.md]（同号 Architecture 级 SAD）
 > **依赖 ADR**: [doc:../decisions/006-external-agent-integration.md]
-> **9 大点名称修订**: 已应用（双轨命名 ForgeMind/Forgekin + AI 术语优先 + 弱化万物使用"多形态智能体 (Multi-Form Agent)" + 去 AGI 化使用"通用智能体 (General-Purpose Agent)"）
-> **依赖详细设计**: [doc:D031-external-agent-adapter.md]（容器层） + [doc:D032-external-agent-profile.md]（agent_id 引用） + [doc:D014-memory-collection.md]（灵忆归档 F014）
+> **依赖详细设计**: [doc:D031-external-agent-adapter.md]（容器层） + [doc:D032-external-agent-profile.md]（agent_id 引用） + [doc:D014-memory-collection.md]（EchoStore归档 F014）
 
 ---
 
@@ -18,13 +17,13 @@
 
 ### 1.1 设计问题
 
-ExternalAgentAdapter 抽象层（D031）需要实现"灵智体 -> claude code 写代码 -> codex review -> trae 部署"的连续协作流，但 v7.0 三方 Agent 间无共享状态，每次调用都是独立会话，无法实现连续协作。本详细设计在 `core/external_agent/shared_state.py` 落地 A033 架构，解决以下详细设计层问题：
+ExternalAgentAdapter 抽象层（D031）需要实现"Forgekin -> claude code 写代码 -> codex review -> trae 部署"的连续协作流，但 v7.0 三方 Agent 间无共享状态，每次调用都是独立会话，无法实现连续协作。本详细设计在 `core/external_agent/shared_state.py` 落地 A033 架构，解决以下详细设计层问题：
 
 1. **共享状态数据模型未落地**：A033 仅定义字段列表，未给出 Pydantic 完整模型、字段约束、增量 append 不变量、生命周期绑定校验。
 2. **ModificationRecord 增量 append 未编码**：A033 要求增量 append 而非覆盖，未给出 append_modification 接口签名、并发安全保证、历史记录总量单调递增校验。
 3. **Onboarding 摘要生成算法未实现**：A033 描述"返回最近 N 条"，未给出 max_recent_modifications / max_recent_decisions 阈值、累积 open_questions 合并算法、token 节省量化指标。
 4. **SharedStateHandoff 对接 F003 HandoffCapsule 未编码**：A033 要求 capsule 字段完整写入共享状态，未给出 capsule.open_questions / known_issues / next_action_hint 字段映射、写入校验、capsule 完整性校验。
-5. **TeamAct 终止时归档到 F014 灵忆未实现**：A033 要求归档，未给出归档触发条件、归档原子性保证、归档后共享状态只读化处理。
+5. **TeamAct 终止时归档到 F014 EchoStore未实现**：A033 要求归档，未给出归档触发条件、归档原子性保证、归档后共享状态只读化处理。
 6. **Repository 层抽象与 F008 持久状态层对接未编码**：A033 要求基于 F008 Durable State Surfaces，未给出 SharedStateRepository 接口、读写并发控制、事务边界。
 7. **生命周期与 TeamActState 一一关联校验未实现**：A033 要求 team_act_state_ref 非空，未给出创建时校验、TeamAct 终止事件订阅、归档时机精确触发。
 
@@ -34,21 +33,20 @@ ExternalAgentAdapter 抽象层（D031）需要实现"灵智体 -> claude code �
 - **DI 容器约束**：SharedStateStore / SharedStateHandoff / OnboardingSummaryGenerator 实例必须通过 DI 容器注入到 ExternalAgentBridge（D031）。
 - **Repository 层约束**：ExternalAgentSharedState 持久化必须通过 SharedStateRepository 抽象（基于 F008），禁止直接操作数据库。
 - **配置驱动约束**：onboarding_summary / lifecycle / handoff 配置必须 YAML 外置到 `config/external_agent.yaml`，禁止 .py 硬编码。
-- **生命周期绑定约束**：共享状态必须与 F002 TeamActState 一一关联（team_act_state_ref 字段非空），TeamAct 终止时必须归档到 F014 灵忆。
+- **生命周期绑定约束**：共享状态必须与 F002 TeamActState 一一关联（team_act_state_ref 字段非空），TeamAct 终止时必须归档到 F014 EchoStore。
 - **增量写入约束**：ModificationRecord 必须增量 append，禁止覆盖历史记录；append 后总量单调递增。
 - **Handoff Capsule 一致性约束**：SharedStateHandoff 必须对接 F003 HandoffCapsule，open_questions / known_issues / next_action_hint 三字段必须传递。
 - **Onboarding 摘要约束**：新 Agent 接手时必须读取 Onboarding 摘要而非全部历史，recent_modifications / recent_decisions 数量受 max_* 配置限制。
-- **9 大点名称修订约束**：所有命名严格遵循双轨命名（产品层 ForgeMind / 代码层 Forgekin），AI 术语优先（Forgekin/Multi-Form Agent），弱化万物，去 AGI 化。
 
 ### 1.3 设计影响
 
 - **对 F002 TeamAct 的影响**：ExternalAgentSharedState 与 TeamActState 一一关联，TeamAct 终止事件触发归档。
 - **对 F003 HandoffCapsule 的影响**：SharedStateHandoff 对接 HandoffCapsule，capsule 字段完整写入共享状态。
 - **对 F008 持久状态层的影响**：ExternalAgentSharedState 持久化到 F008 Durable State Surfaces，运行时读写均通过 Repository。
-- **对 F014 多域记忆的影响**：TeamAct 终止时共享状态整体归档到 F014 EchoStore 灵忆集合，作为灵智体经验记忆。
+- **对 F014 多域记忆的影响**：TeamAct 终止时共享状态整体归档到 F014 EchoStore EchoStore集合，作为Forgekin经验记忆。
 - **对 F032 能力画像的影响**：modification_log / decision_context 中 agent_id 字段引用 ExternalAgentCapabilityProfile.agent_id。
-- **对 D031 ExternalAgentBridge 的影响**：Bridge 在调用三方 Agent 后通过 SharedStateStore.append_modification() 写入共享状态。
-- **对 D034 失败回退的影响**：fallback 时下一个 Agent 通过 SharedStateHandoff.read_onboarding() 获取上下文。
+- **对 D031 ExternalAgentBridge 的影响**：Bridge 在调用三方 Agent 后通过 SharedStateStore.append_modification 写入共享状态。
+- **对 D034 失败回退的影响**：fallback 时下一个 Agent 通过 SharedStateHandoff.read_onboarding 获取上下文。
 - **对 D035 能力融合的影响**：共享状态中的 artifact_refs 作为 FusionSource.call_artifacts 来源。
 
 ---
@@ -125,7 +123,7 @@ class ExternalAgentSharedState(BaseModel):
     """
     state_id: str
     team_act_state_ref: str                   # 关联 F002 TeamActState ID（非空）
-    forgekin_id: str                          # 主持灵智体 ID
+    forgekin_id: str                          # 主持Forgekin ID
     session_context: dict = Field(
         default_factory=dict,
         description="会话级共享上下文（如 task_id / requirements / env）",
@@ -153,7 +151,7 @@ class ExternalAgentSharedState(BaseModel):
     )
     archived_to_echo_store_ref: str | None = Field(
         default=None,
-        description="F014 EchoStore 灵忆集合 ID（归档后填充）",
+        description="F014 EchoStore EchoStore集合 ID（归档后填充）",
     )
 
     model_config = {"extra": "forbid"}
@@ -231,7 +229,7 @@ def generate_onboarding_summary(
     recent_decisions = sorted_decisions[-max_recent_decisions:]
 
     # 累积 open_questions，去重保序（按首次出现顺序）
-    seen_questions: set[str] = set()
+    seen_questions: set[str] = set
     accumulated_questions: list[str] = []
     for decision in sorted_decisions:  # 全部历史，非仅 recent
         for q in decision.open_questions:
@@ -309,7 +307,7 @@ class HandoffCapsuleIncompleteError(Exception):
         self.state_id = state_id
         self.next_agent_id = next_agent_id
         self.missing_fields = missing_fields
-        super().__init__(
+        super.__init__(
             f"HandoffCapsule incomplete for state '{state_id}' "
             f"handoff to '{next_agent_id}'; missing: {missing_fields}"
         )
@@ -323,10 +321,10 @@ async def archive_shared_state_atomically(
     shared_state_repo: "SharedStateRepository",
     echo_store_repo: "Repository",  # F014 EchoStore Repository
 ) -> str:
-    """原子归档共享状态到 F014 灵忆
+    """原子归档共享状态到 F014 EchoStore
 
     步骤：
-        1. 写入 F014 EchoStore 灵忆集合（获取 echo_store_ref）
+        1. 写入 F014 EchoStore EchoStore集合（获取 echo_store_ref）
         2. 更新共享状态：archived_at + archived_to_echo_store_ref
         3. 标记共享状态为只读（后续 append 被拒绝）
         4. 任一步失败：回滚（删除已写入的 EchoStore 条目）
@@ -337,7 +335,7 @@ async def archive_shared_state_atomically(
         echo_store_repo: F014 EchoStore Repository
 
     Returns:
-        echo_store_ref（F014 灵忆集合 ID）
+        echo_store_ref（F014 EchoStore集合 ID）
 
     Raises:
         ArchiveFailedError: 归档失败（含回滚失败详情）
@@ -346,8 +344,8 @@ async def archive_shared_state_atomically(
     try:
         echo_store_ref = await echo_store_repo.save(
             key=f"external_agent_shared_state_{state.state_id}",
-            value=state.model_dump(),
-            collection="external_agent_states",  # F014 灵忆集合
+            value=state.model_dump,
+            collection="external_agent_states",  # F014 EchoStore集合
         )
     except Exception as e:
         raise ArchiveFailedError(
@@ -359,7 +357,7 @@ async def archive_shared_state_atomically(
     # 步骤 2-3: 更新共享状态为已归档
     archived_state = state.model_copy(
         update={
-            "archived_at": datetime.now(),
+            "archived_at": datetime.now,
             "archived_to_echo_store_ref": echo_store_ref,
         }
     )
@@ -393,7 +391,7 @@ class ArchiveFailedError(Exception):
         self.state_id = state_id
         self.stage = stage
         self.cause = cause
-        super().__init__(
+        super.__init__(
             f"Archive failed for state '{state_id}' at stage '{stage}': {cause}"
         )
 ```
@@ -424,7 +422,7 @@ class SharedStateStore(ABC):
 
         Args:
             team_act_state_ref: F002 TeamActState ID（必须非空）
-            forgekin_id: 主持灵智体 ID
+            forgekin_id: 主持Forgekin ID
             session_context: 会话级上下文（可选）
 
         Returns:
@@ -495,7 +493,7 @@ class SharedStateStore(ABC):
 
     @abstractmethod
     async def archive_to_echo_store(self, state_id: str) -> str:
-        """TeamAct 终止时归档到 F014 灵忆集合
+        """TeamAct 终止时归档到 F014 EchoStore集合
 
         Returns:
             echo_store_ref
@@ -564,7 +562,7 @@ class HarnessSharedStateStore(SharedStateStore):
                 existing_state_id=existing.state_id,
             )
 
-        state_id = f"shared_state_{team_act_state_ref}_{uuid.uuid4().hex[:8]}"
+        state_id = f"shared_state_{team_act_state_ref}_{uuid.uuid4.hex[:8]}"
         state = ExternalAgentSharedState(
             state_id=state_id,
             team_act_state_ref=team_act_state_ref,
@@ -816,7 +814,7 @@ class HarnessSharedStateHandoff(SharedStateHandoff):
         # 3. capsule.open_questions 合并到最新 DecisionRecord
         #    （创建一个 handoff 专用 DecisionRecord）
         handoff_record = DecisionRecord(
-            record_id=f"handoff_{state_id}_{next_agent_id}_{uuid.uuid4().hex[:8]}",
+            record_id=f"handoff_{state_id}_{next_agent_id}_{uuid.uuid4.hex[:8]}",
             state_id=state_id,
             agent_id=next_agent_id,
             decision=f"Handoff from previous agent to {next_agent_id}",
@@ -881,7 +879,7 @@ class SharedStateNotFoundError(Exception):
 
     def __init__(self, state_id: str, message: str) -> None:
         self.state_id = state_id
-        super().__init__(message)
+        super.__init__(message)
 
 
 class SharedStateAlreadyExistsError(Exception):
@@ -892,7 +890,7 @@ class SharedStateAlreadyExistsError(Exception):
     ) -> None:
         self.team_act_state_ref = team_act_state_ref
         self.existing_state_id = existing_state_id
-        super().__init__(
+        super.__init__(
             f"shared state already exists for team_act '{team_act_state_ref}': "
             f"existing state_id='{existing_state_id}'"
         )
@@ -906,7 +904,7 @@ class SharedStateArchivedError(Exception):
     ) -> None:
         self.state_id = state_id
         self.archived_at = archived_at
-        super().__init__(
+        super.__init__(
             f"shared state '{state_id}' archived at {archived_at}, "
             f"append operations are forbidden"
         )
@@ -920,7 +918,7 @@ class SharedStateAlreadyArchivedError(Exception):
     ) -> None:
         self.state_id = state_id
         self.archived_at = archived_at
-        super().__init__(
+        super.__init__(
             f"shared state '{state_id}' already archived at {archived_at}"
         )
 
@@ -931,7 +929,7 @@ class ModificationRecordConflictError(Exception):
     def __init__(self, record_id: str, state_id: str) -> None:
         self.record_id = record_id
         self.state_id = state_id
-        super().__init__(
+        super.__init__(
             f"record_id '{record_id}' already exists in state '{state_id}'"
         )
 
@@ -941,7 +939,7 @@ class TeamActStateNotFoundError(Exception):
 
     def __init__(self, team_act_state_ref: str) -> None:
         self.team_act_state_ref = team_act_state_ref
-        super().__init__(
+        super.__init__(
             f"TeamActState '{team_act_state_ref}' not found"
         )
 ```
@@ -968,11 +966,11 @@ class SharedStateConfigLoader:
         self,
         config_path: str = "config/external_agent.yaml",
     ) -> None:
-        self._config_path = Path(config_path).resolve()
+        self._config_path = Path(config_path).resolve
 
     def load(self) -> dict:
         """加载 shared_state 配置段"""
-        if not self._config_path.exists():
+        if not self._config_path.exists:
             raise FileNotFoundError(
                 f"external_agent.yaml not found: {self._config_path}"
             )
@@ -1001,7 +999,7 @@ class SharedStateConfigLoader:
 shared_state:
   max_recent_modifications: 20       # Onboarding 摘要中最近修改记录数上限
   max_recent_decisions: 10           # Onboarding 摘要中最近决策记录数上限
-  echo_store_collection: "external_agent_states"  # F014 灵忆集合名
+  echo_store_collection: "external_agent_states"  # F014 EchoStore集合名
   auto_archive_on_team_act_terminate: true        # TeamAct 终止时自动归档
   archive_atomic: true               # 归档原子性保证（失败回滚）
 ```
@@ -1018,7 +1016,7 @@ def register_external_agent_shared_state_layer(
     """注册三方 Agent 共享状态层到 DI 容器"""
     # 1. 加载配置
     config_loader = SharedStateConfigLoader(config_path=config_path)
-    config = config_loader.load()
+    config = config_loader.load
 
     # 2. Repository（基于 F008 DurableStateSurfaces）
     shared_state_repo = container.resolve_repository(
@@ -1159,7 +1157,7 @@ class ExternalAgentBridge:
             update={
                 "input_data": {
                     **task.input_data,
-                    "onboarding_summary": onboarding.model_dump(),
+                    "onboarding_summary": onboarding.model_dump,
                 }
             }
         )
@@ -1171,7 +1169,7 @@ class ExternalAgentBridge:
         # 5. 写入修改记录 + 决策记录到共享状态
         if result.success:
             modification = ModificationRecord(
-                record_id=f"mod_{result.task_id}_{uuid.uuid4().hex[:8]}",
+                record_id=f"mod_{result.task_id}_{uuid.uuid4.hex[:8]}",
                 state_id=state_id,
                 agent_id=agent_id,
                 target=task.description,
@@ -1189,7 +1187,7 @@ class ExternalAgentBridge:
             # 若 result.output 含 decision，写入决策记录
             if result.output and "decision" in result.output:
                 decision = DecisionRecord(
-                    record_id=f"dec_{result.task_id}_{uuid.uuid4().hex[:8]}",
+                    record_id=f"dec_{result.task_id}_{uuid.uuid4.hex[:8]}",
                     state_id=state_id,
                     agent_id=agent_id,
                     decision=result.output["decision"],
@@ -1275,7 +1273,7 @@ class HandoffCapsuleBuilder:
             "open_questions": open_questions,
             "known_issues": known_issues,
             "next_action_hint": next_action_hint,
-            "built_at": datetime.now().isoformat(),
+            "built_at": datetime.now.isoformat,
         }
 ```
 
@@ -1285,7 +1283,7 @@ class HandoffCapsuleBuilder:
 # core/memory/echo_store.py（F014 节选，展示与 D033 协作）
 
 class EchoStoreRepository:
-    """F014 EchoStore Repository（灵忆集合存储）"""
+    """F014 EchoStore Repository（EchoStore集合存储）"""
 
     async def save(
         self,
@@ -1293,12 +1291,12 @@ class EchoStoreRepository:
         value: dict,
         collection: str,
     ) -> str:
-        """保存条目到指定灵忆集合
+        """保存条目到指定EchoStore集合
 
         Args:
             key: 条目键
             value: 条目值（dict）
-            collection: 灵忆集合名（如 "external_agent_states"）
+            collection: EchoStore集合名（如 "external_agent_states"）
 
         Returns:
             echo_store_ref（条目引用 ID）
@@ -1334,7 +1332,7 @@ class HarnessFallbackChainExecutor(FallbackChainExecutor):
                     state_id=state_id,
                 )
                 initial_call["input_data"]["onboarding_summary"] = (
-                    onboarding.model_dump()
+                    onboarding.model_dump
                 )
             # ... 执行 step
 ```
@@ -1555,7 +1553,7 @@ class HarnessFallbackChainExecutor(FallbackChainExecutor):
 - [doc:../features/F002-teamact-loop.md]（生命周期绑定）
 - [doc:../features/F003-handoff-capsule.md]（HandoffCapsule 对接）
 - [doc:../features/F008-durable-state-surfaces.md]（持久状态层）
-- [doc:../features/F014-memory-collection.md]（EchoStore 灵忆归档）
+- [doc:../features/F014-memory-collection.md]（EchoStore EchoStore归档）
 - [doc:../features/F031-external-agent-adapter.md]（Bridge 写入共享状态）
 - [doc:../features/F032-external-agent-profile.md]（agent_id 引用）
 - [doc:../features/F034-external-agent-fallback.md]（Onboarding 传递上下文）
@@ -1563,7 +1561,7 @@ class HarnessFallbackChainExecutor(FallbackChainExecutor):
 - [doc:D031-external-agent-adapter.md]（容器层）
 - [doc:D032-external-agent-profile.md]（agent_id 引用）
 - [doc:../decisions/006-external-agent-integration.md]
-- [doc:../design/naming-contract.md]（灵忆 EchoStore 命名）
+- [doc:../design/naming-contract.md]（EchoStore 命名）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 
 ---
@@ -1572,4 +1570,4 @@ class HarnessFallbackChainExecutor(FallbackChainExecutor):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（共享状态模型 + 增量 append + Onboarding 摘要算法 + HandoffCapsule 字段映射 + 归档原子性保证 + TeamAct 终止事件订阅 + DI 注入 + 21 功能 AC + 9 性能 AC + 10 安全 AC + 6 Eval AC + 20 集成测试点） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（共享状态模型 + 增量 append + Onboarding 摘要算法 + HandoffCapsule 字段映射 + 归档原子性保证 + TeamAct 终止事件订阅 + DI 注入 + 21 功能 AC + 9 性能 AC + 10 安全 AC + 6 Eval AC + 20 集成测试点） | 架构师 Forgekin（猫头鹰·鲁班） |

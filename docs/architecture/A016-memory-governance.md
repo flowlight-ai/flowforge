@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004）
 > **对应 arch.md**: [doc:../arch.md#§3.4]
 > **对应 design.md**: [doc:../design.md#§3.4]（待创建）
 > **对应 Feature**: [doc:../features/F016-memory-governance.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D016-memory-governance.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -19,9 +18,9 @@
 
 记忆系统的核心治理问题是"旧记忆和新记忆一视同仁"。v7.0 记忆无权威等级、无触发方式、无生命周期，导致三类架构故障：
 
-1. **权威倒挂**：候选观察（authority 低）排在铁律（authority 高）前面，灵智体读了错误观察。
+1. **权威倒挂**：候选观察（authority 低）排在铁律（authority 高）前面，Forgekin读了错误观察。
 2. **触发失效**：永远在场的铁律未注入系统提示，仅查询时出现的候选观察被错误地塞进 system role。
-3. **僵尸知识**：3 年前的过时决策与今天的最新决策同权重排序，灵智体引用过时知识。
+3. **僵尸知识**：3 年前的过时决策与今天的最新决策同权重排序，Forgekin引用过时知识。
 
 本架构解决的核心问题：**如何在 L2 治理层形式化"权威性 / 触发方式 / 生命周期"三要素**，使检索结果在 RRF 融合之后经过权威硬序、触发过滤、生命周期衰减三步治理，让旧记忆和新记忆不再一视同仁。
 
@@ -31,7 +30,7 @@
 - **铁律优先约束**：authority=hard_rule 的条目必须在最终排序中硬序置顶，不被 RRF 或消费加权翻盘。
 - **配置驱动约束**：authority_order、deprecated_weight_multiplier、archived_excluded_from_retrieval 等策略外置 YAML。
 - **过期自动转态约束**：expires_at 到期必须自动转 deprecated 并触发 review 任务，不允许"过期不处理"。
-- **review 任务指派约束**：过期 review 必须指派给非原作者灵智体（防止自我确认偏误，铁律"不能自己 review 自己"）。
+- **review 任务指派约束**：过期 review 必须指派给非原作者Forgekin（防止自我确认偏误，铁律"不能自己 review 自己"）。
 
 ### 1.3 架构影响
 
@@ -85,10 +84,10 @@
 
 - **决策 1：三要素打在 entry 上而非 Collection 上**。authority_level 在 Collection 级继承（F014 决策 2），但 activation 与 lifecycle_status 在 entry 级独立。理由：同一 Collection 内不同条目可能处于不同生命周期（如 ADR-001 已 archived / ADR-002 active）。
 - **决策 2：硬序而非加权**。authority 排序用硬序（hard_rule > verified_decision > candidate_observation），不用加权求和。理由：铁律不可被消费加权翻盘，是 Build to Persist 的"不可妥协"约束。
-- **决策 3：deprecated ×0.3 而非归零**。deprecated 条目仍可被检索到但降权，理由：某些 deprecated 知识仍可能有用（如"曾经的方案是什么"），完全归零会让灵智体无法引用历史。
+- **决策 3：deprecated ×0.3 而非归零**。deprecated 条目仍可被检索到但降权，理由：某些 deprecated 知识仍可能有用（如"曾经的方案是什么"），完全归零会让Forgekin无法引用历史。
 - **决策 4：archived 完全排除**。archived 不参与检索但物理保留，理由：archived 是 Build to Persist 的归档态，仅供 F020 归因矩阵的"环境漂移"溯源，不参与日常检索。
-- **决策 5：过期 review 指派给非原作者**。review 任务自动指派给非 author_forgekin_id 的灵智体，防止自我确认偏误。理由：roleagent.md 第 2 章铁律"不能自己 review 自己"。
-- **决策 6：always_on 自动注入 system role**。authority=hard_rule + activation=always_on 的条目在灵智体启动时自动注入 system role，不依赖查询触发。理由：铁律必须在每次执行时在场，不能靠灵智体"想起来查"。
+- **决策 5：过期 review 指派给非原作者**。review 任务自动指派给非 author_forgekin_id 的Forgekin，防止自我确认偏误。理由：roleagent.md 第 2 章铁律"不能自己 review 自己"。
+- **决策 6：always_on 自动注入 system role**。authority=hard_rule + activation=always_on 的条目在Forgekin启动时自动注入 system role，不依赖查询触发。理由：铁律必须在每次执行时在场，不能靠Forgekin"想起来查"。
 
 ### 2.3 架构不变量
 
@@ -96,8 +95,8 @@
 - archived 状态条目必须完全不参与检索（默认 include_archived=False）。
 - deprecated 条目必须强制降权 ×0.3（multiplier 从配置加载）。
 - expires_at 到期必须自动转 deprecated 并触发 review 任务。
-- review 任务必须指派给非 author_forgekin_id 的灵智体。
-- always_on + hard_rule 条目必须在灵智体启动时自动注入 system role。
+- review 任务必须指派给非 author_forgekin_id 的Forgekin。
+- always_on + hard_rule 条目必须在Forgekin启动时自动注入 system role。
 
 ---
 
@@ -184,7 +183,7 @@ class LifecycleScheduler(ABC):
     async def schedule_expiry_review(
         self, entry_id: str, expires_at: datetime, author_forgekin_id: str
     ) -> str:
-        """到期转 deprecated + 派发 review 任务给非 author 灵智体"""
+        """到期转 deprecated + 派发 review 任务给非 author Forgekin"""
 
 
 class ActivationInjector(ABC):
@@ -199,7 +198,7 @@ class ActivationInjector(ABC):
 
 ```
 [检索路径 - 治理过滤]
-  F015 RetrievalFusion.search() → hits
+  F015 RetrievalFusion.search → hits
         │
         ▼
   GovernanceFilter.filter(hits, QueryContext{task_scope, forgekin_id})
@@ -223,7 +222,7 @@ class ActivationInjector(ABC):
         │
         ▼
   Step 4: ExpiryScheduler（异步）
-   检查 expires_at < now() 的条目
+   检查 expires_at < now 的条目
         │
         ▼
   转态 deprecated + 派发 review 任务（非 author）
@@ -232,7 +231,7 @@ class ActivationInjector(ABC):
   返回治理后的 hits（交 F017 消费加权排序）
 
 [启动路径 - always_on 注入]
-  Forgekin.__init__()
+  Forgekin.__init__
         │
         ▼
   ActivationInjector.inject_always_on(forgekin_id, system_role_builder)
@@ -251,22 +250,22 @@ class ActivationInjector(ABC):
 
 - 依赖 **F014 Collection 层**：读取 entry 的 lifecycle_status、authority_level、author_forgekin_id 字段。
 - 依赖 **F015 三检索入口**：接收 RRF 融合后的 hits 列表作为输入。
-- 依赖 **F001 CapabilityProfile**：派发 review 任务时查询非 author 灵智体列表。
+- 依赖 **F001 CapabilityProfile**：派发 review 任务时查询非 author Forgekin列表。
 
 ### 4.2 下游影响
 
 - 影响 **F017 消费排序**：deprecated 条目 ×0.3 降权是消费加权公式中"过时惩罚"的输入；权威硬序后块内交 F017 排序。
 - 影响 **F018 Eval Contract**：治理事件（expiry_review_triggered）可作为 Eval Contract 的回归用例。
 - 影响 **F020 归因矩阵**：archived 条目仅供 F020"环境漂移"归因溯源，不参与日常检索。
-- 影响 **F039 锻典可检索**：锻典条目同样应用三要素治理，确保过时锻典被识别。
+- 影响 **F039 蒸馏知识库可检索**：蒸馏知识库条目同样应用三要素治理，确保过时蒸馏知识库被识别。
 - 影响 **F040 控制面**：治理事件（deprecated/archived/expiry_review_triggered）写入 F040 Eval Hub。
 
 ### 4.3 跨模块不变量
 
 - 治理过滤必须在 F015 RRF 融合之后、F017 消费加权之前执行。
 - 权威硬序必须不可被 F017 消费加权翻盘（hard_rule 永远在 verified_decision 之前）。
-- review 任务指派的灵智体 ID 必须不等于 author_forgekin_id。
-- always_on + hard_rule 条目必须在灵智体首次调用前完成注入。
+- review 任务指派的Forgekin ID 必须不等于 author_forgekin_id。
+- always_on + hard_rule 条目必须在Forgekin首次调用前完成注入。
 - expires_at 到期转态必须在 24 小时内完成（不允许长期滞后）。
 
 ---
@@ -279,7 +278,7 @@ class ActivationInjector(ABC):
 - [ ] AC-2: DI 容器注入通过——`GovernanceFilter` 通过 `inject("governance_filter")` 获取。
 - [ ] AC-3: Repository 层通过——治理标签持久化经 Repository，不直操作数据库。
 - [ ] AC-4: 配置驱动通过——authority_order / deprecated_weight_multiplier / archived_excluded 从 `config/memory_governance.yaml` 加载。
-- [ ] AC-5: review 任务派发逻辑覆盖 5 种"非 author 灵智体"场景。
+- [ ] AC-5: review 任务派发逻辑覆盖 5 种"非 author Forgekin"场景。
 
 ### 5.2 架构不变量验收
 
@@ -288,7 +287,7 @@ class ActivationInjector(ABC):
 - [ ] AC-8: deprecated 条目 score × 0.3 降权生效。
 - [ ] AC-9: expires_at 到期 24 小时内自动转 deprecated。
 - [ ] AC-10: review 任务指派的 forgekin_id ≠ author_forgekin_id（单测覆盖）。
-- [ ] AC-11: always_on + hard_rule 条目在灵智体启动时自动注入 system role（单测覆盖）。
+- [ ] AC-11: always_on + hard_rule 条目在Forgekin启动时自动注入 system role（单测覆盖）。
 
 ---
 
@@ -312,4 +311,4 @@ class ActivationInjector(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 三要素形式化 + 权威硬序 + always_on 注入） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 三要素形式化 + 权威硬序 + always_on 注入） | 架构师 Forgekin（猫头鹰·鲁班） |

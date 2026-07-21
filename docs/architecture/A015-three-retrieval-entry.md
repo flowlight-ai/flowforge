@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004）
 > **对应 arch.md**: [doc:../arch.md#§3.4]
 > **对应 design.md**: [doc:../design.md#§3.4]（待创建）
 > **对应 Feature**: [doc:../features/F015-three-retrieval-entry.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D015-three-retrieval-entry.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,29 +16,29 @@
 
 ### 1.1 架构问题
 
-灵智体（Forgekin）检索知识时存在三种本质不同的检索场景：精确符号（"找 `def handoff_capsule`"）、语义相似（"如何处理失败"）、结构化过滤（"按 authority≥4 查询"）。v7.0 只用 sqlite-vec 向量检索 + BM25 关键词检索，是典型 RAG 架构，无法覆盖三种场景的差异化诉求，导致：
+Forgekin检索知识时存在三种本质不同的检索场景：精确符号（"找 `def handoff_capsule`"）、语义相似（"如何处理失败"）、结构化过滤（"按 authority≥4 查询"）。v7.0 只用 sqlite-vec 向量检索 + BM25 关键词检索，是典型 RAG 架构，无法覆盖三种场景的差异化诉求，导致：
 
 1. **符号检索失效**：函数名/路径/标识符无法精确匹配，向量检索把"handoff_capsule"语义近邻排到精确匹配之前。
 2. **过滤能力薄弱**：无法按 Collection + authority + lifecycle 联合过滤，全靠向量 top-k 后再过滤，丢失有效结果。
 3. **多源融合无规则**：三入口结果融合靠人工排序，无 RRF 等可证明的融合算法。
 
-本架构解决的核心问题：**如何在 L3 检索层为灵智体提供三入口统一调度 + 域隔离强制 + RRF 融合 + 权威过滤的检索协议**，使上层（F017 排序、F039 锻典）拿到"已隔离已过滤已融合"的统一结果集。
+本架构解决的核心问题：**如何在 L3 检索层为Forgekin提供三入口统一调度 + 域隔离强制 + RRF 融合 + 权威过滤的检索协议**，使上层（F017 排序、F039 蒸馏知识库）拿到"已隔离已过滤已融合"的统一结果集。
 
 ### 1.2 架构约束
 
-- **单向依赖约束**：检索层依赖 F014 Collection 层与 OpenSieve，禁止被 F014 反向依赖。
+- **单向依赖约束**：检索层依赖 F014 Collection 层与可插拔数据源适配器（通过 Repository 层抽象），禁止被 F014 反向依赖。
 - **域隔离约束**：三入口均必须强制 `collections` 参数，无此参数的查询在入口处拒绝（不传到引擎内部）。
 - **配置驱动约束**：grep/semantic/index 三引擎的具体实现（ripgrep/sqlite-vec/sqlite_fts）外置 YAML，禁止在代码中硬编码引擎选择。
-- **OpenSieve 约束**：semantic 入口的非结构化检索走 OpenSieve 聚合检索中台，不另起向量服务。
+- **可插拔数据源适配器约束**：semantic 入口的非结构化检索通过 Repository 层抽象（支持可插拔数据源适配器），不在核心框架层硬绑定具体检索引擎。
 - **简单系统约束**：roleagent.md 第 4 章要求"查询扩展由 agent 做，不在引擎里加 regex/小模型"——本架构禁止在检索引擎内做任何 LLM 调用或 regex 扩展。
 
 ### 1.3 架构影响
 
 - **对 F014 Collection 层**：三入口在调用前必须向 CollectionRegistry 校验 collection_ids 是否跨域，跨域抛 CrossDomainJoinForbidden。
 - **对 F016 治理层**：authority_floor 过滤先于 RRF 融合，过滤后的结果交 F016 治理层做权威排序。
-- **对 F017 消费排序**：RRF 融合后的 RetrievalHit 列表交 F017 ConsumptionWeightedRanker 重排，不直接返回给灵智体。
+- **对 F017 消费排序**：RRF 融合后的 RetrievalHit 列表交 F017 ConsumptionWeightedRanker 重排，不直接返回给Forgekin。
 - **对 F020 归因矩阵**：grep 入口为"轨迹检索"提供工具支撑，归因矩阵可通过 grep 检索历史失败轨迹。
-- **对 F039 锻典**：Mind Codex 通过 index 入口按 trigger 字段精确查询锻典条目。
+- **对 F039 蒸馏知识库**：MindCodex 通过 index 入口按 trigger 字段精确查询蒸馏知识库条目。
 
 ---
 
@@ -67,7 +66,7 @@
     ▼                  ▼                  ▼
 ┌────────────┐  ┌────────────┐    ┌────────────┐
 │ GrepEntry  │  │SemanticEntry│   │ IndexEntry │
-│ (ripgrep)  │  │ (OpenSieve)│    │(sqlite_fts)│
+│ (ripgrep)  │  │(可插拔适配器)│  │(sqlite_fts)│
 │ 精确符号    │  │ 语义相似    │    │ 结构过滤    │
 └─────┬──────┘  └─────┬──────┘    └─────┬──────┘
       │               │                 │
@@ -83,7 +82,7 @@
 - **决策 2：RRF 融合而非加权求和**。三入口分数尺度不同（grep 是命中布尔 / semantic 是 cosine / index 是 BM25），直接加权不可比。RRF (Reciprocal Rank Fusion) 用排名倒数融合，尺度无关。`k=60` 是 RRF 经验值，平衡 head/tail。
 - **决策 3：authority_floor 在入口前置过滤**。在 RRF 融合之前先按 authority_floor 丢弃低权威结果，避免低权威结果通过 RRF 排名靠前。理由：F016 治理层要求"hard_rule > verified_decision > candidate_observation"硬序，不能让候选观察通过 RRF 翻盘。
 - **决策 4：grep 用 ripgrep 而非 Python re**。ripgrep 是 Rust 实现的多线程 grep，对大代码库（10w+ 文件）的精确符号查询延迟 < 50ms，Python re 不具备此性能。
-- **决策 5：查询扩展禁在引擎内做**。roleagent.md 第 4 章"简单系统 + 聪明 agent"原则——查询扩展（如同义词扩展、子查询分解）由灵智体在调用前完成，引擎只接收最终 query。理由：在引擎内加 regex/小模型会引入隐式复杂度，破坏 Build to Delete 半衰期标记。
+- **决策 5：查询扩展禁在引擎内做**。roleagent.md 第 4 章"简单系统 + 聪明 agent"原则——查询扩展（如同义词扩展、子查询分解）由Forgekin在调用前完成，引擎只接收最终 query。理由：在引擎内加 regex/小模型会引入隐式复杂度，破坏 Build to Delete 半衰期标记。
 
 ### 2.3 架构不变量
 
@@ -91,7 +90,7 @@
 - 跨域查询必须在 RetrievalFusion 入口层被拒绝，禁止穿透到具体 entry。
 - authority_floor 以下的命中必须在 RRF 融合之前被丢弃。
 - RRF 融合的 k 值必须从配置加载，禁止硬编码。
-- semantic 入口必须走 OpenSieve，禁止另起向量服务。
+- semantic 入口必须走可插拔数据源适配器（通过 Repository 层抽象），禁止另起向量服务。
 - 检索引擎内必须不调用任何 LLM，禁止 regex 查询扩展。
 
 ---
@@ -104,7 +103,7 @@
 |------|------|------|---------|
 | RetrievalFusion | `flowforge/core/memory/retrieval/fusion.py` | 三入口调度、域校验、RRF 融合 | `search` |
 | GrepEntry | `flowforge/core/memory/retrieval/grep.py` | ripgrep 调用、精确符号检索 | `search` |
-| SemanticEntry | `flowforge/core/memory/retrieval/semantic.py` | OpenSieve 调用、语义检索 | `search` |
+| SemanticEntry | `flowforge/core/memory/retrieval/semantic.py` | 可插拔数据源适配器调用、语义检索 | `search` |
 | IndexEntry | `flowforge/core/memory/retrieval/index.py` | sqlite_fts 调用、结构化过滤 | `search` |
 | RRFCombiner | `flowforge/core/memory/retrieval/rrf.py` | RRF 算法实现 | `fuse` |
 | RetrievalConfigLoader | `flowforge/core/memory/retrieval/config.py` | YAML 配置加载 | `load_retrieval_config` |
@@ -164,7 +163,7 @@ class GrepEntry(RetrievalEntry):
 
 
 class SemanticEntry(RetrievalEntry):
-    """语义检索（基于 OpenSieve）"""
+    """语义检索（基于可插拔数据源适配器，通过 Repository 层抽象）"""
 
 
 class IndexEntry(RetrievalEntry):
@@ -205,8 +204,8 @@ class RRFCombiner(ABC):
 ### 3.3 数据流
 
 ```
-[灵智体检索路径]
-  Forgekin.chat(query)  ← 查询扩展由灵智体完成
+[Forgekin检索路径]
+  Forgekin.chat(query)  ← 查询扩展由Forgekin完成
         │
         ▼
   RetrievalFusion.search(RetrievalQuery{
@@ -214,13 +213,13 @@ class RRFCombiner(ABC):
   })
         │
         ├─ collections 空校验 ── 空 ──▶ 抛 ValueError
-        ├─ cross_domain_check() ── 跨域 ──▶ 抛 CrossDomainJoinForbidden
+        ├─ cross_domain_check ── 跨域 ──▶ 抛 CrossDomainJoinForbidden
         │
         ▼
   并行调度（asyncio.gather）
-   ├─ GrepEntry.search()       →  RetrievalResult(grep, hits_g)
-   ├─ SemanticEntry.search()   →  RetrievalResult(semantic, hits_s)
-   └─ IndexEntry.search()      →  RetrievalResult(index, hits_i)
+   ├─ GrepEntry.search       →  RetrievalResult(grep, hits_g)
+   ├─ SemanticEntry.search   →  RetrievalResult(semantic, hits_s)
+   └─ IndexEntry.search      →  RetrievalResult(index, hits_i)
         │
         ▼
   authority_floor 过滤（丢弃 authority < floor 的 hit）
@@ -235,7 +234,7 @@ class RRFCombiner(ABC):
   F017 ConsumptionWeightedRanker.rank(hits)  ← 消费加权重排
         │
         ▼
-  返回给灵智体
+  返回给Forgekin
 ```
 
 ---
@@ -244,8 +243,8 @@ class RRFCombiner(ABC):
 
 ### 4.1 上游依赖
 
-- 依赖 **F014 Collection 层**：三入口均调用 `CollectionRegistry.cross_domain_join_check()` 做域校验，调用 `CollectionRepository.query_entries()` 读条目。
-- 依赖 **OpenSieve 聚合检索中台**（localhost:8100）：semantic 入口的非结构化检索经 OpenSieve SDK 调用，不另起向量服务。
+- 依赖 **F014 Collection 层**：三入口均调用 `CollectionRegistry.cross_domain_join_check` 做域校验，调用 `CollectionRepository.query_entries` 读条目。
+- 依赖 **可插拔数据源适配器**（通过 Repository 层抽象）：semantic 入口的非结构化检索经 Repository 层调用，不另起向量服务。
 - 依赖 **ripgrep 二进制**：grep 入口通过 subprocess 调用 ripgrep，需在 `config/system.yaml` 中声明路径。
 
 ### 4.2 下游影响
@@ -253,7 +252,7 @@ class RRFCombiner(ABC):
 - 影响 **F016 治理层**：authority_floor 过滤后的结果交 F016 GovernanceFilter 做权威排序（hard_rule > verified_decision > candidate_observation）。
 - 影响 **F017 消费排序**：RRF 融合后的 RetrievalHit 列表是 F017 的输入，F017 在此基础上叠加消费加权。
 - 影响 **F020 归因矩阵**：grep 入口为"轨迹检索"提供工具支撑，归因器可通过 grep 检索历史失败 Episode。
-- 影响 **F039 锻典可检索**：Mind Codex 通过 index 入口按 trigger 字段精确查询锻典条目，trigger 是结构化字段。
+- 影响 **F039 蒸馏知识库可检索**：MindCodex 通过 index 入口按 trigger 字段精确查询蒸馏知识库条目，trigger 是结构化字段。
 - 影响 **F040 控制面**：每次检索的 elapsed_ms 与 hit_count 信号写入 F040 Eval Hub，作为"检索质量"摩擦指标。
 
 ### 4.3 跨模块不变量
@@ -261,7 +260,7 @@ class RRFCombiner(ABC):
 - RetrievalFusion 必须在调用三入口前完成 collections 校验，禁止穿透。
 - 三入口返回的 RetrievalHit 必须携带 entry_id（与 F014 / F017 对齐）。
 - RRF 融合后的 hit.score 必须非负（k≥1 保证）。
-- semantic 入口必须不直操作向量库，必须经 OpenSieve。
+- semantic 入口必须不直操作向量库，必须经可插拔数据源适配器（通过 Repository 层抽象）。
 - 三入口必须不调用任何 LLM，查询扩展必须在调用前完成。
 
 ---
@@ -275,7 +274,7 @@ class RRFCombiner(ABC):
 - [ ] AC-3: Repository 层通过——三入口均经 F014 CollectionRepository 读条目，不直操作数据库。
 - [ ] AC-4: 配置驱动通过——grep/semantic/index 引擎选择与 RRF k 值从 `config/retrieval_entries.yaml` 加载。
 - [ ] AC-5: 三入口并行调度，总延迟 ≤ max(三入口延迟) + RRF 融合延迟。
-- [ ] AC-6: OpenSieve 调用走 SDK，无直连向量库代码。
+- [ ] AC-6: 可插拔数据源适配器调用通过 Repository 层抽象，无直连向量库代码。
 
 ### 5.2 架构不变量验收
 
@@ -299,8 +298,9 @@ class RRFCombiner(ABC):
 - [doc:../features/F020-seven-attribution.md]
 - [doc:../features/F039-mind-codex-searchable.md]
 - [doc:../decisions/008-memory-federation.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#编程红线]
+- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
+- [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
+- [doc:../../../hiclaw/rules.md#编程红线]（第 10/11/12/13 条）
 
 ---
 
@@ -308,4 +308,4 @@ class RRFCombiner(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 三入口并行 + RRF 融合 + 域隔离前置） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 三入口并行 + RRF 融合 + 域隔离前置） | 架构师 Forgekin（猫头鹰·鲁班） |

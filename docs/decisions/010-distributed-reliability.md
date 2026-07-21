@@ -2,9 +2,9 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-17
-> **决策者**: 架构师灵智体 + operator 审核
+> **决策者**: 架构师可进化智能体 + operator 审核
 > **依赖**: `[doc:roleagent.md#第6章]` + `[doc:review/review.md#第八章]` RA-037~RA-042 + `[doc:review/review.md#第九章]` FR-004
-> **依据**: RA-037~RA-042（三类可靠性挑战 + Tier 1-4 恢复分级 + liveness 规范读模型 + 弱状态机 vs 强 workflow + 跨 provider 宿主抽象）+ FR-004（万物灵智体 Tier 0 扩展）
+> **依据**: RA-037~RA-042（三类可靠性挑战 + Tier 1-4 恢复分级 + liveness 规范读模型 + 弱状态机 vs 强 workflow + 跨 provider 宿主抽象）+ FR-004（可进化智能体 Tier 0 扩展）
 
 ---
 
@@ -21,7 +21,7 @@ FlowForge v4.0 的现状（`[doc:review/review.md#第八章]` 8.6 节 RA-037~RA-
 - 跨 provider 统一宿主抽象缺失（RA-041 P0），LLMClient 仅做模型路由，未抽象 provider 运维语义
 - 不可控 vs 可控边界未在架构中体现（RA-042 P1），团队在抱怨 provider 不稳定上花精力
 
-`[doc:review/review.md#第九章]` FR-004 进一步补审：万物灵智体（特别是 BioForgekin / ObjForgekin）的可靠性要求更高——物理世界灵智体故障可能导致物理事故（灯具灵智体故障引发火灾），需扩展 Tier 0：物理世界不可逆操作永不自动恢复。`[doc:project_rules.md]` 已记录 ContentForge 在连续创作测试负载下会崩溃（端口 8001 不再监听），ContentForge model_service 健康检查间歇性报失败——这些是分布式可靠性缺失的实证。
+`[doc:review/review.md#第九章]` FR-004 进一步补审：可进化智能体（特别是 BioForgekin / ObjForgekin）的可靠性要求更高——物理世界可进化智能体故障可能导致物理事故（灯具可进化智能体故障引发火灾），需扩展 Tier 0：物理世界不可逆操作永不自动恢复。`[doc:project_rules.md]` 已记录 *Forge 业务项目在连续创作测试负载下会崩溃（业务端口不再监听），model_service 健康检查间歇性报失败——这些是分布式可靠性缺失的实证。
 
 operator 决策：FlowForge 必须实现三类可靠性挑战应对 + Tier 0-4 恢复分级 + liveness 规范读模型 + 弱状态机 vs 强 workflow + 跨 provider 宿主抽象。
 
@@ -33,21 +33,21 @@ operator 决策：FlowForge 必须实现三类可靠性挑战应对 + Tier 0-4 �
 
 | # | 挑战 | 触发场景 | 应对机制 |
 |---|---|---|---|
-| 1 | 单灵智体长任务持久性 | 长任务（小时级）崩溃 / 网络中断 / 上下文压缩 | 副作用 WAL + 检查点 + 恢复卡 |
-| 2 | 跨灵智体协作一致性 | TeamAct 中一只灵智体失败、状态不一致 | SharedStateLedger 规范读 + 持球 lease + 乒乓球熔断器 |
-| 3 | 跨 provider 语义一致性 | 一家 provider 崩了接手的灵智体无法从同一边界恢复 | 跨 provider 统一宿主抽象 + fallback 链 |
+| 1 | 单可进化智能体长任务持久性 | 长任务（小时级）崩溃 / 网络中断 / 上下文压缩 | 副作用 WAL + 检查点 + 恢复卡 |
+| 2 | 跨可进化智能体协作一致性 | TeamAct 中一只可进化智能体失败、状态不一致 | SharedStateLedger 规范读 + 持球 lease + 乒乓球熔断器 |
+| 3 | 跨 provider 语义一致性 | 一家 provider 崩了接手的可进化智能体无法从同一边界恢复 | 跨 provider 统一宿主抽象 + fallback 链 |
 
 ### 2. Tier 0-4 恢复分级（F022，RA-038，FR-004）
 
 | Tier | 失败类型 | 恢复机制 | 自动化 | 例子 |
 |---|---|---|---|---|
-| **Tier 0** | 物理世界不可逆操作 | **永不自动恢复，硬拒 + operator 介入** | ❌ 永不 | 灯具灵智体已开机、IoT 执行器已动作、转账已发起 |
+| **Tier 0** | 物理世界不可逆操作 | **永不自动恢复，硬拒 + operator 介入** | ❌ 永不 | 灯具可进化智能体已开机、IoT 执行器已动作、转账已发起 |
 | Tier 1 | 读取 / 构建 / 测试 / lint | 自动重试 + 指数退避 | ✅ 自动 | 工具调用超时、测试失败、lint 报错 |
 | Tier 2 | 沙箱 / worktree / 可确定性探测 | 探测成功后自动恢复 | ✅ 探测后 | git checkout 失败、worktree 损坏、cache 失效 |
 | Tier 3 | 共享文件 / 外部服务 / GitHub 写 | **不自动恢复，出恢复卡** | ❌ 出卡 | PR 创建失败、文件已写但远程未确认、race condition |
 | Tier 4 | force-push / merge / release | **永远不自动恢复，dispatch 前硬拒** | ❌ 硬拒 | git push --force、release publish、merge to main |
 
-**铁律**：force push / merge / release 等不可逆操作禁止自动重试。Tier 0 是万物灵智体扩展，物理世界操作永不自动恢复。
+**铁律**：force push / merge / release 等不可逆操作禁止自动重试。Tier 0 是可进化智能体扩展，物理世界操作永不自动恢复。
 
 ### 3. 副作用日志 WAL（F021，RA-037）
 
@@ -67,7 +67,7 @@ class SideEffectWAL:
 
 ### 4. liveness 规范读模型（F023，RA-039）
 
-灵智体是否存活不能靠心跳，必须靠"规范读模型"——通过读取共享状态判断当前状态：
+可进化智能体是否存活不能靠心跳，必须靠"规范读模型"——通过读取共享状态判断当前状态：
 
 | 状态来源 | 角色 | 新鲜度 |
 |---|---|---|
@@ -87,7 +87,7 @@ class LivenessVerdict(Enum):
 
 ### 5. 弱状态机 vs 强 workflow 边界（F024，RA-040）
 
-- **弱状态机**：开放协作使用，状态可变 + 路由动态，保留灵智体判断力（如 TeamAct 协作）
+- **弱状态机**：开放协作使用，状态可变 + 路由动态，保留可进化智能体判断力（如 TeamAct 协作）
 - **强 workflow**：严肃副作用使用，固定流程，保证可审计、可回放、可拒绝（如转账 / 审批 / merge / release / 删除数据）
 
 ```python
@@ -114,7 +114,7 @@ class ProviderHostAbstraction:
     supervisor: SidecarSupervisor        # 监管者作为独立伴生进程（sidecar）
 ```
 
-一家 provider 崩了接手的灵智体可从同一边界恢复，避免每家 provider 各写一套恢复逻辑。
+一家 provider 崩了接手的可进化智能体可从同一边界恢复，避免每家 provider 各写一套恢复逻辑。
 
 ### 7. 不可控 vs 可控边界（RA-042）
 
@@ -130,7 +130,7 @@ class ProviderHostAbstraction:
 
 ### 8. Tier 0 物理世界不可逆操作（FR-004）
 
-万物灵智体扩展的可靠性要求：
+可进化智能体扩展的可靠性要求：
 
 - BioForgekin / ObjForgekin 的物理执行器动作（如灯具开机、IoT 设备操作）一旦执行不可回滚
 - 物理 AI 路径下的不可逆操作必须 operator 显式批准（与觉醒阶 E1-E2 全导阶一致）
@@ -153,13 +153,13 @@ class CheckpointDrivenRecovery:
 
 ### 正面后果
 
-- 多灵智体系统具备分布式系统的全部可靠性工程
+- 多可进化智能体系统具备分布式系统的全部可靠性工程
 - Tier 0-4 恢复分级让不可逆操作有明确边界，避免盲目重试造成更大损失
 - liveness 规范读模型消除"心跳假阳性"，四态结构化结果可审计
 - 弱状态机 vs 强 workflow 边界让严肃操作可审计、可回放、可拒绝
 - 跨 provider 宿主抽象让 fallback 链可移植
 - 不可控 vs 可控边界让团队投资方向清晰
-- Tier 0 万物灵智体扩展让物理 AI 路径有安全护栏
+- Tier 0 可进化智能体扩展让物理 AI 路径有安全护栏
 
 ### 负面后果
 
@@ -210,9 +210,9 @@ class CheckpointDrivenRecovery:
 
 - `[doc:roleagent.md#第6章]` — 可靠性：多 agent 是分布式系统
 - `[doc:review/review.md#第八章]` 8.6 节 — RA-037~RA-042 分布式可靠性补审（6 项，5 P0）
-- `[doc:review/review.md#第九章]` 9.3 节 — FR-004 万物灵智体可靠性治理（Tier 0 扩展）
+- `[doc:review/review.md#第九章]` 9.3 节 — FR-004 可进化智能体可靠性治理（Tier 0 扩展）
 - `[doc:features/F021-side-effect-wal.md]` — 副作用日志 WAL
-- `[doc:features/F022-tier-1-4-recovery.md]` — Tier 1-4 恢复分级（含 Tier 0 万物灵智体扩展）
+- `[doc:features/F022-tier-1-4-recovery.md]` — Tier 1-4 恢复分级（含 Tier 0 可进化智能体扩展）
 - `[doc:features/F023-liveness-canonical-read.md]` — liveness 规范读模型
 - `[doc:features/F024-weak-state-vs-strong-workflow.md]` — 弱状态机 vs 强 workflow
 - `[doc:features/F025-provider-host-abstraction.md]` — 跨 provider 宿主抽象
@@ -220,8 +220,8 @@ class CheckpointDrivenRecovery:
 - `[doc:decisions/003-project-thread-architecture.md]` — 线程架构（检查点驱动恢复）
 - `[doc:decisions/007-harness-engineering.md]` — Harness 工程路径（Magic Words 逃生舱 + Governance Boundary）
 - `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢（七类归因含"环境漂移"）
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物灵智体愿景（Tier 0 物理世界）
-- `[doc:design/naming-contract.md#2.2]` — 灵智体（Forgekin / Spirit Agent）
-- `[doc:design/naming-contract.md#2.3]` — 灵族（Forgekin Species，BioForgekin / ObjForgekin 物理形态）
-- `[doc:project_rules.md]` — ContentForge 端口 8001 崩溃 / model_service 健康检查间歇失败记录
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景（Tier 0 物理世界）
+- `[doc:design/naming-contract.md#2.2]` — Forgekin（可进化智能体）
+- `[doc:design/naming-contract.md#2.3]` — Forgekin Species（智能体形态学，BioForgekin / ObjForgekin 物理形态）
+- `[doc:project_rules.md]` — *Forge 业务项目端口崩溃 / model_service 健康检查间歇失败记录
 - `[doc:project_rules.md#P35]` — 长程任务执行规范（检查点驱动恢复）

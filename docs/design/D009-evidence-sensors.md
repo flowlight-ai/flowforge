@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.3]
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]
 > **对应 Feature**: [doc:../features/F009-evidence-sensors.md]
 > **对应 Architecture**: [doc:../architecture/A009-evidence-sensors.md]
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + forgemind Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -42,15 +41,14 @@ A009 架构层定义了"6 类证据 + 二态裁决 + 先红后绿 + 自审拒绝
 | C9 | Web 功能证据必须含 `DOM_DIFF`（T8 铁律），禁只看退出码 | A009 决策 5 |
 | C10 | Evidence `verifiable=true` 强制（不可写入不可验证的证据） | A009 不变量 |
 | C11 | 所有 Evidence / Verdict 写入走 WAL，进程崩溃可重放 | F021 联动 |
-| C12 | 9 大点名称修订：双轨命名、AI 术语优先（Evidence/Verdict/Sensor）、forgemind 仅指 Layer 2、责任方命名（猎犬·夏洛克） | 用户指令 |
-| C13 | 觉醒阶标注：E1-E3 进化阶灵智体可作为 reviewer；E4+ 觉醒阶灵智体作 reviewer 需 Mind Council 二次确认 | naming-contract.md §4 |
+| C13 | 觉醒阶标注：E1-E3 进化阶Forgekin可作为 reviewer；E4+ 觉醒阶Forgekin作 reviewer 需 MindCouncil 二次确认 | naming-contract.md §4 |
 
 ### 1.3 设计影响
 
 | 编号 | 影响 | 关联模块 |
 |------|------|---------|
-| I1 | D002 TeamAct EVIDENCE 步调用 `EvidenceCollector.collect()` 采集证据 | D002 / A002 |
-| I2 | D002 TeamAct VERDICT 步调用 `VerdictValidator.validate()` 校验裁决 | D002 / A002 |
+| I1 | D002 TeamAct EVIDENCE 步调用 `EvidenceCollector.collect` 采集证据 | D002 / A002 |
+| I2 | D002 TeamAct VERDICT 步调用 `VerdictValidator.validate` 校验裁决 | D002 / A002 |
 | I3 | D007 Push Back 的 `evidence_refs` 锚定到本模块的 `evidence_id` | D007 / A007 |
 | I4 | D008 Durable Surface 持久化证据（`task_queue` 或 `thread_trace`） | D008 / A008 |
 | I5 | D001 CapabilityProfile 用证据累积历史表现 | D001 / A001 |
@@ -142,7 +140,7 @@ A009 架构层定义了"6 类证据 + 二态裁决 + 先红后绿 + 自审拒绝
 │    + async load(evidence_id) -> Optional[Evidence]                   │
 │    + async verify(evidence_id) -> bool                               │
 │    + async list_by_forgekin(forgekin_id) -> list[Evidence]           │
-│    + async checkpoint() -> None                                      │
+│    + async checkpoint -> None                                      │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -293,14 +291,14 @@ class ReviewVerdict(BaseModel):
     @field_validator("rationale")
     @classmethod
     def _rationale_non_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ThirdVerdictStateError("ReviewVerdict rationale 不可为空")
-        return v.strip()
+        return v.strip
 
     @model_validator(mode="after")
     def _follow_up_forces_blocking(self) -> "ReviewVerdict":
         """follow_up_notes 非空 → 强制 decision=blocking（A009 决策 2）"""
-        if self.follow_up_notes and self.follow_up_notes.strip():
+        if self.follow_up_notes and self.follow_up_notes.strip:
             if self.decision != VerdictDecision.BLOCKING:
                 # 自动降级
                 self.decision = VerdictDecision.BLOCKING
@@ -458,7 +456,7 @@ class DefaultEvidenceCollector(EvidenceCollector):
             surface_id=f"ev-surface-{evidence_id}",
             surface_type=StateSurfaceType.TASK_QUEUE,
             key=f"evidence:{evidence_id}",
-            payload=evidence.model_dump(),
+            payload=evidence.model_dump,
             authority_level=3,
             compression_immune=True,
             decay_tag=DecayTag.BUILT_TO_PERSIST,
@@ -501,8 +499,8 @@ class DefaultSensorRegistry(SensorRegistry):
         if sensor_id not in self._sensors:
             raise InvalidEvidenceError(f"sensor_id '{sensor_id}' 未注册")
         sensor = self._sensors[sensor_id]
-        # 传感器协议: async def read() -> Any
-        value = await sensor.read()
+        # 传感器协议: async def read -> Any
+        value = await sensor.read
         return SensorReading(
             sensor_id=sensor_id,
             value=value,
@@ -525,7 +523,7 @@ class DefaultVerdictValidator(VerdictValidator):
         errors: list[str] = []
 
         # 1. 校验 target_evidence_ids 都存在
-        author_forgekin_ids: set[str] = set()
+        author_forgekin_ids: set[str] = set
         has_web_function = False
         has_dom_diff = False
         for ev_id in verdict.target_evidence_ids:
@@ -606,7 +604,7 @@ function collect_dom_diff(forgekin_id, url, before_html, after_html) -> str:
 ```
 function validate(verdict, evidence_store) -> ValidationResult:
     errors = []
-    author_ids = set()
+    author_ids = set
     has_web_function = False
     has_dom_diff = False
 
@@ -636,7 +634,7 @@ function validate(verdict, evidence_store) -> ValidationResult:
 
 ```
 function ReviewVerdict._follow_up_forces_blocking(self):
-    if self.follow_up_notes and self.follow_up_notes.strip():
+    if self.follow_up_notes and self.follow_up_notes.strip:
         if self.decision != BLOCKING:
             self.decision = BLOCKING  # 自动降级
     return self
@@ -712,13 +710,13 @@ class SqliteEvidenceStore(EvidenceStore):
             await self._conn.execute("PRAGMA synchronous=NORMAL")
             await self._conn.execute("PRAGMA foreign_keys=ON")
             await self._conn.executescript(self.DDL)
-            await self._conn.commit()
+            await self._conn.commit
         return self._conn
 
     async def save(self, evidence: Evidence) -> str:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         if not evidence.evidence_id:
-            evidence.evidence_id = f"ev-{uuid.uuid4().hex[:12]}"
+            evidence.evidence_id = f"ev-{uuid.uuid4.hex[:12]}"
         await conn.execute(
             """
             INSERT INTO evidences
@@ -731,20 +729,20 @@ class SqliteEvidenceStore(EvidenceStore):
                 evidence.evidence_id, evidence.evidence_type.value,
                 evidence.forgekin_id, evidence.payload_ref,
                 json.dumps(evidence.payload, ensure_ascii=False),
-                evidence.produced_at.isoformat(),
+                evidence.produced_at.isoformat,
                 int(evidence.verifiable), evidence.schema_version,
                 evidence.wal_lsn, evidence.decay_tag.value,
                 evidence.authority_level,
             ),
         )
-        await conn.commit()
-        await self._checkpoint_if_needed()
+        await conn.commit
+        await self._checkpoint_if_needed
         return evidence.evidence_id
 
     async def save_verdict(self, verdict: ReviewVerdict) -> str:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         if not verdict.verdict_id:
-            verdict.verdict_id = f"vrd-{uuid.uuid4().hex[:12]}"
+            verdict.verdict_id = f"vrd-{uuid.uuid4.hex[:12]}"
         await conn.execute(
             """
             INSERT INTO review_verdicts
@@ -757,20 +755,20 @@ class SqliteEvidenceStore(EvidenceStore):
                 verdict.verdict_id, verdict.reviewer_forgekin_id,
                 json.dumps(verdict.target_evidence_ids),
                 verdict.decision.value, verdict.rationale,
-                verdict.follow_up_notes, verdict.decided_at.isoformat(),
+                verdict.follow_up_notes, verdict.decided_at.isoformat,
                 verdict.schema_version, verdict.wal_lsn,
             ),
         )
-        await conn.commit()
+        await conn.commit
         return verdict.verdict_id
 
     async def load(self, evidence_id: str) -> Optional[Evidence]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT * FROM evidences WHERE evidence_id = ?",
             (evidence_id,),
         ) as cur:
-            row = await cur.fetchone()
+            row = await cur.fetchone
         if row is None:
             return None
         return self._deserialize_evidence(row)
@@ -780,13 +778,13 @@ class SqliteEvidenceStore(EvidenceStore):
         return evidence is not None and evidence.verifiable
 
     async def list_by_forgekin(self, forgekin_id: str) -> list[Evidence]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT * FROM evidences WHERE forgekin_id = ? "
             "ORDER BY produced_at DESC",
             (forgekin_id,),
         ) as cur:
-            rows = await cur.fetchall()
+            rows = await cur.fetchall
         return [self._deserialize_evidence(r) for r in rows]
 
     @staticmethod
@@ -811,7 +809,7 @@ class SqliteEvidenceStore(EvidenceStore):
         )
 
     async def _checkpoint_if_needed(self) -> None:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         await conn.execute("PRAGMA wal_checkpoint(FULL)")
 ```
 
@@ -943,7 +941,7 @@ evidence_sensors:
     require_green_run: true
     require_green_after_red: true   # green.timestamp >= red.timestamp
 
-  # 觉醒阶约束（E4+ 作 reviewer 需 Mind Council token）
+  # 觉醒阶约束（E4+ 作 reviewer 需 MindCouncil token）
   awakening_stage_constraints:
     E1: allow_reviewer
     E2: allow_reviewer
@@ -976,7 +974,7 @@ class TeamActLoopExecutor:
         ...
 
     async def _execute_evidence_step(self, state: TeamActState) -> TeamActState:
-        # 持球灵智体产出 (commit / 测试 / trace / 截图 / DOM diff)
+        # 持球Forgekin产出 (commit / 测试 / trace / 截图 / DOM diff)
         action_output = state.action_output
 
         # 根据 action 类型采集对应证据
@@ -989,8 +987,8 @@ class TeamActLoopExecutor:
             ev_id = await self._evidence_collector.collect(
                 EvidenceType.TEST_RED_GREEN, state.owner,
                 {
-                    "red_run": action_output.red_run.model_dump(),
-                    "green_run": action_output.green_run.model_dump(),
+                    "red_run": action_output.red_run.model_dump,
+                    "green_run": action_output.green_run.model_dump,
                     "ref": f"test:{action_output.red_run.run_id}",
                 },
             )
@@ -1109,7 +1107,7 @@ class EvalContractWriter:
 | AC-F14 | `list_by_forgekin` 按 forgekin_id 列出证据 |
 | AC-F15 | Evidence 写入触发 D008 Durable Surface 同步写入 |
 | AC-F16 | 6 类 EvidenceType 不可扩展第七类 |
-| AC-F17 | E4+ 觉醒阶作 reviewer 需 Mind Council token |
+| AC-F17 | E4+ 觉醒阶作 reviewer 需 MindCouncil token |
 | AC-F18 | TEST_RED_GREEN 校验 green.timestamp >= red.timestamp |
 
 ### 5.2 性能验收（Performance AC）
@@ -1132,7 +1130,7 @@ class EvalContractWriter:
 | AC-S3 | 所有 DB 操作通过 Repository, 无 `cursor.execute` |
 | AC-S4 | 禁自审（reviewer != author）强制生效 |
 | AC-S5 | T8 铁律: Web 功能证据必须含 DOM_DIFF |
-| AC-S6 | E4+ 觉醒阶作 reviewer 需 Mind Council 二次确认 |
+| AC-S6 | E4+ 觉醒阶作 reviewer 需 MindCouncil 二次确认 |
 
 ### 5.4 Eval 验收（Eval AC）
 
@@ -1167,4 +1165,4 @@ class EvalContractWriter:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F009 / A009） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F009 / A009） | 开发者 Forgekin（猎犬·夏洛克） |

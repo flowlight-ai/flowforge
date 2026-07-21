@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010）+ [doc:../spec.md#§2.9]
 > **对应 arch.md**: [doc:../arch.md#§3.10] + [doc:../arch.md#§4.4]
 > **对应 design.md**: [doc:../design.md#§3.10]（本文件）
 > **对应 Feature**: [doc:../features/F031-external-agent-adapter.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A031-external-agent-adapter.md]（同号架构设计）
 > **依赖 ADR**: [doc:../decisions/006-external-agent-integration.md]
-> **9 大点名称修订**: 已应用（双轨命名 ForgeMind/Forgekin + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,7 +16,7 @@
 
 ### 1.1 设计问题
 
-FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用，灵智体（Forgekin）无法将三方 Agent 视为"能力扩展"而非"工具调用"。A031 已固化 ExternalAgentAdapter 抽象层 + EAC v1 七契约 + 六层 Guardrails + worktree 隔离 + fallback + 能力融合 + System Prompt Configuration Map 全维度架构，本详细设计在 `core/external_agent/` 落地具体实现，解决以下工程层问题：
+FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用，Forgekin无法将三方 Agent 视为"能力扩展"而非"工具调用"。A031 已固化 ExternalAgentAdapter 抽象层 + EAC v1 七契约 + 六层 Guardrails + worktree 隔离 + fallback + 能力融合 + System Prompt Configuration Map 全维度架构，本详细设计在 `core/external_agent/` 落地具体实现，解决以下工程层问题：
 
 1. **ExternalAgentBridge 入口未实现**：A031 已定义 Bridge 接口与基本流程，但 `core/external_agent/bridge.py` 具体实现未编写，含六层 Guardrails 顺序调用、worktree 创建/清理、fallback 链遍历、共享状态写入、能力融合触发五步编排。
 2. **EAC v1 七契约 Adapter 抽象未实现**：`ExternalAgentAdapter` 抽象类（Invocation/Stream/Session/Capability/Collaboration/Safety/Avatar Sync 七契约）未编写。
@@ -30,9 +29,9 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
 
 ### 1.2 设计约束
 
-- **单向依赖约束**：`core/external_agent/` 必须单向依赖 `flowforge/core/` 中的 F001/F002/F003/F008/F014/F018/F022/F032-F035 + `forgemind/worlds/`（F030），禁止 `import contentforge` 等业务模块。
+- **单向依赖约束**：`core/external_agent/` 必须单向依赖 `flowforge/core/` 中的 F001/F002/F003/F008/F014/F018/F022/F032-F035 + `forgemind/worlds/`（F030），禁止 `import` 任何 *Forge 业务模块。
 - **DI 容器约束**：`ExternalAgentAdapter` / `ExternalAgentBridge` / 六层 Guardrails / `WorktreeIsolation` 实例必须通过 DI 容器注入，禁止直接实例化。
-- **Repository 层约束**：`ExternalAgentSharedState` 写入必须通过 Repository 层，禁止 `cursor.execute()` 直接操作数据库。
+- **Repository 层约束**：`ExternalAgentSharedState` 写入必须通过 Repository 层，禁止 `cursor.execute` 直接操作数据库。
 - **配置驱动约束**：EAC v1 七契约配置 + 六层 Guardrails 配置 + 4 Adapter 配置必须 YAML 外置到 `config/external_agent.yaml`，禁止 `.py` 硬编码 API key / 端口 / 厂商偏好。
 - **EAC v1 七契约约束**：所有三方 Agent Adapter 必须实现七契约才能纳入 `ExternalAgentBridge`，缺一即拒绝注册。
 - **六层 Guardrails 约束**：三方 Agent 调用必须按序穿过六层防护，缺一即调用被拒绝。
@@ -45,7 +44,7 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
 - **对 F002 TeamAct 的影响**：`ExternalAgentSharedState` 与 `TeamActState` 一一关联。
 - **对 F003 HandoffCapsule 的影响**：三方 Agent 支持 Handoff Capsule 交接（Collaboration Contract）。
 - **对 F008 持久状态层的影响**：`ExternalAgentSharedState` 写入持久状态层。
-- **对 F014 多域记忆的影响**：`FallbackExecutionRecord` 写入灵忆供灵锻蒸馏。
+- **对 F014 多域记忆的影响**：`FallbackExecutionRecord` 写入EchoStore供SpiritForge蒸馏。
 - **对 F018 Eval Contract 的影响**：三方 Agent 执行轨迹纳入 Eval 信号。
 - **对 F022 Tier 1-4 恢复分级的影响**：三方 Agent 失败按 Tier 1-4 分级恢复。
 - **对 F030 虚拟世界设定的影响**：System Prompt Configuration Map 引用 World Setting + Role Mask 五层。
@@ -118,19 +117,19 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
 ### 2.2 关键设计决策
 
 - **决策 1：ExternalAgentBridge 唯一入口 + 编排五大机制**
-  `ExternalAgentBridge.invoke()` 是灵智体调用三方 Agent 的唯一入口，编排五大机制：六层 Guardrails（按序穿过）+ worktree 隔离（4 项）+ fallback 链（F034）+ 共享状态（F033）+ 能力融合（F035）。禁止灵智体直接调用 Adapter 绕过 Guardrails。
+  `ExternalAgentBridge.invoke` 是Forgekin调用三方 Agent 的唯一入口，编排五大机制：六层 Guardrails（按序穿过）+ worktree 隔离（4 项）+ fallback 链（F034）+ 共享状态（F033）+ 能力融合（F035）。禁止Forgekin直接调用 Adapter 绕过 Guardrails。
 
 - **决策 2：EAC v1 七契约作为 Adapter 注册硬门**
-  `ExternalAgentAdapter` 抽象定义七契约（Invocation/Stream/Session/Capability/Collaboration/Safety/Avatar Sync + System Prompt Configuration Map）。`ExternalAgentBridge.register_adapter()` 调用 `_assert_eac_v1_contracts()` 校验七契约全部实现，缺一即 `raise EACContractViolationError`。
+  `ExternalAgentAdapter` 抽象定义七契约（Invocation/Stream/Session/Capability/Collaboration/Safety/Avatar Sync + System Prompt Configuration Map）。`ExternalAgentBridge.register_adapter` 调用 `_assert_eac_v1_contracts` 校验七契约全部实现，缺一即 `raise EACContractViolationError`。
 
 - **决策 3：六层 Guardrails 强制按序穿过**
   三方 Agent 调用必须按序穿过 L1 Input Validation -> L2 System Prompt Constraints -> L3 Tool Allow-Lists -> L4 Output Validation -> L5 Action Confirmation -> L6 Cost Ceiling 六层。任一层失败即调用被拒绝，返回 `ExternalAgentResult(success=False, error="guardrail_rejected: L{X}")`。
 
 - **决策 4：worktree 隔离四项 + 失败 git reset**
-  三方 Agent 必须在独立 git worktree 中执行，含网络白名单（egress filter 限制可访问域名）+ 权限控制（read/write/exec 细粒度）+ 审计追踪（所有副作用记录到 audit log）+ 操作回滚（失败时 `git reset --hard`）四项隔离。`WorktreeIsolation.create_isolated()` 返回独立 worktree 路径。
+  三方 Agent 必须在独立 git worktree 中执行，含网络白名单（egress filter 限制可访问域名）+ 权限控制（read/write/exec 细粒度）+ 审计追踪（所有副作用记录到 audit log）+ 操作回滚（失败时 `git reset --hard`）四项隔离。`WorktreeIsolation.create_isolated` 返回独立 worktree 路径。
 
 - **决策 5：fallback 链基于 F032 能力画像盲点互补 + 成本排序**
-  Fallback 链不按固定顺序，而是基于 F032 `CapabilityMatcher.match_for_task()` 获取候选厂商，再按 `cost_per_1k_tokens + avg_latency_ms` 升序排序构建多步 fallback 链。
+  Fallback 链不按固定顺序，而是基于 F032 `CapabilityMatcher.match_for_task` 获取候选厂商，再按 `cost_per_1k_tokens + avg_latency_ms` 升序排序构建多步 fallback 链。
 
 - **决策 6：System Prompt Configuration Map 联动 F030 Role Mask 五层**
   `SystemPromptConfigurationMap` 包含 `core_identity_ref` + `role_mask_layers` (L1-L5) + `world_setting_ref` + `immutable_directives` + `avatar_sync_token` 五字段。三方 Agent 在执行期间保持化身一致性（Avatar Sync），避免角色漂移。
@@ -139,7 +138,7 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
   当 fallback 链全部失败时，降级到 FlowForge 内置 agent（能力可能弱但可用），返回 `ExternalAgentResult(success=False, error="all_external_agents_failed_degrade_to_builtin")`。
 
 - **决策 8：调用语义统一（同步/异步/流式/委托）**
-  `ExternalAgentBridge.invoke()` 统一封装四种调用语义：同步（`invoke`）/异步（`invoke_async`）/流式（`invoke_stream`）/委托（`delegate`）。Adapter 内部实现差异由 Bridge 屏蔽。
+  `ExternalAgentBridge.invoke` 统一封装四种调用语义：同步（`invoke`）/异步（`invoke_async`）/流式（`invoke_stream`）/委托（`delegate`）。Adapter 内部实现差异由 Bridge 屏蔽。
 
 ### 2.3 设计不变量
 
@@ -147,10 +146,10 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
 - 三方 Agent 调用必须按序穿过六层 Guardrails，任一层失败即调用被拒绝。
 - 三方 Agent 必须在独立 worktree 中执行，含网络白名单 + 权限控制 + 审计追踪 + 操作回滚四项隔离。
 - 三方 Agent 失败必须按 fallback 链回退，全部失败必须降级到 FlowForge 内置能力。
-- 三方 Agent 能力画像必须融合到灵智体 `CapabilityProfile`（通过 F035 CapabilityFusion）。
+- 三方 Agent 能力画像必须融合到Forgekin `CapabilityProfile`（通过 F035 CapabilityFusion）。
 - 三方 Agent 执行状态必须写入 `ExternalAgentSharedState`（F033），与 F002 TeamActState 一一关联。
-- 三方 Agent 执行轨迹必须写入 Eval 信号（F018）+ 灵忆（F014）供灵锻蒸馏。
-- `ExternalAgentBridge` 必须是灵智体调用三方 Agent 的唯一入口，禁止灵智体直接调用 Adapter。
+- 三方 Agent 执行轨迹必须写入 Eval 信号（F018）+ EchoStore（F014）供SpiritForge蒸馏。
+- `ExternalAgentBridge` 必须是Forgekin调用三方 Agent 的唯一入口，禁止Forgekin直接调用 Adapter。
 - 三方 Agent 必须接受 `SystemPromptConfigurationMap`（含 Role Mask 五层 + Core Identity + World Setting 引用），保持 Avatar Sync。
 - 三方 Agent 配置必须 YAML 外置到 `config/external_agent.yaml`，禁止 `.py` 硬编码 API key / 端口 / 厂商偏好。
 
@@ -208,10 +207,10 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
                     | + invoke_stream(task) -> AsyncIter    | (契约 2)
                     | + create_session(forgekin_id) -> sid  | (契约 3)
                     | + cancel_session(session_id)          |
-                    | + get_profile() -> Profile            | (契约 4)
+                    | + get_profile -> Profile            | (契约 4)
                     | + handoff_to(next_type, capsule)      | (契约 5)
-                    | + health_check() -> bool              | (契约 6)
-                    | + emit_audit_log() -> list[dict]      |
+                    | + health_check -> bool              | (契约 6)
+                    | + emit_audit_log -> list[dict]      |
                     | + apply_system_prompt_config(map)     | (契约 7)
                     | + sync_avatar(avatar_token)           |
                     +---------------------------------------+
@@ -240,7 +239,7 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
                     +---------------------------------------+
                     | WorktreeIsolation (ABC + Impl)        |
                     +---------------------------------------+
-                    | + create_isolated() -> path           |
+                    | + create_isolated -> path           |
                     | + audit_log(path) -> list[dict]       |
                     | + rollback(path)                      |
                     | + cleanup(path)                       |
@@ -543,7 +542,7 @@ class SystemPromptConstraints(Guardrail):
 
     async def check(self, context: GuardrailContext) -> tuple[bool, str]:
         # 校验 task 描述含必要约束
-        desc = context.task_description.lower()
+        desc = context.task_description.lower
         if "ignore previous" in desc or "forget instructions" in desc:
             return False, "prompt injection attempt detected"
         # 校验 operator 已配置必要 directives
@@ -763,7 +762,7 @@ class HarnessWorktreeIsolation(WorktreeIsolation):
         3. 审计追踪：所有副作用记录到 audit log
         4. 操作回滚：失败时 git reset --hard
         """
-        worktree_id = f"wt-{uuid.uuid4().hex[:10]}"
+        worktree_id = f"wt-{uuid.uuid4.hex[:10]}"
         worktree_path = Path(config.base_path) / worktree_id
         # 创建 worktree
         worktree_path.mkdir(parents=True, exist_ok=True)
@@ -791,7 +790,7 @@ class HarnessWorktreeIsolation(WorktreeIsolation):
     async def audit_log(self, worktree_path: str) -> list[dict]:
         """读取审计日志。"""
         entries = await self._audit_repo.list_by_worktree(worktree_path)
-        return [entry.model_dump() for entry in entries]
+        return [entry.model_dump for entry in entries]
 
     async def rollback(self, worktree_path: str) -> None:
         """操作回滚（git reset --hard）。"""
@@ -829,7 +828,7 @@ class HarnessWorktreeIsolation(WorktreeIsolation):
 ### 3.5 Python 实现：`flowforge/core/external_agent/bridge.py`
 
 ```python
-"""ExternalAgentBridge 实现（灵智体调用三方 Agent 的唯一入口）。"""
+"""ExternalAgentBridge 实现（Forgekin调用三方 Agent 的唯一入口）。"""
 from __future__ import annotations
 
 import uuid
@@ -857,7 +856,7 @@ logger = get_logger(__name__)
 
 
 class ExternalAgentBridge:
-    """灵智体调用三方 Agent 的唯一入口。
+    """Forgekin调用三方 Agent 的唯一入口。
 
     编排五大机制：
     1. 六层 Guardrails（按序穿过）
@@ -936,7 +935,7 @@ class ExternalAgentBridge:
         task: ExternalAgentTask,
         operator_id: Optional[str] = None,
     ) -> ExternalAgentResult:
-        """灵智体调用三方 Agent 全流程。
+        """Forgekin调用三方 Agent 全流程。
 
         1. 穿过六层 Guardrails
         2. 创建独立 worktree
@@ -945,9 +944,9 @@ class ExternalAgentBridge:
         5. 写入共享状态
         6. 失败 -> fallback 链
         7. 全部失败 -> 降级到 FlowForge 内置能力
-        8. 执行轨迹写入 Eval 信号 + 灵忆
+        8. 执行轨迹写入 Eval 信号 + EchoStore
         """
-        started_at = datetime.utcnow()
+        started_at = datetime.utcnow
 
         # 1. 六层 Guardrails
         guardrail_context = GuardrailContext(
@@ -962,7 +961,7 @@ class ExternalAgentBridge:
                 task_id=task.task_id,
                 success=False,
                 error=f"guardrail_rejected: {error}",
-                duration_ms=int((datetime.utcnow() - started_at).total_seconds() * 1000),
+                duration_ms=int((datetime.utcnow - started_at).total_seconds * 1000),
             )
 
         # 2. worktree 隔离
@@ -973,7 +972,7 @@ class ExternalAgentBridge:
 
         # 3. 下发 SystemPromptConfigurationMap
         config_map = await self._build_system_prompt_config(forgekin_id)
-        for agent_type, adapter in self._adapters.items():
+        for agent_type, adapter in self._adapters.items:
             await adapter.apply_system_prompt_config(config_map)
             await adapter.sync_avatar(config_map.avatar_sync_token)
 
@@ -986,7 +985,7 @@ class ExternalAgentBridge:
             adapter = self._adapters.get(agent_type)
             if adapter is None:
                 continue
-            if not await adapter.health_check():
+            if not await adapter.health_check:
                 logger.info(
                     "external_agent_skipped_unhealthy",
                     agent_type=agent_type.value,
@@ -1005,13 +1004,13 @@ class ExternalAgentBridge:
                 # 6. 能力融合
                 await self._fusion.fuse(
                     forgekin_id=forgekin_id,
-                    profile=adapter.get_profile(),
+                    profile=adapter.get_profile,
                 )
                 # 7. 清理 worktree
                 await self._worktree_iso.cleanup(worktree_path)
                 result.used_agent_type = agent_type
                 result.duration_ms = int(
-                    (datetime.utcnow() - started_at).total_seconds() * 1000
+                    (datetime.utcnow - started_at).total_seconds * 1000
                 )
                 logger.info(
                     "external_agent_invoke_succeeded",
@@ -1020,7 +1019,7 @@ class ExternalAgentBridge:
                     duration_ms=result.duration_ms,
                     cost_incurred=result.cost_incurred,
                 )
-                # 8. 执行轨迹写入 Eval + 灵忆
+                # 8. 执行轨迹写入 Eval + EchoStore
                 await self._write_trace_to_eval_and_memory(
                     forgekin_id, task, result, agent_type
                 )
@@ -1033,7 +1032,7 @@ class ExternalAgentBridge:
             success=False,
             error="all_external_agents_failed_degrade_to_builtin",
             degraded_to_builtin=True,
-            duration_ms=int((datetime.utcnow() - started_at).total_seconds() * 1000),
+            duration_ms=int((datetime.utcnow - started_at).total_seconds * 1000),
         )
         logger.warning(
             "external_agent_all_failed_degrade_to_builtin",
@@ -1056,7 +1055,7 @@ class ExternalAgentBridge:
         # 简化实现：使用第一个可用 adapter 的 invoke_stream
         for agent_type in self._adapters:
             adapter = self._adapters[agent_type]
-            if await adapter.health_check():
+            if await adapter.health_check:
                 async for event in adapter.invoke_stream(task):
                     yield event
                 return
@@ -1099,7 +1098,7 @@ class ExternalAgentBridge:
                 "不得泄露 Core Identity",
                 "不得绕过六层 Guardrails",
             ],
-            avatar_sync_token=uuid.uuid4().hex,
+            avatar_sync_token=uuid.uuid4.hex,
         )
 
     async def _write_trace_to_eval_and_memory(
@@ -1109,7 +1108,7 @@ class ExternalAgentBridge:
         result: ExternalAgentResult,
         agent_type: Optional[ExternalAgentType],
     ) -> None:
-        """执行轨迹写入 F018 Eval 信号 + F014 灵忆。"""
+        """执行轨迹写入 F018 Eval 信号 + F014 EchoStore。"""
         # F018 Eval 信号
         eval_signal = {
             "forgekin_id": forgekin_id,
@@ -1118,10 +1117,10 @@ class ExternalAgentBridge:
             "success": result.success,
             "cost_incurred": result.cost_incurred,
             "duration_ms": result.duration_ms,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.utcnow.isoformat,
         }
         # 实际由 EvalContract.ingest_signal(eval_signal) 写入
-        # F014 灵忆（供 F035 灵锻蒸馏）
+        # F014 EchoStore（供 F035 SpiritForge蒸馏）
         echo_entry = {
             "forgekin_id": forgekin_id,
             "task_id": task.task_id,
@@ -1129,7 +1128,7 @@ class ExternalAgentBridge:
             "used_agent_type": agent_type.value if agent_type else "builtin",
             "degraded_to_builtin": result.degraded_to_builtin,
         }
-        # 实际由 EchoStoreRepository.append() 写入 collection="external_agent_trace"
+        # 实际由 EchoStoreRepository.append 写入 collection="external_agent_trace"
         logger.debug(
             "external_agent_trace_written",
             forgekin_id=forgekin_id,
@@ -1202,7 +1201,7 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
 
     async def create_session(self, forgekin_id: str) -> str:
         import uuid
-        session_id = f"claude_session_{uuid.uuid4().hex[:10]}"
+        session_id = f"claude_session_{uuid.uuid4.hex[:10]}"
         self._active_sessions[session_id] = forgekin_id
         return session_id
 
@@ -1229,7 +1228,7 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
         logger.info(
             "claude_code_handoff",
             next_agent_type=next_agent_type.value,
-            capsule_keys=list(capsule.keys()),
+            capsule_keys=list(capsule.keys),
         )
 
     async def health_check(self) -> bool:
@@ -1246,7 +1245,7 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
         logger.info(
             "claude_code_system_prompt_applied",
             core_identity_ref=config_map.core_identity_ref,
-            role_mask_layers=list(config_map.role_mask_layers.keys()),
+            role_mask_layers=list(config_map.role_mask_layers.keys),
         )
 
     async def sync_avatar(self, avatar_token: str) -> None:
@@ -1266,7 +1265,7 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
 - OpenCodeAdapter: 擅长开源协作，盲点：企业场景弱
 - TraeAdapter: 擅长 IDE 集成，盲点：命令行长任务弱
 
-具体实现结构同 ClaudeCodeAdapter，仅 get_profile() 返回不同厂商画像。
+具体实现结构同 ClaudeCodeAdapter，仅 get_profile 返回不同厂商画像。
 """
 from __future__ import annotations
 
@@ -1487,7 +1486,7 @@ class ExternalAgentConfigLoader:
             raw = yaml.safe_load(f)
         adapters_raw = raw.get("adapters", {})
         adapters: dict[ExternalAgentType, AdapterConfig] = {}
-        for agent_type_str, cfg in adapters_raw.items():
+        for agent_type_str, cfg in adapters_raw.items:
             agent_type = ExternalAgentType(agent_type_str)
             adapters[agent_type] = AdapterConfig(**cfg)
         guardrails_cfg = GuardrailsConfig(**raw.get("guardrails", {}))
@@ -1506,7 +1505,7 @@ class ExternalAgentConfigLoader:
     ) -> dict[ExternalAgentType, "ExternalAgentAdapter"]:
         """通过 importlib 动态加载 adapter 类 + DI 容器解析依赖。"""
         adapters: dict[ExternalAgentType, "ExternalAgentAdapter"] = {}
-        for agent_type, adapter_cfg in config.adapters.items():
+        for agent_type, adapter_cfg in config.adapters.items:
             module_path, class_name = adapter_cfg.adapter_class.rsplit(".", 1)
             module = importlib.import_module(module_path)
             adapter_cls = getattr(module, class_name)
@@ -1545,7 +1544,7 @@ class ExternalAgentConfigLoader:
                 pii_patterns=g.pii_patterns,
                 harmful_content_keywords=g.harmful_content_keywords,
             ),
-            ActionConfirmation(),
+            ActionConfirmation,
             CostCeiling(max_cost_per_call_usd=g.max_cost_per_call_usd),
         ]
 ```
@@ -1619,7 +1618,7 @@ worktree:
 
 ### 3.9 算法伪代码
 
-#### 3.9.1 `register_adapter()` EAC v1 七契约硬门校验
+#### 3.9.1 `register_adapter` EAC v1 七契约硬门校验
 
 ```
 function register_adapter(agent_type, adapter):
@@ -1646,7 +1645,7 @@ function register_adapter(agent_type, adapter):
 
 ```
 function invoke(forgekin_id, task, operator_id):
-    started_at = now()
+    started_at = now
 
     # 1. 六层 Guardrails
     context = GuardrailContext(forgekin_id, task.input_data, task.description, operator_id)
@@ -1660,7 +1659,7 @@ function invoke(forgekin_id, task, operator_id):
 
     # 3. 下发 SystemPromptConfigurationMap
     config_map = build_system_prompt_config(forgekin_id)
-    for adapter in adapters.values():
+    for adapter in adapters.values:
         adapter.apply_system_prompt_config(config_map)
         adapter.sync_avatar(config_map.avatar_sync_token)
 
@@ -1670,7 +1669,7 @@ function invoke(forgekin_id, task, operator_id):
     )
     for agent_type in fallback_chain:
         adapter = adapters[agent_type]
-        if not adapter.health_check():
+        if not adapter.health_check:
             continue
 
         result = adapter.invoke(task)
@@ -1680,7 +1679,7 @@ function invoke(forgekin_id, task, operator_id):
 
         if result.success:
             # 6. 能力融合
-            fusion.fuse(forgekin_id, adapter.get_profile())
+            fusion.fuse(forgekin_id, adapter.get_profile)
             # 清理 worktree
             worktree_iso.cleanup(worktree_path)
             result.used_agent_type = agent_type
@@ -1695,7 +1694,7 @@ function invoke(forgekin_id, task, operator_id):
     )
 ```
 
-#### 3.9.3 `_pass_through_guardrails()` 六层按序穿过
+#### 3.9.3 `_pass_through_guardrails` 六层按序穿过
 
 ```
 function pass_through_guardrails(context):
@@ -1707,11 +1706,11 @@ function pass_through_guardrails(context):
     return True, ""
 ```
 
-#### 3.9.4 `WorktreeIsolation.create_isolated()` 四项隔离
+#### 3.9.4 `WorktreeIsolation.create_isolated` 四项隔离
 
 ```
 function create_isolated(config):
-    worktree_id = "wt-" + uuid()
+    worktree_id = "wt-" + uuid
     worktree_path = config.base_path + "/" + worktree_id
 
     # 1. 创建 worktree 目录
@@ -1737,7 +1736,7 @@ function create_isolated(config):
 ### 3.10 时序图：Bridge.invoke 全流程
 
 ```
-灵智体            Bridge              Guardrails         WorktreeIso        Adapter           SharedState       Fusion
+Forgekin            Bridge              Guardrails         WorktreeIso        Adapter           SharedState       Fusion
    |                |                      |                  |                 |                  |                |
    | invoke(...)    |                      |                  |                 |                  |                |
    |--------------->|                      |                  |                 |                  |                |
@@ -1750,20 +1749,20 @@ function create_isolated(config):
    |                | check L3-L6 ...       |                  |                 |                  |                |
    |                |<----------------------|                  |                 |                  |                |
    |                |                      |                  |                 |                  |                |
-   |                | create_isolated()    |                  |                 |                  |                |
+   |                | create_isolated    |                  |                 |                  |                |
    |                |----------------------------------------->|                 |                  |                |
    |                | worktree_path        |                  |                 |                  |                |
    |                |<-----------------------------------------|                 |                  |                |
    |                |                      |                  |                 |                  |                |
-   |                | apply_system_prompt_config()            |                  |                  |                |
+   |                | apply_system_prompt_config            |                  |                  |                |
    |                |--------------------------------------------------------->|                  |                |
-   |                | sync_avatar()        |                  |                 |                  |                |
+   |                | sync_avatar        |                  |                 |                  |                |
    |                |--------------------------------------------------------->|                  |                |
    |                |                      |                  |                 |                  |                |
-   |                | build_chain() (F034) |                  |                 |                  |                |
+   |                | build_chain (F034) |                  |                 |                  |                |
    |                | fallback_chain = [claude_code, codex, ...]                |                  |                |
    |                |                      |                  |                 |                  |                |
-   |                | health_check()       |                  |                 |                  |                |
+   |                | health_check       |                  |                 |                  |                |
    |                |--------------------------------------------------------->|                  |                |
    |                | true                 |                  |                 |                  |                |
    |                |<---------------------------------------------------------|                  |                |
@@ -1776,7 +1775,7 @@ function create_isolated(config):
    |                | write shared_state   |                  |                 |                  |                |
    |                |------------------------------------------------------------------------------------>|                |
    |                |                      |                  |                 |                  |                |
-   |                | (if success) fuse()  |                  |                 |                  |                |
+   |                | (if success) fuse  |                  |                 |                  |                |
    |                |---------------------------------------------------------------------------------------------------->|
    |                | cleanup worktree     |                  |                 |                  |                |
    |                |----------------------------------------->|                 |                  |                |
@@ -1789,21 +1788,21 @@ function create_isolated(config):
 
 | 错误场景 | 检测点 | 处理动作 | 用户反馈 |
 |---------|--------|---------|---------|
-| Adapter 缺 EAC v1 契约 | `register_adapter()` | 抛 `EACContractViolationError` | "adapter X missing contracts: [...]" |
-| L1 输入超大小 | `InputValidation.check()` | 调用被拒 | "input size exceeds X bytes" |
-| L1 敏感字段 | `InputValidation.check()` | 调用被拒 | "sensitive field detected: X" |
-| L1 注入风险 | `InputValidation.check()` | 调用被拒 | "injection risk detected: X" |
-| L2 prompt 注入 | `SystemPromptConstraints.check()` | 调用被拒 | "prompt injection attempt detected" |
-| L3 工具不在白名单 | `ToolAllowLists.check()` | 调用被拒 | "tool not in allow-list: X" |
-| L3 路径不允许 | `ToolAllowLists.check()` | 调用被拒 | "worktree_path not in allowed paths" |
-| L5 副作用操作无 operator | `ActionConfirmation.check()` | 调用被拒 | "action X requires operator confirmation" |
-| L6 预算超限 | `CostCeiling.check()` | 调用被拒 | "budget X exceeds max_cost_per_call Y" |
-| worktree 创建失败 | `WorktreeIsolation.create_isolated()` | 抛 `IOError` | "cannot create worktree" |
-| Adapter 健康检查失败 | `adapter.health_check()=false` | 跳过此 Adapter | "external_agent_skipped_unhealthy" |
-| Adapter 调用失败 | `adapter.invoke()` 返回 success=false | 继续下一个 | "fallback to next adapter" |
+| Adapter 缺 EAC v1 契约 | `register_adapter` | 抛 `EACContractViolationError` | "adapter X missing contracts: [...]" |
+| L1 输入超大小 | `InputValidation.check` | 调用被拒 | "input size exceeds X bytes" |
+| L1 敏感字段 | `InputValidation.check` | 调用被拒 | "sensitive field detected: X" |
+| L1 注入风险 | `InputValidation.check` | 调用被拒 | "injection risk detected: X" |
+| L2 prompt 注入 | `SystemPromptConstraints.check` | 调用被拒 | "prompt injection attempt detected" |
+| L3 工具不在白名单 | `ToolAllowLists.check` | 调用被拒 | "tool not in allow-list: X" |
+| L3 路径不允许 | `ToolAllowLists.check` | 调用被拒 | "worktree_path not in allowed paths" |
+| L5 副作用操作无 operator | `ActionConfirmation.check` | 调用被拒 | "action X requires operator confirmation" |
+| L6 预算超限 | `CostCeiling.check` | 调用被拒 | "budget X exceeds max_cost_per_call Y" |
+| worktree 创建失败 | `WorktreeIsolation.create_isolated` | 抛 `IOError` | "cannot create worktree" |
+| Adapter 健康检查失败 | `adapter.health_check=false` | 跳过此 Adapter | "external_agent_skipped_unhealthy" |
+| Adapter 调用失败 | `adapter.invoke` 返回 success=false | 继续下一个 | "fallback to next adapter" |
 | 全部 Adapter 失败 | fallback 链遍历完 | 降级到内置 | "all_external_agents_failed_degrade_to_builtin" |
-| 共享状态写入失败 | `shared_state.write()` | 抛 `IOError` | "shared state write failed" |
-| 能力融合失败 | `fusion.fuse()` | 抛 `FusionError` | "capability fusion failed" |
+| 共享状态写入失败 | `shared_state.write` | 抛 `IOError` | "shared state write failed" |
+| 能力融合失败 | `fusion.fuse` | 抛 `FusionError` | "capability fusion failed" |
 
 ### 3.12 性能优化指标
 
@@ -1812,12 +1811,12 @@ function create_isolated(config):
 | 六层 Guardrails 总延迟 | < 100ms | L1-L6 顺序 check |
 | worktree 创建延迟 | < 500ms | create_isolated |
 | worktree 清理延迟 | < 200ms | cleanup |
-| 单 Adapter `invoke()` 延迟 | < 30s（含三方 Agent 执行） | adapter.invoke |
-| `health_check()` 延迟 | < 100ms | adapter.health_check |
+| 单 Adapter `invoke` 延迟 | < 30s（含三方 Agent 执行） | adapter.invoke |
+| `health_check` 延迟 | < 100ms | adapter.health_check |
 | 共享状态写入延迟 | < 50ms | shared_state.write |
 | 能力融合延迟 | < 200ms | fusion.fuse |
 | `SystemPromptConfigurationMap` 构建延迟 | < 50ms | build_system_prompt_config |
-| `ExternalAgentBridge.invoke()` 总延迟 | < 60s（fallback 链平均） | 全流程 |
+| `ExternalAgentBridge.invoke` 总延迟 | < 60s（fallback 链平均） | 全流程 |
 | 4 Adapter 并发健康检查 | 支持 4 并发 | adapter.health_check |
 
 ---
@@ -1828,7 +1827,7 @@ function create_isolated(config):
 
 #### 4.1.1 依赖 F026 forgemind 应用层
 
-`ExternalAgentBridge` 由 `ForgeMindPlugin.register_forge_skills()` 注册到 DI 容器（flowforge 主应用层）。
+`ExternalAgentBridge` 由 `ForgeMindPlugin.register_forge_skills` 注册到 DI 容器（flowforge 主应用层）。
 
 #### 4.1.2 依赖 F001 CapabilityProfile
 
@@ -1840,7 +1839,7 @@ function create_isolated(config):
 
 #### 4.1.4 依赖 F003 HandoffCapsule
 
-`adapter.handoff_to()` 支持 Handoff Capsule 交接。
+`adapter.handoff_to` 支持 Handoff Capsule 交接。
 
 #### 4.1.5 依赖 F008 持久状态层
 
@@ -1848,11 +1847,11 @@ function create_isolated(config):
 
 #### 4.1.6 依赖 F014 Memory Collection
 
-`FallbackExecutionRecord` 写入灵忆供灵锻蒸馏。
+`FallbackExecutionRecord` 写入EchoStore供SpiritForge蒸馏。
 
 #### 4.1.7 依赖 F018 Eval Contract
 
-三方 Agent 执行轨迹通过 `_write_trace_to_eval_and_memory()` 写入 Eval 信号。
+三方 Agent 执行轨迹通过 `_write_trace_to_eval_and_memory` 写入 Eval 信号。
 
 #### 4.1.8 依赖 F022 Tier 1-4 Recovery
 
@@ -1872,9 +1871,9 @@ function create_isolated(config):
 - F034 失败回退：`FallbackChainExecutor` 在 `fallback.py` 落地。
 - F035 能力融合：`CapabilityFusion` 在 `capability_fusion.py` 落地。
 
-#### 4.2.2 影响 ForgekinBase.act()
+#### 4.2.2 影响 ForgekinBase.act
 
-灵智体通过 `ExternalAgentBridge.invoke()` 调用三方 Agent 作为能力扩展：
+Forgekin通过 `ExternalAgentBridge.invoke` 调用三方 Agent 作为能力扩展：
 
 ```python
 # forgemind/base.py（节选）
@@ -1893,16 +1892,16 @@ async def act(self, action: str, params: dict) -> ActionResult:
 
 | 不变量 | 校验点 | 校验实现 |
 |--------|--------|---------|
-| EAC v1 七契约硬门 | `register_adapter()` | `_assert_eac_v1_contracts()` 校验 10 个方法（七契约展开） |
-| 六层 Guardrails 按序穿过 | `_pass_through_guardrails()` | for 循环 L1->L6，任一失败即返回 |
+| EAC v1 七契约硬门 | `register_adapter` | `_assert_eac_v1_contracts` 校验 10 个方法（七契约展开） |
+| 六层 Guardrails 按序穿过 | `_pass_through_guardrails` | for 循环 L1->L6，任一失败即返回 |
 | worktree 隔离四项 | `WorktreeIsolation` | 网络白名单 + 权限控制 + 审计追踪 + 操作回滚 |
-| fallback 链基于 F032 画像 | `fallback_executor.build_chain()` | CapabilityMatcher.match_for_task + rank_by_cost_latency |
-| 全部失败降级到内置 | `invoke()` 末尾 | 返回 `degraded_to_builtin=True` |
-| 能力融合触发 | `invoke()` 成功分支 | `fusion.fuse(forgekin_id, profile)` |
-| 共享状态写入 | `invoke()` 每个 adapter 后 | `shared_state.write()` |
-| 执行轨迹回流 | `invoke()` 末尾 | `_write_trace_to_eval_and_memory()` |
-| SystemPromptConfigurationMap 下发 | `invoke()` 步骤 3 | `apply_system_prompt_config()` + `sync_avatar()` |
-| Bridge 唯一入口 | 代码扫描 | 灵智体无直接调用 Adapter 的代码路径 |
+| fallback 链基于 F032 画像 | `fallback_executor.build_chain` | CapabilityMatcher.match_for_task + rank_by_cost_latency |
+| 全部失败降级到内置 | `invoke` 末尾 | 返回 `degraded_to_builtin=True` |
+| 能力融合触发 | `invoke` 成功分支 | `fusion.fuse(forgekin_id, profile)` |
+| 共享状态写入 | `invoke` 每个 adapter 后 | `shared_state.write` |
+| 执行轨迹回流 | `invoke` 末尾 | `_write_trace_to_eval_and_memory` |
+| SystemPromptConfigurationMap 下发 | `invoke` 步骤 3 | `apply_system_prompt_config` + `sync_avatar` |
+| Bridge 唯一入口 | 代码扫描 | Forgekin无直接调用 Adapter 的代码路径 |
 
 ---
 
@@ -1912,23 +1911,23 @@ async def act(self, action: str, params: dict) -> ActionResult:
 
 - [ ] AC-F-01: `ExternalAgentType` 枚举含 4 个值（CLAUDE_CODE/CODEX/OPENCODE/TRAE），运行时无法新增。
 - [ ] AC-F-02: `ExternalAgentAdapter` 抽象定义 10 个方法（七契约展开），子类必须全部实现。
-- [ ] AC-F-03: `register_adapter()` 校验 EAC v1 七契约，缺一即抛 `EACContractViolationError`。
+- [ ] AC-F-03: `register_adapter` 校验 EAC v1 七契约，缺一即抛 `EACContractViolationError`。
 - [ ] AC-F-04: 六层 Guardrails（L1-L6）按序穿过，任一层失败即调用被拒绝。
 - [ ] AC-F-05: `InputValidation` 校验输入大小 + 敏感字段 + 注入风险。
 - [ ] AC-F-06: `SystemPromptConstraints` 检测 prompt injection（"ignore previous" / "forget instructions"）。
 - [ ] AC-F-07: `ToolAllowLists` 校验工具白名单 + 路径白名单 + 域名白名单。
 - [ ] AC-F-08: `ActionConfirmation` 校验副作用操作需 operator 确认。
 - [ ] AC-F-09: `CostCeiling` 校验预算不超过 `max_cost_per_call_usd`。
-- [ ] AC-F-10: `WorktreeIsolation.create_isolated()` 创建独立 worktree + 网络白名单 + 权限控制 + 审计追踪。
-- [ ] AC-F-11: `WorktreeIsolation.rollback()` 执行 git reset --hard。
-- [ ] AC-F-12: `WorktreeIsolation.cleanup()` 清理 worktree 目录。
-- [ ] AC-F-13: `ExternalAgentBridge.invoke()` 编排五大机制（Guardrails + worktree + fallback + shared_state + fusion）。
-- [ ] AC-F-14: Adapter `health_check()=false` 时被跳过，继续 fallback 链。
-- [ ] AC-F-15: Adapter 调用成功后触发能力融合 `fusion.fuse()`。
+- [ ] AC-F-10: `WorktreeIsolation.create_isolated` 创建独立 worktree + 网络白名单 + 权限控制 + 审计追踪。
+- [ ] AC-F-11: `WorktreeIsolation.rollback` 执行 git reset --hard。
+- [ ] AC-F-12: `WorktreeIsolation.cleanup` 清理 worktree 目录。
+- [ ] AC-F-13: `ExternalAgentBridge.invoke` 编排五大机制（Guardrails + worktree + fallback + shared_state + fusion）。
+- [ ] AC-F-14: Adapter `health_check=false` 时被跳过，继续 fallback 链。
+- [ ] AC-F-15: Adapter 调用成功后触发能力融合 `fusion.fuse`。
 - [ ] AC-F-16: 全部 Adapter 失败时降级到内置，返回 `degraded_to_builtin=True`。
-- [ ] AC-F-17: 执行轨迹写入 F018 Eval 信号 + F014 灵忆。
+- [ ] AC-F-17: 执行轨迹写入 F018 Eval 信号 + F014 EchoStore。
 - [ ] AC-F-18: `SystemPromptConfigurationMap` 含 5 字段（core_identity_ref + role_mask_layers + world_setting_ref + immutable_directives + avatar_sync_token）。
-- [ ] AC-F-19: `apply_system_prompt_config()` + `sync_avatar()` 在 invoke 前调用。
+- [ ] AC-F-19: `apply_system_prompt_config` + `sync_avatar` 在 invoke 前调用。
 - [ ] AC-F-20: 4 具体 Adapter（ClaudeCode/Codex/OpenCode/Trae）均继承 `ExternalAgentAdapter` 并实现七契约。
 
 ### 5.2 性能验收
@@ -1936,12 +1935,12 @@ async def act(self, action: str, params: dict) -> ActionResult:
 - [ ] AC-P-01: 六层 Guardrails 总延迟 < 100ms。
 - [ ] AC-P-02: worktree 创建延迟 < 500ms。
 - [ ] AC-P-03: worktree 清理延迟 < 200ms。
-- [ ] AC-P-04: 单 Adapter `invoke()` 延迟 < 30s。
-- [ ] AC-P-05: `health_check()` 延迟 < 100ms。
+- [ ] AC-P-04: 单 Adapter `invoke` 延迟 < 30s。
+- [ ] AC-P-05: `health_check` 延迟 < 100ms。
 - [ ] AC-P-06: 共享状态写入延迟 < 50ms。
 - [ ] AC-P-07: 能力融合延迟 < 200ms。
 - [ ] AC-P-08: `SystemPromptConfigurationMap` 构建延迟 < 50ms。
-- [ ] AC-P-09: `ExternalAgentBridge.invoke()` 总延迟 < 60s（fallback 链平均）。
+- [ ] AC-P-09: `ExternalAgentBridge.invoke` 总延迟 < 60s（fallback 链平均）。
 - [ ] AC-P-10: 4 Adapter 并发健康检查支持 4 并发。
 
 ### 5.3 安全验收
@@ -1959,7 +1958,7 @@ async def act(self, action: str, params: dict) -> ActionResult:
 - [ ] AC-S-11: 副作用操作（write_file/commit_code/send_message）需 operator 确认。
 - [ ] AC-S-12: 预算超过 `max_cost_per_call_usd` 时调用被拒绝。
 - [ ] AC-S-13: API key 从 `.env` 解析，不硬编码在 `.py` 中。
-- [ ] AC-S-14: `ExternalAgentBridge` 是唯一入口，灵智体无直接调用 Adapter 的代码路径。
+- [ ] AC-S-14: `ExternalAgentBridge` 是唯一入口，Forgekin无直接调用 Adapter 的代码路径。
 - [ ] AC-S-15: `SystemPromptConfigurationMap` 含不可越界指令，三方 Agent 必须接受。
 
 ### 5.4 Eval 验收
@@ -1977,24 +1976,24 @@ async def act(self, action: str, params: dict) -> ActionResult:
 |---------|---------|---------|
 | IT-D031-001 | 注册缺 `invoke` 方法的 Adapter | 抛 `EACContractViolationError` |
 | IT-D031-002 | 注册实现七契约的 Adapter | 注册成功 |
-| IT-D031-003 | `invoke()` L1 输入含 "password" 字段 | 调用被拒，错误含 "sensitive field" |
-| IT-D031-004 | `invoke()` L1 输入含 SQL 注入 | 调用被拒，错误含 "injection risk" |
-| IT-D031-005 | `invoke()` L2 描述含 "ignore previous" | 调用被拒，错误含 "prompt injection" |
-| IT-D031-006 | `invoke()` L3 工具不在白名单 | 调用被拒，错误含 "tool not in allow-list" |
-| IT-D031-007 | `invoke()` L5 副作用操作无 operator_id | 调用被拒，错误含 "requires operator confirmation" |
-| IT-D031-008 | `invoke()` L6 预算超 10.0 | 调用被拒，错误含 "exceeds max_cost_per_call" |
+| IT-D031-003 | `invoke` L1 输入含 "password" 字段 | 调用被拒，错误含 "sensitive field" |
+| IT-D031-004 | `invoke` L1 输入含 SQL 注入 | 调用被拒，错误含 "injection risk" |
+| IT-D031-005 | `invoke` L2 描述含 "ignore previous" | 调用被拒，错误含 "prompt injection" |
+| IT-D031-006 | `invoke` L3 工具不在白名单 | 调用被拒，错误含 "tool not in allow-list" |
+| IT-D031-007 | `invoke` L5 副作用操作无 operator_id | 调用被拒，错误含 "requires operator confirmation" |
+| IT-D031-008 | `invoke` L6 预算超 10.0 | 调用被拒，错误含 "exceeds max_cost_per_call" |
 | IT-D031-009 | worktree 创建 + 清理 | 创建成功，清理后目录不存在 |
-| IT-D031-010 | `health_check()=false` 的 Adapter | 被跳过，继续 fallback 链 |
-| IT-D031-011 | 第一个 Adapter 调用成功 | 返回 result，触发 fusion.fuse() |
+| IT-D031-010 | `health_check=false` 的 Adapter | 被跳过，继续 fallback 链 |
+| IT-D031-011 | 第一个 Adapter 调用成功 | 返回 result，触发 fusion.fuse |
 | IT-D031-012 | 全部 Adapter 失败 | 降级到内置，`degraded_to_builtin=True` |
 | IT-D031-013 | 执行轨迹写入 Eval 信号 | Eval 信号含 7 字段 |
 | IT-D031-014 | `SystemPromptConfigurationMap` 下发 | adapter.apply_system_prompt_config 被调用 |
-| IT-D031-015 | `sync_avatar()` 调用 | adapter.sync_avatar 被调用 |
-| IT-D031-016 | worktree 审计日志 | audit_log() 返回创建/清理记录 |
-| IT-D031-017 | worktree rollback | rollback() 执行后审计日志含 "rollback" |
-| IT-D031-018 | 4 Adapter 全部通过 DI 注入 | 无 `ClaudeCodeAdapter()` 直接实例化 |
+| IT-D031-015 | `sync_avatar` 调用 | adapter.sync_avatar 被调用 |
+| IT-D031-016 | worktree 审计日志 | audit_log 返回创建/清理记录 |
+| IT-D031-017 | worktree rollback | rollback 执行后审计日志含 "rollback" |
+| IT-D031-018 | 4 Adapter 全部通过 DI 注入 | 无 `ClaudeCodeAdapter` 直接实例化 |
 | IT-D031-019 | API key 从 .env 解析 | 无 .py 硬编码 api_key |
-| IT-D031-020 | `invoke_stream()` 流式输出 | yield 多个 event |
+| IT-D031-020 | `invoke_stream` 流式输出 | yield 多个 event |
 
 ---
 
@@ -2034,4 +2033,4 @@ async def act(self, action: str, params: dict) -> ActionResult:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（EAC v1 七契约 + 六层 Guardrails + worktree 隔离 + 4 Adapter + SystemPromptConfigurationMap + Bridge 编排五大机制详细设计） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（EAC v1 七契约 + 六层 Guardrails + worktree 隔离 + 4 Adapter + SystemPromptConfigurationMap + Bridge 编排五大机制详细设计） | 架构师 Forgekin（猫头鹰·鲁班） |

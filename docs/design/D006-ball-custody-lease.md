@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，FR-CORE-016）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]
 > **对应 Feature**: [doc:../features/F006-ball-custody-lease.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A006-ball-custody-lease.md]（同号架构设计）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + 进化阶/觉醒阶标注）
 
 ---
 
@@ -19,27 +18,27 @@
 
 A006 架构设计已给出"持球注册 lease + 定时唤醒"的协议层硬要求与接口契约，但落地到代码层仍需解决以下问题：
 
-1. **lease TTL 与 renewal 的并发安全**：同一灵智体在 lease 即将过期时同时调用 `renew` 与 `release`，如何保证状态机一致性？需要明确 lease 状态转换的原子语义。
+1. **lease TTL 与 renewal 的并发安全**：同一Forgekin在 lease 即将过期时同时调用 `renew` 与 `release`，如何保证状态机一致性？需要明确 lease 状态转换的原子语义。
 2. **WakeupScheduler 多源监听的去重**：CI 绿、CVO 确认、定时器、外部事件四种唤醒源可能同时触发同一 lease 的唤醒，如何保证只唤醒一次（at-most-once）？
-3. **一灵智体同时只能持有一个 lease 的强制校验**：acquire 时如何可靠地校验？需要并发安全的 `find_active_lease_by_forgekin` 查询。
+3. **一Forgekin同时只能持有一个 lease 的强制校验**：acquire 时如何可靠地校验？需要并发安全的 `find_active_lease_by_forgekin` 查询。
 4. **lease 过期扫描的周期与延迟**：TTL 到期未续约需要多快感知？扫描周期 1s 还是 10s？对 F004 PingPongCircuitBreaker 的空传计入有延迟影响。
 5. **Magic Words "星星罐子" 强制撤销的优先级**：operator 触发 STAR_JAR 时如何中断正在进行的 lease 操作？是否需要 cancellation token？
-6. **lease 状态走 WAL 的回放契约**：进程崩溃后 lease 仍在但 TTL 计时器丢失，如何恢复 TTL 剩余时间？是基于 `acquired_at + ttl_seconds - now()` 重新计算还是直接 expired？
+6. **lease 状态走 WAL 的回放契约**：进程崩溃后 lease 仍在但 TTL 计时器丢失，如何恢复 TTL 剩余时间？是基于 `acquired_at + ttl_seconds - now` 重新计算还是直接 expired？
 7. **lease 与 TeamActState.current_owner 的一致性**：lease 释放后必须同步置 `current_owner=None`，但若 TeamActRepo 更新失败如何回滚？
 
 ### 1.2 详细设计约束
 
 - **C1 单向依赖**：`flowforge/core/teamact/lease.py` 不可 import forgemind 或 *Forge 模块；仅可依赖 `core/teamact/`、`core/plugin/di_container.py`、`core/tracing.py`、`core/events/`。
-- **C2 DI 注入**：`BallCustodyRegistry` 必须通过 `core/plugin/di_container.py::inject()` 注入 `LeaseStore`、`WakeupScheduler`、`TeamActStateRepository`、`EventBus`、`EvalSignalWriter`，禁直接实例化。
+- **C2 DI 注入**：`BallCustodyRegistry` 必须通过 `core/plugin/di_container.py::inject` 注入 `LeaseStore`、`WakeupScheduler`、`TeamActStateRepository`、`EventBus`、`EvalSignalWriter`，禁直接实例化。
 - **C3 Repository 抽象**：lease 状态必须通过 `LeaseStore (ABC)` 抽象持久化，禁 `cursor.execute`，禁 `sqlite3.connect` 直连。
 - **C4 配置驱动**：`default_ttl_seconds`、`max_renewals`、`renewal_extension_seconds`、`expiry_scan_interval_seconds` 必须外置到 `flowforge/config/teamact.yaml`，禁硬编码。
 - **C5 TTL 强制**：lease 必须有 TTL（默认 1800 秒），到期未续约自动释放；TTL 不可设为 0 或负数（禁永久持有）。
 - **C6 续约上限**：续约次数超 `max_renewals`（默认 3）强制释放并升级 CVO；`max_renewals` 不可超过 10。
-- **C7 一灵智体一 lease**：`acquire` 时校验该 forgekin_id 是否已有 active lease，有则抛 `LeaseAlreadyHeld`。
+- **C7 一Forgekin一 lease**：`acquire` 时校验该 forgekin_id 是否已有 active lease，有则抛 `LeaseAlreadyHeld`。
 - **C8 WAL 持久化**：`SqliteLeaseStore` 必须启用 `PRAGMA journal_mode=WAL` + `PRAGMA synchronous=NORMAL` + 定期 `PRAGMA wal_checkpoint(FULL)`。
 - **C9 异步非阻塞**：所有 I/O 操作必须 `async/await`；TTL 扫描通过 `asyncio.create_task` 后台运行，禁阻塞主流程。
 - **C10 类型注解强制**：Python 3.11+，所有公共方法返回类型与参数类型必须显式注解。
-- **C11 Magic Words 不可绕过**：`force_revoke` 由 `MagicWordsExecutor` 调用，灵智体不可直接调用；`force_revoke` 绕过 `max_renewals` 检查。
+- **C11 Magic Words 不可绕过**：`force_revoke` 由 `MagicWordsExecutor` 调用，Forgekin不可直接调用；`force_revoke` 绕过 `max_renewals` 检查。
 - **C12 lease 释放广播**：lease 释放后必须广播 `lease.released` 事件，TeamActState 可感知接管。
 
 ### 1.3 详细设计影响
@@ -103,14 +102,14 @@ A006 架构设计已给出"持球注册 lease + 定时唤醒"的协议层硬要�
 │  │ - _eval_signal_writer    │   │ SqliteLeaseStore (WAL)           │   │
 │  │ - _lock: asyncio.Lock    │   ├──────────────────────────────────┤   │
 │  │ - _expiry_task: Task     │   │ - _db_path / _conn / _lock       │   │
-│  └──────────────────────────┘   │ + _ensure_schema()               │   │
-│                                  │ + _checkpoint()                  │   │
+│  └──────────────────────────┘   │ + _ensure_schema               │   │
+│                                  │ + _checkpoint                  │   │
 │  ┌──────────────────────────┐    └──────────────────────────────────┘   │
 │  │ WakeupScheduler (ABC)    │                                           │
 │  ├──────────────────────────┤    ┌──────────────────────────────────┐  │
 │  │ + schedule(lease)        │    │ LeaseLifecycleManager (ABC)      │  │
 │  │ + fire(event)            │    ├──────────────────────────────────┤  │
-│  │ + cancel(lease_id)       │    │ + check_ttl_expiry() -> [ids]    │  │
+│  │ + cancel(lease_id)       │    │ + check_ttl_expiry -> [ids]    │  │
 │  └──────────────────────────┘    │ + force_revoke(lid, reason)      │  │
 │              ▲                    └──────────────────────────────────┘  │
 │              │                              ▲                          │
@@ -163,7 +162,7 @@ class BallCustodyLease(BaseModel):
     """持球注册 lease — 分布式 lease + 定时唤醒"""
     lease_id: str = Field(..., min_length=1, description="lease 唯一 ID")
     team_id: str = Field(..., min_length=1, description="TeamAct team_id")
-    forgekin_id: str = Field(..., min_length=1, description="持球灵智体 ID")
+    forgekin_id: str = Field(..., min_length=1, description="持球Forgekin ID")
     reason: str = Field(..., min_length=1, description="等待原因（CI/CVO/timer/external）")
     next_step: str = Field(..., min_length=1, description="唤醒后执行的下一步")
     expected_wake_at: datetime = Field(..., description="预期唤醒时间")
@@ -194,9 +193,9 @@ class BallCustodyLease(BaseModel):
     @field_validator("reason", "next_step")
     @classmethod
     def _non_empty_text(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("reason / next_step 不可为空")
-        return v.strip()
+        return v.strip
 
     @model_validator(mode="after")
     def _check_status_consistency(self) -> "BallCustodyLease":
@@ -215,9 +214,9 @@ class BallCustodyLease(BaseModel):
 
     def is_expired_at(self, now: datetime) -> bool:
         """检查 TTL 是否过期"""
-        if not self.is_active():
+        if not self.is_active:
             return False
-        elapsed = (now - self.acquired_at).total_seconds()
+        elapsed = (now - self.acquired_at).total_seconds
         # renewed 状态按 expected_wake_at 判定
         if self.status == LeaseStatus.RENEWED:
             return now >= self.expected_wake_at
@@ -225,12 +224,12 @@ class BallCustodyLease(BaseModel):
 
     def remaining_ttl(self, now: Optional[datetime] = None) -> int:
         """剩余 TTL 秒数"""
-        if not self.is_active():
+        if not self.is_active:
             return 0
         now = now or datetime.now(timezone.utc)
         if self.status == LeaseStatus.RENEWED:
-            return max(0, int((self.expected_wake_at - now).total_seconds()))
-        elapsed = (now - self.acquired_at).total_seconds()
+            return max(0, int((self.expected_wake_at - now).total_seconds))
+        elapsed = (now - self.acquired_at).total_seconds
         return max(0, int(self.ttl_seconds - elapsed))
 
 
@@ -256,12 +255,12 @@ class LeaseError(Exception):
 
 
 class LeaseAlreadyHeld(LeaseError):
-    """一灵智体已持有 lease（禁多球）"""
+    """一Forgekin已持有 lease（禁多球）"""
 
     def __init__(self, forgekin_id: str, existing_lease_id: str) -> None:
         self.forgekin_id = forgekin_id
         self.existing_lease_id = existing_lease_id
-        super().__init__(
+        super.__init__(
             f"forgekin {forgekin_id} already holds lease {existing_lease_id}"
         )
 
@@ -276,7 +275,7 @@ class LeaseAlreadyTerminal(LeaseError):
     def __init__(self, lease_id: str, status: LeaseStatus) -> None:
         self.lease_id = lease_id
         self.status = status
-        super().__init__(f"lease {lease_id} already terminal: {status}")
+        super.__init__(f"lease {lease_id} already terminal: {status}")
 
 
 class MaxRenewalsExceeded(LeaseError):
@@ -286,7 +285,7 @@ class MaxRenewalsExceeded(LeaseError):
         self.lease_id = lease_id
         self.renewal_count = renewal_count
         self.max_renewals = max_renewals
-        super().__init__(
+        super.__init__(
             f"lease {lease_id} renewals {renewal_count} > max {max_renewals}"
         )
 
@@ -318,7 +317,7 @@ class LeaseStore(ABC):
         self,
         forgekin_id: str,
     ) -> Optional[BallCustodyLease]:
-        """查找该灵智体的活跃 lease（HELD/RENEWED）"""
+        """查找该Forgekin的活跃 lease（HELD/RENEWED）"""
 
     @abstractmethod
     async def list_active_by_team(
@@ -376,7 +375,7 @@ class BallCustodyRegistry(ABC):
         """注册 lease
 
         架构契约:
-        - 一灵智体同时只能持有一个 lease（禁多球）
+        - 一Forgekin同时只能持有一个 lease（禁多球）
         - 持久化到 Repository 层（WAL 可重放）
         - 启动 TTL 计时器
         - 注册 WakeupScheduler 监听
@@ -422,7 +421,7 @@ class BallCustodyRegistry(ABC):
         forgekin_id: str,
         team_id: str,
     ) -> None:
-        """便捷方法：释放该灵智体在该团队的活跃 lease"""
+        """便捷方法：释放该Forgekin在该团队的活跃 lease"""
 
     @abstractmethod
     async def list_active(self, team_id: str) -> list[BallCustodyLease]:
@@ -439,7 +438,7 @@ class BallCustodyRegistry(ABC):
         架构契约:
         - 仅 operator 通过 Magic Words "星星罐子" 触发
         - 绕过 max_renewals 检查
-        - 灵智体不可调用
+        - Forgekin不可调用
         """
 
 
@@ -497,19 +496,19 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
         self._max_renewals = max_renewals
         self._renewal_extension_seconds = renewal_extension_seconds
         self._expiry_scan_interval_seconds = expiry_scan_interval_seconds
-        self._lock = asyncio.Lock()
+        self._lock = asyncio.Lock
         self._expiry_task: Optional[asyncio.Task] = None
         from core.tracing import get_logger
         self._logger = get_logger("flowforge.lease.registry")
 
     async def start_expiry_scanner(self) -> None:
         """启动 TTL 过期后台扫描任务"""
-        if self._expiry_task is None or self._expiry_task.done():
-            self._expiry_task = asyncio.create_task(self._expiry_scan_loop())
+        if self._expiry_task is None or self._expiry_task.done:
+            self._expiry_task = asyncio.create_task(self._expiry_scan_loop)
 
     async def stop_expiry_scanner(self) -> None:
-        if self._expiry_task and not self._expiry_task.done():
-            self._expiry_task.cancel()
+        if self._expiry_task and not self._expiry_task.done:
+            self._expiry_task.cancel
             try:
                 await self._expiry_task
             except asyncio.CancelledError:
@@ -518,7 +517,7 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
 
     async def acquire(self, lease: BallCustodyLease) -> str:
         async with self._lock:
-            # 1. 校验一灵智体一 lease
+            # 1. 校验一Forgekin一 lease
             existing = await self._store.find_active_by_forgekin(lease.forgekin_id)
             if existing:
                 raise LeaseAlreadyHeld(lease.forgekin_id, existing.lease_id)
@@ -539,7 +538,7 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
                     "forgekin_id": lease.forgekin_id,
                     "team_id": lease.team_id,
                     "reason": lease.reason,
-                    "expected_wake_at": lease.expected_wake_at.isoformat(),
+                    "expected_wake_at": lease.expected_wake_at.isoformat,
                 },
             )
             self._eval_signal_writer.write_trace(
@@ -567,7 +566,7 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
         now = datetime.now(timezone.utc)
         ttl = ttl_seconds or self._default_ttl_seconds
         lease = BallCustodyLease(
-            lease_id=f"lease-{uuid.uuid4().hex[:16]}",
+            lease_id=f"lease-{uuid.uuid4.hex[:16]}",
             team_id=team_id,
             forgekin_id=forgekin_id,
             reason=reason,
@@ -587,7 +586,7 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
             lease = await self._store.load(lease_id)
             if lease is None:
                 raise LeaseNotFound(lease_id)
-            if not lease.is_active():
+            if not lease.is_active:
                 raise LeaseAlreadyTerminal(lease_id, lease.status)
             # 续约次数检查
             if lease.renewal_count >= self._max_renewals:
@@ -616,7 +615,7 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
                 {
                     "lease_id": lease_id,
                     "renewal_count": lease.renewal_count,
-                    "expected_wake_at": lease.expected_wake_at.isoformat(),
+                    "expected_wake_at": lease.expected_wake_at.isoformat,
                 },
             )
             self._eval_signal_writer.write_trace(
@@ -636,7 +635,7 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
             lease = await self._store.load(lease_id)
             if lease is None:
                 raise LeaseNotFound(lease_id)
-            if not lease.is_active():
+            if not lease.is_active:
                 # 幂等：已是终态，no-op
                 self._logger.warning(
                     "lease %s already terminal: %s", lease_id, lease.status
@@ -666,7 +665,7 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
             lease = await self._store.load(lease_id)
             if lease is None:
                 raise LeaseNotFound(lease_id)
-            if not lease.is_active():
+            if not lease.is_active:
                 return  # 幂等
             # 绕过 max_renewals 检查，直接撤销
             await self._mark_terminal(lease, LeaseStatus.REVOKED)
@@ -727,7 +726,7 @@ class DefaultBallCustodyRegistry(BallCustodyRegistry):
                     try:
                         async with self._lock:
                             fresh = await self._store.load(lease.lease_id)
-                            if fresh is None or not fresh.is_active():
+                            if fresh is None or not fresh.is_active:
                                 continue
                             if not fresh.is_expired_at(now):
                                 continue
@@ -763,8 +762,8 @@ class DefaultWakeupScheduler(WakeupScheduler):
         self._ci_listener = ci_listener
         self._cvo_listener = cvo_listener
         self._pending: dict[str, list[WakeupEvent]] = {}
-        self._processed_event_ids: set[str] = set()
-        self._lock = asyncio.Lock()
+        self._processed_event_ids: set[str] = set
+        self._lock = asyncio.Lock
         from core.tracing import get_logger
         self._logger = get_logger("flowforge.lease.scheduler")
 
@@ -773,14 +772,14 @@ class DefaultWakeupScheduler(WakeupScheduler):
             self._pending[lease.lease_id] = []
         # 注册定时器唤醒（CI/CVO 由外部 listener 推送）
         timer_event = WakeupEvent(
-            event_id=f"we-{uuid.uuid4().hex[:16]}",
+            event_id=f"we-{uuid.uuid4.hex[:16]}",
             lease_id=lease.lease_id,
             trigger=WakeupTrigger.TIMER,
             fired_at=lease.expected_wake_at,
-            payload={"expected_wake_at": lease.expected_wake_at.isoformat()},
+            payload={"expected_wake_at": lease.expected_wake_at.isoformat},
         )
         # 定时器延迟触发
-        delay = (lease.expected_wake_at - datetime.now(timezone.utc)).total_seconds()
+        delay = (lease.expected_wake_at - datetime.now(timezone.utc)).total_seconds
         if delay > 0:
             asyncio.create_task(self._delayed_fire(timer_event, delay))
 
@@ -847,7 +846,7 @@ class DefaultLeaseLifecycleManager(LeaseLifecycleManager):
         expired_ids: list[str] = []
         for lease in expiring:
             try:
-                if lease.is_expired_at(now) and lease.is_active():
+                if lease.is_expired_at(now) and lease.is_active:
                     # 调用 registry 的释放逻辑（不走 force_revoke）
                     await self._registry.release(lease.lease_id)
                     expired_ids.append(lease.lease_id)
@@ -886,7 +885,7 @@ async function renew(lease_id, extension_seconds):
     async with lock:
         lease = await store.load(lease_id)
         if lease is None: raise LeaseNotFound
-        if not lease.is_active(): raise LeaseAlreadyTerminal
+        if not lease.is_active: raise LeaseAlreadyTerminal
         if lease.renewal_count >= max_renewals:
             await mark_terminal(lease, RELEASED)
             await event_bus.publish("cvo.escalate.max_renewals_exceeded", ...)
@@ -902,15 +901,15 @@ async function renew(lease_id, extension_seconds):
 **算法 3：TTL 过期扫描（后台 loop）**
 
 ```
-async function expiry_scan_loop():
+async function expiry_scan_loop:
     while True:
         await asyncio.sleep(expiry_scan_interval_seconds)
-        now = now_utc()
+        now = now_utc
         expiring = await store.list_expiring(before=now, limit=100)
         for lease in expiring:
             async with lock:
                 fresh = await store.load(lease.lease_id)
-                if fresh is None or not fresh.is_active(): continue
+                if fresh is None or not fresh.is_active: continue
                 if not fresh.is_expired_at(now): continue
                 await mark_terminal(fresh, EXPIRED)
 ```
@@ -922,7 +921,7 @@ async function force_revoke(lease_id, reason):
     async with lock:
         lease = await store.load(lease_id)
         if lease is None: raise LeaseNotFound
-        if not lease.is_active(): return  # 幂等
+        if not lease.is_active: return  # 幂等
         # 绕过 max_renewals 检查
         await mark_terminal(lease, REVOKED)
         await event_bus.publish("cvo.escalate.lease_revoked", ...)
@@ -933,9 +932,9 @@ async function force_revoke(lease_id, reason):
 ```
 async function replay_from_checkpoint(checkpoint_lsn):
     leases = await store.replay_from(checkpoint_lsn)
-    now = now_utc()
+    now = now_utc
     for lease in leases:
-        if not lease.is_active(): continue  # 终态不恢复
+        if not lease.is_active: continue  # 终态不恢复
         if lease.is_expired_at(now):
             # 进程崩溃期间 TTL 已过期，直接标记 EXPIRED
             await store.mark_status(lease.lease_id, EXPIRED)
@@ -1007,7 +1006,7 @@ class SqliteLeaseStore(LeaseStore):
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
         self._conn: Optional[aiosqlite.Connection] = None
-        self._lock = asyncio.Lock()
+        self._lock = asyncio.Lock
 
     async def _ensure_conn(self) -> aiosqlite.Connection:
         if self._conn is None:
@@ -1017,11 +1016,11 @@ class SqliteLeaseStore(LeaseStore):
             await self._conn.execute("PRAGMA synchronous=NORMAL")
             await self._conn.execute("PRAGMA foreign_keys=ON")
             await self._conn.executescript(_SCHEMA_SQL)
-            await self._conn.commit()
+            await self._conn.commit
         return self._conn
 
     async def save(self, lease: BallCustodyLease) -> str:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with self._lock:
             await conn.execute(
                 """
@@ -1038,8 +1037,8 @@ class SqliteLeaseStore(LeaseStore):
                     lease.forgekin_id,
                     lease.reason,
                     lease.next_step,
-                    lease.expected_wake_at.isoformat(),
-                    lease.acquired_at.isoformat(),
+                    lease.expected_wake_at.isoformat,
+                    lease.acquired_at.isoformat,
                     lease.ttl_seconds,
                     lease.status.value,
                     lease.renewal_count,
@@ -1050,40 +1049,40 @@ class SqliteLeaseStore(LeaseStore):
                     lease.wal_lsn,
                 ),
             )
-            await conn.commit()
+            await conn.commit
             # 回填 wal_lsn（使用 rowid）
             if lease.wal_lsn is None:
                 cursor = await conn.execute(
                     "SELECT rowid FROM ball_custody_lease WHERE lease_id=?",
                     (lease.lease_id,),
                 )
-                row = await cursor.fetchone()
-                await cursor.close()
+                row = await cursor.fetchone
+                await cursor.close
                 if row:
                     lease.wal_lsn = row[0]
                     await conn.execute(
                         "UPDATE ball_custody_lease SET wal_lsn=? WHERE lease_id=?",
                         (lease.wal_lsn, lease.lease_id),
                     )
-                    await conn.commit()
+                    await conn.commit
             await self._checkpoint_if_needed(conn)
         return lease.lease_id
 
     async def load(self, lease_id: str) -> Optional[BallCustodyLease]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         cursor = await conn.execute(
             "SELECT * FROM ball_custody_lease WHERE lease_id=?",
             (lease_id,),
         )
-        row = await cursor.fetchone()
-        await cursor.close()
+        row = await cursor.fetchone
+        await cursor.close
         return self._row_to_lease(row) if row else None
 
     async def find_active_by_forgekin(
         self,
         forgekin_id: str,
     ) -> Optional[BallCustodyLease]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         cursor = await conn.execute(
             """
             SELECT * FROM ball_custody_lease
@@ -1092,15 +1091,15 @@ class SqliteLeaseStore(LeaseStore):
             """,
             (forgekin_id,),
         )
-        row = await cursor.fetchone()
-        await cursor.close()
+        row = await cursor.fetchone
+        await cursor.close
         return self._row_to_lease(row) if row else None
 
     async def list_active_by_team(
         self,
         team_id: str,
     ) -> list[BallCustodyLease]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         cursor = await conn.execute(
             """
             SELECT * FROM ball_custody_lease
@@ -1109,8 +1108,8 @@ class SqliteLeaseStore(LeaseStore):
             """,
             (team_id,),
         )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        rows = await cursor.fetchall
+        await cursor.close
         return [self._row_to_lease(r) for r in rows]
 
     async def list_expiring(
@@ -1118,7 +1117,7 @@ class SqliteLeaseStore(LeaseStore):
         before: datetime,
         limit: int = 100,
     ) -> list[BallCustodyLease]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         cursor = await conn.execute(
             """
             SELECT * FROM ball_custody_lease
@@ -1126,10 +1125,10 @@ class SqliteLeaseStore(LeaseStore):
               AND expected_wake_at <= ?
             ORDER BY expected_wake_at ASC LIMIT ?
             """,
-            (before.isoformat(), limit),
+            (before.isoformat, limit),
         )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        rows = await cursor.fetchall
+        await cursor.close
         return [self._row_to_lease(r) for r in rows]
 
     async def mark_status(
@@ -1137,16 +1136,16 @@ class SqliteLeaseStore(LeaseStore):
         lease_id: str,
         status: LeaseStatus,
     ) -> None:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with self._lock:
             await conn.execute(
                 "UPDATE ball_custody_lease SET status=? WHERE lease_id=?",
                 (status.value, lease_id),
             )
-            await conn.commit()
+            await conn.commit
 
     async def replay_from(self, checkpoint_lsn: int) -> list[BallCustodyLease]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         cursor = await conn.execute(
             """
             SELECT * FROM ball_custody_lease
@@ -1155,14 +1154,14 @@ class SqliteLeaseStore(LeaseStore):
             """,
             (checkpoint_lsn,),
         )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        rows = await cursor.fetchall
+        await cursor.close
         return [self._row_to_lease(r) for r in rows]
 
     async def _checkpoint_if_needed(self, conn: aiosqlite.Connection) -> None:
         cursor = await conn.execute("SELECT COUNT(*) FROM ball_custody_lease")
-        count = (await cursor.fetchone())[0]
-        await cursor.close()
+        count = (await cursor.fetchone)[0]
+        await cursor.close
         if count % 100 == 0:
             await conn.execute("PRAGMA wal_checkpoint(FULL)")
 
@@ -1187,7 +1186,7 @@ class SqliteLeaseStore(LeaseStore):
 
     async def close(self) -> None:
         if self._conn is not None:
-            await self._conn.close()
+            await self._conn.close
             self._conn = None
 ```
 
@@ -1196,7 +1195,7 @@ class SqliteLeaseStore(LeaseStore):
 **时序图 1：acquire lease（CI 等待场景）**
 
 ```
-灵智体A   BallCustodyRegistry   LeaseStore   WakeupScheduler   TeamActRepo   EventBus
+ForgekinA   BallCustodyRegistry   LeaseStore   WakeupScheduler   TeamActRepo   EventBus
   │             │                    │              │                │            │
   │ acquire_for(forgekin=A, team=T, reason="wait_ci", next_step="run_tests")     │
   ├────────────>│                    │              │                │            │
@@ -1222,13 +1221,13 @@ class SqliteLeaseStore(LeaseStore):
   │ lease_id    │                    │              │                │            │
   │<────────────┤                    │              │                │            │
   │             │                    │              │                │            │
-  │ (灵智体A 退出会话，等待 CI 绿)   │              │                │            │
+  │ (ForgekinA 退出会话，等待 CI 绿)   │              │                │            │
   │             │                    │              │                │            │
   │             │      (CI 绿后 WakeupScheduler.fire)                │            │
   │             │      publish("lease.wakeup.fired", ...)            │            │
   │             ├──────────────────────────────────────────────────────────────>│
   │             │                    │              │                │            │
-  │ (TeamActLoopExecutor 监听 lease.wakeup.fired，唤醒灵智体A执行 next_step)     │
+  │ (TeamActLoopExecutor 监听 lease.wakeup.fired，唤醒ForgekinA执行 next_step)     │
 ```
 
 **时序图 2：TTL 过期自动释放**
@@ -1257,23 +1256,23 @@ ExpiryScanner   LeaseStore   BallCustodyRegistry   TeamActRepo   EventBus
   │                                 │ publish("lease.released", ... │
   │                                 ├──────────────────────────────>│
   │                                 │                  │            │
-  │ 球回 TeamActState，可被其他灵智体接管                              │
+  │ 球回 TeamActState，可被其他Forgekin接管                              │
 ```
 
 ### 3.3 错误处理策略
 
 | # | 异常场景 | 触发条件 | 处理策略 | 重试 | 用户感知 |
 |---|---------|---------|---------|:----:|---------|
-| EH-1 | 一灵智体已持 lease | `find_active_by_forgekin` 返回非 None | 抛 `LeaseAlreadyHeld`，trace 记录 | 否 | 调用方捕获后决定 release 旧 lease 或拒绝 acquire |
+| EH-1 | 一Forgekin已持 lease | `find_active_by_forgekin` 返回非 None | 抛 `LeaseAlreadyHeld`，trace 记录 | 否 | 调用方捕获后决定 release 旧 lease 或拒绝 acquire |
 | EH-2 | lease 不存在 | `load(lease_id)` 返回 None | 抛 `LeaseNotFound` | 否 | 调用方感知 |
-| EH-3 | lease 已是终态 | `lease.is_active()` 返回 False | 幂等 no-op（release/force_revoke）或抛 `LeaseAlreadyTerminal`（renew） | 否 | trace 记录 |
+| EH-3 | lease 已是终态 | `lease.is_active` 返回 False | 幂等 no-op（release/force_revoke）或抛 `LeaseAlreadyTerminal`（renew） | 否 | trace 记录 |
 | EH-4 | 续约超限 | `renewal_count >= max_renewals` | 强制释放 + 升级 CVO + 抛 `MaxRenewalsExceeded` | 否 | CVO 收到事件介入仲裁 |
 | EH-5 | TTL 过期扫描失败 | `list_expiring` 或 `mark_terminal` 异常 | 单 lease 异常不影响其他 lease；下次扫描重试 | 是（下次扫描） | trace 标记 |
 | EH-6 | TeamActState 更新失败 | `update_owner` 异常 | lease 状态已保存为终态，但 owner 未更新；广播 `lease.owner_update_failed` 事件告警 CVO | 否 | CVO 介入手动 sync |
 | EH-7 | WakeupScheduler 取消失败 | `scheduler.cancel` 异常 | 仅 log warning，不影响 lease 释放主流程 | 否 | 唤醒事件可能误触发，但 at-most-once 保证只处理一次 |
 | EH-8 | EventBus 广播失败 | `event_bus.publish_async` 超时/异常 | 仅 log warning，不影响 lease 状态变更 | 否 | trace 标记 "event_bus_failed" |
 | EH-9 | WAL 写入失败 | `store.save` 异常（磁盘满） | 重试 3 次（指数退避 100ms/200ms/400ms）；仍失败则 lease 状态不持久化，下次扫描重新检测 | 是（3次） | 调用方收到异常 |
-| EH-10 | Magic Words 撤销但 lease 已释放 | `force_revoke` 时 lease.is_active()=False | 幂等 no-op | 否 | trace 记录 "revoke_no_op" |
+| EH-10 | Magic Words 撤销但 lease 已释放 | `force_revoke` 时 lease.is_active=False | 幂等 no-op | 否 | trace 记录 "revoke_no_op" |
 | EH-11 | 重复唤醒事件 | `WakeupScheduler.fire` 收到已处理 event_id | at-most-once：返回 False，不重复广播 | 否 | trace 记录 "duplicate_wakeup_ignored" |
 | EH-12 | 进程崩溃后 TTL 已过期 | WAL 重放发现 `is_expired_at(now)=True` | 直接标记 EXPIRED，不重新 schedule | 否 | 球回 TeamActState |
 
@@ -1395,7 +1394,7 @@ class TeamActLoopExecutor:
         wait_reason: str,
         next_step: str,
     ) -> str:
-        # 灵智体需要退出会话等待外部条件
+        # Forgekin需要退出会话等待外部条件
         lease_id = await self._lease_registry.acquire_for(
             forgekin_id=forgekin_id,
             team_id=team_id,
@@ -1416,11 +1415,11 @@ from core.teamact.lease import BallCustodyRegistry, LeaseStatus
 
 class PingPongCircuitBreaker:
     async def evaluate_pass(self, record: PassRecord) -> BreakerVerdict:
-        # 检查持球灵智体是否处于 lease held 状态
+        # 检查持球Forgekin是否处于 lease held 状态
         active_lease = await self._lease_registry._store.find_active_by_forgekin(
             record.forgekin_id
         )
-        if active_lease and active_lease.is_active():
+        if active_lease and active_lease.is_active:
             # lease held 期间：是否计入空传取决于是否有实质产出
             # 若无工具调用 + 无产出 → 计入空传（防僵尸持球）
             if not record.has_substantive_output:
@@ -1444,7 +1443,7 @@ class HandoffCapsuleStore:
         latest.next_step = (
             f"[lease:{lease.lease_id}] reason={lease.reason}"
             f" next_step={lease.next_step}"
-            f" expected_wake_at={lease.expected_wake_at.isoformat()}"
+            f" expected_wake_at={lease.expected_wake_at.isoformat}"
         )
         await self.write(latest)
 ```
@@ -1523,7 +1522,7 @@ class SideEffectWalReplayer:
         leases = await store.replay_from(checkpoint_lsn)
         now = datetime.now(timezone.utc)
         for lease in leases:
-            if not lease.is_active():
+            if not lease.is_active:
                 continue
             if lease.is_expired_at(now):
                 # 崩溃期间 TTL 已过期
@@ -1546,14 +1545,14 @@ class SideEffectWalReplayer:
 | # | 测试点 | 验证内容 | 铁律关联 |
 |---|-------|---------|---------|
 | IT-1 | acquire 完整链路 | acquire_for → store.save → scheduler.schedule → teamact_repo.update_owner → event_bus.publish | T4 真实 lease 注册 |
-| IT-2 | 一灵智体一 lease 强制校验 | 同一 forgekin_id 第二次 acquire → 抛 LeaseAlreadyHeld | T3 断言异常类型 |
+| IT-2 | 一Forgekin一 lease 强制校验 | 同一 forgekin_id 第二次 acquire → 抛 LeaseAlreadyHeld | T3 断言异常类型 |
 | IT-3 | TTL 过期自动释放 | acquire ttl=60s → sleep 65s → expiry_scan 检测 → status=EXPIRED → owner=None | T6 MetricsCollector 采集延迟 |
 | IT-4 | 续约 max_renewals 检查 | acquire → renew 4 次（max=3）→ 第 4 次抛 MaxRenewalsExceeded + CVO 升级 | T3 断言异常 + 事件 |
 | IT-5 | Magic Words force_revoke | operator 触发 "星星罐子" → force_revoke → status=REVOKED → CVO 升级 | T1 真实 operator 输入 |
 | IT-6 | WakeupScheduler at-most-once | 同一 event_id fire 两次 → 第二次返回 False，不重复广播 | T3 断言返回值 |
 | IT-7 | CI 绿唤醒触发 | acquire reason=wait_ci → CI 状态变绿 → fire(WakeupEvent(trigger=CI_GREEN)) → lease.next_step 被执行 | T4 真实 CI 状态监听 |
 | IT-8 | WAL 重放一致性 | 写入 100 条 lease → 进程崩溃 → replay_from(0) → 活跃 lease 状态恢复，过期 lease 标记 EXPIRED | T6 采集重放延迟 |
-| IT-9 | lease release 后 TeamActState 可被接管 | release → current_owner=None → 其他灵智体可通过 take 接管 | T3 断言 owner 切换 |
+| IT-9 | lease release 后 TeamActState 可被接管 | release → current_owner=None → 其他Forgekin可通过 take 接管 | T3 断言 owner 切换 |
 | IT-10 | lease held 期间空传计入 F004 | acquire → 无工具调用 + 无产出的 PassRecord → F004 consecutive_empty_passes +1 | T3 断言空传计数 |
 | IT-11 | fallback_owner 生效 | lease 配置 fallback_owner="cvo" → 过期后 current_owner=cvo 而非 None | T3 断言 owner 值 |
 | IT-12 | 续约后 expected_wake_at 更新 | renew(extension=3600) → expected_wake_at = now + 3600s | T3 断言时间 |
@@ -1568,17 +1567,17 @@ class SideEffectWalReplayer:
 | AC # | 验收点 | 验证方法 |
 |------|-------|---------|
 | AC-F-1 | `flowforge/core/teamact/lease.py` 不 import forgemind 或 *Forge 模块 | 静态扫描 import 语句 |
-| AC-F-2 | `BallCustodyRegistry` 通过 DI 容器 `inject()` 注入，无直接实例化 | 代码审查 + DI 容器单测 |
+| AC-F-2 | `BallCustodyRegistry` 通过 DI 容器 `inject` 注入，无直接实例化 | 代码审查 + DI 容器单测 |
 | AC-F-3 | lease 状态通过 `LeaseStore (ABC)` 持久化，无 `cursor.execute` | grep `cursor.execute` 在 lease 模块返回空 |
 | AC-F-4 | `default_ttl_seconds` / `max_renewals` / `renewal_extension_seconds` / `expiry_scan_interval_seconds` 外置到 `flowforge/config/teamact.yaml` | YAML 加载测试 |
 | AC-F-5 | lease 状态走 WAL（`PRAGMA journal_mode=WAL`） | DB pragma 查询 |
-| AC-F-6 | 持球灵智体可注册 lease 并声明等待原因与唤醒时间 | 集成测试 IT-1 |
+| AC-F-6 | 持球Forgekin可注册 lease 并声明等待原因与唤醒时间 | 集成测试 IT-1 |
 | AC-F-7 | TTL 到期未续约自动释放，球回 TeamActState（current_owner=None 或 fallback_owner） | 集成测试 IT-3 |
 | AC-F-8 | 续约次数超 `max_renewals` 强制释放并升级 CVO | 集成测试 IT-4 |
-| AC-F-9 | `WakeupEvent` 触发时正确唤醒持球灵智体执行 next_step | 集成测试 IT-7 |
+| AC-F-9 | `WakeupEvent` 触发时正确唤醒持球Forgekin执行 next_step | 集成测试 IT-7 |
 | AC-F-10 | lease held 期间空传计入 F004 PingPongCircuitBreaker | 集成测试 IT-10 |
 | AC-F-11 | Magic Words "星星罐子"可强制撤销 lease（绕过 max_renewals） | 集成测试 IT-5 |
-| AC-F-12 | 一灵智体同时只能持有一个 lease | 集成测试 IT-2 |
+| AC-F-12 | 一Forgekin同时只能持有一个 lease | 集成测试 IT-2 |
 | AC-F-13 | WakeupScheduler at-most-once 保证（重复事件不重复处理） | 集成测试 IT-6 |
 | AC-F-14 | lease 释放后广播 `lease.released` 事件，TeamActState 可感知接管 | 集成测试 IT-9 |
 | AC-F-15 | lease 状态可回放（`replay_from`）恢复 TeamActState.current_owner | 集成测试 IT-8 |
@@ -1604,8 +1603,8 @@ class SideEffectWalReplayer:
 | AC # | 验收点 |
 |------|-------|
 | AC-S-1 | lease 状态通过 Repository 抽象，无 `cursor.execute` / `sqlite3.connect` 直连 |
-| AC-S-2 | 一灵智体一 lease 强制校验（禁多球） |
-| AC-S-3 | `force_revoke` 仅 Magic Words 触发，灵智体不可直接调用 |
+| AC-S-2 | 一Forgekin一 lease 强制校验（禁多球） |
+| AC-S-3 | `force_revoke` 仅 Magic Words 触发，Forgekin不可直接调用 |
 | AC-S-4 | lease 释放后 TeamActState.current_owner 同步置空（或 fallback_owner） |
 | AC-S-5 | WAL 文件权限 0600 |
 | AC-S-6 | 所有 lease 操作写 audit + Eval trace，禁删除 |
@@ -1647,4 +1646,4 @@ class SideEffectWalReplayer:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 A006 架构与 F006 Feature SRS） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 A006 架构与 F006 Feature SRS） | 开发者 Forgekin（猎犬·夏洛克） |

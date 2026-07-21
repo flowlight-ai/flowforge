@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004）
 > **对应 arch.md**: [doc:../arch.md#§3.4]
 > **对应 design.md**: [doc:../design.md#§3.4]
 > **对应 Feature**: [doc:../features/F017-consumption-weighted-ranking.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A017-consumption-weighted-ranking.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,7 +16,7 @@
 
 ### 1.1 设计问题
 
-灵智体（Forgekin，社区社交称"灵智体"）在记忆检索中需要判断"知识价值"。v7.0 靠向量相似度 + 时间衰减，导致两类问题：冷启动偏热点（新条目无消费数据被埋底）、LLM 自评失真（模型说自己好）。A017 架构设计已确认 L4 消费排序层实现 14 行为指标汇聚 + 调整后得分公式 + 贝叶斯收缩 + 中心化偏移 + 分数时效衰减。
+Forgekin（Evolvable Agent，社区社交称"灵智体"）在记忆检索中需要判断"知识价值"。v7.0 靠向量相似度 + 时间衰减，导致两类问题：冷启动偏热点（新条目无消费数据被埋底）、LLM 自评失真（模型说自己好）。A017 架构设计已确认 L4 消费排序层实现 14 行为指标汇聚 + 调整后得分公式 + 贝叶斯收缩 + 中心化偏移 + 分数时效衰减。
 
 本详细设计进一步下沉到代码层，需要解决以下子问题：
 
@@ -26,7 +25,7 @@
 3. **中心化偏移的负值处理**：`entry_sum - class_average` 可能为负，"长期不用"条目得负分的实现机制与下游 display 的负值处理。
 4. **时效衰减的 floor 实现**：`max(0.2, 0.5 ** (days / 30))` 公式的边界（last_consumed_at 远期值、未来值）与精度。
 5. **统计缓存的失效策略**：`ConsumptionStatsCache` 在 record 后失效的强一致保证，避免缓存与 DB 不一致导致排序错误。
-6. **公式五项参与的硬约束**：如何在 `rank()` 中强制五项全部参与计算，缺一项即拒绝（防止工程师偷工减料）。
+6. **公式五项参与的硬约束**：如何在 `rank` 中强制五项全部参与计算，缺一项即拒绝（防止工程师偷工减料）。
 
 ### 1.2 设计约束
 
@@ -45,7 +44,7 @@
 - **对 F014 Collection 层（D014）**：`entry_id` 是 14 行为信号的聚合主键，D014 必须保证 `entry_id` 全局唯一（UUID v7 时序排序）。本设计需在 record 时校验 entry_id 存在性。
 - **对 F015 三检索入口（D015）**：RRF 融合后的 `retrieval_score` 是消费加权公式的"融合检索得分"项，必须传入 RankContext。
 - **对 F016 治理层（D016）**：deprecated 条目 ×0.3 降权是消费加权公式中"过时惩罚"的输入。本设计需从 RankContext 接收 `authority_bonus_map` 与 `staleness_penalty_map`。
-- **对 F039 锻典可检索**：消费加权让"哪些锻典条目真正被复用"可识别，是 Build to Persist 的反馈闭环资产。
+- **对 F039 蒸馏知识库可检索**：消费加权让"哪些蒸馏知识库条目真正被复用"可识别，是 Build to Persist 的反馈闭环资产。
 - **对 F040 控制面**：14 信号采集统计写入 F040 Eval Hub，作为"知识价值"摩擦指标。
 - **对 DI 容器**：需新增 `consumption_ranker` / `consumption_collector` / `bayesian_shrinker` / `recency_decay` / `consumption_stats_cache` / `consumption_signal_repository` 六个绑定。
 - **对数据库 schema**：需新增 `consumption_signals` 表（按 entry_id + signal_type 聚合索引）+ `consumption_stats` 缓存表。
@@ -142,7 +141,7 @@ class SignalType(str, Enum):
 
 class ConsumptionSignal(BaseModel):
     """单条消费信号"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     signal_id: str = Field(min_length=1)
     entry_id: str = Field(min_length=1)
@@ -155,7 +154,7 @@ class ConsumptionSignal(BaseModel):
 
 class ConsumptionStats(BaseModel):
     """消费统计；走 ConsumptionStatsCache"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     entry_id: str
     total_signals: int = Field(ge=0)
@@ -170,7 +169,7 @@ class ConsumptionStats(BaseModel):
 
 class RankContext(BaseModel):
     """重排上下文"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     forgekin_id: str = Field(min_length=1)
     task_scope: Optional[str] = None
@@ -180,7 +179,7 @@ class RankContext(BaseModel):
 
 class RankedHit(BaseModel):
     """重排后 hit 模型；五项必须全部参与"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     entry_id: str
     original_score: float
@@ -359,7 +358,7 @@ class RankingConfig(BaseModel):
 
 class ClassAverageCache(BaseModel):
     """同类平均消费率缓存"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     collection_type: str
     average: float
@@ -501,7 +500,7 @@ class DefaultConsumptionWeightedRanker(ConsumptionWeightedRanker):
         if not hits:
             return []
 
-        now = datetime.utcnow()
+        now = datetime.utcnow
         ranked: list[RankedHit] = []
 
         for hit in hits:
@@ -667,14 +666,14 @@ class LRUPerEntryCache(ConsumptionStatsCache):
     def __init__(self, ttl_seconds: int = 300, max_size: int = 10000):
         self._ttl = ttl_seconds
         self._max = max_size
-        self._store: OrderedDict[str, tuple[ConsumptionStats, float]] = OrderedDict()
+        self._store: OrderedDict[str, tuple[ConsumptionStats, float]] = OrderedDict
 
     async def get(self, entry_id: str) -> Optional[ConsumptionStats]:
         import time
         if entry_id not in self._store:
             return None
         stats, ts = self._store[entry_id]
-        if time.time() - ts > self._ttl:
+        if time.time - ts > self._ttl:
             del self._store[entry_id]
             return None
         # LRU: move to end
@@ -685,7 +684,7 @@ class LRUPerEntryCache(ConsumptionStatsCache):
         import time
         if entry_id in self._store:
             self._store.move_to_end(entry_id)
-        self._store[entry_id] = (stats, time.time())
+        self._store[entry_id] = (stats, time.time)
         while len(self._store) > self._max:
             self._store.popitem(last=False)
 
@@ -698,11 +697,11 @@ class LRUPerEntryCache(ConsumptionStatsCache):
 
 ```
 [信号采集路径]
-  Forgekin.act() / verify()
+  Forgekin.act / verify
         │
         ├─ 工具调用 → signal_type=SEARCHED/READ/USED
         ├─ 任务结果 → signal_type=TASK_SUCCEEDED_AFTER/TASK_FAILED_AFTER
-        └─ 灵智体决策 → signal_type=CITED/SKIPPED/REJECTED/DOWNVOTED
+        └─ Forgekin决策 → signal_type=CITED/SKIPPED/REJECTED/DOWNVOTED
         │
         ▼
   ConsumptionCollector.record(ConsumptionSignal{
@@ -724,7 +723,7 @@ class LRUPerEntryCache(ConsumptionStatsCache):
   cache.invalidate(entry_id)（强一致）
 
 [重排路径]
-  F016 GovernanceFilter.filter() → hits（含 authority 硬序分块）
+  F016 GovernanceFilter.filter → hits（含 authority 硬序分块）
         │
         ▼
   ConsumptionWeightedRanker.rank(hits, RankContext{
@@ -754,7 +753,7 @@ class LRUPerEntryCache(ConsumptionStatsCache):
   块内按 adjusted_score 降序（块间硬序由 F016 保持）
         │
         ▼
-  返回 RankedHit 列表给灵智体
+  返回 RankedHit 列表给Forgekin
 
 [缓存失效路径]
   ConsumptionCollector.record(signal)
@@ -765,7 +764,7 @@ class LRUPerEntryCache(ConsumptionStatsCache):
   cache.invalidate(signal.entry_id)
         │
         ▼
-  下次 rank 时 stats() 触发 cache miss
+  下次 rank 时 stats 触发 cache miss
         │
         ▼
   repository.query_stats(entry_id) 重新计算并缓存
@@ -843,11 +842,11 @@ error_messages:
   - `query_class_average(collection_type)` 按 CollectionType 聚合统计
 
 - **依赖 F015 三检索入口（D015）**：
-  - `retrieval_score` 来自 `RetrievalFusion.search()` 返回的 hits 中的 `score` 字段
+  - `retrieval_score` 来自 `RetrievalFusion.search` 返回的 hits 中的 `score` 字段
   - hits 必须包含 `entry_id` + `collection_type` 字段
 
 - **依赖 F016 治理层（D016）**：
-  - `authority_bonus_map` 来自 D016 `AuthoritySorter.sort_by_authority()` 输出的 `adjusted_score` 中的 `authority_bonus` 分量
+  - `authority_bonus_map` 来自 D016 `AuthoritySorter.sort_by_authority` 输出的 `adjusted_score` 中的 `authority_bonus` 分量
   - `staleness_penalty_map` 来自 D016 deprecated ×0.3 降权的反算值
 
 - **依赖 F009 Evidence & Sensors**：
@@ -856,10 +855,10 @@ error_messages:
 
 ### 4.2 下游影响（如何被调用）
 
-- **影响 F039 锻典可检索**：
-  - 消费加权让"哪些锻典条目真正被复用"可识别
+- **影响 F039 蒸馏知识库可检索**：
+  - 消费加权让"哪些蒸馏知识库条目真正被复用"可识别
   - 是 Build to Persist 的反馈闭环资产
-  - 锻典条目 rank 后可识别"长期不被复用"的过时锻典
+  - 蒸馏知识库条目 rank 后可识别"长期不被复用"的过时蒸馏知识库
 
 - **影响 F018 Eval Contract**：
   - 14 信号统计可作为 Eval Contract 的"摩擦指标"
@@ -902,7 +901,7 @@ error_messages:
 
 ### 5.1 功能验收 AC
 
-- [ ] AC-FUNC-001: `ConsumptionWeightedRanker.rank()` 五项全部参与计算
+- [ ] AC-FUNC-001: `ConsumptionWeightedRanker.rank` 五项全部参与计算
 - [ ] AC-FUNC-002: 14 信号均来自真实工具调用或任务结果，禁止 LLM 自评
 - [ ] AC-FUNC-003: 新条目（无消费数据）`bayesian_estimate` 等于同类平均（不等于 0）
 - [ ] AC-FUNC-004: `recency_decay` ≥ floor=0.2，永不归零
@@ -967,4 +966,4 @@ error_messages:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 14 信号 + 贝叶斯收缩 + 中心化偏移 + 不归零时效 + LRU 缓存） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 14 信号 + 贝叶斯收缩 + 中心化偏移 + 不归零时效 + LRU 缓存） | 开发者 Forgekin（猎犬·夏洛克） |

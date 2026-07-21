@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]
 > **对应 Feature**: [doc:../features/F023-liveness-canonical-read.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A023-liveness-canonical-read.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -50,13 +49,13 @@
 
 ### 1.3 设计影响
 
-- **对 F022 Tier 1-4 恢复**：Tier 2 探测阶段调用 `CanonicalReadModel.canonical_read()` 获取 liveness。本设计需暴露 `canonical_read` 接口。
+- **对 F022 Tier 1-4 恢复**：Tier 2 探测阶段调用 `CanonicalReadModel.canonical_read` 获取 liveness。本设计需暴露 `canonical_read` 接口。
 - **对 F024 强 workflow**：强 workflow 每步前检查 liveness，zombie 状态拒绝执行。本设计需暴露 `check_liveness` 接口。
-- **对 F025 跨 provider 宿主抽象**：provider liveness 是灵智体 liveness 的输入维度之一。本设计需暴露 `update_provider_liveness` 接口。
+- **对 F025 跨 provider 宿主抽象**：provider liveness 是Forgekin liveness 的输入维度之一。本设计需暴露 `update_provider_liveness` 接口。
 - **对 F020 七类归因**：environment_drift 归因使用 liveness 历史作为证据。本设计需派发 `liveness.changed` 事件。
 - **对 F021 副作用 WAL**：WAL 状态变更时更新 liveness。本设计订阅 `wal.entry.*` 事件。
 - **对 F040 控制面**：所有 liveness 变更写入 F040 Eval Hub。本设计派发 liveness 事件。
-- **对 Forgekin.act()**：Forgekin 执行前必须 `check_liveness`，zombie 状态拒绝执行。
+- **对 Forgekin.act**：Forgekin 执行前必须 `check_liveness`，zombie 状态拒绝执行。
 - **对 DI 容器**：需新增 `canonical_read_model` / `liveness_probe` / `split_brain_detector` / `liveness_repository` 四个绑定。
 
 ---
@@ -162,7 +161,7 @@ ALLOWED_TRANSITIONS = {
     LivenessState.ALIVE: {LivenessState.DEGRADED, LivenessState.GRACE_WAITING, LivenessState.ZOMBIE},
     LivenessState.DEGRADED: {LivenessState.ALIVE, LivenessState.GRACE_WAITING, LivenessState.ZOMBIE},
     LivenessState.GRACE_WAITING: {LivenessState.ALIVE, LivenessState.DEGRADED, LivenessState.ZOMBIE},
-    LivenessState.ZOMBIE: set(),  # 终态，不可恢复
+    LivenessState.ZOMBIE: set,  # 终态，不可恢复
 }
 
 
@@ -387,24 +386,24 @@ function canonical_read(forgekin_id: str) -> LivenessRecord:
 
     # 2. 检查宽限期是否过期
     if durable.state == GRACE_WAITING:
-        if durable.grace_until is not None and now() > durable.grace_until:
+        if durable.grace_until is not None and now > durable.grace_until:
             # 宽限期结束，转 ZOMBIE
             new_record = LivenessRecord(
-                record_id=uuid_v7(),
+                record_id=uuid_v7,
                 forgekin_id=forgekin_id,
                 state=LivenessState.ZOMBIE,
                 last_heartbeat_at=durable.last_heartbeat_at,
-                last_probe_at=now(),
+                last_probe_at=now,
                 grace_until=None,
                 source=CanonicalSource.DURABLE_RECORD,
                 zombie_reason=f"grace period expired at {durable.grace_until}",
-                recorded_at=now(),
+                recorded_at=now,
             )
             await liveness_repository.upsert(new_record)
             return new_record
 
     # 3. 检查心跳是否过期（heartbeat_stale_seconds）
-    if now() - durable.last_heartbeat_at > config.heartbeat_stale_seconds:
+    if now - durable.last_heartbeat_at > config.heartbeat_stale_seconds:
         # 心跳过期，进入宽限期
         await liveness_probe.enter_grace(
             forgekin_id, timedelta(seconds=config.grace_period.default_duration_seconds)
@@ -435,7 +434,7 @@ function transition_state(
     current: LivenessState, target: LivenessState
 ) -> LivenessState:
 
-    if target not in ALLOWED_TRANSITIONS.get(current, set()):
+    if target not in ALLOWED_TRANSITIONS.get(current, set):
         raise IllegalLivenessTransitionError(
             f"liveness state transition {current.value} -> {target.value} "
             f"not allowed"
@@ -449,12 +448,12 @@ function update_heartbeat(forgekin_id: str) -> None:
     if current is None:
         # 不存在记录，创建 ALIVE 记录
         new_record = LivenessRecord(
-            record_id=uuid_v7(),
+            record_id=uuid_v7,
             forgekin_id=forgekin_id,
             state=LivenessState.ALIVE,
-            last_heartbeat_at=now(),
+            last_heartbeat_at=now,
             source=CanonicalSource.DURABLE_RECORD,
-            recorded_at=now(),
+            recorded_at=now,
         )
         await liveness_repository.upsert(new_record)
         return
@@ -472,14 +471,14 @@ function update_heartbeat(forgekin_id: str) -> None:
         transition_state(current.state, new_state)  # 校验合法性
 
     new_record = LivenessRecord(
-        record_id=uuid_v7(),
+        record_id=uuid_v7,
         forgekin_id=forgekin_id,
         state=new_state,
-        last_heartbeat_at=now(),
+        last_heartbeat_at=now,
         last_probe_at=current.last_probe_at,
         grace_until=None,  # 心跳恢复时清除宽限期
         source=CanonicalSource.DURABLE_RECORD,
-        recorded_at=now(),
+        recorded_at=now,
     )
     await liveness_repository.upsert(new_record)
 
@@ -489,15 +488,15 @@ function enter_grace(forgekin_id: str, duration: timedelta) -> None:
     current = await liveness_repository.get_latest(forgekin_id)
     if current is None:
         # 不存在记录，创建 GRACE_WAITING
-        grace_until = now() + duration
+        grace_until = now + duration
         new_record = LivenessRecord(
-            record_id=uuid_v7(),
+            record_id=uuid_v7,
             forgekin_id=forgekin_id,
             state=LivenessState.GRACE_WAITING,
-            last_heartbeat_at=now(),
+            last_heartbeat_at=now,
             grace_until=grace_until,
             source=CanonicalSource.DURABLE_RECORD,
-            recorded_at=now(),
+            recorded_at=now,
         )
         await liveness_repository.upsert(new_record)
         return
@@ -505,15 +504,15 @@ function enter_grace(forgekin_id: str, duration: timedelta) -> None:
     # 状态转换校验
     transition_state(current.state, LivenessState.GRACE_WAITING)
 
-    grace_until = now() + duration
+    grace_until = now + duration
     new_record = LivenessRecord(
-        record_id=uuid_v7(),
+        record_id=uuid_v7,
         forgekin_id=forgekin_id,
         state=LivenessState.GRACE_WAITING,
         last_heartbeat_at=current.last_heartbeat_at,
         grace_until=grace_until,
         source=CanonicalSource.DURABLE_RECORD,
-        recorded_at=now(),
+        recorded_at=now,
     )
     await liveness_repository.upsert(new_record)
 ```
@@ -530,25 +529,25 @@ function detect(records: list[LivenessRecord]) -> Optional[SplitBrainAlert]:
     states = set(r.state for r in records)
     if config.split_brain.state_disagreement_enabled and len(states) > 1:
         return SplitBrainAlert(
-            alert_id=uuid_v7(),
+            alert_id=uuid_v7,
             forgekin_id=records[0].forgekin_id,
             sources_disagree=[r.source for r in records],
             states={r.source.value: r.state.value for r in records},
             delta_seconds=0.0,
-            detected_at=now(),
+            detected_at=now,
         )
 
     # 2. 检查 last_heartbeat_at 差异
     heartbeats = [r.last_heartbeat_at for r in records]
-    delta = (max(heartbeats) - min(heartbeats)).total_seconds()
+    delta = (max(heartbeats) - min(heartbeats)).total_seconds
     if delta > config.split_brain.heartbeat_delta_threshold_seconds:
         return SplitBrainAlert(
-            alert_id=uuid_v7(),
+            alert_id=uuid_v7,
             forgekin_id=records[0].forgekin_id,
             sources_disagree=[r.source for r in records],
             states={r.source.value: r.state.value for r in records},
             delta_seconds=delta,
-            detected_at=now(),
+            detected_at=now,
         )
 
     return None
@@ -645,7 +644,7 @@ class DefaultCanonicalReadModel(CanonicalReadModel):
                 # 探测失败，创建临时 ZOMBIE 记录
                 now = datetime.now(timezone.utc)
                 fallback = LivenessRecord(
-                    record_id=str(uuid.uuid1()),
+                    record_id=str(uuid.uuid1),
                     forgekin_id=forgekin_id,
                     state=LivenessState.ZOMBIE,
                     last_heartbeat_at=now,
@@ -663,7 +662,7 @@ class DefaultCanonicalReadModel(CanonicalReadModel):
                 # 宽限期结束，转 ZOMBIE
                 now = datetime.now(timezone.utc)
                 new_record = LivenessRecord(
-                    record_id=str(uuid.uuid1()),
+                    record_id=str(uuid.uuid1),
                     forgekin_id=forgekin_id,
                     state=LivenessState.ZOMBIE,
                     last_heartbeat_at=durable.last_heartbeat_at,
@@ -676,13 +675,13 @@ class DefaultCanonicalReadModel(CanonicalReadModel):
                 await self._repo.upsert(new_record)
                 await self._bus.publish(
                     topic="liveness.changed",
-                    payload=new_record.model_dump(),
+                    payload=new_record.model_dump,
                 )
                 return new_record
 
         # 3. 检查心跳是否过期
         now = datetime.now(timezone.utc)
-        if (now - durable.last_heartbeat_at).total_seconds() > self._cfg.heartbeat_stale_seconds:
+        if (now - durable.last_heartbeat_at).total_seconds > self._cfg.heartbeat_stale_seconds:
             # 心跳过期，进入宽限期
             try:
                 await self._probe.enter_grace(
@@ -778,7 +777,7 @@ class DefaultLivenessProbe(LivenessProbe):
         now = datetime.now(timezone.utc)
         if current is None:
             new_record = LivenessRecord(
-                record_id=str(uuid.uuid1()),
+                record_id=str(uuid.uuid1),
                 forgekin_id=forgekin_id,
                 state=LivenessState.ALIVE,
                 last_heartbeat_at=now,
@@ -799,7 +798,7 @@ class DefaultLivenessProbe(LivenessProbe):
             self._check_transition(current.state, LivenessState.ALIVE)
 
         new_record = LivenessRecord(
-            record_id=str(uuid.uuid1()),
+            record_id=str(uuid.uuid1),
             forgekin_id=forgekin_id,
             state=LivenessState.ALIVE,
             last_heartbeat_at=now,
@@ -811,7 +810,7 @@ class DefaultLivenessProbe(LivenessProbe):
         await self._repo.upsert(new_record)
         await self._bus.publish(
             topic="liveness.changed",
-            payload=new_record.model_dump(),
+            payload=new_record.model_dump,
         )
 
     async def mark_degraded(self, forgekin_id: str, reason: str) -> None:
@@ -825,7 +824,7 @@ class DefaultLivenessProbe(LivenessProbe):
 
         now = datetime.now(timezone.utc)
         new_record = LivenessRecord(
-            record_id=str(uuid.uuid1()),
+            record_id=str(uuid.uuid1),
             forgekin_id=forgekin_id,
             state=LivenessState.DEGRADED,
             last_heartbeat_at=current.last_heartbeat_at,
@@ -838,7 +837,7 @@ class DefaultLivenessProbe(LivenessProbe):
         await self._repo.upsert(new_record)
         await self._bus.publish(
             topic="liveness.changed",
-            payload=new_record.model_dump(),
+            payload=new_record.model_dump,
         )
 
     async def mark_zombie(self, forgekin_id: str, reason: str) -> None:
@@ -848,7 +847,7 @@ class DefaultLivenessProbe(LivenessProbe):
             self._check_transition(current.state, LivenessState.ZOMBIE)
 
         new_record = LivenessRecord(
-            record_id=str(uuid.uuid1()),
+            record_id=str(uuid.uuid1),
             forgekin_id=forgekin_id,
             state=LivenessState.ZOMBIE,
             last_heartbeat_at=current.last_heartbeat_at if current else now,
@@ -861,7 +860,7 @@ class DefaultLivenessProbe(LivenessProbe):
         await self._repo.upsert(new_record)
         await self._bus.publish(
             topic="liveness.changed",
-            payload=new_record.model_dump(),
+            payload=new_record.model_dump,
         )
 
     async def enter_grace(
@@ -875,7 +874,7 @@ class DefaultLivenessProbe(LivenessProbe):
             self._check_transition(current.state, LivenessState.GRACE_WAITING)
 
         new_record = LivenessRecord(
-            record_id=str(uuid.uuid1()),
+            record_id=str(uuid.uuid1),
             forgekin_id=forgekin_id,
             state=LivenessState.GRACE_WAITING,
             last_heartbeat_at=current.last_heartbeat_at if current else now,
@@ -887,13 +886,13 @@ class DefaultLivenessProbe(LivenessProbe):
         await self._repo.upsert(new_record)
         await self._bus.publish(
             topic="liveness.changed",
-            payload=new_record.model_dump(),
+            payload=new_record.model_dump,
         )
 
     def _check_transition(
         self, current: LivenessState, target: LivenessState
     ) -> None:
-        allowed = ALLOWED_TRANSITIONS.get(current, set())
+        allowed = ALLOWED_TRANSITIONS.get(current, set)
         if target not in allowed:
             raise IllegalLivenessTransitionError(
                 f"liveness state transition {current.value} -> {target.value} "
@@ -918,7 +917,7 @@ class DefaultSplitBrainDetector(SplitBrainDetector):
         states = {r.state for r in records}
         if self._cfg.split_brain.state_disagreement_enabled and len(states) > 1:
             return SplitBrainAlert(
-                alert_id=str(uuid.uuid1()),
+                alert_id=str(uuid.uuid1),
                 forgekin_id=records[0].forgekin_id,
                 sources_disagree=[r.source for r in records],
                 states={r.source.value: r.state.value for r in records},
@@ -928,10 +927,10 @@ class DefaultSplitBrainDetector(SplitBrainDetector):
 
         # 2. last_heartbeat_at 差异
         heartbeats = [r.last_heartbeat_at for r in records]
-        delta = (max(heartbeats) - min(heartbeats)).total_seconds()
+        delta = (max(heartbeats) - min(heartbeats)).total_seconds
         if delta > self._cfg.split_brain.heartbeat_delta_threshold_seconds:
             return SplitBrainAlert(
-                alert_id=str(uuid.uuid1()),
+                alert_id=str(uuid.uuid1),
                 forgekin_id=records[0].forgekin_id,
                 sources_disagree=[r.source for r in records],
                 states={r.source.value: r.state.value for r in records},
@@ -947,7 +946,7 @@ class DefaultSplitBrainDetector(SplitBrainDetector):
         )
         await self._bus.publish(
             topic="liveness.split_brain",
-            payload=alert.model_dump(),
+            payload=alert.model_dump,
         )
 ```
 
@@ -956,11 +955,11 @@ class DefaultSplitBrainDetector(SplitBrainDetector):
 ```
 [canonical_read 时序图]
 
-  Forgekin.act()    canonical    repository   probe    detector   EventBus   F040
+  Forgekin.act    canonical    repository   probe    detector   EventBus   F040
         │              │             │           │           │          │          │
         │ canonical_read(forgekin_id) │           │           │          │          │
         ├─────────────>│             │           │           │          │          │
-        │              │ get_latest()            │           │          │          │
+        │              │ get_latest            │           │          │          │
         │              ├────────────>│           │           │          │          │
         │              │<────────────┤ durable   │           │          │          │
         │              │                                                          │          │
@@ -968,18 +967,18 @@ class DefaultSplitBrainDetector(SplitBrainDetector):
         │              │   转 ZOMBIE + upsert + publish                          │          │
         │              │                                                          │          │
         │              │ (elif heartbeat stale)                                  │          │
-        │              │ enter_grace()                                           │          │
+        │              │ enter_grace                                           │          │
         │              ├──────────────────────────>│              │           │          │          │
         │              │<──────────────────────────┤ OK           │           │          │          │
         │              │                                                          │          │
         │              │ (elif split_brain.enabled)                                │          │
-        │              │ probe()                                                  │          │
+        │              │ probe                                                  │          │
         │              ├──────────────────────────>│              │           │          │          │
         │              │<──────────────────────────┤ record       │           │          │          │
         │              │ detect([durable, probed])                                │          │
         │              ├──────────────────────────────────────────>│           │          │          │
         │              │<──────────────────────────────────────────┤ alert?    │          │          │
-        │              │ (if alert) alert()                                                     │          │
+        │              │ (if alert) alert                                                     │          │
         │              ├────────────────────────────────────────────────────────>│          │          │
         │              │                                                                       ├────────>│
         │              │                                                                       │          │
@@ -1018,9 +1017,9 @@ class DefaultSplitBrainDetector(SplitBrainDetector):
 
 ### 4.1 上游依赖如何调用
 
-- **Forgekin.act()**：Forgekin 执行前调用 `CanonicalReadModel.check_liveness(required_state=ALIVE)`。
-- **F022 Tier 1-4 恢复**：Tier 2 探测阶段调用 `canonical_read()` 获取 liveness。
-- **F024 强 workflow**：强 workflow 每步前调用 `check_liveness()`，zombie 状态拒绝执行。
+- **Forgekin.act**：Forgekin 执行前调用 `CanonicalReadModel.check_liveness(required_state=ALIVE)`。
+- **F022 Tier 1-4 恢复**：Tier 2 探测阶段调用 `canonical_read` 获取 liveness。
+- **F024 强 workflow**：强 workflow 每步前调用 `check_liveness`，zombie 状态拒绝执行。
 - **F025 跨 provider 宿主抽象**：provider liveness 通过 `mark_degraded/mark_zombie` 接口更新。
 - **F021 副作用 WAL**：WAL 状态变更时订阅 `wal.entry.failed` 触发 mark_degraded。
 - **DI 容器**：`canonical_read_model` 通过 `inject("canonical_read_model")` 获取。
@@ -1029,28 +1028,28 @@ class DefaultSplitBrainDetector(SplitBrainDetector):
 
 - **F020 七类归因**：liveness 历史作为 environment_drift 归因证据。F020 订阅 `liveness.changed` 事件。
 - **F040 控制面**：所有 liveness 变更写入 F040 Eval Hub。F040 订阅 `liveness.*` 主题。
-- **Forgekin.learn()**：liveness 历史作为 Forgekin 学习输入，更新能力画像。
+- **Forgekin.learn**：liveness 历史作为 Forgekin 学习输入，更新能力画像。
 - **archive_repository**：liveness 历史归档到 archive_repository（独立表）。
 
 ### 4.3 集成测试点
 
 | 测试点 ID | 测试场景 | 验证点 | 责任方 |
 |----------|---------|--------|--------|
-| IT-D023-001 | canonical_read 优先 durable_record | durable_record 存在时不调用 probe | 测试员灵智体（蜜獾·平头哥） |
-| IT-D023-002 | canonical_read durable 不存在触发 probe | probe 被调用 + upsert | 测试员灵智体 |
-| IT-D023-003 | 宽限期过期转 ZOMBIE | GRACE_WAITING + grace_until < now → ZOMBIE | 测试员灵智体 |
-| IT-D023-004 | 心跳过期进入宽限期 | heartbeat_stale 后转 GRACE_WAITING | 测试员灵智体 |
-| IT-D023-005 | 状态转换矩阵 ALIVE→DEGRADED | 合法转换通过 | 测试员灵智体 |
-| IT-D023-006 | 状态转换矩阵 ZOMBIE→ALIVE | 非法转换被拒绝 | 测试员灵智体 |
-| IT-D023-007 | update_heartbeat 恢复 ALIVE | GRACE_WAITING → ALIVE | 测试员灵智体 |
-| IT-D023-008 | ZOMBIE 拒绝 heartbeat | ZOMBIE 状态心跳被拒 | 测试员灵智体 |
-| IT-D023-009 | 脑裂检测 state 不一致 | 不同 source 的 state 不一致触发 alert | 测试员灵智体 |
-| IT-D023-010 | 脑裂检测 heartbeat 差异 | heartbeat delta > 阈值触发 alert | 测试员灵智体 |
-| IT-D023-011 | check_liveness ALIVE 要求 | ALIVE 状态通过，其他状态拒绝 | 测试员灵智体 |
-| IT-D023-012 | check_liveness ZOMBIE 拒绝 | ZOMBIE 永远拒绝 | 测试员灵智体 |
-| IT-D023-013 | probe 超时进入宽限期 | probe timeout → GRACE_WAITING | 测试员灵智体 |
-| IT-D023-014 | probe_handler 失败回落 | probe 失败时创建临时 ZOMBIE | 测试员灵智体 |
-| IT-D023-015 | 多源校验脑裂时仍以 durable 为准 | 脑裂时 canonical_read 返回 durable | 测试员灵智体 |
+| IT-D023-001 | canonical_read 优先 durable_record | durable_record 存在时不调用 probe | 测试员Forgekin（蜜獾·平头哥） |
+| IT-D023-002 | canonical_read durable 不存在触发 probe | probe 被调用 + upsert | 测试员Forgekin |
+| IT-D023-003 | 宽限期过期转 ZOMBIE | GRACE_WAITING + grace_until < now → ZOMBIE | 测试员Forgekin |
+| IT-D023-004 | 心跳过期进入宽限期 | heartbeat_stale 后转 GRACE_WAITING | 测试员Forgekin |
+| IT-D023-005 | 状态转换矩阵 ALIVE→DEGRADED | 合法转换通过 | 测试员Forgekin |
+| IT-D023-006 | 状态转换矩阵 ZOMBIE→ALIVE | 非法转换被拒绝 | 测试员Forgekin |
+| IT-D023-007 | update_heartbeat 恢复 ALIVE | GRACE_WAITING → ALIVE | 测试员Forgekin |
+| IT-D023-008 | ZOMBIE 拒绝 heartbeat | ZOMBIE 状态心跳被拒 | 测试员Forgekin |
+| IT-D023-009 | 脑裂检测 state 不一致 | 不同 source 的 state 不一致触发 alert | 测试员Forgekin |
+| IT-D023-010 | 脑裂检测 heartbeat 差异 | heartbeat delta > 阈值触发 alert | 测试员Forgekin |
+| IT-D023-011 | check_liveness ALIVE 要求 | ALIVE 状态通过，其他状态拒绝 | 测试员Forgekin |
+| IT-D023-012 | check_liveness ZOMBIE 拒绝 | ZOMBIE 永远拒绝 | 测试员Forgekin |
+| IT-D023-013 | probe 超时进入宽限期 | probe timeout → GRACE_WAITING | 测试员Forgekin |
+| IT-D023-014 | probe_handler 失败回落 | probe 失败时创建临时 ZOMBIE | 测试员Forgekin |
+| IT-D023-015 | 多源校验脑裂时仍以 durable 为准 | 脑裂时 canonical_read 返回 durable | 测试员Forgekin |
 
 ---
 
@@ -1122,4 +1121,4 @@ class DefaultSplitBrainDetector(SplitBrainDetector):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（四态 liveness + 三类 CanonicalSource + durable_record 单一真相源 + 宽限期机制 + 脑裂检测 + 状态转换矩阵 + 15 集成测试点 + 4 类 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（四态 liveness + 三类 CanonicalSource + durable_record 单一真相源 + 宽限期机制 + 脑裂检测 + 状态转换矩阵 + 15 集成测试点 + 4 类 AC） | 开发者 Forgekin（猎犬·夏洛克） |

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，对应 FR-CORE-023）
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
 > **对应 Feature**: [doc:../features/F013-harnessability.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D013-harnessability.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -19,10 +18,10 @@
 
 FlowForge 在架构层需要解决"接入低 harnessability 系统只能靠猜和点页面硬跑"的根本问题。当前 v7.0：
 
-1. 未对外部系统做 Harnessability 评估，接入低分系统（如某些无 API 只有页面的发布平台）时灵智体只能猜
+1. 未对外部系统做 Harnessability 评估，接入低分系统（如某些无 API 只有页面的发布平台）时Forgekin只能猜
 2. 无六维评分（稳定 API / 事件流回调 / 持久状态 / 可验证输出 / 幂等可回滚 / 权限边界清楚）
 3. 无接入策略四档判定（full_harness / partial_harness / human_in_loop / skip）
-4. 低 Harnessability 系统的治理规则一视同仁注入所有灵智体（违反 RA-023 低保真矩阵）
+4. 低 Harnessability 系统的治理规则一视同仁注入所有Forgekin（违反 RA-023 低保真矩阵）
 
 Harnessability 在架构层是 Harness 七层的适配层（L7），是外部系统接入前的工程判据。
 
@@ -100,12 +99,12 @@ Harnessability 在架构层是 Harness 七层的适配层（L7），是外部系
 │              LowFiMatrix 低保真矩阵 (RA-023)                       │
 │   ┌────────────────────────────────────────────────────────────┐   │
 │   │ 低 Harnessability 系统的治理规则标记为"个体补偿":            │   │
-│   │ - 不强制注入所有灵智体                                      │   │
-│   │ - 仅注入实际接入该系统的灵智体                              │   │
+│   │ - 不强制注入所有Forgekin                                      │   │
+│   │ - 仅注入实际接入该系统的Forgekin                              │   │
 │   │ - 标记 Build to Delete (sunset 后该模型退役即移除)          │   │
 │   ├────────────────────────────────────────────────────────────┤   │
 │   │ 跨 agent 资产治理规则:                                       │   │
-│   │ - 强制注入所有灵智体                                        │   │
+│   │ - 强制注入所有Forgekin                                        │   │
 │   │ - 标记 Built to Persist                                     │   │
 │   └────────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────────┘
@@ -123,7 +122,7 @@ Harnessability 在架构层是 Harness 七层的适配层（L7），是外部系
   理由：full_harness / partial_harness / human_in_loop / skip 四档对应不同接入成本。低分系统接入必须先建适配层或人机协同。
 
 - **决策 4：低维标记触发个体补偿治理规则（RA-023）**
-  理由：低 Harnessability 系统的治理规则不应一视同仁注入所有灵智体，仅注入实际接入的灵智体，标记 Build to Delete。
+  理由：低 Harnessability 系统的治理规则不应一视同仁注入所有Forgekin，仅注入实际接入的Forgekin，标记 Build to Delete。
 
 - **决策 5：评分结果写入 F040 控制面供 sunset review 参考**
   理由：Harnessability 评分随系统演化可能变化（如发布平台新增 API），需周期 review。
@@ -138,7 +137,7 @@ Harnessability 在架构层是 Harness 七层的适配层（L7），是外部系
 - dimension_threshold 默认 0.6（可配置）
 - 低维必须记入 low_dimensions
 - 接入策略仅四档（full_harness / partial_harness / human_in_loop / skip），无第五档
-- 低 Harnessability 系统治理规则标记"个体补偿"，不强制注入所有灵智体
+- 低 Harnessability 系统治理规则标记"个体补偿"，不强制注入所有Forgekin
 - HarnessabilityScore 必须持久化到 Durable Surface（F008）
 - 评分结果必须写入 F040 控制面
 
@@ -189,7 +188,7 @@ class HarnessabilityScore(BaseModel):
 
     @validator("scores")
     def scores_must_be_in_range(cls, v: dict) -> dict:
-        for dim, score in v.items():
+        for dim, score in v.items:
             if not 0.0 <= score <= 1.0:
                 raise ValueError(f"Dimension {dim} score 必须在 0.0-1.0 之间")
         return v
@@ -241,9 +240,9 @@ class HarnessDecisionGate(ABC):
 class LowFiMatrix(ABC):
     """低保真矩阵 (RA-023)
 
-    维护"治理规则 × 灵智体类型"低保真矩阵,
+    维护"治理规则 × Forgekin类型"低保真矩阵,
     识别"某规则只是补偿某模型坏习惯" (→ Build to Delete)
-    vs "跨灵智体资产" (→ Built to Persist)
+    vs "跨Forgekin资产" (→ Built to Persist)
     """
 
     @abstractmethod
@@ -256,9 +255,9 @@ class LowFiMatrix(ABC):
 
         架构契约:
         - 低 Harnessability 系统的规则 → individual_compensation
-          (仅注入实际接入的灵智体, 标 Build to Delete)
+          (仅注入实际接入的Forgekin, 标 Build to Delete)
         - 跨系统通用规则 → cross_agent_asset
-          (强制注入所有灵智体, 标 Built to Persist)
+          (强制注入所有Forgekin, 标 Built to Persist)
         """
 ```
 
@@ -333,7 +332,7 @@ class LowFiMatrix(ABC):
 
 - HarnessabilityScore 必须持久化到 Durable Surface（F008），不存进程内
 - 接入策略仅四档（full_harness / partial_harness / human_in_loop / skip），无第五档
-- 低 Harnessability 系统治理规则必须标记"个体补偿"，不强制注入所有灵智体
+- 低 Harnessability 系统治理规则必须标记"个体补偿"，不强制注入所有Forgekin
 - 评分结果必须写入 F040 控制面供 sunset review
 - 评分维度仅六维，不可扩展（避免评分膨胀）
 - dimension_threshold 默认 0.6，可配置但不可低于 0.5
@@ -357,7 +356,7 @@ class LowFiMatrix(ABC):
 - [ ] AC-8: 低维标记触发个体补偿治理规则（RA-023）
 - [ ] AC-9: 接入策略四档判定正确（full/partial/human_in_loop/skip）
 - [ ] AC-10: 评分维度仅六维，不可扩展
-- [ ] AC-11: 低 Harnessability 系统治理规则不强制注入所有灵智体
+- [ ] AC-11: 低 Harnessability 系统治理规则不强制注入所有Forgekin
 - [ ] AC-12: dimension_threshold 默认 0.6，可配置但不可低于 0.5
 
 ---
@@ -383,4 +382,4 @@ class LowFiMatrix(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F013 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F013 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

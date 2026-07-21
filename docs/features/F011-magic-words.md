@@ -6,17 +6,16 @@
 > **关联 ADR**: [doc:decisions/007-harness-engineering.md]
 > **类型**: harness
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.3]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-Magic Words 是人到灵智体（Forgekin）的 runtime 协议——operator 用四个低带宽关键词打断 agent，对应四种逃生动作。本 Feature 实现四个 Magic Words 的识别、触发动作、审计记录，以及在所有觉醒阶（Awakening Stage）下都不可绕过的硬约束。
+Magic Words 是人到Forgekin的 runtime 协议——operator 用四个低带宽关键词打断 agent，对应四种逃生动作。本 Feature 实现四个 Magic Words 的识别、触发动作、审计记录，以及在所有觉醒阶（Awakening Stage）下都不可绕过的硬约束。
 
 四个 Magic Words：
 1. **"第一性原理"** — 检查是否用复杂度代偿无知
@@ -28,7 +27,7 @@ Magic Words 是人到灵智体（Forgekin）的 runtime 协议——operator 用
 
 `[doc:review/review.md#RA-020]` 指出：roleagent.md 第 3 章的 Magic Words 是人到 agent 的 runtime 协议，v7.0 无任何低带宽人类打断机制，operator 只能改 prompt 重启会话。naming-contract.md §4 觉醒阶规则明确"Magic Words 逃生舱始终可触发（任何阶都不能绕过）"。
 
-不做这个 Feature，觉醒阶 E4+ Evoling 状态的灵智体在偏离愿景时无制动手段，F022 Tier 4 不可逆操作无法被 runtime 拦截，F036 forgemind 万物灵智体的物理世界操作（FR-004）无紧急停止。这是 Build to Persist 的安全治理资产。
+不做这个 Feature，觉醒阶 E4+ Evoling 状态的Forgekin在偏离愿景时无制动手段，F022 Tier 4 不可逆操作无法被 runtime 拦截，F036 forgemind 可进化智能体的物理世界操作（FR-004）无紧急停止。这是 Build to Persist 的安全治理资产。
 
 ## 3. 详细设计（Detailed Design）
 
@@ -66,8 +65,8 @@ class MagicWordsExecutor:
 
 ### 3.3 关键算法
 
-- **第一性原理**：触发后要求灵智体列出"当前复杂度是否在代偿对问题的无知"，并降级到更简单的方案。
-- **我能猜出来**：触发后禁止灵智体继续推理，强制查询 F008 Durable State Surfaces 真相源。
+- **第一性原理**：触发后要求Forgekin列出"当前复杂度是否在代偿对问题的无知"，并降级到更简单的方案。
+- **我能猜出来**：触发后禁止Forgekin继续推理，强制查询 F008 Durable State Surfaces 真相源。
 - **下次一定**：触发后禁止"留到下次"，强制在当前 session 完成可做的部分。
 - **星星罐子**：触发后立即冻结所有 F022 Tier 4 操作（force-push/merge/release），升级 CVO 仲裁。
 - **不可绕过**：所有觉醒阶（E1-E6）下 Magic Words 检测器始终激活，禁用配置关闭。
@@ -106,7 +105,7 @@ magic_words:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体在执行任务中，operator 触发"星星罐子"，验证 Tier 4 操作立即冻结并升级 CVO。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin在执行任务中，operator 触发"星星罐子"，验证 Tier 4 操作立即冻结并升级 CVO。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
@@ -125,4 +124,3 @@ magic_words:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.3 同号映射 | 文档员灵智体（钢笔·文心） |

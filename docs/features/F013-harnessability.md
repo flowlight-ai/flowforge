@@ -6,17 +6,16 @@
 > **关联 ADR**: [doc:decisions/007-harness-engineering.md]
 > **类型**: harness
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.3]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-Harnessability 评估回答 roleagent.md 第 3 章的核心问题："不是每个系统都同样适合交给 agent"。本 Feature 实现对外部系统的 Harnessability 评分（稳定 API / 事件流回调 / 持久状态 / 可验证输出 / 操作幂等可回滚 / 权限边界清楚），让灵智体（Forgekin）接入新系统前先评估适配度，避免靠猜和点页面硬跑。
+Harnessability 评估回答 roleagent.md 第 3 章的核心问题："不是每个系统都同样适合交给 agent"。本 Feature 实现对外部系统的 Harnessability 评分（稳定 API / 事件流回调 / 持久状态 / 可验证输出 / 操作幂等可回滚 / 权限边界清楚），让Forgekin接入新系统前先评估适配度，避免靠猜和点页面硬跑。
 
 这是 Build to Persist 基础设施——编码"哪些系统值得 harness 投资"的工程判据。
 
@@ -122,4 +121,3 @@ harnessability:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.3 同号映射 | 文档员灵智体（钢笔·文心） |

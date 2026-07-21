@@ -1,15 +1,14 @@
-# D038: 灵智体进化谱系详细设计
+# D038: Forgekin进化谱系详细设计
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.13]（FR-CORE-013）
 > **对应 arch.md**: [doc:../arch.md#§3.13]
 > **对应 design.md**: [doc:../design.md#§3.13]
 > **对应 Feature**: [doc:../features/F038-forgemind-lineage.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A038-forgemind-lineage.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/005-forgemind-application-layer.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,14 +16,14 @@
 
 ### 1.1 设计问题
 
-本详细设计在 A038 架构设计基础上，深入到代码层落地灵智体进化谱系（Forgekin Lineage）系统，需解决以下工程问题：
+本详细设计在 A038 架构设计基础上，深入到代码层落地Forgekin进化谱系（Forgekin Lineage）系统，需解决以下工程问题：
 
-- **灵印锚点工程化**：所有谱系关系以 soul_imprint（灵印 Mind Imprint）为唯一标识，即使能力进化、形态升级、跨层迁移，灵印保持血缘链可追溯。如何用 Pydantic 模型表达 LineageNode 与 LineageEdge 并以 soul_imprint 为主键?
-- **分裂协议实现**：一父→多子分裂时，如何为每个子生成新灵印、记录父灵印到 parent_soul_imprints、按 split_manifest 调整能力画像、原子化写入 LineageEdge（SPLIT 关系）?
-- **融合协议实现**：多父→一子融合时，如何按 fuse_manifest 加权合并多父能力画像、生成子新灵印、记录所有父灵印、原子化写入 LineageEdge（FUSED 关系）?
+- **SoulImprint锚点工程化**：所有谱系关系以 soul_imprint（SoulImprint）为唯一标识，即使能力进化、形态升级、跨层迁移，SoulImprint保持血缘链可追溯。如何用 Pydantic 模型表达 LineageNode 与 LineageEdge 并以 soul_imprint 为主键?
+- **分裂协议实现**：一父→多子分裂时，如何为每个子生成新SoulImprint、记录父SoulImprint到 parent_soul_imprints、按 split_manifest 调整能力画像、原子化写入 LineageEdge（SPLIT 关系）?
+- **融合协议实现**：多父→一子融合时，如何按 fuse_manifest 加权合并多父能力画像、生成子新SoulImprint、记录所有父SoulImprint、原子化写入 LineageEdge（FUSED 关系）?
 - **双向遍历算法**：如何实现 `get_ancestry(soul_imprint, depth)` 向上查祖先和 `get_descendants(soul_imprint, depth)` 向下查后代，支持深度限制与循环检测?
 - **觉醒阶跃迁记录**：E1→E2 / E2→E3 可由 Eval 信号自动触发，E3→E4 / E4→E5 / E5→E6 必须 operator 批准，如何实现 AwakeningTransitionRecorder 状态机?
-- **跨 Feature 谱系写入统一入口**：F028 锻造（FORGED）/ F037 市场（CLONED/TRADED）/ F036 跨层迁移（LAYER_TRANSITION）/ F038 自身（SPLIT/FUSED）/ 觉醒阶（AWAKENING）六类写入如何通过统一 add_edge() 接口实现?
+- **跨 Feature 谱系写入统一入口**：F028 锻造（FORGED）/ F037 市场（CLONED/TRADED）/ F036 跨层迁移（LAYER_TRANSITION）/ F038 自身（SPLIT/FUSED）/ 觉醒阶（AWAKENING）六类写入如何通过统一 add_edge 接口实现?
 
 ### 1.2 设计约束
 
@@ -32,20 +31,19 @@
 - **DI 容器**：LineageStore / LineageSplitExecutor / LineageFuseExecutor / LineageQuery / AwakeningTransitionRecorder 必须由 DI 容器注入
 - **Repository 层**：所有节点 / 边的持久化必须经 LineageRepository 抽象，复用 F008 Durable State Surfaces，禁止直接操作数据库
 - **配置驱动**：split / fuse / ancestry_query / audit / awakening_rules 必须外置 YAML（`flowforge/forgemind/config/lineage.yaml`）
-- **灵印锚点**：所有 LineageNode 以 soul_imprint 为主键查询，所有 LineageEdge 的 from_soul_imprints / to_soul_imprints 必须是已存在的 LineageNode
+- **SoulImprint锚点**：所有 LineageNode 以 soul_imprint 为主键查询，所有 LineageEdge 的 from_soul_imprints / to_soul_imprints 必须是已存在的 LineageNode
 - **operator 审批**：分裂 / 融合 / E3→E4 及以上觉醒阶跃迁必须 operator 批准，禁止自动繁殖
 - **原子化写入**：分裂 / 融合时 LineageNode 与 LineageEdge 必须事务化写入，任一失败则回滚
 - **持久表面复用**：LineageRepository 复用 F008 Durable State Surfaces（surface_type="lineage_node" / "lineage_edge"），禁止独立实现持久层
-- **9 大点名称修订**：代码层使用 Forgekin / LineageStore / SoulImprint / AwakeningStage；文档层使用"灵智体 / 谱系 / 灵印 / 觉醒阶"
 
 ### 1.3 设计影响
 
 - **新增模块**：`flowforge/forgemind/lineage/` 下 7 个文件（store.py / split.py / fuse.py / query.py / awakening.py / repository.py / models.py）
 - **修改 F008 Durable State Surfaces**：新增 surface_type="lineage_node" / "lineage_edge" 两类持久表面
-- **修改 F028 ForgePipeline**：流水线第 1 步（形态定义）创建灵智体时调用 `LineageStore.add_node(relation=FORGED)` 记录血缘起点
+- **修改 F028 ForgePipeline**：流水线第 1 步（形态定义）创建Forgekin时调用 `LineageStore.add_node(relation=FORGED)` 记录血缘起点
 - **修改 F037 Marketplace**：订阅克隆调用 `LineageStore.add_edge(CLONED)`，交易转移调用 `add_edge(TRADED)`
 - **修改 F036 ForgeRelationship**：跨层迁移调用 `LineageStore.add_edge(LAYER_TRANSITION)`
-- **影响 F039 Mind Codex**：锻典条目的 soul_imprint 字段可按谱系查询某灵智体家族的知识资产
+- **影响 F039 MindCodex**：蒸馏知识库条目的 soul_imprint 字段可按谱系查询某Forgekin家族的知识资产
 - **影响 F040 Harness Eval**：谱系数据可作为 Eval 信号源（如"某家族的觉醒阶跃迁成功率"）
 
 ---
@@ -134,10 +132,10 @@ class LineageRelation(str, Enum):
 
 
 class LineageNode(BaseModel):
-    """谱系节点（一个灵智体）"""
+    """谱系节点（一个Forgekin）"""
     forgekin_id: str
     soul_imprint: str = Field(
-        description="灵印 Mind Imprint（身份锚点，不可变，主键）"
+        description="SoulImprint（身份锚点，不可变，主键）"
     )
     species: str = Field(description="ForgekinSpecies 来自 F027")
     layer: str = Field(description="ForgeLayer 来自 F036")
@@ -145,12 +143,12 @@ class LineageNode(BaseModel):
     relation_to_parents: LineageRelation
     parent_soul_imprints: list[str] = Field(
         default_factory=list,
-        description="父灵印列表（FORGED=空, SPLIT=1父, FUSED=多父, "
+        description="父SoulImprint列表（FORGED=空, SPLIT=1父, FUSED=多父, "
                     "CLONED=1父, TRADED=1父, LAYER_TRANSITION=1父）"
     )
     child_soul_imprints: list[str] = Field(
         default_factory=list,
-        description="子灵印列表（动态更新）"
+        description="子SoulImprint列表（动态更新）"
     )
     current_awakening_stage: str = Field(
         default="E1",
@@ -171,9 +169,9 @@ class LineageEdge(BaseModel):
     edge_id: str
     relation: LineageRelation
     from_soul_imprints: list[str] = Field(
-        description="源灵印（SPLIT=1, FUSED=多, FORGED=空）"
+        description="源SoulImprint（SPLIT=1, FUSED=多, FORGED=空）"
     )
-    to_soul_imprints: list[str] = Field(description="目标灵印")
+    to_soul_imprints: list[str] = Field(description="目标SoulImprint")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     operator_approved: bool = False
     operator_id: Optional[str] = None
@@ -211,7 +209,7 @@ class FuseManifest(BaseModel):
     """融合清单"""
     parent_forgekin_ids: list[str] = Field(
         min_length=2, max_length=3,
-        description="父灵智体 ID 列表（2-3 个）"
+        description="父Forgekin ID 列表（2-3 个）"
     )
     child_name: str
     merge_strategy: str = Field(
@@ -271,7 +269,7 @@ class LineageStore(ABC):
     async def get_node(
         self, soul_imprint: str
     ) -> Optional[LineageNode]:
-        """按灵印查询节点"""
+        """按SoulImprint查询节点"""
         ...
 
     @abstractmethod
@@ -334,17 +332,17 @@ class LineageSplitExecutor(ABC):
         parent_forgekin_id: str,
         split_manifest: SplitManifest,
     ) -> list[str]:
-        """分裂出多个子灵智体
+        """分裂出多个子Forgekin
 
         前置条件:
         - operator_id 已批准（manifest.operator_id 非空）
         - child_count <= max_children_per_split（配置默认 5）
-        - 父灵智体存在且 is_active=True
-        - 父灵智体未在其他分裂 / 融合中
+        - 父Forgekin存在且 is_active=True
+        - 父Forgekin未在其他分裂 / 融合中
 
         步骤:
         1. 读取父 LineageNode + CapabilityProfile
-        2. 为每个子生成新灵印:
+        2. 为每个子生成新SoulImprint:
               new_soul_imprint = SoulImprintGenerator.generate(
                   parent=parent.soul_imprint, species=parent.species,
                   salt=child_index)
@@ -387,13 +385,13 @@ class LineageFuseExecutor(ABC):
         parent_forgekin_ids: list[str],
         fuse_manifest: FuseManifest,
     ) -> str:
-        """融合多个父灵智体为一个子灵智体
+        """融合多个父Forgekin为一个子Forgekin
 
         前置条件:
         - operator_id 已批准
         - len(parent_forgekin_ids) <= max_parents_per_fuse（默认 3）
-        - 所有父灵智体存在且 is_active=True
-        - 所有父灵智体未在其他分裂 / 融合中
+        - 所有父Forgekin存在且 is_active=True
+        - 所有父Forgekin未在其他分裂 / 融合中
 
         步骤:
         1. 读取所有父 LineageNode + CapabilityProfile
@@ -401,7 +399,7 @@ class LineageFuseExecutor(ABC):
               weighted_by_performance: 按历史 Wilson 下界加权
               pick_best: 每个能力域取 Wilson 下界最高的父
               union: 取所有父能力并集
-        3. 生成子新灵印:
+        3. 生成子新SoulImprint:
               new_soul_imprint = SoulImprintGenerator.generate(
                   parents=[p1.soul_imprint, p2.soul_imprint, ...],
                   species=manifest.species or parent1.species,
@@ -561,7 +559,7 @@ class LineageQuery(ABC):
     ) -> list[dict]:
         """审计追溯链
 
-        返回该灵智体的所有生命周期事件（按时间排序）:
+        返回该Forgekin的所有生命周期事件（按时间排序）:
         - FORGED 创建
         - SPLIT 分裂
         - FUSED 融合
@@ -602,7 +600,7 @@ class LineageRepository(ABC):
         soul_imprint: str,
         child_soul_imprints: list[str],
     ) -> None:
-        """更新父节点的子灵印列表"""
+        """更新父节点的子SoulImprint列表"""
         ...
 
     @abstractmethod
@@ -705,9 +703,9 @@ class LineageRepository(ABC):
           salt=str(i))
       child_cap ← deepcopy(parent_cap)
       child_cap.apply_adjustment(manifest.child_adjustments[i])
-      child_cap.save()
+      child_cap.save
       child_node ← LineageNode(
-          forgekin_id=uuid4(),
+          forgekin_id=uuid4,
           soul_imprint=new_imprint,
           species=parent_node.species,
           layer=parent_node.layer,
@@ -720,15 +718,15 @@ class LineageRepository(ABC):
       child_soul_imprints.append(new_imprint)
       child_forgekin_ids.append(child_node.forgekin_id)
 9. edge ← LineageEdge(
-       edge_id=uuid4(),
+       edge_id=uuid4,
        relation=SPLIT,
        from_soul_imprints=[parent_node.soul_imprint],
        to_soul_imprints=child_soul_imprints,
        operator_approved=True,
        operator_id=manifest.operator_id,
        capability_snapshot={
-           "parent": parent_cap.snapshot(),
-           "children": [c.snapshot() for c in child_caps]
+           "parent": parent_cap.snapshot,
+           "children": [c.snapshot for c in child_caps]
        },
        trigger_reason=manifest.reason,
    )
@@ -773,7 +771,7 @@ class LineageRepository(ABC):
 7. IF to_stage == "E6" AND operator_id != "CVO":
       raise AwakeningTransitionError("only CVO can authorize E6")
 8. edge ← LineageEdge(
-       edge_id=uuid4(),
+       edge_id=uuid4,
        relation=AWAKENING,
        from_soul_imprints=[node.soul_imprint],
        to_soul_imprints=[node.soul_imprint],
@@ -858,7 +856,7 @@ class LineageStoreImpl(LineageStore):
                     f"node not found for edge: {imprint}"
                 )
         if not edge.edge_id:
-            edge.edge_id = str(uuid.uuid4())
+            edge.edge_id = str(uuid.uuid4)
         await self._repo.save_edge(edge)
         # 更新父节点的 child_soul_imprints
         for from_imprint in edge.from_soul_imprints:
@@ -883,7 +881,7 @@ class LineageStoreImpl(LineageStore):
     ) -> list[str]:
         for edge in edges:
             if not edge.edge_id:
-                edge.edge_id = str(uuid.uuid4())
+                edge.edge_id = str(uuid.uuid4)
         await self._repo.save_edges_batch(edges)
         return [e.edge_id for e in edges]
 
@@ -1018,7 +1016,7 @@ operator    AwakeningTransitionRecorder    LineageStore    Repository
 | 异常类型 | 触发条件 | 处理策略 |
 |---------|---------|---------|
 | `NodeAlreadyExistsError` | soul_imprint 已存在节点 | 返回 409 Conflict |
-| `ParentNotFoundError` | parent_soul_imprints 中存在未注册的灵印 | 返回 422，附缺失父灵印列表 |
+| `ParentNotFoundError` | parent_soul_imprints 中存在未注册的SoulImprint | 返回 422，附缺失父SoulImprint列表 |
 | `SplitError` | child_count > 5 / 父节点不活跃 / operator 未批准 | 返回 422 |
 | `FuseError` | 父数量 > 3 / 父节点不活跃 / operator 未批准 | 返回 422 |
 | `AwakeningTransitionError` | 跃迁不合法 / operator 未批准 / 进化阶不达标 / E6 非 CVO 授权 | 返回 403 或 422 |
@@ -1045,7 +1043,7 @@ operator    AwakeningTransitionRecorder    LineageStore    Repository
 | `split(child_count=5)` 延迟 | P95 < 2s | 受 CapabilityProfile 深拷贝影响 |
 
 **优化策略**：
-1. **批量写入**：分裂 / 融合时使用 `add_edges_batch()` 单次事务提交多条边
+1. **批量写入**：分裂 / 融合时使用 `add_edges_batch` 单次事务提交多条边
 2. **谱系缓存**：`get_node(soul_imprint)` 结果以 soul_imprint 为 key 缓存 5 分钟，节点更新时失效
 3. **深度限制**：`get_ancestry` / `get_descendants` 强制 depth ≤ 20，访问节点数 ≤ 1000，防止谱系爆炸
 4. **异步分裂 / 融合**：`split_async` / `fuse_async` 拆分为异步任务，通过 `get_split_status(task_id)` 查询进度
@@ -1112,24 +1110,24 @@ forgekin_lineage:
 
 | 上游模块 | 调用入口 | 调用时机 | 数据流 |
 |---------|---------|---------|--------|
-| **F001 CapabilityProfile** | `CapabilityProfileRepository.get_profile()` / `apply_adjustment()` / `snapshot()` | 分裂时复制父画像 + 调整；融合时按 strategy 合并多父画像 | 双向：读 + 改 + 写回 |
+| **F001 CapabilityProfile** | `CapabilityProfileRepository.get_profile` / `apply_adjustment` / `snapshot` | 分裂时复制父画像 + 调整；融合时按 strategy 合并多父画像 | 双向：读 + 改 + 写回 |
 | **F008 Durable State Surfaces** | `DurableStateStore.save("lineage_node"/"lineage_edge", ...)` | 节点 / 边持久化 | 单向：写 |
 | **F027 多形态智能体** | `ForgekinSpecies` 枚举 | 节点 species 字段 | 单向：读 |
-| **F028 ForgePipeline** | `LineageStore.add_node(relation=FORGED)` | 流水线第 1 步创建灵智体时 | 单向：写 |
+| **F028 ForgePipeline** | `LineageStore.add_node(relation=FORGED)` | 流水线第 1 步创建Forgekin时 | 单向：写 |
 | **F036 ForgeRelationship** | `LineageStore.add_edge(relation=LAYER_TRANSITION)` | 跨层迁移完成时 | 单向：写 |
 | **F037 Marketplace** | `LineageStore.add_edge(relation=CLONED / TRADED)` | 订阅克隆 / 交易转移时 | 单向：写 |
-| **SoulImprintGenerator** | `SoulImprintGenerator.generate(parent=..., species=..., salt=...)` | 分裂 / 融合时生成新灵印 | 单向：读 |
+| **SoulImprintGenerator** | `SoulImprintGenerator.generate(parent=..., species=..., salt=...)` | 分裂 / 融合时生成新SoulImprint | 单向：读 |
 | **EventBus** | `EventBus.publish(SplitCompletedEvent / FuseCompletedEvent / AwakeningTransitionEvent)` | 分裂 / 融合 / 跃迁完成时 | 单向：发布 |
 
 ### 4.2 下游影响如何被调用
 
 | 下游模块 | 被调用入口 | 调用方 | 时机 |
 |---------|-----------|-------|------|
-| **F039 Mind Codex** | `MindCodexStore.list_by_soul_imprint_family(...)` | LineageQuery | 按谱系查询某灵智体家族的知识资产 |
+| **F039 MindCodex** | `MindCodexStore.list_by_soul_imprint_family(...)` | LineageQuery | 按谱系查询某Forgekin家族的知识资产 |
 | **F040 Harness Eval** | `LineageQuery.audit_trail(soul_imprint)` | 控制面趋势分析 | 家族觉醒阶跃迁成功率作为 Eval 信号 |
 | **F036 ForgeRelationship** | `LineageEdge(LAYER_TRANSITION)` 写入 | ForgeRelationshipManager.execute_transition | 跨层迁移时 |
 | **F037 Marketplace** | `LineageEdge(CLONED / TRADED)` 写入 | ForgekinCloner / OwnershipTransferor | 订阅 / 交易时 |
-| **F028 ForgePipeline** | `LineageNode(FORGED)` 写入 | 流水线第 1 步 | 灵智体创建时 |
+| **F028 ForgePipeline** | `LineageNode(FORGED)` 写入 | 流水线第 1 步 | Forgekin创建时 |
 | **operator 控制台** | HTTP API `GET /api/v7/lineage/{soul_imprint}/ancestry` | operator UI | 谱系可视化 |
 | **EventBus 订阅者** | `SplitCompletedEvent` / `FuseCompletedEvent` / `AwakeningTransitionEvent` | dashboard / 通知系统 | 异步消费 |
 
@@ -1141,15 +1139,15 @@ forgekin_lineage:
   - `AwakeningTransitionRecorder.record_transition` 状态矩阵各分支
   - `LineageSplitExecutor.split` 批量写入原子性
 - **T2 跨模块集成层**：
-  - F028 流水线创建灵智体 → 自动写入 LineageNode(FORGED)
+  - F028 流水线创建Forgekin → 自动写入 LineageNode(FORGED)
   - F037 订阅克隆 → 自动写入 LineageEdge(CLONED) + 父子节点 child_soul_imprints 更新
   - F036 跨层迁移 → 自动写入 LineageEdge(LAYER_TRANSITION)
   - F038 觉醒阶跃迁 E3→E4 → 校验进化阶 ≥ E4 + operator 批准
 - **T3 E2E 层（遵守 T1-T8 测试铁律）**：
-  - 真实 operator 锻造"写作灵智体"（父，真实 LLM 完成能力画像）
-  - operator 触发分裂出"技术博客灵智体"和"散文灵智体"（子）
+  - 真实 operator 锻造"写作Forgekin"（父，真实 LLM 完成能力画像）
+  - operator 触发分裂出"技术博客Forgekin"和"散文Forgekin"（子）
   - 验证：3 个 LineageNode 正确写入 / LineageEdge(SPLIT) from=[父] to=[子1,子2] / 父节点 child_soul_imprints 含两子
-  - operator 触发"写作灵智体" + "研究灵智体"融合为"深度报道灵智体"
+  - operator 触发"写作Forgekin" + "研究Forgekin"融合为"深度报道Forgekin"
   - 验证：LineageNode(FUSED) parent_soul_imprints 含两父 / LineageEdge(FUSED) from=[父1,父2] to=[子]
   - 查询祖先 / 后代验证谱系树双向遍历
   - 真实 LLM 完成 5+ 任务（Eval ≥ 0.85）后，operator 批准 E3→E4 跃迁
@@ -1170,9 +1168,9 @@ forgekin_lineage:
 - [ ] **AC-3**：`add_node(relation=FORGED)` parent_soul_imprints 为空
 - [ ] **AC-4**：`add_node(relation in SPLIT/FUSED/CLONED/TRADED/LAYER_TRANSITION)` 校验所有 parent_soul_imprints 已存在
 - [ ] **AC-5**：`add_edge` 后父节点 child_soul_imprints 自动更新
-- [ ] **AC-6**：`split` 子灵智体生成新灵印，parent_soul_imprints 记录父灵印
+- [ ] **AC-6**：`split` 子Forgekin生成新SoulImprint，parent_soul_imprints 记录父SoulImprint
 - [ ] **AC-7**：`split` child_count > 5 被拒绝
-- [ ] **AC-8**：`fuse` 子灵智体生成新灵印，parent_soul_imprints 记录所有父灵印
+- [ ] **AC-8**：`fuse` 子Forgekin生成新SoulImprint，parent_soul_imprints 记录所有父SoulImprint
 - [ ] **AC-9**：`fuse` 父数量 > 3 被拒绝
 - [ ] **AC-10**：`get_ancestry` / `get_descendants` 双向遍历支持深度限制与循环检测
 - [ ] **AC-11**：`record_transition(E1→E2/E2→E3)` 可由 Eval 信号自动触发（无需 operator 批准）
@@ -1180,7 +1178,7 @@ forgekin_lineage:
 - [ ] **AC-13**：`record_transition(E3→E4)` 校验进化阶同步 ≥ E4
 - [ ] **AC-14**：`record_transition(E5→E6)` 校验 operator 是 CVO
 - [ ] **AC-15**：分裂 / 融合必须 operator 显式批准（无自动繁殖路径）
-- [ ] **AC-16**：F028 锻造创建灵智体自动写入 LineageNode(FORGED)
+- [ ] **AC-16**：F028 锻造创建Forgekin自动写入 LineageNode(FORGED)
 - [ ] **AC-17**：F037 订阅克隆写入 LineageEdge(CLONED)，交易写入 LineageEdge(TRADED)
 - [ ] **AC-18**：F036 跨层迁移写入 LineageEdge(LAYER_TRANSITION)
 
@@ -1212,10 +1210,10 @@ forgekin_lineage:
 
 ## 6. 引用
 
-- [doc:../spec.md#§3.13]（FR-CORE-013 灵智体市场 + 进化谱系）
+- [doc:../spec.md#§3.13]（FR-CORE-013 Forgekin市场 + 进化谱系）
 - [doc:../spec.md#§2.5]（进化阶与觉醒阶三标注）
-- [doc:../arch.md#§3.13]（灵智体市场 + 进化谱系架构）
-- [doc:../arch.md#§3.8]（forgemind 应用层，灵印 Mind Imprint 不可变）
+- [doc:../arch.md#§3.13]（Forgekin市场 + 进化谱系架构）
+- [doc:../arch.md#§3.8]（forgemind 应用层，SoulImprint 不可变）
 - [doc:../architecture/A038-forgemind-lineage.md]（同号 Feature 级 SAD）
 - [doc:../features/F038-forgemind-lineage.md]（同号 Feature 级 SRS）
 - [doc:../features/F001-capability-profile.md]（能力画像）
@@ -1223,11 +1221,11 @@ forgekin_lineage:
 - [doc:../features/F027-all-things-spirit-species.md]（多形态智能体形态分类）
 - [doc:../features/F028-forging-pipeline.md]（锻造流水线）
 - [doc:../features/F036-forgemind-forge-relationship.md]（forgemind 与 *Forge 关系）
-- [doc:../features/F037-forgemind-marketplace.md]（灵智体市场）
-- [doc:../features/F039-mind-codex-searchable.md]（灵典可检索知识库）
+- [doc:../features/F037-forgemind-marketplace.md]（Forgekin市场）
+- [doc:../features/F039-mind-codex-searchable.md]（MindCodex可检索知识库）
 - [doc:../features/F040-harness-eval-control-plane.md]（Harness Eval 控制面）
 - [doc:../decisions/005-forgemind-application-layer.md]（forgemind 应用层 ADR）
-- [doc:../design/naming-contract.md#2.6]（灵印 Soul Imprint）
+- [doc:../design/naming-contract.md#2.6]（SoulImprint）
 - [doc:../design/naming-contract.md#2.10]（进化阶 Evolution Stage）
 - [doc:../design/naming-contract.md#2.11]（觉醒阶 Awakening Stage）
 - [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
@@ -1239,4 +1237,4 @@ forgekin_lineage:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，应用 9 大点名称修订；含 Pydantic Models / 接口实现 / 分裂融合算法 / 觉醒阶状态机 / BFS 遍历 / 时序图 / 配置示例 / 跨模块协作 / 验收 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，） | 开发者 Forgekin（猎犬·夏洛克） |

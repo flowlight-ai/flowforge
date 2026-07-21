@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]
 > **对应 Feature**: [doc:../features/F025-provider-host-abstraction.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A025-provider-host-abstraction.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -55,13 +54,13 @@
 ### 1.3 设计影响
 
 - **对 F023 liveness 规范读模型**：provider liveness 是 Forgekin liveness 的输入维度之一。本设计派发 `provider.liveness.changed` 事件到 F023。
-- **对 F034 三方 Agent 失败回退**：三方 Agent 失败回退复用宿主抽象的 failover 边界。本设计暴露 `failover()` 接口供 F034 调用。
+- **对 F034 三方 Agent 失败回退**：三方 Agent 失败回退复用宿主抽象的 failover 边界。本设计暴露 `failover` 接口供 F034 调用。
 - **对 F021 副作用 WAL**：provider 调用作为 PROVIDER_CALL 副作用记录到 WAL，failover 时不丢失。本设计调用 F021 接口。
 - **对 F022 Tier 1-4 恢复**：provider 故障触发 F022 分级恢复，Tier 4 provider failover。本设计派发 `recovery.request` 事件到 F022。
 - **对伙伴系统数学（§3.7）**：波动吸收的 provider 切换支撑。本设计暴露 `failover` 能力供 §3.7 使用。
 - **对 F040 控制面**：provider 健康状态与 failover 事件写入 F040 Eval Hub。本设计派发 `provider.*` 事件。
 - **对 OpenRoute（多模型 API 网关）**：宿主抽象与 OpenRoute 协同。OpenRoute 提供路由，宿主抽象提供运维语义归一化。
-- **对 Forgekin.chat()**：Forgekin 调用 LLM 时通过 `HostAbstraction.call(provider_id, request)` 而非直接 SDK。
+- **对 Forgekin.chat**：Forgekin 调用 LLM 时通过 `HostAbstraction.call(provider_id, request)` 而非直接 SDK。
 - **对 DI 容器**：需新增 `host_abstraction` / `semantic_normalizer` / `sidecar_supervisor_engine` / `failover_executor` / `host_repository` 五个绑定。
 
 ---
@@ -130,7 +129,7 @@
 │  <<interface>> HostRepository (ABC)                                       │
 │  + upsert_supervisor(supervisor) -> str                                   │
 │  + get_supervisor(provider_id) -> Optional[SidecarSupervisor]             │
-│  + query_unhealthy() -> list[SidecarSupervisor]                            │
+│  + query_unhealthy -> list[SidecarSupervisor]                            │
 │  + insert_failover_record(record) -> str                                  │
 │                                                                            │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -435,19 +434,19 @@ function call(provider_id: str, request: CallRequest) -> CallResponse:
     await wal_coordinator.append_pending(wal_entry)
 
     # 4. 调用具体 provider adapter
-    start_time = now()
+    start_time = now
     try:
         raw_response = await asyncio.wait_for(
             adapter.call(provider_id, request, host_contract),
             timeout=timeout,
         )
-        latency_ms = (now() - start_time).total_seconds() * 1000
+        latency_ms = (now - start_time).total_seconds * 1000
 
         # 5. 成功 → 确认 WAL + 返回
         await wal_coordinator.confirm(wal_entry.entry_id)
 
         return CallResponse(
-            response_id=uuid_v7(),
+            response_id=uuid_v7,
             provider_id=provider_id,
             status="success",
             data=raw_response,
@@ -456,7 +455,7 @@ function call(provider_id: str, request: CallRequest) -> CallResponse:
 
     except Exception as e:
         # 6. 失败 → 错误码归一化 + 触发 failover
-        latency_ms = (now() - start_time).total_seconds() * 1000
+        latency_ms = (now - start_time).total_seconds * 1000
         unified_error = semantic_normalizer.normalize_error(
             provider_id, {"error": str(e), "code": getattr(e, "code", 500)}
         )
@@ -472,7 +471,7 @@ function call(provider_id: str, request: CallRequest) -> CallResponse:
             )
 
             return CallResponse(
-                response_id=uuid_v7(),
+                response_id=uuid_v7,
                 provider_id=provider_id,
                 status="failover_triggered",
                 unified_error=unified_error,
@@ -482,7 +481,7 @@ function call(provider_id: str, request: CallRequest) -> CallResponse:
         else:
             # AUTH_ERROR 不可 failover，直接返回错误
             return CallResponse(
-                response_id=uuid_v7(),
+                response_id=uuid_v7,
                 provider_id=provider_id,
                 status="failed",
                 unified_error=unified_error,
@@ -545,7 +544,7 @@ function failover(
     if supervisor is not None:
         new_supervisor = supervisor.model_copy(update={
             "health_state": "zombie",
-            "last_failover_at": now(),
+            "last_failover_at": now,
         })
         await host_repository.upsert_supervisor(new_supervisor)
 
@@ -568,7 +567,7 @@ function failover(
             await host_repository.insert_failover_record({
                 "from_provider": from_provider,
                 "to_provider": candidate,
-                "failover_at": now(),
+                "failover_at": now,
                 "reason": "provider_unhealthy",
             })
 
@@ -611,7 +610,7 @@ function monitor(provider_id: str) -> None:
 
         new_supervisor = supervisor.model_copy(update={
             "health_state": liveness.state.value,
-            "last_heartbeat_at": now(),
+            "last_heartbeat_at": now,
         })
         await host_repository.upsert_supervisor(new_supervisor)
 
@@ -775,7 +774,7 @@ class DefaultFailoverExecutor(FailoverExecutor):
                 await self._repo.insert_failover_record({
                     "from_provider": from_provider,
                     "to_provider": candidate,
-                    "failover_at": datetime.now(timezone.utc).isoformat(),
+                    "failover_at": datetime.now(timezone.utc).isoformat,
                     "reason": "provider_unhealthy",
                 })
                 await self._bus.publish(
@@ -862,14 +861,14 @@ class DefaultHostAbstraction(HostAbstraction):
                 timeout=timeout,
             )
             latency_ms = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                (datetime.now(timezone.utc) - start_time).total_seconds * 1000
             )
 
             # 6. 成功 → 确认 WAL
             await self._wal.confirm(wal_entry.entry_id)
 
             return CallResponse(
-                response_id=str(uuid.uuid1()),
+                response_id=str(uuid.uuid1),
                 provider_id=provider_id,
                 status="success",
                 data=raw_response,
@@ -878,7 +877,7 @@ class DefaultHostAbstraction(HostAbstraction):
 
         except asyncio.TimeoutError:
             latency_ms = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                (datetime.now(timezone.utc) - start_time).total_seconds * 1000
             )
             await self._wal.fail(wal_entry.entry_id, error="timeout")
 
@@ -895,7 +894,7 @@ class DefaultHostAbstraction(HostAbstraction):
 
         except Exception as e:
             latency_ms = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                (datetime.now(timezone.utc) - start_time).total_seconds * 1000
             )
             await self._wal.fail(wal_entry.entry_id, error=str(e))
 
@@ -935,7 +934,7 @@ class DefaultHostAbstraction(HostAbstraction):
             chain = self._failover_chains.get(provider_id, [])
             if not chain:
                 return CallResponse(
-                    response_id=str(uuid.uuid1()),
+                    response_id=str(uuid.uuid1),
                     provider_id=provider_id,
                     status="failed",
                     unified_error=unified_error,
@@ -945,7 +944,7 @@ class DefaultHostAbstraction(HostAbstraction):
             try:
                 new_provider = await self._failover.failover(provider_id, chain)
                 return CallResponse(
-                    response_id=str(uuid.uuid1()),
+                    response_id=str(uuid.uuid1),
                     provider_id=provider_id,
                     status="failover_triggered",
                     unified_error=unified_error,
@@ -954,7 +953,7 @@ class DefaultHostAbstraction(HostAbstraction):
                 )
             except AllProvidersUnavailableError:
                 return CallResponse(
-                    response_id=str(uuid.uuid1()),
+                    response_id=str(uuid.uuid1),
                     provider_id=provider_id,
                     status="failed",
                     unified_error=unified_error,
@@ -963,7 +962,7 @@ class DefaultHostAbstraction(HostAbstraction):
         else:
             # AUTH_ERROR 不可 failover
             return CallResponse(
-                response_id=str(uuid.uuid1()),
+                response_id=str(uuid.uuid1),
                 provider_id=provider_id,
                 status="failed",
                 unified_error=unified_error,
@@ -972,7 +971,7 @@ class DefaultHostAbstraction(HostAbstraction):
 
     def _build_wal_entry(self, provider_id: str, request: CallRequest) -> WalEntry:
         return WalEntry(
-            entry_id=str(uuid.uuid1()),
+            entry_id=str(uuid.uuid1),
             idempotency_key=request.idempotency_key,
             forgekin_id=request.forgekin_id,
             workflow_id=None,
@@ -1031,7 +1030,7 @@ class DefaultSidecarSupervisorEngine(SidecarSupervisorEngine):
             now = datetime.now(timezone.utc)
             if supervisor is None:
                 new_supervisor = SidecarSupervisor(
-                    supervisor_id=str(uuid.uuid1()),
+                    supervisor_id=str(uuid.uuid1),
                     provider_id=provider_id,
                     health_state=state,
                     last_heartbeat_at=now,
@@ -1049,7 +1048,7 @@ class DefaultSidecarSupervisorEngine(SidecarSupervisorEngine):
                 payload={
                     "provider_id": provider_id,
                     "state": state,
-                    "timestamp": now.isoformat(),
+                    "timestamp": now.isoformat,
                 },
             )
 
@@ -1095,17 +1094,17 @@ class DefaultSidecarSupervisorEngine(SidecarSupervisorEngine):
 ```
 [provider 调用主流程时序图]
 
-  Forgekin.chat()   host_abstraction   normalizer   wal_coord   adapter   failover_exec   EventBus   F040
+  Forgekin.chat   host_abstraction   normalizer   wal_coord   adapter   failover_exec   EventBus   F040
         │                 │                 │            │           │            │             │          │
         │ call(provider_id, request)        │            │           │            │             │          │
         ├────────────────>│                 │            │           │            │             │          │
-        │                 │ normalize_timeout()         │            │            │             │          │
+        │                 │ normalize_timeout         │            │            │             │          │
         │                 ├────────────────>│           │            │            │             │          │
         │                 │<────────────────┤ timeout=60 │            │            │             │          │
         │                 │ append_pending(wal_entry)                │            │             │          │
         │                 ├────────────────────────────>│            │            │             │          │
         │                 │<────────────────────────────┤ entry_id   │            │             │          │
-        │                 │ adapter.call()                            │            │             │          │
+        │                 │ adapter.call                            │            │             │          │
         │                 ├──────────────────────────────────────────>│            │             │          │
         │                 │                                                │            │             │          │
         │                 │ (success)                                     │            │             │          │
@@ -1163,9 +1162,9 @@ class DefaultSidecarSupervisorEngine(SidecarSupervisorEngine):
 
 ### 4.1 上游依赖如何调用
 
-- **Forgekin.chat()**：Forgekin 调用 LLM 时通过 `HostAbstraction.call(provider_id, request)` 而非直接 SDK。
-- **F034 三方 Agent 失败回退**：F034 调用 `HostAbstraction.failover()` 复用宿主抽象的 failover 边界。
-- **F022 Tier 1-4 恢复**：F022 Tier 4 调用 `HostAbstraction.failover()` 触发 provider failover。
+- **Forgekin.chat**：Forgekin 调用 LLM 时通过 `HostAbstraction.call(provider_id, request)` 而非直接 SDK。
+- **F034 三方 Agent 失败回退**：F034 调用 `HostAbstraction.failover` 复用宿主抽象的 failover 边界。
+- **F022 Tier 1-4 恢复**：F022 Tier 4 调用 `HostAbstraction.failover` 触发 provider failover。
 - **DI 容器**：`host_abstraction` 通过 `inject("host_abstraction")` 获取。
 
 ### 4.2 下游影响如何被调用
@@ -1181,21 +1180,21 @@ class DefaultSidecarSupervisorEngine(SidecarSupervisorEngine):
 
 | 测试点 ID | 测试场景 | 验证点 | 责任方 |
 |----------|---------|--------|--------|
-| IT-D025-001 | provider 调用成功 | status=success，data 非空 | 测试员灵智体（蜜獾·平头哥） |
-| IT-D025-002 | provider 调用失败 + 错误码归一化 | unified_code 映射正确 | 测试员灵智体 |
-| IT-D025-003 | provider 超时触发 failover | status=failover_triggered | 测试员灵智体 |
-| IT-D025-004 | RATE_LIMIT 触发 failover | failover_to 为链中下一个 | 测试员灵智体 |
-| IT-D025-005 | NETWORK_ERROR 触发 failover | failover_to 为链中下一个 | 测试员灵智体 |
-| IT-D025-006 | AUTH_ERROR 不触发 failover | status=failed，无 failover | 测试员灵智体 |
-| IT-D025-007 | HostContract 四要素硬约束 | 缺一即拒绝注册 | 测试员灵智体 |
-| IT-D025-008 | 超时归一化按 provider | anthropic=60s, openai=90s 差异化 | 测试员灵智体 |
-| IT-D025-009 | failover 链有序遍历 | 按链顺序尝试备用 | 测试员灵智体 |
-| IT-D025-010 | failover 同边界切换 | 接手 Forgekin 不重新初始化 | 测试员灵智体 |
-| IT-D025-011 | failover 全部不可用 | AllProvidersUnavailableError | 测试员灵智体 |
-| IT-D025-012 | sidecar 独立进程监控 | 独立进程 + 周期性探活 | 测试员灵智体 |
-| IT-D025-013 | sidecar 检测 zombie 触发 failover | zombie → trigger_failover | 测试员灵智体 |
-| IT-D025-014 | provider liveness 派发 F023 | provider.liveness.changed 事件 | 测试员灵智体 |
-| IT-D025-015 | 不可控 vs 可控边界显式声明 | 代码中显式注释 | 测试员灵智体 |
+| IT-D025-001 | provider 调用成功 | status=success，data 非空 | 测试员Forgekin（蜜獾·平头哥） |
+| IT-D025-002 | provider 调用失败 + 错误码归一化 | unified_code 映射正确 | 测试员Forgekin |
+| IT-D025-003 | provider 超时触发 failover | status=failover_triggered | 测试员Forgekin |
+| IT-D025-004 | RATE_LIMIT 触发 failover | failover_to 为链中下一个 | 测试员Forgekin |
+| IT-D025-005 | NETWORK_ERROR 触发 failover | failover_to 为链中下一个 | 测试员Forgekin |
+| IT-D025-006 | AUTH_ERROR 不触发 failover | status=failed，无 failover | 测试员Forgekin |
+| IT-D025-007 | HostContract 四要素硬约束 | 缺一即拒绝注册 | 测试员Forgekin |
+| IT-D025-008 | 超时归一化按 provider | anthropic=60s, openai=90s 差异化 | 测试员Forgekin |
+| IT-D025-009 | failover 链有序遍历 | 按链顺序尝试备用 | 测试员Forgekin |
+| IT-D025-010 | failover 同边界切换 | 接手 Forgekin 不重新初始化 | 测试员Forgekin |
+| IT-D025-011 | failover 全部不可用 | AllProvidersUnavailableError | 测试员Forgekin |
+| IT-D025-012 | sidecar 独立进程监控 | 独立进程 + 周期性探活 | 测试员Forgekin |
+| IT-D025-013 | sidecar 检测 zombie 触发 failover | zombie → trigger_failover | 测试员Forgekin |
+| IT-D025-014 | provider liveness 派发 F023 | provider.liveness.changed 事件 | 测试员Forgekin |
+| IT-D025-015 | 不可控 vs 可控边界显式声明 | 代码中显式注释 | 测试员Forgekin |
 
 ---
 
@@ -1266,4 +1265,4 @@ class DefaultSidecarSupervisorEngine(SidecarSupervisorEngine):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（HostContract 四要素 + 错误码归一化 + 超时归一化 + sidecar 独立进程 + failover 同边界切换 + failover 链有序 + 不可控 vs 可控边界显式声明 + 15 集成测试点 + 4 类 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（HostContract 四要素 + 错误码归一化 + 超时归一化 + sidecar 独立进程 + failover 同边界切换 + failover 链有序 + 不可控 vs 可控边界显式声明 + 15 集成测试点 + 4 类 AC） | 开发者 Forgekin（猎犬·夏洛克） |

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，对应 FR-CORE-019）
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
 > **对应 Feature**: [doc:../features/F008-durable-state-surfaces.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D008-durable-state-surfaces.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -20,7 +19,7 @@
 FlowForge 在架构层需要解决"对话历史是最脆的状态表面，会被压缩截断丢失，真相源必须外部化"的根本问题。当前 v7.0 有 task_store / memory manager / git_worktree，但未明确：
 
 1. 对话历史（thread_trace）是最脆的状态表面，关键决策必须镜像到高权威表面
-2. 治理规则仍塞在 user message 里，上下文压缩后规则消失，灵智体（Forgekin，社区社交称'灵智体'）后半段突然违规
+2. 治理规则仍塞在 user message 里，上下文压缩后规则消失，Forgekin（Evolvable Agent，社区社交称'灵智体'）后半段突然违规
 3. 6 类持久状态表面无权威等级与冲突解析规则
 4. 压缩免疫层（native system role）未形式化，治理规则无处下沉
 
@@ -235,7 +234,7 @@ class ConflictResolver(ABC):
 ### 3.3 数据流
 
 ```
-灵智体执行动作 (TeamAct ACTION 步)
+Forgekin执行动作 (TeamAct ACTION 步)
                   │
                   │ 产出 (代码 / 任务 / 决策 / 记忆 / 胶囊)
                   ▼
@@ -274,7 +273,7 @@ class ConflictResolver(ABC):
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ 4. 灵智体读取 (canonical_read)                             │
+│ 4. Forgekin读取 (canonical_read)                             │
 │    - 多表面冲突时返回权威等级最高的                          │
 │    - 与 F023 liveness 规范读模型联动                         │
 └──────────────────────────────────────────────────────────────┘
@@ -348,4 +347,4 @@ class ConflictResolver(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F008 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F008 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

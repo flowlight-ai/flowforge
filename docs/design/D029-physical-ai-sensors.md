@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.11]（FR-CORE-011）
 > **对应 arch.md**: [doc:../arch.md#§3.11]
 > **对应 design.md**: [doc:../design.md#§3.11]（本文件）
 > **对应 Feature**: [doc:../features/F029-physical-ai-sensors.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A029-physical-ai-sensors.md]（同号架构设计）
 > **依赖 ADR**: [doc:../decisions/013-all-things-spirit-mind-vision.md]
-> **9 大点名称修订**: 已应用（双轨命名 ForgeMind/Forgekin + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,34 +16,34 @@
 
 ### 1.1 设计问题
 
-forgemind 应用层需要为 BIO/ORG/OBJ/HYBRID 形态灵智体（Forgekin）提供物理世界感知通道，对标业界 Embodied AI（具身智能）工程实现路径。A029 已固化 8 传感器通道 + 4 类 Adapter + 形态门控 + Tier 0 不可逆保护架构，本详细设计在 `forgemind/sensors/` 落地具体实现，解决以下工程层问题：
+forgemind 应用层需要为 BIO/ORG/OBJ/HYBRID 形态Forgekin提供物理世界感知通道，对标业界 Embodied AI（具身智能）工程实现路径。A029 已固化 8 传感器通道 + 4 类 Adapter + 形态门控 + Tier 0 不可逆保护架构，本详细设计在 `forgemind/sensors/` 落地具体实现，解决以下工程层问题：
 
 1. **8 传感器通道枚举未落地**：`SensorChannel` 接口在 A029 已定义，但 `forgemind/sensors/base.py` 未实现。
 2. **4 类 Adapter 实现缺失**：CameraAdapter / MicrophoneAdapter / IotAdapter / WearableAdapter 四类适配器抽象类未编写。
-3. **形态门控调用未集成**：`SensorRegistry.bind()` 调用 `SpeciesRegistry.assert_sensor_allowed(species, channel)` 的具体调用链未实现。
+3. **形态门控调用未集成**：`SensorRegistry.bind` 调用 `SpeciesRegistry.assert_sensor_allowed(species, channel)` 的具体调用链未实现。
 4. **PhysicalEventIngestor 未实现**：传感器事件写入 F014 EchoStore 的转换器未实现，含采样率差异化策略（高采样率特征提取、低采样率直存）。
 5. **Tier0Guard 未实现**：物理不可逆操作守卫未实现，含 operator 二次确认 + 永不自动恢复逻辑。
-6. **设备故障降级机制未实现**：传感器离线时灵智体进入 liveness degraded 状态的具体转换未编码。
+6. **设备故障降级机制未实现**：传感器离线时Forgekin进入 liveness degraded 状态的具体转换未编码。
 7. **sensors.yaml 配置加载器未实现**：8 通道配置 + 4 类 Adapter driver 类名 + 采样率 + 数据格式 YAML 外置加载器未实现。
 
 ### 1.2 设计约束
 
-- **单向依赖约束**：`forgemind/sensors/` 必须单向依赖 `flowforge/core/` 中的 F014 EchoStore + F023 liveness 读模型 + `forgemind/species/`（F027），禁止 `import contentforge` 等业务模块。
-- **DI 容器约束**：`SensorAdapter` 实例必须通过 DI 容器注入到 `SensorRegistry`，禁止 `OpenCvCameraAdapter()` 直接实例化。
-- **Repository 层约束**：`SensorEvent` 写入 EchoStore 必须通过 `EchoStoreRepository.append()`，禁止 `cursor.execute()` 直接操作数据库。
+- **单向依赖约束**：`forgemind/sensors/` 必须单向依赖 `flowforge/core/` 中的 F014 EchoStore + F023 liveness 读模型 + `forgemind/species/`（F027），禁止 `import` 任何 *Forge 业务模块。
+- **DI 容器约束**：`SensorAdapter` 实例必须通过 DI 容器注入到 `SensorRegistry`，禁止 `OpenCvCameraAdapter` 直接实例化。
+- **Repository 层约束**：`SensorEvent` 写入 EchoStore 必须通过 `EchoStoreRepository.append`，禁止 `cursor.execute` 直接操作数据库。
 - **配置驱动约束**：传感器 driver 类名 + `config_schema` + `sampling_rate_hz` + `data_format` + `on_event_action` 必须 YAML 外置到 `forgemind/config/sensors.yaml`，禁止 `.py` 硬编码设备路径。
-- **形态门控约束**：`SensorRegistry.bind()` 必须调用 `SpeciesRegistry.assert_sensor_allowed(species, channel)` 校验形态合法性，VIRTUAL 形态绑定被拒绝。
+- **形态门控约束**：`SensorRegistry.bind` 必须调用 `SpeciesRegistry.assert_sensor_allowed(species, channel)` 校验形态合法性，VIRTUAL 形态绑定被拒绝。
 - **Tier 0 不可逆约束**：物理执行器（如机械臂、门锁、阀门）等不可逆操作必须经 operator 二次确认，永不自动恢复。
-- **采样率适配约束**：高采样率（>= 1Hz）传感器必须做特征提取后入灵忆，禁止原始数据直接写入 EchoStore（避免灵忆爆炸）。
-- **故障降级约束**：传感器离线时灵智体必须进入 F023 liveness degraded 状态，observe() 返回最近一次有效快照，不阻塞决策回路。
+- **采样率适配约束**：高采样率（>= 1Hz）传感器必须做特征提取后入EchoStore，禁止原始数据直接写入 EchoStore（避免EchoStore爆炸）。
+- **故障降级约束**：传感器离线时Forgekin必须进入 F023 liveness degraded 状态，observe 返回最近一次有效快照，不阻塞决策回路。
 
 ### 1.3 设计影响
 
-- **对 F027 形态分类的影响**：`SensorRegistry` 调用 `SpeciesRegistry.assert_sensor_allowed()` 校验形态门控，强化"形态决定接入层"约束。
-- **对 F014 多域记忆的影响**：`SensorEvent` 写入 EchoStore 情景记忆，成为灵智体经验记忆一部分。
-- **对 F023 liveness 规范读模型的影响**：传感器离线时灵智体进入 liveness degraded 状态。
+- **对 F027 形态分类的影响**：`SensorRegistry` 调用 `SpeciesRegistry.assert_sensor_allowed` 校验形态门控，强化"形态决定接入层"约束。
+- **对 F014 多域记忆的影响**：`SensorEvent` 写入 EchoStore 情景记忆，成为Forgekin经验记忆一部分。
+- **对 F023 liveness 规范读模型的影响**：传感器离线时Forgekin进入 liveness degraded 状态。
 - **对 F022 Tier 1-4 恢复分级的影响**：传感器故障按 Tier 1（自动重试）/Tier 2（换设备）分级恢复；物理不可逆操作按 Tier 0（永不自动恢复）保护。
-- **对 ForgekinBase.observe() 的影响**：observe() 通过 `SensorAdapter.read_snapshot()` 读取物理世界状态作为 Observation。
+- **对 ForgekinBase.observe 的影响**：observe 通过 `SensorAdapter.read_snapshot` 读取物理世界状态作为 Observation。
 
 ---
 
@@ -63,7 +62,7 @@ forgemind 应用层需要为 BIO/ORG/OBJ/HYBRID 形态灵智体（Forgekin）提
                     |            |                      |           |
                     |  +---------v---------+            |           |
                     |  | SensorBinding     |<-----------+           |
-                    |  | (灵智体<->设备)   |                        |
+                    |  | (Forgekin<->设备)   |                        |
                     |  +---------+---------+                        |
                     |            |                                  |
                     |  +---------v---------+   +-------------------+ |
@@ -112,19 +111,19 @@ forgemind 应用层需要为 BIO/ORG/OBJ/HYBRID 形态灵智体（Forgekin）提
   `SensorChannel` 固定为 camera/microphone/temperature/location/accelerometer/pressure/light/depth 八通道，覆盖 Embodied AI 主流感知模态。Adapter 按 4 类组织（视觉 camera.py / 听觉 microphone.py / IoT iot.py / 可穿戴 wearable.py），每类一个文件。新增通道必须经 ADR 决策。
 
 - **决策 2：形态门控由 SpeciesRegistry 集中校验**
-  `SensorRegistry.bind()` 调用 `SpeciesRegistry.assert_sensor_allowed(species, channel)` 校验形态合法性。VIRTUAL 形态绑定物理传感器被拒绝。校验通过 `SpeciesProfile.sensor_allowed: bool` 字段实现。
+  `SensorRegistry.bind` 调用 `SpeciesRegistry.assert_sensor_allowed(species, channel)` 校验形态合法性。VIRTUAL 形态绑定物理传感器被拒绝。校验通过 `SpeciesProfile.sensor_allowed: bool` 字段实现。
 
 - **决策 3：采样率差异化适配策略**
   `SensorDataFormat` 三种格式：RAW（原始数据，低采样率直存）/ FEATURE（特征提取，高采样率）/ EVENT（事件触发，如压力垫）。`sampling_rate_hz >= 1.0` 强制 FEATURE 格式，禁止 RAW 直存；`< 1.0` 允许 RAW 直存。
 
 - **决策 4：传感器事件统一写入 F014 EchoStore 情景记忆**
-  `PhysicalEventIngestor.ingest(event)` 将 `SensorEvent` 转换为 `EchoStoreEntry`，调用 `EchoStoreRepository.append()` 写入 `collection="sensor_event"` 集合。
+  `PhysicalEventIngestor.ingest(event)` 将 `SensorEvent` 转换为 `EchoStoreEntry`，调用 `EchoStoreRepository.append` 写入 `collection="sensor_event"` 集合。
 
 - **决策 5：设备故障触发 F023 liveness degraded + 快照缓存**
-  `SnapshotCache` 缓存最近一次有效快照（per binding），`SensorAdapter.health_check()=false` 时触发 `LivenessService.mark_degraded(forgekin_id, reason="sensor_offline")`，`observe()` 返回缓存快照，不阻塞决策回路。
+  `SnapshotCache` 缓存最近一次有效快照（per binding），`SensorAdapter.health_check=false` 时触发 `LivenessService.mark_degraded(forgekin_id, reason="sensor_offline")`，`observe` 返回缓存快照，不阻塞决策回路。
 
 - **决策 6：Tier 0 不可逆操作守卫**
-  `Tier0Guard` 数据模型 `IrreversibleActionRequest`（request_id / binding_id / action / params / status / operator_id / confirmed_at）。`request_irreversible_action()` 创建 PENDING 请求，`confirm_irreversible_action()` 由 operator 批准后才能执行。永不自动恢复（无超时自动批准）。
+  `Tier0Guard` 数据模型 `IrreversibleActionRequest`（request_id / binding_id / action / params / status / operator_id / confirmed_at）。`request_irreversible_action` 创建 PENDING 请求，`confirm_irreversible_action` 由 operator 批准后才能执行。永不自动恢复（无超时自动批准）。
 
 - **决策 7：传感器配置 YAML 外置 + DI 加载**
   `sensors.yaml` 配置 8 通道 driver 类名 + 采样率 + 数据格式 + on_event_action，`SensorsConfigLoader` 通过 `importlib` 动态加载 Adapter 类并经 DI 容器注入到 `SensorRegistry`。
@@ -132,10 +131,10 @@ forgemind 应用层需要为 BIO/ORG/OBJ/HYBRID 形态灵智体（Forgekin）提
 ### 2.3 设计不变量
 
 - `SensorChannel` 枚举必须固定 8 通道，禁止运行时动态新增通道。
-- `SensorRegistry.bind()` 必须调用 `SpeciesRegistry.assert_sensor_allowed()` 校验形态门控，VIRTUAL 形态绑定被拒绝。
+- `SensorRegistry.bind` 必须调用 `SpeciesRegistry.assert_sensor_allowed` 校验形态门控，VIRTUAL 形态绑定被拒绝。
 - `SensorEvent` 必须通过 `PhysicalEventIngestor` 写入 F014 EchoStore，禁止直接操作数据库。
-- 高采样率（>= 1Hz）传感器必须做特征提取后入灵忆，禁止原始数据直存。
-- 传感器离线时灵智体必须进入 F023 liveness degraded 状态，禁止阻塞决策回路。
+- 高采样率（>= 1Hz）传感器必须做特征提取后入EchoStore，禁止原始数据直存。
+- 传感器离线时Forgekin必须进入 F023 liveness degraded 状态，禁止阻塞决策回路。
 - 物理不可逆操作必须经 operator 二次确认，禁止自动执行（Tier 0 保护）。
 - `SensorAdapter` 必须通过 DI 容器注入，禁止直接实例化。
 - 传感器配置必须 YAML 外置到 `forgemind/config/sensors.yaml`，禁止 `.py` 硬编码设备路径。
@@ -194,7 +193,7 @@ forgemind 应用层需要为 BIO/ORG/OBJ/HYBRID 形态灵智体（Forgekin）提
                     | + connect(device_id) -> str           |
                     | + subscribe(binding_id, callback)     |
                     | + read_snapshot(binding_id) -> dict   |
-                    | + health_check() -> bool              |
+                    | + health_check -> bool              |
                     +---------------------------------------+
                                        ^
                                        |
@@ -295,7 +294,7 @@ _DEFAULT_SAMPLING_RATE: dict[SensorChannel, float] = {
 
 
 class SensorBinding(BaseModel):
-    """传感器绑定（灵智体 <-> 物理设备）。"""
+    """传感器绑定（Forgekin <-> 物理设备）。"""
     binding_id: str
     forgekin_id: str
     species: str                          # 来自 F027，必须为 BIO/OBJ/HYBRID
@@ -346,7 +345,7 @@ class SensorAdapter(ABC):
 
     @abstractmethod
     async def read_snapshot(self, binding_id: str) -> dict:
-        """读取当前快照（用于 observe()）。"""
+        """读取当前快照（用于 observe）。"""
         raise NotImplementedError
 
     @abstractmethod
@@ -365,7 +364,7 @@ class SensorAdapter(ABC):
 class SnapshotCache:
     """最近一次有效快照缓存（per binding）。
 
-    传感器离线时 observe() 返回缓存快照，不阻塞决策回路。
+    传感器离线时 observe 返回缓存快照，不阻塞决策回路。
     """
 
     def __init__(self) -> None:
@@ -374,7 +373,7 @@ class SnapshotCache:
 
     def update(self, binding_id: str, snapshot: dict) -> None:
         self._cache[binding_id] = snapshot
-        self._cached_at[binding_id] = datetime.utcnow()
+        self._cached_at[binding_id] = datetime.utcnow
 
     def get(self, binding_id: str) -> Optional[dict]:
         return self._cache.get(binding_id)
@@ -494,7 +493,7 @@ class HarnessSensorRegistry:
         connection_id = await adapter.connect(binding.device_id)
         # 4. 持久化绑定
         if not binding.binding_id:
-            binding.binding_id = f"sensor-binding-{uuid.uuid4().hex[:10]}"
+            binding.binding_id = f"sensor-binding-{uuid.uuid4.hex[:10]}"
         await self._binding_repo.save(binding)
         logger.info(
             "sensor_bound",
@@ -557,9 +556,9 @@ logger = get_logger(__name__)
 class HarnessPhysicalEventIngestor:
     """物理事件摄入器。
 
-    高采样率（FEATURE 格式）：调用 _extract_feature() 提取特征后入灵忆。
-    低采样率（RAW 格式）：直接入灵忆。
-    事件触发（EVENT 格式）：直接入灵忆，附加事件元数据。
+    高采样率（FEATURE 格式）：调用 _extract_feature 提取特征后入EchoStore。
+    低采样率（RAW 格式）：直接入EchoStore。
+    事件触发（EVENT 格式）：直接入EchoStore，附加事件元数据。
     """
 
     def __init__(
@@ -588,7 +587,7 @@ class HarnessPhysicalEventIngestor:
         # 更新快照缓存
         self._snapshot_cache.update(
             event.binding_id,
-            {"last_event": content, "timestamp": event.timestamp.isoformat()},
+            {"last_event": content, "timestamp": event.timestamp.isoformat},
         )
         logger.debug(
             "sensor_event_ingested",
@@ -619,7 +618,7 @@ class HarnessPhysicalEventIngestor:
                 "event_id": event.event_id,
                 "binding_id": event.binding_id,
                 "channel": event.channel.value,
-                "timestamp": event.timestamp.isoformat(),
+                "timestamp": event.timestamp.isoformat,
                 "data_format": "feature",
                 "feature": feature,
                 "raw_payload_size": len(str(event.payload)),
@@ -630,7 +629,7 @@ class HarnessPhysicalEventIngestor:
                 "event_id": event.event_id,
                 "binding_id": event.binding_id,
                 "channel": event.channel.value,
-                "timestamp": event.timestamp.isoformat(),
+                "timestamp": event.timestamp.isoformat,
                 "data_format": "event",
                 "trigger": event.payload.get("trigger"),
                 "value": event.payload.get("value"),
@@ -641,7 +640,7 @@ class HarnessPhysicalEventIngestor:
                 "event_id": event.event_id,
                 "binding_id": event.binding_id,
                 "channel": event.channel.value,
-                "timestamp": event.timestamp.isoformat(),
+                "timestamp": event.timestamp.isoformat,
                 "data_format": "raw",
                 "payload": event.payload,
             }
@@ -734,7 +733,7 @@ class HarnessTier0Guard(Tier0Guard):
         params: dict,
     ) -> str:
         """发起不可逆操作请求（需 operator 二次确认）。"""
-        request_id = f"tier0-req-{uuid.uuid4().hex[:10]}"
+        request_id = f"tier0-req-{uuid.uuid4.hex[:10]}"
         request = IrreversibleActionRequest(
             request_id=request_id,
             binding_id=binding_id,
@@ -772,7 +771,7 @@ class HarnessTier0Guard(Tier0Guard):
                 f"cannot confirm"
             )
         request.status = "CONFIRMED"
-        request.confirmed_at = datetime.utcnow()
+        request.confirmed_at = datetime.utcnow
         request.confirmed_by = operator_id
         await self._request_repo.save(request)
         logger.info(
@@ -1074,7 +1073,7 @@ class SensorsConfigLoader:
             raw = yaml.safe_load(f)
         channels_raw = raw.get("channels", {})
         channels: dict[SensorChannel, ChannelConfig] = {}
-        for channel_name, cfg in channels_raw.items():
+        for channel_name, cfg in channels_raw.items:
             channel = SensorChannel(channel_name)
             channels[channel] = ChannelConfig(**cfg)
         return SensorsConfig(
@@ -1089,7 +1088,7 @@ class SensorsConfigLoader:
     ) -> dict[SensorChannel, SensorAdapter]:
         """通过 importlib 动态加载 adapter 类 + DI 容器解析依赖。"""
         adapters: dict[SensorChannel, SensorAdapter] = {}
-        for channel, channel_cfg in config.channels.items():
+        for channel, channel_cfg in config.channels.items:
             module_path, class_name = channel_cfg.adapter_class.rsplit(".", 1)
             module = importlib.import_module(module_path)
             adapter_cls = getattr(module, class_name)
@@ -1271,13 +1270,13 @@ function ingest(event):
     # 3. 更新快照缓存
     snapshot_cache.update(event.binding_id, {
         "last_event": content,
-        "timestamp": event.timestamp.isoformat(),
+        "timestamp": event.timestamp.isoformat,
     })
 
     return echo_entry_id
 ```
 
-#### 3.9.3 `ForgekinBase.observe()` 故障降级流程
+#### 3.9.3 `ForgekinBase.observe` 故障降级流程
 
 ```
 function observe_with_sensors(forgekin_id):
@@ -1288,7 +1287,7 @@ function observe_with_sensors(forgekin_id):
         adapter = sensor_registry.get_adapter(binding.channel)
 
         # 1. 健康检查
-        if not adapter.health_check():
+        if not adapter.health_check:
             # 设备离线 -> liveness degraded
             liveness_service.mark_degraded(
                 forgekin_id,
@@ -1317,7 +1316,7 @@ function observe_with_sensors(forgekin_id):
     return Observation(sensor_snapshot=snapshot)
 ```
 
-#### 3.9.4 `Tier0Guard.request_irreversible_action()` 不可逆操作流程
+#### 3.9.4 `Tier0Guard.request_irreversible_action` 不可逆操作流程
 
 ```
 function request_irreversible_action(binding_id, action, params):
@@ -1327,7 +1326,7 @@ function request_irreversible_action(binding_id, action, params):
 
     # 2. 创建 PENDING 请求
     request = IrreversibleActionRequest(
-        request_id=generate_id(),
+        request_id=generate_id,
         binding_id=binding_id,
         action=action,
         params=params,
@@ -1353,7 +1352,7 @@ function confirm_irreversible_action(request_id, operator_id):
         raise RuntimeError("request already resolved")
 
     request.status = "CONFIRMED"
-    request.confirmed_at = now()
+    request.confirmed_at = now
     request.confirmed_by = operator_id
     request_repo.save(request)
 
@@ -1399,9 +1398,9 @@ operator          SensorRegistry        SpeciesRegistry      SensorAdapter      
    |                    |<--------------------------------------------------|                      |
    |                    |                      |                    |                    |                      |
    | (observe 调用)     |                      |                    |                    |                      |
-   | read_snapshot()    |                      |                    |                    |                      |
+   | read_snapshot    |                      |                    |                    |                      |
    |------------------->|                      |                    |                    |                      |
-   |                    | health_check()       |                    |                    |                      |
+   |                    | health_check       |                    |                    |                      |
    |                    |----------------------------------------->|                    |                      |
    |                    | true/false           |                    |                    |                      |
    |                    |<-----------------------------------------|                    |                      |
@@ -1416,28 +1415,28 @@ operator          SensorRegistry        SpeciesRegistry      SensorAdapter      
 
 | 错误场景 | 检测点 | 处理动作 | 用户反馈 |
 |---------|--------|---------|---------|
-| VIRTUAL 形态绑定物理传感器 | `SpeciesRegistry.assert_sensor_allowed()` | 抛 `SpeciesSensorForbiddenError` | "VIRTUAL species cannot bind physical sensor" |
-| 通道无 adapter | `SensorRegistry.bind()` | 抛 `ValueError` | "no adapter registered for channel X" |
-| 设备连接失败 | `SensorAdapter.connect()` | 抛 `DeviceConnectionError` | "cannot connect to device X" |
-| 高采样率使用 RAW 格式 | `SensorBinding._assert_high_sampling_uses_feature()` | Pydantic 校验失败 | "sampling_rate >= 1.0 must use FEATURE format" |
-| 设备离线 | `SensorAdapter.health_check()=false` | 触发 `LivenessService.mark_degraded()` | "sensor_offline: channel X" |
-| 全部传感器离线 | `observe_with_sensors()` | 触发 `LivenessService.mark_critical()` | "all_sensors_offline" |
+| VIRTUAL 形态绑定物理传感器 | `SpeciesRegistry.assert_sensor_allowed` | 抛 `SpeciesSensorForbiddenError` | "VIRTUAL species cannot bind physical sensor" |
+| 通道无 adapter | `SensorRegistry.bind` | 抛 `ValueError` | "no adapter registered for channel X" |
+| 设备连接失败 | `SensorAdapter.connect` | 抛 `DeviceConnectionError` | "cannot connect to device X" |
+| 高采样率使用 RAW 格式 | `SensorBinding._assert_high_sampling_uses_feature` | Pydantic 校验失败 | "sampling_rate >= 1.0 must use FEATURE format" |
+| 设备离线 | `SensorAdapter.health_check=false` | 触发 `LivenessService.mark_degraded` | "sensor_offline: channel X" |
+| 全部传感器离线 | `observe_with_sensors` | 触发 `LivenessService.mark_critical` | "all_sensors_offline" |
 | Tier 0 操作未确认 | `Tier0Guard` | 阻塞执行，等待 operator 确认 | "Tier 0 action PENDING confirmation" |
-| Tier 0 操作被拒绝 | `reject_irreversible_action()` | `status=REJECTED`，不执行操作 | "action rejected: reason" |
-| EchoStore 写入失败 | `EchoStoreRepository.append()` | 抛 `IOError` | "echo store write failed" |
-| 不可逆操作清单未含 action | `request_irreversible_action()` | 抛 `ValueError` | "action X not in tier0 list" |
-| adapter 类未找到 | `importlib.import_module()` | 抛 `ImportError` | "module not found" |
-| DI 依赖缺失 | `di_container.resolve()` | 抛 `DIResolutionError` | "cannot resolve dependency" |
+| Tier 0 操作被拒绝 | `reject_irreversible_action` | `status=REJECTED`，不执行操作 | "action rejected: reason" |
+| EchoStore 写入失败 | `EchoStoreRepository.append` | 抛 `IOError` | "echo store write failed" |
+| 不可逆操作清单未含 action | `request_irreversible_action` | 抛 `ValueError` | "action X not in tier0 list" |
+| adapter 类未找到 | `importlib.import_module` | 抛 `ImportError` | "module not found" |
+| DI 依赖缺失 | `di_container.resolve` | 抛 `DIResolutionError` | "cannot resolve dependency" |
 
 ### 3.12 性能优化指标
 
 | 指标 | 目标值 | 测量点 |
 |------|--------|--------|
-| `bind()` 延迟 | < 500ms | 形态校验 + connect + save |
-| `ingest()` 单事件延迟 | < 50ms（RAW）/ < 200ms（FEATURE） | transform + echo_repo.append |
-| `batch_ingest()` 1000 事件延迟 | < 30s | 单事件 × 1000 |
-| `read_snapshot()` 延迟 | < 100ms | adapter.read_snapshot |
-| `health_check()` 延迟 | < 50ms | adapter.health_check |
+| `bind` 延迟 | < 500ms | 形态校验 + connect + save |
+| `ingest` 单事件延迟 | < 50ms（RAW）/ < 200ms（FEATURE） | transform + echo_repo.append |
+| `batch_ingest` 1000 事件延迟 | < 30s | 单事件 × 1000 |
+| `read_snapshot` 延迟 | < 100ms | adapter.read_snapshot |
+| `health_check` 延迟 | < 50ms | adapter.health_check |
 | Tier 0 请求创建延迟 | < 100ms | request_repo.save + notifier.notify |
 | 快照缓存命中率 | > 95%（设备离线时） | snapshot_cache.get |
 | 8 通道并发订阅 | 支持 8 并发 | adapter.subscribe |
@@ -1451,7 +1450,7 @@ operator          SensorRegistry        SpeciesRegistry      SensorAdapter      
 
 #### 4.1.1 依赖 F026 forgemind 应用层
 
-`SensorRegistry` / `PhysicalEventIngestor` / `Tier0Guard` 由 `ForgeMindPlugin.register_forge_skills()` 注册到 DI 容器：
+`SensorRegistry` / `PhysicalEventIngestor` / `Tier0Guard` 由 `ForgeMindPlugin.register_forge_skills` 注册到 DI 容器：
 
 ```python
 # forgemind/plugin.py（节选）
@@ -1460,7 +1459,7 @@ class ForgeMindPlugin:
         config_loader = SensorsConfigLoader(
             Path(__file__).parent / "config" / "sensors.yaml"
         )
-        config = config_loader.load()
+        config = config_loader.load
         adapters = config_loader.load_adapter_instances(config, di_container)
         # 注册 SensorRegistry
         sensor_registry = HarnessSensorRegistry(
@@ -1472,7 +1471,7 @@ class ForgeMindPlugin:
         # 注册 PhysicalEventIngestor
         ingestor = HarnessPhysicalEventIngestor(
             echo_store_repo=di_container.resolve(EchoStoreRepository),
-            snapshot_cache=SnapshotCache(),
+            snapshot_cache=SnapshotCache,
         )
         di_container.register_singleton(PhysicalEventIngestor, ingestor)
         # 注册 Tier0Guard
@@ -1485,7 +1484,7 @@ class ForgeMindPlugin:
 
 #### 4.1.2 依赖 F027 形态分类
 
-`SensorRegistry.bind()` 调用 `SpeciesRegistry.assert_sensor_allowed(species, channel)`：
+`SensorRegistry.bind` 调用 `SpeciesRegistry.assert_sensor_allowed(species, channel)`：
 
 ```python
 # forgemind/species/species_registry_impl.py（节选，由 F027 实现）
@@ -1507,11 +1506,11 @@ class HarnessSpeciesRegistry(SpeciesRegistry):
 
 #### 4.1.3 依赖 F014 多域记忆
 
-`PhysicalEventIngestor.ingest()` 调用 `EchoStoreRepository.append()` 写入 `collection="sensor_event"` 集合。
+`PhysicalEventIngestor.ingest` 调用 `EchoStoreRepository.append` 写入 `collection="sensor_event"` 集合。
 
 #### 4.1.4 依赖 F023 liveness 规范读模型
 
-`SensorAdapter.health_check()=false` 时调用 `LivenessService.mark_degraded()`：
+`SensorAdapter.health_check=false` 时调用 `LivenessService.mark_degraded`：
 
 ```python
 # forgemind/sensors/liveness_bridge.py
@@ -1528,14 +1527,14 @@ class SensorLivenessBridge:
 
 #### 4.1.5 依赖 F022 Tier 1-4 恢复分级
 
-- 传感器故障按 Tier 1（自动重试 `connect()`）/ Tier 2（换设备）分级恢复。
+- 传感器故障按 Tier 1（自动重试 `connect`）/ Tier 2（换设备）分级恢复。
 - 物理不可逆操作按 Tier 0（永不自动恢复）保护，与 Tier 1-4 联动。
 
 ### 4.2 下游影响实现
 
-#### 4.2.1 影响 ForgekinBase.observe()
+#### 4.2.1 影响 ForgekinBase.observe
 
-`observe()` 通过 `SensorAdapter.read_snapshot()` 读取物理世界状态：
+`observe` 通过 `SensorAdapter.read_snapshot` 读取物理世界状态：
 
 ```python
 # forgemind/base.py（节选，ForgekinBase.observe 实现）
@@ -1544,7 +1543,7 @@ async def observe(self) -> Observation:
     sensor_snapshot: dict[str, dict] = {}
     for binding in bindings:
         adapter = self._sensor_registry.get_adapter(binding.channel)
-        if adapter and await adapter.health_check():
+        if adapter and await adapter.health_check:
             snap = await adapter.read_snapshot(binding.binding_id)
             sensor_snapshot[binding.channel.value] = snap
         else:
@@ -1557,7 +1556,7 @@ async def observe(self) -> Observation:
 
 #### 4.2.2 影响 F030 虚拟世界设定层
 
-HYBRID 形态灵智体同时接入物理传感器（F029）与虚拟世界设定（F030），二者通过 ForgekinBase 决策回路融合。
+HYBRID 形态Forgekin同时接入物理传感器（F029）与虚拟世界设定（F030），二者通过 ForgekinBase 决策回路融合。
 
 #### 4.2.3 影响 F038 进化谱系
 
@@ -1577,13 +1576,13 @@ await self._lineage_repo.append_evolution_evidence(
 | 不变量 | 校验点 | 校验实现 |
 |--------|--------|---------|
 | 8 通道枚举固定 | `SensorChannel` | Enum 类，运行时不可新增 |
-| VIRTUAL 形态门控 | `SensorRegistry.bind()` | `SpeciesRegistry.assert_sensor_allowed()` |
-| 高采样率特征提取 | `SensorBinding._assert_high_sampling_uses_feature()` | Pydantic `model_validator` |
-| 传感器事件写入 EchoStore | `PhysicalEventIngestor.ingest()` | 通过 `EchoStoreRepository.append()` |
-| 设备故障降级 | `observe_with_sensors()` | `health_check()=false` -> `LivenessService.mark_degraded()` |
+| VIRTUAL 形态门控 | `SensorRegistry.bind` | `SpeciesRegistry.assert_sensor_allowed` |
+| 高采样率特征提取 | `SensorBinding._assert_high_sampling_uses_feature` | Pydantic `model_validator` |
+| 传感器事件写入 EchoStore | `PhysicalEventIngestor.ingest` | 通过 `EchoStoreRepository.append` |
+| 设备故障降级 | `observe_with_sensors` | `health_check=false` -> `LivenessService.mark_degraded` |
 | Tier 0 永不自动恢复 | `Tier0Guard` | 无超时自动批准逻辑，必须 operator 显式确认 |
-| DI 注入 | `SensorsConfigLoader.load_adapter_instances()` | `di_container.resolve(adapter_cls)` |
-| YAML 配置驱动 | `SensorsConfigLoader.load()` | 8 通道配置全部从 `sensors.yaml` 加载 |
+| DI 注入 | `SensorsConfigLoader.load_adapter_instances` | `di_container.resolve(adapter_cls)` |
+| YAML 配置驱动 | `SensorsConfigLoader.load` | 8 通道配置全部从 `sensors.yaml` 加载 |
 
 ---
 
@@ -1592,30 +1591,30 @@ await self._lineage_repo.append_evolution_evidence(
 ### 5.1 功能验收
 
 - [ ] AC-F-01: `SensorChannel` 枚举含 8 个值（CAMERA/MICROPHONE/TEMPERATURE/LOCATION/ACCELEROMETER/PRESSURE/LIGHT/DEPTH），运行时无法新增。
-- [ ] AC-F-02: `SensorRegistry.bind(binding)` 调用 `SpeciesRegistry.assert_sensor_allowed()`，VIRTUAL 形态绑定被拒绝。
-- [ ] AC-F-03: `SensorBinding._assert_high_sampling_uses_feature()` 校验 `sampling_rate_hz >= 1.0` 时 `data_format` 必须为 FEATURE。
+- [ ] AC-F-02: `SensorRegistry.bind(binding)` 调用 `SpeciesRegistry.assert_sensor_allowed`，VIRTUAL 形态绑定被拒绝。
+- [ ] AC-F-03: `SensorBinding._assert_high_sampling_uses_feature` 校验 `sampling_rate_hz >= 1.0` 时 `data_format` 必须为 FEATURE。
 - [ ] AC-F-04: `PhysicalEventIngestor.ingest(event)` 根据 `data_format` 转换内容后写入 EchoStore `sensor_event` 集合。
 - [ ] AC-F-05: 高采样率（>= 1Hz）传感器事件 payload 含 `feature` 字段，无原始数据。
 - [ ] AC-F-06: 低采样率（< 1Hz）传感器事件 payload 含 `payload` 字段（原始数据）。
 - [ ] AC-F-07: 事件触发格式 payload 含 `trigger` + `value` 字段。
-- [ ] AC-F-08: `SnapshotCache` 缓存最近一次有效快照，`update()` / `get()` / `invalidate()` 三方法可用。
-- [ ] AC-F-09: `SensorAdapter.health_check()=false` 时，`observe_with_sensors()` 返回缓存快照，不阻塞。
-- [ ] AC-F-10: 全部传感器离线时，`LivenessService.mark_critical()` 被调用。
-- [ ] AC-F-11: `Tier0Guard.request_irreversible_action()` 创建 PENDING 请求并通知 operator。
-- [ ] AC-F-12: `Tier0Guard.confirm_irreversible_action()` 后 `status=CONFIRMED`，含 `confirmed_by` 字段。
-- [ ] AC-F-13: `Tier0Guard.reject_irreversible_action()` 后 `status=REJECTED`，含 `rejection_reason`。
+- [ ] AC-F-08: `SnapshotCache` 缓存最近一次有效快照，`update` / `get` / `invalidate` 三方法可用。
+- [ ] AC-F-09: `SensorAdapter.health_check=false` 时，`observe_with_sensors` 返回缓存快照，不阻塞。
+- [ ] AC-F-10: 全部传感器离线时，`LivenessService.mark_critical` 被调用。
+- [ ] AC-F-11: `Tier0Guard.request_irreversible_action` 创建 PENDING 请求并通知 operator。
+- [ ] AC-F-12: `Tier0Guard.confirm_irreversible_action` 后 `status=CONFIRMED`，含 `confirmed_by` 字段。
+- [ ] AC-F-13: `Tier0Guard.reject_irreversible_action` 后 `status=REJECTED`，含 `rejection_reason`。
 - [ ] AC-F-14: Tier 0 请求永不自动批准（无超时逻辑）。
-- [ ] AC-F-15: `SensorsConfigLoader.load()` 加载 `sensors.yaml`，8 通道配置齐全。
-- [ ] AC-F-16: `load_adapter_instances()` 通过 `importlib` 动态加载 adapter 类，依赖通过 DI 容器解析。
+- [ ] AC-F-15: `SensorsConfigLoader.load` 加载 `sensors.yaml`，8 通道配置齐全。
+- [ ] AC-F-16: `load_adapter_instances` 通过 `importlib` 动态加载 adapter 类，依赖通过 DI 容器解析。
 - [ ] AC-F-17: 4 类 Adapter 抽象基类（CameraAdapter / MicrophoneAdapter / IotAdapter / WearableAdapter）均继承 `SensorAdapter`。
 
 ### 5.2 性能验收
 
-- [ ] AC-P-01: `bind()` 延迟 < 500ms。
-- [ ] AC-P-02: `ingest()` 单事件延迟 < 50ms（RAW）/ < 200ms（FEATURE）。
-- [ ] AC-P-03: `batch_ingest()` 1000 事件延迟 < 30s。
-- [ ] AC-P-04: `read_snapshot()` 延迟 < 100ms。
-- [ ] AC-P-05: `health_check()` 延迟 < 50ms。
+- [ ] AC-P-01: `bind` 延迟 < 500ms。
+- [ ] AC-P-02: `ingest` 单事件延迟 < 50ms（RAW）/ < 200ms（FEATURE）。
+- [ ] AC-P-03: `batch_ingest` 1000 事件延迟 < 30s。
+- [ ] AC-P-04: `read_snapshot` 延迟 < 100ms。
+- [ ] AC-P-05: `health_check` 延迟 < 50ms。
 - [ ] AC-P-06: Tier 0 请求创建延迟 < 100ms。
 - [ ] AC-P-07: 快照缓存命中率 > 95%（设备离线时）。
 - [ ] AC-P-08: 8 通道并发订阅支持 8 并发。
@@ -1623,50 +1622,50 @@ await self._lineage_repo.append_evolution_evidence(
 
 ### 5.3 安全验收
 
-- [ ] AC-S-01: VIRTUAL 形态灵智体绑定物理传感器被拒绝，错误信息含形态名 + 通道名。
+- [ ] AC-S-01: VIRTUAL 形态Forgekin绑定物理传感器被拒绝，错误信息含形态名 + 通道名。
 - [ ] AC-S-02: 高采样率传感器使用 RAW 格式时，Pydantic 校验失败。
 - [ ] AC-S-03: Tier 0 操作未经 operator 确认时，物理动作不执行。
 - [ ] AC-S-04: Tier 0 请求含 `confirmed_by` 字段，所有不可逆操作可追溯到 operator。
 - [ ] AC-S-05: Tier 0 请求永不自动批准，无超时逻辑。
 - [ ] AC-S-06: `SensorRegistry` 不直接操作数据库，所有写入通过 Repository 层。
 - [ ] AC-S-07: `SensorsConfigLoader` 不硬编码 adapter 类名，全部从 YAML 读取。
-- [ ] AC-S-08: 传感器离线时灵智体进入 liveness degraded 状态，不阻塞决策回路。
+- [ ] AC-S-08: 传感器离线时Forgekin进入 liveness degraded 状态，不阻塞决策回路。
 - [ ] AC-S-09: 不可逆操作清单（`tier0_actions`）YAML 外置，禁止运行时修改。
 - [ ] AC-S-10: `IrreversibleActionRequest` 含 `requested_at` / `confirmed_at` 时间戳，便于审计。
 
 ### 5.4 Eval 验收
 
-- [ ] AC-E-01: 传感器事件写入 EchoStore 后，可通过 `EchoStoreRepository.query()` 查询。
+- [ ] AC-E-01: 传感器事件写入 EchoStore 后，可通过 `EchoStoreRepository.query` 查询。
 - [ ] AC-E-02: 事件 payload 含 `event_id` / `binding_id` / `channel` / `timestamp` / `data_format` 五字段。
 - [ ] AC-E-03: 特征提取后 payload 含 `feature` 字段，特征结构按通道类型差异化（camera: faces/objects/pose；microphone: transcript/speaker_id）。
-- [ ] AC-E-04: 快照缓存更新后，`SnapshotCache.get()` 返回最近一次有效快照。
-- [ ] AC-E-05: liveness degraded 状态可被 `LivenessService.get_status()` 查询。
+- [ ] AC-E-04: 快照缓存更新后，`SnapshotCache.get` 返回最近一次有效快照。
+- [ ] AC-E-05: liveness degraded 状态可被 `LivenessService.get_status` 查询。
 - [ ] AC-E-06: Tier 0 请求状态变更（PENDING -> CONFIRMED/REJECTED）写入审计日志。
 
 ### 5.5 集成测试点
 
 | 测试 ID | 测试场景 | 期望结果 |
 |---------|---------|---------|
-| IT-D029-001 | VIRTUAL 形态灵智体绑定 camera 通道 | 抛 `SpeciesSensorForbiddenError` |
-| IT-D029-002 | BIO 形态灵智体绑定 camera 通道 | 绑定成功，返回 binding_id |
+| IT-D029-001 | VIRTUAL 形态Forgekin绑定 camera 通道 | 抛 `SpeciesSensorForbiddenError` |
+| IT-D029-002 | BIO 形态Forgekin绑定 camera 通道 | 绑定成功，返回 binding_id |
 | IT-D029-003 | `SensorBinding` 高采样率 + RAW 格式 | Pydantic 校验失败 |
 | IT-D029-004 | `SensorBinding` 高采样率 + FEATURE 格式 | 校验通过 |
-| IT-D029-005 | `ingest()` 高采样率事件 | payload 含 `feature` 字段，无原始数据 |
-| IT-D029-006 | `ingest()` 低采样率事件 | payload 含 `payload` 字段（原始数据） |
-| IT-D029-007 | `ingest()` 事件触发格式 | payload 含 `trigger` + `value` 字段 |
-| IT-D029-008 | `health_check()=false` 时 `observe()` | 返回缓存快照，不阻塞 |
-| IT-D029-009 | 全部传感器离线 | `LivenessService.mark_critical()` 被调用 |
+| IT-D029-005 | `ingest` 高采样率事件 | payload 含 `feature` 字段，无原始数据 |
+| IT-D029-006 | `ingest` 低采样率事件 | payload 含 `payload` 字段（原始数据） |
+| IT-D029-007 | `ingest` 事件触发格式 | payload 含 `trigger` + `value` 字段 |
+| IT-D029-008 | `health_check=false` 时 `observe` | 返回缓存快照，不阻塞 |
+| IT-D029-009 | 全部传感器离线 | `LivenessService.mark_critical` 被调用 |
 | IT-D029-010 | Tier 0 操作未确认 | 物理动作不执行，请求 PENDING |
 | IT-D029-011 | Tier 0 操作 operator 确认 | `status=CONFIRMED`，物理动作可执行 |
 | IT-D029-012 | Tier 0 操作 operator 拒绝 | `status=REJECTED`，物理动作不执行 |
 | IT-D029-013 | Tier 0 请求 24h 后状态 | 仍为 PENDING（永不自动批准） |
-| IT-D029-014 | `SensorsConfigLoader.load()` 8 通道齐全 | `SensorsConfig` 实例化成功 |
+| IT-D029-014 | `SensorsConfigLoader.load` 8 通道齐全 | `SensorsConfig` 实例化成功 |
 | IT-D029-015 | `sensors.yaml` 缺失 camera 通道 | 不报错（可选通道） |
-| IT-D029-016 | `sensors.yaml` 含未知 adapter 类名 | `importlib.import_module()` 抛 `ImportError` |
-| IT-D029-017 | `batch_ingest()` 1000 事件 | 全部写入 EchoStore，延迟 < 30s |
-| IT-D029-018 | `SnapshotCache.update()` 后 `get()` | 返回最近一次快照 |
-| IT-D029-019 | `SnapshotCache.invalidate()` 后 `get()` | 返回 None |
-| IT-D029-020 | 4 类 Adapter 全部通过 DI 注入 | 无 `OpenCvCameraAdapter()` 直接实例化 |
+| IT-D029-016 | `sensors.yaml` 含未知 adapter 类名 | `importlib.import_module` 抛 `ImportError` |
+| IT-D029-017 | `batch_ingest` 1000 事件 | 全部写入 EchoStore，延迟 < 30s |
+| IT-D029-018 | `SnapshotCache.update` 后 `get` | 返回最近一次快照 |
+| IT-D029-019 | `SnapshotCache.invalidate` 后 `get` | 返回 None |
+| IT-D029-020 | 4 类 Adapter 全部通过 DI 注入 | 无 `OpenCvCameraAdapter` 直接实例化 |
 
 ---
 
@@ -1687,7 +1686,7 @@ await self._lineage_repo.append_evolution_evidence(
 - [doc:../design/D026-forgemind-app-layer.md]（ForgeMindPlugin DI 注册）
 - [doc:../design/D027-all-things-spirit-species.md]（SpeciesRegistry.assert_sensor_allowed）
 - [doc:../design/D014-memory-collection.md]（EchoStoreRepository.append 契约）
-- [doc:../design/naming-contract.md]（灵忆 EchoStore + 灵族 Forgekin Species）
+- [doc:../design/naming-contract.md]（EchoStore + Forgekin Species 智能体形态学）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 - [doc:../../../hiclaw/rules.md#AI编程优秀实践]（六层 Guardrails）
 
@@ -1697,4 +1696,4 @@ await self._lineage_repo.append_evolution_evidence(
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（8 通道 + 4 类 Adapter 实现 + 形态门控 + 采样率适配 + Tier 0 不可逆保护 + 故障降级详细设计） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（8 通道 + 4 类 Adapter 实现 + 形态门控 + 采样率适配 + Tier 0 不可逆保护 + 故障降级详细设计） | 架构师 Forgekin（猫头鹰·鲁班） |

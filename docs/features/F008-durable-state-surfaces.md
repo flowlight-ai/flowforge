@@ -6,11 +6,10 @@
 > **关联 ADR**: [doc:decisions/007-harness-engineering.md]
 > **类型**: harness
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.3]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -104,14 +103,14 @@ durable_state:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体在长上下文压缩后验证治理规则仍在 native system role 生效。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin在长上下文压缩后验证治理规则仍在 native system role 生效。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第3章]
 - [doc:review/review.md#第八章/RA-017]
 - [doc:decisions/007-harness-engineering.md]
-- [doc:design/naming-contract.md#2.5]（灵忆 EchoStore）
+- [doc:design/naming-contract.md#2.5]（EchoStore）
 - [doc:features/F002-teamact-loop.md]
 - [doc:features/F010-governance-boundary.md]
 - [doc:features/F023-liveness-canonical-read.md]
@@ -123,4 +122,3 @@ durable_state:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.3 同号映射 | 文档员灵智体（钢笔·文心） |

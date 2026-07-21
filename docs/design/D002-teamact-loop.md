@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]
 > **对应 Feature**: [doc:../features/F002-teamact-loop.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A002-teamact-loop.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -40,7 +39,7 @@ A002 已给出 TeamAct 六步循环的协议层契约（STATE/OWNER/ACTION/EVIDE
 
 ### 1.3 设计影响
 
-- **对 A001 CapabilityProfile**：Owner 步调用 `CapabilityRouter.route()`
+- **对 A001 CapabilityProfile**：Owner 步调用 `CapabilityRouter.route`
 - **对 A003 Handoff Capsule**：ROUTE 步强制写入 HandoffCapsule 五段
 - **对 A004 PingPong Circuit Breaker**：ACTION 步触发 PassRecord 评估
 - **对 A005 At-Mention Routing**：ROUTE 步行首 @ 解析路由指令
@@ -86,8 +85,8 @@ A002 已给出 TeamAct 六步循环的协议层契约（STATE/OWNER/ACTION/EVIDE
 │  │  + advance(team_id, capsule) │   │  + cross_agent_verified      │   │
 │  │  + check_termination(team_id)│   │  + no_dangling_ownership     │   │
 │  │  + freeze(team_id, reason)   │   │  + vision_converged          │   │
-│  │  - _wal_write(state)         │   │  + all_met() -> bool         │   │
-│  │  - _wal_replay() -> state    │   └──────────────────────────────┘   │
+│  │  - _wal_write(state)         │   │  + all_met -> bool         │   │
+│  │  - _wal_replay -> state    │   └──────────────────────────────┘   │
 │  └──────────────┬───────────────┘                                      │
 │                 ▼                                                      │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
@@ -317,7 +316,7 @@ class TeamActLoopExecutor:
             team_id=team_id,
             status=state.status if state else TeamStatus.TERMINATED,
             iterations=state.iteration if state else 0,
-            termination=state.termination if state else TerminationCondition(),
+            termination=state.termination if state else TerminationCondition,
             final_owner=state.current_owner if state else None,
             evidence_refs=state.evidence_refs if state else [],
         )
@@ -329,7 +328,7 @@ class TeamActLoopExecutor:
         context: dict,
     ) -> StepResult:
         """执行单步"""
-        started = datetime.now()
+        started = datetime.now
         handler = {
             TeamActStep.STATE: self._state_step,
             TeamActStep.OWNER: self._owner_step,
@@ -340,14 +339,14 @@ class TeamActLoopExecutor:
         }[step]
         try:
             result = await handler(team_id, context)
-            result.duration_ms = int((datetime.now() - started).total_seconds() * 1000)
+            result.duration_ms = int((datetime.now - started).total_seconds * 1000)
             return result
         except Exception as exc:
             logger.exception("teamact.step.error", team_id=team_id, step=step)
             return StepResult(
                 team_id=team_id, step=step, success=False,
                 quality_score=0.0, error=str(exc),
-                duration_ms=int((datetime.now() - started).total_seconds() * 1000),
+                duration_ms=int((datetime.now - started).total_seconds * 1000),
             )
 
     async def _state_step(self, team_id: str, ctx: dict) -> StepResult:
@@ -371,14 +370,14 @@ class TeamActLoopExecutor:
         await self._ledger.persist(state)
         # 触发 F006 lease 注册
         await self._lease_registry.acquire(
-            lease=type("L", (), {
+            lease=type("L", , {
                 "lease_id": f"lease_{team_id}_{state.iteration}",
                 "team_id": team_id,
                 "forgekin_id": decision.selected_forgekin_id,
                 "reason": "TeamAct Owner 步持球",
                 "next_step": "action",
-                "expected_wake_at": datetime.now(),
-            })()
+                "expected_wake_at": datetime.now,
+            })
         )
         await self._ledger.advance(team_id)
         return StepResult(
@@ -389,11 +388,11 @@ class TeamActLoopExecutor:
     async def _action_step(self, team_id: str, ctx: dict) -> StepResult:
         state = await self._ledger.load(team_id)
         # 委托 LoopExecutor 执行（质量分阈值 0.85）
-        loop_input = type("I", (), {
+        loop_input = type("I", , {
             "task": ctx["task"],
             "forgekin_id": state.current_owner,
             "context": ctx,
-        })()
+        })
         loop_output = await self._loop_executor.execute(loop_input)
         if loop_output.quality_score < state.quality_score_threshold:
             logger.warning(
@@ -401,7 +400,7 @@ class TeamActLoopExecutor:
                 team_id=team_id, score=loop_output.quality_score,
             )
         # F004 评估实质产出
-        pass_record = type("PR", (), {
+        pass_record = type("PR", , {
             "from_forgekin_id": state.current_owner,
             "to_forgekin_id": state.current_owner,  # self-pass
             "iteration": state.iteration,
@@ -410,7 +409,7 @@ class TeamActLoopExecutor:
             "evidence_refs": [],
             "has_substantive_output": True,
             "debate_mode": False,
-        })()
+        })
         breaker_verdict = await self._circuit_breaker.evaluate_pass(pass_record)
         if breaker_verdict.action == "trip":
             await self._ledger.freeze(team_id, "PingPong 熔断触发")
@@ -468,7 +467,7 @@ class TeamActLoopExecutor:
     async def _route_step(self, team_id: str, ctx: dict) -> StepResult:
         state = await self._ledger.load(team_id)
         # 写入 HandoffCapsule 五段
-        capsule = type("C", (), {
+        capsule = type("C", , {
             "capsule_id": f"cap_{team_id}_{state.iteration}",
             "author_forgekin_id": state.current_owner,
             "team_id": team_id,
@@ -479,11 +478,11 @@ class TeamActLoopExecutor:
             "open_questions": ctx.get("open_questions", []),
             "next_step": ctx.get("next_step", ""),
             "evidence_refs": state.evidence_refs,
-        })()
+        })
         capsule_id = await self._handoff_store.write(capsule)
         state.handoff_capsule_ids.append(capsule_id)
         # 检查终止条件
-        if state.termination.all_met():
+        if state.termination.all_met:
             state.status = TeamStatus.TERMINATED
         else:
             state.iteration += 1
@@ -501,7 +500,7 @@ class TeamActLoopExecutor:
 
     async def _call_reviewer(self, reviewer_id: str, state: TeamActState):
         # 委托 LoopExecutor 调用 reviewer
-        return type("V", (), {"decision": "approve", "rationale": ""})()
+        return type("V", , {"decision": "approve", "rationale": ""})
 ```
 
 ### 2.3 数据结构
@@ -606,7 +605,7 @@ class TerminationEvaluator:
          EVIDENCE -> VERDICT, VERDICT -> ROUTE, ROUTE -> STATE (or TERMINATED)
        }
    2.2 state.current_step = next_step
-   2.3 state.updated_at = now()
+   2.3 state.updated_at = now
    2.4 IF capsule_id: state.handoff_capsule_ids.append(capsule_id)
    2.5 persist(state) -- WAL 写入
 3. 广播事件 TeamActAdvanced(team_id, next_step)
@@ -688,7 +687,7 @@ class SqliteSharedStateLedger(SharedStateLedger):
         row = self._conn.execute(
             "SELECT state_json FROM teamact_state WHERE team_id = ?",
             (team_id,),
-        ).fetchone()
+        ).fetchone
         if row is None:
             return None
         return TeamActState.model_validate_json(row["state_json"])
@@ -704,9 +703,9 @@ class SqliteSharedStateLedger(SharedStateLedger):
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 (
-                    state.team_id, state.model_dump_json(),
+                    state.team_id, state.model_dump_json,
                     state.status.value, state.iteration,
-                    datetime.now().isoformat(),
+                    datetime.now.isoformat,
                 ),
             )
             self._conn.execute(
@@ -716,8 +715,8 @@ class SqliteSharedStateLedger(SharedStateLedger):
                 """,
                 (
                     state.team_id, "persist",
-                    state.model_dump_json(),
-                    datetime.now().isoformat(),
+                    state.model_dump_json,
+                    datetime.now.isoformat,
                 ),
             )
             self._conn.execute("COMMIT")
@@ -744,7 +743,7 @@ class SqliteSharedStateLedger(SharedStateLedger):
             TeamActStep.ROUTE: TeamActStep.STATE,
         }
         state.current_step = next_step_map[state.current_step]
-        state.updated_at = datetime.now()
+        state.updated_at = datetime.now
         if capsule_id:
             state.handoff_capsule_ids.append(capsule_id)
         await self.persist(state)
@@ -754,7 +753,7 @@ class SqliteSharedStateLedger(SharedStateLedger):
         state = await self.load(team_id)
         if state is None:
             return False
-        return state.termination.all_met()
+        return state.termination.all_met
 
     async def freeze(self, team_id: str, reason: str) -> None:
         state = await self.load(team_id)
@@ -769,7 +768,7 @@ class SqliteSharedStateLedger(SharedStateLedger):
         rows = self._conn.execute(
             "SELECT payload FROM teamact_wal WHERE team_id = ? ORDER BY wal_id DESC LIMIT 1",
             (team_id,),
-        ).fetchall()
+        ).fetchall
         if not rows:
             return None
         return TeamActState.model_validate_json(rows[0]["payload"])
@@ -798,7 +797,7 @@ TeamActLoopExecutor.run_team(team_id, task_context)
 │ OWNER 步                                                         │
 │  - CapabilityRouter.route(task, candidates) [F001]             │
 │  - state.current_owner = decision.selected_forgekin_id         │
-│  - BallCustodyLease.acquire() [F006]                            │
+│  - BallCustodyLease.acquire [F006]                            │
 │  - advance(team_id) → current_step = ACTION                    │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
@@ -814,7 +813,7 @@ TeamActLoopExecutor.run_team(team_id, task_context)
                           ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ EVIDENCE 步                                                      │
-│  - EvidenceCollector.collect() [F009]                           │
+│  - EvidenceCollector.collect [F009]                           │
 │    - TEST_RED_GREEN: 校验红+绿两次运行                          │
 │    - Web 功能: 校验 DOM_DIFF 存在 (T8)                          │
 │  - state.evidence_refs.append(evidence_id)                      │
@@ -838,7 +837,7 @@ TeamActLoopExecutor.run_team(team_id, task_context)
 │  - HandoffCapsule.write(五段) [F003]                            │
 │    - blind_spot_hints 自动从 CapabilityProfile 注入              │
 │  - AtMentionParser 行首 @ 路由指令解析 [F005]                   │
-│  - TerminationEvaluator.all_met():                              │
+│  - TerminationEvaluator.all_met:                              │
 │    1. acceptance_criteria_met                                   │
 │    2. evidence_attached                                         │
 │    3. cross_agent_verified                                      │
@@ -860,10 +859,10 @@ TeamActLoopExecutor.run_team(team_id, task_context)
 Operator 输入 "星星罐子"
        │
        ▼
-MagicWordsDetector.detect() → MagicWord.STAR_JAR
+MagicWordsDetector.detect → MagicWord.STAR_JAR
        │
        ▼
-MagicWordsExecutor.emergency_stop()
+MagicWordsExecutor.emergency_stop
        │
        ▼
 SharedStateLedger.freeze(team_id, "Magic Words: 星星罐子")
@@ -940,7 +939,7 @@ from flowforge.core.teamact.executor import TeamActLoopExecutor
 
 
 class ForgekinEngine:
-    """灵智体引擎 — 装饰 HybridExecutor + HarnessOrchestrator"""
+    """Forgekin引擎 — 装饰 HybridExecutor + HarnessOrchestrator"""
 
     def __init__(self, forgekin_id: str) -> None:
         self._forgekin_id = forgekin_id
@@ -952,7 +951,7 @@ class ForgekinEngine:
             task_context=task,
             max_iterations=10,
         )
-        return outcome.model_dump()
+        return outcome.model_dump
 ```
 
 **GovernanceInjector 注入治理规则到 native_system_role**（构造时）：
@@ -961,7 +960,7 @@ class ForgekinEngine:
 # flowforge/core/harness/governance.py
 class GovernanceInjector:
     async def inject_to_teamact(self, team_id: str) -> None:
-        """注入治理规则到 TeamAct 灵智体的 native_system_role"""
+        """注入治理规则到 TeamAct Forgekin的 native_system_role"""
         bundle = await self._loader.load("flowforge/config/harness.yaml")
         # hard 规则注入 native_system_role (压缩免疫)
         for rule in bundle.rules:
@@ -1037,7 +1036,7 @@ async def test_teamact_six_step_loop_completes(real_llm_client, real_db):
     )
     assert outcome.status == TeamStatus.TERMINATED
     assert outcome.iterations >= 1
-    assert outcome.termination.all_met() is True
+    assert outcome.termination.all_met is True
     assert len(outcome.evidence_refs) > 0  # T3 具体断言
 
 
@@ -1057,7 +1056,7 @@ async def test_teamact_freezes_on_magic_words(real_db):
 async def test_termination_rejects_self_review(real_db):
     """终止条件 3: 跨 agent 交叉验证 reviewer != author"""
     state = TeamActState(team_id="team_test_003", current_owner="forgekin_A")
-    evaluator = TerminationEvaluator()
+    evaluator = TerminationEvaluator
     # reviewer == author (自审)
     result = await evaluator.evaluate_cross_agent_verified(state, "forgekin_A", "forgekin_A")
     assert result is False  # T3 具体断言，禁自审
@@ -1070,7 +1069,7 @@ async def test_termination_rejects_self_review(real_db):
 ### 5.1 功能验收 AC
 
 - [ ] AC-1: `TeamActLoopExecutor.run_team` 可完整跑完六步循环
-- [ ] AC-2: 五项终止条件任一未满足时 `TerminationCondition.all_met() == False`
+- [ ] AC-2: 五项终止条件任一未满足时 `TerminationCondition.all_met == False`
 - [ ] AC-3: `nesting_level` > 3 时构造抛 `ValidationError`
 - [ ] AC-4: `SharedStateLedger.freeze` 后 `advance` 抛 RuntimeError
 - [ ] AC-5: Magic Words 打断后 TeamActState 持久化到 WAL（不丢）
@@ -1123,4 +1122,4 @@ async def test_termination_rejects_self_review(real_db):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F002/A002） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F002/A002） | 开发者 Forgekin（猎犬·夏洛克） |

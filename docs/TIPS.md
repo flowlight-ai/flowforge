@@ -17,7 +17,7 @@
 
 ### TIP-002：ForgekinEngine 不能绕过 Harness 护栏
 
-**症状**：ForgekinEngine.execute() 直接包装 HybridExecutor，跳过四根护栏（D-004）。
+**症状**：ForgekinEngine.execute 直接包装 HybridExecutor，跳过四根护栏（D-004）。
 
 **规避**：ForgekinEngine 必须是 HarnessOrchestrator 的扩展装饰器，而非独立入口。
 
@@ -89,7 +89,7 @@
 
 ---
 
-## 3. forgemind 万物可进化智能体陷阱
+## 3. forgemind 可进化智能体陷阱
 
 ### TIP-011：可进化智能体必须有现实闭环
 
@@ -135,7 +135,7 @@
 
 ### TIP-016：禁止绕过 DI 容器
 
-**症状**：`from workers.topic_agent import TopicAgent; agent = TopicAgent()`。
+**症状**：`from workers.topic_agent import TopicAgent; agent = TopicAgent`。
 
 **规避**：所有依赖必须通过构造函数注入，由 DI 容器管理。
 
@@ -161,7 +161,7 @@
 
 **症状**：发布内容包含 `{"draft": "..."}` 格式。
 
-**规避**：`_strip_json_wrapper()` 逻辑在 `result_extractor.py`、`content.py`、`executor.py` 中实现。
+**规避**：`_strip_json_wrapper` 逻辑在 `result_extractor.py`、`content.py`、`executor.py` 中实现。
 
 ---
 
@@ -207,11 +207,11 @@
 
 **规避**：默认阈值 0.85（可在 Loop 配置中覆盖）。AI 味 veto 阈值 0.55 不是 0.65（允许轻微 AI 味，阻止严重 AI 味）。
 
-### TIP-027：ContentForge 创建 / 润色接口 3 分钟上限
+### TIP-027：*Forge 业务接口 3 分钟上限
 
 **症状**：5-10 分钟超时。
 
-**规避**：性能优化必须定位根因（LLM / Openroute / workflow bug），不能简化质量标准或 Loop 流程。
+**规避**：性能优化必须定位根因（LLM / 网关 / workflow bug），不能简化质量标准或 Loop 流程。
 
 ### TIP-028：候选链排序
 

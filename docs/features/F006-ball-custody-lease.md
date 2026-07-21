@@ -6,17 +6,16 @@
 > **关联 ADR**: [doc:decisions/002-collaboration-protocol.md]
 > **类型**: collaboration
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.2]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-持球注册 Lease 是 TeamAct 协作协议的"分布式 lease + 定时唤醒"机制：当灵智体（Forgekin）需要退出当前会话等待外部条件（CI 完成、CVO 确认、定时唤醒）时，用结构化的持球注册工具声明等待原因、下一步计划和预期唤醒时间。这相当于分布式系统里的 lease + 定时唤醒。
+持球注册 Lease 是 TeamAct 协作协议的"分布式 lease + 定时唤醒"机制：当Forgekin需要退出当前会话等待外部条件（CI 完成、CVO 确认、定时唤醒）时，用结构化的持球注册工具声明等待原因、下一步计划和预期唤醒时间。这相当于分布式系统里的 lease + 定时唤醒。
 
 本 Feature 实现 lease 的注册、续约、超时释放、唤醒回调，并与 F004 乒乓球熔断器联动避免"持球但不动"。
 
@@ -34,7 +33,7 @@
 class BallCustodyLease(BaseModel):
     lease_id: str
     team_id: str
-    forgekin_id: str                # 持球灵智体
+    forgekin_id: str                # 持球Forgekin
     reason: str                     # 等待原因（CI/CVO/定时唤醒）
     next_step: str                  # 唤醒后下一步
     expected_wake_at: datetime      # 预期唤醒时间
@@ -71,9 +70,9 @@ class WakeupScheduler:
 
 ### 3.3 关键算法
 
-- **TTL 续约**：持球灵智体在 TTL 到期前可续约，续约次数超 `max_renewals` 强制释放并升级 CVO。
-- **超时释放**：TTL 到期未续约，lease 转 expired，球回 TeamAct 状态机可被其他灵智体接管。
-- **唤醒回调**：WakeupScheduler 监听 CI/CVO/定时器事件，触发时唤醒对应持球灵智体。
+- **TTL 续约**：持球Forgekin在 TTL 到期前可续约，续约次数超 `max_renewals` 强制释放并升级 CVO。
+- **超时释放**：TTL 到期未续约，lease 转 expired，球回 TeamAct 状态机可被其他Forgekin接管。
+- **唤醒回调**：WakeupScheduler 监听 CI/CVO/定时器事件，触发时唤醒对应持球Forgekin。
 - **与熔断器联动**：lease held 期间无工具调用 + 无产出，F004 乒乓球熔断器计入空传。
 
 ### 3.4 配置外置（YAML 示例）
@@ -89,10 +88,10 @@ ball_custody:
 
 ## 4. 验收标准（Acceptance Criteria）
 
-- [ ] AC-1: 持球灵智体可注册 lease 并声明等待原因与唤醒时间
+- [ ] AC-1: 持球Forgekin可注册 lease 并声明等待原因与唤醒时间
 - [ ] AC-2: TTL 到期未续约自动释放，球回 TeamAct 状态机
 - [ ] AC-3: 续约次数超限强制释放并升级 CVO
-- [ ] AC-4: WakeupEvent 触发时正确唤醒持球灵智体
+- [ ] AC-4: WakeupEvent 触发时正确唤醒持球Forgekin
 - [ ] AC-5: lease held 期间空传计入 F004 熔断器
 
 ## 5. 测试策略
@@ -108,14 +107,14 @@ ball_custody:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体持球等待 CI（真实运行测试套件），验证 CI 绿后唤醒回调正确触发。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin持球等待 CI（真实运行测试套件），验证 CI 绿后唤醒回调正确触发。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第2章]
 - [doc:review/review.md#第八章/RA-014]
 - [doc:decisions/002-collaboration-protocol.md]
-- [doc:design/naming-contract.md#2.2]（灵智体 Forgekin）
+- [doc:design/naming-contract.md#2.2]（Forgekin Forgekin）
 - [doc:features/F002-teamact-loop.md]
 - [doc:features/F004-pingpong-circuit-breaker.md]
 - [doc:project_rules.md#T1-T8]
@@ -126,4 +125,3 @@ ball_custody:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.2 同号映射 | 文档员灵智体（钢笔·文心） |

@@ -6,11 +6,10 @@
 > **关联 ADR**: [doc:decisions/002-collaboration-protocol.md]
 > **类型**: collaboration
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.2]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -33,7 +32,7 @@
 ```python
 class AtMentionToken(BaseModel):
     raw_line: str                    # 原始行
-    target_forgekin_id: str          # @ 的目标灵智体
+    target_forgekin_id: str          # @ 的目标Forgekin
     is_routing: bool                 # 是否为路由指令（行首判定）
     routing_intent: Optional[str]    # 路由意图（take/pass/escalate）
     line_number: int
@@ -61,7 +60,7 @@ class RoutingDispatcher:
 
 ### 3.3 关键算法
 
-- **行首判定**：`is_routing = line.lstrip().startswith("@")`；句中 @ 一律标记 `is_routing=False`。
+- **行首判定**：`is_routing = line.lstrip.startswith("@")`；句中 @ 一律标记 `is_routing=False`。
 - **意图识别**：基于行首 @ 后的关键词（take/pass/escalate/broadcast）识别路由意图；无关键词默认为 pass。
 - **叙述隔离**：句中 @ 的 token 仅记录不触发路由变更。
 - **条件路由**：支持 `@forgekin take when CI_GREEN` 形式的条件路由，与 F006 lease 联动。
@@ -98,14 +97,14 @@ at_mention_routing:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 多个真实厂商灵智体在协作对话中使用行首 @ 与句中 @，验证路由正确触发且叙述不被误判。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 多个真实厂商Forgekin在协作对话中使用行首 @ 与句中 @，验证路由正确触发且叙述不被误判。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第2章]
 - [doc:review/review.md#第八章/RA-013]
 - [doc:decisions/002-collaboration-protocol.md]
-- [doc:design/naming-contract.md#2.2]（灵智体 Forgekin）
+- [doc:design/naming-contract.md#2.2]（Forgekin Forgekin）
 - [doc:features/F002-teamact-loop.md]
 - [doc:features/F006-ball-custody-lease.md]
 - [doc:project_rules.md#T1-T8]
@@ -116,4 +115,3 @@ at_mention_routing:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.2 同号映射 | 文档员灵智体（钢笔·文心） |

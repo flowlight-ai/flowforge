@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.3]
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]
 > **对应 Feature**: [doc:../features/F012-entropy-control.md]
 > **对应 Architecture**: [doc:../architecture/A012-entropy-control.md]
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + forgemind Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -21,7 +20,7 @@ A012 架构层定义了"自动 tag + 14 天 sunset + 三选一裁决 + 升级 CV
 
 1. **D-Q1**：commit message 含 `[hotfix]` 标记如何在 Pydantic 模型层精确识别（防止 `[HOTFIX]`/`[ Hotfix ]` 大小写/空白变体遗漏）？
 2. **D-Q2**：`HotfixTagger.tag` 如何在 commit 提交钩子内同步打 tag + 启动 14 天计时，并保证 `sunset_review_due >= merged_at + 14 天` 不变量？
-3. **D-Q3**：`SunsetScheduler` 如何基于 APScheduler 调度两周强制 review 任务，并分配给非作者灵智体（跨厂商 review 配对）？
+3. **D-Q3**：`SunsetScheduler` 如何基于 APScheduler 调度两周强制 review 任务，并分配给非作者Forgekin（跨厂商 review 配对）？
 4. **D-Q4**：`EntropyReviewGate.validate` 如何对 decision 字段做三选一硬约束（formal_fix/permanent/no_longer_relevant），同时拒绝"再看看"/"defer"/"later" 等同义词？
 5. **D-Q5**：reviewer_forgekin_id != commit.forgekin_id 禁自审如何在 Pydantic model_validator 层校验？
 6. **D-Q6**：到期未 review 如何自动升级 CVO（overdue_escalation），保证不阻塞主流程？
@@ -44,8 +43,7 @@ A012 架构层定义了"自动 tag + 14 天 sunset + 三选一裁决 + 升级 CV
 | C11 | sunset_review_due = merged_at + sunset_days（默认 14 天，可配置但不可少于 14 天） | A012 不变量 |
 | C12 | forbidden_decisions 必须包含 [再看看, defer, later] | A012 不变量 |
 | C13 | HotfixTag 走 D021 Side Effect WAL 可重放，进程崩溃可恢复 | A012 跨模块不变量 |
-| C14 | 9 大点名称修订：双轨命名、AI 术语优先（HotfixTagger/EntropyReviewGate）、forgemind 仅指 Layer 2、责任方命名（猎犬·夏洛克） | 用户指令 |
-| C15 | 觉醒阶标注：E1-E3 进化阶直接允许；E4-E6 觉醒阶 sunset review 需 Mind Council 二次确认 | naming-contract.md §4 |
+| C15 | 觉醒阶标注：E1-E3 进化阶直接允许；E4-E6 觉醒阶 sunset review 需 MindCouncil 二次确认 | naming-contract.md §4 |
 
 ### 1.3 设计影响
 
@@ -116,7 +114,7 @@ A012 架构层定义了"自动 tag + 14 天 sunset + 三选一裁决 + 升级 CV
 │  +----------------------------------+  +------------------------+  │
 │  │ +tag(commit_sha, forgekin_id,    │  │ +schedule_review(      │  │
 │  │   commit_message) -> str         │  │   hotfix_tag_id)       │  │
-│  │ +list_pending() -> list[HotfixTag│  │ +list_overdue()        │  │
+│  │ +list_pending -> list[HotfixTag│  │ +list_overdue        │  │
 │  │ +get_tag(tag_id) -> HotfixTag    │  │   -> list[HotfixTag]   │  │
 │  └──────────────────────────────────┘  │ +cancel(tag_id)        │  │
 │             △                          └────────────────────────┘  │
@@ -138,10 +136,10 @@ A012 架构层定义了"自动 tag + 14 天 sunset + 三选一裁决 + 升级 CV
 │  +----------------------------------+  +------------------------+  │
 │  │ +validate(verdict, hotfix_tag)   │  │ +save_tag(tag)         │  │
 │  │   -> ValidationResult            │  │ +load_tag(tag_id)      │  │
-│  │ +apply_verdict(verdict, tag)     │  │ +list_pending()        │  │
-│  │   -> HotfixStatus                │  │ +list_overdue()        │  │
+│  │ +apply_verdict(verdict, tag)     │  │ +list_pending        │  │
+│  │   -> HotfixStatus                │  │ +list_overdue        │  │
 │  │ +escalate_to_cvo(tag)            │  │ +save_verdict(v)       │  │
-│  └──────────────────────────────────┘  │ +checkpoint()          │  │
+│  └──────────────────────────────────┘  │ +checkpoint          │  │
 │             △                          └────────────────────────┘  │
 │             │ implements                          △                 │
 │             ▼                                     │ implements      │
@@ -244,9 +242,9 @@ class EntropyReviewVerdict(BaseModel):
     @field_validator("rationale")
     @classmethod
     def _rationale_must_not_be_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("EntropyReviewVerdict rationale 不可为空")
-        return v.strip()
+        return v.strip
 
     def validate_against_tag(self, hotfix_tag: HotfixTag) -> None:
         """reviewer != author 跨厂商 review 校验 (需 hotfix_tag 上下文)"""
@@ -296,7 +294,7 @@ class SunsetScheduler(ABC):
 
         架构契约:
             - sunset_review_due 到期自动创建 review 任务
-            - 分配给非作者灵智体 (跨厂商 review 配对)
+            - 分配给非作者Forgekin (跨厂商 review 配对)
             - 到期未 review 自动升级 CVO
         """
 
@@ -481,7 +479,7 @@ class DefaultHotfixTagger(HotfixTagger):
         commit_message: str,
         merged_at: Optional[datetime] = None,
     ) -> str:
-        merged_at = merged_at or datetime.utcnow()
+        merged_at = merged_at or datetime.utcnow
 
         # 大小写/空白不敏感匹配 [hotfix] / [HOTFIX] / [ Hotfix ]
         if not _HOTFIX_MARKER_RE.search(commit_message):
@@ -492,7 +490,7 @@ class DefaultHotfixTagger(HotfixTagger):
             return ""
 
         sunset_due = merged_at + timedelta(days=self._sunset_days)
-        tag_id = f"hotfix-{commit_sha[:8]}-{int(merged_at.timestamp())}"
+        tag_id = f"hotfix-{commit_sha[:8]}-{int(merged_at.timestamp)}"
 
         tag = HotfixTag(
             tag_id=tag_id,
@@ -508,13 +506,13 @@ class DefaultHotfixTagger(HotfixTagger):
         await self._store.save_tag(tag)
         _logger.info(
             "hotfix_tagged tag_id=%s commit_sha=%s forgekin_id=%s due=%s",
-            tag_id, commit_sha, forgekin_id, sunset_due.isoformat(),
+            tag_id, commit_sha, forgekin_id, sunset_due.isoformat,
         )
 
         if self._event_bus is not None:
             await self._event_bus.publish_async(
                 "entropy.hotfix.tagged",
-                {"tag_id": tag_id, "commit_sha": commit_sha, "due": sunset_due.isoformat()},
+                {"tag_id": tag_id, "commit_sha": commit_sha, "due": sunset_due.isoformat},
             )
 
         return tag_id
@@ -556,11 +554,11 @@ class APSchedulerSunsetScheduler(SunsetScheduler):
         )
         _logger.info(
             "sunset_review_scheduled tag_id=%s due=%s",
-            hotfix_tag_id, due_at.isoformat(),
+            hotfix_tag_id, due_at.isoformat,
         )
 
     async def _trigger_review(self, hotfix_tag_id: str) -> None:
-        """到期触发: 分配非作者灵智体 review"""
+        """到期触发: 分配非作者Forgekin review"""
         tag = await self._store.load_tag(hotfix_tag_id)
         if tag is None or tag.status != HotfixStatus.PENDING_REVIEW:
             return  # 已裁决或不存在, 跳过
@@ -578,10 +576,10 @@ class APSchedulerSunsetScheduler(SunsetScheduler):
             "review_assigned tag_id=%s reviewer=%s (author=%s)",
             hotfix_tag_id, reviewer, tag.forgekin_id,
         )
-        # 实际 review 由 reviewer 灵智体通过 TeamAct ROUTE 步触发 EntropyReviewGate.validate
+        # 实际 review 由 reviewer Forgekin通过 TeamAct ROUTE 步触发 EntropyReviewGate.validate
 
     async def list_overdue(self, now: Optional[datetime] = None) -> list[HotfixTag]:
-        now = now or datetime.utcnow()
+        now = now or datetime.utcnow
         return await self._store.list_overdue(now)
 
     async def _escalate(self, tag: HotfixTag) -> None:
@@ -599,8 +597,8 @@ class APSchedulerSunsetScheduler(SunsetScheduler):
                 "tag_id": tag.tag_id,
                 "commit_sha": tag.commit_sha,
                 "forgekin_id": tag.forgekin_id,
-                "merged_at": tag.merged_at.isoformat(),
-                "sunset_review_due": tag.sunset_review_due.isoformat(),
+                "merged_at": tag.merged_at.isoformat,
+                "sunset_review_due": tag.sunset_review_due.isoformat,
             },
         )
         _logger.warning(
@@ -660,7 +658,7 @@ class DefaultEntropyReviewGate(EntropyReviewGate):
             errors.append(str(e))
 
         # 3. decision 命中 forbidden_decisions
-        decision_str = verdict.decision.value if isinstance(verdict.decision, EntropyDecision) else str(verdict.decision).lower()
+        decision_str = verdict.decision.value if isinstance(verdict.decision, EntropyDecision) else str(verdict.decision).lower
         if decision_str in self.FORBIDDEN_DECISIONS:
             errors.append(
                 f"decision={decision_str} 命中 forbidden_decisions (禁'再看看'等同义词)"
@@ -673,7 +671,7 @@ class DefaultEntropyReviewGate(EntropyReviewGate):
             errors.append(f"decision={decision_str} 不在 EntropyDecision 三选一内")
 
         # 5. rationale 非空 (Pydantic 已校验, 此处兜底)
-        if not verdict.rationale or not verdict.rationale.strip():
+        if not verdict.rationale or not verdict.rationale.strip:
             errors.append("rationale 不可为空")
 
         # 6. evidence_refs 至少 1 条 (与 D009 联动)
@@ -750,7 +748,7 @@ class DefaultEntropyReviewGate(EntropyReviewGate):
                 "reviewer_forgekin_id": verdict.reviewer_forgekin_id,
                 "rationale": verdict.rationale,
                 "evidence_refs": verdict.evidence_refs,
-                "retired_at": datetime.utcnow().isoformat(),
+                "retired_at": datetime.utcnow.isoformat,
             },
         )
         _logger.info(
@@ -778,8 +776,8 @@ class DefaultEntropyReviewGate(EntropyReviewGate):
             evidence_pack={
                 "tag_id": hotfix_tag.tag_id,
                 "commit_sha": hotfix_tag.commit_sha,
-                "merged_at": hotfix_tag.merged_at.isoformat(),
-                "sunset_review_due": hotfix_tag.sunset_review_due.isoformat(),
+                "merged_at": hotfix_tag.merged_at.isoformat,
+                "sunset_review_due": hotfix_tag.sunset_review_due.isoformat,
             },
         )
         _logger.warning(
@@ -834,7 +832,7 @@ _trigger_review (到期触发):
 3.2    RETURN
 4. reviewer = forgekin_pairer.pair_non_author(tag.forgekin_id)  # 跨厂商 review 配对
 5. INFO "review_assigned tag_id reviewer author"
-6. # 实际 review 由 reviewer 灵智体通过 TeamAct ROUTE 步触发 EntropyReviewGate.validate
+6. # 实际 review 由 reviewer Forgekin通过 TeamAct ROUTE 步触发 EntropyReviewGate.validate
 ```
 
 **算法 3：EntropyReviewGate.validate 三选一硬约束**
@@ -851,14 +849,14 @@ OUTPUT: ValidationResult
 3. TRY verdict.validate_against_tag(hotfix_tag)  # reviewer != author
 3.1 EXCEPT ReviewerIsAuthorError AS e: errors.append(str(e))
 
-4. decision_str = verdict.decision.value.lower()
+4. decision_str = verdict.decision.value.lower
 5. IF decision_str IN FORBIDDEN_DECISIONS:
 5.1    errors.append("decision 命中 forbidden_decisions")
 
 6. TRY EntropyDecision(decision_str)  # 三选一硬校验
 6.1 EXCEPT ValueError: errors.append("不在三选一内")
 
-7. IF NOT verdict.rationale OR NOT verdict.rationale.strip():
+7. IF NOT verdict.rationale OR NOT verdict.rationale.strip:
 7.1    errors.append("rationale 不可为空")
 
 8. IF NOT verdict.evidence_refs:
@@ -984,14 +982,14 @@ class SqliteEntropyStore(EntropyStore):
         await conn.execute("PRAGMA synchronous=NORMAL")
         await conn.execute("PRAGMA foreign_keys=ON")
         await conn.executescript(self.SCHEMA_SQL)
-        await conn.commit()
+        await conn.commit
         return conn
 
     async def save_tag(self, tag: HotfixTag) -> None:
         self._wal_lsn_counter += 1
         wal_lsn = self._wal_lsn_counter
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 await conn.execute(
                     """
                     INSERT OR REPLACE INTO hotfix_tags
@@ -1001,8 +999,8 @@ class SqliteEntropyStore(EntropyStore):
                     """,
                     (
                         tag.tag_id, tag.commit_sha, tag.forgekin_id,
-                        tag.commit_message, tag.merged_at.isoformat(),
-                        tag.sunset_review_due.isoformat(), tag.status.value,
+                        tag.commit_message, tag.merged_at.isoformat,
+                        tag.sunset_review_due.isoformat, tag.status.value,
                         wal_lsn, tag.schema_version,
                     ),
                 )
@@ -1013,19 +1011,19 @@ class SqliteEntropyStore(EntropyStore):
                     """,
                     (tag.tag_id, json.dumps({"wal_lsn": wal_lsn})),
                 )
-                await conn.commit()
+                await conn.commit
             tag.wal_lsn = wal_lsn
         except Exception as e:
             raise EntropyStoreUnavailableError(f"save_tag 失败: {e}") from e
 
     async def load_tag(self, tag_id: str) -> Optional[HotfixTag]:
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 async with conn.execute(
                     "SELECT * FROM hotfix_tags WHERE tag_id = ?",
                     (tag_id,),
                 ) as cur:
-                    row = await cur.fetchone()
+                    row = await cur.fetchone
                     if row is None:
                         return None
                     return self._row_to_tag(row)
@@ -1034,18 +1032,18 @@ class SqliteEntropyStore(EntropyStore):
 
     async def list_pending(self) -> list[HotfixTag]:
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 async with conn.execute(
                     "SELECT * FROM hotfix_tags WHERE status = 'pending_review' ORDER BY sunset_review_due ASC"
                 ) as cur:
-                    rows = await cur.fetchall()
+                    rows = await cur.fetchall
                     return [self._row_to_tag(r) for r in rows]
         except Exception as e:
             raise EntropyStoreUnavailableError(f"list_pending 失败: {e}") from e
 
     async def list_overdue(self, now: datetime) -> list[HotfixTag]:
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 async with conn.execute(
                     """
                     SELECT * FROM hotfix_tags
@@ -1053,16 +1051,16 @@ class SqliteEntropyStore(EntropyStore):
                       AND sunset_review_due < ?
                     ORDER BY sunset_review_due ASC
                     """,
-                    (now.isoformat(),),
+                    (now.isoformat,),
                 ) as cur:
-                    rows = await cur.fetchall()
+                    rows = await cur.fetchall
                     return [self._row_to_tag(r) for r in rows]
         except Exception as e:
             raise EntropyStoreUnavailableError(f"list_overdue 失败: {e}") from e
 
     async def save_verdict(self, verdict: EntropyReviewVerdict) -> None:
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 await conn.execute(
                     """
                     INSERT OR REPLACE INTO entropy_verdicts
@@ -1074,7 +1072,7 @@ class SqliteEntropyStore(EntropyStore):
                         verdict.verdict_id, verdict.hotfix_tag_id,
                         verdict.reviewer_forgekin_id, verdict.decision.value,
                         verdict.rationale, json.dumps(verdict.evidence_refs),
-                        verdict.reviewed_at.isoformat(),
+                        verdict.reviewed_at.isoformat,
                     ),
                 )
                 await conn.execute(
@@ -1084,7 +1082,7 @@ class SqliteEntropyStore(EntropyStore):
                     """,
                     (verdict.hotfix_tag_id, json.dumps({"verdict_id": verdict.verdict_id})),
                 )
-                await conn.commit()
+                await conn.commit
         except Exception as e:
             raise EntropyStoreUnavailableError(f"save_verdict 失败: {e}") from e
 
@@ -1099,7 +1097,7 @@ class SqliteEntropyStore(EntropyStore):
                 f"tag_id={tag_id} 已是终态 {existing.status.value}, 不可回退到 {status.value}"
             )
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 await conn.execute(
                     """
                     UPDATE hotfix_tags
@@ -1115,15 +1113,15 @@ class SqliteEntropyStore(EntropyStore):
                     """,
                     (tag_id, json.dumps({"new_status": status.value})),
                 )
-                await conn.commit()
+                await conn.commit
         except Exception as e:
             raise EntropyStoreUnavailableError(f"update_tag_status 失败: {e}") from e
 
     async def checkpoint(self) -> None:
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 await conn.execute("PRAGMA wal_checkpoint(FULL)")
-                await conn.commit()
+                await conn.commit
         except Exception as e:
             raise EntropyStoreUnavailableError(f"checkpoint 失败: {e}") from e
 
@@ -1240,11 +1238,11 @@ Scheduler(到期)    SunsetScheduler   Store              RoutingDispatcher   CV
 
 | 指标 | 目标值 | 测量方式 | 优化手段 |
 |------|:------:|---------|---------|
-| tag() 延迟 | < 50ms (P95) | `_logger.info` 时间戳 | WAL 异步刷盘 + WAL LSN 单调递增 |
-| validate() 延迟 | < 5ms (P95) | 方法级 timing | Pydantic v2 + frozenset 查找 O(1) |
-| apply_verdict() 延迟 | < 100ms (P95) | 方法级 timing | 单事务 UPDATE + INSERT |
-| list_overdue() 延迟 | < 30ms (P95) | 索引 idx_tags_status_due | 复合索引 (status, sunset_review_due) |
-| schedule_review() 调度 | < 10ms (P95) | add_job timing | APScheduler 内存 job store |
+| tag 延迟 | < 50ms (P95) | `_logger.info` 时间戳 | WAL 异步刷盘 + WAL LSN 单调递增 |
+| validate 延迟 | < 5ms (P95) | 方法级 timing | Pydantic v2 + frozenset 查找 O(1) |
+| apply_verdict 延迟 | < 100ms (P95) | 方法级 timing | 单事务 UPDATE + INSERT |
+| list_overdue 延迟 | < 30ms (P95) | 索引 idx_tags_status_due | 复合索引 (status, sunset_review_due) |
+| schedule_review 调度 | < 10ms (P95) | add_job timing | APScheduler 内存 job store |
 | DB 文件大小 | < 10MB / 1000 hotfix | 文件系统 | 90 天后归档 + VACUUM |
 | WAL checkpoint 频率 | 每 1000 个 tag 一次 | wal_lsn % 1000 == 0 | PRAGMA wal_checkpoint(FULL) |
 | CVO 升级耗时 | < 200ms (P95) | dispatch_to_cvo timing | async fire-and-forget, 不阻塞主流程 |
@@ -1291,7 +1289,7 @@ entropy_control:
   # WAL checkpoint 频率 (每 N 个 tag 一次)
   wal_checkpoint_every_n_tags: 1000
 
-  # 觉醒阶二次确认 (E4-E6 需 Mind Council 确认 no_longer_relevant 决策)
+  # 觉醒阶二次确认 (E4-E6 需 MindCouncil 确认 no_longer_relevant 决策)
   awakening_stage_review_required:
     - E4
     - E5
@@ -1348,7 +1346,7 @@ class DefaultDurableStateRegistry:
         await self.write_surface(
             surface_type=StateSurfaceType.GIT,
             key=f"hotfix/{tag.tag_id}",
-            payload=tag.model_dump(),
+            payload=tag.model_dump,
             authority_level=4,
             decay_tag=DecayTag.BUILT_TO_PERSIST,
         )
@@ -1370,13 +1368,13 @@ class SideEffectWAL:
     async def append_hotfix_tag(self, tag: HotfixTag) -> int:
         lsn = await self._append(
             op_type="hotfix_tag_saved",
-            payload=tag.model_dump(),
+            payload=tag.model_dump,
         )
         return lsn
 
     async def replay(self) -> None:
         # 进程启动时重放 WAL, 恢复 PENDING_REVIEW 状态
-        for entry in await self._read_all():
+        for entry in await self._read_all:
             if entry.op_type == "hotfix_tag_saved":
                 tag = HotfixTag(**entry.payload)
                 if tag.status == HotfixStatus.PENDING_REVIEW:
@@ -1411,7 +1409,7 @@ class DefaultEvalSignalWriter:
         await self._store.save_signal({
             "signal_type": signal_type,
             "payload": payload,
-            "occurred_at": datetime.utcnow(),
+            "occurred_at": datetime.utcnow,
         })
         # 异步通知 D040 控制面
         await self._event_bus.publish_async("eval.retirement_signal", payload)
@@ -1446,7 +1444,7 @@ class HarnessEvalControlPlane:
 | T10 | D012 NO_LONGER_RELEVANT → D010 guardrail 降级 default | D012→D010 | GovernanceRule authority: HARD→DEFAULT |
 | T11 | D012 FORMAL_FIX → D008 git surface 升级 Built to Persist | D012→D008 | decay_tag: BUILT_TO_DELETE→BUILT_TO_PERSIST |
 | T12 | D012 status 终态不可逆（PERMANENT 后再裁决 → HotfixTagTerminalError） | D012 内部 | raise HotfixTagTerminalError |
-| T13 | 觉醒阶 E4+ no_longer_relevant → Mind Council 二次确认 | D012↔Mind Council | 二次确认未通过则不 apply |
+| T13 | 觉醒阶 E4+ no_longer_relevant → MindCouncil 二次确认 | D012↔MindCouncil | 二次确认未通过则不 apply |
 
 ---
 
@@ -1471,15 +1469,15 @@ class HarnessEvalControlPlane:
 - [ ] AC-F15: apply_verdict(PERMANENT) → status=PERMANENT + D008 decay_tag 改 Built to Persist
 - [ ] AC-F16: apply_verdict(NO_LONGER_RELEVANT) → status=NO_LONGER_RELEVANT + D018 退役信号写入 + D040 sunset review 触发
 - [ ] AC-F17: escalate_to_cvo 调用 RoutingDispatcher.dispatch_to_cvo, evidence_pack 含 tag_id/commit_sha/due
-- [ ] AC-F18: 觉醒阶 E4-E6 的 NO_LONGER_RELEVANT 决策需 Mind Council 二次确认
+- [ ] AC-F18: 觉醒阶 E4-E6 的 NO_LONGER_RELEVANT 决策需 MindCouncil 二次确认
 
 ### 5.2 性能验收（Performance AC）
 
-- [ ] AC-P1: tag() P95 延迟 < 50ms
-- [ ] AC-P2: validate() P95 延迟 < 5ms
-- [ ] AC-P3: apply_verdict() P95 延迟 < 100ms
-- [ ] AC-P4: list_overdue() P95 延迟 < 30ms
-- [ ] AC-P5: schedule_review() P95 延迟 < 10ms
+- [ ] AC-P1: tag P95 延迟 < 50ms
+- [ ] AC-P2: validate P95 延迟 < 5ms
+- [ ] AC-P3: apply_verdict P95 延迟 < 100ms
+- [ ] AC-P4: list_overdue P95 延迟 < 30ms
+- [ ] AC-P5: schedule_review P95 延迟 < 10ms
 - [ ] AC-P6: WAL checkpoint 每 1000 个 tag 一次, checkpoint 耗时 < 500ms
 - [ ] AC-P7: 1000 hotfix tag DB 文件 < 10MB
 
@@ -1491,7 +1489,7 @@ class HarnessEvalControlPlane:
 - [ ] AC-S4: sunset_days 配置硬下限 14 天（不可通过配置绕过）
 - [ ] AC-S5: audit log（entropy_events 表）禁删除, 仅 INSERT + SELECT
 - [ ] AC-S6: CVO 升级 evidence_pack 必须含 merged_at + sunset_review_due（可追溯）
-- [ ] AC-S7: 觉醒阶 E4+ 的 NO_LONGER_RELEVANT 决策需 Mind Council 二次确认（防灵智体自降级）
+- [ ] AC-S7: 觉醒阶 E4+ 的 NO_LONGER_RELEVANT 决策需 MindCouncil 二次确认（防Forgekin自降级）
 
 ### 5.4 Eval 验收（Eval AC）
 
@@ -1531,4 +1529,4 @@ class HarnessEvalControlPlane:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F012/A012） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F012/A012） | 开发者 Forgekin（猎犬·夏洛克） |

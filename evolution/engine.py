@@ -17,6 +17,7 @@ engine.evaluate() / engine.execute() 为 async I/O 入口（符合规范：所�
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict
 
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.knowledge_evolution import KnowledgeEvolution
@@ -25,6 +26,9 @@ from flowforge.evolution.metacognition import MetacognitionRouter
 from flowforge.evolution.models import KnowledgeMaturityLevel
 from flowforge.evolution.process_evolution import ProcessEvolution
 from flowforge.evolution.scope_guard import ScopeGuard
+
+if TYPE_CHECKING:
+    from flowforge.evolution.self_dev_base import SelfDevLoopBase
 
 logger = get_logger("flowforge.evolution.engine")
 
@@ -44,6 +48,9 @@ class ForgeMindEngine:
         self.knowledge_evolution = KnowledgeEvolution()
         self.maturity_ladder = KnowledgeMaturityLadder()
         self.metacognition = MetacognitionRouter()
+        # F046 SelfDev 三闭环执行层（按 loop_type 注册，避免硬编码子类 — 红线 9）
+        # 治理层（三模式）与执行层（SelfDev）解耦：执行层通过 register_self_dev_loop 注入
+        self._self_dev_loops: Dict[str, Any] = {}
 
     async def evaluate(self, context: dict) -> dict:
         """评估当前上下文，返回建议动作。
@@ -113,6 +120,64 @@ class ForgeMindEngine:
 
         logger.warning(f"evolution execute: unknown mode {mode!r}")
         return {"status": "error", "reason": f"unknown mode {mode!r}"}
+
+    # ---- SelfDev 三闭环（F046 执行层）----
+
+    def register_self_dev_loop(self, loop: "SelfDevLoopBase") -> None:
+        """注册 SelfDev 闭环实例（DI 注入，红线 12）.
+
+        治理层（ForgeMindEngine）不硬编码导入 SelfDevDocLoop/Code/Framework 子类（红线 9），
+        子类实例通过本方法注入，按 loop_type 索引.
+
+        Args:
+            loop: SelfDevLoopBase 实例（子类必须设置 loop_type 类属性）
+
+        Raises:
+            ValueError: loop.loop_type 为空或已注册
+        """
+        loop_type = getattr(loop, "loop_type", "")
+        if not loop_type:
+            raise ValueError("SelfDev 闭环实例必须设置 loop_type 类属性")
+        if loop_type in self._self_dev_loops:
+            raise ValueError(f"SelfDev 闭环 {loop_type!r} 已注册（禁止重复注册）")
+        self._self_dev_loops[loop_type] = loop
+        logger.info(f"注册 SelfDev 闭环: type={loop_type}, min_stage={loop.min_awakening_stage}")
+
+    def get_self_dev_loop(self, loop_type: str) -> "SelfDevLoopBase | None":
+        """获取已注册的 SelfDev 闭环实例."""
+        return self._self_dev_loops.get(loop_type)
+
+    def list_self_dev_loops(self) -> dict[str, str]:
+        """列出所有已注册的 SelfDev 闭环（loop_type -> min_awakening_stage）."""
+        return {
+            loop_type: getattr(loop, "min_awakening_stage", "unknown")
+            for loop_type, loop in self._self_dev_loops.items()
+        }
+
+    async def run_self_dev_loop(self, loop_type: str, context: dict) -> dict:
+        """运行指定类型的 SelfDev 闭环（F046 §3 Phase 5 集成入口）.
+
+        觉醒阶门控由 SelfDevLoopBase.check_awakening_stage 内部执行（I1）.
+        若可进化智能体觉醒阶低于闭环要求，抛出 AwakeningStageBlockedError.
+
+        Args:
+            loop_type: 闭环类型 ("doc" | "code" | "framework")
+            context: 循环上下文（含 awakening_stage 等）
+
+        Returns:
+            SelfDevLoopBase.run_once 返回的循环执行结果
+
+        Raises:
+            ValueError: loop_type 未注册
+            AwakeningStageBlockedError: 觉醒阶门控未通过（I1）
+        """
+        loop = self._self_dev_loops.get(loop_type)
+        if loop is None:
+            raise ValueError(
+                f"SelfDev 闭环 {loop_type!r} 未注册（请先调用 register_self_dev_loop）"
+            )
+        logger.info(f"run_self_dev_loop 启动: loop_type={loop_type}")
+        return await loop.run_once(context)
 
     # ---- Scope Guard ----
 

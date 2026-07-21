@@ -1,15 +1,14 @@
-# A028: 灵智体锻造流水线架构设计
+# A028: Forgekin 锻造流水线架构设计
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.9]（FR-CORE-009）
 > **对应 arch.md**: [doc:../arch.md#§3.9]
 > **对应 design.md**: [doc:../design.md#§3.9]（待创建）
 > **对应 Feature**: [doc:../features/F028-forging-pipeline.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D028-forging-pipeline.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/013-all-things-spirit-mind-vision.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,9 +16,9 @@
 
 ### 1.1 架构问题
 
-forgemind 应用层需要将"养灵"过程从"配置 persona"升级为系统化育灵（Forge Nurturing）流水线，但 v7.0 仅有"灵启训练"一个步骤，未设计完整锻造流水线。本架构在 forgemind 内部建立 6 步锻造流水线编排框架，解决以下架构层问题：
+forgemind 应用层需要将 Forge Nurturing 过程从"配置 persona"升级为系统化 Forge Nurturing 流水线，但 v7.0 仅有"灵启训练"一个步骤，未设计完整锻造流水线。本架构在 forgemind 内部建立 6 步锻造流水线编排框架，解决以下架构层问题：
 
-1. **育灵过程无标准化流程**：从形态定义到觉醒晋升的 6 步无统一编排器，散落在不同模块。
+1. **Forge Nurturing过程无标准化流程**：从形态定义到觉醒晋升的 6 步无统一编排器，散落在不同模块。
 2. **阶段间硬耦合**：形态定义、能力注入、记忆初始化、价值观对齐、能力验证、觉醒晋升彼此直接调用，无阶段隔离。
 3. **operator 关键审批点缺失**：①形态定义 / ④价值观对齐 / ⑥觉醒晋升三处必须 operator 批准，但 v7.0 无审批门机制。
 4. **能力验证无硬门**：⑤能力验证阶段未对接 F018 Eval Contract 五问，质量分 < 0.85 仍可晋升。
@@ -29,7 +28,7 @@ forgemind 应用层需要将"养灵"过程从"配置 persona"升级为系统化�
 ### 1.2 架构约束
 
 - **单向依赖约束**：ForgePipeline 必须单向依赖 F001/F008/F014/F018/F027，禁止反向依赖 *Forge。
-- **DI 容器约束**：StageHandler 必须通过 DI 容器注入，禁止 ForgePipeline 直接 `SpeciesDefineHandler()` 实例化。
+- **DI 容器约束**：StageHandler 必须通过 DI 容器注入，禁止 ForgePipeline 直接 `SpeciesDefineHandler` 实例化。
 - **配置驱动约束**：6 阶段 handler 类名 / require_operator_approval / eval_threshold / on_fail / max_awakening_stage 必须 YAML 外置到 `forgemind/config/forging.yaml`。
 - **operator 审批约束**：①④⑥阶段必须 operator 显式批准，禁止自动跳过审批门。
 - **Eval 硬门约束**：⑤能力验证阶段必须通过 F018 Eval Contract 五问 + 质量分阈值 0.85，失败必须回滚到 ②能力注入。
@@ -39,10 +38,10 @@ forgemind 应用层需要将"养灵"过程从"配置 persona"升级为系统化�
 
 - **对 F027 形态分类的影响**：流水线第 ① 步调用 SpeciesRegistry.get(species) 加载形态属性。
 - **对 F001 能力画像的影响**：流水线第 ② 步注入 CapabilityProfile，作为 Forgekin 能力锚点。
-- **对 F014 多域记忆的影响**：流水线第 ③ 步初始化多域记忆联邦，写入初始灵忆条目。
-- **对 F008 持久状态层的影响**：流水线产出（灵印 + 能力画像 + 初始灵忆 + 锻造清单）必须写入持久状态层。
+- **对 F014 多域记忆的影响**：流水线第 ③ 步初始化多域记忆联邦，写入初始EchoStore条目。
+- **对 F008 持久状态层的影响**：流水线产出（SoulImprint + 能力画像 + 初始EchoStore + 锻造清单）必须写入持久状态层。
 - **对 F018 Eval Contract 的影响**：流水线第 ⑤ 步必须通过 Eval 五问评估，Eval 信号回流触发后续晋升。
-- **对 F037 灵智体市场的影响**：流水线第 ⑥ 步觉醒晋升后灵智体可发布到市场。
+- **对 F037 Forgekin 市场的影响**：流水线第 ⑥ 步觉醒晋升后Forgekin可发布到市场。
 - **对 F038 进化谱系的影响**：流水线产出的 Forgekin 作为谱系起点，后续形态进化/能力增长追加到谱系。
 
 ---
@@ -109,16 +108,16 @@ forgemind 应用层需要将"养灵"过程从"配置 persona"升级为系统化�
   阶段顺序为 ①形态定义 -> ②能力注入 -> ③记忆初始化 -> ④价值观对齐 -> ⑤能力验证 -> ⑥觉醒晋升，每阶段产出 artifact_id 后才能进入下一阶段。这避免阶段间直接调用造成的硬耦合，artifact 作为阶段间契约。
 
 - **决策 2：operator 关键审批点设在 ①④⑥阶段**
-  ①形态定义（确认 species）+ ④价值观对齐（确认 value_anchors）+ ⑥觉醒晋升（确认目标觉醒阶）必须 operator 批准。其他阶段可自动执行。这平衡自动化与人为控制，避免灵智体擅自切换形态或越权晋升。
+  ①形态定义（确认 species）+ ④价值观对齐（确认 value_anchors）+ ⑥觉醒晋升（确认目标觉醒阶）必须 operator 批准。其他阶段可自动执行。这平衡自动化与人为控制，避免Forgekin擅自切换形态或越权晋升。
 
 - **决策 3：⑤能力验证硬门对接 F018 Eval Contract**
-  ⑤阶段必须通过 Eval Contract 五问（谁评估/评估什么/何时评估/评估信号/评估后做什么）+ 质量分阈值 0.85（v4.0 调整后默认值）。失败则回滚到 ②能力注入重新注入能力。这保证觉醒灵智体具备基线能力。
+  ⑤阶段必须通过 Eval Contract 五问（谁评估/评估什么/何时评估/评估信号/评估后做什么）+ 质量分阈值 0.85（v4.0 调整后默认值）。失败则回滚到 ②能力注入重新注入能力。这保证觉醒Forgekin具备基线能力。
 
 - **决策 4：StageHandler 插件化 + YAML 配置驱动**
   每阶段一个 StageHandler 类，handler 类名 + require_operator_approval + eval_threshold + on_fail + max_awakening_stage 全部 YAML 外置。这满足配置驱动约束（架构红线第 5 条），允许通过修改 YAML 调整流程而无需改代码。
 
 - **决策 5：觉醒阶上限由 ForgingManifest 授权**
-  ⑥阶段目标觉醒阶不可超过 operator 在 ForgingManifest.max_awakening_stage 中授权的范围。默认 max=E3，更高觉醒阶需 operator 单独授权。这防止灵智体越权晋升到 E5 进化阶（Evolving / L3 Self-Improving）或 E6 灵智阶（ForgeMind / L4 Self-Evolving Agent）。
+  ⑥阶段目标觉醒阶不可超过 operator 在 ForgingManifest.max_awakening_stage 中授权的范围。默认 max=E3，更高觉醒阶需 operator 单独授权。这防止Forgekin越权晋升到 E5 进化阶（Evolving / L3 Self-Improving）或 E6 ForgeMind 阶（ForgeMind / L4 Self-Evolving Agent）。
 
 ### 2.3 架构不变量
 
@@ -180,7 +179,7 @@ class AwakeningStage(str, Enum):
     A3_AUTONOMOUS = "A3_autonomous"        # A3 自主阶（Autonomous / L2 Tool-Using）
     A4_PROACTIVE = "A4_proactive"          # A4 主动阶（Proactive / L3 Self-Improving）
     A5_SUPER_EVOLVING = "A5_super_evolving"  # A5 超进化阶（Super Evolving / L4 Self-Evolving）
-    A6_FORGEMIND = "A6_forgemind"          # A6 灵智阶（ForgeMind / L5 General-Purpose Agent）
+    A6_FORGEMIND = "A6_forgemind"          # A6 ForgeMind 阶（ForgeMind / L5 General-Purpose Agent）
 
 
 class StageTransition(BaseModel):
@@ -200,7 +199,7 @@ class ForgingPipelineState(BaseModel):
     current_stage: ForgingStage
     species: str                              # 来自 F027
     capability_profile_ref: str               # 来自 F001
-    soul_imprint_ref: str                     # 灵印（身份锚点）
+    soul_imprint_ref: str                     # SoulImprint（身份锚点）
     stage_artifacts: dict[ForgingStage, str]  # 每阶段产出物 ID
     started_at: datetime
     stage_history: list[StageTransition] = Field(default_factory=list)
@@ -210,7 +209,7 @@ class ForgingManifest(BaseModel):
     """锻造清单（YAML 配置驱动）"""
     species: str                              # ForgekinSpecies
     seed_capabilities: list[str]              # 能力包 ID
-    seed_memories: list[str]                  # 初始灵忆 ID
+    seed_memories: list[str]                  # 初始EchoStore ID
     value_anchors: list[str]                  # 价值锚点（不可被 Eval 修改）
     verification_tasks: list[str]             # 能力验证任务
     target_awakening_stage: AwakeningStage
@@ -337,10 +336,10 @@ class ForgingExecutor(ABC):
 
 ### 4.2 下游影响
 
-- **影响 F037 灵智体市场**：流水线第 ⑥ 步觉醒晋升后灵智体可发布到市场。
+- **影响 F037 Forgekin 市场**：流水线第 ⑥ 步觉醒晋升后Forgekin可发布到市场。
 - **影响 F038 进化谱系**：流水线产出的 Forgekin 作为谱系起点。
 - **影响 F035 能力融合**：流水线产出的 CapabilityProfile 是 F035 能力融合的目标画像。
-- **影响 F039 灵典可检索知识库**：流水线第 ③ 步初始灵忆可作为灵典种子条目。
+- **影响 F039 MindCodex可检索知识库**：流水线第 ③ 步初始EchoStore可作为MindCodex种子条目。
 
 ### 4.3 跨模块不变量
 
@@ -365,10 +364,10 @@ class ForgingExecutor(ABC):
 
 ### 5.2 架构不变量验收
 
-- [ ] AC-6: 6 阶段严格顺序不变量通过 —— 跳过任何阶段的 advance() 调用被拒绝。
+- [ ] AC-6: 6 阶段严格顺序不变量通过 —— 跳过任何阶段的 advance 调用被拒绝。
 - [ ] AC-7: Eval 硬门不变量通过 —— ⑤阶段 Eval 分数 < 0.85 时禁止进入 ⑥，必须回滚到 ②。
 - [ ] AC-8: 觉醒阶上限不变量通过 —— ⑥目标觉醒阶超过 max_awakening_stage 时被拒绝。
-- [ ] AC-9: 阶段 artifact 解耦不变量通过 —— StageHandler 无法直接调用下一阶段，必须通过 ForgingExecutor.advance()。
+- [ ] AC-9: 阶段 artifact 解耦不变量通过 —— StageHandler 无法直接调用下一阶段，必须通过 ForgingExecutor.advance。
 - [ ] AC-10: 回滚机制不变量通过 —— rollback_to(②) 调用后流水线状态 current_stage 回到 ②，③④⑤artifact 失效。
 - [ ] AC-11: 持久化不变量通过 —— 流水线完成后所有 artifact 在 F008 中可查询。
 
@@ -389,7 +388,7 @@ class ForgingExecutor(ABC):
 - [doc:../features/F037-forgemind-marketplace.md]
 - [doc:../features/F038-forgemind-lineage.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
-- [doc:../design/naming-contract.md]（育灵 Forge Nurturing + 灵印 Soul Imprint + 觉醒阶）
+- [doc:../design/naming-contract.md]（Forge Nurturing + SoulImprint + 觉醒阶）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 
 ---
@@ -398,4 +397,4 @@ class ForgingExecutor(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（6 阶段流水线 + 审批门 + Eval 硬门 + 回滚机制架构） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（6 阶段流水线 + 审批门 + Eval 硬门 + 回滚机制架构） | 架构师 Forgekin（猫头鹰·鲁班） |

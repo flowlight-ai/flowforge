@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，对应 FR-CORE-021）
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
 > **对应 Feature**: [doc:../features/F010-governance-boundary.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D010-governance-boundary.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -19,9 +18,9 @@
 
 FlowForge 在架构层需要解决"治理规则被上下文压缩吞掉"的根本问题。当前 v7.0 治理规则通过 user message prepend 注入：
 
-1. 上下文压缩时，治理规则被截断丢失，灵智体（Forgekin）后半段突然违规
+1. 上下文压缩时，治理规则被截断丢失，Forgekin后半段突然违规
 2. 没有区分硬约束（guardrails）与默认行为（defaults），所有规则一视同仁注入
-3. 灵智体可覆盖硬约束（如自己决定"这次不写测试"），违反 operator 安全治理要求
+3. Forgekin可覆盖硬约束（如自己决定"这次不写测试"），违反 operator 安全治理要求
 4. 治理规则无版本化，规则变更不走 ADR 流程
 
 Governance Boundary 在架构层是 Harness 七层的约束层（L4），是 Magic Words 拉闸词注入的位置，是严肃操作红线的承载载体。
@@ -85,7 +84,7 @@ Governance Boundary 在架构层是 Harness 七层的约束层（L4），是 Mag
                                  │
                                  ▼
 ┌────────────────────────────────────────────────────────────────────┐
-│         ForgekinHost 灵智体构造时注入 (见 ADR 001)                 │
+│         ForgekinHost Forgekin构造时注入 (见 ADR 001)                 │
 │   ┌────────────────────────────────────────────────────────────┐   │
 │   │ GovernanceValidator.validate(session)                     │   │
 │   │ - 治理规则出现在 user_message → 告警                        │   │
@@ -98,16 +97,16 @@ Governance Boundary 在架构层是 Harness 七层的约束层（L4），是 Mag
 ### 2.2 关键架构决策
 
 - **决策 1：硬约束必须注入 native_system_role**
-  理由：roleagent.md 明确治理规则不能通过 user message prepend 注入，会被上下文压缩吞掉。system role 注入由 ForgekinHost 在灵智体构造时统一注入，是协议层硬要求。
+  理由：roleagent.md 明确治理规则不能通过 user message prepend 注入，会被上下文压缩吞掉。system role 注入由 ForgekinHost 在Forgekin构造时统一注入，是协议层硬要求。
 
 - **决策 2：双轨信任编译（guardrails + defaults）**
-  理由：参考 ADR-021-pack-system 的双轨设计。guardrails 轨只能加严不可放宽（如"禁止删除测试用例"），灵智体不可覆盖；defaults 轨可覆盖（如"优先用 pytest"），灵智体可声明覆盖。
+  理由：参考 ADR-021-pack-system 的双轨设计。guardrails 轨只能加严不可放宽（如"禁止删除测试用例"），Forgekin不可覆盖；defaults 轨可覆盖（如"优先用 pytest"），Forgekin可声明覆盖。
 
 - **决策 3：治理规则文本必须外置到 YAML**
   理由：编程红线第 11 条明确禁止硬编码提示词/路径/密钥/端口。治理规则文本外置便于版本管理与 ADR 审计。
 
 - **决策 4：GovernanceBundle 版本化 + ADR 流程**
-  理由：规则变更必须走 ADR 流程，禁直接改文本。版本号让审计可追溯哪一版本规则注入了哪只灵智体。
+  理由：规则变更必须走 ADR 流程，禁直接改文本。版本号让审计可追溯哪一版本规则注入了哪只Forgekin。
 
 - **决策 5：audit 发现 user_message 治理规则时告警**
   理由：定期 audit session context，发现治理规则出现在 user_message 即告警。防止 v4.0 残留代码绕过新架构。
@@ -118,8 +117,8 @@ Governance Boundary 在架构层是 Harness 七层的约束层（L4），是 Mag
 ### 2.3 架构不变量
 
 - hard 规则必须注入 native_system_role，禁 user_message_prepend
-- guardrails 轨只能加严（monotonic tightening），不可被灵智体覆盖
-- defaults 轨可被灵智体声明覆盖
+- guardrails 轨只能加严（monotonic tightening），不可被Forgekin覆盖
+- defaults 轨可被Forgekin声明覆盖
 - 治理规则文本必须外置 YAML，禁硬编码
 - GovernanceBundle 带版本号，规则变更走 ADR 流程
 - 上下文压缩后治理规则仍在 session 生效（compression_immune=true）
@@ -159,12 +158,12 @@ class GovernanceRule(BaseModel):
         "native_system_role", "developer_role", "user_message"
     ]
     compression_immune: bool                         # 必须为 true（除非 soft + user_message）
-    applies_to: list[str] = Field(default_factory=list)  # 适用的灵智体类型/角色
+    applies_to: list[str] = Field(default_factory=list)  # 适用的Forgekin类型/角色
     version: str                                     # 规则版本号
 
     @validator("rule_text")
     def text_must_not_be_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("GovernanceRule rule_text 不可为空")
         return v
 
@@ -195,7 +194,7 @@ class DualTrackPolicy(BaseModel):
             raise ValueError("guardrail 必须 authority=hard")
 
     def override_default(self, rule_id: str, override_text: str) -> None:
-        """default 覆盖：灵智体声明覆盖默认行为"""
+        """default 覆盖：Forgekin声明覆盖默认行为"""
         pass  # 仅 defaults 轨可覆盖
 
 
@@ -233,7 +232,7 @@ class GovernanceInjector(ABC):
         架构契约:
         - 所有 hard 规则必须 compression_immune=true
         - 注入位置: native_system_role (禁 user_message)
-        - 由 ForgekinHost 在灵智体构造时调用
+        - 由 ForgekinHost 在Forgekin构造时调用
         """
 
     @abstractmethod
@@ -282,7 +281,7 @@ Operator 编写治理规则 YAML (flowforge/config/harness.yaml)
 └────────────────────────┬─────────────────────────────┘
                          │
                          ▼
-         ForgekinHost 在灵智体构造时注入 (ADR 001)
+         ForgekinHost 在Forgekin构造时注入 (ADR 001)
                          │
                          ▼
 ┌──────────────────────────────────────────────────────┐
@@ -293,13 +292,13 @@ Operator 编写治理规则 YAML (flowforge/config/harness.yaml)
 └────────────────────────┬─────────────────────────────┘
                          │ 校验通过
                          ▼
-            灵智体可被构造并注入治理规则
+            Forgekin可被构造并注入治理规则
                          │
                          ▼
          上下文压缩发生 (native_system_role 保留)
                          │
                          ▼
-            治理规则仍约束灵智体行为 (compression_immune)
+            治理规则仍约束Forgekin行为 (compression_immune)
 ```
 
 ---
@@ -310,7 +309,7 @@ Operator 编写治理规则 YAML (flowforge/config/harness.yaml)
 
 - **F008 Durable State Surfaces** — GovernanceBundle 持久化到 task_queue / thread_trace，compression_immune 属性来源
 - **F002 TeamAct Loop** — ACTION 步受治理规则约束
-- **ForgekinHost（ADR 001）** — 在灵智体构造时统一注入治理规则
+- **ForgekinHost（ADR 001）** — 在Forgekin构造时统一注入治理规则
 
 ### 4.2 下游影响
 
@@ -318,14 +317,14 @@ Operator 编写治理规则 YAML (flowforge/config/harness.yaml)
 - **F011 Magic Words** — 四个 Magic Words 注入到 native_system_role 拉闸位置
 - **F012 Entropy Control** — guardrail 失效可降级为 default，触发 sunset review
 - **F022 Tier 1-4 恢复** — 严肃操作红线注入压缩免疫层
-- **F036 forgemind** — 万物灵智体的物理世界操作红线
+- **F036 forgemind** — 可进化智能体的物理世界操作红线
 
 ### 4.3 跨模块不变量
 
 - GovernanceBundle 必须持久化到 Durable Surface（F008），不存进程内
 - hard 规则必须注入 native_system_role，禁 user_message_prepend
 - Magic Words（F011）必须通过 native_system_role 注入拉闸位置
-- guardrail 提案需灵议 Mind Council 审批，需 Replay A/B 验证净增益
+- guardrail 提案需 MindCouncil 审批，需 Replay A/B 验证净增益
 - 规则变更必须走 ADR 流程，带版本号
 
 ---
@@ -343,8 +342,8 @@ Operator 编写治理规则 YAML (flowforge/config/harness.yaml)
 ### 5.2 架构不变量验收
 
 - [ ] AC-6: hard 规则全部注入 native_system_role，禁 user_message_prepend
-- [ ] AC-7: guardrails 轨只能加严（monotonic tightening），灵智体不可覆盖
-- [ ] AC-8: defaults 轨可被灵智体声明覆盖（需声明）
+- [ ] AC-7: guardrails 轨只能加严（monotonic tightening），Forgekin不可覆盖
+- [ ] AC-8: defaults 轨可被Forgekin声明覆盖（需声明）
 - [ ] AC-9: 治理规则文本外置 YAML，无硬编码
 - [ ] AC-10: 上下文压缩后治理规则仍在 session 生效（compression_immune=true）
 - [ ] AC-11: audit 发现 user_message 治理规则时告警
@@ -373,4 +372,4 @@ Operator 编写治理规则 YAML (flowforge/config/harness.yaml)
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F010 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F010 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

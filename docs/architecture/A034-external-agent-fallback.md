@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010）
 > **对应 arch.md**: [doc:../arch.md#§3.10]
 > **对应 design.md**: [doc:../design.md#§3.10]（待创建）
 > **对应 Feature**: [doc:../features/F034-external-agent-fallback.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D034-external-agent-fallback.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/006-external-agent-integration.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -23,25 +22,25 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 失败提供跨厂
 2. **fallback 链编排无依据**：fallback 链按固定编号顺序，而非基于 F032 能力画像盲点互补 + 成本排序。
 3. **Tier 1-4 恢复分级未联动**：三方 Agent 失败未与 F022 Tier 1-4 恢复分级联动，恢复策略混乱。
 4. **降级到内置 agent 缺失**：所有三方 Agent 失败时无降级机制，任务直接失败。
-5. **FallbackExecutionRecord 未归档**：fallback 执行记录未写入 F014 灵忆，无法供 F035 灵锻蒸馏。
+5. **FallbackExecutionRecord 未归档**：fallback 执行记录未写入 F014 EchoStore，无法供 F035 SpiritForge 蒸馏。
 6. **五种 FallbackAction 未定义**：retry_same/switch_provider/degrade_builtin/escalate/fail_fast 五种动作无统一枚举。
 
 ### 1.2 架构约束
 
-- **单向依赖约束**：FallbackChainExecutor 必须单向依赖 F022 Tier 1-4 + F032 能力画像 + F014 灵忆，禁止反向依赖 *Forge。
+- **单向依赖约束**：FallbackChainExecutor 必须单向依赖 F022 Tier 1-4 + F032 能力画像 + F014 EchoStore，禁止反向依赖 *Forge。
 - **DI 容器约束**：FallbackChainExecutor / FallbackChainBuilder 实例必须通过 DI 容器注入到 ExternalAgentBridge。
-- **Repository 层约束**：FallbackExecutionRecord 写入 F014 灵忆必须通过 Repository 层，禁止直接操作数据库。
+- **Repository 层约束**：FallbackExecutionRecord 写入 F014 EchoStore必须通过 Repository 层，禁止直接操作数据库。
 - **配置驱动约束**：failure_detection / fallback_chains / chain_builder 配置必须 YAML 外置到 `config/external_agent.yaml`，禁止 .py 硬编码厂商偏好。
-- **质量阈值约束**：质量检测阈值必须为 0.85（与项目规则质量分阈值一致），禁止灵智体修改。
+- **质量阈值约束**：质量检测阈值必须为 0.85（与项目规则质量分阈值一致），禁止Forgekin修改。
 - **Tier 联动约束**：每种 FallbackTrigger 必须对应一个 F022 Tier（1-4），跨级恢复禁止跳级。
 
 ### 1.3 架构影响
 
 - **对 F022 Tier 1-4 恢复分级的影响**：三方 Agent 失败按 Tier 1（自动重试）/Tier 2（换厂商）/Tier 3（降级内置）/Tier 4（升级 operator）分级恢复。
 - **对 F032 能力画像的影响**：FallbackChainBuilder 基于 ExternalAgentCapabilityProfile 盲点互补 + 成本排序构建 fallback 链。
-- **对 F014 多域记忆的影响**：FallbackExecutionRecord 写入灵忆供 F035 灵锻蒸馏失败经验。
+- **对 F014 多域记忆的影响**：FallbackExecutionRecord 写入EchoStore供 F035 SpiritForge 蒸馏失败经验。
 - **对 F018 Eval Contract 的影响**：fallback 执行结果纳入 Eval 信号，影响三方 Agent 可靠性评估。
-- **对 A031 ExternalAgentBridge 的影响**：Bridge 在调用失败时调用 FallbackChainExecutor.execute() 执行 fallback 链。
+- **对 A031 ExternalAgentBridge 的影响**：Bridge 在调用失败时调用 FallbackChainExecutor.execute 执行 fallback 链。
 
 ---
 
@@ -89,7 +88,7 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 失败提供跨厂
                     |  上游依赖（DI 注入）                      |
                     |  F022 Tier 1-4 Recovery (恢复分级)        |
                     |  F032 ExternalAgentProfile (能力画像)     |
-                    |  F014 Memory Collection (灵忆归档)        |
+                    |  F014 Memory Collection (EchoStore归档)        |
                     |  F018 Eval Contract (Eval 信号)          |
                     +-------------------------------------------+
                                           |
@@ -110,7 +109,7 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 失败提供跨厂
   FallbackAction 固定为 RETRY_SAME（同厂商重试）/SWITCH_PROVIDER（换厂商）/DEGRADE_TO_BUILTIN（降级内置 agent）/ESCALATE_OPERATOR（升级 operator）/FAIL_FAST（快速失败）五种。前四种为可恢复动作，最后一种为不可恢复错误。
 
 - **决策 3：fallback 链基于 F032 能力画像盲点互补 + 成本排序构建**
-  FallbackChainBuilder.build_for_task() 调用 F032 CapabilityMatcher.match_for_task() 获取候选厂商，再按 cost_per_1k_tokens + avg_latency_ms 升序排序构建多步 fallback 链。这避免按固定编号顺序（如 Claude=1/Codex=2/OpenCode=3/Trae=4），保证 fallback 选择最优厂商。
+  FallbackChainBuilder.build_for_task 调用 F032 CapabilityMatcher.match_for_task 获取候选厂商，再按 cost_per_1k_tokens + avg_latency_ms 升序排序构建多步 fallback 链。这避免按固定编号顺序（如 Claude=1/Codex=2/OpenCode=3/Trae=4），保证 fallback 选择最优厂商。
 
 - **决策 4：与 F022 Tier 1-4 恢复分级严格联动**
   每种 FallbackTrigger 对应一个 Tier：TIMEOUT/RATE_LIMIT -> Tier 1（自动重试）；SERVICE_UNAVAILABLE -> Tier 2（换厂商）；CRASH -> Tier 3（降级内置）；QUALITY_BELOW_THRESHOLD -> Tier 4（升级 operator）。跨级恢复禁止跳级（如 Tier 1 失败必须先尝试 Tier 2 而非直接 Tier 4）。
@@ -118,11 +117,11 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 失败提供跨厂
 - **决策 5：全部失败降级到 FlowForge 内置 agent**
   当 fallback 链全部失败时，降级到 FlowForge 内置 agent（能力可能弱但可用）。这保证任务不会因三方 Agent 全部不可用而完全失败。
 
-- **决策 6：FallbackExecutionRecord 写入 F014 灵忆供灵锻蒸馏**
-  每次 fallback 执行记录（含 trigger / from_provider / to_provider / action_taken / recovery_tier / succeeded）写入 F014 灵忆集合，作为灵智体失败经验记忆。F035 能力融合可蒸馏这些失败经验，提升灵智体未来调用决策能力。
+- **决策 6：FallbackExecutionRecord 写入 F014 EchoStore供SpiritForge 蒸馏**
+  每次 fallback 执行记录（含 trigger / from_provider / to_provider / action_taken / recovery_tier / succeeded）写入 F014 EchoStore集合，作为Forgekin失败经验记忆。F035 能力融合可蒸馏这些失败经验，提升Forgekin未来调用决策能力。
 
 - **决策 7：质量阈值 0.85 与项目规则一致**
-  QUALITY_BELOW_THRESHOLD 触发阈值为 0.85，与项目规则质量分阈值（v4.0 调整后默认值）一致。这保证三方 Agent 产出质量与灵智体自身产出质量标准统一。
+  QUALITY_BELOW_THRESHOLD 触发阈值为 0.85，与项目规则质量分阈值（v4.0 调整后默认值）一致。这保证三方 Agent 产出质量与Forgekin自身产出质量标准统一。
 
 ### 2.3 架构不变量
 
@@ -131,8 +130,8 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 失败提供跨厂
 - fallback 链必须基于 F032 能力画像盲点互补 + 成本排序构建，禁止按厂商编号顺序。
 - 每种 FallbackTrigger 必须对应一个 F022 Tier，跨级恢复禁止跳级。
 - 全部三方 Agent 失败必须降级到 FlowForge 内置 agent，禁止任务完全失败。
-- FallbackExecutionRecord 必须写入 F014 灵忆集合，供 F035 灵锻蒸馏。
-- 质量阈值必须为 0.85，禁止灵智体修改。
+- FallbackExecutionRecord 必须写入 F014 EchoStore集合，供 F035 SpiritForge 蒸馏。
+- 质量阈值必须为 0.85，禁止Forgekin修改。
 - failure_detection / fallback_chains / chain_builder 配置必须 YAML 外置到 `config/external_agent.yaml`。
 
 ---
@@ -201,7 +200,7 @@ class FallbackChain(BaseModel):
 
 
 class FallbackExecutionRecord(BaseModel):
-    """fallback 执行记录（写入 F014 灵忆）"""
+    """fallback 执行记录（写入 F014 EchoStore）"""
     record_id: str
     chain_id: str
     triggered_at: datetime
@@ -212,7 +211,7 @@ class FallbackExecutionRecord(BaseModel):
     recovery_tier: int                        # F022 Tier 1-4
     succeeded: bool
     duration_ms: int = 0
-    echo_store_ref: str                       # 写入 F014 灵忆集合 ID
+    echo_store_ref: str                       # 写入 F014 EchoStore集合 ID
 
 
 class FailureDetector(ABC):
@@ -244,8 +243,8 @@ class FallbackChainBuilder(ABC):
     ) -> FallbackChain:
         """
         基于能力匹配 + 盲点互补 + 成本排序构建 fallback 链：
-        1. 调用 F032 CapabilityMatcher.match_for_task() 获取候选厂商
-        2. 调用 F032 CapabilityMatcher.rank_by_cost_latency() 按成本排序
+        1. 调用 F032 CapabilityMatcher.match_for_task 获取候选厂商
+        2. 调用 F032 CapabilityMatcher.rank_by_cost_latency 按成本排序
         3. 为每个厂商配置 5 种 FallbackTrigger -> FallbackAction 映射
         4. 每步关联 F022 Tier 1-4
         """
@@ -264,11 +263,11 @@ class FallbackChainExecutor(ABC):
         """
         执行 fallback 链：
         1. 调用 initial_call
-        2. FailureDetector.detect_failure() 检测失败
+        2. FailureDetector.detect_failure 检测失败
         3. 按 chain.steps 顺序执行 FallbackAction
         4. 每步关联 F022 Tier 恢复策略
         5. 全部失败 -> DEGRADE_TO_BUILTIN
-        6. 写入 FallbackExecutionRecord 到 F014 灵忆
+        6. 写入 FallbackExecutionRecord 到 F014 EchoStore
         """
         ...
 
@@ -276,7 +275,7 @@ class FallbackChainExecutor(ABC):
     async def write_record_to_echo_store(
         self, record: FallbackExecutionRecord
     ) -> str:
-        """将执行记录写入 F014 灵忆（供 F035 灵锻蒸馏）"""
+        """将执行记录写入 F014 EchoStore（供 F035 SpiritForge 蒸馏）"""
         ...
 ```
 
@@ -314,7 +313,7 @@ class FallbackChainExecutor(ABC):
         `--> operator 不处理: FAIL_FAST
             |
             v
-[4] 写入 FallbackExecutionRecord 到 F014 灵忆
+[4] 写入 FallbackExecutionRecord 到 F014 EchoStore
     `--> FallbackChainExecutor.write_record_to_echo_store(record)
         |-- record.trigger = RATE_LIMIT
         |-- record.from_provider = "claude_code"
@@ -332,10 +331,10 @@ class FallbackChainExecutor(ABC):
     FallbackChainBuilder.build_for_task(task_requirements, forgekin_profile_id)
         |
         v
-    F032 CapabilityMatcher.match_for_task() -> 候选厂商列表
+    F032 CapabilityMatcher.match_for_task -> 候选厂商列表
         |
         v
-    F032 CapabilityMatcher.rank_by_cost_latency() -> 按成本排序
+    F032 CapabilityMatcher.rank_by_cost_latency -> 按成本排序
         |
         v
     为每个厂商配置 5 种 trigger -> action 映射
@@ -356,14 +355,14 @@ class FallbackChainExecutor(ABC):
 
 - **依赖 F022 Tier 1-4 Recovery**：每种 FallbackTrigger 对应一个 Tier，恢复策略由 Tier 决定。
 - **依赖 F032 ExternalAgentProfile**：FallbackChainBuilder 基于 CapabilityMatcher 盲点互补 + 成本排序构建链。
-- **依赖 F014 Memory Collection**：FallbackExecutionRecord 写入灵忆供灵锻蒸馏。
+- **依赖 F014 Memory Collection**：FallbackExecutionRecord 写入EchoStore供SpiritForge 蒸馏。
 - **依赖 F018 Eval Contract**：fallback 执行结果纳入 Eval 信号，影响三方 Agent 可靠性评估。
 - **依赖 core/interfaces**：Repository / DI 容器抽象。
 
 ### 4.2 下游影响
 
-- **影响 A031 ExternalAgentBridge**：Bridge 在调用失败时调用 FallbackChainExecutor.execute() 执行 fallback 链。
-- **影响 F035 能力融合**：FallbackExecutionRecord 作为灵锻蒸馏原料，提升灵智体未来调用决策能力。
+- **影响 A031 ExternalAgentBridge**：Bridge 在调用失败时调用 FallbackChainExecutor.execute 执行 fallback 链。
+- **影响 F035 能力融合**：FallbackExecutionRecord 作为SpiritForge 蒸馏原料，提升Forgekin未来调用决策能力。
 - **影响 F032 能力画像**：fallback 执行结果通过 Eval 信号更新 historical_performance。
 
 ### 4.3 跨模块不变量
@@ -373,8 +372,8 @@ class FallbackChainExecutor(ABC):
 - fallback 链必须基于 F032 能力画像盲点互补 + 成本排序构建，禁止按厂商编号顺序。
 - 每种 FallbackTrigger 必须对应一个 F022 Tier，跨级恢复禁止跳级。
 - 全部三方 Agent 失败必须降级到 FlowForge 内置 agent，禁止任务完全失败。
-- FallbackExecutionRecord 必须写入 F014 灵忆集合，未写入时 fallback 视为未完成。
-- 质量阈值必须为 0.85，禁止灵智体修改。
+- FallbackExecutionRecord 必须写入 F014 EchoStore集合，未写入时 fallback 视为未完成。
+- 质量阈值必须为 0.85，禁止Forgekin修改。
 
 ---
 
@@ -384,7 +383,7 @@ class FallbackChainExecutor(ABC):
 
 - [ ] AC-1: 单向依赖通过 —— `core/external_agent/fallback.py` 仅依赖 F014/F018/F022/F032，无 *Forge 反向 import。
 - [ ] AC-2: DI 容器注入通过 —— FallbackChainExecutor / FallbackChainBuilder 通过 DI 容器注入到 ExternalAgentBridge。
-- [ ] AC-3: Repository 层通过 —— FallbackExecutionRecord 通过 Repository 写入 F014 灵忆，无直接数据库操作。
+- [ ] AC-3: Repository 层通过 —— FallbackExecutionRecord 通过 Repository 写入 F014 EchoStore，无直接数据库操作。
 - [ ] AC-4: 配置驱动通过 —— failure_detection / fallback_chains / chain_builder 配置 YAML 外置到 `config/external_agent.yaml`。
 - [ ] AC-5: 质量阈值通过 —— QUALITY_BELOW_THRESHOLD 触发阈值为 0.85，与项目规则一致。
 
@@ -395,7 +394,7 @@ class FallbackChainExecutor(ABC):
 - [ ] AC-8: 能力画像构建不变量通过 —— FallbackChainBuilder 调用 F032 CapabilityMatcher，非按厂商编号顺序。
 - [ ] AC-9: Tier 联动不变量通过 —— TIMEOUT/RATE_LIMIT -> Tier 1, SERVICE_UNAVAILABLE -> Tier 2, CRASH -> Tier 3, QUALITY_BELOW_THRESHOLD -> Tier 4。
 - [ ] AC-10: 全部失败降级不变量通过 —— fallback 链全部失败时调用 DEGRADE_TO_BUILTIN，任务不失败。
-- [ ] AC-11: 灵忆归档不变量通过 —— FallbackExecutionRecord 在 F014 EchoStore 中可查询。
+- [ ] AC-11: EchoStore归档不变量通过 —— FallbackExecutionRecord 在 F014 EchoStore 中可查询。
 
 ---
 
@@ -420,4 +419,4 @@ class FallbackChainExecutor(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（5 触发 + 5 动作 + 能力画像构建 + Tier 1-4 联动 + 降级内置 + 灵忆归档架构） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（5 触发 + 5 动作 + 能力画像构建 + Tier 1-4 联动 + 降级内置 + EchoStore归档架构） | 架构师 Forgekin（猫头鹰·鲁班） |

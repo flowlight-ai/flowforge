@@ -6,11 +6,10 @@
 > **关联 ADR**: [doc:decisions/008-memory-federation.md]
 > **类型**: memory
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.4]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.4]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -22,9 +21,9 @@
 
 ## 2. 动机（Motivation）
 
-`[doc:review/review.md#RA-024]` 指出：v7.0 的灵忆（EchoStore）基于 sqlite-vec 向量检索 + 关键词 BM25，是典型 RAG 架构。roleagent.md 第 4 章提出三检索入口（grep/语义/索引）互补——grep 精确文本（如函数名）、语义相似（如"如何处理失败"）、结构化索引（如按 Collection + authority 查询）。v7.0 只用向量 + BM25，无法覆盖"我要找 `def handoff_capsule` 这个精确符号"这类场景。
+`[doc:review/review.md#RA-024]` 指出：v7.0 的EchoStore（EchoStore）基于 sqlite-vec 向量检索 + 关键词 BM25，是典型 RAG 架构。roleagent.md 第 4 章提出三检索入口（grep/语义/索引）互补——grep 精确文本（如函数名）、语义相似（如"如何处理失败"）、结构化索引（如按 Collection + authority 查询）。v7.0 只用向量 + BM25，无法覆盖"我要找 `def handoff_capsule` 这个精确符号"这类场景。
 
-不做这个 Feature，F017 消费加权排序缺少多源融合入口，F039 灵典可检索知识库无法实现"按 trigger 字段精确查询"，F020 七类归因矩阵缺少"轨迹检索"工具支撑。这是 roleagent.md 第 4 章检索驱动的适配循环基础。
+不做这个 Feature，F017 消费加权排序缺少多源融合入口，F039 MindCodex可检索知识库无法实现"按 trigger 字段精确查询"，F020 七类归因矩阵缺少"轨迹检索"工具支撑。这是 roleagent.md 第 4 章检索驱动的适配循环基础。
 
 ## 3. 详细设计（Detailed Design）
 
@@ -115,18 +114,18 @@ retrieval_entries:
 
 ### 5.2 集成测试
 
-- 接入 F014 Collection、F017 消费加权排序、F039 灵典可检索。
+- 接入 F014 Collection、F017 消费加权排序、F039 MindCodex 可检索。
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体在多 Collection 场景下用三种入口检索，验证融合结果正确。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin在多 Collection 场景下用三种入口检索，验证融合结果正确。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第4章]
 - [doc:review/review.md#第八章/RA-024]
 - [doc:decisions/008-memory-federation.md]
-- [doc:design/naming-contract.md#2.5]（灵忆 EchoStore）
+- [doc:design/naming-contract.md#2.5]（EchoStore）
 - [doc:features/F014-memory-collection.md]
 - [doc:features/F017-consumption-weighted-ranking.md]
 - [doc:features/F039-mind-codex-searchable.md]
@@ -138,4 +137,3 @@ retrieval_entries:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.4 同号映射 | 文档员灵智体（钢笔·文心） |

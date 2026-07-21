@@ -2,7 +2,7 @@
 
 > **文档编号**: decisions/README.md（v1.0）
 > **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构
-> **参考**: `[doc:clowder-ai/docs/decisions/]` 目录结构
+> **参考**: 标准 ADR 目录结构
 
 ---
 
@@ -15,7 +15,7 @@
 
 > **状态**: proposed | accepted | deprecated | superseded by ADR 0YY
 > **日期**: YYYY-MM-DD
-> **决策者**: operator | 架构师灵智体 | 灵议 Mind Council
+> **决策者**: operator | 架构师可进化智能体 | 多智能体议事（MindCouncil）
 > **依赖**: [doc:xxx]
 
 ## 上下文
@@ -55,7 +55,7 @@
 | [010-distributed-reliability.md](010-distributed-reliability.md) | 分布式可靠性 | ⏳ | RA-037~RA-042 |
 | [011-partnership-math.md](011-partnership-math.md) | 伙伴系统数学 | ⏳ | RA-043~RA-047 |
 | [012-naming-fusion.md](012-naming-fusion.md) | 命名融合（ForgeMind 主名） | ⏳ | review.md §6 |
-| [013-all-things-spirit-mind-vision.md](013-all-things-spirit-mind-vision.md) | 万物灵智体愿景 | ⏳ | VISION.md |
+| [013-all-things-spirit-mind-vision.md](013-all-things-spirit-mind-vision.md) | 可进化智能体愿景 | ⏳ | VISION.md |
 
 ---
 
@@ -66,7 +66,7 @@
 - ADR 005: forgemind 应用层
 - ADR 006: 三方 Agent 集成
 - ADR 012: 命名融合
-- ADR 013: 万物灵智体愿景
+- ADR 013: 可进化智能体愿景
 
 ### P1（Phase 1 完成前必须完成）
 - ADR 002: TeamAct 协作协议
@@ -90,9 +90,9 @@
 |---------|--------|------|
 | 愿景类（013） | operator | 不可委托 |
 | 命名类（012） | operator | 不可委托 |
-| 架构类（002-011） | 架构师灵智体 + operator 审核 | 灵议 Mind Council 协助 |
-| 应用层类（005） | operator + 架构师灵智体 | 涉及万物灵智体愿景 |
-| 三方 Agent 类（006） | 架构师灵智体 + 三方厂商视角 | 灵议协助 |
+| 架构类（002-011） | 架构师可进化智能体 + operator 审核 | 多智能体议事（MindCouncil） 协助 |
+| 应用层类（005） | operator + 架构师可进化智能体 | 涉及可进化智能体愿景 |
+| 三方 Agent 类（006） | 架构师可进化智能体 + 三方厂商视角 | 多智能体议事协助 |
 
 ---
 

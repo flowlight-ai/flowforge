@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]
 > **对应 Feature**: [doc:../features/F024-weak-state-vs-strong-workflow.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A024-weak-state-vs-strong-workflow.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -29,10 +28,10 @@
 
 1. **操作分类的实现**：`OperationClassifier` 按配置的 `serious_operations` 列表分类，如何保证默认开放协作。
 2. **强 workflow 四属性校验**：注册 workflow 时校验四属性齐全，缺一即拒绝。
-3. **每步写 WAL 的协调**：`advance()` 调用 `WalAppender.append_pending` + `WalExecutor.execute` + `WalExecutor.confirm` 三阶段。
-4. **F011 MagicWords 拦截点**：每步执行前调用 `MagicWordsGuard.check()`，命中 magic word 则 reject。
+3. **每步写 WAL 的协调**：`advance` 调用 `WalAppender.append_pending` + `WalExecutor.execute` + `WalExecutor.confirm` 三阶段。
+4. **F011 MagicWords 拦截点**：每步执行前调用 `MagicWordsGuard.check`，命中 magic word 则 reject。
 5. **reject 触发 rollback**：reject 后回滚已执行的可回滚步骤，不可回滚步骤标记 failed。
-6. **replay 按 WAL 回放恢复**：进程重启后未完成的 workflow 按 WAL 回放，调用 `WalReplayer.replay()`。
+6. **replay 按 WAL 回放恢复**：进程重启后未完成的 workflow 按 WAL 回放，调用 `WalReplayer.replay`。
 7. **审计日志的写入**：每步写 AuditEntry，关联 wal_entry_id，写入 F040 Eval Hub。
 8. **强 workflow 状态机**：created → running → success / rejected / failed 的合法转换。
 
@@ -57,7 +56,7 @@
 - **对 F022 Tier 1-4 恢复**：强 workflow 的 rejectable 步骤对应 Tier 0/4，replayable 步骤对应 Tier 1/2。本设计派发恢复请求到 F022。
 - **对 F023 liveness**：强 workflow 每步前检查 liveness，zombie 状态拒绝执行。
 - **对 F040 控制面**：强 workflow 审计日志写入 F040 Eval Hub。本设计派发 `workflow.*` 事件。
-- **对 Forgekin.act()**：Forgekin 执行操作前调用 `OperationClassifier.classify()` 决定走轻量状态机还是强 workflow。
+- **对 Forgekin.act**：Forgekin 执行操作前调用 `OperationClassifier.classify` 决定走轻量状态机还是强 workflow。
 - **对 DI 容器**：需新增 `operation_classifier` / `strong_workflow_engine` / `audit_logger` / `workflow_rollbacker` / `workflow_repository` 五个绑定。
 
 ---
@@ -147,7 +146,7 @@
 │  + insert_workflow(workflow) -> str                                       │
 │  + update_status(workflow_id, status, **fields) -> None                    │
 │  + get(workflow_id) -> Optional[StrongWorkflow]                            │
-│  + query_incomplete() -> list[StrongWorkflow]                              │
+│  + query_incomplete -> list[StrongWorkflow]                              │
 │  + insert_audit(entry) -> str                                              │
 │  + query_audit(workflow_id) -> list[AuditEntry]                           │
 │                                                                            │
@@ -191,10 +190,10 @@ class StepResult(str, Enum):
 WORKFLOW_TRANSITIONS = {
     WorkflowStatus.CREATED: {WorkflowStatus.RUNNING},
     WorkflowStatus.RUNNING: {WorkflowStatus.SUCCESS, WorkflowStatus.REJECTED, WorkflowStatus.FAILED},
-    WorkflowStatus.SUCCESS: set(),  # 终态
+    WorkflowStatus.SUCCESS: set,  # 终态
     WorkflowStatus.REJECTED: {WorkflowStatus.ROLLED_BACK},
     WorkflowStatus.FAILED: {WorkflowStatus.ROLLED_BACK},
-    WorkflowStatus.ROLLED_BACK: set(),  # 终态
+    WorkflowStatus.ROLLED_BACK: set,  # 终态
 }
 
 
@@ -501,7 +500,7 @@ function advance(workflow_id: str) -> WorkflowStep:
         # 所有步骤完成，标记 SUCCESS
         await workflow_repository.update_status(
             workflow_id, WorkflowStatus.SUCCESS,
-            completed_at=now(),
+            completed_at=now,
         )
         await event_bus.publish(
             topic="workflow.completed",
@@ -540,7 +539,7 @@ function advance(workflow_id: str) -> WorkflowStep:
 
     # 6. 写 F021 WAL（先写后执行）
     wal_entry = WalEntry(
-        entry_id=uuid_v7(),
+        entry_id=uuid_v7,
         idempotency_key=f"workflow:{workflow_id}:step:{step.step_id}",
         forgekin_id=workflow.forgekin_id,
         workflow_id=workflow_id,
@@ -549,14 +548,14 @@ function advance(workflow_id: str) -> WorkflowStep:
         action_payload={"action": step.action},
         pre_state=step.pre_state,
         reversible=Reversibility.REVERSIBLE if step.reversible else Reversibility.IRREVERSIBLE,
-        created_at=now(),
+        created_at=now,
     )
     executed_entry = await wal_coordinator.execute_with_wal(wal_entry)
     step = step.model_copy(update={
         "wal_entry_id": executed_entry.entry_id,
         "post_state": executed_entry.post_state,
         "result": StepResult.SUCCESS if executed_entry.status == WalStatus.CONFIRMED else StepResult.FAILED,
-        "executed_at": now(),
+        "executed_at": now,
     })
     await workflow_repository.update_step(
         workflow_id, step.step_id,
@@ -573,7 +572,7 @@ function advance(workflow_id: str) -> WorkflowStep:
         else:
             await workflow_repository.update_status(
                 workflow_id, WorkflowStatus.FAILED,
-                completed_at=now(),
+                completed_at=now,
             )
         return step
 
@@ -610,7 +609,7 @@ function reject(workflow_id: str, reason: str) -> None:
     transition_workflow_status(workflow.status, WorkflowStatus.REJECTED)
     await workflow_repository.update_status(
         workflow_id, WorkflowStatus.REJECTED,
-        completed_at=now(),
+        completed_at=now,
     )
 
     # 2. rollback_on_reject 硬约束
@@ -690,7 +689,7 @@ function replay(workflow_id: str) -> None:
             await workflow_repository.update_step(
                 workflow_id, step.step_id,
                 result=StepResult.SUCCESS,
-                executed_at=now(),
+                executed_at=now,
             )
         else:
             # 无 WAL entry，重新执行
@@ -699,7 +698,7 @@ function replay(workflow_id: str) -> None:
     # 4. 全部步骤完成 → SUCCESS
     await workflow_repository.update_status(
         workflow_id, WorkflowStatus.SUCCESS,
-        completed_at=now(),
+        completed_at=now,
     )
 ```
 
@@ -991,7 +990,7 @@ class DefaultStrongWorkflowEngine(StrongWorkflowEngine):
                 "failure_count": 1,
                 "last_error": reason,
                 "workflow_id": workflow_id,
-                "occurred_at": datetime.now(timezone.utc).isoformat(),
+                "occurred_at": datetime.now(timezone.utc).isoformat,
                 "context_uri": f"workflow://{workflow_id}",
             },
         )
@@ -1037,7 +1036,7 @@ class DefaultStrongWorkflowEngine(StrongWorkflowEngine):
     def _check_transition(
         self, current: WorkflowStatus, target: WorkflowStatus
     ) -> None:
-        allowed = WORKFLOW_TRANSITIONS.get(current, set())
+        allowed = WORKFLOW_TRANSITIONS.get(current, set)
         if target not in allowed:
             raise IllegalWorkflowTransitionError(
                 f"workflow transition {current.value} -> {target.value} "
@@ -1046,7 +1045,7 @@ class DefaultStrongWorkflowEngine(StrongWorkflowEngine):
 
     def _build_wal_entry(self, workflow: StrongWorkflow, step: WorkflowStep) -> WalEntry:
         return WalEntry(
-            entry_id=str(uuid.uuid1()),
+            entry_id=str(uuid.uuid1),
             idempotency_key=f"workflow:{workflow.workflow_id}:step:{step.step_id}",
             forgekin_id=workflow.forgekin_id,
             workflow_id=workflow.workflow_id,
@@ -1082,7 +1081,7 @@ class DefaultAuditLogger(AuditLogger):
         forgekin_id: str = "", operator_id: str = "",
     ) -> str:
         entry = AuditEntry(
-            audit_entry_id=str(uuid.uuid1()),
+            audit_entry_id=str(uuid.uuid1),
             workflow_id=workflow_id,
             step_id=step_id,
             forgekin_id=forgekin_id,
@@ -1095,7 +1094,7 @@ class DefaultAuditLogger(AuditLogger):
         await self._repo.insert_audit(entry)
         await self._bus.publish(
             topic="workflow.audit.logged",
-            payload=entry.model_dump(),
+            payload=entry.model_dump,
         )
         return entry.audit_entry_id
 
@@ -1134,7 +1133,7 @@ class DefaultWorkflowRollbacker(WorkflowRollbacker):
 ```
 [强 workflow 执行时序图]
 
-  Forgekin.act()   classifier   engine       wal_coord   repository   audit_logger   rollbacker   canonical   magic_guard   EventBus   F040
+  Forgekin.act   classifier   engine       wal_coord   repository   audit_logger   rollbacker   canonical   magic_guard   EventBus   F040
         │             │            │             │             │            │              │            │            │           │          │
         │ classify(operation)     │             │             │            │              │            │            │           │          │
         ├────────────>│            │             │             │            │              │            │            │           │          │
@@ -1149,17 +1148,17 @@ class DefaultWorkflowRollbacker(WorkflowRollbacker):
         │                          │                                                                                                    ├────────>│
         │ advance(workflow_id)     │             │             │            │              │            │            │           │          │
         ├────────────────────────>│             │             │            │              │            │            │           │          │
-        │                          │ check_liveness()                                                                                    │           │          │
+        │                          │ check_liveness                                                                                    │           │          │
         │                          ├──────────────────────────────────────────────────────────────────>│            │           │          │
         │                          │<──────────────────────────────────────────────────────────────────┤ OK         │           │          │
-        │                          │ detect_magic_word()                                                                                  │           │          │
+        │                          │ detect_magic_word                                                                                  │           │          │
         │                          ├────────────────────────────────────────────────────────────────────────────────>│           │          │
         │                          │<────────────────────────────────────────────────────────────────────────────────┤ None      │          │
         │                          │ execute_with_wal(wal_entry)                                                                         │           │          │
         │                          ├────────────>│             │            │              │            │            │           │          │
         │                          │             │ append_pending + execute + confirm       │            │            │           │          │
         │                          │<────────────┤ entry         │            │              │            │            │           │          │
-        │                          │ log_step()              │            │              │            │            │           │          │
+        │                          │ log_step              │            │              │            │            │           │          │
         │                          ├──────────────────────────────────────>│              │            │            │           │          │
         │                          │<──────────────────────────────────────┤ audit_id     │            │            │           │          │
         │                          │ update_step + update_status current_step+1                                                       │           │          │
@@ -1200,12 +1199,12 @@ class DefaultWorkflowRollbacker(WorkflowRollbacker):
 
 ### 4.1 上游依赖如何调用
 
-- **Forgekin.act()**：Forgekin 执行操作前调用 `OperationClassifier.classify(operation)` 决定走轻量状态机还是强 workflow。
+- **Forgekin.act**：Forgekin 执行操作前调用 `OperationClassifier.classify(operation)` 决定走轻量状态机还是强 workflow。
 - **F002 TeamAct**：TeamAct 的"严肃操作"步骤调用本设计的 `start + advance`。
 - **F022 Tier 1-4 恢复**：F022 Tier 1/2 通过 `replay(workflow_id)` 回放未完成 workflow。
-- **F023 liveness 规范读**：advance 中调用 `check_liveness()` 检查 zombie。
-- **F011 Magic Words**：advance 中调用 `MagicWordsGuard.detect_magic_word()` 拦截。
-- **F021 副作用 WAL**：advance 中调用 `WalCoordinator.execute_with_wal()`。
+- **F023 liveness 规范读**：advance 中调用 `check_liveness` 检查 zombie。
+- **F011 Magic Words**：advance 中调用 `MagicWordsGuard.detect_magic_word` 拦截。
+- **F021 副作用 WAL**：advance 中调用 `WalCoordinator.execute_with_wal`。
 - **DI 容器**：`strong_workflow_engine` 通过 `inject("strong_workflow_engine")` 获取。
 
 ### 4.2 下游影响如何被调用
@@ -1213,27 +1212,27 @@ class DefaultWorkflowRollbacker(WorkflowRollbacker):
 - **F021 副作用 WAL**：本设计调用 F021 接口写入 / 回放 WAL。
 - **F022 Tier 1-4 恢复**：reject 时派发 `recovery.request` 事件到 F022。
 - **F040 控制面**：所有 workflow 状态变更与审计日志写入 F040 Eval Hub。F040 订阅 `workflow.*` 主题。
-- **Forgekin.learn()**：workflow 执行历史作为 Forgekin 学习输入。
+- **Forgekin.learn**：workflow 执行历史作为 Forgekin 学习输入。
 
 ### 4.3 集成测试点
 
 | 测试点 ID | 测试场景 | 验证点 | 责任方 |
 |----------|---------|--------|--------|
-| IT-D024-001 | 操作分类（严肃操作） | transfer/merge/release 等分类为 SERIOUS_SIDE_EFFECT | 测试员灵智体（蜜獾·平头哥） |
-| IT-D024-002 | 操作分类（默认开放协作） | 未在列表中的操作默认 OPEN_COLLABORATION | 测试员灵智体 |
-| IT-D024-003 | 四属性硬约束 | 缺任一属性拒绝注册 | 测试员灵智体 |
-| IT-D024-004 | workflow 启动 | CREATED → RUNNING 状态转换 | 测试员灵智体 |
-| IT-D024-005 | 推进下一步 + 写 WAL | advance 调用 wal_coordinator.execute_with_wal | 测试员灵智体 |
-| IT-D024-006 | liveness zombie 拒绝执行 | zombie 状态触发 reject | 测试员灵智体 |
-| IT-D024-007 | MagicWords 拦截 | magic word 命中触发 reject | 测试员灵智体 |
-| IT-D024-008 | Tier 4 硬拒 | tier=4 的 step 触发 reject | 测试员灵智体 |
-| IT-D024-009 | step 失败触发 reject | step FAILED 时触发 reject | 测试员灵智体 |
-| IT-D024-010 | reject 回滚可回滚步骤 | 可逆 step 被 rollback | 测试员灵智体 |
-| IT-D024-011 | reject 不可回滚步骤标记 failed | 不可逆 step 标记 FAILED | 测试员灵智体 |
-| IT-D024-012 | 审计日志写入 | AuditEntry 关联 wal_entry_id | 测试员灵智体 |
-| IT-D024-013 | replay 按 WAL 回放 | replay 调用 wal_replayer.replay_entry | 测试员灵智体 |
-| IT-D024-014 | replayable=false 拒绝 replay | 硬约束拒绝 | 测试员灵智体 |
-| IT-D024-015 | 全部步骤完成转 SUCCESS | current_step >= len(steps) → SUCCESS | 测试员灵智体 |
+| IT-D024-001 | 操作分类（严肃操作） | transfer/merge/release 等分类为 SERIOUS_SIDE_EFFECT | 测试员Forgekin（蜜獾·平头哥） |
+| IT-D024-002 | 操作分类（默认开放协作） | 未在列表中的操作默认 OPEN_COLLABORATION | 测试员Forgekin |
+| IT-D024-003 | 四属性硬约束 | 缺任一属性拒绝注册 | 测试员Forgekin |
+| IT-D024-004 | workflow 启动 | CREATED → RUNNING 状态转换 | 测试员Forgekin |
+| IT-D024-005 | 推进下一步 + 写 WAL | advance 调用 wal_coordinator.execute_with_wal | 测试员Forgekin |
+| IT-D024-006 | liveness zombie 拒绝执行 | zombie 状态触发 reject | 测试员Forgekin |
+| IT-D024-007 | MagicWords 拦截 | magic word 命中触发 reject | 测试员Forgekin |
+| IT-D024-008 | Tier 4 硬拒 | tier=4 的 step 触发 reject | 测试员Forgekin |
+| IT-D024-009 | step 失败触发 reject | step FAILED 时触发 reject | 测试员Forgekin |
+| IT-D024-010 | reject 回滚可回滚步骤 | 可逆 step 被 rollback | 测试员Forgekin |
+| IT-D024-011 | reject 不可回滚步骤标记 failed | 不可逆 step 标记 FAILED | 测试员Forgekin |
+| IT-D024-012 | 审计日志写入 | AuditEntry 关联 wal_entry_id | 测试员Forgekin |
+| IT-D024-013 | replay 按 WAL 回放 | replay 调用 wal_replayer.replay_entry | 测试员Forgekin |
+| IT-D024-014 | replayable=false 拒绝 replay | 硬约束拒绝 | 测试员Forgekin |
+| IT-D024-015 | 全部步骤完成转 SUCCESS | current_step >= len(steps) → SUCCESS | 测试员Forgekin |
 
 ---
 
@@ -1304,4 +1303,4 @@ class DefaultWorkflowRollbacker(WorkflowRollbacker):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（双轨操作分类 + 强 workflow 四属性 + 每步写 WAL + F011 MagicWords 拦截 + F023 liveness 检查 + reject rollback + replay 回放 + 审计日志 + 15 集成测试点 + 4 类 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（双轨操作分类 + 强 workflow 四属性 + 每步写 WAL + F011 MagicWords 拦截 + F023 liveness 检查 + reject rollback + replay 回放 + 审计日志 + 15 集成测试点 + 4 类 AC） | 开发者 Forgekin（猎犬·夏洛克） |

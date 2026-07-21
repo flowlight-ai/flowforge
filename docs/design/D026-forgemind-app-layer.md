@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.8]（FR-CORE-008）
 > **对应 arch.md**: [doc:../arch.md#§3.8]
 > **对应 design.md**: [doc:../design.md#§3.8]
 > **对应 Feature**: [doc:../features/F026-forgemind-app-layer.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A026-forgemind-app-layer.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/005-forgemind-application-layer.md] + [doc:../decisions/013-all-things-spirit-mind-vision.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,22 +16,22 @@
 
 ### 1.1 设计问题
 
-A026 架构设计已确定 forgemind 作为 FlowForge Layer 2 应用层，承载多形态智能体（Multi-Form Agent）育灵（Forge Nurturing）代码。本详细设计进一步下沉到代码层，需要解决以下子问题：
+A026 架构设计已确定 forgemind 作为 FlowForge Layer 2 应用层，承载多形态智能体（Multi-Form Agent）Forge Nurturing（Forge Nurturing）代码。本详细设计进一步下沉到代码层，需要解决以下子问题：
 
 1. **ForgeMindPlugin 四钩子的具体注册路径**：`register_forgekins / register_forge_skills / register_council_channels / register_auto_forge_config` 四钩子如何挂接到 FlowForge Plugin Registry 的 `PluginV3` 协议，注册时机与失败回滚策略。
 2. **ForgekinBase 三方法契约的执行模型**：`observe / act / verify` 三方法如何对应 Harness L3/L2/L4，方法签名、返回类型、异常传播路径与超时控制。
 3. **SpeciesRegistry 单例的 DI 注入路径**：DI 容器中 `species_registry` 绑定规则、生命周期、与 ForgePipeline / SensorRegistry / WorldSetting 的注入关系。
-4. **ForgekinEngine 与 HarnessOrchestrator 的对接协议**：ForgekinEngine 作为灵智体执行引擎宿主，如何把 ForgekinBase 三方法转译为 Harness 七层调用。
-5. **5 预置灵智体 YAML 加载与校验**：猫头鹰·鲁班 / 猎犬·夏洛克 / 孔雀·梵高 / 蜜獾·平头哥 / 钢笔·文心 5 个预置灵智体的 YAML schema、加载顺序、必填字段校验。
+4. **ForgekinEngine 与 HarnessOrchestrator 的对接协议**：ForgekinEngine 作为Forgekin执行引擎宿主，如何把 ForgekinBase 三方法转译为 Harness 七层调用。
+5. **5 预置Forgekin YAML 加载与校验**：猫头鹰·鲁班 / 猎犬·夏洛克 / 孔雀·梵高 / 蜜獾·平头哥 / 钢笔·文心 5 个预置Forgekin的 YAML schema、加载顺序、必填字段校验。
 6. **觉醒阶晋升的 Eval 信号回流路径**：E1 -> E2 / E2 -> E3 晋升触发条件、Eval Contract 五问的调用时机、质量分阈值 0.85 的硬门实现。
 7. **forgemind 反向依赖零容忍的静态校验**：如何在 CI 中扫描 `flowforge/core/` 是否 import forgemind 模块。
 
 ### 1.2 设计约束
 
 - **单向依赖约束**：`flowforge/forgemind/` 是 Layer 2 应用层，单向依赖 `flowforge/core/`（L1 底座）+ `flowforge/loop/` + `flowforge/modes/`，禁止 `flowforge/core/` 反向 `import flowforge.forgemind.*`（架构红线第 12 条 + 编程红线第 10 条）。
-- **DI 容器约束**：ForgekinBase 实例必须通过 `ForgekinEngine.load_forgekin()` 注入，ForgeMindPlugin / SpeciesRegistry / ForgePipeline 必须通过 DI 容器解析，禁止 `ForgekinBase()` / `SpeciesRegistry()` 直接实例化（编程红线第 12 条）。
-- **Repository 层约束**：灵印（MindImprint）写入必须经 `MindImprintRepository` 抽象，形态进化记录必须经 `ForgekinLineageRepository`，禁止 `cursor.execute()` 直接操作数据库（架构红线第 4 条）。
-- **配置驱动约束**：5 形态定义、6 步锻造清单、5 预置灵智体描述必须 YAML 外置到 `forgemind/config/*.yaml`，禁止 .py 硬编码（架构红线第 5 条 + P16）。
+- **DI 容器约束**：ForgekinBase 实例必须通过 `ForgekinEngine.load_forgekin` 注入，ForgeMindPlugin / SpeciesRegistry / ForgePipeline 必须通过 DI 容器解析，禁止 `ForgekinBase` / `SpeciesRegistry` 直接实例化（编程红线第 12 条）。
+- **Repository 层约束**：SoulImprint（SoulImprint）写入必须经 `SoulImprintRepository` 抽象，形态进化记录必须经 `ForgekinLineageRepository`，禁止 `cursor.execute` 直接操作数据库（架构红线第 4 条）。
+- **配置驱动约束**：5 形态定义、6 步锻造清单、5 预置Forgekin描述必须 YAML 外置到 `forgemind/config/*.yaml`，禁止 .py 硬编码（架构红线第 5 条 + P16）。
 - **业务领域代码零容忍**：forgemind 严禁包含内容创作 / 小说 / 电商 / 开发等垂直业务领域代码（编程红线第 10 条），垂直业务必须放到对应 *Forge 子项目。
 - **Plugin V3 协议约束**：forgemind 通过 `ForgeMindPlugin` 实现四钩子注册到 FlowForge Plugin Registry，不直接调用 Plugin Registry 内部 API。
 - **异步约束**：所有 I/O 操作使用 `async/await`，禁止同步阻塞调用。
@@ -42,12 +41,12 @@ A026 架构设计已确定 forgemind 作为 FlowForge Layer 2 应用层，承载
 ### 1.3 设计影响
 
 - **对核心框架层（L1）的影响**：要求 `core/plugin/` 暴露 Plugin V3 四钩子注册点 `register_forgekins / register_forge_skills / register_council_channels / register_auto_forge_config`；要求 `core/harness/` 暴露 HarnessOrchestrator 端口供 ForgekinEngine 对接。
-- **对 *Forge 子项目的影响**：明确 *Forge 不再承载通用灵智体代码，*Forge 只保留垂直业务 Plugin，复用 forgemind 提供的 ForgekinBase / ForgePipeline / SensorAdapter / WorldSetting 抽象。
+- **对 *Forge 子项目的影响**：明确 *Forge 不再承载通用Forgekin代码，*Forge 只保留垂直业务 Plugin，复用 forgemind 提供的 ForgekinBase / ForgePipeline / SensorAdapter / WorldSetting 抽象。
 - **对 F027 形态分类的影响**：forgemind 提供 SpeciesRegistry 容器与 `forgemind/species.py` 文件，F027 在此落地 5 形态枚举与形态门控逻辑。
 - **对 F028 锻造流水线的影响**：forgemind 提供 ForgePipeline 编排框架与 `forgemind/forging/` 目录，F028 实现 6 步具体阶段处理器。
 - **对 F029 物理 AI 传感器的影响**：forgemind 提供 SensorAdapter 抽象与 `forgemind/sensors/` 目录，F029 落地摄像头/麦克风/IoT 适配器。
 - **对 F030 虚拟世界设定层的影响**：forgemind 提供 WorldSetting 抽象与 `forgemind/worlds/` 目录，F030 落地三层世界引擎。
-- **对 F036 / F037 / F038 / F039 的影响**：forgemind 提供市场发布接口、谱系追踪接口、灵典承载目录，供 F036-F039 落地具体能力。
+- **对 F036 / F037 / F038 / F039 的影响**：forgemind 提供市场发布接口、谱系追踪接口、MindCodex承载目录，供 F036-F039 落地具体能力。
 - **对 Eval 自代谢系统的影响**：forgemind 触发的觉醒阶晋升必须经 Eval Contract 五问（F018）评估通过，Eval 信号回流到 forgemind 形成自进化闭环。
 - **对 DI 容器的影响**：需新增 `forgekin_engine / species_registry / forge_pipeline / mind_imprint_repo / forgekin_lineage_repo / mind_council` 等绑定。
 
@@ -68,8 +67,8 @@ A026 架构设计已确定 forgemind 作为 FlowForge Layer 2 应用层，承载
 │  + OBJ                              + E3_SENSE      (感知阶 / L1 Reactive)  │
 │  + VIRTUAL                          + E4_ACT        (行动阶 / L2 Tool-Using)│
 │  + HYBRID                           + E5_EVOLVING   (进化阶 / L3 Self-Impr) │
-│                                     + E6_FORGEMIND  (灵智阶 / L4 Self-Evolv) │
-│  <<model>> MindImprint                                                        │
+│                                     + E6_FORGEMIND  (ForgeMind 阶 / L4 Self-Evolv) │
+│  <<model>> SoulImprint                                                        │
 │  + imprint_id: str                 <<model>> ForgekinFormData                │
 │  + soul_imprint_hash: str          + species: ForgekinSpecies                │
 │  + species: ForgekinSpecies        + physical_description: str               │
@@ -77,20 +76,20 @@ A026 架构设计已确定 forgemind 作为 FlowForge Layer 2 应用层，承载
 │                                    + sensor_channels: list[str]              │
 │  <<abstract>> ForgekinBase         + world_setting_id: str?                  │
 │  + forgekin_id: str                                                           │
-│  + mind_imprint: MindImprint       <<plugin>> ForgeMindPlugin                │
-│  + form_data: ForgekinFormData     + register_forgekins() -> list[dict]      │
-│  + evolution_stage: EvolutionStage + register_forge_skills() -> list[dict]   │
-│  + lineage_id: str?                + register_council_channels() -> list     │
-│  # observe() -> dict[str, Any]     + register_auto_forge_config() -> dict    │
+│  + mind_imprint: SoulImprint       <<plugin>> ForgeMindPlugin                │
+│  + form_data: ForgekinFormData     + register_forgekins -> list[dict]      │
+│  + evolution_stage: EvolutionStage + register_forge_skills -> list[dict]   │
+│  + lineage_id: str?                + register_council_channels -> list     │
+│  # observe -> dict[str, Any]     + register_auto_forge_config -> dict    │
 │  # act(action, params) -> dict                                               │
 │  # verify(evidence) -> bool        <<port>> ForgekinEnginePort               │
 │                                    + load_forgekin(id) -> ForgekinBase       │
 │  <<interface>> SpeciesRegistry     + execute_observe_act_verify(...)         │
 │  + register(profile) -> str                                                   │
-│  + get(species) -> SpeciesProfile  <<interface>> MindImprintRepository       │
+│  + get(species) -> SpeciesProfile  <<interface>> SoulImprintRepository       │
 │  + list_evolution_paths(species)   + insert(imprint) -> str                  │
-│  + assert_sensor_allowed(...)      + get(imprint_id) -> MindImprint?         │
-│  + assert_world_setting_allowed()  + hash_exists(hash) -> bool               │
+│  + assert_sensor_allowed(...)      + get(imprint_id) -> SoulImprint?         │
+│  + assert_world_setting_allowed  + hash_exists(hash) -> bool               │
 │                                                                              │
 │  <<interface>> ForgekinLineageRepo <<interface>> MindCouncil                 │
 │  + append(record) -> str           + convene(topic, members) -> str          │
@@ -130,11 +129,11 @@ class ForgekinSpecies(str, Enum):
 
     三标注：中文 / 英文 / AI 业界路径
     """
-    BIO = "bio"               # BioForgekin 生物灵智体（Embodied AI 路径）
-    ORG = "org"               # OrgForgekin 组织灵智体
-    OBJ = "obj"               # ObjForgekin 物品灵智体（Embodied AI 路径）
-    VIRTUAL = "virtual"       # VirtualForgekin 虚拟灵智体（Character AI 路径）
-    HYBRID = "hybrid"         # HybridForgekin 混合灵智体
+    BIO = "bio"               # BioForgekin 生物Forgekin（Embodied AI 路径）
+    ORG = "org"               # OrgForgekin 组织Forgekin
+    OBJ = "obj"               # ObjForgekin 物品Forgekin（Embodied AI 路径）
+    VIRTUAL = "virtual"       # VirtualForgekin 虚拟Forgekin（Character AI 路径）
+    HYBRID = "hybrid"         # HybridForgekin 混合Forgekin
 
 
 class EvolutionStage(str, Enum):
@@ -148,16 +147,16 @@ class EvolutionStage(str, Enum):
     E3_SENSE = "E3_sense"          # E3 感知阶（Sense / L1 Reactive）
     E4_ACT = "E4_act"              # E4 行动阶（Act / L2 Tool-Using）
     E5_EVOLVING = "E5_evolving"    # E5 进化阶（Evolving / L3 Self-Improving）
-    E6_FORGEMIND = "E6_forgemind"  # E6 灵智阶（ForgeMind / L4 Self-Evolving Agent）
+    E6_FORGEMIND = "E6_forgemind"  # E6 ForgeMind 阶（ForgeMind / L4 Self-Evolving Agent）
 
 
-class MindImprint(BaseModel):
-    """灵印（MindImprint）—— 灵智体不可变身份锚点
+class SoulImprint(BaseModel):
+    """SoulImprint（SoulImprint）—— Forgekin不可变身份锚点
 
     架构契约：
     - soul_imprint_hash 全局唯一且不可变
     - species 写入后保留原值（即使形态进化，原 species 不修改）
-    - 通过 MindImprintRepository 持久化到 F008 Durable State Surfaces
+    - 通过 SoulImprintRepository 持久化到 F008 Durable State Surfaces
     """
     model_config = ConfigDict(frozen=True)
 
@@ -168,7 +167,7 @@ class MindImprint(BaseModel):
 
 
 class ForgekinFormData(BaseModel):
-    """灵智体形态数据（描述物理/虚拟形态）"""
+    """Forgekin形态数据（描述物理/虚拟形态）"""
     species: ForgekinSpecies
     physical_description: str = Field(min_length=1, max_length=2048)
     virtual_description: str = Field(default="", max_length=2048)
@@ -177,17 +176,17 @@ class ForgekinFormData(BaseModel):
 
 
 class ForgekinBase(ABC, BaseModel):
-    """灵智体抽象基类（三方法契约）
+    """Forgekin抽象基类（三方法契约）
 
     架构契约：
     - observe -> Harness L3 Evidence & Sensors
     - act     -> Harness L2 Tool Mediation
     - verify  -> Harness L4 Governance Boundary
     - 三方法缺一即架构契约违反
-    - 实例化必须通过 ForgekinEngine.load_forgekin()，禁止直接 ForgekinBase()
+    - 实例化必须通过 ForgekinEngine.load_forgekin，禁止直接 ForgekinBase
     """
     forgekin_id: str = Field(min_length=1)
-    mind_imprint: MindImprint
+    mind_imprint: SoulImprint
     form_data: ForgekinFormData
     evolution_stage: EvolutionStage = EvolutionStage.E1_DORMANT
     lineage_id: Optional[str] = None
@@ -200,7 +199,7 @@ class ForgekinBase(ABC, BaseModel):
         对应 Harness L3 Evidence & Sensors：
         - BIO/OBJ/HYBRID 形态：通过 SensorAdapter 读取物理世界
         - VIRTUAL/HYBRID 形态：通过 WorldSetting 读取虚拟世界状态
-        - 任何形态：可读取 EchoStore 中的近期灵忆条目
+        - 任何形态：可读取 EchoStore 中的近期EchoStore条目
         返回 Observation dict（含 sensor_snapshot / world_state / recent_echoes）
         """
         ...
@@ -221,7 +220,7 @@ class ForgekinBase(ABC, BaseModel):
         """验证现实（通过 Evidence & Sensors 反馈）
 
         对应 Harness L4 Governance Boundary：
-        - 校验 act() 产出是否满足预期
+        - 校验 act 产出是否满足预期
         - 校验治理规则是否被违反（如 forbidden_actions 未触发）
         - 返回 bool（true=通过 / false=需回滚或告警）
         """
@@ -240,7 +239,7 @@ class ForgeMindPlugin:
 
     架构契约：
     - 不直接调用 Plugin Registry 内部 API
-    - 四钩子在 FlowForge 启动时被 PluginRegistry.load() 调用
+    - 四钩子在 FlowForge 启动时被 PluginRegistry.load 调用
     - 任一钩子失败则 forgemind 整体注册失败，ForgekinEngine 拒绝加载任何 Forgekin
     """
 
@@ -248,43 +247,43 @@ class ForgeMindPlugin:
     plugin_version: str = "1.0.0"
 
     @staticmethod
-    def register_forgekins() -> list[dict[str, Any]]:
-        """钩子 1：注册通用灵智体形态（5 种）
+    def register_forgekins -> list[dict[str, Any]]:
+        """钩子 1：注册通用Forgekin形态（5 种）
 
         返回 5 形态枚举的描述信息，供 ForgekinEngine 在运行时按需加载
         """
         return [
             {
                 "species": ForgekinSpecies.BIO.value,
-                "name": "生物灵智体",
+                "name": "生物Forgekin",
                 "ai_path": "Embodied AI",
                 "require_sensor": True,
                 "require_world_setting": False,
             },
             {
                 "species": ForgekinSpecies.ORG.value,
-                "name": "组织灵智体",
+                "name": "组织Forgekin",
                 "ai_path": "Organizational Agent",
                 "require_sensor": False,
                 "require_world_setting": False,
             },
             {
                 "species": ForgekinSpecies.OBJ.value,
-                "name": "物品灵智体",
+                "name": "物品Forgekin",
                 "ai_path": "Embodied AI",
                 "require_sensor": True,
                 "require_world_setting": False,
             },
             {
                 "species": ForgekinSpecies.VIRTUAL.value,
-                "name": "虚拟灵智体",
+                "name": "虚拟Forgekin",
                 "ai_path": "Character AI",
                 "require_sensor": False,
                 "require_world_setting": True,
             },
             {
                 "species": ForgekinSpecies.HYBRID.value,
-                "name": "混合灵智体",
+                "name": "混合Forgekin",
                 "ai_path": "Hybrid Embodied + Character",
                 "require_sensor": True,
                 "require_world_setting": True,
@@ -292,7 +291,7 @@ class ForgeMindPlugin:
         ]
 
     @staticmethod
-    def register_forge_skills() -> list[dict[str, Any]]:
+    def register_forge_skills -> list[dict[str, Any]]:
         """钩子 2：注册锻造技能（与进化阶绑定）
 
         返回 skill -> stage 映射，供 ForgePipeline 在觉醒阶晋升时启用对应技能
@@ -306,10 +305,10 @@ class ForgeMindPlugin:
         ]
 
     @staticmethod
-    def register_council_channels() -> list[dict[str, Any]]:
-        """钩子 3：注册灵议通道（多 Forgekin 协作）
+    def register_council_channels -> list[dict[str, Any]]:
+        """钩子 3：注册MindCouncil通道（多 Forgekin 协作）
 
-        返回 channel 配置，供 MindCouncil 在多灵智体议事时使用
+        返回 channel 配置，供 MindCouncil 在多 Forgekin议事时使用
         """
         return [
             {
@@ -322,7 +321,7 @@ class ForgeMindPlugin:
         ]
 
     @staticmethod
-    def register_auto_forge_config() -> dict[str, Any]:
+    def register_auto_forge_config -> dict[str, Any]:
         """钩子 4：注册自锻造配置（与 F035 能力融合联动）
 
         返回自锻造调度配置，供 ForgePipeline 在低活动时段触发自锻造
@@ -356,9 +355,9 @@ class ForgekinEnginePort(ABC):
 
     @abstractmethod
     async def load_forgekin(self, forgekin_id: str) -> ForgekinBase:
-        """加载灵智体实例（DI 注入依赖）
+        """加载Forgekin实例（DI 注入依赖）
 
-        - 从 MindImprintRepository 读取灵印
+        - 从 SoulImprintRepository 读取SoulImprint
         - 从 ForgekinLineageRepository 读取最新进化记录
         - 注入 CapabilityProfile / EchoStore / SensorAdapter / WorldSetting
         - 返回 ForgekinBase 实例（具体子类由 species 决定）
@@ -405,31 +404,31 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional
 from datetime import datetime
-from .base import MindImprint, ForgekinSpecies, EvolutionStage
+from .base import SoulImprint, ForgekinSpecies, EvolutionStage
 
 
-class MindImprintRepository(ABC):
-    """灵印 Repository（禁直操作数据库，必须经 ORM）
+class SoulImprintRepository(ABC):
+    """SoulImprint Repository（禁直操作数据库，必须经 ORM）
 
     架构契约：
-    - 灵印是 Forgekin 不可变身份锚点，写入后永不可修改
+    - SoulImprint是 Forgekin 不可变身份锚点，写入后永不可修改
     - soul_imprint_hash 全局唯一，重复写入抛 IntegrityError
     - 持久化到 F008 Durable State Surfaces
     """
 
     @abstractmethod
-    async def insert(self, imprint: MindImprint) -> str:
-        """插入灵印（不可变，重复 hash 抛异常）"""
+    async def insert(self, imprint: SoulImprint) -> str:
+        """插入SoulImprint（不可变，重复 hash 抛异常）"""
         ...
 
     @abstractmethod
-    async def get(self, imprint_id: str) -> Optional[MindImprint]:
-        """按 ID 读取灵印"""
+    async def get(self, imprint_id: str) -> Optional[SoulImprint]:
+        """按 ID 读取SoulImprint"""
         ...
 
     @abstractmethod
-    async def get_by_forgekin_id(self, forgekin_id: str) -> Optional[MindImprint]:
-        """按 forgekin_id 读取灵印"""
+    async def get_by_forgekin_id(self, forgekin_id: str) -> Optional[SoulImprint]:
+        """按 forgekin_id 读取SoulImprint"""
         ...
 
     @abstractmethod
@@ -462,7 +461,7 @@ class ForgekinLineageRepository(ABC):
 
     @abstractmethod
     async def get_lineage(self, forgekin_id: str) -> list[SpeciesEvolutionRecord]:
-        """读取灵智体的完整谱系（按时间排序）"""
+        """读取Forgekin的完整谱系（按时间排序）"""
         ...
 
     @abstractmethod
@@ -472,12 +471,12 @@ class ForgekinLineageRepository(ABC):
 
 
 class MindCouncil(ABC):
-    """灵议（Mind Council）—— 多 Forgekin 协作议事
+    """MindCouncil（MindCouncil）—— 多 Forgekin 协作议事
 
     架构契约：
     - 复用 F002 TeamAct 六步循环 + Handoff Capsule
     - 议事结果必须经 Eval Contract 评估
-    - 议事产出写入 F014 灵忆
+    - 议事产出写入 F014 EchoStore
     """
 
     @abstractmethod
@@ -487,7 +486,7 @@ class MindCouncil(ABC):
         members: list[str],  # forgekin_id 列表
         context: dict,
     ) -> str:
-        """召集灵议（返回 session_id）"""
+        """召集MindCouncil（返回 session_id）"""
         ...
 
     @abstractmethod
@@ -509,7 +508,7 @@ from __future__ import annotations
 from typing import Optional, Any
 from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
-from .base import ForgekinSpecies, EvolutionStage, MindImprint, ForgekinFormData
+from .base import ForgekinSpecies, EvolutionStage, SoulImprint, ForgekinFormData
 
 
 class ForgekinConfig(BaseModel):
@@ -523,7 +522,7 @@ class ForgekinConfig(BaseModel):
 
 
 class PresetForgekinSpec(BaseModel):
-    """预置灵智体 YAML schema（5 个预置灵智体）"""
+    """预置Forgekin YAML schema（5 个预置Forgekin）"""
     forgekin_id: str = Field(min_length=1)
     name: str = Field(min_length=1, max_length=64)
     species: ForgekinSpecies
@@ -557,7 +556,7 @@ class PresetForgekinSpec(BaseModel):
 
 
 class ForgekinRegistrationRequest(BaseModel):
-    """对外暴露的灵智体注册请求"""
+    """对外暴露的Forgekin注册请求"""
     name: str = Field(min_length=1, max_length=64)
     species: ForgekinSpecies
     physical_description: str = Field(min_length=1, max_length=2048)
@@ -569,7 +568,7 @@ class ForgekinRegistrationRequest(BaseModel):
 
 
 class Observation(BaseModel):
-    """observe() 返回的观察结果"""
+    """observe 返回的观察结果"""
     forgekin_id: str
     timestamp: datetime
     sensor_snapshot: dict[str, Any] = Field(default_factory=dict)
@@ -579,7 +578,7 @@ class Observation(BaseModel):
 
 
 class ActionResult(BaseModel):
-    """act() 返回的行动结果"""
+    """act 返回的行动结果"""
     forgekin_id: str
     action: str
     success: bool
@@ -591,7 +590,7 @@ class ActionResult(BaseModel):
 
 
 class VerifyResult(BaseModel):
-    """verify() 返回的验证结果"""
+    """verify 返回的验证结果"""
     forgekin_id: str
     passed: bool
     governance_violations: list[str] = Field(default_factory=list)
@@ -611,7 +610,7 @@ class EvolutionPromotionRequest(BaseModel):
 
 
 class CouncilConveneRequest(BaseModel):
-    """灵议召集请求"""
+    """MindCouncil召集请求"""
     topic: str = Field(min_length=1, max_length=256)
     members: list[str] = Field(min_length=2, max_length=20)
     context: dict
@@ -620,11 +619,11 @@ class CouncilConveneRequest(BaseModel):
 
 ### 2.4 关键算法伪代码
 
-#### 2.4.1 ForgekinEngine 加载灵智体算法
+#### 2.4.1 ForgekinEngine 加载Forgekin算法
 
 ```
 function load_forgekin(forgekin_id: str) -> ForgekinBase:
-    # 1. 从 Repository 读取灵印（不可变身份锚点）
+    # 1. 从 Repository 读取SoulImprint（不可变身份锚点）
     imprint = await mind_imprint_repo.get_by_forgekin_id(forgekin_id)
     if imprint is None:
         raise ForgekinNotFoundError(forgekin_id)
@@ -642,7 +641,7 @@ function load_forgekin(forgekin_id: str) -> ForgekinBase:
     sensor_adapter = await sensor_registry.list_bindings(forgekin_id) if species in [BIO, OBJ, HYBRID] else []
     world_setting = await world_setting_repo.get(forgekin_id) if species in [VIRTUAL, HYBRID] else None
 
-    # 5. 构造 ForgekinBase 实例（禁止直接 ForgekinBase()，必须用具体子类）
+    # 5. 构造 ForgekinBase 实例（禁止直接 ForgekinBase，必须用具体子类）
     forgekin = forgekin_class(
         forgekin_id=forgekin_id,
         mind_imprint=imprint,
@@ -662,7 +661,7 @@ function load_forgekin(forgekin_id: str) -> ForgekinBase:
 function execute_observe_act_verify(forgekin_id, action, params) -> dict:
     # 阶段 1: observe（Harness L3 Evidence & Sensors）
     try:
-        observation = await forgekin.observe()
+        observation = await forgekin.observe
         if observation.health_status == "offline":
             return {success: false, phase: "observe", error: "forgekin_offline"}
     except SensorUnavailableError as e:
@@ -738,13 +737,13 @@ function promote_evolution_stage(forgekin_id, target_stage, eval_signal) -> None
 
     # 5. 写入进化记录（增量 append，不覆盖历史）
     record = SpeciesEvolutionRecord(
-        record_id=uuid_v7(),
+        record_id=uuid_v7,
         forgekin_id=forgekin_id,
         from_species=current_record.to_species if current_record else imprint.species,
         to_species=current_record.to_species if current_record else imprint.species,  # 形态进化单独触发
         from_stage=current_stage,
         to_stage=target_stage,
-        triggered_at=now(),
+        triggered_at=now,
         operator_approved=eval_signal.operator_approved,
         eval_quality_score=eval_signal.quality_score,
         rationale=eval_signal.rationale,
@@ -752,7 +751,7 @@ function promote_evolution_stage(forgekin_id, target_stage, eval_signal) -> None
     await forgekin_lineage_repo.append(record)
 
     # 6. 更新 forgekin.evolution_stage（在下一次 load_forgekin 时生效）
-    # 注意：灵印 species 字段不修改（保留血缘痕迹）
+    # 注意：SoulImprint species 字段不修改（保留血缘痕迹）
 
     # 7. 发射事件
     await event_bus.emit(EvolutionPromotedEvent(
@@ -767,12 +766,12 @@ function promote_evolution_stage(forgekin_id, target_stage, eval_signal) -> None
 ```
 function register_forge_mind_plugin(plugin_registry: PluginRegistry) -> None:
     # 1. 注册四钩子
-    plugin = ForgeMindPlugin()
+    plugin = ForgeMindPlugin
 
-    forgekins = plugin.register_forgekins()          # 钩子 1
-    forge_skills = plugin.register_forge_skills()    # 钩子 2
-    council_channels = plugin.register_council_channels()  # 钩子 3
-    auto_forge_config = plugin.register_auto_forge_config()  # 钩子 4
+    forgekins = plugin.register_forgekins          # 钩子 1
+    forge_skills = plugin.register_forge_skills    # 钩子 2
+    council_channels = plugin.register_council_channels  # 钩子 3
+    auto_forge_config = plugin.register_auto_forge_config  # 钩子 4
 
     # 2. 校验四钩子返回值非空
     for name, value in [
@@ -796,13 +795,13 @@ function register_forge_mind_plugin(plugin_registry: PluginRegistry) -> None:
         },
     )
 
-    # 4. 加载 5 预置灵智体 YAML
+    # 4. 加载 5 预置Forgekin YAML
     preset_path = Path("forgemind/config/forgekins/")
     for yaml_file in preset_path.glob("*.yaml"):
-        spec = PresetForgekinSpec(**yaml.safe_load(yaml_file.read_text()))
+        spec = PresetForgekinSpec(**yaml.safe_load(yaml_file.read_text))
         await species_registry.register_preset_forgekin(spec)
 
-    # 5. 注册成功后 ForgekinEngine 可加载灵智体
+    # 5. 注册成功后 ForgekinEngine 可加载Forgekin
     logger.info("ForgeMindPlugin registered successfully",
                 extra={"forgekins_count": len(forgekins)})
 ```
@@ -823,7 +822,7 @@ from uuid import uuid7
 from flowforge.forgemind.base import ForgekinBase, EvolutionStage
 from flowforge.forgemind.engine import ForgekinEnginePort
 from flowforge.forgemind.repositories import (
-    MindImprintRepository, ForgekinLineageRepository, SpeciesEvolutionRecord,
+    SoulImprintRepository, ForgekinLineageRepository, SpeciesEvolutionRecord,
 )
 from flowforge.forgemind.models import Observation, ActionResult, VerifyResult
 
@@ -838,7 +837,7 @@ class HarnessForgekinEngine(ForgekinEnginePort):
 
     def __init__(
         self,
-        mind_imprint_repo: MindImprintRepository,
+        mind_imprint_repo: SoulImprintRepository,
         forgekin_lineage_repo: ForgekinLineageRepository,
         capability_profile_repo,  # F001
         sensor_registry,          # F029
@@ -883,7 +882,7 @@ class HarnessForgekinEngine(ForgekinEnginePort):
 
         # 阶段 1: observe
         try:
-            observation = await forgekin.observe()
+            observation = await forgekin.observe
         except Exception as e:
             return {"success": False, "phase": "observe", "error": str(e)}
 
@@ -940,7 +939,7 @@ class HarnessForgekinEngine(ForgekinEnginePort):
             )
 
         record = SpeciesEvolutionRecord(
-            record_id=str(uuid7()),
+            record_id=str(uuid7),
             forgekin_id=forgekin_id,
             from_species=latest.to_species if latest else (await self._imprint_repo.get_by_forgekin_id(forgekin_id)).species,
             to_species=latest.to_species if latest else (await self._imprint_repo.get_by_forgekin_id(forgekin_id)).species,
@@ -967,11 +966,11 @@ def _register_forgemind_bindings(container: DIContainer, config: "ForgekinConfig
     # Repository（每次注入新建 session）
     container.register_factory(
         "mind_imprint_repository",
-        lambda: SqlAlchemyMindImprintRepository(get_async_session_factory()),
+        lambda: SqlAlchemySoulImprintRepository(get_async_session_factory),
     )
     container.register_factory(
         "forgekin_lineage_repository",
-        lambda: SqlAlchemyForgekinLineageRepository(get_async_session_factory()),
+        lambda: SqlAlchemyForgekinLineageRepository(get_async_session_factory),
     )
 
     # ForgekinEngine（单例，端口注入）
@@ -989,7 +988,7 @@ def _register_forgemind_bindings(container: DIContainer, config: "ForgekinConfig
     )
 
     # ForgeMindPlugin（单例）
-    container.register_singleton("forge_mind_plugin", lambda: ForgeMindPlugin())
+    container.register_singleton("forge_mind_plugin", lambda: ForgeMindPlugin)
 
     # MindCouncil（单例，复用 F002 TeamAct）
     container.register_singleton(
@@ -1001,7 +1000,7 @@ def _register_forgemind_bindings(container: DIContainer, config: "ForgekinConfig
     )
 ```
 
-#### 3.1.3 预置灵智体 YAML 加载器
+#### 3.1.3 预置Forgekin YAML 加载器
 
 ```python
 # flowforge/forgemind/config_loader.py
@@ -1012,7 +1011,7 @@ from .models import PresetForgekinSpec, ForgekinConfig
 
 
 class PresetForgekinLoader:
-    """5 预置灵智体 YAML 加载器"""
+    """5 预置Forgekin YAML 加载器"""
 
     PRESET_FILES = [
         "owl_luban.yaml",        # 猫头鹰·鲁班（架构师）
@@ -1029,7 +1028,7 @@ class PresetForgekinLoader:
         specs: list[PresetForgekinSpec] = []
         for filename in self.PRESET_FILES:
             filepath = self._dir / filename
-            if not filepath.exists():
+            if not filepath.exists:
                 raise FileNotFoundError(f"preset forgekin YAML missing: {filepath}")
             with open(filepath, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
@@ -1050,7 +1049,7 @@ class ForgekinConfigLoader:
         return ForgekinConfig(**data["forgemind"])
 ```
 
-#### 3.1.4 预置灵智体 YAML 配置示例
+#### 3.1.4 预置Forgekin YAML 配置示例
 
 ```yaml
 # flowforge/forgemind/config/forgekins/owl_luban.yaml
@@ -1058,7 +1057,7 @@ forgekin_id: "preset_owl_luban"
 name: "猫头鹰·鲁班"
 species: "virtual"
 physical_description: ""
-virtual_description: "架构师灵智体，负责系统设计与架构决策"
+virtual_description: "架构师 Forgekin，负责系统设计与架构决策"
 sensor_channels: []
 world_setting_id: "forgemind_workspace"
 seed_capabilities:
@@ -1083,25 +1082,25 @@ responsibility: "架构师"
 ```
 FlowForge启动     PluginRegistry     ForgeMindPlugin     SpeciesRegistry     ForgekinEngine
     │                   │                   │                   │                   │
-    │ load_plugins()    │                   │                   │                   │
+    │ load_plugins    │                   │                   │                   │
     ├──────────────────▶│                   │                   │                   │
     │                   │                   │                   │                   │
     │                   │ discover ForgeMindPlugin              │                   │
     │                   ├──────────────────▶│                   │                   │
     │                   │                   │                   │                   │
-    │                   │ register_forgekins() (钩子1)          │                   │
+    │                   │ register_forgekins (钩子1)          │                   │
     │                   ├──────────────────▶│                   │                   │
     │                   │◀── 5 形态枚举 ────┤                   │                   │
     │                   │                   │                   │                   │
-    │                   │ register_forge_skills() (钩子2)       │                   │
+    │                   │ register_forge_skills (钩子2)       │                   │
     │                   ├──────────────────▶│                   │                   │
     │                   │◀── skill->stage ─┤                   │                   │
     │                   │                   │                   │                   │
-    │                   │ register_council_channels() (钩子3)   │                   │
+    │                   │ register_council_channels (钩子3)   │                   │
     │                   ├──────────────────▶│                   │                   │
     │                   │◀── council cfg ──┤                   │                   │
     │                   │                   │                   │                   │
-    │                   │ register_auto_forge_config() (钩子4)  │                   │
+    │                   │ register_auto_forge_config (钩子4)  │                   │
     │                   ├──────────────────▶│                   │                   │
     │                   │◀── auto_forge ───┤                   │                   │
     │                   │                   │                   │                   │
@@ -1133,10 +1132,10 @@ operator          ForgekinEngine       ForgekinBase        Harness L3/L2/L4     
    │   action, params)  │                    │                    │                    │
    ├───────────────────▶│                    │                    │                    │
    │                    │                    │                    │                    │
-   │                    │ load_forgekin()    │                    │                    │
+   │                    │ load_forgekin    │                    │                    │
    │                    │ (DI 注入依赖)       │                    │                    │
    │                    │                    │                    │                    │
-   │                    │ observe()          │                    │                    │
+   │                    │ observe          │                    │                    │
    │                    ├───────────────────▶│                    │                    │
    │                    │                    │ read sensors/world │                    │
    │                    │                    ├───────────────────▶│                    │
@@ -1166,7 +1165,7 @@ operator          ForgekinEngine       ForgekinBase        Harness L3/L2/L4     
    │                    │◀── bool ───────────┤                    │                    │
    │                    │                    │                    │                    │
    │                    │ if not verified:   │                    │                    │
-   │                    │   rollback_action()│                    │                    │
+   │                    │   rollback_action│                    │                    │
    │                    │                    │                    │                    │
    │◀── result ────────┤                    │                    │                    │
    │   {success: true,  │                    │                    │                    │
@@ -1180,44 +1179,44 @@ operator          ForgekinEngine       ForgekinBase        Harness L3/L2/L4     
 
 | 异常类型 | 触发场景 | 处理策略 | 调用方预期 |
 |---------|---------|---------|-----------|
-| `ForgekinNotFoundError` | forgekin_id 不存在或灵印未注册 | 拒绝加载，返回 404 | 调用方校验 forgekin_id 后重试 |
+| `ForgekinNotFoundError` | forgekin_id 不存在或SoulImprint未注册 | 拒绝加载，返回 404 | 调用方校验 forgekin_id 后重试 |
 | `PluginRegistrationError` | Plugin V3 四钩子返回空值或校验失败 | 拒绝整个 forgemind 注册，ForgekinEngine 拒绝加载 | operator 检查 YAML 配置后重启 |
-| `SensorUnavailableError` | BIO/OBJ/HYBRID 形态灵智体传感器离线 | 触发 F023 liveness degraded，observe 返回最近有效快照 | 调用方降级处理 |
+| `SensorUnavailableError` | BIO/OBJ/HYBRID 形态Forgekin传感器离线 | 触发 F023 liveness degraded，observe 返回最近有效快照 | 调用方降级处理 |
 | `ActionNotAllowedError` | action 不在 CapabilityProfile.allowed_actions 白名单 | 拒绝 act，返回 403 | 调用方修改 action 或升级能力画像 |
 | `Tier0ConfirmationRequiredError` | 物理/不可逆操作未经 operator 二次确认 | 拒绝 act，返回 401 | 调用方获取 operator 确认后重试 |
 | `GovernanceViolationError` | verify 检测到治理规则违反 | 触发回滚，返回 409 + need_rollback=true | 调用方回滚 + 告警 |
 | `EvalThresholdNotMetError` | 觉醒阶晋升时 Eval 质量分 < 0.85 | 拒绝晋升，返回 403 | 调用方等待更高 Eval 信号 |
 | `StageJumpForbiddenError` | 觉醒阶晋升跳级（如 E1 -> E3） | 拒绝晋升，返回 409 | 调用方按顺序逐级晋升 |
 | `OperatorApprovalRequiredError` | 觉醒阶晋升未经 operator 审批 | 拒绝晋升，返回 401 | 调用方获取 operator 批准后重试 |
-| `SoulImprintHashCollisionError` | 灵印 hash 重复注册 | 拒绝注册，返回 409 | 调用方重新生成 hash |
+| `SoulImprintHashCollisionError` | SoulImprint hash 重复注册 | 拒绝注册，返回 409 | 调用方重新生成 hash |
 | `ReverseDependencyError` | core/ import forgemind/ 被静态扫描发现 | CI 失败，拒绝合并 | 开发者重构依赖方向 |
-| `ValidationError`（Pydantic） | 预置灵智体 YAML 字段缺失或类型错误 | 拒绝加载，启动失败 | operator 修正 YAML 后重启 |
+| `ValidationError`（Pydantic） | 预置Forgekin YAML 字段缺失或类型错误 | 拒绝加载，启动失败 | operator 修正 YAML 后重启 |
 
 **幂等性策略**：
 
-- `MindImprint.soul_imprint_hash` 全局唯一，重复注册抛 `IntegrityError`，调用方应重试。
-- `ForgekinLineageRepository.append()` 增量 append，record_id 使用 UUID v7，重复 append 由 Repository 层幂等处理。
-- `execute_observe_act_verify()` 非幂等（含副作用），调用方应使用 idempotency_key 包裹。
-- `promote_evolution_stage()` 幂等（同一 eval_signal 重复触发只生效一次，由 record_id 去重）。
+- `SoulImprint.soul_imprint_hash` 全局唯一，重复注册抛 `IntegrityError`，调用方应重试。
+- `ForgekinLineageRepository.append` 增量 append，record_id 使用 UUID v7，重复 append 由 Repository 层幂等处理。
+- `execute_observe_act_verify` 非幂等（含副作用），调用方应使用 idempotency_key 包裹。
+- `promote_evolution_stage` 幂等（同一 eval_signal 重复触发只生效一次，由 record_id 去重）。
 
 ### 3.4 性能优化
 
 | 性能指标 | 目标值 | 优化手段 |
 |---------|:------:|---------|
-| `load_forgekin()` 延迟 | < 50ms | 灵印 + 进化记录 + 能力画像并行查询（asyncio.gather）；进程内 LRU 缓存（maxsize=256，TTL=300s） |
-| `execute_observe_act_verify()` 闭环延迟 | < 5s（含 LLM 调用） | observe/act/verify 串行（必须），但 act 内部工具调用并行；超时控制 30s |
-| `register_forgekins()` 启动延迟 | < 100ms | 5 形态枚举静态构造，无 I/O；YAML 加载并行 |
-| 5 预置灵智体加载延迟 | < 500ms | 5 个 YAML 文件并行加载 + Pydantic 校验 |
-| `promote_evolution_stage()` 延迟 | < 30ms | 单条 INSERT + 事件异步发射 |
+| `load_forgekin` 延迟 | < 50ms | SoulImprint + 进化记录 + 能力画像并行查询（asyncio.gather）；进程内 LRU 缓存（maxsize=256，TTL=300s） |
+| `execute_observe_act_verify` 闭环延迟 | < 5s（含 LLM 调用） | observe/act/verify 串行（必须），但 act 内部工具调用并行；超时控制 30s |
+| `register_forgekins` 启动延迟 | < 100ms | 5 形态枚举静态构造，无 I/O；YAML 加载并行 |
+| 5 预置Forgekin加载延迟 | < 500ms | 5 个 YAML 文件并行加载 + Pydantic 校验 |
+| `promote_evolution_stage` 延迟 | < 30ms | 单条 INSERT + 事件异步发射 |
 | 并发 load_forgekin | 50 QPS | LRU 缓存命中率 > 90%；Repository 连接池 max_size=20 |
 | DI 容器注入延迟 | < 1ms | 单例缓存，首次注入后直接返回 |
 
 **缓存策略**：
 
-- 灵印缓存：进程内 LRU（maxsize=256，TTL=300s），通过 `ForgekinLineageRepository.append()` 事件主动失效。
+- SoulImprint缓存：进程内 LRU（maxsize=256，TTL=300s），通过 `ForgekinLineageRepository.append` 事件主动失效。
 - 能力画像缓存：复用 F001 CapabilityProfile 的缓存策略。
 - 不缓存 ForgekinBase 实例：实例可能持有运行时状态（如 session_id），缓存导致状态污染。
-- 预置灵智体 YAML 启动时一次性加载到内存，运行时直接读取。
+- 预置Forgekin YAML 启动时一次性加载到内存，运行时直接读取。
 
 **索引设计**：
 
@@ -1239,12 +1238,12 @@ class PluginRegistry:
         # 扫描已注册插件，调用四钩子
         plugin = container.resolve("forge_mind_plugin")  # ForgeMindPlugin
         hooks = {
-            "forgekins": plugin.register_forgekins(),
-            "forge_skills": plugin.register_forge_skills(),
-            "council_channels": plugin.register_council_channels(),
-            "auto_forge_config": plugin.register_auto_forge_config(),
+            "forgekins": plugin.register_forgekins,
+            "forge_skills": plugin.register_forge_skills,
+            "council_channels": plugin.register_council_channels,
+            "auto_forge_config": plugin.register_auto_forge_config,
         }
-        for name, value in hooks.items():
+        for name, value in hooks.items:
             if not value:
                 raise PluginRegistrationError(f"hook {name} returned empty")
         self._registered["forgemind"] = hooks
@@ -1254,7 +1253,7 @@ class PluginRegistry:
 
 #### 4.1.2 ForgekinEngine 端口注入
 
-forgemind 内部需要执行灵智体时，通过 DI 注入 `ForgekinEnginePort`：
+forgemind 内部需要执行Forgekin时，通过 DI 注入 `ForgekinEnginePort`：
 
 ```python
 # forgemind 内部代码（如 ForgePipeline）
@@ -1348,10 +1347,10 @@ class SensorRegistryImpl:
 
 #### 4.2.4 F036 / F037 / F038 / F039 如何消费本模块
 
-- **F036 forgemind 与 *Forge 关系**：*Forge 通过 Plugin V3 复用本模块的 ForgekinBase / ForgePipeline 抽象，禁止 *Forge 重新定义通用灵智体类。
-- **F037 灵智体市场**：本模块的 `ForgekinBase` 实例可通过 `ForgekinMarketplace.publish(forgekin)` 发布到市场。
+- **F036 forgemind 与 *Forge 关系**：*Forge 通过 Plugin V3 复用本模块的 ForgekinBase / ForgePipeline 抽象，禁止 *Forge 重新定义通用Forgekin类。
+- **F037 Forgekin市场**：本模块的 `ForgekinBase` 实例可通过 `ForgekinMarketplace.publish(forgekin)` 发布到市场。
 - **F038 进化谱系**：本模块的 `ForgekinLineageRepository` 提供 `append / get_lineage / get_latest_record` 接口，F038 在此基础上落地谱系可视化。
-- **F039 灵典**：本模块的 `forgemind/codex/` 目录承载灵典（Mind Codex）知识库，F039 落地可检索索引。
+- **F039 MindCodex**：本模块的 `forgemind/codex/` 目录承载MindCodex（MindCodex）知识库，F039 落地可检索索引。
 
 ### 4.3 集成测试点
 
@@ -1359,24 +1358,24 @@ class SensorRegistryImpl:
 |---------|------|-------|
 | IT-D026-001 | FlowForge 启动后 Plugin Registry 中存在 forgemind 四钩子 | forgekins/forge_skills/council_channels/auto_forge_config 全部非空 |
 | IT-D026-002 | 5 形态枚举完整注册 | BIO/ORG/OBJ/VIRTUAL/HYBRID 全部存在 |
-| IT-D026-003 | 5 预置灵智体 YAML 加载 | 猫头鹰·鲁班 / 猎犬·夏洛克 / 孔雀·梵高 / 蜜獾·平头哥 / 钢笔·文心 全部加载成功 |
-| IT-D026-004 | ForgekinEngine.load_forgekin() DI 注入 | 返回的 ForgekinBase 实例依赖全部注入完成 |
+| IT-D026-003 | 5 预置Forgekin YAML 加载 | 猫头鹰·鲁班 / 猎犬·夏洛克 / 孔雀·梵高 / 蜜獾·平头哥 / 钢笔·文心 全部加载成功 |
+| IT-D026-004 | ForgekinEngine.load_forgekin DI 注入 | 返回的 ForgekinBase 实例依赖全部注入完成 |
 | IT-D026-005 | observe -> act -> verify 闭环 | 三方法全部成功调用，返回 {success: true, verified: true} |
 | IT-D026-006 | action 不在白名单 | 抛 ActionNotAllowedError |
 | IT-D026-007 | Tier 0 操作未经确认 | 抛 Tier0ConfirmationRequiredError |
 | IT-D026-008 | verify 失败触发回滚 | 返回 {need_rollback: true}，副作用回滚 |
 | IT-D026-009 | 觉醒阶晋升 Eval 分数 < 0.85 | 抛 EvalThresholdNotMetError |
 | IT-D026-010 | 觉醒阶晋升跳级（E1 -> E3） | 抛 StageJumpForbiddenError |
-| IT-D026-011 | 灵印 hash 重复注册 | 抛 SoulImprintHashCollisionError |
+| IT-D026-011 | SoulImprint hash 重复注册 | 抛 SoulImprintHashCollisionError |
 | IT-D026-012 | core/ import forgemind/ | CI 静态扫描失败 |
 | IT-D026-013 | forgemind 包含 *Forge 业务代码 | CI 静态扫描失败（编程红线第 10 条） |
-| IT-D026-014 | ForgekinBase() 直接实例化 | CI 静态扫描失败（编程红线第 12 条） |
+| IT-D026-014 | ForgekinBase 直接实例化 | CI 静态扫描失败（编程红线第 12 条） |
 | IT-D026-015 | ForgeMindPlugin 四钩子任一返回空 | 抛 PluginRegistrationError |
 | IT-D026-016 | 50 并发 load_forgekin | LRU 缓存命中，无死锁 |
-| IT-D026-017 | MindCouncil 召集灵议 | 复用 F002 TeamAct，决议写入 F014 灵忆 |
+| IT-D026-017 | MindCouncil 召集MindCouncil | 复用 F002 TeamAct，决议写入 F014 EchoStore |
 | IT-D026-018 | VIRTUAL 形态绑定物理传感器 | F029 形态门控拒绝 |
 | IT-D026-019 | BIO 形态绑定虚拟世界设定 | F030 形态门控拒绝 |
-| IT-D026-020 | 进化阶晋升后灵印 species 不变 | 灵印 species 字段保留原值，新 species 在 ForgekinLineage |
+| IT-D026-020 | 进化阶晋升后SoulImprint species 不变 | SoulImprint species 字段保留原值，新 species 在 ForgekinLineage |
 
 ---
 
@@ -1385,36 +1384,36 @@ class SensorRegistryImpl:
 ### 5.1 功能验收 AC
 
 - [ ] **AC-F-1**: forgemind 通过 Plugin V3 四钩子注册到 FlowForge Plugin Registry，5 形态枚举完整（IT-D026-001/002）。
-- [ ] **AC-F-2**: 5 预置灵智体 YAML 外置到 `forgemind/config/forgekins/*.yaml`，启动时加载成功（IT-D026-003）。
-- [ ] **AC-F-3**: `ForgekinEngine.load_forgekin()` 通过 DI 注入依赖，返回 ForgekinBase 实例（IT-D026-004）。
-- [ ] **AC-F-4**: `observe -> act -> verify` 三方法契约可端到端调用，5 形态灵智体均实现三方法（IT-D026-005）。
-- [ ] **AC-F-5**: act() 校验 action 白名单，非法 action 被拒绝（IT-D026-006）。
+- [ ] **AC-F-2**: 5 预置Forgekin YAML 外置到 `forgemind/config/forgekins/*.yaml`，启动时加载成功（IT-D026-003）。
+- [ ] **AC-F-3**: `ForgekinEngine.load_forgekin` 通过 DI 注入依赖，返回 ForgekinBase 实例（IT-D026-004）。
+- [ ] **AC-F-4**: `observe -> act -> verify` 三方法契约可端到端调用，5 形态Forgekin均实现三方法（IT-D026-005）。
+- [ ] **AC-F-5**: act 校验 action 白名单，非法 action 被拒绝（IT-D026-006）。
 - [ ] **AC-F-6**: Tier 0 不可逆操作未经 operator 确认时被拒绝（IT-D026-007）。
-- [ ] **AC-F-7**: verify() 失败时触发回滚，返回 need_rollback=true（IT-D026-008）。
+- [ ] **AC-F-7**: verify 失败时触发回滚，返回 need_rollback=true（IT-D026-008）。
 - [ ] **AC-F-8**: 觉醒阶晋升 Eval 分数 < 0.85 时被拒绝（IT-D026-009）。
 - [ ] **AC-F-9**: 觉醒阶晋升禁止跳级，必须逐级晋升（IT-D026-010）。
-- [ ] **AC-F-10**: 灵印 hash 全局唯一，重复注册被拒绝（IT-D026-011）。
-- [ ] **AC-F-11**: 觉醒阶晋升后灵印 species 字段保留原值，新 species 仅在 ForgekinLineage（IT-D026-020）。
-- [ ] **AC-F-12**: MindCouncil 召集灵议复用 F002 TeamAct，决议写入 F014 灵忆（IT-D026-017）。
+- [ ] **AC-F-10**: SoulImprint hash 全局唯一，重复注册被拒绝（IT-D026-011）。
+- [ ] **AC-F-11**: 觉醒阶晋升后SoulImprint species 字段保留原值，新 species 仅在 ForgekinLineage（IT-D026-020）。
+- [ ] **AC-F-12**: MindCouncil 召集MindCouncil复用 F002 TeamAct，决议写入 F014 EchoStore（IT-D026-017）。
 
 ### 5.2 性能验收
 
-- [ ] **AC-P-1**: `load_forgekin()` 延迟 < 50ms（P95，缓存命中时 < 5ms）。
-- [ ] **AC-P-2**: `execute_observe_act_verify()` 闭环延迟 < 5s（P95，含 LLM 调用）。
-- [ ] **AC-P-3**: `register_forgekins()` 启动延迟 < 100ms。
-- [ ] **AC-P-4**: 5 预置灵智体加载延迟 < 500ms。
+- [ ] **AC-P-1**: `load_forgekin` 延迟 < 50ms（P95，缓存命中时 < 5ms）。
+- [ ] **AC-P-2**: `execute_observe_act_verify` 闭环延迟 < 5s（P95，含 LLM 调用）。
+- [ ] **AC-P-3**: `register_forgekins` 启动延迟 < 100ms。
+- [ ] **AC-P-4**: 5 预置Forgekin加载延迟 < 500ms。
 - [ ] **AC-P-5**: 50 并发 `load_forgekin` 无死锁、无数据丢失（IT-D026-016）。
 - [ ] **AC-P-6**: LRU 缓存命中率 > 90%（长期运行后采样统计）。
 
 ### 5.3 安全验收
 
 - [ ] **AC-S-1**: 单向依赖通过 —— `grep -r "from forgemind" flowforge/core/` 返回 0 结果（IT-D026-012）。
-- [ ] **AC-S-2**: DI 容器注入通过 —— 无 `ForgekinBase()` / `SpeciesRegistry()` 直接实例化代码（IT-D026-014）。
-- [ ] **AC-S-3**: Repository 层通过 —— 灵印/进化记录写入均通过 Repository 抽象，无 `cursor.execute()` 调用。
-- [ ] **AC-S-4**: 配置驱动通过 —— 5 形态定义、6 步锻造清单、5 预置灵智体均 YAML 外置，无 .py 硬编码。
+- [ ] **AC-S-2**: DI 容器注入通过 —— 无 `ForgekinBase` / `SpeciesRegistry` 直接实例化代码（IT-D026-014）。
+- [ ] **AC-S-3**: Repository 层通过 —— SoulImprint/进化记录写入均通过 Repository 抽象，无 `cursor.execute` 调用。
+- [ ] **AC-S-4**: 配置驱动通过 —— 5 形态定义、6 步锻造清单、5 预置Forgekin均 YAML 外置，无 .py 硬编码。
 - [ ] **AC-S-5**: 业务领域代码零容忍 —— forgemind/ 目录无内容创作/小说/电商/开发等垂直业务代码（IT-D026-013）。
 - [ ] **AC-S-6**: Tier 0 不可逆操作必须 operator 二次确认（IT-D026-007）。
-- [ ] **AC-S-7**: 灵印 hash 全局唯一，防止身份漂移（IT-D026-011）。
+- [ ] **AC-S-7**: SoulImprint hash 全局唯一，防止身份漂移（IT-D026-011）。
 - [ ] **AC-S-8**: 觉醒阶晋升必须经 Eval 信号触发 + operator 审批，防止越权晋升（IT-D026-009/010）。
 
 ### 5.4 Eval 验收
@@ -1458,4 +1457,4 @@ class SensorRegistryImpl:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 类图 + Pydantic Models + 接口实现 + 时序图 + 错误处理 + 性能优化 + 跨模块协作 + AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 类图 + Pydantic Models + 接口实现 + 时序图 + 错误处理 + 性能优化 + 跨模块协作 + AC） | 开发者 Forgekin（猎犬·夏洛克） |

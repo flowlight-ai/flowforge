@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.8] + [doc:../spec.md#§3.15]（FR-CORE-008 / FR-CORE-015 / FR-CORE-029）
 > **对应 arch.md**: [doc:../arch.md#§3.8] + [doc:../arch.md#§3.15]
 > **对应 design.md**: [doc:../design.md#§3.8] + [doc:../design.md#§3.15]
 > **对应 Feature**: [doc:../features/F036-forgemind-forge-relationship.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A036-forgemind-forge-relationship.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/005-forgemind-application-layer.md] + [doc:../decisions/003-plugin-v3-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,7 +16,7 @@
 
 ### 1.1 设计问题
 
-本详细设计在 A036 架构设计基础上，深入到代码层落地 forgemind（Layer 2 通用灵智体承载）与 *Forge（Layer 3 垂直业务灵智体承载）的关系系统，需解决以下工程问题：
+本详细设计在 A036 架构设计基础上，深入到代码层落地 forgemind（Layer 2 通用Forgekin承载）与 *Forge（Layer 3 垂直业务Forgekin承载）的关系系统，需解决以下工程问题：
 
 - **Plugin V3 四钩子工程契约**：`register_forgekins` / `register_forge_skills` / `register_council_channels` / `register_auto_forge_config` 四钩子如何以 Python 抽象方法形式落地? 入参 registry 类型如何定义?
 - **LayerTransitionEngine 状态机**：跨层迁移（进化 / 回炉）如何用状态机校验前置条件、调用 operator 审批、原子化执行迁移?
@@ -27,22 +26,21 @@
 
 ### 1.2 设计约束
 
-- **单向依赖**：`flowforge/forgemind/relationship/` 禁止 `import contentforge.* / devforge.* / novelforge.* / mallforge.*`；仅可 import `flowforge/core/*` 与 `flowforge/forgemind/*`
+- **单向依赖**：`flowforge/forgemind/relationship/` 禁止 import 任何 *Forge 业务模块；仅可 import `flowforge/core/*` 与 `flowforge/forgemind/*`
 - **DI 容器**：`ForgeRelationshipManager` / `LayerTransitionEngine` / `EvolveExecutor` / `ReclaimExecutor` / `ForgeRelationshipRepository` 必须由 DI 容器以 singleton 或 scoped scope 注入
-- **Repository 层**：所有持久化必须经 `ForgeRelationshipRepository` 抽象，禁止 `cursor.execute()` / `session.add()` 直接调用
+- **Repository 层**：所有持久化必须经 `ForgeRelationshipRepository` 抽象，禁止 `cursor.execute` / `session.add` 直接调用
 - **配置驱动**：layers / transition_rules / vertical_skills / operator_approval 必须来自 `flowforge/forgemind/config/forge_relationship.yaml`
 - **Plugin V3 协议**：`ForgeMindPlugin` 必须继承 `FlowForgePlugin` 并实现四钩子；*Forge Plugin 通过钩子被动注册，forgemind 不可主动扫描 *Forge
 - **原子化迁移**：LayerTransition 写入 Repository + 谱系边写入 LineageStore + 能力画像更新必须事务化，任一失败则回滚
-- **9 大点名称修订**：代码层使用 Forgekin / ForgeLayer / CapabilityProfile / ForgekinEngine；文档层使用"灵智体 / 灵智 / 通用 / 垂直"
 
 ### 1.3 设计影响
 
 - **新增模块**：`flowforge/forgemind/relationship/` 下 6 个文件（manager.py / transition.py / evolve.py / reclaim.py / repository.py / models.py）
 - **修改模块**：`flowforge/forgemind/plugins.py` 新增 ForgeMindPlugin 四钩子实现；`flowforge/core/plugin/protocol.py` 扩展 FlowForgePlugin 抽象基类
-- **影响 F028 ForgePipeline**：流水线新增"通用→垂直"分支调用 `LayerTransitionEngine.evolve()`，"垂直→通用"分支调用 `LayerTransitionEngine.reclaim()`
-- **影响 F037 灵智体市场**：MarketplaceListing 新增 `layer: ForgeLayer` 字段，市场查询支持 `?layer=forgemind|contentforge|...` 过滤
+- **影响 F028 ForgePipeline**：流水线新增"通用→垂直"分支调用 `LayerTransitionEngine.evolve`，"垂直→通用"分支调用 `LayerTransitionEngine.reclaim`
+- **影响 F037 Forgekin市场**：MarketplaceListing 新增 `layer: ForgeLayer` 字段，市场查询支持 `?layer=forgemind|<forge_project_id>|...` 过滤
 - **影响 F038 进化谱系**：LineageStore 新增 `LAYER_TRANSITION` 关系类型边的写入入口
-- **影响 F039 灵典可检索知识库**：回炉蒸馏产出的通用 SkillPackage 写入 Mind Codex，可被其他灵智体检索消费
+- **影响 F039 MindCodex可检索知识库**：回炉蒸馏产出的通用 SkillPackage 写入 MindCodex，可被其他Forgekin检索消费
 
 ---
 
@@ -56,10 +54,10 @@
                           │  FlowForgePlugin             │
                           │  (core/plugin/protocol.py)   │
                           │  ─────────────────────────   │
-                          │  + register_forgekins()      │
-                          │  + register_forge_skills()   │
-                          │  + register_council_channels()│
-                          │  + register_auto_forge_config()│
+                          │  + register_forgekins      │
+                          │  + register_forge_skills   │
+                          │  + register_council_channels│
+                          │  + register_auto_forge_config│
                           └──────────────┬──────────────┘
                                          │ extends
                                          ▼
@@ -72,8 +70,8 @@
                           │  - skill_registry             │
                           │  - council_registry           │
                           │  - auto_forge_config          │
-                          │  + register_forgekins() ───┐  │
-                          │  + register_forge_skills() │  │
+                          │  + register_forgekins ───┐  │
+                          │  + register_forge_skills │  │
                           │  + register_council_channels│ │
                           │  + register_auto_forge_config│ │
                           └──────────────────────────┬─┘  │
@@ -95,9 +93,9 @@
           │ ForgeRelationship       │  │ <<abstract>>             │
           │ ManagerImpl             │  │ LayerTransitionEngine     │
           │                         │  │ (transition.py)           │
-          │ - repository            │  │ + validate_precondition()│
-          │ - transition_engine     │  │ + request_operator()     │
-          │ - evolve_executor       │  │ + commit_transition()    │
+          │ - repository            │  │ + validate_precondition│
+          │ - transition_engine     │  │ + request_operator     │
+          │ - evolve_executor       │  │ + commit_transition    │
           │ - reclaim_executor      │  └────────────┬─────────────┘
           │ - capability_repo       │               │
           │ - lineage_store         │               │ delegates
@@ -111,7 +109,7 @@
                        │                │ ReclaimExecutor          │
                        │                │ (reclaim.py)             │
                        │                │ + reclaim(transition)    │
-                       │                │   → SpiritForge.distill()│
+                       │                │   → SpiritForge.distill│
                        │                └──────────────────────────┘
                        ▼
           ┌─────────────────────────────────────────────────────────┐
@@ -120,7 +118,7 @@
           │ + save_relationship(rel)                                │
           │ + save_transition(t)                                    │
           │ + list_transitions(forgekin_id)                         │
-          │ + get_pending_transitions()                             │
+          │ + get_pending_transitions                             │
           └─────────────────────────────────────────────────────────┘
 ```
 
@@ -137,13 +135,17 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
-class ForgeLayer(str, Enum):
-    """灵智体承载层（双轨命名：代码层枚举值 = Layer 名）"""
-    FORGEMIND = "forgemind"
-    CONTENTFORGE = "contentforge"
-    DEVFORGE = "devforge"
-    NOVELFORGE = "novelforge"
-    MALLFORGE = "mallforge"
+class ForgeLayer(BaseModel):
+    """Forgekin承载层（动态注册，不硬编码具体 *Forge 项目名）
+
+    设计原则：FlowForge 核心层不硬编码具体 *Forge 项目名。
+    所有垂直承载层通过 Plugin V3 协议动态注册（详见 ADR 005 + F026）。
+    """
+    layer_id: str                              # 如 "forgemind" 或由 Plugin V3 注册的 *Forge 项目名
+    role: Literal["general", "vertical"]       # 通用承载层 / 垂直承载层
+    vertical_skills: list[str] = []            # 垂直领域技能包（仅 vertical 层有）
+    can_evolve_to: list[str] = []              # 可进化到的目标层 ID 列表
+    can_reclaim_to: str | None = None          # 可回炉到的目标层 ID
 
 
 class TransitionType(str, Enum):
@@ -167,7 +169,7 @@ class LayerTransition(BaseModel):
     """跨层迁移记录（进化 / 回炉）"""
     transition_id: str
     forgekin_id: str
-    soul_imprint: str = Field(description="灵印 Mind Imprint（谱系锚点）")
+    soul_imprint: str = Field(description="SoulImprint（谱系锚点）")
     from_layer: ForgeLayer
     to_layer: ForgeLayer
     transition_type: TransitionType
@@ -195,7 +197,7 @@ class LayerTransition(BaseModel):
 
 
 class ForgeRelationship(BaseModel):
-    """forgemind 与 *Forge 关系（一个灵智体的承载层关系）"""
+    """forgemind 与 *Forge 关系（一个Forgekin的承载层关系）"""
     forgekin_id: str
     soul_imprint: str
     current_layer: ForgeLayer
@@ -238,7 +240,7 @@ class ForgeRelationshipManager(ABC):
 
     @abstractmethod
     async def get_relationship(self, forgekin_id: str) -> ForgeRelationship:
-        """查询灵智体当前的承载层关系
+        """查询Forgekin当前的承载层关系
 
         若关系不存在则抛出 RelationshipNotFoundError
         """
@@ -252,11 +254,11 @@ class ForgeRelationshipManager(ABC):
         reason: str,
         requested_by: str,
     ) -> str:
-        """请求通用灵智体进化为垂直灵智体（需 operator 批准）
+        """请求通用Forgekin进化为垂直Forgekin（需 operator 批准）
 
         前置条件:
         - current_layer == ForgeLayer.FORGEMIND
-        - target in (CONTENTFORGE, DEVFORGE, NOVELFORGE, MALLFORGE)
+        - target_layer_id 是已通过 Plugin V3 注册的垂直承载层 ID
         - Eval 分数 >= min_eval_score（默认 0.85）
         - 任务数 >= min_task_count（默认 5）
 
@@ -271,7 +273,7 @@ class ForgeRelationshipManager(ABC):
         reason: str,
         requested_by: str,
     ) -> str:
-        """请求垂直灵智体回炉为通用灵智体（能力沉淀到通用层）
+        """请求垂直Forgekin回炉为通用Forgekin（能力沉淀到通用层）
 
         前置条件:
         - current_layer != ForgeLayer.FORGEMIND
@@ -350,14 +352,14 @@ class LayerTransitionEngine(ABC):
 
         EVOLVE:
         - current_layer == FORGEMIND
-        - target in (CONTENTFORGE, DEVFORGE, NOVELFORGE, MALLFORGE)
+        - target_layer_id 是已通过 Plugin V3 注册的垂直承载层 ID
         - eval_score >= min_eval_score (配置 0.85)
         - task_count >= min_task_count (配置 5)
-        - 灵智体未在其他迁移中（无 PENDING/APPROVED/IN_PROGRESS 的 transition）
+        - Forgekin未在其他迁移中（无 PENDING/APPROVED/IN_PROGRESS 的 transition）
 
         RECLAIM:
         - current_layer != FORGEMIND
-        - 灵智体未在其他迁移中
+        - Forgekin未在其他迁移中
 
         校验失败抛出 PreconditionError
         """
@@ -373,7 +375,7 @@ class LayerTransitionEngine(ABC):
         副作用:
         - transition.status = PENDING_APPROVAL
         - 通过 EventBus 发布 TransitionApprovalRequestedEvent
-        - 等待 operator 通过 approve_transition() 回写
+        - 等待 operator 通过 approve_transition 回写
         """
         ...
 
@@ -386,7 +388,7 @@ class LayerTransitionEngine(ABC):
 
         事务步骤:
         1. transition.status = IN_PROGRESS
-        2. 调用 EvolveExecutor.evolve() 或 ReclaimExecutor.reclaim()
+        2. 调用 EvolveExecutor.evolve 或 ReclaimExecutor.reclaim
         3. 写入 F038 LineageStore（relation=LAYER_TRANSITION）
         4. 更新 ForgeRelationship.current_layer
         5. transition.status = COMPLETED
@@ -436,7 +438,7 @@ class ReclaimExecutor(ABC):
         1. 调用 SpiritForge.distill(
               forgekin_id, scope="general_only",
               preserve_vertical_in_original=True)
-        2. 蒸馏产出的通用 SkillPackage 写入 F039 Mind Codex
+        2. 蒸馏产出的通用 SkillPackage 写入 F039 MindCodex
            （需通过 CL-005 七字段契约校验）
         3. 仅更新 ForgeRelationship.capability_snapshot_per_layer[FORGEMIND]
            保留原垂直层的快照不变
@@ -561,9 +563,9 @@ class ForgeMindPlugin(FlowForgePlugin):
     # ── V3 钩子（v7.1 新增）────────────────────────────────────
 
     def register_forgekins(self, forgekin_registry: Any) -> None:
-        """接收 *Forge 通过 Plugin V3 注册的垂直灵智体
+        """接收 *Forge 通过 Plugin V3 注册的垂直Forgekin
 
-        *Forge plugins.py 在启动时调用本钩子，将自己锻造的垂直灵智体
+        *Forge plugins.py 在启动时调用本钩子，将自己锻造的垂直Forgekin
         注册到 forgemind 的 ForgeRelationshipManager。
         forgemind 不可主动扫描 *Forge，只能被动接收注册。
         """
@@ -582,11 +584,11 @@ class ForgeMindPlugin(FlowForgePlugin):
         )
 
     def register_council_channels(self, council_registry: Any) -> None:
-        """接收 *Forge 注册的灵议 Mind Council 通道"""
+        """接收 *Forge 注册的MindCouncil 通道"""
         self._council_registry = council_registry
 
     def register_auto_forge_config(self, auto_forge_config: Any) -> None:
-        """接收 *Forge 注册的灵锻 SpiritForge 配置"""
+        """接收 *Forge 注册的SpiritForge 配置"""
         self._auto_forge_config = auto_forge_config
 ```
 
@@ -596,7 +598,7 @@ class ForgeMindPlugin(FlowForgePlugin):
 
 | 模型 | 用途 | 关键字段 |
 |------|------|---------|
-| `ForgeLayer` | 承载层枚举 | FORGEMIND / CONTENTFORGE / DEVFORGE / NOVELFORGE / MALLFORGE |
+| `ForgeLayer` | 承载层数据模型 | forgemind（通用）+ 动态注册的垂直承载层（Plugin V3 注册） |
 | `TransitionType` | 迁移类型 | EVOLVE / RECLAIM |
 | `TransitionStatus` | 迁移状态机 | REQUESTED→PENDING_APPROVAL→APPROVED→IN_PROGRESS→COMPLETED |
 | `LayerTransition` | 迁移记录 | transition_id / from_layer / to_layer / capability_delta / lineage_edge_id |
@@ -618,7 +620,7 @@ class ForgeMindPlugin(FlowForgePlugin):
    // 校验 eval_score >= 0.85, task_count >= 5
    // 校验无其他进行中的 transition
 5. transition ← LayerTransition(
-       transition_id=uuid4(),
+       transition_id=uuid4,
        forgekin_id=forgekin_id,
        soul_imprint=rel.soul_imprint,
        from_layer=rel.current_layer,
@@ -659,7 +661,7 @@ class ForgeMindPlugin(FlowForgePlugin):
       // 更新关系
       rel ← repository.get_relationship(transition.forgekin_id)
       rel.current_layer ← transition.to_layer
-      rel.last_transition_at ← now()
+      rel.last_transition_at ← now
       rel.evolution_history.append(transition)
       repository.save_relationship(rel)
       transition.status ← COMPLETED
@@ -756,7 +758,7 @@ class ForgeRelationshipManagerImpl(ForgeRelationshipManager):
         await self._engine.validate_precondition(request)
 
         transition = LayerTransition(
-            transition_id=_gen_uuid(),
+            transition_id=_gen_uuid,
             forgekin_id=forgekin_id,
             soul_imprint=rel.soul_imprint,
             from_layer=rel.current_layer,
@@ -792,7 +794,7 @@ class ForgeRelationshipManagerImpl(ForgeRelationshipManager):
         await self._engine.validate_precondition(request)
 
         transition = LayerTransition(
-            transition_id=_gen_uuid(),
+            transition_id=_gen_uuid,
             forgekin_id=forgekin_id,
             soul_imprint=rel.soul_imprint,
             from_layer=rel.current_layer,
@@ -877,7 +879,7 @@ class ForgeRelationshipManagerImpl(ForgeRelationshipManager):
             # 更新关系
             rel = await self._repo.get_relationship(transition.forgekin_id)
             rel.current_layer = transition.to_layer
-            rel.last_transition_at = _now()
+            rel.last_transition_at = _now
             rel.evolution_history.append(transition)
             await self._repo.save_relationship(rel)
 
@@ -896,12 +898,12 @@ class ForgeRelationshipManagerImpl(ForgeRelationshipManager):
             raise
 
 
-def _gen_uuid() -> str:
+def _gen_uuid -> str:
     import uuid
-    return str(uuid.uuid4())
+    return str(uuid.uuid4)
 
 
-def _now():
+def _now:
     from datetime import datetime, timezone
     return datetime.now(timezone.utc)
 ```
@@ -956,16 +958,16 @@ operator     ForgeRelationshipManager    LayerTransitionEngine    EvolveExecutor
 
 | 异常类型 | 触发条件 | 处理策略 |
 |---------|---------|---------|
-| `RelationshipNotFoundError` | forgekin_id 在 Repository 中无关系记录 | 返回 404，提示"灵智体未注册承载层关系" |
+| `RelationshipNotFoundError` | forgekin_id 在 Repository 中无关系记录 | 返回 404，提示"Forgekin未注册承载层关系" |
 | `PreconditionError` | Eval < 0.85 / 任务数 < 5 / current_layer 不匹配 / 已有进行中迁移 | 返回 422，附详细校验失败字段 |
 | `InvalidStatusError` | 在非 APPROVED 状态调用 execute / 在非 PENDING_APPROVAL 调用 approve | 返回 409 Conflict，附当前 status |
 | `EvolveExecutorError` | CapabilityProfile 复制失败 / SkillPackage 注入失败 | transition.status = ROLLED_BACK，记录堆栈，重新提交需重新申请 |
-| `ReclaimExecutorError` | SpiritForge.distill() 失败 / Mind Codex 入库校验失败 | 同上，回滚已蒸馏条目 |
+| `ReclaimExecutorError` | SpiritForge.distill 失败 / MindCodex 入库校验失败 | 同上，回滚已蒸馏条目 |
 | `LineageStoreError` | F038 谱系边写入失败 | transition.status = ROLLED_BACK，需人工介入修复 LineageStore |
 | `RepositoryTimeoutError` | 持久层超时 | 重试 3 次后返回 503 Service Unavailable |
 | `OperatorApprovalTimeoutError` | 申请提交后 7 天未审批 | 自动关闭申请（status=REJECTED，reason=auto_timeout） |
 
-**回滚策略**：所有迁移操作通过 `try/except` 包裹，任一步骤失败将 `transition.status` 设为 `ROLLED_BACK`。已部分执行的副作用（如已写入的 SkillPackage）通过补偿事务清理——`EvolveExecutor.evolve()` 失败时调用 `_compensate_evolve()` 删除已注入的 vertical_skills。
+**回滚策略**：所有迁移操作通过 `try/except` 包裹，任一步骤失败将 `transition.status` 设为 `ROLLED_BACK`。已部分执行的副作用（如已写入的 SkillPackage）通过补偿事务清理——`EvolveExecutor.evolve` 失败时调用 `_compensate_evolve` 删除已注入的 vertical_skills。
 
 ### 3.4 性能优化
 
@@ -978,10 +980,10 @@ operator     ForgeRelationshipManager    LayerTransitionEngine    EvolveExecutor
 | 待审批列表 | P95 < 100ms | 状态字段建索引，限制返回 100 条 |
 
 **优化策略**：
-1. **异步执行**：`execute_transition` 内部 SpiritForge 蒸馏可能耗时 > 30s，提供 `execute_transition_async()` 异步版本，通过 EventBus 发布 `TransitionCompleted` 事件
+1. **异步执行**：`execute_transition` 内部 SpiritForge 蒸馏可能耗时 > 30s，提供 `execute_transition_async` 异步版本，通过 EventBus 发布 `TransitionCompleted` 事件
 2. **批量审批**：`approve_transitions_batch(transition_ids, operator_id, decision)` 支持一次审批多个申请
 3. **缓存**：ForgeRelationship 读取结果以 `forgekin_id` 为 key 缓存 5 分钟，写入时失效
-4. **谱系边批量写入**：单次迁移可能产生多条谱系边（蒸馏多个 SkillPackage 时），使用 `add_edges_batch()` 批量提交
+4. **谱系边批量写入**：单次迁移可能产生多条谱系边（蒸馏多个 SkillPackage 时），使用 `add_edges_batch` 批量提交
 
 ### 3.5 配置示例
 
@@ -992,23 +994,19 @@ forge_relationship:
   layers:
     forgemind:
       role: general
-      can_evolve_to: [contentforge, devforge, novelforge, mallforge]
-    contentforge:
+      can_evolve_to: [<forge_project_id_1>, <forge_project_id_2>, <forge_project_id_N>]
+    <forge_project_id_1>:
       role: vertical
       can_reclaim_to: forgemind
-      vertical_skills: [topic_research, seo_writing, fact_check, content_review]
-    devforge:
+      vertical_skills: [<vertical_skill_1>, <vertical_skill_2>, <vertical_skill_3>, <vertical_skill_4>]
+    <forge_project_id_2>:
       role: vertical
       can_reclaim_to: forgemind
-      vertical_skills: [code_review, refactor, test_gen, bug_diagnose]
-    novelforge:
+      vertical_skills: [<vertical_skill_1>, <vertical_skill_2>, <vertical_skill_3>, <vertical_skill_4>]
+    <forge_project_id_N>:
       role: vertical
       can_reclaim_to: forgemind
-      vertical_skills: [outline_gen, character_dev, plot_arc, style_polish]
-    mallforge:
-      role: vertical
-      can_reclaim_to: forgemind
-      vertical_skills: [product_copy, price_strategy, review_reply, promotion_plan]
+      vertical_skills: [<vertical_skill_1>, <vertical_skill_2>, <vertical_skill_3>, <vertical_skill_4>]
 
   transition_rules:
     evolve:
@@ -1044,8 +1042,8 @@ forge_relationship:
 | **F008 Durable State Surfaces** | `DurableStateStore.save(surface_type="forge_relationship", payload)` | ForgeRelationship 与 LayerTransition 持久化 | 单向：写 |
 | **F018 Eval Contract** | `EvalContractStore.get_friction_metrics(contract_id)` / `EvalLedger.get_eval_score(forgekin_id)` | 进化前置条件校验 | 单向：读 |
 | **F028 ForgePipeline** | `ForgePipeline.execute_branch(branch="evolve_to_vertical" / "reclaim_to_forgemind")` | 流水线"通用→垂直"分支或"垂直→通用"分支触发 | 单向：流水线调用本模块 |
-| **F039 Mind Codex** | `MindCodexStore.add_entry(entry)` | 回炉蒸馏产出的 SkillPackage 写入锻典（需通过 CL-005 校验） | 单向：写 |
-| **Plugin V3 协议** | `ForgeMindPlugin.register_forgekins()` / `register_forge_skills()` 等 | *Forge 启动时通过钩子注册 | 单向：*Forge → forgemind |
+| **F039 MindCodex** | `MindCodexStore.add_entry(entry)` | 回炉蒸馏产出的 SkillPackage 写入蒸馏知识库（需通过 CL-005 校验） | 单向：写 |
+| **Plugin V3 协议** | `ForgeMindPlugin.register_forgekins` / `register_forge_skills` 等 | *Forge 启动时通过钩子注册 | 单向：*Forge → forgemind |
 | **F038 LineageStore** | `LineageStore.add_edge(relation=LAYER_TRANSITION, ...)` | 迁移提交时写入谱系边 | 单向：写 |
 | **EventBus** | `EventBus.publish(TransitionApprovalRequestedEvent)` / `TransitionCompletedEvent` | 申请提交时 / 迁移完成时 | 单向：发布 |
 
@@ -1055,7 +1053,7 @@ forge_relationship:
 |---------|-----------|-------|------|
 | **F037 Marketplace** | `MarketplaceListing.layer` 字段 | ForgeRelationshipManager | 关系变更后通知市场刷新 listing 的 layer 标签 |
 | **F038 LineageStore** | `LineageStore.add_edge(LAYER_TRANSITION)` | ForgeRelationshipManagerImpl.execute_transition | 迁移完成时 |
-| **F039 Mind Codex** | `MindCodexStore.add_entry()` | ReclaimExecutor.reclaim | 蒸馏产出 SkillPackage 时 |
+| **F039 MindCodex** | `MindCodexStore.add_entry` | ReclaimExecutor.reclaim | 蒸馏产出 SkillPackage 时 |
 | **F027 多形态智能体** | 不调用（跨层迁移不改 species） | — | — |
 | **operator 控制台** | HTTP API `GET /api/v7/transitions?status=pending_approval` | operator UI | 审批列表展示 |
 | **EventBus 订阅者** | `TransitionCompletedEvent` / `TransitionRolledBackEvent` | dashboard / 通知系统 | 异步消费 |
@@ -1063,18 +1061,18 @@ forge_relationship:
 ### 4.3 集成测试点
 
 - **T1 单元层**：
-  - `LayerTransitionEngine.validate_precondition()` 各分支（Eval 不达标 / 任务不足 / 已有进行中迁移）单测
-  - `ForgeRelationshipManagerImpl.approve_transition()` 状态机转换覆盖
+  - `LayerTransitionEngine.validate_precondition` 各分支（Eval 不达标 / 任务不足 / 已有进行中迁移）单测
+  - `ForgeRelationshipManagerImpl.approve_transition` 状态机转换覆盖
 - **T2 跨模块集成层**：
   - `execute_transition` 全链路：F001 → F038 → F008 三方写入原子性
   - `register_forgekins` 钩子被 *Forge Plugin 调用后，ForgeRelationship 正确建立
 - **T3 E2E 层（遵守 T1-T8 测试铁律）**：
-  - 真实 operator 在 forgemind 锻造通用写作灵智体
+  - 真实 operator 在 forgemind 锻造通用写作Forgekin
   - 真实 LLM 完成 5+ 内容创作任务（Eval ≥ 0.85，禁止 mock LLM）
-  - 申请进化到 contentforge，operator 审批通过
-  - 验证：ForgeRelationship.current_layer=contentforge / F038 谱系边存在 / MarketplaceListing.layer=contentforge
+  - 申请进化到 `<forge_project_id>`（已注册的垂直承载层），operator 审批通过
+  - 验证：ForgeRelationship.current_layer=`<forge_project_id>` / F038 谱系边存在 / MarketplaceListing.layer=`<forge_project_id>`
   - 触发回炉到 forgemind
-  - 验证：通用能力蒸馏到 Mind Codex（CL-005 七字段完整）/ contentforge 垂直能力快照保留不变
+  - 验证：通用能力蒸馏到 MindCodex（CL-005 七字段完整）/ `<forge_project_id>` 垂直能力快照保留不变
 - **T4 异常路径**：
   - 迁移执行中 F038 LineageStore 写入失败 → 验证 status=ROLLED_BACK / 已注入的 vertical_skills 被补偿删除
 
@@ -1132,15 +1130,15 @@ forge_relationship:
 - [doc:../features/F008-durable-state-surfaces.md]（Durable State Surfaces）
 - [doc:../features/F018-eval-contract.md]（Eval Contract）
 - [doc:../features/F028-forging-pipeline.md]（锻造流水线）
-- [doc:../features/F037-forgemind-marketplace.md]（灵智体市场）
+- [doc:../features/F037-forgemind-marketplace.md]（Forgekin市场）
 - [doc:../features/F038-forgemind-lineage.md]（进化谱系）
-- [doc:../features/F039-mind-codex-searchable.md]（灵典可检索知识库）
+- [doc:../features/F039-mind-codex-searchable.md]（MindCodex可检索知识库）
 - [doc:../features/F040-harness-eval-control-plane.md]（Harness Eval 控制面）
 - [doc:../decisions/005-forgemind-application-layer.md]（forgemind 应用层 ADR）
 - [doc:../decisions/003-plugin-v3-protocol.md]（Plugin V3 协议 ADR）
-- [doc:../design/naming-contract.md#2.1]（灵智 ForgeMind）
-- [doc:../design/naming-contract.md#2.2]（灵智体 Forgekin）
-- [doc:../design/naming-contract.md#2.6]（灵印 Soul Imprint）
+- [doc:../design/naming-contract.md#2.1]（ForgeMind）
+- [doc:../design/naming-contract.md#2.2]（Forgekin Forgekin）
+- [doc:../design/naming-contract.md#2.6]（SoulImprint）
 - [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
 - [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
 
@@ -1150,4 +1148,4 @@ forge_relationship:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，应用 9 大点名称修订；含 Pydantic Models / 接口实现 / 时序图 / 配置示例 / 跨模块协作 / 验收 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，） | 开发者 Forgekin（猎犬·夏洛克） |

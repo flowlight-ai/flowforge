@@ -129,10 +129,205 @@ class TraeConfig(BaseSettings):
 
     @property
     def bridge_tasks_dir(self) -> str:
-        """桥接模式的任务文件目录."""
+        """桥接模式的任务文件目录（向后兼容，等同于 requests_dir）."""
         return f"{self.bridge_dir}/tasks"
 
     @property
     def bridge_responses_dir(self) -> str:
         """桥接模式的响应文件目录."""
         return f"{self.bridge_dir}/responses"
+
+
+# ── TraeBridgeConfig — F045 §2.2 桥接配置（对应 trae_bridge.yaml）──
+
+
+class TraeBridgeConfig(BaseSettings):
+    """Trae 桥接协议配置 — F045 §2.2 + §2.3 不变量.
+
+    对应 flowforge/config/trae_bridge.yaml 配置文件。
+    支持：
+    - 从 YAML 文件加载（load_from_yaml 类方法）
+    - 环境变量覆盖（FLOWFORGE_BRIDGE_* 前缀）
+    - ${ENV_VAR:default} 占位符展开（不变量 6 路径不硬编码）
+
+    与 TraeConfig 的关系：
+    - TraeConfig 是 LLM 客户端配置（mode/api_url/api_key 等）
+    - TraeBridgeConfig 是桥接协议配置（目录/超时/归档等）
+    - TraeLLMClient 同时使用两者：TraeConfig 决定模式，TraeBridgeConfig 决定桥接细节
+    """
+
+    # ── 基础开关 ────────────────────────────────────────────────────
+    enabled: bool = Field(
+        default=True,
+        description="是否启用桥接（false 时 chat 直接抛 TraeBridgeConfigError）",
+    )
+
+    # ── 目录配置（不变量 6 路径不硬编码）───────────────────────────
+    shared_dir: str = Field(
+        default="d:/software/openclaw/flowforge/.trae_bridge",
+        description="共享目录路径（支持 ${ENV_VAR:default} 占位符）",
+    )
+    requests_dir: str = Field(
+        default="requests",
+        description="请求文件子目录名（request_{uuid}.json）",
+    )
+    responses_dir: str = Field(
+        default="responses",
+        description="响应文件子目录名（response_{uuid}.json）",
+    )
+    cancels_dir: str = Field(
+        default="cancels",
+        description="取消文件子目录名（cancel_{uuid}.json，不变量 8 逃生舱）",
+    )
+    acks_dir: str = Field(
+        default="acks",
+        description="确认文件子目录名（ack_{uuid}.json，可选）",
+    )
+    archive_dir: str = Field(
+        default="archive",
+        description="归档子目录名（不变量 4 不丢数据）",
+    )
+
+    # ── 轮询与超时（不变量 3 超时保证）─────────────────────────────
+    poll_interval_seconds: float = Field(
+        default=2.0,
+        ge=0.5,
+        description="轮询响应文件间隔秒数（最小 0.5）",
+    )
+    default_timeout_seconds: int = Field(
+        default=300,
+        ge=1,
+        description="默认超时秒数（5 分钟）",
+    )
+    long_task_timeout_seconds: int = Field(
+        default=1800,
+        ge=1,
+        description="长任务超时秒数（30 分钟，文档生成等）",
+    )
+    ack_timeout_seconds: int = Field(
+        default=60,
+        ge=0,
+        description="等待 operator ack 的超时秒数（0=不等待）",
+    )
+
+    # ── 归档机制（不变量 4 不丢数据）───────────────────────────────
+    archive_completed: bool = Field(
+        default=True,
+        description="完成的请求是否归档到 archive/",
+    )
+    max_archive_files: int = Field(
+        default=1000,
+        ge=1,
+        description="归档目录最大文件数（超过自动清理最旧）",
+    )
+    cleanup_on_startup: bool = Field(
+        default=False,
+        description="启动时清理遗留 pending 请求（标记为 timeout）",
+    )
+
+    # ── 状态总览 ───────────────────────────────────────────────────
+    update_status_on_write: bool = Field(
+        default=True,
+        description="写入 request 时是否更新 status.json",
+    )
+    update_status_on_complete: bool = Field(
+        default=True,
+        description="完成响应时是否更新 status.json",
+    )
+
+    # ── 流式响应（F045 §2.1 双向通信支持，预留）────────────────────
+    stream_enabled: bool = Field(
+        default=False,
+        description="是否启用流式响应（Phase 3 实现）",
+    )
+    stream_chunk_interval: float = Field(
+        default=0.5,
+        ge=0.1,
+        description="流式轮询间隔秒数",
+    )
+
+    # ── 健康检查 ───────────────────────────────────────────────────
+    health_check_on_init: bool = Field(
+        default=True,
+        description="初始化时检查目录可写性",
+    )
+
+    model_config = {
+        "env_prefix": "FLOWFORGE_BRIDGE_",
+        "env_file": ".env",
+        "extra": "ignore",
+        "case_sensitive": False,
+    }
+
+    @classmethod
+    def load_from_yaml(cls, yaml_path: str) -> TraeBridgeConfig:
+        """从 trae_bridge.yaml 加载配置.
+
+        支持 ${ENV_VAR:default} 占位符展开（不变量 6 路径不硬编码）。
+
+        Args:
+            yaml_path: trae_bridge.yaml 文件路径
+
+        Returns:
+            TraeBridgeConfig 实例
+        """
+        import os
+        import re
+
+        try:
+            with open(yaml_path, "r", encoding="utf-8") as f:
+                raw = f.read()
+        except FileNotFoundError:
+            # 配置文件不存在时使用默认值
+            return cls()
+
+        # 展开 ${ENV_VAR:default} 占位符
+        def _expand(match: re.Match) -> str:
+            expr = match.group(1)
+            if ":" in expr:
+                env_key, default = expr.split(":", 1)
+                return os.environ.get(env_key.strip(), default.strip())
+            return os.environ.get(expr.strip(), "")
+
+        raw = re.sub(r"\$\{([^}]+)\}", _expand, raw)
+
+        try:
+            import yaml
+
+            data = yaml.safe_load(raw) or {}
+        except Exception:
+            data = {}
+
+        bridge_data = data.get("bridge", {})
+        # 环境变量优先级高于 YAML（pydantic-settings 自动处理）
+        return cls(**bridge_data)
+
+    @property
+    def requests_path(self) -> str:
+        """请求文件完整目录路径."""
+        return f"{self.shared_dir}/{self.requests_dir}"
+
+    @property
+    def responses_path(self) -> str:
+        """响应文件完整目录路径."""
+        return f"{self.shared_dir}/{self.responses_dir}"
+
+    @property
+    def cancels_path(self) -> str:
+        """取消文件完整目录路径."""
+        return f"{self.shared_dir}/{self.cancels_dir}"
+
+    @property
+    def acks_path(self) -> str:
+        """确认文件完整目录路径."""
+        return f"{self.shared_dir}/{self.acks_dir}"
+
+    @property
+    def archive_path(self) -> str:
+        """归档文件完整目录路径."""
+        return f"{self.shared_dir}/{self.archive_dir}"
+
+    @property
+    def status_file(self) -> str:
+        """状态总览文件完整路径."""
+        return f"{self.shared_dir}/status.json"

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.8] + [doc:../spec.md#§2.6]（5 种形态分类）
 > **对应 arch.md**: [doc:../arch.md#§3.8]
 > **对应 design.md**: [doc:../design.md#§3.8]（待创建）
 > **对应 Feature**: [doc:../features/F027-all-things-spirit-species.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D027-all-things-spirit-species.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/013-all-things-spirit-mind-vision.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,20 +16,20 @@
 
 ### 1.1 架构问题
 
-forgemind 应用层需要承载多形态智能体（Multi-Form Agent）实践场，但 v7.0 的 MindProfile 中无 species 字段，灵智体（Forgekin）仅能用于内容/代码/小说/电商四个数字业务场景，无法扩展到物理世界与虚拟角色。本架构在 forgemind 内部建立形态分类层，解决以下架构层问题：
+forgemind 应用层需要承载多形态智能体（Multi-Form Agent）实践场，但 v7.0 的 MindProfile 中无 species 字段，Forgekin仅能用于内容/代码/小说/电商四个数字业务场景，无法扩展到物理世界与虚拟角色。本架构在 forgemind 内部建立形态分类层，解决以下架构层问题：
 
 1. **形态分类无统一抽象**：BIO/ORG/OBJ/VIRTUAL/HYBRID 五种形态散落在不同模块，无 SpeciesRegistry 统一注册。
 2. **形态决定接入层关系未编码**：BIO/OBJ/HYBRID 必须接入物理传感器（F029）；VIRTUAL/HYBRID 必须接入虚拟世界设定层（F030），但 v7.0 无此形态门控。
 3. **形态可进化路径未约束**：BioForgekin -> HybridForgekin（加装传感器）、VirtualForgekin -> HybridForgekin（接入物理实体）等进化路径未编码，存在身份漂移风险。
-4. **形态字段未贯穿灵印**：形态属性未写入灵印（MindImprint）命名空间，无法作为身份锚点。
+4. **形态字段未贯穿SoulImprint**：形态属性未写入SoulImprint（SoulImprint）命名空间，无法作为身份锚点。
 
 ### 1.2 架构约束
 
 - **单向依赖约束**：SpeciesRegistry 必须单向依赖 core/config 与 core/interfaces，禁止反向依赖 *Forge 业务模块。
 - **配置驱动约束**：5 形态的 physical_coupling / virtual_world_required / sensor_channels / evolution_targets 必须 YAML 外置到 `forgemind/config/species.yaml`。
-- **形态门控约束**：BIO/OBJ/HYBRID 形态的灵智体必须绑定至少一个传感器通道（F029），VIRTUAL/HYBRID 形态的灵智体必须绑定一个 world_setting_id（F030）。
-- **形态进化审批约束**：形态进化（如 BIO -> HYBRID）必须经 operator 显式批准，禁止灵智体擅自切换形态导致身份漂移。
-- **灵印不可变约束**：species 字段写入灵印后，形态进化记录追加到 ForgekinLineage，原 species 字段不修改（保留血缘痕迹）。
+- **形态门控约束**：BIO/OBJ/HYBRID 形态的Forgekin必须绑定至少一个传感器通道（F029），VIRTUAL/HYBRID 形态的Forgekin必须绑定一个 world_setting_id（F030）。
+- **形态进化审批约束**：形态进化（如 BIO -> HYBRID）必须经 operator 显式批准，禁止Forgekin擅自切换形态导致身份漂移。
+- **SoulImprint不可变约束**：species 字段写入SoulImprint后，形态进化记录追加到 ForgekinLineage，原 species 字段不修改（保留血缘痕迹）。
 
 ### 1.3 架构影响
 
@@ -80,8 +79,8 @@ forgemind 应用层需要承载多形态智能体（Multi-Form Agent）实践场
                 |                         |
                 v                         v
     +-----------------------+   +-----------------------+
-    | BIO 形态灵智体         |   | VIRTUAL 形态灵智体    |
-    | OBJ 形态灵智体         |   | HYBRID 形态灵智体     |
+    | BIO 形态Forgekin         |   | VIRTUAL 形态Forgekin    |
+    | OBJ 形态Forgekin         |   | HYBRID 形态Forgekin     |
     | (Embodied AI 路径)    |   | (Character AI 路径)   |
     +-----------------------+   +-----------------------+
 ```
@@ -89,29 +88,29 @@ forgemind 应用层需要承载多形态智能体（Multi-Form Agent）实践场
 ### 2.2 关键架构决策
 
 - **决策 1：5 形态枚举固定不可扩展（BIO/ORG/OBJ/VIRTUAL/HYBRID）**
-  5 形态覆盖 AI 业界 Embodied AI（BIO/OBJ）+ Character AI（VIRTUAL）+ 组织智能体（ORG）+ 混合实体（HYBRID）全部范式。固定枚举避免灵智体形态无限扩展导致 ForgekinBase 三方法契约失效。新增形态必须经 ADR 决策，禁止运行时动态注册。
+  5 形态覆盖 AI 业界 Embodied AI（BIO/OBJ）+ Character AI（VIRTUAL）+ 组织智能体（ORG）+ 混合实体（HYBRID）全部范式。固定枚举避免Forgekin形态无限扩展导致 ForgekinBase 三方法契约失效。新增形态必须经 ADR 决策，禁止运行时动态注册。
 
 - **决策 2：形态属性 YAML 外置 + 形态注册表单例**
   SpeciesProfile 的 physical_coupling / virtual_world_required / sensor_channels / evolution_targets 必须 YAML 外置到 `forgemind/config/species.yaml`，由 SpeciesRegistry 在启动时加载为单例。这满足配置驱动约束（架构红线第 5 条），避免 .py 硬编码形态偏好。
 
 - **决策 3：形态门控由 SpeciesRegistry 集中校验**
-  SensorRegistry.bind() 与 WorldSetting.load() 必须调用 SpeciesRegistry.get(species) 校验形态合法性。这避免形态门控逻辑分散在 F029/F030 各自实现中，保证形态约束全局一致。
+  SensorRegistry.bind 与 WorldSetting.load 必须调用 SpeciesRegistry.get(species) 校验形态合法性。这避免形态门控逻辑分散在 F029/F030 各自实现中，保证形态约束全局一致。
 
 - **决策 4：形态进化由 SpeciesEvolutionGuard 强制 operator 审批**
-  形态进化（如 BIO -> HYBRID）需 request -> approve -> apply 三步，approve 必须由 operator 显式确认。这防止灵智体擅自切换形态导致身份漂移，与 F038 ForgekinLineage 联动保留血缘痕迹。
+  形态进化（如 BIO -> HYBRID）需 request -> approve -> apply 三步，approve 必须由 operator 显式确认。这防止Forgekin擅自切换形态导致身份漂移，与 F038 ForgekinLineage 联动保留血缘痕迹。
 
-- **决策 5：形态字段写入灵印作为身份锚点**
-  species 字段在创建时写入 MindImprint，进化后原 species 保留在 imprint，新 species 写入 ForgekinLineage。这保证灵印作为不可变身份锚点（架构不变量），同时通过谱系记录形态演化历史。
+- **决策 5：形态字段写入SoulImprint作为身份锚点**
+  species 字段在创建时写入 SoulImprint，进化后原 species 保留在 imprint，新 species 写入 ForgekinLineage。这保证SoulImprint作为不可变身份锚点（架构不变量），同时通过谱系记录形态演化历史。
 
 ### 2.3 架构不变量
 
 - 5 形态枚举必须固定为 BIO/ORG/OBJ/VIRTUAL/HYBRID，禁止运行时动态新增形态。
 - SpeciesProfile 必须 YAML 外置到 `forgemind/config/species.yaml`，禁止 .py 硬编码形态属性。
-- BIO/OBJ/HYBRID 形态灵智体必须绑定至少一个传感器通道，VIRTUAL 形态灵智体禁止绑定物理传感器。
-- VIRTUAL/HYBRID 形态灵智体必须绑定 world_setting_id，BIO/ORG/OBJ 形态灵智体禁止绑定虚拟世界设定。
+- BIO/OBJ/HYBRID 形态Forgekin必须绑定至少一个传感器通道，VIRTUAL 形态Forgekin禁止绑定物理传感器。
+- VIRTUAL/HYBRID 形态Forgekin必须绑定 world_setting_id，BIO/ORG/OBJ 形态Forgekin禁止绑定虚拟世界设定。
 - 形态进化必须经 SpeciesEvolutionGuard.request -> approve -> apply 三步，approve 必须由 operator 显式确认。
-- ORG 形态灵智体必须不可降级为 BIO/OBJ 形态（组织不能退化为生物/物品）。
-- species 字段必须写入灵印（MindImprint）作为身份锚点，形态进化记录追加到 ForgekinLineage 而非修改灵印。
+- ORG 形态Forgekin必须不可降级为 BIO/OBJ 形态（组织不能退化为生物/物品）。
+- species 字段必须写入SoulImprint（SoulImprint）作为身份锚点，形态进化记录追加到 ForgekinLineage 而非修改SoulImprint。
 
 ---
 
@@ -140,11 +139,11 @@ from datetime import datetime
 
 class ForgekinSpecies(str, Enum):
     """多形态智能体形态分类（5 种，对应 spec.md §2.6）"""
-    BIO = "bio"               # BioForgekin 生物灵智体（Embodied AI 路径）
-    ORG = "org"               # OrgForgekin 组织灵智体
-    OBJ = "obj"               # ObjForgekin 物品灵智体（Embodied AI 路径）
-    VIRTUAL = "virtual"       # VirtualForgekin 虚拟灵智体（Character AI 路径）
-    HYBRID = "hybrid"         # HybridForgekin 混合灵智体
+    BIO = "bio"               # BioForgekin 生物Forgekin（Embodied AI 路径）
+    ORG = "org"               # OrgForgekin 组织Forgekin
+    OBJ = "obj"               # ObjForgekin 物品Forgekin（Embodied AI 路径）
+    VIRTUAL = "virtual"       # VirtualForgekin 虚拟Forgekin（Character AI 路径）
+    HYBRID = "hybrid"         # HybridForgekin 混合Forgekin
 
 
 class PhysicalCoupling(str, Enum):
@@ -267,7 +266,7 @@ class SpeciesEvolutionGuard(ABC):
     ForgekinFormData(species, sensor_channels, world_setting_id)
         |
         v
-    写入灵印 MindImprint（species 字段不可变）
+    写入SoulImprint（species 字段不可变）
 
 [传感器绑定阶段（F029 调用）]
     SensorRegistry.bind(forgekin_id, channel)
@@ -300,7 +299,7 @@ class SpeciesEvolutionGuard(ABC):
     SpeciesEvolutionRecord --> 写入 ForgekinLineage（F038）
         |
         v
-    forgekin.species 字段更新（灵印 species 保留原值作为血缘痕迹）
+    forgekin.species 字段更新（SoulImprint species 保留原值作为血缘痕迹）
 ```
 
 ---
@@ -317,8 +316,8 @@ class SpeciesEvolutionGuard(ABC):
 ### 4.2 下游影响
 
 - **影响 F028 锻造流水线**：F028 第 ① 步"形态定义"必须从 SpeciesRegistry 加载 SpeciesProfile，禁止硬编码形态。
-- **影响 F029 物理 AI 传感器**：F029 的 SensorRegistry.bind() 必须调用 SpeciesRegistry.assert_sensor_allowed() 校验形态门控。
-- **影响 F030 虚拟世界设定层**：F030 的 WorldSetting.load() 必须调用 SpeciesRegistry.assert_world_setting_allowed() 校验形态门控。
+- **影响 F029 物理 AI 传感器**：F029 的 SensorRegistry.bind 必须调用 SpeciesRegistry.assert_sensor_allowed 校验形态门控。
+- **影响 F030 虚拟世界设定层**：F030 的 WorldSetting.load 必须调用 SpeciesRegistry.assert_world_setting_allowed 校验形态门控。
 - **影响 F038 进化谱系**：SpeciesEvolutionRecord 写入 ForgekinLineage 作为形态进化血缘证据。
 - **影响 F001 能力画像**：CapabilityProfile 包含 species 字段，能力匹配时考虑形态约束。
 
@@ -327,8 +326,8 @@ class SpeciesEvolutionGuard(ABC):
 - SpeciesRegistry 必须在 FlowForge 启动时由 `forgemind/config/species.yaml` 加载完成，未加载完成时 ForgePipeline 拒绝启动锻造流程。
 - 形态门控校验必须由 SpeciesRegistry 集中执行，F029/F030 禁止在各自模块内重复实现形态判断逻辑。
 - 形态进化记录必须写入 F038 ForgekinLineage，未写入时形态进化视为无效。
-- 灵印 species 字段必须保留原值（即使形态进化），新 species 写入 ForgekinLineage 作为进化后状态。
-- VIRTUAL 形态灵智体必须永不可绑定物理传感器，违反即形态门控失效。
+- SoulImprint species 字段必须保留原值（即使形态进化），新 species 写入 ForgekinLineage 作为进化后状态。
+- VIRTUAL 形态Forgekin必须永不可绑定物理传感器，违反即形态门控失效。
 
 ---
 
@@ -345,10 +344,10 @@ class SpeciesEvolutionGuard(ABC):
 ### 5.2 架构不变量验收
 
 - [ ] AC-6: 5 形态枚举固定不变量通过 —— ForgekinSpecies 仅含 BIO/ORG/OBJ/VIRTUAL/HYBRID 五值，运行时无法新增。
-- [ ] AC-7: 形态门控不变量通过 —— VIRTUAL 形态灵智体绑定物理传感器被拒绝，BIO 形态灵智体绑定虚拟世界设定被拒绝。
+- [ ] AC-7: 形态门控不变量通过 —— VIRTUAL 形态Forgekin绑定物理传感器被拒绝，BIO 形态Forgekin绑定虚拟世界设定被拒绝。
 - [ ] AC-8: 形态进化审批不变量通过 —— 未经 operator 审批的形态进化请求被拒绝应用。
-- [ ] AC-9: ORG 不可降级不变量通过 —— ORG -> BIO / ORG -> OBJ 进化路径被 SpeciesRegistry.list_evolution_paths() 排除。
-- [ ] AC-10: 灵印 species 不可变不变量通过 —— 形态进化后灵印 species 字段保留原值，新 species 仅出现在 ForgekinLineage。
+- [ ] AC-9: ORG 不可降级不变量通过 —— ORG -> BIO / ORG -> OBJ 进化路径被 SpeciesRegistry.list_evolution_paths 排除。
+- [ ] AC-10: SoulImprint species 不可变不变量通过 —— 形态进化后SoulImprint species 字段保留原值，新 species 仅出现在 ForgekinLineage。
 - [ ] AC-11: HYBRID 顶态不变量通过 —— HYBRID 形态 evolution_targets 为空列表，不可再进化。
 
 ---
@@ -364,7 +363,7 @@ class SpeciesEvolutionGuard(ABC):
 - [doc:../features/F030-virtual-world-setting.md]
 - [doc:../features/F038-forgemind-lineage.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
-- [doc:../design/naming-contract.md]（灵族 Forgekin Species + 灵印 MindImprint）
+- [doc:../design/naming-contract.md]（Forgekin Species 智能体形态学 + SoulImprint）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 
 ---
@@ -373,4 +372,4 @@ class SpeciesEvolutionGuard(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（5 形态枚举 + 形态门控 + 形态进化守卫架构） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（5 形态枚举 + 形态门控 + 形态进化守卫架构） | 架构师 Forgekin（猫头鹰·鲁班） |

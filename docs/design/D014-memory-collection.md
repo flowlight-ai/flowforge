@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004）
 > **对应 arch.md**: [doc:../arch.md#§3.4]
 > **对应 design.md**: [doc:../design.md#§3.4]
 > **对应 Feature**: [doc:../features/F014-memory-collection.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A014-memory-collection.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,7 +16,7 @@
 
 ### 1.1 设计问题
 
-灵智体（Forgekin，社区社交称"灵智体"）在执行任务时需要从多个相互独立的"知识域"读取上下文：项目权威资料（spec/ADR/git）、个人偏好、外部知识库、虚拟世界设定、情景记忆（灵忆 EchoStore）。A014 架构设计已确认 L1 真相源 Collection 层需要建立域隔离、权威继承、生命周期可治理、来源可溯源的统一容器模型。
+Forgekin（Evolvable Agent，社区社交称"灵智体"）在执行任务时需要从多个相互独立的"知识域"读取上下文：项目权威资料（spec/ADR/git）、个人偏好、外部知识库、虚拟世界设定、情景记忆（EchoStore）。A014 架构设计已确认 L1 真相源 Collection 层需要建立域隔离、权威继承、生命周期可治理、来源可溯源的统一容器模型。
 
 本详细设计进一步下沉到代码层，需要解决以下子问题：
 
@@ -31,10 +30,10 @@
 ### 1.2 设计约束
 
 - **单向依赖约束**：`flowforge/core/memory/collection/` 是 L1 底座，禁止 import F015/F016/F017/F039 任何模块（编程红线第 10 条延伸）。
-- **DI 容器约束**：`CollectionRegistry` 必须通过 DI 容器注入，绑定生命周期为 `singleton`，禁止 `CollectionRegistry()` 直接实例化（编程红线第 12 条）。
+- **DI 容器约束**：`CollectionRegistry` 必须通过 DI 容器注入，绑定生命周期为 `singleton`，禁止 `CollectionRegistry` 直接实例化（编程红线第 12 条）。
 - **Repository 层约束**：所有 Collection 元数据持久化必须经 `CollectionRepository` 抽象，禁止 `cursor.execute("INSERT INTO collections ...")` 直操作数据库（编程红线第 13 条）。
 - **配置驱动约束**：Collection 类型、权威等级、域隔离策略、物理存储后端选择必须外置 YAML（编程红线第 11 条）。
-- **OpenSieve 约束**：Collection 条目的非结构化检索统一走 OpenSieve 聚合检索中台（localhost:8100），不另起向量库。
+- **可插拔数据源适配器约束**：Collection 条目的非结构化检索通过 Repository 层抽象调用可插拔数据源适配器，不另起向量库。
 - **异步约束**：所有 I/O 操作使用 `async/await`，禁止同步阻塞调用。
 - **类型注解约束**：Python 3.11+，所有公共方法强制类型注解。
 - **提示词外置约束**：本模块不涉及提示词，但错误信息模板需外置到 `config/error_messages.yaml`。
@@ -42,9 +41,9 @@
 ### 1.3 设计影响
 
 - **对 L2 治理层（F016/A016）**：`authority_level` 字段成为治理三要素 `Authority` 的物理承载，治理层不再独立维护权威数据。本设计需保证 `Collection.authority_level` 的不可变性（创建后不可修改）。
-- **对 L3 检索层（F015/A015）**：三检索入口必须强制 `collections` 过滤参数，跨域 join 在引擎层硬拒。本设计需提供 `cross_domain_join_check()` 的同步快速路径。
+- **对 L3 检索层（F015/A015）**：三检索入口必须强制 `collections` 过滤参数，跨域 join 在引擎层硬拒。本设计需提供 `cross_domain_join_check` 的同步快速路径。
 - **对 L4 消费排序（F017/A017）**：`entry_id` 成为消费信号的聚合粒度。本设计需保证 `entry_id` 全局唯一（UUID v7 时序排序）。
-- **对 L6 锻典（F039/A039）**：Mind Codex 是 `external_knowledge` 类型 Collection 的特化，复用同一容器模型。本设计需暴露 `register()` 供锻典初始化调用。
+- **对 L6 蒸馏知识库（F039/A039）**：MindCodex 是 `external_knowledge` 类型 Collection 的特化，复用同一容器模型。本设计需暴露 `register` 供蒸馏知识库初始化调用。
 - **对 F020 七类归因矩阵**：`provenance` 字段成为"翻译偏差 / 环境漂移"归因的溯源依据。本设计需保证 `provenance` 强类型可被归因器解析。
 - **对 DI 容器**：需新增 `collection_registry` / `collection_repository` 两个绑定。
 - **对数据库 schema**：需新增 `collections` / `collection_entries` / `collection_provenance` 三张表，按 CollectionType 物理分表。
@@ -145,7 +144,7 @@ class Provenance(BaseModel):
 
     def to_flat(self) -> str:
         """扁平化为存储字符串，向后兼容 A014 provenance:str"""
-        return f"{self.type.value}:{self.ref}@{self.captured_at.isoformat()}"
+        return f"{self.type.value}:{self.ref}@{self.captured_at.isoformat}"
 
 
 class Collection(BaseModel):
@@ -165,7 +164,7 @@ class Collection(BaseModel):
 
 class CollectionEntry(BaseModel):
     """条目模型；authority 字段在 Repository 注入时由 Collection.authority_level 继承"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     entry_id: str = Field(min_length=1)
     collection_id: str = Field(min_length=1)
@@ -180,7 +179,7 @@ class CrossDomainJoinForbidden(Exception):
     """跨域 join 被禁止时抛出"""
     def __init__(self, collection_ids: list[str]):
         self.collection_ids = collection_ids
-        super().__init__(
+        super.__init__(
             f"Cross-domain join forbidden for collections: {collection_ids}"
         )
 
@@ -401,12 +400,12 @@ function append_entry(entry: CollectionEntry) -> str:
 
     # 6. 发射事件（幂等，event_id 作幂等键）
     event = LifecycleEvent(
-        event_id=uuid_v7(),
+        event_id=uuid_v7,
         event_type="entry_appended",
         collection_id=entry.collection_id,
         entry_id=entry_id,
         payload={"authority": entry.authority},
-        emitted_at=now(),
+        emitted_at=now,
     )
     await event_bus.emit(event)
 
@@ -465,7 +464,7 @@ class SqlAlchemyCollectionRegistry(CollectionRegistry):
         # 缓存 collection_id → collection_type 的映射（用于快速 cross_domain_check）
         # 注意：缓存必须与 archive/register 同步失效，通过 event_bus 订阅失效
         self._type_cache: dict[str, CollectionType] = {}
-        self._cache_lock = asyncio.Lock()
+        self._cache_lock = asyncio.Lock
 
     async def register(self, collection: Collection) -> str:
         # 校验 personal_context owner
@@ -484,7 +483,7 @@ class SqlAlchemyCollectionRegistry(CollectionRegistry):
 
         # 发射 registered 事件（幂等：event_id 唯一）
         event = LifecycleEvent(
-            event_id=str(uuid7()),
+            event_id=str(uuid7),
             event_type="registered",
             collection_id=collection_id,
             payload={"collection_type": collection.collection_type.value},
@@ -508,7 +507,7 @@ class SqlAlchemyCollectionRegistry(CollectionRegistry):
             self._type_cache.pop(collection_id, None)
         # 发射 archived 事件
         event = LifecycleEvent(
-            event_id=str(uuid7()),
+            event_id=str(uuid7),
             event_type="archived",
             collection_id=collection_id,
             payload={},
@@ -538,7 +537,7 @@ class SqlAlchemyCollectionRegistry(CollectionRegistry):
 
         # 5. 发射 entry_appended 事件
         event = LifecycleEvent(
-            event_id=str(uuid7()),
+            event_id=str(uuid7),
             event_type="entry_appended",
             collection_id=entry.collection_id,
             entry_id=entry_id,
@@ -614,29 +613,29 @@ class SqlAlchemyCollectionRepository(CollectionRepository):
 
     async def insert_collection(self, collection: Collection) -> str:
         table = _TYPE_TO_TABLE[collection.collection_type]
-        async with self._session_factory() as session:  # type: AsyncSession
-            row = table(**collection.model_dump())
+        async with self._session_factory as session:  # type: AsyncSession
+            row = table(**collection.model_dump)
             session.add(row)
-            await session.commit()
+            await session.commit
             return collection.collection_id
 
     async def query_by_type(
         self, ctype: CollectionType, include_archived: bool = False
     ) -> list[Collection]:
         table = _TYPE_TO_TABLE[ctype]
-        async with self._session_factory() as session:
+        async with self._session_factory as session:
             stmt = select(table).where(table.collection_type == ctype.value)
             if not include_archived:
                 stmt = stmt.where(table.lifecycle_status != CollectionLifecycle.ARCHIVED.value)
             result = await session.execute(stmt)
-            return [Collection.model_validate(row.__dict__) for row in result.scalars()]
+            return [Collection.model_validate(row.__dict__) for row in result.scalars]
 
     async def update_lifecycle(
         self, collection_id: str, status: CollectionLifecycle
     ) -> None:
         # 需先查 collection_type 再路由到对应表
-        async with self._session_factory() as session:
-            for ctype, table in _TYPE_TO_TABLE.items():
+        async with self._session_factory as session:
+            for ctype, table in _TYPE_TO_TABLE.items:
                 stmt = (
                     update(table)
                     .where(table.collection_id == collection_id)
@@ -644,15 +643,15 @@ class SqlAlchemyCollectionRepository(CollectionRepository):
                 )
                 result = await session.execute(stmt)
                 if result.rowcount > 0:
-                    await session.commit()
+                    await session.commit
                     return
             raise KeyError(f"Collection not found: {collection_id}")
 
     async def insert_entry(self, entry: CollectionEntry) -> str:
-        async with self._session_factory() as session:
-            row = CollectionEntryModel(**entry.model_dump())
+        async with self._session_factory as session:
+            row = CollectionEntryModel(**entry.model_dump)
             session.add(row)
-            await session.commit()
+            await session.commit
             return entry.entry_id
 
     async def query_entries(
@@ -662,7 +661,7 @@ class SqlAlchemyCollectionRepository(CollectionRepository):
         include_archived: bool = False,
         limit: int = 100,
     ) -> list[CollectionEntry]:
-        async with self._session_factory() as session:
+        async with self._session_factory as session:
             stmt = (
                 select(CollectionEntryModel)
                 .where(CollectionEntryModel.collection_id == collection_id)
@@ -674,14 +673,14 @@ class SqlAlchemyCollectionRepository(CollectionRepository):
                 )
             stmt = stmt.limit(limit)
             result = await session.execute(stmt)
-            return [CollectionEntry.model_validate(row.__dict__) for row in result.scalars()]
+            return [CollectionEntry.model_validate(row.__dict__) for row in result.scalars]
 
     async def get_collection(self, collection_id: str) -> Optional[Collection]:
-        async with self._session_factory() as session:
-            for ctype, table in _TYPE_TO_TABLE.items():
+        async with self._session_factory as session:
+            for ctype, table in _TYPE_TO_TABLE.items:
                 stmt = select(table).where(table.collection_id == collection_id)
                 result = await session.execute(stmt)
-                row = result.scalar_one_or_none()
+                row = result.scalar_one_or_none
                 if row is not None:
                     return Collection.model_validate(row.__dict__)
             return None
@@ -724,14 +723,14 @@ def _register_collection_bindings(container: DIContainer, config: CollectionConf
     # Repository（不是单例，每次注入新建 session）
     container.register_factory(
         "collection_repository",
-        lambda: SqlAlchemyCollectionRepository(get_async_session_factory()),
+        lambda: SqlAlchemyCollectionRepository(get_async_session_factory),
     )
     # Event Bus（单例）
     container.register_singleton(
         "lifecycle_event_bus",
-        lambda: InMemoryLifecycleEventBus(),
+        lambda: InMemoryLifecycleEventBus,
     )
-    # Registry（单例，禁止 CollectionRegistry() 直接实例化）
+    # Registry（单例，禁止 CollectionRegistry 直接实例化）
     container.register_singleton(
         "collection_registry",
         lambda: SqlAlchemyCollectionRegistry(
@@ -743,10 +742,10 @@ def _register_collection_bindings(container: DIContainer, config: CollectionConf
 
 ### 3.2 关键流程时序图
 
-#### 3.2.1 灵智体写入记忆条目时序图
+#### 3.2.1 Forgekin写入记忆条目时序图
 
 ```
-Forgekin.act()      CollectionRegistry    CollectionRepository    LifecycleEventBus    F016/F017 订阅者
+Forgekin.act      CollectionRegistry    CollectionRepository    LifecycleEventBus    F016/F017 订阅者
     │                      │                       │                     │                      │
     │ append_entry(entry)  │                       │                     │                      │
     ├─────────────────────▶│                       │                     │                      │
@@ -838,17 +837,17 @@ F015 RetrievalFusion    CollectionRegistry    Type Cache    CollectionRepository
 
 | 性能指标 | 目标值 | 优化手段 |
 |---------|:------:|---------|
-| `register()` 延迟 | < 20ms | 单条 INSERT，无关联查询；EventBus 异步发射 |
-| `append_entry()` 延迟 | < 15ms | 单条 INSERT + 1 次父 Collection 查询；事件异步 |
-| `list_by_type()` 延迟 | < 50ms（100 条） | 直接路由到对应物理表，无跨表 join；按 collection_type 索引 |
-| `cross_domain_join_check()` 延迟 | < 5ms（5 个 collection_ids） | 内存缓存 `collection_id → type`，并行查询；缓存命中率 > 95% 时延迟 < 1ms |
-| `get_authority_level()` 延迟 | < 5ms | 内存缓存（与 cross_domain_join_check 共享 cache） |
+| `register` 延迟 | < 20ms | 单条 INSERT，无关联查询；EventBus 异步发射 |
+| `append_entry` 延迟 | < 15ms | 单条 INSERT + 1 次父 Collection 查询；事件异步 |
+| `list_by_type` 延迟 | < 50ms（100 条） | 直接路由到对应物理表，无跨表 join；按 collection_type 索引 |
+| `cross_domain_join_check` 延迟 | < 5ms（5 个 collection_ids） | 内存缓存 `collection_id → type`，并行查询；缓存命中率 > 95% 时延迟 < 1ms |
+| `get_authority_level` 延迟 | < 5ms | 内存缓存（与 cross_domain_join_check 共享 cache） |
 | 物理表单表容量 | < 100w 条 | `max_entries_per_collection=100_000` 限制单 Collection 条目数 |
 | 并发写入 | 100 QPS | SQLAlchemy 异步 + 数据库连接池（max_size=20） |
 
 **缓存策略**：
 
-- 类型缓存 `collection_id → CollectionType`：进程内字典，TTL 无限，通过 `archive()` 主动失效。
+- 类型缓存 `collection_id → CollectionType`：进程内字典，TTL 无限，通过 `archive` 主动失效。
 - 不缓存 CollectionEntry：entry 数量可能巨大，全量缓存内存压力过大；entry 查询走索引。
 - 不缓存 list_by_type 结果：active Collection 数量有限（< 100），直接查表足够快。
 
@@ -884,7 +883,7 @@ class DurableStateWriter:
 
 #### 4.1.2 F001 CapabilityProfile 调用
 
-F001 校验 `owner_forgekin_id` 时查询灵智体存在性。本模块在 `register()` 阶段调用 F001 提供的 `forgekin_exists()` 接口：
+F001 校验 `owner_forgekin_id` 时查询Forgekin存在性。本模块在 `register` 阶段调用 F001 提供的 `forgekin_exists` 接口：
 
 ```python
 # 本模块在 register 中调用 F001（注意：F001 是上游，本模块可以依赖）
@@ -905,7 +904,7 @@ class SqlAlchemyCollectionRegistry(CollectionRegistry):
 
 #### 4.2.1 F015 三检索入口如何消费本模块
 
-F015 RetrievalFusion 在执行检索前调用本模块的 `cross_domain_join_check()` 与 `list_by_type()`：
+F015 RetrievalFusion 在执行检索前调用本模块的 `cross_domain_join_check` 与 `list_by_type`：
 
 ```python
 # F015 侧代码（不在本模块）
@@ -945,13 +944,13 @@ F016 还订阅 `LifecycleEventBus` 的 `archived` / `deprecated` 事件，及时
 
 #### 4.2.3 F017 消费加权排序如何消费本模块
 
-F017 ConsumptionWeightedRanker 使用 `entry_id` 作为消费信号的聚合主键。`entry_id` 由本模块在 `append_entry()` 中返回，F017 将其作为 `ConsumptionSignal.entry_id` 写入。
+F017 ConsumptionWeightedRanker 使用 `entry_id` 作为消费信号的聚合主键。`entry_id` 由本模块在 `append_entry` 中返回，F017 将其作为 `ConsumptionSignal.entry_id` 写入。
 
 **集成测试点**：F017 收到的 `entry_id` 必须能在本模块 Repository 中查到，禁止"幽灵 entry"。
 
-#### 4.2.4 F039 锻典可检索知识库如何消费本模块
+#### 4.2.4 F039 蒸馏知识库可检索知识库如何消费本模块
 
-F039 Mind Codex 复用 `external_knowledge` CollectionType，在初始化时调用 `register()` 注册一个特殊的 Codex Collection：
+F039 MindCodex 复用 `external_knowledge` CollectionType，在初始化时调用 `register` 注册一个特殊的 Codex Collection：
 
 ```python
 # F039 侧代码（不在本模块）
@@ -959,7 +958,7 @@ class MindCodexInitializer:
     async def initialize(self):
         codex_collection = Collection(
             collection_id="mind_codex_default",
-            name="Mind Codex Default",
+            name="MindCodex Default",
             collection_type=CollectionType.EXTERNAL_KNOWLEDGE,
             authority_level=3,  # verified_decision
             source_uri="flowforge://forgemind/codex",
@@ -981,7 +980,7 @@ class MindCodexInitializer:
 | IT-D014-005 | 跨域 join 检测（5×5 类型组合） | 全部抛 CrossDomainJoinForbidden |
 | IT-D014-006 | 同域 join 检测（5 种类型各内 1 次） | 全部放行 |
 | IT-D014-007 | archived Collection 追加 entry | 抛 ArchivedCollectionWriteError |
-| IT-D014-008 | archive() 后 list_by_type 默认不返回 | archived 不在默认结果中 |
+| IT-D014-008 | archive 后 list_by_type 默认不返回 | archived 不在默认结果中 |
 | IT-D014-009 | LifecycleEventBus 事件幂等 | 重复发射相同 event_id 不触发下游重复处理 |
 | IT-D014-010 | CollectionRegistry 单例性 | 多次 inject 返回同一对象（id 相等） |
 | IT-D014-011 | F015 调用 cross_domain_join_check | 跨域查询被拒绝 |
@@ -1005,24 +1004,24 @@ class MindCodexInitializer:
 - [ ] **AC-F-7**: `cross_domain_join_check` 覆盖 5×5 类型组合，全部抛 `CrossDomainJoinForbidden`（IT-D014-005）。
 - [ ] **AC-F-8**: `LifecycleEventBus` 事件幂等，重复 event_id 不触发下游重复处理（IT-D014-009）。
 - [ ] **AC-F-9**: `CollectionRegistry` 是 DI 单例，多次 inject 返回同一对象（IT-D014-010）。
-- [ ] **AC-F-10**: F039 锻典可注册 `external_knowledge` Collection 并复用容器模型（IT-D014-014）。
+- [ ] **AC-F-10**: F039 蒸馏知识库可注册 `external_knowledge` Collection 并复用容器模型（IT-D014-014）。
 
 ### 5.2 性能验收
 
-- [ ] **AC-P-1**: `register()` 延迟 < 20ms（P95，单机 SQLite）。
-- [ ] **AC-P-2**: `append_entry()` 延迟 < 15ms（P95，单机 SQLite）。
-- [ ] **AC-P-3**: `list_by_type()` 延迟 < 50ms（P95，100 条结果）。
-- [ ] **AC-P-4**: `cross_domain_join_check()` 延迟 < 5ms（P95，5 个 collection_ids，缓存命中）。
-- [ ] **AC-P-5**: `cross_domain_join_check()` 延迟 < 15ms（P95，5 个 collection_ids，缓存未命中）。
+- [ ] **AC-P-1**: `register` 延迟 < 20ms（P95，单机 SQLite）。
+- [ ] **AC-P-2**: `append_entry` 延迟 < 15ms（P95，单机 SQLite）。
+- [ ] **AC-P-3**: `list_by_type` 延迟 < 50ms（P95，100 条结果）。
+- [ ] **AC-P-4**: `cross_domain_join_check` 延迟 < 5ms（P95，5 个 collection_ids，缓存命中）。
+- [ ] **AC-P-5**: `cross_domain_join_check` 延迟 < 15ms（P95，5 个 collection_ids，缓存未命中）。
 - [ ] **AC-P-6**: 100 并发 `append_entry` 无死锁、无数据丢失（IT-D014-015）。
 - [ ] **AC-P-7**: 类型缓存命中率 > 95%（长期运行后采样统计）。
 
 ### 5.3 安全验收
 
 - [ ] **AC-S-1**: 所有数据库操作经 Repository 层，无 `cursor.execute` 直操作数据库代码（静态扫描确认）。
-- [ ] **AC-S-2**: 所有依赖通过 DI 容器注入，无 `CollectionRegistry()` 直接实例化代码（静态扫描确认）。
+- [ ] **AC-S-2**: 所有依赖通过 DI 容器注入，无 `CollectionRegistry` 直接实例化代码（静态扫描确认）。
 - [ ] **AC-S-3**: 所有提示词外置 YAML，本模块代码中无硬编码提示词（静态扫描确认）。
-- [ ] **AC-S-4**: `owner_forgekin_id` 字段在 personal_context Collection 中强制非空，防止跨灵智体上下文泄露（IT-D014-002）。
+- [ ] **AC-S-4**: `owner_forgekin_id` 字段在 personal_context Collection 中强制非空，防止跨Forgekin上下文泄露（IT-D014-002）。
 - [ ] **AC-S-5**: 跨域 join 在引擎层硬拒，防止跨域数据污染（IT-D014-005）。
 - [ ] **AC-S-6**: `provenance` 字段强制非空，确保所有记忆可溯源（IT-D014-003）。
 - [ ] **AC-S-7**: Repository 层使用参数化查询（SQLAlchemy ORM 自动参数化），无 SQL 注入风险。
@@ -1049,8 +1048,8 @@ class MindCodexInitializer:
 - [doc:../features/F017-consumption-weighted-ranking.md]
 - [doc:../features/F039-mind-codex-searchable.md]
 - [doc:../decisions/008-memory-federation.md]
-- [doc:../design/naming-contract.md#2.5]（灵忆 EchoStore）
-- [doc:../design/naming-contract.md#2.8]（锻典 Mind Codex）
+- [doc:../design/naming-contract.md#2.5]（EchoStore）
+- [doc:../design/naming-contract.md#2.8]（MindCodex 蒸馏知识库）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 - [doc:../../../hiclaw/rules.md#编程红线]
 
@@ -1060,4 +1059,4 @@ class MindCodexInitializer:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 类图 + Pydantic Models + 实现 + 时序图 + 错误处理 + 性能优化 + 跨模块协作 + AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 类图 + Pydantic Models + 实现 + 时序图 + 错误处理 + 性能优化 + 跨模块协作 + AC） | 开发者 Forgekin（猎犬·夏洛克） |

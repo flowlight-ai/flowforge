@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.1]（FR-CORE-001）
 > **对应 arch.md**: [doc:../arch.md#§3.1]
 > **对应 design.md**: [doc:../design.md#§3.1]（待创建）
 > **对应 Feature**: [doc:../features/F001-capability-profile.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D001-capability-profile.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/004-capability-profile-routing.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,10 +16,10 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智体'）如何被选择去承担某项任务"的根本问题。当前 `default_llm_actors.py` 把灵智体固定成岗位槽位（如"你是内容创作者"），违反 roleagent.md 第 0 章"role-agent 是蒸汽马车式误判"的核心主张，导致：
+FlowForge 在架构层需要解决"Forgekin（Evolvable Agent，社区社交称'灵智体'）如何被选择去承担某项任务"的根本问题。当前 `default_llm_actors.py` 把Forgekin固定成岗位槽位（如"你是内容创作者"），违反 roleagent.md 第 0 章"role-agent 是蒸汽马车式误判"的核心主张，导致：
 
 1. 路由基于硬编码角色而非能力匹配，违反编程红线第 10 条（禁止在 flowforge 中写死业务领域代码）与第 11 条（禁止硬编码提示词/路径/密钥/端口）
-2. 跨厂商 review 不基于盲点画像，同厂商灵智体共享盲点的结构性问题无法消除
+2. 跨厂商 review 不基于盲点画像，同厂商Forgekin共享盲点的结构性问题无法消除
 3. 缺少 Build to Delete vs Built to Persist 半衰期判别器，无法识别哪些机制值得长期投资
 4. Agent 状态三层中只有"现实状态"是唯一跨会话持久层，但当前未形式化
 
@@ -29,7 +28,7 @@ CapabilityProfile 在架构层提供"能力 × Harness 契合度"的度量基础
 ### 1.2 架构约束
 
 - **单向依赖约束**：`flowforge/core/capability/` 只能依赖 `core/interfaces/` 与共享内核，禁止反向依赖 *Forge 或 forgemind 应用层
-- **DI 容器约束**：CapabilityRouter 与 CapabilityRepository 必须通过构造函数注入，禁止 `CapabilityRouter()` 直接实例化
+- **DI 容器约束**：CapabilityRouter 与 CapabilityRepository 必须通过构造函数注入，禁止 `CapabilityRouter` 直接实例化
 - **Repository 层约束**：能力画像的读写必须通过 `CapabilityRepository` 抽象，禁止直接 `cursor.execute("INSERT INTO capability_profiles...")`
 - **配置驱动约束**：路由权重、阈值、维度配置外置到 `flowforge/config/capability.yaml`，禁止在 `.py` 文件中硬编码
 - **Plugin V3 协议约束**：*Forge 不可直接注册 CapabilityProfile，必须通过 `register_forgekins` 钩子注入
@@ -89,7 +88,7 @@ CapabilityProfile 在架构层提供"能力 × Harness 契合度"的度量基础
 ### 2.2 关键架构决策
 
 - **决策 1：role 是运行时标签，profile 才是长期主体**
-  理由：role 回答"这一步谁负责什么"，profile 回答"为什么是这只灵智体"。role 每次任务可变，profile 跨 session 持续累积，避免 agent 被固定成岗位槽位。
+  理由：role 回答"这一步谁负责什么"，profile 回答"为什么是这只Forgekin"。role 每次任务可变，profile 跨 session 持续累积，避免 agent 被固定成岗位槽位。
 
 - **决策 2：能力画像必须包含 blind_spots（半常量层）**
   理由：roleagent.md 第 0 章明确"能力画像不是简历"。盲点决定了谁该 review 谁、谁和谁组队会翻车。空 blind_spots 列表必须在 Schema 层报错。
@@ -97,11 +96,11 @@ CapabilityProfile 在架构层提供"能力 × Harness 契合度"的度量基础
 - **决策 3：可变性分层（常量/半常量/变量/累积/瞬时五层）**
   理由：不同可变性层的更新策略不同。常量层（模型固有能力）几乎不变；累积层（历史表现）单调积累；瞬时层（当前状态）每次任务刷新。混在一起会导致画像失真。
 
-- **决策 4：路由算法延迟必须 < 100ms（10 个候选灵智体）**
+- **决策 4：路由算法延迟必须 < 100ms（10 个候选Forgekin）**
   理由：路由在 TeamAct Owner 步高频调用，若用 LLM 在线判断能力匹配，每次路由都要 LLM 调用，延迟与成本不可接受。改为本地向量匹配 + 缓存预计算。
 
 - **决策 5：跨厂商 review 配对基于盲点不重叠**
-  理由：同一家厂商的灵智体共享训练分布偏差（如 Claude review Claude 漏掉同一类错误）。盲点不重叠是跨厂商 review 的结构性必需，不是锦上添花。
+  理由：同一家厂商的Forgekin共享训练分布偏差（如 Claude review Claude 漏掉同一类错误）。盲点不重叠是跨厂商 review 的结构性必需，不是锦上添花。
 
 - **决策 6：Build to Delete vs Built to Persist 半衰期标记**
   理由：能力画像本身是 Built to Persist 基础设施（编码 agent 与外部现实的关系，模型越强越值钱），但具体的路由算法可能随模型升级而调整（Build to Delete，标 sunset）。
@@ -110,8 +109,8 @@ CapabilityProfile 在架构层提供"能力 × Harness 契合度"的度量基础
 
 - CapabilityProfile 必须包含 `blind_spots` 字段，空列表报 SchemaError
 - CapabilityProfile 必须通过 Repository 层持久化，禁止直接操作数据库
-- 路由算法延迟必须 < 100ms（10 个候选灵智体，P99）
-- 能力画像更新必须由 Eval 信号触发，禁止灵智体主动修改自己的画像
+- 路由算法延迟必须 < 100ms（10 个候选Forgekin，P99）
+- 能力画像更新必须由 Eval 信号触发，禁止Forgekin主动修改自己的画像
 - 跨厂商 review 配对必须验证盲点不重叠，重叠则拒绝配对
 - CapabilityRouter 与 CapabilityRepository 必须通过 DI 容器注入，禁止直接实例化
 - 历史表现只能单调累积，禁止回退或清零
@@ -139,7 +138,7 @@ from enum import Enum
 
 
 class CapabilityProfile(BaseModel):
-    """灵智体能力画像 — 长期主体画像（跨 session 持续）"""
+    """Forgekin能力画像 — 长期主体画像（跨 session 持续）"""
     forgekin_id: str
     model_capability: "ModelCapability"          # 常量层
     cognitive_style: "CognitiveStyle"            # 常量层
@@ -155,7 +154,7 @@ class CapabilityProfile(BaseModel):
         """分析能力缺口，返回需要扩展的能力列表"""
 
     def has_blind_spot_conflict(self, other: "CapabilityProfile") -> bool:
-        """检查与另一灵智体的盲点是否冲突（用于跨厂商 review 配对）"""
+        """检查与另一Forgekin的盲点是否冲突（用于跨厂商 review 配对）"""
 
 
 class CapabilityRouter(ABC):
@@ -185,7 +184,7 @@ class CapabilityRepository(ABC):
 
     @abstractmethod
     async def load(self, forgekin_id: str) -> Optional[CapabilityProfile]:
-        """加载灵智体的能力画像"""
+        """加载Forgekin的能力画像"""
 
     @abstractmethod
     async def update_performance(
@@ -200,7 +199,7 @@ class CapabilityRepository(ABC):
         self,
         required: "TaskProfile",
     ) -> list[CapabilityProfile]:
-        """列出符合任务能力要求的候选灵智体"""
+        """列出符合任务能力要求的候选Forgekin"""
 
 
 class BlindSpotDetector(ABC):
@@ -239,7 +238,7 @@ class RoutingDecision(BaseModel):
        │
        ▼
 ┌──────────────────────────────────────────────┐
-│ 1. CapabilityRepository.list_by_capability   │  ← 查询候选灵智体
+│ 1. CapabilityRepository.list_by_capability   │  ← 查询候选Forgekin
 │    (Repository 层读 SQLite)                   │
 └──────────────────┬───────────────────────────┘
                    │ list[CapabilityProfile]
@@ -285,7 +284,7 @@ class RoutingDecision(BaseModel):
 
 ### 4.2 下游影响
 
-- **F002 TeamAct Loop** — Owner 步直接调用 `CapabilityRouter.route()` 选定持球者
+- **F002 TeamAct Loop** — Owner 步直接调用 `CapabilityRouter.route` 选定持球者
 - **F003 Handoff Capsule** — 交接胶囊的 `blind_spot_hints` 自动从 author CapabilityProfile 注入
 - **F007 Push Back** — Push Back 的 evidence_refs 必须锚定到 F009 证据，间接依赖画像评估"是否是 reviewer 盲点 vs author 盲点"
 - **F031 External Agent Adapter** — ExternalAgentProfile 融合到 CapabilityProfile（gap_analysis 驱动三方 Agent 调用决策）
@@ -313,7 +312,7 @@ class RoutingDecision(BaseModel):
 ### 5.2 架构不变量验收
 
 - [ ] AC-6: `blind_spots` 为空列表时 `CapabilityProfile` 构造抛 SchemaError
-- [ ] AC-7: 路由算法 P99 延迟 < 100ms（10 候选灵智体，基准测试）
+- [ ] AC-7: 路由算法 P99 延迟 < 100ms（10 候选Forgekin，基准测试）
 - [ ] AC-8: `update_performance` 调用后 `historical_performance.success_count` 单调递增，无回退
 - [ ] AC-9: 跨厂商 review 配对 `overlap_score >= 0.3` 时配对被拒绝
 - [ ] AC-10: 路由正确率 ≥ 85%（基于 Eval 信号 100 次任务基准）
@@ -338,4 +337,4 @@ class RoutingDecision(BaseModel):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F001 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F001 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

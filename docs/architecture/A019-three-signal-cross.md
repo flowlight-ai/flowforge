@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005）
 > **对应 arch.md**: [doc:../arch.md#§3.5]
 > **对应 design.md**: [doc:../design.md#§3.5]（待创建）
 > **对应 Feature**: [doc:../features/F019-three-signal-cross.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D019-three-signal-cross.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/009-eval-self-metabolism.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -20,7 +19,7 @@
 Eval 数据源的架构问题是"单一信号失真"。v7.0 只有第三方信号（MetricsCollector 采集的工具调用频率），导致三类架构故障：
 
 1. **无愿景对齐判断**：缺少第一方 CVO 愿景信号，无法判断"harness 在增值但偏离愿景"。
-2. **无灵智体摩擦反馈**：缺少第二方 agent 摩擦信号，灵智体的真实摩擦无法被采集。常见错误是用"自由散文反思"代替结构化采访，导致反思无法机器处理。
+2. **无Forgekin摩擦反馈**：缺少第二方 agent 摩擦信号，Forgekin的真实摩擦无法被采集。常见错误是用"自由散文反思"代替结构化采访，导致反思无法机器处理。
 3. **冲突无法识别**：三方信号冲突时无检测机制，CVO 说"这块该退役"而 MetricsCollector 显示"用得很频繁"，无仲裁。
 
 roleagent.md 第 5 章三方信号：**①第一方 CVO 愿景信号 ②第二方 agent 摩擦信号（结构化采访，不是自由散文反思）③第三方运行时观测信号**。本架构解决的核心问题：**如何在 L2 三方信号交叉层实现三信号采集、交叉验证、冲突检测，以及"三方不一致即触发 F020 归因"的硬约束**。
@@ -30,7 +29,7 @@ roleagent.md 第 5 章三方信号：**①第一方 CVO 愿景信号 ②第二�
 - **单向依赖约束**：三方信号交叉层依赖 F018 Eval Contract，禁止被 F018 反向依赖。
 - **结构化采访约束**：第二方 agent 摩擦信号必须用预设问题采集，禁止自由散文反思。
 - **冲突触发约束**：同 metric 三方差异超阈值必须自动触发 F020 七类归因矩阵。
-- **CVO 愿景派生约束**：第一方 CVO 愿景信号从 VISION.md / ROADMAP.md 派生，禁止灵智体自评愿景对齐度。
+- **CVO 愿景派生约束**：第一方 CVO 愿景信号从 VISION.md / ROADMAP.md 派生，禁止Forgekin自评愿景对齐度。
 - **配置驱动约束**：冲突阈值、采访模板、采集指标外置 YAML。
 
 ### 1.3 架构影响
@@ -39,7 +38,7 @@ roleagent.md 第 5 章三方信号：**①第一方 CVO 愿景信号 ②第二�
 - **对 F020 七类归因矩阵**：三方冲突是 F020 归因的触发源，归因器读取冲突详情做七类分类。
 - **对 F040 控制面**：三方信号写入 F040 Eval Hub，作为"哪块机制正在增值/折旧"的依据。
 - **对 VISION.md / ROADMAP.md**：CVO 愿景信号反向驱动 VISION/ROADMAP 文档结构化（必须可机器读取）。
-- **对灵智体执行流**：第二方摩擦信号在灵智体完成任务后触发结构化采访，注入到 Forgekin.verify() 之后。
+- **对Forgekin执行流**：第二方摩擦信号在Forgekin完成任务后触发结构化采访，注入到 Forgekin.verify 之后。
 
 ---
 
@@ -81,17 +80,17 @@ roleagent.md 第 5 章三方信号：**①第一方 CVO 愿景信号 ②第二�
 
 ### 2.2 关键架构决策
 
-- **决策 1：第二方信号必须结构化采访**。预设问题列表（如"这次任务哪一步最卡？""哪个工具调用最失败？"），灵智体按问题给答案。理由：自由散文反思无法机器处理，结构化采访让摩擦信号可量化、可对比、可归因。
-- **决策 2：第一方信号从 VISION/ROADMAP 派生而非灵智体自评**。CVO 愿景对齐度由 VISION.md / ROADMAP.md 的结构化字段派生（如"该 harness 组件对应 ROADMAP 第几条"），禁止灵智体自评"我对齐愿景了"。理由：自评会引入"模型说自己好"的失真。
+- **决策 1：第二方信号必须结构化采访**。预设问题列表（如"这次任务哪一步最卡？""哪个工具调用最失败？"），Forgekin按问题给答案。理由：自由散文反思无法机器处理，结构化采访让摩擦信号可量化、可对比、可归因。
+- **决策 2：第一方信号从 VISION/ROADMAP 派生而非Forgekin自评**。CVO 愿景对齐度由 VISION.md / ROADMAP.md 的结构化字段派生（如"该 harness 组件对应 ROADMAP 第几条"），禁止Forgekin自评"我对齐愿景了"。理由：自评会引入"模型说自己好"的失真。
 - **决策 3：冲突检测按 metric 分组**。同 metric_name 的三方信号差异 > conflict_threshold（默认 0.3）标记冲突。理由：跨 metric 比较无意义（如"工具调用频率"与"任务成功率"无可比性）。
 - **决策 4：冲突自动触发 F020**。检测到冲突不依赖人工 review，自动派发到 F020 归因矩阵。理由：roleagent.md 第 5 章硬要求"三方不一致即触发归因"。
-- **决策 5：禁止自由散文反思**。`forbid_free_form_reflection: true` 是硬配置，禁止灵智体在采访外发送自由反思文本。理由：避免散文污染结构化信号。
+- **决策 5：禁止自由散文反思**。`forbid_free_form_reflection: true` 是硬配置，禁止Forgekin在采访外发送自由反思文本。理由：避免散文污染结构化信号。
 - **决策 6：第三方信号复用 F009 Evidence & Sensors**。runtime_observation 信号来自 F009 已采集的工具调用模式/失败频率/重试次数/耗时分布，不另起采集器。理由：避免重复采集与数据不一致。
 
 ### 2.3 架构不变量
 
 - 第二方 agent 摩擦信号必须用结构化采访采集，必须禁止自由散文反思。
-- 第一方 CVO 愿景信号必须从 VISION.md / ROADMAP.md 派生，必须禁止灵智体自评。
+- 第一方 CVO 愿景信号必须从 VISION.md / ROADMAP.md 派生，必须禁止Forgekin自评。
 - 同 metric 三方差异超 conflict_threshold 必须自动触发 F020 归因。
 - 第三方 runtime_observation 信号必须复用 F009 采集器，必须不另起采集。
 - 采访模板必须从配置加载，必须禁止代码硬编码问题列表。
@@ -168,7 +167,7 @@ class CrossValidationResult(BaseModel):
 class SignalCollector(ABC):
     @abstractmethod
     async def collect_cvo(self, metric: str) -> Signal:
-        """从 VISION/ROADMAP 派生 CVO 信号；禁止灵智体自评"""
+        """从 VISION/ROADMAP 派生 CVO 信号；禁止Forgekin自评"""
 
     @abstractmethod
     async def collect_friction(self, interview: FrictionInterview) -> Signal:
@@ -207,7 +206,7 @@ class CvoSignalCollector(ABC):
         │
         ├─ FrictionInterviewCollector.conduct_interview(forgekin_id)
         │    └─ 加载采访模板（YAML）
-        │    └─ 灵智体按问题给答案（结构化）
+        │    └─ Forgekin按问题给答案（结构化）
         │    └─ 拒绝自由散文反思
         │
         └─ RuntimeSignalCollector.collect_from_evidence(metric)
@@ -227,10 +226,10 @@ class CvoSignalCollector(ABC):
         ├─ 同 metric 三方差异 > conflict_threshold (0.3) → is_conflict=True
         │
         ▼
-  detect_conflict() 检测冲突
+  detect_conflict 检测冲突
         │
         ▼
-  冲突自动派发 F020 AttributionClassifier.classify()
+  冲突自动派发 F020 AttributionClassifier.classify
         │
         ▼
   F020 七类归因矩阵分类根因
@@ -260,12 +259,12 @@ class CvoSignalCollector(ABC):
 - 影响 **F020 七类归因矩阵**：三方冲突是 F020 归因的触发源。
 - 影响 **F040 控制面**：三方信号写入 F040 Eval Hub，作为"哪块机制正在增值/折旧"的依据。
 - 影响 **F012 Entropy Control**：长期 CVO 愿景对齐度低可触发 F012 sunset review（通过 F018 sunset_signals）。
-- 影响 **Forgekin.verify()**：第二方摩擦采访注入到灵智体 verify 之后，作为标准反馈环节。
+- 影响 **Forgekin.verify**：第二方摩擦采访注入到Forgekin verify 之后，作为标准反馈环节。
 
 ### 4.3 跨模块不变量
 
 - 第二方摩擦信号必须用结构化采访，必须禁止自由散文（forbid_free_form_reflection=true）。
-- 第一方 CVO 信号必须从 VISION/ROADMAP 派生，必须禁止灵智体自评。
+- 第一方 CVO 信号必须从 VISION/ROADMAP 派生，必须禁止Forgekin自评。
 - 第三方 runtime 信号必须复用 F009，必须不另起采集器。
 - 同 metric 三方差异超阈值必须自动触发 F020，必须不依赖人工 review。
 - 采访模板必须从配置加载，必须禁止代码硬编码。
@@ -285,7 +284,7 @@ class CvoSignalCollector(ABC):
 ### 5.2 架构不变量验收
 
 - [ ] AC-6: 第二方信号必须是 FrictionInterview 结构化对象，自由散文被拒绝（单测覆盖）。
-- [ ] AC-7: 第一方 CVO 信号从 VISION/ROADMAP 派生，无灵智体自评代码（静态扫描确认）。
+- [ ] AC-7: 第一方 CVO 信号从 VISION/ROADMAP 派生，无Forgekin自评代码（静态扫描确认）。
 - [ ] AC-8: 第三方 runtime 信号复用 F009，无独立采集器（静态扫描确认）。
 - [ ] AC-9: 同 metric 三方差异 > 0.3 自动触发 F020 归因（集成测试覆盖）。
 - [ ] AC-10: 采访模板从 YAML 加载，代码中无硬编码问题列表。
@@ -312,4 +311,4 @@ class CvoSignalCollector(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 三方采集 + 结构化采访 + 冲突自动触发归因） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 三方采集 + 结构化采访 + 冲突自动触发归因） | 架构师 Forgekin（猫头鹰·鲁班） |

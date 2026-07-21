@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004）
 > **对应 arch.md**: [doc:../arch.md#§3.4]
 > **对应 design.md**: [doc:../design.md#§3.4]
 > **对应 Feature**: [doc:../features/F015-three-retrieval-entry.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A015-three-retrieval-entry.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -21,7 +20,7 @@ A015 架构设计已确定三检索入口（grep / semantic / index）并行调�
 
 1. **三入口并行调度的具体编排**：`asyncio.gather` 与 `asyncio.gather(return_exceptions=True)` 的选择，单入口失败时是否影响整体。
 2. **ripgrep 子进程调用的封装**：subprocess 的超时控制、大输出截断、错误码映射。
-3. **OpenSieve SDK 调用的具体接口契约**：URL、请求体、响应解析、错误码归一化。
+3. **可插拔数据源适配器 SDK 调用的具体接口契约**：URL、请求体、响应解析、错误码归一化。
 4. **sqlite_fts 索引同步**：何时写入 fts 索引，与 CollectionEntry 写入的事务边界。
 5. **RRF 算法的工程实现**：`k=60` 从配置加载，相同 entry_id 在多个入口命中时分数合并。
 6. **authority_floor 过滤的执行时机**：在 RRF 融合之前对每个入口结果独立过滤，避免低权威命中干扰排名。
@@ -29,10 +28,10 @@ A015 架构设计已确定三检索入口（grep / semantic / index）并行调�
 
 ### 1.2 设计约束
 
-- **单向依赖约束**：`flowforge/core/memory/retrieval/` 依赖 F014 Collection 层与 OpenSieve，禁止被 F014 反向依赖，禁止 import F016/F017/F020/F039/F040。
+- **单向依赖约束**：`flowforge/core/memory/retrieval/` 依赖 F014 Collection 层与可插拔数据源适配器（通过 Repository 层抽象），禁止被 F014 反向依赖，禁止 import F016/F017/F020/F039/F040。
 - **域隔离约束**：三入口均必须强制 `collections` 参数，无此参数的查询在入口处拒绝。
-- **配置驱动约束**：grep/semantic/index 三引擎的具体实现路径（ripgrep 二进制路径、OpenSieve URL、sqlite_fts 表名）外置 YAML。
-- **OpenSieve 约束**：semantic 入口的非结构化检索走 OpenSieve 聚合检索中台，不另起向量服务。
+- **配置驱动约束**：grep/semantic/index 三引擎的具体实现路径（ripgrep 二进制路径、可插拔数据源适配器 URL、sqlite_fts 表名）外置 YAML。
+- **可插拔数据源适配器约束**：semantic 入口的非结构化检索通过 Repository 层抽象调用可插拔数据源适配器，不另起向量服务。
 - **简单系统约束**：roleagent.md 第 4 章要求"查询扩展由 agent 做，不在引擎里加 regex/小模型"——本设计禁止在检索引擎内做任何 LLM 调用或 regex 扩展。
 - **异步约束**：所有 I/O 操作使用 `async/await`；subprocess 调用使用 `asyncio.create_subprocess_exec`。
 - **超时约束**：单入口超时 1s，整体检索超时 2s（并行 + RRF）。
@@ -43,9 +42,9 @@ A015 架构设计已确定三检索入口（grep / semantic / index）并行调�
 - **对 F016 治理层**：authority_floor 过滤先于 RRF 融合，过滤后的结果交 F016 治理层做权威排序。
 - **对 F017 消费排序**：RRF 融合后的 RetrievalHit 列表是 F017 的输入。本设计需保证 `RetrievalHit.entry_id` 与 F014 对齐。
 - **对 F020 归因矩阵**：grep 入口为"轨迹检索"提供工具支撑，归因器可通过 grep 检索历史失败 Episode。
-- **对 F039 锻典可检索**：Mind Codex 通过 index 入口按 trigger 字段精确查询锻典条目。
+- **对 F039 蒸馏知识库可检索**：MindCodex 通过 index 入口按 trigger 字段精确查询蒸馏知识库条目。
 - **对 F040 控制面**：每次检索的 elapsed_ms 与 hit_count 信号写入 F040 Eval Hub。
-- **对 OpenSieve 服务**：semantic 入口的批量调用模式，需考虑 OpenSieve 的限流（默认 100 QPS）。
+- **对可插拔数据源适配器服务**：semantic 入口的批量调用模式，需考虑可插拔数据源适配器的限流（默认 100 QPS）。
 - **对系统依赖**：需安装 ripgrep 二进制（`rg` 命令），通过 `config/system.yaml` 声明路径。
 
 ---
@@ -76,7 +75,7 @@ A015 架构设计已确定三检索入口（grep / semantic / index）并行调�
 │  + search(query): RetrievalResult                                       │
 │                                                                        │
 │  <<interface>> GrepEntry            <<interface>> SemanticEntry          │
-│  (ripgrep subprocess)               (OpenSieve SDK)                       │
+│  (ripgrep subprocess)               (可插拔适配器 SDK)                       │
 │                                                                        │
 │  <<interface>> IndexEntry           <<interface>> RRFCombiner             │
 │  (sqlite_fts)                       + fuse(results, k): list[Hit]        │
@@ -90,7 +89,7 @@ A015 架构设计已确定三检索入口（grep / semantic / index）并行调�
 │  + entry_timeout_ms: int = 1000                                         │
 │  + fusion_timeout_ms: int = 2000                                         │
 │  + ripgrep_path: str                                                     │
-│  + opensieve_url: str                                                    │
+│  + adapter_service_url: str                                                    │
 │  + fts_table_name: str                                                   │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘
@@ -144,7 +143,7 @@ class CrossDomainJoinForbidden(Exception):
     """跨域查询在 RetrievalFusion 入口层被拒绝"""
     def __init__(self, collection_ids: list[str]):
         self.collection_ids = collection_ids
-        super().__init__(f"Cross-domain join forbidden: {collection_ids}")
+        super.__init__(f"Cross-domain join forbidden: {collection_ids}")
 
 
 class EmptyCollectionsError(ValueError):
@@ -157,7 +156,7 @@ class RetrievalTimeoutError(Exception):
     def __init__(self, entry_type: RetrievalEntryType, timeout_ms: int):
         self.entry_type = entry_type
         self.timeout_ms = timeout_ms
-        super().__init__(
+        super.__init__(
             f"Retrieval timeout: {entry_type.value} exceeded {timeout_ms}ms"
         )
 
@@ -224,8 +223,8 @@ class RetrievalConfig(BaseModel):
     entry_timeout_ms: int = Field(default=1000, ge=100)
     fusion_timeout_ms: int = Field(default=2000, ge=500)
     ripgrep_path: str = "rg"
-    opensieve_url: str = "http://localhost:8100"
-    opensieve_timeout_ms: int = Field(default=800, ge=100)
+    adapter_service_url: str = "http://localhost:8100"
+    adapter_timeout_ms: int = Field(default=800, ge=100)
     fts_table_name: str = "collection_entries_fts"
     max_excerpt_length: int = Field(default=500, ge=50)
     forbidden_llm_in_engine: bool = True  # 引擎内禁 LLM 调用
@@ -243,7 +242,7 @@ class GrepSearchRequest(BaseModel):
 
 
 class SemanticSearchRequest(BaseModel):
-    """OpenSieve 调用请求"""
+    """可插拔数据源适配器调用请求"""
     query_text: str = Field(min_length=1)
     collections: list[str] = Field(min_length=1)
     top_k: int = Field(default=20, ge=1, le=200)
@@ -258,8 +257,8 @@ class IndexSearchRequest(BaseModel):
     limit: int = Field(default=50, ge=1, le=500)
 
 
-class OpenSieveResponse(BaseModel):
-    """OpenSieve SDK 响应"""
+class AdapterSearchResponse(BaseModel):
+    """可插拔数据源适配器 SDK 响应"""
     hit_id: str
     collection_id: str
     score: float
@@ -338,9 +337,9 @@ function fuse(results: list[RetrievalResult], k: int = 60) -> list[RetrievalHit]
         rank_maps.append(rank_map)
 
     # 2. 收集所有 entry_id（去重）
-    all_entry_ids = set()
+    all_entry_ids = set
     for rm in rank_maps:
-        all_entry_ids.update(rm.keys())
+        all_entry_ids.update(rm.keys)
 
     # 3. 计算每个 entry_id 的 RRF 分数
     scores = {}
@@ -360,7 +359,7 @@ function fuse(results: list[RetrievalResult], k: int = 60) -> list[RetrievalHit]
 
     # 5. 更新 hit 的 score 与 rank
     fused = []
-    for entry_id, score in scores.items():
+    for entry_id, score in scores.items:
         hit = best_hits[entry_id]
         hit.score = score
         fused.append(hit)
@@ -421,7 +420,7 @@ class RipgrepGrepEntry(RetrievalEntry):
 
     async def search(self, query: RetrievalQuery) -> RetrievalResult:
         import time
-        start = time.monotonic()
+        start = time.monotonic
 
         # 1. 获取 collection 对应的物理路径（通过 source_uri）
         search_paths = []
@@ -448,19 +447,19 @@ class RipgrepGrepEntry(RetrievalEntry):
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
+                proc.communicate,
                 timeout=self._config.entry_timeout_ms / 1000,
             )
         except asyncio.TimeoutError:
-            proc.kill()
+            proc.kill
             raise RetrievalTimeoutError(
                 RetrievalEntryType.GREP, self._config.entry_timeout_ms
             )
 
         # 4. 解析 ripgrep JSON 输出
         hits = []
-        for line in stdout.decode("utf-8", errors="ignore").splitlines():
-            if not line.strip():
+        for line in stdout.decode("utf-8", errors="ignore").splitlines:
+            if not line.strip:
                 continue
             try:
                 obj = json.loads(line)
@@ -478,7 +477,7 @@ class RipgrepGrepEntry(RetrievalEntry):
                 payload_excerpt=data.get("lines", {}).get("text", "")[:self._config.max_excerpt_length],
             ))
 
-        elapsed_ms = int((time.monotonic() - start) * 1000)
+        elapsed_ms = int((time.monotonic - start) * 1000)
         return RetrievalResult(
             query_id=query.query_id,
             entry_type=RetrievalEntryType.GREP,
@@ -487,7 +486,7 @@ class RipgrepGrepEntry(RetrievalEntry):
         )
 ```
 
-#### 3.1.2 SemanticEntry OpenSieve 实现
+#### 3.1.2 SemanticEntry 可插拔数据源适配器实现
 
 ```python
 # flowforge/core/memory/retrieval/semantic.py
@@ -497,23 +496,23 @@ import time
 from typing import Optional
 import httpx
 from .fusion import RetrievalEntry, RetrievalQuery, RetrievalResult, RetrievalHit, RetrievalEntryType, RetrievalTimeoutError
-from .models import RetrievalConfig, OpenSieveResponse
+from .models import RetrievalConfig, AdapterSearchResponse
 
 
-class OpenSieveSemanticEntry(RetrievalEntry):
-    """基于 OpenSieve 聚合检索中台的语义检索"""
+class PluggableAdapterSemanticEntry(RetrievalEntry):
+    """基于可插拔数据源适配器的语义检索"""
 
     def __init__(self, config: RetrievalConfig):
         self._config = config
         self._client = httpx.AsyncClient(
-            base_url=config.opensieve_url,
-            timeout=config.opensieve_timeout_ms / 1000,
+            base_url=config.adapter_service_url,
+            timeout=config.adapter_timeout_ms / 1000,
         )
 
     async def search(self, query: RetrievalQuery) -> RetrievalResult:
-        start = time.monotonic()
+        start = time.monotonic
 
-        # 1. 调用 OpenSieve /api/v1/search
+        # 1. 调用可插拔数据源适配器 /api/v1/search
         request_body = {
             "query": query.pattern,
             "collections": query.collections,
@@ -526,20 +525,20 @@ class OpenSieveSemanticEntry(RetrievalEntry):
                 "/api/v1/search",
                 json=request_body,
             )
-            response.raise_for_status()
+            response.raise_for_status
         except httpx.TimeoutException:
             raise RetrievalTimeoutError(
-                RetrievalEntryType.SEMANTIC, self._config.opensieve_timeout_ms
+                RetrievalEntryType.SEMANTIC, self._config.adapter_timeout_ms
             )
         except httpx.HTTPStatusError as e:
             # 错误码归一化（参考 F025 HostAbstraction）
-            raise RuntimeError(f"OpenSieve error: {e.response.status_code}") from e
+            raise RuntimeError(f"Pluggable adapter error: {e.response.status_code}") from e
 
         # 2. 解析响应
-        data = response.json()
+        data = response.json
         hits = []
         for i, item in enumerate(data.get("hits", []), start=1):
-            osr = OpenSieveResponse(**item)
+            osr = AdapterSearchResponse(**item)
             hits.append(RetrievalHit(
                 entry_id=osr.hit_id,
                 collection_id=osr.collection_id,
@@ -549,7 +548,7 @@ class OpenSieveSemanticEntry(RetrievalEntry):
                 payload_excerpt=osr.payload_excerpt[:self._config.max_excerpt_length],
             ))
 
-        elapsed_ms = int((time.monotonic() - start) * 1000)
+        elapsed_ms = int((time.monotonic - start) * 1000)
         return RetrievalResult(
             query_id=query.query_id,
             entry_type=RetrievalEntryType.SEMANTIC,
@@ -558,7 +557,7 @@ class OpenSieveSemanticEntry(RetrievalEntry):
         )
 
     async def close(self):
-        await self._client.aclose()
+        await self._client.aclose
 ```
 
 #### 3.1.3 IndexEntry sqlite_fts 实现
@@ -589,7 +588,7 @@ class SqliteFtsIndexEntry(RetrievalEntry):
         self._collection_repo = collection_repository
 
     async def search(self, query: RetrievalQuery) -> RetrievalResult:
-        start = time.monotonic()
+        start = time.monotonic
 
         # 构造 FTS5 查询（参数化，防注入）
         fts_query = self._sanitize_fts_query(query.pattern)
@@ -605,13 +604,13 @@ class SqliteFtsIndexEntry(RetrievalEntry):
             LIMIT :limit
         """)
 
-        async with self._session_factory() as session:  # type: AsyncSession
+        async with self._session_factory as session:  # type: AsyncSession
             result = await session.execute(sql, {
                 "authority_floor": query.authority_floor,
                 "fts_query": fts_query,
                 "limit": query.max_results,
             })
-            rows = result.fetchall()
+            rows = result.fetchall
 
         hits = []
         for i, row in enumerate(rows, start=1):
@@ -629,7 +628,7 @@ class SqliteFtsIndexEntry(RetrievalEntry):
                 payload_excerpt=str(row[2])[:self._config.max_excerpt_length],
             ))
 
-        elapsed_ms = int((time.monotonic() - start) * 1000)
+        elapsed_ms = int((time.monotonic - start) * 1000)
         return RetrievalResult(
             query_id=query.query_id,
             entry_type=RetrievalEntryType.INDEX,
@@ -674,9 +673,9 @@ class DefaultRRFCombiner(RRFCombiner):
             rank_maps.append(rank_map)
 
         # 2. 收集所有 entry_id（去重）
-        all_entry_ids: set[str] = set()
+        all_entry_ids: set[str] = set
         for rm in rank_maps:
-            all_entry_ids.update(rm.keys())
+            all_entry_ids.update(rm.keys)
 
         # 3. 计算每个 entry_id 的 RRF 分数
         scores: dict[str, float] = {}
@@ -693,11 +692,11 @@ class DefaultRRFCombiner(RRFCombiner):
             for hit in r.hits:
                 if (hit.entry_id not in best_hits
                         or hit.score > best_hits[hit.entry_id].score):
-                    best_hits[hit.entry_id] = hit.model_copy()
+                    best_hits[hit.entry_id] = hit.model_copy
 
         # 5. 更新 hit 的 score 与 rank
         fused: list[RetrievalHit] = []
-        for entry_id, score in scores.items():
+        for entry_id, score in scores.items:
             hit = best_hits[entry_id]
             hit.score = score
             fused.append(hit)
@@ -747,14 +746,14 @@ class DefaultRetrievalFusion(RetrievalFusion):
             RetrievalEntryType.INDEX: index_entry,
         }
         self._registry = collection_registry
-        self._rrf = rrf_combiner or DefaultRRFCombiner()
+        self._rrf = rrf_combiner or DefaultRRFCombiner
 
     async def search(
         self,
         query: RetrievalQuery,
         enable_entries: Optional[list[RetrievalEntryType]] = None,
     ) -> list[RetrievalHit]:
-        start = time.monotonic()
+        start = time.monotonic
 
         # 1. 校验 collections 非空
         if not query.collections:
@@ -764,7 +763,7 @@ class DefaultRetrievalFusion(RetrievalFusion):
         await self.cross_domain_check(query.collections)
 
         # 3. 选择启用的入口
-        enabled = enable_entries or list(self._entries.keys())
+        enabled = enable_entries or list(self._entries.keys)
 
         # 4. 并行调度三入口（return_exceptions=True 防止单入口失败拖垮整体）
         tasks = []
@@ -824,7 +823,7 @@ class DefaultRetrievalFusion(RetrievalFusion):
 #### 3.2.1 三入口并行检索时序图
 
 ```
-Forgekin.chat()   RetrievalFusion   GrepEntry   SemanticEntry   IndexEntry   RRFCombiner   CollectionRegistry
+Forgekin.chat   RetrievalFusion   GrepEntry   SemanticEntry   IndexEntry   RRFCombiner   CollectionRegistry
     │                  │                  │             │              │             │                │
     │ search(query)   │                  │             │              │             │                │
     ├─────────────────▶                  │             │              │             │                │
@@ -840,7 +839,7 @@ Forgekin.chat()   RetrievalFusion   GrepEntry   SemanticEntry   IndexEntry   RRF
     │                  ├───────────────────────────────────────────────▶              │                │
     │                  │                  │             │              │             │                │
     │                  │                  │ subprocess  │ httpx.post   │ SELECT FTS   │                │
-    │                  │                  │ ripgrep     │ OpenSieve    │ sqlite       │                │
+    │                  │                  │ ripgrep     │ 可插拔适配器 │ sqlite       │                │
     │                  │                  │             │              │             │                │
     │                  │◀── RetrievalResult(grep) ──────┤              │             │                │
     │                  │◀── RetrievalResult(semantic) ────────────────┤              │                │
@@ -867,7 +866,7 @@ Forgekin.chat()   RetrievalFusion   GrepEntry   SemanticEntry   IndexEntry   RRF
 | `CrossDomainJoinForbidden` | 跨域查询检测 | 拒绝查询，返回 403 | 调用方拆分为多次同域查询 |
 | `RetrievalTimeoutError` | 单入口超时（grep > 1s / semantic > 800ms） | 该入口结果为空，不影响其他入口 | 调用方收到部分结果 |
 | `RuntimeError("Retrieval fusion timeout")` | 整体检索超时 > 2s | 全部入口结果丢弃，返回空 | 调用方降级到缓存或重试 |
-| `httpx.HTTPStatusError` | OpenSieve 返回 4xx/5xx | semantic 入口失败，记录 Eval 信号 | 其他入口正常返回 |
+| `httpx.HTTPStatusError` | 可插拔数据源适配器返回 4xx/5xx | semantic 入口失败，记录 Eval 信号 | 其他入口正常返回 |
 | `subprocess.CalledProcessError` | ripgrep 非零退出 | grep 入口失败，记录 Eval 信号 | 其他入口正常返回 |
 | `sqlalchemy.OperationalError` | sqlite_fts 表不存在或锁 | index 入口失败，记录 Eval 信号 | 其他入口正常返回 |
 | `json.JSONDecodeError` | ripgrep JSON 输出损坏 | 跳过损坏行，保留可解析命中 | 调用方收到部分结果 |
@@ -884,23 +883,23 @@ Forgekin.chat()   RetrievalFusion   GrepEntry   SemanticEntry   IndexEntry   RRF
 | 性能指标 | 目标值 | 优化手段 |
 |---------|:------:|---------|
 | grep 入口延迟 | < 50ms | ripgrep 是 Rust 实现，10w 文件库 < 50ms；subprocess 启动开销 < 10ms |
-| semantic 入口延迟 | < 500ms | OpenSieve 内置 HNSW 索引；httpx 连接池复用 |
+| semantic 入口延迟 | < 500ms | 可插拔数据源适配器内置 HNSW 索引；httpx 连接池复用 |
 | index 入口延迟 | < 100ms | sqlite_fts5 内存索引；按 collection_id 索引 |
 | 整体检索延迟 | < max(三入口) + RRF 融合延迟 | 三入口并行；RRF 融合 < 5ms |
 | authority_floor 过滤 | < 5ms（10 hits） | 走 CollectionRegistry 类型缓存 |
 | 跨域校验 | < 5ms（5 个 collection_ids） | 走 CollectionRegistry 类型缓存 |
 | RRF 融合 | < 5ms（100 hits） | 纯内存计算，O(N×K) 复杂度 |
-| OpenSieve 调用 QPS | < 100 QPS | httpx 连接池 max_connections=20 |
+| 可插拔数据源适配器调用 QPS | < 100 QPS | httpx 连接池 max_connections=20 |
 
 **缓存策略**：
 
 - 不缓存检索结果：检索查询多样性高，缓存命中率低；语义检索结果实时性要求高。
 - 缓存 `collection_id → authority_level`（与 F014 共享缓存）。
-- OpenSieve httpx.AsyncClient 复用（连接池）。
+- 可插拔数据源适配器 httpx.AsyncClient 复用（连接池）。
 
 **索引同步策略**：
 
-- sqlite_fts 索引在 F014 CollectionRepository.insert_entry() 时同步写入（同事务）。
+- sqlite_fts 索引在 F014 CollectionRepository.insert_entry 时同步写入（同事务）。
 - 索引更新失败不阻塞 entry 写入，记录警告日志 + Eval 信号。
 - 定期任务（每小时）校验 entry 与 fts 索引一致性，发现不一致重建索引。
 
@@ -912,7 +911,7 @@ Forgekin.chat()   RetrievalFusion   GrepEntry   SemanticEntry   IndexEntry   RRF
 
 #### 4.1.1 F014 Collection 层调用
 
-F014 CollectionRegistry 提供 `cross_domain_join_check()` 与 `get_authority_level()` 接口，本模块在每次检索前调用：
+F014 CollectionRegistry 提供 `cross_domain_join_check` 与 `get_authority_level` 接口，本模块在每次检索前调用：
 
 ```python
 # 本模块内部调用 F014
@@ -923,11 +922,11 @@ class DefaultRetrievalFusion(RetrievalFusion):
 
 **集成测试点**：F014 注册 5 种 CollectionType 各 1 个，本模块用跨域 collection_ids 检索时必须抛 `CrossDomainJoinForbidden`。
 
-#### 4.1.2 OpenSieve 聚合检索中台调用
+#### 4.1.2 可插拔数据源适配器调用
 
-OpenSieve（localhost:8100）提供 `/api/v1/search` 接口，本模块通过 httpx 调用。OpenSieve 负责向量检索 + 关键词检索的底层实现，本模块仅负责协议封装。
+可插拔数据源适配器（localhost:8100）提供 `/api/v1/search` 接口，本模块通过 httpx 调用。可插拔数据源适配器负责向量检索 + 关键词检索的底层实现，本模块仅负责协议封装。
 
-**集成测试点**：mock OpenSieve 返回固定响应，验证 SemanticEntry 解析正确；关闭 OpenSieve 时本模块应超时降级。
+**集成测试点**：mock 可插拔数据源适配器返回固定响应，验证 SemanticEntry 解析正确；关闭可插拔数据源适配器时本模块应超时降级。
 
 #### 4.1.3 ripgrep 二进制依赖
 
@@ -988,7 +987,7 @@ class AttributionClassifierImpl:
 
     async def search_historical_failures(self, pattern: str):
         query = RetrievalQuery(
-            query_id=str(uuid7()),
+            query_id=str(uuid7),
             entry_type=RetrievalEntryType.GREP,  # 单入口模式
             pattern=pattern,
             collections=["episodic_trace_default"],
@@ -998,7 +997,7 @@ class AttributionClassifierImpl:
         return await self._retrieval_fusion.search(query, enable_entries=[RetrievalEntryType.GREP])
 ```
 
-#### 4.2.4 F039 锻典可检索消费本模块
+#### 4.2.4 F039 蒸馏知识库可检索消费本模块
 
 F039 MindCodexSearch 通过 index 入口按 trigger 字段精确查询：
 
@@ -1010,7 +1009,7 @@ class MindCodexSearchImpl:
 
     async def search_by_trigger(self, trigger: str):
         query = RetrievalQuery(
-            query_id=str(uuid7()),
+            query_id=str(uuid7),
             entry_type=RetrievalEntryType.INDEX,
             pattern=trigger,
             collections=["mind_codex_default"],
@@ -1046,12 +1045,12 @@ class EvalHubSubscriber:
 | IT-D015-007 | RRF 融合相同 entry_id 多入口命中 | 分数累加正确 |
 | IT-D015-008 | RRF k 值从配置加载 | 代码中无硬编码 60 |
 | IT-D015-009 | ripgrep 不存在 | grep 入口失败，其他入口正常 |
-| IT-D015-010 | OpenSieve 服务关闭 | semantic 入口超时，其他入口正常 |
+| IT-D015-010 | 可插拔数据源适配器服务关闭 | semantic 入口超时，其他入口正常 |
 | IT-D015-011 | sqlite_fts 表不存在 | index 入口失败，其他入口正常 |
 | IT-D015-012 | enable_entries 仅 GREP | 仅 grep 入口执行 |
 | IT-D015-013 | F017 调用 search_and_rank | RRF + governance + consumption 链式调用成功 |
 | IT-D015-014 | F020 grep 检索历史 Episode | 返回历史失败归因 |
-| IT-D015-015 | F039 index 按 trigger 查询 | 返回锻典条目 |
+| IT-D015-015 | F039 index 按 trigger 查询 | 返回蒸馏知识库条目 |
 | IT-D015-016 | 引擎内无 LLM 调用代码 | 静态扫描确认 |
 | IT-D015-017 | 引擎内无 regex 扩展代码 | 静态扫描确认 |
 
@@ -1069,7 +1068,7 @@ class EvalHubSubscriber:
 - [ ] **AC-F-6**: RRF 融合相同 entry_id 多入口命中时分数累加正确（IT-D015-007）。
 - [ ] **AC-F-7**: RRF k 值从配置加载，代码中无硬编码 60（IT-D015-008）。
 - [ ] **AC-F-8**: grep 入口可查精确符号（如 `def handoff_capsule`），延迟 < 50ms（IT-D015-003）。
-- [ ] **AC-F-9**: semantic 入口经 OpenSieve SDK 调用，无直连向量库代码（IT-D015-010）。
+- [ ] **AC-F-9**: semantic 入口经可插拔数据源适配器 SDK 调用，无直连向量库代码（IT-D015-010）。
 - [ ] **AC-F-10**: index 入口经 sqlite_fts 查询，参数化防注入（IT-D015-011）。
 - [ ] **AC-F-11**: enable_entries 可关闭部分入口（IT-D015-012）。
 - [ ] **AC-F-12**: 引擎内无 LLM 调用、无 regex 查询扩展代码（IT-D015-016/017 静态扫描）。
@@ -1077,13 +1076,13 @@ class EvalHubSubscriber:
 ### 5.2 性能验收
 
 - [ ] **AC-P-1**: grep 入口延迟 < 50ms（P95，10w 文件库）。
-- [ ] **AC-P-2**: semantic 入口延迟 < 500ms（P95，OpenSieve 单机）。
+- [ ] **AC-P-2**: semantic 入口延迟 < 500ms（P95，可插拔数据源适配器单机）。
 - [ ] **AC-P-3**: index 入口延迟 < 100ms（P95，sqlite_fts）。
 - [ ] **AC-P-4**: 整体检索延迟 < max(三入口) + 10ms（RRF 融合 < 5ms）。
 - [ ] **AC-P-5**: authority_floor 过滤延迟 < 5ms（10 hits，缓存命中）。
 - [ ] **AC-P-6**: 跨域校验延迟 < 5ms（5 个 collection_ids，缓存命中）。
 - [ ] **AC-P-7**: RRF 融合延迟 < 5ms（100 hits）。
-- [ ] **AC-P-8**: 100 QPS 检索不触发 OpenSieve 限流。
+- [ ] **AC-P-8**: 100 QPS 检索不触发可插拔数据源适配器限流。
 
 ### 5.3 安全验收
 
@@ -1093,7 +1092,7 @@ class EvalHubSubscriber:
 - [ ] **AC-S-4**: sqlite_fts 查询使用参数化绑定（SQLAlchemy text + bindparams），无 SQL 注入风险。
 - [ ] **AC-S-5**: ripgrep subprocess 调用使用 `asyncio.create_subprocess_exec`（非 shell=True），无命令注入风险。
 - [ ] **AC-S-6**: FTS5 查询模式经过 `_sanitize_fts_query` 转义特殊字符。
-- [ ] **AC-S-7**: OpenSieve 调用走 https（生产环境），httpx 自动证书校验。
+- [ ] **AC-S-7**: 可插拔数据源适配器调用走 https（生产环境），httpx 自动证书校验。
 - [ ] **AC-S-8**: 引擎内禁 LLM 调用与 regex 扩展（`forbidden_llm_in_engine` / `forbidden_regex_expansion` 配置 + 静态扫描）。
 
 ### 5.4 Eval 验收
@@ -1131,4 +1130,4 @@ class EvalHubSubscriber:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 三入口实现 + RRF 算法 + 时序图 + 错误处理 + 性能优化 + 跨模块协作 + AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 三入口实现 + RRF 算法 + 时序图 + 错误处理 + 性能优化 + 跨模块协作 + AC） | 开发者 Forgekin（猎犬·夏洛克） |

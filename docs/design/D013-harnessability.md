@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.3]
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]
 > **对应 Feature**: [doc:../features/F013-harnessability.md]
 > **对应 Architecture**: [doc:../architecture/A013-harnessability.md]
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + forgemind Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -24,7 +23,7 @@ A013 架构层定义了"六维评分 + 加权平均 + 四档接入策略 + 低�
 3. **D-Q3**：`overall = 加权平均` 如何在 Pydantic model_validator 层校验与配置 weight 一致？
 4. **D-Q4**：`HarnessDecisionGate.decide` 如何按四档阈值（full >= 0.8 / partial 0.5-0.8 / human_in_loop 0.3-0.5 / skip < 0.3）判定 recommendation，并禁第五档？
 5. **D-Q5**：低于 `dimension_threshold`（默认 0.6）的维度如何记入 `low_dimensions`，触发个体补偿治理规则？
-6. **D-Q6**：`LowFiMatrix.classify_rule` 如何对治理规则分类（个体补偿 vs 跨 agent 资产），保证低 Harnessability 系统规则不强制注入所有灵智体？
+6. **D-Q6**：`LowFiMatrix.classify_rule` 如何对治理规则分类（个体补偿 vs 跨 agent 资产），保证低 Harnessability 系统规则不强制注入所有Forgekin？
 7. **D-Q7**：评分结果如何持久化到 D008 thread_trace + 写入 D040 控制面供 sunset review 参考？
 
 ### 1.2 设计约束
@@ -38,13 +37,12 @@ A013 架构层定义了"六维评分 + 加权平均 + 四档接入策略 + 低�
 | C5 | 六维评分每维度 0.0-1.0，overall = 加权平均 | A013 决策 1+2 |
 | C6 | 低维标记（低于 dimension_threshold 默认 0.6）记入 low_dimensions | A013 决策 4 |
 | C7 | 接入策略四档（full_harness / partial_harness / human_in_loop / skip），禁第五档 | A013 决策 3 |
-| C8 | 低 Harnessability 系统治理规则标记"个体补偿"，不强制注入所有灵智体 | A013 决策 4 + RA-023 |
+| C8 | 低 Harnessability 系统治理规则标记"个体补偿"，不强制注入所有Forgekin | A013 决策 4 + RA-023 |
 | C9 | 评分结果写入 D040 控制面供 sunset review | A013 决策 5 |
 | C10 | HarnessabilityScore 持久化到 D008 thread_trace surface | A013 不变量 |
 | C11 | 评分维度仅六维，不可扩展（避免评分膨胀） | A013 不变量 |
 | C12 | dimension_threshold 默认 0.6，可配置但不可低于 0.5 | A013 不变量 |
-| C13 | 9 大点名称修订：双轨命名、AI 术语优先（HarnessabilityAssessor/HarnessDecisionGate）、forgemind 仅指 Layer 2、责任方命名（猎犬·夏洛克） | 用户指令 |
-| C14 | 觉醒阶标注：E1-E3 进化阶接入低 Harnessability 系统需 human_in_loop 强制；E4-E6 觉醒阶接入需 Mind Council 评估 | naming-contract.md §4 |
+| C14 | 觉醒阶标注：E1-E3 进化阶接入低 Harnessability 系统需 human_in_loop 强制；E4-E6 觉醒阶接入需 MindCouncil 评估 | naming-contract.md §4 |
 | C15 | 跨模块联动：D001 CapabilityProfile.harness_fit_score / D010 Governance Boundary / D025 跨 provider 宿主抽象 / D029 物理 AI 传感器 / D032 三方 Agent 能力画像 / D040 控制面 | A013 跨模块影响 |
 
 ### 1.3 设计影响
@@ -123,7 +121,7 @@ A013 架构层定义了"六维评分 + 加权平均 + 四档接入策略 + 低�
 │  +------------------------------+  +----------------------------+  │
 │  │ +assess(target_system)       │  │ +decide(score)             │  │
 │  │   -> HarnessabilityScore     │  │   -> HarnessRecommendation │  │
-│  │ +list_assessed() -> list[Sco │  │ +require_human_in_loop(sco)│  │
+│  │ +list_assessed -> list[Sco │  │ +require_human_in_loop(sco)│  │
 │  │ +get_score(target) -> Score  │  │   -> bool                  │  │
 │  └──────────────────────────────┘  └────────────────────────────┘  │
 │             △                                  △                    │
@@ -144,8 +142,8 @@ A013 架构层定义了"六维评分 + 加权平均 + 四档接入策略 + 低�
 │  +------------------------------+  +----------------------------+  │
 │  │ +classify_rule(rule_id,      │  │ +save_score(score)         │  │
 │  │   target_score) -> RuleFiType│  │ +load_score(target)        │  │
-│  │ +list_individual_compensations│  │ +list_all()                │  │
-│  │   -> list[str]               │  │ +checkpoint()              │  │
+│  │ +list_individual_compensations│  │ +list_all                │  │
+│  │   -> list[str]               │  │ +checkpoint              │  │
 │  └──────────────────────────────┘  └────────────────────────────┘  │
 │             △                                  △                    │
 │             │ implements                       │ implements         │
@@ -239,7 +237,7 @@ class HarnessabilityScore(BaseModel):
                 f"scores 必须覆盖全部六维, 实际 {len(v)} 维 "
                 f"(禁缺维, 禁扩展第七维)"
             )
-        for dim, score in v.items():
+        for dim, score in v.items:
             if not 0.0 <= score <= 1.0:
                 raise ValueError(
                     f"Dimension {dim.value} score={score} 必须在 0.0-1.0 之间"
@@ -302,9 +300,9 @@ class HarnessDecisionGate(ABC):
 class LowFiMatrix(ABC):
     """低保真矩阵 (RA-023)
 
-    维护"治理规则 × 灵智体类型"低保真矩阵,
+    维护"治理规则 × Forgekin类型"低保真矩阵,
     识别"某规则只是补偿某模型坏习惯" (→ Build to Delete)
-    vs "跨灵智体资产" (→ Built to Persist)
+    vs "跨Forgekin资产" (→ Built to Persist)
     """
 
     @abstractmethod
@@ -317,9 +315,9 @@ class LowFiMatrix(ABC):
 
         架构契约:
             - 低 Harnessability 系统的规则 → INDIVIDUAL_COMPENSATION
-              (仅注入实际接入的灵智体, 标 Build to Delete)
+              (仅注入实际接入的Forgekin, 标 Build to Delete)
             - 跨系统通用规则 → CROSS_AGENT_ASSET
-              (强制注入所有灵智体, 标 Built to Persist)
+              (强制注入所有Forgekin, 标 Built to Persist)
         """
 
     @abstractmethod
@@ -432,13 +430,13 @@ class DefaultHarnessabilityAssessor(HarnessabilityAssessor):
         self._store = store
         self._weights = weights or {d: d.default_weight for d in HarnessabilityDimension}
         # 权重归一化校验
-        total_weight = sum(self._weights.values())
+        total_weight = sum(self._weights.values)
         if abs(total_weight - 1.0) > 0.001:
             # 自动归一化
-            self._weights = {d: w / total_weight for d, w in self._weights.items()}
+            self._weights = {d: w / total_weight for d, w in self._weights.items}
         self._dimension_threshold = dimension_threshold
         self._dimension_probes = dimension_probes or {}
-        self._decision_gate = decision_gate or DefaultHarnessDecisionGate()
+        self._decision_gate = decision_gate or DefaultHarnessDecisionGate
         self._event_bus = event_bus
         self._eval_signal_writer = eval_signal_writer
 
@@ -468,7 +466,7 @@ class DefaultHarnessabilityAssessor(HarnessabilityAssessor):
 
         # 3. 低维标记
         low_dimensions = [
-            dim for dim, score in scores.items()
+            dim for dim, score in scores.items
             if score < self._dimension_threshold
         ]
 
@@ -501,7 +499,7 @@ class DefaultHarnessabilityAssessor(HarnessabilityAssessor):
                 "overall": overall,
                 "recommendation": recommendation.value,
                 "low_dimensions": [d.value for d in low_dimensions],
-                "assessed_at": score_obj.assessed_at.isoformat(),
+                "assessed_at": score_obj.assessed_at.isoformat,
             })
 
         if self._event_bus is not None:
@@ -521,7 +519,7 @@ class DefaultHarnessabilityAssessor(HarnessabilityAssessor):
         return score_obj
 
     async def list_assessed(self) -> list[HarnessabilityScore]:
-        return await self._store.list_all()
+        return await self._store.list_all
 
     async def get_score(self, target_system: str) -> Optional[HarnessabilityScore]:
         return await self._store.load_score(target_system)
@@ -567,7 +565,7 @@ class DefaultHarnessDecisionGate(HarnessDecisionGate):
 class DefaultLowFiMatrix(LowFiMatrix):
     """默认低保真矩阵 (RA-023)"""
 
-    # 跨 agent 资产规则白名单 (强制注入所有灵智体)
+    # 跨 agent 资产规则白名单 (强制注入所有Forgekin)
     DEFAULT_CROSS_AGENT_RULES = frozenset({
         "rule.no_force_push_to_main",
         "rule.no_delete_main_branch",
@@ -592,7 +590,7 @@ class DefaultLowFiMatrix(LowFiMatrix):
         rule_id: str,
         target_system_score: HarnessabilityScore,
     ) -> RuleFiType:
-        if not rule_id or not rule_id.strip():
+        if not rule_id or not rule_id.strip:
             raise LowFiClassificationError("rule_id 不可为空")
 
         # 1. 白名单规则 → 跨 agent 资产
@@ -682,7 +680,7 @@ OUTPUT: HarnessRecommendation
 INPUT: rule_id, target_system_score
 OUTPUT: RuleFiType
 
-1. IF NOT rule_id.strip(): RAISE LowFiClassificationError
+1. IF NOT rule_id.strip: RAISE LowFiClassificationError
 2. IF rule_id IN cross_agent_rules 白名单: RETURN CROSS_AGENT_ASSET
 3. IF target_system_score.overall < 0.8: RETURN INDIVIDUAL_COMPENSATION
 4. RETURN CROSS_AGENT_ASSET  # 默认高 Harnessability 系统的规则为跨 agent 资产
@@ -770,14 +768,14 @@ class SqliteHarnessabilityStore(HarnessabilityStore):
         await conn.execute("PRAGMA synchronous=NORMAL")
         await conn.execute("PRAGMA foreign_keys=ON")
         await conn.executescript(self.SCHEMA_SQL)
-        await conn.commit()
+        await conn.commit
         return conn
 
     async def save_score(self, score: HarnessabilityScore) -> None:
         self._wal_lsn_counter += 1
         wal_lsn = self._wal_lsn_counter
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 await conn.execute(
                     """
                     INSERT OR REPLACE INTO harnessability_scores
@@ -787,11 +785,11 @@ class SqliteHarnessabilityStore(HarnessabilityStore):
                     """,
                     (
                         score.target_system,
-                        json.dumps({d.value: s for d, s in score.scores.items()}),
+                        json.dumps({d.value: s for d, s in score.scores.items}),
                         score.overall,
                         json.dumps([d.value for d in score.low_dimensions]),
                         score.recommendation.value,
-                        score.assessed_at.isoformat(),
+                        score.assessed_at.isoformat,
                         score.schema_version,
                         wal_lsn,
                     ),
@@ -803,19 +801,19 @@ class SqliteHarnessabilityStore(HarnessabilityStore):
                     """,
                     (score.target_system, json.dumps({"wal_lsn": wal_lsn, "overall": score.overall})),
                 )
-                await conn.commit()
+                await conn.commit
             score.wal_lsn = wal_lsn
         except Exception as e:
             raise HarnessabilityStoreUnavailableError(f"save_score 失败: {e}") from e
 
     async def load_score(self, target_system: str) -> Optional[HarnessabilityScore]:
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 async with conn.execute(
                     "SELECT * FROM harnessability_scores WHERE target_system = ?",
                     (target_system,),
                 ) as cur:
-                    row = await cur.fetchone()
+                    row = await cur.fetchone
                     if row is None:
                         return None
                     return self._row_to_score(row)
@@ -824,26 +822,26 @@ class SqliteHarnessabilityStore(HarnessabilityStore):
 
     async def list_all(self) -> list[HarnessabilityScore]:
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 async with conn.execute(
                     "SELECT * FROM harnessability_scores ORDER BY assessed_at DESC"
                 ) as cur:
-                    rows = await cur.fetchall()
+                    rows = await cur.fetchall
                     return [self._row_to_score(r) for r in rows]
         except Exception as e:
             raise HarnessabilityStoreUnavailableError(f"list_all 失败: {e}") from e
 
     async def checkpoint(self) -> None:
         try:
-            async with await self._connect() as conn:
+            async with await self._connect as conn:
                 await conn.execute("PRAGMA wal_checkpoint(FULL)")
-                await conn.commit()
+                await conn.commit
         except Exception as e:
             raise HarnessabilityStoreUnavailableError(f"checkpoint 失败: {e}") from e
 
     def _row_to_score(self, row) -> HarnessabilityScore:
         scores_dict = json.loads(row[1])
-        scores = {HarnessabilityDimension(k): float(v) for k, v in scores_dict.items()}
+        scores = {HarnessabilityDimension(k): float(v) for k, v in scores_dict.items}
         low_dims = [HarnessabilityDimension(d) for d in json.loads(row[3])]
         return HarnessabilityScore(
             target_system=row[0],
@@ -903,7 +901,7 @@ GovernanceInjector    LowFiMatrix        GovernanceStore
   │ ├─────────────────────────────────────────────────────────>│
   │ <─────────────────────────────────────────────────────────┤ ok
   │                      │                    │
-  │  → 仅注入实际接入该系统的灵智体, 标 Build to Delete                    │
+  │  → 仅注入实际接入该系统的Forgekin, 标 Build to Delete                    │
 ```
 
 ### 3.3 错误处理策略
@@ -927,12 +925,12 @@ GovernanceInjector    LowFiMatrix        GovernanceStore
 
 | 指标 | 目标值 | 测量方式 | 优化手段 |
 |------|:------:|---------|---------|
-| assess() 延迟 | < 200ms (P95, 单 probe < 30ms) | 方法级 timing | 六维 probe 并行 `asyncio.gather` |
-| decide() 延迟 | < 1ms (P95) | 方法级 timing | 纯计算, 无 I/O |
-| classify_rule() 延迟 | < 2ms (P95) | 方法级 timing | frozenset O(1) 查找 |
-| save_score() 延迟 | < 50ms (P95) | DB timing | WAL 异步刷盘 |
-| load_score() 延迟 | < 20ms (P95) | DB timing | PRIMARY KEY 索引 |
-| list_all() 延迟 | < 50ms (P95, 1000 系统) | DB timing | recommendation 索引 |
+| assess 延迟 | < 200ms (P95, 单 probe < 30ms) | 方法级 timing | 六维 probe 并行 `asyncio.gather` |
+| decide 延迟 | < 1ms (P95) | 方法级 timing | 纯计算, 无 I/O |
+| classify_rule 延迟 | < 2ms (P95) | 方法级 timing | frozenset O(1) 查找 |
+| save_score 延迟 | < 50ms (P95) | DB timing | WAL 异步刷盘 |
+| load_score 延迟 | < 20ms (P95) | DB timing | PRIMARY KEY 索引 |
+| list_all 延迟 | < 50ms (P95, 1000 系统) | DB timing | recommendation 索引 |
 | DB 文件大小 | < 5MB / 1000 系统 | 文件系统 | 90 天后归档 + VACUUM |
 | WAL checkpoint 频率 | 每 100 次评估一次 | wal_lsn % 100 == 0 | PRAGMA wal_checkpoint(FULL) |
 
@@ -972,7 +970,7 @@ harnessability:
   # dimension_threshold 硬下限 0.5 (低于此值抛 DimensionThresholdTooLowError)
   dimension_threshold_min: 0.5
 
-  # 跨 agent 资产规则白名单 (强制注入所有灵智体, Built to Persist)
+  # 跨 agent 资产规则白名单 (强制注入所有Forgekin, Built to Persist)
   cross_agent_rules:
     - rule.no_force_push_to_main
     - rule.no_delete_main_branch
@@ -985,7 +983,7 @@ harnessability:
   # 觉醒阶接入策略
   awakening_stage_policy:
     E1_E3: allow_with_human_in_loop_if_low  # 进化阶: 低分系统需 human_in_loop
-    E4_E6: require_mind_council_review       # 觉醒阶: 接入需 Mind Council 评估
+    E4_E6: require_mind_council_review       # 觉醒阶: 接入需 MindCouncil 评估
 
   # WAL checkpoint 频率 (每 N 次评估一次)
   wal_checkpoint_every_n_assessments: 100
@@ -1020,7 +1018,7 @@ class DefaultCapabilityProfileBuilder:
             system_scores[target] = score
 
         # 计算 harness_fit_score (低 harnessability 系统拉低 profile)
-        avg_overall = sum(s.overall for s in system_scores.values()) / len(system_scores)
+        avg_overall = sum(s.overall for s in system_scores.values) / len(system_scores)
         harness_fit_score = round(avg_overall, 4)
 
         return CapabilityProfile(
@@ -1061,7 +1059,7 @@ class DefaultDurableStateRegistry:
         await self.write_surface(
             surface_type=StateSurfaceType.THREAD_TRACE,
             key=f"harnessability/{score.target_system}",
-            payload=score.model_dump(),
+            payload=score.model_dump,
             authority_level=1,
             decay_tag=DecayTag.BUILT_TO_PERSIST,  # 评分是 Build to Persist 基础设施
         )
@@ -1086,11 +1084,11 @@ class DefaultGovernanceInjector:
 
         fi_type = self._low_fi_matrix.classify_rule(rule.rule_id, score)
         if fi_type == RuleFiType.INDIVIDUAL_COMPENSATION:
-            # 个体补偿: 仅注入实际接入该系统的灵智体, 标 Build to Delete
+            # 个体补偿: 仅注入实际接入该系统的Forgekin, 标 Build to Delete
             rule.decay_tag = DecayTag.BUILT_TO_DELETE
             rule.injection_scope = f"target:{target_system}"
         else:
-            # 跨 agent 资产: 强制注入所有灵智体, 标 Built to Persist
+            # 跨 agent 资产: 强制注入所有Forgekin, 标 Built to Persist
             rule.decay_tag = DecayTag.BUILT_TO_PERSIST
             rule.injection_scope = "all"
         await self._store.save_rule(rule)
@@ -1146,7 +1144,7 @@ class ExternalAgentProfileBuilder:
         scores = {}
         for target in target_systems:
             scores[target] = await self._harness_assessor.assess(target)
-        avg_harness = sum(s.overall for s in scores.values()) / len(scores) if scores else 0.0
+        avg_harness = sum(s.overall for s in scores.values) / len(scores) if scores else 0.0
         return ExternalAgentProfile(
             agent_id=agent_id,
             harnessability_score=avg_harness,
@@ -1179,8 +1177,8 @@ class HarnessEvalControlPlane:
 | T2 | D002 TeamAct ACTION 步 → D013 assess → 低分系统强制 human_in_loop | D002→D013 | require_operator_confirmation=True |
 | T3 | D013 assess → D008 thread_trace 持久化 | D013→D008 | thread_trace authority=1, decay_tag=BUILT_TO_PERSIST |
 | T4 | D010 GovernanceInjector → D013 LowFiMatrix.classify_rule | D010↔D013 | 低分系统规则标 INDIVIDUAL_COMPENSATION |
-| T5 | D013 INDIVIDUAL_COMPENSATION → D010 仅注入实际接入灵智体 | D013→D010 | injection_scope="target:xxx", decay_tag=BUILT_TO_DELETE |
-| T6 | D013 CROSS_AGENT_ASSET → D010 强制注入所有灵智体 | D013→D010 | injection_scope="all", decay_tag=BUILT_TO_PERSIST |
+| T5 | D013 INDIVIDUAL_COMPENSATION → D010 仅注入实际接入Forgekin | D013→D010 | injection_scope="target:xxx", decay_tag=BUILT_TO_DELETE |
+| T6 | D013 CROSS_AGENT_ASSET → D010 强制注入所有Forgekin | D013→D010 | injection_scope="all", decay_tag=BUILT_TO_PERSIST |
 | T7 | D025 ProviderHostAbstraction → D013 assess → overall < 0.5 不抽象 | D025↔D013 | should_abstract=False |
 | T8 | D029 PhysicalSensorAdapter → D013 assess → SKIP 不接入 | D029↔D013 | IntegrationResult(success=False) |
 | T9 | D032 ExternalAgentProfile → D013 assess → 适配度维度补充 | D032↔D013 | harnessability_score 字段非空 |
@@ -1189,7 +1187,7 @@ class HarnessEvalControlPlane:
 | T12 | D013 维度评分 > 1.0 → ScoreOutOfRangeError | D013 内部 | Pydantic validator 拒绝 |
 | T13 | D013 dimension_threshold < 0.5 → DimensionThresholdTooLowError | D013 内部 | 构造函数抛出 |
 | T14 | D013 weights sum != 1.0 → 自动归一化 + WARNING | D013 内部 | 评分仍正确 |
-| T15 | D013 觉醒阶 E4-E6 接入低分系统 → Mind Council 二次确认 | D013↔Mind Council | 二次确认未通过则不接入 |
+| T15 | D013 觉醒阶 E4-E6 接入低分系统 → MindCouncil 二次确认 | D013↔MindCouncil | 二次确认未通过则不接入 |
 
 ---
 
@@ -1212,18 +1210,18 @@ class HarnessEvalControlPlane:
 - [ ] AC-F13: 评分结果写入 D040 控制面（eval_signal_writer 调用）
 - [ ] AC-F14: 评分维度仅六维，不可扩展（TooManyDimensionsError）
 - [ ] AC-F15: dimension_threshold 默认 0.6，可配置但不可低于 0.5
-- [ ] AC-F16: 跨 agent 资产规则强制注入所有灵智体（标 Built to Persist）
-- [ ] AC-F17: 个体补偿规则仅注入实际接入灵智体（标 Build to Delete）
-- [ ] AC-F18: 觉醒阶 E4-E6 接入低分系统需 Mind Council 二次确认
+- [ ] AC-F16: 跨 agent 资产规则强制注入所有Forgekin（标 Built to Persist）
+- [ ] AC-F17: 个体补偿规则仅注入实际接入Forgekin（标 Build to Delete）
+- [ ] AC-F18: 觉醒阶 E4-E6 接入低分系统需 MindCouncil 二次确认
 
 ### 5.2 性能验收（Performance AC）
 
-- [ ] AC-P1: assess() P95 延迟 < 200ms（六维 probe 并行）
-- [ ] AC-P2: decide() P95 延迟 < 1ms
-- [ ] AC-P3: classify_rule() P95 延迟 < 2ms
-- [ ] AC-P4: save_score() P95 延迟 < 50ms
-- [ ] AC-P5: load_score() P95 延迟 < 20ms
-- [ ] AC-P6: list_all() P95 延迟 < 50ms（1000 系统）
+- [ ] AC-P1: assess P95 延迟 < 200ms（六维 probe 并行）
+- [ ] AC-P2: decide P95 延迟 < 1ms
+- [ ] AC-P3: classify_rule P95 延迟 < 2ms
+- [ ] AC-P4: save_score P95 延迟 < 50ms
+- [ ] AC-P5: load_score P95 延迟 < 20ms
+- [ ] AC-P6: list_all P95 延迟 < 50ms（1000 系统）
 - [ ] AC-P7: 1000 系统 DB 文件 < 5MB
 
 ### 5.3 安全验收（Security AC）
@@ -1232,9 +1230,9 @@ class HarnessEvalControlPlane:
 - [ ] AC-S2: 每维度评分 0.0-1.0 硬约束（ScoreOutOfRangeError）
 - [ ] AC-S3: overall 0.0-1.0 硬约束（Pydantic validator）
 - [ ] AC-S4: dimension_threshold 硬下限 0.5（防配置绕过）
-- [ ] AC-S5: 个体补偿规则不强制注入所有灵智体（RA-023 不变量）
+- [ ] AC-S5: 个体补偿规则不强制注入所有Forgekin（RA-023 不变量）
 - [ ] AC-S6: 跨 agent 资产规则白名单不可被低分系统覆盖（白名单优先级最高）
-- [ ] AC-S7: 觉醒阶 E4-E6 接入低分系统需 Mind Council 二次确认（防灵智体自降级）
+- [ ] AC-S7: 觉醒阶 E4-E6 接入低分系统需 MindCouncil 二次确认（防Forgekin自降级）
 - [ ] AC-S8: audit log（harnessability_events 表）禁删除，仅 INSERT + SELECT
 
 ### 5.4 Eval 验收（Eval AC）
@@ -1283,4 +1281,4 @@ class HarnessEvalControlPlane:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F013/A013） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F013/A013） | 开发者 Forgekin（猎犬·夏洛克） |

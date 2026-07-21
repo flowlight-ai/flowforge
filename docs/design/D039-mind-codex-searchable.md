@@ -1,15 +1,14 @@
-# D039: 灵典可检索知识库详细设计
+# D039: MindCodex 可检索知识库详细设计（Distilled Knowledge Base，社区社交称"灵典"）
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.4] + [doc:../spec.md#§3.14]（FR-CORE-004 / FR-CORE-014 / FR-CORE-024）
 > **对应 arch.md**: [doc:../arch.md#§3.4] + [doc:../arch.md#§3.14]
 > **对应 design.md**: [doc:../design.md#§3.4] + [doc:../design.md#§3.14]
 > **对应 Feature**: [doc:../features/F039-mind-codex-searchable.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A039-mind-codex-searchable.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,40 +16,39 @@
 
 ### 1.1 设计问题
 
-本详细设计在 A039 架构设计基础上，深入到代码层落地灵典可检索知识库（Mind Codex Searchable）系统，需解决以下工程问题：
+本详细设计在 A039 架构设计基础上，深入到代码层落地MindCodex可检索知识库（MindCodex Searchable）系统，需解决以下工程问题：
 
 - **CL-005 七字段契约硬校验**：trigger / procedure / precondition / postcondition / anti_pattern / provenance / confidence 七字段如何用 Pydantic 模型 + validator 实现缺字段拒绝入库? confidence 范围 [0.0, 1.0] 如何约束? provenance 至少 1 个 Episode ID 如何校验?
-- **与 F014 灵忆存储隔离**：锻典（结构化蒸馏产物）与灵忆（原始任务日志）如何在不同 surface_type / 不同 collection 中物理隔离?
-- **三检索入口工程化**：search_semantic（Milvus 向量）/ search_grep（ES BM25）/ search_index（按 domain 图谱）如何通过 OpenSieve SDK 并发调用?
+- **与 F014 EchoStore存储隔离**：蒸馏知识库（结构化蒸馏产物）与EchoStore（原始任务日志）如何在不同 surface_type / 不同 collection 中物理隔离?
+- **三检索入口工程化**：search_semantic（Milvus 向量）/ search_grep（ES BM25）/ search_index（按 domain 图谱）如何通过可插拔数据源适配器 SDK 并发调用?
 - **RRF 融合算法实现**：三入口结果如何按 1/(k+rank) 计算 RRF 分数并融合排序?
 - **消费加权排序接入 F017**：consumption_count + last_eval_score + recency 三信号如何按 0.3/0.4/0.3 权重 + Wilson 收缩排序?
 - **成熟度门控实现**：L0-L2 不可消费（仅存储）、L3+ 可消费的过滤逻辑如何在 search_federated 内强制生效? L3→L4 operator 批准如何实现?
-- **provenance 字段指向 F014 Episode ID**：锻典条目入库时如何校验 provenance 中的 Episode ID 在 F014 EchoStore 中确实存在?
-- **soul_imprint 关联 F038 谱系**：锻典条目如何按灵印家族查询（"某灵智体家族累计的锻典条目"）?
+- **provenance 字段指向 F014 Episode ID**：蒸馏知识库条目入库时如何校验 provenance 中的 Episode ID 在 F014 EchoStore 中确实存在?
+- **soul_imprint 关联 F038 谱系**：蒸馏知识库条目如何按SoulImprint家族查询（"某Forgekin家族累计的蒸馏知识库条目"）?
 
 ### 1.2 设计约束
 
 - **单向依赖**：`flowforge/forgemind/codex/` 禁止 import 任何 *Forge 模块；可 import `flowforge/core/*` 与 `flowforge/forgemind/*`
 - **DI 容器**：MindCodexStore / MindCodexSearcher / MindCodexConsumer / MaturityGatekeeper / SpiritForge 必须由 DI 容器注入
-- **Repository 层**：所有锻典条目持久化必须经 MindCodexRepository 抽象，复用 F008 持久表面，禁止直接操作数据库
+- **Repository 层**：所有蒸馏知识库条目持久化必须经 MindCodexRepository 抽象，复用 F008 持久表面，禁止直接操作数据库
 - **配置驱动**：contract_validation / search / consumption_ranking / maturity 规则必须外置 YAML（`flowforge/forgemind/config/mind_codex.yaml`）
-- **OpenSieve 统一入口**：所有检索必须通过 OpenSieve Client，禁止锻典自建检索引擎
-- **CL-005 七字段契约**：每个锻典条目必须包含七字段，缺字段或 confidence 越界拒绝入库
-- **与灵忆存储隔离**：锻典 surface_type="mind_codex_entry"，与 F014 EchoStore（surface_type="echo_episode"）物理隔离
+- **可插拔数据源适配器统一入口**：所有检索必须通过 Repository 层抽象调用可插拔数据源适配器，禁止蒸馏知识库自建检索引擎
+- **CL-005 七字段契约**：每个蒸馏知识库条目必须包含七字段，缺字段或 confidence 越界拒绝入库
+- **与EchoStore存储隔离**：蒸馏知识库 surface_type="mind_codex_entry"，与 F014 EchoStore（surface_type="echo_episode"）物理隔离
 - **成熟度门控**：仅 L3+ 条目可被 search_federated 返回，L0-L2 仅存储不消费
-- **9 大点名称修订**：代码层使用 MindCodexEntry / MindCodexStore / SpiritForge；文档层使用"锻典 / 灵锻 / 灵忆 / 灵印"
 
 ### 1.3 设计影响
 
 - **新增模块**：`flowforge/forgemind/codex/` 下 7 个文件（store.py / searcher.py / consumer.py / maturity.py / spirit_forge.py / repository.py / models.py）
 - **修改 F008 Durable State Surfaces**：新增 surface_type="mind_codex_entry" 持久表面
-- **修改 F014 Memory Collection**：锻典作为多域记忆联邦 L6 层（procedural memory），与 L1-L5 隔离存储
-- **修改 F015 三检索入口**：锻典检索接入 graph_resolve / list_recent / search_evidence 三入口
-- **修改 F017 消费加权排序**：锻典消费信号接入 14 信号加权排序
-- **影响 F028 ForgePipeline**：流水线第 3 步（记忆初始化）可预加载相关锻典条目到灵智体工作记忆
-- **影响 F035 三方 Agent 能力融合**：三方 Agent 蒸馏的能力通过 SpiritForge 写入锻典
-- **影响 F038 进化谱系**：锻典条目包含 soul_imprint 字段，按谱系查询家族知识资产
-- **影响 F040 Harness Eval 控制面**：锻典消费信号作为 Eval 信号源
+- **修改 F014 Memory Collection**：蒸馏知识库作为多域记忆联邦 L6 层（procedural memory），与 L1-L5 隔离存储
+- **修改 F015 三检索入口**：蒸馏知识库检索接入 graph_resolve / list_recent / search_evidence 三入口
+- **修改 F017 消费加权排序**：蒸馏知识库消费信号接入 14 信号加权排序
+- **影响 F028 ForgePipeline**：流水线第 3 步（记忆初始化）可预加载相关蒸馏知识库条目到Forgekin工作记忆
+- **影响 F035 三方 Agent 能力融合**：三方 Agent 蒸馏的能力通过 SpiritForge 写入蒸馏知识库
+- **影响 F038 进化谱系**：蒸馏知识库条目包含 soul_imprint 字段，按谱系查询家族知识资产
+- **影响 F040 Harness Eval 控制面**：蒸馏知识库消费信号作为 Eval 信号源
 
 ---
 
@@ -92,8 +90,8 @@
    │ + search_semantic(query)       │  │  .py)                         │
    │ + search_grep(keyword)         │  │ + consume(entry_id,           │
    │ + search_index(domain)         │  │     eval_score)               │
-   │ + search_federated(query)      │  │ + update_consumption_count()  │
-   │   → RRF 融合 + 成熟度门控      │  │ + update_last_eval_score()    │
+   │ + search_federated(query)      │  │ + update_consumption_count  │
+   │   → RRF 融合 + 成熟度门控      │  │ + update_last_eval_score    │
    └────────────────────────────────┘  └───────────────────────────────┘
                  ▲
                  │
@@ -143,10 +141,10 @@ REQUIRED_CONTRACT_FIELDS = (
 
 
 class MindCodexEntry(BaseModel):
-    """锻典条目（CL-005 Knowledge Object Contract 七字段契约）"""
+    """蒸馏知识库条目（CL-005 Knowledge Object Contract 七字段契约）"""
 
     entry_id: str
-    forgekin_id: str = Field(description="所属灵智体")
+    forgekin_id: str = Field(description="所属Forgekin")
     domain: str = Field(description="能力域（如 writing / coding / fact_check）")
 
     # === CL-005 七字段契约（缺一不可）===
@@ -156,7 +154,7 @@ class MindCodexEntry(BaseModel):
     postcondition: str = Field(description="④postcondition 预期效果")
     anti_pattern: str = Field(description="⑤anti_pattern 反模式")
     provenance: list[str] = Field(
-        description="⑥provenance 来源 Episode ID（F014 灵忆 ID）"
+        description="⑥provenance 来源 Episode ID（F014 EchoStore ID）"
     )
     confidence: float = Field(
         ge=0.0, le=1.0,
@@ -182,7 +180,7 @@ class MindCodexEntry(BaseModel):
         description="最后 Eval 分数（F017 信号）"
     )
     soul_imprint: str = Field(
-        description="所属灵智体灵印（F038 谱系追踪）"
+        description="所属ForgekinSoulImprint（F038 谱系追踪）"
     )
 
     @field_validator("provenance")
@@ -201,7 +199,7 @@ class MindCodexEntry(BaseModel):
 
 
 class SearchQuery(BaseModel):
-    """锻典检索查询"""
+    """蒸馏知识库检索查询"""
     forgekin_id: str
     query: Optional[str] = Field(default=None, description="语义查询文本")
     keyword: Optional[str] = Field(default=None, description="全文关键词")
@@ -242,11 +240,11 @@ class ContractValidationError(Exception):
 
 
 class MindCodexStore(ABC):
-    """锻典存储（抽象接口，与 F014 灵忆存储物理隔离）"""
+    """蒸馏知识库存储（抽象接口，与 F014 EchoStore存储物理隔离）"""
 
     @abstractmethod
     async def add_entry(self, entry: MindCodexEntry) -> str:
-        """添加锻典条目
+        """添加蒸馏知识库条目
 
         前置条件:
         - CL-005 七字段契约校验通过（缺字段 / confidence 越界拒绝）
@@ -301,10 +299,10 @@ class MindCodexStore(ABC):
         soul_imprint: str,
         max_depth: int = 3,
     ) -> list[MindCodexEntry]:
-        """按谱系查询某灵智体家族的锻典条目
+        """按谱系查询某Forgekin家族的蒸馏知识库条目
 
         通过 F038 LineageQuery.get_descendants(soul_imprint, depth)
-        获取家族成员的 soul_imprint 列表, 然后查询所有这些灵印的条目
+        获取家族成员的 soul_imprint 列表, 然后查询所有这些SoulImprint的条目
         """
         ...
 ```
@@ -319,7 +317,7 @@ from .models import MindCodexEntry, SearchQuery
 
 
 class MindCodexSearcher(ABC):
-    """锻典检索器（接入 OpenSieve 三入口 + RRF 融合 + 成熟度门控）"""
+    """蒸馏知识库检索器（通过 Repository 层抽象调用可插拔数据源适配器三入口 + RRF 融合 + 成熟度门控）"""
 
     @abstractmethod
     async def search_semantic(
@@ -328,7 +326,7 @@ class MindCodexSearcher(ABC):
         query: str,
         top_k: int = 10,
     ) -> list[MindCodexEntry]:
-        """语义向量检索（OpenSieve Milvus）
+        """语义向量检索（通过可插拔适配器调用 Milvus）
 
         索引来源: entry.procedure + entry.trigger 的 embedding
         """
@@ -341,7 +339,7 @@ class MindCodexSearcher(ABC):
         keyword: str,
         top_k: int = 10,
     ) -> list[MindCodexEntry]:
-        """全文关键词检索（OpenSieve Elasticsearch BM25）
+        """全文关键词检索（通过可插拔适配器调用 Elasticsearch BM25）
 
         索引字段: trigger / procedure / precondition / anti_pattern
         """
@@ -395,7 +393,7 @@ from abc import ABC, abstractmethod
 
 
 class MindCodexConsumer(ABC):
-    """锻典消费者（记录消费信号供 F017 加权）"""
+    """蒸馏知识库消费者（记录消费信号供 F017 加权）"""
 
     @abstractmethod
     async def consume(
@@ -413,10 +411,10 @@ class MindCodexConsumer(ABC):
 
         副作用:
         - consumption_count += 1
-        - last_consumed_at = now()
+        - last_consumed_at = now
         - last_eval_score = eval_score
         - 触发 F017 消费加权排序更新
-        - 写入消费记录到 F014 灵忆（task 维度）
+        - 写入消费记录到 F014 EchoStore（task 维度）
 
         若 entry.maturity_level < L3 抛 MaturityGateError
         """
@@ -499,7 +497,7 @@ class SpiritForgeError(Exception):
 
 
 class SpiritForge(ABC):
-    """灵锻引擎（从灵忆蒸馏知识到锻典）"""
+    """SpiritForge引擎（从EchoStore蒸馏知识到蒸馏知识库）"""
 
     @abstractmethod
     async def distill(
@@ -509,10 +507,10 @@ class SpiritForge(ABC):
         preserve_vertical_in_original: bool = True,
         episode_ids: list[str] | None = None,
     ) -> list[str]:
-        """蒸馏经验到锻典
+        """蒸馏经验到蒸馏知识库
 
         步骤:
-        1. 从 F014 EchoStore 拉取灵智体的 Episode 日志
+        1. 从 F014 EchoStore 拉取Forgekin的 Episode 日志
            （若 episode_ids 给定则仅蒸馏指定 episodes）
         2. 按能力域（domain）聚类 episodes
         3. 对每个 domain 调用 LLM 蒸馏出 CL-005 七字段:
@@ -579,7 +577,7 @@ from .models import MindCodexEntry
 
 
 class MindCodexRepository(ABC):
-    """锻典持久层（抽象接口，与 F014 灵忆存储物理隔离）
+    """蒸馏知识库持久层（抽象接口，与 F014 EchoStore存储物理隔离）
 
     复用 F008 Durable State Surfaces, surface_type='mind_codex_entry'
     与 F014 EchoStore (surface_type='echo_episode') 物理隔离
@@ -637,7 +635,7 @@ class MindCodexRepository(ABC):
 
 | 模型 | 用途 | 关键字段 |
 |------|------|---------|
-| `MindCodexEntry` | 锻典条目（CL-005 七字段） | trigger / procedure / precondition / postcondition / anti_pattern / provenance / confidence + maturity_level + consumption_count + soul_imprint |
+| `MindCodexEntry` | 蒸馏知识库条目（CL-005 七字段） | trigger / procedure / precondition / postcondition / anti_pattern / provenance / confidence + maturity_level + consumption_count + soul_imprint |
 | `SearchQuery` | 检索查询 | query / keyword / domain / min_maturity / include_family |
 | `ConsumptionRecord` | 消费记录 | entry_id / eval_score / task_id |
 
@@ -666,7 +664,7 @@ class MindCodexRepository(ABC):
        raise ContractValidationError(
            f"soul_imprint not in lineage: {entry.soul_imprint}")
 5. entry.maturity_level ← "L0"  // 初始成熟度
-6. entry.created_at ← now()
+6. entry.created_at ← now
 7. entry.consumption_count ← 0
 8. await repository.save_entry(entry)
 9. event_bus.publish(EntryAddedEvent(entry_id=entry.entry_id,
@@ -705,14 +703,14 @@ class MindCodexRepository(ABC):
 3. // RRF 融合
    rrf_scores: dict[entry_id, float] ← {}
    entry_map: dict[entry_id, MindCodexEntry] ← {}
-   FOR source, entries IN entries_by_source.items():
+   FOR source, entries IN entries_by_source.items:
        FOR rank, entry IN enumerate(entries, start=1):
            rrf_scores[entry.entry_id] += 1.0 / (60 + rank)
            entry_map[entry.entry_id] ← entry
 
 4. // 成熟度门控（仅保留 L3+）
    filtered ← [
-       (eid, score) FOR eid, score IN rrf_scores.items()
+       (eid, score) FOR eid, score IN rrf_scores.items
        IF _maturity_rank(entry_map[eid].maturity_level)
             >= _maturity_rank(query.min_maturity)
    ]
@@ -784,11 +782,11 @@ _wilson_lower_bound(n, p, z=1.96):
     RETURN max(0.0, (center - spread) / denom)
 _recency_score(last_consumed_at):
     IF last_consumed_at IS None: RETURN 0.0
-    days_ago ← (now() - last_consumed_at).days
+    days_ago ← (now - last_consumed_at).days
     RETURN max(0.0, 1.0 - days_ago/30)  // 30 天衰减
 _staleness_penalty(last_consumed_at):
     IF last_consumed_at IS None: RETURN 0.5
-    days_ago ← (now() - last_consumed_at).days
+    days_ago ← (now - last_consumed_at).days
     IF days_ago > 90: RETURN 0.5  // 90 天未用强惩罚
     RETURN 0.0
 ```
@@ -943,20 +941,20 @@ class MindCodexSearcherImpl(MindCodexSearcher):
     def __init__(
         self,
         repository: MindCodexRepository,
-        opensieve_client,  # OpenSieve 统一入口
+        adapter_client,  # 可插拔数据源适配器统一入口
         lineage_query,  # F038 LineageQuery
         config,
     ) -> None:
         self._repo = repository
-        self._opensieve = opensieve_client
+        self._adapter = adapter_client
         self._lineage_query = lineage_query
         self._config = config
 
     async def search_semantic(
         self, forgekin_id: str, query: str, top_k: int = 10
     ) -> list[MindCodexEntry]:
-        # 调用 OpenSieve Milvus 语义检索
-        raw = await self._opensieve.search_semantic(
+        # 调用可插拔数据源适配器 Milvus 语义检索
+        raw = await self._adapter.search_semantic(
             collection="mind_codex",
             query_text=query,
             filter={"forgekin_id": forgekin_id},
@@ -967,7 +965,7 @@ class MindCodexSearcherImpl(MindCodexSearcher):
     async def search_grep(
         self, forgekin_id: str, keyword: str, top_k: int = 10
     ) -> list[MindCodexEntry]:
-        raw = await self._opensieve.search_grep(
+        raw = await self._adapter.search_grep(
             index="mind_codex",
             query=keyword,
             filter={"forgekin_id": forgekin_id},
@@ -1040,7 +1038,7 @@ class MindCodexSearcherImpl(MindCodexSearcher):
         # 4. 成熟度门控
         min_rank = _MATURITY_RANK.get(query.min_maturity, 3)
         filtered = [
-            (eid, score) for eid, score in rrf_scores.items()
+            (eid, score) for eid, score in rrf_scores.items
             if _MATURITY_RANK.get(
                 entry_map[eid].maturity_level, 0
             ) >= min_rank
@@ -1134,7 +1132,7 @@ SpiritForge    F014 EchoStore    LLM    MindCodexStore    MindCodexRepository   
 **检索消费流时序**：
 
 ```
-agent         MindCodexSearcher       OpenSieve        MindCodexRepository    MaturityGatekeeper    MindCodexConsumer
+agent         MindCodexSearcher       可插拔适配器        MindCodexRepository    MaturityGatekeeper    MindCodexConsumer
   │                  │                     │                   │                     │                     │
   │ search_federated │                     │                   │                     │                     │
   ├─────────────────►│ async gather        │                   │                     │                     │
@@ -1166,10 +1164,10 @@ agent         MindCodexSearcher       OpenSieve        MindCodexRepository    Ma
 | `ContractValidationError` | CL-005 七字段缺失 / confidence 越界 / provenance Episode 不存在 / soul_imprint 不在谱系 | 返回 422，附详细缺失字段 |
 | `MaturityGateError` | 消费 L0-L2 条目 / 晋升规则不满足 / L4 晋升无 operator | 返回 403 或 422 |
 | `SpiritForgeError` | LLM 蒸馏失败 / Episode 日志解析失败 / 入库契约校验失败 | 蒸馏任务失败重试 3 次后告警；已部分入库的条目回滚 |
-| `OpenSieveUnavailableError` | OpenSieve 服务不可用 | 检索降级为仅 search_index（图谱过滤），返回 503 提示"语义检索暂不可用" |
+| `AdapterUnavailableError` | 可插拔数据源适配器服务不可用 | 检索降级为仅 search_index（图谱过滤），返回 503 提示"语义检索暂不可用" |
 | `ProvenanceNotFoundError` | provenance Episode ID 在 F014 EchoStore 中不存在 | 返回 422，附缺失 Episode ID |
 | `RepositoryTimeoutError` | 持久层超时 | 重试 3 次后返回 503 |
-| `LineageConsistencyError` | soul_imprint 在 F038 LineageStore 中不存在 | 返回 422，提示"灵印未注册谱系" |
+| `LineageConsistencyError` | soul_imprint 在 F038 LineageStore 中不存在 | 返回 422，提示"SoulImprint未注册谱系" |
 
 **回滚策略**：
 - SpiritForge 蒸馏多个 entry 时使用事务化批量入库，任一 entry 契约校验失败则整批回滚
@@ -1181,8 +1179,8 @@ agent         MindCodexSearcher       OpenSieve        MindCodexRepository    Ma
 | 性能指标 | SLO | 优化手段 |
 |---------|:----:|---------|
 | `add_entry` 延迟 | P95 < 200ms | 契约校验 + 2 次外部存在性查询（echo / lineage）+ 1 次写入 |
-| `search_semantic` 延迟 | P95 < 300ms | OpenSieve Milvus 向量检索 |
-| `search_grep` 延迟 | P95 < 200ms | OpenSieve ES BM25 |
+| `search_semantic` 延迟 | P95 < 300ms | 可插拔数据源适配器 Milvus 向量检索 |
+| `search_grep` 延迟 | P95 < 200ms | 可插拔数据源适配器 ES BM25 |
 | `search_index` 延迟 | P95 < 50ms | Repository 单表 domain 索引 |
 | `search_federated` 延迟 | P95 < 500ms | 三入口并发（asyncio.gather）+ RRF O(n) |
 | `consume` 延迟 | P95 < 50ms | 单表 UPDATE |
@@ -1192,9 +1190,9 @@ agent         MindCodexSearcher       OpenSieve        MindCodexRepository    Ma
 **优化策略**：
 1. **三入口并发**：`asyncio.gather` 并发调用，任一失败降级
 2. **缓存**：`get_entry(entry_id)` 结果以 entry_id 为 key 缓存 5 分钟，消费信号更新时失效
-3. **批量蒸馏**：SpiritForge 一次蒸馏多个 domain 的 entry，使用 `add_entries_batch()` 批量入库
-4. **OpenSieve 降级**：OpenSieve 不可用时自动降级为仅 search_index（domain 过滤）
-5. **预加载**：F028 ForgePipeline 第 3 步可预加载相关 domain 的 L3+ 锻典条目到灵智体工作记忆
+3. **批量蒸馏**：SpiritForge 一次蒸馏多个 domain 的 entry，使用 `add_entries_batch` 批量入库
+4. **可插拔数据源适配器降级**：可插拔数据源适配器不可用时自动降级为仅 search_index（domain 过滤）
+5. **预加载**：F028 ForgePipeline 第 3 步可预加载相关 domain 的 L3+ 蒸馏知识库条目到Forgekin工作记忆
 6. **Wilson 缓存**：消费加权排序的 Wilson 下界按 (n, p) 缓存，避免重复计算
 7. **异步蒸馏**：`distill_async` 拆分为异步任务，通过 `get_distill_status(task_id)` 查询进度
 
@@ -1207,7 +1205,7 @@ mind_codex:
   store:
     backend: durable_state_surfaces
     surface_type: mind_codex_entry
-    distinguish_from_echo_store: true   # 与 F014 灵忆物理隔离
+    distinguish_from_echo_store: true   # 与 F014 EchoStore物理隔离
     cache_entry_ttl_seconds: 300
 
   contract_validation:
@@ -1226,15 +1224,15 @@ mind_codex:
 
   search:
     entries:
-      semantic: enabled    # OpenSieve Milvus
-      grep: enabled        # OpenSieve ES BM25
+      semantic: enabled    # 可插拔适配器 Milvus
+      grep: enabled        # 可插拔适配器 ES BM25
       index: enabled       # Repository domain 索引
     rrf_fusion: true
     rrf_k: 60
     min_maturity_for_consume: L3   # CL-003 成熟度门控
     top_k_default: 10
     top_k_max: 100
-    opensieve:
+    adapter:
       endpoint: http://localhost:8100
       timeout_seconds: 5
       fallback_to_index_only: true
@@ -1291,25 +1289,25 @@ mind_codex:
 
 | 上游模块 | 调用入口 | 调用时机 | 数据流 |
 |---------|---------|---------|--------|
-| **F008 Durable State Surfaces** | `DurableStateStore.save("mind_codex_entry", ...)` | 锻典条目持久化（与 F014 灵忆 surface_type 隔离） | 单向：写 |
+| **F008 Durable State Surfaces** | `DurableStateStore.save("mind_codex_entry", ...)` | 蒸馏知识库条目持久化（与 F014 EchoStore surface_type 隔离） | 单向：写 |
 | **F014 Memory Collection** | `EchoStore.has_episode(ep_id)` / `EchoStore.get_episodes(forgekin_id)` | add_entry 时校验 provenance / distill 时拉取 episodes | 单向：读 |
 | **F015 三检索入口** | search_evidence / graph_resolve / list_recent 三入口语义 | search_federated 复用 F015 入口语义 | 单向：读 |
 | **F017 消费加权排序** | Wilson 收缩算法 + 14 信号加权公式 | consumption_ranking 接入 F017 算法 | 单向：读 |
-| **F028 ForgePipeline** | 流水线第 3 步预加载相关锻典条目 | 灵智体创建时 | 单向：读 |
-| **F035 三方 Agent 能力融合** | SpiritForge.distill() 写入三方 Agent 蒸馏的能力 | 三方 Agent 蒸馏时 | 单向：写 |
+| **F028 ForgePipeline** | 流水线第 3 步预加载相关蒸馏知识库条目 | Forgekin创建时 | 单向：读 |
+| **F035 三方 Agent 能力融合** | SpiritForge.distill 写入三方 Agent 蒸馏的能力 | 三方 Agent 蒸馏时 | 单向：写 |
 | **F036 ForgeRelationship** | 回炉蒸馏产出通用 SkillPackage | ReclaimExecutor 调用 | 单向：写 |
-| **F038 LineageStore** | `LineageStore.get_node(soul_imprint)` / `LineageQuery.get_descendants(...)` | add_entry 校验灵印存在 / list_by_soul_imprint_family 查询家族 | 单向：读 |
-| **OpenSieve** | `OpenSieveClient.search_semantic / search_grep / search_index` | 检索三入口 | 单向：读 |
+| **F038 LineageStore** | `LineageStore.get_node(soul_imprint)` / `LineageQuery.get_descendants(...)` | add_entry 校验SoulImprint存在 / list_by_soul_imprint_family 查询家族 | 单向：读 |
+| **可插拔数据源适配器** | `PluggableAdapterClient.search_semantic / search_grep / search_index` | 检索三入口 | 单向：读 |
 | **EventBus** | `EventBus.publish(EntryAddedEvent / MaturityPromotedEvent / ConsumedEvent)` | 入库 / 晋升 / 消费时 | 单向：发布 |
 
 ### 4.2 下游影响如何被调用
 
 | 下游模块 | 被调用入口 | 调用方 | 时机 |
 |---------|-----------|-------|------|
-| **F017 消费加权排序** | `MindCodexConsumer.consume()` 触发 F017 信号更新 | F017 订阅 ConsumedEvent | 消费时 |
-| **F028 ForgePipeline** | 流水线第 3 步预加载 L3+ 锻典条目 | ForgePipeline | 灵智体创建时 |
+| **F017 消费加权排序** | `MindCodexConsumer.consume` 触发 F017 信号更新 | F017 订阅 ConsumedEvent | 消费时 |
+| **F028 ForgePipeline** | 流水线第 3 步预加载 L3+ 蒸馏知识库条目 | ForgePipeline | Forgekin创建时 |
 | **F040 Harness Eval 控制面** | 控制面消费 consumption_count / last_eval_score 作为 Eval 信号 | F040 控制面 | 每日汇总时 |
-| **F036 ForgeRelationship** | ReclaimExecutor 调用 SpiritForge.distill() 蒸馏通用能力 | ReclaimExecutor | 回炉时 |
+| **F036 ForgeRelationship** | ReclaimExecutor 调用 SpiritForge.distill 蒸馏通用能力 | ReclaimExecutor | 回炉时 |
 | **operator 控制台** | HTTP API `GET /api/v7/codex/entries?forgekin_id=...` | operator UI | 知识审计 |
 | **EventBus 订阅者** | `EntryAddedEvent` / `MaturityPromotedEvent` / `ConsumedEvent` | dashboard / 通知系统 | 异步消费 |
 
@@ -1322,15 +1320,15 @@ mind_codex:
   - `promote_maturity` 各级晋升规则单测（L0→L1 / L1→L2 / L2→L3 / L3→L4）
 - **T2 跨模块集成层**：
   - `add_entry` 全链路：CL-005 校验 + F014 provenance 存在性 + F038 soul_imprint 存在性
-  - `search_federated` 接入 OpenSieve 真实服务（localhost:8100），三入口返回真实结果
+  - `search_federated` 通过 Repository 层抽象调用可插拔数据源适配器真实服务（localhost:8100），三入口返回真实结果
   - `consume` 触发 F017 消费加权信号更新
   - `list_by_soul_imprint_family` 通过 F038 LineageQuery 查询家族条目
 - **T3 E2E 层（遵守 T1-T8 测试铁律）**：
-  - 真实灵智体通过真实 LLM 完成 5+ 编码任务（Eval ≥ 0.85，禁止 mock LLM）
-  - 真实 LLM 灵锻蒸馏出"代码编写能力"条目（含 CL-005 七字段，provenance 指向真实 Episode ID）
-  - 经 Eval Ledger 验证（CL-004）合入锻典，初始 maturity_level=L0
-  - 灵智体使用该条目 6+ 次（2+ agents，80%+ 成功率），自动晋升 L3
-  - 下次类似任务灵智体通过 search_federated 找到该条目并消费
+  - 真实Forgekin通过真实 LLM 完成 5+ 编码任务（Eval ≥ 0.85，禁止 mock LLM）
+  - 真实 LLM SpiritForge蒸馏出"代码编写能力"条目（含 CL-005 七字段，provenance 指向真实 Episode ID）
+  - 经 Eval Ledger 验证（CL-004）合入蒸馏知识库，初始 maturity_level=L0
+  - Forgekin使用该条目 6+ 次（2+ agents，80%+ 成功率），自动晋升 L3
+  - 下次类似任务Forgekin通过 search_federated 找到该条目并消费
   - 验证：消费信号记录（consumption_count +1，last_eval_score 更新）/ 加权排序正确
   - operator 批准 L3→L4 晋升（需 12+ uses，last 10 90%+）
 - **T4 异常路径**：
@@ -1338,7 +1336,7 @@ mind_codex:
   - 入库时 soul_imprint 不在谱系 → 验证拒绝
   - 消费 L0-L2 条目 → 验证拒绝（MaturityGateError）
   - L3→L4 晋升无 operator_id → 验证拒绝
-  - OpenSieve 不可用 → 验证降级为 search_index only
+  - 可插拔数据源适配器不可用 → 验证降级为 search_index only
 
 ---
 
@@ -1353,7 +1351,7 @@ mind_codex:
 - [ ] **AC-5**：`add_entry` provenance 空 / Episode 不存在拒绝入库
 - [ ] **AC-6**：`add_entry` soul_imprint 不在 F038 谱系拒绝入库
 - [ ] **AC-7**：`add_entry` 初始 maturity_level = L0
-- [ ] **AC-8**：锻典存储与 F014 灵忆存储物理隔离（surface_type=mind_codex_entry vs echo_episode）
+- [ ] **AC-8**：蒸馏知识库存储与 F014 EchoStore存储物理隔离（surface_type=mind_codex_entry vs echo_episode）
 - [ ] **AC-9**：`search_semantic` / `search_grep` / `search_index` 三入口可用
 - [ ] **AC-10**：`search_federated` RRF 融合三入口结果（k=60）
 - [ ] **AC-11**：`search_federated` 成熟度门控（仅返回 L3+ 条目）
@@ -1367,7 +1365,7 @@ mind_codex:
 - [ ] **AC-19**：`promote_maturity` L3→L4 需 ≥12 uses, last 10 ≥90%, **operator approved**
 - [ ] **AC-20**：`distill` 蒸馏产出含 CL-005 七字段 + provenance 指向真实 Episode ID
 - [ ] **AC-21**：`list_by_soul_imprint_family` 通过 F038 谱系查询家族条目
-- [ ] **AC-22**：所有检索通过 OpenSieve 统一入口（无绕过）
+- [ ] **AC-22**：所有检索通过 Repository 层抽象调用可插拔数据源适配器统一入口（无绕过）
 
 ### 5.2 性能验收
 
@@ -1380,7 +1378,7 @@ mind_codex:
 ### 5.3 安全验收
 
 - [ ] **AC-28**：所有条目通过 MindCodexRepository 持久化（无直接数据库操作）
-- [ ] **AC-29**：锻典存储与 F014 灵忆存储物理隔离（distinguish_from_echo_store=true）
+- [ ] **AC-29**：蒸馏知识库存储与 F014 EchoStore存储物理隔离（distinguish_from_echo_store=true）
 - [ ] **AC-30**：L3→L4 晋升必须 operator 批准（不可自动晋升）
 - [ ] **AC-31**：L0-L2 条目禁止被检索消费（强制门控）
 - [ ] **AC-32**：所有契约校验失败 + 晋升失败写入审计日志
@@ -1389,8 +1387,8 @@ mind_codex:
 
 - [ ] **AC-33**：`distill` 的 confidence 由真实 Eval 信号计算（成功/失败比 + Wilson 下界）
 - [ ] **AC-34**：`consume` 的 eval_score 来自 F018 EvalLedger（非自算）
-- [ ] **AC-35**：F040 控制面将锻典消费信号（consumption_count / last_eval_score）作为 Eval 信号源
-- [ ] **AC-36**：F040 控制面将 CL-005 契约违反率作为锻典组件健康指标
+- [ ] **AC-35**：F040 控制面将蒸馏知识库消费信号（consumption_count / last_eval_score）作为 Eval 信号源
+- [ ] **AC-36**：F040 控制面将 CL-005 契约违反率作为蒸馏知识库组件健康指标
 - [ ] **AC-37**：F040 控制面将 L3+ 晋升成功率作为知识质量指标
 
 ---
@@ -1398,10 +1396,10 @@ mind_codex:
 ## 6. 引用
 
 - [doc:../spec.md#§3.4]（FR-CORE-004 多域记忆联邦）
-- [doc:../spec.md#§3.14]（FR-CORE-014 灵锻 SpiritForge + 灵议 Mind Council）
-- [doc:../spec.md#§3.16]（FR-CORE-024 灵典 Mind Codex 可检索知识库）
+- [doc:../spec.md#§3.14]（FR-CORE-014 SpiritForge + MindCouncil）
+- [doc:../spec.md#§3.16]（FR-CORE-024 MindCodex 可检索知识库）
 - [doc:../arch.md#§3.4]（多域记忆联邦六层架构）
-- [doc:../arch.md#§3.14]（灵锻 SpiritForge + 灵议 Mind Council 架构）
+- [doc:../arch.md#§3.14]（SpiritForge + MindCouncil 架构）
 - [doc:../architecture/A039-mind-codex-searchable.md]（同号 Feature 级 SAD）
 - [doc:../features/F039-mind-codex-searchable.md]（同号 Feature 级 SRS）
 - [doc:../features/F008-durable-state-surfaces.md]（Durable State Surfaces）
@@ -1414,10 +1412,10 @@ mind_codex:
 - [doc:../features/F038-forgemind-lineage.md]（进化谱系）
 - [doc:../features/F040-harness-eval-control-plane.md]（Harness Eval 控制面）
 - [doc:../decisions/008-memory-federation.md]（多域记忆联邦 ADR）
-- [doc:../design/naming-contract.md#2.5]（灵忆 EchoStore）
-- [doc:../design/naming-contract.md#2.7]（灵锻 SpiritForge）
-- [doc:../design/naming-contract.md#2.8]（锻典 Mind Codex）
-- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 所有数据检索走 OpenSieve）
+- [doc:../design/naming-contract.md#2.5]（EchoStore）
+- [doc:../design/naming-contract.md#2.7]（SpiritForge）
+- [doc:../design/naming-contract.md#2.8]（MindCodex 蒸馏知识库）
+- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
 - [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
 - [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
 
@@ -1427,4 +1425,4 @@ mind_codex:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，应用 9 大点名称修订；含 Pydantic Models + validator / 接口实现 / RRF + Wilson 算法 / 成熟度门控 / 时序图 / 配置示例 / 跨模块协作 / 验收 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，） | 开发者 Forgekin（猎犬·夏洛克） |

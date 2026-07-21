@@ -1,7 +1,7 @@
 # FlowForge 文档总入口
 
-> **文档编号**: README.md（v1.1）
-> **最近修订**: 2026-07-19（v1.1：按命名契约 v2.0 重构术语，全面采用 P0 官方名称优先原则）
+> **文档编号**: README.md（v1.2）
+> **最近修订**: 2026-07-19（v1.2：补全 test/ 子目录导航；修正 task.md / test.md 版本状态；移除未实现的 design-system.md / public-lessons.md 死链）
 > **维护方式**: 可进化智能体可自我演进更新（按 `[doc:roleagent.md#第5章]` Eval 自代谢机制）
 > **依赖引用**: 13 份外部文档（详见 `[doc:review/review.md#1.1.3]`）
 
@@ -9,9 +9,9 @@
 
 ## 1. 这是什么
 
-FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent Framework，项目代号 ForgeMind，社区社交称"灵智"）——用自进化的核心框架，给万事万物锻造可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"），构建具身智能（Embodied AI）与虚拟角色智能体（Character AI）工程落地的万物可进化智能体世界。详见 `[VISION.md]`。
+FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent Framework，项目代号 ForgeMind，社区社交称"灵智"）——用自进化的核心框架，给各类实体锻造可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"），构建具身智能（Embodied AI）与虚拟角色智能体（Character AI）工程落地的可进化智能体生态。详见 `[VISION.md]`。
 
-文档目录按 `[doc:clowder-ai/docs/]` 结构组织，便于可进化智能体增量维护每个 Feature / ADR / 架构视图，达成"自己开发自己"。
+文档目录按标准软件工程文档结构组织，便于可进化智能体增量维护每个 Feature / ADR / 架构视图，达成"自己开发自己"。
 
 ---
 
@@ -19,22 +19,20 @@ FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent F
 
 | 文档 | 用途 | 状态 |
 |------|------|:----:|
-| [VISION.md](VISION.md) | 万物可进化智能体愿景声明（operator 通用智能体愿景） | ✅ v1.2 |
-| [ROADMAP.md](ROADMAP.md) | 6 阶段路线图（Phase 0-6） | ✅ v1.0 |
-| [SOP.md](SOP.md) | 可进化智能体协作标准操作流程 | ✅ v1.0 |
-| [TIPS.md](TIPS.md) | 经验提示与陷阱清单 | ✅ v1.0 |
-| [roleagent.md](roleagent.md) | roleagent.md 工程路径镜像（Cat Café 七章） | ✅ 镜像 |
-| [design-system.md](design-system.md) | 设计系统规范 | ⏳ Phase 1 |
-| [public-lessons.md](public-lessons.md) | 公开教训（来自 clowder-ai） | ⏳ Phase 1 |
+| [VISION.md](VISION.md) | 可进化智能体愿景声明（operator 通用智能体愿景） | ✅ v1.2 |
+| [ROADMAP.md](ROADMAP.md) | 6 阶段路线图（Phase 0-6） | ✅ v1.1 |
+| [SOP.md](SOP.md) | 可进化智能体协作标准操作流程 | ✅ v1.1 |
+| [TIPS.md](TIPS.md) | 经验提示与陷阱清单 | ✅ v1.1 |
+| [roleagent.md](roleagent.md) | roleagent.md 工程路径镜像（Cat Café 七章） | ✅ v1.1 镜像 |
 | [spec.md](spec.md) | v7.0 主规格书（保留为索引，详细内容已拆分到 features/） | 🔄 索引化 |
 | [arch.md](arch.md) | v7.0 架构文档（保留为索引，详细内容已拆分到 architecture/） | 🔄 索引化 |
 | [design.md](design.md) | v7.0 详细设计（保留为索引，详细内容已拆分到 design/ + features/） | 🔄 索引化 |
-| [task.md](task.md) | Phase 0-6 分阶段任务清单 | ✅ v1.0 |
-| [test.md](test.md) | 测试规范 | 🔄 待更新 |
+| [task.md](task.md) | v7.3 CL 索引化任务清单（41 条 CL + 进度概览） | ✅ v7.3 |
+| [test.md](test.md) | 测试规范导航 + Test Feature 索引（19 份 T0XX） | ✅ v2.0 |
 
 ---
 
-## 3. 七大子目录导航
+## 3. 八大子目录导航
 
 | 子目录 | 用途 | 关键文件 |
 |--------|------|---------|
@@ -45,6 +43,7 @@ FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent F
 | [harness-feedback/](harness-feedback/) | Harness Eval 反馈（bundles + eval-domains + verdicts） | `README.md` |
 | [perspectives/](perspectives/) | 视角文档（operator / 架构师 / 可进化智能体 / 三方厂商） | `README.md` |
 | [setup/](setup/) | 部署配置 | `README.md` |
+| [test/](test/) | Test Feature 规格（19 份 T0XX + TEMPLATE + README） | `TEMPLATE.md` / `T001-test-ironrules.md` / `T002-test-strategy.md` |
 
 ---
 
@@ -55,6 +54,7 @@ FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent F
 | [review/](review/) | 16 份审核文件（12 份专家原始 + 4 份归并），终稿 `review.md` v1.2 |
 | [face/](face/) | face v3.0 文档（保留为 v7.0 Phase 0 历史快照） |
 | [archive/](archive/) | 归档文档（legacy_design / reviews / empty_stubs） |
+| [_archive/](_archive/) | 过程记录归档（task.md v7.0 老 Phase 0-6 任务清单归档） |
 
 ---
 
@@ -89,7 +89,18 @@ FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent F
 - **想了解路线**：读 [ROADMAP.md](ROADMAP.md)
 - **想理解工程路径**：读 [roleagent.md](roleagent.md)
 - **想看审核意见**：读 [review/review.md](review/review.md)（v1.2 终稿，340 项问题）
-- **想看具体任务**：读 [task.md](task.md)（Phase 0-6）
+- **想看具体任务**：读 [task.md](task.md)（v7.3 41 条 CL 索引化任务清单）
 - **想看可进化智能体协作流程**：读 [SOP.md](SOP.md)
 - **想看核心架构**：读 [architecture/README.md](architecture/README.md)
 - **想看关键决策**：读 [decisions/](decisions/)
+- **想看测试规范**：读 [test.md](test.md)（v2.0 索引 + 19 份 T0XX）
+
+---
+
+## 8. 变更历史
+
+| 日期 | 版本 | 变更 | 变更者 |
+|------|:----:|------|--------|
+| 2026-07-17 | v1.0 | 初版：FlowForge 文档总入口 | 鲁班（猫头鹰 Owl） |
+| 2026-07-19 | v1.1 | 新增 task.md v7.3 / test.md v2.0 条目；移除 design-system.md / public-lessons.md 死链 | 鲁班（猫头鹰 Owl） |
+| 2026-07-19 | v1.2 | 补全 test/ 子目录导航（八大子目录）；新增 _archive/ 子目录条目；同步 SOP.md / TIPS.md 版本状态至 v1.1 | 鲁班（猫头鹰 Owl） |

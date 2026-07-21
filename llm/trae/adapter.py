@@ -1,46 +1,120 @@
-"""Trae LLM 适配器 — 将 TraeLLMClient 适配为 flowforge 兼容接口.
+"""Trae LLM Provider 适配器 — F045 §3.2 Phase 2 LLMClient 接入.
 
-将 TraeLLMClient 适配为 flowforge ModelCapability 兼容的接口，
-使 devforge agents 能够通过配置 model="trae" 使用 Trae 作为编码 LLM。
+TraeModelCapabilityAdapter 将 TraeLLMClient 适配为 LLMProvider 兼容接口，
+让 FlowForge 上层（ModelCapability → LLMClient → Provider）能通过 provider="trae"
+路由到 Trae 桥接。
+
+遵守铁律：
+- 红线 12：通过 _PROVIDER_REGISTRY 注册到 Provider 注册表
+- 铁律 3：依赖通过构造函数注入（TraeLLMClient）
+- 红线 9：组合优于继承（TraeLLMClient 是组合对象，LLMProvider 是接口契约）
+
+模块加载时自动注册到 _PROVIDER_REGISTRY，无需手动调用 register_provider。
+配置 trae_bridge.yaml 后，models.yaml 中可使用 provider: trae 路由。
 
 用法示例：
+    # 方式 1：通过 LLMProvider 注册表（推荐，符合 DI 原则）
+    from flowforge.llm.provider import get_provider
+    provider = get_provider("trae", config={...})
+    response = await provider.chat(messages=[...])
+
+    # 方式 2：直接实例化（用于测试）
     from flowforge.llm.trae.adapter import TraeModelCapabilityAdapter
-
     adapter = TraeModelCapabilityAdapter()
-    result = await adapter.chat("写一个 Python 函数")
-    print(result)
+    response = await adapter.chat(messages=[...])
 
-    # 在 devforge agent YAML 配置中：
-    # model: trae
-    # agent 会自动使用 TraeModelCapabilityAdapter
+    # 方式 3：在 models.yaml 中配置 provider: trae
+    # FlowForge 会自动通过 _PROVIDER_REGISTRY 路由到 TraeModelCapabilityAdapter
 """
 
 from __future__ import annotations
 
+import time
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
+from flowforge.llm.provider import LLMProvider, LLMResponse, register_provider
 
 from flowforge.llm.trae.client import TraeLLMClient
-from flowforge.llm.trae.config import TraeConfig
+from flowforge.llm.trae.config import TraeBridgeConfig, TraeConfig
+from flowforge.llm.trae.exceptions import TraeBridgeError
+from flowforge.llm.trae.models import BridgeRequestContext
+from flowforge.llm.trae.protocol import TraeBridgeProtocol
 
 logger = get_logger("trae_llm.adapter")
 
 
-class TraeModelCapabilityAdapter:
-    """将 TraeLLMClient 适配为 ModelCapability 兼容的 Provider.
+class TraeModelCapabilityAdapter(LLMProvider):
+    """将 TraeLLMClient 适配为 LLMProvider 兼容的 Provider.
 
-    允许 devforge agents 通过在 YAML 配置中设置 model="trae"
-    来使用 Trae 作为其 LLM。
+    实现 LLMProvider 抽象基类的 chat/stream/health_check 方法，
+    将 TraeLLMClient 的字典响应适配为 LLMResponse 对象。
 
-    实现了与 flowforge.core.model_capability.ModelCapability.chat()
-    兼容的简单接口，以及与 LLMClient 兼容的消息接口。
+    通过 _PROVIDER_REGISTRY 注册后，FlowForge 上层可通过：
+    - models.yaml 配置 provider: trae
+    - LLMRouter 自动路由到本适配器
+    - ModelCapability.chat() → LLMClient → TraeModelCapabilityAdapter.chat()
     """
 
-    def __init__(self, config: Optional[TraeConfig] = None):
-        self._config = config or TraeConfig()
-        self._client = TraeLLMClient(self._config)
+    provider_name = "trae"
+
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+        *,
+        trae_config: Optional[TraeConfig] = None,
+        bridge_config: Optional[TraeBridgeConfig] = None,
+        protocol: Optional[TraeBridgeProtocol] = None,
+        client: Optional[TraeLLMClient] = None,
+    ) -> None:
+        """初始化 TraeModelCapabilityAdapter.
+
+        Args:
+            config: LLMProvider 标准配置字典（兼容 get_provider 调用）
+            trae_config: TraeConfig（可选，覆盖 config 中的 trae 字段）
+            bridge_config: TraeBridgeConfig（可选，桥接配置）
+            protocol: TraeBridgeProtocol（可选，文件协议层）
+            client: TraeLLMClient（可选，已构造的客户端实例）
+
+        优先级：client > protocol > bridge_config > config
+        """
+        super().__init__(config)
+        cfg = config or {}
+
+        # 解析配置（兼容 models.yaml 的 provider config 结构）
+        self._trae_config = trae_config or TraeConfig(
+            mode=cfg.get("mode", "bridge"),
+            default_model=cfg.get("default_model", "trae"),
+        )
+
+        # 加载桥接配置（优先用显式传入，否则从 trae_bridge.yaml 加载）
+        if bridge_config is not None:
+            self._bridge_config = bridge_config
+        else:
+            yaml_path = cfg.get(
+                "bridge_yaml",
+                "d:/software/openclaw/flowforge/config/trae_bridge.yaml",
+            )
+            try:
+                self._bridge_config = TraeBridgeConfig.load_from_yaml(yaml_path)
+            except Exception as e:
+                logger.warning(f"加载 trae_bridge.yaml 失败，使用默认配置: {e}")
+                self._bridge_config = TraeBridgeConfig()
+
+        # 构造客户端（优先用传入的 client，否则用 protocol/bridge_config 构造）
+        if client is not None:
+            self._client = client
+        else:
+            self._client = TraeLLMClient(
+                config=self._trae_config,
+                bridge_config=self._bridge_config,
+                protocol=protocol,
+            )
+
+        self._default_model = cfg.get("default_model", self._trae_config.default_model)
         self._logger = get_logger("trae_llm.adapter")
+
+    # ── 依赖注入 ────────────────────────────────────────────────────
 
     @property
     def client(self) -> TraeLLMClient:
@@ -48,77 +122,135 @@ class TraeModelCapabilityAdapter:
         return self._client
 
     @property
-    def config(self) -> TraeConfig:
-        """获取配置."""
-        return self._config
+    def bridge_config(self) -> TraeBridgeConfig:
+        """获取桥接配置."""
+        return self._bridge_config
 
     def set_memory_manager(self, memory_manager: Any) -> None:
-        """注入 MemoryManager（依赖注入，铁律3）."""
+        """注入 MemoryManager（依赖注入，铁律 3）."""
         self._client.set_memory_manager(memory_manager)
 
-    # ── ModelCapability 兼容接口 ────────────────────────────────────
+    # ── LLMProvider 抽象方法实现 ────────────────────────────────────
 
     async def chat(
         self,
-        prompt: str,
-        *,
-        system: str = "",
-        persona: str = "",
-        agent_name: str = "",
-        model: str = "",
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
         temperature: float = 0.7,
-        max_tokens: int = 4000,
-        task_id: str = "trae",
-        tools: Optional[list] = None,
+        max_tokens: int = 4096,
         **kwargs,
-    ) -> Dict[str, Any]:
-        """简单聊天接口，兼容 ModelCapability.chat().
+    ) -> LLMResponse:
+        """LLMProvider.chat 实现 — 同步聊天调用.
 
-        Args:
-            prompt: 用户消息内容
-            system: 可选系统提示词
-            persona: Persona 标识（用于构建 session_id）
-            agent_name: Agent 名（用于构建 session_id）
-            model: 模型名（忽略，始终使用 trae）
-            temperature: 采样温度
-            max_tokens: 最大生成 token 数
-            task_id: 任务 ID
-            tools: 可选工具定义
-
-        Returns:
-            与 ModelCapability.chat() 兼容的响应字典
+        将 TraeLLMClient 的字典响应适配为 LLMResponse 对象。
         """
-        messages: List[Dict[str, str]] = []
-        if system:
-            messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
+        # 构造请求上下文（F045 §2.3 不变量 7 operator 可见性）
+        context: Optional[BridgeRequestContext] = kwargs.pop("context", None)
+        if context is None:
+            context = BridgeRequestContext(
+                forgekin_id=kwargs.pop("forgekin_id", "unknown"),
+                task_type=kwargs.pop("task_type", "chat"),
+                task_summary=kwargs.pop("task_summary", ""),
+                model=model or self._default_model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=kwargs.pop("tools", None),
+            )
+        else:
+            # 显式传入 context 时，覆盖 model/temperature/max_tokens
+            if model is not None:
+                context.model = model
+            context.temperature = temperature
+            context.max_tokens = max_tokens
 
-        # 构建 session_id 以保持会话上下文
-        session_id = ""
-        if agent_name or persona:
-            parts = [p for p in (agent_name, persona, task_id) if p]
-            session_id = ":".join(parts)
+        start_time = time.monotonic()
+        try:
+            result = await self._client.chat(
+                messages=messages,
+                context=context,
+                session_id=kwargs.pop("session_id", ""),
+                task_id=kwargs.pop("task_id", ""),
+                timeout=kwargs.pop("timeout", None),
+                **kwargs,
+            )
 
-        result = await self._client.chat(
-            messages,
-            model=model or self._config.default_model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            session_id=session_id,
-            task_id=task_id,
-            tools=tools,
-            **kwargs,
-        )
+            latency_ms = (time.monotonic() - start_time) * 1000
+            usage = result.get("usage", {}) or {}
 
-        # 确保返回格式与 ModelCapability.chat() 一致
-        return {
-            "content": result.get("content", ""),
-            "provider": "trae",
-            "model": result.get("model", self._config.default_model),
-            "tokens": result.get("usage", {}).get("total_tokens", 0),
-            "usage": result.get("usage", {}),
-            "tool_calls": result.get("tool_calls", []),
-        }
+            self.record_success()
+            return LLMResponse(
+                content=result.get("content", ""),
+                model=result.get("model", model or self._default_model),
+                provider=self.provider_name,
+                input_tokens=usage.get("input_tokens", 0),
+                output_tokens=usage.get("output_tokens", 0),
+                latency_ms=latency_ms,
+                cost=usage.get("cost", 0.0),
+                finish_reason=usage.get("finish_reason", ""),
+                raw_response=result,
+            )
+        except TraeBridgeError as e:
+            self.record_error()
+            self._logger.error(f"TraeModelCapabilityAdapter.chat 失败: {e}")
+            raise
+        except Exception as e:
+            self.record_error()
+            self._logger.error(f"TraeModelCapabilityAdapter.chat 异常: {e}")
+            raise
+
+    async def stream(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        **kwargs,
+    ) -> AsyncIterator[str]:
+        """LLMProvider.stream 实现 — 流式聊天调用.
+
+        注意：Bridge 模式下，先完整获取响应再分段 yield（模拟流式）。
+        """
+        context: Optional[BridgeRequestContext] = kwargs.pop("context", None)
+        if context is None:
+            context = BridgeRequestContext(
+                forgekin_id=kwargs.pop("forgekin_id", "unknown"),
+                task_type="chat_stream",
+                model=model or self._default_model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        try:
+            async for chunk in self._client.stream_chat(
+                messages=messages,
+                context=context,
+                session_id=kwargs.pop("session_id", ""),
+                task_id=kwargs.pop("task_id", ""),
+                **kwargs,
+            ):
+                yield chunk
+            self.record_success()
+        except TraeBridgeError as e:
+            self.record_error()
+            self._logger.error(f"TraeModelCapabilityAdapter.stream 失败: {e}")
+            raise
+        except Exception as e:
+            self.record_error()
+            self._logger.error(f"TraeModelCapabilityAdapter.stream 异常: {e}")
+            raise
+
+    async def health_check(self) -> bool:
+        """LLMProvider.health_check 实现 — 检查桥接可用性."""
+        try:
+            healthy = await self._client.health_check()
+            self._healthy = healthy
+            return healthy
+        except Exception as e:
+            self._logger.warning(f"TraeModelCapabilityAdapter.health_check 失败: {e}")
+            self._healthy = False
+            return False
+
+    # ── ModelCapability 兼容接口（向后兼容）─────────────────────────
 
     async def chat_with_messages(
         self,
@@ -131,22 +263,13 @@ class TraeModelCapabilityAdapter:
         task_id: str = "trae",
         **kwargs,
     ) -> Dict[str, Any]:
-        """基于消息的聊天接口，兼容 LLMClient.
+        """基于消息的聊天接口，兼容旧 LLMClient.chat() 签名.
 
-        Args:
-            messages: 消息列表
-            model: 模型名（忽略，始终使用 trae）
-            temperature: 采样温度
-            max_tokens: 最大生成 token 数
-            session_id: 会话 ID
-            task_id: 任务 ID
-
-        Returns:
-            与 LLMClient.chat() 兼容的响应字典
+        返回字典格式（非 LLMResponse 对象），向后兼容。
         """
-        result = await self._client.chat(
-            messages,
-            model=model or self._config.default_model,
+        response = await self.chat(
+            messages=messages,
+            model=model or None,
             temperature=temperature,
             max_tokens=max_tokens,
             session_id=session_id,
@@ -154,11 +277,15 @@ class TraeModelCapabilityAdapter:
             **kwargs,
         )
         return {
-            "content": result.get("content", ""),
-            "provider": "trae",
-            "model": result.get("model", self._config.default_model),
-            "usage": result.get("usage", {}),
-            "tool_calls": result.get("tool_calls", []),
+            "content": response.content,
+            "provider": response.provider,
+            "model": response.model,
+            "usage": {
+                "input_tokens": response.input_tokens,
+                "output_tokens": response.output_tokens,
+                "latency_ms": response.latency_ms,
+            },
+            "tool_calls": (response.raw_response or {}).get("tool_calls", []),
         }
 
     async def chat_stream(
@@ -177,73 +304,54 @@ class TraeModelCapabilityAdapter:
             system: 可选系统提示词
             session_id: 会话 ID
             task_id: 任务 ID
-
-        Yields:
-            文本块
         """
         messages: List[Dict[str, str]] = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        async for chunk in self._client.stream_chat(
-            messages, session_id=session_id, task_id=task_id, **kwargs
-        ):
-            yield chunk
-
-    # ── LLMProvider 兼容接口 ───────────────────────────────────────
-
-    async def stream(
-        self,
-        messages: List[Dict[str, str]],
-        *,
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> AsyncIterator[str]:
-        """流式接口，兼容 LLMProvider.stream().
-
-        Args:
-            messages: 消息列表
-            model: 模型名
-            temperature: 采样温度
-            max_tokens: 最大生成 token 数
-
-        Yields:
-            文本块
-        """
-        async for chunk in self._client.stream_chat(
-            messages,
-            model=model or self._config.default_model,
-            temperature=temperature,
-            max_tokens=max_tokens,
+        async for chunk in self.stream(
+            messages=messages,
+            session_id=session_id,
+            task_id=task_id,
             **kwargs,
         ):
             yield chunk
 
-    async def health_check(self) -> bool:
-        """健康检查，兼容 LLMProvider.health_check()."""
-        return await self._client.health_check()
+
+# ── 注册到 Provider 注册表（F045 §3.2 Phase 2）─────────────────────
+# 模块加载时自动注册，让 LLMRouter 通过 provider="trae" 路由
+register_provider("trae", TraeModelCapabilityAdapter)
 
 
-# ── 模块级单例 ──────────────────────────────────────────────────────
+# ── 模块级单例（向后兼容）─────────────────────────────────────────
 
 _adapter_instance: Optional[TraeModelCapabilityAdapter] = None
 
 
-def get_trae_adapter(config: Optional[TraeConfig] = None) -> TraeModelCapabilityAdapter:
+def get_trae_adapter(
+    config: Optional[Dict[str, Any]] = None,
+    *,
+    bridge_config: Optional[TraeBridgeConfig] = None,
+    protocol: Optional[TraeBridgeProtocol] = None,
+) -> TraeModelCapabilityAdapter:
     """获取 TraeModelCapabilityAdapter 单例.
 
     Args:
-        config: 可选配置（仅在首次调用时生效）
+        config: LLMProvider 标准配置字典
+        bridge_config: TraeBridgeConfig（可选）
+        protocol: TraeBridgeProtocol（可选）
 
     Returns:
         TraeModelCapabilityAdapter 单例实例
     """
     global _adapter_instance
     if _adapter_instance is None:
-        _adapter_instance = TraeModelCapabilityAdapter(config)
+        _adapter_instance = TraeModelCapabilityAdapter(
+            config=config,
+            bridge_config=bridge_config,
+            protocol=protocol,
+        )
     return _adapter_instance
 
 
@@ -251,3 +359,10 @@ def reset_trae_adapter() -> None:
     """重置单例（用于测试）."""
     global _adapter_instance
     _adapter_instance = None
+
+
+__all__ = [
+    "TraeModelCapabilityAdapter",
+    "get_trae_adapter",
+    "reset_trae_adapter",
+]

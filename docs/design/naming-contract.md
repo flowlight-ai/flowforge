@@ -4,7 +4,6 @@
 > **依据**: `[doc:decisions/012-naming-fusion.md]` 命名融合 ADR + `[doc:VISION.md#7]` operator 愿景锚点 + `[hiclaw/rules.md#12.2]` 术语规范方法论
 > **维护规则**: 命名变更必须通过新增 ADR，不可直接修改本文件中的旧命名（真相源唯一）
 > **目的**: 让 FlowForge 生态的所有概念可被智能体自身和人类开发者共同理解、记忆、引用
-> **v2.0 关键变更**：根据 operator 2026-07-19 指令全面重构——确立"官方名称优先"原则（AI 业界专业术语为正式名称，体系别名仅用于社区社交）；新增 §2 智能体分类（静态智能体 vs 可进化智能体）；技术文档/代码/对外宣传中大量出现的必须是官方名称；正式文档中如出现体系别名必须首次标注官方名称
 
 ---
 
@@ -275,7 +274,7 @@ FlowForge 生态的所有概念采用**三层命名体系**，按以下优先级
 | **E3** | Defined / Domain-Aware（已定义级 / 领域感知） | Growth | 成长阶 | 在特定 Species 内可跨任务执行，可调用三方 Agent 扩展能力。 | SpiritForge 蒸馏出 3+ MindCodex 条目 + 三方 Agent 调用成功 |
 | **E4** | Managed / Cross-Domain（已管理级 / 跨域） | Growth-Deep | 成长阶·深 | 可跨 Species 协作（如 BioForgekin 与 OrgForgekin 协作），进入 Evolving 状态（自我导向）。 | 跨 Species 协作 3+ 任务 + 觉醒阶 ≥ E3 |
 | **E5** | Optimizing / Self-Evolving（优化级 / 自进化） | Awakened | 觉醒阶 | 可主动发现能力缺口并通过 SpiritForge 自补；可发起 MindCouncil。 | 主动发起 1+ MindCouncil + 自补 3+ MindCodex 条目 |
-| **E6** | Master / Forge Master（大师级 / 锻造大师） | ForgeMind | 灵智阶 | 可锻造新的可进化智能体（"造 agent"），达成 operator "养万物"愿景。 | operator 直接授权 |
+| **E6** | Master / Forge Master（大师级 / 锻造大师） | ForgeMind | 灵智阶 | 可锻造新的可进化智能体（"造 agent"），达成 operator "锻造可进化智能体"愿景。 | operator 直接授权 |
 
 **进化阶规则**：
 - E1→E2→E3 是能力积累，由 Eval 信号自动触发
@@ -423,14 +422,14 @@ agent_type: forgekin              # 可进化智能体（forgekin）或静态智
 | 文档 vs 代码 | 代码为准，文档同步更新 |
 | 旧文档 vs 新文档 | 新文档为准，旧文档归档到 _archive/ |
 | v4.0 术语 vs v7.1 术语 | v7.1 为准，v4.0 术语废弃 |
-| 第三方术语（如 clowder-ai） | 保留原术语，本文件定义映射关系 |
+| 第三方术语（如前期归档） | 保留原术语，本文件定义映射关系 |
 | P0 vs P2 冲突 | P0 官方名称优先，P2 别名仅社交用 |
 
-### 9.2 与 clowder-ai 的术语映射
+### 9.2 与前期术语的映射
 
-| clowder-ai 术语 | FlowForge 术语（P0 官方名称） | 项目英文名（P1） | 映射关系 |
+| 前期术语 | FlowForge 术语（P0 官方名称） | 项目英文名（P1） | 映射关系 |
 |----------------|----------------------------|----------------|---------|
-| Cat（猫） | Evolvable Agent | Forgekin | 范式扩展：猫 → 万物 |
+| Cat（猫） | Evolvable Agent | Forgekin | 范式扩展：猫 → 多形态实体 |
 | Cat Café | Agent Onboarding Platform | forgemind | 应用层映射 |
 | Breed（品种） | Agent Morphology | ForgekinSpecies | 形态分类映射 |
 | Cat Profile | Capability Profile | CapabilityProfile | 直接映射 |
@@ -442,8 +441,8 @@ agent_type: forgekin              # 可进化智能体（forgekin）或静态智
 ## 10. 引用
 
 - `[doc:decisions/012-naming-fusion.md]` — 命名融合 ADR（决策源）
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物可进化智能体愿景 ADR
-- `[doc:VISION.md]` — 万物可进化智能体愿景声明
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景 ADR
+- `[doc:VISION.md]` — 可进化智能体愿景声明
 - `[doc:roleagent.md#第0章]` — 能力画像工程路径
 - `[doc:roleagent.md#第7章]` — 伙伴系统数学
 - `[hiclaw/rules.md#12.2]` — 术语规范方法论（官方名称优先原则）
@@ -456,5 +455,5 @@ agent_type: forgekin              # 可进化智能体（forgekin）或静态智
 | 版本 | 日期 | 变更 | 作者 |
 |------|------|------|------|
 | v1.0 | 2026-07-17 | 初版：12 核心概念命名表 + 进化阶 E1-E6 + 觉醒阶 E1-E6 + 废弃清单 + 使用规范 | Trae CN（agent） |
-| v1.1 | 2026-07-18 | operator 指令修订：魂忆→灵忆、魂印→灵印（"魂"字过于玄学，统一改为"灵"字）；废弃清单同步更新；§2.5/§2.6 增加废弃旧名行 | Trae CN（agent） |
-| v2.0 | 2026-07-19 | **operator 指令全面重构**：确立"官方名称优先"原则（P0/P1/P2 三层命名体系，AI 业界专业术语为正式名称，体系别名仅社交用）；新增 §2 智能体分类（静态智能体 Static Agent vs 可进化智能体 Evolvable Agent / Forgekin，含对比矩阵和使用规范）；§3 12 核心概念表全面重写为 P0 优先格式；新增 §7 术语使用场景矩阵；新增 §7.1/§7.2 正式文档/社区社交标注规范示例；进化阶/觉醒阶表格加入 P0 官方名称列 | Trae CN（agent） |
+| v1.1 | 2026-07-18 | 魂忆→灵忆、魂印→灵印（"魂"字过于玄学，统一改为"灵"字）；废弃清单同步更新；§2.5/§2.6 增加废弃旧名行 | Trae CN（agent） |
+| v2.0 | 2026-07-19 | 确立"官方名称优先"原则（P0/P1/P2 三层命名体系，AI 业界专业术语为正式名称，体系别名仅社交用）；新增 §2 智能体分类（静态智能体 Static Agent vs 可进化智能体 Evolvable Agent / Forgekin，含对比矩阵和使用规范）；§3 12 核心概念表全面重写为 P0 优先格式；新增 §7 术语使用场景矩阵；新增 §7.1/§7.2 正式文档/社区社交标注规范示例；进化阶/觉醒阶表格加入 P0 官方名称列 | Trae CN（agent） |

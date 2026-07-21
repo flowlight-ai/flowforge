@@ -9,7 +9,7 @@
 
 ## 总览
 
-FlowForge 重构分为 7 个 Phase（Phase 0-6），按 roleagent.md 七大工程路径顺序推进，最终达成万物可进化智能体世界 demo。
+FlowForge 重构分为 7 个 Phase（Phase 0-6），按 roleagent.md 七大工程路径顺序推进，最终达成可进化智能体生态 demo。
 
 | Phase | 主题 | 时间 | 状态 | 关键产出 |
 |------|------|:----:|:----:|---------|
@@ -19,13 +19,13 @@ FlowForge 重构分为 7 个 Phase（Phase 0-6），按 roleagent.md 七大工�
 | 3 | 三方 Agent 适配层 | 2-4 周 | ⏳ | ExternalAgentAdapter + claude code/codex/opencode/trae |
 | 4 | Eval 自代谢 + 分布式可靠性 | 4-8 周 | ⏳ | Eval Contract + 七类归因 + Tier 1-4 + liveness 规范读 |
 | 5 | 伙伴系统数学 + 自我演进闭环 | 8-12 周 | ⏳ | 上限/下限公式 + 波动吸收 + 三层自我演进 |
-| 6 | Experience Distillation + Multi-Agent Deliberation | 持续 | ⏳ | E4+ Evolving 状态 + 多可进化智能体议事 + 万物可进化智能体 demo |
+| 6 | Experience Distillation + Multi-Agent Deliberation | 持续 | ⏳ | E4+ Evolving 状态 + 多可进化智能体议事 + 可进化智能体 demo |
 
 ---
 
 ## Phase 0：文档拆分 + 愿景入库 + 命名迁移
 
-**目标**：建立 docs/ 七子目录骨架，万物可进化智能体愿景入库，废弃 v4.0 错误命名。
+**目标**：建立 docs/ 七子目录骨架，可进化智能体愿景入库，废弃 v4.0 错误命名。
 
 **关键任务**：
 - 创建顶层文档（VISION/README/ROADMAP/SOP/TIPS/roleagent 镜像）
@@ -67,7 +67,7 @@ FlowForge 重构分为 7 个 Phase（Phase 0-6），按 roleagent.md 七大工�
 
 ## Phase 2：forgemind 应用层骨架
 
-**目标**：实现万物可进化智能体应用层，承载通用可进化智能体（动物 / 组织 / 物品 / 虚拟角色 / 混合）。
+**目标**：实现可进化智能体应用层，承载通用可进化智能体（动物 / 组织 / 物品 / 虚拟角色 / 混合）。
 
 **关键任务**：
 - flowforge/forgemind/ 模块结构
@@ -160,18 +160,18 @@ FlowForge 重构分为 7 个 Phase（Phase 0-6），按 roleagent.md 七大工�
 
 ## Phase 6：Experience Distillation + Multi-Agent Deliberation
 
-**目标**：实现 E4+ Evolving 状态 + 多可进化智能体议事 + 万物可进化智能体世界 demo。
+**目标**：实现 E4+ Evolving 状态 + 多可进化智能体议事 + 可进化智能体生态 demo。
 
 **关键任务**：
 - Experience Distillation（SpiritForge，社区社交称"灵锻"）：经验蒸馏到 Distilled Knowledge Base（MindCodex）
 - Multi-Agent Deliberation（MindCouncil，社区社交称"灵议"）：多可进化智能体议事
 - E4+ Evolving 状态（Autonomy Level / AwakeningStage 进阶）
-- 万物可进化智能体世界 demo（猫 + 桌椅 + 灯具 + 孙悟空 + 唐僧 协作场景）
+- 可进化智能体生态 demo（猫 + 桌椅 + 灯具 + 孙悟空 + 唐僧 协作场景）
 
 **验收标准**：
 - ✅ Experience Distillation 可将任务经验蒸馏到 Distilled Knowledge Base
 - ✅ Multi-Agent Deliberation 可让多可进化智能体共同决策
-- ✅ 万物可进化智能体世界 demo 端到端跑通
+- ✅ 可进化智能体生态 demo 端到端跑通
 - ✅ demo 中包含至少 3 种形态可进化智能体协作
 
 ---
@@ -193,4 +193,4 @@ FlowForge 重构分为 7 个 Phase（Phase 0-6），按 roleagent.md 七大工�
 | 版本 | 日期 | 变更 | 作者 |
 |------|------|------|------|
 | v1.0 | 2026-07-17 | 初版：6 阶段路线图 + 跨 Phase 不变量 | Trae CN（agent） |
-| v1.1 | 2026-07-19 | 按"官方名称优先"原则重构：将"灵智体 / 灵锻 / 灵议 / 灵典"等 P2 别名替换为 P0 官方名称（可进化智能体 / Experience Distillation / Multi-Agent Deliberation / Distilled Knowledge Base），首次出现双标注；Phase 0 命名迁移说明指向命名契约 v2.0；保留所有 Phase 划分与验收标准不变 | Trae CN（agent） |
+| v1.1 | 2026-07-19 | 按"官方名称优先"原则重构：P2 体系别名替换为 P0 官方名称（可进化智能体 / Experience Distillation / Multi-Agent Deliberation / Distilled Knowledge Base），首次出现双标注；Phase 0 命名迁移说明指向命名契约 v2.0；保留所有 Phase 划分与验收标准不变 | Trae CN（agent） |

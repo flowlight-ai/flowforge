@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]（待创建）
 > **对应 Feature**: [doc:../features/F023-liveness-canonical-read.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D023-liveness-canonical-read.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -19,8 +18,8 @@
 
 分布式可靠性的核心问题是"liveness split-brain"。roleagent.md 第 6 章描述真实事故：两个后端读路径对同一 invocation 给出矛盾结果（一个说"活着"一个说"死了"）。v7.0 无规范读模型，导致三类架构故障：
 
-1. **心跳假活**：灵智体进程崩溃但心跳残留，上层判断为"活着"继续派活。
-2. **僵尸进程**：心跳在但副作用停滞，灵智体实际上"僵尸"，仍被分配任务。
+1. **心跳假活**：Forgekin进程崩溃但心跳残留，上层判断为"活着"继续派活。
+2. **僵尸进程**：心跳在但副作用停滞，Forgekin实际上"僵尸"，仍被分配任务。
 3. **多源矛盾**：durable_record / draft_cache / in_process_tracker 三源结果不一致时无仲裁规则。
 
 roleagent.md 第 6 章要求**单一规范读模型**：持久记录是生命周期真相源，草稿缓存是内容新鲜度信号，进程内 tracker 是控制面状态。本架构解决的核心问题：**如何实现四态结构化 liveness（活着/退化/僵尸/等待宽限）、规范读路径、split-brain 检测、与 F008 Durable State Surfaces 联动**。
@@ -92,7 +91,7 @@ roleagent.md 第 6 章要求**单一规范读模型**：持久记录是生命周
 - **决策 3：宽限期机制**。失联后进入 grace_waiting，宽限期（默认 120s）内不转 zombie，宽限期满转 zombie。理由：网络抖动不应立即判 zombie，宽限期是合理容忍。
 - **决策 4：zombie 检测靠副作用滞后**。心跳正常但 confirmed_side_effect_lag > 阈值（默认 300s）判 zombie。理由：心跳可被进程残留发送，副作用停滞是更可靠的"真活着"信号。
 - **决策 5：split-brain 检测与告警**。多读路径结果矛盾时以 durable_record 为准并写 F040 告警。理由：split-brain 是分布式真实事故，必须可检测可告警。
-- **决策 6：规范读路径不写状态**。`CanonicalReadModel.read()` 是纯读操作，不修改 liveness 状态。状态变更由 `LivenessProbe.probe()` 异步执行。理由：读操作不应有副作用，避免读触发写导致循环。
+- **决策 6：规范读路径不写状态**。`CanonicalReadModel.read` 是纯读操作，不修改 liveness 状态。状态变更由 `LivenessProbe.probe` 异步执行。理由：读操作不应有副作用，避免读触发写导致循环。
 
 ### 2.3 架构不变量
 
@@ -328,4 +327,4 @@ class SplitBrainDetector(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 四态结构化 + 单一真相源 + split-brain 检测 + 宽限期机制） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 四态结构化 + 单一真相源 + split-brain 检测 + 宽限期机制） | 架构师 Forgekin（猫头鹰·鲁班） |

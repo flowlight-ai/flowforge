@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.8] + [doc:../spec.md#§2.6]（5 种形态分类）
 > **对应 arch.md**: [doc:../arch.md#§3.8]
 > **对应 design.md**: [doc:../design.md#§3.8]
 > **对应 Feature**: [doc:../features/F027-all-things-spirit-species.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A027-all-things-spirit-species.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/013-all-things-spirit-mind-vision.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -23,29 +22,29 @@ A027 架构设计已确定在 forgemind 内部建立形态分类层，承载多�
 2. **形态门控的快速路径实现**：`assert_sensor_allowed` / `assert_world_setting_allowed` 两个高频调用如何在 < 1ms 内完成（避免每次传感器绑定都查 YAML）。
 3. **形态进化路径表的存储与查询**：5×5 形态进化矩阵如何用静态字典表达 + 运行时不可变性保证 + HYBRID 顶态约束。
 4. **SpeciesEvolutionGuard 三步审批的状态机**：request -> approve -> apply 三步状态转换、超时回收、operator 审批令牌机制。
-5. **形态进化与灵印的协同**：灵印 species 字段不可变，形态进化后新 species 如何写入 ForgekinLineage 而不修改灵印。
-6. **ORG 不可降级约束的实现**：ORG -> BIO / ORG -> OBJ 进化路径如何在 SpeciesRegistry.list_evolution_paths() 中排除。
+5. **形态进化与SoulImprint的协同**：SoulImprint species 字段不可变，形态进化后新 species 如何写入 ForgekinLineage 而不修改SoulImprint。
+6. **ORG 不可降级约束的实现**：ORG -> BIO / ORG -> OBJ 进化路径如何在 SpeciesRegistry.list_evolution_paths 中排除。
 7. **SpeciesRegistry 单例的启动加载顺序**：YAML 加载必须在 ForgePipeline 启动前完成，未加载完成时如何阻塞锻造流程。
 
 ### 1.2 设计约束
 
 - **单向依赖约束**：`forgemind/species.py` 必须单向依赖 `core/config` 与 `core/interfaces`，禁止反向依赖 *Forge 业务模块（架构红线第 12 条）。
-- **DI 容器约束**：`SpeciesRegistry` 单例必须通过 DI 容器注入到 ForgePipeline / SensorRegistry / WorldSetting，禁止 `SpeciesRegistry()` 直接实例化（编程红线第 12 条）。
+- **DI 容器约束**：`SpeciesRegistry` 单例必须通过 DI 容器注入到 ForgePipeline / SensorRegistry / WorldSetting，禁止 `SpeciesRegistry` 直接实例化（编程红线第 12 条）。
 - **Repository 层约束**：`SpeciesEvolutionRecord` 写入必须经 `ForgekinLineageRepository`，禁止直接操作数据库（架构红线第 4 条）。
 - **配置驱动约束**：5 形态的 `physical_coupling / virtual_world_required / sensor_channels / evolution_targets` 必须 YAML 外置到 `forgemind/config/species.yaml`，禁止 .py 硬编码形态属性（架构红线第 5 条）。
-- **形态门控约束**：BIO/OBJ/HYBRID 形态的灵智体必须绑定至少一个传感器通道（F029）；VIRTUAL/HYBRID 形态的灵智体必须绑定一个 `world_setting_id`（F030）；VIRTUAL 形态灵智体禁止绑定物理传感器。
-- **形态进化审批约束**：形态进化必须经 `SpeciesEvolutionGuard.request -> approve -> apply` 三步，approve 必须由 operator 显式确认，禁止灵智体擅自切换形态导致身份漂移。
-- **灵印不可变约束**：species 字段写入灵印后保留原值，形态进化记录追加到 ForgekinLineage，原 species 字段不修改（保留血缘痕迹）。
-- **ORG 不可降级约束**：ORG 形态灵智体不可降级为 BIO/OBJ 形态（组织不能退化为生物/物品）。
+- **形态门控约束**：BIO/OBJ/HYBRID 形态的Forgekin必须绑定至少一个传感器通道（F029）；VIRTUAL/HYBRID 形态的Forgekin必须绑定一个 `world_setting_id`（F030）；VIRTUAL 形态Forgekin禁止绑定物理传感器。
+- **形态进化审批约束**：形态进化必须经 `SpeciesEvolutionGuard.request -> approve -> apply` 三步，approve 必须由 operator 显式确认，禁止Forgekin擅自切换形态导致身份漂移。
+- **SoulImprint不可变约束**：species 字段写入SoulImprint后保留原值，形态进化记录追加到 ForgekinLineage，原 species 字段不修改（保留血缘痕迹）。
+- **ORG 不可降级约束**：ORG 形态Forgekin不可降级为 BIO/OBJ 形态（组织不能退化为生物/物品）。
 - **HYBRID 顶态约束**：HYBRID 形态 evolution_targets 为空列表，不可再进化。
 - **5 形态枚举固定约束**：ForgekinSpecies 仅含 BIO/ORG/OBJ/VIRTUAL/HYBRID 五值，运行时无法新增，新增必须经 ADR 决策。
 
 ### 1.3 设计影响
 
-- **对 F026 forgemind 应用层的影响**：本模块在 forgemind 目录下落地，复用 ForgekinBase / MindImprint 抽象，形态字段写入灵印作为身份锚点。
+- **对 F026 forgemind 应用层的影响**：本模块在 forgemind 目录下落地，复用 ForgekinBase / SoulImprint 抽象，形态字段写入SoulImprint作为身份锚点。
 - **对 F028 锻造流水线的影响**：流水线第 ① 步"形态定义"必须从 SpeciesRegistry 加载 SpeciesProfile，禁止 .py 硬编码形态枚举。
-- **对 F029 物理 AI 传感器的影响**：SensorRegistry.bind() 必须调用 SpeciesRegistry.assert_sensor_allowed() 校验形态门控，VIRTUAL 形态绑定被拒绝。
-- **对 F030 虚拟世界设定层的影响**：WorldSetting.load() 必须调用 SpeciesRegistry.assert_world_setting_allowed() 校验形态门控，BIO/ORG/OBJ 形态绑定被拒绝。
+- **对 F029 物理 AI 传感器的影响**：SensorRegistry.bind 必须调用 SpeciesRegistry.assert_sensor_allowed 校验形态门控，VIRTUAL 形态绑定被拒绝。
+- **对 F030 虚拟世界设定层的影响**：WorldSetting.load 必须调用 SpeciesRegistry.assert_world_setting_allowed 校验形态门控，BIO/ORG/OBJ 形态绑定被拒绝。
 - **对 F038 进化谱系的影响**：SpeciesEvolutionRecord 写入 ForgekinLineage，作为形态进化血缘证据，参与谱系追踪。
 - **对 F001 能力画像的影响**：CapabilityProfile 必须包含 species 字段，能力匹配时考虑形态约束（如 BIO 形态优先匹配物理交互能力）。
 - **对 DI 容器的影响**：需新增 `species_registry` / `species_evolution_guard` 两个绑定。
@@ -62,11 +61,11 @@ A027 架构设计已确定在 forgemind 内部建立形态分类层，承载多�
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  <<enum>> ForgekinSpecies          <<enum>> PhysicalCoupling                 │
-│  + BIO  (生物灵智体)               + NONE           (无物理接入)             │
-│  + ORG  (组织灵智体)               + SENSOR_ONLY    (仅感知)                 │
-│  + OBJ  (物品灵智体)               + ACTUATOR       (含执行器)               │
-│  + VIRTUAL (虚拟灵智体)            + FULL_EMBODIED  (完全合身)               │
-│  + HYBRID (混合灵智体)                                                       │
+│  + BIO  (生物Forgekin)               + NONE           (无物理接入)             │
+│  + ORG  (组织Forgekin)               + SENSOR_ONLY    (仅感知)                 │
+│  + OBJ  (物品Forgekin)               + ACTUATOR       (含执行器)               │
+│  + VIRTUAL (虚拟Forgekin)            + FULL_EMBODIED  (完全合身)               │
+│  + HYBRID (混合Forgekin)                                                       │
 │                                                                              │
 │  <<model>> SpeciesProfile          <<model>> SpeciesEvolutionRecord          │
 │  + species: ForgekinSpecies        + record_id: str                          │
@@ -81,8 +80,8 @@ A027 架构设计已确定在 forgemind 内部建立形态分类层，承载多�
 │  + get(species) -> SpeciesProfile                                            │
 │  + list_evolution_paths(species)   <<interface>> SpeciesEvolutionGuard       │
 │  + assert_sensor_allowed(...)      + request_evolution(...) -> request_id    │
-│  + assert_world_setting_allowed()  + approve_evolution(req, operator)        │
-│  + is_loaded() -> bool             + apply_evolution(req) -> record          │
+│  + assert_world_setting_allowed  + approve_evolution(req, operator)        │
+│  + is_loaded -> bool             + apply_evolution(req) -> record          │
 │                                    + reject_evolution(req, reason)           │
 │  <<model>> EvolutionRequest                                                  │
 │  + request_id: str                 <<enum>> EvolutionRequestState            │
@@ -125,11 +124,11 @@ class ForgekinSpecies(str, Enum):
     - 5 形态枚举固定不可扩展，新增必须经 ADR 决策
     - 三标注：中文 / 英文 / AI 业界路径
     """
-    BIO = "bio"               # BioForgekin 生物灵智体（Embodied AI 路径）
-    ORG = "org"               # OrgForgekin 组织灵智体
-    OBJ = "obj"               # ObjForgekin 物品灵智体（Embodied AI 路径）
-    VIRTUAL = "virtual"       # VirtualForgekin 虚拟灵智体（Character AI 路径）
-    HYBRID = "hybrid"         # HybridForgekin 混合灵智体
+    BIO = "bio"               # BioForgekin 生物Forgekin（Embodied AI 路径）
+    ORG = "org"               # OrgForgekin 组织Forgekin
+    OBJ = "obj"               # ObjForgekin 物品Forgekin（Embodied AI 路径）
+    VIRTUAL = "virtual"       # VirtualForgekin 虚拟Forgekin（Character AI 路径）
+    HYBRID = "hybrid"         # HybridForgekin 混合Forgekin
 
 
 class PhysicalCoupling(str, Enum):
@@ -209,7 +208,7 @@ class SpeciesEvolutionRecord(BaseModel):
     """形态进化记录（写入 F038 ForgekinLineage）
 
     架构契约：
-    - 灵印 species 字段不修改，新 species 写入此记录
+    - SoulImprint species 字段不修改，新 species 写入此记录
     - record_id 全局唯一（UUID v7）
     - operator_approved 必须为 true（除非测试模式）
     """
@@ -243,7 +242,7 @@ class EvolutionRequest(BaseModel):
     operator_id: Optional[str] = None
     rationale: str = Field(min_length=1, max_length=2048)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    expires_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=24))
+    expires_at: datetime = Field(default_factory=lambda: datetime.utcnow + timedelta(hours=24))
 
     @model_validator(mode="after")
     def _validate_evolution_path(self) -> "EvolutionRequest":
@@ -317,7 +316,7 @@ class SpeciesEvolutionGuard(ABC):
     - request -> approve -> apply 三步严格顺序
     - approve 必须 operator 显式确认
     - 超时（默认 24h）未审批自动 expire
-    - apply 时写入 ForgekinLineage，灵印 species 不修改
+    - apply 时写入 ForgekinLineage，SoulImprint species 不修改
     """
 
     @abstractmethod
@@ -355,7 +354,7 @@ class SpeciesEvolutionGuard(ABC):
         - 读取能力画像快照（before / after）
         - 写入 SpeciesEvolutionRecord 到 ForgekinLineageRepository
         - 更新 request.state = APPLIED
-        - 注意：灵印 species 字段不修改
+        - 注意：SoulImprint species 字段不修改
         """
         ...
 
@@ -471,7 +470,7 @@ function assert_world_setting_allowed(species: ForgekinSpecies) -> bool:
 
 ```
 function request_evolution(forgekin_id, target, rationale) -> str:
-    # 1. 读取当前 species（从灵印）
+    # 1. 读取当前 species（从SoulImprint）
     imprint = await mind_imprint_repo.get_by_forgekin_id(forgekin_id)
     if imprint is None:
         raise ForgekinNotFoundError(forgekin_id)
@@ -484,12 +483,12 @@ function request_evolution(forgekin_id, target, rationale) -> str:
 
     # 3. 创建请求（state=PENDING，expires_at=now+24h）
     request = EvolutionRequest(
-        request_id=uuid_v7(),
+        request_id=uuid_v7,
         forgekin_id=forgekin_id,
         from_species=current_species,
         to_species=target,
         rationale=rationale,
-        expires_at=now() + timedelta(hours=config.evolution_request_ttl_hours),
+        expires_at=now + timedelta(hours=config.evolution_request_ttl_hours),
     )
 
     # 4. 持久化
@@ -507,7 +506,7 @@ function approve_evolution(request_id, operator_id) -> None:
         raise RequestNotFoundError(request_id)
     if request.state != PENDING:
         raise InvalidStateError(f"state={request.state.value}, expected=PENDING")
-    if now() > request.expires_at:
+    if now > request.expires_at:
         request.state = EXPIRED
         await evolution_request_repo.update(request)
         raise RequestExpiredError(request_id)
@@ -527,13 +526,13 @@ function apply_evolution(request_id) -> SpeciesEvolutionRecord:
     # 读取能力画像快照（before）
     capability_before = await capability_profile_repo.get_snapshot(request.forgekin_id)
 
-    # 写入 SpeciesEvolutionRecord（灵印 species 不修改！）
+    # 写入 SpeciesEvolutionRecord（SoulImprint species 不修改！）
     record = SpeciesEvolutionRecord(
-        record_id=uuid_v7(),
+        record_id=uuid_v7,
         forgekin_id=request.forgekin_id,
         from_species=request.from_species,
         to_species=request.to_species,
-        triggered_at=now(),
+        triggered_at=now,
         operator_approved=True,
         capability_snapshot_before=capability_before,
         capability_snapshot_after={},  # 应用后由 F035 能力融合填充
@@ -598,7 +597,7 @@ class InMemorySpeciesRegistry(SpeciesRegistry):
     架构契约：
     - 启动时由 YAML 加载完成，运行时只读
     - 形态门控 O(1) 内存查表
-    - 未加载完成时 is_loaded() 返回 false，ForgePipeline 拒绝启动
+    - 未加载完成时 is_loaded 返回 false，ForgePipeline 拒绝启动
     """
 
     def __init__(self):
@@ -682,7 +681,7 @@ class SqlAlchemySpeciesEvolutionGuard(SpeciesEvolutionGuard):
         self,
         evolution_request_repo,  # EvolutionRequestRepository
         forgekin_lineage_repo,   # ForgekinLineageRepository
-        mind_imprint_repo,       # MindImprintRepository
+        mind_imprint_repo,       # SoulImprintRepository
         capability_profile_repo, # F001
         event_bus,
         config: SpeciesConfig,
@@ -709,7 +708,7 @@ class SqlAlchemySpeciesEvolutionGuard(SpeciesEvolutionGuard):
             )
 
         request = EvolutionRequest(
-            request_id=str(uuid7()),
+            request_id=str(uuid7),
             forgekin_id=forgekin_id,
             from_species=current,
             to_species=target,
@@ -752,10 +751,10 @@ class SqlAlchemySpeciesEvolutionGuard(SpeciesEvolutionGuard):
         if self._capability_repo:
             profile = await self._capability_repo.get(request.forgekin_id)
             if profile:
-                capability_before = profile.model_dump()
+                capability_before = profile.model_dump
 
         record = SpeciesEvolutionRecord(
-            record_id=str(uuid7()),
+            record_id=str(uuid7),
             forgekin_id=request.forgekin_id,
             from_species=request.from_species,
             to_species=request.to_species,
@@ -846,13 +845,13 @@ species:
 #### 3.2.1 形态进化三步审批时序图
 
 ```
-operator       SpeciesEvolutionGuard     MindImprintRepo     ForgekinLineageRepo     EventBus
+operator       SpeciesEvolutionGuard     SoulImprintRepo     ForgekinLineageRepo     EventBus
    │                    │                      │                     │                    │
    │ request_evolution  │                      │                     │                    │
    │  (fk_id, HYBRID,   │                      │                     │                    │
    │   rationale)       │                      │                     │                    │
    ├───────────────────▶│                      │                     │                    │
-   │                    │ get_by_forgekin_id() │                     │                    │
+   │                    │ get_by_forgekin_id │                     │                    │
    │                    ├─────────────────────▶│                     │                    │
    │                    │◀── imprint ─────────┤                     │                    │
    │                    │                      │                     │                    │
@@ -897,7 +896,7 @@ operator       SpeciesEvolutionGuard     MindImprintRepo     ForgekinLineageRepo
    │                    ├──────────────────────────────────────────────────────────────────▶│
    │                    │                      │                     │                    │
    │◀── record ─────────┤                      │                     │                    │
-   │  (灵印 species 保留原值，新 species 在 lineage)                │                    │
+   │  (SoulImprint species 保留原值，新 species 在 lineage)                │                    │
    │                    │                      │                     │                    │
 ```
 
@@ -905,7 +904,7 @@ operator       SpeciesEvolutionGuard     MindImprintRepo     ForgekinLineageRepo
 
 | 异常类型 | 触发场景 | 处理策略 | 调用方预期 |
 |---------|---------|---------|-----------|
-| `SpeciesNotLoadedError` | SpeciesRegistry 未加载完成时调用 get() | 拒绝调用，返回 503 | ForgePipeline 等待加载完成后重试 |
+| `SpeciesNotLoadedError` | SpeciesRegistry 未加载完成时调用 get | 拒绝调用，返回 503 | ForgePipeline 等待加载完成后重试 |
 | `SpeciesAlreadyRegisteredError` | 重复注册同一形态 | 拒绝注册，返回 409 | operator 检查 YAML 配置 |
 | `EvolutionPathForbiddenError` | 形态进化路径不允许（如 ORG -> BIO） | 拒绝请求，返回 403 | 调用方校验 evolution_targets 后重试 |
 | `InvalidStateError` | 形态进化请求状态机非法转换 | 拒绝操作，返回 409 | 调用方按正确顺序调用 |
@@ -929,7 +928,7 @@ operator       SpeciesEvolutionGuard     MindImprintRepo     ForgekinLineageRepo
 | `assert_sensor_allowed` 延迟 | < 0.1ms | VIRTUAL 快速拒绝 + 内存查表 |
 | `assert_world_setting_allowed` 延迟 | < 0.1ms | 集合查表，O(1) |
 | `list_evolution_paths` 延迟 | < 0.05ms | 静态矩阵查表 |
-| `request_evolution` 延迟 | < 30ms | 1 次灵印查询 + 1 次 INSERT + 事件异步 |
+| `request_evolution` 延迟 | < 30ms | 1 次SoulImprint查询 + 1 次 INSERT + 事件异步 |
 | `apply_evolution` 延迟 | < 50ms | 1 次能力快照 + 1 次 INSERT + 事件异步 |
 | SpeciesRegistry 启动加载 | < 100ms | 5 形态 YAML 静态加载 |
 | 并发 assert_sensor_allowed | 1000 QPS | 内存只读，无锁 |
@@ -957,14 +956,14 @@ class SpeciesDefineHandler:
         self._registry = species_registry  # DI 注入
 
     async def execute(self, state: ForgingPipelineState) -> str:
-        if not await self._registry.is_loaded():
+        if not await self._registry.is_loaded:
             raise RuntimeError("SpeciesRegistry not loaded, ForgePipeline cannot start")
         profile = await self._registry.get(ForgekinSpecies(state.species))
         state.species_profile = profile
         return f"species_spec_{state.forgekin_id}"
 ```
 
-**集成测试点**：F028 启动时校验 `is_loaded()` 返回 true，否则拒绝启动锻造流程。
+**集成测试点**：F028 启动时校验 `is_loaded` 返回 true，否则拒绝启动锻造流程。
 
 #### 4.1.2 F029 传感器注册表调用形态门控
 
@@ -1010,7 +1009,7 @@ class WorldSettingImpl:
 # F038 侧代码
 class ForgekinLineageImpl:
     async def get_lineage(self, forgekin_id: str) -> list[SpeciesEvolutionRecord]:
-        # 直接调用 ForgekinLineageRepository.get_lineage()
+        # 直接调用 ForgekinLineageRepository.get_lineage
         return await self._lineage_repo.get_lineage(forgekin_id)
 ```
 
@@ -1029,7 +1028,7 @@ class CapabilityProfile(BaseModel):
 
 | 测试编号 | 场景 | 验证点 |
 |---------|------|-------|
-| IT-D027-001 | 加载 5 形态 YAML | SpeciesRegistry.is_loaded() 返回 true |
+| IT-D027-001 | 加载 5 形态 YAML | SpeciesRegistry.is_loaded 返回 true |
 | IT-D027-002 | YAML 缺少 1 形态 | 抛 SpeciesValidationError |
 | IT-D027-003 | VIRTUAL 形态 sensor_channels 非空 | YAML 校验失败 |
 | IT-D027-004 | BIO 形态 sensor_channels 为空 | YAML 校验失败 |
@@ -1041,7 +1040,7 @@ class CapabilityProfile(BaseModel):
 | IT-D027-010 | 形态进化三步审批完整流程 | request -> approve -> apply 全部成功 |
 | IT-D027-011 | 未经 approve 直接 apply | 抛 InvalidStateError |
 | IT-D027-012 | 形态进化请求超时 | expire_stale_requests 标记 EXPIRED |
-| IT-D027-013 | 形态进化后灵印 species 不变 | 灵印 species 保留原值，新 species 在 ForgekinLineage |
+| IT-D027-013 | 形态进化后SoulImprint species 不变 | SoulImprint species 保留原值，新 species 在 ForgekinLineage |
 | IT-D027-014 | SpeciesRegistry 未加载时 ForgePipeline 启动 | 抛 RuntimeError |
 | IT-D027-015 | 5 形态枚举完整 | BIO/ORG/OBJ/VIRTUAL/HYBRID 全部存在 |
 | IT-D027-016 | F029 调用 assert_sensor_allowed | VIRTUAL 形态绑定被拒绝 |
@@ -1066,7 +1065,7 @@ class CapabilityProfile(BaseModel):
 - [ ] **AC-F-8**: 形态进化三步审批完整流程可执行（IT-D027-010）。
 - [ ] **AC-F-9**: 未经 approve 直接 apply 被拒绝（IT-D027-011）。
 - [ ] **AC-F-10**: 形态进化请求超时自动 expire（IT-D027-012）。
-- [ ] **AC-F-11**: 形态进化后灵印 species 字段保留原值，新 species 在 ForgekinLineage（IT-D027-013）。
+- [ ] **AC-F-11**: 形态进化后SoulImprint species 字段保留原值，新 species 在 ForgekinLineage（IT-D027-013）。
 - [ ] **AC-F-12**: SpeciesRegistry 未加载时 ForgePipeline 拒绝启动（IT-D027-014）。
 
 ### 5.2 性能验收
@@ -1082,12 +1081,12 @@ class CapabilityProfile(BaseModel):
 ### 5.3 安全验收
 
 - [ ] **AC-S-1**: 单向依赖通过 —— `forgemind/species.py` 不 import *Forge 任何模块。
-- [ ] **AC-S-2**: DI 容器注入通过 —— SpeciesRegistry 单例通过 DI 注入，无 `SpeciesRegistry()` 直接实例化。
-- [ ] **AC-S-3**: Repository 层通过 —— SpeciesEvolutionRecord 通过 ForgekinLineageRepository 写入，无 `cursor.execute()`。
+- [ ] **AC-S-2**: DI 容器注入通过 —— SpeciesRegistry 单例通过 DI 注入，无 `SpeciesRegistry` 直接实例化。
+- [ ] **AC-S-3**: Repository 层通过 —— SpeciesEvolutionRecord 通过 ForgekinLineageRepository 写入，无 `cursor.execute`。
 - [ ] **AC-S-4**: 配置驱动通过 —— 5 形态属性 YAML 外置，无 .py 硬编码。
 - [ ] **AC-S-5**: 形态门控集中校验，F029/F030 禁止重复实现形态判断逻辑。
 - [ ] **AC-S-6**: 形态进化必须 operator 显式审批，防止身份漂移（IT-D027-011）。
-- [ ] **AC-S-7**: 灵印 species 不可变，形态进化记录追加到 ForgekinLineage（IT-D027-013）。
+- [ ] **AC-S-7**: SoulImprint species 不可变，形态进化记录追加到 ForgekinLineage（IT-D027-013）。
 - [ ] **AC-S-8**: evolution_targets 来自静态矩阵，YAML 覆盖被拒绝。
 
 ### 5.4 Eval 验收
@@ -1114,7 +1113,7 @@ class CapabilityProfile(BaseModel):
 - [doc:../features/F038-forgemind-lineage.md]
 - [doc:../features/F001-capability-profile.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
-- [doc:../design/naming-contract.md]（灵族 Forgekin Species + 灵印 MindImprint）
+- [doc:../design/naming-contract.md]（Forgekin Species 智能体形态学 + SoulImprint）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 - [doc:../../../hiclaw/rules.md#编程红线]
 
@@ -1124,4 +1123,4 @@ class CapabilityProfile(BaseModel):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（5 形态枚举 + 形态门控 + 形态进化守卫 + 灵印协同 + YAML 配置驱动详细设计） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（5 形态枚举 + 形态门控 + 形态进化守卫 + SoulImprint协同 + YAML 配置驱动详细设计） | 开发者 Forgekin（猎犬·夏洛克） |

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]（待创建）
 > **对应 Feature**: [doc:../features/F022-tier-1-4-recovery.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D022-tier-1-4-recovery.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -22,7 +21,7 @@
 1. **不可逆操作被重试**：Tier 4 操作（force-push/merge/release）被自动重试可能造成不可逆损害（如重复 merge）。
 2. **可自动恢复操作浪费注意力**：Tier 1 操作（file_read/build/test）不自动恢复，把 operator 注意力浪费在低风险失败上。
 
-roleagent.md 第 6 章要求按副作用可恢复性分级恢复，FR-004 进一步要求扩展 Tier 0（物理世界不可逆操作永不自动恢复，万物灵智体场景如灯具灵智体故障引发火灾）。本架构解决的核心问题：**如何实现 Tier 0-4 五级分级、自动恢复策略、Tier 4 硬拒、Tier 0 物理硬拒，与 F011 Magic Words 星星罐子联动**。
+roleagent.md 第 6 章要求按副作用可恢复性分级恢复，FR-004 进一步要求扩展 Tier 0（物理世界不可逆操作永不自动恢复，可进化智能体场景如灯具Forgekin故障引发火灾）。本架构解决的核心问题：**如何实现 Tier 0-4 五级分级、自动恢复策略、Tier 4 硬拒、Tier 0 物理硬拒，与 F011 Magic Words 星星罐子联动**。
 
 ### 1.2 架构约束
 
@@ -38,7 +37,7 @@ roleagent.md 第 6 章要求按副作用可恢复性分级恢复，FR-004 进一
 - **对 F011 Magic Words**：Tier 0/4 操作在 dispatch 前可被 F011 星星罐子拦截。
 - **对 F023 liveness 规范读模型**：Tier 分级恢复结果影响 liveness 状态（恢复成功转 alive / 失败转 zombie）。
 - **对 F024 强 workflow**：强 workflow 的 rejectable 步骤对应 Tier 0/4，replayable 步骤对应 Tier 1/2。
-- **对 F029 物理 AI 传感器接入**：physical_op 必须 Tier 0，是万物灵智体物理世界保护的承载。
+- **对 F029 物理 AI 传感器接入**：physical_op 必须 Tier 0，是可进化智能体物理世界保护的承载。
 
 ---
 
@@ -80,12 +79,12 @@ roleagent.md 第 6 章要求按副作用可恢复性分级恢复，FR-004 进一
 
 ### 2.2 关键架构决策
 
-- **决策 1：五级分级而非四级**。在 roleagent.md 第 6 章 Tier 1-4 基础上扩展 Tier 0（物理世界不可逆），万物灵智体（Forgekin）场景下 physical_op 不可逆（如开锁/点火）必须 Tier 0。理由：FR-004 要求物理世界不可逆操作永不自动恢复。
+- **决策 1：五级分级而非四级**。在 roleagent.md 第 6 章 Tier 1-4 基础上扩展 Tier 0（物理世界不可逆），可进化智能体（Forgekin）场景下 physical_op 不可逆（如开锁/点火）必须 Tier 0。理由：FR-004 要求物理世界不可逆操作永不自动恢复。
 - **决策 2：Tier 0/4 在 dispatch 前硬拒**。Tier 0/4 操作不进入自动重试路径，必须在 dispatch 阶段被硬拒，必须 operator 显式批准。理由：自动重试不可逆操作可能造成不可逆损害。
 - **决策 3：Tier 1 自动重放**。file_read/build/test/lint 无副作用或副作用可重建，直接 replay WAL entry。理由：低风险失败不需要 operator 注意力，浪费注意力是架构债务。
 - **决策 4：Tier 2 探测后重放**。worktree/sandbox 操作先探测环境可用性（如 worktree 是否还存在），探测成功后 replay，失败转 Tier 3。理由：探测成本低，可避免盲目重放。
 - **决策 5：Tier 3 恢复卡机制**。shared_file/external_service/github_write 不自动恢复，创建恢复卡交 operator。理由：这些操作涉及外部状态，自动恢复可能造成不一致，operator 决策更可靠。
-- **决策 6：F011 星星罐子拦截**。Tier 0/4 在 dispatch 前可被 F011 Magic Words "星星罐子"拦截。理由：roleagent.md 第 6 章 + F011 逃生舱要求，给灵智体一个"停下来想想"的机会。
+- **决策 6：F011 星星罐子拦截**。Tier 0/4 在 dispatch 前可被 F011 Magic Words "星星罐子"拦截。理由：roleagent.md 第 6 章 + F011 逃生舱要求，给Forgekin一个"停下来想想"的机会。
 - **决策 7：分级映射从配置加载**。SideEffectType → Tier 映射表外置 YAML，禁止代码硬编码。理由：分级策略可能随业务演进调整，配置驱动可热更新。
 
 ### 2.3 架构不变量
@@ -203,7 +202,7 @@ class MagicWordsGuard(ABC):
 
 ```
 [重启恢复路径]
-  F021 WalReplayer.list_pending() → pending entries
+  F021 WalReplayer.list_pending → pending entries
         │
         ▼
   TierClassifier.classify(wal_entry)
@@ -217,7 +216,7 @@ class MagicWordsGuard(ABC):
         ▼
   RecoveryExecutor 按 Tier 执行
         │
-        ├─ TIER_0 → MagicWordsGuard.intercept() → hard_reject
+        ├─ TIER_0 → MagicWordsGuard.intercept → hard_reject
         │            （F011 星星罐子可拦截）
         ├─ TIER_1 → auto_replay(entry_id)
         │            （直接重放 WAL entry）
@@ -226,11 +225,11 @@ class MagicWordsGuard(ABC):
         │            └─ 探测失败 → 转 TIER_3 issue_recovery_card
         ├─ TIER_3 → RecoveryCardIssuer.issue_card(entry_id)
         │            （创建恢复卡交 operator）
-        └─ TIER_4 → MagicWordsGuard.intercept() → hard_reject
+        └─ TIER_4 → MagicWordsGuard.intercept → hard_reject
                      （必须 operator 显式批准）
 
 [dispatch 前拦截路径]
-  Forgekin.act() 触发 Tier 0/4 副作用
+  Forgekin.act 触发 Tier 0/4 副作用
         │
         ▼
   MagicWordsGuard.intercept(entry_id, tier)
@@ -324,4 +323,4 @@ class MagicWordsGuard(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 五级分级 + Tier 0 物理硬拒 + F011 星星罐子联动） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 五级分级 + Tier 0 物理硬拒 + F011 星星罐子联动） | 架构师 Forgekin（猫头鹰·鲁班） |

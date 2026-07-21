@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-17
-> **决策者**: 架构师灵智体 + operator 审核
+> **决策者**: 架构师可进化智能体 + operator 审核
 > **依赖**: `[doc:roleagent.md#第4章]` + `[doc:review/review.md#第八章]` RA-024~RA-030 + `[doc:review/review.md#第十三章]` CL-009
 > **依据**: RA-024~RA-030（多域记忆联邦六层 + 三检索入口 + 治理三要素 + 消费加权排序）+ CL-009（三路记忆 Canon / Relational / Session）
 
@@ -12,16 +12,16 @@
 
 `[doc:roleagent.md#第4章]` 一句话论点："很多 RAG 输给 grep"。grep 赢在当前性、精确性、可审计性，但 RAG 假设所有记忆都是同质的向量空间——这是 RAG 的根本缺陷。FlowForge v4.0 的现状（`[doc:review/review.md#第八章]` 8.4 节 RA-024~RA-030 共 7 项问题，5 项 P0）：
 
-- 灵忆（EchoStore）基于 sqlite-vec 向量检索 + 关键词 BM25，**这是典型 RAG 架构**（RA-024 P0）
+- 情景记忆存储（EchoStore）基于 sqlite-vec 向量检索 + 关键词 BM25，**这是典型 RAG 架构**（RA-024 P0）
 - 完全无 Collection（知识域）概念，所有记忆混在一个 store 里
-- 只有语义搜索一个入口（RA-025 P0），灵智体从上下文压缩恢复后无法快速"发生了什么"
+- 只有语义搜索一个入口（RA-025 P0），可进化智能体从上下文压缩恢复后无法快速"发生了什么"
 - 记忆无权威等级、无触发方式、无生命周期（RA-026 P0），过期知识可能永远排在前面
 - 完全无消费加权排序反馈闭环（RA-027 P0），靠向量相似度 + 时间衰减，无法识别"长期没被使用的知识应降权"
 - 无冷启动保护（RA-028 P1），新知识可能因向量距离远永远排不到前面
-- 灵典（Mind Codex）未建成可检索知识库，仍是固定 prompt 模板（RA-029 P0）
-- OpenSieve 在 QueryUnderstandingStage 用 LLM 改写查询（RA-030 P1），违反"简单系统 + 聪明灵智体"原则
+- 蒸馏知识库（MindCodex）未建成可检索知识库，仍是固定 prompt 模板（RA-029 P0）
+- 外部检索引擎在 QueryUnderstandingStage 用 LLM 改写查询（RA-030 P1），违反"简单系统 + 聪明可进化智能体"原则
 
-`[doc:review/review.md#第十三章]` 13.2 节 CL-009 进一步补审：clowder-ai `[doc:clowder-ai/docs/features/F093-cats-and-u-world-engine.md]` 定义三路记忆——Canon（典藏，永久，世界级真相）/ Relational（关系，长期，角色间互动）/ Session（会话，临时，单次回合）。铁律："RP 台词不自动入典"——Role Play 中灵智体说的话不能自动进入 Canon 记忆，必须经过 Canon Sync 协议显式确认。v7.0 EchoStore 是单一记忆库，临时会话记忆污染永久典藏，无法实现此铁律。
+`[doc:review/review.md#第十三章]` 13.2 节 CL-009 进一步补审：前期世界引擎三层架构（已归档）定义三路记忆——Canon（典藏，永久，世界级真相）/ Relational（关系，长期，角色间互动）/ Session（会话，临时，单次回合）。铁律："RP 台词不自动入典"——Role Play 中可进化智能体说的话不能自动进入 Canon 记忆，必须经过 Canon Sync 协议显式确认。v7.0 EchoStore 是单一记忆库，临时会话记忆污染永久典藏，无法实现此铁律。
 
 operator 决策：FlowForge 必须实现六层多域记忆运行时 + 三检索入口 + 消费加权排序 + 贝叶斯收缩 + 中心化偏移 + 分数时效衰减 + 三路记忆区分。
 
@@ -34,20 +34,20 @@ operator 决策：FlowForge 必须实现六层多域记忆运行时 + 三检索�
 | 层 | 内容 | 存续时间 | Feature |
 |---|---|---|---|
 | L1 工作记忆 | 当前任务上下文 | 单 session | （进程内 cache） |
-| L2 Episode | 具体任务经历（灵忆 EchoStore） | 跨 session | F014 |
-| L3 Skill | 可加载知识包（skill_packages） | 跨灵智体 | F014 |
+| L2 Episode | 具体任务经历（情景记忆存储（EchoStore）） | 跨 session | F014 |
+| L3 Skill | 可加载知识包（skill_packages） | 跨可进化智能体 | F014 |
 | L4 Collection | 沉淀领域知识（知识域隔离） | 跨项目 | F014 |
-| L5 灵典 Mind Codex | 蒸馏经验（锻典） | 跨代际 | F039 |
+| L5 蒸馏知识库（MindCodex） | 蒸馏经验（蒸馏知识库） | 跨代际 | F039 |
 | L6 文化 | 团队规范（rules.md / prompts.md） | 永久 | （文档层） |
 
 ### 2. 三路记忆区分（CL-009，F093 铁律）
 
-参考 `[doc:clowder-ai/docs/features/F093-cats-and-u-world-engine.md]` 的三路记忆：
+参考前期世界引擎三层架构（已归档）的三路记忆：
 
 | 路径 | 用途 | 持久性 | 写入规则 |
 |---|---|---|---|
 | **Canon** | 典藏记忆，世界级真相 | 永久 | 必须经 Canon Sync 协议显式确认，**禁止 RP 台词自动入典** |
-| **Relational** | 关系记忆，灵智体间互动 | 长期 | 由互动事件自动写入 |
+| **Relational** | 关系记忆，可进化智能体间互动 | 长期 | 由互动事件自动写入 |
 | **Session** | 会话记忆，单次回合 | 临时 | 自动写入，回合结束清除（除非升级为 Relational） |
 
 ```python
@@ -73,7 +73,7 @@ class ThreeTrackMemory:
 | `list_recent` | 零先验扫描（刚从压缩恢复，按时间倒序列最近文档） | 时间倒序 |
 | `search_evidence` | 语义搜索（知道方向但不知锚点） | BM25 + 向量混合 + 治理元数据 |
 
-灵智体从上下文压缩恢复后，先调 `list_recent` 快速重建上下文，再调 `graph_resolve` / `search_evidence` 深入。
+可进化智能体从上下文压缩恢复后，先调 `list_recent` 快速重建上下文，再调 `graph_resolve` / `search_evidence` 深入。
 
 ### 4. 治理层三要素（F016，RA-026）
 
@@ -91,7 +91,7 @@ class MemoryGovernance:
 
 ### 5. 消费加权排序（F017，RA-027）
 
-不用 LLM 自评打分，用灵智体真实行为（搜了 / 读了 / 用了）判断知识价值。14 个行为指标汇聚成消费加权排序：
+不用 LLM 自评打分，用可进化智能体真实行为（搜了 / 读了 / 用了）判断知识价值。14 个行为指标汇聚成消费加权排序：
 
 ```
 调整后得分 = 融合检索得分
@@ -101,7 +101,7 @@ class MemoryGovernance:
             - 过时惩罚
 ```
 
-行为指标包括：被引用次数、被复用次数、解决问题次数、失败引用次数、最近引用时间、引用灵智体多样性等。
+行为指标包括：被引用次数、被复用次数、解决问题次数、失败引用次数、最近引用时间、引用可进化智能体多样性等。
 
 ### 6. 贝叶斯收缩 + 中心化偏移 + 分数时效衰减（RA-028）
 
@@ -122,7 +122,7 @@ def adjusted_score(raw_score: float, observations: int, prior: float,
 
 ### 7. 检索驱动的适配循环（RA-029，F039）
 
-灵典（Mind Codex）必须建成**可检索知识库**，而非固定 prompt 模板。检索循环 vs 训练循环：
+蒸馏知识库（MindCodex）必须建成**可检索知识库**，而非固定 prompt 模板。检索循环 vs 训练循环：
 
 | 维度 | 检索循环 | 训练循环 |
 |---|---|---|
@@ -131,15 +131,15 @@ def adjusted_score(raw_score: float, observations: int, prior: float,
 | 灾难性遗忘 | 无 | 有 |
 | 可审计性 | 完全（每次检索可追溯） | 弱 |
 
-FlowForge 选检索驱动适配循环，灵典条目可跨灵智体共享、即时生效、可审计回滚。
+FlowForge 选检索驱动适配循环，蒸馏知识库条目可跨可进化智能体共享、即时生效、可审计回滚。
 
-### 8. 简单系统 + 聪明灵智体原则（RA-030）
+### 8. 简单系统 + 聪明可进化智能体原则（RA-030）
 
-查询扩展由灵智体用自己的领域知识做，**不在检索引擎里加 regex 规则或小模型做意图分类**。OpenSieve 的 QueryUnderstandingStage 必须移除（已在 `[doc:project_rules.md]` 记录：OpenSieve /api/v1/retrieve 因 QueryUnderstandingStage LLM 调用耗时 90s 超时）。检索引擎只做检索 + 排序 + 治理元数据，意图理解交给灵智体。
+查询扩展由可进化智能体用自己的领域知识做，**不在检索引擎里加 regex 规则或小模型做意图分类**。外部检索引擎的 QueryUnderstandingStage 必须移除（已在 `[doc:project_rules.md]` 记录：检索引擎 /api/v1/retrieve 因 QueryUnderstandingStage LLM 调用耗时 90s 超时）。检索引擎只做检索 + 排序 + 治理元数据，意图理解交给可进化智能体。
 
 ### 9. 与 Pack 系统联动（CL-018）
 
-参考 `[doc:clowder-ai/docs/decisions/ADR-021-pack-system.md]`，灵典条目可打包为 Pack 跨灵智体共享。Pack = 可分享的灵典子集，由灵锻（SpiritForge）把高价值 Growth 蒸馏为 Pack（见 ADR 011 伙伴系统数学）。
+参考前期 Pack 系统设计（已归档），蒸馏知识库条目可打包为 Pack 跨可进化智能体共享。Pack = 可分享的蒸馏知识库子集，由 SpiritForge（经验蒸馏）把高价值 Growth 蒸馏为 Pack（见 ADR 011 伙伴系统数学）。
 
 ---
 
@@ -148,12 +148,12 @@ FlowForge 选检索驱动适配循环，灵典条目可跨灵智体共享、即�
 ### 正面后果
 
 - 记忆从"同质向量空间"升维到"六层多域 + 三路区分"的结构化联邦
-- 三检索入口覆盖三种认知模式，灵智体从压缩恢复后可快速重建上下文
+- 三检索入口覆盖三种认知模式，可进化智能体从压缩恢复后可快速重建上下文
 - 治理元数据让旧记忆自动归档，过期知识不再永远排前面
 - 消费加权排序用真实行为判断知识价值，不用 LLM 自评
 - 贝叶斯收缩保护冷启动新知识，中心化偏移允许负信号
 - 检索驱动适配循环即时生效、跨厂商通用、无灾难性遗忘
-- RP 台词不自动入典铁律让虚拟角色灵智体不被角色扮演污染核心身份
+- RP 台词不自动入典铁律让虚拟角色可进化智能体不被角色扮演污染核心身份
 
 ### 负面后果
 
@@ -161,13 +161,13 @@ FlowForge 选检索驱动适配循环，灵典条目可跨灵智体共享、即�
 - 治理元数据每条记忆都要维护，记忆写入开销增加
 - 三路记忆区分需要重构 EchoStore（破坏性变更）
 - 消费加权排序需要积累 14 个行为指标，初期数据稀疏
-- 移除 OpenSieve QueryUnderstandingStage 影响现有检索行为（需迁移）
+- 移除外部检索引擎 QueryUnderstandingStage 影响现有检索行为（需迁移）
 
 ### 风险
 
 - 多域联邦跨 store 一致性风险 —— 缓解：SharedStateLedger 走 Tier 2 恢复（见 ADR 010）
-- 消费加权排序可能被恶意行为操纵（灵智体故意多次引用某条记忆）—— 缓解：跨灵智体引用多样性加权
-- RP 台词不自动入典可能让虚拟角色灵智体记忆"太干净" —— 缓解：Canon Sync 协议允许 operator 显式批准入典
+- 消费加权排序可能被恶意行为操纵（可进化智能体故意多次引用某条记忆）—— 缓解：跨可进化智能体引用多样性加权
+- RP 台词不自动入典可能让虚拟角色可进化智能体记忆"太干净" —— 缓解：Canon Sync 协议允许 operator 显式批准入典
 - 贝叶斯收缩先验参数难调 —— 缓解：与 ADR 009 Eval 自代谢联动，先验参数随 Eval 信号调整
 
 ---
@@ -184,7 +184,7 @@ FlowForge 选检索驱动适配循环，灵典条目可跨灵智体共享、即�
 
 - 优点：治理简单
 - 缺点：临时会话污染永久典藏，违反 CL-009 铁律
-- 未选择原因：虚拟角色灵智体会被 RP 污染核心身份
+- 未选择原因：虚拟角色可进化智能体会被 RP 污染核心身份
 
 ### 方案 C: 用 LLM 在线评估每条记忆价值
 
@@ -209,14 +209,14 @@ FlowForge 选检索驱动适配循环，灵典条目可跨灵智体共享、即�
 - `[doc:features/F015-three-retrieval-entry.md]` — 三检索入口
 - `[doc:features/F016-memory-governance.md]` — 记忆治理三要素
 - `[doc:features/F017-consumption-weighted-ranking.md]` — 消费加权排序
-- `[doc:features/F039-mind-codex-searchable.md]` — 灵典可检索知识库
-- `[doc:clowder-ai/docs/features/F093-cats-and-u-world-engine.md]` — 三路记忆 + RP 台词不自动入典铁律
-- `[doc:clowder-ai/docs/decisions/ADR-021-pack-system.md]` — Pack 系统经验可移植
+- `[doc:features/F039-mind-codex-searchable.md]` — 蒸馏知识库可检索知识库
+- 前期世界引擎三层架构（已归档） — 三路记忆 + RP 台词不自动入典铁律
+- 前期 Pack 系统设计（已归档） — Pack 系统经验可移植
 - `[doc:decisions/007-harness-engineering.md]` — Harness 工程路径（Durable State Surfaces 持有记忆联邦）
 - `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢（消费加权信号来源）
 - `[doc:decisions/010-distributed-reliability.md]` — 分布式可靠性（SharedStateLedger 跨 store 一致性）
 - `[doc:decisions/011-partnership-math.md]` — 伙伴系统数学（Pack 共享机制）
-- `[doc:design/naming-contract.md#2.5]` — 灵忆（EchoStore，情景记忆）
-- `[doc:design/naming-contract.md#2.7]` — 灵锻（SpiritForge，经验蒸馏）
-- `[doc:design/naming-contract.md#2.8]` — 锻典（Mind Codex，蒸馏知识库）
-- `[doc:project_rules.md]` — OpenSieve QueryUnderstandingStage 必须移除
+- `[doc:design/naming-contract.md#2.5]` — EchoStore（情景记忆存储）
+- `[doc:design/naming-contract.md#2.7]` — SpiritForge（经验蒸馏）
+- `[doc:design/naming-contract.md#2.8]` — MindCodex（蒸馏知识库）
+- `[doc:project_rules.md]` — 外部检索引擎 QueryUnderstandingStage 必须移除

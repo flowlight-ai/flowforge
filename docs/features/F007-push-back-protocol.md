@@ -6,17 +6,16 @@
 > **关联 ADR**: [doc:decisions/002-collaboration-protocol.md]
 > **类型**: collaboration
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.2]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-Generator Push Back 协议把 TeamAct 的 review 从单向（reviewer → author 修改）升级为双向辩论：任何灵智体（Forgekin）在任何角色下都有权 push back reviewer 的裁决——前提是带着证据 + 适用性论证 + 替代方案。没有证据的 push back 不合法；有证据的 push back 必须被正视。
+Generator Push Back 协议把 TeamAct 的 review 从单向（reviewer → author 修改）升级为双向辩论：任何Forgekin在任何角色下都有权 push back reviewer 的裁决——前提是带着证据 + 适用性论证 + 替代方案。没有证据的 push back 不合法；有证据的 push back 必须被正视。
 
 本 Feature 实现合法 push back 的 Schema、辩论链、超时升级，以及"无证据 push back 拒绝"的硬约束。
 
@@ -105,14 +104,14 @@ push_back:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商 reviewer 灵智体给出错判，真实 author 灵智体带证据 push back，验证辩论链正确流转并最终由 CVO 仲裁。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用，LLM 生成内容经 LLM 审核。
+- 真实厂商 reviewer Forgekin给出错判，真实 author Forgekin带证据 push back，验证辩论链正确流转并最终由 CVO 仲裁。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用，LLM 生成内容经 LLM 审核。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第2章]
 - [doc:review/review.md#第八章/RA-015]
 - [doc:decisions/002-collaboration-protocol.md]
-- [doc:design/naming-contract.md#2.2]（灵智体 Forgekin）
+- [doc:design/naming-contract.md#2.2]（Forgekin Forgekin）
 - [doc:features/F002-teamact-loop.md]
 - [doc:features/F009-evidence-sensors.md]
 - [doc:features/F019-three-signal-cross.md]
@@ -124,4 +123,3 @@ push_back:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.2 同号映射 | 文档员灵智体（钢笔·文心） |

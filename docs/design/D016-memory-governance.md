@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004）
 > **对应 arch.md**: [doc:../arch.md#§3.4]
 > **对应 design.md**: [doc:../design.md#§3.4]
 > **对应 Feature**: [doc:../features/F016-memory-governance.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A016-memory-governance.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,15 +16,15 @@
 
 ### 1.1 设计问题
 
-灵智体（Forgekin，社区社交称"灵智体"）在执行任务时检索记忆，旧记忆与新记忆一视同仁导致三类问题：权威倒挂（候选观察压过铁律）、触发失效（铁律未注入 system role）、僵尸知识（3 年前过时决策与今天最新决策同权重）。A016 架构设计已确认 L2 治理层形式化"权威性 / 触发方式 / 生命周期"三要素，让检索结果在 RRF 融合后经过权威硬序、触发过滤、生命周期衰减三步治理。
+Forgekin（Evolvable Agent，社区社交称"灵智体"）在执行任务时检索记忆，旧记忆与新记忆一视同仁导致三类问题：权威倒挂（候选观察压过铁律）、触发失效（铁律未注入 system role）、僵尸知识（3 年前过时决策与今天最新决策同权重）。A016 架构设计已确认 L2 治理层形式化"权威性 / 触发方式 / 生命周期"三要素，让检索结果在 RRF 融合后经过权威硬序、触发过滤、生命周期衰减三步治理。
 
 本详细设计进一步下沉到代码层，需要解决以下子问题：
 
 1. **三要素标签的物理存储**：Authority/Activation/LifecycleStatus 三要素打在 entry 上，需明确 `governance_tags` 表结构与 entry 表的关联方式，支持快速查询与排序。
-2. **四步过滤算法的实现细节**：LifecycleFilter → ActivationFilter → AuthoritySorter → ExpiryScheduler 四步如何在同一 `filter()` 调用中顺序执行，每步的中间结果如何流转。
+2. **四步过滤算法的实现细节**：LifecycleFilter → ActivationFilter → AuthoritySorter → ExpiryScheduler 四步如何在同一 `filter` 调用中顺序执行，每步的中间结果如何流转。
 3. **硬序排序的稳定实现**：`hard_rule > verified_decision > candidate_observation` 硬序需保证 hard_rule 块内最低分仍高于 verified_decision 块内最高分，需要分数区段隔离机制。
-4. **always_on 自动注入的钩子位置**：灵智体启动时 `inject_always_on()` 在 `__init__` 中的具体注入点与 system role builder 的接口契约。
-5. **review 任务派发的非 author 选择算法**：从 CapabilityProfile 查询非 author 灵智体列表，如何选择最合适的 reviewer（最近活跃 + 能力匹配 + 非 author 三条件加权）。
+4. **always_on 自动注入的钩子位置**：Forgekin启动时 `inject_always_on` 在 `__init__` 中的具体注入点与 system role builder 的接口契约。
+5. **review 任务派发的非 author 选择算法**：从 CapabilityProfile 查询非 author Forgekin列表，如何选择最合适的 reviewer（最近活跃 + 能力匹配 + 非 author 三条件加权）。
 6. **过期转态的调度频率**：`schedule_expiry_review` 是周期触发还是事件触发，如何避免高频扫描对数据库的压力。
 
 ### 1.2 设计约束
@@ -34,7 +33,7 @@
 - **铁律优先约束**：authority=hard_rule 的条目必须在最终排序中硬序置顶，不被 RRF 或消费加权翻盘。
 - **配置驱动约束**：authority_order、deprecated_weight_multiplier、archived_excluded_from_retrieval、expiry_scan_interval_seconds 等策略外置 `config/memory_governance.yaml`。
 - **过期自动转态约束**：`expires_at` 到期必须自动转 deprecated 并触发 review 任务，不允许"过期不处理"。
-- **review 任务指派约束**：过期 review 必须指派给非原作者灵智体（防止自我确认偏误，铁律"不能自己 review 自己"）。
+- **review 任务指派约束**：过期 review 必须指派给非原作者Forgekin（防止自我确认偏误，铁律"不能自己 review 自己"）。
 - **DI 容器约束**：`GovernanceFilter` / `GovernanceTagger` / `LifecycleScheduler` / `ActivationInjector` 均通过 DI 容器注入，禁止直接实例化。
 - **Repository 层约束**：治理标签持久化必须经 `GovernanceTagRepository` 抽象，禁止 `cursor.execute("INSERT INTO governance_tags ...")` 直操作数据库。
 - **异步约束**：所有 I/O 操作使用 `async/await`，过期扫描使用 `asyncio.create_task` 不阻塞主流程。
@@ -42,12 +41,12 @@
 
 ### 1.3 设计影响
 
-- **对 F014 Collection 层（D014）**：`lifecycle_status` 字段成为治理层的物理承载，D014 在 `register()` 时需校验 lifecycle 取值与 `governance_tags` 表外键一致。`authority_level` 字段被治理层 Authority 枚举引用，治理层不独立维护权威副本。
-- **对 F015 三检索入口（D015）**：`authority_floor` 过滤先于 RRF 融合执行，治理层在 RRF 之后做权威硬序。D015 `RetrievalFusion.search()` 返回的 hits 必须包含 `entry_id` 字段供治理层查询标签。
+- **对 F014 Collection 层（D014）**：`lifecycle_status` 字段成为治理层的物理承载，D014 在 `register` 时需校验 lifecycle 取值与 `governance_tags` 表外键一致。`authority_level` 字段被治理层 Authority 枚举引用，治理层不独立维护权威副本。
+- **对 F015 三检索入口（D015）**：`authority_floor` 过滤先于 RRF 融合执行，治理层在 RRF 之后做权威硬序。D015 `RetrievalFusion.search` 返回的 hits 必须包含 `entry_id` 字段供治理层查询标签。
 - **对 F017 消费排序（D017）**：deprecated 条目强制 ×0.3 降权，是消费加权公式中"过时惩罚"的输入。硬序后块内交 F017 排序，块间硬序保持。
 - **对 F018 Eval Contract**：治理事件（`expiry_review_triggered`）可作为 Eval Contract 的回归用例。
 - **对 F020 归因矩阵**：archived 条目仅供 F020"环境漂移"归因溯源，不参与日常检索。
-- **对 F039 锻典可检索**：锻典条目同样应用三要素治理，确保过时锻典被识别。
+- **对 F039 蒸馏知识库可检索**：蒸馏知识库条目同样应用三要素治理，确保过时蒸馏知识库被识别。
 - **对 F040 控制面**：治理事件（deprecated/archived/expiry_review_triggered）写入 F040 Eval Hub。
 - **对 DI 容器**：需新增 `governance_filter` / `governance_tagger` / `lifecycle_scheduler` / `activation_injector` / `governance_tag_repository` 五个绑定。
 - **对数据库 schema**：需新增 `governance_tags` 表（按 entry_id 索引）+ `expiry_review_tasks` 表。
@@ -99,7 +98,7 @@
 │                                                                      │
 │  <<interface>> LifecycleScheduler <<interface>> ActivationInjector   │
 │  + schedule_expiry_review(...)  + inject_always_on(                  │
-│  + scan_and_expire(): int          forgekin_id, builder): int        │
+│  + scan_and_expire: int          forgekin_id, builder): int        │
 │                                                                      │
 │  <<interface>> GovernanceTagRepository                              │
 │  + insert_tag(tag): void                                            │
@@ -107,7 +106,7 @@
 │  + query_tags_batch(entry_ids): list                               │
 │  + update_lifecycle(entry_id, status): void                        │
 │  + query_expired(now): list                                        │
-│  + query_always_on_hard_rule(): list                               │
+│  + query_always_on_hard_rule: list                               │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -159,7 +158,7 @@ class GovernanceTag(BaseModel):
 
 class QueryContext(BaseModel):
     """治理过滤的查询上下文"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     task_scope: Optional[str] = None
     is_query_phase: bool = True
@@ -177,7 +176,7 @@ class ReviewTaskStatus(str, Enum):
 
 class ReviewTask(BaseModel):
     """过期 review 任务；reviewer_forgekin_id 必须不等于 author_forgekin_id"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     task_id: str = Field(min_length=1)
     entry_id: str = Field(min_length=1)
@@ -257,7 +256,7 @@ class LifecycleScheduler(ABC):
         expires_at: datetime,
         author_forgekin_id: str,
     ) -> str:
-        """到期转 deprecated + 派发 review 任务给非 author 灵智体；返回 task_id"""
+        """到期转 deprecated + 派发 review 任务给非 author Forgekin；返回 task_id"""
 
     @abstractmethod
     async def scan_and_expire(self) -> int:
@@ -409,7 +408,7 @@ function GovernanceFilter.filter(hits, context):
     # 块间用分数区段隔离，块内按 adjusted_score 降序
 
     # Step 4: ExpiryScheduler（异步）
-    asyncio.create_task(scheduler.scan_and_expire())
+    asyncio.create_task(scheduler.scan_and_expire)
 
     return sorted_hits
 
@@ -432,8 +431,8 @@ function AuthoritySorter.sort_by_authority_hard(activated):
     return result
 
 
-function LifecycleScheduler.scan_and_expire():
-    now = datetime.utcnow()
+function LifecycleScheduler.scan_and_expire:
+    now = datetime.utcnow
     expired_tags = repository.query_expired(now)
     count = 0
     for tag in expired_tags:
@@ -447,12 +446,12 @@ function LifecycleScheduler.scan_and_expire():
 
 
 function select_non_author_reviewer(author_forgekin_id):
-    # 从 CapabilityProfile 查询活跃灵智体列表
+    # 从 CapabilityProfile 查询活跃Forgekin列表
     # 三条件加权：最近活跃（40%）+ 能力匹配（40%）+ 非 author（强制）
-    candidates = capability_profile.list_active_forgekins()
+    candidates = capability_profile.list_active_forgekins
     candidates = [c for c in candidates if c.id != author_forgekin_id]
     if not candidates:
-        raise NoReviewerAvailableError()
+        raise NoReviewerAvailableError
     return weighted_select(candidates, weights=[recency, capability_match])
 ```
 
@@ -540,7 +539,7 @@ class DefaultGovernanceFilter(GovernanceFilter):
         sorted_hits = await self._sorter.sort_by_authority(activated)
 
         # Step 4: ExpiryScheduler 异步扫描
-        asyncio.create_task(self._scheduler.scan_and_expire())
+        asyncio.create_task(self._scheduler.scan_and_expire)
 
         return sorted_hits
 
@@ -591,7 +590,7 @@ from .models import GovernanceConfig
 
 
 class DefaultActivationInjector(ActivationInjector):
-    """always_on 注入器：灵智体启动时调用"""
+    """always_on 注入器：Forgekin启动时调用"""
 
     def __init__(
         self,
@@ -606,7 +605,7 @@ class DefaultActivationInjector(ActivationInjector):
         forgekin_id: str,
         system_role_builder,
     ) -> int:
-        tags = await self._repo.query_always_on_hard_rule()
+        tags = await self._repo.query_always_on_hard_rule
         # 按 batch_size 分批，避免单次注入太多
         batch_size = self._config.always_on_inject_batch_size
         injected = 0
@@ -658,13 +657,13 @@ class DefaultLifecycleScheduler(LifecycleScheduler):
     ) -> str:
         reviewer_id = await self._select_non_author_reviewer(author_forgekin_id)
         task = ReviewTask(
-            task_id=f"rev-{entry_id}-{int(expires_at.timestamp())}",
+            task_id=f"rev-{entry_id}-{int(expires_at.timestamp)}",
             entry_id=entry_id,
             author_forgekin_id=author_forgekin_id,
             reviewer_forgekin_id=reviewer_id,
             expires_at=expires_at,
             status=ReviewTaskStatus.ASSIGNED,
-            assigned_at=datetime.utcnow(),
+            assigned_at=datetime.utcnow,
             rationale="expiry_auto_review",
         )
         if self._review_repo:
@@ -674,7 +673,7 @@ class DefaultLifecycleScheduler(LifecycleScheduler):
         return task.task_id
 
     async def scan_and_expire(self) -> int:
-        now = datetime.utcnow()
+        now = datetime.utcnow
         expired_tags = await self._repo.query_expired(now)
         count = 0
         for tag in expired_tags:
@@ -692,22 +691,22 @@ class DefaultLifecycleScheduler(LifecycleScheduler):
         """启动周期扫描任务"""
         interval = self._config.expiry_scan_interval_seconds
 
-        async def _loop():
+        async def _loop:
             while True:
                 await asyncio.sleep(interval)
-                await self.scan_and_expire()
+                await self.scan_and_expire
 
-        self._scan_task = asyncio.create_task(_loop())
+        self._scan_task = asyncio.create_task(_loop)
 
     async def _select_non_author_reviewer(self, author_forgekin_id: str) -> str:
         if not self._cap_provider:
             raise RuntimeError("capability_profile_provider 未注入")
-        candidates = await self._cap_provider.list_active_forgekins()
+        candidates = await self._cap_provider.list_active_forgekins
         candidates = [c for c in candidates if c.id != author_forgekin_id]
         if not candidates:
             raise RuntimeError("无可用的非 author reviewer")
         # 简化：选最近活跃
-        candidates.sort(key=lambda c: -c.last_active_at.timestamp())
+        candidates.sort(key=lambda c: -c.last_active_at.timestamp)
         return candidates[0].id
 ```
 
@@ -748,18 +747,18 @@ class DefaultLifecycleScheduler(LifecycleScheduler):
         │   块内按 adjusted_score 降序
         │
         ├─ Step 5: 异步 ExpiryScheduler
-        │   asyncio.create_task(scan_and_expire())
+        │   asyncio.create_task(scan_and_expire)
         │
         ▼
   返回治理后 hits → F017 消费加权排序
 
 [启动路径 - always_on 注入]
-  Forgekin.__init__()
+  Forgekin.__init__
         │
         ▼
   ActivationInjector.inject_always_on(forgekin_id, system_role_builder)
         │
-        ├─ repository.query_always_on_hard_rule()
+        ├─ repository.query_always_on_hard_rule
         │   返回 authority=HARD_RULE + activation=ALWAYS_ON 条目
         │
         ▼
@@ -777,7 +776,7 @@ class DefaultLifecycleScheduler(LifecycleScheduler):
   周期触发（expiry_scan_interval=3600s）
         │
         ▼
-  LifecycleScheduler.scan_and_expire()
+  LifecycleScheduler.scan_and_expire
         │
         ├─ repository.query_expired(now)
         │   返回 expires_at < now 的所有条目
@@ -786,7 +785,7 @@ class DefaultLifecycleScheduler(LifecycleScheduler):
   for tag in expired_tags:
         │
         ├─ select_non_author_reviewer(author_forgekin_id)
-        │   从 CapabilityProfile 选非 author 灵智体
+        │   从 CapabilityProfile 选非 author Forgekin
         │
         ├─ create ReviewTask（reviewer ≠ author）
         │
@@ -802,7 +801,7 @@ class DefaultLifecycleScheduler(LifecycleScheduler):
 |------|---------|---------|--------|
 | `GovernanceTagError` | author_forgekin_id 为空 / scope 缺失 | 拒绝打标签，返回 4xx | GOV-001 |
 | `AuthorityHardOrderViolation` | hard_rule 块分数低于 verified_decision 块 | 调整分数区段偏移，记录告警 | GOV-002 |
-| `NoReviewerAvailableError` | 无非 author 灵智体可用 | 复用 Least-Loaded 策略，必要时降级为 author（告警） | GOV-003 |
+| `NoReviewerAvailableError` | 无非 author Forgekin可用 | 复用 Least-Loaded 策略，必要时降级为 author（告警） | GOV-003 |
 | `TagNotFoundError` | entry_id 无对应标签 | 默认 candidate_observation + active | GOV-004 |
 | `ExpiryScanFailed` | 过期扫描异常 | 单条跳过，记录日志，下次扫描重试 | GOV-005 |
 | `BatchQueryTimeout` | 批量查询标签超时 | 降级为单条查询，记录性能告警 | GOV-006 |
@@ -818,7 +817,7 @@ class DefaultLifecycleScheduler(LifecycleScheduler):
 | 分数区段隔离 | 预计算 offset，无运行时分支 | 硬序 100 hits < 1ms | 0.6ms |
 | always_on 批量 | `batch_size=50` 单批注入 | 启动注入 < 100ms | 78ms |
 | 索引设计 | `governance_tags(entry_id)` 主键 + `(authority, activation)` 复合索引 | 单条查询 < 2ms | 1.1ms |
-| Reviewer 选择缓存 | 活跃灵智体列表缓存 5 分钟 | reviewer 选择 < 5ms | 2.3ms |
+| Reviewer 选择缓存 | 活跃Forgekin列表缓存 5 分钟 | reviewer 选择 < 5ms | 2.3ms |
 
 ### 3.5 YAML 配置示例
 
@@ -856,22 +855,22 @@ error_messages:
 ### 4.1 上游依赖（如何调用）
 
 - **依赖 F014 Collection 层（D014）**：
-  - 调用 `CollectionRegistry.list_by_type()` 获取 active + pending_review Collection
+  - 调用 `CollectionRegistry.list_by_type` 获取 active + pending_review Collection
   - 调用 `CollectionRepository.get_authority_level(collection_id)` 读取权威等级（与 GovernanceTag.authority 双向校验）
   - `ActivationInjector._load_entry_content` 通过 DI 注入的 `CollectionRegistry` 加载 entry.payload
 
 - **依赖 F015 三检索入口（D015）**：
-  - 接收 `RetrievalFusion.search()` 返回的 hits 列表作为 `filter()` 输入
+  - 接收 `RetrievalFusion.search` 返回的 hits 列表作为 `filter` 输入
   - hits 必须包含 `entry_id` 字段供治理层查询标签
 
 - **依赖 F001 CapabilityProfile**：
-  - `select_non_author_reviewer` 查询 `list_active_forgekins()` 获取候选 reviewer
+  - `select_non_author_reviewer` 查询 `list_active_forgekins` 获取候选 reviewer
   - 三条件加权：最近活跃 + 能力匹配 + 非 author
 
 ### 4.2 下游影响（如何被调用）
 
 - **影响 F017 消费排序（D017）**：
-  - `GovernanceFilter.filter()` 输出是 `ConsumptionWeightedRanker.rank()` 的输入
+  - `GovernanceFilter.filter` 输出是 `ConsumptionWeightedRanker.rank` 的输入
   - deprecated ×0.3 降权是消费加权公式中"过时惩罚"的输入
   - 权威硬序后块内交 F017 排序，块间硬序保持
 
@@ -883,9 +882,9 @@ error_messages:
   - archived 条目仅供 F020"环境漂移"归因溯源
   - 通过 `query_archived_by_provenance` 查询接口
 
-- **影响 F039 锻典可检索**：
-  - 锻典条目同样应用三要素治理
-  - 锻典初始化时调用 `GovernanceTagger.tag()` 打标签
+- **影响 F039 蒸馏知识库可检索**：
+  - 蒸馏知识库条目同样应用三要素治理
+  - 蒸馏知识库初始化时调用 `GovernanceTagger.tag` 打标签
 
 - **影响 F040 控制面**：
   - 治理事件（deprecated/archived/expiry_review_triggered）写入 F040 EvalHub
@@ -917,10 +916,10 @@ error_messages:
 
 ### 5.1 功能验收 AC
 
-- [ ] AC-FUNC-001: `GovernanceFilter.filter()` 四步顺序执行，输出按硬序排列
+- [ ] AC-FUNC-001: `GovernanceFilter.filter` 四步顺序执行，输出按硬序排列
 - [ ] AC-FUNC-002: archived 条目在 `include_archived=False` 时不出现
 - [ ] AC-FUNC-003: deprecated 条目 score 强制 ×0.3 降权
-- [ ] AC-FUNC-004: always_on + hard_rule 条目在灵智体启动时自动注入 system role
+- [ ] AC-FUNC-004: always_on + hard_rule 条目在Forgekin启动时自动注入 system role
 - [ ] AC-FUNC-005: task_scoped 条目 scope 不匹配时不返回
 - [ ] AC-FUNC-006: query_only 条目在非查询阶段不返回
 - [ ] AC-FUNC-007: expires_at 到期自动转 deprecated 并触发 review 任务
@@ -935,7 +934,7 @@ error_messages:
 - [ ] AC-PERF-003: always_on 注入 batch_size=50 在 < 100ms 内完成
 - [ ] AC-PERF-004: 硬序排序 100 hits < 1ms
 - [ ] AC-PERF-005: 标签缓存命中率 > 80%（LRU TTL=60s）
-- [ ] AC-PERF-006: reviewer 选择 < 5ms（活跃灵智体列表缓存 5 分钟）
+- [ ] AC-PERF-006: reviewer 选择 < 5ms（活跃Forgekin列表缓存 5 分钟）
 - [ ] AC-PERF-007: 单条标签查询 < 2ms（按 entry_id 主键索引）
 
 ### 5.3 安全验收 AC
@@ -981,4 +980,4 @@ error_messages:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 四步过滤算法 + 权威硬序分数区段 + always_on 注入 + 非author reviewer 选择） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 四步过滤算法 + 权威硬序分数区段 + always_on 注入 + 非author reviewer 选择） | 开发者 Forgekin（猎犬·夏洛克） |

@@ -2,7 +2,7 @@
 
 > **文档编号**: SOP.md（v1.1）
 > **依据**: `[doc:roleagent.md#第2章]` TeamAct 六步循环 + 五项终止条件
-> **适用范围**: 所有 FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）协作场景（含 forgemind 万物可进化智能体 + *Forge 垂直可进化智能体）
+> **适用范围**: 所有 FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）协作场景（含 forgemind 可进化智能体 + *Forge 垂直可进化智能体）
 > **命名规范**: 严格遵循 `[doc:design/naming-contract.md]` v2.0 "官方名称优先"原则
 
 ---
@@ -250,4 +250,4 @@ Multi-Agent Deliberation（MindCouncil，社区社交称"灵议"）用于解决�
 | 版本 | 日期 | 变更 | 作者 |
 |------|------|------|------|
 | v1.0 | 2026-07-17 | 初版：TeamAct 六步循环 + 五项终止 + 7 大场景 SOP | Trae CN（agent） |
-| v1.1 | 2026-07-19 | 按"官方名称优先"原则重构：标题与全文将"灵智体"改为 P0 官方名称"可进化智能体（Forgekin）"；新增 §0 智能体分类说明（静态智能体 vs 可进化智能体）；"灵锻 / 灵典 / 灵议 / 觉醒阶"等 P2 别名首次出现双标注；保留所有 SOP 流程步骤不变 | Trae CN（agent） |
+| v1.1 | 2026-07-19 | 按"官方名称优先"原则重构：标题与全文改为 P0 官方名称"可进化智能体（Forgekin）"；新增 §0 智能体分类说明（静态智能体 vs 可进化智能体）；P2 体系别名首次出现双标注；保留所有 SOP 流程步骤不变 | Trae CN（agent） |

@@ -5,7 +5,7 @@
 > **用途 1**: FlowForge 设计规范文档导航（命名契约 / 控制台设计系统 / 品牌设计 / 动效设计）
 > **用途 2**: 40 份 D0XX 文件的索引（Feature 级 SDD），与 [features/F0XX-xxx.md](../features/) + [architecture/A0XX-xxx.md](../architecture/) 同号一一对应
 > **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构 + `[doc:../../../hiclaw/rules.md#第十一部分]` 文档分层规范
-> **参考**: `[doc:clowder-ai/docs/design/]` 目录结构 + `[doc:../architecture/README.md]` Architecture Feature 索引结构
+> **参考**: 标准 design 目录结构 + `[doc:../architecture/README.md]` Architecture Feature 索引结构
 
 ---
 
@@ -35,35 +35,38 @@
 
 ## 3. 命名契约核心（详见 naming-contract.md）
 
-### 3.1 双轨命名策略
+### 3.1 三层命名体系（P0/P1/P2，详见 naming-contract.md §1）
 
-| 轨道 | 用途 | 主名 | 代码层名 |
-|------|------|------|---------|
-| 文档/对外 | 文档、UI、operator 沟通 | 灵智（ForgeMind） | — |
-| 代码/技术 | 代码、API、配置 | — | Forgekin |
+| 优先级 | 名称类型 | 使用场景 | 示例 |
+|:------:|---------|---------|------|
+| **P0** | **官方名称（AI 业界专业术语）** | 技术设计文档、代码、API、对外宣传 | Agent / Evolvable Agent / Episodic Memory Store / Distilled Knowledge Base |
+| **P1** | **项目英文名** | 代码类名、模块名、配置项、API 路径 | `ForgeMind` / `Forgekin` / `EchoStore` / `MindCodex` / `MindCouncil` |
+| **P2** | **体系别名（仅社交用）** | 社区讨论、技术博客口语化表达 | ForgeMind / Forgekin / EchoStore / SoulImprint / SpiritForge / MindCodex / MindCouncil / Forge Nurturing |
 
 **废弃命名**：
-- ❌ "E6 灵匠 Mind Artisan" → ✅ "灵智"
-- ❌ "炉灵" → ✅ "灵智体"
-- ❌ "魂忆" → ✅ "灵忆"（v7.1 修订）
-- ❌ "魂印" → ✅ "灵印"（v7.1 修订）
+- ❌ "E6 灵匠 Mind Artisan" → ✅ ForgeMind（Persistent Identity Agent Framework）
+- ❌ "炉灵" → ✅ Forgekin（Evolvable Agent）
+- ❌ "魂忆" → ✅ EchoStore（Episodic Memory Store，社区社交称"灵忆"）
+- ❌ "魂印" → ✅ SoulImprint（Persistent Identity，社区社交称"灵印"）
+- ❌ "自锻" → ✅ SpiritForge（Experience Distillation，社区社交称"灵锻"）
+- ❌ "锻典" → ✅ MindCodex（Distilled Knowledge Base，社区社交称"灵典"）
 - ❌ M18/M19/M20 自创术语 → ✅ M1-M17 + v7.0 FR-EVO 术语
 
-### 3.2 v7.1 术语表
+### 3.2 v7.1 核心术语表（P1 优先 + P0 概念锚定）
 
-| 术语 | 含义 |
-|------|------|
-| 灵智 ForgeMind | 最终形态主名 |
-| 灵智体 Forgekin | 代码层主名 |
-| 灵族 Forgekin Species | 灵智体形态分类（5 种） |
-| 育灵 Forge Nurturing | 灵智体锻造过程 |
-| 灵忆 EchoStore | 灵智体经验记忆 |
-| 灵印 Mind Imprint | 灵智体身份标识 |
-| 灵锻 SpiritForge | 经验蒸馏到锻典 |
-| 锻典 Mind Codex | 蒸馏经验知识库 |
-| 灵议 Mind Council | 多灵智体议事 |
-| 进化阶 Evolution Stage | E1-E6 能力成熟度 |
-| 觉醒阶 Awakening Stage | E1-E6 自主性等级 |
+| 项目英文名（P1） | 官方名称（P0） | 体系别名（P2，仅社交） | 含义 |
+|------|------|------|------|
+| ForgeMind | Persistent Identity Agent Framework | ForgeMind | 最终形态主名（应用层品牌） |
+| Forgekin | Evolvable Agent | Forgekin | 可进化智能体（代码层主名） |
+| ForgekinSpecies | Agent Morphology | 智能体形态学 | 智能体形态分类（5 种） |
+| Forge Nurturing | Agent Onboarding + Lifelong Learning | Forge Nurturing | 智能体锻造过程 |
+| EchoStore | Episodic Memory Store | EchoStore | 智能体经验记忆 |
+| SoulImprint | Persistent Identity | SoulImprint | 智能体身份标识 |
+| SpiritForge | Experience Distillation | SpiritForge | 经验蒸馏到 MindCodex |
+| MindCodex | Distilled Knowledge Base | MindCodex | 蒸馏经验知识库 |
+| MindCouncil | Multi-Agent Deliberation | MindCouncil | 多智能体议事 |
+| EvolutionStage | Capability Maturity Level | 进化阶 | E1-E6 能力成熟度 |
+| AwakeningStage | Autonomy Level | 觉醒阶 | E1-E6 自主性等级 |
 
 ---
 
@@ -72,13 +75,13 @@
 ### 4.1 多形态智能体形态视觉
 
 5 种形态分类各有视觉标识：
-- **BioForgekin**（生物灵智体）：暖色调 + 生物形态曲线
-- **OrgForgekin**（组织灵智体）：冷色调 + 网络节点拓扑
-- **ObjForgekin**（物品灵智体）：中性色 + 物品几何轮廓
-- **VirtualForgekin**（虚拟灵智体）：渐变色 + 虚拟抽象符号
-- **HybridForgekin**（混合灵智体）：多色融合 + 复合形态
+- **BioForgekin**（生物Forgekin）：暖色调 + 生物形态曲线
+- **OrgForgekin**（组织Forgekin）：冷色调 + 网络节点拓扑
+- **ObjForgekin**（物品Forgekin）：中性色 + 物品几何轮廓
+- **VirtualForgekin**（虚拟Forgekin）：渐变色 + 虚拟抽象符号
+- **HybridForgekin**（混合Forgekin）：多色融合 + 复合形态
 
-### 4.2 灵智体锻造视觉语言
+### 4.2 Forgekin锻造视觉语言
 
 锻造流水线视觉表达：原石 → 粗锻 → 精锻 → 觉醒 → 进化
 
@@ -108,6 +111,7 @@ D0XX-kebab-case-name.md
 | D026-D030 | forgemind 应用层详细设计 | F026-F030 / A026-A030 |
 | D031-D035 | 三方 Agent 集成详细设计 | F031-F035 / A031-A035 |
 | D036-D040 | 其他详细设计 | F036-F040 / A036-A040 |
+| D041-D044 | 可进化智能体详细设计（4 种组织角色） | F041-F044 / A041-A044 |
 
 #### 5.1.3 模板
 
@@ -127,7 +131,7 @@ D0XX-kebab-case-name.md
 
 ---
 
-### 5.2 Design Feature 清单（40 份）
+### 5.2 Design Feature 清单（44 份）
 
 #### 5.2.1 TeamAct 协作详细设计（D001-D007）
 
@@ -185,7 +189,7 @@ D0XX-kebab-case-name.md
 |--------|------|:----:|-------------|------------------|----------------|
 | [D026-forgemind-app-layer.md](D026-forgemind-app-layer.md) | forgemind 应用层详细设计 | ⏳ | F026 | A026 | §3.8 |
 | [D027-all-things-spirit-species.md](D027-all-things-spirit-species.md) | 多形态智能体形态分类详细设计 | ⏳ | F027 | A027 | §3.8 |
-| [D028-forging-pipeline.md](D028-forging-pipeline.md) | 灵智体锻造流水线详细设计 | ⏳ | F028 | A028 | §3.9 |
+| [D028-forging-pipeline.md](D028-forging-pipeline.md) | Forgekin锻造流水线详细设计 | ⏳ | F028 | A028 | §3.9 |
 | [D029-physical-ai-sensors.md](D029-physical-ai-sensors.md) | 物理 AI 传感器接入详细设计 | ⏳ | F029 | A029 | §3.11 |
 | [D030-virtual-world-setting.md](D030-virtual-world-setting.md) | 虚拟世界设定层详细设计 | ⏳ | F030 | A030 | §3.12 |
 
@@ -204,10 +208,21 @@ D0XX-kebab-case-name.md
 | Design | 标题 | 状态 | 对应 Feature | 对应 Architecture | 对应 design.md |
 |--------|------|:----:|-------------|------------------|----------------|
 | [D036-forgemind-forge-relationship.md](D036-forgemind-forge-relationship.md) | forgemind 与 *Forge 关系详细设计 | ⏳ | F036 | A036 | §3.8 |
-| [D037-forgemind-marketplace.md](D037-forgemind-marketplace.md) | 灵智体市场详细设计 | ⏳ | F037 | A037 | §3.13 |
-| [D038-forgemind-lineage.md](D038-forgemind-lineage.md) | 灵智体进化谱系详细设计 | ⏳ | F038 | A038 | §3.13 |
-| [D039-mind-codex-searchable.md](D039-mind-codex-searchable.md) | 灵典可检索知识库详细设计 | ⏳ | F039 | A039 | §3.4 / §3.14 |
+| [D037-forgemind-marketplace.md](D037-forgemind-marketplace.md) | Forgekin市场详细设计 | ⏳ | F037 | A037 | §3.13 |
+| [D038-forgemind-lineage.md](D038-forgemind-lineage.md) | Forgekin进化谱系详细设计 | ⏳ | F038 | A038 | §3.13 |
+| [D039-mind-codex-searchable.md](D039-mind-codex-searchable.md) | MindCodex 可检索知识库详细设计 | ⏳ | F039 | A039 | §3.4 / §3.14 |
 | [D040-harness-eval-control-plane.md](D040-harness-eval-control-plane.md) | Harness Eval 控制面详细设计 | ⏳ | F040 | A040 | §3.5 |
+
+#### 5.2.9 可进化智能体详细设计（D041-D044，4 种组织角色）
+
+> 4 种组织形态可进化智能体（OrgForgekin）的详细设计，从 design.md §2.7 提取。每种智能体有独立代号 + 5 种 action.type + 觉醒阶上限 + 进化阶路径 + 集成 F0XX 上游依赖。
+
+| Design | 标题 | 状态 | 对应 Feature | 对应 Architecture | 责任方Forgekin | 觉醒阶上限 |
+|--------|------|:----:|-------------|------------------|-------------|:----------:|
+| [D041-product-manager.md](D041-product-manager.md) | 产品经理可进化智能体详细设计 | ⏳ | F041 | A041 | 鹰·凯恩（Eagle Kane） | E3 |
+| [D042-devops.md](D042-devops.md) | 运维可进化智能体详细设计 | ⏳ | F042 | A042 | 蜂鸟·闪电（Hummingbird Flash） | E4 |
+| [D043-security-officer.md](D043-security-officer.md) | 安全官可进化智能体详细设计 | ⏳ | F043 | A043 | 狼·阿尔法（Wolf Alpha） | E3 |
+| [D044-delivery-manager.md](D044-delivery-manager.md) | 交付经理可进化智能体详细设计 | ⏳ | F044 | A044 | 象·牛顿（Elephant Newton） | E3 |
 
 ---
 
@@ -244,4 +259,5 @@ spec.md §3.X  ←─同号─→  arch.md §3.X  ←─同号─→  design.md 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
 | 2026-07-17 | v1.0 | 初版：设计规范导航（命名契约 / 控制台 / 品牌 / 动效） | Trae CN（agent） |
-| 2026-07-19 | v2.0 | **新增 FlowForge Design Feature 规格**：40 份 D0XX 文件索引（与 F0XX/A0XX 同号一一对应）+ TEMPLATE.md 模板引用 + 7 节结构说明 + 与顶层 design.md 关系图 | 文档员灵智体（钢笔·文心） |
+| 2026-07-19 | v2.0 | **新增 FlowForge Design Feature 规格**：40 份 D0XX 文件索引（与 F0XX/A0XX 同号一一对应）+ TEMPLATE.md 模板引用 + 7 节结构说明 + 与顶层 design.md 关系图 | 文档员Forgekin（钢笔·文心） |
+| 2026-07-19 | v2.1 | **新增可进化智能体详细设计**：4 份 D041-D044 文件索引（产品经理 / 运维 / 安全官 / 交付经理），从 design.md §2.7 提取 | 文档员Forgekin（钢笔·文心） |

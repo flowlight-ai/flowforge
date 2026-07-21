@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005）
 > **对应 arch.md**: [doc:../arch.md#§3.5]
 > **对应 design.md**: [doc:../design.md#§3.5]
 > **对应 Feature**: [doc:../features/F019-three-signal-cross.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A019-three-signal-cross.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/009-eval-self-metabolism.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -19,7 +18,7 @@
 
 Eval 自代谢系统（§3.5）L2 层需要将三类独立信号源交叉验证，A019 架构设计已确认三类信号源：
 1. **CVO 愿景信号**（来自 F007/F008 VISION.md 与 ROADMAP.md）
-2. **灵智体摩擦信号**（来自结构化采访，禁止自由散文）
+2. **Forgekin摩擦信号**（来自结构化采访，禁止自由散文）
 3. **runtime 观测信号**（来自 F009 FrictionSignal）
 
 本详细设计进一步下沉到代码层，需要解决以下子问题：
@@ -54,7 +53,7 @@ Eval 自代谢系统（§3.5）L2 层需要将三类独立信号源交叉验证�
 - **对 F007/F008 VISION.md / ROADMAP.md**：CVO 采集器从声明性文档派生愿景信号。本设计需保证派生算法的幂等。
 - **对 F012 退役**：当 `superseded_by` 冲突信号触发时，F012 退役流程启动。本设计需保证 sunset 信号的派发幂等。
 - **对 F040 控制面**：所有信号与冲突事件写入 F040 Eval Hub。本设计需保证事件 schema 可被 F040 消费。
-- **对 Forgekin.verify()**：Forgekin 自检接口在 verify() 中调用本设计的 `cross_validate()`，作为可进化门禁之一。
+- **对 Forgekin.verify**：Forgekin 自检接口在 verify 中调用本设计的 `cross_validate`，作为可进化门禁之一。
 - **对 DI 容器**：需新增 `signal_cross_validator` / `signal_repository` / `cvo_collector` / `friction_interview_collector` / `runtime_signal_collector` 五个绑定。
 
 ---
@@ -100,10 +99,10 @@ Eval 自代谢系统（§3.5）L2 层需要将三类独立信号源交叉验证�
 │  + collect(context) -> list[Signal]                                       │
 │                                                                            │
 │  <<interface>> CvoSignalCollector          <<interface>> FrictionInterview  │
-│  + collect_from_vision() -> list[Signal]   + conduct_interview()          │
+│  + collect_from_vision -> list[Signal]   + conduct_interview          │
 │                                                                            │
 │  <<interface>> RuntimeSignalCollector                                      │
-│  + collect_from_f009() -> list[Signal]                                      │
+│  + collect_from_f009 -> list[Signal]                                      │
 │                                                                            │
 │  <<interface>> SignalCrossValidator                                        │
 │  + cross_validate(cycle_id) -> CrossValidationResult                      │
@@ -195,7 +194,7 @@ class StructuredQuestion(BaseModel):
 
 
 class FrictionInterview(BaseModel):
-    """灵智体结构化采访"""
+    """Forgekin结构化采访"""
     model_config = ConfigDict(frozen=True)
 
     interview_id: str = Field(min_length=1)
@@ -210,7 +209,7 @@ class FrictionInterview(BaseModel):
     def _validate_no_free_form(self) -> "FrictionInterview":
         if self.forbid_free_form is not True:
             raise ValueError("forbid_free_form must be True (hard constraint)")
-        if self.free_form_reflection and self.free_form_reflection.strip():
+        if self.free_form_reflection and self.free_form_reflection.strip:
             raise ValueError(
                 "free_form_reflection must be empty (forbid_free_form=True)"
             )
@@ -276,7 +275,7 @@ class CvoSignalCollector(SignalCollector):
 
 
 class FrictionInterviewCollector(SignalCollector):
-    """灵智体结构化采访采集器"""
+    """Forgekin结构化采访采集器"""
 
     @abstractmethod
     async def conduct_interview(
@@ -315,8 +314,8 @@ class SignalCrossValidator(ABC):
         三方交叉验证主流程：
         1. 并发采集三方信号（asyncio.gather，三采集器隔离超时）
         2. 按 metric_name 分组
-        3. 调用 detect_conflicts() 检测冲突
-        4. 调用 dispatch_to_f020() 派发冲突到 F020
+        3. 调用 detect_conflicts 检测冲突
+        4. 调用 dispatch_to_f020 派发冲突到 F020
         5. 返回 CrossValidationResult
         """
 
@@ -492,7 +491,7 @@ function cross_validate(cycle_id: str) -> CrossValidationResult:
         conflicts=conflicts,
         passed=(len(conflicts) == 0),
         dispatched_count=dispatched,
-        validated_at=now(),
+        validated_at=now,
     )
 ```
 
@@ -505,7 +504,7 @@ function detect_conflicts(signals: list[Signal]) -> list[SignalConflict]:
     groups = group_by(signals, key=lambda s: s.metric_name)
 
     conflicts = []
-    for metric_name, group_signals in groups.items():
+    for metric_name, group_signals in groups.items:
         # 至少需要 2 个不同来源的信号才有冲突可能
         sources = set(s.source for s in group_signals)
         if len(sources) < 2:
@@ -520,13 +519,13 @@ function detect_conflicts(signals: list[Signal]) -> list[SignalConflict]:
                 if delta > config.conflict_threshold:
                     severity = classify_severity(delta)
                     conflict = SignalConflict(
-                        conflict_id=uuid_v7(),
+                        conflict_id=uuid_v7,
                         metric_name=metric_name,
                         signals=[s1, s2],
                         severity=severity,
                         delta=delta,
                         dispatched_to_f020=False,
-                        detected_at=now(),
+                        detected_at=now,
                     )
                     conflicts.append(conflict)
 
@@ -591,17 +590,17 @@ function collect_from_vision(vision_uri: str, cycle_id: str) -> list[Signal]:
     signals = []
     for section in doc.sections:
         # 从声明性指标派生 signal
-        if section.has_metric():
+        if section.has_metric:
             metric_name = standardize_metric_name(section.metric_name)
             signal = Signal(
-                signal_id=uuid_v7(),
+                signal_id=uuid_v7,
                 source=SignalSource.CVO_VISION,
                 forgekin_id="system_vision",  # 愿景信号无具体 forgekin
                 eval_cycle_id=cycle_id,
                 metric_name=metric_name,
                 value=section.target_value,
                 value_type=classify_value_type(section.target_value),
-                captured_at=now(),
+                captured_at=now,
                 provenance_uri=f"{vision_uri}#{section.id}",
                 idempotency_key=f"cvo:{cycle_id}:{metric_name}:system_vision",
             )
@@ -646,13 +645,13 @@ function conduct_interview(
 
     # 4. 构造 FrictionInterview（free_form_reflection 必须为空）
     interview = FrictionInterview(
-        interview_id=uuid_v7(),
+        interview_id=uuid_v7,
         forgekin_id=forgekin_id,
         eval_cycle_id=cycle_id,
         questions=selected_answers,
         free_form_reflection="",  # 硬约束：必须为空
         forbid_free_form=True,
-        conducted_at=now(),
+        conducted_at=now,
     )
 
     return interview
@@ -717,7 +716,7 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
         )
         runtime_task = self._runtime.collect_from_f009(
             forgekin_id="default", cycle_id=cycle_id,
-            time_window=self._build_default_window(),
+            time_window=self._build_default_window,
         )
 
         tasks = [cvo_task, friction_task, runtime_task]
@@ -774,7 +773,7 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
             groups.setdefault(s.metric_name, []).append(s)
 
         conflicts: list[SignalConflict] = []
-        for metric_name, group_signals in groups.items():
+        for metric_name, group_signals in groups.items:
             sources = {s.source for s in group_signals}
             if len(sources) < 2:
                 continue
@@ -786,7 +785,7 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
                     delta = self._compute_delta(s1, s2)
                     if delta > self._cfg.conflict_threshold:
                         conflicts.append(SignalConflict(
-                            conflict_id=str(uuid.uuid1()),
+                            conflict_id=str(uuid.uuid1),
                             metric_name=metric_name,
                             signals=[s1, s2],
                             severity=self._classify_severity(delta),
@@ -805,13 +804,13 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
         if self._cfg.dispatch_mode == "sync":
             for c in conflicts:
                 await self._bus.publish_sync(
-                    topic="f020.attribution.request", payload=c.model_dump()
+                    topic="f020.attribution.request", payload=c.model_dump
                 )
                 c._internal_set("dispatched_to_f020", True)  # type: ignore
         else:
             await self._bus.publish_batch(
                 topic="f020.attribution.request",
-                payloads=[c.model_dump() for c in conflicts],
+                payloads=[c.model_dump for c in conflicts],
             )
             for c in conflicts:
                 c._internal_set("dispatched_to_f020", True)  # type: ignore
@@ -839,7 +838,7 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
         for q in interview.questions:
             # 选项转换为 categorical signal
             signal = Signal(
-                signal_id=str(uuid.uuid1()),
+                signal_id=str(uuid.uuid1),
                 source=SignalSource.AGENT_FRICTION,
                 forgekin_id=interview.forgekin_id,
                 eval_cycle_id=cycle_id,
@@ -869,30 +868,30 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
 ```
 [三方交叉验证时序图]
 
-  Forgekin.verify()    cross_validator    CvoCollector   FrictionCollector  RuntimeCollector   EventBus    F020归因器
+  Forgekin.verify    cross_validator    CvoCollector   FrictionCollector  RuntimeCollector   EventBus    F020归因器
         │                    │                  │                 │                  │                │             │
-        │ cross_validate()   │                  │                 │                  │                │             │
+        │ cross_validate   │                  │                 │                  │                │             │
         ├───────────────────>│                  │                 │                  │                │             │
-        │                    │ collect_from_vision()                │                  │                │             │
+        │                    │ collect_from_vision                │                  │                │             │
         │                    ├─────────────────>│                   │                  │                │             │
         │                    │                  │ return [Signal]  │                  │                │             │
         │                    │<─────────────────┤                   │                  │                │             │
-        │                    │ conduct_interview()                  │                  │                │             │
+        │                    │ conduct_interview                  │                  │                │             │
         │                    ├─────────────────────────────────────>│                  │                │             │
         │                    │                                      │ return Interview │                │             │
         │                    │<─────────────────────────────────────┤                  │                │             │
-        │                    │ collect_from_f009()                                     │                │             │
+        │                    │ collect_from_f009                                     │                │             │
         │                    ├────────────────────────────────────────────────────────>│                │             │
         │                    │                                                          │ return [Sig]  │             │
         │                    │<────────────────────────────────────────────────────────┤                │             │
         │                    │                                                          │                │             │
         │                    │ dedup + insert_signal (Repository)                                       │             │
-        │                    │ detect_conflicts()                                                       │             │
-        │                    │ dispatch_to_f020()                                                       │             │
+        │                    │ detect_conflicts                                                       │             │
+        │                    │ dispatch_to_f020                                                       │             │
         │                    ├──────────────────────────────────────────────────────────────────────────>│             │
         │                    │                                                                          │ publish    │
         │                    │                                                                          ├───────────>│
-        │                    │                                                                          │            │ attribution_classify()
+        │                    │                                                                          │            │ attribution_classify
         │                    │                                                                          │            │
         │                    │<─────────────────── CrossValidationResult ──────────────────────────────┤             │
         │<───────────────────┤                                                                                          │
@@ -942,28 +941,28 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
 - **F020 七类归因**：通过 EventBus 订阅 `f020.attribution.request` 主题接收冲突。F020 异步消费，不阻塞 Eval 流程。
 - **F040 控制面**：所有信号、冲突、违规事件写入 F040 Eval Hub。F040 控制面订阅 `eval.cross.signal.collected` / `eval.cross.conflict.detected` 事件。
 - **F012 退役**：当 `superseded_by` 类型的冲突信号触发时，F012 退役流程启动。F012 订阅 `f012.retire.request` 事件。
-- **Forgekin.verify()**：Forgekin 自检接口在 verify() 中调用 `cross_validate()`，作为可进化门禁之一。
+- **Forgekin.verify**：Forgekin 自检接口在 verify 中调用 `cross_validate`，作为可进化门禁之一。
 - **EAC v1 契约**：本设计是 EAC v1 七契约中的"评估契约"物理承载，提供三方信号交叉验证能力。
 
 ### 4.3 集成测试点
 
 | 测试点 ID | 测试场景 | 验证点 | 责任方 |
 |----------|---------|--------|--------|
-| IT-D019-001 | 三方并发采集正常流程 | 3 个采集器均成功，signals 总数 = 三方之和 | 测试员灵智体（蜜獾·平头哥） |
-| IT-D019-002 | 单采集器超时隔离 | 1 个采集器超时，其他 2 个继续，result.total_signals 反映成功采集器 | 测试员灵智体 |
-| IT-D019-003 | 单采集器重试耗尽 | 1 个采集器重试耗尽后失败，不阻塞其他采集器 | 测试员灵智体 |
-| IT-D019-004 | 幂等去重 | 同一 idempotency_key 的 signal 仅入库一次 | 测试员灵智体 |
-| IT-D019-005 | 冲突检测（数值维度） | latency 数值差异 > 0.3 标记冲突 | 测试员灵智体 |
-| IT-D019-006 | 冲突检测（分类维度） | categorical 选项不同标记冲突（delta=1.0） | 测试员灵智体 |
-| IT-D019-007 | 冲突派发到 F020 | EventBus 收到 `f020.attribution.request` 事件 | 测试员灵智体 |
-| IT-D019-008 | forbid_free_form_reflection 硬约束 | FrictionInterview.free_form_reflection 非空时拒绝 | 测试员灵智体 |
-| IT-D019-009 | 结构化采访禁止自由文本 | StructuredQuestion.forbid_free_text=False 时拒绝 | 测试员灵智体 |
-| IT-D019-010 | CVO 愿景派生幂等 | 同一 VISION.md 多次采集派生相同 signal_id（同 idempotency_key） | 测试员灵智体 |
-| IT-D019-011 | runtime 复用 F009 | RuntimeSignalCollector 不重复定义 metric，复用 F009 定义 | 测试员灵智体 |
-| IT-D019-012 | metric_name 与 F018 契约对齐 | 不一致时 MetricNameMismatchError 抛出 | 测试员灵智体 |
-| IT-D019-013 | severity 分类正确 | delta < 0.3 LOW，0.3~0.6 MEDIUM，>= 0.6 HIGH | 测试员灵智体 |
-| IT-D019-014 | 异步派发不阻塞 Eval | dispatch_mode=async 时 cross_validate 总时延 < 5s | 测试员灵智体 |
-| IT-D019-015 | Repository 查询性能 | 1000 信号下 cycle_id 查询 < 100ms | 测试员灵智体 |
+| IT-D019-001 | 三方并发采集正常流程 | 3 个采集器均成功，signals 总数 = 三方之和 | 测试员Forgekin（蜜獾·平头哥） |
+| IT-D019-002 | 单采集器超时隔离 | 1 个采集器超时，其他 2 个继续，result.total_signals 反映成功采集器 | 测试员Forgekin |
+| IT-D019-003 | 单采集器重试耗尽 | 1 个采集器重试耗尽后失败，不阻塞其他采集器 | 测试员Forgekin |
+| IT-D019-004 | 幂等去重 | 同一 idempotency_key 的 signal 仅入库一次 | 测试员Forgekin |
+| IT-D019-005 | 冲突检测（数值维度） | latency 数值差异 > 0.3 标记冲突 | 测试员Forgekin |
+| IT-D019-006 | 冲突检测（分类维度） | categorical 选项不同标记冲突（delta=1.0） | 测试员Forgekin |
+| IT-D019-007 | 冲突派发到 F020 | EventBus 收到 `f020.attribution.request` 事件 | 测试员Forgekin |
+| IT-D019-008 | forbid_free_form_reflection 硬约束 | FrictionInterview.free_form_reflection 非空时拒绝 | 测试员Forgekin |
+| IT-D019-009 | 结构化采访禁止自由文本 | StructuredQuestion.forbid_free_text=False 时拒绝 | 测试员Forgekin |
+| IT-D019-010 | CVO 愿景派生幂等 | 同一 VISION.md 多次采集派生相同 signal_id（同 idempotency_key） | 测试员Forgekin |
+| IT-D019-011 | runtime 复用 F009 | RuntimeSignalCollector 不重复定义 metric，复用 F009 定义 | 测试员Forgekin |
+| IT-D019-012 | metric_name 与 F018 契约对齐 | 不一致时 MetricNameMismatchError 抛出 | 测试员Forgekin |
+| IT-D019-013 | severity 分类正确 | delta < 0.3 LOW，0.3~0.6 MEDIUM，>= 0.6 HIGH | 测试员Forgekin |
+| IT-D019-014 | 异步派发不阻塞 Eval | dispatch_mode=async 时 cross_validate 总时延 < 5s | 测试员Forgekin |
+| IT-D019-015 | Repository 查询性能 | 1000 信号下 cycle_id 查询 < 100ms | 测试员Forgekin |
 
 ---
 
@@ -1035,4 +1034,4 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（三方信号模型 + 交叉验证算法 + 冲突派发 F020 + forbid_free_form_reflection 硬约束 + 15 集成测试点 + 4 类 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（三方信号模型 + 交叉验证算法 + 冲突派发 F020 + forbid_free_form_reflection 硬约束 + 15 集成测试点 + 4 类 AC） | 开发者 Forgekin（猎犬·夏洛克） |

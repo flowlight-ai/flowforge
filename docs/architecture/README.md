@@ -1,8 +1,8 @@
 # FlowForge Architecture Feature 规格
 
-> **文档编号**: README.md（v1.0）
+> **文档编号**: README.md（v1.1）
 > **更新日期**: 2026-07-19
-> **用途**: 40 份 A0XX 文件的索引（Feature 级 SAD），与 [features/F0XX-xxx.md](../features/) 同号一一对应
+> **用途**: 44 份 A0XX 文件的索引（Feature 级 SAD），与 [features/F0XX-xxx.md](../features/) 同号一一对应
 > **依赖**: `[doc:../spec.md]` + `[doc:../arch.md]` + `[doc:../features/]` + `[doc:../../../hiclaw/rules.md#第十一部分]`
 
 ---
@@ -29,6 +29,7 @@ A0XX-kebab-case-name.md
 | A026-A030 | forgemind 应用层 | F026-F030 |
 | A031-A035 | 三方 Agent 集成 | F031-F035 |
 | A036-A040 | 其他 | F036-F040 |
+| A041-A044 | 可进化智能体（4 种组织角色） | F041-F044 |
 
 ### 1.3 模板
 
@@ -36,7 +37,7 @@ A0XX-kebab-case-name.md
 
 ---
 
-## 2. Architecture Feature 清单（40 份）
+## 2. Architecture Feature 清单（44 份）
 
 ### 2.1 TeamAct 协作（A001-A007）
 
@@ -94,7 +95,7 @@ A0XX-kebab-case-name.md
 |-------------|------|:----:|-------------|-------------|
 | [A026-forgemind-app-layer.md](A026-forgemind-app-layer.md) | forgemind 应用层架构 | ⏳ | F026 | §3.8 |
 | [A027-all-things-spirit-species.md](A027-all-things-spirit-species.md) | 多形态智能体形态分类架构 | ⏳ | F027 | §3.8 |
-| [A028-forging-pipeline.md](A028-forging-pipeline.md) | 灵智体锻造流水线架构 | ⏳ | F028 | §3.9 |
+| [A028-forging-pipeline.md](A028-forging-pipeline.md) | Forgekin锻造流水线架构 | ⏳ | F028 | §3.9 |
 | [A029-physical-ai-sensors.md](A029-physical-ai-sensors.md) | 物理 AI 传感器接入架构 | ⏳ | F029 | §3.11 |
 | [A030-virtual-world-setting.md](A030-virtual-world-setting.md) | 虚拟世界设定层架构 | ⏳ | F030 | §3.12 |
 
@@ -113,10 +114,19 @@ A0XX-kebab-case-name.md
 | Architecture | 标题 | 状态 | 对应 Feature | 对应 spec.md |
 |-------------|------|:----:|-------------|-------------|
 | [A036-forgemind-forge-relationship.md](A036-forgemind-forge-relationship.md) | forgemind 与 *Forge 关系架构 | ⏳ | F036 | §3.8 |
-| [A037-forgemind-marketplace.md](A037-forgemind-marketplace.md) | 灵智体市场架构 | ⏳ | F037 | §3.13 |
-| [A038-forgemind-lineage.md](A038-forgemind-lineage.md) | 灵智体进化谱系架构 | ⏳ | F038 | §3.13 |
-| [A039-mind-codex-searchable.md](A039-mind-codex-searchable.md) | 灵典可检索知识库架构 | ⏳ | F039 | §3.4 / §3.14 |
+| [A037-forgemind-marketplace.md](A037-forgemind-marketplace.md) | Forgekin市场架构 | ⏳ | F037 | §3.13 |
+| [A038-forgemind-lineage.md](A038-forgemind-lineage.md) | Forgekin进化谱系架构 | ⏳ | F038 | §3.13 |
+| [A039-mind-codex-searchable.md](A039-mind-codex-searchable.md) | MindCodex 可检索知识库架构 | ⏳ | F039 | §3.4 / §3.14 |
 | [A040-harness-eval-control-plane.md](A040-harness-eval-control-plane.md) | Harness Eval 控制面架构 | ⏳ | F040 | §3.5 |
+
+### 2.9 可进化智能体架构（A041-A044，4 种组织角色）
+
+| Architecture | 标题 | 状态 | 对应 Feature | 责任方 Forgekin |
+|-------------|------|:----:|-------------|-------------|
+| [A041-product-manager.md](A041-product-manager.md) | 产品经理可进化智能体架构 | ⏳ | F041 | 鹰·凯恩（Eagle Kane） |
+| [A042-devops.md](A042-devops.md) | 运维可进化智能体架构 | ⏳ | F042 | 蜂鸟·闪电（Hummingbird Flash） |
+| [A043-security-officer.md](A043-security-officer.md) | 安全官可进化智能体架构 | ⏳ | F043 | 狼·阿尔法（Wolf Alpha） |
+| [A044-delivery-manager.md](A044-delivery-manager.md) | 交付经理可进化智能体架构 | ⏳ | F044 | 象·牛顿（Elephant Newton） |
 
 ---
 

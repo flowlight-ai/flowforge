@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，FR-CORE-018）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]
 > **对应 Feature**: [doc:../features/F004-pingpong-circuit-breaker.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A004-pingpong-circuit-breaker.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -19,7 +18,7 @@
 
 A004 已给出 PingPongCircuitBreaker 的架构契约（实质产出判定 + 空传计数 + 熔断升级 + WAL 可重放），但未落到代码层。本详细设计在代码层解决以下问题：
 
-1. **"实质产出"判定如何避免灵智体自评欺骗**：灵智体可能撒谎说"我有产出"，必须基于工具调用记录与产出字符数等客观信号
+1. **"实质产出"判定如何避免Forgekin自评欺骗**：Forgekin可能撒谎说"我有产出"，必须基于工具调用记录与产出字符数等客观信号
 2. **连续空传计数的"连续"语义如何在状态机层严格定义**：中间一次有产出的传球是否归零，A004 决策 6 已明确归零，但代码层需保证原子性
 3. **熔断触发后的冻结如何与 TeamActState 联动**：熔断器与状态机是两个对象，需保证冻结原子性，避免熔断触发时 TeamAct 仍推进
 4. **debate_mode 豁免如何防止滥用**：豁免必须显式声明，仍记录 trace，但代码层需校验豁免合理性（不能所有传球都声明 debate_mode）
@@ -105,8 +104,8 @@ A004 已给出 PingPongCircuitBreaker 的架构契约（实质产出判定 + 空
 │   │  + tripped_at: Optional[datetime]                                │  │
 │   │  + tripped_reason: Optional[str]                                 │  │
 │   │  + debate_ratio: float  [debate 占比, 防滥用]                    │  │
-│   │  + reset() -> Self                                               │  │
-│   │  + is_frozen() -> bool                                           │  │
+│   │  + reset -> Self                                               │  │
+│   │  + is_frozen -> bool                                           │  │
 │   └────────────────────────────┬─────────────────────────────────────┘  │
 │                                │                                        │
 │                                ▼                                        │
@@ -135,7 +134,7 @@ A004 已给出 PingPongCircuitBreaker 的架构契约（实质产出判定 + 空
 │   │           PingPongStateStore (ABC, Repository 层)                │  │
 │   │  + save(state) -> None                                           │  │
 │   │  + load(team_id) -> Optional[PingPongState]                      │  │
-│   │  + list_tripped() -> list[PingPongState]                         │  │
+│   │  + list_tripped -> list[PingPongState]                         │  │
 │   │  + wal_replay(log_path) -> list[PingPongState]                   │  │
 │   └──────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -191,7 +190,7 @@ class PassRecord(BaseModel):
     """持球期产出记录（一次 Route 步对应一条）
 
     不可变记录，记录一次持球期间的工具调用、产出字符数、证据引用。
-    has_substantive_output 由 SubstantiveOutputDetector 判定，禁灵智体自评。
+    has_substantive_output 由 SubstantiveOutputDetector 判定，禁Forgekin自评。
     """
 
     record_id: str = Field(..., min_length=1)
@@ -218,7 +217,7 @@ class PassRecord(BaseModel):
     )
     has_substantive_output: bool = Field(
         default=False,
-        description="由 SubstantiveOutputDetector 判定，禁灵智体自评",
+        description="由 SubstantiveOutputDetector 判定，禁Forgekin自评",
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -561,7 +560,7 @@ class DefaultPingPongCircuitBreaker(PingPongCircuitBreaker):
             payload={
                 "team_id": team_id,
                 "reason": reason,
-                "tripped_at": datetime.now(timezone.utc).isoformat(),
+                "tripped_at": datetime.now(timezone.utc).isoformat,
             },
             trace_id=f"trip-{team_id}",
         )
@@ -588,14 +587,14 @@ class DefaultPingPongCircuitBreaker(PingPongCircuitBreaker):
             raise CircuitBreakerError(
                 f"team_id={team_id} status={state.status.value} 非 tripped"
             )
-        state.reset()
+        state.reset
         await self._store.save(state)
         await self._teamact_state_repo.unfreeze(team_id)
         await self._event_bus.publish(
             event_type="pingpong.breaker.reset",
             payload={
                 "team_id": team_id,
-                "reset_at": datetime.now(timezone.utc).isoformat(),
+                "reset_at": datetime.now(timezone.utc).isoformat,
                 "cvo_confirmed": True,
             },
             trace_id=f"reset-{team_id}",
@@ -714,7 +713,7 @@ STEPS:
    IF state.status != TRIPPED:
        RAISE CircuitBreakerError
 
-3. state.reset()
+3. state.reset
    # consecutive_empty_passes = 0, status = OPEN
    # tripped_at = None, tripped_reason = None
    # history 保留
@@ -737,7 +736,7 @@ OUTPUT: record_id = "pass-{team_id}-{iteration}-{hash8}"
 
 STEPS:
 1. raw = f"{team_id}|{iteration}|{from_forgekin_id}|{to_forgekin_id}|{utc_now_ns}"
-2. hash8 = sha256(raw).hexdigest()[:8]
+2. hash8 = sha256(raw).hexdigest[:8]
 3. record_id = f"pass-{team_id}-{iteration}-{hash8}"
 4. RETURN record_id
 ```
@@ -862,8 +861,8 @@ class SqlitePingPongStateStore(PingPongStateStore):
     ):
         self._db_path = str(db_path)
         self._wal_dir = str(wal_dir) if wal_dir else str(Path(db_path).parent)
-        self._lock = asyncio.Lock()
-        self._init_db()
+        self._lock = asyncio.Lock
+        self._init_db
 
     def _init_db(self) -> None:
         Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -871,7 +870,7 @@ class SqlitePingPongStateStore(PingPongStateStore):
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.execute("PRAGMA synchronous=NORMAL;")
             conn.executescript(self.DDL)
-            conn.commit()
+            conn.commit
         logger.info(
             "SqlitePingPongStateStore 初始化完成 db=%s", self._db_path,
         )
@@ -891,7 +890,7 @@ class SqlitePingPongStateStore(PingPongStateStore):
 
     async def save(self, state: PingPongState) -> None:
         async with self._lock:
-            def _do_save() -> None:
+            def _do_save -> None:
                 with sqlite3.connect(self._db_path) as conn:
                     conn.execute(
                         """
@@ -909,12 +908,12 @@ class SqlitePingPongStateStore(PingPongStateStore):
                             self._serialize_history(state.history),
                             state.history_max_size,
                             state.status.value,
-                            state.tripped_at.isoformat() if state.tripped_at else None,
+                            state.tripped_at.isoformat if state.tripped_at else None,
                             state.tripped_reason,
                             state.debate_count,
                             state.total_count,
                             state.debate_ratio_threshold,
-                            datetime.now(timezone.utc).isoformat(),
+                            datetime.now(timezone.utc).isoformat,
                         ),
                     )
                     for record in state.history[-5:]:
@@ -938,10 +937,10 @@ class SqlitePingPongStateStore(PingPongStateStore):
                                 json.dumps(record.evidence_refs, ensure_ascii=False),
                                 1 if record.debate_mode else 0,
                                 1 if record.has_substantive_output else 0,
-                                record.created_at.isoformat(),
+                                record.created_at.isoformat,
                             ),
                         )
-                    conn.commit()
+                    conn.commit
 
             await asyncio.to_thread(_do_save)
             logger.info(
@@ -953,41 +952,41 @@ class SqlitePingPongStateStore(PingPongStateStore):
 
     async def load(self, team_id: str) -> Optional[PingPongState]:
         async with self._lock:
-            def _do_load() -> Optional[PingPongState]:
+            def _do_load -> Optional[PingPongState]:
                 with sqlite3.connect(self._db_path) as conn:
                     conn.row_factory = sqlite3.Row
                     row = conn.execute(
                         "SELECT * FROM pingpong_states WHERE team_id = ?",
                         (team_id,),
-                    ).fetchone()
+                    ).fetchone
                 return self._row_to_state(row) if row else None
 
             return await asyncio.to_thread(_do_load)
 
     async def list_tripped(self) -> list[PingPongState]:
         async with self._lock:
-            def _do_list() -> list[PingPongState]:
+            def _do_list -> list[PingPongState]:
                 with sqlite3.connect(self._db_path) as conn:
                     conn.row_factory = sqlite3.Row
                     rows = conn.execute(
                         "SELECT * FROM pingpong_states WHERE status = ?",
                         (BreakerStatus.TRIPPED.value,),
-                    ).fetchall()
+                    ).fetchall
                 return [self._row_to_state(r) for r in rows]
 
             return await asyncio.to_thread(_do_list)
 
     async def wal_replay(self, log_path: str) -> list[PingPongState]:
         async with self._lock:
-            def _do_replay() -> list[PingPongState]:
+            def _do_replay -> list[PingPongState]:
                 with sqlite3.connect(self._db_path) as conn:
                     conn.execute("PRAGMA wal_checkpoint(FULL);")
-                    conn.commit()
+                    conn.commit
                 with sqlite3.connect(self._db_path) as conn:
                     conn.row_factory = sqlite3.Row
                     rows = conn.execute(
                         "SELECT * FROM pingpong_states ORDER BY team_id"
-                    ).fetchall()
+                    ).fetchall
                 return [self._row_to_state(r) for r in rows]
 
             return await asyncio.to_thread(_do_replay)
@@ -1064,7 +1063,7 @@ TeamActLoop    Author       CircuitBreaker   Substantive    PingPong
     │              │   └──────────┬────────┘     │              │
     │              │              │              │              │
     │              │   [TRIP]     │              │              │
-    │              │              │ trip()       │              │
+    │              │              │ trip       │              │
     │              │              │ → freeze     │              │
     │              │              │ → Eval signal│              │
     │              │              │ → CVO notify │              │
@@ -1098,9 +1097,9 @@ CVO                CircuitBreaker      TeamActStateRepo    EventBus
  │                       │ 校验 cvo_confirmed │                │
  │                       │ = True             │                │
  │                       │ load(state)        │                │
- │                       │ state.reset()      │                │
+ │                       │ state.reset      │                │
  │                       │ save(state)        │                │
- │                       ├───────────────────►│ unfreeze()     │
+ │                       ├───────────────────►│ unfreeze     │
  │                       │                    │ TeamActState   │
  │                       │                    │ .status=ACTIVE │
  │                       │◄───────────────────┤                │
@@ -1118,12 +1117,12 @@ CVO                CircuitBreaker      TeamActStateRepo    EventBus
 
 | 错误场景 | 异常类型 | 处理策略 | 用户感知 |
 |---------|---------|---------|---------|
-| 灵智体自传（from == to） | `CircuitBreakerError` | Pydantic field_validator 拦截 | TeamAct ROUTE 步重试 |
+| Forgekin自传（from == to） | `CircuitBreakerError` | Pydantic field_validator 拦截 | TeamAct ROUTE 步重试 |
 | record_id 格式错误 | `CircuitBreakerError` | Pydantic model_validator 拦截 | TeamAct 阻塞，告警 CVO |
 | status=TRIPPED 但 tripped_at 为空 | `CircuitBreakerError` | model_validator 一致性校验 | 启动失败，数据修复 |
-| 熔断触发时 TeamActState 冻结失败 | `TeamActStateError` | trip() 抛出，CVO 通知失败重试 | CVO 收到失败告警 |
-| reset 时 cvo_confirmed=False | `CvoConfirmationRequired` | 抛出，拒绝 reset | 灵智体收到"需 CVO 确认"提示 |
-| reset 时 status != TRIPPED | `CircuitBreakerError` | 抛出，避免误 reset | 灵智体收到"无需 reset"提示 |
+| 熔断触发时 TeamActState 冻结失败 | `TeamActStateError` | trip 抛出，CVO 通知失败重试 | CVO 收到失败告警 |
+| reset 时 cvo_confirmed=False | `CvoConfirmationRequired` | 抛出，拒绝 reset | Forgekin收到"需 CVO 确认"提示 |
+| reset 时 status != TRIPPED | `CircuitBreakerError` | 抛出，避免误 reset | Forgekin收到"无需 reset"提示 |
 | debate_mode 占比超阈值 | （不抛异常） | 记录 warning 日志 + debate_ratio_warning 标记 | Eval 信号记录滥用告警 |
 | SQLite 写入失败 | `sqlite3.OperationalError` | 抛出，TeamAct 重试 | TeamAct 标记 FROZEN |
 | WAL 文件损坏 | `sqlite3.DatabaseError` | 启动时 checkpoint 失败，回退备份 | 启动失败，运维介入 |
@@ -1212,7 +1211,7 @@ pingpong_cvo_escalation:
     2. 换 owner
     3. reset (cvo_confirmed=True)
 
-    禁止灵智体自恢复。
+    禁止Forgekin自恢复。
 
   reset_confirmation_template: |
     ✅ 熔断恢复确认
@@ -1287,7 +1286,7 @@ class HandoffCapsule(BaseModel):
 class EvidenceStore(ABC):
     async def collect_tool_calls(self, team_id: str, iteration: int) -> list[str]:
         """收集持球期间的工具调用 ID（熔断器输入）"""
-        # 从 ToolRegistry.execute() 日志中提取
+        # 从 ToolRegistry.execute 日志中提取
 ```
 
 ### 4.2 下游影响（被调用）
@@ -1368,13 +1367,13 @@ class MagicWordsEscapeHatch:
 | IT-4 | debate_mode 占比超 50% 告警 | `debate_ratio_warning=True` | - |
 | IT-5 | 熔断触发后 TeamActState 冻结 | `TeamActState.status=FROZEN` | A002 |
 | IT-6 | CVO 确认 reset 后解冻 | `status=OPEN`, `TeamActState.status=ACTIVE` | A002 |
-| IT-7 | 灵智体自恢复被拒绝 | `cvo_confirmed=False` 抛 `CvoConfirmationRequired` | - |
-| IT-8 | 灵智体自传被拒绝 | `from==to` 抛 `CircuitBreakerError` | - |
+| IT-7 | Forgekin自恢复被拒绝 | `cvo_confirmed=False` 抛 `CvoConfirmationRequired` | - |
+| IT-8 | Forgekin自传被拒绝 | `from==to` 抛 `CircuitBreakerError` | - |
 | IT-9 | 进程崩溃后 WAL 重放恢复状态 | `wal_replay` 返回完整状态 | A021 |
 | IT-10 | PingPong 与 HandoffCapsule 联动 | 胶囊 `has_substantive_output` 影响熔断判定 | A003 |
 | IT-11 | Eval 信号写入（熔断触发） | F018 收到 `pingpong.tripped` 信号 | A018 |
 | IT-12 | operator 拉闸（绕过熔断器） | Magic Words 直接 trip，不经 evaluate_pass | A011 |
-| IT-13 | E2E 真实 LLM 协作场景 | 3 个不同厂商灵智体协作，验证熔断器不误杀合理 debate | T1-T8 |
+| IT-13 | E2E 真实 LLM 协作场景 | 3 个不同厂商Forgekin协作，验证熔断器不误杀合理 debate | T1-T8 |
 
 ---
 
@@ -1382,12 +1381,12 @@ class MagicWordsEscapeHatch:
 
 ### 5.1 功能验收（AC）
 
-- [ ] **AC-1**: `PassRecord` 灵智体自传（`from == to`）时构造抛 `CircuitBreakerError`
+- [ ] **AC-1**: `PassRecord` Forgekin自传（`from == to`）时构造抛 `CircuitBreakerError`
 - [ ] **AC-2**: `record_id` 格式 `pass-{team_id}-{iteration}-{hash8}` 校验
 - [ ] **AC-3**: `PingPongCircuitBreaker` 通过 DI 容器注入，无直接实例化
 - [ ] **AC-4**: 熔断状态持久化通过 Repository 层（`PingPongStateStore` ABC），无 `cursor.execute`
 - [ ] **AC-5**: `max_empty_passes` / `min_output_chars` / `min_tool_calls` / `debate_ratio_threshold` 外置到 `flowforge/config/teamact.yaml`
-- [ ] **AC-6**: 实质产出判定基于 `tool_calls >= 1 OR output_chars >= 200`，禁灵智体自评
+- [ ] **AC-6**: 实质产出判定基于 `tool_calls >= 1 OR output_chars >= 200`，禁Forgekin自评
 - [ ] **AC-7**: 连续空传计数达 `max_empty_passes`（默认 3）触发熔断，禁配置关闭
 - [ ] **AC-8**: 有实质产出时计数归零（非递减）
 - [ ] **AC-9**: `debate_mode=true` 时豁免（`has_substantive_output=True`），但 `debate_count+1` 仍记录
@@ -1415,7 +1414,7 @@ class MagicWordsEscapeHatch:
 
 - [ ] **AC-26**: `flowforge/core/teamact/circuit_breaker.py` 不 import forgemind 或 *Forge 模块（单向依赖）
 - [ ] **AC-27**: 熔断状态持久化通过 Repository 层，业务代码无 `cursor.execute`
-- [ ] **AC-28**: `cvo_confirmed` 参数必须为 True 才能 reset（防灵智体自恢复）
+- [ ] **AC-28**: `cvo_confirmed` 参数必须为 True 才能 reset（防Forgekin自恢复）
 - [ ] **AC-29**: SQLite 连接使用参数化查询（防 SQL 注入）
 - [ ] **AC-30**: `record_id` 生成包含 hash8 防碰撞（SHA256 前 8 位）
 - [ ] **AC-31**: 熔断触发事件广播到 EventBus，Eval 控制面可感知
@@ -1426,7 +1425,7 @@ class MagicWordsEscapeHatch:
 - [ ] **AC-33**: 熔断恢复后 24 小时内不重复触发（避免反复熔断）
 - [ ] **AC-34**: debate_mode 滥用告警率 < 10%（Eval 信号采样）
 - [ ] **AC-35**: CVO 仲裁平均响应时间 < 30 分钟（Eval 信号采样）
-- [ ] **AC-36**: E2E 测试（T1-T8 铁律）：3 个不同厂商灵智体协作，验证熔断器不误杀合理 debate（5 轮内收敛），LLM 生成内容经 LLM 审核
+- [ ] **AC-36**: E2E 测试（T1-T8 铁律）：3 个不同厂商Forgekin协作，验证熔断器不误杀合理 debate（5 轮内收敛），LLM 生成内容经 LLM 审核
 
 ---
 
@@ -1446,7 +1445,7 @@ class MagicWordsEscapeHatch:
 - [doc:../architecture/A021-side-effect-wal.md]（WAL 可重放联动）
 - [doc:../features/F011-magic-words.md]（operator 拉闸逃生舱）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR）
-- [doc:../design/naming-contract.md#2.2]（灵智体 Forgekin 双轨命名）
+- [doc:../design/naming-contract.md#2.2]（Forgekin Forgekin 双轨命名）
 - [doc:../design/D001-capability-profile.md]（CapabilityProfile 详细设计）
 - [doc:../design/D002-teamact-loop.md]（TeamAct 详细设计，ROUTE 步触发）
 - [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
@@ -1460,4 +1459,4 @@ class MagicWordsEscapeHatch:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F004 Feature 级 SRS + A004 架构级 SAD） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F004 Feature 级 SRS + A004 架构级 SAD） | 开发者 Forgekin（猎犬·夏洛克） |

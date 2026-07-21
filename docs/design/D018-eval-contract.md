@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005）
 > **对应 arch.md**: [doc:../arch.md#§3.5]
 > **对应 design.md**: [doc:../design.md#§3.5]
 > **对应 Feature**: [doc:../features/F018-eval-contract.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A018-eval-contract.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/009-eval-self-metabolism.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -21,7 +20,7 @@ Eval 自代谢系统的入口问题是新增一块 harness 组件时无任何预
 
 本详细设计进一步下沉到代码层，需要解决以下子问题：
 
-1. **五问 Schema 的强类型化实现**：who/when/friction_metrics/regression_cases/sunset_signals 用 Pydantic 强类型而非自由文本，who 必须是灵智体类型枚举、friction_metrics 必须是 FrictionMetric 列表、sunset_signals 必须是三类枚举之一。
+1. **五问 Schema 的强类型化实现**：who/when/friction_metrics/regression_cases/sunset_signals 用 Pydantic 强类型而非自由文本，who 必须是Forgekin类型枚举、friction_metrics 必须是 FrictionMetric 列表、sunset_signals 必须是三类枚举之一。
 2. **摩擦指标可采性校验**：`friction_metrics` 中每个 metric 必须在 F019 SignalCollector 中有对应采集器，如何通过 `collector` 字段查询 F019 已注册的采集器列表。
 3. **合入门禁的 CI 集成路径**：`ContractGate.validate_on_merge(component, pr_files)` 如何在 PR 阶段被 GitHub Actions / GitLab CI 调用，返回 `GateResult` 给 CI 拒绝/通过。
 4. **契约不可变性的实现**：EvalContract 一旦注册不可修改，变更需新版本号注册。如何通过 `contract_id` 版本号 + `superseded_by` 字段实现版本链。
@@ -121,7 +120,7 @@ class SunsetSignalType(str, Enum):
 
 
 class ForgekinRole(str, Enum):
-    """责任方命名（9 大点名称修订第 6 条）"""
+    """责任方命名（参考 naming-contract.md §3）"""
     OWL_LUBAN = "owl_luban"               # 架构师=猫头鹰·鲁班
     HOUND_SHERLOCK = "hound_sherlock"      # 开发者=猎犬·夏洛克
     PEACOCK_VANGOGH = "peacock_vangogh"   # 评审员=孔雀·梵高
@@ -131,7 +130,7 @@ class ForgekinRole(str, Enum):
 
 class FrictionMetric(BaseModel):
     """单个摩擦指标"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     name: str = Field(min_length=1, max_length=128)
     target_value: float
@@ -141,7 +140,7 @@ class FrictionMetric(BaseModel):
 
 class SunsetSignal(BaseModel):
     """sunset 信号定义"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     signal_type: SunsetSignalType
     threshold: float
@@ -166,9 +165,9 @@ class EvalContract(BaseModel):
 
     @model_validator(mode="after")
     def validate_five_questions(self) -> "EvalContract":
-        if not self.who.strip():
+        if not self.who.strip:
             raise ValueError("who field must be non-empty")
-        if not self.when.strip():
+        if not self.when.strip:
             raise ValueError("when field must be non-empty")
         if not self.friction_metrics:
             raise ValueError("friction_metrics must be non-empty")
@@ -181,7 +180,7 @@ class EvalContract(BaseModel):
 
 class GateResult(BaseModel):
     """门禁结果"""
-    model_config = ConfigDict()
+    model_config = ConfigDict
 
     passed: bool
     reason: str
@@ -213,7 +212,7 @@ class EvalContractRegistry(ABC):
         """
         注册契约：
         1. 五问非空校验（Pydantic 已保证）
-        2. FrictionMetricValidator.check_collectable() 校验
+        2. FrictionMetricValidator.check_collectable 校验
         3. sunset_signals 三类型枚举校验
         4. contract_id 唯一性校验
         返回 contract_id（不可变）
@@ -421,7 +420,7 @@ function SunsetSignalDispatcher.dispatch_sunset(contract_id, signal):
 
 
 function FrictionMetricValidator.check_collectable(metrics):
-    registered = await signal_collector_registry.list_collectors()
+    registered = await signal_collector_registry.list_collectors
     for metric in metrics:
         if metric.collector not in registered:
             return False
@@ -465,7 +464,7 @@ class DefaultContractGate(ContractGate):
             return GateResult(
                 passed=True,
                 reason="CI gate disabled",
-                checked_at=datetime.utcnow(),
+                checked_at=datetime.utcnow,
             )
 
         pattern = self._config.contract_file_pattern
@@ -474,7 +473,7 @@ class DefaultContractGate(ContractGate):
             return GateResult(
                 passed=False,
                 reason=f"无 EvalContract 文件（{pattern}）",
-                checked_at=datetime.utcnow(),
+                checked_at=datetime.utcnow,
             )
 
         for cf in contract_files:
@@ -484,14 +483,14 @@ class DefaultContractGate(ContractGate):
                 return GateResult(
                     passed=False,
                     reason=f"契约加载失败: {e}",
-                    checked_at=datetime.utcnow(),
+                    checked_at=datetime.utcnow,
                 )
 
             if contract.harness_component != component:
                 return GateResult(
                     passed=False,
                     reason=f"契约组件不匹配: {contract.harness_component} != {component}",
-                    checked_at=datetime.utcnow(),
+                    checked_at=datetime.utcnow,
                 )
 
             five_q_result = self._validate_five_questions(contract)
@@ -499,7 +498,7 @@ class DefaultContractGate(ContractGate):
                 return five_q_result
 
             import asyncio
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop
             collectable = loop.run_until_complete(
                 self._validator.check_collectable(contract.friction_metrics)
             )
@@ -508,13 +507,13 @@ class DefaultContractGate(ContractGate):
                     passed=False,
                     reason=f"摩擦指标不可采: {contract.contract_id}",
                     contract_id=contract.contract_id,
-                    checked_at=datetime.utcnow(),
+                    checked_at=datetime.utcnow,
                 )
 
         return GateResult(
             passed=True,
             reason=f"契约校验通过（{len(contract_files)} 个文件）",
-            checked_at=datetime.utcnow(),
+            checked_at=datetime.utcnow,
         )
 
     def _load_contract_from_yaml(self, file_path: str) -> EvalContract:
@@ -525,19 +524,19 @@ class DefaultContractGate(ContractGate):
     def _validate_five_questions(self, contract: EvalContract) -> GateResult:
         for field in self._config.required_fields:
             value = getattr(contract, field, None)
-            if value is None or (isinstance(value, str) and not value.strip()) \
+            if value is None or (isinstance(value, str) and not value.strip) \
                or (isinstance(value, list) and not value):
                 return GateResult(
                     passed=False,
                     reason=f"五问不完整: {field} 为空",
                     contract_id=contract.contract_id,
-                    checked_at=datetime.utcnow(),
+                    checked_at=datetime.utcnow,
                 )
         return GateResult(
             passed=True,
             reason="五问完整",
             contract_id=contract.contract_id,
-            checked_at=datetime.utcnow(),
+            checked_at=datetime.utcnow,
         )
 
 
@@ -650,7 +649,7 @@ class DefaultFrictionMetricValidator(FrictionMetricValidator):
         self,
         metrics: list[FrictionMetric],
     ) -> bool:
-        registered = await self._collector_registry.list_collectors()
+        registered = await self._collector_registry.list_collectors
         registered_set = set(registered)
         for metric in metrics:
             if metric.collector not in registered_set:
@@ -662,7 +661,7 @@ class DefaultFrictionMetricValidator(FrictionMetricValidator):
 
 ```
 [契约注册路径]
-  灵智体开发新 harness 组件
+  Forgekin开发新 harness 组件
         │
         ▼
   编写 .eval_contract.yaml 文件
@@ -687,13 +686,13 @@ class DefaultFrictionMetricValidator(FrictionMetricValidator):
         │
         ├─ schema_version 兼容性校验
         ├─ contract_id 唯一性校验
-        ├─ FrictionMetricValidator.check_collectable()
+        ├─ FrictionMetricValidator.check_collectable
         │   查询 F019 已注册采集器列表
         │   不可采 → 抛 FrictionMetricNotCollectableError
         ├─ sunset_signals handler 校验
         │
         ▼
-  ContractRepository.insert_contract()
+  ContractRepository.insert_contract
         │
         ▼
   返回 contract_id（不可变）
@@ -751,7 +750,7 @@ class DefaultFrictionMetricValidator(FrictionMetricValidator):
         ├─ v1.0.superseded_by = v1.1.contract_id
         │
         ▼
-  F019 list_friction_metrics() 仅返回 v1.1 的 metrics
+  F019 list_friction_metrics 仅返回 v1.1 的 metrics
 ```
 
 ### 3.3 错误处理
@@ -821,7 +820,7 @@ error_messages:
 
 - **依赖 F013 Harnessability 评估**：
   - 契约的 `friction_metrics` 与 F013 6 项评估指标对齐
-  - 通过 `harnessability_evaluator.list_metrics()` 查询已注册指标
+  - 通过 `harnessability_evaluator.list_metrics` 查询已注册指标
 
 ### 4.2 下游影响（如何被调用）
 
@@ -938,4 +937,4 @@ error_messages:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 五问强类型 Schema + 合入门禁 CI 集成 + sunset 三类型派发 + 契约版本链） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架 + 五问强类型 Schema + 合入门禁 CI 集成 + sunset 三类型派发 + 契约版本链） | 开发者 Forgekin（猎犬·夏洛克） |

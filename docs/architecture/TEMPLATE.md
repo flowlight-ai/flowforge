@@ -13,7 +13,7 @@
 2. **A0XX 文件是 Feature 级 SAD**：补充架构视角，不重复 Feature 内容
 3. **单文件 < 50KB**，超出请拆分
 4. **必须填写"对应 spec.md/arch.md/design.md/F0XX"四字段**
-5. **必须应用 9 大点名称修订**
+5. **必须**
 
 ---
 
@@ -24,14 +24,13 @@
 
 > **状态**: ⏳ pending | 🔄 in_progress | ✅ done
 > **创建日期**: YYYY-MM-DD
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.X]（FR-CORE-0XX）
 > **对应 arch.md**: [doc:../arch.md#§3.X]
 > **对应 design.md**: [doc:../design.md#§3.X]（待创建）
 > **对应 Feature**: [doc:../features/F0XX-xxx.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D0XX-xxx.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/0XX-xxx.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -129,5 +128,5 @@ class A0XXComponent:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架） | 架构师 Forgekin（猫头鹰·鲁班） |
 ```

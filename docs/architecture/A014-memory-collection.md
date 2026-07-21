@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004）
 > **对应 arch.md**: [doc:../arch.md#§3.4]
 > **对应 design.md**: [doc:../design.md#§3.4]（待创建）
 > **对应 Feature**: [doc:../features/F014-memory-collection.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D014-memory-collection.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,28 +16,28 @@
 
 ### 1.1 架构问题
 
-灵智体（Forgekin，社区社交称"灵智体"）在执行任务时需要从多个相互独立的"知识域"读取上下文：项目权威资料（spec/ADR/git）、个人偏好、外部知识库、虚拟世界设定、情景记忆。v7.0 把所有记忆混在一个 sqlite-vec store 里，导致三个架构层问题：
+Forgekin（Evolvable Agent，社区社交称"灵智体"）在执行任务时需要从多个相互独立的"知识域"读取上下文：项目权威资料（spec/ADR/git）、个人偏好、外部知识库、虚拟世界设定、情景记忆。v7.0 把所有记忆混在一个 sqlite-vec store 里，导致三个架构层问题：
 
 1. **跨域污染**：项目铁律与候选观察一视同仁排序，铁律可能被候选观察盖过。
-2. **权限失配**：灵智体 A 的个人上下文可被灵智体 B 直接检索，无 owner 边界。
+2. **权限失配**：Forgekin A 的个人上下文可被Forgekin B 直接检索，无 owner 边界。
 3. **溯源丢失**：条目无 provenance，F020 七类归因矩阵无法回溯"知识从哪里来"。
 
-本架构解决的核心问题：**如何在记忆联邦的最底层（L1 真相源 Collection 层）建立域隔离、权威继承、生命周期可治理、来源可溯源的统一容器模型**，为 L2 治理层、L3 检索层、L6 锻典（Mind Codex）层提供唯一真相源。
+本架构解决的核心问题：**如何在记忆联邦的最底层（L1 真相源 Collection 层）建立域隔离、权威继承、生命周期可治理、来源可溯源的统一容器模型**，为 L2 治理层、L3 检索层、L6 蒸馏知识库（MindCodex）层提供唯一真相源。
 
 ### 1.2 架构约束
 
-- **单向依赖约束**：Collection 层是 L1 底座，只能被上层（L2 治理 / L3 检索 / L6 锻典）依赖，禁止反向 import。
-- **DI 容器约束**：`CollectionRegistry` 必须通过 DI 容器注入，禁止 `CollectionRegistry()` 直接实例化（编程红线第 12 条）。
+- **单向依赖约束**：Collection 层是 L1 底座，只能被上层（L2 治理 / L3 检索 / L6 蒸馏知识库）依赖，禁止反向 import。
+- **DI 容器约束**：`CollectionRegistry` 必须通过 DI 容器注入，禁止 `CollectionRegistry` 直接实例化（编程红线第 12 条）。
 - **Repository 层约束**：所有 Collection 元数据持久化必须经 Repository 层，禁止 `cursor.execute("INSERT INTO collections ...")` 直操作数据库（编程红线第 13 条）。
 - **配置驱动约束**：Collection 类型、权威等级、域隔离策略必须外置 YAML（编程红线第 11 条）。
-- **OpenSieve 约束**：Collection 条目的非结构化检索走 OpenSieve（FR-CORE-004），不另起向量库。
+- **可插拔数据源适配器约束**：Collection 条目的非结构化检索通过 Repository 层抽象（支持可插拔数据源适配器，FR-CORE-004），不在核心框架层硬绑定具体检索引擎。
 
 ### 1.3 架构影响
 
 - **对 L2 治理层（F016）**：`authority_level` 字段成为治理三要素 `Authority` 的物理承载，治理层不再独立维护权威数据。
 - **对 L3 检索层（F015）**：三检索入口必须强制 `collections` 过滤参数，跨域 join 在引擎层硬拒。
 - **对 L4 消费排序（F017）**：`entry_id` 成为消费信号的聚合粒度，14 行为指标按 entry 汇聚。
-- **对 L6 锻典（F039）**：Mind Codex 是 `external_knowledge` 类型 Collection 的特化，复用同一容器模型。
+- **对 L6 蒸馏知识库（F039）**：MindCodex 是 `external_knowledge` 类型 Collection 的特化，复用同一容器模型。
 - **对 F020 归因矩阵**：provenance 字段成为"翻译偏差 / 环境漂移"归因的溯源依据。
 
 ---
@@ -57,8 +56,8 @@
 ┌────────────────────────────────────────────────────────────────────┐
 │ L1: CollectionRegistry（域注册中心 + 域隔离仲裁器）                 │
 │  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐  │
-│  │ register()       │ │ list_by_type()   │ │ archive()        │  │
-│  │ enforce_isolate()│ │ check_authority()│ │ emit_lifecycle() │  │
+│  │ register       │ │ list_by_type   │ │ archive        │  │
+│  │ enforce_isolate│ │ check_authority│ │ emit_lifecycle │  │
 │  └──────────────────┘ └──────────────────┘ └──────────────────┘  │
 └──────────┬─────────────────────────────────────────────────────────┘
            │ Repository 层
@@ -71,8 +70,8 @@
            ▼
 ┌──────────────┬──────────────┬──────────────┬──────────────┬───────┐
 │ project_mem  │ personal_ctx │ external_kb  │ virtual_world│ echo  │
-│  (git://)    │  (owner-bound│  (OpenSieve) │  (YAML)      │ (JSONL│
-│              │   namespace) │              │              │  )    │
+│  (git://)    │  (owner-bound│  (可插拔数据  │  (YAML)      │ (JSONL│
+│              │   namespace) │   源适配器)   │              │  )    │
 └──────────────┴──────────────┴──────────────┴──────────────┴───────┘
 ```
 
@@ -80,7 +79,7 @@
 
 - **决策 1：物理隔离而非逻辑隔离**。五种 CollectionType 在物理层分库/分表存储，禁止 SQL 跨域 join。理由：逻辑隔离在性能压力下会被工程师以"临时优化"为名绕过，物理隔离是结构性约束（铁律 6 禁止盲目覆盖）。
 - **决策 2：权威等级在 Collection 级声明，条目继承**。`authority_level` 是 Collection 属性而非 entry 属性，避免每条 entry 重复声明导致的不一致。继承关系在 `CollectionEntry` 读出时由 Repository 注入。
-- **决策 3：provenance 字段必填**。每条 entry 必须携带来源（Episode ID / 文档 URI / 决策 ID），未携带 provenance 的 entry 在 `register()` 阶段被拒绝。理由：F020 归因矩阵的"环境漂移"归因依赖此字段。
+- **决策 3：provenance 字段必填**。每条 entry 必须携带来源（Episode ID / 文档 URI / 决策 ID），未携带 provenance 的 entry 在 `register` 阶段被拒绝。理由：F020 归因矩阵的"环境漂移"归因依赖此字段。
 - **决策 4：CollectionRegistry 作为 DI 单例**。整个进程内只有一个 `CollectionRegistry` 实例，由 DI 容器注入到所有上层模块。理由：防止多实例导致域隔离策略不一致。
 - **决策 5：lifecycle 状态机三态外加 archived**。`active / pending_review / deprecated / archived` 四态，archived 物理保留但不参与检索，是 Build to Persist 的体现（不删除可追溯）。
 
@@ -189,7 +188,7 @@ class CollectionRepository(ABC):
 
 ```
 [Agent 写入路径]
-  Forgekin.observe() / act()
+  Forgekin.observe / act
         │
         ▼
   CollectionRegistry.append_entry(entry)
@@ -197,10 +196,10 @@ class CollectionRepository(ABC):
         ├─ provenance 非空校验 ── 空 ──▶ 抛 ValueError，拒绝写入
         │
         ▼
-  cross_domain_join_check() ── 跨域 ──▶ 抛 CrossDomainJoinForbidden
+  cross_domain_join_check ── 跨域 ──▶ 抛 CrossDomainJoinForbidden
         │
         ▼
-  CollectionRepository.insert_entry()
+  CollectionRepository.insert_entry
         │
         ├─ authority 从 Collection 继承（不读 entry 字段）
         │
@@ -217,7 +216,7 @@ class CollectionRepository(ABC):
   F015 RetrievalFusion.search(query, collections=[...])
         │
         ▼
-  CollectionRegistry.list_by_type()  返回 active + pending_review
+  CollectionRegistry.list_by_type  返回 active + pending_review
         │  archived 被过滤掉
         ▼
   返回给 F016 GovernanceFilter 进一步过滤
@@ -230,7 +229,7 @@ class CollectionRepository(ABC):
 ### 4.1 上游依赖
 
 - 依赖 **F008 Durable State Surfaces**：Collection 元数据作为 6 类持久状态表面之一（memory federation），写入受 F008 规范约束。
-- 依赖 **F001 CapabilityProfile**：`owner_forgekin_id` 校验需查 CapabilityProfile 确认灵智体存在。
+- 依赖 **F001 CapabilityProfile**：`owner_forgekin_id` 校验需查 CapabilityProfile 确认Forgekin存在。
 
 ### 4.2 下游影响
 
@@ -238,14 +237,14 @@ class CollectionRepository(ABC):
 - 影响 **F016 记忆治理三要素**：`authority_level` 字段被治理层 Authority 枚举引用，lifecycle_status 被治理层 LifecycleStatus 枚举引用。
 - 影响 **F017 消费加权排序**：`entry_id` 是 14 行为指标的聚合主键。
 - 影响 **F020 七类归因矩阵**：provenance 字段是"环境漂移 / 翻译偏差"归因的回溯依据。
-- 影响 **F039 锻典可检索知识库**：Mind Codex 复用 `external_knowledge` CollectionType，共享同一容器模型。
+- 影响 **F039 蒸馏知识库可检索知识库**：MindCodex 复用 `external_knowledge` CollectionType，共享同一容器模型。
 
 ### 4.3 跨模块不变量
 
 - F015 RetrievalFusion 必须在调用前完成 collections 参数校验，禁止穿透到 CollectionRegistry 内部判跨域。
 - F016 GovernanceFilter 的 authority 排序必须以 Collection.authority_level 为权威源，禁止独立维护权威副本。
 - F017 ConsumptionCollector 的 entry_id 必须存在于 CollectionRegistry，禁止"幽灵 entry"。
-- F039 Mind Codex 的 codex_entry 必须能反向追溯到 CollectionEntry.entry_id。
+- F039 MindCodex 的 codex_entry 必须能反向追溯到 CollectionEntry.entry_id。
 
 ---
 
@@ -254,7 +253,7 @@ class CollectionRepository(ABC):
 ### 5.1 架构契约验收
 
 - [ ] AC-1: 单向依赖通过——`flowforge/core/memory/collection/` 不 import F015/F016/F017/F039 任何模块。
-- [ ] AC-2: DI 容器注入通过——`CollectionRegistry` 通过 `inject("collection_registry")` 获取，无直接 `CollectionRegistry()` 调用。
+- [ ] AC-2: DI 容器注入通过——`CollectionRegistry` 通过 `inject("collection_registry")` 获取，无直接 `CollectionRegistry` 调用。
 - [ ] AC-3: Repository 层通过——所有持久化操作经 `CollectionRepository`，无 `cursor.execute` 直操作数据库。
 - [ ] AC-4: 配置驱动通过——5 种 CollectionType 与权威等级均从 `config/memory_collections.yaml` 加载。
 - [ ] AC-5: 跨域 join 在引擎层硬拒，单测覆盖 5×5 跨类型组合。
@@ -289,4 +288,4 @@ class CollectionRepository(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 组件图 + 接口契约 + 跨模块不变量） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 组件图 + 接口契约 + 跨模块不变量） | 架构师 Forgekin（猫头鹰·鲁班） |

@@ -3,7 +3,7 @@
 > **状态**: ⏳ pending
 > **类型**: collaboration
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **依赖 ADR**: [doc:decisions/002-collaboration-protocol.md]
 > **依赖 Feature**: [doc:features/F001-capability-profile.md]
 > **依据**: [doc:review/review.md#第八章] RA-009~RA-016
@@ -12,7 +12,6 @@
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.2]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -27,14 +26,14 @@
 
 ### 1.2 当前痛点
 
-- MallForge 违反 P31 铁律（Agent 直接执行，未通过 LoopExecutor）
+- *Forge 业务项目违反 P31 铁律（Agent 直接执行，未通过 LoopExecutor）
 - 协作没有跨厂商 review 结构性必需
 - 乒乓球熔断（ping-pong）无机制
 
 ### 1.3 不做的影响
 
 - 无法实现 roleagent.md 第 2 章团队主循环
-- 灵智体协作会陷入死循环
+- Forgekin协作会陷入死循环
 - 跨厂商 review 缺失导致同厂商盲点
 
 ---
@@ -119,7 +118,7 @@ class TeamActState(BaseModel):
     
     def is_terminated(self) -> bool:
         """检查是否满足五项终止条件"""
-        return self.termination.all_met()
+        return self.termination.all_met
 
 
 class PingPongCircuitBreaker:
@@ -160,7 +159,7 @@ class PingPongCircuitBreaker:
 ### 3.2 实现步骤
 
 1. 定义 Pydantic 数据模型（state_machine.py）
-2. 实现 TeamActState.advance() 状态推进
+2. 实现 TeamActState.advance 状态推进
 3. 实现 HandoffCapsule 协议
 4. 实现 PingPongCircuitBreaker 熔断
 5. 集成到 ForgekinEngine（替换 EventBus + Handoff）
@@ -216,8 +215,8 @@ class PingPongCircuitBreaker:
 
 ### 5.3 E2E 测试
 
-- 3 个灵智体协作完成一个 Feature（如"创建猫灵智体"）
-- 验证交接胶囊在 3 个灵智体间正确传递
+- 3 个Forgekin协作完成一个 Feature（如"创建猫Forgekin"）
+- 验证交接胶囊在 3 个Forgekin间正确传递
 - 验证五项终止条件全部达成
 - **遵守 T1-T8 铁律**：真实 LLM、真实数据、真实工具调用
 
@@ -227,7 +226,7 @@ class PingPongCircuitBreaker:
 
 ### 6.1 谁评估
 
-- 跨厂商 reviewer 灵智体
+- 跨厂商 reviewer Forgekin
 - 自动探针（终止条件达成率）
 
 ### 6.2 评估什么
@@ -281,7 +280,7 @@ TeamAct 是 roleagent.md 第 1 章明确列出的"agent 交接协议"——编�
 
 ### 8.3 风险
 
-- 灵智体可能伪造终止条件（缓解：证据锚点 + 跨厂商 review）
+- Forgekin可能伪造终止条件（缓解：证据锚点 + 跨厂商 review）
 
 ---
 
@@ -317,5 +316,4 @@ TeamAct 是 roleagent.md 第 1 章明确列出的"agent 交接协议"——编�
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-17 | v0.1 | 初始创建 | 架构师灵智体 |
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.2 同号映射 | 文档员灵智体（钢笔·文心） |
+| 2026-07-17 | v0.1 | 初始创建 | 架构师 Forgekin |

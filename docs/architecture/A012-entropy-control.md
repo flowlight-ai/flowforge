@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，对应 FR-CORE-022）
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
 > **对应 Feature**: [doc:../features/F012-entropy-control.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D012-entropy-control.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -89,7 +88,7 @@ Entropy Control 在架构层是 Harness 七层的清理层（L6），是 Build t
 │   ┌────────────────────────────────────────────────────────────┐   │
 │   │ sunset_review_due 到期:                                     │   │
 │   │ - 自动创建 review 任务                                       │   │
-│   │ - 分配给非作者灵智体                                         │   │
+│   │ - 分配给非作者Forgekin                                         │   │
 │   │ - 触发 EntropyReviewGate                                     │   │
 │   └────────────────────────────────────────────────────────────┘   │
 │   ┌────────────────────────────────────────────────────────────┐   │
@@ -212,7 +211,7 @@ class EntropyReviewVerdict(BaseModel):
 
     @validator("rationale")
     def rationale_must_not_be_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("EntropyReviewVerdict rationale 不可为空")
         return v
 
@@ -247,7 +246,7 @@ class SunsetScheduler(ABC):
 
         架构契约:
         - sunset_review_due 到期自动创建 review 任务
-        - 分配给非作者灵智体 (reviewer != author)
+        - 分配给非作者Forgekin (reviewer != author)
         - 到期未 review 自动升级 CVO
         """
 
@@ -293,11 +292,11 @@ Forgekin 提交 commit (含 [hotfix] 标记)
 │ APScheduler 调度                                      │
 │  - sunset_review_due 到期触发                          │
 │  - 自动创建 review 任务                                 │
-│  - 分配给非作者灵智体 (reviewer != author)             │
+│  - 分配给非作者Forgekin (reviewer != author)             │
 └────────────────────────┬─────────────────────────────┘
                          │
                          ▼
-            Reviewer 灵智体执行 review
+            Reviewer Forgekin执行 review
                          │
                          │ EntropyReviewVerdict (decision + rationale)
                          ▼
@@ -399,4 +398,4 @@ Forgekin 提交 commit (含 [hotfix] 标记)
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F012 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F012 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

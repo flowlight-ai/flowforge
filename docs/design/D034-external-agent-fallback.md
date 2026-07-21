@@ -2,15 +2,14 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010）
 > **对应 arch.md**: [doc:../arch.md#§3.10]（三方 Agent 集成）
 > **对应 design.md**: [doc:../design.md#§3.10]
 > **对应 Feature**: [doc:../features/F034-external-agent-fallback.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A034-external-agent-fallback.md]（同号 Architecture 级 SAD）
 > **依赖 ADR**: [doc:../decisions/006-external-agent-integration.md]
-> **9 大点名称修订**: 已应用（双轨命名 ForgeMind/Forgekin + AI 术语优先 + 弱化万物使用"多形态智能体 (Multi-Form Agent)" + 去 AGI 化使用"通用智能体 (General-Purpose Agent)"）
-> **依赖详细设计**: [doc:D031-external-agent-adapter.md]（容器层） + [doc:D032-external-agent-profile.md]（CapabilityMatcher） + [doc:D022-tier-1-4-recovery.md]（F022 Tier 1-4 恢复分级） + [doc:D014-memory-collection.md]（F014 灵忆归档）
+> **依赖详细设计**: [doc:D031-external-agent-adapter.md]（容器层） + [doc:D032-external-agent-profile.md]（CapabilityMatcher） + [doc:D022-tier-1-4-recovery.md]（F022 Tier 1-4 恢复分级） + [doc:D014-memory-collection.md]（F014 EchoStore归档）
 
 ---
 
@@ -22,33 +21,32 @@ ExternalAgentAdapter 抽象层（D031）需要为三方 Agent 失败提供跨厂
 
 1. **5 种 FallbackTrigger 检测算法未实现**：A034 列出 TIMEOUT/RATE_LIMIT/SERVICE_UNAVAILABLE/CRASH/QUALITY_BELOW_THRESHOLD 五种触发，未给出 HTTP 状态码映射、超时阈值（30s）、退出码检测、Eval 质量分阈值（0.85）的具体实现。
 2. **5 种 FallbackAction 决策矩阵未编码**：A034 列出 RETRY_SAME/SWITCH_PROVIDER/DEGRADE_TO_BUILTIN/ESCALATE_OPERATOR/FAIL_FAST 五种动作，未给出 trigger × action 映射矩阵、Tier 1-4 联动关系、跨级恢复禁止跳级校验。
-3. **FallbackChain 构建算法未实现**：A034 要求基于 F032 CapabilityMatcher.match_for_task() + rank_by_cost_latency() 构建，未给出构建流程、step 间 next_step_id 链表结构、Tier 1-4 配置映射。
+3. **FallbackChain 构建算法未实现**：A034 要求基于 F032 CapabilityMatcher.match_for_task + rank_by_cost_latency 构建，未给出构建流程、step 间 next_step_id 链表结构、Tier 1-4 配置映射。
 4. **FallbackChainExecutor 执行循环未编码**：A034 描述"按 chain.steps 顺序执行"，未给出执行循环、失败重试 max_retries 上限、全部失败降级到内置、operator 升级通知接口。
-5. **FallbackExecutionRecord 写入 F014 灵忆未实现**：A034 要求写入 F014 供 F035 灵锻蒸馏，未给出记录结构、echo_store_ref 字段、原子写入保证。
+5. **FallbackExecutionRecord 写入 F014 EchoStore未实现**：A034 要求写入 F014 供 F035 SpiritForge蒸馏，未给出记录结构、echo_store_ref 字段、原子写入保证。
 6. **质量阈值 0.85 与项目规则一致性校验未实现**：A034 要求与项目规则一致，未给出常量定义、配置加载校验、运行时禁止修改保证。
 7. **Tier 1-4 联动跨级恢复禁止跳级校验未实现**：A034 要求 Tier 1 失败必须先尝试 Tier 2 而非直接 Tier 4，未给出跳级检测算法、违规拒绝逻辑。
 
 ### 1.2 设计约束
 
-- **单向依赖约束**：`core/external_agent/fallback.py` 仅依赖 F022 Tier 1-4 Recovery + F032 能力画像 + F014 灵忆 + F018 Eval Contract + core/interfaces，禁止反向依赖 *Forge。
+- **单向依赖约束**：`core/external_agent/fallback.py` 仅依赖 F022 Tier 1-4 Recovery + F032 能力画像 + F014 EchoStore + F018 Eval Contract + core/interfaces，禁止反向依赖 *Forge。
 - **DI 容器约束**：FallbackChainExecutor / FallbackChainBuilder / FailureDetector 实例必须通过 DI 容器注入到 ExternalAgentBridge（D031）。
-- **Repository 层约束**：FallbackExecutionRecord 写入 F014 灵忆必须通过 Repository 层，禁止直接操作数据库。
+- **Repository 层约束**：FallbackExecutionRecord 写入 F014 EchoStore必须通过 Repository 层，禁止直接操作数据库。
 - **配置驱动约束**：failure_detection / fallback_chains / chain_builder 配置必须 YAML 外置到 `config/external_agent.yaml`，禁止 .py 硬编码厂商偏好或阈值。
-- **质量阈值约束**：质量检测阈值必须为 0.85（与项目规则质量分阈值一致），禁止灵智体修改。
+- **质量阈值约束**：质量检测阈值必须为 0.85（与项目规则质量分阈值一致），禁止Forgekin修改。
 - **Tier 联动约束**：每种 FallbackTrigger 必须对应一个 F022 Tier（1-4），跨级恢复禁止跳级。
 - **5 触发枚举不可扩展约束**：FallbackTrigger 固定 5 种，运行时不可新增触发原因。
 - **5 动作枚举不可扩展约束**：FallbackAction 固定 5 种，运行时不可新增动作。
 - **全部失败降级约束**：fallback 链全部失败必须降级到 FlowForge 内置 agent，禁止任务完全失败。
-- **9 大点名称修订约束**：所有命名严格遵循双轨命名（产品层 ForgeMind / 代码层 Forgekin），AI 术语优先（Forgekin/Multi-Form Agent），弱化万物，去 AGI 化。
 
 ### 1.3 设计影响
 
 - **对 F022 Tier 1-4 恢复分级的影响**：三方 Agent 失败按 Tier 1（自动重试）/Tier 2（换厂商）/Tier 3（降级内置）/Tier 4（升级 operator）分级恢复。
-- **对 F032 能力画像的影响**：FallbackChainBuilder 基于 CapabilityMatcher.match_for_task() + rank_by_cost_latency() 构建链；fallback 执行结果通过 Eval 信号更新 historical_performance。
-- **对 F014 多域记忆的影响**：FallbackExecutionRecord 写入灵忆供 F035 灵锻蒸馏失败经验。
+- **对 F032 能力画像的影响**：FallbackChainBuilder 基于 CapabilityMatcher.match_for_task + rank_by_cost_latency 构建链；fallback 执行结果通过 Eval 信号更新 historical_performance。
+- **对 F014 多域记忆的影响**：FallbackExecutionRecord 写入EchoStore供 F035 SpiritForge蒸馏失败经验。
 - **对 F018 Eval Contract 的影响**：fallback 执行结果纳入 Eval 信号，影响三方 Agent 可靠性评估。
-- **对 D031 ExternalAgentBridge 的影响**：Bridge 在调用失败时调用 FallbackChainExecutor.execute() 执行 fallback 链。
-- **对 D035 能力融合的影响**：FallbackExecutionRecord 作为灵锻蒸馏原料，提炼"何时不应调用某厂商"的反模式知识。
+- **对 D031 ExternalAgentBridge 的影响**：Bridge 在调用失败时调用 FallbackChainExecutor.execute 执行 fallback 链。
+- **对 D035 能力融合的影响**：FallbackExecutionRecord 作为SpiritForge蒸馏原料，提炼"何时不应调用某厂商"的反模式知识。
 
 ---
 
@@ -153,9 +151,9 @@ class FallbackChain(BaseModel):
 
 ```python
 class FallbackExecutionRecord(BaseModel):
-    """fallback 执行记录（写入 F014 灵忆）
+    """fallback 执行记录（写入 F014 EchoStore）
 
-    供 F035 灵锻蒸馏"何时不应调用某厂商"的反模式知识。
+    供 F035 SpiritForge蒸馏"何时不应调用某厂商"的反模式知识。
     """
     record_id: str
     chain_id: str
@@ -168,7 +166,7 @@ class FallbackExecutionRecord(BaseModel):
     succeeded: bool                           # fallback 后是否成功
     failure_detail: str | None = None         # 失败详情（错误信息摘要）
     duration_ms: int = Field(ge=0, default=0)
-    echo_store_ref: str | None = None         # F014 灵忆集合 ID（写入后填充）
+    echo_store_ref: str | None = None         # F014 EchoStore集合 ID（写入后填充）
 
     model_config = {"extra": "forbid"}
 ```
@@ -198,7 +196,7 @@ TRIGGER_ACTION_TIER_MATRIX: dict[FallbackTrigger, tuple[FallbackAction, int]] = 
 
 
 QUALITY_THRESHOLD = 0.85
-"""质量阈值（与项目规则 v4.0 调整后默认值一致，禁止灵智体修改）"""
+"""质量阈值（与项目规则 v4.0 调整后默认值一致，禁止Forgekin修改）"""
 
 DEFAULT_TIMEOUT_SECONDS = 30
 """默认超时阈值（与 LLM webchat 调用 30s 上限一致）"""
@@ -284,8 +282,8 @@ async def build_fallback_chain(
     """构建 fallback 链
 
     算法：
-        1. 调用 CapabilityMatcher.match_for_task() 获取候选厂商（按盲点互补分降序）
-        2. 调用 CapabilityMatcher.rank_by_cost_latency() 按成本+延迟升序重排
+        1. 调用 CapabilityMatcher.match_for_task 获取候选厂商（按盲点互补分降序）
+        2. 调用 CapabilityMatcher.rank_by_cost_latency 按成本+延迟升序重排
         3. 为每个厂商生成 5 个 step（一个厂商 × 5 个 trigger）
         4. 按 Tier 升序排列 steps（Tier 1 在前）
         5. 设置 next_step_id 形成链表
@@ -301,7 +299,7 @@ async def build_fallback_chain(
     Args:
         capability_matcher: F032 CapabilityMatcher 实例
         task_requirements: 任务能力需求
-        forgekin_profile_id: 灵智体画像 ID
+        forgekin_profile_id: Forgekin画像 ID
         timeout_seconds: 超时阈值
 
     Returns:
@@ -339,7 +337,7 @@ async def build_fallback_chain(
     steps: list[FallbackChainStep] = []
     for provider_profile in ranked:
         provider_value = provider_profile.provider.value
-        for trigger, (action, tier) in TRIGGER_ACTION_TIER_MATRIX.items():
+        for trigger, (action, tier) in TRIGGER_ACTION_TIER_MATRIX.items:
             step = FallbackChainStep(
                 step_id=f"step_{provider_value}_{trigger.value}",
                 provider=provider_value,
@@ -394,7 +392,7 @@ async def execute_fallback_chain(
             - ESCALATE_OPERATOR: 通知 operator 等待人工介入
             - FAIL_FAST: 立即返回失败
         5. 全部失败 -> DEGRADE_TO_BUILTIN 兜底
-        6. 写入 FallbackExecutionRecord 到 F014 灵忆
+        6. 写入 FallbackExecutionRecord 到 F014 EchoStore
 
     Args:
         chain: fallback 链
@@ -409,8 +407,8 @@ async def execute_fallback_chain(
     Returns:
         FallbackExecutionRecord
     """
-    triggered_at = datetime.now()
-    start_ms = triggered_at.timestamp() * 1000
+    triggered_at = datetime.now
+    start_ms = triggered_at.timestamp * 1000
 
     current_step_idx = 0
     last_trigger: FallbackTrigger | None = None
@@ -435,7 +433,7 @@ async def execute_fallback_chain(
                     agent_id=step.provider,
                     state_id=state_id,
                 )
-                call_input["onboarding_summary"] = onboarding.model_dump()
+                call_input["onboarding_summary"] = onboarding.model_dump
             except Exception as e:
                 logger.warning(
                     "read_onboarding failed, proceeding without summary",
@@ -563,11 +561,11 @@ async def execute_fallback_chain(
         except Exception as e:
             last_failure_detail = f"final builtin agent failed: {e}"
 
-    end_ms = datetime.now().timestamp() * 1000
+    end_ms = datetime.now.timestamp * 1000
     duration_ms = int(end_ms - start_ms)
 
     record = FallbackExecutionRecord(
-        record_id=f"fer_{chain.chain_id}_{uuid.uuid4().hex[:8]}",
+        record_id=f"fer_{chain.chain_id}_{uuid.uuid4.hex[:8]}",
         chain_id=chain.chain_id,
         triggered_at=triggered_at,
         trigger=last_trigger or FallbackTrigger.SERVICE_UNAVAILABLE,
@@ -741,7 +739,7 @@ class FallbackChainExecutor(ABC):
     async def write_record_to_echo_store(
         self, record: FallbackExecutionRecord
     ) -> str:
-        """将执行记录写入 F014 灵忆（供 F035 灵锻蒸馏）"""
+        """将执行记录写入 F014 EchoStore（供 F035 SpiritForge蒸馏）"""
         ...
 ```
 
@@ -783,7 +781,7 @@ class HarnessFallbackChainExecutor(FallbackChainExecutor):
             shared_state_handoff=self._handoff,
             state_id=state_id,
         )
-        # 写入 F014 灵忆
+        # 写入 F014 EchoStore
         echo_ref = await self.write_record_to_echo_store(record)
         updated_record = record.model_copy(
             update={"echo_store_ref": echo_ref}
@@ -810,7 +808,7 @@ class HarnessFallbackChainExecutor(FallbackChainExecutor):
     ) -> str:
         echo_ref = await self._echo_repo.save(
             key=f"fallback_record_{record.record_id}",
-            value=record.model_dump(),
+            value=record.model_dump,
             collection="external_agent_fallback_records",
         )
         return echo_ref
@@ -862,10 +860,10 @@ class FallbackConfigLoader:
         self,
         config_path: str = "config/external_agent.yaml",
     ) -> None:
-        self._config_path = Path(config_path).resolve()
+        self._config_path = Path(config_path).resolve
 
     def load(self) -> dict:
-        if not self._config_path.exists():
+        if not self._config_path.exists:
             raise FileNotFoundError(
                 f"external_agent.yaml not found: {self._config_path}"
             )
@@ -896,7 +894,7 @@ fallback:
   timeout_seconds: 30                  # 超时阈值（与 LLM webchat 30s 上限一致）
   quality_threshold: 0.85              # 质量阈值（项目规则铁律，禁止修改）
   max_retries: 2                       # RETRY_SAME 最大重试次数
-  echo_store_collection: "external_agent_fallback_records"  # F014 灵忆集合
+  echo_store_collection: "external_agent_fallback_records"  # F014 EchoStore集合
   operator_notify_timeout_seconds: 300 # operator 响应超时（5 分钟）
   auto_degrade_on_all_fail: true       # 全部失败时自动降级到内置 agent
 ```
@@ -910,7 +908,7 @@ def register_external_agent_fallback_layer(
 ) -> None:
     """注册三方 Agent 失败回退层到 DI 容器"""
     config_loader = FallbackConfigLoader(config_path=config_path)
-    config = config_loader.load()
+    config = config_loader.load
 
     echo_store_repo = container.resolve_repository(
         model_type="EchoStoreEntry",
@@ -991,7 +989,7 @@ class ExternalAgentBridge:
 
         # 2. 执行 fallback 链
         initial_call = {
-            "task": task.model_dump(),
+            "task": task.model_dump,
             "forgekin_id": forgekin_id,
         }
         record = await self._fb_executor.execute(
@@ -1020,7 +1018,7 @@ class ExternalAgentBridge:
         return ExternalAgentResult(
             task_id=task.task_id,
             success=record.succeeded,
-            output={"fallback_record": record.model_dump()},
+            output={"fallback_record": record.model_dump},
             error=None if record.succeeded else record.failure_detail,
             execution_trace=[],
             cost_incurred=0.0,
@@ -1067,18 +1065,18 @@ class TierProgressionViolationError(Exception):
     def __init__(self, from_tier: int, to_tier: int, reason: str) -> None:
         self.from_tier = from_tier
         self.to_tier = to_tier
-        super().__init__(
+        super.__init__(
             f"Tier progression violation: {from_tier} -> {to_tier}: {reason}"
         )
 ```
 
 ### 4.3 与 F032 CapabilityMatcher 协作
 
-FallbackChainBuilder 调用 CapabilityMatcher.match_for_task() + rank_by_cost_latency() 构建链（详见 §2.4 build_fallback_chain 算法）。
+FallbackChainBuilder 调用 CapabilityMatcher.match_for_task + rank_by_cost_latency 构建链（详见 §2.4 build_fallback_chain 算法）。
 
 ### 4.4 与 F014 EchoStore 协作（归档）
 
-FallbackExecutionRecord 写入 F014 EchoStore 灵忆集合 `external_agent_fallback_records`，供 F035 灵锻蒸馏。
+FallbackExecutionRecord 写入 F014 EchoStore EchoStore集合 `external_agent_fallback_records`，供 F035 SpiritForge蒸馏。
 
 ### 4.5 与 F018 Eval Contract 协作
 
@@ -1130,11 +1128,11 @@ class HarnessCapabilityDistiller(CapabilityDistiller):
             key = (record.from_provider, record.trigger.value)
             clusters.setdefault(key, []).append(record)
 
-        for (provider, trigger), records in clusters.items():
+        for (provider, trigger), records in clusters.items:
             if len(records) < 3:
                 continue  # CL-003 L0->L1 需 3+ 相似 Episode
             candidate = CapabilityDistillationCandidate(
-                candidate_id=f"anti_pattern_{provider}_{trigger}_{uuid.uuid4().hex[:8]}",
+                candidate_id=f"anti_pattern_{provider}_{trigger}_{uuid.uuid4.hex[:8]}",
                 fusion_sources=[],  # 由 D035 内部填充
                 distilled_capability=f"避免在 {trigger} 场景下调用 {provider}",
                 trigger_pattern=f"{provider} 在 {trigger} 场景下失败",
@@ -1155,15 +1153,15 @@ class HarnessCapabilityDistiller(CapabilityDistiller):
 ```
 [ExternalAgentBridge] --invoke_with_fallback(forgekin_id, task)-->
     |
-    | 1. FallbackChainBuilder.build_for_task()
+    | 1. FallbackChainBuilder.build_for_task
     v
 [FallbackChainBuilder (D034)]
     |
-    | 2. CapabilityMatcher.match_for_task() (D032)
+    | 2. CapabilityMatcher.match_for_task (D032)
     v
 [CapabilityMatcher] --candidates: [claude_code, codex, opencode, trae]-->
     |
-    | 3. CapabilityMatcher.rank_by_cost_latency() (D032)
+    | 3. CapabilityMatcher.rank_by_cost_latency (D032)
     v
 [ranked candidates] --按成本+延迟升序-->
     |
@@ -1268,7 +1266,7 @@ class HarnessCapabilityDistiller(CapabilityDistiller):
 - [ ] **AC-F-15**: execute_fallback_chain 在 DEGRADE_TO_BUILTIN 步成功时跳出循环。
 - [ ] **AC-F-16**: execute_fallback_chain 在 ESCALATE_OPERATOR 步 operator 未响应时进入 next_step。
 - [ ] **AC-F-17**: execute_fallback_chain 全部失败时调用 builtin_agent_invoker 兜底。
-- [ ] **AC-F-18**: HarnessFallbackChainExecutor.execute 写入 FallbackExecutionRecord 到 F014 灵忆。
+- [ ] **AC-F-18**: HarnessFallbackChainExecutor.execute 写入 FallbackExecutionRecord 到 F014 EchoStore。
 - [ ] **AC-F-19**: FallbackConfigLoader 校验 quality_threshold == 0.85，违反触发 ValueError。
 - [ ] **AC-F-20**: FallbackExecutionRecord.echo_store_ref 在写入 F014 后填充。
 
@@ -1304,7 +1302,7 @@ class HarnessCapabilityDistiller(CapabilityDistiller):
 - [ ] **AC-E-04**: FallbackExecutionRecord.succeeded=False 且 to_provider="operator" 时返回 0.3。
 - [ ] **AC-E-05**: FallbackExecutionRecord.action_taken=FAIL_FAST 时返回 0.0。
 - [ ] **AC-E-06**: fallback 执行结果通过 Eval 信号回流到 PerformanceLog，total_calls +1。
-- [ ] **AC-E-07**: 同一 provider 在 3+ 次同种 trigger 失败后，D035 灵锻可蒸馏出反模式知识。
+- [ ] **AC-E-07**: 同一 provider 在 3+ 次同种 trigger 失败后，D035 SpiritForge可蒸馏出反模式知识。
 - [ ] **AC-E-08**: Tier 升级路径严格按 1 -> 2 -> 3 -> 4，跳级被 TierProgressionViolationError 拒绝。
 
 ### 5.5 集成测试点（Integration Test Points）
@@ -1359,7 +1357,7 @@ class HarnessCapabilityDistiller(CapabilityDistiller):
 - [doc:../features/F022-tier-1-4-recovery.md]（Tier 1-4 恢复分级）
 - [doc:../features/F032-external-agent-profile.md]（CapabilityMatcher）
 - [doc:../features/F033-external-agent-shared-state.md]（Onboarding 传递）
-- [doc:../features/F014-memory-collection.md]（EchoStore 灵忆归档）
+- [doc:../features/F014-memory-collection.md]（EchoStore EchoStore归档）
 - [doc:../features/F018-eval-contract.md]（Eval 信号）
 - [doc:../features/F031-external-agent-adapter.md]（Bridge 调用）
 - [doc:../features/F035-external-agent-capability-fusion.md]（反模式蒸馏）
@@ -1376,4 +1374,4 @@ class HarnessCapabilityDistiller(CapabilityDistiller):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（5 触发 + 5 动作 + 决策矩阵 + 失败检测算法 + 链构建算法 + 执行循环 + Tier 1-4 联动 + 质量阈值 0.85 + 灵忆归档 + 反模式蒸馏协作 + 20 功能 AC + 8 性能 AC + 10 安全 AC + 8 Eval AC + 20 集成测试点） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（5 触发 + 5 动作 + 决策矩阵 + 失败检测算法 + 链构建算法 + 执行循环 + Tier 1-4 联动 + 质量阈值 0.85 + EchoStore归档 + 反模式蒸馏协作 + 20 功能 AC + 8 性能 AC + 10 安全 AC + 8 Eval AC + 20 集成测试点） | 架构师 Forgekin（猫头鹰·鲁班） |

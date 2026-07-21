@@ -25,7 +25,7 @@ harness-feedback/
 ├── eval-domains/                      # Eval 域定义（YAML）
 │   ├── eval-a2a.yaml                  # A2A 协作 eval
 │   ├── eval-memory.yaml               # 记忆召回 eval
-│   ├── eval-forgemind.yaml            # 万物灵智体 eval
+│   ├── eval-forgemind.yaml            # 可进化智能体 eval
 │   ├── eval-external-agent.yaml       # 三方 Agent eval
 │   └── eval-friction.yaml             # 摩擦信号 eval
 └── verdicts/                          # Eval 裁决记录
@@ -44,9 +44,9 @@ harness-feedback/
 
 评估多域记忆联邦：三入口检索准确率、消费加权排序有效性、记忆治理三要素执行度。
 
-### 3.3 eval-forgemind.yaml — 万物灵智体 eval
+### 3.3 eval-forgemind.yaml — 可进化智能体 eval
 
-评估灵智体锻造：5 种形态灵智体创建正确性、传感器接入稳定性、虚拟世界设定一致性、形态进化合法性。
+评估可进化智能体锻造：5 种形态可进化智能体创建正确性、传感器接入稳定性、虚拟世界设定一致性、形态进化合法性。
 
 ### 3.4 eval-external-agent.yaml — 三方 Agent eval
 
@@ -54,7 +54,7 @@ harness-feedback/
 
 ### 3.5 eval-friction.yaml — 摩擦信号 eval
 
-评估灵智体协作摩擦：返工率、跨厂商盲点检出率、用户可见崩塌率、波动吸收因子。
+评估可进化智能体协作摩擦：返工率、跨厂商盲点检出率、用户可见崩塌率、波动吸收因子。
 
 ---
 
@@ -114,7 +114,7 @@ harness-feedback/
   "confidence": 0.87,
   "evidence": [
     {"signal": "trace", "value": "CapabilityProfile.gap_analysis skipped"},
-    {"signal": "user_feedback", "value": "灵智体未识别猫的习性"},
+    {"signal": "user_feedback", "value": "可进化智能体未识别猫的习性"},
     {"signal": "probe", "value": "memory_recall_accuracy=0.42"}
   ],
   "recommended_action": "refactor_harness"
@@ -141,4 +141,4 @@ harness-feedback/
 - **不可变性**：bundles/ 数据写入后不可修改（审计要求）
 - **保留期**：verdicts/ 永久保留；bundles/ 保留 90 天
 - **隐私**：用户反馈数据脱敏后存储
-- **可检索**：所有 Eval 数据通过灵典 Mind Codex 可检索（`[doc:features/F039-mind-codex-searchable.md]`）
+- **可检索**：所有 Eval 数据通过蒸馏知识库（MindCodex） 可检索（`[doc:features/F039-mind-codex-searchable.md]`）

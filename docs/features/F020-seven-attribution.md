@@ -6,11 +6,10 @@
 > **关联 ADR**: [doc:decisions/009-eval-self-metabolism.md]
 > **类型**: eval
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.5]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.5]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -24,7 +23,7 @@
 
 `[doc:review/review.md#RA-034]` 指出：roleagent.md 第 5 章七类归因——①愿景缺口②翻译偏差③harness 错位④工具缺口⑤执行缺口⑥环境漂移⑦品味落差。v7.0 失败归因只能到"agent 没做好"→优化 prompt→换模型，把多层系统拍扁成一维答案。导致真正的根因（如 harness 错位）永远修不到。
 
-不做这个 Feature，F019 三方信号交叉的冲突无分类出口，F039 灵典可检索知识库无法按归因类型检索历史失败，F040 控制面无法识别"哪类根因最频繁"。这是 roleagent.md 第 5 章 Eval 自代谢的根因治理。
+不做这个 Feature，F019 三方信号交叉的冲突无分类出口，F039 MindCodex可检索知识库无法按归因类型检索历史失败，F040 控制面无法识别"哪类根因最频繁"。这是 roleagent.md 第 5 章 Eval 自代谢的根因治理。
 
 ## 3. 详细设计（Detailed Design）
 
@@ -108,18 +107,18 @@ seven_attribution:
 
 ### 5.2 集成测试
 
-- 接入 F009 Evidence & Sensors、F019 三方信号交叉、F039 灵典。
+- 接入 F009 Evidence & Sensors、F019 三方信号交叉、F039 MindCodex。
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体执行失败任务，采集证据与信号，验证归因落到七类之一并路由修复。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin执行失败任务，采集证据与信号，验证归因落到七类之一并路由修复。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第5章]
 - [doc:review/review.md#第八章/RA-034]
 - [doc:decisions/009-eval-self-metabolism.md]
-- [doc:design/naming-contract.md#2.8]（锻典 Mind Codex）
+- [doc:design/naming-contract.md#2.8]（MindCodex 蒸馏知识库）
 - [doc:features/F009-evidence-sensors.md]
 - [doc:features/F012-entropy-control.md]
 - [doc:features/F018-eval-contract.md]
@@ -133,4 +132,3 @@ seven_attribution:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.5 同号映射 | 文档员灵智体（钢笔·文心） |

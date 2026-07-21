@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.1]（FR-CORE-001）
 > **对应 arch.md**: [doc:../arch.md#§3.1]
 > **对应 design.md**: [doc:../design.md#§3.1]
 > **对应 Feature**: [doc:../features/F001-capability-profile.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A001-capability-profile.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/004-capability-profile-routing.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -169,7 +168,7 @@ class DefaultCapabilityRouter(CapabilityRouter):
     ) -> RoutingDecision:
         cache_key = f"{task.task_id}:{hash(tuple(c.forgekin_id for c in candidates))}"
         cached = self._cache.get(cache_key)
-        if cached and (datetime.now() - cached[1]).total_seconds() < self._cache_ttl:
+        if cached and (datetime.now - cached[1]).total_seconds < self._cache_ttl:
             logger.debug("capability.route.cache_hit", task_id=task.task_id)
             return cached[0]
 
@@ -207,7 +206,7 @@ class DefaultCapabilityRouter(CapabilityRouter):
             blind_spot_warnings=warnings,
             runner_up_id=runner_up,
         )
-        self._cache[cache_key] = (decision, datetime.now())
+        self._cache[cache_key] = (decision, datetime.now)
         logger.info(
             "capability.route.decision",
             task_id=task.task_id,
@@ -327,7 +326,7 @@ class ModelCapability(BaseModel):
     @field_validator("model_name")
     @classmethod
     def name_must_not_be_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("model_name 不可为空")
         return v
 
@@ -378,7 +377,7 @@ class PerformanceLog(BaseModel):
 
 
 class CapabilityProfile(BaseModel):
-    """灵智体能力画像 — 长期主体画像（跨 session 持续）"""
+    """Forgekin能力画像 — 长期主体画像（跨 session 持续）"""
 
     forgekin_id: str
     model_capability: ModelCapability                    # 常量层
@@ -415,13 +414,13 @@ class CapabilityProfile(BaseModel):
         return gaps
 
     def has_blind_spot_conflict(self, other: "CapabilityProfile") -> bool:
-        """检查与另一灵智体的盲点是否冲突（用于跨厂商 review 配对）"""
+        """检查与另一Forgekin的盲点是否冲突（用于跨厂商 review 配对）"""
         # 同厂商必冲突（共享训练分布偏差）
         if self.model_capability.vendor == other.model_capability.vendor:
             return True
         # 描述相似度（Jaccard on tokens）
         def tokenize(desc: str) -> set[str]:
-            return set(desc.lower().split())
+            return set(desc.lower.split)
 
         for bs_self in self.blind_spots:
             t_self = tokenize(bs_self.description)
@@ -457,7 +456,7 @@ class CapabilityProfile(BaseModel):
                 f"不可作为 {expected_layer} 层修改"
             )
         setattr(self, field_name, value)
-        self.updated_at = datetime.now()
+        self.updated_at = datetime.now
         return self
 
 
@@ -622,7 +621,7 @@ class SqliteCapabilityRepository(CapabilityRepository):
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
         self._conn: Optional[sqlite3.Connection] = None
-        self._init_db()
+        self._init_db
 
     def _init_db(self) -> None:
         self._conn = sqlite3.connect(self._db_path, isolation_level=None)
@@ -633,7 +632,7 @@ class SqliteCapabilityRepository(CapabilityRepository):
     async def save(self, profile: CapabilityProfile) -> str:
         if self._conn is None:
             raise RuntimeError("DB connection not initialized")
-        payload = profile.model_dump_json()
+        payload = profile.model_dump_json
         self._conn.execute(
             """
             INSERT OR REPLACE INTO capability_profiles
@@ -645,7 +644,7 @@ class SqliteCapabilityRepository(CapabilityRepository):
                 profile.model_capability.vendor,
                 payload,
                 profile.harness_fit_score,
-                datetime.now().isoformat(),
+                datetime.now.isoformat,
             ),
         )
         logger.info("capability.profile.saved", forgekin_id=profile.forgekin_id)
@@ -657,7 +656,7 @@ class SqliteCapabilityRepository(CapabilityRepository):
         row = self._conn.execute(
             "SELECT profile_json FROM capability_profiles WHERE forgekin_id = ?",
             (forgekin_id,),
-        ).fetchone()
+        ).fetchone
         if row is None:
             return None
         return CapabilityProfile.model_validate_json(row["profile_json"])
@@ -681,7 +680,7 @@ class SqliteCapabilityRepository(CapabilityRepository):
                 eval_signal.eval_id,
                 1 if eval_signal.success else 0,
                 eval_signal.quality_score,
-                datetime.now().isoformat(),
+                datetime.now.isoformat,
             ),
         )
         profile = await self.load(forgekin_id)
@@ -722,7 +721,7 @@ class SqliteCapabilityRepository(CapabilityRepository):
         # 简单筛选：先按 vendor 全量加载，再 Python 过滤
         rows = self._conn.execute(
             "SELECT profile_json FROM capability_profiles"
-        ).fetchall()
+        ).fetchall
         candidates: list[CapabilityProfile] = []
         for row in rows:
             try:
@@ -774,7 +773,7 @@ TeamAct Owner 步 (A002)
 ┌────────────────────────────────────────────────────────────────┐
 │ 4. TeamActState.current_owner = decision.selected_forgekin_id │
 │    - 写入 Evidence (F009): RoutingDecision 作为路由证据         │
-│    - 触发 F006 BallCustodyLease.acquire()                      │
+│    - 触发 F006 BallCustodyLease.acquire                      │
 └────────────────────────────────────────────────────────────────┘
 
 [任务完成后异步]
@@ -828,8 +827,8 @@ class LRUCache(Generic[K, V]):
 
     def __init__(self, maxsize: int = 1000) -> None:
         self._maxsize = maxsize
-        self._data: OrderedDict[K, V] = OrderedDict()
-        self._lock = Lock()
+        self._data: OrderedDict[K, V] = OrderedDict
+        self._lock = Lock
 
     def get(self, key: K) -> Optional[V]:
         with self._lock:
@@ -870,7 +869,7 @@ class TeamActLoopExecutor:
     async def owner_step(self, team_id: str, task_profile) -> str:
         candidates = await self._repo.list_by_capability(task_profile)
         if not candidates:
-            raise RuntimeError(f"无候选灵智体可承担 task={task_profile.task_id}")
+            raise RuntimeError(f"无候选Forgekin可承担 task={task_profile.task_id}")
         decision = await self._router.route(task_profile, candidates)
         # 同步到 TeamActState
         await self._shared_state.update_owner(team_id, decision.selected_forgekin_id)
@@ -878,7 +877,7 @@ class TeamActLoopExecutor:
         await self._evidence_collector.collect(
             etype="trace_log",
             forgekin_id=decision.selected_forgekin_id,
-            payload={"routing_decision": decision.model_dump()},
+            payload={"routing_decision": decision.model_dump},
         )
         return decision.selected_forgekin_id
 ```
@@ -1006,7 +1005,7 @@ from flowforge.core.capability.storage import EvalSignal
 @pytest.mark.asyncio
 async def test_route_picks_best_skill_match(real_llm_client, real_db):
     """T1 真实 LLM + T2 真实场景数据 + T3 具体断言"""
-    # Arrange: 5 个不同厂商的灵智体 (DeepSeek/Qwen/GLM/Kimi/HunYuan)
+    # Arrange: 5 个不同厂商的Forgekin (DeepSeek/Qwen/GLM/Kimi/HunYuan)
     candidates = [
         CapabilityProfile(
             forgekin_id=f"forgekin_{vendor}",
@@ -1071,7 +1070,7 @@ async def test_blind_spot_overlap_blocks_same_vendor_pairing(real_db):
 - [ ] AC-1: `CapabilityProfile` 可创建并持久化到 SQLite（通过 `CapabilityRepository.save`）
 - [ ] AC-2: `blind_spots` 为空列表时构造抛 `ValidationError`
 - [ ] AC-3: `mutate_field` 拒绝跨可变性层修改（如把常量层当瞬时层修改）
-- [ ] AC-4: `CapabilityRouter.route()` 返回 `RoutingDecision` 含 `score_breakdown`（5 维明细）
+- [ ] AC-4: `CapabilityRouter.route` 返回 `RoutingDecision` 含 `score_breakdown`（5 维明细）
 - [ ] AC-5: 路由算法基于能力匹配而非角色（验证 `skill_match` 权重最高）
 - [ ] AC-6: `has_blind_spot_conflict` 同厂商返回 True（必冲突）
 - [ ] AC-7: `update_performance` 后 `total_tasks` 单调递增，禁回退
@@ -1090,7 +1089,7 @@ async def test_blind_spot_overlap_blocks_same_vendor_pairing(real_db):
 ### 5.3 安全验收
 
 - [ ] AC-16: 所有 DB 操作通过 `CapabilityRepository` 抽象，无 `cursor.execute("INSERT INTO capability_profiles...")` 直操作
-- [ ] AC-17: 画像更新必须由 `EvalSignal` 触发（禁灵智体主动修改自己的画像）
+- [ ] AC-17: 画像更新必须由 `EvalSignal` 触发（禁Forgekin主动修改自己的画像）
 - [ ] AC-18: 跨厂商 review 配对 `overlap_score >= 0.3` 时配对被拒绝
 - [ ] AC-19: ExternalAgentProfile 融合后保留原厂商溯源，不可降级为"内部能力"
 - [ ] AC-20: `decay_tag=SUNSET_REVIEW_DUE` 的画像必须经 ADR 流程才可彻底退役
@@ -1124,4 +1123,4 @@ async def test_blind_spot_overlap_blocks_same_vendor_pairing(real_db):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F001/A001） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F001/A001） | 开发者 Forgekin（猎犬·夏洛克） |

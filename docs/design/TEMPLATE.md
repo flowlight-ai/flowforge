@@ -13,7 +13,7 @@
 2. **D0XX 文件是 Feature 级 SDD**：补充详细设计视角（类签名 / 算法 / 时序 / 数据结构 / 配置项），不重复 Feature / Architecture 内容
 3. **单文件 < 50KB**，超出请拆分
 4. **必须填写"对应 spec.md / arch.md / design.md / F0XX / A0XX"五字段**
-5. **必须应用 9 大点名称修订**（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
+5. **必须**（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 6. **每节模板要素**：关联文档引用 + 关键类/接口代码 + 关键算法 + 数据结构 + 时序图 + 错误处理 + 性能设计 + 安全设计 + 配置项 + Built to Delete/Persist 标记
 7. **禁止使用全角问号 `？`**，必须用半角 `?`
 8. **禁止写"待补充"占位符**——未实现部分必须明确标注 `TODO` 并记录为 Bug（T5 铁律）
@@ -27,14 +27,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: YYYY-MM-DD
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.X]（FR-CORE-0XX）
 > **对应 arch.md**: [doc:../arch.md#§3.X]
 > **对应 design.md**: [doc:../design.md#§3.X]
 > **对应 Feature**: [doc:../features/F0XX-xxx.md]（同号Feature级SRS）
 > **对应 Architecture**: [doc:../architecture/A0XX-xxx.md]（同号Feature级SAD）
 > **依赖 ADR**: [doc:../decisions/0XX-xxx.md]（如有）
-> **9 大点名称修订**: 已应用（双轨命名 + AI术语优先 + 弱化万物 + 去AGI化）
 
 ---
 
@@ -205,7 +204,7 @@ Caller ──→ D0XXComponent ──→ Dependency A
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架） | 开发者 Forgekin（猎犬·夏洛克） |
 ```
 
 ---
@@ -216,14 +215,13 @@ Caller ──→ D0XXComponent ──→ Dependency A
 
 1. **状态**：⏳ pending / 🔄 in_progress / ✅ done / ❌ deprecated / 🚫 blocked
 2. **创建日期**：YYYY-MM-DD 格式
-3. **负责人**：开发者灵智体（猎犬·夏洛克）
+3. **负责人**：开发者 Forgekin（猎犬·夏洛克）
 4. **对应 spec.md**：引用 spec.md §3.X（FR-CORE-0XX）
 5. **对应 arch.md**：引用 arch.md §3.X
 6. **对应 design.md**：引用 design.md §3.X
 7. **对应 Feature**：引用 features/F0XX-xxx.md（同号 Feature 级 SRS）
 8. **对应 Architecture**：引用 architecture/A0XX-xxx.md（同号 Feature 级 SAD）
 9. **依赖 ADR**：引用 decisions/0XX-xxx.md（如有）
-10. **9 大点名称修订**：已应用（必须勾选）
 
 ### 7 节结构说明
 
@@ -236,15 +234,3 @@ Caller ──→ D0XXComponent ──→ Dependency A
 | 5 | 详细设计验收 | 功能验收 / 性能验收 / 安全验收 / Build to Delete/Persist 验收 |
 | 6 | 引用 | 跨文档引用 |
 | 7 | 变更历史 | 版本变更记录 |
-
-### 9 大点名称修订检查清单
-
-- [ ] AI 术语优先：代码与对外技术文档使用 AI 专业术语（Forgekin / ForgeMind / SpiritForge / Mind Codex / Mind Council / CapabilityProfile / Embodied AI / Character AI / ExternalAgentAdapter）
-- [ ] 双轨命名策略：产品层用"灵智（ForgeMind）"，代码层用"Forgekin"
-- [ ] 弱化万物：对外宣称用"多形态智能体（Multi-Form Agent）"
-- [ ] 去 AGI 化：禁止"AGI"，使用"通用智能体（General-Purpose Agent）"或"自进化（Self-Evolving）"
-- [ ] 术语替换：炉灵→灵智 / 养灵→育灵 / 魂忆→灵忆 / 魂印→灵印 / 自锻→灵锻 / 锻典→灵典（Mind Codex）/ 火种等级→进化阶 / 升华阶→觉醒阶 / 灵议（Forgekin Council）→灵议（Mind Council）
-- [ ] 责任方命名：架构师=猫头鹰·鲁班 / 开发者=猎犬·夏洛克 / 评审员=孔雀·梵高 / 测试员=蜜獾·平头哥 / 文档员=钢笔·文心
-- [ ] forgemind 定位：Layer 2 应用层
-- [ ] 三方 Agent 强化：EAC v1 七契约 + 六层 Guardrails
-- [ ] 进化阶/觉醒阶三标注：中文+英文+AI 业界概念

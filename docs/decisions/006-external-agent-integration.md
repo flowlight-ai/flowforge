@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-17
-> **决策者**: 架构师灵智体 + operator 审核
+> **决策者**: 架构师可进化智能体 + operator 审核
 > **依赖**: `[doc:VISION.md#5]` + `[doc:project_rules.md#红线11]`
 > **依据**: `[doc:review/review.md#第九章]` EX-001~EX-010
 
@@ -12,11 +12,11 @@
 
 operator 指示（2026-07-17）：
 
-> 我们的灵智体除了可以调用 flowforge 核心框架的能力外，还可以接入和使用任何三方的 Agent 的（这个也是我们的强大优势，比喻目前设计接入的编程 Agent：claude code、codex、opencode、trae，将来可扩展接入更多的编程 Agent 和其他的 Agent 的，这些都是可以给灵智体调用），目前你这块的设计感觉也比较弱，请加强。
+> 我们的可进化智能体除了可以调用 flowforge 核心框架的能力外，还可以接入和使用任何三方的 Agent 的（这个也是我们的强大优势，比喻目前设计接入的编程 Agent：claude code、codex、opencode、trae，将来可扩展接入更多的编程 Agent 和其他的 Agent 的，这些都是可以给可进化智能体调用），目前你这块的设计感觉也比较弱，请加强。
 
 当前 FlowForge 设计中，三方 Agent 集成被弱化为 ToolRegistry 中的普通工具调用。这导致：
-- 三方 Agent 的能力画像未纳入灵智体能力画像融合
-- 三方 Agent 执行状态未写入灵智体共享状态
+- 三方 Agent 的能力画像未纳入可进化智能体能力画像融合
+- 三方 Agent 执行状态未写入可进化智能体共享状态
 - 三方 Agent 失败时无 fallback 链
 - 三方 Agent 执行轨迹未纳入 Eval 信号
 
@@ -26,7 +26,7 @@ operator 指示（2026-07-17）：
 
 ### 1. 三方 Agent 是能力扩展，不是工具
 
-灵智体调用三方 Agent 时，三方 Agent 的能力画像被纳入灵智体的能力画像融合，而非简单工具调用。
+可进化智能体调用三方 Agent 时，三方 Agent 的能力画像被纳入可进化智能体的能力画像融合，而非简单工具调用。
 
 ### 2. ExternalAgentAdapter 抽象层
 
@@ -36,7 +36,7 @@ operator 指示（2026-07-17）：
 flowforge/core/external_agent/
 ├── __init__.py
 ├── adapter.py             # ExternalAgentAdapter 抽象
-├── bridge.py              # ExternalAgentBridge（灵智体调用入口）
+├── bridge.py              # ExternalAgentBridge（可进化智能体调用入口）
 ├── profile.py             # ExternalAgentProfile（三方 Agent 能力画像）
 ├── shared_state.py        # ExternalAgentSharedState（状态共享）
 ├── fallback.py            # ExternalAgentFallback（失败回退链）
@@ -54,7 +54,7 @@ flowforge/core/external_agent/
 | 机制 | 用途 | Feature |
 |------|------|---------|
 | ExternalAgentProfile | 三方 Agent 能力画像 | F032 |
-| ExternalAgentSharedState | 执行状态写入灵智体共享状态 | F033 |
+| ExternalAgentSharedState | 执行状态写入可进化智能体共享状态 | F033 |
 | ExternalAgentFallback | 失败回退链 | F034 |
 | ExternalAgentCapabilityFusion | 能力画像融合 | F035 |
 
@@ -70,9 +70,9 @@ flowforge/core/external_agent/
 ### 5. 调用流程
 
 ```
-1. 灵智体发起 ExternalAgentBridge.invoke(agent_id, task)
+1. 可进化智能体发起 ExternalAgentBridge.invoke(agent_id, task)
    ↓
-2. 灵智体能力画像 gap_analysis 判断需要三方 Agent
+2. 可进化智能体能力画像 gap_analysis 判断需要三方 Agent
    ↓
 3. ExternalAgentAdapter 路由到对应三方 Agent
    ↓
@@ -80,13 +80,13 @@ flowforge/core/external_agent/
    ↓
 5. 执行状态写入 ExternalAgentSharedState
    ↓
-6. 灵智体读取共享状态，融合到自身能力画像
+6. 可进化智能体读取共享状态，融合到自身能力画像
    ↓
 7. 若失败，ExternalAgentFallback 链回退到下一个三方 Agent
    ↓
 8. 全部失败 → 回退到 FlowForge 内置能力
    ↓
-9. 执行轨迹写入灵智体 Eval 信号
+9. 执行轨迹写入可进化智能体 Eval 信号
 ```
 
 ### 6. 安全治理（六层 Guardrails）
@@ -94,11 +94,11 @@ flowforge/core/external_agent/
 | 治理层 | 机制 |
 |--------|------|
 | L1 输入验证 | 三方 Agent 调用前必须通过 Schema 校验 |
-| L2 系统提示约束 | 灵智体 system role 注入"禁止绕过审计" |
+| L2 系统提示约束 | 可进化智能体 system role 注入"禁止绕过审计" |
 | L3 工具白名单 | 三方 Agent 只能调用 allow-list 内工具 |
 | L4 输出验证 | 三方 Agent 输出必须通过 lint + 测试 |
 | L5 操作确认 | 不可逆操作（merge/release）需 operator 确认 |
-| L6 成本上限 | 每个灵智体有三方 Agent 调用配额 |
+| L6 成本上限 | 每个可进化智能体有三方 Agent 调用配额 |
 
 ### 7. worktree 隔离
 
@@ -113,9 +113,9 @@ flowforge/core/external_agent/
 
 ### 正面后果
 
-- 灵智体能力大幅扩展（接入顶级编程 Agent）
+- 可进化智能体能力大幅扩展（接入顶级编程 Agent）
 - 三方 Agent 失败有 fallback 链保证可用性
-- 三方 Agent 能力画像融合让灵智体能力画像更完整
+- 三方 Agent 能力画像融合让可进化智能体能力画像更完整
 - 未来可扩展接入非编程类 Agent（搜索 / 设计 / 创意）
 
 ### 负面后果

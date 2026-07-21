@@ -6,11 +6,10 @@
 > **关联 ADR**: [doc:decisions/010-distributed-reliability.md]
 > **类型**: reliability
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.6]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.6]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -18,7 +17,7 @@
 
 跨 provider 宿主抽象是 roleagent.md 第 6 章的可靠性边界：不同 provider（Claude/GPT/Gemini/Antigravity）的超时策略、错误码语义、通道协议、恢复机制都不一样。需要统一宿主抽象：传输 × 绑定 × 运行时契约 × 事件适配器，监管者作为独立伴生进程（sidecar）。
 
-本 Feature 实现统一宿主抽象层、provider 运维语义归一化、sidecar 监管者，让一家 provider 崩了接手的灵智体（Forgekin）可从同一边界恢复。
+本 Feature 实现统一宿主抽象层、provider 运维语义归一化、sidecar 监管者，让一家 provider 崩了接手的Forgekin可从同一边界恢复。
 
 ## 2. 动机（Motivation）
 
@@ -124,7 +123,7 @@ provider_host:
 - [doc:review/review.md#第八章/RA-041]
 - [doc:review/review.md#第八章/RA-042]
 - [doc:decisions/010-distributed-reliability.md]
-- [doc:design/naming-contract.md#2.2]（灵智体 Forgekin）
+- [doc:design/naming-contract.md#2.2]（Forgekin Forgekin）
 - [doc:features/F023-liveness-canonical-read.md]
 - [doc:features/F034-external-agent-fallback.md]
 - [doc:features/F040-harness-eval-control-plane.md]
@@ -136,4 +135,3 @@ provider_host:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.6 同号映射 | 文档员灵智体（钢笔·文心） |

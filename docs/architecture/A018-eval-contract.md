@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005）
 > **对应 arch.md**: [doc:../arch.md#§3.5]
 > **对应 design.md**: [doc:../design.md#§3.5]（待创建）
 > **对应 Feature**: [doc:../features/F018-eval-contract.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D018-eval-contract.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/009-eval-self-metabolism.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -57,8 +56,8 @@ roleagent.md 第 5 章硬要求：**新增一块 harness 时必须写清楚①�
 ┌─────────────────────────────────────────────────────────────────────┐
 │ L1: EvalContractRegistry（契约注册中心 + 校验器）                    │
 │  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐  │
-│  │ register()       │ │ get()            │ │ list_by_component│  │
-│  │ validate_5q()    │ │ check_collectable│ │ emit_sunset()    │  │
+│  │ register       │ │ get            │ │ list_by_component│  │
+│  │ validate_5q    │ │ check_collectable│ │ emit_sunset    │  │
 │  └──────────────────┘ └──────────────────┘ └──────────────────┘  │
 └───┬──────────────────────────────────────────────┬─────────────────┘
     │ register / validate                          │ gate
@@ -77,7 +76,7 @@ roleagent.md 第 5 章硬要求：**新增一块 harness 时必须写清楚①�
 
 ### 2.2 关键架构决策
 
-- **决策 1：五问 Schema 强类型而非自由文本**。who/when/friction_metrics/regression_cases/sunset_signals 用 Pydantic 模型强制类型，who 必须是灵智体类型枚举、friction_metrics 必须是 FrictionMetric 列表。理由：自由文本无法被 F019 自动采集，强类型让摩擦指标可机器读取。
+- **决策 1：五问 Schema 强类型而非自由文本**。who/when/friction_metrics/regression_cases/sunset_signals 用 Pydantic 模型强制类型，who 必须是Forgekin类型枚举、friction_metrics 必须是 FrictionMetric 列表。理由：自由文本无法被 F019 自动采集，强类型让摩擦指标可机器读取。
 - **决策 2：合入门禁硬约束而非软提示**。CI 在 PR 阶段强制校验 EvalContract 存在性，无契约直接拒绝合入。理由：软提示会被工程师以"先合入后补契约"绕过，硬约束是结构性保障。
 - **决策 3：摩擦指标可采性校验**。`friction_metrics` 中每个 metric 必须在 F019 SignalCollector 中有对应采集器，否则拒绝注册。理由：声明了但采不到的指标是死指标，无 Eval 价值。
 - **决策 4：sunset_signals 三类型枚举**。`unused_days / friction_above_threshold / superseded_by` 三类枚举，每类对应不同的 sunset 处理器。理由：避免自由文本触发器无法被 F012 自动识别。
@@ -195,7 +194,7 @@ class SunsetSignalDispatcher(ABC):
 
 ```
 [契约注册路径]
-  灵智体开发新 harness 组件
+  Forgekin开发新 harness 组件
         │
         ▼
   编写 EvalContract（五问 + friction_metrics + sunset_signals）
@@ -204,11 +203,11 @@ class SunsetSignalDispatcher(ABC):
   EvalContractRegistry.register(contract)
         │
         ├─ 五问非空校验 ── 任一为空 ──▶ 抛 ValueError，拒绝注册
-        ├─ FrictionMetricValidator.check_collectable() ── 不可采 ──▶ 拒绝
+        ├─ FrictionMetricValidator.check_collectable ── 不可采 ──▶ 拒绝
         ├─ sunset_signals 类型校验 ── 非三类枚举 ──▶ 拒绝
         │
         ▼
-  ContractRepository.insert()
+  ContractRepository.insert
         │
         ▼
   返回 contract_id（不可变）
@@ -308,4 +307,4 @@ class SunsetSignalDispatcher(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 五问 Schema + 合入门禁 + 退役信号派发） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 五问 Schema + 合入门禁 + 退役信号派发） | 架构师 Forgekin（猫头鹰·鲁班） |

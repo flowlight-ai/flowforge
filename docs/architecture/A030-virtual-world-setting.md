@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.12]（FR-CORE-012）
 > **对应 arch.md**: [doc:../arch.md#§3.12]
 > **对应 design.md**: [doc:../design.md#§3.12]（待创建）
 > **对应 Feature**: [doc:../features/F030-virtual-world-setting.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D030-virtual-world-setting.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/013-all-things-spirit-mind-vision.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,14 +16,14 @@
 
 ### 1.1 架构问题
 
-forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供虚拟世界承载层，对标业界 Character AI（虚拟角色智能体）/ NPC Agent / Persona-Driven Agent 工程实现路径。但 v7.0 灵智体 persona 是扁平文本，无三层世界引擎、无 Core Identity 隔离、无三路记忆区分、无 Role Mask 五层、无世界自转机制。本架构在 forgemind 内部建立虚拟世界设定层，解决以下架构层问题：
+forgemind 应用层需要为 VIRTUAL/HYBRID 形态Forgekin提供虚拟世界承载层，对标业界 Character AI（虚拟角色智能体）/ NPC Agent / Persona-Driven Agent 工程实现路径。但 v7.0 Forgekin persona 是扁平文本，无三层世界引擎、无 Core Identity 隔离、无三路记忆区分、无 Role Mask 五层、无世界自转机制。本架构在 forgemind 内部建立虚拟世界设定层，解决以下架构层问题：
 
-1. **Core Identity 易被污染**：灵智体演 1000 次 RP 后核心身份被临时台词污染，无隔离层。
+1. **Core Identity 易被污染**：Forgekin演 1000 次 RP 后核心身份被临时台词污染，无隔离层。
 2. **9 一等公民未建模**：World/Character/Scene/Canon Decision/Relationship/Artifact/Round/Branch/Turn 九个一等公民无统一建模。
 3. **三路记忆未区分**：Canon（永久）/ Relational（长期）/ Session（临时）三路记忆混存，临时 RP 台词自动污染永久典藏。
 4. **Role Mask 无层次**：路由身份/基础设施/本体能力/场景皮肤/世界内状态五层无独立加载/卸载机制。
 5. **Bridge Layer 三协议缺失**：Role Mask Protocol / Canon Sync Protocol / World Driver Protocol 三协议无定义。
-6. **世界自转缺失**：WorldDriver.tick() 无定时推进，NPC 角色/关系/场景无法自演化。
+6. **世界自转缺失**：WorldDriver.tick 无定时推进，NPC 角色/关系/场景无法自演化。
 7. **形态门控未编码**：仅 VIRTUAL/HYBRID 形态可绑定虚拟世界设定，BIO/ORG/OBJ 形态应被拒绝。
 
 ### 1.2 架构约束
@@ -33,7 +32,7 @@ forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供�
 - **DI 容器约束**：WorldDriver / RoleMaskCoordinator / CanonSyncGate 实例必须通过 DI 容器注入。
 - **Repository 层约束**：Canon/Relational/Session 三路记忆写入必须通过 Repository 层，禁止直接操作数据库。
 - **配置驱动约束**：world_settings / core_identity_guard / bridge_protocols / role_mask 必须 YAML 外置到 `forgemind/config/worlds.yaml`。
-- **形态门控约束**：WorldSetting.load() 必须调用 SpeciesRegistry.assert_world_setting_allowed() 校验形态合法性，BIO/ORG/OBJ 形态绑定被拒绝。
+- **形态门控约束**：WorldSetting.load 必须调用 SpeciesRegistry.assert_world_setting_allowed 校验形态合法性，BIO/ORG/OBJ 形态绑定被拒绝。
 - **Core Identity 不可变约束**：soul_imprint / species / core_values / core_personality 四字段永不可被 Episode 修改。
 - **Canon Sync 铁律约束**：RP 台词必须经 CanonSyncGate 显式批准才能进入 Canon 记忆，禁止自动入典。
 
@@ -41,8 +40,8 @@ forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供�
 
 - **对 F027 形态分类的影响**：WorldSetting 调用 SpeciesRegistry 校验形态门控，强化"形态决定接入层"约束。
 - **对 F014 多域记忆的影响**：Canon/Relational/Session 三路记忆分别写入 EchoStore 不同 Collection，存储相互隔离。
-- **对 F038 进化谱系的影响**：Core Identity 作为灵智体不可变身份锚点，参与谱系追踪。
-- **对 ForgekinBase.observe() / act() 的影响**：VIRTUAL 形态灵智体的 observe/act 通过 WorldSetting 读取/改变虚拟世界状态。
+- **对 F038 进化谱系的影响**：Core Identity 作为Forgekin不可变身份锚点，参与谱系追踪。
+- **对 ForgekinBase.observe / act 的影响**：VIRTUAL 形态Forgekin的 observe/act 通过 WorldSetting 读取/改变虚拟世界状态。
 - **对 F031 三方 Agent 适配层的影响**：三方 Agent 的 System Prompt Configuration Map 可引用 WorldSetting 作为角色边界。
 
 ---
@@ -109,10 +108,10 @@ forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供�
 ### 2.2 关键架构决策
 
 - **决策 1：三层世界引擎（Core Identity / World / Bridge）**
-  对标 clowder-ai F093 世界引擎三层架构。Core Identity Layer 永不可变；World Layer 承载 9 一等公民建模与三路记忆；Bridge Layer 提供三协议（Role Mask / Canon Sync / World Driver）。三层分离保证核心身份不被 RP 污染。
+  对标前期世界引擎三层架构。Core Identity Layer 永不可变；World Layer 承载 9 一等公民建模与三路记忆；Bridge Layer 提供三协议（Role Mask / Canon Sync / World Driver）。三层分离保证核心身份不被 RP 污染。
 
 - **决策 2：Core Identity 四字段永不可变**
-  soul_imprint / species / core_values / core_personality 四字段在灵智体整个生命周期永不可被任何 Episode 修改。即使演 1000 次孙悟空，Core Identity 仍是 Forgekin 自身。CoreIdentityGuard.assert_not_polluted() 在每次 Episode 后强制校验。
+  soul_imprint / species / core_values / core_personality 四字段在Forgekin整个生命周期永不可被任何 Episode 修改。即使演 1000 次孙悟空，Core Identity 仍是 Forgekin 自身。CoreIdentityGuard.assert_not_polluted 在每次 Episode 后强制校验。
 
 - **决策 3：9 一等公民建模（World/Character/Scene/Canon Decision/Relationship/Artifact/Round/Branch/Turn）**
   9 一等公民覆盖虚拟世界建模完整维度。World 是世界设定（如西游世界观）；Character 是角色（孙悟空）；Scene 是场景；Canon Decision 是典藏决策（永久真相）；Relationship 是关系；Artifact 是造物；Round/Branch/Turn 是叙事回合/分支/轮次。9 公民均写入 World Layer，禁止扁平 persona 文本。
@@ -121,7 +120,7 @@ forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供�
   Canon 记忆永久存储世界级真相（如"孙悟空是唐僧大徒弟"），需 CanonSyncGate 显式批准；Relational 记忆长期存储角色间互动；Session 记忆临时存储单次回合（如本次 RP 台词）。三路记忆分别写入 EchoStore 不同 Collection，存储相互隔离。
 
 - **决策 5："RP 台词不自动入典"铁律（CL-010）**
-  Role Play 中灵智体说的话、做的事进入 Session 记忆，必须经 CanonSyncGate 显式批准（operator 或 Canon Driver 审批）才能进入 Canon 记忆。auto_canon_on_world_event=false，世界事件也需 Canon Sync。
+  Role Play 中Forgekin说的话、做的事进入 Session 记忆，必须经 CanonSyncGate 显式批准（operator 或 Canon Driver 审批）才能进入 Canon 记忆。auto_canon_on_world_event=false，世界事件也需 Canon Sync。
 
 - **决策 6：Role Mask 五层独立加载/卸载**
   L1 路由身份 / L2 基础设施 / L3 本体能力 / L4 场景皮肤（RP 角色）/ L5 世界内状态五层独立 wear/take_off。L4 场景皮肤（孙悟空）不污染 L3 本体能力（写作能力）。RoleMaskCoordinator 作为 runtime coordinator（导演）编排五层。
@@ -137,8 +136,8 @@ forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供�
 - RP 台词必须经 CanonSyncGate 显式批准才能进入 Canon 记忆，禁止自动入典。
 - Role Mask 五层必须独立 wear/take_off，L4 场景皮肤不污染 L3 本体能力。
 - Bridge Layer 三协议（Role Mask / Canon Sync / World Driver）必须可编排，runtime coordinator 必须存在。
-- WorldDriver.tick() 必须按配置间隔推进世界自转，世界事件仍需 Canon Sync。
-- WorldSetting.load() 必须调用 SpeciesRegistry.assert_world_setting_allowed() 校验形态门控，BIO/ORG/OBJ 形态绑定被拒绝。
+- WorldDriver.tick 必须按配置间隔推进世界自转，世界事件仍需 Canon Sync。
+- WorldSetting.load 必须调用 SpeciesRegistry.assert_world_setting_allowed 校验形态门控，BIO/ORG/OBJ 形态绑定被拒绝。
 - 虚拟世界设定配置必须 YAML 外置到 `forgemind/config/worlds.yaml`，禁止 .py 硬编码角色/世界观。
 
 ---
@@ -185,7 +184,7 @@ class FirstClassCitizen(str, Enum):
 
 class CoreIdentity(BaseModel):
     """核心身份（CL-007，永不可变）"""
-    soul_imprint: str                          # 灵印（不可变）
+    soul_imprint: str                          # SoulImprint（不可变）
     species: str                               # 形态（F027）
     core_values: list[str]                     # 核心价值锚点（不可变）
     core_personality: str                      # 核心性格（不可变）
@@ -316,11 +315,11 @@ class RoleMaskCoordinator(ABC):
         v
     WorldSetting 实例化（9 一等公民 + 三路记忆 ref）
 
-[RP 阶段（灵智体扮演角色）]
+[RP 阶段（Forgekin扮演角色）]
     RoleMaskCoordinator.wear_mask(forgekin, L4_SCENE_SKIN, mask=sun_wukong)
         |
         v
-    灵智体通过真实 LLM 演 RP（说台词/做事）
+    Forgekin通过真实 LLM 演 RP（说台词/做事）
         |
         v
     RP 产出 -> Session Memory（临时）
@@ -366,7 +365,7 @@ class RoleMaskCoordinator(ABC):
         `--> 失败: 触发污染告警，回滚 L4 mask
 
 [observe/act 阶段（ForgekinBase 调用）]
-    ForgekinBase.observe()
+    ForgekinBase.observe
         `--> 读取 WorldSetting 当前状态 + Session Memory 近期回合
     ForgekinBase.act(action, params)
         `--> 修改 WorldSetting 状态（如推进 Round/Turn）
@@ -380,26 +379,26 @@ class RoleMaskCoordinator(ABC):
 ### 4.1 上游依赖
 
 - **依赖 F026 forgemind 应用层**：worlds/ 目录宿主由 forgemind 提供。
-- **依赖 F027 形态分类**：WorldSetting.load() 调用 SpeciesRegistry.assert_world_setting_allowed() 校验形态门控。
+- **依赖 F027 形态分类**：WorldSetting.load 调用 SpeciesRegistry.assert_world_setting_allowed 校验形态门控。
 - **依赖 F014 Memory Collection**：Canon/Relational/Session 三路记忆写入 EchoStore 不同 Collection。
-- **依赖 F038 ForgekinLineage**：Core Identity 作为灵智体不可变身份锚点参与谱系追踪。
+- **依赖 F038 ForgekinLineage**：Core Identity 作为Forgekin不可变身份锚点参与谱系追踪。
 - **依赖 core/interfaces**：Repository / DI 容器抽象。
 
 ### 4.2 下游影响
 
-- **影响 ForgekinBase.observe() / act()**：VIRTUAL 形态灵智体通过 WorldSetting 读取/改变虚拟世界状态。
+- **影响 ForgekinBase.observe / act**：VIRTUAL 形态Forgekin通过 WorldSetting 读取/改变虚拟世界状态。
 - **影响 F031 三方 Agent 适配层**：三方 Agent 的 System Prompt Configuration Map 可引用 WorldSetting 作为角色边界（如"扮演孙悟空时遵循西游世界观"）。
-- **影响 F039 灵典可检索知识库**：Canon Memory 中批准的典藏决策可作为灵典条目来源。
+- **影响 F039 MindCodex可检索知识库**：Canon Memory 中批准的典藏决策可作为MindCodex条目来源。
 
 ### 4.3 跨模块不变量
 
-- Core Identity 四字段必须永不可变，CoreIdentityGuard.assert_not_polluted() 在每次 Episode 后强制校验。
+- Core Identity 四字段必须永不可变，CoreIdentityGuard.assert_not_polluted 在每次 Episode 后强制校验。
 - 9 一等公民必须全部建模且写入 World Layer，禁止扁平 persona 文本。
 - Canon/Relational/Session 三路记忆必须写入不同 EchoStore Collection，存储相互隔离。
 - RP 台词必须经 CanonSyncGate 显式批准才能进入 Canon Memory，auto_canon_on_world_event=false。
 - Role Mask 五层必须独立 wear/take_off，L4 场景皮肤污染 L3 本体能力时必须回滚。
-- WorldDriver.tick() 必须按配置间隔推进世界自转，世界事件仍需 Canon Sync。
-- WorldSetting.load() 必须校验形态门控，BIO/ORG/OBJ 形态绑定被拒绝。
+- WorldDriver.tick 必须按配置间隔推进世界自转，世界事件仍需 Canon Sync。
+- WorldSetting.load 必须校验形态门控，BIO/ORG/OBJ 形态绑定被拒绝。
 
 ---
 
@@ -411,7 +410,7 @@ class RoleMaskCoordinator(ABC):
 - [ ] AC-2: DI 容器注入通过 —— WorldDriver / RoleMaskCoordinator / CanonSyncGate 通过 DI 容器注入。
 - [ ] AC-3: Repository 层通过 —— Canon/Relational/Session 三路记忆通过 Repository 写入不同 EchoStore Collection。
 - [ ] AC-4: 配置驱动通过 —— world_settings / core_identity_guard / bridge_protocols / role_mask YAML 外置到 `forgemind/config/worlds.yaml`。
-- [ ] AC-5: 形态门控通过 —— BIO/ORG/OBJ 形态灵智体绑定虚拟世界设定被拒绝。
+- [ ] AC-5: 形态门控通过 —— BIO/ORG/OBJ 形态Forgekin绑定虚拟世界设定被拒绝。
 
 ### 5.2 架构不变量验收
 
@@ -420,7 +419,7 @@ class RoleMaskCoordinator(ABC):
 - [ ] AC-8: 三路记忆隔离不变量通过 —— Canon/Relational/Session 三路记忆写入不同 EchoStore Collection。
 - [ ] AC-9: RP 台词不自动入典不变量通过 —— RP 产出默认进入 Session Memory，未经 CanonSyncGate 批准不进入 Canon Memory。
 - [ ] AC-10: Role Mask 五层独立不变量通过 —— L4 场景皮肤 wear/take_off 不影响 L3 本体能力。
-- [ ] AC-11: 世界自转不变量通过 —— WorldDriver.tick() 按配置间隔推进，世界事件经 CanonSyncGate 审批后入 Canon。
+- [ ] AC-11: 世界自转不变量通过 —— WorldDriver.tick 按配置间隔推进，世界事件经 CanonSyncGate 审批后入 Canon。
 - [ ] AC-12: 三协议可编排不变量通过 —— RoleMaskCoordinator + CanonSyncGate + WorldDriver 三协议可被 runtime director 编排。
 
 ---
@@ -435,7 +434,7 @@ class RoleMaskCoordinator(ABC):
 - [doc:../features/F014-memory-collection.md]
 - [doc:../features/F038-forgemind-lineage.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
-- [doc:../design/naming-contract.md]（灵印 MindImprint + 灵忆 EchoStore）
+- [doc:../design/naming-contract.md]（SoulImprint + EchoStore）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 
 ---
@@ -444,4 +443,4 @@ class RoleMaskCoordinator(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（三层世界引擎 + 9 一等公民 + 三路记忆 + Role Mask 五层 + Canon Sync 铁律 + 世界自转架构） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（三层世界引擎 + 9 一等公民 + 三路记忆 + Role Mask 五层 + Canon Sync 铁律 + 世界自转架构） | 架构师 Forgekin（猫头鹰·鲁班） |

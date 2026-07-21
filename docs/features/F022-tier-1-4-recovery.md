@@ -6,29 +6,28 @@
 > **关联 ADR**: [doc:decisions/010-distributed-reliability.md]
 > **类型**: reliability
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.6]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.6]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-Tier 1-4 恢复分级是 roleagent.md 第 6 章的可靠性治理：按副作用可恢复性分四级。本 Feature 实现四级的自动恢复策略，并扩展万物灵智体 Tier 0（物理世界不可逆操作永不自动恢复，FR-004）。
+Tier 1-4 恢复分级是 roleagent.md 第 6 章的可靠性治理：按副作用可恢复性分四级。本 Feature 实现四级的自动恢复策略，并扩展可进化智能体 Tier 0（物理世界不可逆操作永不自动恢复，FR-004）。
 
 - **Tier 1**：读取/构建/测试/lint 始终自动恢复
 - **Tier 2**：沙箱/worktree/可确定性探测，探测成功后自动恢复
 - **Tier 3**：共享文件/外部服务/GitHub 写，不自动恢复，出恢复卡
 - **Tier 4**：force-push/merge/release，永远不自动恢复，dispatch 前硬拒
-- **Tier 0**（万物灵智体扩展）：物理世界不可逆操作，永不自动恢复（FR-004）
+- **Tier 0**（可进化智能体扩展）：物理世界不可逆操作，永不自动恢复（FR-004）
 
 ## 2. 动机（Motivation）
 
 `[doc:review/review.md#RA-038]` 指出：roleagent.md 第 6 章要求按副作用可恢复性分级恢复。v7.0 所有失败统一重试 3 次，导致可自动恢复的（Tier 1）和不可自动恢复的（Tier 4）一视同仁——Tier 4 操作被自动重试可能造成不可逆损害，Tier 1 操作不自动恢复浪费注意力。
 
-`[doc:review/review.md#FR-004]` 进一步要求万物灵智体可靠性治理扩展 Tier 0：物理世界不可逆操作（如灯具灵智体故障引发火灾）永不自动恢复。不做这个 Feature，F021 WAL 的 pending entry 无分级处理策略，F011 Magic Words 的"星星罐子"无 Tier 4 拦截依据，F029 物理 AI 传感器接入无 Tier 0 保护。
+`[doc:review/review.md#FR-004]` 进一步要求可进化智能体可靠性治理扩展 Tier 0：物理世界不可逆操作（如灯具Forgekin故障引发火灾）永不自动恢复。不做这个 Feature，F021 WAL 的 pending entry 无分级处理策略，F011 Magic Words 的"星星罐子"无 Tier 4 拦截依据，F029 物理 AI 传感器接入无 Tier 0 保护。
 
 ## 3. 详细设计（Detailed Design）
 
@@ -105,7 +104,7 @@ tier_recovery:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体触发各 Tier 副作用失败，验证恢复策略按 Tier 正确执行。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin触发各 Tier 副作用失败，验证恢复策略按 Tier 正确执行。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
@@ -113,7 +112,7 @@ tier_recovery:
 - [doc:review/review.md#第八章/RA-038]
 - [doc:review/review.md#第九章/FR-004]
 - [doc:decisions/010-distributed-reliability.md]
-- [doc:design/naming-contract.md#2.3]（灵族 Forgekin Species）
+- [doc:design/naming-contract.md#2.3]（Forgekin Species 智能体形态学）
 - [doc:features/F011-magic-words.md]
 - [doc:features/F021-side-effect-wal.md]
 - [doc:features/F029-physical-ai-sensors.md]
@@ -125,4 +124,3 @@ tier_recovery:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.6 同号映射 | 文档员灵智体（钢笔·文心） |

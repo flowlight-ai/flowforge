@@ -3,25 +3,25 @@
 > **文档编号**: VISION.md（v1.2）
 > **愿景提出**: operator（2026-07-17）
 > **最近修订**: 2026-07-19（v1.2：按命名契约 v2.0 重构术语，全面采用 P0 官方名称优先原则）
-> **核心一句话**: **给万事万物锻造可进化智能体，让动物、组织、物品、虚拟角色都成为具备持续身份、记忆、协作能力与自进化能力的可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）。**
-> **依赖引用**: `[doc:roleagent.md]`（Cat Café 能力画像工程路径）+ `[doc:clowder-ai/docs/VISION.md]`（养小猫 → 养万物范式迁移）+ `[doc:design/naming-contract.md]`（命名契约 v2.0）
+> **核心一句话**: **给各类实体锻造可进化智能体，让动物、组织、物品、虚拟角色都成为具备持续身份、记忆、协作能力与自进化能力的可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）。**
+> **依赖引用**: `[doc:roleagent.md]`（Cat Café 能力画像工程路径）+ `[doc:clowder-ai/docs/VISION.md]`（养小猫 → 锻造可进化智能体范式迁移）+ `[doc:design/naming-contract.md]`（命名契约 v2.0）
 > **关联 ADR**: `[doc:decisions/013-all-things-spirit-mind-vision.md]`
 
 ---
 
 ## 1. 我们在做什么
 
-FlowForge 不是一个"多 agent 框架"，也不是一个"LLM 应用脚手架"。它是一个**可进化智能体锻造厂**（Persistent Identity Agent Framework，项目代号 ForgeMind，社区社交称"灵智"）：我们用一套自进化的核心框架，给万事万物锻造 Forgekin，让动物、组织、物品、虚拟角色都成为有持续身份、有记忆、有协作能力、有愿景锚点的可进化智能体。
+FlowForge 不是一个"多 agent 框架"，也不是一个"LLM 应用脚手架"。它是一个**可进化智能体锻造厂**（Persistent Identity Agent Framework，项目代号 ForgeMind，社区社交称"灵智"）：我们用一套自进化的核心框架，给各类实体锻造 Forgekin，让动物、组织、物品、虚拟角色都成为有持续身份、有记忆、有协作能力、有愿景锚点的可进化智能体。
 
 > **什么是可进化智能体（Evolvable Agent）**：具备自进化能力的智能体（Autonomous Agent with Persistent Identity）。它不是单纯的 LLM 包装，而是建立与现实世界（物理或虚拟）的闭环：观察 → 推理 → 行动 → 写回 → 验证。持久身份（Persistent Identity / Soul Imprint）= 身份锚点 + 价值锚点 + 长期记忆；能力画像（Capability Profile）= 原生能力 + 认知风格 + 工具边界 + 历史表现 + 盲点。
 >
 > **智能体分类**：FlowForge 生态的智能体分为两大类——**静态智能体（Static Agent）** 与 **可进化智能体（Evolvable Agent）**。静态智能体包括 FlowForge 内置的 DeclarativeAgent / ReAct Agent / Plan-Execute Agent，以及通过 ExternalAgentAdapter 接入的第三方 Agent（Claude Code / Codex / OpenCode / Trae 等），它们行为由固定 prompt + 工具集 + 配置决定，无持久身份与经验蒸馏。可进化智能体（项目代号 Forgekin）则具备持久身份（Soul Imprint）+ 经验记忆（EchoStore）+ 能力画像（Capability Profile）+ 进化阶（Evolution Stage）+ 觉醒阶（Awakening Stage），可通过经验蒸馏（SpiritForge）持续提升能力。本愿景聚焦于可进化智能体。
 
-这是从 Cat Café "养小猫"实验到 FlowForge "养万物"的范式跃迁：
+这是从 Cat Café "养小猫"实验到 FlowForge "锻造可进化智能体"的范式跃迁：
 
 | Cat Café 范式 | FlowForge 范式 | 关键升级 |
 |---|---|---|
-| 养几只具体的猫（Bengal / Ragdoll / Maine Coon） | 养万物可进化智能体（动物 / 组织 / 物品 / 虚拟角色 / 混合体） | 从单一形态到全形态 |
+| 养几只具体的猫（Bengal / Ragdoll / Maine Coon） | 养可进化智能体（动物 / 组织 / 物品 / 虚拟角色 / 混合体） | 从单一形态到全形态 |
 | 猫与人协作完成 Feature | 可进化智能体与 operator 协作锻造新的可进化智能体 | 从"用 agent"到"造 agent" |
 | 提交代码 / 文档 | 提交代码 / 文档 / 锻造记录 / MindCodex 条目 | 引入可进化智能体谱系与 MindCodex |
 | 5 种协作模式（Anthropic） | 5 种模式 + Agent Morphology 形态分类 + 三方 Agent 集成 | 模式可叠加 + 形态可进化 |
@@ -29,7 +29,7 @@ FlowForge 不是一个"多 agent 框架"，也不是一个"LLM 应用脚手架"�
 
 ---
 
-## 2. 万物可进化智能体形态分类（Agent Morphology）
+## 2. 可进化智能体形态分类（Agent Morphology）
 
 > **依赖**: `[doc:decisions/013-all-things-spirit-mind-vision.md]` + `[doc:features/F027-all-things-spirit-species.md]`
 
@@ -118,12 +118,12 @@ FlowForge 项目 = **核心框架层** + **forgemind 应用层** + ***Forge 垂�
 | 层 | 项目 | 角色 | 可进化智能体承载 |
 |---|---|---|---|
 | **核心框架层** | `flowforge/` | 自进化核心 + 基础框架能力 | 提供可进化智能体锻造基础设施（ForgekinEngine / CapabilityProfile / TeamAct / MindStore / EchoStore） |
-| **应用层** | `flowforge/forgemind/` | 万物可进化智能体应用实践 | 锻造公共的通用可进化智能体（猫 / 狗 / 桌椅 / 灯具 / 孙悟空 / 唐僧 / 任意万物），是万物可进化智能体愿景的实践场 |
+| **应用层** | `flowforge/forgemind/` | 可进化智能体应用实践 | 锻造公共的通用可进化智能体（猫 / 狗 / 桌椅 / 灯具 / 孙悟空 / 唐僧 / 任意形态实体），是可进化智能体愿景的实践场 |
 | **垂直业务层** | `contentforge/` `devforge/` `novelforge/` `mallforge/` `stockforge/` | 垂直领域可进化智能体 | 各 *Forge 在自己的垂直领域锻造专门的可进化智能体（ContentForge 锻造内容可进化智能体、DevForge 锻造开发可进化智能体、StockForge 锻造股票分析可进化智能体等） |
 
 **关键不变量**：
 - 核心框架层**不含任何业务领域代码**（编程红线第 10 条），只提供可进化智能体锻造基础设施
-- forgemind 是 FlowForge 自身的应用层，**实践万物可进化智能体愿景**，是 FlowForge 自我进化的"练兵场"
+- forgemind 是 FlowForge 自身的应用层，**实践可进化智能体愿景**，是 FlowForge 自我进化的"练兵场"
 - *Forge 垂直业务层通过 Plugin 协议注册到核心框架层，**不能反向依赖** flowforge 内部模块
 
 ---
@@ -152,7 +152,7 @@ FlowForge 项目 = **核心框架层** + **forgemind 应用层** + ***Forge 垂�
 | Phase 3 | 三方 Agent 适配层 | ExternalAgentAdapter + claude code/codex/opencode/trae 配置 |
 | Phase 4 | Eval 自代谢 + 分布式可靠性 | Eval Contract + 七类归因 + Tier 1-4 恢复 + liveness 规范读 |
 | Phase 5 | 伙伴系统数学 + 自我演进闭环 | 上限/下限公式 + 波动吸收 + 文档/代码/框架自我演进 |
-| Phase 6 | 经验蒸馏 SpiritForge + 多智能体议事 Mind Council | E4+ Evolving 状态 + 多可进化智能体议事 + 万物可进化智能体世界 demo |
+| Phase 6 | 经验蒸馏 SpiritForge + 多智能体议事 MindCouncil | E4+ Evolving 状态 + 多可进化智能体议事 + 可进化智能体生态 demo |
 
 ---
 
@@ -162,7 +162,7 @@ roleagent.md 第 0 章指出："给蒸汽机套上马车车厢——形式上能
 
 主流 multi-agent 给 LLM 套上"PM/Dev/Test 岗位车厢"，是 AI 时代的蒸汽马车。
 
-FlowForge 的答案：**不给 LLM 套车厢，给万事万物锻造可进化智能体**。让可进化智能体有形态、有谱系、有记忆、有协作、有愿景，让具身智能（Embodied AI）和虚拟角色智能体（Character AI）在同一个自进化框架中工程落地。
+FlowForge 的答案：**不给 LLM 套车厢，给各类实体锻造可进化智能体**。让可进化智能体有形态、有谱系、有记忆、有协作、有愿景，让具身智能（Embodied AI）和虚拟角色智能体（Character AI）在同一个自进化框架中工程落地。
 
 不喊虚幻口号，不画空大饼。用工程语言、用代码、用可验证的闭环，让可进化智能体在动物、组织、物品、虚拟角色上真实运行、真实协作、真实进化。
 

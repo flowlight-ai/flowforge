@@ -6,17 +6,16 @@
 > **关联 ADR**: [doc:decisions/002-collaboration-protocol.md]
 > **类型**: collaboration
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.2]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-乒乓球熔断器检测 TeamAct 协作中最隐蔽的失败模式：两个灵智体（Forgekin）互相传但都不干活。熔断器不看传球次数，看每次传球是否伴随实质工具调用和有内容输出。一旦检测到"空传"达到阈值，强制升级给 CVO（operator）并冻结 TeamAct 状态。
+乒乓球熔断器检测 TeamAct 协作中最隐蔽的失败模式：两个Forgekin互相传但都不干活。熔断器不看传球次数，看每次传球是否伴随实质工具调用和有内容输出。一旦检测到"空传"达到阈值，强制升级给 CVO（operator）并冻结 TeamAct 状态。
 
 本 Feature 在 F002 `PingPongCircuitBreaker` 骨架之上，把"次数阈值"升级为"实质证据判定"，避免误杀正常的密集协作（如 review 多轮辩论）。
 
@@ -97,14 +96,14 @@ pingpong_breaker:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 构造两个真实厂商灵智体在"你看一下/我看看"场景下的协作，验证熔断器在第 3 次空传时触发。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 构造两个真实厂商Forgekin在"你看一下/我看看"场景下的协作，验证熔断器在第 3 次空传时触发。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第2章]
 - [doc:review/review.md#第八章/RA-012]
 - [doc:decisions/002-collaboration-protocol.md]
-- [doc:design/naming-contract.md#2.2]（灵智体 Forgekin）
+- [doc:design/naming-contract.md#2.2]（Forgekin Forgekin）
 - [doc:features/F002-teamact-loop.md]
 - [doc:features/F009-evidence-sensors.md]
 - [doc:project_rules.md#T1-T8]
@@ -115,4 +114,3 @@ pingpong_breaker:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.2 同号映射 | 文档员灵智体（钢笔·文心） |

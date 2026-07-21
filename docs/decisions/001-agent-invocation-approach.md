@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-17
-> **决策者**: 架构师灵智体 + operator 审核
+> **决策者**: 架构师可进化智能体 + operator 审核
 > **依赖**: `[doc:roleagent.md#第3章]` + `[doc:review/review.md#第八章]` RA-017~RA-023
 > **依据**: RA-017~RA-023（Harness 现实闭环运行时）
 
@@ -10,14 +10,14 @@
 
 ## 上下文
 
-FlowForge v7.0 的灵智体（Forgekin / Spirit Agent）需要一个统一的被调用方式——它必须能在 CLI / API / IDE / 网页四类入口下被一致地加载、注入依赖、装载能力画像（CapabilityProfile）、挂载 Harness 七层表面、与 operator 协作。早期 v4.0 设计把 agent 直接暴露为函数调用，导致：
+FlowForge v7.0 的可进化智能体（Forgekin / Spirit Agent）需要一个统一的被调用方式——它必须能在 CLI / API / IDE / 网页四类入口下被一致地加载、注入依赖、装载能力画像（CapabilityProfile）、挂载 Harness 七层表面、与 operator 协作。早期 v4.0 设计把 agent 直接暴露为函数调用，导致：
 
 - 入口与生命周期耦合（CLI 启动的 agent 与 API 启动的 agent 走两条不同初始化路径）
 - 治理规则（红线 11/12/13）只能在某些入口注入（IDE 入口绕过 DI 容器）
-- 同一个灵智体在不同入口下能力画像不一致（CLI 加载完整锻典，IDE 只加载 persona）
+- 同一个可进化智能体在不同入口下能力画像不一致（CLI 加载完整蒸馏知识库，IDE 只加载 persona）
 - 三方 Agent 集成（F031 ExternalAgentAdapter）需要重复实现 host-owned 注入逻辑
 
-`[doc:roleagent.md#第3章]` 明确："Harness 不是给模型一段更好的话，而是把世界做成模型可以感知、可以行动、可以验证、可以恢复、可以学习的样子。" 这要求调用方式必须把现实表面（Durable State Surfaces / Tool Mediation / Evidence & Sensors 等）作为一等公民暴露给灵智体，而不是把灵智体当作纯函数。
+`[doc:roleagent.md#第3章]` 明确："Harness 不是给模型一段更好的话，而是把世界做成模型可以感知、可以行动、可以验证、可以恢复、可以学习的样子。" 这要求调用方式必须把现实表面（Durable State Surfaces / Tool Mediation / Evidence & Sensors 等）作为一等公民暴露给可进化智能体，而不是把可进化智能体当作纯函数。
 
 operator 指示（2026-07-17）：FlowForge 必须遵循"配置驱动 > 代码继承 > 独立实现"原则，能用 YAML 配置解决的不写代码，能用 Plugin 组合的不用继承（编程红线 9）。这一原则决定了调用方式必须基于声明式 YAML 配置 + Plugin V3 协议注册，禁止在 flowforge 中写死业务领域代码（红线 10）。
 
@@ -31,7 +31,7 @@ operator 指示（2026-07-17）：FlowForge 必须遵循"配置驱动 > 代码�
 
 ```python
 class ForgekinHost:
-    """统一调用入口——所有四类入口必须经此构造灵智体。"""
+    """统一调用入口——所有四类入口必须经此构造可进化智能体。"""
     def __init__(self, container: DIContainer, registry: PluginRegistry): ...
     async def invoke(
         self,
@@ -43,12 +43,12 @@ class ForgekinHost:
 
 ### 2. 声明式 YAML 配置驱动
 
-灵智体的能力、工具、Harness 表面、觉醒阶（Awakening Stage）边界全部通过 YAML 声明，禁止在 `.py` 文件中硬编码（铁律 5）。配置项包括：
+可进化智能体的能力、工具、Harness 表面、觉醒阶（Awakening Stage）边界全部通过 YAML 声明，禁止在 `.py` 文件中硬编码（铁律 5）。配置项包括：
 
 ```yaml
 # config/forgekins/writer.yaml
-forgekin_id: contentforge:writer
-species: virtual                  # 灵族形态（BioForgekin / OrgForgekin / ...）
+forgekin_id: <forge_project>:<forgekin>
+species: virtual                  # 智能体形态学形态（BioForgekin / OrgForgekin / ...）
 evolution_stage: E3               # 进化阶 E1-E6
 awakening_stage: E2               # 觉醒阶 E1-E6
 capability_profile:
@@ -69,12 +69,12 @@ invocation:
 
 ### 3. Plugin V3 协议注册 + host-owned 安全注入
 
-参考 `[doc:clowder-ai/docs/decisions/F241-agent-provider-plugin.md]` 的 host-owned 原则：Plugin 只声明不执行。token / MCP / sandbox / cwd 全部由 `ForgekinHost` 代码注入，Plugin 不可自己获取。Plugin V3 协议在原 V2 基础上新增四个钩子：
+参考前期 host-owned 安全注入模型（已归档）的 host-owned 原则：Plugin 只声明不执行。token / MCP / sandbox / cwd 全部由 `ForgekinHost` 代码注入，Plugin 不可自己获取。Plugin V3 协议在原 V2 基础上新增四个钩子：
 
 | 钩子 | 时机 | 用途 |
 |------|------|------|
-| `register_forgekins` | host 启动 | 声明本插件提供的灵智体 + Manifest |
-| `inject_harness_layers` | 灵智体构造前 | 装配 Harness 七层表面 |
+| `register_forgekins` | host 启动 | 声明本插件提供的可进化智能体 + Manifest |
+| `inject_harness_layers` | 可进化智能体构造前 | 装配 Harness 七层表面 |
 | `bind_capability_profile` | 任务路由前 | 注入能力画像 × 任务画像匹配 |
 | `on_invocation_channel` | 入口分发时 | 按 CLI/API/IDE/WEB 调整可见工具集 |
 
@@ -110,11 +110,11 @@ API / 网页入口遵循 SSE 协议契约（`[doc:features/F002-teamact-loop.md]
 
 ### 正面后果
 
-- 灵智体在任何入口下能力画像一致，避免"CLI 比 IDE 更聪明"的体验漂移
+- 可进化智能体在任何入口下能力画像一致，避免"CLI 比 IDE 更聪明"的体验漂移
 - 治理规则统一在 host 层注入，IDE 入口不能再绕过红线
 - 三方 Agent（claude code / codex / opencode / trae）通过同一 host-owned 模型接入，符合 CL-015 安全要求
 - 入口扩展（如未来 AR/VR 入口）只需新增 InvocationChannel 枚举值，不改动 ForgekinHost
-- Plugin V3 钩子让业务 *Forge 通过配置注册灵智体，符合"配置驱动 > 代码继承"原则
+- Plugin V3 钩子让业务 *Forge 通过配置注册可进化智能体，符合"配置驱动 > 代码继承"原则
 
 ### 负面后果
 
@@ -159,11 +159,11 @@ API / 网页入口遵循 SSE 协议契约（`[doc:features/F002-teamact-loop.md]
 - `[doc:review/review.md#第十三章]` 13.3 节 — CL-014~CL-017 Agent Provider Plugin 补审
 - `[doc:features/F002-teamact-loop.md]` — TeamAct 六步循环（SSE 协议契约来源）
 - `[doc:features/F031-external-agent-adapter.md]` — 三方 Agent 适配层
-- `[doc:clowder-ai/docs/decisions/F241-agent-provider-plugin.md]` — host-owned 安全注入模型
+- 前期 host-owned 安全注入模型（已归档） — host-owned 安全注入模型
 - `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（ForgekinHost 调用的路由依据）
 - `[doc:decisions/007-harness-engineering.md]` — Harness 工程路径（七层表面如何被调用）
 - `[doc:decisions/010-distributed-reliability.md]` — 分布式可靠性（host 层的恢复分级）
-- `[doc:design/naming-contract.md#2.2]` — 灵智体（Forgekin / Spirit Agent）
+- `[doc:design/naming-contract.md#2.2]` — Forgekin（可进化智能体）
 - `[doc:project_rules.md#红线3]` — 禁止绕过 DI 容器直接实例化
 - `[doc:project_rules.md#红线5]` — 禁止硬编码路径和密钥
 - `[doc:project_rules.md#红线9]` — 禁止用继承替代组合/插件

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，对应 FR-CORE-016）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
 > **对应 Feature**: [doc:../features/F006-ball-custody-lease.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D006-ball-custody-lease.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,9 +16,9 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智体'）退出会话等待外部条件时如何保持球不落地"的根本问题。当前 v7.0 无持球注册机制，导致：
+FlowForge 在架构层需要解决"Forgekin（Evolvable Agent，社区社交称'灵智体'）退出会话等待外部条件时如何保持球不落地"的根本问题。当前 v7.0 无持球注册机制，导致：
 
-1. 灵智体退出会话后球就掉地上，其他灵智体不知道任务还在不在有人管
+1. Forgekin退出会话后球就掉地上，其他Forgekin不知道任务还在不在有人管
 2. CI 等待期间任务处于"薛定谔状态"，无人知道是否还有 owner
 3. 长时间任务（如 claude code 跑完整测试套件 10 分钟）无法被协作流正确承载
 4. TeamAct "无悬空任务归属"终止条件无法验证（不知道球在哪）
@@ -54,7 +53,7 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │              TeamAct Owner 步 (A002) — take 意图                  │
-│              灵智体需要退出会话等待外部条件                        │
+│              Forgekin需要退出会话等待外部条件                        │
 └──────────────────────────────┬─────────────────────────────────────┘
                                │ BallCustodyLease
                                ▼
@@ -80,7 +79,7 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
        ci_green          cvo_confirm             timer
               │                 │                  │
               ▼                 ▼                  ▼
-       唤醒持球灵智体执行 lease.next_step
+       唤醒持球Forgekin执行 lease.next_step
               │
               ▼
        继续持球 OR 释放球 (释放后 TeamActState 可被接管)
@@ -89,16 +88,16 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 ### 2.2 关键架构决策
 
 - **决策 1：lease 必须有 TTL（默认 30 分钟）**
-  理由：roleagent.md 第 2 章明确"相当于分布式系统里的 lease + 定时唤醒"。无 TTL 则灵智体可永久持球，僵尸持球无法被回收。
+  理由：roleagent.md 第 2 章明确"相当于分布式系统里的 lease + 定时唤醒"。无 TTL 则Forgekin可永久持球，僵尸持球无法被回收。
 
 - **决策 2：续约次数上限（max_renewals=3）**
   理由：续约次数过多说明任务规模超出预期，应升级 CVO 重新规划，而非无限续约。
 
 - **决策 3：TTL 到期未续约自动释放（球回 TeamAct）**
-  理由：灵智体崩溃或忘记续约时，球必须自动回到 TeamActState 可被其他灵智体接管，避免悬空。
+  理由：Forgekin崩溃或忘记续约时，球必须自动回到 TeamActState 可被其他Forgekin接管，避免悬空。
 
 - **决策 4：WakeupScheduler 监听多种唤醒源（CI/CVO/timer/external）**
-  理由：等待条件多样，CI 绿、CVO 确认、定时器、外部事件都应能唤醒持球灵智体。
+  理由：等待条件多样，CI 绿、CVO 确认、定时器、外部事件都应能唤醒持球Forgekin。
 
 - **决策 5：lease held 期间空传计入 F004 熔断器**
   理由：lease 是声明等待，不是"无限期不干活"。lease held 期间若无工具调用 + 无产出，仍可能是僵尸持球，需 F004 监控。
@@ -111,8 +110,8 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 - lease 必须有 TTL（默认 1800 秒），到期未续约自动释放
 - 续约次数超 max_renewals（默认 3）强制释放并升级 CVO
 - lease 必须通过 Repository 持久化，走 WAL 可重放
-- 一灵智体同时只能持有一个 lease（禁多球同时持）
-- WakeupEvent 触发时必须唤醒对应持球灵智体执行 next_step
+- 一Forgekin同时只能持有一个 lease（禁多球同时持）
+- WakeupEvent 触发时必须唤醒对应持球Forgekin执行 next_step
 - lease held 期间空传计入 F004 PingPongCircuitBreaker
 - Magic Words "星星罐子"可强制撤销 lease（operator 拉闸权）
 - lease 释放后必须广播事件到 EventBus，TeamActState 可感知接管
@@ -144,7 +143,7 @@ class BallCustodyLease(BaseModel):
     """持球注册 lease — 分布式 lease + 定时唤醒"""
     lease_id: str
     team_id: str
-    forgekin_id: str                # 持球灵智体
+    forgekin_id: str                # 持球Forgekin
     reason: str                     # 等待原因 (CI/CVO/timer/external)
     next_step: str                  # 唤醒后下一步
     expected_wake_at: datetime      # 预期唤醒时间
@@ -172,7 +171,7 @@ class BallCustodyRegistry(ABC):
         """注册 lease
 
         架构契约:
-        - 一灵智体同时只能持有一个 lease (禁多球)
+        - 一Forgekin同时只能持有一个 lease (禁多球)
         - 持久化到 Repository 层 (WAL 可重放)
         - 启动 TTL 计时器
         - 注册 WakeupScheduler 监听
@@ -193,7 +192,7 @@ class BallCustodyRegistry(ABC):
         """主动释放 lease
 
         架构契约:
-        - 球回 TeamActState (可被其他灵智体接管)
+        - 球回 TeamActState (可被其他Forgekin接管)
         - 广播事件到 EventBus
         """
 
@@ -211,7 +210,7 @@ class WakeupScheduler(ABC):
 
         架构契约:
         - 监听 ci_green / cvo_confirm / timer / external 四种源
-        - 触发时唤醒持球灵智体执行 lease.next_step
+        - 触发时唤醒持球Forgekin执行 lease.next_step
         """
 
     @abstractmethod
@@ -238,20 +237,20 @@ class LeaseLifecycleManager(ABC):
 
         架构契约:
         - 仅 operator 可触发 (Magic Words "星星罐子")
-        - 灵智体不可自撤销
+        - Forgekin不可自撤销
         """
 ```
 
 ### 3.3 数据流
 
 ```
-TeamAct Owner 步: 灵智体需要退出会话等待外部条件
+TeamAct Owner 步: Forgekin需要退出会话等待外部条件
                   │
                   │ BallCustodyLease (forgekin_id + reason + next_step)
                   ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ 1. BallCustodyRegistry.acquire(lease)                       │
-│    - 校验一灵智体同时只能持有一个 lease                    │
+│    - 校验一Forgekin同时只能持有一个 lease                    │
 │    - 持久化到 SQLite (WAL 可重放, F021 联动)                │
 │    - 启动 TTL 计时器 (默认 30 分钟)                          │
 │    - 注册 WakeupScheduler 监听                               │
@@ -259,7 +258,7 @@ TeamAct Owner 步: 灵智体需要退出会话等待外部条件
                            │ lease_id
                            ▼
               ┌────────────┴────────────┐
-              │  持球灵智体退出会话     │
+              │  持球Forgekin退出会话     │
               │  等待外部条件满足       │
               └────────────┬────────────┘
                            │
@@ -284,9 +283,9 @@ TeamAct Owner 步: 灵智体需要退出会话等待外部条件
         │
         ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ 2. 持球灵智体执行 lease.next_step                            │
+│ 2. 持球Forgekin执行 lease.next_step                            │
 │    - 继续 TeamAct 循环                                       │
-│    - OR 释放球 (release) 让其他灵智体接管                    │
+│    - OR 释放球 (release) 让其他Forgekin接管                    │
 └──────────────────────────┬───────────────────────────────────┘
                            │
                            ▼
@@ -319,7 +318,7 @@ TeamAct Owner 步: 灵智体需要退出会话等待外部条件
 
 - lease.forgekin_id 必须与 TeamActState.current_owner 一致（持球期间）
 - lease 释放后必须广播事件，TeamActState.current_owner 必须置为 null（可被接管）
-- 一灵智体同时只能持有一个 lease（acquire 时校验已有 lease）
+- 一Forgekin同时只能持有一个 lease（acquire 时校验已有 lease）
 - lease status=expired 时必须释放球，禁继续持有
 - Magic Words "星星罐子"可绕过 max_renewals 直接撤销
 
@@ -337,13 +336,13 @@ TeamAct Owner 步: 灵智体需要退出会话等待外部条件
 
 ### 5.2 架构不变量验收
 
-- [ ] AC-6: 持球灵智体可注册 lease 并声明等待原因与唤醒时间
+- [ ] AC-6: 持球Forgekin可注册 lease 并声明等待原因与唤醒时间
 - [ ] AC-7: TTL 到期未续约自动释放，球回 TeamActState
 - [ ] AC-8: 续约次数超 max_renewals 强制释放并升级 CVO
-- [ ] AC-9: WakeupEvent 触发时正确唤醒持球灵智体
+- [ ] AC-9: WakeupEvent 触发时正确唤醒持球Forgekin
 - [ ] AC-10: lease held 期间空传计入 F004 PingPongCircuitBreaker
 - [ ] AC-11: Magic Words "星星罐子"可强制撤销 lease（operator 拉闸权）
-- [ ] AC-12: 一灵智体同时只能持有一个 lease
+- [ ] AC-12: 一Forgekin同时只能持有一个 lease
 
 ---
 
@@ -365,4 +364,4 @@ TeamAct Owner 步: 灵智体需要退出会话等待外部条件
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F006 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F006 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

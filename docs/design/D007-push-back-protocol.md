@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.2] / [doc:../spec.md#§3.7]
 > **对应 arch.md**: [doc:../arch.md#§3.2] / [doc:../arch.md#§3.7]
 > **对应 design.md**: [doc:../design.md#§3.2] / [doc:../design.md#§3.7]
 > **对应 Feature**: [doc:../features/F007-push-back-protocol.md]
 > **对应 Architecture**: [doc:../architecture/A007-push-back-protocol.md]
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + forgemind Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -32,7 +31,7 @@ A007 架构层定义了 Push Back 双向辩论协议的骨架，本详细设计�
 | 编号 | 约束 | 来源 |
 |------|------|------|
 | C1 | `flowforge/core/harness/push_back.py` 不可 import forgemind 或 *Forge 模块 | 单向依赖 |
-| C2 | PushBackValidator / DebateOrchestrator 通过 `@inject` 装饰器构造函数注入，禁直接 `PushBackValidator()` | DI 容器 |
+| C2 | PushBackValidator / DebateOrchestrator 通过 `@inject` 装饰器构造函数注入，禁直接 `PushBackValidator` | DI 容器 |
 | C3 | PushBack / ReviewerResponse / DebateChain 通过 Repository 持久化，禁 `cursor.execute` | Repository 层 |
 | C4 | `push_back.yaml` 外置三要素校验规则、辩论轮次上限、超时阈值 | 配置驱动 |
 | C5 | PushBack 三要素任一为空 → 拒绝写入并抛 `InvalidPushBackError` | A007 决策 1 |
@@ -41,8 +40,7 @@ A007 架构层定义了 Push Back 双向辩论协议的骨架，本详细设计�
 | C8 | 超时阈值默认 600 秒，到期自动升级 CVO，超时事件写入 audit log | A007 决策 5 |
 | C9 | 无证据 Push Back（`evidence_refs=[]`）→ 写入 CapabilityProfile "bad_intuition" 信号 | A007 决策 6 |
 | C10 | 所有 Push Back / Response 记录走 WAL，进程崩溃可重放 | F021 联动 |
-| C11 | 9 大点名称修订：双轨命名（"灵智体" / "Forgekin"）、AI 术语优先（PushBack/DebateChain）、forgemind 仅指 Layer 2、责任方命名（猎犬·夏洛克） | 用户指令 |
-| C12 | 觉醒阶标注：E1-E3 进化阶灵智体可发起 Push Back；E4+ 觉醒阶灵智体发起 Push Back 时强制经灵议 Mind Council 二次确认 | naming-contract.md §4 |
+| C12 | 觉醒阶标注：E1-E3 进化阶Forgekin可发起 Push Back；E4+ 觉醒阶Forgekin发起 Push Back 时强制经MindCouncil 二次确认 | naming-contract.md §4 |
 
 ### 1.3 设计影响
 
@@ -148,7 +146,7 @@ A007 架构层定义了 Push Back 双向辩论协议的骨架，本详细设计�
 │    + async save_response(resp) -> str                                │
 │    + async load_chain(verdict_id) -> Optional[DebateChain]           │
 │    + async list_pending_overdue(now, timeout_s) -> list[PushBack]    │
-│    + async checkpoint() -> None                                      │
+│    + async checkpoint -> None                                      │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -242,9 +240,9 @@ class PushBack(BaseModel):
     @field_validator("applicability_argument", "alternative_proposal")
     @classmethod
     def _non_empty_text(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("Push Back 文本字段不可为空")
-        return v.strip()
+        return v.strip
 
     @model_validator(mode="after")
     def _evidence_refs_non_empty(self) -> "PushBack":
@@ -269,9 +267,9 @@ class ReviewerResponse(BaseModel):
     @field_validator("rationale")
     @classmethod
     def _rationale_non_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("ReviewerResponse rationale 不可为空（禁 silently dismiss）")
-        return v.strip()
+        return v.strip
 
     @model_validator(mode="after")
     def _counter_must_have_evidence(self) -> "ReviewerResponse":
@@ -359,7 +357,7 @@ class PushBackValidator(ABC):
         架构契约:
         - 三要素（evidence_refs / applicability_argument / alternative_proposal）非空
         - evidence_refs 每个 id 必须在 D009 Evidence Store 中存在
-        - E4+ 觉醒阶需附 Mind Council 二次确认 token
+        - E4+ 觉醒阶需附 MindCouncil 二次确认 token
         """
 
     @abstractmethod
@@ -383,7 +381,7 @@ class DebateOrchestrator(ABC):
         架构契约:
         - 首轮: 创建新 DebateChain
         - 后续轮: 检查 max_rounds, 超限抛 DebateChainExhausted
-        - E4+ 觉醒阶强制 Mind Council 二次确认
+        - E4+ 觉醒阶强制 MindCouncil 二次确认
         - 无证据 Push Back 走 BadIntuitionSink, 不进入链
         """
 
@@ -446,12 +444,12 @@ class DefaultPushBackValidator(PushBackValidator):
                     f"evidence_ref '{ev_id}' 在 D009 Evidence Store 中不存在"
                 )
 
-        # 2. E4+ 觉醒阶需 Mind Council 二次确认
+        # 2. E4+ 觉醒阶需 MindCouncil 二次确认
         if pb.awakening_stage in ("E4", "E5", "E6"):
-            # Mind Council token 由 D018 注入, 此处仅检查存在性
+            # MindCouncil token 由 D018 注入, 此处仅检查存在性
             if not getattr(pb, "_mind_council_token", None):
                 errors.append(
-                    f"觉醒阶 {pb.awakening_stage} Push Back 需 Mind Council 二次确认 token"
+                    f"觉醒阶 {pb.awakening_stage} Push Back 需 MindCouncil 二次确认 token"
                 )
 
         # 3. 无证据 Push Back 走 BadIntuitionSink（不应到此分支）
@@ -679,7 +677,7 @@ class DefaultBadIntuitionSink(BadIntuitionSink):
         # 1. 写入 CapabilityProfile.bad_intuition
         await self._capability_repo.append_bad_intuition(
             forgekin_id=forgekin_id,
-            signal={"push_back_id": push_back_id, "reason": reason, "ts": datetime.now(timezone.utc).isoformat()},
+            signal={"push_back_id": push_back_id, "reason": reason, "ts": datetime.now(timezone.utc).isoformat},
         )
         # 2. 写入 D008 thread_trace (authority_level=2)
         await self._thread_trace_store.append_surface(
@@ -767,7 +765,7 @@ function submit_response(resp: ReviewerResponse) -> ChainStatus:
 **算法 3：超时扫描循环**
 
 ```
-async function timeout_scan_loop():
+async function timeout_scan_loop:
     while True:
         try:
             await asyncio.sleep(60)  # 每分钟扫描一次
@@ -887,13 +885,13 @@ class SqlitePushBackStore(PushBackStore):
             await self._conn.execute("PRAGMA synchronous=NORMAL")
             await self._conn.execute("PRAGMA foreign_keys=ON")
             await self._conn.executescript(self.DDL)
-            await self._conn.commit()
+            await self._conn.commit
         return self._conn
 
     async def save(self, pb: PushBack) -> str:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         if not pb.push_back_id:
-            pb.push_back_id = f"pb-{uuid.uuid4().hex[:12]}"
+            pb.push_back_id = f"pb-{uuid.uuid4.hex[:12]}"
         await conn.execute(
             """
             INSERT INTO push_backs
@@ -907,20 +905,20 @@ class SqlitePushBackStore(PushBackStore):
                 pb.push_back_id, pb.verdict_id, pb.author_forgekin_id,
                 json.dumps(pb.evidence_refs),
                 pb.applicability_argument, pb.alternative_proposal,
-                pb.submitted_at.isoformat(),
+                pb.submitted_at.isoformat,
                 pb.awakening_stage, pb.schema_version, pb.wal_lsn,
                 pb.decay_tag.value, pb.authority_level,
                 int(pb.compression_immune),
             ),
         )
-        await conn.commit()
-        await self._checkpoint_if_needed()
+        await conn.commit
+        await self._checkpoint_if_needed
         return pb.push_back_id
 
     async def save_response(self, resp: ReviewerResponse) -> str:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         if not resp.response_id:
-            resp.response_id = f"resp-{uuid.uuid4().hex[:12]}"
+            resp.response_id = f"resp-{uuid.uuid4.hex[:12]}"
         await conn.execute(
             """
             INSERT INTO reviewer_responses
@@ -933,21 +931,21 @@ class SqlitePushBackStore(PushBackStore):
                 resp.response_id, resp.push_back_id, resp.reviewer_forgekin_id,
                 resp.response_type.value,
                 json.dumps(resp.counter_evidence_refs),
-                resp.rationale, resp.responded_at.isoformat(),
+                resp.rationale, resp.responded_at.isoformat,
                 resp.schema_version, resp.wal_lsn,
             ),
         )
-        await conn.commit()
+        await conn.commit
         return resp.response_id
 
     async def load_chain(self, verdict_id: str) -> Optional[DebateChain]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT chain_id, status, max_rounds, created_at, resolved_at, resolution "
             "FROM debate_chains WHERE verdict_id = ?",
             (verdict_id,),
         ) as cur:
-            row = await cur.fetchone()
+            row = await cur.fetchone
         if row is None:
             return None
         chain_id, status, max_rounds, created_at, resolved_at, resolution = row
@@ -964,13 +962,13 @@ class SqlitePushBackStore(PushBackStore):
         )
 
     async def _load_rounds(self, chain_id: str) -> list[DebateRound]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT round_index, push_back_id, response_id FROM chain_rounds "
             "WHERE chain_id = ? ORDER BY round_index",
             (chain_id,),
         ) as cur:
-            rows = await cur.fetchall()
+            rows = await cur.fetchall
         rounds: list[DebateRound] = []
         for round_index, pb_id, resp_id in rows:
             pb = await self._load_push_back(pb_id)
@@ -979,22 +977,22 @@ class SqlitePushBackStore(PushBackStore):
         return rounds
 
     async def _load_push_back(self, pb_id: str) -> PushBack:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT * FROM push_backs WHERE push_back_id = ?",
             (pb_id,),
         ) as cur:
-            row = await cur.fetchone()
+            row = await cur.fetchone
         # 行 → PushBack 反序列化（略，参考 _load_response）
         ...
 
     async def _load_response(self, resp_id: str) -> Optional[ReviewerResponse]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT * FROM reviewer_responses WHERE response_id = ?",
             (resp_id,),
         ) as cur:
-            row = await cur.fetchone()
+            row = await cur.fetchone
         if row is None:
             return None
         # 反序列化（略）
@@ -1007,8 +1005,8 @@ class SqlitePushBackStore(PushBackStore):
 
         策略：找最近一轮无 response 且 submitted_at + timeout < now 的 PushBack
         """
-        conn = await self._ensure_conn()
-        cutoff = (now.timestamp()) - timeout_seconds
+        conn = await self._ensure_conn
+        cutoff = (now.timestamp) - timeout_seconds
         async with conn.execute(
             """
             SELECT pb.* FROM push_backs pb
@@ -1019,15 +1017,15 @@ class SqlitePushBackStore(PushBackStore):
             """,
             (cutoff,),
         ) as cur:
-            rows = await cur.fetchall()
+            rows = await cur.fetchall
         return [await self._load_push_back(row[0]) for row in rows]
 
     async def update_chain_status(
         self, chain_id: str, status: ChainStatus,
         resolution: Optional[PushBackOutcome] = None,
     ) -> None:
-        conn = await self._ensure_conn()
-        resolved_at = datetime.now(timezone.utc).isoformat() if status in (
+        conn = await self._ensure_conn
+        resolved_at = datetime.now(timezone.utc).isoformat if status in (
             ChainStatus.RESOLVED, ChainStatus.ESCALATED
         ) else None
         await conn.execute(
@@ -1036,33 +1034,33 @@ class SqlitePushBackStore(PushBackStore):
             (status.value, resolved_at,
              resolution.value if resolution else None, chain_id),
         )
-        await conn.commit()
+        await conn.commit
 
     async def _load_chain_by_push_back(self, push_back_id: str) -> Optional[DebateChain]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT chain_id FROM chain_rounds WHERE push_back_id = ?",
             (push_back_id,),
         ) as cur:
-            row = await cur.fetchone()
+            row = await cur.fetchone
         if row is None:
             return None
         async with conn.execute(
             "SELECT verdict_id FROM debate_chains WHERE chain_id = ?",
             (row[0],),
         ) as cur:
-            vrow = await cur.fetchone()
+            vrow = await cur.fetchone
         if vrow is None:
             return None
         return await self.load_chain(vrow[0])
 
     async def _checkpoint_if_needed(self) -> None:
         """定期 PRAGMA wal_checkpoint(FULL) 防 WAL 文件膨胀"""
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         await conn.execute("PRAGMA wal_checkpoint(FULL)")
 
     async def checkpoint(self) -> None:
-        await self._checkpoint_if_needed()
+        await self._checkpoint_if_needed
 ```
 
 ### 3.2 关键时序图
@@ -1143,7 +1141,7 @@ Round 3: author PB → reviewer COUNTER (with evidence)
 | E5 | `PushBackTimeoutError` 超时 | 升级 CVO, 写入 TIMEOUT_ESCALATED 审计 | reviewer 收到"@cvo escalate (timeout)" |
 | E6 | `aiosqlite.OperationalError` DB 锁 | 指数退避重试 3 次, 仍失败抛出 | 服务返回 503 |
 | E7 | `aiosqlite.IntegrityError` 外键冲突 | 不重试, 抛出 | 服务返回 500 + 错误日志 |
-| E8 | E4+ 觉醒阶 Push Back 缺 Mind Council token | 拒绝写入, 提示二次确认 | author 看到"觉醒阶 E4+ 需 Mind Council 二次确认" |
+| E8 | E4+ 觉醒阶 Push Back 缺 MindCouncil token | 拒绝写入, 提示二次确认 | author 看到"觉醒阶 E4+ 需 MindCouncil 二次确认" |
 | E9 | `event_bus.publish_async` 失败 | 不阻塞主流程, 仅记录 warning | 用户无感知, 监控告警 |
 | E10 | `eval_signal_writer.write_trace` 失败 | 不阻塞主流程, 仅记录 warning | Eval 数据可能缺失, 监控告警 |
 | E11 | `routing_dispatcher.dispatch_to_cvo` 失败 | 重试 3 次, 仍失败抛出 + audit log | CVO 未收到升级, 监控告警 |
@@ -1185,7 +1183,7 @@ push_back:
     E1: allow_push_back              # 进化阶: 直接允许
     E2: allow_push_back
     E3: allow_push_back
-    E4: require_mind_council_token   # 觉醒阶: 需 Mind Council 二次确认
+    E4: require_mind_council_token   # 觉醒阶: 需 MindCouncil 二次确认
     E5: require_mind_council_token
     E6: require_mind_council_token
 
@@ -1203,7 +1201,7 @@ push_back:
   bad_intuition:
     penalty_per_occurrence: 0.05    # 每次扣 0.05
     degradation_threshold: 3        # 累计 3 次触发降级评估
-    max_penalty: 0.15               # 单只灵智体上限 0.15
+    max_penalty: 0.15               # 单只Forgekin上限 0.15
 
   # 升级路径
   escalation:
@@ -1332,7 +1330,7 @@ class MagicWordsExecutor:
 | T6 | 超时 600s 未回应 → 自动升级 CVO | resolution = TIMEOUT_ESCALATED | AC-F9 |
 | T7 | 无证据 Push Back → 写入 bad_intuition 信号 | capability_repo 收到信号 | AC-F10 |
 | T8 | 累计 3 次坏直觉 → 触发降级评估 | event_bus 收到 "capability.degradation_required" | AC-F11 |
-| T9 | E4+ 觉醒阶 Push Back 缺 Mind Council token → 拒绝 | InvalidPushBackError | AC-F12 |
+| T9 | E4+ 觉醒阶 Push Back 缺 MindCouncil token → 拒绝 | InvalidPushBackError | AC-F12 |
 | T10 | reviewer ACCEPT_ALTERNATIVE → chain 收敛 | resolution = ACCEPTED | AC-F4 |
 | T11 | reviewer CONCEDE → chain 收敛 | resolution = ACCEPTED | AC-F5 |
 | T12 | WAL 写入后进程崩溃 → 重启可恢复 chain | load_chain 返回完整数据 | AC-P3 |
@@ -1357,7 +1355,7 @@ class MagicWordsExecutor:
 | AC-F9 | Push Back 提交后 600s 未回应 → 自动升级 CVO + 写 TIMEOUT_ESCALATED 审计 |
 | AC-F10 | 无证据 Push Back（evidence_refs=[]）→ 写入 BadIntuitionSink, 不进入链 |
 | AC-F11 | 累计 3 次坏直觉 → event_bus 发布 "capability.degradation_required" |
-| AC-F12 | E4+ 觉醒阶 Push Back 缺 Mind Council token → 拒绝写入 |
+| AC-F12 | E4+ 觉醒阶 Push Back 缺 MindCouncil token → 拒绝写入 |
 | AC-F13 | "星星罐子" 触发 → 所有进行中 chain 被中断 |
 | AC-F14 | CVO 升级时 evidence_pack 包含全部 rounds 的 evidence_refs 与 alternative_proposal |
 | AC-F15 | `load_chain` 按 verdict_id 返回完整辩论链（含 rounds + responses） |
@@ -1384,7 +1382,7 @@ class MagicWordsExecutor:
 | AC-S2 | PushBackValidator / DebateOrchestrator 通过 `@inject` 注入, 无直接实例化 |
 | AC-S3 | 所有 DB 操作通过 Repository, 无 `cursor.execute` |
 | AC-S4 | 禁自审（reviewer != author）强制生效 |
-| AC-S5 | E4+ 觉醒阶强制 Mind Council 二次确认, 防止高自主灵智体滥用 Push Back |
+| AC-S5 | E4+ 觉醒阶强制 MindCouncil 二次确认, 防止高自主Forgekin滥用 Push Back |
 | AC-S6 | 升级 CVO 的事件写入 audit log, 禁删除 |
 
 ### 5.4 Eval 验收（Eval AC）
@@ -1424,4 +1422,4 @@ class MagicWordsExecutor:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F007 / A007） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F007 / A007） | 开发者 Forgekin（猎犬·夏洛克） |

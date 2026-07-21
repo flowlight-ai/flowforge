@@ -104,7 +104,7 @@ operator 最终决策（2026-07-17）：
 | `hiclaw/rules.md` | 炉灵 → 灵智体 / 养灵 → 育灵 |
 | `hiclaw/prompts.md` | 炉灵 → 灵智体 |
 
-**说明**：review/ 目录下的旧审核记录（glm.md/doubao.md/minimax1.md 等）是历史审核快照，保留原术语不改；新增审核文件（如 clowder-ai-deep-review.md）必须用 v7.1 新术语。
+**说明**：review/ 目录下的旧审核记录（glm.md/doubao.md/minimax1.md 等）是历史审核快照，保留原术语不改；新增审核文件（如深度补审归档）必须用 v7.1 新术语。
 
 ### 7. 代码命名规范
 
@@ -119,7 +119,7 @@ flowforge/forgemind/              # 应用层
 flowforge/core/forgekin/          # 核心层灵智体能力
 
 # 文档/UI：使用 ForgeMind / 灵智
-VISION.md                         # 万物灵智体愿景
+VISION.md                         # 可进化智能体愿景
 README.md                         # "灵智体锻造厂"
 ```
 
@@ -138,7 +138,7 @@ README.md                         # "灵智体锻造厂"
 
 - 需要全局替换多个文件（Phase 0 工作量增加）
 - 旧代码可能引用废弃命名（需要兼容期）
-- 第三方文档（如 clowder-ai）可能仍用旧命名
+- 第三方文档（如前期归档）可能仍用旧命名
 
 ### 风险
 

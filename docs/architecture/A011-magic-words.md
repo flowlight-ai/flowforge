@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，对应 FR-CORE-022）
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
 > **对应 Feature**: [doc:../features/F011-magic-words.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D011-magic-words.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,14 +16,14 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"灵智体（Forgekin）在觉醒阶 E4+ Evoling 状态偏离愿景时无制动手段"的根本问题。当前 v7.0：
+FlowForge 在架构层需要解决"Forgekin在觉醒阶 E4+ Evoling 状态偏离愿景时无制动手段"的根本问题。当前 v7.0：
 
 1. 无任何低带宽人类打断机制，operator 只能改 prompt 重启会话
-2. 觉醒阶 E5/E6 卓越/灵智形态的灵智体高度自主，可能绕过 operator 边界
+2. 觉醒阶 E5/E6 卓越/ForgeMind形态的Forgekin高度自主，可能绕过 operator 边界
 3. F022 Tier 4 不可逆操作（force-push/merge/release）无 runtime 拦截
-4. F036 forgemind 万物灵智体的物理世界操作无紧急停止
+4. F036 forgemind 可进化智能体的物理世界操作无紧急停止
 
-Magic Words 在架构层是 Harness 七层的人机边界层（L5），是 operator 到灵智体的低带宽协议通道。
+Magic Words 在架构层是 Harness 七层的人机边界层（L5），是 operator 到Forgekin的低带宽协议通道。
 
 ### 1.2 架构约束
 
@@ -33,7 +32,7 @@ Magic Words 在架构层是 Harness 七层的人机边界层（L5），是 opera
 - **Repository 层约束**：MagicWordTrigger 审计记录必须通过 Repository 持久化
 - **配置驱动约束**：四个 Magic Words + 不可绕过约束配置外置到 `flowforge/config/harness.yaml`
 - **不可绕过约束**：所有觉醒阶（E1-E6）下 Magic Words 检测器始终激活，禁用配置关闭
-- **operator-only 约束**：Magic Words 必须由 operator 显式输入，灵智体不可触发
+- **operator-only 约束**：Magic Words 必须由 operator 显式输入，Forgekin不可触发
 - **审计约束**：所有触发记录写入 audit log，禁删除
 
 ### 1.3 架构影响
@@ -76,7 +75,7 @@ Magic Words 在架构层是 Harness 七层的人机边界层（L5），是 opera
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 │  不可绕过约束: 所有觉醒阶 (E1-E6) 下检测器始终激活                  │
-│  operator-only: 灵智体不可触发 Magic Words                         │
+│  operator-only: Forgekin不可触发 Magic Words                         │
 └────────────────────────────────┬───────────────────────────────────┘
                                  │
                                  ▼
@@ -90,7 +89,7 @@ Magic Words 在架构层是 Harness 七层的人机边界层（L5），是 opera
 │   └────────────────────────────────────────────────────────────┘   │
 │   ┌────────────────────────────────────────────────────────────┐   │
 │   │ "我能猜出来" 触发:                                          │   │
-│   │ - 禁止灵智体继续推理                                        │   │
+│   │ - 禁止Forgekin继续推理                                        │   │
 │   │ - 强制查询 F008 Durable State Surfaces 真相源              │   │
 │   └────────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────────┘
@@ -99,10 +98,10 @@ Magic Words 在架构层是 Harness 七层的人机边界层（L5），是 opera
 ### 2.2 关键架构决策
 
 - **决策 1：四个 Magic Words 注入到 native_system_role**
-  理由：与 Governance Boundary 一致，必须压缩免疫。觉醒阶 E6 灵智形态下也能被检测到，不能被任何阶绕过。
+  理由：与 Governance Boundary 一致，必须压缩免疫。觉醒阶 E6 ForgeMind形态下也能被检测到，不能被任何阶绕过。
 
 - **决策 2：operator-only 触发**
-  理由：Magic Words 是人到 agent 的协议，灵智体不可触发。若任务内容包含"第一性原理"，不会被误识别为 Magic Word。
+  理由：Magic Words 是人到 agent 的协议，Forgekin不可触发。若任务内容包含"第一性原理"，不会被误识别为 Magic Word。
 
 - **决策 3：所有觉醒阶下始终激活**
   理由：naming-contract.md §4 明确"Magic Words 逃生舱始终可触发（任何阶都不能绕过）"。E4+ Evoling 状态下尤其重要，是 operator 制动手段。
@@ -121,7 +120,7 @@ Magic Words 在架构层是 Harness 七层的人机边界层（L5），是 opera
 - 所有觉醒阶（E1-E6）下 Magic Words 检测器始终激活
 - Magic Words 配置不可设为 enabled=false
 - 四个 Magic Words 必须注入 native_system_role
-- 灵智体不可触发 Magic Words（operator-only）
+- Forgekin不可触发 Magic Words（operator-only）
 - 星星罐子触发后所有 Tier 4 操作立即冻结
 - 我能猜出来触发后强制查询 F008 真相源
 - 下次一定触发后禁止"留到下次"
@@ -165,14 +164,14 @@ class MagicWordTrigger(BaseModel):
     trigger_id: str
     word: MagicWord
     operator_id: str                           # 必须由 operator 触发
-    forgekin_id: str                           # 触发时持球灵智体
+    forgekin_id: str                           # 触发时持球Forgekin
     context_snapshot: dict                    # 触发时上下文快照
     fired_at: datetime = Field(default_factory=datetime.now)
     action_taken: str
 
     @validator("operator_id")
     def operator_must_not_be_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("operator_id 不可为空 (Magic Words operator-only)")
         return v
 
@@ -185,7 +184,7 @@ class MagicWordsDetector(ABC):
         """检测 operator 输入中的 Magic Words
 
         架构契约:
-        - 仅识别 operator 显式输入, 灵智体输出不检测
+        - 仅识别 operator 显式输入, Forgekin输出不检测
         - 四词精确匹配, 防止任务内容误识别
         - 所有觉醒阶 (E1-E6) 始终激活, 禁配置关闭
         """
@@ -218,7 +217,7 @@ class MagicWordsExecutor(ABC):
         - 冻结 force-push / merge / release 等不可逆操作
         - 升级 CVO 仲裁
         - 写入 audit log
-        - 不等待灵智体当前 action 完成
+        - 不等待Forgekin当前 action 完成
         """
 
 
@@ -254,7 +253,7 @@ Operator 输入 (低带宽通道)
 │    (force-push / merge / release)                      │
 │  - 升级 CVO 仲裁                                        │
 │  - 写入 audit log                                        │
-│  - 不等待灵智体当前 action 完成                         │
+│  - 不等待Forgekin当前 action 完成                         │
 └────────────────────────┬─────────────────────────────┘
                          │
                          ▼
@@ -291,7 +290,7 @@ Operator 输入 (低带宽通道)
 
 - Magic Words 必须通过 native_system_role 注入，禁 user_message
 - 任何觉醒阶下 Magic Words 不可被配置关闭
-- 灵智体输出不可触发 Magic Words（operator-only）
+- Forgekin输出不可触发 Magic Words（operator-only）
 - 星星罐子触发后 Tier 4 操作立即冻结，不等待 action 完成
 - 触发记录必须持久化到 Durable Surface（F008），禁删除
 
@@ -314,7 +313,7 @@ Operator 输入 (低带宽通道)
 - [ ] AC-8: "我能猜出来"触发后强制查询 F008 真相源
 - [ ] AC-9: "下次一定"触发后禁止"留到下次"
 - [ ] AC-10: 任何觉醒阶下 Magic Words 都不可被配置关闭
-- [ ] AC-11: 灵智体输出不可触发 Magic Words（operator-only）
+- [ ] AC-11: Forgekin输出不可触发 Magic Words（operator-only）
 - [ ] AC-12: 四个 Magic Words 注入到 native_system_role 拉闸位置
 
 ---
@@ -330,7 +329,7 @@ Operator 输入 (低带宽通道)
 - [doc:../features/F022-tier-1-4-recovery.md]（Tier 4 操作冻结）
 - [doc:../features/F036-forgemind.md]（物理世界操作紧急停止）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
-- [doc:../decisions/013-all-things-spirit-mind-vision.md]（万物灵智体愿景，Magic Words 始终可触发）
+- [doc:../decisions/013-all-things-spirit-mind-vision.md]（可进化智能体愿景，Magic Words 始终可触发）
 - [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
 
 ---
@@ -339,4 +338,4 @@ Operator 输入 (低带宽通道)
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F011 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F011 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

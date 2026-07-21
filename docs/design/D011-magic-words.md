@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.3]
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]
 > **对应 Feature**: [doc:../features/F011-magic-words.md]
 > **对应 Architecture**: [doc:../architecture/A011-magic-words.md]
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + forgemind Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -22,7 +21,7 @@ A011 架构层定义了"四词 + operator-only + 始终激活 + 星星罐子冻�
 1. **D-Q1**：4 个 Magic Words 如何在 Pydantic 模型层枚举，确保不可扩展第五词？
 2. **D-Q2**：`MagicWordsDetector` 如何仅识别 operator 显式输入（line 起始匹配），防止任务内容误识别？
 3. **D-Q3**：`MagicWordsExecutor` 如何按 word 分发到对应动作（complexity_audit / force_truth_source_read / forbid_defer / emergency_stop）？
-4. **D-Q4**："星星罐子" 触发如何立即冻结所有 F022 Tier 4 操作（force-push/merge/release），不等待灵智体当前 action 完成？
+4. **D-Q4**："星星罐子" 触发如何立即冻结所有 F022 Tier 4 操作（force-push/merge/release），不等待Forgekin当前 action 完成？
 5. **D-Q5**："我能猜出来" 触发如何强制查询 D008 真相源（canonical_read），禁止继续推理？
 6. **D-Q6**：所有觉醒阶（E1-E6）下检测器如何始终激活，禁用配置关闭？
 7. **D-Q7**：触发记录如何写入 audit log + D008 thread_trace，禁删除？
@@ -36,7 +35,7 @@ A011 架构层定义了"四词 + operator-only + 始终激活 + 星星罐子冻�
 | C3 | MagicWordTrigger 审计记录通过 Repository 持久化到 D008 Durable Surface | Repository 层 |
 | C4 | 四个 Magic Words + 不可绕过约束配置外置到 `flowforge/config/harness.yaml` | 配置驱动 |
 | C5 | 四个 Magic Words 注入到 `native_system_role`（压缩免疫） | A011 决策 1 |
-| C6 | operator-only 触发，灵智体输出不检测 | A011 决策 2 |
+| C6 | operator-only 触发，Forgekin输出不检测 | A011 决策 2 |
 | C7 | 所有觉醒阶（E1-E6）下检测器始终激活，禁配置关闭 | A011 决策 3 |
 | C8 | "星星罐子" 触发立即冻结所有 F022 Tier 4 操作 | A011 决策 4 |
 | C9 | "我能猜出来" 强制查询 D008 真相源 | A011 不变量 |
@@ -44,7 +43,6 @@ A011 架构层定义了"四词 + operator-only + 始终激活 + 星星罐子冻�
 | C11 | "第一性原理" 检查复杂度代偿无知 | A011 不变量 |
 | C12 | 所有触发记录写入 audit log, 禁删除 | A011 决策 5 |
 | C13 | 触发时上下文快照写入 D008 thread_trace | A011 不变量 |
-| C14 | 9 大点名称修订：双轨命名、AI 术语优先（MagicWord/MagicWordsDetector）、forgemind 仅指 Layer 2、责任方命名（猎犬·夏洛克） | 用户指令 |
 | C15 | 觉醒阶标注：所有阶（E1-E6）下 Magic Words 始终可触发，是 operator 制动手段 | naming-contract.md §4 |
 
 ### 1.3 设计影响
@@ -84,7 +82,7 @@ A011 架构层定义了"四词 + operator-only + 始终激活 + 星星罐子冻�
 │    + trigger_id: str                                                 │
 │    + word: MagicWord                                                 │
 │    + operator_id: str          (operator-only, 非空)                │
-│    + forgekin_id: str          (触发时持球灵智体)                    │
+│    + forgekin_id: str          (触发时持球Forgekin)                    │
 │    + context_snapshot: dict   (触发时上下文快照)                     │
 │    + fired_at: datetime                                              │
 │    + action_taken: str                                               │
@@ -117,7 +115,7 @@ A011 架构层定义了"四词 + operator-only + 始终激活 + 星星罐子冻�
 │  «implements AuditLogger» SqliteAuditLogger                          │
 │    + async log(trigger) -> None                                      │
 │    + async list_triggers(operator_id) -> list[MagicWordTrigger]      │
-│    + async checkpoint() -> None                                      │
+│    + async checkpoint -> None                                      │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -179,7 +177,7 @@ class MagicWordsError(Exception):
 
 
 class ForgekinTriggeredMagicWordError(MagicWordsError):
-    """灵智体输出触发 Magic Words（违反 operator-only）"""
+    """Forgekin输出触发 Magic Words（违反 operator-only）"""
 
 
 class MagicWordDisabledError(MagicWordsError):
@@ -209,11 +207,11 @@ class MagicWordTrigger(BaseModel):
     @field_validator("operator_id")
     @classmethod
     def _operator_non_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ForgekinTriggeredMagicWordError(
                 "operator_id 不可为空 (Magic Words operator-only)"
             )
-        return v.strip()
+        return v.strip
 
 
 class ActionResult(BaseModel):
@@ -233,7 +231,7 @@ class MagicWordsDetector(ABC):
         """检测 operator 输入中的 Magic Words
 
         架构契约:
-        - 仅识别 operator 显式输入, 灵智体输出不检测
+        - 仅识别 operator 显式输入, Forgekin输出不检测
         - 四词精确匹配, 防止任务内容误识别
         - 所有觉醒阶 (E1-E6) 始终激活, 禁配置关闭
         - 行首匹配（line.lstrip(" \\t\\u3000").startswith(word)）
@@ -267,7 +265,7 @@ class MagicWordsExecutor(ABC):
         - 冻结 force-push / merge / release 等不可逆操作
         - 升级 CVO 仲裁
         - 写入 audit log
-        - 不等待灵智体当前 action 完成
+        - 不等待Forgekin当前 action 完成
         """
 
 
@@ -309,13 +307,13 @@ class DefaultMagicWordsDetector(MagicWordsDetector):
         if not operator_input:
             return None
         # 按行扫描, 仅识别行首匹配
-        for line in operator_input.splitlines():
+        for line in operator_input.splitlines:
             stripped = line.lstrip(" \t\u3000")  # 半角空格/制表符/全角空格
             for word in MagicWord:
                 if stripped.startswith(word.value):
                     # 校验后面是标点 / 空白 / 行尾（防止"第一性原理思考"误匹配）
                     rest = stripped[len(word.value):]
-                    if not rest or rest[0] in "，。！？,.!?" or rest[0].isspace():
+                    if not rest or rest[0] in "，。！？,.!?" or rest[0].isspace:
                         return word
         return None
 
@@ -406,10 +404,10 @@ class DefaultMagicWordsExecutor(MagicWordsExecutor):
                 await self._forgekin_host.inject_truth_source(truth.payload)
         elif word == MagicWord.NEXT_TIME_FOR_SURE:
             # 禁止"留到下次": 强制当前完成
-            await self._forgekin_host.forbid_defer()
+            await self._forgekin_host.forbid_defer
         elif word == MagicWord.FIRST_PRINCIPLES:
             # 检查复杂度代偿无知
-            await self._forgekin_host.trigger_complexity_audit()
+            await self._forgekin_host.trigger_complexity_audit
 
         # 发布事件 + Eval 信号
         await self._event_bus.publish_async(
@@ -437,7 +435,7 @@ class DefaultMagicWordsExecutor(MagicWordsExecutor):
             # 1. 冻结所有 Tier 4 操作（force-push/merge/release）
             await self._tier4_freezer.freeze_all_tier4(reason=reason)
 
-            # 2. 不等待灵智体当前 action 完成（强制中断）
+            # 2. 不等待Forgekin当前 action 完成（强制中断）
             await self._forgekin_host.force_interrupt_current_action(
                 reason=f"emergency_stop: {reason}"
             )
@@ -490,12 +488,12 @@ class SqliteAuditLogger(AuditLogger):
             await self._conn.execute("PRAGMA journal_mode=WAL")
             await self._conn.execute("PRAGMA synchronous=NORMAL")
             await self._conn.executescript(self.DDL)
-            await self._conn.commit()
+            await self._conn.commit
         return self._conn
 
     async def log(self, trigger: MagicWordTrigger) -> None:
         import json
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         await conn.execute(
             """
             INSERT INTO magic_word_triggers
@@ -508,31 +506,31 @@ class SqliteAuditLogger(AuditLogger):
                 trigger.trigger_id, trigger.word.value,
                 trigger.operator_id, trigger.forgekin_id,
                 json.dumps(trigger.context_snapshot, ensure_ascii=False, default=str),
-                trigger.fired_at.isoformat(),
+                trigger.fired_at.isoformat,
                 trigger.action_taken,
                 trigger.schema_version, trigger.wal_lsn,
                 trigger.decay_tag.value, trigger.authority_level,
             ),
         )
-        await conn.commit()
+        await conn.commit
 
     async def list_triggers(
         self, operator_id: Optional[str] = None
     ) -> list[MagicWordTrigger]:
         import json
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         if operator_id:
             async with conn.execute(
                 "SELECT * FROM magic_word_triggers WHERE operator_id = ? "
                 "ORDER BY fired_at DESC",
                 (operator_id,),
             ) as cur:
-                rows = await cur.fetchall()
+                rows = await cur.fetchall
         else:
             async with conn.execute(
                 "SELECT * FROM magic_word_triggers ORDER BY fired_at DESC"
             ) as cur:
-                rows = await cur.fetchall()
+                rows = await cur.fetchall
         return [self._deserialize(r) for r in rows]
 
     @staticmethod
@@ -566,13 +564,13 @@ class SqliteAuditLogger(AuditLogger):
 ```
 function detect(operator_input: str) -> Optional[MagicWord]:
     if not operator_input: return None
-    for line in operator_input.splitlines():
+    for line in operator_input.splitlines:
         stripped = line.lstrip(" \t\u3000")  # 半角空格/制表符/全角空格
         for word in MagicWord:
             if stripped.startswith(word.value):
                 rest = stripped[len(word.value):]
                 # 校验后面是标点/空白/行尾（防止误匹配）
-                if not rest or rest[0] in "，。！？,.!?" or rest[0].isspace():
+                if not rest or rest[0] in "，。！？,.!?" or rest[0].isspace:
                     return word
     return None
 ```
@@ -604,9 +602,9 @@ async function execute(word, context, operator_id) -> ActionResult:
         truth = durable_state_registry.canonical_read(context.truth_key)
         if truth: forgekin_host.inject_truth_source(truth.payload)
     elif word == NEXT_TIME_FOR_SURE:
-        forgekin_host.forbid_defer()
+        forgekin_host.forbid_defer
     elif word == FIRST_PRINCIPLES:
-        forgekin_host.trigger_complexity_audit()
+        forgekin_host.trigger_complexity_audit
 
     # 4. 发布事件 + Eval 信号
     event_bus.publish("magic_word.triggered", {...})
@@ -623,7 +621,7 @@ async function emergency_stop(reason: str) -> None:
         # 1. 冻结所有 Tier 4 操作（force-push/merge/release）
         tier4_freezer.freeze_all_tier4(reason)
 
-        # 2. 强制中断灵智体当前 action（不等待完成）
+        # 2. 强制中断Forgekin当前 action（不等待完成）
         forgekin_host.force_interrupt_current_action(reason)
 
         # 3. 升级 CVO 仲裁
@@ -640,7 +638,7 @@ async function emergency_stop(reason: str) -> None:
 **算法 4：注入 Magic Words 到 native_system_role（与 D010 联动）**
 
 ```
-async function inject_magic_words_to_native_system_role():
+async function inject_magic_words_to_native_system_role:
     # 复用 D010 GovernanceInjector
     magic_word_rules = [
         GovernanceRule(
@@ -688,9 +686,9 @@ Operator         Detector          Executor          Tier4Freezer     ForgekinHo
   │                  │                  │ <─────────────────────────────────────────────────────────────────┤
   │                  │                  │ emergency_stop(reason)           │              │                  │
   │                  │                  ├─────────────────>│                │              │                  │
-  │                  │                  │                  │ freeze_all_tier4()           │                  │
+  │                  │                  │                  │ freeze_all_tier4           │                  │
   │                  │                  │                  │ <── done       │              │                  │
-  │                  │                  │ force_interrupt_current_action()│              │                  │
+  │                  │                  │ force_interrupt_current_action│              │                  │
   │                  │                  ├──────────────────────────────────>│              │                  │
   │                  │                  │ <─────────────────────────────────┤              │                  │
   │                  │                  │ dispatch_to_cvo(emergency)       │              │                  │
@@ -700,7 +698,7 @@ Operator         Detector          Executor          Tier4Freezer     ForgekinHo
   │                  │                  │ publish_async("magic_word.triggered")            │                  │
   │ <───────────────────────────────────┤ ActionResult(success=True)        │              │                  │
   │                  │                  │                  │                │              │                  │
-  │  → Tier 4 已冻结, 灵智体 action 已中断, CVO 升级, audit log 已写入 │ │                  │
+  │  → Tier 4 已冻结, Forgekin action 已中断, CVO 升级, audit log 已写入 │ │                  │
 ```
 
 **时序图 2：我能猜出来强制查询真相源**
@@ -726,19 +724,19 @@ Operator         Detector          Executor          D008 Registry     ForgekinH
   │                  │                  │ <──────────────────────────────────┤
   │ <───────────────────────────────────┤ ActionResult(success=True)         │
   │                  │                  │                  │                  │
-  │  → 灵智体收到真相源, 停止推理        │                  │                  │
+  │  → Forgekin收到真相源, 停止推理        │                  │                  │
 ```
 
 ### 3.3 错误处理策略
 
 | # | 异常 / 场景 | 处理策略 | 用户可见行为 |
 |---|------------|---------|-------------|
-| E1 | `ForgekinTriggeredMagicWordError` 灵智体输出触发 | 拒绝执行, 仅记录 audit log | operator 看到"灵智体不可触发 Magic Words" |
+| E1 | `ForgekinTriggeredMagicWordError` Forgekin输出触发 | 拒绝执行, 仅记录 audit log | operator 看到"Forgekin不可触发 Magic Words" |
 | E2 | `MagicWordDisabledError` 配置关闭 | 拒绝部署 + audit 告警 | 启动失败"Magic Words 不可禁用" |
 | E3 | `Tier4FreezeFailedError` 冻结失败 | 重试 3 次, 仍失败抛出 + audit log | CVO 收到告警, 监控告警 |
 | E4 | `audit_logger.log` 失败 | 重试 3 次, 仍失败抛出 | Magic Word 触发失败, 服务返回 500 |
 | E5 | `durable_state_registry.write` 失败 | 不阻塞主流程, 仅 warning | thread_trace 缺失, 监控告警 |
-| E6 | `forgekin_host.force_interrupt_current_action` 失败 | 重试 3 次, 仍失败抛出 | 灵智体未中断, 监控告警 |
+| E6 | `forgekin_host.force_interrupt_current_action` 失败 | 重试 3 次, 仍失败抛出 | Forgekin未中断, 监控告警 |
 | E7 | `routing_dispatcher.dispatch_to_cvo` 失败 | 重试 3 次, 仍失败抛出 + audit log | CVO 未收到升级, 监控告警 |
 | E8 | `debate_orchestrator.cancel_all_pending` 失败 | 不阻塞 emergency_stop 主流程 | 辩论链未中断, 监控告警 |
 | E9 | `event_bus.publish_async` 失败 | 不阻塞主流程, 仅 warning | 用户无感知 |
@@ -804,7 +802,7 @@ magic_words:
   # 我能猜出来查询真相源
   i_can_guess:
     truth_source: "D008_canonical_read"
-    inject_to_forgekin: true      # 注入到灵智体上下文
+    inject_to_forgekin: true      # 注入到Forgekin上下文
     stop_reasoning: true          # 停止继续推理
 
   # 下次一定禁止 defer
@@ -911,7 +909,7 @@ class DefaultDebateOrchestrator:
     async def cancel_all_pending(self, reason: str) -> None:
         """星星罐子触发时中断所有进行中 DebateChain"""
         async with self._lock:
-            for chain_id, chain in self._active_chains.items():
+            for chain_id, chain in self._active_chains.items:
                 if chain.status in (ChainStatus.AWAITING_RESPONSE, ChainStatus.AWAITING_PUSH_BACK):
                     chain.status = ChainStatus.ESCALATED
                     chain.resolution = PushBackOutcome.TIMEOUT_ESCALATED
@@ -964,7 +962,7 @@ class DefaultRoutingDispatcher:
 |---|--------|---------|---------|
 | T1 | detect "星星罐子" 行首 → 返回 MagicWord.STAR_JAR | 行首匹配 | AC-F1 |
 | T2 | detect "任务内容含第一性原理" 行中 → 不触发 | 行首匹配 + 边界校验 | AC-F2 |
-| T3 | detect 灵智体输出 → 不触发 | operator-only | AC-F3 |
+| T3 | detect Forgekin输出 → 不触发 | operator-only | AC-F3 |
 | T4 | execute STAR_JAR → 冻结 Tier 4 + 中断辩论链 + 升级 CVO | emergency_stop 调用 | AC-F7 |
 | T5 | execute I_CAN_GUESS → canonical_read + inject_truth_source | 强制查询真相源 | AC-F8 |
 | T6 | execute NEXT_TIME_FOR_SURE → forbid_defer | 禁止 defer | AC-F9 |
@@ -985,7 +983,7 @@ class DefaultRoutingDispatcher:
 |----|------|
 | AC-F1 | `detect` 行首匹配 "星星罐子" → 返回 MagicWord.STAR_JAR |
 | AC-F2 | `detect` 行中匹配 "任务含第一性原理" → 不触发（行首匹配 + 边界校验） |
-| AC-F3 | 灵智体输出不触发 Magic Words（operator-only） |
+| AC-F3 | Forgekin输出不触发 Magic Words（operator-only） |
 | AC-F4 | 4 个 Magic Words 文本精确匹配，不可扩展第五词 |
 | AC-F5 | `execute` 按 word 分发到对应 action（complexity_audit / force_truth_source_read / forbid_defer / emergency_stop） |
 | AC-F6 | `MagicWordTrigger.operator_id` 为空 → ForgekinTriggeredMagicWordError |
@@ -998,7 +996,7 @@ class DefaultRoutingDispatcher:
 | AC-F13 | 配置 enabled=false → 拒绝部署 + MagicWordDisabledError |
 | AC-F14 | 4 个 Magic Words 注入到 native_system_role（复用 D010 GovernanceInjector） |
 | AC-F15 | 所有觉醒阶（E1-E6）下检测器始终激活 |
-| AC-F16 | 星星罐子不等待灵智体当前 action 完成（强制中断） |
+| AC-F16 | 星星罐子不等待Forgekin当前 action 完成（强制中断） |
 | AC-F17 | Magic Words 是 Build to Persist 安全资产（decay_tag=BUILT_TO_PERSIST） |
 | AC-F18 | emergency_stop 失败时抛 Tier4FreezeFailedError |
 
@@ -1020,9 +1018,9 @@ class DefaultRoutingDispatcher:
 | AC-S1 | `flowforge/core/harness/magic_words.py` 不 import forgemind 或 *Forge 模块 |
 | AC-S2 | Detector / Executor / AuditLogger 通过 `@inject` 注入, 无直接实例化 |
 | AC-S3 | 所有 DB 操作通过 Repository, 无 `cursor.execute` |
-| AC-S4 | operator-only 强制生效, 灵智体输出不触发 |
+| AC-S4 | operator-only 强制生效, Forgekin输出不触发 |
 | AC-S5 | audit log 禁删除, 所有触发可追溯 |
-| AC-S6 | 星星罐子立即冻结 Tier 4, 不等待灵智体 action 完成 |
+| AC-S6 | 星星罐子立即冻结 Tier 4, 不等待Forgekin action 完成 |
 | AC-S7 | 4 个 Magic Words 注入到 native_system_role 拉闸位置 |
 
 ### 5.4 Eval 验收（Eval AC）
@@ -1058,4 +1056,4 @@ class DefaultRoutingDispatcher:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F011 / A011） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F011 / A011） | 开发者 Forgekin（猎犬·夏洛克） |

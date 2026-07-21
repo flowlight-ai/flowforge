@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，对应 FR-CORE-018）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
 > **对应 Feature**: [doc:../features/F004-pingpong-circuit-breaker.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D004-pingpong-circuit-breaker.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,9 +16,9 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"多灵智体（Forgekin，社区社交称'灵智体'）协作中最隐蔽的失败模式：两个灵智体互相传但都不干活"的检测问题。当前 v7.0 无"乒乓球熔断器"，导致：
+FlowForge 在架构层需要解决"多 Forgekin（Evolvable Agent，社区社交称'灵智体'）协作中最隐蔽的失败模式：两个Forgekin互相传但都不干活"的检测问题。当前 v7.0 无"乒乓球熔断器"，导致：
 
-1. 两个灵智体可能无限互传"你看一下""我看看"，消耗 token 无产出
+1. 两个Forgekin可能无限互传"你看一下""我看看"，消耗 token 无产出
 2. F002 骨架仅用 `max_iterations` 次数判定，会误杀合理的多轮 review 辩论
 3. 熔断触发后无升级 CVO 机制，团队陷入死循环无人介入
 4. 缺少"实质产出"判定标准，无法区分"密集协作"与"空传"
@@ -53,7 +52,7 @@ FlowForge 在架构层需要解决"多灵智体（Forgekin，社区社交称'灵
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                TeamAct ACTION/ROUTE 步 (A002)                     │
-│   持球灵智体执行动作 → 传球 (Route)                                │
+│   持球Forgekin执行动作 → 传球 (Route)                                │
 └──────────────────────────────┬─────────────────────────────────────┘
                                │ PassRecord
                                ▼
@@ -87,13 +86,13 @@ FlowForge 在架构层需要解决"多灵智体（Forgekin，社区社交称'灵
   理由：roleagent.md 第 2 章明确"看每次传球是否伴随实质工具调用和有内容输出"。次数判定会误杀合理的多轮 review 辩论（review 辩论可能 5 轮才收敛）。
 
 - **决策 2：连续空传 ≥ 3 次触发熔断（max_empty_passes=3）**
-  理由：单次空传可能是灵智体在思考，2 次可能是协作节奏未建立，3 次连续空传基本可判定为"互传无产出"模式。阈值可配置。
+  理由：单次空传可能是Forgekin在思考，2 次可能是协作节奏未建立，3 次连续空传基本可判定为"互传无产出"模式。阈值可配置。
 
 - **决策 3：debate_mode 显式豁免（仍记录 trace）**
   理由：review 辩论场景允许密集传球，但必须显式声明 debate_mode=true。豁免判定但仍记录 trace，避免豁免被滥用。
 
 - **决策 4：熔断触发强制升级 CVO（不可静默恢复）**
-  理由：熔断是协作失败信号，必须由 CVO 决定 push back（要求原 owner 重做）或换 owner。reset 必须由 CVO 确认，禁灵智体自恢复。
+  理由：熔断是协作失败信号，必须由 CVO 决定 push back（要求原 owner 重做）或换 owner。reset 必须由 CVO 确认，禁Forgekin自恢复。
 
 - **决策 5：熔断状态走 WAL（进程崩溃可恢复）**
   理由：熔断状态若进程内持有，进程崩溃后状态丢失，团队可能重复触发熔断。必须持久化到 Durable Surface，走 Tier 2 恢复分级。
@@ -103,12 +102,12 @@ FlowForge 在架构层需要解决"多灵智体（Forgekin，社区社交称'灵
 
 ### 2.3 架构不变量
 
-- 实质产出判定必须基于 `tool_calls > 0 OR output_chars >= min_output_chars`，禁灵智体自评
+- 实质产出判定必须基于 `tool_calls > 0 OR output_chars >= min_output_chars`，禁Forgekin自评
 - 连续空传计数达到 max_empty_passes（默认 3）必须触发熔断，禁配置关闭
 - 熔断触发后 TeamActState 必须冻结，禁继续推进
 - 熔断状态必须通过 Repository 持久化，走 WAL 可重放
 - debate_mode 豁免必须显式声明，仍记录 trace
-- 熔断恢复（reset）必须由 CVO 确认，禁灵智体自恢复
+- 熔断恢复（reset）必须由 CVO 确认，禁Forgekin自恢复
 - 熔断触发必须写 Eval 信号 + 升级 CVO + 通知 reviewer
 
 ---
@@ -192,7 +191,7 @@ class PingPongCircuitBreaker(ABC):
 
         架构契约:
         - 必须由 CVO 确认 (cvo_confirmed=true)
-        - 灵智体不可自恢复
+        - Forgekin不可自恢复
         """
 
 
@@ -220,11 +219,11 @@ class BreakerVerdict(BaseModel):
 ### 3.3 数据流
 
 ```
-TeamAct ACTION 步: 持球灵智体执行动作
+TeamAct ACTION 步: 持球Forgekin执行动作
                   │
                   │ 持球期间产出: tool_calls + output_chars
                   ▼
-TeamAct ROUTE 步: 持球灵智体传球
+TeamAct ROUTE 步: 持球Forgekin传球
                   │
                   │ PassRecord
                   ▼
@@ -288,8 +287,8 @@ TeamAct ROUTE 步: 持球灵智体传球
 
 - 熔断状态必须与 TeamActState.status 一致（tripped 时 TeamActState 冻结）
 - 熔断触发必须广播事件到 EventBus，Eval 控制面可感知
-- debate_mode 豁免必须由灵智体显式声明，trace 仍记录
-- 熔断恢复必须由 CVO 确认，禁灵智体自恢复
+- debate_mode 豁免必须由Forgekin显式声明，trace 仍记录
+- 熔断恢复必须由 CVO 确认，禁Forgekin自恢复
 - 熔断状态走 WAL，进程崩溃后状态可恢复
 
 ---
@@ -306,11 +305,11 @@ TeamAct ROUTE 步: 持球灵智体传球
 
 ### 5.2 架构不变量验收
 
-- [ ] AC-6: 实质产出判定基于 `tool_calls > 0 OR output_chars >= min_output_chars`，禁灵智体自评
+- [ ] AC-6: 实质产出判定基于 `tool_calls > 0 OR output_chars >= min_output_chars`，禁Forgekin自评
 - [ ] AC-7: 连续空传达 max_empty_passes 触发熔断，禁配置关闭
 - [ ] AC-8: 熔断触发后 TeamActState 冻结，禁继续推进
 - [ ] AC-9: debate_mode 豁免必须显式声明，trace 仍记录
-- [ ] AC-10: reset 必须由 CVO 确认（cvo_confirmed=true），禁灵智体自恢复
+- [ ] AC-10: reset 必须由 CVO 确认（cvo_confirmed=true），禁Forgekin自恢复
 - [ ] AC-11: 熔断触发写 Eval 信号 + 升级 CVO + 通知 reviewer
 
 ---
@@ -333,4 +332,4 @@ TeamAct ROUTE 步: 持球灵智体传球
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F004 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F004 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

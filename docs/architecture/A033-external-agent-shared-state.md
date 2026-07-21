@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010）
 > **对应 arch.md**: [doc:../arch.md#§3.10]
 > **对应 design.md**: [doc:../design.md#§3.10]（待创建）
 > **对应 Feature**: [doc:../features/F033-external-agent-shared-state.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D033-external-agent-shared-state.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/006-external-agent-integration.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,7 +16,7 @@
 
 ### 1.1 架构问题
 
-ExternalAgentAdapter 抽象层（A031）需要实现"灵智体 -> claude code 写代码 -> codex review -> trae 部署"连续协作流，但 v7.0 三方 Agent 间无共享状态，每次调用都是独立会话，无法实现连续协作。本架构在 `core/external_agent/shared_state.py` 建立三方 Agent 状态共享层，解决以下架构层问题：
+ExternalAgentAdapter 抽象层（A031）需要实现"Forgekin -> claude code 写代码 -> codex review -> trae 部署"连续协作流，但 v7.0 三方 Agent 间无共享状态，每次调用都是独立会话，无法实现连续协作。本架构在 `core/external_agent/shared_state.py` 建立三方 Agent 状态共享层，解决以下架构层问题：
 
 1. **共享状态数据模型缺失**：三方 Agent 间无 session_context / modification_log / decision_context / artifact_refs 统一数据模型。
 2. **TeamAct 生命周期未绑定**：共享状态与 F002 TeamActState 无关联，TeamAct 终止时共享状态无归档机制。
@@ -32,7 +31,7 @@ ExternalAgentAdapter 抽象层（A031）需要实现"灵智体 -> claude code �
 - **DI 容器约束**：SharedStateStore / SharedStateHandoff 实例必须通过 DI 容器注入到 ExternalAgentBridge。
 - **Repository 层约束**：ExternalAgentSharedState 写入必须通过 Repository 层（基于 F008 持久状态层），禁止直接操作数据库。
 - **配置驱动约束**：onboarding_summary / lifecycle / handoff 配置必须 YAML 外置到 `config/external_agent.yaml`，禁止 .py 硬编码。
-- **生命周期绑定约束**：共享状态必须与 F002 TeamActState 一一关联，TeamAct 终止时必须归档到 F014 灵忆。
+- **生命周期绑定约束**：共享状态必须与 F002 TeamActState 一一关联，TeamAct 终止时必须归档到 F014 EchoStore。
 - **增量写入约束**：ModificationRecord 必须增量 append，禁止覆盖历史记录。
 - **Handoff Capsule 一致性约束**：SharedStateHandoff 必须对接 F003 HandoffCapsule，open_questions 必须传递。
 
@@ -41,10 +40,10 @@ ExternalAgentAdapter 抽象层（A031）需要实现"灵智体 -> claude code �
 - **对 F002 TeamAct 的影响**：ExternalAgentSharedState 与 TeamActState 一一关联，TeamAct 终止时归档。
 - **对 F003 HandoffCapsule 的影响**：SharedStateHandoff 对接 HandoffCapsule，交接信息一致。
 - **对 F008 持久状态层的影响**：ExternalAgentSharedState 持久化到 F008 Durable State Surfaces。
-- **对 F014 多域记忆的影响**：TeamAct 终止时共享状态归档到灵忆，成为灵智体经验记忆。
+- **对 F014 多域记忆的影响**：TeamAct 终止时共享状态归档到EchoStore，成为Forgekin经验记忆。
 - **对 F032 能力画像的影响**：modification_log 中 agent_id 引用 ExternalAgentCapabilityProfile.agent_id。
 - **对 F035 能力融合的影响**：共享状态中的 call_artifacts 作为能力融合来源。
-- **对 A031 ExternalAgentBridge 的影响**：Bridge 在调用三方 Agent 后通过 SharedStateStore.write() 写入共享状态。
+- **对 A031 ExternalAgentBridge 的影响**：Bridge 在调用三方 Agent 后通过 SharedStateStore.write 写入共享状态。
 
 ---
 
@@ -99,22 +98,22 @@ ExternalAgentAdapter 抽象层（A031）需要实现"灵智体 -> claude code �
 ### 2.2 关键架构决策
 
 - **决策 1：共享状态生命周期 = TeamAct 生命周期**
-  ExternalAgentSharedState 与 F002 TeamActState 一一关联（team_act_state_ref 字段）。TeamAct 终止时共享状态归档到 F014 灵忆集合，成为灵智体经验记忆。这避免共享状态无限累积导致存储爆炸。
+  ExternalAgentSharedState 与 F002 TeamActState 一一关联（team_act_state_ref 字段）。TeamAct 终止时共享状态归档到 F014 EchoStore集合，成为Forgekin经验记忆。这避免共享状态无限累积导致存储爆炸。
 
 - **决策 2：修改历史增量 append 而非覆盖**
-  ModificationRecord 通过 SharedStateStore.append_modification() 增量写入，不覆盖历史。每个三方 Agent 修改产出物时 append 一条记录（含 agent_id / timestamp / target / diff_summary / rationale / commit_ref）。这保留完整修改历史供后续 Agent 理解上下文。
+  ModificationRecord 通过 SharedStateStore.append_modification 增量写入，不覆盖历史。每个三方 Agent 修改产出物时 append 一条记录（含 agent_id / timestamp / target / diff_summary / rationale / commit_ref）。这保留完整修改历史供后续 Agent 理解上下文。
 
 - **决策 3：Onboarding 摘要避免重读全部上下文**
-  SharedStateHandoff.read_onboarding() 返回最近 N 条 ModificationRecord + DecisionRecord 的摘要（默认 max_recent_modifications=20, max_recent_decisions=10），而非全部历史。新 Agent 接手时只需读摘要，避免 token 浪费。
+  SharedStateHandoff.read_onboarding 返回最近 N 条 ModificationRecord + DecisionRecord 的摘要（默认 max_recent_modifications=20, max_recent_decisions=10），而非全部历史。新 Agent 接手时只需读摘要，避免 token 浪费。
 
 - **决策 4：DecisionRecord.open_questions 必须传递（与 F003 一致）**
   DecisionRecord 的 open_questions 字段必须传递给下一个 Agent，与 F003 HandoffCapsule 一致。这保证未解决问题不因 Agent 切换而丢失。
 
 - **决策 5：SharedStateHandoff 对接 F003 HandoffCapsule**
-  SharedStateHandoff.handoff_to_next_agent() 接收 HandoffCapsule 参数，与 F003 交接胶囊协议一致。交接时 capsule 中的 open_questions / known_issues / next_action_hint 必须写入共享状态。
+  SharedStateHandoff.handoff_to_next_agent 接收 HandoffCapsule 参数，与 F003 交接胶囊协议一致。交接时 capsule 中的 open_questions / known_issues / next_action_hint 必须写入共享状态。
 
-- **决策 6：TeamAct 终止时归档到 F014 灵忆**
-  TeamAct 终止时（如任务完成 / 取消 / 失败）ExternalAgentSharedState 整体归档到 F014 EchoStore 灵忆集合，作为灵智体经验记忆一部分，供 F035 能力融合蒸馏。
+- **决策 6：TeamAct 终止时归档到 F014 EchoStore**
+  TeamAct 终止时（如任务完成 / 取消 / 失败）ExternalAgentSharedState 整体归档到 F014 EchoStore EchoStore集合，作为Forgekin经验记忆一部分，供 F035 能力融合蒸馏。
 
 ### 2.3 架构不变量
 
@@ -123,7 +122,7 @@ ExternalAgentAdapter 抽象层（A031）需要实现"灵智体 -> claude code �
 - DecisionRecord.open_questions 必须传递给下一个 Agent，禁止丢失。
 - SharedStateHandoff 必须对接 F003 HandoffCapsule，交接信息完整。
 - 新 Agent 接手时必须读取 Onboarding 摘要而非全部历史。
-- TeamAct 终止时共享状态必须归档到 F014 灵忆集合。
+- TeamAct 终止时共享状态必须归档到 F014 EchoStore集合。
 - ExternalAgentSharedState 持久化必须通过 Repository 层（基于 F008），禁止直接操作数据库。
 - onboarding_summary / lifecycle / handoff 配置必须 YAML 外置到 `config/external_agent.yaml`。
 
@@ -178,7 +177,7 @@ class ExternalAgentSharedState(BaseModel):
     """三方 Agent 共享状态（写入 F008 持久状态层）"""
     state_id: str
     team_act_state_ref: str                    # 关联 F002 TeamActState ID
-    forgekin_id: str                           # 主持灵智体 ID
+    forgekin_id: str                           # 主持Forgekin ID
     session_context: dict                      # 会话级共享上下文
     modification_log: list[ModificationRecord] = Field(default_factory=list)
     decision_context: list[DecisionRecord] = Field(default_factory=list)
@@ -228,7 +227,7 @@ class SharedStateStore(ABC):
 
     @abstractmethod
     async def archive_to_echo_store(self, state_id: str) -> str:
-        """TeamAct 终止时归档到 F014 灵忆集合"""
+        """TeamAct 终止时归档到 F014 EchoStore集合"""
         ...
 
 
@@ -268,9 +267,9 @@ class SharedStateHandoff(ABC):
         v
     持久化到 F008 Durable State Surfaces
 
-[协作阶段（灵智体 -> claude code -> codex -> trae）]
-    [1] 灵智体调用 claude code 写代码
-        `--> ExternalAgentBridge.invoke() [A031]
+[协作阶段（Forgekin -> claude code -> codex -> trae）]
+    [1] Forgekin调用 claude code 写代码
+        `--> ExternalAgentBridge.invoke [A031]
             `--> claude code 修改文件 + 提交 commit
                 `--> SharedStateStore.append_modification(state_id, record)
                     |-- record.agent_id = "claude_code_main"
@@ -281,7 +280,7 @@ class SharedStateHandoff(ABC):
                     |-- record.decision = "使用 OAuth2 而非 JWT"
                     `-- record.open_questions = ["是否需要刷新令牌?"]
 
-    [2] 灵智体调用 codex review
+    [2] Forgekin调用 codex review
         `--> SharedStateHandoff.read_onboarding(agent_id="codex_main", state_id)
             `--> 返回 OnboardingSummary
                 |-- recent_modifications: [最近 20 条]
@@ -292,7 +291,7 @@ class SharedStateHandoff(ABC):
             `--> SharedStateStore.append_modification(state_id, record)
                 `-- record.target = "review comments"
 
-    [3] 灵智体调用 trae 部署
+    [3] Forgekin调用 trae 部署
         `--> SharedStateHandoff.read_onboarding(agent_id="trae_main", state_id)
             `--> 返回 OnboardingSummary（含 codex 的 review 意见）
         `--> trae 部署
@@ -306,11 +305,11 @@ class SharedStateHandoff(ABC):
     SharedStateStore.archive_to_echo_store(state_id)
         |
         v
-    ExternalAgentSharedState 整体归档到 F014 EchoStore 灵忆集合
-        `--> 作为灵智体经验记忆（供 F035 能力融合蒸馏）
+    ExternalAgentSharedState 整体归档到 F014 EchoStore EchoStore集合
+        `--> 作为Forgekin经验记忆（供 F035 能力融合蒸馏）
 
 [交接阶段（Agent 切换）]
-    灵智体决定从 claude code 切换到 codex
+    Forgekin决定从 claude code 切换到 codex
         |
         v
     SharedStateHandoff.handoff_to_next_agent(state_id, next_agent_id="codex_main", capsule)
@@ -337,7 +336,7 @@ class SharedStateHandoff(ABC):
 
 ### 4.2 下游影响
 
-- **影响 A031 ExternalAgentBridge**：Bridge 在调用三方 Agent 后通过 SharedStateStore.write() 写入共享状态。
+- **影响 A031 ExternalAgentBridge**：Bridge 在调用三方 Agent 后通过 SharedStateStore.write 写入共享状态。
 - **影响 F035 能力融合**：共享状态中的 call_artifacts 作为能力融合来源。
 - **影响 F034 失败回退**：fallback 时下一个 Agent 通过 read_onboarding 获取上下文。
 
@@ -348,7 +347,7 @@ class SharedStateHandoff(ABC):
 - DecisionRecord.open_questions 必须传递给下一个 Agent，禁止丢失。
 - SharedStateHandoff 必须对接 F003 HandoffCapsule，capsule 字段完整写入共享状态。
 - 新 Agent 接手时必须读取 Onboarding 摘要而非全部历史。
-- TeamAct 终止时共享状态必须归档到 F014 灵忆集合，未归档时 TeamAct 视为未完成。
+- TeamAct 终止时共享状态必须归档到 F014 EchoStore集合，未归档时 TeamAct 视为未完成。
 
 ---
 
@@ -386,7 +385,7 @@ class SharedStateHandoff(ABC):
 - [doc:../features/F034-external-agent-fallback.md]
 - [doc:../features/F035-external-agent-capability-fusion.md]
 - [doc:../decisions/006-external-agent-integration.md]
-- [doc:../design/naming-contract.md]（灵忆 EchoStore）
+- [doc:../design/naming-contract.md]（EchoStore）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 
 ---
@@ -395,4 +394,4 @@ class SharedStateHandoff(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（共享状态 + 增量 append + Onboarding 摘要 + Handoff Capsule 对接 + 归档架构） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（共享状态 + 增量 append + Onboarding 摘要 + Handoff Capsule 对接 + 归档架构） | 架构师 Forgekin（猫头鹰·鲁班） |

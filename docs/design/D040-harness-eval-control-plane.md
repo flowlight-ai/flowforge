@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005 Eval 自代谢系统 / FR-CORE-030 Harness Eval 控制面）
 > **对应 arch.md**: [doc:../arch.md#§3.5]（Eval 自代谢系统架构）
 > **对应 design.md**: [doc:../design.md#§3.5]
 > **对应 Feature**: [doc:../features/F040-harness-eval-control-plane.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A040-harness-eval-control-plane.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/009-eval-self-metabolism.md]（Eval 自代谢 ADR）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 术语替换 + 责任方命名 + forgemind 定位 Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -20,35 +19,34 @@
 本详细设计在 A040 架构设计基础上，深入到代码层落地 Harness Eval 控制面（Harness Eval Control Plane，社区社交称"harness 生命周期控制面"），需解决以下工程问题：
 
 - **控制面 API 工程契约**：`ControlPlaneAPI` 提供 `get_status` / `list_by_state` / `trigger_action` / `get_trend` 四个抽象方法如何用 Python `abc.ABC` 落地? 单例（singleton scope）如何在 DI 容器中注册? 拉闸权校验如何嵌入 `trigger_action`?
-- **DailySummarizer 多源聚合算法**：每日 02:00 cron 触发的 `summarize()` 如何并行拉取 F018 契约 `friction_metrics` + F019 三方信号 `appreciation` + F020 七类归因分布? 三源数据如何按 `contract_id` 对齐合并?
-- **五态状态机校验规则**：`LifecycleStateMachine.can_transition()` 如何编码合法转换矩阵? `stable → bottleneck` 跳跃如何阻断? `consecutive_depreciating_days` 如何累加触发 `depreciating → bottleneck`?
-- **ActionRecommender 派发策略**：`recommend()` 如何按 `lifecycle_state` 派发对应行动? `escalate_cvo_refactor` 的 `requires_operator_approval=True` 如何传递到 `ControlPlaneAPI.trigger_action` 强制校验 `operator_id`?
+- **DailySummarizer 多源聚合算法**：每日 02:00 cron 触发的 `summarize` 如何并行拉取 F018 契约 `friction_metrics` + F019 三方信号 `appreciation` + F020 七类归因分布? 三源数据如何按 `contract_id` 对齐合并?
+- **五态状态机校验规则**：`LifecycleStateMachine.can_transition` 如何编码合法转换矩阵? `stable → bottleneck` 跳跃如何阻断? `consecutive_depreciating_days` 如何累加触发 `depreciating → bottleneck`?
+- **ActionRecommender 派发策略**：`recommend` 如何按 `lifecycle_state` 派发对应行动? `escalate_cvo_refactor` 的 `requires_operator_approval=True` 如何传递到 `ControlPlaneAPI.trigger_action` 强制校验 `operator_id`?
 - **TrendAnalyzer 时间窗口聚合**：`analyze(window_days)` 如何从 `ControlPlaneRepository.query_history` 拉取历史状态并按归因类型聚合频次? `bottleneck_candidates` 如何识别"持续折旧接近阈值"?
-- **ControlPlaneRepository 复用 F008 持久表面**：如何通过 `DurableStateSurface` 抽象持久化 `HarnessComponentStatus`? 与 F014 灵忆存储（EchoStore，情景记忆存储 / 智能体经验日志）如何物理隔离?
+- **ControlPlaneRepository 复用 F008 持久表面**：如何通过 `DurableStateSurface` 抽象持久化 `HarnessComponentStatus`? 与 F014 EchoStore存储（EchoStore，情景记忆存储 / 智能体经验日志）如何物理隔离?
 - **operator 拉闸权异步审批**：`escalate_cvo_refactor` 提交后如何挂起等待 operator 审批? 审批结果如何回写并触发 CVO 通知?
 
 ### 1.2 设计约束
 
-- **单向依赖**：`flowforge/forgemind/eval_control/` 禁止 `import contentforge.* / devforge.* / novelforge.* / mallforge.*`；仅可 `import flowforge/core/*` 与 `flowforge/forgemind/*`；禁止反向依赖（F018/F019/F020 不可 import 控制面模块）
+- **单向依赖**：`flowforge/forgemind/eval_control/` 禁止 `import 任何 *Forge 业务模块`；仅可 `import flowforge/core/*` 与 `flowforge/forgemind/*`；禁止反向依赖（F018/F019/F020 不可 import 控制面模块）
 - **DI 容器**：`ControlPlaneAPI` / `DailySummarizer` / `ActionRecommender` / `TrendAnalyzer` / `LifecycleStateMachine` / `ControlPlaneRepository` 必须由 DI 容器注入；`ControlPlaneAPI` 必须以 **singleton scope** 注册（全系统唯一实例）
-- **Repository 层**：所有持久化必须经 `ControlPlaneRepository` 抽象，禁止 `cursor.execute()` / `session.add()` 直接调用（编程红线第 13 条）
+- **Repository 层**：所有持久化必须经 `ControlPlaneRepository` 抽象，禁止 `cursor.execute` / `session.add` 直接调用（编程红线第 13 条）
 - **配置驱动**：`summary_schedule` / `appreciation_threshold` / `friction_threshold` / `bottleneck_consecutive_days` / `action_routing` 必须来自 `flowforge/forgemind/config/harness_eval_control_plane.yaml`，禁止硬编码（编程红线第 11 条）
 - **operator 拉闸权**：`escalate_cvo_refactor` 必须 `operator_id` 非空且经审批校验，禁止自动触发不可逆操作（六层 Guardrails 之 Action Confirmation 层）
-- **只读视图**：dashboard 数据源必须只读控制面状态，写入路径仅 `ControlPlaneAPI.trigger_action()`
-- **状态机铁律**：五态转换必须遵循 `LifecycleStateMachine.can_transition()` 矩阵，禁止 `stable → bottleneck` 跳跃（必须经 `action_needed` 中转）
+- **只读视图**：dashboard 数据源必须只读控制面状态，写入路径仅 `ControlPlaneAPI.trigger_action`
+- **状态机铁律**：五态转换必须遵循 `LifecycleStateMachine.can_transition` 矩阵，禁止 `stable → bottleneck` 跳跃（必须经 `action_needed` 中转）
 - **数据来源不可越权**：`friction_score` 必须来自 F018；`appreciation_score` 必须来自 F019；`attribution_distribution` 必须来自 F020；控制面禁止自算或自分类
-- **9 大点名称修订**：代码层使用 `Forgekin` / `HarnessLifecycleState` / `ControlPlaneAPI` / `AppreciationScore` / `FrictionScore`；文档层使用"harness 控制面 / 增值 / 折旧 / 瓶颈"双标注；社区层使用"灵智体"仅作补充说明
 
 ### 1.3 设计影响
 
 - **新增模块**：`flowforge/forgemind/eval_control/` 下 7 个文件（`api.py` / `summarizer.py` / `recommender.py` / `trend.py` / `state_machine.py` / `repository.py` / `models.py`）
 - **修改模块**：`flowforge/forgemind/plugins.py` 注册控制面到 DI 容器；`flowforge/forgemind/config/harness_eval_control_plane.yaml` 新增配置文件
-- **影响 F012 Entropy Control**：`SunsetReviewer.start_review()` 接收来自 `ActionRecommender` 的 `F012_sunset_review` 派发，`depreciating` 状态自动触发
+- **影响 F012 Entropy Control**：`SunsetReviewer.start_review` 接收来自 `ActionRecommender` 的 `F012_sunset_review` 派发，`depreciating` 状态自动触发
 - **影响 F018 Eval Contract**：契约表新增 `friction_metrics` 字段供控制面消费；`contract_id` 作为控制面组件状态锚点
 - **影响 F019 三方信号交叉**：信号采集器新增导出接口供 `DailySummarizer` 拉取 `appreciation` 分；信号冲突标记触发 `action_needed`
 - **影响 F020 七类归因矩阵**：归因结果导出接口供 `DailySummarizer` 拉取 `attribution_distribution`；归因频发（同一组件 24h 内 ≥ N 次）触发 `action_needed`
-- **影响 F039 锻典可检索知识库**：控制面产出的 `TrendReport` 作为元知识经 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）蒸馏写入锻典（Mind Codex，蒸馏知识库 / 策展技能库 / 程序性记忆），供灵智体（Forgekin，社区社交称"灵智体"）检索"哪类根因最频繁"
-- **影响 F038 进化谱系**：bottleneck 状态升级 CVO 重构如涉及灵智体跨层迁移，需调用 `LineageStore.record_transition()` 记录 `LAYER_TRANSITION` 边
+- **影响 F039 MindCodex 可检索知识库**：控制面产出的 `TrendReport` 作为元知识经 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）蒸馏写入 MindCodex（蒸馏知识库 / 策展技能库 / 程序性记忆），供Forgekin（Evolvable Agent，社区社交称"灵智体"）检索"哪类根因最频繁"
+- **影响 F038 进化谱系**：bottleneck 状态升级 CVO 重构如涉及Forgekin跨层迁移，需调用 `LineageStore.record_transition` 记录 `LAYER_TRANSITION` 边
 - **影响 operator 控制台**：新增"控制面拉闸审批"页面，operator 通过该页面批准 `escalate_cvo_refactor`
 
 ---
@@ -94,7 +92,7 @@
    │ DailySummarizer        │  │ ActionRecommender      │  │ LifecycleStateMachine│
    │ (summarizer.py)        │  │ (recommender.py)       │  │ (state_machine.py)   │
    │ ────────────────────   │  │ ────────────────────   │  │ ──────────────────   │
-   │ + summarize()          │  │ + recommend(status)    │  │ + can_transition     │
+   │ + summarize          │  │ + recommend(status)    │  │ + can_transition     │
    │   -> DailySummary      │  │   -> list[Action]      │  │   (from, to) -> bool │
    └────────────────────────┘  └────────────────────────┘  └──────────────────────┘
 
@@ -184,7 +182,7 @@ class HarnessComponentStatus(BaseModel):
     @field_validator("component_id", "contract_id")
     @classmethod
     def _non_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("component_id / contract_id 不可为空")
         return v
 
@@ -333,7 +331,7 @@ class ControlPlaneAPI(ABC):
         window_days: int,
         component_id: Optional[str] = None,
     ) -> TrendReport:
-        """查询趋势报告（架构师灵智体（猫头鹰·鲁班）调用）"""
+        """查询趋势报告（架构师 Forgekin（猫头鹰·鲁班）调用）"""
         ...
 
 
@@ -463,12 +461,12 @@ class ControlPlaneRepository(ABC):
 
 ### 2.4 关键算法伪代码
 
-#### 2.4.1 DailySummarizer.summarize() 算法
+#### 2.4.1 DailySummarizer.summarize 算法
 
 ```
-function summarize() -> DailySummary:
+function summarize -> DailySummary:
     # Step 1: 并行拉取三源数据
-    f018_contracts = await f018_repo.list_all_contracts()        # 所有契约
+    f018_contracts = await f018_repo.list_all_contracts        # 所有契约
     f019_signals = await f019_repo.get_signals_window(24h)       # 24h 三方信号
     f020_attributions = await f020_repo.get_attributions_window(24h)
 
@@ -537,8 +535,8 @@ function summarize() -> DailySummary:
             actions_dispatched.append(action.action_id)
 
     summary = DailySummary(
-        summary_id=uuid4(),
-        summary_date=now_utc(),
+        summary_id=uuid4,
+        summary_date=now_utc,
         component_statuses=component_statuses,
         top_attribution_classes=top_attributions,
         actions_dispatched=actions_dispatched,
@@ -547,17 +545,17 @@ function summarize() -> DailySummary:
     return summary
 ```
 
-#### 2.4.2 ActionRecommender.recommend() 算法
+#### 2.4.2 ActionRecommender.recommend 算法
 
 ```
 function recommend(status: HarnessComponentStatus) -> list[Action]:
     state = status.lifecycle_state
     actions = []
-    timestamp = now_utc()
+    timestamp = now_utc
 
     if state == STABLE or state == APPRECIATING:
         return [Action(
-            action_id=uuid4(),
+            action_id=uuid4,
             component_id=status.component_id,
             action_type="no_action",
             trigger_state=state,
@@ -567,7 +565,7 @@ function recommend(status: HarnessComponentStatus) -> list[Action]:
 
     if state == DEPRECIATING:
         actions.append(Action(
-            action_id=uuid4(),
+            action_id=uuid4,
             component_id=status.component_id,
             action_type="F012_sunset_review",
             trigger_state=state,
@@ -579,7 +577,7 @@ function recommend(status: HarnessComponentStatus) -> list[Action]:
 
     if state == ACTION_NEEDED:
         actions.append(Action(
-            action_id=uuid4(),
+            action_id=uuid4,
             component_id=status.component_id,
             action_type="F020_fix_router",
             trigger_state=state,
@@ -590,7 +588,7 @@ function recommend(status: HarnessComponentStatus) -> list[Action]:
 
     if state == BOTTLENECK:
         actions.append(Action(
-            action_id=uuid4(),
+            action_id=uuid4,
             component_id=status.component_id,
             action_type="escalate_cvo_refactor",
             trigger_state=state,
@@ -604,7 +602,7 @@ function recommend(status: HarnessComponentStatus) -> list[Action]:
     return actions
 ```
 
-#### 2.4.3 LifecycleStateMachine.can_transition() 转换矩阵
+#### 2.4.3 LifecycleStateMachine.can_transition 转换矩阵
 
 ```
 TRANSITION_MATRIX = {
@@ -617,7 +615,7 @@ TRANSITION_MATRIX = {
 }
 
 function can_transition(from_state, to_state) -> bool:
-    return to_state in TRANSITION_MATRIX.get(from_state, set())
+    return to_state in TRANSITION_MATRIX.get(from_state, set)
 
 # 关键禁止规则:
 # - STABLE → BOTTLENECK: 必须经 DEPRECIATING → ACTION_NEEDED 中转
@@ -626,11 +624,11 @@ function can_transition(from_state, to_state) -> bool:
 # - APPRECIATING → ACTION_NEEDED: 必须经 DEPRECIATING 中转
 ```
 
-#### 2.4.4 TrendAnalyzer.analyze() 算法
+#### 2.4.4 TrendAnalyzer.analyze 算法
 
 ```
 function analyze(window_days, component_id?) -> TrendReport:
-    end_date = now_utc()
+    end_date = now_utc
     start_date = end_date - timedelta(days=window_days)
 
     if component_id:
@@ -647,7 +645,7 @@ function analyze(window_days, component_id?) -> TrendReport:
 
     for status in sorted(history, key=lambda s: s.updated_at):
         cid = status.component_id
-        for attr_class, count in status.attribution_distribution.items():
+        for attr_class, count in status.attribution_distribution.items:
             attribution_frequency[attr_class] = (
                 attribution_frequency.get(attr_class, 0) + count
             )
@@ -669,7 +667,7 @@ function analyze(window_days, component_id?) -> TrendReport:
             bottleneck_candidates.append(cid)
 
     return TrendReport(
-        report_id=uuid4(),
+        report_id=uuid4,
         window_days=window_days,
         start_date=start_date,
         end_date=end_date,
@@ -725,7 +723,7 @@ class ControlPlaneAPIImpl(ControlPlaneAPI):
     async def get_status(
         self, component_id: str
     ) -> HarnessComponentStatus:
-        if not component_id or not component_id.strip():
+        if not component_id or not component_id.strip:
             raise ValueError("component_id 不可为空")
         status = await self._repository.get_latest_status(component_id)
         if status is None:
@@ -739,7 +737,7 @@ class ControlPlaneAPIImpl(ControlPlaneAPI):
     async def list_by_state(
         self, state: HarnessLifecycleState
     ) -> list[HarnessComponentStatus]:
-        all_statuses = await self._repository.list_all_latest()
+        all_statuses = await self._repository.list_all_latest
         return [s for s in all_statuses if s.lifecycle_state == state]
 
     async def trigger_action(
@@ -774,12 +772,12 @@ class ControlPlaneAPIImpl(ControlPlaneAPI):
 
         # Step 4: 构造 Action 对象
         action_obj = Action(
-            action_id=str(uuid.uuid4()),
+            action_id=str(uuid.uuid4),
             component_id=component_id,
             action_type=action,
             trigger_state=status.lifecycle_state,
             requires_operator_approval=requires_approval,
-            dispatched_at=datetime.utcnow(),
+            dispatched_at=datetime.utcnow,
             payload={
                 "friction_score": status.friction_score,
                 "appreciation_score": status.appreciation_score,
@@ -804,10 +802,10 @@ class ControlPlaneAPIImpl(ControlPlaneAPI):
         elif action == "escalate_cvo_refactor":
             # 提交拉闸权审批请求，挂起等待 operator 批准
             req = TransitionRequest(
-                request_id=str(uuid.uuid4()),
+                request_id=str(uuid.uuid4),
                 component_id=component_id,
                 action_type="escalate_cvo_refactor",
-                submitted_at=datetime.utcnow(),
+                submitted_at=datetime.utcnow,
                 submitted_by=operator_id,
                 status="pending",
             )
@@ -819,7 +817,7 @@ class ControlPlaneAPIImpl(ControlPlaneAPI):
 
         # Step 6: 更新 last_action
         status.last_action = action_obj.action_id
-        status.updated_at = datetime.utcnow()
+        status.updated_at = datetime.utcnow
         await self._repository.save_component_status(status)
 
         self._logger.info(
@@ -876,11 +874,11 @@ class DailySummarizerImpl(DailySummarizer):
         self._logger = logger
 
     async def summarize(self) -> DailySummary:
-        window_start = datetime.utcnow() - timedelta(hours=24)
+        window_start = datetime.utcnow - timedelta(hours=24)
 
         # Step 1: 并行拉取三源数据
         contracts, signals, attributions = await asyncio.gather(
-            self._f018.list_all_contracts(),
+            self._f018.list_all_contracts,
             self._f019.get_signals_window(window_start),
             self._f020.get_attributions_window(window_start),
         )
@@ -904,10 +902,10 @@ class DailySummarizerImpl(DailySummarizer):
                         continue
                     if action.requires_operator_approval:
                         req = TransitionRequest(
-                            request_id=str(uuid.uuid4()),
+                            request_id=str(uuid.uuid4),
                             component_id=cid,
                             action_type="escalate_cvo_refactor",
-                            submitted_at=datetime.utcnow(),
+                            submitted_at=datetime.utcnow,
                             submitted_by="auto",
                             status="pending",
                         )
@@ -927,8 +925,8 @@ class DailySummarizerImpl(DailySummarizer):
 
         top_attributions = self._top5_attributions(component_statuses)
         summary = DailySummary(
-            summary_id=str(uuid.uuid4()),
-            summary_date=datetime.utcnow(),
+            summary_id=str(uuid.uuid4),
+            summary_date=datetime.utcnow,
             component_statuses=component_statuses,
             top_attribution_classes=top_attributions,
             actions_dispatched=actions_dispatched,
@@ -990,7 +988,7 @@ class DailySummarizerImpl(DailySummarizer):
             friction_score=friction,
             attribution_distribution=attribution_dist,
             consecutive_depreciating_days=consecutive_days,
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.utcnow,
         )
 
     def _count_by_class(self, attributions) -> dict[str, int]:
@@ -1003,14 +1001,14 @@ class DailySummarizerImpl(DailySummarizer):
     def _attribution_conflict_count(self, dist: dict[str, int]) -> int:
         # 归因冲突: 同一组件 24h 内同一归因类出现 >= max_allowed_per_class 次
         max_allowed = self._cfg.get("max_attributions_per_class_24h", 3)
-        return sum(1 for count in dist.values() if count >= max_allowed)
+        return sum(1 for count in dist.values if count >= max_allowed)
 
     def _top5_attributions(
         self, statuses: list[HarnessComponentStatus]
     ) -> list[str]:
         merged = {}
         for s in statuses:
-            for cls, count in s.attribution_distribution.items():
+            for cls, count in s.attribution_distribution.items:
                 merged[cls] = merged.get(cls, 0) + count
         return sorted(merged, key=merged.get, reverse=True)[:5]
 
@@ -1076,7 +1074,7 @@ class LifecycleStateMachineImpl(LifecycleStateMachine):
         from_state: HarnessLifecycleState,
         to_state: HarnessLifecycleState,
     ) -> bool:
-        allowed = self._MATRIX.get(from_state, set())
+        allowed = self._MATRIX.get(from_state, set)
         return to_state in allowed
 ```
 
@@ -1091,9 +1089,9 @@ from typing import Optional
 class ControlPlaneRepositoryImpl(ControlPlaneRepository):
     """控制面持久层实现（复用 F008 DurableStateSurface）
 
-    与 F014 灵忆存储（EchoStore，情景记忆存储 / 智能体经验日志）物理隔离:
+    与 F014 EchoStore存储（EchoStore，情景记忆存储 / 智能体经验日志）物理隔离:
     - 控制面状态存储在 durable_surface namespace="harness_eval_control"
-    - 灵忆存储在 durable_surface namespace="echo_store"
+    - EchoStore存储在 durable_surface namespace="echo_store"
     """
 
     NAMESPACE = "harness_eval_control"     # 与 echo_store 物理隔离
@@ -1106,13 +1104,13 @@ class ControlPlaneRepositoryImpl(ControlPlaneRepository):
         self, status: HarnessComponentStatus
     ) -> None:
         key = f"component:{status.component_id}:latest"
-        await self._surface.put(self.NAMESPACE, key, status.model_dump_json())
+        await self._surface.put(self.NAMESPACE, key, status.model_dump_json)
         # 同时写入历史时间序列（按日期索引）
         hist_key = (
             f"component:{status.component_id}:history:"
-            f"{status.updated_at.isoformat()}"
+            f"{status.updated_at.isoformat}"
         )
-        await self._surface.put(self.NAMESPACE, hist_key, status.model_dump_json())
+        await self._surface.put(self.NAMESPACE, hist_key, status.model_dump_json)
 
     async def get_latest_status(
         self, component_id: str
@@ -1152,8 +1150,8 @@ class ControlPlaneRepositoryImpl(ControlPlaneRepository):
         return result
 
     async def save_daily_summary(self, summary: DailySummary) -> None:
-        key = f"summary:{summary.summary_date.isoformat()}"
-        await self._surface.put(self.NAMESPACE, key, summary.model_dump_json())
+        key = f"summary:{summary.summary_date.isoformat}"
+        await self._surface.put(self.NAMESPACE, key, summary.model_dump_json)
 
     async def query_summaries(
         self, start_date: datetime, end_date: datetime
@@ -1174,7 +1172,7 @@ class ControlPlaneRepositoryImpl(ControlPlaneRepository):
         self, request: TransitionRequest
     ) -> None:
         key = f"transition_request:{request.request_id}"
-        await self._surface.put(self.NAMESPACE, key, request.model_dump_json())
+        await self._surface.put(self.NAMESPACE, key, request.model_dump_json)
 
     async def get_transition_request(
         self, request_id: str
@@ -1345,12 +1343,12 @@ harness_eval_control_plane:
 
 | 上游模块 | 协作接口 | 协作内容 |
 |---------|---------|---------|
-| **F008 Durable State Surfaces** | `DurableStateSurface.put/get/scan_keys` | 控制面状态持久化复用 F008 持久表面，namespace=`harness_eval_control` 与 F014 灵忆（namespace=`echo_store`）物理隔离 |
+| **F008 Durable State Surfaces** | `DurableStateSurface.put/get/scan_keys` | 控制面状态持久化复用 F008 持久表面，namespace=`harness_eval_control` 与 F014 EchoStore（namespace=`echo_store`）物理隔离 |
 | **F012 Entropy Control** | `SunsetReviewer.start_review(component_id, friction_score)` | 控制面 `depreciating` 状态自动派发 F012 sunset review 流程 |
-| **F018 Eval Contract** | `EvalContractRepository.list_all_contracts()` + `contract.friction_metrics` | 控制面消费 F018 契约的 `friction_metrics["total"]` 作为 `friction_score` 输入；`contract_id` 作为组件状态锚点 |
+| **F018 Eval Contract** | `EvalContractRepository.list_all_contracts` + `contract.friction_metrics` | 控制面消费 F018 契约的 `friction_metrics["total"]` 作为 `friction_score` 输入；`contract_id` 作为组件状态锚点 |
 | **F019 三方信号交叉** | `ThreeSignalRepository.get_signals_window(start)` | 控制面消费 F019 三方信号的 `appreciation` 分；信号冲突标记（同组件 24h 内三方信号不一致）触发 `action_needed` |
 | **F020 七类归因矩阵** | `AttributionRepository.get_attributions_window(start)` | 控制面消费 F020 归因结果按 `attribution_class` 聚合为 `attribution_distribution`；归因频发触发 `action_needed` |
-| **APScheduler** | `CronTrigger("0 2 * * *")` | 每日 02:00 UTC 触发 `DailySummarizer.summarize()` |
+| **APScheduler** | `CronTrigger("0 2 * * *")` | 每日 02:00 UTC 触发 `DailySummarizer.summarize` |
 | **EventBus** | `event_bus.publish(topic, payload)` | 控制面派发行动通过 EventBus 通知 F012/F020/CVO；同时发布 `operator.approval_required` 通知拉闸权审批 |
 | **OperatorApprover** | `verify(operator_id, action) -> bool` | operator 拉闸权校验（仅 `escalate_cvo_refactor` 需要） |
 | **ADR 009 Eval 自代谢** | — | 本 Feature 是 ADR 009 终态控制面落地 |
@@ -1359,23 +1357,23 @@ harness_eval_control_plane:
 
 | 下游模块 | 协作接口 | 协作内容 |
 |---------|---------|---------|
-| **F039 锻典可检索知识库** | `MindCodexStore.add_entry(entry)` | 控制面产出的 `TrendReport` 作为元知识经 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）蒸馏写入锻典（Mind Codex，蒸馏知识库 / 策展技能库 / 程序性记忆），供灵智体（Forgekin，社区社交称"灵智体"）检索"哪类根因最频繁" |
-| **F038 进化谱系** | `LineageStore.record_transition(edge)` | bottleneck 状态升级 CVO 重构如涉及灵智体跨层迁移，需调用 `record_transition()` 写入 `LAYER_TRANSITION` 边 |
+| **F039 MindCodex 可检索知识库** | `MindCodexStore.add_entry(entry)` | 控制面产出的 `TrendReport` 作为元知识经 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）蒸馏写入 MindCodex（蒸馏知识库 / 策展技能库 / 程序性记忆），供Forgekin（Evolvable Agent，社区社交称"灵智体"）检索"哪类根因最频繁" |
+| **F038 进化谱系** | `LineageStore.record_transition(edge)` | bottleneck 状态升级 CVO 重构如涉及Forgekin跨层迁移，需调用 `record_transition` 写入 `LAYER_TRANSITION` 边 |
 | **CVO（Chief Vision Officer，operator）** | `cvo_notifier.send_refactor_request(component_id, reason)` | bottleneck 状态升级 CVO 重构，CVO 接收通知并决定是否启动架构重构 |
 | **dashboard** | `ControlPlaneAPI.list_by_state(state)` 只读 | dashboard 只读控制面状态，展示组件生命周期、趋势报告、行动记录；禁止直接写入 `lifecycle_state` |
-| **operator 控制台** | `operator_console.list_pending_approvals()` + `approve(request_id, reason)` | operator 通过控制台批准 `escalate_cvo_refactor` 行动（拉闸权） |
-| **架构师灵智体（猫头鹰·鲁班）** | `ControlPlaneAPI.get_trend(window_days)` | 架构师消费趋势报告决定重构优先级 |
+| **operator 控制台** | `operator_console.list_pending_approvals` + `approve(request_id, reason)` | operator 通过控制台批准 `escalate_cvo_refactor` 行动（拉闸权） |
+| **架构师 Forgekin（猫头鹰·鲁班）** | `ControlPlaneAPI.get_trend(window_days)` | 架构师消费趋势报告决定重构优先级 |
 | **EventBus 订阅者** | `subscribe("f012.sunset_review_requested")` / `subscribe("f020.fix_dispatched")` / `subscribe("operator.approval_required")` / `subscribe("cvo.refactor_approved")` | F012/F020/operator 控制台订阅控制面事件，自动执行后续流程 |
 
 ### 4.3 集成测试点
 
 | 测试点 | 验证内容 | 验证方法 |
 |--------|---------|---------|
-| **T1: 三源聚合正确性** | DailySummarizer 正确拉取 F018/F019/F020 数据并按 `contract_id` 对齐 | 构造 mock 三源数据，验证 `summarize()` 输出的 `component_statuses` 中每个组件的 `friction_score` / `appreciation_score` / `attribution_distribution` 与源数据一致 |
-| **T2: 状态机校验** | `LifecycleStateMachine.can_transition()` 阻断非法转换 | 验证 `STABLE → BOTTLENECK` 返回 False，`STABLE → DEPRECIATING → ACTION_NEEDED → BOTTLENECK` 返回 True |
+| **T1: 三源聚合正确性** | DailySummarizer 正确拉取 F018/F019/F020 数据并按 `contract_id` 对齐 | 构造 mock 三源数据，验证 `summarize` 输出的 `component_statuses` 中每个组件的 `friction_score` / `appreciation_score` / `attribution_distribution` 与源数据一致 |
+| **T2: 状态机校验** | `LifecycleStateMachine.can_transition` 阻断非法转换 | 验证 `STABLE → BOTTLENECK` 返回 False，`STABLE → DEPRECIATING → ACTION_NEEDED → BOTTLENECK` 返回 True |
 | **T3: operator 拉闸权** | `escalate_cvo_refactor` 无 `operator_id` 抛 `PermissionError` | 调用 `trigger_action(cid, "escalate_cvo_refactor")` 不传 `operator_id`，验证抛出 `PermissionError` |
-| **T4: 持久层隔离** | 控制面 namespace 与 F014 灵忆 namespace 物理隔离 | 写入控制面状态后扫描 `echo_store` namespace，验证无控制面数据 |
-| **T5: 行动派发路由** | `depreciating` → F012 / `action_needed` → F020 / `bottleneck` → CVO | 构造三种状态组件，调用 `recommend()`，验证派发的 `action_type` 正确 |
+| **T4: 持久层隔离** | 控制面 namespace 与 F014 EchoStore namespace 物理隔离 | 写入控制面状态后扫描 `echo_store` namespace，验证无控制面数据 |
+| **T5: 行动派发路由** | `depreciating` → F012 / `action_needed` → F020 / `bottleneck` → CVO | 构造三种状态组件，调用 `recommend`，验证派发的 `action_type` 正确 |
 | **T6: 趋势分析聚合** | `TrendAnalyzer.analyze(30)` 正确聚合 30 天归因频次 | 构造 30 天 mock 历史数据，验证 `attribution_frequency` 与手工统计一致 |
 
 ---
@@ -1389,12 +1387,12 @@ harness_eval_control_plane:
 - [ ] **AC-3**: `list_by_state(state)` 返回该状态所有组件列表（dashboard 只读调用）
 - [ ] **AC-4**: `trigger_action(component_id, action, operator_id?)` 返回 `Action` 对象
 - [ ] **AC-5**: `get_trend(window_days, component_id?)` 返回 `TrendReport`
-- [ ] **AC-6**: `DailySummarizer.summarize()` 并行拉取 F018/F019/F020 三源数据
-- [ ] **AC-7**: `summarize()` 按 `contract_id` 对齐合并三源数据
-- [ ] **AC-8**: `summarize()` 计算 `appreciation_score` / `friction_score` / `attribution_distribution`
-- [ ] **AC-9**: `summarize()` 按 `LifecycleStateMachine` 规则更新 `lifecycle_state`
-- [ ] **AC-10**: `summarize()` 持久化到 `ControlPlaneRepository`
-- [ ] **AC-11**: `summarize()` 触发 `ActionRecommender.recommend()` 派发行动
+- [ ] **AC-6**: `DailySummarizer.summarize` 并行拉取 F018/F019/F020 三源数据
+- [ ] **AC-7**: `summarize` 按 `contract_id` 对齐合并三源数据
+- [ ] **AC-8**: `summarize` 计算 `appreciation_score` / `friction_score` / `attribution_distribution`
+- [ ] **AC-9**: `summarize` 按 `LifecycleStateMachine` 规则更新 `lifecycle_state`
+- [ ] **AC-10**: `summarize` 持久化到 `ControlPlaneRepository`
+- [ ] **AC-11**: `summarize` 触发 `ActionRecommender.recommend` 派发行动
 - [ ] **AC-12**: `ActionRecommender.recommend(status)` 按状态派发对应行动类型
 - [ ] **AC-13**: `STABLE` / `APPRECIATING` 状态派发 `no_action`
 - [ ] **AC-14**: `DEPRECIATING` 状态派发 `F012_sunset_review`（`requires_operator_approval=False`）
@@ -1402,10 +1400,10 @@ harness_eval_control_plane:
 - [ ] **AC-16**: `BOTTLENECK` 状态派发 `escalate_cvo_refactor`（`requires_operator_approval=True`）
 - [ ] **AC-17**: `TrendAnalyzer.analyze(window_days)` 按时间窗口聚合归因分布
 - [ ] **AC-18**: `TrendAnalyzer` 输出 `attribution_frequency` / `state_transitions` / `bottleneck_candidates`
-- [ ] **AC-19**: `LifecycleStateMachine.can_transition()` 校验转换合法性
+- [ ] **AC-19**: `LifecycleStateMachine.can_transition` 校验转换合法性
 - [ ] **AC-20**: `STABLE → BOTTLENECK` 跳跃被阻断（必须经 `DEPRECIATING → ACTION_NEEDED` 中转）
 - [ ] **AC-21**: `consecutive_depreciating_days >= bottleneck_consecutive_days` 触发 `DEPRECIATING → BOTTLENECK`
-- [ ] **AC-22**: `ControlPlaneRepository` 复用 F008 持久表面，namespace 与 F014 灵忆物理隔离
+- [ ] **AC-22**: `ControlPlaneRepository` 复用 F008 持久表面，namespace 与 F014 EchoStore物理隔离
 
 ### 5.2 性能验收（5 个 AC）
 
@@ -1421,7 +1419,7 @@ harness_eval_control_plane:
 - [ ] **AC-29**: `OperatorApprover.verify(operator_id, action)` 校验 operator 权限
 - [ ] **AC-30**: operator 审批超时 72h 自动 reject
 - [ ] **AC-31**: dashboard 数据源只读，无 `lifecycle_state` 写入路径
-- [ ] **AC-32**: 控制面 namespace 与 F014 灵忆 namespace 物理隔离（`distinguish_from_echo_store=true`）
+- [ ] **AC-32**: 控制面 namespace 与 F014 EchoStore namespace 物理隔离（`distinguish_from_echo_store=true`）
 
 ### 5.4 Eval 验收（5 个 AC）
 
@@ -1448,21 +1446,21 @@ harness_eval_control_plane:
 - [doc:../architecture/A040-harness-eval-control-plane.md]（同号 Feature 级 SAD）
 - [doc:../features/F008-durable-state-surfaces.md]（持久状态层，控制面存储后端）
 - [doc:../features/F012-entropy-control.md]（Entropy Control，sunset review 处理方）
-- [doc:../features/F014-memory-collection.md]（灵忆存储，与控制面存储隔离）
+- [doc:../features/F014-memory-collection.md]（EchoStore存储，与控制面存储隔离）
 - [doc:../features/F018-eval-contract.md]（Eval Contract，friction_metrics 来源）
 - [doc:../features/F019-three-signal-cross.md]（三方信号交叉，appreciation 来源）
 - [doc:../features/F020-seven-attribution.md]（七类归因矩阵，attribution 来源）
 - [doc:../features/F038-forgemind-lineage.md]（进化谱系，跨层迁移记录）
-- [doc:../features/F039-mind-codex-searchable.md]（锻典可检索，趋势元知识蒸馏）
+- [doc:../features/F039-mind-codex-searchable.md]（蒸馏知识库可检索，趋势元知识蒸馏）
 - [doc:../architecture/A018-eval-contract.md]（Eval Contract 架构，同源 ADR 009）
 - [doc:../architecture/A019-three-signal-cross.md]（三方信号架构，同源 ADR 009）
 - [doc:../architecture/A020-seven-attribution.md]（七类归因架构，同源 ADR 009）
 - [doc:../decisions/009-eval-self-metabolism.md]（Eval 自代谢 ADR）
-- [doc:../design/naming-contract.md#2.2]（灵智体 Forgekin）
-- [doc:../design/naming-contract.md#2.5]（灵忆 EchoStore）
-- [doc:../design/naming-contract.md#2.7]（灵锻 SpiritForge）
-- [doc:../design/naming-contract.md#2.8]（锻典 Mind Codex）
-- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 所有数据检索走 OpenSieve）
+- [doc:../design/naming-contract.md#2.2]（Forgekin Forgekin）
+- [doc:../design/naming-contract.md#2.5]（EchoStore）
+- [doc:../design/naming-contract.md#2.7]（SpiritForge）
+- [doc:../design/naming-contract.md#2.8]（MindCodex 蒸馏知识库）
+- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
 - [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
 - [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
 - [doc:../../../hiclaw/rules.md#第十二部分]（AI 编程优秀实践六层 Guardrails）
@@ -1475,4 +1473,4 @@ harness_eval_control_plane:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，应用 9 大点名称修订：双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 术语替换 + 责任方命名 + forgemind 定位 Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，） | 开发者 Forgekin（猎犬·夏洛克） |

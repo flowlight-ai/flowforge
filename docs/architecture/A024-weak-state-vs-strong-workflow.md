@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]（待创建）
 > **对应 Feature**: [doc:../features/F024-weak-state-vs-strong-workflow.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D024-weak-state-vs-strong-workflow.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -50,7 +49,7 @@ roleagent.md 第 6 章要求：**开放协作使用轻量状态机保留模型�
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │ 上层调用方                                                           │
-│  F002 TeamActLoop  Forgekin.act()  F022 RecoveryExecutor           │
+│  F002 TeamActLoop  Forgekin.act  F022 RecoveryExecutor           │
 └──────────┬──────────────────────────────────────────────────────────┘
            │ execute(operation)
            ▼
@@ -220,7 +219,7 @@ class AuditLogger(ABC):
 
 ```
 [操作分类路径]
-  Forgekin.act() 触发操作
+  Forgekin.act 触发操作
         │
         ▼
   OperationClassifier.classify(operation)
@@ -247,14 +246,14 @@ class AuditLogger(ABC):
         ├─ F022 Tier 分级拒绝点（Tier 0/4 → hard_reject）
         ├─ F011 MagicWords 拦截点（可被星星罐子拦截）
         │
-        ├─ 拦截 / 拒绝 → reject()
+        ├─ 拦截 / 拒绝 → reject
         │              │
         │              ▼
-        │              WorkflowRollbacker.rollback_step()
+        │              WorkflowRollbacker.rollback_step
         │              ├─ 可回滚操作 → 恢复 pre_state
         │              └─ 不可回滚操作 → 标记 failed
         │
-        ├─ AuditLogger.log_step() 写审计日志
+        ├─ AuditLogger.log_step 写审计日志
         │
         ▼
   current_step += 1
@@ -345,4 +344,4 @@ class AuditLogger(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 操作分类 + 强 workflow 四属性 + reject rollback + replay） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 操作分类 + 强 workflow 四属性 + reject rollback + replay） | 架构师 Forgekin（猫头鹰·鲁班） |

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010）+ [doc:../spec.md#§2.9]
 > **对应 arch.md**: [doc:../arch.md#§3.10]
 > **对应 design.md**: [doc:../design.md#§3.10]（待创建）
 > **对应 Feature**: [doc:../features/F031-external-agent-adapter.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D031-external-agent-adapter.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/006-external-agent-integration.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,14 +16,14 @@
 
 ### 1.1 架构问题
 
-FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用，灵智体（Forgekin）无法将三方 Agent 视为"能力扩展"而非"工具调用"。operator 指示（2026-07-17）明确要求加强三方 Agent 集成设计，支持 claude code / codex / opencode / trae 等编程 Agent 接入，并扩展到其他类型 Agent。本架构在 core/external_agent/ 建立 ExternalAgentAdapter 抽象层，解决以下架构层问题：
+FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用，Forgekin无法将三方 Agent 视为"能力扩展"而非"工具调用"。operator 指示（2026-07-17）明确要求加强三方 Agent 集成设计，支持 claude code / codex / opencode / trae 等编程 Agent 接入，并扩展到其他类型 Agent。本架构在 core/external_agent/ 建立 ExternalAgentAdapter 抽象层，解决以下架构层问题：
 
 1. **三方 Agent 与工具调用混淆**：v7.0 把三方 Agent 当 ToolRegistry 普通工具，导致能力画像无法融合、无 fallback、无共享状态。
 2. **EAC v1 七契约未定义**：Invocation / Stream / Session / Capability / Collaboration / Safety / Avatar Sync 七契约无统一规范，三方 Agent 接入接口散乱。
 3. **六层 Guardrails 未编码**：Input Validation / System Prompt Constraints / Tool Allow-Lists / Output Validation / Action Confirmation / Cost Ceiling 六层防护缺失，三方 Agent 调用存在安全风险。
 4. **worktree 隔离缺失**：三方 Agent 直接在主仓库执行，无网络白名单/权限控制/审计追踪/操作回滚四项隔离。
 5. **fallback 链未编排**：三方 Agent 失败无跨厂商回退机制，单点失败导致任务失败。
-6. **能力画像未融合**：三方 Agent 调用是"用完即走"，灵智体无法从调用中"学到"能力（与 clowder-ai 差距）。
+6. **能力画像未融合**：三方 Agent 调用是"用完即走"，Forgekin无法从调用中"学到"能力（与前期差距）。
 7. **System Prompt Configuration Map 缺失**：三方 Agent 无法接受 FlowForge 下发的 Role Mask 五层 / Core Identity / World Setting 引用，化身不一致。
 
 ### 1.2 架构约束
@@ -44,7 +43,7 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
 - **对 F002 TeamAct 的影响**：ExternalAgentSharedState 与 TeamActState 一一关联。
 - **对 F003 HandoffCapsule 的影响**：三方 Agent 支持 Handoff Capsule 交接（Collaboration Contract）。
 - **对 F008 持久状态层的影响**：ExternalAgentSharedState 写入持久状态层。
-- **对 F014 多域记忆的影响**：FallbackExecutionRecord 写入灵忆供灵锻蒸馏。
+- **对 F014 多域记忆的影响**：FallbackExecutionRecord 写入EchoStore供SpiritForge蒸馏。
 - **对 F018 Eval Contract 的影响**：三方 Agent 执行轨迹纳入 Eval 信号。
 - **对 F022 Tier 1-4 恢复分级的影响**：三方 Agent 失败按 Tier 1-4 分级恢复。
 - **对 F032-F035 的影响**：本架构作为容器，承载 F032 能力画像 / F033 状态共享 / F034 失败回退 / F035 能力融合四大机制。
@@ -60,7 +59,7 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
                     |        flowforge/core/external_agent/           |
                     |                                                 |
                     |  +-------------------+                          |
-                    |  | ExternalAgent     |  灵智体调用三方 Agent     |
+                    |  | ExternalAgent     |  Forgekin调用三方 Agent     |
                     |  | Bridge            |  的入口                   |
                     |  +---------+---------+                          |
                     |            |                                    |
@@ -128,7 +127,7 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
 ### 2.2 关键架构决策
 
 - **决策 1：ExternalAgentAdapter 抽象层 + Bridge 入口模式**
-  ExternalAgentAdapter 抽象定义七契约接口，ExternalAgentBridge 作为灵智体调用三方 Agent 的唯一入口。Bridge 编排 4 大机制（Profile/SharedState/Fallback/CapabilityFusion）+ 七契约 + 六层 Guardrails + worktree 隔离。这避免灵智体直接调用 Adapter 绕过 Guardrails。
+  ExternalAgentAdapter 抽象定义七契约接口，ExternalAgentBridge 作为Forgekin调用三方 Agent 的唯一入口。Bridge 编排 4 大机制（Profile/SharedState/Fallback/CapabilityFusion）+ 七契约 + 六层 Guardrails + worktree 隔离。这避免Forgekin直接调用 Adapter 绕过 Guardrails。
 
 - **决策 2：EAC v1 七契约作为 Adapter 注册硬门**
   所有三方 Agent Adapter 必须实现七契约（Invocation/Stream/Session/Capability/Collaboration/Safety/Avatar Sync + System Prompt Configuration Map）才能纳入 ExternalAgentBridge。缺一即拒绝注册。七契约覆盖同步调用、流式输出、会话管理、能力声明、协作交接、安全审计、化身同步全维度。
@@ -149,7 +148,7 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
   当 fallback 链全部失败时，降级到 FlowForge 内置 agent（能力可能弱但可用）。这保证任务不会因三方 Agent 全部不可用而完全失败。
 
 - **决策 8：调用语义统一（同步/异步/流式/委托）**
-  ExternalAgentBridge.invoke() 统一封装四种调用语义：同步（invoke）/异步（invoke_async）/流式（invoke_stream）/委托（delegate）。Adapter 内部实现差异由 Bridge 屏蔽。
+  ExternalAgentBridge.invoke 统一封装四种调用语义：同步（invoke）/异步（invoke_async）/流式（invoke_stream）/委托（delegate）。Adapter 内部实现差异由 Bridge 屏蔽。
 
 ### 2.3 架构不变量
 
@@ -157,10 +156,10 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
 - 三方 Agent 调用必须穿过六层 Guardrails，任一层失败即调用被拒绝。
 - 三方 Agent 必须在独立 worktree 中执行，含网络白名单 + 权限控制 + 审计追踪 + 操作回滚四项隔离。
 - 三方 Agent 失败必须按 fallback 链回退，全部失败必须降级到 FlowForge 内置能力。
-- 三方 Agent 能力画像必须融合到灵智体 CapabilityProfile（通过 F035 CapabilityFusion）。
+- 三方 Agent 能力画像必须融合到Forgekin CapabilityProfile（通过 F035 CapabilityFusion）。
 - 三方 Agent 执行状态必须写入 ExternalAgentSharedState（F033），与 F002 TeamActState 一一关联。
-- 三方 Agent 执行轨迹必须写入 Eval 信号（F018）+ 灵忆（F014）供灵锻蒸馏。
-- ExternalAgentBridge 必须是灵智体调用三方 Agent 的唯一入口，禁止灵智体直接调用 Adapter。
+- 三方 Agent 执行轨迹必须写入 Eval 信号（F018）+ EchoStore（F014）供SpiritForge蒸馏。
+- ExternalAgentBridge 必须是Forgekin调用三方 Agent 的唯一入口，禁止Forgekin直接调用 Adapter。
 - 三方 Agent 必须接受 System Prompt Configuration Map（含 Role Mask 五层 + Core Identity + World Setting 引用），保持 Avatar Sync。
 - 三方 Agent 配置必须 YAML 外置到 `config/external_agent.yaml`，禁止 .py 硬编码 API key / 端口 / 厂商偏好。
 
@@ -172,7 +171,7 @@ FlowForge 三方 Agent 集成此前被弱化为 ToolRegistry 普通工具调用�
 
 | 模块 | 路径 | 职责 |
 |------|------|------|
-| ExternalAgentBridge | `core/external_agent/bridge.py` | 灵智体调用三方 Agent 的唯一入口 |
+| ExternalAgentBridge | `core/external_agent/bridge.py` | Forgekin调用三方 Agent 的唯一入口 |
 | ExternalAgentAdapter | `core/external_agent/adapter.py` | 三方 Agent 适配器抽象（EAC v1 七契约） |
 | ExternalAgentType | `core/external_agent/adapter.py` | 三方 Agent 类型枚举（claude_code/codex/opencode/trae） |
 | ExternalAgentTask | `core/external_agent/adapter.py` | 三方 Agent 任务数据模型 |
@@ -327,7 +326,7 @@ class Guardrail(ABC):
 
 
 class ExternalAgentBridge:
-    """灵智体调用三方 Agent 的唯一入口"""
+    """Forgekin调用三方 Agent 的唯一入口"""
 
     def __init__(
         self,
@@ -351,14 +350,14 @@ class ExternalAgentBridge:
         task: ExternalAgentTask,
     ) -> ExternalAgentResult:
         """
-        灵智体调用三方 Agent 全流程：
+        Forgekin调用三方 Agent 全流程：
         1. 穿过六层 Guardrails
         2. 创建独立 worktree
         3. 按 fallback 链调用三方 Agent
         4. 写入共享状态
         5. 失败 -> fallback 链
         6. 全部失败 -> 降级到 FlowForge 内置能力
-        7. 执行轨迹写入 Eval 信号 + 灵忆
+        7. 执行轨迹写入 Eval 信号 + EchoStore
         """
         # 步骤 1: 六层 Guardrails
         for guardrail in self.guardrails:
@@ -371,18 +370,18 @@ class ExternalAgentBridge:
                 )
 
         # 步骤 2: worktree 隔离
-        worktree_path = await self.worktree_isolation.create_isolated()
+        worktree_path = await self.worktree_isolation.create_isolated
         task.worktree_path = worktree_path
 
         # 步骤 3-6: fallback 链
         for agent_type in self.fallback_chain:
             adapter = self.adapters[agent_type]
-            if not await adapter.health_check():
+            if not await adapter.health_check:
                 continue
             result = await adapter.invoke(task)
             await self.shared_state.write(forgekin_id, task.task_id, result)
             if result.success:
-                await self.fusion.fuse(forgekin_id, adapter.get_profile())
+                await self.fusion.fuse(forgekin_id, adapter.get_profile)
                 await self.worktree_isolation.cleanup(worktree_path)
                 return result
 
@@ -422,7 +421,7 @@ class WorktreeIsolation(ABC):
 ### 3.3 数据流
 
 ```
-[1] 灵智体 Forgekin 提出三方 Agent 调用请求
+[1] Forgekin 提出三方 Agent 调用请求
     `--> ExternalAgentBridge.invoke(forgekin_id, task)
             |
             v
@@ -442,7 +441,7 @@ class WorktreeIsolation(ABC):
             |
             v
 [3] worktree 隔离四项
-    `--> WorktreeIsolation.create_isolated()
+    `--> WorktreeIsolation.create_isolated
         - 网络白名单: egress filter 限制可访问域名
         - 权限控制: read/write/exec 细粒度
         - 审计追踪: 所有副作用记录到 audit log
@@ -451,11 +450,11 @@ class WorktreeIsolation(ABC):
             v
 [4] fallback 链调用
     for agent_type in fallback_chain (基于 F032 能力画像盲点互补 + 成本排序):
-        `--> adapter.health_check() -> true
+        `--> adapter.health_check -> true
             `--> adapter.invoke(task)
                 `--> 成功:
                     |-- shared_state.write(forgekin_id, task_id, result) [F033]
-                    |-- fusion.fuse(forgekin_id, adapter.get_profile()) [F035]
+                    |-- fusion.fuse(forgekin_id, adapter.get_profile) [F035]
                     `--> 返回 result
                 `--> 失败: 继续下一个 agent_type
             |
@@ -467,7 +466,7 @@ class WorktreeIsolation(ABC):
             v
 [6] 执行轨迹回流
     `--> Eval 信号写入 F018 Eval Contract
-    `--> FallbackExecutionRecord 写入 F014 灵忆（供 F035 灵锻蒸馏）
+    `--> FallbackExecutionRecord 写入 F014 EchoStore（供 F035 SpiritForge蒸馏）
     `--> 审计日志归档
     `--> worktree cleanup
 ```
@@ -484,7 +483,7 @@ class WorktreeIsolation(ABC):
 - **依赖 F004 Ping-Pong Circuit Breaker**：Collaboration Contract 支持心跳。
 - **依赖 F005 At-Mention Routing**：Collaboration Contract 支持 @-mention 路由。
 - **依赖 F008 Durable State Surfaces**：ExternalAgentSharedState 持久化目标。
-- **依赖 F014 Memory Collection**：FallbackExecutionRecord 写入灵忆。
+- **依赖 F014 Memory Collection**：FallbackExecutionRecord 写入EchoStore。
 - **依赖 F018 Eval Contract**：三方 Agent 执行轨迹纳入 Eval 信号。
 - **依赖 F022 Tier 1-4 Recovery**：三方 Agent 失败按 Tier 1-4 分级恢复。
 - **依赖 F030 Virtual World Setting**：System Prompt Configuration Map 引用 World Setting + Role Mask 五层。
@@ -496,17 +495,17 @@ class WorktreeIsolation(ABC):
 - **影响 F033 三方 Agent 状态共享**：本架构作为容器，F033 在 shared_state.py 落地 SharedStateStore 与 Handoff 接口。
 - **影响 F034 三方 Agent 失败回退**：本架构作为容器，F034 在 fallback.py 落地 FallbackChainExecutor 与 Builder。
 - **影响 F035 三方 Agent 能力融合**：本架构作为容器，F035 在 capability_fusion.py 落地 FusionSourceCollector 与 Distiller。
-- **影响 ForgekinBase.act()**：灵智体可通过 ExternalAgentBridge 调用三方 Agent 作为能力扩展。
+- **影响 ForgekinBase.act**：Forgekin可通过 ExternalAgentBridge 调用三方 Agent 作为能力扩展。
 
 ### 4.3 跨模块不变量
 
-- ExternalAgentBridge 必须是灵智体调用三方 Agent 的唯一入口，禁止灵智体直接调用 Adapter。
+- ExternalAgentBridge 必须是Forgekin调用三方 Agent 的唯一入口，禁止Forgekin直接调用 Adapter。
 - EAC v1 七契约必须全部实现，缺一即 Adapter 注册被拒绝。
 - 六层 Guardrails 必须按序穿过，任一层失败即调用被拒绝。
 - worktree 隔离四项（网络/权限/审计/回滚）必须全部生效，禁止在主仓库直接执行。
 - fallback 链必须基于 F032 能力画像盲点互补 + 成本排序构建，禁止按固定编号顺序。
 - 全部三方 Agent 失败必须降级到 FlowForge 内置能力，禁止任务完全失败。
-- 三方 Agent 执行轨迹必须同时写入 F018 Eval 信号 + F014 灵忆，供灵锻蒸馏。
+- 三方 Agent 执行轨迹必须同时写入 F018 Eval 信号 + F014 EchoStore，供SpiritForge蒸馏。
 - System Prompt Configuration Map 必须包含 Role Mask 五层 + Core Identity + World Setting 引用，保持 Avatar Sync。
 
 ---
@@ -530,9 +529,9 @@ class WorktreeIsolation(ABC):
 - [ ] AC-10: 全部失败降级不变量通过 —— 全部三方 Agent 失败时降级到 FlowForge 内置能力，返回 degrade_to_builtin。
 - [ ] AC-11: 能力融合不变量通过 —— 三方 Agent 调用成功后能力画像融合到 CapabilityProfile（F035）。
 - [ ] AC-12: 共享状态不变量通过 —— ExternalAgentSharedState 与 F002 TeamActState 一一关联。
-- [ ] AC-13: 执行轨迹回流不变量通过 —— 三方 Agent 执行轨迹同时写入 F018 Eval 信号 + F014 灵忆。
+- [ ] AC-13: 执行轨迹回流不变量通过 —— 三方 Agent 执行轨迹同时写入 F018 Eval 信号 + F014 EchoStore。
 - [ ] AC-14: System Prompt Configuration Map 不变量通过 —— 三方 Agent 接受 Role Mask 五层 + Core Identity + World Setting 引用，Avatar Sync 一致。
-- [ ] AC-15: Bridge 唯一入口不变量通过 —— 灵智体无直接调用 Adapter 的代码路径。
+- [ ] AC-15: Bridge 唯一入口不变量通过 —— Forgekin无直接调用 Adapter 的代码路径。
 
 ---
 
@@ -566,4 +565,4 @@ class WorktreeIsolation(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（EAC v1 七契约 + 六层 Guardrails + worktree 隔离 + fallback + 能力融合 + System Prompt Configuration Map 全维度架构） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（EAC v1 七契约 + 六层 Guardrails + worktree 隔离 + fallback + 能力融合 + System Prompt Configuration Map 全维度架构） | 架构师 Forgekin（猫头鹰·鲁班） |

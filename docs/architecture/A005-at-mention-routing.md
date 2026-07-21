@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，对应 FR-CORE-017）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
 > **对应 Feature**: [doc:../features/F005-at-mention-routing.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D005-at-mention-routing.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,7 +16,7 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智体'）协作时如何可靠地从对话中提取路由指令"的根本问题。当前 v7.0 A2A 协议无此约束，导致：
+FlowForge 在架构层需要解决"Forgekin（Evolvable Agent，社区社交称'灵智体'）协作时如何可靠地从对话中提取路由指令"的根本问题。当前 v7.0 A2A 协议无此约束，导致：
 
 1. `@` 提及和路由指令混在一起无法区分，任务归属不明，球经常掉地上
 2. 跨厂商协作时叙述性提及（如"我和 @architect 讨论过"）被误判为路由，导致非预期的任务转移
@@ -32,7 +31,7 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 - **DI 容器约束**：RoutingDispatcher 通过构造函数注入 TeamActState 与 BallCustodyRegistry
 - **Repository 层约束**：路由指令日志必须通过 Repository 持久化（可审计）
 - **配置驱动约束**：default_intent / supported_intents / ambiguous_fallback 外置到 `flowforge/config/teamact.yaml`
-- **行首判定约束**：必须使用 `line.lstrip().startswith("@")`，禁宽松匹配
+- **行首判定约束**：必须使用 `line.lstrip.startswith("@")`，禁宽松匹配
 - **歧义回退约束**：重名/不存在的目标必须走 ambiguous_fallback，禁静默丢弃
 
 ### 1.3 架构影响
@@ -52,9 +51,9 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│              灵智体对话 (TeamAct ACTION/ROUTE 步)                  │
-│   "@contentforge:writer 请把这段重写"  ← 路由 (行首 @)             │
-│   "我和 @contentforge:writer 讨论了"   ← 叙述 (句中 @, 不路由)     │
+│              Forgekin对话 (TeamAct ACTION/ROUTE 步)                  │
+│   "@<forge_project>:<forgekin> 请把这段重写"  ← 路由 (行首 @)        │
+│   "我和 @<forge_project>:<forgekin> 讨论了"   ← 叙述 (句中 @, 不路由)│
 └──────────────────────────────┬─────────────────────────────────────┘
                                │ message + source_forgekin_id
                                ▼
@@ -110,11 +109,11 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 
 ### 2.3 架构不变量
 
-- 路由指令必须出现在行首（`line.lstrip().startswith("@")`），句中 @ 仅记录不触发路由
+- 路由指令必须出现在行首（`line.lstrip.startswith("@")`），句中 @ 仅记录不触发路由
 - 路由意图必须识别为 take/pass/escalate/broadcast 之一，无关键词默认 pass
 - 路由目标必须通过 validate_target 校验（重名/不存在走 ambiguous_fallback）
 - 路由变更必须同步写入 TeamActState.current_owner
-- take 意图必须触发 F006 BallCustodyLease.acquire()
+- take 意图必须触发 F006 BallCustodyLease.acquire
 - escalate 意图必须升级 CVO 仲裁
 - 路由指令日志必须通过 Repository 持久化（可审计）
 - 条件路由挂起等待条件满足后触发，禁静默丢弃
@@ -145,7 +144,7 @@ from datetime import datetime
 class AtMentionToken(BaseModel):
     """单条 @ 提及"""
     raw_line: str                        # 原始行
-    target_forgekin_id: str              # @ 的目标灵智体
+    target_forgekin_id: str              # @ 的目标Forgekin
     is_routing: bool                     # 是否为路由指令（行首判定）
     routing_intent: Optional[str]        # 路由意图 (take/pass/escalate/broadcast)
     line_number: int
@@ -190,7 +189,7 @@ class RoutingDispatcher(ABC):
 
         架构契约:
         - validate_target 校验目标合法性 (重名/不存在走 ambiguous_fallback)
-        - take → 触发 F006 BallCustodyLease.acquire()
+        - take → 触发 F006 BallCustodyLease.acquire
         - pass → 球给下一个 (更新 TeamActState.current_owner)
         - escalate → 升级 CVO 仲裁
         - broadcast → 多目标分发
@@ -230,7 +229,7 @@ class DispatchResult(BaseModel):
 ### 3.3 数据流
 
 ```
-灵智体对话消息 (TeamAct ACTION/ROUTE 步)
+Forgekin对话消息 (TeamAct ACTION/ROUTE 步)
                   │
                   │ message + source_forgekin_id
                   ▼
@@ -254,7 +253,7 @@ class DispatchResult(BaseModel):
 ┌──────────────────────────────────────────────────────────────┐
 │ 3. RoutingDispatcher.dispatch(directive)                    │
 │    - validate_target (重名/不存在走 ambiguous_fallback)     │
-│    - take → F006 BallCustodyLease.acquire()                │
+│    - take → F006 BallCustodyLease.acquire                │
 │    - pass → 更新 TeamActState.current_owner                │
 │    - escalate → 升级 CVO                                    │
 │    - broadcast → 多目标分发                                  │
@@ -316,7 +315,7 @@ class DispatchResult(BaseModel):
 - [ ] AC-8: 条件路由可挂起等待条件满足后触发
 - [ ] AC-9: 歧义目标（重名/不存在）走 ambiguous_fallback 不静默丢弃
 - [ ] AC-10: 路由变更同步写入 TeamActState.current_owner
-- [ ] AC-11: take 意图触发 F006 BallCustodyLease.acquire()
+- [ ] AC-11: take 意图触发 F006 BallCustodyLease.acquire
 
 ---
 
@@ -337,4 +336,4 @@ class DispatchResult(BaseModel):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F005 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F005 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

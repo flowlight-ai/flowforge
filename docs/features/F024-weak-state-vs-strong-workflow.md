@@ -6,11 +6,10 @@
 > **关联 ADR**: [doc:decisions/010-distributed-reliability.md]
 > **类型**: reliability
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.6]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.6]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -109,14 +108,14 @@ state_vs_workflow:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体执行严肃副作用（如 merge），中途触发 reject，验证回滚与审计。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin执行严肃副作用（如 merge），中途触发 reject，验证回滚与审计。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第6章]
 - [doc:review/review.md#第八章/RA-040]
 - [doc:decisions/010-distributed-reliability.md]
-- [doc:design/naming-contract.md#2.2]（灵智体 Forgekin）
+- [doc:design/naming-contract.md#2.2]（Forgekin Forgekin）
 - [doc:features/F002-teamact-loop.md]
 - [doc:features/F011-magic-words.md]
 - [doc:features/F021-side-effect-wal.md]
@@ -129,4 +128,3 @@ state_vs_workflow:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.6 同号映射 | 文档员灵智体（钢笔·文心） |

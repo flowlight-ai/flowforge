@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，FR-CORE-017）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]
 > **对应 Feature**: [doc:../features/F005-at-mention-routing.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A005-at-mention-routing.md]（同号架构设计）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + 进化阶/觉醒阶标注）
 
 ---
 
@@ -19,7 +18,7 @@
 
 A005 架构设计已给出"行首 @ 路由"协议层硬要求与接口契约，但落地到代码层仍需解决以下问题：
 
-1. **行首判定的边界条件**：`line.lstrip().startswith("@")` 在 Windows CRLF / 空白符 / 全角空格 / Markdown 引用前缀 `> @xxx` 等场景下如何机械判定？需要明确解析器规则与单元测试矩阵。
+1. **行首判定的边界条件**：`line.lstrip.startswith("@")` 在 Windows CRLF / 空白符 / 全角空格 / Markdown 引用前缀 `> @xxx` 等场景下如何机械判定？需要明确解析器规则与单元测试矩阵。
 2. **意图关键词识别的歧义**：`@forgekin take` 与 `@forgekin takeover` 如何区分？关键词必须按 token 边界匹配，禁子串匹配。
 3. **条件路由的语法**：`@forgekin take when CI_GREEN` 中 `when` 关键字后的条件表达式是字符串枚举还是 DSL？需要确定可解析条件集合与未知条件的回退策略。
 4. **路由指令的并发分发**：同一消息中多行行首 @ 触发多个 RoutingDirective 时，分发顺序与原子性如何保证？是顺序分发还是并行分发？
@@ -29,22 +28,22 @@ A005 架构设计已给出"行首 @ 路由"协议层硬要求与接口契约，�
 ### 1.2 详细设计约束
 
 - **C1 单向依赖**：`flowforge/core/teamact/at_mention.py` 不可 import forgemind 或 *Forge 模块；仅可依赖 `core/capability/`、`core/teamact/`、`core/plugin/di_container.py`、`core/tracing.py`、`core/events/`。
-- **C2 DI 注入**：`RoutingDispatcher` 必须通过 `core/plugin/di_container.py::inject()` 注入 `TeamActStateRepository`、`BallCustodyRegistry`、`CapabilityRepository`、`RoutingLogStore`，禁直接实例化。
+- **C2 DI 注入**：`RoutingDispatcher` 必须通过 `core/plugin/di_container.py::inject` 注入 `TeamActStateRepository`、`BallCustodyRegistry`、`CapabilityRepository`、`RoutingLogStore`，禁直接实例化。
 - **C3 Repository 抽象**：路由指令日志必须通过 `RoutingLogStore (ABC)` 抽象，禁 `cursor.execute`，禁 `sqlite3.connect` 直连。
 - **C4 配置驱动**：`default_intent`、`supported_intents`、`ambiguous_fallback`、`condition_keywords` 必须外置到 `flowforge/config/teamact.yaml`，禁硬编码。
 - **C5 行首判定**：必须使用 `line.lstrip(" \t\u3000").startswith("@")`，禁宽松正则 `^.*?@`。
 - **C6 歧义回退**：重名 / 不存在 / 关键词不识别的目标必须走 `ambiguous_fallback`（默认 `notify_cvo`），禁静默丢弃。
 - **C7 WAL 持久化**：`SqliteRoutingLogStore` 必须启用 `PRAGMA journal_mode=WAL` + `PRAGMA synchronous=NORMAL` + 定期 `PRAGMA wal_checkpoint(FULL)`。
-- **C8 异步非阻塞**：所有 I/O 操作（Repository、EventBus 广播）必须 `async/await`，阻塞调用通过 `asyncio.to_thread()` 包装。
+- **C8 异步非阻塞**：所有 I/O 操作（Repository、EventBus 广播）必须 `async/await`，阻塞调用通过 `asyncio.to_thread` 包装。
 - **C9 类型注解强制**：Python 3.11+，所有公共方法返回类型与参数类型必须显式注解。
 - **C10 半角问号**：所有正则 pattern 必须使用半角 `?`，禁全角 `？`（项目记忆 20260719 已记录坑）。
-- **C11 双轨命名**：代码层用 `Forgekin` / `CapabilityProfile` / `RoutingDirective`；产品文案层用"灵智体 / 能力画像 / 路由指令"。
+- **C11 双轨命名**：代码层用 `Forgekin` / `CapabilityProfile` / `RoutingDirective`；产品文案层用"Forgekin / 能力画像 / 路由指令"。
 
 ### 1.3 详细设计影响
 
-- **I1 对 D002 TeamAct Loop 的影响**：`TeamActLoopExecutor` 在 Owner 步与 ROUTE 步必须调用 `RoutingDispatcher.dispatch()`，将解析出的 RoutingDirective 同步写入 TeamActState.current_owner。
-- **I2 对 D006 Ball Custody Lease 的影响**：`take` 意图触发 `BallCustodyRegistry.acquire()`；`pass` 意图触发 `BallCustodyRegistry.release()`；条件路由挂起期间 lease 持续 held。
-- **I3 对 D003 Handoff Capsule 的影响**：路由指令变更必须写入 HandoffCapsule.next_step 字段，使接手灵智体可见路由上下文。
+- **I1 对 D002 TeamAct Loop 的影响**：`TeamActLoopExecutor` 在 Owner 步与 ROUTE 步必须调用 `RoutingDispatcher.dispatch`，将解析出的 RoutingDirective 同步写入 TeamActState.current_owner。
+- **I2 对 D006 Ball Custody Lease 的影响**：`take` 意图触发 `BallCustodyRegistry.acquire`；`pass` 意图触发 `BallCustodyRegistry.release`；条件路由挂起期间 lease 持续 held。
+- **I3 对 D003 Handoff Capsule 的影响**：路由指令变更必须写入 HandoffCapsule.next_step 字段，使接手Forgekin可见路由上下文。
 - **I4 对 D007 Push Back 的影响**：`escalate` 意图通过行首 `@cvo escalate` 升级 CVO 仲裁，触发 Push Back 辩论链。
 - **I5 对 D018 Eval Contract 的影响**：路由指令日志是 trace 信号源，写入 `EvalSignalWriter` 供归因矩阵消费。
 - **I6 对 D021 Side Effect WAL 的影响**：路由指令日志走 WAL，进程崩溃后可从 WAL 重放恢复 TeamActState.current_owner。
@@ -140,8 +139,8 @@ A005 架构设计已给出"行首 @ 路由"协议层硬要求与接口契约，�
 │  ├──────────────────────────────────────────────────────────────┤   │
 │  │ - _db_path: Path                                              │   │
 │  │ - _conn: aiosqlite.Connection                                 │   │
-│  │ + _ensure_schema()                                            │   │
-│  │ + _checkpoint()                                               │   │
+│  │ + _ensure_schema                                            │   │
+│  │ + _checkpoint                                               │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -177,14 +176,14 @@ class DecayTag(str, Enum):
 class AtMentionToken(BaseModel):
     """单条 @ 提及解析结果"""
     raw_line: str = Field(..., min_length=1, description="原始行文本")
-    target_forgekin_id: str = Field(..., min_length=1, description="@ 的目标灵智体 ID")
+    target_forgekin_id: str = Field(..., min_length=1, description="@ 的目标Forgekin ID")
     is_routing: bool = Field(..., description="是否为行首路由指令（True）或句中叙述（False）")
     routing_intent: Optional[RoutingIntent] = Field(
         default=None,
         description="路由意图；句中 @ 为 None",
     )
     line_number: int = Field(..., ge=1, description="消息中的行号（从 1 开始）")
-    source_forgekin_id: str = Field(..., min_length=1, description="发起方灵智体 ID")
+    source_forgekin_id: str = Field(..., min_length=1, description="发起方Forgekin ID")
     condition: Optional[str] = Field(
         default=None,
         description="条件路由表达式（如 CI_GREEN）",
@@ -215,7 +214,7 @@ class RoutingDirective(BaseModel):
         default=None,
         description="条件路由表达式；非空表示挂起等待条件满足",
     )
-    source_forgekin_id: str = Field(..., min_length=1, description="发起方灵智体 ID")
+    source_forgekin_id: str = Field(..., min_length=1, description="发起方Forgekin ID")
     issued_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="指令发出时间（UTC）",
@@ -234,9 +233,9 @@ class RoutingDirective(BaseModel):
     @field_validator("target")
     @classmethod
     def _target_non_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("RoutingDirective.target 不可为空")
-        return v.strip()
+        return v.strip
 
 
 class DispatchResult(BaseModel):
@@ -245,7 +244,7 @@ class DispatchResult(BaseModel):
     directive_id: str = Field(..., min_length=1)
     new_owner: Optional[str] = Field(
         default=None,
-        description="分发后的新持球灵智体 ID（pass/take 成功时非空）",
+        description="分发后的新持球Forgekin ID（pass/take 成功时非空）",
     )
     lease_id: Optional[str] = Field(
         default=None,
@@ -302,7 +301,7 @@ class AmbiguousTargetError(AtMentionError):
         self.target = target
         self.reason = reason
         self.fallback = fallback
-        super().__init__(f"ambiguous target '{target}': {reason}; fallback={fallback}")
+        super.__init__(f"ambiguous target '{target}': {reason}; fallback={fallback}")
 
 
 class InvalidIntentKeywordError(AtMentionError):
@@ -370,7 +369,7 @@ class RoutingDispatcher(ABC):
 
         架构契约:
         - validate_target 校验目标合法性（重名/不存在走 ambiguous_fallback）
-        - take → 触发 BallCustodyRegistry.acquire()，更新 TeamActState.current_owner
+        - take → 触发 BallCustodyRegistry.acquire，更新 TeamActState.current_owner
         - pass → 更新 TeamActState.current_owner，释放原 lease
         - escalate → 升级 CVO 仲裁（事件广播）
         - broadcast → 多目标分发（按 team_id 成员列表）
@@ -419,7 +418,7 @@ from core.plugin.di_container import inject
 
 
 _LINE_START_AT_PATTERN = re.compile(r"^[ \t\u3000]*@")
-# 行首 @ 提取目标 ID（支持 namespace:forgekin 形式，如 contentforge:writer）
+# 行首 @ 提取目标 ID（支持 namespace:forgekin 形式，如 <forge_project>:<forgekin>）
 _TARGET_PATTERN = re.compile(r"^[ \t\u3000]*@([A-Za-z0-9_:\-\.]+)")
 # 意图关键词（按 token 边界匹配，防 takeover 误匹配 take）
 _INTENT_PATTERN = re.compile(
@@ -441,7 +440,7 @@ class DefaultAtMentionParser(AtMentionParser):
         supported_targets: Optional[set[str]] = None,
         logger_name: str = "flowforge.at_mention.parser",
     ) -> None:
-        self._supported_targets = supported_targets or set()
+        self._supported_targets = supported_targets or set
         self._logger = _get_logger(logger_name)
 
     async def parse(
@@ -452,7 +451,7 @@ class DefaultAtMentionParser(AtMentionParser):
         if not message:
             return []
         tokens: list[AtMentionToken] = []
-        lines = message.splitlines()
+        lines = message.splitlines
         for idx, line in enumerate(lines, start=1):
             if "@" not in line:
                 continue
@@ -504,7 +503,7 @@ class DefaultAtMentionParser(AtMentionParser):
         match = _INTENT_PATTERN.match(line)
         if not match:
             return None  # 无关键词 → 默认 pass（由 IntentRecognizer 处理）
-        keyword = match.group(1).lower()
+        keyword = match.group(1).lower
         try:
             return RoutingIntent(keyword)
         except ValueError:
@@ -514,7 +513,7 @@ class DefaultAtMentionParser(AtMentionParser):
         match = _CONDITION_PATTERN.search(line)
         if not match:
             return None
-        return match.group(1).upper()
+        return match.group(1).upper
 
 
 class KeywordIntentRecognizer(IntentRecognizer):
@@ -616,7 +615,7 @@ class DefaultRoutingDispatcher(RoutingDispatcher):
         # 5. 广播事件 + 写 Eval 信号
         await self._event_bus.publish_async(
             "routing.directive.dispatched",
-            {"directive_id": directive.directive_id, "result": result.model_dump()},
+            {"directive_id": directive.directive_id, "result": result.model_dump},
         )
         self._eval_signal_writer.write_trace(
             signal_type="routing_dispatch",
@@ -778,7 +777,7 @@ class DefaultRoutingDispatcher(RoutingDispatcher):
         result: DispatchResult,
     ) -> None:
         entry = RoutingLogEntry(
-            entry_id=f"rle-{uuid.uuid4().hex[:16]}",
+            entry_id=f"rle-{uuid.uuid4.hex[:16]}",
             directive_id=directive.directive_id,
             team_id=directive.team_id,
             target=directive.target,
@@ -802,7 +801,7 @@ def _get_logger(name: str):
 ```
 function parse(message, source_forgekin_id):
     tokens = []
-    lines = message.splitlines()
+    lines = message.splitlines
     for idx, line in enumerate(lines, start=1):
         if "@" not in line:
             continue
@@ -922,7 +921,7 @@ class SqliteRoutingLogStore(RoutingLogStore):
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
         self._conn: Optional[aiosqlite.Connection] = None
-        self._lock = asyncio.Lock()
+        self._lock = asyncio.Lock
 
     async def _ensure_conn(self) -> aiosqlite.Connection:
         if self._conn is None:
@@ -932,11 +931,11 @@ class SqliteRoutingLogStore(RoutingLogStore):
             await self._conn.execute("PRAGMA synchronous=NORMAL")
             await self._conn.execute("PRAGMA foreign_keys=ON")
             await self._conn.executescript(_SCHEMA_SQL)
-            await self._conn.commit()
+            await self._conn.commit
         return self._conn
 
     async def append(self, entry: RoutingLogEntry) -> str:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with self._lock:
             # 获取 WAL LSN（rowid 作为简易 LSN）
             cursor = await conn.execute(
@@ -954,16 +953,16 @@ class SqliteRoutingLogStore(RoutingLogStore):
                     entry.target,
                     entry.intent.value,
                     entry.source_forgekin_id,
-                    entry.issued_at.isoformat(),
-                    entry.dispatched_at.isoformat(),
-                    entry.dispatch_result.model_dump_json(),
+                    entry.issued_at.isoformat,
+                    entry.dispatched_at.isoformat,
+                    entry.dispatch_result.model_dump_json,
                     entry.schema_version,
                     entry.decay_tag.value,
                 ),
             )
-            await conn.commit()
+            await conn.commit
             wal_lsn = cursor.lastrowid
-            await cursor.close()
+            await cursor.close
             await self._checkpoint_if_needed(conn)
         # 回填 wal_lsn
             entry.wal_lsn = wal_lsn
@@ -971,7 +970,7 @@ class SqliteRoutingLogStore(RoutingLogStore):
                 "UPDATE routing_log SET wal_lsn=? WHERE entry_id=?",
                 (wal_lsn, entry.entry_id),
             )
-            await conn.commit()
+            await conn.commit
         return entry.entry_id
 
     async def list_by_team(
@@ -979,7 +978,7 @@ class SqliteRoutingLogStore(RoutingLogStore):
         team_id: str,
         limit: int = 100,
     ) -> list[RoutingLogEntry]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         cursor = await conn.execute(
             """
             SELECT entry_id, directive_id, team_id, target, intent,
@@ -992,12 +991,12 @@ class SqliteRoutingLogStore(RoutingLogStore):
             """,
             (team_id, limit),
         )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        rows = await cursor.fetchall
+        await cursor.close
         return [self._row_to_entry(r) for r in rows]
 
     async def replay_from(self, checkpoint_lsn: int) -> list[RoutingLogEntry]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         cursor = await conn.execute(
             """
             SELECT entry_id, directive_id, team_id, target, intent,
@@ -1009,15 +1008,15 @@ class SqliteRoutingLogStore(RoutingLogStore):
             """,
             (checkpoint_lsn,),
         )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        rows = await cursor.fetchall
+        await cursor.close
         return [self._row_to_entry(r) for r in rows]
 
     async def _checkpoint_if_needed(self, conn: aiosqlite.Connection) -> None:
         # 每 100 条日志做一次 FULL checkpoint
         cursor = await conn.execute("SELECT COUNT(*) FROM routing_log")
-        count = (await cursor.fetchone())[0]
-        await cursor.close()
+        count = (await cursor.fetchone)[0]
+        await cursor.close
         if count % 100 == 0:
             await conn.execute("PRAGMA wal_checkpoint(FULL)")
 
@@ -1045,7 +1044,7 @@ class SqliteRoutingLogStore(RoutingLogStore):
 
     async def close(self) -> None:
         if self._conn is not None:
-            await self._conn.close()
+            await self._conn.close
             self._conn = None
 ```
 
@@ -1054,7 +1053,7 @@ class SqliteRoutingLogStore(RoutingLogStore):
 **时序图 1：行首 @ take 路由（成功路径）**
 
 ```
-灵智体A    AtMentionParser   IntentRecognizer   RoutingDispatcher   TeamActRepo   LeaseRegistry   RoutingLogStore   EventBus
+ForgekinA    AtMentionParser   IntentRecognizer   RoutingDispatcher   TeamActRepo   LeaseRegistry   RoutingLogStore   EventBus
   │             │                   │                   │                │              │                │              │
   │ parse(msg)  │                   │                   │                │              │                │              │
   ├────────────>│                   │                   │                │              │                │              │
@@ -1097,7 +1096,7 @@ class SqliteRoutingLogStore(RoutingLogStore):
 **时序图 2：歧义目标回退**
 
 ```
-灵智体A    RoutingDispatcher   CapabilityRepo   EventBus(CVO)
+ForgekinA    RoutingDispatcher   CapabilityRepo   EventBus(CVO)
   │             │                   │                │
   │ dispatch(directive, target="unknown_agent")     │
   ├────────────>│                   │                │
@@ -1122,7 +1121,7 @@ class SqliteRoutingLogStore(RoutingLogStore):
 | EH-2 | 重名目标 | 同一 forgekin_id 解析出多个 profile（理论上 CapabilityRepository 唯一） | 走 `ambiguous_fallback`，CVO 仲裁 | 否 | 同 EH-1，reason="duplicate_target" |
 | EH-3 | 关键词不识别 | `_extract_intent_keyword` 返回 None（不在 4 种枚举内） | IntentRecognizer 使用 default_intent=PASS | 否 | DispatchResult 正常返回，但 trace 记录 "unknown_keyword_fallback_to_pass" |
 | EH-4 | 条件路由表达式不识别 | `when` 后关键词不在 `condition_keywords` 配置中 | 走 `ambiguous_fallback`，记录 trace | 否 | DispatchResult.error="unknown_condition_keyword" |
-| EH-5 | lease 注册失败 | `BallCustodyRegistry.acquire_for` 抛异常（如一灵智体已持球） | DispatchResult.success=False，error 透传 | 否 | error="LeaseAlreadyHeld: forgekin_id=xxx" |
+| EH-5 | lease 注册失败 | `BallCustodyRegistry.acquire_for` 抛异常（如一Forgekin已持球） | DispatchResult.success=False，error 透传 | 否 | error="LeaseAlreadyHeld: forgekin_id=xxx" |
 | EH-6 | TeamActState 更新失败 | `teamact_repo.update_owner` 抛异常（如 DB 锁） | DispatchResult.success=False，已 acquire 的 lease 需回滚 release | 否 | error="TeamActStateUpdateFailed" |
 | EH-7 | WAL 写入失败 | `routing_log_store.append` 抛异常（如磁盘满） | 重试 3 次（指数退避 100ms/200ms/400ms）；仍失败则降级写入 fallback log 文件 + 告警 | 是（3次） | DispatchResult 仍返回成功，但 trace 标记 "log_persistence_failed" |
 | EH-8 | EventBus 广播失败 | `event_bus.publish_async` 超时或异常 | 仅 log warning，不影响 DispatchResult | 否 | trace 标记 "event_bus_publish_failed" |
@@ -1179,17 +1178,17 @@ at_mention:
   broadcast_team_resolver:
     type: static_config
     teams:
-      team:contentforge:all:
-        - contentforge:topic
-        - contentforge:research
-        - contentforge:writing
-        - contentforge:seo
-        - contentforge:factcheck
-        - contentforge:publish
-      team:devforge:all:
-        - devforge:coder
-        - devforge:reviewer
-        - devforge:tester
+      team:<forge_project_id_1>:all:
+        - <forge_project_id_1>:<forgekin_1>
+        - <forge_project_id_1>:<forgekin_2>
+        - <forge_project_id_1>:<forgekin_3>
+        - <forge_project_id_1>:<forgekin_4>
+        - <forge_project_id_1>:<forgekin_5>
+        - <forge_project_id_1>:<forgekin_6>
+      team:<forge_project_id_2>:all:
+        - <forge_project_id_2>:<forgekin_1>
+        - <forge_project_id_2>:<forgekin_2>
+        - <forge_project_id_2>:<forgekin_3>
 ```
 
 ---
@@ -1251,7 +1250,7 @@ class TeamActLoopExecutor:
         for token in routing_tokens:
             intent = self._recognizer.recognize(token)
             directive = RoutingDirective(
-                directive_id=f"dir-{uuid.uuid4().hex[:16]}",
+                directive_id=f"dir-{uuid.uuid4.hex[:16]}",
                 team_id=team_id,
                 target=token.target_forgekin_id,
                 intent=intent,
@@ -1291,14 +1290,14 @@ class BallCustodyRegistry:
         reason: str,
         next_step: str,
     ) -> str:
-        # 校验一灵智体同时只能持有一个 lease
+        # 校验一Forgekin同时只能持有一个 lease
         existing = await self._find_active_lease_by_forgekin(forgekin_id)
         if existing:
             raise LeaseAlreadyHeld(
                 f"forgekin {forgekin_id} already holds lease {existing.lease_id}"
             )
         lease = BallCustodyLease(
-            lease_id=f"lease-{uuid.uuid4().hex[:16]}",
+            lease_id=f"lease-{uuid.uuid4.hex[:16]}",
             team_id=team_id,
             forgekin_id=forgekin_id,
             reason=reason,
@@ -1396,7 +1395,7 @@ class SideEffectWalReplayer:
 | IT-3 | 条件路由挂起 | `@forgekin take when CI_GREEN` 解析出 condition=CI_GREEN；dispatch 挂起到 teamact_repo.record_pending_directive | T3 断言 pending_condition 非空 |
 | IT-4 | 歧义目标回退 | `@unknown_agent take` → DispatchResult.success=False，ambiguous_fallback_triggered=True，CVO 收到 notify 事件 | T3 断言 fallback 触发 |
 | IT-5 | escalate 升级 CVO | `@cvo escalate` → event_bus 发布 cvo.escalate.requested | T4 真实 EventBus |
-| IT-6 | broadcast 多目标分发 | `@team:contentforge:all broadcast` → 所有成员收到 routing.broadcast.received 事件 | T3 断言 broadcast_targets 长度 |
+| IT-6 | broadcast 多目标分发 | `@team:<forge_project_id>:all broadcast` → 所有成员收到 routing.broadcast.received 事件 | T3 断言 broadcast_targets 长度 |
 | IT-7 | WAL 重放一致性 | 写入 100 条路由日志 → 进程崩溃（模拟）→ replay_from(0) → TeamActState.current_owner 与最后一条日志一致 | T6 MetricsCollector 采集 |
 | IT-8 | 重复 directive 幂等 | 同一 directive_id dispatch 两次 → 第二次返回原 DispatchResult，不重复 acquire lease | T3 断言 lease_count 不变 |
 | IT-9 | 多行消息混合路由+叙述 | 同一消息含 3 行行首 @ + 2 行句中 @ → tokens 长度 5，routing_tokens 长度 3 | T3 断言分类正确 |
@@ -1414,7 +1413,7 @@ class SideEffectWalReplayer:
 | AC # | 验收点 | 验证方法 |
 |------|-------|---------|
 | AC-F-1 | `flowforge/core/teamact/at_mention.py` 不 import forgemind 或 *Forge 模块 | 静态扫描 import 语句 |
-| AC-F-2 | `RoutingDispatcher` 通过 DI 容器 `inject()` 注入，无直接实例化 | 代码审查 + DI 容器单测 |
+| AC-F-2 | `RoutingDispatcher` 通过 DI 容器 `inject` 注入，无直接实例化 | 代码审查 + DI 容器单测 |
 | AC-F-3 | 路由指令日志通过 `RoutingLogStore (ABC)` 持久化，无 `cursor.execute` | grep `cursor.execute` 在 at_mention 模块返回空 |
 | AC-F-4 | `default_intent` / `supported_intents` / `ambiguous_fallback` / `condition_keywords` 外置到 `flowforge/config/teamact.yaml` | YAML 加载测试 |
 | AC-F-5 | 路由指令日志走 WAL（`PRAGMA journal_mode=WAL`） | DB pragma 查询 |
@@ -1423,8 +1422,8 @@ class SideEffectWalReplayer:
 | AC-F-8 | 条件路由可挂起等待条件满足后触发 | 集成测试 IT-3 |
 | AC-F-9 | 歧义目标（重名/不存在）走 `ambiguous_fallback` 不静默丢弃 | 集成测试 IT-4 |
 | AC-F-10 | 路由变更同步写入 `TeamActState.current_owner` | 集成测试 IT-1 |
-| AC-F-11 | `take` 意图触发 `BallCustodyRegistry.acquire()` | 集成测试 IT-1 |
-| AC-F-12 | `pass` 意图触发 `BallCustodyRegistry.release_for()` 释放原 lease | 集成测试 |
+| AC-F-11 | `take` 意图触发 `BallCustodyRegistry.acquire` | 集成测试 IT-1 |
+| AC-F-12 | `pass` 意图触发 `BallCustodyRegistry.release_for` 释放原 lease | 集成测试 |
 | AC-F-13 | `escalate` 意图升级 CVO 仲裁（发布事件） | 集成测试 IT-5 |
 | AC-F-14 | `broadcast` 意图多目标分发 | 集成测试 IT-6 |
 | AC-F-15 | 路由指令日志可回放（`replay_from`）恢复 TeamActState | 集成测试 IT-7 |
@@ -1449,7 +1448,7 @@ class SideEffectWalReplayer:
 |------|-------|
 | AC-S-1 | 路由指令日志通过 Repository 抽象，无 `cursor.execute` / `sqlite3.connect` 直连 |
 | AC-S-2 | `validate_target` 拒绝未知目标，走 `ambiguous_fallback` |
-| AC-S-3 | 灵智体输出不触发 Magic Words（本模块不涉及 Magic Words，但需保证灵智体不可伪造 `source_forgekin_id`） |
+| AC-S-3 | Forgekin输出不触发 Magic Words（本模块不涉及 Magic Words，但需保证Forgekin不可伪造 `source_forgekin_id`） |
 | AC-S-4 | 路由指令日志写入 audit，禁删除 |
 | AC-S-5 | 条件路由挂起状态持久化，进程崩溃可恢复 |
 | AC-S-6 | WAL 文件权限 0600（仅 owner 读写） |
@@ -1491,4 +1490,4 @@ class SideEffectWalReplayer:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 A005 架构与 F005 Feature SRS） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 A005 架构与 F005 Feature SRS） | 开发者 Forgekin（猎犬·夏洛克） |

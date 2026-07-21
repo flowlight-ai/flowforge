@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]（待创建）
 > **对应 Feature**: [doc:../features/F025-provider-host-abstraction.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D025-provider-host-abstraction.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -21,9 +20,9 @@
 
 1. **错误码语义混乱**：anthropic 429 与 openai 429 在 v7.0 被同样处理为"重试"，但 anthropic 429 可能是 token 限流、openai 429 可能是 RPM 限流，重试策略不同。
 2. **超时策略不一致**：anthropic 默认 60s 超时，openai 默认 90s 超时，v7.0 用统一超时导致某些 provider 误判超时。
-3. **provider 故障无 failover**：一家 provider 崩了，接手的灵智体（Forgekin）无法从同一边界恢复，需重新初始化。
+3. **provider 故障无 failover**：一家 provider 崩了，接手的Forgekin无法从同一边界恢复，需重新初始化。
 
-roleagent.md 第 6 章要求**统一宿主抽象：传输 × 绑定 × 运行时契约 × 事件适配器，监管者作为独立伴生进程（sidecar）**。本架构解决的核心问题：**如何实现统一宿主抽象层、provider 运维语义归一化、sidecar 监管者、failover 边界，让一家 provider 崩了接手的灵智体可从同一边界恢复**。
+roleagent.md 第 6 章要求**统一宿主抽象：传输 × 绑定 × 运行时契约 × 事件适配器，监管者作为独立伴生进程（sidecar）**。本架构解决的核心问题：**如何实现统一宿主抽象层、provider 运维语义归一化、sidecar 监管者、failover 边界，让一家 provider 崩了接手的Forgekin可从同一边界恢复**。
 
 ### 1.2 架构约束
 
@@ -36,7 +35,7 @@ roleagent.md 第 6 章要求**统一宿主抽象：传输 × 绑定 × 运行时
 
 ### 1.3 架构影响
 
-- **对 F023 liveness 规范读模型**：provider liveness 是灵智体 liveness 的输入维度之一。
+- **对 F023 liveness 规范读模型**：provider liveness 是Forgekin liveness 的输入维度之一。
 - **对 F034 三方 Agent 失败回退**：三方 Agent 失败回退复用宿主抽象的 failover 边界。
 - **对 F021 副作用 WAL**：provider 调用作为副作用记录到 WAL，failover 时不丢失。
 - **对 F022 Tier 1-4 恢复分级**：provider 故障触发 F022 分级恢复，Tier 4 provider failover。
@@ -52,7 +51,7 @@ roleagent.md 第 6 章要求**统一宿主抽象：传输 × 绑定 × 运行时
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │ 上层调用方                                                           │
-│  Forgekin.chat()  F034 ExternalAgentFallback  F022 RecoveryExec    │
+│  Forgekin.chat  F034 ExternalAgentFallback  F022 RecoveryExec    │
 └──────────┬──────────────────────────────────────────────────────────┘
            │ HostAbstraction.call(provider_id, request)
            ▼
@@ -232,7 +231,7 @@ class FailoverExecutor(ABC):
 
 ```
 [provider 调用路径]
-  Forgekin.chat() / F034 ExternalAgentFallback
+  Forgekin.chat / F034 ExternalAgentFallback
         │
         ▼
   HostAbstraction.call(provider_id=anthropic, request={...})
@@ -244,7 +243,7 @@ class FailoverExecutor(ABC):
         │
         ├─ 成功 → 返回 response
         │
-        └─ 失败 → SemanticNormalizer.normalize_error()
+        └─ 失败 → SemanticNormalizer.normalize_error
                   │
                   ├─ unified_code=rate_limit → 触发 failover
                   ├─ unified_code=network_error → 触发 failover
@@ -270,7 +269,7 @@ class FailoverExecutor(ABC):
         ├─ 复用 F023 LivenessProbe 探测 provider liveness
         │
         ├─ liveness=degraded → 告警 F040
-        ├─ liveness=zombie → trigger_failover()
+        ├─ liveness=zombie → trigger_failover
         │
         ▼
   trigger_failover(provider_id=anthropic, reason="zombie_detected")
@@ -298,7 +297,7 @@ class FailoverExecutor(ABC):
 
 ### 4.1 上游依赖
 
-- 依赖 **F023 liveness 规范读模型**：provider liveness 是灵智体 liveness 的输入维度之一。
+- 依赖 **F023 liveness 规范读模型**：provider liveness 是Forgekin liveness 的输入维度之一。
 - 依赖 **F021 副作用 WAL**：provider 调用作为副作用记录到 WAL，failover 时不丢失。
 - 依赖 **F008 Durable State Surfaces**：failover 后上下文从 F008 durable_record 恢复。
 
@@ -364,4 +363,4 @@ class FailoverExecutor(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + HostContract 四要素 + 错误码归一化 + sidecar 独立进程 + failover 同边界） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + HostContract 四要素 + 错误码归一化 + sidecar 独立进程 + failover 同边界） | 架构师 Forgekin（猫头鹰·鲁班） |

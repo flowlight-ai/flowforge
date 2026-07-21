@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-17
-> **决策者**: 架构师灵智体 + operator 审核
+> **决策者**: 架构师可进化智能体 + operator 审核
 > **依赖**: `[doc:roleagent.md#第0章]` + `[doc:roleagent.md#第1章]` + `[doc:decisions/013-all-things-spirit-mind-vision.md]`
 > **依据**: `[doc:review/review.md#第八章]` RA-001~RA-008
 
@@ -113,13 +113,13 @@ def select_reviewer(author_profile: CapabilityProfile, candidates: list[Capabili
 
 - CapabilityProfile 实现复杂度增加（六维度 + 盲点 + 历史表现）
 - 路由算法需要计算能力匹配度，增加延迟
-- 需要维护能力画像数据库（每个灵智体一份）
+- 需要维护能力画像数据库（每个可进化智能体一份）
 
 ### 风险
 
 - 能力画像可能过时（缓解：eval 信号实时刷新）
 - 盲点识别可能不准（缓解：跨厂商 review 信号回流）
-- 路由算法可能引入偏见（缓解：算法可解释性 + 灵议审查）
+- 路由算法可能引入偏见（缓解：算法可解释性 + 多智能体议事审查）
 
 ---
 
@@ -150,6 +150,6 @@ def select_reviewer(author_profile: CapabilityProfile, candidates: list[Capabili
 - `[doc:roleagent.md#第0章]` — Role-agent 在这张图里处在哪一层
 - `[doc:roleagent.md#第1章]` — 核心公式：能力 × Harness 契合度
 - `[doc:features/F001-capability-profile.md]` — 能力画像 Feature
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物灵智体愿景
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景
 - `[doc:review/review.md#第八章]` — roleagent 补审 RA-001~RA-008
 - `[doc:project_rules.md#红线10]` — 禁止在 flowforge 中写死业务领域代码

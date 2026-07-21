@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
 > **对应 Feature**: [doc:../features/F002-teamact-loop.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D002-teamact-loop.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,10 +16,10 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"多灵智体（Forgekin，社区社交称'灵智体'）协作如何形式化终止"的根本问题。当前协作基于 EventBus + Handoff，存在三大架构缺陷：
+FlowForge 在架构层需要解决"多 Forgekin（Evolvable Agent，社区社交称'灵智体'）协作如何形式化终止"的根本问题。当前协作基于 EventBus + Handoff，存在三大架构缺陷：
 
-1. **无团队级终止条件** — 灵智体互相传球可以永远循环，没有"团队停下来"机制；单灵智体判断"做完了"经常是 RLHF 训练出的收尾惯性幻觉
-2. **交接信息缺失** — 前一个灵智体只传任务 ID 与状态枚举，接手灵智体必须重读全部上下文，token 成本爆炸
+1. **无团队级终止条件** — Forgekin互相传球可以永远循环，没有"团队停下来"机制；单Forgekin判断"做完了"经常是 RLHF 训练出的收尾惯性幻觉
+2. **交接信息缺失** — 前一个Forgekin只传任务 ID 与状态枚举，接手Forgekin必须重读全部上下文，token 成本爆炸
 3. **协作失败模式无防护** — 乒乓球互传、球掉地、reviewer 错判等失败模式无协议层防护
 
 TeamAct 六步循环 + 五项终止条件 + 交接胶囊 + 乒乓球熔断器 + 行首 @ 路由 + 持球注册 lease + Generator Push Back 是 roleagent.md 第 2 章提出的工程化闭环，是 FlowForge 与普通 multi-agent 框架的根本差异。
@@ -99,22 +98,22 @@ TeamAct 六步循环 + 五项终止条件 + 交接胶囊 + 乒乓球熔断器 + 
 ### 2.2 关键架构决策
 
 - **决策 1：TeamAct 不是 Anthropic 第六种协作模式，是 Shared State 模式的工程化闭环**
-  理由：roleagent.md 第 2 章明确主张。Shared State 模式要求显式状态机 + 五项终止 + 交接胶囊，不是"灵智体自由协作 + Eval 事后归因"。
+  理由：roleagent.md 第 2 章明确主张。Shared State 模式要求显式状态机 + 五项终止 + 交接胶囊，不是"Forgekin自由协作 + Eval 事后归因"。
 
 - **决策 2：六步循环必须分形嵌套（系统层 / 团队层 / 个体层）**
-  理由：Feature 生命周期（系统层）→ 灵智体间交接（团队层）→ 单灵智体工具调用（个体层）每层都跑同一六步循环，避免协议断层。
+  理由：Feature 生命周期（系统层）→ Forgekin间交接（团队层）→ 单Forgekin工具调用（个体层）每层都跑同一六步循环，避免协议断层。
 
 - **决策 3：五项终止条件缺一不可（不允许任一项缺失）**
   理由：roleagent.md 明确"CI 通过了 ≠ 愿景方向对了"。验收标准全部达成 + 证据已附 + 跨 agent 交叉验证 + 无悬空任务归属 + 愿景收敛，五项都必须显式判定。
 
 - **决策 4：交接胶囊是协议层硬要求，不是可选礼貌**
-  理由：前一个灵智体传球时若不留下 What/Why/Tradeoff/Open/Next 五段结构化摘要，接手灵智体必须重读完整上下文，token 成本不可接受。
+  理由：前一个Forgekin传球时若不留下 What/Why/Tradeoff/Open/Next 五段结构化摘要，接手Forgekin必须重读完整上下文，token 成本不可接受。
 
 - **决策 5：SharedStateLedger 是单一真相源（Single Source of Truth）**
   理由：TeamAct 状态分散在多处会导致一致性灾难。所有 step / owner / iteration / termination 必须由 SharedStateLedger 统一持有，走 Tier 2 恢复分级。
 
 - **决策 6：TeamAct 治理规则必须沉到 native system role（压缩免疫）**
-  理由：若用 user message prepend 注入治理规则，上下文压缩后规则消失，灵智体后半段突然违规（F010 RA-019 P0 问题）。
+  理由：若用 user message prepend 注入治理规则，上下文压缩后规则消失，Forgekin后半段突然违规（F010 RA-019 P0 问题）。
 
 ### 2.3 架构不变量
 
@@ -244,19 +243,19 @@ class TeamActLoopExecutor(ABC):
 ┌──────────────────────────────────────────────────────────────┐
 │ OWNER 步: CapabilityRouter.route(task, candidates) (F001)    │
 │   - 写入 TeamActState.current_owner                          │
-│   - 触发 F006 BallCustodyLease.acquire()                     │
+│   - 触发 F006 BallCustodyLease.acquire                     │
 └──────────────────────────┬───────────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ ACTION 步: 持球灵智体执行（通过 LoopExecutor）               │
+│ ACTION 步: 持球Forgekin执行（通过 LoopExecutor）               │
 │   - 写代码 / review / 设计 / 调研                            │
 │   - F004 PingPongCircuitBreaker 监控实质产出                 │
 └──────────────────────────┬───────────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ EVIDENCE 步: EvidenceCollector.collect() (F009)              │
+│ EVIDENCE 步: EvidenceCollector.collect (F009)              │
 │   - commit / 测试 / trace / screenshot / DOM diff            │
 │   - 写入 TeamActState.evidence_refs                          │
 └──────────────────────────┬───────────────────────────────────┘
@@ -274,7 +273,7 @@ class TeamActLoopExecutor(ABC):
 │ ROUTE 步: 球给下一个 / 继续持有 / 升级 CVO                   │
 │   - 写入 HandoffCapsule 五段 (What/Why/Tradeoff/Open/Next)   │
 │   - F005 行首 @ 路由指令解析                                │
-│   - 检查 TerminationCondition.all_met()                      │
+│   - 检查 TerminationCondition.all_met                      │
 └──────────────────────────┬───────────────────────────────────┘
                            │
                            ▼
@@ -293,7 +292,7 @@ class TeamActLoopExecutor(ABC):
 
 ### 4.1 上游依赖
 
-- **F001 CapabilityProfile** — Owner 步调用 `CapabilityRouter.route()` 选定持球者
+- **F001 CapabilityProfile** — Owner 步调用 `CapabilityRouter.route` 选定持球者
 - **F008 Durable State Surfaces** — TeamAct 状态必须持久化到 6 类 Durable Surface
 - **F009 Evidence & Sensors** — EVIDENCE 步采集证据，VERDICT 步验证证据
 - **F018-F020 Eval 自代谢** — TeamAct 失败模式是七类归因矩阵的主要输入
@@ -331,7 +330,7 @@ class TeamActLoopExecutor(ABC):
 
 ### 5.2 架构不变量验收
 
-- [ ] AC-7: 五项终止条件任一未满足时 `TerminationCondition.all_met() == False`
+- [ ] AC-7: 五项终止条件任一未满足时 `TerminationCondition.all_met == False`
 - [ ] AC-8: 交接胶囊五段字段任一为空时抛 SchemaError
 - [ ] AC-9: 跨 agent 交叉验证 reviewer == author 时拒绝写入 verdict
 - [ ] AC-10: SharedStateLedger 走 Tier 2 恢复（WAL 可重放，进程崩溃状态可恢复）
@@ -363,4 +362,4 @@ class TeamActLoopExecutor(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F002 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F002 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

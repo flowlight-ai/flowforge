@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]（待创建）
 > **对应 Feature**: [doc:../features/F021-side-effect-wal.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D021-side-effect-wal.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -57,7 +56,7 @@ roleagent.md 第 6 章要求：**所有副作用操作必须先写 WAL 再执行
 ┌─────────────────────────────────────────────────────────────────────┐
 │ L1: WalCoordinator（WAL 协调器 - 先写后执行编排）                    │
 │  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐  │
-│  │ append_pending() │ │ execute()        │ │ confirm()        │  │
+│  │ append_pending │ │ execute        │ │ confirm        │  │
 │  │ idempotency_check│ │ pre_state_snapshot│ │ emit_confirmed   │  │
 │  └──────────────────┘ └──────────────────┘ └──────────────────┘  │
 └───┬──────────────────────────────────────────────┬─────────────────┘
@@ -208,7 +207,7 @@ class WalCoordinator(ABC):
 
 ```
 [副作用执行路径 - 先写后执行]
-  Forgekin.act() 触发副作用（如 file_write）
+  Forgekin.act 触发副作用（如 file_write）
         │
         ▼
   WalCoordinator.append_pending(WalEntry{
@@ -217,7 +216,7 @@ class WalCoordinator(ABC):
     idempotency_key=hash(target+payload)
   })
         │
-        ├─ idempotency_check() ── 已存在 ──▶ 返回已有 entry_id，跳过执行
+        ├─ idempotency_check ── 已存在 ──▶ 返回已有 entry_id，跳过执行
         ├─ pre_state 记录（仅可回滚操作）
         │
         ▼
@@ -228,7 +227,7 @@ class WalCoordinator(ABC):
         │
         ├─ status: pending → executing
         ├─ 执行副作用（写文件）
-        ├─ 成功 → status: executing → confirmed, confirmed_at=now()
+        ├─ 成功 → status: executing → confirmed, confirmed_at=now
         └─ 失败 → status: executing → failed
         │
         ▼
@@ -327,4 +326,4 @@ class WalCoordinator(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 先写后执行 + 幂等键 + pre_state 分类 + 五态状态机） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 先写后执行 + 幂等键 + pre_state 分类 + 五态状态机） | 架构师 Forgekin（猫头鹰·鲁班） |

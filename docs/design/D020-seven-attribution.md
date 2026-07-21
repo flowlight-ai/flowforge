@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005）
 > **对应 arch.md**: [doc:../arch.md#§3.5]
 > **对应 design.md**: [doc:../design.md#§3.5]
 > **对应 Feature**: [doc:../features/F020-seven-attribution.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A020-seven-attribution.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/009-eval-self-metabolism.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -59,7 +58,7 @@ Eval 自代谢系统（§3.5）L3 层需要将失败事件归因到 7 类根因�
 - **对 F022 Tier 1-4 恢复**：归因修复可能派发到 F022（如 execution_gap 触发 Tier 2 重放）。
 - **对 F024 强 workflow**：归因修复可能派发到 F024（如 harness_mismatch 触发强 workflow 回滚）。
 - **对 F040 控制面**：所有归因结果与修复派发记录写入 F040 Eval Hub。
-- **对 Forgekin.learn()**：Forgekin 学习接口在 learn() 中调用归因结果，更新品味画像（CapabilityProfile）。
+- **对 Forgekin.learn**：Forgekin 学习接口在 learn 中调用归因结果，更新品味画像（CapabilityProfile）。
 - **对 DI 容器**：需新增 `attribution_classifier` / `attribution_repository` / `fix_router` 三个绑定。
 
 ---
@@ -235,7 +234,7 @@ class FixAction(BaseModel):
     dispatched: bool = False
 
 
-Attribution.model_rebuild()
+Attribution.model_rebuild
 
 
 # flowforge/core/eval/attribution/interfaces.py
@@ -417,8 +416,8 @@ function traverse(event: FailureEvent) -> list[Attribution]:
 
     attributions = []
 
-    # 固定顺序，禁止调整（由 Enum.ordered() 强制）
-    ordered_types = AttributionType.ordered()
+    # 固定顺序，禁止调整（由 Enum.ordered 强制）
+    ordered_types = AttributionType.ordered
 
     primary_assigned = False
     for step_config in config.decision_steps:
@@ -444,13 +443,13 @@ function traverse(event: FailureEvent) -> list[Attribution]:
     # 若所有 check_* 都未命中，标记为 TASTE_GAP（兜底）
     if not attributions:
         fallback = Attribution(
-            attribution_id=uuid_v7(),
+            attribution_id=uuid_v7,
             event_id=event.event_id,
             attribution_type=AttributionType.TASTE_GAP,
             is_primary=True,
             confidence=0.3,  # 低置信度，需人工复核
             evidence=["fallback: no specific attribution matched"],
-            detected_at=now(),
+            detected_at=now,
         )
         attributions.append(fallback)
 
@@ -470,7 +469,7 @@ function check_vision_gap(event: FailureEvent, step_config) -> Optional[Attribut
         confidence = compute_vision_gap_confidence(event, vision)
         if confidence >= step_config.confidence_threshold:
             return Attribution(
-                attribution_id=uuid_v7(),
+                attribution_id=uuid_v7,
                 event_id=event.event_id,
                 attribution_type=AttributionType.VISION_GAP,
                 is_primary=False,  # 由 traverse 统一标记
@@ -479,20 +478,20 @@ function check_vision_gap(event: FailureEvent, step_config) -> Optional[Attribut
                     f"vision_uri={vision.uri if vision else 'None'}",
                     f"metric_name={event.metric_name} not found in vision",
                 ],
-                detected_at=now(),
+                detected_at=now,
             )
 
     # 3. 检查是否为 superseded_by（被新愿景取代）
     if event.signal_conflict and event.signal_conflict.severity == "high":
-        if "superseded" in event.failure_summary.lower():
+        if "superseded" in event.failure_summary.lower:
             return Attribution(
-                attribution_id=uuid_v7(),
+                attribution_id=uuid_v7,
                 event_id=event.event_id,
                 attribution_type=AttributionType.VISION_GAP,
                 is_primary=False,
                 confidence=0.9,
                 evidence=["superseded_by detected in failure_summary"],
-                detected_at=now(),
+                detected_at=now,
             )
 
     return None  # 未命中
@@ -514,7 +513,7 @@ function route(attributions: list[Attribution]) -> list[FixAction]:
         payload = render_payload_template(rule.payload_template, attr)
 
         fix = FixAction(
-            fix_id=uuid_v7(),
+            fix_id=uuid_v7,
             attribution_id=attr.attribution_id,
             target=FixTarget(rule.fix_target),
             payload=payload,
@@ -534,16 +533,16 @@ function dispatch(fix_actions: list[FixAction]) -> int:
                 continue  # 幂等
             await event_bus.publish_sync(
                 topic=f"fix.target.{fix.target.value}",
-                payload=fix.model_dump(),
+                payload=fix.model_dump,
             )
             fix._internal_set("dispatched", True)  # type: ignore
     else:
         # 批量异步派发，按 target 分组
         by_target = group_by(fix_actions, key=lambda f: f.target)
-        for target, fixes in by_target.items():
+        for target, fixes in by_target.items:
             await event_bus.publish_batch(
                 topic=f"fix.target.{target.value}",
-                payloads=[f.model_dump() for f in fixes if not f.dispatched],
+                payloads=[f.model_dump for f in fixes if not f.dispatched],
             )
             for f in fixes:
                 f._internal_set("dispatched", True)  # type: ignore
@@ -570,7 +569,7 @@ function check_taste_gap(event: FailureEvent, step_config) -> Optional[Attributi
     delta = expected_taste - taste_score
     if delta > step_config.confidence_threshold:
         return Attribution(
-            attribution_id=uuid_v7(),
+            attribution_id=uuid_v7,
             event_id=event.event_id,
             attribution_type=AttributionType.TASTE_GAP,
             is_primary=False,
@@ -580,7 +579,7 @@ function check_taste_gap(event: FailureEvent, step_config) -> Optional[Attributi
                 f"actual_taste={taste_score}",
                 f"delta={delta}",
             ],
-            detected_at=now(),
+            detected_at=now,
         )
 
     return None
@@ -644,7 +643,7 @@ class DefaultAttributionClassifier(AttributionClassifier):
                     secondary = attr.model_copy(update={"is_primary": False})
                     attributions.append(secondary)
                     primary = Attribution(
-                        attribution_id=str(uuid.uuid1()),
+                        attribution_id=str(uuid.uuid1),
                         event_id=event.event_id,
                         attribution_type=AttributionType.TASTE_GAP,
                         is_primary=True,
@@ -696,7 +695,7 @@ class DefaultAttributionDecisionTree(AttributionDecisionTree):
 
     async def traverse(self, event: FailureEvent) -> list[Attribution]:
         results: list[Attribution] = []
-        for attr_type in AttributionType.ordered():
+        for attr_type in AttributionType.ordered:
             step_cfg = self._find_step_config(attr_type)
             if step_cfg is None:
                 continue
@@ -712,7 +711,7 @@ class DefaultAttributionDecisionTree(AttributionDecisionTree):
         # 简化版：检查 signal_conflict 是否涉及 CVO 愿景信号
         if event.signal_conflict and "cvo_vision" in str(event.signal_conflict):
             return Attribution(
-                attribution_id=str(uuid.uuid1()),
+                attribution_id=str(uuid.uuid1),
                 event_id=event.event_id,
                 attribution_type=AttributionType.VISION_GAP,
                 is_primary=False,
@@ -724,9 +723,9 @@ class DefaultAttributionDecisionTree(AttributionDecisionTree):
 
     async def check_translation_drift(self, event: FailureEvent) -> Optional[Attribution]:
         # 检查 friction_metric 是否标记 translation 问题
-        if event.friction_metric and "translation" in str(event.friction_metric).lower():
+        if event.friction_metric and "translation" in str(event.friction_metric).lower:
             return Attribution(
-                attribution_id=str(uuid.uuid1()),
+                attribution_id=str(uuid.uuid1),
                 event_id=event.event_id,
                 attribution_type=AttributionType.TRANSLATION_DRIFT,
                 is_primary=False,
@@ -737,9 +736,9 @@ class DefaultAttributionDecisionTree(AttributionDecisionTree):
         return None
 
     async def check_harness_mismatch(self, event: FailureEvent) -> Optional[Attribution]:
-        if "harness" in event.failure_summary.lower():
+        if "harness" in event.failure_summary.lower:
             return Attribution(
-                attribution_id=str(uuid.uuid1()),
+                attribution_id=str(uuid.uuid1),
                 event_id=event.event_id,
                 attribution_type=AttributionType.HARNESS_MISMATCH,
                 is_primary=False,
@@ -750,9 +749,9 @@ class DefaultAttributionDecisionTree(AttributionDecisionTree):
         return None
 
     async def check_tool_gap(self, event: FailureEvent) -> Optional[Attribution]:
-        if "tool" in event.failure_summary.lower() or "missing capability" in event.failure_summary.lower():
+        if "tool" in event.failure_summary.lower or "missing capability" in event.failure_summary.lower:
             return Attribution(
-                attribution_id=str(uuid.uuid1()),
+                attribution_id=str(uuid.uuid1),
                 event_id=event.event_id,
                 attribution_type=AttributionType.TOOL_GAP,
                 is_primary=False,
@@ -765,7 +764,7 @@ class DefaultAttributionDecisionTree(AttributionDecisionTree):
     async def check_execution_gap(self, event: FailureEvent) -> Optional[Attribution]:
         if event.signal_conflict and event.signal_conflict.get("severity") == "high":
             return Attribution(
-                attribution_id=str(uuid.uuid1()),
+                attribution_id=str(uuid.uuid1),
                 event_id=event.event_id,
                 attribution_type=AttributionType.EXECUTION_GAP,
                 is_primary=False,
@@ -776,9 +775,9 @@ class DefaultAttributionDecisionTree(AttributionDecisionTree):
         return None
 
     async def check_environment_drift(self, event: FailureEvent) -> Optional[Attribution]:
-        if "environment" in event.failure_summary.lower() or "config" in event.failure_summary.lower():
+        if "environment" in event.failure_summary.lower or "config" in event.failure_summary.lower:
             return Attribution(
-                attribution_id=str(uuid.uuid1()),
+                attribution_id=str(uuid.uuid1),
                 event_id=event.event_id,
                 attribution_type=AttributionType.ENVIRONMENT_DRIFT,
                 is_primary=False,
@@ -791,7 +790,7 @@ class DefaultAttributionDecisionTree(AttributionDecisionTree):
     async def check_taste_gap(self, event: FailureEvent) -> Optional[Attribution]:
         # 兜底归因（低置信度）
         return Attribution(
-            attribution_id=str(uuid.uuid1()),
+            attribution_id=str(uuid.uuid1),
             event_id=event.event_id,
             attribution_type=AttributionType.TASTE_GAP,
             is_primary=False,
@@ -833,7 +832,7 @@ class DefaultFixRouter(FixRouter):
                 continue
             payload = self._build_payload(attr, target)
             fix = FixAction(
-                fix_id=str(uuid.uuid1()),
+                fix_id=str(uuid.uuid1),
                 attribution_id=attr.attribution_id,
                 target=target,
                 payload=payload,
@@ -853,10 +852,10 @@ class DefaultFixRouter(FixRouter):
                 continue
             by_target.setdefault(f.target, []).append(f)
 
-        for target, fixes in by_target.items():
+        for target, fixes in by_target.items:
             await self._bus.publish_batch(
                 topic=f"fix.target.{target.value}",
-                payloads=[f.model_dump() for f in fixes],
+                payloads=[f.model_dump for f in fixes],
             )
             for f in fixes:
                 # frozen 模型不可修改字段，这里通过 _internal_set 内部接口
@@ -889,15 +888,15 @@ class DefaultFixRouter(FixRouter):
         │            │              │                │            │           │             │
         │ publish    │              │                │            │           │             │
         ├───────────>│              │                │            │           │             │
-        │            │ traverse()   │                │            │           │             │
+        │            │ traverse   │                │            │           │             │
         │            ├─────────────>│                 │            │           │             │
-        │            │              │ check_vision_gap()           │           │             │
-        │            │              │ check_translation_drift()    │           │             │
-        │            │              │ check_harness_mismatch()    │           │             │
-        │            │              │ check_tool_gap()             │           │             │
-        │            │              │ check_execution_gap()       │           │             │
-        │            │              │ check_environment_drift()    │           │             │
-        │            │              │ check_taste_gap()            │           │             │
+        │            │              │ check_vision_gap           │           │             │
+        │            │              │ check_translation_drift    │           │             │
+        │            │              │ check_harness_mismatch    │           │             │
+        │            │              │ check_tool_gap             │           │             │
+        │            │              │ check_execution_gap       │           │             │
+        │            │              │ check_environment_drift    │           │             │
+        │            │              │ check_taste_gap            │           │             │
         │            │              │ return [Attribution]          │           │             │
         │            │<─────────────┤                                │           │             │
         │            │ 标记主归因+次归因                                          │             │
@@ -906,7 +905,7 @@ class DefaultFixRouter(FixRouter):
         │            │<──────────────────────────────┤                          │             │
         │            │ route(attributions)                                       │             │
         │            ├──────────────────────────────────────────────>│           │             │
-        │            │                                              │ dispatch()│             │
+        │            │                                              │ dispatch│             │
         │            │                                              ├──────────>│ publish    │
         │            │                                              │           ├────────────>│ F021/F022/F024/F012/F040
         │            │<──────────────────────────────────────────────┤           │             │
@@ -960,28 +959,28 @@ class DefaultFixRouter(FixRouter):
 - **F024 强 workflow**：`HARNESS_MISMATCH` 归因触发 F024 强 workflow 回滚（订阅 `fix.target.f024_workflow`）。
 - **F012 退役**：`VISION_GAP` 归因（含 superseded_by）触发 F012 退役（订阅 `fix.target.f012_sunset`）。
 - **F040 控制面**：所有归因结果与修复派发记录写入 F040 Eval Hub（订阅 `eval.attribution.classified` 事件）。
-- **Forgekin.learn()**：归因结果作为 Forgekin 学习输入，更新品味画像。
+- **Forgekin.learn**：归因结果作为 Forgekin 学习输入，更新品味画像。
 - **EAC v1 七契约**：本设计是 EAC v1 七契约中的"归因契约"物理承载。
 
 ### 4.3 集成测试点
 
 | 测试点 ID | 测试场景 | 验证点 | 责任方 |
 |----------|---------|--------|--------|
-| IT-D020-001 | 决策树固定顺序遍历 | 7 步顺序与 AttributionType.ordered() 一致 | 测试员灵智体（蜜獾·平头哥） |
-| IT-D020-002 | 主归因置信度阈值 | 主归因 confidence >= 0.7 | 测试员灵智体 |
-| IT-D020-003 | 主归因置信度不足降级 | 主归因 confidence < 0.7 时降级为次归因 + HUMAN_REVIEW | 测试员灵智体 |
-| IT-D020-004 | 次归因数量上限 | 次归因数量 <= max_secondary_attributions（默认 3） | 测试员灵智体 |
-| IT-D020-005 | vision_gap 归因 | signal_conflict 涉及 cvo_vision 时归因为 VISION_GAP | 测试员灵智体 |
-| IT-D020-006 | translation_drift 归因 | friction_metric 涉及 translation 时归因为 TRANSLATION_DRIFT | 测试员灵智体 |
-| IT-D020-007 | harness_mismatch 归因 | failure_summary 包含 harness 时归因为 HARNESS_MISMATCH | 测试员灵智体 |
-| IT-D020-008 | tool_gap 归因 | failure_summary 包含 tool 时归因为 TOOL_GAP | 测试员灵智体 |
-| IT-D020-009 | execution_gap 归因 | signal_conflict severity=high 时归因为 EXECUTION_GAP | 测试员灵智体 |
-| IT-D020-010 | environment_drift 归因 | failure_summary 包含 environment 时归因为 ENVIRONMENT_DRIFT | 测试员灵智体 |
-| IT-D020-011 | taste_gap 兜底归因 | 所有 check_* 未命中时兜底为 TASTE_GAP（低置信度） | 测试员灵智体 |
-| IT-D020-012 | 修复路由派发 F021 | ENVIRONMENT_DRIFT 触发 F021 WAL 回放事件 | 测试员灵智体 |
-| IT-D020-013 | 修复路由派发 F022 | EXECUTION_GAP 触发 F022 Tier 2 重放事件 | 测试员灵智体 |
-| IT-D020-014 | 修复路由派发 F024 | HARNESS_MISMATCH 触发 F024 workflow 回滚事件 | 测试员灵智体 |
-| IT-D020-015 | 修复派发幂等 | 同一 idempotency_key 重复派发不产生副作用 | 测试员灵智体 |
+| IT-D020-001 | 决策树固定顺序遍历 | 7 步顺序与 AttributionType.ordered 一致 | 测试员Forgekin（蜜獾·平头哥） |
+| IT-D020-002 | 主归因置信度阈值 | 主归因 confidence >= 0.7 | 测试员Forgekin |
+| IT-D020-003 | 主归因置信度不足降级 | 主归因 confidence < 0.7 时降级为次归因 + HUMAN_REVIEW | 测试员Forgekin |
+| IT-D020-004 | 次归因数量上限 | 次归因数量 <= max_secondary_attributions（默认 3） | 测试员Forgekin |
+| IT-D020-005 | vision_gap 归因 | signal_conflict 涉及 cvo_vision 时归因为 VISION_GAP | 测试员Forgekin |
+| IT-D020-006 | translation_drift 归因 | friction_metric 涉及 translation 时归因为 TRANSLATION_DRIFT | 测试员Forgekin |
+| IT-D020-007 | harness_mismatch 归因 | failure_summary 包含 harness 时归因为 HARNESS_MISMATCH | 测试员Forgekin |
+| IT-D020-008 | tool_gap 归因 | failure_summary 包含 tool 时归因为 TOOL_GAP | 测试员Forgekin |
+| IT-D020-009 | execution_gap 归因 | signal_conflict severity=high 时归因为 EXECUTION_GAP | 测试员Forgekin |
+| IT-D020-010 | environment_drift 归因 | failure_summary 包含 environment 时归因为 ENVIRONMENT_DRIFT | 测试员Forgekin |
+| IT-D020-011 | taste_gap 兜底归因 | 所有 check_* 未命中时兜底为 TASTE_GAP（低置信度） | 测试员Forgekin |
+| IT-D020-012 | 修复路由派发 F021 | ENVIRONMENT_DRIFT 触发 F021 WAL 回放事件 | 测试员Forgekin |
+| IT-D020-013 | 修复路由派发 F022 | EXECUTION_GAP 触发 F022 Tier 2 重放事件 | 测试员Forgekin |
+| IT-D020-014 | 修复路由派发 F024 | HARNESS_MISMATCH 触发 F024 workflow 回滚事件 | 测试员Forgekin |
+| IT-D020-015 | 修复派发幂等 | 同一 idempotency_key 重复派发不产生副作用 | 测试员Forgekin |
 
 ---
 
@@ -1012,7 +1011,7 @@ class DefaultFixRouter(FixRouter):
 
 ### 5.3 安全验收 AC
 
-- [ ] **AC-D020-018**: 决策树顺序固定不可变（Enum.ordered() 强制）
+- [ ] **AC-D020-018**: 决策树顺序固定不可变（Enum.ordered 强制）
 - [ ] **AC-D020-019**: 主归因有且仅有 1 个
 - [ ] **AC-D020-020**: 修复派发幂等（idempotency_key 去重）
 - [ ] **AC-D020-021**: 归因不可变（Pydantic frozen=True）
@@ -1055,4 +1054,4 @@ class DefaultFixRouter(FixRouter):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（七类归因模型 + 固定顺序决策树 + 主归因+次归因 + 修复路由派发 + 15 集成测试点 + 4 类 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（七类归因模型 + 固定顺序决策树 + 主归因+次归因 + 修复路由派发 + 15 集成测试点 + 4 类 AC） | 开发者 Forgekin（猎犬·夏洛克） |

@@ -6,11 +6,10 @@
 > **关联 ADR**: [doc:decisions/008-memory-federation.md]
 > **类型**: memory
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.4]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.4]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -24,7 +23,7 @@
 
 `[doc:review/review.md#RA-026]` 指出：roleagent.md 治理层三要素——权威性/触发方式/生命周期。v7.0 记忆无权威等级、无触发方式、无生命周期，旧记忆和新记忆一视同仁排序，过期知识可能永远排在前面。
 
-不做这个 Feature，F014 Collection 的 authority_level 无检索语义，F017 消费加权排序缺少 lifecycle 衰减维度，F039 灵典可检索知识库无法识别"已失效知识"。这是 roleagent.md 第 4 章治理层的核心机制。
+不做这个 Feature，F014 Collection 的 authority_level 无检索语义，F017 消费加权排序缺少 lifecycle 衰减维度，F039 MindCodex 可检索知识库无法识别"已失效知识"。这是 roleagent.md 第 4 章治理层的核心机制。
 
 ## 3. 详细设计（Detailed Design）
 
@@ -109,14 +108,14 @@ memory_governance:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体检索含过期知识的 Collection，验证 deprecated 降权 + 过期 review 触发。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin检索含过期知识的 Collection，验证 deprecated 降权 + 过期 review 触发。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第4章]
 - [doc:review/review.md#第八章/RA-026]
 - [doc:decisions/008-memory-federation.md]
-- [doc:design/naming-contract.md#2.5]（灵忆 EchoStore）
+- [doc:design/naming-contract.md#2.5]（EchoStore）
 - [doc:features/F014-memory-collection.md]
 - [doc:features/F015-three-retrieval-entry.md]
 - [doc:features/F017-consumption-weighted-ranking.md]
@@ -128,4 +127,3 @@ memory_governance:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.4 同号映射 | 文档员灵智体（钢笔·文心） |

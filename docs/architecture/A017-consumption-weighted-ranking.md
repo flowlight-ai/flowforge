@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004）
 > **对应 arch.md**: [doc:../arch.md#§3.4]
 > **对应 design.md**: [doc:../design.md#§3.4]（待创建）
 > **对应 Feature**: [doc:../features/F017-consumption-weighted-ranking.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D017-consumption-weighted-ranking.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/008-memory-federation.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -22,7 +21,7 @@
 1. **冷启动偏热点**：新条目无消费数据，向量距离远导致永远排不到前面，"长期没被使用的知识"反而排在前面。
 2. **LLM 自评失真**：若用 LLM 自评打分，会出现"模型说自己好"，与真实使用脱节。
 
-roleagent.md 第 4 章核心创新：**用灵智体（Forgekin）真实行为（搜了/读了/用了）判断知识价值，不用 LLM 自评打分**。本架构解决的核心问题：**如何在 L4 消费排序层实现 14 行为指标汇聚 + 调整后得分公式 + 贝叶斯收缩 + 中心化偏移 + 分数时效衰减**，让冷启动条目不被埋底、长尾条目不归零、长期不用条目得负分。
+roleagent.md 第 4 章核心创新：**用Forgekin真实行为（搜了/读了/用了）判断知识价值，不用 LLM 自评打分**。本架构解决的核心问题：**如何在 L4 消费排序层实现 14 行为指标汇聚 + 调整后得分公式 + 贝叶斯收缩 + 中心化偏移 + 分数时效衰减**，让冷启动条目不被埋底、长尾条目不归零、长期不用条目得负分。
 
 ### 1.2 架构约束
 
@@ -37,7 +36,7 @@ roleagent.md 第 4 章核心创新：**用灵智体（Forgekin）真实行为（
 - **对 F014 Collection 层**：entry_id 是 14 行为信号的聚合主键，F014 必须保证 entry_id 全局唯一。
 - **对 F015 三检索入口**：RRF 融合后的 score 是消费加权公式的"融合检索得分"项。
 - **对 F016 治理层**：deprecated ×0.3 降权是消费加权公式中"过时惩罚"的输入。
-- **对 F039 锻典可检索**：消费加权让"哪些锻典条目真正被复用"可识别，是 Build to Persist 的反馈闭环资产。
+- **对 F039 蒸馏知识库可检索**：消费加权让"哪些蒸馏知识库条目真正被复用"可识别，是 Build to Persist 的反馈闭环资产。
 - **对 F040 控制面**：14 信号采集统计写入 F040 Eval Hub，作为"知识价值"摩擦指标。
 
 ---
@@ -49,7 +48,7 @@ roleagent.md 第 4 章核心创新：**用灵智体（Forgekin）真实行为（
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │ 上层调用方                                                           │
-│  Forgekin.chat()  F039 CodexSearch  F040 EvalHub                   │
+│  Forgekin.chat  F039 CodexSearch  F040 EvalHub                   │
 └──────────┬──────────────────────────────────────────────────────────┘
            │ ConsumptionWeightedRanker.rank(hits, context)
            ▼
@@ -218,23 +217,23 @@ class RecencyDecay(ABC):
 
 ```
 [信号采集路径]
-  Forgekin.act() / verify()
+  Forgekin.act / verify
         │
         ├─ 工具调用 → searched/read/used
         ├─ 任务结果 → task_succeeded_after / task_failed_after
-        └─ 灵智体决策 → cited/skipped/rejected/downvoted
+        └─ Forgekin决策 → cited/skipped/rejected/downvoted
         │
         ▼
   ConsumptionCollector.record(ConsumptionSignal{entry_id, signal_type, weight})
         │
         ▼
-  ConsumptionSignalRepository.insert()
+  ConsumptionSignalRepository.insert
         │
         ▼
   ConsumptionStatsCache.invalidate(entry_id)  ← 失效缓存
 
 [重排路径]
-  F016 GovernanceFilter.filter() → hits（含 authority 硬序分块）
+  F016 GovernanceFilter.filter → hits（含 authority 硬序分块）
         │
         ▼
   ConsumptionWeightedRanker.rank(hits, RankContext{authority_bonus_map})
@@ -253,7 +252,7 @@ class RecencyDecay(ABC):
   按 adjusted 降序排列（块内排序，块间由 F016 硬序保持）
         │
         ▼
-  返回给灵智体
+  返回给Forgekin
 ```
 
 ---
@@ -269,7 +268,7 @@ class RecencyDecay(ABC):
 
 ### 4.2 下游影响
 
-- 影响 **F039 锻典可检索**：消费加权让"哪些锻典条目真正被复用"可识别，是 Build to Persist 的反馈闭环。
+- 影响 **F039 蒸馏知识库可检索**：消费加权让"哪些蒸馏知识库条目真正被复用"可识别，是 Build to Persist 的反馈闭环。
 - 影响 **F018 Eval Contract**：14 信号统计可作为 Eval Contract 的"摩擦指标"（如 cited 频率低即摩擦）。
 - 影响 **F020 归因矩阵**：长期不用的条目（centered_offset 为负）触发 F020"品味落差"或"翻译偏差"归因。
 - 影响 **F040 控制面**：14 信号采集统计写入 F040 Eval Hub，作为"知识价值"摩擦指标。
@@ -326,4 +325,4 @@ class RecencyDecay(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 14 信号 + 贝叶斯收缩 + 中心化偏移 + 不归零时效） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 14 信号 + 贝叶斯收缩 + 中心化偏移 + 不归零时效） | 架构师 Forgekin（猫头鹰·鲁班） |

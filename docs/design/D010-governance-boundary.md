@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.3]
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]
 > **对应 Feature**: [doc:../features/F010-governance-boundary.md]
 > **对应 Architecture**: [doc:../architecture/A010-governance-boundary.md]
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + forgemind Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -23,7 +22,7 @@ A010 架构层定义了"治理规则压缩免疫注入 + 双轨信任编译 + AD
 2. **D-Q2**：`DualTrackPolicy` 如何实现 `guardrails` 轨 `monotonic tightening`（只能加严不可放宽）？
 3. **D-Q3**：`GovernanceLoader` 如何从 `harness.yaml` 加载 `hard_rules` + `soft_rules`，校验 `forbidden_layers` 含 `user_message_prepend`？
 4. **D-Q4**：`GovernanceInjector` 如何通过 `ForgekinHost` 把 hard 规则注入到 `native_system_role`，同时把 soft 规则注入到 `developer_role`？
-5. **D-Q5**：`GovernanceValidator` 如何 audit session context，发现治理规则在 `user_message` 即告警，并拒绝构造未注入 hard 规则的灵智体？
+5. **D-Q5**：`GovernanceValidator` 如何 audit session context，发现治理规则在 `user_message` 即告警，并拒绝构造未注入 hard 规则的Forgekin？
 6. **D-Q6**：`GovernanceBundle` 如何带版本号 + ADR 引用，规则变更走 ADR 流程？
 7. **D-Q7**：上下文压缩发生时，`compression_immune=true` 的治理规则如何通过 D008 `CompressionImmuneInjector` 重新注入到新上下文？
 
@@ -37,13 +36,12 @@ A010 架构层定义了"治理规则压缩免疫注入 + 双轨信任编译 + AD
 | C4 | `hard_rules` / `soft_rules` / `forbidden_layers` 配置外置到 `flowforge/config/harness.yaml` | 配置驱动 |
 | C5 | `authority=hard` 时 `injection_layer` 必须 `native_system_role`，禁 `user_message` | A010 决策 1 |
 | C6 | `authority=hard` 时 `compression_immune` 必须 `true` | A010 决策 1 |
-| C7 | `guardrails` 轨只能加严（monotonic tightening），灵智体不可覆盖 | A010 决策 2 |
-| C8 | `defaults` 轨可被灵智体声明覆盖 | A010 决策 2 |
+| C7 | `guardrails` 轨只能加严（monotonic tightening），Forgekin不可覆盖 | A010 决策 2 |
+| C8 | `defaults` 轨可被Forgekin声明覆盖 | A010 决策 2 |
 | C9 | GovernanceBundle 带版本号 + ADR 引用，规则变更走 ADR 流程 | A010 决策 4 |
 | C10 | audit 发现 `user_message` 治理规则时告警 | A010 决策 5 |
 | C11 | `forbidden_layers` 必须包含 `user_message_prepend` | A010 不变量 |
-| C12 | 9 大点名称修订：双轨命名、AI 术语优先（GovernanceBundle/DualTrackPolicy）、forgemind 仅指 Layer 2、责任方命名（猎犬·夏洛克） | 用户指令 |
-| C13 | 觉醒阶标注：E4+ 觉醒阶灵智体覆盖 default 规则需 Mind Council 二次确认 | naming-contract.md §4 |
+| C13 | 觉醒阶标注：E4+ 觉醒阶Forgekin覆盖 default 规则需 MindCouncil 二次确认 | naming-contract.md §4 |
 
 ### 1.3 设计影响
 
@@ -54,7 +52,7 @@ A010 架构层定义了"治理规则压缩免疫注入 + 双轨信任编译 + AD
 | I3 | D009 Evidence & Sensors 用治理规则作 `quality_gate` 证据判据 | D009 / A009 |
 | I4 | D011 Magic Words 注入到 `native_system_role` 拉闸位置（复用 GovernanceInjector） | D011 / A011 |
 | I5 | D012 Entropy Control 周期 review 已失效 guardrail，可降级为 default | D012 / A012 |
-| I6 | ForgekinHost（ADR 001）在灵智体构造时调用 GovernanceInjector 统一注入 | ADR 001 |
+| I6 | ForgekinHost（ADR 001）在Forgekin构造时调用 GovernanceInjector 统一注入 | ADR 001 |
 
 ---
 
@@ -118,8 +116,8 @@ A010 架构层定义了"治理规则压缩免疫注入 + 双轨信任编译 + AD
 │  «implements GovernanceStore» SqliteGovernanceStore                  │
 │    + async save_bundle(bundle) -> str                                │
 │    + async load_bundle(bundle_id) -> Optional[GovernanceBundle]      │
-│    + async list_bundles() -> list[GovernanceBundle]                  │
-│    + async checkpoint() -> None                                      │
+│    + async list_bundles -> list[GovernanceBundle]                  │
+│    + async checkpoint -> None                                      │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -185,7 +183,7 @@ class AdrRequiredError(GovernanceError):
 
 
 class MindCouncilRequiredError(GovernanceError):
-    """E4+ 觉醒阶覆盖 default 需 Mind Council 二次确认"""
+    """E4+ 觉醒阶覆盖 default 需 MindCouncil 二次确认"""
 
 
 # ───────────────────────────── Pydantic 模型 ─────────────────────────────
@@ -204,9 +202,9 @@ class GovernanceRule(BaseModel):
     @field_validator("rule_text")
     @classmethod
     def _text_non_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise InvalidRuleError("GovernanceRule rule_text 不可为空")
-        return v.strip()
+        return v.strip
 
     @model_validator(mode="after")
     def _hard_rule_constraints(self) -> "GovernanceRule":
@@ -231,7 +229,7 @@ class DualTrackPolicy(BaseModel):
     """双轨信任编译（CL-019）
 
     guardrails 轨: hard, 只能加严不可放宽（monotonic tightening）
-    defaults 轨: soft, 灵智体可声明覆盖
+    defaults 轨: soft, Forgekin可声明覆盖
     """
     guardrails: list[GovernanceRule] = Field(default_factory=list)
     defaults: list[GovernanceRule] = Field(default_factory=list)
@@ -280,11 +278,11 @@ class DualTrackPolicy(BaseModel):
     def override_default(
         self, rule_id: str, override_text: str, mind_council_token: Optional[str] = None
     ) -> GovernanceRule:
-        """default 覆盖：灵智体声明覆盖默认行为
+        """default 覆盖：Forgekin声明覆盖默认行为
 
         架构契约:
         - 仅 defaults 轨可覆盖
-        - E4+ 觉醒阶需 Mind Council 二次确认 token
+        - E4+ 觉醒阶需 MindCouncil 二次确认 token
         - 返回覆盖后的新规则
         """
         existing = next(
@@ -293,7 +291,7 @@ class DualTrackPolicy(BaseModel):
         if existing is None:
             raise InvalidRuleError(f"default 规则 {rule_id} 不存在")
 
-        # E4+ 觉醒阶覆盖需 Mind Council token
+        # E4+ 觉醒阶覆盖需 MindCouncil token
         # (此处由 caller 传入, 简化校验)
         if not mind_council_token:
             # 检查 override 是否需要二次确认
@@ -385,7 +383,7 @@ class GovernanceInjector(ABC):
         架构契约:
         - 所有 hard 规则必须 compression_immune=true
         - 注入位置: native_system_role (禁 user_message)
-        - 由 ForgekinHost 在灵智体构造时调用
+        - 由 ForgekinHost 在Forgekin构造时调用
         """
 
     @abstractmethod
@@ -469,7 +467,7 @@ class DefaultGovernanceLoader(GovernanceLoader):
             ))
 
         bundle = GovernanceBundle(
-            bundle_id=f"gb-{gov.get('bundle_name', 'default')}-{int(datetime.now(timezone.utc).timestamp())}",
+            bundle_id=f"gb-{gov.get('bundle_name', 'default')}-{int(datetime.now(timezone.utc).timestamp)}",
             rules=rules,
             injection_layer=InjectionLayer.NATIVE_SYSTEM_ROLE,
             version=str(gov.get("bundle_version", "1")),
@@ -522,7 +520,7 @@ class DefaultGovernanceInjector(GovernanceInjector):
                 surface_id=f"gov-hard-{rule.rule_id}-v{rule.version}",
                 surface_type=StateSurfaceType.TASK_QUEUE,
                 key=f"governance:hard:{rule.rule_id}",
-                payload=rule.model_dump(),
+                payload=rule.model_dump,
                 authority_level=4,
                 compression_immune=True,
                 decay_tag=DecayTag.BUILT_TO_PERSIST,
@@ -567,7 +565,7 @@ class DefaultGovernanceValidator(GovernanceValidator):
         for rule in hard_rules_in_session:
             if rule.rule_id not in native_system_role:
                 errors.append(
-                    f"hard 规则 {rule.rule_id} 未注入 native_system_role, 拒绝构造灵智体"
+                    f"hard 规则 {rule.rule_id} 未注入 native_system_role, 拒绝构造Forgekin"
                 )
 
         # 2. 校验规则变更走 ADR
@@ -600,7 +598,7 @@ class DefaultGovernanceValidator(GovernanceValidator):
         if violations:
             await self._audit_logger.log(
                 event="forbidden_injection_layer_detected",
-                payload=result.model_dump(),
+                payload=result.model_dump,
             )
         return result
 ```
@@ -759,13 +757,13 @@ class SqliteGovernanceStore(GovernanceStore):
             await self._conn.execute("PRAGMA synchronous=NORMAL")
             await self._conn.execute("PRAGMA foreign_keys=ON")
             await self._conn.executescript(self.DDL)
-            await self._conn.commit()
+            await self._conn.commit
         return self._conn
 
     async def save_bundle(self, bundle: GovernanceBundle) -> str:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         if not bundle.bundle_id:
-            bundle.bundle_id = f"gb-{uuid.uuid4().hex[:12]}"
+            bundle.bundle_id = f"gb-{uuid.uuid4.hex[:12]}"
         await conn.execute(
             """
             INSERT INTO governance_bundles
@@ -774,8 +772,8 @@ class SqliteGovernanceStore(GovernanceStore):
             """,
             (
                 bundle.bundle_id,
-                json.dumps([r.model_dump() for r in bundle.rules], ensure_ascii=False),
-                bundle.injected_at.isoformat(),
+                json.dumps([r.model_dump for r in bundle.rules], ensure_ascii=False),
+                bundle.injected_at.isoformat,
                 bundle.injection_layer.value,
                 bundle.version, bundle.adr_ref,
             ),
@@ -797,18 +795,18 @@ class SqliteGovernanceStore(GovernanceStore):
                     r.version, r.adr_ref,
                 ),
             )
-        await conn.commit()
-        await self._checkpoint_if_needed()
+        await conn.commit
+        await self._checkpoint_if_needed
         return bundle.bundle_id
 
     async def load_bundle(self, bundle_id: str) -> Optional[GovernanceBundle]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT bundle_id, rules_json, injected_at, injection_layer, version, adr_ref "
             "FROM governance_bundles WHERE bundle_id = ?",
             (bundle_id,),
         ) as cur:
-            row = await cur.fetchone()
+            row = await cur.fetchone
         if row is None:
             return None
         bundle_id, rules_json, injected_at, injection_layer, version, adr_ref = row
@@ -824,11 +822,11 @@ class SqliteGovernanceStore(GovernanceStore):
         )
 
     async def list_bundles(self) -> list[GovernanceBundle]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT bundle_id FROM governance_bundles ORDER BY version DESC"
         ) as cur:
-            rows = await cur.fetchall()
+            rows = await cur.fetchall
         bundles: list[GovernanceBundle] = []
         for (bid,) in rows:
             b = await self.load_bundle(bid)
@@ -837,13 +835,13 @@ class SqliteGovernanceStore(GovernanceStore):
         return bundles
 
     async def _checkpoint_if_needed(self) -> None:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         await conn.execute("PRAGMA wal_checkpoint(FULL)")
 ```
 
 ### 3.2 关键时序图
 
-**时序图 1：灵智体构造时注入治理规则**
+**时序图 1：Forgekin构造时注入治理规则**
 
 ```
 ForgekinHost       Loader            Store            Injector        D008 Registry
@@ -853,7 +851,7 @@ ForgekinHost       Loader            Store            Injector        D008 Regis
      │                │ parse YAML     │                 │                 │
      │                │ hard_rules + soft_rules          │                 │
      │                │ forbidden_layers 含 user_message_prepend?          │
-     │                │ save_bundle()  │                 │                 │
+     │                │ save_bundle  │                 │                 │
      │                ├────────────────>│                 │                 │
      │                │ <───────────────┤ bundle_id       │                 │
      │ <──────────────┤ GovernanceBundle│                 │                 │
@@ -872,7 +870,7 @@ ForgekinHost       Loader            Store            Injector        D008 Regis
      │                │                 │                 │ append_developer_role│
      │ <──────────────────────────────────────────────────┤ done            │
      │                │                 │                 │                 │
-     │ 灵智体构造完成, 治理规则已注入 native_system_role + developer_role │
+     │ Forgekin构造完成, 治理规则已注入 native_system_role + developer_role │
 ```
 
 **时序图 2：audit 发现 user_message 含治理规则**
@@ -907,7 +905,7 @@ Validator         session_ctx       AuditLogger
 | E4 | `GuardrailRelaxationError` 试图放宽 guardrail | 拒绝写入 | caller 看到"guardrail 不可放宽, version 必须 > 当前" |
 | E5 | `ForbiddenLayerError` 使用 user_message_prepend | 拒绝写入 + audit 告警 | caller 看到"禁用 user_message_prepend" |
 | E6 | `AdrRequiredError` 规则变更未走 ADR | 拒绝部署 | caller 看到"规则变更必须走 ADR 流程" |
-| E7 | `MindCouncilRequiredError` E4+ 覆盖 default 缺 token | 拒绝覆盖 | caller 看到"E4+ 觉醒阶覆盖 default 需 Mind Council 二次确认" |
+| E7 | `MindCouncilRequiredError` E4+ 覆盖 default 缺 token | 拒绝覆盖 | caller 看到"E4+ 觉醒阶覆盖 default 需 MindCouncil 二次确认" |
 | E8 | `aiosqlite.OperationalError` DB 锁 | 指数退避重试 3 次 | 服务返回 503 |
 | E9 | `aiosqlite.IntegrityError` 主键冲突 | 不重试, 抛出 | 服务返回 500 |
 | E10 | `forgekin_host.append_native_system_role` 失败 | 重试 3 次, 仍失败抛出 | 服务返回 500 |
@@ -978,14 +976,14 @@ governance:
       version: 1
       adr_ref: "ADR-007"
 
-  # soft 规则（注入 developer_role, 灵智体可声明覆盖）
+  # soft 规则（注入 developer_role, Forgekin可声明覆盖）
   soft_rules:
     - rule_id: "prefer_pytest"
       rule_text: "测试优先使用 pytest 框架"
       authority: soft
       injection_layer: developer_role
       compression_immune: false
-      applies_to: ["devforge:*"]
+      applies_to: ["<forge_project_id>:*"]
       version: 1
       adr_ref: "ADR-007"
 
@@ -998,7 +996,7 @@ governance:
       version: 1
       adr_ref: "ADR-007"
 
-  # 觉醒阶约束（E4+ 覆盖 default 需 Mind Council token）
+  # 觉醒阶约束（E4+ 覆盖 default 需 MindCouncil token）
   awakening_stage_constraints:
     E1: allow_override_default
     E2: allow_override_default
@@ -1063,7 +1061,7 @@ class ForgekinHost:
         result = await self._validator.validate(session_ctx)
         if not result.ok:
             raise GovernanceError(
-                f"灵智体构造拒绝: 治理规则校验失败 {result.errors}"
+                f"Forgekin构造拒绝: 治理规则校验失败 {result.errors}"
             )
 ```
 
@@ -1149,7 +1147,7 @@ class EntropyReviewGate:
 | T6 | audit_user_message 检测到治理关键词 → 告警 | violations 非空 | AC-F8 |
 | T7 | inject_hard 写 DurableSurface compression_immune=true | surface 持久化 | AC-F9 |
 | T8 | inject_soft 写 developer_role | 不在 native_system_role | AC-F10 |
-| T9 | E4+ 覆盖 default 缺 Mind Council token → 拒绝 | MindCouncilRequiredError | AC-F11 |
+| T9 | E4+ 覆盖 default 缺 MindCouncil token → 拒绝 | MindCouncilRequiredError | AC-F11 |
 | T10 | WAL 写入后进程崩溃 → 重启可恢复 | load_bundle 返回完整数据 | AC-P3 |
 | T11 | load 时 forbidden_layers 缺 user_message_prepend → 拒绝 | ForbiddenLayerError | AC-F7 |
 | T12 | validate 时 hard 规则未注入 native_system_role → 拒绝构造 | ValidationResult.ok=false | AC-F12 |
@@ -1172,8 +1170,8 @@ class EntropyReviewGate:
 | AC-F8 | `audit_user_message` 检测到治理关键词 → audit log + 告警 |
 | AC-F9 | `inject_hard` 写 DurableSurface（compression_immune=true, authority_level=4） |
 | AC-F10 | `inject_soft` 写 developer_role，不写 native_system_role |
-| AC-F11 | E4+ 觉醒阶覆盖 default 缺 Mind Council token → MindCouncilRequiredError |
-| AC-F12 | `validate` 时 hard 规则未注入 native_system_role → 拒绝构造灵智体 |
+| AC-F11 | E4+ 觉醒阶覆盖 default 缺 MindCouncil token → MindCouncilRequiredError |
+| AC-F12 | `validate` 时 hard 规则未注入 native_system_role → 拒绝构造Forgekin |
 | AC-F13 | 上下文压缩后 hard 规则仍生效（compression_immune=true） |
 | AC-F14 | DualTrackPolicy guardrails 轨只能加严，defaults 轨可覆盖 |
 | AC-F15 | GovernanceBundle 版本号单调递增 |
@@ -1201,7 +1199,7 @@ class EntropyReviewGate:
 | AC-S3 | 所有 DB 操作通过 Repository, 无 `cursor.execute` |
 | AC-S4 | hard 规则强制注入 native_system_role + compression_immune=true |
 | AC-S5 | `user_message_prepend` 注入被拒绝 + audit 告警 |
-| AC-S6 | E4+ 觉醒阶覆盖 default 强制 Mind Council 二次确认 |
+| AC-S6 | E4+ 觉醒阶覆盖 default 强制 MindCouncil 二次确认 |
 | AC-S7 | 规则变更必须走 ADR 流程, 带版本号 |
 
 ### 5.4 Eval 验收（Eval AC）
@@ -1238,4 +1236,4 @@ class EntropyReviewGate:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F010 / A010） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F010 / A010） | 开发者 Forgekin（猎犬·夏洛克） |

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.12]（FR-CORE-012）
 > **对应 arch.md**: [doc:../arch.md#§3.12]
 > **对应 design.md**: [doc:../design.md#§3.12]（本文件）
 > **对应 Feature**: [doc:../features/F030-virtual-world-setting.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A030-virtual-world-setting.md]（同号架构设计）
 > **依赖 ADR**: [doc:../decisions/013-all-things-spirit-mind-vision.md]
-> **9 大点名称修订**: 已应用（双轨命名 ForgeMind/Forgekin + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,33 +16,33 @@
 
 ### 1.1 设计问题
 
-forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供虚拟世界承载层，对标业界 Character AI（虚拟角色智能体）/ NPC Agent / Persona-Driven Agent 工程实现路径。A030 已固化三层世界引擎 + 9 一等公民 + 三路记忆 + Role Mask 五层 + Canon Sync 铁律 + 世界自转架构，本详细设计在 `forgemind/worlds/` 落地具体实现，解决以下工程层问题：
+forgemind 应用层需要为 VIRTUAL/HYBRID 形态Forgekin提供虚拟世界承载层，对标业界 Character AI（虚拟角色智能体）/ NPC Agent / Persona-Driven Agent 工程实现路径。A030 已固化三层世界引擎 + 9 一等公民 + 三路记忆 + Role Mask 五层 + Canon Sync 铁律 + 世界自转架构，本详细设计在 `forgemind/worlds/` 落地具体实现，解决以下工程层问题：
 
 1. **三层世界引擎未落地**：Core Identity Layer / World Layer / Bridge Layer 三层架构在 A030 已定义，但 `forgemind/worlds/core_identity.py` / `world_setting.py` / `bridge.py` 未实现。
 2. **9 一等公民建模未实现**：World/Character/Scene/Canon Decision/Relationship/Artifact/Round/Branch/Turn 九个一等公民枚举与数据模型未编写。
 3. **Core Identity 四字段不可变保护未编码**：`soul_imprint` / `species` / `core_values` / `core_personality` 四字段永不可被 Episode 修改的 `CoreIdentityGuard` 未实现。
 4. **三路记忆隔离未实现**：Canon / Relational / Session 三路记忆分别写入 EchoStore 不同 Collection 的机制未编码。
-5. **CanonSyncGate RP 台词入典审批未实现**：`submit_for_canon()` / `approve_canon()` / `reject_canon()` 三方法契约未落地，auto_canon_on_world_event=false 铁律未编码。
+5. **CanonSyncGate RP 台词入典审批未实现**：`submit_for_canon` / `approve_canon` / `reject_canon` 三方法契约未落地，auto_canon_on_world_event=false 铁律未编码。
 6. **RoleMaskCoordinator 五层 wear/take_off 未实现**：L1 路由身份 / L2 基础设施 / L3 本体能力 / L4 场景皮肤 / L5 世界内状态五层独立加载/卸载机制未编码。
-7. **WorldDriver.tick() 世界自转未实现**：定时推进世界时间 + NPC 角色/关系/场景自演化 + 世界事件经 Canon Sync 入典的流程未编码。
-8. **形态门控未集成**：`WorldSetting.load()` 调用 `SpeciesRegistry.assert_world_setting_allowed()` 的调用链未实现，BIO/ORG/OBJ 形态绑定被拒绝。
+7. **WorldDriver.tick 世界自转未实现**：定时推进世界时间 + NPC 角色/关系/场景自演化 + 世界事件经 Canon Sync 入典的流程未编码。
+8. **形态门控未集成**：`WorldSetting.load` 调用 `SpeciesRegistry.assert_world_setting_allowed` 的调用链未实现，BIO/ORG/OBJ 形态绑定被拒绝。
 
 ### 1.2 设计约束
 
-- **单向依赖约束**：`forgemind/worlds/` 必须单向依赖 `flowforge/core/` 中的 F014 EchoStore Repository + `forgemind/species/`（F027 SpeciesRegistry），禁止 `import contentforge` 等业务模块。
+- **单向依赖约束**：`forgemind/worlds/` 必须单向依赖 `flowforge/core/` 中的 F014 EchoStore Repository + `forgemind/species/`（F027 SpeciesRegistry），禁止 `import` 任何 *Forge 业务模块。
 - **DI 容器约束**：`WorldDriver` / `RoleMaskCoordinator` / `CanonSyncGate` / `CoreIdentityGuard` 实例必须通过 DI 容器注入，禁止直接实例化。
-- **Repository 层约束**：Canon / Relational / Session 三路记忆写入必须通过 `EchoStoreRepository.append()`，禁止直接操作数据库。
+- **Repository 层约束**：Canon / Relational / Session 三路记忆写入必须通过 `EchoStoreRepository.append`，禁止直接操作数据库。
 - **配置驱动约束**：`world_settings` / `core_identity_guard` / `bridge_protocols` / `role_mask` 配置必须 YAML 外置到 `forgemind/config/worlds.yaml`，禁止 `.py` 硬编码角色/世界观。
-- **形态门控约束**：`WorldSetting.load()` 必须调用 `SpeciesRegistry.assert_world_setting_allowed()` 校验形态合法性，BIO/ORG/OBJ 形态绑定被拒绝。
+- **形态门控约束**：`WorldSetting.load` 必须调用 `SpeciesRegistry.assert_world_setting_allowed` 校验形态合法性，BIO/ORG/OBJ 形态绑定被拒绝。
 - **Core Identity 不可变约束**：`soul_imprint` / `species` / `core_values` / `core_personality` 四字段永不可被任何 Episode 修改。
 - **Canon Sync 铁律约束**：RP 台词必须经 `CanonSyncGate` 显式批准才能进入 Canon 记忆，`auto_canon_on_world_event=false`。
 
 ### 1.3 设计影响
 
-- **对 F027 形态分类的影响**：`WorldSetting.load()` 调用 `SpeciesRegistry.assert_world_setting_allowed()` 校验形态门控，强化"形态决定接入层"约束。
+- **对 F027 形态分类的影响**：`WorldSetting.load` 调用 `SpeciesRegistry.assert_world_setting_allowed` 校验形态门控，强化"形态决定接入层"约束。
 - **对 F014 多域记忆的影响**：Canon / Relational / Session 三路记忆分别写入 EchoStore 不同 Collection，存储相互隔离。
-- **对 F038 进化谱系的影响**：Core Identity 作为灵智体不可变身份锚点，参与谱系追踪。
-- **对 ForgekinBase.observe() / act() 的影响**：VIRTUAL 形态灵智体的 observe/act 通过 `WorldSetting` 读取/改变虚拟世界状态。
+- **对 F038 进化谱系的影响**：Core Identity 作为Forgekin不可变身份锚点，参与谱系追踪。
+- **对 ForgekinBase.observe / act 的影响**：VIRTUAL 形态Forgekin的 observe/act 通过 `WorldSetting` 读取/改变虚拟世界状态。
 - **对 F031 三方 Agent 适配层的影响**：三方 Agent 的 System Prompt Configuration Map 可引用 `WorldSetting` 作为角色边界。
 
 ---
@@ -115,7 +114,7 @@ forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供�
   Core Identity Layer 永不可变；World Layer 承载 9 一等公民建模与三路记忆；Bridge Layer 提供三协议（Role Mask / Canon Sync / World Driver）。三层分离保证核心身份不被 RP 污染。
 
 - **决策 2：Core Identity 四字段永不可变 + 污染检测**
-  `soul_imprint` / `species` / `core_values` / `core_personality` 四字段在灵智体整个生命周期永不可被任何 Episode 修改。`CoreIdentityGuard.assert_not_polluted()` 在每次 Episode 后强制校验，对比四字段与持久化版本。
+  `soul_imprint` / `species` / `core_values` / `core_personality` 四字段在Forgekin整个生命周期永不可被任何 Episode 修改。`CoreIdentityGuard.assert_not_polluted` 在每次 Episode 后强制校验，对比四字段与持久化版本。
 
 - **决策 3：9 一等公民枚举固定 + WorldSetting 聚合**
   `FirstClassCitizen` 固定为 WORLD / CHARACTER / SCENE / CANON_DECISION / RELATIONSHIP / ARTIFACT / ROUND / BRANCH / TURN 九个值。`WorldSetting` 通过 `citizens: dict[FirstClassCitizen, list[str]]` 聚合 9 公民实例 ID。
@@ -124,10 +123,10 @@ forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供�
   `MemoryRouter.route(memory_type)` 根据记忆类型路由到不同 EchoStore Collection：Canon -> `canon_collection` / Relational -> `relational_collection` / Session -> `session_collection`。三路记忆存储相互隔离。
 
 - **决策 5："RP 台词不自动入典"铁律（CL-010）**
-  RP 中灵智体说的话、做的事进入 Session 记忆，必须经 `CanonSyncGate` 显式批准（operator 或 Canon Driver 审批）才能进入 Canon 记忆。`auto_canon_on_world_event=false`，世界事件也需 Canon Sync。
+  RP 中Forgekin说的话、做的事进入 Session 记忆，必须经 `CanonSyncGate` 显式批准（operator 或 Canon Driver 审批）才能进入 Canon 记忆。`auto_canon_on_world_event=false`，世界事件也需 Canon Sync。
 
 - **决策 6：Role Mask 五层独立 wear/take_off + L4 不污染 L3**
-  L1 路由身份 / L2 基础设施 / L3 本体能力 / L4 场景皮肤（RP 角色）/ L5 世界内状态五层独立 wear/take_off。`RoleMaskCoordinator.assert_l4_not_polluting_l3()` 在 L4 卸载后强制校验 L3 本体能力未被污染。
+  L1 路由身份 / L2 基础设施 / L3 本体能力 / L4 场景皮肤（RP 角色）/ L5 世界内状态五层独立 wear/take_off。`RoleMaskCoordinator.assert_l4_not_polluting_l3` 在 L4 卸载后强制校验 L3 本体能力未被污染。
 
 - **决策 7：WorldDriver 定时推进世界自转 + 世界事件经 Canon Sync**
   `WorldDriver.tick(world_id)` 按 `tick_interval_seconds`（默认 3600s）定时推进世界时间，NPC 角色/关系/场景自演化。世界事件写入 Canon 记忆需 Canon Sync 确认（`auto_canon_on_world_event=false`）。
@@ -140,8 +139,8 @@ forgemind 应用层需要为 VIRTUAL/HYBRID 形态灵智体（Forgekin）提供�
 - RP 台词必须经 `CanonSyncGate` 显式批准才能进入 Canon 记忆，`auto_canon_on_world_event=false`。
 - Role Mask 五层必须独立 wear/take_off，L4 场景皮肤不污染 L3 本体能力。
 - Bridge Layer 三协议（Role Mask / Canon Sync / World Driver）必须可编排，runtime coordinator 必须存在。
-- `WorldDriver.tick()` 必须按配置间隔推进世界自转，世界事件仍需 Canon Sync。
-- `WorldSetting.load()` 必须调用 `SpeciesRegistry.assert_world_setting_allowed()` 校验形态门控，BIO/ORG/OBJ 形态绑定被拒绝。
+- `WorldDriver.tick` 必须按配置间隔推进世界自转，世界事件仍需 Canon Sync。
+- `WorldSetting.load` 必须调用 `SpeciesRegistry.assert_world_setting_allowed` 校验形态门控，BIO/ORG/OBJ 形态绑定被拒绝。
 - 虚拟世界设定配置必须 YAML 外置到 `forgemind/config/worlds.yaml`，禁止 `.py` 硬编码角色/世界观。
 
 ---
@@ -263,11 +262,11 @@ class CoreIdentity(BaseModel):
     一旦创建，四字段永不可被任何 Episode 修改。
     CoreIdentityGuard 在每次 Episode 后强制校验。
     """
-    soul_imprint: str                          # 灵印（不可变身份锚点）
+    soul_imprint: str                          # SoulImprint（不可变身份锚点）
     species: str                               # 形态（F027）
     core_values: list[str]                     # 核心价值锚点（不可变）
     core_personality: str                      # 核心性格（不可变）
-    forgekin_id: str                           # 所属灵智体
+    forgekin_id: str                           # 所属Forgekin
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     model_config = {"frozen": True}  # Pydantic 不可变模型
@@ -673,7 +672,7 @@ class HarnessCanonSyncGate(CanonSyncGate):
             tags=[f"episode:{episode_id}", "pending_canon"],
         )
         # 2. 创建 PENDING 请求
-        request_id = f"canon-req-{uuid.uuid4().hex[:10]}"
+        request_id = f"canon-req-{uuid.uuid4.hex[:10]}"
         request = CanonRequest(
             request_id=request_id,
             world_id=world_id,
@@ -718,7 +717,7 @@ class HarnessCanonSyncGate(CanonSyncGate):
         )
         # 更新请求状态
         request.status = CanonRequestStatus.APPROVED
-        request.reviewed_at = datetime.utcnow()
+        request.reviewed_at = datetime.utcnow
         request.reviewed_by = approver
         request.content["_canon_entry_id"] = canon_entry_id
         await self._request_repo.save(request)
@@ -744,7 +743,7 @@ class HarnessCanonSyncGate(CanonSyncGate):
                 f"cannot reject"
             )
         request.status = CanonRequestStatus.REJECTED
-        request.reviewed_at = datetime.utcnow()
+        request.reviewed_at = datetime.utcnow
         request.rejection_reason = reason
         await self._request_repo.save(request)
         logger.info(
@@ -787,7 +786,7 @@ class HarnessCanonSyncGate(CanonSyncGate):
     ) -> int:
         """清理过期的 Session 记忆（72h 前的）。"""
         # 实际实现调用 EchoStoreRepository.delete_by_tags_and_age
-        cutoff = datetime.utcnow() - timedelta(hours=SESSION_AUTO_CLEANUP_HOURS)
+        cutoff = datetime.utcnow - timedelta(hours=SESSION_AUTO_CLEANUP_HOURS)
         deleted_count = await self._request_repo.delete_session_entries_before(
             forgekin_id=forgekin_id,
             world_id=world_id,
@@ -907,7 +906,7 @@ class HarnessRoleMaskCoordinator(RoleMaskCoordinator):
             layer=layer,
             forgekin_id=forgekin_id,
             mask_content=mask_content,
-            worn_at=__import__("datetime").datetime.utcnow().isoformat(),
+            worn_at=__import__("datetime").datetime.utcnow.isoformat,
         )
         # 持久化
         await self._mask_repo.save(mask)
@@ -988,7 +987,7 @@ class HarnessRoleMaskCoordinator(RoleMaskCoordinator):
         snapshot = {
             "strengths": cap.strengths,
             "blind_spots": cap.blind_spots,
-            "snapshot_at": __import__("datetime").datetime.utcnow().isoformat(),
+            "snapshot_at": __import__("datetime").datetime.utcnow.isoformat,
         }
         await self._mask_repo.save_l3_snapshot(forgekin_id, snapshot)
 
@@ -1063,7 +1062,7 @@ class HarnessWorldDriver(WorldDriver):
         self._world_repo = world_setting_repo
         self._canon_sync = canon_sync_gate
         self._npc_engine = npc_evolution_engine
-        self._scheduler = scheduler or AsyncIOScheduler()
+        self._scheduler = scheduler or AsyncIOScheduler
         # world_id -> job_id 映射
         self._tick_jobs: dict[str, str] = {}
 
@@ -1082,7 +1081,7 @@ class HarnessWorldDriver(WorldDriver):
             await self._canon_sync.submit_for_canon(
                 forgekin_id=event.get("forgekin_id", "world_system"),
                 world_id=world_id,
-                episode_id=f"world_tick_{datetime.utcnow().isoformat()}",
+                episode_id=f"world_tick_{datetime.utcnow.isoformat}",
                 content=event,
             )
         logger.info(
@@ -1107,7 +1106,7 @@ class HarnessWorldDriver(WorldDriver):
             )
             return
         if not self._scheduler.running:
-            self._scheduler.start()
+            self._scheduler.start
         job = self._scheduler.add_job(
             self.tick,
             IntervalTrigger(seconds=interval_seconds),
@@ -1285,7 +1284,7 @@ function load(forgekin_id, world_id):
     return world
 ```
 
-#### 3.9.2 `CanonSyncGate.submit_for_canon()` RP 台词入典审批流程
+#### 3.9.2 `CanonSyncGate.submit_for_canon` RP 台词入典审批流程
 
 ```
 function submit_for_canon(forgekin_id, world_id, episode_id, content):
@@ -1297,7 +1296,7 @@ function submit_for_canon(forgekin_id, world_id, episode_id, content):
 
     # 2. 创建 PENDING Canon 请求
     request = CanonRequest(
-        request_id=generate_id(),
+        request_id=generate_id,
         world_id=world_id,
         forgekin_id=forgekin_id,
         episode_id=episode_id,
@@ -1322,7 +1321,7 @@ function approve_canon(request_id, approver):
     )
 
     request.status = APPROVED
-    request.reviewed_at = now()
+    request.reviewed_at = now
     request.reviewed_by = approver
     request.content["_canon_entry_id"] = canon_entry_id
     request_repo.save(request)
@@ -1338,7 +1337,7 @@ function wear_mask(forgekin_id, layer, mask_id, mask_content):
         snapshot = {
             "strengths": cap.strengths,
             "blind_spots": cap.blind_spots,
-            "snapshot_at": now().isoformat(),
+            "snapshot_at": now.isoformat,
         }
         mask_repo.save_l3_snapshot(forgekin_id, snapshot)
 
@@ -1374,7 +1373,7 @@ function assert_l4_not_polluting_l3(forgekin_id):
     return True
 ```
 
-#### 3.9.4 `WorldDriver.tick()` 世界自转流程
+#### 3.9.4 `WorldDriver.tick` 世界自转流程
 
 ```
 function tick(world_id):
@@ -1393,7 +1392,7 @@ function tick(world_id):
         canon_sync.submit_for_canon(
             forgekin_id="world_system",
             world_id=world_id,
-            episode_id="world_tick_" + now().isoformat(),
+            episode_id="world_tick_" + now.isoformat,
             content=event,
         )
 ```
@@ -1401,7 +1400,7 @@ function tick(world_id):
 ### 3.10 时序图：RP 流程 + Canon Sync
 
 ```
-灵智体           RoleMaskCoord        CanonSyncGate       MemoryRouter      EchoStore
+Forgekin           RoleMaskCoord        CanonSyncGate       MemoryRouter      EchoStore
    |                  |                     |                  |                 |
    | wear_mask(L4,    |                     |                  |                 |
    |  sun_wukong)     |                     |                  |                 |
@@ -1414,7 +1413,7 @@ function tick(world_id):
    |                  |----------------------------------------->|                 |
    |<-----------------|                     |                  |                 |
    |                  |                     |                  |                 |
-   | (灵智体演 RP，   |                     |                  |                 |
+   | (Forgekin演 RP，   |                     |                  |                 |
    |  说台词/做事)    |                     |                  |                 |
    |                  |                     |                  |                 |
    | write_session    |                     |                  |                 |
@@ -1465,32 +1464,32 @@ function tick(world_id):
 
 | 错误场景 | 检测点 | 处理动作 | 用户反馈 |
 |---------|--------|---------|---------|
-| BIO/ORG/OBJ 形态绑定虚拟世界 | `SpeciesRegistry.assert_world_setting_allowed()` | 抛 `SpeciesWorldSettingForbiddenError` | "species X cannot bind virtual world setting" |
-| WorldSetting 不存在 | `WorldSettingService.load()` | 抛 `KeyError` | "world setting not found: X" |
-| Core Identity 四字段被污染 | `CoreIdentityGuard.assert_not_polluted()` | 返回 false，触发安全告警 | "core identity field X polluted" |
-| Core Identity 重复创建 | `CoreIdentityGuard.create_immutable()` | 抛 `RuntimeError` | "CoreIdentity already exists; immutable once created" |
-| Canon 请求已 resolved | `approve_canon()` / `reject_canon()` | 抛 `RuntimeError` | "request status is X, cannot review" |
-| L4 mask 污染 L3 | `assert_l4_not_polluting_l3()` | 抛 `L4MaskPollutionError` | "L4 mask polluted L3 capability; rollback required" |
-| 世界自转无 world | `WorldDriver.tick()` | 抛 `KeyError` | "world not found: X" |
-| auto_canon_on_world_event=true | `WorldsConfigLoader.load()` | 抛 `ValueError` | "auto_canon_on_world_event must be false (CL-010 铁律)" |
-| Session 记忆 72h 未清理 | `cleanup_expired_session()` | 自动删除 | "session memory cleaned up: N entries" |
-| 三路记忆路由错误 | `MemoryRouter.route()` | 抛 `KeyError` | "unknown memory type: X" |
+| BIO/ORG/OBJ 形态绑定虚拟世界 | `SpeciesRegistry.assert_world_setting_allowed` | 抛 `SpeciesWorldSettingForbiddenError` | "species X cannot bind virtual world setting" |
+| WorldSetting 不存在 | `WorldSettingService.load` | 抛 `KeyError` | "world setting not found: X" |
+| Core Identity 四字段被污染 | `CoreIdentityGuard.assert_not_polluted` | 返回 false，触发安全告警 | "core identity field X polluted" |
+| Core Identity 重复创建 | `CoreIdentityGuard.create_immutable` | 抛 `RuntimeError` | "CoreIdentity already exists; immutable once created" |
+| Canon 请求已 resolved | `approve_canon` / `reject_canon` | 抛 `RuntimeError` | "request status is X, cannot review" |
+| L4 mask 污染 L3 | `assert_l4_not_polluting_l3` | 抛 `L4MaskPollutionError` | "L4 mask polluted L3 capability; rollback required" |
+| 世界自转无 world | `WorldDriver.tick` | 抛 `KeyError` | "world not found: X" |
+| auto_canon_on_world_event=true | `WorldsConfigLoader.load` | 抛 `ValueError` | "auto_canon_on_world_event must be false (CL-010 铁律)" |
+| Session 记忆 72h 未清理 | `cleanup_expired_session` | 自动删除 | "session memory cleaned up: N entries" |
+| 三路记忆路由错误 | `MemoryRouter.route` | 抛 `KeyError` | "unknown memory type: X" |
 | 9 一等公民枚举非法 | `FirstClassCitizen(value)` | 抛 `ValueError` | "X is not a valid FirstClassCitizen" |
 
 ### 3.12 性能优化指标
 
 | 指标 | 目标值 | 测量点 |
 |------|--------|--------|
-| `WorldSetting.load()` 延迟 | < 200ms | 形态校验 + 三路记忆初始化 |
-| `CoreIdentityGuard.assert_not_polluted()` 延迟 | < 50ms | 四字段对比 |
-| `CanonSyncGate.submit_for_canon()` 延迟 | < 100ms | Session 写入 + 请求创建 |
-| `CanonSyncGate.approve_canon()` 延迟 | < 100ms | Canon 写入 + 状态更新 |
-| `RoleMaskCoordinator.wear_mask()` 延迟 | < 100ms（L4 含快照 < 200ms） | mask 持久化 |
-| `RoleMaskCoordinator.take_off_mask()` 延迟 | < 200ms（L4 含校验） | mask 删除 + L3 校验 |
-| `WorldDriver.tick()` 延迟 | < 5s | NPC 演化 + 事件发射 + Canon Sync |
+| `WorldSetting.load` 延迟 | < 200ms | 形态校验 + 三路记忆初始化 |
+| `CoreIdentityGuard.assert_not_polluted` 延迟 | < 50ms | 四字段对比 |
+| `CanonSyncGate.submit_for_canon` 延迟 | < 100ms | Session 写入 + 请求创建 |
+| `CanonSyncGate.approve_canon` 延迟 | < 100ms | Canon 写入 + 状态更新 |
+| `RoleMaskCoordinator.wear_mask` 延迟 | < 100ms（L4 含快照 < 200ms） | mask 持久化 |
+| `RoleMaskCoordinator.take_off_mask` 延迟 | < 200ms（L4 含校验） | mask 删除 + L3 校验 |
+| `WorldDriver.tick` 延迟 | < 5s | NPC 演化 + 事件发射 + Canon Sync |
 | Session 记忆清理延迟 | < 30s（1000 条） | 批量删除 |
 | 三路记忆写入并发 | 支持 100 并发 | EchoStoreRepository.append |
-| `WorldDriver.start_auto_tick()` 启动延迟 | < 500ms | APScheduler 注册 |
+| `WorldDriver.start_auto_tick` 启动延迟 | < 500ms | APScheduler 注册 |
 
 ---
 
@@ -1500,7 +1499,7 @@ function tick(world_id):
 
 #### 4.1.1 依赖 F026 forgemind 应用层
 
-`CoreIdentityGuard` / `CanonSyncGate` / `RoleMaskCoordinator` / `WorldDriver` 由 `ForgeMindPlugin.register_forge_skills()` 注册到 DI 容器：
+`CoreIdentityGuard` / `CanonSyncGate` / `RoleMaskCoordinator` / `WorldDriver` 由 `ForgeMindPlugin.register_forge_skills` 注册到 DI 容器：
 
 ```python
 # forgemind/plugin.py（节选）
@@ -1510,7 +1509,7 @@ class ForgeMindPlugin:
         config_loader = WorldsConfigLoader(
             Path(__file__).parent / "config" / "worlds.yaml"
         )
-        config = config_loader.load()
+        config = config_loader.load
         # 注册 CoreIdentityGuard
         identity_guard = HarnessCoreIdentityGuard(
             identity_repo=di_container.resolve(CoreIdentityRepository),
@@ -1544,7 +1543,7 @@ class ForgeMindPlugin:
 
 #### 4.1.2 依赖 F027 形态分类
 
-`WorldSettingService.load()` 调用 `SpeciesRegistry.assert_world_setting_allowed(species)`：
+`WorldSettingService.load` 调用 `SpeciesRegistry.assert_world_setting_allowed(species)`：
 
 ```python
 # forgemind/species/species_registry_impl.py（节选，由 F027 实现）
@@ -1560,14 +1559,14 @@ class HarnessSpeciesRegistry(SpeciesRegistry):
 
 #### 4.1.3 依赖 F014 多域记忆
 
-`MemoryRouter.route()` 调用 `EchoStoreRepository.append()` 写入三路 Collection：
+`MemoryRouter.route` 调用 `EchoStoreRepository.append` 写入三路 Collection：
 - Canon -> `canon_collection`
 - Relational -> `relational_collection`
 - Session -> `session_collection`
 
 #### 4.1.4 依赖 F038 ForgekinLineage
 
-Core Identity 作为灵智体不可变身份锚点参与谱系追踪：
+Core Identity 作为Forgekin不可变身份锚点参与谱系追踪：
 
 ```python
 # 锻造流水线 ① 阶段创建 CoreIdentity 后
@@ -1580,10 +1579,10 @@ await self._lineage_repo.append_identity_anchor(
 
 ### 4.2 下游影响实现
 
-#### 4.2.1 影响 ForgekinBase.observe() / act()
+#### 4.2.1 影响 ForgekinBase.observe / act
 
 ```python
-# forgemind/base.py（节选，VIRTUAL 形态灵智体）
+# forgemind/base.py（节选，VIRTUAL 形态Forgekin）
 async def observe(self) -> Observation:
     if self._species == "virtual" or self._species == "hybrid":
         world = await self._world_setting_service.load(
@@ -1629,17 +1628,17 @@ config_map = SystemPromptConfigurationMap(
     },
     world_setting_ref=world.world_id,  # 引用 F030 WorldSetting
     immutable_directives=["遵循西游世界观", "不可越界 OOC"],
-    avatar_sync_token=generate_avatar_token(),
+    avatar_sync_token=generate_avatar_token,
 )
 await adapter.apply_system_prompt_config(config_map)
 ```
 
-#### 4.2.3 影响 F039 灵典可检索知识库
+#### 4.2.3 影响 F039 MindCodex可检索知识库
 
-Canon Memory 中批准的典藏决策可作为灵典条目来源：
+Canon Memory 中批准的典藏决策可作为MindCodex条目来源：
 
 ```python
-# 定期将 Canon Memory 条目索引到 F039 灵典
+# 定期将 Canon Memory 条目索引到 F039 MindCodex
 async def index_canon_to_codex(world_id: str):
     canon_entries = await echo_store_repo.query(
         collection="canon_collection",
@@ -1658,15 +1657,15 @@ async def index_canon_to_codex(world_id: str):
 | 不变量 | 校验点 | 校验实现 |
 |--------|--------|---------|
 | Core Identity 四字段不可变 | `CoreIdentity` 模型 | Pydantic `model_config = {"frozen": True}` |
-| Core Identity 污染检测 | `CoreIdentityGuard.assert_not_polluted()` | 四字段对比持久化版本 |
+| Core Identity 污染检测 | `CoreIdentityGuard.assert_not_polluted` | 四字段对比持久化版本 |
 | 9 一等公民固定枚举 | `FirstClassCitizen` | Enum 类，运行时不可新增 |
 | 三路记忆隔离 | `MemoryRouter._collection_map` | 三种类型路由到不同 Collection |
-| RP 台词不自动入典 | `CanonSyncGate.submit_for_canon()` | 默认进 Session，需 operator 批准才进 Canon |
-| auto_canon_on_world_event=false | `WorldsConfigLoader.load()` | YAML 校验，违反抛 ValueError |
-| L4 不污染 L3 | `RoleMaskCoordinator.assert_l4_not_polluting_l3()` | L4 加载前快照 L3，卸载后对比 |
-| 世界事件经 Canon Sync | `WorldDriver.tick()` | 每个事件调用 `canon_sync.submit_for_canon()` |
-| 形态门控 | `WorldSettingService.load()` | `SpeciesRegistry.assert_world_setting_allowed()` |
-| DI 注入 | `ForgeMindPlugin.register_forge_skills()` | 全部通过 `di_container.resolve()` |
+| RP 台词不自动入典 | `CanonSyncGate.submit_for_canon` | 默认进 Session，需 operator 批准才进 Canon |
+| auto_canon_on_world_event=false | `WorldsConfigLoader.load` | YAML 校验，违反抛 ValueError |
+| L4 不污染 L3 | `RoleMaskCoordinator.assert_l4_not_polluting_l3` | L4 加载前快照 L3，卸载后对比 |
+| 世界事件经 Canon Sync | `WorldDriver.tick` | 每个事件调用 `canon_sync.submit_for_canon` |
+| 形态门控 | `WorldSettingService.load` | `SpeciesRegistry.assert_world_setting_allowed` |
+| DI 注入 | `ForgeMindPlugin.register_forge_skills` | 全部通过 `di_container.resolve` |
 
 ---
 
@@ -1676,42 +1675,42 @@ async def index_canon_to_codex(world_id: str):
 
 - [ ] AC-F-01: `FirstClassCitizen` 枚举含 9 个值（WORLD/CHARACTER/SCENE/CANON_DECISION/RELATIONSHIP/ARTIFACT/ROUND/BRANCH/TURN），运行时无法新增。
 - [ ] AC-F-02: `CoreIdentity` 模型 `model_config = {"frozen": True}`，实例化后字段不可修改。
-- [ ] AC-F-03: `CoreIdentityGuard.create_immutable()` 仅允许调用一次，重复创建抛 `RuntimeError`。
-- [ ] AC-F-04: `CoreIdentityGuard.assert_not_polluted()` 对比四字段与持久化版本，被修改时返回 false。
-- [ ] AC-F-05: `WorldSettingService.load()` 调用 `SpeciesRegistry.assert_world_setting_allowed()`，BIO/ORG/OBJ 形态绑定被拒绝。
-- [ ] AC-F-06: `MemoryRouter.route()` 根据 `memory_type` 路由到不同 Collection（canon/relational/session）。
-- [ ] AC-F-07: `CanonSyncGate.submit_for_canon()` 内容先写入 Session 记忆，再创建 PENDING 请求。
-- [ ] AC-F-08: `CanonSyncGate.approve_canon()` 后写入 Canon 记忆，`status=APPROVED`，含 `reviewed_by` 字段。
-- [ ] AC-F-09: `CanonSyncGate.reject_canon()` 后 `status=REJECTED`，含 `rejection_reason`。
-- [ ] AC-F-10: `CanonSyncGate.write_session_memory()` 写入 Session 记忆，未经 Canon Sync 批准不进入 Canon。
+- [ ] AC-F-03: `CoreIdentityGuard.create_immutable` 仅允许调用一次，重复创建抛 `RuntimeError`。
+- [ ] AC-F-04: `CoreIdentityGuard.assert_not_polluted` 对比四字段与持久化版本，被修改时返回 false。
+- [ ] AC-F-05: `WorldSettingService.load` 调用 `SpeciesRegistry.assert_world_setting_allowed`，BIO/ORG/OBJ 形态绑定被拒绝。
+- [ ] AC-F-06: `MemoryRouter.route` 根据 `memory_type` 路由到不同 Collection（canon/relational/session）。
+- [ ] AC-F-07: `CanonSyncGate.submit_for_canon` 内容先写入 Session 记忆，再创建 PENDING 请求。
+- [ ] AC-F-08: `CanonSyncGate.approve_canon` 后写入 Canon 记忆，`status=APPROVED`，含 `reviewed_by` 字段。
+- [ ] AC-F-09: `CanonSyncGate.reject_canon` 后 `status=REJECTED`，含 `rejection_reason`。
+- [ ] AC-F-10: `CanonSyncGate.write_session_memory` 写入 Session 记忆，未经 Canon Sync 批准不进入 Canon。
 - [ ] AC-F-11: `RoleMaskCoordinator.wear_mask(L4)` 加载前快照 L3 capability。
 - [ ] AC-F-12: `RoleMaskCoordinator.take_off_mask(L4)` 卸载后校验 L3 未被污染，污染时抛 `L4MaskPollutionError`。
-- [ ] AC-F-13: `RoleMaskCoordinator.get_active_masks()` 返回当前激活的 mask 字典。
-- [ ] AC-F-14: `WorldDriver.tick()` 推进世界时间 + NPC 演化 + 发射事件 + Canon Sync。
-- [ ] AC-F-15: `WorldDriver.start_auto_tick()` 按 `tick_interval_seconds` 定时调用 `tick()`。
-- [ ] AC-F-16: `WorldDriver.stop_auto_tick()` 移除 APScheduler job。
-- [ ] AC-F-17: `WorldsConfigLoader.load()` 校验 `auto_canon_on_world_event=false`，违反抛 `ValueError`。
-- [ ] AC-F-18: `cleanup_expired_session()` 清理 72h 前的 Session 记忆。
+- [ ] AC-F-13: `RoleMaskCoordinator.get_active_masks` 返回当前激活的 mask 字典。
+- [ ] AC-F-14: `WorldDriver.tick` 推进世界时间 + NPC 演化 + 发射事件 + Canon Sync。
+- [ ] AC-F-15: `WorldDriver.start_auto_tick` 按 `tick_interval_seconds` 定时调用 `tick`。
+- [ ] AC-F-16: `WorldDriver.stop_auto_tick` 移除 APScheduler job。
+- [ ] AC-F-17: `WorldsConfigLoader.load` 校验 `auto_canon_on_world_event=false`，违反抛 `ValueError`。
+- [ ] AC-F-18: `cleanup_expired_session` 清理 72h 前的 Session 记忆。
 
 ### 5.2 性能验收
 
-- [ ] AC-P-01: `WorldSetting.load()` 延迟 < 200ms。
-- [ ] AC-P-02: `CoreIdentityGuard.assert_not_polluted()` 延迟 < 50ms。
-- [ ] AC-P-03: `CanonSyncGate.submit_for_canon()` 延迟 < 100ms。
-- [ ] AC-P-04: `CanonSyncGate.approve_canon()` 延迟 < 100ms。
-- [ ] AC-P-05: `RoleMaskCoordinator.wear_mask()` 延迟 < 100ms（L4 含快照 < 200ms）。
-- [ ] AC-P-06: `RoleMaskCoordinator.take_off_mask()` 延迟 < 200ms（L4 含校验）。
-- [ ] AC-P-07: `WorldDriver.tick()` 延迟 < 5s。
+- [ ] AC-P-01: `WorldSetting.load` 延迟 < 200ms。
+- [ ] AC-P-02: `CoreIdentityGuard.assert_not_polluted` 延迟 < 50ms。
+- [ ] AC-P-03: `CanonSyncGate.submit_for_canon` 延迟 < 100ms。
+- [ ] AC-P-04: `CanonSyncGate.approve_canon` 延迟 < 100ms。
+- [ ] AC-P-05: `RoleMaskCoordinator.wear_mask` 延迟 < 100ms（L4 含快照 < 200ms）。
+- [ ] AC-P-06: `RoleMaskCoordinator.take_off_mask` 延迟 < 200ms（L4 含校验）。
+- [ ] AC-P-07: `WorldDriver.tick` 延迟 < 5s。
 - [ ] AC-P-08: Session 记忆清理延迟 < 30s（1000 条）。
 - [ ] AC-P-09: 三路记忆写入并发支持 100 并发。
-- [ ] AC-P-10: `WorldDriver.start_auto_tick()` 启动延迟 < 500ms。
+- [ ] AC-P-10: `WorldDriver.start_auto_tick` 启动延迟 < 500ms。
 
 ### 5.3 安全验收
 
-- [ ] AC-S-01: BIO/ORG/OBJ 形态灵智体绑定虚拟世界设定被拒绝。
+- [ ] AC-S-01: BIO/ORG/OBJ 形态Forgekin绑定虚拟世界设定被拒绝。
 - [ ] AC-S-02: Core Identity 四字段永不可变，`model_config = {"frozen": True}` 强制不可变。
 - [ ] AC-S-03: Core Identity 重复创建被拒绝，抛 `RuntimeError`。
-- [ ] AC-S-04: Core Identity 污染时 `assert_not_polluted()` 返回 false，触发安全告警。
+- [ ] AC-S-04: Core Identity 污染时 `assert_not_polluted` 返回 false，触发安全告警。
 - [ ] AC-S-05: RP 台词默认进入 Session 记忆，未经 Canon Sync 批准不进入 Canon。
 - [ ] AC-S-06: `auto_canon_on_world_event=true` 在 YAML 中被拒绝（铁律）。
 - [ ] AC-S-07: L4 场景皮肤污染 L3 本体能力时抛 `L4MaskPollutionError`，触发回滚。
@@ -1721,37 +1720,37 @@ async def index_canon_to_codex(world_id: str):
 
 ### 5.4 Eval 验收
 
-- [ ] AC-E-01: 1000 次 RP 后 `CoreIdentityGuard.assert_not_polluted()` 返回 true（四字段未被修改）。
+- [ ] AC-E-01: 1000 次 RP 后 `CoreIdentityGuard.assert_not_polluted` 返回 true（四字段未被修改）。
 - [ ] AC-E-02: 9 一等公民全部建模且写入 World Layer，无扁平 persona 文本。
 - [ ] AC-E-03: Canon/Relational/Session 三路记忆写入不同 EchoStore Collection，存储相互隔离。
 - [ ] AC-E-04: RP 台词默认进入 Session Collection，未经审批不进入 Canon Collection。
 - [ ] AC-E-05: L4 场景皮肤 wear/take_off 不影响 L3 本体能力（strengths/blind_spots 一致）。
-- [ ] AC-E-06: `WorldDriver.tick()` 按配置间隔推进，世界事件经 CanonSyncGate 审批后入 Canon。
+- [ ] AC-E-06: `WorldDriver.tick` 按配置间隔推进，世界事件经 CanonSyncGate 审批后入 Canon。
 - [ ] AC-E-07: `RoleMaskCoordinator` + `CanonSyncGate` + `WorldDriver` 三协议可被 runtime director 编排。
 
 ### 5.5 集成测试点
 
 | 测试 ID | 测试场景 | 期望结果 |
 |---------|---------|---------|
-| IT-D030-001 | BIO 形态灵智体绑定虚拟世界 | 抛 `SpeciesWorldSettingForbiddenError` |
-| IT-D030-002 | VIRTUAL 形态灵智体绑定虚拟世界 | 加载成功，三路记忆初始化 |
+| IT-D030-001 | BIO 形态Forgekin绑定虚拟世界 | 抛 `SpeciesWorldSettingForbiddenError` |
+| IT-D030-002 | VIRTUAL 形态Forgekin绑定虚拟世界 | 加载成功，三路记忆初始化 |
 | IT-D030-003 | `CoreIdentity` 创建后修改字段 | Pydantic 抛 `ValidationError`（frozen） |
 | IT-D030-004 | `CoreIdentity` 重复创建 | 抛 `RuntimeError` |
-| IT-D030-005 | `assert_not_polluted()` 检测到 species 被修改 | 返回 false |
+| IT-D030-005 | `assert_not_polluted` 检测到 species 被修改 | 返回 false |
 | IT-D030-006 | `MemoryRouter.route(CANON)` 写入 | 写入 `canon_collection` |
 | IT-D030-007 | `MemoryRouter.route(SESSION)` 写入 | 写入 `session_collection` |
-| IT-D030-008 | `submit_for_canon()` 提交 RP 台词 | 内容进 Session + 创建 PENDING 请求 |
-| IT-D030-009 | `approve_canon()` 后 | 内容进 Canon + status=APPROVED |
-| IT-D030-010 | `reject_canon()` 后 | 内容保留 Session + status=REJECTED |
+| IT-D030-008 | `submit_for_canon` 提交 RP 台词 | 内容进 Session + 创建 PENDING 请求 |
+| IT-D030-009 | `approve_canon` 后 | 内容进 Canon + status=APPROVED |
+| IT-D030-010 | `reject_canon` 后 | 内容保留 Session + status=REJECTED |
 | IT-D030-011 | `wear_mask(L4)` 加载孙悟空 | L3 capability 快照保存 |
 | IT-D030-012 | `take_off_mask(L4)` 后 L3 未被污染 | 通过校验，无异常 |
 | IT-D030-013 | `take_off_mask(L4)` 后 L3 被污染 | 抛 `L4MaskPollutionError` |
-| IT-D030-014 | `WorldDriver.tick()` | NPC 演化 + 事件经 Canon Sync |
+| IT-D030-014 | `WorldDriver.tick` | NPC 演化 + 事件经 Canon Sync |
 | IT-D030-015 | `WorldsConfigLoader` 含 `auto_canon_on_world_event=true` | 抛 `ValueError` |
 | IT-D030-016 | 1000 次 RP 后 Core Identity | 四字段未被修改 |
 | IT-D030-017 | 三路记忆写入不同 Collection | Canon/Relational/Session 隔离 |
-| IT-D030-018 | `cleanup_expired_session()` 72h 前 | 自动清理 Session 记忆 |
-| IT-D030-019 | `WorldDriver.start_auto_tick()` | APScheduler 注册 job |
+| IT-D030-018 | `cleanup_expired_session` 72h 前 | 自动清理 Session 记忆 |
+| IT-D030-019 | `WorldDriver.start_auto_tick` | APScheduler 注册 job |
 | IT-D030-020 | 三协议可被 runtime director 编排 | wear_mask + submit_for_canon + tick 顺序执行 |
 
 ---
@@ -1772,7 +1771,7 @@ async def index_canon_to_codex(world_id: str):
 - [doc:../design/D026-forgemind-app-layer.md]（ForgeMindPlugin DI 注册）
 - [doc:../design/D027-all-things-spirit-species.md]（SpeciesRegistry.assert_world_setting_allowed）
 - [doc:../design/D014-memory-collection.md]（EchoStoreRepository.append 契约）
-- [doc:../design/naming-contract.md]（灵印 MindImprint + 灵忆 EchoStore）
+- [doc:../design/naming-contract.md]（SoulImprint + EchoStore）
 - [doc:../../../hiclaw/rules.md#第十一部分]
 - [doc:../../../hiclaw/rules.md#AI编程优秀实践]（六层 Guardrails + Loop 工程模式）
 
@@ -1782,4 +1781,4 @@ async def index_canon_to_codex(world_id: str):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（三层世界引擎 + 9 一等公民 + 三路记忆 + Role Mask 五层 + Canon Sync 铁律 + 世界自转详细设计） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（三层世界引擎 + 9 一等公民 + 三路记忆 + Role Mask 五层 + Canon Sync 铁律 + 世界自转详细设计） | 架构师 Forgekin（猫头鹰·鲁班） |

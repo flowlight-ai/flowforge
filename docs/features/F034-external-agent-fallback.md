@@ -6,17 +6,16 @@
 > **关联 ADR**: [doc:decisions/006-external-agent-integration.md]
 > **类型**: external-agent
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.10]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.10]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-三方 Agent 失败回退（External Agent Fallback）是 forgemind 应用层的可靠性保障：三方 Agent 可能失败（claude code 超时、codex 限流、opencode 服务不可用、trae IDE 崩溃），需设计跨厂商 fallback 链与降级策略。本 Feature 实现失败检测、fallback 链编排、与 F022 Tier 1-4 恢复分级联动、与 F032 能力画像联动，让灵智体（Forgekin）调用三方 Agent 失败后能换厂商或降级到内置 agent。
+三方 Agent 失败回退（External Agent Fallback）是 forgemind 应用层的可靠性保障：三方 Agent 可能失败（claude code 超时、codex 限流、opencode 服务不可用、trae IDE 崩溃），需设计跨厂商 fallback 链与降级策略。本 Feature 实现失败检测、fallback 链编排、与 F022 Tier 1-4 恢复分级联动、与 F032 能力画像联动，让Forgekin调用三方 Agent 失败后能换厂商或降级到内置 agent。
 
 这是 Build to Persist 基础设施——编码"三方 Agent 失败可回退"的工程规则，对标 roleagent.md 第 6 章分布式可靠性主张。
 
@@ -136,7 +135,7 @@ external_agent_fallback:
 - [ ] AC-2: fallback 链基于 F032 能力画像盲点互补构建
 - [ ] AC-3: 与 F022 Tier 1-4 恢复分级联动（每 trigger 对应 Tier）
 - [ ] AC-4: 所有三方 Agent 失败时降级到内置 agent
-- [ ] AC-5: FallbackExecutionRecord 写入灵忆供灵锻蒸馏
+- [ ] AC-5: FallbackExecutionRecord 写入 EchoStore 供 SpiritForge 蒸馏
 
 ## 5. 测试策略
 
@@ -146,11 +145,11 @@ external_agent_fallback:
 
 ### 5.2 集成测试
 
-- 接入 F032 能力画像、F022 Tier 1-4 恢复分级、F014 灵忆集合。
+- 接入 F032 能力画像、F022 Tier 1-4 恢复分级、F014 EchoStore集合。
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实 claude code 被模拟限流（429），灵智体通过真实 LLM 决策触发 fallback 链换到 codex，验证 fallback 执行记录写入灵忆、Tier 2 联动正确。再触发 codex 服务不可用，验证降级到内置 agent。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用（含真实三方 Agent，限流场景用真实厂商限流响应）。
+- 真实 claude code 被模拟限流（429），Forgekin通过真实 LLM 决策触发 fallback 链换到 codex，验证 fallback 执行记录写入EchoStore、Tier 2 联动正确。再触发 codex 服务不可用，验证降级到内置 agent。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用（含真实三方 Agent，限流场景用真实厂商限流响应）。
 
 ## 6. 引用
 
@@ -169,4 +168,3 @@ external_agent_fallback:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.10 同号映射 | 文档员灵智体（钢笔·文心） |

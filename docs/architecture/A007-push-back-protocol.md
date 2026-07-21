@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2] + [doc:../spec.md#§3.7]（FR-CORE-002 + FR-CORE-007）
 > **对应 arch.md**: [doc:../arch.md#§3.2] + [doc:../arch.md#§3.7]
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
 > **对应 Feature**: [doc:../features/F007-push-back-protocol.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D007-push-back-protocol.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md] + [doc:../decisions/011-partnership-math.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -121,7 +120,7 @@ Generator Push Back 协议在架构层是 TeamAct VERDICT 步的双向辩论协�
 - **决策 5：超时自动升级 CVO（response_deadline 默认 1 小时）**
   理由：reviewer 不回应会拖延团队。超时自动升级 CVO 仲裁，避免 Push Back 滥用。
 
-- **决策 6：无证据 Push Back 反向计入该灵智体的"坏直觉"画像**
+- **决策 6：无证据 Push Back 反向计入该Forgekin的"坏直觉"画像**
   理由：roleagent.md 第 2 章明确"无证据 push back 反向计入该 agent 的'坏直觉'画像"。Push Back 滥用应有成本。
 
 ### 2.3 架构不变量
@@ -132,7 +131,7 @@ Generator Push Back 协议在架构层是 TeamAct VERDICT 步的双向辩论协�
 - 同一 verdict 的 Push Back 链最多 3 轮，超限强制升级 CVO
 - 超时未回应自动升级 CVO 仲裁
 - Push Back 链必须通过 Repository 持久化，走 WAL 可重放
-- 无证据 Push Back 反向计入该灵智体的"坏直觉"画像（F001 BlindSpot）
+- 无证据 Push Back 反向计入该Forgekin的"坏直觉"画像（F001 BlindSpot）
 - Push Back 期间 TeamAct 终止条件判定暂停（辩论未决）
 
 ---
@@ -181,7 +180,7 @@ class PushBack(BaseModel):
 
     @validator("applicability_argument", "alternative_proposal")
     def args_must_not_be_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("PushBack 三要素任一不可为空")
         return v
 
@@ -377,7 +376,7 @@ TeamAct VERDICT 步: reviewer 给出 verdict (approve/blocking)
 - [ ] AC-8: 同一 verdict 辩论超 3 轮强制升级 CVO
 - [ ] AC-9: reviewer 超时未回应自动升级 CVO 仲裁
 - [ ] AC-10: reviewer 不可 silently dismiss（必须在 deadline 内正式回应）
-- [ ] AC-11: 无证据 Push Back 反向计入该灵智体的"坏直觉"画像（F001 BlindSpot）
+- [ ] AC-11: 无证据 Push Back 反向计入该Forgekin的"坏直觉"画像（F001 BlindSpot）
 - [ ] AC-12: Push Back 链可被追溯（DebateChain 完整记录）
 
 ---
@@ -402,4 +401,4 @@ TeamAct VERDICT 步: reviewer 给出 verdict (approve/blocking)
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F007 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F007 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

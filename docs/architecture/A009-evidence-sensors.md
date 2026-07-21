@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.3]（FR-CORE-003，对应 FR-CORE-020）
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]（待创建）
 > **对应 Feature**: [doc:../features/F009-evidence-sensors.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D009-evidence-sensors.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -54,7 +53,7 @@ Evidence & Sensors 在架构层是 Harness 七层的验证证据层（L3），�
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │              TeamAct EVIDENCE 步 (A002)                            │
-│   持球灵智体产出 (commit / 测试 / trace / 截图 / DOM diff)         │
+│   持球Forgekin产出 (commit / 测试 / trace / 截图 / DOM diff)         │
 └──────────────────────────────┬─────────────────────────────────────┘
                                │ Evidence
                                ▼
@@ -185,7 +184,7 @@ class ReviewVerdict(BaseModel):
 
     @validator("rationale")
     def rationale_must_not_be_empty(cls, v: str) -> str:
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("ReviewVerdict rationale 不可为空")
         return v
 
@@ -249,7 +248,7 @@ class VerdictValidator(ABC):
 ### 3.3 数据流
 
 ```
-TeamAct ACTION 步: 持球灵智体执行动作
+TeamAct ACTION 步: 持球Forgekin执行动作
                   │
                   │ 产出 (commit/测试/trace/截图/DOM diff)
                   ▼
@@ -358,4 +357,4 @@ TeamAct VERDICT 步: 跨 agent review (reviewer != author)
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F009 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F009 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

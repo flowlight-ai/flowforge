@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]
 > **对应 Feature**: [doc:../features/F022-tier-1-4-recovery.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A022-tier-1-4-recovery.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -50,14 +49,14 @@
 
 ### 1.3 设计影响
 
-- **对 F021 副作用 WAL**：Tier 1/2 通过 `WalReplayer.replay()` 回放未确认 entry。本设计需调用 F021 接口。
-- **对 F023 liveness 规范读**：Tier 2 探测阶段调用 F023 `CanonicalReadModel.canonical_read()` 获取系统真实状态。本设计需调用 F023 接口。
+- **对 F021 副作用 WAL**：Tier 1/2 通过 `WalReplayer.replay` 回放未确认 entry。本设计需调用 F021 接口。
+- **对 F023 liveness 规范读**：Tier 2 探测阶段调用 F023 `CanonicalReadModel.canonical_read` 获取系统真实状态。本设计需调用 F023 接口。
 - **对 F024 强 workflow**：强 workflow 的 rejectable 步骤对应 Tier 0/4，replayable 步骤对应 Tier 1/2。本设计需调用 F024 接口。
 - **对 F025 跨 provider 宿主抽象**：provider 故障触发 Tier 4 provider failover。本设计需调用 F025 接口。
 - **对 F011 Magic Words**：Tier 3 恢复卡由 F011 Magic Words 守护器识别触发。本设计需嵌入 F011 守护器。
 - **对 F020 七类归因**：恢复历史记录写入 F020 归因器的输入。本设计需派发 `recovery.completed` 事件。
 - **对 F040 控制面**：所有恢复动作写入 F040 Eval Hub。本设计需派发恢复事件。
-- **对 Forgekin.act()**：Forgekin 执行失败时调用 `RecoveryExecutor.recover()` 触发恢复。
+- **对 Forgekin.act**：Forgekin 执行失败时调用 `RecoveryExecutor.recover` 触发恢复。
 - **对 DI 容器**：需新增 `tier_classifier` / `recovery_executor` / `magic_words_guard` / `recovery_repository` 四个绑定。
 
 ---
@@ -406,24 +405,24 @@ function classify(fault: FaultSignal) -> RecoveryDecision:
     for rule in sorted_rules:
         if matches(fault, rule):
             return RecoveryDecision(
-                decision_id=uuid_v7(),
+                decision_id=uuid_v7,
                 fault_id=fault.fault_id,
                 tier=RecoveryTier(rule.tier),
                 action=map_tier_to_action(rule.tier),
                 reason=f"matched rule priority={rule.priority}",
                 evidence=collect_evidence(fault, rule),
-                decided_at=now(),
+                decided_at=now,
             )
 
     # 默认 Tier 2（探测后重放）
     return RecoveryDecision(
-        decision_id=uuid_v7(),
+        decision_id=uuid_v7,
         fault_id=fault.fault_id,
         tier=RecoveryTier.TIER_2_PROBE_THEN_REPLAY,
         action=RecoveryAction.WAL_REPLAY,
         reason="default: no specific rule matched",
         evidence=["fallback to tier_2"],
-        decided_at=now(),
+        decided_at=now,
     )
 
 
@@ -470,14 +469,14 @@ function map_tier_to_action(tier: str) -> RecoveryAction:
 function execute_tier_0(fault: FaultSignal) -> RecoveryRecord:
     # Tier 0: 无动作，直接返回
     record = RecoveryRecord(
-        record_id=uuid_v7(),
+        record_id=uuid_v7,
         fault_id=fault.fault_id,
         tier=RecoveryTier.TIER_0_IGNORE,
         action=RecoveryAction.NO_OP,
         outcome="skipped",
         idempotency_key=f"recovery:{fault.fault_id}:tier_0",
-        started_at=now(),
-        completed_at=now(),
+        started_at=now,
+        completed_at=now,
     )
     await repository.insert_record(record)
     return record
@@ -486,14 +485,14 @@ function execute_tier_0(fault: FaultSignal) -> RecoveryRecord:
 function execute_tier_4(fault: FaultSignal) -> RecoveryRecord:
     # Tier 4: 硬拒，不可自动恢复
     record = RecoveryRecord(
-        record_id=uuid_v7(),
+        record_id=uuid_v7,
         fault_id=fault.fault_id,
         tier=RecoveryTier.TIER_4_HARD_REJECT,
         action=RecoveryAction.HARD_REJECT,
         outcome="failed",
         idempotency_key=f"recovery:{fault.fault_id}:tier_4",
-        started_at=now(),
-        completed_at=now(),
+        started_at=now,
+        completed_at=now,
         error=f"hard reject: fault_type={fault.fault_type} "
               f"failure_count={fault.failure_count}",
     )
@@ -501,7 +500,7 @@ function execute_tier_4(fault: FaultSignal) -> RecoveryRecord:
     # 告警 F040 控制面
     await event_bus.publish(
         topic="recovery.hard_rejected",
-        payload=record.model_dump(),
+        payload=record.model_dump,
     )
     return record
 ```
@@ -512,13 +511,13 @@ function execute_tier_4(fault: FaultSignal) -> RecoveryRecord:
 function execute_tier_2(fault: FaultSignal) -> RecoveryRecord:
 
     record = RecoveryRecord(
-        record_id=uuid_v7(),
+        record_id=uuid_v7,
         fault_id=fault.fault_id,
         tier=RecoveryTier.TIER_2_PROBE_THEN_REPLAY,
         action=RecoveryAction.WAL_REPLAY,
         outcome="success",  # 默认成功，失败时覆盖
         idempotency_key=f"recovery:{fault.fault_id}:tier_2",
-        started_at=now(),
+        started_at=now,
     )
 
     try:
@@ -547,14 +546,14 @@ function execute_tier_2(fault: FaultSignal) -> RecoveryRecord:
         # 3. 探测通过后回放 WAL
         replayed = await wal_replayer.replay(since_ts=fault.occurred_at)
         record = record.model_copy(update={
-            "completed_at": now(),
+            "completed_at": now,
             "error": f"replayed {replayed} entries",
         })
 
     except Exception as e:
         record = record.model_copy(update={
             "outcome": "failed",
-            "completed_at": now(),
+            "completed_at": now,
             "error": str(e),
         })
 
@@ -589,14 +588,14 @@ function execute_tier_3(fault: FaultSignal) -> RecoveryRecord:
     )
 
     record = RecoveryRecord(
-        record_id=uuid_v7(),
+        record_id=uuid_v7,
         fault_id=fault.fault_id,
         tier=RecoveryTier.TIER_3_RECOVERY_CARD,
         action=RecoveryAction.RECOVERY_CARD,
         outcome="success" if decision == "approved" else "failed",
         idempotency_key=f"recovery:{fault.fault_id}:tier_3:{card.card_id}",
-        started_at=now(),
-        completed_at=now(),
+        started_at=now,
+        completed_at=now,
         error=f"user_decision={decision}",
     )
 
@@ -708,7 +707,7 @@ class DefaultTierClassifier(TierClassifier):
         for rule in sorted_rules:
             if self._matches(fault, rule):
                 return RecoveryDecision(
-                    decision_id=str(uuid.uuid1()),
+                    decision_id=str(uuid.uuid1),
                     fault_id=fault.fault_id,
                     tier=RecoveryTier(rule.tier),
                     action=self._map_tier_to_action(rule.tier),
@@ -718,7 +717,7 @@ class DefaultTierClassifier(TierClassifier):
                 )
         # 默认 Tier 2
         return RecoveryDecision(
-            decision_id=str(uuid.uuid1()),
+            decision_id=str(uuid.uuid1),
             fault_id=fault.fault_id,
             tier=RecoveryTier.TIER_2_PROBE_THEN_REPLAY,
             action=RecoveryAction.WAL_REPLAY,
@@ -812,14 +811,14 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
         # 4. 派发事件
         await self._bus.publish(
             topic="recovery.completed",
-            payload=record.model_dump(),
+            payload=record.model_dump,
         )
         return record
 
     async def execute_tier_0(self, fault: FaultSignal) -> RecoveryRecord:
         now = datetime.now(timezone.utc)
         record = RecoveryRecord(
-            record_id=str(uuid.uuid1()),
+            record_id=str(uuid.uuid1),
             fault_id=fault.fault_id,
             tier=RecoveryTier.TIER_0_IGNORE,
             action=RecoveryAction.NO_OP,
@@ -836,7 +835,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
         try:
             replayed = await self._wal_replayer.replay(since_ts=fault.occurred_at)
             record = RecoveryRecord(
-                record_id=str(uuid.uuid1()),
+                record_id=str(uuid.uuid1),
                 fault_id=fault.fault_id,
                 tier=RecoveryTier.TIER_1_REPLAY,
                 action=RecoveryAction.WAL_REPLAY,
@@ -848,7 +847,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
             )
         except Exception as e:
             record = RecoveryRecord(
-                record_id=str(uuid.uuid1()),
+                record_id=str(uuid.uuid1),
                 fault_id=fault.fault_id,
                 tier=RecoveryTier.TIER_1_REPLAY,
                 action=RecoveryAction.WAL_REPLAY,
@@ -870,7 +869,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
             )
             if liveness.state == "zombie":
                 record = RecoveryRecord(
-                    record_id=str(uuid.uuid1()),
+                    record_id=str(uuid.uuid1),
                     fault_id=fault.fault_id,
                     tier=RecoveryTier.TIER_2_PROBE_THEN_REPLAY,
                     action=RecoveryAction.WAL_REPLAY,
@@ -887,7 +886,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
             wal_pending = await self._wal_repo.query_pending(since_ts=fault.occurred_at)
             if not wal_pending:
                 record = RecoveryRecord(
-                    record_id=str(uuid.uuid1()),
+                    record_id=str(uuid.uuid1),
                     fault_id=fault.fault_id,
                     tier=RecoveryTier.TIER_2_PROBE_THEN_REPLAY,
                     action=RecoveryAction.WAL_REPLAY,
@@ -903,7 +902,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
             # 3. 探测通过后回放
             replayed = await self._wal_replayer.replay(since_ts=fault.occurred_at)
             record = RecoveryRecord(
-                record_id=str(uuid.uuid1()),
+                record_id=str(uuid.uuid1),
                 fault_id=fault.fault_id,
                 tier=RecoveryTier.TIER_2_PROBE_THEN_REPLAY,
                 action=RecoveryAction.WAL_REPLAY,
@@ -915,7 +914,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
             )
         except Exception as e:
             record = RecoveryRecord(
-                record_id=str(uuid.uuid1()),
+                record_id=str(uuid.uuid1),
                 fault_id=fault.fault_id,
                 tier=RecoveryTier.TIER_2_PROBE_THEN_REPLAY,
                 action=RecoveryAction.WAL_REPLAY,
@@ -959,7 +958,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
                 outcome = "failed"
 
         record = RecoveryRecord(
-            record_id=str(uuid.uuid1()),
+            record_id=str(uuid.uuid1),
             fault_id=fault.fault_id,
             tier=RecoveryTier.TIER_3_RECOVERY_CARD,
             action=RecoveryAction.RECOVERY_CARD,
@@ -975,7 +974,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
     async def execute_tier_4(self, fault: FaultSignal) -> RecoveryRecord:
         now = datetime.now(timezone.utc)
         record = RecoveryRecord(
-            record_id=str(uuid.uuid1()),
+            record_id=str(uuid.uuid1),
             fault_id=fault.fault_id,
             tier=RecoveryTier.TIER_4_HARD_REJECT,
             action=RecoveryAction.HARD_REJECT,
@@ -989,7 +988,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
         await self._repo.insert_record(record)
         await self._bus.publish(
             topic="recovery.hard_rejected",
-            payload=record.model_dump(),
+            payload=record.model_dump,
         )
         return record
 
@@ -1033,7 +1032,7 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
 ```
 [恢复主流程时序图]
 
-  Forgekin.act()   executor    classifier   repository   wal_replayer   canonical   magic_guard   EventBus   F040
+  Forgekin.act   executor    classifier   repository   wal_replayer   canonical   magic_guard   EventBus   F040
         │             │            │             │             │            │            │           │          │
         │ recover(fault)           │             │             │            │            │           │          │
         ├────────────>│            │             │             │            │            │           │          │
@@ -1046,10 +1045,10 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
         │             │ execute_tier_X(fault)                                 │            │           │          │
         │             │ (按 tier 分发)                                       │            │           │          │
         │             │ ├─ tier_0: 无动作                                    │            │           │          │
-        │             │ ├─ tier_1: wal_replayer.replay()                    │            │           │          │
+        │             │ ├─ tier_1: wal_replayer.replay                    │            │           │          │
         │             │ │              ├──────────────────────>│             │            │           │          │
         │             │ │              │<──────────────────────┤ replayed   │            │           │          │
-        │             │ ├─ tier_2: canonical.canonical_read() + wal_replayer.replay()    │           │          │
+        │             │ ├─ tier_2: canonical.canonical_read + wal_replayer.replay    │           │          │
         │             │ │              ├──────────────────────────────────────>│           │           │          │
         │             │ │              │<──────────────────────────────────────┤ liveness  │           │          │
         │             │ ├─ tier_3: magic_guard.detect_magic_word + create_recovery_card + await_user_decision        │
@@ -1098,11 +1097,11 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
 
 ### 4.1 上游依赖如何调用
 
-- **Forgekin.act()**：Forgekin 执行失败时调用 `RecoveryExecutor.recover(fault)` 触发恢复。
-- **F024 强 workflow**：强 workflow rejectable 步骤对应 Tier 0/4，replayable 步骤对应 Tier 1/2。F024 调用本设计的 `recover()` 接口。
+- **Forgekin.act**：Forgekin 执行失败时调用 `RecoveryExecutor.recover(fault)` 触发恢复。
+- **F024 强 workflow**：强 workflow rejectable 步骤对应 Tier 0/4，replayable 步骤对应 Tier 1/2。F024 调用本设计的 `recover` 接口。
 - **F025 跨 provider 宿主抽象**：provider 故障触发 Tier 4 provider failover。F025 通过 `fault_type=ProviderFailure` 调用本设计。
-- **F021 副作用 WAL**：Tier 1/2 通过 `WalReplayer.replay()` 回放。本设计调用 F021 接口。
-- **F023 liveness 规范读**：Tier 2 探测阶段调用 `CanonicalReadModel.canonical_read()`。本设计调用 F023 接口。
+- **F021 副作用 WAL**：Tier 1/2 通过 `WalReplayer.replay` 回放。本设计调用 F021 接口。
+- **F023 liveness 规范读**：Tier 2 探测阶段调用 `CanonicalReadModel.canonical_read`。本设计调用 F023 接口。
 - **F011 Magic Words**：Tier 3 恢复卡由 F011 MagicWordsGuard 识别触发。本设计嵌入 F011 守护器。
 - **DI 容器**：`recovery_executor` 通过 `inject("recovery_executor")` 获取。
 
@@ -1110,28 +1109,28 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
 
 - **F020 七类归因**：恢复历史记录写入 F020 归因器的输入。F020 订阅 `recovery.completed` 事件。
 - **F040 控制面**：所有恢复动作写入 F040 Eval Hub。F040 订阅 `recovery.*` 主题。
-- **Forgekin.learn()**：恢复历史作为 Forgekin 学习输入，更新能力画像（CapabilityProfile）。
+- **Forgekin.learn**：恢复历史作为 Forgekin 学习输入，更新能力画像（CapabilityProfile）。
 - **archive_repository**：恢复记录归档到 archive_repository（独立表）。
 
 ### 4.3 集成测试点
 
 | 测试点 ID | 测试场景 | 验证点 | 责任方 |
 |----------|---------|--------|--------|
-| IT-D022-001 | Tier 0 忽略故障 | outcome=skipped，无恢复动作 | 测试员灵智体（蜜獾·平头哥） |
-| IT-D022-002 | Tier 1 WAL 回放 | wal_replayer.replay 被调用，outcome=success | 测试员灵智体 |
-| IT-D022-003 | Tier 2 探测后回放 | canonical_read 调用 + WAL 完整性检查 + 回放 | 测试员灵智体 |
-| IT-D022-004 | Tier 2 探测失败（zombie） | outcome=failed + escalate 到 Tier 3 | 测试员灵智体 |
-| IT-D022-005 | Tier 3 magic word 触发恢复卡 | RecoveryCard 创建 + await_user_decision | 测试员灵智体 |
-| IT-D022-006 | Tier 3 无 magic word | 自动升级到 Tier 4 | 测试员灵智体 |
-| IT-D022-007 | Tier 4 硬拒 | outcome=failed + 告警 F040 | 测试员灵智体 |
-| IT-D022-008 | 跨 Tier 升级链路 | Tier 1 失败 → Tier 2 → Tier 3 → Tier 4 | 测试员灵智体 |
-| IT-D022-009 | 幂等去重 | 同一 fault_id 多次 recover 仅执行一次 | 测试员灵智体 |
-| IT-D022-010 | 升级循环检测 | Tier 4 后再升级抛 EscalationLoopError | 测试员灵智体 |
-| IT-D022-011 | Magic Words 配置加载 | magic_words 列表非空 + card_timeout_seconds 范围 | 测试员灵智体 |
-| IT-D022-012 | 分类规则全覆盖 | classification_rules 覆盖全部 5 个 Tier | 测试员灵智体 |
-| IT-D022-013 | 用户决策超时 | Tier 3 等待超时后 outcome=failed + escalate | 测试员灵智体 |
-| IT-D022-014 | 用户决策拒绝 | Tier 3 用户拒绝后 outcome=failed + escalate | 测试员灵智体 |
-| IT-D022-015 | 探测超时 | Tier 2 探测超时后 outcome=failed + escalate | 测试员灵智体 |
+| IT-D022-001 | Tier 0 忽略故障 | outcome=skipped，无恢复动作 | 测试员Forgekin（蜜獾·平头哥） |
+| IT-D022-002 | Tier 1 WAL 回放 | wal_replayer.replay 被调用，outcome=success | 测试员Forgekin |
+| IT-D022-003 | Tier 2 探测后回放 | canonical_read 调用 + WAL 完整性检查 + 回放 | 测试员Forgekin |
+| IT-D022-004 | Tier 2 探测失败（zombie） | outcome=failed + escalate 到 Tier 3 | 测试员Forgekin |
+| IT-D022-005 | Tier 3 magic word 触发恢复卡 | RecoveryCard 创建 + await_user_decision | 测试员Forgekin |
+| IT-D022-006 | Tier 3 无 magic word | 自动升级到 Tier 4 | 测试员Forgekin |
+| IT-D022-007 | Tier 4 硬拒 | outcome=failed + 告警 F040 | 测试员Forgekin |
+| IT-D022-008 | 跨 Tier 升级链路 | Tier 1 失败 → Tier 2 → Tier 3 → Tier 4 | 测试员Forgekin |
+| IT-D022-009 | 幂等去重 | 同一 fault_id 多次 recover 仅执行一次 | 测试员Forgekin |
+| IT-D022-010 | 升级循环检测 | Tier 4 后再升级抛 EscalationLoopError | 测试员Forgekin |
+| IT-D022-011 | Magic Words 配置加载 | magic_words 列表非空 + card_timeout_seconds 范围 | 测试员Forgekin |
+| IT-D022-012 | 分类规则全覆盖 | classification_rules 覆盖全部 5 个 Tier | 测试员Forgekin |
+| IT-D022-013 | 用户决策超时 | Tier 3 等待超时后 outcome=failed + escalate | 测试员Forgekin |
+| IT-D022-014 | 用户决策拒绝 | Tier 3 用户拒绝后 outcome=failed + escalate | 测试员Forgekin |
+| IT-D022-015 | 探测超时 | Tier 2 探测超时后 outcome=failed + escalate | 测试员Forgekin |
 
 ---
 
@@ -1203,4 +1202,4 @@ class DefaultRecoveryExecutor(RecoveryExecutor):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（5 级 Tier + 4 类 Action + 决策树 + Tier 0/4 硬拒 + Tier 2 探测后重放 + Tier 3 恢复卡 + 跨 Tier 升级 + Magic Words 守护 + 15 集成测试点 + 4 类 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（5 级 Tier + 4 类 Action + 决策树 + Tier 0/4 硬拒 + Tier 2 探测后重放 + Tier 3 恢复卡 + 跨 Tier 升级 + Magic Words 守护 + 15 集成测试点 + 4 类 AC） | 开发者 Forgekin（猎犬·夏洛克） |

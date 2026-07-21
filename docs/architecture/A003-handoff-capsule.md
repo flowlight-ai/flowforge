@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，对应 FR-CORE-016）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
 > **对应 Feature**: [doc:../features/F003-handoff-capsule.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D003-handoff-capsule.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,14 +16,14 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智体'）交接时如何让接手者快速 bootstrap"的根本问题。当前 v7.0 `handoff.py` 只传递任务 ID 和状态枚举，未实现交接胶囊的结构化内容，导致：
+FlowForge 在架构层需要解决"Forgekin（Evolvable Agent，社区社交称'灵智体'）交接时如何让接手者快速 bootstrap"的根本问题。当前 v7.0 `handoff.py` 只传递任务 ID 和状态枚举，未实现交接胶囊的结构化内容，导致：
 
-1. 接手灵智体必须重读完整上下文，token 成本爆炸（长任务可达数万 token）
-2. 接手灵智体无法区分"作者已决"与"作者未决"的开放问题，反复重做已决策的权衡
+1. 接手Forgekin必须重读完整上下文，token 成本爆炸（长任务可达数万 token）
+2. 接手Forgekin无法区分"作者已决"与"作者未决"的开放问题，反复重做已决策的权衡
 3. 跨厂商 review 缺少 rationale，reviewer 误判 author 设计意图
 4. TeamAct "无悬空任务归属"终止条件无法验证（开放问题状态不可追溯）
 
-交接胶囊在架构层是 TeamAct ROUTE 步的协议层硬要求，是把"前一个灵智体的心智状态"外部化到 Durable Surface 的工程实现。
+交接胶囊在架构层是 TeamAct ROUTE 步的协议层硬要求，是把"前一个Forgekin的心智状态"外部化到 Durable Surface 的工程实现。
 
 ### 1.2 架构约束
 
@@ -43,7 +42,7 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 - **对 Durable State Surfaces（A008）的影响**：胶囊作为 6 类 Durable Surface 之一，承载跨 session 状态外部化
 - **对 Evidence & Sensors（A009）的影响**：evidence_refs 字段锚定到 F009 Evidence Store
 - **对 Push Back（A007）的影响**：胶囊的 tradeoffs 字段是 Push Back 论证的依据之一
-- **对分布式可靠性（A021-A025）的影响**：胶囊 WAL 可重放，进程崩溃后接手灵智体可读最新胶囊恢复
+- **对分布式可靠性（A021-A025）的影响**：胶囊 WAL 可重放，进程崩溃后接手Forgekin可读最新胶囊恢复
 
 ---
 
@@ -54,7 +53,7 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                   TeamAct ROUTE 步 (A002)                          │
-│   持球灵智体传球时强制写入 HandoffCapsule                          │
+│   持球Forgekin传球时强制写入 HandoffCapsule                          │
 └──────────────────────────────┬─────────────────────────────────────┘
                                │ DI 注入
                                ▼
@@ -82,7 +81,7 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
                                  │ 读取
                                  │
                   ┌──────────────┴───────────────┐
-                  │  接手灵智体 (TeamAct STATE 步) │
+                  │  接手Forgekin (TeamAct STATE 步) │
                   │  跨厂商 reviewer (盲点提示)    │
                   └──────────────────────────────┘
 ```
@@ -90,7 +89,7 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
 ### 2.2 关键架构决策
 
 - **决策 1：交接胶囊是协议层硬要求，不是可选礼貌**
-  理由：roleagent.md 第 2 章明确要求。不强制写入则接手灵智体必须重读完整上下文，token 成本与延迟不可接受。
+  理由：roleagent.md 第 2 章明确要求。不强制写入则接手Forgekin必须重读完整上下文，token 成本与延迟不可接受。
 
 - **决策 2：五段 Schema（What/Why/Tradeoff/Open/Next）任一非空**
   理由：五段对应不同心智维度。What 是事实陈述，Why 是设计意图，Tradeoff 是放弃的选项，Open 是开放问题，Next 是下一步建议。缺失任一段都会让接手者心智断层。
@@ -102,10 +101,10 @@ FlowForge 在架构层需要解决"灵智体（Forgekin，社区社交称'灵智
   理由：TeamAct "无悬空任务归属"终止条件要求所有 open question 都已 resolved 或已升级。状态不可追溯则终止条件无法判定。
 
 - **决策 5：胶囊是 Durable Surface（authority_level=2，compression_immune=true）**
-  理由：胶囊必须跨 session 跨 agent 持续存在。若塞在对话历史里，上下文压缩后胶囊消失，接手灵智体无法恢复心智状态。
+  理由：胶囊必须跨 session 跨 agent 持续存在。若塞在对话历史里，上下文压缩后胶囊消失，接手Forgekin无法恢复心智状态。
 
 - **决策 6：胶囊版本化（schema_version），版本变更走 ADR 流程**
-  理由：胶囊 Schema 是协议层契约，灵智体不可私自修改。版本变更必须通过 ADR 评审，保留不可变历史。
+  理由：胶囊 Schema 是协议层契约，Forgekin不可私自修改。版本变更必须通过 ADR 评审，保留不可变历史。
 
 ### 2.3 架构不变量
 
@@ -142,7 +141,7 @@ from datetime import datetime
 class HandoffCapsule(BaseModel):
     """交接胶囊 — TeamAct ROUTE 步协议层硬要求"""
     capsule_id: str
-    author_forgekin_id: str           # 作者灵智体 ID
+    author_forgekin_id: str           # 作者Forgekin ID
     team_id: str                       # TeamAct team_id
     iteration: int                    # 第几轮迭代
     what: str                          # 做了什么（事实陈述，非空）
@@ -158,7 +157,7 @@ class HandoffCapsule(BaseModel):
     @validator("what", "why", "tradeoffs", "next_step")
     def must_be_non_empty(cls, v: str) -> str:
         """五段字段任一为空抛 SchemaError"""
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise ValueError("HandoffCapsule 五段字段不可为空")
         return v
 
@@ -179,7 +178,7 @@ class HandoffCapsuleStore(ABC):
 
     @abstractmethod
     async def read_latest(self, team_id: str) -> Optional[HandoffCapsule]:
-        """读取团队最新胶囊（接手灵智体 bootstrap 入口）"""
+        """读取团队最新胶囊（接手Forgekin bootstrap 入口）"""
 
     @abstractmethod
     async def list_chain(self, team_id: str) -> list[HandoffCapsule]:
@@ -222,11 +221,11 @@ class OpenQuestionStatus(BaseModel):
 ### 3.3 数据流
 
 ```
-TeamAct ROUTE 步触发 (持球灵智体传球)
+TeamAct ROUTE 步触发 (持球Forgekin传球)
                   │
                   ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ 1. 持球灵智体填写 HandoffCapsule 五段                         │
+│ 1. 持球Forgekin填写 HandoffCapsule 五段                         │
 │    (what / why / tradeoffs / open_questions / next_step)     │
 │    evidence_refs 锚定到 F009 Evidence Store                  │
 └──────────────────────────┬───────────────────────────────────┘
@@ -252,12 +251,12 @@ TeamAct ROUTE 步触发 (持球灵智体传球)
 │ 4. HandoffCapsuleStore.write(capsule)                       │
 │    - 持久化到 SQLite (Durable Surface, authority_level=2)    │
 │    - WAL 写入 (F021 联动, 可重放)                           │
-│    - 广播事件到 EventBus (接手灵智体可感知)                  │
+│    - 广播事件到 EventBus (接手Forgekin可感知)                  │
 └──────────────────────────┬───────────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ 5. 接手灵智体在 TeamAct STATE 步读取最新胶囊                 │
+│ 5. 接手Forgekin在 TeamAct STATE 步读取最新胶囊                 │
 │    HandoffCapsuleStore.read_latest(team_id)                 │
 │    - 快速 bootstrap (无需重读完整上下文)                     │
 │    - 看到盲点提示 (避免重蹈 author 覆辙)                     │
@@ -332,4 +331,4 @@ TeamAct ROUTE 步触发 (持球灵智体传球)
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F003 Feature 级 SRS） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架，对应 F003 Feature 级 SRS） | 架构师 Forgekin（猫头鹰·鲁班） |

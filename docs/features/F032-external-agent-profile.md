@@ -6,23 +6,22 @@
 > **关联 ADR**: [doc:decisions/006-external-agent-integration.md]
 > **类型**: external-agent
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.10]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.10]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-三方 Agent 能力画像（External Agent Capability Profile）是 forgemind 应用层对三方 Agent（claude code / codex / opencode / trae 等）的能力建模：每个三方 Agent 有自己的 CapabilityProfile（擅长 + 盲点），灵智体（Forgekin）基于能力匹配选择合适的三方 Agent 而非"配置默认值"。本 Feature 实现三方 Agent 能力画像数据模型、能力匹配查询、与 F001 灵智体能力画像的盲点互补配对。
+三方 Agent 能力画像（External Agent Capability Profile）是 forgemind 应用层对三方 Agent（claude code / codex / opencode / trae 等）的能力建模：每个三方 Agent 有自己的 CapabilityProfile（擅长 + 盲点），Forgekin基于能力匹配选择合适的三方 Agent 而非"配置默认值"。本 Feature 实现三方 Agent 能力画像数据模型、能力匹配查询、与 F001 Forgekin能力画像的盲点互补配对。
 
 这是 Build to Persist 基础设施——编码"三方 Agent 是能力扩展非工具调用"的工程规则。
 
 ## 2. 动机（Motivation）
 
-`[doc:review/review.md#EX-002]` 指出：v7.0 无三方 Agent 能力画像，灵智体无法基于能力匹配选择合适的三方 Agent，只能按"配置默认值"调用。按 RA-001 能力画像思路：claude code 擅长复杂重构/盲点是长上下文易漂移；codex 擂长推理/盲点是工具调用弱；opencode 擅长开源协作/盲点是企业场景弱；trae 擅长 IDE 集成/盲点是命令行长任务弱。
+`[doc:review/review.md#EX-002]` 指出：v7.0 无三方 Agent 能力画像，Forgekin无法基于能力匹配选择合适的三方 Agent，只能按"配置默认值"调用。按 RA-001 能力画像思路：claude code 擅长复杂重构/盲点是长上下文易漂移；codex 擂长推理/盲点是工具调用弱；opencode 擅长开源协作/盲点是企业场景弱；trae 擅长 IDE 集成/盲点是命令行长任务弱。
 
 不做这个 Feature，F033 状态共享无能力画像作为协作上下文，F034 fallback 仅按顺序而非能力匹配，F035 能力融合无目标画像。这是三方 Agent 集成层的能力底座。
 
@@ -64,7 +63,7 @@ class ExternalAgentProfileRegistry(ABC):
     async def list_by_provider(self, provider: ExternalAgentProvider) -> list[ExternalAgentCapabilityProfile]: ...
 
 class CapabilityMatcher(ABC):
-    """能力匹配器（灵智体能力画像 × 三方 Agent 能力画像）"""
+    """能力匹配器（Forgekin能力画像 × 三方 Agent 能力画像）"""
     @abstractmethod
     async def match_for_task(
         self, forgekin_profile_id: str, task_capability_requirements: list[str]
@@ -82,7 +81,7 @@ class CapabilityMatcher(ABC):
 
 ### 3.3 关键算法
 
-- **盲点互补配对**：灵智体盲点 ∩ 三方 Agent 擅长 = 高匹配分；灵智体擅长 ∩ 三方 Agent 盲点 = 低匹配分（不选）。
+- **盲点互补配对**：Forgekin盲点 ∩ 三方 Agent 擅长 = 高匹配分；Forgekin擅长 ∩ 三方 Agent 盲点 = 低匹配分（不选）。
 - **跨厂商 review 配对**：基于 F002 跨厂商 review 逻辑，primary agent 与 complementary agent 必须盲点不重叠。
 - **历史表现加权**：PerformanceLog 的 Wilson 下界用于小样本可靠性（与 F001 一致）。
 - **成本/延迟信号**：F034 fallback 链决策时按 cost_per_1k_tokens + avg_latency_ms 排序。
@@ -128,11 +127,11 @@ external_agent_profiles:
 
 ### 5.2 集成测试
 
-- 接入 F001 灵智体能力画像、F002 TeamAct 跨厂商 review、F034 fallback 决策。
+- 接入 F001 Forgekin能力画像、F002 TeamAct 跨厂商 review、F034 fallback 决策。
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实 claude code + codex 注册能力画像，灵智体有"长上下文需求"任务时通过真实 LLM 决策调用 codex 而非 claude code（因 claude code 长上下文盲点）。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用（含真实三方 Agent）。
+- 真实 claude code + codex 注册能力画像，Forgekin有"长上下文需求"任务时通过真实 LLM 决策调用 codex 而非 claude code（因 claude code 长上下文盲点）。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用（含真实三方 Agent）。
 
 ## 6. 引用
 
@@ -153,4 +152,3 @@ external_agent_profiles:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.10 同号映射 | 文档员灵智体（钢笔·文心） |

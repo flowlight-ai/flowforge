@@ -1,14 +1,14 @@
 # FlowForge Feature 规格
 
-> **文档编号**: features/README.md（v1.0）
+> **文档编号**: features/README.md（v1.1）
 > **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构
-> **参考**: `[doc:clowder-ai/docs/features/]` 目录结构（F001-F255）
+> **参考**: 标准 Feature 目录结构（已归档，F001-F255）
 
 ---
 
 ## 1. Feature 规范
 
-每个 Feature 是一个独立的可演进单元，对应 roleagent.md 中的"Feature 规格"。**单文件 < 50KB**，灵智体可在单次任务中完整重写。
+每个 Feature 是一个独立的可演进单元，对应 roleagent.md 中的"Feature 规格"。**单文件 < 50KB**，Forgekin可在单次任务中完整重写。
 
 ### 1.1 Feature 文件命名
 
@@ -33,6 +33,7 @@ F0XX-kebab-case-name.md
 | F026-F030 | forgemind 应用层 | FM-001~FM-012 |
 | F031-F035 | 三方 Agent 集成 | EX-001~EX-010 |
 | F036-F040 | 其他 | — |
+| F041-F044 | 可进化智能体（4 种组织角色） | FM-013~FM-016 |
 
 ### 1.3 Feature 模板
 
@@ -40,7 +41,7 @@ F0XX-kebab-case-name.md
 
 ---
 
-## 2. Feature 清单（40 份核心 Feature）
+## 2. Feature 清单（44 份核心 Feature）
 
 ### 2.1 TeamAct 协作（F001-F007）
 
@@ -97,8 +98,8 @@ F0XX-kebab-case-name.md
 | Feature | 标题 | 状态 | 依据 |
 |---------|------|:----:|------|
 | [F026-forgemind-app-layer.md](F026-forgemind-app-layer.md) | forgemind 应用层 | ⏳ | FM-001~FM-012 |
-| [F027-all-things-spirit-species.md](F027-all-things-spirit-species.md) | 万物灵智体形态分类 | ⏳ | FM-003 |
-| [F028-forging-pipeline.md](F028-forging-pipeline.md) | 灵智体锻造流水线 | ⏳ | FM-006 |
+| [F027-all-things-spirit-species.md](F027-all-things-spirit-species.md) | 可进化智能体形态分类 | ⏳ | FM-003 |
+| [F028-forging-pipeline.md](F028-forging-pipeline.md) | Forgekin锻造流水线 | ⏳ | FM-006 |
 | [F029-physical-ai-sensors.md](F029-physical-ai-sensors.md) | 物理 AI 传感器接入 | ⏳ | FM-009 |
 | [F030-virtual-world-setting.md](F030-virtual-world-setting.md) | 虚拟世界设定层 | ⏳ | FM-010 |
 
@@ -117,10 +118,21 @@ F0XX-kebab-case-name.md
 | Feature | 标题 | 状态 | 依据 |
 |---------|------|:----:|------|
 | [F036-forgemind-forge-relationship.md](F036-forgemind-forge-relationship.md) | forgemind 与 *Forge 关系 | ⏳ | FM-005 |
-| [F037-forgemind-marketplace.md](F037-forgemind-marketplace.md) | 灵智体市场 | ⏳ | FM-007 |
-| [F038-forgemind-lineage.md](F038-forgemind-lineage.md) | 灵智体进化谱系 | ⏳ | FM-008 |
-| [F039-mind-codex-searchable.md](F039-mind-codex-searchable.md) | 灵典可检索知识库 | ⏳ | RA-029 |
+| [F037-forgemind-marketplace.md](F037-forgemind-marketplace.md) | Forgekin市场 | ⏳ | FM-007 |
+| [F038-forgemind-lineage.md](F038-forgemind-lineage.md) | Forgekin进化谱系 | ⏳ | FM-008 |
+| [F039-mind-codex-searchable.md](F039-mind-codex-searchable.md) | MindCodex可检索知识库 | ⏳ | RA-029 |
 | [F040-harness-eval-control-plane.md](F040-harness-eval-control-plane.md) | Harness Eval 控制面 | ⏳ | RA-036 |
+
+### 2.9 可进化智能体（F041-F044）
+
+> 4 种组织形态可进化智能体（OrgForgekin），从 design.md §2.7 提取。每种智能体有独立代号 + 5 种 action.type + 觉醒阶上限 + 进化阶路径。
+
+| Feature | 标题 | 状态 | 依据 | 代号 |
+|---------|------|:----:|------|------|
+| [F041-product-manager.md](F041-product-manager.md) | 产品经理可进化智能体 | ⏳ | FM-013 | 鹰·凯恩（Eagle Kane） |
+| [F042-devops.md](F042-devops.md) | 运维可进化智能体 | ⏳ | FM-014 | 蜂鸟·闪电（Hummingbird Flash） |
+| [F043-security-officer.md](F043-security-officer.md) | 安全官可进化智能体 | ⏳ | FM-015 | 狼·阿尔法（Wolf Alpha） |
+| [F044-delivery-manager.md](F044-delivery-manager.md) | 交付经理可进化智能体 | ⏳ | FM-016 | 象·牛顿（Elephant Newton） |
 
 ---
 
@@ -143,27 +155,27 @@ F0XX-kebab-case-name.md
    ↓
 2. 创建 F0XX-xxx.md（基于 TEMPLATE.md）
    ↓
-3. 评审员灵智体 review Feature 规格
+3. 评审员Forgekin review Feature 规格
    ↓
-4. 开发者灵智体实现代码骨架
+4. 开发者 Forgekin实现代码骨架
    ↓
-5. 测试员灵智体执行 E2E 测试（T1-T8）
+5. 测试员Forgekin执行 E2E 测试（T1-T8）
    ↓
-6. Eval 员灵智体归因到七类矩阵
+6. Eval 员Forgekin归因到七类矩阵
    ↓
 7. 若 Eval 通过 → 状态改为 ✅ done
    若 Eval 失败 → 回到步骤 4 修复
    ↓
-8. 文档员灵智体更新 F0XX.md + ROADMAP.md
+8. 文档员Forgekin更新 F0XX.md + ROADMAP.md
    ↓
-9. 灵锻员灵智体将经验蒸馏到灵典 Mind Codex
+9. SpiritForge 经验蒸馏到 MindCodex（蒸馏知识库）
 ```
 
 ---
 
 ## 5. Feature 自我演进
 
-Feature 文档可由灵智体自我演进更新，但必须：
+Feature 文档可由Forgekin自我演进更新，但必须：
 1. 通过 Eval 信号触发（不能主动修改）
 2. 保留 `[doc:引用]` 格式
 3. 单文件 < 50KB

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.6]（FR-CORE-006）
 > **对应 arch.md**: [doc:../arch.md#§3.6]
 > **对应 design.md**: [doc:../design.md#§3.6]
 > **对应 Feature**: [doc:../features/F021-side-effect-wal.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A021-side-effect-wal.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/010-distributed-reliability.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -56,7 +55,7 @@
 - **对 F025 跨 provider 宿主抽象**：provider 调用作为 PROVIDER_CALL 副作用记录到 WAL，failover 时不丢失。
 - **对 F020 七类归因**：environment_drift 归因触发 WAL 回放。
 - **对 F040 控制面**：WAL 状态变更事件写入 F040 Eval Hub。
-- **对 Forgekin.act()**：Forgekin 执行副作用前必须调用 `WalAppender.append_pending`。
+- **对 Forgekin.act**：Forgekin 执行副作用前必须调用 `WalAppender.append_pending`。
 - **对 DI 容器**：需新增 `wal_coordinator` / `wal_appender` / `wal_executor` / `wal_replayer` / `wal_repository` 五个绑定。
 - **对数据库 schema**：需新增 `wal_entries` 表（entry_id PK / idempotency_key 唯一索引 / status 索引 / created_at 索引）。
 
@@ -118,8 +117,8 @@
 │  <<interface>> WalCoordinator (ABC)                                        │
 │  + execute_with_wal(entry) -> WalEntry                                    │
 │  + rollback(entry_id) -> WalEntry                                         │
-│  + checkpoint() -> int                                                    │
-│  + compact() -> int                                                        │
+│  + checkpoint -> int                                                    │
+│  + compact -> int                                                        │
 │                                                                            │
 │  <<interface>> WalRepository (ABC)                                         │
 │  + insert(entry) -> str                                                    │
@@ -239,8 +238,8 @@ class WalExecutor(ABC):
         执行副作用：
         1. 状态转换：PENDING → EXECUTING
         2. 调用具体副作用处理器（SideEffectHandler）
-        3. 成功 → confirm()
-        4. 失败 → fail()
+        3. 成功 → confirm
+        4. 失败 → fail
         """
 
     @abstractmethod
@@ -261,7 +260,7 @@ class WalReplayer(ABC):
         回放自 since_ts 起的所有 PENDING / EXECUTING 状态的 entry：
         1. 查询 since_ts 之后的未确认 entry
         2. 按 entry_id 顺序回放
-        3. 调用 dedup() 去重
+        3. 调用 dedup 去重
         返回成功回放数
         """
 
@@ -477,10 +476,10 @@ function transition_status(
         EXECUTING: {CONFIRMED, FAILED},  # 可转 CONFIRMED 或 FAILED
         CONFIRMED: {ROLLED_BACK},  # 仅能转 ROLLED_BACK（回滚）
         FAILED: {ROLLED_BACK},  # 仅能转 ROLLED_BACK（回滚）
-        ROLLED_BACK: set(),  # 终态，不再转换
+        ROLLED_BACK: set,  # 终态，不再转换
     }
 
-    if target not in ALLOWED_TRANSITIONS.get(current, set()):
+    if target not in ALLOWED_TRANSITIONS.get(current, set):
         raise IllegalTransitionError(
             f"WAL status transition {current} -> {target} not allowed"
         )
@@ -537,7 +536,7 @@ function replay_entry(entry: WalEntry) -> WalEntry:
         await wal_repository.update_status(
             entry.entry_id, WalStatus.CONFIRMED,
             post_state=post_state,
-            confirmed_at=now(),
+            confirmed_at=now,
         )
         return await wal_repository.get(entry.entry_id)
     except Exception as e:
@@ -584,7 +583,7 @@ function rollback(entry_id: str) -> WalEntry:
     # 4. 状态转换：CONFIRMED/FAILED → ROLLED_BACK
     await wal_repository.update_status(
         entry_id, WalStatus.ROLLED_BACK,
-        rolled_back_at=now(),
+        rolled_back_at=now,
     )
 
     return await wal_repository.get(entry_id)
@@ -593,7 +592,7 @@ function rollback(entry_id: str) -> WalEntry:
 #### 2.4.5 Checkpoint 与 Compaction
 
 ```
-function checkpoint() -> int:
+function checkpoint -> int:
 
     # 1. 查询所有 CONFIRMED 状态
     confirmed_entries = await wal_repository.query_by_status(CONFIRMED)
@@ -609,10 +608,10 @@ function checkpoint() -> int:
     return archived
 
 
-function compact() -> int:
+function compact -> int:
 
     # 1. 查询 ROLLED_BACK 状态超过 retention 的 entry
-    cutoff = now() - timedelta(days=config.rolled_back_retention_days)
+    cutoff = now - timedelta(days=config.rolled_back_retention_days)
     expired = await wal_repository.query_rolled_back_before(cutoff)
 
     # 2. 删除
@@ -676,7 +675,7 @@ ALLOWED_TRANSITIONS = {
     WalStatus.EXECUTING: {WalStatus.CONFIRMED, WalStatus.FAILED},
     WalStatus.CONFIRMED: {WalStatus.ROLLED_BACK},
     WalStatus.FAILED: {WalStatus.ROLLED_BACK},
-    WalStatus.ROLLED_BACK: set(),
+    WalStatus.ROLLED_BACK: set,
 }
 
 
@@ -758,7 +757,7 @@ class DefaultWalCoordinator(WalCoordinator):
         # 派发回滚事件
         await self._bus.publish(
             topic="wal.entry.rolled_back",
-            payload=result.model_dump() if result else {},
+            payload=result.model_dump if result else {},
         )
         return result  # type: ignore
 
@@ -783,7 +782,7 @@ class DefaultWalCoordinator(WalCoordinator):
     def _check_transition(
         self, current: WalStatus, target: WalStatus
     ) -> WalStatus:
-        allowed = ALLOWED_TRANSITIONS.get(current, set())
+        allowed = ALLOWED_TRANSITIONS.get(current, set)
         if target not in allowed:
             raise IllegalTransitionError(
                 f"WAL status transition {current.value} -> {target.value} "
@@ -878,7 +877,7 @@ class DefaultWalExecutor(WalExecutor):
         result = await self._repo.get(entry_id)
         await self._bus.publish(
             topic="wal.entry.confirmed",
-            payload=result.model_dump() if result else {},
+            payload=result.model_dump if result else {},
         )
         return result  # type: ignore
 
@@ -890,7 +889,7 @@ class DefaultWalExecutor(WalExecutor):
         result = await self._repo.get(entry_id)
         await self._bus.publish(
             topic="wal.entry.failed",
-            payload=result.model_dump() if result else {},
+            payload=result.model_dump if result else {},
         )
         return result  # type: ignore
 
@@ -942,7 +941,7 @@ class DefaultWalReplayer(WalReplayer):
 ```
 [先写后执行时序图]
 
-  Forgekin.act()    coordinator    appender     repository    executor    handler    EventBus
+  Forgekin.act    coordinator    appender     repository    executor    handler    EventBus
         │              │              │             │            │           │           │
         │ execute_with_wal(entry)    │             │            │           │           │
         ├─────────────>│             │             │            │           │           │
@@ -959,7 +958,7 @@ class DefaultWalReplayer(WalReplayer):
         │              ├──────────────────────────────────────>│           │           │
         │              │                            │ update_status EXECUTING          │
         │              │                            ├──────────>│           │           │
-        │              │                            │ handler.execute()                │
+        │              │                            │ handler.execute                │
         │              │                            ├──────────────────────>│           │
         │              │                            │           │ post_state            │
         │              │                            │<──────────────────────┤           │
@@ -1006,16 +1005,16 @@ class DefaultWalReplayer(WalReplayer):
 
 ### 4.1 上游依赖如何调用
 
-- **Forgekin.act()**：Forgekin 执行副作用前必须调用 `WalCoordinator.execute_with_wal`。
+- **Forgekin.act**：Forgekin 执行副作用前必须调用 `WalCoordinator.execute_with_wal`。
 - **F024 强 workflow**：强 workflow 每步必须 `append_pending`，关联 `workflow_id`。调用方需保证 workflow_id 已知。
 - **F025 跨 provider 宿主抽象**：provider 调用作为 PROVIDER_CALL 副作用记录到 WAL，failover 时 WAL 不丢失。
 - **DI 容器**：`wal_coordinator` 通过 `inject("wal_coordinator")` 获取。
 
 ### 4.2 下游影响如何被调用
 
-- **F022 Tier 1-4 恢复**：Tier 1/2 通过 `WalReplayer.replay()` 回放未确认 entry。F022 订阅 `wal.entry.confirmed` 事件确认恢复进度。
+- **F022 Tier 1-4 恢复**：Tier 1/2 通过 `WalReplayer.replay` 回放未确认 entry。F022 订阅 `wal.entry.confirmed` 事件确认恢复进度。
 - **F023 liveness 规范读**：WAL 状态是 liveness 判定的输入之一。F023 订阅 `wal.entry.failed` 事件检测 zombie。
-- **F020 七类归因**：environment_drift 归因触发 `WalCoordinator.rollback()`。F020 通过 EventBus 派发修复请求。
+- **F020 七类归因**：environment_drift 归因触发 `WalCoordinator.rollback`。F020 通过 EventBus 派发修复请求。
 - **F040 控制面**：所有 WAL 状态变更事件写入 F040 Eval Hub。F040 订阅 `wal.entry.*` 主题。
 - **archive_repository**：checkpoint 归档的 entry 写入 archive_repository（独立表/独立库）。
 
@@ -1023,21 +1022,21 @@ class DefaultWalReplayer(WalReplayer):
 
 | 测试点 ID | 测试场景 | 验证点 | 责任方 |
 |----------|---------|--------|--------|
-| IT-D021-001 | 先写后执行主流程 | PENDING → EXECUTING → CONFIRMED 顺序正确 | 测试员灵智体（蜜獾·平头哥） |
-| IT-D021-002 | 幂等键去重 | 同一 idempotency_key 的 entry 仅入库一次 | 测试员灵智体 |
-| IT-D021-003 | 五态状态机非法转换 | PENDING → CONFIRMED 直接转换被拒绝 | 测试员灵智体 |
-| IT-D021-004 | 可逆副作用回滚 | DB_WRITE 类型可回滚到 pre_state | 测试员灵智体 |
-| IT-D021-005 | 不可逆副作用拒绝回滚 | MESSAGE_SEND 类型回滚被拒绝 | 测试员灵智体 |
-| IT-D021-006 | 条件可逆副作用判定 | API_CALL 类型按 handler.can_rollback 判定 | 测试员灵智体 |
-| IT-D021-007 | WAL 回放顺序 | 按 entry_id 时序排序回放 | 测试员灵智体 |
-| IT-D021-008 | 回放幂等 | 已 CONFIRMED 的 entry 回放时跳过 | 测试员灵智体 |
-| IT-D021-009 | 执行超时处理 | handler 超时后 entry 标记 FAILED | 测试员灵智体 |
-| IT-D021-010 | Checkpoint 归档 | CONFIRMED 状态 entry 归档到 archive | 测试员灵智体 |
-| IT-D021-011 | Compaction 清理 | ROLLED_BACK 超过 retention 被 delete | 测试员灵智体 |
-| IT-D021-012 | fsync_on_append 硬约束 | fsync_on_append=False 时配置加载失败 | 测试员灵智体 |
-| IT-D021-013 | 六类副作用全覆盖 | reversibility_rules 覆盖全部 6 类 | 测试员灵智体 |
-| IT-D021-014 | 跨 workflow 关联 | query_by_workflow 返回 workflow 下所有 entry | 测试员灵智体 |
-| IT-D021-015 | 并发执行限流 | max_concurrent_executions 限制并发数 | 测试员灵智体 |
+| IT-D021-001 | 先写后执行主流程 | PENDING → EXECUTING → CONFIRMED 顺序正确 | 测试员Forgekin（蜜獾·平头哥） |
+| IT-D021-002 | 幂等键去重 | 同一 idempotency_key 的 entry 仅入库一次 | 测试员Forgekin |
+| IT-D021-003 | 五态状态机非法转换 | PENDING → CONFIRMED 直接转换被拒绝 | 测试员Forgekin |
+| IT-D021-004 | 可逆副作用回滚 | DB_WRITE 类型可回滚到 pre_state | 测试员Forgekin |
+| IT-D021-005 | 不可逆副作用拒绝回滚 | MESSAGE_SEND 类型回滚被拒绝 | 测试员Forgekin |
+| IT-D021-006 | 条件可逆副作用判定 | API_CALL 类型按 handler.can_rollback 判定 | 测试员Forgekin |
+| IT-D021-007 | WAL 回放顺序 | 按 entry_id 时序排序回放 | 测试员Forgekin |
+| IT-D021-008 | 回放幂等 | 已 CONFIRMED 的 entry 回放时跳过 | 测试员Forgekin |
+| IT-D021-009 | 执行超时处理 | handler 超时后 entry 标记 FAILED | 测试员Forgekin |
+| IT-D021-010 | Checkpoint 归档 | CONFIRMED 状态 entry 归档到 archive | 测试员Forgekin |
+| IT-D021-011 | Compaction 清理 | ROLLED_BACK 超过 retention 被 delete | 测试员Forgekin |
+| IT-D021-012 | fsync_on_append 硬约束 | fsync_on_append=False 时配置加载失败 | 测试员Forgekin |
+| IT-D021-013 | 六类副作用全覆盖 | reversibility_rules 覆盖全部 6 类 | 测试员Forgekin |
+| IT-D021-014 | 跨 workflow 关联 | query_by_workflow 返回 workflow 下所有 entry | 测试员Forgekin |
+| IT-D021-015 | 并发执行限流 | max_concurrent_executions 限制并发数 | 测试员Forgekin |
 
 ---
 
@@ -1108,4 +1107,4 @@ class DefaultWalReplayer(WalReplayer):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（六类副作用 + 五态状态机 + 先写后执行 + 幂等键 + 回滚算法 + checkpoint/compaction + 15 集成测试点 + 4 类 AC） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（六类副作用 + 五态状态机 + 先写后执行 + 幂等键 + 回滚算法 + checkpoint/compaction + 15 集成测试点 + 4 类 AC） | 开发者 Forgekin（猎犬·夏洛克） |

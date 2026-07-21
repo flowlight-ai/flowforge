@@ -6,17 +6,16 @@
 > **关联 ADR**: [doc:decisions/002-collaboration-protocol.md]
 > **类型**: collaboration
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.2]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.2]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-交接胶囊（Handoff Capsule）是 TeamAct 六步循环中 Route 步的协议层硬要求：前一个灵智体（Forgekin）传球时必须留下 5 段结构化摘要——What / Why / Tradeoff / Open / Next。它不是可选礼貌，而是接手 Forgekin 快速 bootstrap 的唯一入口。
+交接胶囊（Handoff Capsule）是 TeamAct 六步循环中 Route 步的协议层硬要求：前一个Forgekin传球时必须留下 5 段结构化摘要——What / Why / Tradeoff / Open / Next。它不是可选礼貌，而是接手 Forgekin 快速 bootstrap 的唯一入口。
 
 本 Feature 在 F002 TeamAct 状态机之上，把 `HandoffCapsule` 从骨架字段升级为带 Schema 校验、版本化、可审计、可回放的协议对象，并接入跨厂商 review 的盲点提示（依赖 F001 CapabilityProfile）。
 
@@ -35,7 +34,7 @@
 ```python
 class HandoffCapsule(BaseModel):
     capsule_id: str
-    author_forgekin_id: str           # 作者灵智体 ID
+    author_forgekin_id: str           # 作者Forgekin ID
     team_id: str                       # TeamAct team_id
     iteration: int                     # 第几轮迭代
     what: str                          # 做了什么（事实陈述）
@@ -98,19 +97,19 @@ handoff_capsule:
 
 ### 5.2 集成测试
 
-- 接入 F002 TeamActState.advance()，验证 Route 步强制写胶囊。
+- 接入 F002 TeamActState.advance，验证 Route 步强制写胶囊。
 - 接入 F001 CapabilityProfile，验证盲点提示正确注入。
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 3 个不同厂商灵智体协作完成一个 Feature，验证胶囊在三者间正确传递且开放问题状态正确流转。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用，LLM 生成内容经 LLM 审核。
+- 3 个不同厂商Forgekin协作完成一个 Feature，验证胶囊在三者间正确传递且开放问题状态正确流转。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用，LLM 生成内容经 LLM 审核。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第2章]
 - [doc:review/review.md#第八章/RA-011]
 - [doc:decisions/002-collaboration-protocol.md]
-- [doc:design/naming-contract.md#2.2]（灵智体 Forgekin）
+- [doc:design/naming-contract.md#2.2]（Forgekin Forgekin）
 - [doc:features/F001-capability-profile.md]
 - [doc:features/F002-teamact-loop.md]
 - [doc:project_rules.md#T1-T8]
@@ -121,4 +120,3 @@ handoff_capsule:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.2 同号映射 | 文档员灵智体（钢笔·文心） |

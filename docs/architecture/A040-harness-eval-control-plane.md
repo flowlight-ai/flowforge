@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005 Eval 自代谢系统 / FR-CORE-030 Harness Eval 控制面）
 > **对应 arch.md**: [doc:../arch.md#§3.5]
 > **对应 design.md**: [doc:../design.md#§3.5]（待创建）
 > **对应 Feature**: [doc:../features/F040-harness-eval-control-plane.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D040-harness-eval-control-plane.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/009-eval-self-metabolism.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -45,8 +44,8 @@
 - **对 F018 Eval Contract 的影响**：控制面消费 F018 契约的 friction_metrics 作为摩擦分输入，contract_id 是组件状态的锚点
 - **对 F019 三方信号交叉的影响**：控制面消费 F019 三方信号作为增值分输入，信号冲突时触发 action_needed 状态
 - **对 F020 七类归因矩阵的影响**：控制面消费 F020 归因结果作为 attribution_distribution，归因频发触发 action_needed 状态
-- **对 F039 锻典可检索的影响**：控制面产出的"组件生命周期趋势"作为元知识可被蒸馏写入锻典
-- **对 F008 Durable State Surfaces 的影响**：控制面状态复用 F008 持久表面存储，与 F014 灵忆存储隔离
+- **对 F039 蒸馏知识库可检索的影响**：控制面产出的"组件生命周期趋势"作为元知识可被蒸馏写入蒸馏知识库
+- **对 F008 Durable State Surfaces 的影响**：控制面状态复用 F008 持久表面存储，与 F014 EchoStore存储隔离
 - **对 CVO（Chief Vision Officer）的影响**：bottleneck 状态升级 CVO 重构，CVO 接收升级通知并决定是否启动重构
 - **对 dashboard 的影响**：dashboard 必须只读控制面状态，禁止直接写入
 
@@ -76,9 +75,9 @@
 │  │                                                                │  │
 │  │  ┌──────────────────────────────────────────────────────────┐ │  │
 │  │  │ ControlPlaneAPI（控制面 API，唯一实例）                  │ │  │
-│  │  │  ├─ get_status()        查询组件状态                     │ │  │
-│  │  │  ├─ list_by_state()     按状态列表                       │ │  │
-│  │  │  └─ trigger_action()    触发行动（operator 拉闸权校验）  │ │  │
+│  │  │  ├─ get_status        查询组件状态                     │ │  │
+│  │  │  ├─ list_by_state     按状态列表                       │ │  │
+│  │  │  └─ trigger_action    触发行动（operator 拉闸权校验）  │ │  │
 │  │  └──────────────────────────────────────────────────────────┘ │  │
 │  │                                                                │  │
 │  │  ┌──────────────────────────────────────────────────────────┐ │  │
@@ -106,8 +105,8 @@
 │  │                                                                │  │
 │  │  ┌──────────────────────────────────────────────────────────┐ │  │
 │  │  │ ControlPlaneRepository（持久层，复用 F008 持久表面）     │ │  │
-│  │  │  ├─ save_component_status()                             │ │  │
-│  │  │  ├─ query_history()                                     │ │  │
+│  │  │  ├─ save_component_status                             │ │  │
+│  │  │  ├─ query_history                                     │ │  │
 │  │  │  └─ distinguish_from_echo_store: true                   │ │  │
 │  │  └──────────────────────────────────────────────────────────┘ │  │
 │  └────────────────────────────────────────────────────────────────┘  │
@@ -127,7 +126,7 @@
 ### 2.2 关键架构决策
 
 - **决策 1：控制面作为 forgemind 应用层模块（非独立项目）**
-  - 理由：控制面是 forgemind 应用层的编排者，与灵智体（Forgekin，社区社交称"灵智体"）生命周期管理强耦合。独立成项目会导致 forgemind 与控制面跨项目调用，违反"上层可以依赖下层，下层绝对禁止导入上层模块"的单向依赖铁律
+  - 理由：控制面是 forgemind 应用层的编排者，与Forgekin（Evolvable Agent，社区社交称"灵智体"）生命周期管理强耦合。独立成项目会导致 forgemind 与控制面跨项目调用，违反"上层可以依赖下层，下层绝对禁止导入上层模块"的单向依赖铁律
   - 替代方案：独立项目 `evalcontrol/` → 跨项目 RPC 调用，引入网络延迟与故障域分裂，且控制面需访问 F018/F019/F020 内部状态，跨项目访问破坏封装
 - **决策 2：四态判定 + 稳定态（共五态）状态机**
   - 理由：roleagent.md 第 5 章明确"增值 / 折旧 / 需要行动 / 成为瓶颈"四态，加上"稳定"作为初始/恢复态，共五态。状态机驱动让组件生命周期可追溯，避免状态跳跃（如 stable → bottleneck 必须经 action_needed 中转）
@@ -142,16 +141,16 @@
   - 理由：bottleneck → escalate_cvo_refactor 是不可逆操作（架构重构），必须 operator 批准防止自动触发导致系统不稳定。这是"六层 Guardrails"中的 Action Confirmation 层
   - 替代方案：自动触发 CVO 重构 → 不可逆操作无人工确认，可能引发连锁故障
 - **决策 6：趋势分析按时间窗口聚合归因分布**
-  - 理由：F020 归因结果按时间窗口（如 7 天 / 30 天）聚合，可识别"哪类根因最频繁"，为架构师灵智体（猫头鹰·鲁班）提供重构优先级依据。趋势数据可被蒸馏写入 F039 锻典作为元知识
+  - 理由：F020 归因结果按时间窗口（如 7 天 / 30 天）聚合，可识别"哪类根因最频繁"，为架构师 Forgekin（猫头鹰·鲁班）提供重构优先级依据。趋势数据可被蒸馏写入 F039 蒸馏知识库作为元知识
   - 替代方案：仅看当前归因分布 → 无法识别长期趋势，可能错过"缓慢恶化的根因"
-- **决策 7：复用 F008 持久表面（与 F014 灵忆存储隔离）**
-  - 理由：F008 Durable State Surfaces 已提供持久化能力，控制面状态复用 F008 避免重复造轮子。与 F014 灵忆存储隔离，避免控制面状态与原始任务日志混淆
+- **决策 7：复用 F008 持久表面（与 F014 EchoStore存储隔离）**
+  - 理由：F008 Durable State Surfaces 已提供持久化能力，控制面状态复用 F008 避免重复造轮子。与 F014 EchoStore存储隔离，避免控制面状态与原始任务日志混淆
   - 替代方案：自建存储 → 违反"配置驱动 > 代码继承 > 独立实现"原则，且 F008 已提供持久表面抽象
 - **决策 8：单一 ControlPlaneAPI 实例（禁止多控制面分裂）**
   - 理由：控制面是全系统唯一的 Eval 编排者，多实例会导致 lifecycle_state 不一致。DI 容器以 singleton scope 注册 ControlPlaneAPI
   - 替代方案：多控制面实例 → 状态分裂，dashboard 无法确定读哪个实例
 - **决策 9：dashboard_data_source 只读控制面状态**
-  - 理由：dashboard 必须只读控制面状态，禁止直接写入 lifecycle_state。写入路径必须经 ControlPlaneAPI.trigger_action() 并通过 operator 拉闸权校验
+  - 理由：dashboard 必须只读控制面状态，禁止直接写入 lifecycle_state。写入路径必须经 ControlPlaneAPI.trigger_action 并通过 operator 拉闸权校验
   - 替代方案：dashboard 直接写入 → 绕过 Action Confirmation 层，可能误操作
 
 ### 2.3 架构不变量
@@ -163,7 +162,7 @@
 - 行动建议必须按状态派发（depreciating→F012 / action_needed→F020 / bottleneck→CVO）
 - bottleneck → escalate_cvo_refactor 必须 operator 批准（不可逆操作拉闸权）
 - 五态转换必须遵循状态机规则，禁止跳跃（stable → bottleneck 必须经 action_needed 中转）
-- 控制面状态必须复用 F008 持久表面，与 F014 灵忆存储隔离
+- 控制面状态必须复用 F008 持久表面，与 F014 EchoStore存储隔离
 - dashboard_data_source 必须只读控制面状态，禁止直接写入 lifecycle_state
 - 所有控制面规则必须外置 YAML 配置，禁止硬编码
 
@@ -178,7 +177,7 @@
 - **ActionRecommender（`flowforge/forgemind/eval_control/recommender.py`）**：行动建议派发器，按状态派发到 F012/F020/CVO
 - **TrendAnalyzer（`flowforge/forgemind/eval_control/trend.py`）**：趋势分析器，按时间窗口聚合归因分布
 - **LifecycleStateMachine（`flowforge/forgemind/eval_control/state_machine.py`）**：五态状态机，校验状态转换合法性
-- **ControlPlaneRepository（`flowforge/forgemind/eval_control/repository.py`）**：持久层，复用 F008 持久表面，与 F014 灵忆存储隔离
+- **ControlPlaneRepository（`flowforge/forgemind/eval_control/repository.py`）**：持久层，复用 F008 持久表面，与 F014 EchoStore存储隔离
 - **models（`flowforge/forgemind/eval_control/models.py`）**：数据模型（HarnessLifecycleState / HarnessComponentStatus / DailySummary / TrendReport / Action）
 
 ### 3.2 接口契约
@@ -449,7 +448,7 @@ class ControlPlaneRepository(ABC):
   │ Cron Scheduler │
   │ 02:00 触发     │
   └────────┬───────┘
-           │ 1. summarize()
+           │ 1. summarize
            ▼
   ┌────────────────────────────────────────────┐
   │ DailySummarizer                            │
@@ -462,7 +461,7 @@ class ControlPlaneRepository(ABC):
            ▼
   ┌────────────────────────────────────────────┐
   │ LifecycleStateMachine                      │
-  │  ├─ can_transition() 校验转换合法性       │
+  │  ├─ can_transition 校验转换合法性       │
   │  ├─ depreciating 连续 N 天 → bottleneck   │
   │  └─ 输出最终 lifecycle_state              │
   └────────┬───────────────────────────────────┘
@@ -470,14 +469,14 @@ class ControlPlaneRepository(ABC):
            ▼
   ┌────────────────────────────────────────────┐
   │ ControlPlaneRepository                     │
-  │  ├─ save_component_status()               │
-  │  ├─ save_daily_summary()                  │
+  │  ├─ save_component_status               │
+  │  ├─ save_daily_summary                  │
   │  └─ 复用 F008 持久表面                    │
   └────────┬───────────────────────────────────┘
            │ 4. 派发行动
            ▼
   ┌────────────────────────────────────────────┐
-  │ ActionRecommender.recommend()              │
+  │ ActionRecommender.recommend              │
   │  ├─ depreciating  → F012 sunset review   │
   │  ├─ action_needed → F020 fix router      │
   │  ├─ bottleneck    → escalate CVO         │
@@ -494,7 +493,7 @@ class ControlPlaneRepository(ABC):
            │ 1. trigger_action(component_id, action)
            ▼
   ┌────────────────────────────────────────────┐
-  │ ControlPlaneAPI.trigger_action()           │
+  │ ControlPlaneAPI.trigger_action           │
   │  ├─ 校验 component_id 存在                │
   │  ├─ 校验 action 与当前状态匹配           │
   │  └─ 拉闸权校验:                           │
@@ -506,7 +505,7 @@ class ControlPlaneRepository(ABC):
            ▼
   ┌────────────────────────────────────────────┐
   │ 行动处理方派发                             │
-  │  ├─ F012 SunsetReviewer.start_review()    │
+  │  ├─ F012 SunsetReviewer.start_review    │
   │  ├─ F020 FixRouter.dispatch(attribution)  │
   │  └─ CVO 通知（升级重构决策）              │
   └────────┬───────────────────────────────────┘
@@ -520,7 +519,7 @@ class ControlPlaneRepository(ABC):
 
 趋势分析流（按需查询）:
   ┌────────────────┐
-  │ 架构师灵智体   │
+  │ 架构师 Forgekin   │
   │ （猫头鹰·鲁班）│
   │  "查询 30 天   │
   │   趋势"        │
@@ -528,7 +527,7 @@ class ControlPlaneRepository(ABC):
            │ 1. get_trend(window_days=30)
            ▼
   ┌────────────────────────────────────────────┐
-  │ TrendAnalyzer.analyze()                    │
+  │ TrendAnalyzer.analyze                    │
   │  ├─ 从 Repository 拉取历史状态             │
   │  ├─ 按 7/30 天窗口聚合归因分布            │
   │  ├─ 识别"哪类根因最频繁"                  │
@@ -539,7 +538,7 @@ class ControlPlaneRepository(ABC):
   ┌────────────────────────────────────────────┐
   │ 输出                                        │
   │  ├─ 架构师决策重构优先级                   │
-  │  ├─ 蒸馏到 F039 锻典作为元知识            │
+  │  ├─ 蒸馏到 F039 蒸馏知识库作为元知识            │
   │  └─ dashboard 只读展示                     │
   └────────────────────────────────────────────┘
 ```
@@ -550,7 +549,7 @@ class ControlPlaneRepository(ABC):
 
 ### 4.1 上游依赖
 
-- **F008 Durable State Surfaces**：控制面状态持久化复用 F008 持久表面，与 F014 灵忆存储隔离
+- **F008 Durable State Surfaces**：控制面状态持久化复用 F008 持久表面，与 F014 EchoStore存储隔离
 - **F012 Entropy Control**：控制面是 F012 sunset review 的折旧判定来源，depreciating 状态触发 F012 流程
 - **F018 Eval Contract**：控制面消费 F018 契约的 friction_metrics 作为摩擦分输入，contract_id 是组件状态锚点
 - **F019 三方信号交叉**：控制面消费 F019 三方信号作为增值分输入，信号冲突触发 action_needed
@@ -560,12 +559,12 @@ class ControlPlaneRepository(ABC):
 
 ### 4.2 下游影响
 
-- **F039 锻典可检索**：控制面产出的趋势报告作为元知识可被蒸馏写入锻典，供灵智体检索"哪类根因最频繁"
-- **F038 进化谱系**：bottleneck 状态升级 CVO 重构如涉及灵智体跨层迁移，需记录到 F038 谱系
+- **F039 蒸馏知识库可检索**：控制面产出的趋势报告作为元知识可被蒸馏写入蒸馏知识库，供Forgekin检索"哪类根因最频繁"
+- **F038 进化谱系**：bottleneck 状态升级 CVO 重构如涉及Forgekin跨层迁移，需记录到 F038 谱系
 - **CVO（Chief Vision Officer）**：bottleneck 状态升级 CVO 重构，CVO 接收通知并决定是否启动架构重构
 - **dashboard**：dashboard 必须只读控制面状态，展示组件生命周期、趋势报告、行动记录
 - **operator 控制台**：operator 通过控制台批准 bottleneck → escalate_cvo_refactor 行动（拉闸权）
-- **架构师灵智体（猫头鹰·鲁班）**：消费趋势报告决定重构优先级
+- **架构师 Forgekin（猫头鹰·鲁班）**：消费趋势报告决定重构优先级
 
 ### 4.3 跨模块不变量
 
@@ -575,7 +574,7 @@ class ControlPlaneRepository(ABC):
 - 归因分布（attribution_distribution）必须来自 F020 七类归因，禁止控制面自分类
 - depreciating → F012 sunset review 派发必须自动触发（无需 operator 批准）
 - escalate_cvo_refactor 必须 operator 批准（不可逆操作拉闸权）
-- 控制面状态持久化必须复用 F008，禁止与 F014 灵忆存储混用
+- 控制面状态持久化必须复用 F008，禁止与 F014 EchoStore存储混用
 - dashboard 必须只读控制面状态，禁止直接写入 lifecycle_state
 
 ---
@@ -586,7 +585,7 @@ class ControlPlaneRepository(ABC):
 
 - [ ] AC-1: 单向依赖通过——eval_control 模块不 import 任何 *Forge 模块，且不被 F018/F019/F020 反向依赖
 - [ ] AC-2: DI 容器注入通过——ControlPlaneAPI / DailySummarizer / ActionRecommender 通过 DI 容器注入且 ControlPlaneAPI 为 singleton scope
-- [ ] AC-3: Repository 层通过——ControlPlaneRepository 抽象存在且复用 F008 持久表面，与 F014 灵忆存储隔离
+- [ ] AC-3: Repository 层通过——ControlPlaneRepository 抽象存在且复用 F008 持久表面，与 F014 EchoStore存储隔离
 - [ ] AC-4: 配置驱动通过——summary_schedule / appreciation_threshold / friction_threshold / bottleneck_consecutive_days / action_routing 外置 YAML
 - [ ] AC-5: 五态状态机通过——LifecycleStateMachine 校验转换合法性，禁止 STABLE → BOTTLENECK 跳跃
 - [ ] AC-6: 每日汇总通过——DailySummarizer 聚合 F018 + F019 + F020 三个数据源并更新 lifecycle_state
@@ -597,12 +596,11 @@ class ControlPlaneRepository(ABC):
 
 - [ ] AC-9: 全系统仅有一个 ControlPlaneAPI 实例（DI singleton scope 校验通过）
 - [ ] AC-10: bottleneck → escalate_cvo_refactor 必须 operator 批准（拉闸权校验通过）
-- [ ] AC-11: 控制面状态持久化复用 F008，与 F014 灵忆存储物理隔离（distinguish_from_echo_store=true）
+- [ ] AC-11: 控制面状态持久化复用 F008，与 F014 EchoStore存储物理隔离（distinguish_from_echo_store=true）
 - [ ] AC-12: dashboard_data_source 只读控制面状态，无写入路径
 - [ ] AC-13: friction_score 来自 F018 friction_metrics（非控制面自算）
 - [ ] AC-14: appreciation_score 来自 F019 三方信号（非控制面自算）
 - [ ] AC-15: attribution_distribution 来自 F020 七类归因（非控制面自分类）
-- [ ] AC-16: 9 大点名称修订已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -618,12 +616,12 @@ class ControlPlaneRepository(ABC):
 - [doc:../features/F019-three-signal-cross.md]（三方信号交叉，appreciation 来源）
 - [doc:../features/F020-seven-attribution.md]（七类归因矩阵，attribution 来源）
 - [doc:../features/F038-forgemind-lineage.md]（进化谱系，跨层迁移记录）
-- [doc:../features/F039-mind-codex-searchable.md]（锻典可检索，趋势元知识蒸馏）
+- [doc:../features/F039-mind-codex-searchable.md]（蒸馏知识库可检索，趋势元知识蒸馏）
 - [doc:../architecture/A018-eval-contract.md]（Eval Contract 架构，同源 ADR 009）
 - [doc:../architecture/A019-three-signal-cross.md]（三方信号架构，同源 ADR 009）
 - [doc:../architecture/A020-seven-attribution.md]（七类归因架构，同源 ADR 009）
 - [doc:../decisions/009-eval-self-metabolism.md]（Eval 自代谢 ADR）
-- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 所有数据检索走 OpenSieve）
+- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
 - [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
 - [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
 
@@ -633,4 +631,4 @@ class ControlPlaneRepository(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架，应用 9 大点名称修订） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架） | 架构师 Forgekin（猫头鹰·鲁班） |

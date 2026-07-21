@@ -149,4 +149,22 @@ run_port_check.ps1
 
 # ==================== Workflow artifacts (generated, not source) ====================
 workflows/*.yaml
-docs/_archive
+
+# ==================== Internal development documents (not for GitHub) ====================
+# task.md: 内部任务索引，包含老项目名引用与移植计划，不公开
+docs/task.md
+# _archive/: 历史归档目录，包含老项目信息、过程记录、中间态文档
+docs/_archive/
+# roleagent.md: 内部角色代理设计文档（如包含老项目上下文则忽略；如已净化可移除此行）
+docs/roleagent.md
+# VISION.md / ROADMAP.md / SOP.md / TIPS.md: 内部规划文档（如包含老项目信息则忽略；如已净化可移除此行）
+docs/VISION.md
+docs/ROADMAP.md
+docs/SOP.md
+docs/TIPS.md
+# harness-feedback/: 内部反馈记录
+docs/harness-feedback/
+# perspectives/: 内部视角记录
+docs/perspectives/
+# setup/: 内部安装配置记录（如包含敏感信息）
+docs/setup/

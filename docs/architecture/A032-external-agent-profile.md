@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010）
 > **对应 arch.md**: [doc:../arch.md#§3.10]
 > **对应 design.md**: [doc:../design.md#§3.10]（待创建）
 > **对应 Feature**: [doc:../features/F032-external-agent-profile.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D032-external-agent-profile.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/006-external-agent-integration.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -17,10 +16,10 @@
 
 ### 1.1 架构问题
 
-ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 建立能力画像，使灵智体（Forgekin）基于能力匹配选择合适的三方 Agent，而非按"配置默认值"或固定编号顺序调用。本架构在 `core/external_agent/profile.py` 建立三方 Agent 能力画像层，解决以下架构层问题：
+ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 建立能力画像，使Forgekin基于能力匹配选择合适的三方 Agent，而非按"配置默认值"或固定编号顺序调用。本架构在 `core/external_agent/profile.py` 建立三方 Agent 能力画像层，解决以下架构层问题：
 
 1. **能力画像数据模型缺失**：三方 Agent 无 strengths/blind_spots/tool_calling_proficiency/long_context_stability 等结构化字段。
-2. **盲点互补配对未编码**：灵智体盲点与三方 Agent 擅长无匹配机制，导致调用选择次优。
+2. **盲点互补配对未编码**：Forgekin盲点与三方 Agent 擅长无匹配机制，导致调用选择次优。
 3. **跨厂商 review 配对缺失**：primary agent 与 complementary agent 配对未约束盲点不重叠，可能导致 review 质量低。
 4. **历史表现无 Wilson 下界**：小样本下三方 Agent 可靠性评估未使用 Wilson 下界，存在小样本偏差。
 5. **成本/延迟信号未纳入决策**：F034 fallback 决策时无 cost_per_1k_tokens + avg_latency_ms 排序依据。
@@ -32,7 +31,7 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 建立能力画像
 - **Repository 层约束**：ExternalAgentCapabilityProfile 持久化必须通过 Repository 层，禁止直接操作数据库。
 - **配置驱动约束**：4 厂商（claude_code/codex/opencode/trae）的 strengths/blind_spots/proficiency/cost/latency 必须 YAML 外置到 `config/external_agent.yaml`，禁止 .py 硬编码厂商偏好。
 - **Wilson 下界约束**：小样本（< 30 次）历史表现评估必须使用 Wilson 下界，禁止直接用平均值。
-- **盲点互补约束**：CapabilityMatcher 必须基于盲点互补配对，灵智体盲点 ∩ 三方 Agent 擅长 = 高匹配分。
+- **盲点互补约束**：CapabilityMatcher 必须基于盲点互补配对，Forgekin盲点 ∩ 三方 Agent 擅长 = 高匹配分。
 
 ### 1.3 架构影响
 
@@ -40,7 +39,7 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 建立能力画像
 - **对 F002 TeamAct 的影响**：跨厂商 review 配对联动 F002 跨厂商 review 逻辑。
 - **对 F034 失败回退的影响**：FallbackChainBuilder 基于 ExternalAgentCapabilityProfile 盲点互补 + 成本排序构建 fallback 链。
 - **对 F035 能力融合的影响**：ExternalAgentCapabilityProfile 作为能力融合来源画像。
-- **对 A031 ExternalAgentBridge 的影响**：Bridge 在选择 Adapter 时调用 CapabilityMatcher.match_for_task() 决策最优厂商。
+- **对 A031 ExternalAgentBridge 的影响**：Bridge 在选择 Adapter 时调用 CapabilityMatcher.match_for_task 决策最优厂商。
 
 ---
 
@@ -71,11 +70,11 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 建立能力画像
                     |                                    v           |
                     |  +------------------------------------------+ |
                     |  | CapabilityMatcher                        | |
-                    |  | (灵智体画像 × 三方 Agent 画像 匹配)       | |
+                    |  | (Forgekin画像 × 三方 Agent 画像 匹配)       | |
                     |  +------------------------------------------+ |
-                    |   |-- match_for_task()                       | |
+                    |   |-- match_for_task                       | |
                     |   |   `--> 盲点互补 + 任务能力需求匹配        | |
-                    |   `-- find_complementary_pair()              | |
+                    |   `-- find_complementary_pair              | |
                     |       `--> 跨厂商 review 配对（盲点不重叠）   | |
                     +-------------------------------------------------+
                                           |
@@ -104,10 +103,10 @@ ExternalAgentAdapter 抽象层（A031）需要为三方 Agent 建立能力画像
   ExternalAgentProvider 固定为 claude_code/codex/opencode/trae 四厂商，覆盖业界主流编程 Agent。新增厂商必须经 ADR 决策。这避免运行时动态注册导致画像字段缺失。
 
 - **决策 3：盲点互补配对算法**
-  CapabilityMatcher.match_for_task() 基于盲点互补：灵智体盲点 ∩ 三方 Agent 擅长 = 高匹配分；灵智体擅长 ∩ 三方 Agent 盲点 = 低匹配分（不选）。任务能力需求作为额外过滤条件。这保证选择最能补齐灵智体盲点的厂商。
+  CapabilityMatcher.match_for_task 基于盲点互补：Forgekin盲点 ∩ 三方 Agent 擅长 = 高匹配分；Forgekin擅长 ∩ 三方 Agent 盲点 = 低匹配分（不选）。任务能力需求作为额外过滤条件。这保证选择最能补齐Forgekin盲点的厂商。
 
 - **决策 4：跨厂商 review 配对盲点不重叠**
-  CapabilityMatcher.find_complementary_pair() 为 primary agent 找盲点互补的 complementary agent，且 primary 与 complementary 盲点不重叠。这联动 F002 跨厂商 review 逻辑，保证 review 质量不因双方盲点重叠而失效。
+  CapabilityMatcher.find_complementary_pair 为 primary agent 找盲点互补的 complementary agent，且 primary 与 complementary 盲点不重叠。这联动 F002 跨厂商 review 逻辑，保证 review 质量不因双方盲点重叠而失效。
 
 - **决策 5：Wilson 下界处理小样本偏差**
   PerformanceLog 的 Wilson 下界用于小样本可靠性评估（< 30 次调用时）。与 F001 CapabilityProfile 一致。这避免小样本下平均值高估可靠性。
@@ -207,7 +206,7 @@ class ExternalAgentProfileRegistry(ABC):
 
 
 class CapabilityMatcher(ABC):
-    """能力匹配器（灵智体能力画像 × 三方 Agent 能力画像）"""
+    """能力匹配器（Forgekin能力画像 × 三方 Agent 能力画像）"""
 
     @abstractmethod
     async def match_for_task(
@@ -217,8 +216,8 @@ class CapabilityMatcher(ABC):
     ) -> list[ExternalAgentCapabilityProfile]:
         """
         基于盲点互补 + 任务能力需求匹配
-        - 灵智体盲点 ∩ 三方 Agent 擅长 = 高匹配分
-        - 灵智体擅长 ∩ 三方 Agent 盲点 = 低匹配分（不选）
+        - Forgekin盲点 ∩ 三方 Agent 擅长 = 高匹配分
+        - Forgekin擅长 ∩ 三方 Agent 盲点 = 低匹配分（不选）
         - 任务能力需求作为额外过滤条件
         """
         ...
@@ -258,22 +257,22 @@ class CapabilityMatcher(ABC):
         v
     注册表就绪
 
-[灵智体调用决策阶段（A031 Bridge 调用）]
+[Forgekin调用决策阶段（A031 Bridge 调用）]
     ExternalAgentBridge.invoke(forgekin_id, task)
         |
         v
     CapabilityMatcher.match_for_task(forgekin_profile_id, task_capability_requirements)
         |
         v
-    读取灵智体 CapabilityProfile (F001) -> 拿到灵智体 strengths + blind_spots
+    读取Forgekin CapabilityProfile (F001) -> 拿到Forgekin strengths + blind_spots
         |
         v
-    遍历 ExternalAgentProfileRegistry.list_all()
+    遍历 ExternalAgentProfileRegistry.list_all
         |
         v
     计算盲点互补分：
-    - 灵智体盲点 ∩ 三方 Agent 擅长 -> 高分
-    - 灵智体擅长 ∩ 三方 Agent 盲点 -> 低分（排除）
+    - Forgekin盲点 ∩ 三方 Agent 擅长 -> 高分
+    - Forgekin擅长 ∩ 三方 Agent 盲点 -> 低分（排除）
     - 任务能力需求过滤
         |
         v
@@ -301,7 +300,7 @@ class CapabilityMatcher(ABC):
     FallbackChainBuilder.build_for_task(task_requirements, forgekin_profile_id)
         |
         v
-    CapabilityMatcher.match_for_task() -> candidates
+    CapabilityMatcher.match_for_task -> candidates
         |
         v
     CapabilityMatcher.rank_by_cost_latency(candidates)
@@ -314,13 +313,13 @@ class CapabilityMatcher(ABC):
 
 ### 4.1 上游依赖
 
-- **依赖 F001 CapabilityProfile**：灵智体能力画像作为盲点互补匹配输入；复用 PerformanceLog 数据模型。
+- **依赖 F001 CapabilityProfile**：Forgekin能力画像作为盲点互补匹配输入；复用 PerformanceLog 数据模型。
 - **依赖 F002 TeamAct**：跨厂商 review 配对联动 F002 跨厂商 review 逻辑。
 - **依赖 core/interfaces**：Repository / DI 容器抽象。
 
 ### 4.2 下游影响
 
-- **影响 A031 ExternalAgentBridge**：Bridge 在选择 Adapter 时调用 CapabilityMatcher.match_for_task() 决策最优厂商。
+- **影响 A031 ExternalAgentBridge**：Bridge 在选择 Adapter 时调用 CapabilityMatcher.match_for_task 决策最优厂商。
 - **影响 F034 失败回退**：FallbackChainBuilder 基于 ExternalAgentCapabilityProfile 盲点互补 + 成本排序构建 fallback 链。
 - **影响 F035 能力融合**：ExternalAgentCapabilityProfile 作为能力融合来源画像。
 - **影响 F033 状态共享**：ExternalAgentSharedState 的 modification_log 中 agent_id 字段引用 ExternalAgentCapabilityProfile.agent_id。
@@ -377,4 +376,4 @@ class CapabilityMatcher(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（六维能力画像 + 盲点互补 + 跨厂商 review 配对 + Wilson 下界架构） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（六维能力画像 + 盲点互补 + 跨厂商 review 配对 + Wilson 下界架构） | 架构师 Forgekin（猫头鹰·鲁班） |

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.3]
 > **对应 arch.md**: [doc:../arch.md#§3.3]
 > **对应 design.md**: [doc:../design.md#§3.3]
 > **对应 Feature**: [doc:../features/F008-durable-state-surfaces.md]
 > **对应 Architecture**: [doc:../architecture/A008-durable-state-surfaces.md]
 > **依赖 ADR**: [doc:../decisions/007-harness-engineering.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 责任方命名 + forgemind Layer 2 + 三方 Agent 强化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -23,7 +22,7 @@ A008 架构层定义了"6 类持久状态表面 + 权威等级 + 压缩免疫注
 2. **D-Q2**：权威等级 1-5 如何在 SQLite + WAL 中以索引形式存储，使 `canonical_read` 能在 1ms 内返回最高权威表面？
 3. **D-Q3**：`CompressionImmuneInjector` 如何把治理规则文本与 Magic Words 拉闸词注入到 `native_system_role`，同时禁止 `user_message_prepend` 注入？
 4. **D-Q4**：`ConflictResolver` 如何处理同 surface_type 不同来源的两条记录冲突（如 feature_spec vs thread_trace 对同一断言不一致）？
-5. **D-Q5**：`DurableStateRegistry` 如何对灵智体提供 `canonical_read(key)` 接口，自动返回最高权威 + 最新版本的记录？
+5. **D-Q5**：`DurableStateRegistry` 如何对Forgekin提供 `canonical_read(key)` 接口，自动返回最高权威 + 最新版本的记录？
 6. **D-Q6**：上下文压缩发生时，`compression_immune=true` 的记录如何保证仍注入到新上下文，而 `compression_immune=false` 的记录允许被裁剪？
 7. **D-Q7**：6 类表面的 `decay_tag` 默认值如何确定（如 `thread_trace=BUILT_TO_DELETE`，`feature_spec=BUILT_TO_PERSIST`）？
 
@@ -41,8 +40,7 @@ A008 架构层定义了"6 类持久状态表面 + 权威等级 + 压缩免疫注
 | C8 | 治理规则与 Magic Words 必须注入 `native_system_role`，禁 `user_message_prepend` | A008 决策 3 |
 | C9 | `canonical_read(key)` 返回同 key 中 `authority_level` 最高 + `version` 最大的记录 | A008 决策 6 |
 | C10 | 所有 Surface 写入走 WAL，进程崩溃可重放 | F021 联动 |
-| C11 | 9 大点名称修订：双轨命名、AI 术语优先（DurableSurface/CompressionImmune）、forgemind 仅指 Layer 2、责任方命名（猎犬·夏洛克） | 用户指令 |
-| C12 | 觉醒阶标注：E1-E3 进化阶灵智体可读全部 6 类；E4+ 觉醒阶灵智体写 `feature_spec` 需 Mind Council 二次确认 | naming-contract.md §4 |
+| C12 | 觉醒阶标注：E1-E3 进化阶Forgekin可读全部 6 类；E4+ 觉醒阶Forgekin写 `feature_spec` 需 MindCouncil 二次确认 | naming-contract.md §4 |
 
 ### 1.3 设计影响
 
@@ -97,7 +95,7 @@ A008 架构层定义了"6 类持久状态表面 + 权威等级 + 压缩免疫注
 │    + write(surface) -> str                                           │
 │    + canonical_read(key) -> Optional[DurableSurface]                 │
 │    + list_by_type(surface_type) -> list[DurableSurface]              │
-│    + list_compression_immune() -> list[DurableSurface]               │
+│    + list_compression_immune -> list[DurableSurface]               │
 │                                                                      │
 │  «ABC» CompressionImmuneInjector                                     │
 │    + inject_native_system_role(text) -> None                         │
@@ -116,8 +114,8 @@ A008 架构层定义了"6 类持久状态表面 + 权威等级 + 压缩免疫注
 │    + async write(surface) -> str                                     │
 │    + async canonical_read(key) -> Optional[DurableSurface]           │
 │    + async list_by_type(surface_type) -> list[DurableSurface]        │
-│    + async list_compression_immune() -> list[DurableSurface]         │
-│    + async checkpoint() -> None                                      │
+│    + async list_compression_immune -> list[DurableSurface]         │
+│    + async checkpoint -> None                                      │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -207,7 +205,7 @@ class ConflictUnresolvableError(DurableStateError):
 
 
 class MindCouncilRequiredError(DurableStateError):
-    """E4+ 觉醒阶写 feature_spec 需 Mind Council 二次确认"""
+    """E4+ 觉醒阶写 feature_spec 需 MindCouncil 二次确认"""
 
 
 # ───────────────────────────── Pydantic 模型 ─────────────────────────────
@@ -267,7 +265,7 @@ class DurableStateRegistry(ABC):
         架构契约:
         - 同 key 写入触发 version+1
         - authority_level 超过 surface_type.default_authority 时拒绝
-        - E4+ 觉醒阶写 FEATURE_SPEC 需 Mind Council token
+        - E4+ 觉醒阶写 FEATURE_SPEC 需 MindCouncil token
         - 持久化到 Durable Surface 自身（即 SQLite + WAL）
         """
 
@@ -307,7 +305,7 @@ class CompressionImmuneInjector(ABC):
         架构契约:
         - 注入位置: native_system_role (压缩免疫)
         - 禁用 user_message_prepend
-        - 由 ForgekinHost 在灵智体构造时调用
+        - 由 ForgekinHost 在Forgekin构造时调用
         - 上下文压缩后规则仍生效
         """
 
@@ -361,14 +359,14 @@ class DefaultDurableStateRegistry(DurableStateRegistry):
         self._conn: Any = None  # aiosqlite.Connection, 延迟初始化
 
     async def write(self, surface: DurableSurface) -> str:
-        # E4+ 觉醒阶写 FEATURE_SPEC 需 Mind Council token
+        # E4+ 觉醒阶写 FEATURE_SPEC 需 MindCouncil token
         if surface.surface_type == StateSurfaceType.FEATURE_SPEC:
             if not getattr(surface, "_mind_council_token", None):
                 # 由 caller 在 payload 中带 "mind_council_token" 字段
                 token = surface.payload.get("mind_council_token")
                 if not token:
                     raise MindCouncilRequiredError(
-                        "E4+ 觉醒阶写 FEATURE_SPEC 需 Mind Council 二次确认 token "
+                        "E4+ 觉醒阶写 FEATURE_SPEC 需 MindCouncil 二次确认 token "
                         "(放在 payload.mind_council_token)"
                     )
 
@@ -405,7 +403,7 @@ class DefaultDurableStateRegistry(DurableStateRegistry):
         return await self._store.list_by_type(surface_type)
 
     async def list_compression_immune(self) -> list[DurableSurface]:
-        return await self._store.list_compression_immune()
+        return await self._store.list_compression_immune
 
 
 class DefaultCompressionImmuneInjector(CompressionImmuneInjector):
@@ -429,7 +427,7 @@ class DefaultCompressionImmuneInjector(CompressionImmuneInjector):
 
     async def inject_native_system_role(self, text: str) -> None:
         """注入到 native_system_role（压缩免疫层）"""
-        if not text or not text.strip():
+        if not text or not text.strip:
             raise InvalidSurfaceError("native_system_role 注入文本不可为空")
 
         # 通过 ForgekinHost 注入（不在 user_message）
@@ -466,7 +464,7 @@ class DefaultCompressionImmuneInjector(CompressionImmuneInjector):
         if violations:
             await self._audit_logger.log(
                 event="forbidden_injection_layer_detected",
-                payload=result.model_dump(),
+                payload=result.model_dump,
             )
         return result
 
@@ -554,7 +552,7 @@ function audit_user_message(session_ctx) -> AuditResult:
 ```
 async function on_context_compressed(session_ctx):
     # 列出所有 compression_immune=true 的 Surface
-    immune_surfaces = registry.list_compression_immune()
+    immune_surfaces = registry.list_compression_immune
     # 重新注入到新上下文的 native_system_role
     for surface in immune_surfaces:
         text = surface.payload.get("text")
@@ -632,13 +630,13 @@ class SqliteDurableStateStore(DurableStateRegistry):
             await self._conn.execute("PRAGMA synchronous=NORMAL")
             await self._conn.execute("PRAGMA foreign_keys=ON")
             await self._conn.executescript(self.DDL)
-            await self._conn.commit()
+            await self._conn.commit
         return self._conn
 
     async def write(self, surface: DurableSurface) -> str:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         if not surface.surface_id:
-            surface.surface_id = f"ds-{uuid.uuid4().hex[:12]}"
+            surface.surface_id = f"ds-{uuid.uuid4.hex[:12]}"
         await conn.execute(
             """
             INSERT INTO durable_surfaces
@@ -653,16 +651,16 @@ class SqliteDurableStateStore(DurableStateRegistry):
                 surface.authority_level, int(surface.compression_immune),
                 surface.decay_tag.value, surface.version,
                 surface.schema_version, surface.wal_lsn,
-                surface.created_at.isoformat(),
+                surface.created_at.isoformat,
                 surface.authored_by,
             ),
         )
-        await conn.commit()
-        await self._checkpoint_if_needed()
+        await conn.commit
+        await self._checkpoint_if_needed
         return surface.surface_id
 
     async def canonical_read(self, key: str) -> Optional[DurableSurface]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             """
             SELECT surface_id, surface_type, key, payload_json,
@@ -675,7 +673,7 @@ class SqliteDurableStateStore(DurableStateRegistry):
             """,
             (key,),
         ) as cur:
-            row = await cur.fetchone()
+            row = await cur.fetchone
         if row is None:
             return None
         return self._deserialize(row)
@@ -683,22 +681,22 @@ class SqliteDurableStateStore(DurableStateRegistry):
     async def list_by_type(
         self, surface_type: StateSurfaceType
     ) -> list[DurableSurface]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT * FROM durable_surfaces WHERE surface_type = ? "
             "ORDER BY created_at DESC",
             (surface_type.value,),
         ) as cur:
-            rows = await cur.fetchall()
+            rows = await cur.fetchall
         return [self._deserialize(r) for r in rows]
 
     async def list_compression_immune(self) -> list[DurableSurface]:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         async with conn.execute(
             "SELECT * FROM durable_surfaces WHERE compression_immune = 1 "
             "ORDER BY authority_level DESC"
         ) as cur:
-            rows = await cur.fetchall()
+            rows = await cur.fetchall
         return [self._deserialize(r) for r in rows]
 
     @staticmethod
@@ -724,7 +722,7 @@ class SqliteDurableStateStore(DurableStateRegistry):
         )
 
     async def _checkpoint_if_needed(self) -> None:
-        conn = await self._ensure_conn()
+        conn = await self._ensure_conn
         await conn.execute("PRAGMA wal_checkpoint(FULL)")
 ```
 
@@ -761,7 +759,7 @@ ContextEngine       Injector          Registry         ForgekinHost
   │ on_context_        │                  │                  │
   │ compressed(ctx)    │                  │                  │
   ├───────────────────>│                  │                  │
-  │                    │ list_compression_immune()           │
+  │                    │ list_compression_immune           │
   │                    ├─────────────────>│                  │
   │                    │ <────────────────┤ [s1, s2, s3...]  │
   │                    │                  │                  │
@@ -773,7 +771,7 @@ ContextEngine       Injector          Registry         ForgekinHost
   │                    │                  │                  │
   │                    │ audit_user_message(ctx)              │
   │                    │ (检测 user_message 是否含治理规则)   │
-  │                    │ if violations: alert_operators()    │
+  │                    │ if violations: alert_operators    │
   │ <──────────────────┤ done             │                  │
 ```
 
@@ -784,7 +782,7 @@ ContextEngine       Injector          Registry         ForgekinHost
 | E1 | `InvalidSurfaceError` authority 超过 surface_type 默认上限 | 拒绝写入, 返回 422 | caller 看到"authority_level 超过 surface_type 默认上限" |
 | E2 | `ForbiddenInjectionLayerError` user_message_prepend 注入 | 拒绝写入 + audit 告警 | caller 看到"禁用 user_message_prepend 注入治理规则" |
 | E3 | `ConflictUnresolvableError` 同 key authority + version 相同 | 抛出, 不写入 | caller 看到"无法仲裁冲突, 需人工介入" |
-| E4 | `MindCouncilRequiredError` E4+ 写 FEATURE_SPEC 缺 token | 拒绝写入 | caller 看到"E4+ 觉醒阶写 FEATURE_SPEC 需 Mind Council 二次确认" |
+| E4 | `MindCouncilRequiredError` E4+ 写 FEATURE_SPEC 缺 token | 拒绝写入 | caller 看到"E4+ 觉醒阶写 FEATURE_SPEC 需 MindCouncil 二次确认" |
 | E5 | `aiosqlite.OperationalError` DB 锁 | 指数退避重试 3 次 | 服务返回 503 |
 | E6 | `aiosqlite.IntegrityError` 主键冲突 | 不重试, 抛出 | 服务返回 500 |
 | E7 | `audit_user_message` 发现违规 | 不阻塞主流程, 仅 audit log + 告警 | 监控告警 |
@@ -864,7 +862,7 @@ durable_state:
     - guardrail
     - 禁止绕过
 
-  # 觉醒阶约束（E4+ 写 FEATURE_SPEC 需 Mind Council token）
+  # 觉醒阶约束（E4+ 写 FEATURE_SPEC 需 MindCouncil token）
   awakening_stage_constraints:
     E1: allow_write_all
     E2: allow_write_all
@@ -901,7 +899,7 @@ class TeamActLoopExecutor:
             surface_id=f"tq-{state.team_id}-{state.step_id}",
             surface_type=StateSurfaceType.TASK_QUEUE,
             key=f"task:{state.team_id}:state",
-            payload=state.model_dump(),
+            payload=state.model_dump,
             authority_level=3,
             compression_immune=True,
             decay_tag=DecayTag.BUILT_TO_PERSIST,
@@ -936,7 +934,7 @@ class HandoffCapsuleStore:
             surface_id=f"hc-{capsule.capsule_id}",
             surface_type=StateSurfaceType.HANDOFF_CAPSULE,
             key=f"handoff:{capsule.team_id}:{capsule.capsule_id}",
-            payload=capsule.model_dump(),
+            payload=capsule.model_dump,
             authority_level=3,
             compression_immune=True,
             decay_tag=DecayTag.BUILT_TO_PERSIST,
@@ -975,7 +973,7 @@ class GovernanceLoader:
             surface_id=f"gb-{bundle.bundle_id}",
             surface_type=StateSurfaceType.TASK_QUEUE,
             key=f"governance:{bundle.bundle_id}",
-            payload=bundle.model_dump(),
+            payload=bundle.model_dump,
             authority_level=4,
             compression_immune=True,         # 治理规则压缩免疫
             decay_tag=DecayTag.BUILT_TO_PERSIST,
@@ -993,7 +991,7 @@ class MagicWordsExecutor:
     async def execute(self, word, context, operator_id):
         # 写入触发时上下文快照到 thread_trace
         surface = DurableSurface(
-            surface_id=f"tt-mw-{word.value}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            surface_id=f"tt-mw-{word.value}-{datetime.now.strftime('%Y%m%d%H%M%S')}",
             surface_type=StateSurfaceType.THREAD_TRACE,
             key=f"thread:magic_word:{word.value}",
             payload={"word": word.value, "context": context, "operator_id": operator_id},
@@ -1080,7 +1078,7 @@ class HotfixTagger:
 | AC-F12 | `ConflictResolver` authority_level 不同 → 高权威胜 |
 | AC-F13 | `ConflictResolver` version 不同 → 较新胜 |
 | AC-F14 | `ConflictResolver` authority + version 相同 → ConflictUnresolvableError |
-| AC-F15 | E4+ 觉醒阶写 FEATURE_SPEC 缺 Mind Council token → MindCouncilRequiredError |
+| AC-F15 | E4+ 觉醒阶写 FEATURE_SPEC 缺 MindCouncil token → MindCouncilRequiredError |
 | AC-F16 | 6 类 surface_type 不可扩展第七类 |
 | AC-F17 | `forbidden_layers` 必须包含 user_message_prepend |
 | AC-F18 | DecayTag 默认值与 surface_type 对应关系正确 |
@@ -1105,7 +1103,7 @@ class HotfixTagger:
 | AC-S2 | Registry / Injector / Resolver 通过 `@inject` 注入, 无直接实例化 |
 | AC-S3 | 所有 DB 操作通过 Repository, 无 `cursor.execute` |
 | AC-S4 | `user_message_prepend` 注入治理规则被拒绝 + audit 告警 |
-| AC-S5 | E4+ 觉醒阶写 FEATURE_SPEC 强制 Mind Council 二次确认 |
+| AC-S5 | E4+ 觉醒阶写 FEATURE_SPEC 强制 MindCouncil 二次确认 |
 | AC-S6 | audit 日志禁删除, 所有违规注入可追溯 |
 
 ### 5.4 Eval 验收（Eval AC）
@@ -1143,4 +1141,4 @@ class HotfixTagger:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F008 / A008） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架, 对应 F008 / A008） | 开发者 Forgekin（猎犬·夏洛克） |

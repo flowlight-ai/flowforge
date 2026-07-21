@@ -6,25 +6,24 @@
 > **关联 ADR**: [doc:decisions/006-external-agent-integration.md]
 > **类型**: external-agent
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.10]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.10]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-三方 Agent 能力融合（External Agent Capability Fusion）是 forgemind 应用层最深层的能力增长机制：灵智体（Forgekin）调用三方 Agent 后，三方 Agent 的能力应能"沉淀"到灵智体的能力画像（F001）中。本 Feature 实现调用轨迹蒸馏、能力沉淀到锻典（Mind Codex）、与 F039 灵典可检索知识库联动、与 F014 灵忆联动，让灵智体多次调用 claude code 写代码后"学到"代码编写能力。
+三方 Agent 能力融合（External Agent Capability Fusion）是 forgemind 应用层最深层的能力增长机制：Forgekin（Evolvable Agent，社区社交称"灵智体"）调用三方 Agent 后，三方 Agent 的能力应能"沉淀"到 Forgekin 的能力画像（F001）中。本 Feature 实现调用轨迹蒸馏、能力沉淀到 MindCodex（蒸馏知识库，社区社交称"灵典"）、与 F039 MindCodex 可检索知识库联动、与 F014 EchoStore 联动，让 Forgekin 多次调用 claude code 写代码后"学到"代码编写能力。
 
-这是 Build to Persist 基础设施——编码"用完即走 → 用完即学"的工程规则，对标 clowder-ai 猫从调用工具中学习的能力。
+这是 Build to Persist 基础设施——编码"用完即走 → 用完即学"的工程规则，对标前期动物形态智能体从调用工具中学习的能力。
 
 ## 2. 动机（Motivation）
 
-`[doc:review/review.md#EX-010]` 指出：v7.0 无三方 Agent 能力融合机制，三方 Agent 调用是"用完即走"，灵智体无法从调用中成长。这是与 clowder-ai 最大差距——clowder-ai 的猫会从调用工具中学习，v7.0 的 Forgekin 不会。灵智体多次调用 claude code 写代码后，应通过灵锻（SpiritForge）蒸馏出代码编写能力条目写入锻典（Mind Codex），下次任务可直接复用。
+`[doc:review/review.md#EX-010]` 指出：v7.0 无三方 Agent 能力融合机制，三方 Agent 调用是"用完即走"，Forgekin无法从调用中成长。这是与前期设计的主要差距——前期动物形态智能体会从调用工具中学习，v7.0 的 Forgekin 不会。Forgekin多次调用 claude code 写代码后，应通过SpiritForge（SpiritForge）蒸馏出代码编写能力条目写入蒸馏知识库（MindCodex），下次任务可直接复用。
 
-不做这个 Feature，F032 能力画像无能力增长通道，F033 共享状态无蒸馏原料，F039 灵典无三方 Agent 调用经验条目。这是三方 Agent 集成层的能力增长底座。
+不做这个 Feature，F032 能力画像无能力增长通道，F033 共享状态无蒸馏原料，F039 MindCodex无三方 Agent 调用经验条目。这是三方 Agent 集成层的能力增长底座。
 
 ## 3. 详细设计（Detailed Design）
 
@@ -34,7 +33,7 @@
 class FusionSource(BaseModel):
     """能力融合来源（一次三方 Agent 调用）"""
     source_id: str
-    forgekin_id: str                           # 调用方灵智体 ID
+    forgekin_id: str                           # 调用方Forgekin ID
     external_agent_id: str                     # 三方 Agent ID（来自 F032）
     external_agent_profile_ref: str            # F032 能力画像引用
     task_context: dict                         # 调用时任务上下文
@@ -43,7 +42,7 @@ class FusionSource(BaseModel):
     call_timestamp: datetime
 
 class CapabilityDistillationCandidate(BaseModel):
-    """能力蒸馏候选（待灵锻评估是否合入锻典）"""
+    """能力蒸馏候选（待SpiritForge评估是否合入蒸馏知识库）"""
     candidate_id: str
     fusion_sources: list[FusionSource]         # 多次相似调用作为蒸馏原料
     distilled_capability: str                  # 蒸馏出的能力描述
@@ -73,31 +72,31 @@ class FusionSourceCollector(ABC):
         ...
 
 class CapabilityDistiller(ABC):
-    """能力蒸馏器（与灵锻 SpiritForge 联动）"""
+    """能力蒸馏器（与SpiritForge 联动）"""
     @abstractmethod
     async def distill(self, sources: list[FusionSource]) -> CapabilityDistillationCandidate: ...
 
     @abstractmethod
     async def submit_to_codex(self, candidate: CapabilityDistillationCandidate) -> str:
-        """提交到 F039 灵典（需 Eval Ledger 前后测验证，CL-004）"""
+        """提交到 F039 MindCodex（需 Eval Ledger 前后测验证，CL-004）"""
         ...
 
 class CapabilityFusionApplier(ABC):
-    """能力融合应用器（合入灵智体能力画像）"""
+    """能力融合应用器（合入Forgekin能力画像）"""
     @abstractmethod
     async def apply_to_profile(
         self, forgekin_id: str, codex_entry_id: str
     ) -> None:
-        """将锻典条目作为 SkillPackage 合入 F001 能力画像"""
+        """将蒸馏知识库条目作为 SkillPackage 合入 F001 能力画像"""
         ...
 ```
 
 ### 3.3 关键算法
 
 - **相似调用聚类**：基于任务上下文 + 三方 Agent 能力域聚类相似 FusionSource（CL-003 L0→L1 需 3+ 相似）。
-- **五级成熟度阶梯**：L0 Episode → L1 Pattern（3+ 相似）→ L2 Draft（灵锻主动抽象）→ L3 Validated（Eval A/B 验证）→ L4 Standard（operator 批准），与 CL-003 一致。
-- **Eval Ledger 净增益**：合入锻典前必须前后测对比，净增益 > 0 才允许合入（CL-004）。
-- **合入能力画像**：成熟度 L3+ 的锻典条目作为 SkillPackage 合入 F001 CapabilityProfile，下次任务可路由到此灵智体。
+- **五级成熟度阶梯**：L0 Episode → L1 Pattern（3+ 相似）→ L2 Draft（SpiritForge 主动抽象）→ L3 Validated（Eval A/B 验证）→ L4 Standard（operator 批准），与 CL-003 一致。
+- **Eval Ledger 净增益**：合入蒸馏知识库前必须前后测对比，净增益 > 0 才允许合入（CL-004）。
+- **合入能力画像**：成熟度 L3+ 的蒸馏知识库条目作为 SkillPackage 合入 F001 CapabilityProfile，下次任务可路由到此Forgekin。
 
 ### 3.4 配置外置（YAML 示例）
 
@@ -124,8 +123,8 @@ external_agent_capability_fusion:
 - [ ] AC-1: 每次三方 Agent 调用后采集 FusionSource
 - [ ] AC-2: 相似调用聚类（CL-003 L0→L1 需 3+ 相似）
 - [ ] AC-3: 五级成熟度阶梯严格（L0→L4 不可跳级）
-- [ ] AC-4: Eval Ledger 净增益 > 0 才允许合入锻典（CL-004）
-- [ ] AC-5: L3+ 锻典条目作为 SkillPackage 合入 F001 能力画像
+- [ ] AC-4: Eval Ledger 净增益 > 0 才允许合入蒸馏知识库（CL-004）
+- [ ] AC-5: L3+ 蒸馏知识库条目作为 SkillPackage 合入 F001 能力画像
 
 ## 5. 测试策略
 
@@ -135,11 +134,11 @@ external_agent_capability_fusion:
 
 ### 5.2 集成测试
 
-- 接入 F001 能力画像、F014 灵忆、F032 三方 Agent 能力画像、F033 共享状态、F039 灵典、F018 Eval Contract。
+- 接入 F001 能力画像、F014 EchoStore、F032 三方 Agent 能力画像、F033 共享状态、F039 MindCodex、F018 Eval Contract。
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实灵智体调用真实 claude code 写代码 5 次相似任务（每次 Eval ≥ 0.85），通过真实 LLM 灵锻蒸馏出代码编写能力候选，经 Eval Ledger 前后测验证净增益 > 0 后合入锻典，再合入能力画像。下次类似任务灵智体可自主完成（不调 claude code）。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用（含真实三方 Agent）。
+- 真实Forgekin调用真实 claude code 写代码 5 次相似任务（每次 Eval ≥ 0.85），通过真实 LLM SpiritForge蒸馏出代码编写能力候选，经 Eval Ledger 前后测验证净增益 > 0 后合入蒸馏知识库，再合入能力画像。下次类似任务Forgekin可自主完成（不调 claude code）。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用（含真实三方 Agent）。
 
 ## 6. 引用
 
@@ -149,8 +148,8 @@ external_agent_capability_fusion:
 - [doc:review/review.md#第十三章/CL-004]（Eval Ledger 进化账本）
 - [doc:review/review.md#第十三章/CL-005]（Knowledge Object Contract）
 - [doc:decisions/006-external-agent-integration.md]
-- [doc:design/naming-contract.md#2.7]（灵锻 SpiritForge）
-- [doc:design/naming-contract.md#2.8]（锻典 Mind Codex）
+- [doc:design/naming-contract.md#2.7]（SpiritForge 经验蒸馏）
+- [doc:design/naming-contract.md#2.8]（MindCodex 蒸馏知识库）
 - [doc:design/naming-contract.md#2.12]（能力画像 Capability Profile）
 - [doc:features/F001-capability-profile.md]
 - [doc:features/F014-memory-collection.md]
@@ -166,4 +165,3 @@ external_agent_capability_fusion:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.10 同号映射 | 文档员灵智体（钢笔·文心） |

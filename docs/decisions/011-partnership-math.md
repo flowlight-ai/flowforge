@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-17
-> **决策者**: 架构师灵智体 + operator 审核
+> **决策者**: 架构师可进化智能体 + operator 审核
 > **依赖**: `[doc:roleagent.md#第7章]` + `[doc:review/review.md#第八章]` RA-043~RA-047 + `[doc:review/review.md#第十三章]` CL-018/CL-020
 > **依据**: RA-043~RA-047（上限 max + 下限连乘 + 波动吸收 + Token 账本 + 四种亏结构）+ CL-018/CL-020（Pack / Growth 种子果实模型）
 
@@ -16,9 +16,9 @@
 - 下限公式（多层门）未形式化（RA-044 P0），有部分门（review / 测试 / eval）但未形式化为连乘概率模型，无法识别"哪道门的盲点相关性最高，应该优先加固"
 - 波动吸收机制未实现（RA-045 P0），无完整波动吸收链路，模型质量波动直接传导到用户体验——"今天怎么突然变笨了"
 - Token 账本（总成本模型）未设计（RA-046 P1），只算 token 成本，未设计完整成本模型，导致"省 token"决策可能增加返工和尾部风险
-- 四种亏结构未识别（RA-047 P1），多灵智体协作可能踩中任一种亏结构而无人察觉
+- 四种亏结构未识别（RA-047 P1），多可进化智能体协作可能踩中任一种亏结构而无人察觉
 
-`[doc:review/review.md#第十三章]` 13.4 节 CL-018 / CL-020 进一步补审：clowder-ai `[doc:clowder-ai/docs/decisions/ADR-021-pack-system.md]` 的 Pack 系统定义经验的可移植单元——`Experience = Me × Pack + Growth`，经验 = 我的本体 × Pack（共享规则包）+ Growth（个人成长）。果实可蒸馏为新 Pack（个人经验沉淀为共享规则）。v7.0 灵锻只产出私有锻典条目，无"个人经验 → 共享 Pack"的蒸馏路径，违反 operator 第 9 条愿景（灵智体应能从调用三方 Agent 中学习，但学到的能力无法共享给其他灵智体）。
+`[doc:review/review.md#第十三章]` 13.4 节 CL-018 / CL-020 进一步补审：前期 Pack 系统设计（已归档）的 Pack 系统定义经验的可移植单元——`Experience = Me × Pack + Growth`，经验 = 我的本体 × Pack（共享规则包）+ Growth（个人成长）。果实可蒸馏为新 Pack（个人经验沉淀为共享规则）。v7.0 SpiritForge（经验蒸馏）只产出私有 MindCodex（蒸馏知识库）条目，无"个人经验 → 共享 Pack"的蒸馏路径，违反 operator 第 9 条愿景（可进化智能体应能从调用三方 Agent 中学习，但学到的能力无法共享给其他可进化智能体）。
 
 operator 决策：FlowForge 必须形式化四个乘子（上限 max + 下限连乘 + 波动吸收 + 失败恢复）+ Token 账本 + 四种亏结构识别 + Pack / Growth 种子果实模型。
 
@@ -32,7 +32,7 @@ operator 决策：FlowForge 必须形式化四个乘子（上限 max + 下限连
 团队质量 ≈ max(候选路径质量)
 ```
 
-多灵智体的价值不是"更多人力的平均值"，而是"不同认知路径扩展候选解，从中选最优"。这个 max 成立的前提是**路径足够不同**——跨厂商、跨角色、跨工作习惯。
+多可进化智能体的价值不是"更多人力的平均值"，而是"不同认知路径扩展候选解，从中选最优"。这个 max 成立的前提是**路径足够不同**——跨厂商、跨角色、跨工作习惯。
 
 ```python
 class UpperBoundFormula:
@@ -65,7 +65,7 @@ P(错误抵达用户) = ∏(每层门防漏过概率)
               × CVO 没拉闸
 ```
 
-跨厂商 review 是结构性必需：同厂商灵智体共享盲点，错误穿过同厂商 review 的概率高；跨厂商 review 的盲点不重叠，错误必须连续穿过多个不重叠盲点才能抵达用户。
+跨厂商 review 是结构性必需：同厂商可进化智能体共享盲点，错误穿过同厂商 review 的概率高；跨厂商 review 的盲点不重叠，错误必须连续穿过多个不重叠盲点才能抵达用户。
 
 ```python
 class LowerBoundFormula:
@@ -92,7 +92,7 @@ class LowerBoundFormula:
 | 波动来源 | 吸收机制 | 对应 ADR |
 |---|---|---|
 | 模型忘了上下文 | 记忆联邦找回来 | ADR 008 |
-| 灵智体写偏了 | review 退回 | ADR 002 |
+| 可进化智能体写偏了 | review 退回 | ADR 002 |
 | 任务中断了 | 可靠性控制面留下恢复点 | ADR 010 |
 | 某个工具失效 | eval 触发 sunset review | ADR 009 |
 | 某个 provider 不适合 | 调度换路径 | ADR 010 F025 |
@@ -109,7 +109,7 @@ class LowerBoundFormula:
        + 错误进入真实环境后的修复成本
 ```
 
-单灵智体看似更省 token，但加上"单点失败导致用户返工"的成本，多灵智体的 token 账本反而更优。**早暴露的错误便宜，晚暴露的错误昂贵**。
+单可进化智能体看似更省 token，但加上"单点失败导致用户返工"的成本，多可进化智能体的 token 账本反而更优。**早暴露的错误便宜，晚暴露的错误昂贵**。
 
 ```python
 class TokenLedger:
@@ -132,8 +132,8 @@ class TokenLedger:
 |---|---|---|---|
 | 1 | 盲传 | 后一棒不是纠错而是无新信息重做 | 乒乓球熔断器 strike（见 ADR 002 F004） |
 | 2 | 伪拆分 | 任务拆了但子任务没变简单只多了协调税 | 子任务复杂度 ≥ 父任务复杂度 × 0.9 |
-| 3 | 同质化 | 所有灵智体盲点高度相关 | 跨厂商 review 盲点重叠率 > 0.7 |
-| 4 | 协调税超过收益 | 协调开销 > 多路径收益 | 总成本（Token 账本）> 单灵智体成本 × 1.5 |
+| 3 | 同质化 | 所有可进化智能体盲点高度相关 | 跨厂商 review 盲点重叠率 > 0.7 |
+| 4 | 协调税超过收益 | 协调开销 > 多路径收益 | 总成本（Token 账本）> 单可进化智能体成本 × 1.5 |
 
 ```python
 class DeficitDetector:
@@ -150,45 +150,45 @@ class DeficitDetector:
         return deficits
 ```
 
-**铁律**：多灵智体协作必须实时检测四种亏结构，触发时升级给 CVO。
+**铁律**：多可进化智能体协作必须实时检测四种亏结构，触发时升级给 CVO。
 
 ### 6. Pack / Growth 种子果实模型（CL-018 / CL-020）
 
-参考 `[doc:clowder-ai/docs/decisions/ADR-021-pack-system.md]`：
+参考前期 Pack 系统设计（已归档）：
 
 ```
 Experience = Me × Pack + Growth
 ```
 
-- **Pack（种子）**：共享规则包，跨灵智体可移植。一只灵智体学会的"如何写技术博客" Pack 可分享给另一只灵智体
-- **Growth（果实）**：个人经验，单灵智体私有
+- **Pack（种子）**：共享规则包，跨可进化智能体可移植。一只可进化智能体学会的"如何写技术博客" Pack 可分享给另一只可进化智能体
+- **Growth（果实）**：个人经验，单可进化智能体私有
 - **蒸馏路径**：果实可蒸馏为新 Pack（个人经验沉淀为共享规则）
 
 ```python
 class Pack:
-    """可移植的经验单元——跨灵智体共享的锻典子集。"""
+    """可移植的经验单元——跨可进化智能体共享的蒸馏知识库子集。"""
     pack_id: str
     rules: list[KnowledgeObject]   # 见 ADR 009 CL-005 Knowledge Object Contract
-    shared_with: list[ForgekinSpecies]  # 共享给哪些灵族
+    shared_with: list[ForgekinSpecies]  # 共享给哪些智能体形态学
     guardrails: list[Guardrail]    # 见 ADR 007 CL-019 双轨信任编译
     defaults: list[Default]
 
 
 class PackDistiller:
-    """灵锻（SpiritForge）的子模块——把高价值 Growth 蒸馏为 Pack。"""
+    """经验蒸馏（SpiritForge）的子模块——把高价值 Growth 蒸馏为 Pack。"""
     async def distill(self, growth: Growth) -> Pack:
         # 必须通过 Eval Ledger 净增益验证（见 ADR 009 CL-004）
         # 必须 Mode C 知识进化五级成熟度阶梯晋升
         ...
 ```
 
-**铁律**：禁止灵智体的成长永远是私有的。高价值 Growth 必须可蒸馏为 Pack 贡献回灵族（Forgekin Species），实现"师傅带徒弟"的经验传承。
+**铁律**：禁止可进化智能体的成长永远是私有的。高价值 Growth 必须可蒸馏为 Pack 贡献回智能体形态学（Forgekin Species），实现"师傅带徒弟"的经验传承。
 
 ### 7. 双层语言协议（RA-046 联动）
 
 | 层 | 用途 | 形式 |
 |---|---|---|
-| 内部高密度 | 灵智体之间通信 | JSON / 代码 / 紧凑标记 |
+| 内部高密度 | 可进化智能体之间通信 | JSON / 代码 / 紧凑标记 |
 | 外部讲人话 | 给 operator / 用户的输出 | 自然语言 |
 
 双层语言降低人类心智负载（Token 账本的一项），同时保持内部通信效率。
@@ -204,12 +204,12 @@ class PackDistiller:
 ### 正面后果
 
 - 伙伴系统的四个乘子可形式化度量，团队质量可量化
-- 上限公式让多灵智体价值清晰（不是平均值而是最大值）
+- 上限公式让多可进化智能体价值清晰（不是平均值而是最大值）
 - 下限公式让多层门防护可形式化，可识别最薄弱的门
 - 波动吸收让模型质量波动不传导到用户体验
 - Token 账本让"省 token"决策科学化（早暴露的错误便宜）
-- 四种亏结构识别让多灵智体协作可监测
-- Pack / Growth 种子果实模型让经验可跨灵智体共享
+- 四种亏结构识别让多可进化智能体协作可监测
+- Pack / Growth 种子果实模型让经验可跨可进化智能体共享
 
 ### 负面后果
 
@@ -224,7 +224,7 @@ class PackDistiller:
 - 上限 max 公式可能让团队倾向"押注单一最强路径" —— 缓解：max 在多个不相关候选中选，不押注单一
 - 下限连乘可能让团队过度加门（每多一道门成本上升）—— 缓解：识别"盲点相关性最高的门"优先加固，非无脑加门
 - 波动吸收可能让团队忽视根本问题（波动被吸收后看不到根因）—— 缓解：与 ADR 009 Eval 自代谢联动，吸收 ≠ 隐藏，根因仍归因
-- Pack 共享可能让坏经验跨灵智体扩散 —— 缓解：Pack 蒸馏必须 Mode C 五级成熟度阶梯 + Eval Ledger 净增益
+- Pack 共享可能让坏经验跨可进化智能体扩散 —— 缓解：Pack 蒸馏必须 Mode C 五级成熟度阶梯 + Eval Ledger 净增益
 - 四种亏结构检测可能误判 —— 缓解：检测信号阈值可配置，初期可保守
 
 ---
@@ -243,11 +243,11 @@ class PackDistiller:
 - 缺点：单门漏过概率接近 1 时下限失守（RA-044 P0 未解决）
 - 未选择原因：违反下限连乘公式
 
-### 方案 C: 不区分 Pack / Growth（统一私有锻典）
+### 方案 C: 不区分 Pack / Growth（统一私有蒸馏知识库）
 
 - 优点：实现简单
-- 缺点：经验不可跨灵智体共享，违反 CL-018 Pack 概念
-- 未选择原因：违反 operator 第 9 条愿景（灵智体能力应可共享）
+- 缺点：经验不可跨可进化智能体共享，违反 CL-018 Pack 概念
+- 未选择原因：违反 operator 第 9 条愿景（可进化智能体能力应可共享）
 
 ### 方案 D: 用 LLM 在线评估团队质量
 
@@ -262,15 +262,15 @@ class PackDistiller:
 - `[doc:roleagent.md#第7章]` — 伙伴系统的数学：上限提高，下限托底
 - `[doc:review/review.md#第八章]` 8.7 节 — RA-043~RA-047 伙伴系统数学补审（5 项，3 P0）
 - `[doc:review/review.md#第十三章]` 13.4 节 — CL-018 / CL-020 Pack / Growth 种子果实模型
-- `[doc:clowder-ai/docs/decisions/ADR-021-pack-system.md]` — Pack 系统经验可移植单元
+- 前期 Pack 系统设计（已归档） — Pack 系统经验可移植单元
 - `[doc:decisions/002-collaboration-protocol.md]` — TeamAct 协作协议（跨厂商 review 链 + 乒乓球熔断器）
 - `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（盲点维度 + 跨厂商 review 配对）
 - `[doc:decisions/007-harness-engineering.md]` — Harness 工程路径（CL-019 双轨信任编译 guardrails + defaults）
 - `[doc:decisions/008-memory-federation.md]` — 多域记忆联邦（波动吸收：模型忘上下文 → 记忆联邦找回）
 - `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢（波动吸收：工具失效 → sunset；Mode C 五级成熟度阶梯）
 - `[doc:decisions/010-distributed-reliability.md]` — 分布式可靠性（波动吸收：任务中断 → 恢复点；跨 provider fallback）
-- `[doc:design/naming-contract.md#2.3]` — 灵族（Forgekin Species，Pack 共享边界）
-- `[doc:design/naming-contract.md#2.7]` — 灵锻（SpiritForge，Pack 蒸馏引擎）
-- `[doc:design/naming-contract.md#2.8]` — 锻典（Mind Codex，Pack 载体）
+- `[doc:design/naming-contract.md#2.3]` — Forgekin Species（智能体形态学，Pack 共享边界）
+- `[doc:design/naming-contract.md#2.7]` — SpiritForge（经验蒸馏，Pack 蒸馏引擎）
+- `[doc:design/naming-contract.md#2.8]` — MindCodex（蒸馏知识库，Pack 载体）
 - `[doc:project_rules.md#铁律2]` — 质量分阈值默认 0.85
 - `[doc:project_rules.md#P35]` — 长程任务执行规范（波动吸收：检查点驱动恢复）

@@ -26,6 +26,22 @@ from flowforge.evolution.models import (
 )
 from flowforge.evolution.process_evolution import ProcessEvolution
 from flowforge.evolution.scope_guard import ScopeGuard
+from flowforge.evolution.self_dev_base import (
+    ApprovalRequiredError,
+    AwakeningStageBlockedError,
+    DevPlan,
+    DevResult,
+    DevTask,
+    LLMReviewFailedError,
+    LoopExecutionRecord,
+    MAX_REFLECT_RETRIES,
+    ReflectRetryExhaustedError,
+    ScopeGuardBlockedError,
+    SelfDevError,
+    SelfDevLoopBase,
+    VerifyResult,
+)
+from flowforge.evolution.self_dev_doc import SelfDevDocLoop
 
 __all__ = [
     # Engine
@@ -47,4 +63,19 @@ __all__ = [
     "KnowledgeMaturityLevel",
     "KnowledgeObject",
     "MetacognitionRouter",
+    # F046 SelfDev 三闭环执行层
+    "SelfDevLoopBase",
+    "SelfDevDocLoop",
+    "DevTask",
+    "DevPlan",
+    "DevResult",
+    "VerifyResult",
+    "LoopExecutionRecord",
+    "SelfDevError",
+    "AwakeningStageBlockedError",
+    "ScopeGuardBlockedError",
+    "ApprovalRequiredError",
+    "LLMReviewFailedError",
+    "ReflectRetryExhaustedError",
+    "MAX_REFLECT_RETRIES",
 ]

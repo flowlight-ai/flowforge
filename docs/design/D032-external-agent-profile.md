@@ -2,15 +2,14 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010）
 > **对应 arch.md**: [doc:../arch.md#§3.10]（三方 Agent 集成）
 > **对应 design.md**: [doc:../design.md#§3.10]
 > **对应 Feature**: [doc:../features/F032-external-agent-profile.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A032-external-agent-profile.md]（同号 Architecture 级 SAD）
 > **依赖 ADR**: [doc:../decisions/006-external-agent-integration.md]
-> **9 大点名称修订**: 已应用（双轨命名 ForgeMind/Forgekin + AI 术语优先 + 弱化万物使用"多形态智能体 (Multi-Form Agent)" + 去 AGI 化使用"通用智能体 (General-Purpose Agent)"）
-> **依赖详细设计**: [doc:D031-external-agent-adapter.md]（容器层） + [doc:D014-memory-collection.md]（PerformanceLog 复用 F001 灵忆）
+> **依赖详细设计**: [doc:D031-external-agent-adapter.md]（容器层） + [doc:D014-memory-collection.md]（PerformanceLog 复用 F001 EchoStore）
 
 ---
 
@@ -18,11 +17,11 @@
 
 ### 1.1 设计问题
 
-ExternalAgentAdapter 抽象层（D031）需要为三方 Agent 建立能力画像，使灵智体（Forgekin，多形态智能体）基于能力匹配选择合适的三方 Agent，而非按"配置默认值"或固定编号顺序调用。本详细设计在 `core/external_agent/profile.py` 落地 A032 架构，解决以下详细设计层问题：
+ExternalAgentAdapter 抽象层（D031）需要为三方 Agent 建立能力画像，使Forgekin（多形态智能体）基于能力匹配选择合适的三方 Agent，而非按"配置默认值"或固定编号顺序调用。本详细设计在 `core/external_agent/profile.py` 落地 A032 架构，解决以下详细设计层问题：
 
 1. **能力画像数据模型未落地**：A032 仅定义六维字段，未给出 Pydantic 完整模型、字段约束、校验器、模型不可变性保证。
 2. **Wilson 下界算法未实现**：A032 引用 Wilson 下界但未给出实现，需明确小样本阈值（< 30 次）、置信度（z=1.96）、公式与边界处理。
-3. **盲点互补配对算法未编码**：A032 描述"灵智体盲点 ∩ 三方 Agent 擅长 = 高匹配分"，未给出集合运算、归一化评分、阈值过滤的具体算法。
+3. **盲点互补配对算法未编码**：A032 描述"Forgekin盲点 ∩ 三方 Agent 擅长 = 高匹配分"，未给出集合运算、归一化评分、阈值过滤的具体算法。
 4. **跨厂商 review 配对盲点不重叠校验未实现**：A032 要求 primary 与 complementary 盲点不重叠，未给出 Jaccard 距离 + 阈值的具体实现。
 5. **YAML 配置加载与启动期注册未实现**：A032 要求 4 厂商画像 YAML 外置，未给出 ConfigLoader 启动期加载流程、字段完整性校验、DI 容器注入路径。
 6. **历史表现更新链路未编码**：A032 要求 fallback 执行结果通过 Eval 信号更新 historical_performance，未给出 PerformanceLog 增量更新接口与 Repository 落盘路径。
@@ -39,14 +38,13 @@ ExternalAgentAdapter 抽象层（D031）需要为三方 Agent 建立能力画像
 - **跨厂商 review 盲点不重叠约束**：find_complementary_pair 必须满足 primary 与 complementary 盲点交集为空（Jaccard=0），违反即配对被拒绝。
 - **4 厂商枚举不可扩展约束**：ExternalAgentProvider 固定 4 厂商，运行时不可动态新增厂商，新增必须经 ADR 决策。
 - **六维字段完整性约束**：ExternalAgentCapabilityProfile 六维字段缺一即注册被拒绝。
-- **9 大点名称修订约束**：所有命名严格遵循双轨命名（产品层 ForgeMind / 代码层 Forgekin），AI 术语优先（Forgekin/Multi-Form Agent），弱化万物（不使用"万物灵长"等表述），去 AGI 化（不使用"AGI/通用人工智能"等表述）。
 
 ### 1.3 设计影响
 
 - **对 F001 能力画像的影响**：ExternalAgentCapabilityProfile 与 CapabilityProfile 数据模型对齐，复用 PerformanceLog 数据结构与 Wilson 下界计算。
 - **对 F002 TeamAct 的影响**：跨厂商 review 配对联动 F002 跨厂商 review 逻辑，primary/complementary 配对结果作为 TeamAct 编排输入。
-- **对 D031 ExternalAgentBridge 的影响**：Bridge 在选择 Adapter 时调用 CapabilityMatcher.match_for_task() 决策最优厂商；register_adapter() 调用 ExternalAgentProfileRegistry.get() 校验画像存在。
-- **对 D034 失败回退的影响**：FallbackChainBuilder.build_for_task() 基于 CapabilityMatcher.match_for_task() + rank_by_cost_latency() 构建 fallback 链。
+- **对 D031 ExternalAgentBridge 的影响**：Bridge 在选择 Adapter 时调用 CapabilityMatcher.match_for_task 决策最优厂商；register_adapter 调用 ExternalAgentProfileRegistry.get 校验画像存在。
+- **对 D034 失败回退的影响**：FallbackChainBuilder.build_for_task 基于 CapabilityMatcher.match_for_task + rank_by_cost_latency 构建 fallback 链。
 - **对 D035 能力融合的影响**：ExternalAgentCapabilityProfile 作为能力融合来源画像，FusionSource.external_agent_profile_ref 引用 agent_id。
 - **对 F018 Eval Contract 的影响**：fallback 执行结果通过 Eval 信号回流到 PerformanceLog.historical_performance。
 
@@ -66,7 +64,7 @@ class ExternalAgentProvider(str, Enum):
     """三方 Agent 厂商（4 个，固定不可扩展）
 
     新增厂商必须经 ADR 决策（doc:../decisions/006-external-agent-integration.md）。
-    运行时动态新增厂商会被 _assert_provider_in_enum() 拒绝。
+    运行时动态新增厂商会被 _assert_provider_in_enum 拒绝。
     """
     CLAUDE_CODE = "claude_code"   # 擅长复杂重构，盲点：长上下文易漂移
     CODEX = "codex"               # 擅长推理，盲点：工具调用弱
@@ -239,7 +237,7 @@ WILSON_SMALL_SAMPLE_THRESHOLD = 30
 
 ### 2.3 盲点互补配对算法
 
-盲点互补配对是 CapabilityMatcher 的核心算法：灵智体盲点 ∩ 三方 Agent 擅长 = 高匹配分；灵智体擅长 ∩ 三方 Agent 盲点 = 低匹配分。
+盲点互补配对是 CapabilityMatcher 的核心算法：Forgekin盲点 ∩ 三方 Agent 擅长 = 高匹配分；Forgekin擅长 ∩ 三方 Agent 盲点 = 低匹配分。
 
 ```python
 def compute_blind_spot_complement_score(
@@ -256,13 +254,13 @@ def compute_blind_spot_complement_score(
         score = complement - 0.5 * conflict
 
     解释：
-        - complement 高（Agent 擅长灵智体的盲点）-> 高分
-        - conflict 高（Agent 盲点恰好是灵智体擅长，浪费 Agent 价值）-> 低分
+        - complement 高（Agent 擅长Forgekin的盲点）-> 高分
+        - conflict 高（Agent 盲点恰好是Forgekin擅长，浪费 Agent 价值）-> 低分
         - 冲突权重 0.5（不能完全抵消互补收益）
 
     Args:
-        forgekin_strengths: 灵智体擅长能力
-        forgekin_blind_spots: 灵智体盲点
+        forgekin_strengths: Forgekin擅长能力
+        forgekin_blind_spots: Forgekin盲点
         agent_strengths: 三方 Agent 擅长能力
         agent_blind_spots: 三方 Agent 盲点
 
@@ -270,11 +268,11 @@ def compute_blind_spot_complement_score(
         匹配分（0.0-1.0），低于 COMPLEMENT_SCORE_THRESHOLD 的候选被过滤
     """
     if not forgekin_blind_spots:
-        # 灵智体无盲点，无法互补，返回中性分
+        # Forgekin无盲点，无法互补，返回中性分
         return 0.5
 
     if not forgekin_strengths:
-        # 灵智体无擅长，无法判定冲突，仅看互补
+        # Forgekin无擅长，无法判定冲突，仅看互补
         complement = len(set(forgekin_blind_spots) & set(agent_strengths)) / len(forgekin_blind_spots)
         return complement
 
@@ -334,7 +332,7 @@ class BlindSpotsOverlapError(Exception):
         self.primary_blind_spots = primary_blind_spots
         self.complementary_blind_spots = complementary_blind_spots
         self.overlap = overlap
-        super().__init__(
+        super.__init__(
             f"primary 与 complementary 盲点重叠: {overlap}；"
             f"primary={primary_blind_spots}, complementary={complementary_blind_spots}"
         )
@@ -523,11 +521,11 @@ class HarnessExternalAgentProfileRegistry(ExternalAgentProfileRegistry):
     async def list_by_provider(
         self, provider: ExternalAgentProvider
     ) -> list[ExternalAgentCapabilityProfile]:
-        all_profiles = await self._repo.list_all()
+        all_profiles = await self._repo.list_all
         return [p for p in all_profiles if p.provider == provider]
 
     async def list_all(self) -> list[ExternalAgentCapabilityProfile]:
-        return await self._repo.list_all()
+        return await self._repo.list_all
 
     async def update_performance(
         self,
@@ -602,7 +600,7 @@ class HarnessExternalAgentProfileRegistry(ExternalAgentProfileRegistry):
 
 ```python
 class CapabilityMatcher(ABC):
-    """能力匹配器（灵智体能力画像 × 三方 Agent 能力画像）"""
+    """能力匹配器（Forgekin能力画像 × 三方 Agent 能力画像）"""
 
     @abstractmethod
     async def match_for_task(
@@ -613,8 +611,8 @@ class CapabilityMatcher(ABC):
         """基于盲点互补 + 任务能力需求匹配
 
         算法：
-            1. 读取灵智体 CapabilityProfile（F001）获取 strengths + blind_spots
-            2. 遍历 ExternalAgentProfileRegistry.list_all()
+            1. 读取Forgekin CapabilityProfile（F001）获取 strengths + blind_spots
+            2. 遍历 ExternalAgentProfileRegistry.list_all
             3. 对每个 Agent 计算盲点互补分
             4. 过滤 score < COMPLEMENT_SCORE_THRESHOLD 的候选
             5. 过滤不满足 task_capability_requirements 的候选
@@ -650,7 +648,7 @@ class HarnessCapabilityMatcher(CapabilityMatcher):
     """CapabilityMatcher 的 Harness 实现
 
     依赖：
-        - forgekin_profile_repo: Repository[CapabilityProfile]（F001 灵智体画像）
+        - forgekin_profile_repo: Repository[CapabilityProfile]（F001 Forgekin画像）
         - agent_profile_registry: ExternalAgentProfileRegistry
     """
 
@@ -678,7 +676,7 @@ class HarnessCapabilityMatcher(CapabilityMatcher):
         forgekin_profile_id: str,
         task_capability_requirements: list[str],
     ) -> list[ExternalAgentCapabilityProfile]:
-        # 1. 读取灵智体 CapabilityProfile
+        # 1. 读取Forgekin CapabilityProfile
         forgekin_profile = await self._forgekin_repo.find_by_id(forgekin_profile_id)
         if forgekin_profile is None:
             raise ForgekinProfileNotFoundError(
@@ -690,7 +688,7 @@ class HarnessCapabilityMatcher(CapabilityMatcher):
         forgekin_blind_spots = list(getattr(forgekin_profile, "blind_spots", []))
 
         # 2. 遍历全部三方 Agent 画像
-        all_agents = await self._registry.list_all()
+        all_agents = await self._registry.list_all
 
         # 3. 计算盲点互补分 + 过滤
         scored: list[tuple[float, ExternalAgentCapabilityProfile]] = []
@@ -749,7 +747,7 @@ class HarnessCapabilityMatcher(CapabilityMatcher):
         primary = await self._registry.get(primary_agent_id)
 
         # 候选必须是不同厂商
-        candidates = await self._registry.list_all()
+        candidates = await self._registry.list_all
         cross_provider_candidates = [
             c for c in candidates if c.provider != primary.provider
         ]
@@ -815,7 +813,7 @@ class ProviderNotInEnumError(Exception):
     def __init__(self, provider: str, allowed: list[str]) -> None:
         self.provider = provider
         self.allowed = allowed
-        super().__init__(
+        super.__init__(
             f"provider '{provider}' not in enum; allowed: {allowed}"
         )
 
@@ -826,7 +824,7 @@ class SixDimensionsIncompleteError(Exception):
     def __init__(self, agent_id: str, missing_fields: list[str]) -> None:
         self.agent_id = agent_id
         self.missing_fields = missing_fields
-        super().__init__(
+        super.__init__(
             f"agent_id '{agent_id}' missing required fields: {missing_fields}"
         )
 
@@ -836,7 +834,7 @@ class AgentIdConflictError(Exception):
 
     def __init__(self, agent_id: str, message: str) -> None:
         self.agent_id = agent_id
-        super().__init__(message)
+        super.__init__(message)
 
 
 class AgentProfileNotFoundError(Exception):
@@ -844,15 +842,15 @@ class AgentProfileNotFoundError(Exception):
 
     def __init__(self, agent_id: str, message: str) -> None:
         self.agent_id = agent_id
-        super().__init__(message)
+        super.__init__(message)
 
 
 class ForgekinProfileNotFoundError(Exception):
-    """灵智体画像未找到"""
+    """Forgekin画像未找到"""
 
     def __init__(self, forgekin_id: str, message: str) -> None:
         self.forgekin_id = forgekin_id
-        super().__init__(message)
+        super.__init__(message)
 ```
 
 ### 3.4 配置加载器
@@ -889,7 +887,7 @@ class ExternalAgentProfileConfigLoader:
         config_path: str = "config/external_agent.yaml",
         registry: ExternalAgentProfileRegistry | None = None,
     ) -> None:
-        self._config_path = Path(config_path).resolve()
+        self._config_path = Path(config_path).resolve
         self._registry = registry
 
     async def load_and_register(
@@ -905,7 +903,7 @@ class ExternalAgentProfileConfigLoader:
         if target_registry is None:
             raise ValueError("registry must be provided")
 
-        if not self._config_path.exists():
+        if not self._config_path.exists:
             raise FileNotFoundError(
                 f"external_agent.yaml not found: {self._config_path}"
             )
@@ -1155,7 +1153,7 @@ async def startup_load_external_agent_profiles(
     必须在 ExternalAgentBridge（D031）初始化前完成。
     """
     loader = container.resolve(ExternalAgentProfileConfigLoader)
-    registered_ids = await loader.load_and_register()
+    registered_ids = await loader.load_and_register
     logger.info(
         "Startup external agent profiles loaded",
         extra={"registered_count": len(registered_ids)},
@@ -1168,7 +1166,7 @@ async def startup_load_external_agent_profiles(
 
 ### 4.1 与 D031 ExternalAgentBridge 协作
 
-ExternalAgentBridge 在选择 Adapter 时调用 CapabilityMatcher.match_for_task() 决策最优厂商。
+ExternalAgentBridge 在选择 Adapter 时调用 CapabilityMatcher.match_for_task 决策最优厂商。
 
 ```python
 # core/external_agent/bridge.py（D031 节选，展示与 D032 协作）
@@ -1317,8 +1315,8 @@ class CrossVendorReviewOrchestrator:
             "status": "completed",
             "primary_agent_id": primary_agent_id,
             "complementary_agent_id": complementary.agent_id,
-            "primary_result": primary_result.dict(),
-            "review_result": review_result.dict(),
+            "primary_result": primary_result.dict,
+            "review_result": review_result.dict,
         }
 ```
 
@@ -1339,12 +1337,12 @@ class HarnessFallbackChainBuilder(FallbackChainBuilder):
         task_requirements: list[str],
         forgekin_profile_id: str,
     ) -> FallbackChain:
-        # 1. CapabilityMatcher.match_for_task() 获取候选厂商
+        # 1. CapabilityMatcher.match_for_task 获取候选厂商
         candidates = await self._matcher.match_for_task(
             forgekin_profile_id=forgekin_profile_id,
             task_capability_requirements=task_requirements,
         )
-        # 2. rank_by_cost_latency() 按成本排序
+        # 2. rank_by_cost_latency 按成本排序
         ranked = await self._matcher.rank_by_cost_latency(candidates)
         # 3. 为每个厂商配置 5 种 trigger -> action 映射
         steps = self._build_steps_from_ranked(ranked)
@@ -1386,7 +1384,7 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
             task_context=call_record["task_context"],
             call_artifacts=call_record.get("artifacts", []),
             call_quality_score=quality_score,
-            call_timestamp=datetime.now(),
+            call_timestamp=datetime.now,
         )
 ```
 
@@ -1395,7 +1393,7 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
 ```
 [Forgekin] --invoke(forgekin_id, task, requirements)--> [ExternalAgentBridge]
                                                               |
-                                                              | 1. match_for_task()
+                                                              | 1. match_for_task
                                                               v
                                                         [CapabilityMatcher]
                                                               |
@@ -1407,7 +1405,7 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
                                                               v
                                                         [CapabilityMatcher]
                                                               |
-                                                              | 3. list_all()
+                                                              | 3. list_all
                                                               v
                                                         [ExternalAgentProfileRegistry]
                                                               |
@@ -1415,7 +1413,7 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
                                                               v
                                                         [CapabilityMatcher]
                                                               |
-                                                              | 4. compute_blind_spot_complement_score()
+                                                              | 4. compute_blind_spot_complement_score
                                                               |    (forgekin_blind_spots ∩ agent_strengths)
                                                               v
                                                         [CapabilityMatcher]
@@ -1432,13 +1430,13 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
         v
 [ClaudeCodeAdapter] ---success---> [ExternalAgentBridge]
                                        |
-                                       | 8. update_performance_via_eval()
+                                       | 8. update_performance_via_eval
                                        v
-                                 [ExternalAgentProfileRegistry.update_performance()]
+                                 [ExternalAgentProfileRegistry.update_performance]
                                        |
-                                       | 9. compute_wilson_lower_bound()
+                                       | 9. compute_wilson_lower_bound
                                        v
-                                 [Repository.save()]
+                                 [Repository.save]
                                        |
                                        v
 [ExternalAgentBridge] <---result--- [ExternalAgentProfileRegistry]
@@ -1462,7 +1460,7 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
 - [ ] **AC-F-10**: rank_by_cost_latency_impl 在单候选时返回该候选；在多候选时按归一化 cost+latency 加权升序排序。
 - [ ] **AC-F-11**: HarnessExternalAgentProfileRegistry.register 重复注册同 agent_id 触发 AgentIdConflictError。
 - [ ] **AC-F-12**: HarnessExternalAgentProfileRegistry.get 未注册 agent_id 触发 AgentProfileNotFoundError。
-- [ ] **AC-F-13**: HarnessCapabilityMatcher.match_for_task 在灵智体画像未找到时触发 ForgekinProfileNotFoundError。
+- [ ] **AC-F-13**: HarnessCapabilityMatcher.match_for_task 在Forgekin画像未找到时触发 ForgekinProfileNotFoundError。
 - [ ] **AC-F-14**: HarnessCapabilityMatcher.match_for_task 过滤 score < COMPLEMENT_SCORE_THRESHOLD (0.3) 的候选。
 - [ ] **AC-F-15**: HarnessCapabilityMatcher.match_for_task 过滤不满足 task_capability_requirements 的候选。
 - [ ] **AC-F-16**: HarnessCapabilityMatcher.find_complementary_pair 仅在同候选为不同厂商时返回，同厂商候选被排除。
@@ -1537,7 +1535,7 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
 | 六维字段缺失 | SixDimensionsIncompleteError | 拒绝注册，启动期失败 | operator |
 | agent_id 已注册 | AgentIdConflictError | 拒绝注册，启动期失败 | operator |
 | agent_id 未注册 | AgentProfileNotFoundError | 调用方处理（如 Bridge 跳过） | logger.warning |
-| 灵智体画像未找到 | ForgekinProfileNotFoundError | match_for_task 失败，Bridge 降级 | logger.error |
+| Forgekin画像未找到 | ForgekinProfileNotFoundError | match_for_task 失败，Bridge 降级 | logger.error |
 | 跨厂商 review 盲点重叠 | BlindSpotsOverlapError | 跳过该候选，继续找下一个 | logger.debug |
 | YAML 文件不存在 | FileNotFoundError | 启动期失败 | operator |
 | YAML 字段缺失 | ValueError | 启动期失败 | operator |
@@ -1556,7 +1554,7 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
 - [doc:../architecture/A032-external-agent-profile.md]（同号 Architecture 级 SAD）
 - [doc:../features/F001-capability-profile.md]（CapabilityProfile 对齐）
 - [doc:../features/F002-teamact-loop.md]（跨厂商 review 配对）
-- [doc:../features/F014-memory-collection.md]（PerformanceLog 灵忆归档）
+- [doc:../features/F014-memory-collection.md]（PerformanceLog EchoStore归档）
 - [doc:../features/F018-eval-contract.md]（Eval 信号回流）
 - [doc:D031-external-agent-adapter.md]（ExternalAgentBridge 容器）
 - [doc:D034-external-agent-fallback.md]（FallbackChainBuilder 基于 match_for_task）
@@ -1571,4 +1569,4 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（4 厂商枚举 + 六维画像 + Wilson 下界算法 + 盲点互补配对 + 跨厂商 review 配对 + rank_by_cost_latency + ConfigLoader + DI 注入 + 20 集成测试点 + 20 功能 AC + 8 性能 AC + 10 安全 AC + 6 Eval AC） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（4 厂商枚举 + 六维画像 + Wilson 下界算法 + 盲点互补配对 + 跨厂商 review 配对 + rank_by_cost_latency + ConfigLoader + DI 注入 + 20 集成测试点 + 20 功能 AC + 8 性能 AC + 10 安全 AC + 6 Eval AC） | 架构师 Forgekin（猫头鹰·鲁班） |

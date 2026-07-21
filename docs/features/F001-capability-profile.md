@@ -3,16 +3,15 @@
 > **状态**: ⏳ pending
 > **类型**: core
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **依赖 ADR**: [doc:decisions/004-capability-profile-routing.md]
 > **依赖 Feature**: 无（F001 是基础 Feature）
 > **依据**: [doc:review/review.md#第八章] RA-001~RA-008
 > **roleagent 章节**: [doc:roleagent.md#第0章] + [doc:roleagent.md#第1章]
-> **关联 VISION**: [doc:VISION.md#4]（灵智体相对其他 multi-agent 的核心优势）
+> **关联 VISION**: [doc:VISION.md#4]（Forgekin相对其他 multi-agent 的核心优势）
 > **对应 spec.md**: [doc:../spec.md#§3.1]（FR-CORE-001，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.1]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.1]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -34,7 +33,7 @@
 ### 1.3 不做的影响
 
 - 无法实现 roleagent.md 七大工程路径
-- forgemind 万物灵智体无法动态路由
+- forgemind 可进化智能体无法动态路由
 - 三方 Agent 能力融合无目标画像
 
 ---
@@ -47,9 +46,9 @@ CapabilityProfile 六维度（对应 roleagent.md 第 0 章三个可变性层）
 
 ```python
 class CapabilityProfile:
-    """灵智体能力画像"""
+    """Forgekin能力画像"""
     
-    forgekin_id: str                       # 灵智体 ID
+    forgekin_id: str                       # Forgekin ID
     model_capability: ModelCapability      # 模型固有能力（常量层）
     cognitive_style: CognitiveStyle        # 认知风格（常量层）
     blind_spots: list[BlindSpot]           # 坏直觉/盲点（半常量层）
@@ -134,7 +133,7 @@ class ModelCapability(BaseModel):
 
 
 class CapabilityProfile(BaseModel):
-    """能力画像 — 灵智体的长期主体画像"""
+    """能力画像 — Forgekin的长期主体画像"""
     forgekin_id: str
     model_capability: ModelCapability
     cognitive_style: CognitiveStyle
@@ -152,7 +151,7 @@ class CapabilityProfile(BaseModel):
         return gaps
     
     def has_blind_spot_conflict(self, other: "CapabilityProfile") -> bool:
-        """检查与另一个灵智体的盲点是否冲突"""
+        """检查与另一个Forgekin的盲点是否冲突"""
         # 用于跨厂商 review 配对
         ...
 ```
@@ -179,7 +178,7 @@ class CapabilityProfile(BaseModel):
 ### 3.2 实现步骤
 
 1. 定义 Pydantic 数据模型（profile.py）
-2. 实现 CapabilityRouter.route() 路由算法
+2. 实现 CapabilityRouter.route 路由算法
 3. 实现 BlindSpot 检测器（基于 Eval 信号）
 4. 实现能力画像存储（Repository 层，禁直操作数据库）
 5. 替换 `default_llm_actors.py` 硬编码角色
@@ -205,7 +204,7 @@ class CapabilityProfile(BaseModel):
 
 ### 4.2 性能验收
 
-- [ ] AC-6: 路由算法延迟 < 100ms（10 个候选灵智体）
+- [ ] AC-6: 路由算法延迟 < 100ms（10 个候选Forgekin）
 
 ### 4.3 安全验收
 
@@ -235,8 +234,8 @@ class CapabilityProfile(BaseModel):
 
 ### 5.3 E2E 测试
 
-- 创建 5 个不同厂商的灵智体（DeepSeek/Qwen/GLM/Kimi/HunYuan）
-- 给定任务画像，验证路由到最佳灵智体
+- 创建 5 个不同厂商的Forgekin（DeepSeek/Qwen/GLM/Kimi/HunYuan）
+- 给定任务画像，验证路由到最佳Forgekin
 - 验证跨厂商 review 配对盲点不重叠
 - **遵守 T1-T8 铁律**：真实 LLM、真实数据、真实工具调用
 
@@ -246,12 +245,12 @@ class CapabilityProfile(BaseModel):
 
 ### 6.1 谁评估
 
-- 跨厂商 reviewer 灵智体（非作者）
+- 跨厂商 reviewer Forgekin（非作者）
 - 自动探针（路由正确率检测）
 
 ### 6.2 评估什么
 
-- 路由正确率（被路由的灵智体是否适合任务）
+- 路由正确率（被路由的Forgekin是否适合任务）
 - 盲点检出率（同厂商盲点是否被跨厂商 review 发现）
 - 历史表现积累有效性（Wilson 下界是否可靠）
 
@@ -305,7 +304,7 @@ class CapabilityProfile(BaseModel):
 ### 8.3 风险
 
 - 能力画像过时（缓解：Eval 信号实时刷新）
-- 路由算法偏见（缓解：可解释性 + 灵议审查）
+- 路由算法偏见（缓解：可解释性 + MindCouncil 审查）
 
 ---
 
@@ -340,5 +339,4 @@ class CapabilityProfile(BaseModel):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-17 | v0.1 | 初始创建 | 架构师灵智体 |
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.1 同号映射 | 文档员灵智体（钢笔·文心） |
+| 2026-07-17 | v0.1 | 初始创建 | 架构师 Forgekin |

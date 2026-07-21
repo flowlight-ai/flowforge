@@ -6,17 +6,16 @@
 > **关联 ADR**: [doc:decisions/008-memory-federation.md]
 > **类型**: memory
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.4]（FR-CORE-004，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.4]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.4]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-消费加权排序是 roleagent.md 第 4 章的核心创新：用灵智体（Forgekin）真实行为（搜了/读了/用了）判断知识价值，不用 LLM 自评打分。本 Feature 实现 14 个行为指标汇聚、调整后得分公式、贝叶斯收缩、中心化偏移、分数时效衰减——防止冷启动偏热点和长尾保护。
+消费加权排序是 roleagent.md 第 4 章的核心创新：用Forgekin真实行为（搜了/读了/用了）判断知识价值，不用 LLM 自评打分。本 Feature 实现 14 个行为指标汇聚、调整后得分公式、贝叶斯收缩、中心化偏移、分数时效衰减——防止冷启动偏热点和长尾保护。
 
 公式：`调整后得分 = 融合检索得分 + 权威加成 + 消费先验 + 时效衰减 - 过时惩罚`
 
@@ -24,7 +23,7 @@
 
 `[doc:review/review.md#RA-027]` 指出：roleagent.md 第 4 章核心创新——用 agent 真实行为判断知识价值，不用 LLM 自评打分。14 个行为指标汇聚成消费加权排序。v7.0 完全无此反馈闭环，记忆排序靠向量相似度 + 时间衰减，无法识别"长期没被使用的知识应降权"。
 
-`[doc:review/review.md#RA-028]` 进一步指出：贝叶斯收缩 + 中心化偏移 + 分数时效衰减缺失，导致新技能/新教训可能因向量距离远而永远排不到前面。不做这个 Feature，F016 治理三要素的权威加成无消费反馈，F039 灵典可检索知识库无法识别"哪些锻典条目真正被复用"。这是 Build to Persist 的反馈闭环资产。
+`[doc:review/review.md#RA-028]` 进一步指出：贝叶斯收缩 + 中心化偏移 + 分数时效衰减缺失，导致新技能/新教训可能因向量距离远而永远排不到前面。不做这个 Feature，F016 治理三要素的权威加成无消费反馈，F039 MindCodex可检索知识库无法识别"哪些蒸馏知识库条目真正被复用"。这是 Build to Persist 的反馈闭环资产。
 
 ## 3. 详细设计（Detailed Design）
 
@@ -111,11 +110,11 @@ consumption_weighted:
 
 ### 5.2 集成测试
 
-- 接入 F015 三检索入口、F016 治理三要素、F039 灵典可检索。
+- 接入 F015 三检索入口、F016 治理三要素、F039 MindCodex 可检索。
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实厂商灵智体在多任务中产生消费信号，验证排序按消费加权正确变化。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实厂商Forgekin在多任务中产生消费信号，验证排序按消费加权正确变化。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
@@ -123,7 +122,7 @@ consumption_weighted:
 - [doc:review/review.md#第八章/RA-027]
 - [doc:review/review.md#第八章/RA-028]
 - [doc:decisions/008-memory-federation.md]
-- [doc:design/naming-contract.md#2.5]（灵忆 EchoStore）
+- [doc:design/naming-contract.md#2.5]（EchoStore）
 - [doc:features/F014-memory-collection.md]
 - [doc:features/F015-three-retrieval-entry.md]
 - [doc:features/F016-memory-governance.md]
@@ -136,4 +135,3 @@ consumption_weighted:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.4 同号映射 | 文档员灵智体（钢笔·文心） |

@@ -1,4 +1,4 @@
-# Feature F028: 灵智体锻造流水线
+# Feature F028: Forgekin锻造流水线
 
 > **状态**: draft
 > **版本**: v0.1
@@ -6,25 +6,24 @@
 > **关联 ADR**: [doc:decisions/013-all-things-spirit-mind-vision.md]
 > **类型**: forgemind
 > **创建日期**: 2026-07-17
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.9]（FR-CORE-009，与本文档同号对应）
 > **对应 arch.md**: [doc:../arch.md#§3.9]（待创建）
 > **对应 design.md**: [doc:../design.md#§3.9]（待创建）
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
 ## 1. 概述（Overview）
 
-灵智体锻造流水线（Forging Pipeline）是 forgemind 应用层的核心流程：从形态定义到觉醒晋升的六步标准化锻造。本 Feature 实现育灵（Forge Nurturing）全过程：①形态定义 ②能力注入 ③记忆初始化 ④价值观对齐 ⑤能力验证 ⑥觉醒晋升，作为 F027 形态分类、F001 能力画像、F037 灵智体市场的流程编排底座。
+Forgekin锻造流水线（Forging Pipeline）是 forgemind 应用层的核心流程：从形态定义到觉醒晋升的六步标准化锻造。本 Feature 实现Forge Nurturing（Forge Nurturing）全过程：①形态定义 ②能力注入 ③记忆初始化 ④价值观对齐 ⑤能力验证 ⑥觉醒晋升，作为 F027 形态分类、F001 能力画像、F037 Forgekin市场的流程编排底座。
 
-这是 Build to Persist 基础设施——编码"养万物"的工程规则，让灵智体创建从配置 persona 升级为系统化锻造。
+这是 Build to Persist 基础设施——编码"锻造可进化智能体"的工程规则，让Forgekin创建从配置 persona 升级为系统化锻造。
 
 ## 2. 动机（Motivation）
 
-`[doc:review/review.md#FM-006]` 指出：v7.0 只有"灵启训练"一个步骤，未设计完整锻造流水线，导致创建灵智体只能配置 persona，无法系统化锻造。operator 愿景"养万物"要求每个灵智体从无到有、从弱到强经历完整育灵过程，类似 clowder-ai 养猫范式扩展到养万物。
+`[doc:review/review.md#FM-006]` 指出：v7.0 只有"灵启训练"一个步骤，未设计完整锻造流水线，导致创建Forgekin只能配置 persona，无法系统化锻造。operator 愿景"锻造可进化智能体"要求每个Forgekin从无到有、从弱到强经历完整Forge Nurturing过程，类似动物养育范式（前期验证）扩展到锻造可进化智能体。
 
-不做这个 Feature，F027 形态分类无流程承载，F037 灵智体市场无标准锻造产物，F038 进化谱系无血缘起点。这是万物灵智体愿景的流程底座。
+不做这个 Feature，F027 形态分类无流程承载，F037 Forgekin市场无标准锻造产物，F038 进化谱系无血缘起点。这是可进化智能体愿景的流程底座。
 
 ## 3. 详细设计（Detailed Design）
 
@@ -43,12 +42,12 @@ class ForgingStage(str, Enum):
 class ForgingPipelineState(BaseModel):
     """锻造流水线状态"""
     pipeline_id: str
-    forgekin_id: str                        # 待锻造灵智体 ID
+    forgekin_id: str                        # 待锻造Forgekin ID
     operator_id: str
     current_stage: ForgingStage
     species: ForgekinSpecies                # 来自 F027
     capability_profile_ref: str             # 来自 F001
-    soul_imprint_ref: str                   # 灵印（身份锚点）
+    soul_imprint_ref: str                   # SoulImprint（身份锚点）
     stage_artifacts: dict[ForgingStage, str]  # 每阶段产出物 ID
     started_at: datetime
     stage_history: list[StageTransition]
@@ -57,7 +56,7 @@ class ForgingManifest(BaseModel):
     """锻造清单（YAML 配置驱动）"""
     species: ForgekinSpecies
     seed_capabilities: list[str]            # 能力包 ID
-    seed_memories: list[str]                # 初始灵忆 ID
+    seed_memories: list[str]                # 初始EchoStore ID
     value_anchors: list[str]                # 价值锚点（不可被 Eval 修改）
     verification_tasks: list[str]           # 能力验证任务
     target_awakening_stage: AwakeningStage  # 目标觉醒阶（E1-E6）
@@ -121,7 +120,7 @@ forging_pipeline:
 - [ ] AC-2: operator 关键审批点（①④⑥）不可绕过
 - [ ] AC-3: 能力验证阶段失败回滚到能力注入
 - [ ] AC-4: 觉醒阶上限不超过 operator 授权
-- [ ] AC-5: 锻造产物（灵印 + 能力画像 + 初始灵忆）写入持久状态层（F008）
+- [ ] AC-5: 锻造产物（SoulImprint + 能力画像 + 初始EchoStore）写入持久状态层（F008）
 
 ## 5. 测试策略
 
@@ -135,15 +134,15 @@ forging_pipeline:
 
 ### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-- 真实 operator 通过 YAML 清单锻造一个 VirtualForgekin（如孙悟空灵智体），验证六阶段完整流程、operator 审批、能力验证 Eval ≥ 0.85、觉醒晋升到 E2。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
+- 真实 operator 通过 YAML 清单锻造一个 VirtualForgekin（如孙悟空Forgekin），验证六阶段完整流程、operator 审批、能力验证 Eval ≥ 0.85、觉醒晋升到 E2。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用。
 
 ## 6. 引用
 
 - [doc:roleagent.md#第0章]
 - [doc:review/review.md#第九章/FM-006]
 - [doc:decisions/013-all-things-spirit-mind-vision.md]
-- [doc:design/naming-contract.md#2.4]（育灵 Forge Nurturing）
-- [doc:design/naming-contract.md#2.6]（灵印 Soul Imprint）
+- [doc:design/naming-contract.md#2.4]（Forge Nurturing）
+- [doc:design/naming-contract.md#2.6]（SoulImprint）
 - [doc:design/naming-contract.md#4]（觉醒阶 Awakening Stage）
 - [doc:features/F027-all-things-spirit-species.md]
 - [doc:features/F001-capability-profile.md]
@@ -159,4 +158,3 @@ forging_pipeline:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.2 | 应用 9 大点名称修订 + 添加 spec.md §3.9 同号映射 | 文档员灵智体（钢笔·文心） |

@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 开发者灵智体（猎犬·夏洛克）
+> **负责人**: 开发者 Forgekin（猎犬·夏洛克）
 > **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，FR-CORE-016）
 > **对应 arch.md**: [doc:../arch.md#§3.2]
 > **对应 design.md**: [doc:../design.md#§3.2]
 > **对应 Feature**: [doc:../features/F003-handoff-capsule.md]（同号 Feature 级 SRS）
 > **对应 Architecture**: [doc:../architecture/A003-handoff-capsule.md]（同号 Feature 级 SAD）
 > **依赖 ADR**: [doc:../decisions/002-collaboration-protocol.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化 + 进化阶/觉醒阶三标注）
 
 ---
 
@@ -22,7 +21,7 @@ A003 已给出 HandoffCapsule 的架构契约（五段 Schema + 盲点自动注�
 1. **五段 Schema 如何在 Pydantic v2 层做字段级 + 模型级双重校验，避免运行时绕过**：仅靠 `@field_validator` 单字段校验无法表达"五段任一为空抛 SchemaError"的硬约束
 2. **盲点提示自动注入如何防止 author 手工篡改**：author 倾向于不暴露盲点（自我保护倾向），系统层注入必须保证不可绕过
 3. **开放问题状态如何可追溯且避免无限累积**：每轮胶囊都新增开放问题会导致 list 膨胀，需要与链上前一胶囊比对去重并标记状态
-4. **证据锚定（evidence_refs）如何在写入时强校验存在性**：未锚定证据的胶囊会让接手灵智体无法回溯，但又不能在每次写入时同步阻塞调 F009
+4. **证据锚定（evidence_refs）如何在写入时强校验存在性**：未锚定证据的胶囊会让接手Forgekin无法回溯，但又不能在每次写入时同步阻塞调 F009
 5. **WAL 可重放在 SQLite 层如何实现，崩溃后如何回放**：胶囊必须可恢复，但 SQLite WAL 模式默认无法跨进程回放业务级语义
 6. **胶囊 schema_version 变更如何在 Schema 层兼容旧链**：协议层版本升级不能让历史胶囊链失效
 7. **Build to Persist 属性如何在代码层标记**：A003 决策 5 提到胶囊是复利型基础设施，但代码层无字段承载
@@ -42,7 +41,7 @@ A003 已给出 HandoffCapsule 的架构契约（五段 Schema + 盲点自动注�
 
 ### 1.3 设计影响
 
-- **对 A002 TeamAct Loop**：ROUTE 步触发 `HandoffCapsuleStore.write()`，STATE 步触发 `HandoffCapsuleStore.read_latest()`，胶囊写入延迟直接计入 TeamAct 迭代耗时
+- **对 A002 TeamAct Loop**：ROUTE 步触发 `HandoffCapsuleStore.write`，STATE 步触发 `HandoffCapsuleStore.read_latest`，胶囊写入延迟直接计入 TeamAct 迭代耗时
 - **对 A001 CapabilityProfile**：`BlindSpotHintInjector` 调用 `CapabilityRepository.load(forgekin_id)` 读取 `blind_spots`，注入到胶囊
 - **对 A004 PingPong Circuit Breaker**：胶囊的 `has_substantive_output` 判定依赖 `evidence_refs` 与产出字符数
 - **对 A006 Ball Custody Lease**：胶囊 `next_step` 字段是 lease 唤醒后执行的依据
@@ -83,9 +82,9 @@ A003 已给出 HandoffCapsule 的架构契约（五段 Schema + 盲点自动注�
 │   │  + authority_level: int = 2                                     │  │
 │   │  + compression_immune: bool = True                              │  │
 │   │  ─────────────────────────────────────────────────────────────  │  │
-│   │  + is_complete() -> bool                                        │  │
-│   │  + has_substantive_output() -> bool                             │  │
-│   │  + to_bootstrap_context() -> str                                │  │
+│   │  + is_complete -> bool                                        │  │
+│   │  + has_substantive_output -> bool                             │  │
+│   │  + to_bootstrap_context -> str                                │  │
 │   └──────────────┬───────────────────────────────────┬──────────────┘  │
 │                  │                                   │                 │
 │                  ▼                                   ▼                 │
@@ -250,11 +249,11 @@ class HandoffCapsule(BaseModel):
     @classmethod
     def _five_fields_non_empty(cls, v: str) -> str:
         """五段字段任一为空（含纯空白）抛 SchemaError"""
-        if not v or not v.strip():
+        if not v or not v.strip:
             raise SchemaError(
                 "HandoffCapsule 五段字段（what/why/tradeoffs/next_step）不可为空"
             )
-        return v.strip()
+        return v.strip
 
     @model_validator(mode="after")
     def _check_open_questions_limit(self) -> "HandoffCapsule":
@@ -283,7 +282,7 @@ class HandoffCapsule(BaseModel):
         return total >= min_chars and len(self.evidence_refs) >= 1
 
     def to_bootstrap_context(self) -> str:
-        """转成接手灵智体 bootstrap 用的紧凑上下文"""
+        """转成接手Forgekin bootstrap 用的紧凑上下文"""
         lines = [
             f"## 第 {self.iteration} 轮交接胶囊 (author: {self.author_forgekin_id})",
             f"### What\n{self.what}",
@@ -352,7 +351,7 @@ class HandoffCapsuleValidator:
         # 1. 五段非空（防御性二次校验）
         for field_name in ("what", "why", "tradeoffs", "next_step"):
             v = getattr(capsule, field_name)
-            if not v or not v.strip():
+            if not v or not v.strip:
                 errors.append(f"字段 {field_name} 不可为空")
 
         # 2. iteration 单调递增
@@ -388,7 +387,7 @@ class HandoffCapsuleValidator:
                     )
 
         # 4. 开放问题数量上限
-        unresolved = capsule.unresolved_question_count()
+        unresolved = capsule.unresolved_question_count
         if unresolved > self._max_open_questions:
             errors.append(
                 f"未解决开放问题 {unresolved} 超过上限 "
@@ -510,7 +509,7 @@ class HandoffCapsuleStore(ABC):
 
     @abstractmethod
     async def read_latest(self, team_id: str) -> Optional[HandoffCapsule]:
-        """读取团队最新胶囊（接手灵智体 bootstrap 入口）"""
+        """读取团队最新胶囊（接手Forgekin bootstrap 入口）"""
 
     @abstractmethod
     async def list_chain(self, team_id: str) -> list[HandoffCapsule]:
@@ -629,7 +628,7 @@ OUTPUT: capsule_id (格式: "cap-{team_id}-{iteration}-{hash8}")
 
 STEPS:
 1. raw = f"{team_id}|{iteration}|{author_forgekin_id}|{utc_now_iso8601_ns}"
-2. hash8 = sha256(raw).hexdigest()[:8]
+2. hash8 = sha256(raw).hexdigest[:8]
 3. capsule_id = f"cap-{team_id}-{iteration}-{hash8}"
 4. RETURN capsule_id
 ```
@@ -729,8 +728,8 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
         self._db_path = str(db_path)
         self._wal_dir = str(wal_dir) if wal_dir else str(Path(db_path).parent)
         self._retention_days = retention_days
-        self._lock = asyncio.Lock()
-        self._init_db()
+        self._lock = asyncio.Lock
+        self._init_db
 
     def _init_db(self) -> None:
         """初始化数据库 + WAL 模式"""
@@ -739,7 +738,7 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.execute("PRAGMA synchronous=NORMAL;")
             conn.executescript(self.DDL)
-            conn.commit()
+            conn.commit
         logger.info(
             "SqliteHandoffCapsuleStore 初始化完成 db=%s",
             self._db_path,
@@ -750,9 +749,9 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
     ) -> str:
         raw = (
             f"{team_id}|{iteration}|{author_forgekin_id}|"
-            f"{datetime.now(timezone.utc).isoformat()}"
+            f"{datetime.now(timezone.utc).isoformat}"
         )
-        hash8 = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:8]
+        hash8 = hashlib.sha256(raw.encode("utf-8")).hexdigest[:8]
         return f"cap-{team_id}-{iteration}-{hash8}"
 
     @staticmethod
@@ -775,7 +774,7 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
         """写入胶囊（WAL 可重放）
 
         - 若 capsule.capsule_id 为空，自动生成
-        - 写入后广播事件到 EventBus（接手灵智体可感知）
+        - 写入后广播事件到 EventBus（接手Forgekin可感知）
         """
         async with self._lock:
             if not capsule.capsule_id:
@@ -783,7 +782,7 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
                     capsule.team_id, capsule.iteration, capsule.author_forgekin_id,
                 )
 
-            def _do_write() -> str:
+            def _do_write -> str:
                 with sqlite3.connect(self._db_path) as conn:
                     conn.execute(
                         """
@@ -811,10 +810,10 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
                             capsule.decay_tag.value,
                             capsule.authority_level,
                             1 if capsule.compression_immune else 0,
-                            capsule.created_at.isoformat(),
+                            capsule.created_at.isoformat,
                         ),
                     )
-                    conn.commit()
+                    conn.commit
                 return capsule.capsule_id
 
             capsule_id = await asyncio.to_thread(_do_write)
@@ -831,7 +830,7 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
 
     async def read_latest(self, team_id: str) -> Optional[HandoffCapsule]:
         async with self._lock:
-            def _do_read() -> Optional[HandoffCapsule]:
+            def _do_read -> Optional[HandoffCapsule]:
                 with sqlite3.connect(self._db_path) as conn:
                     conn.row_factory = sqlite3.Row
                     row = conn.execute(
@@ -841,14 +840,14 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
                         ORDER BY iteration DESC LIMIT 1
                         """,
                         (team_id,),
-                    ).fetchone()
+                    ).fetchone
                 return self._row_to_capsule(row) if row else None
 
             return await asyncio.to_thread(_do_read)
 
     async def list_chain(self, team_id: str) -> list[HandoffCapsule]:
         async with self._lock:
-            def _do_list() -> list[HandoffCapsule]:
+            def _do_list -> list[HandoffCapsule]:
                 with sqlite3.connect(self._db_path) as conn:
                     conn.row_factory = sqlite3.Row
                     rows = conn.execute(
@@ -858,14 +857,14 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
                         ORDER BY iteration ASC
                         """,
                         (team_id,),
-                    ).fetchall()
+                    ).fetchall
                 return [self._row_to_capsule(r) for r in rows]
 
             return await asyncio.to_thread(_do_list)
 
     async def count_open_questions(self, team_id: str) -> int:
         async with self._lock:
-            def _do_count() -> int:
+            def _do_count -> int:
                 with sqlite3.connect(self._db_path) as conn:
                     row = conn.execute(
                         """
@@ -874,7 +873,7 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
                         ORDER BY iteration DESC LIMIT 1
                         """,
                         (team_id,),
-                    ).fetchone()
+                    ).fetchone
                 if not row or not row[0]:
                     return 0
                 questions = self._deserialize_open_questions(row[0])
@@ -893,11 +892,11 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
         本方法用于强制 checkpoint 后读取所有胶囊。
         """
         async with self._lock:
-            def _do_replay() -> list[HandoffCapsule]:
+            def _do_replay -> list[HandoffCapsule]:
                 # 强制 checkpoint，将 WAL 日志合并到主数据库
                 with sqlite3.connect(self._db_path) as conn:
                     conn.execute("PRAGMA wal_checkpoint(FULL);")
-                    conn.commit()
+                    conn.commit
                 # 然后读取所有胶囊（按 team_id 排序）
                 with sqlite3.connect(self._db_path) as conn:
                     conn.row_factory = sqlite3.Row
@@ -906,7 +905,7 @@ class SqliteHandoffCapsuleStore(HandoffCapsuleStore):
                         SELECT * FROM handoff_capsules
                         ORDER BY team_id, iteration ASC
                         """
-                    ).fetchall()
+                    ).fetchall
                 return [self._row_to_capsule(r) for r in rows]
 
             return await asyncio.to_thread(_do_replay)
@@ -994,8 +993,8 @@ TeamActLoop     Author       BlindSpotHint   HandoffCapsule   SqliteHandoff
     │              │              │                │                │
     │◄─────────────┼──────────────┼────────────────┼───────────────┤
     │ capsule(最新)               │                │                │
-    │ 接手灵智体 bootstrap         │                │                │
-    │ (to_bootstrap_context())    │                │                │
+    │ 接手Forgekin bootstrap         │                │                │
+    │ (to_bootstrap_context)    │                │                │
     │              │              │                │                │
 ```
 
@@ -1028,7 +1027,7 @@ Process Restart    SqliteHandoffCapsuleStore       SQLite (WAL)
       │ list[HandoffCapsule]                           │
       │◄───────────────────┤                            │
       │                                                 │
-      │ 接手灵智体可读最新胶囊恢复心智状态              │
+      │ 接手Forgekin可读最新胶囊恢复心智状态              │
 ```
 
 ### 3.3 错误处理
@@ -1135,8 +1134,8 @@ from flowforge.core.capability.profile import CapabilityProfile
 
 class TeamActLoopExecutor:
     async def _route_step(self, state: TeamActState) -> TeamActState:
-        """TeamAct ROUTE 步：持球灵智体传球时强制写入胶囊"""
-        # 1. 持球灵智体填写五段
+        """TeamAct ROUTE 步：持球Forgekin传球时强制写入胶囊"""
+        # 1. 持球Forgekin填写五段
         capsule_draft = await self._author_forgekin.write_handoff(state)
         
         # 2. 加载 author CapabilityProfile（F001）
@@ -1162,10 +1161,10 @@ class TeamActLoopExecutor:
         return state.advance(step=TeamActStep.STATE, iteration=state.iteration + 1)
     
     async def _state_step(self, state: TeamActState) -> TeamActState:
-        """TeamAct STATE 步：接手灵智体读取最新胶囊 bootstrap"""
+        """TeamAct STATE 步：接手Forgekin读取最新胶囊 bootstrap"""
         latest = await self._store.read_latest(state.team_id)
         if latest:
-            bootstrap_ctx = latest.to_bootstrap_context()
+            bootstrap_ctx = latest.to_bootstrap_context
             await self._receiver_forgekin.bootstrap(bootstrap_ctx)
         return state
 ```
@@ -1298,8 +1297,8 @@ class SideEffectWAL:
 - [ ] **AC-11**: 开放问题状态可追溯（OPEN / RESOLVED / ESCALATED / NEW），resolved 不可回退
 - [ ] **AC-12**: `OpenQuestionStatus` 的 `resolved_by` 与 `resolved_at` 在 status=RESOLVED 时必须非空（model_validator）
 - [ ] **AC-13**: 胶囊作为 Durable Surface（`authority_level=2`, `compression_immune=True`），禁塞入对话历史
-- [ ] **AC-14**: `is_complete()` 与 `has_substantive_output()` 业务方法正确判定
-- [ ] **AC-15**: `to_bootstrap_context()` 输出包含五段 + 未解决开放问题 + 盲点提示 + next_step
+- [ ] **AC-14**: `is_complete` 与 `has_substantive_output` 业务方法正确判定
+- [ ] **AC-15**: `to_bootstrap_context` 输出包含五段 + 未解决开放问题 + 盲点提示 + next_step
 
 ### 5.2 性能验收
 
@@ -1325,7 +1324,7 @@ class SideEffectWAL:
 - [ ] **AC-29**: 盲点提示注入率 100%（author CapabilityProfile 有 blind_spots 时必须注入）
 - [ ] **AC-30**: 开放问题解决率（resolved / total）≥ 70%（TeamAct 终止前）
 - [ ] **AC-31**: 跨厂商 reviewer 读胶囊后盲点检出率 ≥ 70%（与 D001 AC-10 一致）
-- [ ] **AC-32**: E2E 测试（T1-T8 铁律）：3 个不同厂商灵智体协作完成 Feature，胶囊在三者间正确传递，开放问题状态正确流转，LLM 生成内容经 LLM 审核
+- [ ] **AC-32**: E2E 测试（T1-T8 铁律）：3 个不同厂商Forgekin协作完成 Feature，胶囊在三者间正确传递，开放问题状态正确流转，LLM 生成内容经 LLM 审核
 
 ---
 
@@ -1344,7 +1343,7 @@ class SideEffectWAL:
 - [doc:../architecture/A008-durable-state-surfaces.md]（Durable Surface 注册）
 - [doc:../architecture/A021-side-effect-wal.md]（WAL 可重放联动）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR）
-- [doc:../design/naming-contract.md#2.2]（灵智体 Forgekin 双轨命名）
+- [doc:../design/naming-contract.md#2.2]（Forgekin Forgekin 双轨命名）
 - [doc:../design/D001-capability-profile.md]（CapabilityProfile 详细设计，盲点注入数据源）
 - [doc:../design/D002-teamact-loop.md]（TeamAct 详细设计，ROUTE 步触发）
 - [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
@@ -1359,4 +1358,4 @@ class SideEffectWAL:
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F003 Feature 级 SRS + A003 架构级 SAD） | 开发者灵智体（猎犬·夏洛克） |
+| 2026-07-19 | v0.1 | 初始创建（详细设计骨架，对应 F003 Feature 级 SRS + A003 架构级 SAD） | 开发者 Forgekin（猎犬·夏洛克） |

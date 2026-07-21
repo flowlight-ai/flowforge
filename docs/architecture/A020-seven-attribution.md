@@ -2,14 +2,13 @@
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
-> **负责人**: 架构师灵智体（猫头鹰·鲁班）
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§3.5]（FR-CORE-005）
 > **对应 arch.md**: [doc:../arch.md#§3.5]
 > **对应 design.md**: [doc:../design.md#§3.5]（待创建）
 > **对应 Feature**: [doc:../features/F020-seven-attribution.md]（同号 Feature 级 SRS）
 > **对应详细设计**: [doc:../design/D020-seven-attribution.md]（待创建，同号 Feature 级 SDD）
 > **依赖 ADR**: [doc:../decisions/009-eval-self-metabolism.md]
-> **9 大点名称修订**: 已应用（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
 
 ---
 
@@ -21,7 +20,7 @@
 
 1. **真根因永远修不到**：如根因是"harness 错位"（如工具边界与任务不匹配），但被拍扁为"agent 没做好"，反复优化 prompt 无效。
 2. **修复动作无的放矢**：所有失败都触发"换模型/调 prompt"，缺少按归因类型派发的修复路由。
-3. **历史失败无分类检索**：F039 锻典无法按归因类型检索历史失败，相同根因反复出现。
+3. **历史失败无分类检索**：F039 蒸馏知识库无法按归因类型检索历史失败，相同根因反复出现。
 
 roleagent.md 第 5 章七类归因：**①愿景缺口 ②翻译偏差 ③harness 错位 ④工具缺口 ⑤执行缺口 ⑥环境漂移 ⑦品味落差**。本架构解决的核心问题：**如何在 L3 七类归因矩阵层实现归因形式化、决策树遍历、主次归因输出、修复路由派发，以及"禁止一维拍扁"的硬约束**。
 
@@ -38,7 +37,7 @@ roleagent.md 第 5 章七类归因：**①愿景缺口 ②翻译偏差 ③harnes
 - **对 F009 Evidence & Sensors**：归因引用的 evidence_refs 必须来自 F009 已采集证据。
 - **对 F019 三方信号交叉**：F019 检测到的信号冲突是归因的触发源。
 - **对 F012 Entropy Control**：`harness_misalign` 归因触发 F012 sunset review。
-- **对 F039 锻典可检索**：归因结果写入 F039 可检索知识库，按归因类型检索历史失败。
+- **对 F039 蒸馏知识库可检索**：归因结果写入 F039 可检索知识库，按归因类型检索历史失败。
 - **对 F040 控制面**：归因统计写入 F040 Eval Hub，作为"哪类根因最频繁"的依据。
 
 ---
@@ -58,9 +57,9 @@ roleagent.md 第 5 章七类归因：**①愿景缺口 ②翻译偏差 ③harnes
 │ L3: AttributionClassifier（七类归因分类器）                          │
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │ 1. 收集 failure_event + signals + evidence_refs            │  │
-│  │ 2. AttributionDecisionTree.traverse()                       │  │
+│  │ 2. AttributionDecisionTree.traverse                       │  │
 │  │ 3. 输出主归因 + 次归因                                       │  │
-│  │ 4. FixRouter.route() 派发修复动作                            │  │
+│  │ 4. FixRouter.route 派发修复动作                            │  │
 │  │ 5. 写入 F039 可检索知识库                                    │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 └───┬──────────────────┬──────────────────┬──────────────────────────┘
@@ -83,7 +82,7 @@ roleagent.md 第 5 章七类归因：**①愿景缺口 ②翻译偏差 ③harnes
 
 - **决策 1：决策树顺序固定而非可配置**。判定顺序固定为"愿景 → 翻译 → harness → 工具 → 执行 → 环境 → 品味"，禁止跳层。理由：roleagent.md 第 5 章硬要求逐层判定，跳层会导致"愿景缺口"被误判为"执行缺口"，真根因被掩盖。
 - **决策 2：主归因 + 次归因同时输出**。决策树终点为主归因，路径上其他命中为次归因。理由：单一归因会丢失次要根因，多归因让 F012 sunset review 与 F040 控制面看到完整根因图谱。
-- **决策 3：禁止"agent 没做好"一维答案**。归因必须是七类之一，"agent 没做好"等模糊答案在 `classify()` 阶段被拒绝。理由：roleagent.md 第 5 章硬要求"禁止把多层系统拍扁成一维答案"。
+- **决策 3：禁止"agent 没做好"一维答案**。归因必须是七类之一，"agent 没做好"等模糊答案在 `classify` 阶段被拒绝。理由：roleagent.md 第 5 章硬要求"禁止把多层系统拍扁成一维答案"。
 - **决策 4：归因必须引用 F009 证据**。evidence_refs 必须非空，无证据的归因被拒绝。理由：归因是无证据的猜测，无法被 F020 后续追溯与验证。
 - **决策 5：修复路由按归因类型派发**。`vision_gap → escalate_cvo`、`harness_misalign → trigger_F012_sunset_review`、`tool_gap → extend_tool_boundary` 等，每类有明确路由。理由：避免所有失败都触发"换模型/调 prompt"的无效修复。
 - **决策 6：归因结果写入 F039**。归因是 Build to Persist 资产，写入 F039 可检索知识库供未来检索"相同根因如何修复过"。理由：避免相同根因反复出现。
@@ -166,9 +165,9 @@ class AttributionClassifier(ABC):
     ) -> Attribution:
         """
         1. 校验 evidence_refs 非空
-        2. 调用 DecisionTree.traverse()
+        2. 调用 DecisionTree.traverse
         3. 输出主归因 + 次归因
-        4. FixRouter.route() 派发修复
+        4. FixRouter.route 派发修复
         5. 写入 F039
         """
 
@@ -243,7 +242,7 @@ class AttributionSearchIndex(ABC):
         └─ taste_gap          → 人工 review
         │
         ▼
-  AttributionRepository.insert()
+  AttributionRepository.insert
         │
         ▼
   F039 AttributionSearchIndex 索引（可按 type 检索）
@@ -258,7 +257,7 @@ class AttributionSearchIndex(ABC):
   返回历史归因列表（含 suggested_fix）
         │
         ▼
-  灵智体参考历史修复动作
+  Forgekin参考历史修复动作
 ```
 
 ---
@@ -274,7 +273,7 @@ class AttributionSearchIndex(ABC):
 ### 4.2 下游影响
 
 - 影响 **F012 Entropy Control**：`harness_misalign` 归因触发 F012 sunset review，是 sunset 信号的次级来源。
-- 影响 **F039 锻典可检索**：归因结果写入 F039，按归因类型检索历史失败。
+- 影响 **F039 蒸馏知识库可检索**：归因结果写入 F039，按归因类型检索历史失败。
 - 影响 **F040 控制面**：归因统计写入 F040 Eval Hub，作为"哪类根因最频繁"的依据。
 - 影响 **CVO**：`vision_gap` 归因升级到 CVO，CVO 决策保留/退役/升级愿景。
 - 影响 **CapabilityProfile（F001）**：`tool_gap` 归因触发 tool_boundary 扩展，更新能力画像。
@@ -332,4 +331,4 @@ class AttributionSearchIndex(ABC):
 
 | 日期 | 版本 | 变更 | 变更者 |
 |------|:----:|------|--------|
-| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 七类枚举 + 决策树固定顺序 + 主次归因 + 修复路由） | 架构师灵智体（猫头鹰·鲁班） |
+| 2026-07-19 | v0.1 | 初始创建（架构骨架 + 七类枚举 + 决策树固定顺序 + 主次归因 + 修复路由） | 架构师 Forgekin（猫头鹰·鲁班） |
