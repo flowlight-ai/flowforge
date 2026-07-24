@@ -413,8 +413,8 @@ FlowForge Web UI 提供 LLM 调用界面，operator 在 Web UI 中操作。
 - [doc:../decisions/006-external-agent-integration.md]（三方 Agent 集成 ADR）
 - [doc:features/F031-external-agent-adapter.md]（三方 Agent 适配层）
 - [doc:features/F026-forgemind-app-layer.md]（forgemind 应用层）
-- [doc:../../../hiclaw/rules.md#T1-T8]（测试铁律）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律]（测试铁律）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

@@ -1519,8 +1519,8 @@ class HarnessEvalControlPlane:
 - [doc:D040-harness-eval-control-plane.md]（sunset review 控制面）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
 - [doc:../decisions/009-eval-self-metabolism.md]（Eval 自代谢联动）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
-- [doc:../../../hiclaw/rules.md#T1-T8]（测试铁律）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
+- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律]（测试铁律）
 - [doc:naming-contract.md#§4]（觉醒阶 E1-E6 标注）
 
 ---

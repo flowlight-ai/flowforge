@@ -356,7 +356,7 @@ TeamAct Owner 步: Forgekin需要退出会话等待外部条件
 - [doc:../features/F005-at-mention-routing.md]（take 意图触发 lease 注册）
 - [doc:../features/F011-magic-words.md]（星星罐子强制撤销 lease）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

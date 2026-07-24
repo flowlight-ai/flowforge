@@ -441,7 +441,7 @@ class ForgePipeline:
         """从 YAML 配置文件锻造灵智体（v7.0 育灵体系核心入口）.
 
         本方法是 forgemind 应用层的核心入口——operator 通过编写 YAML
-        配置文件定义灵智体（参考 clowder-ai/cat-template.json 范式），
+        配置文件定义灵智体（参考 cat-template.json 范式），
         ForgePipeline 读取配置并按 6 阶段流水线锻造灵智体实例。
 
         所有 3 只预置灵智体（鲁班/夏洛克/梵高）通过本方法锻造，全部接入

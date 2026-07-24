@@ -1687,8 +1687,8 @@ await self._lineage_repo.append_evolution_evidence(
 - [doc:../design/D027-all-things-spirit-species.md]（SpeciesRegistry.assert_sensor_allowed）
 - [doc:../design/D014-memory-collection.md]（EchoStoreRepository.append 契约）
 - [doc:../design/naming-contract.md]（EchoStore + Forgekin Species 智能体形态学）
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#AI编程优秀实践]（六层 Guardrails）
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md]（六层 Guardrails）
 
 ---
 

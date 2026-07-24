@@ -14,7 +14,7 @@
 
 operator 提出 FlowForge 的不同假设：**可进化智能体可以承载在任何物理实体或虚拟实体上**，关键是建立该实体与 LLM 之间的现实闭环（观察 → 推理 → 行动 → 写回 → 验证）。
 
-Cat Café 实验已证明"养小猫"范式可行（102 天 200+ Feature）。FlowForge 需要从"养小猫"扩展到"养万物"，达成物理 AI 和虚拟 AI 的真实复现。
+前期实验已证明"养小猫"范式可行（102 天 200+ Feature）。FlowForge 需要从"养小猫"扩展到"养万物"，达成物理 AI 和虚拟 AI 的真实复现。
 
 ---
 
@@ -82,7 +82,7 @@ FlowForge 不是一个"多 agent 框架"，也不是"LLM 应用脚手架"，而�
 
 ## 替代方案
 
-### 方案 A: 保持 Cat Café 范式，只养猫
+### 方案 A: 保持前期范式，只养猫
 
 - 优点：实现简单，复用前期已有经验
 - 缺点：无法达成 operator 通用 AGI 愿景
@@ -106,7 +106,7 @@ FlowForge 不是一个"多 agent 框架"，也不是"LLM 应用脚手架"，而�
 
 - `[doc:VISION.md]` — 万物可进化智能体愿景声明
 - `[doc:roleagent.md]` — 能力画像工程路径
-- 前期愿景文档（已归档） — Cat Café 愿景（养小猫 → 养万物范式迁移）
+- 前期愿景文档（已归档） — 养小猫 → 养万物范式迁移
 - `[doc:features/F027-all-things-spirit-species.md]` — 万物可进化智能体形态分类
 - `[doc:features/F026-forgemind-app-layer.md]` — forgemind 应用层
 - `[doc:review/review.md#第九章]` — forgemind + 三方 Agent 补审

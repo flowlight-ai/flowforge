@@ -1228,8 +1228,8 @@ forgekin_lineage:
 - [doc:../design/naming-contract.md#2.6]（SoulImprint）
 - [doc:../design/naming-contract.md#2.10]（进化阶 Evolution Stage）
 - [doc:../design/naming-contract.md#2.11]（觉醒阶 Awakening Stage）
-- [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
-- [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（编程红线第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md]（软件工程文档分层规范）
 
 ---
 

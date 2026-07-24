@@ -2,7 +2,7 @@
 
 Implements a minimal subset of Google's Agent-to-Agent Protocol (v1.0)
 adapted for FlowForge's multi-agent communication, plus FlowForge-specific
-extensions (mentions, threads, handoffs) inspired by clowder-ai.
+extensions (mentions, threads, handoffs).
 
 Reference: https://a2a-protocol.org/latest/specification/
 
@@ -182,8 +182,8 @@ class A2AAgentCard(BaseModel):
 class A2AMention(BaseModel):
     """An @mention message routed from one agent to another.
 
-    This is a FlowForge extension to the upstream A2A spec, inspired by
-    clowder-ai's @mention routing. A mention carries a content payload
+    This is a FlowForge extension to the upstream A2A spec, implementing
+    @mention routing. A mention carries a content payload
     from a source agent to a target agent within an optional thread.
     """
 

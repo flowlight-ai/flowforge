@@ -1294,8 +1294,8 @@ class DefaultWorkflowRollbacker(WorkflowRollbacker):
 - [doc:../features/F024-weak-state-vs-strong-workflow.md]
 - [doc:../features/F040-harness-eval-control-plane.md]
 - [doc:../decisions/010-distributed-reliability.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#编程红线]
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]
 
 ---
 

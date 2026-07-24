@@ -129,6 +129,14 @@ def test_llm_client_set_event_bus():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(
+    reason=(
+        "依赖外部 openroute HTTP 服务 (127.0.0.1:13001)；"
+        "在无该服务的回归环境下会因 SSL/TCP 连接重试长时间挂起。"
+        "类似 test_quick_e2e.py/test_workflow_5step.py，"
+        "归类为外部 HTTP 依赖测试，需在 openroute 已启动的环境单独运行。"
+    ),
+)
 async def test_llm_client_execute_no_api_key():
     """When a specific provider has no API key, LLMClient falls back to openroute (no key needed)."""
     import os

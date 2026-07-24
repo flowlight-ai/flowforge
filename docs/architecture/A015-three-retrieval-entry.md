@@ -298,9 +298,9 @@ class RRFCombiner(ABC):
 - [doc:../features/F020-seven-attribution.md]
 - [doc:../features/F039-mind-codex-searchable.md]
 - [doc:../decisions/008-memory-federation.md]
-- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
-- [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
-- [doc:../../../hiclaw/rules.md#编程红线]（第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md#33-架构约束]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
+- [doc:../../CONTRIBUTING.md]（软件工程文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（第 10/11/12/13 条）
 
 ---
 

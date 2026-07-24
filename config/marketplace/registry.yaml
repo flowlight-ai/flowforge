@@ -1,5 +1,9 @@
 # FlowForge Marketplace Registry
 # Each plugin entry provides a complete manifest for discovery, install, and verification.
+#
+# 说明：FlowForge 核心市场仅收录核心通用插件。*Forge 业务项目（ContentForge / DevForge /
+# NovelForge / MallForge 等）的专用插件由各自项目维护，通过 Plugin V3 协议在运行时
+# 注册到 PluginRegistry，不在此处登记。
 
 plugins:
   # === Tool Plugins ===
@@ -17,23 +21,6 @@ plugins:
     dependencies: []
     permissions: [network_access]
     entry_point: "flowforge.tools.web_search:WebSearchTool"
-    checksum: null
-
-  # === Agent Plugins ===
-  - name: flowforge-content-writer
-    display_name: "Content Writer Agent"
-    description: "AI-powered content writing agent with style adaptation, SEO optimization, and multi-format output. Supports long-form articles, social media posts, and technical documentation. Configured via contentforge/config/agents/writer_agent.yaml (DeclarativeAgent)."
-    version: "2.0.1"
-    author: "FlowForge Team"
-    category: agent
-    tags: [writing, content, seo, agent]
-    homepage: "https://github.com/flowforge/plugins/tree/main/content-writer"
-    repository: "https://github.com/flowforge/plugins.git"
-    license: MIT
-    min_flowforge_version: "0.5.0"
-    dependencies: [flowforge-web-search]
-    permissions: [llm_access, network_access]
-    entry_point: "contentforge.workers.writer_agent:WriterAgent"
     checksum: null
 
   # === Integration Plugins ===

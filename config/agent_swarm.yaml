@@ -1,0 +1,114 @@
+# F049 Agent Swarm 配置 — 5 灵智体协同调度
+# 详见 [doc:features/F049-agent-swarm.md]
+# 铁律 5：所有路径/能力画像/超时阈值通过本文件外置，禁止硬编码（红线 11）
+# 红线 12：本文件由 SwarmCoordinator 通过 DI 注入读取，不绕过 DI 直接实例化
+
+agent_swarm:
+  # ── 全局开关 ────────────────────────────────────────────────
+  enabled: true
+
+  # ── I4 心跳超时回收 ─────────────────────────────────────────
+  # ASSIGNED/RUNNING 任务 30s 无心跳自动 reassign
+  # reassign 超过 max_retries 次后标记为 FAILED
+  heartbeat_timeout_seconds: 30  # I4 心跳超时阈值
+  max_retries: 3                 # I4 最大重试次数
+
+  # ── 调度循环 ────────────────────────────────────────────────
+  # run_continuously 每 5s 触发一次 dispatch + check_timeouts
+  dispatch_interval_seconds: 5
+
+  # ── I2 trace 归档 ───────────────────────────────────────────
+  # 相对路径（红线 11），运行时由 default.yaml 的 runtime.data_dir 拼接为绝对路径
+  trace_archive:
+    enabled: true
+    path: "data/forgemind/swarm_trace.jsonl"  # append-only JSONL
+
+  # ── 5 灵智体能力画像（capability_profile）──────────────────
+  # 参考 FlowForge 5 agent sweet spot 模式
+  # 文档员·文心 / 开发者·夏洛克 / 架构师·鲁班 / 审查员·梵高 / 测试员·达芬奇
+  # 详见 [doc:design/naming-contract.md#2.2] + [doc:features/F046-selfdev-triple-loop.md#9.2]
+  agents:
+    # ── 1. 文心（丹顶鹤）— 文档员 ────────────────────────────
+    # 觉醒阶 E3，doc 闭环，负责扫描/生成/审核文档
+    wenxin:
+      vendor: "trae"  # Trae CN 桥接（F045）
+      capabilities:
+        - "doc_generation"        # 文档生成（spec/design/ADR 草稿）
+        - "doc_review"            # 文档审核（格式/链接/命名规范）
+        - "format_check"          # front-matter 格式检查
+        - "frontmatter_check"     # 文档 frontmatter 校验
+      # blind_spots: code_generation / architecture_design（交给 sherlock/luban）
+      awakening_stage: "E3"
+
+    # ── 2. 夏洛克（猎犬）— 开发者 ────────────────────────────
+    # 觉醒阶 E4，code 闭环，负责实现/修复/重构代码
+    sherlock:
+      vendor: "trae"
+      capabilities:
+        - "code_generation"       # 代码生成（Python/YAML）
+        - "bug_fixing"            # Bug 修复
+        - "refactoring"           # 代码重构
+        - "test_writing"          # 测试用例编写
+      # blind_spots: doc_generation / code_review（交给 wenxin/vangogh）
+      awakening_stage: "E4"
+
+    # ── 3. 鲁班（猫头鹰）— 架构师 ────────────────────────────
+    # 觉醒阶 E5，framework 闭环，负责调整架构/ADR/依赖图
+    luban:
+      vendor: "trae"
+      capabilities:
+        - "architecture_design"   # 架构设计
+        - "adr_drafting"          # ADR 草稿撰写
+        - "config_adjustment"     # 框架配置调整（需 I8 approval）
+        - "dependency_analysis"   # 依赖图分析
+      # blind_spots: code_generation / test_writing（交给 sherlock/davinci）
+      awakening_stage: "E5"
+
+    # ── 4. 梵高（孔雀）— 审查员 ──────────────────────────────
+    # 觉醒阶 E3，review 闭环，跨厂商独立审查（I5/I6 no-self-review 铁律）
+    # ⚠️ 唯一使用 claude 厂商的灵智体 — review 任务天然落到梵高
+    vangogh:
+      vendor: "claude"  # 跨厂商（I5/I6 no-self-review 铁律）
+      capabilities:
+        - "code_review"           # 代码审查（P0/P1/P2/P3 问题分级）
+        - "doc_review"            # 文档审查
+        - "quality_gate"          # 质量门禁
+        - "push_back"             # 审查 push back（author 可申诉）
+      # blind_spots: code_generation（禁止写代码，铁律明确）
+      # restrictions: 禁止编写或修改任何 .py/.ts/.js 代码文件
+      awakening_stage: "E3"
+      cross_vendor_required: true  # 标记：本 agent 的 review 任务必须跨厂商
+
+    # ── 5. 达芬奇（蜜獾）— 测试员 ────────────────────────────
+    # 觉醒阶 E3，test 闭环，负责自动化测试生成/执行/验证
+    davinci:
+      vendor: "trae"
+      capabilities:
+        - "test_generation"       # 测试用例生成
+        - "test_execution"        # 测试执行（pytest）
+        - "coverage_analysis"     # 覆盖率分析
+        - "regression_test"       # 回归测试
+      # blind_spots: architecture_design / doc_generation（交给 luban/wenxin）
+      awakening_stage: "E3"
+
+  # ── I5 跨厂商能力清单 ───────────────────────────────────────
+  # 这些能力必须由与 author 不同厂商的 agent 执行
+  # 当前仅 vangogh 是 claude 厂商，其他 4 个是 trae 厂商
+  # 所以 code_review / doc_review 任务天然落到 vangogh
+  cross_vendor_required:
+    - "code_review"   # 代码审查必须跨厂商（no-self-review 铁律）
+    - "doc_review"    # 文档审查必须跨厂商
+
+  # ── Phase 2 预留：Swarm Dashboard 配置 ─────────────────────
+  # Phase 2 实现 Web UI 时启用
+  dashboard:
+    enabled: false  # Phase 2 启用
+    websocket_url: "ws://localhost:8000/ws/swarm"
+    refresh_interval_seconds: 2
+
+  # ── Phase 3 预留：MindCodex 归档集成 ───────────────────────
+  # Phase 3 实现 MindCodex 检索时启用
+  mind_codex:
+    enabled: false  # Phase 3 启用
+    knowledge_object_type: "SwarmEpisodeCard"
+    sync_interval_seconds: 60

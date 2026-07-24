@@ -51,12 +51,12 @@
 | [roleagent.md](roleagent.md) | 七大工程路径 |
 | [review/review.md](review/review.md) v1.4 | 16 份审核归并 + 41 条 CL 同步矩阵 |
 | [design/naming-contract.md](design/naming-contract.md) v1.1 | 12 核心概念命名契约 |
-| [hiclaw/rules.md](../../hiclaw/rules.md) v3.2 | 开发规范 + 编程红线 15 条 |
-| [hiclaw/prompts.md](../../hiclaw/prompts.md) P53 | SDD 详细设计说明书模板 |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | 开发规范 + 编程红线 15 条 |
+| [SOP.md](SOP.md) P53 | SDD 详细设计说明书模板 |
 
 ### §1.5 文档组织
 
-按 [hiclaw/rules.md](../../hiclaw/rules.md) 第十一部分文档分层规范，本文档章节与 [spec.md](spec.md) §3 + [arch.md](arch.md) §3 同号对应：
+按 [CONTRIBUTING.md](../CONTRIBUTING.md) 第十一部分文档分层规范，本文档章节与 [spec.md](spec.md) §3 + [arch.md](arch.md) §3 同号对应：
 
 ```
 flowforge/docs/
@@ -203,7 +203,7 @@ Layer 3: *Forge ──Plugin V3──→ forgemind ──装饰器──→ Flow
 
 #### §2.5.1 编程红线 15 条（违反则代码审查不通过）
 
-> **来源**：[hiclaw/rules.md](../../hiclaw/rules.md) + [project_rules.md](../../.trae/rules/project_rules.md)
+> **来源**：[CONTRIBUTING.md](../CONTRIBUTING.md) + [project_rules.md](../../.trae/rules/project_rules.md)
 
 1. 禁止添加 CoT 检测 / 中文比例检测
 2. 质量分阈值默认 0.85（v4.0 调整，可在 Loop 配置中覆盖）
@@ -223,7 +223,7 @@ Layer 3: *Forge ──Plugin V3──→ forgemind ──装饰器──→ Flow
 
 #### §2.5.2 测试铁律 T1-T8
 
-> **来源**：[hiclaw/rules.md](../../hiclaw/rules.md) §5.5
+> **来源**：[CONTRIBUTING.md](../CONTRIBUTING.md) §5.5
 
 | # | 铁律 | 说明 |
 |---|------|------|
@@ -822,9 +822,9 @@ volumes:
 
 #### §6.3.1 日志设计
 
-- 日志自动注入 `trace_id`（详见 [hiclaw/rules.md §2.6 原则 8](../../hiclaw/rules.md)）
+- 日志自动注入 `trace_id`（详见 [CONTRIBUTING.md §2.6 原则 8](../../CONTRIBUTING.md)）
 - 所有 I/O 使用 async/await
-- LLM 调用日志：input + output + execution time（详见 [hiclaw/rules.md §9.3.1](../../hiclaw/rules.md)）
+- LLM 调用日志：input + output + execution time（详见 [CONTRIBUTING.md §9.3.1](../../CONTRIBUTING.md)）
 - 日志级别：DEBUG / INFO / WARNING / ERROR / CRITICAL
 
 ```python
@@ -873,6 +873,6 @@ async def create_forgekin(spec: ForgekinSpec):
 
 > **本文档版本**：v7.1（2026-07-19，索引版）
 > **文档性质**：SDD 顶层索引文件（< 50KB），核心组件详细设计完整内容在 [design/D0XX-xxx.md](design/) 子目录（44 份，与 F0XX/A0XX 同号一一对应）
-> **下一阶段**：基于本文档 + [spec.md](spec.md) + [arch.md](arch.md) + [features/](features/) + [architecture/](architecture/) + [design/](design/) 开发各 D0XX 详细内容，按 [hiclaw/rules.md §11.3](../../hiclaw/rules.md) 三阶段开发流程执行。
+> **下一阶段**：基于本文档 + [spec.md](spec.md) + [arch.md](arch.md) + [features/](features/) + [architecture/](architecture/) + [design/](design/) 开发各 D0XX 详细内容，按 [CONTRIBUTING.md §11.3](../../CONTRIBUTING.md) 三阶段开发流程执行。
 > **配套文档**：[spec.md](spec.md) + [arch.md](arch.md) + [features/](features/) + [architecture/](architecture/) + [design/](design/) + [decisions/](decisions/) + [review/](review/)
 > **历史归档**：[_archive/design_v7_historical_background.md](_archive/design_v7_historical_background.md)（§7 历史背景资料） + [_archive/design_v71_full_backup_20260719.md](_archive/design_v71_full_backup_20260719.md)（v7.0 完整备份）

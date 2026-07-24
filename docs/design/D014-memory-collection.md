@@ -1050,8 +1050,8 @@ class MindCodexInitializer:
 - [doc:../decisions/008-memory-federation.md]
 - [doc:../design/naming-contract.md#2.5]（EchoStore）
 - [doc:../design/naming-contract.md#2.8]（MindCodex 蒸馏知识库）
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#编程红线]
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]
 
 ---
 

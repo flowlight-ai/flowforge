@@ -633,7 +633,7 @@ async def test_retrospective_template_validation():
 - [doc:../architecture/A044-delivery-manager.md]（同号 Feature 级 SAD）
 - [doc:../decisions/002-collaboration-protocol.md]（协作协议 ADR）
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]（万物有灵愿景 ADR）
-- [doc:../../../hiclaw/rules.md#编程红线]（第 9 / 11 / 12 条）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（第 9 / 11 / 12 条）
 
 ---
 

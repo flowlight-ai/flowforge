@@ -3,7 +3,7 @@
 > **文档编号**: TEMPLATE.md（v1.0）
 > **更新日期**: 2026-07-19
 > **用途**: 所有 Design Feature 规格文件的模板（Feature 级 SDD），与 [features/F0XX-xxx.md](../features/) + [architecture/A0XX-xxx.md](../architecture/) 同号一一对应
-> **依赖**: `[doc:../spec.md]` + `[doc:../arch.md]` + `[doc:../design.md]` + `[doc:../features/F0XX-xxx.md]` + `[doc:../architecture/A0XX-xxx.md]` + `[doc:../../../hiclaw/rules.md#第十一部分]`
+> **依赖**: `[doc:../spec.md]` + `[doc:../arch.md]` + `[doc:../design.md]` + `[doc:../features/F0XX-xxx.md]` + `[doc:../architecture/A0XX-xxx.md]` + `[doc:../../CONTRIBUTING.md]`
 
 ---
 
@@ -195,8 +195,8 @@ Caller ──→ D0XXComponent ──→ Dependency A
 - [doc:../features/F0XX-xxx.md]
 - [doc:../architecture/A0XX-xxx.md]
 - [doc:../decisions/0XX-xxx.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/prompts.md#P53]
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../../CONTRIBUTING.md#P53]
 
 ---
 

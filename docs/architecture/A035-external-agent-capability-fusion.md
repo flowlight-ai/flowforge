@@ -465,7 +465,7 @@ class CapabilityFusionApplier(ABC):
 - [doc:../features/F039-mind-codex-searchable.md]
 - [doc:../decisions/006-external-agent-integration.md]
 - [doc:../design/naming-contract.md]（SpiritForge + MindCodex 蒸馏知识库 + Capability Profile 能力画像）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

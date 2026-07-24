@@ -957,8 +957,8 @@ error_messages:
 - [doc:../features/F040-harness-eval-control-plane.md]
 - [doc:../architecture/A017-consumption-weighted-ranking.md]
 - [doc:../decisions/008-memory-federation.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#编程红线]
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]
 
 ---
 

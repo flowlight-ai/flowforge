@@ -392,8 +392,8 @@ class ForgeRelationshipRepository(ABC):
 - [doc:../features/F039-mind-codex-searchable.md]（MindCodex 可检索知识库）
 - [doc:../decisions/005-forgemind-application-layer.md]（forgemind 应用层 ADR）
 - [doc:../decisions/003-plugin-v3-protocol.md]（Plugin V3 协议 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
-- [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md]（软件工程文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（编程红线第 10/11/12/13 条）
 
 ---
 

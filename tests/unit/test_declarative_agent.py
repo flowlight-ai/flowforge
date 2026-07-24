@@ -194,11 +194,12 @@ class TestToolsResolution:
             "properties": {"query": {"type": "string"}},
         }
 
-        with patch("flowforge.tools.registry.ToolRegistry") as MockRegistry:
-            mock_instance = MagicMock()
-            mock_instance.get_tool.return_value = mock_tool
-            MockRegistry.return_value = mock_instance
-
+        mock_registry = MagicMock()
+        mock_registry.get_tool.return_value = mock_tool
+        with patch(
+            "flowforge.core.tool_decorator.get_tool_registry",
+            return_value=mock_registry,
+        ):
             schemas = da._resolve_tools_schema()
             assert len(schemas) == 2
             assert schemas[0]["function"]["name"] == "web_search"
@@ -211,11 +212,12 @@ class TestToolsResolution:
         )
         da = DeclarativeAgent(config=config)
 
-        with patch("flowforge.tools.registry.ToolRegistry") as MockRegistry:
-            mock_instance = MagicMock()
-            mock_instance.get_tool.side_effect = Exception("Not found")
-            MockRegistry.return_value = mock_instance
-
+        mock_registry = MagicMock()
+        mock_registry.get_tool.side_effect = Exception("Not found")
+        with patch(
+            "flowforge.core.tool_decorator.get_tool_registry",
+            return_value=mock_registry,
+        ):
             schemas = da._resolve_tools_schema()
             assert len(schemas) == 0
 
@@ -232,8 +234,10 @@ class TestToolsResolution:
         )
         da = DeclarativeAgent(config=config)
 
-        with patch("flowforge.tools.registry.ToolRegistry") as MockRegistry:
-            MockRegistry.side_effect = Exception("Registry unavailable")
+        with patch(
+            "flowforge.core.tool_decorator.get_tool_registry",
+            return_value=None,
+        ):
             schemas = da._resolve_tools_schema()
             assert schemas == []
 

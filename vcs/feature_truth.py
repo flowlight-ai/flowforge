@@ -1,6 +1,6 @@
 """Feature doc truth 核对.
 
-移植 clowder-ai merge-gate SKILL Step 7.5 的 Feature Doc Truth 核对方法论：
+FlowForge merge-gate SKILL Step 7.5 的 Feature Doc Truth 核对方法论：
 - Pre-merge: 核对 doc 没撒谎（声称完成的有代码支撑，严防"糖衣包装未做"）
 - Post-merge: 记录已合入状态（Phase ✅ + AC 打勾 + Timeline）
 
@@ -67,7 +67,7 @@ class TruthResult(BaseModel):
 class FeatureTruthChecker:
     """Feature doc truth 核对.
 
-    移植 clowder-ai merge-gate SKILL Step 7.5：
+    FlowForge Feature Doc Truth 核对方法论：
     - Pre-merge: 核对 doc 没撒谎（声称完成的有代码支撑）
     - Post-merge: 记录已合入状态（Phase ✅ + AC 打勾 + Timeline）
 

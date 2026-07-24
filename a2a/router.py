@@ -1,6 +1,6 @@
 """A2A Mention Router & Thread Manager.
 
-Ported from clowder-ai's @mention routing methodology, this module
+Implements FlowForge @mention routing methodology. This module
 provides:
 
 - ``MentionRouter``: parses ``@agent_name`` syntax from text and routes

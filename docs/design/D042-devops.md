@@ -599,7 +599,7 @@ async def test_auto_heal_writes_wal_and_rolls_back_on_failure(real_wal):
 - [doc:../features/F042-devops.md]（同号 Feature 级 SRS）
 - [doc:../architecture/A042-devops.md]（同号 Feature 级 SAD）
 - [doc:../decisions/010-distributed-reliability.md]（分布式可靠性 ADR）
-- [doc:../../../hiclaw/rules.md#编程红线]（第 11 / 12 / 13 条）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（第 11 / 12 / 13 条）
 
 ---
 

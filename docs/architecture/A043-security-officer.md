@@ -261,7 +261,7 @@ class SecurityOfficerForgekin(ForgekinBase):
 - [doc:../design.md#§2.7.3]（安全官Forgekin详细设计）
 - [doc:../features/F043-security-officer.md]（同号 Feature 级 SRS）
 - [doc:../decisions/010-distributed-reliability.md]（分布式可靠性 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

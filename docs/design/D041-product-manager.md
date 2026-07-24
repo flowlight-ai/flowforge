@@ -635,7 +635,7 @@ async def test_rice_prioritization():
 - [doc:../features/F041-product-manager.md]（同号 Feature 级 SRS）
 - [doc:../architecture/A041-product-manager.md]（同号 Feature 级 SAD）
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]（万物ForgeMind心智愿景 ADR）
-- [doc:../../../hiclaw/rules.md#编程红线]（第 9 / 11 / 12 条）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（第 9 / 11 / 12 条）
 
 ---
 

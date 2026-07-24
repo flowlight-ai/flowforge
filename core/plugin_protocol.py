@@ -664,6 +664,67 @@ class FlowForgePlugin(ABC):
         """Called on application shutdown."""
         pass
 
+    # ── P2-019 Plugin 启停 transactional 钩子（CL-024） ────────────
+    #
+    # 启停事务性钩子：保证 plugin 启用/禁用操作的原子性。
+    # on_activate 在 plugin 从 PAUSED/STOPPED 切换到 READY 前调用，
+    # 若抛出异常则状态不切换；on_disable 在 READY 切换到 PAUSED 前调用，
+    # 若抛出异常则状态不切换。
+    # 详见 [doc:review/review.md#CL-024] Plugin 启停 transactional
+
+    def on_activate(self, context: dict) -> None:
+        """Called before plugin transitions to READY (activate).
+
+        P2-019 / CL-024: 启用事务性钩子。
+
+        抛出异常将阻止状态切换，调用方必须回滚已完成的副作用。
+        默认实现为 no-op，子类按需覆盖。
+
+        典型用途：
+        - 建立数据库连接 / 加载热配置
+        - 启动后台任务 / 调度器
+        - 订阅事件总线
+        - 注册健康检查
+
+        Args:
+            context: 含 'plugin_config' / 'services' / 'prev_state' 等键
+        """
+        pass
+
+    def on_disable(self, context: dict) -> None:
+        """Called before plugin transitions to PAUSED/STOPPED (disable).
+
+        P2-019 / CL-024: 禁用事务性钩子。
+
+        抛出异常将阻止状态切换。默认实现为 no-op，子类按需覆盖。
+
+        典型用途：
+        - 取消事件订阅
+        - 停止后台任务 / 调度器
+        - 刷新缓冲区 / 释放连接
+        - 持久化内部状态
+
+        Args:
+            context: 含 'reason' / 'target_state' / 'services' 等键
+        """
+        pass
+
+    def rollback_activate(self, context: dict) -> None:
+        """回滚 on_activate 已完成的副作用（CL-024 事务性）.
+
+        在 on_activate 抛出异常后由调用方调用，确保 plugin 状态一致。
+        默认实现为 no-op，子类按需覆盖。
+        """
+        pass
+
+    def rollback_disable(self, context: dict) -> None:
+        """回滚 on_disable 已完成的副作用（CL-024 事务性）.
+
+        在 on_disable 抛出异常后由调用方调用，确保 plugin 状态一致。
+        默认实现为 no-op，子类按需覆盖。
+        """
+        pass
+
     def on_error(self, context: dict, error: Exception) -> None:
         """Called when an error occurs during plugin execution.
 

@@ -1772,8 +1772,8 @@ async def index_canon_to_codex(world_id: str):
 - [doc:../design/D027-all-things-spirit-species.md]（SpeciesRegistry.assert_world_setting_allowed）
 - [doc:../design/D014-memory-collection.md]（EchoStoreRepository.append 契约）
 - [doc:../design/naming-contract.md]（SoulImprint + EchoStore）
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#AI编程优秀实践]（六层 Guardrails + Loop 工程模式）
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md]（六层 Guardrails + Loop 工程模式）
 
 ---
 

@@ -1,6 +1,6 @@
 """FlowForge F100 Self-Evolution — 自我进化机制（v7.0 ForgeMindEngine）。
 
-移植自 clowder-ai 的三模式自我进化机制：
+FlowForge 三模式自我进化机制：
 - Mode A (Scope Guard): 防御 — 当讨论偏离当前 feat 愿景时温柔提醒
 - Mode B (Process Evolution): 防御→改进 — 同类错误反复出现时提出流程改进
 - Mode C (Knowledge Evolution): 进攻→成长 — 有价值的知识/方法论沉淀为可复用资产
@@ -41,7 +41,11 @@ from flowforge.evolution.self_dev_base import (
     SelfDevLoopBase,
     VerifyResult,
 )
+from flowforge.evolution.self_dev_code import SelfDevCodeLoop
 from flowforge.evolution.self_dev_doc import SelfDevDocLoop
+from flowforge.evolution.self_dev_framework import SelfDevFrameworkLoop
+from flowforge.evolution.self_dev_review import SelfDevReviewLoop
+from flowforge.evolution.self_dev_test import SelfDevTestLoop
 
 __all__ = [
     # Engine
@@ -63,9 +67,13 @@ __all__ = [
     "KnowledgeMaturityLevel",
     "KnowledgeObject",
     "MetacognitionRouter",
-    # F046 SelfDev 三闭环执行层
+    # F046 SelfDev 五闭环执行层（v1.1 扩展：doc/code/framework/review/test）
     "SelfDevLoopBase",
     "SelfDevDocLoop",
+    "SelfDevCodeLoop",
+    "SelfDevFrameworkLoop",
+    "SelfDevReviewLoop",
+    "SelfDevTestLoop",
     "DevTask",
     "DevPlan",
     "DevResult",

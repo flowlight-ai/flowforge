@@ -413,10 +413,10 @@ class TestSelfDevLoopBaseInit:
 
     def test_init_default_protected_paths(self, fake_trae_client, fake_engine, forgekin_config) -> None:
         loop = _CountingSelfDevLoop(fake_trae_client, forgekin_config, fake_engine)
-        # 默认包含 VISION.md / hiclaw/rules.md / hiclaw/prompts.md / decisions/
+        # 默认包含 VISION.md / CONTRIBUTING.md / SOP.md / decisions/
         assert "VISION.md" in loop.protected_paths
-        assert "hiclaw/rules.md" in loop.protected_paths
-        assert "hiclaw/prompts.md" in loop.protected_paths
+        assert "CONTRIBUTING.md" in loop.protected_paths
+        assert "SOP.md" in loop.protected_paths
         assert "decisions/" in loop.protected_paths
 
     def test_init_custom_protected_paths_from_config(self, fake_trae_client, fake_engine) -> None:
@@ -503,17 +503,47 @@ class TestScopeGuardCheck:
             loop.pre_act_scope_guard_check(sample_dev_task, plan)
         assert exc.value.target_path == "VISION.md"
 
-    def test_hiclaw_rules_blocked(self, fake_trae_client, fake_engine, forgekin_config, sample_dev_task) -> None:
+    def test_contributing_rules_blocked(self, fake_trae_client, fake_engine, forgekin_config, sample_dev_task) -> None:
         loop = _CountingSelfDevLoop(fake_trae_client, forgekin_config, fake_engine)
-        sample_dev_task.target_path = "hiclaw/rules.md"
+        sample_dev_task.target_path = "CONTRIBUTING.md"
         plan = DevPlan(task_id=sample_dev_task.task_id, steps=[], expected_effect="", risk_assessment="")
         with pytest.raises(ScopeGuardBlockedError):
             loop.pre_act_scope_guard_check(sample_dev_task, plan)
 
-    def test_decisions_dir_blocked(self, fake_trae_client, fake_engine, forgekin_config, sample_dev_task) -> None:
+    def test_decisions_dir_update_blocked(self, fake_trae_client, fake_engine, forgekin_config, sample_dev_task) -> None:
+        """decisions/ 路径的 update 操作必须被阻止（修改已有 ADR 禁止）."""
         loop = _CountingSelfDevLoop(fake_trae_client, forgekin_config, fake_engine)
         sample_dev_task.target_path = "decisions/014-trae.md"
+        # sample_dev_task.modification_type 默认为 "update"
         plan = DevPlan(task_id=sample_dev_task.task_id, steps=[], expected_effect="", risk_assessment="")
+        with pytest.raises(ScopeGuardBlockedError):
+            loop.pre_act_scope_guard_check(sample_dev_task, plan)
+
+    def test_decisions_dir_create_allowed(self, fake_trae_client, fake_engine, forgekin_config, sample_dev_task) -> None:
+        """decisions/ 路径的 create 操作必须被允许（新增 ADR — 注释"新增 ADR 不在此限"）."""
+        loop = _CountingSelfDevLoop(fake_trae_client, forgekin_config, fake_engine)
+        sample_dev_task.target_path = "decisions/014-trae.md"
+        sample_dev_task.modification_type = "create"
+        plan = DevPlan(
+            task_id=sample_dev_task.task_id,
+            steps=[{"action": "create_adr", "path": "decisions/014-trae.md"}],
+            expected_effect="",
+            risk_assessment="",
+        )
+        # 不抛异常
+        loop.pre_act_scope_guard_check(sample_dev_task, plan)
+
+    def test_decisions_dir_update_step_blocked(self, fake_trae_client, fake_engine, forgekin_config, sample_dev_task) -> None:
+        """decisions/ 路径的 step action 非 create_adr 必须被阻止（修改已有 ADR）."""
+        loop = _CountingSelfDevLoop(fake_trae_client, forgekin_config, fake_engine)
+        sample_dev_task.target_path = "docs/normal.md"
+        sample_dev_task.modification_type = "create"  # task 是 create，但 step 是 update
+        plan = DevPlan(
+            task_id=sample_dev_task.task_id,
+            steps=[{"action": "update_yaml", "path": "decisions/014-trae.md"}],
+            expected_effect="",
+            risk_assessment="",
+        )
         with pytest.raises(ScopeGuardBlockedError):
             loop.pre_act_scope_guard_check(sample_dev_task, plan)
 
@@ -528,13 +558,13 @@ class TestScopeGuardCheck:
         sample_dev_task.target_path = "docs/normal.md"
         plan = DevPlan(
             task_id=sample_dev_task.task_id,
-            steps=[{"action": "update", "path": "hiclaw/prompts.md"}],
+            steps=[{"action": "update", "path": "SOP.md"}],
             expected_effect="",
             risk_assessment="",
         )
         with pytest.raises(ScopeGuardBlockedError) as exc:
             loop.pre_act_scope_guard_check(sample_dev_task, plan)
-        assert "hiclaw/prompts.md" in exc.value.target_path
+        assert "SOP.md" in exc.value.target_path
 
 
 # ══════════════════════════════════════════════════════════════════

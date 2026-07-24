@@ -228,8 +228,8 @@ spec.md §3.X  ←─同号─→  arch.md §3.X  ←─同号─→  design.md 
 - [doc:../features/F0XX-xxx.md] — Feature 级 SRS
 - [doc:../architecture/A0XX-xxx.md] — Feature 级 SAD
 - [doc:../design/D0XX-xxx.md] — Feature 级 SDD
-- [doc:../../../hiclaw/rules.md#第十一部分] — 文档分层规范
-- [doc:../../../hiclaw/prompts.md#P7] — 测试铁律自检（T1-T8）
+- [doc:../../CONTRIBUTING.md] — 文档分层规范
+- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律] — 测试铁律自检（T1-T8）
 
 ---
 

@@ -1,7 +1,7 @@
 # FlowForge 命名契约（Naming Contract）
 
 > **文档编号**: design/naming-contract.md（v2.0）
-> **依据**: `[doc:decisions/012-naming-fusion.md]` 命名融合 ADR + `[doc:VISION.md#7]` operator 愿景锚点 + `[hiclaw/rules.md#12.2]` 术语规范方法论
+> **依据**: `[doc:decisions/012-naming-fusion.md]` 命名融合 ADR + `[doc:VISION.md#7]` operator 愿景锚点 + `[CONTRIBUTING.md#12.2]` 术语规范方法论
 > **维护规则**: 命名变更必须通过新增 ADR，不可直接修改本文件中的旧命名（真相源唯一）
 > **目的**: 让 FlowForge 生态的所有概念可被智能体自身和人类开发者共同理解、记忆、引用
 
@@ -367,6 +367,36 @@ FlowForge 生态的所有概念采用**三层命名体系**，按以下优先级
 （EchoStore / Episodic Memory）蒸馏成灵典（MindCodex / Procedural Memory）。
 ```
 
+### 7.3 内外品牌边界（CL-041）
+
+FlowForge 生态存在双品牌体系，需严格区分使用场景：
+
+| 品牌 | 性质 | 使用场景 | 使用限制 |
+|------|------|---------|---------|
+| **FlowForge** | P1 项目英文名（外品牌） | 正式文档 / 代码 / GitHub 公开仓库 / 对外宣传 | 无限制，首选对外品牌 |
+| **Forgekin / ForgeMind / SpiritForge 等** | P1 项目英文名（技术品牌） | 正式文档 / 代码 / API | 无限制，作为技术标识符 |
+| **cat-cafe** | 内部代号（仅社区社交） | 仅社区博客 / 团队内部讨论 | ❌ 严禁出现在代码 / 正式文档 / GitHub 仓库 |
+| **Clowder AI** | 外部参考代号（仅历史引用） | 仅历史背景说明 / ADR 决策追溯 | ❌ 严禁作为 FlowForge 项目的对外品牌 |
+
+**铁律**：
+1. GitHub 公开仓库中**绝对禁止**出现 "cat-cafe" 或 "Clowder AI" 字样
+2. 正式文档（spec/arch/design/feature）中**绝对禁止**使用 "cat-cafe" 作为 FlowForge 别名
+3. 社区社交中使用 "cat-cafe" 必须首次双标注："cat-cafe（即 FlowForge 生态，社区社交称'猫咖'）"
+4. 代码中**绝对禁止**使用 "clowder" / "catcafe" / "cat_cafe" 等作为模块名 / 类名 / 变量名
+5. `naming-contract.md` 是 cat-cafe 字样**唯一允许**出现的正式文档位置（作为"内部代号"声明）
+
+**品牌迁移历史**：
+- v1.0-v6.0：cat-cafe 作为内部代号使用
+- v7.0：迁移到 FlowForge 作为对外品牌，cat-cafe 降级为"仅社区社交"
+- v7.1：CL-041 正式确立内外品牌边界，cat-cafe 仅在社区社交 + naming-contract.md 中保留
+
+**审查清单**（GitHub 开源前必须通过）：
+- [ ] 全仓库 grep "cat-cafe" / "cat_cafe" / "catcafe" / "Clowder" 无结果（除 naming-contract.md）
+- [ ] 正式文档（spec/arch/design/feature）无 cat-cafe 字样
+- [ ] 代码模块名 / 类名 / 变量名无 clowder / catcafe 前缀
+- [ ] README.md / VISION.md / ROADMAP.md 无 cat-cafe 字样
+- [ ] ADR 中仅历史引用（如"参考 clowder-ai 经验"），无 cat-cafe 作为品牌使用
+
 ---
 
 ## 8. 命名使用规范
@@ -430,7 +460,7 @@ agent_type: forgekin              # 可进化智能体（forgekin）或静态智
 | 前期术语 | FlowForge 术语（P0 官方名称） | 项目英文名（P1） | 映射关系 |
 |----------------|----------------------------|----------------|---------|
 | Cat（猫） | Evolvable Agent | Forgekin | 范式扩展：猫 → 多形态实体 |
-| Cat Café | Agent Onboarding Platform | forgemind | 应用层映射 |
+| Cat Café（前期代号） | Agent Onboarding Platform | forgemind | 应用层映射 |
 | Breed（品种） | Agent Morphology | ForgekinSpecies | 形态分类映射 |
 | Cat Profile | Capability Profile | CapabilityProfile | 直接映射 |
 | Cat Memory | Episodic Memory Store | EchoStore | 经验记忆映射 |
@@ -445,7 +475,7 @@ agent_type: forgekin              # 可进化智能体（forgekin）或静态智
 - `[doc:VISION.md]` — 可进化智能体愿景声明
 - `[doc:roleagent.md#第0章]` — 能力画像工程路径
 - `[doc:roleagent.md#第7章]` — 伙伴系统数学
-- `[hiclaw/rules.md#12.2]` — 术语规范方法论（官方名称优先原则）
+- `[CONTRIBUTING.md#12.2]` — 术语规范方法论（官方名称优先原则）
 - `[doc:project_rules.md#红线11]` — 禁止硬编码
 
 ---

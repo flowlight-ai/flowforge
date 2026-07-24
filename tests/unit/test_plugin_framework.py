@@ -70,8 +70,8 @@ async def test_register_tool_plugin():
     assert registry.has_plugin("opensieve_search")
     assert registry.get_manifest("opensieve_search").name == "opensieve_search"
 
-    # Execute
-    result = await registry.execute("opensieve_search", {"query": "test"})
+    # Execute (action defaults to "search" in execute(), but schema requires it explicitly)
+    result = await registry.execute("opensieve_search", {"action": "search", "query": "test"})
     assert "results" in result
 
     # Shutdown

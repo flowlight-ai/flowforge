@@ -21,6 +21,8 @@ from typing import Optional, Callable, Any
 from flowforge.core.task_context import TaskContext
 from flowforge.core.persona_lock import PersonaLock
 from flowforge.executor.hybrid_executor import HybridExecutor
+# 快速失败机制：复用 LLMClient 的无效响应检测，避免 LLM 持续返回"无法回答"时浪费 7 分钟
+from flowforge.tools.llm_client import is_invalid_response as _is_invalid_llm_response
 from flowforge.harness.orchestrator import HarnessOrchestrator
 from flowforge.harness.entropy_manager import EntropyManager, DebtSeverity, RuleEvolution
 from flowforge.core.checkpoint_manager import CheckpointManager
@@ -326,6 +328,56 @@ class LoopExecutor:
             return True
         return False
 
+    @staticmethod
+    def _is_refusal_result(result: Any) -> bool:
+        """检测 worker 执行结果是否为 LLM 拒绝响应（如"无法回答"/"素材不足"等）.
+
+        快速失败机制核心：当 LLM 因账号封禁/配额耗尽/模型禁用等原因持续返回拒绝响应时，
+        LoopExecutor 不应继续耗费 7 分钟跑完所有 max_retries 迭代（含 verifier/reflector
+        的额外 LLM 调用），而应立即终止并返回明确错误。
+
+        检测逻辑：
+        1. 从 result dict 中提取主内容字段（edited_draft/draft/content/output）
+        2. 调用 LLMClient.is_invalid_response() 复用既有拒绝模式库
+        3. 仅当内容明显是拒绝响应（前缀或短文本匹配）才返回 True
+
+        Args:
+            result: HybridExecutor.run() 返回的 dict 或其他对象
+
+        Returns:
+            True 表示这是一次拒绝响应，应计入连续拒绝计数
+        """
+        if not isinstance(result, dict):
+            return False
+        # 提取主内容字段（与 _recover_draft_from_task 一致的优先级）
+        for key in ("edited_draft", "draft", "content", "output", "response", "result"):
+            val = result.get(key)
+            if not isinstance(val, str) or not val.strip():
+                continue
+            # 嵌套 dict 时提取内层
+            if val.strip().startswith("{"):
+                try:
+                    parsed = json.loads(val.strip())
+                    if isinstance(parsed, dict):
+                        for inner_k in ("edited_draft", "draft", "content", "output", "result"):
+                            inner_v = parsed.get(inner_k, "")
+                            if isinstance(inner_v, str) and inner_v.strip():
+                                val = inner_v
+                                break
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            # 调用 LLMClient 的拒绝检测：min_length=0 跳过长度检查（只看拒绝模式）
+            # agent_name="" 表示不针对特定 agent 做长度检查
+            try:
+                if _is_invalid_llm_response(val, agent_name="", min_length=0):
+                    return True
+            except Exception:
+                # 检测失败不影响主流程
+                pass
+            # 只检查第一个非空字段（主内容）
+            break
+        return False
+
     async def _execute_iterations(
         self,
         task: TaskContext,
@@ -408,6 +460,13 @@ class LoopExecutor:
 
         total_start = time.monotonic()
         last_good_result: dict | None = None  # 保存最后一次成功的执行结果
+
+        # 快速失败机制：LLM 持续返回"无法回答"等拒绝响应时，提前终止 Loop
+        # 默认 max_consecutive_refusals=2 — 连续 2 次拒绝即终止（避免 7 分钟浪费）
+        # 可在 loop_config.fast_fail.max_consecutive_refusals 中覆盖
+        fast_fail_config = loop_config.get("fast_fail", {}) or {}
+        max_consecutive_refusals = int(fast_fail_config.get("max_consecutive_refusals", 2))
+        consecutive_refusals = 0
 
         for attempt in range(max_retries):
             # 检查总超时
@@ -697,6 +756,66 @@ class LoopExecutor:
             result = await self.harness.post_execute(result, task)
             _post_exec_duration = time.monotonic() - _post_exec_start
             logger.info(f"[loop][阶段耗时] harness.post_execute: {_post_exec_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}")
+
+            # ── 快速失败检测：LLM 拒绝响应（"无法回答"/"素材不足"/silent failure 等）──
+            # 当 LLM 因账号封禁/配额耗尽/模型禁用持续返回拒绝响应时，
+            # 跳过 verifier + reflector（避免每次迭代浪费 60-90s LLM 调用），
+            # 连续 max_consecutive_refusals 次后立即终止 Loop。
+            if self._is_refusal_result(result):
+                consecutive_refusals += 1
+                logger.warning(
+                    f"[loop] 检测到 LLM 拒绝响应（连续第{consecutive_refusals}次）: "
+                    f"loop_id={state.loop_id}, attempt={attempt + 1}, "
+                    f"max_consecutive_refusals={max_consecutive_refusals}, "
+                    f"task_id={task.task_id}"
+                )
+                if task.event_bus:
+                    task.event_bus.emit(task.task_id, "loop.refusal_detected", {
+                        "loop_id": state.loop_id,
+                        "attempt": state.attempt,
+                        "consecutive_refusals": consecutive_refusals,
+                        "max_consecutive_refusals": max_consecutive_refusals,
+                    })
+                if consecutive_refusals >= max_consecutive_refusals:
+                    refusal_error = (
+                        f"LLM 连续 {consecutive_refusals} 次返回拒绝响应（无法回答/素材不足/服务不可用），"
+                        f"提前终止 Loop（避免浪费 verifier/reflector 调用时间）。"
+                        f"请检查 OpenRoute 服务（端口13001）与 LLM 账号可用性。"
+                    )
+                    state.past_errors.append(refusal_error)
+                    state.phase = LoopPhase.FAILED
+                    self.turn_engine.try_transition(
+                        TurnState.FAILED,
+                        reason=f"consecutive refusals ({consecutive_refusals}) reached threshold",
+                    )
+                    if task.event_bus:
+                        task.event_bus.emit(task.task_id, "loop.fast_failed", {
+                            "loop_id": state.loop_id,
+                            "attempt": state.attempt,
+                            "reason": "consecutive_refusals_exceeded",
+                            "consecutive_refusals": consecutive_refusals,
+                            "last_errors": state.past_errors[-3:],
+                        })
+                    logger.error(f"[loop] {refusal_error}: loop_id={state.loop_id}")
+                    break
+                # 未达阈值：跳过本轮 verifier/reflector，直接进入下一轮迭代
+                # （拒绝响应无需质量评审，也无需反思 — 问题不在内容质量而在 LLM 可用性）
+                state.past_errors.append(
+                    f"Iteration {attempt + 1}: LLM 拒绝响应（连续 {consecutive_refusals}次），跳过 verifier/reflector"
+                )
+                # 退避等待后进入下一轮（给 LLM 服务恢复时间）
+                if attempt < max_retries - 1:
+                    wait_secs = self._calc_backoff(backoff_strategy, backoff_base, attempt)
+                    await asyncio.sleep(wait_secs)
+                continue
+            else:
+                # 内容正常：重置连续拒绝计数
+                if consecutive_refusals > 0:
+                    logger.info(
+                        f"[loop] LLM 恢复正常响应，重置连续拒绝计数: "
+                        f"previous={consecutive_refusals}, attempt={attempt + 1}"
+                    )
+                consecutive_refusals = 0
 
             # 注入 _model 字段（用于 exclude_creator 功能）
             # 从 task.metadata 中获取执行过程中使用的模型
@@ -1174,10 +1293,21 @@ class LoopExecutor:
         else:
             logger.info(f"[loop-trace] task_id={task.task_id} fallback_output is None or non-dict: type={type(fallback_output).__name__}, value={str(fallback_output)[:200] if fallback_output else 'None'}")
 
+        # 错误消息：根据终止原因动态生成（快速失败 vs 重试耗尽 vs 超时）
+        if consecutive_refusals >= max_consecutive_refusals:
+            final_error = (
+                f"LLM 连续拒绝响应 {consecutive_refusals} 次（≥阈值 {max_consecutive_refusals}），"
+                f"Loop 快速失败 — 请检查 OpenRoute 服务与 LLM 账号可用性"
+            )
+        elif state.past_errors and "Total timeout exceeded" in state.past_errors[-1]:
+            final_error = state.past_errors[-1]
+        else:
+            final_error = f"Max retries ({max_retries}) exceeded"
+
         return LoopResult(
             success=False,
             output=fallback_output,
-            error=f"Max retries ({max_retries}) exceeded",
+            error=final_error,
             total_attempts=state.attempt,
             state=state,
         )

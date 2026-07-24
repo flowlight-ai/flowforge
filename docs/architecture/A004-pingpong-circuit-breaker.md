@@ -324,7 +324,7 @@ TeamAct ROUTE 步: 持球Forgekin传球
 - [doc:../features/F009-evidence-sensors.md]（工具调用与产出字符证据源）
 - [doc:../features/F006-ball-custody-lease.md]（lease 期间空传联动）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

@@ -6,7 +6,7 @@
 集成 Scope Guard (Mode A) + Process Evolution (Mode B) + Knowledge Evolution (Mode C)，
 共享五级知识成熟度阶梯 (KnowledgeMaturityLadder) 和元认知路由 (MetacognitionRouter)。
 
-三模式分工（详见 `hiclaw/rules.md#§0.10.1`）：
+三模式分工（详见 `CONTRIBUTING.md#三模式分工`）：
 - Mode A (Scope Guard): 防御 — 偏离愿景时温柔提醒
 - Mode B (Process Evolution): 防御→改进 — 同类错误反复出现时提流程改进
 - Mode C (Knowledge Evolution): 进攻→成长 — 有价值知识沉淀为可复用资产

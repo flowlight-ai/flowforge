@@ -1,7 +1,7 @@
 """FlowForge A2A (Agent-to-Agent) Communication Module.
 
-A multi-agent communication subsystem that ports clowder-ai's @mention
-routing methodology to FlowForge. It provides:
+A multi-agent communication subsystem that implements FlowForge @mention
+routing methodology. It provides:
 
 - **Protocol data models** (Pydantic v2): messages, tasks, mentions,
   threads, handoffs, agent cards — a minimal subset of Google's A2A

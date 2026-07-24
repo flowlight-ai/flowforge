@@ -3,7 +3,7 @@
 > **文档编号**: test/TEMPLATE.md（v1.0）
 > **更新日期**: 2026-07-19
 > **用途**: 所有 FlowForge 测试用例规格文件的模板，与 [features/F0XX-xxx.md](../features/) + [architecture/A0XX-xxx.md](../architecture/) + [design/D0XX-xxx.md](../design/) 同号一一对应
-> **依赖**: `[doc:rules.md#T1-T8]` 测试铁律 + `[doc:design/naming-contract.md]` v2.0 命名规范 + `[doc:../../../hiclaw/rules.md#第十一部分]` 文档分层规范
+> **依赖**: `[doc:rules.md#T1-T8]` 测试铁律 + `[doc:design/naming-contract.md]` v2.0 命名规范 + `[doc:../../CONTRIBUTING.md]` 文档分层规范
 > **关联**: `[doc:test/README.md]` 测试子目录索引 + `[doc:test.md]` 顶层测试索引
 
 ---
@@ -281,8 +281,8 @@ assert llm_call_count >= 8 and llm_call_count <= 11
 - [doc:../features/F0XX-xxx.md] — Feature 级 SRS
 - [doc:../architecture/A0XX-xxx.md] — Feature 级 SAD
 - [doc:../design/D0XX-xxx.md] — Feature 级 SDD
-- [doc:../../../hiclaw/rules.md#第十一部分] — 文档分层规范
-- [doc:../../../hiclaw/prompts.md#P7] — 测试铁律自检（T1-T8）
+- [doc:../../CONTRIBUTING.md] — 文档分层规范
+- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律] — 测试铁律自检（T1-T8）
 
 ---
 

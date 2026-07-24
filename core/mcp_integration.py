@@ -393,3 +393,181 @@ class MCPIntegration:
         except Exception as e:
             logger.error(f"Tool discovery failed for MCP server '{server_name}': {e}")
             return []
+
+    # ── P2-024 MCP 1→3 server 拆分（CL-037） ────────────────────────
+    #
+    # 将单个臃肿的 MCP server 拆分为 3 个聚焦的 server：
+    # - collab:  协作类工具（agents / sessions / handoffs / council）
+    # - memory:  记忆类工具（episodes / methods / codex / knowledge）
+    # - signals: 信号类工具（metrics / events / telemetry / observability）
+    #
+    # 同时支持 prompt 瘦身 50%：每个 wrapper 的 description 截断到 256 字符，
+    # 并去除冗余示例和重复说明。
+    #
+    # 详见 [doc:review/review.md#CL-037] MCP 1→3 server 拆分
+
+    # 三类拆分的工具名关键词映射
+    SPLIT_KEYWORDS: Dict[str, List[str]] = {
+        "collab": [
+            "agent", "session", "handoff", "council", "forgekin",
+            "swarm", "team", "collaborate", "delegate", "approval",
+        ],
+        "memory": [
+            "memory", "episode", "method", "codex", "knowledge",
+            "echo", "mind", "soul", "experience", "distill",
+        ],
+        "signals": [
+            "metric", "event", "telemetry", "observability", "trace",
+            "log", "monitor", "alert", "health", "status",
+        ],
+    }
+
+    # prompt 瘦身后最大长度（原 50% 目标）
+    SLIMMED_DESCRIPTION_MAX_LENGTH = 256
+
+    @classmethod
+    def _classify_tool(cls, tool_name: str, tool_description: str = "") -> str:
+        """根据工具名和描述分类到 collab / memory / signals 之一.
+
+        匹配优先级：collab > memory > signals（默认）。
+        """
+        text = f"{tool_name} {tool_description}".lower()
+        for category in ("collab", "memory", "signals"):
+            keywords = cls.SPLIT_KEYWORDS[category]
+            if any(kw in text for kw in keywords):
+                return category
+        # 默认归入 signals（无关键词匹配时）
+        return "signals"
+
+    @classmethod
+    def _slim_description(cls, description: str) -> str:
+        """prompt 瘦身 50% — 截断到 256 字符并去除冗余.
+
+        规则：
+        1. 移除多行示例块（```...``` 之间的内容）
+        2. 移除"Example:" / "示例:" 之后的内容
+        3. 截断到 SLIMMED_DESCRIPTION_MAX_LENGTH 字符
+        """
+        if not description:
+            return ""
+        import re
+        # 移除代码块示例
+        slimmed = re.sub(r"```[\s\S]*?```", "", description)
+        # 移除 "Example:" / "示例:" 后的内容
+        slimmed = re.split(r"\b(?:Example|示例)\b\s*:", slimmed, maxsplit=1)[0]
+        # 压缩多余空白
+        slimmed = " ".join(slimmed.split())
+        # 截断
+        if len(slimmed) > cls.SLIMMED_DESCRIPTION_MAX_LENGTH:
+            slimmed = slimmed[: cls.SLIMMED_DESCRIPTION_MAX_LENGTH - 3] + "..."
+        return slimmed.strip()
+
+    async def split_server(
+        self,
+        source_server: str,
+        target_prefix: Optional[str] = None,
+    ) -> Dict[str, int]:
+        """将已连接的 MCP server 工具拆分到 3 个虚拟 server 命名空间.
+
+        P2-024 / CL-037: MCP 1→3 server 拆分。
+
+        不会创建新的 MCP 连接，而是在 ToolRegistry 中按新命名空间
+        重新注册 wrapper，原 server 的工具会被注销。
+
+        Args:
+            source_server: 原 server 名称（必须已 connect_server）
+            target_prefix: 新 server 命名空间前缀，默认为 source_server 名
+
+        Returns:
+            dict 形如 {"collab": 3, "memory": 5, "signals": 2}，记录每类工具数
+
+        Raises:
+            KeyError: source_server 未连接
+        """
+        if source_server not in self._servers:
+            raise KeyError(f"MCP server '{source_server}' is not connected")
+
+        server = self._servers[source_server]
+        prefix = target_prefix or source_server
+        wrappers: List[MCPToolWrapper] = server.get("tools", [])
+
+        # 按类别分组
+        grouped: Dict[str, List[MCPToolWrapper]] = {
+            "collab": [], "memory": [], "signals": [],
+        }
+        for wrapper in wrappers:
+            category = self._classify_tool(
+                wrapper._mcp_tool_name, wrapper.description
+            )
+            grouped[category].append(wrapper)
+
+        # 注销原 wrapper
+        for wrapper in wrappers:
+            try:
+                self._tool_registry.unregister(wrapper.name)
+            except KeyError:
+                logger.debug(f"Tool '{wrapper.name}' already unregistered")
+
+        # 重新注册到新命名空间 + 应用 prompt 瘦身
+        new_servers_config: Dict[str, Dict[str, Any]] = {}
+        for category, cat_wrappers in grouped.items():
+            new_server_name = f"{prefix}-{category}"
+            new_wrappers: List[MCPToolWrapper] = []
+            for wrapper in cat_wrappers:
+                # 创建新 wrapper（新命名空间）
+                new_tool_info = dict(wrapper._tool_info)
+                # 应用 prompt 瘦身
+                original_desc = new_tool_info.get("description", "")
+                new_tool_info["description"] = self._slim_description(original_desc)
+                new_wrapper = MCPToolWrapper(
+                    server_name=new_server_name,
+                    tool_info=new_tool_info,
+                    integration=self,
+                )
+                self._tool_registry.register(new_wrapper)
+                new_wrappers.append(new_wrapper)
+                logger.info(
+                    f"Re-registered MCP tool: {new_wrapper.name} "
+                    f"(category={category})"
+                )
+            new_servers_config[new_server_name] = {
+                "name": new_server_name,
+                "transport": server.get("transport", "unknown"),
+                "command": server.get("command"),
+                "args": server.get("args", []),
+                "url": server.get("url"),
+                "env": server.get("env", {}),
+                "connected": True,
+                "client": server.get("client"),  # 共享原 client
+                "tools": new_wrappers,
+                "split_from": source_server,
+                "category": category,
+            }
+
+        # 删除原 server 条目，添加 3 个新 server 条目
+        del self._servers[source_server]
+        self._servers.update(new_servers_config)
+
+        counts = {cat: len(items) for cat, items in grouped.items()}
+        logger.info(
+            f"MCP server '{source_server}' split into 3 servers: "
+            f"collab={counts['collab']} memory={counts['memory']} "
+            f"signals={counts['signals']}"
+        )
+        return counts
+
+    def get_split_status(self) -> Dict[str, List[str]]:
+        """查询当前所有 server 的拆分状态.
+
+        Returns:
+            dict 形如 {"original": [...], "split": [...]}，分别列出
+            未拆分和已拆分的 server 名称。
+        """
+        original: List[str] = []
+        split_servers: List[str] = []
+        for name, server in self._servers.items():
+            if server.get("split_from"):
+                split_servers.append(name)
+            else:
+                original.append(name)
+        return {"original": original, "split": split_servers}

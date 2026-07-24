@@ -1113,8 +1113,8 @@ async def test_termination_rejects_self_review(real_db):
 - [doc:../architecture/A002-teamact-loop.md]（同号 Feature 级 SAD）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR）
 - [doc:../decisions/010-distributed-reliability.md]（SharedStateLedger Tier 2 恢复）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
-- [doc:../../../hiclaw/rules.md#编程红线]（第 9 条：禁用继承替代组合/插件）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（第 9 条：禁用继承替代组合/插件）
 
 ---
 

@@ -556,8 +556,8 @@ class WorktreeIsolation(ABC):
 - [doc:../features/F034-external-agent-fallback.md]
 - [doc:../features/F035-external-agent-capability-fusion.md]
 - [doc:../decisions/006-external-agent-integration.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#AI编程优秀实践]（六层 Guardrails 主张）
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md]（六层 Guardrails 主张）
 
 ---
 

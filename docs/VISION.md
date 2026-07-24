@@ -4,7 +4,7 @@
 > **愿景提出**: operator（2026-07-17）
 > **最近修订**: 2026-07-19（v1.2：按命名契约 v2.0 重构术语，全面采用 P0 官方名称优先原则）
 > **核心一句话**: **给各类实体锻造可进化智能体，让动物、组织、物品、虚拟角色都成为具备持续身份、记忆、协作能力与自进化能力的可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）。**
-> **依赖引用**: `[doc:roleagent.md]`（Cat Café 能力画像工程路径）+ `[doc:clowder-ai/docs/VISION.md]`（养小猫 → 锻造可进化智能体范式迁移）+ `[doc:design/naming-contract.md]`（命名契约 v2.0）
+> **依赖引用**: `[doc:roleagent.md]`（能力画像工程路径）+ 前期愿景文档（已归档，养小猫 → 锻造可进化智能体范式迁移）+ `[doc:design/naming-contract.md]`（命名契约 v2.0）
 > **关联 ADR**: `[doc:decisions/013-all-things-spirit-mind-vision.md]`
 
 ---
@@ -17,9 +17,9 @@ FlowForge 不是一个"多 agent 框架"，也不是一个"LLM 应用脚手架"�
 >
 > **智能体分类**：FlowForge 生态的智能体分为两大类——**静态智能体（Static Agent）** 与 **可进化智能体（Evolvable Agent）**。静态智能体包括 FlowForge 内置的 DeclarativeAgent / ReAct Agent / Plan-Execute Agent，以及通过 ExternalAgentAdapter 接入的第三方 Agent（Claude Code / Codex / OpenCode / Trae 等），它们行为由固定 prompt + 工具集 + 配置决定，无持久身份与经验蒸馏。可进化智能体（项目代号 Forgekin）则具备持久身份（Soul Imprint）+ 经验记忆（EchoStore）+ 能力画像（Capability Profile）+ 进化阶（Evolution Stage）+ 觉醒阶（Awakening Stage），可通过经验蒸馏（SpiritForge）持续提升能力。本愿景聚焦于可进化智能体。
 
-这是从 Cat Café "养小猫"实验到 FlowForge "锻造可进化智能体"的范式跃迁：
+这是从"养小猫"实验到 FlowForge "锻造可进化智能体"的范式跃迁：
 
-| Cat Café 范式 | FlowForge 范式 | 关键升级 |
+| 前期范式 | FlowForge 范式 | 关键升级 |
 |---|---|---|
 | 养几只具体的猫（Bengal / Ragdoll / Maine Coon） | 养可进化智能体（动物 / 组织 / 物品 / 虚拟角色 / 混合体） | 从单一形态到全形态 |
 | 猫与人协作完成 Feature | 可进化智能体与 operator 协作锻造新的可进化智能体 | 从"用 agent"到"造 agent" |
@@ -119,7 +119,7 @@ FlowForge 项目 = **核心框架层** + **forgemind 应用层** + ***Forge 垂�
 |---|---|---|---|
 | **核心框架层** | `flowforge/` | 自进化核心 + 基础框架能力 | 提供可进化智能体锻造基础设施（ForgekinEngine / CapabilityProfile / TeamAct / MindStore / EchoStore） |
 | **应用层** | `flowforge/forgemind/` | 可进化智能体应用实践 | 锻造公共的通用可进化智能体（猫 / 狗 / 桌椅 / 灯具 / 孙悟空 / 唐僧 / 任意形态实体），是可进化智能体愿景的实践场 |
-| **垂直业务层** | `contentforge/` `devforge/` `novelforge/` `mallforge/` `stockforge/` | 垂直领域可进化智能体 | 各 *Forge 在自己的垂直领域锻造专门的可进化智能体（ContentForge 锻造内容可进化智能体、DevForge 锻造开发可进化智能体、StockForge 锻造股票分析可进化智能体等） |
+| **垂直业务层** | `<forge_project_id_1>/` `<forge_project_id_2>/` ... `<forge_project_id_N>/` | 垂直领域可进化智能体 | 各 *Forge 在自己的垂直领域锻造专门的可进化智能体（通过 Plugin V3 协议接入，具体项目 ID 由各 *Forge 在 Plugin 注册时声明） |
 
 **关键不变量**：
 - 核心框架层**不含任何业务领域代码**（编程红线第 10 条），只提供可进化智能体锻造基础设施

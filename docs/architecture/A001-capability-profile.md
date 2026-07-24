@@ -328,8 +328,8 @@ class RoutingDecision(BaseModel):
 - [doc:../decisions/004-capability-profile-routing.md]（能力画像路由 ADR）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR，harness_fit_score 来源）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR，跨厂商 review 链）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
-- [doc:../../../hiclaw/rules.md#编程红线]（第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（第 10/11/12/13 条）
 
 ---
 

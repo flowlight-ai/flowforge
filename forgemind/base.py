@@ -170,7 +170,7 @@ class ForgekinBase(ABC):
                 parts.append(f"{i}. {action}")
 
         parts.append("\n## 行为准则")
-        parts.append("- 遵守 hiclaw/rules.md 15 条编程红线")
+        parts.append("- 遵守 CONTRIBUTING.md 15 条编程红线")
         parts.append("- 遵守 VISION.md §7 七条愿景锚点")
         parts.append("- Magic Words 逃生舱始终可触发")
         parts.append("- 单向依赖零容忍：上层可依赖下层，下层禁止 import 上层")

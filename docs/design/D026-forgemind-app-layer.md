@@ -1448,8 +1448,8 @@ class SensorRegistryImpl:
 - [doc:../decisions/005-forgemind-application-layer.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
 - [doc:../design/naming-contract.md]（双轨命名 + 三标注规范）
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#编程红线]（第 10/12 条）
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（第 10/12 条）
 
 ---
 

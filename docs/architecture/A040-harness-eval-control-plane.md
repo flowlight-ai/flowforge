@@ -621,9 +621,9 @@ class ControlPlaneRepository(ABC):
 - [doc:../architecture/A019-three-signal-cross.md]（三方信号架构，同源 ADR 009）
 - [doc:../architecture/A020-seven-attribution.md]（七类归因架构，同源 ADR 009）
 - [doc:../decisions/009-eval-self-metabolism.md]（Eval 自代谢 ADR）
-- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
-- [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
-- [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
+- [doc:../../CONTRIBUTING.md#33-架构约束]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（编程红线第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md]（软件工程文档分层规范）
 
 ---
 

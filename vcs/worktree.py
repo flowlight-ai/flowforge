@@ -1,6 +1,6 @@
 """Git worktree 隔离开发环境管理.
 
-移植 clowder-ai worktree SKILL 的核心方法论到 FlowForge：
+FlowForge worktree SKILL 核心方法论：
 - 创建 worktree 前必须 main 双向同步（ahead=0 behind=0），F073 门禁
 - worktree 目录在项目同级（不在项目内部），../{repo}-{feature}
 - 创建后验证基线测试通过（pytest）
@@ -128,7 +128,7 @@ async def _run_git(
 class WorktreeManager:
     """Git worktree 隔离开发环境管理.
 
-    移植 clowder-ai worktree SKILL 方法论：
+    FlowForge worktree 方法论：
     - 创建 worktree 前必须 main 双向同步（ahead=0 behind=0）
     - worktree 目录在项目同级（不在项目内部）
     - 创建后验证基线测试通过

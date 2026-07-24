@@ -1025,8 +1025,8 @@ class DefaultSignalCrossValidator(SignalCrossValidator):
 - [doc:../features/F020-seven-attribution.md]
 - [doc:../features/F040-harness-eval-control-plane.md]
 - [doc:../decisions/009-eval-self-metabolism.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#编程红线]
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]
 
 ---
 

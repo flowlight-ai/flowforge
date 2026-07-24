@@ -328,7 +328,7 @@ Forgekin对话消息 (TeamAct ACTION/ROUTE 步)
 - [doc:../features/F006-ball-custody-lease.md]（take 意图触发 lease 注册）
 - [doc:../features/F007-push-back-protocol.md]（escalate 意图升级 CVO）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

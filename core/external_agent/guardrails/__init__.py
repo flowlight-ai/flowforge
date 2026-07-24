@@ -27,6 +27,7 @@ from flowforge.core.external_agent.guardrails.action_confirm import (
     ActionConfirmGuardrail,
 )
 from flowforge.core.external_agent.guardrails.cost_ceiling import (
+    CostCeilingConfig,
     CostCeilingGuardrail,
 )
 from flowforge.core.external_agent.guardrails.input_validation import (
@@ -48,5 +49,6 @@ __all__ = [
     "ToolAllowlistGuardrail",
     "OutputValidationGuardrail",
     "ActionConfirmGuardrail",
+    "CostCeilingConfig",
     "CostCeilingGuardrail",
 ]

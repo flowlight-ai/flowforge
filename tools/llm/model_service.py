@@ -352,7 +352,7 @@ class ModelService:
     async def _check_openroute_health(self, model_key: str, model_id: str) -> dict:
         """Check health of an openroute model by verifying the openroute service is running.
 
-        OpenRoute models require the hiclaw openroute service to be running.
+        OpenRoute models require the OpenRoute service to be running.
         This method first checks if the openroute service is reachable, then attempts
         a lightweight ping to the specific model.
 

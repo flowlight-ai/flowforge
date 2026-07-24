@@ -19,7 +19,7 @@ Usage:
     # 方式2: 从配置字典创建
     config = {
         "name": "topic_agent",
-        "prompt_key": "contentforge.topic_strategy",
+        "prompt_key": "generic.drafter",
         "input_mapping": {"query": "state.topic_query"},
         "state_updates": {"topic_list": "topics"},
         "inject_persona": True,

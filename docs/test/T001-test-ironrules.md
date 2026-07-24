@@ -94,7 +94,7 @@ FLOWFORGE_REAL_LLM=1 pytest tests/e2e/ -v --browser=chromium
 - [doc:test/TEMPLATE.md] — 测试用例文件模板
 - [doc:test/T015-metrics-collector.md] — MetricsCollector 28 项指标采集实现
 - [doc:design/naming-contract.md] — 命名契约 v2.0
-- [doc:../../../hiclaw/prompts.md#P7] — 测试铁律自检（T1-T8）
+- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律] — 测试铁律自检（T1-T8）
 
 ---
 

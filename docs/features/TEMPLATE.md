@@ -3,7 +3,7 @@
 > **文档编号**: TEMPLATE.md（v2.0）
 > **更新日期**: 2026-07-19
 > **用途**: 所有 Feature 规格文件的模板，复制本文件创建新 Feature
-> **依赖**: `[doc:roleagent.md]` + `[doc:VISION.md]` + `[doc:SOP.md]` + `[doc:../spec.md]` + `[doc:../../../hiclaw/rules.md#第十一部分]`
+> **依赖**: `[doc:roleagent.md]` + `[doc:VISION.md]` + `[doc:SOP.md]` + `[doc:../spec.md]` + `[doc:../../CONTRIBUTING.md]`
 
 ---
 
@@ -192,8 +192,8 @@ class F0XXComponent:
 - [doc:../VISION.md#X]
 - [doc:../decisions/0XX-xxx.md]
 - [doc:features/F0YY-xxx.md]
-- [doc:../../../hiclaw/rules.md#T1-T8]
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

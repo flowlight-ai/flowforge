@@ -386,7 +386,7 @@ class SharedStateHandoff(ABC):
 - [doc:../features/F035-external-agent-capability-fusion.md]
 - [doc:../decisions/006-external-agent-integration.md]
 - [doc:../design/naming-contract.md]（EchoStore）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

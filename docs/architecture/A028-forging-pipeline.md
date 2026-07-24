@@ -389,7 +389,7 @@ class ForgingExecutor(ABC):
 - [doc:../features/F038-forgemind-lineage.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
 - [doc:../design/naming-contract.md]（Forge Nurturing + SoulImprint + 觉醒阶）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

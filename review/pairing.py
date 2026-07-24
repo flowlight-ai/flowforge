@@ -1,4 +1,4 @@
-"""Reviewer 配对规则 — 从 clowder-ai 移植的跨模型评审配对机制。
+"""Reviewer 配对规则 — FlowForge 跨模型评审配对机制。
 
 核心规则：
 1. 跨 family 优先（如 DeepSeek 写的代码用 GLM 审查）
@@ -64,7 +64,7 @@ _DEFAULT_FAMILY = "unknown"
 
 
 class ReviewerPairing:
-    """Reviewer 配对规则（从 clowder-ai 移植）。
+    """Reviewer 配对规则（FlowForge 跨模型评审）。
 
     动态匹配规则：
     1. 跨 family 优先（如 DeepSeek 写的代码用 GLM 审查）

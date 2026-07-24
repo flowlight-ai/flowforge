@@ -1,6 +1,6 @@
 """Merge-gate 门禁检查.
 
-移植 clowder-ai merge-gate SKILL 的门禁体系到 FlowForge：
+FlowForge merge-gate SKILL 的门禁体系：
 - 门禁 5 硬条件（reviewer 放行 / P1P2 清零 / review 覆盖 HEAD /
   BACKLOG 更新 / 全量门禁通过）
 - Evidence Validation Checker (E1-E5)
@@ -206,7 +206,7 @@ class MergeGateResult(BaseModel):
 class MergeGateChecker:
     """Merge-gate 5 硬条件 + Evidence Validation + Review Continuity Guard.
 
-    移植 clowder-ai merge-gate SKILL 的门禁体系：
+    FlowForge 门禁体系：
     1. Local peer reviewer 明确放行
     2. 所有 P1/P2 已修复
     3. Review 覆盖当前 HEAD SHA

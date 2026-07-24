@@ -192,18 +192,19 @@ class TestFeedbackLoop:
 
     @pytest.mark.asyncio
     async def test_lightweight_mode_fail_short(self, ctx):
-        """Very short content auto-passes."""
+        """Very short content auto-fails (too short to evaluate, per P0-22)."""
         loop = FeedbackLoop(config={"evaluation_mode": EVAL_MODE_LIGHTWEIGHT})
         result = {"content": "ok", "status": "completed"}
         result = await loop.evaluate(result, ctx)
-        # Too short for evaluation, should auto-pass
-        assert result["_feedback"]["gate"] == "PASS"
+        # Too short for evaluation, should auto-FAIL with output_too_short reason
+        assert result["_feedback"]["gate"] == GATE_FAIL
+        assert result["_feedback"]["reason"] == "output_too_short_for_evaluation"
 
     @pytest.mark.asyncio
     async def test_full_mode(self, ctx):
         """Full mode returns 4-dimension scores."""
         loop = FeedbackLoop(config={"evaluation_mode": EVAL_MODE_FULL})
-        result = {"content": "A comprehensive analysis of machine learning trends with detailed examples and code snippets.", "status": "completed"}
+        result = {"content": "A comprehensive analysis of machine learning trends with detailed examples and code snippets that span across multiple subfields of artificial intelligence research.", "status": "completed"}
         result = await loop.evaluate(result, ctx)
         assert "_feedback" in result
         assert "scores" in result["_feedback"]
@@ -323,8 +324,11 @@ class TestFeedbackLoopGateLogic:
             "作为ai，我无法完成这个任务",
         ]
         for phrase in failure_phrases:
-            # Pad with meaningful words to exceed 50-char threshold and 20-word minimum
-            padding = " This is additional context to ensure the content is long enough for evaluation."
+            # Pad with meaningful words to exceed 100-char threshold (P0-22) and 20-word minimum
+            padding = (
+                " This is additional context to ensure the content is long enough "
+                "for evaluation by the heuristic lightweight evaluator in the feedback loop."
+            )
             result = {"content": phrase + padding, "status": "completed"}
             result = await loop.evaluate(result, ctx)
             assert result["_feedback"]["gate"] == GATE_CONDITIONAL, \
@@ -435,7 +439,7 @@ class TestFeedbackLoopGateLogic:
     async def test_feedback_metadata_completeness(self, ctx):
         """Feedback metadata contains all expected fields."""
         loop = FeedbackLoop(config={"evaluation_mode": EVAL_MODE_LIGHTWEIGHT})
-        result = {"content": "A detailed analysis of software architecture patterns.", "status": "completed"}
+        result = {"content": "A detailed analysis of software architecture patterns including microservices, domain-driven design, event sourcing, and CQRS principles.", "status": "completed"}
         result = await loop.evaluate(result, ctx)
         fb = result["_feedback"]
         assert "gate" in fb
@@ -697,7 +701,7 @@ class TestHarnessOrchestratorIntegration:
         })
         await orch.pre_execute(ctx)
         result = {
-            "content": "A detailed analysis of modern AI trends and their impact on software engineering practices.",
+            "content": "A detailed analysis of modern AI trends and their impact on software engineering practices, including practical examples and detailed discussions of emerging architectures.",
             "status": "completed",
         }
         result = await orch.post_execute(result, ctx)
@@ -783,9 +787,9 @@ class TestHarnessOrchestratorIntegration:
             {"content": "A comprehensive analysis of machine learning trends with detailed examples and practical applications across various industries and research domains worldwide.", "status": "completed"},
             ctx,
         )
-        # CONDITIONAL: failure indicator
+        # CONDITIONAL: failure indicator (padded to exceed 100-char threshold per P0-22)
         r2 = await orch.post_execute(
-            {"content": "I cannot complete this task because the data source is currently unavailable for processing.", "status": "completed"},
+            {"content": "I cannot complete this task because the data source is currently unavailable for processing the requested analytical workflows right now.", "status": "completed"},
             ctx,
         )
         # FAIL: repetitive

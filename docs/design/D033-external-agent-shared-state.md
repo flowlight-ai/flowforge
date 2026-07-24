@@ -1562,7 +1562,7 @@ class HarnessFallbackChainExecutor(FallbackChainExecutor):
 - [doc:D032-external-agent-profile.md]（agent_id 引用）
 - [doc:../decisions/006-external-agent-integration.md]
 - [doc:../design/naming-contract.md]（EchoStore 命名）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

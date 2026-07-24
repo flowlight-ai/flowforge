@@ -4,7 +4,7 @@
 > **更新日期**: 2026-07-19
 > **用途 1**: FlowForge 测试规范文档导航（测试铁律 T1-T9 / 测试策略 / 6 维 28 项指标 / 命名契约 v2.0）
 > **用途 2**: 19 份 T0XX 文件的索引（Test Feature 级规格），与 [features/F0XX-xxx.md](features/) + [architecture/A0XX-xxx.md](architecture/) + [design/D0XX-xxx.md](design/) 同号一一对应
-> **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构 + `[doc:../../../hiclaw/rules.md#第十一部分]` 文档分层规范 + `[doc:design/naming-contract.md]` v2.0 命名契约
+> **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构 + `[doc:../../../CONTRIBUTING.md#第十一部分]` 文档分层规范 + `[doc:design/naming-contract.md]` v2.0 命名契约
 > **参考**: `[doc:design/README.md]` Design Feature 索引结构（同号一一对应模式）
 
 ---

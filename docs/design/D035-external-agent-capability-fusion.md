@@ -1644,7 +1644,7 @@ class SpiritForgeEngine:
 - [doc:D018-eval-contract.md]（F018 Eval Ledger）
 - [doc:../decisions/006-external-agent-integration.md]
 - [doc:../design/naming-contract.md]（SpiritForge + MindCodex 蒸馏知识库命名）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

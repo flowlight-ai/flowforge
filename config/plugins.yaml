@@ -223,19 +223,6 @@ plugins:
         path: {type: string}
         content: {type: string}
 
-  - name: pexels_image
-    transport: local
-    entry_point: flowforge.tools.pexels_image:PexelsImageTool
-    description: "Pexels 图片搜索"
-    tags: [media, external]
-    parameters_schema:
-      type: object
-      required: [query]
-      properties:
-        query: {type: string}
-        per_page: {type: integer, default: 5}
-        orientation: {type: string, default: landscape, enum: [landscape, portrait, square]}
-
   - name: sendgrid_mail
     transport: local
     entry_point: flowforge.tools.sendgrid_mail:SendGridMailTool

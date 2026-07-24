@@ -1346,11 +1346,11 @@ class SideEffectWAL:
 - [doc:../design/naming-contract.md#2.2]（Forgekin Forgekin 双轨命名）
 - [doc:../design/D001-capability-profile.md]（CapabilityProfile 详细设计，盲点注入数据源）
 - [doc:../design/D002-teamact-loop.md]（TeamAct 详细设计，ROUTE 步触发）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
-- [doc:../../../hiclaw/rules.md#红线12]（禁绕过 DI 容器）
-- [doc:../../../hiclaw/rules.md#红线13]（禁直接操作数据库）
-- [doc:../../../hiclaw/rules.md#红线11]（禁硬编码路径/密钥）
-- [doc:../../../hiclaw/prompts.md#P16]（提示词外置验证）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
+- [doc:../../../CONTRIBUTING.md#红线12]（禁绕过 DI 容器）
+- [doc:../../../CONTRIBUTING.md#红线13]（禁直接操作数据库）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（禁硬编码路径/密钥）
+- [doc:../../../CONTRIBUTING.md#P16]（提示词外置验证）
 
 ---
 

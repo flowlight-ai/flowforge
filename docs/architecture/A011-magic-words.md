@@ -330,7 +330,7 @@ Operator 输入 (低带宽通道)
 - [doc:../features/F036-forgemind.md]（物理世界操作紧急停止）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]（可进化智能体愿景，Magic Words 始终可触发）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

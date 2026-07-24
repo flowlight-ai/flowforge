@@ -390,7 +390,7 @@ Forgekin 提交 commit (含 [hotfix] 标记)
 - [doc:../features/F040-harness-eval-control-plane.md]（控制面 sunset review）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
 - [doc:../decisions/009-eval-self-metabolism.md]（Eval 自代谢联动）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

@@ -1,7 +1,7 @@
 # roleagent.md 工程路径镜像（FlowForge 落地版）
 
 > **文档编号**: roleagent.md（v1.1 镜像）
-> **原文路径**: `D:\software\openclaw\clowder-ai\docs\roleagent.md`（1077 行）
+> **原文路径**: 前期 roleagent 工程路径文档（已归档，1077 行）
 > **镜像用途**: FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）在 `flowforge/docs/` 内即可访问 roleagent 工程路径核心内容。详细论证请查阅原文。
 > **依赖关系**: 本文件是 FlowForge v7.0 重构的**核心依据**（`[doc:review/review.md#第八章]` 47 项补审全部基于此文件）
 > **命名依据**: 严格遵循 `[doc:design/naming-contract.md]` v2.0"官方名称优先原则"——技术文档中大量出现 P0 官方名称（AI 业界专业术语），P2 体系别名（社交用）首次出现必须双标注
@@ -25,7 +25,7 @@ FlowForge 生态的智能体分为两大类（详见 `[doc:design/naming-contrac
 
 > **multi-agent 协作从 role-agent 走向能力画像（Capability Profile）、动态路由、共享状态、eval 和可靠性治理的工程路径。**
 
-Cat Café 102 天 200+ Feature 实战核心发现：多 agent 的价值不是"更多人力"，而是**右尾变长**（不同认知路径扩展候选解）、**左尾被截断**（错误要连续穿过多层门才能触达用户）、**方差被吸收**（单点波动变成内部返工成本而非用户可见崩塌）。
+前期 102 天 200+ Feature 实战核心发现：多 agent 的价值不是"更多人力"，而是**右尾变长**（不同认知路径扩展候选解）、**左尾被截断**（错误要连续穿过多层门才能触达用户）、**方差被吸收**（单点波动变成内部返工成本而非用户可见崩塌）。
 
 好的 agent harness 系统不是把单点能力推到极限，而是**把单点波动组织进一个会自我校准的伙伴系统**。
 
@@ -337,6 +337,6 @@ P(错误抵达用户) = ∏(每层门防漏过概率)
 1. **不复制原文全文**：避免副本漂移
 2. **每章保留核心摘要 + 关键公式 + FlowForge 落地映射**
 3. **原文更新时同步更新本镜像**（由可进化智能体 Forgekin 在 Eval 信号触发下完成）
-4. **本镜像与原文冲突时以原文为准**：`D:\software\openclaw\clowder-ai\docs\roleagent.md`
+4. **本镜像与原文冲突时以原文为准**：前期 roleagent 工程路径文档（已归档）
 
 如需查阅完整论证、案例、图表，请直接阅读原文。

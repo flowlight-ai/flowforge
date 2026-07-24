@@ -1,6 +1,6 @@
 """Unified LLM client with automatic model discovery and cross-provider fallback.
 
-Implements a candidate chain system inspired by hiclaw's model_manager:
+Implements a candidate chain system inspired by FlowForge's model_manager:
 - Auto mode: builds candidate chain from all available free models
 - Cross-provider fallback: interleaves models from different providers
 - Health-aware: skips recently failed models, auto-retries after cooldown
@@ -102,7 +102,7 @@ INVALID_RESPONSES = {
 }
 INVALID_RESPONSE_PREFIXES = ("草稿无效",)
 INVALID_RESPONSE_PATTERNS = (
-    "Hiclaw OpenRoute 内置命令", "hc ping", "hc help", "hc reset",
+    "OpenRoute 内置命令", "hc ping", "hc help", "hc reset",
     "hc update", "上下文已重置", "页面已刷新", "浏览器页面不可用",
     # openroute app.py:1348 伪装 chat.completion 的 silent failure 标识
     # 当模型被禁用/不可用时,openroute 返回 HTTP 200 + "模型 X 当前不可用，请稍后重试"
@@ -199,7 +199,7 @@ def build_cross_fallback_chain(
 ) -> List[str]:
     """Build an interleaved candidate chain across providers.
 
-    Inspired by hiclaw's cross_fallback() algorithm:
+    Inspired by FlowForge cross_fallback() algorithm:
     1. Group models by provider
     2. Interleave across top providers for diversity
     3. Filter out models in cooldown
@@ -286,8 +286,8 @@ class LLMClient(BaseTool):
             "agent_name": {"type": "string", "description": "Agent name for model routing"},
             # assignment 参数：任务类型路由键（如 content_create/content_refine/judge），
             # 优先级高于 persona，让 models.yaml 中专用的 assignment 真正生效。
-            # 例如 contentforge writer_engine 传 assignment="content_create" → primary=Doubao-Seed2.0
-            #      contentforge editor_engine 传 assignment="content_refine" → primary=DeepSeek-V4-Pro
+            # 例如创作 Agent 传 assignment="content_create" → primary=Qwen3.6-Plus
+            #      润色 Agent 传 assignment="content_refine" → primary=Kimi-K2.6
             "assignment": {"type": "string", "description": "Task type assignment key for model routing (overrides persona)"},
             "tools": {"type": "array", "description": "OpenAI function calling tools schema"},
             "skip_cooldown": {"type": "boolean", "default": False, "description": "Skip cooldown check for judge calls"},
@@ -1022,7 +1022,7 @@ class LLMClient(BaseTool):
                 payload["stream"] = True
             if tools:
                 payload["tools"] = tools
-            # openroute/auto 模型：让 hiclaw openroute 自动选择最优模型
+            # openroute/auto 模型：让 OpenRoute 自动选择最优模型
             # 不传 tools 给 auto 模式，让 openroute 自行决定路由
             if provider == "openroute" and model_id == "auto" and tools:
                 payload["tools"] = tools

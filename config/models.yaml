@@ -50,7 +50,7 @@ providers:
     bridge_poll_interval: 2
     default_model: trae
     session_persistence: true
-    description: Trae AI 编码助手（文件桥接模式，让 devforge 能调用 Trae 进行编码）
+    description: Trae AI 编码助手（文件桥接模式，让编码 Agent 能调用 Trae 进行编码）
 models:
 - id: auto
   provider: openroute
@@ -201,7 +201,8 @@ assignments:
   # 导致评委/T7审核使用 free 模型（404/429 大量失败，质量分0.0）。
   # 改为只用本地 openroute webchat 模型作为 fallback，确保 100% 本地稳定性。
   # 兜底由 llm_client.py 的 build_cross_fallback_chain 追加 openroute/auto 完成。
-  # v3.4 合并: 采用远程多模型 fallback 链（跨厂商排序避免单点故障）+ stockforge/reflexion assignments
+  # 说明：*Forge 项目的 assignments 由各自项目通过 Plugin V3 协议在运行时注入，
+  # FlowForge 核心仅保留通用能力 assignments（default/lightweight/coding/judge/content_*）。
   default:
     # v5.1临时: API配额全面耗尽(ark 429/kimi 429/aliyuncs 401/siliconflow 403/openrouter 404)
     # 唯一可用API: zhipu/glm-4-flash。待API配额恢复后改回 Doubao-Seed2.0
@@ -227,24 +228,6 @@ assignments:
     - Doubao-Seed2.0
     - GLM-5.1
     - Kimi-K2.6
-  # devforge 编码任务：优先使用 Trae AI 助手（文件桥接模式）
-  # Trae 不可用时 fallback 到常规编码模型链
-  devforge:coding:
-    primary: trae
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - Doubao-Seed2.0
-    - GLM-5.1
-  devforge:code_review:
-    primary: trae
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - Doubao-Seed2.0
-  devforge:architect:
-    primary: trae
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
   # 评委路由：跨厂商排序，避免单厂商故障导致所有评委失败
   # primary=Doubao-Seed2.0（豆包webchat最稳定）
   # v5.8: 末尾追加 openrouter 直接API模型作为保底（不经过本地OpenRoute webchat代理）
@@ -262,18 +245,17 @@ assignments:
     - MiniMax-M3
     - DeepSeek-V4-Pro
   content_create:
-    # v5.27: primary改为Qwen3.6-Plus(prefer_api=True→zhipu/glm-4-flash)
-    # zhipu/glm-4-flash API稳定(25s, 1100字), 写作质量明显改善
-    # Doubao-Seed2.0 webchat截断严重(56字→超时), ark API返回"无法回答"
-    # fallback保留webchat作为备选(API不可用时)
-    primary: openroute/Qwen3.6-Plus
+    # v5.76: primary改为HunYuan3（实测Qwen3.6-Plus返回"无法回答"，Doubao-Seed2.0超时，
+    # HunYuan3 webchat稳定生成262字中文，含第一人称+感官细节+口语化）
+    # 保留Qwen3.6-Plus/Doubao作为fallback（API模式可能恢复）
+    primary: openroute/HunYuan3
     fallbacks:
+    - openroute/GLM-5.1
     - openroute/Doubao-Seed2.0
+    - openroute/Qwen3.6-Plus
     - openroute/Kimi-K2.6
-    - openroute/HunYuan3
     - openroute/MiniMax-M3
     - openroute/DeepSeek-V4-Pro
-    - openroute/GLM-5.1
   content_refine:
     # 铁律: polisher 必须使用 Kimi-K2.6
     # 实测 DeepSeek-V4-Pro/Doubao-Seed2.0 润色会降低质量(创作0.85→润色0.57)
@@ -292,48 +274,6 @@ assignments:
     - openroute/DeepSeek-V4-Pro
     - openrouter/nvidia/nemotron-3-super-120b-a12b:free
     - openrouter/openai/gpt-oss-120b:free
-  stockforge:stock_data:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - MiniMax-M3
-  stockforge:technical_indicator:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - MiniMax-M3
-  stockforge:prediction:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - MiniMax-M3
-  stockforge:risk:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - MiniMax-M3
-  stockforge:report:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - MiniMax-M3
-  stockforge:screening:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - MiniMax-M3
-  stockforge:bull_bear_debate:
-    primary: Doubao-Seed2.0
-    fallbacks:
-    - DeepSeek-V4-Pro
-    - GLM-5.1
-    - MiniMax-M3
   # P0-27: reflexion_evaluator/reflexion_reflector 显式 assignments
   # v2: 移除 MiniMax-M3（openroute minimax 平台持续 connection failed），
   # 替换为 Kimi-K2.6（更稳定的 webchat 模型）

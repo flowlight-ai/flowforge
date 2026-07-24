@@ -349,7 +349,7 @@ TeamAct VERDICT 步: 跨 agent review (reviewer != author)
 - [doc:../features/F018-eval-contract.md]（trace 信号源）
 - [doc:../features/F019-three-signal-cross.md]（trace 信号源）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

@@ -1,0 +1,141 @@
+# ==============================================================================
+# P3-006 Doubao Moderation 内容审核配置示例
+# ==============================================================================
+# 拷贝为 moderation.yaml 后按实际环境修改；moderation.yaml 不入库（铁律5）。
+# 由 DI 容器读取后注入 DoubaoModerationClient 构造函数（铁律12 不绕过 DI）。
+#
+# API key 永远从环境变量读取（不在 YAML 中明文存储）。
+# 默认读取环境变量 DOUBAO_API_KEY，可通过 api_key_env 字段配置其他变量名。
+# ==============================================================================
+
+# 是否启用 moderation 客户端。
+# false 时 moderate() 直接返回 allowed=True，不调用 API。
+# 适用于：开发环境、本地调试、moderation 服务故障期间的整体降级。
+enabled: true
+
+# Doubao Ark API 基址。
+# 默认公有云地址：https://ark.cn-beijing.volces.com/api/v3
+# 私有化部署时替换为内部网关地址。
+api_base: "https://ark.cn-beijing.volces.com/api/v3"
+
+# 存储 API key 的环境变量名。
+# 运行时通过 os.environ[api_key_env] 读取，YAML 中不存储明文密钥。
+# 业务侧可改用 VAULT_DOUBAO_KEY / KMS_DOUBAO_KEY 等密管系统注入的变量名。
+api_key_env: "DOUBAO_API_KEY"
+
+# Doubao moderation 场景标识。
+# 官方默认 "content_detection"（通用内容检测）。
+# 其他可选值：comment_detection（评论检测）、article_detection（文章检测）等。
+# 具体可用场景请参考 Ark 控制台。
+scene: "content_detection"
+
+# 单次请求超时（秒）。
+# 推荐 10s；超过此值视为超时，进入重试。
+timeout_seconds: 10.0
+
+# 失败重试次数（不含首次调用）。
+# retry_count=2 表示最多调用 3 次（1 次原始 + 2 次重试）。
+retry_count: 2
+
+# 重试间隔（秒）。固定间隔；如需指数退避可在代码中扩展。
+retry_delay_seconds: 1.0
+
+# 结果缓存时长（秒）。默认 1 小时。
+# 同一内容在 TTL 内复用审核结果，避免重复调用 API 浪费配额。
+cache_ttl_seconds: 3600
+
+# 是否启用缓存。
+# 高频审核场景强烈建议启用；流式内容（每次内容都不同）可关闭。
+cache_enabled: true
+
+# ──────────────────────────────────────────────────────────────────────
+# fallback_action：API 不可用时的兜底动作
+# ──────────────────────────────────────────────────────────────────────
+# 触发条件：
+#   - 网络错误（DNS 解析失败、连接超时、TCP 重置等）
+#   - HTTP 5xx 服务端错误（重试耗尽后）
+#   - HTTP 401/403 鉴权失败（key 错误或过期）
+#   - 所有重试均超时
+#
+# 三种取值场景说明：
+#
+#   allow（默认）—— 放行
+#     适用场景：
+#       - 内部草稿审核（非面向用户发布）
+#       - 评论实时展示前的预过滤（避免审核服务故障导致评论全部丢失）
+#       - 风险容忍度高的非关键路径
+#     行为：result.allowed=True, action_taken=allow, confidence=0.0
+#
+#   deny —— 拒绝
+#     适用场景：
+#       - 面向用户发布的强校验路径（如公众号文章发布）
+#       - 合规要求"宁错杀不放过"的场景
+#       - 已有其他冗余审核机制（如人工二审）
+#     行为：result.allowed=False, action_taken=deny, confidence=0.0
+#
+#   degrade_to_human —— 降级人工审核
+#     适用场景：
+#       - 高风险场景（金融、医疗、法律内容）
+#       - 单次发布成本高、不可撤回的路径
+#       - 业务侧可基于 action_taken=degrade_to_human 进入人工审核队列
+#     行为：result.allowed=False, action_taken=degrade_to_human, confidence=0.0
+#     调用方应监听此 action 并将内容转入人工审核队列。
+# ──────────────────────────────────────────────────────────────────────
+fallback_action: "allow"
+
+# ──────────────────────────────────────────────────────────────────────
+# block_labels：必须拦截的风险标签
+# ──────────────────────────────────────────────────────────────────────
+# Doubao API 返回的 risk_labels 中，命中此处任一标签即视为拦截
+# （result.allowed=False, action_taken=deny）。
+#
+# 标签来自 Doubao 官方文档，常见类别：
+#   - porn              色情低俗
+#   - violence          暴力血腥
+#   - political         政治敏感
+#   - abuse             辱骂攻击
+#   - ad                广告引流
+#   - fraud             诈骗
+#   - illegal           违法犯罪
+#   - privacy_leak      隐私泄露
+#   - content_violation 通用违规
+#
+# 自定义示例：
+#   - 电商场景：拦截"虚假宣传"，可加入 "false_advertising"
+#   - 教育场景：拦截"代写代考"，可加入 "academic_dishonesty"
+#   - 金融场景：拦截"非法集资"，可加入 "illegal_finance"
+# ──────────────────────────────────────────────────────────────────────
+block_labels:
+  - "porn"           # 色情低俗
+  - "violence"       # 暴力血腥
+  - "political"      # 政治敏感
+  - "abuse"          # 辱骂攻击
+
+# 业务自定义场景下的 block_labels 配置示例（按需取消注释）：
+#
+# 电商运营场景（MallForge）：
+# block_labels:
+#   - "porn"
+#   - "violence"
+#   - "political"
+#   - "abuse"
+#   - "false_advertising"   # 虚假宣传
+#   - "price_fraud"         # 价格欺诈
+#   - "illegal_finance"     # 非法金融
+#
+# 内容创作场景（ContentForge）：
+# block_labels:
+#   - "porn"
+#   - "violence"
+#   - "political"
+#   - "abuse"
+#   - "ad"                  # 文章内夹带广告
+#   - "plagiarism"          # 抄袭
+#   - "privacy_leak"        # 隐私泄露
+
+# 扩展元数据。业务可附加 trace_id / tenant_id / app_name 等。
+# 仅用于日志关联和 metrics 标签，不参与审核决策。
+metadata:
+  app_name: "flowforge"
+  layer: "L5_platform"
+  description: "Doubao Ark moderation 接入层"

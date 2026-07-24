@@ -1,6 +1,6 @@
 """GitHub PR 创建与管理.
 
-移植 clowder-ai merge-gate SKILL 的 PR 流程到 FlowForge：
+FlowForge merge-gate SKILL 的 PR 流程：
 - PR body 禁止 @handle（防止误触发 remote review，PR #160 反面案例）
 - PR comment 触发 review（不是 body），极简格式 @codex review
 - 支持 squash merge（通过 GitHub，禁止本地 squash）
@@ -180,7 +180,7 @@ _HANDLE_REVIEW_PATTERN = re.compile(r"@[A-Za-z0-9_-]+\s+review")
 class PullRequestManager:
     """GitHub PR 创建与管理.
 
-    移植 clowder-ai merge-gate SKILL 的 PR 流程：
+    FlowForge PR 流程：
     - PR body 禁止 @handle（防止误触发 remote review）
     - PR comment 触发 review（不是 body），极简格式 @codex review
     - 支持 squash merge（通过 GitHub，禁止本地 squash）

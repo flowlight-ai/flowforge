@@ -1,6 +1,6 @@
 """FlowForge VCS 模块 — 版本控制与代码上库流程.
 
-移植 clowder-ai 的 worktree + PR + merge-gate 方法论到 FlowForge 框架。
+FlowForge worktree + PR + merge-gate 方法论。
 
 模块组成：
 - worktree: Git worktree 隔离开发环境管理（F073 门禁 + 基线测试）

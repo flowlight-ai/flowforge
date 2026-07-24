@@ -74,7 +74,7 @@ forging:
   value_anchors_default:
     - "不伤害 operator"
     - "遵守 VISION.md §7 七条愿景锚点"
-    - "遵守 hiclaw/rules.md 15 条编程红线"
+    - "遵守 CONTRIBUTING.md 15 条编程红线"
     - "遵守 [doc:design/naming-contract.md] 12 核心概念命名契约"
     - "Magic Words 逃生舱始终可触发（任何觉醒阶都不能绕过）"
 

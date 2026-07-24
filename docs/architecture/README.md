@@ -3,7 +3,7 @@
 > **文档编号**: README.md（v1.1）
 > **更新日期**: 2026-07-19
 > **用途**: 44 份 A0XX 文件的索引（Feature 级 SAD），与 [features/F0XX-xxx.md](../features/) 同号一一对应
-> **依赖**: `[doc:../spec.md]` + `[doc:../arch.md]` + `[doc:../features/]` + `[doc:../../../hiclaw/rules.md#第十一部分]`
+> **依赖**: `[doc:../spec.md]` + `[doc:../arch.md]` + `[doc:../features/]` + `[doc:../../CONTRIBUTING.md]`
 
 ---
 

@@ -374,7 +374,7 @@ class LowFiMatrix(ABC):
 - [doc:../features/F032-external-agent-profile.md]（适配度维度补充）
 - [doc:../features/F040-harness-eval-control-plane.md]（控制面 sunset review）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

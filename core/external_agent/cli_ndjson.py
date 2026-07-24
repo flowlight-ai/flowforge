@@ -20,7 +20,7 @@ NDJSON（Newline-Delimited JSON）流式输出：
     - [doc:review/review.md#14.4] CL-038 NDJSON + stderr 也算活着
     - [doc:decisions/006-external-agent-integration.md] §4 首批接入
     - [doc:design/naming-contract.md#2.2] 灵智体
-    - clowder-ai/docs architecture/cli-integration.md NDJSON 解析器规范
+    - FlowForge CLI NDJSON 解析器规范
 
 铁律遵守：
     - 铁律 5：禁止硬编码密钥 / 路径（sandbox.cwd 由调用方传入）
@@ -221,7 +221,7 @@ class NDJSONParser:
         - ``_parsed``: 已解析成功的 JSON 对象列表
         - ``_failures``: 解析失败的 (line, error) 元组列表
 
-    设计参考：clowder-ai/docs architecture/cli-integration.md NDJSON 解析器规范
+    设计参考：FlowForge CLI NDJSON 解析器规范
     """
 
     def __init__(self) -> None:
@@ -462,7 +462,7 @@ async def stream_cli_invocation(
             "parse_failures": [(line, error), ...],
         }
 
-    设计参考：clowder-ai/docs architecture/cli-integration.md NDJSON 解析器规范
+    设计参考：FlowForge CLI NDJSON 解析器规范
 
     Args:
         process: ``asyncio.subprocess.Process`` 实例（已启动的子进程）。

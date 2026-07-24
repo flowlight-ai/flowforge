@@ -8,7 +8,7 @@
 - ReviewerInfo: 评审者信息
 - ReviewProvenance: 评审溯源记录
 
-设计原则（从 clowder-ai 移植）：
+设计原则：
 1. 同一个体不能 review 自己的代码（铁律）
 2. 跨 family 优先（如 DeepSeek 写的代码用 GLM 审查）
 3. 每个发现必须有明确严重性：P1/P2/P3

@@ -37,6 +37,14 @@ from typing import Any, Dict, List
 # 确保能导入 flowforge
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
+# Windows 终端默认 GBK，print emoji 会失败 — 切到 utf-8 容错输出
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
+
 from flowforge.evolution.engine import ForgeMindEngine
 from flowforge.evolution.self_dev_doc import SelfDevDocLoop
 

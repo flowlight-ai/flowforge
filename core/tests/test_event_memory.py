@@ -18,7 +18,7 @@
 详见:
     - flowforge/docs/design.md v7.1-§D14 Event Memory 规范
     - flowforge/docs/review/review.md 第十四章 CL-029/CL-030
-    - hiclaw/rules.md 测试铁律 T1-T8
+    - CONTRIBUTING.md 测试铁律 T1-T8
 """
 
 from __future__ import annotations

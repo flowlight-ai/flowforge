@@ -435,7 +435,7 @@ class RoleMaskCoordinator(ABC):
 - [doc:../features/F038-forgemind-lineage.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
 - [doc:../design/naming-contract.md]（SoulImprint + EchoStore）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

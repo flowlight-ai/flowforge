@@ -101,8 +101,8 @@ operator 最终决策（2026-07-17）：
 | `flowforge/docs/TIPS.md` | **魂忆 → 灵忆 / 魂印 → 灵印**（v1.1 新增） |
 | `flowforge/evolution/*.py` | SelfEvolutionEngine → ForgeMindEngine |
 | `flowforge/core/plugin_protocol.py` | 新增 V3 四钩子 |
-| `hiclaw/rules.md` | 炉灵 → 灵智体 / 养灵 → 育灵 |
-| `hiclaw/prompts.md` | 炉灵 → 灵智体 |
+| `CONTRIBUTING.md` | 炉灵 → 灵智体 / 养灵 → 育灵 |
+| `CONTRIBUTING.md` | 炉灵 → 灵智体 |
 
 **说明**：review/ 目录下的旧审核记录（glm.md/doubao.md/minimax1.md 等）是历史审核快照，保留原术语不改；新增审核文件（如深度补审归档）必须用 v7.1 新术语。
 

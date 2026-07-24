@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            **/requirements*.txt
+            **/pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pytest pytest-asyncio pytest-cov mypy ruff
+
+      - name: Lint with ruff
+        run: |
+          ruff check flowforge/ --output-format=github || true
+
+      - name: Type check with mypy
+        run: |
+          mypy flowforge/ --ignore-missing-imports || true
+
+      - name: Run unit tests
+        env:
+          PYTEST_ADDOPTS: "--tb=short -q"
+        run: |
+          pytest flowforge/tests/ \
+            --ignore=flowforge/tests/e2e \
+            --ignore=flowforge/tests/test_e2e_real_llm.py \
+            --ignore=flowforge/tests/test_api_testclient.py \
+            --cov=flowforge \
+            --cov-report=xml \
+            --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  docs-frontmatter-check:
+    name: Docs Front-Matter Check (D045)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify docs front-matter
+        run: |
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+          import re
+
+          REQUIRED_FIELDS = {"feature_ids", "related_features", "topics", "doc_kind", "created"}
+          DOC_KIND_VALUES = {"spec", "arch", "design", "feature", "decision", "review", "adr"}
+          errors = []
+
+          docs_dirs = [
+              Path("docs/design"),
+              Path("docs/features"),
+              Path("docs/decisions"),
+          ]
+
+          for docs_dir in docs_dirs:
+              if not docs_dir.exists():
+                  continue
+              for md_file in docs_dir.glob("*.md"):
+                  if md_file.name in {"README.md", "TEMPLATE.md"}:
+                      continue
+                  text = md_file.read_text(encoding="utf-8")
+                  if not text.startswith("---"):
+                      errors.append(f"{md_file}: missing front-matter (must start with ---)")
+                      continue
+                  # Extract front-matter
+                  parts = text.split("---", 2)
+                  if len(parts) < 3:
+                      errors.append(f"{md_file}: malformed front-matter")
+                      continue
+                  fm_text = parts[1]
+                  # Check required fields
+                  for field in REQUIRED_FIELDS:
+                      if not re.search(rf"^{field}\s*:", fm_text, re.MULTILINE):
+                          errors.append(f"{md_file}: missing required field '{field}'")
+
+          if errors:
+              print("❌ Docs front-matter check failed:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+          else:
+              print("✅ All docs front-matter checks passed")
+          EOF
+
+  brand-purification-check:
+    name: Brand Purification Check (CL-041)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify no internal brand leakage
+        run: |
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+
+          # CL-041 禁止在 GitHub 公开仓库出现 cat-cafe / Clowder AI 字样
+          # 例外：design/naming-contract.md §7.3（声明位置）
+          FORBIDDEN_TERMS = ["cat-cafe", "cat_cafe", "catcafe", "Clowder AI"]
+          EXEMPT_FILES = {
+              "docs/design/naming-contract.md",  # 唯一允许声明 cat-cafe 的位置
+          }
+
+          errors = []
+          for path in Path(".").rglob("*.md"):
+              rel = str(path).replace("\\", "/")
+              if rel in EXEMPT_FILES:
+                  continue
+              if rel.startswith(".git/"):
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8", errors="ignore")
+              except Exception:
+                  continue
+              for term in FORBIDDEN_TERMS:
+                  if term in text:
+                      # 找到第一次出现的位置
+                      idx = text.find(term)
+                      line_no = text[:idx].count("\n") + 1
+                      errors.append(f"{rel}:{line_no}: forbidden term '{term}'")
+
+          if errors:
+              print("❌ Brand purification check failed:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+          else:
+              print("✅ Brand purification check passed (no forbidden terms)")
+          EOF

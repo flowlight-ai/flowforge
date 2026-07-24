@@ -339,7 +339,7 @@ Forgekin执行动作 (TeamAct ACTION 步)
 - [doc:../features/F010-governance-boundary.md]（压缩免疫注入层基础）
 - [doc:../features/F023-liveness-canonical-read.md]（liveness 规范读模型）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

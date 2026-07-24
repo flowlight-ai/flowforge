@@ -4,7 +4,7 @@
 > **更新日期**: 2026-07-19
 > **用途 1**: FlowForge 设计规范文档导航（命名契约 / 控制台设计系统 / 品牌设计 / 动效设计）
 > **用途 2**: 40 份 D0XX 文件的索引（Feature 级 SDD），与 [features/F0XX-xxx.md](../features/) + [architecture/A0XX-xxx.md](../architecture/) 同号一一对应
-> **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构 + `[doc:../../../hiclaw/rules.md#第十一部分]` 文档分层规范
+> **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构 + `[doc:../../CONTRIBUTING.md]` 文档分层规范
 > **参考**: 标准 design 目录结构 + `[doc:../architecture/README.md]` Architecture Feature 索引结构
 
 ---

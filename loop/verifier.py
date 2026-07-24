@@ -401,7 +401,7 @@ class MultiJudgeVerifier(LoopVerifier):
             logger.info(f"[verifier-diag] verify() result type={type(result).__name__}, not dict")
 
         if isinstance(result, dict):
-            # P0-29 修复: "report" 优先于 "content", 因为 stockforge:report agent 的
+            # P0-29 修复: "report" 优先于 "content", 因为 report 类型 agent 的
             # result["content"] 是简短描述(36字符), result["report"] 是完整报告(2000+字符)
             # 原列表 "content" 在首位, 提取到36字符描述后停止, 跳过评审
             extracted_from_key = ""
@@ -743,14 +743,17 @@ class MultiJudgeVerifier(LoopVerifier):
             else:
                 dim_lines.append(f"  - {dim} (权重 {weight:.2f})")
 
-        # 4. 动态生成 score_fields — 用示例值 0.50（中性值）
-        # v5 修复: 原 0.85 导致 LLM 锚定效应，评委倾向给0.85分，低质量文章也能通过
-        #   改为 0.50（中性值），LLM 不会锚定到高分，更客观评分
-        # v3 历史: 原 0.0 会导致 GLM-5.1 API 空响应时, OpenRoute 网关返回 prompt 中的
-        #   JSON 模板(scores 全 0.0)作为响应, 浪费 230s 后才被 Echo 检测捕获
-        # v2 历史: 原 <your_score 0.0-1.0> 占位符让某些 LLM 误以为要输出占位符本身
-        score_field_lines = [f'"{dim}": 0.50' for dim in dimensions.keys()]
-        score_fields = ",\n    ".join(score_field_lines)
+        # 4. v6 修复 (2026-07-21): 移除预填充 score_fields
+        # 历史问题: 原 score_fields 用 0.50 作为"中性值"注入 JSON 模板示例,
+        # 但 4 个评委 LLM 都原样回显了模板（返回所有维度=0.50），
+        # 导致内容质量永远 0.50 无法通过 0.85 阈值（task f6dc63c8 根因）。
+        # 现改为：不向 prompt 注入 score_fields，让 LLM 自行构造 JSON，
+        # 在 _extract_judge_result 中检测全 0.50 模板回显并拒绝。
+        # 历史 v5/v4/v3/v2 注释保留供参考：
+        # - v5: 原 0.85 导致 LLM 锚定效应 → 改 0.50（仍被回显）
+        # - v3: 原 0.0 导致 OpenRoute 网关返回 prompt 作为响应（已被 echo 检测解决）
+        # - v2: 原 <your_score> 占位符被 LLM 输出占位符本身
+        score_fields = ""  # 保留变量供模板兼容（minimal_prompt 等老模板可能引用），但不再使用
 
         # 5. 读取提示词模板
         template = config.get("judge_context_template") or _load_verifier_prompt("flowforge.verifier.judge_context_template")
@@ -1361,6 +1364,38 @@ class MultiJudgeVerifier(LoopVerifier):
                 f"(possible placeholder/unable-to-answer), treating as invalid"
             )
             raise ValueError(f"Judge '{model}' returned all-zero scores (possible placeholder issue)")
+
+        # v6 修复 (2026-07-21): 检测全 0.50 模板回显 — 原 prompt 模板预填充 0.50
+        # 作为"中性值"示例，但 LLM（尤其 webchat 模型）倾向原样回显该模板，
+        # 导致所有维度都得 0.50，verifier 误判为有效评分。
+        # 此检测在 prompt 修复后理论上不会触发，但作为防御性兜底保留。
+        if (normalized_scores and len(normalized_scores) >= 3
+                and all(abs(v - 0.50) < 1e-6 for v in normalized_scores.values())):
+            logger.warning(
+                f"MultiJudgeVerifier: judge '{model}' returned all-0.50 scores "
+                f"(template echo detected — LLM 复制了 prompt 中的 0.50 模板分数), "
+                f"treating as invalid"
+            )
+            raise ValueError(
+                f"Judge '{model}' returned all-0.50 scores (template echo detected)"
+            )
+
+        # v6 修复: 检测模板回显的占位符建议（"改进建议1"/"改进建议2"等）
+        # 这些是 prompt 模板里的字面占位符，LLM 直接复制表明未真正评审
+        if isinstance(suggestions, list) and suggestions:
+            _PLACEHOLDER_SUGGESTIONS = {"改进建议1", "改进建议2", "改进建议3", "建议1", "建议2", "建议3"}
+            _echoed_placeholders = [
+                s for s in suggestions
+                if isinstance(s, str) and s.strip() in _PLACEHOLDER_SUGGESTIONS
+            ]
+            if _echoed_placeholders and len(_echoed_placeholders) == len(suggestions):
+                logger.warning(
+                    f"MultiJudgeVerifier: judge '{model}' returned only placeholder suggestions "
+                    f"{_echoed_placeholders} (template echo detected), treating as invalid"
+                )
+                raise ValueError(
+                    f"Judge '{model}' returned only placeholder suggestions (template echo detected)"
+                )
 
         # B3: 检测"无法回答"等非JSON文本被误解析为空scores
         if not normalized_scores:

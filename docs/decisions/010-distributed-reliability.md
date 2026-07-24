@@ -149,6 +149,81 @@ class CheckpointDrivenRecovery:
 
 ---
 
+### 10. CI/CD Tracking 去重（CL-039，headSha + aggregateBucket）
+
+**问题**：CI/CD 系统对同一 commit 可能触发多次 tracking 事件（如 PR push 后立即 re-run、webhook 重试、并发 CI runner），导致：
+
+- 同一 commit 被记录多次，污染质量统计
+- Eval Ledger 净增益计算失真（同一 commit 的多次"成功"被重复计数）
+- Harness Entropy Control 误判（重复事件触发退役信号）
+- Grafana 仪表盘显示假阳性失败率
+
+**决策**：CI/CD Tracking 引入双键去重机制。
+
+#### 10.1 headSha 主键
+
+- 每次 CI/CD tracking 事件必须携带 `headSha`（Git commit SHA）
+- 同一 `headSha` 的事件在 24 小时窗口内只记录第一次
+- 后续重复事件进入"去重丢弃队列"（仅记录计数，不进入主事件流）
+
+```python
+@dataclass
+class CIDCDEvent:
+    event_id: str           # 事件唯一 ID
+    head_sha: str           # Git commit SHA（主去重键）
+    event_type: str         # "push" | "pr" | "workflow_run" | "deployment"
+    status: str             # "success" | "failure" | "cancelled" | "skipped"
+    timestamp: datetime
+    runner_id: str = ""     # runner 标识（辅助去重）
+    aggregate_bucket: str = ""  # 聚合桶（见 §10.2）
+```
+
+#### 10.2 aggregateBucket 聚合桶
+
+- 同一 `headSha` 的多次事件按 `aggregateBucket` 聚合
+- 桶键格式：`{head_sha}:{event_type}:{date}`（date 为 UTC 日期）
+- 桶内仅保留"最严重状态"（failure > cancelled > skipped > success）
+- 桶内事件计数记录在 `event_count` 字段
+
+```python
+def compute_aggregate_bucket(head_sha: str, event_type: str, timestamp: datetime) -> str:
+    """计算聚合桶键 — 同桶事件去重."""
+    date_str = timestamp.astimezone(timezone.utc).strftime("%Y-%m-%d")
+    return f"{head_sha[:12]}:{event_type}:{date_str}"
+
+SEVERITY_ORDER = {"failure": 4, "cancelled": 3, "skipped": 2, "success": 1}
+
+def merge_into_bucket(bucket: CIDCDEvent, new_event: CIDCDEvent) -> CIDCDEvent:
+    """合并新事件到桶，保留最严重状态."""
+    if SEVERITY_ORDER[new_event.status] > SEVERITY_ORDER[bucket.status]:
+        bucket.status = new_event.status
+    bucket.event_count += 1
+    return bucket
+```
+
+#### 10.3 与 Eval Ledger 联动
+
+- Eval Ledger 净增益计算只读取 aggregateBucket 桶内事件
+- 避免同一 commit 的多次"成功"被重复计入净增益
+- Eval Replay A/B 的 pre/post 对比基于桶状态（而非原始事件）
+
+#### 10.4 与 Harness Entropy Control 联动
+
+- Harness Entropy Control 的退役信号基于桶内最严重状态
+- 避免重复事件触发误退役（如同一 commit 因 webhook 重试显示多次"失败"）
+
+#### 10.5 去重窗口
+
+- 默认 24 小时窗口（同 headSha + event_type 24h 内只计一次）
+- 超过 24 小时的同 headSha 事件视为新事件（如手动 re-run）
+- 窗口可配置（`ci_dedup.window_hours` in `config/system.yaml`）
+
+**实现位置**：`flowforge/core/observability.py` 扩展 `dedupe_cicd_event` 函数
+
+**关联 Feature**：F023 liveness 规范读模型 + F012 Entropy Control + F050 Eval Ledger
+
+---
+
 ## 后果
 
 ### 正面后果

@@ -426,7 +426,11 @@ loop.reflector.reflect: |
      - 建议必须具体到"第X段的'XXX'改为'YYY'"，给出具体改写方向
   6. **优先级排序**：按对总分影响从大到小排列建议
   7. **避免重复**：如果历史反思中已有建议，不要重复，而是给出更深层的改进方向
-  8. **输出内容为空时的处理**：如果输出内容为"无"或为空，说明上一次执行未产生有效输出，应分析任务输入和执行流程中的问题，建议如何确保产生有效输出
+  8. **输出内容为空或占位符时的处理**：如果输出内容为"无"、为空、或包含"文章生成失败"、"LLM返回内容无效"、"已重试多次"等占位符文本，说明上一次LLM调用失败（模型拒绝回答/超时/话题偏移）。此时应：
+     - root_cause 指出"LLM生成失败，输出为占位符，需要重新创作"
+     - suggestions[0] 必须是"重新围绕选题'{topic_title}'创作一篇完整文章，严格遵循：1)文章主题必须围绕上述选题展开 2)正文至少1200字 3)使用第一人称'我'的口语化表达 4)包含具体数据和案例（来自素材） 5)去除所有AI模板化痕迹（禁止小标题、编号列表、套话） 6)开头用具体场景代入"
+     - **禁止建议检查代码、环境、模型参数或执行流程** — 这些是技术问题，reflector应聚焦于内容改进指导
+     - suggestions 应聚焦于"如何写好这篇文章"而非"如何修复LLM故障"
 
   ## 输出格式
   严格输出JSON对象，不要输出其他内容:
@@ -791,7 +795,7 @@ flowforge.mode.plan_execute.generate_plan: |
 # === Loop Verifier & DeclarativeAgent externalized prompts ===
 # 以下键用于消除 flowforge/loop/verifier.py 与 flowforge/core/declarative_agent.py
 # 中的硬编码提示词（编程红线#11：禁止硬编码提示词）。
-# 业务上层（contentforge/devforge 等）可在自己的 prompts.yaml 中覆盖这些键。
+# 业务上层（*Forge 项目等）可在自己的 prompts.yaml 中覆盖这些键。
 
 # MultiJudgeVerifier 评委 system message（verifier.py 原 DEFAULT_JUDGE_SYSTEM_MESSAGE）
 flowforge.verifier.judge_system_message: |
@@ -820,7 +824,7 @@ flowforge.loop.refine_fallback: |
 # === MultiJudgeVerifier 默认配置（从 verifier.py 类常量外置） ===
 # 以下键用于消除 flowforge/loop/verifier.py 中 MultiJudgeVerifier 的硬编码类常量
 # （编程红线#11：禁止硬编码提示词）。
-# 业务上层（contentforge/devforge 等）可在自己的 prompts.yaml 中覆盖这些键。
+# 业务上层（*Forge 项目等）可在自己的 prompts.yaml 中覆盖这些键。
 
 # MultiJudgeVerifier 默认评审维度及权重（verifier.py 原 DEFAULT_DIMENSIONS）
 flowforge.verifier.dimensions:
@@ -849,15 +853,17 @@ flowforge.verifier.context_sections:
       source: "task.input_data.task"
 
 # MultiJudgeVerifier 默认评审提示词模板（verifier.py 原 DEFAULT_JUDGE_CONTEXT_TEMPLATE）
-# 占位符: {judge_role} {context_sections} {dimension_lines} {content} {score_fields}
-# 注意: 字面花括号已转义为 {{ }}（.format() 会还原为单层花括号）
+# 占位符: {judge_role} {context_sections} {dimension_lines} {content}
+# v6 修复 (2026-07-21): 移除预填充 JSON 模板 — 原 0.50 模板分数被 LLM 原样回显，
+# 4 个评委都返回 score=0.50（template echo bug），导致内容质量永远 0.50 无法通过 0.85 阈值。
+# 现改为：仅用文本描述 JSON schema，强制 LLM 自行构造 JSON，并在 verifier 端检测全 0.50 的模板回显。
 flowforge.verifier.judge_context_template: |
   你是一位{judge_role}。请对以下内容进行多维度独立评审。
 
   评审上下文:
   {context_sections}
 
-  评审维度:
+  评审维度（每项 0.0-1.0 浮点数，保留两位小数）:
   {dimension_lines}
 
   评分规则(0.0-1.0):
@@ -866,22 +872,29 @@ flowforge.verifier.judge_context_template: |
   待评审内容:
   {content}
 
-  【绝对要求】你只能输出一个JSON对象。不要输出任何其他内容。不要用```json```包裹。直接以{{开头，以}}结尾。
+  【输出要求】
+  1. 必须真正阅读并分析上述"待评审内容"，根据内容实际质量给出每项维度的分数。
+  2. 禁止返回模板/示例分数（例如所有维度都是 0.50），这会被自动检测并判为无效。
+  3. 每个维度的分数必须基于内容在该维度的实际表现，不同维度分数应当有差异（除非内容确实均匀）。
+  4. 严格按维度标准评分，不要因为整体还行就给所有维度高分。
+  5. 评审要严格客观，宁可低估不要高估。
 
-  输出格式:
-  {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1","改进建议2"]}}
+  【输出格式】
+  - 仅输出一个 JSON 对象，不要输出任何其他文字、解释或 Markdown 代码块。
+  - JSON 顶层必须包含两个字段:
+    * "scores": 对象类型，键为上述每个评审维度名（如 "title_attractiveness"），值为该维度的分数（0.0-1.0 浮点数）。
+    * "improvement_suggestions": 数组类型，包含 3-5 条具体的改进建议（每条为非空字符串）。
+  - 直接以 {{ 开头，以 }} 结尾，不要用 ```json``` 包裹。
 
-  示例:
-  {{"scores":{{"quality":0.75,"accuracy":0.80,"completeness":0.72,"clarity":0.78}},"improvement_suggestions":["建议1","建议2"]}}
+  【评分示例（仅说明格式，禁止照搬此示例分数）】
+  假设评审维度为 "quality" 和 "accuracy"，假设内容质量中等，则输出可能形如:
+  {{"scores":{{"quality":0.72,"accuracy":0.65}},"improvement_suggestions":["改进建议具体内容1","改进建议具体内容2"]}}
 
-  评分指引:
-  1. 每个维度给出0.0-1.0之间的浮点数，保留两位小数
-  2. 严格按维度标准评分，不要因为整体还行就给所有维度高分
-  3. improvement_suggestions列出最需改进的方面(3-5条)
-  4. 评审要严格客观，宁可低估不要高估
+  注意：上述示例仅展示 JSON 结构，禁止直接复制示例中的分数值（0.72, 0.65 等），必须根据实际待评审内容给出真实评分。
 
 # MultiJudgeVerifier 兜底最小提示词（verifier.py 原内联 f-string）
-# 占位符: {judge_role} {dimension_lines} {content} {score_fields}
+# v6 修复: 同步主模板移除预填充 JSON，仅描述 schema（避免 LLM 原样回显 0.50 模板）
+# 占位符: {judge_role} {dimension_lines} {content}
 flowforge.verifier.minimal_prompt: |
   你是{judge_role}。
 
@@ -891,4 +904,4 @@ flowforge.verifier.minimal_prompt: |
   待评审内容:
   {content}
 
-  输出JSON: {{"scores":{{{score_fields}}},"improvement_suggestions":["改进建议1"]}}
+  【输出要求】仅输出一个 JSON 对象，包含 "scores"（每个维度的实际分数 0.0-1.0）和 "improvement_suggestions"（3-5条改进建议）。禁止返回所有维度都是 0.50 的模板分数。直接以{{开头，以}}结尾。

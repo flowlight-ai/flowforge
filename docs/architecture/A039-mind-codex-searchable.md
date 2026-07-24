@@ -540,9 +540,9 @@ class MindCodexRepository(ABC):
 - [doc:../features/F038-forgemind-lineage.md]（进化谱系）
 - [doc:../features/F040-harness-eval-control-plane.md]（Harness Eval 控制面）
 - [doc:../decisions/008-memory-federation.md]（多域记忆联邦 ADR）
-- [doc:../../../hiclaw/rules.md#第二部分]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
-- [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
-- [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
+- [doc:../../CONTRIBUTING.md#33-架构约束]（原则 2 数据检索通过 Repository 层抽象，支持可插拔数据源适配器）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（编程红线第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md]（软件工程文档分层规范）
 
 ---
 

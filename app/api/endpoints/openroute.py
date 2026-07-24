@@ -1,7 +1,7 @@
 """
 OpenRoute management API endpoints.
 
-Provides REST API for managing the hiclaw openroute service lifecycle,
+Provides REST API for managing the OpenRoute service lifecycle,
 including start, stop, status, and health check operations.
 
 Uses PluginRegistry to access the OpenRouteService instead of the old

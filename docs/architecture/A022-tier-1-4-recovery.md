@@ -314,8 +314,8 @@ class MagicWordsGuard(ABC):
 - [doc:../features/F025-provider-host-abstraction.md]
 - [doc:../features/F029-physical-ai-sensors.md]
 - [doc:../decisions/010-distributed-reliability.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#编程红线]
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]
 
 ---
 

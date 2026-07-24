@@ -1139,8 +1139,8 @@ forge_relationship:
 - [doc:../design/naming-contract.md#2.1]（ForgeMind）
 - [doc:../design/naming-contract.md#2.2]（Forgekin Forgekin）
 - [doc:../design/naming-contract.md#2.6]（SoulImprint）
-- [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
-- [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（编程红线第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md]（软件工程文档分层规范）
 
 ---
 

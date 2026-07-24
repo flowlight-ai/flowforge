@@ -497,7 +497,8 @@ class TestSystemConfigMCP:
     def test_mcp_server_enabled_default(self):
         from flowforge.core.config import SystemConfig
         config = SystemConfig()
-        assert config.mcp_server_enabled is False
+        # Phase 3: MCP server is now enabled by default
+        assert config.mcp_server_enabled is True
 
     def test_mcp_server_port_default(self):
         from flowforge.core.config import SystemConfig

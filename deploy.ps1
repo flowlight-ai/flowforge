@@ -108,13 +108,9 @@ Get-Content $envFile | ForEach-Object {
     }
 }
 
-# 1.4 配置文件检查 (5 个项目)
+# 1.4 配置文件检查 (FlowForge 核心；*Forge 项目各自检查自己的配置)
 $projects = @(
     @{ Name = "flowforge";   ConfigDir = "flowforge\config";   Required = @("default.yaml", "models.yaml", "plugins.yaml") }
-    @{ Name = "contentforge"; ConfigDir = "contentforge\config"; Required = @("system.yaml", "models.yaml") }
-    @{ Name = "devforge";    ConfigDir = "devforge\config";    Required = @("default.yaml", "models.yaml", "plugins.yaml") }
-    @{ Name = "novelforge";  ConfigDir = "novelforge\config";  Required = @("default.yaml", "models.yaml", "plugins.yaml") }
-    @{ Name = "mallforge";   ConfigDir = "mallforge\config";   Required = @("default.yaml", "models.yaml", "plugins.yaml") }
 )
 
 foreach ($proj in $projects) {
@@ -156,10 +152,10 @@ if (Test-Path $flowforgeReq) {
     Set-Status "Deps:flowforge" "FAIL" "requirements.txt 缺失"
 }
 
-# 2.2 OpenRoute 依赖
-$openrouteReq = Join-Path $RootDir "hiclaw\tool\openroute\requirements.txt"
-if (Test-Path $openrouteReq) {
-    Write-Info "安装 OpenRoute 依赖..."
+# 2.2 OpenRoute 依赖（可选 — OpenRoute 是外部服务，由 OPENROUTE_DIR 环境变量定位）
+$openrouteReq = if ($env:OPENROUTE_DIR) { Join-Path $env:OPENROUTE_DIR "requirements.txt" } else { "" }
+if ($openrouteReq -and (Test-Path $openrouteReq)) {
+    Write-Info "安装 OpenRoute 依赖 (OPENROUTE_DIR=$env:OPENROUTE_DIR)..."
     try {
         pip install -r $openrouteReq --quiet 2>&1 | Out-Null
         Write-Ok "OpenRoute 依赖安装完成"
@@ -168,6 +164,9 @@ if (Test-Path $openrouteReq) {
         Write-Warn "OpenRoute 依赖安装可能不完整: $_"
         Set-Status "Deps:openroute" "WARN" "安装可能不完整"
     }
+} else {
+    Write-Warn "OPENROUTE_DIR 未设置或 requirements.txt 不存在；跳过 OpenRoute 依赖安装（OpenRoute 作为外部服务由独立部署管理）"
+    Set-Status "Deps:openroute" "WARN" "OPENROUTE_DIR 未配置"
 }
 
 # 2.3 验证关键包
@@ -198,10 +197,6 @@ Write-Step "第 3 步: 初始化数据库"
 $dataDirs = @(
     "data"
     "flowforge\data"
-    "contentforge\data"
-    "devforge\data"
-    "novelforge\data"
-    "mallforge\data"
 )
 
 foreach ($dir in $dataDirs) {
@@ -240,14 +235,16 @@ Set-Status "Database" "OK" "目录已就绪"
 # ============================================================
 Write-Step "第 4 步: 启动 OpenRoute 服务"
 
-$openrouteDir = Join-Path $RootDir "hiclaw\tool\openroute"
-$openrouteApp = Join-Path $openrouteDir "app.py"
+# OpenRoute 是外部服务，由 OPENROUTE_DIR 环境变量定位
+# 未配置时仅做健康检查（假设 OpenRoute 已独立部署）
+if (-not $env:OPENROUTE_DIR) {
+    Write-Warn "OPENROUTE_DIR 未设置；假设 OpenRoute 已作为外部服务部署。如需由本脚本启动，请在 .env 中设置 OPENROUTE_DIR"
+}
+$openrouteDir = if ($env:OPENROUTE_DIR) { $env:OPENROUTE_DIR } else { "" }
+$openrouteApp = if ($openrouteDir) { Join-Path $openrouteDir "app.py" } else { "" }
 $openroutePort = if ($env:OPENROUTE_PORT) { $env:OPENROUTE_PORT } else { 13000 }
 
-if (-not (Test-Path $openrouteApp)) {
-    Write-Fail "未找到 OpenRoute 应用: $openrouteApp"
-    Set-Status "OpenRoute" "FAIL" "app.py 缺失"
-} else {
+if ($openrouteApp -and (Test-Path $openrouteApp)) {
     # 检查端口是否已被占用（可能已运行）
     if (-not (Test-PortAvailable $openroutePort)) {
         Write-Warn "端口 $openroutePort 已被占用，检查是否为 OpenRoute..."
@@ -260,7 +257,7 @@ if (-not (Test-Path $openrouteApp)) {
             Set-Status "OpenRoute" "WARN" "端口被占用"
         }
     } else {
-        Write-Info "启动 OpenRoute (端口 $openroutePort)..."
+        Write-Info "启动 OpenRoute (端口 $openroutePort, dir=$openrouteDir)..."
         $env:OPENROUTE_PORT = $openroutePort
         $env:HF_HUB_OFFLINE = "1"
 
@@ -303,6 +300,17 @@ if (-not (Test-Path $openrouteApp)) {
                 Write-Info "OpenRoute 进程仍在运行，可能初始化较慢"
             }
         }
+    }
+} else {
+    # OpenRoute 由外部独立部署 — 仅做健康检查
+    Write-Info "OpenRoute 由外部部署管理，仅做健康检查 (端口 $openroutePort)..."
+    try {
+        $check = Invoke-RestMethod -Uri "http://127.0.0.1:$openroutePort/v1/models" -TimeoutSec 3 -ErrorAction Stop
+        Write-Ok "OpenRoute 已在运行 (外部部署)"
+        Set-Status "OpenRoute" "OK" "外部部署运行中 (端口 $openroutePort)"
+    } catch {
+        Write-Warn "OpenRoute 未在端口 $openroutePort 运行；FlowForge 可启动但 LLM 调用将不可用"
+        Set-Status "OpenRoute" "WARN" "外部未运行"
     }
 }
 
@@ -424,14 +432,11 @@ if ($sdkCheck.ToString().Contains("SDK_OK")) {
     Set-Status "Verify:SDK" "WARN" "导入异常"
 }
 
-# 6.4 Agent 注册验证 — 检查各项目 Agent 是否被 scan_agents 发现
-Write-Info "验证 Agent 自动发现..."
+# 6.4 Agent 注册验证 — 检查 FlowForge 核心 Agent 是否被 scan_agents 发现
+# *Forge 项目的 Agent 由各自项目部署脚本验证（FlowForge 通过 Plugin V3 协议在运行时发现）
+Write-Info "验证 FlowForge 核心 Agent 自动发现..."
 $agentProjects = @(
-    @{ Name = "contentforge"; Package = "contentforge.agents" }
-    @{ Name = "devforge";     Package = "devforge.agents" }
-    @{ Name = "novelforge";   Package = "novelforge.agents" }
-    @{ Name = "mallforge";    Package = "mallforge.agents" }
-    @{ Name = "demoforge";    Package = "demoforge.agents" }
+    @{ Name = "flowforge"; Package = "flowforge.agents.generic" }
 )
 foreach ($proj in $agentProjects) {
     $agentCheck = python -c "from flowforge.sdk import FlowForgeSDK; sdk = FlowForgeSDK(project='$($proj.Name)'); count = sdk.scan_agents('$($proj.Package)'); print(f'AGENTS_OK:{count}')" 2>&1
@@ -450,14 +455,11 @@ foreach ($proj in $agentProjects) {
     }
 }
 
-# 6.5 Tool 注册验证 — 检查各项目 Tool 是否被 scan_tools 发现
-Write-Info "验证 Tool 自动发现..."
+# 6.5 Tool 注册验证 — 检查 FlowForge 核心 Tool 是否被 scan_tools 发现
+# *Forge 项目的 Tool 由各自项目部署脚本验证（FlowForge 通过 Plugin V3 协议在运行时发现）
+Write-Info "验证 FlowForge 核心 Tool 自动发现..."
 $toolProjects = @(
-    @{ Name = "contentforge"; Package = "contentforge.tools" }
-    @{ Name = "devforge";     Package = "devforge.tools" }
-    @{ Name = "novelforge";   Package = "novelforge.tools" }
-    @{ Name = "mallforge";    Package = "mallforge.tools" }
-    @{ Name = "demoforge";    Package = "demoforge.tools" }
+    @{ Name = "flowforge"; Package = "flowforge.tools" }
 )
 foreach ($proj in $toolProjects) {
     $toolCheck = python -c "from flowforge.sdk import FlowForgeSDK; sdk = FlowForgeSDK(project='$($proj.Name)'); count = sdk.scan_tools('$($proj.Package)'); print(f'TOOLS_OK:{count}')" 2>&1
@@ -512,8 +514,8 @@ if ($routeOk) {
     Set-Status "Routes" "WARN" "部分路由不可达"
 }
 
-# 6.7 各项目插件加载检查
-$pluginProjects = @("contentforge", "devforge", "novelforge", "mallforge", "demoforge")
+# 6.6 FlowForge 核心插件加载检查（*Forge 项目插件由各自项目部署脚本验证）
+$pluginProjects = @("flowforge")
 foreach ($proj in $pluginProjects) {
     $pluginCheck = python -c "from $($proj).plugins import plugin; print('PLUGIN_OK:' + plugin.manifest.name)" 2>&1
     if ($pluginCheck.ToString().Contains("PLUGIN_OK:")) {
@@ -534,12 +536,12 @@ Write-Step "第 7 步: 冒烟测试"
 $flowforgePort = if ($env:FLOWFORGE_PORT) { $env:FLOWFORGE_PORT } else { 8000 }
 $smokeOk = $false
 
-# 7.1 Agent 注册冒烟测试 — 验证 Agent 能被创建和执行
+# 7.1 Agent 注册冒烟测试 — 验证 FlowForge 核心 Agent 能被创建和执行
 Write-Info "7.1 Agent 注册冒烟测试..."
 $agentSmoke = python -c "
 from flowforge.sdk import FlowForgeSDK
-sdk = FlowForgeSDK(project='demoforge')
-count = sdk.scan_agents('demoforge.agents')
+sdk = FlowForgeSDK(project='flowforge')
+count = sdk.scan_agents('flowforge.agents.generic')
 if count > 0:
     print(f'AGENT_SMOKE_OK:{count}')
 else:
@@ -553,12 +555,12 @@ if ($agentSmoke.ToString() -match "AGENT_SMOKE_OK:(\d+)") {
     Set-Status "Smoke:Agents" "WARN" "失败"
 }
 
-# 7.2 Tool 注册冒烟测试 — 验证 Tool 能被创建和调用
+# 7.2 Tool 注册冒烟测试 — 验证 FlowForge 核心 Tool 能被创建和调用
 Write-Info "7.2 Tool 注册冒烟测试..."
 $toolSmoke = python -c "
 from flowforge.sdk import FlowForgeSDK
-sdk = FlowForgeSDK(project='demoforge')
-count = sdk.scan_tools('demoforge.tools')
+sdk = FlowForgeSDK(project='flowforge')
+count = sdk.scan_tools('flowforge.tools')
 if count > 0:
     print(f'TOOL_SMOKE_OK:{count}')
 else:

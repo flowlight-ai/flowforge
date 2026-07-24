@@ -43,8 +43,8 @@ MAX_REFLECT_RETRIES: int = 3
 # 任何 SelfDev 闭环都禁止修改这些路径（铁律：VISION/rules/核心 ADR 不可变）
 _PROTECTED_PATH_PATTERNS: List[str] = [
     "VISION.md",
-    "hiclaw/rules.md",
-    "hiclaw/prompts.md",
+    "CONTRIBUTING.md",
+    "SOP.md",
     "decisions/",  # 所有 ADR 不可变（新增 ADR 不在此限）
 ]
 
@@ -363,9 +363,13 @@ class SelfDevLoopBase(ABC):
     def pre_act_scope_guard_check(self, task: DevTask, plan: DevPlan) -> None:
         """I2 Scope Guard 前置检查 — 检查目标路径是否在受保护白名单中.
 
+        特例（F046 §2.6 I2 注释"新增 ADR 不在此限"）：
+        - `decisions/` pattern 允许 create 操作（新增 ADR）
+        - `decisions/` pattern 阻止 update/delete 操作（修改已有 ADR）
+
         Args:
-            task: 开发任务（含 target_path）
-            plan: 修改方案（含 steps）
+            task: 开发任务（含 target_path / modification_type）
+            plan: 修改方案（含 steps，每步含 action / path）
 
         Raises:
             ScopeGuardBlockedError: 目标路径在受保护白名单中
@@ -373,6 +377,9 @@ class SelfDevLoopBase(ABC):
         # 检查 task.target_path
         target = task.target_path
         for pattern in self._protected_paths:
+            # 特例：decisions/ 路径允许 create 新 ADR（注释：新增 ADR 不在此限）
+            if pattern == "decisions/" and task.modification_type == "create":
+                continue
             if pattern in target:
                 raise ScopeGuardBlockedError(
                     target,
@@ -383,7 +390,11 @@ class SelfDevLoopBase(ABC):
         for step in plan.steps:
             step_path = step.get("path", "") if isinstance(step, dict) else ""
             if step_path:
+                step_action = step.get("action", "") if isinstance(step, dict) else ""
                 for pattern in self._protected_paths:
+                    # 特例：decisions/ 路径允许 create_adr action（新增 ADR）
+                    if pattern == "decisions/" and step_action == "create_adr":
+                        continue
                     if pattern in step_path:
                         raise ScopeGuardBlockedError(
                             step_path,

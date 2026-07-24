@@ -323,7 +323,7 @@ TeamAct ROUTE 步触发 (持球Forgekin传球)
 - [doc:../features/F002-teamact-loop.md]（TeamAct ROUTE 步触发写入）
 - [doc:../features/F009-evidence-sensors.md]（evidence_refs 锚定目标）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

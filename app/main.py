@@ -66,7 +66,6 @@ def _register_core_tools(tool_registry: ToolRegistry, plugin_registry: PluginReg
         ("flowforge.tools.tavily_search", "TavilySearchTool", "TAVILY_API_KEY"),
         ("flowforge.tools.duckduckgo_search", "DuckDuckGoSearchTool", None),
         ("flowforge.tools.web_scraper", "WebScraperTool", None),
-        # ContentForge domain tools — use contentforge.tools.xxx directly
         ("flowforge.tools.sendgrid_mail", "SendGridMailTool", "SENDGRID_API_KEY"),
         ("flowforge.tools.local_publish", "LocalPublishTool", None),
         ("flowforge.tools.opensieve_client", "OpenSieveClient", None),
@@ -322,7 +321,9 @@ _AUTO_DISCOVER_SUBDIRS = [
 ]
 
 # Default *forge project names to scan
-_DEFAULT_FORGE_NAMES = ["contentforge", "devforge", "novelforge", "mallforge"]
+# *Forge projects register themselves via Plugin V3 protocol; this list is
+# populated at runtime by auto_discover_plugins() scanning installed packages.
+_DEFAULT_FORGE_NAMES: list[str] = []
 
 
 def auto_discover_plugins(

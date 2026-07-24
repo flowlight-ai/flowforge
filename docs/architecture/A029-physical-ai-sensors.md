@@ -417,7 +417,7 @@ class Tier0Guard(ABC):
 - [doc:../features/F023-liveness-canonical-read.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
 - [doc:../design/naming-contract.md]（EchoStore + Forgekin Species 智能体形态学）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

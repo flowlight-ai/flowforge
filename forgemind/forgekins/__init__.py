@@ -1,7 +1,7 @@
 """灵智体花名册（Forgekins Roster）— 预置灵智体配置加载入口.
 
-参考 clowder-ai/cat-template.json，结合 FlowForge v7.0 育灵体系,
-预置 3 只灵智体（参考 clowder-ai 最初 3 只猫）:
+参考 cat-template.json 范式，结合 FlowForge v7.0 育灵体系,
+预置 3 只灵智体（参考最初 3 只猫）:
 - 鲁班（猫头鹰 / Owl）— 主架构师
 - 夏洛克（猎犬 / Bloodhound）— 代码审查专家
 - 梵高（孔雀 / Peacock）— 视觉设计师
@@ -13,7 +13,7 @@
 
 详见:
     - [doc:design/naming-contract.md#2.2] 灵智体定义
-    - clowder-ai/cat-template.json — 3 只猫参考实现
+    - cat-template.json — 3 只猫参考实现
     - flowforge/llm/trae/client.py — Trae 桥接客户端
 """
 

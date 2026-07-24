@@ -28,10 +28,11 @@ routes:
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # v5.16: timeout 90→300s — v515 实测 webchat 耗时 89-283s
-  # 90s 导致 Doubao(246s)/GLM(283s)/HunYuan(125s) 全部超时，fallback 链串行 5×90s=450s 后失败
-  # 300s 覆盖最慢的 GLM 283s + 17s 缓冲
-  # max_retries=0 不重试，直接 fallback（避免单次 300s×2=600s 阻塞）
+  # v5.49 修复: timeout 300→90s — task 3b37f632 根因分析显示
+  # Qwen3.6-Plus 卡死 300s 触发 tool_registry 300s 超时，候选链未切换
+  # 改为 90s：单模型超时后立即切换到下一个候选（max_retries=0）
+  # 7候选 × 90s = 630s + backoff 7s = 637s（writer_engine 工具级 900s 足够覆盖）
+  # 用户记忆: "LLM call timeout must be 90s, 2 minutes for long articles"
   creative:
     # v5.7: primary改为Qwen3.6-Plus（Doubao-Seed2.0频繁echo/超时）
     # Qwen实测稳定：228s产出1445字，0.832分
@@ -53,7 +54,7 @@ routes:
         - timeout
         - invalid_response
         - echo_response
-      timeout_seconds: 300
+      timeout_seconds: 90  # v5.49: 300→90s，快速切换候选模型
       max_retries: 0
     default_temperature: 0.9
     default_max_tokens: 8192
@@ -136,34 +137,13 @@ routes:
         - echo_response
       timeout_seconds: 60
 
-  # StockForge 股票分析路由（P0-21 新增）
-  # 原: stockforge agents 走 default 路由 → Doubao-Seed2.0 echo_response 导致失败
-  # 新: DeepSeek-V4-Pro 为主（稳定6-10s响应），Doubao-Seed2.0 降为 fallback
-  # 超时120s + max_retries=1，总上限240s（单步工具调用+LLM推理）
-  stock_analysis:
-    primary_provider: openroute
-    primary_model: DeepSeek-V4-Pro
-    fallback_providers:
-      - openroute
-    fallback_models:
-      - GLM-5.1
-      - Doubao-Seed2.0
-      - MiniMax-M3
-    failover_policy:
-      conditions:
-        - rate_limited
-        - timeout
-        - echo_response
-      timeout_seconds: 120
-      max_retries: 1
-      retry_delay_seconds: 1.0
-    default_temperature: 0.3
-    default_max_tokens: 4096
-
 # ==================== Agent 路由映射 ====================
 # Agent 命名空间 -> 路由名
 # 支持前缀匹配: agent_name 以 "multi_judge_" 开头时自动匹配 judge 路由
 # (LLMClient._get_timeout_for_agent 会先精确匹配,再前缀匹配)
+#
+# 说明：*Forge 项目的 Agent 路由由各自项目通过 Plugin V3 协议在运行时注入，
+# FlowForge 核心仅保留通用路由映射（评委 / 反思等通用能力）。
 agent_routes:
   # 评委路由(前缀匹配): multi_judge_<model> → judge 路由(240s 超时)
   multi_judge_: judge
@@ -174,123 +154,11 @@ agent_routes:
   # 日志: agent=reflexion_reflector timeout=200.0s（应走 90s 路由）
   reflexion_reflector: reflector
 
-  # ContentForge Agent
-  # v4.1: topic 走 creative 路由(90s timeout) — default 路由 200s > worker timeout 180s 导致超时
-  # topic_strategist 内部调用 LLM agent_name="topic"，需同时映射
-  contentforge:topic: creative
-  topic: creative
-  contentforge:research: default
-  # v2.4 修复: editor 也走 creative 路由(300s timeout)
-  # 原: 未映射 → default 200s → OpenRoute webchat 推理>200s 超时
-  contentforge:editor: creative
-  contentforge:writer: creative
-  contentforge:seo: precise
-  contentforge:fact_check: precise
-  contentforge:publish: default
-
-  # NovelForge Agent
-  novelforge:novel_concept: creative
-  novelforge:outline: creative
-  novelforge:chapter_writing: creative
-  novelforge:chapter_review: default
-  novelforge:continuity_check: precise
-  novelforge:polisher: creative
-  novelforge:full_review: default
-  novelforge:publication_advisor: default
-
-  # DevForge Agent
-  devforge:requirements_analyst: default
-  devforge:architect: creative
-  devforge:coder: precise
-  devforge:code_reviewer: precise
-  devforge:test_generator: precise
-  devforge:deployment: default
-  devforge:security_auditor: precise
-
-  # MallForge Agent
-  mallforge:product_scout: default
-  mallforge:listing_generator: creative
-  mallforge:ad_optimizer: default
-  mallforge:supply_chain: precise
-  mallforge:support_agent: default
-  mallforge:report_generator: default
-
-  # StockForge Agent
-  # P0-21: stockforge agents 原走 default 路由 → Doubao-Seed2.0 echo_response 导致失败
-  # 改为走 stock_analysis 路由 → DeepSeek-V4-Pro（更稳定，无 echo 问题）
-  stockforge:stock_data: stock_analysis
-  stockforge:technical_indicator: stock_analysis
-  stockforge:prediction: stock_analysis
-  stockforge:risk: stock_analysis
-  stockforge:report: stock_analysis
-  stockforge:screening: stock_analysis
-  stockforge:bull_bear_debate: stock_analysis
-
 # ==================== Agent 模型参数覆盖 ====================
 # Agent 命名空间 -> 模型参数覆盖
-agent_model_params:
-  contentforge:writer:
-    temperature: 0.9
-    max_tokens: 8192
-  contentforge:seo:
-    temperature: 0.3
-    json_mode: true
-  contentforge:fact_check:
-    temperature: 0.0
-    json_mode: true
-  contentforge:publish:
-    temperature: 0.3
-  novelforge:chapter_writing:
-    temperature: 0.9
-    max_tokens: 8192
-  novelforge:continuity_check:
-    temperature: 0.0
-    json_mode: true
-  devforge:coder:
-    temperature: 0.3
-    max_tokens: 8192
-  devforge:security_auditor:
-    temperature: 0.0
-  devforge:code_reviewer:
-    temperature: 0.3
-  mallforge:product_scout:
-    temperature: 0.4
-    json_mode: true
-  mallforge:listing_generator:
-    temperature: 0.7
-    json_mode: true
-  mallforge:ad_optimizer:
-    temperature: 0.5
-    json_mode: true
-  mallforge:supply_chain:
-    temperature: 0.3
-    json_mode: true
-  mallforge:support_agent:
-    temperature: 0.6
-    json_mode: true
-  mallforge:report_generator:
-    temperature: 0.4
-    json_mode: true
-
-  # StockForge Agent 模型参数（P0-21）
-  stockforge:stock_data:
-    temperature: 0.0
-    max_tokens: 2048
-  stockforge:technical_indicator:
-    temperature: 0.0
-    max_tokens: 2048
-  stockforge:prediction:
-    temperature: 0.3
-    max_tokens: 4096
-  stockforge:risk:
-    temperature: 0.3
-    max_tokens: 4096
-  stockforge:report:
-    temperature: 0.5
-    max_tokens: 8192
-  stockforge:screening:
-    temperature: 0.3
-    max_tokens: 4096
+# 说明：*Forge 项目的 Agent 模型参数由各自项目通过 Plugin V3 协议在运行时注入，
+# FlowForge 核心仅保留通用 Agent 的参数覆盖。
+agent_model_params: {}
 
 # ==================== 故障转移条件定义 ====================
 failover_conditions:

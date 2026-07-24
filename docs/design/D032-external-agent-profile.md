@@ -1561,7 +1561,7 @@ class HarnessFusionSourceCollector(FusionSourceCollector):
 - [doc:D035-external-agent-capability-fusion.md]（FusionSource 引用 agent_id）
 - [doc:../decisions/006-external-agent-integration.md]
 - [doc:../design/naming-contract.md]（双轨命名 ForgeMind/Forgekin）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

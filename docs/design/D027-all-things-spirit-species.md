@@ -1114,8 +1114,8 @@ class CapabilityProfile(BaseModel):
 - [doc:../features/F001-capability-profile.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
 - [doc:../design/naming-contract.md]（Forgekin Species 智能体形态学 + SoulImprint）
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#编程红线]
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]
 
 ---
 

@@ -411,7 +411,7 @@ class FallbackChainExecutor(ABC):
 - [doc:../features/F031-external-agent-adapter.md]
 - [doc:../features/F035-external-agent-capability-fusion.md]
 - [doc:../decisions/006-external-agent-integration.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

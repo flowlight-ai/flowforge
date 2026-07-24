@@ -3,7 +3,7 @@
 > **文档编号**: TEMPLATE.md（v1.0）
 > **更新日期**: 2026-07-19
 > **用途**: 所有 Architecture Feature 规格文件的模板（Feature 级 SAD），与 [features/F0XX-xxx.md](../features/) 同号一一对应
-> **依赖**: `[doc:../spec.md]` + `[doc:../arch.md]` + `[doc:../features/F0XX-xxx.md]` + `[doc:../../../hiclaw/rules.md#第十一部分]`
+> **依赖**: `[doc:../spec.md]` + `[doc:../arch.md]` + `[doc:../features/F0XX-xxx.md]` + `[doc:../../CONTRIBUTING.md]`
 
 ---
 
@@ -120,7 +120,7 @@ class A0XXComponent:
 - [doc:../arch.md#§3.X]
 - [doc:../features/F0XX-xxx.md]
 - [doc:../decisions/0XX-xxx.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

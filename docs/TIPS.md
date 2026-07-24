@@ -1,7 +1,7 @@
 # FlowForge 经验提示与陷阱清单（TIPS）
 
 > **文档编号**: TIPS.md（v1.1）
-> **来源**: `[doc:review/review.md]` 340 项审核问题 + `[doc:roleagent.md]` Cat Café 102 天实战教训 + `[doc:clowder-ai/docs/TIPS.md]` 公开教训
+> **来源**: `[doc:review/review.md]` 340 项审核问题 + `[doc:roleagent.md]` 102 天实战教训 + 前期经验教训归档
 > **更新机制**: 每个 Bug 修复后由可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）自动追加教训条目
 > **命名规范**: 严格遵循 `[doc:design/naming-contract.md]` v2.0 "官方名称优先"原则，P0 官方名称大量使用，P2 体系别名仅社交用
 
@@ -227,7 +227,7 @@
 
 **症状**：spec.md 182KB / arch.md 277KB / design.md 264KB，可进化智能体无法单次重写。
 
-**规避**：每个 Feature 一个文件，单文件 < 50KB。按 clowder-ai/docs 七子目录结构组织。
+**规避**：每个 Feature 一个文件，单文件 < 50KB。按标准软件工程七子目录结构组织。
 
 ### TIP-030：ADR 不可变
 

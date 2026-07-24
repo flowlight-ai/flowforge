@@ -17,7 +17,7 @@
 5. Persist: 基类通用实现，沉淀到 ForgeMindEngine 三模式
 
 安全护栏：
-- I2 Scope Guard 前置检查：禁止修改 VISION.md / hiclaw/rules.md / hiclaw/prompts.md / decisions/
+- I2 Scope Guard 前置检查：禁止修改 VISION.md / CONTRIBUTING.md / SOP.md / decisions/
 - I4 LLM 审核必经（T7 铁律）：生成的文档内容必须再调用 LLM 审核通过
 - I7 不硬编码：路径从 forgekin_config["project_root"] 读取
 """

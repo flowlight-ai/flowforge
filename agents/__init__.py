@@ -7,10 +7,6 @@ from flowforge.agents.generic.multilingual import MultilingualAgent
 from flowforge.agents.generic.web_search_agent import WebSearchAgent
 from flowforge.agents.generic.research_agent import ResearchAgent
 
-# ContentForge domain agents have been migrated to contentforge package.
-# Load them via DeclarativeAgent.from_yaml("contentforge/config/agents/*.yaml").
-# DevForge domain agents have been migrated to devforge package.
-
 ALL_AGENTS = GENERIC_AGENTS
 
 

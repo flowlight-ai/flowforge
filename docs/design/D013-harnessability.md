@@ -1271,8 +1271,8 @@ class HarnessEvalControlPlane:
 - [doc:D032-external-agent-profile.md]（三方 Agent 能力画像）
 - [doc:D040-harness-eval-control-plane.md]（控制面）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
-- [doc:../../../hiclaw/rules.md#T1-T8]（测试铁律）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
+- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律]（测试铁律）
 - [doc:naming-contract.md#§4]（觉醒阶 E1-E6 标注）
 
 ---

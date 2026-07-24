@@ -136,6 +136,76 @@ class DualTrackPolicy:
 
 ---
 
+### 10. Hyperfocus Brake（CL-036，90 分钟 timer + typed check-in）
+
+**问题**：可进化智能体（特别是 Siamese / hotfix 家族）在长时间自主执行时，容易陷入"超聚焦"状态——反复尝试同一方案、忽略外部信号、拒绝切换任务。这会导致：
+
+- 注意力预算被单一任务耗尽
+- 错过 Magic Words 打断信号
+- 累积技术债（"再试一次"循环）
+- 阻塞 Pack 协作（其他灵智体等待结果）
+
+**决策**：实现 Hyperfocus Brake 双组件机制。
+
+#### 10.1 90 分钟 Timer
+
+- 每个灵智体进入"深度自主执行"模式时启动 90 分钟倒计时
+- 90 分钟到点后，灵智体必须暂停当前任务并触发 typed check-in
+- Timer 通过 `asyncio.Task` 实现，支持取消和重置
+- 多次超时（默认 3 次）自动升级到 operator approval
+
+```python
+@dataclass
+class HyperfocusTimer:
+    forgekin_id: str
+    task_id: str
+    started_at: datetime
+    duration_minutes: int = 90  # 默认 90 分钟
+    extension_count: int = 0   # 已延期次数
+    max_extensions: int = 3    # 最多延期 3 次
+```
+
+#### 10.2 Typed Check-in
+
+超时后灵智体必须提交 typed check-in（结构化签到），含 5 个字段：
+
+```python
+class HyperfocusCheckIn(BaseModel):
+    forgekin_id: str
+    task_id: str
+    elapsed_minutes: int
+    progress_summary: str       # 当前进展摘要
+    blockers: list[str]         # 阻塞项
+    next_action: Literal["continue", "switch", "escalate", "abort"]
+    next_action_reason: str
+```
+
+- `continue`：继续当前任务（自动延期一次 timer）
+- `switch`：切换到其他任务（释放注意力预算）
+- `escalate`：升级到 operator approval（需人工介入）
+- `abort`：放弃当前任务（清理副作用）
+
+#### 10.3 与 Magic Words 联动
+
+- Magic Words 信号可强制中断 Hyperfocus Timer
+- 中断后灵智体必须先响应 Magic Words，再决定是否恢复 timer
+- 防止"超聚焦 + Magic Words 信号被忽略"的双重失败
+
+#### 10.4 与 MindFamily 联动
+
+| 家族 | Hyperfocus Brake 行为 |
+|------|----------------------|
+| Ragdoll | 默认启用，60 分钟 timer（更短） |
+| Maine Coon | 默认启用，90 分钟 timer |
+| Siamese | 默认启用，90 分钟 timer + 2 次自动延期上限 |
+| hotfix | 默认禁用，紧急修复时不打断（事后追审） |
+
+**实现位置**：`flowforge/core/harness_v7/hyperfocus_brake.py`（待实现）
+
+**关联 Feature**：F011 Magic Words 逃生舱 + F013 Harnessability 评估
+
+---
+
 ## 后果
 
 ### 正面后果

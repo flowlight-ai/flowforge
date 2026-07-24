@@ -363,8 +363,8 @@ Operator 编写治理规则 YAML (flowforge/config/harness.yaml)
 - [doc:../features/F022-tier-1-4-recovery.md]（严肃操作红线）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
 - [doc:../decisions/001-agent-invocation-approach.md]（ForgekinHost 注入治理规则）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
-- [doc:../../../hiclaw/rules.md#红线11]（禁止硬编码提示词）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（禁止硬编码提示词）
 
 ---
 

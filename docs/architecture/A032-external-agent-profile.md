@@ -368,7 +368,7 @@ class CapabilityMatcher(ABC):
 - [doc:../features/F035-external-agent-capability-fusion.md]
 - [doc:../decisions/006-external-agent-integration.md]
 - [doc:../design/naming-contract.md]（能力画像 Capability Profile）
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

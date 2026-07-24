@@ -1366,7 +1366,7 @@ class HarnessCapabilityDistiller(CapabilityDistiller):
 - [doc:D033-external-agent-shared-state.md]（Onboarding 传递）
 - [doc:D022-tier-1-4-recovery.md]（Tier 1-4 详细设计）
 - [doc:../decisions/006-external-agent-integration.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 
 ---
 

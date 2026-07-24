@@ -505,8 +505,8 @@ class LineageRepository(ABC):
 - [doc:../features/F037-forgemind-marketplace.md]（Forgekin 市场）
 - [doc:../features/F039-mind-codex-searchable.md]（MindCodex可检索知识库）
 - [doc:../decisions/005-forgemind-application-layer.md]（forgemind 应用层 ADR）
-- [doc:../../../hiclaw/rules.md#第七部分]（编程红线第 10/11/12/13 条）
-- [doc:../../../hiclaw/rules.md#第十一部分]（软件工程文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（编程红线第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md]（软件工程文档分层规范）
 
 ---
 

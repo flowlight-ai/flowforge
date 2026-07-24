@@ -1133,7 +1133,7 @@ class HotfixTagger:
 - [doc:../architecture/A012-entropy-control.md]（HotfixTag 写 git + thread_trace）
 - [doc:../architecture/A021-side-effect-wal.md]（WAL 可重放）
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

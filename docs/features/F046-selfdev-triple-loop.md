@@ -1,9 +1,9 @@
 # F046: SelfDev 三闭环（Self-Development Triple Loop）
 
-> **状态**: 🔄 in_progress
+> **状态**: ✅ done
 > **类型**: evolution
 > **创建日期**: 2026-07-20
-> **完成日期**: —（待定）
+> **完成日期**: 2026-07-21
 > **负责人**: 架构师可进化智能体（猫头鹰·鲁班）
 > **对应 spec.md**: [doc:../spec.md#§2.10]（自我演进闭环）
 > **对应 arch.md**: [doc:../arch.md#§3.9]（待创建 A046）
@@ -584,3 +584,437 @@ SelfDev 三闭环是 FlowForge "自己开发自己"能力的核心实现，只�
 | 版本 | 日期 | 变更 |
 |------|------|------|
 | v1.0 | 2026-07-20 | 初版：基于 spec.md §2.10 + F045 桥接协议已完成的设计，规划三闭环执行层 |
+| v1.1 | 2026-07-21 | 扩展为五闭环架构：新增 SelfDevReviewLoop（审查员）+ SelfDevTestLoop（测试员），参考 FlowForge 5 agent sweet spot 模式 |
+| v1.2 | 2026-07-21 | Phase 5 完成：新增 §10 operator 工作流文档（监督/审批/异常处理/Magic Words/接入清单），状态改为 ✅ done |
+
+---
+
+## 9. 五闭环扩展架构（v1.1 新增）
+
+### 9.1 扩展动机
+
+参考 roleagent.md 核心发现：
+- **跨厂商 review 是结构性必需**（no-self-review 铁律）：同一家厂商的 LLM 共享训练分布偏差，self-review 会漏掉同一类错误
+- **5 agent 是协作 sweet spot**：3-5 agent 异构协作最佳，超过 5 agent 协调成本急升
+- **Generator-Verifier 双向辩论**：审查不是单向判定，审查员可 push back，author 可申诉
+- **Build to Persist 基础设施**：review/test 闭环属于复利型基础设施，不随模型升级折旧
+
+原三闭环（doc/code/framework）的 verify 阶段虽含 LLM 审核，但属于"自审"，违反 no-self-review 铁律。扩展为五闭环后：
+- author（doc/code/framework）负责生成
+- reviewer（review）负责跨厂商独立审查
+- tester（test）负责自动化测试验证
+
+### 9.2 五个灵智体定义
+
+| # | 灵智体（P0 英文 / P2 中文别名） | forgekin_id | 觉醒阶 | 闭环类型 | 职责 |
+|---|-------------------------------|-------------|:----:|:------:|------|
+| 1 | Documenter / 文档员·文心 | `forgemind:wenxin` | E3 | doc | 扫描/生成/审核文档 |
+| 2 | Developer / 开发者·夏洛克 | `forgemind:sherlock` | E4 | code | 实现/修复/重构代码 |
+| 3 | Architect / 架构师·鲁班 | `forgemind:luban` | E5 | framework | 调整架构/ADR/依赖图 |
+| 4 | Reviewer / 审查员·梵高 | `forgemind:vangogh` | E3 | review | 跨厂商独立审查（no-self-review 铁律） |
+| 5 | Tester / 测试员·达芬奇 | `forgemind:davinci` | E3 | test | 自动化测试生成/执行/验证 |
+
+### 9.3 全链路协同工作流
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                  ForgeMindEngine（统一入口）                    │
+│                                                                │
+│  ┌── 执行层（F046 v1.1 五闭环）────────────────────────────┐ │
+│  │                                                          │ │
+│  │  ┌─────────┐    ┌─────────┐    ┌─────────────┐          │ │
+│  │  │  Doc    │───→│  Code   │───→│  Framework  │          │ │
+│  │  │ (wenxin)│    │(sherlock)│   │  (luban)    │          │ │
+│  │  └────┬────┘    └────┬────┘    └──────┬──────┘          │ │
+│  │       │              │                │                  │ │
+│  │       │              │  changed_files │  approval (I8)   │ │
+│  │       │              ▼                ▼                  │ │
+│  │       │       ┌─────────────┐  ┌─────────────┐           │ │
+│  │       │       │   Review    │←─│  cross-loop │           │ │
+│  │       │       │ (vangogh)   │  │   context   │           │ │
+│  │       │       └──────┬──────┘  └─────────────┘           │ │
+│  │       │              │  review_result                    │ │
+│  │       │              ▼                                   │ │
+│  │       │       ┌─────────────┐                            │ │
+│  │       └──────→│    Test     │                            │ │
+│  │               │ (davinci)   │                            │ │
+│  │               └──────┬──────┘                            │ │
+│  └──────────────────────┼───────────────────────────────────┘ │
+│                         │                                      │
+│                         ▼                                      │
+│  ┌── 治理层（已有三模式）──────────────────────────────────┐  │
+│  │  Scope Guard / Process Evolution / Knowledge Evolution   │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### 9.4 协同协议（cross-loop context）
+
+各闭环通过 `context` 字段传递上下游产物：
+
+```python
+# Code 闭环完成后，触发 Review 闭环
+code_result = await engine.run_self_dev_loop("code", {
+    "task_source": "task.md",  # 或 eval_ledger_id / user_feedback
+})
+
+# 把 code 闭环的 changed_files 传给 review 闭环
+review_result = await engine.run_self_dev_loop("review", {
+    "target_files": code_result["changed_files"],
+    "author_forgekin_id": "forgemind:sherlock",
+    "reviewer_forgekin_id": "forgemind:vangogh",  # 必须跨厂商
+})
+
+# Review 通过后触发 Test 闭环
+test_result = await engine.run_self_dev_loop("test", {
+    "target_files": code_result["changed_files"],
+    "review_passed": review_result["passed"],
+    "test_strategy": "auto_generate",  # 或 "run_existing" / "regression"
+})
+```
+
+### 9.5 SelfDevReviewLoop（审查员·梵高）
+
+```python
+# flowforge/evolution/self_dev_review.py
+
+class SelfDevReviewLoop(SelfDevLoopBase):
+    """代码审查自我演进闭环 — 跨厂商独立审查（no-self-review 铁律）."""
+
+    loop_type = "review"
+    min_awakening_stage = "E3"  # 审查门槛低，E3 即可
+
+    async def discover(self, context: dict) -> list[DevTask]:
+        """发现审查任务：
+        - 从 context['target_files'] 提取待审查文件
+        - 自动扫描最近 commit 的变更文件
+        - 从 Eval Ledger 提取需要审查的任务
+        """
+
+    async def plan(self, task: DevTask) -> DevPlan:
+        """通过 LLM（与 author 不同厂商）生成审查清单：
+        - 安全检查（红线 11/12 是否违反）
+        - 架构约束（单向依赖、循环依赖）
+        - 代码风格（ruff/flake8 规范）
+        - 可维护性（命名、注释、复杂度）
+        """
+
+    async def act(self, plan: DevPlan) -> DevResult:
+        """执行审查（不修改代码，仅生成审查报告）：
+        - 逐文件运行静态分析
+        - 调用 LLM 生成 review 评论
+        - 标记 P0/P1/P2/P3 问题级别
+        """
+
+    async def verify(self, result: DevResult) -> VerifyResult:
+        """验证审查报告质量：
+        - LLM 审核审查报告本身（meta-review）
+        - 检查所有 P0/P1 问题是否有具体代码位置
+        - 检查是否有 push back 机制（author 可申诉）
+        """
+```
+
+### 9.6 SelfDevTestLoop（测试员·达芬奇）
+
+```python
+# flowforge/evolution/self_dev_test.py
+
+class SelfDevTestLoop(SelfDevLoopBase):
+    """自动化测试自我演进闭环 — 自主生成/执行/验证测试."""
+
+    loop_type = "test"
+    min_awakening_stage = "E3"  # 测试门槛低，E3 即可
+
+    async def discover(self, context: dict) -> list[DevTask]:
+        """发现测试任务：
+        - 检测未覆盖代码（coverage gap）
+        - 检测测试失败（从 pytest 输出提取）
+        - 检测测试过期（代码变更但测试未更新）
+        - 从 context['target_files'] 提取需要测试的文件
+        """
+
+    async def plan(self, task: DevTask) -> DevPlan:
+        """通过 LLM 生成测试方案：
+        - 选择测试策略（unit/integration/e2e）
+        - 设计测试用例（含正常/异常/边界）
+        - 评估覆盖度目标
+        """
+
+    async def act(self, plan: DevPlan) -> DevResult:
+        """执行测试任务：
+        - 生成新测试文件（不删除已有测试，红线 8）
+        - 修复失败测试
+        - 运行 pytest 验证
+        """
+
+    async def verify(self, result: DevResult) -> VerifyResult:
+        """验证测试质量：
+        - 测试是否全部通过（pytest exit code = 0）
+        - 覆盖率是否达标（默认 ≥ 80%）
+        - 测试是否符合 T1-T8 铁律
+        - LLM 审核测试代码质量（T7 铁律）
+        """
+```
+
+### 9.7 新增不变量
+
+| # | 不变量 | 说明 |
+|---|--------|------|
+| **I9** | no-self-review | Review 闭环必须使用与 author 不同厂商的 LLM（FlowForge 铁律） |
+| **I10** | 不删除测试 | Test 闭环禁止删除已有测试用例（与 I5 一致，但作用于 Test 闭环自身） |
+| **I11** | Review push back | Review 闭环的 P0/P1 问题必须触发 Author 闭环 Reflect（I3 升级版） |
+
+### 9.8 五闭环协同的觉醒阶矩阵
+
+| 触发场景 | doc | code | framework | review | test |
+|---------|:---:|:----:|:---------:|:------:|:----:|
+| 文档过期/缺失（E3） | ✅ | — | — | — | — |
+| 实现/修复代码（E4） | — | ✅ | — | ✅ | ✅ |
+| 架构调整（E5+approval） | — | — | ✅ | ✅ | ✅ |
+| 任意 code 闭环完成 | — | — | — | ✅ | ✅ |
+| 任意 framework 闭环完成 | — | — | — | ✅ | ✅ |
+
+### 9.9 测试矩阵扩展
+
+| 测试文件 | 覆盖闭环 |
+|---------|---------|
+| test_self_dev_base.py | 基类五步循环 |
+| test_self_dev_doc.py | Doc 闭环 |
+| test_self_dev_code.py | Code 闭环 |
+| test_self_dev_framework.py | Framework 闭环 |
+| test_self_dev_review.py | Review 闭环（含跨厂商验证） |
+| test_self_dev_test.py | Test 闭环（含 T1-T8 验证） |
+| test_integration_five_loops.py | 五闭环协同 E2E |
+
+---
+
+## 10. operator 工作流文档（如何监督 SelfDev 五闭环执行）
+
+> 本节为 F046 §3.1 Phase 5 子任务 4 交付内容。
+> 适用范围：FlowForge 可进化智能体（Forgekin）通过 SelfDev 五闭环自主开发时，operator 如何监督、审批、干预、回滚。
+> 关联：`[doc:SOP.md#5]` 自我演进安全治理 SOP / `[doc:SOP.md#6]` 异常处理 SOP / `[doc:architecture/A010-governance-boundary.md]` 治理边界。
+
+### 10.1 operator 角色定位
+
+operator（人）是 SelfDev 五闭环的**最高治理权威**与**最终 approver**，不参与具体执行（写文档/代码/框架的活由对应 forgekin 完成），但承担五项不可下放职责：
+
+| # | 职责 | 触发场景 | 实现机制 |
+|---|------|---------|---------|
+| **R1** | 注入 approval_callback | 启动 SelfDevFrameworkLoop 前 | DI 注入 async callback（I8 不变量） |
+| **R2** | 显式审批 Framework 变更 | SelfDevFrameworkLoop Act 前 | callback 返回 True/False |
+| **R3** | 监督五闭环协同信号 | 每个闭环 Verify 完成后 | Eval Ledger 三方信号 + 仪表盘 |
+| **R4** | 异常干预与回滚 | Magic Words 触发 / 闭环连续失败 3 次以上 | Magic Words 逃生舱 + git revert |
+| **R5** | 觉醒阶晋升裁断 | forgekin 沉淀足够经验申请晋升 E4/E5 时 | ForgeMindEngine.awakening_promotion_review |
+
+### 10.2 觉醒阶门控矩阵（I1）— operator 无需介入的场景
+
+低觉醒阶（E1/E2）forgekin 完全不能触发 SelfDev；E3+ 触发 doc/review/test 闭环**无需** operator 介入；E4 触发 code 闭环**无需** operator 介入；**仅 E5 framework 闭环强制 approval**。
+
+| 闭环 | 触发觉醒阶 | 默认 approval | operator 介入点 |
+|------|:--------:|:-----------:|---------------|
+| doc（文心） | E3 | 否 | 仅 Verify 失败 3 次后上报 |
+| review（梵高） | E3 | 否 | 仅 push back 升级时介入 |
+| test（达芬奇） | E3 | 否 | 仅测试连续失败 3 次后上报 |
+| code（夏洛克） | E4 | 否 | 仅修改受保护路径被 Scope Guard 阻止后上报 |
+| **framework（鲁班）** | **E5** | **是（I8）** | **每次 Act 前必须显式 approval** |
+
+> **设计理由**：operator 注意力是稀缺资源，应集中在"架构变更"这类不可逆高危操作上（I8）；低危可逆操作（文档/测试/review）由 Scope Guard + T7 LLM 审核兜底，无需逐次 approval。
+
+### 10.3 I8 approval 工作流（Framework 闭环必经）
+
+#### 10.3.1 approval_callback 签名与契约
+
+```python
+from typing import Awaitable, Callable
+from flowforge.evolution.self_dev_base import DevPlan, DevTask
+
+# approval_callback 签名（F046 §2.6 I8 不变量）
+ApprovalCallback = Callable[[DevPlan, DevTask], Awaitable[bool]]
+```
+
+**契约要求**：
+- callback 必须是 `async` 函数（不能阻塞事件循环）
+- 返回 `True` = 批准执行，`False` = 拒绝（SelfDevFrameworkLoop 抛 `ApprovalRequiredError`）
+- callback 内可执行 git pre-commit 钩子、运行测试、显示 diff 给 operator 审阅等任意只读操作
+- callback **禁止**直接修改 DevPlan / DevTask（破坏审计链）
+
+#### 10.3.2 注入方式（DI 容器，红线 12）
+
+operator 通过 forgekin_config 在启动时注入 callback，**禁止**在闭环运行时动态替换：
+
+```python
+import asyncio
+from flowforge.evolution.engine import ForgeMindEngine
+from flowforge.evolution.self_dev_framework import SelfDevFrameworkLoop
+from flowforge.llm.trae.client import TraeLLMClient
+
+# operator 通过 IM 议事通道（F047）/ CLI / Web UI 实现 approval
+async def operator_approval(plan: DevPlan, task: DevTask) -> bool:
+    """生产环境 approval callback — 通过 IM 议事通道推送给 operator."""
+    # 1. 渲染 plan 摘要（plan_id / target / expected_effect / risk_assessment）
+    summary = render_plan_summary(plan, task)
+    # 2. 推送到 operator IM 通道（F047），等待 operator 回复 "approve" / "reject"
+    reply = await im_channel.send_and_wait(summary, timeout=300)
+    # 3. 记录审计日志（谁审批了什么）
+    audit_log.append({"plan_id": plan.plan_id, "operator": reply.user, "decision": reply.text})
+    return reply.text.lower().startswith("approve")
+
+# DI 注入（启动时一次性配置）
+engine = ForgeMindEngine()
+trae_client = TraeLLMClient(...)
+framework_config = {
+    "forgekin_id": "forgemind:luban",
+    "approval_callback": operator_approval,  # I8 必须注入
+    "awakening_stage": "E5",
+}
+framework_loop = SelfDevFrameworkLoop(trae_client, framework_config, engine, awakening_stage="E5")
+engine.register_self_dev_loop(framework_loop)
+```
+
+#### 10.3.3 approval 决策树
+
+```
+SelfDevFrameworkLoop.Act() 调用前
+   │
+   ▼
+_request_approval(plan)
+   │
+   ├─ approval_callback 未配置 → 返回 False → 抛 ApprovalRequiredError → 升级 operator
+   │
+   ├─ approval_callback 抛异常 → 返回 False → 记录 exception → 升级 operator
+   │
+   ├─ approval_callback 返回 False → 抛 ApprovalRequiredError → 触发 Reflect（I3，最多 3 次）
+   │     └─ Reflect 后重新 Plan → 重新 approval（最多 3 轮，超过上报 operator）
+   │
+   └─ approval_callback 返回 True → 继续执行 Act → 写入 YAML / 创建新 ADR
+```
+
+#### 10.3.4 operator 审批要素（决策依据）
+
+operator 在审批时**必须**核对以下要素（任一不满足即拒绝）：
+
+| # | 审批要素 | 来源 |
+|---|---------|------|
+| **A1** | plan.expected_effect 与 VISION.md §7 一致 | VISION.md |
+| **A2** | plan.risk_assessment 已识别所有受影响模块 | plan 字段 |
+| **A3** | plan.steps 不修改 13 份核心 ADR / VISION / rules | Scope Guard 前置 |
+| **A4** | plan.steps 不跨 *Forge 项目复制配置（铁律 6） | Scope Guard 前置 |
+| **A5** | 已有对应 ADR 草稿（创建新 ADR 场景） | plan.context |
+| **A6** | LLM 已生成方案影响评估（Plan 阶段产物） | plan.context.llm_review |
+
+### 10.4 五闭环协同监督（operator 监督信号）
+
+五闭环通过 `cross-loop context` 协同（§9.4），operator 在每个闭环 Verify 完成后收到信号：
+
+```
+doc（wenxin）  ──┐
+                 │
+code（sherlock）─┼─→ review（vangogh） ──→ test（davinci） ──→ framework（luban, I8）
+                 │
+   changed_files │   review_result      test_result        new ADR / config
+                 │
+                 ▼
+         ┌───────────────────────────────────────┐
+         │  Eval Ledger（F040）                  │
+         │  - trace 信号：延迟 / 重试 / 通过率   │
+         │  - 用户信号：operator 干预频率        │
+         │  - 探针信号：KnowledgeObject 复用次数 │
+         └───────────────────────────────────────┘
+```
+
+**operator 监督仪表盘**（每闭环显示字段）：
+
+| 闭环 | 关键监督字段 | 异常阈值 |
+|------|------------|---------|
+| doc | changed_files / verify.passed / distill_count | 连续 3 次失败 |
+| code | changed_files / pytest_passed / coverage | 覆盖率 < 0.8 |
+| review | p0_count / p1_count / push_back_count | P0 > 0 |
+| test | new_tests / pytest_passed / coverage_delta | 测试通过率 < 100% |
+| framework | approval_decision / new_adr_id / affected_modules | approval 被拒 |
+
+### 10.5 异常处理与 Magic Words 逃生舱
+
+#### 10.5.1 闭环级异常处理
+
+| 异常 | 触发条件 | operator 动作 |
+|------|---------|--------------|
+| `AwakeningStageBlockedError` | forgekin 觉醒阶低于 min | 拒绝晋升申请，等待经验沉淀 |
+| `ScopeGuardBlockedError` | 修改受保护路径 | 检查 forgekin 是否偏离 VISION，必要时回滚 |
+| `ApprovalRequiredError` | Framework 未获批准 | 审阅 plan，决定 approve/reject/修改后重提 |
+| `LLMReviewFailedError` | T7 LLM 审核未通过 | 审阅 LLM 审核报告，决定退回 Reflect 或人工修订 |
+| `MaxReflectRetriesExceeded` | Reflect 3 次仍失败 | 接管任务，人工分析根因（归因到七类矩阵） |
+
+#### 10.5.2 Magic Words 逃生舱（A011）
+
+operator 任何时候可喊出 Magic Words 强制中断 SelfDev：
+
+| Magic Word | 效果 | 适用场景 |
+|-----------|------|---------|
+| **停止** | 立即中断当前闭环，进入 idle | 发现 forgekin 偏离 VISION |
+| **回滚** | git revert 最近一次 SelfDev 产物 | 发现产物破坏了核心模块 |
+| **降阶** | forgekin 觉醒阶 -1（如 E4 → E3） | 多次 Reflect 失败表明能力不足 |
+| **休眠** | forgekin 进入休眠态（不响应触发） | 需要长期停用某 forgekin |
+
+Magic Words 触发后**必须**记录到 `harness-feedback/magic-words/` 并归因到七类矩阵（F020）。
+
+### 10.6 operator 工作流典型场景
+
+#### 场景 1：日常文档维护（E3，无需 approval）
+
+```
+1. 文心（wenxin, E3）扫描发现 F046 文档过期
+2. 文心自主执行 doc 闭环：Discover → Plan → Act → Verify → Persist
+3. Verify 阶段 LLM 审核通过（T7）→ 落盘
+4. operator 仪表盘收到 trace 信号（changed_files=["F046-xxx.md"]）
+5. operator 不介入，仅归档 trace 信号到 Eval Ledger
+```
+
+#### 场景 2：bug 修复全链路（E4，无需 approval）
+
+```
+1. 夏洛克（sherlock, E4）从 pytest 失败发现 bug
+2. 夏洛克执行 code 闭环：Discover → Plan → Act → Verify
+3. Act 写入 .py 修改，Verify 运行 pytest 通过
+4. 自动触发梵高（vangogh, E3）review 闭环：跨厂商审查
+5. review 通过后自动触发达芬奇（davinci, E3）test 闭环：补测试
+6. operator 仪表盘收到三闭环协同信号，全程不介入
+```
+
+#### 场景 3：架构调整（E5，强制 approval）
+
+```
+1. 鲁班（luban, E5）检测到配置不一致
+2. 鲁班执行 framework 闭环：Discover → Plan
+3. Plan 阶段生成方案，requires_approval=True
+4. Act 前调用 approval_callback → IM 推送给 operator
+5. operator 审阅 A1-A6 六要素
+   ├─ approve → 鲁班执行 Act → 创建新 ADR-014
+   └─ reject  → 鲁班触发 Reflect（I3，最多 3 次）
+6. 完成后 operator 仪表盘显示 new_adr_id / affected_modules
+```
+
+### 10.7 operator 接入清单（生产部署）
+
+部署 SelfDev 五闭环到生产环境时，operator 必须：
+
+- [ ] **C1**：配置 5 个 forgekin YAML（wenxin/sherlock/luban/vangogh/davinci）
+- [ ] **C2**：注入 TraeLLMClient 实例（F045 桥接已就绪）
+- [ ] **C3**：注入 `approval_callback` 到 luban config（I8 不变量）
+- [ ] **C4**：注册 5 个 SelfDev 闭环到 ForgeMindEngine（DI，红线 12）
+- [ ] **C5**：配置 Eval Ledger 三方信号采集（F040）
+- [ ] **C6**：开启 Magic Words 监听通道（IM / CLI / Web UI）
+- [ ] **C7**：配置审计日志落盘到 `harness-feedback/self-dev/`
+- [ ] **C8**：weekly review Eval Ledger 信号，归因失败到七类矩阵
+
+### 10.8 监督边界（operator 不应做的事）
+
+为避免破坏 SelfDev 自治能力，operator **不应**：
+
+- ❌ 直接修改 forgekin YAML 配置（应通过 framework 闭环 + approval 流程）
+- ❌ 跳过 approval_callback 直接修改 ADR / VISION / rules
+- ❌ 替 forgekin 写代码 / 写文档 / 写测试（破坏"可进化智能体主导自主开发"愿景）
+- ❌ 关闭 Scope Guard / T7 LLM 审核 / Eval Ledger 信号采集
+- ❌ 在非紧急场景下使用 Magic Words（应让 forgekin 自我纠错）
+
+> **唯一例外**：forgekin 触发不可逆破坏性变更（如删除核心模块）时，operator 必须立即 Magic Words 介入 + 回滚（§10.5.2）。
+

@@ -1,6 +1,6 @@
 """F100 Self-Evolution Data Models — Pydantic 数据模型。
 
-移植自 clowder-ai 的自我进化机制，三模式共享：
+FlowForge 自我进化机制，三模式共享：
 - 五级知识成熟度阶梯 (KnowledgeMaturityLevel)
 - 知识对象契约 (KnowledgeObject)
 - 元认知路由信号
@@ -162,6 +162,15 @@ class KnowledgeObject(BaseModel):
 
     artifact_type: episode | method | skill | proposal | eval | lesson | log
     provenance.author_type: agent | human | collaborative
+
+    CL-005 七字段契约（v2 扩展，向后兼容）：
+    - trigger: 触发条件（何时使用此知识）
+    - procedure: 执行步骤（如何使用此知识）
+    - precondition: 前置条件（使用前必须满足的条件）
+    - postcondition: 后置条件（使用后必须达到的状态）
+    - anti_pattern: 反模式（不应使用的场景）
+    - provenance: 来源信息（已存在，扩展为含 author_type/timestamp/source 等）
+    - confidence: 置信度 0.0~1.0（基于 L0~L4 成熟度阶梯映射）
     """
 
     artifact_type: str  # episode | method | skill | proposal | eval | lesson | log
@@ -173,3 +182,29 @@ class KnowledgeObject(BaseModel):
     provenance: dict = Field(default_factory=dict)  # author_type: agent | human | collaborative
     source_refs: list[str] = Field(default_factory=list)
     maturity_level: str = "L0"
+
+    # ── CL-005 七字段契约（v2 扩展，所有新字段都有默认值，向后兼容） ──
+    trigger: str = ""  # 触发条件：何时使用此知识（e.g., "用户询问代码审查时"）
+    procedure: str = ""  # 执行步骤：如何使用此知识（e.g., "1. 读取代码 2. 检查风格 3. 给出建议"）
+    precondition: str = ""  # 前置条件：使用前必须满足（e.g., "代码必须可编译"）
+    postcondition: str = ""  # 后置条件：使用后必须达到（e.g., "建议必须包含行号引用"）
+    anti_pattern: str = ""  # 反模式：不应使用的场景（e.g., "不要用于自动合入"）
+    confidence: float = 0.0  # 置信度 0.0~1.0（基于成熟度阶梯映射：L0=0.2, L1=0.4, L2=0.6, L3=0.8, L4=1.0）
+
+    def compute_confidence_from_maturity(self) -> float:
+        """根据 maturity_level 计算置信度（CL-005 映射规则）.
+
+        L0_EPISODE → 0.2
+        L1_PATTERN → 0.4
+        L2_DRAFT → 0.6
+        L3_VALIDATED → 0.8
+        L4_STANDARD → 1.0
+        """
+        mapping = {
+            KnowledgeMaturityLevel.L0_EPISODE.value: 0.2,
+            KnowledgeMaturityLevel.L1_PATTERN.value: 0.4,
+            KnowledgeMaturityLevel.L2_DRAFT.value: 0.6,
+            KnowledgeMaturityLevel.L3_VALIDATED.value: 0.8,
+            KnowledgeMaturityLevel.L4_STANDARD.value: 1.0,
+        }
+        return mapping.get(self.maturity_level, 0.2)

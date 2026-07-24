@@ -151,20 +151,42 @@ run_port_check.ps1
 workflows/*.yaml
 
 # ==================== Internal development documents (not for GitHub) ====================
-# task.md: 内部任务索引，包含老项目名引用与移植计划，不公开
+# task.md: 内部任务索引，包含移植计划与进度，不公开
 docs/task.md
-# _archive/: 历史归档目录，包含老项目信息、过程记录、中间态文档
+# _archive/: 历史归档目录，包含过程记录、中间态文档
 docs/_archive/
-# roleagent.md: 内部角色代理设计文档（如包含老项目上下文则忽略；如已净化可移除此行）
-docs/roleagent.md
-# VISION.md / ROADMAP.md / SOP.md / TIPS.md: 内部规划文档（如包含老项目信息则忽略；如已净化可移除此行）
-docs/VISION.md
-docs/ROADMAP.md
-docs/SOP.md
-docs/TIPS.md
 # harness-feedback/: 内部反馈记录
 docs/harness-feedback/
 # perspectives/: 内部视角记录
 docs/perspectives/
 # setup/: 内部安装配置记录（如包含敏感信息）
 docs/setup/
+# review/: 内部审核追溯文档（含 RA/FM/FR/CL ID 命名空间）
+docs/review/
+# process/: 内部过程文档
+docs/process/
+
+# ==================== Local config overrides (P3-011) ====================
+config/local/
+config/system.local.yaml
+config/system.local.yml
+config/secrets.yaml
+config/secrets.yml
+config/generated.yaml  # D046 OOTB 生成的配置（审计用，不入仓）
+
+# ==================== Local databases & caches (P3-011) ====================
+*.sqlite
+*.sqlite-journal
+flowforge.db
+flowforge_state.db
+.cache/
+
+# ==================== Local LLM profiles & browser sessions (P3-011) ====================
+webchat_profile/
+chrome_profile/
+.playwright/
+
+# ==================== Local logs & crash dumps (P3-011) ====================
+crash_dumps/
+*.dmp
+*.dump

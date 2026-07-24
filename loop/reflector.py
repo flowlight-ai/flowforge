@@ -124,6 +124,26 @@ _AI_SUGGESTION_FORBIDDEN_PATTERNS: list[re.Pattern] = [
 ]
 
 
+# v5.65 修复: 恢复建议白名单 — 当 LLM 输出为空/占位符/偏题时, reflector 会生成
+# "重新围绕选题创作一篇完整文章" 这类关键恢复建议。这些建议可能包含"场景代入"等
+# AI 模式词, 但它们是修复失败的关键指导, 不应被过滤。
+# 旧逻辑: 直接匹配 _AI_SUGGESTION_FORBIDDEN_PATTERNS 过滤, 导致 v5.63 的恢复建议
+# "重新围绕选题'...'创作一篇完整文章...开头用具体场景代入" 被 '场景代入' 模式过滤,
+# 第2轮 writer 收不到"重新围绕选题创作"的关键指导, 只收到"引用具体数据"的次要建议,
+# 导致第2轮内容只有 601 字, 质量分 0.794 < 0.85。
+# 新逻辑: 建议中包含恢复关键词时, 跳过 AI 模式过滤, 直接保留。
+_RECOVERY_SUGGESTION_KEYWORDS: tuple[str, ...] = (
+    "重新围绕选题",
+    "创作一篇完整文章",
+    "重新创作一篇",
+    "重新撰写一篇",
+    "从头创作",
+    "围绕上述选题",
+    "围绕该选题",
+    "围绕此选题",
+)
+
+
 def filter_ai_pattern_suggestions(suggestions: list[str]) -> tuple[list[str], list[str]]:
     """过滤包含 AI 模式内容的建议。
 
@@ -134,6 +154,14 @@ def filter_ai_pattern_suggestions(suggestions: list[str]) -> tuple[list[str], li
     dropped: list[str] = []
     for s in suggestions:
         s_str = str(s)
+        # v5.65 修复: 恢复建议白名单优先级最高, 包含恢复关键词的建议直接保留
+        # 这些建议是修复 LLM 失败的关键指导, 即使包含"场景代入"等词也不应过滤
+        _is_recovery = any(_kw in s_str for _kw in _RECOVERY_SUGGESTION_KEYWORDS)
+        if _is_recovery:
+            kept.append(s_str)
+            if CF_DEBUG:
+                logger.info(f"[CF-DEBUG] reflector 保留恢复建议(白名单): suggestion={s_str[:100]!r}")
+            continue
         matched_pattern = None
         for p in _AI_SUGGESTION_FORBIDDEN_PATTERNS:
             if p.search(s_str):

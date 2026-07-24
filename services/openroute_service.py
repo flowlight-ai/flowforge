@@ -1,11 +1,11 @@
 """OpenRoute Service Manager for FlowForge.
 
-Manages the lifecycle of the hiclaw openroute service, which wraps web-based
+Manages the lifecycle of the OpenRoute service, which wraps web-based
 LLM chat interfaces (Doubao, Kimi, DeepSeek, Qianwen, Yuanbao) as OpenAI-compatible
 APIs using Playwright browser automation.
 
 The openroute service runs as a separate subprocess on port 13000, providing:
-- 1 auto-routing entry: auto (delegates to hiclaw's assignment-based model selection)
+- 1 auto-routing entry: auto (delegates to OpenRoute's assignment-based model selection)
 - 1 round-robin entry: web/chat (distributes across all 5 platforms)
 - 5 platform-specific models: Doubao-Seed2.0, kimi-web/chat, deepseek-web/chat,
   yuanbao-web/chat, qianwen-web/chat
@@ -44,7 +44,7 @@ HEALTH_POLL_INTERVAL = 2
 
 
 class OpenRouteService(ToolPlugin):
-    """Manages the hiclaw openroute subprocess lifecycle.
+    """Manages the OpenRoute subprocess lifecycle.
 
     Implements ToolPlugin so it can be managed by PluginRegistry.
     All config is injected through the constructor — no hardcoded paths,
@@ -91,24 +91,18 @@ class OpenRouteService(ToolPlugin):
         self._started_at: Optional[float] = None
         self._running: bool = False
 
-        # Resolve openroute_dir: explicit > env > auto-detect
+        # Resolve openroute_dir: explicit > env > empty (must be configured)
         if openroute_dir:
             self._openroute_dir = Path(openroute_dir)
         elif os.environ.get("OPENROUTE_DIR"):
             self._openroute_dir = Path(os.environ["OPENROUTE_DIR"])
         else:
-            # Auto-detect: look for hiclaw/tool/openroute relative to flowforge/
-            flowforge_root = Path(__file__).parent.parent
-            project_root = flowforge_root.parent
-            candidate = project_root / "hiclaw" / "tool" / "openroute"
-            if candidate.exists():
-                self._openroute_dir = candidate
-            else:
-                self._openroute_dir = Path()
-                logger.warning(
-                    f"OpenRoute dir not found at {candidate}. "
-                    f"Set OPENROUTE_DIR env var or pass openroute_dir config."
-                )
+            # OpenRoute is an external service; require explicit configuration
+            self._openroute_dir = Path()
+            logger.warning(
+                "OpenRoute dir not configured. "
+                "Set OPENROUTE_DIR env var or pass openroute_dir config."
+            )
 
     @property
     def base_url(self) -> str:

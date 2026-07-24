@@ -71,11 +71,13 @@ def _get_openrouter_config():
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         # 尝试从多个.env文件位置读取
+        # OpenRoute 由 OPENROUTE_DIR 环境变量定位（外部服务）
+        openroute_dir = os.environ.get("OPENROUTE_DIR", "")
         env_candidates = [
             PROJECT_ROOT / ".env",
-            PROJECT_ROOT / "contentforge" / ".env",
-            PROJECT_ROOT / "hiclaw" / "tool" / "openroute" / ".env",
         ]
+        if openroute_dir:
+            env_candidates.append(Path(openroute_dir) / ".env")
         for env_file in env_candidates:
             if env_file.exists():
                 with open(env_file, "r", encoding="utf-8") as f:

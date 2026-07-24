@@ -40,12 +40,12 @@
 | [decisions/](decisions/) 13 份 ADR | 不可变架构决策记录 |
 | [roleagent.md](roleagent.md) | 七大工程路径 |
 | [review/review.md](review/review.md) v1.4 | 16 份审核归并 + 41 条 CL 同步矩阵 |
-| [hiclaw/rules.md](../../hiclaw/rules.md) v3.2 | 开发规范 + 第十一部分文档分层规范 |
-| [hiclaw/prompts.md](../../hiclaw/prompts.md) P52 | SAD 架构设计说明书模板 |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | 开发规范 + 第十一部分文档分层规范 |
+| [SOP.md](SOP.md) | SAD 架构设计说明书模板 |
 
 ### §1.5 文档组织
 
-按 `hiclaw/rules.md` 第十一部分文档分层规范，本文档章节与 [spec.md](spec.md) §3 同号对应。三顶层文档章节同号：同一核心功能在 spec.md/arch.md/design.md 中章节同号（如 §3.1 CapabilityProfile 在三个文档中都是 §3.1）。
+按 FlowForge 文档分层规范，本文档章节与 [spec.md](spec.md) §3 同号对应。三顶层文档章节同号：同一核心功能在 spec.md/arch.md/design.md 中章节同号（如 §3.1 CapabilityProfile 在三个文档中都是 §3.1）。
 
 ```
 flowforge/docs/
@@ -157,7 +157,7 @@ Agent 质量 = 模型能力 × Harness 契合度（Environment Fit）
 
 ### §2.6 架构不变性约束（铁律守护）
 
-> **来源**：[review/review.md](review/review.md) v1.4 §7.2 + [hiclaw/rules.md](../../hiclaw/rules.md) 编程红线
+> **来源**：[review/review.md](review/review.md) v1.4 §7.2 + [CONTRIBUTING.md](../CONTRIBUTING.md) 编程红线
 
 1. **单向依赖零容忍**：上层可依赖下层，下层绝对禁止导入上层模块；FlowForge 反向依赖零容忍（flowforge 中禁止 import 任何 *Forge 模块）
 2. **循环依赖零容忍**：发现循环依赖必须重构，不允许用延迟导入规避
@@ -416,7 +416,7 @@ Web Chat 渠道（默认）/ 飞书渠道 / 微信公众号/个人号渠道 / We
 
 ### §6.3 可观测性架构
 
-- 日志自动注入 trace_id（详见 [hiclaw/rules.md §2.6 原则 8](../../hiclaw/rules.md)）
+- 日志自动注入 trace_id（详见 [CONTRIBUTING.md §2.6 原则 8](../../CONTRIBUTING.md)）
 - 所有 I/O 使用 async/await
 - Eval 信号采集（trace 信号 + 用户信号 + 探针信号）
 - 七类归因矩阵可分类失败原因
@@ -425,6 +425,6 @@ Web Chat 渠道（默认）/ 飞书渠道 / 微信公众号/个人号渠道 / We
 ---
 
 > **本文档版本**：v7.1（2026-07-19）
-> **下一阶段**：基于本文档 + [spec.md](spec.md) + [features/](features/) 开发 [design.md](design.md)（SDD 详细设计说明书），按 [hiclaw/rules.md §11.3](../../hiclaw/rules.md) 三阶段开发流程执行。
+> **下一阶段**：基于本文档 + [spec.md](spec.md) + [features/](features/) 开发 [design.md](design.md)（SDD 详细设计说明书），按 [CONTRIBUTING.md §11.3](../../CONTRIBUTING.md) 三阶段开发流程执行。
 > **配套文档**：[spec.md](spec.md) + [design.md](design.md) + [features/](features/) + [architecture/](architecture/) + [design/](design/) + [decisions/](decisions/) + [review/](review/)
 > **历史归档**：v7.0/v6.0 历史架构章节已归档至 [`_archive/arch_v7_historical_background.md`](_archive/arch_v7_historical_background.md)，仅作演化路径参考。

@@ -156,7 +156,7 @@ def codex_manifest() -> AgentProviderManifest:
         version="1.0.0",
         protocol=AgentProtocol.API,
         transport=AgentTransport.HTTP,
-        capabilities=["reasoning", "math_computation"],
+        capabilities=["reasoning", "math_computation", "logic_analysis", "structured_output", "code_generation"],
         blind_spots=["工具调用弱", "长上下文处理一般"],
         timeout_seconds=300,
         required_env_vars=["OPENAI_API_KEY"],

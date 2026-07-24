@@ -375,7 +375,7 @@ class ForgekinEnginePort(ABC):
 - [doc:../features/F036-forgemind-forge-relationship.md]
 - [doc:../decisions/005-forgemind-application-layer.md]
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]
-- [doc:../../../hiclaw/rules.md#第十一部分]
+- [doc:../../CONTRIBUTING.md]
 - [doc:../design/naming-contract.md]（双轨命名 + 三标注规范）
 
 ---

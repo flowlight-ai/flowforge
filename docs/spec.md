@@ -60,13 +60,13 @@
 | [review/review.md](review/review.md) v1.4 | 16 份审核归并 + 41 条 CL 同步矩阵 |
 | [decisions/](decisions/) 13 份 ADR | 不可变架构决策记录 |
 | [features/](features/) 40 份 F0XX | Feature 级 SRS |
-| [hiclaw/rules.md](../../hiclaw/rules.md) v3.2 | 开发规范 + 第十一部分文档分层规范 + 第十二部分反思 |
-| [hiclaw/prompts.md](../../hiclaw/prompts.md) | AI 编程提示词模板库（P1-P55） |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | 开发规范 + 第十一部分文档分层规范 + 第十二部分反思 |
+| [SOP.md](SOP.md) | AI 编程提示词模板库（P1-P55） |
 | 前期设计参考（已归档） | 参考设计（3 只动物形态智能体分工 + roleagent 七大工程路径源头） |
 
 ### §1.5 文档组织
 
-按 `hiclaw/rules.md` 第十一部分文档分层规范：
+按 FlowForge 文档分层规范：
 
 ```
 flowforge/docs/
@@ -407,7 +407,7 @@ v7.1 多形态智能体愿景目前处于**设计态**，对应代码尚未全�
 
 **架构约束**：
 1. **单向依赖**：上层可依赖下层，下层绝对禁止导入上层模块
-2. **配置驱动 > 代码继承 > 独立实现**（详见 [hiclaw/rules.md §2.1](../../hiclaw/rules.md)）
+2. **配置驱动 > 代码继承 > 独立实现**（详见 [CONTRIBUTING.md §2.1](../../CONTRIBUTING.md)）
 3. **所有 Agent 通过 LoopExecutor 执行**（P31 铁律，质量分阈值 0.85）
 4. **数据检索通过 Repository 层抽象**（结构化 + 非结构化统一入口，支持可插拔数据源适配器；具体数据源由 *Forge 业务层或部署配置注入，FlowForge 核心层不绑定特定数据源）
 5. **Plugin V3 协议**：*Forge 通过 Plugin V3 四钩子注册可进化智能体到 forgemind
@@ -591,23 +591,23 @@ EAC v1 七契约：
 
 ### §5.4 可观测性要求
 
-- 日志自动注入 trace_id（详见 [hiclaw/rules.md §2.6 原则 8](../../hiclaw/rules.md)）
+- 日志自动注入 trace_id（详见 [CONTRIBUTING.md §2.6 原则 8](../../CONTRIBUTING.md)）
 - 所有 I/O 使用 async/await
 - Eval 信号采集（trace 信号 + 用户信号 + 探针信号）
 - 七类归因矩阵可分类失败原因
-- LLM 调用日志：input + output + execution time（详见 [hiclaw/rules.md §9.3.1](../../hiclaw/rules.md)）
+- LLM 调用日志：input + output + execution time（详见 [CONTRIBUTING.md §9.3.1](../../CONTRIBUTING.md)）
 
 ### §5.5 可演进性要求
 
 - 配置驱动率：Phase 0 ≥ 30% / Phase 1 ≥ 60% / Phase 2 ≥ 80%
-- 文档分层规范（详见 [hiclaw/rules.md 第十一部分](../../hiclaw/rules.md)）
+- 文档分层规范（详见 [CONTRIBUTING.md 第十一部分](../../CONTRIBUTING.md)）
 - 自我演进闭环（详见 §2.10）
 - Build to Delete vs Built to Persist 半衰期标记
 - ADR 不可变历史（决策变更通过新增 ADR 引用旧 ADR）
 
 ### §5.6 测试要求（T1-T8 铁律）
 
-详见 [hiclaw/rules.md §5.5](../../hiclaw/rules.md) 测试铁律 T1-T9。本节强调：
+详见 [CONTRIBUTING.md §5.5](../../CONTRIBUTING.md) 测试铁律 T1-T9。本节强调：
 - 禁止 Mock LLM（T1）
 - 禁止假数据（T2）
 - 禁止跳过验证（T3）
@@ -620,6 +620,6 @@ EAC v1 七契约：
 ---
 
 > **本文档版本**：v7.1（2026-07-19）
-> **下一阶段**：基于本文档开发 [arch.md](arch.md)（SAD 架构设计说明书），按 [hiclaw/rules.md §11.3](../../hiclaw/rules.md) 三阶段开发流程执行。
+> **下一阶段**：基于本文档开发 [arch.md](arch.md)（SAD 架构设计说明书），按 [CONTRIBUTING.md §11.3](../../CONTRIBUTING.md) 三阶段开发流程执行。
 > **配套文档**：[arch.md](arch.md) + [design.md](design.md) + [features/](features/) + [architecture/](architecture/) + [design/](design/) + [decisions/](decisions/) + [review/](review/)
 > **历史归档**：v7.0/v6.0 历史章节已归档至 [`_archive/spec_v7_historical_background.md`](_archive/spec_v7_historical_background.md)，仅作演化路径参考。

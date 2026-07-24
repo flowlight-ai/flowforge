@@ -1,7 +1,7 @@
 """FlowForge SOP 执行引擎 — 多智能体自开发方法论的阶段门禁系统。
 
 SOP（Standard Operating Procedure）执行引擎是 FlowForge 的核心组件之一，
-用于管控多智能体自开发方法论的阶段流转。从 clowder-ai 移植并适配 Python/flowforge 框架。
+用于管控多智能体自开发方法论的阶段流转。适配 Python/flowforge 框架。
 
 核心概念：
 - SOPDefinition: 一个完整的标准作业流程（如 7 阶段开发 SOP）

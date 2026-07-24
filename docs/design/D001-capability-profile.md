@@ -1114,8 +1114,8 @@ async def test_blind_spot_overlap_blocks_same_vendor_pairing(real_db):
 - [doc:../decisions/007-harness-engineering.md]（Harness 工程路径 ADR）
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR，跨厂商 review 链）
 - [doc:../design/naming-contract.md#2.12]（能力画像命名定义）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
-- [doc:../../../hiclaw/rules.md#编程红线]（第 10/11/12/13 条）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
+- [doc:../../CONTRIBUTING.md#31-15-条编程红线违反即拒绝合入]（第 10/11/12/13 条）
 
 ---
 

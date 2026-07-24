@@ -354,7 +354,7 @@ class TeamActLoopExecutor(ABC):
 - [doc:../decisions/002-collaboration-protocol.md]（TeamAct 协作协议 ADR）
 - [doc:../decisions/004-capability-profile-routing.md]（跨厂商 review 配对依据）
 - [doc:../decisions/010-distributed-reliability.md]（SharedStateLedger Tier 2 恢复）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

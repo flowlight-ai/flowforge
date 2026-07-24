@@ -188,7 +188,7 @@ class FeedbackLoop:
         persona = getattr(ctx, 'persona', 'unknown')
 
         # Get content to evaluate — 与 MultiJudgeVerifier 一致的字段优先级
-        # P0-29 修复: "report" 优先于 "content", 因为 stockforge:report agent 的
+        # P0-29 修复: "report" 优先于 "content", 因为 report 类型 agent 的
         # result["content"] 是简短描述(36字符), result["report"] 是完整报告(2000+字符)
         content = ""
         if isinstance(result, dict):
@@ -220,7 +220,7 @@ class FeedbackLoop:
                      f"mode={mode_str} content_len={content_len}")
 
         if not content or (isinstance(content, str) and len(content.strip()) < 100):
-            # P0-22: 数据采集/计算类Agent（如stockforge）返回短content是正常的
+            # P0-22: 数据采集/计算类Agent（如数据分析 agent）返回短content是正常的
             # 因为实质数据在 records/indicators/financial 等字段中
             # 仅当content短且无实质数据字段时才FAIL
             data_field_keys = (

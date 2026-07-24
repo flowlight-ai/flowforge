@@ -251,7 +251,7 @@ operator / 用户反馈
 - [doc:../design.md#§2.7.1]（产品经理Forgekin详细设计）
 - [doc:../features/F041-product-manager.md]（同号 Feature 级 SRS）
 - [doc:../decisions/013-all-things-spirit-mind-vision.md]（万物ForgeMind心智愿景 ADR）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
 
 ---
 

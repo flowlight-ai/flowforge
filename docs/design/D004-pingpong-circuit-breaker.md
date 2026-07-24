@@ -1448,10 +1448,10 @@ class MagicWordsEscapeHatch:
 - [doc:../design/naming-contract.md#2.2]（Forgekin Forgekin 双轨命名）
 - [doc:../design/D001-capability-profile.md]（CapabilityProfile 详细设计）
 - [doc:../design/D002-teamact-loop.md]（TeamAct 详细设计，ROUTE 步触发）
-- [doc:../../../hiclaw/rules.md#第十一部分]（文档分层规范）
-- [doc:../../../hiclaw/rules.md#红线12]（禁绕过 DI 容器）
-- [doc:../../../hiclaw/rules.md#红线13]（禁直接操作数据库）
-- [doc:../../../hiclaw/rules.md#T1-T8]（测试铁律）
+- [doc:../../CONTRIBUTING.md]（文档分层规范）
+- [doc:../../../CONTRIBUTING.md#红线12]（禁绕过 DI 容器）
+- [doc:../../../CONTRIBUTING.md#红线13]（禁直接操作数据库）
+- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律]（测试铁律）
 
 ---
 

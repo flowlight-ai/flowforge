@@ -2024,8 +2024,8 @@ async def act(self, action: str, params: dict) -> ActionResult:
 - [doc:../design/D033-external-agent-shared-state.md]（F033 状态共享）
 - [doc:../design/D034-external-agent-fallback.md]（F034 失败回退）
 - [doc:../design/D035-external-agent-capability-fusion.md]（F035 能力融合）
-- [doc:../../../hiclaw/rules.md#第十一部分]
-- [doc:../../../hiclaw/rules.md#AI编程优秀实践]（六层 Guardrails 主张）
+- [doc:../../CONTRIBUTING.md]
+- [doc:../../CONTRIBUTING.md]（六层 Guardrails 主张）
 
 ---
 

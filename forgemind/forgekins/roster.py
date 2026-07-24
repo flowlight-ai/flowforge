@@ -1,12 +1,19 @@
 """花名册加载器（Roster Loader）— 从 YAML 加载预置灵智体配置.
 
 提供:
-- BUILTIN_FORGEKINS: 3 只预置灵智体 ID 清单
+- BUILTIN_FORGEKINS: 5 只预置灵智体 ID 清单（F046 v1.1 五闭环扩展）
 - ROSTER_FILES: ID → YAML 文件路径映射
 - load_forgekin_config(forgekin_id): 加载单个灵智体配置
 - list_builtin_forgekins(): 列出所有预置灵智体元信息
 
 配置驱动（铁律5+P16）: 所有灵智体配置外置到 YAML,不在 .py 中硬编码.
+
+五灵智体（F046 v1.1 §9.2）：
+- wenxin（文心, doc, E3）— 文档员
+- sherlock（夏洛克, code, E4）— 开发者
+- luban（鲁班, framework, E5）— 架构师
+- vangogh（梵高, review, E3）— 审查员
+- davinci（达芬奇, test, E3）— 测试员
 """
 
 from __future__ import annotations
@@ -18,13 +25,16 @@ import yaml
 
 _ROSTER_DIR = Path(__file__).resolve().parent
 
-# 3 只预置灵智体（参考 clowder-ai 最初的 3 只猫）
-BUILTIN_FORGEKINS: list[str] = ["luban", "sherlock", "vangogh"]
+# 5 只预置灵智体（F046 v1.1 §9.2 五闭环扩展：原 3 只 → 5 只）
+# 参考 3 agent → 5 agent sweet spot 模式
+BUILTIN_FORGEKINS: list[str] = ["wenxin", "sherlock", "luban", "vangogh", "davinci"]
 
 ROSTER_FILES: dict[str, Path] = {
-    "luban": _ROSTER_DIR / "luban.yaml",
+    "wenxin": _ROSTER_DIR / "wenxin.yaml",
     "sherlock": _ROSTER_DIR / "sherlock.yaml",
+    "luban": _ROSTER_DIR / "luban.yaml",
     "vangogh": _ROSTER_DIR / "vangogh.yaml",
+    "davinci": _ROSTER_DIR / "davinci.yaml",
 }
 
 

@@ -114,8 +114,21 @@ class ToolRegistry:
             await self._emit_callback("tool.start", {"tool_name": name, "params": input.params})
 
         start = time.time()
-        # LLM 工具需要更长超时（候选链 6 模型 × 30s + fallback 6 模型 × 30s = 360s）
-        effective_timeout = 300 if name in ("llm", "llm_client") else self._tool_timeout
+        # LLM-heavy 工具需要更长超时：
+        # - 单模型超时 90s（creative/judge 路由）+ 7 候选模型 = 630s
+        # - 加上 backoff (1+2+4=7s) 和 verifier/judge 时间 = 约 700s
+        # - writer_engine/editor_engine 内部调用 LLMClient 候选链，需要完整时间走完
+        # v5.49 修复: writer_engine/editor_engine 原走默认 300s 超时，
+        # 导致 LLMClient 候选链切换未完成就被 tool_registry 取消（task 3b37f632 根因）
+        _LLM_HEAVY_TOOLS = ("llm", "llm_client", "writer_engine", "editor_engine",
+                           "topic_strategist", "research_engine", "content_auditor")
+        if name in _LLM_HEAVY_TOOLS:
+            # LLM-heavy 工具：900s 超时，允许候选链完整切换（7模型 × 90s + backoff）
+            effective_timeout = 900
+        elif name in ("llm", "llm_client"):
+            effective_timeout = 300
+        else:
+            effective_timeout = self._tool_timeout
         try:
             if is_base_tool:
                 result = await asyncio.wait_for(tool.execute(input), timeout=effective_timeout)

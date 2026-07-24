@@ -22,11 +22,6 @@ from flowforge.agents.generic.fact_check import FactCheckAgent
 from flowforge.agents.generic.trend_analysis import TrendAnalysisAgent
 from flowforge.agents.generic.image_research import ImageResearchAgent
 
-# ContentForge domain agents have been migrated to contentforge package.
-# Use: from contentforge.agents.xxx import XxxAgent
-# DevForge domain agents have been migrated to devforge package.
-# Use: from devforge.agents.xxx import XxxAgent
-
 GENERIC_AGENTS = [
     ReactThinkerAgent,
     ReactActorAgent,
