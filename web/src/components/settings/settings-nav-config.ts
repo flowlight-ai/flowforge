@@ -99,6 +99,13 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     description: '工作流、Agent、执行模式、工具与运行时总开关。',
   },
   {
+    id: 'appearance',
+    label: '外观与主题',
+    icon: 'palette',
+    color: 'var(--info)',
+    description: '主题模式（亮色/暗色/跟随系统）、界面密度与视觉偏好。',
+  },
+  {
     id: 'rules',
     label: '协作与规则',
     icon: 'scroll-text',
@@ -137,6 +144,7 @@ export const SECTION_KEYWORDS: Record<string, string> = {
   voice: '语音 TTS STT whisper',
   rules: '规则 提示词 prompt SOP 协作 governance',
   system: '配置 环境 workflow agent mode tool',
+  appearance: '主题 外观 颜色 暗色 亮色 跟随系统 theme dark light',
   notify: '推送 通知 push',
   ops: '运维 监控 observability 健康 usage',
 };

@@ -203,7 +203,7 @@ export default function TaskSidebar() {
               {config.brandShort}
             </div>
             <div className="ts-idle-title">{config.brandName}</div>
-            <div className="ts-idle-subtitle">Helm Studio</div>
+            <div className="ts-idle-subtitle">对话</div>
           </div>
 
           <div className="ts-idle-prompt">开始新任务</div>

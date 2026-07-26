@@ -27,7 +27,7 @@ interface Crumb {
 
 const ROUTE_LABELS: Record<string, string> = {
   "": "仪表盘",
-  solo: "Helm Studio",
+  solo: "对话",
   council: "群聊",
   tasks: "任务列表",
   review: "审核中心",

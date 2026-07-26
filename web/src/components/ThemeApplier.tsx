@@ -18,19 +18,23 @@ const META_THEME_COLORS: Record<"light" | "dark", string> = {
 };
 
 export function ThemeApplier() {
-  const { theme } = useTheme();
+  // 使用 resolvedTheme（永远是 light 或 dark），避免 theme="system" 时索引失败
+  // 当 theme="system" 时，resolvedTheme 会根据系统偏好自动解析为 light 或 dark
+  const { resolvedTheme, theme } = useTheme();
 
   useEffect(() => {
     if (typeof document === "undefined") return;
 
     // 更新 meta theme-color（移动端浏览器顶栏颜色）
+    // 使用 resolvedTheme 确保永远是 "light" 或 "dark"，避免 "system" 索引失败
+    const color = META_THEME_COLORS[resolvedTheme];
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute("content", META_THEME_COLORS[theme]);
+      meta.setAttribute("content", color);
     } else {
       const newMeta = document.createElement("meta");
       newMeta.name = "theme-color";
-      newMeta.content = META_THEME_COLORS[theme];
+      newMeta.content = color;
       document.head.appendChild(newMeta);
     }
 
@@ -41,7 +45,7 @@ export function ThemeApplier() {
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [theme]);
+  }, [resolvedTheme, theme]);
 
   return null;
 }

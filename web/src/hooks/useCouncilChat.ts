@@ -82,17 +82,18 @@ export function useCouncilChat() {
 
   /** 发送消息（触发灵议） */
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, replyTo?: CouncilMessage) => {
       if (!text.trim() || isLoading) return;
 
       setError(null);
 
-      // 添加用户消息
+      // 添加用户消息（可选包含引用回复的原消息）
       const userMsg: CouncilMessage = {
         id: `user-${Date.now()}`,
         source: "user",
         content: text,
         timestamp: Date.now(),
+        replyTo,
       };
       setMessages((prev) => [...prev, userMsg]);
 
@@ -203,6 +204,20 @@ export function useCouncilChat() {
     setError(null);
   }, []);
 
+  /**
+   * 添加系统消息 — 供 UI 层主动推送通知（投票发起、命令帮助等）
+   * 不触发 LLM 调用，仅插入消息流
+   */
+  const addSystemMessage = useCallback((content: string) => {
+    const sysMsg: CouncilMessage = {
+      id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      source: "system",
+      content,
+      timestamp: Date.now(),
+    };
+    setMessages((prev) => [...prev, sysMsg]);
+  }, []);
+
   /** 更新配置 */
   const updateConfig = useCallback((updates: Partial<CouncilConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
@@ -236,6 +251,7 @@ export function useCouncilChat() {
     messagesEndRef,
     sendMessage,
     clearMessages,
+    addSystemMessage,
     updateConfig,
     toggleParticipant,
     setForgekinRole,

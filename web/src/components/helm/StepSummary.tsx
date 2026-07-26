@@ -81,7 +81,7 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
           <span className="text-xs font-medium text-indigo-300">{step.stepName}</span>
-          <span className="text-[10px] text-gray-500 ml-auto">执行中...</span>
+          <span className="text-[10px] text-[var(--muted)] ml-auto">执行中...</span>
         </div>
       ))}
 
@@ -101,7 +101,7 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
               <svg
                 width="12" height="12" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                className="text-gray-600 flex-shrink-0 transition-transform duration-150"
+                className="text-[var(--muted)] flex-shrink-0 transition-transform duration-150"
                 style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
               >
                 <polyline points="6 9 12 15 18 9" />
@@ -121,11 +121,11 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
               )}
 
               {/* Step name */}
-              <span className="text-xs font-medium text-gray-300 truncate">{step.stepName}</span>
+              <span className="text-xs font-medium text-[var(--text)] truncate">{step.stepName}</span>
 
               {/* Duration */}
               {step.durationMs != null && (
-                <span className="text-[10px] text-gray-600 font-mono flex-shrink-0">
+                <span className="text-[10px] text-[var(--muted)] font-mono flex-shrink-0">
                   {formatDuration(step.durationMs)}
                 </span>
               )}

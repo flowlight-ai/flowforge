@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { SETTINGS_SECTIONS } from './settings-nav-config';
 import { SettingsText } from './primitives';
 import { AccountsSection } from './sections/AccountsSection';
+import { AppearanceSection } from './sections/AppearanceSection';
 import { ConciergeSection } from './sections/ConciergeSection';
 import { ImSection } from './sections/ImSection';
 import { MarketplaceSection } from './sections/MarketplaceSection';
@@ -85,6 +86,8 @@ export function SettingsContent({ section }: SettingsContentProps) {
         return <VoiceSection />;
       case 'system':
         return <SystemSection />;
+      case 'appearance':
+        return <AppearanceSection />;
       case 'rules':
         return <RulesSection />;
       case 'notify':

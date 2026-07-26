@@ -24,7 +24,7 @@ import {
 } from "./helm-utils";
 import ChatStream from "./ChatStream";
 import ChatInput from "./ChatInput";
-import ModeSelector, { type HelmMode } from "./ModeSelector";
+import { type HelmMode } from "./ModeSelector";
 import type { useHelmWebSocket } from "../../hooks/useHelmWebSocket";
 import type { useHelmPlan } from "./hooks/useHelmPlan";
 import type { useHelmDiff } from "./hooks/useHelmDiff";
@@ -590,7 +590,7 @@ export default function HelmMainPanel({
               </button>
               <button
                 onClick={onDismissResumePrompt}
-                className="text-xs px-3 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600"
+                className="text-xs px-3 py-1 bg-[var(--bg-muted)] text-[var(--text)] rounded hover:bg-[var(--bg-muted)]"
               >
                 忽略
               </button>
@@ -615,14 +615,6 @@ export default function HelmMainPanel({
           />
         </>
       )}
-
-      {/* ModeSelector 放在底部（4 模式切换：normal/helm/auto/council） */}
-      <ModeSelector
-        mode={mode}
-        onModeChange={setMode}
-        selectedWorkflow={selectedWorkflow}
-        onWorkflowChange={setSelectedWorkflow}
-      />
     </>
   );
 }

@@ -191,10 +191,10 @@ export default memo(function DynamicGraph({ nodes, edges, currentStep }: Dynamic
   const completedCount = nodes.filter((n) => n.status === "completed").length;
 
   return (
-    <div className="my-3 rounded-lg border border-gray-700 bg-gray-900/60 p-3">
+    <div className="my-3 rounded-lg border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_60%,transparent)] p-3">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs text-gray-400 font-medium">执行图谱</span>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-[var(--muted)] font-medium">执行图谱</span>
+        <span className="text-xs text-[var(--muted)]">
           {completedCount}/{nodes.length} 完成
         </span>
         <div style={{ flex: 1 }} />

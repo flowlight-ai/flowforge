@@ -64,13 +64,13 @@ export default function ModeSelector({
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-2 border-t border-gray-800 bg-gray-900/80"
+      className="flex items-center gap-3 px-4 py-2 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,transparent)]"
       data-mode-selector="container"
     >
-      <div className="flex gap-1 bg-gray-800 rounded-lg p-1" data-mode-selector="tabs">
+      <div className="flex gap-1 bg-[var(--bg-hover)] rounded-lg p-1" data-mode-selector="tabs">
         <button
           onClick={() => onModeChange("helm")}
-          className="px-3 py-1.5 rounded-md text-sm font-medium transition-all bg-purple-600 text-white shadow-sm"
+          className="px-3 py-1.5 rounded-md text-sm font-medium transition-all bg-[var(--accent)] text-white shadow-sm"
           title={MODE_DESC.helm}
           data-mode="helm"
           data-active="true"
@@ -80,7 +80,7 @@ export default function ModeSelector({
         </button>
       </div>
 
-      <span className="text-xs text-gray-500 ml-auto" data-mode-selector-hint="true">
+      <span className="text-xs text-[var(--muted)] ml-auto" data-mode-selector-hint="true">
         {MODE_DESC.helm}
       </span>
 

@@ -357,7 +357,7 @@ interface QuickEntry {
 }
 
 const QUICK_ENTRIES: readonly QuickEntry[] = [
-  { href: "/solo", icon: "⚡", label: "Helm Studio", sub: "单 Agent 编排", accent: "var(--accent)" },
+  { href: "/solo", icon: "⚡", label: "对话", sub: "单 Agent 编排", accent: "var(--accent)" },
   { href: "/memory", icon: "◉", label: "记忆中心", sub: "集合 / 图谱 / 健康", accent: "var(--info)" },
   { href: "/mission-hub", icon: "◎", label: "Mission Hub", sub: "任务列表 / 看板", accent: "var(--ok)" },
   { href: "/signals", icon: "◈", label: "信号", sub: "事件 / 异常 / 来源", accent: "var(--warn)" },

@@ -215,7 +215,7 @@ export function FirstRunQuestWizard({ onClose, forceOpen = false }: WizardProps)
         {step === 3 && (
           <div data-firstrun-step="done">
             <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "12px" }}>
-              一切就绪！点击下方按钮进入 Helm Studio 开始你的第一次任务。
+              一切就绪！点击下方按钮进入对话开始你的第一次任务。
             </p>
             <Link
               href="/solo"
@@ -231,7 +231,7 @@ export function FirstRunQuestWizard({ onClose, forceOpen = false }: WizardProps)
                 textDecoration: "none",
               }}
             >
-              进入 Helm Studio →
+              进入对话 →
             </Link>
           </div>
         )}

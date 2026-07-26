@@ -68,9 +68,9 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
               onSave={() => panels.setShowSettings(false)}
               onReset={() => {}}
             />
-            <div className="flex justify-end px-4 py-3 border-t border-gray-700">
+            <div className="flex justify-end px-4 py-3 border-t border-[var(--border)]">
               <button
-                className="px-4 py-1.5 text-sm rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600"
+                className="px-4 py-1.5 text-sm rounded-lg bg-[var(--bg-muted)] text-[var(--text)] hover:bg-[var(--bg-muted)]"
                 onClick={() => panels.setShowSettings(false)}
               >
                 关闭
@@ -90,12 +90,12 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
             className="w-full max-w-md h-full bg-[#1e1e2e] shadow-2xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <span className="text-sm font-semibold text-gray-200">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+              <span className="text-sm font-semibold text-[var(--text)]">
                 MCP 服务器配置
               </span>
               <button
-                className="text-gray-400 hover:text-gray-200"
+                className="text-[var(--muted)] hover:text-[var(--text)]"
                 onClick={() => panels.setShowMCPConfig(false)}
               >
                 ✕
@@ -122,12 +122,12 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
             className="w-full max-w-lg max-h-[80vh] bg-[#1e1e2e] rounded-xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-              <span className="text-sm font-semibold text-gray-200">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+              <span className="text-sm font-semibold text-[var(--text)]">
                 Figma 导入
               </span>
               <button
-                className="text-gray-400 hover:text-gray-200"
+                className="text-[var(--muted)] hover:text-[var(--text)]"
                 onClick={() => panels.setShowFigmaImporter(false)}
               >
                 ✕

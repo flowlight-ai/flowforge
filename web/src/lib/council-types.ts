@@ -49,6 +49,8 @@ export interface CouncilMessage {
   forgekinRole?: ForgekinRole;
   content: string;
   timestamp: number;
+  /** 引用回复的原消息（当用户使用"引用回复"时） */
+  replyTo?: CouncilMessage;
   /** 该灵智体响应的元信息（model/usage 等） */
   meta?: {
     model?: string;

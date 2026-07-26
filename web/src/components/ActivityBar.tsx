@@ -6,7 +6,7 @@
  * 来源：clowder-ai/packages/web/src/components/ActivityBar.tsx（简化版）
  *
  * 重构说明（v2）：
- *   - 将原"对话"小图标拆为两个独立入口：Helm Studio（/solo）+ 群聊工作室（/council）
+ *   - 将原"对话"小图标拆为两个独立入口：对话（/solo）+ 群聊（/council）
  *   - 原因：Helm 是单人对话、Council 是群聊，二者 UI 框架完全不同（Helm 三栏 vs Council 全屏），
  *     放在同一小图标下会让用户混淆。拆为两个独立入口更直观。
  *   - 底部保留审批铃铛 + 设置 + 主题切换
@@ -107,10 +107,35 @@ function MoonIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
+function SystemIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
+      <title>跟随系统</title>
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="8" y1="21" x2="16" y2="21" strokeLinecap="round" />
+      <line x1="12" y1="17" x2="12" y2="21" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CouncilIcon({ className = "h-5 w-5" }: { className?: string }) {
+  // 群聊图标：三个圆形头像叠加，表示多智能体协作
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
+      <title>群聊</title>
+      <circle cx="9" cy="9" r="3" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="17" cy="11" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 19c0-3 3-5 6-5s6 2 6 5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 19c0-2 2-3.5 4-3.5s2 1.5 2 3.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const NAV_ITEMS: NavItemDef[] = [
-  // 两种对话模式拆为独立入口：Helm（单人）+ Council（群聊）
-  { id: "solo", path: "/solo", label: "Helm Studio（单人对话）", match: (p) => p === "/" || p.startsWith("/solo"), icon: ChatIcon },
-  { id: "council", path: "/council", label: "群聊工作室（多智能体群聊）", match: (p) => p.startsWith("/council"), icon: CouncilIcon },
+  // 两种对话模式拆为独立入口：对话（单人 Helm）+ 群聊（Council 多智能体）
+  // 命名规范（v3）：toast 提示用 P0 用户术语"对话"/"群聊"，路由保持技术路径 /solo /council
+  { id: "solo", path: "/solo", label: "对话", match: (p) => p === "/" || p.startsWith("/solo"), icon: ChatIcon },
+  { id: "council", path: "/council", label: "群聊", match: (p) => p.startsWith("/council"), icon: CouncilIcon },
   { id: "memory", path: "/memory", label: "记忆中心", match: (p) => p.startsWith("/memory"), icon: MemoryIcon },
   { id: "mission", path: "/mission-hub", label: "Mission Hub", match: (p) => p.startsWith("/mission"), icon: MissionIcon },
   { id: "signals", path: "/signals", label: "信号", match: (p) => p.startsWith("/signals"), icon: SignalIcon },
@@ -126,7 +151,18 @@ export function ActivityBar({ className }: ActivityBarProps) {
   const approvalCount = useApprovalHubStore((s) => s.count);
   const toggleApproval = useApprovalHubStore((s) => s.toggle);
   const fetchPending = useApprovalHubStore((s) => s.fetchPending);
-  const { theme, toggleTheme } = useTheme();
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
+
+  // 三态主题切换：light → dark → system → light
+  // 图标和标题根据当前 theme 显示（system 模式下显示 SystemIcon + "跟随系统"）
+  const themeTitle =
+    theme === "light" ? "亮色主题（点击切换到暗色）" :
+    theme === "dark" ? "暗色主题（点击切换到跟随系统）" :
+    `跟随系统（当前: ${resolvedTheme === "dark" ? "暗色" : "亮色"}，点击切换到亮色）`;
+  const themeIcon =
+    theme === "light" ? <SunIcon className="h-5 w-5" /> :
+    theme === "dark" ? <MoonIcon className="h-5 w-5" /> :
+    <SystemIcon className="h-5 w-5" />;
 
   const handleNav = useCallback(
     (path: string) => {
@@ -203,10 +239,11 @@ export function ActivityBar({ className }: ActivityBarProps) {
           type="button"
           onClick={toggleTheme}
           className="flex h-10 w-10 items-center justify-center rounded-lg transition-all hover:bg-[var(--console-rail-item,#252633)] hover:shadow-[var(--console-rail-shadow,0_1px_2px_rgba(0,0,0,0.3))]"
-          title={theme === "light" ? "切换到暗色主题" : "切换到亮色主题"}
+          title={themeTitle}
           data-activity-bar-item="theme"
+          data-theme-current={theme}
         >
-          {theme === "light" ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
+          {themeIcon}
         </button>
 
         <button

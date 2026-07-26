@@ -41,7 +41,7 @@ interface CommandDef {
 interface ShortcutDef {
   keys: string;
   description: string;
-  /** 上下文：全局 / Helm Studio / 群聊工作室 */
+  /** 上下文：全局 / 对话 / 群聊 */
   context: string;
 }
 
@@ -89,11 +89,11 @@ const COMMANDS: CommandDef[] = [
 
 const SHORTCUTS: ShortcutDef[] = [
   { keys: "Cmd+K / Ctrl+K", description: "打开命令面板", context: "全局" },
-  { keys: "Cmd+/ / Ctrl+/", description: "聚焦聊天输入框并触发斜杠命令", context: "Helm Studio" },
-  { keys: "Cmd+Enter / Ctrl+Enter", description: "发送当前消息", context: "Helm Studio" },
-  { keys: "Shift+Enter", description: "换行（不发送）", context: "Helm Studio" },
+  { keys: "Cmd+/ / Ctrl+/", description: "聚焦聊天输入框并触发斜杠命令", context: "对话" },
+  { keys: "Cmd+Enter / Ctrl+Enter", description: "发送当前消息", context: "对话" },
+  { keys: "Shift+Enter", description: "换行（不发送）", context: "对话" },
   { keys: "Cmd+B / Ctrl+B", description: "切换左侧导航栏显隐", context: "全局" },
-  { keys: "Cmd+J / Ctrl+J", description: "切换右侧上下文面板", context: "群聊工作室" },
+  { keys: "Cmd+J / Ctrl+J", description: "切换右侧上下文面板", context: "群聊" },
   { keys: "Escape", description: "关闭模态框 / 抽屉", context: "全局" },
   { keys: "Tab", description: "在表单字段间切换焦点", context: "全局" },
   { keys: "Cmd+, / Ctrl+,", description: "打开设置中心", context: "全局" },

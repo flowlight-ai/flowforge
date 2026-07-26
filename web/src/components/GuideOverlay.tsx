@@ -37,7 +37,7 @@ const GUIDE_STEPS: GuideStep[] = [
   {
     id: "helm-studio",
     target: "nav.helm-studio",
-    title: "Helm Studio — 4 种聊天模式",
+    title: "对话 — 4 种聊天模式",
     content: "支持普通工作流、AI 自主规划（Helm）、全自动、群聊（5 个可进化智能体协作）4 种模式。",
     placement: "right",
   },

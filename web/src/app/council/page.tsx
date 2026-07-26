@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /council — 群聊工作室独立路由
+ * /council — 群聊独立路由
  *
  * 重构说明（v2）：
  *   - 原 /council 重定向到 /solo?mode=council（在 Helm 框架内嵌套群聊）
@@ -29,8 +29,15 @@
  */
 
 import dynamic from "next/dynamic";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useShellConfig } from "@/lib/shell-config";
+import { useCouncilChat } from "@/hooks/useCouncilChat";
+import {
+  FORGEKIN_COLORS,
+  FORGEKIN_EMOJI,
+  ROLE_CONFIG,
+  type ForgekinRosterItem,
+} from "@/lib/council-types";
 
 // CouncilChatPanel 已就绪，动态导入避免 SSR 问题（内部使用 fetch/浏览器 API）
 const CouncilChatPanel = dynamic(
@@ -69,7 +76,6 @@ export default function CouncilPage() {
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
         height: "100dvh",
         overflow: "hidden",
         background: "var(--bg)",
@@ -106,7 +112,7 @@ export default function CouncilPage() {
           }}
         >
           <span aria-hidden>◎</span>
-          <span>{config.brandName} 群聊工作室</span>
+          <span>{config.brandName} 群聊</span>
         </div>
 
         <span
@@ -222,8 +228,8 @@ export default function CouncilPage() {
           </button>
           <a
             href="/solo"
-            aria-label="返回 Helm Studio"
-            title="返回 Helm Studio"
+            aria-label="返回对话"
+            title="返回对话"
             data-council-action="back-to-solo"
             style={{
               padding: "6px 10px",
@@ -237,7 +243,7 @@ export default function CouncilPage() {
               textDecoration: "none",
             }}
           >
-            ← Helm Studio
+            ← 对话
           </a>
         </div>
       </header>
@@ -318,22 +324,73 @@ function CouncilLoading() {
           animation: "spin 0.8s linear infinite",
         }}
       />
-      正在加载群聊工作室...
+      正在加载群聊...
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
 /**
- * CouncilContextPanel — 上下文面板（占位实现）
+ * CouncilContextPanel — 上下文面板（增强版）
  *
- * 后续可扩展：
- *   - 当前任务的相关文档
- *   - 智能体能力画像
- *   - 历史讨论摘要
- *   - 投票/决议面板
+ * 显示：
+ *   1. 当前会话配置（可用智能体数、轮数、投票状态）
+ *   2. 智能体花名册（实时获取，显示头像/名称/物种）
+ *   3. 使用提示
+ *   4. 快捷操作入口
+ *
+ * 数据来源：独立 fetch /api/v1/forgemind/roster（只读，不与主聊天面板共享状态）
+ * 主题：CSS 变量驱动
  */
 function CouncilContextPanel() {
+  const [roster, setRoster] = useState<ForgekinRosterItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 独立获取花名册（只读展示，不与主聊天面板共享状态）
+  useEffect(() => {
+    let cancelled = false;
+    const loadRoster = async () => {
+      try {
+        const res = await fetch("/api/v1/forgemind/roster");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (cancelled) return;
+        const items: ForgekinRosterItem[] = data.builtin || [];
+        setRoster(items.filter((r) => r.available && !r.error));
+      } catch (e) {
+        if (!cancelled) {
+          setError(`加载花名册失败: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadRoster();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const sectionStyle: React.CSSProperties = {
+    padding: "12px",
+    borderRadius: "var(--radius-md)",
+    background: "var(--bg)",
+    border: "1px solid var(--border)",
+    fontSize: "12px",
+    color: "var(--muted)",
+    lineHeight: 1.6,
+  };
+
+  const sectionTitleStyle: React.CSSProperties = {
+    marginBottom: "8px",
+    fontWeight: 600,
+    color: "var(--text)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  };
+
   return (
     <div
       data-council="context-content"
@@ -351,49 +408,183 @@ function CouncilContextPanel() {
       >
         上下文
       </h3>
-      <div
-        style={{
-          padding: "12px",
-          borderRadius: "var(--radius-md)",
-          background: "var(--bg)",
-          border: "1px solid var(--border)",
-          fontSize: "12px",
-          color: "var(--muted)",
-          lineHeight: 1.6,
-        }}
-      >
-        <div style={{ marginBottom: "8px", fontWeight: 600, color: "var(--text)" }}>
-          讨论摘要
+
+      {/* 当前会话配置 */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          <span>当前会话</span>
+          <span style={{ color: "var(--accent)", fontSize: "10px" }}>● 在线</span>
         </div>
-        开始群聊后，此处将显示：
-        <ul style={{ margin: "8px 0 0", paddingLeft: "16px" }}>
-          <li>当前讨论主题</li>
-          <li>参与的可进化智能体</li>
-          <li>已达成的共识</li>
-          <li>待解决的问题</li>
-        </ul>
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div>
+            <span style={{ color: "var(--muted)" }}>可用智能体：</span>
+            <span style={{ color: "var(--text)", fontWeight: 600 }}>
+              {loading ? "加载中..." : `${roster.length} 个`}
+            </span>
+          </div>
+          <div>
+            <span style={{ color: "var(--muted)" }}>默认轮数：</span>
+            <span style={{ color: "var(--text)", fontWeight: 600 }}>1 轮</span>
+          </div>
+          <div>
+            <span style={{ color: "var(--muted)" }}>投票状态：</span>
+            <span style={{ color: "var(--text)", fontWeight: 600 }}>无活跃投票</span>
+          </div>
+        </div>
       </div>
 
-      <div
-        style={{
-          padding: "12px",
-          borderRadius: "var(--radius-md)",
-          background: "var(--bg)",
-          border: "1px solid var(--border)",
-          fontSize: "12px",
-          color: "var(--muted)",
-          lineHeight: 1.6,
-        }}
-      >
-        <div style={{ marginBottom: "8px", fontWeight: 600, color: "var(--text)" }}>
-          使用提示
+      {/* 智能体花名册 */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          <span>智能体花名册</span>
+          <span style={{ color: "var(--muted)", fontSize: "10px" }}>
+            {roster.length} 个
+          </span>
+        </div>
+        {error && (
+          <div style={{ color: "var(--semantic-critical, #ef4444)", fontSize: "11px" }}>
+            {error}
+          </div>
+        )}
+        {loading ? (
+          <div style={{ color: "var(--muted)", fontSize: "11px" }}>加载中...</div>
+        ) : roster.length === 0 ? (
+          <div style={{ color: "var(--muted)", fontSize: "11px" }}>
+            暂无可用智能体，请检查后端服务
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {roster.map((item) => {
+              const colors = FORGEKIN_COLORS[item.id] || { primary: "#888", secondary: "#333" };
+              const emoji = FORGEKIN_EMOJI[item.id] || "🤖";
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "6px",
+                    borderRadius: "var(--radius-sm)",
+                    background: `linear-gradient(135deg, ${colors.primary}11, transparent)`,
+                    border: `1px solid ${colors.primary}44`,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "14px",
+                      background: `linear-gradient(135deg, ${colors.primary}33, ${colors.secondary}33)`,
+                      border: `1px solid ${colors.primary}66`,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {emoji}
+                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div
+                      style={{
+                        color: "var(--text)",
+                        fontWeight: 600,
+                        fontSize: "12px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.name}
+                    </div>
+                    <div
+                      style={{
+                        color: "var(--muted)",
+                        fontSize: "10px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.role?.primary}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      padding: "1px 4px",
+                      borderRadius: "4px",
+                      background: colors.primary,
+                      color: "#fff",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {item.species}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 使用提示 */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          <span>使用提示</span>
         </div>
         <ul style={{ margin: 0, paddingLeft: "16px" }}>
           <li>使用 @mention 指定智能体发言</li>
+          <li>输入 @all 提及所有参与的智能体</li>
           <li>不指定则所有参与的智能体依次发言</li>
-          <li>可配置讨论轮数（默认 3 轮）</li>
-          <li>支持中途停止和继续</li>
+          <li>可配置讨论轮数（1-3 轮）</li>
+          <li>点击 ◎ 投票 发起群聊决议投票</li>
+          <li>消息支持 emoji 表情回复和引用</li>
         </ul>
+      </div>
+
+      {/* 快捷操作 */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          <span>快捷操作</span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <a
+            href="/admin/agents"
+            style={{
+              color: "var(--accent)",
+              fontSize: "11px",
+              textDecoration: "none",
+              padding: "4px 0",
+            }}
+          >
+            → 管理智能体花名册
+          </a>
+          <a
+            href="/admin/settings?section=routing"
+            style={{
+              color: "var(--accent)",
+              fontSize: "11px",
+              textDecoration: "none",
+              padding: "4px 0",
+            }}
+          >
+            → 配置路由策略
+          </a>
+          <a
+            href="/review"
+            style={{
+              color: "var(--accent)",
+              fontSize: "11px",
+              textDecoration: "none",
+              padding: "4px 0",
+            }}
+          >
+            → 查看评审中心
+          </a>
+        </div>
       </div>
     </div>
   );
