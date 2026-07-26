@@ -49,7 +49,7 @@ logger = get_logger("external_agent.adapter.claude_code")
 class ClaudeCodeAdapter(ExternalAgentAdapter):
     """Claude Code Adapter（CLI + MCP 协议）。
 
-    按 EX-001 升级为"能力扩展"思维：灵智体可加载 claude code 的代码能力
+    按 EX-001 升级为"能力扩展"思维：Forgekin可加载 claude code 的代码能力
     作为自己的能力延伸，而非简单的"调用一下拿结果"。
 
     能力画像（EX-002）：
@@ -112,7 +112,7 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
         设计依据：
             - [doc:review/review.md#14.4] CL-038 NDJSON + stderr 也算活着
             - [doc:decisions/006-external-agent-integration.md] §4 首批接入
-            - [doc:design/naming-contract.md#2.2] 灵智体
+            - [doc:design/naming-contract.md#2.2] Forgekin
         """
         logger.info(
             "claude_code.invoke task_len=%d sandbox=%s",
@@ -201,7 +201,7 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
         设计依据：
             - [doc:review/review.md#14.4] CL-038 NDJSON + stderr 也算活着
             - [doc:decisions/006-external-agent-integration.md] §4 首批接入
-            - [doc:design/naming-contract.md#2.2] 灵智体
+            - [doc:design/naming-contract.md#2.2] Forgekin
         """
         logger.info(
             "claude_code.stream task_len=%d sandbox=%s",

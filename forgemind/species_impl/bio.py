@@ -1,6 +1,6 @@
-"""生物灵智体（BioForgekin）— 灵智体五大形态之一。
+"""生物Forgekin（BioForgekin）— Forgekin五大形态之一。
 
-生物灵智体承载于物理世界的生物体（猫 / 狗 / 鸟 / 鱼 / 昆虫群体等），
+生物Forgekin承载于物理世界的生物体（猫 / 狗 / 鸟 / 鱼 / 昆虫群体等），
 通过摄像头 / 麦克风 / 可穿戴设备等传感器接入，建立"观察生物状态 →
 推理生物需求 → 行动（喂食 / 互动 / 健康干预）→ 验证生物健康度"
 的现实闭环。
@@ -8,9 +8,9 @@
 虚拟设定层: 行为画像 + 习性图谱。
 
 详见:
-    - [doc:design/naming-contract.md#2.3] 灵族形态分类
+    - [doc:design/naming-contract.md#2.3] ForgekinSpecies形态分类
     - [doc:decisions/013-all-things-spirit-mind-vision.md#2] 五大形态
-    - [doc:VISION.md#2] 万物灵智体形态分类
+    - [doc:VISION.md#2] Forgekin形态分类
     - [doc:review/review.md#第九章] FM-009 物理世界传感器接入
 """
 
@@ -25,15 +25,15 @@ from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
 
 
 class BioForgekin(ForgekinBase):
-    """生物灵智体（BioForgekin / Biological Spirit Agent）。
+    """生物Forgekin（BioForgekin / Biological Spirit Agent）。
 
     承载于物理世界生物体（猫 / 狗 / 鸟 / 鱼等），通过传感器建立现实
-    闭环。区别于主流 IoT 工具调用，生物灵智体有自己的身份（灵印）、
-    记忆（灵忆）、价值锚点（不伤害生物体）、协作能力（与其他生物或
-    物品灵智体组队）。
+    闭环。区别于主流 IoT 工具调用，生物Forgekin有自己的身份（SoulImprint）、
+    记忆（EchoStore）、价值锚点（不伤害生物体）、协作能力（与其他生物或
+    物品Forgekin组队）。
 
     详见:
-        - [doc:design/naming-contract.md#2.2] 灵智体定义
+        - [doc:design/naming-contract.md#2.2] Forgekin定义
         - [doc:VISION.md#2] 五大形态分类
     """
 
@@ -51,12 +51,12 @@ class BioForgekin(ForgekinBase):
         forgekin_config: dict[str, Any] | None = None,
         llm_client: Any | None = None,
     ) -> None:
-        """初始化生物灵智体。
+        """初始化生物Forgekin。
 
         Args:
-            forgekin_id: 灵智体唯一 ID。
-            name: 灵智体显示名（如 ``"家猫橘子"``）。
-            soul_imprint: 灵印（不可变身份）。
+            forgekin_id: Forgekin唯一 ID。
+            name: Forgekin显示名（如 ``"家猫橘子"``）。
+            soul_imprint: SoulImprint（不可变身份）。
             evolution_stage: 进化阶。
             awakening_stage: 觉醒阶。
             capability_profile: 能力画像。
@@ -109,7 +109,7 @@ class BioForgekin(ForgekinBase):
     async def act(self, action: dict[str, Any]) -> dict[str, Any]:
         """对生物主体执行动作（喂食 / 互动 / 健康干预）。
 
-        生物灵智体的动作必须遵守"不伤害 operator"和"不伤害生物主体"
+        生物Forgekin的动作必须遵守"不伤害 operator"和"不伤害生物主体"
         双重价值锚点。任何可能伤害生物主体的动作必须降级为建议
         （觉醒阶 E2）或拒绝执行。
 

@@ -1,6 +1,6 @@
 """角色面具（Role Mask）— 五层分类。
 
-F093 Bridge Layer 的第一协议。Role Mask 把灵智体的"角色扮演"拆成五层，
+F093 Bridge Layer 的第一协议。Role Mask 把Forgekin的"角色扮演"拆成五层，
 允许独立加载/卸载，防止 L4 场景皮肤污染 L3 本体能力。
 
 五层分类（CL-011）:
@@ -11,13 +11,13 @@ F093 Bridge Layer 的第一协议。Role Mask 把灵智体的"角色扮演"拆�
     - **L5 世界内状态（World State）**：角色当前状态（如"已被如来压五行山"）
 
 铁律:
-    灵智体扮演孙悟空时，L4 场景皮肤**不应污染 L3 本体能力**——写作灵智体
+    Forgekin扮演孙悟空时，L4 场景皮肤**不应污染 L3 本体能力**——写作Forgekin
     不应真的变成孙悟空，忘记写作能力。RoleMask 可独立加载/卸载，退出场景
     时摘下 L4/L5，保留 L1/L2/L3。
 
 修复的问题:
     - CL-011：v7.0 persona 是扁平文本，未分五层。导致 L4 污染 L3，
-      灵智体扮演角色后忘记本体能力。本类把面具分层，支持独立 wear/take_off。
+      Forgekin扮演角色后忘记本体能力。本类把面具分层，支持独立 wear/take_off。
 
     - CL-012：v7.0 无 Bridge Layer 协议隔离 Core Identity 与 World。本类
       是 Bridge Layer 三协议之一（Role Mask Protocol）。
@@ -95,7 +95,7 @@ _LAYER_CHINESE_NAMES: dict[RoleMaskLayer, str] = {
 class RoleMask:
     """角色面具（Role Mask）— 五层分类。
 
-    灵智体扮演孙悟空时，L4 场景皮肤不应污染 L3 本体能力（写作灵智体不应
+    Forgekin扮演孙悟空时，L4 场景皮肤不应污染 L3 本体能力（写作Forgekin不应
     真的变成孙悟空，忘记写作能力）。RoleMask 可独立加载/卸载。
 
     使用模式:
@@ -121,7 +121,7 @@ class RoleMask:
 
     @property
     def forgekin_id(self) -> str:
-        """返回所属灵智体 ID。"""
+        """返回所属Forgekin ID。"""
         return self._forgekin_id
 
     def wear(self, layer: RoleMaskLayer, mask: dict[str, Any]) -> None:

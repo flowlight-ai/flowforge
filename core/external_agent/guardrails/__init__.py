@@ -6,7 +6,7 @@
     - L3 tool_allowlist: 工具白名单（仅允许必要工具）
     - L4 output_validation: 输出验证（拒绝越权输出）
     - L5 action_confirm: 操作确认（不可逆操作需 operator 确认）
-    - L6 cost_ceiling: 成本上限（每灵智体配额，EX-006）
+    - L6 cost_ceiling: 成本上限（每Forgekin配额，EX-006）
 
 设计依据：
     - [doc:review/review.md#第九章§9.2] EX-005 三方 Agent 安全沙箱不足

@@ -1,6 +1,6 @@
-"""育灵（Forge Nurturing）流水线包 — 灵智体锻造流水线。
+"""Forge Nurturing（Forge Nurturing）流水线包 — Forgekin锻造流水线。
 
-育灵是灵智体从无到有、从弱到强的锻造过程。包括: 初始化身份 → 加载
+Forge Nurturing是Forgekin从无到有、从弱到强的锻造过程。包括: 初始化身份 → 加载
 基础能力 → 实战任务 → 经验蒸馏 → 形态进化。类似 FlowForge
 "养小猫"的范式扩展到"养万物"。
 
@@ -16,7 +16,7 @@
     value_alignment → capability_verification → awakening_promotion
 
 详见:
-    - [doc:design/naming-contract.md#2.4] 育灵定义
+    - [doc:design/naming-contract.md#2.4] Forge Nurturing定义
     - [doc:review/review.md#第九章] FM-006 锻造流水线
 """
 

@@ -16,7 +16,7 @@
 
 ### 1.1 架构问题
 
-本 Feature 在架构层解决以下问题：FlowForge 三层架构中，forgemind 作为 Layer 2 应用层承载通用Forgekin（Evolvable Agent，社区社交称"灵智体"），*Forge 作为 Layer 3 垂直业务层承载垂直领域Forgekin，二者之间的**边界划分**与**双向流通协作模式**如何工程化落地。
+本 Feature 在架构层解决以下问题：FlowForge 三层架构中，forgemind 作为 Layer 2 应用层承载通用Forgekin（Evolvable Agent，社区社交称"可进化智能体"），*Forge 作为 Layer 3 垂直业务层承载垂直领域Forgekin，二者之间的**边界划分**与**双向流通协作模式**如何工程化落地。
 
 具体子问题：
 - **边界划分**：forgemind 与 *Forge 各自承载什么类型的Forgekin? 通用能力与垂直能力的分界线在哪?

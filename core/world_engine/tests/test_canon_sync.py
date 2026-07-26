@@ -104,9 +104,9 @@ def huaguoshan_scene() -> Scene:
 
 @pytest.fixture
 def wukong_identity() -> CoreIdentityLayer:
-    """孙悟空扮演灵智体的核心身份（注意：核心身份是写作灵智体，不是孙悟空）。
+    """孙悟空扮演Forgekin的核心身份（注意：核心身份是写作Forgekin，不是孙悟空）。
 
-    铁律 CL-007：即使灵智体演 1000 次孙悟空，核心身份仍是写作灵智体。
+    铁律 CL-007：即使Forgekin演 1000 次孙悟空，核心身份仍是写作Forgekin。
     """
     return CoreIdentityLayer(
         forgekin_id="forgemind:writer_cat_001",
@@ -207,9 +207,9 @@ async def test_canon_memory_rejects_unconfirmed_writer(
         decided_by="operator",
         timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
-    # 灵智体自身（forgekin:xxx）无 Canon 写入权限
+    # Forgekin自身（forgekin:xxx）无 Canon 写入权限
     ok = await canon_memory.write(decision, confirmed_by="forgemind:writer_cat_001")
-    assert ok is False, "灵智体自身不应有 Canon 写入权限（违反 CL-010）"
+    assert ok is False, "Forgekin自身不应有 Canon 写入权限（违反 CL-010）"
     decisions = await canon_memory.read(journey_world.world_id)
     assert decisions == [], "未确认的写入不应进入 CanonMemory"
 
@@ -347,16 +347,16 @@ async def test_confirm_canon_rejects_unauthorized(
     canon_sync: CanonSyncProtocol,
     wukong_rp_turn: Turn,
 ) -> None:
-    """铁律 CL-010：灵智体自身 / council 不能确认入典（council 只能提议不能确认）。"""
+    """铁律 CL-010：Forgekin自身 / council 不能确认入典（council 只能提议不能确认）。"""
     proposal_id = await canon_sync.propose_canon(
         turn=wukong_rp_turn,
         proposer="forgemind:writer_cat_001",
     )
-    # 灵智体自身无确认权限
+    # Forgekin自身无确认权限
     ok = await canon_sync.confirm_canon(
         proposal_id, confirmer="forgemind:writer_cat_001"
     )
-    assert ok is False, "灵智体自身不应有 Canon 确认权限"
+    assert ok is False, "Forgekin自身不应有 Canon 确认权限"
     # council 也不在 _CANON_CONFIRMERS 白名单中
     ok2 = await canon_sync.confirm_canon(proposal_id, confirmer="council")
     assert ok2 is False, "council 不在 Canon 确认白名单中"
@@ -389,7 +389,7 @@ async def test_reject_canon_by_anyone(
         turn=wukong_rp_turn,
         proposer="forgemind:writer_cat_001",
     )
-    # 灵智体自身可拒绝（撤回自己的提议）
+    # Forgekin自身可拒绝（撤回自己的提议）
     ok = await canon_sync.reject_canon(
         proposal_id=proposal_id,
         rejecter="forgemind:writer_cat_001",
@@ -609,7 +609,7 @@ def test_world_driver_can_write_canon_operator(world_driver: WorldDriver) -> Non
 
 
 def test_world_driver_cannot_write_canon_forgekin(world_driver: WorldDriver) -> None:
-    """铁律 CL-010/CL-021：灵智体自身无 Canon 写入权限。"""
+    """铁律 CL-010/CL-021：Forgekin自身无 Canon 写入权限。"""
     assert world_driver.can_write_canon("forgemind:writer_cat_001") is False
     assert world_driver.can_write_canon("char-sun-wukong") is False
     assert world_driver.can_write_canon("") is False
@@ -641,7 +641,7 @@ def test_core_identity_is_immutable(wukong_identity: CoreIdentityLayer) -> None:
 
 
 def test_core_identity_verify_imprint(wukong_identity: CoreIdentityLayer) -> None:
-    """verify_imprint 校验灵印一致性。"""
+    """verify_imprint 校验SoulImprint一致性。"""
     assert wukong_identity.verify_imprint("a" * 64) is True
     assert wukong_identity.verify_imprint("b" * 64) is False
 

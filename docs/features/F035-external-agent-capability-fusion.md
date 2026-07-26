@@ -15,7 +15,7 @@
 
 ## 1. 概述（Overview）
 
-三方 Agent 能力融合（External Agent Capability Fusion）是 forgemind 应用层最深层的能力增长机制：Forgekin（Evolvable Agent，社区社交称"灵智体"）调用三方 Agent 后，三方 Agent 的能力应能"沉淀"到 Forgekin 的能力画像（F001）中。本 Feature 实现调用轨迹蒸馏、能力沉淀到 MindCodex（蒸馏知识库，社区社交称"灵典"）、与 F039 MindCodex 可检索知识库联动、与 F014 EchoStore 联动，让 Forgekin 多次调用 claude code 写代码后"学到"代码编写能力。
+三方 Agent 能力融合（External Agent Capability Fusion）是 forgemind 应用层最深层的能力增长机制：Forgekin（Evolvable Agent，社区社交称"可进化智能体"）调用三方 Agent 后，三方 Agent 的能力应能"沉淀"到 Forgekin 的能力画像（F001）中。本 Feature 实现调用轨迹蒸馏、能力沉淀到 MindCodex（蒸馏知识库，社区社交称"蒸馏知识库"）、与 F039 MindCodex 可检索知识库联动、与 F014 EchoStore 联动，让 Forgekin 多次调用 claude code 写代码后"学到"代码编写能力。
 
 这是 Build to Persist 基础设施——编码"用完即走 → 用完即学"的工程规则，对标前期动物形态智能体从调用工具中学习的能力。
 

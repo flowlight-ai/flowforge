@@ -14,7 +14,11 @@ export { FlowForgeClient, createFlowForgeClient } from "../lib/flowforge-client"
 
 // ─── Shell Components ───────────────────────────────────────
 export { default as ShellWrapper } from "../components/ShellWrapper";
-export { default as Sidebar } from "../components/Sidebar";
+export { ThreadSidebar } from "../components/ThreadSidebar";
+export { ActivityBar } from "../components/ActivityBar";
+export { TopBar } from "../components/TopBar";
+// 兼容别名：旧 SDK 消费方 import { Sidebar } 仍可用（指向 ThreadSidebar）
+export { ThreadSidebar as Sidebar } from "../components/ThreadSidebar";
 
 // ─── Shell Config (Provider + Hook, 不含默认配置) ───────────
 export { ShellConfigProvider, useShellConfig } from "../lib/shell-config";

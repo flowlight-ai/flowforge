@@ -99,7 +99,7 @@
 |:------:|---------|---------|------|
 | **P0** | **官方名称（AI 业界专业术语）** | 技术设计文档、代码、API、对外宣传、README、VISION | Agent / Multi-Agent System / Capability Profile / Episodic Memory / Skill Library / Multi-Agent Deliberation |
 | **P1** | **项目英文名** | 代码类名、模块名、配置项、API 路径 | `ForgekinEngine` / `EchoStore` / `MindCodex` / `CapabilityProfile` / `MindCouncil` |
-| **P2** | **体系别名（仅社交用）** | 社区讨论、技术博客口语化表达、网友交流 | 灵智 / 灵智体 / 灵忆 / 灵印 / 灵锻 / 灵典 / 灵议 / 育灵 |
+| **P2** | **体系别名（仅社交用）** | 社区讨论、技术博客口语化表达、网友交流 | 通用智能体框架 / 可进化智能体 / 情景记忆存储 / 持久身份 / 经验蒸馏 / 蒸馏知识库 / 多智能体议事 / 智能体入职与终身学习 |
 
 ### 5.2 智能体分类
 

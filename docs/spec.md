@@ -49,7 +49,7 @@
 
 **双轨命名策略**（详细见 §2.4）：
 - **代码层 / 技术文档**：使用 AI 专业术语（如 Forgekin、ForgeMind、SpiritForge、MindCodex、MindCouncil、CapabilityProfile、Embodied AI、Character AI）
-- **社区社交 / 体系命名**：使用灵智体体系名（如灵智、灵智体、灵锻、灵典、灵议、育灵、灵忆、灵印）—— 仅用于社区网友之间的社交沟通，正式技术文档中专业术语优先、体系名作补充说明
+- **社区社交 / 体系命名**：使用可进化智能体体系名（如通用智能体框架、可进化智能体、经验蒸馏、蒸馏知识库、多智能体议事、智能体入职与终身学习、情景记忆存储、持久身份）—— 仅用于社区网友之间的社交沟通，正式技术文档中专业术语优先、体系名作补充说明
 
 ### §1.4 参考文献
 
@@ -89,7 +89,7 @@ flowforge/docs/
 
 ### §2.1 产品定位
 
-**FlowForge** 是一个**智能体自进化框架（Self-Evolving Agent Framework）**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统，并通过 **forgemind 应用层**承载多形态可进化智能体（Forgekin，社区社交称"灵智体"）的智能体入职与终身学习（Forge Nurturing）、经验蒸馏（SpiritForge）、多智能体议事（MindCouncil）闭环，走向通用智能体（General-Purpose Agent）愿景。
+**FlowForge** 是一个**智能体自进化框架（Self-Evolving Agent Framework）**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统，并通过 **forgemind 应用层**承载多形态可进化智能体（Forgekin，社区社交称"可进化智能体"）的智能体入职与终身学习（Forge Nurturing）、经验蒸馏（SpiritForge）、多智能体议事（MindCouncil）闭环，走向通用智能体（General-Purpose Agent）愿景。
 
 **一句话定位**：FlowForge = 智能体自进化框架 + forgemind 应用层（多形态可进化智能体锻造场所）
 
@@ -140,11 +140,11 @@ FlowForge 生态的智能体（Agent）分为两大类，二者在设计、能�
 
 **代码基类**：`StaticAgent` / `DeclarativeAgent` / `ExternalAgentAdapter`
 
-#### §2.3.2 可进化智能体（Evolvable Agent / Forgekin，社区社交称"灵智体"）
+#### §2.3.2 可进化智能体（Evolvable Agent / Forgekin，社区社交称"可进化智能体"）
 
 > **强制等级**：operator 不可妥协锚点（详见 [VISION.md §7](VISION.md)）
 
-**可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）** = **具备持久身份（Persistent Identity）和自进化能力（Self-Evolving Capability）的自主智能体（Autonomous Agent）**。
+**可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）** = **具备持久身份（Persistent Identity）和自进化能力（Self-Evolving Capability）的自主智能体（Autonomous Agent）**。
 
 区别于主流 multi-agent 的 session 级软件助手（即静态智能体），可进化智能体建立与现实世界（物理或虚拟）的闭环：
 
@@ -206,7 +206,7 @@ FlowForge 生态的智能体（Agent）分为两大类，二者在设计、能�
 | 12 | 能力画像（CapabilityProfile） | CapabilityProfile | Capability Profile / Agent Skill Graph / Blind Spot Map（能力画像 / 智能体技能图 / 盲点图） |
 
 **说明**：
-- **官方名称优先原则（v2.0 强化）**：技术设计文档、代码、API、对外宣传中**大量出现的必须是 P0 官方名称（AI 业界专业术语）**；P2 体系别名（灵智 / 灵智体 / 灵忆 / 灵印 / 灵锻 / 灵典 / 灵议 / 育灵）**仅用于社区社交沟通**；正式文档中如出现 P2 别名必须首次标注 P0 官方名称。详见 [design/naming-contract.md#1.1](design/naming-contract.md) 官方名称优先原则。
+- **官方名称优先原则（v2.0 强化）**：技术设计文档、代码、API、对外宣传中**大量出现的必须是 P0 官方名称（AI 业界专业术语）**；P2 体系别名（通用智能体框架 / 可进化智能体 / 情景记忆存储 / 持久身份 / 经验蒸馏 / 蒸馏知识库 / 多智能体议事 / 智能体入职与终身学习）**仅用于社区社交沟通**；正式文档中如出现 P2 别名必须首次标注 P0 官方名称。详见 [design/naming-contract.md#1.1](design/naming-contract.md) 官方名称优先原则。
 - 历史命名变迁详见 [design/naming-contract.md#6](design/naming-contract.md) 废弃命名清单。
 
 **三层命名体系（P0/P1/P2）**：
@@ -215,12 +215,12 @@ FlowForge 生态的智能体（Agent）分为两大类，二者在设计、能�
 |:------:|---------|---------|------|
 | **P0** | **官方名称（AI 业界专业术语）** | 技术设计文档、代码、API、对外宣传、README、VISION | Agent / Multi-Agent System / Capability Profile / Episodic Memory / Skill Library / Multi-Agent Deliberation |
 | **P1** | **项目英文名** | 代码类名、模块名、配置项、API 路径 | `ForgekinEngine` / `EchoStore` / `MindCodex` / `CapabilityProfile` / `MindCouncil` |
-| **P2** | **体系别名（仅社交用）** | 社区讨论、技术博客口语化表达、网友交流 | 灵智 / 灵智体 / 灵忆 / 灵印 / 灵锻 / 灵典 / 灵议 / 育灵 |
+| **P2** | **体系别名（仅社交用）** | 社区讨论、技术博客口语化表达、网友交流 | 通用智能体框架 / 可进化智能体 / 情景记忆存储 / 持久身份 / 经验蒸馏 / 蒸馏知识库 / 多智能体议事 / 智能体入职与终身学习 |
 
 **铁律**：
 1. 正式文档优先使用 P0 官方名称
 2. P2 体系别名仅用于社交，首次出现时必须标注 P0 官方名称
-3. 正式文档中如出现 P2 别名必须双标注（如"灵智体（Forgekin / Evolvable Agent）"）
+3. 正式文档中如出现 P2 别名必须双标注（如"可进化智能体（Forgekin / Evolvable Agent）"）
 4. 代码层严禁使用 P2 别名作为标识符
 
 ### §2.5 进化阶与觉醒阶（中英文 + AI 业界概念三标注）
@@ -271,7 +271,7 @@ FlowForge 生态的智能体（Agent）分为两大类，二者在设计、能�
 > **对外宣称**：多形态智能体（Multi-Form Agent）—— 弱化"万物"虚幻用语
 > **权威定义**：详见 [design/naming-contract.md#2.3](design/naming-contract.md) 智能体形态学分类 + [features/F027-all-things-spirit-species.md](features/F027-all-things-spirit-species.md)
 
-可进化智能体（Forgekin，社区社交称"灵族"）按载体形态分为 5 种，形态可进化（E1 萌芽阶 → E6 大师级完整生命周期）：
+可进化智能体（Forgekin，社区社交称"智能体形态学"）按载体形态分为 5 种，形态可进化（E1 萌芽阶 → E6 大师级完整生命周期）：
 
 | # | 形态（中文 + 英文 + AI 业界概念） | 示例 | 物理接入 | 虚拟设定 |
 |---|------|------|------|---------|

@@ -2,7 +2,7 @@
 
 > **文档编号**: SOP.md（v1.1）
 > **依据**: `[doc:roleagent.md#第2章]` TeamAct 六步循环 + 五项终止条件
-> **适用范围**: 所有 FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）协作场景（含 forgemind 可进化智能体 + *Forge 垂直可进化智能体）
+> **适用范围**: 所有 FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）协作场景（含 forgemind 可进化智能体 + *Forge 垂直可进化智能体）
 > **命名规范**: 严格遵循 `[doc:design/naming-contract.md]` v2.0 "官方名称优先"原则
 
 ---
@@ -64,7 +64,7 @@ loop:
    ↓
 8. 文档员可进化智能体更新 F0XX.md 状态为"已完成"+ 更新 ROADMAP.md
    ↓
-9. 经验蒸馏员可进化智能体在低活动期将本次经验蒸馏到 Distilled Knowledge Base（MindCodex，社区社交称"灵典"）
+9. 经验蒸馏员可进化智能体在低活动期将本次经验蒸馏到 Distilled Knowledge Base（MindCodex，社区社交称"蒸馏知识库"）
 ```
 
 ### 2.2 可进化智能体进化
@@ -72,7 +72,7 @@ loop:
 ```
 1. 可进化智能体在执行任务中累积经验（行为信号 + Eval 信号）
    ↓
-2. Experience Distillation（SpiritForge，社区社交称"灵锻"）在低活动期触发经验蒸馏
+2. Experience Distillation（SpiritForge，社区社交称"经验蒸馏"）在低活动期触发经验蒸馏
    ↓
 3. 蒸馏结果写入 Distilled Knowledge Base（MindCodex，可检索知识库）
    ↓
@@ -226,7 +226,7 @@ loop:
 
 ## 7. Multi-Agent Deliberation SOP（Phase 6）
 
-Multi-Agent Deliberation（MindCouncil，社区社交称"灵议"）用于解决跨可进化智能体冲突 / 复杂决策：
+Multi-Agent Deliberation（MindCouncil，社区社交称"多智能体议事"）用于解决跨可进化智能体冲突 / 复杂决策：
 
 ```
 1. 任一可进化智能体可发起 MindCouncil（含议程 + 相关可进化智能体列表）

@@ -1,6 +1,6 @@
-"""虚拟灵智体（VirtualForgekin）— 灵智体五大形态之一。
+"""虚拟Forgekin（VirtualForgekin）— Forgekin五大形态之一。
 
-虚拟灵智体承载于虚拟世界角色（童话 / 神话 / 历史 / 现实人物 / VR /
+虚拟Forgekin承载于虚拟世界角色（童话 / 神话 / 历史 / 现实人物 / VR /
 游戏角色），无物理接入（纯虚拟），通过虚拟世界设定层建立"观察虚拟
 世界状态 → 推理角色行为 → 行动（角色扮演 / 关系推进）→ 验证角色
 一致性"的现实闭环。
@@ -10,9 +10,9 @@
 虚拟设定层: 角色设定 + 世界观 + 关系网。
 
 详见:
-    - [doc:design/naming-contract.md#2.3] 灵族形态分类
+    - [doc:design/naming-contract.md#2.3] ForgekinSpecies形态分类
     - [doc:decisions/013-all-things-spirit-mind-vision.md#2] 五大形态
-    - [doc:VISION.md#2] 万物灵智体形态分类
+    - [doc:VISION.md#2] Forgekin形态分类
     - [doc:review/review.md#第九章] FM-010 虚拟世界设定层
 """
 
@@ -27,15 +27,15 @@ from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
 
 
 class VirtualForgekin(ForgekinBase):
-    """虚拟灵智体（VirtualForgekin / Virtual Character Agent）。
+    """虚拟Forgekin（VirtualForgekin / Virtual Character Agent）。
 
     承载于虚拟世界角色（童话 / 神话 / 历史 / 现实人物 / VR / 游戏角色）。
-    一个孙悟空灵智体不只是 cosplay 模型，它有自己的取经愿景、与唐僧
-    灵智体的长期协作记忆、对八戒灵智体的能力画像盲点认知。这是
+    一个孙悟空Forgekin不只是 cosplay 模型，它有自己的取经愿景、与唐僧
+    Forgekin的长期协作记忆、对八戒Forgekin的能力画像盲点认知。这是
     Character AI / NPC Agent 范式的工程实现路径。
 
     详见:
-        - [doc:design/naming-contract.md#2.2] 灵智体定义
+        - [doc:design/naming-contract.md#2.2] Forgekin定义
         - [doc:VISION.md#2] 五大形态分类
         - [doc:VISION.md#3] 虚拟角色智能体路径
     """
@@ -55,12 +55,12 @@ class VirtualForgekin(ForgekinBase):
         forgekin_config: dict[str, Any] | None = None,
         llm_client: Any | None = None,
     ) -> None:
-        """初始化虚拟灵智体。
+        """初始化虚拟Forgekin。
 
         Args:
-            forgekin_id: 灵智体唯一 ID。
-            name: 灵智体显示名（如 ``"孙悟空"``）。
-            soul_imprint: 灵印（不可变身份）。
+            forgekin_id: Forgekin唯一 ID。
+            name: Forgekin显示名（如 ``"孙悟空"``）。
+            soul_imprint: SoulImprint（不可变身份）。
             evolution_stage: 进化阶。
             awakening_stage: 觉醒阶。
             capability_profile: 能力画像。
@@ -112,7 +112,7 @@ class VirtualForgekin(ForgekinBase):
     async def act(self, action: dict[str, Any]) -> dict[str, Any]:
         """执行角色行为（对话 / 行动 / 关系推进）。
 
-        虚拟灵智体的动作必须遵守世界观约束（如孙悟空不可念经）和
+        虚拟Forgekin的动作必须遵守世界观约束（如孙悟空不可念经）和
         角色设定（性格 / 动机 / 能力边界）。违反世界观或角色设定的
         动作必须拒绝。
 

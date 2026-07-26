@@ -32,7 +32,7 @@ class ApprovalRequest(BaseModel):
     """审批请求。"""
 
     request_id: str
-    forgekin_id: str  # 发起灵智体 ID
+    forgekin_id: str  # 发起Forgekin ID
     thread_id: str  # 来源 thread
     request_type: Literal[
         "code_merge",
@@ -54,7 +54,7 @@ class ApprovalDecision(BaseModel):
 
     request_id: str
     decision: Literal["approved", "rejected", "deferred"]
-    decided_by: str  # operator 或代理灵智体 ID
+    decided_by: str  # operator 或代理Forgekin ID
     decided_at: datetime = Field(default_factory=_now_utc)
     comments: str = ""
     conditions: list[str] = Field(default_factory=list)  # 批准条件（如 "需夏洛克 review 后合入"）
@@ -64,7 +64,7 @@ class ApprovalHub:
     """Approval Hub — 跨 thread 统一审批中心（内存骨架实现）。
 
     职责：
-    - 接收灵智体提交的审批请求
+    - 接收Forgekin提交的审批请求
     - operator 一键 approve / reject / defer
     - 超时自动拒绝（purge_expired）
     - 统计待审批/已决策分布

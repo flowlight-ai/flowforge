@@ -37,7 +37,7 @@ logger = get_logger("capability.analyzer")
 
 
 class TaskProfile(BaseModel):
-    """任务画像——描述任务对灵智体的能力要求。
+    """任务画像——描述任务对Forgekin的能力要求。
 
     对应 ADR 004 §4：动态路由基于能力画像 × 任务画像的匹配度。
 
@@ -47,7 +47,7 @@ class TaskProfile(BaseModel):
         required_skills: 任务需要的知识包名称列表。
         required_tools: 任务需要的工具列表。
         forbidden_blind_spot_categories: 任务禁忌盲点类别列表
-            （若灵智体在该类别有盲点，标记为风险）。
+            （若Forgekin在该类别有盲点，标记为风险）。
         preferred_cognitive_styles: 期望的解释风格列表
             （如 ["structured", "concise"]）。
         min_context_window: 最小上下文窗口要求（token 数，None 表示不限制）。
@@ -84,11 +84,11 @@ class GapReport(BaseModel):
 
     Attributes:
         missing_skills: 缺失的知识包名称列表
-            （任务要求但灵智体未加载）。
+            （任务要求但Forgekin未加载）。
         missing_tools: 缺失的工具列表
-            （任务要求但灵智体未被授权）。
+            （任务要求但Forgekin未被授权）。
         blind_spot_risks: 盲点风险列表
-            （每项是 (category, description) 元组，表示任务禁忌盲点与灵智体盲点重叠）。
+            （每项是 (category, description) 元组，表示任务禁忌盲点与Forgekin盲点重叠）。
         context_window_insufficient: 上下文窗口是否不足。
         cognitive_style_mismatch: 认知风格是否不匹配。
         recommendations: 建议文案列表（人类可读）。
@@ -181,7 +181,7 @@ class ProfileAnalyzer:
 
     实现三个核心分析能力：
         1. compute_gap: 任务画像 × 能力画像 gap 分析
-        2. detect_blind_spot_conflicts: 多灵智体盲点冲突检测
+        2. detect_blind_spot_conflicts: 多Forgekin盲点冲突检测
         3. recommend_pairing: 跨厂商 review 配对推荐
 
     设计原则（编程红线 9）：
@@ -199,13 +199,13 @@ class ProfileAnalyzer:
         """任务画像 × 能力画像 gap 分析。
 
         分析四类 gap：
-            1. 缺失技能：任务要求但灵智体未加载的知识包
-            2. 缺失工具：任务要求但灵智体未被授权的工具
-            3. 盲点风险：任务禁忌盲点类别与灵智体盲点重叠
+            1. 缺失技能：任务要求但Forgekin未加载的知识包
+            2. 缺失工具：任务要求但Forgekin未被授权的工具
+            3. 盲点风险：任务禁忌盲点类别与Forgekin盲点重叠
             4. 上下文窗口不足 + 认知风格不匹配
 
         Args:
-            profile: 灵智体能力画像。
+            profile: Forgekin能力画像。
             task_profile: 任务画像。
             prompts_path: 提示词模板路径（铁律 5，可选注入）。
 
@@ -229,7 +229,7 @@ class ProfileAnalyzer:
             if t not in allowed or t in forbidden
         ]
 
-        # 3. 盲点风险：任务禁忌类别 ∩ 灵智体盲点类别
+        # 3. 盲点风险：任务禁忌类别 ∩ Forgekin盲点类别
         my_blind_categories = {bs.category for bs in profile.blind_spots}
         forbidden_set = set(task_profile.forbidden_blind_spot_categories)
         risky_categories = my_blind_categories & forbidden_set
@@ -280,7 +280,7 @@ class ProfileAnalyzer:
                 _format_recommendation(
                     templates.get("blind_spot_risk"),
                     fallback=(
-                        "警告: 任务禁忌盲点类别 '{category}' 与当前灵智体盲点重叠"
+                        "警告: 任务禁忌盲点类别 '{category}' 与当前Forgekin盲点重叠"
                         "（{desc}），建议跨厂商 review"
                     ),
                     category=cat,
@@ -323,13 +323,13 @@ class ProfileAnalyzer:
     def detect_blind_spot_conflicts(
         candidates: list[CapabilityProfile],
     ) -> list[tuple[str, str, str]]:
-        """检测候选灵智体集合中的盲点冲突。
+        """检测候选Forgekin集合中的盲点冲突。
 
         遍历候选列表中所有 (i, j) 配对，返回存在盲点冲突的配对。
         用于跨厂商 review 必要性批量判断。
 
         Args:
-            candidates: 候选灵智体列表。
+            candidates: 候选Forgekin列表。
 
         Returns:
             冲突列表 [(profile_id_a, profile_id_b, conflict_category), ...]。
@@ -366,7 +366,7 @@ class ProfileAnalyzer:
             3. 若无可行 reviewer，返回 None（调用方需升级 operator）
 
         Args:
-            author: 作者灵智体画像。
+            author: 作者Forgekin画像。
             candidates: 候选 reviewer 画像列表。
 
         Returns:

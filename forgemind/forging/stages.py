@@ -1,10 +1,10 @@
-"""育灵锻造阶段定义 — 6 阶段流水线的阶段枚举与结果模型。
+"""Forge Nurturing锻造阶段定义 — 6 阶段流水线的阶段枚举与结果模型。
 
 按 [doc:review/review.md#第九章] FM-006 定义 6 阶段:
 
-    1. 形态定义（species_definition）— 确定灵族 species
+    1. 形态定义（species_definition）— 确定ForgekinSpecies species
     2. 能力注入（capability_injection）— 加载 CapabilityProfile
-    3. 记忆初始化（memory_seeding）— 初始化灵忆 EchoStore
+    3. 记忆初始化（memory_seeding）— 初始化EchoStore EchoStore
     4. 价值观对齐（value_alignment）— 注入价值锚点
     5. 能力验证（capability_verification）— Eval 验证（min_quality_score=0.85）
     6. 觉醒晋升（awakening_promotion）— 初始觉醒阶 E1
@@ -13,7 +13,7 @@
 配置驱动（详见 ``config/forging.yaml``）。
 
 详见:
-    - [doc:design/naming-contract.md#2.4] 育灵定义
+    - [doc:design/naming-contract.md#2.4] Forge Nurturing定义
     - [doc:review/review.md#第九章] FM-006 锻造流水线 6 阶段
     - [doc:rules.md#红线2] 质量分阈值 0.85
 """
@@ -27,7 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ForgingStage(str, Enum):
-    """育灵锻造阶段枚举 — 6 阶段流水线。
+    """Forge Nurturing锻造阶段枚举 — 6 阶段流水线。
 
     阶段顺序固定为 ``SPECIES_DEFINITION → CAPABILITY_INJECTION →
     MEMORY_SEEDING → VALUE_ALIGNMENT → CAPABILITY_VERIFICATION →
@@ -76,9 +76,9 @@ _STAGE_CHINESE_NAMES: dict[ForgingStage, str] = {
 }
 
 _STAGE_DESCRIPTIONS: dict[ForgingStage, str] = {
-    ForgingStage.SPECIES_DEFINITION: "确定灵族 species（bio/org/obj/virtual/hybrid）",
+    ForgingStage.SPECIES_DEFINITION: "确定ForgekinSpecies species（bio/org/obj/virtual/hybrid）",
     ForgingStage.CAPABILITY_INJECTION: "加载能力画像 CapabilityProfile",
-    ForgingStage.MEMORY_SEEDING: "初始化灵忆 EchoStore 种子记忆",
+    ForgingStage.MEMORY_SEEDING: "初始化EchoStore EchoStore 种子记忆",
     ForgingStage.VALUE_ALIGNMENT: "注入价值锚点（VISION §7 + 15 条红线）",
     ForgingStage.CAPABILITY_VERIFICATION: "Eval 验证（min_quality_score=0.85）",
     ForgingStage.AWAKENING_PROMOTION: "确认初始觉醒阶 E1（全导阶）",

@@ -256,7 +256,7 @@ class SelfDevRuntime:
         - "im": 通过 F047 IM 议事通道推送（F047 完成后启用，当前降级为 manual）
 
         Args:
-            forgekin_id: 发起审批的灵智体 ID
+            forgekin_id: 发起审批的Forgekin ID
 
         Returns:
             async approval_callback(plan, task) -> bool

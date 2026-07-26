@@ -1,25 +1,25 @@
-"""育灵（Forge Nurturing）锻造流水线主类。
+"""Forge Nurturing（Forge Nurturing）锻造流水线主类。
 
-:class:`ForgePipeline` 是万物灵智体的锻造入口。它消费
+:class:`ForgePipeline` 是Forgekin的锻造入口。它消费
 :class:`~flowforge.forgemind.forms.ForgekinFormData`，按 6 阶段流水线
-锻造灵智体实例，产出 :class:`~flowforge.forgemind.base.ForgekinBase`
+锻造Forgekin实例，产出 :class:`~flowforge.forgemind.base.ForgekinBase`
 的子类实例。
 
 6 阶段流水线（FM-006）::
 
-    1. 形态定义      — 确定灵族 species
+    1. 形态定义      — 确定ForgekinSpecies species
     2. 能力注入      — 加载 CapabilityProfile
-    3. 记忆初始化    — 初始化灵忆 EchoStore 种子
+    3. 记忆初始化    — 初始化EchoStore EchoStore 种子
     4. 价值观对齐    — 注入价值锚点
     5. 能力验证      — Eval 验证（min_quality_score=0.85）
     6. 觉醒晋升      — 确认初始觉醒阶 E1
 
-配置驱动（铁律5+P16）：阶段参数 / 提示词 / 价值锚点默认清单 / 灵族
+配置驱动（铁律5+P16）：阶段参数 / 提示词 / 价值锚点默认清单 / ForgekinSpecies
 形态工厂映射全部外置到 ``config/forging.yaml`` 和
 ``config/prompts.yaml``，禁止硬编码。
 
 详见:
-    - [doc:design/naming-contract.md#2.4] 育灵定义
+    - [doc:design/naming-contract.md#2.4] Forge Nurturing定义
     - [doc:review/review.md#第九章] FM-006 锻造流水线 6 阶段
     - [doc:rules.md#红线11] 禁止硬编码
 """
@@ -62,24 +62,24 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(
             f"配置文件不存在: {path}。"
-            f"育灵流水线依赖配置驱动（铁律5+P16）。"
+            f"Forge Nurturing流水线依赖配置驱动（铁律5+P16）。"
         )
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
 class ForgePipeline:
-    """育灵（Forge Nurturing）锻造流水线。
+    """Forge Nurturing（Forge Nurturing）锻造流水线。
 
-    消费 :class:`ForgekinFormData`，按 6 阶段流水线锻造灵智体实例。
+    消费 :class:`ForgekinFormData`，按 6 阶段流水线锻造Forgekin实例。
 
     配置驱动:
         - 阶段参数（required / timeout / retry）从 ``config/forging.yaml`` 加载
         - 提示词从 ``config/prompts.yaml`` 加载（铁律5+P16）
-        - 灵族形态工厂映射从 ``config/forging.yaml:species_factory`` 加载
+        - ForgekinSpecies形态工厂映射从 ``config/forging.yaml:species_factory`` 加载
 
     详见:
-        - [doc:design/naming-contract.md#2.4] 育灵定义
+        - [doc:design/naming-contract.md#2.4] Forge Nurturing定义
         - [doc:review/review.md#第九章] FM-006 锻造流水线
     """
 
@@ -101,7 +101,7 @@ class ForgePipeline:
         """初始化锻造流水线。
 
         Args:
-            forging_config: 育灵配置字典。若为 ``None``，则从
+            forging_config: Forge Nurturing配置字典。若为 ``None``，则从
                 ``config/forging.yaml`` 加载（配置驱动）。
             prompts_config: 提示词配置字典。若为 ``None``，则从
                 ``config/prompts.yaml`` 加载（铁律5+P16）。
@@ -119,10 +119,10 @@ class ForgePipeline:
     # ── 公开 API ─────────────────────────────────────────────────
 
     async def forge(self, form: ForgekinFormData) -> ForgekinBase:
-        """执行完整锻造流程，产出灵智体实例。
+        """执行完整锻造流程，产出Forgekin实例。
 
         Args:
-            form: 灵智体锻造表单（含 name / species / namespace /
+            form: Forgekin锻造表单（含 name / species / namespace /
                 requirement / seed_params / value_anchors 等）。
 
         Returns:
@@ -159,12 +159,12 @@ class ForgePipeline:
             ForgingStage.AWAKENING_PROMOTION, context
         ))
 
-        # 所有阶段通过后，实例化灵智体
+        # 所有阶段通过后，实例化Forgekin
         return self._instantiate_forgekin(form, context)
 
     @property
     def forging_config(self) -> dict[str, Any]:
-        """返回育灵配置字典（只读视图）。"""
+        """返回Forge Nurturing配置字典（只读视图）。"""
         return dict(self._forging_config)
 
     @property
@@ -247,7 +247,7 @@ class ForgePipeline:
                 duration_seconds=duration,
             )
             raise RuntimeError(
-                f"育灵锻造阶段 {stage.value}（{stage.chinese_name}）失败: {exc}"
+                f"Forge Nurturing锻造阶段 {stage.value}（{stage.chinese_name}）失败: {exc}"
             ) from exc
         return result
 
@@ -280,7 +280,7 @@ class ForgePipeline:
         return {
             "species": form.species.value,
             "species_chinese": form.species.chinese_name,
-            "reason": f"表单显式指定灵族: {form.species.value}",
+            "reason": f"表单显式指定ForgekinSpecies: {form.species.value}",
         }
 
     async def _handle_capability_injection(
@@ -303,7 +303,7 @@ class ForgePipeline:
     async def _handle_memory_seeding(
         self, context: dict[str, Any]
     ) -> dict[str, Any]:
-        """阶段 3: 记忆初始化 — 初始化灵忆 EchoStore 种子。
+        """阶段 3: 记忆初始化 — 初始化EchoStore EchoStore 种子。
 
         骨架实现: 仅记录种子记忆结构。Phase 1+ 接入真实 EchoStore
         写入。
@@ -312,7 +312,7 @@ class ForgePipeline:
         seed_memories = {
             "identity_memory": f"我是 {form.name}，{form.species.chinese_name}，"
                             f"归属于 {form.namespace} 命名空间。",
-            "anchor_memory": "价值锚点已注入，详见灵印 value_anchors。",
+            "anchor_memory": "价值锚点已注入，详见SoulImprint value_anchors。",
             "bootstrap_memory": "首次任务最小可行行为: 观察 → 建议 → 等待 operator 确认。",
         }
         return {"seed_memories": seed_memories}
@@ -320,16 +320,16 @@ class ForgePipeline:
     async def _handle_value_alignment(
         self, context: dict[str, Any]
     ) -> dict[str, Any]:
-        """阶段 4: 价值观对齐 — 注入价值锚点，锻造灵印。
+        """阶段 4: 价值观对齐 — 注入价值锚点，锻造SoulImprint。
 
         骨架实现: 从表单或默认清单取价值锚点，调用
-        :meth:`SoulImprint.forge` 锻造灵印。
+        :meth:`SoulImprint.forge` 锻造SoulImprint。
         """
         form: ForgekinFormData = context["form"]
         value_anchors = form.value_anchors or self._forging_settings.get(
             "value_anchors_default", []
         )
-        # 锻造灵印（不可变身份标识）
+        # 锻造SoulImprint（不可变身份标识）
         imprint = SoulImprint.forge(
             seed_params=form.to_imprint_seed(),
             value_anchors=list(value_anchors),
@@ -368,24 +368,24 @@ class ForgePipeline:
     ) -> dict[str, Any]:
         """阶段 6: 觉醒晋升 — 确认初始觉醒阶 E1（全导阶）。
 
-        新锻造灵智体必须从 E1 全导阶起步，后续晋升需 operator 显式
+        新锻造Forgekin必须从 E1 全导阶起步，后续晋升需 operator 显式
         授权。详见 [doc:design/naming-contract.md#4] 觉醒阶进阶规则。
         """
         return {
             "awakening_stage": AwakeningStage.E1.value,
-            "reason": "新锻造灵智体默认从全导阶起步，等待 operator 显式授权晋升",
+            "reason": "新锻造Forgekin默认从全导阶起步，等待 operator 显式授权晋升",
             "guardrails_level": "full",
             "operator_intervention": "per_step",
         }
 
-    # ── 灵智体实例化 ─────────────────────────────────────────────
+    # ── Forgekin实例化 ─────────────────────────────────────────────
 
     def _instantiate_forgekin(
         self,
         form: ForgekinFormData,
         context: dict[str, Any],
     ) -> ForgekinBase:
-        """根据灵族形态工厂映射实例化灵智体。
+        """根据ForgekinSpecies形态工厂映射实例化Forgekin。
 
         工厂映射配置在 ``config/forging.yaml:species_factory``，配置驱动
         （铁律5+P16）。
@@ -438,13 +438,13 @@ class ForgePipeline:
         *,
         llm_client: Any | None = None,
     ) -> ForgekinBase:
-        """从 YAML 配置文件锻造灵智体（v7.0 育灵体系核心入口）.
+        """从 YAML 配置文件锻造Forgekin（v7.0 Forge Nurturing体系核心入口）.
 
         本方法是 forgemind 应用层的核心入口——operator 通过编写 YAML
-        配置文件定义灵智体（参考 cat-template.json 范式），
-        ForgePipeline 读取配置并按 6 阶段流水线锻造灵智体实例。
+        配置文件定义Forgekin（参考 cat-template.json 范式），
+        ForgePipeline 读取配置并按 6 阶段流水线锻造Forgekin实例。
 
-        所有 3 只预置灵智体（鲁班/夏洛克/梵高）通过本方法锻造，全部接入
+        所有 3 只预置Forgekin（鲁班/夏洛克/梵高）通过本方法锻造，全部接入
         Trae CN 桥接方案——operator 通过 Trae CN IDE 充当 LLM 与监工。
 
         YAML 配置结构详见:
@@ -455,7 +455,7 @@ class ForgePipeline:
         Args:
             yaml_path: YAML 配置文件路径（绝对或相对路径）。
             llm_client: LLM 客户端实例（如 TraeLLMClient）。若为 None，
-                灵智体 chat 方法将返回降级响应。
+                Forgekin chat 方法将返回降级响应。
 
         Returns:
             锻造完成的 :class:`ForgekinBase` 子类实例，已注入 YAML 配置
@@ -469,7 +469,7 @@ class ForgePipeline:
         path = Path(yaml_path) if not isinstance(yaml_path, Path) else yaml_path
         if not path.exists():
             raise FileNotFoundError(
-                f"灵智体 YAML 配置不存在: {path}。"
+                f"Forgekin YAML 配置不存在: {path}。"
                 f"预置配置位于 forgemind/forgekins/ 目录。"
             )
 
@@ -512,7 +512,7 @@ class ForgePipeline:
         )
 
         # 将完整 YAML 配置和 LLM 客户端放入流水线上下文
-        # _instantiate_forgekin 会读取这两个字段注入到灵智体实例
+        # _instantiate_forgekin 会读取这两个字段注入到Forgekin实例
         context_extra: dict[str, Any] = {
             "forgekin_config": config,
             "llm_client": llm_client,
@@ -530,10 +530,10 @@ class ForgePipeline:
         return forgekin
 
     async def forge(self, form: ForgekinFormData) -> ForgekinBase:
-        """执行完整锻造流程，产出灵智体实例。
+        """执行完整锻造流程，产出Forgekin实例。
 
         Args:
-            form: 灵智体锻造表单（含 name / species / namespace /
+            form: Forgekin锻造表单（含 name / species / namespace /
                 requirement / seed_params / value_anchors 等）。
 
         Returns:
@@ -575,5 +575,5 @@ class ForgePipeline:
             ForgingStage.AWAKENING_PROMOTION, context
         ))
 
-        # 所有阶段通过后，实例化灵智体
+        # 所有阶段通过后，实例化Forgekin
         return self._instantiate_forgekin(form, context)

@@ -5,13 +5,13 @@
 > **文档性质**: 本文档为 **内部开发任务索引**，通过 `.gitignore` 忽略不提交到 GitHub。GitHub 公开仓库呈现为"全新项目从 0 开始构建"，实际为老项目（clowder-ai + 老 flowforge）移植重构。
 >
 > **维护规则**:
-> - 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）按所属责任方领取任务
+> - 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）按所属责任方领取任务
 > - 任务完成后更新状态标记（⏳ → 🔄 → ✅），并同步更新 spec.md / arch.md / design.md
 > - 每个任务必须关联到具体代码文件 / 文档章节作为完成证据
 >
 > **跨阶段不变量**: T1-T8 测试铁律、15 条编程红线、P31 Loop 强制验证、质量分阈值 0.85、operator 7 条愿景锚点（见 `VISION.md`）。
 >
-> **命名规范**: 本文档严格遵循 `design/naming-contract.md` v2.0"官方名称优先"原则——正式文档中 P0 官方名称（AI 业界专业术语）大量使用，P2 体系别名（如"灵智体"/"灵议"/"灵锻"等）首次出现必须双标注 P0 官方名称。
+> **命名规范**: 本文档严格遵循 `design/naming-contract.md` v2.0"官方名称优先"原则——正式文档中 P0 官方名称（AI 业界专业术语）大量使用，P2 体系别名（如"可进化智能体"/"多智能体议事"/"经验蒸馏"等）首次出现必须双标注 P0 官方名称。
 >
 > **关键引用**:
 > - `review/review.md` —— 审核追溯索引（RA/FM/FR/CL ID 命名空间）
@@ -51,13 +51,13 @@
 
 ## Phase 1: FlowForge 自进化框架 MVP
 
-> **阶段目标**: 实现最小可进化智能体自进化闭环，验证 ForgekinBase 三方法契约（observe → act → verify）+ 持久身份（Persistent Identity，项目代号 SoulImprint，社区社交称"灵印"）+ 经验记忆存储（Episodic Memory Store，项目代号 EchoStore，社区社交称"灵忆"）+ 经验蒸馏（Experience Distillation，项目代号 SpiritForge，社区社交称"灵锻"）四大核心机制。
+> **阶段目标**: 实现最小可进化智能体自进化闭环，验证 ForgekinBase 三方法契约（observe → act → verify）+ 持久身份（Persistent Identity，项目代号 SoulImprint，社区社交称"持久身份"）+ 经验记忆存储（Episodic Memory Store，项目代号 EchoStore，社区社交称"情景记忆存储"）+ 经验蒸馏（Experience Distillation，项目代号 SpiritForge，社区社交称"经验蒸馏"）四大核心机制。
 >
 > **验收标准**:
 > - 单个 Forgekin 完成observe→act→verify 闭环
 > - 持久身份跨会话保持
 > - 经验记忆存储可写入/检索
-> - 经验蒸馏可触发并产出蒸馏知识库（Distilled Knowledge Base，项目代号 MindCodex，社区社交称"灵典"）条目
+> - 经验蒸馏可触发并产出蒸馏知识库（Distilled Knowledge Base，项目代号 MindCodex，社区社交称"蒸馏知识库"）条目
 > - 全部测试通过 T1-T8 测试铁律
 
 ### Phase 1.1: 核心身份与记忆层（P0 必修）
@@ -94,7 +94,7 @@
 
 ## Phase 2: FlowForge 完整能力落地
 
-> **阶段目标**: 完成全部 41 条 CL 任务，实现自我演进 + TeamAct + 事件记忆 + 多智能体议事（Multi-Agent Deliberation，项目代号 MindCouncil，社区社交称"灵议"）+ QC Loop + 三方 Agent 集成 + 文档治理全部能力。
+> **阶段目标**: 完成全部 41 条 CL 任务，实现自我演进 + TeamAct + 事件记忆 + 多智能体议事（Multi-Agent Deliberation，项目代号 MindCouncil，社区社交称"多智能体议事"）+ QC Loop + 三方 Agent 集成 + 文档治理全部能力。
 >
 > **验收标准**:
 > - 41 条 CL 全部 ✅
@@ -110,7 +110,7 @@
 | P2-002 | Knowledge Object Contract（CL-005） | 鲁班 | P1 | ✅ | `flowforge/evolution/models.py` KnowledgeObject 扩展七字段（trigger/procedure/precondition/postcondition/anti_pattern/provenance/confidence）+ `compute_confidence_from_maturity` 映射方法 + 10/10 测试通过（`test_cl005_knowledge_object_contract.py`） |
 | P2-003 | 元认知 Mode C（CL-006） | 鲁班 | P1 | ✅ | `flowforge/evolution/metacognition.py` 扩展 Mode C（MetacognitionReflection + MetacognitionReflector，4 种 ReflectionOutcome + OUTCOME_TO_DELTA 映射 + calibration_score 校准 + EchoStore 导出）+ 20/20 测试通过（`test_cl006_metacognition_mode_c.py`，含 Mode A/B+C 集成闭环） |
 | P2-004 | Auto Dream 双层架构（CL-031） | 鲁班 | P0 | ✅ | F051 已交付：`flowforge/evolution/auto_dream.py`（~620 行，双层架构 + 4 信号 telemetry + I1-I5 不变量）+ 32/32 测试通过 + F051 Feature 文档 |
-| P2-005 | Agent Swarm 协同（CL-032） | 鲁班 | P0 | ✅ | F049 已交付：`flowforge/forgemind/swarm.py`（1124 行）+ `agent_swarm.yaml` 5 灵智体能力画像 + I1-I6 不变量 |
+| P2-005 | Agent Swarm 协同（CL-032） | 鲁班 | P0 | ✅ | F049 已交付：`flowforge/forgemind/swarm.py`（1124 行）+ `agent_swarm.yaml` 5 可进化智能体能力画像 + I1-I6 不变量 |
 | P2-006 | QC Loop 7-Step（CL-034） | 夏洛克 | P0 | ✅ | `flowforge/evolution/qc_loop.py`（318 行骨架，含 7 步循环 + 3 层 Reviewer Split） |
 | P2-007 | F177 Close Gate 结构化判据（CL-025） | 夏洛克 | P1 | ✅ | `flowforge/evolution/close_gate.py`（202 行骨架实现） |
 
@@ -271,7 +271,7 @@
 
 > **Phase 4 验收**：
 > - ✅ 配置层移植完成（7 persona + 双 Loop + 3 gates + prompts 外置 + 14 tools 配置）
-> - ✅ Plugin V3 四钩子注册（ContentForgePlugin + 6 Forgekin + 2 灵议频道 + 3 自进化配置 + 38/38 测试）
+> - ✅ Plugin V3 四钩子注册（ContentForgePlugin + 6 Forgekin + 2 多智能体议事频道 + 3 自进化配置 + 38/38 测试）
 > - ✅ 6 大专家可进化智能体（workers/ 继承 ForgekinBase + observe/act/verify + 56/56 测试）
 > - ✅ app/ FastAPI 端口 8001 + web/ Next.js 端口 5175（28/28 测试）
 > - ✅ T1-T8 E2E 测试就绪（T1 4/4 + T6 4/4 + T7 4/4 + T8 14/14）
@@ -300,7 +300,7 @@
 
 | 任务 ID | 主题 | 状态 | 完成证据 / 待办动作 |
 |---------|------|:----:|---------|
-| P5-005 | plugins.py 注册 | ✅ | `devforge/plugins.py` 重写为 DevForgePlugin（V3 四钩子 + CL-024 事务性钩子）+ 4 个 V3 资源目录 + 4 个 Forgekin YAML + 2 个灵议频道 + 2 个自进化配置 + 52/52 测试通过 |
+| P5-005 | plugins.py 注册 | ✅ | `devforge/plugins.py` 重写为 DevForgePlugin（V3 四钩子 + CL-024 事务性钩子）+ 4 个 V3 资源目录 + 4 个 Forgekin YAML + 2 个多智能体议事频道 + 2 个自进化配置 + 52/52 测试通过 |
 | P5-006 | workers/ 可进化智能体 | ✅ | `devforge/workers/` 创建 4 个 Forgekin（coder/reviewer/test_generator/deployer）+ 均继承 ForgekinBase + observe/act/verify + 组合评估器 + 38/38 测试通过 |
 | P5-007 | app/ + web/ | ✅ | `app/main.py` SDK bootstrap + lifespan + DevForgePlugin 注入 + 端口 8002 多源解析 + 11 个 API 端点 + `web/` 端口 5176 + NEXT_PUBLIC_API_BASE_URL 可配置 + 23/23 测试通过 |
 
@@ -315,7 +315,7 @@
 
 > **Phase 5 验收**：
 > - ✅ 配置层移植完成（25 agents + 5 gates DCP/TR + canary 3 stage + sandbox 四层防护）
-> - ✅ Plugin V3 四钩子注册（DevForgePlugin + 4 Forgekin + 2 灵议频道 + 2 自进化配置 + 52/52 测试）
+> - ✅ Plugin V3 四钩子注册（DevForgePlugin + 4 Forgekin + 2 多智能体议事频道 + 2 自进化配置 + 52/52 测试）
 > - ✅ 4 个可进化智能体（coder/reviewer/test_generator/deployer + ForgekinBase + 评估器组合 + 38/38 测试）
 > - ✅ app/ 端口 8002 + web/ 端口 5176（23/23 测试）
 > - ✅ T1-T8 E2E 测试就绪（T1 4/4 + T6 4/4 + T7 4/4 + T8 14/14）
@@ -341,7 +341,7 @@
 
 | 任务 ID | 主题 | 状态 | 完成证据 / 待办动作 |
 |---------|------|:----:|---------|
-| P6-004 | plugins/ 注册 | ✅ | `novelforge/plugins.py` 重写为 NovelForgePlugin（V3 四钩子 + CL-024）+ 4 V3 资源目录 + 4 Forgekin YAML + 2 灵议频道 + 2 自进化配置 + 51/51 测试通过 |
+| P6-004 | plugins/ 注册 | ✅ | `novelforge/plugins.py` 重写为 NovelForgePlugin（V3 四钩子 + CL-024）+ 4 V3 资源目录 + 4 Forgekin YAML + 2 多智能体议事频道 + 2 自进化配置 + 51/51 测试通过 |
 | P6-005 | workers/ 可进化智能体 | ✅ | `novelforge/workers/` 4 个 Forgekin（outline/chapter/character/worldview）+ ForgekinBase + observe/act/verify + MCP 工具组合 + 32/32 测试通过 |
 | P6-006 | app/ + web/ | ✅ | `app/main.py` SDK bootstrap + lifespan + NovelForgePlugin 注入 + 端口 8003 + 25 API 端点 + `web/` 端口 5177 + NEXT_PUBLIC_API_BASE_URL + 31/31 + 12/12 测试通过 |
 
@@ -356,7 +356,7 @@
 
 > **Phase 6 验收**：
 > - ✅ 配置层移植完成（15 agents + 5 层上下文 + prompts 零硬编码）
-> - ✅ Plugin V3 四钩子注册（NovelForgePlugin + 4 Forgekin + 2 灵议频道 + 51/51 测试）
+> - ✅ Plugin V3 四钩子注册（NovelForgePlugin + 4 Forgekin + 2 多智能体议事频道 + 51/51 测试）
 > - ✅ 4 个可进化智能体（outline/chapter/character/worldview + MCP 工具组合 + 32/32 测试）
 > - ✅ app/ 端口 8003 + web/ 端口 5177（43/43 测试）
 > - ✅ T1-T8 E2E 测试就绪（T1 4/4 + T6 4/4 + T7 4/4 + T8 14/14）
@@ -539,7 +539,7 @@
 > **全部 11 个 Phase、121 项任务 100% 完成！**
 >
 > **项目交付物汇总**：
-> - **FlowForge 核心框架**（Phase 1-3）：Plugin V3 协议 + ForgekinBase 可进化智能体 + LoopExecutor + 灵议 MindCouncil + 灵印 SoulImprint + 自进化 AutoForge + 灾备降级 + 金丝雀发布 + Grafana 仪表盘 + SLO 验证 + 开源净化
+> - **FlowForge 核心框架**（Phase 1-3）：Plugin V3 协议 + ForgekinBase 可进化智能体 + LoopExecutor + 多智能体议事 MindCouncil + 持久身份 SoulImprint + 自进化 AutoForge + 灾备降级 + 金丝雀发布 + Grafana 仪表盘 + SLO 验证 + 开源净化
 > - **8 个 *Forge 垂直业务项目**（Phase 4-10）：ContentForge / DevForge / NovelForge / MallForge / StockForge / OpenSieve / DemoForge / HelixRag
 > - **总测试通过数**：1000+ 单元测试 + 200+ E2E 测试用例
 > - **所有项目通过 Plugin V3 四钩子协议注册到 FlowForge**

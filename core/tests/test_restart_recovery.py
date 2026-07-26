@@ -157,7 +157,7 @@ def redis_with_stale_and_valid() -> FakeRedisClient:
     # valid: completed + TTL=3600（正常完成，TTL 未过期）
     client.set_key(
         key="task:novelforge:chapter_writer",
-        value={"chapter": 7, "title": "灵智体觉醒"},
+        value={"chapter": 7, "title": "Forgekin觉醒"},
         ttl=3600,
         status="completed",
         created_at="2026-07-18T08:00:00+00:00",

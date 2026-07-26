@@ -19,7 +19,7 @@ NDJSON（Newline-Delimited JSON）流式输出：
 设计依据：
     - [doc:review/review.md#14.4] CL-038 NDJSON + stderr 也算活着
     - [doc:decisions/006-external-agent-integration.md] §4 首批接入
-    - [doc:design/naming-contract.md#2.2] 灵智体
+    - [doc:design/naming-contract.md#2.2] Forgekin
     - FlowForge CLI NDJSON 解析器规范
 
 铁律遵守：

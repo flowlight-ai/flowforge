@@ -51,7 +51,7 @@ class HistoryEntry(BaseModel):
         action: 执行的动作描述。
         evidence: 产出证据（commit / 测试 / trace ID）。
         timestamp: 记录时间。
-        agent: 执行该动作的灵智体标识（可选）。
+        agent: 执行该动作的Forgekin标识（可选）。
         ball_status: 记录时的持球状态。
     """
 
@@ -62,7 +62,7 @@ class HistoryEntry(BaseModel):
         default_factory=lambda: datetime.now(timezone.utc),
         description="记录时间",
     )
-    agent: Optional[str] = Field(default=None, description="执行灵智体")
+    agent: Optional[str] = Field(default=None, description="执行Forgekin")
     ball_status: BallStatus = Field(
         default=BallStatus.HELD, description="持球状态"
     )
@@ -174,7 +174,7 @@ class TeamActState(BaseModel):
     Attributes:
         current_step: 当前 TeamAct 步骤（默认 STATE）。
         task_id: 当前任务标识。
-        ball_holder: 当前持球灵智体标识（None 表示无人持球）。
+        ball_holder: 当前持球Forgekin标识（None 表示无人持球）。
         history: 历史记录列表（每次 advance/pass_ball/escalate 追加一条）。
         capsules: 交接胶囊列表（协议层硬要求）。
         termination_status: 五项终止条件报告。
@@ -187,7 +187,7 @@ class TeamActState(BaseModel):
     )
     task_id: str = Field(..., description="当前任务标识")
     ball_holder: Optional[str] = Field(
-        default=None, description="当前持球灵智体"
+        default=None, description="当前持球Forgekin"
     )
     history: list[HistoryEntry] = Field(
         default_factory=list, description="历史记录列表"
@@ -309,13 +309,13 @@ class TeamActState(BaseModel):
     def pass_ball(
         self, to_agent: str, capsule: HandoffCapsule
     ) -> bool:
-        """传球 — 将球权转交给下一个灵智体。
+        """传球 — 将球权转交给下一个Forgekin。
 
         交接胶囊是协议层硬要求（roleagent.md §2.3），传球时必须附带胶囊。
         胶囊的 to_agent 必须与 to_agent 参数一致，且胶囊必须通过 is_valid() 校验。
 
         Args:
-            to_agent: 接收球的灵智体标识。
+            to_agent: 接收球的Forgekin标识。
             capsule: 交接胶囊（协议层硬要求）。
 
         Returns:
@@ -366,7 +366,7 @@ class TeamActState(BaseModel):
     def escalate(self, to_cvo: bool = True) -> None:
         """升级给首席愿景官（CVO）。
 
-        当灵智体无法完成任务或愿景方向不明确时，升级给 CVO。
+        当Forgekin无法完成任务或愿景方向不明确时，升级给 CVO。
         CVO 的确认是五项终止条件之一（vision_converged），不能被 proxy 替代
         （roleagent.md §2.2 第 5 项）。
 

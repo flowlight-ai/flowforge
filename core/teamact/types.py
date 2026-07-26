@@ -89,9 +89,9 @@ class TerminationCondition(str, Enum):
 class BallStatus(str, Enum):
     """持球状态枚举。
 
-    描述灵智体（Forgekin）在 TeamAct 循环中的持球状态：
+    描述Forgekin（Forgekin）在 TeamAct 循环中的持球状态：
         HELD      → 当前持球（执行中）
-        PASSED    → 已传球（球已转交给下一个灵智体）
+        PASSED    → 已传球（球已转交给下一个Forgekin）
         RELEASED  → 已释放（任务完成，主动释放球权）
         ESCALATED → 已升级（升级给首席愿景官 CVO）
     """

@@ -1,6 +1,6 @@
 """ExternalAgentBridge — 三方 Agent 统一桥接层。
 
-灵智体通过 Bridge 调用三方 Agent，Bridge 负责：
+Forgekin通过 Bridge 调用三方 Agent，Bridge 负责：
     1. 查询 ProviderTransportRegistry 选择合适的三方 Agent
     2. 通过 HostInjector 注入安全配置
     3. 通过 ACPTransport 统一通信
@@ -10,7 +10,7 @@
 设计依据：
     - [doc:review/review.md#第九章§9.2] EX-003/EX-004 三方 Agent 协议适配层 + 状态共享
     - [doc:decisions/006-external-agent-integration.md] §5 调用流程
-    - [doc:design/naming-contract.md#2.2] 灵智体 / [doc:design/naming-contract.md#2.12] 能力画像
+    - [doc:design/naming-contract.md#2.2] Forgekin / [doc:design/naming-contract.md#2.12] 能力画像
 
 铁律遵守：
     - 铁律 3：依赖通过构造函数注入（registry / host_injector / transport / fallback / fusion / shared_state）
@@ -48,9 +48,9 @@ logger = get_logger("external_agent.bridge")
 
 
 class BridgeInvokeRequest(BaseModel):
-    """Bridge 调用请求（灵智体发起）。"""
+    """Bridge 调用请求（Forgekin发起）。"""
 
-    forgekin_id: str = Field(..., description="灵智体 ID")
+    forgekin_id: str = Field(..., description="Forgekin ID")
     task: str = Field(..., description="任务描述")
     context: dict[str, Any] = Field(
         default_factory=dict, description="调用上下文"
@@ -69,7 +69,7 @@ class BridgeInvokeRequest(BaseModel):
 
 
 class BridgeInvokeResponse(BaseModel):
-    """Bridge 调用响应（返回给灵智体）。"""
+    """Bridge 调用响应（返回给Forgekin）。"""
 
     success: bool = Field(..., description="最终是否成功")
     winning_provider: str = Field(default="", description="成功的 Provider")
@@ -92,7 +92,7 @@ class BridgeInvokeResponse(BaseModel):
 class ExternalAgentBridge:
     """三方 Agent 统一桥接层。
 
-    灵智体通过 Bridge 调用三方 Agent，Bridge 负责：
+    Forgekin通过 Bridge 调用三方 Agent，Bridge 负责：
     1. 查询 ProviderTransportRegistry 选择合适的三方 Agent
     2. 通过 HostInjector 注入安全配置
     3. 通过 ACPTransport 统一通信
@@ -102,12 +102,12 @@ class ExternalAgentBridge:
     详见 [doc:review/review.md#第九章§9.2] EX-003/EX-004
 
     调用流程（[doc:decisions/006-external-agent-integration.md] §5）：
-        1. 灵智体发起 Bridge.invoke(forgekin_id, task)
+        1. Forgekin发起 Bridge.invoke(forgekin_id, task)
         2. Bridge 查询 Registry 选择 Provider（或按 preferred_providers）
         3. HostInjector 注入 sandbox / credentials
         4. ACPTransport 调用三方 Agent
         5. 结果写入 SharedState
-        6. CapabilityFusion 融合能力到灵智体画像
+        6. CapabilityFusion 融合能力到Forgekin画像
         7. 失败时 Fallback 链回退到下一个 Provider
         8. 全部失败回退到 FlowForge 内置能力
     """
@@ -151,10 +151,10 @@ class ExternalAgentBridge:
         preferred_providers: Optional[list[str]] = None,
         required_capability: Optional[str] = None,
     ) -> BridgeInvokeResponse:
-        """灵智体调用三方 Agent 完成任务。
+        """Forgekin调用三方 Agent 完成任务。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             task: 任务描述。
             context: 调用上下文（含 shared_state history）。
             preferred_providers: 首选 Provider 列表（空时用默认 fallback 链）。

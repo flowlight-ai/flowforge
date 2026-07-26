@@ -1,6 +1,6 @@
 """PingPongCircuitBreaker — 乒乓球熔断器（给数据不给结论）。
 
-乒乓球熔断器检测灵智体间的"乒乓球"模式：两个灵智体互相传球却没有实质进展。
+乒乓球熔断器检测Forgekin间的"乒乓球"模式：两个Forgekin互相传球却没有实质进展。
 当 N > threshold（默认 3）时触发熔断，建议"该换路了"（不是"再来一个就好了"）。
 
 对应 roleagent.md §2.4 + F004-pingpong-circuit-breaker.md：
@@ -31,10 +31,10 @@ logger = get_logger("teamact.circuit_breaker")
 
 
 class PingPongCircuitBreaker:
-    """乒乓球熔断器 — 检测灵智体间无进展的来回传球模式。
+    """乒乓球熔断器 — 检测Forgekin间无进展的来回传球模式。
 
     核心行为（roleagent.md §2.4）：
-        - 当某灵智体连续失败/来回传球次数 N > threshold（默认 3）时触发熔断
+        - 当某Forgekin连续失败/来回传球次数 N > threshold（默认 3）时触发熔断
         - 触发时"该换路了"（不是"再来一个就好了"）
         - 给数据不给结论：返回失败次数和原因，不直接决策下一步
 
@@ -66,11 +66,11 @@ class PingPongCircuitBreaker:
     def record_failure(self, agent_id: str, reason: str) -> None:
         """记录一次失败（乒乓球来回）。
 
-        每次灵智体在 TeamAct 循环中无进展地传球/失败时调用。
+        每次Forgekin在 TeamAct 循环中无进展地传球/失败时调用。
         increments rounds_count[agent_id] 并记录最近一次失败原因。
 
         Args:
-            agent_id: 灵智体（Forgekin）标识。
+            agent_id: Forgekin（Forgekin）标识。
             reason: 失败原因（用于 trace 诊断）。
         """
         self.rounds_count[agent_id] = self.rounds_count.get(agent_id, 0) + 1
@@ -92,7 +92,7 @@ class PingPongCircuitBreaker:
             - N > max_rounds 时也返回 True（硬上限）
 
         Args:
-            agent_id: 灵智体标识。
+            agent_id: Forgekin标识。
 
         Returns:
             True 表示应触发熔断（换路），False 表示继续。
@@ -104,12 +104,12 @@ class PingPongCircuitBreaker:
         return count > self.threshold
 
     def reset(self, agent_id: str) -> None:
-        """重置灵智体的失败计数。
+        """重置Forgekin的失败计数。
 
-        当灵智体取得实质进展（产出证据 / 通过 review）时调用。
+        当Forgekin取得实质进展（产出证据 / 通过 review）时调用。
 
         Args:
-            agent_id: 灵智体标识。
+            agent_id: Forgekin标识。
         """
         self.rounds_count.pop(agent_id, None)
         self.last_failure.pop(agent_id, None)
@@ -124,7 +124,7 @@ class PingPongCircuitBreaker:
         熔断器本身不决策。
 
         Args:
-            agent_id: 灵智体标识。
+            agent_id: Forgekin标识。
 
         Returns:
             包含 rounds_count / last_failure / threshold / should_break 的数据字典。

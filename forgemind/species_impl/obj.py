@@ -1,6 +1,6 @@
-"""物品灵智体（ObjForgekin）— 灵智体五大形态之一。
+"""物品Forgekin（ObjForgekin）— Forgekin五大形态之一。
 
-物品灵智体承载于物理世界物品（桌椅 / 灯具 / 家电 / 工具等），通过
+物品Forgekin承载于物理世界物品（桌椅 / 灯具 / 家电 / 工具等），通过
 IoT 传感器 / 物联网协议接入，建立"观察物品状态 → 推理物品功能 →
 行动（开灯 / 调节温度 / 启动设备）→ 验证物品状态"的现实闭环。
 
@@ -9,9 +9,9 @@ IoT 传感器 / 物联网协议接入，建立"观察物品状态 → 推理物�
 虚拟设定层: 物品功能边界 + 使用场景。
 
 详见:
-    - [doc:design/naming-contract.md#2.3] 灵族形态分类
+    - [doc:design/naming-contract.md#2.3] ForgekinSpecies形态分类
     - [doc:decisions/013-all-things-spirit-mind-vision.md#2] 五大形态
-    - [doc:VISION.md#2] 万物灵智体形态分类
+    - [doc:VISION.md#2] Forgekin形态分类
     - [doc:review/review.md#第九章] FM-009 物理世界传感器接入
 """
 
@@ -26,15 +26,15 @@ from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
 
 
 class ObjForgekin(ForgekinBase):
-    """物品灵智体（ObjForgekin / Object Spirit Agent，对应 Embodied AI）。
+    """物品Forgekin（ObjForgekin / Object Spirit Agent，对应 Embodied AI）。
 
     承载于物理世界物品（桌椅 / 灯具 / 家电 / 工具等）。一个智能灯具
-    灵智体不只是被 LLM 调用的工具，它有自己的身份、记忆（用户偏好、
-    时段模式）、协作能力（与其他家电灵智体组队）、愿景（节能 + 用户
+    Forgekin不只是被 LLM 调用的工具，它有自己的身份、记忆（用户偏好、
+    时段模式）、协作能力（与其他家电Forgekin组队）、愿景（节能 + 用户
     舒适）。这是当下业界 Embodied AI 范式的工程实现路径。
 
     详见:
-        - [doc:design/naming-contract.md#2.2] 灵智体定义
+        - [doc:design/naming-contract.md#2.2] Forgekin定义
         - [doc:VISION.md#2] 五大形态分类
         - [doc:VISION.md#3] 具身智能路径
     """
@@ -54,12 +54,12 @@ class ObjForgekin(ForgekinBase):
         forgekin_config: dict[str, Any] | None = None,
         llm_client: Any | None = None,
     ) -> None:
-        """初始化物品灵智体。
+        """初始化物品Forgekin。
 
         Args:
-            forgekin_id: 灵智体唯一 ID。
-            name: 灵智体显示名（如 ``"客厅吊灯"``）。
-            soul_imprint: 灵印（不可变身份）。
+            forgekin_id: Forgekin唯一 ID。
+            name: Forgekin显示名（如 ``"客厅吊灯"``）。
+            soul_imprint: SoulImprint（不可变身份）。
             evolution_stage: 进化阶。
             awakening_stage: 觉醒阶。
             capability_profile: 能力画像。
@@ -112,7 +112,7 @@ class ObjForgekin(ForgekinBase):
     async def act(self, action: dict[str, Any]) -> dict[str, Any]:
         """执行物品功能（开灯 / 调节温度 / 启动设备）。
 
-        物品灵智体的动作必须在 ``function_boundary`` 内——超出功能边界
+        物品Forgekin的动作必须在 ``function_boundary`` 内——超出功能边界
         的动作必须拒绝。涉及物理不可逆操作（如加热 / 切割）的决策必须
         由 operator 确认后执行。
 

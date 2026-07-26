@@ -120,7 +120,7 @@ class ExternalAgentWorktree:
 
         Args:
             provider_name: 调用的三方 Agent 名称（用于命名 worktree）。
-            forgekin_id: 灵智体 ID（用于命名 worktree）。
+            forgekin_id: Forgekin ID（用于命名 worktree）。
             source_subdir: 源子目录（如 "flowforge/"，None 时复制整个 source_repo）。
 
         Returns:

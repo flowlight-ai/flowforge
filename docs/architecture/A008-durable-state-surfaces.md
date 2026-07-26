@@ -19,7 +19,7 @@
 FlowForge 在架构层需要解决"对话历史是最脆的状态表面，会被压缩截断丢失，真相源必须外部化"的根本问题。当前 v7.0 有 task_store / memory manager / git_worktree，但未明确：
 
 1. 对话历史（thread_trace）是最脆的状态表面，关键决策必须镜像到高权威表面
-2. 治理规则仍塞在 user message 里，上下文压缩后规则消失，Forgekin（Evolvable Agent，社区社交称'灵智体'）后半段突然违规
+2. 治理规则仍塞在 user message 里，上下文压缩后规则消失，Forgekin（Evolvable Agent，社区社交称'可进化智能体'）后半段突然违规
 3. 6 类持久状态表面无权威等级与冲突解析规则
 4. 压缩免疫层（native system role）未形式化，治理规则无处下沉
 

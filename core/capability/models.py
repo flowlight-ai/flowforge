@@ -1,4 +1,4 @@
-"""CapabilityProfile data models — 灵智体能力画像数据模型。
+"""CapabilityProfile data models — Forgekin能力画像数据模型。
 
 本模块定义 CapabilityProfile 六维度（对应 roleagent.md 第 0 章三个可变性层）：
     - 常量层：ModelCapability / CognitiveStyle / BlindSpot
@@ -71,7 +71,7 @@ class ModelCapability(BaseModel):
 class CognitiveStyle(BaseModel):
     """认知风格（常量层）。
 
-    描述灵智体在推理 / 抽象 / 风险 / 解释四个维度的认知偏好。
+    描述Forgekin在推理 / 抽象 / 风险 / 解释四个维度的认知偏好。
     对应 roleagent.md §0：profile 描述"为什么是这只 agent"。
 
     Attributes:
@@ -166,7 +166,7 @@ class BlindSpot(BaseModel):
 class SkillPackage(BaseModel):
     """可加载知识包（变量层）。
 
-    描述灵智体可动态加载的领域知识包。对应 roleagent.md §4.3 L3 Skill 层。
+    描述Forgekin可动态加载的领域知识包。对应 roleagent.md §4.3 L3 Skill 层。
 
     Attributes:
         name: 知识包名称（唯一标识）。
@@ -198,7 +198,7 @@ class SkillPackage(BaseModel):
 class ToolBoundary(BaseModel):
     """工具边界（变量层）。
 
-    描述灵智体可调用工具的允许 / 禁止 / 偏好集合。
+    描述Forgekin可调用工具的允许 / 禁止 / 偏好集合。
     对应 roleagent.md §3.2 Tool Mediation 层。
 
     Attributes:
@@ -257,7 +257,7 @@ class PerformanceLog(BaseModel):
 
 
 class AgentState(BaseModel):
-    """灵智体当前状态（瞬时层）。
+    """Forgekin当前状态（瞬时层）。
 
     跨推理调用的瞬时信号，单 session 内可变。
     对应 roleagent.md §1.2 计算状态 + 现实状态层。

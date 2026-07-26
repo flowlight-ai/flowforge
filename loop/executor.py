@@ -32,7 +32,7 @@ from flowforge.loop.verifier import LoopVerifier
 from flowforge.loop.reflector import LoopReflector
 from flowforge.loop.registry import LoopRegistry
 from flowforge.loop.turn_transition import TurnTransitionEngine, TurnState
-from flowforge.core.tracing import get_logger
+from flowforge.core.tracing import get_logger, get_trace_id
 
 logger = get_logger("loop.executor")
 
@@ -450,6 +450,12 @@ class LoopExecutor:
                 task.metadata["loop_past_failures"] = past_failures
 
         # Loop 启动事件
+        _loop_trace = get_trace_id()
+        logger.info(
+            f"[trace_id={_loop_trace}] loop start: loop_id={state.loop_id} "
+            f"task_id={state.task_id} max_retries={max_retries} "
+            f"total_timeout={total_timeout}s"
+        )
         if task.event_bus:
             task.event_bus.emit(task.task_id, "loop.started", {
                 "loop_id": state.loop_id,
@@ -764,7 +770,7 @@ class LoopExecutor:
             if self._is_refusal_result(result):
                 consecutive_refusals += 1
                 logger.warning(
-                    f"[loop] 检测到 LLM 拒绝响应（连续第{consecutive_refusals}次）: "
+                    f"[trace_id={_loop_trace}] [loop] 检测到 LLM 拒绝响应（连续第{consecutive_refusals}次）: "
                     f"loop_id={state.loop_id}, attempt={attempt + 1}, "
                     f"max_consecutive_refusals={max_consecutive_refusals}, "
                     f"task_id={task.task_id}"
@@ -796,7 +802,9 @@ class LoopExecutor:
                             "consecutive_refusals": consecutive_refusals,
                             "last_errors": state.past_errors[-3:],
                         })
-                    logger.error(f"[loop] {refusal_error}: loop_id={state.loop_id}")
+                    logger.error(
+                        f"[trace_id={_loop_trace}] [loop] {refusal_error}: loop_id={state.loop_id}"
+                    )
                     break
                 # 未达阈值：跳过本轮 verifier/reflector，直接进入下一轮迭代
                 # （拒绝响应无需质量评审，也无需反思 — 问题不在内容质量而在 LLM 可用性）
@@ -1227,7 +1235,7 @@ class LoopExecutor:
         state.phase = LoopPhase.FAILED
         # v3.8 性能分析: Loop失败总耗时汇总
         _loop_total_duration = time.monotonic() - total_start
-        logger.info(f"[loop][性能汇总] task_id={task.task_id} 失败 | "
+        logger.info(f"[trace_id={_loop_trace}] [loop][性能汇总] task_id={task.task_id} 失败 | "
                      f"总耗时={_loop_total_duration:.2f}s | "
                      f"规划={_plan_duration:.2f}s | "
                      f"迭代次数={state.attempt} | "

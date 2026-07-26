@@ -125,7 +125,7 @@ class SteerCommand(BaseModel):
         action: Steer 动作类型（7 种枚举之一）。
         priority: Steer 优先级（5 级，默认 NORMAL）。
         target_task_id: 目标任务 ID（必须存在于队列中）。
-        target_agent_id: REDIRECT 时的目标灵智体 ID（仅 REDIRECT 必填）。
+        target_agent_id: REDIRECT 时的目标Forgekin ID（仅 REDIRECT 必填）。
         reason: operator 必填理由（审计追溯依据，禁止空字符串）。
         operator_id: 发起 operator 标识（必须以 "operator" 开头，I2 校验）。
         payload: 附加数据（如 priority_boost 的 boost_level / redirect 的 capsule）。
@@ -149,7 +149,7 @@ class SteerCommand(BaseModel):
     )
     target_task_id: str = Field(..., description="目标任务 ID")
     target_agent_id: Optional[str] = Field(
-        default=None, description="REDIRECT 时的目标灵智体 ID"
+        default=None, description="REDIRECT 时的目标Forgekin ID"
     )
     reason: str = Field(..., min_length=1, description="operator 必填理由")
     operator_id: str = Field(..., description="发起 operator 标识")
@@ -193,7 +193,7 @@ class SteerEffect(BaseModel):
         command_id: 对应的 SteerCommand ID。
         applied: 是否成功应用。
         affected_tasks: 受影响的任务 ID 列表。
-        affected_agents: 受影响的灵智体 ID 列表。
+        affected_agents: 受影响的Forgekin ID 列表。
         side_effects: 副作用记录（如 emergency_interruption / queue_paused）。
         applied_at: 应用时间（UTC，自动生成）。
         message: 附加消息（失败原因 / 成功摘要）。
@@ -205,7 +205,7 @@ class SteerEffect(BaseModel):
         default_factory=list, description="受影响的任务 ID 列表"
     )
     affected_agents: list[str] = Field(
-        default_factory=list, description="受影响的灵智体 ID 列表"
+        default_factory=list, description="受影响的Forgekin ID 列表"
     )
     side_effects: dict[str, Any] = Field(
         default_factory=dict, description="副作用记录"

@@ -1,7 +1,7 @@
-"""F046/F049 五灵智体持续工作调度循环（Continuous Orchestration Foreman）.
+"""F046/F049 五Forgekin持续工作调度循环（Continuous Orchestration Foreman）.
 
 设计动机（参考 5 agent sweet spot 模式）：
-- 5 个灵智体（wenxin/sherlock/luban/vangogh/davinci）永远不停止工作
+- 5 个Forgekin（wenxin/sherlock/luban/vangogh/davinci）永远不停止工作
 - 持续扫描任务源 → 通过 SwarmCoordinator 分发 → 触发 SelfDev 闭环 → 监控结果 → 循环
 - operator 通过 Magic Words 或 SteerCommand 干预
 - 单次循环间隔可配置（默认 60 秒）
@@ -13,7 +13,7 @@
 4. task.md 中 ⏳/🔄 状态的任务
 5. 定时扫描（文档过期/代码 bug/架构偏离/审查缺失/测试覆盖率下降）
 
-五灵智体协同工作流（F046 §9.3）：
+五Forgekin协同工作流（F046 §9.3）：
     doc(wenxin) → code(sherlock) → review(vangogh) → test(davinci) → framework(luban, I8)
 
 不变量：
@@ -81,10 +81,10 @@ class ForemanStats:
 
 
 class ContinuousForeman:
-    """五灵智体持续工作调度器（永不停止）.
+    """五Forgekin持续工作调度器（永不停止）.
 
     参考 FlowForge 5 agent sweet spot 模式：
-    - 5 个灵智体永远不停止工作
+    - 5 个Forgekin永远不停止工作
     - foreman 持续扫描任务源 → 分发 → 监控 → 循环
     - operator 通过 Magic Words 干预（停止/暂停/继续）
 
@@ -154,7 +154,7 @@ class ContinuousForeman:
         self._pause_requested = False
         self._stats = ForemanStats(current_state="running")
         self._logger.info(
-            "Foreman 启动 — 5 灵智体持续工作模式（5 agent sweet spot）"
+            "Foreman 启动 — 5 Forgekin持续工作模式（5 agent sweet spot）"
         )
 
         # 懒加载 SwarmCoordinator（避免 import 时硬依赖）
@@ -263,7 +263,7 @@ class ContinuousForeman:
                     for task in tasks:
                         self._submit_to_swarm(task)
 
-                    # 3. 分发任务到 5 灵智体
+                    # 3. 分发任务到 5 Forgekin
                     if self._swarm is not None:
                         dispatched = await self._swarm.dispatch()
                         self._stats.total_tasks_dispatched += len(dispatched)
@@ -608,7 +608,7 @@ class ContinuousForeman:
         """根据 agent_id 推断 loop_type.
 
         Args:
-            agent_id: 灵智体 ID（如 "wenxin" / "forgemind:wenxin"）
+            agent_id: Forgekin ID（如 "wenxin" / "forgemind:wenxin"）
 
         Returns:
             loop_type（doc/code/framework/review/test）
@@ -660,7 +660,7 @@ class ContinuousForeman:
             title: 任务标题
             description: 任务描述
             loop_type: 闭环类型（doc/code/framework/review/test）
-            forgekin_id: 优先分配的灵智体 ID
+            forgekin_id: 优先分配的Forgekin ID
             priority: 优先级（low/normal/high/critical/emergency）
             context: 任务上下文
 
@@ -736,7 +736,7 @@ class ContinuousForeman:
 
             coordinator = create_swarm_coordinator()
 
-            # 注册 5 个灵智体
+            # 注册 5 个Forgekin
             agents_config = self._load_agents_config()
             for agent_id, agent_cfg in agents_config.items():
                 coordinator.register_agent(
@@ -756,7 +756,7 @@ class ContinuousForeman:
             return _MockSwarmCoordinator()
 
     def _load_agents_config(self) -> Dict[str, Dict[str, Any]]:
-        """加载 5 灵智体能力画像配置.
+        """加载 5 Forgekin能力画像配置.
 
         Returns:
             agent_id -> {capabilities, vendor} 字典

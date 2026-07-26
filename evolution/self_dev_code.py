@@ -1,7 +1,7 @@
 """F046 §2.5.2 SelfDevCodeLoop — 代码自我演进闭环.
 
 负责自主实现和修改代码，是 SelfDev 五闭环中觉醒阶要求中等（E4）的闭环.
-对应灵智体：开发者·夏洛克（forgemind:sherlock）.
+对应Forgekin：开发者·夏洛克（forgemind:sherlock）.
 
 处理对象：
 - flowforge/**/*.py（Python 源码）

@@ -1,16 +1,16 @@
-"""AvatarSyncAdapter — 灵智体形象同步适配器（EAC v1 契约 7 Avatar Sync）。
+"""AvatarSyncAdapter — Forgekin形象同步适配器（EAC v1 契约 7 Avatar Sync）。
 
-灵智体形象（persona）同步到三方 Agent：确保 claude code / codex / opencode / trae
-在调用时使用一致的灵智体身份（名称 / 性格 / 语音 / 头像）。
+Forgekin形象（persona）同步到三方 Agent：确保 claude code / codex / opencode / trae
+在调用时使用一致的Forgekin身份（名称 / 性格 / 语音 / 头像）。
 
 设计依据：
     - [doc:review/review.md#第九章§9.2] EX-002 能力画像（avatar 维度）
-    - [doc:design/naming-contract.md#2.6] 灵印（forgekin_id 命名空间）
+    - [doc:design/naming-contract.md#2.6] SoulImprint（forgekin_id 命名空间）
     - [doc:design.md v7.1-§D6.2] EAC v1 七契约 #7 Avatar Sync
 
 铁律遵守：
     - 铁律 3：依赖通过构造函数注入（无外部依赖时构造函数留空）
-    - 编程红线 11：配置驱动（AvatarSpec 字段来自灵智体 YAML 配置）
+    - 编程红线 11：配置驱动（AvatarSpec 字段来自Forgekin YAML 配置）
     - 编程红线 12：禁止绕过 DI 容器直接实例化
     - 骨架实现：sync_avatar 返回固定成功结构，不实际调用三方 Agent
 
@@ -30,14 +30,14 @@ logger = get_logger("external_agent.avatar_sync")
 
 
 class AvatarSpec(BaseModel):
-    """灵智体形象规格（同步到三方 Agent 的 persona 数据）。
+    """Forgekin形象规格（同步到三方 Agent 的 persona 数据）。
 
-    与 [doc:design/naming-contract.md#2.6] 灵印一致，
+    与 [doc:design/naming-contract.md#2.6] SoulImprint一致，
     forgekin_id 作为命名空间键。
 
     Attributes:
-        forgekin_id: 灵智体 ID。
-        name: 灵智体正式名称。
+        forgekin_id: Forgekin ID。
+        name: Forgekin正式名称。
         nickname: 昵称。
         species: 物种（如 "code_dragon" / "research_owl"）。
         personality_summary: 性格摘要（一句话）。
@@ -46,8 +46,8 @@ class AvatarSpec(BaseModel):
         blind_spots: 盲点列表（EX-002，决定谁该 review 谁）。
     """
 
-    forgekin_id: str = Field(..., description="灵智体 ID")
-    name: str = Field(..., description="灵智体正式名称")
+    forgekin_id: str = Field(..., description="Forgekin ID")
+    name: str = Field(..., description="Forgekin正式名称")
     nickname: str = Field(default="", description="昵称")
     species: str = Field(default="", description="物种")
     personality_summary: str = Field(default="", description="性格摘要")
@@ -78,10 +78,10 @@ class SyncResult(BaseModel):
 
 
 class AvatarSyncAdapter:
-    """灵智体形象同步适配器（EAC v1 契约 7 Avatar Sync）。
+    """Forgekin形象同步适配器（EAC v1 契约 7 Avatar Sync）。
 
-    灵智体形象同步到三方 Agent：确保 claude code / codex / opencode / trae
-    在调用时使用一致的灵智体身份。
+    Forgekin形象同步到三方 Agent：确保 claude code / codex / opencode / trae
+    在调用时使用一致的Forgekin身份。
 
     详见 [doc:review/review.md#第九章§9.2] EX-002 + [doc:design/naming-contract.md#2.6]
 
@@ -105,14 +105,14 @@ class AvatarSyncAdapter:
         avatar_spec: AvatarSpec,
         target_providers: list[str],
     ) -> dict[str, SyncResult]:
-        """同步灵智体形象到多个三方 Agent（骨架实现：固定成功）。
+        """同步Forgekin形象到多个三方 Agent（骨架实现：固定成功）。
 
         实际实现应按 Provider 协议（如 system_prompt 注入 / avatar API 上传）
         将 avatar_spec 推送到目标 Provider。
 
         Args:
-            forgekin_id: 灵智体 ID。
-            avatar_spec: 灵智体形象规格。
+            forgekin_id: Forgekin ID。
+            avatar_spec: Forgekin形象规格。
             target_providers: 目标 Provider 名称列表。
 
         Returns:
@@ -141,10 +141,10 @@ class AvatarSyncAdapter:
     def get_synced_avatar(
         self, forgekin_id: str, provider_name: str
     ) -> Optional[AvatarSpec]:
-        """获取已同步到指定 Provider 的灵智体形象。
+        """获取已同步到指定 Provider 的Forgekin形象。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             provider_name: Provider 名称。
 
         Returns:
@@ -159,7 +159,7 @@ class AvatarSyncAdapter:
         """列出已同步形象到哪些 Provider。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
 
         Returns:
             Provider 名称列表（未同步时返回空列表）。

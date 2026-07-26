@@ -278,7 +278,7 @@ def test_router_route_returns_family_and_decision() -> None:
 
 
 def test_router_route_ragdoll_denies_deploy() -> None:
-    """Ragdoll 灵智体尝试 deploy 被拒绝."""
+    """Ragdoll Forgekin尝试 deploy 被拒绝."""
     router = MindFamilyRouter()
     family, decision = router.route(
         forgekin_id="test:ragdoll",
@@ -315,7 +315,7 @@ def test_router_post_route_calls_post_action() -> None:
 
 
 def test_router_full_cycle_siamese() -> None:
-    """Siamese 灵智体完整流程：route → 执行 → post_route."""
+    """Siamese Forgekin完整流程：route → 执行 → post_route."""
     router = MindFamilyRouter()
     # 1. route
     family, decision = router.route(

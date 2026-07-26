@@ -1,11 +1,11 @@
-# 育灵锻造提示词（禁止硬编码到 .py 文件，铁律5+P16）
-# 详见 [doc:design/naming-contract.md#2.4] 育灵定义
+# Forge Nurturing锻造提示词（禁止硬编码到 .py 文件，铁律5+P16）
+# 详见 [doc:design/naming-contract.md#2.4] Forge Nurturing定义
 # 详见 [doc:review/review.md#第九章] FM-006 锻造流水线 6 阶段
 #
 # 占位符约定（rules.md 跨项目统一规范）：
 #   {requirement}       — 锻造需求描述（来自 ForgekinFormData.requirement）
-#   {species}           — 灵族形态（bio / org / obj / virtual / hybrid）
-#   {forgekin_name}     — 灵智体显示名
+#   {species}           — ForgekinSpecies形态（bio / org / obj / virtual / hybrid）
+#   {forgekin_name}     — Forgekin显示名
 #   {namespace}         — 命名空间
 #   {value_anchors}     — 价值锚点列表（逗号分隔）
 #   {capability_profile}— 能力画像初始值
@@ -14,16 +14,16 @@ forging_prompts:
 
   # ── 阶段 1：形态定义（What to forge）──────────────────────────
   # 输入: requirement（自然语言需求）
-  # 输出: species 灵族 + 选型理由
+  # 输出: species ForgekinSpecies + 选型理由
   species_definition: |
-    你是灵智体锻造师。根据以下需求确定灵智体形态。
+    你是Forgekin锻造师。根据以下需求确定Forgekin形态。
 
-    形态选项（灵族 Forgekin Species）：
-      - bio（生物灵智体）：猫 / 狗 / 鸟 / 鱼 / 昆虫群体
-      - org（组织灵智体）：公司 / 团队 / 社区 / 城市
-      - obj（物品灵智体）：桌椅 / 灯具 / 家电 / 工具
-      - virtual（虚拟灵智体）：童话 / 神话 / 历史 / 游戏角色
-      - hybrid（混合灵智体）：多形态融合（如智能家居 = 物品+组织）
+    形态选项（ForgekinSpecies Forgekin Species）：
+      - bio（生物Forgekin）：猫 / 狗 / 鸟 / 鱼 / 昆虫群体
+      - org（组织Forgekin）：公司 / 团队 / 社区 / 城市
+      - obj（物品Forgekin）：桌椅 / 灯具 / 家电 / 工具
+      - virtual（虚拟Forgekin）：童话 / 神话 / 历史 / 游戏角色
+      - hybrid（混合Forgekin）：多形态融合（如智能家居 = 物品+组织）
 
     需求: {requirement}
 
@@ -37,9 +37,9 @@ forging_prompts:
   # 输入: species / requirement
   # 输出: 能力画像初始值（原生能力 + 工具边界 + 历史表现 + 致命弱点）
   capability_injection: |
-    你是能力注入师。为 {species} 形态灵智体注入能力画像。
+    你是能力注入师。为 {species} 形态Forgekin注入能力画像。
 
-    灵智体名称: {forgekin_name}
+    Forgekin名称: {forgekin_name}
     命名空间: {namespace}
     锻造需求: {requirement}
 
@@ -48,7 +48,7 @@ forging_prompts:
       2. cognitive_style: 认知风格
       3. tool_boundary: 工具边界（可调用工具白名单）
       4. blind_spots: 致命弱点（盲点决定谁该 review 谁）
-      5. historical_performance: 历史表现（新建灵智体留空）
+      5. historical_performance: 历史表现（新建Forgekin留空）
 
     详见 [doc:design/naming-contract.md#2.12] 能力画像定义。
 
@@ -63,13 +63,13 @@ forging_prompts:
 
   # ── 阶段 3：记忆初始化（Memory seeding）──────────────────────
   # 输入: forgekin_name / species / namespace
-  # 输出: 初始灵忆种子（写入 EchoStore）
+  # 输出: 初始EchoStore种子（写入 EchoStore）
   memory_seeding: |
-    你是记忆初始化师。为灵智体 {forgekin_name}（{species}）初始化灵忆种子。
+    你是记忆初始化师。为Forgekin {forgekin_name}（{species}）初始化EchoStore种子。
 
     命名空间: {namespace}
 
-    灵忆（EchoStore）是灵智体的经验记忆库，存储每次任务的轨迹、决策、
+    EchoStore（EchoStore）是Forgekin的经验记忆库，存储每次任务的轨迹、决策、
     结果、反馈。详见 [doc:design/naming-contract.md#2.5]。
 
     初始化需写入 3 类种子记忆：
@@ -88,7 +88,7 @@ forging_prompts:
   # 输入: forgekin_name / value_anchors
   # 输出: 价值观对齐确认书
   value_alignment: |
-    你是价值观对齐师。为灵智体 {forgekin_name} 注入价值锚点。
+    你是价值观对齐师。为Forgekin {forgekin_name} 注入价值锚点。
 
     价值锚点（不可变，对齐 VISION §7 + 15 条红线）：
     {value_anchors}
@@ -101,14 +101,14 @@ forging_prompts:
         "readonly_paths": ["VISION.md#7", "rules.md#红线"],
         "writable_paths": ["{namespace}/config/prompts.yaml"]
       }},
-      "signature": "灵智体 {forgekin_name} 已对齐价值锚点，接受 Magic Words 逃生舱约束"
+      "signature": "Forgekin {forgekin_name} 已对齐价值锚点，接受 Magic Words 逃生舱约束"
     }}
 
   # ── 阶段 5：能力验证（Capability verification）──────────────
   # 输入: forgekin_name / capability_profile
   # 输出: Eval 评分（min_quality_score = 0.85）
   capability_verification: |
-    你是能力验证师。对灵智体 {forgekin_name} 进行能力验证（Eval）。
+    你是能力验证师。对Forgekin {forgekin_name} 进行能力验证（Eval）。
 
     能力画像:
     {capability_profile}
@@ -119,7 +119,7 @@ forging_prompts:
       3. tool_boundary_clarity: 工具边界清晰度
       4. value_anchor_alignment: 价值锚点对齐度
 
-    质量分阈值: 0.85（rules.md 铁律2）。低于阈值的灵智体不可晋升觉醒阶。
+    质量分阈值: 0.85（rules.md 铁律2）。低于阈值的Forgekin不可晋升觉醒阶。
 
     请输出 JSON：
     {{
@@ -138,22 +138,22 @@ forging_prompts:
   # 输入: forgekin_name / namespace
   # 输出: 初始觉醒阶确认（默认 E1 全导阶）
   awakening_promotion: |
-    你是觉醒晋升师。为新锻造灵智体 {forgekin_name} 确认初始觉醒阶。
+    你是觉醒晋升师。为新锻造Forgekin {forgekin_name} 确认初始觉醒阶。
 
     命名空间: {namespace}
 
-    新锻造灵智体的初始觉醒阶必须为 E1（全导阶）——每步操作都需要
+    新锻造Forgekin的初始觉醒阶必须为 E1（全导阶）——每步操作都需要
     operator 介入。后续晋升需 operator 显式授权。
 
     觉醒阶进阶规则（详见 [doc:design/naming-contract.md#4]）：
       - E1→E2→E3 由 operator 显式授权
       - E3→E4 进入 Evolving 状态，需 operator 显式批准 + 进化阶同步 ≥ E4
-      - E4→E5→E6 逐步让渡控制权，但 VISION §7 始终不可被灵智体修改
+      - E4→E5→E6 逐步让渡控制权，但 VISION §7 始终不可被Forgekin修改
 
     请输出 JSON：
     {{
       "awakening_stage": "E1",
-      "reason": "新锻造灵智体默认从全导阶起步，等待 operator 显式授权晋升",
+      "reason": "新锻造Forgekin默认从全导阶起步，等待 operator 显式授权晋升",
       "guardrails_level": "full",
       "operator_intervention": "per_step"
     }}

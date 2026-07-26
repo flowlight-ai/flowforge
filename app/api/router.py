@@ -34,5 +34,5 @@ router.include_router(metrics.router)
 router.include_router(domain_plugins_router)
 router.include_router(plugin_management_router)
 router.include_router(marketplace_router)
-# v7.0: ForgeMind 万物灵智体应用层 API（Trae CN 桥接 + webchat + IM 灵议 + 自进化）
+# v7.0: ForgeMind Forgekin应用层 API（Trae CN 桥接 + webchat + IM MindCouncil + 自进化）
 router.include_router(forgemind_router)

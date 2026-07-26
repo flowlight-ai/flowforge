@@ -4,7 +4,7 @@
 本类为最小骨架实现，仅维护协作句柄，不实际调度三方 Agent。
 
 设计依据：
-    - [doc:review/review.md#第九章§9.2] EX-010 三方 Agent 与灵智体能力融合
+    - [doc:review/review.md#第九章§9.2] EX-010 三方 Agent 与Forgekin能力融合
     - [doc:review/review.md#14.3] CL-032 Agent Swarm（群体协作）
     - [doc:design.md v7.1-§D6.2] EAC v1 七契约 #5 Collaboration
 

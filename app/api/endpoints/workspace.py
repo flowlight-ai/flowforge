@@ -228,6 +228,43 @@ async def get_context(task_id: str):
     return {"task_id": task_id, "context": context}
 
 
+@router.get("/{task_id}/status")
+async def get_status(task_id: str):
+    """Read the current workspace/task status (GET).
+
+    Previously this endpoint only supported POST (update). The GET method
+    reads the status from the workspace's task metadata without modifying it.
+    """
+    ws = get_workspace_manager()
+    path = ws.get_workspace_path(task_id)
+    if not path:
+        raise HTTPException(status_code=404, detail=f"Workspace not found: {task_id}")
+    from pathlib import Path
+    import json
+    task_meta_path = Path(str(path)) / ".helm" / "task.json"
+    task_meta = None
+    if task_meta_path.exists():
+        with open(task_meta_path, "r", encoding="utf-8") as f:
+            task_meta = json.load(f)
+    # Also check .checkpoint.json for the latest status
+    checkpoint_path = Path(str(path)) / ".checkpoint.json"
+    checkpoint = None
+    if checkpoint_path.exists():
+        with open(checkpoint_path, "r", encoding="utf-8") as f:
+            checkpoint = json.load(f)
+    current_status = "unknown"
+    if task_meta and isinstance(task_meta, dict):
+        current_status = task_meta.get("status", "unknown")
+    elif checkpoint and isinstance(checkpoint, dict):
+        current_status = checkpoint.get("status", "unknown")
+    return {
+        "task_id": task_id,
+        "status": current_status,
+        "task_meta": task_meta,
+        "checkpoint": checkpoint,
+    }
+
+
 @router.post("/{task_id}/status")
 async def update_status(task_id: str, payload: dict):
     ws = get_workspace_manager()

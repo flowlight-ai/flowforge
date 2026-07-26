@@ -1,7 +1,7 @@
-"""核心身份层（Core Identity Layer）— 灵智体的不可变身份。
+"""核心身份层（Core Identity Layer）— Forgekin的不可变身份。
 
 F093 三层世界引擎的第一层。此层**不可被任何 Episode 污染**——即使
-灵智体演了 1000 次"孙悟空"，核心身份仍是"写作灵智体"。
+Forgekin演了 1000 次"孙悟空"，核心身份仍是"写作Forgekin"。
 
 设计要点:
     - **完全不可变**：使用 ``Pydantic v2 ConfigDict(frozen=True)``，所有
@@ -9,17 +9,17 @@ F093 三层世界引擎的第一层。此层**不可被任何 Episode 污染**�
     - **与 MindProfile 分离**：v7.0 的 MindProfile 是可变结构（任务经验
       可修改 persona/values/skills），无法承担 Core Identity 职责。本类
       与 MindProfile 严格分离，只承载不可变身份。
-    - **灵印引用**：``soul_imprint_hash`` 引用
+    - **SoulImprint引用**：``soul_imprint_hash`` 引用
       :class:`~flowforge.forgemind.soul_imprint.SoulImprint` 的哈希，作为
       谱系追踪的锚点。
 
 修复的问题:
-    - CL-007：v7.0 灵智体无 Core Identity 隔离层，导致身份漂移。
+    - CL-007：v7.0 Forgekin无 Core Identity 隔离层，导致身份漂移。
       本层是"不可变身份锚点"，即使世界层全部崩塌，核心身份仍可重建。
 
 详见:
-    - [doc:review/review.md#13.2] CL-007（v7.0 灵智体无 Core Identity 隔离层）
-    - [doc:design/naming-contract.md#2.6] 灵印定义
+    - [doc:review/review.md#13.2] CL-007（v7.0 Forgekin无 Core Identity 隔离层）
+    - [doc:design/naming-contract.md#2.6] SoulImprint定义
     - [doc:features/F093-cats-and-u-world-engine.md] 世界引擎 Feature 规格
 """
 
@@ -32,15 +32,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CoreIdentityLayer(BaseModel):
-    """核心身份层（Core Identity Layer）— 灵智体的不可变身份。
+    """核心身份层（Core Identity Layer）— Forgekin的不可变身份。
 
-    此层不可被任何 Episode 污染。即使灵智体演了 1000 次"孙悟空"，核心
-    身份仍是"写作灵智体"。
+    此层不可被任何 Episode 污染。即使Forgekin演了 1000 次"孙悟空"，核心
+    身份仍是"写作Forgekin"。
 
     与 :class:`~flowforge.forgemind.base.ForgekinBase` 的关系:
-        - ``ForgekinBase`` 是灵智体的运行时基类，承载可变的 evolution_stage
+        - ``ForgekinBase`` 是Forgekin的运行时基类，承载可变的 evolution_stage
           / awakening_stage / capability_profile。
-        - ``CoreIdentityLayer`` 是灵智体的不可变身份锚点，**只承载不可变
+        - ``CoreIdentityLayer`` 是Forgekin的不可变身份锚点，**只承载不可变
           字段**。一个 Forgekin 实例持有一个 CoreIdentityLayer 实例。
 
     不可变性:
@@ -48,19 +48,19 @@ class CoreIdentityLayer(BaseModel):
         ``ValidationError``。这是身份隔离的物理保证，防止 RP 污染。
 
     属性:
-        forgekin_id: 灵智体唯一 ID（如 ``"forgemind:writer_cat"``）。
-        name: 灵智体显示名（不可变身份名）。
-        species: 灵族形态值（:class:`~flowforge.forgemind.species.ForgekinSpecies`
+        forgekin_id: Forgekin唯一 ID（如 ``"forgemind:writer_cat"``）。
+        name: Forgekin显示名（不可变身份名）。
+        species: ForgekinSpecies形态值（:class:`~flowforge.forgemind.species.ForgekinSpecies`
             的 value，如 ``"bio"`` / ``"virtual"``）。
         birth_timestamp: 出生时间（UTC）。
         core_personality: 核心性格列表（不可变，如 ``["沉稳", "好奇"]``）。
         value_anchors: 价值锚点列表（不可变，对齐 VISION §7 + 15 条红线）。
-        soul_imprint_hash: 灵印哈希（引用
+        soul_imprint_hash: SoulImprint哈希（引用
             :class:`~flowforge.forgemind.soul_imprint.SoulImprint.imprint_hash`）。
 
     详见:
         - [doc:review/review.md#13.2] CL-007
-        - [doc:design/naming-contract.md#2.6] 灵印
+        - [doc:design/naming-contract.md#2.6] SoulImprint
     """
 
     model_config = ConfigDict(
@@ -69,11 +69,11 @@ class CoreIdentityLayer(BaseModel):
         validate_assignment=True,
     )
 
-    forgekin_id: str = Field(..., description="灵智体唯一 ID。")
-    name: str = Field(..., description="灵智体显示名（不可变）。")
+    forgekin_id: str = Field(..., description="Forgekin唯一 ID。")
+    name: str = Field(..., description="Forgekin显示名（不可变）。")
     species: str = Field(
         ...,
-        description="灵族形态值（ForgekinSpecies.value，如 'bio' / 'virtual'）。",
+        description="ForgekinSpecies形态值（ForgekinSpecies.value，如 'bio' / 'virtual'）。",
     )
     birth_timestamp: datetime = Field(..., description="出生时间（UTC）。")
     core_personality: list[str] = Field(
@@ -86,7 +86,7 @@ class CoreIdentityLayer(BaseModel):
     )
     soul_imprint_hash: str = Field(
         ...,
-        description="灵印哈希（引用 SoulImprint.imprint_hash，谱系追踪锚点）。",
+        description="SoulImprint哈希（引用 SoulImprint.imprint_hash，谱系追踪锚点）。",
     )
 
     @field_validator("forgekin_id", "name", "species", "soul_imprint_hash")
@@ -125,13 +125,13 @@ class CoreIdentityLayer(BaseModel):
         }
 
     def verify_imprint(self, soul_imprint_hash: str) -> bool:
-        """校验传入的灵印哈希是否与核心身份记录的一致。
+        """校验传入的SoulImprint哈希是否与核心身份记录的一致。
 
         用于跨 session / 跨代际身份验证。如果返回 ``False``，说明核心身份
-        与灵印不一致，身份可信度受损。
+        与SoulImprint不一致，身份可信度受损。
 
         Args:
-            soul_imprint_hash: 待校验的灵印哈希。
+            soul_imprint_hash: 待校验的SoulImprint哈希。
 
         Returns:
             ``True`` 表示哈希一致，身份可信。

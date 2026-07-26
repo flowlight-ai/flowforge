@@ -1,7 +1,7 @@
 """CapabilityRegistry — 三方 Agent 能力注册表（EAC v1 契约 4 Capability）。
 
 能力声明与发现：注册每个 Provider 声明的 capability 及其 manifest 引用，
-灵智体通过 discover() 查询"谁能做 code_review"。
+Forgekin通过 discover() 查询"谁能做 code_review"。
 
 与 ProviderTransportRegistry 互补：
     - ProviderTransportRegistry 管"谁在线"（Provider 元数据 / 传输方式）
@@ -65,7 +65,7 @@ class CapabilityRegistry:
     """三方 Agent 能力注册表（EAC v1 契约 4 Capability）。
 
     能力声明与发现：注册每个 Provider 声明的 capability 及其 manifest 引用，
-    灵智体通过 discover() 查询"谁能做 code_review"。
+    Forgekin通过 discover() 查询"谁能做 code_review"。
 
     详见 [doc:review/review.md#第九章§9.2] EX-008
 

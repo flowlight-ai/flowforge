@@ -1,9 +1,9 @@
 """ForgeMind v7.0 全流程验证脚本.
 
 验证:
-    1. 3 只灵智体（鲁班/夏洛克/梵高）通过 YAML 配置锻造
-    2. webchat — 与灵智体对话（Trae CN 桥接，降级模式）
-    3. IM 灵议 — 3 只灵智体共同讨论
+    1. 3 只Forgekin（鲁班/夏洛克/梵高）通过 YAML 配置锻造
+    2. webchat — 与Forgekin对话（Trae CN 桥接，降级模式）
+    3. IM MindCouncil — 3 只Forgekin共同讨论
     4. 自进化触发 — ForgeMindEngine Mode A/B/C
 
 运行方式:
@@ -11,8 +11,8 @@
     python flowforge/scripts/verify_forgemind_pipeline.py
 
 详见:
-    - [doc:design/naming-contract.md#2.2] 灵智体定义
-    - [doc:VISION.md#1] 万物灵智体愿景
+    - [doc:design/naming-contract.md#2.2] Forgekin定义
+    - [doc:VISION.md#1] Forgekin愿景
 """
 
 from __future__ import annotations
@@ -30,9 +30,9 @@ from flowforge.forgemind.forging.pipeline import ForgePipeline
 
 
 async def verify_forge_all() -> dict:
-    """验证 1: 锻造 3 只灵智体."""
+    """验证 1: 锻造 3 只Forgekin."""
     print("\n" + "=" * 70)
-    print("验证 1: 锻造 3 只灵智体（鲁班/夏洛克/梵高）")
+    print("验证 1: 锻造 3 只Forgekin（鲁班/夏洛克/梵高）")
     print("=" * 70)
 
     pipeline = ForgePipeline()
@@ -48,9 +48,9 @@ async def verify_forge_all() -> dict:
             print(f"     forgekin_id: {desc['forgekin_id']}")
             print(f"     进化阶: {desc['evolution_stage']} ({desc['evolution_stage_chinese']})")
             print(f"     觉醒阶: {desc['awakening_stage']} ({desc['awakening_stage_chinese']})")
-            print(f"     灵印哈希: {desc['imprint_hash'][:16]}...")
+            print(f"     SoulImprint哈希: {desc['imprint_hash'][:16]}...")
             print(f"     可自进化: {desc['can_self_evolve']}")
-            print(f"     可锻造新灵智体: {desc['can_forge_new_forgekin']}")
+            print(f"     可锻造新Forgekin: {desc['can_forge_new_forgekin']}")
         except Exception as exc:  # noqa: BLE001
             print(f"  ❌ 锻造失败: {type(exc).__name__}: {exc}")
 
@@ -79,21 +79,21 @@ async def verify_webchat(forgekins: dict) -> None:
 
 
 async def verify_council(forgekins: dict) -> None:
-    """验证 3: IM 灵议（3 只灵智体共同讨论）."""
+    """验证 3: IM MindCouncil（3 只Forgekin共同讨论）."""
     print("\n" + "=" * 70)
-    print("验证 3: IM 灵议（3 只灵智体共同讨论）")
+    print("验证 3: IM MindCouncil（3 只Forgekin共同讨论）")
     print("=" * 70)
 
     topic = "FlowForge v7.0 是否应该立即实现 Evoling 状态（觉醒阶 E4+）？"
-    print(f"\n灵议主题: {topic}")
-    print(f"参与灵智体: {[fk.name for fk in forgekins.values()]}")
+    print(f"\nMindCouncil主题: {topic}")
+    print(f"参与Forgekin: {[fk.name for fk in forgekins.values()]}")
 
     discussion_history: list[dict[str, str]] = []
 
     for round_num in range(1, 2):  # 单轮
         print(f"\n--- 第 {round_num} 轮 ---")
         for fid, forgekin in forgekins.items():
-            context_msg = f"灵议主题: {topic}\n\n"
+            context_msg = f"MindCouncil主题: {topic}\n\n"
             if discussion_history:
                 context_msg += "已有讨论:\n"
                 for msg in discussion_history[-3:]:
@@ -153,7 +153,7 @@ async def main() -> None:
     print("ForgeMind v7.0 全流程验证")
     print("=" * 70)
     print(f"项目根: {PROJECT_ROOT}")
-    print(f"预置灵智体: {BUILTIN_FORGEKINS}")
+    print(f"预置Forgekin: {BUILTIN_FORGEKINS}")
 
     # 验证 1: 锻造
     forgekins = await verify_forge_all()
@@ -164,7 +164,7 @@ async def main() -> None:
     # 验证 2: webchat
     await verify_webchat(forgekins)
 
-    # 验证 3: IM 灵议
+    # 验证 3: IM MindCouncil
     await verify_council(forgekins)
 
     # 验证 4: 自进化
@@ -178,9 +178,9 @@ async def main() -> None:
     print("=" * 70)
     print("\n下一步:")
     print("  1. 启动 FastAPI: cd flowforge && python -m flowforge.app.main")
-    print("  2. 锻造灵智体: POST /api/v1/forgemind/forge/luban")
+    print("  2. 锻造Forgekin: POST /api/v1/forgemind/forge/luban")
     print("  3. webchat: POST /api/v1/forgemind/webchat/luban")
-    print("  4. IM 灵议: POST /api/v1/forgemind/council")
+    print("  4. IM MindCouncil: POST /api/v1/forgemind/council")
     print("  5. 自进化: POST /api/v1/forgemind/evolve/luban")
 
 

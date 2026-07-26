@@ -1,100 +1,77 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AgentGuardStatus } from "@/lib/types";
+import { useState, useCallback } from "react";
+import { AgentsTabBar, AgentTab } from "@/components/admin/agents/AgentsTabBar";
+import { EvolvableAgentTab } from "@/components/admin/agents/EvolvableAgentTab";
+import { StaticAgentTab } from "@/components/admin/agents/StaticAgentTab";
+import { HubForgekinEditor } from "@/components/admin/agents/HubForgekinEditor";
+
+/**
+ * 智能体管理中心 — 双 Tab 布局
+ *
+ * 依据 WEB-FUSION-DESIGN.md §6：
+ *   Tab 1: 可进化智能体 (Evolvable Agent / Forgekin) — 5 个内置 Forgekin
+ *   Tab 2: 静态智能体 (Static Agent) — 内置 4 种 + 外部接入 5 种
+ *
+ * 命名规范（依据 naming-contract.md）：
+ *   - 使用 P0 命名 "可进化智能体" / "静态智能体" / "Forgekin"
+ *   - 禁止使用 P2 别名 "灵智体"
+ */
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<AgentGuardStatus[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<AgentTab>("evolvable");
+  const [evolvableCount, setEvolvableCount] = useState(5);
+  const [staticCount] = useState(9); // 4 内置 + 5 外部
+  const [editingForgekinId, setEditingForgekinId] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/v1/system/agents")
-      .then((r) => r.json())
-      .then((data) =>
-        setAgents(data.agents || data.agent_guards || [])
-      )
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const handleEdit = useCallback((id: string) => {
+    setEditingForgekinId(id);
+    setEditorOpen(true);
   }, []);
 
-  const stateStyle = (s: string): React.CSSProperties => {
-    if (s === "closed")
-      return { background: "var(--ok-subtle)", color: "var(--ok)" };
-    if (s === "open")
-      return { background: "var(--danger-subtle)", color: "var(--danger)" };
-    return { background: "var(--warn-subtle)", color: "var(--warn)" };
-  };
-
-  const stateLabel = (s: string) => {
-    if (s === "closed") return "正常";
-    if (s === "open") return "熔断";
-    return "半开";
-  };
+  const handleEditorClose = useCallback(() => {
+    setEditorOpen(false);
+  }, []);
 
   return (
-    <div className="animate-rise">
-      <div className="card">
-        <h2 className="page-title" style={{ margin: "0 0 4px" }}>
-          Agent 状态
-        </h2>
-        <p className="page-sub" style={{ marginBottom: "16px" }}>
-          Agent 运行状态与熔断器监控
+    <div className="admin-agents animate-rise p-6" data-admin="agents">
+      {/* 页面标题 */}
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-[var(--cafe-text,#e5e7eb)]">
+          智能体管理
+        </h1>
+        <p className="text-sm text-[var(--cafe-text-muted,#6b7280)] mt-1">
+          可进化智能体（Evolvable Agent / Forgekin）+ 静态智能体（Static Agent）
         </p>
+      </div>
 
-        {loading ? (
-          <div className="empty">
-            <div className="spinner" />
-            加载中...
-          </div>
-        ) : agents.length === 0 ? (
-          <div className="empty">暂无 Agent 状态数据</div>
+      {/* 双 Tab 切换栏 */}
+      <AgentsTabBar
+        tab={tab}
+        onTabChange={setTab}
+        evolvableCount={evolvableCount}
+        staticCount={staticCount}
+      />
+
+      {/* Tab 内容 */}
+      <div className="agents-content" data-agents-active-tab={tab}>
+        {tab === "evolvable" ? (
+          <EvolvableAgentTab
+            onEdit={handleEdit}
+            onCountChange={setEvolvableCount}
+          />
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Agent</th>
-                <th>熔断状态</th>
-                <th>可用</th>
-                <th>失败次数</th>
-                <th>超时(秒)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agents.map((a) => (
-                <tr key={a.agent_name}>
-                  <td
-                    style={{
-                      fontFamily: "var(--mono)",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {a.agent_name}
-                  </td>
-                  <td>
-                    <span className="pill" style={stateStyle(a.circuit_state)}>
-                      {stateLabel(a.circuit_state)}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        color: a.is_available
-                          ? "var(--ok)"
-                          : "var(--danger)",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {a.is_available ? "✓" : "✗"}
-                    </span>
-                  </td>
-                  <td>{a.failure_count}</td>
-                  <td>{a.timeout_seconds}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <StaticAgentTab />
         )}
       </div>
+
+      {/* HubForgekinEditor 编辑抽屉 —— 右侧固定抽屉，未保存关闭时内部弹确认 */}
+      <HubForgekinEditor
+        forgekinId={editingForgekinId}
+        open={editorOpen}
+        onClose={handleEditorClose}
+      />
     </div>
   );
 }

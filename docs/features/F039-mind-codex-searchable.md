@@ -1,4 +1,4 @@
-# Feature F039: MindCodex 可检索知识库（Distilled Knowledge Base，社区社交称"灵典"）
+# Feature F039: MindCodex 可检索知识库（Distilled Knowledge Base，社区社交称"蒸馏知识库"）
 
 > **状态**: draft
 > **版本**: v0.1
@@ -15,7 +15,7 @@
 
 ## 1. 概述（Overview）
 
-MindCodex 可检索知识库（Distilled Knowledge Base，社区社交称"灵典"）是 forgemind 应用层的蒸馏知识存储：SpiritForge（Experience Distillation，社区社交称"灵锻"）产出的 MindCodex 条目必须可检索、可复用、可审计。本 Feature 实现 MindCodex 条目的 Knowledge Object Contract（CL-005 七字段契约）、三检索入口接入（与 F015 联动）、消费加权排序（与 F017 联动）、与 F014 EchoStore（Episodic Memory Store，社区社交称"灵忆"）的原始日志区分，让 Forgekin（Evolvable Agent，社区社交称"灵智体"）判断"这个知识是否适用于当前场景"。
+MindCodex 可检索知识库（Distilled Knowledge Base，社区社交称"蒸馏知识库"）是 forgemind 应用层的蒸馏知识存储：SpiritForge（Experience Distillation，社区社交称"经验蒸馏"）产出的 MindCodex 条目必须可检索、可复用、可审计。本 Feature 实现 MindCodex 条目的 Knowledge Object Contract（CL-005 七字段契约）、三检索入口接入（与 F015 联动）、消费加权排序（与 F017 联动）、与 F014 EchoStore（Episodic Memory Store，社区社交称"情景记忆存储"）的原始日志区分，让 Forgekin（Evolvable Agent，社区社交称"可进化智能体"）判断"这个知识是否适用于当前场景"。
 
 这是 Build to Persist 基础设施——编码"蒸馏知识库是结构化可检索蒸馏产物"的工程规则，区别于EchoStore的原始日志。
 

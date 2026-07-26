@@ -1,7 +1,7 @@
 """L6 Cost Ceiling — 成本上限 Guardrail（EX-006）。
 
 按 EX-006 实现三方 Agent 成本与配额管理：
-    - 每灵智体有三方 Agent 调用配额
+    - 每Forgekin有三方 Agent 调用配额
     - 成本告警（接近上限时告警）
     - 成本分摊到任务
 
@@ -32,7 +32,7 @@ class CostStore(Protocol):
     """成本存储后端协议（DI 注入点）。"""
 
     async def get_usage(self, forgekin_id: str) -> dict[str, Any]:
-        """获取某灵智体的累计成本使用量。"""
+        """获取某Forgekin的累计成本使用量。"""
         ...
 
     async def add_usage(
@@ -49,7 +49,7 @@ class CostStore(Protocol):
 class CostCeilingConfig(BaseModel):
     """成本上限配置。"""
 
-    # 每灵智体的配额（默认值，可按灵智体覆盖）
+    # 每Forgekin的配额（默认值，可按Forgekin覆盖）
     default_token_quota: int = Field(
         default=1_000_000, description="默认 token 配额"
     )
@@ -67,9 +67,9 @@ class CostCeilingConfig(BaseModel):
     critical_threshold: float = Field(
         default=1.0, ge=0.0, le=1.0, description="临界阈值（100%）"
     )
-    # 按灵智体覆盖配额（key=forgekin_id）
+    # 按Forgekin覆盖配额（key=forgekin_id）
     per_forgekin_quota: dict[str, dict[str, Any]] = Field(
-        default_factory=dict, description="按灵智体定制的配额"
+        default_factory=dict, description="按Forgekin定制的配额"
     )
 
 
@@ -77,7 +77,7 @@ class CostCheckResult(BaseModel):
     """成本检查结果。"""
 
     allowed: bool = Field(..., description="是否允许调用")
-    forgekin_id: str = Field(..., description="灵智体 ID")
+    forgekin_id: str = Field(..., description="Forgekin ID")
     current_tokens: int = Field(default=0, description="当前 token 使用量")
     current_calls: int = Field(default=0, description="当前调用次数")
     current_cost: float = Field(default=0.0, description="当前货币成本")
@@ -91,7 +91,7 @@ class CostCheckResult(BaseModel):
 class CostCeilingGuardrail:
     """L6 成本上限 Guardrail（EX-006）。
 
-    每灵智体有三方 Agent 调用配额，超过配额时拒绝调用。
+    每Forgekin有三方 Agent 调用配额，超过配额时拒绝调用。
 
     详见 [doc:review/review.md#第九章§9.2] EX-006
 
@@ -124,7 +124,7 @@ class CostCeilingGuardrail:
         """检查是否允许调用（配额未超）。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             estimated_tokens: 本次预计 token 消耗。
             estimated_cost: 本次预计货币成本。
 
@@ -205,7 +205,7 @@ class CostCeilingGuardrail:
         """记录实际使用量（调用完成后）。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             tokens: 本次实际 token 消耗。
             calls: 本次调用次数（通常为 1）。
             cost: 本次实际货币成本。
@@ -220,7 +220,7 @@ class CostCeilingGuardrail:
         )
 
     async def get_usage_report(self, forgekin_id: str) -> dict[str, Any]:
-        """获取某灵智体的成本使用报告（用于审计 / 成本分摊）。"""
+        """获取某Forgekin的成本使用报告（用于审计 / 成本分摊）。"""
         usage = await self._store.get_usage(forgekin_id)
         quota = self._config.per_forgekin_quota.get(forgekin_id, {})
         return {

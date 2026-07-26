@@ -92,9 +92,9 @@ class T7Reviewer:
     """
 
     def __init__(self, openroute_base: str = "http://127.0.0.1:13001",
-                 model: str = "Doubao-Seed2.0", api_key: str = ""):
+                 model: str = "GLM-5.1", api_key: str = ""):
         self.openroute_base = openroute_base.rstrip("/")
-        # 默认使用Doubao-Seed2.0（实测13-16s返回，最稳定）；auto模型会路由到超时模型
+        # 默认使用GLM-5.1（Doubao-Seed2.0 webchat通道当前超时，GLM-5.1可用且稳定）
         self.model = model
         self.api_key = api_key or self._resolve_api_key()
         self.results: list[dict] = []

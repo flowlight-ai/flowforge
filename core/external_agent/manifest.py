@@ -2,13 +2,13 @@
 
 按 F241 (CL-014) 定义声明式 Manifest：每个三方 Agent 厂商提交一份 Manifest
 声明自己的能力/协议/传输方式，host 维护 ProviderTransportRegistry 注册表，
-灵智体（Forgekin）通过查询注册表发现能力。
+Forgekin（Forgekin）通过查询注册表发现能力。
 
 设计依据：
     - [doc:decisions/006-external-agent-integration.md] §3 ExternalAgentAdapter 抽象层
     - [doc:review/review.md#第九章§9.2] EX-001/EX-002/EX-008 能力扩展 + 能力画像 + 能力发现
     - [doc:review/review.md#13.3] F241 Agent Provider Plugin（CL-014）
-    - [doc:design/naming-contract.md#2.2] 灵智体 / [doc:design/naming-contract.md#2.12] 能力画像
+    - [doc:design/naming-contract.md#2.2] Forgekin / [doc:design/naming-contract.md#2.12] 能力画像
 
 铁律遵守：
     - 铁律 5：禁止硬编码密钥/路径/端口（required_env_vars 仅声明变量名，不存值）
@@ -74,7 +74,7 @@ class AgentProviderManifest(BaseModel):
     """Agent Provider 声明式 Manifest（F241 CL-014）。
 
     每个三方 Agent 厂商提交一份 Manifest 声明自己的能力/协议/传输方式。
-    host 维护 ProviderTransportRegistry 注册表，灵智体通过查询注册表发现能力。
+    host 维护 ProviderTransportRegistry 注册表，Forgekin通过查询注册表发现能力。
 
     详见:
         - [doc:review/review.md#13.3] F241 Agent Provider Plugin

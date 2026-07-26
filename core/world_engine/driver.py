@@ -19,7 +19,7 @@ Canon 写入权限（铁律 CL-010 / CL-021）:
 修复的问题:
     - CL-013：v7.0 虚拟世界是"agent 触发才有反应"，无世界自转。本类提供
       tick 机制，让世界自己演化。
-    - CL-021：v7.0 无 World Driver 概念，多个虚拟角色灵智体在同一世界中
+    - CL-021：v7.0 无 World Driver 概念，多个虚拟角色Forgekin在同一世界中
       无统一世界状态。本类是每个虚拟世界的 Driver 单例。
 
 详见:
@@ -62,7 +62,7 @@ class WorldDriver:
         本类的 :meth:`can_write_canon` 仅做权限判断，不直接写入。
 
     线程安全:
-        非线程安全。多灵智体共享一个 WorldDriver 时，应通过
+        非线程安全。多Forgekin共享一个 WorldDriver 时，应通过
         :class:`~flowforge.core.world_engine.coordinator.RuntimeCoordinator`
         串行化 tick。
 
@@ -143,7 +143,7 @@ class WorldDriver:
         """判断 actor 是否有 Canon 写入权限。
 
         铁律（CL-010 / CL-021）：只有 ``operator`` / ``canon_driver`` /
-        ``council`` 有权限写入 Canon。其他灵智体（包括 World Driver 自身
+        ``council`` 有权限写入 Canon。其他Forgekin（包括 World Driver 自身
         产生的事件）若要入典，必须经过
         :class:`~flowforge.core.world_engine.canon_sync.CanonSyncProtocol`
         由有权限的 confirmer 确认。

@@ -2,7 +2,7 @@
 
 > **文档编号**: ROADMAP.md（v1.1）
 > **依据**: `[doc:review/review.md#12.4]` task.md 重写规划 + `[doc:VISION.md#8]` 愿景落地路径
-> **更新机制**: 每个 Phase 完成后由可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）更新状态（按 `[doc:roleagent.md#第5章]` Eval 自代谢）
+> **更新机制**: 每个 Phase 完成后由可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）更新状态（按 `[doc:roleagent.md#第5章]` Eval 自代谢）
 > **命名规范**: 严格遵循 `[doc:design/naming-contract.md]` v2.0 "官方名称优先"原则
 
 ---
@@ -163,8 +163,8 @@ FlowForge 重构分为 7 个 Phase（Phase 0-6），按 roleagent.md 七大工�
 **目标**：实现 E4+ Evolving 状态 + 多可进化智能体议事 + 可进化智能体生态 demo。
 
 **关键任务**：
-- Experience Distillation（SpiritForge，社区社交称"灵锻"）：经验蒸馏到 Distilled Knowledge Base（MindCodex）
-- Multi-Agent Deliberation（MindCouncil，社区社交称"灵议"）：多可进化智能体议事
+- Experience Distillation（SpiritForge，社区社交称"经验蒸馏"）：经验蒸馏到 Distilled Knowledge Base（MindCodex）
+- Multi-Agent Deliberation（MindCouncil，社区社交称"多智能体议事"）：多可进化智能体议事
 - E4+ Evolving 状态（Autonomy Level / AwakeningStage 进阶）
 - 可进化智能体生态 demo（猫 + 桌椅 + 灯具 + 孙悟空 + 唐僧 协作场景）
 

@@ -33,7 +33,7 @@ world_engine_prompts:
     1. 是否符合世界规则？
     2. 是否与已有 Canon 冲突？
     3. 是否具有长期价值（vs 一次性 RP 台词）？
-    4. 是否会污染角色核心身份（如让写作灵智体误认为自己是孙悟空）？
+    4. 是否会污染角色核心身份（如让写作Forgekin误认为自己是孙悟空）？
 
     输出 JSON：
     {{
@@ -71,9 +71,9 @@ world_engine_prompts:
   role_mask_validation: |
     你是面具验证员（Role Mask Validator）。检查 L4 场景皮肤是否污染 L3 本体能力。
 
-    【灵智体核心身份】
+    【Forgekin核心身份】
     名字：{forgekin_name}
-    灵族：{species}
+    ForgekinSpecies：{species}
     核心性格：{core_personality}
     价值锚点：{value_anchors}
 
@@ -88,7 +88,7 @@ world_engine_prompts:
 
     请判断：
     1. L4 场景皮肤是否越界修改了 L3 本体能力？
-    2. 灵智体是否忘记了核心身份（如写作灵智体真的认为自己是孙悟空）？
+    2. Forgekin是否忘记了核心身份（如写作Forgekin真的认为自己是孙悟空）？
     3. 退出场景后，本体能力是否可恢复？
 
     输出 JSON：
@@ -100,9 +100,9 @@ world_engine_prompts:
     }}
 
   role_mask_scene_entry: |
-    你是场景进入审核员（Scene Entry Reviewer）。灵智体即将进入场景，生成 L4/L5 面具建议。
+    你是场景进入审核员（Scene Entry Reviewer）。Forgekin即将进入场景，生成 L4/L5 面具建议。
 
-    【灵智体核心身份】
+    【Forgekin核心身份】
     {core_identity}
 
     【目标场景】
@@ -116,7 +116,7 @@ world_engine_prompts:
     请生成：
     1. L4 场景皮肤面具（角色 persona，但不修改本体能力）
     2. L5 世界内状态面具（角色当前状态）
-    3. 风险提示（如"扮演孙悟空可能让灵智体忘记写作能力"）
+    3. 风险提示（如"扮演孙悟空可能让Forgekin忘记写作能力"）
 
     输出 JSON：
     {{
@@ -186,9 +186,9 @@ world_engine_prompts:
   # 用于 RuntimeCoordinator 的导演决策（CL-012）。
 
   coordinator_scene_decision: |
-    你是运行时协调器（Runtime Coordinator）。决定灵智体是否应进入/退出场景。
+    你是运行时协调器（Runtime Coordinator）。决定Forgekin是否应进入/退出场景。
 
-    【灵智体核心身份】
+    【Forgekin核心身份】
     {core_identity}
 
     【当前任务】

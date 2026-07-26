@@ -1,4 +1,4 @@
-"""CapabilityProfile — 灵智体能力画像主模型。
+"""CapabilityProfile — Forgekin能力画像主模型。
 
 CapabilityProfile 是 roleagent.md §0 的核心抽象："profile 才是长期主体"。
 profile 回答"为什么是这只 agent"，role 回答"这一步谁负责什么"。
@@ -41,9 +41,9 @@ if TYPE_CHECKING:
 
 
 class CapabilityProfile(BaseModel):
-    """灵智体能力画像 — 长期主体画像。
+    """Forgekin能力画像 — 长期主体画像。
 
-    CapabilityProfile 是灵智体的长期主体画像，跨 session 持续。
+    CapabilityProfile 是Forgekin的长期主体画像，跨 session 持续。
     它不是简历（只写优点），必须写盲点（决定谁该 review 谁）。
 
     六维度对应 roleagent.md §0 三个可变性层：
@@ -61,7 +61,7 @@ class CapabilityProfile(BaseModel):
 
     Attributes:
         profile_id: 画像唯一标识。
-        agent_id: 所属灵智体（forgekin）标识——对应 ADR 012 代码层命名 Forgekin。
+        agent_id: 所属Forgekin（forgekin）标识——对应 ADR 012 代码层命名 Forgekin。
         model_capability: 模型固有能力（常量层）。
         cognitive_style: 认知风格（常量层）。
         blind_spots: 盲点列表（半常量层）。
@@ -75,7 +75,7 @@ class CapabilityProfile(BaseModel):
     """
 
     profile_id: str = Field(..., description="画像唯一标识")
-    agent_id: str = Field(..., description="所属灵智体（Forgekin）标识")
+    agent_id: str = Field(..., description="所属Forgekin（Forgekin）标识")
     model_capability: ModelCapability = Field(..., description="模型固有能力")
     cognitive_style: CognitiveStyle = Field(
         default_factory=CognitiveStyle, description="认知风格"
@@ -112,7 +112,7 @@ class CapabilityProfile(BaseModel):
         """F001 AC-3：盲点必须写入（验证空 blind_spots 列表会报错）。
 
         能力画像不是简历——必须写盲点。空盲点列表意味着画像不完整。
-        若灵智体确实无已知盲点，应显式写入一个 category=OTHER 的占位盲点。
+        若Forgekin确实无已知盲点，应显式写入一个 category=OTHER 的占位盲点。
         """
         # 注意：此处仅记录警告级别的不变量提示，不强制抛错以允许渐进式画像构建。
         # 严格的 AC-3 验证由 ProfileAnalyzer.detect_blind_spot_conflicts 配合调用方决定。
@@ -122,7 +122,7 @@ class CapabilityProfile(BaseModel):
     # ── 盲点冲突检测 ──────────────────────────────────────────────────
 
     def has_blind_spot_conflict(self, other: "CapabilityProfile") -> bool:
-        """检测与另一个灵智体的盲点冲突。
+        """检测与另一个Forgekin的盲点冲突。
 
         冲突定义（ADR 004 §5）：
             - 相同厂商（provider）+ 相同类别（category）盲点 → 返回 True
@@ -134,7 +134,7 @@ class CapabilityProfile(BaseModel):
         Claude review Claude 漏掉同一类错误。跨厂商 review 是结构性必需。"
 
         Args:
-            other: 另一个灵智体的能力画像。
+            other: 另一个Forgekin的能力画像。
 
         Returns:
             True 表示存在盲点冲突（需要跨厂商 review），False 表示无冲突。
@@ -161,7 +161,7 @@ class CapabilityProfile(BaseModel):
         返回 GapReport 包含：缺失技能 / 缺失工具 / 盲点风险 / 建议。
 
         Args:
-            task_profile: 任务画像（描述任务对灵智体的能力要求）。
+            task_profile: 任务画像（描述任务对Forgekin的能力要求）。
 
         Returns:
             GapReport 包含 missing_skills / missing_tools / blind_spot_risks / recommendations。
@@ -175,7 +175,7 @@ class CapabilityProfile(BaseModel):
     def to_summary(self) -> str:
         """生成人类可读摘要。
 
-        用于 trace 日志 / operator 展示 / 灵议议事时快速理解灵智体画像。
+        用于 trace 日志 / operator 展示 / MindCouncil议事时快速理解Forgekin画像。
         """
         strengths = ", ".join(self.model_capability.strengths[:3]) or "(none)"
         limitations = ", ".join(self.model_capability.limitations[:3]) or "(none)"

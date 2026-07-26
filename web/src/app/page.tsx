@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useShellConfig } from "@/lib/shell-config";
 import { TaskItem, SystemStatus } from "@/lib/types";
 import { useFetchWithCache } from "@/hooks/useFetchWithCache";
+import { HubLeaderboardTab } from "@/components/hub/HubLeaderboardTab";
 
 function StatusCards({ systemStatus, statusLoading, version }: { systemStatus: SystemStatus | null; statusLoading: boolean; version: string }) {
   const stats = [
@@ -159,6 +160,8 @@ export default function Dashboard() {
 
         <StatusCards systemStatus={systemStatus} statusLoading={statusLoading} version={config.version} />
       </div>
+
+      <QuickEntryCards />
 
       <div className="card" style={{ marginTop: "20px" }}>
         <div
@@ -331,6 +334,90 @@ export default function Dashboard() {
           </table>
         )}
       </div>
+
+      <div className="card" style={{ marginTop: "20px" }} data-dashboard="leaderboard">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+          <h2 className="page-title" style={{ margin: 0 }}>可进化智能体排行榜</h2>
+        </div>
+        <p className="page-sub" style={{ marginBottom: "12px" }}>
+          按 Task / Quality / Token / Uptime 维度查看 Forgekin 排行 · HubLeaderboardTab
+        </p>
+        <HubLeaderboardTab />
+      </div>
+    </div>
+  );
+}
+
+interface QuickEntry {
+  readonly href: string;
+  readonly icon: string;
+  readonly label: string;
+  readonly sub: string;
+  readonly accent: string;
+}
+
+const QUICK_ENTRIES: readonly QuickEntry[] = [
+  { href: "/solo", icon: "⚡", label: "Helm Studio", sub: "单 Agent 编排", accent: "var(--accent)" },
+  { href: "/memory", icon: "◉", label: "记忆中心", sub: "集合 / 图谱 / 健康", accent: "var(--info)" },
+  { href: "/mission-hub", icon: "◎", label: "Mission Hub", sub: "任务列表 / 看板", accent: "var(--ok)" },
+  { href: "/signals", icon: "◈", label: "信号", sub: "事件 / 异常 / 来源", accent: "var(--warn)" },
+  { href: "/review", icon: "✓", label: "审核中心", sub: "门禁 / 评审", accent: "var(--accent)" },
+  { href: "/admin/marketplace", icon: "◇", label: "能力市场", sub: "能力包安装", accent: "var(--info)" },
+];
+
+function QuickEntryCards() {
+  return (
+    <div
+      data-dashboard="quick-entries"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gap: "12px",
+        marginTop: "20px",
+      }}
+    >
+      {QUICK_ENTRIES.map((entry) => (
+        <Link
+          key={entry.href}
+          href={entry.href}
+          data-quick-entry={entry.href}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "14px",
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-md)",
+            textDecoration: "none",
+            color: "var(--fg)",
+            transition: "border-color 0.15s ease, transform 0.15s ease",
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "var(--radius-sm)",
+              background: `color-mix(in srgb, ${entry.accent} 16%, transparent)`,
+              color: entry.accent,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "16px",
+              fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            {entry.icon}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg)" }}>{entry.label}</div>
+            <div style={{ fontSize: "11px", color: "var(--muted)" }}>{entry.sub}</div>
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }

@@ -45,7 +45,7 @@
 - **影响 F018 Eval Contract**：契约表新增 `friction_metrics` 字段供控制面消费；`contract_id` 作为控制面组件状态锚点
 - **影响 F019 三方信号交叉**：信号采集器新增导出接口供 `DailySummarizer` 拉取 `appreciation` 分；信号冲突标记触发 `action_needed`
 - **影响 F020 七类归因矩阵**：归因结果导出接口供 `DailySummarizer` 拉取 `attribution_distribution`；归因频发（同一组件 24h 内 ≥ N 次）触发 `action_needed`
-- **影响 F039 MindCodex 可检索知识库**：控制面产出的 `TrendReport` 作为元知识经 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）蒸馏写入 MindCodex（蒸馏知识库 / 策展技能库 / 程序性记忆），供Forgekin（Evolvable Agent，社区社交称"灵智体"）检索"哪类根因最频繁"
+- **影响 F039 MindCodex 可检索知识库**：控制面产出的 `TrendReport` 作为元知识经 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）蒸馏写入 MindCodex（蒸馏知识库 / 策展技能库 / 程序性记忆），供Forgekin（Evolvable Agent，社区社交称"可进化智能体"）检索"哪类根因最频繁"
 - **影响 F038 进化谱系**：bottleneck 状态升级 CVO 重构如涉及Forgekin跨层迁移，需调用 `LineageStore.record_transition` 记录 `LAYER_TRANSITION` 边
 - **影响 operator 控制台**：新增"控制面拉闸审批"页面，operator 通过该页面批准 `escalate_cvo_refactor`
 
@@ -1357,7 +1357,7 @@ harness_eval_control_plane:
 
 | 下游模块 | 协作接口 | 协作内容 |
 |---------|---------|---------|
-| **F039 MindCodex 可检索知识库** | `MindCodexStore.add_entry(entry)` | 控制面产出的 `TrendReport` 作为元知识经 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）蒸馏写入 MindCodex（蒸馏知识库 / 策展技能库 / 程序性记忆），供Forgekin（Evolvable Agent，社区社交称"灵智体"）检索"哪类根因最频繁" |
+| **F039 MindCodex 可检索知识库** | `MindCodexStore.add_entry(entry)` | 控制面产出的 `TrendReport` 作为元知识经 SpiritForge（经验蒸馏 / 离线策略学习 / 知识编译）蒸馏写入 MindCodex（蒸馏知识库 / 策展技能库 / 程序性记忆），供Forgekin（Evolvable Agent，社区社交称"可进化智能体"）检索"哪类根因最频繁" |
 | **F038 进化谱系** | `LineageStore.record_transition(edge)` | bottleneck 状态升级 CVO 重构如涉及Forgekin跨层迁移，需调用 `record_transition` 写入 `LAYER_TRANSITION` 边 |
 | **CVO（Chief Vision Officer，operator）** | `cvo_notifier.send_refactor_request(component_id, reason)` | bottleneck 状态升级 CVO 重构，CVO 接收通知并决定是否启动架构重构 |
 | **dashboard** | `ControlPlaneAPI.list_by_state(state)` 只读 | dashboard 只读控制面状态，展示组件生命周期、趋势报告、行动记录；禁止直接写入 `lifecycle_state` |

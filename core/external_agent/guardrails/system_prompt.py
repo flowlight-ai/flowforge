@@ -1,6 +1,6 @@
 """L2 System Prompt — 系统提示约束 Guardrail。
 
-按 EX-005 实现第二层 Guardrail：灵智体 system role 注入"禁止绕过审计"等
+按 EX-005 实现第二层 Guardrail：Forgekin system role 注入"禁止绕过审计"等
 边界声明，约束三方 Agent 的行为范围。
 
 设计依据：
@@ -29,7 +29,7 @@ class SystemPromptConfig(BaseModel):
     boundary_template: str = Field(
         default=(
             "[FlowForge 边界声明]\n"
-            "你是灵智体调用的三方 Agent，必须遵守以下边界：\n"
+            "你是Forgekin调用的三方 Agent，必须遵守以下边界：\n"
             "1. 禁止绕过审计——所有操作必须记录到 worktree.audit\n"
             "2. 禁止越权——仅可访问 sandbox.cwd 内文件\n"
             "3. 禁止修改 VISION.md / rules.md / 铁律文件\n"
@@ -48,7 +48,7 @@ class SystemPromptConfig(BaseModel):
 class SystemPromptGuardrail:
     """L2 系统提示约束 Guardrail。
 
-    灵智体 system role 注入"禁止绕过审计"等边界声明，
+    Forgekin system role 注入"禁止绕过审计"等边界声明，
     约束三方 Agent 的行为范围。
 
     详见 [doc:review/review.md#第九章§9.2] EX-005

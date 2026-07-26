@@ -1,19 +1,19 @@
-"""灵智体锻造表单（ForgekinFormData）— 育灵流水线的输入契约。
+"""Forgekin锻造表单（ForgekinFormData）— Forge Nurturing流水线的输入契约。
 
-育灵（Forge Nurturing）流水线以 :class:`ForgekinFormData` 作为输入，
+Forge Nurturing（Forge Nurturing）流水线以 :class:`ForgekinFormData` 作为输入，
 通过 6 阶段锻造流程（形态定义 → 能力注入 → 记忆初始化 → 价值观对齐 →
-能力验证 → 觉醒晋升）产出灵智体实例。
+能力验证 → 觉醒晋升）产出Forgekin实例。
 
 表单使用 Pydantic v2 模型校验输入，保证:
 
     - 必填字段（``name`` / ``species`` / ``namespace``）非空
-    - 灵族枚举值合法（``bio`` / ``org`` / ``obj`` / ``virtual`` / ``hybrid``）
+    - ForgekinSpecies枚举值合法（``bio`` / ``org`` / ``obj`` / ``virtual`` / ``hybrid``）
     - 价值锚点列表非空且无重复
-    - 觉醒阶默认为 E1（全导阶），保证新锻造灵智体从全人工起步
+    - 觉醒阶默认为 E1（全导阶），保证新锻造Forgekin从全人工起步
 
 详见:
-    - [doc:design/naming-contract.md#2.4] 育灵定义
-    - [doc:design/naming-contract.md#2.6] 灵印定义
+    - [doc:design/naming-contract.md#2.4] Forge Nurturing定义
+    - [doc:design/naming-contract.md#2.6] SoulImprint定义
     - [doc:review/review.md#第九章] FM-006 锻造流水线 6 阶段
 """
 
@@ -28,17 +28,17 @@ from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
 
 
 class ForgekinFormData(BaseModel):
-    """灵智体锻造表单 — 育灵流水线的标准输入。
+    """Forgekin锻造表单 — Forge Nurturing流水线的标准输入。
 
-    表单描述"想锻造一个什么样的灵智体"，由 :class:`ForgePipeline` 消费
+    表单描述"想锻造一个什么样的Forgekin"，由 :class:`ForgePipeline` 消费
     并产出 :class:`~flowforge.forgemind.base.ForgekinBase` 实例。
 
     属性:
-        name: 灵智体显示名（如 ``"孙悟空"`` / ``"客厅吊灯"``）。
-        species: 灵族形态（bio / org / obj / virtual / hybrid）。
+        name: Forgekin显示名（如 ``"孙悟空"`` / ``"客厅吊灯"``）。
+        species: ForgekinSpecies形态（bio / org / obj / virtual / hybrid）。
         namespace: 命名空间（如 ``"forgemind"`` / ``"contentforge"``）。
         requirement: 锻造需求描述（自然语言）。
-        seed_params: 初始种子参数（写入灵印，作为谱系锚点）。
+        seed_params: 初始种子参数（写入SoulImprint，作为谱系锚点）。
         value_anchors: 价值锚点（对齐 VISION §7 + 15 条红线）。
         capability_profile: 能力画像初始值（可选）。
         evolution_stage: 初始进化阶（默认 E1 萌芽阶）。
@@ -46,8 +46,8 @@ class ForgekinFormData(BaseModel):
         operator_id: 锻造发起者（operator 命名空间 ID，可选）。
 
     详见:
-        - [doc:design/naming-contract.md#2.4] 育灵定义
-        - [doc:design/naming-contract.md#2.6] 灵印 seed_params
+        - [doc:design/naming-contract.md#2.4] Forge Nurturing定义
+        - [doc:design/naming-contract.md#2.6] SoulImprint seed_params
     """
 
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
@@ -55,11 +55,11 @@ class ForgekinFormData(BaseModel):
     name: str = Field(
         ...,
         min_length=1,
-        description="灵智体显示名（如 '孙悟空' / '客厅吊灯'）。",
+        description="Forgekin显示名（如 '孙悟空' / '客厅吊灯'）。",
     )
     species: ForgekinSpecies = Field(
         ...,
-        description="灵族形态（bio / org / obj / virtual / hybrid）。",
+        description="ForgekinSpecies形态（bio / org / obj / virtual / hybrid）。",
     )
     namespace: str = Field(
         ...,
@@ -72,7 +72,7 @@ class ForgekinFormData(BaseModel):
     )
     seed_params: dict[str, Any] = Field(
         default_factory=dict,
-        description="初始种子参数（写入灵印，作为谱系锚点）。",
+        description="初始种子参数（写入SoulImprint，作为谱系锚点）。",
     )
     value_anchors: list[str] = Field(
         default_factory=list,
@@ -118,9 +118,9 @@ class ForgekinFormData(BaseModel):
         return stripped
 
     def to_imprint_seed(self) -> dict[str, Any]:
-        """生成用于灵印计算的种子参数字典。
+        """生成用于SoulImprint计算的种子参数字典。
 
-        将表单核心字段合并为灵印种子，确保谱系可追溯。``seed_params``
+        将表单核心字段合并为SoulImprint种子，确保谱系可追溯。``seed_params``
         字段优先，表单核心字段（``name`` / ``species`` / ``namespace``）
         作为基础。
         """

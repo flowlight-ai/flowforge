@@ -20,7 +20,7 @@ runtime coordinator:
     是"导演"，决定何时戴面具 / 何时摘面具 / 何时入典。
 
 修复的问题:
-    - CL-012：v7.0 无 Bridge Layer 概念，灵智体直接用 persona 介入任务，
+    - CL-012：v7.0 无 Bridge Layer 概念，Forgekin直接用 persona 介入任务，
       无协议隔离 Core Identity 与 World。本类是三协议 + coordinator 的
       聚合容器。
 

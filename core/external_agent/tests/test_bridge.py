@@ -386,7 +386,7 @@ class TestCapabilityFusion:
         assert not result.fused
 
     def test_fuse_success(self, fusion: ExternalAgentCapabilityFusion) -> None:
-        """测试成功融合能力到灵智体画像。"""
+        """测试成功融合能力到Forgekin画像。"""
         result = fusion.fuse(
             forgekin_profile={
                 "capabilities": ["existing_cap"],

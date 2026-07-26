@@ -1,20 +1,20 @@
-"""ForgeMind API endpoints — 万物灵智体锻造厂的应用层入口.
+"""ForgeMind API endpoints — Forgekin锻造厂的应用层入口.
 
 提供 5 个核心 endpoint:
 
-    - ``GET  /api/forgemind/roster``                     — 列出所有预置灵智体
-    - ``POST /api/forgemind/forge/{forgekin_id}``         — 从 YAML 锻造灵智体
-    - ``POST /api/forgemind/webchat/{forgekin_id}``       — 与灵智体对话（Trae CN 桥接）
-    - ``POST /api/forgemind/council``                     — IM 灵议（3 只灵智体共同讨论）
+    - ``GET  /api/forgemind/roster``                     — 列出所有预置Forgekin
+    - ``POST /api/forgemind/forge/{forgekin_id}``         — 从 YAML 锻造Forgekin
+    - ``POST /api/forgemind/webchat/{forgekin_id}``       — 与Forgekin对话（Trae CN 桥接）
+    - ``POST /api/forgemind/council``                     — IM MindCouncil（3 只Forgekin共同讨论）
     - ``POST /api/forgemind/evolve/{forgekin_id}``        — 触发自进化（ForgeMindEngine）
 
-所有灵智体通过 Trae CN 桥接方案接入 LLM——operator 通过 Trae CN IDE
+所有Forgekin通过 Trae CN 桥接方案接入 LLM——operator 通过 Trae CN IDE
 充当 LLM 与监工，流程使用 flowforge 已有的 TraeLLMClient。
 
 详见:
-    - [doc:design/naming-contract.md#2.2] 灵智体定义
-    - [doc:VISION.md#1] 万物灵智体愿景
-    - forgemind/forgekins/roster.py — 预置灵智体花名册
+    - [doc:design/naming-contract.md#2.2] Forgekin定义
+    - [doc:VISION.md#1] Forgekin愿景
+    - forgemind/forgekins/roster.py — 预置Forgekin花名册
 """
 
 from __future__ import annotations
@@ -39,12 +39,12 @@ logger = get_logger("api.forgemind")
 router = APIRouter(prefix="/forgemind", tags=["forgemind"])
 
 
-# ── 全局灵智体注册表（进程内单例，跨请求保持会话状态）──────────────
+# ── 全局Forgekin注册表（进程内单例，跨请求保持会话状态）──────────────
 
 class _ForgekinRegistry:
-    """灵智体实例注册表（进程内单例）.
+    """Forgekin实例注册表（进程内单例）.
 
-    管理已锻造的灵智体实例，跨 HTTP 请求保持会话状态。
+    管理已锻造的Forgekin实例，跨 HTTP 请求保持会话状态。
     每个 forgekin_id 对应一个 ForgekinBase 实例。
     """
 
@@ -54,16 +54,16 @@ class _ForgekinRegistry:
         self._trae_client: Any | None = None
 
     def get(self, forgekin_id: str) -> ForgekinBase | None:
-        """获取已锻造的灵智体实例。"""
+        """获取已锻造的Forgekin实例。"""
         return self._instances.get(forgekin_id)
 
     def register(self, forgekin: ForgekinBase) -> None:
-        """注册灵智体实例。"""
+        """注册Forgekin实例。"""
         self._instances[forgekin.forgekin_id] = forgekin
-        logger.info(f"灵智体已注册: {forgekin.forgekin_id}")
+        logger.info(f"Forgekin已注册: {forgekin.forgekin_id}")
 
     def list_instances(self) -> list[dict[str, Any]]:
-        """列出所有已锻造灵智体的描述。"""
+        """列出所有已锻造Forgekin的描述。"""
         return [fk.describe() for fk in self._instances.values()]
 
     async def get_pipeline(self) -> ForgePipeline:
@@ -85,7 +85,7 @@ class _ForgekinRegistry:
                 logger.info("TraeLLMClient 已初始化（Trae CN 桥接模式）")
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
-                    f"TraeLLMClient 初始化失败，灵智体将使用降级模式: {exc}"
+                    f"TraeLLMClient 初始化失败，Forgekin将使用降级模式: {exc}"
                 )
                 self._trae_client = None
         return self._trae_client
@@ -129,26 +129,26 @@ class WebChatResponse(BaseModel):
 
 
 class CouncilRequest(BaseModel):
-    """IM 灵议请求体。"""
+    """IM MindCouncil请求体。"""
     topic: str = Field(
         ...,
         min_length=1,
-        description="灵议主题（如 '是否采用 ADR-014 提议的 Plugin V4 协议'）",
+        description="MindCouncil主题（如 '是否采用 ADR-014 提议的 Plugin V4 协议'）",
     )
     forgekin_ids: list[str] = Field(
         default_factory=list,
-        description="参与灵议的灵智体 ID 列表（默认 3 只预置灵智体全部参与）",
+        description="参与MindCouncil的Forgekin ID 列表（默认 3 只预置Forgekin全部参与）",
     )
     max_rounds: int = Field(
         default=1,
         ge=1,
         le=3,
-        description="灵议最大轮数（每轮所有灵智体各发言一次）",
+        description="MindCouncil最大轮数（每轮所有Forgekin各发言一次）",
     )
 
 
 class CouncilResponse(BaseModel):
-    """IM 灵议响应体。"""
+    """IM MindCouncil响应体。"""
     topic: str
     rounds: list[dict[str, Any]]
     summary: str
@@ -190,7 +190,7 @@ class EvolveResponse(BaseModel):
 
 @router.get("/roster")
 async def get_roster() -> dict[str, Any]:
-    """列出所有预置灵智体花名册.
+    """列出所有预置Forgekin花名册.
 
     Returns:
         含 ``builtin``（预置花名册）和 ``forged``（已锻造实例）的字典。
@@ -203,10 +203,10 @@ async def get_roster() -> dict[str, Any]:
 
 @router.post("/forge/{forgekin_id}", response_model=ForgeResponse)
 async def forge_forgekin(forgekin_id: str) -> ForgeResponse:
-    """从 YAML 配置锻造灵智体.
+    """从 YAML 配置锻造Forgekin.
 
     Args:
-        forgekin_id: 预置灵智体 ID（如 ``luban`` / ``sherlock`` / ``vangogh``）。
+        forgekin_id: 预置Forgekin ID（如 ``luban`` / ``sherlock`` / ``vangogh``）。
 
     Returns:
         锻造结果。
@@ -214,7 +214,7 @@ async def forge_forgekin(forgekin_id: str) -> ForgeResponse:
     if forgekin_id not in BUILTIN_FORGEKINS:
         raise HTTPException(
             status_code=404,
-            detail=f"未知预置灵智体 ID: {forgekin_id}. 可用: {BUILTIN_FORGEKINS}",
+            detail=f"未知预置Forgekin ID: {forgekin_id}. 可用: {BUILTIN_FORGEKINS}",
         )
 
     # 已锻造则直接返回
@@ -252,7 +252,7 @@ async def forge_forgekin(forgekin_id: str) -> ForgeResponse:
             llm_client=trae_client,
         )
     except Exception as exc:  # noqa: BLE001
-        logger.exception(f"锻造灵智体失败: {forgekin_id}")
+        logger.exception(f"锻造Forgekin失败: {forgekin_id}")
         raise HTTPException(status_code=500, detail=f"锻造失败: {exc}")
 
     _registry.register(forgekin)
@@ -270,20 +270,20 @@ async def forge_forgekin(forgekin_id: str) -> ForgeResponse:
 
 @router.post("/webchat/{forgekin_id}", response_model=WebChatResponse)
 async def webchat(forgekin_id: str, request: WebChatRequest) -> WebChatResponse:
-    """与灵智体对话（Trae CN 桥接）.
+    """与Forgekin对话（Trae CN 桥接）.
 
-    灵智体通过 Trae CN 桥接接入 LLM——operator 通过 Trae CN IDE 充当
+    Forgekin通过 Trae CN 桥接接入 LLM——operator 通过 Trae CN IDE 充当
     LLM 与监工。请求被写入 data/trae_bridge/tasks/，Trae AI 处理后写
     响应到 data/trae_bridge/responses/，本接口轮询并返回。
 
     Args:
-        forgekin_id: 灵智体 ID（如 ``luban``）。
+        forgekin_id: Forgekin ID（如 ``luban``）。
         request: webchat 请求体。
 
     Returns:
         webchat 响应。
     """
-    # 获取或锻造灵智体
+    # 获取或锻造Forgekin
     forgekin = _registry.get(forgekin_id)
     if forgekin is None:
         # 自动锻造
@@ -292,7 +292,7 @@ async def webchat(forgekin_id: str, request: WebChatRequest) -> WebChatResponse:
         if forgekin is None:
             raise HTTPException(
                 status_code=500,
-                detail=f"灵智体 {forgekin_id} 自动锻造失败",
+                detail=f"Forgekin {forgekin_id} 自动锻造失败",
             )
 
     # 构造消息
@@ -305,7 +305,7 @@ async def webchat(forgekin_id: str, request: WebChatRequest) -> WebChatResponse:
     if request.max_tokens is not None:
         kwargs["max_tokens"] = request.max_tokens
 
-    # 调用灵智体的 chat 方法（通过 Trae CN 桥接）
+    # 调用Forgekin的 chat 方法（通过 Trae CN 桥接）
     result = await forgekin.chat(
         messages,
         session_id=request.session_id,
@@ -324,21 +324,21 @@ async def webchat(forgekin_id: str, request: WebChatRequest) -> WebChatResponse:
 
 @router.post("/council", response_model=CouncilResponse)
 async def council(request: CouncilRequest) -> CouncilResponse:
-    """IM 灵议 — 多灵智体协同决策.
+    """IM MindCouncil — 多Forgekin协同决策.
 
-    灵议（ForgeCouncil）是多个灵智体就特定主题进行协同决策的机制。
-    每轮所有参与灵智体依次发言，下一轮可以看到前一轮的所有发言。
+    MindCouncil（ForgeCouncil）是多个Forgekin就特定主题进行协同决策的机制。
+    每轮所有参与Forgekin依次发言，下一轮可以看到前一轮的所有发言。
 
     Args:
-        request: 灵议请求体。
+        request: MindCouncil请求体。
 
     Returns:
-        灵议结果，含每轮发言和最终摘要。
+        MindCouncil结果，含每轮发言和最终摘要。
     """
-    # 确定参与灵智体
+    # 确定参与Forgekin
     forgekin_ids = request.forgekin_ids or list(BUILTIN_FORGEKINS)
 
-    # 确保所有灵智体已锻造
+    # 确保所有Forgekin已锻造
     for fid in forgekin_ids:
         if _registry.get(fid) is None:
             await forge_forgekin(fid)
@@ -349,18 +349,18 @@ async def council(request: CouncilRequest) -> CouncilResponse:
     if not participants:
         raise HTTPException(
             status_code=500,
-            detail="无可用灵智体参与灵议",
+            detail="无可用Forgekin参与MindCouncil",
         )
 
-    # 执行多轮灵议
+    # 执行多轮MindCouncil
     rounds: list[dict[str, Any]] = []
     discussion_history: list[dict[str, str]] = []
 
     for round_num in range(1, request.max_rounds + 1):
         round_messages: list[dict[str, Any]] = []
         for forgekin in participants:
-            # 构造灵议上下文消息
-            context_msg = f"灵议主题: {request.topic}\n\n"
+            # 构造MindCouncil上下文消息
+            context_msg = f"MindCouncil主题: {request.topic}\n\n"
             if discussion_history:
                 context_msg += "已有讨论:\n"
                 for msg in discussion_history[-6:]:  # 最近 6 条
@@ -385,10 +385,10 @@ async def council(request: CouncilRequest) -> CouncilResponse:
 
         rounds.append({"round": round_num, "messages": round_messages})
 
-    # 生成摘要（用第一个灵智体）
+    # 生成摘要（用第一个Forgekin）
     summary_msg = (
-        f"灵议主题: {request.topic}\n\n"
-        f"以下是 {len(participants)} 位灵智体的讨论记录，请总结共识与分歧（300 字以内）:\n"
+        f"MindCouncil主题: {request.topic}\n\n"
+        f"以下是 {len(participants)} 位Forgekin的讨论记录，请总结共识与分歧（300 字以内）:\n"
     )
     for msg in discussion_history:
         summary_msg += f"[{msg['role']}]: {msg['content'][:150]}\n"
@@ -409,7 +409,7 @@ async def council(request: CouncilRequest) -> CouncilResponse:
 async def evolve(
     forgekin_id: str, request: EvolveRequest
 ) -> EvolveResponse:
-    """触发灵智体自进化（ForgeMindEngine）.
+    """触发Forgekin自进化（ForgeMindEngine）.
 
     自进化三模式（F100）:
         - Mode A (scope_guard): 防御 — 偏离愿景时温柔提醒
@@ -417,7 +417,7 @@ async def evolve(
         - Mode C (knowledge_evolution): 进攻→成长 — 有价值知识沉淀为可复用资产
 
     Args:
-        forgekin_id: 灵智体 ID。
+        forgekin_id: Forgekin ID。
         request: 自进化请求体。
 
     Returns:
@@ -427,10 +427,10 @@ async def evolve(
     if forgekin is None:
         raise HTTPException(
             status_code=404,
-            detail=f"灵智体 {forgekin_id} 未锻造，请先调用 /forge/{forgekin_id}",
+            detail=f"Forgekin {forgekin_id} 未锻造，请先调用 /forge/{forgekin_id}",
         )
 
-    # 检查灵智体是否可自进化（觉醒阶 ≥ E4）
+    # 检查Forgekin是否可自进化（觉醒阶 ≥ E4）
     can_evolve = forgekin.can_self_evolve()
 
     if not can_evolve and request.mode != "auto":
@@ -440,7 +440,7 @@ async def evolve(
             triggered=False,
             result={
                 "reason": (
-                    f"灵智体觉醒阶为 {forgekin.awakening_stage.value}，"
+                    f"Forgekin觉醒阶为 {forgekin.awakening_stage.value}，"
                     f"需 ≥ E4 才能自我进化。当前仅支持 operator 触发的 "
                     f"scope_guard 模式。"
                 ),
@@ -465,7 +465,7 @@ async def evolve(
             "status": "triggered",
             "message": (
                 f"自进化已触发（{mode} 模式）。"
-                f"灵智体 {forgekin.name} 将在下次任务中应用进化结果。"
+                f"Forgekin {forgekin.name} 将在下次任务中应用进化结果。"
             ),
         }
         return EvolveResponse(

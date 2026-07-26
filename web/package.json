@@ -13,7 +13,10 @@
     "dev": "next dev --port 5174",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "sync:vendor": "node scripts/sync-vendor-assets.mjs",
+    "predev": "node scripts/sync-vendor-assets.mjs",
+    "prebuild": "node scripts/sync-vendor-assets.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.10.2",
@@ -25,13 +28,17 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-markdown": "^9.0.1",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "zustand": "^4.5.7"
   },
   "devDependencies": {
     "@types/diff": "^7.0.2",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.5.4",
+    "postcss": "^8.5.23",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5.4.0"
   }
 }

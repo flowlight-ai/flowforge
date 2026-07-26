@@ -1,7 +1,7 @@
-"""世界层（World Layer）— 灵智体所在的世界设定。
+"""世界层（World Layer）— Forgekin所在的世界设定。
 
 F093 三层世界引擎的第二层。World Layer 包含 9 个一等公民 + 三路记忆，
-是灵智体进行 Role Play 的"舞台"。
+是Forgekin进行 Role Play 的"舞台"。
 
 组成:
     - **9 个一等公民**：World / Character / Scene / CanonDecision /
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
 
 class WorldLayer:
-    """世界层（World Layer）— 灵智体所在的世界设定。
+    """世界层（World Layer）— Forgekin所在的世界设定。
 
     包含 9 个一等公民 + 三路记忆。一个 WorldLayer 实例对应一个虚拟世界
     （如"西游世界"、"现代办公室"）。

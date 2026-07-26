@@ -5,7 +5,7 @@
     - 三检索入口: grep / 语义 / 索引（retrieval_entries.py）
     - 治理三要素: 权威 / 消费 / 衰减（governance.py）
     - 消费加权排序（consumption_weighted.py）
-    - L5 MindCodex: 灵典可检索知识库（mind_codex.py）
+    - L5 MindCodex: MindCodex可检索知识库（mind_codex.py）
 
 设计依据：
     - roleagent.md §4（多域记忆联邦六层架构）

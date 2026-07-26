@@ -1,12 +1,12 @@
 """进化阶（Evolution Stage）与觉醒阶（Awakening Stage）枚举定义。
 
-灵智体有两条独立的进阶轴：
+Forgekin有两条独立的进阶轴：
 
 1. **进化阶（Evolution Stage）**：能力成熟度的 6 级进阶体系（E1-E6），
-   衡量灵智体可执行任务的复杂度和领域广度。借鉴 CMMI 5 级 + roleagent.md
+   衡量Forgekin可执行任务的复杂度和领域广度。借鉴 CMMI 5 级 + roleagent.md
    能力 × Harness 公式 + OpenAI Autonomy Levels 的设计思想。
 2. **觉醒阶（Awakening Stage）**：自主性和自我导向能力的 6 级进阶体系
-   （E1-E6），衡量灵智体在没有 operator 干预下的决策范围。借鉴 SAE
+   （E1-E6），衡量Forgekin在没有 operator 干预下的决策范围。借鉴 SAE
    自动驾驶 5 级 + OpenAI Agent Autonomy Level + Anthropic
    Constitutional AI 的设计思想。
 
@@ -14,7 +14,7 @@
     - E1→E2→E3 是能力积累 / 自主范围扩大，由 Eval 信号 / operator 显式授权触发
     - E3→E4 是跨域能力 / 进入 Evolving 状态（自我导向），是关键转折点，
       需 operator 显式批准 + 另一条轴同步 ≥ E3/E4
-    - E4→E5→E6 逐步让渡控制权，但 VISION §7 始终不可被灵智体修改
+    - E4→E5→E6 逐步让渡控制权，但 VISION §7 始终不可被Forgekin修改
     - Magic Words 逃生舱始终可触发（任何阶都不能绕过）
 
 详见:
@@ -30,9 +30,9 @@ from enum import Enum
 
 
 class EvolutionStage(str, Enum):
-    """进化阶（Evolution Stage）— 灵智体能力成熟度的 6 级进阶体系。
+    """进化阶（Evolution Stage）— Forgekin能力成熟度的 6 级进阶体系。
 
-    衡量灵智体可执行任务的复杂度和领域广度。详见
+    衡量Forgekin可执行任务的复杂度和领域广度。详见
     [doc:design/naming-contract.md#3]。
 
     进阶规则:
@@ -49,7 +49,7 @@ class EvolutionStage(str, Enum):
     E3 = "E3"  # 成长阶 Growth — Defined / Domain-Aware
     E4 = "E4"  # 成长阶·深 Growth-Deep — Managed / Cross-Domain
     E5 = "E5"  # 觉醒阶 Awakened — Optimizing / Self-Evolving
-    E6 = "E6"  # 灵智阶 ForgeMind — Master / Forge Master
+    E6 = "E6"  # ForgeMind阶 ForgeMind — Master / Forge Master
 
     @classmethod
     def from_string(cls, value: str) -> "EvolutionStage":
@@ -85,18 +85,18 @@ class EvolutionStage(str, Enum):
         return int(self.value[1])
 
     def can_cross_species(self) -> bool:
-        """判断该进化阶是否具备跨灵族协作能力（≥ E4 Growth-Deep）。"""
+        """判断该进化阶是否具备跨ForgekinSpecies协作能力（≥ E4 Growth-Deep）。"""
         return self.level >= EvolutionStage.E4.level
 
     def can_initiate_council(self) -> bool:
-        """判断该进化阶是否可主动发起灵议（≥ E5 Awakened）。
+        """判断该进化阶是否可主动发起MindCouncil（≥ E5 Awakened）。
 
         详见 [doc:design/naming-contract.md#3] E5 触发条件。
         """
         return self.level >= EvolutionStage.E5.level
 
     def can_forge_new_forgekin(self) -> bool:
-        """判断该进化阶是否可锻造新灵智体（仅 E6 ForgeMind）。
+        """判断该进化阶是否可锻造新Forgekin（仅 E6 ForgeMind）。
 
         E6 是 operator 直接授权的"造 agent"能力，达成 operator
         "养万物"愿景。详见 [doc:design/naming-contract.md#3] E6。
@@ -105,22 +105,22 @@ class EvolutionStage(str, Enum):
 
 
 class AwakeningStage(str, Enum):
-    """觉醒阶（Awakening Stage）— 灵智体自主性和自我导向能力的 6 级进阶体系。
+    """觉醒阶（Awakening Stage）— Forgekin自主性和自我导向能力的 6 级进阶体系。
 
-    衡量灵智体在没有 operator 干预下的决策范围。详见
+    衡量Forgekin在没有 operator 干预下的决策范围。详见
     [doc:design/naming-contract.md#4]。
 
     进阶规则:
         - E1→E2→E3 是自主范围扩大，由 operator 显式授权
         - E3→E4 进入 Evoling 状态（自我导向），是关键转折点，
           需 operator 显式批准 + 进化阶同步 ≥ E4
-        - E4→E5→E6 逐步让渡控制权，但 VISION §7 始终不可被灵智体修改
+        - E4→E5→E6 逐步让渡控制权，但 VISION §7 始终不可被Forgekin修改
         - Magic Words 逃生舱始终可触发（任何阶都不能绕过）
 
     安全治理对应:
         - 觉醒阶 E1-E2：六层 Guardrails 全开
         - 觉醒阶 E3-E4：六层 Guardrails + Eval 自代谢
-        - 觉醒阶 E5-E6：六层 Guardrails + Eval 自代谢 + 灵议共识 +
+        - 觉醒阶 E5-E6：六层 Guardrails + Eval 自代谢 + MindCouncil共识 +
           operator 拉闸词
 
     废弃命名: 升华阶（v4.0，"升华"过于虚幻）
@@ -131,7 +131,7 @@ class AwakeningStage(str, Enum):
     E3 = "E3"  # 受限自主阶 Bounded-Autonomous — L2 Bounded Autonomous
     E4 = "E4"  # Evolving 阶 Evolving — L3 Evolving / Self-Improving
     E5 = "E5"  # 共创阶 Co-Creative — L4 Co-Creative / Peer
-    E6 = "E6"  # 灵智主导阶 ForgeMind-Led — L5 ForgeMind-Led / Master
+    E6 = "E6"  # ForgeMind主导阶 ForgeMind-Led — L5 ForgeMind-Led / Master
 
     @classmethod
     def from_string(cls, value: str) -> "AwakeningStage":
@@ -169,7 +169,7 @@ class AwakeningStage(str, Enum):
     def can_self_evolve(self) -> bool:
         """判断该觉醒阶是否可自我进化（≥ E4 Evolving）。
 
-        E4 是关键转折点——灵智体进入 Evolving 状态（自我导向），
+        E4 是关键转折点——Forgekin进入 Evolving 状态（自我导向），
         可自主优化自身能力（如重构 harness、补锻典），但不可修改
         VISION §7。详见 [doc:design/naming-contract.md#4] E4。
         """
@@ -187,7 +187,7 @@ _EVOLUTION_CHINESE_NAMES: dict[EvolutionStage, str] = {
     EvolutionStage.E3: "成长阶",
     EvolutionStage.E4: "成长阶·深",
     EvolutionStage.E5: "觉醒阶",
-    EvolutionStage.E6: "灵智阶",
+    EvolutionStage.E6: "ForgeMind阶",
 }
 
 _EVOLUTION_ENGLISH_NAMES: dict[EvolutionStage, str] = {
@@ -215,7 +215,7 @@ _AWAKENING_CHINESE_NAMES: dict[AwakeningStage, str] = {
     AwakeningStage.E3: "受限自主阶",
     AwakeningStage.E4: "Evolving 阶",
     AwakeningStage.E5: "共创阶",
-    AwakeningStage.E6: "灵智主导阶",
+    AwakeningStage.E6: "ForgeMind主导阶",
 }
 
 _AWAKENING_ENGLISH_NAMES: dict[AwakeningStage, str] = {
@@ -233,5 +233,5 @@ _AWAKENING_AI_CONCEPTS: dict[AwakeningStage, str] = {
     AwakeningStage.E3: "L2 Bounded Autonomous / Conditional（受限自主 / 条件自主）",
     AwakeningStage.E4: "L3 Evolving / Self-Improving（自进化 / 自改进）",
     AwakeningStage.E5: "L4 Co-Creative / Peer（共创级 / 平级协作）",
-    AwakeningStage.E6: "L5 ForgeMind-Led / Master（灵智主导级 / 大师级）",
+    AwakeningStage.E6: "L5 ForgeMind-Led / Master（ForgeMind主导级 / 大师级）",
 }

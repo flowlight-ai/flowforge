@@ -326,11 +326,11 @@ assert llm_call_count >= 8 and llm_call_count <= 11
 
 - [ ] **P0 官方名称优先**：测试文档中大量使用 Evolvable Agent / Forgekin / ForgeMind / Capability Profile / Episodic Memory 等业界专业术语
 - [ ] **P1 项目英文名作为代码标识符**：类名 `ForgekinEngine`、模块名 `flowforge/core/forgekin/`
-- [ ] **P2 体系别名仅社交用**：灵智体 / 灵忆 / 灵印等仅在社区讨论中使用，正式文档首次出现必须双标注（如"灵智体（Forgekin / Evolvable Agent）"）
+- [ ] **P2 体系别名仅社交用**：可进化智能体 / 情景记忆存储 / 持久身份等仅在社区讨论中使用，正式文档首次出现必须双标注（如"可进化智能体（Forgekin / Evolvable Agent）"）
 - [ ] **代码层严禁 P2 别名**：测试代码中类名/变量名/API 路径不出现 P2 别名作为标识符
 - [ ] **弱化"万物"说法**：使用"多形态智能体（Multi-Form Agent）"或"可进化智能体（Evolvable Agent）"，"万物"仅保留在 VISION.md 愿景表述中
 - [ ] **去 AGI 化**：禁止使用"AGI"，使用"通用智能体（General-Purpose Agent）"或"自进化（Self-Evolving）"
-- [ ] **术语替换**：炉灵→灵智体 / 养灵→育灵 / 魂忆→灵忆 / 魂印→灵印 / 自锻→灵锻 / 锻典→灵典（MindCodex）/ 火种等级→进化阶 / 升华阶→觉醒阶
+- [ ] **术语替换**：炉灵→可进化智能体 / 养灵→智能体入职与终身学习 / 魂忆→情景记忆存储 / 魂印→持久身份 / 自锻→经验蒸馏 / 锻典→蒸馏知识库（MindCodex）/ 火种等级→进化阶 / 升华阶→觉醒阶
 
 ### T1-T8 测试铁律自检清单
 

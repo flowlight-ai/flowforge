@@ -16,7 +16,7 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"多 Forgekin（Evolvable Agent，社区社交称'灵智体'）协作如何形式化终止"的根本问题。当前协作基于 EventBus + Handoff，存在三大架构缺陷：
+FlowForge 在架构层需要解决"多 Forgekin（Evolvable Agent，社区社交称'可进化智能体'）协作如何形式化终止"的根本问题。当前协作基于 EventBus + Handoff，存在三大架构缺陷：
 
 1. **无团队级终止条件** — Forgekin互相传球可以永远循环，没有"团队停下来"机制；单Forgekin判断"做完了"经常是 RLHF 训练出的收尾惯性幻觉
 2. **交接信息缺失** — 前一个Forgekin只传任务 ID 与状态枚举，接手Forgekin必须重读全部上下文，token 成本爆炸

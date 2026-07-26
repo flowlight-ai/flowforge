@@ -71,7 +71,7 @@ TECH_SUMMARY_SCENARIO = {
 
 # ==================== 辅助函数 ====================
 
-async def call_openroute_llm(prompt: str, system: str = "", model: str = "Doubao-Seed2.0",
+async def call_openroute_llm(prompt: str, system: str = "", model: str = "GLM-5.1",
                               max_tokens: int = 500) -> tuple:
     """调用真实OpenRoute LLM生成内容（T1: 禁止Mock LLM）.
 

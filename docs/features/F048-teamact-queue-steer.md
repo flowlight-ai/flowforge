@@ -21,7 +21,7 @@
 
 ### 1.1 问题陈述
 
-FlowForge 的 TeamAct 协议（F002）已经定义了"State → Owner → Action → Evidence → Verdict → Route"六步循环，作为多灵智体（Forgekin）协作的统一闭环。`flowforge/core/teamact/` 目录已实现：
+FlowForge 的 TeamAct 协议（F002）已经定义了"State → Owner → Action → Evidence → Verdict → Route"六步循环，作为多可进化智能体（Forgekin）协作的统一闭环。`flowforge/core/teamact/` 目录已实现：
 
 - `types.py`：六步循环状态枚举 + 五项终止条件 + 持球状态
 - `state_machine.py`：`TeamActState` 六步状态机 + `TerminationReport` 终止报告
@@ -33,7 +33,7 @@ FlowForge 的 TeamAct 协议（F002）已经定义了"State → Owner → Action
 - 无法对队列中**特定任务**做"提前/延后"调度
 - 无法对**正在执行**的任务做"中断→重排"
 - 无法在**不停止整个 TeamAct**的情况下"暂停/恢复"队列
-- 无法把任务**重定向**到另一个灵智体（必须等当前持球者 ROUTE）
+- 无法把任务**重定向**到另一个可进化智能体（必须等当前持球者 ROUTE）
 - 无法**取消**已入队但尚未执行的任务
 
 FlowForge SteerCommand 思想来源给出了一种解法：**operator 通过 SteerCommand 对正在执行的 TeamAct 队列进行实时干预**——`priority_boost` / `interrupt` / `requeue` / `redirect` / `pause` / `resume`。这种"驾驶舱式"干预能力是 operator 治理权威的工程化落地，与 Magic Words 逃生舱形成"细粒度+粗粒度"双层干预体系。
@@ -119,7 +119,7 @@ class SteerCommand(BaseModel):
         action: Steer 动作类型（7 种枚举之一）。
         priority: Steer 优先级（5 级，默认 NORMAL）。
         target_task_id: 目标任务 ID（必须存在）。
-        target_agent_id: REDIRECT 时的目标灵智体 ID（仅 REDIRECT 必填）。
+        target_agent_id: REDIRECT 时的目标可进化智能体 ID（仅 REDIRECT 必填）。
         reason: operator 必填理由（审计追溯依据，禁止空字符串）。
         operator_id: 发起 operator 标识（必须以 "operator" 开头，I2 校验）。
         payload: 附加数据（如 priority_boost 的目标优先级值）。
@@ -267,7 +267,7 @@ class SteerQueue:
 | # | 不变量 | 说明 | 实现机制 |
 |---|--------|------|---------|
 | **I1** | SteerCommand 不可篡改 | 一旦 `submit()` 写入 `_pending`，任何后续修改必须以新 `SteerCommand` 追加（含 `amend_of` payload 字段引用原 command_id）；`SteerCommand` 字段均为 Pydantic 默认值，禁止运行时 `setattr` | Pydantic `model_config = {"frozen": True}`（v2 写法）+ `_pending.append` 后立即记录到 trace |
-| **I2** | operator 独占 steer 权限 | 只有 `operator_id` 以 `"operator"` 开头的 SteerCommand 能通过 `submit()`；其他灵智体提交抛 `PermissionError` | `submit()` 前置校验 `command.operator_id.startswith("operator")` |
+| **I2** | operator 独占 steer 权限 | 只有 `operator_id` 以 `"operator"` 开头的 SteerCommand 能通过 `submit()`；其他可进化智能体提交抛 `PermissionError` | `submit()` 前置校验 `command.operator_id.startswith("operator")` |
 | **I3** | Steer 影响 trace 记录 | 每次 `apply_to_queue` 完成后必须落盘到 `data/teamact/steer_trace.jsonl`（append-only），含 command + effect 全字段；归档失败不阻断应用，但记 ERROR 日志 | `_archive_record` 私有方法 + 配置 `trace_archive.enabled` 开关 |
 | **I4** | Steer 不破坏 TeamAct 状态机 | 非 EMERGENCY 优先级的 SteerCommand 应用到队尾（等当前原子操作完成）；EMERGENCY 可中断 ACTION/EVIDENCE 步骤，但必须留下 `interrupted` 标记并触发 VERDICT 阶段（让 verdict 决定去留，不直接跳状态） | `apply_to_queue` 检查 `command.priority != EMERGENCY` 时只处理 `task_queue[1:]`（跳过队首=当前执行中任务） |
 | **I5** | 紧急 steer 可中断任意阶段 | `priority == EMERGENCY` 的 INTERRUPT/CANCEL/REDIRECT 可对队首任务生效，触发状态机进入 VERDICT 阶段（不直接终止，让 verdict 判定）；同时记录 `emergency_interruption=True` 到 side_effects | `_dispatch` 内对 `EMERGENCY` 走特殊分支，调用 `state.advance()` 推进到 VERDICT |
@@ -538,7 +538,7 @@ E2E 测试遵守 T1-T8 铁律：
 
 ### 7.2 理由
 
-TeamAct Queue Steer 是 FlowForge 治理体系的**永久基础设施**——只要 FlowForge 存在多灵智体协同 + operator 治理需求，就需要 Steer 实时干预能力。即使未来 LLM 能力升级到完全自主，operator 仍需对队列执行保留细粒度调度权（与 Magic Words 粗粒度逃生舱互补）。
+TeamAct Queue Steer 是 FlowForge 治理体系的**永久基础设施**——只要 FlowForge 存在多可进化智能体协同 + operator 治理需求，就需要 Steer 实时干预能力。即使未来 LLM 能力升级到完全自主，operator 仍需对队列执行保留细粒度调度权（与 Magic Words 粗粒度逃生舱互补）。
 
 具体而言：
 - `SteerCommand / SteerEffect / SteerQueue` 核心模型属于 Build to Persist（治理契约）

@@ -89,7 +89,7 @@ class CouncilMessage(BaseModel):
 
     message_id: str
     channel: str  # "console" | "webchat" | "trae"
-    forgekin_id: str  # 发起灵智体 ID
+    forgekin_id: str  # 发起Forgekin ID
     content: str  # 消息内容
     message_type: str  # "approval_request" | "info" | "alert" | "council"
     payload: dict[str, Any] = Field(default_factory=dict)  # 附加数据（PR url / config diff）
@@ -475,7 +475,7 @@ class IMCouncilManager:
     职责：
     - 注册 / 注销通道适配器（DI 注入，红线 12）
     - 自动通道选择 + I1 降级链路
-    - 五步灵议流程（发起→收集→综合→决策→归档）
+    - 五步MindCouncil流程（发起→收集→综合→决策→归档）
     - I3 强制：request_approval 为审批的唯一公开入口
     - I4 超时自动拒绝
     - I5 归档落盘 JSONL
@@ -632,7 +632,7 @@ class IMCouncilManager:
     ) -> bool:
         """发起审批请求 → 推送 → 等待回复 → 调用 ApprovalHub.decide → 归档.
 
-        五步灵议流程（F047 §2.3）：
+        五步MindCouncil流程（F047 §2.3）：
         1. 发起：构造 CouncilMessage 并提交到 ApprovalHub
         2. 收集：通过选定通道推送 message
         3. 综合：等待 operator 回复 CouncilReply

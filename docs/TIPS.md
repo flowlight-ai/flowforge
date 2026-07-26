@@ -2,7 +2,7 @@
 
 > **文档编号**: TIPS.md（v1.1）
 > **来源**: `[doc:review/review.md]` 340 项审核问题 + `[doc:roleagent.md]` 102 天实战教训 + 前期经验教训归档
-> **更新机制**: 每个 Bug 修复后由可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）自动追加教训条目
+> **更新机制**: 每个 Bug 修复后由可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）自动追加教训条目
 > **命名规范**: 严格遵循 `[doc:design/naming-contract.md]` v2.0 "官方名称优先"原则，P0 官方名称大量使用，P2 体系别名仅社交用
 
 ---
@@ -113,7 +113,7 @@
 
 **症状**：把可进化智能体形态固定为单一类型。
 
-**规避**：BioForgekin 可进化为 HybridForgekin（既是宠物又是社区吉祥物）。形态进化通过 F027 流程触发。形态分类遵循 Agent Morphology（智能体形态学，项目代号 ForgekinSpecies，社区社交称"灵族"）。
+**规避**：BioForgekin 可进化为 HybridForgekin（既是宠物又是社区吉祥物）。形态进化通过 F027 流程触发。形态分类遵循 Agent Morphology（智能体形态学，项目代号 ForgekinSpecies，社区社交称"智能体形态学"）。
 
 ### TIP-014：三方 Agent 是能力扩展不是工具
 
@@ -277,7 +277,7 @@
 
 **症状**：使用过渡命名"E6 灵匠 Mind Artisan"。
 
-**规避**：最终形态命名为 Persistent Identity Agent Framework（ForgeMind，社区社交称"灵智"），不再使用"灵匠"。详见 `[doc:design/naming-contract.md#6]` 废弃清单。
+**规避**：最终形态命名为 Persistent Identity Agent Framework（ForgeMind，社区社交称"通用智能体框架"），不再使用"灵匠"。详见 `[doc:design/naming-contract.md#6]` 废弃清单。
 
 ### TIP-037：废弃自创术语 M18/M19/M20
 
@@ -289,7 +289,7 @@
 
 **症状**：使用 v4.0 已废弃命名（炉灵 / 养灵 / 自锻 / 火种 / 升华阶 / 魂忆 / 魂印等）。
 
-**规避**：严格遵循 `[doc:design/naming-contract.md]` v2.0 三层命名体系，正式文档优先使用 P0 官方名称（AI 业界专业术语），P2 体系别名（灵智 / 灵智体 / 灵忆 / 灵印 / 灵锻 / 锻典 / 灵议 / 灵族 / 育灵 / 进化阶 / 觉醒阶 / 能力画像）仅用于社区社交，正式文档中如出现必须首次双标注。
+**规避**：严格遵循 `[doc:design/naming-contract.md]` v2.0 三层命名体系，正式文档优先使用 P0 官方名称（AI 业界专业术语），P2 体系别名（通用智能体框架 / 可进化智能体 / 情景记忆存储 / 持久身份 / 经验蒸馏 / 锻典 / 多智能体议事 / 智能体形态学 / 智能体入职与终身学习 / 进化阶 / 觉醒阶 / 能力画像）仅用于社区社交，正式文档中如出现必须首次双标注。
 
 ---
 

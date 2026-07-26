@@ -58,7 +58,7 @@ class StaleRecord(BaseModel):
 class RestartNotification(BaseModel):
     """Phase A+ 发布的重启通知事件载荷.
 
-    灵智体订阅 ``restart_notification`` 事件后，可依据此载荷触发自身的
+    Forgekin订阅 ``restart_notification`` 事件后，可依据此载荷触发自身的
     restart recovery 流程。
 
     Attributes:
@@ -121,7 +121,7 @@ class RestartRecoveryPipeline:
         - **Phase A**: 扫描 Redis 过期记录（``status="running"`` 且 ``TTL < 0``）。
           不删除，仅标记，保留审计痕迹。
         - **Phase A+**: 发布 ``restart_notification`` 事件到 EventBus，
-          灵智体订阅后触发自身的 restart recovery 流程。
+          Forgekin订阅后触发自身的 restart recovery 流程。
         - **Phase B**: 队列状态持久化（AOF + RDB 双层）。
           强制所有 Redis key 显式 TTL（默认 24h，**禁止 0**）。
           重启时先加载 RDB 快照，再 replay AOF 日志。
@@ -204,7 +204,7 @@ class RestartRecoveryPipeline:
 
         生成 ``restart_id``（UUID），构造 RestartNotification 事件，
         通过 ``event_bus.publish("restart_notification", payload)`` 发布。
-        灵智体订阅此事件，触发自身的 restart recovery 流程。
+        Forgekin订阅此事件，触发自身的 restart recovery 流程。
 
         Args:
             swept_records: Phase A 扫描到的过期记录列表。

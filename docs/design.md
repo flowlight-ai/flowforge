@@ -36,7 +36,7 @@
 
 详见 [design/naming-contract.md](design/naming-contract.md) v1.1 + [spec.md §2.4](spec.md)（12 核心概念命名表）+ [spec.md §2.5](spec.md)（进化阶与觉醒阶）。
 
-**双轨命名策略**：代码层 / 技术文档使用 AI 专业术语（Forgekin / ForgeMind / SpiritForge / MindCodex / MindCouncil / CapabilityProfile / Embodied AI / Character AI / ExternalAgentAdapter / ForgekinEngine / HarnessOrchestrator）；社区社交使用灵智体体系名（灵智 / 灵智体 / 灵锻 / 灵典 / 灵议 / 育灵 / 灵忆 / 灵印）—— 仅用于社区网友之间的社交沟通，正式技术文档中专业术语优先、体系名作补充说明。
+**双轨命名策略**：代码层 / 技术文档使用 AI 专业术语（Forgekin / ForgeMind / SpiritForge / MindCodex / MindCouncil / CapabilityProfile / Embodied AI / Character AI / ExternalAgentAdapter / ForgekinEngine / HarnessOrchestrator）；社区社交使用可进化智能体体系名（通用智能体框架 / 可进化智能体 / 经验蒸馏 / 蒸馏知识库 / 多智能体议事 / 智能体入职与终身学习 / 情景记忆存储 / 持久身份）—— 仅用于社区网友之间的社交沟通，正式技术文档中专业术语优先、体系名作补充说明。
 
 ### §1.4 参考文献
 
@@ -83,7 +83,7 @@ flowforge/docs/
 
 ### §2.1 设计哲学
 
-FlowForge 是一个**智能体自进化框架（Self-Evolving Agent Framework）**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统，并通过 **forgemind 应用层**承载多形态智能体（Multi-Form Agent，社区社交称"灵智体 Forgekin"）的智能体入职与终身学习（Forge Nurturing）、经验蒸馏（SpiritForge）、多智能体议事（MindCouncil）闭环，走向通用智能体（General-Purpose Agent）愿景。
+FlowForge 是一个**智能体自进化框架（Self-Evolving Agent Framework）**——为 AI Agent 提供约束、反馈、上下文管理与熵控制的完整控制论系统，并通过 **forgemind 应用层**承载多形态智能体（Multi-Form Agent，社区社交称"可进化智能体 Forgekin"）的智能体入职与终身学习（Forge Nurturing）、经验蒸馏（SpiritForge）、多智能体议事（MindCouncil）闭环，走向通用智能体（General-Purpose Agent）愿景。
 
 **核心公式**（来自 [roleagent.md §1](roleagent.md)）：
 
@@ -629,7 +629,7 @@ class EvolutionStage(str, Enum):
     E3_GROWTH = "E3"             # 成长阶 Growth
     E4_GROWTH_DEEP = "E4"        # 成长阶·深 Growth-Deep
     E5_AWAKENED = "E5"           # 觉醒阶 Awakened
-    E6_FORGEMIND = "E6"          # 灵智阶 ForgeMind
+    E6_FORGEMIND = "E6"          # 通用智能体框架阶 ForgeMind
 
 class AwakeningStage(str, Enum):
     """觉醒阶 E1-E6（自主性 6 级）"""

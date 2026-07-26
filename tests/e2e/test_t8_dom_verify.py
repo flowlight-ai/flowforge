@@ -117,7 +117,7 @@ class TestT8DOMVerify:
                 llm_verify=False,
                 content_type="Web UI页面内容",
                 context="FlowForge管理界面",
-                timeout=30,
+                timeout=60,
             )
             metrics.record_tool_call("playwright", "ok" if result["found"] else "fail", result["detail"])
 

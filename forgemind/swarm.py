@@ -1,6 +1,6 @@
-"""F049 Agent Swarm — 5 灵智体协同协议.
+"""F049 Agent Swarm — 5 Forgekin协同协议.
 
-本模块实现 Swarm 协议层（F049），让 5 个灵智体（文心/夏洛克/鲁班/梵高/达芬奇）
+本模块实现 Swarm 协议层（F049），让 5 个Forgekin（文心/夏洛克/鲁班/梵高/达芬奇）
 通过 SwarmCoordinator 全局唯一调度器协同工作：
 
     - 任务分发：capability-based routing（按 capability_profile 分发，I3 能力匹配）
@@ -17,7 +17,7 @@
     - ADR 002-collaboration-protocol.md（TeamAct 协作协议）
     - ADR 006-external-agent-integration.md（三方 Agent 集成）
 
-5 个灵智体能力画像（详见 config/agent_swarm.yaml）：
+5 个Forgekin能力画像（详见 config/agent_swarm.yaml）：
     - wenxin  (trae)   : doc_generation / doc_review / format_check / frontmatter_check
     - sherlock(trae)   : code_generation / bug_fixing / refactoring / test_writing
     - luban   (trae)   : architecture_design / adr_drafting / config_adjustment / dependency_analysis
@@ -198,7 +198,7 @@ class SwarmDispatchRecord(BaseModel):
 
 
 class SwarmCoordinator:
-    """Swarm 协调器 — 5 灵智体协同调度（I1 单一调度器）.
+    """Swarm 协调器 — 5 Forgekin协同调度（I1 单一调度器）.
 
     职责：
         - 任务分发（capability-based routing，I3 能力匹配）
@@ -207,7 +207,7 @@ class SwarmCoordinator:
         - 跨厂商独立（I5/I6 review 任务路由到不同厂商）
 
     不变量（详见 F049 §2.5）：
-        - I1: 单一调度器 — 全局唯一，禁止灵智体之间直接派发任务
+        - I1: 单一调度器 — 全局唯一，禁止Forgekin之间直接派发任务
         - I2: 任务不丢失 — submit_task 必立即写入 _tasks + 落盘 trace
         - I3: 能力匹配 — dispatch 必须把任务路由给能力匹配的 agent
         - I4: 心跳超时回收 — 30s 无心跳自动 reassign，最多 3 次

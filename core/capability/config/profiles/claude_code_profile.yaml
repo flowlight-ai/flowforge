@@ -1,10 +1,10 @@
-# 示例 CapabilityProfile YAML — Claude Code 灵智体
+# 示例 CapabilityProfile YAML — Claude Code Forgekin
 #
 # 用于跨厂商 review 演示：本画像与 gpt5_profile.yaml 共享同一类别盲点
 # (self_referential_logic)，但厂商不同（anthropic vs openai），
 # 故 has_blind_spot_conflict 应返回 False（不同厂商天然分散盲点）。
 #
-# 当与另一个 anthropic 厂商的灵智体配对 review 时，因同类别盲点应返回 True。
+# 当与另一个 anthropic 厂商的Forgekin配对 review 时，因同类别盲点应返回 True。
 #
 # 字段说明详见 loader.py docstring。
 

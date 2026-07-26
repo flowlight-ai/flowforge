@@ -19,7 +19,10 @@ export interface ShellConfig {
   brandSubtitle: string;
   version: string;
   navSections: NavSection[];
+  /** 已弃用：helm 路径跳过 Shell（Phase 2 改为统一 Shell） */
   helmPaths?: string[];
+  /** 无 Shell 的展示页路径（如 /showcase /story） */
+  chromelessPaths?: string[];
   apiBaseUrl?: string;
   wsBaseUrl?: string;
 }

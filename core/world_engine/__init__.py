@@ -1,14 +1,14 @@
 """世界引擎（World Engine）— F093 三层架构。
 
-FlowForge v7.0 育灵体系的世界引擎，对应 F093 三层架构补审 7 项
+FlowForge v7.0 Forge Nurturing体系的世界引擎，对应 F093 三层架构补审 7 项
 （CL-007~CL-013）。
 
 三层架构:
-    1. **Core Identity Layer（核心身份层）**——灵智体的不可变身份。
-       即使灵智体演了 1000 次"孙悟空"，核心身份仍是"写作灵智体"。
+    1. **Core Identity Layer（核心身份层）**——Forgekin的不可变身份。
+       即使Forgekin演了 1000 次"孙悟空"，核心身份仍是"写作Forgekin"。
        详见 :class:`~flowforge.core.world_engine.core_identity.CoreIdentityLayer`。
 
-    2. **World Layer（世界层）**——灵智体所在的世界设定。
+    2. **World Layer（世界层）**——Forgekin所在的世界设定。
        9 个一等公民 + 三路记忆（Canon 永久 / Relational 长期 / Session 临时）。
        详见 :class:`~flowforge.core.world_engine.world.WorldLayer`。
 
@@ -17,7 +17,7 @@ FlowForge v7.0 育灵体系的世界引擎，对应 F093 三层架构补审 7 �
        详见 :class:`~flowforge.core.world_engine.bridge.BridgeLayer`。
 
 铁律:
-    "RP 台词不自动入典"（CL-010）——Role Play 中灵智体说的话不能自动
+    "RP 台词不自动入典"（CL-010）——Role Play 中Forgekin说的话不能自动
     进入 Canon 记忆，必须经过
     :class:`~flowforge.core.world_engine.canon_sync.CanonSyncProtocol`
     显式确认（operator 或 Canon Driver 批准）。

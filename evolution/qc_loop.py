@@ -50,7 +50,7 @@ class ReviewerReport(BaseModel):
     """单层 reviewer 审查报告。"""
 
     layer: ReviewerLayer
-    reviewer_id: str  # 审查灵智体 ID
+    reviewer_id: str  # 审查Forgekin ID
     issues: list[dict[str, Any]] = Field(default_factory=list)
     # 每个问题: {severity, location, description, suggestion}
     pass_count: int = 0

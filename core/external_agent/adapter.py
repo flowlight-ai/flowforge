@@ -1,7 +1,7 @@
 """ExternalAgentAdapter — 三方 Agent 适配器抽象基类。
 
 按 EX-001 升级为"能力扩展"思维，不是"工具调用"思维。
-灵智体可加载 claude code 的代码能力、codex 的推理能力、
+Forgekin可加载 claude code 的代码能力、codex 的推理能力、
 opencode 的开源生态能力、trae 的 IDE 能力。
 
 设计依据：
@@ -37,7 +37,7 @@ class ExternalAgentResult(BaseModel):
     """三方 Agent 调用结果。
 
     封装三方 Agent 的输出、成本、能力画像贡献等信息，
-    供 ExternalAgentBridge 进一步处理（融合到灵智体主画像）。
+    供 ExternalAgentBridge 进一步处理（融合到Forgekin主画像）。
 
     Attributes:
         provider_name: 调用的三方 Agent Provider 名称。
@@ -73,7 +73,7 @@ class ExternalAgentAdapter(ABC):
     """三方 Agent 适配器抽象基类。
 
     按 EX-001 升级为"能力扩展"思维，不是"工具调用"思维。
-    灵智体可加载 claude code 的代码能力、codex 的推理能力、
+    Forgekin可加载 claude code 的代码能力、codex 的推理能力、
     opencode 的开源生态能力、trae 的 IDE 能力。
 
     详见 [doc:review/review.md#第九章§9.2] EX-001~EX-010

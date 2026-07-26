@@ -5,7 +5,7 @@ F093 三路记忆的第一路。Canon Memory 存储
 不可推翻的决策。
 
 铁律（CL-010）:
-    "RP 台词不自动入典"——Role Play 中灵智体说的话、做的事**不能自动
+    "RP 台词不自动入典"——Role Play 中Forgekin说的话、做的事**不能自动
     进入 Canon 记忆**，必须经过
     :class:`~flowforge.core.world_engine.canon_sync.CanonSyncProtocol`
     显式确认（operator 或 Canon Driver 批准）。
@@ -19,7 +19,7 @@ F093 三路记忆的第一路。Canon Memory 存储
 修复的问题:
     - CL-009：v7.0 EchoStore 是单一记忆库，未区分 Canon/Relational/Session
       三路。本类是 Canon 路的独立存储。
-    - CL-010：v7.0 灵忆记录所有任务轨迹，所有内容自动进入记忆。本类强制
+    - CL-010：v7.0 EchoStore记录所有任务轨迹，所有内容自动进入记忆。本类强制
       显式确认，违反铁律的写入会被拒绝。
 
 详见:

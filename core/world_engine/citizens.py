@@ -64,7 +64,7 @@ class Character(BaseModel):
     """角色（Character）— 一等公民 2/9。
 
     世界中的角色定义。一个 :class:`~flowforge.forgemind.base.ForgekinBase`
-    灵智体在不同世界中可扮演不同 Character，但其 Core Identity 不变
+    Forgekin在不同世界中可扮演不同 Character，但其 Core Identity 不变
     （CL-007）。
 
     属性:
@@ -106,7 +106,7 @@ class Scene(BaseModel):
 class CanonDecision(BaseModel):
     """典藏决策（Canon Decision）— 一等公民 4/9。
 
-    世界级不可推翻的决策。一旦入典，所有灵智体在该世界中的行为必须遵守。
+    世界级不可推翻的决策。一旦入典，所有Forgekin在该世界中的行为必须遵守。
 
     **铁律**：Canon Decision 的写入必须经过
     :class:`~flowforge.core.world_engine.canon_sync.CanonSyncProtocol`

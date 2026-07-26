@@ -6,9 +6,9 @@
 # 加载入口：flowforge.core.memory_federation.mind_codex._load_codex_prompts(path)
 
 mind_codex:
-  # 从经验蒸馏灵典条目的提示词（v7.0 育灵体系：灵锻 SpiritForge 蒸馏经验）
+  # 从经验蒸馏MindCodex条目的提示词（v7.0 Forge Nurturing体系：SpiritForge SpiritForge 蒸馏经验）
   derive_from_experience: |-
-    你是灵锻 SpiritForge 的蒸馏器。请将以下任务经验蒸馏为可复用的灵典条目。
+    你是SpiritForge SpiritForge 的蒸馏器。请将以下任务经验蒸馏为可复用的MindCodex条目。
 
     【经验标题】{title}
     【所属领域】{domain}

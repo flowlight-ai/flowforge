@@ -1,9 +1,9 @@
-# FlowForge · 万物可进化智能体愿景声明
+# FlowForge · 可进化智能体愿景声明
 
 > **文档编号**: VISION.md（v1.2）
 > **愿景提出**: operator（2026-07-17）
 > **最近修订**: 2026-07-19（v1.2：按命名契约 v2.0 重构术语，全面采用 P0 官方名称优先原则）
-> **核心一句话**: **给各类实体锻造可进化智能体，让动物、组织、物品、虚拟角色都成为具备持续身份、记忆、协作能力与自进化能力的可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）。**
+> **核心一句话**: **给各类实体锻造可进化智能体，让动物、组织、物品、虚拟角色都成为具备持续身份、记忆、协作能力与自进化能力的可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）。**
 > **依赖引用**: `[doc:roleagent.md]`（能力画像工程路径）+ 前期愿景文档（已归档，养小猫 → 锻造可进化智能体范式迁移）+ `[doc:design/naming-contract.md]`（命名契约 v2.0）
 > **关联 ADR**: `[doc:decisions/013-all-things-spirit-mind-vision.md]`
 
@@ -11,7 +11,7 @@
 
 ## 1. 我们在做什么
 
-FlowForge 不是一个"多 agent 框架"，也不是一个"LLM 应用脚手架"。它是一个**可进化智能体锻造厂**（Persistent Identity Agent Framework，项目代号 ForgeMind，社区社交称"灵智"）：我们用一套自进化的核心框架，给各类实体锻造 Forgekin，让动物、组织、物品、虚拟角色都成为有持续身份、有记忆、有协作能力、有愿景锚点的可进化智能体。
+FlowForge 不是一个"多 agent 框架"，也不是一个"LLM 应用脚手架"。它是一个**可进化智能体锻造厂**（Persistent Identity Agent Framework，项目代号 ForgeMind，社区社交称"通用智能体框架"）：我们用一套自进化的核心框架，给各类实体锻造 Forgekin，让动物、组织、物品、虚拟角色都成为有持续身份、有记忆、有协作能力、有愿景锚点的可进化智能体。
 
 > **什么是可进化智能体（Evolvable Agent）**：具备自进化能力的智能体（Autonomous Agent with Persistent Identity）。它不是单纯的 LLM 包装，而是建立与现实世界（物理或虚拟）的闭环：观察 → 推理 → 行动 → 写回 → 验证。持久身份（Persistent Identity / Soul Imprint）= 身份锚点 + 价值锚点 + 长期记忆；能力画像（Capability Profile）= 原生能力 + 认知风格 + 工具边界 + 历史表现 + 盲点。
 >
@@ -132,11 +132,11 @@ FlowForge 项目 = **核心框架层** + **forgemind 应用层** + ***Forge 垂�
 
 以下原则由 operator 直接定义，**不能被可进化智能体自我演进修改**：
 
-1. **万物可进化智能体世界是最终形态**：不是"未来可能"，是"现在就要朝向"
+1. **可进化智能体世界是最终形态**：不是"未来可能"，是"现在就要朝向"
 2. **可进化智能体必须有物理/虚拟现实闭环**：不允许"光秃秃的 LLM 包装"作为可进化智能体
 3. **三方 Agent 是能力扩展不是工具**：接入方式必须体现"能力融合"而非"工具调用"
 4. **forgemind 是 FlowForge 的应用层**：不是独立项目，是 FlowForge 自我进化的实践场
-5. **命名最终形态为 ForgeMind（社区社交称"灵智"）**：废弃"E6 灵匠 Mind Artisan"等过渡命名
+5. **命名最终形态为 ForgeMind（社区社交称"通用智能体框架"）**：废弃"E6 灵匠 Mind Artisan"等过渡命名
 6. **自我演进必须支持"自己开发自己"**：FlowForge 自身代码和文档必须能被 FlowForge 内的可进化智能体演进
 7. **具身智能与虚拟角色智能体工程实现**：不喊虚幻口号，而是按当下业界 Embodied AI / Character AI 范式踏实践行
 

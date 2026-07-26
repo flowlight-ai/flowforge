@@ -16,7 +16,7 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"Forgekin（Evolvable Agent，社区社交称'灵智体'）交接时如何让接手者快速 bootstrap"的根本问题。当前 v7.0 `handoff.py` 只传递任务 ID 和状态枚举，未实现交接胶囊的结构化内容，导致：
+FlowForge 在架构层需要解决"Forgekin（Evolvable Agent，社区社交称'可进化智能体'）交接时如何让接手者快速 bootstrap"的根本问题。当前 v7.0 `handoff.py` 只传递任务 ID 和状态枚举，未实现交接胶囊的结构化内容，导致：
 
 1. 接手Forgekin必须重读完整上下文，token 成本爆炸（长任务可达数万 token）
 2. 接手Forgekin无法区分"作者已决"与"作者未决"的开放问题，反复重做已决策的权衡

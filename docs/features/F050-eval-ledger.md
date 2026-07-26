@@ -43,7 +43,7 @@ FlowForge 的自我演进闭环（F046 SelfDev 五闭环）需要**进化级评�
 
 - **F046 SelfDev 闭环无法收敛**：每次提案都合入会导致方法库持续膨胀且质量无保障，违背 I7 不变量（每次进化必须有可验证完成标准）
 - **经验无法沉淀**：被拒绝的提案原因不记录，下次同类提案仍会被提出，浪费 LLM 调用成本
-- **Foreman 无失败信号源**：ContinuousForeman 的"任务源 2: Eval Ledger 失败信号"无法工作，5 灵智体持续调度循环退化为纯 task.md 扫描
+- **Foreman 无失败信号源**：ContinuousForeman 的"任务源 2: Eval Ledger 失败信号"无法工作，5 可进化智能体持续调度循环退化为纯 task.md 扫描
 
 ---
 

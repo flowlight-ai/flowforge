@@ -30,6 +30,6 @@ ranking:
   recency_half_life_days: 30.0     # 最近性因子半衰期
   recency_min_factor: 0.1          # 最近性因子下限
 
-# 灵典配置（mind_codex.py）
+# MindCodex配置（mind_codex.py）
 mind_codex:
   default_top_k: 5                 # 默认返回前 K 条

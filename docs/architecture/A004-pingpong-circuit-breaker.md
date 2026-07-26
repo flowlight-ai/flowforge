@@ -16,7 +16,7 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"多 Forgekin（Evolvable Agent，社区社交称'灵智体'）协作中最隐蔽的失败模式：两个Forgekin互相传但都不干活"的检测问题。当前 v7.0 无"乒乓球熔断器"，导致：
+FlowForge 在架构层需要解决"多 Forgekin（Evolvable Agent，社区社交称'可进化智能体'）协作中最隐蔽的失败模式：两个Forgekin互相传但都不干活"的检测问题。当前 v7.0 无"乒乓球熔断器"，导致：
 
 1. 两个Forgekin可能无限互传"你看一下""我看看"，消耗 token 无产出
 2. F002 骨架仅用 `max_iterations` 次数判定，会误杀合理的多轮 review 辩论

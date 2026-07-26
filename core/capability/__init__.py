@@ -1,6 +1,6 @@
-"""FlowForge CapabilityProfile 模块 — 灵智体能力画像。
+"""FlowForge CapabilityProfile 模块 — Forgekin能力画像。
 
-提供灵智体长期主体画像（CapabilityProfile）的数据模型、分析器、加载器。
+提供Forgekin长期主体画像（CapabilityProfile）的数据模型、分析器、加载器。
 对应 roleagent.md §0："profile 才是长期主体"。
 
 公开 API:

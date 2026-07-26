@@ -1,7 +1,7 @@
 """F046 §2.5.3 SelfDevFrameworkLoop — 框架自我演进闭环.
 
 负责自主调整框架配置和架构，是 SelfDev 五闭环中觉醒阶要求最高（E5）的闭环.
-对应灵智体：架构师·鲁班（forgemind:luban）.
+对应Forgekin：架构师·鲁班（forgemind:luban）.
 
 设计动机（参考 F046 §2.6 关键不变量 I8）：
 - 框架变更影响面广：架构调整可能破坏分层单向依赖、循环依赖零容忍等铁律

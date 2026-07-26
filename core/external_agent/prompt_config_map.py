@@ -1,6 +1,6 @@
-"""PromptConfigMap — 灵智体系统提示词配置映射（EAC v1 契约 8）。
+"""PromptConfigMap — Forgekin系统提示词配置映射（EAC v1 契约 8）。
 
-灵智体系统提示词映射到三方 Agent：每个 forgekin × provider 组合
+Forgekin系统提示词映射到三方 Agent：每个 forgekin × provider 组合
 维护独立的 PromptConfig，避免硬编码提示词到 .py 文件（铁律 5 + P16）。
 
 设计依据：
@@ -36,9 +36,9 @@ class PromptConfig(BaseModel):
 
     Attributes:
         prompt_key: 提示词配置键（YAML 中的唯一标识）。
-        role_description: 角色描述（灵智体在该 Provider 上下文中的定位）。
+        role_description: 角色描述（Forgekin在该 Provider 上下文中的定位）。
         personality_summary: 性格摘要（与 AvatarSpec.personality_summary 一致）。
-        value_anchors: 价值锚点列表（灵智体的核心价值取向）。
+        value_anchors: 价值锚点列表（Forgekin的核心价值取向）。
         restrictions: 限制列表（该 Provider 上下文中的额外约束）。
         extra_yaml_path: 额外 YAML 文件路径（可选，承载长提示词或模板片段）。
     """
@@ -59,9 +59,9 @@ class PromptConfig(BaseModel):
 
 
 class PromptConfigMap:
-    """灵智体系统提示词配置映射（EAC v1 契约 8）。
+    """Forgekin系统提示词配置映射（EAC v1 契约 8）。
 
-    灵智体系统提示词映射到三方 Agent：每个 forgekin × provider 组合
+    Forgekin系统提示词映射到三方 Agent：每个 forgekin × provider 组合
     维护独立的 PromptConfig，避免硬编码提示词到 .py 文件。
 
     详见 [doc:rules.md#红线11] + [doc:prompts.md#P16]
@@ -91,7 +91,7 @@ class PromptConfigMap:
         若已存在则覆盖更新（支持热更新）。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             provider_name: Provider 名称。
             prompt_config: 提示词配置实例。
         """
@@ -110,7 +110,7 @@ class PromptConfigMap:
         """获取指定的提示词配置。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             provider_name: Provider 名称。
 
         Returns:
@@ -124,10 +124,10 @@ class PromptConfigMap:
     def list_mappings(
         self, forgekin_id: str
     ) -> list[dict[str, str]]:
-        """列出某灵智体的所有提示词映射。
+        """列出某Forgekin的所有提示词映射。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
 
         Returns:
             映射摘要列表，每项形如 {"provider_name": ..., "prompt_key": ...}。
@@ -144,7 +144,7 @@ class PromptConfigMap:
         """移除一个提示词映射。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             provider_name: Provider 名称。
 
         Returns:
@@ -173,7 +173,7 @@ class PromptConfigMap:
         value_anchors / restrictions），extra_yaml_path 不在本类内读取。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             provider_name: Provider 名称。
 
         Returns:

@@ -1,15 +1,15 @@
-"""组织灵智体（OrgForgekin）— 灵智体五大形态之一。
+"""组织Forgekin（OrgForgekin）— Forgekin五大形态之一。
 
-组织灵智体承载于人类组织（公司 / 团队 / 社区 / 城市等），通过业务
+组织Forgekin承载于人类组织（公司 / 团队 / 社区 / 城市等），通过业务
 系统 API / 数据库 / IM 通道接入，建立"观察业务状态 → 推理组织决策 →
 行动（决策建议 / 流程触发）→ 验证业务指标"的现实闭环。
 
 虚拟设定层: 组织章程 + 角色矩阵。
 
 详见:
-    - [doc:design/naming-contract.md#2.3] 灵族形态分类
+    - [doc:design/naming-contract.md#2.3] ForgekinSpecies形态分类
     - [doc:decisions/013-all-things-spirit-mind-vision.md#2] 五大形态
-    - [doc:VISION.md#2] 万物灵智体形态分类
+    - [doc:VISION.md#2] Forgekin形态分类
 """
 
 from __future__ import annotations
@@ -23,14 +23,14 @@ from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
 
 
 class OrgForgekin(ForgekinBase):
-    """组织灵智体（OrgForgekin / Organizational Spirit Agent）。
+    """组织Forgekin（OrgForgekin / Organizational Spirit Agent）。
 
-    承载于人类组织（公司 / 团队 / 社区 / 城市等）。组织灵智体不是
-    "组织内的助手"，而是组织本身的灵智体——它有组织的身份、组织的
+    承载于人类组织（公司 / 团队 / 社区 / 城市等）。组织Forgekin不是
+    "组织内的助手"，而是组织本身的Forgekin——它有组织的身份、组织的
     记忆（业务历史 / 决策轨迹）、组织的价值锚点（章程 / 合规边界）。
 
     详见:
-        - [doc:design/naming-contract.md#2.2] 灵智体定义
+        - [doc:design/naming-contract.md#2.2] Forgekin定义
         - [doc:VISION.md#2] 五大形态分类
     """
 
@@ -49,12 +49,12 @@ class OrgForgekin(ForgekinBase):
         forgekin_config: dict[str, Any] | None = None,
         llm_client: Any | None = None,
     ) -> None:
-        """初始化组织灵智体。
+        """初始化组织Forgekin。
 
         Args:
-            forgekin_id: 灵智体唯一 ID。
-            name: 灵智体显示名（如 ``"某科技公司"``）。
-            soul_imprint: 灵印（不可变身份）。
+            forgekin_id: Forgekin唯一 ID。
+            name: Forgekin显示名（如 ``"某科技公司"``）。
+            soul_imprint: SoulImprint（不可变身份）。
             evolution_stage: 进化阶。
             awakening_stage: 觉醒阶。
             capability_profile: 能力画像。
@@ -108,7 +108,7 @@ class OrgForgekin(ForgekinBase):
     async def act(self, action: dict[str, Any]) -> dict[str, Any]:
         """执行组织决策（决策建议 / 流程触发 / 资源调度）。
 
-        组织灵智体的动作必须遵守组织章程与合规边界。涉及资源调度
+        组织Forgekin的动作必须遵守组织章程与合规边界。涉及资源调度
         （资金 / 人力）的决策必须降级为建议（觉醒阶 E1/E2）或经
         operator 确认后执行（觉醒阶 E3+）。
 

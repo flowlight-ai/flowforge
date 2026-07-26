@@ -1,7 +1,7 @@
 """HandoffCapsule — 交接胶囊（协议层硬要求）。
 
 交接胶囊是 TeamAct 协作协议的协议层硬要求（不是可选的礼貌行为）。
-前一个灵智体在传球时主动留下结构化摘要，让后一个灵智体接手时不需要重读全部上下文。
+前一个Forgekin在传球时主动留下结构化摘要，让后一个Forgekin接手时不需要重读全部上下文。
 
 对应 roleagent.md §2.3：交接胶囊（resume capsule）
     "前一个 agent 在传球时主动留下结构化摘要：做了什么 / 为什么 / 权衡了什么 /
@@ -34,10 +34,10 @@ logger = get_logger("teamact.handoff")
 
 
 class HandoffCapsule(BaseModel):
-    """交接胶囊 — 灵智体间协作的结构化交接摘要。
+    """交接胶囊 — Forgekin间协作的结构化交接摘要。
 
     交接胶囊是 TeamAct 协议层硬要求（roleagent.md §2.3）。
-    前一个灵智体在传球时必须留下结构化摘要，使后一个灵智体无需重读全部上下文。
+    前一个Forgekin在传球时必须留下结构化摘要，使后一个Forgekin无需重读全部上下文。
 
     字段同时满足：
         - 任务规格（capsule_id / from_agent / to_agent / task_summary /
@@ -46,8 +46,8 @@ class HandoffCapsule(BaseModel):
 
     Attributes:
         capsule_id: 胶囊唯一标识（自动生成 UUID）。
-        from_agent: 传出灵智体（Forgekin）标识。
-        to_agent: 接收灵智体（Forgekin）标识。
+        from_agent: 传出Forgekin（Forgekin）标识。
+        to_agent: 接收Forgekin（Forgekin）标识。
         task_summary: 做了什么（任务摘要）。
         rationale: 为什么这样做（设计理由，F002 AC-3）。
         tradeoffs: 权衡了什么（取舍说明，F002 AC-3）。
@@ -62,8 +62,8 @@ class HandoffCapsule(BaseModel):
         default_factory=lambda: f"capsule-{uuid4().hex[:12]}",
         description="胶囊唯一标识",
     )
-    from_agent: str = Field(..., description="传出灵智体标识")
-    to_agent: str = Field(..., description="接收灵智体标识")
+    from_agent: str = Field(..., description="传出Forgekin标识")
+    to_agent: str = Field(..., description="接收Forgekin标识")
     task_summary: str = Field(..., description="任务摘要（做了什么）")
     rationale: str = Field(default="", description="设计理由（为什么这样做）")
     tradeoffs: str = Field(default="", description="取舍说明（权衡了什么）")
@@ -85,7 +85,7 @@ class HandoffCapsule(BaseModel):
     def to_summary(self) -> str:
         """生成人类可读摘要。
 
-        用于 trace 日志 / operator 展示 / 灵议议事时快速理解交接内容。
+        用于 trace 日志 / operator 展示 / MindCouncil议事时快速理解交接内容。
         格式参考 config/prompts.yaml 的 handoff_capsule.summary_template。
         """
         decisions = ", ".join(self.decisions_made) or "(none)"

@@ -1,6 +1,6 @@
-"""FlowForge External Agent Integration — 三方 Agent 集成层（v7.0 育灵体系）。
+"""FlowForge External Agent Integration — 三方 Agent 集成层（v7.0 Forge Nurturing体系）。
 
-灵智体（Forgekin）通过本模块接入三方 Agent 作为能力扩展：
+Forgekin（Forgekin）通过本模块接入三方 Agent 作为能力扩展：
     - Claude Code（CLI + MCP）—— 复杂重构 / 代码生成
     - Codex（API + function calling）—— 推理 / 结构化输出
     - OpenCode（SDK + plugin）—— 开源协作 / 插件扩展
@@ -8,7 +8,7 @@
 
 核心机制（详见 [doc:decisions/006-external-agent-integration.md]）：
     - ExternalAgentAdapter: 三方 Agent 适配器抽象基类（EX-001/EX-003）
-    - ExternalAgentBridge: 灵智体调用入口（EX-003/EX-004）
+    - ExternalAgentBridge: Forgekin调用入口（EX-003/EX-004）
     - ExternalAgentSharedState: 跨三方 Agent 状态共享（EX-004）
     - ExternalAgentFallback: 失败回退链（EX-007）
     - ExternalAgentCapabilityFusion: 能力融合机制（EX-010）
@@ -25,8 +25,8 @@ EAC v1 七契约（v7.1-§D6.2，详见 design.md）：
     4. Capability        — CapabilityRegistry（能力声明与发现，与 ProviderTransportRegistry 互补）
     5. Collaboration     — CollaborationCoordinator（同步/异步/群体协作）
     6. Safety            — guardrails/ 6 个组件（input/system_prompt/tool_allowlist/output/action_confirm/cost_ceiling）
-    7. Avatar Sync       — AvatarSyncAdapter（灵智体形象同步到三方 Agent）
-    8. Prompt Config Map — PromptConfigMap（灵智体系统提示词映射到三方 Agent，提示词外置）
+    7. Avatar Sync       — AvatarSyncAdapter（Forgekin形象同步到三方 Agent）
+    8. Prompt Config Map — PromptConfigMap（Forgekin系统提示词映射到三方 Agent，提示词外置）
 
 六层 Guardrails（EX-005）：
     L1 InputValidation / L2 SystemPrompt / L3 ToolAllowlist

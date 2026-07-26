@@ -1,7 +1,7 @@
 """ExternalAgentSharedState — 三方 Agent 状态共享机制。
 
 按 EX-004 实现跨三方 Agent 的状态共享：
-灵智体调用 claude code 修改代码后，codex 接手 review 时应能看到
+Forgekin调用 claude code 修改代码后，codex 接手 review 时应能看到
 claude code 的修改历史和决策上下文。
 
 设计依据：
@@ -45,14 +45,14 @@ class SharedStateStore(Protocol):
         ...
 
     async def list_keys(self, forgekin_id: str) -> list[str]:
-        """列出某灵智体下所有共享状态键。"""
+        """列出某Forgekin下所有共享状态键。"""
         ...
 
 
 class SharedStateEntry(BaseModel):
     """共享状态条目（单条历史记录）。"""
 
-    forgekin_id: str = Field(..., description="灵智体 ID")
+    forgekin_id: str = Field(..., description="Forgekin ID")
     provider_name: str = Field(..., description="写入该条目的三方 Agent")
     key: str = Field(..., description="状态键")
     value: Any = Field(..., description="状态值")
@@ -68,13 +68,13 @@ class SharedStateEntry(BaseModel):
 class ExternalAgentSharedState:
     """三方 Agent 状态共享（EX-004）。
 
-    灵智体调用 claude code 修改代码后，codex 接手 review 时应能看到
+    Forgekin调用 claude code 修改代码后，codex 接手 review 时应能看到
     claude code 的修改历史和决策上下文。
 
     详见 [doc:review/review.md#第九章§9.2] EX-004
 
     典型连续协作流：
-        灵智体 → claude code 写代码 → codex review → trae 部署
+        Forgekin → claude code 写代码 → codex review → trae 部署
         ↑ 每一步的修改历史和决策上下文都通过 SharedState 共享 ↓
     """
 
@@ -98,7 +98,7 @@ class ExternalAgentSharedState:
         """写入共享状态条目。
 
         Args:
-            forgekin_id: 灵智体 ID（命名空间隔离）。
+            forgekin_id: Forgekin ID（命名空间隔离）。
             key: 状态键（如 "code_changes/main.py"）。
             value: 状态值（任意可序列化对象）。
             provider_name: 写入该条目的三方 Agent（用于审计追踪）。
@@ -124,7 +124,7 @@ class ExternalAgentSharedState:
         return await self._store.read(forgekin_id, key)
 
     async def list_history(self, forgekin_id: str) -> list[dict[str, Any]]:
-        """列出某灵智体的全部共享状态历史（按时间顺序）。
+        """列出某Forgekin的全部共享状态历史（按时间顺序）。
 
         用于跨厂商协作场景：codex 接手 review 前先 list_history 查看
         claude code 的修改历史和决策上下文。
@@ -139,7 +139,7 @@ class ExternalAgentSharedState:
         return history
 
     async def clear(self, forgekin_id: str) -> None:
-        """清空某灵智体的共享状态（任务完成后清理）。
+        """清空某Forgekin的共享状态（任务完成后清理）。
 
         注意：此方法不会自动调用，需 host 显式触发——避免误删历史。
         """

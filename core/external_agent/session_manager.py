@@ -5,7 +5,7 @@ session_id 作为跨调用追踪与状态共享的命名空间键。
 
 设计依据：
     - [doc:review/review.md#13.3] F241 CL-016 ACP transport（session 维度）
-    - [doc:design/naming-contract.md#2.2] 灵印（forgekin_id 命名空间隔离）
+    - [doc:design/naming-contract.md#2.2] SoulImprint（forgekin_id 命名空间隔离）
     - [doc:design.md v7.1-§D6.2] EAC v1 七契约 #3 Session
 
 铁律遵守：
@@ -36,7 +36,7 @@ class SessionInfo(BaseModel):
 
     Attributes:
         session_id: 会话唯一标识（sess-{provider}-{forgekin_id}-{ts}-{rand6}）。
-        forgekin_id: 灵智体 ID（命名空间隔离键，[doc:design/naming-contract.md#2.2] 灵印）。
+        forgekin_id: Forgekin ID（命名空间隔离键，[doc:design/naming-contract.md#2.2] SoulImprint）。
         provider_name: 三方 Agent Provider 名称。
         created_at: 创建时间（UTC）。
         expires_at: 过期时间（UTC）。
@@ -44,7 +44,7 @@ class SessionInfo(BaseModel):
     """
 
     session_id: str = Field(..., description="会话唯一标识")
-    forgekin_id: str = Field(..., description="灵智体 ID")
+    forgekin_id: str = Field(..., description="Forgekin ID")
     provider_name: str = Field(..., description="Provider 名称")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -87,7 +87,7 @@ class SessionManager:
         """创建新会话。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
             provider_name: Provider 名称。
             ttl_seconds: 会话有效期（秒），默认 3600。
 
@@ -177,10 +177,10 @@ class SessionManager:
     async def list_active_sessions(
         self, forgekin_id: str
     ) -> list[SessionInfo]:
-        """列出某灵智体的所有活跃会话（惰性清理过期）。
+        """列出某Forgekin的所有活跃会话（惰性清理过期）。
 
         Args:
-            forgekin_id: 灵智体 ID。
+            forgekin_id: Forgekin ID。
 
         Returns:
             活跃会话列表（已过期的不返回，且会被清理）。

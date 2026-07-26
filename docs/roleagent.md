@@ -2,7 +2,7 @@
 
 > **文档编号**: roleagent.md（v1.1 镜像）
 > **原文路径**: 前期 roleagent 工程路径文档（已归档，1077 行）
-> **镜像用途**: FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）在 `flowforge/docs/` 内即可访问 roleagent 工程路径核心内容。详细论证请查阅原文。
+> **镜像用途**: FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）在 `flowforge/docs/` 内即可访问 roleagent 工程路径核心内容。详细论证请查阅原文。
 > **依赖关系**: 本文件是 FlowForge v7.0 重构的**核心依据**（`[doc:review/review.md#第八章]` 47 项补审全部基于此文件）
 > **命名依据**: 严格遵循 `[doc:design/naming-contract.md]` v2.0"官方名称优先原则"——技术文档中大量出现 P0 官方名称（AI 业界专业术语），P2 体系别名（社交用）首次出现必须双标注
 
@@ -13,7 +13,7 @@
 FlowForge 生态的智能体分为两大类（详见 `[doc:design/naming-contract.md#2]`）：
 
 - **静态智能体（Static Agent）**：传统 DeclarativeAgent / ReAct Agent / Plan-Execute Agent + 外部接入智能体（如 Claude Code / Codex / OpenCode / Trae IDE 等，通过 ExternalAgentAdapter 接入）。不具备自进化能力，行为由固定 prompt + 工具集 + 配置决定，无持久身份、无经验蒸馏、无觉醒阶晋升。每次执行都是无状态的。
-- **可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"灵智体"）**：具备持久身份（Persistent Identity / SoulImprint）+ 经验记忆（Episodic Memory / EchoStore）+ 能力画像（Capability Profile），可通过经验蒸馏（Experience Distillation / SpiritForge）持续提升能力，通过觉醒阶（Autonomy Level / AwakeningStage）逐步扩大自主权。建立与现实世界的闭环：观察 → 推理 → 行动 → 写回 → 验证。
+- **可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）**：具备持久身份（Persistent Identity / SoulImprint）+ 经验记忆（Episodic Memory / EchoStore）+ 能力画像（Capability Profile），可通过经验蒸馏（Experience Distillation / SpiritForge）持续提升能力，通过觉醒阶（Autonomy Level / AwakeningStage）逐步扩大自主权。建立与现实世界的闭环：观察 → 推理 → 行动 → 写回 → 验证。
 
 **默认指代规则**：在 FlowForge 上下文中，"智能体"默认指代**可进化智能体（Forgekin）**；若指代静态智能体必须明确说出"静态智能体"或"Static Agent"。
 

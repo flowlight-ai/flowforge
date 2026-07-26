@@ -1,4 +1,4 @@
-# F049 Agent Swarm 配置 — 5 灵智体协同调度
+# F049 Agent Swarm 配置 — 5 Forgekin协同调度
 # 详见 [doc:features/F049-agent-swarm.md]
 # 铁律 5：所有路径/能力画像/超时阈值通过本文件外置，禁止硬编码（红线 11）
 # 红线 12：本文件由 SwarmCoordinator 通过 DI 注入读取，不绕过 DI 直接实例化
@@ -23,7 +23,7 @@ agent_swarm:
     enabled: true
     path: "data/forgemind/swarm_trace.jsonl"  # append-only JSONL
 
-  # ── 5 灵智体能力画像（capability_profile）──────────────────
+  # ── 5 Forgekin能力画像（capability_profile）──────────────────
   # 参考 FlowForge 5 agent sweet spot 模式
   # 文档员·文心 / 开发者·夏洛克 / 架构师·鲁班 / 审查员·梵高 / 测试员·达芬奇
   # 详见 [doc:design/naming-contract.md#2.2] + [doc:features/F046-selfdev-triple-loop.md#9.2]
@@ -66,7 +66,7 @@ agent_swarm:
 
     # ── 4. 梵高（孔雀）— 审查员 ──────────────────────────────
     # 觉醒阶 E3，review 闭环，跨厂商独立审查（I5/I6 no-self-review 铁律）
-    # ⚠️ 唯一使用 claude 厂商的灵智体 — review 任务天然落到梵高
+    # ⚠️ 唯一使用 claude 厂商的Forgekin — review 任务天然落到梵高
     vangogh:
       vendor: "claude"  # 跨厂商（I5/I6 no-self-review 铁律）
       capabilities:

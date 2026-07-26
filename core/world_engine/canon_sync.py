@@ -5,11 +5,11 @@ World 之间的"宪法闸门"——所有试图进入 Canon Memory 的内容必�
 协议显式确认。
 
 铁律（CL-010）:
-    "Role Play 中灵智体说的话、做的事**不能自动进入 Canon 记忆**，必须
+    "Role Play 中Forgekin说的话、做的事**不能自动进入 Canon 记忆**，必须
     经过 Canon Sync Protocol 显式确认（operator 或 Canon Driver 批准）。"
 
     这是 F093 最重要的铁律。违反此铁律会导致：
-        ① 灵智体在扮演孙悟空时说的"我是齐天大圣"会自动进入记忆
+        ① Forgekin在扮演孙悟空时说的"我是齐天大圣"会自动进入记忆
         ② 下次任务可能真的认为自己是孙悟空（身份漂移，CL-007）
         ③ RP 错误污染世界级真相（Canon 污染，CL-009）
 
@@ -21,7 +21,7 @@ World 之间的"宪法闸门"——所有试图进入 Canon Memory 的内容必�
        可拒绝，记录拒绝原因）
 
 修复的问题:
-    - CL-010：v7.0 灵忆记录所有任务轨迹，所有内容自动进入记忆。本协议
+    - CL-010：v7.0 EchoStore记录所有任务轨迹，所有内容自动进入记忆。本协议
       强制显式确认，违反铁律的入典会被拒绝。
 
 详见:
@@ -104,7 +104,7 @@ class CanonSyncProtocolBase(ABC):
 class CanonSyncProtocol(CanonSyncProtocolBase):
     """典藏同步协议（Canon Sync Protocol）— 铁律："RP 台词不自动入典"。
 
-    Role Play 中灵智体说的话、做的事不能自动进入 Canon 记忆，必须经过
+    Role Play 中Forgekin说的话、做的事不能自动进入 Canon 记忆，必须经过
     本协议显式确认（operator 或 Canon Driver 批准）。
 
     实现要点:
@@ -141,7 +141,7 @@ class CanonSyncProtocol(CanonSyncProtocolBase):
 
         Args:
             turn: 待入典的 Turn。``turn.is_canon`` 应为 ``False``。
-            proposer: 提议者（任何角色可提议，包括灵智体自身）。
+            proposer: 提议者（任何角色可提议，包括Forgekin自身）。
 
         Returns:
             proposal_id（UUID 字符串）。

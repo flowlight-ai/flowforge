@@ -1,7 +1,7 @@
 """CL-025 F177 Close Gate Validator — Phase A Close Gate 结构化判据。
 
 [doc:review/review.md#14.1] CL-025 F177 Close Gate 结构化判据
-[doc:design/naming-contract.md#2.2] 灵智体
+[doc:design/naming-contract.md#2.2] Forgekin
 
 规格大纲（design v7.1-§D7.9 Close Gate Validator）：
 - AC → evidence 矩阵（每条 AC 标注 ✅/❌ + commit/test/screenshot 证据）

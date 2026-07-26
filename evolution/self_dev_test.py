@@ -1,7 +1,7 @@
 """F046 §9.6 SelfDevTestLoop — 自动化测试自我演进闭环.
 
 负责自主生成/执行/验证测试，是 F046 v1.1 五闭环扩展架构新增的闭环之一.
-对应灵智体：测试员·达芬奇（forgemind:davinci）.
+对应Forgekin：测试员·达芬奇（forgemind:davinci）.
 
 设计动机（参考 roleagent.md + 项目测试铁律 T1-T8）：
 - 测试是复利型基础设施（Built to Persist）
@@ -9,7 +9,7 @@
 - T1-T8 铁律强制
   禁止 Mock LLM、禁止假数据、必须具体断言、必须采集指标等
 - 闭环最后一环
-  Test 闭环是五灵智体全链路（doc→code→framework→review→test）的最后一环
+  Test 闭环是五Forgekin全链路（doc→code→framework→review→test）的最后一环
 
 处理对象：
 - tests/**/*.py（测试文件，禁止删除已有 — I10/红线 8）

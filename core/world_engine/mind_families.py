@@ -1,6 +1,6 @@
 """P2-013 四心智家族护栏（CL-026）— Ragdoll / Maine Coon / Siamese / hotfix 四家族 guardrail hooks.
 
-四心智家族（Four Mind Families）是 v7.0 育灵体系的灵智体行为护栏分类，
+四心智家族（Four Mind Families）是 v7.0 Forge Nurturing体系的Forgekin行为护栏分类，
 按"风险偏好 + 自主性等级"两个维度划分：
 
 | 家族       | 风险偏好 | 自主性等级 | 典型场景                       | 护栏强度 |
@@ -10,7 +10,7 @@
 | Siamese    | 高      | E3-E4     | 自主决策（部署/合入/重构）       | 弱（信任+事后审核） |
 | hotfix     | 紧急    | E5+       | 紧急修复（生产故障/安全漏洞）    | 极弱（事后追审） |
 
-护栏 hooks 允许灵智体在执行动作前后插入家族特定的检查逻辑。
+护栏 hooks 允许Forgekin在执行动作前后插入家族特定的检查逻辑。
 
 详见:
     - [doc:review/review.md#CL-026] 四心智家族护栏
@@ -299,10 +299,10 @@ DEFAULT_FAMILY_HOOKS: dict[MindFamily, GuardrailHook] = {
 
 
 class MindFamilyRouter:
-    """心智家族路由器 — 按灵智体觉醒阶 / 风险等级 / 动作类型选择家族.
+    """心智家族路由器 — 按Forgekin觉醒阶 / 风险等级 / 动作类型选择家族.
 
     工作流程：
-    1. 灵智体执行动作前调用 route(forgekin_id, awakening_stage, action, context)
+    1. Forgekin执行动作前调用 route(forgekin_id, awakening_stage, action, context)
     2. Router 根据觉醒阶 / 动作风险选择家族
     3. 调用家族 hook 的 pre_action
     4. 动作执行后调用 post_action

@@ -1,10 +1,10 @@
-"""灵印（Soul Imprint）— 灵智体的不可变身份标识。
+"""SoulImprint（Soul Imprint）— Forgekin的不可变身份标识。
 
-灵印是灵智体的不可变身份标识，由初始锻造时的种子参数 + 价值锚点 +
-命名空间组成。即使能力进化、形态升级，灵印保持不变，是谱系追踪的锚点。
+SoulImprint是Forgekin的不可变身份标识，由初始锻造时的种子参数 + 价值锚点 +
+命名空间组成。即使能力进化、形态升级，SoulImprint保持不变，是谱系追踪的锚点。
 
 设计要点:
-    - **不可变性**：灵印一旦创建，``seed_params`` / ``value_anchors`` /
+    - **不可变性**：SoulImprint一旦创建，``seed_params`` / ``value_anchors`` /
       ``namespace`` / ``imprint_hash`` 均不可修改。这是谱系追踪的前提。
     - **哈希稳定性**：``imprint_hash`` 基于 ``seed_params`` +
       ``value_anchors`` + ``namespace`` 计算，相同输入产出相同哈希。
@@ -13,8 +13,8 @@
       避免跨应用层身份冲突。
 
 详见:
-    - [doc:design/naming-contract.md#2.6] 灵印定义
-    - [doc:features/F038-forgemind-lineage.md] 灵智体进化谱系
+    - [doc:design/naming-contract.md#2.6] SoulImprint定义
+    - [doc:features/F038-forgemind-lineage.md] Forgekin进化谱系
     - [doc:review/review.md#第九章] FM-008 谱系追踪
 """
 
@@ -48,16 +48,16 @@ def _stable_json(payload: Mapping[str, Any]) -> str:
 
 
 class SoulImprint(BaseModel):
-    """灵印（Soul Imprint）— 灵智体的不可变身份标识。
+    """SoulImprint（Soul Imprint）— Forgekin的不可变身份标识。
 
-    灵印是谱系追踪的锚点。即使灵智体进化形态、升级能力，灵印保持不变。
+    SoulImprint是谱系追踪的锚点。即使Forgekin进化形态、升级能力，SoulImprint保持不变。
 
     属性:
         imprint_hash: 基于种子参数 + 价值锚点 + 命名空间计算的哈希。
         seed_params: 初始锻造时的种子参数（如 species / name 初始值等）。
         value_anchors: 价值锚点列表（不可变，对齐 VISION §7 七条愿景锚点）。
         namespace: 命名空间（如 ``"contentforge"`` / ``"forgemind"``）。
-        created_at: 灵印创建时间（UTC）。
+        created_at: SoulImprint创建时间（UTC）。
 
     详见:
         - [doc:design/naming-contract.md#2.6]
@@ -65,7 +65,7 @@ class SoulImprint(BaseModel):
     """
 
     model_config = ConfigDict(
-        frozen=True,  # 完全不可变——铁律：灵印是身份锚点
+        frozen=True,  # 完全不可变——铁律：SoulImprint是身份锚点
         extra="forbid",
         validate_assignment=True,
     )
@@ -88,7 +88,7 @@ class SoulImprint(BaseModel):
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        description="灵印创建时间（UTC）。",
+        description="SoulImprint创建时间（UTC）。",
     )
 
     @field_validator("namespace")
@@ -96,7 +96,7 @@ class SoulImprint(BaseModel):
     def _namespace_non_empty(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError(
-                "namespace 不能为空——灵印必须归属于某个命名空间。"
+                "namespace 不能为空——SoulImprint必须归属于某个命名空间。"
                 "详见 [doc:design/naming-contract.md#2.6]"
             )
         return v.strip()
@@ -115,7 +115,7 @@ class SoulImprint(BaseModel):
         value_anchors: list[str],
         namespace: str,
     ) -> str:
-        """计算灵印哈希（SHA-256）。
+        """计算SoulImprint哈希（SHA-256）。
 
         哈希基于 ``seed_params`` + ``value_anchors`` + ``namespace`` 三要素
         计算。相同输入始终产出相同哈希，保证谱系追踪的稳定性。
@@ -143,9 +143,9 @@ class SoulImprint(BaseModel):
         value_anchors: list[str],
         namespace: str,
     ) -> "SoulImprint":
-        """锻造一个新灵印（推荐入口）。
+        """锻造一个新SoulImprint（推荐入口）。
 
-        自动计算 ``imprint_hash`` 并构造不可变灵印实例。这是创建灵印的
+        自动计算 ``imprint_hash`` 并构造不可变SoulImprint实例。这是创建SoulImprint的
         推荐方式，避免调用方手动计算哈希导致不一致。
 
         Args:
@@ -165,9 +165,9 @@ class SoulImprint(BaseModel):
         )
 
     def verify(self) -> bool:
-        """校验当前灵印的 ``imprint_hash`` 是否与三要素重算结果一致。
+        """校验当前SoulImprint的 ``imprint_hash`` 是否与三要素重算结果一致。
 
-        用于跨 session / 跨代际身份验证。如果返回 ``False``，说明灵印
+        用于跨 session / 跨代际身份验证。如果返回 ``False``，说明SoulImprint
         被篡改或损坏，谱系追踪应中止。
 
         Returns:

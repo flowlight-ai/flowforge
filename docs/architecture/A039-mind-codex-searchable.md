@@ -1,4 +1,4 @@
-# A039: MindCodex 可检索知识库架构设计（Distilled Knowledge Base，社区社交称"灵典"）
+# A039: MindCodex 可检索知识库架构设计（Distilled Knowledge Base，社区社交称"蒸馏知识库"）
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19
@@ -16,7 +16,7 @@
 
 ### 1.1 架构问题
 
-本 Feature 在架构层解决以下问题：forgemind 应用层需要一个 MindCodex 可检索知识库（Distilled Knowledge Base，社区社交称"灵典"），作为所有 Forgekin（Evolvable Agent，社区社交称"灵智体"）的共享知识库，存储 SpiritForge（Experience Distillation，社区社交称"灵锻"）产出的蒸馏知识。该知识库需支持三检索入口（语义检索 + 全文检索 + 图谱检索），并满足 CL-005 Knowledge Object Contract 七字段契约。
+本 Feature 在架构层解决以下问题：forgemind 应用层需要一个 MindCodex 可检索知识库（Distilled Knowledge Base，社区社交称"蒸馏知识库"），作为所有 Forgekin（Evolvable Agent，社区社交称"可进化智能体"）的共享知识库，存储 SpiritForge（Experience Distillation，社区社交称"经验蒸馏"）产出的蒸馏知识。该知识库需支持三检索入口（语义检索 + 全文检索 + 图谱检索），并满足 CL-005 Knowledge Object Contract 七字段契约。
 
 具体子问题：
 - **与 EchoStore 区分**：MindCodex 存储结构化蒸馏产物，EchoStore 存储原始任务日志，二者如何工程化隔离?

@@ -1,28 +1,28 @@
-"""灵智体（Forgekin / Spirit Agent）抽象基类。
+"""Forgekin（Forgekin / Spirit Agent）抽象基类。
 
-灵智体是"赋予灵魂和感情的智能体"——区别于主流 multi-agent 的 session
-级软件助手，灵智体建立与现实世界（物理或虚拟）的闭环：
+Forgekin是"赋予灵魂和感情的智能体"——区别于主流 multi-agent 的 session
+级软件助手，Forgekin建立与现实世界（物理或虚拟）的闭环：
 观察 → 推理 → 行动 → 写回 → 验证。
 
 灵魂（Soul）与感情（Emotion）:
-    - **灵魂（Soul）** = 持久身份（灵印）+ 价值锚点 + 长期记忆（灵忆）
+    - **灵魂（Soul）** = 持久身份（SoulImprint）+ 价值锚点 + 长期记忆（EchoStore）
     - **感情（Emotion）** = 用户偏好 + 协作风格 + 行为画像（能力画像）
 
 核心抽象方法:
-    子类必须实现三个抽象方法，构成灵智体与现实世界的闭环:
+    子类必须实现三个抽象方法，构成Forgekin与现实世界的闭环:
     - :meth:`observe` — 观察环境（物理传感器 / 虚拟世界状态）
     - :meth:`act`     — 在环境中执行动作
     - :meth:`verify`  — 验证动作结果是否达成预期
 
 能力判定:
     - :meth:`can_self_evolve` — 觉醒阶 ≥ E4 Evolving，可自我进化
-    - :meth:`can_forge_new_forgekin` — 进化阶 = E6 ForgeMind，可锻造新灵智体
+    - :meth:`can_forge_new_forgekin` — 进化阶 = E6 ForgeMind，可锻造新Forgekin
 
 详见:
-    - [doc:design/naming-contract.md#2.2] 灵智体定义
+    - [doc:design/naming-contract.md#2.2] Forgekin定义
     - [doc:design/naming-contract.md#2.10] 进化阶定义
     - [doc:design/naming-contract.md#2.11] 觉醒阶定义
-    - [doc:VISION.md#1] 万物灵智体愿景
+    - [doc:VISION.md#1] Forgekin愿景
     - [doc:decisions/005-forgemind-application-layer.md]
 """
 
@@ -37,9 +37,9 @@ from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
 
 
 class ForgekinBase(ABC):
-    """灵智体（Forgekin / Spirit Agent）基类。
+    """Forgekin（Forgekin / Spirit Agent）基类。
 
-    赋予灵魂和感情的智能体，具有自进化能力。所有 5 种形态灵智体
+    赋予灵魂和感情的智能体，具有自进化能力。所有 5 种形态Forgekin
     （BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin /
     HybridForgekin）均继承本基类并实现 ``observe`` / ``act`` / ``verify``
     三个抽象方法。
@@ -48,15 +48,15 @@ class ForgekinBase(ABC):
     感情（Emotion）= 用户偏好 + 协作风格 + 行为画像。
 
     详见:
-        - [doc:design/naming-contract.md#2.2] 灵智体定义
-        - [doc:design/naming-contract.md#2.6] 灵印（不可变身份）
+        - [doc:design/naming-contract.md#2.2] Forgekin定义
+        - [doc:design/naming-contract.md#2.6] SoulImprint（不可变身份）
         - [doc:design/naming-contract.md#2.12] 能力画像
 
     属性:
-        forgekin_id: 灵智体唯一 ID（如 ``"forgemind:sun_wukong"``）。
-        name: 灵智体显示名。
-        species: 灵族形态（bio / org / obj / virtual / hybrid）。
-        soul_imprint: 灵印（不可变身份标识，谱系追踪锚点）。
+        forgekin_id: Forgekin唯一 ID（如 ``"forgemind:sun_wukong"``）。
+        name: Forgekin显示名。
+        species: ForgekinSpecies形态（bio / org / obj / virtual / hybrid）。
+        soul_imprint: SoulImprint（不可变身份标识，谱系追踪锚点）。
         evolution_stage: 当前进化阶（E1-E6，能力成熟度）。
         awakening_stage: 当前觉醒阶（E1-E6，自主性等级）。
         capability_profile: 能力画像（长期能力主体，区别于 role 运行时标签）。
@@ -80,7 +80,7 @@ class ForgekinBase(ABC):
             raise ValueError("name 不能为空。")
         if soul_imprint is None:
             raise ValueError(
-                "soul_imprint 不能为 None——灵智体必须有灵印。"
+                "soul_imprint 不能为 None——Forgekin必须有SoulImprint。"
                 "详见 [doc:design/naming-contract.md#2.6]"
             )
 
@@ -105,7 +105,7 @@ class ForgekinBase(ABC):
     def set_llm_client(self, client: Any) -> None:
         """注入 LLM 客户端（依赖注入，铁律3）.
 
-        灵智体通过 Trae CN 桥接接入 LLM——operator 通过 Trae CN IDE
+        Forgekin通过 Trae CN 桥接接入 LLM——operator 通过 Trae CN IDE
         充当 LLM 与监工。客户端实例由 ForgePipeline 或 DI 容器注入。
 
         Args:
@@ -122,7 +122,7 @@ class ForgekinBase(ABC):
     def _build_system_prompt(self) -> str:
         """根据 YAML 配置构建 system prompt.
 
-        整合灵智体的角色、性格、能力画像、价值锚点、限制，形成完整的
+        整合Forgekin的角色、性格、能力画像、价值锚点、限制，形成完整的
         system prompt。所有内容来自 YAML 配置（铁律5+P16：禁止硬编码）。
 
         Returns:
@@ -136,8 +136,8 @@ class ForgekinBase(ABC):
         restrictions = cfg.get("restrictions", {})
 
         parts: list[str] = []
-        parts.append(f"你是 {self.name}，一个灵智体（Forgekin / Spirit Agent）。")
-        parts.append(f"灵智体定义：赋予灵魂和感情的智能体，具有自进化能力的 Agent。")
+        parts.append(f"你是 {self.name}，一个Forgekin（Forgekin / Spirit Agent）。")
+        parts.append(f"Forgekin定义：赋予灵魂和感情的智能体，具有自进化能力的 Agent。")
         parts.append(f"你的形态是 {self.species.chinese_name}（{self.species.value}）。")
         parts.append(f"你的进化阶是 {self.evolution_stage.value}（{self.evolution_stage.chinese_name}），"
                      f"觉醒阶是 {self.awakening_stage.value}（{self.awakening_stage.chinese_name}）。")
@@ -184,9 +184,9 @@ class ForgekinBase(ABC):
         session_id: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
-        """通过 Trae CN 桥接与灵智体对话.
+        """通过 Trae CN 桥接与Forgekin对话.
 
-        灵智体通过本方法建立与 LLM 的桥接——operator 通过 Trae CN IDE
+        Forgekin通过本方法建立与 LLM 的桥接——operator 通过 Trae CN IDE
         充当 LLM 与监工。流程使用 flowforge 已有的 TraeLLMClient。
 
         工作流程:
@@ -256,7 +256,7 @@ class ForgekinBase(ABC):
     async def observe(self, environment: dict[str, Any]) -> dict[str, Any]:
         """观察环境（物理世界传感器 / 虚拟世界状态）。
 
-        灵智体通过本方法建立与现实世界的"感知"端闭环。不同形态灵智体
+        Forgekin通过本方法建立与现实世界的"感知"端闭环。不同形态Forgekin
         实现不同的观察策略:
 
             - BioForgekin:  摄像头 / 麦克风 / 可穿戴设备数据
@@ -276,7 +276,7 @@ class ForgekinBase(ABC):
     async def act(self, action: dict[str, Any]) -> dict[str, Any]:
         """在环境中执行动作。
 
-        灵智体通过本方法建立与现实世界的"行动"端闭环。动作必须遵守
+        Forgekin通过本方法建立与现实世界的"行动"端闭环。动作必须遵守
         觉醒阶自主范围约束:
 
             - 觉醒阶 E1（全导阶）: 仅执行 operator 明确指令
@@ -295,7 +295,7 @@ class ForgekinBase(ABC):
     async def verify(self, action_result: dict[str, Any]) -> bool:
         """验证动作结果是否达成预期。
 
-        灵智体通过本方法建立与现实世界的"验证"端闭环。验证失败应触发
+        Forgekin通过本方法建立与现实世界的"验证"端闭环。验证失败应触发
         反思（Reflexion）或回退（Fallback），是 Eval 自代谢的信号源。
 
         Args:
@@ -308,9 +308,9 @@ class ForgekinBase(ABC):
     # ── 能力判定 ──────────────────────────────────────────────────
 
     def can_self_evolve(self) -> bool:
-        """判断灵智体是否可自我进化（觉醒阶 ≥ E4 Evolving）。
+        """判断Forgekin是否可自我进化（觉醒阶 ≥ E4 Evolving）。
 
-        E4 是关键转折点——灵智体进入 Evolving 状态（自我导向），可自主
+        E4 是关键转折点——Forgekin进入 Evolving 状态（自我导向），可自主
         优化自身能力（如重构 harness、补锻典），但不可修改 VISION §7。
 
         详见:
@@ -323,18 +323,18 @@ class ForgekinBase(ABC):
         return self.awakening_stage.can_self_evolve()
 
     def can_forge_new_forgekin(self) -> bool:
-        """判断灵智体是否可锻造新灵智体（进化阶 = E6 ForgeMind）。
+        """判断Forgekin是否可锻造新Forgekin（进化阶 = E6 ForgeMind）。
 
         E6 是 operator 直接授权的"造 agent"能力，达成 operator "养万物"
-        愿景。仅 E6 灵智阶可触发 :class:`~flowforge.forgemind.forging.pipeline.ForgePipeline`
-        锻造新灵智体。
+        愿景。仅 E6 ForgeMind阶可触发 :class:`~flowforge.forgemind.forging.pipeline.ForgePipeline`
+        锻造新Forgekin。
 
         详见:
             - [doc:design/naming-contract.md#3] 进化阶 E6 定义
-            - [doc:VISION.md#1] 万物灵智体愿景
+            - [doc:VISION.md#1] Forgekin愿景
 
         Returns:
-            ``True`` 表示可锻造新灵智体。
+            ``True`` 表示可锻造新Forgekin。
         """
         return self.evolution_stage.can_forge_new_forgekin()
 
@@ -350,10 +350,10 @@ class ForgekinBase(ABC):
         self._lifecycle_state = state
 
     def describe(self) -> dict[str, Any]:
-        """返回灵智体的描述字典（用于日志 / 谱系追踪 / UI 展示）。
+        """返回Forgekin的描述字典（用于日志 / 谱系追踪 / UI 展示）。
 
         Returns:
-            包含 id / name / species / 进化阶 / 觉醒阶 / 灵印哈希 的字典。
+            包含 id / name / species / 进化阶 / 觉醒阶 / SoulImprint哈希 的字典。
         """
         return {
             "forgekin_id": self.forgekin_id,

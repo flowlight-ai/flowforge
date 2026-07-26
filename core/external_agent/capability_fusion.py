@@ -1,12 +1,12 @@
 """ExternalAgentCapabilityFusion — 三方 Agent 能力融合机制（EX-010）。
 
-灵智体调用三方 Agent 后，三方 Agent 的能力应能"沉淀"到灵智体的能力画像中。
-如灵智体多次调用 claude code 写代码后，应"学到"代码编写能力（通过灵锻蒸馏）。
+Forgekin调用三方 Agent 后，三方 Agent 的能力应能"沉淀"到Forgekin的能力画像中。
+如Forgekin多次调用 claude code 写代码后，应"学到"代码编写能力（通过SpiritForge蒸馏）。
 
 设计依据：
-    - [doc:review/review.md#第九章§9.2] EX-010 三方 Agent 与灵智体能力融合机制缺失
+    - [doc:review/review.md#第九章§9.2] EX-010 三方 Agent 与Forgekin能力融合机制缺失
     - [doc:decisions/006-external-agent-integration.md] §3 四大机制（F035）
-    - [doc:design/naming-contract.md#2.7] 灵锻 / [doc:design/naming-contract.md#2.12] 能力画像
+    - [doc:design/naming-contract.md#2.7] SpiritForge / [doc:design/naming-contract.md#2.12] 能力画像
 
 铁律遵守：
     - 铁律 3：依赖通过构造函数注入
@@ -30,7 +30,7 @@ logger = get_logger("external_agent.capability_fusion")
 class FusionConfig(BaseModel):
     """能力融合配置（控制融合强度 / 阈值 / 衰减）。"""
 
-    # 融合权重：外部能力对灵智体主画像的影响系数（0.0-1.0）
+    # 融合权重：外部能力对Forgekin主画像的影响系数（0.0-1.0）
     # 调用次数越多、成功率越高，融合权重越大（但不超过 max_weight）
     base_weight: float = Field(default=0.1, ge=0.0, le=1.0, description="基础融合权重")
     max_weight: float = Field(default=0.5, ge=0.0, le=1.0, description="最大融合权重")
@@ -62,8 +62,8 @@ class FusionResult(BaseModel):
 class ExternalAgentCapabilityFusion:
     """三方 Agent 能力融合机制（EX-010）。
 
-    灵智体调用三方 Agent 后，三方 Agent 的能力应能"沉淀"到灵智体的能力画像中。
-    如灵智体多次调用 claude code 写代码后，应"学到"代码编写能力（通过灵锻蒸馏）。
+    Forgekin调用三方 Agent 后，三方 Agent 的能力应能"沉淀"到Forgekin的能力画像中。
+    如Forgekin多次调用 claude code 写代码后，应"学到"代码编写能力（通过SpiritForge蒸馏）。
 
     详见 [doc:review/review.md#第九章§9.2] EX-010
 
@@ -71,8 +71,8 @@ class ExternalAgentCapabilityFusion:
         1. 调用次数门槛：min_invocations 次以下不融合（避免一次调用"学到"）
         2. 成功率门槛：min_success_rate 以下不融合（避免从失败中学习）
         3. 权重渐进：weight = min(base * invocation_count, max_weight)
-        4. 盲点同步：盲点同步到灵智体画像，用于跨厂商 review 配对
-        5. 不去重：原有能力保留，新能力追加（让灵锻后续蒸馏去重）
+        4. 盲点同步：盲点同步到Forgekin画像，用于跨厂商 review 配对
+        5. 不去重：原有能力保留，新能力追加（让SpiritForge后续蒸馏去重）
     """
 
     def __init__(self, config: FusionConfig | None = None) -> None:
@@ -90,10 +90,10 @@ class ExternalAgentCapabilityFusion:
         invocation_count: int,
         success_rate: float,
     ) -> FusionResult:
-        """融合三方 Agent 能力到灵智体主画像。
+        """融合三方 Agent 能力到Forgekin主画像。
 
         Args:
-            forgekin_profile: 灵智体当前能力画像（含 capabilities / blind_spots）。
+            forgekin_profile: Forgekin当前能力画像（含 capabilities / blind_spots）。
             external_agent_profile: 三方 Agent 能力画像（来自 Adapter.get_capability_profile）。
             invocation_count: 历史调用次数（用于门槛判断）。
             success_rate: 历史成功率（0.0-1.0）。
@@ -127,7 +127,7 @@ class ExternalAgentCapabilityFusion:
             self._config.max_weight,
         )
 
-        # 融合能力（不去重，让灵锻后续蒸馏去重）
+        # 融合能力（不去重，让SpiritForge后续蒸馏去重）
         existing_caps: list[str] = list(forgekin_profile.get("capabilities", []))
         external_caps: list[str] = list(
             external_agent_profile.get("capabilities", [])
@@ -152,7 +152,7 @@ class ExternalAgentCapabilityFusion:
             **forgekin_profile,
             "capabilities": fused_caps,
             "blind_spots": fused_blind_spots,
-            # 记录融合历史（供灵锻 SpiritForge 蒸馏使用）
+            # 记录融合历史（供SpiritForge SpiritForge 蒸馏使用）
             "fusion_history": list(forgekin_profile.get("fusion_history", [])) + [
                 {
                     "external_agent": external_agent_profile.get(

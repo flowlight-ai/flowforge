@@ -6,7 +6,7 @@
 演示场景：
     模拟「文档→代码→代码审查→自动化测试→框架沉淀」全链路协同（5 闭环完整）
 
-五灵智体协同工作流（F046 §9.3 v1.1 扩展）：
+五Forgekin协同工作流（F046 §9.3 v1.1 扩展）：
     1. 文心（forgemind:wenxin, doc, E3）
        └─ 发现缺失 design 文档 → 生成 → LLM 审核通过
     2. 夏洛克（forgemind:sherlock, code, E4）
@@ -435,7 +435,7 @@ def configure_five_loops_responses(client: FakeTraeClient) -> None:
                     "- review.passed → test.review_passed\n"
                     "- test.changed_files → framework.target_files（I8 approval）\n\n"
                     "## 影响\n\n"
-                    "1. 五个灵智体可独立完成全链路自我开发\n"
+                    "1. 五个Forgekin可独立完成全链路自我开发\n"
                     "2. 仅 E5 框架变更需 operator approval（I8 不变量）\n"
                     "3. 其他闭环达到觉醒阶门控即可自主执行\n"
                 ),
@@ -464,7 +464,7 @@ def configure_five_loops_responses(client: FakeTraeClient) -> None:
 
 
 # ══════════════════════════════════════════════════════════════════
-# §5 注册 5 个灵智体（含 framework 鲁班 + I8 approval）
+# §5 注册 5 个Forgekin（含 framework 鲁班 + I8 approval）
 # ══════════════════════════════════════════════════════════════════
 
 
@@ -473,12 +473,12 @@ def register_five_forgekins(
     client: FakeTraeClient,
     project_root: str,
 ) -> Dict[str, Any]:
-    """注册 5 个灵智体到 ForgeMindEngine（含 framework 鲁班 + I8 approval）.
+    """注册 5 个Forgekin到 ForgeMindEngine（含 framework 鲁班 + I8 approval）.
 
     返回：
         forgekins 字典：{loop_type: loop_instance}
     """
-    print("\n[Register] 注册 5 个灵智体到 ForgeMindEngine（含 framework 鲁班）...")
+    print("\n[Register] 注册 5 个Forgekin到 ForgeMindEngine（含 framework 鲁班）...")
 
     # 通用 persist stub（避免真实治理层调用）
     async def _noop_persist(record):
@@ -542,7 +542,7 @@ def register_five_forgekins(
     engine.register_self_dev_loop(framework_loop)
     print(f"[Register] 鲁班（forgemind:luban）— framework, E5, I8 approval 自动 — 已注册")
 
-    print(f"[Register] 共注册 5 个灵智体（含 framework 鲁班）")
+    print(f"[Register] 共注册 5 个Forgekin（含 framework 鲁班）")
 
     # 验证注册
     loops = engine.list_self_dev_loops()
@@ -808,7 +808,7 @@ async def main() -> None:
         # 实例化 ForgeMindEngine
         engine = ForgeMindEngine()
 
-        # 注册 5 个灵智体（含 framework 鲁班 + I8 approval）
+        # 注册 5 个Forgekin（含 framework 鲁班 + I8 approval）
         register_five_forgekins(engine, client, str(temp_project))
 
         # 执行五闭环协同

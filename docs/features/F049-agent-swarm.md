@@ -1,4 +1,4 @@
-# F049: Agent Swarm 协同协议（C4 — 5 灵智体协同调度）
+# F049: Agent Swarm 协同协议（C4 — 5 可进化智能体协同调度）
 
 > **状态**: 🔄 in_progress
 > **类型**: collaboration
@@ -12,7 +12,7 @@
 > **依赖 Feature**: [doc:features/F046-selfdev-triple-loop.md]（SelfDev 五闭环 — Swarm 调度的最小工作单元）+ [doc:features/F048-teamact-queue-steer.md]（TeamAct Queue Steer — operator 实时干预 Swarm 队列）+ [doc:features/F045-trae-bridge-protocol.md]（Trae 桥接 — 跨厂商 LLM 通道）
 > **依据**: P2-005 Agent Swarm 协同（CL-032），`flowforge/core/external_agent/collaboration_coordinator.py` 骨架已就绪（SWARM 模式枚举已定义），待补完整 Swarm 协议
 > **roleagent 章节**: [doc:../roleagent.md#第十章]（5 agent sweet spot — FlowForge 工程模式）+ [doc:../roleagent.md#第九章]（no-self-review 铁律）
-> **关联 VISION**: [doc:../VISION.md#7]（可进化智能体主导自主开发 — 5 灵智体协同调度）
+> **关联 VISION**: [doc:../VISION.md#7]（可进化智能体主导自主开发 — 5 可进化智能体协同调度）
 > **关联 CL**: CL-032（Agent Swarm，P2-005）
 
 ---
@@ -21,24 +21,24 @@
 
 ### 1.1 问题陈述
 
-FlowForge 已经在 F046 v1.1 中完成了 SelfDev **五闭环**架构（doc/code/framework/review/test），分别由 5 个灵智体（文心·wenxin / 夏洛克·sherlock / 鲁班·luban / 梵高·vangogh / 达芬奇·davinci）承担。F048 进一步交付了 TeamAct Queue Steer，让 operator 可以对正在执行的 TeamAct 队列做细粒度调度干预。
+FlowForge 已经在 F046 v1.1 中完成了 SelfDev **五闭环**架构（doc/code/framework/review/test），分别由 5 个可进化智能体（文心·wenxin / 夏洛克·sherlock / 鲁班·luban / 梵高·vangogh / 达芬奇·davinci）承担。F048 进一步交付了 TeamAct Queue Steer，让 operator 可以对正在执行的 TeamAct 队列做细粒度调度干预。
 
-但 5 个灵智体之间**缺少一个全局调度器**：
+但 5 个可进化智能体之间**缺少一个全局调度器**：
 
 - F046 §9.4 的"cross-loop context"只是把上游产物通过 `context` 字段传给下游闭环，**没有定义谁负责调度**——是文心自己决定触发夏洛克？还是夏洛克完成后自己调梵高？
-- F048 的 SteerCommand 作用于 TeamAct 队列，但**队列里的任务从哪里来**？谁来根据任务需求把任务路由给"最合适的灵智体"？
+- F048 的 SteerCommand 作用于 TeamAct 队列，但**队列里的任务从哪里来**？谁来根据任务需求把任务路由给"最合适的可进化智能体"？
 - `flowforge/core/external_agent/collaboration_coordinator.py` 骨架中已经定义了 `CollaborationMode.SWARM` 枚举值，但 `coordinate()` 只是返回骨架句柄，**没有真实的多 Agent 群体协作调度**
 
 FlowForge 5 agent sweet spot 工程模式给出了一种解法：**5 agent sweet spot 模式**——5 个异构 agent 通过 SwarmCoordinator 全局唯一调度器协同，按 capability-based routing 分发任务、按 heartbeat+timeout 回收任务、按 blind_spots 自动找搭档补齐能力缺口。这种"5 agent + 单一调度器"模式是协作成本与能力覆盖的 sweet spot（超过 5 个 agent 协调成本急升，少于 3 个无互补空间）。
 
-F049 的目标是补全 **Swarm 协议层**——基于 5 个灵智体的能力画像（capability_profile），定义 SwarmCoordinator 全局调度器、SwarmTask 任务模型、AgentHeartbeat 心跳协议，让 5 个灵智体可以通过统一调度器协同工作，并将所有调度行为归档到 trace 日志（I2 不变量）。
+F049 的目标是补全 **Swarm 协议层**——基于 5 个可进化智能体的能力画像（capability_profile），定义 SwarmCoordinator 全局调度器、SwarmTask 任务模型、AgentHeartbeat 心跳协议，让 5 个可进化智能体可以通过统一调度器协同工作，并将所有调度行为归档到 trace 日志（I2 不变量）。
 
 ### 1.2 当前痛点
 
 1. **无全局调度器**：F046 五闭环的 cross-loop context 是"传话"机制，不是"调度"机制——每个闭环完成后必须自行决定下一步触发谁，无全局视角
-2. **能力匹配缺失**：任务进入队列后没有按 `required_capabilities` 路由到合适的灵智体——任何灵智体都可能拿到自己 blind_spots 内的任务
-3. **任务丢失风险**：F048 SteerCommand 可对队列做实时干预，但如果某个灵智体崩溃后任务无人接管，任务会永久滞留（I2 不变量未覆盖"任务不丢失"语义）
-4. **心跳监控缺失**：灵智体在 ACTION 阶段执行长任务时（如 LLM 生成 5 分钟），无心跳上报机制——若 LLM 调用挂死，调度器无法感知
+2. **能力匹配缺失**：任务进入队列后没有按 `required_capabilities` 路由到合适的可进化智能体——任何可进化智能体都可能拿到自己 blind_spots 内的任务
+3. **任务丢失风险**：F048 SteerCommand 可对队列做实时干预，但如果某个可进化智能体崩溃后任务无人接管，任务会永久滞留（I2 不变量未覆盖"任务不丢失"语义）
+4. **心跳监控缺失**：可进化智能体在 ACTION 阶段执行长任务时（如 LLM 生成 5 分钟），无心跳上报机制——若 LLM 调用挂死，调度器无法感知
 5. **能力互补无工程化**：F046 §2.5.1 文心的 `blind_spots` 字段写了"代码实现（交给夏洛克）"，但**谁来识别 blind_spots 并自动找搭档**没有定义
 6. **no-self-review 仅靠配置约束**：F046 §9.7 I9 不变量要求 review 闭环用与 author 不同厂商的 LLM，但当前仅靠 vangogh.yaml 配置 `cross_vendor_required: true` 标记，调度器不强制
 7. **CL-032 验证未通过**：`flowforge/core/external_agent/collaboration_coordinator.py` 骨架中 `SWARM` 模式无完整实现，CL-032 持续滞留 PARTIAL 状态
@@ -46,9 +46,9 @@ F049 的目标是补全 **Swarm 协议层**——基于 5 个灵智体的能力�
 ### 1.3 不做的影响
 
 如果不实现 Agent Swarm 协同协议：
-- **5 灵智体协同依赖人工编排**：operator 必须手动决定"现在让谁做什么"，违背"可进化智能体主导自主开发"愿景（VISION §7）
-- **能力匹配靠运气**：任务随机分给某个灵智体，可能落到 blind_spots 内导致质量不达标（违反 I3 能力匹配不变量）
-- **崩溃恢复无机制**：某灵智体崩溃后任务永久滞留，需 operator 手动重启（违反 I4 心跳超时回收）
+- **5 可进化智能体协同依赖人工编排**：operator 必须手动决定"现在让谁做什么"，违背"可进化智能体主导自主开发"愿景（VISION §7）
+- **能力匹配靠运气**：任务随机分给某个可进化智能体，可能落到 blind_spots 内导致质量不达标（违反 I3 能力匹配不变量）
+- **崩溃恢复无机制**：某可进化智能体崩溃后任务永久滞留，需 operator 手动重启（违反 I4 心跳超时回收）
 - **no-self-review 仅靠纪律**：vangogh 自审 sherlock 产物无法在调度层被阻止（违反 I5/I6）
 - **F046 五闭环无法全链路自动化**：cross-loop context 缺调度器后，每次闭环切换都需要 operator 显式 trigger
 - **F048 Steer 缺作用对象**：SteerCommand 作用于"任务队列"，但队列里任务来源、路由规则未定义
@@ -60,7 +60,7 @@ F049 的目标是补全 **Swarm 协议层**——基于 5 个灵智体的能力�
 
 ### 2.1 核心设计
 
-**分层架构**：基于 5 灵智体能力画像（数据层）+ 已有 TeamAct 状态机（F002 执行层）+ F048 Steer 协议（干预层），新增 Swarm 协议层作为全局调度器：
+**分层架构**：基于 5 可进化智能体能力画像（数据层）+ 已有 TeamAct 状态机（F002 执行层）+ F048 Steer 协议（干预层），新增 Swarm 协议层作为全局调度器：
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -107,11 +107,11 @@ F049 的目标是补全 **Swarm 协议层**——基于 5 个灵智体的能力�
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 5 灵智体能力画像（capability_profile）
+### 2.2 5 可进化智能体能力画像（capability_profile）
 
-参考 5 agent sweet spot 模式，5 个灵智体覆盖"文档/代码/架构/审查/测试"五大能力域，其中审查员必须跨厂商（I5/I6 不变量）：
+参考 5 agent sweet spot 模式，5 个可进化智能体覆盖"文档/代码/架构/审查/测试"五大能力域，其中审查员必须跨厂商（I5/I6 不变量）：
 
-| # | 灵智体 | forgekin_id | 厂商 | 能力域 | native_abilities |
+| # | 可进化智能体 | forgekin_id | 厂商 | 能力域 | native_abilities |
 |---|--------|-------------|:----:|:------:|------------------|
 | 1 | 文心·wenxin | `forgemind:wenxin` | trae | doc | doc_generation / doc_review / format_check / frontmatter_check |
 | 2 | 夏洛克·sherlock | `forgemind:sherlock` | trae | code | code_generation / bug_fixing / refactoring / test_writing |
@@ -121,7 +121,7 @@ F049 的目标是补全 **Swarm 协议层**——基于 5 个灵智体的能力�
 
 **能力互补矩阵**（blind_spots 自动找搭档）：
 
-| 灵智体 | blind_spots | 搭档（自动转交） |
+| 可进化智能体 | blind_spots | 搭档（自动转交） |
 |--------|-------------|------------------|
 | wenxin | code_generation, architecture_design | sherlock / luban |
 | sherlock | doc_generation, code_review | wenxin / vangogh |
@@ -129,7 +129,7 @@ F049 的目标是补全 **Swarm 协议层**——基于 5 个灵智体的能力�
 | vangogh | code_generation（禁止写代码） | sherlock |
 | davinci | architecture_design, doc_generation | luban / wenxin |
 
-**跨厂商要求**（I5 不变量）：`code_review` / `doc_review` 必须由与 author 不同厂商的灵智体执行——当前仅 vangogh 是 claude 厂商，其他 4 个是 trae 厂商，所以 review 任务天然落到 vangogh。
+**跨厂商要求**（I5 不变量）：`code_review` / `doc_review` 必须由与 author 不同厂商的可进化智能体执行——当前仅 vangogh 是 claude 厂商，其他 4 个是 trae 厂商，所以 review 任务天然落到 vangogh。
 
 ### 2.3 任务分发与回收策略
 
@@ -291,7 +291,7 @@ class AgentHeartbeat(BaseModel):
 
 
 class SwarmCoordinator:
-    """Swarm 协调器 — 5 灵智体协同调度（I1 单一调度器）."""
+    """Swarm 协调器 — 5 可进化智能体协同调度（I1 单一调度器）."""
 
     HEARTBEAT_TIMEOUT_SECONDS = 30.0  # I4 心跳超时
     MAX_RETRIES = 3  # 最大重试次数
@@ -343,7 +343,7 @@ class SwarmCoordinator:
 
 | # | 不变量 | 说明 | 实现机制 |
 |---|--------|------|---------|
-| **I1** | 单一调度器 | SwarmCoordinator 全局唯一——所有 5 灵智体的任务分发必须经过同一个 SwarmCoordinator 实例，禁止灵智体之间直接派发任务 | DI 容器单例注入（红线 12）；构造函数私有化外部禁止 `SwarmCoordinator()` 直接实例化（通过 `create_swarm_coordinator()` 工厂） |
+| **I1** | 单一调度器 | SwarmCoordinator 全局唯一——所有 5 可进化智能体的任务分发必须经过同一个 SwarmCoordinator 实例，禁止可进化智能体之间直接派发任务 | DI 容器单例注入（红线 12）；构造函数私有化外部禁止 `SwarmCoordinator()` 直接实例化（通过 `create_swarm_coordinator()` 工厂） |
 | **I2** | 任务不丢失 | 任何 `submit_task` 调用必须立即写入 `_tasks` 字典 + 落盘 trace 记录（`data/forgemind/swarm_trace.jsonl`）；reassign 操作也必须落 trace | `submit_task` 同步写入 `_tasks` + 异步 `_archive_record`；archive 失败不阻断 submit，但记 ERROR 日志 |
 | **I3** | 能力匹配 | `dispatch` 必须把任务路由给 `capabilities ⊇ task.required_capabilities` 的 agent；agent.capability_profile 不覆盖任务需求时不分发（任务保持 PENDING） | `_find_capable_agent` 用集合包含关系校验 `set(agent_caps) >= set(task.required_capabilities)` |
 | **I4** | 心跳超时回收 | ASSIGNED/RUNNING 任务 30s（`HEARTBEAT_TIMEOUT_SECONDS`）无心跳自动 reassign；reassign 最多 3 次（`MAX_RETRIES`），超过则 FAILED | `check_timeouts` 每 5s 扫描，超时则 `retry_count += 1` 并重置 `assigned_agent_id = None` |
@@ -403,7 +403,7 @@ operator 通过 F048 SteerCommand 对 Swarm 队列实时干预
 
 Phase 2 将在 FlowForge Web UI（F026 应用层）添加 Swarm Dashboard 组件，可视化展示：
 
-- **左侧**：5 灵智体状态卡片（agent_id / vendor / capabilities / 当前 workload / 最近心跳时间）
+- **左侧**：5 可进化智能体状态卡片（agent_id / vendor / capabilities / 当前 workload / 最近心跳时间）
 - **中部**：Swarm 任务看板（按 status 分列：PENDING / ASSIGNED / RUNNING / COMPLETED / FAILED）
 - **右侧**：Swarm 调度 trace 历史（最近 N 条 SwarmDispatchRecord）
 - **顶部**：全局统计（总任务数 / 完成率 / 平均延迟 / reassign 次数）
@@ -439,7 +439,7 @@ Swarm Dashboard 复用 F047 WebChatChannel 的 WebSocket 推送通道，状态�
    - `run_continuously`：持续调度循环（永不停止）
 4. 实现 I1-I6 六个不变量
 5. 实现 trace 归档到 `data/forgemind/swarm_trace.jsonl`（append-only）
-6. 创建配置文件 `flowforge/config/agent_swarm.yaml`（5 个灵智体能力画像 + 跨厂商要求）
+6. 创建配置文件 `flowforge/config/agent_swarm.yaml`（5 个可进化智能体能力画像 + 跨厂商要求）
 7. 单元测试：test_swarm_coordinator.py / test_swarm_invariants.py / test_swarm_dispatch.py
 
 #### Phase 2：Swarm Dashboard Web UI + F048 Steer 集成
@@ -454,7 +454,7 @@ Swarm Dashboard 复用 F047 WebChatChannel 的 WebSocket 推送通道，状态�
 1. 归档同步到 MindCodex（F039）：每次 SwarmDispatchRecord 作为 `SwarmEpisodeCard` 知识对象
 2. Eval Ledger（F040）采集 Swarm trace 信号（分发延迟 / reassign 次数 / 能力匹配率 / 心跳超时率）
 3. 七类归因（F020）：Swarm 调度失败时归因到 `swarm_no_capable_agent / swarm_heartbeat_timeout / swarm_cross_vendor_violation / swarm_max_retries_exceeded` 等子类
-4. E2E 测试：test_swarm_e2e.py（真实 5 灵智体协同 + 归档检索）
+4. E2E 测试：test_swarm_e2e.py（真实 5 可进化智能体协同 + 归档检索）
 
 ### 3.2 依赖关系
 
@@ -505,7 +505,7 @@ agent_swarm:
 
 ### 4.1 功能验收
 
-- [ ] AC-1: `SwarmCoordinator.register_agent` 注册 5 个灵智体的能力画像 + 厂商标识
+- [ ] AC-1: `SwarmCoordinator.register_agent` 注册 5 个可进化智能体的能力画像 + 厂商标识
 - [ ] AC-2: `SwarmCoordinator.submit_task` 接收 SwarmTask 并返回 task_id，存入 `_tasks` 字典
 - [ ] AC-3: `SwarmCoordinator.dispatch` 按 capability-based routing 把 PENDING 任务路由给能力匹配的 agent
 - [ ] AC-4: `_find_capable_agent` 4 步过滤正确执行（能力包含 → I5 跨厂商 → I6 no-self-review → load balancing）
@@ -548,7 +548,7 @@ agent_swarm:
 ### 5.1 单元测试
 
 - `test_swarm_models.py`：`SwarmTask / AgentHeartbeat` Pydantic 校验 / 默认值 / 状态枚举
-- `test_swarm_register.py`：`register_agent` 注册 5 灵智体能力画像
+- `test_swarm_register.py`：`register_agent` 注册 5 可进化智能体能力画像
 - `test_swarm_dispatch.py`：`dispatch` capability-based routing / 4 步过滤 / load balancing
 - `test_swarm_heartbeat.py`：`heartbeat` 更新 / `check_timeouts` 超时检测 / reassign
 - `test_swarm_complement.py`：`_find_complement_agent` 能力互补推荐
@@ -590,7 +590,7 @@ E2E 测试遵守 T1-T8 铁律：
 
 - capability-based routing 的准确性（任务是否路由到能力匹配的 agent）
 - I1-I6 六个不变量的有效性（单一调度器 / 任务不丢失 / 能力匹配 / 心跳超时 / 跨厂商独立 / no-self-review）
-- 5 灵智体协同的负载均衡（workload 分布是否合理）
+- 5 可进化智能体协同的负载均衡（workload 分布是否合理）
 - 能力互补推荐的有效性（blind_spots 任务是否找到合适搭档）
 - operator 体验（调度延迟、Plan Board 易用性 — Phase 2）
 
@@ -629,7 +629,7 @@ E2E 测试遵守 T1-T8 铁律：
 
 ### 7.2 理由
 
-Agent Swarm 协同协议是 FlowForge 多灵智体协同体系的**永久基础设施**——只要 FlowForge 存在 5 灵智体协同调度需求，就需要 SwarmCoordinator 全局调度器。即使未来 LLM 能力升级到完全自主，5 agent sweet spot 模式仍然是协作成本与能力覆盖的最佳平衡点（FlowForge 5 agent sweet spot 工程模式验证）。
+Agent Swarm 协同协议是 FlowForge 多可进化智能体协同体系的**永久基础设施**——只要 FlowForge 存在 5 可进化智能体协同调度需求，就需要 SwarmCoordinator 全局调度器。即使未来 LLM 能力升级到完全自主，5 agent sweet spot 模式仍然是协作成本与能力覆盖的最佳平衡点（FlowForge 5 agent sweet spot 工程模式验证）。
 
 具体而言：
 - `SwarmTask / AgentHeartbeat / SwarmTaskStatus` 核心模型属于 Build to Persist（调度契约）

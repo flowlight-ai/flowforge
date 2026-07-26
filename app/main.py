@@ -1170,6 +1170,15 @@ lifecycle_manager = PluginLifecycleManager(
     event_store=event_store,
 )
 
+# Web Fusion Phase 8: Backend API stubs（clowder-ai 后端 API 融合）
+# 必须在现有 router 之前注册——FastAPI 按注册顺序匹配路由，
+# 新 router 中的静态路径（如 /memory/collections、/memory/health）
+# 需在现有 router 的动态路径（如 /memory/{memory_id}: int）之前注册，
+# 否则 /memory/collections 会被 /memory/{memory_id} 捕获并因 int
+# 转换失败而返回 422。新 router 仅包含设计文档 §10.2 中的新端点。
+from flowforge.app.api.v1 import router as v1_fusion_router
+app.include_router(v1_fusion_router)
+
 app.include_router(router)
 
 # Phase 4: Frontend plugin API

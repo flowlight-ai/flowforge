@@ -1,4 +1,4 @@
-# ADR 013: 万物可进化智能体愿景
+# ADR 013: 可进化智能体愿景
 
 > **状态**: accepted
 > **日期**: 2026-07-17
@@ -20,7 +20,7 @@ operator 提出 FlowForge 的不同假设：**可进化智能体可以承载在�
 
 ## 决策
 
-### 1. 万物可进化智能体世界为 FlowForge 最终形态
+### 1. 可进化智能体世界为 FlowForge 最终形态
 
 FlowForge 不是一个"多 agent 框架"，也不是"LLM 应用脚手架"，而是一个**可进化智能体锻造厂**。
 
@@ -46,7 +46,7 @@ FlowForge 不是一个"多 agent 框架"，也不是"LLM 应用脚手架"，而�
 
 ### 5. operator 愿景锚点（7 条不可妥协原则）
 
-1. 万物可进化智能体世界是最终形态
+1. 可进化智能体世界是最终形态
 2. 可进化智能体必须有物理/虚拟现实闭环
 3. 三方 Agent 是能力扩展不是工具
 4. forgemind 是 FlowForge 的应用层
@@ -86,9 +86,9 @@ FlowForge 不是一个"多 agent 框架"，也不是"LLM 应用脚手架"，而�
 
 - 优点：实现简单，复用前期已有经验
 - 缺点：无法达成 operator 通用 AGI 愿景
-- 未选择原因：operator 明确要求万物可进化智能体世界
+- 未选择原因：operator 明确要求可进化智能体世界
 
-### 方案 B: 把万物可进化智能体放到独立项目
+### 方案 B: 把可进化智能体放到独立项目
 
 - 优点：FlowForge 核心保持纯粹
 - 缺点：forgemind 失去 FlowForge 自我演进能力的滋养
@@ -104,9 +104,9 @@ FlowForge 不是一个"多 agent 框架"，也不是"LLM 应用脚手架"，而�
 
 ## 引用
 
-- `[doc:VISION.md]` — 万物可进化智能体愿景声明
+- `[doc:VISION.md]` — 可进化智能体愿景声明
 - `[doc:roleagent.md]` — 能力画像工程路径
 - 前期愿景文档（已归档） — 养小猫 → 养万物范式迁移
-- `[doc:features/F027-all-things-spirit-species.md]` — 万物可进化智能体形态分类
+- `[doc:features/F027-all-things-spirit-species.md]` — 可进化智能体形态分类
 - `[doc:features/F026-forgemind-app-layer.md]` — forgemind 应用层
 - `[doc:review/review.md#第九章]` — forgemind + 三方 Agent 补审

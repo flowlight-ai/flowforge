@@ -1,4 +1,4 @@
-"""ForgeMind Engine — 统一管理三模式自我进化（v7.0 育灵体系主引擎）。
+"""ForgeMind Engine — 统一管理三模式自我进化（v7.0 Forge Nurturing体系主引擎）。
 
 按 ADR-012 命名融合：SelfEvolutionEngine → ForgeMindEngine
 （M18/M19/M20 三个 v4.0 自创术语合并为 v7.0 ForgeMindEngine）。
@@ -34,7 +34,7 @@ logger = get_logger("flowforge.evolution.engine")
 
 
 class ForgeMindEngine:
-    """ForgeMind Engine — 统一管理三模式自我进化（v7.0 育灵体系主引擎）。
+    """ForgeMind Engine — 统一管理三模式自我进化（v7.0 Forge Nurturing体系主引擎）。
 
     按 ADR-012 命名融合：原 SelfEvolutionEngine（M18）已废弃，合并 M18/M19/M20 为 ForgeMindEngine。
 

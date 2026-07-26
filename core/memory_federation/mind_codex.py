@@ -1,18 +1,18 @@
-"""MindCodex — 灵典可检索知识库。
+"""MindCodex — MindCodex可检索知识库。
 
-实现 roleagent.md §4.3 L5 灵典层：
-    - MindCodexEntry: 灵典条目（蒸馏的经验单元）
-    - MindCodex: 灵典知识库（存储 + 检索 + 从经验蒸馏）
+实现 roleagent.md §4.3 L5 MindCodex层：
+    - MindCodexEntry: MindCodex条目（蒸馏的经验单元）
+    - MindCodex: MindCodex知识库（存储 + 检索 + 从经验蒸馏）
 
 设计依据：
     - F039-mind-codex-searchable.md
-    - roleagent.md §4.3 L5 灵典 Mind Codex（跨代际持续）
-    - v7.0 育灵体系：灵锻 SpiritForge 蒸馏经验 → 灵典存储
+    - roleagent.md §4.3 L5 MindCodex Mind Codex（跨代际持续）
+    - v7.0 Forge Nurturing体系：SpiritForge SpiritForge 蒸馏经验 → MindCodex存储
 
-灵典定位（roleagent.md §4.3）：
+MindCodex定位（roleagent.md §4.3）：
     - L4 Collection 是沉淀的领域知识（被动积累）
-    - L5 灵典是蒸馏的可复用经验（主动提炼，跨代际持续）
-    - 灵典是灵锻 SpiritForge 的产出存储层，可被未来灵智体检索复用
+    - L5 MindCodex是蒸馏的可复用经验（主动提炼，跨代际持续）
+    - MindCodex是SpiritForge SpiritForge 的产出存储层，可被未来Forgekin检索复用
 
 铁律遵守：
     - 铁律 3：通过构造函数注入 logger / llm_client / prompts_path
@@ -45,10 +45,10 @@ logger = get_logger("memory_federation.mind_codex")
 
 
 class MindCodexEntry(BaseModel):
-    """灵典条目——蒸馏的经验单元。
+    """MindCodex条目——蒸馏的经验单元。
 
     对应 roleagent.md §4.3 L5：跨代际持续的蒸馏经验。
-    每个条目是灵锻 SpiritForge 从一次具体任务经验中蒸馏出的可复用知识。
+    每个条目是SpiritForge SpiritForge 从一次具体任务经验中蒸馏出的可复用知识。
 
     Attributes:
         codex_id: 条目唯一标识（自动生成 UUID）。
@@ -57,7 +57,7 @@ class MindCodexEntry(BaseModel):
         domain: 所属领域（如 programming / finance / medicine）。
         skill_tags: 技能标签列表（用于检索匹配 + Index 入口）。
         derived_from: 来源经验标识（如 episode_id / trace_id）。
-            用于追溯灵典条目来自哪次具体经验。
+            用于追溯MindCodex条目来自哪次具体经验。
         created_at: 创建时间 ISO 8601。
     """
 
@@ -88,7 +88,7 @@ class MindCodexEntry(BaseModel):
 def _load_codex_prompts(
     prompts_path: Optional[Path],
 ) -> dict[str, str]:
-    """加载灵典提示词模板。
+    """加载MindCodex提示词模板。
 
     铁律 5+P16：禁止硬编码提示词。
     模板从 config/prompts.yaml 的 mind_codex 节加载。
@@ -124,14 +124,14 @@ def _load_codex_prompts(
 
 
 class MindCodex:
-    """灵典知识库——存储 + 检索 + 从经验蒸馏。
+    """MindCodex知识库——存储 + 检索 + 从经验蒸馏。
 
-    v7.0 育灵体系：灵锻 SpiritForge 完成经验蒸馏后，结果存入灵典。
-    灵典是跨代际持续的知识库，可被未来灵智体检索复用。
+    v7.0 Forge Nurturing体系：SpiritForge SpiritForge 完成经验蒸馏后，结果存入MindCodex。
+    MindCodex是跨代际持续的知识库，可被未来Forgekin检索复用。
 
     设计原则（roleagent.md §4.1 + §4.5）：
         - 检索简单优先：grep 风格的子串匹配 + 关键词重叠
-        - 不把复杂度压到检索系统，蒸馏交给灵锻 SpiritForge
+        - 不把复杂度压到检索系统，蒸馏交给SpiritForge SpiritForge
 
     Args:
         llm_client: 可选的 LLM 客户端（用于 derive_from_experience 蒸馏）。
@@ -159,10 +159,10 @@ class MindCodex:
     # ── 存储操作 ───────────────────────────────────────────────────
 
     async def add_entry(self, entry: MindCodexEntry) -> None:
-        """添加灵典条目。
+        """添加MindCodex条目。
 
         Args:
-            entry: 要添加的灵典条目。
+            entry: 要添加的MindCodex条目。
         """
         self._entries.append(entry)
         self._logger.info(
@@ -172,7 +172,7 @@ class MindCodex:
         )
 
     def list_entries(self) -> list[MindCodexEntry]:
-        """列出所有灵典条目（用于 trace / 调试）。"""
+        """列出所有MindCodex条目（用于 trace / 调试）。"""
         return list(self._entries)
 
     # ── 检索操作 ───────────────────────────────────────────────────
@@ -180,7 +180,7 @@ class MindCodex:
     async def search(
         self, query: str, top_k: int = 5
     ) -> list[MindCodexEntry]:
-        """检索灵典条目。
+        """检索MindCodex条目。
 
         简单实现（roleagent.md §4.1 简单系统优先）：
             1. 子串匹配（grep 风格，零幻觉）—— 标题 / 内容 / 标签三处查找
@@ -197,7 +197,7 @@ class MindCodex:
             top_k: 返回前 K 条（默认 5）。
 
         Returns:
-            匹配的灵典条目列表（按相关性降序）。
+            匹配的MindCodex条目列表（按相关性降序）。
         """
         if not query:
             return []
@@ -239,9 +239,9 @@ class MindCodex:
     async def derive_from_experience(
         self, experience: dict[str, Any]
     ) -> MindCodexEntry:
-        """从经验蒸馏灵典条目。
+        """从经验蒸馏MindCodex条目。
 
-        v7.0 育灵体系：将一次具体任务经验蒸馏为可复用的灵典条目。
+        v7.0 Forge Nurturing体系：将一次具体任务经验蒸馏为可复用的MindCodex条目。
 
         蒸馏策略：
             1. 若注入了 llm_client + prompts.yaml（铁律 5+P16）→ 调用 LLM 蒸馏
@@ -256,7 +256,7 @@ class MindCodex:
                 - source_id: 来源标识（episode_id / trace_id）
 
         Returns:
-            蒸馏后的 MindCodexEntry（已存入灵典）。
+            蒸馏后的 MindCodexEntry（已存入MindCodex）。
         """
         title = str(experience.get("title", "untitled_experience"))
         content = str(experience.get("content", ""))

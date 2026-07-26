@@ -14,10 +14,10 @@ F093 Bridge Layer 的"导演"角色。Runtime Coordinator 决定：
     - **Canon 提议**：``propose_canon`` 委托给
       :class:`~flowforge.core.world_engine.canon_sync.CanonSyncProtocol`，
       不直接写入 CanonMemory（CL-010 铁律）。
-    - **身份校验**：每次进入场景前，校验 Core Identity 的灵印一致性。
+    - **身份校验**：每次进入场景前，校验 Core Identity 的SoulImprint一致性。
 
 修复的问题:
-    - CL-012：v7.0 无 Bridge Layer / runtime coordinator，灵智体直接用
+    - CL-012：v7.0 无 Bridge Layer / runtime coordinator，Forgekin直接用
       persona 介入任务，无协议隔离 Core Identity 与 World。本类是"导演"，
       统一协调跨层操作。
 
@@ -52,7 +52,7 @@ class RuntimeCoordinator:
         ...     bridge=bridge_layer,
         ... )
         >>> await coordinator.enter_scene(scene, role_mask)
-        >>> # ... 灵智体在场景内 RP ...
+        >>> # ... Forgekin在场景内 RP ...
         >>> proposal_id = await coordinator.propose_canon(turn)
         >>> await coordinator.exit_scene()
 

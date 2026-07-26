@@ -46,10 +46,10 @@
 **废弃命名**：
 - ❌ "E6 灵匠 Mind Artisan" → ✅ ForgeMind（Persistent Identity Agent Framework）
 - ❌ "炉灵" → ✅ Forgekin（Evolvable Agent）
-- ❌ "魂忆" → ✅ EchoStore（Episodic Memory Store，社区社交称"灵忆"）
-- ❌ "魂印" → ✅ SoulImprint（Persistent Identity，社区社交称"灵印"）
-- ❌ "自锻" → ✅ SpiritForge（Experience Distillation，社区社交称"灵锻"）
-- ❌ "锻典" → ✅ MindCodex（Distilled Knowledge Base，社区社交称"灵典"）
+- ❌ "魂忆" → ✅ EchoStore（Episodic Memory Store，社区社交称"情景记忆存储"）
+- ❌ "魂印" → ✅ SoulImprint（Persistent Identity，社区社交称"持久身份"）
+- ❌ "自锻" → ✅ SpiritForge（Experience Distillation，社区社交称"经验蒸馏"）
+- ❌ "锻典" → ✅ MindCodex（Distilled Knowledge Base，社区社交称"蒸馏知识库"）
 - ❌ M18/M19/M20 自创术语 → ✅ M1-M17 + v7.0 FR-EVO 术语
 
 ### 3.2 v7.1 核心术语表（P1 优先 + P0 概念锚定）

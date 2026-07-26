@@ -245,24 +245,26 @@ assignments:
     - MiniMax-M3
     - DeepSeek-V4-Pro
   content_create:
-    # v5.76: primary改为HunYuan3（实测Qwen3.6-Plus返回"无法回答"，Doubao-Seed2.0超时，
-    # HunYuan3 webchat稳定生成262字中文，含第一人称+感官细节+口语化）
-    # 保留Qwen3.6-Plus/Doubao作为fallback（API模式可能恢复）
-    primary: openroute/HunYuan3
+    # v5.82: primary从Doubao-Seed2.0改为DeepSeek-V4-Pro — Doubao-Seed2.0 API后端(ark/doubao-1-5-pro-32k)
+    # 生成短内容(730字)，导致质量分0.69 FAIL。DeepSeek-V4-Pro首个API后端是ark/deepseek-v3-2-251201
+    # (DeepSeek V3.2以长文本生成能力著称)，预期生成更长内容
+    # v5.81: primary从GLM-5.1改为Doubao-Seed2.0 — GLM-5.1 webchat截断长prompt(15547字符)
+    primary: openroute/DeepSeek-V4-Pro
     fallbacks:
-    - openroute/GLM-5.1
     - openroute/Doubao-Seed2.0
+    - openroute/GLM-5.1
     - openroute/Qwen3.6-Plus
     - openroute/Kimi-K2.6
     - openroute/MiniMax-M3
-    - openroute/DeepSeek-V4-Pro
+    - openroute/HunYuan3
   content_refine:
-    # 铁律: polisher 必须使用 Kimi-K2.6
-    # 实测 DeepSeek-V4-Pro/Doubao-Seed2.0 润色会降低质量(创作0.85→润色0.57)
-    # Kimi-K2.6 超时时 fallback 到 Doubao-Seed2.0
-    primary: openroute/Kimi-K2.6
+    # v5.84: primary从Kimi-K2.6改为Doubao-Seed2.0 — Kimi-K2.6反思重写把2279字缩到1110字，
+    # 导致质量分从0.903降到0.8055。Doubao-Seed2.0在writer阶段生成2184-2279字稳定长内容
+    # 铁律变更: 之前"polisher必须使用Kimi-K2.6"是基于旧测试，v5.84实测Doubao-Seed2.0更稳定
+    # Kimi-K2.6作为fallback保留
+    primary: openroute/Doubao-Seed2.0
     fallbacks:
-    - openroute/Doubao-Seed2.0
+    - openroute/Kimi-K2.6
     - openroute/Qwen3.6-Plus
     - openroute/HunYuan3
     - openroute/GLM-5.1

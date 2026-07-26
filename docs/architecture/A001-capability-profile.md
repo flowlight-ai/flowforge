@@ -16,7 +16,7 @@
 
 ### 1.1 架构问题
 
-FlowForge 在架构层需要解决"Forgekin（Evolvable Agent，社区社交称'灵智体'）如何被选择去承担某项任务"的根本问题。当前 `default_llm_actors.py` 把Forgekin固定成岗位槽位（如"你是内容创作者"），违反 roleagent.md 第 0 章"role-agent 是蒸汽马车式误判"的核心主张，导致：
+FlowForge 在架构层需要解决"Forgekin（Evolvable Agent，社区社交称'可进化智能体'）如何被选择去承担某项任务"的根本问题。当前 `default_llm_actors.py` 把Forgekin固定成岗位槽位（如"你是内容创作者"），违反 roleagent.md 第 0 章"role-agent 是蒸汽马车式误判"的核心主张，导致：
 
 1. 路由基于硬编码角色而非能力匹配，违反编程红线第 10 条（禁止在 flowforge 中写死业务领域代码）与第 11 条（禁止硬编码提示词/路径/密钥/端口）
 2. 跨厂商 review 不基于盲点画像，同厂商Forgekin共享盲点的结构性问题无法消除

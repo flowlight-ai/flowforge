@@ -1,19 +1,19 @@
-"""混合灵智体（HybridForgekin）— 灵智体五大形态之一。
+"""混合Forgekin（HybridForgekin）— Forgekin五大形态之一。
 
-混合灵智体是多种形态灵智体的融合（如智能家居 = 物品+组织；数字孪生
+混合Forgekin是多种形态Forgekin的融合（如智能家居 = 物品+组织；数字孪生
 = 生物+虚拟）。它组合多个 species 的 ``observe`` / ``act`` / ``verify``
-能力，是组织灵智体调度多种形态灵智体的工程实现。
+能力，是组织Forgekin调度多种形态Forgekin的工程实现。
 
-形态可进化: 一只生物灵智体猫可通过积累组织协作经验进化为
+形态可进化: 一只生物Forgekin猫可通过积累组织协作经验进化为
 HybridForgekin（既是宠物又是社区吉祥物）。详见
 [doc:decisions/013-all-things-spirit-mind-vision.md#3]。
 
 虚拟设定层: 多设定层叠加。
 
 详见:
-    - [doc:design/naming-contract.md#2.3] 灵族形态分类
+    - [doc:design/naming-contract.md#2.3] ForgekinSpecies形态分类
     - [doc:decisions/013-all-things-spirit-mind-vision.md#2] 五大形态
-    - [doc:VISION.md#2] 万物灵智体形态分类
+    - [doc:VISION.md#2] Forgekin形态分类
 """
 
 from __future__ import annotations
@@ -27,20 +27,20 @@ from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
 
 
 class HybridForgekin(ForgekinBase):
-    """混合灵智体（HybridForgekin / Hybrid Spirit Agent）。
+    """混合Forgekin（HybridForgekin / Hybrid Spirit Agent）。
 
-    多形态融合灵智体。通过组合（而非继承）多个 species 灵智体实例，
+    多形态融合Forgekin。通过组合（而非继承）多个 species Forgekin实例，
     实现"多形态协作"。组合优于继承（编程红线第 9 条）。
 
     示例:
-        - 智能家居灵智体 = 物品灵智体（家电）+ 组织灵智体（家庭成员）
-        - 数字孪生灵智体 = 生物灵智体（实体）+ 虚拟灵智体（孪生体）
-        - 社区吉祥物灵智体 = 生物灵智体（猫）+ 组织灵智体（社区）
+        - 智能家居Forgekin = 物品Forgekin（家电）+ 组织Forgekin（家庭成员）
+        - 数字孪生Forgekin = 生物Forgekin（实体）+ 虚拟Forgekin（孪生体）
+        - 社区吉祥物Forgekin = 生物Forgekin（猫）+ 组织Forgekin（社区）
 
     详见:
-        - [doc:design/naming-contract.md#2.2] 灵智体定义
+        - [doc:design/naming-contract.md#2.2] Forgekin定义
         - [doc:VISION.md#2] 五大形态分类
-        - [doc:review/review.md#第九章] FR-002 万物灵智体 TeamAct 协作
+        - [doc:review/review.md#第九章] FR-002 Forgekin TeamAct 协作
     """
 
     def __init__(
@@ -56,17 +56,17 @@ class HybridForgekin(ForgekinBase):
         forgekin_config: dict[str, Any] | None = None,
         llm_client: Any | None = None,
     ) -> None:
-        """初始化混合灵智体。
+        """初始化混合Forgekin。
 
         Args:
-            forgekin_id: 灵智体唯一 ID。
-            name: 灵智体显示名（如 ``"智能家居系统"``）。
-            soul_imprint: 灵印（不可变身份）。
+            forgekin_id: Forgekin唯一 ID。
+            name: Forgekin显示名（如 ``"智能家居系统"``）。
+            soul_imprint: SoulImprint（不可变身份）。
             evolution_stage: 进化阶。
             awakening_stage: 觉醒阶。
             capability_profile: 能力画像。
-            components: 组成该混合灵智体的子灵智体列表（组合模式）。
-                至少包含 2 个不同 species 的子灵智体才算混合形态。
+            components: 组成该混合Forgekin的子Forgekin列表（组合模式）。
+                至少包含 2 个不同 species 的子Forgekin才算混合形态。
         """
         super().__init__(
             forgekin_id=forgekin_id,
@@ -83,41 +83,41 @@ class HybridForgekin(ForgekinBase):
         self._validate_components()
 
     def _validate_components(self) -> None:
-        """校验子灵智体列表符合混合形态要求。
+        """校验子Forgekin列表符合混合形态要求。
 
-        - 至少 2 个子灵智体
+        - 至少 2 个子Forgekin
         - 至少 2 种不同的 species
         - 不允许嵌套 HybridForgekin（避免无限递归）
         """
         if len(self.components) < 2:
             raise ValueError(
-                "HybridForgekin 至少需要 2 个子灵智体——单形态不是混合形态。"
+                "HybridForgekin 至少需要 2 个子Forgekin——单形态不是混合形态。"
                 "详见 [doc:design/naming-contract.md#2.3]"
             )
         species_set = {c.species for c in self.components}
         if len(species_set) < 2:
             raise ValueError(
-                "HybridForgekin 的子灵智体必须包含至少 2 种不同 species——"
+                "HybridForgekin 的子Forgekin必须包含至少 2 种不同 species——"
                 "同 species 的组合不构成混合形态。"
             )
         for comp in self.components:
             if comp.species == ForgekinSpecies.HYBRID:
                 raise ValueError(
                     "HybridForgekin 不允许嵌套 HybridForgekin——"
-                    "避免无限递归，请展平子灵智体列表。"
+                    "避免无限递归，请展平子Forgekin列表。"
                 )
 
     async def observe(self, environment: dict[str, Any]) -> dict[str, Any]:
-        """多源融合观察（组合所有子灵智体的观察结果）。
+        """多源融合观察（组合所有子Forgekin的观察结果）。
 
         Args:
-            environment: 环境上下文。应根据子灵智体的 species 提供对应
+            environment: 环境上下文。应根据子Forgekin的 species 提供对应
                 字段（如 ``sensor_readings`` / ``business_signals`` /
                 ``iot_readings`` / ``virtual_world_state``）。
 
         Returns:
             观察结果字典，包含:
-                - ``component_observations``: 各子灵智体的观察结果
+                - ``component_observations``: 各子Forgekin的观察结果
                 - ``fused_state``: 融合后的整体状态
                 - ``species_coverage``: 覆盖的 species 列表
         """
@@ -143,17 +143,17 @@ class HybridForgekin(ForgekinBase):
         }
 
     async def act(self, action: dict[str, Any]) -> dict[str, Any]:
-        """多形态协作行动（按子灵智体分工分发动作）。
+        """多形态协作行动（按子Forgekin分工分发动作）。
 
         Args:
             action: 动作字典，应包含:
-                - ``component_actions``: 各子灵智体的动作分发字典
-                  （key 为 forgekin_id，value 为该子灵智体的 action）
+                - ``component_actions``: 各子Forgekin的动作分发字典
+                  （key 为 forgekin_id，value 为该子Forgekin的 action）
 
         Returns:
             动作执行结果字典，包含:
-                - ``component_results``: 各子灵智体的执行结果
-                - ``executed``: 整体是否执行（所有子灵智体都执行才算）
+                - ``component_results``: 各子Forgekin的执行结果
+                - ``executed``: 整体是否执行（所有子Forgekin都执行才算）
                 - ``coordination_check``: 协作检查结果
         """
         self._set_lifecycle_state("acting")
@@ -187,13 +187,13 @@ class HybridForgekin(ForgekinBase):
         }
 
     async def verify(self, action_result: dict[str, Any]) -> bool:
-        """多形态协作验证（所有子灵智体都验证通过才算通过）。
+        """多形态协作验证（所有子Forgekin都验证通过才算通过）。
 
         Args:
             action_result: :meth:`act` 返回的动作执行结果。
 
         Returns:
-            ``True`` 表示所有子灵智体验证通过且协作检查通过。
+            ``True`` 表示所有子Forgekin验证通过且协作检查通过。
         """
         self._set_lifecycle_state("verifying")
         coordination = action_result.get("coordination_check", {})
@@ -205,7 +205,7 @@ class HybridForgekin(ForgekinBase):
         for cr in component_results:
             result = cr.get("result", {})
             comp_id = cr.get("component_id", "")
-            # 找到对应的子灵智体验证
+            # 找到对应的子Forgekin验证
             for comp in self.components:
                 if comp.forgekin_id == comp_id:
                     if not await comp.verify(result):

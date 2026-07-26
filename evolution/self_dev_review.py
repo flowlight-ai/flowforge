@@ -1,7 +1,7 @@
 """F046 §9.5 SelfDevReviewLoop — 代码审查自我演进闭环.
 
 负责跨厂商独立审查代码，是 F046 v1.1 五闭环扩展架构新增的闭环之一.
-对应灵智体：审查员·梵高（forgemind:vangogh）.
+对应Forgekin：审查员·梵高（forgemind:vangogh）.
 
 设计动机（参考 roleagent.md 核心理论）：
 - 跨厂商 review 是结构性必需（no-self-review 铁律）
@@ -9,7 +9,7 @@
 - Generator-Verifier 双向辩论
   审查不是单向判定，审查员可 push back，author 可申诉
 - 5 agent sweet spot
-  审查员是五灵智体协作的关键角色
+  审查员是五Forgekin协作的关键角色
 
 处理对象：
 - 任意 .py 文件（接受 Code/Framework 闭环的 changed_files 作为输入）
@@ -160,7 +160,7 @@ class SelfDevReviewLoop(SelfDevLoopBase):
                 - target_files: 待审查文件列表（协同协议主入口）
                 - force_targets: 强制指定的目标文件列表
                 - recent_commits: 最近 commit 数量（默认 0，不扫描）
-                - author_forgekin_id: author 灵智体 ID（I9 跨厂商检查用）
+                - author_forgekin_id: author Forgekin ID（I9 跨厂商检查用）
                 - author_llm_model: author 使用的 LLM 模型（I9 跨厂商检查用）
 
         Returns:
@@ -415,7 +415,7 @@ class SelfDevReviewLoop(SelfDevLoopBase):
             f"请为以下文件设计审查清单.\n\n"
             f"【文件信息】\n"
             f"路径: {task.target_path}\n"
-            f"作者灵智体: {task.context.get('author_forgekin_id', 'unknown')}\n"
+            f"作者Forgekin: {task.context.get('author_forgekin_id', 'unknown')}\n"
             f"作者 LLM 模型: {task.context.get('author_llm_model', 'unknown')}\n\n"
             f"【文件内容】{truncated}\n```\n{preview}\n```\n\n"
             f"【审查维度】\n"

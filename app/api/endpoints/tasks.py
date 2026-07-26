@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from flowforge.app.deps import get_executor
 from flowforge.core.task_context import TaskContext
 from flowforge.core.errors import ConflictError, ModeNotFoundError
-from flowforge.core.tracing import get_trace_id, get_logger
+from flowforge.core.tracing import get_trace_id, get_logger, set_trace_id, generate_trace_id
 
 logger = get_logger("tasks_api")
 
@@ -79,13 +79,19 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
 
 @router.post("", status_code=201)
 async def create_task(payload: dict, executor=Depends(get_executor)):
+    # 为每个任务生成独立 trace_id，贯穿任务调度→LLM调用→完成全链路
+    # 中间件可能已设置 trace_id，此处确保存在并显式用于日志关联
+    trace_id = set_trace_id(generate_trace_id())
     # ── Input validation ──
     intent = payload.get("intent", "")
     # Support 'task' field as alias for 'intent'
     if not intent and payload.get("task"):
         intent = payload["task"]
     input_data = payload.get("input_data", {})
-    logger.info(f"create_task called: intent={intent!r}, input_data_keys={list(input_data.keys()) if input_data else 'empty'}")
+    logger.info(
+        f"[trace_id={trace_id}] create_task: intent={intent!r}, "
+        f"input_data_keys={list(input_data.keys()) if input_data else 'empty'}"
+    )
     if not intent and not input_data:
         logger.warning(f"Input validation failed: empty intent and input_data")
         raise HTTPException(
@@ -105,6 +111,10 @@ async def create_task(payload: dict, executor=Depends(get_executor)):
 
     task_id = payload.get("task_id") or str(uuid.uuid4())
     persona = payload.get("persona", "default")
+    logger.info(
+        f"[trace_id={trace_id}] create_task: task_id={task_id} persona={persona} "
+        f"intent={intent[:60]!r}"
+    )
     if intent and not input_data:
         input_data = {"task": intent}
     mode = payload.get("mode")
@@ -174,7 +184,7 @@ async def create_task(payload: dict, executor=Depends(get_executor)):
         except Exception as e:
             logger.warning(f"Failed to create workspace for task {task_id}: {e}")
 
-        asyncio.ensure_future(_run_task_background(executor, context, mode or "workflow"))
+        asyncio.ensure_future(_run_task_background(executor, context, mode or "workflow", trace_id))
         return _make_response({
             "task_id": task_id, "persona": persona,
             "mode": mode or "workflow",
@@ -199,11 +209,25 @@ async def create_task(payload: dict, executor=Depends(get_executor)):
     })
 
 
-async def _run_task_background(executor, context: TaskContext, mode_hint: str):
+async def _run_task_background(executor, context: TaskContext, mode_hint: str, trace_id: str = ""):
+    # 后台任务需重新设置 trace_id（ContextVar 在新 asyncio.Task 中不自动继承）
+    if trace_id:
+        set_trace_id(trace_id)
+    logger.info(
+        f"[trace_id={trace_id or get_trace_id()}] _run_task_background: dispatching "
+        f"task_id={context.task_id} mode={mode_hint}"
+    )
     try:
         await executor.run(context, mode_hint=mode_hint)
+        logger.info(
+            f"[trace_id={trace_id or get_trace_id()}] _run_task_background: task_id={context.task_id} completed"
+        )
     except Exception as e:
-        logger.error(f"Background task {context.task_id} failed: {e}")
+        logger.error(
+            f"[trace_id={trace_id or get_trace_id()}] _run_task_background: "
+            f"task_id={context.task_id} failed: {e}",
+            exc_info=True,
+        )
 
 
 @router.get("")

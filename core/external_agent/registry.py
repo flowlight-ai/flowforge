@@ -1,6 +1,6 @@
 """ProviderTransportRegistry — Agent Provider 传输注册表（F241 CL-014）。
 
-host 维护所有 agentProvider 的注册表，灵智体通过查询注册表发现能力。
+host 维护所有 agentProvider 的注册表，Forgekin通过查询注册表发现能力。
 
 设计依据：
     - [doc:review/review.md#13.3] F241 Agent Provider Plugin（CL-014）
@@ -32,7 +32,7 @@ logger = get_logger("external_agent.registry")
 class ProviderTransportRegistry:
     """Agent Provider 传输注册表（F241 CL-014）。
 
-    host 维护所有 agentProvider 的注册表，灵智体通过查询注册表发现能力。
+    host 维护所有 agentProvider 的注册表，Forgekin通过查询注册表发现能力。
 
     详见 [doc:review/review.md#13.3] F241 Agent Provider Plugin
 
@@ -78,7 +78,7 @@ class ProviderTransportRegistry:
     def discover(self, capability: str) -> list[AgentProviderManifest]:
         """按能力发现 Provider 列表（EX-008 能力发现机制）。
 
-        灵智体查询"谁能做 code_review"，返回所有声明了该能力的 Provider。
+        Forgekin查询"谁能做 code_review"，返回所有声明了该能力的 Provider。
 
         Args:
             capability: 能力名称（如 "code_generation" / "code_review"）。

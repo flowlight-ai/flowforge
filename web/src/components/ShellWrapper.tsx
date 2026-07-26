@@ -1,95 +1,99 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { Suspense } from "react";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { useSidebarStore } from "@/stores/sidebarStore";
 import { useShellConfig } from "../lib/shell-config";
-import Sidebar from "./Sidebar";
+import { ActivityBar } from "./ActivityBar";
+import { ThreadSidebar } from "./ThreadSidebar";
+import { TopBar } from "./TopBar";
+import { ConciergeHost } from "./concierge/ConciergeHost";
+import { FloatingPresentationSurfaceHost } from "./workspace/FloatingPresentationSurfaceHost";
+import { ApprovalHubDrawer } from "./ApprovalHubDrawer";
+import { ResizeHandle } from "./workspace/ResizeHandle";
 
-export default function ShellWrapper({
-  children,
-  sidebar,
-}: {
+// 与 clowder-ai 一致：展示页无 Shell
+const CHROMELESS_ROUTES = ["/showcase", "/story", "/story-export"];
+
+// 与 clowder-ai 一致：这些路由隐藏 ThreadSidebar（因为有自带侧边栏）
+const SIDEBAR_HIDDEN_ROUTES = [
+  "/admin/settings",
+  "/admin/marketplace",
+  "/signals",
+  "/memory",
+  "/mission",
+];
+
+interface ShellWrapperProps {
   children: React.ReactNode;
+  /** 可选：自定义侧边栏内容（不传则使用默认 ThreadSidebar） */
   sidebar?: React.ReactNode;
-}) {
+}
+
+export default function ShellWrapper({ children, sidebar }: ShellWrapperProps) {
   const pathname = usePathname();
   const config = useShellConfig();
-  const isHelm = (config.helmPaths ?? ["/helm"]).some((p) => pathname.startsWith(p));
+  const isOpen = useSidebarStore((s) => s.isOpen);
+  const width = useSidebarStore((s) => s.width);
+  const close = useSidebarStore((s) => s.close);
+  const handleResize = useSidebarStore((s) => s.handleResize);
+  const resetWidth = useSidebarStore((s) => s.resetWidth);
+  const isDesktop = useIsDesktop();
 
-  if (isHelm) {
+  const isChromeless = (config.chromelessPaths ?? CHROMELESS_ROUTES).some((p) =>
+    pathname.startsWith(p),
+  );
+
+  if (isChromeless) {
     return <>{children}</>;
   }
 
+  const showSidebar =
+    isOpen &&
+    isDesktop &&
+    !SIDEBAR_HIDDEN_ROUTES.some((r) => pathname.startsWith(r));
+
   return (
     <div
-      style={{
-        height: "100vh",
-        display: "grid",
-        gridTemplateColumns: "var(--shell-nav-width, 258px) minmax(0, 1fr)",
-        gridTemplateRows: "var(--shell-topbar-height, 52px) 1fr",
-        gridTemplateAreas: `"nav topbar" "nav content"`,
-        overflow: "hidden",
-      }}
+      className="console-shell flex h-screen h-dvh overflow-hidden"
+      data-shell="wrapper"
     >
-      <header
-        style={{
-          gridArea: "nav",
-          borderRight: "1px solid color-mix(in srgb, var(--border, #2e3040) 74%, transparent)",
-          overflow: "hidden",
-        }}
+      <Suspense
+        fallback={<div className="w-[52px] flex-shrink-0" aria-hidden="true" />}
       >
-        {sidebar ?? <Sidebar />}
-      </header>
-      <div
-        style={{
-          gridArea: "topbar",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 24px",
-          borderBottom: "1px solid color-mix(in srgb, var(--border, #2e3040) 74%, transparent)",
-          background: "color-mix(in srgb, var(--bg, #0e1015) 82%, transparent)",
-          backdropFilter: "blur(12px) saturate(1.6)",
-          WebkitBackdropFilter: "blur(12px) saturate(1.6)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            fontSize: "14px",
-            fontWeight: 700,
-            color: config.brandColor,
-            letterSpacing: "1px",
-          }}
+        <ActivityBar />
+      </Suspense>
+
+      {showSidebar && (
+        <div className="flex items-stretch flex-shrink-0">
+          <div style={{ width }} className="flex-shrink-0">
+            {sidebar ?? <ThreadSidebar onClose={close} className="w-full" />}
+          </div>
+          <ResizeHandle
+            direction="horizontal"
+            label="左侧对话栏"
+            onResize={handleResize}
+            onCollapse={close}
+            onDoubleClick={resetWidth}
+            showLine={false}
+          />
+        </div>
+      )}
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopBar />
+        <main
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+          data-shell="main"
         >
-          <span>{config.brandName}</span>
-        </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <span
-            style={{
-              padding: "4px 10px",
-              borderRadius: "9999px",
-              background: `${config.brandColor}1a`,
-              color: config.brandColor,
-              fontSize: "11px",
-              fontWeight: 600,
-            }}
-          >
-            {config.brandSubtitle}
-          </span>
-        </div>
+          {children}
+        </main>
       </div>
-      <main
-        style={{
-          gridArea: "content",
-          padding: "24px",
-          overflowY: "auto",
-          overflowX: "hidden",
-        }}
-      >
-        {children}
-      </main>
+
+      <FloatingPresentationSurfaceHost />
+      <ConciergeHost />
+      <ApprovalHubDrawer />
     </div>
   );
 }

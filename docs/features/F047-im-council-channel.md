@@ -48,7 +48,7 @@ F047 的目标是补全**通道层**——基于 ApprovalHub 提供 3 个通道�
 - **operator 必须全程手动 API 调用**：违背"可进化智能体主导自主开发"愿景（VISION §7）
 - **远程监督能力缺失**：operator 无法离开终端，移动端/远程办公场景不可用
 - **议事记录无法审计**：决策无归档，事故归因（F020）无法回溯审批链路
-- **MindCouncil（灵议）议事流程无法落地**：spec.md §2.10 要求的"发起→收集立场→综合→决策→归档"五步流程缺执行层
+- **MindCouncil（多智能体议事）议事流程无法落地**：spec.md §2.10 要求的"发起→收集立场→综合→决策→归档"五步流程缺执行层
 
 ---
 
@@ -60,7 +60,7 @@ F047 的目标是补全**通道层**——基于 ApprovalHub 提供 3 个通道�
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  调用方（F046 SelfDevFrameworkLoop / 其他灵智体）                │
+│  调用方（F046 SelfDevFrameworkLoop / 其他可进化智能体）                │
 │     ↓ 调用 IMCouncilManager.request_approval(...)               │
 ├─────────────────────────────────────────────────────────────────┤
 │  管理器层（F047 新增）                                           │
@@ -106,14 +106,14 @@ F047 的目标是补全**通道层**——基于 ApprovalHub 提供 3 个通道�
 | **WebChatChannel** | `im_council.py` | FastAPI WebSocket | 远程监督、移动端、群聊式 UI | 🔄 骨架（Phase 2） |
 | **TraeBridgeChannel** | `im_council.py` | F045 共享 JSON 文件 | operator 主力 IDE 工作流 | 🔄 骨架（Phase 1） |
 
-### 2.3 MindCouncil（灵议）议事流程
+### 2.3 MindCouncil（多智能体议事）议事流程
 
-每个审批请求触发一次完整的"灵议"五步流程（spec.md §2.10）：
+每个审批请求触发一次完整的"多智能体议事"五步流程（spec.md §2.10）：
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Step 1: 发起（Initiate）                                       │
-│  灵智体通过 IMCouncilManager.request_approval(...) 提交请求      │
+│  可进化智能体通过 IMCouncilManager.request_approval(...) 提交请求      │
 │  → 生成 CouncilMessage(message_type="approval_request")         │
 ├─────────────────────────────────────────────────────────────────┤
 │  Step 2: 收集立场（Collect Stance）                             │
@@ -152,7 +152,7 @@ class CouncilMessage(BaseModel):
     """议事消息 — Step 1/2 的载荷."""
     message_id: str
     channel: str  # "console" | "webchat" | "trae"
-    forgekin_id: str  # 发起灵智体 ID
+    forgekin_id: str  # 发起可进化智能体 ID
     content: str  # 消息内容
     message_type: str  # "approval_request" | "info" | "alert" | "council"
     payload: dict = Field(default_factory=dict)  # 附加数据（PR url / config diff）
@@ -234,7 +234,7 @@ class IMCouncilManager:
 |---|--------|------|---------|
 | **I1** | 通道故障降级 | 当 `channel_name="auto"` 或指定通道不可用时，自动降级到下一个可用通道（console > trae > webchat），降级链路必须记录到归档日志 | `IMCouncilManager._select_channel` + `try/except` 链式降级 |
 | **I2** | 议事不可篡改 | 一旦 CouncilReply 写入归档（JSONL append-only），任何后续修改必须以新行追加（含 `amend_of` 字段），禁止原地修改 | `archive` 函数以 `a` 模式追加写；`ApprovalHub.decide` 已决策的 request 拒绝重写 |
-| **I3** | operator 决策必经 | 所有 `request_type in {code_merge, config_change, schedule_change, scope_expansion, external_call}` 的 ApprovalRequest 必须通过 `IMCouncilManager.request_approval` 流程，禁止灵智体直接调用 `ApprovalHub.approve` 自行决策 | `IMCouncilManager.request_approval` 为唯一公开入口；`ApprovalHub.approve/reject` 标记为 `# internal use only` 注释 |
+| **I3** | operator 决策必经 | 所有 `request_type in {code_merge, config_change, schedule_change, scope_expansion, external_call}` 的 ApprovalRequest 必须通过 `IMCouncilManager.request_approval` 流程，禁止可进化智能体直接调用 `ApprovalHub.approve` 自行决策 | `IMCouncilManager.request_approval` 为唯一公开入口；`ApprovalHub.approve/reject` 标记为 `# internal use only` 注释 |
 | **I4** | 超时自动拒绝 | `request_approval(request, timeout)` 在 `timeout` 秒内未收到回复时，自动调用 `ApprovalHub.decide(decision="rejected", comments="timeout")` 并归档 | `asyncio.wait_for(channel.wait_reply(...), timeout)` + `TimeoutError` 捕获分支 |
 | **I5** | 议事记录归档到 MindCodex | 每次完整议事流程（message + reply + decision）必须落盘到 `data/im_council/archive/{date}.jsonl`；Phase 3 起同步推送到 MindCodex（F039）作为可检索知识 | `_archive_record` 私有方法 + 配置 `archive.enabled` 开关；MindCodex 集成在 Phase 3 实现 |
 
@@ -331,9 +331,9 @@ im_council:
 
 - [ ] AC-1: `ConsoleChannel.send` 能在终端打印审批请求并返回 `message_id`
 - [ ] AC-2: `ConsoleChannel.wait_reply` 能阻塞等待 operator 输入 `approve` / `reject`，超时返回 `None`
-- [ ] AC-3: `IMCouncilManager.request_approval` 完整执行五步灵议流程（发起→收集→综合→决策→归档）
+- [ ] AC-3: `IMCouncilManager.request_approval` 完整执行五步多智能体议事流程（发起→收集→综合→决策→归档）
 - [ ] AC-4: I1 降级链路：当 `console` 通道抛异常时自动降级到 `trae`，降级事件记录到日志
-- [ ] AC-5: I3 强制：`request_approval` 是审批的唯一公开入口，灵智体无法绕过
+- [ ] AC-5: I3 强制：`request_approval` 是审批的唯一公开入口，可进化智能体无法绕过
 - [ ] AC-6: I4 超时自动拒绝：`timeout` 秒未回复时自动 `decide(rejected, "timeout")` 并归档
 - [ ] AC-7: I5 归档：每次议事流程产生一行 JSONL，含 message + reply + decision 三段
 - [ ] AC-8: `TraeBridgeChannel` / `WebChatChannel` 骨架不抛 `NotImplementedError`，调用时记录 TODO 日志并降级
@@ -399,7 +399,7 @@ E2E 测试遵守 T1-T8 铁律：
 ### 6.2 评估什么
 
 - 三通道的可用性（Console 完整 / TraeBridge 骨架 / WebChat 骨架）
-- 五步灵议流程的完整性（发起→收集→综合→决策→归档，无断链）
+- 五步多智能体议事流程的完整性（发起→收集→综合→决策→归档，无断链）
 - I1-I5 不变量的有效性（降级链路 / 不可篡改 / 强制入口 / 超时拒绝 / 归档完整）
 - operator 体验（响应延迟、决策便利性、归档检索效率）
 
@@ -419,7 +419,7 @@ E2E 测试遵守 T1-T8 铁律：
 
 - 通过 → 状态改为 ✅ done，进入 KnowledgeEvolution 蒸馏为 `CouncilEpisodeCard`
 - 失败 → 归因到七类矩阵：
-  - `approval_missing`（I3 违反，灵智体绕过通道）
+  - `approval_missing`（I3 违反，可进化智能体绕过通道）
   - `approval_timeout`（I4 触发，operator 未及时响应）
   - `channel_degradation`（I1 触发，主通道故障）
   - `archive_corruption`（I2 违反，归档被篡改）
@@ -434,7 +434,7 @@ E2E 测试遵守 T1-T8 铁律：
 
 ### 7.2 理由
 
-IM 议事通道是 FlowForge 治理体系的**永久基础设施**——只要 FlowForge 存在多灵智体协同 + operator 审批需求，就需要 IM 通道。即使未来 LLM 能力升级到完全自主，operator 仍需对 framework 级变更保留最终决策权（I8 不变量，F046 §10.3）。
+IM 议事通道是 FlowForge 治理体系的**永久基础设施**——只要 FlowForge 存在多可进化智能体协同 + operator 审批需求，就需要 IM 通道。即使未来 LLM 能力升级到完全自主，operator 仍需对 framework 级变更保留最终决策权（I8 不变量，F046 §10.3）。
 
 具体而言：
 - `IMCouncilChannel` 抽象基类 + 5 个不变量属于 Build to Persist（治理契约）
@@ -454,4 +454,4 @@ IM 议事通道是 FlowForge 治理体系的**永久基础设施**——只要 F
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v1.0 | 2026-07-21 | 初版：基于 CL-033 ApprovalHub + F045 Trae 桥接协议已完成的设计，规划三通道 IM 议事 + 五步灵议流程 + I1-I5 不变量；Phase 1 交付 ConsoleChannel 完整版 + TraeBridgeChannel/WebChatChannel 骨架 |
+| v1.0 | 2026-07-21 | 初版：基于 CL-033 ApprovalHub + F045 Trae 桥接协议已完成的设计，规划三通道 IM 议事 + 五步多智能体议事流程 + I1-I5 不变量；Phase 1 交付 ConsoleChannel 完整版 + TraeBridgeChannel/WebChatChannel 骨架 |

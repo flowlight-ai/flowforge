@@ -1,12 +1,12 @@
-"""evolve_forgekins.py — 3 灵智体自进化 + task.md 剩余任务代理执行脚本.
+"""evolve_forgekins.py — 3 Forgekin自进化 + task.md 剩余任务代理执行脚本.
 
 验证:
-    1. 3 只灵智体（鲁班/夏洛克/梵高）通过 YAML 配置锻造
-    2. 每只灵智体领取 task.md 中对应责任方的剩余任务（代理执行）
+    1. 3 只Forgekin（鲁班/夏洛克/梵高）通过 YAML 配置锻造
+    2. 每只Forgekin领取 task.md 中对应责任方的剩余任务（代理执行）
     3. 通过 ForgeMindEngine Mode A/B/C 触发自进化
     4. 调用刚补全的代码模块作为"任务完成证据"（真实调用，非空跑）
-    5. webchat — 灵智体汇报任务完成情况
-    6. IM 灵议 — 3 只灵智体共同总结
+    5. webchat — Forgekin汇报任务完成情况
+    6. IM MindCouncil — 3 只Forgekin共同总结
 
 运行方式:
     $env:PYTHONIOENCODING="utf-8"; cd d:\\software\\openclaw
@@ -14,7 +14,7 @@
 
 详见:
     - [doc:review/review.md#第十四章] CL-022~CL-041 责任方分配
-    - [doc:design/naming-contract.md#2.2] 灵智体定义
+    - [doc:design/naming-contract.md#2.2] Forgekin定义
     - [doc:design.md#v7.1-§D9] 责任方矩阵
 """
 
@@ -59,7 +59,7 @@ class TaskResult(BaseModel):
     duration_ms: int
 
 
-# ── 灵智体花名册元信息（与 task.md 责任方分配一致）─────────────
+# ── Forgekin花名册元信息（与 task.md 责任方分配一致）─────────────
 
 FORGEKIN_PROFILES: dict[str, dict[str, Any]] = {
     "luban": {
@@ -175,7 +175,7 @@ class _FakeRedisClient:
         return self._data[key][2].get(field)
 
 
-# ── 阶段 1: 锻造 3 只灵智体 ─────────────────────────────────────
+# ── 阶段 1: 锻造 3 只Forgekin ─────────────────────────────────────
 
 
 async def forge_all_forgekins() -> dict[str, Any]:
@@ -184,7 +184,7 @@ async def forge_all_forgekins() -> dict[str, Any]:
     Returns:
         dict[str, ForgekinBase] — {"luban": forgekin, "sherlock": ..., "vangogh": ...}
     """
-    print_banner("阶段 1: 锻造 3 只灵智体（鲁班/夏洛克/梵高）")
+    print_banner("阶段 1: 锻造 3 只Forgekin（鲁班/夏洛克/梵高）")
     pipeline = ForgePipeline()
     forgekins: dict[str, Any] = {}
 
@@ -209,7 +209,7 @@ async def forge_all_forgekins() -> dict[str, Any]:
 
 
 async def claim_tasks(forgekins: dict[str, Any]) -> None:
-    """打印每只灵智体领取的任务清单（来自 task.md 责任方分配）."""
+    """打印每只Forgekin领取的任务清单（来自 task.md 责任方分配）."""
     print_banner("阶段 2: task.md 剩余任务领取（按责任方分配）")
 
     for fid in BUILTIN_FORGEKINS:
@@ -224,7 +224,7 @@ async def claim_tasks(forgekins: dict[str, Any]) -> None:
         print(f"本次代理任务:")
         for idx, (task_id, task_name, cl_id) in enumerate(profile["tasks"], 1):
             print(f"  {idx}. {task_name}（{cl_id}）")
-        # 灵智体自报家门（通过 chat 降级模式）
+        # Forgekin自报家门（通过 chat 降级模式）
         try:
             intro = await forgekin.chat([{
                 "role": "user",
@@ -241,16 +241,16 @@ async def claim_tasks(forgekins: dict[str, Any]) -> None:
             print(f"  ⚠️  自报家门失败: {type(exc).__name__}: {exc}")
 
 
-# ── 阶段 3: 自进化执行（每只灵智体调用真实代码模块）─────────────
+# ── 阶段 3: 自进化执行（每只Forgekin调用真实代码模块）─────────────
 
 
 async def execute_self_evolution(
     forgekins: dict[str, Any],
 ) -> dict[str, list[TaskResult]]:
-    """让每只灵智体真正调用代码模块作为任务完成证据.
+    """让每只Forgekin真正调用代码模块作为任务完成证据.
 
     Returns:
-        dict[str, list[TaskResult]] — 每只灵智体的任务结果列表.
+        dict[str, list[TaskResult]] — 每只Forgekin的任务结果列表.
     """
     print_banner("阶段 3: 自进化执行（真实代码调用作为任务完成证据）")
     results: dict[str, list[TaskResult]] = {}
@@ -274,7 +274,7 @@ async def execute_self_evolution(
 
 
 def _print_task_results(results: list[TaskResult]) -> None:
-    """打印单个灵智体的任务结果列表."""
+    """打印单个Forgekin的任务结果列表."""
     for r in results:
         icon = "✅" if r.status == "pass" else ("🟡" if r.status == "partial" else "❌")
         print(f"  {icon} [{r.cl_id}] {r.task_name}: {r.status.upper()} "
@@ -748,7 +748,7 @@ async def execute_vangogh_tasks(forgekin: Any) -> list[TaskResult]:
             name="梵高",
             nickname="vangogh",
             species="virtual",
-            personality_summary="富有激情与表达力的视觉设计灵智体",
+            personality_summary="富有激情与表达力的视觉设计Forgekin",
             voice="诗意且具体",
             avatar_uri="avatars/vangogh.png",
             blind_spots=["对极端逻辑场景不够敏感"],
@@ -824,7 +824,7 @@ async def execute_vangogh_tasks(forgekin: Any) -> list[TaskResult]:
         pcm = PromptConfigMap()
         cfg = PromptConfig(
             prompt_key="vangogh_visual_review",
-            role_description="你是梵高，视觉设计灵智体，负责 UI/UX 审查",
+            role_description="你是梵高，视觉设计Forgekin，负责 UI/UX 审查",
             personality_summary="富有激情与表达力，注重视觉美感与用户体验",
             value_anchors=["美观优先", "用户体验至上", "尊重 operator 决策"],
             restrictions=["禁止硬编码文案", "禁止绕过 DI 容器"],
@@ -865,8 +865,8 @@ async def webchat_report(
     forgekins: dict[str, Any],
     task_results: dict[str, list[TaskResult]],
 ) -> None:
-    """每只灵智体通过 chat 汇报自己的任务完成情况."""
-    print_banner("阶段 4: webchat 汇报（每只灵智体汇报任务完成情况）")
+    """每只Forgekin通过 chat 汇报自己的任务完成情况."""
+    print_banner("阶段 4: webchat 汇报（每只Forgekin汇报任务完成情况）")
 
     for fid in BUILTIN_FORGEKINS:
         if fid not in forgekins:
@@ -883,7 +883,7 @@ async def webchat_report(
         print(f"任务摘要: {len(results)} 项任务 — PASS={pass_count} "
               f"PARTIAL={partial_count} FAIL={fail_count}（CL: {', '.join(cl_ids)}）")
 
-        # 通过 chat 让灵智体汇报（降级模式：返回 system prompt 注入的角色信息）
+        # 通过 chat 让Forgekin汇报（降级模式：返回 system prompt 注入的角色信息）
         user_msg = (
             f"请用 100 字以内汇报你刚完成的 {len(results)} 项代理任务的总体情况，"
             f"包括 PASS {pass_count} 项、FAIL {fail_count} 项，"
@@ -899,15 +899,15 @@ async def webchat_report(
             print(f"  ❌ webchat 失败: {type(exc).__name__}: {exc}")
 
 
-# ── 阶段 5: IM 灵议总结 ────────────────────────────────────────
+# ── 阶段 5: IM MindCouncil总结 ────────────────────────────────────────
 
 
 async def im_council_summary(
     forgekins: dict[str, Any],
     task_results: dict[str, list[TaskResult]],
 ) -> None:
-    """3 只灵智体通过 IM 灵议讨论 task.md 剩余任务代理执行的总结."""
-    print_banner("阶段 5: IM 灵议总结（3 只灵智体共同讨论）")
+    """3 只Forgekin通过 IM MindCouncil讨论 task.md 剩余任务代理执行的总结."""
+    print_banner("阶段 5: IM MindCouncil总结（3 只Forgekin共同讨论）")
 
     total_pass = sum(
         1 for results in task_results.values() for r in results if r.status == "pass"
@@ -918,12 +918,12 @@ async def im_council_summary(
     total = sum(len(results) for results in task_results.values())
 
     topic = (
-        f"3 灵智体已通过自进化完成 task.md 剩余任务的代理执行，"
+        f"3 Forgekin已通过自进化完成 task.md 剩余任务的代理执行，"
         f"共 {total} 项任务（PASS {total_pass} / FAIL {total_fail}）。"
         f"请每人总结自己的成果并交叉确认（150 字以内）。"
     )
-    print(f"\n灵议主题: {topic}")
-    print(f"参与灵智体: {[forgekins[fid].name for fid in BUILTIN_FORGEKINS if fid in forgekins]}")
+    print(f"\nMindCouncil主题: {topic}")
+    print(f"参与Forgekin: {[forgekins[fid].name for fid in BUILTIN_FORGEKINS if fid in forgekins]}")
 
     discussion_history: list[dict[str, str]] = []
 
@@ -936,7 +936,7 @@ async def im_council_summary(
         pass_count = sum(1 for r in results if r.status == "pass")
         cl_ids = [r.cl_id for r in results]
 
-        context_msg = f"灵议主题: {topic}\n\n"
+        context_msg = f"MindCouncil主题: {topic}\n\n"
         if discussion_history:
             context_msg += "已有讨论:\n"
             for msg in discussion_history[-3:]:
@@ -979,10 +979,10 @@ def print_final_report(
     print_banner("ForgeMind v7.1 自进化 + task.md 剩余任务代理执行 — 最终报告")
 
     # 表格输出
-    print("\n灵智体任务完成情况:")
+    print("\nForgekin任务完成情况:")
     header = (
         f"┌──────────┬─────────────────────┬──────────┬──────┬──────┬──────────┐\n"
-        f"│ 灵智体   │ 形态                │ 任务数   │ PASS │ FAIL │ 耗时(ms) │\n"
+        f"│ Forgekin   │ 形态                │ 任务数   │ PASS │ FAIL │ 耗时(ms) │\n"
         f"├──────────┼─────────────────────┼──────────┼──────┼──────┼──────────┤"
     )
     print(header)
@@ -1045,7 +1045,7 @@ def print_final_report(
         )
         print(f"  {profile['name_chinese']}（觉醒阶 {awk}）: {mode_status}")
 
-    # webchat/IM 灵议全流程
+    # webchat/IM MindCouncil全流程
     total_pass = sum(
         1 for results in task_results.values() for r in results if r.status == "pass"
     )
@@ -1054,7 +1054,7 @@ def print_final_report(
     )
     total = sum(len(results) for results in task_results.values())
     flow_status = "✅ 打通" if total > 0 else "❌ 未打通"
-    print(f"\nwebchat/IM 灵议全流程: {flow_status}（含降级模式下的 system prompt 注入）")
+    print(f"\nwebchat/IM MindCouncil全流程: {flow_status}（含降级模式下的 system prompt 注入）")
     print(f"  总任务: {total}  PASS: {total_pass}  FAIL: {total_fail}")
     print("=" * 70)
 
@@ -1063,16 +1063,16 @@ def print_final_report(
 
 
 async def main() -> int:
-    """主流程：锻造 → 领取任务 → 自进化执行 → webchat 汇报 → IM 灵议总结."""
-    print_banner("ForgeMind v7.1 灵智体自进化 + task.md 剩余任务代理执行")
+    """主流程：锻造 → 领取任务 → 自进化执行 → webchat 汇报 → IM MindCouncil总结."""
+    print_banner("ForgeMind v7.1 Forgekin自进化 + task.md 剩余任务代理执行")
     print(f"项目根: {PROJECT_ROOT}")
-    print(f"预置灵智体: {BUILTIN_FORGEKINS}")
+    print(f"预置Forgekin: {BUILTIN_FORGEKINS}")
     print(f"运行时间: {datetime.now(timezone.utc).isoformat()}")
 
-    # 阶段 1: 锻造 3 只灵智体
+    # 阶段 1: 锻造 3 只Forgekin
     forgekins = await forge_all_forgekins()
     if len(forgekins) < 3:
-        print("\n❌ 锻造失败，至少需要 3 只灵智体")
+        print("\n❌ 锻造失败，至少需要 3 只Forgekin")
         return 1
 
     # 阶段 2: 任务领取
@@ -1084,7 +1084,7 @@ async def main() -> int:
     # 阶段 4: webchat 汇报
     await webchat_report(forgekins, task_results)
 
-    # 阶段 5: IM 灵议总结
+    # 阶段 5: IM MindCouncil总结
     await im_council_summary(forgekins, task_results)
 
     # 阶段 6: 最终报告

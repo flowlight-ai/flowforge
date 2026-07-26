@@ -1,4 +1,4 @@
-# D039: MindCodex 可检索知识库详细设计（Distilled Knowledge Base，社区社交称"灵典"）
+# D039: MindCodex 可检索知识库详细设计（Distilled Knowledge Base，社区社交称"蒸馏知识库"）
 
 > **状态**: ⏳ pending
 > **创建日期**: 2026-07-19

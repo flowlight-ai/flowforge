@@ -17,7 +17,7 @@ FlowForge v7.0 文档系统存在以下问题：
 2. **文档关系断裂**：feature 文档之间无 `related_features` 字段，导致 Eval Ledger 净增益计算时无法识别影响范围
 3. **文档类型混乱**：feature / decision / design / review 文档无 `doc_kind` 字段，CI 无法按类型应用不同校验规则
 4. **文档追溯困难**：无 `created` / `last_reviewed` 字段，Harness Entropy Control 无法识别过期文档触发退役信号
-5. **主题索引缺失**：无 `topics` 字段，无法构建文档主题图谱供灵智体检索
+5. **主题索引缺失**：无 `topics` 字段，无法构建文档主题图谱供可进化智能体检索
 
 CL-040 要求：所有正式文档必须含 5 字段 front-matter（feature_ids / related_features / topics / doc_kind / created）。
 
@@ -70,7 +70,7 @@ status: accepted                       # 状态：draft | proposed | accepted | 
 - `eval` / `contract` / `friction` — Eval Contract 相关
 - `harness` / `entropy` / `sunset` — Harness 治理相关
 - `memory` / `distillation` / `codex` — 记忆系统相关
-- `forgekin` / `forgemind` / `evolution` — 育灵体系相关
+- `forgekin` / `forgemind` / `evolution` — 智能体入职与终身学习体系相关
 - `teamact` / `handoff` / `council` — TeamAct 协作相关
 - `external_agent` / `mcp` / `acp` — 三方 Agent 集成相关
 - `reliability` / `recovery` / `checkpoint` — 可靠性相关

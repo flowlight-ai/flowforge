@@ -1,14 +1,14 @@
-"""花名册加载器（Roster Loader）— 从 YAML 加载预置灵智体配置.
+"""花名册加载器（Roster Loader）— 从 YAML 加载预置Forgekin配置.
 
 提供:
-- BUILTIN_FORGEKINS: 5 只预置灵智体 ID 清单（F046 v1.1 五闭环扩展）
+- BUILTIN_FORGEKINS: 5 只预置Forgekin ID 清单（F046 v1.1 五闭环扩展）
 - ROSTER_FILES: ID → YAML 文件路径映射
-- load_forgekin_config(forgekin_id): 加载单个灵智体配置
-- list_builtin_forgekins(): 列出所有预置灵智体元信息
+- load_forgekin_config(forgekin_id): 加载单个Forgekin配置
+- list_builtin_forgekins(): 列出所有预置Forgekin元信息
 
-配置驱动（铁律5+P16）: 所有灵智体配置外置到 YAML,不在 .py 中硬编码.
+配置驱动（铁律5+P16）: 所有Forgekin配置外置到 YAML,不在 .py 中硬编码.
 
-五灵智体（F046 v1.1 §9.2）：
+五Forgekin（F046 v1.1 §9.2）：
 - wenxin（文心, doc, E3）— 文档员
 - sherlock（夏洛克, code, E4）— 开发者
 - luban（鲁班, framework, E5）— 架构师
@@ -25,7 +25,7 @@ import yaml
 
 _ROSTER_DIR = Path(__file__).resolve().parent
 
-# 5 只预置灵智体（F046 v1.1 §9.2 五闭环扩展：原 3 只 → 5 只）
+# 5 只预置Forgekin（F046 v1.1 §9.2 五闭环扩展：原 3 只 → 5 只）
 # 参考 3 agent → 5 agent sweet spot 模式
 BUILTIN_FORGEKINS: list[str] = ["wenxin", "sherlock", "luban", "vangogh", "davinci"]
 
@@ -39,13 +39,13 @@ ROSTER_FILES: dict[str, Path] = {
 
 
 def load_forgekin_config(forgekin_id: str) -> dict[str, Any]:
-    """加载单个预置灵智体的 YAML 配置.
+    """加载单个预置Forgekin的 YAML 配置.
 
     Args:
-        forgekin_id: 灵智体 ID（如 "luban"）
+        forgekin_id: Forgekin ID（如 "luban"）
 
     Returns:
-        完整的灵智体配置字典
+        完整的Forgekin配置字典
 
     Raises:
         KeyError: 未知 forgekin_id
@@ -53,7 +53,7 @@ def load_forgekin_config(forgekin_id: str) -> dict[str, Any]:
     """
     if forgekin_id not in ROSTER_FILES:
         raise KeyError(
-            f"未知预置灵智体 ID: {forgekin_id}. "
+            f"未知预置Forgekin ID: {forgekin_id}. "
             f"可用: {list(ROSTER_FILES.keys())}"
         )
     path = ROSTER_FILES[forgekin_id]
@@ -64,7 +64,7 @@ def load_forgekin_config(forgekin_id: str) -> dict[str, Any]:
 
 
 def list_builtin_forgekins() -> list[dict[str, Any]]:
-    """列出所有预置灵智体的元信息（不含完整配置）.
+    """列出所有预置Forgekin的元信息（不含完整配置）.
 
     Returns:
         元信息字典列表,每项含 id/name/nickname/species/role/availability

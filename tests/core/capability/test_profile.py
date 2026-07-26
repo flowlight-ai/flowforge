@@ -88,7 +88,7 @@ def _make_profile(
 
     Args:
         profile_id: 画像 ID。
-        agent_id: 灵智体 ID。
+        agent_id: Forgekin ID。
         provider: 厂商。
         model_name: 模型名。
         blind_spot_categories: 盲点类别列表（None 时使用默认 self_referential_logic）。
@@ -161,7 +161,7 @@ def claude_profile() -> CapabilityProfile:
 
 @pytest.fixture
 def another_claude_profile() -> CapabilityProfile:
-    """同厂商（anthropic）的另一个灵智体——共享 self_referential_logic 盲点。"""
+    """同厂商（anthropic）的另一个Forgekin——共享 self_referential_logic 盲点。"""
     return _make_profile(
         profile_id="claude-reviewer-002",
         agent_id="claude-reviewer-forgekin",
@@ -172,7 +172,7 @@ def another_claude_profile() -> CapabilityProfile:
 
 @pytest.fixture
 def gpt5_profile() -> CapabilityProfile:
-    """不同厂商（openai）的灵智体——同类别盲点但厂商不同。"""
+    """不同厂商（openai）的Forgekin——同类别盲点但厂商不同。"""
     return _make_profile(
         profile_id="gpt5-researcher-001",
         agent_id="gpt5-researcher-forgekin",
@@ -319,9 +319,9 @@ def test_gap_analysis_task_profile_matching(claude_profile: CapabilityProfile) -
         required_tools=["file_read", "debugger"],  # debugger 未授权
         forbidden_blind_spot_categories=[
             BlindSpotCategory.SELF_REFERENTIAL_LOGIC
-        ],  # 与灵智体盲点重叠
+        ],  # 与Forgekin盲点重叠
         preferred_cognitive_styles=["structured"],
-        min_context_window=100000,  # 灵智体 200000 够用
+        min_context_window=100000,  # Forgekin 200000 够用
     )
 
     report = claude_profile.gap_analysis(task)
@@ -378,7 +378,7 @@ def test_gap_analysis_context_window_insufficient() -> None:
 def test_gap_analysis_cognitive_style_mismatch() -> None:
     """测试 gap_analysis 认知风格不匹配检测。"""
     profile = _make_profile()
-    # 灵智体风格是 structured，任务期望 narrative/concise
+    # Forgekin风格是 structured，任务期望 narrative/concise
     task = TaskProfile(
         task_id="task-003",
         task_type="creative_writing",
@@ -399,7 +399,7 @@ def test_gap_analysis_no_gap_when_fully_matched() -> None:
         task_type="code_generation",
         required_skills=["python_async"],
         required_tools=["file_read"],
-        forbidden_blind_spot_categories=[],  # 不禁忌灵智体的盲点
+        forbidden_blind_spot_categories=[],  # 不禁忌Forgekin的盲点
         preferred_cognitive_styles=["structured"],
         min_context_window=100000,
     )

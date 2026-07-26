@@ -138,7 +138,7 @@ def verify_cl022() -> tuple[str, str]:
                 f"PluginManifest 缺少基础字段: {missing_basic}",
             )
 
-        # V7.0 育灵字段
+        # V7.0 Forge Nurturing字段
         v70_fields = [
             "forgekins_dir",
             "codex_dir",
@@ -149,7 +149,7 @@ def verify_cl022() -> tuple[str, str]:
         if missing_v70:
             return (
                 "PARTIAL",
-                f"PluginManifest 缺少 V7.0 育灵字段: {missing_v70}",
+                f"PluginManifest 缺少 V7.0 Forge Nurturing字段: {missing_v70}",
             )
 
         # FlowForgePlugin 可被继承实例化（验证 ABC 可用）
@@ -163,7 +163,7 @@ def verify_cl022() -> tuple[str, str]:
         return (
             "PASS",
             "PluginManifest 实例化成功，含 forgekins_dir/codex_dir/"
-            "council_dir/auto_forge_dir 4 个 V7.0 育灵字段",
+            "council_dir/auto_forge_dir 4 个 V7.0 Forge Nurturing字段",
         )
     except ImportError as e:
         return "FAIL", f"导入失败: {e}"

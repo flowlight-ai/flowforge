@@ -79,7 +79,7 @@ operator 决策：FlowForge 必须实现 Harness 七层现实表面 + Build to D
 | 下次一定 | 能做的现在做 |
 | 星星罐子 | P0 不可逆风险立即停止 |
 
-Magic Words 是协议层硬要求，不能被任何觉醒阶绕过（包括 E6 灵智主导阶）。与 ADR 013 可进化智能体愿景的"Magic Words 逃生舱始终可触发"原则一致。
+Magic Words 是协议层硬要求，不能被任何觉醒阶绕过（包括 E6 通用智能体框架主导阶）。与 ADR 013 可进化智能体愿景的"Magic Words 逃生舱始终可触发"原则一致。
 
 ### 6. Entropy Control 退役（F012，RA-021）
 
@@ -143,14 +143,14 @@ class DualTrackPolicy:
 - 注意力预算被单一任务耗尽
 - 错过 Magic Words 打断信号
 - 累积技术债（"再试一次"循环）
-- 阻塞 Pack 协作（其他灵智体等待结果）
+- 阻塞 Pack 协作（其他可进化智能体等待结果）
 
 **决策**：实现 Hyperfocus Brake 双组件机制。
 
 #### 10.1 90 分钟 Timer
 
-- 每个灵智体进入"深度自主执行"模式时启动 90 分钟倒计时
-- 90 分钟到点后，灵智体必须暂停当前任务并触发 typed check-in
+- 每个可进化智能体进入"深度自主执行"模式时启动 90 分钟倒计时
+- 90 分钟到点后，可进化智能体必须暂停当前任务并触发 typed check-in
 - Timer 通过 `asyncio.Task` 实现，支持取消和重置
 - 多次超时（默认 3 次）自动升级到 operator approval
 
@@ -167,7 +167,7 @@ class HyperfocusTimer:
 
 #### 10.2 Typed Check-in
 
-超时后灵智体必须提交 typed check-in（结构化签到），含 5 个字段：
+超时后可进化智能体必须提交 typed check-in（结构化签到），含 5 个字段：
 
 ```python
 class HyperfocusCheckIn(BaseModel):
@@ -188,7 +188,7 @@ class HyperfocusCheckIn(BaseModel):
 #### 10.3 与 Magic Words 联动
 
 - Magic Words 信号可强制中断 Hyperfocus Timer
-- 中断后灵智体必须先响应 Magic Words，再决定是否恢复 timer
+- 中断后可进化智能体必须先响应 Magic Words，再决定是否恢复 timer
 - 防止"超聚焦 + Magic Words 信号被忽略"的双重失败
 
 #### 10.4 与 MindFamily 联动

@@ -7,10 +7,10 @@
     - EvolutionStage 6 个枚举值存在
     - AwakeningStage 6 个枚举值存在
     - SoulImprint.compute_hash() 返回稳定哈希
-    - SoulImprint.forge() 创建不可变灵印且 verify() 通过
+    - SoulImprint.forge() 创建不可变SoulImprint且 verify() 通过
     - ForgekinBase.can_self_evolve() 在觉醒阶 E4+ 返回 True
     - ForgekinBase.can_forge_new_forgekin() 仅在进化阶 E6 返回 True
-    - 5 种形态灵智体（BioForgekin / OrgForgekin / ObjForgekin /
+    - 5 种形态Forgekin（BioForgekin / OrgForgekin / ObjForgekin /
       VirtualForgekin / HybridForgekin）可实例化且 observe/act/verify
       可被 await
 
@@ -23,8 +23,8 @@
     - T6/T7/T8: 不涉及指标采集 / LLM 审核 / DOM 验证场景
 
 详见:
-    - [doc:design/naming-contract.md#2.2] 灵智体定义
-    - [doc:design/naming-contract.md#2.6] 灵印定义
+    - [doc:design/naming-contract.md#2.2] Forgekin定义
+    - [doc:design/naming-contract.md#2.6] SoulImprint定义
     - [doc:design/naming-contract.md#3] 进化阶详细定义
     - [doc:design/naming-contract.md#4] 觉醒阶详细定义
     - [doc:project_rules.md#测试铁律] T1-T8
@@ -57,7 +57,7 @@ def _make_imprint(
     namespace: str = "forgemind",
     value_anchors: list[str] | None = None,
 ) -> SoulImprint:
-    """构造测试用灵印。"""
+    """构造测试用SoulImprint。"""
     if value_anchors is None:
         value_anchors = ["不伤害 operator", "遵守 VISION.md §7"]
     return SoulImprint.forge(
@@ -84,7 +84,7 @@ class _DummyForgekin(ForgekinBase):
 
 
 class TestForgekinSpeciesEnum:
-    """ForgekinSpecies 灵族枚举完整性测试。"""
+    """ForgekinSpecies ForgekinSpecies枚举完整性测试。"""
 
     def test_has_five_species(self) -> None:
         """5 大形态枚举值必须存在（详见 naming-contract.md §2.3）。"""
@@ -95,7 +95,7 @@ class TestForgekinSpeciesEnum:
         assert ForgekinSpecies.HYBRID.value == "hybrid"
 
     def test_total_count_is_five(self) -> None:
-        """灵族枚举总数必须为 5。"""
+        """ForgekinSpecies枚举总数必须为 5。"""
         assert len(list(ForgekinSpecies)) == 5
 
     def test_from_string_case_insensitive(self) -> None:
@@ -104,13 +104,13 @@ class TestForgekinSpeciesEnum:
         assert ForgekinSpecies.from_string("Virtual") == ForgekinSpecies.VIRTUAL
 
     def test_from_string_rejects_unknown(self) -> None:
-        """未知灵族字符串应抛出 ValueError。"""
-        with pytest.raises(ValueError, match="未知的灵族形态"):
+        """未知ForgekinSpecies字符串应抛出 ValueError。"""
+        with pytest.raises(ValueError, match="未知的ForgekinSpecies形态"):
             ForgekinSpecies.from_string("unknown_species")
 
     def test_chinese_name_and_class_name(self) -> None:
         """chinese_name / class_name 属性应返回正确值。"""
-        assert ForgekinSpecies.BIO.chinese_name == "生物灵智体"
+        assert ForgekinSpecies.BIO.chinese_name == "生物Forgekin"
         assert ForgekinSpecies.BIO.class_name == "BioForgekin"
         assert ForgekinSpecies.HYBRID.class_name == "HybridForgekin"
 
@@ -138,7 +138,7 @@ class TestEvolutionStageEnum:
         assert EvolutionStage.E3.chinese_name == "成长阶"
         assert EvolutionStage.E4.chinese_name == "成长阶·深"
         assert EvolutionStage.E5.chinese_name == "觉醒阶"
-        assert EvolutionStage.E6.chinese_name == "灵智阶"
+        assert EvolutionStage.E6.chinese_name == "ForgeMind阶"
 
     def test_english_names(self) -> None:
         """英文名应与 naming-contract.md §3 表格一致。"""
@@ -160,7 +160,7 @@ class TestEvolutionStageEnum:
         assert EvolutionStage.E6.can_initiate_council() is True
 
     def test_can_cross_species_at_e4_plus(self) -> None:
-        """can_cross_species 在 E4+ 返回 True（跨灵族协作能力）。"""
+        """can_cross_species 在 E4+ 返回 True（跨ForgekinSpecies协作能力）。"""
         assert EvolutionStage.E3.can_cross_species() is False
         assert EvolutionStage.E4.can_cross_species() is True
 
@@ -188,7 +188,7 @@ class TestAwakeningStageEnum:
         assert AwakeningStage.E3.chinese_name == "受限自主阶"
         assert AwakeningStage.E4.chinese_name == "Evolving 阶"
         assert AwakeningStage.E5.chinese_name == "共创阶"
-        assert AwakeningStage.E6.chinese_name == "灵智主导阶"
+        assert AwakeningStage.E6.chinese_name == "ForgeMind主导阶"
 
     def test_can_self_evolve_at_e4_plus(self) -> None:
         """can_self_evolve 在 E4+ 返回 True（Evolving 状态）。"""
@@ -205,11 +205,11 @@ class TestAwakeningStageEnum:
         assert AwakeningStage.E2.is_full_human_control() is False
 
 
-# ── 灵印（SoulImprint）测试 ───────────────────────────────────────
+# ── SoulImprint（SoulImprint）测试 ───────────────────────────────────────
 
 
 class TestSoulImprint:
-    """SoulImprint 灵印测试（详见 naming-contract.md §2.6）。"""
+    """SoulImprint SoulImprint测试（详见 naming-contract.md §2.6）。"""
 
     def test_compute_hash_is_stable(self) -> None:
         """compute_hash 对相同输入应返回相同哈希。"""
@@ -246,7 +246,7 @@ class TestSoulImprint:
         assert h1 != h2
 
     def test_forge_creates_immutable_imprint(self) -> None:
-        """forge 创建的灵印应不可变（frozen=True）。"""
+        """forge 创建的SoulImprint应不可变（frozen=True）。"""
         imprint = SoulImprint.forge(
             seed_params={"name": "孙悟空"},
             value_anchors=["不伤害 operator"],
@@ -256,7 +256,7 @@ class TestSoulImprint:
             imprint.namespace = "contentforge"  # type: ignore[misc]
 
     def test_forge_verify_passes(self) -> None:
-        """forge 创建的灵印 verify() 应通过（哈希一致）。"""
+        """forge 创建的SoulImprint verify() 应通过（哈希一致）。"""
         imprint = SoulImprint.forge(
             seed_params={"name": "孙悟空"},
             value_anchors=["不伤害 operator"],
@@ -305,12 +305,12 @@ class TestForgekinBaseInheritance:
         imprint = _make_imprint(name="孙悟空")
         forgekin = _DummyForgekin(
             forgekin_id="forgemind:test_dummy",
-            name="测试灵智体",
+            name="测试Forgekin",
             species=ForgekinSpecies.VIRTUAL,
             soul_imprint=imprint,
         )
         assert forgekin.forgekin_id == "forgemind:test_dummy"
-        assert forgekin.name == "测试灵智体"
+        assert forgekin.name == "测试Forgekin"
         assert forgekin.species == ForgekinSpecies.VIRTUAL
         assert forgekin.lifecycle_state == "created"
 
@@ -341,7 +341,7 @@ class TestForgekinBaseInheritance:
         imprint = _make_imprint()
         forgekin = _DummyForgekin(
             forgekin_id="forgemind:test_async",
-            name="异步测试灵智体",
+            name="异步测试Forgekin",
             species=ForgekinSpecies.VIRTUAL,
             soul_imprint=imprint,
         )
@@ -422,7 +422,7 @@ class TestCapabilityJudgement:
         assert desc["forgekin_id"] == "forgemind:sun_wukong"
         assert desc["name"] == "孙悟空"
         assert desc["species"] == "virtual"
-        assert desc["species_chinese"] == "虚拟灵智体"
+        assert desc["species_chinese"] == "虚拟Forgekin"
         assert desc["evolution_stage"] == "E3"
         assert desc["awakening_stage"] == "E2"
         assert desc["imprint_hash"] == imprint.imprint_hash
@@ -431,15 +431,15 @@ class TestCapabilityJudgement:
         assert desc["can_forge_new_forgekin"] is False  # E3 != E6
 
 
-# ── 5 种形态灵智体实例化测试 ─────────────────────────────────────
+# ── 5 种形态Forgekin实例化测试 ─────────────────────────────────────
 
 
 class TestSpeciesImplInstantiation:
-    """5 种形态灵智体可实例化且 observe/act/verify 可 await。"""
+    """5 种形态Forgekin可实例化且 observe/act/verify 可 await。"""
 
     @pytest.mark.asyncio
     async def test_bio_forgekin(self) -> None:
-        """BioForgekin 生物灵智体可实例化。"""
+        """BioForgekin 生物Forgekin可实例化。"""
         imprint = _make_imprint(name="家猫橘子")
         forgekin = BioForgekin(
             forgekin_id="forgemind:cat_orange",
@@ -459,7 +459,7 @@ class TestSpeciesImplInstantiation:
 
     @pytest.mark.asyncio
     async def test_org_forgekin(self) -> None:
-        """OrgForgekin 组织灵智体可实例化。"""
+        """OrgForgekin 组织Forgekin可实例化。"""
         imprint = _make_imprint(name="某科技公司")
         forgekin = OrgForgekin(
             forgekin_id="forgemind:tech_company",
@@ -474,7 +474,7 @@ class TestSpeciesImplInstantiation:
 
     @pytest.mark.asyncio
     async def test_obj_forgekin(self) -> None:
-        """ObjForgekin 物品灵智体可实例化。"""
+        """ObjForgekin 物品Forgekin可实例化。"""
         imprint = _make_imprint(name="客厅吊灯")
         forgekin = ObjForgekin(
             forgekin_id="forgemind:ceiling_lamp",
@@ -496,7 +496,7 @@ class TestSpeciesImplInstantiation:
 
     @pytest.mark.asyncio
     async def test_virtual_forgekin(self) -> None:
-        """VirtualForgekin 虚拟灵智体可实例化。"""
+        """VirtualForgekin 虚拟Forgekin可实例化。"""
         imprint = _make_imprint(name="孙悟空")
         forgekin = VirtualForgekin(
             forgekin_id="forgemind:sun_wukong",
@@ -516,9 +516,9 @@ class TestSpeciesImplInstantiation:
 
     @pytest.mark.asyncio
     async def test_hybrid_forgekin(self) -> None:
-        """HybridForgekin 混合灵智体可实例化（组合 2+ 不同 species 子灵智体）。"""
+        """HybridForgekin 混合Forgekin可实例化（组合 2+ 不同 species 子Forgekin）。"""
         imprint = _make_imprint(name="智能家居系统")
-        # 子灵智体: 物品 + 组织
+        # 子Forgekin: 物品 + 组织
         lamp = ObjForgekin(
             forgekin_id="forgemind:smart_home:lamp",
             name="智能灯具",
@@ -548,7 +548,7 @@ class TestSpeciesImplInstantiation:
         assert len(obs["component_observations"]) == 2
 
     def test_hybrid_rejects_single_species(self) -> None:
-        """HybridForgekin 子灵智体必须包含至少 2 种不同 species。"""
+        """HybridForgekin 子Forgekin必须包含至少 2 种不同 species。"""
         imprint = _make_imprint(name="混合测试")
         lamp1 = ObjForgekin(
             forgekin_id="forgemind:lamp1",
