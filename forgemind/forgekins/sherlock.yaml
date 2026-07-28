@@ -50,13 +50,12 @@ awakening_stage: E4  # 自主阶（Autonomous）— code 闭环门控（I1）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: trae
-  model: trae
-  mode: bridge
+  provider: zhipu  # 直连智谱 API（绕过 OpenRoute WebChat 浏览器自动化）
+  model: glm-4-flash  # 夏洛克=开发者，flash 响应快
+  mode: http
   session_id_prefix: "forgemind:sherlock"
-  bridge_timeout: 300
-  bridge_poll_interval: 2
-  temperature: 0.3  # 审查任务需要确定性
+  bridge_timeout: 60
+  temperature: 0.5
   max_tokens: 8192
 
 # ── 能力画像 ────────────────────────────────────────────────

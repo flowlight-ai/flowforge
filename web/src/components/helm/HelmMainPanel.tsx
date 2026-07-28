@@ -579,12 +579,12 @@ export default function HelmMainPanel({
 
           {resumePrompt && helm.phase === "idle" && (
             <div className="px-4 py-3 bg-amber-900/30 border-t border-amber-700/50 flex items-center gap-3">
-              <span className="text-amber-300 text-xs">
+              <span className="text-[var(--semantic-warning)] text-xs">
                 ⏸ 发现未完成的任务: {resumePrompt.intent.slice(0, 40)}
               </span>
               <button
                 onClick={onResumePrompt}
-                className="text-xs px-3 py-1 bg-amber-600 text-white rounded hover:bg-amber-500"
+                className="text-xs px-3 py-1 bg-[var(--semantic-warning)] text-[var(--cafe-accent-foreground)] rounded hover:opacity-90"
               >
                 继续执行
               </button>

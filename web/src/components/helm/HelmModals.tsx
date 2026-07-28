@@ -42,11 +42,11 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
       {/* Settings 全屏覆盖模态框 */}
       {panels.showSettings && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--scrim-heavy)]"
           onClick={() => panels.setShowSettings(false)}
         >
           <div
-            className="w-full max-w-2xl max-h-[80vh] bg-[#1e1e2e] rounded-xl shadow-2xl overflow-hidden"
+            className="w-full max-w-2xl max-h-[80vh] bg-[var(--bg-elevated)] rounded-xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <SettingsPanel
@@ -83,11 +83,11 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
       {/* MCP 服务器配置（右侧滑入） */}
       {panels.showMCPConfig && (
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-black/40"
+          className="fixed inset-0 z-50 flex justify-end bg-[var(--scrim-dim)]"
           onClick={() => panels.setShowMCPConfig(false)}
         >
           <div
-            className="w-full max-w-md h-full bg-[#1e1e2e] shadow-2xl overflow-y-auto"
+            className="w-full max-w-md h-full bg-[var(--bg-elevated)] shadow-2xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
@@ -115,11 +115,11 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
       {/* Figma 导入器 */}
       {panels.showFigmaImporter && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--scrim-heavy)]"
           onClick={() => panels.setShowFigmaImporter(false)}
         >
           <div
-            className="w-full max-w-lg max-h-[80vh] bg-[#1e1e2e] rounded-xl shadow-2xl overflow-hidden"
+            className="w-full max-w-lg max-h-[80vh] bg-[var(--bg-elevated)] rounded-xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">

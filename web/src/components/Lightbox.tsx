@@ -58,7 +58,7 @@ export function Lightbox({ open, images, index, onIndexChange, onClose }: Lightb
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.85)",
+        background: "var(--scrim-heavy)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

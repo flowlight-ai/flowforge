@@ -171,14 +171,14 @@ export default function StaticGraphModal({ type, name, onClose }: StaticGraphMod
 
   const renderGraph = useCallback(() => {
     if (!graph || !graph.nodes.length) {
-      return <div className="text-center text-gray-400 py-8">暂无流程图数据</div>;
+      return <div className="text-center text-[var(--muted)] py-8">暂无流程图数据</div>;
     }
 
     const { positions, svgW, svgH } = layout;
     const { roots, children } = hierarchy;
 
     return (
-      <svg width="100%" viewBox={`0 0 ${svgW} ${svgH}`} className="bg-gray-900/50 rounded-lg">
+      <svg width="100%" viewBox={`0 0 ${svgW} ${svgH}`} className="bg-[color-mix(in_srgb,var(--bg-elevated)_50%,transparent)] rounded-lg">
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
@@ -328,50 +328,50 @@ export default function StaticGraphModal({ type, name, onClose }: StaticGraphMod
   const typeLabel = type === "workflow" ? "工作流" : type === "agent" ? "Agent" : "执行模式";
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-gray-800 rounded-xl shadow-2xl w-[780px] max-h-[85vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+    <div className="fixed inset-0 bg-[var(--scrim-heavy)] flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-[var(--bg-hover)] rounded-xl shadow-2xl w-[780px] max-h-[85vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
           <h3 className="text-lg font-semibold text-white">
             {typeLabel}流程图 — {graph?.display_name || graph?.name || name}
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">✕</button>
+          <button onClick={onClose} className="text-[var(--muted)] hover:text-white text-xl">✕</button>
         </div>
 
         <div className="p-6">
-          {loading && <div className="text-center text-gray-400 py-8">加载中...</div>}
-          {error && <div className="text-center text-red-400 py-8">加载失败: {error}</div>}
+          {loading && <div className="text-center text-[var(--muted)] py-8">加载中...</div>}
+          {error && <div className="text-center text-[var(--danger)] py-8">加载失败: {error}</div>}
           {!loading && !error && graph && (
             <>
               {graph.description && (
-                <p className="text-gray-400 text-sm mb-3">{graph.description}</p>
+                <p className="text-[var(--muted)] text-sm mb-3">{graph.description}</p>
               )}
               {graph.default_mode && (
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-gray-400 text-sm">默认模式:</span>
-                  <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded text-xs font-medium">
+                  <span className="text-[var(--muted)] text-sm">默认模式:</span>
+                  <span className="px-2 py-0.5 bg-[color-mix(in_srgb,var(--cafe-accent)_20%,transparent)] text-[var(--cafe-accent)] rounded text-xs font-medium">
                     {graph.mode_display_name || graph.default_mode}
                   </span>
                   {graph.mode_description && (
-                    <span className="text-gray-500 text-xs">— {graph.mode_description}</span>
+                    <span className="text-[var(--muted)] text-xs">— {graph.mode_description}</span>
                   )}
                 </div>
               )}
               {graph.capabilities && graph.capabilities.length > 0 && (
                 <div className="flex gap-2 mb-4">
                   {graph.capabilities.map((c) => (
-                    <span key={c} className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded text-xs">{c}</span>
+                    <span key={c} className="px-2 py-1 bg-[color-mix(in_srgb,var(--cafe-accent)_20%,transparent)] text-[var(--cafe-accent)] rounded text-xs">{c}</span>
                   ))}
                 </div>
               )}
               {renderGraph()}
-              <div className="mt-4 flex flex-wrap gap-3 text-xs text-gray-500">
+              <div className="mt-4 flex flex-wrap gap-3 text-xs text-[var(--muted)]">
                 <span>🤖 Agent</span>
                 <span>🧠 LLM</span>
                 <span>🔧 Tool</span>
                 <span>📊 Result</span>
                 <span>👁️ Review</span>
                 <span>⚡ Mode</span>
-                <span className="text-amber-400">- - → 循环/迭代</span>
+                <span className="text-[var(--semantic-warning)]">- - → 循环/迭代</span>
               </div>
             </>
           )}

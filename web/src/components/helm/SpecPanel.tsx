@@ -161,20 +161,20 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0c0d12]">
+    <div className="flex flex-col h-full bg-[var(--bg-elevated)]">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2 flex-shrink-0">
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 flex-shrink-0">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <polyline points="14 2 14 8 20 8" />
           <line x1="16" y1="13" x2="8" y2="13" />
           <line x1="16" y1="17" x2="8" y2="17" />
         </svg>
-        <span className="text-sm font-semibold text-gray-200">Spec 模式</span>
+        <span className="text-sm font-semibold text-[var(--text)]">Spec 模式</span>
       </div>
 
       {/* Tab bar */}
-      <div className="flex border-b border-gray-800 flex-shrink-0">
+      <div className="flex border-b border-[var(--border)] flex-shrink-0">
         {([
           { key: "spec" as TabKey, label: "spec.md", badge: null },
           { key: "tasks" as TabKey, label: "tasks.md", badge: totalTasks > 0 ? `${completedTasks}/${totalTasks}` : null },
@@ -185,13 +185,13 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
             onClick={() => setActiveTab(tab.key)}
             className={`flex-1 px-3 py-2 text-xs font-medium transition-colors border-b-2 flex items-center justify-center gap-1.5 ${
               activeTab === tab.key
-                ? "text-indigo-400 border-indigo-500"
-                : "text-gray-500 border-transparent hover:text-gray-300"
+                ? "text-[var(--cafe-accent)] border-[var(--cafe-accent)]"
+                : "text-[var(--muted)] border-transparent hover:text-[var(--text)]"
             }`}
           >
             <span>{tab.label}</span>
             {tab.badge && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-hover)] text-[var(--muted)]">
                 {tab.badge}
               </span>
             )}
@@ -205,11 +205,11 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
         {activeTab === "spec" && (
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-gray-500">Markdown 格式</span>
+              <span className="text-xs text-[var(--muted)]">Markdown 格式</span>
               <button
                 onClick={generateSpecFromDescription}
                 disabled={isGenerating}
-                className="text-xs px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50 flex items-center gap-1"
+                className="text-xs px-2 py-1 rounded-lg bg-[var(--cafe-accent)] hover:bg-[var(--cafe-accent-hover)] text-[var(--cafe-accent-foreground)] transition-colors disabled:opacity-50 flex items-center gap-1"
               >
                 {isGenerating ? (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }}>
@@ -226,7 +226,7 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
             <textarea
               value={specContent}
               onChange={(e) => handleSpecChange(e.target.value)}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 font-mono focus:outline-none focus:border-indigo-500 resize-none min-h-[400px]"
+              className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:border-[var(--cafe-accent)] resize-none min-h-[400px]"
               placeholder="# 项目规格&#10;&#10;## 概述&#10;描述项目需求..."
             />
           </div>
@@ -240,8 +240,8 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
                 key={task.id}
                 className={`rounded-lg border p-3 transition-colors ${
                   task.completed
-                    ? "border-gray-800 bg-gray-900/30 opacity-60"
-                    : "border-gray-700 bg-gray-900/60"
+                    ? "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_30%,transparent)] opacity-60"
+                    : "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_60%,transparent)]"
                 }`}
               >
                 <div className="flex items-start gap-2">
@@ -249,8 +249,8 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
                     onClick={() => toggleTask(task.id)}
                     className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
                       task.completed
-                        ? "bg-indigo-600 border-indigo-500"
-                        : "border-gray-600 hover:border-indigo-500"
+                        ? "bg-[var(--cafe-accent)] border-[var(--cafe-accent)]"
+                        : "border-[var(--border-strong)] hover:border-[var(--cafe-accent)]"
                     }`}
                   >
                     {task.completed && (
@@ -266,11 +266,11 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
                       onChange={(e) => updateTask(task.id, { title: e.target.value })}
                       placeholder="任务标题"
                       className={`w-full bg-transparent text-sm font-medium focus:outline-none ${
-                        task.completed ? "text-gray-500 line-through" : "text-gray-200"
+                        task.completed ? "text-[var(--muted)] line-through" : "text-[var(--text)]"
                       }`}
                     />
                     {task.description && (
-                      <p className="text-[11px] text-gray-500 mt-0.5">{task.description}</p>
+                      <p className="text-[11px] text-[var(--muted)] mt-0.5">{task.description}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
@@ -281,7 +281,7 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
                     />
                     <button
                       onClick={() => removeTask(task.id)}
-                      className="text-gray-600 hover:text-red-400 p-0.5 rounded transition-colors"
+                      className="text-[var(--muted)] hover:text-[var(--danger)] p-0.5 rounded transition-colors"
                       title="删除"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -295,7 +295,7 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
             ))}
             <button
               onClick={addTask}
-              className="w-full py-2 text-xs text-gray-500 hover:text-gray-300 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+              className="w-full py-2 text-xs text-[var(--muted)] hover:text-[var(--text)] border border-dashed border-[var(--border)] rounded-lg hover:border-[var(--border-strong)] transition-colors"
             >
               + 添加任务
             </button>
@@ -311,8 +311,8 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
                   onClick={() => toggleChecklist(item.id)}
                   className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
                     item.checked
-                      ? "bg-indigo-600 border-indigo-500"
-                      : "border-gray-600 hover:border-indigo-500"
+                      ? "bg-[var(--cafe-accent)] border-[var(--cafe-accent)]"
+                      : "border-[var(--border-strong)] hover:border-[var(--cafe-accent)]"
                   }`}
                 >
                   {item.checked && (
@@ -327,12 +327,12 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
                   onChange={(e) => updateChecklistText(item.id, e.target.value)}
                   placeholder="检查项..."
                   className={`flex-1 bg-transparent text-sm focus:outline-none ${
-                    item.checked ? "text-gray-500 line-through" : "text-gray-200"
+                    item.checked ? "text-[var(--muted)] line-through" : "text-[var(--text)]"
                   }`}
                 />
                 <button
                   onClick={() => removeChecklistItem(item.id)}
-                  className="text-gray-600 hover:text-red-400 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-[var(--muted)] hover:text-[var(--danger)] p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                   title="删除"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -344,7 +344,7 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
             ))}
             <button
               onClick={addChecklistItem}
-              className="w-full py-2 text-xs text-gray-500 hover:text-gray-300 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors mt-2"
+              className="w-full py-2 text-xs text-[var(--muted)] hover:text-[var(--text)] border border-dashed border-[var(--border)] rounded-lg hover:border-[var(--border-strong)] transition-colors mt-2"
             >
               + 添加检查项
             </button>
@@ -354,15 +354,15 @@ export default function SpecPanel({ spec, tasks, checklist, onUpdate }: SpecPane
 
       {/* Progress bar */}
       {activeTab === "tasks" && totalTasks > 0 && (
-        <div className="px-4 py-2 border-t border-gray-800 flex-shrink-0">
+        <div className="px-4 py-2 border-t border-[var(--border)] flex-shrink-0">
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                className="h-full bg-[var(--cafe-accent)] rounded-full transition-all duration-300"
                 style={{ width: `${(completedTasks / totalTasks) * 100}%` }}
               />
             </div>
-            <span className="text-[10px] text-gray-500 font-mono">{completedTasks}/{totalTasks}</span>
+            <span className="text-[10px] text-[var(--muted)] font-mono">{completedTasks}/{totalTasks}</span>
           </div>
         </div>
       )}

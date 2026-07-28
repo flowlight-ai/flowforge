@@ -178,7 +178,7 @@ export function GuideOverlay() {
         <div
           className="fixed inset-0 z-[9995] pointer-events-none"
           style={{
-            background: `rgba(0,0,0,0.6)`,
+            background: `var(--scrim-heavy)`,
             clipPath: `polygon(0% 0%, 0% 100%, ${targetRect.left}px 100%, ${targetRect.left}px ${targetRect.top}px, ${targetRect.right}px ${targetRect.top}px, ${targetRect.right}px ${targetRect.bottom}px, ${targetRect.left}px ${targetRect.bottom}px, ${targetRect.left}px 100%, 100% 100%, 100% 0%)`,
           }}
           data-guide-overlay="true"
@@ -186,7 +186,7 @@ export function GuideOverlay() {
       ) : (
         <div
           className="fixed inset-0 z-[9995]"
-          style={{ background: "rgba(0,0,0,0.6)" }}
+          style={{ background: "var(--scrim-heavy)" }}
           data-guide-overlay="true"
         />
       )}

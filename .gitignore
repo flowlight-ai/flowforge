@@ -190,3 +190,4 @@ chrome_profile/
 crash_dumps/
 *.dmp
 *.dump
+.trae_bridge

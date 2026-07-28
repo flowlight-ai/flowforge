@@ -97,6 +97,9 @@ class ForgekinBase(ABC):
         # LLM 客户端（TraeLLMClient 或兼容接口），通过 set_llm_client 注入
         # 延迟初始化：未注入时 chat 方法会回退到纯文本响应
         self._llm_client: Any | None = llm_client
+        # CLI LLM Provider 缓存（claude_code/codex/gemini/opencode）
+        # 根据 llm.provider 字段延迟创建，避免每次 chat 重复初始化
+        self._cli_provider_cache: Any | None = None
         # 生命周期状态：created → observing/acting/verifying → evolved/retired
         self._lifecycle_state: str = "created"
 
@@ -215,7 +218,88 @@ class ForgekinBase(ABC):
         kwargs.setdefault("temperature", llm_cfg.get("temperature", 0.7))
         kwargs.setdefault("max_tokens", llm_cfg.get("max_tokens", 8192))
 
-        # 降级处理：未注入 LLM 客户端
+        # 根据 llm.provider 选择 LLM 后端
+        provider = llm_cfg.get("provider", "trae")
+
+        # zhipu provider：直连智谱 AI API（绕过 OpenRoute WebChat 浏览器自动化）
+        # 当 OpenRoute WebChat 卡住时，这是稳定可用的后备路径
+        if provider == "zhipu":
+            if self._cli_provider_cache is None:
+                from flowforge.llm.zhipu_client import build_zhipu_client
+                model_name = llm_cfg.get("model", "glm-4-flash")
+                self._cli_provider_cache = build_zhipu_client(model_name)
+            if self._cli_provider_cache is not None:
+                try:
+                    result = await self._cli_provider_cache.chat(
+                        full_messages,
+                        session_id=session_id,
+                        timeout=llm_cfg.get("bridge_timeout", 60),
+                        **kwargs,
+                    )
+                    result.setdefault("forgekin_id", self.forgekin_id)
+                    result.setdefault("session_id", session_id)
+                    return result
+                except Exception as exc:  # noqa: BLE001
+                    return {
+                        "content": f"[{self.name} ZHIPU 异常] {type(exc).__name__}: {exc}",
+                        "model": provider,
+                        "usage": {"latency_ms": 0, "error": True},
+                        "session_id": session_id,
+                        "forgekin_id": self.forgekin_id,
+                    }
+
+        # openroute provider：通过 HTTP 调用 OpenRoute 网关（推荐，稳定快速）
+        if provider == "openroute":
+            if self._cli_provider_cache is None:
+                from flowforge.llm.openroute_client import build_openroute_client
+                model_name = llm_cfg.get("model", "Doubao-Seed2.0")
+                self._cli_provider_cache = build_openroute_client(model_name)
+            if self._cli_provider_cache is not None:
+                try:
+                    result = await self._cli_provider_cache.chat(
+                        full_messages,
+                        session_id=session_id,
+                        timeout=llm_cfg.get("bridge_timeout", 90),
+                        **kwargs,
+                    )
+                    result.setdefault("forgekin_id", self.forgekin_id)
+                    result.setdefault("session_id", session_id)
+                    return result
+                except Exception as exc:  # noqa: BLE001
+                    return {
+                        "content": f"[{self.name} OpenRoute 异常] {type(exc).__name__}: {exc}",
+                        "model": provider,
+                        "usage": {"latency_ms": 0, "error": True},
+                        "session_id": session_id,
+                        "forgekin_id": self.forgekin_id,
+                    }
+
+        # CLI provider：通过 subprocess 调用三方 Agent CLI（claude_code/codex/gemini/opencode）
+        if provider not in ("trae", "openroute", "zhipu"):
+            if self._cli_provider_cache is None:
+                from flowforge.llm.cli_provider import build_cli_provider
+                self._cli_provider_cache = build_cli_provider(provider)
+            if self._cli_provider_cache is not None:
+                try:
+                    result = await self._cli_provider_cache.chat(
+                        full_messages,
+                        session_id=session_id,
+                        timeout=llm_cfg.get("bridge_timeout", 300),
+                        **kwargs,
+                    )
+                    result.setdefault("forgekin_id", self.forgekin_id)
+                    result.setdefault("session_id", session_id)
+                    return result
+                except Exception as exc:  # noqa: BLE001
+                    return {
+                        "content": f"[{self.name} CLI 异常] {type(exc).__name__}: {exc}",
+                        "model": provider,
+                        "usage": {"latency_ms": 0, "error": True},
+                        "session_id": session_id,
+                        "forgekin_id": self.forgekin_id,
+                    }
+
+        # 降级处理：未注入 LLM 客户端（trae 模式）
         if self._llm_client is None:
             return {
                 "content": (

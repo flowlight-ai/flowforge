@@ -130,7 +130,7 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
 
   if (!isSupported) {
     return (
-      <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-600">
+      <div className="flex items-center gap-2 px-2 py-1 text-xs text-[var(--muted)]">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <line x1="1" y1="1" x2="23" y2="23" />
           <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
@@ -160,7 +160,7 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
           {/* Pulse ring */}
           {isListening && (
             <div
-              className="absolute inset-0 rounded-full bg-red-500"
+              className="absolute inset-0 rounded-full bg-[var(--danger)]"
               style={{
                 transform: `scale(${pulseScale + 0.3})`,
                 opacity: pulseOpacity,
@@ -172,8 +172,8 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
             onClick={toggleListening}
             className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all ${
               isListening
-                ? "bg-red-500 text-white shadow-lg shadow-red-500/30"
-                : "bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700"
+                ? "bg-[var(--danger)] text-white shadow-lg shadow-red-500/30"
+                : "bg-[var(--bg-hover)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg-muted)]"
             }`}
             title={isListening ? "停止录音" : "开始录音"}
           >
@@ -197,7 +197,7 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
           value={selectedLanguage}
           onChange={(e) => setSelectedLanguage(e.target.value)}
           disabled={isListening}
-          className="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-[11px] text-gray-300 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+          className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-2 py-1 text-[11px] text-[var(--text)] focus:outline-none focus:border-[var(--cafe-accent)] disabled:opacity-50"
         >
           {SUPPORTED_LANGUAGES.map((lang) => (
             <option key={lang.code} value={lang.code}>{lang.label}</option>
@@ -206,8 +206,8 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
 
         {/* Status */}
         {isListening && (
-          <span className="text-[11px] text-red-400 font-medium flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400" style={{ animation: "pulse 1s ease-in-out infinite" }} />
+          <span className="text-[11px] text-[var(--danger)] font-medium flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" style={{ animation: "pulse 1s ease-in-out infinite" }} />
             录音中
           </span>
         )}
@@ -215,17 +215,17 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
 
       {/* Real-time transcription */}
       {(finalText || interimText) && (
-        <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-3 py-2 text-sm">
-          <span className="text-gray-300">{finalText}</span>
+        <div className="bg-[color-mix(in_srgb,var(--bg-elevated)_50%,transparent)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm">
+          <span className="text-[var(--text)]">{finalText}</span>
           {interimText && (
-            <span className="text-gray-500 italic">{interimText}</span>
+            <span className="text-[var(--muted)] italic">{interimText}</span>
           )}
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="text-[11px] text-red-400 flex items-center gap-1">
+        <div className="text-[11px] text-[var(--danger)] flex items-center gap-1">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />

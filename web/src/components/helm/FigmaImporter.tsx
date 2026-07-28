@@ -122,19 +122,19 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-[#0c0d12]">
+    <div className="flex flex-col h-full bg-[var(--bg-elevated)]">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2 flex-shrink-0">
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 flex-shrink-0">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" />
           <circle cx="8.5" cy="8.5" r="1.5" />
           <polyline points="21 15 16 10 5 21" />
         </svg>
-        <span className="text-sm font-semibold text-gray-200">Figma 导入</span>
+        <span className="text-sm font-semibold text-[var(--text)]">Figma 导入</span>
       </div>
 
       {/* URL input */}
-      <div className="px-4 py-3 border-b border-gray-800 flex-shrink-0">
+      <div className="px-4 py-3 border-b border-[var(--border)] flex-shrink-0">
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <input
@@ -143,13 +143,13 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
               onChange={(e) => setFigmaUrl(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleImport(); }}
               placeholder="粘贴 Figma 文件链接..."
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 pr-8"
+              className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--cafe-accent)] pr-8"
               disabled={isLoading}
             />
             {figmaUrl && !isLoading && (
               <button
                 onClick={() => setFigmaUrl("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)]"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -161,7 +161,7 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
           <button
             onClick={handleImport}
             disabled={!figmaUrl.trim() || isLoading}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--cafe-accent)] hover:bg-[var(--cafe-accent-hover)] text-[var(--cafe-accent-foreground)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             {isLoading ? (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }}>
@@ -180,7 +180,7 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
 
         {/* Error */}
         {error && (
-          <div className="mt-2 text-xs text-red-400 flex items-center gap-1">
+          <div className="mt-2 text-xs text-[var(--danger)] flex items-center gap-1">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
@@ -192,7 +192,7 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
 
         {/* URL format hint */}
         {!imported && !error && (
-          <div className="mt-2 text-[11px] text-gray-600">
+          <div className="mt-2 text-[11px] text-[var(--muted)]">
             支持 https://www.figma.com/file/... 或 https://www.figma.com/design/... 格式
           </div>
         )}
@@ -201,7 +201,7 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
       {/* Frame preview */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {!imported ? (
-          <div className="flex items-center justify-center h-full text-gray-600 text-xs p-4">
+          <div className="flex items-center justify-center h-full text-[var(--muted)] text-xs p-4">
             <div className="text-center">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" className="mx-auto mb-3 opacity-30">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -212,16 +212,16 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
             </div>
           </div>
         ) : frames.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-600 text-xs p-4">
+          <div className="flex items-center justify-center h-full text-[var(--muted)] text-xs p-4">
             未找到设计框架
           </div>
         ) : (
           <div className="p-3 space-y-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-400">{frames.length} 个框架</span>
+              <span className="text-xs text-[var(--muted)]">{frames.length} 个框架</span>
               <button
                 onClick={reset}
-                className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-[11px] text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               >
                 重新导入
               </button>
@@ -233,17 +233,17 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
                 onClick={() => setSelectedFrameId(frame.id)}
                 className={`rounded-lg border p-3 cursor-pointer transition-all ${
                   selectedFrameId === frame.id
-                    ? "border-indigo-500 bg-indigo-500/5"
-                    : "border-gray-700 bg-gray-900/40 hover:border-gray-600"
+                    ? "border-[var(--cafe-accent)] bg-[color-mix(in_srgb,var(--cafe-accent)_5%,transparent)]"
+                    : "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_40%,transparent)] hover:border-[var(--border-strong)]"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   {/* Thumbnail placeholder */}
-                  <div className="w-20 h-14 rounded bg-gray-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <div className="w-20 h-14 rounded bg-[var(--bg-hover)] flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {frame.thumbnailUrl ? (
                       <img src={frame.thumbnailUrl} alt={frame.name} className="w-full h-full object-cover" />
                     ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-600">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--muted)]">
                         <rect x="3" y="3" width="18" height="18" rx="2" />
                         <circle cx="8.5" cy="8.5" r="1.5" />
                         <polyline points="21 15 16 10 5 21" />
@@ -253,12 +253,12 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-200 truncate">{frame.name}</div>
+                    <div className="text-sm font-medium text-[var(--text)] truncate">{frame.name}</div>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] text-gray-500 font-mono">
+                      <span className="text-[10px] text-[var(--muted)] font-mono">
                         {frame.width}×{frame.height}
                       </span>
-                      <span className="text-[10px] text-gray-600">
+                      <span className="text-[10px] text-[var(--muted)]">
                         {frame.childrenCount} 子元素
                       </span>
                     </div>
@@ -279,10 +279,10 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
 
       {/* Generate code action */}
       {imported && selectedFrameId && (
-        <div className="px-4 py-3 border-t border-gray-800 flex-shrink-0">
+        <div className="px-4 py-3 border-t border-[var(--border)] flex-shrink-0">
           <button
             onClick={handleGenerate}
-            className="w-full py-2 text-sm font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2 text-sm font-medium rounded-lg bg-[var(--cafe-accent)] hover:bg-[var(--cafe-accent-hover)] text-[var(--cafe-accent-foreground)] transition-colors flex items-center justify-center gap-2"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <polyline points="16 18 22 12 16 6" />

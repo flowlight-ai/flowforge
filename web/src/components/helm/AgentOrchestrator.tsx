@@ -79,9 +79,9 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
   const activeAgent = agents.find((a) => a.id === configuringId);
 
   return (
-    <div className="flex flex-col h-full bg-[#0c0d12]">
+    <div className="flex flex-col h-full bg-[var(--bg-elevated)]">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2 flex-shrink-0">
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 flex-shrink-0">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="2" width="6" height="6" rx="1" />
           <rect x="16" y="2" width="6" height="6" rx="1" />
@@ -89,14 +89,14 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
           <path d="M5 8v3a2 2 0 002 2h2" />
           <path d="M19 8v3a2 2 0 01-2 2h-2" />
         </svg>
-        <span className="text-sm font-semibold text-gray-200">Agent 编排</span>
-        <span className="text-xs text-gray-500 ml-auto">{agents.filter((a) => a.enabled).length}/{agents.length} 已启用</span>
+        <span className="text-sm font-semibold text-[var(--text)]">Agent 编排</span>
+        <span className="text-xs text-[var(--muted)] ml-auto">{agents.filter((a) => a.enabled).length}/{agents.length} 已启用</span>
       </div>
 
       {/* Agent Cards */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
         {agents.length === 0 && (
-          <div className="flex items-center justify-center h-full text-gray-600 text-xs">
+          <div className="flex items-center justify-center h-full text-[var(--muted)] text-xs">
             暂无可用 Agent
           </div>
         )}
@@ -109,17 +109,17 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
             onDrop={handleDrop}
             className={`group relative rounded-lg border transition-all cursor-grab active:cursor-grabbing ${
               agent.enabled
-                ? "border-gray-700 bg-gray-900/60 hover:border-indigo-500/50"
-                : "border-gray-800 bg-gray-900/30 opacity-50"
+                ? "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_60%,transparent)] hover:border-[color-mix(in_srgb,var(--cafe-accent)_50%,transparent)]"
+                : "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-elevated)_30%,transparent)] opacity-50"
             }`}
           >
             {/* Connection line to next agent */}
             {idx < agents.length - 1 && (
-              <div className="absolute left-1/2 -bottom-2 w-px h-2 bg-gray-700" />
+              <div className="absolute left-1/2 -bottom-2 w-px h-2 bg-[var(--bg-muted)]" />
             )}
             <div className="flex items-center gap-3 px-3 py-2.5">
               {/* Drag handle */}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 flex-shrink-0">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--muted)] flex-shrink-0">
                 <circle cx="9" cy="5" r="1" /><circle cx="15" cy="5" r="1" />
                 <circle cx="9" cy="12" r="1" /><circle cx="15" cy="12" r="1" />
                 <circle cx="9" cy="19" r="1" /><circle cx="15" cy="19" r="1" />
@@ -131,17 +131,17 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-200 truncate">{agent.name}</span>
-                  <span className="text-[10px] text-gray-600 font-mono">#{idx + 1}</span>
+                  <span className="text-xs font-semibold text-[var(--text)] truncate">{agent.name}</span>
+                  <span className="text-[10px] text-[var(--muted)] font-mono">#{idx + 1}</span>
                 </div>
-                <span className="text-[11px] text-gray-500 truncate block">{agent.description}</span>
+                <span className="text-[11px] text-[var(--muted)] truncate block">{agent.description}</span>
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
                   onClick={() => openConfig(agent)}
-                  className="text-gray-500 hover:text-gray-200 p-1 rounded hover:bg-white/10 transition-colors"
+                  className="text-[var(--muted)] hover:text-[var(--text)] p-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
                   title="配置"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -152,7 +152,7 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
                 <button
                   onClick={() => onToggle(agent.id)}
                   className={`relative w-8 h-4 rounded-full transition-colors ${
-                    agent.enabled ? "bg-indigo-500" : "bg-gray-700"
+                    agent.enabled ? "bg-[var(--cafe-accent)]" : "bg-[var(--bg-muted)]"
                   }`}
                   title={agent.enabled ? "禁用" : "启用"}
                 >
@@ -169,17 +169,17 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
             {agent.enabled && (agent.config.model || agent.config.temperature !== undefined) && (
               <div className="px-3 pb-2 flex gap-2 flex-wrap">
                 {agent.config.model && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--cafe-accent)_10%,transparent)] text-[var(--cafe-accent)] font-mono">
                     {agent.config.model}
                   </span>
                 )}
                 {agent.config.temperature !== undefined && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 font-mono">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-hover)] text-[var(--muted)] font-mono">
                     T={agent.config.temperature}
                   </span>
                 )}
                 {agent.config.tools && agent.config.tools.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-hover)] text-[var(--muted)]">
                     {agent.config.tools.length} 工具
                   </span>
                 )}
@@ -191,29 +191,29 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
 
       {/* Config modal */}
       {activeAgent && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setConfiguringId(null)}>
+        <div className="absolute inset-0 bg-[var(--scrim-heavy)] flex items-center justify-center z-50" onClick={() => setConfiguringId(null)}>
           <div
-            className="bg-[#1a1b26] border border-gray-700 rounded-xl w-[380px] max-h-[80%] overflow-y-auto shadow-2xl"
+            className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl w-[380px] max-h-[80%] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2">
+            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2">
               <span className="text-lg">{activeAgent.icon || "🤖"}</span>
-              <span className="text-sm font-semibold text-gray-200">{activeAgent.name}</span>
-              <span className="text-xs text-gray-500">配置</span>
+              <span className="text-sm font-semibold text-[var(--text)]">{activeAgent.name}</span>
+              <span className="text-xs text-[var(--muted)]">配置</span>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="text-xs text-gray-400 block mb-1">模型</label>
+                <label className="text-xs text-[var(--muted)] block mb-1">模型</label>
                 <input
                   type="text"
                   value={draftConfig.model || ""}
                   onChange={(e) => setDraftConfig((c) => ({ ...c, model: e.target.value }))}
                   placeholder="auto"
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--cafe-accent)]"
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Temperature: {draftConfig.temperature ?? 0.7}</label>
+                <label className="text-xs text-[var(--muted)] block mb-1">Temperature: {draftConfig.temperature ?? 0.7}</label>
                 <input
                   type="range"
                   min="0"
@@ -221,20 +221,20 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
                   step="0.1"
                   value={draftConfig.temperature ?? 0.7}
                   onChange={(e) => setDraftConfig((c) => ({ ...c, temperature: parseFloat(e.target.value) }))}
-                  className="w-full accent-indigo-500"
+                  className="w-full accent-[var(--cafe-accent)]"
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Max Tokens</label>
+                <label className="text-xs text-[var(--muted)] block mb-1">Max Tokens</label>
                 <input
                   type="number"
                   value={draftConfig.maxTokens ?? 4096}
                   onChange={(e) => setDraftConfig((c) => ({ ...c, maxTokens: parseInt(e.target.value) || 4096 }))}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--cafe-accent)]"
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-400 block mb-1">工具（逗号分隔）</label>
+                <label className="text-xs text-[var(--muted)] block mb-1">工具（逗号分隔）</label>
                 <input
                   type="text"
                   value={(draftConfig.tools || []).join(", ")}
@@ -243,20 +243,20 @@ export default function AgentOrchestrator({ agents, onToggle, onConfigure, onReo
                     tools: e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : [],
                   }))}
                   placeholder="web_search, scraper"
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--cafe-accent)]"
                 />
               </div>
             </div>
-            <div className="px-4 py-3 border-t border-gray-800 flex justify-end gap-2">
+            <div className="px-4 py-3 border-t border-[var(--border)] flex justify-end gap-2">
               <button
                 onClick={() => setConfiguringId(null)}
-                className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 rounded-lg hover:bg-white/5 transition-colors"
+                className="px-3 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--text)] rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={saveConfig}
-                className="px-3 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs text-[var(--cafe-accent-foreground)] bg-[var(--cafe-accent)] hover:bg-[var(--cafe-accent-hover)] rounded-lg transition-colors"
               >
                 保存
               </button>

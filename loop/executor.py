@@ -466,6 +466,9 @@ class LoopExecutor:
 
         total_start = time.monotonic()
         last_good_result: dict | None = None  # 保存最后一次成功的执行结果
+        # v5.99.5: 初始化result=None防止max_retries=0时UnboundLocalError
+        # 当max_retries=0时for循环不执行，result未定义会导致后续引用崩溃
+        result: dict | None = None
 
         # 快速失败机制：LLM 持续返回"无法回答"等拒绝响应时，提前终止 Loop
         # 默认 max_consecutive_refusals=2 — 连续 2 次拒绝即终止（避免 7 分钟浪费）

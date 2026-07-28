@@ -54,8 +54,11 @@ from flowforge.app.api.v1 import (
 router = APIRouter(prefix="/api/v1", tags=["web-fusion-v1"])
 
 # Forgekin 相关（重命名自 clowder-ai cats）
-router.include_router(forgekins.router)
+# 注意：council 路由必须先注册，否则其 /forgekins/council/chat 会被
+# forgekins.router 的 /{forgekin_id}/chat 捕获（forgekin_id="council"）
+# 导致 422 错误（期望 message 字段而非 content）。
 router.include_router(forgekins_council.router)
+router.include_router(forgekins.router)
 
 # 线程管理
 router.include_router(threads.router)

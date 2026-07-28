@@ -50,13 +50,12 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: trae
-  model: trae
-  mode: bridge
+  provider: zhipu  # 直连智谱 API（绕过 OpenRoute WebChat 浏览器自动化）
+  model: glm-4-flash  # 梵高=审查员，flash 响应快
+  mode: http
   session_id_prefix: "forgemind:vangogh"
-  bridge_timeout: 300
-  bridge_poll_interval: 2
-  temperature: 0.9  # 创意任务需要更高随机性
+  bridge_timeout: 60
+  temperature: 0.6
   max_tokens: 8192
 
 # ── 能力画像 ────────────────────────────────────────────────

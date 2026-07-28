@@ -83,7 +83,7 @@ export function FirstRunQuestWizard({ onClose, forceOpen = false }: WizardProps)
           padding: "24px",
           maxWidth: "520px",
           width: "100%",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
+          boxShadow: "var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.2))",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
