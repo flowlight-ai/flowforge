@@ -5,6 +5,7 @@ from flowforge.app.api.endpoints import (
     admin_models, settings,
     prompts, memory, metrics,
     forgemind,
+    external_agents, env_vars,
 )
 from flowforge.app.api.endpoints.graph import router as graph_router
 from flowforge.app.api.endpoints.domain_plugins import router as domain_plugins_router
@@ -36,3 +37,6 @@ router.include_router(plugin_management_router)
 router.include_router(marketplace_router)
 # v7.0: ForgeMind Forgekin应用层 API（Trae CN 桥接 + webchat + IM MindCouncil + 自进化）
 router.include_router(forgemind_router)
+# 外部接入智能体状态检查 + 环境变量管理（WEB-FUSION §6.3 + §8）
+router.include_router(external_agents.router)
+router.include_router(env_vars.router)

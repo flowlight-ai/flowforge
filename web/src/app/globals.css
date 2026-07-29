@@ -219,6 +219,98 @@
   color-scheme: dark;
 }
 
+/* ============================================================
+ * VARIABLE BRIDGE — globals.css → theme-tokens.css 统一映射
+ *
+ * 目的：将 globals.css 原有变量（--bg, --text, --border 等）映射到
+ *       theme-tokens.css 的 OKLCH 变量（--cafe-surface, --cafe-text 等），
+ *       消除两套变量系统并存导致的颜色不一致问题。
+ *
+ * 原理：theme-tokens.css 已在 :root（light）和 [data-theme="dark"] 中
+ *       分别定义了不同的 OKLCH 值，映射后 globals.css 变量自动跟随主题切换。
+ *
+ * 注意：此映射在 [data-theme="dark"] 块之后声明，优先级等同 :root，
+ *       不会覆盖 light/dark 模式的具体值，只是将变量重新指向 theme-tokens 变量。
+ * ============================================================ */
+:root {
+  /* 背景 → Surface */
+  --bg: var(--cafe-surface);
+  --bg-accent: var(--cafe-surface-sunken);
+  --bg-elevated: var(--cafe-surface-elevated);
+  --bg-hover: var(--cafe-surface-sunken);
+  --bg-muted: var(--cafe-surface-sunken);
+  --card: var(--cafe-surface-canvas);
+  --card-foreground: var(--cafe-text);
+  --popover: var(--cafe-surface-elevated);
+  --popover-foreground: var(--cafe-text);
+  --panel: var(--cafe-surface);
+  --panel-strong: var(--cafe-surface-elevated);
+  --panel-hover: var(--cafe-surface-sunken);
+
+  /* 文字 → Text */
+  --text: var(--cafe-text);
+  --text-strong: var(--cafe-text);
+  --muted: var(--cafe-text-muted);
+  --muted-strong: var(--cafe-text-muted);
+
+  /* 边框 → Border */
+  --border: var(--cafe-border);
+  --border-strong: var(--cafe-border);
+  --border-hover: var(--cafe-border);
+  --input: var(--cafe-border-subtle);
+
+  /* 强调色 → Accent */
+  --accent: var(--cafe-accent);
+  --accent-hover: var(--cafe-accent-hover);
+  --accent-muted: var(--cafe-accent);
+  --accent-subtle: var(--accent-50);
+  --accent-foreground: var(--cafe-accent-foreground);
+  --accent-glow: var(--accent-200);
+  --ring: var(--cafe-accent);
+  --primary: var(--cafe-accent);
+  --primary-foreground: var(--cafe-accent-foreground);
+  --secondary: var(--cafe-surface-sunken);
+  --secondary-foreground: var(--cafe-text);
+  --focus: var(--accent-subtle);
+
+  /* 语义色 → Semantic */
+  --ok: var(--semantic-success);
+  --ok-muted: var(--semantic-success);
+  --ok-subtle: var(--semantic-success-surface);
+  --warn: var(--semantic-warning);
+  --warn-muted: var(--semantic-warning);
+  --warn-subtle: var(--semantic-warning-surface);
+  --danger: var(--semantic-critical);
+  --danger-muted: var(--semantic-critical);
+  --danger-subtle: var(--semantic-critical-surface);
+  --destructive: var(--semantic-critical);
+  --destructive-foreground: var(--cafe-accent-foreground);
+  --info: var(--semantic-info);
+
+  /* 辅助色 → Accent-2 */
+  --accent-2: var(--chart-4);
+  --accent-2-muted: var(--chart-4);
+  --accent-2-subtle: var(--semantic-info-surface);
+
+  /* 阴影 → Elevation */
+  --shadow-sm: var(--shadow-elevation-1);
+  --shadow-md: var(--shadow-elevation-2);
+  --shadow-lg: var(--shadow-elevation-3);
+
+  /* 辅助变量 → 桥接（确保 :root 有定义，避免编译器静态替换） */
+  --rail-bg: var(--cafe-surface-sunken);
+  --rail-border: var(--cafe-border-subtle);
+  --overlay-bg: var(--cafe-surface-elevated);
+  --overlay-border: var(--cafe-border);
+  --icon-fg: var(--cafe-text-muted);
+  --icon-fg-hover: var(--cafe-text);
+  --icon-fg-active: var(--cafe-text);
+  --icon-hover-bg: var(--cafe-surface-sunken);
+  --icon-active-bg: var(--cafe-surface-sunken);
+  --scrollbar-thumb: var(--cafe-border);
+  --scrollbar-thumb-hover: var(--cafe-border);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -239,7 +331,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb { background: var(--cafe-border); border-radius: var(--radius-full); }
 ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
 :focus-visible { outline: none; box-shadow: var(--focus-ring); }
@@ -1011,7 +1103,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   flex-shrink: 0;
   overflow: hidden;
   border-right: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  background: var(--rail-bg);
+  background: var(--cafe-surface-sunken);
 }
 
 .helm-chat-panel {
@@ -1926,7 +2018,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   gap: 2px;
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid var(--rail-border);
+  border-top: 1px solid var(--cafe-border-subtle);
 }
 .helm-ab-btn {
   width: 40px; height: 40px;
@@ -2013,7 +2105,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   right: 0;
   margin-top: 4px;
   min-width: 160px;
-  background: var(--overlay-bg);
+  background: var(--cafe-surface-elevated);
   border: 1px solid var(--overlay-border);
   border-radius: 8px;
   padding: 4px;
@@ -2053,7 +2145,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 }
 .helm-panel-menu-divider {
   height: 1px;
-  background: var(--rail-border);
+  background: var(--cafe-border-subtle);
   margin: 4px 6px;
 }
 
@@ -4033,7 +4125,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   border-radius: var(--radius-full);
 }
 .artifact-edit-area::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
+  background: var(--cafe-border);
   border-radius: var(--radius-full);
 }
 .artifact-edit-area::-webkit-scrollbar-thumb:hover {
@@ -4048,7 +4140,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   border-radius: var(--radius-full);
 }
 .artifact-draft-preview::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
+  background: var(--cafe-border);
   border-radius: var(--radius-full);
 }
 .artifact-draft-preview::-webkit-scrollbar-thumb:hover {
@@ -4063,7 +4155,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   border-radius: var(--radius-full);
 }
 .artifact-code-preview::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
+  background: var(--cafe-border);
   border-radius: var(--radius-full);
 }
 .artifact-code-preview::-webkit-scrollbar-thumb:hover {
@@ -4326,7 +4418,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   top: 100%;
   right: 0;
   min-width: 160px;
-  background: var(--overlay-bg);
+  background: var(--cafe-surface-elevated);
   border: 1px solid var(--overlay-border);
   border-radius: 6px;
   padding: 4px;

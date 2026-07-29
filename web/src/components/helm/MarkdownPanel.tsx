@@ -695,7 +695,7 @@ export default function MarkdownPanel({
             <span>{activeTab.filePath}</span>
             <span>{content.length} 字</span>
             <span>{fileType}</span>
-            {activeTab.isDirty && <span className="text-[var(--semantic-warning)]">未保存</span>}
+            {activeTab.isDirty && <span className="text-amber-400">未保存</span>}
           </div>
         )}
       </>

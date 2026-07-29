@@ -75,13 +75,13 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
       {runningSteps.map((step) => (
         <div
           key={step.id}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[color-mix(in_srgb,var(--cafe-accent)_5%,transparent)] border border-[color-mix(in_srgb,var(--cafe-accent)_10%,transparent)]"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/5 border border-indigo-500/10"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#89b4fa" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0" style={{ animation: "spin 1s linear infinite" }}>
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
-          <span className="text-xs font-medium text-[var(--cafe-accent)]">{step.stepName}</span>
-          <span className="text-[10px] text-[var(--muted)] ml-auto">执行中...</span>
+          <span className="text-xs font-medium text-indigo-300">{step.stepName}</span>
+          <span className="text-[10px] text-gray-500 ml-auto">执行中...</span>
         </div>
       ))}
 
@@ -93,7 +93,7 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
         return (
           <div key={step.id} className="group">
             <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] cursor-pointer transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/[0.02] cursor-pointer transition-colors"
               onClick={() => toggleCollapse(step.id)}
               style={{ borderLeft: `2px solid ${borderColor}` }}
             >
@@ -101,7 +101,7 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
               <svg
                 width="12" height="12" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                className="text-[var(--muted)] flex-shrink-0 transition-transform duration-150"
+                className="text-gray-600 flex-shrink-0 transition-transform duration-150"
                 style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
               >
                 <polyline points="6 9 12 15 18 9" />
@@ -121,11 +121,11 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
               )}
 
               {/* Step name */}
-              <span className="text-xs font-medium text-[var(--text)] truncate">{step.stepName}</span>
+              <span className="text-xs font-medium text-gray-300 truncate">{step.stepName}</span>
 
               {/* Duration */}
               {step.durationMs != null && (
-                <span className="text-[10px] text-[var(--muted)] font-mono flex-shrink-0">
+                <span className="text-[10px] text-gray-600 font-mono flex-shrink-0">
                   {formatDuration(step.durationMs)}
                 </span>
               )}
@@ -133,7 +133,7 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
               {/* Expand action */}
               <button
                 onClick={(e) => { e.stopPropagation(); onExpand(step.id); }}
-                className="text-[var(--muted)] hover:text-[var(--text)] p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                className="text-gray-600 hover:text-gray-300 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                 title="查看详情"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -146,7 +146,7 @@ export default function StepSummary({ steps, onExpand }: StepSummaryProps) {
             {/* Collapsed summary */}
             {isCollapsed && (
               <div className="ml-[30px] mr-3 py-1">
-                <span className="text-[11px] text-[var(--muted)] leading-relaxed">
+                <span className="text-[11px] text-gray-500 leading-relaxed">
                   {autoGenerateSummary(step)}
                 </span>
               </div>

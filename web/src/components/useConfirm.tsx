@@ -61,7 +61,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {state && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center"
-          style={{ background: "var(--scrim-dim)" }}
+          style={{ background: "rgba(0,0,0,0.5)" }}
           data-confirm-overlay="true"
           role="dialog"
           aria-modal="true"
@@ -90,9 +90,9 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 onClick={() => handleResolve(true)}
                 className={`px-4 py-2 text-sm rounded-md text-white ${
                   state.variant === "danger"
-                    ? "bg-[var(--semantic-critical)] hover:opacity-90"
+                    ? "bg-red-600 hover:bg-red-700"
                     : state.variant === "warning"
-                    ? "bg-[var(--semantic-warning)] hover:opacity-90"
+                    ? "bg-orange-600 hover:bg-orange-700"
                     : "bg-[var(--cafe-accent)] hover:bg-[var(--cafe-accent-hover)]"
                 }`}
                 data-confirm-ok="true"

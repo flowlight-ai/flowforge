@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
@@ -9,23 +8,10 @@ import { useShellConfig } from "../lib/shell-config";
 import { ActivityBar } from "./ActivityBar";
 import { ThreadSidebar } from "./ThreadSidebar";
 import { TopBar } from "./TopBar";
+import { ConciergeHost } from "./concierge/ConciergeHost";
+import { FloatingPresentationSurfaceHost } from "./workspace/FloatingPresentationSurfaceHost";
+import { ApprovalHubDrawer } from "./ApprovalHubDrawer";
 import { ResizeHandle } from "./workspace/ResizeHandle";
-
-// 性能优化：非关键浮动组件用 dynamic import 延迟加载
-// 这些组件不在首屏关键路径上，延迟加载可显著减少首屏 JS 体积
-// 参考 clowder-ai 的懒加载策略
-const ConciergeHost = dynamic(
-  () => import("./concierge/ConciergeHost").then((m) => m.ConciergeHost),
-  { ssr: false, loading: () => null }
-);
-const FloatingPresentationSurfaceHost = dynamic(
-  () => import("./workspace/FloatingPresentationSurfaceHost").then((m) => m.FloatingPresentationSurfaceHost),
-  { ssr: false, loading: () => null }
-);
-const ApprovalHubDrawer = dynamic(
-  () => import("./ApprovalHubDrawer").then((m) => m.ApprovalHubDrawer),
-  { ssr: false, loading: () => null }
-);
 
 // 与 clowder-ai 一致：展示页无 Shell
 const CHROMELESS_ROUTES = ["/showcase", "/story", "/story-export"];

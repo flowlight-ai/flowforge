@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useTheme } from "../ThemeProvider";
+import { ThemeMenu } from "../ThemeMenu";
+import dynamic from "next/dynamic";
+
+const OklchTuner = dynamic(() => import("../OklchTuner"), { ssr: false });
 
 /** 应用配置 */
 export interface AppConfig {
@@ -47,6 +52,8 @@ export default function SettingsPanel({ config, onSave, onReset }: SettingsPanel
   const [draft, setDraft] = useState<AppConfig>(config);
   const [hasChanges, setHasChanges] = useState(false);
   const [showKeyMap, setShowKeyMap] = useState<Record<string, boolean>>({});
+  const [showTuner, setShowTuner] = useState(false);
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     setDraft(config);
@@ -89,7 +96,7 @@ export default function SettingsPanel({ config, onSave, onReset }: SettingsPanel
   }, [onReset]);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-elevated)]">
+    <div className="flex flex-col h-full bg-[#0c0d12]">
       {/* Header */}
       <div className="px-4 py-3 border-b border-[var(--border)] flex items-center gap-2 flex-shrink-0">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -97,7 +104,7 @@ export default function SettingsPanel({ config, onSave, onReset }: SettingsPanel
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
         <span className="text-sm font-semibold text-[var(--text)]">设置</span>
-        {hasChanges && <span className="w-2 h-2 rounded-full bg-[var(--semantic-warning)] flex-shrink-0" title="有未保存的更改" />}
+        {hasChanges && <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" title="有未保存的更改" />}
       </div>
 
       {/* Tab bar */}
@@ -135,20 +142,26 @@ export default function SettingsPanel({ config, onSave, onReset }: SettingsPanel
               </select>
             </SettingField>
             <SettingField label="主题">
-              <div className="flex gap-2">
-                {(["dark", "light", "system"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => updateGeneral({ theme: t })}
-                    className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      draft.general.theme === t
-                        ? "bg-[var(--cafe-accent)] text-[var(--cafe-accent-foreground)]"
-                        : "bg-[var(--bg-hover)] text-[var(--muted)] hover:text-[var(--text)]"
-                    }`}
-                  >
-                    {t === "dark" ? "深色" : t === "light" ? "浅色" : "跟随系统"}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                <div className="flex gap-2">
+                  {(["dark", "light", "system"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => {
+                        updateGeneral({ theme: t });
+                        setTheme(t);
+                      }}
+                      className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        draft.general.theme === t
+                          ? "bg-[var(--cafe-accent)] text-[var(--cafe-accent-foreground)]"
+                          : "bg-[var(--bg-hover)] text-[var(--muted)] hover:text-[var(--text)]"
+                      }`}
+                    >
+                      {t === "dark" ? "深色" : t === "light" ? "浅色" : "跟随系统"}
+                    </button>
+                  ))}
+                </div>
+                <ThemeMenu onEditTheme={() => setShowTuner(true)} />
               </div>
             </SettingField>
             <SettingField label="自动保存">
@@ -317,11 +330,12 @@ export default function SettingsPanel({ config, onSave, onReset }: SettingsPanel
         <button
           onClick={handleSave}
           disabled={!hasChanges}
-          className="px-4 py-1.5 text-xs font-medium rounded-lg bg-[var(--cafe-accent)] hover:bg-[var(--cafe-accent-hover)] text-[var(--cafe-accent-foreground)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-4 py-1.5 text-xs font-medium rounded-lg bg-[var(--cafe-accent)] hover:opacity-90 text-[var(--cafe-accent-foreground)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           保存
         </button>
       </div>
+      {showTuner && <OklchTuner onClose={() => setShowTuner(false)} />}
     </div>
   );
 }

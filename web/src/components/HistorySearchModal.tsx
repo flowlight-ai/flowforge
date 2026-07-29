@@ -152,7 +152,7 @@ export function HistorySearchModal({ open, onClose, initialCategory = "all" }: H
           maxHeight: "70vh",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.2))",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>

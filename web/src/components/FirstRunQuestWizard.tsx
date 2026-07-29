@@ -83,7 +83,7 @@ export function FirstRunQuestWizard({ onClose, forceOpen = false }: WizardProps)
           padding: "24px",
           maxWidth: "520px",
           width: "100%",
-          boxShadow: "var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.2))",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.2)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
@@ -215,7 +215,7 @@ export function FirstRunQuestWizard({ onClose, forceOpen = false }: WizardProps)
         {step === 3 && (
           <div data-firstrun-step="done">
             <p style={{ fontSize: "13px", color: "var(--muted)", marginBottom: "12px" }}>
-              一切就绪！点击下方按钮进入对话开始你的第一次任务。
+              一切就绪！点击下方按钮进入 Helm Studio 开始你的第一次任务。
             </p>
             <Link
               href="/solo"
@@ -231,7 +231,7 @@ export function FirstRunQuestWizard({ onClose, forceOpen = false }: WizardProps)
                 textDecoration: "none",
               }}
             >
-              进入对话 →
+              进入 Helm Studio →
             </Link>
           </div>
         )}

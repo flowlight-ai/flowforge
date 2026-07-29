@@ -81,7 +81,7 @@ export function HubListModal({ open, onClose }: HubListModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "var(--scrim-dim)", backdropFilter: "blur(2px)" }}
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -91,7 +91,7 @@ export function HubListModal({ open, onClose }: HubListModalProps) {
         style={{
           background: "var(--bg-elevated,#1e1f26)",
           borderRadius: "16px",
-          boxShadow: "var(--shadow-lg, 0 8px 32px rgba(0,0,0,0.4))",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
           width: "560px",
           maxWidth: "92vw",
           maxHeight: "80vh",

@@ -28,11 +28,13 @@ routes:
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # v5.49 修复: timeout 300→90s — task 3b37f632 根因分析显示
-  # Qwen3.6-Plus 卡死 300s 触发 tool_registry 300s 超时，候选链未切换
-  # 改为 90s：单模型超时后立即切换到下一个候选（max_retries=0）
-  # 7候选 × 90s = 630s + backoff 7s = 637s（writer_engine 工具级 900s 足够覆盖）
-  # 用户记忆: "LLM call timeout must be 90s, 2 minutes for long articles"
+  # v5.99.16 修复: timeout 120→150s — Kimi-K2.6 实测124s超时(120s), 仅超4.7s
+  # v5.99.15问题: timeout=120s, 但Kimi-K2.6偶发慢响应124s导致超时,
+  #   回退到MiniMax-M3(127s也超时) → Doubao(未及调用迭代已超时300s) → zhipu永远得不到机会
+  # v5.99.16策略: timeout=150s (覆盖Kimi 89-130s+缓冲), 候选链精简为Kimi→zhipu
+  #   去掉MiniMax/Doubao(同为webchat, 都会120s+超时, 浪费时间)
+  #   Kimi失败后直接走zhipu API(8s快速), 确保流程不卡死
+  # 用户记忆: "2 minutes for long articles" — 150s略超但确保webchat模型完成
   creative:
     # v5.7: primary改为Qwen3.6-Plus（Doubao-Seed2.0频繁echo/超时）
     # Qwen实测稳定：228s产出1445字，0.832分
@@ -54,7 +56,7 @@ routes:
         - timeout
         - invalid_response
         - echo_response
-      timeout_seconds: 90  # v5.49: 300→90s，快速切换候选模型
+      timeout_seconds: 180  # v5.99.17: 150→180s — Kimi-K2.6 在 ContentForge 内部调用耗时 154.36s 超过 150s 超时
       max_retries: 0
     default_temperature: 0.9
     default_max_tokens: 8192
@@ -153,6 +155,14 @@ agent_routes:
   # 原: DefaultLLMReflector 硬编码 agent_name="reflexion_reflector" 但 yaml 未映射 → default 200s
   # 日志: agent=reflexion_reflector timeout=200.0s（应走 90s 路由）
   reflexion_reflector: reflector
+  # v6.0修复: ContentForge 写作/编辑/选题 agent 走 creative 路由(90s超时, max_retries=0)
+  # 根因: writer 使用 default 路由(timeout=200s, max_retries=2), Kimi-K2.6 webchat超时后
+  #       重试2次共600s, 导致全流程21分钟超时
+  # 修复: writer→creative(90s, max_retries=0), 超时立即切换到下一个候选模型
+  contentforge:writer: creative
+  contentforge:editor: creative
+  contentforge:topic: creative
+  contentforge:research: creative
 
 # ==================== Agent 模型参数覆盖 ====================
 # Agent 命名空间 -> 模型参数覆盖

@@ -46,33 +46,33 @@ export default function TerminalPanel({ commands, onCopy, onRerun }: TerminalPan
   const background = filtered.filter((c) => c.isBackground);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-elevated)]">
+    <div className="flex flex-col h-full bg-[#0c0d12]">
       {/* Header */}
-      <div className="px-4 py-2.5 border-b border-[var(--border)] flex items-center gap-2 flex-shrink-0">
+      <div className="px-4 py-2.5 border-b border-gray-800 flex items-center gap-2 flex-shrink-0">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="4 17 10 11 4 5" />
           <line x1="12" y1="19" x2="20" y2="19" />
         </svg>
-        <span className="text-xs font-semibold text-[var(--text)] uppercase tracking-wider">终端</span>
-        <span className="text-[10px] text-[var(--muted)] ml-1">{commands.filter((c) => c.status === "running").length} 运行中</span>
+        <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">终端</span>
+        <span className="text-[10px] text-gray-600 ml-1">{commands.filter((c) => c.status === "running").length} 运行中</span>
         <div className="flex-1" />
       </div>
 
       {/* Search */}
-      <div className="px-3 py-1.5 border-b border-[var(--border)] flex-shrink-0">
+      <div className="px-3 py-1.5 border-b border-gray-800 flex-shrink-0">
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="搜索命令..."
-          className="w-full bg-[var(--bg-elevated)] text-[var(--text)] text-xs px-2 py-1.5 rounded border border-[var(--border)] focus:border-[var(--cafe-accent)] focus:outline-none"
+          className="w-full bg-gray-900 text-gray-200 text-xs px-2 py-1.5 rounded border border-gray-700 focus:border-indigo-500 focus:outline-none"
         />
       </div>
 
       {/* Command list */}
       <div ref={listRef} className="flex-1 overflow-y-auto min-h-0">
         {commands.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-[var(--muted)] text-xs p-4">
+          <div className="flex items-center justify-center h-full text-gray-600 text-xs p-4">
             执行的命令将显示在这里
           </div>
         ) : (
@@ -91,14 +91,14 @@ export default function TerminalPanel({ commands, onCopy, onRerun }: TerminalPan
 
             {/* Background island */}
             {background.length > 0 && (
-              <div className="mx-3 my-2 border border-[color-mix(in_srgb,var(--semantic-warning)_20%,transparent)] rounded-lg bg-[color-mix(in_srgb,var(--semantic-warning)_5%,transparent)] overflow-hidden">
-                <div className="px-3 py-1.5 flex items-center gap-2 border-b border-[color-mix(in_srgb,var(--semantic-warning)_10%,transparent)]">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--semantic-warning)]">
+              <div className="mx-3 my-2 border border-amber-500/20 rounded-lg bg-amber-500/5 overflow-hidden">
+                <div className="px-3 py-1.5 flex items-center gap-2 border-b border-amber-500/10">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400">
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
-                  <span className="text-[11px] font-medium text-[var(--semantic-warning)]">后台命令</span>
-                  <span className="text-[10px] text-[color-mix(in_srgb,var(--semantic-warning)_60%,transparent)]">{background.length}</span>
+                  <span className="text-[11px] font-medium text-amber-400">后台命令</span>
+                  <span className="text-[10px] text-amber-400/60">{background.length}</span>
                 </div>
                 {background.map((cmd) => (
                   <CommandCard
@@ -144,7 +144,7 @@ function CommandCard({
 
   return (
     <div
-      className={`border-b border-[color-mix(in_srgb,var(--border)_50%,transparent)] ${compact ? "px-2 py-1.5" : "px-4 py-2.5"} cursor-pointer hover:bg-[var(--bg-hover)] transition-colors`}
+      className={`border-b border-gray-800/50 ${compact ? "px-2 py-1.5" : "px-4 py-2.5"} cursor-pointer hover:bg-white/[0.02] transition-colors`}
       onClick={onToggle}
     >
       <div className="flex items-center gap-2">
@@ -158,13 +158,13 @@ function CommandCard({
         )}
 
         {/* Command text */}
-        <span className={`font-mono text-[var(--text)] flex-1 truncate ${compact ? "text-[11px]" : "text-xs"}`}>
+        <span className={`font-mono text-gray-300 flex-1 truncate ${compact ? "text-[11px]" : "text-xs"}`}>
           $ {command.command}
         </span>
 
         {/* Duration */}
         {command.durationMs != null && (
-          <span className="text-[10px] text-[var(--muted)] font-mono flex-shrink-0">
+          <span className="text-[10px] text-gray-600 font-mono flex-shrink-0">
             {command.durationMs < 1000 ? `${command.durationMs}ms` : `${(command.durationMs / 1000).toFixed(1)}s`}
           </span>
         )}
@@ -173,7 +173,7 @@ function CommandCard({
         <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onCopy}
-            className="text-[var(--muted)] hover:text-[var(--text)] p-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
+            className="text-gray-600 hover:text-gray-300 p-1 rounded hover:bg-white/10 transition-colors"
             title="复制输出"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -183,7 +183,7 @@ function CommandCard({
           </button>
           <button
             onClick={onRerun}
-            className="text-[var(--muted)] hover:text-[var(--text)] p-1 rounded hover:bg-[var(--bg-hover)] transition-colors"
+            className="text-gray-600 hover:text-gray-300 p-1 rounded hover:bg-white/10 transition-colors"
             title="重新运行"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -196,7 +196,7 @@ function CommandCard({
 
       {/* Expanded output */}
       {expanded && command.output && (
-        <pre className={`mt-2 bg-[var(--bg-sunken)] rounded-lg p-3 text-[11px] font-mono text-[var(--text)] overflow-x-auto whitespace-pre-wrap max-h-[300px] overflow-y-auto ${compact ? "text-[10px]" : ""}`}>
+        <pre className={`mt-2 bg-[#1e1e2e] rounded-lg p-3 text-[11px] font-mono text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-[300px] overflow-y-auto ${compact ? "text-[10px]" : ""}`}>
           {command.output}
         </pre>
       )}

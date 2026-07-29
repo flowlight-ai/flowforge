@@ -15,6 +15,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useShellConfig } from "@/lib/shell-config";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface TopBarProps {
   className?: string;
@@ -130,6 +131,7 @@ export function TopBar({ className }: TopBarProps) {
       <div className="flex-1" />
 
       <div className="flex items-center gap-3">
+        <ThemeToggle />
         <span
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
           style={{

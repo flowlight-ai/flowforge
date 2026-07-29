@@ -41,10 +41,11 @@ def configure_logging(config: Optional[dict[str, Any]] = None) -> None:
     console_handler.setLevel(logging.INFO)
     console_handler.addFilter(trace_filter)
 
-    file_handler = logging.handlers.RotatingFileHandler(
+    # v5.99.14: 改用 FileHandler 替代 RotatingFileHandler
+    # 根因: Windows下 RotatingFileHandler.doRollover() 调用 os.rename 时
+    # 报 PermissionError [WinError 32]（文件被其他进程占用），导致所有日志丢失
+    file_handler = logging.FileHandler(
         str(log_file),
-        maxBytes=10 * 1024 * 1024,
-        backupCount=5,
         encoding="utf-8",
     )
     file_handler.setFormatter(logging.Formatter(FILE_FORMAT))

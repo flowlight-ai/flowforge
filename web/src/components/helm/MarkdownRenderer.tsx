@@ -1,7 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
+
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false, loading: () => <span className="text-xs opacity-50">…</span> });
 
 interface MarkdownRendererProps {
   /** Markdown 内容 */
@@ -165,16 +167,16 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
               const blockId = `code-${codeString.slice(0, 20).replace(/\s/g, "_")}`;
               return (
                 <div className="relative group my-3">
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-[var(--bg-sunken)] rounded-t-lg border-b border-[color-mix(in_srgb,var(--border)_50%,transparent)]">
-                    <span className="text-[10px] text-[var(--muted)] font-mono uppercase">{language || "code"}</span>
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-[#1e1e2e] rounded-t-lg border-b border-gray-700/50">
+                    <span className="text-[10px] text-gray-500 font-mono uppercase">{language || "code"}</span>
                     <button
                       onClick={() => handleCopy(codeString, blockId)}
-                      className="text-[10px] text-[var(--muted)] hover:text-[var(--text)] px-1.5 py-0.5 rounded hover:bg-[var(--bg-hover)] transition-colors"
+                      className="text-[10px] text-gray-500 hover:text-gray-300 px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors"
                     >
                       {copiedBlock === blockId ? "已复制 ✓" : "复制"}
                     </button>
                   </div>
-                  <pre className="!mt-0 !rounded-t-none bg-[var(--bg-sunken)] !p-3 overflow-x-auto">
+                  <pre className="!mt-0 !rounded-t-none bg-[#1e1e2e] !p-3 overflow-x-auto">
                     <code
                       className={codeClassName}
                       dangerouslySetInnerHTML={{
@@ -188,7 +190,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
 
             return (
               <code
-                className="px-1.5 py-0.5 rounded bg-[var(--bg-hover)] text-[var(--cafe-accent)] text-[0.9em] font-mono"
+                className="px-1.5 py-0.5 rounded bg-gray-800 text-indigo-300 text-[0.9em] font-mono"
                 {...props}
               >
                 {children}
@@ -203,7 +205,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--cafe-accent)] hover:text-[var(--cafe-accent)] underline underline-offset-2 transition-colors"
+                className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors"
                 {...props}
               >
                 {children}
@@ -217,7 +219,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
               <img
                 src={src}
                 alt={alt || ""}
-                className="max-w-full rounded-lg my-2 border border-[color-mix(in_srgb,var(--border)_50%,transparent)]"
+                className="max-w-full rounded-lg my-2 border border-gray-700/50"
                 loading="lazy"
                 {...props}
               />
@@ -228,7 +230,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
           blockquote({ node, children, ...props }) {
             return (
               <blockquote
-                className="border-l-3 border-[color-mix(in_srgb,var(--cafe-accent)_50%,transparent)] pl-4 py-1 my-2 text-[var(--muted)] italic bg-[color-mix(in_srgb,var(--cafe-accent)_5%,transparent)] rounded-r-lg"
+                className="border-l-3 border-indigo-500/50 pl-4 py-1 my-2 text-gray-400 italic bg-indigo-500/5 rounded-r-lg"
                 {...props}
               >
                 {children}
@@ -239,7 +241,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
           // Tables
           table({ node, children, ...props }) {
             return (
-              <div className="overflow-x-auto my-3 rounded-lg border border-[color-mix(in_srgb,var(--border)_50%,transparent)]">
+              <div className="overflow-x-auto my-3 rounded-lg border border-gray-700/50">
                 <table className="w-full text-sm" {...props}>
                   {children}
                 </table>
@@ -249,7 +251,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
 
           thead({ node, children, ...props }) {
             return (
-              <thead className="bg-[color-mix(in_srgb,var(--bg-hover)_50%,transparent)]" {...props}>
+              <thead className="bg-gray-800/50" {...props}>
                 {children}
               </thead>
             );
@@ -257,7 +259,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
 
           th({ node, children, ...props }) {
             return (
-              <th className="px-3 py-2 text-left text-xs font-semibold text-[var(--text)] border-b border-[color-mix(in_srgb,var(--border)_50%,transparent)]" {...props}>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-300 border-b border-gray-700/50" {...props}>
                 {children}
               </th>
             );
@@ -265,7 +267,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
 
           td({ node, children, ...props }) {
             return (
-              <td className="px-3 py-2 text-xs text-[var(--muted)] border-b border-[color-mix(in_srgb,var(--border)_50%,transparent)]" {...props}>
+              <td className="px-3 py-2 text-xs text-gray-400 border-b border-gray-800/50" {...props}>
                 {children}
               </td>
             );
@@ -273,36 +275,36 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
 
           // Headings
           h1({ node, children, ...props }) {
-            return <h1 className="text-xl font-bold text-[var(--text-strong)] mt-6 mb-3 pb-2 border-b border-[var(--border)]" {...props}>{children}</h1>;
+            return <h1 className="text-xl font-bold text-gray-100 mt-6 mb-3 pb-2 border-b border-gray-800" {...props}>{children}</h1>;
           },
           h2({ node, children, ...props }) {
-            return <h2 className="text-lg font-bold text-[var(--text-strong)] mt-5 mb-2 pb-1 border-b border-[color-mix(in_srgb,var(--border)_50%,transparent)]" {...props}>{children}</h2>;
+            return <h2 className="text-lg font-bold text-gray-100 mt-5 mb-2 pb-1 border-b border-gray-800/50" {...props}>{children}</h2>;
           },
           h3({ node, children, ...props }) {
-            return <h3 className="text-base font-semibold text-[var(--text)] mt-4 mb-2" {...props}>{children}</h3>;
+            return <h3 className="text-base font-semibold text-gray-200 mt-4 mb-2" {...props}>{children}</h3>;
           },
 
           // Paragraphs
           p({ node, children, ...props }) {
-            return <p className="text-sm text-[var(--text)] leading-relaxed my-1.5" {...props}>{children}</p>;
+            return <p className="text-sm text-gray-300 leading-relaxed my-1.5" {...props}>{children}</p>;
           },
 
           // Lists
           ul({ node, children, ...props }) {
-            return <ul className="list-disc list-inside text-sm text-[var(--text)] my-1.5 space-y-0.5" {...props}>{children}</ul>;
+            return <ul className="list-disc list-inside text-sm text-gray-300 my-1.5 space-y-0.5" {...props}>{children}</ul>;
           },
           ol({ node, children, ...props }) {
-            return <ol className="list-decimal list-inside text-sm text-[var(--text)] my-1.5 space-y-0.5" {...props}>{children}</ol>;
+            return <ol className="list-decimal list-inside text-sm text-gray-300 my-1.5 space-y-0.5" {...props}>{children}</ol>;
           },
 
           // Horizontal rule
           hr({ node, ...props }) {
-            return <hr className="border-[var(--border)] my-4" {...props} />;
+            return <hr className="border-gray-700 my-4" {...props} />;
           },
 
           // Strikethrough (GFM)
           del({ node, children, ...props }) {
-            return <del className="line-through text-[var(--muted)]" {...props}>{children}</del>;
+            return <del className="line-through text-gray-500" {...props}>{children}</del>;
           },
         }}
       >

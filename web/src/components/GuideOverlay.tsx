@@ -37,7 +37,7 @@ const GUIDE_STEPS: GuideStep[] = [
   {
     id: "helm-studio",
     target: "nav.helm-studio",
-    title: "对话 — 4 种聊天模式",
+    title: "Helm Studio — 4 种聊天模式",
     content: "支持普通工作流、AI 自主规划（Helm）、全自动、群聊（5 个可进化智能体协作）4 种模式。",
     placement: "right",
   },
@@ -178,7 +178,7 @@ export function GuideOverlay() {
         <div
           className="fixed inset-0 z-[9995] pointer-events-none"
           style={{
-            background: `var(--scrim-heavy)`,
+            background: `rgba(0,0,0,0.6)`,
             clipPath: `polygon(0% 0%, 0% 100%, ${targetRect.left}px 100%, ${targetRect.left}px ${targetRect.top}px, ${targetRect.right}px ${targetRect.top}px, ${targetRect.right}px ${targetRect.bottom}px, ${targetRect.left}px ${targetRect.bottom}px, ${targetRect.left}px 100%, 100% 100%, 100% 0%)`,
           }}
           data-guide-overlay="true"
@@ -186,7 +186,7 @@ export function GuideOverlay() {
       ) : (
         <div
           className="fixed inset-0 z-[9995]"
-          style={{ background: "var(--scrim-heavy)" }}
+          style={{ background: "rgba(0,0,0,0.6)" }}
           data-guide-overlay="true"
         />
       )}

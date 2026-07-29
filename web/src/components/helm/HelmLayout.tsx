@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useHelmWebSocket } from "../../hooks/useHelmWebSocket";
 import { useShellConfig } from "../../lib/shell-config";
@@ -26,7 +27,7 @@ import HelmLeftPanel from "./HelmLeftPanel";
 import HelmWorkspaceBar from "./HelmWorkspaceBar";
 import HelmMainPanel from "./HelmMainPanel";
 import HelmRightPanel from "./HelmRightPanel";
-import HelmModals from "./HelmModals";
+const HelmModals = dynamic(() => import("./HelmModals"), { ssr: false });
 import { useHelmWorkspace } from "./hooks/useHelmWorkspace";
 import { useHelmPanels } from "./hooks/useHelmPanels";
 import { useHelmPlan } from "./hooks/useHelmPlan";

@@ -42,11 +42,11 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
       {/* Settings 全屏覆盖模态框 */}
       {panels.showSettings && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--scrim-heavy)]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={() => panels.setShowSettings(false)}
         >
           <div
-            className="w-full max-w-2xl max-h-[80vh] bg-[var(--bg-elevated)] rounded-xl shadow-2xl overflow-hidden"
+            className="w-full max-w-2xl max-h-[80vh] bg-[#1e1e2e] rounded-xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <SettingsPanel
@@ -68,9 +68,9 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
               onSave={() => panels.setShowSettings(false)}
               onReset={() => {}}
             />
-            <div className="flex justify-end px-4 py-3 border-t border-[var(--border)]">
+            <div className="flex justify-end px-4 py-3 border-t border-gray-700">
               <button
-                className="px-4 py-1.5 text-sm rounded-lg bg-[var(--bg-muted)] text-[var(--text)] hover:bg-[var(--bg-muted)]"
+                className="px-4 py-1.5 text-sm rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600"
                 onClick={() => panels.setShowSettings(false)}
               >
                 关闭
@@ -83,19 +83,19 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
       {/* MCP 服务器配置（右侧滑入） */}
       {panels.showMCPConfig && (
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-[var(--scrim-dim)]"
+          className="fixed inset-0 z-50 flex justify-end bg-black/40"
           onClick={() => panels.setShowMCPConfig(false)}
         >
           <div
-            className="w-full max-w-md h-full bg-[var(--bg-elevated)] shadow-2xl overflow-y-auto"
+            className="w-full max-w-md h-full bg-[#1e1e2e] shadow-2xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-              <span className="text-sm font-semibold text-[var(--text)]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+              <span className="text-sm font-semibold text-gray-200">
                 MCP 服务器配置
               </span>
               <button
-                className="text-[var(--muted)] hover:text-[var(--text)]"
+                className="text-gray-400 hover:text-gray-200"
                 onClick={() => panels.setShowMCPConfig(false)}
               >
                 ✕
@@ -115,19 +115,19 @@ export default function HelmModals({ selectedModel }: HelmModalsProps) {
       {/* Figma 导入器 */}
       {panels.showFigmaImporter && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--scrim-heavy)]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={() => panels.setShowFigmaImporter(false)}
         >
           <div
-            className="w-full max-w-lg max-h-[80vh] bg-[var(--bg-elevated)] rounded-xl shadow-2xl overflow-hidden"
+            className="w-full max-w-lg max-h-[80vh] bg-[#1e1e2e] rounded-xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-              <span className="text-sm font-semibold text-[var(--text)]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+              <span className="text-sm font-semibold text-gray-200">
                 Figma 导入
               </span>
               <button
-                className="text-[var(--muted)] hover:text-[var(--text)]"
+                className="text-gray-400 hover:text-gray-200"
                 onClick={() => panels.setShowFigmaImporter(false)}
               >
                 ✕
