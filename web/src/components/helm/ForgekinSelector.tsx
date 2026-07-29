@@ -33,7 +33,7 @@ interface ForgekinSelectorProps {
  *   - 卡片可展开显示详细信息
  *   - 静音按钮（仅参与者显示，静音后图标变化）
  *
- * 参考 clowder-ai AgentSelector 设计
+ * 参考 AgentSelector 设计
  */
 export default function ForgekinSelector({
   roster,

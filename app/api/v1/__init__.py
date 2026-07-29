@@ -1,6 +1,6 @@
 """FlowForge Web Fusion Phase 8 — Backend API stubs.
 
-将 clowder-ai 的后端 API 端点合并到 FlowForge 8000 端口。
+FlowForge 后端 API 端点注册到 8000 端口。
 所有路由以 ``/api/v1`` 为前缀，资源用复数，子资源用嵌套。
 
 命名规范（铁律）：
@@ -13,7 +13,6 @@
     - 前端可以正常渲染（即使是空状态）
     - 响应格式与前端期望一致
 
-详细 API 清单见 web/WEB-FUSION-DESIGN.md §10.2。
 """
 
 from __future__ import annotations
@@ -53,7 +52,7 @@ from flowforge.app.api.v1 import (
 
 router = APIRouter(prefix="/api/v1", tags=["web-fusion-v1"])
 
-# Forgekin 相关（重命名自 clowder-ai cats）
+# Forgekin 相关（重命名自 Forgekin）
 router.include_router(forgekins.router)
 router.include_router(forgekins_council.router)
 

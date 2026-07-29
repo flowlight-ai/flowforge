@@ -1,9 +1,8 @@
 """External agents API — claude_code / codex / gemini / opencode / trae.
 
-Ported from the new project's ``web/app.py`` (web_legacy_backup) into the
-old project's modular ``app/api/endpoints/`` structure per PORTING-SPEC.md
-§3.4. Preserves the new project's 5-CLI integration + protocol-conversion
-advantage while adopting the old project's router-based layout.
+Migrated from `flowforge/web/app.py` into the modular
+``app/api/endpoints/`` structure. Preserves the 5-CLI integration + protocol-conversion
+advantage while adopting the router-based layout.
 
 Endpoints (mounted under ``/api/v1`` by the v1 router):
     GET  /external-agents                  — list all adapters + availability
@@ -36,9 +35,7 @@ logger = get_logger("flowforge.app.api.endpoints.external_agents_api")
 
 router = APIRouter(prefix="/external-agents", tags=["external-agents"])
 
-
 # ── Request / response models ────────────────────────────────────────────────
-
 
 class ExternalAgentUpdate(BaseModel):
     """PUT /external-agents/{kind} request body."""
@@ -50,7 +47,6 @@ class ExternalAgentUpdate(BaseModel):
         default=None, description="Default invoke timeout in seconds"
     )
 
-
 class ExternalAgentTestRequest(BaseModel):
     """POST /external-agents/{kind}/test request body."""
 
@@ -60,9 +56,7 @@ class ExternalAgentTestRequest(BaseModel):
     )
     timeout: float = Field(default=60.0, description="Timeout in seconds")
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
-
 
 def _adapter_to_ui_status(adapter_status: dict[str, Any]) -> dict[str, Any]:
     """Translate the bridge's adapter status dict into the UI shape.
@@ -97,7 +91,6 @@ def _adapter_to_ui_status(adapter_status: dict[str, Any]) -> dict[str, Any]:
         "binary_path": binary,
     }
 
-
 def _resolve_kind(kind: str) -> ExternalAgentKind:
     """Convert a string kind into ExternalAgentKind, raising 400 on unknown."""
     try:
@@ -111,9 +104,7 @@ def _resolve_kind(kind: str) -> ExternalAgentKind:
             ),
         ) from exc
 
-
 # ── Endpoints ────────────────────────────────────────────────────────────────
-
 
 @router.get("")
 async def list_external_agents() -> dict[str, Any]:
@@ -192,7 +183,6 @@ async def list_external_agents() -> dict[str, Any]:
         "bridge_available": True,
     }
 
-
 @router.get("/{kind}")
 async def get_external_agent(kind: str) -> dict[str, Any]:
     """Return detailed status for one external agent."""
@@ -210,7 +200,6 @@ async def get_external_agent(kind: str) -> dict[str, Any]:
             detail=f"external agent {kind} not configured in forgemind.yaml",
         )
     return {"agent": adapter.get_status()}
-
 
 @router.put("/{kind}")
 async def update_external_agent(
@@ -235,7 +224,6 @@ async def update_external_agent(
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail=f"invalid payload: {exc}") from exc
     return {"updated": True, "agent": status}
-
 
 @router.post("/{kind}/test")
 async def test_external_agent(

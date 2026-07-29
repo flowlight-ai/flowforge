@@ -4,7 +4,6 @@
  * CollectionGraph — 记忆图谱可视化
  *
  * 以简化 SVG 展示集合间的关联（节点=集合，边=共享锚点）。
- * 移植自 clowder-ai CollectionGraph，去掉 d3 依赖，使用内联 SVG。
  *
  * API：GET /api/v1/memory/graph
  */

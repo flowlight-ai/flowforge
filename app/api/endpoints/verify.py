@@ -1,9 +1,8 @@
 """T7 / T8 verification endpoints — LLM audit + DOM checklist.
 
-Ported from the new project's ``web/app.py`` (web_legacy_backup) into the
-old project's modular ``app/api/endpoints/`` structure per PORTING-SPEC.md
-§3.4. Preserves the T7 (LLM-audits-LLM) and T8 (DOM verification) testing
-铁律 while adopting the old project's router-based layout.
+Migrated from `flowforge/web/app.py` into the modular
+``app/api/endpoints/`` structure. Preserves the T7 (LLM-audits-LLM) and T8 (DOM verification) testing
+铁律 while adopting the router-based layout.
 
 Endpoints (mounted under ``/api/v1`` by the v1 router):
     POST /verify/t7     — T7 audit: invoke a second LLM to audit primary output
@@ -29,9 +28,7 @@ logger = get_logger("flowforge.app.api.endpoints.verify")
 
 router = APIRouter(prefix="/verify", tags=["verify"])
 
-
 # ── T7 request / response models ────────────────────────────────────────────
-
 
 class T7VerifyRequest(BaseModel):
     """T7 audit request body.
@@ -59,13 +56,10 @@ class T7VerifyRequest(BaseModel):
         default=None, description="(legacy) audit last N primary messages"
     )
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
-
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
 
 def _lookup_forgekin_loop_type(forgekin_id: str) -> str:
     """Best-effort lookup of a forgekin's loop_type from its YAML config."""
@@ -82,7 +76,6 @@ def _lookup_forgekin_loop_type(forgekin_id: str) -> str:
         logger.debug(f"Could not lookup loop_type for {forgekin_id}: {exc}")
     return ""
 
-
 def _lookup_forgekin_name(forgekin_id: str) -> str:
     """Best-effort lookup of a forgekin's display name."""
     try:
@@ -98,9 +91,7 @@ def _lookup_forgekin_name(forgekin_id: str) -> str:
         logger.debug(f"Could not lookup name for {forgekin_id}: {exc}")
     return forgekin_id
 
-
 # ── Endpoints ────────────────────────────────────────────────────────────────
-
 
 @router.post("/t7")
 async def verify_t7(payload: T7VerifyRequest) -> dict[str, Any]:
@@ -211,7 +202,6 @@ async def verify_t7(payload: T7VerifyRequest) -> dict[str, Any]:
         "audited_at": _now_iso(),
     }
 
-
 @router.get("/t8")
 async def verify_t8() -> dict[str, Any]:
     """T8 DOM health checklist — drives browser automation verification.
@@ -260,7 +250,6 @@ async def verify_t8() -> dict[str, Any]:
         ],
         "bridge_status": get_bridge_status(),
     }
-
 
 @router.get("/bridge")
 async def bridge_status() -> dict[str, Any]:

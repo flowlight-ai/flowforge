@@ -4,7 +4,6 @@
  * HealthReport — 记忆健康报告
  *
  * 展示记忆库的整体健康指标：覆盖率、新鲜度、待审数量、异常标记。
- * 移植自 clowder-ai HealthReport，简化为单卡片聚合版。
  *
  * API：GET /api/v1/memory/health
  */

@@ -4,7 +4,7 @@ All FlowForge errors derive from FlowForgeError so callers can catch the
 entire family with a single except clause, while still discriminating by
 subclass when they need finer-grained handling.
 
-Merged from old project (HTTP-oriented errors) and new project (domain errors).
+Merged HTTP-oriented errors and domain errors into a single hierarchy.
 """
 
 from __future__ import annotations
@@ -13,8 +13,8 @@ from __future__ import annotations
 class FlowForgeError(Exception):
     """Base exception for everything raised by flowforge.
 
-    Supports both HTTP-oriented attributes (status_code, detail) from the old
-    project and domain-oriented attributes (message, cause) from the new project.
+    Supports both HTTP-oriented attributes (status_code, detail) and
+    domain-oriented attributes (message, cause).
     """
 
     status_code: int = 500

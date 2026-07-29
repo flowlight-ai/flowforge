@@ -3,7 +3,6 @@
 /**
  * HubAgentSessionsTab — 可进化智能体会话 Tab
  *
- * 移植自 clowder-ai HubAgentSessionsTab，简化为 FlowForge 适配版。
  * 用于 /admin/agents/[id]?tab=sessions，展示 Forgekin 的历史会话与上下文。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

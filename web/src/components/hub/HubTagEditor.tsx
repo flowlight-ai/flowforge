@@ -3,7 +3,6 @@
 /**
  * HubTagEditor — 标签编辑器
  *
- * 移植自 clowder-ai HubTagEditor，简化为 FlowForge 适配版。
  * 用于 /admin/agents，编辑可进化智能体的标签集合（用于分组与过滤）。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

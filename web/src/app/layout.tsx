@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-// 性能优化（参考 clowder-ai）：globals.css 通过 import 加载（Tailwind 需要 Next 处理），
+// 性能优化：globals.css 通过 import 加载（Tailwind 需要 Next 处理），
 // 其他 vendor CSS 通过 <link> 静态加载，绕过 Next dev 的 flight CSS loader
 // （该 loader 会阻塞类选择器和非根 CSS，是 dev 模式页面慢的核心原因）
 import "./globals.css";
@@ -28,7 +28,7 @@ import { ConfirmProvider } from "@/components/useConfirm";
 
 // 性能优化：非关键全局组件用 dynamic import 延迟加载
 // 这些组件（模态框/引导层/Toast）不在首屏关键渲染路径上，
-// 延迟加载可显著减少首屏 JS 体积，参考 clowder-ai 的按需加载策略
+// 延迟加载可显著减少首屏 JS 体积，参考 的按需加载策略
 const BrakeModal = dynamic(
   () => import("@/components/BrakeModal").then((m) => m.BrakeModal),
   { ssr: false, loading: () => null }

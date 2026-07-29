@@ -5,10 +5,9 @@ It wires :mod:`flowforge.llm.client.LLMClient` to the YAML configuration in
 ``config/llm_route.yaml`` + ``config/web_chat_prompts.yaml`` and exposes two
 high-level async methods:
 
-Ported from `flowforge/web/llm_bridge.py` (web_legacy_backup) to
-`flowforge/llm/council_bridge.py` per PORTING-SPEC.md §3.4 — keeps the
-new project's T7/T9/push_back/external-agent advantages while adopting
-the old project's modular `app/api/endpoints/` structure.
+Migrated from `flowforge/web/llm_bridge.py` to
+`flowforge/llm/council_bridge.py` — keeps the T7/T9/push_back/external-agent
+advantages while adopting the modular `app/api/endpoints/` structure.
 
 * :meth:`ForgekinLLMBridge.respond` — generate a forgekin's council reply.
 * :meth:`ForgekinLLMBridge.audit_t7` — T7 audit of a primary forgekin reply
@@ -56,9 +55,7 @@ from flowforge.llm.provider import (
 
 logger = get_logger("flowforge.llm.council_bridge")
 
-
 # ── Public dataclasses ───────────────────────────────────────────────────────
-
 
 @dataclass(frozen=True)
 class ForgekinReply:
@@ -70,7 +67,6 @@ class ForgekinReply:
     latency_ms: float
     finish_reason: str
     raw: dict[str, Any] | None = None
-
 
 @dataclass(frozen=True)
 class T7AuditResult:
@@ -85,9 +81,7 @@ class T7AuditResult:
     quality_threshold: float
     raw_text: str
 
-
 # ── Internal helpers ─────────────────────────────────────────────────────────
-
 
 class _SafeDict(dict):
     """dict subclass that returns '{key}' for missing keys, so str.format_map
@@ -96,16 +90,13 @@ class _SafeDict(dict):
     def __missing__(self, key: str) -> str:  # noqa: D401
         return "{" + key + "}"
 
-
 def _env(name: str, default: str = "") -> str:
     """Read an environment variable, stripping surrounding whitespace."""
     val = os.environ.get(name, default)
     return val.strip() if isinstance(val, str) else default
 
-
 def _bool_env(name: str, default: bool = False) -> bool:
     return _env(name, str(default)).lower() in {"1", "true", "yes", "on"}
-
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     if not path.exists():
@@ -116,9 +107,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
         raise ValueError(f"config file is not a mapping: {path}")
     return data
 
-
 # ── Bridge ───────────────────────────────────────────────────────────────────
-
 
 class ForgekinLLMBridge:
     """Bridge between the web chat layer and the LLM stack.
@@ -669,9 +658,7 @@ class ForgekinLLMBridge:
         """Return the adapter for a kind, or None. Used by /api/external-agents/{kind}/test."""
         return self._external_agents.get(kind)
 
-
 # ── T7 response parsing ─────────────────────────────────────────────────────
-
 
 def _parse_t7_response(
     text: str,

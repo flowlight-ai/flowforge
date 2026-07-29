@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 /**
  * /admin/models 旧入口 — 已废弃
  *
- * 依据 WEB-FUSION-DESIGN.md §3.2 路由清理清单：
  *   原 ModelConfigPage（390 行）已合并到 /admin/settings 的 "accounts" section
  *   （"账户与密钥" — 模型 Provider、API Key、凭据管理）
  *

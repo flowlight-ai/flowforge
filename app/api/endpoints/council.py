@@ -1,8 +1,7 @@
 """Forgekin Council Chat API endpoints — modular router port.
 
-Ported from `flowforge/web_legacy_backup/app.py` (single-file `create_app()`)
-into the old project's modular `app/api/endpoints/` structure per
-PORTING-SPEC.md §3.4. Keeps the new project's T7/T9/push_back/external-agent
+Migrated from the legacy single-file `create_app()` into the modular
+`app/api/endpoints/` structure, keeping the T7/T9/push_back/external-agent
 advantages while adopting the modular layout.
 
 Endpoints (prefix="/api/v1/forgemind/council"):
@@ -70,18 +69,14 @@ CONFIG_DIR = PROJECT_ROOT / "config"
 FORGEKINS_DIR = CONFIG_DIR / "forgekins"
 WORKFLOWS_DIR = CONFIG_DIR / "workflows"
 
-
 # ── Helper functions ─────────────────────────────────────────────────────────
-
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
-
 def _bool_env(name: str, default: bool = False) -> bool:
     val = os.environ.get(name, str(default))
     return val.strip().lower() in {"1", "true", "yes", "on"}
-
 
 def _upsert_env_var(env_path: Path, key: str, value: str) -> None:
     """Insert or update a KEY=value line in a .env file (铁律 5 — secrets in .env).
@@ -102,7 +97,6 @@ def _upsert_env_var(env_path: Path, key: str, value: str) -> None:
         lines.append(f'{key}="{value}"')
     env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-
 def _load_yaml(path: Path) -> dict[str, Any]:
     """Load a YAML file into a dict (returns {} for missing files)."""
     if not path.exists():
@@ -111,12 +105,10 @@ def _load_yaml(path: Path) -> dict[str, Any]:
         data = yaml.safe_load(f) or {}
     return data if isinstance(data, dict) else {}
 
-
 def _env(name: str, default: str = "") -> str:
     """Read an environment variable, stripping surrounding whitespace."""
     val = os.environ.get(name, default)
     return val.strip() if isinstance(val, str) else default
-
 
 def _load_forgekins() -> dict[str, dict]:
     """Load 5 forgekin YAML configs from config/forgekins/."""
@@ -128,9 +120,7 @@ def _load_forgekins() -> dict[str, dict]:
             forgekins[path.stem] = cfg
     return forgekins
 
-
 # ── Data structures ──────────────────────────────────────────────────────────
-
 
 @dataclass
 class LLMMeta:
@@ -146,7 +136,6 @@ class LLMMeta:
     finish_reason: str
     chain: str  # fallback chain name, e.g. "content_create"
 
-
 @dataclass
 class T7Badge:
     """T7 audit result attached to primary forgekin messages."""
@@ -159,7 +148,6 @@ class T7Badge:
     latency_ms: float
     quality_threshold: float
     chain: str = "t7_audit"  # I9: audit chain differs from primary chain
-
 
 @dataclass
 class ChatMessage:
@@ -184,7 +172,6 @@ class ChatMessage:
     role: str = ""  # council role for this turn: primary | reviewer | tester
     llm_meta: LLMMeta | None = None
     t7_badge: T7Badge | None = None
-
 
 @dataclass
 class ChatState:
@@ -216,9 +203,7 @@ class ChatState:
             return list(self.messages)
         return list(self.messages[-limit:])
 
-
 # ── Task management (in-memory, MVP) ─────────────────────────────────────────
-
 
 @dataclass
 class Task:
@@ -251,7 +236,6 @@ class Task:
         })
         self.touch()
 
-
 # ── Forgekin persona helpers ─────────────────────────────────────────────────
 
 AVATARS = {
@@ -270,7 +254,6 @@ _PERSONA_TO_FORGEKIN = {
     "test": "fk-davinci",
     "review": "fk-vangogh",
 }
-
 
 def _forgekin_profile(fk_cfg: dict) -> dict:
     """Extract UI-relevant fields from a forgekin config."""
@@ -293,7 +276,6 @@ def _forgekin_profile(fk_cfg: dict) -> dict:
         "requires_approval": fk_cfg.get("self_dev_loop", {}).get("requires_manual_approval", False),
         "capabilities": [c["name"] for c in fk_cfg.get("capabilities", [])],
     }
-
 
 def _route_message(content: str, forgekins: dict[str, dict]) -> list[dict]:
     """Decide which forgekins respond, in what order, based on routing rules.
@@ -329,13 +311,11 @@ def _route_message(content: str, forgekins: dict[str, dict]) -> list[dict]:
 
     return routing
 
-
 def _find_forgekin_cfg(forgekins: dict[str, dict], fk_id: str) -> dict | None:
     for cfg in forgekins.values():
         if cfg.get("forgekin_id") == fk_id:
             return cfg
     return None
-
 
 async def _broadcast(state: ChatState, msg: ChatMessage) -> None:
     """Broadcast a new message to all WebSocket subscribers.
@@ -384,7 +364,6 @@ async def _broadcast(state: ChatState, msg: ChatMessage) -> None:
         f"remaining_subscribers={len(state.subscribers)}"
     )
 
-
 # ── Module-level state (lazy-initialized on first request) ───────────────────
 # These mirror the closure-captured state in create_app(). Lazy init avoids
 # import-time failures when config/llm_route.yaml or forgekin YAMLs are missing.
@@ -399,7 +378,6 @@ forgekins_cfg: dict[str, dict] | None = None
 # without restarting the process. ``bridge_holder["bridge"]`` is the single
 # source of truth — every endpoint reads through _get_bridge().
 bridge_holder: dict[str, ForgekinLLMBridge] = {}
-
 
 def _get_forgekins() -> dict[str, dict]:
     """Lazily load forgekin configs and seed greetings on first call.
@@ -426,7 +404,6 @@ def _get_forgekins() -> dict[str, dict]:
             ))
     return forgekins_cfg
 
-
 def _get_bridge() -> ForgekinLLMBridge:
     """Lazily initialize the ForgekinLLMBridge on first request.
 
@@ -437,14 +414,11 @@ def _get_bridge() -> ForgekinLLMBridge:
         bridge_holder["bridge"] = ForgekinLLMBridge.from_config(CONFIG_DIR)
     return bridge_holder["bridge"]
 
-
 # ── Router ───────────────────────────────────────────────────────────────────
 
 router = APIRouter(prefix="/api/v1/forgemind/council", tags=["forgekin-council"])
 
-
 # ── Endpoints: agents ────────────────────────────────────────────────────────
-
 
 @router.get("/agents")
 async def list_agents() -> dict:
@@ -458,7 +432,6 @@ async def list_agents() -> dict:
             "role": "operator",
         },
     }
-
 
 @router.get("/agents/{fk_id}")
 async def get_agent_detail(fk_id: str) -> dict:
@@ -484,9 +457,7 @@ async def get_agent_detail(fk_id: str) -> dict:
     profile["model_preference"] = fk_cfg.get("model_preference", {})
     return {"agent": profile}
 
-
 # ── Endpoints: messages ──────────────────────────────────────────────────────
-
 
 @router.get("/messages")
 async def get_messages(limit: int = 50) -> dict:
@@ -495,7 +466,6 @@ async def get_messages(limit: int = 50) -> dict:
         "messages": [asdict(m) for m in recent],
         "total": len(state.messages),
     }
-
 
 @router.post("/messages/clear")
 async def clear_messages() -> dict:
@@ -549,9 +519,7 @@ async def clear_messages() -> dict:
         )
     return {"cleared": True, "cleared_count": count}
 
-
 # ── Endpoint: chat (real LLM responses) ──────────────────────────────────────
-
 
 @router.post("/chat")
 async def send_message(payload: dict) -> dict:
@@ -789,9 +757,7 @@ async def send_message(payload: dict) -> dict:
         "routing": routing,
     }
 
-
 # ── Endpoint: bridge status ──────────────────────────────────────────────────
-
 
 @router.get("/bridge")
 async def bridge_status() -> dict:
@@ -811,9 +777,7 @@ async def bridge_status() -> dict:
         "config_dir": str(b._config_dir),
     }
 
-
 # ── Endpoints: I11 multi-turn context + push back protocol ──────────────────
-
 
 @router.get("/context")
 async def get_context(limit: int = 10) -> dict:
@@ -835,7 +799,6 @@ async def get_context(limit: int = 10) -> dict:
             "escalated": state.escalated_to_operator,
         },
     }
-
 
 @router.post("/push_back")
 async def trigger_push_back(payload: dict) -> dict:
@@ -893,7 +856,6 @@ async def trigger_push_back(payload: dict) -> dict:
         "message": pb_content,
     }
 
-
 @router.post("/push_back/reset")
 async def reset_push_back() -> dict:
     state.reset_push_back()
@@ -906,9 +868,7 @@ async def reset_push_back() -> dict:
         },
     }
 
-
 # ── Endpoints: settings — LLM configuration ─────────────────────────────────
-
 
 @router.get("/settings/llm")
 async def get_llm_settings() -> dict:
@@ -943,7 +903,6 @@ async def get_llm_settings() -> dict:
         "prefer_api": cfg.get("prefer_api", True),
         "config_path": str(llm_route_path),
     }
-
 
 @router.put("/settings/llm")
 async def update_llm_settings(payload: dict) -> dict:
@@ -999,7 +958,6 @@ async def update_llm_settings(payload: dict) -> dict:
         "api_key_configured": bool(api_key),
     }
 
-
 @router.post("/settings/llm/test")
 async def test_llm_connection(payload: dict) -> dict:
     """Test the LLM connection by sending a minimal completion request.
@@ -1026,9 +984,7 @@ async def test_llm_connection(payload: dict) -> dict:
             "error": str(exc),
         }
 
-
 # ── Endpoints: settings — runtime parameters ────────────────────────────────
-
 
 @router.get("/settings/runtime")
 async def get_runtime_settings() -> dict:
@@ -1040,7 +996,6 @@ async def get_runtime_settings() -> dict:
         "push_back_max_rounds": state.push_back_max_rounds,
         "debug": _bool_env("FLOWFORGE_DEBUG", False),
     }
-
 
 @router.put("/settings/runtime")
 async def update_runtime_settings(payload: dict) -> dict:
@@ -1074,9 +1029,7 @@ async def update_runtime_settings(payload: dict) -> dict:
         },
     }
 
-
 # ── Endpoints: task management (in-memory MVP) ──────────────────────────────
-
 
 @router.get("/tasks")
 async def list_tasks(status: str | None = None) -> dict:
@@ -1089,7 +1042,6 @@ async def list_tasks(status: str | None = None) -> dict:
         "tasks": [asdict(t) for t in items],
         "total": len(items),
     }
-
 
 @router.post("/tasks")
 async def create_task(payload: dict) -> dict:
@@ -1193,7 +1145,6 @@ async def create_task(payload: dict) -> dict:
 
     return {"task": asdict(task)}
 
-
 @router.get("/tasks/{task_id}")
 async def get_task(task_id: str) -> dict:
     """Return a single task's full state including events."""
@@ -1201,7 +1152,6 @@ async def get_task(task_id: str) -> dict:
     if not task:
         raise HTTPException(status_code=404, detail=f"task '{task_id}' not found")
     return {"task": asdict(task)}
-
 
 @router.post("/tasks/{task_id}/cancel")
 async def cancel_task(task_id: str) -> dict:
@@ -1214,7 +1164,6 @@ async def cancel_task(task_id: str) -> dict:
     task.status = "cancelled"
     task.add_event("cancelled", "operator requested cancellation")
     return {"task": asdict(task)}
-
 
 # ── Endpoint: WebSocket (real-time message stream) ──────────────────────────
 # NOTE: FastAPI WebSocket paths DO inherit the APIRouter prefix (same as HTTP
@@ -1289,9 +1238,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             f"remaining_subscribers={len(state.subscribers)}"
         )
 
-
 # ── Endpoints: dashboard, workflows, metrics ────────────────────────────────
-
 
 @router.get("/dashboard")
 async def dashboard() -> dict:
@@ -1339,7 +1286,6 @@ async def dashboard() -> dict:
         },
     }
 
-
 @router.get("/workflows")
 async def list_workflows() -> dict:
     """列出所有 workflow 配置 — 扫描 config/workflows/*.yaml。
@@ -1376,7 +1322,6 @@ async def list_workflows() -> dict:
             logger.warning(f"Failed to load workflow {f}: {exc}")
     return {"status": "success", "data": {"workflows": workflows}}
 
-
 @router.get("/workflows/{workflow_name}")
 async def get_workflow(workflow_name: str) -> dict:
     """获取单个 workflow 配置详情。"""
@@ -1397,7 +1342,6 @@ async def get_workflow(workflow_name: str) -> dict:
             "steps": cfg.get("steps", []),
         },
     }
-
 
 @router.get("/council-metrics")
 async def prometheus_metrics() -> Response:

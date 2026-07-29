@@ -14,7 +14,6 @@ interface ThinkingIndicatorProps {
 /**
  * ThinkingIndicator — 思考中指示器
  *
- * 来源：clowder-ai/packages/web/src/components/ThinkingIndicator.tsx（简化版）
  * 用途：替代简单的 loading dots，显示具体哪些智能体正在响应
  *
  * 视觉：

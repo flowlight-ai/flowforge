@@ -6,10 +6,9 @@ import { HubObservabilityTab } from "@/components/hub/HubObservabilityTab";
 /**
  * 可观测性页面 — 使用 HubObservabilityTab + 保留日志查看器
  *
- * 整合 clowder-ai HubObservabilityTab（服务健康/运行时会话/回调认证）
+ * 整合 HubObservabilityTab（服务健康/运行时会话/回调认证）
  * 与 FlowForge 原有日志查看器，形成完整的可观测性中心。
  *
- * 依据 WEB-FUSION-DESIGN.md §8：HubObservabilityTab 提供核心 Hub 能力；
  * 日志查看器为 FlowForge 原有功能，作为补充保留。
  */
 

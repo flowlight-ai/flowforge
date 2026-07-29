@@ -5,9 +5,8 @@ If the config files (llm_route.yaml / web_chat_prompts.yaml) are missing,
 ``get_bridge()`` returns ``None`` and endpoints degrade gracefully — they
 report "bridge unavailable" instead of crashing.
 
-This keeps the new project's T7/push_back/external-agent advantages available
-to the old project's modular ``app/api/endpoints/`` structure, per
-PORTING-SPEC.md §3.4.
+This keeps the T7/push_back/external-agent advantages available to the
+modular ``app/api/endpoints/`` structure.
 """
 
 from __future__ import annotations
@@ -24,7 +23,6 @@ _bridge: ForgekinLLMBridge | None = None
 _bridge_init_failed: bool = False
 _failure_reason: str = ""
 
-
 def _config_dir() -> Path:
     """Return the flowforge config directory.
 
@@ -34,7 +32,6 @@ def _config_dir() -> Path:
     ``flowforge/``.
     """
     return Path(__file__).resolve().parent.parent / "config"
-
 
 def get_bridge() -> ForgekinLLMBridge | None:
     """Return the singleton bridge instance, or ``None`` if unavailable.
@@ -69,7 +66,6 @@ def get_bridge() -> ForgekinLLMBridge | None:
         logger.warning(f"ForgekinLLMBridge unavailable — {_failure_reason}")
         return None
 
-
 def reload_bridge() -> bool:
     """Force re-initialization of the bridge (used by settings reload).
 
@@ -80,7 +76,6 @@ def reload_bridge() -> bool:
     _bridge_init_failed = False
     _failure_reason = ""
     return get_bridge() is not None
-
 
 def get_bridge_status() -> dict[str, Any]:
     """Return a diagnostic dict for the ``/bridge/status`` endpoint."""

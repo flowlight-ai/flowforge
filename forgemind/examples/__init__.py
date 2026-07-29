@@ -1,7 +1,7 @@
 """Built-in example forgekins — bring the Forgekin vision to life.
 
 Examples:
-- animal_companion — a cat spirit (homage to clowder-ai 养小猫)
+- animal_companion — a cat spirit (homage to the cat companion concept)
 - organization     — a small team spirit
 - object_spirit    — a desk lamp spirit
 - fictional_character — Sherlock Holmes spirit

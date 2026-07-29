@@ -7,7 +7,7 @@
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
- * 独立性：不依赖 clowder-ai 任何组件。
+ * 独立性：不依赖上游
  */
 
 import type { RoleKind, SpeciesKind } from "./model";

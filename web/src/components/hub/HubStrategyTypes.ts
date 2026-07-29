@@ -1,7 +1,6 @@
 /**
  * HubStrategyTypes — 路由策略共享类型定义
  *
- * 移植自 clowder-ai HubStrategyTypes，适配 FlowForge /api/v1/ 路径。
  * 仅包含类型定义，不包含运行时逻辑，便于在 HubRoutingPolicyTab、
  * HubConnectorConfigTab 等多个 Hub 组件间复用。
  *

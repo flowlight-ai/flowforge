@@ -5,11 +5,11 @@
  *
  * 重构说明（v2）：
  *   - 原 /council 重定向到 /solo?mode=council（在 Helm 框架内嵌套群聊）
- *   - 现重构为独立路由，使用 clowder-ai 启发的全屏聊天布局
+ *   - 现重构为独立路由，使用 启发的全屏聊天布局
  *   - 原因：Helm 三栏布局（左面板/聊天/编辑器）不适合群聊场景
  *   - 群聊需要：消息流为主、智能体头像侧栏、@mention 增强、轮次控制
  *
- * UI 框架（参考 clowder-ai ChatContainer）：
+ * UI 框架（参考 ChatContainer）：
  *   ┌─────────────────────────────────────────────────────────┐
  *   │ CouncilHeader（品牌/任务ID/轮次/设置）                    │
  *   ├──────────┬──────────────────────────────────┬───────────┤
@@ -45,7 +45,7 @@ const CouncilChatPanel = dynamic(
   { ssr: false, loading: () => <CouncilLoading /> }
 );
 
-// 群聊配置跳转按钮样式 — 参考 clowder-ai ChatContainerHeader 的快捷链接
+// 群聊配置跳转按钮样式 — 参考 ChatContainerHeader 的快捷链接
 const configLinkStyle: React.CSSProperties = {
   padding: "6px 10px",
   borderRadius: "var(--radius-sm)",
@@ -82,7 +82,7 @@ export default function CouncilPage() {
         color: "var(--text)",
       }}
     >
-      {/* 顶部 Header — 参考 clowder-ai ChatContainerHeader */}
+      {/* 顶部 Header — 参考 ChatContainerHeader */}
       <header
         className="council-header"
         data-council="header"
@@ -145,7 +145,7 @@ export default function CouncilPage() {
           className="council-actions"
           style={{ display: "flex", alignItems: "center", gap: "8px" }}
         >
-          {/* 群聊配置跳转按钮组 — 参考 clowder-ai ChatContainerHeader */}
+          {/* 群聊配置跳转按钮组 — 参考 ChatContainerHeader */}
           {/* 群聊需要大量配置：Forgekin 选择、路由策略、历史会话、评审等 */}
           <nav
             aria-label="群聊配置"

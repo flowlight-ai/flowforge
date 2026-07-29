@@ -9,13 +9,13 @@ CLI agents. The web chat layer (app.py + llm_bridge.py) calls
 ``ExternalAgentAdapter.invoke()`` when ``use_external_agent=true`` is passed
 to ``POST /api/chat``.
 
-Cross-platform binary resolution (ported from clowder-ai's cli-resolve.ts):
+Cross-platform binary resolution :
 - Windows: PATH → %APPDATA%\\npm → %LOCALAPPDATA%\\npm → D:\\ProgramData\\nodejs\\npm-global
   Prefers ``.cmd`` shims (reliable for create_subprocess_exec).
 - Unix: PATH → ~/.local/bin → ~/.claude/bin → ~/.volta/bin → ~/.fnm/aliases/default/bin
   plus nvm-managed ~/.nvm/versions/node/*/bin.
 
-Per-CLI oneshot argument shapes (verified against clowder-ai's AgentService
+Per-CLI oneshot argument shapes (verified against upstream CLI
 implementations — see ClaudeAgentService.ts:6, GeminiAgentService.ts:856,
 OpenCodeAgentService.ts:6, routing-guard-remedial.ts:4):
 - claude:  ``claude -p "<prompt>"``
@@ -42,7 +42,6 @@ from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.forgemind.external_agents")
 
-
 class ExternalAgentKind(str, Enum):
     CLAUDE_CODE = "claude_code"
     CODEX = "codex"
@@ -50,7 +49,6 @@ class ExternalAgentKind(str, Enum):
     OPENCODE = "opencode"
     TRAE = "trae"
     CUSTOM = "custom"
-
 
 @dataclass
 class ExternalAgentConfig:
@@ -70,7 +68,6 @@ class ExternalAgentConfig:
     # "--skip-trust" for gemini, "--skip-git-repo-check" for codex).
     # Caller-supplied extra_args still take precedence (deduped by flag name).
     default_extra_args: list[str] = field(default_factory=list)
-
 
 # Default configurations — overridable via forgemind.yaml or the settings API.
 DEFAULT_CONFIGS: dict[ExternalAgentKind, ExternalAgentConfig] = {
@@ -135,12 +132,8 @@ DEFAULT_CONFIGS: dict[ExternalAgentKind, ExternalAgentConfig] = {
     ),
 }
 
-
 class ExternalAgentError(FlowForgeError):
     """External agent invocation failed."""
-
-
-# ─── Cross-platform binary resolution (ported from clowder-ai cli-resolve.ts) ──
 
 _IS_WINDOWS = sys.platform.startswith("win")
 
@@ -154,7 +147,6 @@ _UNIX_SEARCH_DIRS = (
     ".nix-profile/bin",
 )
 
-
 def _collect_nvm_bin_dirs() -> list[Path]:
     """Discover nvm-managed Node.js bin directories under ~/.nvm/versions/node/."""
     home = Path.home()
@@ -162,7 +154,6 @@ def _collect_nvm_bin_dirs() -> list[Path]:
     if not nvm_dir.exists():
         return []
     return [d / "bin" for d in nvm_dir.iterdir() if d.is_dir() and d.name.startswith("v")]
-
 
 def _windows_search_dirs() -> list[Path]:
     """Windows well-known install directories for npm-global CLIs."""
@@ -178,7 +169,6 @@ def _windows_search_dirs() -> list[Path]:
     dirs.append(Path("C:/Program Files/nodejs"))
     return dirs
 
-
 def _probe_dir_for_binary(dir_path: Path, binary: str) -> Path | None:
     """Probe one directory for the binary, preferring .cmd/.exe on Windows."""
     if not dir_path.exists():
@@ -193,7 +183,6 @@ def _probe_dir_for_binary(dir_path: Path, binary: str) -> Path | None:
         if candidate.exists() and candidate.is_file():
             return candidate
     return None
-
 
 def resolve_cli_binary(binary: str, override: str = "") -> Path | None:
     """Resolve the full path to a CLI binary.
@@ -229,9 +218,7 @@ def resolve_cli_binary(binary: str, override: str = "") -> Path | None:
             return candidate.resolve()
     return None
 
-
 # ─── Per-kind oneshot argument construction ──────────────────────────────────
-
 
 def build_oneshot_args(kind: ExternalAgentKind, prompt: str, extra_args: list[str] | None = None) -> list[str]:
     """Build the CLI argument vector for a one-shot prompt invocation.
@@ -287,14 +274,11 @@ def build_oneshot_args(kind: ExternalAgentKind, prompt: str, extra_args: list[st
     args.extend(["--prompt", prompt])
     return args
 
-
 # ─── Adapter ─────────────────────────────────────────────────────────────────
-
 
 def _is_flag_token(token: str) -> bool:
     """Return True if the token looks like a CLI flag (starts with '-' or '--')."""
     return token.startswith("-") and token != "-"
-
 
 def _merge_extra_args(defaults: list[str] | None, override: list[str] | None) -> list[str]:
     """Merge default_extra_args with caller-supplied extra_args.
@@ -331,7 +315,6 @@ def _merge_extra_args(defaults: list[str] | None, override: list[str] | None) ->
         i += 1
     merged.extend(override)
     return merged
-
 
 class ExternalAgentAdapter:
     """Subprocess-based adapter for a third-party agent."""
@@ -500,11 +483,9 @@ class ExternalAgentAdapter:
         except ExternalAgentError:
             raise
 
-
 def build_default_adapters() -> dict[ExternalAgentKind, ExternalAgentAdapter]:
     """Construct adapters for all five built-in external agents."""
     return {kind: ExternalAgentAdapter(cfg) for kind, cfg in DEFAULT_CONFIGS.items()}
-
 
 async def _kill_process_tree(proc: asyncio.subprocess.Process, label: str) -> None:
     """Kill a subprocess and all its children (Windows-aware).
@@ -553,7 +534,6 @@ async def _kill_process_tree(proc: asyncio.subprocess.Process, label: str) -> No
             f"_kill_process_tree({label}, pid={pid}): proc.wait() still pending "
             f"after 5s — pipe may be held by an orphaned child. Continuing."
         )
-
 
 def load_adapters_from_config(config: dict[str, Any]) -> dict[ExternalAgentKind, ExternalAgentAdapter]:
     """Build adapters from a forgemind.yaml ``external_agents`` mapping.

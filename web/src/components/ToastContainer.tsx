@@ -1,7 +1,6 @@
 /**
  * ToastContainer — 全局 Toast 通知容器
  *
- * 来源：clowder-ai/packages/web/src/components/ToastContainer.tsx（简化版）
  * 职责：在应用右下角显示 toast 通知，支持自动消失、手动关闭
  *
  * 设计原则：

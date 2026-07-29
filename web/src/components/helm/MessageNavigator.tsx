@@ -12,7 +12,6 @@ interface MessageNavigatorProps {
 /**
  * MessageNavigator — 消息导航器
  *
- * 来源：clowder-ai/packages/web/src/components/MessageNavigator.tsx（简化版）
  * 用途：当消息超过 5 条时显示，提供上下翻页按钮和当前位置指示
  *
  * 视觉：

@@ -3,7 +3,6 @@
 /**
  * HubListModal — Hub 全局入口模态框（占位实现）
  *
- * 移植自 clowder-ai HubListModal，简化为 FlowForge 适配版。
  * 由 ActivityBar 全局入口触发，承载 IM Hub 线程、连接器、权限多 Tab。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

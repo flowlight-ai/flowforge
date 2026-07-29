@@ -1,10 +1,9 @@
 /**
  * trace-tree-utils — Trace Span 树构建与扁平化工具
  *
- * 移植自 clowder-ai trace-tree-utils，纯逻辑函数（无 React 依赖）。
  * 提供 TraceSpan / SpanNode 类型 + buildForest / flattenForest 工具。
  *
- * 独立性：不依赖任何 clowder-ai 模块，可直接用于单元测试。
+ * 独立性：不依赖任何外部模块，可直接用于单元测试。
  */
 
 export interface TraceSpan {

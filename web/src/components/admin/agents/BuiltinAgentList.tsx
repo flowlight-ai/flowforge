@@ -3,7 +3,6 @@
 /**
  * BuiltinAgentList — FlowForge 内置静态智能体列表
  *
- * 依据 WEB-FUSION-DESIGN.md §6.3：
  *   DeclarativeAgent / ReActAgent / PlanExecuteAgent / ReflexionAgent
  *
  * 这些是 FlowForge 框架内置的静态智能体（不可进化），通过 YAML 配置驱动。

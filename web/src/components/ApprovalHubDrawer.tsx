@@ -2,9 +2,6 @@
 
 /**
  * ApprovalHubDrawer — 审批中心抽屉
- *
- * 来源：clowder-ai/packages/web/src/components/ApprovalHubDrawer.tsx（简化版）
- *
  * Phase 2 阶段：占位实现，仅消费 approvalHubStore 的 open 状态，渲染一个空抽屉壳。
  * 后续 Phase 6 会按需补全审批项列表、批量操作、过滤等能力。
  */

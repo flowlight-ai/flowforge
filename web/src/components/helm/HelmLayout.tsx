@@ -7,7 +7,7 @@
  *
  * 重构说明（v2）：
  *   - /solo 路由专注 Helm 单 Agent 模式
- *   - 群聊（council）已迁移到 /council 独立路由（使用 clowder-ai 移植 UI）
+ *   - 群聊（council）已迁移到 /council 独立路由（使用 移植 UI）
  *   - URL 参数 ?mode=council 会触发重定向到 /council
  *   - ?mode=normal 和 ?mode=auto 已废弃，静默映射为 helm
  */

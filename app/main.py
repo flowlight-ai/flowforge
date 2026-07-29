@@ -42,7 +42,6 @@ from flowforge.core.persona_lock import PersonaLock
 load_logging_config()
 logger = get_logger("main")
 
-
 def _register_core_tools(tool_registry: ToolRegistry, plugin_registry: PluginRegistry):
     from flowforge.tools.python_executor import PythonExecutorTool
     from flowforge.tools.file_rw import FileReadWriteTool
@@ -87,7 +86,6 @@ def _register_core_tools(tool_registry: ToolRegistry, plugin_registry: PluginReg
         except Exception:
             pass
 
-
 def _register_core_agents(agent_registry: AgentRegistry):
     from flowforge.agents.generic import GENERIC_AGENTS
     for agent_cls in GENERIC_AGENTS:
@@ -97,7 +95,6 @@ def _register_core_agents(agent_registry: AgentRegistry):
         except Exception as e:
             logger.debug(f"Skip agent {agent_cls.__name__}: {e}")
 
-
 def _register_all_modes(mode_registry: ModeRegistry):
     for executor_cls in [
         WorkflowExecutor, ReflexionExecutor, ReActExecutor,
@@ -105,7 +102,6 @@ def _register_all_modes(mode_registry: ModeRegistry):
         SelfDiscoverExecutor, AgentJudgeExecutor, GraphOfThoughtsExecutor,
     ]:
         mode_registry.register(executor_cls())
-
 
 def _topological_sort_plugins(plugins: list) -> list:
     """Sort plugins by dependencies using Kahn's algorithm.
@@ -143,7 +139,6 @@ def _topological_sort_plugins(plugins: list) -> list:
 
     return [name_to_plugin[name] for name in result]
 
-
 def _check_version_compatibility(plugins: list) -> list:
     """Remove plugins incompatible with the current framework version.
 
@@ -172,7 +167,6 @@ def _check_version_compatibility(plugins: list) -> list:
                 )
         compatible.append(plugin)
     return compatible
-
 
 def _load_domain_plugins(
     agent_registry: AgentRegistry,
@@ -301,7 +295,6 @@ def _load_domain_plugins(
             mod.register_tools(tool_registry)
             logger.info(f"Registered tools from {mod.__name__} (legacy)")
 
-
 # Keep track of loaded protocol plugins for shutdown
 _loaded_plugins: list[FlowForgePlugin] = []
 
@@ -324,7 +317,6 @@ _AUTO_DISCOVER_SUBDIRS = [
 # *Forge projects register themselves via Plugin V3 protocol; this list is
 # populated at runtime by auto_discover_plugins() scanning installed packages.
 _DEFAULT_FORGE_NAMES: list[str] = []
-
 
 def auto_discover_plugins(
     agent_registry: AgentRegistry,
@@ -496,7 +488,6 @@ def auto_discover_plugins(
             )
         except Exception as e:
             logger.error(f"auto_discover_plugins: failed to load plugin '{forge_name}': {e}")
-
 
 def _load_single_plugin(
     plugin_instance: FlowForgePlugin,
@@ -697,7 +688,6 @@ def _load_single_plugin(
         logger.error(f"[{plugin_instance.name}] Plugin load failed: {e}")
         raise
 
-
 def get_loaded_plugins() -> list[dict]:
     """Get info about all loaded domain plugins."""
     return [
@@ -710,7 +700,6 @@ def get_loaded_plugins() -> list[dict]:
         }
         for p in _loaded_plugins
     ]
-
 
 async def unload_plugin(plugin_name: str) -> dict:
     """Unload a plugin by name — removes all its registrations.
@@ -832,7 +821,6 @@ async def unload_plugin(plugin_name: str) -> dict:
         "removed_schedules": removed_schedules,
     }
 
-
 async def reload_plugin(plugin_name: str) -> dict:
     """Reload a plugin — unload then reload from the same module.
 
@@ -919,7 +907,6 @@ async def reload_plugin(plugin_name: str) -> dict:
         "unload": unload_result,
         "reload": "completed",
     }
-
 
 @asynccontextmanager
 async def lifespan(app):
@@ -1041,7 +1028,6 @@ async def lifespan(app):
         scheduler.shutdown()
     logger.info("FlowForge API shutdown")
 
-
 app = FastAPI(title="FlowForge API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -1104,7 +1090,6 @@ set_executor_instance(_executor_instance)
 # PersonaLock 单例 — Loop 执行期间防止同一 Persona 被其他任务抢占
 # 必须在 LoopExecutor 注入之前定义，因为 LoopExecutor 依赖 PersonaLock
 _persona_lock = PersonaLock()
-
 
 def get_persona_lock() -> PersonaLock:
     """获取全局 PersonaLock 实例。"""
@@ -1175,7 +1160,7 @@ lifecycle_manager = PluginLifecycleManager(
     event_store=event_store,
 )
 
-# Web Fusion Phase 8: Backend API stubs（clowder-ai 后端 API 融合）
+# Web Fusion Phase 8: Backend API stubs（后端 API 融合）
 # 必须在现有 router 之前注册——FastAPI 按注册顺序匹配路由，
 # 新 router 中的静态路径（如 /memory/collections、/memory/health）
 # 需在现有 router 的动态路径（如 /memory/{memory_id}: int）之前注册，
@@ -1227,7 +1212,6 @@ except ImportError:
     pass
 
 # ForgeMind Council Chat (T7/T9/push_back/external-agent) — modular port
-# from clowder-ai web_legacy_backup. Router prefix is absolute:
 # /api/v1/forgemind/council/* (see endpoints/council.py), so we mount
 # directly on the app rather than nesting under the /api/v1 router.
 try:
@@ -1258,7 +1242,6 @@ try:
         logger.warning(f"Web static dir not found: {_web_static_dir}")
 except Exception as _e:  # noqa: BLE001
     logger.warning(f"Web UI mount failed: {_e}")
-
 
 # ── Legacy compat routes for T7/T8 E2E tests ────────────────────────────────
 # The T7/T8 test suite (tests/test_t7_t8_e2e.py and test_t7_t8_external_agents.py)
@@ -1291,7 +1274,6 @@ try:
 except ImportError as _e:
     logger.warning(f"Legacy compat routes not mounted: {_e}")
 
-
 # ── Diagnostic WebSocket endpoint ────────────────────────────────────────────
 # Minimal WS endpoint to isolate WebSocket 403 issues from council router logic.
 @app.websocket("/test-ws")
@@ -1307,7 +1289,6 @@ async def diagnostic_ws(ws: WebSocket):
             await ws.send_text(f"echo: {data}")
     except Exception as exc:
         logger.warning(f"[test-ws] ERROR: {exc!r}")
-
 
 @app.get("/health")
 def health():
@@ -1345,7 +1326,6 @@ def health():
         components["openroute"] = {"status": "unknown"}
     return {"status": "healthy", "components": components}
 
-
 @app.get("/metrics")
 def get_metrics_endpoint():
     from flowforge.core.metrics import get_prometheus_metrics, get_metrics as gm
@@ -1354,7 +1334,6 @@ def get_metrics_endpoint():
         from starlette.responses import Response
         return Response(content=prom_data, media_type="text/plain; version=0.0.4; charset=utf-8")
     return gm()
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host=system_config.server_host, port=system_config.server_port)

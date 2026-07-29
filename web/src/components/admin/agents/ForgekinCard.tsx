@@ -3,7 +3,7 @@
 /**
  * ForgekinCard — 可进化智能体卡片
  *
- * 来源：老版 flowforge /admin/agents page.tsx 卡片 + clowder-ai Forgekin 概念融合
+ * Forgekin 概念卡片
  *
  * 显示：头像 / 名称 / 角色 / 形态 / 进化阶 / 觉醒阶 / 在线状态
  * 操作：编辑 / 进化 / 觉醒 / 谱系

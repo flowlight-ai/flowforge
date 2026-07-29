@@ -2,10 +2,7 @@
 
 /**
  * FloatingPresentationSurfaceHost — 演示浮窗宿主
- *
- * 来源：clowder-ai/packages/web/src/components/workspace/FloatingPresentationSurfaceHost.tsx（简化版）
- *
- * Phase 2 阶段：占位实现，仅渲染挂载点，不引入 clowder-ai 的完整演示浮窗逻辑。
+ * Phase 2 阶段：占位实现，仅渲染挂载点，不引入 完整的演示浮窗逻辑。
  * 后续 Phase 6 会按需补全浮窗内容、讲稿同步、最小化/还原等能力。
  */
 

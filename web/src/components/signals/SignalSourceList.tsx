@@ -4,7 +4,6 @@
  * SignalSourceList — 信号源管理
  *
  * 列出所有信号源、状态、最近一次抓取时间；支持启用/禁用、立即抓取。
- * 移植自 clowder-ai signals/sources，简化为表格视图。
  *
  * API：GET /api/v1/signals/sources
  *      POST /api/v1/signals/sources/{id}/toggle

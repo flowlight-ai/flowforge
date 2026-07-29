@@ -1,7 +1,6 @@
 /**
  * ThemeProvider — 主题 Provider
  *
- * 来源：clowder-ai/packages/web/src/components/ThemeProvider.tsx（简化版）
  * 职责：管理 light/dark/system 三态主题切换，提供主题上下文给子组件
  *
  * 设计原则：
