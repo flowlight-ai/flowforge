@@ -156,6 +156,10 @@ pytest_*.txt
 # ===== Node modules (CRITICAL: never commit dependencies) =====
 node_modules/
 
+# ===== Next.js build output (generated, not source) =====
+.next/
+out/
+
 # ===== Local backup directories (do not publish) =====
 core_new_backup/
 web_legacy_backup/
