@@ -1,4 +1,4 @@
-﻿# FlowForge — CODEOWNERS
+# FlowForge — CODEOWNERS
 # Each line is a file pattern followed by one or more owners.
 # Order matters — later matches take precedence.
 # Doc: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
@@ -15,7 +15,7 @@ flowforge/core/             @flowlight-ai/maintainers
 flowforge/llm/              @flowlight-ai/maintainers
 
 # CI and scripts — require maintainer review
-.github/                    @forge-mord/maintainers
+.github/                    @flowlight-ai/maintainers
 scripts/                    @flowlight-ai/maintainers
 
 # Configuration — require maintainer review
