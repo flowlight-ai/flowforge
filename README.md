@@ -24,7 +24,7 @@
 
 - [Overview](#overview)
 - [Key Features](#key-features)
-- [The Five Forgekins](#the-five-forgekins)
+- [Forgekins: Configurable Self-Evolving Agents](#forgekins-configurable-self-evolving-agents)
 - [Architecture](#architecture)
 - [Self-Devolution Triple-Loop](#self-devolution-triple-loop)
 - [Key Invariants & Testing Ironclad Rules](#key-invariants--testing-ironclad-rules)
@@ -44,7 +44,7 @@
 
 While mainstream multi-agent frameworks (AutoGen / CrewAI / LangGraph) allocate **role slots** for collaboration, FlowForge solves a deeper problem: **how an agent preserves identity consistency, accumulates capability, remains behaviorally verifiable, and evolves under governance over long time horizons.**
 
-The framework ships a `forgemind` application layer that hosts five built-in **Forgekins** (Persistent Identity Agents) — each bound to an external coding agent (Claude Code / Codex / Gemini / OpenCode / Trae CN) — and orchestrates them through a **Self-Devolution Triple-Loop** supervised by **Cross-Vendor Review**.
+The framework ships a `forgemind` application layer where any number of **Forgekins** (Persistent Identity Agents) can be registered via YAML profiles — each may bind to an external coding agent (Claude Code / Codex / Gemini / OpenCode / Trae CN, or any custom adapter) — and orchestrates them through a **Self-Devolution Triple-Loop** supervised by **Cross-Vendor Review**. The repo ships **5 default Forgekins as a reference example**; adding a new one is a config-only operation, no framework code changes required.
 
 ## Key Features
 
@@ -57,9 +57,15 @@ The framework ships a `forgemind` application layer that hosts five built-in **F
 - **Distributed Reliability** — Side-Effect WAL + Tier Recovery + Liveness Probe + Provider Host guarantee crash-safe execution.
 - **IM Council Channels** — Dual-channel deliberation (web group + Feishu group) with `@mention` routing and I8 framework-change approval buttons.
 
-## The Five Forgekins
+## Forgekins: Configurable Self-Evolving Agents
 
-Each Forgekin is bound to a specific external coding agent and owns a dedicated Self-Devolution Loop:
+**The architecture is not fixed to any number of Forgekins.** A Forgekin is a **config-driven entity** — register one by dropping a YAML profile into `config/forgekins/`, binding it to a Self-Devolution Loop, and (optionally) an external coding agent. The ForgeMindEngine routes tasks to the right Forgekin at runtime based on capability profiles, not hardcoded roles.
+
+**Self-evolution is the architectural centerpiece, not the agent count.** Every Forgekin autonomously improves itself through the **Self-Devolution Triple-Loop** — five closed loops that let agents evolve their own docs, code, framework, reviews, and tests without human intervention (subject to governance gates I8/I9).
+
+### The 5 Default Forgekins (Reference Example)
+
+The repo ships with 5 default Forgekins as a **reference example** of how the architecture instantiates real self-evolving agents. Each is bound to a different vendor and owns a dedicated Self-Devolution Loop:
 
 | Forgekin | Vendor | Self-Dev Loop | Awakening Stage | External Agent |
 |----------|--------|---------------|-----------------|----------------|
@@ -69,7 +75,7 @@ Each Forgekin is bound to a specific external coding agent and owns a dedicated 
 | **Da Vinci** (达芬奇) | open_source | `SelfDevTestLoop` | E3 | OpenCode |
 | **Luban** (鲁班) | bytedance | `SelfDevFrameworkLoop` | E5 *(operator-approved)* | Trae CN |
 
-**Collaboration Topology:**
+**Collaboration Topology (default config):**
 
 ```mermaid
 graph LR
@@ -91,6 +97,25 @@ graph LR
   V -->|push back ≤ 3 rounds| D
   V -->|push back ≤ 3 rounds| L
 ```
+
+### Adding Your Own Forgekin
+
+Registering a new Forgekin is a **config-only operation** — no framework code changes:
+
+```yaml
+# config/forgekins/my-forgekin.yaml
+name: "MyForgekin"
+vendor: anthropic              # drives I9 cross-vendor review routing
+self_dev_loop: SelfDevCodeLoop # which of the 5 closed loops it owns
+awakening_stage: E3            # autonomy tier (I1 gating)
+external_agent: claude_code    # optional capability extension
+capabilities:
+  - { name: "rust", proficiency: 0.8 }
+  - { name: "system_design", proficiency: 0.6 }
+blind_spots: ["frontend"]
+```
+
+The ForgeMindEngine picks this up on next reload and starts routing matching tasks to it.
 
 ## Architecture
 
@@ -115,8 +140,10 @@ graph LR
 
 ## Self-Devolution Triple-Loop
 
-| Loop | Type | Awakening | Owner Forgekin | Approval |
-|------|------|-----------|----------------|----------|
+The Triple-Loop is the **architectural mechanism that makes Forgekins self-evolving**. There are 5 loop *types* — each Forgekin binds to one (configured in its YAML profile). The 5 default Forgekins ship with a 1-to-1 mapping as a reference; in your own deployment you can have multiple Forgekins on the same loop type, or leave a loop type unbound.
+
+| Loop Type | Awakening | Scope | Default Owner (example) | Approval |
+|-----------|-----------|-------|--------------------------|----------|
 | `SelfDevDocLoop` | E3 | Documentation evolution | Wenxin | Auto |
 | `SelfDevCodeLoop` | E4 | Code evolution | Sherlock | Auto |
 | `SelfDevReviewLoop` | E3 | Cross-vendor review | Vangogh | Auto |
@@ -190,7 +217,7 @@ council:
   pass_threshold: 0.85        # P33 quality threshold
 ```
 
-Each Forgekin is described by a YAML profile under `config/forgekins/*.yaml` (capabilities, blind spots, self-dev loop binding, IM channel subscriptions, council role, persona).
+Each Forgekin is described by a YAML profile under `config/forgekins/*.yaml` (capabilities, blind spots, self-dev loop binding, IM channel subscriptions, council role, persona). **The framework imposes no limit on the number of Forgekins** — the 5 default profiles are illustrative; add or remove profiles to match your deployment.
 
 ## Usage Example
 
