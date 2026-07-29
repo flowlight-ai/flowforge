@@ -1,4 +1,4 @@
-﻿# Contributing to FlowForge / 贡献指南
+# Contributing to FlowForge / 贡献指南
 
 [English](#english) | [中文](#中文)
 
@@ -121,6 +121,41 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
 - Explain why, not just what.
 - Approve only when you fully understand the change.
 
+### 10. Engineering Standards
+
+All contributions must adhere to the following engineering standards. These rules are non-negotiable — violating any of them invalidates the contribution.
+
+#### Testing Ironclad Rules
+
+| # | Rule |
+|---|------|
+| T1 | No Mock LLM — all E2E/integration tests call real LLMs |
+| T2 | No fake data — real-scenario inputs only |
+| T3 | No skipped verification — concrete assertions required |
+| T4 | No Mock tools — `web_search` / `publish` / `fact_check` must be real |
+| T5 | Unimplemented = Bug |
+| T6 | Metrics collection mandatory (MetricsCollector) |
+| T7 | LLM-generated content must be reviewed by another LLM |
+| T8 | Web features verified via real browser DOM inspection |
+
+#### Coding Red Lines
+
+1. No CoT detection / Chinese-ratio detection
+2. Quality threshold default `0.85` (overridable in Loop config)
+3. No Mock LLM
+4. No fake data
+5. No skipped verification
+6. No exit-code-only checks — output quality required
+7. No unrelated code changes during fixes
+8. No deleting existing test cases
+9. No inheritance where composition/plugins fit
+10. No hardcoded business-domain logic in FlowForge core
+11. No hardcoded prompts / paths / keys / ports
+12. No bypassing the DI container
+13. No direct database operations
+14. No deviation from `prompts.md` and `rules.md`
+15. No cutting corners (unimplemented = Bug)
+
 ---
 
 <a id="中文"></a>
@@ -236,3 +271,38 @@ pip install -e ".[dev]"
 - 关注代码本身，而非个人。
 - 解释"为什么"，不仅仅是"是什么"。
 - 完全理解改动后才批准。
+
+### 10. 工程标准
+
+所有贡献必须遵守以下工程标准。这些规则不可商量—违反任何一条都会导致贡献无效。
+
+#### 测试铁律
+
+| 编号 | 规则 |
+|------|------|
+| T1 | 禁止 Mock LLM — 所有 E2E/集成测试必须调用真实 LLM |
+| T2 | 禁止假数据 — 必须使用真实场景输入 |
+| T3 | 禁止跳过验证 — 必须有具体断言 |
+| T4 | 禁止 Mock 工具 — `web_search` / `publish` / `fact_check` 必须真实调用 |
+| T5 | 未实现即 Bug |
+| T6 | 必须采集指标 (MetricsCollector) |
+| T7 | LLM 生成的内容必须经另一个 LLM 审核 |
+| T8 | Web 功能必须通过真实浏览器 DOM 检查验证 |
+
+#### 编程红线
+
+1. 禁止添加 CoT 检测/中文比例检测
+2. 质量分阈值默认 `0.85`（可在 Loop 配置中覆盖）
+3. 禁止 Mock LLM
+4. 禁止假数据
+5. 禁止跳过验证
+6. 禁止只看退出码不检查输出质量
+7. 禁止在修复问题时修改不相关代码
+8. 禁止删除已有测试用例
+9. 禁止用继承替代组合/插件
+10. 禁止在 FlowForge 核心中写死业务领域代码
+11. 禁止硬编码提示词/路径/密钥/端口
+12. 禁止绕过 DI 容器直接实例化
+13. 禁止直接操作数据库
+14. 禁止不按 `prompts.md` 和 `rules.md` 执行
+15. 禁止偷工减料（发现未实现即 Bug）

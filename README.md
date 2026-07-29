@@ -20,83 +20,54 @@
 
 ---
 
-## Table of Contents
+## Why FlowForge?
 
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Forgekins: Configurable Self-Evolving Agents](#forgekins-configurable-self-evolving-agents)
-- [Architecture](#architecture)
-- [Self-Devolution Triple-Loop](#self-devolution-triple-loop)
-- [Key Invariants & Testing Ironclad Rules](#key-invariants--testing-ironclad-rules)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Usage Example](#usage-example)
-- [Documentation](#documentation)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+Mainstream multi-agent frameworks (AutoGen / CrewAI / LangGraph) answer one question well: *how do multiple LLM calls cooperate within a session?* But when the session ends, the agent forgets. When the server restarts, it's a blank slate. When the model upgrades, hard-won experience is lost.
+
+FlowForge answers the harder, less crowded question:
+
+> **How does an agent preserve identity, accumulate capability, remain verifiable, and evolve under governance — across months and model generations?**
+
+This is not another chatbot framework. FlowForge is the **infrastructure layer** for agents that need to *remember, grow, and be held accountable* over long time horizons.
+
+| Dimension | Mainstream Multi-Agent | FlowForge |
+|-----------|------------------------|-----------|
+| **Identity** | Session-scoped; amnesia on restart | Persistent across sessions, crashes, and model upgrades |
+| **Capability** | Single model + tool calls | Model × Harness × Forgekin morphology × External agent extension |
+| **Collaboration** | Fixed role slots (PM/Dev/Test) | Dynamic capability-profile routing; role is a runtime label |
+| **Evolution** | Model upgrade = system upgrade | Agents autonomously evolve their own docs, code, and tests |
+| **Review** | Same-vendor self-approval | Cross-vendor independent review (no agent approves its own work) |
+| **Embodiment** | API tool calls | Physical sensors (IoT) + virtual world settings |
 
 ---
 
-## Overview
-
-**FlowForge** is a **Persistent Identity Agent Framework** — an engineering-grade Harness Layer that evolves LLM-based agents from session-scoped assistants into long-lived intelligent subjects with persistent identity, accumulative capability, verifiable behavior, and governable evolution.
-
-While mainstream multi-agent frameworks (AutoGen / CrewAI / LangGraph) allocate **role slots** for collaboration, FlowForge solves a deeper problem: **how an agent preserves identity consistency, accumulates capability, remains behaviorally verifiable, and evolves under governance over long time horizons.**
-
-The framework ships a `forgemind` application layer where any number of **Forgekins** (Persistent Identity Agents) can be registered via YAML profiles — each may bind to an external coding agent (Claude Code / Codex / Gemini / OpenCode / Trae CN, or any custom adapter) — and orchestrates them through a **Self-Devolution Triple-Loop** supervised by **Cross-Vendor Review**. The repo ships **5 default Forgekins as a reference example**; adding a new one is a config-only operation, no framework code changes required.
-
 ## Key Features
 
-- **Persistent Identity Agent (Forgekin)** — Long-lived agents with `Soul Imprint`, `Capability Profile`, and `Blind Spot Map` that persist across tasks and sessions.
-- **Self-Devolution Triple-Loop** — Five closed loops (`SelfDevDocLoop` / `SelfDevCodeLoop` / `SelfDevFrameworkLoop` / `SelfDevReviewLoop` / `SelfDevTestLoop`) drive autonomous documentation, code, framework, review, and test evolution.
-- **Cross-Vendor Independent Review (I9 no-self-review)** — Council reviewers must come from a different vendor than the author; quorum requires ≥ 2 distinct vendors.
-- **Multi-Domain Memory Federation** — Five memory domains (`task` / `episodes` / `methods` / `identity` / `facts`) federated through the `MindCodex` (procedural memory codex).
+- **Persistent Identity (Forgekin)** — Long-lived agents with `Soul Imprint`, `Capability Profile`, and `EchoStore` that survive crashes, model upgrades, and session boundaries.
+- **Self-Devolution Triple-Loop** — Five closed loops that let agents autonomously evolve their own documentation, code, framework, reviews, and tests — under governance gates.
+- **Cross-Vendor Review** — Reviewers must come from a different vendor than the author; no agent can approve its own work.
+- **Multi-Domain Memory Federation** — Five memory domains federated through the `MindCodex` procedural memory codex.
 - **Seven-Layer Harness Engineering** — `durable_state` · `tool_mediation` · `evidence_sensors` · `governance` · `magic_words` · `entropy_control` · `harnessability`.
-- **Eval Self-Metabolism** — Three-Signals scoring (`self_report 0.2 + observer 0.4 + telemetry 0.4`) + Attribution Matrix drive capability reweighting.
-- **Distributed Reliability** — Side-Effect WAL + Tier Recovery + Liveness Probe + Provider Host guarantee crash-safe execution.
-- **IM Council Channels** — Dual-channel deliberation (web group + Feishu group) with `@mention` routing and I8 framework-change approval buttons.
+- **Config-Driven Forgekins** — Register any number of Forgekins via YAML profiles. The 5 defaults are a reference example, not a limit.
+- **External Agent Integration** — Bind Claude Code / Codex / Gemini / OpenCode / Trae CN as capability extensions.
+
+---
 
 ## Forgekins: Configurable Self-Evolving Agents
 
-**The architecture is not fixed to any number of Forgekins.** A Forgekin is a **config-driven entity** — register one by dropping a YAML profile into `config/forgekins/`, binding it to a Self-Devolution Loop, and (optionally) an external coding agent. The ForgeMindEngine routes tasks to the right Forgekin at runtime based on capability profiles, not hardcoded roles.
+**The architecture is not fixed to any number of Forgekins.** A Forgekin is a config-driven entity — register one by dropping a YAML profile into `config/forgekins/`, binding it to a Self-Devolution Loop and (optionally) an external coding agent. The ForgeMindEngine routes tasks at runtime based on capability profiles, not hardcoded roles.
 
-**Self-evolution is the architectural centerpiece, not the agent count.** Every Forgekin autonomously improves itself through the **Self-Devolution Triple-Loop** — five closed loops that let agents evolve their own docs, code, framework, reviews, and tests without human intervention (subject to governance gates I8/I9).
+**Self-evolution is the architectural centerpiece, not the agent count.**
 
 ### The 5 Default Forgekins (Reference Example)
 
-The repo ships with 5 default Forgekins as a **reference example** of how the architecture instantiates real self-evolving agents. Each is bound to a different vendor and owns a dedicated Self-Devolution Loop:
-
-| Forgekin | Vendor | Self-Dev Loop | Awakening Stage | External Agent |
-|----------|--------|---------------|-----------------|----------------|
-| **Wenxin** (文心) | anthropic | `SelfDevDocLoop` | E3 | Claude Code |
-| **Sherlock** (夏洛克) | openai | `SelfDevCodeLoop` | E4 | Codex |
-| **Vangogh** (梵高) | google | `SelfDevReviewLoop` | E3 | Gemini |
-| **Da Vinci** (达芬奇) | open_source | `SelfDevTestLoop` | E3 | OpenCode |
-| **Luban** (鲁班) | bytedance | `SelfDevFrameworkLoop` | E5 *(operator-approved)* | Trae CN |
-
-**Collaboration Topology (default config):**
-
-```mermaid
-graph LR
-  subgraph Author
-    W[Wenxin<br/>anthropic<br/>Doc Loop]
-    S[Sherlock<br/>openai<br/>Code Loop]
-    D[Da Vinci<br/>open_source<br/>Test Loop]
-    L[Luban<br/>bytedance<br/>Framework Loop<br/>I8: operator approval]
-  end
-  subgraph Reviewer
-    V[Vangogh<br/>google<br/>Review Loop<br/>I9: no-self-review]
-  end
-  W --> V
-  S --> V
-  D --> V
-  L --> V
-  V -->|push back ≤ 3 rounds| W
-  V -->|push back ≤ 3 rounds| S
-  V -->|push back ≤ 3 rounds| D
-  V -->|push back ≤ 3 rounds| L
-```
+| Forgekin | Vendor | Self-Dev Loop | External Agent |
+|----------|--------|---------------|----------------|
+| **Wenxin** (文心) | anthropic | Documentation evolution | Claude Code |
+| **Sherlock** (夏洛克) | openai | Code evolution | Codex |
+| **Vangogh** (梵高) | google | Cross-vendor review | Gemini |
+| **Da Vinci** (达芬奇) | open_source | Test evolution | OpenCode |
+| **Luban** (鲁班) | bytedance | Framework evolution *(operator-approved)* | Trae CN |
 
 ### Adding Your Own Forgekin
 
@@ -105,29 +76,29 @@ Registering a new Forgekin is a **config-only operation** — no framework code 
 ```yaml
 # config/forgekins/my-forgekin.yaml
 name: "MyForgekin"
-vendor: anthropic              # drives I9 cross-vendor review routing
-self_dev_loop: SelfDevCodeLoop # which of the 5 closed loops it owns
-awakening_stage: E3            # autonomy tier (I1 gating)
-external_agent: claude_code    # optional capability extension
+vendor: anthropic
+self_dev_loop: SelfDevCodeLoop
+awakening_stage: E3
+external_agent: claude_code
 capabilities:
   - { name: "rust", proficiency: 0.8 }
   - { name: "system_design", proficiency: 0.6 }
 blind_spots: ["frontend"]
 ```
 
-The ForgeMindEngine picks this up on next reload and starts routing matching tasks to it.
+---
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Application Layer · forgemind/                                 │
-│  Forgekin Registry · Council (Mind Council) · External Agents   │
+│  Forgekin Registry · Council · External Agents                  │
 ├─────────────────────────────────────────────────────────────────┤
 │  Command Layer · evolution/                                     │
 │  ForgeMindEngine · Metacognition Router · Maturity Ladder       │
 ├─────────────────────────────────────────────────────────────────┤
-│  Execution Layer · workers/                                     │
+│  Execution Layer · workers/ · loop/                             │
 │  Self-Dev Loops · Loop Executor · Execution Modes               │
 ├─────────────────────────────────────────────────────────────────┤
 │  Tools & Memory Layer · core/                                   │
@@ -136,58 +107,49 @@ The ForgeMindEngine picks this up on next reload and starts routing matching tas
        ↕ Shared Kernel: DI Container · Plugin Protocol · Tracing ↕
 ```
 
-**Iron Rule**: Upper layers depend on lower layers; lower layers **never** import upper layers. Single-direction dependency is the baseline that prevents architectural rot.
+**Single-direction dependency**: upper layers depend on lower layers; lower layers never import upper layers.
 
-## Self-Devolution Triple-Loop
-
-The Triple-Loop is the **architectural mechanism that makes Forgekins self-evolving**. There are 5 loop *types* — each Forgekin binds to one (configured in its YAML profile). The 5 default Forgekins ship with a 1-to-1 mapping as a reference; in your own deployment you can have multiple Forgekins on the same loop type, or leave a loop type unbound.
-
-| Loop Type | Awakening | Scope | Default Owner (example) | Approval |
-|-----------|-----------|-------|--------------------------|----------|
-| `SelfDevDocLoop` | E3 | Documentation evolution | Wenxin | Auto |
-| `SelfDevCodeLoop` | E4 | Code evolution | Sherlock | Auto |
-| `SelfDevReviewLoop` | E3 | Cross-vendor review | Vangogh | Auto |
-| `SelfDevTestLoop` | E3 | Test evolution | Da Vinci | Auto |
-| `SelfDevFrameworkLoop` | E5 | Framework evolution | Luban | **I8: operator manual approval** |
-
-Every loop follows the **Discover → Assign → Act → Verify → Persist** five-step closed pattern, with quality threshold `0.85` and push-back upper bound of 3 rounds (I11).
-
-## Key Invariants & Testing Ironclad Rules
-
-**Architectural Invariants:**
-
-- **I1** — Awakening-stage gating (autonomy tier enforced before action)
-- **I2** — `VISION.md` / `decisions/` are read-only
-- **I3** — The 15 coding red lines (no hard-coded prompts, no bypassing DI, no direct DB ops, …)
-- **I8** — Framework changes require operator approval
-- **I9** — Cross-vendor no-self-review
-- **I11** — Push-back protocol capped at 3 rounds
-
-**Testing Ironclad Rules (T1–T8):**
-
-| # | Rule |
-|---|------|
-| T1 | No Mock LLM — all E2E/integration tests call real LLMs |
-| T2 | No fake data — real-scenario inputs only |
-| T3 | No skipped verification — concrete assertions required |
-| T4 | No Mock tools — `web_search` / `publish` / `fact_check` must be real |
-| T5 | Unimplemented = Bug |
-| T6 | Metrics collection mandatory (MetricsCollector) |
-| T7 | LLM-generated content must be reviewed by another LLM |
-| T8 | Web features verified via real browser DOM inspection |
+---
 
 ## Quick Start
 
+### One-command setup (recommended)
+
 ```bash
-# Install (editable, with dev extras)
 git clone https://github.com/flowlight-ai/flowforge.git
 cd flowforge
+
+# Set up Python env + install backend deps + build frontend
+python scripts/setup.py
+
+# (Optional) Install external coding agent CLIs
+python scripts/install_agents.py
+
+# Start backend (port 8000) + frontend (port 5175)
+python scripts/start.py
+```
+
+Then open **http://localhost:5175** in your browser.
+
+### Manual setup
+
+```bash
 pip install -e ".[dev]"
+cd web && npm install && npm run build && cd ..
 
-# Launch the web chat interface (pure HTML/CSS/JS, served by FastAPI)
-python flowforge/web/app.py --host 127.0.0.1 --port 8765
+# Copy environment template
+cp .env.example .env  # then fill in your keys
 
-# Verify the five Forgekins configuration (YAML + external agent binaries)
+# Start backend
+python -m uvicorn flowforge.app.main:app --host 127.0.0.1 --port 8000
+
+# Start frontend (in another terminal)
+cd web && npm run dev
+```
+
+### Verify the 5 default Forgekins
+
+```bash
 python scripts/verify_five_forgekins.py
 ```
 
@@ -199,6 +161,8 @@ FEISHU_APP_ID=...
 FEISHU_APP_SECRET=...
 FEISHU_CHAT_ID=...
 ```
+
+---
 
 ## Configuration
 
@@ -213,94 +177,74 @@ external_agents:
 
 council:
   min_reviewers: 2
-  min_distinct_vendors: 2     # I9 enforcement
-  pass_threshold: 0.85        # P33 quality threshold
+  min_distinct_vendors: 2     # cross-vendor enforcement
+  pass_threshold: 0.85        # quality threshold
 ```
 
-Each Forgekin is described by a YAML profile under `config/forgekins/*.yaml` (capabilities, blind spots, self-dev loop binding, IM channel subscriptions, council role, persona). **The framework imposes no limit on the number of Forgekins** — the 5 default profiles are illustrative; add or remove profiles to match your deployment.
+Each Forgekin is described by a YAML profile under `config/forgekins/*.yaml`. **The framework imposes no limit on the number of Forgekins** — add or remove profiles to match your deployment.
 
-## Usage Example
-
-```python
-import asyncio
-from flowforge import ForgeMindEngine
-from flowforge.forgemind import Forgekin, ForgekinType, Capability
-
-# Initialize the self-evolution engine with a scope baseline (vision)
-engine = ForgeMindEngine(scope_baseline="Build a coding agent that ships safely")
-
-
-async def main() -> None:
-    # evaluate(ctx) is a pure function — it returns a routing decision
-    decision = await engine.evaluate(ctx)
-    print(f"mode={decision.mode}  confidence={decision.action_confidence:.3f}")
-    if decision.mode != "none":
-        await engine.execute(decision)
-
-
-asyncio.run(main())
-
-# Endow a Forgekin with persistent identity
-cat = Forgekin(name="小煤球", forgekin_type=ForgekinType.ANIMAL_COMPANION)
-cat.add_capability(Capability(name="empathy", proficiency=0.9))
-```
+---
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
+| [docs/VISION.md](docs/VISION.md) | Project vision and design philosophy |
 | [docs/spec.md](docs/spec.md) | Project specification |
 | [docs/arch.md](docs/arch.md) | Architecture design |
 | [docs/design.md](docs/design.md) | Detailed design |
 | [docs/roadmap.md](docs/roadmap.md) | Development roadmap |
-| [docs/decisions/](docs/decisions/) | 14 Architecture Decision Records (ADRs) |
-| [docs/features/](docs/features/) | 27 Feature designs (F001–F031) |
-| [docs/VISION.md](docs/VISION.md) | All-Things Spirit Mind vision |
+| [docs/decisions/](docs/decisions/) | Architecture Decision Records (ADRs) |
+| [docs/features/](docs/features/) | Feature designs |
+| [docs/roleagent.md](docs/roleagent.md) | Multi-agent engineering paths |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guide |
 | [SECURITY.md](SECURITY.md) | Security policy |
-| [CHANGELOG.md](CHANGELOG.md) | Changelog |
+
+---
 
 ## Roadmap
 
-- **Phase 0** — Project scaffolding + GitHub configuration ✅
-- **Phase 1** — Minimal self-evolution code skeleton
-- **Phase 2** — Core modules (DI · Plugin · Compiler · Loop)
-- **Phase 3** — Complete ForgeMindEngine (Self-Devolution Triple-Loop)
-- **Phase 4** — Distributed reliability + Multi-Domain Memory Federation
-- **Phase 5** — IM Council Channels + Web chat UI
-- **Phase 6** — Drive *Forge ecosystem + Forgekin lifelong learning
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **0** | Project scaffolding + cross-platform config + docs skeleton | 🔄 In Progress |
+| **1** | Seven engineering paths code skeleton | ⏳ Pending |
+| **2** | forgemind application layer + Forgekin morphologies | ⏳ Pending |
+| **3** | Third-party Agent adapter layer | ⏳ Pending |
+| **4** | Eval self-metabolism + distributed reliability | ⏳ Pending |
+| **5** | Partnership math + self-evolution closed loop | ⏳ Pending |
+| **6** | SpiritForge experience distillation + MindCouncil | ⏳ Pending |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
+
+---
 
 ## Project Structure
 
 ```
 flowforge/
-├── core/              # Shared kernel: capability · teamact · harness · memory · eval · reliability
-├── evolution/         # ForgeMindEngine (three-mode self-evolution)
+├── core/              # Shared kernel: capability · teamact · harness · memory · eval
+├── evolution/         # ForgeMindEngine (self-evolution orchestration)
 ├── forgemind/         # Application layer: forgekin · registry · council · external_agents
-├── web/               # Web chat UI (FastAPI + HTML/CSS/JS, no frontend framework)
-├── config/            # forgemind.yaml · forgekins/*.yaml · im_channels.yaml · evolution.yaml
-├── docs/              # spec · arch · design · roadmap · 14 ADRs · 27 Features
-├── scripts/           # verify_five_forgekins.py
-└── tests/             # Test suite (T1–T8 ironclad rules enforced)
+├── web/               # Web UI (Next.js 14 + FastAPI backend)
+├── config/            # forgemind.yaml · forgekins/*.yaml · evolution.yaml
+├── docs/              # spec · arch · design · roadmap · ADRs · features
+├── scripts/           # setup.py · install_agents.py · start.py · verify_five_forgekins.py
+└── tests/             # Test suite
 ```
 
-## Naming Convention
-
-- **P0** — AI industry terms (e.g., *Persistent Identity Agent*, *Self-Devolution Triple-Loop*, *Cross-Vendor Review*, *Multi-Domain Memory Federation*) — primary in docs and code.
-- **P1** — Code class names (e.g., `ForgeMind`, `Forgekin`, `MindCodex`) — used in identifiers.
-- **P2** — Community aliases (e.g., Chinese aliases for Forgekin / Forge Nurturing / MindCouncil / MindCodex) — community & social channels only.
+---
 
 ## Contributing
 
-We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a Pull Request.
+We welcome contributions of all kinds — new Forgekin profiles, adapter integrations, documentation improvements, or core framework work.
 
 - 🐛 [Report a Bug](https://github.com/flowlight-ai/flowforge/issues/new?template=bug_report.yml)
 - 💡 [Request a Feature](https://github.com/flowlight-ai/flowforge/issues/new?template=feature_request.yml)
 - 💬 [Join Discussions](https://github.com/flowlight-ai/flowforge/discussions)
 
-All contributions must respect the 15 coding red lines (I3) and the T1–T8 testing ironclad rules.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a Pull Request.
+
+---
 
 ## License
 

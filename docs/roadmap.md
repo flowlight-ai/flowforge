@@ -2,7 +2,7 @@
 
 > **Document ID**: ROADMAP.md (v1.0)
 > **Status**: Living document — updated after each phase completes
-> **Cross-phase invariants**: T1–T8 testing ironclad rules · 15 coding red lines · quality threshold `0.85` · 7 vision anchors
+> **Cross-phase invariants**: Engineering standards (see CONTRIBUTING.md) · quality threshold 0.85 · vision anchors
 
 ---
 
@@ -14,7 +14,7 @@ FlowForge is built **compounding-infrastructure-first**: every phase delivers a 
 
 1. **Build-to-Persist over Build-to-Demo** — Every module is designed to outlive the current LLM generation. We don't ship features that will be rewritten when the next model drops.
 2. **Self-Developing** — FlowForge uses FlowForge's own capabilities to develop FlowForge. By Phase 5, Forgekins are writing their own code, docs, and tests.
-3. **Verifiable Claims over Vibes** — Every phase has concrete acceptance criteria with real LLM calls (T1), real data (T2), and concrete assertions (T3). No "it kind of works" milestones.
+3. **Verifiable Claims over Vibes** — Every phase has concrete acceptance criteria with real LLM calls, real data, and concrete assertions. No "it kind of works" milestones.
 
 **For contributors:** Each phase lists "Good first issues" — these are scoped tasks that don't require understanding the entire framework. Pick a phase that matches your interest and start there.
 
@@ -210,44 +210,9 @@ FlowForge is built **compounding-infrastructure-first**: every phase delivers a 
 
 ---
 
-## Cross-Phase Invariants
+## Cross-Phase Standards
 
-The following rules apply to **all phases**. Violating any one invalidates that phase:
-
-### T1–T8 Testing Ironclad Rules
-
-| # | Rule |
-|---|------|
-| T1 | No Mock LLM — all E2E/integration tests call real LLMs |
-| T2 | No fake data — real-scenario inputs only |
-| T3 | No skipped verification — concrete assertions required |
-| T4 | No Mock tools — `web_search` / `publish` / `fact_check` must be real |
-| T5 | Unimplemented = Bug |
-| T6 | Metrics collection mandatory (MetricsCollector) |
-| T7 | LLM-generated content must be reviewed by another LLM |
-| T8 | Web features verified via real browser DOM inspection |
-
-### 15 Coding Red Lines
-
-1. No CoT detection / Chinese-ratio detection
-2. Quality threshold default `0.85` (overridable in Loop config)
-3. No Mock LLM
-4. No fake data
-5. No skipped verification
-6. No exit-code-only checks — output quality required
-7. No unrelated code changes during fixes
-8. No deleting existing test cases
-9. No inheritance where composition/plugins fit
-10. No hardcoded business-domain logic in FlowForge core
-11. No hardcoded prompts / paths / keys / ports
-12. No bypassing the DI container
-13. No direct database operations
-14. No deviation from `prompts.md` and `rules.md`
-15. No cutting corners (unimplemented = Bug)
-
-### Seven Vision Anchors
-
-See [VISION.md §6](VISION.md#6-seven-non-negotiable-principles)
+All phases adhere to the engineering standards defined in [CONTRIBUTING.md](../CONTRIBUTING.md) — including testing requirements, code quality rules, and review protocols. The quality threshold for all loops is `0.85`.
 
 ---
 
@@ -258,9 +223,9 @@ Each phase has concrete acceptance criteria and tasks. Here's how to contribute:
 1. **Pick a task** — Look at the phase's Key Tasks, pick one that matches your skills
 2. **Check dependencies** — Make sure the task's dependencies are met
 3. **Read the relevant ADRs and Feature specs** — Understand the design before coding
-4. **Write code + tests** — Follow T1–T8 ironclad rules and 15 red lines
+4. **Write code + tests** — Follow the engineering standards in CONTRIBUTING.md
 5. **Open a PR** — Use the [PR template](../.github/pull_request_template.md)
-6. **Cross-vendor review** — Your PR will be reviewed by Forgekins from a different vendor (I9)
+6. **Cross-vendor review** — Your PR will be reviewed by Forgekins from a different vendor
 7. **Merge** — Once CI passes and review approves, squash-and-merge
 
 **Good first issues** for new contributors:

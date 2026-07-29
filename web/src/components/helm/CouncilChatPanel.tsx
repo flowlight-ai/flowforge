@@ -68,6 +68,8 @@ export default function CouncilChatPanel({
     toggleParticipant,
     setForgekinRole,
     reloadRoster,
+    interruptedRequest,
+    retryInterrupted,
   } = useCouncilChat();
 
   const [inputText, setInputText] = useState("");
@@ -1150,6 +1152,38 @@ export default function CouncilChatPanel({
               style={{ color: "var(--semantic-critical, #ef4444)" }}
             >
               {error}
+            </div>
+          )}
+          {interruptedRequest && !isLoading && (
+            <div
+              className="mt-2 flex items-center gap-2"
+              style={{
+                fontSize: "12px",
+                padding: "6px 10px",
+                borderRadius: "var(--radius-sm)",
+                background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <span style={{ color: "var(--muted)" }}>
+                ⚠ 上次灵议因页面刷新中断
+              </span>
+              <button
+                type="button"
+                onClick={retryInterrupted}
+                style={{
+                  padding: "3px 10px",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--accent)",
+                  color: "var(--accent-foreground, #fff)",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                }}
+              >
+                ⟳ 重试
+              </button>
             </div>
           )}
         </div>

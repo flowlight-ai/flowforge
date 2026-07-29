@@ -50,7 +50,7 @@ Concretely, FlowForge provides:
 - **Self-Devolution Triple-Loop** — Five closed loops (Documentation / Code / Framework / Review / Test) that let Forgekins autonomously evolve their own capabilities, with quality threshold `0.85` and cross-vendor review enforcement.
 - **Multi-Domain Memory Federation** — Five memory domains (`task` / `episodes` / `methods` / `identity` / `facts`) federated through the `MindCodex` procedural memory codex.
 - **Seven-Layer Harness Engineering** — `durable_state` · `tool_mediation` · `evidence_sensors` · `governance` · `magic_words` · `entropy_control` · `harnessability`.
-- **Cross-Vendor Independent Review (I9)** — Reviewers must come from a different vendor than the author; quorum requires ≥ 2 distinct vendors. No agent can approve its own work.
+- **Cross-Vendor Independent Review** — Reviewers must come from a different vendor than the author; quorum requires ≥ 2 distinct vendors. No agent can approve its own work.
 
 This is **not** another chatbot framework. FlowForge is the infrastructure layer for agents that need to **remember, grow, and be held accountable over months and years**, not just minutes.
 
@@ -173,7 +173,7 @@ FlowForge is an ambitious project at the intersection of **multi-agent systems, 
 
 **What you'll find here:**
 
-- A codebase that takes engineering discipline seriously (15 red lines, 8 testing ironclad rules, 11 architectural invariants)
+- A codebase that takes engineering discipline seriously — rigorous testing, code review, and architectural standards
 - A vision that goes beyond "chatbot framework" toward general-purpose agency
 - A community that values verifiable claims over vibes
 - 14 Architecture Decision Records and 27 Feature specs documenting every major design choice
@@ -181,7 +181,7 @@ FlowForge is an ambitious project at the intersection of **multi-agent systems, 
 **What we offer:**
 
 - Your contributions persist — not just in git history, but in the Forgekins' MindCodex
-- Your code is reviewed by cross-vendor agents, not just humans (I9 enforcement)
+- Your code is reviewed by cross-vendor agents, not just humans
 - You're building infrastructure for the next decade of AI agents, not the next quarter's demo
 
 **Join us:**

@@ -23,12 +23,38 @@ import {
  *   - config: 群聊配置（参与灵智体/角色分配/轮数）
  *   - isLoading: 灵议进行中标志
  *
+ * 持久化与中断恢复（v2 修复）:
+ *   - messages: 持久化到 localStorage（最近 200 条）
+ *   - config: 持久化到 localStorage（智能体选择/角色/轮数）
+ *   - pendingRequest: 持久化到 localStorage（正在进行的灵议请求）
+ *   - 页面刷新时检测中断的请求，替换"灵议进行中"为"⚠ 会话中断"，
+ *     并提供 retryInterrupted() 重试功能
+ *
  */
+
 const STORAGE_KEY = "flowforge-council-messages";
+const CONFIG_KEY = "flowforge-council-config";
+const PENDING_KEY = "flowforge-council-pending";
+
+/** 中断请求的最大有效期（5 分钟），超过则视为中断 */
+const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
+
+/** 待处理请求信息（持久化到 localStorage，用于中断恢复） */
+interface PendingRequest {
+  topic: string;
+  participantIds: string[];
+  maxRounds: number;
+  /** 请求发起时间戳 */
+  startedAt: number;
+  /** "灵议进行中"系统消息的 ID（用于中断时替换） */
+  sysMsgId: string;
+  /** 用户消息的 ID（用于中断时定位） */
+  userMsgId: string;
+}
 
 export function useCouncilChat() {
+  // ── 消息持久化 ──────────────────────────────────────────────
   const [messages, setMessages] = useState<CouncilMessage[]>(() => {
-    // 从 localStorage 恢复对话记录（铁律2：不使用假数据，恢复真实历史）
     if (typeof window === "undefined") return [];
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -37,13 +63,27 @@ export function useCouncilChat() {
       return [];
     }
   });
+
+  // ── 配置持久化 ──────────────────────────────────────────────
+  const [config, setConfig] = useState<CouncilConfig>(() => {
+    if (typeof window === "undefined") return DEFAULT_COUNCIL_CONFIG;
+    try {
+      const stored = window.localStorage.getItem(CONFIG_KEY);
+      return stored ? { ...DEFAULT_COUNCIL_CONFIG, ...JSON.parse(stored) } : DEFAULT_COUNCIL_CONFIG;
+    } catch {
+      return DEFAULT_COUNCIL_CONFIG;
+    }
+  });
+
   const [roster, setRoster] = useState<ForgekinRosterItem[]>([]);
-  const [config, setConfig] = useState<CouncilConfig>(DEFAULT_COUNCIL_CONFIG);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 持久化消息到 localStorage
+  /** 中断的请求信息（供 UI 显示"重试"按钮） */
+  const [interruptedRequest, setInterruptedRequest] = useState<PendingRequest | null>(null);
+
+  // ── 持久化 messages 到 localStorage ─────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -52,6 +92,54 @@ export function useCouncilChat() {
       // localStorage 满或不可用时忽略
     }
   }, [messages]);
+
+  // ── 持久化 config 到 localStorage ───────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    } catch {
+      // 忽略
+    }
+  }, [config]);
+
+  // ── 中断恢复：页面加载时检测未完成的请求 ─────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const pendingRaw = window.localStorage.getItem(PENDING_KEY);
+      if (!pendingRaw) return;
+
+      const pending: PendingRequest = JSON.parse(pendingRaw);
+      const elapsed = Date.now() - pending.startedAt;
+
+      // 清除 pending 标记（无论是否过期，都不再认为请求在进行中）
+      window.localStorage.removeItem(PENDING_KEY);
+
+      if (elapsed < PENDING_TIMEOUT_MS && elapsed > 0) {
+        // 请求可能在进行中（页面刷新中断），标记为可重试
+        setInterruptedRequest(pending);
+
+        // 替换"灵议进行中"系统消息为中断提示
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pending.sysMsgId
+              ? {
+                  ...m,
+                  content: `⚠ 灵议因页面刷新中断（已等待 ${Math.round(elapsed / 1000)}s）。点击"重试"重新发起。`,
+                }
+              : m
+          )
+        );
+      } else {
+        // 请求已过期，直接移除"灵议进行中"系统消息
+        setMessages((prev) => prev.filter((m) => m.id !== pending.sysMsgId));
+        setInterruptedRequest(pending);
+      }
+    } catch {
+      // 忽略解析错误
+    }
+  }, []);
 
   /** 加载灵智体花名册 */
   const loadRoster = useCallback(async () => {
@@ -100,16 +188,38 @@ export function useCouncilChat() {
     [roster]
   );
 
+  /** 保存 pending 请求到 localStorage（用于中断恢复） */
+  const savePending = useCallback((pending: PendingRequest) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+    } catch {
+      // 忽略
+    }
+  }, []);
+
+  /** 清除 pending 请求（请求完成或失败时调用） */
+  const clearPending = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.removeItem(PENDING_KEY);
+    } catch {
+      // 忽略
+    }
+  }, []);
+
   /** 发送消息（触发灵议） */
   const sendMessage = useCallback(
     async (text: string, replyTo?: CouncilMessage) => {
       if (!text.trim() || isLoading) return;
 
       setError(null);
+      setInterruptedRequest(null);
 
       // 添加用户消息（可选包含引用回复的原消息）
+      const userMsgId = `user-${Date.now()}`;
       const userMsg: CouncilMessage = {
-        id: `user-${Date.now()}`,
+        id: userMsgId,
         source: "user",
         content: text,
         timestamp: Date.now(),
@@ -132,13 +242,25 @@ export function useCouncilChat() {
       setIsLoading(true);
 
       // 添加"灵议进行中"系统消息
+      const sysMsgId = `sys-${Date.now()}`;
       const sysMsg: CouncilMessage = {
-        id: `sys-${Date.now()}`,
+        id: sysMsgId,
         source: "system",
         content: `灵议进行中：${participantIds.length} 个灵智体参与，共 ${config.maxRounds} 轮...`,
         timestamp: Date.now() + 1,
       };
       setMessages((prev) => [...prev, sysMsg]);
+
+      // 保存 pending 请求信息（用于中断恢复）
+      const pending: PendingRequest = {
+        topic: text,
+        participantIds,
+        maxRounds: config.maxRounds,
+        startedAt: Date.now(),
+        sysMsgId,
+        userMsgId,
+      };
+      savePending(pending);
 
       try {
         const reqBody: CouncilRequest = {
@@ -167,8 +289,11 @@ export function useCouncilChat() {
 
         const data: CouncilResponse = await res.json();
 
+        // 请求成功，清除 pending 标记
+        clearPending();
+
         // 移除"灵议进行中"系统消息
-        setMessages((prev) => prev.filter((m) => m.id !== sysMsg.id));
+        setMessages((prev) => prev.filter((m) => m.id !== sysMsgId));
 
         // 将灵议响应转换为消息流
         const newMessages: CouncilMessage[] = [];
@@ -206,8 +331,11 @@ export function useCouncilChat() {
 
         setMessages((prev) => [...prev, ...newMessages]);
       } catch (e) {
+        // 请求失败，清除 pending 标记
+        clearPending();
+
         // 移除"灵议进行中"系统消息
-        setMessages((prev) => prev.filter((m) => m.id !== sysMsg.id));
+        setMessages((prev) => prev.filter((m) => m.id !== sysMsgId));
         const errMsg = e instanceof Error
           ? (e.name === "AbortError" ? "灵议超时（180s），请减少轮数或参与灵智体数量" : e.message)
           : String(e);
@@ -225,15 +353,36 @@ export function useCouncilChat() {
         setIsLoading(false);
       }
     },
-    [config, isLoading, parseMentions, roster]
+    [config, isLoading, parseMentions, roster, savePending, clearPending]
   );
+
+  /** 重试中断的请求（页面刷新后恢复） */
+  const retryInterrupted = useCallback(() => {
+    if (!interruptedRequest) return;
+
+    // 移除中断提示消息和原用户消息（重新发送会生成新的）
+    setMessages((prev) =>
+      prev.filter(
+        (m) =>
+          m.id !== interruptedRequest.sysMsgId &&
+          m.id !== interruptedRequest.userMsgId
+      )
+    );
+
+    setInterruptedRequest(null);
+
+    // 重新发送原始消息
+    sendMessage(interruptedRequest.topic);
+  }, [interruptedRequest, sendMessage]);
 
   /** 清空消息（同时清除 localStorage） */
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
+    setInterruptedRequest(null);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(PENDING_KEY);
     }
   }, []);
 
@@ -289,5 +438,8 @@ export function useCouncilChat() {
     toggleParticipant,
     setForgekinRole,
     reloadRoster: loadRoster,
+    // 中断恢复
+    interruptedRequest,
+    retryInterrupted,
   };
 }
