@@ -1,4 +1,4 @@
-# FlowForge forgemind (万物灵智体 application layer) configuration.
+# FlowForge forgemind (Forgekin application layer) configuration.
 
 version: "0.1.0"
 
@@ -45,7 +45,7 @@ external_agents:
     description: "Trae IDE agent — coding & debugging"
     default_timeout: 120.0
 
-# Council (灵议) defaults
+# Council (MindCouncil) defaults
 council:
   min_reviewers: 2
   min_distinct_vendors: 2

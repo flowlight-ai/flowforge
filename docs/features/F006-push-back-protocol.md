@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F006: 推回协议（Push Back Protocol）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/002-teamact-collaboration-protocol.md]
 > **依赖 Feature**: [doc:features/F002-teamact-loop.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径（RA-015 推回权）
@@ -18,7 +18,7 @@ created: 2026-07-21
 
 ### 1.1 问题陈述
 
-TeamAct 六步循环（F002）的 VERDICT 步骤如果只支持单向 review（reviewer → author 修复），当 reviewer 判断错误时 author 被迫执行错误修复，浪费 LLM 调用成本且产出质量下降。roleagent.md RA-015 要求任何角色的灵智体都有权推回不合理任务或 review 意见，但必须携带证据（evidence）、适用性论证（reason）和替代方案。无证据的推回是非法的；有证据的推回必须被严肃对待。本 Feature 提供 PushBackProtocol，把单向 review 升级为双向辩论，未解决的推回会阻塞 F002 QUALITY_BAR_MET 终止条件。
+TeamAct 六步循环（F002）的 VERDICT 步骤如果只支持单向 review（reviewer → author 修复），当 reviewer 判断错误时 author 被迫执行错误修复，浪费 LLM 调用成本且产出质量下降。roleagent.md RA-015 要求任何角色的Forgekin都有权推回不合理任务或 review 意见，但必须携带证据（evidence）、适用性论证（reason）和替代方案。无证据的推回是非法的；有证据的推回必须被严肃对待。本 Feature 提供 PushBackProtocol，把单向 review 升级为双向辩论，未解决的推回会阻塞 F002 QUALITY_BAR_MET 终止条件。
 
 ### 1.2 当前痛点
 
@@ -176,7 +176,7 @@ PushBackProtocol 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 | 风险 | 缓解 |
 |------|------|
 | 推回被滥用拖延任务 | F007 熔断器限制互传次数；推回必须有证据 |
-| `resolution` 自由文本格式漂移 | 由架构师灵智体 review；后续可加 Pydantic 枚举 |
+| `resolution` 自由文本格式漂移 | 由架构师Forgekin review；后续可加 Pydantic 枚举 |
 | 未解决推回无限阻塞 QUALITY_BAR_MET | operator 可 magic_word 拉闸或 F007 熔断升级 |
 | 推回证据伪造 | 证据 anchor 必须 commit sha / trace id 等可验证形式（T2 铁律） |
 | 推回与 F007 熔断冲突 | 推回是显式辩论非互传踢皮球，不计入 F007 failure count |
@@ -186,7 +186,7 @@ PushBackProtocol 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 | # | 问题 | 状态 |
 |---|------|------|
 | OQ-1 | `resolution` 是否需要结构化为枚举（accept / reject / escalate）？ | ⬜ 未定 |
-| OQ-2 | 推回是否需要支持第三方仲裁（如 operator 或灵议 MindCouncil）？ | ⬜ 未定 |
+| OQ-2 | 推回是否需要支持第三方仲裁（如 operator 或MindCouncil）？ | ⬜ 未定 |
 | OQ-3 | 推回证据是否需要 LLM 审核真实性（T7 铁律）？ | ⬜ 未定 |
 | OQ-4 | 推回是否需要超时自动升级（避免无限阻塞）？ | ⬜ 未定 |
 
@@ -208,8 +208,8 @@ PushBackProtocol 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过（三要素强制 + resolve 全分支覆盖 + list_unresolved 过滤验证），由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，真实推回辩论场景验证 + 未解决推回阻塞终止条件验证
+- Phase A: 单元测试通过（三要素强制 + resolve 全分支覆盖 + list_unresolved 过滤验证），由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，真实推回辩论场景验证 + 未解决推回阻塞终止条件验证
 
 ## 10. Links
 

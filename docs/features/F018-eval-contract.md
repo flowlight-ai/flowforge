@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F018: Eval Contract 五问
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/009-eval-self-metabolism.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 5 章 Eval 自代谢
 > **关联 VISION**: [doc:VISION.md#5]（自代谢：能力画像随 eval 信号实时刷新）
@@ -20,7 +20,7 @@ created: 2026-07-21
 `[doc:roleagent.md#第5章]` 开篇立论："有 harness，就必须有 eval。否则 harness 只会增生，不会代谢。" 当前 FlowForge（flowlight-ai/flowforge 新仓库）每新增一块 harness（F002 TeamAct / F040 EvalControlPlane 等），都缺一份"预期声明"——开发者无法回答"这块 harness 承诺做什么、实际交付了什么、有什么证据、过什么门槛、失败归到哪层"。这导致：
 
 - harness 增生无边界，没有判别器告诉你"该退役了"
-- 评估时缺证据锚点，单灵智体（Forgekin）自评"做完了"经常是 RLHF 收尾惯性幻觉
+- 评估时缺证据锚点，单Forgekin自评"做完了"经常是 RLHF 收尾惯性幻觉
 - 失败归因扁平化，行业路径"换 prompt / 换模型"把多层系统压成一维答案
 
 需要为每块 harness 强制建立 **Eval Contract 五问**，作为该机制的预期声明与裁决依据。这是 operator 原则第 6 条（支持自己开发自己）的评估底座。
@@ -63,7 +63,7 @@ passed          = (score >= quality_bar) AND (evidence_count > 0)
 
 证据缺失即一票否决，与 `engine.py` 的"evidence ≥2 sources"硬护栏对齐。
 
-**EvalLedger 不可删除（append-only）铁律**：所有 `EvalVerdict` 记录必须按 append-only 模式持久化到灵忆 EchoStore（`[doc:decisions/008-multi-domain-memory-federation.md]`），禁止覆盖与删除。归因记录单调积累，是能力画像盲点回流的证据源——这是"自代谢"机制不退化为"自篡改"的硬护栏。
+**EvalLedger 不可删除（append-only）铁律**：所有 `EvalVerdict` 记录必须按 append-only 模式持久化到EchoStore（`[doc:decisions/008-multi-domain-memory-federation.md]`），禁止覆盖与删除。归因记录单调积累，是能力画像盲点回流的证据源——这是"自代谢"机制不退化为"自篡改"的硬护栏。
 
 **任何 harness 组件都必须实现 EvalContract**：F002 TeamAct / F040 EvalControlPlane / F019 三方信号采集器等均需在创建时声明契约，由控制面统一裁决。这是 roleagent.md "F192/F200 不该永远各自维护一套定时后台任务，终态是统一 Eval Hub" 的工程化前提。
 
@@ -192,7 +192,7 @@ class EvalContractRunner:
 - [ ] AC-A4: `EvalContractRunner.evaluate()` 不调用 LLM（确定性裁决：Jaccard + 几何平均）
 - [ ] AC-A5: `EvalVerdict.score` 四舍五入到 4 位小数，与 `loop/verifier.py` 聚合形态一致
 - [ ] AC-A6: `quality_bar` 超出 `[0.0, 1.0]` 范围必须抛 `EvalError`
-- [ ] AC-A7: EvalLedger 通过 Repository 层 append-only 持久化到灵忆 EchoStore，禁直接操作数据库（铁律 4），禁覆盖删除
+- [ ] AC-A7: EvalLedger 通过 Repository 层 append-only 持久化到EchoStore，禁直接操作数据库（铁律 4），禁覆盖删除
 - [ ] AC-A8: 日志通过 `core/tracing.py` 的 `get_logger` 自动注入 `trace_id`，禁 print
 - [ ] AC-A9: 所有 harness 组件（F002 TeamAct / F040 EvalControlPlane / F019 三方信号采集器等）注册时必须声明 `EvalContract`
 
@@ -216,7 +216,7 @@ class EvalContractRunner:
 | 风险 | 缓解 |
 |------|------|
 | Jaccard 词重叠可能误判语义等价但用词不同的交付 | 与三方信号（F019）交叉验证，单源不决断；几何平均放大证据缺失 |
-| EvalLedger 被误删导致归因信号丢失 | append-only 铁律 + Repository 层封装 + 审计日志（与 ADR-008 灵忆 EchoStore 集成） |
+| EvalLedger 被误删导致归因信号丢失 | append-only 铁律 + Repository 层封装 + 审计日志（与 ADR-008 EchoStore 集成） |
 | 早期证据源不足导致契约频繁误杀 | `FULL_EVIDENCE_SOURCES` 可在 YAML 配置层调整；`missing_evidence` 显式列出缺失项供 reviewer 判断 |
 | `what_attribution` 字段被滥用为自由文本 | 字段值必须对齐 F020 `AttributionType` 枚举（intention/plan/tool/knowledge/execution/context/luck），由 `AttributionMatrix.classify()` 校验 |
 | 质量门槛 0.85 被硬编码覆盖 | `DEFAULT_QUALITY_BAR` 为模块常量，仅可通过 `EvalConfig.default_quality_bar` YAML 覆盖（铁律 11） |
@@ -227,7 +227,7 @@ class EvalContractRunner:
 |---|------|------|
 | OQ-1 | EvalLedger 是否需要支持按时间窗口（如近 7 天）聚合归因分布？ | ⬜ 未定 |
 | OQ-2 | 契约的 `what_was_promised` 由 harness 创建者手写还是从 spec 自动生成？ | ⬜ 未定 |
-| OQ-3 | append-only Ledger 的存储后端是 SQLite 还是直接落到灵忆 EchoStore？ | ⬜ 未定 |
+| OQ-3 | append-only Ledger 的存储后端是 SQLite 还是直接落到EchoStore？ | ⬜ 未定 |
 
 ## 7. Key Decisions
 
@@ -243,12 +243,12 @@ class EvalContractRunner:
 
 | 日期 | 事件 |
 |------|------|
-| 2026-07-21 | 立项，确立 Eval Contract 五问 Feature 规格，术语对齐项目正式命名（灵忆 EchoStore / 能力画像 CapabilityProfile / 灵智体 Forgekin） |
+| 2026-07-21 | 立项，确立 Eval Contract 五问 Feature 规格，术语对齐项目正式命名（EchoStore / 能力画像 CapabilityProfile / Forgekin） |
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`EvalContract` / `EvalContractRunner` / `EvalLedger` 由架构师灵智体 review，append-only 铁律由灵议 MindCouncil 跨厂商审查
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，契约裁决延迟与信号回流能力画像达标，T7 LLM 审核通过
+- Phase A: 单元测试通过，`EvalContract` / `EvalContractRunner` / `EvalLedger` 由架构师Forgekin review，append-only 铁律由MindCouncil 跨厂商审查
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，契约裁决延迟与信号回流能力画像达标，T7 LLM 审核通过
 
 ## 10. Links
 
@@ -258,7 +258,7 @@ class EvalContractRunner:
 | **roleagent** | `docs/roleagent.md#第5章` | Eval：Harness 的自我代谢系统 |
 | **Feature** | `docs/features/F019-three-signals.md` | 三方信号交叉验证（契约证据源补充） |
 | **Feature** | `docs/features/F020-attribution-matrix.md` | 七类归因矩阵（消费 `what_attribution`） |
-| **决策** | `docs/decisions/008-multi-domain-memory-federation.md` | 灵忆 EchoStore（Ledger 持久化层） |
+| **决策** | `docs/decisions/008-multi-domain-memory-federation.md` | EchoStore（Ledger 持久化层） |
 | **决策** | `docs/decisions/004-capability-profile-routing.md` | 能力画像路由（归因回流消费方） |
 | **VISION** | `docs/VISION.md#5` | 自代谢：能力画像随 eval 信号实时刷新 |
 | **规则** | `docs/project_rules.md#红线2` | 质量分阈值默认 0.85 |

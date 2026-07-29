@@ -15,7 +15,7 @@
 | `environment.md` | 环境准备（Python 3.11+ / Node 18+ / SQLite） | ⏳ |
 | `install-dependencies.md` | 依赖安装指南（pip + npm） | ⏳ |
 | `provider-config.md` | Provider 配置（OpenRoute / Bailian / 自建模型） | ⏳ |
-| `member-binding.md` | 成员绑定指南（账号 / 灵智体 / 群组） | ⏳ |
+| `member-binding.md` | 成员绑定指南（账号 / 可进化智能体 / 群组） | ⏳ |
 | `first-run.md` | 首次启动检查清单 | ⏳ |
 | `troubleshooting.md` | 常见问题排查 | ⏳ |
 
@@ -53,6 +53,6 @@
 
 ## 延伸阅读
 
-- `[doc:SOP.md]` — 灵智体协作标准操作规程
+- `[doc:SOP.md]` — 可进化智能体（Forgekin）协作标准操作规程
 - `[doc:TIPS.md]` — 经验提示与陷阱清单
 - `flowforge/config/system.yaml` — 系统配置文件

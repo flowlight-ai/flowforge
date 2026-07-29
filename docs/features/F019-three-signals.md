@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F019: 三方信号交叉验证
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/009-eval-self-metabolism.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 5 章 Eval 自代谢
 > **关联 VISION**: [doc:VISION.md#5]（自代谢：能力画像随 eval 信号实时刷新）
@@ -21,7 +21,7 @@ created: 2026-07-21
 
 - **自我报告（self_report）可信度低**：roleagent.md 第 4 章用具体证据驳斥"LLM-as-judge 全量自评"——模型的自评集中在 0.6-0.85 的成功区间，几乎没有负样本。根信号本身有毒，因为 RLHF 训练让模型产生"该收尾了"的乐观反射。
 - **纯 trace 缺主观意图**：telemetry 只能看到"调用了什么工具、耗时多少"，看不到 agent 当时的意图与上下文判断。
-- **跨 agent review 缺客观锚点**：observer 信号（人类 reviewer / 跨厂商灵智体）虽可信，但样本稀疏、采样慢，单独使用会让 eval 退化为人审工单。
+- **跨 agent review 缺客观锚点**：observer 信号（人类 reviewer / 跨厂商Forgekin）虽可信，但样本稀疏、采样慢，单独使用会让 eval 退化为人审工单。
 
 需要 **三方信号交叉验证**——自我报告 / observer / telemetry 三源加权聚合，让单源偏差被另两源稀释。这是 operator 原则第 6 条（支持自己开发自己）的可靠性底座——FlowForge 用 FlowForge 自身能力开发 FlowForge 时，必须有多源交叉才能避免自我欺骗。
 
@@ -48,7 +48,7 @@ created: 2026-07-21
 
 | 信号源 | 枚举值 | 默认权重 | 含义 |
 |--------|--------|---------|------|
-| SELF_REPORT | `self_report` | **0.2** | 灵智体自评（最低权重，最易乐观偏差） |
+| SELF_REPORT | `self_report` | **0.2** | Forgekin自评（最低权重，最易乐观偏差） |
 | OBSERVER | `observer` | **0.4** | 跨 agent / 人类 reviewer |
 | TELEMETRY | `telemetry` | **0.4** | 客观遥测（与 observer 同列最高权重） |
 
@@ -233,7 +233,7 @@ class ThreeSignalAggregator:
 - [ ] AC-B5: 信号聚合结果回流到能力画像（CapabilityProfile）的 `historical_performance`，`disagreement_score` 累积到盲点画像层
 - [ ] AC-B6: 至少 2 个独立信号源（对齐 F018 `FULL_EVIDENCE_SOURCES = 2`）才算完整证据，单源触发"collect additional evidence"建议
 - [ ] AC-B7: E2E 测试 — 构造 SELF_REPORT=0.9 / OBSERVER=0.4 / TELEMETRY=0.5 三源信号，聚合 `final_score ≈ 0.54`，`disagreement_score > 0.3` 触发 reconcile 建议
-- [ ] AC-B8: 遵守 T1-T8 测试铁律：真实 LLM 调用（observer 信号若由跨厂商灵智体产生，必须真实调 LLM）/ 真实场景数据 / 不跳过验证 / 不 Mock 工具（telemetry 采集必须真实埋点，禁 mock）/ 采集 MetricsCollector 完整指标 / LLM 生成内容必须经 LLM 审核（T7：observer 评语必须再调 LLM 审核语义自洽性）/ Web 功能操控浏览器验证 DOM
+- [ ] AC-B8: 遵守 T1-T8 测试铁律：真实 LLM 调用（observer 信号若由跨厂商Forgekin产生，必须真实调 LLM）/ 真实场景数据 / 不跳过验证 / 不 Mock 工具（telemetry 采集必须真实埋点，禁 mock）/ 采集 MetricsCollector 完整指标 / LLM 生成内容必须经 LLM 审核（T7：observer 评语必须再调 LLM 审核语义自洽性）/ Web 功能操控浏览器验证 DOM
 
 ## 4. 依赖
 
@@ -257,7 +257,7 @@ class ThreeSignalAggregator:
 | # | 问题 | 状态 |
 |---|------|------|
 | OQ-1 | self_report 信号是否需要附加"信心度"字段，让模型自报信心折扣权重？ | ⬜ 未定 |
-| OQ-2 | observer 信号由跨厂商 reviewer 灵智体产生时，是否需要 MindCouncil 复议？ | ⬜ 未定 |
+| OQ-2 | observer 信号由跨厂商 reviewer Forgekin产生时，是否需要 MindCouncil 复议？ | ⬜ 未定 |
 | OQ-3 | telemetry 信号的埋点协议是否由 F040 控制面统一注入，还是各 harness 自管？ | ⬜ 未定 |
 
 ## 7. Key Decisions
@@ -279,8 +279,8 @@ class ThreeSignalAggregator:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`SignalSource` / `EvalSignal` / `ThreeSignalAggregator` 由架构师灵智体 review，权重设计由灵议 MindCouncil 跨厂商审查（防止单厂商盲点）
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，分歧触发与信号回流能力画像达标，T7 LLM 审核通过
+- Phase A: 单元测试通过，`SignalSource` / `EvalSignal` / `ThreeSignalAggregator` 由架构师Forgekin review，权重设计由MindCouncil 跨厂商审查（防止单厂商盲点）
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，分歧触发与信号回流能力画像达标，T7 LLM 审核通过
 
 ## 10. Links
 
@@ -292,7 +292,7 @@ class ThreeSignalAggregator:
 | **Feature** | `docs/features/F018-eval-contract.md` | Eval Contract 五问（`what_evidence_exists` 由三方信号填充） |
 | **Feature** | `docs/features/F020-attribution-matrix.md` | 七类归因矩阵（消费信号分歧定位根因层） |
 | **决策** | `docs/decisions/004-capability-profile-routing.md` | 能力画像路由（信号回流消费方，§2.5 跨厂商 reviewer 选择） |
-| **决策** | `docs/decisions/008-multi-domain-memory-federation.md` | 灵忆 EchoStore（信号记录持久化层） |
+| **决策** | `docs/decisions/008-multi-domain-memory-federation.md` | EchoStore（信号记录持久化层） |
 | **VISION** | `docs/VISION.md#5` | 自代谢：能力画像随 eval 信号实时刷新 |
 | **规则** | `docs/project_rules.md#红线3` | 禁止使用 Mock LLM（observer 信号必须真实调 LLM） |
 | **代码** | `flowforge/core/eval/three_signals.py` | SignalSource + ThreeSignalAggregator 实现 |

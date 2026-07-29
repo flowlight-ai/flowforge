@@ -14,7 +14,7 @@
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-purple.svg)](https://github.com/flowlight-ai/flowforge/discussions)
 
 > *Forge a Persistent Identity. Endow it with Memory, Council, and Self-Devolution.*
-> *锻造持久身份 · 赋予记忆、灵议与自进化能力。*
+> *锻造持久身份 · 赋予记忆、MindCouncil 与自进化能力。*
 
 </div>
 
@@ -263,7 +263,7 @@ flowforge/
 
 - **P0** — AI industry terms (e.g., *Persistent Identity Agent*, *Self-Devolution Triple-Loop*, *Cross-Vendor Review*, *Multi-Domain Memory Federation*) — primary in docs and code.
 - **P1** — Code class names (e.g., `ForgeMind`, `Forgekin`, `MindCodex`) — used in identifiers.
-- **P2** — Community aliases (e.g., 灵智体 / 育灵 / 灵议 / 灵典) — community & social channels only.
+- **P2** — Community aliases (e.g., Chinese aliases for Forgekin / Forge Nurturing / MindCouncil / MindCodex) — community & social channels only.
 
 ## Contributing
 

@@ -8,10 +8,10 @@ created: 2026-07-21
 
 # F016: 消费加权评分（Consumption Weighted Scoring）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/008-memory-federation.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第4章 多域记忆联邦
-> **关联 VISION**: [doc:VISION.md#3]（持续身份：灵忆 EchoStore 提供 access_count 根信号）
+> **关联 VISION**: [doc:VISION.md#3]（持续身份：EchoStore 提供 access_count 根信号）
 
 ## 1. 上下文
 
@@ -146,7 +146,7 @@ class ConsumptionWeightedRanker:
 - [ ] AC-B3: 新建条目（`age_seconds < 86400`）的 `recency` 项 > 0；超过 1 天的条目 `recency` 项 = 0
 - [ ] AC-B4: `access_count >= 10` 的条目 `access_frequency` 项 = 1.0（饱和）
 - [ ] AC-B5: `rank()` 在千级 `entries` 上延迟 < 20ms
-- [ ] AC-B6: E2E 测试——灵智体协作过程中真实检索 → 排序 → 注入 context，排序结果与 `access_count` 信号正相关
+- [ ] AC-B6: E2E 测试——Forgekin协作过程中真实检索 → 排序 → 注入 context，排序结果与 `access_count` 信号正相关
 - [ ] AC-B7: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -195,18 +195,18 @@ class ConsumptionWeightedRanker:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`ConsumptionWeightedRanker` 由架构师灵智体 review，验证四维权重合 1.0 与纯函数特性
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，验证消费反馈闭环（`access_count` → `access_frequency` → 排序）生效
+- Phase A: 单元测试通过，`ConsumptionWeightedRanker` 由架构师Forgekin review，验证四维权重合 1.0 与纯函数特性
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，验证消费反馈闭环（`access_count` → `access_frequency` → 排序）生效
 
 ## 10. Links
 
 | 类型 | 路径 | 说明 |
 |------|------|------|
 | **ADR** | `docs/decisions/008-memory-federation.md` | 多域记忆联邦决策（§2.6 消费加权排序） |
-| **ADR** | `docs/decisions/012-naming-fusion.md` | 命名融合（灵忆 EchoStore 术语表） |
+| **ADR** | `docs/decisions/012-naming-fusion.md` | 命名融合（EchoStore 术语表） |
 | **Feature** | `docs/features/F014-memory-collection.md` | 记忆收集与多域存储（提供 importance/access_count 字段） |
 | **Feature** | `docs/features/F015-retrieval-entries.md` | 三检索入口（touch() 回写消费信号） |
-| **Feature** | `docs/features/F017-memory-governance-mind-codex.md` | 治理与灵典（apply_decay 影响 importance） |
+| **Feature** | `docs/features/F017-memory-governance-mind-codex.md` | 治理与MindCodex（apply_decay 影响 importance） |
 | **Code** | `flowforge/core/memory/consumption_weighted.py` | ConsumptionWeightedRanker 实现 |
-| **VISION** | `docs/VISION.md#3` | 持续身份：灵忆 EchoStore 提供 access_count 根信号 |
+| **VISION** | `docs/VISION.md#3` | 持续身份：EchoStore 提供 access_count 根信号 |
 | **roleagent** | `docs/roleagent.md#第4章` | revealed preference 原则（不用 LLM 自评打分） |

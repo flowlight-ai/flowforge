@@ -8,7 +8,7 @@ created: 2026-07-17
 
 # F002: TeamAct 六步循环
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/002-collaboration-protocol.md]
 > **依赖 Feature**: [doc:features/F001-capability-profile.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径
@@ -20,11 +20,11 @@ created: 2026-07-17
 
 flowlight-ai/flowforge 新仓库当前协作基于固定角色 + EventBus + Handoff，没有团队级终止条件。这导致：
 
-- 灵智体互相传球永远循环，没有"团队停下来"机制
-- 单灵智体判断"做完了"经常是幻觉（被 RLHF 训练出收尾惯性）
-- 没有交接胶囊（前一个灵智体不留摘要，后一个灵智体重读全部上下文）
+- Forgekin互相传球永远循环，没有"团队停下来"机制
+- 单Forgekin判断"做完了"经常是幻觉（被 RLHF 训练出收尾惯性）
+- 没有交接胶囊（前一个Forgekin不留摘要，后一个Forgekin重读全部上下文）
 
-需要实现 TeamAct 六步循环 + 五项终止条件，让灵智体协作有明确终止边界。这是 operator 原则第 6 条（支持自己开发自己）的协作基础——FlowForge 用 FlowForge 自身能力开发 FlowForge 需要 TeamAct 编排多灵智体协作。
+需要实现 TeamAct 六步循环 + 五项终止条件，让Forgekin协作有明确终止边界。这是 operator 原则第 6 条（支持自己开发自己）的协作基础——FlowForge 用 FlowForge 自身能力开发 FlowForge 需要 TeamAct 编排多Forgekin协作。
 
 ### 1.2 当前痛点
 
@@ -36,7 +36,7 @@ flowlight-ai/flowforge 新仓库当前协作基于固定角色 + EventBus + Hand
 ### 1.3 不做的影响
 
 - 无法实现 `[doc:roleagent.md#第2章]` 团队主循环
-- 灵智体协作陷入死循环
+- Forgekin协作陷入死循环
 - 跨厂商 review 缺失导致同厂商盲点
 - "自己开发自己"闭环无法达成
 
@@ -48,12 +48,12 @@ TeamAct 六步循环 + 五项终止条件（来自 `[doc:roleagent.md#第2章]`�
 
 ```
 loop:
-    State    → 读共享状态（仓库 / spec / 任务 / 灵忆 EchoStore / 交接胶囊）
+    State    → 读共享状态（仓库 / spec / 任务 / EchoStore / 交接胶囊）
     Owner    → 谁持球？（基于 F001 CapabilityProfile 路由 / 显式持有声明）
     Action   → 持球者执行（写代码 / review / 设计 / 调研）
     Evidence → 产出证据（commit / 测试 / trace / 截图）
     Verdict  → 验证（跨厂商 review / 自检 / operator 确认）
-    Route    → 传球（路由给下一个灵智体 / 继续持有 / 升级给 operator）
+    Route    → 传球（路由给下一个Forgekin / 继续持有 / 升级给 operator）
 ```
 
 五项终止条件缺一不可：验收标准达成 + 证据已附 + 跨 agent 交叉验证 + 无悬空任务归属 + 愿景收敛。
@@ -156,7 +156,7 @@ class PingPongCircuitBreaker:
 - [ ] AC-B2: 状态推进延迟 < 50ms
 - [ ] AC-B3: TeamAct 终止条件达成率 ≥ 90%
 - [ ] AC-B4: 交接胶囊完整率 100%
-- [ ] AC-B5: E2E 测试 — 3 个灵智体协作完成一个 Feature（如"创建猫灵智体"），交接胶囊正确传递，五项终止条件全部达成
+- [ ] AC-B5: E2E 测试 — 3 个Forgekin协作完成一个 Feature（如"创建猫Forgekin"），交接胶囊正确传递，五项终止条件全部达成
 - [ ] AC-B6: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -169,7 +169,7 @@ class PingPongCircuitBreaker:
 
 | 风险 | 缓解 |
 |------|------|
-| 灵智体伪造终止条件 | 证据锚点 + 跨厂商 review + Eval 信号 |
+| Forgekin伪造终止条件 | 证据锚点 + 跨厂商 review + Eval 信号 |
 | 五项终止条件拖慢迭代 | Phase A 先跑通基础循环，Phase B 补齐 Eval |
 | 交接胶囊格式漂移 | Pydantic Schema 强校验 |
 | 乒乓球熔断误判 | max_iterations 可配置（默认 3） |
@@ -179,7 +179,7 @@ class PingPongCircuitBreaker:
 | # | 问题 | 状态 |
 |---|------|------|
 | OQ-1 | TeamAct 状态是否需要支持回滚（Route → Action）？ | ⬜ 未定 |
-| OQ-2 | 五项终止条件中"vision_converged"由 operator 还是灵议 MindCouncil 确认？ | ⬜ 未定 |
+| OQ-2 | 五项终止条件中"vision_converged"由 operator 还是MindCouncil 确认？ | ⬜ 未定 |
 | OQ-3 | 跨厂商 review 是否需要至少 2 个不同厂商？ | ⬜ 未定 |
 
 ## 7. Key Decisions
@@ -187,9 +187,9 @@ class PingPongCircuitBreaker:
 | # | 决策 | 理由 | 日期 |
 |---|------|------|------|
 | KD-1 | TeamAct 六步循环 + 五项终止条件 | `[doc:roleagent.md#第2章]` 主张 | 2026-07-17 |
-| KD-2 | 交接胶囊是协议层硬要求 | 避免后继灵智体重读全部上下文 | 2026-07-17 |
+| KD-2 | 交接胶囊是协议层硬要求 | 避免后继Forgekin重读全部上下文 | 2026-07-17 |
 | KD-3 | 跨厂商 review 不能被 proxy 替代 | "CI 通过"≠"愿景对齐" | 2026-07-17 |
-| KD-4 | 五项终止条件缺一不可 | 防止单灵智体收尾惯性幻觉 | 2026-07-17 |
+| KD-4 | 五项终止条件缺一不可 | 防止单Forgekin收尾惯性幻觉 | 2026-07-17 |
 
 ## 8. Timeline
 
@@ -199,8 +199,8 @@ class PingPongCircuitBreaker:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，TeamActState 状态机由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，终止条件达成率与交接胶囊完整率达标
+- Phase A: 单元测试通过，TeamActState 状态机由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，终止条件达成率与交接胶囊完整率达标
 
 ## 10. Links
 

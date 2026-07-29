@@ -1,0 +1,40 @@
+# Codex Agent Provider Manifest
+# 按 F241 (CL-014) 声明式 Manifest 配置（铁律 5 配置驱动）
+# 详见 [doc:decisions/006-external-agent-integration.md] §4 首批接入
+# 详见 [doc:review/review.md#第九章§9.2] EX-002 能力画像
+
+provider_name: "openai.codex"
+display_name: "Codex"
+version: "1.0.0"
+protocol: "api"
+transport: "http"
+
+capabilities:
+  - reasoning
+  - math_computation
+  - logic_analysis
+  - structured_output
+  - code_generation
+
+blind_spots:
+  - "工具调用弱"
+  - "长上下文处理一般"
+  - "对中文场景适配较弱"
+
+timeout_seconds: 300
+retry_policy:
+  max_attempts: 3
+  backoff_seconds: 3
+
+cost_per_token: 0.005
+cost_per_call: 0.0
+
+safety_level: "normal"
+
+required_env_vars:
+  - OPENAI_API_KEY
+
+required_permissions:
+  - file_read
+  - run_tests
+  - lint

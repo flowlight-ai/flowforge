@@ -1,7 +1,7 @@
 # FlowForge 经验提示与陷阱清单（TIPS）
 
 > **文档编号**: TIPS.md（v1.0）
-> **维护规则**: 灵智体在动手前必须先查本清单是否已有相关陷阱；每个 Bug 修复后由灵智体自动追加教训条目
+> **维护规则**: 可进化智能体（Forgekin）在动手前必须先查本清单是否已有相关陷阱；每个 Bug 修复后由可进化智能体自动追加教训条目
 > **更新机制**: 每次发现新陷阱 → 反思 → 沉淀到本清单 → 关联到 spec.md / arch.md / design.md 对应章节
 
 ---
@@ -10,9 +10,9 @@
 
 ### TIP-001：禁止循环依赖
 
-**症状**：自进化层在应用层之上，但应用层又通过 PluginProtocol 注册灵智体角色，构成循环依赖。
+**症状**：自进化层在应用层之上，但应用层又通过 PluginProtocol 注册可进化智能体角色，构成循环依赖。
 
-**规避**：自进化层作为"Harness v2.0 升级"嵌入到核心框架层，而非独立层。forgemind 应用层通过 Plugin 协议注册灵智体，单向依赖核心框架层。
+**规避**：自进化层作为"Harness v2.0 升级"嵌入到核心框架层，而非独立层。forgemind 应用层通过 Plugin 协议注册可进化智能体，单向依赖核心框架层。
 
 ### TIP-002：ForgekinEngine 不能绕过 Harness 护栏
 
@@ -84,13 +84,13 @@
 
 ---
 
-## 3. forgemind 万物灵智体陷阱
+## 3. forgemind 可进化智能体（Forgekin）陷阱
 
-### TIP-011：灵智体形态不能随意切换
+### TIP-011：可进化智能体形态不能随意切换
 
 **症状**：开发者直接把 BioForgekin 改成 VirtualForgekin，绕过进化流程。
 
-**规避**：形态进化必须通过 ForgekinEngine 触发，更新灵智体谱系（Lineage）+ 灵典条目。形态切换需要 operator 确认。
+**规避**：形态进化必须通过 ForgekinEngine 触发，更新可进化智能体谱系（Lineage）+ 蒸馏知识库（MindCodex）条目。形态切换需要 operator 确认。
 
 ### TIP-012：物理 AI 传感器接入必须有现实闭环
 
@@ -102,13 +102,13 @@
 
 **症状**：把虚拟角色设定写在 system prompt 里，每次推理都重新加载。
 
-**规避**：虚拟世界设定层是持久化数据（WorldSetting + Character + Worldview + Relationship），不是 prompt 装饰。灵智体通过 EchoStore 召回相关设定。
+**规避**：虚拟世界设定层是持久化数据（WorldSetting + Character + Worldview + Relationship），不是 prompt 装饰。可进化智能体通过 EchoStore 召回相关设定。
 
-### TIP-014：三方 Agent 不是灵智体的替代
+### TIP-014：三方 Agent 不是可进化智能体的替代
 
-**症状**：灵智体把所有任务都丢给 claude code，自己变成空壳。
+**症状**：可进化智能体把所有任务都丢给 claude code，自己变成空壳。
 
-**规避**：三方 Agent 是能力扩展，不是灵智体本身。灵智体必须保持自己的 CapabilityProfile、EchoStore、SoulImprint，三方 Agent 只在灵智体盲点时被调用。
+**规避**：三方 Agent 是能力扩展，不是可进化智能体本身。可进化智能体必须保持自己的 CapabilityProfile、EchoStore、SoulImprint，三方 Agent 只在可进化智能体盲点时被调用。
 
 ---
 
@@ -184,7 +184,7 @@
 
 ### TIP-025：operator 确认不可委托
 
-**症状**：架构师灵智体代替 operator 做愿景收敛确认。
+**症状**：架构师可进化智能体代替 operator 做愿景收敛确认。
 
 **规避**：第 5 项终止条件（愿景收敛）必须 operator 本人确认，不能被 proxy 替代。
 
@@ -212,14 +212,14 @@
 
 | 正式术语 | 英文类名 | 废弃术语 |
 |----------|---------|---------|
-| 灵智 ForgeMind | ForgeMindEngine | SelfEvolutionEngine |
-| 灵智体 Forgekin | Forgekin | SelfEvolutionAgent |
-| 育灵 Forge Nurturing | ForgeNurturing | Agent Lifecycle |
-| 灵忆 Echo Store | EchoStore | MemoryGovernance |
-| 灵印 Soul Imprint | SoulImprint | Agent Profile |
-| 灵锻 SpiritForge | SpiritForge | SelfEvolutionEngine |
+| 通用智能体框架 ForgeMind | ForgeMindEngine | SelfEvolutionEngine |
+| 可进化智能体 Forgekin | Forgekin | SelfEvolutionAgent |
+| 智能体入职与终身学习 Forge Nurturing | ForgeNurturing | Agent Lifecycle |
+| 情景记忆存储 Echo Store | EchoStore | MemoryGovernance |
+| 持久身份 Soul Imprint | SoulImprint | Agent Profile |
+| 经验蒸馏 SpiritForge | SpiritForge | SelfEvolutionEngine |
 | 锻典 Mind Codex | MindCodex | Skill Library |
-| 灵议 Mind Council | MindCouncil | CollaborationGate |
+| 多智能体议事 Mind Council | MindCouncil | CollaborationGate |
 | 进化阶 E1-E6 | EvolutionStage | Agent Maturity Level |
 
 ### TIP-029：M18/M19/M20 已废弃
@@ -228,11 +228,11 @@
 
 **规避**：M18/M19/M20 已合并为 ForgeMindEngine。详见 `[doc:decisions/012-naming-fusion.md]`。
 
-### TIP-030：E6 灵匠 Mind Artisan 已改名为"灵智"
+### TIP-030：E6 灵匠 Mind Artisan 已改名为"通用智能体框架"
 
 **症状**：代码或文档中出现 "E6 灵匠 Mind Artisan"。
 
-**规避**：最终形态命名为"灵智 ForgeMind"，禁止使用 "E6 灵匠 Mind Artisan"。详见 `[doc:decisions/013-all-things-spirit-mind-vision.md]`。
+**规避**：最终形态命名为"通用智能体框架 ForgeMind"，禁止使用 "E6 灵匠 Mind Artisan"。详见 `[doc:decisions/013-all-things-spirit-mind-vision.md]`。
 
 ---
 
@@ -282,7 +282,7 @@
 
 ### TIP-036：禁止 flowforge 越界引用 *Forge
 
-**症状**：在 flowforge 中出现 ContentForge/NovelForge/DevForge/MallForge 灵智体适配任务；或 flowforge 代码 import contentforge/novelforge/devforge/mallforge 模块。
+**症状**：在 flowforge 中出现 ContentForge/NovelForge/DevForge/MallForge 可进化智能体适配任务；或 flowforge 代码 import contentforge/novelforge/devforge/mallforge 模块。
 
 **规避**：
 - flowforge 是纯通用框架，禁止 import 任何 *Forge / content / opensieve / openroute 模块
@@ -360,4 +360,4 @@
 - `[doc:arch.md]` — 全局架构设计
 - `[doc:design.md]` — 当前阶段设计
 - `[doc:decisions/012-naming-fusion.md]` — 命名融合 ADR（术语表）
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物灵智体愿景 ADR
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景 ADR

@@ -188,7 +188,7 @@ def check_trae_bridge(im_cfg: dict) -> None:
 def print_topology(forgekins: dict, im_cfg: dict) -> None:
     """Print collaboration topology summary."""
     section("Five Forgekin Collaboration Topology")
-    print(f"{'灵智体':<10} {'Vendor':<12} {'Loop':<12} {'Stage':<6} {'Binary':<10} {'Council':<8} {'Approval':<10}")
+    print(f"{'Forgekin':<10} {'Vendor':<12} {'Loop':<12} {'Stage':<6} {'Binary':<10} {'Council':<8} {'Approval':<10}")
     print("-" * 80)
     for slug, expected in EXPECTED.items():
         cfg = forgekins[slug]
@@ -210,7 +210,7 @@ def print_topology(forgekins: dict, im_cfg: dict) -> None:
 
 def main() -> int:
     print("=" * 72)
-    print("FlowForge 5 灵智体 (Forgekin) 配置验证")
+    print("FlowForge 5 Forgekin 配置验证")
     print("=" * 72)
 
     forgekins, im_cfg = check_yaml_loads()

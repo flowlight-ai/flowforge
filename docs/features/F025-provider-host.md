@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F025: Provider Host 抽象（Provider Host Abstraction）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/010-distributed-reliability.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 6 章 分布式可靠性
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -171,12 +171,12 @@ class ProviderHost:
 
 | 日期 | 事件 |
 |------|------|
-| 2026-07-21 | 立项，确立 Provider Host 抽象 Feature 规格，术语对齐项目正式命名（灵智体 Forgekin） |
+| 2026-07-21 | 立项，确立 Provider Host 抽象 Feature 规格，术语对齐项目正式命名（Forgekin） |
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`ProviderHost` 注册与优先级选择由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，failover 自动切换、与 F022/F023 集成正确性达标
+- Phase A: 单元测试通过，`ProviderHost` 注册与优先级选择由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，failover 自动切换、与 F022/F023 集成正确性达标
 
 ## 10. Links
 

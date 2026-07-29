@@ -34,7 +34,7 @@ capabilities:
   - name: "naming_compliance"
     proficiency: 0.82
     evidence:
-      - "Verified 灵智体/育灵/灵议/灵典/灵法/灵锻 terminology across 27 Feature docs"
+      - "Verified Forgekin/Forge Nurturing/MindCouncil/MindCodex/ForgeMethod/SpiritForge terminology across 27 Feature docs"
     last_assessed_at: "2026-07-21T00:00:00Z"
   - name: "scope_guard_review"
     proficiency: 0.80

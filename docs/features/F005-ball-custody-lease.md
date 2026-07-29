@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F005: 球权租借（Ball Custody Lease）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/002-teamact-collaboration-protocol.md]
 > **依赖 Feature**: [doc:features/F002-teamact-loop.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径（RA-014 持球 lease）
@@ -18,13 +18,13 @@ created: 2026-07-21
 
 ### 1.1 问题陈述
 
-TeamAct 六步循环（F002）中，持球灵智体有时需要退出会话等待外部条件（CI 完成、operator 确认、定时唤醒）。如果没有结构化的球权 lease 机制，会出现"球掉地上"故障：一个灵智体离开后，其他灵智体不知道任务是否还有 owner，要么重复认领导致双持球冲突，要么无人认领导致任务悬挂。roleagent.md RA-014 要求持球者必须声明 custody lease，lease 有 TTL，灵智体消失后 lease 自动过期，其他灵智体可重新 acquire。本 Feature 提供 BallCustodyRegistry，作为 TeamAct 协作的结构性安全网。
+TeamAct 六步循环（F002）中，持球Forgekin有时需要退出会话等待外部条件（CI 完成、operator 确认、定时唤醒）。如果没有结构化的球权 lease 机制，会出现"球掉地上"故障：一个Forgekin离开后，其他Forgekin不知道任务是否还有 owner，要么重复认领导致双持球冲突，要么无人认领导致任务悬挂。roleagent.md RA-014 要求持球者必须声明 custody lease，lease 有 TTL，Forgekin消失后 lease 自动过期，其他Forgekin可重新 acquire。本 Feature 提供 BallCustodyRegistry，作为 TeamAct 协作的结构性安全网。
 
 ### 1.2 当前痛点
 
 - 没有 lease 概念，球权归属不可观测
-- 双灵智体同时持球，F004 路由后两个 owner 都执行 ACTION 步骤
-- 灵智体异常退出后任务悬挂，无 TTL 自动释放
+- 双Forgekin同时持球，F004 路由后两个 owner 都执行 ACTION 步骤
+- Forgekin异常退出后任务悬挂，无 TTL 自动释放
 - 测试需要 sleep 等待 TTL 过期，测试套件慢且不确定
 - F003 HandoffCapsule 缺少 `custody_lease_id` 桥接，无法追踪 lease 流转
 
@@ -166,7 +166,7 @@ lease 生命周期：acquire（OWNER 步骤）→ renew（长任务续约）→ 
 - [ ] AC-B2: F003 HandoffCapsule 的 `custody_lease_id` 与 F005 lease_id 一致
 - [ ] AC-B3: F004 `@all` 广播不触发 acquire（避免全员抢球）
 - [ ] AC-B4: lease 操作延迟 < 1ms（纯内存字典，无 IO）
-- [ ] AC-B5: 持球灵智体异常退出后，TTL 过期其他灵智体可重新 acquire（模拟 now_fn 快进）
+- [ ] AC-B5: 持球Forgekin异常退出后，TTL 过期其他Forgekin可重新 acquire（模拟 now_fn 快进）
 - [ ] AC-B6: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -211,8 +211,8 @@ lease 生命周期：acquire（OWNER 步骤）→ renew（长任务续约）→ 
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过（acquire / release / renew / current_holder / is_expired 全分支覆盖 + now_fn 快进验证），由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，双持球防护 + TTL 过期恢复在真实协作场景中验证
+- Phase A: 单元测试通过（acquire / release / renew / current_holder / is_expired 全分支覆盖 + now_fn 快进验证），由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，双持球防护 + TTL 过期恢复在真实协作场景中验证
 
 ## 10. Links
 

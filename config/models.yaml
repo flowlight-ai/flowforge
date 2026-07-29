@@ -1,0 +1,296 @@
+active_providers:
+- openroute
+- openrouter
+- doubao
+providers:
+  openroute:
+    base_url: http://127.0.0.1:13001/v1
+    api_key_env: OPENROUTE_API_KEY
+    # 铁律5: 禁止硬编码密钥 — 通过 OPENROUTE_API_KEY 环境变量注入
+    api_key_default: ""
+    protected: true
+    description: 预装默认供应商，用户不可删除或修改
+  openrouter:
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    user_manageable: true
+    description: 自定义模型供应商，用户可管理模型
+  aliyuncs:
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: ALIYUN_API_KEY
+  ark:
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    api_key_env: ARK_API_KEY
+  arkcode:
+    base_url: https://ark.cn-beijing.volces.com/api/coding/v3
+    api_key_env: ARKCODE_API_KEY
+  siliconflow:
+    base_url: https://api.siliconflow.cn/v1
+    api_key_env: SILICONFLOW_API_KEY
+  kimi:
+    base_url: https://api.moonshot.cn/v1
+    api_key_env: KIMI_API_KEY
+  zhipu:
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    api_key_env: ZHIPU_API_KEY
+  tencent:
+    base_url: https://hunyuan.tencentcloudapi.com/v1
+    api_key_env: TENCENT_API_KEY
+  local:
+    base_url: http://localhost:11434/v1
+    api_key_env: LOCAL_API_KEY
+  doubao:
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    api_key_env: ARK_API_KEY
+    description: 豆包大模型官方API（火山引擎Ark平台）
+  trae:
+    mode: bridge
+    bridge_dir: data/trae_bridge
+    bridge_timeout: 300
+    bridge_poll_interval: 2
+    default_model: trae
+    session_persistence: true
+    description: Trae AI 编码助手（文件桥接模式，让编码 Agent 能调用 Trae 进行编码）
+models:
+- id: auto
+  provider: openroute
+  display_name: Auto 智能路由
+  enabled: true
+- id: qwen/qwen3-coder:free
+  provider: openrouter
+  display_name: Qwen3 Coder (Free)
+  enabled: true
+- id: qwen/qwen3-next-80b-a3b-instruct:free
+  provider: openrouter
+  display_name: Qwen3 Next 80B (Free)
+  enabled: true
+- id: openai/gpt-oss-120b:free
+  provider: openrouter
+  display_name: GPT-OSS 120B (Free)
+  enabled: true
+- id: openai/gpt-oss-20b:free
+  provider: openrouter
+  display_name: GPT-OSS 20B (Free)
+  enabled: true
+- id: nousresearch/hermes-3-llama-3.1-405b:free
+  provider: openrouter
+  display_name: Hermes 3 Llama 405B (Free)
+  enabled: true
+- id: google/gemma-4-31b-it:free
+  provider: openrouter
+  display_name: Gemma 4 31B (Free)
+  enabled: true
+- id: google/gemma-4-26b-a4b-it:free
+  provider: openrouter
+  display_name: Gemma 4 26B (Free)
+  enabled: true
+- id: nvidia/nemotron-3-super-120b-a12b:free
+  provider: openrouter
+  display_name: Nemotron 3 Super (Free)
+  enabled: true
+- id: nvidia/nemotron-3-nano-30b-a3b:free
+  provider: openrouter
+  display_name: Nemotron 3 Nano 30B (Free)
+  enabled: true
+- id: nvidia/nemotron-3-ultra-550b-a55b:free
+  provider: openrouter
+  display_name: Nemotron 3 Ultra (Free)
+  enabled: true
+- id: meta-llama/llama-3.3-70b-instruct:free
+  provider: openrouter
+  display_name: Llama 3.3 70B (Free)
+  enabled: true
+- id: poolside/laguna-m.1:free
+  provider: openrouter
+  display_name: Laguna M.1 (Free)
+  enabled: true
+- id: proxy
+  provider: openroute
+  display_name: 网页代理轮询
+  enabled: true
+- id: Doubao-Seed2.0
+  provider: openroute
+  display_name: 豆包 Seed 2.0
+  enabled: true
+- id: MiniMax-M3
+  provider: openroute
+  display_name: MiniMax M3
+  enabled: true
+- id: GLM-5.1
+  provider: openroute
+  display_name: 智谱 GLM 5.1
+  enabled: true
+- id: DeepSeek-V4-Pro
+  provider: openroute
+  display_name: DeepSeek V4 Pro
+  enabled: true
+- id: Kimi-K2.6
+  provider: openroute
+  display_name: Kimi K2.6
+  enabled: true
+- id: Qwen3.6-Plus
+  provider: openroute
+  display_name: 通义千问 3.6 Plus
+  enabled: true
+- id: HunYuan3
+  provider: openroute
+  display_name: 腾讯混元 3
+  enabled: true
+- id: GPT-5.5
+  provider: openroute
+  display_name: GPT-5.5
+  enabled: true
+- id: Claude-4.8-Sonnet
+  provider: openroute
+  display_name: Claude 4.8 Sonnet
+  enabled: true
+- id: Gemini-3.3-Pro
+  provider: openroute
+  display_name: Gemini 3.3 Pro
+  enabled: true
+- id: free
+  provider: openroute
+  display_name: 免费模型集合
+  enabled: true
+- id: ark-code-latest
+  provider: arkcode
+  display_name: Ark Code Latest
+  enabled: true
+- id: deepseek-v3-2-251201
+  provider: ark
+  display_name: DeepSeek V3 (Ark)
+  enabled: true
+- id: doubao-1-5-pro-32k-250115
+  provider: ark
+  display_name: Doubao 1.5 Pro (Ark)
+  enabled: true
+- id: qwen3.5-flash-2026-02-23
+  provider: aliyuncs
+  display_name: Qwen 3.5 Flash
+  enabled: true
+- id: qwen3.5-27b
+  provider: aliyuncs
+  display_name: Qwen 3.5 27B
+  enabled: true
+- id: glm-4.5
+  provider: aliyuncs
+  display_name: GLM 4.5
+  enabled: true
+- id: glm-4.6
+  provider: aliyuncs
+  display_name: GLM 4.6
+  enabled: true
+- id: kimi-k2.5
+  provider: aliyuncs
+  display_name: Kimi K2.5
+  enabled: true
+- id: kimi-k2.5-moonshot
+  provider: kimi
+  display_name: Kimi K2.5 (Moonshot)
+  enabled: true
+- id: glm-4-flash
+  provider: zhipu
+  display_name: GLM-4 Flash
+  enabled: true
+- id: trae
+  provider: trae
+  display_name: Trae AI 编码助手
+  enabled: true
+assignments:
+  # v3: 移除所有 free fallback — openroute/free 会路由到 openrouter.ai 的 free 模型，
+  # 导致评委/T7审核使用 free 模型（404/429 大量失败，质量分0.0）。
+  # 改为只用本地 openroute webchat 模型作为 fallback，确保 100% 本地稳定性。
+  # 兜底由 llm_client.py 的 build_cross_fallback_chain 追加 openroute/auto 完成。
+  # 说明：*Forge 项目的 assignments 由各自项目通过 Plugin V3 协议在运行时注入，
+  # FlowForge 核心仅保留通用能力 assignments（default/lightweight/coding/judge/content_*）。
+  default:
+    # v5.1临时: API配额全面耗尽(ark 429/kimi 429/aliyuncs 401/siliconflow 403/openrouter 404)
+    # 唯一可用API: zhipu/glm-4-flash。待API配额恢复后改回 Doubao-Seed2.0
+    primary: zhipu/glm-4-flash
+    fallbacks:
+    - Doubao-Seed2.0
+    - DeepSeek-V4-Pro
+    - GLM-5.1
+    - Kimi-K2.6
+    - MiniMax-M3
+    - HunYuan3
+    - Qwen3.6-Plus
+  lightweight:
+    primary: zhipu/glm-4-flash
+    fallbacks:
+    - Doubao-Seed2.0
+    - DeepSeek-V4-Pro
+    - GLM-5.1
+    - Kimi-K2.6
+  coding:
+    primary: DeepSeek-V4-Pro
+    fallbacks:
+    - Doubao-Seed2.0
+    - GLM-5.1
+    - Kimi-K2.6
+  # 评委路由：跨厂商排序，避免单厂商故障导致所有评委失败
+  # primary=Doubao-Seed2.0（豆包webchat最稳定）
+  # v5.8: 末尾追加 openrouter 直接API模型作为保底（不经过本地OpenRoute webchat代理）
+  # 原因：OpenRoute Playwright在高负载(14次LLM调用)下可能崩溃，导致所有webchat评委失败
+  # 约束：webchat模型优先（用户要求5评委评审只用webchat），free模型仅作backup
+  judge:
+    # v5.16: 基于 v515 单评委测试数据调整
+    # 移除 Kimi-K2.6（300s 超时不可用），保留 Qwen3.6-Plus（89s 最快）
+    # webchat 模型优先（用户要求5评委评审只用webchat）
+    primary: Doubao-Seed2.0
+    fallbacks:
+    - Qwen3.6-Plus
+    - HunYuan3
+    - GLM-5.1
+    - MiniMax-M3
+    - DeepSeek-V4-Pro
+  content_create:
+    # v5.82: primary从Doubao-Seed2.0改为DeepSeek-V4-Pro — Doubao-Seed2.0 API后端(ark/doubao-1-5-pro-32k)
+    # 生成短内容(730字)，导致质量分0.69 FAIL。DeepSeek-V4-Pro首个API后端是ark/deepseek-v3-2-251201
+    # (DeepSeek V3.2以长文本生成能力著称)，预期生成更长内容
+    # v5.81: primary从GLM-5.1改为Doubao-Seed2.0 — GLM-5.1 webchat截断长prompt(15547字符)
+    primary: openroute/DeepSeek-V4-Pro
+    fallbacks:
+    - openroute/Doubao-Seed2.0
+    - openroute/GLM-5.1
+    - openroute/Qwen3.6-Plus
+    - openroute/Kimi-K2.6
+    - openroute/MiniMax-M3
+    - openroute/HunYuan3
+  content_refine:
+    # v5.84: primary从Kimi-K2.6改为Doubao-Seed2.0 — Kimi-K2.6反思重写把2279字缩到1110字，
+    # 导致质量分从0.903降到0.8055。Doubao-Seed2.0在writer阶段生成2184-2279字稳定长内容
+    # 铁律变更: 之前"polisher必须使用Kimi-K2.6"是基于旧测试，v5.84实测Doubao-Seed2.0更稳定
+    # Kimi-K2.6作为fallback保留
+    primary: openroute/Doubao-Seed2.0
+    fallbacks:
+    - openroute/Kimi-K2.6
+    - openroute/Qwen3.6-Plus
+    - openroute/HunYuan3
+    - openroute/GLM-5.1
+    - openroute/DeepSeek-V4-Pro
+  content_eval:
+    primary: openroute/GLM-5.1
+    fallbacks:
+    - openroute/Doubao-Seed2.0
+    - openroute/DeepSeek-V4-Pro
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - openrouter/openai/gpt-oss-120b:free
+  # P0-27: reflexion_evaluator/reflexion_reflector 显式 assignments
+  # v2: 移除 MiniMax-M3（openroute minimax 平台持续 connection failed），
+  # 替换为 Kimi-K2.6（更稳定的 webchat 模型）
+  # v3.4 性能修复: API优先 — webchat模型60s超时导致reflector卡死
+  reflexion_evaluator:
+    # v5.1临时: API配额耗尽，改用 zhipu/glm-4-flash
+    primary: zhipu/glm-4-flash
+    fallbacks:
+    - openrouter/openai/gpt-oss-120b:free
+    - openroute/Kimi-K2.6
+    - openroute/Doubao-Seed2.0
+  reflexion_reflector:
+    # v5.1临时: API配额耗尽，改用 zhipu/glm-4-flash
+    primary: zhipu/glm-4-flash
+    fallbacks:
+    - openrouter/openai/gpt-oss-120b:free
+    - openroute/Qwen3.6-Plus
+    - openroute/Doubao-Seed2.0

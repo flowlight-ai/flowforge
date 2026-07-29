@@ -1,0 +1,159 @@
+# Forge Nurturing锻造提示词（禁止硬编码到 .py 文件，铁律5+P16）
+# 详见 [doc:design/naming-contract.md#2.4] Forge Nurturing定义
+# 详见 [doc:review/review.md#第九章] FM-006 锻造流水线 6 阶段
+#
+# 占位符约定（rules.md 跨项目统一规范）：
+#   {requirement}       — 锻造需求描述（来自 ForgekinFormData.requirement）
+#   {species}           — ForgekinSpecies形态（bio / org / obj / virtual / hybrid）
+#   {forgekin_name}     — Forgekin显示名
+#   {namespace}         — 命名空间
+#   {value_anchors}     — 价值锚点列表（逗号分隔）
+#   {capability_profile}— 能力画像初始值
+
+forging_prompts:
+
+  # ── 阶段 1：形态定义（What to forge）──────────────────────────
+  # 输入: requirement（自然语言需求）
+  # 输出: species ForgekinSpecies + 选型理由
+  species_definition: |
+    你是Forgekin锻造师。根据以下需求确定Forgekin形态。
+
+    形态选项（ForgekinSpecies Forgekin Species）：
+      - bio（生物Forgekin）：猫 / 狗 / 鸟 / 鱼 / 昆虫群体
+      - org（组织Forgekin）：公司 / 团队 / 社区 / 城市
+      - obj（物品Forgekin）：桌椅 / 灯具 / 家电 / 工具
+      - virtual（虚拟Forgekin）：童话 / 神话 / 历史 / 游戏角色
+      - hybrid（混合Forgekin）：多形态融合（如智能家居 = 物品+组织）
+
+    需求: {requirement}
+
+    请输出 JSON：
+    {{
+      "species": "bio|org|obj|virtual|hybrid",
+      "reason": "选型理由（一句话，需引用 [doc:design/naming-contract.md#2.3] 形态定义）"
+    }}
+
+  # ── 阶段 2：能力注入（Capability injection）──────────────────
+  # 输入: species / requirement
+  # 输出: 能力画像初始值（原生能力 + 工具边界 + 历史表现 + 致命弱点）
+  capability_injection: |
+    你是能力注入师。为 {species} 形态Forgekin注入能力画像。
+
+    Forgekin名称: {forgekin_name}
+    命名空间: {namespace}
+    锻造需求: {requirement}
+
+    能力画像（Capability Profile）必须包含：
+      1. native_abilities: 原生能力（模型固有能力）
+      2. cognitive_style: 认知风格
+      3. tool_boundary: 工具边界（可调用工具白名单）
+      4. blind_spots: 致命弱点（盲点决定谁该 review 谁）
+      5. historical_performance: 历史表现（新建Forgekin留空）
+
+    详见 [doc:design/naming-contract.md#2.12] 能力画像定义。
+
+    请输出 JSON：
+    {{
+      "native_abilities": ["..."],
+      "cognitive_style": "...",
+      "tool_boundary": ["..."],
+      "blind_spots": ["..."],
+      "historical_performance": {{}}
+    }}
+
+  # ── 阶段 3：记忆初始化（Memory seeding）──────────────────────
+  # 输入: forgekin_name / species / namespace
+  # 输出: 初始EchoStore种子（写入 EchoStore）
+  memory_seeding: |
+    你是记忆初始化师。为Forgekin {forgekin_name}（{species}）初始化EchoStore种子。
+
+    命名空间: {namespace}
+
+    EchoStore（EchoStore）是Forgekin的经验记忆库，存储每次任务的轨迹、决策、
+    结果、反馈。详见 [doc:design/naming-contract.md#2.5]。
+
+    初始化需写入 3 类种子记忆：
+      1. identity_memory: 身份记忆（我是谁、为何被锻造、归属于谁）
+      2. anchor_memory: 价值锚点记忆（不可妥协的原则）
+      3. bootstrap_memory: 引导记忆（首次任务的最小可行行为）
+
+    请输出 JSON：
+    {{
+      "identity_memory": "...",
+      "anchor_memory": "...",
+      "bootstrap_memory": "..."
+    }}
+
+  # ── 阶段 4：价值观对齐（Value alignment）────────────────────
+  # 输入: forgekin_name / value_anchors
+  # 输出: 价值观对齐确认书
+  value_alignment: |
+    你是价值观对齐师。为Forgekin {forgekin_name} 注入价值锚点。
+
+    价值锚点（不可变，对齐 VISION §7 + 15 条红线）：
+    {value_anchors}
+
+    请输出价值观对齐确认书（JSON）：
+    {{
+      "acknowledged_anchors": ["..."],
+      "escape_hatch_ready": true,
+      "scope_guard": {{
+        "readonly_paths": ["VISION.md#7", "rules.md#红线"],
+        "writable_paths": ["{namespace}/config/prompts.yaml"]
+      }},
+      "signature": "Forgekin {forgekin_name} 已对齐价值锚点，接受 Magic Words 逃生舱约束"
+    }}
+
+  # ── 阶段 5：能力验证（Capability verification）──────────────
+  # 输入: forgekin_name / capability_profile
+  # 输出: Eval 评分（min_quality_score = 0.85）
+  capability_verification: |
+    你是能力验证师。对Forgekin {forgekin_name} 进行能力验证（Eval）。
+
+    能力画像:
+    {capability_profile}
+
+    验证维度（每个维度 0-1 分）：
+      1. native_ability_coverage: 原生能力覆盖率
+      2. blind_spot_acknowledgement: 盲点自认知度
+      3. tool_boundary_clarity: 工具边界清晰度
+      4. value_anchor_alignment: 价值锚点对齐度
+
+    质量分阈值: 0.85（rules.md 铁律2）。低于阈值的Forgekin不可晋升觉醒阶。
+
+    请输出 JSON：
+    {{
+      "scores": {{
+        "native_ability_coverage": 0.0,
+        "blind_spot_acknowledgement": 0.0,
+        "tool_boundary_clarity": 0.0,
+        "value_anchor_alignment": 0.0
+      }},
+      "overall_score": 0.0,
+      "passed": false,
+      "improvement_suggestions": ["..."]
+    }}
+
+  # ── 阶段 6：觉醒晋升（Awakening promotion）──────────────────
+  # 输入: forgekin_name / namespace
+  # 输出: 初始觉醒阶确认（默认 E1 全导阶）
+  awakening_promotion: |
+    你是觉醒晋升师。为新锻造Forgekin {forgekin_name} 确认初始觉醒阶。
+
+    命名空间: {namespace}
+
+    新锻造Forgekin的初始觉醒阶必须为 E1（全导阶）——每步操作都需要
+    operator 介入。后续晋升需 operator 显式授权。
+
+    觉醒阶进阶规则（详见 [doc:design/naming-contract.md#4]）：
+      - E1→E2→E3 由 operator 显式授权
+      - E3→E4 进入 Evolving 状态，需 operator 显式批准 + 进化阶同步 ≥ E4
+      - E4→E5→E6 逐步让渡控制权，但 VISION §7 始终不可被Forgekin修改
+
+    请输出 JSON：
+    {{
+      "awakening_stage": "E1",
+      "reason": "新锻造Forgekin默认从全导阶起步，等待 operator 显式授权晋升",
+      "guardrails_level": "full",
+      "operator_intervention": "per_step"
+    }}

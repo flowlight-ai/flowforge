@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-21
-> **决策者**: operator + 架构师灵智体
+> **决策者**: operator + 架构师可进化智能体（Forgekin）
 > **依赖**: `[doc:roleagent.md#第5章]` + `[doc:decisions/004-capability-profile-routing.md]` + `[doc:decisions/008-multi-domain-memory-federation.md]`
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径
 
@@ -14,7 +14,7 @@
 
 当前 FlowForge（flowlight-ai/flowforge 新仓库）面临三个静态 eval 病灶：
 
-- **Benchmark 只测一个因子**：benchmark 测的是模型能力（等式左项），无法测 harness 契合度（等式右项）。一个 benchmark 满分的灵智体（Forgekin）换到本项目里可能因工具描述含糊而频繁出错。
+- **Benchmark 只测一个因子**：benchmark 测的是模型能力（等式左项），无法测 harness 契合度（等式右项）。一个 benchmark 满分的可进化智能体（Forgekin）换到本项目里可能因工具描述含糊而频繁出错。
 - **无退役信号 = 技术债永生**：一块机制从来不触发，比"指标下降"更危险——它可能是死代码，只是在占用 agent 的注意力预算。没有退役信号的 harness，就是没有自我删除机制的技术债。
 - **"agent 没做好"是拍扁的多层答案**：行业常见路径是"agent 做得不好 → 优化 prompt → 换模型"，把多层系统压扁成一维答案。回到核心公式 `效能 = 能力 × Harness 契合度`，问题可能出在愿景、翻译、工具、执行、环境、品味任一层。
 
@@ -113,7 +113,7 @@ overall = CONTRACT_WEIGHT * verdict.score + SIGNAL_WEIGHT * aggregated.final_sco
 - `attribution != LUCK` → "address {layer}-layer root cause"
 - `passed and agreement_score >= 0.8` → "no action needed"
 
-这些行动信号回流到能力画像（CapabilityProfile，见 `[doc:decisions/004-capability-profile-routing.md]`）的 `historical_performance` 积累层，并通过 ADR-008 的灵忆 EchoStore 持久化。能力画像的盲点（`blind_spots`）由归因分布的非 LUCK 类别累积证据——某灵智体若在 `TOOL` 层反复失败，其盲点画像就标记"工具调用偏差"，触发跨厂商 reviewer 选择（ADR-004 §2.5）。配置由 `EvalConfigLoader.load_from_yaml()` 异步加载（`asyncio.to_thread`），`EvalConfig` 持有 `default_quality_bar` / `signal_weights` / `attribution_rules`，全部 YAML 驱动，禁止硬编码（铁律 5 + P16）。
+这些行动信号回流到能力画像（CapabilityProfile，见 `[doc:decisions/004-capability-profile-routing.md]`）的 `historical_performance` 积累层，并通过 ADR-008 的情景记忆存储 EchoStore 持久化。能力画像的盲点（`blind_spots`）由归因分布的非 LUCK 类别累积证据——某可进化智能体若在 `TOOL` 层反复失败，其盲点画像就标记"工具调用偏差"，触发跨厂商 reviewer 选择（ADR-004 §2.5）。配置由 `EvalConfigLoader.load_from_yaml()` 异步加载（`asyncio.to_thread`），`EvalConfig` 持有 `default_quality_bar` / `signal_weights` / `attribution_rules`，全部 YAML 驱动，禁止硬编码（铁律 5 + P16）。
 
 ---
 
@@ -135,7 +135,7 @@ overall = CONTRACT_WEIGHT * verdict.score + SIGNAL_WEIGHT * aggregated.final_sco
 - 三方信号权重 `SELF_REPORT=0.2 / OBSERVER=0.4 / TELEMETRY=0.4` 直接落地 roleagent.md"用行为信号而非自评"——self_report 被折扣是因为它最易受 RLHF 乐观偏差污染。
 - 七类归因把"agent 没做好"拍扁的多层答案重新展开，对应核心公式 `效能 = 能力 × Harness 契合度` 的每一个可能失效层。
 - `EvalControlPlane` 作为统一入口，是 roleagent.md 终态"Harness Eval Control Plane"的工程骨架，避免每个 feature 自造定时后台任务。
-- 控制面本身不调 LLM，符合"给 agent 数据不给结论"原则——结论由灵智体在正确坐标系里得出。
+- 控制面本身不调 LLM，符合"给 agent 数据不给结论"原则——结论由可进化智能体在正确坐标系里得出。
 
 ---
 
@@ -148,7 +148,7 @@ overall = CONTRACT_WEIGHT * verdict.score + SIGNAL_WEIGHT * aggregated.final_sco
 | 证据≥2 源可能过严导致误杀 | `FULL_EVIDENCE_SOURCES` 可配置；`missing_evidence` 显式列出缺失项供 reviewer 判断 |
 | evaluator 注册遗漏导致信号缺失 | `_collect_signals` 异常隔离（单 evaluator 失败不阻断），warning 日志可追溯 |
 | 控制面权重 0.5/0.5 可能不适配所有场景 | `CONTRACT_WEIGHT` / `SIGNAL_WEIGHT` 为模块常量，可在 YAML 配置层覆盖 |
-| 归因结果回流能力画像可能滞后 | 与 ADR-008 灵忆 EchoStore 集成，归因记录单调积累；与 ADR-004 盲点画像联动跨厂商 review |
+| 归因结果回流能力画像可能滞后 | 与 ADR-008 情景记忆存储 EchoStore 集成，归因记录单调积累；与 ADR-004 盲点画像联动跨厂商 review |
 
 ---
 
@@ -163,8 +163,8 @@ overall = CONTRACT_WEIGHT * verdict.score + SIGNAL_WEIGHT * aggregated.final_sco
 ## 7. 参与者
 
 - operator（愿景锚点 + 7 条不可妥协原则 + 最终决策）
-- 架构师灵智体（方案设计 + 代码实现 + 术语对齐项目正式命名）
-- 灵议 MindCouncil（归因矩阵与控制面权重审查，跨厂商视角）
+- 架构师可进化智能体（方案设计 + 代码实现 + 术语对齐项目正式命名）
+- 多智能体议事 MindCouncil（归因矩阵与控制面权重审查，跨厂商视角）
 
 ---
 
@@ -172,7 +172,7 @@ overall = CONTRACT_WEIGHT * verdict.score + SIGNAL_WEIGHT * aggregated.final_sco
 
 | 日期 | 修订 | 修订者 |
 |------|------|--------|
-| 2026-07-21 | 初始版本，确立 Eval 自代谢决策：EvalContract 五问 + 三方信号 + 七类归因 + EvalControlPlane + 信号回流能力画像；术语对齐项目正式命名（灵忆 EchoStore / 灵议 MindCouncil / 灵智体 Forgekin / 能力画像 CapabilityProfile） | operator + 架构师灵智体 |
+| 2026-07-21 | 初始版本，确立 Eval 自代谢决策：EvalContract 五问 + 三方信号 + 七类归因 + EvalControlPlane + 信号回流能力画像；术语对齐项目正式命名（情景记忆存储 EchoStore / 多智能体议事 MindCouncil / 可进化智能体 Forgekin / 能力画像 CapabilityProfile） | operator + 架构师可进化智能体 |
 
 ---
 

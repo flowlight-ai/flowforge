@@ -1,5 +1,5 @@
 # IM Channels — web群 + 飞信群 议事通道配置
-# 5 灵智体 (文心/夏洛克/梵高/达芬奇/鲁班) 通过此通道协作完成自我开发任务.
+# 5 Forgekin (文心/夏洛克/梵高/达芬奇/鲁班) 通过此通道协作完成自我开发任务.
 # Design inspired by industry-standard multi-agent IM patterns (Feishu bot + WebChat mirror).
 
 version: "0.1.0"
@@ -13,7 +13,7 @@ web_group:
     token_env: "FLOWFORGE_WEBCHAT_TOKEN"  # 从环境变量读取，不硬编码
   channels:
     forgekin_council:
-      description: "灵智体议事大厅 — 5 灵智体协作主通道"
+      description: "Forgekin Council Hall — 5 Forgekin协作主通道"
       subscribers:
         - "fk-wenxin"
         - "fk-sherlock"
@@ -63,10 +63,10 @@ feishu_group:
     type: "app"
     app_id_env: "FEISHU_APP_ID"        # 从环境变量读取
     app_secret_env: "FEISHU_APP_SECRET"
-    chat_id_env: "FEISHU_CHAT_ID"      # 灵智体议事群 chat_id
+    chat_id_env: "FEISHU_CHAT_ID"      # Forgekin Council群 chat_id
   channels:
     forgekin_council:
-      description: "飞信灵智体议事群 — 与 web_group:forgekin_council 双向镜像"
+      description: "飞信 Forgekin Council群 — 与 web_group:forgekin_council 双向镜像"
       mirror_of: "web_group:forgekin_council"
       subscribers:
         - "fk-wenxin"
@@ -177,7 +177,7 @@ protocol:
   quality_threshold: 0.85
 
 # ===== Trae CN 桥接配置 =====
-# 5 灵智体通过 TraeLLMClient 桥接 Trae CN IDE 执行实际任务.
+# 5 Forgekin 通过 TraeLLMClient 桥接 Trae CN IDE 执行实际任务.
 trae_bridge:
   enabled: true
   protocol: "stdio"  # or "http"

@@ -1,0 +1,29 @@
+# 框架重构工作流 — 鲁班主导，需 operator 批准（I8 门禁）
+name: framework_refactor
+display_name: "框架重构闭环"
+description: "鲁班架构分析 → I8 门禁审批 → 重构执行 → 梵高审查 → 达芬奇验证"
+icon: "🔨"
+category: "framework"
+version: "1.0"
+
+steps:
+  - id: "analyze"
+    display_name: "架构分析"
+    agent: "fk-luban"
+    human_review: false
+  - id: "approve"
+    display_name: "I8 门禁审批"
+    agent: "fk-luban"
+    human_review: true
+  - id: "refactor"
+    display_name: "重构执行"
+    agent: "fk-luban"
+    human_review: false
+  - id: "review"
+    display_name: "架构审查"
+    agent: "fk-vangogh"
+    human_review: false
+  - id: "verify"
+    display_name: "依赖验证"
+    agent: "fk-davinci"
+    human_review: false

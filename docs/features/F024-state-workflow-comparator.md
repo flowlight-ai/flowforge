@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F024: Weak State vs Strong Workflow（弱状态 vs 强工作流）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/010-distributed-reliability.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 6 章 分布式可靠性
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -21,7 +21,7 @@ created: 2026-07-21
 
 ### 1.2 当前痛点
 
-- 开放协作任务被强 workflow 锁死路径，失去灵智体判断空间
+- 开放协作任务被强 workflow 锁死路径，失去Forgekin判断空间
 - 严肃副作用用弱状态机，crash 后无法 replay，只能从头重启
 - 第三方 API 依赖步骤被盲目 replay，与外部状态去同步
 - 没有静态分析工具判断"这个流程该用哪种模式"
@@ -168,12 +168,12 @@ class StateWorkflowComparator:
 
 | 日期 | 事件 |
 |------|------|
-| 2026-07-21 | 立项，确立 Weak State vs Strong Workflow Feature 规格，术语对齐项目正式命名（灵智体 Forgekin） |
+| 2026-07-21 | 立项，确立 Weak State vs Strong Workflow Feature 规格，术语对齐项目正式命名（Forgekin） |
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`StateWorkflowComparator` 分类规则由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，与 F021/F022/F023 集成正确性、推荐模式与实际编排一致性达标
+- Phase A: 单元测试通过，`StateWorkflowComparator` 分类规则由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，与 F021/F022/F023 集成正确性、推荐模式与实际编排一致性达标
 
 ## 10. Links
 

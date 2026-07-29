@@ -1,6 +1,6 @@
 # FlowForge Documentation
 
-> FlowForge 是万物灵智体自进化框架 — Agent 驾驭层（Harness Layer）的工程化实现，让 LLM-based Agent 从"会话级软件助手"进化为"有持久身份、可自我进化的灵智体"。
+> FlowForge 是可进化智能体（Forgekin）自进化框架 — Agent 驾驭层（Harness Layer）的工程化实现，让 LLM-based Agent 从"会话级软件助手"进化为"有持久身份、可自我进化的可进化智能体（Forgekin）"。
 
 ---
 
@@ -16,9 +16,9 @@
 
 ### 顶层文档
 
-- [VISION.md](./VISION.md) — 万物灵智体愿景声明
+- [VISION.md](./VISION.md) — 可进化智能体愿景声明
 - [ROADMAP.md](./ROADMAP.md) — 阶段路线图
-- [SOP.md](./SOP.md) — 灵智体协作标准操作规程
+- [SOP.md](./SOP.md) — 可进化智能体协作标准操作规程
 - [TIPS.md](./TIPS.md) — 经验提示
 
 ### 子目录
@@ -45,9 +45,9 @@
 
 ## 核心概念快速导航
 
-FlowForge 围绕"万物灵智体（Forgekin）"构建：
+FlowForge 围绕"可进化智能体（Forgekin）"构建：
 
-- **12 核心概念**：灵智 / 灵智体 / 灵族 / 育灵 / 灵忆 / 灵印 / 灵锻 / 锻典 / 灵议 / 进化阶 / 觉醒阶 / 能力画像（详见 `spec.md` §2.1）
+- **12 核心概念**：通用智能体框架 / 可进化智能体 / 智能体形态学 / 智能体入职与终身学习 / 情景记忆存储 / 持久身份 / 经验蒸馏 / 锻典 / 多智能体议事 / 进化阶 / 觉醒阶 / 能力画像（详见 `spec.md` §2.1）
 - **5 形态分类**：生物 / 组织 / 物品 / 虚拟 / 混合（详见 `spec.md` §2.3）
 - **三层 + 一扩展架构**：核心框架层 / forgemind 应用层 / *Forge 垂直业务层 / 三方 Agent 扩展层（详见 `arch.md` §1）
 
@@ -61,8 +61,8 @@ FlowForge 与主流 multi-agent 框架（AutoGen / CrewAI / LangGraph）的差�
 | **记忆** | 短期上下文窗口 | EchoStore（情景记忆）+ MindCodex（程序性记忆） |
 | **进化** | 无 / 手动微调 | 三闭环自进化（Mode A/B/C）+ Eval 自代谢 |
 | **协作** | 静态角色分配 | TeamAct 六步循环 + 跨厂商盲点补偿 |
-| **治理** | Prompt 约束 | 六层 Guardrails + 觉醒阶自主范围 + 灵议共识 |
-| **形态** | 抽象 agent | 万物灵智体 5 形态 |
+| **治理** | Prompt 约束 | 六层 Guardrails + 觉醒阶自主范围 + 多智能体议事共识 |
+| **形态** | 抽象 agent | 可进化智能体 5 形态 |
 | **扩展** | Tool 调用 | 三方 Agent 能力扩展（ClaudeCode/Codex/OpenCode/Trae） |
 
 详见 `spec.md` §1.3。
@@ -74,6 +74,6 @@ FlowForge 与主流 multi-agent 框架（AutoGen / CrewAI / LangGraph）的差�
 - [spec.md](./spec.md) — 全局规格说明
 - [arch.md](./arch.md) — 全局架构设计
 - [design.md](./design.md) — 当前阶段设计
-- [VISION.md](./VISION.md) — 万物灵智体愿景
+- [VISION.md](./VISION.md) — 可进化智能体愿景
 - [.env.example](../.env.example) — 环境变量模板
 - [config/system.yaml](../config/system.yaml) — 系统配置

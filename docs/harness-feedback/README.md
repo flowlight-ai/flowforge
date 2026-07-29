@@ -23,7 +23,7 @@
 |------|------|------|
 | `eval-domains/eval-teamact.yaml` | TeamAct 协作评估域 | ⏳ |
 | `eval-domains/eval-memory.yaml` | 多域记忆联邦评估域 | ⏳ |
-| `eval-domains/eval-forgemind.yaml` | forgemind 灵智体评估域 | ⏳ |
+| `eval-domains/eval-forgemind.yaml` | forgemind 可进化智能体（Forgekin）评估域 | ⏳ |
 | `eval-domains/eval-harness.yaml` | Harness 七层护栏评估域 | ⏳ |
 | `eval-domains/eval-reliability.yaml` | 分布式可靠性评估域 | ⏳ |
 | `eval-domains/eval-friction.yaml` | 摩擦信号评估域 | ⏳ |
@@ -57,7 +57,7 @@ bundles/{YYYY-MM-DD}-{domain}-{slug}/
 domainId: eval:{slug}              # 评估域唯一标识
 displayName: {显示名}              # 中文显示名
 systemThreadId: thread_eval_{slug} # 评估系统线程 ID
-evalCat:                           # 执行评估的灵智体
+evalCat:                           # 执行评估的可进化智能体
   catId: {id}
   handle: "@{handle}"
   model: {model}

@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F011: 治理边界（Governance Boundary）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/007-harness-engineering.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 3 章 Harness 七层（Layer 4）
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -23,15 +23,15 @@ FlowForge 需要一个**压缩免疫的治理边界**：治理规则作为结构
 
 ### 1.2 当前痛点
 
-- *Forge 项目中治理规则写在 prompt 里，被压缩后灵智体"忘记"规则
+- *Forge 项目中治理规则写在 prompt 里，被压缩后Forgekin"忘记"规则
 - 治理规则无统一存储，散落在各 Agent 的 system prompt 中
-- 规则违反无客观检测机制，靠灵智体自评
+- 规则违反无客观检测机制，靠Forgekin自评
 - 子串匹配可能误判（如"force"出现在合法描述中），缺少结构化 action schema
 
 ### 1.3 不做的影响
 
-- 治理规则在长任务中被压缩吞掉，灵智体行为失控
-- 不可逆操作无外部边界，灵智体可执行危险动作
+- 治理规则在长任务中被压缩吞掉，Forgekin行为失控
+- 不可逆操作无外部边界，Forgekin可执行危险动作
 - 规则违反无法追溯，事故无法追查
 - "自己开发自己"闭环无法达成——开发过程必须受治理边界约束
 
@@ -159,7 +159,7 @@ class GovernanceBoundary:
 - [ ] AC-B1: 治理规则通过 system role 注入（不是 user message prepend），与 F002 AC-A6 对齐
 - [ ] AC-B2: `check_violation` 在工具调用前（F009）、证据记录前（F010）执行
 - [ ] AC-B3: 规则配置驱动（YAML），与项目规则"配置驱动优先"对齐
-- [ ] AC-B4: E2E 测试 — 灵智体尝试执行含禁用短语的动作，`check_violation` 返回违规，动作被拦截
+- [ ] AC-B4: E2E 测试 — Forgekin尝试执行含禁用短语的动作，`check_violation` 返回违规，动作被拦截
 - [ ] AC-B5: E2E 测试 — 长任务跨多轮对话压缩后，治理规则仍生效（压缩免疫验证）
 - [ ] AC-B6: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
@@ -203,8 +203,8 @@ class GovernanceBoundary:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，压缩免疫铁律（规则不进 prompt）由架构师灵智体 review + T7 LLM 审核
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，长任务压缩后规则仍生效
+- Phase A: 单元测试通过，压缩免疫铁律（规则不进 prompt）由架构师Forgekin review + T7 LLM 审核
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，长任务压缩后规则仍生效
 
 ## 10. Links
 

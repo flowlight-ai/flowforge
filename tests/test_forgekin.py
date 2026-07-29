@@ -1,4 +1,4 @@
-"""Tests for forgekin (灵族) + external agent adapters + council."""
+"""Tests for forgekin (ForgekinSpecies) + external agent adapters + council."""
 
 from __future__ import annotations
 

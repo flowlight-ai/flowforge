@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-21
-> **决策者**: operator + 架构师灵智体（Forgekin）
+> **决策者**: operator + 架构师可进化智能体（Forgekin）
 > **依赖**: `[doc:roleagent.md#第6章]` + `[doc:decisions/007-harness-engineering-path.md]`
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 6 章工程路径
 
@@ -14,8 +14,8 @@
 
 FlowForge（flowlight-ai/flowforge 通用底座）的能力画像驱动团队比固定岗位流水线更依赖状态连续性：谁做过什么、谁正在接手、哪个判断已经被验证，都不能因为一个会话断开而丢失。然而当前系统面临三类真实的失败模式（按时间顺序撞上）：
 
-- **第一类·单灵智体长任务持久性**：任务持续几分钟到几十分钟时，通信通道几乎必然中断。`[doc:roleagent.md#第6章]` 提到三种故障——副作用已执行但通道断了（不能盲目重试）、本地成功但远程失败（race condition）、provider 返回空响应（需要理解错误语义）。
-- **第二类·跨灵智体协作一致性**：TeamAct 循环中 Route 阶段是最脆弱的窗口——前一只做完 Action 但没来得及更新 Evidence 就崩了，后一只接球看到半截状态。`[doc:roleagent.md#第6章]` 记录了真实的 liveness split-brain：两个后端读路径对同一 invocation 给出矛盾结果。
+- **第一类·单可进化智能体长任务持久性**：任务持续几分钟到几十分钟时，通信通道几乎必然中断。`[doc:roleagent.md#第6章]` 提到三种故障——副作用已执行但通道断了（不能盲目重试）、本地成功但远程失败（race condition）、provider 返回空响应（需要理解错误语义）。
+- **第二类·跨可进化智能体协作一致性**：TeamAct 循环中 Route 阶段是最脆弱的窗口——前一只做完 Action 但没来得及更新 Evidence 就崩了，后一只接球看到半截状态。`[doc:roleagent.md#第6章]` 记录了真实的 liveness split-brain：两个后端读路径对同一 invocation 给出矛盾结果。
 - **第三类·跨 provider 语义一致性**：Claude、GPT、Gemini、Antigravity 等 provider 的超时策略、错误码语义、通道协议、恢复机制各不相同。同一套可靠性规则不能绑死在某一家实现上。
 
 行业大多数 multi-agent 讨论把可靠性压在 prompt 和 orchestration 层面处理，但分布式系统的核心教训是：**你不可能消除故障，你只能设计对故障的容忍**。本 ADR 记录 P1-6 阶段落地的 5 个可靠性原语（F021-F025）如何把分布式系统经典工具箱（Saga / WAL / Liveness Probe / Workflow Engine / Failover Pool）搬进 FlowForge。
@@ -50,7 +50,7 @@ FlowForge（flowlight-ai/flowforge 通用底座）的能力画像驱动团队比
 
 ### 2.3 Liveness 探活（心跳 + 租约）
 
-`LivenessProbe` 是路由前的**只读模型**——它永不改变状态，只报告。任何灵智体可声明 `LivenessSpec`（`name / description / sla_seconds / required_for`），并注册一个异步 check 函数。`run_all` 串行执行所有探针，每个 `ProbeResult` 携带 `name / healthy / latency_ms / last_checked / error`，探针间相互隔离——一个抛异常不影响其他。
+`LivenessProbe` 是路由前的**只读模型**——它永不改变状态，只报告。任何可进化智能体可声明 `LivenessSpec`（`name / description / sla_seconds / required_for`），并注册一个异步 check 函数。`run_all` 串行执行所有探针，每个 `ProbeResult` 携带 `name / healthy / latency_ms / last_checked / error`，探针间相互隔离——一个抛异常不影响其他。
 
 `required_for` 列出依赖该探针的能力名，探针不健康时这些能力被标记为退化。恢复决策**不**由探针做出，而是由 `TierRecoveryService` 基于探针结果触发——这是 `[doc:roleagent.md#第6章]` "给数据不给结论"原则的体现。
 
@@ -122,8 +122,8 @@ FlowForge（flowlight-ai/flowforge 通用底座）的能力画像驱动团队比
 ## 7. 参与者
 
 - operator（愿景锚点 + 最终决策 + 7 条不可妥协原则）
-- 架构师灵智体（Forgekin，方案设计 + 术语对齐项目正式命名）
-- 可靠性灵智体（实现 P1-6 五原语代码 + 真实 Antigravity alpha smoke 验证）
+- 架构师可进化智能体（Forgekin，方案设计 + 术语对齐项目正式命名）
+- 可靠性可进化智能体（实现 P1-6 五原语代码 + 真实 Antigravity alpha smoke 验证）
 
 ---
 
@@ -131,7 +131,7 @@ FlowForge（flowlight-ai/flowforge 通用底座）的能力画像驱动团队比
 
 | 日期 | 修订 | 修订者 |
 |------|------|--------|
-| 2026-07-21 | 初始版本，确立分布式可靠性五原语决策（WAL / Tier Recovery / Liveness / State-Workflow / Provider Host），术语对齐项目正式命名（灵智体 Forgekin / 灵忆 EchoStore） | operator + 架构师灵智体 |
+| 2026-07-21 | 初始版本，确立分布式可靠性五原语决策（WAL / Tier Recovery / Liveness / State-Workflow / Provider Host），术语对齐项目正式命名（可进化智能体 Forgekin / 情景记忆存储 EchoStore） | operator + 架构师可进化智能体 |
 
 ---
 

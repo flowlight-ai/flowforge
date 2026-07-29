@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F010: 证据传感器（Evidence Sensors）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/007-harness-engineering.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 3 章 Harness 七层（Layer 3）
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -23,7 +23,7 @@ FlowForge 需要一个**证据传感器层**：证据"先记录后验证"（reco
 
 ### 1.2 当前痛点
 
-- 灵智体自评"已完成"无客观锚点，RLHF 收尾惯性导致提前宣布完成
+- Forgekin自评"已完成"无客观锚点，RLHF 收尾惯性导致提前宣布完成
 - 跨厂商 review 缺少客观一致性指标，只靠"CI 通过"≠"愿景对齐"
 - 证据未分级（未验证 / 已验证），全都被等权计入验收
 - 缺少跨证据交叉验证（cross-check），无法检测矛盾证据
@@ -32,7 +32,7 @@ FlowForge 需要一个**证据传感器层**：证据"先记录后验证"（reco
 
 - TeamAct 五项终止条件中"evidence_attached"无法客观判定（F002）
 - 跨厂商 review 沦为主观判断，盲点无法暴露
-- 灵智体可伪造完成证据，无交叉验证防线
+- Forgekin可伪造完成证据，无交叉验证防线
 - "自己开发自己"闭环无法达成——开发产出必须可验证
 
 ## 2. 决策
@@ -135,7 +135,7 @@ class EvidenceCollector:
 - [ ] AC-B1: `verify` 必须由非作者 verifier 完成（结构性强制，调用方传入 `verifier` 与 `source` 比对）
 - [ ] AC-B2: 跨厂商 review 配对基于盲点不重叠（依赖 F001 CapabilityProfile）
 - [ ] AC-B3: cross-check ratio 阈值可配置（如 ≥0.8 视为一致，<0.5 视为矛盾）
-- [ ] AC-B4: E2E 测试 — 灵智体 A 产出证据，灵智体 B（不同厂商）verify，cross_check 两份独立证据 ratio 落在合理区间
+- [ ] AC-B4: E2E 测试 — Forgekin A 产出证据，Forgekin B（不同厂商）verify，cross_check 两份独立证据 ratio 落在合理区间
 - [ ] AC-B5: E2E 测试 — TeamAct 五项终止条件中"evidence_attached"基于 `verified=True` 证据计数判定
 - [ ] AC-B6: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
@@ -179,8 +179,8 @@ class EvidenceCollector:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，cross-check ratio 边界值（0.0/1.0）由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，跨厂商 review 一致性达标
+- Phase A: 单元测试通过，cross-check ratio 边界值（0.0/1.0）由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，跨厂商 review 一致性达标
 
 ## 10. Links
 

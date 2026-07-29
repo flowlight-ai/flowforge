@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-17
-> **决策者**: operator + 架构师灵智体
+> **决策者**: operator + 架构师可进化智能体（Forgekin）
 > **依赖**: `[doc:roleagent.md#第0章]` + `[doc:roleagent.md#第1章]` + `[doc:decisions/013-all-things-spirit-mind-vision.md]`
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径
 
@@ -28,10 +28,10 @@ operator 指示（2026-07-17）："multi-agent 协作从 role-agent 走向能力
 
 ### 2.1 role 是运行时标签，profile 才是长期主体
 
-`[doc:roleagent.md#第0章]`：role 回答"这一步谁负责什么"，profile 回答"为什么是这只灵智体"。
+`[doc:roleagent.md#第0章]`：role 回答"这一步谁负责什么"，profile 回答"为什么是这只可进化智能体"。
 
 - **role**：TeamAct 循环里的运行时状态（owner / verifier / router 等），每次任务可变
-- **profile**：长期主体画像（灵印 SoulImprint，含模型固有能力 + 认知风格 + 工具边界 + 历史表现 + 坏直觉 + 当前状态）
+- **profile**：长期主体画像（持久身份 SoulImprint，含模型固有能力 + 认知风格 + 工具边界 + 历史表现 + 坏直觉 + 当前状态）
 
 ### 2.2 CapabilityProfile 六维度
 
@@ -88,16 +88,16 @@ def select_reviewer(author_profile: CapabilityProfile, candidates: list[Capabili
 
 ### 2.6 能力画像 × Harness 契合度
 
-`[doc:roleagent.md#第1章]`：灵智体质量 = 模型能力 × Harness 契合度。
+`[doc:roleagent.md#第1章]`：可进化智能体质量 = 模型能力 × Harness 契合度。
 
-能力画像只有进入具体运行环境后，才会从静态描述变成可验证能力。CapabilityProfile 必须包含 `harness_fit_score` 字段，记录该灵智体在当前 harness 中的契合度。
+能力画像只有进入具体运行环境后，才会从静态描述变成可验证能力。CapabilityProfile 必须包含 `harness_fit_score` 字段，记录该可进化智能体在当前 harness 中的契合度。
 
 ### 2.7 三个可变性层
 
 `[doc:roleagent.md#第0章]`：能力画像维度可变性不同：
 - **常量层**：model_capability / cognitive_style / blind_spots（接近模型层常量）
 - **变量层**：skill_packages / tool_boundary（可加载）
-- **积累层**：historical_performance（单调积累，写入灵忆 EchoStore）
+- **积累层**：historical_performance（单调积累，写入情景记忆存储 EchoStore）
 - **瞬时层**：current_state（瞬时信号）
 
 ---
@@ -119,7 +119,7 @@ def select_reviewer(author_profile: CapabilityProfile, candidates: list[Capabili
 - `[doc:roleagent.md#第0章]` 明确指出"role-agent 是把新物种用旧坐标系测量"，固定角色路由违反核心主张
 - `[doc:roleagent.md#第1章]` 公式"能力 × Harness 契合度"要求能力画像必须包含 harness_fit_score
 - 盲点画像让跨厂商 review 成为结构性必需，而非锦上添花
-- 能力画像可随 eval 信号实时刷新，是灵智体（Forgekin）持续身份的基础
+- 能力画像可随 eval 信号实时刷新，是可进化智能体（Forgekin）持续身份的基础
 
 ---
 
@@ -127,11 +127,11 @@ def select_reviewer(author_profile: CapabilityProfile, candidates: list[Capabili
 
 | 风险 | 缓解 |
 |------|------|
-| 能力画像可能过时 | eval 信号实时刷新，灵忆 EchoStore 持续积累 |
+| 能力画像可能过时 | eval 信号实时刷新，情景记忆存储 EchoStore 持续积累 |
 | 盲点识别可能不准 | 跨厂商 review 信号回流，七类归因矩阵定位 |
-| 路由算法可能引入偏见 | 算法可解释性 + 灵议 MindCouncil 审查 |
+| 路由算法可能引入偏见 | 算法可解释性 + 多智能体议事 MindCouncil 审查 |
 | CapabilityProfile 实现复杂度增加 | 分阶段实现：Phase 1 先实现常量层 + 变量层，Phase 4 补齐积累层 |
-| 能力画像数据库维护成本 | 每个灵智体一份画像，通过灵印 SoulImprint 持久化 |
+| 能力画像数据库维护成本 | 每个可进化智能体一份画像，通过持久身份 SoulImprint 持久化 |
 
 ---
 
@@ -146,7 +146,7 @@ def select_reviewer(author_profile: CapabilityProfile, candidates: list[Capabili
 ## 7. 参与者
 
 - operator（愿景锚点 + 最终决策）
-- 架构师灵智体（方案设计 + 术语对齐项目正式命名）
+- 架构师可进化智能体（方案设计 + 术语对齐项目正式命名）
 
 ---
 
@@ -154,7 +154,7 @@ def select_reviewer(author_profile: CapabilityProfile, candidates: list[Capabili
 
 | 日期 | 修订 | 修订者 |
 |------|------|--------|
-| 2026-07-17 | 初始版本，确立能力画像路由决策，术语对齐项目正式命名（灵忆 EchoStore / 灵印 SoulImprint / 灵议 MindCouncil） | operator + 架构师灵智体 |
+| 2026-07-17 | 初始版本，确立能力画像路由决策，术语对齐项目正式命名（情景记忆存储 EchoStore / 持久身份 SoulImprint / 多智能体议事 MindCouncil） | operator + 架构师可进化智能体 |
 
 ---
 
@@ -163,6 +163,6 @@ def select_reviewer(author_profile: CapabilityProfile, candidates: list[Capabili
 - `[doc:roleagent.md#第0章]` — Role-agent 在这张图里处在哪一层
 - `[doc:roleagent.md#第1章]` — 核心公式：能力 × Harness 契合度
 - `[doc:features/F001-capability-profile.md]` — 能力画像 Feature
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物灵智体愿景
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体（Forgekin）愿景
 - `[doc:decisions/012-naming-fusion.md]` — 命名融合（项目正式术语表）
 - `[doc:project_rules.md#红线10]` — 禁止在 flowforge 中写死业务领域代码

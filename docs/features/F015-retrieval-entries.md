@@ -8,10 +8,10 @@ created: 2026-07-21
 
 # F015: 三检索入口（Three Retrieval Entries）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/008-memory-federation.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第4章 多域记忆联邦
-> **关联 VISION**: [doc:VISION.md#3]（持续身份：灵忆 EchoStore 提供检索基底）
+> **关联 VISION**: [doc:VISION.md#3]（持续身份：EchoStore 提供检索基底）
 
 ## 1. 上下文
 
@@ -19,7 +19,7 @@ created: 2026-07-21
 
 `[doc:roleagent.md#第4章]` 指出：agent 在不同认知状态下需要走不同的检索路径——有上下文时走精确导航，失上下文时走零先验扫描，探索性时走语义搜索。单池向量 RAG 只提供一条语义召回路径，无法覆盖三种认知模式。
 
-FlowForge 需要在 F014 的 `MemoryCollection` 基底上挂载三个**独立、async、互相不替代**的检索入口，让灵智体（Forgekin）根据当前认知状态选择路径，并在命中时回写消费信号（`touch()`）作为 F016 消费加权的根信号源。
+FlowForge 需要在 F014 的 `MemoryCollection` 基底上挂载三个**独立、async、互相不替代**的检索入口，让Forgekin根据当前认知状态选择路径，并在命中时回写消费信号（`touch()`）作为 F016 消费加权的根信号源。
 
 ### 1.2 当前痛点
 
@@ -33,7 +33,7 @@ FlowForge 需要在 F014 的 `MemoryCollection` 基底上挂载三个**独立、
 - 违反 `[doc:roleagent.md#第4章]` "三种认知模式走不同路"主张
 - F016 消费加权无 `access_count` 信号源，加权公式退化为静态打分
 - 检索结果无 `matched_by` 溯源，无法度量各 retriever 命中率与质量
-- 灵智体在"知道 feature 编号"场景下仍走 TF-IDF 召回，性能与精度双输
+- Forgekin在"知道 feature 编号"场景下仍走 TF-IDF 召回，性能与精度双输
 
 ## 2. 决策
 
@@ -178,7 +178,7 @@ class IndexRetriever:
 - [ ] AC-B3: `SemanticRetriever` 在千级 collection 上延迟 < 200ms（in-memory TF-IDF）
 - [ ] AC-B4: `IndexRetriever` 在千级 collection 上延迟 < 10ms（O(1) 索引查找）
 - [ ] AC-B5: `SemanticRetriever` 对"高频词退化查询"（query token 出现在每篇文档）仍返回非空 ranked 结果（smoothed IDF 保护）
-- [ ] AC-B6: E2E 测试——灵智体在三种认知状态下分别走对应检索路径，命中结果经 F016 排序后注入 agent context
+- [ ] AC-B6: E2E 测试——Forgekin在三种认知状态下分别走对应检索路径，命中结果经 F016 排序后注入 agent context
 - [ ] AC-B7: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -225,18 +225,18 @@ class IndexRetriever:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，三 retriever 由架构师灵智体 review，验证 `touch()` 回写闭环与 smoothed IDF 公式
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，验证三入口在三种认知状态下的命中率与延迟达标
+- Phase A: 单元测试通过，三 retriever 由架构师Forgekin review，验证 `touch()` 回写闭环与 smoothed IDF 公式
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，验证三入口在三种认知状态下的命中率与延迟达标
 
 ## 10. Links
 
 | 类型 | 路径 | 说明 |
 |------|------|------|
 | **ADR** | `docs/decisions/008-memory-federation.md` | 多域记忆联邦决策（§2.4 三检索入口） |
-| **ADR** | `docs/decisions/012-naming-fusion.md` | 命名融合（灵忆 EchoStore 术语表） |
+| **ADR** | `docs/decisions/012-naming-fusion.md` | 命名融合（EchoStore 术语表） |
 | **Feature** | `docs/features/F014-memory-collection.md` | 记忆收集与多域存储（基底） |
 | **Feature** | `docs/features/F016-consumption-weighted.md` | 消费加权排序（读取 touch() 信号） |
-| **Feature** | `docs/features/F017-memory-governance-mind-codex.md` | 治理与灵典（影响检索候选集） |
+| **Feature** | `docs/features/F017-memory-governance-mind-codex.md` | 治理与MindCodex（影响检索候选集） |
 | **Code** | `flowforge/core/memory/retrieval_entries.py` | GrepRetriever / SemanticRetriever / IndexRetriever / RetrievalResult 实现 |
-| **VISION** | `docs/VISION.md#3` | 持续身份：灵忆 EchoStore 提供检索基底 |
+| **VISION** | `docs/VISION.md#3` | 持续身份：EchoStore 提供检索基底 |
 | **roleagent** | `docs/roleagent.md#第4章` | 三种认知模式走不同路 |

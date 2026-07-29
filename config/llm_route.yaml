@@ -10,8 +10,10 @@ version: "0.1.0"
 providers:
   openroute:
     enabled: true
-    base_url: "http://localhost:13000"  # override via FLOWFORGE_LLM_ROUTE_OPENROUTE_BASE_URL
-    api_key: ""                          # override via FLOWFORGE_LLM_ROUTE_OPENROUTE_API_KEY
+    # NOTE: use 127.0.0.1 (not localhost) to avoid Windows asyncio+httpx IPv6
+    # resolution issues that cause intermittent ConnectError.
+    base_url: "http://127.0.0.1:13001"  # override via FLOWFORGE_LLM_ROUTE_OPENROUTE_BASE_URL (default port 13001)
+    api_key: ""  # 铁律5: 禁止硬编码密钥 — 通过 FLOWFORGE_LLM_ROUTE_OPENROUTE_API_KEY 环境变量注入
     kind: "openroute"
 
   direct_anthropic:
@@ -47,53 +49,85 @@ providers:
 
 # Fallback chains per role — cross-vendor ordered
 # (eval/designate models from different vendors to prevent vendor-wide outages)
+# 2026-07-27 更新: DeepSeek-V4-Pro 优先（实测最稳定，~27s响应），
+# GLM-5.1 间歇性超时降为次选，Qwen3.6-Plus 兜底。
+# 同时减少重试次数（max_retries=1）和超时时间（45s）以确保
+# webchat 在 3 分钟 SLO 内完成。
 fallback_chains:
+  # 2026-07-28 实测调优: openroute 后端为免费 web 抓取源，会间歇性"无法回答"或超时。
+  # 实测可稳定返回内容的源: DeepSeek-V4-Pro(~5s) Qwen3.6-Plus(~9s) HunYuan3(~27s) Ernie(~31s)。
+  # 已剔除频繁 ReadTimeout 的 Kimi-K2.6 / Doubao-Seed2.0 / MiniMax-M3 / GLM-5.1(慢)。
+  # 加宽 fallback 池以提高"至少一个成功"的概率（满足 T7/T8 可靠性）。
   content_create:
     - model: "DeepSeek-V4-Pro"
       provider: "openroute"
       priority: 0
     - model: "Qwen3.6-Plus"
-      provider: "direct_zhipu"
+      provider: "openroute"
       priority: 1
     - model: "HunYuan3"
-      provider: "direct_tencent"
+      provider: "openroute"
       priority: 2
+    - model: "Ernie"
+      provider: "openroute"
+      priority: 3
 
   judge:
-    - model: "Qwen3.6-Plus"
-      provider: "direct_zhipu"
+    - model: "DeepSeek-V4-Pro"
+      provider: "openroute"
       priority: 0
-    - model: "Kimi-K2.6"
-      provider: "direct_moonshot"
+    - model: "Qwen3.6-Plus"
+      provider: "openroute"
       priority: 1
     - model: "HunYuan3"
-      provider: "direct_tencent"
+      provider: "openroute"
       priority: 2
+    - model: "Ernie"
+      provider: "openroute"
+      priority: 3
 
   review:
-    - model: "Kimi-K2.6"
-      provider: "direct_moonshot"
+    - model: "DeepSeek-V4-Pro"
+      provider: "openroute"
       priority: 0
     - model: "Qwen3.6-Plus"
-      provider: "direct_zhipu"
-      priority: 1
-    - model: "GLM-5.1"
-      provider: "direct_zhipu"
-      priority: 2
-
-  t7_audit:
-    - model: "Qwen3.6-Plus"
-      provider: "direct_zhipu"
-      priority: 0
-    - model: "Kimi-K2.6"
-      provider: "direct_moonshot"
+      provider: "openroute"
       priority: 1
     - model: "HunYuan3"
-      provider: "direct_tencent"
+      provider: "openroute"
       priority: 2
+    - model: "Ernie"
+      provider: "openroute"
+      priority: 3
+
+  t7_audit:
+    # I9 no-self-review: audit uses a different chain (t7_audit) than primary
+    # (content_create). DeepSeek-V4-Pro is primary's first choice, so the
+    # audit chain starts with Qwen3.6-Plus to ensure a different model.
+    - model: "Qwen3.6-Plus"
+      provider: "openroute"
+      priority: 0
+    - model: "DeepSeek-V4-Pro"
+      provider: "openroute"
+      priority: 1
+    - model: "HunYuan3"
+      provider: "openroute"
+      priority: 2
+    - model: "Ernie"
+      provider: "openroute"
+      priority: 3
 
 # Caller preferences
 prefer_api: true  # API providers preferred over webchat for content_create/judge/review
+
+# Retry / timeout tuning (T7 SLO: full chat must complete within 3 minutes)
+# DeepSeek-V4-Pro intermittently takes 60+s on OpenRoute webchat backend, so
+# we cap per-attempt timeout at 30s and limit retries to 1 to fail fast and
+# let the fallback chain take over (GLM-5.1 typically responds in <20s).
+max_retries: 1
+retry_delay: 1.0
+# 2026-07-28: 30s→35s，给较慢但可用的后端（GLM-5.1 ~28s）留出余量，避免误切。
+default_timeout: 35.0
 
 # Silent-failure patterns — HTTP 200 with disguised error text
 silent_failure_patterns:

@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F022: Tier 1-4 恢复分级（Tiered Recovery）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/010-distributed-reliability.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 6 章 分布式可靠性
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -202,12 +202,12 @@ class TierRecoveryService:
 
 | 日期 | 事件 |
 |------|------|
-| 2026-07-21 | 立项，确立 Tier 1-4 恢复分级 Feature 规格，术语对齐项目正式命名（灵智体 Forgekin） |
+| 2026-07-21 | 立项，确立 Tier 1-4 恢复分级 Feature 规格，术语对齐项目正式命名（Forgekin） |
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`TierRecoveryService` 分级逻辑由架构师灵智体 review，策略注册幂等性验证
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，fail-closed 默认安全、退化规则、与 F021/F025 集成正确性达标
+- Phase A: 单元测试通过，`TierRecoveryService` 分级逻辑由架构师Forgekin review，策略注册幂等性验证
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，fail-closed 默认安全、退化规则、与 F021/F025 集成正确性达标
 
 ## 10. Links
 

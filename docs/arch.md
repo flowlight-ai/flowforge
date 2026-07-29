@@ -15,11 +15,11 @@ FlowForge 采用**三层 + 一扩展**架构，单向依赖，组合优于继承
 ┌──────────────────────────────────────────────────────────────────┐
 │ Layer 3: *Forge 垂直业务层                                       │
 │   ContentForge / NovelForge / DevForge / MallForge / StockForge  │
-│   通过 Plugin V3 四钩子注册灵智体到 forgemind                    │
+│   通过 Plugin V3 四钩子注册 Forgekin 到 forgemind                │
 └──────────────────────────────────────────────────────────────────┘
                               ▲ Plugin V3
 ┌──────────────────────────────────────────────────────────────────┐
-│ Layer 2: forgemind 应用层（万物灵智体育灵场所）                  │
+│ Layer 2: forgemind 应用层（可进化智能体 Forge Nurturing 场所）│
 │   base / registry / council / external_agents / forgekins/       │
 │   ForgekinBase + ForgekinRegistry + ForgePipeline                │
 └──────────────────────────────────────────────────────────────────┘
@@ -44,8 +44,8 @@ FlowForge 采用**三层 + 一扩展**架构，单向依赖，组合优于继承
 |------|------|------|
 | 自进化层位置 | 融入 Layer 1（Harness v2.0 升级） | 避免自进化层 ↔ 应用层循环依赖 |
 | ForgekinEngine 形态 | HarnessOrchestrator 的装饰器 | 避免绕过 Harness 护栏 |
-| forgemind 位置 | Layer 2 应用层 | 介于核心框架与 *Forge 之间，承载万物灵智体 |
-| 三方 Agent 位置 | Layer 0 能力扩展层 | 作为灵智体能力扩展，不是工具 |
+| forgemind 位置 | Layer 2 应用层 | 介于核心框架与 *Forge 之间，承载可进化智能体 |
+| 三方 Agent 位置 | Layer 0 能力扩展层 | 作为 Forgekin 能力扩展，不是工具 |
 | *Forge 集成方式 | Plugin V3 协议 | 核心框架不感知 *Forge 内部实现 |
 
 ### 1.2 依赖方向铁律
@@ -94,21 +94,21 @@ flowforge/
 │   ├── loop/                     # Loop 执行引擎
 │   ├── tools/                    # 通用工具
 │   └── py.typed
-├── forgemind/                    # Layer 2: 应用层（万物灵智体育灵场所）
+├── forgemind/                    # Layer 2: 应用层（可进化智能体 Forge Nurturing 场所）
 │   ├── base.py                   # ForgekinBase 抽象基类
 │   ├── registry.py               # ForgekinRegistry
-│   ├── council.py                # Mind Council（灵议）
+│   ├── council.py                # Mind Council
 │   ├── external_agents.py        # 三方 Agent 适配
 │   ├── magic_words.py            # magic words 注册
-│   ├── forgekins/                # 灵智体 YAML 配置
+│   ├── forgekins/                # Forgekin YAML 配置
 │   │   ├── luban.yaml            # 鲁班 = 猫头鹰（主架构师）
 │   │   ├── sherlock.yaml         # 夏洛克 = 猎犬（代码审查）
 │   │   └── vangogh.yaml          # 梵高 = 孔雀（视觉设计）
-│   └── examples/                 # 5 形态示例灵智体
-│       ├── animal_companion.py   # 生物灵智体示例
-│       ├── organization.py       # 组织灵智体示例
-│       ├── object_spirit.py      # 物品灵智体示例
-│       └── fictional_character.py # 虚拟灵智体示例
+│   └── examples/                 # 5 形态示例 Forgekin
+│       ├── animal_companion.py   # 生物可进化智能体示例
+│       ├── organization.py       # 组织可进化智能体示例
+│       ├── object_spirit.py      # 物品可进化智能体示例
+│       └── fictional_character.py # 虚拟可进化智能体示例
 ├── config/                       # YAML 配置
 │   ├── system.yaml               # 系统配置（路径、运行时）
 │   ├── llm_route.yaml            # LLM 路由（fallback chains）
@@ -148,15 +148,15 @@ flowforge/
 | 模块 | 职责 |
 |------|------|
 | `base.py` | `ForgekinBase` 抽象基类（observe/reason/act/persist/verify） |
-| `registry.py` | `ForgekinRegistry` — 灵智体注册中心 |
-| `council.py` | `MindCouncil` — 灵议多智能体议事 |
+| `registry.py` | `ForgekinRegistry` — Forgekin 注册中心 |
+| `council.py` | `MindCouncil` — 多智能体议事 |
 | `external_agents.py` | 三方 Agent 调用入口（委托给 `core/external_agent/`） |
-| `forgekins/` | 预置灵智体 YAML 配置 |
-| `examples/` | 5 形态示例灵智体实现 |
+| `forgekins/` | 预置 Forgekin YAML 配置 |
+| `examples/` | 5 形态示例 Forgekin 实现 |
 
 #### Layer 3: *Forge 垂直业务层（独立项目）
 
-*Forge 项目（ContentForge / DevForge / NovelForge / MallForge / StockForge）是独立开源项目，通过 Plugin V3 协议注册垂直领域灵智体到 forgemind。FlowForge 核心框架不感知 *Forge 内部实现。
+*Forge 项目（ContentForge / DevForge / NovelForge / MallForge / StockForge）是独立开源项目，通过 Plugin V3 协议注册垂直领域 Forgekin 到 forgemind。FlowForge 核心框架不感知 *Forge 内部实现。
 
 ---
 
@@ -192,13 +192,13 @@ class PluginProtocol(Protocol):
 
 ```python
 class ForgekinPluginProtocol(PluginProtocol, Protocol):
-    # 灵智体注册
+    # Forgekin 注册
     def register_forgekins(self) -> list[ForgekinSpec]: ...
 
-    # 育灵技能注册（到 SkillRegistry，非 ForgekinRegistry）
+    # Forge Nurturing 技能注册（到 SkillRegistry，非 ForgekinRegistry）
     def register_forge_skills(self) -> list[SkillSpec]: ...
 
-    # 灵议通道注册（到 CouncilRegistry）
+    # MindCouncil 通道注册（到 CouncilRegistry）
     def register_council_channels(self) -> list[CouncilChannelSpec]: ...
 
     # 自动锻造配置注册（到 SpiritForgeRegistry）
@@ -210,9 +210,9 @@ class ForgekinPluginProtocol(PluginProtocol, Protocol):
 | 注册中心 | 职责 | 注册时机 |
 |---------|------|---------|
 | `ToolRegistry` | 工具白名单 + 副作用记录 | `register_tools()` 调用时 |
-| `ForgekinRegistry` | 灵智体形态 + 谱系 | `register_forgekins()` 调用时 |
-| `SkillRegistry` | 育灵技能 | `register_forge_skills()` 调用时 |
-| `CouncilRegistry` | 灵议通道 | `register_council_channels()` 调用时 |
+| `ForgekinRegistry` | Forgekin 形态 + 谱系 | `register_forgekins()` 调用时 |
+| `SkillRegistry` | Forge Nurturing 技能 | `register_forge_skills()` 调用时 |
+| `CouncilRegistry` | MindCouncil 通道 | `register_council_channels()` 调用时 |
 | `SpiritForgeRegistry` | 自动锻造配置 | `register_spirit_forge_config()` 调用时 |
 
 ---
@@ -262,18 +262,18 @@ Eval 信号累积
 ┌─────────────────────────────────────┐
 │ Mode C: Knowledge Evolution         │
 │ smoke gate + promotion gate         │
-│ → 锻典（Mind Codex）条目沉淀        │
+│ → Mind Codex 条目沉淀              │
 └─────────────────────────────────────┘
   ↓
-灵智体进化阶提升（需 operator 确认）
+Forgekin 进化阶提升（需 operator 确认）
 ```
 
-### 4.3 灵议流
+### 4.3 MindCouncil 流
 
 ```
-高觉醒阶灵智体（A5+）触发灵议
+高觉醒阶 Forgekin（A5+）触发 MindCouncil
   ↓
-MindCouncil 召集（≥ 2 个不同厂商灵智体）
+MindCouncil 召集（≥ 2 个不同厂商 Forgekin）
   ↓
 多轮审议（受 magic words 逃生舱约束）
   ↓
@@ -293,7 +293,7 @@ MindCouncil 召集（≥ 2 个不同厂商灵智体）
 | `config/system.yaml` | 系统 | 路径占位符解析、运行时行为 |
 | `config/llm_route.yaml` | LLM 路由 | Provider 配置 + fallback chains |
 | `config/evolution.yaml` | 自进化 | 三闭环参数 + 成熟度阈值 |
-| `config/forgemind.yaml` | 应用层 | 预置灵智体 + 三方 Agent + Council |
+| `config/forgemind.yaml` | 应用层 | 预置 Forgekin + 三方 Agent + Council |
 | `config/prompts.yaml` | 提示词 | 所有 prompt 外置（铁律 5） |
 
 ### 5.2 路径占位符

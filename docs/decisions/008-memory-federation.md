@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-21
-> **决策者**: operator + 架构师灵智体
+> **决策者**: operator + 架构师可进化智能体（Forgekin）
 > **依赖**: `[doc:roleagent.md#第4章]` + `[doc:decisions/004-capability-profile-routing.md]` + `[doc:decisions/007-harness-engineering-path.md]`
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 多域记忆运行时工程路径
 
@@ -20,7 +20,7 @@
 - **无消费反馈**：知识被搜到后有没有读、有没有用，系统完全不知道
 - **跨域不联邦**：项目仓库、个人上下文、专业资料库之间的知识不会自然联邦
 
-operator 指示（2026-07-21）：能力画像（CapabilityProfile）若没有记忆系统支撑，会退化成静态简历——必须建设多域记忆联邦，让灵智体（Forgekin）的画像随 eval 信号实时刷新。本 ADR 是 P1 决策，术语对齐项目正式命名（详见 `[doc:decisions/012-naming-fusion.md]`）。
+operator 指示（2026-07-21）：能力画像（CapabilityProfile）若没有记忆系统支撑，会退化成静态简历——必须建设多域记忆联邦，让可进化智能体（Forgekin）的画像随 eval 信号实时刷新。本 ADR 是 P1 决策，术语对齐项目正式命名（详见 `[doc:decisions/012-naming-fusion.md]`）。
 
 ---
 
@@ -35,21 +35,21 @@ operator 指示（2026-07-21）：能力画像（CapabilityProfile）若没有�
 | 情景记忆 | 情景记忆 | Episodic Memory | 灵忆 EchoStore | 事件型记忆——"什么时候发生了什么" |
 | 认知记忆 | 语义记忆 | Semantic Memory | — | 事实型记忆——"什么是真的" |
 | 程序记忆 | 程序记忆 | Procedural Memory | — | 技能型记忆——"怎么做 X" |
-| 社交记忆 | 共享记忆 | Shared Memory | — | 跨灵智体共享记忆 |
+| 社交记忆 | 共享记忆 | Shared Memory | — | 跨可进化智能体共享记忆 |
 | 元认知记忆 | 方法论库索引 | Forge Codex | 灵典 MindCodex | 蒸馏方法库索引 |
 
 ```python
 class MemoryDomain(str, Enum):
-    EPISODIC = "episodic"        # 经验记忆（Episodic Memory Store / 灵忆 EchoStore）
+    EPISODIC = "episodic"        # 经验记忆（Episodic Memory Store / 情景记忆存储 EchoStore）
     SEMANTIC = "semantic"        # 语义记忆
     PROCEDURAL = "procedural"    # 程序记忆
     SHARED = "shared"            # 共享记忆
-    FORGE_CODEX = "forge_codex"  # 方法论库索引（Forge Codex / 灵典 MindCodex）
+    FORGE_CODEX = "forge_codex"  # 方法论库索引（Forge Codex / 蒸馏知识库 MindCodex）
 ```
 
-### 2.2 EchoStore（灵忆）— 经验记忆存储
+### 2.2 EchoStore（情景记忆存储）— 经验记忆存储
 
-经验记忆（Episodic Memory Store / 灵忆 EchoStore）是 `MemoryCollection` 中 `MemoryDomain.EPISODIC` 域的运行时形态。`MemoryEntry` 是其最小记录单元：
+经验记忆（Episodic Memory Store / 情景记忆存储 EchoStore）是 `MemoryCollection` 中 `MemoryDomain.EPISODIC` 域的运行时形态。`MemoryEntry` 是其最小记录单元：
 
 ```python
 @dataclass
@@ -70,9 +70,9 @@ class MemoryEntry:
 
 `MemoryCollection` 维护三套索引（`_by_id` / `_by_domain` / `_by_tag`），通过 `add()` / `get()` / `list_by_domain()` / `list_by_tags()` / `remove()` / `clear()` 提供联邦基底。`importance` 在 `add()` 时被 clamp 到 `[0.0, 1.0]`。
 
-### 2.3 MindCodex（灵典）— 蒸馏知识库
+### 2.3 MindCodex（蒸馏知识库）— 蒸馏知识库
 
-蒸馏知识库（Forge Codex / 灵典 MindCodex）是元认知记忆域的独立实现，承载 `ForgeMethod`（灵法）——从经验中蒸馏出的可复用方法论：
+蒸馏知识库（Forge Codex / MindCodex）是元认知记忆域的独立实现，承载 `ForgeMethod`（灵法）——从经验中蒸馏出的可复用方法论：
 
 ```python
 @dataclass
@@ -179,9 +179,9 @@ relevance        = query_context.get("relevance", 0.5)
 ## 7. 参与者
 
 - operator（愿景锚点 + 最终决策）
-- 架构师灵智体（方案设计 + 术语对齐项目正式命名）
-- 灵忆 EchoStore（经验记忆存储基底实现）
-- 灵典 MindCodex（蒸馏知识库实现）
+- 架构师可进化智能体（方案设计 + 术语对齐项目正式命名）
+- 情景记忆存储 EchoStore（经验记忆存储基底实现）
+- 蒸馏知识库 MindCodex（蒸馏知识库实现）
 
 ---
 
@@ -189,17 +189,17 @@ relevance        = query_context.get("relevance", 0.5)
 
 | 日期 | 修订 | 修订者 |
 |------|------|--------|
-| 2026-07-21 | 初始版本，确立多域记忆联邦决策，落地五域 / 三入口 / 消费加权 / 治理层，术语对齐项目正式命名（灵忆 EchoStore / 灵典 MindCodex） | operator + 架构师灵智体 |
+| 2026-07-21 | 初始版本，确立多域记忆联邦决策，落地五域 / 三入口 / 消费加权 / 治理层，术语对齐项目正式命名（情景记忆存储 EchoStore / 蒸馏知识库 MindCodex） | operator + 架构师可进化智能体 |
 
 ---
 
 ## 引用
 
 - `[doc:roleagent.md#第4章]` — 团队记忆：从 grep 到多域知识联邦
-- `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（积累层写入灵忆 EchoStore）
+- `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（积累层写入情景记忆存储 EchoStore）
 - `[doc:decisions/007-harness-engineering-path.md]` — Harness 工程路径
 - `[doc:decisions/012-naming-fusion.md]` — 命名融合（项目正式术语表）
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物灵智体愿景
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体（Forgekin）愿景
 - `flowforge/core/memory/collection.py` — MemoryDomain / MemoryEntry / MemoryCollection
 - `flowforge/core/memory/retrieval_entries.py` — GrepRetriever / SemanticRetriever / IndexRetriever
 - `flowforge/core/memory/consumption_weighted.py` — ConsumptionWeightedRanker

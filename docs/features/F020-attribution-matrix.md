@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F020: 七类归因矩阵
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/009-eval-self-metabolism.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 5 章 Eval 自代谢
 > **关联 VISION**: [doc:VISION.md#5]（自代谢：能力画像随 eval 信号实时刷新）
@@ -20,7 +20,7 @@ created: 2026-07-21
 `[doc:roleagent.md#第5章]` 给出 7 类归因矩阵，把"agent 没做好"这个拍扁的多层答案重新展开。回到核心公式 `效能 = 能力 × Harness 契合度`，问题可能出在愿景、翻译、工具、执行、环境、品味任一层。当前 FlowForge（flowlight-ai/flowforge 新仓库）面临三个归因病灶：
 
 - **归因扁平化**：行业常见路径"agent 做得不好 → 优化 prompt → 换模型"，把多层系统压扁成一维答案，丢失根因定位。
-- **归因到 agent 而非归因到层**：传统做法归咎"某灵智体（Forgekin）不行"，触发换模型/换 prompt，但真正根因可能在工具描述含糊（TOOL 层）或上下文缺失（CONTEXT 层）。
+- **归因到 agent 而非归因到层**：传统做法归咎"某Forgekin不行"，触发换模型/换 prompt，但真正根因可能在工具描述含糊（TOOL 层）或上下文缺失（CONTEXT 层）。
 - **缺退役信号**：一块机制从来不触发，比"指标下降"更危险——它可能是死代码。归因分布长期可统计才能识别"该退役"。
 
 需要 **七类归因矩阵 + EvalControlPlane 控制面 + EvalLoader 配置加载** 三件套，让失败有明确的层归属、修复路径、历史数据支撑。这是 roleagent.md"F192/F200 不该永远各自维护一套定时后台任务，终态是统一 Eval Hub"的工程化骨架。
@@ -343,8 +343,8 @@ class EvalConfigLoader:
 - [ ] AC-B2: `attribution != LUCK` 时追加 recommendation "address {layer}-layer root cause"
 - [ ] AC-B3: `verdict.passed and agreement_score >= 0.8` 时追加 "no action needed; contract met and signals aligned"
 - [ ] AC-B4: `verdict.missing_evidence` 非空时追加 "collect additional evidence: ..."，显式列出缺失项
-- [ ] AC-B5: 归因记录 append-only 持久化到灵忆 EchoStore，按 `target_id` / `attribution` 过滤查询历史
-- [ ] AC-B6: 历史归因分布通过 `get_distribution()` 统计，回流到能力画像（CapabilityProfile）的 `blind_spots` 层——某灵智体若在 TOOL 层反复失败，盲点画像标记"工具调用偏差"，触发跨厂商 reviewer 选择（ADR-004 §2.5）
+- [ ] AC-B5: 归因记录 append-only 持久化到EchoStore，按 `target_id` / `attribution` 过滤查询历史
+- [ ] AC-B6: 历史归因分布通过 `get_distribution()` 统计，回流到能力画像（CapabilityProfile）的 `blind_spots` 层——某Forgekin若在 TOOL 层反复失败，盲点画像标记"工具调用偏差"，触发跨厂商 reviewer 选择（ADR-004 §2.5）
 - [ ] AC-B7: `EvalConfigLoader` 加载的 YAML 配置（`default_quality_bar` / `signal_weights` / `attribution_rules`）注入 `EvalControlPlane.__init__`，全部 YAML 驱动（铁律 5 + P16）
 - [ ] AC-B8: E2E 测试 — 构造 `FailureDescription` 含 "timeout" 关键词，归因到 EXECUTION；构造 "hallucination" 归因到 KNOWLEDGE；构造无关键词文本 fallback 到 LUCK；五步流程产出 `EvalReport`，`overall_score = 0.5 * verdict.score + 0.5 * signals.final_score`
 - [ ] AC-B9: 遵守 T1-T8 测试铁律：真实 LLM 调用（evaluator 若为 LLM 观察者，必须真实调 LLM）/ 真实场景数据（失败描述必须来自真实 trace）/ 不跳过验证（每类归因必须有断言）/ 不 Mock 工具（telemetry 采集必须真实埋点）/ 采集 MetricsCollector 完整指标 / LLM 生成内容必须经 LLM 审核（T7：若 failure 描述由 LLM 总结，必须再调 LLM 审核归因分类合理性）/ Web 功能操控浏览器验证 DOM
@@ -360,10 +360,10 @@ class EvalConfigLoader:
 | 风险 | 缓解 |
 |------|------|
 | 关键词归因漏判边缘 case（语义等价但用词不同） | 规则 YAML 可覆盖；无匹配 fallback 到 LUCK 触发人工审视；归因分布长期可统计 |
-| EXECUTION 优先级误判（timeout 是症状非根因） | `get_distribution()` 长期统计；某灵智体 EXECUTION 占比过高时触发"工具 / 环境约束"专项排查 |
+| EXECUTION 优先级误判（timeout 是症状非根因） | `get_distribution()` 长期统计；某Forgekin EXECUTION 占比过高时触发"工具 / 环境约束"专项排查 |
 | 控制面权重 0.5/0.5 不适配所有场景 | `CONTRACT_WEIGHT` / `SIGNAL_WEIGHT` 为模块常量，可在 YAML 配置层覆盖 |
 | evaluator 注册遗漏导致信号缺失 | `_collect_signals` 异常隔离 + warning 日志；缺失源在 `recommendations` 显式提示 |
-| 归因结果回流能力画像滞后 | 与 ADR-008 灵忆 EchoStore 集成，append-only 单调积累；与 ADR-004 盲点画像联动跨厂商 review |
+| 归因结果回流能力画像滞后 | 与 ADR-008 EchoStore 集成，append-only 单调积累；与 ADR-004 盲点画像联动跨厂商 review |
 | YAML 配置覆盖默认规则后行为漂移 | `EvalConfigLoader` 严格 schema 校验；未知 `attribution_type` / `signal_source` 抛 `EvalError` |
 | 历史归因数据回灌控制面时版本不兼容 | `EvalConfig` frozen dataclass + 字段版本号；向后兼容字段缺失时 fallback 默认值 |
 
@@ -374,7 +374,7 @@ class EvalConfigLoader:
 | OQ-1 | 归因分类是否需要支持多标签（一次失败归到多层）？ | ⬜ 未定 |
 | OQ-2 | LUCK 占比过高时是否需要触发"归因规则审查"建议？ | ⬜ 未定 |
 | OQ-3 | 历史归因数据回灌控制面的触发时机（按 target_id / 按时间窗口）？ | ⬜ 未定 |
-| OQ-4 | 归因规则 YAML 覆盖是否需要灵议 MindCouncil 审查，防止单厂商私改规则？ | ⬜ 未定 |
+| OQ-4 | 归因规则 YAML 覆盖是否需要MindCouncil 审查，防止单厂商私改规则？ | ⬜ 未定 |
 
 ## 7. Key Decisions
 
@@ -386,7 +386,7 @@ class EvalConfigLoader:
 | KD-4 | 无匹配 fallback 到 LUCK | 不可控因素记录但不修复；LUCK 占比过高时触发归因规则审查 | 2026-07-21 |
 | KD-5 | 控制面权重 0.5/0.5 | 契约与信号等权；无信号时退化为契约裁决 | 2026-07-21 |
 | KD-6 | EvalControlPlane 为统一入口 | roleagent.md "终态是统一 Eval Hub"，避免 F192/F200 各自维护定时任务 | 2026-07-21 |
-| KD-7 | 行动队列而非展示指标 | `_build_recommendations()` 输出可执行行动，让灵智体在正确坐标系里得出结论 | 2026-07-21 |
+| KD-7 | 行动队列而非展示指标 | `_build_recommendations()` 输出可执行行动，让Forgekin在正确坐标系里得出结论 | 2026-07-21 |
 | KD-8 | EvalLoader YAML 驱动 | 铁律 5 + P16 禁硬编码；`asyncio.to_thread` 异步友好 | 2026-07-21 |
 
 ## 8. Timeline
@@ -397,8 +397,8 @@ class EvalConfigLoader:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`AttributionType` / `AttributionMatrix` / `EvalControlPlane` / `EvalConfigLoader` 由架构师灵智体 review，归因规则顺序由灵议 MindCouncil 跨厂商审查（防止单厂商盲点影响规则优先级）
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，修复路径映射与历史归因回灌能力画像达标，T7 LLM 审核通过
+- Phase A: 单元测试通过，`AttributionType` / `AttributionMatrix` / `EvalControlPlane` / `EvalConfigLoader` 由架构师Forgekin review，归因规则顺序由MindCouncil 跨厂商审查（防止单厂商盲点影响规则优先级）
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，修复路径映射与历史归因回灌能力画像达标，T7 LLM 审核通过
 
 ## 10. Links
 
@@ -410,7 +410,7 @@ class EvalConfigLoader:
 | **Feature** | `docs/features/F018-eval-contract.md` | Eval Contract 五问（`what_attribution` 字段消费 `AttributionType`） |
 | **Feature** | `docs/features/F019-three-signals.md` | 三方信号交叉验证（信号分歧定位根因层） |
 | **决策** | `docs/decisions/004-capability-profile-routing.md` | 能力画像路由（归因回流消费方，§2.5 跨厂商 reviewer 选择） |
-| **决策** | `docs/decisions/008-multi-domain-memory-federation.md` | 灵忆 EchoStore（历史归因 append-only 持久化层） |
+| **决策** | `docs/decisions/008-multi-domain-memory-federation.md` | EchoStore（历史归因 append-only 持久化层） |
 | **决策** | `docs/decisions/012-naming-fusion.md` | 命名融合（项目正式术语表） |
 | **VISION** | `docs/VISION.md#5` | 自代谢：能力画像随 eval 信号实时刷新 |
 | **规则** | `docs/project_rules.md#红线5` | 禁止硬编码路径 / 密钥 / 端口（EvalConfig YAML 驱动） |

@@ -1,0 +1,35 @@
+# FlowForge MemoryFederation 配置
+#
+# 铁律 5：禁止硬编码路径/密钥/参数。所有可调参数外置到此文件。
+# 加载入口：调用方通过 SystemConfig 注入到 MemoryGovernance / Ranker / MindCodex
+#
+# 设计依据：roleagent.md §4 + F014-F017 + F039
+
+# 权威等级配置（governance.py）
+authority:
+  authority_base: 0.5              # 基础权威分
+  authority_source_boost: 0.2      # 可信来源加成
+  verified_sources:                # 可信来源列表（享受加成）
+    - "claude-code-forgekin"
+    - "gpt5-researcher-forgekin"
+    - "spiritforge"
+    - "operator"
+
+# 衰减策略配置（governance.py apply_decay）
+decay:
+  decay_half_life_days: 30.0       # 半衰期 30 天（30 天后权威减半）
+  decay_min_score: 0.1             # 衰减下限（避免归零，保留可恢复性）
+
+# 检索配置（retrieval_entries.py）
+retrieval:
+  default_max_results: 10          # 默认最大返回数
+  default_entry_type: "grep"       # 默认检索入口（grep 优先——简单系统 + 聪明 agent）
+
+# 排序配置（consumption_weighted.py）
+ranking:
+  recency_half_life_days: 30.0     # 最近性因子半衰期
+  recency_min_factor: 0.1          # 最近性因子下限
+
+# MindCodex配置（mind_codex.py）
+mind_codex:
+  default_top_k: 5                 # 默认返回前 K 条

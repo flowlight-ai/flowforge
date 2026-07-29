@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F023: Liveness 规范读（Liveness Probe）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/010-distributed-reliability.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 6 章 分布式可靠性
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -17,7 +17,7 @@ created: 2026-07-21
 
 ### 1.1 问题陈述
 
-`[doc:roleagent.md#第6章]` 第二类失败模式记录了真实的 liveness split-brain：两个后端读路径对同一 invocation 给出矛盾结果。FlowForge 通用底座在路由工作前需要一个"这个能力还活着吗"的只读探针，但当前没有统一的探针注册与执行框架。各灵智体（Forgekin）自行 ping 各自依赖，导致：(1) 探针结果不可比较；(2) 探针间相互干扰；(3) 探针超时无 SLA 约束；(4) 探针异常直接传播，单点故障影响全局。
+`[doc:roleagent.md#第6章]` 第二类失败模式记录了真实的 liveness split-brain：两个后端读路径对同一 invocation 给出矛盾结果。FlowForge 通用底座在路由工作前需要一个"这个能力还活着吗"的只读探针，但当前没有统一的探针注册与执行框架。各Forgekin（Forgekin）自行 ping 各自依赖，导致：(1) 探针结果不可比较；(2) 探针间相互干扰；(3) 探针超时无 SLA 约束；(4) 探针异常直接传播，单点故障影响全局。
 
 ### 1.2 当前痛点
 
@@ -39,7 +39,7 @@ created: 2026-07-21
 
 ### 2.1 核心设计
 
-`LivenessProbe` 是路由前的**只读模型**——它永不改变状态，只报告。任何灵智体可声明 `LivenessSpec`（`name / description / sla_seconds / required_for`），并注册一个异步 check 函数。`run_all` 串行执行所有探针，每个 `ProbeResult` 携带 `name / healthy / latency_ms / last_checked / error`，探针间相互隔离——一个抛异常不影响其他。
+`LivenessProbe` 是路由前的**只读模型**——它永不改变状态，只报告。任何Forgekin可声明 `LivenessSpec`（`name / description / sla_seconds / required_for`），并注册一个异步 check 函数。`run_all` 串行执行所有探针，每个 `ProbeResult` 携带 `name / healthy / latency_ms / last_checked / error`，探针间相互隔离——一个抛异常不影响其他。
 
 `required_for` 列出依赖该探针的能力名，探针不健康时这些能力被标记为退化。恢复决策**不**由探针做出，而是由 `TierRecoveryService` 基于探针结果触发——这是 `[doc:roleagent.md#第6章]` "给数据不给结论"原则的体现。探针 check 函数返回 `True`（健康）/ `False`（不健康），可抛异常；探针捕获后写入 `ProbeResult.error`。`latency_ms` 基于 `time.perf_counter` 测量，精度到毫秒。
 
@@ -187,12 +187,12 @@ class LivenessProbe:
 
 | 日期 | 事件 |
 |------|------|
-| 2026-07-21 | 立项，确立 Liveness 规范读 Feature 规格，术语对齐项目正式命名（灵智体 Forgekin） |
+| 2026-07-21 | 立项，确立 Liveness 规范读 Feature 规格，术语对齐项目正式命名（Forgekin） |
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`LivenessProbe` 注册与隔离执行由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，只读约束、SLA 检测、与 F022/F025 集成正确性达标
+- Phase A: 单元测试通过，`LivenessProbe` 注册与隔离执行由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，只读约束、SLA 检测、与 F022/F025 集成正确性达标
 
 ## 10. Links
 

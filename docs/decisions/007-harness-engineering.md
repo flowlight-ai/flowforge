@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-21
-> **决策者**: operator + 架构师灵智体（Forgekin / 架构师灵智体）
+> **决策者**: operator + 架构师可进化智能体（Forgekin）
 > **依赖**: `[doc:roleagent.md#第3章]` + `[doc:decisions/004-capability-profile-routing.md]`
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径
 
@@ -39,7 +39,7 @@ role-agent 直接调用 LLM 会失败，原因在于开放环境中的五类模�
 - `DurableStateSurface.restore(snapshot_id)`：deep-copy 出存，调用方修改不污染快照
 - `DurableStateSurface.list_snapshots()`：枚举所有快照
 
-tradeoff 明确：状态越外部化，系统越可恢复；表面越多越需要治理（故与第 6 层 EntropyControl 配套）。生产环境可换 SQLite/PostgreSQL 后端而不改 surface API——这是压缩免疫的"现实状态层"，承载灵忆 EchoStore 的持久化语义。
+tradeoff 明确：状态越外部化，系统越可恢复；表面越多越需要治理（故与第 6 层 EntropyControl 配套）。生产环境可换 SQLite/PostgreSQL 后端而不改 surface API——这是压缩免疫的"现实状态层"，承载情景记忆存储（EchoStore）的持久化语义。
 
 ### 2.2 Tool Mediation（工具中介 / ToolMediator）
 
@@ -167,7 +167,7 @@ tradeoff 明确：状态越外部化，系统越可恢复；表面越多越需�
 ## 7. 参与者
 
 - operator（愿景锚点 + 最终决策 + Magic Words 词义来源）
-- 架构师灵智体（Forgekin / 架构师灵智体）（七层模块设计 + 权重标定 + 术语对齐项目正式命名）
+- 架构师可进化智能体（Forgekin）（七层模块设计 + 权重标定 + 术语对齐项目正式命名）
 
 ---
 
@@ -175,7 +175,7 @@ tradeoff 明确：状态越外部化，系统越可恢复；表面越多越需�
 
 | 日期 | 修订 | 修订者 |
 |------|------|--------|
-| 2026-07-21 | 初始版本，确立 Harness 七层工程路径决策，对齐 `flowforge/core/harness/` 七个 P1 模块实现 | operator + 架构师灵智体 |
+| 2026-07-21 | 初始版本，确立 Harness 七层工程路径决策，对齐 `flowforge/core/harness/` 七个 P1 模块实现 | operator + 架构师可进化智能体 |
 
 ---
 
@@ -184,7 +184,7 @@ tradeoff 明确：状态越外部化，系统越可恢复；表面越多越需�
 - `[doc:roleagent.md#第1章]` — 核心公式：能力 × Harness 契合度
 - `[doc:roleagent.md#第3章]` — Harness：让模型完成现实闭环的运行时（七层）
 - `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（harness_fit_score 字段消费方）
-- `[doc:decisions/012-naming-fusion.md]` — 命名融合（项目正式术语表：灵忆 EchoStore / 灵印 SoulImprint / 灵议 MindCouncil / 灵智体 Forgekin / 育灵 Forge Nurturing）
+- `[doc:decisions/012-naming-fusion.md]` — 命名融合（项目正式术语表：情景记忆存储 EchoStore / 持久身份 SoulImprint / 多智能体议事 MindCouncil / 可进化智能体 Forgekin / 智能体入职与终身学习 Forge Nurturing）
 - `[doc:flowforge/core/harness/durable_state.py]` — DurableStateSurface 实现
 - `[doc:flowforge/core/harness/tool_mediation.py]` — ToolMediator 实现
 - `[doc:flowforge/core/harness/evidence_sensors.py]` — EvidenceCollector 实现

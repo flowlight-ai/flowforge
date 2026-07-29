@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F021: Side-Effect WAL（副作用预写日志）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/010-distributed-reliability.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 6 章 分布式可靠性
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -17,7 +17,7 @@ created: 2026-07-21
 
 ### 1.1 问题陈述
 
-FlowForge 通用底座承载多灵智体（Forgekin）协作，副作用（发布 / 数据库写入 / 外部 API 调用）一旦执行不可撤销。`[doc:roleagent.md#第6章]` 第一类失败模式明确："副作用已执行但通道断了"——此时盲目重试会双发，不重试则状态丢失。需要一个在副作用执行**之前**追加的预写日志（Write-Ahead Log），让恢复层在 crash 后能精确知道哪些副作用已落盘、哪些需要 replay 或补偿。
+FlowForge 通用底座承载多Forgekin协作，副作用（发布 / 数据库写入 / 外部 API 调用）一旦执行不可撤销。`[doc:roleagent.md#第6章]` 第一类失败模式明确："副作用已执行但通道断了"——此时盲目重试会双发，不重试则状态丢失。需要一个在副作用执行**之前**追加的预写日志（Write-Ahead Log），让恢复层在 crash 后能精确知道哪些副作用已落盘、哪些需要 replay 或补偿。
 
 ### 1.2 当前痛点
 
@@ -140,7 +140,7 @@ class WriteAheadLog:
 - [ ] AC-B3: crash 后重启，PENDING 条目数与 crash 前一致（持久化后端就绪后验证）
 - [ ] AC-B4: 与 F022 集成——`FailureContext.wal_entries` 非空时触发 TIER_3_ROLLBACK，空则降级 ESCALATE（"nothing to roll back"）
 - [ ] AC-B5: 与 F024 集成——STRONG workflow 的可补偿步骤走 WAL replay，WEAK workflow 不走 replay
-- [ ] AC-B6: E2E 测试——真实多灵智体协作场景，副作用执行前写 WAL，crash 注入后 replay 不双发、补偿正确执行
+- [ ] AC-B6: E2E 测试——真实多Forgekin协作场景，副作用执行前写 WAL，crash 注入后 replay 不双发、补偿正确执行
 - [ ] AC-B7: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -182,12 +182,12 @@ class WriteAheadLog:
 
 | 日期 | 事件 |
 |------|------|
-| 2026-07-21 | 立项，确立 Side-Effect WAL Feature 规格，术语对齐项目正式命名（灵智体 Forgekin） |
+| 2026-07-21 | 立项，确立 Side-Effect WAL Feature 规格，术语对齐项目正式命名（Forgekin） |
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`WriteAheadLog` 状态机由架构师灵智体 review，终态保护与深拷贝不可变性验证
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，crash 注入后 replay 不双发、补偿正确性达标
+- Phase A: 单元测试通过，`WriteAheadLog` 状态机由架构师Forgekin review，终态保护与深拷贝不可变性验证
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，crash 注入后 replay 不双发、补偿正确性达标
 
 ## 10. Links
 

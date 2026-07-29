@@ -1,0 +1,40 @@
+# OpenCode Agent Provider Manifest
+# 按 F241 (CL-014) 声明式 Manifest 配置（铁律 5 配置驱动）
+# 详见 [doc:decisions/006-external-agent-integration.md] §4 首批接入
+# 详见 [doc:review/review.md#第九章§9.2] EX-002 能力画像
+
+provider_name: "opencode.opencode"
+display_name: "OpenCode"
+version: "1.0.0"
+protocol: "sdk"
+transport: "stdio"
+
+capabilities:
+  - open_source_collaboration
+  - plugin_extension
+  - code_generation
+  - community_ecosystem
+
+blind_spots:
+  - "企业场景弱"
+  - "SLA 无保障"
+  - "合规性不足"
+
+timeout_seconds: 300
+retry_policy:
+  max_attempts: 2
+  backoff_seconds: 5
+
+cost_per_token: 0.0
+cost_per_call: 0.0
+
+safety_level: "normal"
+
+# OpenCode 是开源项目，可能无需 API key
+required_env_vars: []
+
+required_permissions:
+  - file_read
+  - file_write
+  - run_tests
+  - lint

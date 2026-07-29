@@ -153,3 +153,23 @@ pytest_*.txt
 .vscode/settings.json
 .vscode/launch.json
 
+# ===== Node modules (CRITICAL: never commit dependencies) =====
+node_modules/
+
+# ===== Local backup directories (do not publish) =====
+core_new_backup/
+web_legacy_backup/
+
+# ===== TypeScript incremental build cache =====
+*.tsbuildinfo
+
+# ===== FlowForge runtime data directory (generated at runtime, not source) =====
+data/
+
+# ===== Developer scratch / diagnostic files =====
+_diag*.py
+.tmp_chat*.json
+
+# ===== Source maps (reduce repo bloat) =====
+*.map
+

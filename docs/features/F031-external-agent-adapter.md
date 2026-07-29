@@ -8,7 +8,7 @@ created: 2026-07-17
 
 # F031: 三方 Agent 适配层
 
-> **状态**: spec | **负责人**: operator + 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: operator + 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/006-external-agent-integration.md]
 > **依赖 Feature**: [doc:features/F001-capability-profile.md] + [doc:features/F026-forgemind-app-layer.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径
@@ -20,16 +20,16 @@ created: 2026-07-17
 
 operator 指示（2026-07-17）：
 
-> 我们的灵智体除了可以调用 flowforge 核心框架的能力外，还可以接入和使用任何三方的 Agent 的（这个也是我们的强大优势，比喻目前设计接入的编程 Agent：claude code、codex、opencode、trae，将来可扩展接入更多的编程 Agent 和其他的 Agent 的，这些都是可以给灵智体调用），目前你这块的设计感觉也比较弱，请加强。
+> 我们的Forgekin除了可以调用 flowforge 核心框架的能力外，还可以接入和使用任何三方的 Agent 的（这个也是我们的强大优势，比喻目前设计接入的编程 Agent：claude code、codex、opencode、trae，将来可扩展接入更多的编程 Agent 和其他的 Agent 的，这些都是可以给Forgekin调用），目前你这块的设计感觉也比较弱，请加强。
 
 flowlight-ai/flowforge 新仓库设计中，三方 Agent 集成被弱化为 ToolRegistry 中的普通工具调用。这导致：
 
-- 三方 Agent 的能力画像未纳入灵智体能力画像融合
-- 三方 Agent 执行状态未写入灵智体共享状态（灵忆 EchoStore）
+- 三方 Agent 的能力画像未纳入Forgekin能力画像融合
+- 三方 Agent 执行状态未写入Forgekin共享状态（EchoStore）
 - 三方 Agent 失败时无 fallback 链
 - 三方 Agent 执行轨迹未纳入 Eval 信号
 
-本 Feature 是 operator 愿景锚点第 3 条（三方 Agent 是能力扩展不是工具）的落地基础——三方 Agent 不是工具，而是灵智体能力画像的扩展。
+本 Feature 是 operator 愿景锚点第 3 条（三方 Agent 是能力扩展不是工具）的落地基础——三方 Agent 不是工具，而是Forgekin能力画像的扩展。
 
 ### 1.2 当前痛点
 
@@ -37,11 +37,11 @@ flowlight-ai/flowforge 新仓库设计中，三方 Agent 集成被弱化为 Tool
 - 无 ExternalAgentProfile 机制，三方 Agent 的能力差异（Claude Code 强于代码理解、Codex 强于推理、Trae 强于 IDE 集成）未建模
 - 三方 Agent 失败无回退链，单点依赖导致可用性差
 - 三方 Agent 在主进程执行，无 worktree 隔离，存在安全风险
-- 三方 Agent 执行轨迹未写入灵忆 EchoStore，灵智体重启即失忆
+- 三方 Agent 执行轨迹未写入EchoStore，Forgekin重启即失忆
 
 ### 1.3 不做的影响
 
-- 灵智体能力被限制在 FlowForge 内置能力（违反 operator 愿景锚点第 3 条）
+- Forgekin能力被限制在 FlowForge 内置能力（违反 operator 愿景锚点第 3 条）
 - 无法实现"自己开发自己"闭环（ForgeMindEngine 缺少三方 Agent 协作）
 - 单点依赖导致可用性差（任一三方 Agent API 宕机即阻塞）
 - 三方 Agent 执行无法审计，违反六层 Guardrails 治理要求
@@ -56,11 +56,11 @@ ExternalAgentAdapter 抽象层位于核心框架层（`flowforge/core/external_a
 flowforge/core/external_agent/
 ├── __init__.py
 ├── adapter.py             # ExternalAgentAdapter 抽象基类
-├── bridge.py              # ExternalAgentBridge（灵智体调用入口）
+├── bridge.py              # ExternalAgentBridge（Forgekin调用入口）
 ├── profile.py             # ExternalAgentProfile（三方 Agent 能力画像）
-├── shared_state.py        # ExternalAgentSharedState（状态共享，写入灵忆 EchoStore）
+├── shared_state.py        # ExternalAgentSharedState（状态共享，写入EchoStore）
 ├── fallback.py            # ExternalAgentFallback（失败回退链）
-├── capability_fusion.py   # ExternalAgentCapabilityFusion（能力融合到灵印 SoulImprint）
+├── capability_fusion.py   # ExternalAgentCapabilityFusion（能力融合到SoulImprint）
 └── adapters/              # 具体三方 Agent 适配器
     ├── __init__.py
     ├── claude_code.py     # Claude Code Adapter（fallback 优先级 1）
@@ -72,23 +72,23 @@ flowforge/core/external_agent/
 **调用流程（九步）**：
 
 ```
-1. 灵智体发起 ExternalAgentBridge.invoke(agent_id, task)
+1. Forgekin发起 ExternalAgentBridge.invoke(agent_id, task)
    ↓
-2. 灵智体能力画像 gap_analysis 判断需要三方 Agent
+2. Forgekin能力画像 gap_analysis 判断需要三方 Agent
    ↓
 3. ExternalAgentAdapter 路由到对应三方 Agent
    ↓
 4. 三方 Agent 在独立 worktree 执行（隔离 + 审计）
    ↓
-5. 执行状态写入 ExternalAgentSharedState（同步到灵忆 EchoStore）
+5. 执行状态写入 ExternalAgentSharedState（同步到EchoStore）
    ↓
-6. 灵智体读取共享状态，融合到自身能力画像（灵印 SoulImprint）
+6. Forgekin读取共享状态，融合到自身能力画像（SoulImprint）
    ↓
 7. 若失败，ExternalAgentFallback 链回退到下一个三方 Agent
    ↓
 8. 全部失败 → 回退到 FlowForge 内置能力（ForgeMindEngine）
    ↓
-9. 执行轨迹写入灵智体 Eval 信号
+9. 执行轨迹写入Forgekin Eval 信号
 ```
 
 ### 2.2 关键接口
@@ -131,10 +131,10 @@ class ExternalAgentProfile(BaseModel):
 
 
 class ExternalAgentSharedState(BaseModel):
-    """三方 Agent 状态共享（F033 详细定义，写入灵忆 EchoStore）"""
+    """三方 Agent 状态共享（F033 详细定义，写入EchoStore）"""
     invocation_id: str
     agent_id: str
-    forgekin_id: str                       # 发起调用的灵智体 ID
+    forgekin_id: str                       # 发起调用的Forgekin ID
     task_summary: str
     started_at: datetime = Field(default_factory=datetime.now)
     completed_at: Optional[datetime] = None
@@ -165,7 +165,7 @@ class ExternalAgentFallback(BaseModel):
 
 
 class ExternalAgentCapabilityFusion(BaseModel):
-    """能力画像融合（F035 详细定义，融合到灵智体灵印 SoulImprint）"""
+    """能力画像融合（F035 详细定义，融合到ForgekinSoulImprint）"""
     forgekin_id: str
     source_agent_id: str
     fused_capabilities: list[str]          # 融合进来的能力标签
@@ -209,12 +209,12 @@ class ExternalAgentAdapter(ABC):
 
 
 class ExternalAgentBridge:
-    """灵智体调用三方 Agent 的入口（核心 API）"""
+    """Forgekin调用三方 Agent 的入口（核心 API）"""
 
     def __init__(
         self,
         adapters: dict[str, ExternalAgentAdapter],
-        shared_state_writer: Any,   # 写入灵忆 EchoStore 的 Repository
+        shared_state_writer: Any,   # 写入EchoStore 的 Repository
         eval_collector: Any,        # Eval 信号采集器
         fallback_registry: dict[str, ExternalAgentFallback],
     ):
@@ -231,14 +231,14 @@ class ExternalAgentBridge:
         worktree_path: str,
     ) -> ExternalAgentSharedState:
         """
-        灵智体调用三方 Agent（含 fallback 链 + 共享状态写入 + Eval 采集）。
+        Forgekin调用三方 Agent（含 fallback 链 + 共享状态写入 + Eval 采集）。
 
         流程：
             1. 创建 ExternalAgentSharedState
             2. 路由到 adapter.invoke()
             3. 失败则走 fallback_chain
             4. 全部失败则回退到 ForgeMindEngine（由调用方处理）
-            5. 写入灵忆 EchoStore
+            5. 写入EchoStore
             6. 采集 Eval 信号
         """
         ...
@@ -254,7 +254,7 @@ class ExternalAgentGuardrails(BaseModel):
     l4_output_validation: str              # 输出 lint + 测试规则 ID
     l5_operator_confirm_actions: list[str] # 不可逆操作（如 merge/release）
     l6_cost_ceiling_per_call: float        # 单次调用成本上限
-    l6_cost_ceiling_per_forgekin: float    # 单灵智体日成本上限
+    l6_cost_ceiling_per_forgekin: float    # 单Forgekin日成本上限
 ```
 
 ### 2.3 边界规则（TIP-044）
@@ -287,7 +287,7 @@ flowforge 是纯通用框架，ExternalAgentAdapter 抽象层位于核心框架�
 - [ ] AC-A3: `ExternalAgentBridge.invoke()` 实现九步调用流程
 - [ ] AC-A4: `ExternalAgentFallback.next_agent()` 可按 priority 推进 fallback 链
 - [ ] AC-A5: 六层 Guardrails 配置通过 Pydantic Schema 强校验
-- [ ] AC-A6: 调用状态通过 Repository 层持久化到灵忆 EchoStore（禁直接操作数据库）
+- [ ] AC-A6: 调用状态通过 Repository 层持久化到EchoStore（禁直接操作数据库）
 - [ ] AC-A7: 调用轨迹写入 `harness-feedback/external-agent-traces/`（JSON Lines 格式）
 - [ ] AC-A8: flowforge 不 import 任何 *Forge / content / opensieve / openroute 模块（边界验证 TIP-044）
 
@@ -298,11 +298,11 @@ flowforge 是纯通用框架，ExternalAgentAdapter 抽象层位于核心框架�
 - [ ] AC-B3: 每个 Adapter 的 `health_check()` 可正确检测三方 Agent 可用性
 - [ ] AC-B4: worktree 隔离生效（网络/权限/审计/资源/超时五维度）
 - [ ] AC-B5: fallback 链 E2E 测试 — Claude Code 不可用时自动回退到 Codex，依此类推
-- [ ] AC-B6: 全部三方 Agent 失败时回退到 ForgeMindEngine（不抛异常给灵智体）
-- [ ] AC-B7: 能力融合 E2E 测试 — 三方 Agent 执行完成后，能力画像融合到灵智体灵印 SoulImprint
+- [ ] AC-B6: 全部三方 Agent 失败时回退到 ForgeMindEngine（不抛异常给Forgekin）
+- [ ] AC-B7: 能力融合 E2E 测试 — 三方 Agent 执行完成后，能力画像融合到ForgekinSoulImprint
 - [ ] AC-B8: L6 成本上限触发时自动终止调用并记录告警
 - [ ] AC-B9: 单次调用延迟 < 30s（不含三方 Agent 自身执行时间）
-- [ ] AC-B10: E2E 测试 — 灵智体调用 Claude Code 完成一个真实编程任务（如新增单元测试），worktree 隔离 + fallback 链 + 能力融合 + Eval 采集全部生效
+- [ ] AC-B10: E2E 测试 — Forgekin调用 Claude Code 完成一个真实编程任务（如新增单元测试），worktree 隔离 + fallback 链 + 能力融合 + Eval 采集全部生效
 - [ ] AC-B11: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -317,7 +317,7 @@ flowforge 是纯通用框架，ExternalAgentAdapter 抽象层位于核心框架�
 |------|------|
 | 三方 Agent API 不稳定 | fallback 链 + 重试机制 + Tier 1-4 恢复分级（F022） |
 | 三方 Agent 能力画像融合可能引入盲点 | 跨厂商 review + 盲点画像识别（F001 blind_spots） |
-| worktree 隔离可能被绕过 | 审计追踪 + L5 操作确认 + 灵议 MindCouncil 审查 |
+| worktree 隔离可能被绕过 | 审计追踪 + L5 操作确认 + MindCouncil 审查 |
 | 三方 Agent 调用成本较高 | L6 成本上限 + 配额管理 + Token 账本 |
 | 三方 Agent API key 泄露风险 | 配置外置（编程红线第 11 条）+ 密钥管理服务 |
 | 单点 Adapter 实现质量参差 | 抽象基类强约束 + 跨厂商 review + Eval 信号反馈 |
@@ -331,7 +331,7 @@ flowforge 是纯通用框架，ExternalAgentAdapter 抽象层位于核心框架�
 | OQ-2 | worktree 隔离是否使用 Docker 容器还是 git worktree + 权限隔离？ | ⬜ 未定 |
 | OQ-3 | fallback 链是否需要支持运行时动态调整（基于历史成功率）？ | ⬜ 未定 |
 | OQ-4 | 能力融合的 `fusion_confidence` 如何计算？基于历史成功率还是单次执行质量？ | ⬜ 未定 |
-| OQ-5 | 三方 Agent 调用是否需要灵议 MindCouncil 审查？还是仅 L5 操作确认？ | ⬜ 未定 |
+| OQ-5 | 三方 Agent 调用是否需要MindCouncil 审查？还是仅 L5 操作确认？ | ⬜ 未定 |
 
 ## 7. Key Decisions
 
@@ -344,7 +344,7 @@ flowforge 是纯通用框架，ExternalAgentAdapter 抽象层位于核心框架�
 | KD-5 | 六层 Guardrails 强约束（L1-L6） | 三方 Agent 调用必须安全可控 | 2026-07-17 |
 | KD-6 | worktree 隔离 + 审计追踪 | 三方 Agent 在隔离环境执行，全部记录到 traces/ | 2026-07-17 |
 | KD-7 | flowforge 只提供抽象基类，*Forge 自己实现适配器 | TIP-044 边界隔离规则 | 2026-07-17 |
-| KD-8 | 使用项目正式术语（灵忆 EchoStore / 灵印 SoulImprint / 灵议 MindCouncil / ForgeMindEngine） | ADR-012 命名融合 | 2026-07-17 |
+| KD-8 | 使用项目正式术语（EchoStore / SoulImprint / MindCouncil / ForgeMindEngine） | ADR-012 命名融合 | 2026-07-17 |
 
 ## 8. Timeline
 
@@ -354,8 +354,8 @@ flowforge 是纯通用框架，ExternalAgentAdapter 抽象层位于核心框架�
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，ExternalAgentBridge 九步流程由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，fallback 链和六层 Guardrails 全部生效
+- Phase A: 单元测试通过，ExternalAgentBridge 九步流程由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，fallback 链和六层 Guardrails 全部生效
 
 ## 10. Links
 

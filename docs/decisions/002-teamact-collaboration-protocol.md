@@ -2,7 +2,7 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-21
-> **决策者**: operator + 架构师灵智体
+> **决策者**: operator + 架构师可进化智能体（Forgekin）
 > **依赖**: `[doc:roleagent.md#第2章]` + `[doc:decisions/004-capability-profile-routing.md]` + `[doc:decisions/013-all-things-spirit-mind-vision.md]`
 > **依据**: roleagent.md 七大工程路径之 TeamAct 团队主循环 + operator 7 条不可妥协原则
 > **代码实现**: P1-2 ✅ 完整实现（`flowforge/core/teamact/` 7 个文件 624 行 + 385 测试通过）
@@ -190,8 +190,8 @@ class PingPongCircuitBreaker:
 ## 7. 参与者
 
 - operator（愿景锚点 + 最终决策）
-- 架构师灵智体（方案设计 + 代码实现 P1-2）
-- 代码审核灵智体（385 测试用例验证通过）
+- 架构师可进化智能体（方案设计 + 代码实现 P1-2）
+- 代码审核可进化智能体（385 测试用例验证通过）
 
 ---
 
@@ -199,7 +199,7 @@ class PingPongCircuitBreaker:
 
 | 日期 | 修订 | 修订者 |
 |------|------|--------|
-| 2026-07-21 | 初始版本，确立 TeamAct 协作协议决策，代码实现 P1-2 已完成 | operator + 架构师灵智体 |
+| 2026-07-21 | 初始版本，确立 TeamAct 协作协议决策，代码实现 P1-2 已完成 | operator + 架构师可进化智能体 |
 
 ---
 
@@ -209,7 +209,7 @@ class PingPongCircuitBreaker:
 - `[doc:roleagent.md#RA-010]` — 五项终止条件
 - `[doc:roleagent.md#RA-014]` — 持球 lease 规范
 - `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（TeamAct owner 选择依据）
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物灵智体愿景
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体（Forgekin）愿景
 - `[doc:decisions/012-naming-fusion.md]` — 命名融合（项目正式术语表）
 - `[doc:features/F002-teamact-loop.md]` — TeamAct 主循环 Feature 规格
 - `flowforge/core/teamact/` — P1-2 代码实现（7 文件 624 行）

@@ -1,6 +1,6 @@
 # perspectives 视角文档
 
-> **目录作用**: 存放多视角文档，从不同利益相关方角度阐述对 FlowForge 万物灵智体世界的理解，包括 operator 愿景、架构师画像、灵智体第一人称体验、三方 Agent 厂商视角等
+> **目录作用**: 存放多视角文档，从不同利益相关方角度阐述对 FlowForge 可进化智能体（Forgekin）世界的理解，包括 operator 愿景、架构师画像、可进化智能体（Forgekin）第一人称体验、三方 Agent 厂商视角等
 > **维护规则**: 新增视角文档时按 `{视角}-{slug}.md` 或 `{Feature}/` 子目录组织；视角文档强调主观体验与方向性论述，不替代架构文档的客观描述
 
 ---
@@ -13,9 +13,9 @@
 |------|------|------|
 | `operator-vision.md` | operator 愿景视角（7 条不可妥协原则） | ⏳ |
 | `architect-portrait.md` | 架构师画像视角（七层架构设计动机） | ⏳ |
-| `forgekin-first-person.md` | 灵智体第一人称体验视角（觉醒/锻造/进化） | ⏳ |
+| `forgekin-first-person.md` | 可进化智能体第一人称体验视角（觉醒/锻造/进化） | ⏳ |
 | `third-party-agent-vendor.md` | 三方 Agent 厂商视角（claude code/codex/opencode/trae） | ⏳ |
-| `end-user-experience.md` | 终端用户体验视角（万物灵智体交互） | ⏳ |
+| `end-user-experience.md` | 终端用户体验视角（可进化智能体交互） | ⏳ |
 | `community-contributor.md` | 社区贡献者视角（开源治理参与路径） | ⏳ |
 
 ### Feature 关联视角（待创建）
@@ -31,7 +31,7 @@
 | 视角类型 | 说明 | 代表文档 |
 |---------|------|---------|
 | **决策视角** | operator / 架构师的决策动机与原则 | `operator-vision.md`、`architect-portrait.md` |
-| **主体视角** | 灵智体自身的第一人称体验 | `forgekin-first-person.md` |
+| **主体视角** | 可进化智能体自身的第一人称体验 | `forgekin-first-person.md` |
 | **外部视角** | 三方厂商 / 终端用户 / 社区贡献者 | `third-party-agent-vendor.md` 等 |
 | **Feature 视角** | 单个 Feature 的阶段定向文档 | `F209/f209-phase-d-orientation.md` |
 
@@ -50,6 +50,6 @@
 
 ## 延伸阅读
 
-- `[doc:VISION.md]` — 万物灵智体愿景（operator 7 条不可妥协原则）
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物灵智体愿景 ADR
+- `[doc:VISION.md]` — 可进化智能体愿景（operator 7 条不可妥协原则）
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景 ADR
 - `[doc:roleagent.md]` — 多智能体工程路径白皮书

@@ -45,7 +45,7 @@
 {为什么否决其他方案}
 
 ## 7. 参与者
-{参与决策的灵智体/operator}
+{参与决策的可进化智能体（Forgekin）/operator}
 
 ## 8. 修订记录
 | 日期 | 修订 | 修订者 |
@@ -62,7 +62,7 @@
 | ADR-005 | forgemind 应用层 | ✅ | `[doc:decisions/005-forgemind-application-layer.md]` |
 | ADR-006 | 三方 Agent 集成 | ✅ | `[doc:decisions/006-external-agent-integration.md]` |
 | ADR-012 | 命名融合 | ✅ | `[doc:decisions/012-naming-fusion.md]` |
-| ADR-013 | 万物灵智体愿景 | ✅ | `[doc:decisions/013-all-things-spirit-mind-vision.md]` |
+| ADR-013 | 可进化智能体愿景 | ✅ | `[doc:decisions/013-all-things-spirit-mind-vision.md]` |
 
 ---
 
@@ -98,7 +98,7 @@
 | ADR-010 | 分布式可靠性 | P1 | ✅ |
 | ADR-011 | 伙伴系统数学 | P1 | ✅ |
 | ADR-012 | 命名融合 | P0 | ✅ |
-| ADR-013 | 万物灵智体愿景 | P0 | ✅ |
+| ADR-013 | 可进化智能体愿景 | P0 | ✅ |
 | ADR-014 | 自进化三模式 | P1 | ✅ |
 
 ---

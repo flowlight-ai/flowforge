@@ -6,23 +6,23 @@ doc_kind: spec
 created: 2026-07-21
 ---
 
-# F017: 记忆治理 + 灵典（Memory Governance + MindCodex）
+# F017: 记忆治理 + MindCodex（Memory Governance + MindCodex）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/008-memory-federation.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第4章 多域记忆联邦
-> **关联 VISION**: [doc:VISION.md#3]（持续身份：灵忆 EchoStore 治理 + 灵典 MindCodex 蒸馏）
+> **关联 VISION**: [doc:VISION.md#3]（持续身份：EchoStore 治理 + MindCodex 蒸馏）
 
 ## 1. 上下文
 
 ### 1.1 问题陈述
 
-`[doc:roleagent.md#第4章]` 指出：记忆系统若无治理层，会无限膨胀——过期知识永远排在前面，矛盾知识无人解决，熵增不可逆。同时，元认知记忆域（`MemoryDomain.FORGE_CODEX`）需要独立承载**蒸馏方法库**——从经验中提炼的可复用方法论（灵法 ForgeMethod），由**灵典 MindCodex**承载，与扁平 `MemoryEntry` 形态不同。
+`[doc:roleagent.md#第4章]` 指出：记忆系统若无治理层，会无限膨胀——过期知识永远排在前面，矛盾知识无人解决，熵增不可逆。同时，元认知记忆域（`MemoryDomain.FORGE_CODEX`）需要独立承载**蒸馏方法库**——从经验中提炼的可复用方法论（ForgeMethod），由**MindCodex**承载，与扁平 `MemoryEntry` 形态不同。
 
 FlowForge 需要两个独立但协同的子系统：
 
 1. **`MemoryGovernor`**：对 F014 `MemoryCollection` 执行 retention / decay / conflict 三原语治理
-2. **`MindCodex`（灵典）**：独立承载 `ForgeMethod`（灵法）结构化蒸馏记录，对应 `MemoryDomain.FORGE_CODEX` 域
+2. **`MindCodex`**：独立承载 `ForgeMethod`结构化蒸馏记录，对应 `MemoryDomain.FORGE_CODEX` 域
 
 ### 1.2 当前痛点
 
@@ -30,14 +30,14 @@ FlowForge 需要两个独立但协同的子系统：
 - **无衰减机制**：`importance` 一旦写入永不变化，无法建模遗忘曲线
 - **无冲突检测**：同域同标签的矛盾条目共存，agent 检索时收到冲突信号
 - **元认知记忆域无载体**：`MemoryDomain.FORGE_CODEX` 域无独立实现，蒸馏方法论无处沉淀
-- **灵锻 SpiritForge 无下游消费者**：经验蒸馏产出的 ForgeMethod 无库可入
+- **SpiritForge 无下游消费者**：经验蒸馏产出的 ForgeMethod 无库可入
 
 ### 1.3 不做的影响
 
 - 违反 `[doc:roleagent.md#第4章]` 熵增抑制主张——记忆系统无限膨胀
 - F016 消费加权的 `importance` 项永不变化，老知识永远垄断排序
 - 同域同标签冲突条目共存，agent 检索收到矛盾信号，决策质量退化
-- 灵锻 SpiritForge 蒸馏产出的 ForgeMethod 无库可入，元认知记忆域形同虚设
+- SpiritForge 蒸馏产出的 ForgeMethod 无库可入，元认知记忆域形同虚设
 - operator "画像必须有记忆系统支撑"指示在元认知层断裂
 
 ## 2. 决策
@@ -54,14 +54,14 @@ FlowForge 需要两个独立但协同的子系统：
 - **`ConflictResolver.resolve(conflicting)`**：最高 `importance` 胜出；平局按 `created_at` 最新；再平局按 `entry_id` 字典序（确定性）
 - **frozen dataclass 策略**：`RetentionPolicy` 与 `DecayPolicy` 为 `frozen=True`，可跨 collection 共享而不产生意外副作用
 
-**子系统二：`MindCodex`（灵典）— 蒸馏知识库**
+**子系统二：`MindCodex`— 蒸馏知识库**
 
-- **`ForgeMethod`（灵法）数据类**：`name` / `domain` / `description` / `method_id` / `steps` / `preconditions` / `postconditions` / `evidence` / `created_at` / `usage_count` / `success_rate` 十一字段
+- **`ForgeMethod`数据类**：`name` / `domain` / `description` / `method_id` / `steps` / `preconditions` / `postconditions` / `evidence` / `created_at` / `usage_count` / `success_rate` 十一字段
 - **`add_method(method)`**：注册方法，`success_rate` clamp 到 `[0.0, 1.0]`；空 `name` / `domain` 或重复 `method_id` 抛 `MemoryError`
 - **`search(query, top_k=5)`**：基于子串计数排序（`name + description + steps` 拼接后小写化），无 embedding 依赖
 - **`get(method_id)` / `list_by_domain(domain)` / `count()` / `clear()`**：标准库操作
-- **对应 `MemoryDomain.FORGE_CODEX` 域**：灵典独立承载，不写入 F014 `MemoryCollection`（结构化记录与扁平 `MemoryEntry` 形态不同）
-- **`usage_count` / `success_rate` 由调用方更新**：在 loop replay 后由灵锻 SpiritForge 调用方更新，灵典本身不自动更新
+- **对应 `MemoryDomain.FORGE_CODEX` 域**：MindCodex独立承载，不写入 F014 `MemoryCollection`（结构化记录与扁平 `MemoryEntry` 形态不同）
+- **`usage_count` / `success_rate` 由调用方更新**：在 loop replay 后由SpiritForge 调用方更新，MindCodex本身不自动更新
 
 ### 2.2 关键接口
 
@@ -159,14 +159,14 @@ class MemoryGovernor:
         ...
 
 
-# ============ 子系统二：灵典 MindCodex ============
+# ============ 子系统二：MindCodex ============
 
 import uuid
 
 
 @dataclass
 class ForgeMethod:
-    """One distilled method (灵法) — procedural memory record.
+    """One distilled method — procedural memory record.
 
     success_rate is clamped to [0.0, 1.0] at add_method() time. usage_count
     and success_rate are updated by callers (e.g. after a loop replay).
@@ -188,7 +188,7 @@ class ForgeMethod:
 
 
 class MindCodex:
-    """Searchable in-memory library of ForgeMethods (灵典)."""
+    """Searchable in-memory library of ForgeMethods."""
 
     def __init__(self) -> None:
         self._by_id: dict[str, ForgeMethod] = {}
@@ -215,11 +215,11 @@ class MindCodex:
     def clear(self) -> None: ...
 ```
 
-**灵典与灵忆的边界**：灵忆 EchoStore（F014 EPISODIC 域）承载事件型扁平记忆（`MemoryEntry`），灵典 MindCodex 承载结构化蒸馏方法论（`ForgeMethod`）。灵锻 SpiritForge 从灵忆中蒸馏经验，产出 ForgeMethod 注册到灵典——这是 `[doc:decisions/012-naming-fusion.md]` 育灵体系的记忆层闭环。
+**MindCodex与EchoStore的边界**：EchoStore（F014 EPISODIC 域）承载事件型扁平记忆（`MemoryEntry`），MindCodex 承载结构化蒸馏方法论（`ForgeMethod`）。SpiritForge 从EchoStore中蒸馏经验，产出 ForgeMethod 注册到MindCodex——这是 `[doc:decisions/012-naming-fusion.md]` Forge Nurturing体系的记忆层闭环。
 
 ## 3. 验收标准
 
-### Phase A（治理 + 灵典实现）
+### Phase A（治理 + MindCodex实现）
 
 - [ ] AC-A1: `RetentionPolicy` 为 `frozen=True` dataclass，三字段（`max_entries` / `max_age_seconds` / `min_importance`），默认值分别为 `None` / `None` / `0.0`
 - [ ] AC-A2: `DecayPolicy` 为 `frozen=True` dataclass，两字段（`decay_rate=0.95` / `decay_interval_seconds=3600.0`）
@@ -239,8 +239,8 @@ class MindCodex:
 - [ ] AC-B2: `apply_decay()` 在千级 collection 上延迟 < 50ms
 - [ ] AC-B3: `detect_conflicts()` + `ConflictResolver.resolve()` 端到端——同域同标签冲突组检测到，并按规则选出 winner
 - [ ] AC-B4: `apply_decay()` 衰减后的 `importance` 反映到 F016 `ConsumptionWeightedRanker` 排序中（衰减条目排名下降）
-- [ ] AC-B5: 灵典 MindCodex 与灵忆 EchoStore 边界清晰——`ForgeMethod` 不写入 `MemoryCollection`，`MemoryEntry` 不写入 `MindCodex`
-- [ ] AC-B6: E2E 测试——灵锻 SpiritForge 从灵忆蒸馏经验，产出 ForgeMethod 注册到灵典，灵典 `search()` 可检索到该方法
+- [ ] AC-B5: MindCodex 与EchoStore 边界清晰——`ForgeMethod` 不写入 `MemoryCollection`，`MemoryEntry` 不写入 `MindCodex`
+- [ ] AC-B6: E2E 测试——SpiritForge 从EchoStore蒸馏经验，产出 ForgeMethod 注册到MindCodex，MindCodex `search()` 可检索到该方法
 - [ ] AC-B7: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -255,10 +255,10 @@ class MindCodex:
 |------|------|
 | `(domain, frozenset(tags))` 冲突分组可能误判（同标签但非冲突） | `ConflictResolver` 仅在 governance 主动调用时触发，不阻塞正常检索；P2 演进为语义冲突检测 |
 | `apply_decay` 乘性衰减可能让重要条目 importance 趋零 | 调用方可设 `min_importance` 保护阈值；P2 演进为分段衰减 |
-| `MindCodex.search()` 子串计数排序在大库上召回质量差 | P1 阶段可接受（灵典规模小），P2 演进为 TF-IDF 或向量索引 |
-| `ForgeMethod.usage_count` / `success_rate` 不自动更新 | 设计取舍：由灵锻 SpiritForge 在 loop replay 后调用方更新，避免自动更新引入隐藏副作用 |
+| `MindCodex.search()` 子串计数排序在大库上召回质量差 | P1 阶段可接受（MindCodex规模小），P2 演进为 TF-IDF 或向量索引 |
+| `ForgeMethod.usage_count` / `success_rate` 不自动更新 | 设计取舍：由SpiritForge 在 loop replay 后调用方更新，避免自动更新引入隐藏副作用 |
 | `RetentionPolicy` 三重上限叠加可能淘汰过多 | 调用方按场景配置，P2 提供策略预设 |
-| 灵典与灵忆边界模糊可能导致调用方误用 | 文档明确：`MemoryEntry` → 灵忆，`ForgeMethod` → 灵典，不可混用 |
+| MindCodex与EchoStore边界模糊可能导致调用方误用 | 文档明确：`MemoryEntry` → EchoStore，`ForgeMethod` → MindCodex，不可混用 |
 
 ## 6. Open Questions
 
@@ -266,9 +266,9 @@ class MindCodex:
 |---|------|------|
 | OQ-1 | `apply_decay` 是否应支持按 `MemoryDomain` 区分衰减率？ | ⬜ 未定（P2 演进项） |
 | OQ-2 | `ConflictResolver.resolve()` 是否应支持"合并"而非"选 winner"策略？ | ⬜ 未定（P2 演进项） |
-| OQ-3 | 灵典 MindCodex 是否需要持久化（markdown / sqlite）？ | ⬜ 未定（P2 演进项） |
-| OQ-4 | `ForgeMethod.success_rate` 更新时机是否应由灵锻 SpiritForge 自动触发？ | 🟡 已定：由调用方更新，灵典不自动更新 |
-| OQ-5 | 灵典是否需要与 F015 三检索入口集成（如 `CodexRetriever`）？ | ⬜ 未定（P2 演进项） |
+| OQ-3 | MindCodex 是否需要持久化（markdown / sqlite）？ | ⬜ 未定（P2 演进项） |
+| OQ-4 | `ForgeMethod.success_rate` 更新时机是否应由SpiritForge 自动触发？ | 🟡 已定：由调用方更新，MindCodex不自动更新 |
+| OQ-5 | MindCodex是否需要与 F015 三检索入口集成（如 `CodexRetriever`）？ | ⬜ 未定（P2 演进项） |
 
 ## 7. Key Decisions
 
@@ -279,33 +279,33 @@ class MindCodex:
 | KD-3 | `apply_decay` 默认 `decay_rate=0.95` / `interval=3600s` | 建模遗忘曲线，1 小时内新建条目不衰减 | 2026-07-21 |
 | KD-4 | `detect_conflicts` 按 `(domain, frozenset(tags))` 分组 | 同域同标签暗示重复或竞争记忆 | 2026-07-21 |
 | KD-5 | `ConflictResolver` 选择规则：importance → created_at → entry_id | 确定性 tiebreaker，保证测试可重现 | 2026-07-21 |
-| KD-6 | 灵典 MindCodex 独立承载 `MemoryDomain.FORGE_CODEX` 域 | `ForgeMethod` 结构化记录与扁平 `MemoryEntry` 形态不同 | 2026-07-21 |
-| KD-7 | `MindCodex.search()` 子串计数排序，无 embedding | 与联邦 no-embedding 规则一致，P1 阶段灵典规模小 | 2026-07-21 |
-| KD-8 | `ForgeMethod.usage_count` / `success_rate` 由调用方更新 | 避免自动更新引入隐藏副作用，灵锻 SpiritForge 在 loop replay 后更新 | 2026-07-21 |
-| KD-9 | `success_rate` 在 `add_method()` 时 clamp 到 `[0.0, 1.0]` | 防止脏数据污染灵典 | 2026-07-21 |
+| KD-6 | MindCodex 独立承载 `MemoryDomain.FORGE_CODEX` 域 | `ForgeMethod` 结构化记录与扁平 `MemoryEntry` 形态不同 | 2026-07-21 |
+| KD-7 | `MindCodex.search()` 子串计数排序，无 embedding | 与联邦 no-embedding 规则一致，P1 阶段MindCodex规模小 | 2026-07-21 |
+| KD-8 | `ForgeMethod.usage_count` / `success_rate` 由调用方更新 | 避免自动更新引入隐藏副作用，SpiritForge 在 loop replay 后更新 | 2026-07-21 |
+| KD-9 | `success_rate` 在 `add_method()` 时 clamp 到 `[0.0, 1.0]` | 防止脏数据污染MindCodex | 2026-07-21 |
 | KD-10 | 纯 Python + 无外部 embedding 依赖 | P0 阶段稳定运行，向量索引作为 P2 编译层可插拔替换 | 2026-07-21 |
 
 ## 8. Timeline
 
 | 日期 | 事件 |
 |------|------|
-| 2026-07-21 | 立项，确立 F017 记忆治理 + 灵典 Feature 规格，落地 MemoryGovernor 三原语 + MindCodex 蒸馏知识库，术语对齐项目正式命名（灵典 MindCodex / 灵法 ForgeMethod） |
+| 2026-07-21 | 立项，确立 F017 记忆治理 + MindCodex Feature 规格，落地 MemoryGovernor 三原语 + MindCodex 蒸馏知识库，术语对齐项目正式命名（MindCodex / ForgeMethod） |
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`MemoryGovernor` / `ConflictResolver` / `MindCodex` / `ForgeMethod` 由架构师灵智体 review，验证 frozen 策略与确定性 tiebreaker
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，验证灵锻 SpiritForge → 灵典 MindCodex 蒸馏闭环与治理三原语生效
+- Phase A: 单元测试通过，`MemoryGovernor` / `ConflictResolver` / `MindCodex` / `ForgeMethod` 由架构师Forgekin review，验证 frozen 策略与确定性 tiebreaker
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，验证SpiritForge → MindCodex 蒸馏闭环与治理三原语生效
 
 ## 10. Links
 
 | 类型 | 路径 | 说明 |
 |------|------|------|
-| **ADR** | `docs/decisions/008-memory-federation.md` | 多域记忆联邦决策（§2.3 灵典 / §2.7 治理） |
-| **ADR** | `docs/decisions/012-naming-fusion.md` | 命名融合（灵典 MindCodex / 灵法 ForgeMethod / 灵锻 SpiritForge 术语表） |
+| **ADR** | `docs/decisions/008-memory-federation.md` | 多域记忆联邦决策（§2.3 MindCodex / §2.7 治理） |
+| **ADR** | `docs/decisions/012-naming-fusion.md` | 命名融合（MindCodex / ForgeMethod / SpiritForge 术语表） |
 | **Feature** | `docs/features/F014-memory-collection.md` | 记忆收集与多域存储（治理操作对象） |
 | **Feature** | `docs/features/F015-retrieval-entries.md` | 三检索入口（detect_conflicts 不阻塞检索） |
 | **Feature** | `docs/features/F016-consumption-weighted.md` | 消费加权排序（apply_decay 影响 importance） |
 | **Code** | `flowforge/core/memory/governance.py` | RetentionPolicy / DecayPolicy / ConflictResolver / MemoryGovernor 实现 |
 | **Code** | `flowforge/core/memory/mind_codex.py` | ForgeMethod / MindCodex 实现 |
-| **VISION** | `docs/VISION.md#3` | 持续身份：灵忆 EchoStore 治理 + 灵典 MindCodex 蒸馏 |
+| **VISION** | `docs/VISION.md#3` | 持续身份：EchoStore 治理 + MindCodex 蒸馏 |
 | **roleagent** | `docs/roleagent.md#第4章` | 熵增抑制 + 元认知记忆域 |

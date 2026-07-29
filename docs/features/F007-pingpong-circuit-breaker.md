@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F007: 乒乓球熔断器（PingPong Circuit Breaker）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/002-teamact-collaboration-protocol.md]
 > **依赖 Feature**: [doc:features/F002-teamact-loop.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径（RA-012 乒乓球熔断）
@@ -18,11 +18,11 @@ created: 2026-07-21
 
 ### 1.1 问题陈述
 
-TeamAct 六步循环（F002）中，灵智体持球后可能连续失败：ACTION 步骤没产出可用 evidence、VERDICT 步骤被 reviewer 拒绝、ROUTE 步骤又被传回原 owner。这种"持球但无进展"的故障如果不熔断，会无限消耗 LLM 调用成本。roleagent.md RA-012 指出，乒乓球失败模式不是"两个 agent 互传"，而是"持球者连续失败无产出"——breaker 不计传球次数，计每个 owner 的连续失败次数。本 Feature 提供 PingPongCircuitBreaker，按 owner 跟踪连续失败，超过阈值（默认 3）触发熔断，强制升级给 operator。
+TeamAct 六步循环（F002）中，Forgekin持球后可能连续失败：ACTION 步骤没产出可用 evidence、VERDICT 步骤被 reviewer 拒绝、ROUTE 步骤又被传回原 owner。这种"持球但无进展"的故障如果不熔断，会无限消耗 LLM 调用成本。roleagent.md RA-012 指出，乒乓球失败模式不是"两个 agent 互传"，而是"持球者连续失败无产出"——breaker 不计传球次数，计每个 owner 的连续失败次数。本 Feature 提供 PingPongCircuitBreaker，按 owner 跟踪连续失败，超过阈值（默认 3）触发熔断，强制升级给 operator。
 
 ### 1.2 当前痛点
 
-- 持球灵智体连续失败无熔断，LLM 调用成本浪费
+- 持球Forgekin连续失败无熔断，LLM 调用成本浪费
 - 熔断器按团队计数，单个 struggling owner 拖累全队
 - 失败后无自动升级机制，需要 operator 人工干预
 - 成功后失败计数不重置，历史失败累积导致误熔断
@@ -158,7 +158,7 @@ PingPongCircuitBreaker 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 - [ ] AC-B5: 熔断后 F005 lease 强制 release（球权交回 operator）
 - [ ] AC-B6: operator 干预后调用 `reset(owner)` 解除熔断，owner 可重新尝试
 - [ ] AC-B7: F006 推回不计入 failure count（推回是显式辩论，非持球失败）
-- [ ] AC-B8: E2E 测试 — 灵智体连续 3 次持球失败，触发熔断升级 operator，operator 干预后恢复
+- [ ] AC-B8: E2E 测试 — Forgekin连续 3 次持球失败，触发熔断升级 operator，operator 干预后恢复
 - [ ] AC-B9: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -205,8 +205,8 @@ PingPongCircuitBreaker 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过（record_failure / record_success / is_tripped / reset / failure_count 全分支覆盖 + 多 owner 隔离验证），由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，真实连续失败场景触发熔断 + operator 干预恢复验证
+- Phase A: 单元测试通过（record_failure / record_success / is_tripped / reset / failure_count 全分支覆盖 + 多 owner 隔离验证），由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，真实连续失败场景触发熔断 + operator 干预恢复验证
 
 ## 10. Links
 

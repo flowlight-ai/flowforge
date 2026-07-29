@@ -8,10 +8,10 @@ created: 2026-07-21
 
 # F014: 记忆收集与多域存储（Memory Collection + Multi-Domain Storage）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/008-memory-federation.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第4章 多域记忆联邦
-> **关联 VISION**: [doc:VISION.md#3]（持续身份：灵印 SoulImprint + 灵忆 EchoStore）
+> **关联 VISION**: [doc:VISION.md#3]（持续身份：SoulImprint + EchoStore）
 
 ## 1. 上下文
 
@@ -19,7 +19,7 @@ created: 2026-07-21
 
 `[doc:roleagent.md#第4章]` 指出："项目记忆首先不是语义召回问题，而是现实导航问题"——单池记忆（single-pool memory）把决策、教训、spec、个人上下文、外部资料混进一个向量库，丢失了项目知识最重要的工程属性：文件路径、行号、权威等级、文档类型、决策权威、上下文关系。
 
-FlowForge（flowlight-ai/flowforge 新仓库）需要一个**多域记忆联邦基底**：把不同性质的知识放进不同记忆域，由统一的 `MemoryCollection` 提供联邦底层，使上层三检索入口（F015）、消费加权排序（F016）、治理与灵典（F017）能在同一基底上协同工作。
+FlowForge（flowlight-ai/flowforge 新仓库）需要一个**多域记忆联邦基底**：把不同性质的知识放进不同记忆域，由统一的 `MemoryCollection` 提供联邦底层，使上层三检索入口（F015）、消费加权排序（F016）、治理与MindCodex（F017）能在同一基底上协同工作。
 
 ### 1.2 当前痛点
 
@@ -39,9 +39,9 @@ FlowForge（flowlight-ai/flowforge 新仓库）需要一个**多域记忆联邦�
 
 ### 2.1 核心设计
 
-落地五大记忆域 + 双索引 MemoryCollection + 经验记忆存储（灵忆 EchoStore）形态：
+落地五大记忆域 + 双索引 MemoryCollection + 经验记忆存储（EchoStore）形态：
 
-- **五大记忆域**（`MemoryDomain` 枚举）：EPISODIC（情景/经验，对应灵忆 EchoStore）/ SEMANTIC（语义）/ PROCEDURAL（程序）/ SHARED（共享）/ FORGE_CODEX（元认知，对应灵典 MindCodex，详见 F017）
+- **五大记忆域**（`MemoryDomain` 枚举）：EPISODIC（情景/经验，对应EchoStore）/ SEMANTIC（语义）/ PROCEDURAL（程序）/ SHARED（共享）/ FORGE_CODEX（元认知，对应MindCodex，详见 F017）
 - **MemoryEntry 最小记录单元**：携带 `content` / `domain` / `entry_id` / `tags` / `created_at` / `last_accessed` / `access_count` / `importance` 八字段
 - **双索引 MemoryCollection**：`_by_id` / `_by_domain` / `_by_tag` 三套索引同步维护，O(1) 查找
 - **importance clamp**：`add()` 时强制 `importance ∈ [0.0, 1.0]`
@@ -62,11 +62,11 @@ from enum import Enum
 class MemoryDomain(str, Enum):
     """Top-level memory domain (记忆域)."""
 
-    EPISODIC = "episodic"        # 经验记忆（Episodic Memory Store / 灵忆 EchoStore）
+    EPISODIC = "episodic"        # 经验记忆（Episodic Memory Store / EchoStore）
     SEMANTIC = "semantic"        # 语义记忆
     PROCEDURAL = "procedural"    # 程序记忆
     SHARED = "shared"            # 共享记忆
-    FORGE_CODEX = "forge_codex"  # 方法论库索引（Forge Codex / 灵典 MindCodex）
+    FORGE_CODEX = "forge_codex"  # 方法论库索引（Forge Codex / MindCodex）
 
 
 @dataclass
@@ -138,7 +138,7 @@ class MemoryCollection:
     def clear(self) -> None: ...
 ```
 
-`MemoryDomain.EPISODIC` 域的运行时形态即**灵忆 EchoStore**（经验记忆存储）——承载"什么时候发生了什么"的事件型记忆。`MemoryDomain.FORGE_CODEX` 域由 F017 的 `MindCodex`（灵典）独立承载，详见 [doc:features/F017-memory-governance-mind-codex.md]。
+`MemoryDomain.EPISODIC` 域的运行时形态即**EchoStore**（经验记忆存储）——承载"什么时候发生了什么"的事件型记忆。`MemoryDomain.FORGE_CODEX` 域由 F017 的 `MindCodex`（MindCodex）独立承载，详见 [doc:features/F017-memory-governance-mind-codex.md]。
 
 ## 3. 验收标准
 
@@ -157,10 +157,10 @@ class MemoryCollection:
 
 ### Phase B（联邦集成 + E2E）
 
-- [ ] AC-B1: 灵忆 EchoStore 形态（EPISODIC 域）可独立验证——同一 collection 内五域共存不互相污染
+- [ ] AC-B1: EchoStore 形态（EPISODIC 域）可独立验证——同一 collection 内五域共存不互相污染
 - [ ] AC-B2: `add()` / `get()` / `remove()` / `clear()` 延迟 < 5ms（千级 collection）
 - [ ] AC-B3: 索引一致性——`count()` 与 `_by_domain` 各域总和、`_by_tag` 计数一致
-- [ ] AC-B4: E2E 测试——灵智体（Forgekin）协作过程中真实写入 EPISODIC 记忆，跨灵智体通过 SHARED 域联邦共享
+- [ ] AC-B4: E2E 测试——Forgekin协作过程中真实写入 EPISODIC 记忆，跨Forgekin通过 SHARED 域联邦共享
 - [ ] AC-B5: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 - [ ] AC-B6: 所有日志携带 `trace_id`，可通过 tracing 层关联检索/治理/排序全链路
 
@@ -168,7 +168,7 @@ class MemoryCollection:
 
 - **Evolved from**: 无
 - **Blocked by**: 无
-- **Related**: F015（三检索入口，挂载在 MemoryCollection 上）、F016（消费加权排序，消费 `access_count` / `last_accessed` 信号）、F017（治理与灵典，操作 collection + FORGE_CODEX 域由 MindCodex 承载）
+- **Related**: F015（三检索入口，挂载在 MemoryCollection 上）、F016（消费加权排序，消费 `access_count` / `last_accessed` 信号）、F017（治理与MindCodex，操作 collection + FORGE_CODEX 域由 MindCodex 承载）
 
 ## 5. 风险
 
@@ -193,32 +193,32 @@ class MemoryCollection:
 | # | 决策 | 理由 | 日期 |
 |---|------|------|------|
 | KD-1 | 五大记忆域（EPISODIC / SEMANTIC / PROCEDURAL / SHARED / FORGE_CODEX） | `[doc:roleagent.md#第4章]` 主张 + ADR-008 §2.1 | 2026-07-21 |
-| KD-2 | 灵忆 EchoStore = MemoryCollection 中 EPISODIC 域运行时形态 | 术语对齐 ADR-012，避免新增独立类 | 2026-07-21 |
+| KD-2 | EchoStore = MemoryCollection 中 EPISODIC 域运行时形态 | 术语对齐 ADR-012，避免新增独立类 | 2026-07-21 |
 | KD-3 | `touch()` 由 retriever 命中时调用，回写 `last_accessed` + `access_count` | 形成 F016 消费加权闭环根信号 | 2026-07-21 |
 | KD-4 | `importance` 在 `add()` 时 clamp 到 `[0.0, 1.0]` | 防止脏数据污染 F016 加权公式 | 2026-07-21 |
 | KD-5 | 纯 Python + 无外部 embedding 依赖 | P0 阶段稳定运行，向量索引作为 P2 编译层可插拔替换 | 2026-07-21 |
-| KD-6 | FORGE_CODEX 域由 F017 MindCodex 独立承载，不写入 MemoryCollection | 灵典承载 ForgeMethod 结构化记录，与扁平 MemoryEntry 形态不同 | 2026-07-21 |
+| KD-6 | FORGE_CODEX 域由 F017 MindCodex 独立承载，不写入 MemoryCollection | MindCodex承载 ForgeMethod 结构化记录，与扁平 MemoryEntry 形态不同 | 2026-07-21 |
 
 ## 8. Timeline
 
 | 日期 | 事件 |
 |------|------|
-| 2026-07-21 | 立项，确立 F014 记忆收集与多域存储 Feature 规格，术语对齐项目正式命名（灵忆 EchoStore） |
+| 2026-07-21 | 立项，确立 F014 记忆收集与多域存储 Feature 规格，术语对齐项目正式命名（EchoStore） |
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，`MemoryCollection` / `MemoryEntry` / `MemoryDomain` 由架构师灵智体 review，验证三索引同步与 `touch()` 反馈闭环
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，验证灵忆 EchoStore 跨灵智体联邦共享与五域共存不污染
+- Phase A: 单元测试通过，`MemoryCollection` / `MemoryEntry` / `MemoryDomain` 由架构师Forgekin review，验证三索引同步与 `touch()` 反馈闭环
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，验证EchoStore 跨Forgekin联邦共享与五域共存不污染
 
 ## 10. Links
 
 | 类型 | 路径 | 说明 |
 |------|------|------|
 | **ADR** | `docs/decisions/008-memory-federation.md` | 多域记忆联邦决策 |
-| **ADR** | `docs/decisions/012-naming-fusion.md` | 命名融合（灵忆 EchoStore / 灵典 MindCodex 术语表） |
+| **ADR** | `docs/decisions/012-naming-fusion.md` | 命名融合（EchoStore / MindCodex 术语表） |
 | **Feature** | `docs/features/F015-retrieval-entries.md` | 三检索入口挂载在 MemoryCollection 上 |
 | **Feature** | `docs/features/F016-consumption-weighted.md` | 消费加权排序消费 access_count 信号 |
-| **Feature** | `docs/features/F017-memory-governance-mind-codex.md` | 治理与灵典（FORGE_CODEX 域） |
+| **Feature** | `docs/features/F017-memory-governance-mind-codex.md` | 治理与MindCodex（FORGE_CODEX 域） |
 | **Code** | `flowforge/core/memory/collection.py` | MemoryDomain / MemoryEntry / MemoryCollection 实现 |
-| **VISION** | `docs/VISION.md#3` | 持续身份：灵印 SoulImprint + 灵忆 EchoStore |
+| **VISION** | `docs/VISION.md#3` | 持续身份：SoulImprint + EchoStore |
 | **roleagent** | `docs/roleagent.md#第4章` | 多域记忆联邦 |

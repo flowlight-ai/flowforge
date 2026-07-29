@@ -98,7 +98,8 @@ def compute_config_drive_rate(pkg_root: Path, config_dir: Path) -> float:
 def main(argv: list[str] | None = None) -> int:
     """Console entry point. Returns 0 on success, 1 on violations."""
     here = Path(__file__).resolve().parent
-    pkg_root = here.parent.parent / "flowforge"
+    # After flattening: project root IS the flowforge package itself.
+    pkg_root = here.parent.parent
     config_dir = here.parent.parent / "config"
 
     if not pkg_root.is_dir():

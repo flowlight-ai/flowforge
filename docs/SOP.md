@@ -1,9 +1,9 @@
-# FlowForge 灵智体协作标准操作流程（SOP）
+# FlowForge 可进化智能体（Forgekin）协作标准操作流程（SOP）
 
 > **文档编号**: SOP.md（v1.0）
 > **依据**: `[doc:roleagent.md#第2章]` TeamAct 六步循环 + 五项终止条件 + `[doc:TIPS.md#TIP-034]` 文档审核门禁
-> **适用范围**: 所有 FlowForge 灵智体协作场景（含 forgemind 万物灵智体 + *Forge 垂直灵智体）
-> **维护规则**: 灵智体在协作前必须先读本 SOP，违反 SOP 视为协作失败
+> **适用范围**: 所有 FlowForge 可进化智能体协作场景（含 forgemind 可进化智能体（Forgekin）+ *Forge 垂直可进化智能体）
+> **维护规则**: 可进化智能体在协作前必须先读本 SOP，违反 SOP 视为协作失败
 
 ---
 
@@ -35,7 +35,7 @@
 ### 0.3 门禁审核流程
 
 ```
-1. 灵智体完成 Phase N 的文档骨架
+1. 可进化智能体完成 Phase N 的文档骨架
    ↓
 2. 在 task.md "当前门禁状态"表中标记为"⏳ 待审核"
    ↓
@@ -75,7 +75,7 @@
 
 ## 1. SOP 总则
 
-灵智体协作遵循 **TeamAct** 团队主循环（roleagent.md 第 2 章）：六步循环 + 五项终止条件。所有协作必须显式进入 TeamAct 状态机，不允许"无状态协作"。
+可进化智能体协作遵循 **TeamAct** 团队主循环（roleagent.md 第 2 章）：六步循环 + 五项终止条件。所有协作必须显式进入 TeamAct 状态机，不允许"无状态协作"。
 
 ```
 loop:
@@ -96,38 +96,38 @@ loop:
 
 ---
 
-## 2. 灵智体锻造 SOP（forgemind 专用）
+## 2. 可进化智能体锻造 SOP（forgemind 专用）
 
-### 2.1 创建新灵智体
+### 2.1 创建新可进化智能体
 
 ```
-1. operator 提出灵智体需求（如"养一只孙悟空灵智体"）
+1. operator 提出可进化智能体需求（如"养一只孙悟空可进化智能体"）
    ↓
-2. 架构师灵智体读取 VISION.md + roleagent.md，生成 features/F0XX-species-xxx.md
+2. 架构师可进化智能体读取 VISION.md + roleagent.md，生成 features/F0XX-species-xxx.md
    ↓
-3. 开发者灵智体读取 F0XX 规格 + ADR 005/013，生成 forgemind/xxx_forgekin.py
+3. 开发者可进化智能体读取 F0XX 规格 + ADR 005/013，生成 forgemind/xxx_forgekin.py
    ↓
-4. 评审员灵智体跨厂商 review F0XX + 代码，approve 或 blocking
+4. 评审员可进化智能体跨厂商 review F0XX + 代码，approve 或 blocking
    ↓
-5. 测试员灵智体执行 E2E 测试（T1-T8 铁律），采集轨迹到 harness-feedback/
+5. 测试员可进化智能体执行 E2E 测试（T1-T8 铁律），采集轨迹到 harness-feedback/
    ↓
-6. Eval 员灵智体根据轨迹 + 三方信号，归因到七类矩阵之一
+6. Eval 员可进化智能体根据轨迹 + 三方信号，归因到七类矩阵之一
    ↓
 7. 修复后回到步骤 3，直至 Eval 通过
    ↓
-8. operator 验收（第 5 项终止条件），灵智体进入灵典 Mind Codex
+8. operator 验收（第 5 项终止条件），可进化智能体进入蒸馏知识库 Mind Codex
 ```
 
-### 2.2 灵智体形态进化
+### 2.2 可进化智能体形态进化
 
 ```
-1. 灵智体在执行任务中积累跨形态经验（如猫灵智体参与组织协作）
+1. 可进化智能体在执行任务中积累跨形态经验（如猫可进化智能体参与组织协作）
    ↓
 2. ForgekinEngine 检测到形态进化条件达成（觉醒阶 ≥ E4）
    ↓
 3. 触发形态进化流程：BioForgekin → HybridForgekin
    ↓
-4. 更新灵智体谱系（Lineage）+ 灵典条目
+4. 更新可进化智能体谱系（Lineage）+ 蒸馏知识库条目
    ↓
 5. operator 确认进化（不可委托）
 ```
@@ -141,21 +141,21 @@ loop:
 ```
 1. 评估三方 Agent 必要性（是否补 CapabilityProfile 盲点）
    ↓
-2. 架构师灵智体生成 features/F0XX-external-agent-xxx.md
+2. 架构师可进化智能体生成 features/F0XX-external-agent-xxx.md
    ↓
-3. 开发者灵智体实现 Adapter + Bridge + SharedState + Fallback
+3. 开发者可进化智能体实现 Adapter + Bridge + SharedState + Fallback
    ↓
-4. 安全员灵智体审核六层 Guardrails 完备性
+4. 安全员可进化智能体审核六层 Guardrails 完备性
    ↓
-5. 测试员灵智体执行 E2E 测试（含不可逆操作确认）
+5. 测试员可进化智能体执行 E2E 测试（含不可逆操作确认）
    ↓
-6. 能力融合员灵智体更新 CapabilityProfile
+6. 能力融合员可进化智能体更新 CapabilityProfile
 ```
 
 ### 3.2 三方 Agent 调用流程
 
 ```
-1. 灵智体检测到任务需要三方 Agent 能力
+1. 可进化智能体检测到任务需要三方 Agent 能力
    ↓
 2. ExternalAgentBridge 查询可用 Adapter（按 fallback 链排序）
    ↓
@@ -165,7 +165,7 @@ loop:
    ↓
 5. 采集 trace + 成本 + 证据
    ↓
-6. 能力融合：将三方 Agent 贡献融合到灵智体能力画像
+6. 能力融合：将三方 Agent 贡献融合到可进化智能体能力画像
 ```
 
 ---
@@ -175,7 +175,7 @@ loop:
 ### 4.1 Feature 完成后文档更新
 
 ```
-1. 灵智体完成 Feature 实现
+1. 可进化智能体完成 Feature 实现
    ↓
 2. 自动更新 features/F0XX-xxx.md（Status: spec → done，AC 全部勾选）
    ↓
@@ -191,7 +191,7 @@ loop:
 ### 4.2 ADR 生成
 
 ```
-1. 灵智体识别到架构决策点
+1. 可进化智能体识别到架构决策点
    ↓
 2. 生成 decisions/NNN-slug.md（11 个标准段）
    ↓
@@ -204,16 +204,16 @@ loop:
 
 ---
 
-## 5. 灵议 Mind Council SOP（Phase 6）
+## 5. 多智能体议事 Mind Council SOP（Phase 6）
 
-### 5.1 召集灵议
+### 5.1 召集多智能体议事
 
 ```
-1. 触发条件：愿景偏离 / 跨灵智体冲突 / 重大架构决策
+1. 触发条件：愿景偏离 / 跨可进化智能体冲突 / 重大架构决策
    ↓
-2. 召集人灵智体发起灵议（最小 2 个评审员 + 2 个厂商）
+2. 召集人可进化智能体发起多智能体议事（最小 2 个评审员 + 2 个厂商）
    ↓
-3. 灵智体各自陈述立场（基于 CapabilityProfile + EchoStore）
+3. 可进化智能体各自陈述立场（基于 CapabilityProfile + EchoStore）
    ↓
 4. operator 可使用 4 条 Magic Words 制动
    ↓
@@ -222,12 +222,12 @@ loop:
 
 ### 5.2 operator 拉闸词使用
 
-| Magic Word | 使用场景 | 灵智体响应 |
+| Magic Word | 使用场景 | 可进化智能体响应 |
 |-----------|---------|-----------|
-| **第一性原理** | 灵议陷入细节争论 | 灵议暂停，重新审视第一性原理 |
-| **我能猜出来** | 结论太显而易见 | 灵议终止，直接执行 |
+| **第一性原理** | 多智能体议事陷入细节争论 | 多智能体议事暂停，重新审视第一性原理 |
+| **我能猜出来** | 结论太显而易见 | 多智能体议事终止，直接执行 |
 | **下次一定** | 问题非阻塞但需修复 | 触发 sunset 计时器（F012） |
-| **星星罐子** | 想法好但非当前优先 | 进入灵典待孵化队列 |
+| **星星罐子** | 想法好但非当前优先 | 进入蒸馏知识库待孵化队列 |
 
 ---
 
@@ -235,7 +235,7 @@ loop:
 
 ### 6.1 七类归因矩阵
 
-灵智体失败时，Eval 员灵智体根据三方信号（trace + 人 + 自动）归因到以下七类之一：
+可进化智能体失败时，Eval 员可进化智能体根据三方信号（trace + 人 + 自动）归因到以下七类之一：
 
 | 归因类 | 含义 | 处理 |
 |--------|------|------|
@@ -244,16 +244,16 @@ loop:
 | 3. 工具调用错误 | 工具使用不当 | 修复工具调用 + 加白名单 |
 | 4. 记忆缺失 | EchoStore 未召回相关记忆 | 优化记忆联邦检索 |
 | 5. 协作失败 | TeamAct 循环断裂 | 修复协作协议 |
-| 6. 愿景偏离 | 灵智体行为偏离 VISION | operator 介入 + Magic Words |
+| 6. 愿景偏离 | 可进化智能体行为偏离 VISION | operator 介入 + Magic Words |
 | 7. 外部干扰 | 三方 Agent / 网络 / 配额 | Tier 1-4 恢复分级 |
 
 ### 6.2 Tier 1-4 恢复分级
 
 | Tier | 含义 | 恢复方式 |
 |------|------|---------|
-| Tier 1 | 自动恢复 | 灵智体自愈（重试 / fallback） |
-| Tier 2 | 带状态恢复 | 灵智体 + EchoStore 恢复 |
-| Tier 3 | 人工确认 | 灵智体请求 operator 确认 |
+| Tier 1 | 自动恢复 | 可进化智能体自愈（重试 / fallback） |
+| Tier 2 | 带状态恢复 | 可进化智能体 + EchoStore 恢复 |
+| Tier 3 | 人工确认 | 可进化智能体请求 operator 确认 |
 | Tier 4 | 不可恢复 | operator 介入 + sunset review |
 
 ---
@@ -276,7 +276,7 @@ loop:
 ## 8. 延伸阅读
 
 - `[doc:roleagent.md]` — 多智能体工程路径白皮书
-- `[doc:VISION.md]` — 万物灵智体愿景
+- `[doc:VISION.md]` — 可进化智能体愿景
 - `[doc:spec.md]` — 全局规格说明
 - `[doc:arch.md]` — 全局架构设计
 - `[doc:TIPS.md]` — 经验提示与陷阱清单

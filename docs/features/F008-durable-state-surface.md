@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F008: 持久状态表面（Durable State Surface）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/007-harness-engineering.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 3 章 Harness 七层（Layer 1）
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -19,11 +19,11 @@ created: 2026-07-21
 
 `[doc:roleagent.md#第3章]` 指出：长任务跨 session、跨 thread、跨天推进时，模型上下文窗口撑不住，压缩会丢信息。模型本身像一个缸中之脑——它能推理，能生成方案，但它天然没有稳定的现实感知、现实记忆、现实行动后果。
 
-FlowForge 需要为灵智体（Forgekin）提供一个**外部化的状态表面**：状态以不可变快照形式存放在模型上下文之外，可按 `snapshot_id` 精确恢复，承载灵忆 EchoStore 的持久化语义。这是 Harness 七层的第 1 层——感知现实，让灵智体不再失忆上岗。
+FlowForge 需要为Forgekin提供一个**外部化的状态表面**：状态以不可变快照形式存放在模型上下文之外，可按 `snapshot_id` 精确恢复，承载EchoStore 的持久化语义。这是 Harness 七层的第 1 层——感知现实，让Forgekin不再失忆上岗。
 
 ### 1.2 当前痛点
 
-- 长任务跨 session 推进时，状态丢失，灵智体被迫"从头加载上下文"
+- 长任务跨 session 推进时，状态丢失，Forgekin被迫"从头加载上下文"
 - 内存态字典可被调用方就地修改，存储侧无防御，状态污染难以追查
 - 没有 `snapshot_id` 维度的状态血缘，无法回滚到任意历史点
 - 直接操作数据库的反模式（违反铁律 4）偶尔出现，缺少"surface API 不变、后端可换"的抽象
@@ -31,8 +31,8 @@ FlowForge 需要为灵智体（Forgekin）提供一个**外部化的状态表面
 ### 1.3 不做的影响
 
 - TeamAct 六步循环（F002）的 `TeamActState` 无处持久化，跨 session 必丢
-- 交接胶囊（F003）无法跨灵智体可靠传递
-- 灵忆 EchoStore 缺少底层快照原语，记忆治理三要素（F016）失去基础
+- 交接胶囊（F003）无法跨Forgekin可靠传递
+- EchoStore 缺少底层快照原语，记忆治理三要素（F016）失去基础
 - "自己开发自己"闭环无法达成——长程任务必须可恢复
 
 ## 2. 决策
@@ -153,7 +153,7 @@ class DurableStateSurface:
 | # | 问题 | 状态 |
 |---|------|------|
 | OQ-1 | 快照清理策略：按 TTL 还是按 LRU？与 F013 EntropyController 是否共用一套？ | ⬜ 未定 |
-| OQ-2 | SQLite/PostgreSQL 后端是否需要支持并发写（多灵智体同时 snapshot）？ | ⬜ 未定 |
+| OQ-2 | SQLite/PostgreSQL 后端是否需要支持并发写（多Forgekin同时 snapshot）？ | ⬜ 未定 |
 | OQ-3 | 是否需要快照压缩（zstd）以降低存储成本？ | ⬜ 未定 |
 
 ## 7. Key Decisions
@@ -174,8 +174,8 @@ class DurableStateSurface:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，深拷贝不变量由架构师灵智体 review
-- Phase B: 持久化后端 E2E 测试由跨厂商 reviewer 灵智体 review，跨 session 恢复成功率达标
+- Phase A: 单元测试通过，深拷贝不变量由架构师Forgekin review
+- Phase B: 持久化后端 E2E 测试由跨厂商 reviewer Forgekin review，跨 session 恢复成功率达标
 
 ## 10. Links
 

@@ -13,17 +13,17 @@
 |------|------|------|--------|
 | Phase 0 | 项目元数据 + 跨平台配置 + 文档骨架 | 🔄 进行中 | 60% |
 | Phase 1 | roleagent 七大工程路径代码骨架 | ⏳ 待开始 | 0% |
-| Phase 2 | forgemind 应用层骨架 + 万物灵智体形态分类 | ⏳ 待开始 | 0% |
+| Phase 2 | forgemind 应用层骨架 + 可进化智能体（Forgekin）形态分类 | ⏳ 待开始 | 0% |
 | Phase 3 | 三方 Agent 适配层 | ⏳ 待开始 | 0% |
 | Phase 4 | Eval 自代谢 + 分布式可靠性 | ⏳ 待开始 | 0% |
 | Phase 5 | 伙伴系统数学 + 自我演进闭环 | ⏳ 待开始 | 0% |
-| Phase 6 | 灵锻 SpiritForge + 灵议 Mind Council | ⏳ 待开始 | 0% |
+| Phase 6 | 经验蒸馏 SpiritForge + 多智能体议事 Mind Council | ⏳ 待开始 | 0% |
 
 ---
 
 ## Phase 0：项目元数据 + 跨平台配置 + 文档骨架
 
-> **目标**: 完成项目元数据（pyproject.toml / README / VISION / spec / arch / design）、跨平台路径配置（.env.example / system.yaml）、文档骨架（七子目录 + 核心三件套 + 顶层文档），让文档可被灵智体增量维护。
+> **目标**: 完成项目元数据（pyproject.toml / README / VISION / spec / arch / design）、跨平台路径配置（.env.example / system.yaml）、文档骨架（七子目录 + 核心三件套 + 顶层文档），让文档可被可进化智能体（Forgekin）增量维护。
 
 **验收标准**:
 - 项目元数据完整（pyproject.toml / .gitignore / .env.example / README.md）
@@ -60,7 +60,7 @@
 - Harness 七层（Durable State / Tool Mediation / Evidence / Governance / Magic Words / Entropy / Harnessability）骨架完整
 - 多域记忆联邦 MVP 可工作（grep + 检索入口 + 消费加权）
 - Eval Contract 五问可被任意 harness 组件实现
-- 分布式可靠性 Tier 1-4 恢复分级可被灵智体调用
+- 分布式可靠性 Tier 1-4 恢复分级可被可进化智能体调用
 - 伙伴系统数学公式可计算（上限/下限/波动吸收）
 
 **七大工程路径**:
@@ -112,19 +112,19 @@
 
 | Phase | 涉及的工程路径 | 说明 |
 |-------|--------------|------|
-| Phase 2 | 路径 1（能力画像）+ 路径 2（TeamAct） | forgemind 应用层使用能力画像路由 + TeamAct 编排多灵智体协作 |
+| Phase 2 | 路径 1（能力画像）+ 路径 2（TeamAct） | forgemind 应用层使用能力画像路由 + TeamAct 编排多可进化智能体协作 |
 | Phase 3 | 路径 3（Harness 七层） | 三方 Agent 调用需通过 Harness 六层 Guardrails |
 | Phase 4 | 路径 5（Eval 自代谢）+ 路径 6（分布式可靠性） | Eval 完整实现 + Tier 1-4 恢复分级完整实现 |
 | Phase 5 | 路径 7（伙伴系统数学） | 伙伴系统数学完整实现 + 自我演进闭环 |
-| Phase 6 | 全部 7 条路径 | 灵锻 SpiritForge + 灵议 MindCouncil 基于全部 7 条路径的成果 |
+| Phase 6 | 全部 7 条路径 | 经验蒸馏 SpiritForge + 多智能体议事 MindCouncil 基于全部 7 条路径的成果 |
 
 详见: `[doc:arch.md#七大工程路径代码映射]`
 
 ---
 
-## Phase 2：forgemind 应用层骨架 + 万物灵智体形态分类
+## Phase 2：forgemind 应用层骨架 + 可进化智能体形态分类
 
-> **目标**: 在 `flowforge/forgemind/` 下实现万物灵智体应用层，承载 5 种形态分类（BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin / HybridForgekin）。
+> **目标**: 在 `flowforge/forgemind/` 下实现可进化智能体应用层，承载 5 种形态分类（BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin / HybridForgekin）。
 
 **依赖**: P1 全部、F026-F030、F036-F038
 
@@ -135,16 +135,16 @@
 - ForgeMindPlugin 实现 Plugin V3 四钩子
 - 5 种形态枚举可加载
 - 进化阶（E1-E6）+ 觉醒阶（E1-E6）可查询
-- E2E 测试：可锻造一个猫灵智体（BioForgekin）+ 接入物理传感器（F029）
+- E2E 测试：可锻造一个猫可进化智能体（BioForgekin）+ 接入物理传感器（F029）
 
 **关键任务**:
 - P2-1 forgemind 模块骨架（ForgekinSpecies / EvolutionStage / ForgekinBase / ForgePipeline / ForgeMindPlugin）
-- P2-2 万物灵智体形态分类（5 种）
-- P2-3 灵智体锻造流水线（YAML 配置 + 提示词外置 + 指标定义）
+- P2-2 可进化智能体形态分类（5 种）
+- P2-3 可进化智能体锻造流水线（YAML 配置 + 提示词外置 + 指标定义）
 - P2-4 物理 AI 传感器接入（摄像头/麦克风/IoT）
 - P2-5 虚拟世界设定层（VR/游戏/童话/神话/历史）
-- P2-6 灵智体市场 + 进化谱系
-- P2-7 forgemind 与 *Forge 关系（4 个 *Forge 灵智体适配）
+- P2-6 可进化智能体市场 + 进化谱系
+- P2-7 forgemind 与 *Forge 关系（4 个 *Forge 可进化智能体适配）
 
 详见: `[doc:task.md#Phase 2]`
 
@@ -152,7 +152,7 @@
 
 ## Phase 3：三方 Agent 适配层
 
-> **目标**: 实现 ExternalAgentAdapter 抽象层，让灵智体可接入 claude code / codex / opencode / trae 等三方 Agent，作为能力扩展。
+> **目标**: 实现 ExternalAgentAdapter 抽象层，让可进化智能体可接入 claude code / codex / opencode / trae 等三方 Agent，作为能力扩展。
 
 **依赖**: P1 全部、P2-1、F031-F035
 
@@ -160,9 +160,9 @@
 - 4 个三方 Agent Adapter 全部可调用（claude code / codex / opencode / trae）
 - ExternalAgentBridge 可执行 fallback 链
 - ExternalAgentSharedState 可与 FlowForge 共享状态同步
-- ExternalAgentCapabilityFusion 可融合三方 Agent 能力到灵智体画像
+- ExternalAgentCapabilityFusion 可融合三方 Agent 能力到可进化智能体画像
 - 六层 Guardrails 全部启用
-- E2E 测试：灵智体可调用 claude code 完成代码任务
+- E2E 测试：可进化智能体可调用 claude code 完成代码任务
 
 **关键任务**:
 - P3-1 三方 Agent 核心抽象（Adapter / Bridge / SharedState / Fallback / CapabilityFusion）
@@ -185,7 +185,7 @@
 - Eval Contract 五问可被任意 harness 组件实现（F018）
 - 三方信号（trace + 人 + 自动）可交叉验证（F019）
 - 七类归因矩阵可定位失败根因（F020）
-- Tier 1-4 恢复分级可被灵智体调用（F022）
+- Tier 1-4 恢复分级可被可进化智能体调用（F022）
 - liveness 规范读模型可被任何 agent 查询（F023）
 - Harness Eval 控制面可每日汇总（F040）
 - Build to Delete sunset 计时器可触发（F012）
@@ -220,30 +220,30 @@
 - P5-2 文档自我演进（Feature文档自动更新 / ADR自动生成 / Eval结果归档）
 - P5-3 代码自我演进（Feature→代码骨架 / Eval信号→harness重构 / 七类归因→Bug自动修复）
 - P5-4 框架自我演进（ForgekinEngine路由优化 / TeamAct终止条件优化 / 记忆联邦权威等级调整）
-- P5-5 "自己开发自己"闭环（11步闭环编排器 / 灵智体A-G角色定义 / E2E测试）
+- P5-5 "自己开发自己"闭环（11步闭环编排器 / 可进化智能体A-G角色定义 / E2E测试）
 
 详见: `[doc:task.md#Phase 5]`
 
 ---
 
-## Phase 6：灵锻 SpiritForge + 灵议 Mind Council
+## Phase 6：经验蒸馏 SpiritForge + 多智能体议事 Mind Council
 
-> **目标**: 实现 E4+ Evoling 状态 + 多灵智体议事机制。
+> **目标**: 实现 E4+ Evoling 状态 + 多可进化智能体议事机制。
 
 **依赖**: P5 全部
 
 **验收标准**:
-- 灵锻 SpiritForge 可在低活动期蒸馏经验到灵典 Mind Codex
-- 灵议 Mind Council 可召集多灵智体议事
+- 经验蒸馏 SpiritForge 可在低活动期蒸馏经验到蒸馏知识库 Mind Codex
+- 多智能体议事 Mind Council 可召集多可进化智能体议事
 - E4+ Evoling 状态可触发（觉醒阶 ≥ E4）
-- 灵议决议可写入 VISION.md / ROADMAP.md
-- operator 拉闸词可在灵议偏离愿景时制动
+- 多智能体议事决议可写入 VISION.md / ROADMAP.md
+- operator 拉闸词可在多智能体议事偏离愿景时制动
 
 **关键任务**:
-- P6-1 灵锻 SpiritForge 实现
-- P6-2 灵议 Mind Council 实现
+- P6-1 经验蒸馏 SpiritForge 实现
+- P6-2 多智能体议事 Mind Council 实现
 - P6-3 E4+ Evoling 状态机
-- P6-4 灵议决议写回机制
+- P6-4 多智能体议事决议写回机制
 - P6-5 operator 拉闸词集成
 
 详见: `[doc:task.md#Phase 6]`
@@ -291,7 +291,7 @@
 ## 延伸阅读
 
 - `[doc:task.md]` — 6 阶段任务清单（待办池）
-- `[doc:VISION.md]` — 万物灵智体愿景
-- `[doc:SOP.md]` — 灵智体协作 SOP
+- `[doc:VISION.md]` — 可进化智能体愿景
+- `[doc:SOP.md]` — 可进化智能体协作 SOP
 - `[doc:design.md]` — 当前阶段设计
 - `[doc:roleagent.md]` — 多智能体工程路径白皮书

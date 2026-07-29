@@ -2,10 +2,10 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-17
-> **决策者**: operator + 架构师灵智体
+> **决策者**: operator + 架构师可进化智能体
 > **依赖**: `[doc:VISION.md#6]`
 > **依据**: operator 7 条不可妥协原则第 5 条（命名最终形态为"灵智"）
-> **不可变**: 命名变更需 operator 直接决策，不能由灵智体自我演进修改
+> **不可变**: 命名变更需 operator 直接决策，不能由可进化智能体自我演进修改
 
 ---
 
@@ -103,8 +103,8 @@ flowforge/core/council/           # 灵议 MindCouncil
 flowforge/core/memory/codex.py    # 锻典 MindCodex
 
 # 文档/UI：使用 ForgeMind / 灵智
-VISION.md                         # 万物灵智体愿景
-README.md                         # "灵智体锻造厂"
+VISION.md                         # 可进化智能体愿景
+README.md                         # "可进化智能体锻造厂"
 ```
 
 ---
@@ -152,7 +152,7 @@ README.md                         # "灵智体锻造厂"
 ## 7. 参与者
 
 - operator（最终形态命名决策，不可委托）
-- 架构师灵智体（术语表整理 + 代码命名规范）
+- 架构师可进化智能体（术语表整理 + 代码命名规范）
 
 ---
 
@@ -160,7 +160,7 @@ README.md                         # "灵智体锻造厂"
 
 | 日期 | 修订 | 修订者 |
 |------|------|--------|
-| 2026-07-17 | 确立项目正式术语表（12 核心概念：ForgeMind / Forgekin / ForgekinSpecies / ForgeNurturing / EchoStore / SoulImprint / SpiritForge / MindCodex / MindCouncil / EvolutionStage / AwakeningStage / CapabilityProfile） | operator + 架构师灵智体 |
+| 2026-07-17 | 确立项目正式术语表（12 核心概念：ForgeMind / Forgekin / ForgekinSpecies / ForgeNurturing / EchoStore / SoulImprint / SpiritForge / MindCodex / MindCouncil / EvolutionStage / AwakeningStage / CapabilityProfile） | operator + 架构师可进化智能体 |
 
 ---
 

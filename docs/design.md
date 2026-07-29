@@ -18,7 +18,7 @@
 ```
 
 完成此阶段后，可以：
-- 注册 1 个预置灵智体（鲁班 = 猫头鹰）
+- 注册 1 个预置 Forgekin（鲁班 = 猫头鹰）
 - 执行单次 observe → reason → act → verify 循环
 - 采集 Eval 信号到 Eval Ledger
 - 通过 CLI 触发循环
@@ -29,10 +29,10 @@
 
 | 能力 | 实现阶段 |
 |------|---------|
-| TeamAct 多灵智体协作 | 阶段二 |
-| 灵议 Mind Council | 阶段三 |
+| TeamAct 多 Forgekin 协作 | 阶段二 |
+| MindCouncil | 阶段三 |
 | 三方 Agent 集成 | 阶段三 |
-| 灵锻 SpiritForge 经验蒸馏 | 阶段四 |
+| SpiritForge 经验蒸馏 | 阶段四 |
 | Eval 自代谢 | 阶段四 |
 | 多域记忆联邦 | 阶段二 |
 | *Forge 垂直业务集成 | 阶段五 |
@@ -47,7 +47,7 @@
 6. ✅ MIT License
 7. ✅ Plugin V2 + V3 协议定义（不要求实现，只要求协议）
 8. ✅ 单向依赖零容忍
-9. ✅ ForgekinBase 抽象基类 + 1 个预置灵智体实现
+9. ✅ ForgekinBase 抽象基类 + 1 个预置 Forgekin 实现
 10. ✅ Eval 信号采集到不可删除的 Ledger
 11. ✅ T1-T8 测试铁律基线测试套件
 12. ✅ CLI 入口（`flowforge` 命令）
@@ -90,9 +90,9 @@
 | `docs/spec.md` | 全局规格说明 | ✅ |
 | `docs/arch.md` | 全局架构设计 | ✅ |
 | `docs/design.md` | 当前阶段设计（本文档） | ✅ |
-| `docs/VISION.md` | 万物灵智体愿景 | ✅ |
+| `docs/VISION.md` | 可进化智能体愿景 | ✅ |
 | `docs/ROADMAP.md` | 6 阶段路线图 | ✅ |
-| `docs/SOP.md` | 灵智体协作 SOP | ✅ |
+| `docs/SOP.md` | Forgekin 协作 SOP | ✅ |
 | `docs/TIPS.md` | 经验提示 | ✅ |
 | `docs/decisions/` | 5 份核心 ADR | ✅ |
 | `docs/features/` | 4 份核心 Feature 规格 | ✅ |
@@ -232,13 +232,13 @@ def get_container() -> DIContainer:
 from pydantic import BaseModel
 
 class SkillRegistry:
-    """育灵技能注册中心。"""
+    """Forge Nurturing 技能注册中心。"""
     def register(self, spec: "SkillSpec") -> None: ...
     def get(self, name: str) -> "SkillSpec": ...
     def list(self) -> list["SkillSpec"]: ...
 
 class CouncilRegistry:
-    """灵议通道注册中心。"""
+    """MindCouncil 通道注册中心。"""
     ...
 
 class SpiritForgeRegistry:
@@ -246,7 +246,7 @@ class SpiritForgeRegistry:
     ...
 
 class ForgekinRegistry:
-    """灵智体注册中心。"""
+    """Forgekin 注册中心。"""
     ...
 ```
 
@@ -294,10 +294,10 @@ class OutputGate:
 | 阶段零 | 项目骨架 | ✅ 已完成 |
 | 阶段一 | Core 基础设施 | 7 个 core 模块 |
 | 阶段二 | 能力画像 + TeamAct + Harness | CapabilityProfile + TeamActState + 7 层 Harness |
-| 阶段三 | LLMClient + LoopExecutor + forgemind | LLMClient + Loop 引擎 + ForgekinBase + 1 个预置灵智体 |
+| 阶段三 | LLMClient + LoopExecutor + forgemind | LLMClient + Loop 引擎 + ForgekinBase + 1 个预置 Forgekin |
 | 阶段四 | 自进化三闭环 + Eval | Mode A/B/C + Eval Ledger |
-| 阶段五 | 三方 Agent + 灵议 | EAC v1 + 4 个适配器 + Mind Council |
-| 阶段六 | 灵锻 + 锻典 | SpiritForge + Mind Codex |
+| 阶段五 | 三方 Agent + MindCouncil | EAC v1 + 4 个适配器 + Mind Council |
+| 阶段六 | SpiritForge + Mind Codex | SpiritForge + Mind Codex |
 
 完整阶段规划见内部 `task.md`。
 

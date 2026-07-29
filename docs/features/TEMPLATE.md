@@ -1,7 +1,7 @@
 # Feature Doc 标准模板
 
 > **用途**：新 Feature 立项时复制此模板到 `docs/features/F{NNN}-{slug}.md`
-> **为什么规范化**：Feature 文档需要统一格式，便于灵智体增量维护和 parser 自动提取进度
+> **为什么规范化**：Feature 文档需要统一格式，便于可进化智能体（Forgekin）增量维护和 parser 自动提取进度
 > **决策来源**：FlowForge 项目需求 + 11 段标准 ADR 格式借鉴
 
 ---
@@ -21,7 +21,7 @@ created: {YYYY-MM-DD}
 
 # F{NNN}: {Feature Name}
 
-> **状态**: spec | **负责人**: {灵智体名/operator} | **优先级**: {P0/P1/P2}
+> **状态**: spec | **负责人**: {可进化智能体名/operator} | **优先级**: {P0/P1/P2}
 > **依赖 ADR**: [doc:decisions/NNN-xxx.md]
 > **依赖 Feature**: [doc:features/F0xx-xxx.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径

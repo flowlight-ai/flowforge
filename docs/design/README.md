@@ -13,8 +13,8 @@
 |------|------|------|
 | `naming-contract.md` | 命名契约（12 概念 + 双轨命名） | ⏳ |
 | `console-design-system.md` | 控制台设计系统（UI/UX） | ⏳ |
-| `forgemind-brand.md` | forgemind 品牌（万物灵智体形态视觉） | ⏳ |
-| `hero-prism-motion.md` | 动效设计（灵智体锻造动效） | ⏳ |
+| `forgemind-brand.md` | forgemind 品牌（可进化智能体（Forgekin）形态视觉） | ⏳ |
+| `hero-prism-motion.md` | 动效设计（可进化智能体（Forgekin）锻造动效） | ⏳ |
 
 ### 设计资源（待补充）
 
@@ -29,14 +29,14 @@
 
 | 正式术语 | 英文类名 | 废弃术语 |
 |----------|---------|---------|
-| 灵智 ForgeMind | ForgeMindEngine | SelfEvolutionEngine |
-| 灵智体 Forgekin | Forgekin | SelfEvolutionAgent |
-| 育灵 ForgeNurturing | ForgeNurturing | Agent Lifecycle |
-| 灵忆 EchoStore | EchoStore | MemoryGovernance |
-| 灵印 SoulImprint | SoulImprint | Agent Profile |
-| 灵锻 SpiritForge | SpiritForge | SelfEvolutionEngine |
+| 通用智能体框架 ForgeMind | ForgeMindEngine | SelfEvolutionEngine |
+| 可进化智能体 Forgekin | Forgekin | SelfEvolutionAgent |
+| 智能体入职与终身学习 ForgeNurturing | ForgeNurturing | Agent Lifecycle |
+| 情景记忆存储 EchoStore | EchoStore | MemoryGovernance |
+| 持久身份 SoulImprint | SoulImprint | Agent Profile |
+| 经验蒸馏 SpiritForge | SpiritForge | SelfEvolutionEngine |
 | 锻典 MindCodex | MindCodex | Skill Library |
-| 灵议 MindCouncil | MindCouncil | CollaborationGate |
+| 多智能体议事 MindCouncil | MindCouncil | CollaborationGate |
 | 进化阶 E1-E6 | EvolutionStage | Agent Maturity Level |
 
 详见 `[doc:decisions/012-naming-fusion.md]`

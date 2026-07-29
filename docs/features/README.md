@@ -55,14 +55,14 @@
 
 ### 多域记忆联邦 Feature（F014-F017，4 份）
 > 依赖 ADR-008，参考代码 `flowforge/core/memory/`
-> 说明：F017 合并记忆治理 + 灵典 MindCodex，因灵典是治理保护的对象，二者在同一模块下紧密耦合。
+> 说明：F017 合并记忆治理 + 蒸馏知识库（MindCodex），因蒸馏知识库是治理保护的对象，二者在同一模块下紧密耦合。
 
 | Feature | 标题 | 状态 | 文件 |
 |---------|------|------|------|
 | F014 | 记忆收集 + 多域存储 Memory Collection | ✅ | `[doc:features/F014-memory-collection.md]` |
 | F015 | 三检索入口 Retrieval Entries | ✅ | `[doc:features/F015-retrieval-entries.md]` |
 | F016 | 消费加权评分 Consumption Weighted | ✅ | `[doc:features/F016-consumption-weighted.md]` |
-| F017 | 记忆治理 + 灵典 Memory Governance + MindCodex | ✅ | `[doc:features/F017-memory-governance-mind-codex.md]` |
+| F017 | 记忆治理 + 蒸馏知识库 Memory Governance + MindCodex | ✅ | `[doc:features/F017-memory-governance-mind-codex.md]` |
 
 ### Eval 自代谢 Feature（F018-F020，3 份）
 > 依赖 ADR-009，参考代码 `flowforge/core/eval/`
@@ -105,13 +105,13 @@
 
 | 范围 | 标题 | 依赖 ADR | 优先级 |
 |------|------|---------|--------|
-| F027-F030 | 万物灵智体形态分类（5 形态 + 物理 AI 传感器 + 虚拟世界设定层 + 进化谱系） | ADR-013 | Phase 2 启动前 |
-| F028 | 灵智体锻造流水线 | ADR-005 | Phase 2 |
+| F027-F030 | 可进化智能体（Forgekin）形态分类（5 形态 + 物理 AI 传感器 + 虚拟世界设定层 + 进化谱系） | ADR-013 | Phase 2 启动前 |
+| F028 | 可进化智能体（Forgekin）锻造流水线 | ADR-005 | Phase 2 |
 | F032-F035 | 三方 Agent 子 Feature（Adapter / Bridge / SharedState / Fallback / CapabilityFusion） | ADR-006 | Phase 3 |
 | F036-F038 | forgemind 高级 Feature（市场 / 谱系 / council） | ADR-005 | Phase 2-6 |
 | F040 | Harness Eval 控制面 | ADR-009 | Phase 4 |
 
-> **说明**：F039 灵典可检索知识库已合并入 F017（记忆治理 + 灵典 MindCodex），F039 编号保留不复用但不再单独创建。
+> **说明**：F039 蒸馏知识库可检索知识库已合并入 F017（记忆治理 + 蒸馏知识库 MindCodex），F039 编号保留不复用但不再单独创建。
 
 ---
 

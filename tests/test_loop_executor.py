@@ -141,3 +141,75 @@ def test_handoff_capsule_increments_iteration() -> None:
     state.push_handoff(HandoffCapsule(from_owner="a", to_owner="b"))
     assert state.iteration == 1
     assert len(state.handoff_log) == 1
+
+
+# ── 快速失败机制测试 ──────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_loop_fast_fail_on_consecutive_refusals() -> None:
+    """LLM 连续返回"无法回答"时，Loop 应提前终止，不跑完 max_iterations。"""
+
+    async def action(state: LoopState) -> str:
+        return "无法回答"
+
+    state = _state_with_criteria()
+    executor = LoopExecutor(
+        action_fn=action,
+        max_iterations=5,
+        max_consecutive_refusals=2,
+    )
+    result = await executor.run(state)
+    assert result.passed is False
+    assert "consecutive refusals" in result.termination_reason
+    # Should terminate after 2 refusals, not 5 iterations
+    assert result.iterations == 2
+
+
+@pytest.mark.asyncio
+async def test_loop_fast_fail_on_silent_failure() -> None:
+    """LLM 返回 silent failure（"当前不可用，请稍后重试"）时也应触发快速失败。"""
+
+    async def action(state: LoopState) -> str:
+        return "当前不可用，请稍后重试"
+
+    state = _state_with_criteria()
+    executor = LoopExecutor(
+        action_fn=action,
+        max_iterations=5,
+        max_consecutive_refusals=2,
+    )
+    result = await executor.run(state)
+    assert result.passed is False
+    assert "consecutive refusals" in result.termination_reason
+
+
+@pytest.mark.asyncio
+async def test_loop_recovers_from_single_refusal() -> None:
+    """单次拒绝后恢复正常内容时，Loop 不应终止，应继续正常流程。"""
+    call_count = {"n": 0}
+
+    async def action(state: LoopState) -> str:
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return "无法回答"
+        return "good artifact after recovery"
+
+    def reviewer(artifact: str, ctx: dict) -> dict:
+        if "good" in artifact:
+            return {"reviewer": "stub", "pass": True, "score": 0.95}
+        return {"reviewer": "stub", "pass": False, "score": 0.3}
+
+    state = _state_with_criteria()
+    state.cvo_vision_confirmed = True
+    state.attach_evidence("criterion_1", "pre-seeded")
+
+    executor = LoopExecutor(
+        action_fn=action,
+        verifier=Verifier(quality_threshold=0.85, reviewer=reviewer),
+        max_iterations=5,
+        max_consecutive_refusals=2,
+    )
+    result = await executor.run(state)
+    assert result.passed is True
+    assert "consecutive refusals" not in result.termination_reason

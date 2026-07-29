@@ -21,13 +21,13 @@
 | 文档 | 名称 | 状态 |
 |------|------|------|
 | `2026-07-17-architecture-views.md` | 七层架构 + forgemind 全景视图 | ⏳ |
-| `collaboration-landscape.md` | 协作全景（TeamAct + 共鸣 + 灵议） | ⏳ |
+| `collaboration-landscape.md` | 协作全景（TeamAct + 共鸣 + 多智能体议事（MindCouncil）） | ⏳ |
 | `at-mention-routing-system.md` | 行首 @ 路由协议（多 agent 路由） | ⏳ |
 | `cli-integration.md` | 三方 Agent CLI 接入架构 | ⏳ |
 | `feature-placement.md` | Feature 在七层架构中的归属位置 | ⏳ |
 | `memory-system-overview.md` | 多域记忆联邦架构总览 | ⏳ |
 | `retrieval-pipeline-deep-dive.md` | 检索流水线（三入口 + 消费加权） | ⏳ |
-| `user-journeys.md` | 万物灵智体锻造用户旅程 | ⏳ |
+| `user-journeys.md` | 可进化智能体（Forgekin）锻造用户旅程 | ⏳ |
 
 ### ownership cells（待创建）
 
@@ -52,5 +52,5 @@
 ## 延伸阅读
 
 - `[doc:arch.md]` — 架构索引（顶层）
-- `[doc:VISION.md]` — 万物灵智体愿景
+- `[doc:VISION.md]` — 可进化智能体愿景
 - `[doc:decisions/README.md]` — ADR 架构决策记录

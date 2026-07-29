@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F004: @mention 路由（AtMention Router）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/002-teamact-collaboration-protocol.md]
 > **依赖 Feature**: [doc:features/F002-teamact-loop.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径（RA-013 行首 @ 路由）
@@ -18,14 +18,14 @@ created: 2026-07-21
 
 ### 1.1 问题陈述
 
-TeamAct 六步循环（F002）的 ROUTE 步骤需要一个明确的路由协议：当前持球灵智体如何在消息中表达"把球传给谁"。roleagent.md RA-013 指出，路由指令必须出现在行首，埋在句中的 `@` 是叙述性引用而非路由——把两者混用是"球掉地上"故障的主要来源。本 Feature 提供 AtMentionRouter，解析行首 `@` 路由指令，支持 4 种语义（精确 / 广播 / 按角色 / 按 forgekin id），让 F003 HandoffCapsule 的 `to_owner` 字段能被结构化填充。
+TeamAct 六步循环（F002）的 ROUTE 步骤需要一个明确的路由协议：当前持球Forgekin如何在消息中表达"把球传给谁"。roleagent.md RA-013 指出，路由指令必须出现在行首，埋在句中的 `@` 是叙述性引用而非路由——把两者混用是"球掉地上"故障的主要来源。本 Feature 提供 AtMentionRouter，解析行首 `@` 路由指令，支持 4 种语义（精确 / 广播 / 按角色 / 按 forgekin id），让 F003 HandoffCapsule 的 `to_owner` 字段能被结构化填充。
 
 ### 1.2 当前痛点
 
 - 路由指令与叙述性 @ 混用，球权归属歧义
 - 没有"广播给全员"语义（`@all`），无法发起 standup / 同步信号
 - 没有"按角色路由"语义（`@role:xxx`），无法驱动 F001 CapabilityProfile 路由
-- 没有"按 forgekin id 路由"语义（`@forgekin:xxx`），无法精确路由到具体灵智体
+- 没有"按 forgekin id 路由"语义（`@forgekin:xxx`），无法精确路由到具体Forgekin
 - 解析逻辑散落在各 Agent 代码中，无法被跨厂商 review 复用
 
 ### 1.3 不做的影响
@@ -133,10 +133,10 @@ AtMentionRouter 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 | # | 失败模式 | 检测 | 恢复 |
 |---|---------|------|------|
 | FM-1 | 句中 @ 被误解析为路由 | 正则 `^@` 锚定行首 | 句中 @ 返回空 `to_owner`，保留当前持球者 |
-| FM-2 | `@role:xxx` 的 role 与 F001 命名不一致 | 路由后 F001 返回空 owner | 升级 operator，架构师灵智体对齐命名契约 |
+| FM-2 | `@role:xxx` 的 role 与 F001 命名不一致 | 路由后 F001 返回空 owner | 升级 operator，架构师Forgekin对齐命名契约 |
 | FM-3 | None 输入 | `route()` 抛 `TeamActError` | 调用方前置校验，禁传 None |
 | FM-4 | `@all` 广播引发全员抢球 | `is_broadcast=True` 时不触发 F005 acquire | 广播仅通知，不转移球权 |
-| FM-5 | bare name 与 forgekin id 混淆 | bare name 视为 name；精确 id 用 `@forgekin:` 前缀 | 命名契约明确，架构师灵智体 review |
+| FM-5 | bare name 与 forgekin id 混淆 | bare name 视为 name；精确 id 用 `@forgekin:` 前缀 | 命名契约明确，架构师Forgekin review |
 
 恢复原则：行首 @ 优先于一切；无行首 @ 时保留当前持球者，调用方自行决定下一步。
 
@@ -158,10 +158,10 @@ AtMentionRouter 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 ### Phase B（TeamAct 集成 + E2E）
 
 - [ ] AC-B1: F002 ROUTE 步骤调用 `AtMentionRouter.route()` 填充 F003 HandoffCapsule 的 `to_owner`
-- [ ] AC-B2: `@role:xxx` 触发 F001 CapabilityProfile 路由，从团队中选出具备该 capability 的灵智体
+- [ ] AC-B2: `@role:xxx` 触发 F001 CapabilityProfile 路由，从团队中选出具备该 capability 的Forgekin
 - [ ] AC-B3: `@all` 广播不触发球权转移（`is_broadcast=True` 时 F005 BallCustodyRegistry 不 acquire 新 lease）
 - [ ] AC-B4: 路由解析延迟 < 5ms（纯正则，无 LLM 调用）
-- [ ] AC-B5: E2E 测试 — 真实 3 灵智体协作场景，4 种路由语义全部覆盖
+- [ ] AC-B5: E2E 测试 — 真实 3 Forgekin协作场景，4 种路由语义全部覆盖
 - [ ] AC-B6: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -174,7 +174,7 @@ AtMentionRouter 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 
 | 风险 | 缓解 |
 |------|------|
-| `@role:xxx` 的 role 命名与 F001 CapabilityProfile 不一致 | 由架构师灵智体 review 命名契约 |
+| `@role:xxx` 的 role 命名与 F001 CapabilityProfile 不一致 | 由架构师Forgekin review 命名契约 |
 | bare name 与 forgekin id 混淆（如 `@coder` 是 name 还是 id） | bare name 视为 name；精确 id 必须用 `@forgekin:` 前缀 |
 | 句中 @ 被误解析为路由 | 正则锚定行首 `^@`，句中 @ 不匹配 |
 | 广播 `@all` 引发并发 acquire 冲突 | `is_broadcast=True` 时不触发 F005 acquire |
@@ -204,8 +204,8 @@ AtMentionRouter 在 TeamAct 生态中与其他 4 份子 Feature 协作：
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过（4 种路由 + None + 空前缀全部分支覆盖），由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，4 种路由语义在真实协作场景中全部命中
+- Phase A: 单元测试通过（4 种路由 + None + 空前缀全部分支覆盖），由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，4 种路由语义在真实协作场景中全部命中
 
 ## 10. Links
 

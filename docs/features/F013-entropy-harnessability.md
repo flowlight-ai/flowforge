@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F013: 熵控制 + 可驾驭性评分（Entropy Control + Harnessability Scorer）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/007-harness-engineering.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 3 章 Harness 七层（Layer 6 + Layer 7）
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -279,7 +279,7 @@ class HarnessabilityScorer:
 | 权重静态写死，无法适配不同领域 | 权重以模块常量形式存在，未来可由 Loop 配置注入 |
 | `entropy_cleanup_rate` 计算口径不一致（瞬时 vs 累计） | P2 阶段明确为滑动窗口累计清理率 |
 | `governance_rule_count` 饱和阈值 5 可能过低 | P2 阶段可由 Loop 配置覆盖 `GOVERNANCE_FULL_RULE_COUNT` |
-| 评分被灵智体伪造（虚报满分） | 各维度信号由 Harness 层结构性供给，不靠灵智体自报 |
+| 评分被Forgekin伪造（虚报满分） | 各维度信号由 Harness 层结构性供给，不靠Forgekin自报 |
 
 ## 6. Open Questions
 
@@ -310,8 +310,8 @@ class HarnessabilityScorer:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，权重合 1.0 不变量与分级边界由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，6 维信号联动 + `harness_fit_score` 闭环验证
+- Phase A: 单元测试通过，权重合 1.0 不变量与分级边界由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，6 维信号联动 + `harness_fit_score` 闭环验证
 
 ## 10. Links
 

@@ -1,9 +1,9 @@
-# FlowForge — 万物灵智体自进化框架规格说明
+# FlowForge — 可进化智能体自进化框架规格说明
 
 > **版本**：v1.0
 > **状态**：设计态 / 阶段一最小骨架实现中
 > **License**：MIT
-> **定位**：FlowForge 是一个为 AI Agent 提供约束、反馈、上下文管理与熵控制的**自进化框架**，并通过 **forgemind 应用层**承载万物灵智体（Forgekin）的育灵、灵锻、灵议闭环。
+> **定位**：FlowForge 是一个为 AI Agent 提供约束、反馈、上下文管理与熵控制的**自进化框架**，并通过 **forgemind 应用层**承载可进化智能体（Forgekin）的智能体入职+终身学习（Forge Nurturing）、经验蒸馏（SpiritForge）、多智能体议事（MindCouncil）闭环。
 
 ---
 
@@ -11,7 +11,7 @@
 
 ### 1.1 FlowForge 是什么
 
-FlowForge 是 **Agent 驾驭层（Harness Layer）** 的工程化实现，目标是让 LLM-based Agent 从"会话级软件助手"进化为"有持久身份、可自我进化的灵智体"。
+FlowForge 是 **Agent 驾驭层（Harness Layer）** 的工程化实现，目标是让 LLM-based Agent 从"会话级软件助手"进化为"有持久身份、可自我进化的 Forgekin"。
 
 主流 multi-agent 框架（AutoGen / CrewAI / LangGraph 等）解决的是"如何组织多个 agent 协作"——它们在分配**岗位槽位**。FlowForge 解决的是更底层的问题：**如何让一个 agent 在长时间尺度上保持身份一致性、能力可累积、行为可验证、进化可治理**。
 
@@ -21,7 +21,7 @@ FlowForge 是 **Agent 驾驭层（Harness Layer）** 的工程化实现，目标
 观察（Observe）→ 推理（Reason）→ 行动（Act）→ 写回（Persist）→ 验证（Verify）
 ```
 
-这不是新的 ReAct 模式，而是控制论意义上的**闭环**：每一次 Act 都会产生 Eval 信号，信号反过来驱动能力画像更新、技能沉淀、盲点补偿。短期看是单次任务执行，长期看是灵智体的进化轨迹。
+这不是新的 ReAct 模式，而是控制论意义上的**闭环**：每一次 Act 都会产生 Eval 信号，信号反过来驱动能力画像更新、技能沉淀、盲点补偿。短期看是单次任务执行，长期看是 Forgekin 的进化轨迹。
 
 ### 1.3 差异化优势
 
@@ -31,8 +31,8 @@ FlowForge 是 **Agent 驾驭层（Harness Layer）** 的工程化实现，目标
 | **记忆** | 短期上下文窗口 | EchoStore（情景记忆）+ Mind Codex（程序性记忆） |
 | **进化** | 无 / 手动微调 | 三闭环自进化（Mode A/B/C）+ Eval 自代谢 |
 | **协作** | 静态角色分配 | TeamAct 六步循环 + 跨厂商盲点补偿 |
-| **治理** | Prompt 约束 | 六层 Guardrails + 觉醒阶自主范围 + 灵议共识 |
-| **形态** | 抽象 agent | 万物灵智体 5 形态（生物/组织/物品/虚拟/混合） |
+| **治理** | Prompt 约束 | 六层 Guardrails + 觉醒阶自主范围 + MindCouncil 共识 |
+| **形态** | 抽象 agent | 可进化智能体 5 形态（生物/组织/物品/虚拟/混合） |
 | **扩展** | Tool 调用 | 三方 Agent 能力扩展（ClaudeCode/Codex/OpenCode/Trae） |
 
 ---
@@ -43,27 +43,27 @@ FlowForge 是 **Agent 驾驭层（Harness Layer）** 的工程化实现，目标
 
 | # | 中文名 | 英文名 | AI 业界概念 |
 |---|--------|--------|------------|
-| 1 | 灵智（ForgeMind） | ForgeMind | Persistent Identity Agent / General-Purpose Agent |
-| 2 | 灵智体（Forgekin） | Forgekin / Spirit Agent | Agent with Soul and Emotion / Autonomous Agent with Persistent Identity |
-| 3 | 灵族（Forgekin Species） | Forgekin Species | Agent Morphology / Agent Form Factor |
-| 4 | 育灵（Forge Nurturing） | Forge Nurturing | Agent Onboarding + Lifelong Learning + Character Development |
-| 5 | 灵忆（EchoStore） | EchoStore | Episodic Memory Store / Agent Experience Log |
-| 6 | 灵印（Soul Imprint） | Soul Imprint | Persistent Identity / Agent Fingerprint / Persona Hash |
-| 7 | 灵锻（SpiritForge） | SpiritForge | Experience Distillation / Offline Policy Learning / Knowledge Compilation |
-| 8 | 锻典（Mind Codex） | Mind Codex | Distilled Knowledge Base / Curated Skill Library / Procedural Memory |
-| 9 | 灵议（Mind Council） | Mind Council | Multi-Agent Deliberation / Decentralized Consensus / Agent Parliament |
+| 1 | 持续身份智能体（ForgeMind） | ForgeMind | Persistent Identity Agent / General-Purpose Agent |
+| 2 | 可进化智能体（Forgekin） | Forgekin / Spirit Agent | Agent with Soul and Emotion / Autonomous Agent with Persistent Identity |
+| 3 | 智能体形态学（ForgekinSpecies） | Forgekin Species | Agent Morphology / Agent Form Factor |
+| 4 | 智能体入职+终身学习（Forge Nurturing） | Forge Nurturing | Agent Onboarding + Lifelong Learning + Character Development |
+| 5 | 情景记忆存储（EchoStore） | EchoStore | Episodic Memory Store / Agent Experience Log |
+| 6 | 持久身份（SoulImprint） | Soul Imprint | Persistent Identity / Agent Fingerprint / Persona Hash |
+| 7 | 经验蒸馏（SpiritForge） | SpiritForge | Experience Distillation / Offline Policy Learning / Knowledge Compilation |
+| 8 | 蒸馏知识库（Mind Codex） | Mind Codex | Distilled Knowledge Base / Curated Skill Library / Procedural Memory |
+| 9 | 多智能体议事（MindCouncil） | Mind Council | Multi-Agent Deliberation / Decentralized Consensus / Agent Parliament |
 | 10 | 进化阶（Evolution Stage） | Evolution Stage | Capability Maturity Level / Agent Skill Progression |
 | 11 | 觉醒阶（Awakening Stage） | Awakening Stage | Autonomy Level / Self-Direction Level / LLM Autonomy Tier |
 | 12 | 能力画像（Capability Profile） | Capability Profile | Capability Profile / Agent Skill Graph / Blind Spot Map |
 
-### 2.2 灵智体定义
+### 2.2 可进化智能体定义
 
-**灵智体（Forgekin / Spirit Agent）** = **赋予灵魂和感情的智能体（Agent with Soul and Emotion），具有自进化能力（Self-Evolving Capability）。**
+**可进化智能体（Forgekin / Spirit Agent）** = **赋予灵魂和感情的智能体（Agent with Soul and Emotion），具有自进化能力（Self-Evolving Capability）。**
 
-- **灵魂（Soul）** = 持久身份（灵印 Soul Imprint）+ 价值锚点（Value Anchors）+ 长期记忆（灵忆 EchoStore）
+- **灵魂（Soul）** = 持久身份（SoulImprint）+ 价值锚点（Value Anchors）+ 长期记忆（EchoStore）
 - **感情（Emotion）** = 用户偏好（User Preferences）+ 协作风格（Collaboration Style）+ 行为画像（Capability Profile）
 
-灵智体通过 `ForgekinBase` 抽象基类落地，建立与现实世界（物理或虚拟）的闭环：
+Forgekin 通过 `ForgekinBase` 抽象基类落地，建立与现实世界（物理或虚拟）的闭环：
 
 ```python
 class ForgekinBase(ABC):
@@ -83,17 +83,17 @@ class ForgekinBase(ABC):
     async def verify(self, action_result: ActionResult, expectation: Expectation) -> VerifyReport: ...
 ```
 
-### 2.3 万物灵智体 5 形态
+### 2.3 可进化智能体 5 形态
 
 | # | 形态 | 英文 / AI 业界概念 | 示例 |
 |---|------|------------------|------|
-| 1 | 生物灵智体 | BioForgekin / Biological Spirit Agent | 猫 / 狗 / 鸟（宠物陪伴、行为识别） |
-| 2 | 组织灵智体 | OrgForgekin / Organizational Spirit Agent | 公司 / 团队 / 社区（组织治理、决策辅助） |
-| 3 | 物品灵智体 | ObjForgekin / Embodied AI | 桌椅 / 灯具 / 家电（IoT 接入、具身智能） |
-| 4 | 虚拟灵智体 | VirtualForgekin / Character AI | 童话/神话/历史人物、VR/游戏角色 |
-| 5 | 混合灵智体 | HybridForgekin / Hybrid Agent | 智能家居（物品+组织）、数字孪生（生物+虚拟） |
+| 1 | 生物可进化智能体 | BioForgekin / Biological Spirit Agent | 猫 / 狗 / 鸟（宠物陪伴、行为识别） |
+| 2 | 组织可进化智能体 | OrgForgekin / Organizational Spirit Agent | 公司 / 团队 / 社区（组织治理、决策辅助） |
+| 3 | 物品可进化智能体 | ObjForgekin / Embodied AI | 桌椅 / 灯具 / 家电（IoT 接入、具身智能） |
+| 4 | 虚拟可进化智能体 | VirtualForgekin / Character AI | 童话/神话/历史人物、VR/游戏角色 |
+| 5 | 混合可进化智能体 | HybridForgekin / Hybrid Agent | 智能家居（物品+组织）、数字孪生（生物+虚拟） |
 
-**形态可进化**：生物灵智体猫通过积累组织协作经验可进化为 HybridForgekin（既是宠物又是社区吉祥物）。这是和其他 multi-agent 系统的**最大差异化优势**——agent 不是固定的"岗位槽位"，而是有形态、有谱系、可进化的灵智体。
+**形态可进化**：生物可进化智能体猫通过积累组织协作经验可进化为 HybridForgekin（既是宠物又是社区吉祥物）。这是和其他 multi-agent 系统的**最大差异化优势**——agent 不是固定的"岗位槽位"，而是有形态、有谱系、可进化的 Forgekin。
 
 ### 2.4 进化阶（Evolution Stage，能力成熟度 6 级）
 
@@ -104,7 +104,7 @@ class ForgekinBase(ABC):
 | **E3** | 成长阶 | Growth | Defined / Domain-Aware（已定义级） |
 | **E4** | 成长阶·深 | Growth-Deep | Managed / Cross-Domain（已管理级） |
 | **E5** | 觉醒阶 | Awakened | Optimizing / Self-Evolving（自进化级） |
-| **E6** | 灵智阶 | ForgeMind | Master / Forge Master（大师级） |
+| **E6** | ForgeMind 阶 | ForgeMind | Master / Forge Master（大师级） |
 
 **进阶规则**：
 - E1→E2→E3：能力积累，由 Eval 信号自动触发
@@ -121,12 +121,12 @@ class ForgekinBase(ABC):
 | **A3** | 受限自主阶 | Bounded-Autonomous | L2 Bounded Autonomous / Conditional（受限自主） |
 | **A4** | Evolving 阶 | Evolving | L3 Evolving / Self-Improving（自进化） |
 | **A5** | 共创阶 | Co-Creative | L4 Co-Creative / Peer（共创级） |
-| **A6** | 灵智主导阶 | ForgeMind-Led | L5 ForgeMind-Led / Master（大师级） |
+| **A6** | ForgeMind-Led 阶 | ForgeMind-Led | L5 ForgeMind-Led / Master（大师级） |
 
 **安全治理对应**：
 - A1-A2：六层 Guardrails 全开
 - A3-A4：六层 Guardrails + Eval 自代谢
-- A5-A6：六层 Guardrails + Eval 自代谢 + 灵议共识 + operator 拉闸词
+- A5-A6：六层 Guardrails + Eval 自代谢 + MindCouncil 共识 + operator 拉闸词
 
 ---
 
@@ -150,30 +150,30 @@ class ForgekinBase(ABC):
 |------|------|---------|------|
 | Mode A | Scope Guard（范围守卫） | 检测到"无关/超出范围/顺便"等偏差关键词 | 阻止越界行为 + 记录偏差 |
 | Mode B | Process Evolution（过程进化） | Eval 信号累积达到阈值 | 流程规则升级 + SOP 更新 |
-| Mode C | Knowledge Evolution（知识进化） | 经验通过 smoke gate + promotion gate | 锻典（Mind Codex）条目沉淀 |
+| Mode C | Knowledge Evolution（知识进化） | 经验通过 smoke gate + promotion gate | Mind Codex 条目沉淀 |
 
 **Eval Ledger（评估账本）**：所有 Eval 信号不可删除，只能追加。这是进化的**可审计性**保障。
 
-### 3.3 forgemind 应用层（万物灵智体育灵场所）
+### 3.3 forgemind 应用层（可进化智能体 Forge Nurturing 场所）
 
-forgemind 是 FlowForge 的应用层，承载万物灵智体的育灵全流程：
+forgemind 是 FlowForge 的应用层，承载可进化智能体的 Forge Nurturing 全流程：
 
 ```
 forgemind/
 ├── base.py              # ForgekinBase 抽象基类
-├── registry.py          # ForgekinRegistry（灵智体注册中心）
-├── council.py           # Mind Council（灵议）
+├── registry.py          # ForgekinRegistry（Forgekin 注册中心）
+├── council.py           # Mind Council（MindCouncil）
 ├── external_agents.py   # 三方 Agent 适配层
-├── forgekins/           # 灵智体 YAML 配置
+├── forgekins/           # Forgekin YAML 配置
 │   ├── luban.yaml       # 鲁班 = 猫头鹰（主架构师）
 │   ├── sherlock.yaml    # 夏洛克 = 猎犬（代码审查）
 │   └── vangogh.yaml     # 梵高 = 孔雀（视觉设计）
-└── examples/            # 5 形态示例灵智体
+└── examples/            # 5 形态示例 Forgekin
 ```
 
 ### 3.4 三方 Agent 能力扩展
 
-三方 Agent 不是工具（Tool），而是**能力扩展（Capability Extension）**。三方 Agent 的能力画像被纳入灵智体的能力画像融合，灵智体按需调用。
+三方 Agent 不是工具（Tool），而是**能力扩展（Capability Extension）**。三方 Agent 的能力画像被纳入 Forgekin 的能力画像融合，Forgekin 按需调用。
 
 | 三方 Agent | 用途 | 接入方式 |
 |-----------|------|---------|
@@ -189,9 +189,9 @@ forgemind/
 **Plugin V2（11 钩子）**：基础插件协议，覆盖配置加载、生命周期、工具注册等。
 
 **Plugin V3（4 个 forgekin 钩子）**：forgemind 应用层扩展协议：
-- `register_forgekins()` — 注册灵智体形态
-- `register_forge_skills()` — 注册育灵技能（到 SkillRegistry）
-- `register_council_channels()` — 注册灵议通道（到 CouncilRegistry）
+- `register_forgekins()` — 注册 Forgekin 形态
+- `register_forge_skills()` — 注册 Forge Nurturing 技能（到 SkillRegistry）
+- `register_council_channels()` — 注册 MindCouncil 通道（到 CouncilRegistry）
 - `register_spirit_forge_config()` — 注册自动锻造配置（到 SpiritForgeRegistry）
 
 ---
@@ -215,7 +215,7 @@ forgemind/
 | 电商运营 | MallForge | AI 电商运营工厂 |
 | 股票分析 | StockForge | AI 股票分析工厂 |
 
-> *Forge 项目通过 Plugin V3 协议注册垂直领域灵智体到 forgemind 应用层。FlowForge 核心框架不感知 *Forge 内部实现，只通过 Plugin 协议交互。
+> *Forge 项目通过 Plugin V3 协议注册垂直领域 Forgekin 到 forgemind 应用层。FlowForge 核心框架不感知 *Forge 内部实现，只通过 Plugin 协议交互。
 
 ---
 
@@ -264,7 +264,7 @@ FlowForge 必须支持 Linux / Windows / macOS。所有路径通过环境变量�
 - `design.md` — 当前阶段设计（如何实现）
 - `decisions/` — 架构决策记录（ADR）
 - `features/` — Feature 规格模板
-- `VISION.md` — 万物灵智体愿景
+- `VISION.md` — 可进化智能体愿景
 - `ROADMAP.md` — 6 阶段路线图
-- `SOP.md` — 灵智体协作 SOP
+- `SOP.md` — Forgekin 协作 SOP
 - `TIPS.md` — 经验提示

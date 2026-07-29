@@ -59,12 +59,17 @@ def test_loop_run_returns_zero(capsys: pytest.CaptureFixture[str]) -> None:
 
 
 def test_python_m_flowforge_version_works(project_root: Path) -> None:
-    """Smoke test: ensure `python -m flowforge --version` works from CLI."""
+    """Smoke test: ensure `python -m flowforge --version` works from CLI.
+
+    After flattening the directory structure, the project root IS the flowforge
+    package itself. So `python -m flowforge` must run from the PARENT directory
+    (where the flowforge package can be found on sys.path).
+    """
     result = subprocess.run(
         [sys.executable, "-m", "flowforge", "--version"],
         capture_output=True,
         text=True,
-        cwd=str(project_root),
+        cwd=str(project_root.parent),
         timeout=30,
     )
     assert result.returncode == 0, f"stderr: {result.stderr}"

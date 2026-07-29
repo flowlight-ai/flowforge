@@ -2,21 +2,21 @@
 
 > **状态**: accepted
 > **日期**: 2026-07-21
-> **决策者**: operator + 架构师灵智体
+> **决策者**: operator + 架构师可进化智能体
 > **依赖**: `[doc:roleagent.md]` + `[doc:decisions/004-capability-profile-routing.md]` + `[doc:decisions/008-multi-domain-memory-federation.md]` + `[doc:decisions/009-eval-self-metabolism.md]` + `[doc:decisions/013-all-things-spirit-mind-vision.md]`
-> **依据**: operator 7 条不可妥协原则 + 万物灵智体（All-Things Spirit Mind）愿景
+> **依据**: operator 7 条不可妥协原则 + 可进化智能体（Spirit Mind）愿景
 
 ---
 
 ## 1. 上下文
 
-`[doc:roleagent.md#第1章]` 确立核心公式："Agent 质量 = 模型能力 × Harness 契合度"。但静态灵智体（Forgekin）存在三个结构性缺陷：
+`[doc:roleagent.md#第1章]` 确立核心公式："Agent 质量 = 模型能力 × Harness 契合度"。但静态可进化智能体（Forgekin）存在三个结构性缺陷：
 
 1. **过程重复犯错**：同一类错误反复出现，缺少机制把单次纠正提炼为流程改进，违背 roleagent.md 第 5 章"harness 必须有自我代谢系统"主张
 2. **知识不沉淀**：高价值协作经验只活在对话历史里，会话结束就消失，违背 roleagent.md 第 4 章"团队记忆"主张——知识生产者必须等于消费者
-3. **框架不能自演化**：operator 明确要求"自己开发自己"——灵智体不仅要会用框架，还要能改进框架本身；但完全自由修改代码会破坏架构完整性
+3. **框架不能自演化**：operator 明确要求"自己开发自己"——可进化智能体不仅要会用框架，还要能改进框架本身；但完全自由修改代码会破坏架构完整性
 
-operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物灵智体愿景共同要求：灵智体必须具备自我演进能力，且演进必须分级、可控、可审计。本 ADR 是 P1-8 代码实现的决策追溯，对应 `flowforge/evolution/` 下 7 个文件。
+operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和可进化智能体愿景共同要求：可进化智能体必须具备自我演进能力，且演进必须分级、可控、可审计。本 ADR 是 P1-8 代码实现的决策追溯，对应 `flowforge/evolution/` 下 7 个文件。
 
 ---
 
@@ -27,10 +27,10 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 将自进化分为三个互斥但协作的模式：
 
 - **Mode A — 过程进化（ProcessEvolution）**：改进执行过程本身。当重复错误 ≥2 次、用户纠正可泛化、SOP 出现缺口、review 发现系统性问题时，按 5 槽模板（trigger / evidence / root_cause / lever / verify）提出改进提案。杠杆按最小代价排序：`recite_scope → memory → skill → sop → rule → system_prompt → l0`，默认走最轻杠杆。提案生命周期：proposed → accepted（必须挂 commit_ref）→ 30 天 replay check
-- **Mode B — 知识进化（KnowledgeEvolution）**：把高价值协作蒸馏为可复用知识，写入灵典（MindCodex）。三问过滤（reusability / non_obviousness / decay_risk，≥2/3 才蒸馏）；产物分三向：`method_card | skill_draft | memory`；通过 Replay A/B 双门验证（smoke gate 3 例 ≥2 通过 + promotion gate 5 例 ≥3 通过且覆盖 3 类）
+- **Mode B — 知识进化（KnowledgeEvolution）**：把高价值协作蒸馏为可复用知识，写入经验知识库（MindCodex）。三问过滤（reusability / non_obviousness / decay_risk，≥2/3 才蒸馏）；产物分三向：`method_card | skill_draft | memory`；通过 Replay A/B 双门验证（smoke gate 3 例 ≥2 通过 + promotion gate 5 例 ≥3 通过且覆盖 3 类）
 - **Mode C — 框架进化（Framework Evolution）**：修改代码本身。这是最重模式，**必须 operator 手动批准（I8 不变式）**。任何框架修改走 Scope Guard 的 plan → preview → approve → apply 四步流程；禁止区（`core/` + `tests/` + `decisions/`）一律拒绝
 
-### 2.2 ForgeMindEngine（灵智引擎）— 三模式调度核心
+### 2.2 ForgeMindEngine（通用智能体框架引擎）— 三模式调度核心
 
 `ForgeMindEngine` 是唯一接触三模式的入口（边界铁律：调用方不得直接实例化 Mode 类）。生命周期分两步：
 
@@ -50,7 +50,7 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 
 ### 2.4 EvolutionStage（进化阶）— E1-E6 成熟度分级
 
-进化阶衡量**能力成熟度**，描述灵智体在某个领域的能力水位，与代码层 `KnowledgeMaturityLevel`（L0-L4）互补：
+进化阶衡量**能力成熟度**，描述可进化智能体在某个领域的能力水位，与代码层 `KnowledgeMaturityLevel`（L0-L4）互补：
 
 | 阶 | 名称 | 标志 |
 |----|------|------|
@@ -63,7 +63,7 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 
 ### 2.5 AwakeningStage（觉醒阶）— A1-A5 自主性分级
 
-觉醒阶衡量**自主性级别**，描述灵智体能多大程度脱离 operator 干预：
+觉醒阶衡量**自主性级别**，描述可进化智能体能多大程度脱离 operator 干预：
 
 | 阶 | 名称 | 自主范围 |
 |----|------|----------|
@@ -89,8 +89,8 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 
 **I8 不变式**（铁律）：任何对代码本身的修改（Mode C 框架进化）必须经 operator 手动批准。这体现 operator"自己开发自己"愿景与安全边界的平衡：
 
-- 灵智体可以**提出**框架改进提案（E6 触发）
-- 灵智体可以**预览**修改效果（preview 阶段）
+- 可进化智能体可以**提出**框架改进提案（E6 触发）
+- 可进化智能体可以**预览**修改效果（preview 阶段）
 - 但**应用**（apply）必须 operator 显式 signoff
 - 禁止区永远拒绝，无论觉醒阶多高
 
@@ -115,15 +115,15 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 | **方案 A（选定）: 三模式 + Scope Guard + operator 批准门槛** | 分级清晰，Mode A/B 自由、Mode C 可控；满足 operator"自己开发自己"愿景；I8 保护架构完整性；Scope Guard 提供四类安全信号 | 实现复杂度高（7 文件 + 元认知 + 成熟度阶梯）；Mode C 流程长，迭代慢 |
 | 方案 B: 单一进化模式（无分类） | 实现简单 | 无法区分过程改进 / 知识沉淀 / 框架修改；高风险操作无门禁；违背 I8 |
 | 方案 C: 无 Scope Guard 的自由进化 | Mode C 迭代快 | 架构完整性不可控；禁止区可能被误改；违背 operator 7 原则"修复过程变更安全" |
-| 方案 D: 完全人工进化（无自进化） | 最安全 | 违背万物灵智体愿景；违背 operator"自己开发自己"要求；能力无法复利 |
+| 方案 D: 完全人工进化（无自进化） | 最安全 | 违背可进化智能体愿景；违背 operator"自己开发自己"要求；能力无法复利 |
 
 ---
 
 ## 4. 理由
 
-- operator 明确要求灵智体具备自我演进能力，且演进必须可控——三模式分级是唯一同时满足"自主性"和"安全性"的方案
+- operator 明确要求可进化智能体具备自我演进能力，且演进必须可控——三模式分级是唯一同时满足"自主性"和"安全性"的方案
 - `[doc:roleagent.md#第5章]` Eval 自代谢主张：harness 必须有自我删除机制，否则只会增生技术债。Mode A 的 minimal-leverage + 30 天 replay check 直接落地这一主张
-- `[doc:roleagent.md#第4章]` 多域记忆联邦要求知识生产者 = 知识消费者。Mode B 的 Episode → MethodCard 蒸馏闭环让灵智体既是知识生产者又是消费者，写入灵典 MindCodex 后可被检索复用
+- `[doc:roleagent.md#第4章]` 多域记忆联邦要求知识生产者 = 知识消费者。Mode B 的 Episode → MethodCard 蒸馏闭环让可进化智能体既是知识生产者又是消费者，写入经验知识库 MindCodex 后可被检索复用
 - Mode C 的 I8 不变式直接落地 operator 7 原则中"禁止偷工减料"和"修复过程变更安全"——框架修改必须显式批准，禁止区永远拒绝
 - Scope Guard 的 magic_word 机制对应 roleagent.md 第 3 章"Runtime 逃生舱"——operator 可用极低带宽打断错误轨迹
 - 进化阶（E1-E6）与觉醒阶（A1-A5）解耦：能力成熟度和自主性级别独立评估，避免"能力强就给更多自主权"的线性思维
@@ -136,7 +136,7 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 |------|------|
 | Mode C 框架进化破坏架构完整性 | I8 不变式：operator 手动批准 + Scope Guard 禁止区（core/tests/decisions）+ plan→preview→approve→apply 四步 |
 | Mode A 误触发，频繁改流程 | minimal-leverage 优先级 + ≥2 证据源硬护栏 + 30 天 replay check |
-| Mode B 蒸馏低质量知识污染灵典 MindCodex | 三问过滤（≥2/3）+ smoke gate + promotion gate（5 例 ≥3 通过且 3 类覆盖）+ 成熟度阶梯降级机制（L2 最近 3 次 <50% 降级，L3 最近 5 次 <60% 降级） |
+| Mode B 蒸馏低质量知识污染经验知识库 MindCodex | 三问过滤（≥2/3）+ smoke gate + promotion gate（5 例 ≥3 通过且 3 类覆盖）+ 成熟度阶梯降级机制（L2 最近 3 次 <50% 降级，L3 最近 5 次 <60% 降级） |
 | 元认知 self_reported 信号有系统偏差 | 高风险场景权重降为 0；Wilson 下界保守估计 |
 | 觉醒阶 A4/A5 误授权 | 当前定位 A2，A4/A5 仅作愿景目标，不默认开启 |
 | 进化阶与觉醒阶混淆 | 文档明确区分（E=能力，A=自主性），代码层独立评估 |
@@ -149,14 +149,14 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 
 - **方案 B（单一进化模式）**：违背 roleagent.md 第 1 章"Build to Delete / Built to Persist"判别——不同进化模式有不同半衰期，必须分类治理
 - **方案 C（无 Scope Guard）**：违背 operator 7 原则"禁止在修复问题时修改不相关代码"——没有 Scope Guard，框架修改会蔓延到禁止区
-- **方案 D（完全人工进化）**：违背万物灵智体愿景和 operator"自己开发自己"要求；能力无法复利积累
+- **方案 D（完全人工进化）**：违背可进化智能体愿景和 operator"自己开发自己"要求；能力无法复利积累
 
 ---
 
 ## 7. 参与者
 
 - operator（愿景锚点 + I8 不变式 + 最终决策）
-- 架构师灵智体（三模式设计 + 术语对齐 + P1-8 代码实现）
+- 架构师可进化智能体（三模式设计 + 术语对齐 + P1-8 代码实现）
 
 ---
 
@@ -164,7 +164,7 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 
 | 日期 | 修订 | 修订者 |
 |------|------|--------|
-| 2026-07-21 | 初始版本，确立自进化三模式决策，追溯 P1-8 代码实现（ForgeMindEngine / ScopeGuard / ProcessEvolution / KnowledgeEvolution / KnowledgeMaturityLadder / MetacognitionRouter / models） | operator + 架构师灵智体 |
+| 2026-07-21 | 初始版本，确立自进化三模式决策，追溯 P1-8 代码实现（ForgeMindEngine / ScopeGuard / ProcessEvolution / KnowledgeEvolution / KnowledgeMaturityLadder / MetacognitionRouter / models） | operator + 架构师可进化智能体 |
 
 ---
 
@@ -177,7 +177,7 @@ operator 7 条原则中"禁止偷工减料（发现未实现即Bug）"和万物�
 - `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由
 - `[doc:decisions/008-multi-domain-memory-federation.md]` — 多域记忆联邦
 - `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 万物灵智体愿景
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景
 - `[doc:decisions/012-naming-fusion.md]` — 命名融合（项目正式术语表）
 - `flowforge/evolution/engine.py` — ForgeMindEngine 三模式调度核心
 - `flowforge/evolution/scope_guard.py` — ScopeGuard 作用域守卫

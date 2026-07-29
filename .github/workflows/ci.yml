@@ -35,10 +35,10 @@ jobs:
         run: pip install ruff
 
       - name: Run ruff check
-        run: ruff check flowforge/
+        run: ruff check .
 
       - name: Run ruff format check
-        run: ruff format --check flowforge/
+        run: ruff format --check .
 
   type-check:
     name: Type Check (mypy)
@@ -58,7 +58,7 @@ jobs:
           pip install -e ".[dev]" || pip install mypy
 
       - name: Run mypy
-        run: mypy flowforge/ || echo "::warning::mypy not fully configured yet"
+        run: mypy . || echo "::warning::mypy not fully configured yet"
 
   test:
     name: Test (pytest)
@@ -84,7 +84,7 @@ jobs:
           pip install -e ".[dev]" || pip install pytest pytest-asyncio pytest-cov
 
       - name: Run tests
-        run: pytest tests/ -v --cov=flowforge --cov-report=xml || echo "::warning::tests not fully configured yet"
+        run: pytest tests/ -v --cov=. --cov-report=xml || echo "::warning::tests not fully configured yet"
 
       - name: Upload coverage
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'

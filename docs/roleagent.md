@@ -1,7 +1,7 @@
 # roleagent.md 工程路径（FlowForge 落地版）
 
 > **文档编号**: roleagent.md（v1.0）
-> **用途**: FlowForge 灵智体在 `flowforge/docs/` 内即可访问 roleagent 工程路径核心内容
+> **用途**: FlowForge 可进化智能体（Forgekin）在 `flowforge/docs/` 内即可访问 roleagent 工程路径核心内容
 > **维护规则**: 本文件不得偏离核心主张；项目演进时同步更新
 
 ---
@@ -130,7 +130,7 @@ operator 可以通过 4 条 Magic Words 紧急制动（详见 `[doc:VISION.md#8]
 
 ### 4.3 锻典 MindCodex
 
-锻典是可检索的知识库，存储灵智体蒸馏的经验。锻典条目有 5 级成熟度阶梯：
+锻典是可检索的知识库，存储可进化智能体蒸馏的经验。锻典条目有 5 级成熟度阶梯：
 
 | 级别 | 含义 | 来源 |
 |------|------|------|
@@ -176,9 +176,9 @@ operator 可以通过 4 条 Magic Words 紧急制动（详见 `[doc:VISION.md#8]
 
 | Tier | 含义 | 恢复方式 |
 |------|------|---------|
-| Tier 1 | 自动恢复 | 灵智体自愈（重试 / fallback） |
-| Tier 2 | 带状态恢复 | 灵智体 + 灵忆恢复 |
-| Tier 3 | 人工确认 | 灵智体请求 operator 确认 |
+| Tier 1 | 自动恢复 | 可进化智能体自愈（重试 / fallback） |
+| Tier 2 | 带状态恢复 | 可进化智能体 + 情景记忆存储（EchoStore）恢复 |
+| Tier 3 | 人工确认 | 可进化智能体请求 operator 确认 |
 | Tier 4 | 不可恢复 | operator 介入 + sunset review |
 
 ### 6.2 liveness 规范读模型
@@ -232,7 +232,7 @@ Token 账本统计单 agent vs 团队成本，回答"多 agent 是否值得"。
 
 ---
 
-## 9. 万物灵智体形态分类
+## 9. 可进化智能体（Forgekin）形态分类
 
 详见 `[doc:VISION.md#2]`
 
@@ -246,7 +246,7 @@ Token 账本统计单 agent vs 团队成本，回答"多 agent 是否值得"。
 
 ## 11. 延伸阅读
 
-- `[doc:VISION.md]` — 万物灵智体愿景
-- `[doc:SOP.md]` — 灵智体协作 SOP
+- `[doc:VISION.md]` — 可进化智能体愿景
+- `[doc:SOP.md]` — 可进化智能体协作 SOP
 - `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由 ADR
 - `[doc:decisions/006-external-agent-integration.md]` — 三方 Agent 集成 ADR

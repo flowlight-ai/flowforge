@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F012: Magic Words（魔法词 / 逃生舱）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/007-harness-engineering.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 3 章 Harness 七层（Layer 5）
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -17,20 +17,20 @@ created: 2026-07-21
 
 ### 1.1 问题陈述
 
-`[doc:roleagent.md#第3章]` 指出：模型没有稳定的"我现在不该继续"自觉，不可逆操作必须有外部边界。Runtime 逃生舱让人类用极低带宽打断灵智体的错误轨迹——一句话就能 halt / pause / escalate / rollback，无需理解灵智体内部状态。
+`[doc:roleagent.md#第3章]` 指出：模型没有稳定的"我现在不该继续"自觉，不可逆操作必须有外部边界。Runtime 逃生舱让人类用极低带宽打断Forgekin的错误轨迹——一句话就能 halt / pause / escalate / rollback，无需理解Forgekin内部状态。
 
 FlowForge 需要一个**魔法词注册表**：中英双语词表，任一 Harness 层都可监听；检测到魔法词时返回 `DetectedMagicWord`（含 `position` 与 ±20 字符 `context`），供人工复核。这是 Harness 七层的第 5 层——人机边界，让 operator 极低带宽干预。
 
 ### 1.2 当前痛点
 
-- 灵智体跑偏时，operator 必须理解内部状态才能干预，干预成本高
+- Forgekin跑偏时，operator 必须理解内部状态才能干预，干预成本高
 - 没有统一的"停止/暂停/升级/回滚"词表，各 Agent 自定义
-- 复述历史短语可能误触逃生舱（如灵智体复述用户之前的"暂停"指令）
+- 复述历史短语可能误触逃生舱（如Forgekin复述用户之前的"暂停"指令）
 - 与 `flowforge.forgemind.magic_words`（CVO 中断协议）职责重叠，未明确区分
 
 ### 1.3 不做的影响
 
-- 灵智体错误轨迹无法低带宽打断，operator 必须全程盯盘
+- Forgekin错误轨迹无法低带宽打断，operator 必须全程盯盘
 - 不可逆操作无人工确认边界，事故无法挽回
 - 逃生舱词表散落，维护成本高
 - "自己开发自己"闭环无法达成——开发过程必须可被 operator 随时打断
@@ -172,8 +172,8 @@ class MagicWordsRegistry:
 - [ ] AC-B1: **仅在当前 CVO 指令中触发，复述历史中的短语不触发**（结构性约束，调用方传入当前指令文本）
 - [ ] AC-B2: 检测日志 WARNING 级别，含 `word` / `action` / `pos`，供人工复核
 - [ ] AC-B3: 与 `flowforge.forgemind.magic_words`（CVO 中断协议）职责明确区分（文档 + 代码注释）
-- [ ] AC-B4: E2E 测试 — operator 输入"停止"，灵智体 HALT；输入"暂停"，灵智体 PAUSE；输入"升级"，灵智体 ESCALATE；输入"回滚"，灵智体 ROLLBACK
-- [ ] AC-B5: E2E 测试 — 灵智体复述历史中的"暂停"不触发 PAUSE（仅当前 CVO 指令触发）
+- [ ] AC-B4: E2E 测试 — operator 输入"停止"，Forgekin HALT；输入"暂停"，Forgekin PAUSE；输入"升级"，Forgekin ESCALATE；输入"回滚"，Forgekin ROLLBACK
+- [ ] AC-B5: E2E 测试 — Forgekin复述历史中的"暂停"不触发 PAUSE（仅当前 CVO 指令触发）
 - [ ] AC-B6: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -218,8 +218,8 @@ class MagicWordsRegistry:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，双语词表与检测原语由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，CVO 触发约束验证（复述历史不触发）
+- Phase A: 单元测试通过，双语词表与检测原语由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，CVO 触发约束验证（复述历史不触发）
 
 ## 10. Links
 

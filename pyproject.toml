@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "flowforge"
 version = "0.1.0"
-description = "FlowForge — self-evolving agent harness with universal forgekin (万物灵智体) application layer."
+description = "FlowForge — self-evolving agent harness with universal forgekin (Forgekin) application layer."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-    { name = "flowlight-ai", url = "https://github.com/flowlight-ai" }
+    { name = "flowlight-ai", email = "dev@flowlight-ai.local" }
 ]
 keywords = ["agent", "self-evolution", "multi-agent", "llm", "agi", "forgekin"]
 classifiers = [
@@ -29,6 +29,10 @@ dependencies = [
     "pyyaml>=6.0",
     "httpx>=0.27",
     "anyio>=4.0",
+    # Web app (Forgekin Council Chat) — needed for flowforge.web.app
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",  # [standard] includes websockets + httptools
+    "websockets>=12.0",          # imported directly by tests/test_websocket_load.py
 ]
 
 [project.optional-dependencies]
@@ -38,6 +42,8 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.5",
     "mypy>=1.10",
+    # T8 DOM verification tests require a real browser
+    "playwright>=1.40",
 ]
 cli = [
     "click>=8.1",

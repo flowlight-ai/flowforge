@@ -8,7 +8,7 @@ created: 2026-07-21
 
 # F009: 工具中介（Tool Mediation）
 
-> **状态**: spec | **负责人**: 架构师灵智体 | **优先级**: P0
+> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
 > **依赖 ADR**: [doc:decisions/007-harness-engineering.md]
 > **依据**: operator 7 条不可妥协原则 + roleagent.md 第 3 章 Harness 七层（Layer 2）
 > **关联 VISION**: [doc:VISION.md#6]（operator 原则第 6 条：支持自己开发自己）
@@ -30,10 +30,10 @@ FlowForge 需要一个**工具中介层**：所有工具调用必须经过 `Tool
 
 ### 1.3 不做的影响
 
-- 灵智体可调用任意工具（包括越权），不可逆操作无外部边界
-- prompt injection 可诱导灵智体调用危险工具
+- Forgekin可调用任意工具（包括越权），不可逆操作无外部边界
+- prompt injection 可诱导Forgekin调用危险工具
 - 工具调用审计缺失，事故无法追查
-- operator 原则第 6 条（支持自己开发自己）无法达成——灵智体开发灵智体需要工具边界
+- operator 原则第 6 条（支持自己开发自己）无法达成——Forgekin开发Forgekin需要工具边界
 
 ## 2. 决策
 
@@ -155,8 +155,8 @@ class ToolMediator:
 - [ ] AC-B1: allowlist 配置驱动（YAML），与项目规则"工具调用必须通过 ToolRegistry.execute()"对齐
 - [ ] AC-B2: 调用日志含 `tool` / `caller` / `ok` / `duration_ms`，可用于审计
 - [ ] AC-B3: invoke 延迟（不含 handler 执行）< 1ms
-- [ ] AC-B4: E2E 测试 — 灵智体 A 调用工具 X（在 allowlist）成功，灵智体 B 调用工具 X（不在 allowlist）抛 `ToolAllowlistViolation`
-- [ ] AC-B5: E2E 测试 — handler 抛异常时返回 `ToolResult(success=False)`，上层灵智体可决策重试或降级
+- [ ] AC-B4: E2E 测试 — Forgekin A 调用工具 X（在 allowlist）成功，Forgekin B 调用工具 X（不在 allowlist）抛 `ToolAllowlistViolation`
+- [ ] AC-B5: E2E 测试 — handler 抛异常时返回 `ToolResult(success=False)`，上层Forgekin可决策重试或降级
 - [ ] AC-B6: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
 
 ## 4. 依赖
@@ -172,13 +172,13 @@ class ToolMediator:
 | allowlist 维护成本随工具数量上升 | 配置驱动注册（YAML），与 ToolRegistry 对齐 |
 | handler 异常被吞（`success=False`），调用方可能误判 | `error` 字段保留 `str(exc)`，日志 WARNING 级别 |
 | sync handler 阻塞事件循环 | P2 阶段引入 `run_in_executor` 包装 sync handler |
-| allowlist 用 `list[str]` 线性查找 | 灵智体数量 < 100 时无性能问题；P2 可换 `set` |
+| allowlist 用 `list[str]` 线性查找 | Forgekin数量 < 100 时无性能问题；P2 可换 `set` |
 
 ## 6. Open Questions
 
 | # | 问题 | 状态 |
 |---|------|------|
-| OQ-1 | allowlist 是否支持通配符（如 `*` 表示所有灵智体）？ | ⬜ 未定 |
+| OQ-1 | allowlist 是否支持通配符（如 `*` 表示所有Forgekin）？ | ⬜ 未定 |
 | OQ-2 | 工具调用是否需要支持超时（`timeout` 参数）？ | ⬜ 未定 |
 | OQ-3 | `ToolResult` 是否需要附带 `trace_id` 用于跨层追踪？ | ⬜ 未定 |
 
@@ -199,8 +199,8 @@ class ToolMediator:
 
 ## 9. Review Gate
 
-- Phase A: 单元测试通过，allowlist 强制与 sync/async 检测由架构师灵智体 review
-- Phase B: E2E 测试由跨厂商 reviewer 灵智体 review，越权调用拦截率 100%
+- Phase A: 单元测试通过，allowlist 强制与 sync/async 检测由架构师Forgekin review
+- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，越权调用拦截率 100%
 
 ## 10. Links
 

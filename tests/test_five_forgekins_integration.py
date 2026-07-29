@@ -1,4 +1,4 @@
-"""Five-forgekin integration test — verify 5 灵智体 (文心/夏洛克/梵高/达芬奇/鲁班)
+"""Five-forgekin integration test — verify 5 Forgekin (文心/夏洛克/梵高/达芬奇/鲁班)
 configurations + IM channels + external agent bindings are all wired correctly.
 
 This is a config-validation test, not a runtime E2E test. It checks:
@@ -199,11 +199,11 @@ def test_trae_bridge_configured(im_channels_config):
 # ── 9. 协作拓扑打印 (信息性,非断言) ──────────────────────────────
 
 def test_print_collaboration_topology(forgekin_configs, im_channels_config, capsys):
-    """打印 5 灵智体协作拓扑 (信息性,便于调试)."""
+    """打印 5 Forgekin协作拓扑 (信息性,便于调试)."""
     print("\n" + "=" * 72)
-    print("5 灵智体协作拓扑 (Five Forgekin Collaboration Topology)")
+    print("5 Forgekin协作拓扑 (Five Forgekin Collaboration Topology)")
     print("=" * 72)
-    print(f"{'灵智体':<10} {'Vendor':<12} {'Loop':<12} {'Stage':<6} {'Binary':<10} {'Council':<10}")
+    print(f"{'Forgekin':<10} {'Vendor':<12} {'Loop':<12} {'Stage':<6} {'Binary':<10} {'Council':<10}")
     print("-" * 72)
     for slug, expected in EXPECTED_FORGEKINS.items():
         cfg = forgekin_configs[slug]

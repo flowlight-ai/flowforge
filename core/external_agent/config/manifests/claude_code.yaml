@@ -1,0 +1,43 @@
+# Claude Code Agent Provider Manifest
+# 按 F241 (CL-014) 声明式 Manifest 配置（铁律 5 配置驱动）
+# 详见 [doc:decisions/006-external-agent-integration.md] §4 首批接入
+# 详见 [doc:review/review.md#第九章§9.2] EX-002 能力画像
+
+provider_name: "anthropic.claude_code"
+display_name: "Claude Code"
+version: "1.0.0"
+protocol: "cli"
+transport: "stdio"
+
+capabilities:
+  - code_generation
+  - code_review
+  - complex_refactor
+  - long_chain_reasoning
+  - mcp_tool_use
+
+blind_spots:
+  - "长上下文易漂移"
+  - "工具调用偶尔失败"
+  - "对中文注释理解偶有偏差"
+
+timeout_seconds: 600
+retry_policy:
+  max_attempts: 3
+  backoff_seconds: 5
+
+cost_per_token: 0.003
+cost_per_call: 0.0
+
+safety_level: "normal"
+
+required_env_vars:
+  - ANTHROPIC_API_KEY
+
+required_permissions:
+  - file_read
+  - file_write
+  - git_status
+  - git_diff
+  - run_tests
+  - lint
