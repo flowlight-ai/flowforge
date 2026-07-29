@@ -100,6 +100,8 @@ tmp/
 .tmp_*
 _*.py
 _*.ps1
+# Exception: __init__.py is a Python package marker, NOT a temporary script
+!__init__.py
 
 # ===== Internal migration documents (not for public GitHub) =====
 # These files reveal migration from legacy project — keep locally for reference
