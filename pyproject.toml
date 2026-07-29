@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "flowforge"
 version = "0.1.0"
-description = "FlowForge — self-evolving agent harness with universal forgekin (Forgekin) application layer."
+description = "FlowForge — self-evolving agent harness with a Forgekin application layer."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-    { name = "flowlight-ai", email = "dev@flowlight-ai.local" }
+    { name = "flowlight-ai", email = "dev@flowlight-ai.dev" }
 ]
 keywords = ["agent", "self-evolution", "multi-agent", "llm", "agi", "forgekin"]
 classifiers = [

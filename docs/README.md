@@ -17,7 +17,7 @@
 ### 顶层文档
 
 - [VISION.md](./VISION.md) — 可进化智能体愿景声明
-- [ROADMAP.md](./ROADMAP.md) — 阶段路线图
+- [roadmap.md](./roadmap.md) — 阶段路线图
 - [SOP.md](./SOP.md) — 可进化智能体协作标准操作规程
 - [TIPS.md](./TIPS.md) — 经验提示
 

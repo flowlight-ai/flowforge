@@ -1,4 +1,4 @@
-# FlowForge · GitHub 仓库配置指南（小白教程）
+# FlowForge · GitHub 仓库配置指南（新手友好）
 
 > 本指南面向从未配置过 GitHub 仓库的新手，手把手教你完成 PR 创建、分支保护、CI 门禁和协作流程配置。
 
@@ -9,7 +9,7 @@
 - 你已经有一个 GitHub 账号
 - 仓库 `https://github.com/flowlight-ai/flowforge` 已创建
 - 你是仓库的 Owner（拥有管理员权限）
-- 本地代码已推送到 `chore/security-cleanup-and-ci-hardening` 分支
+- 本地代码已推送到 `feature/your-branch` 分支
 
 ---
 
@@ -17,13 +17,13 @@
 
 ### 步骤 1：打开创建 PR 页面
 
-1. 浏览器打开：https://github.com/flowlight-ai/flowforge/pull/new/chore/security-cleanup-and-ci-hardening
+1. 浏览器打开：https://github.com/flowlight-ai/flowforge/pull/new/feature/your-branch
 2. 或者：进入仓库主页 → 点击 `Compare & pull request` 按钮（如果有黄色提示条）
 
 ### 步骤 2：填写 PR 信息
 
 1. **Base**: `main` ← 目标分支（合并到哪）
-2. **Compare**: `chore/security-cleanup-and-ci-hardening` ← 源分支（你的改动）
+2. **Compare**: `feature/your-branch` ← 源分支（你的改动）
 3. **标题**：`chore: security hardening, CI setup, and docs polish`
 4. **描述**：PR 模板会自动加载，按提示勾选检查清单
 5. 点击 `Create pull request` 按钮
@@ -102,10 +102,11 @@
 |-----------|------|---------|
 | `ci.yml` | 代码风格检查 + 类型检查 + 单元测试 + 构建 | push 和 PR 到 main |
 | `codeql.yml` | 安全漏洞扫描 | push 和 PR 到 main |
-| `dependabot.yml` | 依赖自动更新 | 定期检查 |
 | `labels.yml` | 自动给 Issue/PR 打标签 | Issue/PR 创建时 |
 | `stale.yml` | 自动关闭长期不活跃的 Issue/PR | 每天检查 |
 | `welcome.yml` | 新贡献者首次 PR 自动欢迎 | 首次 PR 创建时 |
+| `docs.yml` | 文档构建检查 | push 和 PR 到 main |
+| `release.yml` | 发布流程 | 创建 release 时 |
 
 ### 如何修改 CI 配置
 

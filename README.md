@@ -2,8 +2,8 @@
 
 # FlowForge
 
-### Persistent Identity Agent Framework with Self-Devolution Triple-Loop
-#### 持久身份智能体框架 · 自进化三闭环
+### Persistent Identity Agent Framework with Self-Devolution Loops
+#### 持久身份智能体框架 · 自进化闭环
 
 [![CI](https://github.com/flowlight-ai/flowforge/actions/workflows/ci.yml/badge.svg)](https://github.com/flowlight-ai/flowforge/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/flowlight-ai/flowforge/actions/workflows/codeql.yml/badge.svg)](https://github.com/flowlight-ai/flowforge/actions/workflows/codeql.yml)
@@ -44,7 +44,7 @@ This is not another chatbot framework. FlowForge is the **infrastructure layer**
 ## Key Features
 
 - **Persistent Identity (Forgekin)** — Long-lived agents with `Soul Imprint`, `Capability Profile`, and `EchoStore` that survive crashes, model upgrades, and session boundaries.
-- **Self-Devolution Triple-Loop** — Five closed loops that let agents autonomously evolve their own documentation, code, framework, reviews, and tests — under governance gates.
+- **Self-Devolution Loops** — Five closed loops that let agents autonomously evolve their own documentation, code, framework, reviews, and tests — under governance gates.
 - **Cross-Vendor Review** — Reviewers must come from a different vendor than the author; no agent can approve its own work.
 - **Multi-Domain Memory Federation** — Five memory domains federated through the `MindCodex` procedural memory codex.
 - **Seven-Layer Harness Engineering** — `durable_state` · `tool_mediation` · `evidence_sensors` · `governance` · `magic_words` · `entropy_control` · `harnessability`.

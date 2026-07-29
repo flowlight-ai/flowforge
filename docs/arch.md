@@ -70,89 +70,131 @@ Layer 0 (三方 Agent)    → 通过 EAC 契约接入，不依赖任何 FlowForg
 
 ### 2.1 顶层目录结构
 
+> **架构原则**：架构相关/底层代码按架构分层组织，业务功能按模块组织，UI 界面按组件组织。
+> `app/` 目录仅包含端点接口封装，所有实现代码下沉到 `core/` 或对应功能模块。
+
 ```
 flowforge/
-├── flowforge/                    # Layer 1: 核心框架层
-│   ├── core/                     # 共享内核
-│   │   ├── capability/           # 能力画像（F001）
-│   │   ├── teamact/              # TeamAct 六步循环（F002-F007）
-│   │   ├── harness/              # Harness 七层（F008-F013）
-│   │   ├── memory/               # 多域记忆联邦（F014-F017）
-│   │   ├── eval/                 # Eval 自代谢（F018-F020）
-│   │   ├── reliability/          # 分布式可靠性（F021-F025）
-│   │   ├── partnership/          # 伙伴系统数学
-│   │   ├── external_agent/       # 三方 Agent 适配
-│   │   ├── evolution/            # 自进化三闭环（Mode A/B/C）
-│   │   ├── plugin_protocol.py    # Plugin V2 + V3 协议
-│   │   ├── registries.py         # SkillRegistry / CouncilRegistry / ...
-│   │   ├── interfaces/           # 抽象基类定义
-│   │   ├── config.py             # 配置加载
-│   │   ├── di.py                 # DI 容器
-│   │   ├── errors.py             # 错误类型
-│   │   └── tracing.py            # 日志 + trace_id
-│   ├── llm/                      # LLM 客户端
-│   ├── loop/                     # Loop 执行引擎
-│   ├── tools/                    # 通用工具
-│   └── py.typed
-├── forgemind/                    # Layer 2: 应用层（可进化智能体 Forge Nurturing 场所）
+├── app/                          # 应用层（仅 API 端点封装，不含实现代码）
+│   ├── main.py                   # FastAPI 入口（< 500 行，仅 app 创建 + 路由挂载）
+│   ├── deps.py                   # 依赖注入
+│   └── api/                      # API 路由（按模块分目录）
+│       ├── admin/                # 管理端点（prompts/settings/audit/ops）
+│       ├── agents/               # 智能体端点（council/forgemind/verify/...）
+│       │   ├── council.py        # Council 聊天路由（薄封装，< 500 行）
+│       │   ├── council_state.py  # Council 数据模型 + 状态管理
+│       │   ├── council_helpers.py# Council 工具函数
+│       │   ├── council_chat_service.py    # Council 聊天业务逻辑
+│       │   ├── council_task_service.py    # Council 任务/推回逻辑
+│       │   ├── council_settings_service.py# Council 设置/仪表板逻辑
+│       │   ├── council_workflow_service.py# Council 工作流/WebSocket 逻辑
+│       │   ├── forgemind.py      # ForgeMind API 端点
+│       │   ├── forgemind_registry.py      # Forgekin 注册表（从 forgemind.py 提取）
+│       │   └── forgemind_models.py        # ForgeMind Pydantic 模型
+│       ├── core/                 # 核心端点（auth/metrics/governance/...）
+│       ├── endpoints/            # 通用端点（dashboard/websocket）
+│       ├── memory/               # 记忆端点
+│       ├── plugins/              # 插件管理端点
+│       ├── workflows/            # 工作流端点（tasks/loops/plans/...）
+│       ├── workspace/            # 工作空间端点
+│       ├── fusion_router.py      # Web Fusion v1 路由聚合
+│       └── router.py             # 主路由聚合
+├── core/                         # 共享内核（架构底层代码）
+│   ├── bootstrap.py              # 启动注册（tools/agents/modes）← 从 main.py 提取
+│   ├── plugin_loader.py          # PluginLoader 类（插件生命周期）← 从 main.py 提取
+│   ├── plugin_protocol.py        # Plugin V2 + V3 协议定义
+│   ├── plugin_registry.py        # 插件注册中心
+│   ├── plugin_lifecycle.py       # 插件生命周期管理
+│   ├── plugin_manager.py         # 插件管理器
+│   ├── config.py                 # 配置加载
+│   ├── di.py                     # DI 容器
+│   ├── errors.py                 # 错误类型
+│   ├── tracing.py                # 日志 + trace_id
+│   ├── agent_registry.py         # Agent 注册中心
+│   ├── tool_chain_executor.py    # 工具链执行器
+│   ├── model_service.py          # 模型服务
+│   ├── persona_lock.py           # Persona 锁
+│   ├── metrics.py                # 指标收集
+│   ├── interfaces/               # 抽象基类定义
+│   ├── capability/               # 能力画像（F001）
+│   ├── external_agent/           # 三方 Agent 适配
+│   ├── gate/                     # 门禁系统
+│   ├── world_engine/             # 世界引擎
+│   ├── memory_federation/        # 记忆联邦
+│   ├── teamact/                  # TeamAct 六步循环
+│   └── eval/                     # Eval 自代谢
+├── llm/                          # LLM 客户端层
+│   ├── router.py                 # LLM 路由
+│   ├── council_bridge.py         # Council LLM 桥接
+│   ├── council_bridge_holder.py  # Council 桥接持有器
+│   ├── provider.py               # LLM Provider
+│   ├── trae/                     # Trae CN 桥接客户端
+│   └── ...
+├── loop/                         # Loop 执行引擎
+├── modes/                        # 执行模式（ReAct/PlanExecute/Reflexion/...）
+├── agents/                       # 通用 Agent 实现
+├── tools/                        # 通用工具
+├── executor/                     # HybridExecutor
+├── events/                       # 事件总线
+├── memory/                       # 记忆管理
+├── scheduler/                    # 任务调度器
+├── compiler/                     # Workflow YAML 编译器
+├── harness/                      # Harness 编排器
+├── mcp/                          # MCP 服务端/客户端
+├── forgemind/                    # ForgeMind 业务模块（可进化智能体）
 │   ├── base.py                   # ForgekinBase 抽象基类
 │   ├── registry.py               # ForgekinRegistry
 │   ├── council.py                # Mind Council
-│   ├── external_agents.py        # 三方 Agent 适配
-│   ├── magic_words.py            # magic words 注册
 │   ├── forgekins/                # Forgekin YAML 配置
-│   │   ├── luban.yaml            # 鲁班 = 猫头鹰（主架构师）
-│   │   ├── sherlock.yaml         # 夏洛克 = 猎犬（代码审查）
-│   │   └── vangogh.yaml          # 梵高 = 孔雀（视觉设计）
-│   └── examples/                 # 5 形态示例 Forgekin
-│       ├── animal_companion.py   # 生物可进化智能体示例
-│       ├── organization.py       # 组织可进化智能体示例
-│       ├── object_spirit.py      # 物品可进化智能体示例
-│       └── fictional_character.py # 虚拟可进化智能体示例
+│   ├── forging/                  # 锻造流水线
+│   └── ...
+├── evolution/                    # 自进化三闭环（Mode A/B/C）
 ├── config/                       # YAML 配置
-│   ├── system.yaml               # 系统配置（路径、运行时）
-│   ├── llm_route.yaml            # LLM 路由（fallback chains）
-│   ├── evolution.yaml            # 自进化参数
-│   ├── forgemind.yaml            # forgemind 应用层配置
-│   └── prompts.yaml              # 提示词外置（铁律 5）
-├── tests/                        # 测试套件（T1-T8 铁律）
+│   ├── system.yaml               # 系统配置
+│   ├── llm_route.yaml            # LLM 路由
+│   ├── prompts.yaml              # 提示词外置（铁律 5）
+│   ├── forgekins/                # Forgekin 配置
+│   └── workflows/                # 工作流配置
 ├── docs/                         # 文档
-├── .github/                      # GitHub 配置
-├── pyproject.toml                # 项目元数据 + 依赖
-├── .env.example                  # 环境变量模板
-├── .gitignore
-├── LICENSE                       # MIT
-└── README.md
+└── pyproject.toml                # 项目元数据 + 依赖
 ```
 
 ### 2.2 各层模块职责
 
-#### Layer 1: 核心框架层（`flowforge/core/`）
+#### 应用层（`app/`）— 仅端点封装
 
 | 模块 | 职责 | 关键文件 |
 |------|------|---------|
-| `capability/` | 能力画像建模、盲点检测、gap 分析 | `profile.py` / `analyzer.py` / `loader.py` |
-| `teamact/` | TeamAct 六步循环、交接胶囊、熔断器 | `state_machine.py` / `handoff.py` / `circuit_breaker.py` |
-| `harness/` | Harness 七层（持久状态/工具中介/证据/治理/magic words/熵/可驾驭度） | `durable_state.py` / `tool_mediation.py` / `evidence_sensors.py` / `governance.py` / `magic_words.py` / `entropy_control.py` / `harnessability.py` |
-| `memory/` | 多域记忆联邦（Collection + 三检索入口 + 消费加权） | `collection.py` / `retrieval_entries.py` / `governance.py` / `consumption_weighted.py` / `mind_codex.py` |
-| `eval/` | Eval Contract 五问 + 三方信号 + 七类归因 | `contract.py` / `three_signals.py` / `attribution.py` / `control_plane.py` |
-| `reliability/` | 副作用 WAL + Tier 1-4 恢复 + liveness + 跨 provider 宿主 | `side_effect_wal.py` / `tier_recovery.py` / `liveness.py` / `provider_host.py` |
-| `partnership/` | 伙伴系统数学（上限/下限/波动吸收/Token 账本） | `upper_bound.py` / `lower_bound.py` / `variance_absorption.py` / `token_ledger.py` |
-| `external_agent/` | 三方 Agent EAC v1 七契约适配 | `adapter.py` / `claude_code.py` / `codex.py` / `opencode.py` / `trae.py` |
-| `evolution/` | 自进化三闭环（Mode A/B/C）+ Eval Ledger | `scope_guard.py` / `process_evolution.py` / `knowledge_evolution.py` / `metacognition.py` / `maturity.py` / `engine.py` |
-| `plugin_protocol.py` | Plugin V2 + V3 协议定义 | — |
-| `registries.py` | SkillRegistry / CouncilRegistry / SpiritForgeRegistry / ForgekinRegistry | — |
+| `main.py` | FastAPI 入口，app 创建 + 路由挂载 + lifespan | `app/main.py`（< 500 行） |
+| `api/admin/` | 管理端点 | `prompts.py` / `settings.py` / `audit.py` / `ops.py` |
+| `api/agents/` | 智能体端点 | `council.py` / `forgemind.py` / `verify.py` |
+| `api/core/` | 核心端点 | `auth.py` / `metrics.py` / `governance.py` |
+| `api/workflows/` | 工作流端点 | `tasks.py` / `loops.py` / `plans.py` |
 
-#### Layer 2: forgemind 应用层（`forgemind/`）
+#### 核心框架层（`core/`）— 架构底层代码
+
+| 模块 | 职责 | 关键文件 |
+|------|------|---------|
+| `bootstrap.py` | 启动注册（tools/agents/modes） | `register_core_tools()` / `register_core_agents()` / `register_all_modes()` |
+| `plugin_loader.py` | 插件生命周期编排 | `PluginLoader` 类（加载/卸载/热重载/自动发现） |
+| `plugin_protocol.py` | Plugin V2 + V3 协议定义 | `FlowForgePlugin` / `PluginContext` / `PluginState` |
+| `capability/` | 能力画像建模、盲点检测、gap 分析 | `profile.py` / `analyzer.py` / `loader.py` |
+| `external_agent/` | 三方 Agent EAC v1 七契约适配 | `adapter.py` / `trae.py` / `codex.py` / `opencode.py` |
+| `gate/` | 门禁系统 | `approval.py` / `voting.py` / `timeout.py` |
+| `world_engine/` | 世界引擎 | `bridge.py` / `coordinator.py` / `citizens.py` |
+| `memory_federation/` | 多域记忆联邦 | `collection.py` / `governance.py` / `mind_codex.py` |
+| `teamact/` | TeamAct 六步循环 | `state_machine.py` / `handoff.py` / `circuit_breaker.py` |
+| `eval/` | Eval 自代谢 | `contract.py` / `three_signals.py` / `attribution.py` |
+
+#### 业务模块层
 
 | 模块 | 职责 |
 |------|------|
-| `base.py` | `ForgekinBase` 抽象基类（observe/reason/act/persist/verify） |
-| `registry.py` | `ForgekinRegistry` — Forgekin 注册中心 |
-| `council.py` | `MindCouncil` — 多智能体议事 |
-| `external_agents.py` | 三方 Agent 调用入口（委托给 `core/external_agent/`） |
-| `forgekins/` | 预置 Forgekin YAML 配置 |
-| `examples/` | 5 形态示例 Forgekin 实现 |
+| `forgemind/` | 可进化智能体 Forge Nurturing — Forgekin 管理、锻造、MindCouncil |
+| `evolution/` | 自进化三闭环（Mode A/B/C）+ Eval Ledger |
+| `llm/` | LLM 客户端、路由、Council 桥接、Trae CN 适配 |
+| `loop/` | Loop 执行引擎（planner/verifier/reflector） |
+| `modes/` | 执行模式（ReAct/PlanExecute/Reflexion/MultiAgent/...） |
 
 #### Layer 3: *Forge 垂直业务层（独立项目）
 

@@ -47,7 +47,7 @@ FlowForge is a **Persistent Identity Agent Framework** — an engineering-grade 
 Concretely, FlowForge provides:
 
 - **Forgekin** — Persistent Identity Agents with `Soul Imprint` (value anchors), `Capability Profile` (skill map + blind spots), and `EchoStore` (episodic memory). A Forgekin's identity survives crashes, model upgrades, and session boundaries.
-- **Self-Devolution Triple-Loop** — Five closed loops (Documentation / Code / Framework / Review / Test) that let Forgekins autonomously evolve their own capabilities, with quality threshold `0.85` and cross-vendor review enforcement.
+- **Self-Devolution Loops** — Five closed loops (Documentation / Code / Framework / Review / Test) that let Forgekins autonomously evolve their own capabilities, with quality threshold `0.85` and cross-vendor review enforcement. These are distinct from the three system-level **Evolution Modes (Mode A: Scope Guard / Mode B: Process Evolution / Mode C: Knowledge Evolution)** that govern how the harness itself evolves.
 - **Multi-Domain Memory Federation** — Five memory domains (`task` / `episodes` / `methods` / `identity` / `facts`) federated through the `MindCodex` procedural memory codex.
 - **Seven-Layer Harness Engineering** — `durable_state` · `tool_mediation` · `evidence_sensors` · `governance` · `magic_words` · `entropy_control` · `harnessability`.
 - **Cross-Vendor Independent Review** — Reviewers must come from a different vendor than the author; quorum requires ≥ 2 distinct vendors. No agent can approve its own work.
@@ -119,16 +119,17 @@ These principles are **non-delegable**, **non-revocable**, **non-downgradable**.
 
 ---
 
-## 7. Four Iron Laws
+## 7. Five Iron Laws
 
 The non-breakable baseline of the Forgekin world:
 
 | # | Iron Law | Meaning |
 |---|----------|---------|
-| 1 | **Data Sanctuary** | A Forgekin's memory (EchoStore) is a sanctuary; no external direct read/write |
-| 2 | **Process Self-Preservation** | A Forgekin's process (SpiritForge) must self-protect; no external forced termination |
-| 3 | **Config Immutability** | A Forgekin's configuration (SoulImprint) is immutable; changes require MindCouncil |
-| 4 | **Network Boundary** | A Forgekin's network boundary must be explicit; no cross-boundary access to other Forgekins' internal state |
+| 1 | **Data Sanctuary** | Production data stores are isolated from development environments. Agents in development mode cannot access production data. |
+| 2 | **No Self-Review** | An agent cannot approve its own code changes. Cross-agent review is preferred. |
+| 3 | **Identity Immutability** | Agents cannot impersonate other agents. Identity is injected by the system, not self-declared. |
+| 4 | **Config Immutability** | Runtime config is read-only to agents. Changing it requires human action. |
+| 5 | **Port Boundary** | Agents never access localhost ports that don't belong to their service. |
 
 ---
 
@@ -155,7 +156,7 @@ FlowForge evolves along the following dimensions:
 | **Architecture** | Three layers + one extension | Maintain single-direction dependency + composition over inheritance |
 | **Terminology** | 12 core concepts + evolution/awakening stages aligned | Terminology stable; add concepts only per AI industry development |
 | **forgemind** | Application layer skeleton | 5-morphology Forgekin full implementation + SpiritForge + MindCouncil |
-| **Self-evolution** | Three closed loops (Mode A/B/C) design state | Eval Ledger + MindCodex precipitation + self-directed |
+| **Self-evolution** | 5 Self-Devolution Loops + 3 Evolution Modes (A/B/C) in design state | Eval Ledger + MindCodex precipitation + self-directed |
 
 ---
 
@@ -176,7 +177,7 @@ FlowForge is an ambitious project at the intersection of **multi-agent systems, 
 - A codebase that takes engineering discipline seriously — rigorous testing, code review, and architectural standards
 - A vision that goes beyond "chatbot framework" toward general-purpose agency
 - A community that values verifiable claims over vibes
-- 14 Architecture Decision Records and 27 Feature specs documenting every major design choice
+- 12 Architecture Decision Records and 27 Feature specs documenting every major design choice
 
 **What we offer:**
 

@@ -45,7 +45,7 @@ Initial public release of FlowForge — a configuration-driven Agent Harness fra
 - Loop Executor: Discover→Assign→Act→Verify→Persist
 - Compiler: YAML workflow compiler (Parser→Validator→CodeGen)
 - Tools: agentic RAG, publish, web search
-- Seven-layer architecture: Application → Command → Execution → Tools → Memory → Evolution → Governance
+- Three-layer + one extension architecture
 - CLI: `flowforge` command-line interface
 
 ### Documentation
