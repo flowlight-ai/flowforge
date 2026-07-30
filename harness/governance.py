@@ -44,7 +44,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from flowforge.core.tracing import get_logger
 
-logger = get_logger("harness_v7.governance")
+logger = get_logger("harness.governance")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

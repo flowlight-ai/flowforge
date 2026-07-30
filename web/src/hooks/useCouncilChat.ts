@@ -23,15 +23,78 @@ import {
  *   - config: 群聊配置（参与灵智体/角色分配/轮数）
  *   - isLoading: 灵议进行中标志
  *
+ * 持久化：
+ *   - messages + config 自动保存到 localStorage
+ *   - 页面刷新/中断后自动恢复对话记录
+ *
+ * 超时处理：
+ *   - council 请求使用 AbortController，超时 180s（与 3 分钟限制一致）
+ *   - 超时后自动取消并提示用户
+ *
  * 详见 MERGE-SPEC.md §3.2 聊天模式融合设计
  */
+
+// localStorage 键名
+const STORAGE_KEY_MESSAGES = "flowforge:council:messages";
+const STORAGE_KEY_CONFIG = "flowforge:council:config";
+// council 请求超时（毫秒）— 5 灵智体多轮串行调用 LLM，与 3 分钟限制一致
+const COUNCIL_TIMEOUT_MS = 180_000;
+
+/** 从 localStorage 安全读取 JSON */
+function loadFromStorage<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** 安全写入 localStorage */
+function saveToStorage(key: string, value: unknown): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // quota exceeded 或隐私模式 — 静默失败
+  }
+}
+
 export function useCouncilChat() {
-  const [messages, setMessages] = useState<CouncilMessage[]>([]);
+  // 初始化时从 localStorage 恢复对话记录和配置
+  const [messages, setMessages] = useState<CouncilMessage[]>(() =>
+    loadFromStorage<CouncilMessage[]>(STORAGE_KEY_MESSAGES, [])
+  );
   const [roster, setRoster] = useState<ForgekinRosterItem[]>([]);
-  const [config, setConfig] = useState<CouncilConfig>(DEFAULT_COUNCIL_CONFIG);
+  const [config, setConfig] = useState<CouncilConfig>(() =>
+    loadFromStorage<CouncilConfig>(STORAGE_KEY_CONFIG, DEFAULT_COUNCIL_CONFIG)
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // AbortController 引用 — 用于取消进行中的 council 请求
+  const abortRef = useRef<AbortController | null>(null);
+
+  // 持久化 messages 到 localStorage
+  useEffect(() => {
+    saveToStorage(STORAGE_KEY_MESSAGES, messages);
+  }, [messages]);
+
+  // 持久化 config 到 localStorage
+  useEffect(() => {
+    saveToStorage(STORAGE_KEY_CONFIG, config);
+  }, [config]);
+
+  // 页面卸载时取消进行中的请求
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+    };
+  }, []);
 
   /** 加载灵智体花名册 */
   const loadRoster = useCallback(async () => {
@@ -111,11 +174,16 @@ export function useCouncilChat() {
 
       setIsLoading(true);
 
+      // 创建 AbortController 用于超时取消
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const timeoutId = setTimeout(() => controller.abort(), COUNCIL_TIMEOUT_MS);
+
       // 添加"灵议进行中"系统消息
       const sysMsg: CouncilMessage = {
         id: `sys-${Date.now()}`,
         source: "system",
-        content: `灵议进行中：${participantIds.length} 个灵智体参与，共 ${config.maxRounds} 轮...`,
+        content: `灵议进行中：${participantIds.length} 个灵智体参与，共 ${config.maxRounds} 轮...（超时 ${COUNCIL_TIMEOUT_MS / 1000}s）`,
         timestamp: Date.now() + 1,
       };
       setMessages((prev) => [...prev, sysMsg]);
@@ -131,6 +199,7 @@ export function useCouncilChat() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(reqBody),
+          signal: controller.signal,
         });
 
         if (!res.ok) {
@@ -151,6 +220,9 @@ export function useCouncilChat() {
               (r) => r.id === msg.forgekin_id || r.name === msg.name
             );
             const role = forgekin ? config.roleAssignment[forgekin.id] || "observer" : "observer";
+            // 使用后端返回的真实 model 字段（铁律2：禁止硬编码）
+            const model = msg.model || "unknown";
+            const usage = msg.usage || {};
             newMessages.push({
               id: `forgekin-${round.round}-${msg.forgekin_id}-${Date.now()}-${Math.random()}`,
               source: "forgekin",
@@ -160,7 +232,8 @@ export function useCouncilChat() {
               content: msg.content,
               timestamp: Date.now() + newMessages.length,
               meta: {
-                model: "trae",
+                model,
+                usage,
               },
             });
           }
@@ -180,7 +253,14 @@ export function useCouncilChat() {
       } catch (e) {
         // 移除"灵议进行中"系统消息
         setMessages((prev) => prev.filter((m) => m.id !== sysMsg.id));
-        const errMsg = e instanceof Error ? e.message : String(e);
+        let errMsg: string;
+        if (e instanceof DOMException && e.name === "AbortError") {
+          errMsg = `灵议超时（${COUNCIL_TIMEOUT_MS / 1000}s），请减少轮数或灵智体数量后重试`;
+        } else if (e instanceof Error) {
+          errMsg = e.message;
+        } else {
+          errMsg = String(e);
+        }
         setError(`灵议失败: ${errMsg}`);
 
         // 添加错误系统消息
@@ -192,16 +272,30 @@ export function useCouncilChat() {
         };
         setMessages((prev) => [...prev, errorMsg]);
       } finally {
+        clearTimeout(timeoutId);
+        abortRef.current = null;
         setIsLoading(false);
       }
     },
     [config, isLoading, parseMentions, roster]
   );
 
-  /** 清空消息 */
+  /** 取消进行中的灵议请求 */
+  const cancelRequest = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setIsLoading(false);
+  }, []);
+
+  /** 清空消息（同时清除 localStorage） */
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY_MESSAGES);
+    }
   }, []);
 
   /**
@@ -250,6 +344,7 @@ export function useCouncilChat() {
     error,
     messagesEndRef,
     sendMessage,
+    cancelRequest,
     clearMessages,
     addSystemMessage,
     updateConfig,

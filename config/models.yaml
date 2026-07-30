@@ -243,20 +243,22 @@ assignments:
     - openroute/MiniMax-M3
     - openroute/DeepSeek-V4-Pro
   content_create:
-    # v5.99.16: 精简候选链 — 移除MiniMax-M3和Doubao-Seed2.0
-    # v5.99.15问题: Kimi超时(120s)后, 候选链尝试MiniMax(也超时127s)+Doubao(也超时),
-    #   浪费250s+后zhipu永远得不到机会, 迭代300s超时返回空内容
-    # v5.99.16策略: Kimi失败后直接走zhipu API(8s快速), 不浪费时间在同样会超时的webchat模型
-    #   Kimi: 89-130s webchat, 唯一能产出2000+字长文章
-    #   zhipu: 8s API, 产出920字短文章(backup, 通过扩展阶段补充)
-    primary: openroute/Kimi-K2.6
+    # v5.99.47: API优先 — MiniMax-M3 webchat故障(136s+"无法回答"), zhipu API稳定(5-22s)
+    # 候选链: zhipu/glm-4-flash(5-22s/1000-2000字) → MiniMax-M3(128s/3000+字 backup)
+    # project_memory: webchat故障时API作为backup确保100%成功
+    primary: zhipu/glm-4-flash
     fallbacks:
-    - zhipu/glm-4-flash
+    - openroute/MiniMax-M3
+    - openroute/DeepSeek-V4-Pro
+    - openroute/Kimi-K2.6
   content_refine:
-    # v5.99.16: 同content_create, 精简候选链
-    primary: openroute/Kimi-K2.6
+    # v5.99.47: 同步content_create — API优先, webchat作为backup
+    # 候选链: zhipu/glm-4-flash(5-22s) → MiniMax-M3(128s) → DeepSeek → Kimi
+    primary: zhipu/glm-4-flash
     fallbacks:
-    - zhipu/glm-4-flash
+    - openroute/MiniMax-M3
+    - openroute/DeepSeek-V4-Pro
+    - openroute/Kimi-K2.6
   content_eval:
     # v5.99.3: 使用可用模型
     primary: zhipu/glm-4-flash

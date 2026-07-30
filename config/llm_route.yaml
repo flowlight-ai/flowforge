@@ -28,13 +28,16 @@ routes:
     default_max_tokens: 4096
 
   # 创意路由：高温度，适合写作/创意场景
-  # v5.99.16 修复: timeout 120→150s — Kimi-K2.6 实测124s超时(120s), 仅超4.7s
-  # v5.99.15问题: timeout=120s, 但Kimi-K2.6偶发慢响应124s导致超时,
-  #   回退到MiniMax-M3(127s也超时) → Doubao(未及调用迭代已超时300s) → zhipu永远得不到机会
-  # v5.99.16策略: timeout=150s (覆盖Kimi 89-130s+缓冲), 候选链精简为Kimi→zhipu
-  #   去掉MiniMax/Doubao(同为webchat, 都会120s+超时, 浪费时间)
-  #   Kimi失败后直接走zhipu API(8s快速), 确保流程不卡死
-  # 用户记忆: "2 minutes for long articles" — 150s略超但确保webchat模型完成
+  # v5.99.40: timeout 180→60s — 解决5分钟超时问题
+  # 根因: webchat模型(DeepSeek/MiniMax/Kimi)各需75-195s, 3个webchat失败后
+  #   才回退到glm-4-flash(22s), 总耗时247s仅writer就超5分钟
+  # 策略: 60s超时让webchat快速失败回退到API模型
+  #   - DeepSeek-V4-Pro: 21s成功(60s内) | "无法回答"立即失败
+  #   - MiniMax-M3: 45s成功(60s内)
+  #   - Kimi-K2.6: 195s超60s失败, 跳到glm-4-flash
+  #   - glm-4-flash: 22s成功(API稳定)
+  # 最坏情况: 60+60+60+22=202s writer, +60s扩展+60s评委=322s
+  # 典型情况: 21s DeepSeek成功, +60s扩展+60s评委=141s < 300s ✓
   creative:
     # v5.7: primary改为Qwen3.6-Plus（Doubao-Seed2.0频繁echo/超时）
     # Qwen实测稳定：228s产出1445字，0.832分
@@ -56,7 +59,7 @@ routes:
         - timeout
         - invalid_response
         - echo_response
-      timeout_seconds: 180  # v5.99.17: 150→180s — Kimi-K2.6 在 ContentForge 内部调用耗时 154.36s 超过 150s 超时
+      timeout_seconds: 150  # v5.99.46: 90->150s — MiniMax-M3 webchat needs 128s
       max_retries: 0
     default_temperature: 0.9
     default_max_tokens: 8192

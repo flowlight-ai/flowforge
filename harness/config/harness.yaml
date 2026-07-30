@@ -14,7 +14,7 @@
 #   - 编程红线 11：配置驱动
 #   - 铁律 5：禁止硬编码路径/密钥/端口
 #
-# 加载入口：flowforge.core.harness_v7.HarnessConfig.load()
+# 加载入口：flowforge.harness.HarnessConfig.load()
 
 # ── 通用配置 ──────────────────────────────────────────────────────────────────
 general:

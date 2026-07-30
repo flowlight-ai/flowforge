@@ -191,3 +191,16 @@ crash_dumps/
 *.dmp
 *.dump
 .trae_bridge
+
+# ==================== Refactor temp files (2026-07-29) ====================
+# Web dev server error log (Next.js HMR noise)
+web/.next-dev.err
+web/.next-dev.log
+
+# Ad-hoc test scripts with _ prefix (temporary debugging)
+**/_test_*.py
+**/_test_*.json
+**/_test_*.md
+
+# Logs from local runs (single-file, not the directory)
+*.log.*

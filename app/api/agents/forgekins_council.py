@@ -174,7 +174,7 @@ async def send_council_chat(payload: CouncilChatRequest) -> dict[str, Any]:
 
 async def _trigger_forgekin_response(forgekin_id: str, user_message: str) -> dict[str, Any] | None:
     """触发灵智体响应群聊消息."""
-    from flowforge.app.api.endpoints.forgemind import _registry
+    from flowforge.app.api.agents.forgemind import _registry
 
     forgekin = _registry.get(forgekin_id)
     if forgekin is None:

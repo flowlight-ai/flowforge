@@ -45,7 +45,7 @@ from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import get_logger
 
-logger = get_logger("harness_v7.durable_state")
+logger = get_logger("harness.durable_state")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -423,7 +423,7 @@ class GitDurableState(DurableStateSurface):
             readme = self.repo_path / "README.md"
             readme.write_text(
                 f"# Durable State Repository\n\n"
-                f"Auto-initialized by GitDurableState (harness_v7).\n",
+                f"Auto-initialized by GitDurableState (harness).\n",
                 encoding="utf-8",
             )
             self._run_git(["add", "README.md"])

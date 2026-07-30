@@ -150,32 +150,82 @@ flowforge init --profile=full       # 全开（仅 dev 环境）
 
 ## 项目结构
 
+> **重构说明**（2026-07-29）：`app/` 目录下沉为纯端点封装，实现代码迁移到 `core/`；新增 `harness/` 顶层目录（替代旧 `core/harness_v7/`）；API 路由按模块化分目录。详见 [docs/arch.md §2.8](docs/arch.md)。
+
 ```
 flowforge/
-├── agents/             # 通用 Agent
-├── app/                # FastAPI 应用入口
+├── a2a/                # Agent-to-Agent 通信协议
+├── agents/             # 通用 Agent 实现
+├── app/                # 应用层（仅 API 端点封装，< 500 行/文件）
+│   ├── main.py         # FastAPI 入口（app 创建 + 路由挂载）
+│   ├── deps.py         # 依赖注入
+│   └── api/            # API 路由（按模块分目录）
+│       ├── admin/      # 管理端点（prompts/settings/audit/ops/env_vars）
+│       ├── agents/     # 智能体端点（council/forgemind/forgekins）
+│       ├── core/       # 核心端点（auth/metrics/governance/openroute）
+│       ├── memory/     # 记忆端点（memory/graph）
+│       ├── plugins/    # 插件管理端点
+│       ├── workflows/  # 工作流端点（tasks/loops/plans/missions）
+│       ├── workspace/  # 工作空间端点（uploads/workspace）
+│       ├── endpoints/  # 通用端点（dashboard/websocket）
+│       └── router.py   # 主路由聚合
 ├── brain/              # 指挥中枢
+├── cli/                # 命令行工具
 ├── compiler/           # Workflow YAML 编译器
-├── config/             # 通用配置
-├── core/               # 共享内核
-│   ├── capability/     # 能力画像
-│   ├── eval/           # Eval Contract
-│   ├── external_agent/ # 三方 Agent 集成
-│   ├── gate/           # 门禁
-│   ├── harness_v7/     # Harness 七层
-│   ├── memory_federation/ # 记忆联邦
-│   ├── teamact/        # TeamAct 协作
+├── config/             # YAML 配置（system/models/llm_route/prompts）
+├── core/               # 共享内核（架构底层代码）
+│   ├── bootstrap.py    # 启动注册（tools/agents/modes）← 从 main.py 提取
+│   ├── plugin_loader.py # 插件生命周期编排 ← 从 main.py 提取
+│   ├── plugin_protocol.py # Plugin V2 + V3 协议定义
+│   ├── capability/     # 能力画像（F001）
+│   ├── eval/           # Eval 自代谢（三信号）
+│   ├── external_agent/ # 三方 Agent EAC v1 适配
+│   ├── gate/           # 门禁系统
+│   ├── interfaces/     # 抽象基类定义
+│   ├── memory_federation/ # 多域记忆联邦
+│   ├── teamact/        # TeamAct 六步循环
 │   └── world_engine/   # 世界引擎
-├── docs/               # 设计文档
-│   ├── architecture/   # 架构文档（A001-A044）
-│   ├── decisions/      # ADR（决策记录）
-│   ├── design/         # 详细设计（D001-D046）
-│   └── features/       # Feature 规格（F001-F051）
-├── evolution/          # 自我进化引擎
-├── forgemind/          # ForgeMind 应用层
-├── loop/               # Loop 执行引擎
-├── modes/              # 执行模式
-└── tools/              # 通用工具
+├── docs/               # 设计文档（spec/arch/design 三顶层）
+│   ├── architecture/   # 架构文档（A0XX 与 F0XX 同号对应）
+│   ├── decisions/      # ADR（不可变决策记录）
+│   ├── design/         # 详细设计（D0XX 与 F0XX/A0XX 同号对应）
+│   └── features/       # Feature 规格（F0XX）
+├── executor/           # HybridExecutor
+├── events/             # 事件总线（EventBus + DurableEventStream）
+├── evolution/          # 自进化三闭环（Mode A/B/C + Eval Ledger）
+├── forgemind/          # ForgeMind 业务模块（可进化智能体）
+│   ├── base.py         # ForgekinBase 抽象基类
+│   ├── forgekins/      # Forgekin YAML 配置（5 只预置）
+│   ├── forging/        # 锻造流水线
+│   └── autonomous.py   # 自主执行
+├── harness/            # Harness 编排器（七层现实表面）
+│   ├── durable_state.py
+│   ├── evidence_sensors.py
+│   ├── governance.py
+│   └── tool_mediation.py
+├── llm/                # LLM 客户端层
+│   ├── router.py       # LLM 路由
+│   ├── provider.py     # LLM Provider
+│   ├── zhipu_client.py # 智谱 AI 直连客户端
+│   ├── openroute_client.py # OpenRoute 客户端
+│   └── trae/           # Trae CN 桥接客户端
+├── loop/               # Loop 执行引擎（planner/verifier/reflector）
+├── mcp/                # MCP 服务端/客户端
+├── memory/             # 记忆管理
+├── middleware/         # 中间件
+├── modes/              # 执行模式（ReAct/PlanExecute/Reflexion/MultiAgent/...）
+├── observability/      # 可观测性
+├── review/             # 评审模块
+├── scheduler/          # 任务调度器（APScheduler）
+├── security/           # 安全模块
+├── services/           # 业务服务
+├── session/            # 会话管理 + EventStore
+├── skills/             # Skill 沉淀
+├── sop/                # SOP 标准作业流程
+├── tools/              # 通用工具
+├── vcs/                # 版本控制集成
+├── web/                # Next.js 14 前端（React 18 + TypeScript + Tailwind）
+└── workflows/          # 工作流定义
 ```
 
 ## 开发指南

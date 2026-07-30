@@ -50,11 +50,11 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: zhipu  # 直连智谱 API（绕过 OpenRoute WebChat 浏览器自动化）
-  model: glm-4-flash  # 梵高=审查员，flash 响应快
+  provider: zhipu  # 直连智谱 API（使用官方API模型，避免OpenRoute webchat路由问题）
+  model: glm-4-plus  # glm-4-plus 比 glm-4-flash 更强，支持长技术提示词
   mode: http
   session_id_prefix: "forgemind:vangogh"
-  bridge_timeout: 60
+  bridge_timeout: 120  # 增加超时到 120s
   temperature: 0.6
   max_tokens: 8192
 

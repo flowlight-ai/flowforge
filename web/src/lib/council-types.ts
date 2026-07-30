@@ -77,6 +77,10 @@ export interface CouncilRoundMessage {
   forgekin_id: string;
   name: string;
   content: string;
+  /** 实际使用的 LLM 模型名（如 "glm-4-flash"）— 来自真实 LLM 调用 */
+  model?: string;
+  /** LLM 调用用量统计（latency_ms/tokens 等） */
+  usage?: Record<string, unknown>;
 }
 
 /** 灵议响应中的一轮 */

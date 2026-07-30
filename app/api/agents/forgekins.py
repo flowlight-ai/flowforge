@@ -112,7 +112,7 @@ async def forge_forgekin(forgekin_id: str) -> dict[str, Any]:
             detail=f"未知 Forgekin ID: {forgekin_id}. 可用: {BUILTIN_FORGEKINS}",
         )
     # 复用 forgemind endpoint 的全局注册表
-    from flowforge.app.api.endpoints.forgemind import _registry
+    from flowforge.app.api.agents.forgemind import _registry
     from flowforge.forgemind.forgekins.roster import ROSTER_FILES
 
     existing = _registry.get(forgekin_id)
@@ -138,7 +138,7 @@ async def chat_with_forgekin(
     forgekin_id: str, payload: ChatRequest
 ) -> dict[str, Any]:
     """与 Forgekin 对话。"""
-    from flowforge.app.api.endpoints.forgemind import _registry
+    from flowforge.app.api.agents.forgemind import _registry
 
     forgekin = _registry.get(forgekin_id)
     if forgekin is None:

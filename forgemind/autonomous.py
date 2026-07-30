@@ -1,0 +1,795 @@
+"""F052 Autonomous Daemon — 5 Forgekin 24h 自主运行守护进程.
+
+本模块实现灵智体自主工作循环（类似 clowder-ai 的自主工作功能）：
+
+    1. 扫描项目 — 发现文档缺失/代码 TODO/测试缺失/架构问题
+    2. 提交任务 — 将发现的问题作为 SwarmTask 提交给 SwarmCoordinator
+    3. 调度分发 — SwarmCoordinator.run_continuously() 按 I3 能力匹配分发
+    4. 执行任务 — 调用灵智体 LLM 真实生成文档/修复代码/编写测试
+    5. 心跳上报 — heartbeat 上报进度，progress=1.0 自动完成
+    6. 循环往复 — 每 scan_interval 秒扫描一次，24h 不间断
+
+设计依据：
+    - F049 Agent Swarm（SwarmCoordinator 调度）
+    - F046 SelfDev Triple Loop（自进化三模式）
+    - clowder-ai 自主工作模式参考
+    - 铁律 2：禁止假数据 — 所有扫描真实读取文件系统
+    - 铁律 3：禁止 Mock LLM — 任务执行通过 forgekin.chat() 真实调用 LLM
+    - 红线 11：路径通过 config 注入，不硬编码
+
+License: MIT
+"""
+
+from __future__ import annotations
+
+import asyncio
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Optional
+
+import yaml
+
+from flowforge.core.tracing import get_logger
+from flowforge.forgemind.swarm import (
+    SwarmCoordinator,
+    SwarmTask,
+    SwarmTaskStatus,
+)
+
+logger = get_logger("flowforge.forgemind.autonomous")
+
+
+# ──────────────────────────────────────────────────────────────────
+# 默认配置（可通过 YAML 覆盖，红线 11）
+# ──────────────────────────────────────────────────────────────────
+
+DEFAULT_SCAN_INTERVAL_SECONDS = 600  # 10 分钟扫描一次（operator 要求 10min 自动找需求）
+DEFAULT_MAX_CONCURRENT_TASKS = 3  # 同时执行的最大任务数
+DEFAULT_MAX_TASKS_PER_SCAN = 5  # 每次扫描最多提交的任务数
+
+# 文档缺失检查清单（相对项目根目录）
+DOC_CHECKLIST = [
+    "docs/spec.md",
+    "docs/arch.md",
+]
+
+# TODO/FIXME 模式（红线 11：不硬编码，但正则模式是技术常量）
+TODO_PATTERNS = [
+    re.compile(r"#\s*TODO[:\s]", re.IGNORECASE),
+    re.compile(r"#\s*FIXME[:\s]", re.IGNORECASE),
+    re.compile(r"raise\s+NotImplementedError", re.IGNORECASE),
+    re.compile(r"pass\s*#\s*placeholder", re.IGNORECASE),
+]
+
+
+class AutonomousDaemon:
+    """5 灵智体 24h 自主运行守护进程.
+
+    职责：
+        1. 定期扫描项目，发现任务（文档缺失/TODO/测试缺失等）
+        2. 提交任务给 SwarmCoordinator
+        3. 监听分配结果，调用灵智体 LLM 执行任务
+        4. 通过 heartbeat 上报进度
+        5. 完成后任务自动标记 COMPLETED
+
+    使用示例::
+
+        daemon = AutonomousDaemon(
+            coordinator=coord,
+            project_root=Path("d:/software/openclaw"),
+            forgekins={"forgemind:wenxin": wenkin_instance, ...},
+        )
+        await daemon.run_forever()
+    """
+
+    def __init__(
+        self,
+        coordinator: SwarmCoordinator,
+        project_root: Path,
+        forgekins: Optional[dict[str, Any]] = None,
+        config: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """初始化自主运行 daemon.
+
+        Args:
+            coordinator: SwarmCoordinator 实例（已注册 5 灵智体）
+            project_root: 项目根目录（扫描范围）
+            forgekins: 灵智体实例字典 {forgekin_id: ForgekinBase}
+            config: 配置字典（可覆盖默认扫描间隔等）
+        """
+        self._coord = coordinator
+        self._root = Path(project_root)
+        self._forgekins = forgekins or {}
+        self._config = config or {}
+        self._scan_interval = int(
+            self._config.get("scan_interval_seconds", DEFAULT_SCAN_INTERVAL_SECONDS)
+        )
+        self._max_concurrent = int(
+            self._config.get("max_concurrent_tasks", DEFAULT_MAX_CONCURRENT_TASKS)
+        )
+        self._max_tasks_per_scan = int(
+            self._config.get("max_tasks_per_scan", DEFAULT_MAX_TASKS_PER_SCAN)
+        )
+        self._running = False
+        self._dispatch_task: Optional[asyncio.Task] = None
+        # 记录已提交的任务标题，避免重复提交
+        self._submitted_titles: set[str] = set()
+        # 自进化活动历史（最近 200 条，供 API 和可观测性查询）
+        self._activity_log: list[dict[str, Any]] = []
+        # 已完成任务的产出（供 Web 可观测性展示）
+        self._completed_outputs: list[dict[str, Any]] = []
+        # 扫描计数
+        self._scan_count = 0
+
+        logger.info(
+            "AutonomousDaemon 初始化: root=%s scan_interval=%ds max_concurrent=%d",
+            self._root,
+            self._scan_interval,
+            self._max_concurrent,
+        )
+
+    def _log_activity(self, event_type: str, title: str, **extra: Any) -> None:
+        """记录自进化活动（供 API 和 Web 可观测性查询）.
+
+        event_type 取值:
+            - scan_started / scan_completed
+            - task_discovered / task_submitted / task_assigned
+            - task_started / task_completed / task_failed
+            - daemon_started / daemon_stopped
+        """
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event_type": event_type,
+            "title": title,
+            **extra,
+        }
+        self._activity_log.append(entry)
+        # 保留最近 200 条
+        if len(self._activity_log) > 200:
+            self._activity_log = self._activity_log[-200:]
+        # 同时写入 INFO 日志（供 logs 端点采集）
+        logger.info("[ACTIVITY] %s: %s %s", event_type, title, extra or "")
+
+    def register_forgekin(self, forgekin_id: str, forgekin: Any) -> None:
+        """注册灵智体实例（用于执行任务时调用 LLM）."""
+        self._forgekins[forgekin_id] = forgekin
+        logger.info("AutonomousDaemon 注册灵智体: %s", forgekin_id)
+
+    async def run_forever(self) -> None:
+        """主循环 — 24h 持续运行.
+
+        流程：
+            1. 启动 SwarmCoordinator.run_continuously() 后台调度
+            2. 每隔 scan_interval 秒扫描项目
+            3. 提交发现的任务
+            4. 执行已分配的任务
+            5. 循环往复
+        """
+        self._running = True
+        logger.info("AutonomousDaemon 启动 — 5 灵智体开始 24h 自主运行")
+        self._log_activity("daemon_started", "AutonomousDaemon 启动", scan_interval=self._scan_interval)
+
+        # 启动 SwarmCoordinator 后台调度循环
+        self._dispatch_task = asyncio.create_task(
+            self._coord.run_continuously(interval=5.0)
+        )
+        logger.info("SwarmCoordinator 后台调度已启动")
+
+        scan_count = 0
+        while self._running:
+            scan_count += 1
+            try:
+                logger.info("=== 自主扫描第 %d 轮 ===", scan_count)
+                self._scan_count = scan_count
+                self._log_activity("scan_started", f"第 {scan_count} 轮自主扫描")
+
+                # 1. 扫描项目，发现任务
+                tasks = self._scan_project()
+                logger.info("扫描发现 %d 个潜在任务", len(tasks))
+                self._log_activity("scan_completed", f"扫描完成：发现 {len(tasks)} 个潜在任务", scan_round=scan_count)
+
+                # 2. 提交任务（去重 + 限量）
+                submitted = 0
+                for task in tasks[: self._max_tasks_per_scan]:
+                    if task.title in self._submitted_titles:
+                        continue
+                    self._coord.submit_task(task)
+                    self._submitted_titles.add(task.title)
+                    submitted += 1
+                    logger.info(
+                        "提交任务: [%s] %s → 需要: %s",
+                        task.task_id[:12],
+                        task.title,
+                        task.required_capabilities,
+                    )
+                    self._log_activity(
+                        "task_submitted",
+                        task.title,
+                        task_id=task.task_id,
+                        required_capabilities=task.required_capabilities,
+                    )
+
+                # 3. 等待 dispatch 分发
+                await asyncio.sleep(1)
+
+                # 4. 执行已分配的任务
+                await self._execute_assigned_tasks()
+
+                # 5. 等待下一轮扫描
+                logger.info(
+                    "本轮完成: 提交 %d 个任务，等待 %ds 后下一轮",
+                    submitted,
+                    self._scan_interval,
+                )
+                await asyncio.sleep(self._scan_interval)
+
+            except asyncio.CancelledError:
+                logger.info("AutonomousDaemon 收到取消信号，正在停止")
+                break
+            except Exception as exc:  # noqa: BLE001
+                logger.error("AutonomousDaemon 循环异常: %s", exc, exc_info=True)
+                await asyncio.sleep(60)  # 出错后等 1 分钟再重试
+
+        # 清理
+        if self._dispatch_task and not self._dispatch_task.done():
+            self._dispatch_task.cancel()
+            try:
+                await self._dispatch_task
+            except asyncio.CancelledError:
+                pass
+        logger.info("AutonomousDaemon 已停止（共扫描 %d 轮）", scan_count)
+        self._log_activity("daemon_stopped", "AutonomousDaemon 已停止", total_scans=scan_count)
+
+    def stop(self) -> None:
+        """停止自主运行."""
+        self._running = False
+        logger.info("AutonomousDaemon 收到停止指令")
+
+    # ── 项目扫描（真实文件系统操作，铁律 2：禁止假数据）──────────
+
+    def _scan_project(self) -> list[SwarmTask]:
+        """扫描项目，发现任务.
+
+        扫描内容：
+            1. 文档缺失（docs/spec.md / docs/arch.md 等）
+            2. 代码 TODO/FIXME/NotImplementedError
+            3. 测试缺失（有模块无测试）
+
+        Returns:
+            发现的 SwarmTask 列表
+        """
+        tasks: list[SwarmTask] = []
+        tasks.extend(self._scan_missing_docs())
+        tasks.extend(self._scan_code_todos())
+        tasks.extend(self._scan_missing_tests())
+        return tasks
+
+    def _scan_missing_docs(self) -> list[SwarmTask]:
+        """扫描缺失的文档（文心 doc_generation 任务）."""
+        tasks: list[SwarmTask] = []
+        for doc_rel_path in DOC_CHECKLIST:
+            doc_path = self._root / doc_rel_path
+            if not doc_path.exists():
+                tasks.append(SwarmTask(
+                    title=f"补充缺失文档: {doc_rel_path}",
+                    description=(
+                        f"项目根目录下 {doc_rel_path} 文件不存在。"
+                        f"请根据项目实际结构生成对应文档，"
+                        f"包含项目概述、架构设计、使用说明等。"
+                    ),
+                    required_capabilities=["doc_generation"],
+                    priority="normal",
+                    context={"scan_source": "autonomous", "doc_path": doc_rel_path},
+                ))
+        return tasks
+
+    def _scan_code_todos(self) -> list[SwarmTask]:
+        """扫描代码中的 TODO/FIXME/NotImplementedError（夏洛克 code_generation 任务）."""
+        tasks: list[SwarmTask] = []
+        todo_count = 0
+
+        # 扫描 flowforge 目录下的 .py 文件（限制范围避免过多）
+        src_dir = self._root / "flowforge"
+        if not src_dir.is_dir():
+            return tasks
+
+        for py_file in src_dir.rglob("*.py"):
+            # 跳过 __pycache__、tests、docs
+            if "__pycache__" in str(py_file) or "tests" in py_file.parts:
+                continue
+            try:
+                content = py_file.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+
+            for pattern in TODO_PATTERNS:
+                matches = pattern.findall(content)
+                if matches:
+                    todo_count += len(matches)
+                    rel_path = py_file.relative_to(self._root)
+                    task_title = f"修复代码 TODO: {rel_path}"
+                    if task_title not in self._submitted_titles:
+                        tasks.append(SwarmTask(
+                            title=task_title,
+                            description=(
+                                f"文件 {rel_path} 中发现 {len(matches)} 处 "
+                                f"TODO/FIXME/NotImplementedError。"
+                                f"请分析代码上下文并实现缺失的逻辑。"
+                            ),
+                            required_capabilities=["code_generation"],
+                            priority="normal",
+                            context={
+                                "scan_source": "autonomous",
+                                "file": str(rel_path),
+                                "count": len(matches),
+                            },
+                        ))
+                    break  # 同一文件只提交一个任务
+
+        if todo_count > 0:
+            logger.info("代码扫描: 发现 %d 处 TODO/FIXME", todo_count)
+        return tasks
+
+    def _scan_missing_tests(self) -> list[SwarmTask]:
+        """扫描缺失的测试文件（达芬奇 test_generation 任务）."""
+        tasks: list[SwarmTask] = []
+        src_dir = self._root / "flowforge"
+        tests_dir = self._root / "flowforge" / "tests"
+
+        if not src_dir.is_dir():
+            return tasks
+
+        # 扫描核心模块，检查是否有对应测试
+        core_modules = [
+            "forgemind/swarm.py",
+            "forgemind/base.py",
+            "evolution/auto_dream.py",
+        ]
+
+        for mod_rel in core_modules:
+            mod_path = self._root / "flowforge" / mod_rel
+            if not mod_path.exists():
+                continue
+
+            # 检查 tests 目录下是否有对应测试
+            mod_name = Path(mod_rel).stem
+            test_candidates = [
+                tests_dir / f"test_{mod_name}.py",
+                tests_dir / mod_name / f"test_{mod_name}.py",
+            ]
+            # 也检查模块自身目录下的 tests
+            mod_dir = mod_path.parent / "tests"
+            if mod_dir.is_dir():
+                test_candidates.append(mod_dir / f"test_{mod_name}.py")
+
+            has_test = any(t.exists() for t in test_candidates)
+            if not has_test:
+                task_title = f"补充测试: {mod_rel}"
+                if task_title not in self._submitted_titles:
+                    tasks.append(SwarmTask(
+                        title=task_title,
+                        description=(
+                            f"模块 {mod_rel} 缺少单元测试。"
+                            f"请为该模块的核心功能编写测试用例，"
+                            f"覆盖主要分支和边界条件。"
+                        ),
+                        required_capabilities=["test_generation"],
+                        priority="low",
+                        context={
+                            "scan_source": "autonomous",
+                            "module": mod_rel,
+                        },
+                    ))
+
+        return tasks
+
+    # ── 任务执行（真实 LLM 调用，铁律 3：禁止 Mock LLM）──────────
+
+    async def _execute_assigned_tasks(self) -> None:
+        """执行所有 ASSIGNED 状态的任务.
+
+        遍历 SwarmCoordinator 的任务列表，对 ASSIGNED 状态的任务
+        调用对应灵智体的 LLM 执行。
+        """
+        executed = 0
+        for task in list(self._coord._tasks.values()):
+            if executed >= self._max_concurrent:
+                break
+            if (
+                task.status == SwarmTaskStatus.ASSIGNED
+                and task.assigned_agent_id
+            ):
+                # 异步执行（不阻塞扫描循环）
+                asyncio.create_task(self._execute_task(task))
+                executed += 1
+
+        if executed > 0:
+            logger.info("启动 %d 个任务执行（异步并行）", executed)
+
+    async def _execute_task(self, task: SwarmTask) -> None:
+        """执行单个任务 — 调用灵智体 LLM 生成结果.
+
+        流程：
+            1. heartbeat(progress=0.1) — 标记开始执行
+            2. 启动心跳保活协程（每 10s 发送心跳，防止 30s 超时）
+            3. forgekin.chat() — 真实调用 LLM
+            4. 停止心跳保活
+            5. heartbeat(progress=1.0) — 标记完成
+        """
+        agent_id = task.assigned_agent_id
+        forgekin = self._forgekins.get(agent_id)
+
+        if forgekin is None:
+            logger.warning(
+                "任务 %s 分配给 %s，但灵智体实例未注册，跳过",
+                task.task_id[:12],
+                agent_id,
+            )
+            return
+
+        logger.info(
+            "▶ 灵智体 %s 开始执行: [%s] %s",
+            agent_id,
+            task.task_id[:12],
+            task.title,
+        )
+
+        # 心跳保活协程 — LLM 调用可能耗时 30-90s，需要定期发送心跳防止超时
+        keepalive_stop = asyncio.Event()
+
+        async def _heartbeat_keepalive():
+            """每 10s 发送心跳保活（SwarmCoordinator 30s 超时）。"""
+            progress = 0.1
+            while not keepalive_stop.is_set():
+                try:
+                    await self._coord.heartbeat(agent_id, task.task_id, progress, "busy")
+                except Exception:  # noqa: BLE001
+                    pass
+                try:
+                    await asyncio.wait_for(keepalive_stop.wait(), timeout=10.0)
+                except asyncio.TimeoutError:
+                    progress = min(0.9, progress + 0.1)
+
+        try:
+            # 1. 上报开始
+            await self._coord.heartbeat(agent_id, task.task_id, 0.1, "busy")
+
+            # 2. 启动心跳保活
+            keepalive_task = asyncio.create_task(_heartbeat_keepalive())
+
+            # 3. 构造任务消息，调用 LLM
+            task_prompt = self._build_task_prompt(task)
+            messages = [{"role": "user", "content": task_prompt}]
+            result = await forgekin.chat(messages)
+
+            # 4. 停止心跳保活
+            keepalive_stop.set()
+            keepalive_task.cancel()
+            try:
+                await keepalive_task
+            except asyncio.CancelledError:
+                pass
+
+            # 5. 保存结果
+            content = result.get("content", "")
+            model = result.get("model", "unknown")
+
+            # 无效响应检测（T2铁律：禁止假数据；避免"无法回答"被当作有效产出）
+            invalid_markers = [
+                "无法回答", "无法回答这个问题", "我不能回答", "我无法提供",
+                "[ZHIPU HTTP 429]", "[OpenRoute 超时]", "[ZHIPU 异常]",
+                "[OpenRoute 异常]", "余额不足", "当前不可用",
+            ]
+            is_invalid = (
+                not content
+                or len(content) < 20
+                or any(marker in content for marker in invalid_markers)
+            )
+            if is_invalid:
+                logger.warning(
+                    "无效产出: agent=%s task=%s model=%s content=%r",
+                    agent_id,
+                    task.task_id[:12],
+                    model,
+                    content[:100] if content else "(empty)",
+                )
+                self._log_activity(
+                    "task_invalid_output",
+                    task.title,
+                    task_id=task.task_id,
+                    agent_id=agent_id,
+                    model=model,
+                    content_length=len(content),
+                    content_preview=content[:200] if content else "(empty)",
+                    reason="无效响应（无法回答/余额不足/超时等）",
+                )
+                await self._coord.heartbeat(agent_id, task.task_id, 0.0, "error")
+                return
+
+            task.result = {
+                "content": content,
+                "model": model,
+                "summary": content[:200] if content else "",
+                "completed_by": agent_id,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            # 6. 上报完成（progress=1.0 触发 COMPLETED）
+            await self._coord.heartbeat(agent_id, task.task_id, 1.0, "idle")
+
+            logger.info(
+                "✓ 灵智体 %s 完成任务: [%s] %s (model=%s, %d 字)",
+                agent_id,
+                task.task_id[:12],
+                task.title,
+                model,
+                len(content),
+            )
+            self._log_activity(
+                "task_completed",
+                task.title,
+                task_id=task.task_id,
+                agent_id=agent_id,
+                model=model,
+                content_length=len(content),
+                content_preview=content[:300] if content else "",
+            )
+            # 保存产出供 Web 可观测性展示（保留最近 50 条）
+            self._completed_outputs.append({
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "task_id": task.task_id,
+                "title": task.title,
+                "agent_id": agent_id,
+                "model": model,
+                "content": content,
+                "content_preview": content[:500] if content else "",
+            })
+            if len(self._completed_outputs) > 50:
+                self._completed_outputs = self._completed_outputs[-50:]
+
+        except Exception as exc:  # noqa: BLE001
+            # 停止心跳保活
+            keepalive_stop.set()
+            logger.error(
+                "✗ 灵智体 %s 执行任务失败: [%s] %s — %s",
+                agent_id,
+                task.task_id[:12],
+                task.title,
+                exc,
+                exc_info=True,
+            )
+            self._log_activity(
+                "task_failed",
+                task.title,
+                task_id=task.task_id,
+                agent_id=agent_id,
+                error=str(exc),
+            )
+            # 上报失败状态
+            await self._coord.heartbeat(agent_id, task.task_id, 0.0, "error")
+
+    def _build_task_prompt(self, task: SwarmTask) -> str:
+        """构造任务执行提示词（基于任务信息+真实文件上下文，铁律2：禁止假数据）.
+
+        根据任务类型附加真实文件内容，避免 LLM 生成"假设性代码"：
+            - doc_generation: 附加项目结构概览 + README + 关键模块清单
+            - code_generation: 附加目标文件的真实完整内容
+            - test_generation: 附加目标模块的真实完整内容
+        """
+        prompt = (
+            f"你被分配了一个自主任务，请基于你的角色能力完成：\n\n"
+            f"任务标题: {task.title}\n"
+            f"任务描述: {task.description}\n"
+            f"需要能力: {', '.join(task.required_capabilities)}\n"
+        )
+        if task.context:
+            prompt += f"上下文: {task.context}\n"
+
+        # 根据任务类型附加真实文件上下文（关键修复：避免 LLM 生成假设性代码）
+        ctx = task.context or {}
+        required = task.required_capabilities
+
+        if "doc_generation" in required:
+            prompt += self._build_doc_context(ctx)
+        elif "code_generation" in required:
+            prompt += self._build_code_context(ctx)
+        elif "test_generation" in required:
+            prompt += self._build_test_context(ctx)
+
+        prompt += (
+            "\n【重要】以上是项目真实文件内容，请基于实际代码和项目结构生成具体的、"
+            "可执行的成果。禁止生成假设性代码或示例代码——必须针对真实文件"
+            "进行修改或补充。产出格式：\n"
+            "- 文档任务：直接输出 Markdown 文档内容\n"
+            "- 代码任务：输出完整的修改后代码（带文件路径标注）\n"
+            "- 测试任务：输出完整的测试代码（带文件路径标注）"
+        )
+        return prompt
+
+    def _build_doc_context(self, ctx: dict[str, Any]) -> str:
+        """为文档生成任务附加项目真实结构上下文."""
+        parts = ["\n--- 项目真实结构（用于生成文档参考）---\n"]
+        try:
+            for entry in sorted(self._root.iterdir()):
+                if entry.name.startswith(".") or entry.name in {
+                    "__pycache__", "node_modules", ".git", ".next", "dist", "build"
+                }:
+                    continue
+                if entry.is_dir():
+                    parts.append(f"DIR {entry.name}/")
+                    try:
+                        for sub in sorted(entry.iterdir())[:8]:
+                            if not sub.name.startswith("."):
+                                parts.append(f"   - {sub.name}")
+                    except (PermissionError, OSError):
+                        pass
+                else:
+                    parts.append(f"FILE {entry.name}")
+        except (PermissionError, OSError):
+            pass
+
+        readme_path = self._root / "README.md"
+        if readme_path.exists():
+            try:
+                readme = readme_path.read_text(encoding="utf-8", errors="ignore")
+                parts.append("\n--- README.md（前1500字）---\n")
+                parts.append(readme[:1500])
+            except (PermissionError, OSError):
+                pass
+
+        doc_path = ctx.get("doc_path")
+        if doc_path:
+            target_doc = self._root / doc_path
+            if target_doc.exists():
+                try:
+                    existing = target_doc.read_text(encoding="utf-8", errors="ignore")
+                    parts.append(f"\n--- 现有 {doc_path} 内容（供补充参考）---\n")
+                    parts.append(existing[:2000])
+                except (PermissionError, OSError):
+                    pass
+            else:
+                parts.append(f"\n目标文档 {doc_path} 不存在，需新建。")
+
+        return "\n".join(parts) + "\n"
+
+    def _build_code_context(self, ctx: dict[str, Any]) -> str:
+        """为代码修复任务附加目标文件真实完整内容."""
+        file_rel = ctx.get("file")
+        if not file_rel:
+            return ""
+
+        target_file = self._root / file_rel
+        if not target_file.exists():
+            return f"\n目标文件 {file_rel} 不存在。\n"
+
+        try:
+            content = target_file.read_text(encoding="utf-8", errors="ignore")
+        except (PermissionError, OSError) as exc:
+            return f"\n读取文件 {file_rel} 失败: {exc}\n"
+
+        parts = [
+            f"\n--- 目标文件 {file_rel} 完整内容（{len(content)} 字符）---\n",
+            content,
+            "\n--- 文件结束 ---\n",
+            "请在上述真实代码基础上，修复其中的 TODO/FIXME/NotImplementedError，"
+            "输出完整的修改后文件内容。禁止生成假设性或示例性代码。",
+        ]
+        return "\n".join(parts)
+
+    def _build_test_context(self, ctx: dict[str, Any]) -> str:
+        """为测试生成任务附加目标模块真实完整内容."""
+        module_rel = ctx.get("module")
+        if not module_rel:
+            return ""
+
+        target_mod = self._root / module_rel
+        if not target_mod.exists():
+            return f"\n目标模块 {module_rel} 不存在。\n"
+
+        try:
+            content = target_mod.read_text(encoding="utf-8", errors="ignore")
+            max_len = 6000
+            if len(content) > max_len:
+                content = content[:max_len] + f"\n\n# ... (已截断，共 {len(content)} 字符)"
+        except (PermissionError, OSError) as exc:
+            return f"\n读取模块 {module_rel} 失败: {exc}\n"
+
+        parts = [
+            f"\n--- 目标模块 {module_rel} 完整内容（供编写测试参考）---\n",
+            content,
+            "\n--- 模块结束 ---\n",
+            "请基于上述真实代码，为其中的核心类和函数编写单元测试。"
+            "输出完整的测试代码，禁止生成假设性测试。",
+        ]
+        return "\n".join(parts)
+
+    # ── 状态查询 ──────────────────────────────────────────────
+
+    def get_status(self) -> dict[str, Any]:
+        """获取 daemon 运行状态（供 /api/v1/forgemind/autonomous/status 查询）."""
+        tasks = list(self._coord._tasks.values())
+        # 计算最近活动统计
+        recent_activities = self._activity_log[-20:] if self._activity_log else []
+        completed_count = sum(1 for a in self._activity_log if a.get("event_type") == "task_completed")
+        failed_count = sum(1 for a in self._activity_log if a.get("event_type") == "task_failed")
+        return {
+            "running": self._running,
+            "scan_interval_seconds": self._scan_interval,
+            "scan_count": self._scan_count,
+            "registered_forgekins": list(self._forgekins.keys()),
+            "total_tasks": len(tasks),
+            "pending": sum(1 for t in tasks if t.status == SwarmTaskStatus.PENDING),
+            "assigned": sum(1 for t in tasks if t.status == SwarmTaskStatus.ASSIGNED),
+            "running_tasks": sum(1 for t in tasks if t.status == SwarmTaskStatus.RUNNING),
+            "completed": sum(1 for t in tasks if t.status == SwarmTaskStatus.COMPLETED),
+            "failed": sum(1 for t in tasks if t.status == SwarmTaskStatus.FAILED),
+            "submitted_titles": len(self._submitted_titles),
+            # 自进化活动统计
+            "activity_log_count": len(self._activity_log),
+            "completed_tasks_total": completed_count,
+            "failed_tasks_total": failed_count,
+            "recent_activities": recent_activities,
+        }
+
+    def get_activity_log(self, limit: int = 100) -> list[dict[str, Any]]:
+        """获取自进化活动历史（供 Web 可观测性展示）."""
+        return list(reversed(self._activity_log[-limit:]))
+
+    def get_completed_outputs(self, limit: int = 20) -> list[dict[str, Any]]:
+        """获取已完成任务的产出（供 Web 聊天和可观测性展示）."""
+        return list(reversed(self._completed_outputs[-limit:]))
+
+
+# ──────────────────────────────────────────────────────────────────
+# 工厂函数 — 从 YAML 配置创建 AutonomousDaemon
+# ──────────────────────────────────────────────────────────────────
+
+
+async def create_autonomous_daemon(
+    project_root: Path,
+    swarm_config_path: Optional[Path] = None,
+) -> AutonomousDaemon:
+    """从配置创建 AutonomousDaemon 实例.
+
+    Args:
+        project_root: 项目根目录
+        swarm_config_path: agent_swarm.yaml 路径（默认 config/agent_swarm.yaml）
+
+    Returns:
+        配置好的 AutonomousDaemon 实例（未启动）
+    """
+    if swarm_config_path is None:
+        swarm_config_path = project_root / "flowforge" / "config" / "agent_swarm.yaml"
+
+    # 加载 swarm 配置
+    with open(swarm_config_path, encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)["agent_swarm"]
+
+    # 创建 SwarmCoordinator
+    coord = SwarmCoordinator(config=cfg)
+
+    # 创建 AutonomousDaemon
+    daemon = AutonomousDaemon(
+        coordinator=coord,
+        project_root=project_root,
+        config=cfg,
+    )
+
+    # 锻造 5 个灵智体并注册
+    from flowforge.forgemind.forgekins import BUILTIN_FORGEKINS, ROSTER_FILES
+    from flowforge.forgemind.forging.pipeline import ForgePipeline
+
+    pipeline = ForgePipeline()
+    for forgekin_id in BUILTIN_FORGEKINS:
+        try:
+            yaml_path = ROSTER_FILES[forgekin_id]
+            forgekin = await pipeline.forge_from_yaml(yaml_path)
+            # SwarmCoordinator 中的 agent_id 是带前缀的（forgemind:wenxin）
+            full_id = f"forgemind:{forgekin_id}"
+            daemon.register_forgekin(full_id, forgekin)
+            logger.info("灵智体 %s 已锻造并注册到 daemon", full_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("灵智体 %s 锻造失败: %s", forgekin_id, exc)
+
+    return daemon

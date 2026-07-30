@@ -92,10 +92,37 @@ class PromptManager:
                     with open(filepath, "r", encoding="utf-8") as f:
                         data = yaml.safe_load(f)
                     if isinstance(data, dict):
-                        self._prompts.update(data)
-                        logger.info(f"Loaded prompts from {filepath}: {list(data.keys())}")
+                        self._prompts.update(self._flatten_prompts(data))
+                        logger.info(f"Loaded prompts from {filepath}: {len(self._prompts)} keys")
                 except Exception as e:
                     logger.warning(f"Failed to load prompts from {filepath}: {e}")
+
+    @staticmethod
+    def _flatten_prompts(data: dict) -> dict:
+        """Flatten nested prompts YAML into a flat dict of key→template_string.
+
+        Supports two YAML structures:
+        1. Flat: ``key: "template string"`` (legacy, used by old flowforge)
+        2. Nested: ``prompts: {key: {template: "..."}}`` (new format with metadata)
+
+        For nested format, extracts the ``template`` field from each prompt entry.
+        Metadata keys (version, magic_words) are excluded — only prompt templates
+        are stored so that list_keys() returns only actual prompts.
+        """
+        result: dict = {}
+        prompts_section = data.get("prompts")
+        if isinstance(prompts_section, dict):
+            # Nested format: prompts: {key: {template: "..."}, ...}
+            for key, value in prompts_section.items():
+                if isinstance(value, dict) and "template" in value:
+                    result[key] = value["template"]
+                elif isinstance(value, str):
+                    result[key] = value
+            # Metadata keys (version, magic_words) are intentionally excluded
+        else:
+            # Flat format: key: "template string"
+            result.update(data)
+        return result
 
     def get(self, key: str, fallback: str = "", **kwargs) -> str:
         template = self._prompts.get(key, "")
@@ -113,6 +140,10 @@ class PromptManager:
                         fallback = fallback.replace(f"{{{k}}}", str(v))
                     return fallback
             logger.warning(f"Prompt key '{key}' not found")
+            return ""
+        # Ensure template is a string (metadata values like magic_words may be lists)
+        if not isinstance(template, str):
+            logger.warning(f"Prompt key '{key}' is not a string: {type(template).__name__}")
             return ""
         if kwargs:
             try:
@@ -143,7 +174,8 @@ class PromptManager:
         self._prompts[key] = template
 
     def list_keys(self) -> list:
-        return list(self._prompts.keys())
+        """Return list of prompt keys (excludes non-string metadata like version/magic_words)."""
+        return [k for k, v in self._prompts.items() if isinstance(v, str)]
 
     def reload(self, prompts_dir: str = None):
         self._prompts = {}

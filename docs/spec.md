@@ -436,6 +436,34 @@ v7.1 多形态智能体愿景目前处于**设计态**，对应代码尚未全�
 - Loop 超时：3 分钟（创作和润色接口不得超过 3 分钟）
 - 5 个 WebChat 评委并行评审，使用不同模型
 
+### §2.13 代码目录组织约束
+
+> **架构原则**：架构相关/底层代码按架构分层组织，业务功能按模块组织，UI 界面按组件组织。
+> 该原则在代码目录结构上必须体现，详细目录树见 [arch.md §2.8](arch.md)。
+
+**目录组织铁律**：
+
+1. **`app/` 目录仅含端点封装**：`app/` 理论上只有端点的接口封装，不应有实现代码；所有实现代码下沉到 `core/` 或对应功能模块
+2. **单文件不超过 500 行**：app 目录下单文件一般不超过 500 行，超过则拆分为子模块或组件
+3. **架构底层代码按分层组织**：`core/` 下按架构层次组织（capability/teamact/harness/memory/eval/reliability/...）
+4. **业务功能按模块组织**：`forgemind/`、`evolution/`、`loop/`、`modes/` 等按业务模块组织
+5. **UI 界面按组件组织**：Web 前端按 UI 组件组织目录
+6. **提示词外置 YAML**：所有 prompt 必须外置到 `config/prompts.yaml` 或对应模块的 `config/prompts.yaml`，禁止在 .py 文件中硬编码
+7. **路径/密钥/端口外置**：所有路径、密钥、端口通过 `.env` 或 `config/system.yaml` 注入
+
+**关键目录职责**：
+
+| 目录 | 职责 | 备注 |
+|------|------|------|
+| `app/` | 应用层（仅 API 端点封装） | `main.py` < 500 行，仅 app 创建 + 路由挂载 |
+| `app/api/admin/` | 管理端点 | prompts/settings/audit/ops/env_vars |
+| `app/api/agents/` | 智能体端点 | council/forgemind/forgekins（薄封装，业务逻辑下沉） |
+| `core/` | 共享内核（架构底层代码） | bootstrap.py + plugin_loader.py 从 main.py 提取 |
+| `forgemind/` | ForgeMind 业务模块 | Forgekin 管理、锻造、MindCouncil |
+| `evolution/` | 自进化三闭环 | Mode A/B/C + Eval Ledger |
+| `llm/` | LLM 客户端层 | router/provider/trae 桥接 |
+| `config/` | YAML 配置 | prompts.yaml 外置提示词（铁律 5） |
+
 ---
 
 ## §3 具体需求-核心（FR-CORE-0XX）索引

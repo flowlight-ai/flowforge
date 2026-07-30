@@ -363,7 +363,7 @@ async def get_task_events(task_id: str, executor=Depends(get_executor)):
 
     # 2. 从审计日志数据库加载事件
     try:
-        from flowforge.app.api.endpoints.logs import get_audit_logger
+        from flowforge.app.api.core.logs import get_audit_logger
         audit = get_audit_logger()
         result = audit.query(task_id=task_id, limit=200)
         for item in result.get("items", []):

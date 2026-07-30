@@ -10,7 +10,7 @@ agent_swarm:
   # ── I4 心跳超时回收 ─────────────────────────────────────────
   # ASSIGNED/RUNNING 任务 30s 无心跳自动 reassign
   # reassign 超过 max_retries 次后标记为 FAILED
-  heartbeat_timeout_seconds: 30  # I4 心跳超时阈值
+  heartbeat_timeout_seconds: 120  # I4 心跳超时阈值（120s，与LLM超时一致，避免LLM调用期间任务被reassign）
   max_retries: 3                 # I4 最大重试次数
 
   # ── 调度循环 ────────────────────────────────────────────────

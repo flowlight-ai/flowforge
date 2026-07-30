@@ -41,8 +41,8 @@ def _make_app(tmp_db: HelmDatabase, tmp_workspace: Path) -> TestClient:
     """构造注入了临时数据库和工作空间的 FastAPI TestClient。"""
     from fastapi import FastAPI
 
-    from flowforge.app.api.endpoints import plans as plans_mod
-    from flowforge.app.api.endpoints import uploads as uploads_mod
+    from flowforge.app.api.workflows import plans as plans_mod
+    from flowforge.app.api.workspace import uploads as uploads_mod
 
     app = FastAPI()
     app.include_router(plans_mod.router)

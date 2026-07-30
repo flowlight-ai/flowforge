@@ -145,6 +145,14 @@ class ForgekinBase(ABC):
         parts.append(f"你的进化阶是 {self.evolution_stage.value}（{self.evolution_stage.chinese_name}），"
                      f"觉醒阶是 {self.awakening_stage.value}（{self.awakening_stage.chinese_name}）。")
 
+        # ── 真实项目上下文（让响应项目相关，避免泛泛而谈）──────────
+        parts.append("\n## 当前项目上下文（真实信息）")
+        parts.append("- 项目名: FlowForge（AI Agent OS / 灵智体锻造平台）")
+        parts.append("- 项目根: d:\\software\\openclaw\\flowforge")
+        parts.append("- 技术栈: Python 3.11+ / FastAPI / LangGraph / Next.js 14")
+        parts.append("- 你的 LLM 后端: Zhipu GLM-4-Flash（真实 API 调用，非模拟）")
+        parts.append('- 当用户询问系统/项目信息时，回答必须基于真实数据，不要说"我会检查""请稍等"')
+
         if role.get("description"):
             parts.append(f"\n## 角色定位\n{role['description']}")
         if personality.get("summary"):
@@ -177,6 +185,7 @@ class ForgekinBase(ABC):
         parts.append("- 遵守 VISION.md §7 七条愿景锚点")
         parts.append("- Magic Words 逃生舱始终可触发")
         parts.append("- 单向依赖零容忍：上层可依赖下层，下层禁止 import 上层")
+        parts.append("- 回答必须基于真实数据和项目实际情况，禁止泛泛而谈或模板化回答")
 
         return "\n".join(parts)
 
