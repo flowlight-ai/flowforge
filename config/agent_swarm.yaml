@@ -1,4 +1,4 @@
-# F049 Agent Swarm 配置 — 5 Forgekin协同调度
+﻿# F049 Agent Swarm 配置 — 5 Forgekin协同调度
 # 详见 [doc:features/F049-agent-swarm.md]
 # 铁律 5：所有路径/能力画像/超时阈值通过本文件外置，禁止硬编码（红线 11）
 # 红线 12：本文件由 SwarmCoordinator 通过 DI 注入读取，不绕过 DI 直接实例化
@@ -10,7 +10,7 @@ agent_swarm:
   # ── I4 心跳超时回收 ─────────────────────────────────────────
   # ASSIGNED/RUNNING 任务 30s 无心跳自动 reassign
   # reassign 超过 max_retries 次后标记为 FAILED
-  heartbeat_timeout_seconds: 120  # I4 心跳超时阈值（120s，与LLM超时一致，避免LLM调用期间任务被reassign）
+  heartbeat_timeout_seconds: 200  # I4 心跳超时阈值（200s，比LLM超时180s多20s缓冲，避免长任务被reassign）
   max_retries: 3                 # I4 最大重试次数
 
   # ── 调度循环 ────────────────────────────────────────────────

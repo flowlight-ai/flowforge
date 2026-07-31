@@ -1,4 +1,4 @@
-# 文心（丹顶鹤 / Red-crowned Crane）— 文档员Forgekin配置
+﻿# 文心（丹顶鹤 / Red-crowned Crane）— 文档员Forgekin配置
 # 形象选择理由：丹顶鹤在东西方文化中均为"文雅 / 长寿 / 文献传承"的象征
 #   与文档员"扫描/生成/审核文档、守护知识传承"的角色定位高度契合
 #   名字来源：文心雕龙 — 中国文学理论开山之作，"文心"代表对文字品质的极致追求
@@ -46,11 +46,11 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: zhipu  # 直连智谱 API（使用官方API模型，避免OpenRoute webchat路由问题）
-  model: glm-4-plus  # glm-4-plus 比 glm-4-flash 更强，支持长技术提示词
+  provider: openroute  # OpenRoute网关（Qwen3.6-Plus已验证可用，Doubao有bug）
+  model: Qwen3.6-Plus  # 通义千问3.6-Plus（web chat通道稳定，长任务支持好）
   mode: http
   session_id_prefix: "forgemind:wenxin"  # 会话隔离
-  bridge_timeout: 120  # 增加超时到 120s（附加文件上下文后提示词更长）
+  bridge_timeout: 180  # 文档生成提示词长，Qwen3.6-Plus需要更多时间
   temperature: 0.7
   max_tokens: 8192
 

@@ -1,4 +1,4 @@
-# 达芬奇（海豚 / Dolphin）— 测试员Forgekin配置
+﻿# 达芬奇（海豚 / Dolphin）— 测试员Forgekin配置
 # 形象选择理由：海豚以高智商和强好奇心著称，善于通过试错和互动学习
 #   与测试员"自动化测试生成/执行/验证、探索性测试"的角色定位高度契合
 #   名字来源：列奥纳多·达·芬奇 — 文艺复兴全才，发明与验证的象征
@@ -46,11 +46,11 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: zhipu  # 直连智谱 API（使用官方API模型，避免OpenRoute webchat路由问题）
-  model: glm-4-plus  # glm-4-plus 比 glm-4-flash 更强，支持长技术提示词
+  provider: openroute  # OpenRoute网关（Qwen3.6-Plus已验证可用，Doubao有bug）
+  model: Qwen3.6-Plus  # 通义千问3.6-Plus（web chat通道稳定，长任务支持好）
   mode: http
   session_id_prefix: "forgemind:davinci"  # 会话隔离
-  bridge_timeout: 120  # 增加超时到 120s
+  bridge_timeout: 180  # 增加超时以支持长任务
   temperature: 0.4  # 测试生成需要确定性
   max_tokens: 8192
 

@@ -1,4 +1,4 @@
-"""F052 Autonomous Daemon — 5 Forgekin 24h 自主运行守护进程.
+﻿"""F052 Autonomous Daemon — 5 Forgekin 24h 自主运行守护进程.
 
 本模块实现灵智体自主工作循环（类似 clowder-ai 的自主工作功能）：
 
@@ -633,8 +633,8 @@ class AutonomousDaemon:
         if readme_path.exists():
             try:
                 readme = readme_path.read_text(encoding="utf-8", errors="ignore")
-                parts.append("\n--- README.md（前1500字）---\n")
-                parts.append(readme[:1500])
+                parts.append("\n--- README.md（前800字）---\n")
+                parts.append(readme[:800])
             except (PermissionError, OSError):
                 pass
 
@@ -644,8 +644,8 @@ class AutonomousDaemon:
             if target_doc.exists():
                 try:
                     existing = target_doc.read_text(encoding="utf-8", errors="ignore")
-                    parts.append(f"\n--- 现有 {doc_path} 内容（供补充参考）---\n")
-                    parts.append(existing[:2000])
+                    parts.append(f"\n--- 现有 {doc_path} 内容（前1000字，供参考）---\n")
+                    parts.append(existing[:1000])
                 except (PermissionError, OSError):
                     pass
             else:

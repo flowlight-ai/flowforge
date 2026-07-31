@@ -1,4 +1,4 @@
-# 梵高（孔雀 / Peacock）— 审查员Forgekin配置（F046 v1.1 §9.2 角色演进）
+﻿# 梵高（孔雀 / Peacock）— 审查员Forgekin配置（F046 v1.1 §9.2 角色演进）
 # 形象选择理由：孔雀以华丽尾羽著称，是 AI 业界与东西方文化中"审美 / 视觉表达 / 自信展示"的象征
 #   与审查员"以严苛审美标准审视代码/文档质量、富文本表达审查报告"的角色定位高度契合
 #   名字来源：文森特·梵高 — 艺术史上最富激情与表达力的画家，对品质有极致追求
@@ -50,11 +50,11 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: zhipu  # 直连智谱 API（使用官方API模型，避免OpenRoute webchat路由问题）
-  model: glm-4-plus  # glm-4-plus 比 glm-4-flash 更强，支持长技术提示词
+  provider: openroute  # OpenRoute网关（Qwen3.6-Plus已验证可用，Doubao有bug）
+  model: Qwen3.6-Plus  # 通义千问3.6-Plus（web chat通道稳定，长任务支持好）
   mode: http
   session_id_prefix: "forgemind:vangogh"
-  bridge_timeout: 120  # 增加超时到 120s
+  bridge_timeout: 180  # 增加超时以支持长任务
   temperature: 0.6
   max_tokens: 8192
 
