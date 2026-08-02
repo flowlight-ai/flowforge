@@ -27,28 +27,14 @@ FlowForge is the **harness layer** that gives agents a persistent identity, self
 
 | Capability | Claude Code | OpenCode | Codex | WorkBuddy | Trae | Qoder | FlowForge |
 |------------|:-----------:|:--------:|:-----:|:---------:|:----:|:-----:|:---------:|
-| Project context | ✅ `CLAUDE.md` | ✅ | ✅ `AGENTS.md` | ✅ | ✅ | ✅ Repo Wiki | ✅ |
-| Deep codebase understanding | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Code generation & refactor | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Automated testing | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
-| Git / PR workflow & CI/CD | ✅ | ✅ | ✅ GitHub Actions | ✅ | ✅ | ✅ | ✅ |
-| IDE integration | ✅ VS Code / JetBrains | — | ✅ VS Code | ✅ | ✅ IDE | ✅ JetBrains | ✅ via agents |
-| CLI support | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ |
-| Desktop operation (file / app / OS) | — | — | — | ✅ | ✅ | ✅ | ✅ |
-| Office document processing | — | — | — | ✅ Word/Excel/PPT | ✅ | ✅ QoderWork | ✅ |
-| Cross-app workflow automation | — | — | — | ✅ | ✅ 飞书 | ✅ | ✅ |
-| Browser automation | — | ✅ | — | ✅ | ✅ | — | ✅ |
-| Scheduled tasks / automation | — | — | — | ✅ | ✅ | — | ✅ |
-| Content creation (PPT / reports) | — | — | — | ✅ | ✅ | ✅ | ✅ |
-| Data analysis & visualization | — | — | — | ✅ | ✅ | — | ✅ |
-| IM integration (WeChat / Feishu / WeCom) | — | — | — | ✅ WeCom | ✅ 飞书 | — | ✅ |
-| Web search & multimodal | — | ✅ | ✅ screenshots | ✅ | ✅ image→code | — | ✅ |
-| Multi-agent collaboration | ✅ subagents | ✅ sub-agent | — | ✅ Agent Team | — | ✅ expert teams | ✅ MindCouncil |
-| Long-term memory | ✅ memory files | — | ✅ | ✅ multi-layer | — | ✅ Knowledge Engine | ✅ EchoStore + MindCodex |
-| Self-reflection / improvement | — | — | — | — | — | ✅ 意识功能 | ✅ |
-| MCP protocol | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
-| Multi-model support | — | ✅ | — | ✅ 11 models | ✅ DeepSeek | ✅ Claude/Gemini/GPT | ✅ |
-| Autonomous execution | ✅ checkpoints | ✅ | ✅ cloud sandbox | ✅ | ✅ | ✅ Quest Mode | ✅ |
+| Autonomous task execution | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Multi-agent orchestration | ✅ subagents | ✅ | — | ✅ Agent Team | — | ✅ expert teams | ✅ MindCouncil |
+| Context & long-term memory | ✅ `CLAUDE.md` | ✅ | ✅ `AGENTS.md` | ✅ multi-layer | ✅ | ✅ Knowledge Engine | ✅ EchoStore + MindCodex |
+| Tool use & API orchestration | ✅ MCP | ✅ MCP | ✅ MCP | ✅ MCP | ✅ | ✅ MCP | ✅ MCP |
+| Cross-system integration | ✅ IDE/Git | ✅ | ✅ IDE/Git/CI | ✅ Office/WeCom | ✅ 飞书/IDE | ✅ IDE | ✅ all via agents |
+| Web search & multimodal | — | ✅ | ✅ | ✅ | ✅ image→code | — | ✅ |
+| Desktop & office automation | — | — | — | ✅ Word/Excel/PPT | ✅ | ✅ QoderWork | ✅ |
+| Self-reflection & improvement | — | — | — | — | — | ✅ 意識功能 | ✅ |
 | **Agent-level persistent identity** | — | — | — | — | — | — | ✅ Soul Imprint |
 | **Structured self-devolution loops** | — | — | — | — | — | — | ✅ 5 loops: docs/code/framework/review/tests |
 | **Cross-vendor independent review** | — | — | — | — | — | — | ✅ structurally enforced |
@@ -57,7 +43,6 @@ FlowForge is the **harness layer** that gives agents a persistent identity, self
 | **Multi-species morphology** | — | — | — | — | — | — | ✅ 5 evolvable species |
 
 > **Build AI teams, not just agents. Hard rails, soft power, shared mission.**
-
 ---
 
 ## Key Features

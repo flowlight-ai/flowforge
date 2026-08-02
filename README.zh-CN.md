@@ -26,28 +26,14 @@ FlowForge 是为智能体提供持久身份、自进化能力和治理框架的*
 
 | 能力 | Claude Code | OpenCode | Codex | WorkBuddy | Trae | Qoder | FlowForge |
 |------|:-----------:|:--------:|:-----:|:---------:|:----:|:-----:|:---------:|
-| 项目上下文 | ✅ `CLAUDE.md` | ✅ | ✅ `AGENTS.md` | ✅ | ✅ | ✅ Repo Wiki | ✅ |
-| 深度代码库理解 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 代码生成与重构 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 自动化测试 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
-| Git / PR 工作流 & CI/CD | ✅ | ✅ | ✅ GitHub Actions | ✅ | ✅ | ✅ | ✅ |
-| IDE 集成 | ✅ VS Code / JetBrains | — | ✅ VS Code | ✅ | ✅ IDE | ✅ JetBrains | ✅ 经由所雇智能体 |
-| CLI 支持 | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ |
-| 桌面操作（文件 / 应用 / 系统） | — | — | — | ✅ | ✅ | ✅ | ✅ |
-| Office 文档处理 | — | — | — | ✅ Word/Excel/PPT | ✅ | ✅ QoderWork | ✅ |
-| 跨应用工作流自动化 | — | — | — | ✅ | ✅ 飞书 | ✅ | ✅ |
-| 浏览器自动化 | — | ✅ | — | ✅ | ✅ | — | ✅ |
-| 定时任务 / 自动化 | — | — | — | ✅ | ✅ | — | ✅ |
-| 内容创作（PPT / 报告） | — | — | — | ✅ | ✅ | ✅ | ✅ |
-| 数据分析与可视化 | — | — | — | ✅ | ✅ | — | ✅ |
-| IM 集成（微信 / 飞书 / 企微） | — | — | — | ✅ 企微 | ✅ 飞书 | — | ✅ |
-| 网页搜索与多模态 | — | ✅ | ✅ 截图 | ✅ | ✅ 图→代码 | — | ✅ |
-| 多智能体协作 | ✅ subagents | ✅ sub-agent | — | ✅ Agent Team | — | ✅ 专家团队 | ✅ MindCouncil |
-| 长期记忆 | ✅ 记忆文件 | — | ✅ | ✅ 多层记忆 | — | ✅ Knowledge Engine | ✅ EchoStore + MindCodex |
-| 自我反思 / 持续改进 | — | — | — | — | — | ✅ 意识功能 | ✅ |
-| MCP 协议 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
-| 多模型支持 | — | ✅ | — | ✅ 11 种模型 | ✅ DeepSeek | ✅ Claude/Gemini/GPT | ✅ |
-| 自主执行 | ✅ checkpoints | ✅ | ✅ 云端沙箱 | ✅ | ✅ | ✅ Quest Mode | ✅ |
+| 自主任务执行 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 多智能体编排 | ✅ subagents | ✅ | — | ✅ Agent Team | — | ✅ 专家团队 | ✅ MindCouncil |
+| 上下文与长期记忆 | ✅ `CLAUDE.md` | ✅ | ✅ `AGENTS.md` | ✅ 多层记忆 | ✅ | ✅ Knowledge Engine | ✅ EchoStore + MindCodex |
+| 工具调用与 API 编排 | ✅ MCP | ✅ MCP | ✅ MCP | ✅ MCP | ✅ | ✅ MCP | ✅ MCP |
+| 跨系统集成 | ✅ IDE/Git | ✅ | ✅ IDE/Git/CI | ✅ Office/企微 | ✅ 飞书/IDE | ✅ IDE | ✅ 经由所雇智能体 |
+| 网页搜索与多模态 | — | ✅ | ✅ | ✅ | ✅ 图→代码 | — | ✅ |
+| 桌面与办公自动化 | — | — | — | ✅ Word/Excel/PPT | ✅ | ✅ QoderWork | ✅ |
+| 自我反思与持续改进 | — | — | — | — | — | ✅ 意识功能 | ✅ |
 | **智能体级持久身份** | — | — | — | — | — | — | ✅ Soul Imprint |
 | **结构化自进化闭环** | — | — | — | — | — | — | ✅ 5 条闭环：文档/代码/框架/审查/测试 |
 | **跨厂商独立审查** | — | — | — | — | — | — | ✅ 结构强制 |
