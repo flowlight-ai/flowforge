@@ -48,25 +48,25 @@ FlowForge はこれらのエージェントと競合しない——**雇用す�
 
 ## 主な機能
 
-- **永続的アイデンティティ（Forgekin / 霊智体）** — `Soul Imprint`（魂の刻印）、`Capability Profile`（能力プロファイル）、`EchoStore`（エコーストア）を持ち、クラッシュ・モデル更新・セッション境界を生き延びる長寿エージェント。
-- **自己進化ループ（Self-Devolution Loops）** — ガバナンスの闸门のもと、エージェントが自らのドキュメント・コード・フレームワーク・レビュー・テストを自律進化させる 5 つの閉ループ。
+- **永続的アイデンティティ（Forgekin / 進化可能エージェント）** — `Soul Imprint`（魂の刻印）、`Capability Profile`（能力プロファイル）、`EchoStore（エピソード記憶ストア）を持ち、クラッシュ・モデル更新・セッション境界を生き延びる長寿の進化可能エージェント（Forgekin）。
+- **自己進化ループ（Self-Devolution Loops）** — ガバナンスのゲートのもと、エージェントが自らのドキュメント・コード・フレームワーク・レビュー・テストを自律進化させる 5 つの閉ループ。
 - **クロスベンダー・レビュー** — レビュアーは作者と異なるベンダー出自でなければならない；自らの成果を承認できるエージェントはいない。
-- **マルチドメイン記憶連邦** — `MindCodex` 手続き記憶法典を通じた 5 ドメインの記憶連邦。
-- **7 層ハーネス・エンジニアリング** — `durable_state`（永続状態）・`tool_mediation`（ツール仲介）・`evidence_sensors`（証拠センシング）・`governance`（ガバナンス）・`magic_words`（魔法の言葉）・`entropy_control`（エントロピー制御）・`harnessability`（ハーネス可能性）。
+- **マルチドメイン記憶連邦** — `MindCodex` 蒸留知識ベースを通じた 5 ドメインの記憶連邦。
+- **7 層ハーネス工学（Harness Engineering）** — `durable_state`（永続状態）・`tool_mediation`（ツール仲介）・`evidence_sensors`（証拠センシング）・`governance`（ガバナンス）・`magic_words`（魔法の言葉）・`entropy_control`（エントロピー制御）・`harnessability`（ハーネス可能性）。
 - **設定駆動の Forgekin** — YAML プロファイルで任意の数の Forgekin を登録可能。デフォルトの 5 つは参考例であり、上限ではない。
-- **外部エージェント統合** — Claude Code / Codex / Gemini / OpenCode / Trae CN を能力拡張としてバインド。
+- **サードパーティ・エージェント統合（能力拡張）** — Claude Code / Codex / Gemini / OpenCode / Trae CN を能力拡張としてバインド。
 
 ---
 
-## Forgekins：設定可能な自己進化エージェント
+## 進化可能エージェント（Forgekin）：設定可能な自己進化エージェント
 
-**アーキテクチャは Forgekin の数に固定されていない。** Forgekin は設定駆動の実体だ。`config/forgekins/` に YAML プロファイルを置くだけで 1 つ登録でき、それを 1 つの自己進化ループに紐づけ、（オプションで）外部コーディング・エージェントに紐づける。ForgeMindEngine は実行時に能力プロファイルに基づいてタスクをルーティングし、役割をハードコードしない。
+**アーキテクチャは Forgekin の数に固定されていない。** Forgekin は設定駆動の実体だ。`config/forgekins/` に YAML プロファイルを置くだけで 1 つ登録でき、それを 1 つの自己進化ループに紐づけ、（オプションで）外部コーディング・エージェントに紐づける。ForgeMind エンジン（汎用エージェント・フレームワーク）は実行時に能力プロファイルに基づいてタスクをルーティングし、役割をハードコードしない。
 
 **建築の中心はエージェントの数ではなく、自己進化である。**
 
 ### 5 つのデフォルト Forgekin（参考例）
 
-| Forgekin | ベンダー | 自己進化ループ | 外部エージェント |
+| Forgekin | ベンダー | 自己進化ループ | サードパーティ・エージェント（能力拡張） |
 |----------|--------|---------------|----------------|
 | **Wenxin**（文心） | anthropic | ドキュメント進化 | Claude Code |
 | **Sherlock**（夏洛克） | openai | コード進化 | Codex |
@@ -101,7 +101,7 @@ blind_spots: ["frontend"]
 │  Forgekin Registry · Council · External Agents                  │
 ├─────────────────────────────────────────────────────────────────┤
 │  Command Layer · evolution/                                     │
-│  ForgeMindEngine · Metacognition Router · Maturity Ladder       │
+│  ForgeMind エンジン（汎用エージェント・フレームワーク） · Metacognition Router · Maturity Ladder       │
 ├─────────────────────────────────────────────────────────────────┤
 │  Execution Layer · workers/ · loop/                             │
 │  Self-Dev Loops · Loop Executor · Execution Modes               │
@@ -220,7 +220,7 @@ council:
 | **3** | サードパーティ・エージェント適応層 | 🔄 進行中（約 80%） |
 | **4** | 評価自己代謝 + 分散信頼性 | 🔄 進行中（約 40%） |
 | **5** | パートナーシップ数学 + 自己進化閉ループ | 🔄 進行中（約 60%） |
-| **6** | SpiritForge 経験蒸留 + MindCouncil | 🔄 進行中（約 40%） |
+| **6** | SpiritForge 経験蒸留 + MindCouncil（マルチエージェント評議） | 🔄 進行中（約 40%） |
 
 詳細は [docs/roadmap.md](docs/roadmap.md) を参照。
 
@@ -231,7 +231,7 @@ council:
 ```
 flowforge/
 ├── core/              # 共有カーネル：capability · teamact · harness · memory · eval
-├── evolution/         # ForgeMindEngine（自己進化オーケストレーション）
+├── evolution/         # ForgeMind エンジン（汎用エージェント・フレームワーク）（自己進化オーケストレーション）
 ├── forgemind/         # アプリケーション層：forgekin · registry · council · external_agents
 ├── web/               # Web UI（Next.js 14 + FastAPI バックエンド）
 ├── config/            # forgemind.yaml · forgekins/*.yaml · evolution.yaml
