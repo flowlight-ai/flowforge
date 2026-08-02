@@ -23,7 +23,7 @@
 
 ## Why FlowForge?
 
-FlowForge is the **harness layer** that gives agents a persistent identity, self-evolution capability, and governance framework. It doesn't replace your agents — it **employs** them as capability extensions and grows them into career **Forgekin**: agents with a name, a memory, a growth trajectory, and accountability. Every capability your existing agents have, FlowForge inherits — plus six things only FlowForge has.
+FlowForge is the **harness layer** that gives agents a persistent identity, self-evolution capability, and governance framework. It doesn't replace your agents — it **employs** them as capability extensions and grows them into career **Forgekin**: agents with a name, a memory, a growth trajectory, and accountability. Every capability your existing agents have, FlowForge inherits — plus six capabilities at its core.
 
 | Capability | Claude Code | OpenCode | Codex | WorkBuddy | Trae | Qoder | FlowForge |
 |------------|:-----------:|:--------:|:-----:|:---------:|:----:|:-----:|:---------:|
