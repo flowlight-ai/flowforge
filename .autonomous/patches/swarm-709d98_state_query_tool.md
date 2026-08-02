@@ -1,0 +1,48 @@
+# 自主任务产出审阅
+
+- **task_id**: swarm-709d98a96e8f
+- **title**: 修复代码 TODO: flowforge\core\state_query_tool.py
+- **agent**: forgemind:sherlock
+- **model**: openroute/doubao-web/chat
+- **generated_at**: 2026-08-01T06:18:19.734441+00:00
+- **source_file**: flowforge\core\state_query_tool.py
+- **required_capabilities**: code_generation
+
+## 审阅指南
+
+1. 检查产出的代码是否符合项目规范（CONTRIBUTING.md 15 条红线）
+2. 检查是否引入循环依赖或违反分层架构
+3. 通过审核后，将下方代码块内容应用到对应源文件
+4. 应用后必须运行对应测试验证（铁律 T1-T8）
+
+## 任务上下文
+
+```
+文件 flowforge\core\state_query_tool.py 中发现 1 处 TODO/FIXME/NotImplementedError。请分析代码上下文并实现缺失的逻辑。
+```
+
+## LLM 产出内容
+
+# 文件路径：flowforge/tools/state_query_tool.py
+
+python
+
+```
+import importlib
+import logging
+from typing import Optional
+
+from flowforge.core.tool import ToolInput, ToolOutput
+
+logger = logging.getLogger(__name__)
+
+class StateQueryTool:
+    state_key_template: str = ""
+    state_scope_field: Optional[str] = None
+    state_merge_fields: list[str] = []
+    state_list_fields: list[str] = []
+
+    def __init__(self, memory=None, llm_client=None):
+        self._memory = memory
+        self._l
+```

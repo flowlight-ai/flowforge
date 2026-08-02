@@ -60,32 +60,45 @@ DEFAULT_HOST = os.environ.get("GEMINI_PROXY_HOST", "127.0.0.1")
 # 默认 fallback 模型（未知 gemini-* 模型名统一走这里）
 DEFAULT_MODEL = os.environ.get("GEMINI_PROXY_MODEL", "Doubao-Seed2.0")
 
+# 客户端模型名 → OpenRoute 可用模型名映射
+MODEL_MAPPING = {
+    "gemini-2.0-flash": "Doubao-Seed2.0",
+    "gemini-2.0-flash-exp": "Doubao-Seed2.0",
+    "gemini-2.0-pro": "Doubao-Seed2.0",
+    "gemini-1.5-pro": "Doubao-Seed2.0",
+    "gemini-1.5-flash": "Doubao-Seed2.0",
+    "gemini-1.0-pro": "Doubao-Seed2.0",
+    "gemini-pro": "Doubao-Seed2.0",
+    "gemini-3.3-pro": "Doubao-Seed2.0",
+}
+
+
 # Gemini 模型名 → OpenRoute 模型名映射
 # Gemini CLI 默认用 gemini-2.5-pro / gemini-2.5-flash 等，映射到 openroute 的国产模型。
 # OpenRoute 2026-07-25 实测：
 #   - Doubao-Seed2.0:  14.6s 返回 PONG ✓ (稳定)
-#   - Qwen3.6-Plus:    33.9s 返回 PONG ✓ (慢但可用)
-#   - DeepSeek-V4-Pro: 返回 "无法回答"（被识别为拒绝）
+#   - Doubao-Seed2.0:    33.9s 返回 PONG ✓ (慢但可用)
+#   - Doubao-Seed2.0: 返回 "无法回答"（被识别为拒绝）
 #   - MiniMax-M3:      返回 HTML 主页内容（不可用）
-# Pro 档 → Qwen3.6-Plus（推理强），Flash 档 → Doubao-Seed2.0（响应快）。
+# Pro 档 → Doubao-Seed2.0（推理强），Flash 档 → Doubao-Seed2.0（响应快）。
 GEMINI_TO_OPENROUTE_MODEL = {
-    "gemini-2.5-pro": "Qwen3.6-Plus",
+    "gemini-2.5-pro": "Doubao-Seed2.0",
     "gemini-2.5-flash": "Doubao-Seed2.0",
     "gemini-2.0-flash": "Doubao-Seed2.0",
-    "gemini-2.0-pro": "Qwen3.6-Plus",
-    "gemini-1.5-pro": "Qwen3.6-Plus",
+    "gemini-2.0-pro": "Doubao-Seed2.0",
+    "gemini-1.5-pro": "Doubao-Seed2.0",
     "gemini-1.5-flash": "Doubao-Seed2.0",
     # 新版 gemini-cli 0.51+ 默认模型名
     "gemini-3.1-flash-lite": "Doubao-Seed2.0",
-    "gemini-3.1-pro": "Qwen3.6-Plus",
+    "gemini-3.1-pro": "Doubao-Seed2.0",
     "gemini-3.1-flash": "Doubao-Seed2.0",
-    "gemini-3.0-pro": "Qwen3.6-Plus",
+    "gemini-3.0-pro": "Doubao-Seed2.0",
     "gemini-3.0-flash": "Doubao-Seed2.0",
     # gemini-cli 0.60+ 内部 router 用的模型名
     "gemini-3.5-flash": "Doubao-Seed2.0",
-    "gemini-3.5-flash-thinking": "Qwen3.6-Plus",
+    "gemini-3.5-flash-thinking": "Doubao-Seed2.0",
     "gemini-3.5-flash-thinking-lite": "Doubao-Seed2.0",
-    "gemini-3.5-pro": "Qwen3.6-Plus",
+    "gemini-3.5-pro": "Doubao-Seed2.0",
     "gemini-auto": "Doubao-Seed2.0",
     "gemini-flash-lite": "Doubao-Seed2.0",
     # 允许直接用 openroute 模型名（如 "GLM-5.1"）原样透传
@@ -130,6 +143,8 @@ def gemini_request_to_openai(model: str, body: dict[str, Any]) -> dict[str, Any]
           "temperature": 0.7
         }
     """
+    # 客户端模型名 → OpenRoute 可用模型名映射
+    model = MODEL_MAPPING.get(model, model)
     messages: list[dict[str, str]] = []
 
     # systemInstruction → system message
@@ -321,24 +336,105 @@ async def stream_openai_to_gemini(oa_resp: httpx.Response, model: str) -> Any:
 
 # ── HTTP 客户端 ─────────────────────────────────────────────────────────────
 
-async def call_openroute(openai_body: dict[str, Any], stream: bool = False) -> httpx.Response:
-    """转发请求到 OpenRoute. 总是用 stream=False（OpenRoute stream 有 bug）.
+# Invalid response patterns that indicate silent failure
+INVALID_RESPONSE_PATTERNS = [
+    "无法回答",
+    "当前不可用，请稍后重试",
+    "当前不可用,请稍后重试",
+    "我无法回答",
+    "我不能回答",
+    "我无法提供",
+    "我无法完成",
+]
 
-    stream=true 的请求由 stream_generate_content 端点从非流式响应合成 SSE。
+# Fallback models to try when primary model fails
+FALLBACK_MODELS = ["Doubao-Seed2.0", "Kimi-K2.6", "DeepSeek-V4-Pro", "auto"]
+
+
+def _is_invalid_response(content: str) -> bool:
+    """Check if the LLM response is invalid (silent failure)."""
+    if not content or len(content.strip()) < 2:
+        return True
+    content_stripped = content.strip()
+    for pattern in INVALID_RESPONSE_PATTERNS:
+        if pattern in content_stripped:
+            return True
+    return False
+
+
+async def call_openroute(openai_body: dict[str, Any], stream: bool = False) -> httpx.Response:
+    """Call OpenRoute with retry logic and invalid response detection.
+
+    On invalid response or error, retries with fallback models.
+    Max 3 attempts. Always uses stream=False (OpenRoute stream has a bug);
+    callers synthesize SSE from the non-stream response.
     """
     headers = {
         "Authorization": f"Bearer {OPENROUTE_API_KEY}",
         "Content-Type": "application/json",
     }
-    openai_body = {**openai_body, "stream": False}
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        return await client.post(
-            f"{OPENROUTE_BASE_URL}/chat/completions",
-            json=openai_body,
-            headers=headers,
-        )
 
+    original_model = openai_body.get("model", DEFAULT_MODEL)
+    last_response: httpx.Response | None = None
 
+    for attempt in range(1, 4):
+        # Select model: original on attempt 1, fallback on later attempts
+        if attempt == 1:
+            model = original_model
+        else:
+            fallback_idx = min(attempt - 2, len(FALLBACK_MODELS) - 1)
+            model = FALLBACK_MODELS[fallback_idx]
+            log.info(f"Retry {attempt}/3 with fallback model: {model}")
+
+        request_body = {**openai_body, "model": model, "stream": False}
+
+        def _call() -> httpx.Response:
+            with httpx.Client(timeout=180.0) as client:
+                return client.post(
+                    f"{OPENROUTE_BASE_URL}/chat/completions",
+                    json=request_body,
+                    headers=headers,
+                )
+
+        try:
+            resp = await asyncio.to_thread(_call)
+            if resp.status_code != 200:
+                log.warning(f"OpenRoute returned {resp.status_code} (attempt {attempt})")
+                last_response = resp
+                if attempt < 3:
+                    continue
+                return resp
+
+            # Check for invalid response
+            try:
+                data = resp.json()
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                if _is_invalid_response(content):
+                    log.warning(f"Invalid response from {model} (attempt {attempt}): {content[:50]}")
+                    last_response = resp
+                    if attempt < 3:
+                        continue
+                    return resp
+            except Exception:
+                pass
+
+            # Valid response
+            return resp
+
+        except Exception as e:
+            log.warning(f"OpenRoute call failed (attempt {attempt}): {e}")
+            if attempt < 3:
+                continue
+            raise
+
+    # All retries exhausted, return last response (may be None)
+    if last_response is not None:
+        return last_response
+    # Create a synthetic error response
+    return httpx.Response(
+        status_code=503,
+        json={"error": {"message": "All retry attempts failed", "type": "api_error"}},
+    )
 # ── 路由 ────────────────────────────────────────────────────────────────────
 
 @app.get("/")

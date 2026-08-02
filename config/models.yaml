@@ -243,28 +243,39 @@ assignments:
     - openroute/MiniMax-M3
     - openroute/DeepSeek-V4-Pro
   content_create:
-    # v5.99.47: API优先 — MiniMax-M3 webchat故障(136s+"无法回答"), zhipu API稳定(5-22s)
-    # 候选链: zhipu/glm-4-flash(5-22s/1000-2000字) → MiniMax-M3(128s/3000+字 backup)
-    # project_memory: webchat故障时API作为backup确保100%成功
-    primary: zhipu/glm-4-flash
+    # v5.99.70: 实测模型可用性(2026-08-01 06:40) — 重新排序候选链
+    # Qwen3.6-Plus: 24.6s/189字✓ 内容正常无回显
+    # HunYuan3: 34.3s/213字✓ 内容正常无回显
+    # Kimi-K2.6: 62.9s/355字⚠ 有回显问题("用户要求..."开头需清理)
+    # MiniMax-M3: 120s超时✗ 不可用
+    # DeepSeek-V4-Pro/Doubao-Seed2.0: "无法回答"✗ 不可用
+    # 候选链: Qwen3.6-Plus(24s/快稳) → HunYuan3(34s/backup) → Kimi-K2.6(62s/慢backup)
+    primary: openroute/Qwen3.6-Plus
     fallbacks:
-    - openroute/MiniMax-M3
-    - openroute/DeepSeek-V4-Pro
+    - openroute/HunYuan3
     - openroute/Kimi-K2.6
+    - zhipu/glm-4-flash
   content_refine:
-    # v5.99.47: 同步content_create — API优先, webchat作为backup
-    # 候选链: zhipu/glm-4-flash(5-22s) → MiniMax-M3(128s) → DeepSeek → Kimi
-    primary: zhipu/glm-4-flash
+    # v5.99.70: 同步content_create — 使用Qwen3.6-Plus作为primary
+    primary: openroute/Qwen3.6-Plus
     fallbacks:
-    - openroute/MiniMax-M3
-    - openroute/DeepSeek-V4-Pro
+    - openroute/HunYuan3
     - openroute/Kimi-K2.6
+    - zhipu/glm-4-flash
   content_eval:
     # v5.99.3: 使用可用模型
     primary: zhipu/glm-4-flash
     fallbacks:
     - openroute/MiniMax-M3
     - openroute/DeepSeek-V4-Pro
+  # v5.99.70: 选题专用assignment — 使用实测可用模型
+  # 选题需要快速稳定(避免长时间卡住)，Qwen3.6-Plus实测24.6s最快
+  topic:
+    primary: openroute/Qwen3.6-Plus
+    fallbacks:
+    - openroute/HunYuan3
+    - openroute/Kimi-K2.6
+    - zhipu/glm-4-flash
   # P0-27: reflexion_evaluator/reflexion_reflector 显式 assignments
   # v2: 移除 MiniMax-M3（openroute minimax 平台持续 connection failed），
   # 替换为 Kimi-K2.6（更稳定的 webchat 模型）

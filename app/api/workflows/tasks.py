@@ -240,7 +240,7 @@ async def list_tasks(
     offset: int = Query(0, ge=0),
     executor=Depends(get_executor),
 ):
-    result = executor.state_manager.list_states_with_data(
+    result = executor.state_manager.list_states_summary(
         persona=persona, status=status, mode=mode,
         interaction_mode=interaction_mode, limit=limit, offset=offset,
     )

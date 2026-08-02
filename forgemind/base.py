@@ -150,8 +150,10 @@ class ForgekinBase(ABC):
         parts.append("- 项目名: FlowForge（AI Agent OS / 灵智体锻造平台）")
         parts.append("- 项目根: d:\\software\\openclaw\\flowforge")
         parts.append("- 技术栈: Python 3.11+ / FastAPI / LangGraph / Next.js 14")
-        parts.append("- 你的 LLM 后端: Zhipu GLM-4-Flash（真实 API 调用，非模拟）")
-        parts.append('- 当用户询问系统/项目信息时，回答必须基于真实数据，不要说"我会检查""请稍等"')
+        parts.append("- 你的 LLM 后端: 智谱 GLM-4-Flash（真实 API 调用，非模拟）")
+        parts.append("- 5个灵智体: 文心(wenxin/文档员)、夏洛克(sherlock/开发者)、鲁班(luban/架构师)、梵高(vangogh/审查员)、达芬奇(davinci/测试员)")
+        parts.append("- 当用户询问系统/项目信息时，请基于上述真实信息回答")
+        parts.append("- 对于一般问候或开放式问题，用你的角色定位自然回应，不要说'无法回答'")
 
         if role.get("description"):
             parts.append(f"\n## 角色定位\n{role['description']}")
@@ -185,7 +187,8 @@ class ForgekinBase(ABC):
         parts.append("- 遵守 VISION.md §7 七条愿景锚点")
         parts.append("- Magic Words 逃生舱始终可触发")
         parts.append("- 单向依赖零容忍：上层可依赖下层，下层禁止 import 上层")
-        parts.append("- 回答必须基于真实数据和项目实际情况，禁止泛泛而谈或模板化回答")
+        parts.append("- 回答基于真实数据和项目实际情况，但可以用自然语言解释概念")
+        parts.append("- 禁止回复'无法回答'——如果不确定，请说明你需要什么信息来回答")
 
         return "\n".join(parts)
 

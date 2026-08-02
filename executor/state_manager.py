@@ -73,6 +73,44 @@ class StateManager:
         items = items[offset:offset + limit]
         return {"items": items, "total": total}
 
+
+
+    def list_states_summary(self, persona: str = None, status: str = None,
+                        mode: str = None, interaction_mode: str = None,
+                        limit: int = 50, offset: int = 0) -> Dict[str, Any]:
+        """Return task summary list (without input_data/output_data/result)."""
+        rows = self._conn.execute(
+            "SELECT task_id, state_json, updated_at FROM task_states ORDER BY updated_at DESC"
+        ).fetchall()
+        items = []
+        for task_id, state_json, updated_at in rows:
+            state = json.loads(state_json)
+            if persona and state.get("persona") != persona:
+                continue
+            if status and state.get("status") != status:
+                continue
+            if mode and state.get("mode") != mode:
+                continue
+            if interaction_mode and state.get("interaction_mode") != interaction_mode:
+                continue
+            summary = {
+                "task_id": task_id,
+                "updated_at": updated_at,
+                "status": state.get("status"),
+                "persona": state.get("persona"),
+                "mode": state.get("mode"),
+                "interaction_mode": state.get("interaction_mode"),
+                "intent": state.get("intent", ""),
+                "current_step": state.get("current_step"),
+                "total_steps": state.get("total_steps"),
+                "created_at": state.get("created_at"),
+                "review_verdict": state.get("review_verdict"),
+            }
+            items.append(summary)
+        total = len(items)
+        items = items[offset:offset + limit]
+        return {"items": items, "total": total}
+
     def count_by_status(self, status: str) -> int:
         rows = self._conn.execute("SELECT state_json FROM task_states").fetchall()
         count = 0

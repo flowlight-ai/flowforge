@@ -1,4 +1,4 @@
-﻿# 夏洛克（猎犬 / Bloodhound）— 开发者Forgekin配置（F046 v1.1 §9.2 角色演进）
+# 夏洛克（猎犬 / Bloodhound）— 开发者Forgekin配置（F046 v1.1 §9.2 角色演进）
 # 形象选择理由：猎犬（Bloodhound）以敏锐嗅觉著称，可追踪数英里外的气味
 #   与开发者"敏锐定位 bug / 实现代码 / 重构优化"的角色定位高度契合
 #   名字来源：夏洛克·福尔摩斯 — 文学史上最敏锐的侦探，且福尔摩斯故事中常出现 Bloodhound 猎犬
@@ -50,8 +50,8 @@ awakening_stage: E4  # 自主阶（Autonomous）— code 闭环门控（I1）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: openroute  # OpenRoute网关（Qwen3.6-Plus已验证可用，Doubao有bug）
-  model: Qwen3.6-Plus  # 通义千问3.6-Plus（web chat通道稳定，长任务支持好）
+  provider: zhipu  # 智谱 GLM 直连 API（绕过 OpenRoute 网关故障，稳定可靠）
+  model: glm-4-flash  # GLM-4-Flash（智谱免费快速模型，响应稳定）
   mode: http
   session_id_prefix: "forgemind:sherlock"
   bridge_timeout: 180  # 增加超时以支持长任务

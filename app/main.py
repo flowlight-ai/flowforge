@@ -117,20 +117,21 @@ async def lifespan(app: FastAPI):
     autonomous_task: Any = None
     try:
         import os as _os
-        from flowforge.forgemind.autonomous import create_autonomous_daemon
-        # 项目根目录：默认 openclaw 根目录（可由 FLOWFORGE_AUTONOMOUS_ROOT 覆盖）
-        project_root_str = _os.environ.get(
-            "FLOWFORGE_AUTONOMOUS_ROOT",
-            str(Path(__file__).resolve().parents[2]),
-        )
-        autonomous_daemon = await create_autonomous_daemon(Path(project_root_str))
-        autonomous_task = asyncio.create_task(autonomous_daemon.run_forever())
-        logger.info(
-            "AutonomousDaemon 已启动 — 5 灵智体每 %ds 自动扫描需求",
-            autonomous_daemon._scan_interval,
-        )
-        # 暴露到 app.state 供 API 端点查询
-        app.state.autonomous_daemon = autonomous_daemon
+        if _os.environ.get("FLOWFORGE_DISABLE_AUTONOMOUS", "").lower() in ("1", "true", "yes"):
+            logger.info("AutonomousDaemon disabled by FLOWFORGE_DISABLE_AUTONOMOUS=1")
+        else:
+            from flowforge.forgemind.autonomous import create_autonomous_daemon
+            project_root_str = _os.environ.get(
+                "FLOWFORGE_AUTONOMOUS_ROOT",
+                str(Path(__file__).resolve().parents[2]),
+            )
+            autonomous_daemon = await create_autonomous_daemon(Path(project_root_str))
+            autonomous_task = asyncio.create_task(autonomous_daemon.run_forever())
+            logger.info(
+                "AutonomousDaemon 已启动 — 5 灵智体每 %ds 自动扫描需求",
+                autonomous_daemon._scan_interval,
+            )
+            app.state.autonomous_daemon = autonomous_daemon
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"AutonomousDaemon 启动失败（非致命，API 可正常工作）: {exc}", exc_info=True)
 

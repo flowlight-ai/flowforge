@@ -568,10 +568,14 @@ async def autonomous_trigger_scan(request: Request) -> dict[str, Any]:
         tasks = daemon._scan_project()
         submitted = 0
         for task in tasks[: daemon._max_tasks_per_scan]:
-            if task.title in daemon._submitted_titles:
+            # 状态感知去重（与 daemon 主循环一致）：
+            #   - PENDING/ASSIGNED/RUNNING → 跳过
+            #   - COMPLETED/FAILED/CANCELLED/None → 允许重新提交
+            # 修复：原代码引用已删除的 _submitted_titles 属性导致 trigger-scan 抛 AttributeError
+            if daemon._is_task_in_progress(task.title):
                 continue
             daemon._coord.submit_task(task)
-            daemon._submitted_titles.add(task.title)
+            daemon._title_to_task_id[task.title] = task.task_id
             submitted += 1
             daemon._log_activity(
                 "task_submitted",

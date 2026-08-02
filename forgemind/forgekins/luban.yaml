@@ -1,4 +1,4 @@
-﻿# 鲁班（猫头鹰 / Owl）— 主架构师Forgekin配置
+# 鲁班（猫头鹰 / Owl）— 主架构师Forgekin配置
 # 形象选择理由：猫头鹰在 AI 业界与东西方文化中均为"智慧 / 深度思考 / 全局视野"的象征
 #   与主架构师"深度思考后给出架构建议"的角色定位高度契合
 #   名字来源：鲁班 — 中国建筑与工匠祖师爷，技艺与架构设计的象征
@@ -50,8 +50,8 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）— tool allow-li
 # 用户/operator 通过 Trae CN IDE 充当 LLM 与监工
 # 流程使用 flowforge 已有的 TraeLLMClient（llm/trae/client.py）
 llm:
-  provider: openroute  # OpenRoute网关（Qwen3.6-Plus已验证可用，Doubao有bug）
-  model: Qwen3.6-Plus  # 通义千问3.6-Plus（web chat通道稳定，长任务支持好）
+  provider: zhipu  # 智谱 GLM 直连 API（绕过 OpenRoute 网关故障，稳定可靠）
+  model: glm-4-flash  # GLM-4-Flash（智谱免费快速模型，响应稳定）
   mode: http
   session_id_prefix: "forgemind:luban"  # 会话隔离
   bridge_timeout: 180  # 增加超时以支持长任务

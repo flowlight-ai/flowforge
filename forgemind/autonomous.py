@@ -1,4 +1,4 @@
-﻿"""F052 Autonomous Daemon — 5 Forgekin 24h 自主运行守护进程.
+"""F052 Autonomous Daemon — 5 Forgekin 24h 自主运行守护进程.
 
 本模块实现灵智体自主工作循环（类似 clowder-ai 的自主工作功能）：
 
@@ -113,8 +113,9 @@ class AutonomousDaemon:
         )
         self._running = False
         self._dispatch_task: Optional[asyncio.Task] = None
-        # 记录已提交的任务标题，避免重复提交
-        self._submitted_titles: set[str] = set()
+        # 任务标题 → 最新 task_id 映射（用于状态感知的去重，避免死循环）
+        # 替代原 _submitted_titles 集合：原集合永久保留标题，导致已完成/失败任务无法重新提交
+        self._title_to_task_id: dict[str, str] = {}
         # 自进化活动历史（最近 200 条，供 API 和可观测性查询）
         self._activity_log: list[dict[str, Any]] = []
         # 已完成任务的产出（供 Web 可观测性展示）
@@ -150,6 +151,37 @@ class AutonomousDaemon:
             self._activity_log = self._activity_log[-200:]
         # 同时写入 INFO 日志（供 logs 端点采集）
         logger.info("[ACTIVITY] %s: %s %s", event_type, title, extra or "")
+
+    def _is_task_in_progress(self, title: str) -> bool:
+        """状态感知的任务去重检查（修复死循环 Bug）.
+
+        检查给定标题对应的最新任务在 SwarmCoordinator 中的状态：
+            - PENDING/ASSIGNED/RUNNING → True（进行中，跳过提交）
+            - COMPLETED/FAILED/CANCELLED/REASSIGNED → False（已结束，允许重新提交）
+            - 未找到 task_id 或任务不存在 → False（首次提交或被清理）
+
+        这取代了原 `_submitted_titles` 集合的永久去重逻辑：
+        原逻辑导致已完成的"补充缺失文档"任务无法重新提交，
+        使 daemon 陷入"扫描发现2个潜在任务但0个提交"的死循环。
+
+        Args:
+            title: 任务标题.
+
+        Returns:
+            True 表示任务仍在进行中（应跳过），False 表示可重新提交.
+        """
+        task_id = self._title_to_task_id.get(title)
+        if task_id is None:
+            return False  # 从未提交过，允许提交
+        task = self._coord._tasks.get(task_id)
+        if task is None:
+            return False  # 任务已被清理，允许重新提交
+        in_progress_states = {
+            SwarmTaskStatus.PENDING,
+            SwarmTaskStatus.ASSIGNED,
+            SwarmTaskStatus.RUNNING,
+        }
+        return task.status in in_progress_states
 
     def register_forgekin(self, forgekin_id: str, forgekin: Any) -> None:
         """注册灵智体实例（用于执行任务时调用 LLM）."""
@@ -189,13 +221,17 @@ class AutonomousDaemon:
                 logger.info("扫描发现 %d 个潜在任务", len(tasks))
                 self._log_activity("scan_completed", f"扫描完成：发现 {len(tasks)} 个潜在任务", scan_round=scan_count)
 
-                # 2. 提交任务（去重 + 限量）
+                # 2. 提交任务（状态感知去重 + 限量）
+                # 去重策略：基于 task.title 查询 SwarmCoordinator 中的最新 task 状态
+                #   - PENDING/ASSIGNED/RUNNING → 跳过（避免重复提交正在处理的任务）
+                #   - COMPLETED/FAILED/CANCELLED/REASSIGNED/None → 允许重新提交（允许重试/重新发现）
+                # 这修复了原 _submitted_titles 永久保留导致已完成任务无法重新提交的死循环 Bug
                 submitted = 0
                 for task in tasks[: self._max_tasks_per_scan]:
-                    if task.title in self._submitted_titles:
+                    if self._is_task_in_progress(task.title):
                         continue
                     self._coord.submit_task(task)
-                    self._submitted_titles.add(task.title)
+                    self._title_to_task_id[task.title] = task.task_id
                     submitted += 1
                     logger.info(
                         "提交任务: [%s] %s → 需要: %s",
@@ -309,7 +345,7 @@ class AutonomousDaemon:
                     todo_count += len(matches)
                     rel_path = py_file.relative_to(self._root)
                     task_title = f"修复代码 TODO: {rel_path}"
-                    if task_title not in self._submitted_titles:
+                    if not self._is_task_in_progress(task_title):
                         tasks.append(SwarmTask(
                             title=task_title,
                             description=(
@@ -332,7 +368,16 @@ class AutonomousDaemon:
         return tasks
 
     def _scan_missing_tests(self) -> list[SwarmTask]:
-        """扫描缺失的测试文件（达芬奇 test_generation 任务）."""
+        """扫描缺失的测试文件（达芬奇 test_generation 任务）.
+
+        测试查找策略（按优先级）：
+            1. 精确命名匹配：``tests/test_{mod_name}.py`` 或 ``tests/{sub}/test_{mod_name}.py``
+            2. 模糊命名匹配：``tests/**/test_*{mod_name}*.py``（含模块名的测试文件，如 test_cl031_auto_dream.py）
+            3. 内容 import 匹配：测试文件中 import 该模块的（最准确但开销大）
+
+        修复 Bug：原逻辑只检查精确命名，导致 test_cl031_auto_dream.py 被漏检，
+        误判 ``evolution/auto_dream.py`` 缺少测试，触发"补充测试"任务循环。
+        """
         tasks: list[SwarmTask] = []
         src_dir = self._root / "flowforge"
         tests_dir = self._root / "flowforge" / "tests"
@@ -352,21 +397,48 @@ class AutonomousDaemon:
             if not mod_path.exists():
                 continue
 
-            # 检查 tests 目录下是否有对应测试
             mod_name = Path(mod_rel).stem
+            # 1. 精确命名匹配
             test_candidates = [
                 tests_dir / f"test_{mod_name}.py",
                 tests_dir / mod_name / f"test_{mod_name}.py",
+                tests_dir / "unit" / f"test_{mod_name}.py",
+                tests_dir / "integration" / f"test_{mod_name}.py",
             ]
-            # 也检查模块自身目录下的 tests
+            # 模块自身目录下的 tests（如 flowforge/forgemind/tests/）
             mod_dir = mod_path.parent / "tests"
             if mod_dir.is_dir():
                 test_candidates.append(mod_dir / f"test_{mod_name}.py")
 
             has_test = any(t.exists() for t in test_candidates)
+
+            # 2. 模糊命名匹配：tests 目录递归查找包含 mod_name 的 test_*.py
+            if not has_test:
+                for test_file in tests_dir.rglob(f"test_*{mod_name}*.py"):
+                    if "__pycache__" not in str(test_file):
+                        has_test = True
+                        break
+
+            # 3. 内容 import 匹配：查找 import 该模块的测试文件
+            if not has_test:
+                # 构造模块的 import 路径，如 "flowforge.forgemind.swarm"
+                mod_import = f"flowforge.{mod_rel.replace('/', '.').replace('.py', '')}"
+                for test_file in tests_dir.rglob("test_*.py"):
+                    if "__pycache__" in str(test_file):
+                        continue
+                    try:
+                        test_content = test_file.read_text(
+                            encoding="utf-8", errors="ignore"
+                        )
+                        if mod_import in test_content or mod_name in test_content:
+                            has_test = True
+                            break
+                    except (PermissionError, OSError):
+                        continue
+
             if not has_test:
                 task_title = f"补充测试: {mod_rel}"
-                if task_title not in self._submitted_titles:
+                if not self._is_task_in_progress(task_title):
                     tasks.append(SwarmTask(
                         title=task_title,
                         description=(
@@ -515,16 +587,23 @@ class AutonomousDaemon:
                 "completed_at": datetime.now(timezone.utc).isoformat(),
             }
 
+            # 5.1 真实落盘产出（铁律2：禁止假数据/假逻辑）
+            # 文档任务：直接写入 docs/ 目录
+            # 代码/测试任务：写入 .autonomous/patches/{task_id}.md 供 operator 审阅
+            # 这样既满足"真实落盘"要求，又避免 LLM 直接破坏现有代码
+            output_path = self._persist_task_output(task, content, model)
+
             # 6. 上报完成（progress=1.0 触发 COMPLETED）
             await self._coord.heartbeat(agent_id, task.task_id, 1.0, "idle")
 
             logger.info(
-                "✓ 灵智体 %s 完成任务: [%s] %s (model=%s, %d 字)",
+                "✓ 灵智体 %s 完成任务: [%s] %s (model=%s, %d 字, output=%s)",
                 agent_id,
                 task.task_id[:12],
                 task.title,
                 model,
                 len(content),
+                output_path or "(未落盘)",
             )
             self._log_activity(
                 "task_completed",
@@ -534,6 +613,7 @@ class AutonomousDaemon:
                 model=model,
                 content_length=len(content),
                 content_preview=content[:300] if content else "",
+                output_path=output_path,
             )
             # 保存产出供 Web 可观测性展示（保留最近 50 条）
             self._completed_outputs.append({
@@ -544,6 +624,7 @@ class AutonomousDaemon:
                 "model": model,
                 "content": content,
                 "content_preview": content[:500] if content else "",
+                "output_path": output_path,
             })
             if len(self._completed_outputs) > 50:
                 self._completed_outputs = self._completed_outputs[-50:]
@@ -568,6 +649,108 @@ class AutonomousDaemon:
             )
             # 上报失败状态
             await self._coord.heartbeat(agent_id, task.task_id, 0.0, "error")
+
+    def _persist_task_output(
+        self, task: SwarmTask, content: str, model: str
+    ) -> Optional[str]:
+        """真实落盘任务产出（铁律2：禁止假数据/假逻辑）.
+
+        根据任务类型将 LLM 产出写入文件：
+            - doc_generation: 直接写入 ``docs/{filename}`` （安全，文档可被 operator 直接审阅）
+            - code_generation: 写入 ``.autonomous/patches/{task_id}_{filename}.md`` 供 operator 审阅
+            - test_generation: 写入 ``.autonomous/patches/{task_id}_{filename}.md`` 供 operator 审阅
+
+        设计权衡：
+            - 文档任务直接落盘到 docs/，因为文档是声明式的、不会破坏代码
+            - 代码/测试任务先落盘到 patches/ 目录，由 operator 决定是否应用到源文件
+            - 这避免 LLM 直接修改源代码的风险，同时满足"产出必须落盘"的铁律
+
+        Args:
+            task: 已完成的 SwarmTask.
+            content: LLM 生成的产出内容.
+            model: 使用的模型名称（用于元数据）.
+
+        Returns:
+            落盘文件的相对路径（相对 project_root），失败时返回 None.
+        """
+        if not content:
+            return None
+
+        ctx = task.context or {}
+        required = task.required_capabilities
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+        try:
+            if "doc_generation" in required:
+                # 文档任务：直接写入 docs/ 目录
+                doc_rel = ctx.get("doc_path")
+                if not doc_rel:
+                    # 没有指定路径，使用通用路径
+                    doc_rel = f"docs/autonomous_{ts}_{task.task_id[:8]}.md"
+                target = self._root / doc_rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                # 添加 front-matter（铁律：文档必须含 front-matter）
+                if not content.startswith("---"):
+                    frontmatter = (
+                        f"---\n"
+                        f"status: draft\n"
+                        f"type: autonomous_generated\n"
+                        f"created_at: {datetime.now(timezone.utc).isoformat()}\n"
+                        f"generated_by: {task.assigned_agent_id or 'unknown'}\n"
+                        f"model: {model}\n"
+                        f"task_id: {task.task_id}\n"
+                        f"---\n\n"
+                    )
+                    content = frontmatter + content
+                target.write_text(content, encoding="utf-8")
+                rel_path = str(target.relative_to(self._root)).replace("\\", "/")
+                logger.info("文档产出已落盘: %s", rel_path)
+                return rel_path
+
+            elif "code_generation" in required or "test_generation" in required:
+                # 代码/测试任务：写入 .autonomous/patches/ 供 operator 审阅
+                patches_dir = self._root / "flowforge" / ".autonomous" / "patches"
+                patches_dir.mkdir(parents=True, exist_ok=True)
+                # 构造文件名：{task_id}_{原文件名或任务类型}.md
+                source_file = ctx.get("file") or ctx.get("module") or "output"
+                source_basename = Path(source_file).stem
+                patch_filename = f"{task.task_id[:12]}_{source_basename}.md"
+                target = patches_dir / patch_filename
+                # 包装为审阅格式（含元数据 + 原任务信息 + LLM 产出）
+                header = (
+                    f"# 自主任务产出审阅\n\n"
+                    f"- **task_id**: {task.task_id}\n"
+                    f"- **title**: {task.title}\n"
+                    f"- **agent**: {task.assigned_agent_id or 'unknown'}\n"
+                    f"- **model**: {model}\n"
+                    f"- **generated_at**: {datetime.now(timezone.utc).isoformat()}\n"
+                    f"- **source_file**: {source_file}\n"
+                    f"- **required_capabilities**: {', '.join(required)}\n"
+                    f"\n## 审阅指南\n\n"
+                    f"1. 检查产出的代码是否符合项目规范（CONTRIBUTING.md 15 条红线）\n"
+                    f"2. 检查是否引入循环依赖或违反分层架构\n"
+                    f"3. 通过审核后，将下方代码块内容应用到对应源文件\n"
+                    f"4. 应用后必须运行对应测试验证（铁律 T1-T8）\n"
+                    f"\n## 任务上下文\n\n```\n{task.description}\n```\n"
+                    f"\n## LLM 产出内容\n\n"
+                )
+                target.write_text(header + content, encoding="utf-8")
+                rel_path = str(target.relative_to(self._root)).replace("\\", "/")
+                logger.info("代码产出已落盘（待审阅）: %s", rel_path)
+                return rel_path
+
+            else:
+                # 未知任务类型：通用落盘
+                generic_dir = self._root / "flowforge" / ".autonomous" / "outputs"
+                generic_dir.mkdir(parents=True, exist_ok=True)
+                target = generic_dir / f"{task.task_id[:12]}_{ts}.md"
+                target.write_text(content, encoding="utf-8")
+                rel_path = str(target.relative_to(self._root)).replace("\\", "/")
+                return rel_path
+
+        except (PermissionError, OSError) as exc:
+            logger.error("产出落盘失败: task=%s error=%s", task.task_id[:12], exc)
+            return None
 
     def _build_task_prompt(self, task: SwarmTask) -> str:
         """构造任务执行提示词（基于任务信息+真实文件上下文，铁律2：禁止假数据）.
@@ -724,7 +907,7 @@ class AutonomousDaemon:
             "running_tasks": sum(1 for t in tasks if t.status == SwarmTaskStatus.RUNNING),
             "completed": sum(1 for t in tasks if t.status == SwarmTaskStatus.COMPLETED),
             "failed": sum(1 for t in tasks if t.status == SwarmTaskStatus.FAILED),
-            "submitted_titles": len(self._submitted_titles),
+            "submitted_titles": len(self._title_to_task_id),
             # 自进化活动统计
             "activity_log_count": len(self._activity_log),
             "completed_tasks_total": completed_count,
@@ -779,12 +962,23 @@ async def create_autonomous_daemon(
     # 锻造 5 个灵智体并注册
     from flowforge.forgemind.forgekins import BUILTIN_FORGEKINS, ROSTER_FILES
     from flowforge.forgemind.forging.pipeline import ForgePipeline
+    from flowforge.llm.trae.client import TraeLLMClient
+    from flowforge.llm.trae.config import TraeBridgeConfig
+
+    # 创建 TraeLLMClient 实例（用于 provider="trae" 的灵智体）
+    # 铁律 3：依赖通过构造函数注入；初始化失败不阻塞 daemon 启动
+    try:
+        bridge_config = TraeBridgeConfig()
+        trae_client = TraeLLMClient(bridge_config=bridge_config)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("TraeLLMClient 初始化失败，灵智体将走降级路径: %s", exc)
+        trae_client = None
 
     pipeline = ForgePipeline()
     for forgekin_id in BUILTIN_FORGEKINS:
         try:
             yaml_path = ROSTER_FILES[forgekin_id]
-            forgekin = await pipeline.forge_from_yaml(yaml_path)
+            forgekin = await pipeline.forge_from_yaml(yaml_path, llm_client=trae_client)
             # SwarmCoordinator 中的 agent_id 是带前缀的（forgemind:wenxin）
             full_id = f"forgemind:{forgekin_id}"
             daemon.register_forgekin(full_id, forgekin)

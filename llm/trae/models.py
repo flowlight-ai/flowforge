@@ -42,6 +42,7 @@ class BridgeResponseStatus(str, Enum):
     COMPLETED = "completed"      # 正常完成
     ERROR = "error"              # LLM 调用失败
     PARTIAL = "partial"          # 流式响应的部分片段（预留）
+    TIMEOUT = "timeout"          # LLM 调用超时
 
 
 # ── 核心模型 ────────────────────────────────────────────────────────
