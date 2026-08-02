@@ -204,19 +204,6 @@ forgemind/
 - **专业领域 agent**：需要能力累积和盲点治理的智能体（架构师、代码审查员、设计师）
 - **物理 AI 接入**：IoT 设备 / 具身智能设备的智能体化
 - **组织治理 agent**：团队 / 社区 / 公司的决策辅助智能体
-
-### 4.2 垂直领域（通过 *Forge 扩展）
-
-| 垂直领域 | 扩展项目 | 说明 |
-|---------|---------|------|
-| 内容创作 | ContentForge | AI 内容创作工厂 |
-| 软件开发 | DevForge | AI 开发工厂 |
-| 小说创作 | NovelForge | AI 小说创作工厂 |
-| 电商运营 | MallForge | AI 电商运营工厂 |
-| 股票分析 | StockForge | AI 股票分析工厂 |
-
-> *Forge 项目通过 Plugin V3 协议注册垂直领域 Forgekin 到 forgemind 应用层。FlowForge 核心框架不感知 *Forge 内部实现，只通过 Plugin 协议交互。
-
 ---
 
 ## 5. 设计原则
@@ -239,20 +226,7 @@ forgemind/
 - 所有路径通过环境变量或配置文件注入，禁止硬编码绝对路径
 - 日志使用 `core.tracing.get_logger`，自动注入 `trace_id`
 
-### 5.3 测试铁律
-
-| # | 铁律 | 说明 |
-|---|------|------|
-| T1 | 禁止使用 Mock LLM | 所有 E2E / 集成测试必须调用真实 LLM |
-| T2 | 禁止使用假数据 | 测试输入必须是真实场景数据 |
-| T3 | 禁止跳过验证 | 必须有具体断言 |
-| T4 | 禁止 Mock 工具 | web_search / publish / fact_check 等必须真实调用 |
-| T5 | 未实现即 Bug | 发现代码未实现必须记录为 Bug 并修复 |
-| T6 | 必须采集指标 | E2E 测试必须用 MetricsCollector 采集完整指标 |
-| T7 | LLM 内容必须经 LLM 审核 | 凡 LLM 生成内容必须再调用 LLM 审核通过 |
-| T8 | Web 功能必须操控浏览器验证 DOM | 凡涉及网页操作必须用 CDP 浏览器验证 |
-
-### 5.4 跨平台支持
+### 5.3 跨平台支持
 
 FlowForge 必须支持 Linux / Windows / macOS。所有路径通过环境变量注入（见 `.env.example`）。
 

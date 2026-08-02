@@ -286,7 +286,7 @@ pip install -e ".[dev]"
 | T4 | 禁止 Mock 工具 — `web_search` / `publish` / `fact_check` 必须真实调用 |
 | T5 | 未实现即 Bug |
 | T6 | 必须采集指标 (MetricsCollector) |
-| T7 | LLM 生成的内容必须经另一个 LLM 审核 |
+| T7 | LLM 生成的内容必须经另一个 LLM 审核和真人审核 |
 | T8 | Web 功能必须通过真实浏览器 DOM 检查验证 |
 
 #### 编程红线
@@ -304,5 +304,4 @@ pip install -e ".[dev]"
 11. 禁止硬编码提示词/路径/密钥/端口
 12. 禁止绕过 DI 容器直接实例化
 13. 禁止直接操作数据库
-14. 禁止不按 `prompts.md` 和 `rules.md` 执行
-15. 禁止偷工减料（发现未实现即 Bug）
+14. 禁止偷工减料（发现未实现即 Bug）

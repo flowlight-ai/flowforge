@@ -198,7 +198,7 @@ flowforge/
 
 #### Layer 3: *Forge 垂直业务层（独立项目）
 
-*Forge 项目（ContentForge / DevForge / NovelForge / MallForge / StockForge）是独立开源项目，通过 Plugin V3 协议注册垂直领域 Forgekin 到 forgemind。FlowForge 核心框架不感知 *Forge 内部实现。
+*Forge 项目是独立项目，通过 Plugin V3 协议注册垂直领域 Forgekin 到 forgemind。FlowForge 核心框架不感知 *Forge 内部实现。
 
 ---
 

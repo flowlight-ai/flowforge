@@ -6,7 +6,6 @@ FlowForge 是一个通用 Agent Harness 框架，提供：
 - LLM 客户端（错误分类 + 指数退避 + 跨厂商 fallback）
 - forgemind 应用层（Forgekin + 第三方 Agent 接入）
 
-边界铁律：flowforge 不感知 *forge / content / opensieve / openroute 的存在，
 通过 Plugin V3 协议接受上层注册。
 """
 

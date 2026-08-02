@@ -163,8 +163,7 @@ node_modules/
 out/
 
 # ===== Local backup directories (do not publish) =====
-core_new_backup/
-web_legacy_backup/
+docs/setup/README.md
 
 # ===== TypeScript incremental build cache =====
 *.tsbuildinfo
