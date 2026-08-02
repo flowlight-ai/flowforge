@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 import logging
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
@@ -67,12 +68,19 @@ class AuditLogEntry(BaseModel):
     session_id: str = ""
 
 
-class ApprovalProvider:
-    async def push(self, request: ApprovalRequest) -> None:
-        raise NotImplementedError
+class ApprovalProvider(ABC):
+    """ApprovalProvider 接口契约（FR-HRN-05）
 
+    子类必须实现 push（推送审批请求）与 wait_for_response（等待审批响应）。
+    """
+
+    @abstractmethod
+    async def push(self, request: ApprovalRequest) -> None:
+        """将审批请求推送给外部审批通道（如 WebSocket UI），由子类实现。"""
+
+    @abstractmethod
     async def wait_for_response(self, request_id: str, timeout: float) -> ApprovalResponse:
-        raise NotImplementedError
+        """等待指定请求的审批结果，超时返回 fail-closed 的未批准响应，由子类实现。"""
 
 
 class WebSocketApprovalProvider(ApprovalProvider):

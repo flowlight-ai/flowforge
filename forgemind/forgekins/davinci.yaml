@@ -46,9 +46,9 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: zhipu  # 智谱 GLM 直连 API（绕过 OpenRoute 网关故障，稳定可靠）
-  model: glm-4-flash  # GLM-4-Flash（智谱免费快速模型，响应稳定）
-  mode: http
+  provider: opencode  # 通过 opencode CLI（opencode run）调用 LLM
+  model: deepseek-v4-flash-free  # opencode 默认模型（build）
+  mode: cli
   session_id_prefix: "forgemind:davinci"  # 会话隔离
   bridge_timeout: 180  # 增加超时以支持长任务
   temperature: 0.4  # 测试生成需要确定性

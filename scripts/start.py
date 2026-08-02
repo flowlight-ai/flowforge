@@ -27,7 +27,8 @@ VENV_DIR = PROJECT_ROOT / ".venv"
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_BACKEND_PORT = 8000
-DEFAULT_FRONTEND_PORT = 5175
+# 与 web/package.json 的 "dev": "next dev --port 5174" 保持一致
+DEFAULT_FRONTEND_PORT = 5174
 
 BACKEND_READY_TIMEOUT = 90.0  # backend imports many modules; allow generous time
 FRONTEND_READY_TIMEOUT = 90.0  # Next.js first compile can be slow

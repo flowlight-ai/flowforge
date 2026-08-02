@@ -31,7 +31,8 @@ class StateQueryTool(BaseTool):
       - set `state_key_template` (e.g. "novel:{novel_id}:world_state")
       - optionally set `state_merge_fields` for dict-merge fields
       - optionally set `state_list_fields` for list-extend fields
-      - implement `_do_search(query, entity_id, scope, state_data) -> ToolOutput`
+      - optionally override `_do_search(query, entity_id, scope, state_data) -> ToolOutput`
+        (a generic keyword-search default is provided by the base class)
 
     The `name = None` default prevents accidental registration by scan_tools.
     Subclasses MUST override `name` with a proper string.
@@ -192,10 +193,47 @@ class StateQueryTool(BaseTool):
 
     async def _do_search(self, query: str, entity_id: str,
                          scope: int, state_data: dict) -> ToolOutput:
-        """子类必须实现此方法：在 state_data 中执行查询。"""
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement _do_search()"
-        )
+        """在 state_data 中执行默认关键词查询（子类可覆盖以自定义逻辑）。
+
+        默认实现：对合并后的 state 各字段做大小写不敏感的关键词匹配，
+        返回字段级的命中列表。子类需要结构化查询时应覆盖此方法。
+        """
+        terms = [t.lower() for t in query.split() if t.strip()]
+        if not terms:
+            return ToolOutput(result={"results": []})
+
+        results = []
+        for field, value in state_data.items():
+            matches = self._match_state_value(terms, field, value)
+            if matches:
+                results.append({"field": field, "matches": matches})
+
+        return ToolOutput(result={
+            "query": query,
+            "entity_id": entity_id,
+            "scope": scope,
+            "results": results,
+            "state_query": True,
+        })
+
+    @staticmethod
+    def _match_state_value(terms: list, field: str, value) -> list:
+        """在单个 state 字段值中执行关键词匹配，返回命中的条目列表。"""
+        if isinstance(value, dict):
+            hits = []
+            for k, v in value.items():
+                if any(t in str(k).lower() or t in str(v).lower() for t in terms):
+                    hits.append({"key": k, "value": v})
+            return hits
+        if isinstance(value, list):
+            hits = []
+            for item in value:
+                if any(t in str(item).lower() for t in terms):
+                    hits.append({"value": item})
+            return hits
+        if any(t in str(value).lower() for t in terms):
+            return [{"value": value}]
+        return []
 
     async def _fallback_search(self, query: str) -> ToolOutput:
         """Fallback to web_search when no state data is available."""

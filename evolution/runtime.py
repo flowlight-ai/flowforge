@@ -23,7 +23,15 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional
 
+import yaml
+
 from flowforge.core.approval_hub import ApprovalHub, ApprovalRequest
+from flowforge.core.im_council import (
+    ConsoleChannel,
+    IMCouncilManager,
+    TraeBridgeChannel,
+    WebChatChannel,
+)
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.engine import ForgeMindEngine
 from flowforge.evolution.self_dev_base import DevPlan, DevTask

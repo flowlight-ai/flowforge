@@ -301,8 +301,11 @@ class SensorBase(ABC):
 
         实现者应在此方法中执行具体感知逻辑（如读文件 / 调 API / 跑测试）。
         若检测到异常，应设置 SensorReading.anomaly=True。
+
+        注意：本方法为抽象契约（铁律 3），由 @abstractmethod 在实例化时强制
+        子类实现，因此基类不提供默认实现，也不应被直接调用。
         """
-        raise NotImplementedError
+        ...
 
 
 __all__ = [
