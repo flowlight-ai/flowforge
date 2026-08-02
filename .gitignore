@@ -204,3 +204,4 @@ web/.next-dev.log
 
 # Logs from local runs (single-file, not the directory)
 *.log.*
+.autonomous
