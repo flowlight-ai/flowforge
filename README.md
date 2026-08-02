@@ -23,25 +23,21 @@
 
 ## Why FlowForge?
 
-Today's coding agents — **OpenCode, Codex CLI, Gemini CLI, Qoder, iFlow, WorkBuddy, Claude Code** — are brilliant at one thing: *executing a task inside a single session.* But they are disposable contractors. When the session ends, they forget. When the server restarts, they are a blank slate. When the model upgrades, hard-won experience walks out the door — and no one is accountable for what shipped last month.
+FlowForge is the **harness layer** that gives coding agents a persistent identity, self-evolution capability, and governance framework. It doesn't replace your agents — it **employs** them as capability extensions and grows them into career **Forgekin**: agents with a name, a memory, a growth trajectory, and accountability.
 
-FlowForge answers a different, less crowded question:
+| Capability | Claude Code | OpenCode | Codex | WorkBuddy | Trae | Qoder | FlowForge |
+|------------|:-----------:|:--------:|:-----:|:---------:|:----:|:-----:|:---------:|
+| Project context | ✅ `CLAUDE.md` | ✅ | ✅ `AGENTS.md` | ✅ | ✅ | ✅ Repo Wiki | ✅ |
+| Multi-agent collaboration | ✅ subagents | ✅ sub-agent | — | ✅ experts | — | ✅ expert teams | ✅ MindCouncil |
+| Long-term memory | ✅ memory files | — | ✅ | ✅ multi-layer | — | ✅ Knowledge Engine | ✅ EchoStore + MindCodex |
+| **Agent-level persistent identity** | — | — | — | — | — | — | ✅ Soul Imprint |
+| **Self-devolution loops** | — | — | — | — | — | — | ✅ agents evolve own docs/code/tests |
+| **Cross-vendor review** | — | — | — | — | — | — | ✅ structurally enforced |
+| **Experience distillation** | — | — | — | — | — | — | ✅ SpiritForge → MindCodex |
+| **Graduated autonomy (6 stages)** | — | — | — | — | — | — | ✅ Awakening Stages |
+| **Multi-species morphology** | — | — | — | — | — | — | ✅ 5 evolvable species |
 
-> **How does an agent keep a persistent identity, accumulate capability, stay verifiable, and evolve — under governance — across months and model generations?**
-
-FlowForge doesn't compete with these agents — **it employs them.** It is the **harness layer** that binds your existing coding agents as capability extensions and grows them into career **Forgekin**: agents with a Soul Imprint, a growth trajectory, and governance.
-
-| Dimension | Mainstream coding agents (OpenCode · Codex · Gemini CLI · Qoder · iFlow · Claude Code) | FlowForge |
-|-----------|--------------------------------------------------|-----------|
-| **Category** | Disposable task executor ("brilliant hands") | Harness layer for persistent-identity Forgekin |
-| **Identity** | A fresh instance each session; no "who am I" | Soul Imprint + species lineage — survives months & model generations |
-| **Growth** | Capability frozen in model weights; upgrade = replace | Self-Devolution Loops evolve its own docs, code, framework, reviews & tests |
-| **Review** | The same model approves its own output | Cross-vendor independent review — no agent approves its own work |
-| **Autonomy** | Binary: full-auto or human-in-the-loop | 6 Awakening Stages + 6-layer guardrails + magic-word kill-switch |
-| **Memory** | Session context / a flat memory file | EchoStore (episodic) × MindCodex (distilled), federated across domains |
-| **Morphology** | One abstract agent / a single CLI | 5 evolvable species — bio / org / object / virtual / hybrid |
-
-> **The coding agents you already use are the workforce. FlowForge is what gives them a name, a memory, and a manager.**
+> **Build AI teams, not just agents. Hard rails, soft power, shared mission.**
 
 ---
 
