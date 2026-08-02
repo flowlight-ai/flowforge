@@ -7,7 +7,7 @@
 #   docker run --rm -p 8765:8765 flowforge-council:0.1.0
 #   docker compose up
 #
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Runtime configuration.
 ENV PYTHONUNBUFFERED=1 \
