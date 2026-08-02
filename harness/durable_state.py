@@ -34,7 +34,6 @@ import hashlib
 import json
 import sqlite3
 import subprocess
-import time
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
@@ -115,7 +114,7 @@ class DurableStateSurface(ABC):
         Returns:
             状态值；不存在时返回 None。
         """
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     async def write(self, key: str, value: Any, writer: str) -> DurableState:
@@ -129,7 +128,7 @@ class DurableStateSurface(ABC):
         Returns:
             写入后的 DurableState 记录。
         """
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     async def delete(self, key: str) -> bool:
@@ -141,7 +140,7 @@ class DurableStateSurface(ABC):
         Returns:
             True 表示删除成功；False 表示 key 不存在。
         """
-        raise NotImplementedError
+        ...
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -226,12 +225,10 @@ class SqliteDurableState(DurableStateSurface):
     @staticmethod
     def _row_to_state(row: sqlite3.Row) -> DurableState:
         """将 SQLite 行映射为 DurableState 模型。"""
-        import json as _json
-
         return DurableState(
             state_id=row["state_id"],
             key=row["key"],
-            value=_json.loads(row["value_json"]),
+            value=json.loads(row["value_json"]),
             version=row["version"],
             last_writer=row["last_writer"],
             created_at=row["created_at"],
