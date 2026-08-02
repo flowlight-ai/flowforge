@@ -1,12 +1,9 @@
-[🇺🇸 English](README.md) · [🇨🇳 简体中文](README.zh-CN.md) · [🇯🇵 日本語](README.ja.md)
-
----
-
 <div align="center">
 
 # FlowForge
 
-### 永続的アイデンティティ・エージェント・フレームワーク · 自己進化トリプルループ
+### Persistent Identity Agent Framework with Self-Devolution Loops
+#### 永続的アイデンティティ・エージェント・フレームワーク · 自己進化ループ
 
 [![CI](https://github.com/flowlight-ai/flowforge/actions/workflows/ci.yml/badge.svg)](https://github.com/flowlight-ai/flowforge/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/flowlight-ai/flowforge/actions/workflows/codeql.yml/badge.svg)](https://github.com/flowlight-ai/flowforge/actions/workflows/codeql.yml)
@@ -16,155 +13,148 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/flowlight-ai/flowforge/blob/main/CONTRIBUTING.md)
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-purple.svg)](https://github.com/flowlight-ai/flowforge/discussions)
 
-> *永続的アイデンティティを鍛造せよ · 記憶、マインドカウンシル、自己進化の能力を与えよ。*
+> *Forge a Persistent Identity. Endow it with Memory, Council, and Self-Devolution.*
+> *永続的なアイデンティティを鍛造せよ。記憶・評議・自己進化の力を与えよ。*
 
 </div>
 
 ---
 
-## 目次
+[🇺🇸 English](README.md) · [🇨🇳 简体中文](README.zh-CN.md) · [🇯🇵 日本語](README.ja.md)
 
-- [概要](#概要)
-- [主な特長](#主な特長)
-- [5 つのフォージキン](#5-つのフォージキン)
-- [アーキテクチャ](#アーキテクチャ)
-- [自己進化トリプルループ](#自己進化トリプルループ)
-- [重要不変条件とテスト鉄則](#重要不変条件とテスト鉄則)
-- [クイックスタート](#クイックスタート)
-- [設定](#設定)
-- [使用例](#使用例)
-- [ドキュメント](#ドキュメント)
-- [ロードマップ](#ロードマップ)
-- [プロジェクト構成](#プロジェクト構成)
-- [命名規約](#命名規約)
-- [貢献](#貢献)
-- [ライセンス](#ライセンス)
+## なぜ FlowForge なのか？
+
+主流のマルチエージェント・フレームワーク（AutoGen / CrewAI / LangGraph）は一つの問いにうまく答える。*セッション内で複数の LLM 呼び出しがどう協調するか* という問いだ。しかしセッションが終われば、エージェントは忘却する。サーバーを再起動すれば、白紙に戻る。モデルをアップグレードすれば、苦労して蓄積した経験は失われる。
+
+FlowForge が答えるのは、より難しく、取り組む者が少ない問いだ。
+
+> **エージェントはいかにして数ヶ月・複数のモデル世代をまたいで、アイデンティティを保ち、能力を蓄積し、検証可能性を維持し、ガバナンスのもとで進化し続けるのか？**
+
+これはまた別のチャットボット・フレームワークではない。FlowForge は、長い時間軸で*記憶し、成長し、説明責任を負う*必要のあるエージェントのための**インフラ層**だ。
+
+| 次元 | 主流マルチエージェント | FlowForge |
+|------|------------------------|-----------|
+| **アイデンティティ** | セッション単位；再起動で忘却 | セッション・クラッシュ・モデル更新をまたいで永続 |
+| **能力** | 単一モデル + ツール呼び出し | モデル × ハーネス × Forgekin モルフォロジー × 外部エージェント拡張 |
+| **協調** | 固定された役割枠（PM/開発/テスト） | 動的な能力プロファイル・ルーティング；役割は実行時のラベル |
+| **進化** | モデル更新 = システム更新 | エージェントが自らのドキュメント・コード・テストを自律進化 |
+| **レビュー** | 同一ベンダーの自己承認 | クロスベンダーの独立レビュー（自らの成果を承認できるエージェントはいない） |
+| **具体化** | API ツール呼び出し | 物理センサー（IoT）+ 仮想世界設定 |
 
 ---
 
-## 概要
+## 主な機能
 
-**FlowForge** は**永続的アイデンティティ・エージェント・フレームワーク**——LLM ベースのエージェントを「セッション単位のアシスタント」から、永続的なアイデンティティ、蓄積的なケイパビリティ、検証可能な振る舞い、統治可能な進化を備えた長寿の知的主体へと進化させる、エンジニアリンググレードのハーネス層である。
+- **永続的アイデンティティ（Forgekin / 霊智体）** — `Soul Imprint`（魂の刻印）、`Capability Profile`（能力プロファイル）、`EchoStore`（エコーストア）を持ち、クラッシュ・モデル更新・セッション境界を生き延びる長寿エージェント。
+- **自己進化ループ（Self-Devolution Loops）** — ガバナンスの闸门のもと、エージェントが自らのドキュメント・コード・フレームワーク・レビュー・テストを自律進化させる 5 つの閉ループ。
+- **クロスベンダー・レビュー** — レビュアーは作者と異なるベンダー出自でなければならない；自らの成果を承認できるエージェントはいない。
+- **マルチドメイン記憶連邦** — `MindCodex` 手続き記憶法典を通じた 5 ドメインの記憶連邦。
+- **7 層ハーネス・エンジニアリング** — `durable_state`（永続状態）・`tool_mediation`（ツール仲介）・`evidence_sensors`（証拠センシング）・`governance`（ガバナンス）・`magic_words`（魔法の言葉）・`entropy_control`（エントロピー制御）・`harnessability`（ハーネス可能性）。
+- **設定駆動の Forgekin** — YAML プロファイルで任意の数の Forgekin を登録可能。デフォルトの 5 つは参考例であり、上限ではない。
+- **外部エージェント統合** — Claude Code / Codex / Gemini / OpenCode / Trae CN を能力拡張としてバインド。
 
-主流のマルチエージェント・フレームワーク（AutoGen / CrewAI / LangGraph）は協調のために**ロールスロット**を割り当てるが、FlowForge が解くのはより深い問題である：**エージェントがいかにして長い時間軸においてアイデンティティの一貫性を保ち、ケイパビリティを蓄積し、振る舞いの検証可能性を維持し、統治下で進化し続けるか。**
+---
 
-フレームワークは `forgemind` アプリケーション層を備え、5 つの組み込み**フォージキン**（永続的アイデンティティ・エージェント）——それぞれが外部コーディングエージェント（Claude Code / Codex / Gemini / OpenCode / Trae CN）に束縛される——をホストし、**自己進化トリプルループ**のもと、**ベンダー間独立レビュー**によってそれらを編成する。
+## Forgekins：設定可能な自己進化エージェント
 
-## 主な特長
+**アーキテクチャは Forgekin の数に固定されていない。** Forgekin は設定駆動の実体だ。`config/forgekins/` に YAML プロファイルを置くだけで 1 つ登録でき、それを 1 つの自己進化ループに紐づけ、（オプションで）外部コーディング・エージェントに紐づける。ForgeMindEngine は実行時に能力プロファイルに基づいてタスクをルーティングし、役割をハードコードしない。
 
-- **永続的アイデンティティ・エージェント（フォージキン）** — `Soul Imprint`（ソウルインプリント）、`Capability Profile`（ケイパビリティプロファイル）、`Blind Spot Map`（ブラインドスポットマップ）を持ち、タスクやセッションを越えて永続する長寿エージェント。
-- **自己進化トリプルループ** — 5 つの閉ループ（`SelfDevDocLoop` / `SelfDevCodeLoop` / `SelfDevFrameworkLoop` / `SelfDevReviewLoop` / `SelfDevTestLoop`）が、ドキュメント・コード・フレームワーク・レビュー・テストの自律的進化を駆動する。
-- **ベンダー間独立レビュー（I9 自己レビュー禁止）** — カウンシルのレビュアは著者とは異なるベンダー出身でなければならず、定足数は ≥ 2 つの異なるベンダーを要する。
-- **マルチドメインメモリ連邦** — 5 つのメモリドメイン（`task` / `episodes` / `methods` / `identity` / `facts`）が `MindCodex`（手続きメモリ法典）を通じて連邦される。
-- **7 層ハーネスエンジニアリング** — `durable_state` · `tool_mediation` · `evidence_sensors` · `governance` · `magic_words` · `entropy_control` · `harnessability`。
-- **評価自己代謝** — 3 信号スコアリング（`self_report 0.2 + observer 0.4 + telemetry 0.4`）+ 帰属行列がケイパビリティの再重み付けを駆動する。
-- **分散信頼性** — 副作用 WAL + 階層的リカバリ + 生存プローブ + Provider Host がクラッシュセーフな実行を保証する。
-- **IM カウンシルチャンネル** — 二重チャンネル審議（Web グループ + 飛書グループ）、`@mention` ルーティングと I8 フレームワーク変更承認ボタンを備える。
+**建築の中心はエージェントの数ではなく、自己進化である。**
 
-## 5 つのフォージキン
+### 5 つのデフォルト Forgekin（参考例）
 
-各フォージキンは特定の外部コーディングエージェントに束縛され、専用の自己進化ループを所有する：
+| Forgekin | ベンダー | 自己進化ループ | 外部エージェント |
+|----------|--------|---------------|----------------|
+| **Wenxin**（文心） | anthropic | ドキュメント進化 | Claude Code |
+| **Sherlock**（夏洛克） | openai | コード進化 | Codex |
+| **Vangogh**（梵高） | google | クロスベンダー・レビュー | Gemini |
+| **Da Vinci**（ダ・ヴィンチ） | open_source | テスト進化 | OpenCode |
+| **Luban**（魯班） | bytedance | フレームワーク進化 *（運用者承認必須）* | Trae CN |
 
-| フォージキン | ベンダー | 自己進化ループ | 覚醒レベル | 外部エージェント |
-|--------------|----------|---------------|------------|------------------|
-| **Wenxin（文心）** | anthropic | `SelfDevDocLoop` | E3 | Claude Code |
-| **Sherlock（夏洛克）** | openai | `SelfDevCodeLoop` | E4 | Codex |
-| **Vangogh（梵高）** | google | `SelfDevReviewLoop` | E3 | Gemini |
-| **Da Vinci（达芬奇）** | open_source | `SelfDevTestLoop` | E3 | OpenCode |
-| **Luban（鲁班）** | bytedance | `SelfDevFrameworkLoop` | E5 *（運営者承認要）* | Trae CN |
+### 自分の Forgekin を追加する
 
-**協調トポロジ：**
+新しい Forgekin の登録は**純粋な設定作業**だ。フレームワーク・コードの変更は不要だ。
 
-```mermaid
-graph LR
-  subgraph 著者
-    W[Wenxin<br/>anthropic<br/>文書ループ]
-    S[Sherlock<br/>openai<br/>コードループ]
-    D[Da Vinci<br/>open_source<br/>テストループ]
-    L[Luban<br/>bytedance<br/>フレームワークループ<br/>I8: 運営者承認]
-  end
-  subgraph レビュア
-    V[Vangogh<br/>google<br/>レビューループ<br/>I9: 自己レビュー禁止]
-  end
-  W --> V
-  S --> V
-  D --> V
-  L --> V
-  V -->|打ち返し ≤ 3 ラウンド| W
-  V -->|打ち返し ≤ 3 ラウンド| S
-  V -->|打ち返し ≤ 3 ラウンド| D
-  V -->|打ち返し ≤ 3 ラウンド| L
+```yaml
+# config/forgekins/my-forgekin.yaml
+name: "MyForgekin"
+vendor: anthropic
+self_dev_loop: SelfDevCodeLoop
+awakening_stage: E3
+external_agent: claude_code
+capabilities:
+  - { name: "rust", proficiency: 0.8 }
+  - { name: "system_design", proficiency: 0.6 }
+blind_spots: ["frontend"]
 ```
+
+---
 
 ## アーキテクチャ
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  アプリケーション層 · forgemind/                                  │
-│  フォージキン登録簿 · カウンシル（Mind Council） · 外部エージェント │
+│  Application Layer · forgemind/                                 │
+│  Forgekin Registry · Council · External Agents                  │
 ├─────────────────────────────────────────────────────────────────┤
-│  指令層 · evolution/                                              │
-│  ForgeMindEngine · メタ認知ルーター · 成熟度ラダー                │
+│  Command Layer · evolution/                                     │
+│  ForgeMindEngine · Metacognition Router · Maturity Ladder       │
 ├─────────────────────────────────────────────────────────────────┤
-│  実行層 · workers/                                               │
-│  自己進化ループ · ループ実行器 · 実行モード                       │
+│  Execution Layer · workers/ · loop/                             │
+│  Self-Dev Loops · Loop Executor · Execution Modes               │
 ├─────────────────────────────────────────────────────────────────┤
-│  ツールとメモリ層 · core/                                         │
-│  capability · teamact · harness · memory · eval · reliability     │
+│  Tools & Memory Layer · core/                                   │
+│  capability · teamact · harness · memory · eval · reliability   │
 └─────────────────────────────────────────────────────────────────┘
-       ↕ 共有カーネル：DI コンテナ · プラグインプロトコル · トレース ↕
+       ↕ Shared Kernel: DI Container · Plugin Protocol · Tracing ↕
 ```
 
-**鉄則**：上位層は下位層に依存し、下位層は上位層を**決して** import しない。単方向依存がアーキテクチャの腐敗を防ぐベースラインである。
+**単方向依存**：上位層は下位層に依存する；下位層が上位層をインポートすることはない。
 
-## 自己進化トリプルループ
-
-| ループ | タイプ | 覚醒 | 担当フォージキン | 承認 |
-|--------|--------|------|------------------|------|
-| `SelfDevDocLoop` | E3 | ドキュメント進化 | Wenxin | 自動 |
-| `SelfDevCodeLoop` | E4 | コード進化 | Sherlock | 自動 |
-| `SelfDevReviewLoop` | E3 | ベンダー間レビュー | Vangogh | 自動 |
-| `SelfDevTestLoop` | E3 | テスト進化 | Da Vinci | 自動 |
-| `SelfDevFrameworkLoop` | E5 | フレームワーク進化 | Luban | **I8: 運営者手動承認** |
-
-各ループは **発見 → 割当 → 行動 → 検証 → 永続化** の 5 ステップ閉ループ・パターンに従い、品質閾値 `0.85`、打ち返し上限 3 ラウンド（I11）。
-
-## 重要不変条件とテスト鉄則
-
-**アーキテクチャ不変条件：**
-
-- **I1** — 覚醒レベル・ゲーティング（行動前に自律階層を強制）
-- **I2** — `VISION.md` / `decisions/` は読み取り専用
-- **I3** — 15 のコーディング赤線（ハードコードされたプロンプト禁止、DI のバイパス禁止、直接 DB 操作禁止……）
-- **I8** — フレームワーク変更には運営者承認が必要
-- **I9** — ベンダー間自己レビュー禁止
-- **I11** — 打ち返しプロトコル上限 3 ラウンド
-
-**テスト鉄則（T1–T8）：**
-
-| # | ルール |
-|---|--------|
-| T1 | Mock LLM 禁止 — すべての E2E / 統合テストは実 LLM を呼び出す |
-| T2 | 偽データ禁止 — 実シナリオ入力のみ |
-| T3 | 検証スキップ禁止 — 具体的アサーション必須 |
-| T4 | Mock ツール禁止 — `web_search` / `publish` / `fact_check` は実物でなければならない |
-| T5 | 未実装 = バグ |
-| T6 | メトリクス収集必須（MetricsCollector） |
-| T7 | LLM 生成コンテンツは別の LLM によるレビュー必須 |
-| T8 | Web 機能は実ブラウザの DOM 検査で検証 |
+---
 
 ## クイックスタート
 
+### ワンコマンド・セットアップ（推奨）
+
 ```bash
-# インストール（editable、dev 追加依存込み）
 git clone https://github.com/flowlight-ai/flowforge.git
 cd flowforge
+
+# Python 環境の構築 + バックエンド依存のインストール + フロントエンドのビルド
+python scripts/setup.py
+
+# （オプション）外部コーディング・エージェント CLI のインストール
+python scripts/install_agents.py
+
+# バックエンド（8000 番ポート）+ フロントエンド（5175 番ポート）の起動
+python scripts/start.py
+```
+
+その後、ブラウザで **http://localhost:5175** を開く。
+
+### 手動セットアップ
+
+> **パッケージ構成について**：リポジトリのルート*それ自体が* `flowforge` パッケージだ（トップレベルの `__init__.py` を含む）。バックエンド起動時、`flowforge.app.main` が正しく解決されるよう、リポジトリの**親**ディレクトリを `PYTHONPATH` に追加しなければならない。
+
+```bash
 pip install -e ".[dev]"
+cd web && npm install && npm run build && cd ..
 
-# Web チャット UI を起動（純 HTML/CSS/JS、FastAPI が配信）
-python flowforge/web/app.py --host 127.0.0.1 --port 8765
+# 環境変数テンプレートをコピー
+cp .env.example .env  # その後、キーを入力
 
-# 5 フォージキンの設定を検証（YAML + 外部エージェントバイナリ）
+# バックエンド起動（リポジトリルートが flowforge パッケージ → 親ディレクトリが PYTHONPATH 上）
+export PYTHONPATH="$PWD/.."          # PowerShell: $env:PYTHONPATH = "$PWD\.."
+python -m uvicorn flowforge.app.main:app --host 127.0.0.1 --port 8000
+
+# フロントエンド起動（別ターミナル）
+cd web && npm run dev
+```
+
+### 5 つのデフォルト Forgekin を検証
+
+```bash
 python scripts/verify_five_forgekins.py
 ```
 
@@ -176,6 +166,8 @@ FEISHU_APP_ID=...
 FEISHU_APP_SECRET=...
 FEISHU_CHAT_ID=...
 ```
+
+---
 
 ## 設定
 
@@ -190,104 +182,84 @@ external_agents:
 
 council:
   min_reviewers: 2
-  min_distinct_vendors: 2     # I9 強制
-  pass_threshold: 0.85        # P33 品質閾値
+  min_distinct_vendors: 2     # クロスベンダー強制
+  pass_threshold: 0.85        # 品質閾値
 ```
 
-各フォージキンは `config/forgekins/*.yaml` の YAML プロファイルで記述される（ケイパビリティ、ブラインドスポット、自己進化ループ束縛、IM チャンネル購読、カウンシル役割、ペルソナ）。
+各 Forgekin は `config/forgekins/*.yaml` 配下の YAML プロファイルで記述される。**フレームワークは Forgekin の数に上限を課さない** —— デプロイに合わせてプロファイルを追加・削除すればよい。
 
-## 使用例
-
-```python
-import asyncio
-from flowforge import ForgeMindEngine
-from flowforge.forgemind import Forgekin, ForgekinType, Capability
-
-# スコープ・ベースライン（ビジョン）で自己進化エンジンを初期化
-engine = ForgeMindEngine(scope_baseline="安全にデリバリするコーディングエージェントを構築する")
-
-
-async def main() -> None:
-    # evaluate(ctx) は純関数 —— ルーティング決定を返す
-    decision = await engine.evaluate(ctx)
-    print(f"mode={decision.mode}  confidence={decision.action_confidence:.3f}")
-    if decision.mode != "none":
-        await engine.execute(decision)
-
-
-asyncio.run(main())
-
-# フォージキンに永続的アイデンティティを与える
-cat = Forgekin(name="小煤球", forgekin_type=ForgekinType.ANIMAL_COMPANION)
-cat.add_capability(Capability(name="empathy", proficiency=0.9))
-```
+---
 
 ## ドキュメント
 
 | ドキュメント | 説明 |
-|--------------|------|
+|------|------|
+| [docs/VISION.md](docs/VISION.md) | プロジェクトのビジョンと設計哲学 |
 | [docs/spec.md](docs/spec.md) | プロジェクト仕様 |
 | [docs/arch.md](docs/arch.md) | アーキテクチャ設計 |
 | [docs/design.md](docs/design.md) | 詳細設計 |
 | [docs/roadmap.md](docs/roadmap.md) | 開発ロードマップ |
-| [docs/decisions/](docs/decisions/) | 14 件のアーキテクチャ決定記録（ADR） |
-| [docs/features/](docs/features/) | 27 件の機能設計（F001–F031） |
-| [docs/VISION.md](docs/VISION.md) | All-Things Spirit Mind ビジョン |
+| [docs/decisions/](docs/decisions/) | アーキテクチャ決定記録（ADR） |
+| [docs/features/](docs/features/) | 機能設計 |
+| [docs/roleagent.md](docs/roleagent.md) | マルチエージェント工学パス |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 貢献ガイド |
 | [SECURITY.md](SECURITY.md) | セキュリティポリシー |
-| [CHANGELOG.md](CHANGELOG.md) | チェンジログ |
+
+---
 
 ## ロードマップ
 
-- **フェーズ 0** — プロジェクト scaffolding + GitHub 設定 ✅
-- **フェーズ 1** — 最小自己進化コード骨架
-- **フェーズ 2** — コアモジュール（DI · プラグイン · コンパイラ · ループ）
-- **フェーズ 3** — 完全な ForgeMindEngine（自己進化トリプルループ）
-- **フェーズ 4** — 分散信頼性 + マルチドメインメモリ連邦
-- **フェーズ 5** — IM カウンシルチャンネル + Web チャット UI
-- **フェーズ 6** — *Forge エコシステム駆動 + フォージキン生涯学習
+| フェーズ | 範囲 | 状態 |
+|------|------|------|
+| **0** | プロジェクト・スキャフォールド + クロスプラットフォーム設定 + ドキュメント骨格 | ✅ 完了 |
+| **1** | 7 つの工学パスのコード骨格 | 🔄 進行中（約 70%） |
+| **2** | forgemind アプリケーション層 + Forgekin モルフォロジー | 🔄 進行中（約 85%） |
+| **3** | サードパーティ・エージェント適応層 | 🔄 進行中（約 80%） |
+| **4** | 評価自己代謝 + 分散信頼性 | 🔄 進行中（約 40%） |
+| **5** | パートナーシップ数学 + 自己進化閉ループ | 🔄 進行中（約 60%） |
+| **6** | SpiritForge 経験蒸留 + MindCouncil | 🔄 進行中（約 40%） |
 
 詳細は [docs/roadmap.md](docs/roadmap.md) を参照。
 
-## プロジェクト構成
+---
+
+## プロジェクト構造
 
 ```
 flowforge/
-├── core/              # 共有カーネル：capability · teamact · harness · memory · eval · reliability
-├── evolution/         # ForgeMindEngine（三モード自己進化）
+├── core/              # 共有カーネル：capability · teamact · harness · memory · eval
+├── evolution/         # ForgeMindEngine（自己進化オーケストレーション）
 ├── forgemind/         # アプリケーション層：forgekin · registry · council · external_agents
-├── web/               # Web チャット UI（FastAPI + HTML/CSS/JS、フロントエンドフレームワークなし）
-├── config/            # forgemind.yaml · forgekins/*.yaml · im_channels.yaml · evolution.yaml
-├── docs/              # spec · arch · design · roadmap · 14 ADR · 27 Feature
-├── scripts/           # verify_five_forgekins.py
-└── tests/             # テストスイート（T1–T8 鉄則強制）
+├── web/               # Web UI（Next.js 14 + FastAPI バックエンド）
+├── config/            # forgemind.yaml · forgekins/*.yaml · evolution.yaml
+├── docs/              # spec · arch · design · roadmap · ADR · features
+├── scripts/           # setup.py · install_agents.py · start.py · verify_five_forgekins.py
+└── tests/             # テストスイート
 ```
 
-## 命名規約
-
-- **P0** — AI 業界用語（*永続的アイデンティティ・エージェント*、*自己進化トリプルループ*、*ベンダー間独立レビュー*、*マルチドメインメモリ連邦* など）——ドキュメントとコードの主体。
-- **P1** — コードクラス名（`ForgeMind`、`Forgekin`、`MindCodex` など）——識別子に使用。
-- **P2** — コミュニティ別名（霊智体〔れいちたい〕/ 育霊 / 霊議 / 霊典 など）——コミュニティ・SNS チャンネル限定。
+---
 
 ## 貢献
 
-あらゆる種類の貢献を歓迎します！Pull Request を開く前に [CONTRIBUTING.md](CONTRIBUTING.md) をお読みください。
+あらゆる種類の貢献を歓迎する —— 新しい Forgekin プロファイル、アダプター統合、ドキュメント改善、コア・フレームワークの作業。
 
 - 🐛 [バグを報告](https://github.com/flowlight-ai/flowforge/issues/new?template=bug_report.yml)
-- 💡 [機能を提案](https://github.com/flowlight-ai/flowforge/issues/new?template=feature_request.yml)
-- 💬 [議論に参加](https://github.com/flowlight-ai/flowforge/discussions)
+- 💡 [機能提案](https://github.com/flowlight-ai/flowforge/issues/new?template=feature_request.yml)
+- 💬 [ディスカッションに参加](https://github.com/flowlight-ai/flowforge/discussions)
 
-すべての貢献は 15 のコーディング赤線（I3）と T1–T8 テスト鉄則を遵守しなければならない。
+Pull Request を開く前に [CONTRIBUTING.md](CONTRIBUTING.md) を読むこと。
+
+---
 
 ## ライセンス
 
-FlowForge は **[MIT ライセンス](LICENSE)** の下で公開されている。
+FlowForge は **[MIT ライセンス](LICENSE)** のもとで公開されている。
 
 ---
 
 <div align="center">
 
-**⭐ FlowForge が永続的アイデンティティ・エージェントの鍛造に役立ったら、ぜひスターを！⭐**
+**⭐ FlowForge が永続的アイデンティティ・エージェントの鍛造に役立ったら、ぜひスターをつけてください！ ⭐**
 
 **[github.com/flowlight-ai/flowforge](https://github.com/flowlight-ai/flowforge)**
 
