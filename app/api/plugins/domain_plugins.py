@@ -15,24 +15,24 @@ router = APIRouter(prefix="/domain-plugins", tags=["domain-plugins"])
 @router.get("")
 async def list_domain_plugins():
     """List all loaded domain plugins with their status."""
-    from flowforge.app.main import lifecycle_manager
-    if lifecycle_manager:
-        return {"plugins": lifecycle_manager.list_plugins()}
+    from flowforge.app.main import plugin_loader
+    if plugin_loader.lifecycle_manager:
+        return {"plugins": plugin_loader.lifecycle_manager.list_plugins()}
     # Fallback
-    from flowforge.app.main import get_loaded_plugins
-    return {"plugins": get_loaded_plugins()}
+    from flowforge.app.main import plugin_loader
+    return {"plugins": plugin_loader.get_loaded_plugins()}
 
 
 @router.get("/{plugin_name}")
 async def get_domain_plugin(plugin_name: str):
     """Get detailed info about a specific domain plugin."""
-    from flowforge.app.main import lifecycle_manager
-    if lifecycle_manager:
-        plugin = lifecycle_manager.get_plugin(plugin_name)
+    from flowforge.app.main import plugin_loader
+    if plugin_loader.lifecycle_manager:
+        plugin = plugin_loader.lifecycle_manager.get_plugin(plugin_name)
         if not plugin:
             raise HTTPException(status_code=404, detail=f"Plugin '{plugin_name}' not found")
-        state = lifecycle_manager.get_state(plugin_name)
-        record = lifecycle_manager.get_record(plugin_name)
+        state = plugin_loader.lifecycle_manager.get_state(plugin_name)
+        record = plugin_loader.lifecycle_manager.get_record(plugin_name)
         result = {
             "name": plugin.name,
             "version": plugin.version,
@@ -52,8 +52,8 @@ async def get_domain_plugin(plugin_name: str):
         return result
 
     # Fallback
-    from flowforge.app.main import _loaded_plugins
-    for p in _loaded_plugins:
+    from flowforge.app.main import plugin_loader
+    for p in plugin_loader.loaded_plugins:
         if p.name == plugin_name:
             health = p.health_check()
             return {
@@ -76,8 +76,8 @@ async def get_domain_plugin(plugin_name: str):
 @router.post("/{plugin_name}/reload")
 async def reload_domain_plugin(plugin_name: str):
     """Reload a domain plugin — unload and reload."""
-    from flowforge.app.main import reload_plugin
-    result = await reload_plugin(plugin_name)
+    from flowforge.app.main import plugin_loader
+    result = await plugin_loader.reload_plugin(plugin_name)
     if result["status"] != "success":
         raise HTTPException(status_code=400, detail=result.get("message", result.get("error", "Reload failed")))
     return result
@@ -86,8 +86,8 @@ async def reload_domain_plugin(plugin_name: str):
 @router.delete("/{plugin_name}")
 async def unload_domain_plugin(plugin_name: str):
     """Unload a domain plugin — removes all its registrations."""
-    from flowforge.app.main import unload_plugin
-    result = await unload_plugin(plugin_name)
+    from flowforge.app.main import plugin_loader
+    result = await plugin_loader.unload_plugin(plugin_name)
     if result["status"] != "success":
         raise HTTPException(status_code=400, detail=result.get("message", result.get("error", "Unload failed")))
     return result
@@ -96,10 +96,10 @@ async def unload_domain_plugin(plugin_name: str):
 @router.post("/{plugin_name}/pause")
 async def pause_domain_plugin(plugin_name: str):
     """Pause a domain plugin — stop events/schedules, keep agents/tools."""
-    from flowforge.app.main import lifecycle_manager
-    if not lifecycle_manager:
+    from flowforge.app.main import plugin_loader
+    if not plugin_loader.lifecycle_manager:
         raise HTTPException(503, "Plugin lifecycle manager not available")
-    result = await lifecycle_manager.pause_plugin(plugin_name)
+    result = await plugin_loader.lifecycle_manager.pause_plugin(plugin_name)
     if result.get("status") != "success":
         raise HTTPException(400, result.get("error", "Pause failed"))
     return result
@@ -108,10 +108,10 @@ async def pause_domain_plugin(plugin_name: str):
 @router.post("/{plugin_name}/resume")
 async def resume_domain_plugin(plugin_name: str):
     """Resume a paused domain plugin."""
-    from flowforge.app.main import lifecycle_manager
-    if not lifecycle_manager:
+    from flowforge.app.main import plugin_loader
+    if not plugin_loader.lifecycle_manager:
         raise HTTPException(503, "Plugin lifecycle manager not available")
-    result = await lifecycle_manager.resume_plugin(plugin_name)
+    result = await plugin_loader.lifecycle_manager.resume_plugin(plugin_name)
     if result.get("status") != "success":
         raise HTTPException(400, result.get("error", "Resume failed"))
     return result
@@ -120,16 +120,16 @@ async def resume_domain_plugin(plugin_name: str):
 @router.get("/{plugin_name}/health")
 async def domain_plugin_health(plugin_name: str):
     """Check domain plugin health status."""
-    from flowforge.app.main import lifecycle_manager
-    if lifecycle_manager:
-        plugin = lifecycle_manager.get_plugin(plugin_name)
+    from flowforge.app.main import plugin_loader
+    if plugin_loader.lifecycle_manager:
+        plugin = plugin_loader.lifecycle_manager.get_plugin(plugin_name)
         if not plugin:
             raise HTTPException(status_code=404, detail=f"Plugin '{plugin_name}' not found")
         return plugin.health_check()
 
     # Fallback
-    from flowforge.app.main import _loaded_plugins
-    for p in _loaded_plugins:
+    from flowforge.app.main import plugin_loader
+    for p in plugin_loader.loaded_plugins:
         if p.name == plugin_name:
             return p.health_check()
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_name}' not found")

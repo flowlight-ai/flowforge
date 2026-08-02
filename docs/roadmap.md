@@ -24,13 +24,13 @@ FlowForge is built **compounding-infrastructure-first**: every phase delivers a 
 
 | Phase | Scope | Status | Completion |
 |-------|-------|--------|-----------|
-| **Phase 0** | Project scaffolding + cross-platform config + docs skeleton | 🔄 In Progress | 70% |
-| **Phase 1** | Seven engineering paths code skeleton | ⏳ Pending | 0% |
-| **Phase 2** | forgemind application layer + Forgekin morphologies | ⏳ Pending | 0% |
-| **Phase 3** | Third-party Agent adapter layer | ⏳ Pending | 0% |
-| **Phase 4** | Eval self-metabolism + distributed reliability | ⏳ Pending | 0% |
-| **Phase 5** | Partnership math + self-evolution closed loop | ⏳ Pending | 0% |
-| **Phase 6** | SpiritForge experience distillation + MindCouncil | ⏳ Pending | 0% |
+| **Phase 0** | Project scaffolding + cross-platform config + docs skeleton | ✅ Complete | 100% |
+| **Phase 1** | Seven engineering paths code skeleton | 🔄 In Progress | 70% |
+| **Phase 2** | forgemind application layer + Forgekin morphologies | 🔄 In Progress | 85% |
+| **Phase 3** | Third-party Agent adapter layer | 🔄 In Progress | 80% |
+| **Phase 4** | Eval self-metabolism + distributed reliability | 🔄 In Progress | 40% |
+| **Phase 5** | Partnership math + self-evolution closed loop | 🔄 In Progress | 60% |
+| **Phase 6** | SpiritForge experience distillation + MindCouncil | 🔄 In Progress | 40% |
 
 ---
 

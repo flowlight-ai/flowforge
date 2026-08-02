@@ -37,7 +37,7 @@ from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import get_logger
 
-logger = get_logger("harness_v7.tool_mediation")
+logger = get_logger("harness.tool_mediation")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

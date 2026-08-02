@@ -126,7 +126,7 @@ async def verify_t7(payload: T7VerifyRequest) -> dict[str, Any]:
         # This supports the T7 E2E test (test_t7_t8_e2e.py::test_explicit_t7_endpoint)
         # which audits a primary response by message_id after /api/chat returns.
         try:
-            from flowforge.app.api.endpoints.council import state as _council_state
+            from flowforge.app.api.agents.council import state as _council_state
         except ImportError as _exc:
             raise HTTPException(
                 status_code=503,

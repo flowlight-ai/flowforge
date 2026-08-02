@@ -33,6 +33,10 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",  # [standard] includes websockets + httptools
     "websockets>=12.0",          # imported directly by tests/test_websocket_load.py
+    # API / runtime extras (imported by app/core/scheduler/loop modules)
+    "pydantic-settings>=2.0",    # flowforge.core.config (BaseSettings)
+    "apscheduler>=3.10",         # flowforge.scheduler.scheduler
+    "python-multipart>=0.0.9",   # FastAPI Form/File route analysis
 ]
 
 [project.optional-dependencies]

@@ -1,232 +1,290 @@
-"""Tests for Plugin Protocol V3 — four self-evolution hooks.
+"""Tests for the FlowForge plugin system (core.plugin / plugin_protocol).
 
-Per TIP-032: each V3 hook receives its OWN registry type, not a shared one.
+Covers:
+- FlowForgePlugin base class: default state, manifest, name/version
+- V3 ForgeMind hooks (register_forgekins / register_forge_skills /
+  register_council_channels / register_auto_forge_config) — no-op by default
+  and callable with real registries
+- PluginRegistry (core/plugin.py) register / get / list / unregister lifecycle
+- PluginContext DI accessors
+- PluginManifest defaults
+- validate_plugin_config + fill_config_defaults helpers
+
+No LLM is involved — these are pure data-structure + lifecycle tests.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from flowforge.core.errors import PluginError
-from flowforge.core.plugin_protocol import (
+from flowforge.core.errors import PluginError, ForgekinError
+from flowforge.core.plugin import (
+    FlowForgePlugin,
     PluginContext,
-    PluginManager,
-    PluginProtocol,
-    PluginV3Registries,
-)
-from flowforge.core.registries import (
-    AutoForgeConfig,
-    AutoForgeRegistry,
-    CouncilChannelDescriptor,
-    CouncilRegistry,
-    SkillDescriptor,
-    SkillRegistry,
+    PluginManifest,
+    PluginRegistry,
+    PluginState,
+    fill_config_defaults,
+    validate_plugin_config,
 )
 from flowforge.forgemind.forgekin import Forgekin, ForgekinType
 from flowforge.forgemind.registry import ForgekinRegistry
 
 
-def _make_registries() -> PluginV3Registries:
-    """Build a fresh bundle of four empty registries for each test."""
-    return PluginV3Registries(
-        forgekin_registry=ForgekinRegistry(),
-        skill_registry=SkillRegistry(),
-        council_registry=CouncilRegistry(),
-        auto_forge_registry=AutoForgeRegistry(),
+class _DemoPlugin(FlowForgePlugin):
+    manifest = PluginManifest(
+        name="demo-plugin",
+        version="0.0.1",
+        description="demo",
     )
-
-
-class _DemoPlugin(PluginProtocol):
-    plugin_id = "demo-plugin"
-    plugin_version = "0.0.1"
-    plugin_description = "demo"
 
     def __init__(self) -> None:
+        super().__init__()
         self.calls: list[str] = []
 
-    def register_forgekins(self, registry: ForgekinRegistry) -> None:
+    def register_forgekins(self, registry) -> None:
         self.calls.append("forgekins")
-        registry.register(Forgekin(name="demo-fk", forgekin_type=ForgekinType.CUSTOM))
-
-    def register_forge_skills(self, registry: SkillRegistry) -> None:
-        self.calls.append("skills")
         registry.register(
-            SkillDescriptor(
-                skill_id="demo.skill",
-                name="Demo Skill",
-                source_plugin=self.plugin_id,
-            )
+            Forgekin(name="demo-fk", forgekin_type=ForgekinType.CUSTOM)
         )
 
-    def register_council_channels(self, registry: CouncilRegistry) -> None:
+    def register_council_channels(self, registry) -> None:
         self.calls.append("council")
-        registry.register(
-            CouncilChannelDescriptor(
-                channel_id="demo.review",
-                name="Demo Review",
-                source_plugin=self.plugin_id,
-            )
-        )
-
-    def register_auto_forge_config(self, registry: AutoForgeRegistry) -> None:
-        self.calls.append("auto_forge")
-        registry.register(
-            AutoForgeConfig(
-                config_id="demo.forge",
-                plugin_id=self.plugin_id,
-                domain="demo",
-            )
-        )
+        assert registry is not None
 
 
-def test_register_requires_plugin_id() -> None:
-    class _NoId(PluginProtocol):
-        plugin_id = ""
-
-        def register_forgekins(self, r): pass
-        def register_forge_skills(self, r): pass
-        def register_council_channels(self, r): pass
-        def register_auto_forge_config(self, r): pass
-
-    pm = PluginManager()
-    with pytest.raises(PluginError, match="non-empty plugin_id"):
-        pm.register(_NoId())
+# --------------------------------------------------------------------------- #
+# FlowForgePlugin base
+# --------------------------------------------------------------------------- #
 
 
-def test_register_rejects_duplicates() -> None:
-    pm = PluginManager()
-    pm.register(_DemoPlugin())
-    with pytest.raises(PluginError, match="already registered"):
-        pm.register(_DemoPlugin())
-
-
-def test_get_unknown_raises() -> None:
-    pm = PluginManager()
-    with pytest.raises(PluginError, match="not found"):
-        pm.get("bogus")
-
-
-def test_invoke_v3_hooks_calls_all_four_with_distinct_registries() -> None:
-    """TIP-032 fix: each hook must receive its OWN registry type."""
-    pm = PluginManager()
+def test_plugin_initial_state_is_uninitialized() -> None:
     plugin = _DemoPlugin()
-    pm.register(plugin)
-    registries = _make_registries()
-    pm.invoke_v3_hooks(registries)
+    assert plugin.state is PluginState.UNINITIALIZED
 
-    # All four hooks called in declared order
-    assert plugin.calls == ["forgekins", "skills", "council", "auto_forge"]
 
-    # Each registry received exactly one entry of its OWN type
-    assert registries.forgekin_registry.count() == 1
-    assert registries.skill_registry.count() == 1
-    assert registries.council_registry.count() == 1
-    assert registries.auto_forge_registry.count() == 1
+def test_plugin_name_version_from_manifest() -> None:
+    plugin = _DemoPlugin()
+    assert plugin.name == "demo-plugin"
+    assert plugin.version == "0.0.1"
 
-    # Cross-check: the forgekin registry must NOT contain skills / channels / configs
-    fk = registries.forgekin_registry.list_all()[0]
+
+def test_default_manifest_values() -> None:
+    manifest = PluginManifest()
+    assert manifest.name == ""
+    assert manifest.version == "0.1.0"
+    assert manifest.priority == 100
+    assert manifest.transport == "local"
+    assert manifest.safety_level == "normal"
+    assert manifest.tags == []
+    assert manifest.dependencies == []
+
+
+def test_name_falls_back_to_module_when_manifest_empty() -> None:
+    class _NoManifest(FlowForgePlugin):
+        pass
+
+    plugin = _NoManifest()
+    assert plugin.name == "flowforge"
+
+
+# --------------------------------------------------------------------------- #
+# V3 hooks — optional by default, callable with registries
+# --------------------------------------------------------------------------- #
+
+
+def test_v3_hooks_noop_by_default() -> None:
+    class _Minimal(FlowForgePlugin):
+        pass
+
+    plugin = _Minimal()
+    plugin.register_forgekins(ForgekinRegistry())
+    plugin.register_forge_skills(None)
+    plugin.register_council_channels(None)
+    plugin.register_auto_forge_config(None)
+
+
+def test_register_forgekins_registers_into_registry() -> None:
+    plugin = _DemoPlugin()
+    registry = ForgekinRegistry()
+    plugin.register_forgekins(registry)
+    assert plugin.calls == ["forgekins"]
+    assert registry.count() == 1
+    fk = registry.list_all()[0]
     assert isinstance(fk, Forgekin)
     assert fk.name == "demo-fk"
-
-    skill = registries.skill_registry.list_all()[0]
-    assert isinstance(skill, SkillDescriptor)
-    assert skill.skill_id == "demo.skill"
-
-    channel = registries.council_registry.list_all()[0]
-    assert isinstance(channel, CouncilChannelDescriptor)
-    assert channel.channel_id == "demo.review"
-
-    config = registries.auto_forge_registry.list_all()[0]
-    assert isinstance(config, AutoForgeConfig)
-    assert config.config_id == "demo.forge"
+    assert fk.forgekin_type is ForgekinType.CUSTOM
 
 
-def test_invoke_v3_hooks_propagates_errors_as_plugin_error() -> None:
-    class _BrokenPlugin(PluginProtocol):
-        plugin_id = "broken"
-
-        def register_forgekins(self, r): raise RuntimeError("boom")
-        def register_forge_skills(self, r): pass
-        def register_council_channels(self, r): pass
-        def register_auto_forge_config(self, r): pass
-
-    pm = PluginManager()
-    pm.register(_BrokenPlugin())
-    with pytest.raises(PluginError, match="V3 hook failed"):
-        pm.invoke_v3_hooks(_make_registries())
-
-
-def test_list_plugins() -> None:
-    pm = PluginManager()
-    pm.register(_DemoPlugin())
-    assert pm.list_plugins() == ["demo-plugin"]
-
-
-def test_plugin_context_carries_config_and_container() -> None:
-    ctx = PluginContext(config={"k": "v"}, container="stub")
-    assert ctx.config == {"k": "v"}
-    assert ctx.container == "stub"
-
-
-def test_v2_backcompat_hooks_optional() -> None:
+def test_register_forgekins_raises_forgekin_error_on_duplicate() -> None:
     plugin = _DemoPlugin()
-    # V2 hooks return empty lists by default
-    assert plugin.register_agents() == []
-    assert plugin.register_tools() == []
+    registry = ForgekinRegistry()
+    fk = Forgekin(name="demo-fk", forgekin_type=ForgekinType.CUSTOM)
+    registry.register(fk)
+    with pytest.raises(ForgekinError, match="already registered"):
+        registry.register(fk)
 
 
-def test_skill_registry_find_by_tag_and_plugin() -> None:
-    sr = SkillRegistry()
-    sr.register(
-        SkillDescriptor(
-            skill_id="s1",
-            name="S1",
-            capability_tags=["coding", "review"],
-            source_plugin="p1",
-        )
+def test_v2_hooks_are_noop_by_default() -> None:
+    plugin = _DemoPlugin()
+    plugin.register_agents(None)
+    plugin.register_tools(None)
+    plugin.register_workflows(None)
+
+
+# --------------------------------------------------------------------------- #
+# PluginRegistry (core/plugin.py) — lifecycle
+# --------------------------------------------------------------------------- #
+
+
+def test_registry_register_transitions_state_to_ready() -> None:
+    registry = PluginRegistry()
+    plugin = _DemoPlugin()
+    registry.register(plugin)
+    assert plugin.state is PluginState.READY
+    assert registry.get("demo-plugin") is plugin
+
+
+def test_registry_get_unknown_returns_none() -> None:
+    registry = PluginRegistry()
+    assert registry.get("bogus") is None
+
+
+def test_registry_list_plugins() -> None:
+    registry = PluginRegistry()
+    registry.register(_DemoPlugin())
+    assert registry.list_plugins() == ["demo-plugin"]
+
+
+def test_registry_unregister_calls_shutdown() -> None:
+    registry = PluginRegistry()
+    plugin = _DemoPlugin()
+    registry.register(plugin)
+    registry.unregister("demo-plugin")
+    assert plugin.state is PluginState.STOPPED
+    assert registry.get("demo-plugin") is None
+    assert registry.list_plugins() == []
+
+
+def test_registry_unregister_unknown_is_noop() -> None:
+    registry = PluginRegistry()
+    registry.unregister("does-not-exist")
+    assert registry.list_plugins() == []
+
+
+def test_registry_startup_failure_marks_error() -> None:
+    class _Boom(FlowForgePlugin):
+        manifest = PluginManifest(name="boom-plugin")
+
+        def on_startup(self, context: dict) -> None:
+            raise RuntimeError("startup exploded")
+
+    registry = PluginRegistry()
+    plugin = _Boom()
+    registry.register(plugin)
+    assert plugin.state is PluginState.ERROR
+
+
+# --------------------------------------------------------------------------- #
+# PluginContext
+# --------------------------------------------------------------------------- #
+
+
+def test_plugin_context_carries_services_and_config() -> None:
+    ctx = PluginContext(
+        agent_registry="ar",
+        tool_registry="tr",
+        mode_registry="mr",
+        event_bus="eb",
+        scheduler="sched",
+        app="app",
+        config={"k": "v"},
+        plugin_config={"p": "q"},
     )
-    sr.register(
-        SkillDescriptor(
-            skill_id="s2",
-            name="S2",
-            capability_tags=["coding"],
-            source_plugin="p2",
-        )
+    assert ctx.agent_registry == "ar"
+    assert ctx.tool_registry == "tr"
+    assert ctx.mode_registry == "mr"
+    assert ctx.event_bus == "eb"
+    assert ctx.scheduler == "sched"
+    assert ctx.app == "app"
+    assert ctx.config == {"k": "v"}
+    assert ctx.plugin_config == {"p": "q"}
+
+
+def test_plugin_context_forgekin_registry_accessor() -> None:
+    fk_registry = ForgekinRegistry()
+    ctx = PluginContext(
+        agent_registry=None,
+        tool_registry=None,
+        mode_registry=None,
+        event_bus=None,
+        scheduler=None,
+        app=None,
+        forgekin_registry=fk_registry,
     )
-    assert len(sr.find_by_tag("coding")) == 2
-    assert len(sr.find_by_tag("review")) == 1
-    assert len(sr.find_by_plugin("p1")) == 1
-    assert sr.find_by_plugin("p1")[0].skill_id == "s1"
+    assert ctx.forgekin_registry is fk_registry
+    assert ctx.council_registry is None
 
 
-def test_council_registry_unregister() -> None:
-    cr = CouncilRegistry()
-    cr.register(
-        CouncilChannelDescriptor(channel_id="ch1", name="CH1", source_plugin="p1")
+def test_plugin_context_register_service() -> None:
+    ctx = PluginContext(
+        agent_registry=None,
+        tool_registry=None,
+        mode_registry=None,
+        event_bus=None,
+        scheduler=None,
+        app=None,
     )
-    assert cr.count() == 1
-    removed = cr.unregister("ch1")
-    assert removed.channel_id == "ch1"
-    assert cr.count() == 0
+    ctx.register_service("custom", {"x": 1})
+    assert ctx.get_service("custom") == {"x": 1}
+    assert ctx.get_service("missing") is None
 
 
-def test_auto_forge_registry_find_by_domain() -> None:
-    ar = AutoForgeRegistry()
-    ar.register(AutoForgeConfig(config_id="c1", plugin_id="p1", domain="coding"))
-    ar.register(AutoForgeConfig(config_id="c2", plugin_id="p2", domain="writing"))
-    assert len(ar.find_by_domain("coding")) == 1
-    assert len(ar.find_by_domain("writing")) == 1
-    assert len(ar.find_by_domain("nonexistent")) == 0
+# --------------------------------------------------------------------------- #
+# validate_plugin_config / fill_config_defaults
+# --------------------------------------------------------------------------- #
 
 
-def test_skill_registry_rejects_empty_id() -> None:
-    sr = SkillRegistry()
-    with pytest.raises(PluginError, match="non-empty skill_id"):
-        sr.register(SkillDescriptor(skill_id="", name="bad"))
+def test_validate_config_accepts_valid() -> None:
+    schema = {
+        "name": {"type": "string", "required": True},
+        "count": {"type": "integer", "required": False, "default": 10},
+    }
+    ok, errors = validate_plugin_config({"name": "x"}, schema)
+    assert ok is True
+    assert errors == []
 
 
-def test_council_registry_rejects_duplicates() -> None:
-    cr = CouncilRegistry()
-    cr.register(CouncilChannelDescriptor(channel_id="dup", name="D"))
-    with pytest.raises(PluginError, match="already registered"):
-        cr.register(CouncilChannelDescriptor(channel_id="dup", name="D2"))
+def test_validate_config_reports_missing_required() -> None:
+    schema = {"name": {"type": "string", "required": True}}
+    ok, errors = validate_plugin_config({}, schema)
+    assert ok is False
+    assert any("Missing required field: name" in e for e in errors)
+
+
+def test_validate_config_type_mismatch() -> None:
+    schema = {"count": {"type": "integer"}}
+    ok, errors = validate_plugin_config({"count": "not-an-int"}, schema)
+    assert ok is False
+    assert any("expected type integer" in e for e in errors)
+
+
+def test_validate_config_fills_default_from_config() -> None:
+    schema = {"count": {"type": "integer", "default": 10}}
+    cfg = {}
+    ok, _ = validate_plugin_config(cfg, schema)
+    assert ok is True
+    assert cfg["count"] == 10
+
+
+def test_fill_config_defaults_returns_new_dict() -> None:
+    schema = {
+        "name": {"type": "string", "default": "default-name"},
+        "count": {"type": "integer", "default": 3},
+    }
+    cfg = {"name": "override"}
+    result = fill_config_defaults(cfg, schema)
+    assert result["name"] == "override"
+    assert result["count"] == 3
+    # original not mutated
+    assert "count" not in cfg

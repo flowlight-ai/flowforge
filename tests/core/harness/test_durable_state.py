@@ -1,62 +1,99 @@
-"""Tests for the Harness seven-layer guardrail (roleagent.md Ch.7).
+"""Tests for the Harness layer (roleagent.md Ch.3 / Ch.7).
 
-Covers all seven layers in one module per task.md P1-3:
-- DurableStateSurface snapshot/restore round-trip
-- ToolMediator allowlist enforcement (authorized caller passes, unauthorized raises)
-- EvidenceCollector record/verify/cross-check
-- GovernanceBoundary rule violation detection (forbidden action triggers violation)
-- MagicWordsRegistry bilingual detection (中文"停止" + 英文"halt")
-- EntropyController TTL expiry cleanup
-- HarnessabilityScorer score + grade (1.0 -> A, 0.5 -> C or D)
+Covers the current harness components per task.md P1-3:
+- SqliteDurableState write/read/delete + optimistic-version increment
+- ToolMediator whitelist / alias fallback / dangerous rejection / audit trail
+- EvidenceCollector collect/verify integrity (hash check)
+- GovernanceInjector SYSTEM_ROLE injection + compression immunity
+- DebtTracker / RuleEvolution entropy management
+
+> TODO(refactor): MagicWordsRegistry / GovernanceBoundary / HarnessabilityScorer
+> were removed in the v7.0 refactor; magic-words moved to
+> flowforge.forgemind.magic_words (covered in tests/test_forgekin.py).
+
+No LLM is involved — these are pure data-structure + logic tests.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
-from flowforge.core.errors import HarnessError, ToolAllowlistViolation
-from flowforge.core.harness import (
-    DEFAULT_MAGIC_WORDS,
-    DurableStateSurface,
-    EntropyController,
-    EvidenceCollector,
-    GovernanceBoundary,
-    HarnessabilityFactors,
-    HarnessabilityScorer,
-    MagicWordAction,
-    MagicWordsRegistry,
+from flowforge.core.errors import HarnessError
+from flowforge.harness.durable_state import SqliteDurableState
+from flowforge.harness.entropy_manager import (
+    DebtSeverity,
+    DebtStatus,
+    DebtTracker,
+    RuleEvolution,
+    RuleLifecycle,
+)
+from flowforge.harness.evidence_sensors import EvidenceCollector, EvidenceSource
+from flowforge.harness.governance import (
+    GovernanceInjector,
+    GovernanceRule,
+    InjectionPoint,
+)
+from flowforge.harness.tool_mediation import (
+    MediationOutcome,
+    SafetyLevel,
+    ToolDescriptor,
     ToolMediator,
 )
 
 
 # ---------------------------------------------------------------------------
-# Layer 1 — DurableStateSurface
+# Layer 1 — DurableStateSurface (SqliteDurableState)
 # ---------------------------------------------------------------------------
 
 
-def test_durable_state_snapshot_restore_roundtrip() -> None:
-    surface = DurableStateSurface()
-    state = {"step": 3, "items": ["a", "b"], "nested": {"k": 1}}
-    snapshot_id = surface.snapshot(state)
-
-    assert isinstance(snapshot_id, str)
-    assert snapshot_id in surface.list_snapshots()
-
-    restored = surface.restore(snapshot_id)
-    assert restored == state
-    # Mutating the restored copy must not corrupt the stored snapshot.
-    restored["step"] = 999
-    restored["items"].append("c")
-    again = surface.restore(snapshot_id)
-    assert again == state
+@pytest.fixture
+def surface(tmp_path: Path) -> SqliteDurableState:
+    return SqliteDurableState(tmp_path / "state.db")
 
 
-def test_durable_state_restore_unknown_raises() -> None:
-    surface = DurableStateSurface()
-    with pytest.raises(HarnessError):
-        surface.restore("nonexistent")
+@pytest.mark.asyncio
+async def test_durable_state_write_read_roundtrip(surface: SqliteDurableState) -> None:
+    state = await surface.write("task:3:status", {"step": 3, "items": ["a", "b"]}, writer="fk-a")
+    assert state.key == "task:3:status"
+    assert state.version == 1
+    assert state.last_writer == "fk-a"
+
+    value = await surface.read("task:3:status")
+    assert value == {"step": 3, "items": ["a", "b"]}
+
+
+@pytest.mark.asyncio
+async def test_durable_state_read_missing_returns_none(surface: SqliteDurableState) -> None:
+    assert await surface.read("nonexistent") is None
+
+
+@pytest.mark.asyncio
+async def test_durable_state_write_increments_version(surface: SqliteDurableState) -> None:
+    await surface.write("key", "v1", writer="fk-a")
+    state = await surface.write("key", "v2", writer="fk-b")
+    assert state.version == 2
+    assert state.last_writer == "fk-b"
+    assert await surface.read("key") == "v2"
+
+
+@pytest.mark.asyncio
+async def test_durable_state_delete(surface: SqliteDurableState) -> None:
+    await surface.write("key", "value", writer="fk-a")
+    assert await surface.delete("key") is True
+    assert await surface.read("key") is None
+    assert await surface.delete("key") is False
+
+
+@pytest.mark.asyncio
+async def test_durable_state_preserves_created_at_across_updates(
+    surface: SqliteDurableState,
+) -> None:
+    first = await surface.write("key", "v1", writer="fk-a")
+    second = await surface.write("key", "v2", writer="fk-b")
+    assert second.created_at == first.created_at
+    assert second.updated_at != first.updated_at
 
 
 # ---------------------------------------------------------------------------
@@ -64,52 +101,86 @@ def test_durable_state_restore_unknown_raises() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_tool_mediator_allowlist_allows_authorized_caller() -> None:
-    mediator = ToolMediator()
-
-    async def add(x: int, y: int) -> int:
-        return x + y
-
-    mediator.register_tool("add", add, allowlist=["worker-a", "worker-b"])
-    result = await mediator.invoke("add", {"x": 2, "y": 3}, caller="worker-a")
-    assert result.success is True
-    assert result.output == 5
-    assert result.error is None
-    assert result.duration_ms >= 0.0
-
-
-@pytest.mark.asyncio
-async def test_tool_mediator_allowlist_rejects_unauthorized_caller() -> None:
-    mediator = ToolMediator()
-
-    async def secret(value: str) -> str:
-        return value.upper()
-
-    mediator.register_tool("secret", secret, allowlist=["trusted"])
-    with pytest.raises(ToolAllowlistViolation):
-        await mediator.invoke("secret", {"value": "hi"}, caller="intruder")
+def _make_mediator() -> ToolMediator:
+    return ToolMediator(
+        whitelist=[
+            ToolDescriptor(
+                tool_name="file_read",
+                safety_level=SafetyLevel.READONLY,
+            ),
+            ToolDescriptor(
+                tool_name="shell_exec",
+                safety_level=SafetyLevel.DANGEROUS,
+                side_effects=["filesystem", "network"],
+            ),
+            ToolDescriptor(
+                tool_name="irreversible_op",
+                safety_level=SafetyLevel.NORMAL,
+                reversible=False,
+            ),
+        ]
+    )
 
 
 @pytest.mark.asyncio
-async def test_tool_mediator_unknown_tool_raises() -> None:
-    mediator = ToolMediator()
-    with pytest.raises(HarnessError):
-        await mediator.invoke("ghost", {}, caller="anyone")
+async def test_mediator_allows_authorized_readonly_tool() -> None:
+    mediator = _make_mediator()
+    result = await mediator.mediate("file_read", {"path": "/tmp/x"})
+    assert result.outcome is MediationOutcome.ALLOWED
+    assert result.canonical_tool == "file_read"
 
 
 @pytest.mark.asyncio
-async def test_tool_mediator_handler_failure_returns_failed_result() -> None:
-    mediator = ToolMediator()
+async def test_mediator_rejects_unknown_tool() -> None:
+    mediator = _make_mediator()
+    result = await mediator.mediate("ghost_tool", {})
+    assert result.outcome is MediationOutcome.REJECTED_NOT_AUTHORIZED
+    assert result.canonical_tool is None
 
-    async def boom() -> None:
-        raise RuntimeError("kaboom")
 
-    mediator.register_tool("boom", boom, allowlist=["caller"])
-    result = await mediator.invoke("boom", {}, caller="caller")
-    assert result.success is False
-    assert result.output is None
-    assert "kaboom" in (result.error or "")
+@pytest.mark.asyncio
+async def test_mediator_dangerous_requires_confirm() -> None:
+    mediator = _make_mediator()
+    result = await mediator.mediate("shell_exec", {"cmd": "rm -rf"})
+    assert result.outcome is MediationOutcome.REJECTED_DANGEROUS
+
+    confirmed = await mediator.mediate("shell_exec", {"cmd": "ls"}, confirmed_dangerous=True)
+    assert confirmed.outcome is MediationOutcome.ALLOWED
+
+
+@pytest.mark.asyncio
+async def test_mediator_rejects_non_reversible_without_confirm() -> None:
+    mediator = _make_mediator()
+    result = await mediator.mediate("irreversible_op", {})
+    assert result.outcome is MediationOutcome.REJECTED_NOT_REVERSIBLE
+
+
+@pytest.mark.asyncio
+async def test_mediator_alias_fallback() -> None:
+    mediator = _make_mediator()
+    mediator.register_alias("read", "file_read")
+    result = await mediator.mediate("read", {"path": "/tmp/x"})
+    assert result.outcome is MediationOutcome.ALIAS_FALLBACK
+    assert result.canonical_tool == "file_read"
+
+
+@pytest.mark.asyncio
+async def test_mediator_records_audit_trail() -> None:
+    mediator = _make_mediator()
+    await mediator.mediate("file_read", {"path": "/a"})
+    await mediator.mediate("ghost_tool", {})
+    trail = mediator.get_audit_trail()
+    assert len(trail) == 2
+    assert mediator.get_audit_trail("file_read") == [trail[0]]
+
+
+@pytest.mark.asyncio
+async def test_mediator_sanitizes_long_args() -> None:
+    mediator = _make_mediator()
+    long_value = "x" * 500
+    result = await mediator.mediate("file_read", {"path": long_value})
+    assert len(result.args["path"]) < 250
+    assert "(truncated)" in result.args["path"]
 
 
 # ---------------------------------------------------------------------------
@@ -117,218 +188,221 @@ async def test_tool_mediator_handler_failure_returns_failed_result() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_evidence_record_and_verify() -> None:
+@pytest.mark.asyncio
+async def test_evidence_collect_and_verify() -> None:
     collector = EvidenceCollector()
-    ev = collector.record_evidence(
-        source="web_search",
-        content="Python 3.11 was released in October 2022.",
-        evidence_type="fact",
+    evidence = await collector.collect(
+        source_type=EvidenceSource.COMMIT,
+        content="abc123 shipped the feature",
+        metadata={"commit_url": "https://example/abc123"},
     )
-    assert ev.verified is False
-    assert collector.list_unverified() == [ev]
-
-    collector.verify(ev.evidence_id, verifier="reviewer-1")
-    assert ev.verified is True
-    assert collector.list_unverified() == []
+    assert evidence.verified is True
+    assert collector.get_evidence(evidence.evidence_id) is evidence
+    assert collector.list_evidence(EvidenceSource.COMMIT) == [evidence]
 
 
-def test_evidence_verify_unknown_raises() -> None:
+@pytest.mark.asyncio
+async def test_evidence_verify_detects_tampering() -> None:
     collector = EvidenceCollector()
-    with pytest.raises(HarnessError):
-        collector.verify("missing", verifier="r")
+    evidence = await collector.collect(
+        source_type=EvidenceSource.TRACE, content="original trace"
+    )
+    evidence.content = "tampered trace"
+    assert await collector.verify(evidence) is False
 
 
-def test_evidence_cross_check_identical_content() -> None:
+@pytest.mark.asyncio
+async def test_evidence_collect_rejects_disabled_source() -> None:
+    collector = EvidenceCollector(
+        enabled_sources={EvidenceSource.COMMIT, EvidenceSource.TEST}
+    )
+    with pytest.raises(ValueError, match="not enabled"):
+        await collector.collect(source_type=EvidenceSource.LOG, content="x")
+
+
+@pytest.mark.asyncio
+async def test_evidence_hash_is_deterministic() -> None:
     collector = EvidenceCollector()
-    a = collector.record_evidence("s1", "hello world", "t")
-    b = collector.record_evidence("s2", "hello world", "t")
-    assert collector.cross_check(a, b) == pytest.approx(1.0)
-
-
-def test_evidence_cross_check_disjoint_content() -> None:
-    collector = EvidenceCollector()
-    a = collector.record_evidence("s1", "aaaaa", "t")
-    b = collector.record_evidence("s2", "zzzzz", "t")
-    assert collector.cross_check(a, b) == pytest.approx(0.0)
+    e1 = await collector.collect(EvidenceSource.TEST, "same content")
+    e2 = await collector.collect(EvidenceSource.TEST, "same content")
+    assert e1.hash == e2.hash
 
 
 # ---------------------------------------------------------------------------
-# Layer 4 — GovernanceBoundary
+# Layer 4 — GovernanceInjector
 # ---------------------------------------------------------------------------
 
 
-def test_governance_violation_detected() -> None:
-    gov = GovernanceBoundary()
-    gov.add_rule(
-        rule_id="no_direct_db",
-        description="直接操作数据库",
-        severity="critical",
+def _make_injector() -> GovernanceInjector:
+    injector = GovernanceInjector()
+    injector.register_rule(
+        GovernanceRule(
+            rule_id="no_direct_db",
+            content="Forbidden: direct DB access must go through the Repository layer",
+            priority=95,
+        )
     )
-    violations = gov.check_violation("agent 试图直接操作数据库以绕过 Repository")
-    assert len(violations) == 1
-    assert violations[0].rule_id == "no_direct_db"
-    assert "no_direct_db" in violations[0].message
-
-
-def test_governance_no_violation_when_action_clean() -> None:
-    gov = GovernanceBoundary()
-    gov.add_rule("no_direct_db", "直接操作数据库", "critical")
-    assert gov.check_violation("agent called Repository.save()") == []
-
-
-def test_governance_case_insensitive_match() -> None:
-    gov = GovernanceBoundary()
-    gov.add_rule("no_drop", "DROP TABLE", "high")
-    violations = gov.check_violation("someone ran drop table users")
-    assert len(violations) == 1
-    assert violations[0].rule_id == "no_drop"
-
-
-# ---------------------------------------------------------------------------
-# Layer 5 — MagicWordsRegistry
-# ---------------------------------------------------------------------------
-
-
-def test_magic_words_detect_chinese_stop() -> None:
-    registry = MagicWordsRegistry()
-    registry.register_word("停止", MagicWordAction.HALT)
-    detections = registry.detect("请立即停止当前操作")
-    assert len(detections) == 1
-    assert detections[0].word == "停止"
-    assert detections[0].action == MagicWordAction.HALT
-    assert detections[0].position >= 0
-    assert "停止" in detections[0].context
-
-
-def test_magic_words_detect_english_halt() -> None:
-    registry = MagicWordsRegistry()
-    registry.register_word("halt", MagicWordAction.HALT)
-    detections = registry.detect("the system should halt immediately")
-    assert len(detections) == 1
-    assert detections[0].word == "halt"
-    assert detections[0].action == MagicWordAction.HALT
-
-
-def test_magic_words_detect_multiple_words_bilingual() -> None:
-    registry = MagicWordsRegistry()
-    registry.register_word("停止", MagicWordAction.HALT)
-    registry.register_word("halt", MagicWordAction.HALT)
-    text = "first 停止 then halt"
-    detections = registry.detect(text)
-    words = {d.word for d in detections}
-    assert words == {"停止", "halt"}
-
-
-def test_magic_words_with_defaults_includes_bilingual_set() -> None:
-    registry = MagicWordsRegistry.with_defaults()
-    assert "停止" in registry.list_words()
-    assert "halt" in registry.list_words()
-    assert "stop" in registry.list_words()
-    # DEFAULT_MAGIC_WORDS is exposed and non-empty.
-    assert "停止" in DEFAULT_MAGIC_WORDS
-
-
-def test_magic_words_no_detection_when_absent() -> None:
-    registry = MagicWordsRegistry()
-    registry.register_word("halt", MagicWordAction.HALT)
-    assert registry.detect("all good here") == []
-
-
-# ---------------------------------------------------------------------------
-# Layer 6 — EntropyController
-# ---------------------------------------------------------------------------
-
-
-def test_entropy_cleanup_expired() -> None:
-    controller = EntropyController()
-    controller.register_artifact("stale", ttl_seconds=10)
-    controller.register_artifact("fresh", ttl_seconds=3600)
-
-    # Backdate the stale entry so it is past its TTL.
-    entry = controller.get_entry("stale")
-    assert entry is not None
-    entry.last_touched = datetime.now(timezone.utc) - timedelta(seconds=100)
-
-    expired = controller.list_expired()
-    assert expired == ["stale"]
-
-    cleaned = controller.cleanup_expired()
-    assert cleaned == 1
-    assert controller.count() == 1
-    assert controller.get_entry("stale") is None
-    assert controller.get_entry("fresh") is not None
-
-
-def test_entropy_touch_resets_ttl() -> None:
-    controller = EntropyController()
-    controller.register_artifact("a1", ttl_seconds=10)
-    entry = controller.get_entry("a1")
-    assert entry is not None
-    entry.last_touched = datetime.now(timezone.utc) - timedelta(seconds=100)
-    assert controller.list_expired() == ["a1"]
-
-    controller.touch("a1")
-    assert controller.list_expired() == []
-
-
-def test_entropy_register_duplicate_raises() -> None:
-    controller = EntropyController()
-    controller.register_artifact("a1", ttl_seconds=10)
-    with pytest.raises(HarnessError):
-        controller.register_artifact("a1", ttl_seconds=10)
-
-
-# ---------------------------------------------------------------------------
-# Layer 7 — HarnessabilityScorer
-# ---------------------------------------------------------------------------
-
-
-def test_harnessability_perfect_score_is_A() -> None:
-    scorer = HarnessabilityScorer()
-    factors = HarnessabilityFactors(
-        durable_state_coverage=1.0,
-        tool_allowlist_strictness=1.0,
-        evidence_completeness=1.0,
-        governance_rule_count=5,
-        magic_word_coverage=1.0,
-        entropy_cleanup_rate=1.0,
+    injector.register_rule(
+        GovernanceRule(
+            rule_id="code_style",
+            content="Follow PEP 8 for all Python code",
+            priority=30,
+        )
     )
-    score = scorer.score(factors)
-    assert score == pytest.approx(1.0)
-    assert scorer.grade(score) == "A"
-    # grade() also works on a raw float.
-    assert scorer.grade(1.0) == "A"
+    return injector
 
 
-def test_harnessability_mid_score_is_C_or_D() -> None:
-    scorer = HarnessabilityScorer()
-    assert scorer.grade(0.5) in ("C", "D")
-    # Confirm 0.5 actually maps to D under the chosen thresholds.
-    assert scorer.grade(0.5) == "D"
+@pytest.mark.asyncio
+async def test_governance_inject_to_system_role() -> None:
+    injector = _make_injector()
+    text = await injector.inject_to_system_role(rule_id="no_direct_db")
+    assert "no_direct_db" in text
+    assert "Repository layer" in text
 
 
-def test_harnessability_score_weights_sum_to_one() -> None:
-    # If every factor is 0.5 and governance is saturated (5 rules -> 1.0),
-    # the weighted sum is: 0.5*(0.2+0.2+0.2+0.15+0.1) + 1.0*0.15
-    #                    = 0.5*0.85 + 0.15 = 0.425 + 0.15 = 0.575
-    scorer = HarnessabilityScorer()
-    factors = HarnessabilityFactors(
-        durable_state_coverage=0.5,
-        tool_allowlist_strictness=0.5,
-        evidence_completeness=0.5,
-        governance_rule_count=5,
-        magic_word_coverage=0.5,
-        entropy_cleanup_rate=0.5,
+@pytest.mark.asyncio
+async def test_governance_default_injection_point_is_system_role() -> None:
+    rule = GovernanceRule(
+        rule_id="GOV-001",
+        content="some rule",
+        priority=50,
     )
-    score = scorer.score(factors)
-    assert score == pytest.approx(0.575)
-    assert scorer.grade(score) == "D"
+    assert rule.injection_point is InjectionPoint.SYSTEM_ROLE
 
 
-def test_harnessability_grade_boundaries() -> None:
-    scorer = HarnessabilityScorer()
-    assert scorer.grade(0.95) == "A"
-    assert scorer.grade(0.85) == "B"
-    assert scorer.grade(0.65) == "C"
-    assert scorer.grade(0.45) == "D"
-    assert scorer.grade(0.2) == "F"
+@pytest.mark.asyncio
+async def test_governance_critical_rule_forced_to_system_role() -> None:
+    injector = _make_injector()
+    critical = GovernanceRule(
+        rule_id="GOV-CRIT",
+        content="critical invariant",
+        priority=95,
+        injection_point=InjectionPoint.USER_MESSAGE,
+    )
+    text = await injector.inject_to_user_message(critical)
+    # critical rule is forced into SYSTEM_ROLE template
+    assert "[GOVERNANCE RULE #GOV-CRIT]" in text
+    assert "[提示]" not in text
+
+
+@pytest.mark.asyncio
+async def test_governance_noncritical_user_message_allowed() -> None:
+    injector = _make_injector()
+    rule = GovernanceRule(
+        rule_id="GOV-SOFT",
+        content="soft hint",
+        priority=10,
+        injection_point=InjectionPoint.USER_MESSAGE,
+    )
+    text = await injector.inject_to_user_message(rule)
+    assert "[提示]" in text
+
+
+@pytest.mark.asyncio
+async def test_governance_batch_injects_sorted_by_priority() -> None:
+    injector = _make_injector()
+    text = await injector.inject_to_system_role_batch()
+    # highest priority rule appears first
+    assert text.index("no_direct_db") < text.index("code_style")
+
+
+@pytest.mark.asyncio
+async def test_governance_unknown_rule_id_raises() -> None:
+    injector = _make_injector()
+    with pytest.raises(ValueError, match="not registered"):
+        await injector.inject_to_system_role(rule_id="ghost-rule")
+
+
+# ---------------------------------------------------------------------------
+# Layer 6 — Entropy management: DebtTracker + RuleEvolution
+# ---------------------------------------------------------------------------
+
+
+def test_debt_tracker_record_and_open_items() -> None:
+    tracker = DebtTracker()
+    item_id = tracker.record(
+        "agent bypassed repository layer",
+        severity=DebtSeverity.HIGH,
+        source="harness_violation",
+    )
+    assert item_id.startswith("DEBT-")
+    open_items = tracker.get_open_items()
+    assert len(open_items) == 1
+    assert open_items[0].severity is DebtSeverity.HIGH
+
+
+def test_debt_tracker_update_status_closes_item() -> None:
+    tracker = DebtTracker()
+    item_id = tracker.record("some debt")
+    assert tracker.update_status(item_id, DebtStatus.RESOLVED) is True
+    assert tracker.get_open_items() == []
+    assert tracker.update_status("nope", DebtStatus.RESOLVED) is False
+
+
+def test_debt_tracker_summary_counts() -> None:
+    tracker = DebtTracker()
+    tracker.record("debt A", severity=DebtSeverity.HIGH)
+    tracker.record("debt B", severity=DebtSeverity.LOW)
+    summary = tracker.get_summary()
+    assert summary["total_items"] == 2
+    assert summary["open_items"] == 2
+    assert summary["by_severity"][DebtSeverity.HIGH.value] == 1
+    assert summary["by_severity"][DebtSeverity.LOW.value] == 1
+
+
+def test_rule_evolution_propose_and_activate() -> None:
+    evolution = RuleEvolution()
+    rule_id = evolution.propose("no-direct-db", "DB access must use Repository")
+    rule = evolution.rules[rule_id]
+    assert rule.lifecycle is RuleLifecycle.PROPOSED
+    assert rule.version == 1
+
+    assert evolution.activate(rule_id) is True
+    assert evolution.rules[rule_id].lifecycle is RuleLifecycle.ACTIVE
+
+
+def test_rule_evolution_mutation_increments_version() -> None:
+    evolution = RuleEvolution()
+    rule_id = evolution.propose("rule-a", "v1 description")
+    assert evolution.activate(rule_id) is True
+    new_id = evolution.mutate(rule_id, "v2 description")
+    assert new_id is not None
+    # original is deprecated, new version is active
+    assert evolution.rules[rule_id].lifecycle is RuleLifecycle.DEPRECATED
+    new_rule = evolution.rules[new_id]
+    assert new_rule.version == 2
+    assert new_rule.mutation_count == 1
+    assert new_rule.description == "v2 description"
+    assert new_rule.parent_id == rule_id
+
+
+def test_rule_evolution_deprecate_and_retire() -> None:
+    evolution = RuleEvolution()
+    rule_id = evolution.propose("rule-b", "desc")
+    evolution.activate(rule_id)
+    assert evolution.deprecate(rule_id) is True
+    assert evolution.rules[rule_id].lifecycle is RuleLifecycle.DEPRECATED
+    assert evolution.retire(rule_id) is True
+    assert evolution.rules[rule_id].lifecycle is RuleLifecycle.RETIRED
+    assert evolution.get_active_rules() == []
+
+
+def test_rule_evolution_unknown_operations_return_false() -> None:
+    evolution = RuleEvolution()
+    assert evolution.activate("missing") is False
+    assert evolution.mutate("missing", "x") is None
+    assert evolution.deprecate("missing") is False
+
+
+# ---------------------------------------------------------------------------
+# Deferred (removed in v7.0 refactor)
+# ---------------------------------------------------------------------------
+
+
+def test_removed_harness_collaborators_todo() -> None:
+    """MagicWordsRegistry / GovernanceBoundary / HarnessabilityScorer were removed.
+
+    Magic-words moved to flowforge.forgemind.magic_words (see tests/test_forgekin.py).
+    TODO(refactor): re-add coverage for the missing layers when reimplemented.
+    """
+    assert True

@@ -56,7 +56,10 @@ def npm_args(extra: list[str]) -> list[str]:
 
 
 def start_process(
-    cmd: list[str], log_path: Path, cwd: Path | None = None
+    cmd: list[str],
+    log_path: Path,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
 ) -> tuple[subprocess.Popen, object]:
     """Start a background process whose stdout+stderr append to log_path.
 
@@ -69,6 +72,8 @@ def start_process(
         "stderr": subprocess.STDOUT,
         "cwd": str(cwd) if cwd else None,
     }
+    if env is not None:
+        kwargs["env"] = env
     if sys.platform == "win32":
         # New process group so CTRL_BREAK_EVENT can reach the whole tree
         # (npm spawns child processes — killing only npm would orphan them).
@@ -198,9 +203,15 @@ def main() -> int:
                 py, "-m", "uvicorn", "flowforge.app.main:app",
                 "--host", args.host, "--port", str(args.backend_port),
             ]
+            # The repo root IS the ``flowforge`` package (root __init__.py), so
+            # the parent directory must be importable for ``flowforge.app.main``.
+            env = dict(os.environ)
+            parent = str(PROJECT_ROOT.parent)
+            existing = env.get("PYTHONPATH", "")
+            env["PYTHONPATH"] = f"{parent}{os.pathsep}{existing}" if existing else parent
             print(f"  $ {' '.join(cmd)}")
             print(f"  log -> {backend_log}")
-            proc, lf = start_process(cmd, backend_log, cwd=PROJECT_ROOT)
+            proc, lf = start_process(cmd, backend_log, cwd=PROJECT_ROOT, env=env)
             procs.append(("backend", proc, lf))
 
         if start_frontend:

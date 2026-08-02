@@ -152,9 +152,9 @@ async def get_plugin_frontend(plugin_name: str):
     Returns the plugin's frontend_entry and mount_points so that
     the web UI can dynamically load plugin components.
     """
-    from flowforge.app.main import _loaded_plugins
+    from flowforge.app.main import plugin_loader
 
-    for p in _loaded_plugins:
+    for p in plugin_loader.loaded_plugins:
         if p.name == plugin_name:
             manifest = p.manifest
             if not manifest.frontend_entry:

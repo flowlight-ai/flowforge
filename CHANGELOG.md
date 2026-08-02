@@ -5,55 +5,47 @@ All notable changes to FlowForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-08-02
+
+Initial public release of FlowForge ― a configuration-driven Persistent Identity
+Agent framework with built-in self-evolution loops.
 
 ### Added
-- Project scaffolding: LICENSE, CODEOWNERS, .gitignore, .editorconfig
-- Security policy: SECURITY.md with five Iron Laws
-- Contributor License Agreement: CLA.md (bilingual)
-- Contributing guide: CONTRIBUTING.md (bilingual)
-- Maintainers guide: MAINTAINERS.md
-- Trademark policy: TRADEMARKS.md
-- GitHub Actions: CI, release, CodeQL, docs, labels workflows
-- Issue templates: bug report, feature request
-- Pull request template
-- Dependabot configuration
-- Code of Conduct (Contributor Covenant 2.1)
+- **Persistent Identity (Forgekin)** — long-lived agents with Soul Imprint, Capability Profile, and EchoStore
+- **Self-Devolution Loops** — five closed loops (docs / code / review / test / framework) under governance gates
+- **Five default Forgekins** — config-driven YAML profiles under `config/forgekins/`
+- **Cross-Vendor Review** — I9 invariant: reviewers must come from a different vendor than the author
+- **Multi-Domain Memory Federation** — five memory domains federated through the MindCodex codex
+- **Seven-Layer Harness Engineering** — durable_state / tool_mediation / evidence_sensors / governance / magic_words / entropy_control / harnessability
+- **External Agent Integration** — Claude Code / Codex / Gemini / OpenCode / Trae CN adapters (`core/external_agent/`)
+- **ForgeMind application layer** — species / forging / council / marketplace / lineage (`flowforge/forgemind/`)
+- **Evolution Engine** — three modes (Scope Guard, Process Evolution, Knowledge Evolution)
+- **Loop Executor** — Discover → Assign → Act → Verify → Persist
+- **IM Council channels** — WebChat + Feishu mirror with I8 operator-approval workflow
+- **FastAPI backend + Next.js 14 frontend** — Forgekin Council Chat UI
+- **CLI** — `flowforge` command-line interface
+- **Setup & verification scripts** — `scripts/setup.py`, `scripts/start.py`, `scripts/verify_five_forgekins.py`, `scripts/install_agents.py`
+- Project governance: LICENSE, CLA, CODEOWNERS, SECURITY.md, CONTRIBUTING.md, MAINTAINERS.md, TRADEMARKS.md
+- GitHub Actions: CI, release, CodeQL, docs, labels, stale, welcome workflows
+- Issue templates, pull request template, dependabot config, Code of Conduct
 
 ### Changed
-- Nothing yet.
-
-### Deprecated
-- Nothing yet.
-
-### Removed
-- Nothing yet.
+- API layer restructured for security hardening: flat `app/api/endpoints/` + `app/api/v1/` split into `app/api/{admin,agents,core,memory,plugins,workflows,workspace}` routers
+- Harness moved to top-level `flowforge/harness/` package
+- Memory subsystem moved to top-level `flowforge/memory/` package
+- Declared previously-undeclared runtime dependencies (`pydantic-settings`, `apscheduler`, `python-multipart`)
+- `scripts/start.py` now places the repo parent directory on `PYTHONPATH` so `flowforge.app.main` resolves when the repo root is the package
 
 ### Fixed
-- Nothing yet.
-
-### Security
-- Nothing yet.
-
-## [0.1.0] - TBD
-
-Initial public release of FlowForge — a configuration-driven Agent Harness framework with built-in self-evolution capabilities.
-
-### Added
-- Core: DI container, plugin protocol V3, tracing, context
-- Evolution Engine: three modes (Scope Guard, Process Evolution, Knowledge Evolution)
-- Loop Executor: Discover→Assign→Act→Verify→Persist
-- Compiler: YAML workflow compiler (Parser→Validator→CodeGen)
-- Tools: agentic RAG, publish, web search
-- Three-layer + one extension architecture
-- CLI: `flowforge` command-line interface
+- Backend import path resolution for the repo-root-as-package layout
+- Missing runtime dependencies required by `flowforge.core.config`, `flowforge.scheduler`, and FastAPI Form/File routes
 
 ### Documentation
-- README.md with quickstart and architecture overview
-- docs/spec.md: specification
-- docs/arch.md: architecture
-- docs/design.md: detailed design
-- docs/roadmap.md: development roadmap
+- README.md with quickstart, architecture overview, and Forgekin reference
+- docs/VISION.md, docs/spec.md, docs/arch.md, docs/design.md, docs/roadmap.md
+- docs/DEPLOY.md, docs/SOP.md, docs/TIPS.md, docs/roleagent.md
+- Architecture Decision Records in docs/decisions/
+- Feature specs in docs/features/
 
 ---
 

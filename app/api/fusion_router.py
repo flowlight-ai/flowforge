@@ -1,66 +1,39 @@
-"""FlowForge Web Fusion Phase 8 — Backend API stubs.
+"""FlowForge Web Fusion 路由聚合 — v1 端点统一注册.
 
-FlowForge 后端 API 端点注册到 8000 端口。
-所有路由以 ``/api/v1`` 为前缀，资源用复数，子资源用嵌套。
+原 v1/ 目录已合并到各模块子目录（2026-07-29 重组），
+本文件替代原 v1/__init__.py 的路由聚合职责。
 
-命名规范（铁律）：
-    - 使用 ``forgekin`` 替代 ``cat``
-    - 使用 ``可进化智能体`` 替代 ``灵智体``
-    - 严禁使用 cat/clowder/cat-cafe 字样
-
-每个路由文件均为 stub 实现，返回空列表/默认配置，确保：
-    - 前端 fetch 不会 404
-    - 前端可以正常渲染（即使是空状态）
-    - 响应格式与前端期望一致
-
+所有路由以 /api/v1 为前缀，资源用复数，子资源用嵌套。
+详细 API 清单见 web/WEB-FUSION-DESIGN.md §10.2。
 """
-
 from __future__ import annotations
 
 from fastapi import APIRouter
 
-# Web Fusion Phase 8 路由模块
-from flowforge.app.api.v1 import (
-    audit,
-    callbacks,
-    capability,
-    co_creators,
-    concierge,
-    connectors,
-    env_files,
-    eval,
-    forgekins,
-    forgekins_council,
-    governance,
-    leaderboard,
-    marketplace,
-    mcp,
-    memory,
-    missions,
-    notify,
-    ops,
-    permissions,
-    plugins,
-    quotas,
-    routing,
-    signals,
-    skills,
-    threads,
-    tool_usage,
-    voice,
+# Web Fusion 端点（原 v1/ 目录，现合并到各模块）
+from flowforge.app.api.admin import audit, env_files, leaderboard, ops
+from flowforge.app.api.agents import (
+    capability, co_creators, concierge, forgekins, forgekins_council,
+    signals, skills, threads, voice,
 )
+from flowforge.app.api.core import (
+    connectors, eval, governance, mcp, notify, permissions,
+    quotas, routing, tool_usage,
+)
+from flowforge.app.api.workflows import callbacks, missions
+from flowforge.app.api.memory import memory_v1 as memory
+from flowforge.app.api.plugins import marketplace, plugins_v1 as plugins
 
 router = APIRouter(prefix="/api/v1", tags=["web-fusion-v1"])
 
-# Forgekin 相关（重命名自 Forgekin）
-router.include_router(forgekins.router)
+# Forgekin 相关（council 路由必须先注册，避免 /{forgekin_id}/chat 捕获）
 router.include_router(forgekins_council.router)
+router.include_router(forgekins.router)
 
 # 线程管理
 router.include_router(threads.router)
 
-# 记忆系统（与现有 endpoints/memory.py 共享 /memory 前缀，
-# 仅定义 /collections /recall /health 子路径，不与现有 /memory/{id} 冲突）
+# 记忆系统（仅 /collections /recall /health 子路径）
 router.include_router(memory.router)
 
 # 任务管理

@@ -1,7 +1,8 @@
 """Tests for the capability profile (能力画像) subsystem — P1-1.
 
-Covers: add_skill / add_blind_spot, blind-spot conflict detection,
-gap_analysis, complementary pairing, YAML round-trip, to_dict/from_dict.
+Covers: profile construction, skill packages, blind-spot conflict detection,
+gap_analysis (compute_gap), complementary pairing (recommend_pairing),
+blind-spot conflict detection, JSON/YAML round-trip.
 """
 
 from __future__ import annotations
@@ -11,255 +12,510 @@ from pathlib import Path
 import pytest
 
 from flowforge.core.capability import (
-    CapabilityAnalyzer,
+    BlindSpot,
+    BlindSpotCategory,
     CapabilityProfile,
     CognitiveStyle,
+    ModelCapability,
+    ProfileAnalyzer,
     ProfileLoader,
+    SkillPackage,
+    TaskProfile,
+    ToolBoundary,
 )
-from flowforge.core.errors import CapabilityError
 
 
 # ---- fixtures ----
+
+_MC_CODER = ModelCapability(
+    provider="anthropic",
+    model_name="claude-sonnet-4",
+    context_window=200000,
+    strengths=["code_generation", "refactoring"],
+    limitations=["spatial_reasoning"],
+    reasoning_capability=0.9,
+    creativity_capability=0.6,
+)
+
+_MC_DESIGNER = ModelCapability(
+    provider="google",
+    model_name="gemini-2-pro",
+    context_window=1000000,
+    strengths=["design", "creative_writing"],
+    limitations=["code_consistency"],
+    reasoning_capability=0.8,
+    creativity_capability=0.95,
+)
 
 
 @pytest.fixture
 def profile_a() -> CapabilityProfile:
     """Coder profile: strong at coding, blind at design."""
-    p = CapabilityProfile(
-        forgekin_id="fk-coder", cognitive_style=CognitiveStyle.ANALYTICAL
+    return CapabilityProfile(
+        profile_id="fk-coder",
+        agent_id="fk-coder",
+        model_capability=_MC_CODER,
+        cognitive_style=CognitiveStyle(explanation_style="structured"),
+        skill_packages=[
+            SkillPackage(name="coding", domain="programming", proficiency=0.9),
+        ],
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.SPATIAL_REASONING,
+                description="weak at visual/spatial design",
+            ),
+        ],
     )
-    p.add_skill("coding", 0.9, evidence=["commit abc", "pr 123"])
-    p.add_blind_spot("design", 0.7, mitigation="delegate to designer")
-    return p
 
 
 @pytest.fixture
 def profile_b() -> CapabilityProfile:
-    """Designer profile: strong at design, blind at coding."""
-    p = CapabilityProfile(
-        forgekin_id="fk-designer", cognitive_style=CognitiveStyle.INNOVATIVE
+    """Designer profile: strong at design, blind at math."""
+    return CapabilityProfile(
+        profile_id="fk-designer",
+        agent_id="fk-designer",
+        model_capability=_MC_DESIGNER,
+        cognitive_style=CognitiveStyle(explanation_style="narrative"),
+        skill_packages=[
+            SkillPackage(name="design", domain="design", proficiency=0.85),
+        ],
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at precise math",
+            ),
+        ],
     )
-    p.add_skill("design", 0.85, evidence=["mockup v2"])
-    p.add_blind_spot("coding", 0.6, mitigation="delegate to coder")
-    return p
 
 
-# ---- add_skill / add_blind_spot ----
+# ---- profile construction ----
+
+def test_profile_requires_profile_id_and_agent_id() -> None:
+    with pytest.raises(ValueError, match="profile_id"):
+        CapabilityProfile(
+            agent_id="x",
+            model_capability=_MC_CODER,
+        )
+    with pytest.raises(ValueError, match="agent_id"):
+        CapabilityProfile(
+            profile_id="x",
+            model_capability=_MC_CODER,
+        )
 
 
-def test_add_skill_records_package_and_updates_timestamp(
-    profile_a: CapabilityProfile,
-) -> None:
-    assert "coding" in profile_a.skill_packages
-    skill = profile_a.skill_packages["coding"]
+def test_profile_requires_model_capability() -> None:
+    with pytest.raises(ValueError, match="model_capability"):
+        CapabilityProfile(profile_id="x", agent_id="x")
+
+
+def test_profile_accepts_defaults() -> None:
+    p = CapabilityProfile(
+        profile_id="fk-x",
+        agent_id="fk-x",
+        model_capability=_MC_CODER,
+    )
+    assert p.skill_packages == []
+    assert p.blind_spots == []
+    assert p.tool_boundary.allowed_tools == []
+    assert p.harness_fit_score.overall == pytest.approx(0.5)
+
+
+def test_profile_rejects_invalid_cognitive_style() -> None:
+    with pytest.raises(ValueError, match="explanation_style"):
+        CognitiveStyle(explanation_style="bogus")
+
+
+def test_profile_rejects_invalid_mood() -> None:
+    from flowforge.core.capability import AgentState
+
+    with pytest.raises(ValueError, match="mood"):
+        AgentState(mood="bogus")
+
+
+def test_skill_package_rejects_out_of_range_proficiency() -> None:
+    with pytest.raises(ValueError, match="proficiency"):
+        SkillPackage(name="coding", domain="programming", proficiency=1.5)
+
+
+def test_blind_spot_rejects_out_of_range_confidence() -> None:
+    with pytest.raises(ValueError, match="confidence"):
+        BlindSpot(
+            category=BlindSpotCategory.OTHER,
+            description="x",
+            confidence=1.5,
+        )
+
+
+# ---- skill / blind spot accessors ----
+
+def test_has_skill_detects_loaded_package(profile_a: CapabilityProfile) -> None:
+    assert profile_a.has_skill("coding") is True
+    assert profile_a.has_skill("design") is False
+
+
+def test_skill_package_records_proficiency_and_evidence() -> None:
+    p = CapabilityProfile(
+        profile_id="fk-x",
+        agent_id="fk-x",
+        model_capability=_MC_CODER,
+        skill_packages=[
+            SkillPackage(name="coding", domain="programming", proficiency=0.9),
+        ],
+    )
+    skill = p.skill_packages[0]
+    assert skill.name == "coding"
     assert skill.proficiency == pytest.approx(0.9)
-    assert skill.evidence == ["commit abc", "pr 123"]
-    assert skill.last_assessed_at is not None
+    assert skill.domain == "programming"
 
 
-def test_add_skill_rejects_empty_name() -> None:
-    p = CapabilityProfile(forgekin_id="fk-x")
-    with pytest.raises(CapabilityError, match="name must not be empty"):
-        p.add_skill("  ", 0.5)
-
-
-def test_add_skill_rejects_out_of_range_proficiency() -> None:
-    p = CapabilityProfile(forgekin_id="fk-x")
-    with pytest.raises(CapabilityError, match="proficiency"):
-        p.add_skill("coding", 1.5)
-
-
-def test_add_blind_spot_records_entry(profile_a: CapabilityProfile) -> None:
-    assert len(profile_a.blind_spots) == 1
+def test_blind_spot_records_entry(profile_a: CapabilityProfile) -> None:
     spot = profile_a.blind_spots[0]
-    assert spot.name == "design"
-    assert spot.severity == pytest.approx(0.7)
-    assert spot.mitigation == "delegate to designer"
-    assert spot.discovered_at is not None
-
-
-def test_add_blind_spot_rejects_out_of_range_severity() -> None:
-    p = CapabilityProfile(forgekin_id="fk-x")
-    with pytest.raises(CapabilityError, match="severity"):
-        p.add_blind_spot("design", -0.1)
+    assert spot.category is BlindSpotCategory.SPATIAL_REASONING
+    assert spot.description == "weak at visual/spatial design"
+    assert spot.compensation_strategy == "cross_vendor_review"
 
 
 # ---- blind spot conflict ----
 
+def test_same_vendor_same_category_conflicts() -> None:
+    p1 = CapabilityProfile(
+        profile_id="fk-1",
+        agent_id="fk-1",
+        model_capability=_MC_CODER,
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at math",
+            ),
+        ],
+    )
+    p2 = CapabilityProfile(
+        profile_id="fk-2",
+        agent_id="fk-2",
+        model_capability=_MC_CODER,  # same provider
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at math too",
+            ),
+        ],
+    )
+    assert p1.has_blind_spot_conflict(p2) is True
+    assert p2.has_blind_spot_conflict(p1) is True
 
-def test_blind_spot_conflict_when_strength_is_others_blind_spot(
-    profile_a: CapabilityProfile, profile_b: CapabilityProfile
-) -> None:
-    # A's strength "coding" is B's blind spot "coding" → conflict
-    assert profile_a.has_blind_spot_conflict(profile_b) is True
-    # symmetric: B's strength "design" is A's blind spot "design"
-    assert profile_b.has_blind_spot_conflict(profile_a) is True
 
-
-def test_no_blind_spot_conflict_when_strengths_do_not_match_blind_spots() -> None:
-    p1 = CapabilityProfile(forgekin_id="fk-1")
-    p1.add_skill("coding", 0.9)
-    p2 = CapabilityProfile(forgekin_id="fk-2")
-    p2.add_skill("coding", 0.9)
-    # both strong at coding, no blind spots → no conflict
+def test_cross_vendor_never_conflicts() -> None:
+    p1 = CapabilityProfile(
+        profile_id="fk-1",
+        agent_id="fk-1",
+        model_capability=_MC_CODER,
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at math",
+            ),
+        ],
+    )
+    p2 = CapabilityProfile(
+        profile_id="fk-2",
+        agent_id="fk-2",
+        model_capability=_MC_DESIGNER,  # different provider
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at math too",
+            ),
+        ],
+    )
     assert p1.has_blind_spot_conflict(p2) is False
 
 
-def test_no_conflict_when_skill_below_strength_threshold() -> None:
-    p1 = CapabilityProfile(forgekin_id="fk-1")
-    p1.add_skill("coding", 0.3)  # below 0.5 threshold → not a strength
-    p2 = CapabilityProfile(forgekin_id="fk-2")
-    p2.add_blind_spot("coding", 0.8)
+def test_same_vendor_different_category_no_conflict() -> None:
+    p1 = CapabilityProfile(
+        profile_id="fk-1",
+        agent_id="fk-1",
+        model_capability=_MC_CODER,
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at math",
+            ),
+        ],
+    )
+    p2 = CapabilityProfile(
+        profile_id="fk-2",
+        agent_id="fk-2",
+        model_capability=_MC_CODER,
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.SPATIAL_REASONING,
+                description="weak at spatial",
+            ),
+        ],
+    )
     assert p1.has_blind_spot_conflict(p2) is False
 
 
-# ---- gap_analysis ----
-
+# ---- gap_analysis / compute_gap ----
 
 def test_gap_analysis_returns_missing_and_matching(
     profile_a: CapabilityProfile,
 ) -> None:
-    analyzer = CapabilityAnalyzer()
-    report = analyzer.gap_analysis(profile_a, ["coding", "design", "writing"])
-    assert "coding" in report.matching_skills
-    assert set(report.missing_skills) == {"design", "writing"}
-    assert report.total_gap_score == pytest.approx(2.0)
+    task = TaskProfile(
+        task_id="t1",
+        task_type="code_generation",
+        required_skills=["coding", "design", "writing"],
+    )
+    report = ProfileAnalyzer.compute_gap(profile_a, task)
+    assert report.missing_skills == ["design", "writing"]
+    assert report.has_critical_gap is True
 
 
 def test_gap_analysis_no_gap_when_all_required_present(
     profile_a: CapabilityProfile,
 ) -> None:
-    analyzer = CapabilityAnalyzer()
-    report = analyzer.gap_analysis(profile_a, ["coding"])
+    task = TaskProfile(
+        task_id="t2",
+        task_type="code_generation",
+        required_skills=["coding"],
+    )
+    report = ProfileAnalyzer.compute_gap(profile_a, task)
     assert report.missing_skills == []
-    assert report.matching_skills == ["coding"]
-    assert report.total_gap_score == 0.0
+    assert report.has_critical_gap is False
 
 
-def test_gap_analysis_respects_proficiency_threshold() -> None:
-    p = CapabilityProfile(forgekin_id="fk-x")
-    p.add_skill("coding", 0.4)  # below default 0.5
-    analyzer = CapabilityAnalyzer(proficiency_threshold=0.5)
-    report = analyzer.gap_analysis(p, ["coding"])
-    assert report.missing_skills == ["coding"]
-    assert report.matching_skills == []
-
-
-# ---- complementary pairing ----
-
-
-def test_find_complementary_pair_true_when_each_covers_others_gap(
-    profile_a: CapabilityProfile, profile_b: CapabilityProfile
-) -> None:
-    analyzer = CapabilityAnalyzer()
-    # A has coding (lacks design), B has design (lacks coding) → together cover
-    assert (
-        analyzer.find_complementary_pair(profile_a, profile_b, ["coding", "design"])
-        is True
+def test_gap_analysis_missing_tools(profile_a: CapabilityProfile) -> None:
+    task = TaskProfile(
+        task_id="t3",
+        task_type="code_generation",
+        required_tools=["git_push"],
     )
+    report = ProfileAnalyzer.compute_gap(profile_a, task)
+    assert report.missing_tools == ["git_push"]
 
 
-def test_find_complementary_pair_false_when_both_lack_same_skill(
-    profile_a: CapabilityProfile, profile_b: CapabilityProfile
+def test_gap_analysis_tool_in_forbidden_list_is_missing(
+    profile_a: CapabilityProfile,
 ) -> None:
-    analyzer = CapabilityAnalyzer()
-    # neither has "writing"
-    assert (
-        analyzer.find_complementary_pair(profile_a, profile_b, ["coding", "writing"])
-        is False
+    profile_a.tool_boundary = ToolBoundary(forbidden_tools=["db_drop"])
+    task = TaskProfile(
+        task_id="t4",
+        task_type="migration",
+        required_tools=["db_drop"],
     )
+    report = ProfileAnalyzer.compute_gap(profile_a, task)
+    assert report.missing_tools == ["db_drop"]
 
 
-# ---- compute_overlap ----
+def test_gap_analysis_blind_spot_risk(profile_a: CapabilityProfile) -> None:
+    task = TaskProfile(
+        task_id="t5",
+        task_type="ui_redesign",
+        forbidden_blind_spot_categories=[BlindSpotCategory.SPATIAL_REASONING],
+    )
+    report = ProfileAnalyzer.compute_gap(profile_a, task)
+    assert len(report.blind_spot_risks) == 1
+    cat, _ = report.blind_spot_risks[0]
+    assert cat == BlindSpotCategory.SPATIAL_REASONING.value
 
 
-def test_compute_overlap_full_when_identical_skills() -> None:
-    p1 = CapabilityProfile(forgekin_id="fk-1")
-    p1.add_skill("coding", 0.9)
-    p2 = CapabilityProfile(forgekin_id="fk-2")
-    p2.add_skill("coding", 0.8)
-    analyzer = CapabilityAnalyzer()
-    assert analyzer.compute_overlap(p1, p2) == pytest.approx(1.0)
+def test_gap_analysis_context_window_insufficient(
+    profile_a: CapabilityProfile,
+) -> None:
+    task = TaskProfile(
+        task_id="t6",
+        task_type="analysis",
+        min_context_window=1000000,
+    )
+    report = ProfileAnalyzer.compute_gap(profile_a, task)
+    assert report.context_window_insufficient is True
 
 
-def test_compute_overlap_zero_when_disjoint_skills(
+def test_gap_analysis_cognitive_style_mismatch(
+    profile_a: CapabilityProfile,
+) -> None:
+    task = TaskProfile(
+        task_id="t7",
+        task_type="narrative_writing",
+        preferred_cognitive_styles=["narrative"],
+    )
+    report = ProfileAnalyzer.compute_gap(profile_a, task)
+    assert report.cognitive_style_mismatch is True
+
+
+def test_gap_analysis_generates_recommendations(
+    profile_a: CapabilityProfile,
+) -> None:
+    task = TaskProfile(
+        task_id="t8",
+        task_type="code_generation",
+        required_skills=["writing"],
+    )
+    report = ProfileAnalyzer.compute_gap(profile_a, task)
+    assert any("writing" in r for r in report.recommendations)
+
+
+# ---- complementary pairing / recommend_pairing ----
+
+def test_recommend_pairing_picks_cross_vendor_reviewer(
     profile_a: CapabilityProfile, profile_b: CapabilityProfile
 ) -> None:
-    analyzer = CapabilityAnalyzer()
-    assert analyzer.compute_overlap(profile_a, profile_b) == pytest.approx(0.0)
+    reviewer = ProfileAnalyzer.recommend_pairing(profile_a, [profile_b])
+    assert reviewer is profile_b  # different vendor → structural separation
 
 
-def test_compute_overlap_partial() -> None:
-    p1 = CapabilityProfile(forgekin_id="fk-1")
-    p1.add_skill("coding", 0.9)
-    p1.add_skill("design", 0.5)
-    p2 = CapabilityProfile(forgekin_id="fk-2")
-    p2.add_skill("coding", 0.8)
-    p2.add_skill("writing", 0.6)
-    analyzer = CapabilityAnalyzer()
-    # intersection {coding}=1, union {coding,design,writing}=3 → 1/3
-    assert analyzer.compute_overlap(p1, p2) == pytest.approx(1.0 / 3.0)
+def test_recommend_pairing_none_when_no_cross_vendor(
+    profile_a: CapabilityProfile,
+) -> None:
+    same_vendor = CapabilityProfile(
+        profile_id="fk-same",
+        agent_id="fk-same",
+        model_capability=_MC_CODER,
+        skill_packages=[
+            SkillPackage(name="design", domain="design", proficiency=0.9),
+        ],
+    )
+    reviewer = ProfileAnalyzer.recommend_pairing(profile_a, [same_vendor])
+    assert reviewer is None
 
 
-def test_compute_overlap_zero_when_both_empty() -> None:
-    p1 = CapabilityProfile(forgekin_id="fk-1")
-    p2 = CapabilityProfile(forgekin_id="fk-2")
-    analyzer = CapabilityAnalyzer()
-    assert analyzer.compute_overlap(p1, p2) == 0.0
+def test_recommend_pairing_prefers_non_overlapping_blind_spots() -> None:
+    author = CapabilityProfile(
+        profile_id="fk-a",
+        agent_id="fk-a",
+        model_capability=_MC_CODER,
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at math",
+            ),
+        ],
+    )
+    overlapping = CapabilityProfile(
+        profile_id="fk-overlap",
+        agent_id="fk-overlap",
+        model_capability=_MC_DESIGNER,
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="also weak at math",
+            ),
+        ],
+    )
+    non_overlapping = CapabilityProfile(
+        profile_id="fk-clean",
+        agent_id="fk-clean",
+        model_capability=_MC_DESIGNER,
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.SPATIAL_REASONING,
+                description="weak at spatial",
+            ),
+        ],
+    )
+    reviewer = ProfileAnalyzer.recommend_pairing(
+        author, [overlapping, non_overlapping]
+    )
+    assert reviewer is non_overlapping
 
 
-# ---- serialization to_dict / from_dict ----
+def test_detect_blind_spot_conflicts_finds_same_vendor_pairs() -> None:
+    p1 = CapabilityProfile(
+        profile_id="fk-1",
+        agent_id="fk-1",
+        model_capability=_MC_CODER,
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at math",
+            ),
+        ],
+    )
+    p2 = CapabilityProfile(
+        profile_id="fk-2",
+        agent_id="fk-2",
+        model_capability=_MC_CODER,  # same vendor as p1
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="also weak at math",
+            ),
+        ],
+    )
+    p3 = CapabilityProfile(
+        profile_id="fk-3",
+        agent_id="fk-3",
+        model_capability=_MC_DESIGNER,  # different vendor
+        blind_spots=[
+            BlindSpot(
+                category=BlindSpotCategory.MATH_COMPUTATION,
+                description="weak at math",
+            ),
+        ],
+    )
+    conflicts = ProfileAnalyzer.detect_blind_spot_conflicts([p1, p2, p3])
+    assert ("fk-1", "fk-2", "math_computation") in conflicts
+    assert all(c[2] == "math_computation" for c in conflicts)
+    # cross-vendor pair (fk-1, fk-3) is NOT a conflict
+    assert ("fk-1", "fk-3", "math_computation") not in conflicts
 
 
-def test_to_dict_from_dict_round_trip(profile_a: CapabilityProfile) -> None:
+# ---- serialization ----
+
+def test_to_dict_round_trip(profile_a: CapabilityProfile) -> None:
     data = profile_a.to_dict()
-    restored = CapabilityProfile.from_dict(data)
-    assert restored.forgekin_id == profile_a.forgekin_id
+    restored = CapabilityProfile.model_validate(data)
+    assert restored.profile_id == profile_a.profile_id
+    assert restored.agent_id == profile_a.agent_id
     assert restored.cognitive_style == profile_a.cognitive_style
-    assert set(restored.skill_packages.keys()) == set(profile_a.skill_packages.keys())
-    assert restored.skill_packages["coding"].proficiency == pytest.approx(0.9)
-    assert restored.skill_packages["coding"].evidence == ["commit abc", "pr 123"]
-    assert len(restored.blind_spots) == len(profile_a.blind_spots)
-    assert restored.blind_spots[0].name == "design"
-    # datetime round-trips via isoformat exactly
-    assert restored.last_updated_at == profile_a.last_updated_at
+    assert [sp.name for sp in restored.skill_packages] == ["coding"]
+    assert restored.skill_packages[0].proficiency == pytest.approx(0.9)
+    assert restored.blind_spots[0].category is BlindSpotCategory.SPATIAL_REASONING
+    assert restored.created_at == profile_a.created_at
 
 
-def test_from_dict_rejects_missing_forgekin_id() -> None:
-    with pytest.raises(CapabilityError, match="forgekin_id"):
-        CapabilityProfile.from_dict({"cognitive_style": "analytical"})
+def test_to_dict_excludes_load_fn() -> None:
+    from flowforge.core.capability import SkillPackage
+
+    p = CapabilityProfile(
+        profile_id="fk-x",
+        agent_id="fk-x",
+        model_capability=_MC_CODER,
+        skill_packages=[
+            SkillPackage(
+                name="coding",
+                domain="programming",
+                proficiency=0.9,
+                load_fn=lambda: None,
+            ),
+        ],
+    )
+    data = p.to_dict()
+    assert "load_fn" not in data["skill_packages"][0]
 
 
-def test_from_dict_rejects_invalid_cognitive_style() -> None:
-    with pytest.raises(CapabilityError, match="cognitive_style"):
-        CapabilityProfile.from_dict(
-            {"forgekin_id": "fk-x", "cognitive_style": "bogus"}
-        )
-
-
-def test_capability_profile_rejects_empty_forgekin_id() -> None:
-    with pytest.raises(CapabilityError, match="forgekin_id"):
-        CapabilityProfile(forgekin_id="  ")
+def test_to_summary_includes_profile_id(profile_a: CapabilityProfile) -> None:
+    summary = profile_a.to_summary()
+    assert "fk-coder" in summary
+    assert "anthropic" in summary
 
 
 # ---- YAML round-trip ----
-
 
 @pytest.mark.asyncio
 async def test_yaml_round_trip(tmp_path: Path, profile_a: CapabilityProfile) -> None:
     loader = ProfileLoader()
     target = tmp_path / "profile_a.yaml"
-    await loader.save_to_yaml(profile_a, target)
+    await loader.dump_to_yaml(profile_a, target)
     assert target.exists()
     restored = await loader.load_from_yaml(target)
-    assert restored.forgekin_id == profile_a.forgekin_id
+    assert restored.profile_id == profile_a.profile_id
+    assert restored.agent_id == profile_a.agent_id
     assert restored.cognitive_style == profile_a.cognitive_style
-    assert set(restored.skill_packages.keys()) == {"coding"}
-    assert restored.skill_packages["coding"].proficiency == pytest.approx(0.9)
-    assert restored.skill_packages["coding"].evidence == ["commit abc", "pr 123"]
+    assert [sp.name for sp in restored.skill_packages] == ["coding"]
+    assert restored.skill_packages[0].proficiency == pytest.approx(0.9)
     assert len(restored.blind_spots) == 1
-    assert restored.blind_spots[0].name == "design"
-    assert restored.blind_spots[0].severity == pytest.approx(0.7)
+    assert restored.blind_spots[0].category is BlindSpotCategory.SPATIAL_REASONING
 
 
 @pytest.mark.asyncio
@@ -268,9 +524,8 @@ async def test_yaml_round_trip_preserves_all_fields(
 ) -> None:
     loader = ProfileLoader()
     target = tmp_path / "profile_b.yaml"
-    await loader.save_to_yaml(profile_b, target)
+    await loader.dump_to_yaml(profile_b, target)
     restored = await loader.load_from_yaml(target)
-    # Full equality via to_dict comparison (datetimes round-trip via isoformat)
     assert restored.to_dict() == profile_b.to_dict()
 
 
@@ -281,31 +536,40 @@ async def test_yaml_round_trip_with_explicit_schema(tmp_path: Path) -> None:
     target = tmp_path / "schema.yaml"
     target.write_text(
         """
-forgekin_id: fk-001
-cognitive_style: analytical
+profile_id: fk-001
+agent_id: fk-001
+model_capability:
+  provider: anthropic
+  model_name: claude-sonnet-4
+  context_window: 200000
+  strengths: ["code_generation"]
+  limitations: ["math_computation"]
+cognitive_style:
+  explanation_style: concise
+  reasoning_depth: 0.9
+  abstraction_level: 0.8
+  risk_appetite: 0.3
 skill_packages:
   - name: coding
+    domain: programming
     proficiency: 0.85
-    evidence: ["commit abc", "pr 123"]
 blind_spots:
-  - name: design
-    severity: 0.7
-    mitigation: delegate to designer
+  - category: math_computation
+    description: weak at math
 """,
         encoding="utf-8",
     )
     profile = await loader.load_from_yaml(target)
-    assert profile.forgekin_id == "fk-001"
-    assert profile.cognitive_style == CognitiveStyle.ANALYTICAL
-    assert profile.skill_packages["coding"].proficiency == pytest.approx(0.85)
-    assert profile.blind_spots[0].name == "design"
-    assert profile.blind_spots[0].mitigation == "delegate to designer"
+    assert profile.profile_id == "fk-001"
+    assert profile.model_capability.provider == "anthropic"
+    assert profile.skill_packages[0].proficiency == pytest.approx(0.85)
+    assert profile.blind_spots[0].category is BlindSpotCategory.MATH_COMPUTATION
 
 
 @pytest.mark.asyncio
 async def test_load_from_yaml_raises_on_missing_file(tmp_path: Path) -> None:
     loader = ProfileLoader()
-    with pytest.raises(CapabilityError, match="not found"):
+    with pytest.raises(FileNotFoundError, match="not found"):
         await loader.load_from_yaml(tmp_path / "nope.yaml")
 
 
@@ -314,5 +578,16 @@ async def test_load_from_yaml_raises_on_empty_file(tmp_path: Path) -> None:
     loader = ProfileLoader()
     target = tmp_path / "empty.yaml"
     target.write_text("", encoding="utf-8")
-    with pytest.raises(CapabilityError, match="empty"):
+    with pytest.raises(ValueError, match="Empty YAML"):
+        await loader.load_from_yaml(target)
+
+
+@pytest.mark.asyncio
+async def test_load_from_yaml_raises_missing_model_capability(
+    tmp_path: Path,
+) -> None:
+    loader = ProfileLoader()
+    target = tmp_path / "bad.yaml"
+    target.write_text("profile_id: fk-x\nagent_id: fk-x\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="model_capability"):
         await loader.load_from_yaml(target)

@@ -133,6 +133,11 @@ Then open **http://localhost:5175** in your browser.
 
 ### Manual setup
 
+> **Note on package layout**: the repository root *is* the `flowforge` package
+> (it contains the top-level `__init__.py`). When launching the backend you must
+> put the **parent** directory of the repo on `PYTHONPATH` so
+> `flowforge.app.main` resolves.
+
 ```bash
 pip install -e ".[dev]"
 cd web && npm install && npm run build && cd ..
@@ -140,7 +145,8 @@ cd web && npm install && npm run build && cd ..
 # Copy environment template
 cp .env.example .env  # then fill in your keys
 
-# Start backend
+# Start backend (repo root is the `flowforge` package → parent dir on PYTHONPATH)
+export PYTHONPATH="$PWD/.."          # PowerShell: $env:PYTHONPATH = "$PWD\.."
 python -m uvicorn flowforge.app.main:app --host 127.0.0.1 --port 8000
 
 # Start frontend (in another terminal)
@@ -206,13 +212,13 @@ Each Forgekin is described by a YAML profile under `config/forgekins/*.yaml`. **
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **0** | Project scaffolding + cross-platform config + docs skeleton | 🔄 In Progress |
-| **1** | Seven engineering paths code skeleton | ⏳ Pending |
-| **2** | forgemind application layer + Forgekin morphologies | ⏳ Pending |
-| **3** | Third-party Agent adapter layer | ⏳ Pending |
-| **4** | Eval self-metabolism + distributed reliability | ⏳ Pending |
-| **5** | Partnership math + self-evolution closed loop | ⏳ Pending |
-| **6** | SpiritForge experience distillation + MindCouncil | ⏳ Pending |
+| **0** | Project scaffolding + cross-platform config + docs skeleton | ✅ Complete |
+| **1** | Seven engineering paths code skeleton | 🔄 In Progress (~70%) |
+| **2** | forgemind application layer + Forgekin morphologies | 🔄 In Progress (~85%) |
+| **3** | Third-party Agent adapter layer | 🔄 In Progress (~80%) |
+| **4** | Eval self-metabolism + distributed reliability | 🔄 In Progress (~40%) |
+| **5** | Partnership math + self-evolution closed loop | 🔄 In Progress (~60%) |
+| **6** | SpiritForge experience distillation + MindCouncil | 🔄 In Progress (~40%) |
 
 See [docs/roadmap.md](docs/roadmap.md) for details.
 

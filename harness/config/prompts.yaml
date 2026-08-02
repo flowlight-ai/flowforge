@@ -77,7 +77,7 @@ magic_words:
   kill_switch_triggered: |-
     [KILL SWITCH] 拉闸词 '{word}' 已触发，当前执行已制动。
     context: {context_summary}
-    operator 介入需通过 harness_v7.recover() 恢复。
+    operator 介入需通过 harness.recover() 恢复。
 
   # 暂停词触发提示
   pause_triggered: |-
