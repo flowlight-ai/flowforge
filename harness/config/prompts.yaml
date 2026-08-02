@@ -1,0 +1,126 @@
+# FlowForge Harness v7.0 提示词外置配置
+#
+# 铁律 5+P16：禁止硬编码提示词。所有 Harness 七层涉及的提示词模板外置到此文件。
+# 模板使用 {placeholder} 占位符，由对应组件在运行时渲染。
+#
+# 设计依据：
+#   - roleagent.md §3 Harness 七层
+#   - 编程红线 11：提示词必须外置到 YAML
+#   - P16 提示词外置验证
+#
+# 加载入口：各组件通过 HarnessConfig.load_prompts() 读取
+
+# ── 治理规则注入模板（GovernanceInjector 使用） ──────────────────────────────
+governance:
+  # 注入到 SYSTEM_ROLE 的治理规则模板（压缩免疫，roleagent.md §3.3）
+  # 关键设计：治理规则必须注入 SYSTEM_ROLE，禁止注入 USER_MESSAGE
+  system_role_injection: |-
+    [GOVERNANCE RULE #{rule_id}] (priority={priority})
+    {content}
+    [/GOVERNANCE RULE #{rule_id}]
+
+  # 注入到 USER_MESSAGE 的弱规则模板（仅用于可被压缩的临时提示）
+  # 警告：此路径会被上下文压缩吞掉，仅用于非关键规则
+  user_message_injection: |-
+    [提示] {content}
+
+  # 默认治理规则集（在治理规则未配置时使用）
+  default_rules:
+    - rule_id: "GOV-001"
+      content: "禁止执行未经评审的不可逆操作（如 db_drop / force push / rm -rf）"
+      priority: 100
+      injection_point: "SYSTEM_ROLE"
+    - rule_id: "GOV-002"
+      content: "跨厂商 review 是结构性必需，同厂商 review 不算通过"
+      priority: 90
+      injection_point: "SYSTEM_ROLE"
+    - rule_id: "GOV-003"
+      content: "每条验收标准必须有 commit / 测试 / trace 作为证据锚点"
+      priority: 80
+      injection_point: "SYSTEM_ROLE"
+
+# ── 工具中介提示词（ToolMediator 使用） ─────────────────────────────────────
+tool_mediation:
+  # 危险工具调用前的确认提示
+  dangerous_tool_confirm: |-
+    即将执行危险工具 '{tool_name}'（safety_level={safety_level}）。
+    副作用: {side_effects}
+    可逆: {reversible}
+    请确认是否继续。
+
+  # 工具别名兜底提示（Build to Delete，roleagent.md §1.3）
+  alias_fallback: |-
+    工具 '{requested}' 未在白名单中注册，将使用别名兜底 '{canonical}'。
+    此路径标记为 Build to Delete，将在模型工具调用能力提升后退役。
+
+  # 工具未授权拒绝提示
+  tool_not_authorized: |-
+    工具 '{tool_name}' 未被授权（不在白名单中且无可用别名）。
+    调用已拒绝。请联系 operator 或更新 harness.yaml 中的 tool_whitelist。
+
+# ── 证据收集提示词（EvidenceCollector 使用） ────────────────────────────────
+evidence:
+  # 证据缺失告警
+  evidence_missing: |-
+    任务声称完成但未提供证据（commit/test/trace/screenshot）。
+    根据 roleagent.md §3.1 验证失败模式，此为验证失败。
+    必须补充证据才能通过 verdict。
+
+  # 证据哈希校验失败
+  hash_mismatch: |-
+    证据内容哈希不匹配：expected={expected}, actual={actual}。
+    证据可能被篡改或截断，需重新采集。
+
+# ── Magic Words 提示词（MagicWordsRegistry 使用） ──────────────────────────
+magic_words:
+  # 拉闸词触发提示
+  kill_switch_triggered: |-
+    [KILL SWITCH] 拉闸词 '{word}' 已触发，当前执行已制动。
+    context: {context_summary}
+    operator 介入需通过 harness.recover() 恢复。
+
+  # 暂停词触发提示
+  pause_triggered: |-
+    [PAUSE] 暂停词 '{word}' 已触发，执行已暂停。
+    可通过 resume_word 恢复执行。
+
+  # 回滚词触发提示
+  rollback_triggered: |-
+    [ROLLBACK] 回滚词 '{word}' 已触发，正在回滚到最近检查点。
+    checkpoint_id: {checkpoint_id}
+
+# ── Entropy Control 提示词（EntropyController 使用） ────────────────────────
+entropy_control:
+  # hotfix 标签到期 review 通知
+  sunset_review_due: |-
+    Hotfix 标签 '{label}' 已超过 review 期限（{deadline} 天）。
+    文件: {file_path}
+    原因: {reason}
+    必须进行 review 并选择三选一：
+      1. 正式修复（移除 hotfix 标签，转为正式代码）
+      2. 接受为永久（升级为 built-to-persist，更新文档）
+      3. 已不相关（删除相关代码）
+
+  # Build to Delete 标记发现
+  build_to_delete_detected: |-
+    发现 Build to Delete 标记: {label}
+    此脚手架代码应在模型能力提升后退役。
+    当前存在时长: {age_days} 天
+
+# ── Harnessability 评估提示词（HarnessabilityAssessor 使用） ────────────────
+harnessability:
+  # 评估报告摘要
+  assessment_summary: |-
+    Harnessability 评估完成（component={component}）:
+      overall: {overall:.2f}
+      durable_state_coverage: {durable_state_coverage:.2f}
+      tool_mediation_quality: {tool_mediation_quality:.2f}
+      governance_completeness: {governance_completeness:.2f}
+      observability: {observability:.2f}
+      recovery_capability: {recovery_capability:.2f}
+
+  # 评估不达标告警
+  below_threshold: |-
+    Harnessability 评估不达标: overall={overall:.2f} < threshold={threshold}
+    最低维度: {weakest_dimension}={weakest_score:.2f}
+    建议优先补强该维度。

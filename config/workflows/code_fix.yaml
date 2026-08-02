@@ -1,0 +1,29 @@
+# 代码修复工作流 — 夏洛克主导，梵高审查，达芬奇测试
+name: code_fix
+display_name: "代码修复闭环"
+description: "夏洛克复现 bug → 定位根因 → 最小补丁 → 梵高审查 → 达芬奇测试"
+icon: "🔍"
+category: "code"
+version: "1.0"
+
+steps:
+  - id: "reproduce"
+    display_name: "复现 Bug"
+    agent: "fk-sherlock"
+    human_review: false
+  - id: "diagnose"
+    display_name: "定位根因"
+    agent: "fk-sherlock"
+    human_review: false
+  - id: "patch"
+    display_name: "最小补丁"
+    agent: "fk-sherlock"
+    human_review: false
+  - id: "review"
+    display_name: "代码审查"
+    agent: "fk-vangogh"
+    human_review: false
+  - id: "test"
+    display_name: "回归测试"
+    agent: "fk-davinci"
+    human_review: false

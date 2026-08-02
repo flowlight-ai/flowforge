@@ -1,0 +1,53 @@
+# Prometheus 抓取配置示例 — FlowForge P3-001
+#
+# 用法：
+#   1. 复制本文件为 prometheus.yml（或自定义路径）
+#   2. 启动 prometheus：prometheus --config.file=prometheus.yml
+#   3. 在 Grafana 中添加 Prometheus 数据源，URL 指向本 Prometheus 实例
+#
+# 注意：本文件仅为示例，targets 中的 host:port 需根据实际部署调整。
+#       FlowForge 默认监听 8000 端口（见 config/default.yaml 中的 server.port）。
+
+global:
+  scrape_interval: 15s          # 默认抓取间隔
+  evaluation_interval: 15s      # 告警规则评估间隔
+  external_labels:
+    monitor: "flowforge-monitor"
+
+# 告警规则文件（可选，按需启用）
+# rule_files:
+#   - "alerts/*.yml"
+
+# 抓取目标配置
+scrape_configs:
+  # ── FlowForge 主服务 ────────────────────────────────────────────
+  - job_name: "flowforge"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets:
+          - "localhost:8000"   # FlowForge API 端口
+        labels:
+          service: "flowforge"
+          environment: "development"
+
+  # ── FlowForge 副本（如有多实例，可按需扩展）──────────────────────
+  # - job_name: "flowforge-replica"
+  #   scrape_interval: 15s
+  #   metrics_path: /metrics
+  #   static_configs:
+  #     - targets:
+  #         - "localhost:8001"
+
+  # ── Prometheus 自身监控（可选）──────────────────────────────────
+  - job_name: "prometheus"
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - "localhost:9090"
+
+# 远程写入（可选，用于长期存储到 Thanos / VictoriaMetrics / Cortex 等）
+# remote_write:
+#   - url: "http://localhost:8480/api/v1/write"

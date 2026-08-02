@@ -1,0 +1,28 @@
+# FlowForge CapabilityProfile 推荐文案模板
+#
+# 铁律 5+P16：禁止硬编码提示词。所有 GapReport 推荐文案模板外置到此文件。
+# 模板使用 {placeholder} 占位符，由 ProfileAnalyzer._format_recommendation 渲染。
+#
+# 加载入口：flowforge.core.capability.analyzer._load_recommendation_templates(path)
+
+recommendations:
+  # 缺失技能：任务要求的知识包未加载
+  missing_skill: "建议加载技能包 '{skill}' 以满足任务要求（agent={agent_id}）"
+
+  # 缺失工具：任务要求的工具未授权
+  missing_tool: "建议授权工具 '{tool}' 以满足任务要求（agent={agent_id}）"
+
+  # 盲点风险：任务禁忌盲点类别与Forgekin盲点重叠
+  blind_spot_risk: >-
+    警告: 任务禁忌盲点类别 '{category}' 与当前Forgekin盲点重叠
+    （{desc}）。必须启用跨厂商 review 补偿，否则该盲点将连续穿过验证层。
+
+  # 上下文窗口不足
+  context_window_insufficient: >-
+    上下文窗口不足: 任务需要 {required} tokens，Forgekin仅支持 {actual} tokens。
+    建议启用分段处理或更换更大上下文窗口的Forgekin。
+
+  # 认知风格不匹配
+  cognitive_mismatch: >-
+    认知风格不匹配: 任务期望 '{preferred}'，Forgekin实际 '{actual}'。
+    建议调整任务描述或更换风格匹配的Forgekin。

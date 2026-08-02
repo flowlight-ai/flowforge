@@ -1,0 +1,109 @@
+# FlowForge Welcome - Welcome first-time contributors
+# Posts a welcome message when a new contributor opens their first Issue or PR
+
+name: "Welcome"
+
+on:
+  pull_request:
+    types: [opened]
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  welcome:
+    name: Welcome New Contributor
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if first-time contributor
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const author = context.payload[context.eventName].user.login;
+
+            // Check if this is the author's first contribution
+            const query = `
+              query($owner: String!, $repo: String!, $author: String!) {
+                repository(owner: $owner, name: $repo) {
+                  issues(first: 1, filterBy: {createdBy: $author}) {
+                    totalCount
+                  }
+                  pullRequests(first: 1, states: [OPEN, CLOSED, MERGED], headRefName: $author) {
+                    totalCount
+                  }
+                }
+              }
+            `;
+
+            try {
+              const result = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                author: author
+              });
+
+              const issueCount = result.repository.issues.totalCount;
+              const prCount = result.repository.pullRequests.totalCount;
+              const isFirstTime = (issueCount + prCount) <= 1;
+
+              core.setOutput("is_first_time", isFirstTime);
+              core.setOutput("author", author);
+            } catch (error) {
+              // Default to welcome on error
+              core.setOutput("is_first_time", true);
+              core.setOutput("author", author);
+            }
+
+      - name: Welcome on First Issue
+        if: github.event_name == 'issues' && steps.check.outputs.is_first_time == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const author = '${{ steps.check.outputs.author }}';
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                `👋 Welcome to FlowForge, @${author}!`,
+                ``,
+                `Thanks for opening your first issue! We're glad to have you here.`,
+                ``,
+                `While you wait for a response, here are a few things you can do:`,
+                `- 📖 Check our [documentation](https://github.com/${context.repo.owner}/${context.repo.repo}/tree/main/docs)`,
+                `- 💬 Join the [discussions](https://github.com/${context.repo.owner}/${context.repo.repo}/discussions)`,
+                `- 🤝 Read our [contributing guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md)`,
+                ``,
+                `欢迎来到 FlowForge！感谢你提交第一个 Issue！`,
+                `等待回复期间，你可以查看文档、参与讨论、阅读贡献指南。`
+              ].join('\n')
+            });
+
+      - name: Welcome on First PR
+        if: github.event_name == 'pull_request' && steps.check.outputs.is_first_time == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const author = '${{ steps.check.outputs.author }}';
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                `👋 Welcome to FlowForge, @${author}!`,
+                ``,
+                `Thanks for opening your first Pull Request! 🎉`,
+                ``,
+                `A maintainer will review your PR soon. In the meantime:`,
+                `- ✅ Make sure all CI checks pass`,
+                `- 📝 Ensure your PR follows our [contributing guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md)`,
+                `- ✍️ If this is your first contribution, please sign the [CLA](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CLA.md)`,
+                ``,
+                `感谢你提交第一个 Pull Request！🎉 维护者会尽快审查。`,
+                `请确保 CI 检查通过、遵循贡献指南，并签署 CLA（如果是首次贡献）。`
+              ].join('\n')
+            });

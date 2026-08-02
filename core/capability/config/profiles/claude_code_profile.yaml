@@ -1,0 +1,128 @@
+# 示例 CapabilityProfile YAML — Claude Code Forgekin
+#
+# 用于跨厂商 review 演示：本画像与 gpt5_profile.yaml 共享同一类别盲点
+# (self_referential_logic)，但厂商不同（anthropic vs openai），
+# 故 has_blind_spot_conflict 应返回 False（不同厂商天然分散盲点）。
+#
+# 当与另一个 anthropic 厂商的Forgekin配对 review 时，因同类别盲点应返回 True。
+#
+# 字段说明详见 loader.py docstring。
+
+profile_id: "claude-code-001"
+agent_id: "claude-code-forgekin"
+created_at: "2026-07-17T00:00:00Z"
+updated_at: "2026-07-17T00:00:00Z"
+
+model_capability:
+  provider: "anthropic"
+  model_name: "claude-sonnet-4"
+  context_window: 200000
+  strengths:
+    - "code_generation"
+    - "long_context_reasoning"
+    - "structured_explanation"
+  limitations:
+    - "math_computation"
+    - "realtime_data_access"
+  supports_tool_call: true
+  supports_vision: false
+  reasoning_capability: 0.92
+  creativity_capability: 0.85
+
+cognitive_style:
+  reasoning_depth: 0.9
+  abstraction_level: 0.8
+  risk_appetite: 0.3
+  explanation_style: "structured"
+
+blind_spots:
+  - category: "self_referential_logic"
+    description: >-
+      倾向信任自身生成的代码逻辑而不做对抗性验证，
+      在 review 自身代码时会漏掉同源逻辑错误
+    example: >-
+      review 自己刚生成的并发代码时，未发现 race condition
+      （因为生成时已假设该条件不会发生）
+    scenario: "self_code_review"
+    detected_at: "2026-07-17T00:00:00Z"
+    evidence:
+      - "trace-eval-2026-07-17-001"
+      - "trace-eval-2026-07-17-002"
+    compensation_strategy: "cross_vendor_review"
+    confidence: 0.85
+
+  - category: "over_confidence"
+    description: "对结构良好的代码过度自信，倾向于跳过边界测试"
+    example: "对类型注解完整的函数跳过 None 输入测试"
+    scenario: "test_generation"
+    detected_at: "2026-07-17T00:00:00Z"
+    evidence:
+      - "trace-eval-2026-07-17-003"
+    compensation_strategy: "edge_case_probe"
+    confidence: 0.7
+
+skill_packages:
+  - name: "python_async"
+    domain: "programming"
+    version: "1.2.0"
+    loader: "flowforge.skills.PythonAsyncLoader"
+    proficiency: 0.9
+    last_used: "2026-07-17T10:00:00Z"
+    usage_count: 142
+  - name: "typescript_react"
+    domain: "frontend"
+    version: "0.9.0"
+    loader: "flowforge.skills.TypeScriptReactLoader"
+    proficiency: 0.75
+    last_used: "2026-07-16T15:00:00Z"
+    usage_count: 38
+
+tool_boundary:
+  allowed_tools:
+    - "file_read"
+    - "file_write"
+    - "shell_exec"
+    - "git_operation"
+    - "web_search"
+  forbidden_tools:
+    - "db_drop"
+    - "deploy_production"
+  prefer_tools:
+    - "file_read"
+    - "git_operation"
+  tool_proficiency:
+    file_read: 0.95
+    file_write: 0.9
+    shell_exec: 0.85
+    git_operation: 0.92
+
+historical_performance:
+  - task_type: "code_generation"
+    success_rate: 0.92
+    avg_latency: 2.5
+    token_usage: 1500000
+    last_updated: "2026-07-17T00:00:00Z"
+    sample_count: 500
+    wilson_lower_bound: 0.88
+  - task_type: "code_review"
+    success_rate: 0.85
+    avg_latency: 1.8
+    token_usage: 800000
+    last_updated: "2026-07-17T00:00:00Z"
+    sample_count: 320
+    wilson_lower_bound: 0.81
+
+current_state:
+  current_load: 0.3
+  fatigue: 0.1
+  mood: "focused"
+  active_tasks: 2
+  last_break: "2026-07-17T10:00:00Z"
+
+harness_fit_score:
+  overall: 0.85
+  durable_state: 0.9
+  tool_mediation: 0.85
+  governance: 0.8
+  retrieval: 0.7
+  observability: 0.9

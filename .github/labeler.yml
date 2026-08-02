@@ -1,0 +1,86 @@
+# Path-based PR Labeler Configuration
+# https://github.com/actions/labeler
+# Labels are applied to PRs based on which files are changed
+
+# Core modules
+evolution:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "flowforge/evolution/**"
+
+loop:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "flowforge/loop/**"
+
+core:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "flowforge/core/**"
+
+compiler:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "flowforge/compiler/**"
+
+tools:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "flowforge/tools/**"
+
+agents:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "flowforge/agents/**"
+
+modes:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "flowforge/modes/**"
+
+# Non-code areas
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+          - "mkdocs.yml"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+          - "**/test_*.py"
+          - "**/*_test.py"
+
+ci-cd:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - ".gitignore"
+          - ".editorconfig"
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "config/**"
+          - "**/*.yaml"
+          - "**/*.yml"
+          - "**/*.toml"
+          - "pyproject.toml"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pyproject.toml"
+          - "requirements*.txt"
+          - "setup.py"
+          - "setup.cfg"
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "SECURITY.md"
+          - "**/auth*"
+          - "**/secur*"
+          - "**/permiss*"

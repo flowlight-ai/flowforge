@@ -1,0 +1,181 @@
+# FlowForge Harness v7.0 配置
+#
+# Harness 七层工程路径配置：
+#   1. 感知现实 (Durable State Surfaces)
+#   2. 改变现实 (Tool Mediation)
+#   3. 验证现实 (Evidence & Sensors)
+#   4. 约束现实 (Governance Boundary，压缩免疫)
+#   5. 人机边界 (Magic Words 逃生舱)
+#   6. 清理现实 (Entropy Control 退役)
+#   7. 适配现实 (Harnessability 评估)
+#
+# 设计依据：
+#   - roleagent.md §3 Harness 七层
+#   - 编程红线 11：配置驱动
+#   - 铁律 5：禁止硬编码路径/密钥/端口
+#
+# 加载入口：flowforge.harness.HarnessConfig.load()
+
+# ── 通用配置 ──────────────────────────────────────────────────────────────────
+general:
+  # Harness 版本（v7.0 命名，避免与旧 harness/ 冲突）
+  version: "7.0.0"
+  # 是否启用 Harness 七层
+  enabled: true
+  # 默认 trace_id 注入开关
+  inject_trace_id: true
+
+# ── Layer 1: Durable State Surfaces ─────────────────────────────────────────
+durable_state:
+  # 默认后端：sqlite / git
+  default_backend: "sqlite"
+  sqlite:
+    # SQLite 数据库路径（相对项目根，由 DI 容器解析绝对路径）
+    db_path: "data/harness_v7_state.db"
+    # 表名
+    table_name: "durable_state"
+    # 是否启用 WAL 模式
+    wal_mode: true
+  git:
+    # Git 仓库路径
+    repo_path: "data/harness_v7_state_repo"
+    # 分支名
+    branch: "main"
+    # 提交者署名
+    author_name: "flowforge-harness-v7"
+    author_email: "harness-v7@flowforge.local"
+
+# ── Layer 2: Tool Mediation ────────────────────────────────────────────────
+tool_mediation:
+  # 工具白名单（不在白名单中的工具调用将被拒绝或走别名兜底）
+  tool_whitelist:
+    - tool_name: "file_read"
+      safety_level: "readonly"
+      side_effects: []
+      reversible: true
+    - tool_name: "file_write"
+      safety_level: "normal"
+      side_effects: ["filesystem"]
+      reversible: true
+    - tool_name: "shell_exec"
+      safety_level: "dangerous"
+      side_effects: ["filesystem", "network", "process"]
+      reversible: false
+    - tool_name: "git_commit"
+      safety_level: "normal"
+      side_effects: ["git_history"]
+      reversible: false
+    - tool_name: "web_search"
+      safety_level: "readonly"
+      side_effects: ["network"]
+      reversible: true
+  # 工具别名兜底（Build to Delete，roleagent.md §1.3）
+  # 标记为 Build to Delete：模型工具调用能力提升后退役
+  tool_aliases:
+    "read": "file_read"
+    "write": "file_write"
+    "exec": "shell_exec"
+    "search": "web_search"
+    "commit": "git_commit"
+  # 危险工具是否需要人工确认
+  dangerous_requires_confirm: true
+
+# ── Layer 3: Evidence & Sensors ────────────────────────────────────────────
+evidence:
+  # 证据保留期（天）
+  retention_days: 90
+  # 证据来源开关
+  sources:
+    COMMIT: true
+    TEST: true
+    TRACE: true
+    SCREENSHOT: true
+    LOG: true
+  # 哈希算法：sha256 / md5
+  hash_algorithm: "sha256"
+  # 自动验证开关
+  auto_verify: true
+
+# ── Layer 4: Governance Boundary ───────────────────────────────────────────
+governance:
+  # 关键设计：治理规则必须注入 SYSTEM_ROLE（压缩免疫，roleagent.md §3.3）
+  # 禁止通过 USER_MESSAGE prepend 治理规则（会被上下文压缩吞掉）
+  default_injection_point: "SYSTEM_ROLE"
+  # 规则优先级阈值（高于此值的规则不可被覆盖）
+  critical_priority_threshold: 90
+  # 是否启用默认规则集
+  load_default_rules: true
+  # 自定义治理规则文件路径（相对项目根）
+  custom_rules_path: ""
+
+# ── Layer 5: Magic Words 逃生舱 ────────────────────────────────────────────
+magic_words:
+  # 拉闸词（CVO 制动，不可恢复，需 operator 介入）
+  kill_switch_words:
+    - word: "!HALT"
+      action: "kill_switch"
+      description: "立即停止所有 agent 执行，进入冷制动状态"
+    - word: "!STOP_FORGE"
+      action: "kill_switch"
+      description: "停止 FlowForge 全部循环，等待 operator"
+  # 暂停词（可恢复）
+  pause_words:
+    - word: "!PAUSE"
+      action: "pause"
+      description: "暂停当前 agent 执行，保留上下文"
+    - word: "!HOLD"
+      action: "pause"
+      description: "暂停当前 agent 执行"
+  # 回滚词
+  rollback_words:
+    - word: "!ROLLBACK"
+      action: "rollback"
+      description: "回滚到最近检查点"
+    - word: "!REVERT"
+      action: "rollback"
+      description: "撤销最近一次副作用"
+  # 恢复词（解除暂停）
+  resume_word: "!RESUME"
+
+# ── Layer 6: Entropy Control 退役机制 ──────────────────────────────────────
+entropy_control:
+  # Hotfix 标签 review 期限（天）—— roleagent.md §1.3 Build to Delete
+  sunset_review_days: 14
+  # 待扫描的 hotfix 标签前缀（三选一：fix:/hotfix:/workaround:）
+  hotfix_labels:
+    - "fix:"
+    - "hotfix:"
+    - "workaround:"
+  # 扫描目录（相对项目根，留空则扫描整个项目）
+  scan_dirs:
+    - "flowforge/"
+  # 排除目录
+  exclude_dirs:
+    - "tests/"
+    - "data/"
+    - "logs/"
+    - "__pycache__/"
+    - ".git/"
+  # Review 三选一选项
+  review_outcomes:
+    - "formalize"   # 正式修复（移除标签）
+    - "accept"      # 接受为永久（升级为 built-to-persist）
+    - "obsolete"    # 已不相关（删除代码）
+
+# ── Layer 7: Harnessability 评估 ───────────────────────────────────────────
+harnessability:
+  # 评估阈值（低于此值告警）
+  assessment_threshold: 0.85
+  # 各维度权重
+  weights:
+    durable_state_coverage: 0.20
+    tool_mediation_quality: 0.20
+    governance_completeness: 0.20
+    observability: 0.15
+    recovery_capability: 0.15
+    # overall 公式：sum(dimension * weight)
+    # remaining 0.10 保留给 evidence 层（在评估时合并到 observability）
+  # 评估周期（小时）
+  assessment_interval_hours: 24
+  # 是否自动触发 review
+  auto_trigger_review: true

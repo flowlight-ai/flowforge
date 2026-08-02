@@ -1,0 +1,72 @@
+# External Agent 工具白名单配置（EX-005 L3）
+# 三方 Agent 只能调用 allow-list 内工具，防止越权调用
+# 详见 [doc:review/review.md#第九章§9.2] EX-005 安全沙箱不足
+# 详见 [doc:decisions/006-external-agent-integration.md] §6 安全治理 L3
+
+# 默认允许的工具（所有 Provider 共享）
+default_allowed:
+  - file_read
+  - file_write
+  - file_list
+  - file_search
+  - git_status
+  - git_diff
+  - git_log
+  - run_tests
+  - lint
+  - type_check
+
+# 默认禁止的工具（即使 Provider 声明需要也拒绝）
+default_forbidden:
+  - git_push
+  - git_force_push
+  - git_reset_hard
+  - git_clean
+  - git_branch_delete
+  - rm
+  - rmdir
+  - del
+  - sudo
+  - chmod
+  - chown
+  - database_write
+  - database_delete
+  - network_request_unauthorized
+  - shell_exec
+  - env_modify
+
+# 按 Provider 定制的白名单（与 default_allowed 取并集）
+# 同时会与 Manifest.required_permissions 取交集（最小权限原则）
+per_provider:
+  anthropic.claude_code:
+    # Claude Code 额外允许 MCP 工具调用
+    - mcp_tool_call
+    - code_completion
+    - symbol_search
+
+  openai.codex:
+    # Codex 额外允许 function calling
+    - function_call
+    - structured_output
+
+  opencode.opencode:
+    # OpenCode 额外允许 plugin 调用
+    - plugin_call
+    - community_search
+
+  bytedance.trae:
+    # Trae 额外允许 IDE 操作
+    - ide_open_file
+    - ide_navigate
+    - ide_debug
+
+# 危险操作确认（即使工具在白名单内，仍需 operator 确认）
+# 与 L5 action_confirm 联动
+requires_confirmation:
+  - git_commit
+  - git_merge
+  - git_rebase
+  - file_delete
+  - directory_create
+  - dependency_install
+  - build_release

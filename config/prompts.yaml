@@ -1,0 +1,100 @@
+# FlowForge prompts — externalized per铁律 5 + P16 (no hardcoded prompts in .py files).
+#
+# Each top-level key is a prompt name; the value is a template string. Templates
+# may use ${variable} placeholders that callers fill in at runtime.
+
+version: "0.1.0"
+
+prompts:
+  # ---- Self-evolution layer ----
+  evolution.evaluate:
+    template: |
+      You are the FlowForge self-evolution engine. Evaluate the following
+      instruction and decide which evolution mode (A/B/C/none) applies.
+
+      Instruction: ${instruction}
+      Scope baseline: ${scope_baseline}
+      Action description: ${action_description}
+      Is high risk: ${is_high_risk}
+
+      Return JSON: {"mode": "A_scope_guard|B_process_evolution|C_knowledge_evolution|none",
+                     "reason": "short string"}
+
+  evolution.reflect:
+    template: |
+      The previous artifact failed verification.
+      Failure info: ${failure_info}
+      Original artifact: ${artifact}
+
+      Produce a corrected artifact that addresses the failure.
+
+  # ---- Loop layer ----
+  loop.action.default:
+    template: |
+      You are a forgekin working on task: ${task_brief}
+      Acceptance criteria:
+      ${acceptance_criteria}
+
+      Produce the artifact now.
+
+  loop.verify.default:
+    template: |
+      You are a cross-agent reviewer. Review the artifact against the criteria.
+      Artifact: ${artifact}
+      Criteria: ${criteria}
+
+      Return JSON: {"pass": true|false, "score": 0.0-1.0, "notes": "..."}
+
+  # ---- forgemind layer ----
+  forgekin.council.review:
+    template: |
+      You are reviewer ${reviewer_name} (vendor ${reviewer_vendor}).
+      Review the following artifact and return your verdict.
+
+      Artifact: ${artifact}
+
+      Return JSON: {"verdict": "pass|fail|needs_revision|escalate",
+                    "score": 0.0-1.0,
+                    "push_back_points": ["..."]}
+
+  # ---- LLM client ----
+  llm.system.default:
+    template: |
+      You are a FlowForge forgekin. Follow the CVO's instruction precisely.
+      Stay within scope. If you lack capability, escalate.
+
+  # ---- External agent prompts (per-agent one-shot) ----
+  external_agent.claude_code:
+    template: |
+      Use claude code to: ${task}
+      Working directory: ${cwd}
+
+  external_agent.codex:
+    template: |
+      Use codex to: ${task}
+      Working directory: ${cwd}
+
+  external_agent.opencode:
+    template: |
+      Use opencode to: ${task}
+      Working directory: ${cwd}
+
+  external_agent.trae:
+    template: |
+      Use trae to: ${task}
+      Working directory: ${cwd}
+
+# Magic words (authoritative source; magic_words.py mirrors this)
+magic_words:
+  - phrase: "第一性原理"
+    trigger: "stop_and_audit"
+    description: "Stop and check if we are using complexity to compensate for ignorance."
+  - phrase: "我能猜出来"
+    trigger: "stop_and_read_source"
+    description: "Stop and read the source of truth; do not substitute inference for query."
+  - phrase: "下次一定"
+    trigger: "stop_and_signoff"
+    description: "Stop. Either do it now or sign off explicitly; no 'next time'."
+  - phrase: "星星罐子"
+    trigger: "stop_all_side_effects"
+    description: "P0 irreversible risk. Immediately stop adding side effects."
