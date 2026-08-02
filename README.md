@@ -23,28 +23,37 @@
 
 ## Why FlowForge?
 
-FlowForge is the **harness layer** that gives agents a persistent identity, self-evolution capability, and governance framework. It doesn't replace your agents — it **employs** them as capability extensions and grows them into career **Forgekin**: agents with a name, a memory, a growth trajectory, and accountability. Every capability your existing agents have, FlowForge inherits — plus six capabilities at its core.
+FlowForge is the **harness layer** that gives agents a persistent identity, self-evolution capability, and governance framework. It doesn't replace your agents — it **employs** them as capability extensions and grows them into career **Forgekin**: agents with a name, a memory, a growth trajectory, and accountability. Every capability your existing agents have, FlowForge inherits — plus six core capabilities.
 
 | Capability | Claude Code | OpenCode | Codex | WorkBuddy | Trae | Qoder | FlowForge |
 |------------|:-----------:|:--------:|:-----:|:---------:|:----:|:-----:|:---------:|
 | Project context | ✅ `CLAUDE.md` | ✅ | ✅ `AGENTS.md` | ✅ | ✅ | ✅ Repo Wiki | ✅ |
 | Deep codebase understanding | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Multi-agent collaboration | ✅ subagents | ✅ sub-agent | — | ✅ experts | — | ✅ expert teams | ✅ MindCouncil |
-| Long-term memory | ✅ memory files | — | ✅ | ✅ multi-layer | — | ✅ Knowledge Engine | ✅ EchoStore + MindCodex |
 | Code generation & refactor | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Automated testing | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
 | Git / PR workflow & CI/CD | ✅ | ✅ | ✅ GitHub Actions | ✅ | ✅ | ✅ | ✅ |
 | IDE integration | ✅ VS Code / JetBrains | — | ✅ VS Code | ✅ | ✅ IDE | ✅ JetBrains | ✅ via agents |
 | CLI support | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ |
+| Desktop operation (file / app / OS) | — | — | — | ✅ | ✅ | ✅ | ✅ |
+| Office document processing | — | — | — | ✅ Word/Excel/PPT | ✅ | ✅ QoderWork | ✅ |
+| Cross-app workflow automation | — | — | — | ✅ | ✅ 飞书 | ✅ | ✅ |
+| Browser automation | — | ✅ | — | ✅ | ✅ | — | ✅ |
+| Scheduled tasks / automation | — | — | — | ✅ | ✅ | — | ✅ |
+| Content creation (PPT / reports) | — | — | — | ✅ | ✅ | ✅ | ✅ |
+| Data analysis & visualization | — | — | — | ✅ | ✅ | — | ✅ |
+| IM integration (WeChat / Feishu / WeCom) | — | — | — | ✅ WeCom | ✅ 飞书 | — | ✅ |
+| Web search & multimodal | — | ✅ | ✅ screenshots | ✅ | ✅ image→code | — | ✅ |
+| Multi-agent collaboration | ✅ subagents | ✅ sub-agent | — | ✅ Agent Team | — | ✅ expert teams | ✅ MindCouncil |
+| Long-term memory | ✅ memory files | — | ✅ | ✅ multi-layer | — | ✅ Knowledge Engine | ✅ EchoStore + MindCodex |
+| Self-reflection / improvement | — | — | — | — | — | ✅ 意识功能 | ✅ |
 | MCP protocol | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
-| Multi-model support | — | ✅ | — | ✅ | ✅ DeepSeek | ✅ Claude/Gemini/GPT | ✅ |
+| Multi-model support | — | ✅ | — | ✅ 11 models | ✅ DeepSeek | ✅ Claude/Gemini/GPT | ✅ |
 | Autonomous execution | ✅ checkpoints | ✅ | ✅ cloud sandbox | ✅ | ✅ | ✅ Quest Mode | ✅ |
-| Web search & multimodal | — | ✅ WebSearch | ✅ screenshots | ✅ | ✅ image→code | — | ✅ |
 | **Agent-level persistent identity** | — | — | — | — | — | — | ✅ Soul Imprint |
-| **Self-Devolution Loops** | — | — | — | — | — | — | ✅ evolve own docs/code/tests |
+| **Structured self-devolution loops** | — | — | — | — | — | — | ✅ 5 loops: docs/code/framework/review/tests |
 | **Cross-vendor independent review** | — | — | — | — | — | — | ✅ structurally enforced |
-| **Experience distillation** | — | — | — | — | — | — | ✅ SpiritForge → MindCodex |
-| **Graduated autonomy (6 stages)** | — | — | — | — | — | — | ✅ Awakening Stages |
+| **Experience distillation pipeline** | — | — | — | — | — | — | ✅ SpiritForge → MindCodex |
+| **Graduated autonomy (6 stages + guardrails)** | — | — | — | — | — | — | ✅ Awakening Stages |
 | **Multi-species morphology** | — | — | — | — | — | — | ✅ 5 evolvable species |
 
 > **Build AI teams, not just agents. Hard rails, soft power, shared mission.**
