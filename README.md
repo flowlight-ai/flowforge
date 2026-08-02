@@ -23,22 +23,25 @@
 
 ## Why FlowForge?
 
-Mainstream multi-agent frameworks (AutoGen / CrewAI / LangGraph) answer one question well: *how do multiple LLM calls cooperate within a session?* But when the session ends, the agent forgets. When the server restarts, it's a blank slate. When the model upgrades, hard-won experience is lost.
+Today's coding agents — **OpenCode, Codex CLI, Gemini CLI, Qoder, iFlow, WorkBuddy, Claude Code** — are brilliant at one thing: *executing a task inside a single session.* But they are disposable contractors. When the session ends, they forget. When the server restarts, they are a blank slate. When the model upgrades, hard-won experience walks out the door — and no one is accountable for what shipped last month.
 
-FlowForge answers the harder, less crowded question:
+FlowForge answers a different, less crowded question:
 
-> **How does an agent preserve identity, accumulate capability, remain verifiable, and evolve under governance — across months and model generations?**
+> **How does an agent keep a persistent identity, accumulate capability, stay verifiable, and evolve — under governance — across months and model generations?**
 
-This is not another chatbot framework. FlowForge is the **infrastructure layer** for agents that need to *remember, grow, and be held accountable* over long time horizons.
+FlowForge doesn't compete with these agents — **it employs them.** It is the **harness layer** that binds your existing coding agents as capability extensions and grows them into career **Forgekin**: agents with a Soul Imprint, a growth trajectory, and governance.
 
-| Dimension | Mainstream Multi-Agent | FlowForge |
-|-----------|------------------------|-----------|
-| **Identity** | Session-scoped; amnesia on restart | Persistent across sessions, crashes, and model upgrades |
-| **Capability** | Single model + tool calls | Model × Harness × Forgekin morphology × External agent extension |
-| **Collaboration** | Fixed role slots (PM/Dev/Test) | Dynamic capability-profile routing; role is a runtime label |
-| **Evolution** | Model upgrade = system upgrade | Agents autonomously evolve their own docs, code, and tests |
-| **Review** | Same-vendor self-approval | Cross-vendor independent review (no agent approves its own work) |
-| **Embodiment** | API tool calls | Physical sensors (IoT) + virtual world settings |
+| Dimension | Mainstream coding agents (OpenCode · Codex · Gemini CLI · Qoder · iFlow · Claude Code) | FlowForge |
+|-----------|--------------------------------------------------|-----------|
+| **Category** | Disposable task executor ("brilliant hands") | Harness layer for persistent-identity Forgekin |
+| **Identity** | A fresh instance each session; no "who am I" | Soul Imprint + species lineage — survives months & model generations |
+| **Growth** | Capability frozen in model weights; upgrade = replace | Self-Devolution Loops evolve its own docs, code, framework, reviews & tests |
+| **Review** | The same model approves its own output | Cross-vendor independent review — no agent approves its own work |
+| **Autonomy** | Binary: full-auto or human-in-the-loop | 6 Awakening Stages + 6-layer guardrails + magic-word kill-switch |
+| **Memory** | Session context / a flat memory file | EchoStore (episodic) × MindCodex (distilled), federated across domains |
+| **Morphology** | One abstract agent / a single CLI | 5 evolvable species — bio / org / object / virtual / hybrid |
+
+> **The coding agents you already use are the workforce. FlowForge is what gives them a name, a memory, and a manager.**
 
 ---
 
