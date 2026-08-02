@@ -12,11 +12,12 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/flowlight-ai/flowforge/blob/main/CONTRIBUTING.md)
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-purple.svg)](https://github.com/flowlight-ai/flowforge/discussions)
 
-> *锻造持久身份 · 赋予记忆、MindCouncil 与自进化能力。*
+> *锻造持久身份 · 赋予记忆、多智能体议事（MindCouncil）与自进化（Self-Devolution）能力。*
 
 </div>
 
 ---
+
 [🇺🇸 English](README.md) · [🇨🇳 简体中文](README.zh-CN.md) · [🇯🇵 日本語](README.ja.md)
 
 ## 为什么需要 FlowForge？
@@ -32,7 +33,7 @@ FlowForge 回答的是一个更难、更少人涉足的问题：
 | 维度 | 主流多智能体 | FlowForge |
 |------|-------------|-----------|
 | **身份** | 会话级；重启即失忆 | 跨会话、跨崩溃、跨模型升级持久存在 |
-| **能力** | 单一模型 + 工具调用 | 模型 × 工具链 × 灵智体形态 × 外部智能体扩展 |
+| **能力** | 单一模型 + 工具调用 | 模型 × 驾驭层（Harness）× 可进化智能体形态 × 三方 Agent 能力扩展 |
 | **协作** | 固定角色槽位（PM/开发/测试） | 动态能力画像路由；角色只是运行期标签 |
 | **进化** | 模型升级 = 系统升级 | 智能体自主进化自己的文档、代码与测试 |
 | **审查** | 同厂商自审批 | 跨厂商独立审查（没有智能体能审批自己的成果） |
@@ -40,33 +41,33 @@ FlowForge 回答的是一个更难、更少人涉足的问题：
 
 ## 核心特性
 
-- **持久身份（Forgekin / 灵智体）** — 拥有 `Soul Imprint`（灵魂印记）、`Capability Profile`（能力画像）与 `EchoStore`（回声仓储）的长寿智能体，可跨越崩溃、模型升级与会话边界而存活。
-- **自进化闭环（Self-Devolution Loops）** — 五条闭环让智能体在治理闸门下，自主进化自己的文档、代码、框架、审查与测试。
+- **持久身份（可进化智能体 Forgekin）** — 拥有持久身份（Soul Imprint）、能力画像（Capability Profile）与情景记忆存储（EchoStore）的长寿可进化智能体（Forgekin），可跨越崩溃、模型升级与会话边界而存活。
+- **自进化闭环（Self-Devolution Loops）** — 五条闭环让可进化智能体（Forgekin）在治理闸门下，自主进化自己的文档、代码、框架、审查与测试。
 - **跨厂商审查** — 审查者必须来自与作者不同的厂商；没有智能体能审批自己的成果。
-- **多域记忆联邦** — 通过 `MindCodex` 程序性记忆法典联邦的五域记忆。
-- **七层工具链工程** — `durable_state`（持久状态）· `tool_mediation`（工具中介）· `evidence_sensors`（证据传感）· `governance`（治理）· `magic_words`（魔法词）· `entropy_control`（熵控）· `harnessability`（可驾驭性）。
-- **配置驱动的灵智体** — 通过 YAML 画像注册任意数量的灵智体。5 个默认灵智体只是参考示例，并非上限。
-- **外部智能体集成** — 将 Claude Code / Codex / Gemini / OpenCode / Trae CN 绑定为能力扩展。
+- **多域记忆联邦** — 通过蒸馏知识库（MindCodex）这一程序性记忆载体联邦的五域记忆。
+- **七层驾驭工程（Harness Engineering）** — `durable_state`（持久状态）· `tool_mediation`（工具中介）· `evidence_sensors`（证据传感）· `governance`（治理）· `magic_words`（魔法词）· `entropy_control`（熵控）· `harnessability`（驾驭度）。
+- **配置驱动的可进化智能体（Forgekin）** — 通过 YAML 画像注册任意数量的可进化智能体（Forgekin）。5 个默认 Forgekin 只是参考示例，并非上限。
+- **三方 Agent（能力扩展）集成** — 将 Claude Code / Codex / Gemini / OpenCode / Trae CN 绑定为能力扩展。
 
-## 灵智体（Forgekins）：可配置的自进化智能体
+## 可进化智能体（Forgekin）：可配置的自进化智能体
 
-**架构并不固定于任何数量的灵智体。** 灵智体是配置驱动的实体——向 `config/forgekins/` 放入一份 YAML 画像即可注册一个，将其绑定到一条自进化闭环，并（可选地）绑定一个外部编码智能体。ForgeMindEngine 在运行期依据能力画像路由任务，而非硬编码角色。
+**架构并不固定于任何数量的可进化智能体（Forgekin）。** 可进化智能体（Forgekin）是配置驱动的实体——向 `config/forgekins/` 放入一份 YAML 画像即可注册一个，将其绑定到一条自进化闭环（Self-Devolution Loop），并（可选地）绑定一个三方编码 Agent（能力扩展）。ForgeMind 引擎（通用智能体框架）在运行期依据能力画像路由任务，而非硬编码角色。
 
-**自进化才是架构的核心，而非智能体的数量。**
+**自进化才是架构的核心，而非可进化智能体（Forgekin）的数量。**
 
-### 5 个默认灵智体（参考示例）
+### 5 个默认可进化智能体（Forgekin，参考示例）
 
-| 灵智体 | 厂商 | 自进化闭环 | 外部智能体 |
-|--------|------|-----------|-----------|
+| 可进化智能体（Forgekin） | 厂商 | 自进化闭环 | 三方 Agent（能力扩展） |
+|--------------------------|------|-----------|------------------------|
 | **Wenxin（文心）** | anthropic | 文档进化 | Claude Code |
 | **Sherlock（夏洛克）** | openai | 代码进化 | Codex |
 | **Vangogh（梵高）** | google | 跨厂商审查 | Gemini |
 | **Da Vinci（达芬奇）** | open_source | 测试进化 | OpenCode |
 | **Luban（鲁班）** | bytedance | 框架进化 *（需运营者审批）* | Trae CN |
 
-### 新增你自己的灵智体
+### 新增你自己的可进化智能体（Forgekin）
 
-注册一个新的灵智体是**纯配置操作**——无需改动框架代码：
+注册一个新的可进化智能体（Forgekin）是**纯配置操作**——无需改动框架代码：
 
 ```yaml
 # config/forgekins/my-forgekin.yaml
@@ -86,10 +87,10 @@ blind_spots: ["frontend"]
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  应用层 · forgemind/                                             │
-│  灵智体注册表 · MindCouncil · 外部智能体                          │
+│  可进化智能体注册表（ForgekinRegistry） · 多智能体议事（MindCouncil） · 三方 Agent（能力扩展） │
 ├─────────────────────────────────────────────────────────────────┤
 │  指令层 · evolution/                                             │
-│  ForgeMindEngine · 元认知路由 · 成熟度阶梯                        │
+│  ForgeMind 引擎（通用智能体框架） · 元认知路由 · 成熟度阶梯        │
 ├─────────────────────────────────────────────────────────────────┤
 │  执行层 · workers/ · loop/                                       │
 │  自进化闭环 · 闭环执行器 · 执行模式                               │
@@ -113,7 +114,7 @@ cd flowforge
 # 搭建 Python 环境 + 安装后端依赖 + 构建前端
 python scripts/setup.py
 
-# （可选）安装外部编码智能体 CLI
+# （可选）安装三方编码 Agent CLI
 python scripts/install_agents.py
 
 # 启动后端（8000 端口）+ 前端（5175 端口）
@@ -141,7 +142,7 @@ python -m uvicorn flowforge.app.main:app --host 127.0.0.1 --port 8000
 cd web && npm run dev
 ```
 
-### 验证 5 个默认灵智体
+### 验证 5 个默认可进化智能体（Forgekin）
 
 ```bash
 python scripts/verify_five_forgekins.py
@@ -173,7 +174,7 @@ council:
   pass_threshold: 0.85        # 质量阈值
 ```
 
-每个灵智体都由 `config/forgekins/*.yaml` 下的一份 YAML 画像描述。**框架对灵智体数量没有上限**——按需增删画像即可匹配你的部署。
+每个可进化智能体（Forgekin）都由 `config/forgekins/*.yaml` 下的一份 YAML 画像描述。**框架对可进化智能体（Forgekin）的数量没有上限**——按需增删画像即可匹配你的部署。
 
 ## 文档
 
@@ -196,11 +197,11 @@ council:
 |------|------|------|
 | **0** | 项目脚手架 + 跨平台配置 + 文档骨架 | ✅ 已完成 |
 | **1** | 七条工程路径代码骨架 | 🔄 进行中（约 70%） |
-| **2** | forgemind 应用层 + 灵智体形态 | 🔄 进行中（约 85%） |
-| **3** | 第三方智能体适配层 | 🔄 进行中（约 80%） |
+| **2** | forgemind 应用层 + 可进化智能体形态 | 🔄 进行中（约 85%） |
+| **3** | 三方 Agent 适配层 | 🔄 进行中（约 80%） |
 | **4** | 评估自代谢 + 分布式可靠性 | 🔄 进行中（约 40%） |
 | **5** | 协同数学 + 自进化闭环 | 🔄 进行中（约 60%） |
-| **6** | SpiritForge 经验蒸馏 + MindCouncil | 🔄 进行中（约 40%） |
+| **6** | SpiritForge 经验蒸馏 + 多智能体议事（MindCouncil） | 🔄 进行中（约 40%） |
 
 详见 [docs/roadmap.md](docs/roadmap.md)。
 
@@ -209,7 +210,7 @@ council:
 ```
 flowforge/
 ├── core/              # 共享内核：capability · teamact · harness · memory · eval
-├── evolution/         # ForgeMindEngine（自进化编排）
+├── evolution/         # ForgeMind 引擎（通用智能体框架，自进化编排）
 ├── forgemind/         # 应用层：forgekin · registry · council · external_agents
 ├── web/               # Web UI（Next.js 14 + FastAPI 后端）
 ├── config/            # forgemind.yaml · forgekins/*.yaml · evolution.yaml
@@ -220,7 +221,7 @@ flowforge/
 
 ## 贡献
 
-我们欢迎任何形式的贡献——新的灵智体画像、适配器集成、文档改进，或核心框架工作。
+我们欢迎任何形式的贡献——新的可进化智能体（Forgekin）画像、适配器集成、文档改进，或核心框架工作。
 
 - 🐛 [报告 Bug](https://github.com/flowlight-ai/flowforge/issues/new?template=bug_report.yml)
 - 💡 [提交功能建议](https://github.com/flowlight-ai/flowforge/issues/new?template=feature_request.yml)
