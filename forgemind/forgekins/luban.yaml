@@ -45,13 +45,10 @@ evolution_stage: E3  # 精英阶（Practitioner）— 多任务稳定执行
 # 觉醒阶（Awakening Stage，自主性等级 E1-E6）
 awakening_stage: E3  # 受限自主阶（Supervised Autonomy）— tool allow-list 内自主
 
-# ── Trae CN 桥接方案 ─────────────────────────────────────────
-# 所有 3 只Forgekin通过 Trae CN 桥接接入 LLM
-# 用户/operator 通过 Trae CN IDE 充当 LLM 与监工
-# 流程使用 flowforge 已有的 TraeLLMClient（llm/trae/client.py）
+# ── Gemini CLI 后端 ─────────────────────────────────────────
 llm:
-  provider: opencode  # 通过 opencode CLI（opencode run）调用 LLM
-  model: deepseek-v4-flash-free  # opencode 默认模型（build）
+  provider: gemini  # 通过 Gemini CLI（gemini -p）调用 LLM
+  model: gemini-2.5-flash  # 经 OpenRoute gemini 网关转发
   mode: cli
   session_id_prefix: "forgemind:luban"  # 会话隔离
   bridge_timeout: 180  # 增加超时以支持长任务

@@ -125,7 +125,7 @@ class ExternalAgentAdapter(ABC):
         Returns:
             ExternalAgentResult 调用结果。
         """
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     async def stream(
@@ -147,9 +147,8 @@ class ExternalAgentAdapter(ABC):
         Yields:
             响应片段字符串。
         """
-        raise NotImplementedError
-        # 下面这行是为了让 mypy 知道这是 async iterator（不会执行）
-        yield ""  # pragma: no cover
+        ...
+        yield  # pragma: no cover
 
     @abstractmethod
     def get_capability_profile(self) -> dict[str, Any]:
@@ -165,7 +164,7 @@ class ExternalAgentAdapter(ABC):
                 - best_practices: 最佳使用场景
                 - anti_patterns: 反模式（不该用此 Agent 的场景）
         """
-        raise NotImplementedError
+        ...
 
     def prepare_sandbox(
         self,

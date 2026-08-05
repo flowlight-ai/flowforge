@@ -44,7 +44,7 @@ team_strengths: "文档扫描、生成、审核，知识传承"
 evolution_stage: E3  # 精英阶（Practitioner）
 awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
-# ── Trae CN 桥接方案 ─────────────────────────────────────────
+# ── OpenCode CLI 后端 ─────────────────────────────────────
 llm:
   provider: opencode  # 通过 opencode CLI（opencode run）调用 LLM
   model: deepseek-v4-flash-free  # opencode 默认模型（build）

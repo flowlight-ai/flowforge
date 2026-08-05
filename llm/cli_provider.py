@@ -1,11 +1,14 @@
 """CLI LLM Provider — 通过 subprocess 调用三方 Agent CLI 工具.
 
-支持 5 个 CLI Agent：
-  - claude   (claude -p "prompt")
-  - codex    (codex exec "prompt")
-  - gemini   (gemini -p "prompt")
-  - opencode (opencode run "prompt")
-  - trae-cn  (文件桥接，由 TraeLLMClient 处理，不在此类)
+支持的 CLI Agent：
+  - claude_code (claude -p "prompt")              — 经 claude-code-router 转发
+  - codex       (codex exec "prompt")             — 经 responses proxy 转发
+  - gemini      (gemini -p "prompt")              — 经 gemini proxy 转发
+  - opencode    (opencode run "prompt")           — 直连（默认模型）
+  - codebuddy   (codebuddy -p "prompt")           — 直连（hy3 默认模型）
+  - qodercli    (qodercli -p "prompt")            — 需 Qoder 账号登录
+  - iflow       (iflow -p "prompt")               — OpenAI-Compatible API
+  - trae-cn     (文件桥接，由 TraeLLMClient 处理，不在此类)
 
 设计原则：
   - 铁律 3：依赖通过构造函数注入
@@ -17,6 +20,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import shutil
 import time
 from dataclasses import dataclass, field
@@ -31,9 +35,12 @@ logger = get_logger("flowforge.llm.cli_provider")
 class CLIProviderConfig:
     """单个 CLI Agent 的配置."""
 
-    provider: str          # provider 名（claude_code / codex / gemini / opencode）
-    binary: str            # CLI 二进制名（claude / codex / gemini / opencode）
-    cli_args: list[str]    # 非交互模式参数（["-p"] / ["exec"] / ["-p"] / ["run"]）
+    provider: str            # provider 名（claude_code / codex / gemini / opencode / ...）
+    binary: str              # CLI 二进制名（claude / codex / gemini / opencode / ...）
+    cli_args: list[str]      # 非交互模式参数（["-p"] / ["exec"] / ["-p"] / ["run"]）
+    model_flag: list[str] = field(default_factory=list)  # 指定模型的 CLI 参数（如 ["--model"]）
+    model_after_prompt: bool = False  # True: 模型参数置于 prompt 之后（gemini/iflow）
+    trailer_args: list[str] = field(default_factory=list)  # prompt 之后追加的参数（如 gemini 的 --output-format text）
     default_timeout: float = 300.0
     env: dict[str, str] = field(default_factory=dict)
 
@@ -44,21 +51,58 @@ PRESET_CONFIGS: dict[str, CLIProviderConfig] = {
         provider="claude_code",
         binary="claude",
         cli_args=["-p"],
+        model_flag=["--model"],
+        env={
+            "ANTHROPIC_BASE_URL": "http://127.0.0.1:3456",
+            "ANTHROPIC_API_KEY": "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
+        },
     ),
     "codex": CLIProviderConfig(
         provider="codex",
         binary="codex",
         cli_args=["exec"],
+        model_flag=["-m"],
+        env={"CODEX_API_KEY": "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7"},
     ),
     "gemini": CLIProviderConfig(
         provider="gemini",
         binary="gemini",
         cli_args=["-p"],
+        model_flag=["--model"],
+        model_after_prompt=True,
+        trailer_args=["--output-format", "text"],
+        env={
+            "GOOGLE_GEMINI_BASE_URL": "http://127.0.0.1:8082",
+            "GEMINI_API_KEY": "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
+            "GEMINI_CLI_TRUST_WORKSPACE": "true",
+        },
     ),
     "opencode": CLIProviderConfig(
         provider="opencode",
         binary="opencode",
         cli_args=["run"],
+        model_flag=[],  # opencode 使用内置默认模型（build），不传 -m
+    ),
+    "codebuddy": CLIProviderConfig(
+        provider="codebuddy",
+        binary="codebuddy",
+        cli_args=["-p"],
+        model_flag=["--model"],
+    ),
+    "qodercli": CLIProviderConfig(
+        provider="qodercli",
+        binary="qodercli",
+        cli_args=["-p"],
+        model_flag=["-m"],
+        model_after_prompt=True,
+    ),
+    "iflow": CLIProviderConfig(
+        provider="iflow",
+        binary="iflow",
+        cli_args=["-p"],
+        model_flag=["--model"],
+        model_after_prompt=True,
+        trailer_args=["-y"],
     ),
 }
 
@@ -135,11 +179,20 @@ class CLILLMProvider:
         start_ts = time.monotonic()
 
         # 构建命令参数
-        args = [self._binary_path or self.config.binary] + self.config.cli_args + [prompt]
+        args = [self._binary_path or self.config.binary] + list(self.config.cli_args)
+        model = kwargs.get("model")
+        def _model_args() -> list[str]:
+            if model and self.config.model_flag:
+                return list(self.config.model_flag) + [model]
+            return []
+        if self.config.model_after_prompt:
+            args += [prompt] + _model_args() + list(self.config.trailer_args)
+        else:
+            args += _model_args() + [prompt] + list(self.config.trailer_args)
 
         logger.info(
-            "cli_provider invoke: provider=%s binary=%s prompt_len=%d timeout=%ss session=%s",
-            self.config.provider, self.config.binary, len(prompt), timeout_s, session_id,
+            "cli_provider invoke: provider=%s binary=%s prompt_len=%d timeout=%ss session=%s model=%s",
+            self.config.provider, self.config.binary, len(prompt), timeout_s, session_id, model,
         )
 
         try:
@@ -147,7 +200,7 @@ class CLILLMProvider:
                 *args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env={**self.config.env} or None,
+                env={**os.environ, **self.config.env},
             )
         except OSError as exc:
             logger.error("cli_provider spawn failed: %s", exc)
