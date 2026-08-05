@@ -137,7 +137,7 @@ class ForgekinBase(ABC):
 
         parts: list[str] = []
         parts.append(f"你是 {self.name}，一个Forgekin（Forgekin / Spirit Agent）。")
-        parts.append(f"Forgekin定义：赋予灵魂和感情的智能体，具有自进化能力的 Agent。")
+        parts.append("Forgekin定义：赋予灵魂和感情的智能体，具有自进化能力的 Agent。")
         parts.append(f"你的形态是 {self.species.chinese_name}（{self.species.value}）。")
         parts.append(f"你的进化阶是 {self.evolution_stage.value}（{self.evolution_stage.chinese_name}），"
                      f"觉醒阶是 {self.awakening_stage.value}（{self.awakening_stage.chinese_name}）。")

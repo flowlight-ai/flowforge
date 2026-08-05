@@ -1,6 +1,7 @@
 """Verify plugin loading and real tool calls via PluginRegistry."""
-import requests
 import json
+
+import requests
 
 BASE = "http://127.0.0.1:8000/api/v1"
 

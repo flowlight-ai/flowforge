@@ -34,12 +34,11 @@ import hashlib
 import json
 import sqlite3
 import subprocess
-import time
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -78,11 +77,11 @@ class DurableState(BaseModel):
     version: int = Field(default=1, ge=1, description="乐观锁版本号")
     last_writer: str = Field(..., description="最后写入者标识")
     created_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="创建时间 ISO 8601",
     )
     updated_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="最后更新时间 ISO 8601",
     )
 
@@ -106,7 +105,7 @@ class DurableStateSurface(ABC):
     """
 
     @abstractmethod
-    async def read(self, key: str) -> Optional[Any]:
+    async def read(self, key: str) -> Any | None:
         """读取指定 key 的当前值。
 
         Args:
@@ -238,10 +237,10 @@ class SqliteDurableState(DurableStateSurface):
             updated_at=row["updated_at"],
         )
 
-    async def read(self, key: str) -> Optional[Any]:
+    async def read(self, key: str) -> Any | None:
         """读取指定 key 的当前值。"""
         # SQLite 操作放线程池避免阻塞事件循环
-        def _read_sync() -> Optional[DurableState]:
+        def _read_sync() -> DurableState | None:
             conn = self._get_conn()
             try:
                 cur = conn.execute(
@@ -278,7 +277,7 @@ class SqliteDurableState(DurableStateSurface):
                     (key,),
                 )
                 existing = cur.fetchone()
-                now = datetime.now(timezone.utc).isoformat()
+                now = datetime.now(UTC).isoformat()
                 if existing is None:
                     state = DurableState(
                         key=key,
@@ -422,8 +421,8 @@ class GitDurableState(DurableStateSurface):
             # 初始提交（空仓库也需要一个 commit 作为基线）
             readme = self.repo_path / "README.md"
             readme.write_text(
-                f"# Durable State Repository\n\n"
-                f"Auto-initialized by GitDurableState (harness).\n",
+                "# Durable State Repository\n\n"
+                "Auto-initialized by GitDurableState (harness).\n",
                 encoding="utf-8",
             )
             self._run_git(["add", "README.md"])
@@ -481,11 +480,11 @@ class GitDurableState(DurableStateSurface):
         safe = hashlib.sha1(key.encode("utf-8")).hexdigest()[:24]
         return self.repo_path / f"{safe}.json"
 
-    async def read(self, key: str) -> Optional[Any]:
+    async def read(self, key: str) -> Any | None:
         """读取指定 key 的当前值。"""
         path = self._key_to_path(key)
 
-        def _read_sync() -> Optional[Any]:
+        def _read_sync() -> Any | None:
             if not path.exists():
                 return None
             try:
@@ -511,7 +510,7 @@ class GitDurableState(DurableStateSurface):
     async def write(self, key: str, value: Any, writer: str) -> DurableState:
         """写入状态并提交到 git。"""
         path = self._key_to_path(key)
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
 
         def _write_sync() -> DurableState:
             # 读取旧版本以计算 version

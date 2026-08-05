@@ -24,8 +24,7 @@ License: MIT
 from __future__ import annotations
 
 import math
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -70,14 +69,14 @@ class RecencyFactor(BaseModel):
         try:
             ts = datetime.fromisoformat(last_accessed)
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
+                ts = ts.replace(tzinfo=UTC)
         except ValueError:
             logger.warning(
                 f"Invalid last_accessed format: {last_accessed}, "
                 f"returning min_factor"
             )
             return self.min_factor
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         elapsed_days = (now - ts).total_seconds() / 86400.0
         factor = 0.5 ** (elapsed_days / self.half_life_days)
         return max(self.min_factor, factor)
@@ -110,10 +109,10 @@ class ConsumptionWeightedRanker:
 
     def __init__(
         self,
-        governance: Optional[MemoryGovernance] = None,
-        recency: Optional[RecencyFactor] = None,
-        relevance_scores: Optional[dict[str, float]] = None,
-        logger: Optional[TraceLogger] = None,
+        governance: MemoryGovernance | None = None,
+        recency: RecencyFactor | None = None,
+        relevance_scores: dict[str, float] | None = None,
+        logger: TraceLogger | None = None,
     ) -> None:
         self._governance: MemoryGovernance = governance or MemoryGovernance()
         self._recency: RecencyFactor = recency or RecencyFactor()

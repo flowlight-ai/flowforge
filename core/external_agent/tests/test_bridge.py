@@ -21,10 +21,10 @@ License: MIT
 
 from __future__ import annotations
 
-import asyncio
 import os
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, AsyncIterator, Optional
+from typing import Any
 
 import pytest
 
@@ -32,11 +32,10 @@ from flowforge.core.external_agent import (
     ACPMessage,
     ACPResponse,
     ACPTransport,
-    AgentProviderManifest,
     AgentProtocol,
+    AgentProviderManifest,
     AgentTransport,
     BridgeInvokeResponse,
-    CredentialStore,
     ExternalAgentBridge,
     ExternalAgentCapabilityFusion,
     ExternalAgentFallback,
@@ -45,7 +44,6 @@ from flowforge.core.external_agent import (
     HostInjector,
     ProviderTransportRegistry,
     SafetyLevel,
-    SharedStateEntry,
 )
 from flowforge.core.external_agent.adapters import (
     ClaudeCodeAdapter,
@@ -55,9 +53,7 @@ from flowforge.core.external_agent.adapters import (
 )
 from flowforge.core.external_agent.reference_runtime import (
     ReferenceAgentAdapter,
-    ReferenceRuntimeConfig,
 )
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 测试夹具
@@ -73,7 +69,7 @@ class _InMemoryCredentialStore:
     def __init__(self, env_vars: dict[str, str] | None = None) -> None:
         self._vars = env_vars or {}
 
-    def get(self, env_var: str) -> Optional[str]:
+    def get(self, env_var: str) -> str | None:
         # 优先从环境变量取，再从注入字典取
         return os.environ.get(env_var) or self._vars.get(env_var)
 
@@ -84,7 +80,7 @@ class _InMemorySharedStateStore:
     def __init__(self) -> None:
         self._data: dict[str, dict[str, Any]] = {}
 
-    async def read(self, forgekin_id: str, key: str) -> Optional[Any]:
+    async def read(self, forgekin_id: str, key: str) -> Any | None:
         return self._data.get(forgekin_id, {}).get(key)
 
     async def write(self, forgekin_id: str, key: str, value: Any) -> None:

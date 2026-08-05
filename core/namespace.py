@@ -8,9 +8,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
-
 # 项目命名空间注册表 — 各项目在初始化时注册自己的映射
 _NAMESPACE_REGISTRY: dict[str, dict[str, str]] = {}
 

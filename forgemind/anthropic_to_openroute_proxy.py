@@ -26,7 +26,6 @@ Claude CLI 配置 (~/.claude/settings.json):
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import logging
 import os
@@ -35,9 +34,9 @@ import time
 from typing import Any
 
 import httpx
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-import uvicorn
 
 # ── 配置 ────────────────────────────────────────────────────────────────────
 

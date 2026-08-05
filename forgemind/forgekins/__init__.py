@@ -20,8 +20,8 @@
 from flowforge.forgemind.forgekins.roster import (
     BUILTIN_FORGEKINS,
     ROSTER_FILES,
-    load_forgekin_config,
     list_builtin_forgekins,
+    load_forgekin_config,
 )
 
 __all__ = [

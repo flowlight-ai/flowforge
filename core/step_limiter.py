@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -41,7 +40,7 @@ class StepLimiter:
             # 将 prompt_suffix 附加到 LLM 提示中
     """
 
-    def __init__(self, config: Optional[StepLimitConfig] = None):
+    def __init__(self, config: StepLimitConfig | None = None):
         self.config = config or StepLimitConfig()
         self._current_step = 0
         self._retry_count = 0

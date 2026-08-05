@@ -68,8 +68,8 @@ class RuntimeCoordinator:
     def __init__(
         self,
         core_identity: CoreIdentityLayer,
-        world: "WorldLayer",
-        bridge: "BridgeLayer",
+        world: WorldLayer,
+        bridge: BridgeLayer,
     ) -> None:
         if core_identity is None:
             raise ValueError("core_identity 不能为 None。")
@@ -79,8 +79,8 @@ class RuntimeCoordinator:
             raise ValueError("bridge 不能为 None。")
 
         self._core_identity: CoreIdentityLayer = core_identity
-        self._world: "WorldLayer" = world
-        self._bridge: "BridgeLayer" = bridge
+        self._world: WorldLayer = world
+        self._bridge: BridgeLayer = bridge
         # 当前所处场景（None 表示不在场景中）
         self._current_scene: Scene | None = None
         # 当前活跃 RoleMask（由调用方传入，coordinator 持有引用）

@@ -128,9 +128,9 @@ async def verify_evolve(forgekins: dict) -> None:
         print(f"  觉醒阶: {forgekin.awakening_stage.value}")
         print(f"  可自进化: {forgekin.can_self_evolve()}")
         if forgekin.can_self_evolve():
-            print(f"  ✅ 可触发 Mode A/B/C（scope_guard/process_evolution/knowledge_evolution）")
+            print("  ✅ 可触发 Mode A/B/C（scope_guard/process_evolution/knowledge_evolution）")
         else:
-            print(f"  ⚠️  觉醒阶 < E4，仅支持 operator 触发的 scope_guard 模式")
+            print("  ⚠️  觉醒阶 < E4，仅支持 operator 触发的 scope_guard 模式")
 
 
 async def verify_system_prompt(forgekins: dict) -> None:

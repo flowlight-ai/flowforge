@@ -1,7 +1,8 @@
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("checkpoint_manager")
@@ -66,7 +67,7 @@ class CheckpointManager:
             if "label" not in columns:
                 self._conn.execute("ALTER TABLE checkpoints ADD COLUMN label TEXT DEFAULT ''")
 
-    def save(self, task_id: str, step_name: str, state: Dict[str, Any]) -> None:
+    def save(self, task_id: str, step_name: str, state: dict[str, Any]) -> None:
         state_json = json.dumps(state, ensure_ascii=False, default=str)
         existing = self._conn.execute(
             "SELECT id, version FROM checkpoints WHERE task_id = ? AND step_name = ? ORDER BY created_at DESC LIMIT 1",
@@ -113,7 +114,7 @@ class CheckpointManager:
                 return str(latest.get("id", ""))
         return self.save_full(task_id, state, messages, label)
 
-    def restore(self, task_id: str, checkpoint_id: Optional[str] = None) -> dict:
+    def restore(self, task_id: str, checkpoint_id: str | None = None) -> dict:
         if checkpoint_id:
             row = self._conn.execute(
                 "SELECT state_json, messages_json FROM checkpoints WHERE id = ?",
@@ -131,7 +132,7 @@ class CheckpointManager:
             }
         return {"state": {}, "messages": []}
 
-    def load(self, task_id: str, step_name: str) -> Optional[Dict[str, Any]]:
+    def load(self, task_id: str, step_name: str) -> dict[str, Any] | None:
         row = self._conn.execute(
             "SELECT state_json FROM checkpoints WHERE task_id = ? AND step_name = ? ORDER BY created_at DESC LIMIT 1",
             (task_id, step_name)
@@ -140,7 +141,7 @@ class CheckpointManager:
             return json.loads(row[0])
         return None
 
-    def load_latest(self, task_id: str) -> Optional[Dict[str, Any]]:
+    def load_latest(self, task_id: str) -> dict[str, Any] | None:
         row = self._conn.execute(
             "SELECT state_json FROM checkpoints WHERE task_id = ? ORDER BY created_at DESC LIMIT 1",
             (task_id,)
@@ -149,7 +150,7 @@ class CheckpointManager:
             return json.loads(row[0])
         return None
 
-    def get_latest(self, task_id: str) -> Optional[dict]:
+    def get_latest(self, task_id: str) -> dict | None:
         row = self._conn.execute(
             "SELECT id, task_id, step_name, state_json, messages_json, version, label, created_at "
             "FROM checkpoints WHERE task_id = ? ORDER BY created_at DESC LIMIT 1",

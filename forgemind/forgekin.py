@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -64,7 +64,7 @@ class BlindSpot:
     name: str
     severity: float = 0.0  # 0.0..1.0
     mitigation: str = ""  # how to compensate (delegate / ask human / etc.)
-    discovered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    discovered_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -88,7 +88,7 @@ class Forgekin:
     name: str
     forgekin_type: ForgekinType = ForgekinType.CUSTOM
     forgekin_id: str = field(default_factory=lambda: f"fk-{uuid.uuid4().hex[:12]}")
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     # Long-term profile
     capabilities: dict[str, Capability] = field(default_factory=dict)
@@ -119,7 +119,7 @@ class Forgekin:
         logger.debug(f"forgekin {self.forgekin_id}: +blind_spot {spot.name}")
 
     def record_history(self, event: dict[str, Any]) -> None:
-        event.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+        event.setdefault("timestamp", datetime.now(UTC).isoformat())
         self.history.append(event)
 
     def has_capability(self, name: str, min_proficiency: float = 0.5) -> bool:
@@ -142,7 +142,7 @@ class Forgekin:
         if amount < 0:
             raise ForgekinError(f"energy amount must be >= 0, got {amount}")
         self.state.energy = max(0.0, self.state.energy - amount)
-        self.state.last_task_at = datetime.now(timezone.utc)
+        self.state.last_task_at = datetime.now(UTC)
 
     def recover_energy(self, amount: float) -> None:
         if amount < 0:

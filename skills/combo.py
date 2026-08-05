@@ -7,7 +7,7 @@ error handling, and context passing between skills.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 from flowforge.skills.base import (
@@ -42,10 +42,10 @@ class ComboSkill(SkillBase):
         name: str,
         description: str = "",
         version: str = "0.1.0",
-        skill_names: Optional[List[str]] = None,
+        skill_names: list[str] | None = None,
         error_strategy: str = "stop",
         max_retries: int = 0,
-        triggers: Optional[List[SkillTrigger]] = None,
+        triggers: list[SkillTrigger] | None = None,
         source_path: str = "",
     ) -> None:
         super().__init__(
@@ -73,7 +73,7 @@ class ComboSkill(SkillBase):
         """Validate that the context has the minimum required data."""
         return True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         data = super().to_dict()
         data["skill_names"] = self.skill_names
         data["error_strategy"] = self.error_strategy
@@ -93,10 +93,10 @@ class ComboPipeline:
 
     def __init__(
         self,
-        skill_names: List[str],
+        skill_names: list[str],
         error_strategy: str = "stop",
         max_retries: int = 0,
-        skill_manager: Optional[Any] = None,
+        skill_manager: Any | None = None,
     ) -> None:
         """
         Args:
@@ -127,7 +127,7 @@ class ComboPipeline:
             SkillResult with combined output from all sub-skills.
         """
         result = SkillResult()
-        combined_output: Dict[str, Any] = {}
+        combined_output: dict[str, Any] = {}
 
         for skill_name in self.skill_names:
             # Look up the skill
@@ -186,7 +186,7 @@ class ComboPipeline:
         result.output = combined_output
         return result
 
-    def _resolve_skill(self, name: str) -> Optional[SkillBase]:
+    def _resolve_skill(self, name: str) -> SkillBase | None:
         """Look up a skill by name from the manager."""
         if self._skill_manager is not None:
             return self._skill_manager.get_skill(name)
@@ -300,7 +300,7 @@ class ComboPipeline:
         skill_name: str,
     ) -> SkillResult:
         """Execute a skill, optionally retrying on failure."""
-        last_result: Optional[SkillResult] = None
+        last_result: SkillResult | None = None
         attempts = 1 + (self.max_retries if self.error_strategy == "retry" else 0)
 
         for attempt in range(attempts):

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from flowforge.core.tracing import get_logger
@@ -68,7 +68,7 @@ class EvolutionDecision:
     proposal: EvolutionProposal | None = None
     distill_decision: bool = False
     reason: str = ""
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 class ForgeMindEngine:
@@ -174,7 +174,7 @@ class ForgeMindEngine:
         record: dict[str, Any] = {
             "decision_id": decision.decision_id,
             "mode": decision.mode,
-            "executed_at": datetime.now(timezone.utc).isoformat(),
+            "executed_at": datetime.now(UTC).isoformat(),
             "actions": [],
         }
 

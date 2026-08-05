@@ -33,19 +33,17 @@ OpenRoute，再把响应翻译回 Gemini 格式。Gemini CLI 通过环境变量
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import logging
 import os
 import sys
 import time
 from typing import Any
-from urllib.parse import urlparse
 
 import httpx
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse, StreamingResponse
 import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 
 # ── 配置 ────────────────────────────────────────────────────────────────────
 
@@ -419,7 +417,7 @@ async def list_models() -> dict:
         models.append({
             "name": f"models/{openroute_name}",
             "displayName": openroute_name,
-            "description": f"OpenRoute native model",
+            "description": "OpenRoute native model",
         })
     return {"models": models}
 

@@ -46,7 +46,7 @@ def check_yaml_loads() -> tuple[dict, dict]:
     im_path = CONFIG_DIR / "im_channels.yaml"
     with im_path.open(encoding="utf-8") as f:
         im_cfg = yaml.safe_load(f)
-    print(f"  OK: im_channels.yaml loaded")
+    print("  OK: im_channels.yaml loaded")
     return forgekins, im_cfg
 
 
@@ -90,14 +90,14 @@ def check_i9_no_self_review(forgekins: dict) -> None:
     section("Step 4: I9 no-self-review invariant")
     sherlock = forgekins["sherlock"]
     if not sherlock["council_role"]["can_review"]:
-        print(f"  OK: 夏洛克 (openai/codex) is code author, cannot review (I9)")
+        print("  OK: 夏洛克 (openai/codex) is code author, cannot review (I9)")
     else:
-        print(f"  FAIL: 夏洛克 should not be reviewer (I9 violated)")
+        print("  FAIL: 夏洛克 should not be reviewer (I9 violated)")
     vangogh = forgekins["vangogh"]
     if vangogh["council_role"]["can_review"] and vangogh["council_role"]["no_self_review"]:
-        print(f"  OK: 梵高 (google/gemini) is reviewer, no-self-review enforced")
+        print("  OK: 梵高 (google/gemini) is reviewer, no-self-review enforced")
     else:
-        print(f"  FAIL: 梵高 review config invalid")
+        print("  FAIL: 梵高 review config invalid")
 
 
 def check_council_quorum(forgekins: dict) -> None:
@@ -114,14 +114,14 @@ def check_i8_operator_approval(forgekins: dict, im_cfg: dict) -> None:
     section("Step 6: I8 framework changes require operator approval")
     luban = forgekins["luban"]
     if luban["self_dev_loop"].get("requires_manual_approval"):
-        print(f"  OK: 鲁班 self_dev_loop.requires_manual_approval = True")
+        print("  OK: 鲁班 self_dev_loop.requires_manual_approval = True")
     else:
-        print(f"  FAIL: 鲁班 missing requires_manual_approval")
+        print("  FAIL: 鲁班 missing requires_manual_approval")
     feishu_fw = im_cfg["feishu_group"]["channels"].get("framework_changes", {})
     if feishu_fw.get("require_operator_approval") and "approval_buttons" in feishu_fw:
-        print(f"  OK: feishu framework_changes has approval buttons")
+        print("  OK: feishu framework_changes has approval buttons")
     else:
-        print(f"  FAIL: feishu framework_changes missing approval config")
+        print("  FAIL: feishu framework_changes missing approval config")
 
 
 def check_routing_rules(im_cfg: dict) -> None:
@@ -172,7 +172,7 @@ def check_trae_bridge(im_cfg: dict) -> None:
     section("Step 10: Trae CN bridge configuration")
     bridge = im_cfg["trae_bridge"]
     if not bridge["enabled"]:
-        print(f"  FAIL: trae_bridge.enabled = False")
+        print("  FAIL: trae_bridge.enabled = False")
         return
     injected = set(bridge["inject_to"])
     expected = {"fk-wenxin", "fk-sherlock", "fk-vangogh", "fk-davinci", "fk-luban"}
@@ -180,9 +180,9 @@ def check_trae_bridge(im_cfg: dict) -> None:
         status = "OK" if fk_id in injected else "FAIL"
         print(f"  {status}: {fk_id} injected to TraeLLMClient")
     if bridge.get("approval_callback") == "operator_approval":
-        print(f"  OK: approval_callback = operator_approval")
+        print("  OK: approval_callback = operator_approval")
     else:
-        print(f"  FAIL: approval_callback missing")
+        print("  FAIL: approval_callback missing")
 
 
 def print_topology(forgekins: dict, im_cfg: dict) -> None:

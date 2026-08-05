@@ -1,6 +1,7 @@
 """Test helm mode with real model call via WebSocket events."""
 import asyncio
 import json
+
 import requests
 import websockets
 
@@ -55,7 +56,7 @@ async def test_helm_real_model():
                         else:
                             print(f"  [{event_type}]")
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     print("  (timeout - no more events)")
 
             await listen_events()

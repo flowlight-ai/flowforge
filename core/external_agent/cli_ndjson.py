@@ -35,7 +35,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -91,8 +92,8 @@ class StderrCollector:
 
     def __init__(self) -> None:
         self._lines: dict[str, list[str]] = {level: [] for level in self.LEVELS}
-        self._first_line: Optional[str] = None
-        self._last_line: Optional[str] = None
+        self._first_line: str | None = None
+        self._last_line: str | None = None
 
     @classmethod
     def _classify(cls, line: str) -> str:
@@ -135,7 +136,7 @@ class StderrCollector:
             self._first_line = cleaned
         self._last_line = cleaned
 
-    def get_lines(self, level: Optional[str] = None) -> list[str]:
+    def get_lines(self, level: str | None = None) -> list[str]:
         """按级别过滤返回 stderr 行。
 
         Args:
@@ -376,7 +377,7 @@ class CLIResult(BaseModel):
     )
     returncode: int = Field(default=0, description="子进程退出码")
     success: bool = Field(default=False, description="是否成功（仅看 returncode==0）")
-    error: Optional[str] = Field(default=None, description="错误信息")
+    error: str | None = Field(default=None, description="错误信息")
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +419,7 @@ def parse_cli_invocation(
             stderr_collector.feed(line)
 
     success = returncode == 0
-    error: Optional[str] = None
+    error: str | None = None
     if not success:
         error = f"CLI exited with returncode={returncode}"
 

@@ -9,8 +9,9 @@ loop without an LLM. Production wires action_fn to a forgekin + LLMClient call.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from flowforge.core.errors import LoopError
 from flowforge.core.tracing import get_logger, set_trace_id

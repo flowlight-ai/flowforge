@@ -17,7 +17,7 @@ Design principles:
 """
 import re
 from pathlib import Path
-from typing import Dict, List, Literal, Optional
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -68,7 +68,7 @@ class PlatformSpec(BaseModel):
         default=10,
         description="Maximum requests per minute allowed by the platform",
     )
-    fallback_platform: Optional[str] = Field(
+    fallback_platform: str | None = Field(
         default=None,
         description="Alternative platform to use if this one fails",
     )
@@ -84,7 +84,7 @@ class PlatformSpec(BaseModel):
         default="\n\n",
         description="Paragraph separator used by the platform",
     )
-    extra: Dict = Field(
+    extra: dict = Field(
         default_factory=dict,
         description="Platform-specific extra configuration",
     )
@@ -115,7 +115,7 @@ class PlatformAdapterRegistry:
     """
 
     def __init__(self) -> None:
-        self._specs: Dict[str, PlatformSpec] = {}
+        self._specs: dict[str, PlatformSpec] = {}
 
     def register(self, spec: PlatformSpec) -> None:
         """Register a platform specification.
@@ -159,7 +159,7 @@ class PlatformAdapterRegistry:
             )
         return self._specs[platform_id]
 
-    def list_platforms(self) -> List[PlatformSpec]:
+    def list_platforms(self) -> list[PlatformSpec]:
         """List all registered platform specifications."""
         return list(self._specs.values())
 
@@ -179,7 +179,7 @@ class PlatformAdapterRegistry:
         if not path.exists():
             raise FileNotFoundError(f"Platform YAML not found: {yaml_path}")
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         if data is None:
@@ -245,7 +245,7 @@ class PlatformAdapter:
     platform-specific logic. New platforms only need a YAML spec file.
     """
 
-    def __init__(self, registry: Optional[PlatformAdapterRegistry] = None):
+    def __init__(self, registry: PlatformAdapterRegistry | None = None):
         self._registry = registry or PlatformAdapterRegistry()
 
     @property
@@ -376,7 +376,7 @@ class PlatformAdapter:
         This is intentionally simple — not a full markdown parser.
         """
         lines = text.split("\n")
-        html_lines: List[str] = []
+        html_lines: list[str] = []
 
         for line in lines:
             stripped = line.strip()

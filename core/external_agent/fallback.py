@@ -18,8 +18,9 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -41,7 +42,7 @@ class FallbackAttempt(BaseModel):
     error: str = Field(default="", description="失败时的错误信息")
     duration_ms: int = Field(default=0, description="本次尝试耗时（毫秒）")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="尝试时间戳",
     )
 

@@ -11,9 +11,7 @@ Contains the WorkflowValidator class and associated constants for:
 
 import json
 import re
-from typing import Dict, List, Optional
 
-from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("workflow_validator")
@@ -75,7 +73,7 @@ class WorkflowValidator:
     """
 
     # Intent keywords for fallback detection from user input
-    _INTENT_KEYWORDS: Dict[str, List[str]] = {
+    _INTENT_KEYWORDS: dict[str, list[str]] = {
         "creation": ["写一篇", "写篇文章", "创作文章", "创作一篇", "撰写文章", "撰写一篇", "写一篇文章", "帮我写一篇", "写一篇关于", "write an article", "create an article"],
         "write": ["写", "文章", "创作", "撰写", "编写", "write", "article", "generate"],
         "search": ["搜索", "搜", "查", "search", "find", "lookup"],
@@ -89,7 +87,7 @@ class WorkflowValidator:
 
     _CREATION_STRONG_KEYWORDS = {"写一篇", "写篇文章", "创作文章", "创作一篇", "撰写文章", "撰写一篇", "写一篇文章", "帮我写一篇", "写一篇关于", "write an article", "create an article"}
 
-    _INTENT_STEP_TEMPLATES: Dict[str, List[dict]] = {
+    _INTENT_STEP_TEMPLATES: dict[str, list[dict]] = {
         "creation": [
             {"name": "选题研究", "type": "agent", "agent": "topic_research", "input": {}, "description": "研究选题角度"},
             {"name": "搜索素材", "type": "tool", "tool": "web_search", "input": {}, "description": "搜索相关素材"},

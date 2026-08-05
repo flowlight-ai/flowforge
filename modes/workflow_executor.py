@@ -13,19 +13,20 @@ Heavy logic is delegated to sub-modules:
 
 import asyncio
 import copy
-from flowforge.core.base_mode_executor import BaseModeExecutor
+
 from flowforge.core.base_agent import AgentInput
+from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.errors import StepTimeoutError, WorkflowRecursionError
 from flowforge.core.task_context import TaskContext
-from flowforge.core.errors import WorkflowRecursionError, StepTimeoutError
 from flowforge.core.tracing import get_logger
-from flowforge.modes.workflow_validator import (
-    WorkflowValidator,
-    STEP_TIMEOUT_SECONDS,
-)
-from flowforge.modes.workflow_context import ContextHandler
-from flowforge.modes.workflow_tools import ToolHandler
-from flowforge.modes.workflow_react import ReactHandler
 from flowforge.modes.workflow_chat import ChatHandler
+from flowforge.modes.workflow_context import ContextHandler
+from flowforge.modes.workflow_react import ReactHandler
+from flowforge.modes.workflow_tools import ToolHandler
+from flowforge.modes.workflow_validator import (
+    STEP_TIMEOUT_SECONDS,
+    WorkflowValidator,
+)
 
 logger = get_logger("workflow_executor")
 
@@ -162,7 +163,7 @@ class WorkflowExecutor(BaseModeExecutor):
                         timeout=step_timeout * len(step["parallel_group"]),
                     )
                     context_data.update(results)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning(f"Parallel group {pg_label} timed out, skipping")
                 except Exception as e:
                     logger.error(f"Parallel group {pg_label} failed: {e}")
@@ -301,7 +302,7 @@ class WorkflowExecutor(BaseModeExecutor):
                                 logger.info(f"[loop-trace] task_id={ctx.task_id} context_data[{_cdk}] type=dict, keys={list(_cdv.keys())}, len={_cdv_len}")
                             else:
                                 logger.info(f"[loop-trace] task_id={ctx.task_id} context_data[{_cdk}] type={type(_cdv).__name__}, len={_cdv_len}")
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.warning(f"Step '{step_name}' agent '{agent_name}' timed out after {agent_step_timeout}s")
                         on_error = step.get("on_error", "abort")
                         if on_error == "skip":
@@ -327,7 +328,7 @@ class WorkflowExecutor(BaseModeExecutor):
                                     )
                                     context_data.update(agent_output.result)
                                     break
-                                except asyncio.TimeoutError:
+                                except TimeoutError:
                                     if i == retry_count - 1:
                                         logger.warning(f"Step '{step_name}' retry {i+1} timed out")
                                         if on_error != "skip":
@@ -359,7 +360,7 @@ class WorkflowExecutor(BaseModeExecutor):
                                         ctx.state.update(agent_output.state_updates)
                                         context_data.update(agent_output.state_updates)
                                     break
-                                except asyncio.TimeoutError:
+                                except TimeoutError:
                                     if i == retry_count - 1:
                                         logger.warning(f"Step '{step_name}' reflexion retry {i+1} timed out")
                                         raise StepTimeoutError(f"Step '{step_name}' reflexion retry timed out after {agent_step_timeout}s")
@@ -391,7 +392,7 @@ class WorkflowExecutor(BaseModeExecutor):
                     timeout=step_timeout,
                 )
                 context_data[step.get("output", step_name)] = sub_result
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(f"Step '{step_name}' mode executor timed out after {step_timeout}s")
                 on_error = step.get("on_error", "abort")
                 if on_error == "skip":
@@ -419,7 +420,7 @@ class WorkflowExecutor(BaseModeExecutor):
                             )
                             context_data[step.get("output", step_name)] = sub_result
                             break
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             if i == retry_count - 1:
                                 logger.warning(f"Step '{step_name}' reflexion retry {i+1} timed out")
                                 raise StepTimeoutError(f"Step '{step_name}' reflexion retry timed out after {step_timeout}s")

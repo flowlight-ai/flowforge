@@ -7,7 +7,7 @@ companies as a forgeable entity.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flowforge.forgemind.forgekin import (
     BlindSpot,
@@ -28,7 +28,7 @@ def build_team_spirit(name: str = "FlowLight Team") -> Forgekin:
             name="architecture_design",
             proficiency=0.88,
             evidence=["shipped 7-layer harness", "9-project open-source split"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_capability(
@@ -36,7 +36,7 @@ def build_team_spirit(name: str = "FlowLight Team") -> Forgekin:
             name="coding",
             proficiency=0.85,
             evidence=["dual-track codebase in production"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_capability(
@@ -44,7 +44,7 @@ def build_team_spirit(name: str = "FlowLight Team") -> Forgekin:
             name="domain_modeling",
             proficiency=0.82,
             evidence=["stockforge / contentforge / novelforge domain models"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_blind_spot(

@@ -11,7 +11,7 @@ import asyncio
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -127,7 +127,7 @@ class HumanApprovalProvider(ABC):
         """
 
     @abstractmethod
-    async def check_approval(self, approval_id: str) -> Optional[GateVerdict]:
+    async def check_approval(self, approval_id: str) -> GateVerdict | None:
         """检查审批结果。
 
         Args:
@@ -250,7 +250,7 @@ class WebSocketApprovalProvider(HumanApprovalProvider):
 
         return request.approval_id
 
-    async def check_approval(self, approval_id: str) -> Optional[GateVerdict]:
+    async def check_approval(self, approval_id: str) -> GateVerdict | None:
         """检查审批结果。"""
         request = self._pending.get(approval_id)
         if request is None:

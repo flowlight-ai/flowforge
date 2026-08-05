@@ -28,9 +28,9 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -114,7 +114,7 @@ class MediationResult(BaseModel):
         description="中介记录唯一 ID",
     )
     requested_tool: str = Field(..., description="请求调用的工具名")
-    canonical_tool: Optional[str] = Field(
+    canonical_tool: str | None = Field(
         default=None, description="实际放行的工具名"
     )
     args: dict[str, Any] = Field(
@@ -123,12 +123,12 @@ class MediationResult(BaseModel):
     outcome: MediationOutcome = Field(
         ..., description="中介结果状态"
     )
-    descriptor: Optional[ToolDescriptor] = Field(
+    descriptor: ToolDescriptor | None = Field(
         default=None, description="关联的工具描述符"
     )
     reason: str = Field(default="", description="决策原因")
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="中介时间 ISO 8601",
     )
 
@@ -163,8 +163,8 @@ class ToolMediator:
 
     def __init__(
         self,
-        whitelist: Optional[list[ToolDescriptor]] = None,
-        aliases: Optional[dict[str, str]] = None,
+        whitelist: list[ToolDescriptor] | None = None,
+        aliases: dict[str, str] | None = None,
         dangerous_requires_confirm: bool = True,
     ) -> None:
         self.whitelist: dict[str, ToolDescriptor] = {
@@ -208,7 +208,7 @@ class ToolMediator:
             canonical=canonical,
         )
 
-    def _resolve_alias(self, requested: str) -> Optional[str]:
+    def _resolve_alias(self, requested: str) -> str | None:
         """解析别名到标准工具名。
 
         Build-to-Delete: 此方法是别名兜底逻辑的核心，
@@ -225,7 +225,7 @@ class ToolMediator:
     async def mediate(
         self,
         tool_name: str,
-        args: Optional[dict[str, Any]] = None,
+        args: dict[str, Any] | None = None,
         confirmed_dangerous: bool = False,
     ) -> MediationResult:
         """中介一次工具调用。
@@ -350,7 +350,7 @@ class ToolMediator:
         return sanitized
 
     def get_audit_trail(
-        self, tool_name: Optional[str] = None
+        self, tool_name: str | None = None
     ) -> list[MediationResult]:
         """获取审计 trail。
 

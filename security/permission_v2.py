@@ -10,7 +10,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -38,12 +38,12 @@ class PermissionRule:
     action_level: ActionLevel
     decision: PermissionDecision
     reason: str = ""
-    conditions: Dict[str, Any] = field(default_factory=dict)
+    conditions: dict[str, Any] = field(default_factory=dict)
 
 
 class ApprovalRequest(BaseModel):
     tool_name: str
-    params: Dict[str, Any] = {}
+    params: dict[str, Any] = {}
     reason: str = ""
     timeout: float = 300.0
     request_id: str = ""
@@ -78,7 +78,7 @@ class ApprovalProvider:
 class WebSocketApprovalProvider(ApprovalProvider):
     def __init__(self, event_bus: Any = None):
         self._event_bus = event_bus
-        self._pending: Dict[str, asyncio.Future] = {}
+        self._pending: dict[str, asyncio.Future] = {}
 
     async def push(self, request: ApprovalRequest) -> None:
         if self._event_bus:
@@ -93,7 +93,7 @@ class WebSocketApprovalProvider(ApprovalProvider):
         if request_id in self._pending:
             try:
                 return await asyncio.wait_for(self._pending[request_id], timeout=timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 return ApprovalResponse(request_id=request_id, approved=False, comment="Timeout")
         return ApprovalResponse(request_id=request_id, approved=False, comment="No pending request")
 
@@ -111,23 +111,23 @@ class PermissionV2:
     """
 
     def __init__(
-        self, rules: Optional[List[PermissionRule]] = None,
-        approval_provider: Optional[ApprovalProvider] = None,
+        self, rules: list[PermissionRule] | None = None,
+        approval_provider: ApprovalProvider | None = None,
         default_timeout: float = 300.0,
     ):
-        self._rules: List[PermissionRule] = rules or []
+        self._rules: list[PermissionRule] = rules or []
         self._approval_provider = approval_provider
         self._default_timeout = default_timeout
-        self._pending_asks: Dict[str, asyncio.Future] = {}
-        self._audit_log: List[AuditLogEntry] = []
-        self._action_level_defaults: Dict[ActionLevel, PermissionDecision] = {
+        self._pending_asks: dict[str, asyncio.Future] = {}
+        self._audit_log: list[AuditLogEntry] = []
+        self._action_level_defaults: dict[ActionLevel, PermissionDecision] = {
             ActionLevel.READ: PermissionDecision.ALLOW,
             ActionLevel.SUGGEST: PermissionDecision.ASK,
             ActionLevel.PREPARE: PermissionDecision.ASK,
             ActionLevel.EXECUTE: PermissionDecision.DENY,
         }
-        self._decision_store: Dict[str, str] = {}
-        self._store_path: Optional[str] = "flowforge/config/permission_decisions.json"
+        self._decision_store: dict[str, str] = {}
+        self._store_path: str | None = "flowforge/config/permission_decisions.json"
         self._load_decisions()
 
     def add_rule(self, rule: PermissionRule) -> None:
@@ -135,7 +135,6 @@ class PermissionV2:
 
     def _make_key(self, tool_name: str, action: str, params: dict) -> str:
         """Generate a decision key from tool name, action, and key params."""
-        import hashlib
         import json as json_mod
         # Only include stable, identifying params (path, action type)
         key_params = {
@@ -151,13 +150,13 @@ class PermissionV2:
 
     def _load_decisions(self) -> None:
         """Load persisted decisions from JSON file."""
-        import os
         import json as json_mod
+        import os
         if not self._store_path:
             return
         try:
             if os.path.exists(self._store_path):
-                with open(self._store_path, "r", encoding="utf-8") as f:
+                with open(self._store_path, encoding="utf-8") as f:
                     self._decision_store = json_mod.load(f)
         except Exception as e:
             logger.warning(f"Failed to load permission decisions: {e}")
@@ -165,8 +164,8 @@ class PermissionV2:
 
     def _save_decisions(self) -> None:
         """Save decisions to JSON file."""
-        import os
         import json as json_mod
+        import os
         if not self._store_path:
             return
         try:
@@ -185,9 +184,9 @@ class PermissionV2:
             self._save_decisions()
 
     async def check(
-        self, tool_name: str, params: Dict[str, Any] = None,
+        self, tool_name: str, params: dict[str, Any] = None,
         action_level: ActionLevel = ActionLevel.EXECUTE,
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> bool:
         params = params or {}
         # Check persisted decisions first
@@ -210,7 +209,7 @@ class PermissionV2:
             return True
         return await self._request_user_approval(tool_name, params, context)
 
-    def _evaluate_rules(self, tool_name: str, params: Dict[str, Any], action_level: ActionLevel, context: Optional[Dict[str, Any]]) -> PermissionDecision:
+    def _evaluate_rules(self, tool_name: str, params: dict[str, Any], action_level: ActionLevel, context: dict[str, Any] | None) -> PermissionDecision:
         result = self._action_level_defaults.get(action_level, PermissionDecision.ASK)
         for rule in self._rules:
             if rule.tool_name != "*" and rule.tool_name != tool_name:
@@ -223,13 +222,13 @@ class PermissionV2:
                 result = PermissionDecision.ALLOW
         return result
 
-    async def _request_user_approval(self, tool_name: str, params: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> bool:
+    async def _request_user_approval(self, tool_name: str, params: dict[str, Any], context: dict[str, Any] | None = None) -> bool:
         dedup_key = f"{tool_name}:{hash(frozenset(params.items()))}"
 
         if dedup_key in self._pending_asks:
             try:
                 return await asyncio.wait_for(self._pending_asks[dedup_key], timeout=self._default_timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 return False
 
         future = asyncio.get_event_loop().create_future()
@@ -247,13 +246,13 @@ class PermissionV2:
             result = await asyncio.wait_for(future, timeout=self._default_timeout)
             await self._record_audit("allow" if result else "deny", tool_name, params, "User approved" if result else "User denied")
             return result
-        except asyncio.TimeoutError:
+        except TimeoutError:
             await self._record_audit("deny", tool_name, params, "ASK timeout (fail-closed)", timeout=True)
             return False
         finally:
             self._pending_asks.pop(dedup_key, None)
 
-    async def _record_audit(self, decision: str, tool_name: str, params: Dict[str, Any], reason: str, timeout: bool = False) -> None:
+    async def _record_audit(self, decision: str, tool_name: str, params: dict[str, Any], reason: str, timeout: bool = False) -> None:
         params_summary = self._summarize_params(params)
         self._audit_log.append(AuditLogEntry(
             timestamp=time.time(), decision=decision, tool_name=tool_name,
@@ -261,7 +260,7 @@ class PermissionV2:
         ))
         logger.info(f"Permission audit: {decision} {tool_name} - {reason}")
 
-    def _summarize_params(self, params: Dict[str, Any]) -> str:
+    def _summarize_params(self, params: dict[str, Any]) -> str:
         sensitive_keys = {"password", "token", "api_key", "secret", "credential"}
         summary = {}
         for k, v in params.items():
@@ -272,7 +271,7 @@ class PermissionV2:
                 summary[k] = val_str[:50] + "..." if len(val_str) > 50 else val_str
         return str(summary)
 
-    def get_audit_log(self, tool_name: Optional[str] = None, limit: int = 100) -> List[AuditLogEntry]:
+    def get_audit_log(self, tool_name: str | None = None, limit: int = 100) -> list[AuditLogEntry]:
         entries = self._audit_log
         if tool_name:
             entries = [e for e in entries if e.tool_name == tool_name]

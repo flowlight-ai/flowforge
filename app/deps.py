@@ -1,11 +1,11 @@
-from typing import Optional
-from flowforge.executor.hybrid_executor import HybridExecutor
-from flowforge.tools.llm_client import LLMClient
-from flowforge.tools.llm.model_service import ModelService
-from flowforge.scheduler.scheduler import TaskScheduler
+
 from flowforge.core.plugin_manager import PluginManager
 from flowforge.core.plugin_registry import PluginRegistry
 from flowforge.core.tool_chain_executor import ToolChainExecutor
+from flowforge.executor.hybrid_executor import HybridExecutor
+from flowforge.scheduler.scheduler import TaskScheduler
+from flowforge.tools.llm.model_service import ModelService
+from flowforge.tools.llm_client import LLMClient
 
 _executor_instance: HybridExecutor = None
 _llm_client_instance: LLMClient = None
@@ -56,7 +56,7 @@ async def get_executor() -> HybridExecutor:
     return _executor_instance
 
 
-async def get_container() -> Optional[HybridExecutor]:
+async def get_container() -> HybridExecutor | None:
     return _executor_instance
 
 
@@ -84,7 +84,7 @@ async def get_plugin_manager() -> PluginManager:
     return None
 
 
-def get_tool_chain_executor() -> Optional[ToolChainExecutor]:
+def get_tool_chain_executor() -> ToolChainExecutor | None:
     if _tool_chain_executor_instance:
         return _tool_chain_executor_instance
     if _executor_instance and _executor_instance.tool_registry:
@@ -94,7 +94,7 @@ def get_tool_chain_executor() -> Optional[ToolChainExecutor]:
     return None
 
 
-def get_plugin_registry() -> Optional[PluginRegistry]:
+def get_plugin_registry() -> PluginRegistry | None:
     return _plugin_registry_instance
 
 

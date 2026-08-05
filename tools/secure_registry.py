@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, Optional
+
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.task_context import TaskContext
 from flowforge.tools.registry import ToolRegistry
@@ -13,7 +13,7 @@ class SecureToolRegistry(ToolRegistry):
     def __init__(self, event_bus=None, tool_timeout: int = 120):
         super().__init__(tool_timeout=tool_timeout)
         self._event_bus = event_bus
-        self._running_tools: Dict[str, asyncio.Lock] = {}
+        self._running_tools: dict[str, asyncio.Lock] = {}
 
     def register(self, tool: BaseTool):
         if not hasattr(tool, 'safety_level'):
@@ -23,7 +23,7 @@ class SecureToolRegistry(ToolRegistry):
         super().register(tool)
 
     async def execute(self, name: str, input: ToolInput,
-                      context: Optional[TaskContext] = None,
+                      context: TaskContext | None = None,
                       require_approval: bool = True) -> ToolOutput:
         tool = self.get_tool(name)
         safety = getattr(tool, 'safety_level', self.SAFETY_NORMAL)

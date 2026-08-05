@@ -9,7 +9,7 @@ Responsibilities:
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from flowforge.core.errors import ForgekinError
 from flowforge.core.tracing import get_logger

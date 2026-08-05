@@ -28,8 +28,7 @@ in-memory 指标同步到 Prometheus 标准格式，并提供 FastAPI 路由注�
 
 from __future__ import annotations
 
-import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from fastapi import FastAPI
 from prometheus_client import (
@@ -62,7 +61,7 @@ _CONTENTFORGE_COUNTER_NAMES = frozenset({
 })
 
 
-def _parse_metric_key(key: str) -> Tuple[str, Dict[str, str]]:
+def _parse_metric_key(key: str) -> tuple[str, dict[str, str]]:
     """解析 MetricsCollector 中的复合键，返回 (metric_name, labels)。
 
     复合键格式: ``metric_name{k1=v1,k2=v2}`` 或纯 ``metric_name``。
@@ -71,7 +70,7 @@ def _parse_metric_key(key: str) -> Tuple[str, Dict[str, str]]:
         return key, {}
     name, labels_part = key.split("{", 1)
     labels_part = labels_part.rstrip("}")
-    labels: Dict[str, str] = {}
+    labels: dict[str, str] = {}
     if labels_part:
         for pair in labels_part.split(","):
             if "=" in pair:
@@ -99,15 +98,15 @@ class PrometheusExporter:
 
     def __init__(
         self,
-        collector: Optional[MetricsCollector] = None,
-        registry: Optional[CollectorRegistry] = None,
+        collector: MetricsCollector | None = None,
+        registry: CollectorRegistry | None = None,
     ) -> None:
         self.collector: MetricsCollector = collector if collector is not None else MetricsCollector()
         self.registry: CollectorRegistry = registry if registry is not None else CollectorRegistry()
         # 已同步 counter 累计值，用于计算增量
-        self._synced_counters: Dict[str, float] = {}
+        self._synced_counters: dict[str, float] = {}
         # 已同步 histogram 观察次数，用于只同步新增观察
-        self._synced_histogram_counts: Dict[str, int] = {}
+        self._synced_histogram_counts: dict[str, int] = {}
 
         self._init_core_metrics()
         self._init_contentforge_metrics()
@@ -406,7 +405,7 @@ class PrometheusExporter:
             finally:
                 self._synced_histogram_counts[key] = new_count
 
-    def _find_counter(self, name: str) -> Optional[Counter]:
+    def _find_counter(self, name: str) -> Counter | None:
         """根据指标名查找已注册的 Counter。"""
         mapping = {
             "flowforge_tasks_total": self.tasks_total,
@@ -419,7 +418,7 @@ class PrometheusExporter:
         }
         return mapping.get(name)
 
-    def _find_gauge(self, name: str) -> Optional[Gauge]:
+    def _find_gauge(self, name: str) -> Gauge | None:
         """根据指标名查找已注册的 Gauge。"""
         mapping = {
             "flowforge_persona_running": self.persona_running,
@@ -428,7 +427,7 @@ class PrometheusExporter:
         }
         return mapping.get(name)
 
-    def _find_histogram(self, name: str) -> Optional[Histogram]:
+    def _find_histogram(self, name: str) -> Histogram | None:
         """根据指标名查找已注册的 Histogram。"""
         mapping = {
             "flowforge_execution_duration_seconds": self.execution_duration,
@@ -449,7 +448,7 @@ class PrometheusExporter:
         """返回 Prometheus 标准的 Content-Type。"""
         return CONTENT_TYPE_LATEST
 
-    def list_registered_metrics(self) -> List[str]:
+    def list_registered_metrics(self) -> list[str]:
         """列出所有已注册的指标名。"""
         return [
             "flowforge_tasks_total",
@@ -471,7 +470,7 @@ class PrometheusExporter:
 
 # ── 模块级默认实例 ──────────────────────────────────────────────────────
 
-_default_exporter: Optional[PrometheusExporter] = None
+_default_exporter: PrometheusExporter | None = None
 
 
 def get_default_exporter() -> PrometheusExporter:
@@ -490,7 +489,7 @@ def reset_default_exporter() -> None:
 
 def register_metrics_endpoint(
     app: FastAPI,
-    exporter: Optional[PrometheusExporter] = None,
+    exporter: PrometheusExporter | None = None,
     path: str = "/metrics",
 ) -> PrometheusExporter:
     """在 FastAPI 应用上注册 Prometheus ``/metrics`` 端点。

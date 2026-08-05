@@ -1,11 +1,12 @@
 from flowforge.agents.generic import GENERIC_AGENTS
+
 # Re-export generic agents for backwards-compatible imports
 from flowforge.agents.generic.fact_check import FactCheckAgent
-from flowforge.agents.generic.trend_analysis import TrendAnalysisAgent
 from flowforge.agents.generic.image_research import ImageResearchAgent
 from flowforge.agents.generic.multilingual import MultilingualAgent
-from flowforge.agents.generic.web_search_agent import WebSearchAgent
 from flowforge.agents.generic.research_agent import ResearchAgent
+from flowforge.agents.generic.trend_analysis import TrendAnalysisAgent
+from flowforge.agents.generic.web_search_agent import WebSearchAgent
 
 ALL_AGENTS = GENERIC_AGENTS
 

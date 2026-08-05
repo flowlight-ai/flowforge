@@ -30,9 +30,9 @@ import time
 from typing import Any
 
 import httpx
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-import uvicorn
 
 # ── 配置 ────────────────────────────────────────────────────────────────────
 

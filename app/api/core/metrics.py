@@ -5,6 +5,7 @@ including FlowForge core metrics and ContentForge business metrics.
 """
 
 from fastapi import APIRouter, Response
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("api.metrics")
@@ -21,7 +22,7 @@ async def prometheus_metrics():
     business metrics (article quality, publish success rate,
     persona usage, topic research duration).
     """
-    from flowforge.core.metrics import get_prometheus_metrics, get_metrics
+    from flowforge.core.metrics import get_metrics, get_prometheus_metrics
 
     # Try Prometheus-format first (available when prometheus_client is installed)
     prom_data = get_prometheus_metrics()

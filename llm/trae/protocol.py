@@ -20,13 +20,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import shutil
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 from flowforge.llm.trae.config import TraeBridgeConfig
@@ -37,7 +36,6 @@ from flowforge.llm.trae.exceptions import (
     TraeBridgeTimeoutError,
 )
 from flowforge.llm.trae.models import (
-    BridgeAck,
     BridgeCancel,
     BridgeMessage,
     BridgeRequest,
@@ -68,9 +66,9 @@ class TraeBridgeProtocol:
 
     def __init__(
         self,
-        config: Optional[TraeBridgeConfig] = None,
+        config: TraeBridgeConfig | None = None,
         *,
-        watcher: Optional[TraeBridgeWatcher] = None,
+        watcher: TraeBridgeWatcher | None = None,
         enable_watcher: bool = False,
     ) -> None:
         """初始化桥接协议层.
@@ -91,7 +89,7 @@ class TraeBridgeProtocol:
         self._ensure_dirs()
 
         # 文件监听器（可选，事件驱动加速）
-        self._watcher: Optional[TraeBridgeWatcher] = watcher
+        self._watcher: TraeBridgeWatcher | None = watcher
         self._watcher_owned = False  # 标记是否由本实例管理生命周期
         if self._watcher is None and enable_watcher and TraeBridgeWatcher(config=self._config).available:
             self._watcher = TraeBridgeWatcher(self._config)
@@ -131,7 +129,7 @@ class TraeBridgeProtocol:
                     data = json.loads(req_file.read_text(encoding="utf-8"))
                     if data.get("status") == BridgeRequestStatus.PENDING.value:
                         data["status"] = BridgeRequestStatus.TIMEOUT.value
-                        data["timeout_at"] = datetime.now(timezone.utc).isoformat()
+                        data["timeout_at"] = datetime.now(UTC).isoformat()
                         req_file.write_text(
                             json.dumps(data, ensure_ascii=False, indent=2),
                             encoding="utf-8",
@@ -148,12 +146,12 @@ class TraeBridgeProtocol:
 
     async def write_request(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         context: BridgeRequestContext,
         *,
         session_id: str = "",
-        timeout_seconds: Optional[int] = None,
-        request_id: Optional[str] = None,
+        timeout_seconds: int | None = None,
+        request_id: str | None = None,
     ) -> str:
         """写入 request_{uuid}.json 文件.
 
@@ -230,7 +228,7 @@ class TraeBridgeProtocol:
         self,
         request_id: str,
         *,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> BridgeResponse:
         """等待 response_{uuid}.json 到达或超时/取消.
 
@@ -423,7 +421,7 @@ class TraeBridgeProtocol:
                 )
                 return ("cancel", file_path)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             await self._update_request_status(
                 request_id, BridgeRequestStatus.TIMEOUT
             )
@@ -489,7 +487,7 @@ class TraeBridgeProtocol:
         self,
         request_id: str,
         *,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ):
         """流式轮询响应（F045 §2.1 双向通信支持，预留）.
 
@@ -502,7 +500,7 @@ class TraeBridgeProtocol:
 
     # ── 解析响应 ────────────────────────────────────────────────────
 
-    def parse_response(self, response: BridgeResponse) -> Dict[str, Any]:
+    def parse_response(self, response: BridgeResponse) -> dict[str, Any]:
         """解析 BridgeResponse 为标准 LLM 返回格式.
 
         转换为与 flowforge.tools.llm_client.LLMClient.chat() 兼容的字典格式：
@@ -578,7 +576,7 @@ class TraeBridgeProtocol:
         cancel_file = self._cancels_dir / f"cancel_{request_id}.json"
         ack_file = self._acks_dir / f"ack_{request_id}.json"
 
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         archive_prefix = f"{timestamp}_{request_id[:8]}"
 
         for src in (request_file, response_file, cancel_file, ack_file):
@@ -641,7 +639,7 @@ class TraeBridgeProtocol:
             status.cancelled_total = max(
                 0, status.cancelled_total + cancelled_delta
             )
-            status.last_activity_at = datetime.now(timezone.utc)
+            status.last_activity_at = datetime.now(UTC)
             await asyncio.to_thread(
                 self._status_file.write_text,
                 status.model_dump_json(indent=2),
@@ -662,7 +660,7 @@ class TraeBridgeProtocol:
 
     # ── 辅助方法 ────────────────────────────────────────────────────
 
-    def _read_request_timeout(self, request_id: str) -> Optional[float]:
+    def _read_request_timeout(self, request_id: str) -> float | None:
         """从 request 文件读取 timeout_seconds."""
         request_file = self._requests_dir / f"request_{request_id}.json"
         try:
@@ -686,9 +684,9 @@ class TraeBridgeProtocol:
             data = json.loads(request_file.read_text(encoding="utf-8"))
             data["status"] = status.value
             if status == BridgeRequestStatus.TIMEOUT:
-                data["timeout_at"] = datetime.now(timezone.utc).isoformat()
+                data["timeout_at"] = datetime.now(UTC).isoformat()
             elif status == BridgeRequestStatus.CANCELLED:
-                data["cancelled_at"] = datetime.now(timezone.utc).isoformat()
+                data["cancelled_at"] = datetime.now(UTC).isoformat()
             await asyncio.to_thread(
                 request_file.write_text,
                 json.dumps(data, ensure_ascii=False, indent=2),
@@ -730,7 +728,7 @@ class TraeBridgeProtocol:
 
     # ── 查询方法（供 operator/调试用）──────────────────────────────
 
-    def list_pending_requests(self) -> List[Dict[str, Any]]:
+    def list_pending_requests(self) -> list[dict[str, Any]]:
         """列出所有 pending 状态的请求（供 operator 查看）."""
         result = []
         try:
@@ -770,7 +768,7 @@ class TraeBridgeProtocol:
     # ── Watcher 生命周期管理（F045 §3.2 Phase 3）──────────────────
 
     @property
-    def watcher(self) -> Optional[TraeBridgeWatcher]:
+    def watcher(self) -> TraeBridgeWatcher | None:
         """获取关联的 watcher 实例（可能为 None 或未启动）."""
         return self._watcher
 

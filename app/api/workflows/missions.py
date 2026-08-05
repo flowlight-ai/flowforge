@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Query
@@ -28,7 +28,7 @@ class MissionCreate(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat() + "Z"
+    return datetime.now(UTC).isoformat() + "Z"
 
 
 @router.get("")
@@ -51,7 +51,7 @@ async def list_missions(
 async def create_mission(payload: MissionCreate) -> dict[str, Any]:
     """创建任务（stub 返回占位对象）。"""
     return {
-        "id": f"mission_stub_{int(datetime.now(timezone.utc).timestamp())}",
+        "id": f"mission_stub_{int(datetime.now(UTC).timestamp())}",
         "title": payload.title,
         "description": payload.description,
         "forgekin_id": payload.forgekin_id,

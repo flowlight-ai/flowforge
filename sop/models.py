@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -238,4 +238,4 @@ class SOPExecutionResult(BaseModel):
     blocker_messages: list[str] = Field(default_factory=list, description="全部阻断消息")
     warning_messages: list[str] = Field(default_factory=list, description="全部警告消息")
     started_at: datetime = Field(default_factory=datetime.utcnow, description="开始时间")
-    completed_at: Optional[datetime] = Field(default=None, description="完成时间")
+    completed_at: datetime | None = Field(default=None, description="完成时间")

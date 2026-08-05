@@ -28,10 +28,9 @@ from __future__ import annotations
 
 import asyncio
 import re
-import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.self_dev_base import (
@@ -128,7 +127,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
     def __init__(
         self,
         trae_client: Any,
-        forgekin_config: Dict[str, Any],
+        forgekin_config: dict[str, Any],
         evolution_engine: Any,
         *,
         awakening_stage: str = "E4",
@@ -158,7 +157,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
     # §1 Discover — 发现代码任务
     # ══════════════════════════════════════════════════════════════
 
-    async def discover(self, context: Dict[str, Any]) -> List[DevTask]:
+    async def discover(self, context: dict[str, Any]) -> list[DevTask]:
         """发现代码任务（F046 §2.5.2）.
 
         支持四种任务来源（task_source）：
@@ -191,7 +190,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
             f"force_targets={len(force_targets)}, pytest_output_len={len(pytest_output)}"
         )
 
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
 
         if force_targets:
             # force_targets 优先级最高，跳过其他来源
@@ -227,13 +226,13 @@ class SelfDevCodeLoop(SelfDevLoopBase):
         self._logger.info(f"[Discover] 完成: {len(tasks)} 个任务, 耗时 {elapsed_ms}ms")
         return tasks
 
-    async def _discover_from_pytest_failure(self, pytest_output: str) -> List[DevTask]:
+    async def _discover_from_pytest_failure(self, pytest_output: str) -> list[DevTask]:
         """从 pytest 失败输出提取待修复任务."""
         if not pytest_output:
             self._logger.warning("[Discover] pytest_failure 模式但无 pytest_output")
             return []
 
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
         # 匹配 FAILED 模式：FAILED tests/test_xxx.py::test_func - AssertionError: ...
         failed_pattern = re.compile(
             r"FAILED\s+(\S+?\.py)::(\S+)\s*-\s*(.+?)(?:\n|$)"
@@ -288,7 +287,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
             return "flowforge/" + "/".join(parts)
         return ""
 
-    async def _discover_from_task_md(self, task_md_path: str) -> List[DevTask]:
+    async def _discover_from_task_md(self, task_md_path: str) -> list[DevTask]:
         """从 task.md 提取未实现项."""
         if not task_md_path:
             task_md_path = "docs/task.md"
@@ -303,7 +302,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
             self._logger.warning(f"[Discover] 读取 task.md 失败: {e}")
             return []
 
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
         # 匹配未实现项模式：- [ ] F0XX: 描述 / TODO: 描述 / FIXME: 描述
         todo_pattern = re.compile(
             r"^\s*(?:-\s*\[\s*\]\s*|TODO:\s*|FIXME:\s*)(.+)$",
@@ -322,13 +321,13 @@ class SelfDevCodeLoop(SelfDevLoopBase):
             ))
         return tasks
 
-    async def _discover_from_bug_report(self, bug_report: str) -> List[DevTask]:
+    async def _discover_from_bug_report(self, bug_report: str) -> list[DevTask]:
         """从 bug 报告字符串提取任务."""
         if not bug_report:
             return []
 
         # 简单提取：按行分割，每行视为一个 bug
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
         for line in bug_report.strip().splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
@@ -496,7 +495,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
 
     def _parse_plan_response(
         self, content: str, task: DevTask
-    ) -> Tuple[List[Dict[str, Any]], str, str]:
+    ) -> tuple[list[dict[str, Any]], str, str]:
         """解析 LLM 返回的 Plan JSON."""
         import json
 
@@ -555,8 +554,8 @@ class SelfDevCodeLoop(SelfDevLoopBase):
             f"[Act] 开始: plan_id={plan.plan_id}, steps={len(plan.steps)}"
         )
 
-        changed_files: List[str] = []
-        diff_summary_parts: List[str] = []
+        changed_files: list[str] = []
+        diff_summary_parts: list[str] = []
         success = True
         error_message = ""
 
@@ -652,7 +651,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
                 return True
         return False
 
-    def _check_code_safety(self, content: str, target: str) -> List[str]:
+    def _check_code_safety(self, content: str, target: str) -> list[str]:
         """I6/I7 安全护栏检查 — 返回违规列表（空列表表示通过）.
 
         检查项：
@@ -661,7 +660,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
         - 红线 13: 是否直接操作数据库
         - 红线 9: 是否绕过 DI 直接 import LLM SDK
         """
-        violations: List[str] = []
+        violations: list[str] = []
 
         # 仅对 Python 文件做代码内容检查
         if not target.endswith(".py"):
@@ -805,8 +804,8 @@ class SelfDevCodeLoop(SelfDevLoopBase):
             f"changed_files={len(result.changed_files)}"
         )
 
-        checks: List[Dict[str, Any]] = []
-        failure_reasons: List[str] = []
+        checks: list[dict[str, Any]] = []
+        failure_reasons: list[str] = []
 
         # 检查 1: 文件存在性
         for rel_path in result.changed_files:
@@ -921,7 +920,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
             elapsed_ms=elapsed_ms,
         )
 
-    async def _check_python_syntax(self, abs_path: Path) -> Tuple[bool, str]:
+    async def _check_python_syntax(self, abs_path: Path) -> tuple[bool, str]:
         """检查 Python 文件语法（用 py_compile）."""
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -933,7 +932,7 @@ class SelfDevCodeLoop(SelfDevLoopBase):
             if proc.returncode == 0:
                 return True, ""
             return False, stderr.decode("utf-8", errors="replace").strip()
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False, "py_compile 超时（10s）"
         except Exception as e:
             return False, f"py_compile 异常: {e}"

@@ -5,12 +5,11 @@
 所有 SQL 操作通过 MailboxRepository 封装，遵守铁律4（禁止直接SQL）。
 """
 
+import datetime
 import json
 import sqlite3
-import datetime
-from datetime import timezone
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 
@@ -74,9 +73,9 @@ class MailboxRepository:
         subject: str,
         body: str,
         priority: str,
-        tags_json: Optional[str],
+        tags_json: str | None,
         created_at: str,
-        expires_at: Optional[str],
+        expires_at: str | None,
     ) -> int:
         """插入消息，返回自增 id。"""
         cursor = self.conn.execute(
@@ -90,10 +89,10 @@ class MailboxRepository:
     def query_messages(
         self,
         where_clause: str,
-        params: List[Any],
+        params: list[Any],
         order_clause: str,
         limit: int,
-    ) -> List[tuple]:
+    ) -> list[tuple]:
         """按条件查询消息行。"""
         query = (
             f"SELECT id, sender, recipient, subject, body, priority, tags, read, created_at, expires_at "
@@ -118,13 +117,13 @@ class MailboxRepository:
         self.conn.commit()
         return cursor.rowcount
 
-    def count_messages(self, where_clause: str, params: List[Any]) -> int:
+    def count_messages(self, where_clause: str, params: list[Any]) -> int:
         """按条件统计消息数量。"""
         return self.conn.execute(
             f"SELECT COUNT(*) FROM messages WHERE {where_clause}", params
         ).fetchone()[0]
 
-    def count_by_priority(self, where_clause: str, params: List[Any]) -> List[tuple]:
+    def count_by_priority(self, where_clause: str, params: list[Any]) -> list[tuple]:
         """按条件分组统计各优先级消息数量。"""
         return self.conn.execute(
             f"SELECT priority, COUNT(*) FROM messages WHERE {where_clause} GROUP BY priority",
@@ -148,10 +147,10 @@ class Mailbox:
         subject: str,
         body: str,
         priority: str = PRIORITY_NORMAL,
-        tags: Optional[List[str]] = None,
-        ttl_seconds: Optional[int] = None,
+        tags: list[str] | None = None,
+        ttl_seconds: int | None = None,
     ) -> int:
-        now = datetime.datetime.now(timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         expires_at = None
         if ttl_seconds is not None:
             expires_at = (now + datetime.timedelta(seconds=ttl_seconds)).isoformat()
@@ -173,15 +172,15 @@ class Mailbox:
         self,
         recipient: str,
         unread_only: bool = False,
-        priority: Optional[str] = None,
-        subject_contains: Optional[str] = None,
-        sender: Optional[str] = None,
+        priority: str | None = None,
+        subject_contains: str | None = None,
+        sender: str | None = None,
         limit: int = 50,
-    ) -> List[dict]:
+    ) -> list[dict]:
         await self._cleanup_expired()
 
         conditions = ["recipient = ?"]
-        params: List[Any] = [recipient]
+        params: list[Any] = [recipient]
 
         if unread_only:
             conditions.append("read = 0")
@@ -209,13 +208,13 @@ class Mailbox:
         return results
 
     async def _cleanup_expired(self) -> int:
-        now = datetime.datetime.now(timezone.utc).isoformat()
+        now = datetime.datetime.now(datetime.UTC).isoformat()
         count = self._repo.cleanup_expired(now)
         if count:
             logger.info(f"Cleaned up {count} expired messages")
         return count
 
-    async def get_stats(self, recipient: Optional[str] = None) -> Dict[str, Any]:
+    async def get_stats(self, recipient: str | None = None) -> dict[str, Any]:
         await self._cleanup_expired()
 
         if recipient:

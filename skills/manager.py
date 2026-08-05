@@ -6,9 +6,6 @@ Handles version conflict resolution (newer version wins) and trigger matching.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
 from flowforge.core.tracing import get_logger
 from flowforge.skills.base import (
     SkillBase,
@@ -54,15 +51,15 @@ class SkillManager:
     """
 
     def __init__(self) -> None:
-        self._skills: Dict[str, SkillBase] = {}
+        self._skills: dict[str, SkillBase] = {}
         self._loader = SkillLoader()
 
     # ── Loading ─────────────────────────────────────────────────────
 
     def load_skills(
         self,
-        global_dir: Optional[str] = None,
-        project_dir: Optional[str] = None,
+        global_dir: str | None = None,
+        project_dir: str | None = None,
     ) -> int:
         """Load skills from global and project directories.
 
@@ -134,7 +131,7 @@ class SkillManager:
 
     # ── Lookup ──────────────────────────────────────────────────────
 
-    def get_skill(self, name: str) -> Optional[SkillBase]:
+    def get_skill(self, name: str) -> SkillBase | None:
         """Look up a skill by name.
 
         Args:
@@ -145,7 +142,7 @@ class SkillManager:
         """
         return self._skills.get(name)
 
-    def list_skills(self) -> List[SkillBase]:
+    def list_skills(self) -> list[SkillBase]:
         """List all loaded skills.
 
         Returns:
@@ -153,13 +150,13 @@ class SkillManager:
         """
         return list(self._skills.values())
 
-    def list_skills_by_format(self, format: SkillFormat) -> List[SkillBase]:
+    def list_skills_by_format(self, format: SkillFormat) -> list[SkillBase]:
         """List skills filtered by format."""
         return [s for s in self._skills.values() if s.format == format]
 
     # ── Trigger matching ────────────────────────────────────────────
 
-    def match_triggers(self, trigger: SkillTrigger) -> List[SkillBase]:
+    def match_triggers(self, trigger: SkillTrigger) -> list[SkillBase]:
         """Find all skills that match a given trigger.
 
         Args:

@@ -6,7 +6,7 @@ coding proficiency — its blind spots include long-form technical writing.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flowforge.forgemind.forgekin import (
     BlindSpot,
@@ -27,7 +27,7 @@ def build_cat_companion(name: str = "小煤球") -> Forgekin:
             name="empathy",
             proficiency=0.92,
             evidence=["responds to human mood shifts", "comforts stressed CVO"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_capability(
@@ -35,7 +35,7 @@ def build_cat_companion(name: str = "小煤球") -> Forgekin:
             name="observation",
             proficiency=0.85,
             evidence=["detects environment changes before humans notice"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_capability(
@@ -43,7 +43,7 @@ def build_cat_companion(name: str = "小煤球") -> Forgekin:
             name="coding",
             proficiency=0.1,
             evidence=["occasionally walks on keyboard"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_blind_spot(

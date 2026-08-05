@@ -1,4 +1,5 @@
 import os
+
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 
 
@@ -47,7 +48,7 @@ class WorkspaceFileTool(BaseTool):
                 return ToolOutput(result={}, error="Path is a directory, use 'list' action")
             if self._is_binary(full_path):
                 return ToolOutput(result={}, error="Binary file detected, cannot read as text")
-            with open(full_path, "r", encoding="utf-8") as f:
+            with open(full_path, encoding="utf-8") as f:
                 content = f.read()
             return ToolOutput(result={"content": content, "exists": True})
 

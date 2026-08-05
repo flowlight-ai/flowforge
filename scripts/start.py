@@ -190,7 +190,7 @@ def main() -> int:
         print(f"\n  [WARN] .venv not found at {VENV_DIR}")
         print("         Run `python scripts/setup.py` first, or activate your venv.")
     if start_frontend and not (WEB_DIR / "node_modules").is_dir():
-        print(f"\n  [WARN] web/node_modules not found")
+        print("\n  [WARN] web/node_modules not found")
         print("         Run `python scripts/setup.py` (or `cd web && npm install`) first.")
 
     procs: list[tuple[str, subprocess.Popen, object]] = []
@@ -227,7 +227,7 @@ def main() -> int:
         if start_backend:
             health_url = f"http://{args.host}:{args.backend_port}/health"
             if wait_for_url(health_url, BACKEND_READY_TIMEOUT, "backend"):
-                print(f"  [OK] backend ready")
+                print("  [OK] backend ready")
             else:
                 print(f"  [FAIL] backend not ready after {BACKEND_READY_TIMEOUT:.0f}s")
                 print(f"         check {backend_log}")
@@ -235,7 +235,7 @@ def main() -> int:
         if start_frontend:
             web_url = f"http://127.0.0.1:{DEFAULT_FRONTEND_PORT}/"
             if wait_for_url(web_url, FRONTEND_READY_TIMEOUT, "frontend"):
-                print(f"  [OK] frontend ready")
+                print("  [OK] frontend ready")
             else:
                 print(f"  [FAIL] frontend not ready after {FRONTEND_READY_TIMEOUT:.0f}s")
                 print(f"         check {frontend_log}")

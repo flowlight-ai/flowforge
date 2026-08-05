@@ -23,19 +23,17 @@ from flowforge.core.eval.contract import (
     ContractRegistry,
     EvalContract,
     EvalMaturity,
-    EvaluatorType,
     EvaluationTarget,
     EvaluationTiming,
+    EvaluatorType,
     FiveQuestions,
     PostEvaluationAction,
 )
 from flowforge.core.eval.three_signals import (
-    CrossValidationResult,
     Signal,
     SignalType,
     ThreeSignalCrossValidator,
 )
-
 
 # ---------------------------------------------------------------------------
 # Eval Contract five-questions

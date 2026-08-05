@@ -1,5 +1,5 @@
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
-from typing import Optional
+
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
 
 
 class GeneratorAgent(GenericAgent):
@@ -7,7 +7,7 @@ class GeneratorAgent(GenericAgent):
     description = "AI 生成：根据任务需求生成内容"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         requirements = input.params.get("requirements", [])
         style = input.params.get("style", "professional")

@@ -13,8 +13,8 @@ from __future__ import annotations
 from typing import Any
 
 from flowforge.core.tracing import get_logger
-from flowforge.forgemind.forging.pipeline import ForgePipeline
 from flowforge.forgemind.base import ForgekinBase
+from flowforge.forgemind.forging.pipeline import ForgePipeline
 
 logger = get_logger("api.forgemind")
 

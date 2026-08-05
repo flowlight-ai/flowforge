@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
+from flowforge.core.base_agent import AgentInput, AgentOutput, BaseAgent
 
 
 class AgentTimeoutError(Exception):
@@ -24,7 +24,7 @@ class TimeoutAgentWrapper(BaseAgent):
     async def execute(self, input: AgentInput) -> AgentOutput:
         try:
             return await asyncio.wait_for(self._agent.execute(input), timeout=self._timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise AgentTimeoutError(self.name, self._timeout)
 
     async def execute_with_context(self, input: AgentInput, context: Any) -> AgentOutput:
@@ -32,5 +32,5 @@ class TimeoutAgentWrapper(BaseAgent):
             return await asyncio.wait_for(
                 self._agent.execute_with_context(input, context), timeout=self._timeout
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise AgentTimeoutError(self.name, self._timeout)

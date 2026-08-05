@@ -27,13 +27,13 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, AsyncIterator
-
-from flowforge.core.tracing import get_logger
+from collections.abc import AsyncIterator
+from typing import Any
 
 from flowforge.a2a.channels.base import ChannelAdapter
 from flowforge.a2a.protocol import A2AMention, A2AMessage
 from flowforge.a2a.router import MentionRouter
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.a2a.channels.feishu")
 

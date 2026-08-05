@@ -21,7 +21,6 @@ import sys
 import time
 import traceback
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 import httpx
@@ -365,7 +364,7 @@ async def test_websocket_message_broadcast(metrics: LoadMetrics):
                     else:
                         _log("test2_broadcast", str(client_id), logging.DEBUG,
                              "收到非广播消息: type=%s", msg_type)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     _log("test2_broadcast", str(client_id), logging.DEBUG, "监听窗口超时，退出循环")
                     break
             _log("test2_broadcast", str(client_id), logging.INFO, "订阅任务结束")
@@ -655,7 +654,7 @@ async def test_load_metrics_summary():
                         _log("test5_summary", str(client_id), logging.INFO,
                              "收到广播: author=%s",
                              data["message"].get("author_name", "?"))
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
             await ws.close()
             _log("test5_summary", str(client_id), logging.DEBUG,

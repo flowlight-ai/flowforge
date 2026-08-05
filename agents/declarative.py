@@ -44,7 +44,7 @@ from pydantic import BaseModel, Field
 
 from flowforge.core.base_agent import AgentInput, AgentOutput, BaseAgent
 from flowforge.core.persona_injector import PersonaInjector
-from flowforge.core.state_mapper import ParamMapping, StateMapper
+from flowforge.core.state_mapper import StateMapper
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("agents.declarative")
@@ -807,7 +807,7 @@ class DeclarativeAgent:
             配置好的DeclarativeAgent实例
         """
         path = Path(yaml_path)
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             raw = yaml.safe_load(f)
 
         if not isinstance(raw, dict):

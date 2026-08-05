@@ -6,10 +6,9 @@ Gate 相关模型（GateVerdict、GateRecord、Score、GateStatus）和
 """
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -66,10 +65,10 @@ class GateVerdict(BaseModel):
     veto_dimensions_triggered: list[str] = Field(default_factory=list)
     decision: str = "pending"
     retry_count: int = 0
-    goto_step: Optional[str] = None
+    goto_step: str | None = None
     reviewer_feedback: str = ""
-    decided_at: Optional[datetime] = None
-    audit_entry: Optional[dict[str, Any]] = None
+    decided_at: datetime | None = None
+    audit_entry: dict[str, Any] | None = None
 
     @property
     def is_passed(self) -> bool:
@@ -79,7 +78,7 @@ class GateVerdict(BaseModel):
 class GateRecord(BaseModel):
     gate_id: str
     gate_name: str
-    verdict: Optional[GateVerdict] = None
+    verdict: GateVerdict | None = None
     status: GateStatus = GateStatus.PENDING
 
 
@@ -89,8 +88,8 @@ class WorkflowStep(BaseModel):
     agent_name: str = ""
     step_type: str = "agent"
     mode: str = "plan_execute"
-    gate_config: Optional[dict[str, Any]] = None
-    gate_id: Optional[str] = None
+    gate_config: dict[str, Any] | None = None
+    gate_id: str | None = None
     inputs: dict[str, Any] = Field(default_factory=dict)
     outputs: dict[str, Any] = Field(default_factory=dict)
     status: TaskStatus = TaskStatus.PENDING

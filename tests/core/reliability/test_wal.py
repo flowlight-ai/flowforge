@@ -37,7 +37,6 @@ from flowforge.core.reliability import (  # noqa: E402
     WriteAheadLog,
 )
 
-
 # ---------------------------------------------------------------------------
 # 1. WriteAheadLog — append / get / mark_committed / mark_rolled_back
 # ---------------------------------------------------------------------------

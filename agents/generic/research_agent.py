@@ -1,6 +1,6 @@
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput
+
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent
 from flowforge.core.task_context import TaskContext
-from typing import Optional
 
 
 class ResearchAgent(GenericAgent):
@@ -8,7 +8,7 @@ class ResearchAgent(GenericAgent):
     description = "深度研究：制定研究计划、搜索素材、综合撰写研究报告"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         topic = input.params.get("topic", input.params.get("task", ""))
         depth = input.params.get("depth", "medium")
         mode = input.params.get("mode", "full")

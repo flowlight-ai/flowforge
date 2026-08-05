@@ -1,5 +1,5 @@
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
-from typing import Optional
+
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
 
 
 class VerifierAgent(GenericAgent):
@@ -7,7 +7,7 @@ class VerifierAgent(GenericAgent):
     description = "结果验证：检查执行结果是否符合预期和标准"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         execution_result = input.params.get("execution_result", "")
         plan = input.params.get("plan", {})

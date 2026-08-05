@@ -18,16 +18,10 @@ from __future__ import annotations
 import copy
 from abc import ABC
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from flowforge.core.agent_registry import AgentRegistry
-    from flowforge.tools.registry import ToolRegistry
-    from flowforge.events.event_bus import EventBus
-    from flowforge.modes.registry import ModeRegistry
-    from flowforge.scheduler.scheduler import TaskScheduler
-    from flowforge.tools.llm_client import LLMClient
-    from flowforge.core.config import SystemConfig, ConfigLoader
+    pass
 
 
 class PluginState(Enum):
@@ -69,12 +63,12 @@ class PluginManifest:
         license: str = "",
         homepage: str = "",
         # ── Dependencies and compatibility ───────────────────────────
-        dependencies: Optional[List[str]] = None,
-        optional_dependencies: Optional[List[str]] = None,
+        dependencies: list[str] | None = None,
+        optional_dependencies: list[str] | None = None,
         min_framework_version: str = "",
         max_framework_version: str = "",
         # ── Configuration ────────────────────────────────────────────
-        config_schema: Optional[Dict[str, Any]] = None,
+        config_schema: dict[str, Any] | None = None,
         # ── Load control ─────────────────────────────────────────────
         priority: int = 100,
         # ── Tool plugin fields ───────────────────────────────────────
@@ -83,16 +77,16 @@ class PluginManifest:
         endpoint: str = "",
         api_key_env: str = "",
         safety_level: str = "normal",  # readonly, normal, dangerous
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
         health_endpoint: str = "",
         health_interval: int = 300,
         # ── Frontend extension ───────────────────────────────────────
         frontend_entry: str = "",
-        mount_points: Optional[List[str]] = None,
+        mount_points: list[str] | None = None,
         # ── V2 resource directories ──────────────────────────────────
-        personas_dir: Optional[str] = None,
-        prompts_dir: Optional[str] = None,
-        tools_dir: Optional[str] = None,
+        personas_dir: str | None = None,
+        prompts_dir: str | None = None,
+        tools_dir: str | None = None,
         # ── V3 ForgeMind / Forgekin (v7.0 Forge Nurturing体系) ───────────────────
         # Forgekin形态（ForgekinSpecies Forgekin Species）：bio / org / obj / virtual / hybrid
         # 详见 [doc:design/naming-contract.md#2.3]
@@ -102,13 +96,13 @@ class PluginManifest:
         # 觉醒阶 E1-E6（自主性等级），详见 [doc:design/naming-contract.md#4]
         awakening_stage: str = "E1",
         # ForgekinSpecies配置目录（forgemind 应用层专用）
-        forgekins_dir: Optional[str] = None,
+        forgekins_dir: str | None = None,
         # 锻典（Mind Codex）目录
-        codex_dir: Optional[str] = None,
+        codex_dir: str | None = None,
         # MindCouncil（Mind Council）配置目录
-        council_dir: Optional[str] = None,
+        council_dir: str | None = None,
         # 自我进化配置目录（F100 Mode A/B/C）
-        auto_forge_dir: Optional[str] = None,
+        auto_forge_dir: str | None = None,
     ):
         self.name = name
         self.version = version
@@ -162,18 +156,18 @@ class PluginContext:
         app: Any,
         llm_client: Any = None,
         config: Any = None,
-        plugin_config: Optional[Dict[str, Any]] = None,
-        memory_manager: Optional[Any] = None,
-        model_service: Optional[Any] = None,
-        plugin_registry: Optional[Any] = None,
-        event_store: Optional[Any] = None,
+        plugin_config: dict[str, Any] | None = None,
+        memory_manager: Any | None = None,
+        model_service: Any | None = None,
+        plugin_registry: Any | None = None,
+        event_store: Any | None = None,
         # V3 ForgeMind / Forgekin registries (v7.0 Forge Nurturing体系)
         # 详见 [doc:decisions/005-forgemind-application-layer.md]
-        forgekin_registry: Optional[Any] = None,
-        council_registry: Optional[Any] = None,
-        auto_forge_engine: Optional[Any] = None,
-        codex_registry: Optional[Any] = None,
-        pack_registry: Optional[Any] = None,
+        forgekin_registry: Any | None = None,
+        council_registry: Any | None = None,
+        auto_forge_engine: Any | None = None,
+        codex_registry: Any | None = None,
+        pack_registry: Any | None = None,
     ):
         self._agent_registry = agent_registry
         self._tool_registry = tool_registry
@@ -194,7 +188,7 @@ class PluginContext:
         self._auto_forge_engine = auto_forge_engine
         self._codex_registry = codex_registry
         self._pack_registry = pack_registry
-        self._services: Dict[str, Any] = {}
+        self._services: dict[str, Any] = {}
 
     @property
     def agent_registry(self) -> Any:
@@ -237,7 +231,7 @@ class PluginContext:
         return self._config
 
     @property
-    def plugin_config(self) -> Dict[str, Any]:
+    def plugin_config(self) -> dict[str, Any]:
         """Access this plugin's own configuration section.
 
         Loaded from the plugin's section in default.yaml, e.g.:
@@ -249,29 +243,29 @@ class PluginContext:
         return self._plugin_config
 
     @property
-    def memory_manager(self) -> Optional[Any]:
+    def memory_manager(self) -> Any | None:
         """Access the memory manager for persistent storage."""
         return self._memory_manager
 
     @property
-    def model_service(self) -> Optional[Any]:
+    def model_service(self) -> Any | None:
         """Access the model service for health checks and model routing."""
         return self._model_service
 
     @property
-    def plugin_registry(self) -> Optional[Any]:
+    def plugin_registry(self) -> Any | None:
         """Access the plugin registry for tool plugin management."""
         return self._plugin_registry
 
     @property
-    def event_store(self) -> Optional[Any]:
+    def event_store(self) -> Any | None:
         """Access the event store for WAL-mode event persistence and replay."""
         return self._event_store
 
     # ── V3 ForgeMind / Forgekin accessors (v7.0 Forge Nurturing体系) ───────────
 
     @property
-    def forgekin_registry(self) -> Optional[Any]:
+    def forgekin_registry(self) -> Any | None:
         """Access the forgekin registry (Forgekin注册表) for registering/discovering Forgekin.
 
         详见 [doc:decisions/005-forgemind-application-layer.md] 和
@@ -280,7 +274,7 @@ class PluginContext:
         return self._forgekin_registry
 
     @property
-    def council_registry(self) -> Optional[Any]:
+    def council_registry(self) -> Any | None:
         """Access the council registry (MindCouncil注册表) for multi-forgekin deliberation.
 
         详见 [doc:design/naming-contract.md#2.9]
@@ -288,7 +282,7 @@ class PluginContext:
         return self._council_registry
 
     @property
-    def auto_forge_engine(self) -> Optional[Any]:
+    def auto_forge_engine(self) -> Any | None:
         """Access the auto-forge engine (自我进化引擎) for Mode A/B/C self-evolution.
 
         详见 [doc:review/review.md#13.1] F100 自我进化三模式
@@ -296,7 +290,7 @@ class PluginContext:
         return self._auto_forge_engine
 
     @property
-    def codex_registry(self) -> Optional[Any]:
+    def codex_registry(self) -> Any | None:
         """Access the codex registry (锻典注册表) for distilled knowledge base.
 
         详见 [doc:design/naming-contract.md#2.8]
@@ -304,7 +298,7 @@ class PluginContext:
         return self._codex_registry
 
     @property
-    def pack_registry(self) -> Optional[Any]:
+    def pack_registry(self) -> Any | None:
         """Access the pack registry (Pack 共享注册表) for portable experience units.
 
         详见 [doc:review/review.md#13.4] ADR-021 Pack 系统
@@ -315,7 +309,7 @@ class PluginContext:
         """Register a named service for plugin access."""
         self._services[name] = service
 
-    def get_service(self, name: str) -> Optional[Any]:
+    def get_service(self, name: str) -> Any | None:
         """Get a named service — checks registered services first, then built-in."""
         if name in self._services:
             return self._services[name]
@@ -761,8 +755,8 @@ class FlowForgePlugin(ABC):
 
 
 def validate_plugin_config(
-    config: Dict[str, Any], schema: Dict[str, Any]
-) -> Tuple[bool, List[str]]:
+    config: dict[str, Any], schema: dict[str, Any]
+) -> tuple[bool, list[str]]:
     """Validate plugin config against its declared schema.
 
     Uses simple type checking (not full JSON Schema) for lightweight validation.
@@ -776,8 +770,8 @@ def validate_plugin_config(
 
     Returns (is_valid, list_of_errors).
     """
-    errors: List[str] = []
-    type_map: Dict[str, type | tuple[type, ...]] = {
+    errors: list[str] = []
+    type_map: dict[str, type | tuple[type, ...]] = {
         "string": str,
         "integer": int,
         "number": (int, float),
@@ -810,8 +804,8 @@ def validate_plugin_config(
 
 
 def fill_config_defaults(
-    config: Dict[str, Any], schema: Dict[str, Any]
-) -> Dict[str, Any]:
+    config: dict[str, Any], schema: dict[str, Any]
+) -> dict[str, Any]:
     """Fill missing config values with defaults from schema.
 
     Returns a new dict with defaults applied; does not mutate *config*.

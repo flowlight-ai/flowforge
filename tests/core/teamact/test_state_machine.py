@@ -15,8 +15,6 @@ No LLM is involved — these are pure data-structure + state-machine tests.
 
 from __future__ import annotations
 
-import pytest
-
 from flowforge.core.teamact.circuit_breaker import PingPongCircuitBreaker
 from flowforge.core.teamact.handoff import HandoffCapsule
 from flowforge.core.teamact.state_machine import (
@@ -29,7 +27,6 @@ from flowforge.core.teamact.types import (
     TeamActStep,
     TerminationCondition,
 )
-
 
 # --------------------------------------------------------------------------- #
 # helpers

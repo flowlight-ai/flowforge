@@ -10,7 +10,7 @@ stub 实现：消息不持久化，返回空历史与确认回执。
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Query
@@ -31,11 +31,11 @@ class CouncilChatRequest(BaseModel):
 async def send_council_chat(payload: CouncilChatRequest) -> dict[str, Any]:
     """发送群聊消息（stub 返回确认回执）。"""
     return {
-        "id": f"msg_stub_{int(datetime.now(timezone.utc).timestamp())}",
+        "id": f"msg_stub_{int(datetime.now(UTC).timestamp())}",
         "content": payload.content,
         "forgekin_id": payload.forgekin_id,
         "thread_id": payload.thread_id,
-        "created_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "created_at": datetime.now(UTC).isoformat() + "Z",
         "status": "queued",
     }
 

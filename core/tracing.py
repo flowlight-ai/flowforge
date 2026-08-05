@@ -4,7 +4,7 @@ import logging.handlers
 import uuid
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 _trace_id: ContextVar[str] = ContextVar("trace_id", default="")
 _logging_configured = False
@@ -23,7 +23,7 @@ class TraceIdFilter(logging.Filter):
         return True
 
 
-def configure_logging(config: Optional[dict[str, Any]] = None) -> None:
+def configure_logging(config: dict[str, Any] | None = None) -> None:
     global _logging_configured
     if _logging_configured:
         return
@@ -70,7 +70,7 @@ def load_logging_config() -> None:
     if config_path.exists():
         import yaml
 
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             config = yaml.safe_load(f)
         logging.config.dictConfig(config)
 
@@ -96,7 +96,7 @@ def generate_trace_id() -> str:
     return str(uuid.uuid4())
 
 
-def set_trace_id(trace_id: Optional[str] = None) -> str:
+def set_trace_id(trace_id: str | None = None) -> str:
     tid = trace_id or generate_trace_id()
     _trace_id.set(tid)
     return tid

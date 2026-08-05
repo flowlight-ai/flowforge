@@ -32,7 +32,7 @@ import asyncio
 import re
 import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field
@@ -352,7 +352,7 @@ class FallbackChain:
                     duration=duration,
                     result=result,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 duration = time.monotonic() - step_start
                 last_error = f"Timeout after {step.timeout}s"
                 last_error_type = "timeout_error"
@@ -498,7 +498,7 @@ class FallbackChain:
         if not path.exists():
             raise FileNotFoundError(f"Fallback chain config not found: {yaml_path}")
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
         return cls.from_config(config)

@@ -7,7 +7,7 @@ deductive reasoning + observation but has well-documented blind spots
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flowforge.forgemind.forgekin import (
     BlindSpot,
@@ -28,7 +28,7 @@ def build_sherlock(name: str = "Sherlock Holmes") -> Forgekin:
             name="deductive_reasoning",
             proficiency=0.97,
             evidence=["A Study in Scarlet", "The Hound of the Baskervilles"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_capability(
@@ -36,7 +36,7 @@ def build_sherlock(name: str = "Sherlock Holmes") -> Forgekin:
             name="observation",
             proficiency=0.93,
             evidence=["noted ash on shoes → deduced Brixton visit"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_capability(
@@ -44,7 +44,7 @@ def build_sherlock(name: str = "Sherlock Holmes") -> Forgekin:
             name="forensic_analysis",
             proficiency=0.85,
             evidence=["pioneered blood-typing and footprint analysis"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_blind_spot(

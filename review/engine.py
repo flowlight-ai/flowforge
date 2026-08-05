@@ -17,17 +17,17 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
 from flowforge.core.tracing import get_logger
 from flowforge.review.models import (
+    ReviewerInfo,
     ReviewFinding,
     ReviewProvenance,
     ReviewRequest,
     ReviewResponse,
-    ReviewerInfo,
     SeverityLevel,
 )
 from flowforge.review.pairing import ReviewerPairing
@@ -60,7 +60,7 @@ def _load_review_prompts() -> dict[str, Any]:
             )
             _prompts_cache = {}
             return _prompts_cache
-        with open(_REVIEW_PROMPTS_PATH, "r", encoding="utf-8") as f:
+        with open(_REVIEW_PROMPTS_PATH, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         _prompts_cache = data
         logger.info(
@@ -168,7 +168,7 @@ class ReviewEngine:
         self,
         pairing: ReviewerPairing,
         protocol: ReviewProtocol,
-        llm_client: Optional[Any] = None,
+        llm_client: Any | None = None,
     ) -> None:
         """
         Args:
@@ -303,8 +303,8 @@ class ReviewEngine:
 
         if self._llm_client is None:
             self._logger.warning(
-                f"execute_review: no llm_client configured, "
-                f"returning placeholder response"
+                "execute_review: no llm_client configured, "
+                "returning placeholder response"
             )
             return ReviewResponse(
                 request_id=request.request_id,

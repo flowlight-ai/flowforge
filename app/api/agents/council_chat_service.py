@@ -32,9 +32,9 @@ from .council_helpers import (
     _route_message,
 )
 from .council_state import (
+    ChatMessage,
     LLMMeta,
     T7Badge,
-    ChatMessage,
     _broadcast,
     state,
 )

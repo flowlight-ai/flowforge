@@ -56,7 +56,7 @@ class RoleMaskLayer(int, Enum):
     L5_WORLD_STATE = 5
 
     @classmethod
-    def scene_layers(cls) -> frozenset["RoleMaskLayer"]:
+    def scene_layers(cls) -> frozenset[RoleMaskLayer]:
         """返回场景相关层（L4 / L5）。
 
         这些层在退出场景时应被摘下，避免污染本体能力。
@@ -67,7 +67,7 @@ class RoleMaskLayer(int, Enum):
         return frozenset({cls.L4_SCENE_SKIN, cls.L5_WORLD_STATE})
 
     @classmethod
-    def ontology_layers(cls) -> frozenset["RoleMaskLayer"]:
+    def ontology_layers(cls) -> frozenset[RoleMaskLayer]:
         """返回本体相关层（L1 / L2 / L3）。
 
         这些层长期持有，不应被场景层污染。

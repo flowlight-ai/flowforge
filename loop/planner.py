@@ -2,11 +2,11 @@
 
 import json
 import logging
-
 from abc import ABC, abstractmethod
+
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
-from flowforge.loop.state import LoopState, Reflection
+from flowforge.loop.state import Reflection
 
 logger = logging.getLogger(__name__)
 

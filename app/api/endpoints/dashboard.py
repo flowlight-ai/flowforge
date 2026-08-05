@@ -1,8 +1,10 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends
+
 from flowforge.app.deps import get_executor, get_llm_client
-from flowforge.core.tracing import get_trace_id
 from flowforge.core import metrics
+from flowforge.core.tracing import get_trace_id
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -11,7 +13,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 
@@ -54,10 +56,10 @@ async def get_stats(executor=Depends(get_executor)):
     task_stats = metrics.get_task_stats()
     token_stats = metrics.get_llm_token_stats()
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     today_articles = 0
     month_articles = 0
-    month_prefix = datetime.now(timezone.utc).strftime("%Y-%m")
+    month_prefix = datetime.now(UTC).strftime("%Y-%m")
     total_completed = 0
     total_failed = 0
 

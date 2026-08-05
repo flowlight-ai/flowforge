@@ -22,13 +22,12 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
-
 from flowforge.core.tracing import get_logger
+from pydantic import BaseModel, Field
 
 logger = get_logger("teamact.handoff")
 
@@ -78,7 +77,7 @@ class HandoffCapsule(BaseModel):
         default_factory=dict, description="上下文快照"
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="胶囊创建时间",
     )
 

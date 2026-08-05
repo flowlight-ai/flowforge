@@ -21,8 +21,8 @@ License: MIT
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -47,7 +47,7 @@ class SessionInfo(BaseModel):
     forgekin_id: str = Field(..., description="Forgekin ID")
     provider_name: str = Field(..., description="Provider 名称")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="创建时间（UTC）",
     )
     expires_at: datetime = Field(..., description="过期时间（UTC）")
@@ -94,7 +94,7 @@ class SessionManager:
         Returns:
             新创建的 SessionInfo。
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         session_id = self._gen_session_id(provider_name, forgekin_id, now)
         session = SessionInfo(
             session_id=session_id,
@@ -114,7 +114,7 @@ class SessionManager:
         )
         return session
 
-    async def get_session(self, session_id: str) -> Optional[SessionInfo]:
+    async def get_session(self, session_id: str) -> SessionInfo | None:
         """获取会话（惰性清理过期会话）。
 
         Args:
@@ -127,7 +127,7 @@ class SessionManager:
         if session is None:
             return None
         # 惰性清理：过期会话立即清除
-        if datetime.now(timezone.utc) > session.expires_at:
+        if datetime.now(UTC) > session.expires_at:
             del self._sessions[session_id]
             logger.debug(
                 "session.expired lazy_cleanup sid=%s", session_id
@@ -148,7 +148,7 @@ class SessionManager:
         session = await self.get_session(session_id)
         if session is None:
             return False
-        session.expires_at = datetime.now(timezone.utc) + timedelta(
+        session.expires_at = datetime.now(UTC) + timedelta(
             seconds=ttl_seconds
         )
         logger.debug(
@@ -185,7 +185,7 @@ class SessionManager:
         Returns:
             活跃会话列表（已过期的不返回，且会被清理）。
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # 惰性清理过期会话
         expired_sids = [
             sid

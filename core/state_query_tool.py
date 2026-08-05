@@ -115,10 +115,10 @@ class StateQueryTool(BaseTool):
         使用 state_key_template 构造 key，按 scope 过滤，按字段类型合并。
         """
         if not self._memory:
-            logger.debug(f"StateQueryTool._load_state: no memory instance, returning empty")
+            logger.debug("StateQueryTool._load_state: no memory instance, returning empty")
             return {}
         if not self.state_key_template:
-            logger.debug(f"StateQueryTool._load_state: no state_key_template defined, returning empty")
+            logger.debug("StateQueryTool._load_state: no state_key_template defined, returning empty")
             return {}
 
         try:

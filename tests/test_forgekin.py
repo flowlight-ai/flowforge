@@ -22,7 +22,6 @@ from flowforge.forgemind.forgekin import (
     BlindSpot,
     Capability,
     Forgekin,
-    ForgekinType,
 )
 from flowforge.forgemind.magic_words import (
     MAGIC_WORDS,
@@ -30,7 +29,6 @@ from flowforge.forgemind.magic_words import (
     detect_magic_word,
 )
 from flowforge.forgemind.registry import ForgekinRegistry, get_registry
-
 
 # ---- Forgekin basics ----
 

@@ -33,9 +33,10 @@ import asyncio
 import json
 import re
 import time
-from datetime import datetime, timezone
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.self_dev_base import (
@@ -62,7 +63,7 @@ _DEFAULT_ADR_PATTERNS = [
 # 受保护的核心 ADR（禁止修改内容，只能新增 ADR 补充）
 # 注：decisions/ 整个目录已由基类 _PROTECTED_PATH_PATTERNS 保护，
 # 这里额外记录"核心 13 份 ADR"用于 Discover 阶段的偏离检测
-_CORE_ADR_IDS: List[str] = [
+_CORE_ADR_IDS: list[str] = [
     "001", "002", "003", "004", "005", "006", "007",
     "008", "009", "010", "011", "012", "013",
 ]
@@ -132,7 +133,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
     def __init__(
         self,
         trae_client: Any,
-        forgekin_config: Dict[str, Any],
+        forgekin_config: dict[str, Any],
         evolution_engine: Any,
         *,
         awakening_stage: str = "E5",
@@ -149,7 +150,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
         )
 
         # I8 approval 回调（必须显式注入，未注入则所有 Act 都被阻止）
-        self._approval_callback: Optional[ApprovalCallback] = forgekin_config.get(
+        self._approval_callback: ApprovalCallback | None = forgekin_config.get(
             "approval_callback"
         )
 
@@ -163,7 +164,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
     # §1 Discover — 发现框架任务
     # ══════════════════════════════════════════════════════════════
 
-    async def discover(self, context: Dict[str, Any]) -> List[DevTask]:
+    async def discover(self, context: dict[str, Any]) -> list[DevTask]:
         """发现框架任务（F046 §2.5.3）.
 
         支持四种任务来源：
@@ -199,7 +200,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
             f"check_dependencies={check_dependencies}"
         )
 
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
 
         if target_files:
             # force_targets 优先级最高
@@ -236,7 +237,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
         self._logger.info(f"[Discover] 完成: {len(tasks)} 个任务, 耗时 {elapsed_ms}ms")
         return tasks
 
-    async def _discover_architecture_drift(self) -> List[DevTask]:
+    async def _discover_architecture_drift(self) -> list[DevTask]:
         """检测架构偏离（与 ADR 不一致）.
 
         简化实现：扫描 ADR 目录，提取 ADR ID 与标题，
@@ -248,7 +249,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
             self._logger.warning(f"[Discover] ADR 目录不存在: {adr_path}")
             return []
 
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
         try:
             for adr_file in adr_path.glob("*.md"):
                 # 跳过核心 ADR（13 份）
@@ -283,13 +284,13 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
 
         return tasks
 
-    async def _discover_config_inconsistency(self) -> List[DevTask]:
+    async def _discover_config_inconsistency(self) -> list[DevTask]:
         """检测配置不一致（YAML 与代码不匹配）.
 
         简化实现：扫描 config 目录，检查 YAML 文件是否存在语法错误或缺失必填字段.
         """
         self._logger.info("[Discover] config_inconsistency 模式：扫描 config 目录")
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
 
         try:
             import yaml
@@ -348,14 +349,14 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
 
         return tasks
 
-    async def _discover_dependency_graph_issues(self) -> List[DevTask]:
+    async def _discover_dependency_graph_issues(self) -> list[DevTask]:
         """检测依赖图问题（循环依赖、跨层依赖）.
 
         简化实现：扫描 flowforge/ 下的 Python 文件，
         检查是否存在下层导入上层的违规.
         """
         self._logger.info("[Discover] dependency_graph 模式：扫描 Python 依赖")
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
         root = Path(self.project_root) / "flowforge"
         if not root.exists():
             self._logger.warning(f"[Discover] flowforge 目录不存在: {root}")
@@ -557,7 +558,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
 
     def _parse_plan_response(
         self, content: str, task: DevTask
-    ) -> Tuple[List[Dict[str, Any]], str, str]:
+    ) -> tuple[list[dict[str, Any]], str, str]:
         """解析 LLM 返回的 Plan JSON."""
         # 清理 markdown 代码块包裹
         cleaned = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.MULTILINE)
@@ -623,8 +624,8 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
                 )
                 raise ApprovalRequiredError(plan.plan_id, plan.steps[0].get("path", "") if plan.steps else "")
 
-        changed_files: List[str] = []
-        diff_summary_parts: List[str] = []
+        changed_files: list[str] = []
+        diff_summary_parts: list[str] = []
         success = True
         error_message = ""
 
@@ -664,7 +665,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
                     # 添加 front-matter（如果 content 没有以 --- 开头）
                     if not content.startswith("---"):
                         adr_id = step.get("adr_id", "")
-                        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                        timestamp = datetime.now(UTC).strftime("%Y-%m-%d")
                         # target 是字符串，用 Path(target).stem 提取文件名（不含扩展名）
                         adr_title = Path(target).stem
                         front_matter = (
@@ -777,8 +778,8 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
             f"changed_files={len(result.changed_files)}"
         )
 
-        checks: List[Dict[str, Any]] = []
-        failure_reasons: List[str] = []
+        checks: list[dict[str, Any]] = []
+        failure_reasons: list[str] = []
 
         # 检查 1: 文件存在性
         for rel_path in result.changed_files:
@@ -902,7 +903,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
             elapsed_ms=elapsed_ms,
         )
 
-    async def _check_yaml_syntax(self, abs_path: Path) -> Tuple[bool, str]:
+    async def _check_yaml_syntax(self, abs_path: Path) -> tuple[bool, str]:
         """检查 YAML 文件语法."""
         try:
             import yaml
@@ -916,7 +917,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
         except (OSError, UnicodeDecodeError) as e:
             return False, f"读取失败: {e}"
 
-    async def _check_adr_frontmatter(self, abs_path: Path) -> Tuple[bool, str]:
+    async def _check_adr_frontmatter(self, abs_path: Path) -> tuple[bool, str]:
         """检查 ADR 文件的 front-matter 完整性.
 
         必须包含: id / title / status / created_at
@@ -942,7 +943,7 @@ class SelfDevFrameworkLoop(SelfDevLoopBase):
 
         return True, ""
 
-    async def _check_dependency_layer(self, rel_path: str, abs_path: Path) -> Tuple[bool, str]:
+    async def _check_dependency_layer(self, rel_path: str, abs_path: Path) -> tuple[bool, str]:
         """检查 Python 文件的分层单向依赖.
 
         下层模块禁止导入上层模块.

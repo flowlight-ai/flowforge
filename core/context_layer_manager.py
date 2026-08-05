@@ -18,12 +18,11 @@ import json
 import re
 import time
 from enum import Enum
-from typing import Optional
 
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.task_context import TaskContext
-from flowforge.memory.manager import MemoryManager
 from flowforge.core.tracing import get_logger
+from flowforge.memory.manager import MemoryManager
 
 logger = get_logger("flowforge.context_layer_manager")
 
@@ -97,7 +96,7 @@ class ContextLayerManager:
     async def _save_chapters(self, entity_id: str, chapters: list[dict]) -> None:
         await self._store(self._make_key(entity_id, "chapters"), chapters)
 
-    async def _get_chapter(self, entity_id: str, chapter_number: int) -> Optional[dict]:
+    async def _get_chapter(self, entity_id: str, chapter_number: int) -> dict | None:
         chapters = await self._list_chapters(entity_id)
         for ch in chapters:
             if ch.get("chapter_number") == chapter_number:
@@ -352,7 +351,7 @@ class ContextLayerManager:
                 except ValueError:
                     logger.warning(f"ContextLayerManager._determine_layer: invalid layer '{layer_name}', falling back to L4")
                     return ContextLayer.L4
-        logger.info(f"ContextLayerManager._determine_layer: no threshold matched, defaulting to L4")
+        logger.info("ContextLayerManager._determine_layer: no threshold matched, defaulting to L4")
         return ContextLayer.L4
 
     # ── Chapter collection ──
@@ -490,7 +489,7 @@ class ContextLayerManager:
     # ── L4: Full book summary ──
 
     async def _generate_full_summary_data(self, entity_id: str,
-                                            chapters: list[dict]) -> Optional[str]:
+                                            chapters: list[dict]) -> str | None:
         """Generate (but do not persist) the full book summary.
 
         Returns the summary string or ``None`` when no generation is needed.
