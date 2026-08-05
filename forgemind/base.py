@@ -286,13 +286,14 @@ class ForgekinBase(ABC):
                         "forgekin_id": self.forgekin_id,
                     }
 
-        # CLI provider：通过 subprocess 调用三方 Agent CLI（claude_code/codex/gemini/opencode）
+        # CLI provider：通过 subprocess 调用三方 Agent CLI（claude_code/codex/gemini/opencode/codebuddy/qodercli/iflow）
         if provider not in ("trae", "openroute", "zhipu"):
             if self._cli_provider_cache is None:
                 from flowforge.llm.cli_provider import build_cli_provider
                 self._cli_provider_cache = build_cli_provider(provider)
             if self._cli_provider_cache is not None:
                 try:
+                    kwargs.setdefault("model", llm_cfg.get("model"))
                     result = await self._cli_provider_cache.chat(
                         full_messages,
                         session_id=session_id,

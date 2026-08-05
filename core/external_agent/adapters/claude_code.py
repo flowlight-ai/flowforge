@@ -17,17 +17,21 @@
     - 铁律 3：依赖通过构造函数注入
     - 所有 I/O 操作使用 async/await
 
-CL-038 半实现状态：
-    本 Adapter 当前为"半实现"状态——不实际调用 subprocess，但调用
-    ``parse_cli_invocation`` / ``NDJSONParser`` 演示 NDJSON + stderr 解析能力。
-    厂商参考实现时替换 ``# TODO: 厂商实现`` 标记的 subprocess 调用部分即可。
+CL-038 实现状态：
+    本 Adapter 已实现真实 subprocess 调用：
+        - invoke：spawn ``claude code`` CLI（stdio 传输），``communicate`` 后
+          经 ``parse_cli_invocation`` 解析 NDJSON stdout + 收集 stderr。
+        - stream：spawn CLI 后经 ``stream_cli_invocation`` 流式解析并逐帧 yield。
+    超时由 ``manifest.timeout_seconds`` 控制（配置驱动，铁律 11）。
 
 License: MIT
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 from typing import Any, AsyncIterator, Optional
 
 from flowforge.core.external_agent.adapter import (
@@ -35,9 +39,8 @@ from flowforge.core.external_agent.adapter import (
     ExternalAgentResult,
 )
 from flowforge.core.external_agent.cli_ndjson import (
-    NDJSONParser,
-    StderrCollector,
     parse_cli_invocation,
+    stream_cli_invocation,
 )
 from flowforge.core.external_agent.host_injection import SandboxConfig
 from flowforge.core.external_agent.manifest import AgentProviderManifest
@@ -96,16 +99,13 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
         context: dict[str, Any],
         sandbox: Optional[SandboxConfig] = None,
     ) -> ExternalAgentResult:
-        """调用 Claude Code 完成任务（CL-038 半实现状态）。
+        """调用 Claude Code 完成任务（CLI + MCP，CL-038 真实实现）。
 
-        半实现状态：演示 NDJSON + stderr 解析能力，厂商参考实现替换
-        ``# TODO: 厂商实现`` 标记的 subprocess 调用部分即可。
-
-        实现要点（厂商参考）：
-            1. 通过 self.prepare_credentials() 获取 ANTHROPIC_API_KEY
-            2. 使用 sandbox.cwd 作为工作目录
-            3. 通过 subprocess 调用 claude CLI（stdio 传输）
-            4. 用 parse_cli_invocation 解析 stdout（NDJSON）+ stderr
+        实现流程：
+            1. 通过 self.prepare_credentials() 获取 ANTHROPIC_API_KEY（host-owned）
+            2. 以 sandbox.cwd 为工作目录，spawn ``claude code`` CLI（stdio 传输）
+            3. 调用超时由 manifest.timeout_seconds 控制（配置驱动）
+            4. 用 parse_cli_invocation 解析 stdout（NDJSON）+ 收集 stderr
             5. 封装为 ExternalAgentResult（success 仅看 returncode==0，
                "stderr 也算活着"教训）
 
@@ -129,42 +129,55 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
                 error=str(e),
             )
 
-        # TODO: 厂商实现 —— 调用真实 claude CLI（stdio + MCP）
-        #   proc = await asyncio.create_subprocess_exec(
-        #       "claude", "code", "--output-format=ndjson", ...
-        #       stdout=asyncio.subprocess.PIPE,
-        #       stderr=asyncio.subprocess.PIPE,
-        #       cwd=sandbox.cwd if sandbox else None,
-        #       env={**os.environ, **env_vars},
-        #   )
-        #   stdout_bytes, stderr_bytes = await proc.communicate()
-        #   cli_result = parse_cli_invocation(
-        #       stdout=stdout_bytes.decode(),
-        #       stderr=stderr_bytes.decode(),
-        #       returncode=proc.returncode,
-        #   )
+        cmd = self._build_claude_command(task=task, sandbox=sandbox)
+        env = self._build_claude_env(env_vars=env_vars, sandbox=sandbox)
+        cwd = sandbox.cwd if sandbox is not None else None
 
-        # 半实现演示：构造 mock NDJSON stdout（3 行）+ mock stderr（WARNING + INFO）
-        mock_stdout = (
-            '{"event":"start","task":' + json.dumps(task) + '}\n'
-            '{"event":"progress","step":1,"message":"analyzing"}\n'
-            '{"event":"done","output":"[mock] claude code result"}\n'
-        )
-        mock_stderr = (
-            "WARNING: context length 80k tokens, may drift\n"
-            "INFO: using mcp tool: filesystem.read\n"
-        )
-        mock_returncode = 0
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=cwd,
+                env=env,
+            )
+        except (FileNotFoundError, OSError) as e:
+            logger.error(
+                "claude_code.invoke spawn_failed cmd=%s error=%s",
+                cmd[0],
+                e,
+            )
+            return ExternalAgentResult(
+                provider_name=self.provider_name,
+                success=False,
+                error=f"无法启动 claude CLI（{cmd[0]}）：{e}",
+            )
+
+        try:
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=self.manifest.timeout_seconds,
+            )
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return ExternalAgentResult(
+                provider_name=self.provider_name,
+                success=False,
+                error=(
+                    f"claude CLI 调用超时（>{self.manifest.timeout_seconds}s）"
+                ),
+            )
 
         cli_result = parse_cli_invocation(
-            stdout=mock_stdout,
-            stderr=mock_stderr,
-            returncode=mock_returncode,
+            stdout=stdout_bytes.decode("utf-8", errors="replace"),
+            stderr=stderr_bytes.decode("utf-8", errors="replace"),
+            returncode=proc.returncode,
         )
 
         logger.info(
-            "claude_code.invoke half_implemented provider=%s "
-            "success=%s ndjson_count=%d stderr_total=%d",
+            "claude_code.invoke provider=%s success=%s ndjson_count=%d "
+            "stderr_total=%d",
             self.provider_name,
             cli_result.success,
             len(cli_result.ndjson_objects),
@@ -176,7 +189,11 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
             success=cli_result.success,
             output=cli_result.model_dump(),
             artifacts=[],
-            cost={"total_tokens": 0, "total_calls": 1, "total_cost": 0.0},
+            cost={
+                "total_tokens": 0,
+                "total_calls": 1,
+                "total_cost": self.manifest.cost_per_call,
+            },
             capability_contribution=self.get_capability_profile(),
             error=cli_result.error,
         )
@@ -187,16 +204,14 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
         context: dict[str, Any],
         sandbox: Optional[SandboxConfig] = None,
     ) -> AsyncIterator[str]:
-        """流式调用 Claude Code（EX-009 流式语义，CL-038 半实现状态）。
+        """流式调用 Claude Code（EX-009 流式语义，CLI + MCP 真实实现）。
 
-        半实现状态：演示 NDJSON 流式解析能力，厂商参考实现替换
-        ``# TODO: 厂商实现`` 标记的 subprocess 调用部分即可。
-
-        实现要点（厂商参考）：
-            1. 通过 self.prepare_credentials() 获取 ANTHROPIC_API_KEY
-            2. 启动 subprocess，stdout 设为 PIPE
-            3. 用 stream_cli_invocation 异步生成器流式解析 NDJSON
-            4. 每个 dict 序列化为 JSON 字符串后 yield（保持流式语义）
+        实现流程：
+            1. 通过 self.prepare_credentials() 获取 ANTHROPIC_API_KEY（host-owned）
+            2. 以 sandbox.cwd 为工作目录，spawn ``claude code`` CLI（stdio 传输）
+            3. 用 stream_cli_invocation 流式解析 NDJSON，逐帧序列化 yield
+            4. 流结束由 stream_cli_invocation 输出 _final 帧（含 stderr_summary /
+               returncode / parsed_count / parse_failures）
 
         设计依据：
             - [doc:review/review.md#14.4] CL-038 NDJSON + stderr 也算活着
@@ -218,49 +233,50 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
             )
             return
 
-        # TODO: 厂商实现 —— 通过 subprocess stdout 流式读取
-        #   proc = await asyncio.create_subprocess_exec(
-        #       "claude", "code", "--output-format=ndjson", "--stream", ...
-        #       stdout=asyncio.subprocess.PIPE,
-        #       stderr=asyncio.subprocess.PIPE,
-        #       cwd=sandbox.cwd if sandbox else None,
-        #       env={**os.environ, **env_vars},
-        #   )
-        #   async for obj in stream_cli_invocation(proc):
-        #       yield json.dumps(obj, ensure_ascii=False) + "\n"
+        cmd = self._build_claude_command(task=task, sandbox=sandbox)
+        env = self._build_claude_env(env_vars=env_vars, sandbox=sandbox)
+        cwd = sandbox.cwd if sandbox is not None else None
 
-        # 半实现演示：构造 mock chunk 列表（每行一个 NDJSON 对象），
-        # 用 NDJSONParser 演示流式解析，每个解析出的 dict 序列化为 JSON 字符串 yield
-        mock_chunks = [
-            '{"event":"stream_start","task":' + json.dumps(task) + '}\n',
-            '{"event":"delta","step":1,"content":"analyzing"}\n',
-            '{"event":"delta","step":2,"content":"generating"}\n',
-            '{"event":"stream_end","output":"[mock] stream done"}\n',
-        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=cwd,
+                env=env,
+            )
+        except (FileNotFoundError, OSError) as e:
+            logger.error(
+                "claude_code.stream spawn_failed cmd=%s error=%s",
+                cmd[0],
+                e,
+            )
+            yield json.dumps(
+                {
+                    "_type": "_error",
+                    "error": f"无法启动 claude CLI（{cmd[0]}）：{e}",
+                },
+                ensure_ascii=False,
+            )
+            return
 
-        parser = NDJSONParser()
-        for chunk in mock_chunks:
-            for obj in parser.feed_chunk(chunk):
+        # 统计已解析的 NDJSON 对象数（不含 _final 标记帧）
+        parsed_count = 0
+        try:
+            async for obj in stream_cli_invocation(proc):
+                if obj.get("_type") != "_final":
+                    parsed_count += 1
                 yield json.dumps(obj, ensure_ascii=False) + "\n"
-
-        # 刷新 buffer 中可能残留的最后一行
-        for obj in parser.flush_buffer():
-            yield json.dumps(obj, ensure_ascii=False) + "\n"
-
-        # 流结束——yield _final 帧（与 stream_cli_invocation 协议一致）
-        final_frame = {
-            "_type": "_final",
-            "stderr_summary": StderrCollector().summary(),  # 半实现无 stderr
-            "returncode": 0,
-            "parsed_count": parser.get_parsed_count(),
-            "parse_failures": parser.get_parse_failures(),
-        }
-        yield json.dumps(final_frame, ensure_ascii=False) + "\n"
+        finally:
+            # 生成器提前退出时终止子进程，避免遗留僵尸进程
+            if proc.returncode is None:
+                proc.kill()
+                await proc.wait()
 
         logger.info(
-            "claude_code.stream half_implemented provider=%s parsed_count=%d",
+            "claude_code.stream provider=%s parsed_count=%d",
             self.provider_name,
-            parser.get_parsed_count(),
+            parsed_count,
         )
 
     def get_capability_profile(self) -> dict[str, Any]:
@@ -280,3 +296,67 @@ class ClaudeCodeAdapter(ExternalAgentAdapter):
             "best_practices": list(self.CAPABILITY_PROFILE["best_practices"]),
             "anti_patterns": list(self.CAPABILITY_PROFILE["anti_patterns"]),
         }
+
+    # ------------------------------------------------------------------
+    # 私有工具：构造 CLI 命令 / 环境 / MCP 配置
+    # ------------------------------------------------------------------
+
+    def _build_claude_command(
+        self,
+        task: str,
+        sandbox: Optional[SandboxConfig] = None,
+    ) -> list[str]:
+        """构造 ``claude code`` CLI 命令（协议：CLI + MCP，传输：stdio）。
+
+        命令结构：
+            claude code --output-format=ndjson [--mcp-config <json>] <task>
+
+        - task 作为位置参数传入（claude code 将 prompt 作为最后参数）
+        - sandbox.mcp_servers 非空时注入 --mcp-config（CLI + MCP 协议）
+        """
+        cmd = ["claude", "code", "--output-format=ndjson"]
+        mcp_config = self._build_mcp_config(sandbox)
+        if mcp_config:
+            cmd.append("--mcp-config")
+            cmd.append(json.dumps(mcp_config, ensure_ascii=False))
+        cmd.append(task)
+        return cmd
+
+    def _build_mcp_config(
+        self,
+        sandbox: Optional[SandboxConfig] = None,
+    ) -> Optional[dict[str, Any]]:
+        """从 sandbox.mcp_servers 构造 ``--mcp-config`` JSON（无 MCP 返回 None）。
+
+        MCP 服务器配置由 host 注入（CL-015 host-owned，
+        HostInjector.inject_mcp_config），每项含 name / command / args / env。
+        """
+        if sandbox is None or not sandbox.mcp_servers:
+            return None
+        mcp_config: dict[str, Any] = {"mcpServers": {}}
+        for server in sandbox.mcp_servers:
+            name = server.get("name")
+            if not name:
+                continue
+            entry: dict[str, Any] = {"command": server.get("command")}
+            if server.get("args"):
+                entry["args"] = server["args"]
+            if server.get("env"):
+                entry["env"] = server["env"]
+            mcp_config["mcpServers"][name] = entry
+        return mcp_config
+
+    def _build_claude_env(
+        self,
+        env_vars: dict[str, str],
+        sandbox: Optional[SandboxConfig] = None,
+    ) -> dict[str, str]:
+        """合并子进程环境变量（os.environ + sandbox.env_vars + 注入凭据）。
+
+        铁律 5：凭据经 prepare_credentials() 注入，不在此硬编码。
+        """
+        env: dict[str, str] = dict(os.environ)
+        if sandbox is not None:
+            env.update(sandbox.env_vars)
+        env.update(env_vars)
+        return env

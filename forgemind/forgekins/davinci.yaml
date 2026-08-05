@@ -46,8 +46,8 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: opencode  # 通过 opencode CLI（opencode run）调用 LLM
-  model: deepseek-v4-flash-free  # opencode 默认模型（build）
+  provider: codebuddy  # 通过 CodeBuddy CLI（codebuddy -p）调用 LLM
+  model: hy3  # codebuddy 预置默认模型
   mode: cli
   session_id_prefix: "forgemind:davinci"  # 会话隔离
   bridge_timeout: 180  # 增加超时以支持长任务

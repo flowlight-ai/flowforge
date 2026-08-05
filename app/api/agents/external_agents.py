@@ -67,6 +67,27 @@ _EXTERNAL_AGENTS: list[dict[str, str]] = [
         "description": "Google Gemini CLI 编码助手",
         "kind": "cli",
     },
+    {
+        "id": "codebuddy",
+        "name": "CodeBuddy",
+        "cli_command": "codebuddy",
+        "description": "腾讯 CodeBuddy 编码助手",
+        "kind": "cli",
+    },
+    {
+        "id": "qodercli",
+        "name": "Qoder CLI",
+        "cli_command": "qodercli",
+        "description": "Qoder 云编码助手（需 Qoder 账号登录）",
+        "kind": "cli",
+    },
+    {
+        "id": "iflow",
+        "name": "iFlow CLI",
+        "cli_command": "iflow",
+        "description": "iFlow CLI（OpenAI-Compatible API）",
+        "kind": "cli",
+    },
 ]
 
 
