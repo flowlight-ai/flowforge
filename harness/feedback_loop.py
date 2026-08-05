@@ -192,7 +192,7 @@ class FeedbackLoop:
         # result["content"] 是简短描述(36字符), result["report"] 是完整报告(2000+字符)
         content = ""
         if isinstance(result, dict):
-            for key in ("report", "edited_draft", "content", "response", "output", "draft", "final_answer"):
+            for key in ("report", "edited_draft", "polished_content", "content", "response", "output", "draft", "final_answer"):
                 val = result.get(key, "")
                 if isinstance(val, str) and val.strip():
                     content = val
