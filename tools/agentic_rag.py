@@ -11,9 +11,8 @@ Implements:
 import hashlib
 import math
 import re
-from datetime import datetime, timezone
-from typing import Optional
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from flowforge.core.tracing import get_logger
 
@@ -114,7 +113,7 @@ class TimeDecayWeighter:
 
     def weight(self, results: list[RetrievalResult]) -> list[RetrievalResult]:
         """Apply time-decay weighting to results."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for result in results:
             published_at = result.metadata.get("published_at")
             if published_at:
@@ -167,7 +166,7 @@ class QueryUnderstanding:
 class AgenticRAG:
     """Agentic RAG Knowledge Hub — main entry point."""
 
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: dict | None = None):
         self._config = config or {}
         self._deduplicator = SimHashDeduplicator()
         self._fusion = RRFFusion(k=self._config.get("rrf_k", 60))
@@ -278,10 +277,10 @@ class AgenticRAG:
         self._indexed_docs[doc_id] = {
             "content": content,
             "metadata": metadata or {},
-            "indexed_at": datetime.now(timezone.utc).isoformat(),
+            "indexed_at": datetime.now(UTC).isoformat(),
         }
         logger.info(f"Indexed document: {doc_id}")
 
-    def get_indexed_document(self, doc_id: str) -> Optional[dict]:
+    def get_indexed_document(self, doc_id: str) -> dict | None:
         """Retrieve an indexed document."""
         return self._indexed_docs.get(doc_id)

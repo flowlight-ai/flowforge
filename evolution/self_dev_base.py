@@ -24,7 +24,7 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -34,14 +34,14 @@ logger = get_logger("flowforge.evolution.self_dev_base")
 
 # ── 觉醒阶顺序（spec.md §2.5）─────────────────────────────────────
 # E1 哑役阶 / E2 役使阶 / E3 受限自主阶 / E4 自主阶 / E5 完全自主阶 / E6 超越阶
-_AWAKENING_STAGE_ORDER: List[str] = ["E1", "E2", "E3", "E4", "E5", "E6"]
+_AWAKENING_STAGE_ORDER: list[str] = ["E1", "E2", "E3", "E4", "E5", "E6"]
 
 # ── Reflect 重试上限（I3）─────────────────────────────────────────
 MAX_REFLECT_RETRIES: int = 3
 
 # ── 受保护路径白名单（I2 Scope Guard 前置检查）────────────────────
 # 任何 SelfDev 闭环都禁止修改这些路径（铁律：VISION/rules/核心 ADR 不可变）
-_PROTECTED_PATH_PATTERNS: List[str] = [
+_PROTECTED_PATH_PATTERNS: list[str] = [
     "VISION.md",
     "CONTRIBUTING.md",
     "SOP.md",
@@ -66,7 +66,7 @@ class DevTask(BaseModel):
     modification_type: str  # "create" | "update" | "delete"
     description: str  # 任务描述（自然语言）
     priority: str = "normal"  # "low" | "normal" | "high" | "critical"
-    context: Dict[str, Any] = Field(default_factory=dict)  # 额外上下文（如来源 Eval Ledger ID）
+    context: dict[str, Any] = Field(default_factory=dict)  # 额外上下文（如来源 Eval Ledger ID）
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -78,7 +78,7 @@ class DevPlan(BaseModel):
 
     plan_id: str = Field(default_factory=lambda: f"plan-{uuid.uuid4().hex[:12]}")
     task_id: str
-    steps: List[Dict[str, Any]]  # 具体步骤列表（每步含 action/params）
+    steps: list[dict[str, Any]]  # 具体步骤列表（每步含 action/params）
     expected_effect: str  # 预期效果
     risk_assessment: str  # 风险评估
     requires_approval: bool = False  # 是否需要 operator 显式批准（I8 Framework 必为 True）
@@ -94,7 +94,7 @@ class DevResult(BaseModel):
 
     result_id: str = Field(default_factory=lambda: f"result-{uuid.uuid4().hex[:12]}")
     plan_id: str
-    changed_files: List[str] = Field(default_factory=list)  # 变更文件列表
+    changed_files: list[str] = Field(default_factory=list)  # 变更文件列表
     diff_summary: str  # diff 摘要（自然语言描述）
     success: bool
     error_message: str = ""
@@ -111,8 +111,8 @@ class VerifyResult(BaseModel):
     verify_id: str = Field(default_factory=lambda: f"verify-{uuid.uuid4().hex[:12]}")
     result_id: str
     passed: bool
-    checks: List[Dict[str, Any]]  # 具体检查项 [{name, passed, detail}]
-    failure_reasons: List[str] = Field(default_factory=list)
+    checks: list[dict[str, Any]]  # 具体检查项 [{name, passed, detail}]
+    failure_reasons: list[str] = Field(default_factory=list)
     llm_review_passed: bool = False  # T7 铁律：LLM 审核是否通过
     elapsed_ms: int = 0  # Verify 阶段耗时（毫秒）
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -127,15 +127,15 @@ class LoopExecutionRecord(BaseModel):
     record_id: str = Field(default_factory=lambda: f"rec-{uuid.uuid4().hex[:12]}")
     loop_type: str
     task: DevTask
-    plans_history: List[DevPlan] = Field(default_factory=list)  # 含每次 Reflect 后的新 Plan
-    results_history: List[DevResult] = Field(default_factory=list)
-    verifies_history: List[VerifyResult] = Field(default_factory=list)
+    plans_history: list[DevPlan] = Field(default_factory=list)  # 含每次 Reflect 后的新 Plan
+    results_history: list[DevResult] = Field(default_factory=list)
+    verifies_history: list[VerifyResult] = Field(default_factory=list)
     final_passed: bool = False
     reflect_count: int = 0
     persisted: bool = False  # 是否已沉淀到治理层
-    persist_payload: Dict[str, Any] = Field(default_factory=dict)
+    persist_payload: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime = Field(default_factory=datetime.utcnow)
-    finished_at: Optional[datetime] = None
+    finished_at: datetime | None = None
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -230,7 +230,7 @@ class SelfDevLoopBase(ABC):
     def __init__(
         self,
         trae_client: Any,  # TraeLLMClient 实例（F045 桥接）
-        forgekin_config: Dict[str, Any],  # 可进化智能体配置（含 project_root / protected_paths 等）
+        forgekin_config: dict[str, Any],  # 可进化智能体配置（含 project_root / protected_paths 等）
         evolution_engine: Any,  # ForgeMindEngine 实例（治理层）
         *,
         awakening_stage: str = "E3",  # 当前可进化智能体觉醒阶
@@ -259,7 +259,7 @@ class SelfDevLoopBase(ABC):
         self._awakening_stage = awakening_stage
 
         # 受保护路径（可由 forgekin_config 覆盖默认白名单）
-        self._protected_paths: List[str] = list(_PROTECTED_PATH_PATTERNS) + list(
+        self._protected_paths: list[str] = list(_PROTECTED_PATH_PATTERNS) + list(
             forgekin_config.get("protected_paths", [])
         )
 
@@ -278,7 +278,7 @@ class SelfDevLoopBase(ABC):
         return self._awakening_stage
 
     @property
-    def protected_paths(self) -> List[str]:
+    def protected_paths(self) -> list[str]:
         """受保护路径白名单（I2 Scope Guard 前置检查依据）."""
         return list(self._protected_paths)
 
@@ -287,7 +287,7 @@ class SelfDevLoopBase(ABC):
     # ══════════════════════════════════════════════════════════════
 
     @abstractmethod
-    async def discover(self, context: Dict[str, Any]) -> List[DevTask]:
+    async def discover(self, context: dict[str, Any]) -> list[DevTask]:
         """发现任务（子类实现）.
 
         Args:
@@ -341,7 +341,7 @@ class SelfDevLoopBase(ABC):
     # §3.2 通用实现 — 五步循环框架
     # ══════════════════════════════════════════════════════════════
 
-    def check_awakening_stage(self, current_stage: Optional[str] = None) -> None:
+    def check_awakening_stage(self, current_stage: str | None = None) -> None:
         """I1 觉醒阶门控 — 检查当前可进化智能体觉醒阶是否达到闭环要求.
 
         Args:
@@ -430,13 +430,13 @@ class SelfDevLoopBase(ABC):
             f"【上次执行结果】\n成功: {result.success}\n变更文件: {result.changed_files}\n"
             f"diff 摘要: {result.diff_summary}\n错误: {result.error_message}\n\n"
             f"【验证失败原因】\n" + "\n".join(f"- {r}" for r in failure_reasons) + "\n\n"
-            f"【请输出】\n"
-            f"1. 失败根因分析（基于真实反馈，不臆测）\n"
-            f"2. 新的修改步骤（避免重复同类错误）\n"
-            f"3. 预期效果与风险评估\n\n"
-            f"以 JSON 格式返回: "
-            f'{{"steps": [{{"action": "...", "params": {{...}}}}], '
-            f'"expected_effect": "...", "risk_assessment": "..."}}'
+            "【请输出】\n"
+            "1. 失败根因分析（基于真实反馈，不臆测）\n"
+            "2. 新的修改步骤（避免重复同类错误）\n"
+            "3. 预期效果与风险评估\n\n"
+            "以 JSON 格式返回: "
+            '{"steps": [{"action": "...", "params": {...}}], '
+            '"expected_effect": "...", "risk_assessment": "..."}'
         )
 
         ctx = BridgeRequestContext(
@@ -465,7 +465,7 @@ class SelfDevLoopBase(ABC):
         import json
         import re
 
-        new_steps: List[Dict[str, Any]] = []
+        new_steps: list[dict[str, Any]] = []
         expected_effect = "反思后重新规划"
         risk_assessment = "待评估"
 
@@ -494,8 +494,8 @@ class SelfDevLoopBase(ABC):
         content: str,
         content_type: str,
         *,
-        review_criteria: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        review_criteria: str | None = None,
+    ) -> dict[str, Any]:
         """I4 LLM 审核（T7 铁律）— LLM 生成内容必须再调用 LLM 审核通过.
 
         Args:
@@ -558,7 +558,7 @@ class SelfDevLoopBase(ABC):
         import json
         import re
 
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "passed": False,
             "score": 0.0,
             "issues": [],
@@ -579,7 +579,7 @@ class SelfDevLoopBase(ABC):
 
         return result
 
-    async def persist(self, record: LoopExecutionRecord) -> Dict[str, Any]:
+    async def persist(self, record: LoopExecutionRecord) -> dict[str, Any]:
         """沉淀经验到治理层（通用实现）.
 
         调用 ForgeMindEngine 三模式：
@@ -633,8 +633,8 @@ class SelfDevLoopBase(ABC):
             episode_id = ke_result.get("episode_id", "")
             self._logger.info(f"persist 创建 EpisodeCard: {episode_id}")
 
-            method_id: Optional[str] = None
-            proposal_id: Optional[str] = None
+            method_id: str | None = None
+            proposal_id: str | None = None
 
             # 仅在 Verify 通过时尝试蒸馏为 MethodCard
             if record.final_passed and episode_id:
@@ -694,7 +694,7 @@ class SelfDevLoopBase(ABC):
     # §3.3 五步循环主入口
     # ══════════════════════════════════════════════════════════════
 
-    async def run_once(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def run_once(self, context: dict[str, Any]) -> dict[str, Any]:
         """执行一次完整的五步循环（Discover→Plan→Act→Verify→Persist）.
 
         Args:
@@ -725,7 +725,7 @@ class SelfDevLoopBase(ABC):
         tasks = await self.discover(context)
         self._logger.info(f"Discover 完成: 发现 {len(tasks)} 个任务")
 
-        records: List[LoopExecutionRecord] = []
+        records: list[LoopExecutionRecord] = []
         passed_count = 0
         failed_count = 0
         reflect_total = 0

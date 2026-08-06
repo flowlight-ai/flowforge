@@ -23,7 +23,6 @@ Usage:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -300,7 +299,7 @@ class PersonaInjector:
             for yaml_path in candidates:
                 if yaml_path.is_file():
                     try:
-                        with open(yaml_path, "r", encoding="utf-8") as f:
+                        with open(yaml_path, encoding="utf-8") as f:
                             data = yaml.safe_load(f) or {}
                         context = self._build_context_from_data(persona_id, data)
                         logger.debug(f"PersonaInjector: loaded persona '{persona_id}' from {yaml_path}")

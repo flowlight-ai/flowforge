@@ -1,8 +1,9 @@
-from typing import Any, Dict
+from typing import Any
+
 
 class WorkingMemory:
     def __init__(self):
-        self._store: Dict[str, Any] = {}
+        self._store: dict[str, Any] = {}
 
     async def store(self, key: str, value: Any) -> None:
         self._store[key] = value

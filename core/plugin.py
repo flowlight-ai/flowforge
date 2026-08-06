@@ -11,8 +11,8 @@ from flowforge.core.plugin_protocol import (
     PluginContext,
     PluginManifest,
     PluginState,
-    validate_plugin_config,
     fill_config_defaults,
+    validate_plugin_config,
 )
 
 

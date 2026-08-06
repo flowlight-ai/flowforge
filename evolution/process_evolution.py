@@ -18,7 +18,7 @@ Hard guardrails:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.models import EvolutionProposal
@@ -144,7 +144,7 @@ class ProcessEvolution:
                     )
                     return None
                 proposal.status = "accepted"
-                proposal.accepted_at = datetime.now(timezone.utc)
+                proposal.accepted_at = datetime.now(UTC)
                 proposal.commit_ref = commit_ref
                 logger.info(
                     f"process_evolution proposal accepted: id={proposal_id}, commit={commit_ref}"
@@ -156,7 +156,7 @@ class ProcessEvolution:
     def schedule_replay_check(self, proposal_id: str, days: int = 30) -> datetime | None:
         for proposal in self._proposals:
             if proposal.proposal_id == proposal_id:
-                proposal.replay_check_due = datetime.now(timezone.utc) + timedelta(days=days)
+                proposal.replay_check_due = datetime.now(UTC) + timedelta(days=days)
                 logger.info(
                     f"process_evolution replay check scheduled: id={proposal_id}, "
                     f"due={proposal.replay_check_due.isoformat()}"
@@ -171,7 +171,7 @@ class ProcessEvolution:
         return [p for p in self._proposals if p.status == status]
 
     def get_due_replay_checks(self) -> list[EvolutionProposal]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return [
             p
             for p in self._proposals

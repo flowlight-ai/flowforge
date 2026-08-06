@@ -19,8 +19,8 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional, Protocol
+from datetime import UTC, datetime
+from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -36,7 +36,7 @@ class SharedStateStore(Protocol):
     本模块只定义协议，不绑定具体存储——遵循"配置驱动 > 代码实现"。
     """
 
-    async def read(self, forgekin_id: str, key: str) -> Optional[Any]:
+    async def read(self, forgekin_id: str, key: str) -> Any | None:
         """读取共享状态。"""
         ...
 
@@ -57,7 +57,7 @@ class SharedStateEntry(BaseModel):
     key: str = Field(..., description="状态键")
     value: Any = Field(..., description="状态值")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="写入时间（UTC）",
     )
     decision_context: dict[str, Any] = Field(
@@ -93,7 +93,7 @@ class ExternalAgentSharedState:
         key: str,
         value: Any,
         provider_name: str = "",
-        decision_context: Optional[dict[str, Any]] = None,
+        decision_context: dict[str, Any] | None = None,
     ) -> None:
         """写入共享状态条目。
 
@@ -119,7 +119,7 @@ class ExternalAgentSharedState:
             provider_name,
         )
 
-    async def read(self, forgekin_id: str, key: str) -> Optional[Any]:
+    async def read(self, forgekin_id: str, key: str) -> Any | None:
         """读取共享状态条目。"""
         return await self._store.read(forgekin_id, key)
 

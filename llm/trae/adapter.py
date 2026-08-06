@@ -30,11 +30,11 @@ TraeModelCapabilityAdapter 将 TraeLLMClient 适配为 LLMProvider 兼容接口�
 from __future__ import annotations
 
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 from flowforge.llm.provider import LLMProvider, LLMResponse, register_provider
-
 from flowforge.llm.trae.client import TraeLLMClient
 from flowforge.llm.trae.config import TraeBridgeConfig, TraeConfig
 from flowforge.llm.trae.exceptions import TraeBridgeError
@@ -60,12 +60,12 @@ class TraeModelCapabilityAdapter(LLMProvider):
 
     def __init__(
         self,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         *,
-        trae_config: Optional[TraeConfig] = None,
-        bridge_config: Optional[TraeBridgeConfig] = None,
-        protocol: Optional[TraeBridgeProtocol] = None,
-        client: Optional[TraeLLMClient] = None,
+        trae_config: TraeConfig | None = None,
+        bridge_config: TraeBridgeConfig | None = None,
+        protocol: TraeBridgeProtocol | None = None,
+        client: TraeLLMClient | None = None,
     ) -> None:
         """初始化 TraeModelCapabilityAdapter.
 
@@ -134,8 +134,8 @@ class TraeModelCapabilityAdapter(LLMProvider):
 
     async def chat(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         **kwargs,
@@ -145,7 +145,7 @@ class TraeModelCapabilityAdapter(LLMProvider):
         将 TraeLLMClient 的字典响应适配为 LLMResponse 对象。
         """
         # 构造请求上下文（F045 §2.3 不变量 7 operator 可见性）
-        context: Optional[BridgeRequestContext] = kwargs.pop("context", None)
+        context: BridgeRequestContext | None = kwargs.pop("context", None)
         if context is None:
             context = BridgeRequestContext(
                 forgekin_id=kwargs.pop("forgekin_id", "unknown"),
@@ -200,8 +200,8 @@ class TraeModelCapabilityAdapter(LLMProvider):
 
     async def stream(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         **kwargs,
@@ -210,7 +210,7 @@ class TraeModelCapabilityAdapter(LLMProvider):
 
         注意：Bridge 模式下，先完整获取响应再分段 yield（模拟流式）。
         """
-        context: Optional[BridgeRequestContext] = kwargs.pop("context", None)
+        context: BridgeRequestContext | None = kwargs.pop("context", None)
         if context is None:
             context = BridgeRequestContext(
                 forgekin_id=kwargs.pop("forgekin_id", "unknown"),
@@ -254,7 +254,7 @@ class TraeModelCapabilityAdapter(LLMProvider):
 
     async def chat_with_messages(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         *,
         model: str = "",
         temperature: float = 0.7,
@@ -262,7 +262,7 @@ class TraeModelCapabilityAdapter(LLMProvider):
         session_id: str = "",
         task_id: str = "trae",
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """基于消息的聊天接口，兼容旧 LLMClient.chat() 签名.
 
         返回字典格式（非 LLMResponse 对象），向后兼容。
@@ -305,7 +305,7 @@ class TraeModelCapabilityAdapter(LLMProvider):
             session_id: 会话 ID
             task_id: 任务 ID
         """
-        messages: List[Dict[str, str]] = []
+        messages: list[dict[str, str]] = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
@@ -326,14 +326,14 @@ register_provider("trae", TraeModelCapabilityAdapter)
 
 # ── 模块级单例（向后兼容）─────────────────────────────────────────
 
-_adapter_instance: Optional[TraeModelCapabilityAdapter] = None
+_adapter_instance: TraeModelCapabilityAdapter | None = None
 
 
 def get_trae_adapter(
-    config: Optional[Dict[str, Any]] = None,
+    config: dict[str, Any] | None = None,
     *,
-    bridge_config: Optional[TraeBridgeConfig] = None,
-    protocol: Optional[TraeBridgeProtocol] = None,
+    bridge_config: TraeBridgeConfig | None = None,
+    protocol: TraeBridgeProtocol | None = None,
 ) -> TraeModelCapabilityAdapter:
     """获取 TraeModelCapabilityAdapter 单例.
 

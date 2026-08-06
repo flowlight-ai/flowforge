@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -32,7 +32,7 @@ class CompactionResult(BaseModel):
     strategy_used: CompactionStrategy = CompactionStrategy.TRUNCATE
     messages_preserved: int = 0
     messages_compacted: int = 0
-    quality_score: Optional[float] = None
+    quality_score: float | None = None
     latency_ms: float = 0.0
 
 
@@ -55,9 +55,9 @@ class DualThresholdCompactor:
     死循环防护：最大3次/Session
     """
 
-    def __init__(self, config: Optional[CompactionConfig] = None):
+    def __init__(self, config: CompactionConfig | None = None):
         self.config = config or CompactionConfig()
-        self._compaction_count: Dict[str, int] = {}
+        self._compaction_count: dict[str, int] = {}
 
     def should_compact(self, current_tokens: int, model_context_window: int, session_id: str = "") -> bool:
         utilization = current_tokens / model_context_window if model_context_window > 0 else 0
@@ -69,9 +69,9 @@ class DualThresholdCompactor:
         return False
 
     async def compact(
-        self, messages: List[Dict[str, Any]], current_tokens: int,
+        self, messages: list[dict[str, Any]], current_tokens: int,
         model_context_window: int, session_id: str = "", llm_client: Any = None,
-    ) -> Tuple[List[Dict[str, Any]], CompactionResult]:
+    ) -> tuple[list[dict[str, Any]], CompactionResult]:
         start_time = time.time()
         session_id = session_id or "default"
         self._compaction_count[session_id] = self._compaction_count.get(session_id, 0) + 1
@@ -109,7 +109,7 @@ class DualThresholdCompactor:
         logger.info(f"Session {session_id}: compacted {current_tokens} -> {final_tokens} tokens (ratio={result.compression_ratio:.2f}, strategy={result.strategy_used})")
         return final_messages, result
 
-    def _split_messages(self, messages: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def _split_messages(self, messages: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """分割消息为 (preserved_recent, to_compact_older)
 
         - preserved: 最近的N轮消息，保持原样
@@ -123,9 +123,9 @@ class DualThresholdCompactor:
         return messages[split_point:], messages[:split_point]
 
     async def _compact_with_fallback(
-        self, messages: List[Dict[str, Any]], current_tokens: int,
+        self, messages: list[dict[str, Any]], current_tokens: int,
         model_context_window: int, session_id: str, attempt: int, llm_client: Any = None,
-    ) -> Tuple[List[Dict[str, Any]], CompactionResult]:
+    ) -> tuple[list[dict[str, Any]], CompactionResult]:
         # 第一档：LLM摘要
         if llm_client and attempt <= 1:
             try:
@@ -142,7 +142,7 @@ class DualThresholdCompactor:
         # 第三档：丢弃最旧消息
         return self._drop_oldest_compact(messages, current_tokens, model_context_window)
 
-    async def _llm_summary_compact(self, messages: List[Dict[str, Any]], llm_client: Any) -> Tuple[List[Dict[str, Any]], CompactionResult]:
+    async def _llm_summary_compact(self, messages: list[dict[str, Any]], llm_client: Any) -> tuple[list[dict[str, Any]], CompactionResult]:
         conversation_text = self._messages_to_text(messages)
         summary_prompt = (
             "请对以下对话历史进行简洁的中文摘要，保留关键决策、结论和上下文信息。"
@@ -169,7 +169,7 @@ class DualThresholdCompactor:
             messages_compacted=len(messages), quality_score=quality_score,
         )
 
-    def _extractive_compact(self, messages: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], CompactionResult]:
+    def _extractive_compact(self, messages: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], CompactionResult]:
         key_points = []
         for msg in messages:
             content = msg.get("content", "")
@@ -189,7 +189,7 @@ class DualThresholdCompactor:
             strategy_used=CompactionStrategy.EXTRACTIVE, messages_compacted=len(messages),
         )
 
-    def _drop_oldest_compact(self, messages: List[Dict[str, Any]], current_tokens: int, model_context_window: int) -> Tuple[List[Dict[str, Any]], CompactionResult]:
+    def _drop_oldest_compact(self, messages: list[dict[str, Any]], current_tokens: int, model_context_window: int) -> tuple[list[dict[str, Any]], CompactionResult]:
         system_msgs = [m for m in messages if m.get("role") == "system"]
         non_system = [m for m in messages if m.get("role") != "system"]
         target_tokens = int(model_context_window * self.config.safe_threshold)
@@ -201,7 +201,7 @@ class DualThresholdCompactor:
             messages_preserved=len(kept), messages_compacted=drop_count,
         )
 
-    def _force_truncate(self, messages: List[Dict[str, Any]], max_tokens: int) -> List[Dict[str, Any]]:
+    def _force_truncate(self, messages: list[dict[str, Any]], max_tokens: int) -> list[dict[str, Any]]:
         result = []
         estimated = 0
         for msg in messages:
@@ -218,10 +218,10 @@ class DualThresholdCompactor:
                 break
         return result
 
-    def _messages_to_text(self, messages: List[Dict[str, Any]]) -> str:
+    def _messages_to_text(self, messages: list[dict[str, Any]]) -> str:
         return "\n".join(f"[{m.get('role', 'unknown')}]: {m.get('content', '')}" for m in messages)
 
-    def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
+    def _estimate_tokens(self, messages: list[dict[str, Any]]) -> int:
         return sum(len(m.get("content", "")) // 4 for m in messages)
 
     def reset_session(self, session_id: str) -> None:

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 
@@ -32,7 +32,7 @@ class ContextEngine:
     - ``ctx.state["harness_context"]``: v6 structured context block
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
         # Legacy: configured paths for AGENTS.md lookup
         self.agents_md_paths = self.config.get("agents_md_paths", [])
@@ -41,8 +41,8 @@ class ContextEngine:
         workspace_root_val = self.config.get("workspace_root")
         self.workspace_root = Path(workspace_root_val) if workspace_root_val else Path.cwd()
         # Caches: legacy per-persona cache + v6 single cache
-        self._agents_md_cache: Dict[str, str] = {}
-        self._agents_md_v6_cache: Optional[str] = None
+        self._agents_md_cache: dict[str, str] = {}
+        self._agents_md_v6_cache: str | None = None
         self._injection_count = 0
 
     async def inject(self, ctx) -> None:
@@ -85,7 +85,7 @@ class ContextEngine:
                 ctx.metadata["handoff"] = handoff
 
         # --- Inject into ctx.state["harness_context"] (v6) ---
-        assembled: Dict[str, Any] = {
+        assembled: dict[str, Any] = {
             "agents_md": agents_md,
             "past_failures": failures,
             "handoff_artifacts": handoff_artifacts,
@@ -123,7 +123,7 @@ class ContextEngine:
             for path in candidates:
                 if os.path.exists(path):
                     try:
-                        with open(path, "r", encoding="utf-8") as f:
+                        with open(path, encoding="utf-8") as f:
                             content = f.read()
                         self._agents_md_cache[persona] = content
                         return content
@@ -173,13 +173,13 @@ class ContextEngine:
     # Failure retrieval
     # ------------------------------------------------------------------
 
-    async def _retrieve_failures(self, persona: str) -> List[dict]:
+    async def _retrieve_failures(self, persona: str) -> list[dict]:
         entropy_manager = self.config.get("entropy_manager")
         if entropy_manager is not None and hasattr(entropy_manager, "debt_tracker"):
             debt_tracker = entropy_manager.debt_tracker
             if debt_tracker is not None and hasattr(debt_tracker, "get_open_items"):
                 open_items = debt_tracker.get_open_items()
-                failures: List[dict] = []
+                failures: list[dict] = []
                 for item in open_items:
                     failures.append({
                         "failure_type": item.severity.value if hasattr(item, "severity") else "unknown",
@@ -215,7 +215,7 @@ class ContextEngine:
     # Handoff — legacy
     # ------------------------------------------------------------------
 
-    async def _build_handoff(self, ctx) -> Optional[dict]:
+    async def _build_handoff(self, ctx) -> dict | None:
         """Build session handoff artifact for context resumption (legacy)."""
         if not hasattr(ctx, 'metadata'):
             return None
@@ -238,7 +238,7 @@ class ContextEngine:
     # Handoff artifacts — v6
     # ------------------------------------------------------------------
 
-    def _collect_handoff_artifacts(self, ctx) -> List[Dict[str, Any]]:
+    def _collect_handoff_artifacts(self, ctx) -> list[dict[str, Any]]:
         """Collect structured handoff artifacts from previous agent steps.
 
         Handoff artifacts are stored in ``ctx.state["handoff_artifacts"]`` as
@@ -252,11 +252,11 @@ class ContextEngine:
         if not state:
             return []
 
-        raw: List[Any] = state.get("handoff_artifacts", [])
+        raw: list[Any] = state.get("handoff_artifacts", [])
         if not isinstance(raw, list):
             return []
 
-        artifacts: List[Dict[str, Any]] = []
+        artifacts: list[dict[str, Any]] = []
         for item in raw:
             if isinstance(item, dict) and "source_agent" in item:
                 artifacts.append(item)
@@ -267,13 +267,13 @@ class ContextEngine:
     # Dynamic context — v6
     # ------------------------------------------------------------------
 
-    def _build_dynamic_context(self, ctx) -> Dict[str, Any]:
+    def _build_dynamic_context(self, ctx) -> dict[str, Any]:
         """Build runtime-relevant dynamic context.
 
         Extracts persona, mode, task metadata, and other runtime information
         from the TaskContext to form a dynamic context block.
         """
-        dynamic: Dict[str, Any] = {
+        dynamic: dict[str, Any] = {
             "task_id": getattr(ctx, 'task_id', 'unknown'),
             "persona": getattr(ctx, 'persona', None) or "default",
             "mode": getattr(ctx, 'mode', None) or "unknown",
@@ -293,7 +293,7 @@ class ContextEngine:
     # Formatting — v6
     # ------------------------------------------------------------------
 
-    def format_context_block(self, assembled: Dict[str, Any]) -> str:
+    def format_context_block(self, assembled: dict[str, Any]) -> str:
         """Format the assembled context into a human-readable block for LLM injection.
 
         Args:
@@ -302,7 +302,7 @@ class ContextEngine:
         Returns:
             A formatted string ready to be prepended to the LLM prompt.
         """
-        parts: List[str] = []
+        parts: list[str] = []
 
         agents_md = assembled.get("agents_md", "")
         if agents_md:

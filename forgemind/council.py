@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -39,7 +39,7 @@ class CouncilReview:
     score: float  # 0.0..1.0
     notes: str = ""
     push_back_points: list[str] = field(default_factory=list)
-    reviewed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    reviewed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -49,7 +49,7 @@ class CouncilSession:
     reviews: list[CouncilReview] = field(default_factory=list)
     final_verdict: CouncilVerdict | None = None
     final_score: float = 0.0
-    convened_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    convened_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     closed_at: datetime | None = None
 
 
@@ -104,7 +104,7 @@ class CouncilChannel:
                 f"verdict={review.verdict.value} score={review.score:.2f}"
             )
         session.final_verdict, session.final_score = self._aggregate(session.reviews)
-        session.closed_at = datetime.now(timezone.utc)
+        session.closed_at = datetime.now(UTC)
         logger.info(
             f"council closed: session={session.session_id} "
             f"reviews={len(session.reviews)} verdict={session.final_verdict.value} "

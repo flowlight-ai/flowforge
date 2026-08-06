@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter
@@ -22,5 +22,5 @@ async def governance_status() -> dict[str, Any]:
         "active_policies": 0,
         "pending_approvals": 0,
         "violations_24h": 0,
-        "checked_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "checked_at": datetime.now(UTC).isoformat() + "Z",
     }

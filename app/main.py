@@ -19,16 +19,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from flowforge.app.api.router import router
 from flowforge.app.deps import (
+    set_event_store_instance,
     set_executor_instance,
     set_llm_client_instance,
     set_model_service_instance,
-    set_plugin_registry_instance,
     set_plugin_manager_instance,
+    set_plugin_registry_instance,
     set_scheduler_instance,
     set_tool_chain_executor_instance,
-    set_event_store_instance,
 )
-from flowforge.core import metrics
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.core.bootstrap import (
     register_all_modes,
@@ -293,11 +292,13 @@ init_memory_api(memory_manager)
 # Web Fusion v1 router — must register before legacy router so static paths
 # (e.g. /memory/collections) aren't captured by dynamic paths.
 from flowforge.app.api.fusion_router import router as v1_fusion_router
+
 app.include_router(v1_fusion_router)
 
 app.include_router(router)
 
 from flowforge.app.api.plugin_frontend_api import router as frontend_api_router
+
 app.include_router(frontend_api_router)
 
 # Optional routers (guarded imports for environments without these modules)
@@ -415,7 +416,8 @@ def health():
 
 @app.get("/metrics")
 def get_metrics_endpoint():
-    from flowforge.core.metrics import get_metrics as gm, get_prometheus_metrics
+    from flowforge.core.metrics import get_metrics as gm
+    from flowforge.core.metrics import get_prometheus_metrics
     prom_data = get_prometheus_metrics()
     if prom_data:
         from starlette.responses import Response

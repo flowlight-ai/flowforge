@@ -1,5 +1,7 @@
 import os
+
 import yaml
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("prompt_manager")
@@ -89,7 +91,7 @@ class PromptManager:
             if filename.startswith("prompts") and filename.endswith((".yaml", ".yml")):
                 filepath = os.path.join(prompts_dir, filename)
                 try:
-                    with open(filepath, "r", encoding="utf-8") as f:
+                    with open(filepath, encoding="utf-8") as f:
                         data = yaml.safe_load(f)
                     if isinstance(data, dict):
                         self._prompts.update(self._flatten_prompts(data))

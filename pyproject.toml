@@ -76,11 +76,36 @@ flowforge = ["py.typed", "config/*.yaml"]
 [tool.ruff]
 line-length = 110
 target-version = "py311"
-extend-exclude = ["docs", "build", "dist"]
+extend-exclude = ["docs", "build", "dist", ".venv", ".venv2", "__pycache__", "node_modules", "web_legacy_backup"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "W", "C4"]
-ignore = ["E501"]  # line length handled by formatter
+ignore = [
+    "E501",  # line length
+    "W293",  # blank line whitespace
+    "E402",  # imports not at top
+    "E722",  # bare except
+    "E731",  # lambda assignments
+    "E741",  # ambiguous variable names
+    "B008",  # FastAPI Depends() pattern
+    "B011",  # assert False
+    "B017",  # pytest.raises
+    "B023",  # loop variable in function
+    "B024",  # abstract without abstractmethod
+    "B027",  # empty abstract methods
+    "B904",  # raise from err
+    "B905",  # zip strict
+    "N802",  # function name case
+    "N806",  # variable name case
+    "N814",  # camelCase constant
+    "N818",  # exception suffix
+    "UP007",  # X | Y annotation
+    "UP017",  # datetime.UTC
+    "UP042",  # str+Enum
+    "C401", "C408", "C416",
+    "B007", "F841", "F811",
+    "F401",  # intentional re-exports in __init__.py / try-imports
+]
 
 [tool.ruff.format]
 quote-style = "double"

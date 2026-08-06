@@ -416,7 +416,7 @@ class ExternalAgentAdapter:
 
         try:
             stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             # Windows: proc.kill() only terminates the .cmd shim, not the
             # node.exe/python.exe child it launched. The child keeps the
             # stdout/stderr pipes open, so proc.wait() hangs forever. Use
@@ -510,7 +510,7 @@ async def _kill_process_tree(proc: asyncio.subprocess.Process, label: str) -> No
             )
             try:
                 await asyncio.wait_for(kill_proc.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 kill_proc.kill()
         else:
             # Unix: send SIGKILL to the process group (negative PID)
@@ -529,7 +529,7 @@ async def _kill_process_tree(proc: asyncio.subprocess.Process, label: str) -> No
     # Await process exit, but never block forever — 5s ceiling.
     try:
         await asyncio.wait_for(proc.wait(), timeout=5.0)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning(
             f"_kill_process_tree({label}, pid={pid}): proc.wait() still pending "
             f"after 5s — pipe may be held by an orphaned child. Continuing."

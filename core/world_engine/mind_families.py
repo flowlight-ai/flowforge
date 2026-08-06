@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 
@@ -312,7 +312,7 @@ class MindFamilyRouter:
 
     def __init__(
         self,
-        hooks: Optional[dict[MindFamily, GuardrailHook]] = None,
+        hooks: dict[MindFamily, GuardrailHook] | None = None,
     ) -> None:
         self._hooks = hooks or dict(DEFAULT_FAMILY_HOOKS)
 
@@ -320,7 +320,7 @@ class MindFamilyRouter:
         self,
         awakening_stage: str,
         action: str,
-        context: Optional[dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> MindFamily:
         """根据觉醒阶 / 动作 / 上下文选择家族.
 
@@ -361,7 +361,7 @@ class MindFamilyRouter:
         forgekin_id: str,
         awakening_stage: str,
         action: str,
-        context: Optional[dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> tuple[MindFamily, GuardrailDecision]:
         """选择家族并执行 pre_action.
 

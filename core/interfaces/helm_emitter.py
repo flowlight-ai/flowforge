@@ -7,10 +7,10 @@ The concrete implementation is HelmWSManager in app/api/helm_ws_manager.py.
 Blocking issue fix #1: define this interface BEFORE wiring, per HELM.md review.
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Optional
-from datetime import datetime
 import json
+from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Any
 
 
 class HelmEventEmitter(ABC):
@@ -34,7 +34,7 @@ class HelmEventEmitter(ABC):
             "timestamp": datetime.utcnow().isoformat()
         })
 
-    async def emit_tool_end(self, task_id: str, tool_name: str, result: Any, duration_ms: float, error: Optional[str] = None):
+    async def emit_tool_end(self, task_id: str, tool_name: str, result: Any, duration_ms: float, error: str | None = None):
         await self.emit_event(task_id, "helm.tool.end", {
             "tool_name": tool_name,
             "result": self._safe_serialize(result),
@@ -42,7 +42,7 @@ class HelmEventEmitter(ABC):
             "error": error
         })
 
-    async def emit_llm_start(self, task_id: str, agent_name: str, model: str, messages_preview: Optional[list] = None):
+    async def emit_llm_start(self, task_id: str, agent_name: str, model: str, messages_preview: list | None = None):
         await self.emit_event(task_id, "helm.llm.start", {
             "agent_name": agent_name,
             "model": model,
@@ -61,7 +61,7 @@ class HelmEventEmitter(ABC):
             "delta_text": delta_text
         })
 
-    async def emit_llm_end(self, task_id: str, agent_name: str, full_response: str, tokens: int, error: Optional[str] = None):
+    async def emit_llm_end(self, task_id: str, agent_name: str, full_response: str, tokens: int, error: str | None = None):
         await self.emit_event(task_id, "helm.llm.end", {
             "agent_name": agent_name,
             "full_response": full_response,
@@ -99,7 +99,7 @@ class HelmEventEmitter(ABC):
     async def emit_task_resumed(self, task_id: str):
         await self.emit_event(task_id, "helm.task.resumed", {})
 
-    async def emit_task_completed(self, task_id: str, published_urls: Optional[list] = None):
+    async def emit_task_completed(self, task_id: str, published_urls: list | None = None):
         await self.emit_event(task_id, "helm.task.completed", {
             "published_urls": published_urls or []
         })

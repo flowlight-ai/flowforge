@@ -11,7 +11,7 @@ import os
 import sqlite3
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 class StreamEvent(BaseModel):
     event_id: str = ""
     event_type: str = ""
-    data: Dict[str, Any] = {}
-    metadata: Dict[str, Any] = {}
+    data: dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
     timestamp: float = 0.0
     sequence: int = 0
 
@@ -31,7 +31,7 @@ class Snapshot(BaseModel):
     snapshot_id: str = ""
     stream_id: str = ""
     sequence: int = 0
-    state: Dict[str, Any] = {}
+    state: dict[str, Any] = {}
     timestamp: float = 0.0
 
 
@@ -42,9 +42,9 @@ class DurableEventStream:
         self._stream_id = stream_id
         self._batch_size = batch_size
         self._flush_interval = flush_interval
-        self._buffer: List[StreamEvent] = []
+        self._buffer: list[StreamEvent] = []
         self._sequence = 0
-        self._flush_task: Optional[asyncio.Task] = None
+        self._flush_task: asyncio.Task | None = None
         self._running = False
 
         if not db_path:
@@ -98,7 +98,7 @@ class DurableEventStream:
         self._conn.close()
         logger.info(f"DurableEventStream stopped: stream_id={self._stream_id}, final_sequence={self._sequence}, buffer_size={len(self._buffer)}")
 
-    async def append(self, event_type: str, data: Dict[str, Any] = None, metadata: Dict[str, Any] = None) -> StreamEvent:
+    async def append(self, event_type: str, data: dict[str, Any] = None, metadata: dict[str, Any] = None) -> StreamEvent:
         self._sequence += 1
         event = StreamEvent(
             event_id=str(uuid.uuid4()), event_type=event_type,
@@ -134,7 +134,7 @@ class DurableEventStream:
             self._conn.rollback()
             self._buffer = events_to_flush + self._buffer
 
-    async def replay(self, from_sequence: int = 0, event_type: Optional[str] = None, limit: int = 1000) -> List[StreamEvent]:
+    async def replay(self, from_sequence: int = 0, event_type: str | None = None, limit: int = 1000) -> list[StreamEvent]:
         await self.flush()
         logger.debug(f"DurableEventStream replay: from_sequence={from_sequence}, event_type={event_type}, limit={limit}, stream_id={self._stream_id}")
         query = "SELECT event_id, event_type, data, metadata, timestamp, sequence FROM events WHERE stream_id = ? AND sequence > ?"
@@ -149,7 +149,7 @@ class DurableEventStream:
         logger.info(f"DurableEventStream replay result: event_count={len(result)}, from_sequence={from_sequence}, event_type={event_type}")
         return result
 
-    async def create_snapshot(self, state: Dict[str, Any]) -> Snapshot:
+    async def create_snapshot(self, state: dict[str, Any]) -> Snapshot:
         await self.flush()
         snapshot = Snapshot(snapshot_id=str(uuid.uuid4()), stream_id=self._stream_id, sequence=self._sequence, state=state, timestamp=time.time())
         self._conn.execute("INSERT INTO snapshots (snapshot_id, stream_id, sequence, state, timestamp) VALUES (?, ?, ?, ?, ?)",
@@ -158,7 +158,7 @@ class DurableEventStream:
         logger.info(f"DurableEventStream snapshot created: sequence={self._sequence}, state_size={len(json.dumps(state, ensure_ascii=False))}, stream_id={self._stream_id}")
         return snapshot
 
-    async def get_latest_snapshot(self) -> Optional[Snapshot]:
+    async def get_latest_snapshot(self) -> Snapshot | None:
         row = self._conn.execute("SELECT snapshot_id, stream_id, sequence, state, timestamp FROM snapshots WHERE stream_id = ? ORDER BY sequence DESC LIMIT 1", (self._stream_id,)).fetchone()
         if not row:
             logger.debug(f"DurableEventStream get_latest_snapshot: not found, stream_id={self._stream_id}")
@@ -167,7 +167,7 @@ class DurableEventStream:
         logger.debug(f"DurableEventStream get_latest_snapshot: found, sequence={snapshot.sequence}, stream_id={self._stream_id}")
         return snapshot
 
-    async def compact(self, keep_after_sequence: Optional[int] = None) -> int:
+    async def compact(self, keep_after_sequence: int | None = None) -> int:
         snapshot = await self.get_latest_snapshot()
         if not snapshot:
             logger.debug(f"DurableEventStream compact: no snapshot found, skipping, stream_id={self._stream_id}")

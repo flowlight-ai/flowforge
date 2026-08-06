@@ -7,7 +7,7 @@ written by the engine, not by callers.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Literal
 
@@ -20,7 +20,7 @@ class ScopeGuardSignal(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     signal_id: str
-    detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    detected_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     signal_type: Literal[
         "scope_creep",
         "out_of_scope",
@@ -43,7 +43,7 @@ class ScopeGuardLog(BaseModel):
     log_id: str
     signal: ScopeGuardSignal
     action_taken: Literal["logged", "escalated", "blocked", "magic_word_triggered"]
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     note: str = ""
 
 
@@ -68,7 +68,7 @@ class EvolutionProposal(BaseModel):
     lever: str  # one of LEVERAGE_ORDER
     verify: str
     # Lifecycle metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     accepted_at: datetime | None = None
     commit_ref: str | None = None
     replay_check_due: datetime | None = None
@@ -80,7 +80,7 @@ class EpisodeCard(BaseModel):
     model_config = ConfigDict()
 
     episode_id: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     task_snapshot: str
     evidence_map: dict[str, Any]
     decision_timeline: list[dict[str, Any]]
@@ -101,7 +101,7 @@ class MethodCard(BaseModel):
     model_config = ConfigDict()
 
     method_id: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     title: str
     domain: str
     knowledge_type: Literal["procedural", "declarative", "experiential"]
@@ -119,7 +119,7 @@ class EvalLedger(BaseModel):
     model_config = ConfigDict()
 
     eval_id: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     method_id: str
     cases: list[dict[str, Any]]
     smoke_gate_passed: bool | None = None

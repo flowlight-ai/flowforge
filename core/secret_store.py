@@ -11,11 +11,10 @@ License: MIT
 """
 
 import os
-import threading
 import sqlite3
-from datetime import datetime, timezone
+import threading
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -81,7 +80,7 @@ class SecretRepository:
 
     # ──────────────────────────── CRUD ────────────────────────────
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         """Retrieve a secret value by key. Returns None if not found."""
         with self._lock:
             with self._get_conn() as conn:
@@ -119,7 +118,7 @@ class SecretRepository:
                 conn.execute("DELETE FROM secrets WHERE key = ?", (key,))
                 conn.commit()
 
-    def list_keys(self, category: Optional[str] = None) -> List[sqlite3.Row]:
+    def list_keys(self, category: str | None = None) -> list[sqlite3.Row]:
         """List stored secrets as Row objects, optionally filtered by category."""
         with self._lock:
             with self._get_conn() as conn:
@@ -155,7 +154,7 @@ class SecretStore:
         _repo: SecretRepository instance handling all SQL operations.
     """
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         """Initialize the SecretStore and ensure the database schema exists.
 
         Args:
@@ -166,7 +165,7 @@ class SecretStore:
             db_path = _DEFAULT_DB_PATH
         self._repo = SecretRepository(db_path)
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         """Retrieve a secret value by key.
 
         Args:
@@ -190,7 +189,7 @@ class SecretStore:
             category: Optional category label (default ``"api_key"``).
             description: Optional human-readable description.
         """
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         self._repo.set(key, value, category, description, now)
         logger.info(f"Secret set: {key} [{category}]")
 
@@ -203,7 +202,7 @@ class SecretStore:
         self._repo.delete(key)
         logger.info(f"Secret deleted: {key}")
 
-    def list_keys(self, category: Optional[str] = None) -> List[Dict]:
+    def list_keys(self, category: str | None = None) -> list[dict]:
         """List stored secrets with masked values.
 
         Args:
@@ -265,7 +264,7 @@ class SecretStore:
         env_file = Path(os.environ.get("FLOWFORGE_ENV_FILE", ".env"))
         if env_file.exists():
             try:
-                with open(env_file, "r", encoding="utf-8") as f:
+                with open(env_file, encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if line.startswith("#") or "=" not in line:
@@ -281,7 +280,7 @@ class SecretStore:
         return ""
 
 
-_secret_store_instance: Optional[SecretStore] = None
+_secret_store_instance: SecretStore | None = None
 
 
 def get_secret_store() -> SecretStore:

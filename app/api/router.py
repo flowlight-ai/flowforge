@@ -14,32 +14,32 @@
 """
 from fastapi import APIRouter
 
-# ── 架构基础设施层 ──────────────────────────────────────────────
-from flowforge.app.api.core import system, auth, metrics, logs
+# ── 后台管理模块 ────────────────────────────────────────────────
+from flowforge.app.api.admin import admin, admin_models, prompts, review, schedules, settings
 
 # ── 智能体模块 ──────────────────────────────────────────────────
-from flowforge.app.api.agents import agents, modes, forgemind, verify, external_agents_api
+from flowforge.app.api.agents import agents, external_agents_api, forgemind, modes, verify
 
-# ── 工作流模块 ──────────────────────────────────────────────────
-from flowforge.app.api.workflows import workflows, tasks
+# ── 架构基础设施层 ──────────────────────────────────────────────
+from flowforge.app.api.core import auth, logs, metrics, system
+
+# ── 独立组件 ────────────────────────────────────────────────────
+from flowforge.app.api.endpoints import dashboard
+from flowforge.app.api.marketplace_api import router as marketplace_router
 
 # ── 记忆模块 ────────────────────────────────────────────────────
 from flowforge.app.api.memory import memory
 from flowforge.app.api.memory.graph import router as graph_router
 
+# ── 根级 API 模块 ───────────────────────────────────────────────
+from flowforge.app.api.plugin_management import router as plugin_management_router
+
 # ── 插件模块 ────────────────────────────────────────────────────
 from flowforge.app.api.plugins import plugins
 from flowforge.app.api.plugins.domain_plugins import router as domain_plugins_router
 
-# ── 后台管理模块 ────────────────────────────────────────────────
-from flowforge.app.api.admin import admin, admin_models, settings, review, schedules, prompts
-
-# ── 独立组件 ────────────────────────────────────────────────────
-from flowforge.app.api.endpoints import dashboard
-
-# ── 根级 API 模块 ───────────────────────────────────────────────
-from flowforge.app.api.plugin_management import router as plugin_management_router
-from flowforge.app.api.marketplace_api import router as marketplace_router
+# ── 工作流模块 ──────────────────────────────────────────────────
+from flowforge.app.api.workflows import tasks, workflows
 
 router = APIRouter(prefix="/api/v1")
 

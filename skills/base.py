@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -50,17 +50,17 @@ class SkillStep(BaseModel):
     agent: str = ""
     prompt: str = ""
     tool: str = ""
-    condition: Optional[str] = None
+    condition: str | None = None
     on_error: str = "stop"  # stop | skip | retry
     max_retries: int = 0
-    params: Dict[str, Any] = Field(default_factory=dict)
+    params: dict[str, Any] = Field(default_factory=dict)
 
 
 class SkillOutput(BaseModel):
     """Describes the expected output shape of a skill."""
 
     format: str = "text"
-    fields: List[str] = Field(default_factory=list)
+    fields: list[str] = Field(default_factory=list)
 
 
 class SkillContext(BaseModel):
@@ -71,11 +71,11 @@ class SkillContext(BaseModel):
     """
 
     task_id: str = ""
-    input_data: Dict[str, Any] = Field(default_factory=dict)
-    state: Dict[str, Any] = Field(default_factory=dict)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    step_results: Dict[str, Any] = Field(default_factory=dict)
-    task_context: Optional[Any] = None
+    input_data: dict[str, Any] = Field(default_factory=dict)
+    state: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    step_results: dict[str, Any] = Field(default_factory=dict)
+    task_context: Any | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -85,10 +85,10 @@ class SkillResult(BaseModel):
     """Result returned from a skill execution."""
 
     success: bool = True
-    output: Dict[str, Any] = Field(default_factory=dict)
-    error: Optional[str] = None
-    steps_completed: List[str] = Field(default_factory=list)
-    steps_failed: List[str] = Field(default_factory=list)
+    output: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
+    steps_completed: list[str] = Field(default_factory=list)
+    steps_failed: list[str] = Field(default_factory=list)
 
 
 class SkillBase(ABC):
@@ -115,9 +115,9 @@ class SkillBase(ABC):
         description: str = "",
         version: str = "0.1.0",
         format: SkillFormat = SkillFormat.FLOWFORGE,
-        triggers: Optional[List[SkillTrigger]] = None,
-        steps: Optional[List[SkillStep]] = None,
-        output: Optional[SkillOutput] = None,
+        triggers: list[SkillTrigger] | None = None,
+        steps: list[SkillStep] | None = None,
+        output: SkillOutput | None = None,
         source_path: str = "",
     ) -> None:
         self.name = name
@@ -157,7 +157,7 @@ class SkillBase(ABC):
 
     # ── Serialization ───────────────────────────────────────────────
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize skill metadata to a dictionary."""
         return {
             "name": self.name,
@@ -171,7 +171,7 @@ class SkillBase(ABC):
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SkillBase":
+    def from_dict(cls, data: dict[str, Any]) -> SkillBase:
         """Deserialize a skill from a dictionary.
 
         Returns a FlowForgeNativeSkill by default; subclasses may override.
@@ -239,7 +239,7 @@ class FlowForgeNativeSkill(SkillBase):
 
     async def _execute_step(
         self, step: SkillStep, context: SkillContext
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a single step by dispatching to agent/tool/LLM.
 
         Dispatches based on the step configuration:
@@ -307,8 +307,8 @@ class FlowForgeNativeSkill(SkillBase):
         # 3. Direct LLM call via LLMClient
         if prompt:
             try:
-                from flowforge.tools.llm_client import LLMClient
                 from flowforge.core.base_tool import ToolInput
+                from flowforge.tools.llm_client import LLMClient
                 llm_client = LLMClient()
                 tool_input = ToolInput(params={
                     "messages": [{"role": "user", "content": prompt}],

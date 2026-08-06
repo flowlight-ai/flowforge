@@ -20,9 +20,9 @@ License: MIT
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -70,11 +70,11 @@ class CollaborationResult(BaseModel):
         default_factory=list, description="产出物列表"
     )
     started_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="开始时间（UTC）",
     )
     completed_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="完成时间（UTC）",
     )
 
@@ -163,7 +163,7 @@ class CollaborationCoordinator:
         if mode not in self._supported_modes:
             raise ValueError(f"Unsupported collaboration mode: {mode}")
         handle_id = self._gen_handle_id()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # 注册运行中句柄
         handle = CollaborationHandle(
             handle_id=handle_id,
@@ -189,7 +189,7 @@ class CollaborationCoordinator:
             status="completed",
             artifacts=[],
             started_at=now,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
 
     def list_active_collaborations(

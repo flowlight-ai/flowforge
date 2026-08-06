@@ -1,10 +1,7 @@
-import json
-import re
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
-from typing import Optional
 
 
 class WebSearchAgent(GenericAgent):
@@ -12,7 +9,7 @@ class WebSearchAgent(GenericAgent):
     description = "网络搜索：HelixRAG→Web搜索→LLM联网搜索回退链"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         query = input.params.get("query", input.params.get("task", ""))
         mode = input.params.get("mode", "search")
         max_results = input.params.get("max_results", 5)
@@ -53,7 +50,7 @@ class WebSearchAgent(GenericAgent):
                     result={"search_results": search_result, "source": "helixrag"},
                     state_updates={"search_results": search_result},
                 )
-        except Exception as e:
+        except Exception:
             pass
 
         # Fallback 2: web_search tool (DuckDuckGo/Tavily)
@@ -67,7 +64,7 @@ class WebSearchAgent(GenericAgent):
                     result={"search_results": search_result, "source": "web_search"},
                     state_updates={"search_results": search_result},
                 )
-        except Exception as e:
+        except Exception:
             pass
 
         # Fallback 3: LLM WebChat 联网搜索
@@ -103,7 +100,7 @@ class WebSearchAgent(GenericAgent):
             state_updates={"search_results": data},
         )
 
-    async def _call_llm_with_model(self, context: Optional[TaskContext], prompt: str, model: str) -> str:
+    async def _call_llm_with_model(self, context: TaskContext | None, prompt: str, model: str) -> str:
         messages = [{"role": "user", "content": prompt}]
         tool_params = {"messages": messages, "model": model}
         if context is not None and context.tools is not None:

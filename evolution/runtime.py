@@ -19,9 +19,10 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta, timezone
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from flowforge.core.approval_hub import ApprovalHub, ApprovalRequest
 from flowforge.core.tracing import get_logger
@@ -44,7 +45,7 @@ logger = get_logger("flowforge.evolution.runtime")
 _DEFAULT_TRAE_BRIDGE_YAML = "flowforge/config/trae_bridge.yaml"
 
 # forgekin_id → SelfDev 闭环类映射（F046 v1.1 五闭环扩展）
-_FORGEKIN_LOOP_CLASSES: Dict[str, type] = {
+_FORGEKIN_LOOP_CLASSES: dict[str, type] = {
     "wenxin": SelfDevDocLoop,
     "sherlock": SelfDevCodeLoop,
     "luban": SelfDevFrameworkLoop,
@@ -84,7 +85,7 @@ class SelfDevRuntime:
         protocol: TraeBridgeProtocol,
         engine: ForgeMindEngine,
         approval_hub: ApprovalHub,
-        forgekin_configs: Dict[str, Dict[str, Any]],
+        forgekin_configs: dict[str, dict[str, Any]],
         approval_mode: ApprovalMode = "manual",
         approval_timeout_seconds: int = 300,
     ) -> None:
@@ -110,9 +111,9 @@ class SelfDevRuntime:
         self._approval_timeout_seconds: int = approval_timeout_seconds
 
         # request_id -> asyncio.Event（operator 决策后 set，唤醒等待中的 callback）
-        self._pending_events: Dict[str, asyncio.Event] = {}
+        self._pending_events: dict[str, asyncio.Event] = {}
         # request_id -> approved（决策结果缓存，供 approval_callback 读取）
-        self._decisions: Dict[str, bool] = {}
+        self._decisions: dict[str, bool] = {}
 
         self._logger = logger
         self._logger.info(
@@ -131,8 +132,8 @@ class SelfDevRuntime:
         *,
         trae_bridge_yaml_path: str = _DEFAULT_TRAE_BRIDGE_YAML,
         approval_mode: ApprovalMode = "manual",
-        project_root: Optional[str] = None,
-    ) -> "SelfDevRuntime":
+        project_root: str | None = None,
+    ) -> SelfDevRuntime:
         """生产装配入口 — 加载配置 + 创建实例 + 注册闭环.
 
         Args:
@@ -168,7 +169,7 @@ class SelfDevRuntime:
 
         # 4. 加载 5 个 forgekin YAML 配置（铁律 5：配置外置到 YAML）
         root = project_root or str(Path.cwd())
-        forgekin_configs: Dict[str, Dict[str, Any]] = {}
+        forgekin_configs: dict[str, dict[str, Any]] = {}
         for forgekin_id in BUILTIN_FORGEKINS:
             try:
                 cfg = load_forgekin_config(forgekin_id)
@@ -270,7 +271,7 @@ class SelfDevRuntime:
         async def approval_callback(plan: DevPlan, task: DevTask) -> bool:
             """I8 approval 回调 — 提交审批请求并等待 operator 决策."""
             request_id = f"approval-{uuid.uuid4().hex[:16]}"
-            expires_at = datetime.now(timezone.utc) + timedelta(seconds=timeout_seconds)
+            expires_at = datetime.now(UTC) + timedelta(seconds=timeout_seconds)
 
             # 提取目标路径（优先 task.target_path，回退到 plan.steps[0].path）
             target_path = task.target_path
@@ -339,7 +340,7 @@ class SelfDevRuntime:
 
             try:
                 await asyncio.wait_for(event.wait(), timeout=timeout_seconds)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 log.warning(
                     f"approval_callback 超时: request_id={request_id}, "
                     f"timeout={timeout_seconds}s（视为拒绝）"
@@ -498,7 +499,7 @@ class SelfDevRuntime:
         self._logger.info(f"reject 成功: request_id={request_id}")
         return True
 
-    def list_pending_approvals(self) -> List[Dict[str, Any]]:
+    def list_pending_approvals(self) -> list[dict[str, Any]]:
         """列出所有待审批请求（operator 查看用）.
 
         Returns:
@@ -522,7 +523,7 @@ class SelfDevRuntime:
             for r in pending
         ]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取运行时统计信息.
 
         Returns:

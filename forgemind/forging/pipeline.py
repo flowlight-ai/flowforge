@@ -34,12 +34,11 @@ from typing import Any
 import yaml
 
 from flowforge.forgemind.base import ForgekinBase
-from flowforge.forgemind.forms import ForgekinFormData
 from flowforge.forgemind.forging.stages import ForgingStage, ForgingStageResult
+from flowforge.forgemind.forms import ForgekinFormData
 from flowforge.forgemind.soul_imprint import SoulImprint
 from flowforge.forgemind.species import ForgekinSpecies
 from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
-
 
 # ── 配置文件路径（相对于本文件位置）──────────────────────────────
 _CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
@@ -434,7 +433,7 @@ class ForgePipeline:
 
     async def forge_from_yaml(
         self,
-        yaml_path: "Path | str",
+        yaml_path: Path | str,
         *,
         llm_client: Any | None = None,
     ) -> ForgekinBase:

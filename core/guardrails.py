@@ -31,9 +31,9 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Literal, Optional
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from flowforge.core.tracing import get_logger
 
@@ -51,7 +51,7 @@ class GuardrailResult(BaseModel):
 
     status: Literal["passed", "warned", "blocked", "modified"] = "passed"
     message: str = ""
-    modified_data: Optional[str] = None
+    modified_data: str | None = None
 
 
 class InputGuardrail(ABC):

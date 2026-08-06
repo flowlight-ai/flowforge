@@ -1,13 +1,14 @@
 import asyncio
 import uuid
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Depends, Query
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from flowforge.app.deps import get_executor
-from flowforge.core.task_context import TaskContext
 from flowforge.core.errors import ConflictError, ModeNotFoundError
-from flowforge.core.tracing import get_trace_id, get_logger, set_trace_id, generate_trace_id
+from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import generate_trace_id, get_logger, get_trace_id, set_trace_id
 
 logger = get_logger("tasks_api")
 
@@ -47,14 +48,14 @@ def _load_workflow_steps(workflow_name: str) -> list:
     # 业务 workflow 优先
     biz_path = Path(__file__).parent.parent.parent.parent / "workflows" / f"{workflow_name}.yaml"
     if biz_path.exists():
-        with open(biz_path, "r", encoding="utf-8") as f:
+        with open(biz_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return data.get("steps", [])
 
     # 通用 workflow
     gen_path = Path(__file__).parent.parent.parent.parent / "config" / "workflows" / f"{workflow_name}.yaml"
     if gen_path.exists():
-        with open(gen_path, "r", encoding="utf-8") as f:
+        with open(gen_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return data.get("steps", [])
 
@@ -65,7 +66,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 
@@ -73,7 +74,7 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
     return {
         "status": "error",
         "error": {"code": code, "message": message, "details": details or {}},
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 
@@ -93,7 +94,7 @@ async def create_task(payload: dict, executor=Depends(get_executor)):
         f"input_data_keys={list(input_data.keys()) if input_data else 'empty'}"
     )
     if not intent and not input_data:
-        logger.warning(f"Input validation failed: empty intent and input_data")
+        logger.warning("Input validation failed: empty intent and input_data")
         raise HTTPException(
             status_code=422,
             detail=_make_error("MISSING_INPUT", "Either 'intent' or 'input_data' must be provided")

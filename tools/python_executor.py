@@ -7,12 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import os
-import subprocess
 import sys
 import tempfile
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -67,7 +64,7 @@ class PythonExecutorTool(BaseTool):
             logger.error(f"python_executor error: action={action} error={e}")
             return ToolOutput(error=str(e))
 
-    async def _execute_code(self, params: Dict) -> ToolOutput:
+    async def _execute_code(self, params: dict) -> ToolOutput:
         """执行Python代码."""
         code = params.get("code", "")
         if not code:
@@ -96,7 +93,7 @@ class PythonExecutorTool(BaseTool):
             )
             try:
                 stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
                 return ToolOutput(result={
                     "success": False,
@@ -121,7 +118,7 @@ class PythonExecutorTool(BaseTool):
         finally:
             os.unlink(temp_path)
 
-    async def _run_tests(self, params: Dict) -> ToolOutput:
+    async def _run_tests(self, params: dict) -> ToolOutput:
         """运行pytest测试."""
         test_path = params.get("test_path", ".")
         working_dir = params.get("working_dir", os.getcwd())
@@ -131,7 +128,7 @@ class PythonExecutorTool(BaseTool):
         cmd = [sys.executable, "-m", "pytest", test_path] + extra_args
         return await self._run_subprocess(cmd, working_dir, timeout, params.get("env", {}))
 
-    async def _install_package(self, params: Dict) -> ToolOutput:
+    async def _install_package(self, params: dict) -> ToolOutput:
         """安装Python包."""
         package = params.get("package", "")
         if not package:
@@ -141,7 +138,7 @@ class PythonExecutorTool(BaseTool):
         cmd = [sys.executable, "-m", "pip", "install", package]
         return await self._run_subprocess(cmd, os.getcwd(), timeout)
 
-    async def _check_syntax(self, params: Dict) -> ToolOutput:
+    async def _check_syntax(self, params: dict) -> ToolOutput:
         """检查Python语法."""
         code = params.get("code", "")
         if not code:
@@ -160,7 +157,7 @@ class PythonExecutorTool(BaseTool):
         finally:
             os.unlink(temp_path)
 
-    async def _run_command(self, params: Dict) -> ToolOutput:
+    async def _run_command(self, params: dict) -> ToolOutput:
         """运行通用命令."""
         command = params.get("command", "")
         if not command:
@@ -176,7 +173,7 @@ class PythonExecutorTool(BaseTool):
         cmd = command.split()
         return await self._run_subprocess(cmd, working_dir, timeout, params.get("env", {}))
 
-    async def _run_subprocess(self, cmd: List[str], cwd: str, timeout: int, env_vars: Dict = None) -> ToolOutput:
+    async def _run_subprocess(self, cmd: list[str], cwd: str, timeout: int, env_vars: dict = None) -> ToolOutput:
         """运行子进程的通用方法."""
         env = os.environ.copy()
         if env_vars:
@@ -206,7 +203,7 @@ class PythonExecutorTool(BaseTool):
                 "elapsed_s": elapsed,
                 "command": " ".join(cmd),
             })
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             elapsed = round(time.time() - t0, 2)
             return ToolOutput(result={

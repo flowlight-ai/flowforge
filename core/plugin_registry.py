@@ -14,13 +14,14 @@ import importlib
 import os
 import re
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import yaml
 
 from flowforge.core.circuit_breaker import CircuitBreaker, CircuitOpenError
-from flowforge.core.errors import ToolNotFoundError, ConfigurationError
+from flowforge.core.errors import ConfigurationError, ToolNotFoundError
 from flowforge.core.interfaces.tools import (
     PluginHealth,
     PluginManifest,
@@ -73,15 +74,15 @@ class PluginRegistry:
     """
 
     def __init__(self, config_loader=None, di_container=None):
-        self._plugins: Dict[str, ToolPlugin] = {}
-        self._manifests: Dict[str, PluginManifest] = {}
-        self._configs: Dict[str, Dict[str, Any]] = {}
-        self._health_tasks: Dict[str, asyncio.Task] = {}
-        self._health_states: Dict[str, PluginHealth] = {}
-        self._circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self._plugins: dict[str, ToolPlugin] = {}
+        self._manifests: dict[str, PluginManifest] = {}
+        self._configs: dict[str, dict[str, Any]] = {}
+        self._health_tasks: dict[str, asyncio.Task] = {}
+        self._health_states: dict[str, PluginHealth] = {}
+        self._circuit_breakers: dict[str, CircuitBreaker] = {}
         self._config = config_loader
         self._di = di_container
-        self._emit_callback: Optional[Callable] = None
+        self._emit_callback: Callable | None = None
         self._tool_timeout: int = 120
 
     def set_emit_callback(self, callback: Callable) -> None:
@@ -116,7 +117,7 @@ class PluginRegistry:
             logger.warning(f"Plugins config not found: {file_path}")
             return
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
         plugin_list = data.get("plugins", [])
@@ -137,14 +138,14 @@ class PluginRegistry:
                 logger.error(f"Failed to load plugin '{plugin_name}': {e}")
                 # Don't crash the entire system — skip and continue
 
-    async def _register_from_dict(self, plugin_def: Dict[str, Any]) -> None:
+    async def _register_from_dict(self, plugin_def: dict[str, Any]) -> None:
         """Register a single plugin from a dict declaration."""
         config = plugin_def.pop("config", {})
         manifest = PluginManifest(**plugin_def)
         await self.register_plugin(manifest, config)
 
     async def register_plugin(
-        self, manifest: PluginManifest, config: Optional[Dict[str, Any]] = None
+        self, manifest: PluginManifest, config: dict[str, Any] | None = None
     ) -> None:
         """Register a single plugin by manifest.
 
@@ -217,7 +218,7 @@ class PluginRegistry:
             self._plugins[manifest.name] = plugin
 
     async def register_instance(
-        self, plugin: ToolPlugin, manifest: Optional[PluginManifest] = None
+        self, plugin: ToolPlugin, manifest: PluginManifest | None = None
     ) -> None:
         """Register an already-instantiated ToolPlugin directly.
 
@@ -289,7 +290,7 @@ class PluginRegistry:
             self._plugins[name] = plugin
 
     def _load_local_plugin(
-        self, manifest: PluginManifest, config: Dict[str, Any]
+        self, manifest: PluginManifest, config: dict[str, Any]
     ) -> ToolPlugin:
         """Import entry_point class, instantiate with config dict as kwargs.
 
@@ -352,7 +353,7 @@ class PluginRegistry:
             )
 
     def _load_mcp_plugin(
-        self, manifest: PluginManifest, config: Dict[str, Any]
+        self, manifest: PluginManifest, config: dict[str, Any]
     ) -> ToolPlugin:
         """Create MCPToolAdapter from mcp/ module.
 
@@ -366,7 +367,7 @@ class PluginRegistry:
             )
 
         # Build tool_info dict for the adapter
-        tool_info: Dict[str, Any] = {
+        tool_info: dict[str, Any] = {
             "name": manifest.name,
             "description": manifest.description,
             "inputSchema": manifest.parameters_schema,
@@ -381,7 +382,7 @@ class PluginRegistry:
         return wrapper
 
     def _load_openapi_plugin(
-        self, manifest: PluginManifest, config: Dict[str, Any]
+        self, manifest: PluginManifest, config: dict[str, Any]
     ) -> ToolPlugin:
         """Generate OpenAPI client adapter.
 
@@ -396,7 +397,7 @@ class PluginRegistry:
 
         endpoint = manifest.endpoint or ""
         api_key_env = manifest.api_key_env
-        auth: Dict[str, Any] = {}
+        auth: dict[str, Any] = {}
         if api_key_env:
             auth = {"type": "bearer", "token_env": api_key_env}
 
@@ -408,7 +409,7 @@ class PluginRegistry:
         return wrapper
 
     def _load_graphql_plugin(
-        self, manifest: PluginManifest, config: Dict[str, Any]
+        self, manifest: PluginManifest, config: dict[str, Any]
     ) -> ToolPlugin:
         """Generate GraphQL client adapter."""
         try:
@@ -420,7 +421,7 @@ class PluginRegistry:
 
         endpoint = manifest.endpoint or ""
         api_key_env = manifest.api_key_env
-        auth: Dict[str, Any] = {}
+        auth: dict[str, Any] = {}
         if api_key_env:
             auth = {"type": "bearer", "token_env": api_key_env}
 
@@ -432,8 +433,8 @@ class PluginRegistry:
         return wrapper
 
     async def execute(
-        self, plugin_name: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, plugin_name: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute a plugin by name.
 
         Handles timeout, events, and metrics.
@@ -497,7 +498,7 @@ class PluginRegistry:
                 message=f"Circuit breaker open for '{plugin_name}'",
             )
             return {"error": f"Plugin '{plugin_name}' circuit breaker is open"}
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # cb.call() doesn't wrap asyncio.wait_for when used via lambda,
             # so timeout is NOT recorded by cb.call() — record manually
             if cb:
@@ -560,15 +561,15 @@ class PluginRegistry:
         """Check if a plugin is registered."""
         return name in self._plugins
 
-    def list_plugins(self) -> List[PluginManifest]:
+    def list_plugins(self) -> list[PluginManifest]:
         """List all registered plugin manifests."""
         return list(self._manifests.values())
 
-    def list_plugin_names(self) -> List[str]:
+    def list_plugin_names(self) -> list[str]:
         """List all registered plugin names."""
         return list(self._plugins.keys())
 
-    def get_manifest(self, name: str) -> Optional[PluginManifest]:
+    def get_manifest(self, name: str) -> PluginManifest | None:
         """Get the manifest for a registered plugin."""
         return self._manifests.get(name)
 
@@ -578,13 +579,13 @@ class PluginRegistry:
             name, PluginHealth(state=PluginState.UNINITIALIZED)
         )
 
-    def get_circuit_breaker(self, name: str) -> Optional[CircuitBreaker]:
+    def get_circuit_breaker(self, name: str) -> CircuitBreaker | None:
         """Get the circuit breaker for a plugin (for monitoring/testing)."""
         return self._circuit_breakers.get(name)
 
-    async def check_all_health(self) -> Dict[str, PluginHealth]:
+    async def check_all_health(self) -> dict[str, PluginHealth]:
         """Run health checks on all registered plugins."""
-        results: Dict[str, PluginHealth] = {}
+        results: dict[str, PluginHealth] = {}
         for name, plugin in self._plugins.items():
             try:
                 health = await asyncio.wait_for(
@@ -592,7 +593,7 @@ class PluginRegistry:
                 )
                 results[name] = health
                 self._health_states[name] = health
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 results[name] = PluginHealth(
                     state=PluginState.DEGRADED, message="Health check timed out"
                 )
@@ -616,7 +617,7 @@ class PluginRegistry:
                 await asyncio.wait_for(plugin.shutdown(), timeout=10)
                 self._health_states[name] = PluginHealth(state=PluginState.STOPPED)
                 logger.info(f"Plugin shut down: {name}")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(f"Plugin '{name}' shutdown timed out")
             except Exception as e:
                 logger.error(f"Plugin '{name}' shutdown error: {e}")
@@ -654,21 +655,21 @@ class PluginRegistry:
                 )
 
     @staticmethod
-    def _topological_sort(plugin_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _topological_sort(plugin_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Sort plugins by dependency order (depends_on).
 
         Plugins with no dependencies come first, then plugins that depend
         on them, and so on. Raises on circular dependencies.
         """
-        name_to_def: Dict[str, Dict[str, Any]] = {}
+        name_to_def: dict[str, dict[str, Any]] = {}
         for p in plugin_list:
             name = p.get("name", "")
             if name:
                 name_to_def[name] = p
 
         # Build adjacency list
-        graph: Dict[str, List[str]] = {name: [] for name in name_to_def}
-        in_degree: Dict[str, int] = {name: 0 for name in name_to_def}
+        graph: dict[str, list[str]] = {name: [] for name in name_to_def}
+        in_degree: dict[str, int] = dict.fromkeys(name_to_def, 0)
 
         for name, p in name_to_def.items():
             deps = p.get("depends_on", [])
@@ -683,7 +684,7 @@ class PluginRegistry:
 
         # Kahn's algorithm
         queue = [name for name, deg in in_degree.items() if deg == 0]
-        sorted_names: List[str] = []
+        sorted_names: list[str] = []
 
         while queue:
             name = queue.pop(0)
@@ -714,7 +715,7 @@ class _BaseToolToPluginAdapter(ToolPlugin):
         self._base_tool = base_tool
         self.manifest = manifest
 
-    async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, params: dict[str, Any]) -> dict[str, Any]:
         """Delegate to BaseTool.execute(), converting params format."""
         from flowforge.core.base_tool import ToolInput, ToolOutput
 
@@ -752,6 +753,6 @@ class _BaseToolToPluginAdapter(ToolPlugin):
                 return PluginHealth(state=PluginState.ERROR, message=str(e))
         return PluginHealth(state=PluginState.READY)
 
-    def validate_params(self, params: Dict[str, Any]) -> bool:
+    def validate_params(self, params: dict[str, Any]) -> bool:
         """Delegate to BaseTool.validate_params()."""
         return self._base_tool.validate_params(params)

@@ -29,15 +29,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 from flowforge.llm.trae.config import TraeBridgeConfig
 from flowforge.llm.trae.models import BridgeResponseStatus
-from flowforge.llm.trae.watcher import TraeBridgeWatcher, _WATCHDOG_AVAILABLE
 
 logger = get_logger("trae_llm.auto_operator")
 
@@ -46,7 +43,7 @@ logger = get_logger("trae_llm.auto_operator")
 # 这些响应内容代表真实 LLM 在对应场景下可能输出的内容，
 # 用于 E2E 测试验证协议层端到端流程。
 
-_DEFAULT_RESPONSES: Dict[str, str] = {
+_DEFAULT_RESPONSES: dict[str, str] = {
     # SelfDev 三闭环设计（F046）
     "selfdev": (
         "SelfDev 三闭环设计：\n"
@@ -102,7 +99,7 @@ class AutoOperator:
         config: TraeBridgeConfig,
         *,
         response_delay: float = 0.2,
-        responses: Optional[Dict[str, str]] = None,
+        responses: dict[str, str] | None = None,
         fallback: str = _DEFAULT_FALLBACK,
     ) -> None:
         """初始化自动 operator.
@@ -120,7 +117,7 @@ class AutoOperator:
         self._cancels_dir = self._shared_dir / config.cancels_dir
 
         self._response_delay = response_delay
-        self._responses: Dict[str, str] = dict(_DEFAULT_RESPONSES)
+        self._responses: dict[str, str] = dict(_DEFAULT_RESPONSES)
         if responses:
             self._responses.update(responses)
         self._fallback = fallback
@@ -129,9 +126,9 @@ class AutoOperator:
         # 由于 TraeBridgeWatcher 设计为监听 responses + cancels，
         # 这里我们直接使用 watchdog Observer 监听 requests 目录
         self._observer = None
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._stop_event = asyncio.Event()
-        self._poll_task: Optional[asyncio.Task] = None
+        self._poll_task: asyncio.Task | None = None
         self._handled_requests: set[str] = set()
         self._stats = {
             "received": 0,
@@ -177,14 +174,14 @@ class AutoOperator:
         self._poll_task.cancel()
         try:
             await asyncio.wait_for(self._poll_task, timeout=1.0)
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except (TimeoutError, asyncio.CancelledError):
             pass
         self._poll_task = None
         logger.info(
             f"AutoOperator 已停止: stats={self._stats}"
         )
 
-    async def __aenter__(self) -> "AutoOperator":
+    async def __aenter__(self) -> AutoOperator:
         await self.start()
         return self
 
@@ -287,7 +284,7 @@ class AutoOperator:
             },
             "tool_calls": [],
             "error": error,
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
         }
         try:
             await asyncio.to_thread(
@@ -321,7 +318,7 @@ class AutoOperator:
             "request_id": request_id,
             "reason": reason,
             "cancelled_by": "auto_operator",
-            "cancelled_at": datetime.now(timezone.utc).isoformat(),
+            "cancelled_at": datetime.now(UTC).isoformat(),
         }
         await asyncio.to_thread(
             cancel_file.write_text,
@@ -332,12 +329,12 @@ class AutoOperator:
     # ── 状态查询 ─────────────────────────────────────────────────
 
     @property
-    def stats(self) -> Dict[str, int]:
+    def stats(self) -> dict[str, int]:
         """获取 operator 统计信息."""
         return dict(self._stats)
 
     @property
-    def handled_requests(self) -> List[str]:
+    def handled_requests(self) -> list[str]:
         """已处理过的 request_id 列表."""
         return list(self._handled_requests)
 

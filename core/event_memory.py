@@ -27,9 +27,8 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -132,7 +131,7 @@ class EventRecord(BaseModel):
     thread_id: str = Field(..., min_length=1, description="线程 ID")
     message_id: str = Field(..., min_length=1, description="消息 ID")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="事件时间戳（UTC）",
     )
     summary: str = Field(
@@ -179,7 +178,7 @@ class ResolutionLink(BaseModel):
     )
     link_id: str = Field(default="", description="链接唯一标识（自动生成）")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="创建时间（UTC）",
     )
 
@@ -205,7 +204,7 @@ class EventMemoryStore:
     ``async``，I/O 操作使用 ``async/await``（项目规范）.
     """
 
-    def __init__(self, logger: Optional[TraceLogger] = None) -> None:
+    def __init__(self, logger: TraceLogger | None = None) -> None:
         self._logger: TraceLogger = logger or get_logger("event_memory.store")
         # event_id → EventRecord
         self._events: dict[str, EventRecord] = {}
@@ -244,7 +243,7 @@ class EventMemoryStore:
         )
         return event_id
 
-    async def get(self, event_id: str) -> Optional[EventRecord]:
+    async def get(self, event_id: str) -> EventRecord | None:
         """按 ID 查询事件.
 
         Args:
@@ -258,7 +257,7 @@ class EventMemoryStore:
 
     async def teleport(
         self, thread_id: str, message_id: str
-    ) -> Optional[EventRecord]:
+    ) -> EventRecord | None:
         """精确跳转 — 通过 threadId + messageId 二元组定位事件.
 
         用于跨 thread 上下文恢复: 当需要从某个消息节点恢复上下文时，
@@ -322,7 +321,7 @@ class EventMemoryStore:
     async def list_by_type(
         self,
         event_type: EventType,
-        since: Optional[datetime] = None,
+        since: datetime | None = None,
     ) -> list[EventRecord]:
         """按类型查询事件（可叠加时间过滤）.
 
@@ -464,7 +463,7 @@ class EventMemoryStore:
                 - ``by_cat``: ``{cat: count}``
                 - ``resolution_chain_count``: 因果链链接总数
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         window_start = now - timedelta(hours=window_hours)
         async with self._lock:
             in_window = [
@@ -502,7 +501,7 @@ class EventMemoryStore:
         Returns:
             被清理的事件数量.
         """
-        cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+        cutoff = datetime.now(UTC) - timedelta(days=max_age_days)
         async with self._lock:
             expired_ids = [
                 eid

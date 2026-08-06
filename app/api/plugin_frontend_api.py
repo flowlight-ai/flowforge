@@ -1,6 +1,7 @@
 """Frontend plugin API — exposes plugin UI metadata to the Next.js frontend."""
 
 from fastapi import APIRouter, HTTPException
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("api.plugin_frontend")

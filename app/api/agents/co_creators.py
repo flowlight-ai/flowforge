@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter
@@ -26,7 +26,7 @@ class CoCreatorCreate(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat() + "Z"
+    return datetime.now(UTC).isoformat() + "Z"
 
 
 @router.get("")
@@ -39,7 +39,7 @@ async def list_co_creators() -> dict[str, Any]:
 async def add_co_creator(payload: CoCreatorCreate) -> dict[str, Any]:
     """添加共创者（stub 返回占位对象）。"""
     return {
-        "id": f"coc_stub_{int(datetime.now(timezone.utc).timestamp())}",
+        "id": f"coc_stub_{int(datetime.now(UTC).timestamp())}",
         "name": payload.name,
         "role": payload.role,
         "forgekin_id": payload.forgekin_id,

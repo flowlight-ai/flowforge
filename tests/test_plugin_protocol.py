@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import pytest
 
-from flowforge.core.errors import PluginError, ForgekinError
+from flowforge.core.errors import ForgekinError
 from flowforge.core.plugin import (
     FlowForgePlugin,
     PluginContext,

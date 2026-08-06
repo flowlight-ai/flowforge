@@ -21,7 +21,6 @@ import argparse
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
 # Each CLI-based agent: name, forgekin it binds to, npm package, binary name.
 AGENTS: list[dict[str, str]] = [
@@ -162,8 +161,8 @@ def install_agent(agent: dict[str, str]) -> bool:
         ok(f"{binary} installed -> {detail}")
         return True
     fail(f"{binary} installed but not found on PATH")
-    print(f"    The npm global bin dir may not be on your PATH.")
-    print(f"    Run `npm config get prefix` to find it, then add its bin/ to PATH.")
+    print("    The npm global bin dir may not be on your PATH.")
+    print("    Run `npm config get prefix` to find it, then add its bin/ to PATH.")
     return False
 
 

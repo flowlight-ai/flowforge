@@ -21,8 +21,8 @@ from flowforge.core.errors import LLMError
 from flowforge.core.tracing import generate_trace_id, get_logger, set_trace_id
 
 from .council_helpers import (
-    AVATARS,
     _PERSONA_TO_FORGEKIN,
+    AVATARS,
     _find_forgekin_cfg,
     _get_bridge,
     _get_forgekins,

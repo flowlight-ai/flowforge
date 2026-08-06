@@ -24,7 +24,7 @@ F093 三路记忆的第二路。Relational Memory 存储世界中角色之间的
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from flowforge.core.world_engine.citizens import Relationship
@@ -123,7 +123,7 @@ class RelationalMemory(RelationalMemoryBase):
         entry = {
             **interaction,
             "timestamp": interaction.get(
-                "timestamp", datetime.now(timezone.utc).isoformat()
+                "timestamp", datetime.now(UTC).isoformat()
             ),
         }
         self._interactions.setdefault(rel.relationship_id, []).append(entry)

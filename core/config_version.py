@@ -18,7 +18,7 @@
 """
 import warnings
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -34,9 +34,9 @@ class ConfigVersion(BaseModel):
     """配置版本信息"""
     version: str = "1.0.0"
     compatibility: CompatibilityLevel = CompatibilityLevel.MINOR
-    changelog: List[str] = Field(default_factory=list)
-    deprecated_keys: Dict[str, str] = Field(default_factory=dict)  # key -> migration_guide
-    renamed_keys: Dict[str, str] = Field(default_factory=dict)     # old_key -> new_key
+    changelog: list[str] = Field(default_factory=list)
+    deprecated_keys: dict[str, str] = Field(default_factory=dict)  # key -> migration_guide
+    renamed_keys: dict[str, str] = Field(default_factory=dict)     # old_key -> new_key
 
 
 class ConfigVersionManager:
@@ -51,7 +51,7 @@ class ConfigVersionManager:
 
     CURRENT_VERSION = "2.0.0"
 
-    MIGRATIONS: Dict[str, Dict[str, Any]] = {
+    MIGRATIONS: dict[str, dict[str, Any]] = {
         "1.0.0": {
             "target": "1.1.0",
             "compatibility": CompatibilityLevel.MINOR,
@@ -150,7 +150,7 @@ class ConfigVersionManager:
 
         return config
 
-    def get_migration_path(self, from_version: str) -> List[str]:
+    def get_migration_path(self, from_version: str) -> list[str]:
         """获取从指定版本到最新版本的迁移路径
 
         Args:

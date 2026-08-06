@@ -32,8 +32,8 @@ def _get_marketplace():
     """Get or create the Marketplace singleton."""
     global _marketplace_instance
     if _marketplace_instance is None:
-        from flowforge.core.marketplace import Marketplace
         from flowforge.app.deps import get_plugin_manager
+        from flowforge.core.marketplace import Marketplace
 
         plugin_manager = None
         try:

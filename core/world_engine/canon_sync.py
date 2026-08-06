@@ -33,13 +33,12 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from flowforge.core.world_engine.canon_memory import CanonMemory
 from flowforge.core.world_engine.citizens import CanonDecision, Turn
 from flowforge.core.world_engine.session_memory import SessionMemory
-
 
 # 铁律 CL-010：只有以下角色有权限确认入典
 _CANON_CONFIRMERS: frozenset[str] = frozenset({"operator", "canon_driver"})
@@ -161,7 +160,7 @@ class CanonSyncProtocol(CanonSyncProtocolBase):
             proposal_id=proposal_id,
             turn=turn,
             proposer=proposer.strip(),
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         return proposal_id
 
@@ -195,7 +194,7 @@ class CanonSyncProtocol(CanonSyncProtocolBase):
             world_id=self._resolve_world_id(turn),
             decision=turn.content,
             decided_by=confirmer,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         ok = await self._canon_memory.write(decision, confirmed_by=confirmer)
         if not ok:

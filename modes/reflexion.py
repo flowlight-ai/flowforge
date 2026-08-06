@@ -1,10 +1,11 @@
 import time
-from flowforge.core.base_mode_executor import BaseModeExecutor
+
 from flowforge.core.base_agent import AgentInput, AgentOutput
+from flowforge.core.base_mode_executor import BaseModeExecutor
 from flowforge.core.base_tool import ToolInput
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
-from flowforge.core.prompt_manager import get_prompt
 from flowforge.modes.default_llm_actors import DefaultLLMActor, DefaultLLMEvaluator, DefaultLLMReflector
 
 logger = get_logger("reflexion_executor")
@@ -149,7 +150,7 @@ class ReflexionExecutor(BaseModeExecutor):
                             f"tool_result={tool_result!r}",
                             task_id=ctx.task_id,
                         )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning(f"Tool '{actor_tool}' timed out at iteration {iteration+1}", task_id=ctx.task_id)
                 except Exception as e:
                     logger.warning(f"Tool '{actor_tool}' failed at iteration {iteration+1}: {e}, falling back to DefaultLLMActor", task_id=ctx.task_id)
@@ -192,7 +193,7 @@ class ReflexionExecutor(BaseModeExecutor):
                     else:
                         actor_output = await asyncio.wait_for(
                             actor.execute(actor_input), timeout=self.STEP_TIMEOUT)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning(f"Reflexion actor timed out at iteration {iteration+1}", task_id=ctx.task_id)
                 except Exception as e:
                     logger.warning(f"Reflexion actor failed at iteration {iteration+1}: {e}", task_id=ctx.task_id)
@@ -290,7 +291,7 @@ class ReflexionExecutor(BaseModeExecutor):
                     f"耗时={_eval_dur:.2f}s score={eval_output.result.get('score', '?')}",
                     task_id=ctx.task_id,
                 )
-            except (asyncio.TimeoutError, Exception) as e:
+            except (TimeoutError, Exception) as e:
                 logger.warning(f"Reflexion evaluator failed at iteration {iteration+1}: {e}", task_id=ctx.task_id)
                 score = 0.5
                 issues = [f"评估超时或失败: {type(e).__name__}"]
@@ -377,7 +378,7 @@ class ReflexionExecutor(BaseModeExecutor):
                         f"loop_verifier_errors_count={len(ctx.metadata['loop_verifier_errors'])}",
                         task_id=ctx.task_id,
                     )
-            except (asyncio.TimeoutError, Exception) as e:
+            except (TimeoutError, Exception) as e:
                 logger.warning(f"Reflexion reflector failed at iteration {iteration+1}: {e}", task_id=ctx.task_id)
                 memory.append(f"反思阶段失败: {type(e).__name__}")
 
@@ -478,7 +479,7 @@ class ReflexionExecutor(BaseModeExecutor):
                 elif t:
                     topic_lines.append(f"- {t}")
             if topic_lines:
-                sections.append(f"\n## 选题列表\n" + "\n".join(topic_lines))
+                sections.append("\n## 选题列表\n" + "\n".join(topic_lines))
 
         return "\n".join(sections)
 

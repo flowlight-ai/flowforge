@@ -16,14 +16,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -38,7 +36,6 @@ from flowforge.evolution.self_dev_base import (
 )
 from flowforge.evolution.self_dev_doc import SelfDevDocLoop
 
-
 # ══════════════════════════════════════════════════════════════════
 # §1 Fake/Stub 工具类
 # ══════════════════════════════════════════════════════════════════
@@ -50,12 +47,12 @@ class _FakeTraeClient:
     策略：根据调用顺序返回预设响应列表，第 N 次调用返回第 N 个响应.
     """
 
-    def __init__(self, responses: List[Dict[str, Any]] | None = None) -> None:
+    def __init__(self, responses: list[dict[str, Any]] | None = None) -> None:
         self._responses = list(responses or [])
         self.call_count = 0
-        self.calls: List[Dict[str, Any]] = []
+        self.calls: list[dict[str, Any]] = []
 
-    async def chat(self, messages: List[Dict[str, str]], *, context=None, **kwargs) -> Dict[str, Any]:
+    async def chat(self, messages: list[dict[str, str]], *, context=None, **kwargs) -> dict[str, Any]:
         self.call_count += 1
         self.calls.append({"messages": messages, "context": context, "kwargs": kwargs})
         if self._responses:
@@ -117,7 +114,7 @@ def temp_project(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def forgekin_config(temp_project: Path) -> Dict[str, Any]:
+def forgekin_config(temp_project: Path) -> dict[str, Any]:
     return {
         "project_root": str(temp_project),
         "forgekin_id": "forgemind:wenxin",
@@ -794,7 +791,7 @@ class TestEngineIntegration:
 # ══════════════════════════════════════════════════════════════════
 
 
-async def _noop_persist(loop: SelfDevDocLoop, record) -> Dict[str, Any]:
+async def _noop_persist(loop: SelfDevDocLoop, record) -> dict[str, Any]:
     """覆盖 persist — 单元测试中跳过真实治理层调用."""
     record.persisted = True
     record.persist_payload = {"episode_id": "test-episode", "method_id": None, "proposal_id": None}

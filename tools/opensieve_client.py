@@ -14,7 +14,7 @@
 - 异步 I/O：所有 HTTP 调用使用 httpx.AsyncClient
 """
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
@@ -84,7 +84,7 @@ class OpenSieveClient(BaseTool):
     safety_level = "read"
     is_concurrency_safe = True
 
-    def __init__(self, endpoint: Optional[str] = None, timeout: int = 120) -> None:
+    def __init__(self, endpoint: str | None = None, timeout: int = 120) -> None:
         # 基础 URL（去掉 /api/v1/retrieve 后缀，统一用 base）
         raw = endpoint or os.getenv(
             "OPENSIEVE_ENDPOINT", "http://localhost:8100"
@@ -130,7 +130,7 @@ class OpenSieveClient(BaseTool):
         max_results: int = 5,
         min_score: float = 0.3,
         max_age_days: int = 30,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """非结构化语义检索（便捷方法）。
 
         Args:
@@ -153,8 +153,8 @@ class OpenSieveClient(BaseTool):
     async def fetch_data(
         self,
         data_type: str,
-        params: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
         """结构化数据拉取（便捷方法，三源容错）。
 
         Args:
@@ -179,7 +179,7 @@ class OpenSieveClient(BaseTool):
         self,
         source_name: str,
         priority: int = 10,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """注册数据源适配器到 OpenSieve（便捷方法）。
 
         Args:
@@ -197,7 +197,7 @@ class OpenSieveClient(BaseTool):
             raise RuntimeError(out.error)
         return out.result or {}
 
-    async def list_data_sources(self) -> Dict[str, Any]:
+    async def list_data_sources(self) -> dict[str, Any]:
         """列出已注册数据源（便捷方法）。"""
         out = await self._do_list_sources()
         return out.result or {}
@@ -208,13 +208,13 @@ class OpenSieveClient(BaseTool):
 
     # ── 内部实现 ────────────────────────────────────────────────────
 
-    def _headers(self) -> Dict[str, str]:
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
+    def _headers(self) -> dict[str, str]:
+        headers: dict[str, str] = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
-    async def _do_search(self, params: Dict[str, Any]) -> ToolOutput:
+    async def _do_search(self, params: dict[str, Any]) -> ToolOutput:
         query = params.get("query")
         if not query:
             return ToolOutput(error="query is required for action=search")
@@ -271,7 +271,7 @@ class OpenSieveClient(BaseTool):
             logger.error(f"OpenSieve /api/v1/search also failed: {e}")
             return ToolOutput(error=str(e), result={"results": []})
 
-    async def _do_fetch_data(self, params: Dict[str, Any]) -> ToolOutput:
+    async def _do_fetch_data(self, params: dict[str, Any]) -> ToolOutput:
         data_type = params.get("data_type")
         data_params = params.get("data_params") or {}
         if not data_type:
@@ -293,7 +293,7 @@ class OpenSieveClient(BaseTool):
                 "source": data.get("source", ""),
             })
 
-    async def _do_register_source(self, params: Dict[str, Any]) -> ToolOutput:
+    async def _do_register_source(self, params: dict[str, Any]) -> ToolOutput:
         source_name = params.get("source_name")
         if not source_name:
             return ToolOutput(error="source_name is required for action=register_source")

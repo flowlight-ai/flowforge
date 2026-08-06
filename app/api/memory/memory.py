@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
+from flowforge.core.tracing import get_logger, get_trace_id
 from flowforge.memory.manager import MemoryManager
-from flowforge.core.tracing import get_trace_id, get_logger
 
 logger = get_logger("memory_api")
 
@@ -22,7 +22,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 
@@ -30,7 +30,7 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
     return {
         "status": "error",
         "error": {"code": code, "message": message, "details": details or {}},
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 

@@ -2,9 +2,9 @@
 
 确保 ``flowforge`` 包可被导入，并设置测试环境变量。
 """
+import gc
 import os
 import sys
-import gc
 from pathlib import Path
 
 import pytest

@@ -5,9 +5,9 @@ Dual-layer loading: global skills + project skills.
 Combo Skills: pipeline orchestration of multiple skills.
 """
 from flowforge.skills.base import SkillBase, SkillFormat, SkillTrigger
-from flowforge.skills.manager import SkillManager
-from flowforge.skills.combo import ComboSkill, ComboPipeline
+from flowforge.skills.combo import ComboPipeline, ComboSkill
 from flowforge.skills.loader import SkillLoader
+from flowforge.skills.manager import SkillManager
 
 __all__ = [
     "SkillBase", "SkillFormat", "SkillTrigger",

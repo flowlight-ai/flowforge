@@ -14,7 +14,8 @@ License: MIT
 from __future__ import annotations
 
 import re
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 

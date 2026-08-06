@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-from flowforge.core.errors import HarnessError
 from flowforge.harness.durable_state import SqliteDurableState
 from flowforge.harness.entropy_manager import (
     DebtSeverity,
@@ -41,7 +40,6 @@ from flowforge.harness.tool_mediation import (
     ToolDescriptor,
     ToolMediator,
 )
-
 
 # ---------------------------------------------------------------------------
 # Layer 1 — DurableStateSurface (SqliteDurableState)

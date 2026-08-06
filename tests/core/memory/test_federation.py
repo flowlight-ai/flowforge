@@ -14,7 +14,7 @@ Covers the v7.0 memory_federation module:
 
 from __future__ import annotations
 
-import asyncio
+from datetime import UTC
 
 import pytest
 
@@ -36,7 +36,6 @@ from flowforge.core.memory_federation import (
     RetrievalResult,
     SemanticEntry,
 )
-
 
 # ---------------------------------------------------------------------------
 # Collection: MemoryEntry / MemoryCollection / CollectionManager
@@ -470,9 +469,9 @@ async def test_governance_decay_never_below_min() -> None:
 
 def test_recency_factor_fresh_is_one() -> None:
     factor = RecencyFactor()
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     assert factor.compute(now) == pytest.approx(1.0)
 
 

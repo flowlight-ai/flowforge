@@ -56,11 +56,10 @@ from dataclasses import asdict
 
 from fastapi import APIRouter, HTTPException, WebSocket
 
-# ── Re-export state for backward compatibility ───────────────────────────────
-# verify.py does: `from flowforge.app.api.agents.council import state`
-# main.py  does: `from ... import council; council.list_agents() / .send_message()`
-# Both must keep working after the refactor.
-from .council_state import state, tasks_store  # noqa: F401 — re-exported
+from .council_chat_service import (
+    _clear_messages,
+    _process_chat_message,
+)
 from .council_helpers import (
     AVATARS,
     _bool_env,
@@ -69,20 +68,22 @@ from .council_helpers import (
     _get_bridge,
     _get_forgekins,
 )
-from .council_chat_service import (
-    _clear_messages,
-    _process_chat_message,
-)
-from .council_task_service import (
-    _create_council_task,
-    _handle_push_back,
-)
 from .council_settings_service import (
     _get_dashboard_data,
     _get_llm_settings,
     _test_llm_connection,
     _update_llm_settings,
     _update_runtime_settings,
+)
+
+# ── Re-export state for backward compatibility ───────────────────────────────
+# verify.py does: `from flowforge.app.api.agents.council import state`
+# main.py  does: `from ... import council; council.list_agents() / .send_message()`
+# Both must keep working after the refactor.
+from .council_state import state, tasks_store  # noqa: F401 — re-exported
+from .council_task_service import (
+    _create_council_task,
+    _handle_push_back,
 )
 from .council_workflow_service import (
     _get_prometheus_metrics,

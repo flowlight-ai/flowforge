@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -164,7 +164,7 @@ class ForgekinLLMBridge:
     # ── Construction ─────────────────────────────────────────────────────
 
     @classmethod
-    def from_config(cls, config_dir: Path) -> "ForgekinLLMBridge":
+    def from_config(cls, config_dir: Path) -> ForgekinLLMBridge:
         """Build the bridge from a config directory.
 
         Reads ``config/llm_route.yaml``, ``config/web_chat_prompts.yaml``, and

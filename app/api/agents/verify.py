@@ -14,7 +14,7 @@ T8 铁律: 凡涉及网页操作的功能必须操控浏览器查看DOM确认真
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -59,12 +59,11 @@ class T7VerifyRequest(BaseModel):
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 def _lookup_forgekin_loop_type(forgekin_id: str) -> str:
     """Best-effort lookup of a forgekin's loop_type from its YAML config."""
     try:
-        from pathlib import Path
         from flowforge.llm.council_bridge_holder import _config_dir
         cfg_path = _config_dir() / "forgekins" / f"{forgekin_id}.yaml"
         if cfg_path.exists():
@@ -79,7 +78,6 @@ def _lookup_forgekin_loop_type(forgekin_id: str) -> str:
 def _lookup_forgekin_name(forgekin_id: str) -> str:
     """Best-effort lookup of a forgekin's display name."""
     try:
-        from pathlib import Path
         from flowforge.llm.council_bridge_holder import _config_dir
         cfg_path = _config_dir() / "forgekins" / f"{forgekin_id}.yaml"
         if cfg_path.exists():

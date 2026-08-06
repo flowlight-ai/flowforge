@@ -1,7 +1,7 @@
 """Gate Registry — 门控配置注册中心，支持从 config/gates/ 自动加载 YAML 配置。"""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field
@@ -111,7 +111,7 @@ class GateRegistry:
             self._gates[name] = GateConfig(**cfg)
         logger.info(f"GateRegistry: registered gate '{name}' (total: {len(self._gates)})")
 
-    def get(self, name: str) -> Optional[GateConfig]:
+    def get(self, name: str) -> GateConfig | None:
         """获取门控配置."""
         config = self._gates.get(name)
         if config:

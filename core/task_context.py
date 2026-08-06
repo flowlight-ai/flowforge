@@ -7,8 +7,7 @@ throughout the lifecycle of a workflow task.
 License: MIT
 """
 
-from typing import Any, Dict, Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 class TaskContext:
@@ -63,7 +62,7 @@ class TaskContext:
         self.persona = kwargs.pop('persona', None)
         self.harness_enabled = kwargs.pop('harness_enabled', True)
         self.plugin_registry = kwargs.pop('plugin_registry', None)
-        self.created_at = datetime.now(timezone.utc).isoformat()
+        self.created_at = datetime.now(UTC).isoformat()
 
     @classmethod
     def from_parent(cls, parent: 'TaskContext', **overrides) -> 'TaskContext':

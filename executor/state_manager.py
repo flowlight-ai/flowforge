@@ -1,7 +1,8 @@
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("state_manager")
@@ -22,7 +23,7 @@ class StateManager:
         """)
         self._conn.commit()
 
-    def save_state(self, task_id: str, state: Dict[str, Any]) -> None:
+    def save_state(self, task_id: str, state: dict[str, Any]) -> None:
         state_json = json.dumps(state, ensure_ascii=False, default=str)
         self._conn.execute(
             "INSERT OR REPLACE INTO task_states (task_id, state_json, updated_at) VALUES (?, ?, datetime('now'))",
@@ -31,7 +32,7 @@ class StateManager:
         self._conn.commit()
         logger.debug(f"state saved: task={task_id}")
 
-    def load_state(self, task_id: str) -> Optional[Dict[str, Any]]:
+    def load_state(self, task_id: str) -> dict[str, Any] | None:
         row = self._conn.execute(
             "SELECT state_json FROM task_states WHERE task_id = ?",
             (task_id,)
@@ -45,13 +46,13 @@ class StateManager:
         self._conn.commit()
         logger.debug(f"state deleted: task={task_id}")
 
-    def list_states(self) -> List[str]:
+    def list_states(self) -> list[str]:
         rows = self._conn.execute("SELECT task_id FROM task_states ORDER BY updated_at DESC").fetchall()
         return [r[0] for r in rows]
 
     def list_states_with_data(self, persona: str = None, status: str = None,
                               mode: str = None, interaction_mode: str = None,
-                              limit: int = 50, offset: int = 0) -> Dict[str, Any]:
+                              limit: int = 50, offset: int = 0) -> dict[str, Any]:
         rows = self._conn.execute(
             "SELECT task_id, state_json, updated_at FROM task_states ORDER BY updated_at DESC"
         ).fetchall()
@@ -82,7 +83,7 @@ class StateManager:
                 count += 1
         return count
 
-    def update_state(self, task_id: str, updates: Dict[str, Any]) -> None:
+    def update_state(self, task_id: str, updates: dict[str, Any]) -> None:
         current = self.load_state(task_id) or {}
         current.update(updates)
         self.save_state(task_id, current)

@@ -19,7 +19,7 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, model_validator
@@ -99,16 +99,16 @@ class CapabilityProfile(BaseModel):
         default_factory=HarnessFitScore, description="Harness 契合度评分"
     )
     created_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="创建时间 ISO 8601",
     )
     updated_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="最后更新时间 ISO 8601",
     )
 
     @model_validator(mode="after")
-    def _validate_blind_spots_recorded(self) -> "CapabilityProfile":
+    def _validate_blind_spots_recorded(self) -> CapabilityProfile:
         """F001 AC-3：盲点必须写入（验证空 blind_spots 列表会报错）。
 
         能力画像不是简历——必须写盲点。空盲点列表意味着画像不完整。
@@ -121,7 +121,7 @@ class CapabilityProfile(BaseModel):
 
     # ── 盲点冲突检测 ──────────────────────────────────────────────────
 
-    def has_blind_spot_conflict(self, other: "CapabilityProfile") -> bool:
+    def has_blind_spot_conflict(self, other: CapabilityProfile) -> bool:
         """检测与另一个Forgekin的盲点冲突。
 
         冲突定义（ADR 004 §5）：
@@ -154,7 +154,7 @@ class CapabilityProfile(BaseModel):
 
     # ── Gap 分析 ─────────────────────────────────────────────────────
 
-    def gap_analysis(self, task_profile: "TaskProfile") -> "GapReport":
+    def gap_analysis(self, task_profile: TaskProfile) -> GapReport:
         """任务画像 × 能力画像 gap 分析。
 
         委托给 ProfileAnalyzer.compute_gap 执行实际分析逻辑（组合优于继承）。

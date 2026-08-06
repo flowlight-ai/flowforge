@@ -13,10 +13,10 @@ License: MIT
 import asyncio
 import time
 from collections import deque
-from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -113,11 +113,11 @@ class _SlidingWindowCounter:
         self._window = window_seconds
         self._entries: deque[tuple[float, int]] = deque()
 
-    def add(self, value: int, ts: Optional[float] = None) -> None:
+    def add(self, value: int, ts: float | None = None) -> None:
         ts = ts or time.time()
         self._entries.append((ts, value))
 
-    def current(self, ts: Optional[float] = None) -> int:
+    def current(self, ts: float | None = None) -> int:
         ts = ts or time.time()
         cutoff = ts - self._window
         while self._entries and self._entries[0][0] < cutoff:
@@ -138,19 +138,19 @@ class ProviderQuotaManager:
     entry there, its quotas default to unlimited (limit == 0).
     """
 
-    def __init__(self, quotas_config: Optional[Dict[str, Any]] = None) -> None:
-        self._quotas: Dict[str, QuotaConfig] = {}
-        self._tpm_counters: Dict[str, _SlidingWindowCounter] = {}
-        self._rpm_counters: Dict[str, _SlidingWindowCounter] = {}
-        self._daily_costs: Dict[str, float] = {}
-        self._daily_dates: Dict[str, str] = {}
-        self._monthly_costs: Dict[str, float] = {}
+    def __init__(self, quotas_config: dict[str, Any] | None = None) -> None:
+        self._quotas: dict[str, QuotaConfig] = {}
+        self._tpm_counters: dict[str, _SlidingWindowCounter] = {}
+        self._rpm_counters: dict[str, _SlidingWindowCounter] = {}
+        self._daily_costs: dict[str, float] = {}
+        self._daily_dates: dict[str, str] = {}
+        self._monthly_costs: dict[str, float] = {}
         self._lock = asyncio.Lock()
 
         if quotas_config:
             self._load_config(quotas_config)
 
-    def _load_config(self, config: Dict[str, Any]) -> None:
+    def _load_config(self, config: dict[str, Any]) -> None:
         for provider, quota_dict in config.items():
             self._quotas[provider] = QuotaConfig(**quota_dict)
             self._tpm_counters[provider] = _SlidingWindowCounter(window_seconds=60.0)
@@ -162,7 +162,7 @@ class ProviderQuotaManager:
             f"ProviderQuotaManager loaded {len(self._quotas)} provider quotas"
         )
 
-    def load_from_config(self, quotas_config: Dict[str, Any]) -> None:
+    def load_from_config(self, quotas_config: dict[str, Any]) -> None:
         """Public entry point for (re)loading quota configuration."""
         self._load_config(quotas_config)
 
@@ -243,10 +243,10 @@ class ProviderQuotaManager:
 
             return True
 
-    async def get_usage_report(self) -> Dict[str, Any]:
+    async def get_usage_report(self) -> dict[str, Any]:
         """Return a usage report for all tracked providers."""
         async with self._lock:
-            providers: Dict[str, Any] = {}
+            providers: dict[str, Any] = {}
             for provider in self._quotas:
                 self._ensure_provider(provider)
                 quota = self._quotas[provider]
@@ -269,7 +269,7 @@ class ProviderQuotaManager:
                 providers[provider]["quota"] = quota.model_dump()
 
             return {
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
                 "providers": providers,
             }
 
@@ -314,7 +314,7 @@ class ModelQuotaManager:
         if quota.model not in self._monthly_cost:
             self._monthly_cost[quota.model] = 0.0
 
-    def check_quota(self, model: str, estimated_tokens: int = 0) -> Tuple[bool, str]:
+    def check_quota(self, model: str, estimated_tokens: int = 0) -> tuple[bool, str]:
         """检查是否还有配额。
 
         Returns:
@@ -393,11 +393,11 @@ class ModelQuotaManager:
 # Singleton
 # ---------------------------------------------------------------------------
 
-_quota_manager_instance: Optional[ProviderQuotaManager] = None
+_quota_manager_instance: ProviderQuotaManager | None = None
 
 
 def get_provider_quota_manager(
-    quotas_config: Optional[Dict[str, Any]] = None,
+    quotas_config: dict[str, Any] | None = None,
 ) -> ProviderQuotaManager:
     """Return the singleton ProviderQuotaManager instance."""
     global _quota_manager_instance

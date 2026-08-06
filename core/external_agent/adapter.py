@@ -21,8 +21,9 @@ License: MIT
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -62,9 +63,9 @@ class ExternalAgentResult(BaseModel):
     capability_contribution: dict[str, Any] = Field(
         default_factory=dict, description="能力画像贡献（EX-010）"
     )
-    error: Optional[str] = Field(default=None, description="错误信息")
+    error: str | None = Field(default=None, description="错误信息")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="调用完成时间戳",
     )
 
@@ -113,7 +114,7 @@ class ExternalAgentAdapter(ABC):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: Optional[SandboxConfig] = None,
+        sandbox: SandboxConfig | None = None,
     ) -> ExternalAgentResult:
         """同步调用三方 Agent 完成任务。
 
@@ -132,7 +133,7 @@ class ExternalAgentAdapter(ABC):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: Optional[SandboxConfig] = None,
+        sandbox: SandboxConfig | None = None,
     ) -> AsyncIterator[str]:
         """流式调用三方 Agent（EX-009 流式语义）。
 
@@ -170,7 +171,7 @@ class ExternalAgentAdapter(ABC):
     def prepare_sandbox(
         self,
         worktree_path: str,
-        network_allowlist: Optional[list[str]] = None,
+        network_allowlist: list[str] | None = None,
     ) -> SandboxConfig:
         """准备 sandbox 配置（host-owned，CL-015）。
 

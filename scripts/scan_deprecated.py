@@ -17,8 +17,6 @@ import ast
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-
 
 # Root-level harness modules (the v6.0 merged implementations)
 ROOT_MODULES = {
@@ -64,7 +62,7 @@ def get_project_root() -> Path:
     return Path.cwd()
 
 
-def check_import_references(project_root: Path, module_path: str) -> List[str]:
+def check_import_references(project_root: Path, module_path: str) -> list[str]:
     """Check if a module is imported by any other file in the project.
 
     Returns a list of files that import from this module.
@@ -107,7 +105,7 @@ def check_import_references(project_root: Path, module_path: str) -> List[str]:
 
 def classify_file(
     project_root: Path, rel_path: str
-) -> Tuple[str, Optional[str], List[str]]:
+) -> tuple[str, str | None, list[str]]:
     """Classify a file as deprecated/new/init.
 
     Returns:
@@ -198,7 +196,7 @@ def main(delete: bool = False) -> None:
         if safe_referrers:
             print(f"    External imports: {', '.join(safe_referrers)}")
         else:
-            print(f"    External imports: (none — only __init__.py refs)")
+            print("    External imports: (none — only __init__.py refs)")
 
     print(f"\n  Total duplicate code: {total_dup_size:,} bytes ({total_dup_size // 1024} KB)")
 

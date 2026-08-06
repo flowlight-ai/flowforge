@@ -6,11 +6,10 @@
 """
 
 import asyncio
-import hashlib
 import random
 import re
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 
@@ -23,7 +22,7 @@ class HumanBehaviorSimulator:
     所有方法均为 async，需在 Playwright page 上下文中调用。
     """
 
-    def __init__(self, profile: Optional[Dict[str, Any]] = None):
+    def __init__(self, profile: dict[str, Any] | None = None):
         self._profile = profile or {}
 
     async def random_delay(self, min_s: float = 0.5, max_s: float = 2.0) -> None:
@@ -180,7 +179,7 @@ class AntiDetectionAdvisor:
 
     def analyze_page_changes(
         self, before_html: str, after_html: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """分析页面 DOM 变更.
 
         Args:
@@ -194,7 +193,7 @@ class AntiDetectionAdvisor:
             f"analyze_page_changes: enter before_len={len(before_html)} "
             f"after_len={len(after_html)}"
         )
-        changes: List[SelectorChange] = []
+        changes: list[SelectorChange] = []
 
         # 提取所有 id 和 class 属性
         before_attrs = self._extract_attributes(before_html)
@@ -260,8 +259,8 @@ class AntiDetectionAdvisor:
         return {"changes": changes, "summary": summary}
 
     def suggest_selector_updates(
-        self, changes: List[SelectorChange]
-    ) -> List[SelectorUpdateSuggestion]:
+        self, changes: list[SelectorChange]
+    ) -> list[SelectorUpdateSuggestion]:
         """根据 DOM 变更建议选择器更新.
 
         Args:
@@ -273,7 +272,7 @@ class AntiDetectionAdvisor:
         logger.debug(
             f"suggest_selector_updates: enter changes_count={len(changes)}"
         )
-        suggestions: List[SelectorUpdateSuggestion] = []
+        suggestions: list[SelectorUpdateSuggestion] = []
 
         for change in changes:
             if change.change_type == "removed":
@@ -284,7 +283,7 @@ class AntiDetectionAdvisor:
                         SelectorUpdateSuggestion(
                             old_selector=change.selector,
                             new_selector=similar,
-                            reason=f"原选择器已删除，找到相似选择器替代",
+                            reason="原选择器已删除，找到相似选择器替代",
                             confidence=0.6,
                         )
                     )
@@ -313,7 +312,7 @@ class AntiDetectionAdvisor:
                     SelectorUpdateSuggestion(
                         old_selector=change.selector,
                         new_selector=change.new_value,
-                        reason=f"选择器属性已修改",
+                        reason="选择器属性已修改",
                         confidence=change.confidence,
                     )
                 )
@@ -331,8 +330,8 @@ class AntiDetectionAdvisor:
             )
         else:
             logger.info(
-                f"suggest_selector_updates: generated 0 suggestions "
-                f"(no actionable changes)"
+                "suggest_selector_updates: generated 0 suggestions "
+                "(no actionable changes)"
             )
         return suggestions
 
@@ -361,7 +360,7 @@ class AntiDetectionAdvisor:
             )
             return False
 
-    def _extract_attributes(self, html: str) -> Dict[str, str]:
+    def _extract_attributes(self, html: str) -> dict[str, str]:
         """从 HTML 中提取 id 和 class 属性."""
         attrs = {}
 
@@ -378,8 +377,8 @@ class AntiDetectionAdvisor:
         return attrs
 
     def _find_similar_selector(
-        self, removed_selector: str, changes: List[SelectorChange]
-    ) -> Optional[str]:
+        self, removed_selector: str, changes: list[SelectorChange]
+    ) -> str | None:
         """在新增的选择器中找相似的."""
         for change in changes:
             if change.change_type == "added":

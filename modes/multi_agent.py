@@ -1,17 +1,16 @@
 import asyncio
 import json
 import time
-from typing import Dict, List, Optional, Any
 
+from flowforge.core.base_agent import AgentInput, BaseAgent
 from flowforge.core.base_mode_executor import BaseModeExecutor
-from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
-from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
+from flowforge.core.base_tool import ToolInput
+from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
-from flowforge.core.prompt_manager import get_prompt
-from flowforge.tools.registry import ToolRegistry
-from flowforge.memory.task_board import TaskBoard
 from flowforge.memory.mailbox import Mailbox
+from flowforge.memory.task_board import TaskBoard
+from flowforge.tools.registry import ToolRegistry
 
 logger = get_logger("multi_agent_executor")
 
@@ -122,7 +121,7 @@ class SwarmCoordinator:
         self.task_board = task_board
         self.mailbox = mailbox
         self.config = config
-        self._worker_heartbeats: Dict[str, float] = {}
+        self._worker_heartbeats: dict[str, float] = {}
 
     async def monitor(self, ctx: TaskContext):
         while True:
@@ -155,7 +154,7 @@ class MultiAgentExecutor(BaseModeExecutor):
     mode_name = "multi_agent"
     capabilities = ["collaboration"]
 
-    def __init__(self, task_board: Optional[TaskBoard] = None, mailbox: Optional[Mailbox] = None):
+    def __init__(self, task_board: TaskBoard | None = None, mailbox: Mailbox | None = None):
         self.task_board = task_board
         self.mailbox = mailbox
         self.max_idle_rounds = 3
@@ -330,7 +329,7 @@ class MultiAgentExecutor(BaseModeExecutor):
 
         return await self._aggregate_results(lead_agent, ctx)
 
-    async def _create_task_board(self, ctx: TaskContext, lead) -> List[dict]:
+    async def _create_task_board(self, ctx: TaskContext, lead) -> list[dict]:
         if not ctx.tools:
             return []
         task_desc = ctx.input_data.get("task", "")

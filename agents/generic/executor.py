@@ -1,5 +1,5 @@
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
-from typing import Optional
+
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
 
 
 class ExecutorAgent(GenericAgent):
@@ -7,7 +7,7 @@ class ExecutorAgent(GenericAgent):
     description = "计划执行：按计划逐步执行每个步骤"
     default_mode = "plan_execute"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         plan = input.params.get("plan", {})
         steps = plan.get("steps", []) if isinstance(plan, dict) else []
         current_step_index = input.params.get("current_step_index", 0)

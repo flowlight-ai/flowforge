@@ -8,7 +8,8 @@ The verifier is invoked in the Verify step of the loop. It:
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 from flowforge.loop.state import LoopState

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import uuid
 from collections import deque
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from flowforge.core.tracing import get_logger
@@ -96,7 +96,7 @@ class ScopeGuard:
                 return signal
 
         # 3. Frequency breach
-        self._recent_signals.append((datetime.now(timezone.utc), action_description))
+        self._recent_signals.append((datetime.now(UTC), action_description))
         if self._count_recent() >= self.frequency_threshold:
             signal = ScopeGuardSignal(
                 signal_id=f"sg-{uuid.uuid4().hex[:12]}",
@@ -128,7 +128,7 @@ class ScopeGuard:
         return None
 
     def _count_recent(self) -> int:
-        cutoff = datetime.now(timezone.utc) - self.frequency_window
+        cutoff = datetime.now(UTC) - self.frequency_window
         while self._recent_signals and self._recent_signals[0][0] < cutoff:
             self._recent_signals.popleft()
         return len(self._recent_signals)

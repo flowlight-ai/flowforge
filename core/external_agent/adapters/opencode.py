@@ -19,14 +19,14 @@ License: MIT
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from flowforge.core.external_agent.adapter import (
     ExternalAgentAdapter,
     ExternalAgentResult,
 )
 from flowforge.core.external_agent.host_injection import SandboxConfig
-from flowforge.core.external_agent.manifest import AgentProviderManifest
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("external_agent.adapter.opencode")
@@ -75,7 +75,7 @@ class OpenCodeAdapter(ExternalAgentAdapter):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: Optional[SandboxConfig] = None,
+        sandbox: SandboxConfig | None = None,
     ) -> ExternalAgentResult:
         """调用 OpenCode 完成任务。
 
@@ -120,7 +120,7 @@ class OpenCodeAdapter(ExternalAgentAdapter):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: Optional[SandboxConfig] = None,
+        sandbox: SandboxConfig | None = None,
     ) -> AsyncIterator[str]:
         """流式调用 OpenCode（EX-009 流式语义）。"""
         logger.info(

@@ -30,9 +30,8 @@ import os
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 # 确保能导入 flowforge
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -47,7 +46,6 @@ if sys.platform == "win32":
 
 from flowforge.evolution.engine import ForgeMindEngine
 from flowforge.evolution.self_dev_doc import SelfDevDocLoop
-
 
 # ══════════════════════════════════════════════════════════════════
 # §1 配置日志输出（同时输出到控制台和文件）
@@ -82,18 +80,18 @@ class FakeTraeClient:
     后续调用：返回默认响应
     """
 
-    def __init__(self, responses: List[Dict[str, Any]] | None = None) -> None:
+    def __init__(self, responses: list[dict[str, Any]] | None = None) -> None:
         self._responses = list(responses or [])
         self.call_count = 0
-        self.calls: List[Dict[str, Any]] = []
+        self.calls: list[dict[str, Any]] = []
 
     async def chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         *,
         context: Any = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         self.call_count += 1
         self.calls.append({"messages": messages, "context": context, "kwargs": kwargs})
         if self._responses:
@@ -145,7 +143,7 @@ def build_mock_project(root: Path) -> None:
         "- AC2: 通过 LLM 审核\n",
         encoding="utf-8",
     )
-    print(f"[Setup] 创建: docs/features/F100-test.md")
+    print("[Setup] 创建: docs/features/F100-test.md")
 
     # docs/stale_doc.md（过期文档）
     stale_path = root / "docs" / "stale_doc.md"
@@ -156,30 +154,30 @@ def build_mock_project(root: Path) -> None:
     # 修改 mtime 为 100 天前
     old_time = time.time() - 100 * 86400
     os.utime(stale_path, (old_time, old_time))
-    print(f"[Setup] 创建: docs/stale_doc.md (mtime=100天前, 触发过期检测)")
+    print("[Setup] 创建: docs/stale_doc.md (mtime=100天前, 触发过期检测)")
 
     # docs/no_frontmatter.md（无 front-matter）
     (root / "docs" / "no_frontmatter.md").write_text(
         "### 缺少 front-matter 的文档\n\n这个文档没有 YAML 头部.\n",
         encoding="utf-8",
     )
-    print(f"[Setup] 创建: docs/no_frontmatter.md (无 front-matter, 触发格式问题)")
+    print("[Setup] 创建: docs/no_frontmatter.md (无 front-matter, 触发格式问题)")
 
     # README.md
     (root / "README.md").write_text(
         "# Mock Project\n\n这是一个用于演示的 Mock 项目.\n",
         encoding="utf-8",
     )
-    print(f"[Setup] 创建: README.md")
+    print("[Setup] 创建: README.md")
 
     # VISION.md（受保护文件）
     (root / "VISION.md").write_text(
         "# 项目愿景\n\n成为最强 AI Agent 智能体平台.\n",
         encoding="utf-8",
     )
-    print(f"[Setup] 创建: VISION.md (受 Scope Guard 保护)")
+    print("[Setup] 创建: VISION.md (受 Scope Guard 保护)")
 
-    print(f"[Setup] Mock 项目构造完成\n")
+    print("[Setup] Mock 项目构造完成\n")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -418,16 +416,16 @@ async def scenario_3_scope_guard_blocks(temp_project: Path) -> None:
     vision_file = temp_project / "VISION.md"
     content = vision_file.read_text(encoding="utf-8")
     if "被篡改" in content:
-        print(f"\n[Verify] ❌ VISION.md 被篡改！Scope Guard 失效")
+        print("\n[Verify] ❌ VISION.md 被篡改！Scope Guard 失效")
     else:
-        print(f"\n[Verify] ✅ VISION.md 未被修改（Scope Guard 工作正常）")
+        print("\n[Verify] ✅ VISION.md 未被修改（Scope Guard 工作正常）")
         print(f"[Verify]    内容仍为: {content.strip()[:50]}...")
 
     # 验证 summary
     if result["summary"]["failed"] >= 1 and result["summary"]["passed"] == 0:
         print(f"[Verify] ✅ 任务被阻止（failed={result['summary']['failed']}）")
     else:
-        print(f"[Verify] ❌ 任务未被正确阻止")
+        print("[Verify] ❌ 任务未被正确阻止")
 
 
 async def scenario_4_awakening_stage_gate(temp_project: Path) -> None:
@@ -450,7 +448,7 @@ async def scenario_4_awakening_stage_gate(temp_project: Path) -> None:
     print("[Run] 期望：抛出 AwakeningStageBlockedError")
     try:
         await engine.run_self_dev_loop("doc", {})
-        print(f"\n[Verify] ❌ 未抛出异常，门控失效")
+        print("\n[Verify] ❌ 未抛出异常，门控失效")
     except Exception as e:
         print(f"\n[Verify] ✅ 抛出异常: {type(e).__name__}: {e}")
 

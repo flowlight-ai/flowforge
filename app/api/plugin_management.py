@@ -1,6 +1,7 @@
 """Plugin management API endpoints — hot load, unload, reload, pause, resume."""
 
 from fastapi import APIRouter, HTTPException
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("api.plugin_management")

@@ -14,9 +14,9 @@ instruction; quoted or historical mentions do NOT trigger.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterable
 
 from flowforge.core.tracing import get_logger
 

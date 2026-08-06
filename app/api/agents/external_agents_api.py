@@ -25,7 +25,6 @@ from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import get_logger
 from flowforge.forgemind.external_agents import (
-    ExternalAgentAdapter,
     ExternalAgentError,
     ExternalAgentKind,
 )
@@ -149,8 +148,9 @@ async def list_external_agents() -> dict[str, Any]:
     # list_builtin_forgekins() returns list[dict] with {"id": "wenxin", ...};
     # extract the "id" field rather than treating each item as a slug string.
     try:
-        from flowforge.forgemind.forgekins.roster import BUILTIN_FORGEKINS
         import yaml
+
+        from flowforge.forgemind.forgekins.roster import BUILTIN_FORGEKINS
         for slug in BUILTIN_FORGEKINS:
             cfg_path = (
                 bridge._config_dir / "forgekins" / f"{slug}.yaml"

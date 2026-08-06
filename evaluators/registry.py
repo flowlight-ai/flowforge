@@ -1,7 +1,7 @@
 """Evaluator Registry — 评估器配置注册中心，支持从 config/evaluators/ 自动加载 YAML 配置。"""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field
@@ -86,13 +86,13 @@ class EvaluatorRegistry:
             self._instances[name] = evaluator
         logger.info(f"EvaluatorRegistry: registered evaluator '{name}'")
 
-    def get(self, name: str) -> Optional[EvaluatorConfig | Any]:
+    def get(self, name: str) -> EvaluatorConfig | Any | None:
         """获取评估器配置或实例."""
         if name in self._instances:
             return self._instances[name]
         return self._configs.get(name)
 
-    def get_config(self, name: str) -> Optional[EvaluatorConfig]:
+    def get_config(self, name: str) -> EvaluatorConfig | None:
         """获取评估器配置."""
         return self._configs.get(name)
 

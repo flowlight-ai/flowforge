@@ -6,7 +6,7 @@ lamp spirit carries lighting/ambient capabilities and observes the workspace.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flowforge.forgemind.forgekin import (
     BlindSpot,
@@ -27,7 +27,7 @@ def build_desk_lamp(name: str = "老灯") -> Forgekin:
             name="ambient_lighting",
             proficiency=0.95,
             evidence=["adjusts brightness by time-of-day", "remembers CVO preference"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_capability(
@@ -35,7 +35,7 @@ def build_desk_lamp(name: str = "老灯") -> Forgekin:
             name="workspace_observation",
             proficiency=0.6,
             evidence=["detects CVO presence via power draw patterns"],
-            last_assessed_at=datetime.now(timezone.utc),
+            last_assessed_at=datetime.now(UTC),
         )
     )
     fk.add_blind_spot(

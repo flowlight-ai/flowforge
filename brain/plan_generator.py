@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -22,10 +22,10 @@ class PlanStep(BaseModel):
     name: str
     task: str
     agent: str = "executor"
-    tool: Optional[str] = None
-    mode: Optional[str] = None
+    tool: str | None = None
+    mode: str | None = None
     status: str = "pending"          # pending | running | completed | failed | skipped
-    result_summary: Optional[str] = None
+    result_summary: str | None = None
     dependencies: list[int] = []     # 依赖步骤的索引
 
 
@@ -35,8 +35,8 @@ class PlanDelta(BaseModel):
     steps_modified: dict[int, PlanStep] = {}   # index → updated step
     steps_completed: list[int] = []            # 标记为完成的步骤索引
     steps_removed: list[int] = []              # 移除的步骤索引
-    title_updated: Optional[str] = None
-    description_updated: Optional[str] = None
+    title_updated: str | None = None
+    description_updated: str | None = None
     reasoning: str = ""                        # LLM 的更新推理说明
 
 
@@ -70,7 +70,7 @@ class PlanGenerator:
                 role = msg.get("role", "user")
                 content = msg.get("content", "")
                 context_lines.append(f"  [{role}] {content[:200]}")
-            context_block = f"\n对话上下文:\n" + "\n".join(context_lines)
+            context_block = "\n对话上下文:\n" + "\n".join(context_lines)
 
         prompt = get_prompt("brain.plan_generator.initial_plan",
                             intent=intent, mode=mode, persona=persona,

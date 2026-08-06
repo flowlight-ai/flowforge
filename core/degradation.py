@@ -12,9 +12,10 @@ import asyncio
 import inspect
 import logging
 import time
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -34,7 +35,7 @@ class DegradationActionType(str, Enum):
 @dataclass
 class DegradationAction:
     action_type: DegradationActionType
-    target: Optional[str] = None
+    target: str | None = None
     reason: str = ""
     urgency: str = "medium"
 
@@ -44,11 +45,11 @@ class DegradeToHumanEvent(BaseModel):
     component: str = ""
     original_error: str = ""
     degradation_reason: str = ""
-    context_snapshot: Dict[str, Any] = {}
+    context_snapshot: dict[str, Any] = {}
     suggested_action: str = ""
     urgency: str = "medium"
 
-    def to_event_data(self) -> Dict[str, Any]:
+    def to_event_data(self) -> dict[str, Any]:
         return {"event_type": "task.degrade_to_human", "data": self.model_dump(), "metadata": {"requires_notification": True}}
 
 
@@ -67,9 +68,9 @@ class DegradationDecisionTree:
         self._llm_router = llm_router
         self._tool_registry = tool_registry
         self._event_bus = event_bus
-        self._degradation_history: List[Dict[str, Any]] = []
+        self._degradation_history: list[dict[str, Any]] = []
 
-    async def decide(self, component: str, error: Exception, context: Optional[Dict[str, Any]] = None) -> DegradationAction:
+    async def decide(self, component: str, error: Exception, context: dict[str, Any] | None = None) -> DegradationAction:
         error_type = type(error).__name__
         error_msg = str(error)
         logger.info(f"DegradationDecision decide: component={component}, error_type={error_type}, error_msg={error_msg[:100]}")
@@ -84,7 +85,7 @@ class DegradationDecisionTree:
         logger.warning(f"Degradation: component={component}, error={error_type}, action={action.action_type.value}, target={action.target}")
         return action
 
-    async def _evaluate(self, component: str, error: Exception, error_type: str, error_msg: str, context: Optional[Dict[str, Any]]) -> DegradationAction:
+    async def _evaluate(self, component: str, error: Exception, error_type: str, error_msg: str, context: dict[str, Any] | None) -> DegradationAction:
         if self._is_llm_error(error_type, error_msg):
             logger.debug(f"DegradationDecision _evaluate: LLM error matched, has_router={self._llm_router is not None}, component={component}")
             if self._llm_router:
@@ -143,7 +144,7 @@ class DegradationDecisionTree:
         logger.debug(f"DegradationDecision _is_tool_error: error_type={error_type}, matched={matched}")
         return matched
 
-    async def _emit_degrade_to_human(self, component: str, error: Exception, action: DegradationAction, context: Optional[Dict[str, Any]]) -> None:
+    async def _emit_degrade_to_human(self, component: str, error: Exception, action: DegradationAction, context: dict[str, Any] | None) -> None:
         event = DegradeToHumanEvent(
             task_id=context.get("task_id", "") if context else "",
             component=component, original_error=str(error)[:500],
@@ -160,7 +161,7 @@ class DegradationDecisionTree:
         else:
             logger.warning(f"DegradationDecision _emit_degrade_to_human: no event_bus configured, event not emitted, component={component}")
 
-    def get_history(self, component: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_history(self, component: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         logger.debug(f"DegradationDecision get_history: component={component}, limit={limit}")
         history = self._degradation_history
         if component:
@@ -198,10 +199,10 @@ class ResilienceResult(BaseModel):
     success: bool
     value: Any = None
     provider_used: str = ""
-    attempts: List[Dict[str, Any]] = Field(default_factory=list)
+    attempts: list[dict[str, Any]] = Field(default_factory=list)
     total_duration_seconds: float = 0.0
     fallback_used: bool = False
-    degradation_action: Optional[str] = None
+    degradation_action: str | None = None
 
 
 class AllProvidersFailedError(Exception):
@@ -213,10 +214,10 @@ class AllProvidersFailedError(Exception):
     def __init__(
         self,
         message: str,
-        attempts: Optional[List[AttemptRecord]] = None,
+        attempts: list[AttemptRecord] | None = None,
     ) -> None:
         super().__init__(message)
-        self.attempts: List[AttemptRecord] = attempts or []
+        self.attempts: list[AttemptRecord] = attempts or []
 
 
 class ResilienceExecutor:
@@ -268,7 +269,7 @@ class ResilienceExecutor:
     def __init__(
         self,
         primary_provider: str,
-        backup_providers: List[str],
+        backup_providers: list[str],
         provider_quota_manager: Any = None,
         metrics_collector: Any = None,
         max_retries: int = 3,
@@ -282,7 +283,7 @@ class ResilienceExecutor:
             raise ValueError("base_retry_delay must be >= 0")
 
         self.primary_provider: str = primary_provider
-        self.backup_providers: List[str] = list(backup_providers)
+        self.backup_providers: list[str] = list(backup_providers)
         self._quota_manager: Any = provider_quota_manager
         self._metrics: Any = metrics_collector
         self.max_retries: int = max_retries
@@ -293,7 +294,7 @@ class ResilienceExecutor:
         self._total_successes: int = 0
         self._total_failures: int = 0
         self._degradation_count: int = 0
-        self._per_provider_stats: Dict[str, Dict[str, int]] = {}
+        self._per_provider_stats: dict[str, dict[str, int]] = {}
 
     # ------------------------------------------------------------------
     # 主入口
@@ -327,12 +328,12 @@ class ResilienceExecutor:
         # 提取 resilience 专用参数（不传递给 operation）
         on_all_fail: str = kwargs.pop("on_all_fail", "raise")
         default_value: Any = kwargs.pop("default_value", None)
-        quality_check_fn: Optional[Callable[[Any], bool]] = kwargs.pop(
+        quality_check_fn: Callable[[Any], bool] | None = kwargs.pop(
             "quality_check_fn", None
         )
 
-        all_attempts: List[AttemptRecord] = []
-        providers: List[str] = [self.primary_provider] + list(self.backup_providers)
+        all_attempts: list[AttemptRecord] = []
+        providers: list[str] = [self.primary_provider] + list(self.backup_providers)
 
         for provider in providers:
             # 配额检查：超限则直接跳过该 provider
@@ -461,7 +462,7 @@ class ResilienceExecutor:
         operation: Callable[..., Any],
         args: tuple,
         kwargs: dict,
-        quality_check_fn: Optional[Callable[[Any], bool]] = None,
+        quality_check_fn: Callable[[Any], bool] | None = None,
     ) -> AttemptRecord:
         """单 provider 尝试，包含指数退避重试。
 
@@ -479,7 +480,7 @@ class ResilienceExecutor:
         success: bool = False
 
         # 注入 provider 关键字参数
-        op_kwargs: Dict[str, Any] = dict(kwargs)
+        op_kwargs: dict[str, Any] = dict(kwargs)
         op_kwargs["provider"] = provider
 
         for attempt in range(self.max_retries):
@@ -645,7 +646,7 @@ class ResilienceExecutor:
 
     async def _degrade_to_human(
         self,
-        attempts: List[AttemptRecord],
+        attempts: list[AttemptRecord],
         context: dict,
     ) -> str:
         """调用 DegradationDecisionTree 决定降级动作。
@@ -687,7 +688,7 @@ class ResilienceExecutor:
     # 工具方法
     # ------------------------------------------------------------------
 
-    def _attempt_to_dict(self, record: AttemptRecord) -> Dict[str, Any]:
+    def _attempt_to_dict(self, record: AttemptRecord) -> dict[str, Any]:
         """AttemptRecord 序列化为 dict。"""
         return {
             "provider": record.provider,
@@ -735,7 +736,7 @@ class ResilienceExecutor:
                 f"ResilienceExecutor: metrics record error: {e}"
             )
 
-    def get_resilience_status(self) -> Dict[str, Any]:
+    def get_resilience_status(self) -> dict[str, Any]:
         """返回成功率、降级次数等统计。
 
         Returns:

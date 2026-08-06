@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -31,7 +31,7 @@ class ModerationResult(BaseModel):
     category: str = ""
     severity: str = "none"  # none / low / medium / high / critical
     reason: str = ""
-    details: Dict[str, Any] = {}
+    details: dict[str, Any] = {}
     action: str = "allow"  # allow / warn / block / review
 
 
@@ -62,11 +62,11 @@ class ContentModerationLayer:
 
     def __init__(
         self,
-        rules: Optional[List[ModerationRule]] = None,
+        rules: list[ModerationRule] | None = None,
         llm_client: Any = None,
         platform_moderation_fn: Any = None,
     ):
-        self._rules: List[ModerationRule] = rules or []
+        self._rules: list[ModerationRule] = rules or []
         self._llm_client = llm_client
         self._platform_moderation_fn = platform_moderation_fn
         self._default_rules = self._build_default_rules()
@@ -74,7 +74,7 @@ class ContentModerationLayer:
     def add_rule(self, rule: ModerationRule) -> None:
         self._rules.append(rule)
 
-    async def moderate(self, content: str, context: Optional[Dict[str, Any]] = None) -> ModerationResult:
+    async def moderate(self, content: str, context: dict[str, Any] | None = None) -> ModerationResult:
         """执行五层审核链"""
         if not content:
             return ModerationResult(passed=True, level="none", action="allow")
@@ -214,7 +214,7 @@ class ContentModerationLayer:
             logger.warning(f"Platform moderation failed: {e}")
             return ModerationResult(passed=True, level="l5_platform", action="allow", reason="Platform check skipped")
 
-    def _build_default_rules(self) -> List[ModerationRule]:
+    def _build_default_rules(self) -> list[ModerationRule]:
         """构建默认审核规则"""
         return [
             # L1 关键词

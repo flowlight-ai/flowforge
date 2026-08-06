@@ -48,10 +48,10 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -134,16 +134,16 @@ class SwarmTask(BaseModel):
     title: str
     description: str
     required_capabilities: list[str]
-    preferred_agent_id: Optional[str] = None
-    assigned_agent_id: Optional[str] = None
+    preferred_agent_id: str | None = None
+    assigned_agent_id: str | None = None
     status: SwarmTaskStatus = SwarmTaskStatus.PENDING
     priority: str = "normal"
     context: dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    assigned_at: Optional[datetime] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    heartbeat_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    assigned_at: datetime | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    heartbeat_at: datetime | None = None
     result: dict[str, Any] = Field(default_factory=dict)
     failure_reason: str = ""
     retry_count: int = 0
@@ -162,8 +162,8 @@ class AgentHeartbeat(BaseModel):
     """
 
     agent_id: str
-    task_id: Optional[str] = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    task_id: str | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     status: str = "idle"
     progress: float = 0.0
 
@@ -187,8 +187,8 @@ class SwarmDispatchRecord(BaseModel):
     task_id: str
     agent_id: str
     action: str  # "dispatch" / "reassign" / "complete" / "fail" / "cancel"
-    dispatched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    reassigned_from: Optional[str] = None
+    dispatched_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    reassigned_from: str | None = None
     reason: str = ""
 
 
@@ -230,7 +230,7 @@ class SwarmCoordinator:
     HEARTBEAT_TIMEOUT_SECONDS: float = 30.0  # I4 心跳超时
     MAX_RETRIES: int = 3  # 最大重试次数（I4）
 
-    def __init__(self, config: Optional[dict[str, Any]] = None) -> None:
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         """初始化 SwarmCoordinator.
 
         Args:
@@ -307,7 +307,7 @@ class SwarmCoordinator:
             "agent_id": agent_id,
             "capabilities": list(capabilities),
             "vendor": vendor,
-            "registered_at": datetime.now(timezone.utc),
+            "registered_at": datetime.now(UTC),
         }
         # 初始化 idle 心跳（避免 check_timeouts 误判未注册 agent）
         if agent_id not in self._heartbeats:
@@ -440,7 +440,7 @@ class SwarmCoordinator:
                 old_agent_id = task.assigned_agent_id
                 task.assigned_agent_id = agent_id
                 task.status = SwarmTaskStatus.ASSIGNED
-                task.assigned_at = datetime.now(timezone.utc)
+                task.assigned_at = datetime.now(UTC)
                 # REASSIGNED → ASSIGNED 时保留 retry_count（不重置）
                 # 重置 heartbeat_at 等待新 agent 上报
                 task.heartbeat_at = None
@@ -478,7 +478,7 @@ class SwarmCoordinator:
     async def heartbeat(
         self,
         agent_id: str,
-        task_id: Optional[str] = None,
+        task_id: str | None = None,
         progress: float = 0.0,
         status: str = "busy",
     ) -> None:
@@ -513,7 +513,7 @@ class SwarmCoordinator:
         progress = max(0.0, min(1.0, float(progress)))
 
         async with self._lock:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             self._heartbeats[agent_id] = AgentHeartbeat(
                 agent_id=agent_id,
                 task_id=task_id,
@@ -573,7 +573,7 @@ class SwarmCoordinator:
               - task.assigned_at 距 now() > 30s 且 task.heartbeat_at is None（从未心跳）
         """
         async with self._lock:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             timeout_threshold = now - timedelta(seconds=self._heartbeat_timeout)
 
             reassigned_ids: list[str] = []
@@ -670,7 +670,7 @@ class SwarmCoordinator:
 
     # ── Agent 查找（I3+I5+I6 4 步过滤）────────────────────────
 
-    def _find_capable_agent(self, task: SwarmTask) -> Optional[str]:
+    def _find_capable_agent(self, task: SwarmTask) -> str | None:
         """根据任务需求找到最合适的 agent（I3+I5+I6）.
 
         4 步过滤算法（F049 §2.3.1）：
@@ -749,7 +749,7 @@ class SwarmCoordinator:
 
     def _find_complement_agent(
         self, agent_id: str, missing_capability: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """为 agent 找搭档补齐能力缺口.
 
         Args:
@@ -850,7 +850,7 @@ class SwarmCoordinator:
 
     # ── 状态查询 ────────────────────────────────────────────────
 
-    def get_task_status(self, task_id: str) -> Optional[SwarmTaskStatus]:
+    def get_task_status(self, task_id: str) -> SwarmTaskStatus | None:
         """查询任务状态.
 
         Args:
@@ -862,7 +862,7 @@ class SwarmCoordinator:
         task = self._tasks.get(task_id)
         return task.status if task else None
 
-    def get_task(self, task_id: str) -> Optional[SwarmTask]:
+    def get_task(self, task_id: str) -> SwarmTask | None:
         """查询任务完整对象（含 result / context 等）.
 
         Args:
@@ -883,7 +883,7 @@ class SwarmCoordinator:
             - 仅统计 ASSIGNED / RUNNING 状态的任务
             - 未注册 agent 不出现在结果中
         """
-        workload: dict[str, int] = {aid: 0 for aid in self._agents}
+        workload: dict[str, int] = dict.fromkeys(self._agents, 0)
         for task in self._tasks.values():
             if task.status in (SwarmTaskStatus.ASSIGNED, SwarmTaskStatus.RUNNING):
                 if task.assigned_agent_id and task.assigned_agent_id in workload:
@@ -891,7 +891,7 @@ class SwarmCoordinator:
         return workload
 
     def list_tasks(
-        self, status: Optional[SwarmTaskStatus] = None
+        self, status: SwarmTaskStatus | None = None
     ) -> list[SwarmTask]:
         """列出任务（可选按状态过滤）.
 
@@ -1066,12 +1066,12 @@ class SwarmCoordinator:
 # ──────────────────────────────────────────────────────────────────
 
 
-_swarm_coordinator_singleton: Optional[SwarmCoordinator] = None
+_swarm_coordinator_singleton: SwarmCoordinator | None = None
 _singleton_lock = asyncio.Lock()
 
 
 async def create_swarm_coordinator(
-    config: Optional[dict[str, Any]] = None,
+    config: dict[str, Any] | None = None,
     force_new: bool = False,
 ) -> SwarmCoordinator:
     """创建或获取 SwarmCoordinator 单例（I1 单一调度器）.

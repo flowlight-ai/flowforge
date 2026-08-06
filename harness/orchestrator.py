@@ -8,12 +8,13 @@ When harness is disabled (harness_enabled=False), all hooks are no-ops.
 """
 
 import time
-from typing import Optional, Dict, Any
+from typing import Any
+
 from flowforge.core.tracing import get_logger
 from flowforge.harness.context_engine import ContextEngine
-from flowforge.harness.session_manager import SessionManager
-from flowforge.harness.feedback_loop import FeedbackLoop
 from flowforge.harness.entropy_manager import EntropyManager
+from flowforge.harness.feedback_loop import FeedbackLoop
+from flowforge.harness.session_manager import SessionManager
 
 logger = get_logger("harness.orchestrator")
 
@@ -38,7 +39,7 @@ class HarnessOrchestrator:
         session_manager=None,
         feedback_loop=None,
         entropy_manager=None,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ):
         self.config = config or {}
         self.enabled = self.config.get("enabled", True)

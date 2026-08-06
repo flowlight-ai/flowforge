@@ -24,7 +24,6 @@ from flowforge.core.capability import (
     ToolBoundary,
 )
 
-
 # ---- fixtures ----
 
 _MC_CODER = ModelCapability(

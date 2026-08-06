@@ -19,8 +19,9 @@ License: MIT
 
 import asyncio
 import logging
-from typing import Any, Callable, Dict, List, Optional
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -38,15 +39,15 @@ class EventBus:
 
     def __init__(self):
         """Initialize the EventBus with an empty subscriber map."""
-        self._subscribers: Dict[str, List[tuple]] = {}
+        self._subscribers: dict[str, list[tuple]] = {}
         # Request-response support
-        self._response_handlers: Dict[str, asyncio.Future] = {}
+        self._response_handlers: dict[str, asyncio.Future] = {}
 
     def subscribe(
         self,
         event_type: str,
         callback: Callable,
-        filter: Optional[Callable[[dict], bool]] = None,
+        filter: Callable[[dict], bool] | None = None,
     ):
         """Register a callback for a given event type.
 
@@ -112,7 +113,7 @@ class EventBus:
             "type": event_type,
             "payload": payload,
             "task_id": task_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         self._dispatch(event_type, event)
         self._dispatch('*', event)
@@ -186,6 +187,6 @@ class EventBus:
 
         try:
             return await asyncio.wait_for(future, timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._response_handlers.pop(event_type, None)
             raise
