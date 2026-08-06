@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import asyncio
+import glob
 import os
 import shutil
 import time
@@ -29,6 +30,41 @@ from typing import Any
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.llm.cli_provider")
+
+
+# 常见 CLI 安装目录（Bug 6 修复：进程 PATH 可能缺失这些目录）
+# 实测：contentforge 通过 systemd 启动时 PATH 不含 ~/.npm-global/bin，
+# 而 codex/opencode/claude 等 CLI 均安装在 ~/.npm-global/bin，
+# 导致 is_available() 全部判 False → [CLI 不可用] 无效产出。
+# 兜底目录列表仅作解析候选，实际可执行性仍以文件存在 + X_OK 为准。
+# 可通过环境变量 FLOWFORGE_CLI_EXTRA_PATH（冒号分隔）追加自定义目录。
+CLI_EXTRA_PATH_DIRS = [
+    "~/.npm-global/bin",
+    "~/.local/bin",
+    "~/.opencode/bin",
+    "~/.codex/bin",
+    "~/.volta/bin",
+    "~/.bun/bin",
+    "~/go/bin",
+    "/usr/local/bin",
+    "/opt/homebrew/bin",
+    # nvm 版本化 node bin（如 ~/.nvm/versions/node/v22.9.0/bin）
+    "~/.nvm/versions/node/*/bin",
+]
+
+
+def _expand_extra_path_dirs() -> list[str]:
+    """展开额外 CLI 查找目录（含 ~ 与 glob，支持环境变量扩展）."""
+    dirs: list[str] = []
+    for d in CLI_EXTRA_PATH_DIRS:
+        if "*" in d:
+            dirs.extend(glob.glob(os.path.expanduser(d)))
+        else:
+            dirs.append(os.path.expanduser(d))
+    # 环境变量扩展（冒号分隔，供部署时按机器定制）
+    extra = os.environ.get("FLOWFORGE_CLI_EXTRA_PATH", "")
+    dirs.extend(p for p in extra.split(":") if p)
+    return dirs
 
 
 @dataclass
@@ -136,9 +172,43 @@ class CLILLMProvider:
         self._binary_path: str | None = None
 
     def is_available(self) -> bool:
-        """检查 CLI 二进制是否在 PATH 中."""
+        """检查 CLI 二进制是否可用（PATH + 常见安装目录兜底）.
+
+        修复 Bug：进程 PATH 缺失 CLI 安装目录（如 ~/.npm-global/bin）时，
+        shutil.which 返回 None 导致 CLI 被误判不可用。
+        兜底查找成功后将该目录注入进程 PATH（供后续 subprocess 使用）。
+        """
         self._binary_path = shutil.which(self.config.binary)
-        return self._binary_path is not None
+        if self._binary_path is not None:
+            return True
+
+        # 兜底：遍历常见 CLI 安装目录，找到可执行文件即视为可用
+        for d in _expand_extra_path_dirs():
+            if not os.path.isdir(d):
+                continue
+            candidate = os.path.join(d, self.config.binary)
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                self._binary_path = candidate
+                self._ensure_path(d)
+                logger.info(
+                    "cli_provider binary %s found in fallback dir: %s",
+                    self.config.binary,
+                    d,
+                )
+                return True
+        return False
+
+    def _ensure_path(self, directory: str) -> None:
+        """将 CLI 所在目录注入进程 PATH（进程级，幂等）.
+
+        子进程通过 env={**os.environ, **config.env} 继承进程环境，
+        注入后 subprocess 调用（及 CLI 自身的插件/工具查找）才能生效。
+        """
+        path = os.environ.get("PATH", "")
+        parts = path.split(os.pathsep) if path else []
+        if directory in parts:
+            return
+        os.environ["PATH"] = directory + os.pathsep + path
 
     async def chat(
         self,
