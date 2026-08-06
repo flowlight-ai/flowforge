@@ -970,6 +970,55 @@ class SwarmCoordinator:
         )
         return True
 
+    def fail_task(self, task_id: str, reason: str = "") -> bool:
+        """主动标记任务失败（Bug 5 修复：任务必须有终态）.
+
+        调用场景：agent 上报无效产出 / 执行异常 / 未注册 agent 无法执行时，
+        由执行方主动终结任务，避免任务悬挂在 RUNNING/ASSIGNED 等待超时回收
+        （原实现仅 heartbeat(0.0, "error")，该状态不会终结任务，
+        需等 200s 心跳超时 → reassign → 重试 → 最终 FAILED，最长挂 800+s）。
+
+        Args:
+            task_id: 任务 ID.
+            reason: 失败原因（审计追溯依据，写入 failure_reason）.
+
+        Returns:
+            True = 标记成功，False = 任务不存在或已是终态.
+
+        Note:
+            - 与 cancel_task 一样是同步方法（I2 归档失败不阻断主流程）
+            - 已处于 COMPLETED/FAILED/CANCELLED 的任务不可重复标记
+        """
+        task = self._tasks.get(task_id)
+        if task is None:
+            return False
+        if task.status in (SwarmTaskStatus.COMPLETED, SwarmTaskStatus.FAILED,
+                          SwarmTaskStatus.CANCELLED):
+            return False
+
+        old_agent_id = task.assigned_agent_id
+        task.status = SwarmTaskStatus.FAILED
+        task.failure_reason = reason or "task_failed"
+
+        # I2: 落盘 fail trace
+        record = SwarmDispatchRecord(
+            task_id=task_id,
+            agent_id=old_agent_id or "",
+            action="fail",
+            reason=task.failure_reason,
+        )
+        try:
+            self._archive_record(record)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("task %s fail 归档失败: %s", task_id, exc)
+
+        logger.info(
+            "SwarmCoordinator 任务失败: task=%s reason=%s",
+            task_id,
+            task.failure_reason,
+        )
+        return True
+
     # ── 持续调度循环（永不停止）────────────────────────────────
 
     async def run_continuously(self, interval: float = 5.0) -> None:
