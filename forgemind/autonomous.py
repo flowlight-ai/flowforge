@@ -139,8 +139,16 @@ class AutonomousDaemon:
         self._max_tasks_per_scan = int(
             self._config.get("max_tasks_per_scan", DEFAULT_MAX_TASKS_PER_SCAN)
         )
+        # Bug 1 修复：任务消费循环间隔（默认 5s，与 SwarmCoordinator dispatch 节奏对齐）
+        self._consumer_interval = float(
+            self._config.get("consumer_interval_seconds", 5.0)
+        )
         self._running = False
         self._dispatch_task: Optional[asyncio.Task] = None
+        # Bug 1 修复：后台任务消费循环（持续执行 ASSIGNED 任务）
+        self._consumer_task: Optional[asyncio.Task] = None
+        # 执行器任务追踪集合（防 GC 提前回收，done 时自动移除）
+        self._executor_tasks: set[asyncio.Task] = set()
         # 任务标题 → 最新 task_id 映射（用于状态感知的去重，避免死循环）
         # 替代原 _submitted_titles 集合：原集合永久保留标题，导致已完成/失败任务无法重新提交
         self._title_to_task_id: dict[str, str] = {}
@@ -236,6 +244,15 @@ class AutonomousDaemon:
         )
         logger.info("SwarmCoordinator 后台调度已启动")
 
+        # Bug 1 修复：启动后台任务消费循环（持续执行 ASSIGNED 任务）
+        # 原实现仅在扫描轮执行任务，导致扫描间隔内新分配的任务无人执行而超时失败
+        self._consumer_task = asyncio.create_task(self._task_consumer_loop())
+        logger.info(
+            "任务消费循环已启动（interval=%ss, max_concurrent=%d）",
+            self._consumer_interval,
+            self._max_concurrent,
+        )
+
         scan_count = 0
         while self._running:
             scan_count += 1
@@ -275,12 +292,12 @@ class AutonomousDaemon:
                     )
 
                 # 3. 等待 dispatch 分发
+                # 注：任务执行不再在此处进行（Bug 1 修复）——
+                # 由后台 _task_consumer_loop 持续消费 ASSIGNED 任务，
+                # 避免扫描间隔内新分配的任务无人执行而心跳超时。
                 await asyncio.sleep(1)
 
-                # 4. 执行已分配的任务
-                await self._execute_assigned_tasks()
-
-                # 5. 等待下一轮扫描
+                # 4. 等待下一轮扫描
                 logger.info(
                     "本轮完成: 提交 %d 个任务，等待 %ds 后下一轮",
                     submitted,
@@ -295,7 +312,21 @@ class AutonomousDaemon:
                 logger.error("AutonomousDaemon 循环异常: %s", exc, exc_info=True)
                 await asyncio.sleep(60)  # 出错后等 1 分钟再重试
 
-        # 清理
+        # 清理：停止任务消费循环
+        if self._consumer_task and not self._consumer_task.done():
+            self._consumer_task.cancel()
+            try:
+                await self._consumer_task
+            except asyncio.CancelledError:
+                pass
+        # 等待执行器任务结束（最多 5s，避免强制中断正在执行的 LLM 调用）
+        if self._executor_tasks:
+            done, pending = await asyncio.wait(
+                self._executor_tasks, timeout=5.0
+            )
+            for t in pending:
+                t.cancel()
+        # 停止 SwarmCoordinator 调度循环
         if self._dispatch_task and not self._dispatch_task.done():
             self._dispatch_task.cancel()
             try:
@@ -487,22 +518,74 @@ class AutonomousDaemon:
 
     # ── 任务执行（真实 LLM 调用，铁律 3：禁止 Mock LLM）──────────
 
+    async def _task_consumer_loop(self) -> None:
+        """后台任务消费循环（Bug 1 修复）.
+
+        持续轮询 SwarmCoordinator 中 ASSIGNED 状态的任务并启动执行器，
+        受 ``max_concurrent_tasks`` 限制并发数。
+
+        背景：原实现仅在扫描轮（scan_interval=600s）调用一次
+        ``_execute_assigned_tasks``，而 SwarmCoordinator 每 5s 分发一次任务。
+        扫描间隔内新分配的任务无人执行 → 无心跳上报 → heartbeat_timeout
+        → reassign → 重分配后仍无人执行 → 超 3 次后 FAILED。
+
+        修复：每 ``consumer_interval_seconds``（默认 5s）轮询一次，
+        与 dispatch 节奏对齐，确保任何时刻被分配的任务都会被尽快执行。
+        """
+        while self._running:
+            try:
+                await self._execute_assigned_tasks()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001 — 循环不退出
+                logger.error("任务消费循环异常（继续下一轮）: %s", exc)
+            await asyncio.sleep(self._consumer_interval)
+
     async def _execute_assigned_tasks(self) -> None:
         """执行所有 ASSIGNED 状态的任务.
 
         遍历 SwarmCoordinator 的任务列表，对 ASSIGNED 状态的任务
         调用对应灵智体的 LLM 执行。
+
+        Bug 1 修复：拾取任务后立即上报 heartbeat（0.1）将状态推进为
+        RUNNING，防止消费循环下一轮重复拾取同一任务（原实现依赖
+        ``_execute_task`` 内部心跳，存在 create_task 排队窗口期的重复风险）。
+        执行器任务加入 ``_executor_tasks`` 追踪集合，防止 GC 提前回收。
+
+        Bug 1 补充：全局并发控制——按当前 RUNNING 任务数计算剩余容量，
+        避免 5s 轮询下跨轮拾取导致并发超过 max_concurrent（原实现仅在
+        单轮内限制拾取数，扫描轮 600s 间隔下不会跨轮重叠；消费循环
+        5s 间隔下必须按全局在飞任务数限制）。
         """
+        # 全局并发控制：当前 RUNNING（执行中）任务数
+        running = sum(
+            1
+            for t in self._coord._tasks.values()
+            if t.status == SwarmTaskStatus.RUNNING
+        )
+        remaining = max(0, self._max_concurrent - running)
+        if remaining <= 0:
+            return
+
         executed = 0
         for task in list(self._coord._tasks.values()):
-            if executed >= self._max_concurrent:
+            if executed >= remaining:
                 break
             if (
                 task.status == SwarmTaskStatus.ASSIGNED
                 and task.assigned_agent_id
             ):
-                # 异步执行（不阻塞扫描循环）
-                asyncio.create_task(self._execute_task(task))
+                # 立即上报心跳推进状态为 RUNNING（防重复拾取）
+                try:
+                    await self._coord.heartbeat(
+                        task.assigned_agent_id, task.task_id, 0.1, "busy"
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                # 异步执行（不阻塞消费循环）
+                executor = asyncio.create_task(self._execute_task(task))
+                self._executor_tasks.add(executor)
+                executor.add_done_callback(self._executor_tasks.discard)
                 executed += 1
 
         if executed > 0:
