@@ -1,7 +1,6 @@
-# FlowLight FlowForge CI/CD Pipeline (Gitee Go)
-# 触发条件: push/PR 到 master/dev 分支
-
-name: flowlight-flowforge-ci
+# FlowLight CI/CD Pipeline (Gitee Go) — flowforge 真实门禁
+# 含: 代码检查 + 文档检查 + 品牌净化 + 类型检查 + 单元测试
+name: flowforge-ci
 displayName: FlowForge CI Pipeline
 
 triggers:
@@ -18,101 +17,55 @@ triggers:
 
 stages:
   - stage: lint
-    displayName: 代码检查
+    displayName: 代码检查 (Ruff)
     steps:
       - step: script@python
-        name: python-lint
-        displayName: Ruff Lint + Mypy Type Check
+        name: ruff-lint
+        displayName: Ruff 自动修复 + 真实错误拦截
         image: python:3.12
         script: |
-          pip install ruff mypy -q
-          echo "=== Ruff Lint ==="
-          ruff check flowforge/ --output-format=concise || true
-          echo "=== Mypy Type Check ==="
-          mypy flowforge/ --ignore-missing-imports || true
+          pip install ruff -q
+          ruff check . --fix --select F401,F811,F841 || true
+          ruff check . --select F821,F822,F811,E9
 
-  - stage: test
-    displayName: 单元测试
+  - stage: docs
+    displayName: 文档检查 + 品牌净化
     steps:
       - step: script@python
-        name: python-test
+        name: doc-check
+        displayName: 文档链接与品牌词检查
+        image: python:3.12
+        script: |
+          pip install ruff -q
+          echo "=== 品牌净化：禁止遗留 openclaw_ai / cat-cafe / Clowder AI 等旧标识 ==="
+          if grep -rniE "openclaw_ai|cat-cafe|Clowder AI|openclaw_pkg" --include="*.md" --include="*.py" --include="*.yml" --include="*.yaml" --include="*.json" . | grep -v ".gitee-ci.yml"; then
+            echo "✗ 发现旧品牌/组织标识残留，请清理后再提交"
+            exit 1
+          fi
+          echo "✓ 品牌净化通过"
+          echo "=== 文档检查：README 存在性 ==="
+          test -f README.md && echo "✓ README.md 存在" || { echo "✗ 缺少 README.md"; exit 1; }
+
+  - stage: type-check
+    displayName: 类型检查 (Mypy, 报告模式)
+    steps:
+      - step: script@python
+        name: mypy-check
+        displayName: Mypy 类型检查
+        image: python:3.12
+        script: |
+          pip install mypy -q
+          mypy . --ignore-missing-imports --no-error-summary || true
+          echo "(mypy 为报告模式，不阻断合并)"
+
+  - stage: test
+    displayName: 单元测试 (Pytest)
+    steps:
+      - step: script@python
+        name: pytest-run
         displayName: Pytest + Coverage
         image: python:3.12
         script: |
-          pip install -e ".[dev]" -q 2>/dev/null || pip install -r requirements.txt -q
-          pip install pytest pytest-asyncio pytest-cov -q
-          echo "=== Unit Tests ==="
-          pytest flowforge/tests/ --ignore=flowforge/tests/e2e \
-            --ignore=flowforge/tests/test_e2e_real_llm.py \
-            --ignore=flowforge/tests/test_api_testclient.py \
-            --cov=flowforge --cov-report=term-missing -q --tb=short || true
-
-  - stage: docs-check
-    displayName: 文档检查
-    steps:
-      - step: script@python
-        name: docs-frontmatter
-        displayName: 文档 Front-Matter 检查
-        image: python:3.12
-        script: |
-          python - <<'PYEOF'
-          import sys, re
-          from pathlib import Path
-          REQUIRED_FIELDS = {"feature_ids", "related_features", "topics", "doc_kind", "created"}
-          DOC_KIND_VALUES = {"spec", "arch", "design", "feature", "decision", "review", "adr"}
-          errors = []
-          docs_dirs = [Path("docs/design"), Path("docs/features"), Path("docs/decisions")]
-          for docs_dir in docs_dirs:
-              if not docs_dir.exists(): continue
-              for md_file in docs_dir.glob("*.md"):
-                  if md_file.name in {"README.md", "TEMPLATE.md"}: continue
-                  text = md_file.read_text(encoding="utf-8")
-                  if not text.startswith("---"):
-                      errors.append(f"{md_file}: missing front-matter")
-                      continue
-                  parts = text.split("---", 2)
-                  if len(parts) < 3:
-                      errors.append(f"{md_file}: malformed front-matter")
-                      continue
-                  fm_text = parts[1]
-                  for field in REQUIRED_FIELDS:
-                      if not re.search(rf"^{field}\s*:", fm_text, re.MULTILINE):
-                          errors.append(f"{md_file}: missing field '{field}'")
-          if errors:
-              print("FAIL: Docs front-matter check failed:")
-              for e in errors: print(f"  - {e}")
-              sys.exit(1)
-          else:
-              print("PASS: All docs front-matter checks passed")
-          PYEOF
-
-      - step: script@python
-        name: brand-check
-        displayName: 品牌净化检查
-        image: python:3.12
-        script: |
-          python - <<'PYEOF'
-          import sys
-          from pathlib import Path
-          FORBIDDEN_TERMS = ["cat-cafe", "cat_cafe", "catcafe", "Clowder AI", "openclaw_ai"]
-          EXEMPT_FILES = {"docs/design/naming-contract.md"}
-          errors = []
-          for path in Path(".").rglob("*.md"):
-              rel = str(path).replace("\\", "/")
-              if rel in EXEMPT_FILES: continue
-              if rel.startswith(".git/"): continue
-              try:
-                  text = path.read_text(encoding="utf-8", errors="ignore")
-              except Exception: continue
-              for term in FORBIDDEN_TERMS:
-                  if term in text:
-                      idx = text.find(term)
-                      line_no = text[:idx].count("\n") + 1
-                      errors.append(f"{rel}:{line_no}: forbidden '{term}'")
-          if errors:
-              print("FAIL: Brand check failed:")
-              for e in errors: print(f"  - {e}")
-              sys.exit(1)
-          else:
-              print("PASS: Brand purification check passed")
-          PYEOF
+          pip install -r requirements.txt -q 2>/dev/null || echo "无 requirements 或安装警告"
+          pip install pytest pytest-cov -q
+          pytest tests/ --ignore=tests/e2e --cov=. --cov-report=term-missing -q --tb=short

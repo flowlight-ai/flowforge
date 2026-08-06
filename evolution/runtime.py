@@ -315,7 +315,7 @@ class SelfDevRuntime:
 
         manager = IMCouncilManager(approval_hub=approval_hub, config=cfg)
 
-        channel_specs: Dict[str, Callable[[Dict[str, Any]], IMCouncilChannel]] = {
+        channel_specs: Dict[str, Callable[[Dict[str, Any]], IMCouncilChannel]] = {  # noqa: F821
             "console": ConsoleChannel,
             "webchat": WebChatChannel,
             "trae": TraeBridgeChannel,

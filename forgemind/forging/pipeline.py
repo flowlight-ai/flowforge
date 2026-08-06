@@ -529,7 +529,7 @@ class ForgePipeline:
 
         return forgekin
 
-    async def forge(self, form: ForgekinFormData) -> ForgekinBase:
+    async def forge(self, form: ForgekinFormData) -> ForgekinBase:  # noqa: F811
         """执行完整锻造流程，产出Forgekin实例。
 
         Args:

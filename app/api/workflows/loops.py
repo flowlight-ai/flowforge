@@ -114,7 +114,7 @@ async def _run_loop_background(loop_id: str, task_id: str, template_config: dict
             harness = harness or HarnessOrchestrator()
             planner = LLMPlanner()
             verifier = RuleBasedVerifier()
-            reflector = ReflexionReflector(llm_client=getattr(app.state, 'llm_client', None) or getattr(app.state, 'sdk', None) and getattr(app.state.sdk, 'llm', None))
+            reflector = ReflexionReflector(llm_client=getattr(_main.app.state, 'llm_client', None) or getattr(_main.app.state, 'sdk', None) and getattr(_main.app.state.sdk, 'llm', None))
             checkpoint_mgr = getattr(
                 hybrid_executor, "checkpoint_manager",
                 CheckpointManager("data/loop_checkpoints.db"),
