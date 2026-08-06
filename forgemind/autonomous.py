@@ -62,6 +62,34 @@ TODO_PATTERNS = [
     re.compile(r"pass\s*#\s*placeholder", re.IGNORECASE),
 ]
 
+# 扫描需排除的第三方/生成目录（Bug 3 修复）
+# rglob 默认扫入 .venv（63MB 第三方包）、.git、node_modules 等，
+# 导致大量无效 TODO 任务与性能开销。目录名按 parts 匹配（任意层级）。
+SCAN_EXCLUDED_DIRS = frozenset({
+    ".venv",
+    "venv",
+    "env",
+    ".git",
+    ".hg",
+    ".svn",
+    "node_modules",
+    "__pycache__",
+    "site-packages",
+    "build",
+    "dist",
+    ".next",
+    ".nuxt",
+    ".cache",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".tox",
+    ".eggs",
+    ".autonomous",
+    "logs",
+    "data",
+})
+
 
 class AutonomousDaemon:
     """5 灵智体 24h 自主运行守护进程.
@@ -331,8 +359,8 @@ class AutonomousDaemon:
             return tasks
 
         for py_file in src_dir.rglob("*.py"):
-            # 跳过 __pycache__、tests、docs
-            if "__pycache__" in str(py_file) or "tests" in py_file.parts:
+            # 跳过 tests 与第三方/生成目录（Bug 3 修复：排除 .venv 等）
+            if "tests" in py_file.parts or SCAN_EXCLUDED_DIRS.intersection(py_file.parts):
                 continue
             try:
                 content = py_file.read_text(encoding="utf-8", errors="ignore")
@@ -415,16 +443,17 @@ class AutonomousDaemon:
             # 2. 模糊命名匹配：tests 目录递归查找包含 mod_name 的 test_*.py
             if not has_test:
                 for test_file in tests_dir.rglob(f"test_*{mod_name}*.py"):
-                    if "__pycache__" not in str(test_file):
-                        has_test = True
-                        break
+                    if SCAN_EXCLUDED_DIRS.intersection(test_file.parts):
+                        continue
+                    has_test = True
+                    break
 
             # 3. 内容 import 匹配：查找 import 该模块的测试文件
             if not has_test:
                 # 构造模块的 import 路径，如 "flowforge.forgemind.swarm"
                 mod_import = f"flowforge.{mod_rel.replace('/', '.').replace('.py', '')}"
                 for test_file in tests_dir.rglob("test_*.py"):
-                    if "__pycache__" in str(test_file):
+                    if SCAN_EXCLUDED_DIRS.intersection(test_file.parts):
                         continue
                     try:
                         test_content = test_file.read_text(
