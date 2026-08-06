@@ -194,6 +194,7 @@ class TranslationTool(BaseTool):
 
     async def _translate_batch(self, params: Dict[str, Any]) -> ToolOutput:
         texts = params.get("texts", [])
+        text = texts[0] if texts else ""
         source_lang = params.get("source_lang", "auto")
         target_lang = params.get("target_lang", "en")
         context_type = params.get("context", "ecommerce")

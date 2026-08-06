@@ -233,7 +233,7 @@ async def update_env_var(var_name: str, payload: EnvVarUpdate) -> dict[str, Any]
         if not env_path.exists():
             raise FileNotFoundError(f".env 文件不存在: {env_path}")
         content = env_path.read_text(encoding="utf-8")
-        new_content = _update_env_content(content, var_name, payload.value)
+        new_content = _update_env_var(content, var_name, payload.value)
         env_path.write_text(new_content, encoding="utf-8")
         return content, new_content
 

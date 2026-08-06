@@ -143,7 +143,6 @@ class PermissionV2:
 
     def _make_key(self, tool_name: str, action: str, params: dict) -> str:
         """Generate a decision key from tool name, action, and key params."""
-        import hashlib
         import json as json_mod
         # Only include stable, identifying params (path, action type)
         key_params = {

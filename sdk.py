@@ -59,6 +59,9 @@ This is the ONLY import upper projects need:
 
 from __future__ import annotations
 
+from typing import ClassVar
+from fastapi import FastAPI
+
 import importlib
 import inspect
 import os
@@ -1122,7 +1125,6 @@ class FlowForgeSDK:
             logger.info(f"SDK auto-registered agent: {full_name}")
             return wrapped
 
-        import inspect
         return decorator
 
     def on_event(self, event_type: str) -> Callable:

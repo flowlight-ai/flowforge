@@ -1615,6 +1615,7 @@ class LLMClient(BaseTool):
         persona = input.params.get("persona")
         agent_name = input.params.get("agent_name")
         task_id = input.params.get("task_id", "unknown")
+        top_p = input.params.get("top_p")
         prefer_api = input.params.get("prefer_api", False)
         # P0-4: 根据 agent_name 查找对应路由的 timeout
         agent_timeout = self._get_timeout_for_agent(agent_name or "")
