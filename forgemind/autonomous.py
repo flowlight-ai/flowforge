@@ -493,10 +493,24 @@ class AutonomousDaemon:
         forgekin = self._forgekins.get(agent_id)
 
         if forgekin is None:
+            # Bug 4 修复：未注册灵智体时显式终结任务，避免静默悬挂
+            # 原实现仅记 WARNING 后 return，任务停留 ASSIGNED/RUNNING，
+            # 需等 200s 心跳超时 → reassign → 重试 → 最终 FAILED（最长挂 800+s）
             logger.warning(
-                "任务 %s 分配给 %s，但灵智体实例未注册，跳过",
+                "任务 %s 分配给 %s，但灵智体实例未注册，标记任务失败",
                 task.task_id[:12],
                 agent_id,
+            )
+            self._log_activity(
+                "task_failed",
+                task.title,
+                task_id=task.task_id,
+                agent_id=agent_id,
+                error="forgekin_not_registered",
+            )
+            self._coord.fail_task(
+                task.task_id,
+                reason=f"forgekin 未注册: {agent_id}",
             )
             return
 
@@ -548,23 +562,33 @@ class AutonomousDaemon:
             model = result.get("model", "unknown")
 
             # 无效响应检测（T2铁律：禁止假数据；避免"无法回答"被当作有效产出）
+            # Bug 2 修复：补充 CLI 错误前缀标记 + usage.error 字段检查。
+            # cli_provider 在二进制缺失/超时/非零退出时返回
+            # [CLI 不可用]/[CLI 超时]/[CLI 错误] 前缀内容且 usage.error 非空，
+            # 原标记集未覆盖 → 错误内容被当作有效产出持久化。
             invalid_markers = [
                 "无法回答", "无法回答这个问题", "我不能回答", "我无法提供",
                 "[ZHIPU HTTP 429]", "[OpenRoute 超时]", "[ZHIPU 异常]",
                 "[OpenRoute 异常]", "余额不足", "当前不可用",
+                "[CLI 不可用]", "[CLI 错误]", "[CLI 超时]",
+                "[CLI 启动失败]", "[CLI 退出码]",
             ]
+            usage_error = result.get("usage", {}) or {}
+            usage_error = usage_error.get("error") if isinstance(usage_error, dict) else None
             is_invalid = (
                 not content
                 or len(content) < 20
                 or any(marker in content for marker in invalid_markers)
+                or bool(usage_error)
             )
             if is_invalid:
                 logger.warning(
-                    "无效产出: agent=%s task=%s model=%s content=%r",
+                    "无效产出: agent=%s task=%s model=%s content=%r usage_error=%r",
                     agent_id,
                     task.task_id[:12],
                     model,
                     content[:100] if content else "(empty)",
+                    usage_error,
                 )
                 self._log_activity(
                     "task_invalid_output",
@@ -574,9 +598,15 @@ class AutonomousDaemon:
                     model=model,
                     content_length=len(content),
                     content_preview=content[:200] if content else "(empty)",
-                    reason="无效响应（无法回答/余额不足/超时等）",
+                    reason="无效响应（无法回答/余额不足/超时/CLI 错误等）",
                 )
                 await self._coord.heartbeat(agent_id, task.task_id, 0.0, "error")
+                # Bug 5 修复：主动终结任务（heartbeat 0.0 不会改变任务状态，
+                # 原实现使任务悬挂在 RUNNING 等待超时回收）
+                self._coord.fail_task(
+                    task.task_id,
+                    reason=f"invalid_output{': ' + str(usage_error) if usage_error else ''}",
+                )
                 return
 
             task.result = {
@@ -649,6 +679,12 @@ class AutonomousDaemon:
             )
             # 上报失败状态
             await self._coord.heartbeat(agent_id, task.task_id, 0.0, "error")
+            # Bug 5 修复：主动终结任务（heartbeat 0.0 不会改变任务状态，
+            # 原实现使异常任务悬挂在 RUNNING 等待超时回收）
+            self._coord.fail_task(
+                task.task_id,
+                reason=f"execution_exception: {exc}",
+            )
 
     def _persist_task_output(
         self, task: SwarmTask, content: str, model: str
