@@ -1,0 +1,29 @@
+# 文档迭代工作流 — 文心主导，梵高审查
+name: doc_iterative
+display_name: "文档迭代闭环"
+description: "文心主导文档生成 → 梵高跨厂商审查 → 达芬奇验证 → 持久化"
+icon: "📝"
+category: "doc"
+version: "1.0"
+
+steps:
+  - id: "discover"
+    display_name: "发现文档需求"
+    agent: "fk-wenxin"
+    human_review: false
+  - id: "draft"
+    display_name: "撰写文档初稿"
+    agent: "fk-wenxin"
+    human_review: false
+  - id: "review"
+    display_name: "跨厂商审查"
+    agent: "fk-vangogh"
+    human_review: false
+  - id: "verify"
+    display_name: "T7/T8 验证"
+    agent: "fk-davinci"
+    human_review: false
+  - id: "persist"
+    display_name: "持久化"
+    agent: "fk-wenxin"
+    human_review: true

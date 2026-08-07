@@ -1,0 +1,79 @@
+# FlowForge self-evolution configuration.
+#
+# All values can be overridden by environment variables of the form
+# FLOWFORGE_EVOLUTION_<UPPER_KEY> (e.g. FLOWFORGE_EVOLUTION_QUALITY_THRESHOLD).
+
+version: "0.1.0"
+
+# Mode A: Scope Guard
+scope_guard:
+  frequency_window_minutes: 60
+  frequency_threshold: 3
+  deviation_keywords:
+    - "无关"
+    - "超出范围"
+    - "顺便"
+    - "既然"
+    - "扩展"
+  magic_words:
+    - "第一性原理"
+    - "我能猜出来"
+    - "下次一定"
+    - "星星罐子"
+
+# Mode B: Process Evolution
+process_evolution:
+  min_evidence_sources: 2
+  leverage_order:
+    - "recite_scope"
+    - "memory"
+    - "skill"
+    - "sop"
+    - "rule"
+    - "system_prompt"
+    - "l0"
+  replay_check_days: 30
+
+# Mode C: Knowledge Evolution
+knowledge_evolution:
+  smoke_gate_cases: 3
+  smoke_gate_pass_threshold: 2
+  promotion_gate_cases: 5
+  promotion_gate_pass_threshold: 3
+  promotion_gate_category_coverage: 3
+  distill_min_criteria: 2
+
+# Maturity ladder
+maturity:
+  l1_promotion_min_episodes: 2
+  l1_episode_window_days: 180
+  l1_five_q_threshold: 7
+  l3_min_uses: 6
+  l3_min_agents: 2
+  l3_min_success_rate: 0.80
+  l4_min_uses: 12
+  l4_recent_window: 10
+  l4_recent_success_rate: 0.90
+  l2_demotion_window: 3
+  l2_demotion_success_rate: 0.50
+  l3_demotion_window: 5
+  l3_demotion_success_rate: 0.60
+
+# Metacognition router
+metacognition:
+  high_risk_action_confidence_threshold: 0.85
+  weight_domain_reliability: 0.5
+  weight_evidence_completeness: 0.35
+  weight_self_reported: 0.15
+  wilson_z: 1.96
+
+# Quality thresholds
+quality_threshold: 0.85
+loop_max_iterations: 5
+reflection_max_iterations: 3
+
+# LLM call defaults
+llm_timeout_seconds: 90
+llm_long_article_timeout_seconds: 120
+llm_max_retries: 3
+llm_retry_delay: 1.0

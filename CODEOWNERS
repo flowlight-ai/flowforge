@@ -1,0 +1,27 @@
+# FlowForge — CODEOWNERS
+# Each line is a file pattern followed by one or more owners.
+# Order matters — later matches take precedence.
+# Doc: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: maintainer team (replace @your-org with your GitHub org/user)
+*                           @flowlight-ai/maintainers
+
+# Core self-evolution layer — require senior maintainer review
+flowforge/evolution/        @flowlight-ai/maintainers
+flowforge/loop/             @flowlight-ai/maintainers
+flowforge/core/             @flowlight-ai/maintainers
+
+# LLM client — security sensitive
+flowforge/llm/              @flowlight-ai/maintainers
+
+# CI and scripts — require maintainer review
+.github/                    @flowlight-ai/maintainers
+scripts/                    @flowlight-ai/maintainers
+
+# Configuration — require maintainer review
+config/                     @flowlight-ai/maintainers
+pyproject.toml              @flowlight-ai/maintainers
+
+# Documentation — docs team
+docs/                       @flowlight-ai/maintainers
+*.md                        @flowlight-ai/maintainers

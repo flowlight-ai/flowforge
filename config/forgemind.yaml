@@ -1,0 +1,63 @@
+# FlowForge forgemind (Forgekin application layer) configuration.
+
+version: "0.1.0"
+
+# Built-in example forgekins — registered on CLI startup
+example_forgekins:
+  - builder: "build_cat_companion"
+    name: "小煤球"
+  - builder: "build_team_spirit"
+    name: "FlowLight Team"
+  - builder: "build_desk_lamp"
+    name: "老灯"
+  - builder: "build_sherlock"
+    name: "Sherlock Holmes"
+
+# Third-party agent adapters
+external_agents:
+  claude_code:
+    enabled: true
+    binary: "claude"
+    description: "Anthropic Claude Code — coding & code review"
+    default_timeout: 120.0
+
+  codex:
+    enabled: true
+    binary: "codex"
+    description: "OpenAI Codex CLI — code generation"
+    default_timeout: 120.0
+
+  gemini:
+    enabled: true
+    binary: "gemini"
+    description: "Google Gemini CLI — multimodal coding & review"
+    default_timeout: 120.0
+
+  opencode:
+    enabled: true
+    binary: "opencode"
+    description: "Open-source coding agent"
+    default_timeout: 120.0
+
+  trae:
+    enabled: true
+    binary: "trae"
+    description: "Trae IDE agent — coding & debugging"
+    default_timeout: 120.0
+
+# Council (MindCouncil) defaults
+council:
+  min_reviewers: 2
+  min_distinct_vendors: 2
+  pass_threshold: 0.85
+
+# Forgekin energy / lifecycle defaults
+forgekin_defaults:
+  initial_energy: 1.0
+  task_energy_cost: 0.1
+  rest_recovery_rate: 0.2
+
+# Registry behavior
+registry:
+  select_owner_strategy: "most_matching_capabilities"
+  allow_duplicate_names: true
