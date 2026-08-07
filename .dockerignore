@@ -1,0 +1,69 @@
+# Keep the Docker build context lean and free of secrets / local artifacts.
+
+# ── Version control ─────────────────────────────────────────────────────────
+.git/
+
+# ── Python caches & bytecode ────────────────────────────────────────────────
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.tox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.egg-info/
+build/
+dist/
+
+# ── Runtime artifacts ───────────────────────────────────────────────────────
+logs/
+*.log
+*.db
+*.sqlite*
+
+# ── Secrets & credentials (never bake into an image) ────────────────────────
+.env
+.env.*
+*.pem
+*.key
+secrets.yaml
+credentials.json
+config/im_channels.local.yaml
+config/secrets.local.yaml
+*.local.yaml
+
+# ── Editor / OS metadata ────────────────────────────────────────────────────
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ── Temporary & backup files ────────────────────────────────────────────────
+tmp/
+.tmp_*
+*.bak
+*.backup
+*.orig
+
+# ── Docs archives (keep active docs, drop archived ones) ────────────────────
+docs/archive/
+docs/_archive/
+MIGRATION-NOTES.md
+*.migration.md
+
+# ── FlowForge runtime state ─────────────────────────────────────────────────
+.work/
+.runtime/
+.runtime_state/
+*.forgekin-state.json
+
+# ── Demo / test outputs ──────────────────────────────────────────────────────
+demo_outputs/
+test_outputs/
+*.demo.json
+*.demo.log

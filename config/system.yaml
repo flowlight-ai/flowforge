@@ -1,0 +1,72 @@
+# FlowForge system configuration.
+#
+# Defines cross-platform path roots and runtime behavior. All path values
+# use ${...} placeholders resolved by core/config.py at startup from
+# environment variables (see .env.example).
+#
+# Override precedence (highest → lowest):
+#   1. Process environment variables
+#   2. .env file
+#   3. This file (config/system.yaml)
+
+version: "0.1.0"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Path roots (cross-platform)
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+  # flowlight-ai organization root
+  flowlight_ai_root: "${FLOWLIGHT_AI_ROOT}"
+
+  # Runtime working directory (state, checkpoints, intermediate artifacts)
+  work_dir: "${FLOWFORGE_WORK_DIR}"
+
+  # Logs directory
+  log_dir: "${FLOWFORGE_LOG_DIR}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Runtime behavior
+# ─────────────────────────────────────────────────────────────────────────────
+runtime:
+  # Debug logging (0=off, 1=on) — logs LLM inputs/outputs/timings
+  debug: 0
+
+  # Trace level: ERROR / WARN / INFO / DEBUG
+  trace_level: "INFO"
+
+  # Async I/O — all I/O operations use async/await
+  async_mode: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T7/T8 verification
+# ─────────────────────────────────────────────────────────────────────────────
+verification:
+  # T7: LLM cross-vendor review of LLM-generated content
+  t7_audit_enabled: true
+
+  # T8: DOM verification — CDP browser automation for web operations
+  t8_dom_verification_enabled: false
+  t8_cdp_browser_path: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Plugin discovery
+# ─────────────────────────────────────────────────────────────────────────────
+plugins:
+  # Plugin modules to load on startup (Python dotted paths)
+  # Examples: flowforge.forgemind.plugin, contentforge.plugins
+  autoload_modules: []
+  # autoload_modules:
+  #   - "flowforge.forgemind.plugin"
+
+  # Plugin protocol version (V2 = 11 hooks, V3 = +4 forgekin hooks)
+  protocol_version: "V3"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DI container (no direct instantiation allowed)
+# ─────────────────────────────────────────────────────────────────────────────
+di:
+  # Strict mode — raises on missing dependency instead of returning None
+  strict: true
+
+  # Auto-wire dependencies by type hint
+  auto_wire: true

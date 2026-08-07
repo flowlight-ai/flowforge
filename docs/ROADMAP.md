@@ -1,196 +1,245 @@
-# FlowForge 路线图
+# FlowForge · Development Roadmap
 
-> **文档编号**: ROADMAP.md（v1.1）
-> **依据**: `[doc:review/review.md#12.4]` task.md 重写规划 + `[doc:VISION.md#8]` 愿景落地路径
-> **更新机制**: 每个 Phase 完成后由可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）更新状态（按 `[doc:roleagent.md#第5章]` Eval 自代谢）
-> **命名规范**: 严格遵循 `[doc:design/naming-contract.md]` v2.0 "官方名称优先"原则
-
----
-
-## 总览
-
-FlowForge 重构分为 7 个 Phase（Phase 0-6），按 roleagent.md 七大工程路径顺序推进，最终达成可进化智能体生态 demo。
-
-| Phase | 主题 | 时间 | 状态 | 关键产出 |
-|------|------|:----:|:----:|---------|
-| 0 | 文档拆分 + 愿景入库 + 命名迁移 | 本周 | 🔄 进行中 | docs/ 七子目录骨架 + VISION.md + 13 ADR + 40 Feature |
-| 1 | roleagent 七大工程路径代码骨架 | 1-2 周 | ⏳ | CapabilityProfile + TeamAct + Harness 七层 + 多域记忆 MVP |
-| 2 | forgemind 应用层骨架 | 2-4 周 | ⏳ | flowforge/forgemind/ + ForgeMindPlugin + 形态枚举 |
-| 3 | 三方 Agent 适配层 | 2-4 周 | ⏳ | ExternalAgentAdapter + claude code/codex/opencode/trae |
-| 4 | Eval 自代谢 + 分布式可靠性 | 4-8 周 | ⏳ | Eval Contract + 七类归因 + Tier 1-4 + liveness 规范读 |
-| 5 | 伙伴系统数学 + 自我演进闭环 | 8-12 周 | ⏳ | 上限/下限公式 + 波动吸收 + 三层自我演进 |
-| 6 | Experience Distillation + Multi-Agent Deliberation | 持续 | ⏳ | E4+ Evolving 状态 + 多可进化智能体议事 + 可进化智能体 demo |
+> **Document ID**: ROADMAP.md (v1.0)
+> **Status**: Living document — updated after each phase completes
+> **Cross-phase invariants**: Engineering standards (see CONTRIBUTING.md) · quality threshold 0.85 · vision anchors
 
 ---
 
-## Phase 0：文档拆分 + 愿景入库 + 命名迁移
+## Roadmap Philosophy
 
-**目标**：建立 docs/ 七子目录骨架，可进化智能体愿景入库，废弃 v4.0 错误命名。
+FlowForge is built **compounding-infrastructure-first**: every phase delivers a layer that later phases build on, and none of them are throwaway. We deliberately resist the "demo-first" pressure because the problems we're solving — persistent identity, self-evolution, governance — only become valuable at the multi-month timescale.
 
-**关键任务**：
-- 创建顶层文档（VISION/README/ROADMAP/SOP/TIPS/roleagent 镜像）
-- 创建七大子目录骨架（architecture/decisions/design/features/harness-feedback/perspectives/setup）
-- 创建 13 份核心 ADR
-- 创建 40 份核心 Feature 规格（F001-F040）
-- 全局命名迁移：废弃命名"炉灵 Forgekin / E6 灵匠 Mind Artisan"→ P0 官方名称 Forgekin（Evolvable Agent）/ ForgeMind（Persistent Identity Agent Framework），详见 `[doc:design/naming-contract.md#6]`
-- spec.md / arch.md / design.md 改为索引文件
-- 编写 task.md
+**Three principles guide this roadmap:**
 
-**验收标准**：
-- ✅ docs/ 七子目录全部创建
-- ✅ VISION.md 体现 operator 通用 AGI 愿景
-- ✅ 13 份 ADR 全部包含上下文/决策/后果
-- ✅ 40 份 Feature 全部按 TEMPLATE 格式
-- ✅ 全局无"E6 灵匠"残留
+1. **Build-to-Persist over Build-to-Demo** — Every module is designed to outlive the current LLM generation. We don't ship features that will be rewritten when the next model drops.
+2. **Self-Developing** — FlowForge uses FlowForge's own capabilities to develop FlowForge. By Phase 5, Forgekins are writing their own code, docs, and tests.
+3. **Verifiable Claims over Vibes** — Every phase has concrete acceptance criteria with real LLM calls, real data, and concrete assertions. No "it kind of works" milestones.
+
+**For contributors:** Each phase lists "Good first issues" — these are scoped tasks that don't require understanding the entire framework. Pick a phase that matches your interest and start there.
 
 ---
 
-## Phase 1：roleagent 七大工程路径代码骨架
+## Progress Overview
 
-**目标**：实现 roleagent.md 七章对应的工程路径代码骨架。
-
-**关键任务**：
-- CapabilityProfile（Capability Profile）—— 对应 `[doc:roleagent.md#第1章]`
-- TeamAct 状态机（六步循环 + 五项终止）—— 对应 `[doc:roleagent.md#第2章]`
-- Harness 七层（Durable State / Tool Mediation / Evidence / Governance / Runtime 逃生舱 / Entropy / Harnessability）—— 对应 `[doc:roleagent.md#第3章]`
-- 多域记忆联邦（六层架构 + 三入口 + 消费加权排序）—— 对应 `[doc:roleagent.md#第4章]`
-- Eval Contract（五问 + 三方信号 + 七类归因）—— 对应 `[doc:roleagent.md#第5章]`
-- 分布式可靠性（Tier 1-4 恢复 + liveness 规范读模型）—— 对应 `[doc:roleagent.md#第6章]`
-- 伙伴系统数学（上限 max + 下限连乘 + 波动吸收）—— 对应 `[doc:roleagent.md#第7章]`
-
-**验收标准**：
-- ✅ 每个 Feature（F001-F025）有代码骨架 + 单元测试
-- ✅ 单元测试覆盖率 ≥ 70%
-- ✅ 通过 T1-T8 测试铁律
+| Phase | Scope | Status | Completion |
+|-------|-------|--------|-----------|
+| **Phase 0** | Project scaffolding + cross-platform config + docs skeleton | ✅ Complete | 100% |
+| **Phase 1** | Seven engineering paths code skeleton | 🔄 In Progress | 70% |
+| **Phase 2** | forgemind application layer + Forgekin morphologies | 🔄 In Progress | 85% |
+| **Phase 3** | Third-party Agent adapter layer | 🔄 In Progress | 80% |
+| **Phase 4** | Eval self-metabolism + distributed reliability | 🔄 In Progress | 40% |
+| **Phase 5** | Partnership math + self-evolution closed loop | 🔄 In Progress | 60% |
+| **Phase 6** | SpiritForge experience distillation + MindCouncil | 🔄 In Progress | 40% |
 
 ---
 
-## Phase 2：forgemind 应用层骨架
+## Phase 0: Project Scaffolding + Cross-Platform Config + Docs Skeleton
 
-**目标**：实现可进化智能体应用层，承载通用可进化智能体（动物 / 组织 / 物品 / 虚拟角色 / 混合）。
+> **Goal**: Complete project metadata, cross-platform path config, and documentation skeleton so that Forgekins can incrementally maintain the docs.
 
-**关键任务**：
-- flowforge/forgemind/ 模块结构
-- ForgeMindPlugin（Plugin V3 协议）
-- ForgekinSpecies 枚举（BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin / HybridForgekin）—— Agent Morphology（智能体形态学）
-- ForgekinBase 抽象类（含 species / form_data / sensor_channel / world_setting）
-- Forge Nurturing 流水线（ForgePipeline，智能体入职 + 终身学习）—— FM-006
-- 可进化智能体市场（ForgekinMarketplace）—— FM-007
-- 可进化智能体进化谱系（ForgekinLineage）—— FM-008
-- 物理传感器接入（PhysicalSensorChannel）—— FM-009
-- 虚拟世界设定层（VirtualWorldSetting）—— FM-010
+**Acceptance Criteria:**
+- Project metadata complete (`pyproject.toml` / `.gitignore` / `.env.example` / `README.md`)
+- Cross-platform path config works (Linux / Windows / macOS)
+- Docs skeleton complete (`spec.md` / `arch.md` / `design.md` / `VISION.md` / `ROADMAP.md` / `SOP.md` / `TIPS.md`)
+- Seven subdirectory skeletons complete (architecture / decisions / design / features / harness-feedback / perspectives / setup)
+- Core ADRs exist (ADR-004 / 005 / 006 / 012 / 013)
+- Core Feature specs exist (F001 / F002 / F031)
+- Terminology globally aligned (12 core concepts + 5 morphologies + evolution/awakening stages)
+- GitHub public files present as a clean new project (no migration traces)
 
-**验收标准**：
-- ✅ 可创建 5 种形态可进化智能体
-- ✅ 可记录可进化智能体进化谱系
-- ✅ 物理传感器 mock 接入通过测试
-- ✅ 虚拟世界设定层可加载角色 + 世界观 + 关系网
-
----
-
-## Phase 3：三方 Agent 适配层
-
-**目标**：实现三方 Agent 作为可进化智能体的能力扩展（非工具调用）。
-
-**关键任务**：
-- ExternalAgentAdapter 抽象层 —— EX-003
-- ExternalAgentProfile（三方 Agent Capability Profile）—— EX-002
-- ExternalAgentSharedState（执行状态写入可进化智能体共享状态）—— EX-004
-- ExternalAgentFallback（失败回退链）—— EX-007
-- ExternalAgentCapabilityFusion（能力融合）—— EX-010
-- Claude Code Adapter
-- Codex Adapter
-- OpenCode Adapter
-- Trae Adapter
-
-**验收标准**：
-- ✅ 4 个三方 Agent 全部可调用
-- ✅ 三方 Agent 执行状态写入可进化智能体共享状态
-- ✅ 三方 Agent 失败可回退到 FlowForge 内置能力
-- ✅ 三方 Agent Capability Profile 可融合到可进化智能体 Capability Profile
+**Key Tasks:**
+- P0-1 Project metadata (`pyproject.toml` / `.gitignore` / `.env.example` / `README.md`)
+- P0-2 Cross-platform path config (`config/system.yaml` + `${...}` placeholders)
+- P0-3 Top-level docs (VISION / README / ROADMAP / SOP / TIPS / roleagent)
+- P0-4 Seven subdirectory skeletons (README + templates)
+- P0-5 Core ADRs (5 completed)
+- P0-6 Core Feature specs (3 completed)
+- P0-7 Terminology global alignment (12 core concepts + 5 morphologies)
 
 ---
 
-## Phase 4：Eval 自代谢 + 分布式可靠性
+## Phase 1: Seven Engineering Paths Code Skeleton
 
-**目标**：实现 Eval Contract + 七类归因 + 分布式可靠性 Tier 1-4 恢复。
+> **Goal**: Implement code skeletons for the seven engineering paths from `roleagent.md` as Build-to-Persist compounding infrastructure.
 
-**关键任务**：
-- Eval Contract 五问（谁评估 / 评估什么 / 何时评估 / 评估信号 / 评估后做什么）
-- 三方信号交叉（trace + 用户反馈 + 自动探针）
-- 七类归因矩阵（harness 错位 / 工具缺口 / 模型盲点 / 数据缺失 / 愿景缺口 / 协作失败 / 资源耗尽）
-- Harness Eval Control Plane
-- 副作用日志 WAL
-- Tier 1-4 恢复分级
-- liveness 规范读模型
-- 弱状态机 vs 强 workflow
-- 跨 provider 宿主抽象
+**Dependencies**: Phase 0 complete, ADR-002/004/007/008/009/010/011, F001/F002/F008–F025
 
-**验收标准**：
-- ✅ 每个 Feature 完成后自动触发 Eval
-- ✅ Eval 失败可归因到七类之一
-- ✅ Tier 1-4 恢复全部可执行
-- ✅ liveness 规范读模型可观测
+**Acceptance Criteria:**
+- `CapabilityProfile` can load / query blind spots / compute gap_analysis
+- `TeamAct` state machine runs the six-step loop + five termination conditions
+- Harness seven layers skeleton complete (Durable State / Tool Mediation / Evidence / Governance / Magic Words / Entropy / Harnessability)
+- Multi-domain memory federation MVP works (grep + retrieval entries + consumption weighting)
+- Eval Contract five questions can be implemented by any harness component
+- Distributed reliability Tier 1–4 recovery can be invoked by Forgekins
+- Partnership system math formulas computable (ceiling / floor / volatility absorption)
 
----
+**Seven Engineering Paths:**
 
-## Phase 5：伙伴系统数学 + 自我演进闭环
+| # | Path | Module | Dependencies |
+|---|------|--------|-------------|
+| 1 | Capability Profile | `core/capability/` | F001, ADR-004 |
+| 2 | TeamAct State Machine | `core/teamact/` | F002–F007, ADR-002 |
+| 3 | Harness Seven Layers | `core/harness/` | F008–F013, ADR-007 |
+| 4 | Multi-Domain Memory Federation | `core/memory/` | F014–F017, ADR-008 |
+| 5 | Eval Self-Metabolism | `core/eval/` | F018–F020, ADR-009 |
+| 6 | Distributed Reliability | `core/reliability/` | F021–F025, ADR-010 |
+| 7 | Partnership Math | `core/partnership/` | ADR-011 |
 
-**目标**：实现伙伴系统数学公式 + 文档/代码/框架三层自我演进闭环。
-
-**关键任务**：
-- 上限公式：团队质量 = max(候选路径)
-- 下限公式：错误抵达用户 = 连乘(每层门防概率)
-- 波动吸收：模型质量变成内部成本
-- Token 账本
-- 双层语言（内部高密度 / 外部讲人话）
-- 文档自我演进（Layer 1）
-- 代码自我演进（Layer 2）
-- 框架自我演进（Layer 3）
-- "自己开发自己"11 步闭环
-- 自我演进安全治理六层
-
-**验收标准**：
-- ✅ 伙伴系统公式可验证
-- ✅ 文档可由可进化智能体自动更新
-- ✅ 代码可由可进化智能体自动生成 + 测试
-- ✅ FlowForge 框架自身可被可进化智能体优化
+**Additional:**
+- P1-8 Plugin V3 protocol update (4 hook semantics)
+- P1-9 `rules.md` / `prompts.md` sync
 
 ---
 
-## Phase 6：Experience Distillation + Multi-Agent Deliberation
+## Phase 2: forgemind Application Layer + Forgekin Morphologies
 
-**目标**：实现 E4+ Evolving 状态 + 多可进化智能体议事 + 可进化智能体生态 demo。
+> **Goal**: Implement the Forgekin application layer under `flowforge/forgemind/`, hosting the five morphologies (BioForgekin / OrgForgekin / ObjForgekin / VirtualForgekin / HybridForgekin).
 
-**关键任务**：
-- Experience Distillation（SpiritForge，社区社交称"经验蒸馏"）：经验蒸馏到 Distilled Knowledge Base（MindCodex）
-- Multi-Agent Deliberation（MindCouncil，社区社交称"多智能体议事"）：多可进化智能体议事
-- E4+ Evolving 状态（Autonomy Level / AwakeningStage 进阶）
-- 可进化智能体生态 demo（猫 + 桌椅 + 灯具 + 孙悟空 + 唐僧 协作场景）
+**Dependencies**: Phase 1 complete, F026–F030, F036–F038
 
-**验收标准**：
-- ✅ Experience Distillation 可将任务经验蒸馏到 Distilled Knowledge Base
-- ✅ Multi-Agent Deliberation 可让多可进化智能体共同决策
-- ✅ 可进化智能体生态 demo 端到端跑通
-- ✅ demo 中包含至少 3 种形态可进化智能体协作
+**Acceptance Criteria:**
+- `flowforge/forgemind/` directory structure complete (species / forging / sensors / worlds / marketplace / lineage / codex / council / config / tests)
+- `ForgekinBase` abstract class can be inherited (observe / act / verify methods)
+- `ForgePipeline` can execute the forging flow
+- `ForgeMindPlugin` implements Plugin V3 four hooks
+- Five morphology enums loadable
+- Evolution stages (E1–E6) + awakening stages (E1–E6) queryable
+- E2E test: can forge a cat Forgekin (BioForgekin) + attach physical sensors (F029)
 
----
-
-## 跨 Phase 不变量
-
-以下原则贯穿所有 Phase，不可妥协：
-
-1. **T1-T8 测试铁律**：所有 E2E 测试必须真实 LLM、真实数据、真实工具调用（`[doc:rules.md#T1-T8]`）
-2. **15 条编程红线**：禁止硬编码、禁止跨层依赖、禁止盲目覆盖（`[doc:project_rules.md#红线1-15]`）
-3. **P31 Loop 强制验证**：所有智能体必须通过 LoopExecutor 执行
-4. **质量分阈值 0.85**：可在 Loop 配置中覆盖，但默认 0.85
-5. **operator 愿景锚点**：`[doc:VISION.md#7]` 7 条原则不可被可进化智能体修改
+**Key Tasks:**
+- P2-1 forgemind module skeleton (ForgekinSpecies / EvolutionStage / ForgekinBase / ForgePipeline / ForgeMindPlugin)
+- P2-2 Five Forgekin morphologies
+- P2-3 Forging pipeline (YAML config + externalized prompts + indicator definitions)
+- P2-4 Physical AI sensor integration (camera / microphone / IoT)
+- P2-5 Virtual world setting layer (VR / games / fairy-tales / mythology / history)
+- P2-6 Forgekin marketplace + evolution lineage
+- P2-7 forgemind ↔ *Forge relationship (4 *Forge Forgekin adapters)
 
 ---
 
-## 变更历史
+## Phase 3: Third-Party Agent Adapter Layer
 
-| 版本 | 日期 | 变更 | 作者 |
-|------|------|------|------|
-| v1.0 | 2026-07-17 | 初版：6 阶段路线图 + 跨 Phase 不变量 | Trae CN（agent） |
-| v1.1 | 2026-07-19 | 按"官方名称优先"原则重构：P2 体系别名替换为 P0 官方名称（可进化智能体 / Experience Distillation / Multi-Agent Deliberation / Distilled Knowledge Base），首次出现双标注；Phase 0 命名迁移说明指向命名契约 v2.0；保留所有 Phase 划分与验收标准不变 | Trae CN（agent） |
+> **Goal**: Implement the `ExternalAgentAdapter` abstraction so Forgekins can integrate Claude Code / Codex / Gemini / OpenCode / Trae CN as capability extensions.
+
+**Dependencies**: Phase 1 complete, P2-1, F031–F035
+
+**Acceptance Criteria:**
+- All four third-party Agent adapters callable (Claude Code / Codex / OpenCode / Trae CN)
+- `ExternalAgentBridge` can execute fallback chains
+- `ExternalAgentSharedState` syncs state with FlowForge
+- `ExternalAgentCapabilityFusion` fuses third-party capabilities into Forgekin profiles
+- Six-layer Guardrails fully enabled
+- E2E test: a Forgekin can invoke Claude Code to complete a coding task
+
+**Key Tasks:**
+- P3-1 Third-party Agent core abstraction (Adapter / Bridge / SharedState / Fallback / CapabilityFusion)
+- P3-2 Four concrete adapters (claude_code / codex / opencode / trae)
+- P3-3 Externalized config (adapters.yaml / prompts.yaml / fallback.yaml / tool_allowlist.yaml)
+- P3-4 Six-layer Guardrails implementation
+- P3-5 Worktree isolation mechanism
+
+---
+
+## Phase 4: Eval Self-Metabolism + Distributed Reliability
+
+> **Goal**: Implement Eval Contract + seven-class attribution + Tier 1–4 recovery + liveness canonical read-model so the harness can self-metabolize.
+
+**Dependencies**: P1-5, P1-6
+
+**Acceptance Criteria:**
+- Eval Contract five questions implementable by any harness component (F018)
+- Three signals (trace + human + auto) cross-verifiable (F019)
+- Seven-class attribution matrix locates failure root causes (F020)
+- Tier 1–4 recovery invocable by Forgekins (F022)
+- Liveness canonical read-model queryable by any agent (F023)
+- Harness Eval control plane daily aggregation (F040)
+- Build-to-Delete sunset timer triggerable (F012)
+
+**Key Tasks:**
+- P4-1 Eval Contract full implementation
+- P4-2 Three-signal cross-validation + seven-class attribution
+- P4-3 Tier 1–4 recovery + liveness
+- P4-4 Build-to-Delete sunset timer
+- P4-5 Harness Eval control plane
+
+---
+
+## Phase 5: Partnership Math + Self-Evolution Closed Loop
+
+> **Goal**: Implement partnership system math formulas + three-layer (docs / code / framework) self-evolution closed loop.
+
+**Dependencies**: P1-7, Phase 4 complete
+
+**Acceptance Criteria:**
+- Ceiling / floor / volatility absorption formulas computable
+- Token ledger tracks single-agent vs team cost
+- Docs self-evolution: Feature completion auto-updates docs
+- Code self-evolution: Eval-triggered sunset review auto-refactors
+- Framework self-evolution: ForgekinEngine optimizes routing from runtime data
+- "Self-develop-self" closed loop runs end-to-end
+
+**Key Tasks:**
+- P5-1 Partnership math full implementation (ceiling / floor / volatility / token ledger / dual-layer language / minimal necessary complexity)
+- P5-2 Docs self-evolution (Feature doc auto-update / ADR auto-generation / Eval result archival)
+- P5-3 Code self-evolution (Feature → code skeleton / Eval signal → harness refactor / attribution → auto-bug-fix)
+- P5-4 Framework self-evolution (ForgekinEngine routing optimization / TeamAct termination optimization / memory federation authority adjustment)
+- P5-5 "Self-develop-self" closed loop (11-step orchestrator / Forgekin A–G role definition / E2E test)
+
+---
+
+## Phase 6: SpiritForge Experience Distillation + MindCouncil
+
+> **Goal**: Implement E4+ Evolving state + multi-Forgekin MindCouncil deliberation mechanism.
+
+**Dependencies**: Phase 5 complete
+
+**Acceptance Criteria:**
+- SpiritForge distills experience into MindCodex during low-activity periods
+- MindCouncil convenes multiple Forgekins for deliberation
+- E4+ Evolving state triggerable (awakening stage ≥ E4)
+- MindCouncil resolutions writable to `VISION.md` / `ROADMAP.md`
+- Operator Magic Words can brake MindCouncil when it drifts from vision
+
+**Key Tasks:**
+- P6-1 SpiritForge experience distillation
+- P6-2 MindCouncil multi-Forgekin deliberation
+- P6-3 E4+ Evolving state machine
+- P6-4 MindCouncil resolution write-back mechanism
+- P6-5 Operator Magic Words integration
+
+---
+
+## Cross-Phase Standards
+
+All phases adhere to the engineering standards defined in [CONTRIBUTING.md](../CONTRIBUTING.md) — including testing requirements, code quality rules, and review protocols. The quality threshold for all loops is `0.85`.
+
+---
+
+## How to Contribute to a Phase
+
+Each phase has concrete acceptance criteria and tasks. Here's how to contribute:
+
+1. **Pick a task** — Look at the phase's Key Tasks, pick one that matches your skills
+2. **Check dependencies** — Make sure the task's dependencies are met
+3. **Read the relevant ADRs and Feature specs** — Understand the design before coding
+4. **Write code + tests** — Follow the engineering standards in CONTRIBUTING.md
+5. **Open a PR** — Use the [PR template](../.github/pull_request_template.md)
+6. **Cross-vendor review** — Your PR will be reviewed by Forgekins from a different vendor
+7. **Merge** — Once CI passes and review approves, squash-and-merge
+
+**Good first issues** for new contributors:
+- Phase 0: Documentation improvements, cross-platform testing
+- Phase 1: Unit tests for capability profile / partnership math
+- Phase 2: Forgekin YAML profile authoring
+- Phase 3: Adapter integration tests for a specific CLI agent
+
+---
+
+## Further Reading
+
+- [VISION.md](VISION.md) — Forgekin vision statement
+- [SOP.md](SOP.md) — Forgekin collaboration SOP
+- [design.md](design.md) — Current phase detailed design
+- [roleagent.md](roleagent.md) — Multi-agent engineering path whitepaper
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — How to contribute
