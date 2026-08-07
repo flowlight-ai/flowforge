@@ -1,0 +1,79 @@
+﻿# Path-based PR Labeler Configuration
+# https://github.com/actions/labeler
+# Labels are applied to PRs based on which files are changed
+
+# Core modules
+core:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "core/**"
+          - "model/**"
+
+router:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "router/**"
+
+channel:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "channel/**"
+
+infra:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "infra/**"
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "config/**"
+          - "**/*.yaml"
+          - "**/*.yml"
+          - "**/*.toml"
+          - "pyproject.toml"
+
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app.py"
+          - "admin/**"
+          - "user/**"
+
+# Non-code areas
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+          - "**/test_*.py"
+          - "**/*_test.py"
+
+ci-cd:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - ".gitignore"
+          - ".editorconfig"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pyproject.toml"
+          - "requirements*.txt"
+          - "setup.py"
+          - "setup.cfg"
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "SECURITY.md"
+          - "user/auth.py"
+          - "**/auth*"
+          - "**/secur*"
+          - "**/permiss*"

@@ -1,0 +1,70 @@
+﻿# OpenRoute Stale - Auto-close stale issues and PRs
+# Marks issues/PRs as stale after 30 days of inactivity
+# Closes them after 7 more days without activity
+
+name: "Stale"
+
+on:
+  schedule:
+    - cron: "0 2 * * *"  # Every day at 02:00 UTC
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Mark Stale
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Issues
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          stale-issue-label: "stale"
+          exempt-issue-labels: "priority: critical,pinned,security,good first issue,help wanted,status: in-progress"
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had
+            recent activity for 30 days. It will be closed in 7 days if no further
+            activity occurs.
+
+            这个 Issue 因为 30 天没有活动已被自动标记为 stale。如果没有进一步活动，将在 7 天后关闭。
+
+            If this is still relevant, please:
+            - Leave a comment to keep it active
+            - Or remove the `stale` label
+
+            如果仍然相关，请评论保持活跃，或移除 `stale` 标签。
+
+          close-issue-message: |
+            This issue has been automatically closed due to inactivity.
+            Please reopen if still relevant.
+
+            这个 Issue 因长时间无活动已被自动关闭。如仍相关请重新打开。
+
+          # Pull Requests
+          days-before-pr-stale: 14
+          days-before-pr-close: 7
+          stale-pr-label: "stale"
+          exempt-pr-labels: "priority: critical,pinned,security,status: needs-review,status: in-progress"
+          stale-pr-message: |
+            This PR has been automatically marked as stale because it has not had
+            recent activity for 14 days. It will be closed in 7 days if no further
+            activity occurs.
+
+            这个 PR 因为 14 天没有活动已被自动标记为 stale。如果没有进一步活动，将在 7 天后关闭。
+
+          close-pr-message: |
+            This PR has been automatically closed due to inactivity.
+            Please reopen if still being worked on.
+
+            这个 PR 因长时间无活动已被自动关闭。如仍在开发请重新打开。
+
+          # Misc
+          operations-per-run: 30
+          ascending: true
+          remove-stale-when-updated: true
+          delete-branch: false

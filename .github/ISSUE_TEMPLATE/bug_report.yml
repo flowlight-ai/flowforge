@@ -1,0 +1,137 @@
+﻿name: Bug Report
+description: Report a bug to help us improve OpenRoute
+title: "[bug]: "
+labels: ["type: bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill out the information below.
+        感谢你提交 Bug 报告！请填写以下信息。
+
+  - type: checkboxes
+    id: search-first
+    attributes:
+      label: Before Reporting
+      description: Please confirm you've done the following
+      options:
+        - label: I have searched existing [Issues](https://github.com/flowlight-ai/openroute/issues) to avoid duplicates
+          required: true
+        - label: I have read the [documentation](https://github.com/flowlight-ai/openroute/tree/main/docs) and [README](https://github.com/flowlight-ai/openroute/blob/main/README.md)
+          required: true
+        - label: I have updated to the latest version of OpenRoute
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: OpenRoute Version
+      description: Run `pip show openroute` or check `__init__.py`
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: Run `python --version`
+      placeholder: "Python 3.11.x"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS
+        - Ubuntu
+        - Debian
+        - CentOS / RHEL
+        - Other Linux
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is.
+      placeholder: "When I run ... , I expected ... but got ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Run `python app.py ...`
+        2. See error...
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Relevant log output. Enable verbose logging with `OPENROUTE_DEBUG=1`.
+        Paste logs between the triple backticks.
+      render: shell
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Error Traceback
+      description: Full traceback if an exception was raised
+      render: python
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: |
+        Relevant configuration files (YAML, .env). Remove any secrets/keys first!
+        相关配置文件内容，请先移除密钥！
+      render: yaml
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or links
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting, you agree to follow our [Code of Conduct](https://github.com/flowlight-ai/openroute/blob/main/.github/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
