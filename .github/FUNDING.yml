@@ -1,0 +1,38 @@
+﻿# GitHub Funding / 赞助
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+
+# Uncomment and configure the platforms you want to use
+
+# GitHub Sponsors
+github: [flowlight-ai]
+
+# Open Collective
+# open_collective: openroute
+
+# Patreon
+# patreon: flowlight-ai
+
+# Ko-fi
+# ko_fi: flowlight-ai
+
+# Tidelift
+# tidelift: "pypi/openroute"
+
+# Community Bridge
+# community_bridge: openroute
+
+# Liberapay
+# liberapay: flowlight-ai
+
+# IssueHunt
+# issuehunt: flowlight-ai
+
+# Otechie
+# otechie: flowlight-ai
+
+# Custom URL
+# custom: ["https://your-donation-url.com", "https://your-second-donation-url.com"]
+
+# Preferred: GitHub Sponsors
+# Your support helps us maintain and improve OpenRoute!
+# 你的支持帮助我们持续维护和改进 OpenRoute！

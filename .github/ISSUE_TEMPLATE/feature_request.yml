@@ -1,0 +1,96 @@
+﻿name: Feature Request
+description: Suggest a new feature or improvement for OpenRoute
+title: "[feature]: "
+labels: ["type: enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your feature suggestion! Please fill out the information below.
+        感谢你的功能建议！请填写以下信息。
+
+  - type: checkboxes
+    id: search-first
+    attributes:
+      label: Before Suggesting
+      description: Please confirm you've done the following
+      options:
+        - label: I have searched existing [Issues](https://github.com/flowlight-ai/openroute/issues) and [Discussions](https://github.com/flowlight-ai/openroute/discussions) to avoid duplicates
+          required: true
+        - label: I have read the [documentation](https://github.com/flowlight-ai/openroute/tree/main/docs) to confirm this feature doesn't already exist
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: Which area does this feature belong to?
+      options:
+        - Router (routing & dispatch)
+        - Channel (provider channels)
+        - Provider (LLM provider integration)
+        - WebChat (chat interface)
+        - Config (configuration system)
+        - Admin (admin panel)
+        - API (REST API)
+        - Security (auth, rate limiting)
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What's the use case?
+      placeholder: "I'm always frustrated when ... because ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like
+      placeholder: "I would like OpenRoute to ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternatives have you considered?
+      placeholder: |
+        1. Alternative A: ...
+        2. Alternative B: ...
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: |
+        Code examples, mockups, or references to similar features in other projects.
+        代码示例、设计草图或其他项目中的类似功能参考。
+      render: python
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - Low - nice to have
+        - Medium - would improve my workflow
+        - High - blocking my work
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting, you agree to follow our [Code of Conduct](https://github.com/flowlight-ai/openroute/blob/main/.github/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
