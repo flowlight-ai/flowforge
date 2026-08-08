@@ -4,7 +4,7 @@
 
 ## 1. 分支模型：仅主干开发（最高优先级）
 
-- **Gitee 主干分支 = `master`；GitHub 主干分支 = `main`**（stockforge/novelforge/mallforge 在 GitHub 侧历史分支为 `master`，以各仓库实际主干为准）。
+- **Gitee 主干分支 = `master`；GitHub 主干分支 = `main`**，全部 9 仓库统一（含 stockforge/novelforge/mallforge，其 GitHub 默认分支已统一改为 `main`）。
 - **所有代码变更必须通过 Pull Request 合入主干**：本地在主干分支提交后直接 `push`，Gitee 的 master 保护分支会自动将推送转为 PR（重定向到 `auto/master/*` 分支），评审合入后才出现在 master 上。
 - **双平台同步**：同一提交须同时推送到 Gitee 和 GitHub（`./mgr sync` 或分别 push），保持两端主干内容一致。
 - **禁止创建/使用 `dev`、`develop` 等长期分支**；历史遗留 dev 分支一律删除。
