@@ -111,7 +111,7 @@ async def verify_live(meta: list[dict]) -> None:
         try:
             r = await built.chat(
                 [{"role": "user", "content": "reply with exactly: PONG"}],
-                model=PROVIDER_MODEL.get(provider),
+                model=m["model"] or PROVIDER_MODEL.get(provider),
                 timeout=110,
             )
             content = r.get("content", "")
