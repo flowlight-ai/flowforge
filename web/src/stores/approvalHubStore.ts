@@ -1,7 +1,6 @@
 /**
  * Approval Hub Store (Zustand)
  *
- * 来源：clowder-ai/packages/web/src/stores/approvalHubStore.ts
  * 职责：管理审批中心的待审批项列表、badge 计数
  *
  * 用途：

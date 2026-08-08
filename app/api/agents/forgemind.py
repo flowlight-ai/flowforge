@@ -19,33 +19,113 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
-from flowforge.app.api.agents.forgemind_models import (
-    WebChatRequest,
-    WebChatResponse,
-    CouncilRequest,
-    CouncilResponse,
-    ForgeResponse,
-    EvolveRequest,
-    EvolveResponse,
-)
+from flowforge.app.api.agents.forgemind_registry import _registry
 from flowforge.core.tracing import get_logger
 from flowforge.forgemind.forgekins import (
     BUILTIN_FORGEKINS,
-    load_forgekin_config,
     list_builtin_forgekins,
+    load_forgekin_config,
 )
-from flowforge.forgemind.forging.pipeline import ForgePipeline
-from flowforge.forgemind.base import ForgekinBase
-from flowforge.app.api.agents.forgemind_registry import _registry
 
 logger = get_logger("api.forgemind")
 
 router = APIRouter(prefix="/forgemind", tags=["forgemind"])
+
+
+# ── 请求/响应模型 ──────────────────────────────────────────────
+
+class WebChatRequest(BaseModel):
+    """webchat 请求体。"""
+    message: str = Field(
+        ...,
+        min_length=1,
+        description="用户消息内容",
+    )
+    session_id: str | None = Field(
+        default=None,
+        description="会话 ID（用于上下文保持，默认使用 forgekin_id）",
+    )
+    temperature: float | None = Field(
+        default=None,
+        description="采样温度（覆盖 YAML 配置）",
+    )
+    max_tokens: int | None = Field(
+        default=None,
+        description="最大生成 token 数（覆盖 YAML 配置）",
+    )
+
+
+class WebChatResponse(BaseModel):
+    """webchat 响应体。"""
+    forgekin_id: str
+    name: str
+    content: str
+    model: str = "trae"
+    session_id: str
+    usage: dict[str, Any] = Field(default_factory=dict)
+
+
+class CouncilRequest(BaseModel):
+    """IM MindCouncil请求体。"""
+    topic: str = Field(
+        ...,
+        min_length=1,
+        description="MindCouncil主题（如 '是否采用 ADR-014 提议的 Plugin V4 协议'）",
+    )
+    forgekin_ids: list[str] = Field(
+        default_factory=list,
+        description="参与MindCouncil的Forgekin ID 列表（默认 3 只预置Forgekin全部参与）",
+    )
+    max_rounds: int = Field(
+        default=1,
+        ge=1,
+        le=3,
+        description="MindCouncil最大轮数（每轮所有Forgekin各发言一次）",
+    )
+
+
+class CouncilResponse(BaseModel):
+    """IM MindCouncil响应体。"""
+    topic: str
+    rounds: list[dict[str, Any]]
+    summary: str
+    participant_count: int
+
+
+class ForgeResponse(BaseModel):
+    """锻造响应体。"""
+    forgekin_id: str
+    name: str
+    species: str
+    evolution_stage: str
+    awakening_stage: str
+    imprint_hash: str
+    status: str = "forged"
+
+
+class EvolveRequest(BaseModel):
+    """自进化触发请求体。"""
+    mode: str = Field(
+        default="auto",
+        description="进化模式：auto/scope_guard/process_evolution/knowledge_evolution",
+    )
+    context: dict[str, Any] = Field(
+        default_factory=dict,
+        description="进化上下文（如最近任务结果、错误日志等）",
+    )
+
+
+class EvolveResponse(BaseModel):
+    """自进化响应体。"""
+    forgekin_id: str
+    mode: str
+    triggered: bool
+    result: dict[str, Any]
 
 
 # ── Endpoints ──────────────────────────────────────────────────
@@ -188,31 +268,39 @@ async def webchat(forgekin_id: str, request: WebChatRequest) -> WebChatResponse:
 async def council(request: CouncilRequest) -> CouncilResponse:
     """IM MindCouncil — 多Forgekin协同决策.
 
-    MindCouncil（ForgeCouncil）是多个Forgekin就用户提出的问题进行协同讨论的机制。
+    MindCouncil（ForgeCouncil）是多个Forgekin就特定主题进行协同决策的机制。
     每轮所有参与Forgekin依次发言，下一轮可以看到前一轮的所有发言。
-    所有响应来自真实 LLM 调用（forgekin.chat → ZHIPU/OpenRoute API），
-    禁止硬编码提示语（铁律2+P16）。
-
-    端到端打通（tools_bridge）:
-        用户请求若含动作意图（查系统信息/git状态/读文件等），先执行真实工具
-        获取真实数据，再把数据注入 LLM 上下文——让智能体能"做"而不只是"说"。
-        这解决了用户反馈"问系统信息只回复'我会检查'但实际不查"的问题。
 
     Args:
-        request: MindCouncil请求体，topic 为用户原始消息。
+        request: MindCouncil请求体。
 
     Returns:
-        MindCouncil结果，含每轮发言（含真实 model/usage）和最终摘要。
+        MindCouncil结果，含每轮发言和最终摘要。
     """
     # 确定参与Forgekin
     forgekin_ids = request.forgekin_ids or list(BUILTIN_FORGEKINS)
 
+    # 辅助函数：BUILTIN_FORGEKINS 用无前缀 id（如 "wenxin"），
+    # 但 forgekin_id 在 YAML 中是 "forgemind:wenxin"（带 namespace 前缀）。
+    # forge_forgekin(fid) 按 BUILTIN_FORGEKINS 的无前缀 id 锻造，
+    # 但 _registry 注册的 key 是 forgekin.forgekin_id（带前缀）。
+    # 因此查找时需同时尝试无前缀和带前缀两种 key。
+    def _resolve_registry(forgekin_id: str):
+        inst = _registry.get(forgekin_id)
+        if inst is not None:
+            return inst
+        if not forgekin_id.startswith("forgemind:"):
+            inst = _registry.get(f"forgemind:{forgekin_id}")
+            if inst is not None:
+                return inst
+        return None
+
     # 确保所有Forgekin已锻造
     for fid in forgekin_ids:
-        if _registry.get(fid) is None:
+        if _resolve_registry(fid) is None:
             await forge_forgekin(fid)
 
-    participants = [_registry.get(fid) for fid in forgekin_ids]
+    participants = [_resolve_registry(fid) for fid in forgekin_ids]
     participants = [p for p in participants if p is not None]
 
     if not participants:
@@ -221,90 +309,31 @@ async def council(request: CouncilRequest) -> CouncilResponse:
             detail="无可用Forgekin参与MindCouncil",
         )
 
-    # ── 端到端打通：工具桥接层 ──────────────────────────────────
-    # 检测用户消息中的动作意图，执行真实工具获取真实数据。
-    # 这样当用户问"查询系统信息"时，智能体会拿到真实 CPU/内存数据，
-    # 而不是只回复"我会检查"（铁律 T2: 禁止假数据/假逻辑）。
-    from flowforge.forgemind.tools_bridge import (
-        detect_and_execute, build_observation_context,
-    )
-
-    user_message = request.topic.strip()
-    observation_context = ""
-    observation = await detect_and_execute(user_message)
-    if observation is not None:
-        observation_context = build_observation_context(observation)
-        logger.info(
-            "council 工具桥接: intent=%s tool=%s success=%s data_len=%d",
-            observation.intent, observation.tool_name,
-            observation.success, len(observation.data),
-        )
-
-    # 执行多轮MindCouncil — 用户消息原样传递，不包装成"主题"
-    # 性能优化：同一轮内所有灵智体并行调用 LLM（基于相同历史），大幅减少等待时间
+    # 执行多轮MindCouncil
     rounds: list[dict[str, Any]] = []
     discussion_history: list[dict[str, str]] = []
 
-    async def _call_forgekin(
-        forgekin: ForgekinBase, context_msg: str
-    ) -> tuple[ForgekinBase, dict[str, Any]]:
-        """并行调用单个灵智体的 LLM（异常捕获，不阻断其他灵智体）."""
-        try:
+    for round_num in range(1, request.max_rounds + 1):
+        round_messages: list[dict[str, Any]] = []
+        for forgekin in participants:
+            # 构造MindCouncil上下文消息
+            context_msg = f"MindCouncil主题: {request.topic}\n\n"
+            if discussion_history:
+                context_msg += "已有讨论:\n"
+                for msg in discussion_history[-6:]:  # 最近 6 条
+                    context_msg += f"[{msg['role']}]: {msg['content'][:200]}\n"
+                context_msg += "\n请基于以上讨论，给出你的观点（200 字以内）:"
+            else:
+                context_msg += "请给出你的初始观点（200 字以内）:"
+
             messages = [{"role": "user", "content": context_msg}]
             result = await forgekin.chat(messages)
-            return forgekin, result
-        except Exception as exc:  # noqa: BLE001 — 单个灵智体失败不阻断群聊
-            return forgekin, {
-                "content": f"[{forgekin.name} 调用异常] {type(exc).__name__}: {exc}",
-                "model": "error",
-                "usage": {"latency_ms": 0, "error": True},
-            }
 
-    for round_num in range(1, request.max_rounds + 1):
-        # 构造本轮所有灵智体的上下文消息（同轮共享相同历史）
-        if round_num == 1 and not discussion_history:
-            # 第一轮：所有灵智体直接回应用户消息
-            # 若有工具观察结果，前置注入真实数据（端到端打通核心）
-            if observation_context:
-                context_msg = (
-                    f"{observation_context}\n\n"
-                    f"---\n用户原始问题: {user_message}\n"
-                    f"请基于以上真实数据回答用户问题，直接给出真实数据，"
-                    f'不要说"我会检查"或"请稍等"。'
-                )
-            else:
-                context_msg = user_message
-            contexts = [(f, context_msg) for f in participants]
-        else:
-            # 后续轮：基于用户问题 + 已有讨论（最近 6 条）
-            history_text = ""
-            for msg in discussion_history[-6:]:
-                history_text += f"[{msg['role']}]: {msg['content'][:200]}\n"
-            contexts = [
-                (
-                    f,
-                    f"用户问题: {user_message}\n\n已有讨论:\n{history_text}\n"
-                    f"请基于用户问题和以上讨论，给出你的观点（200 字以内）:",
-                )
-                for f in participants
-            ]
-
-        # 并行调用所有灵智体（asyncio.gather 保持顺序）
-        results = await asyncio.gather(
-            *[_call_forgekin(f, ctx) for f, ctx in contexts]
-        )
-
-        round_messages: list[dict[str, Any]] = []
-        for forgekin, result in results:
             content = result.get("content", "")
-            model = result.get("model", "unknown")
-            usage = result.get("usage", {})
             round_messages.append({
                 "forgekin_id": forgekin.forgekin_id,
                 "name": forgekin.name,
                 "content": content,
-                "model": model,
-                "usage": usage,
             })
             discussion_history.append({
                 "role": forgekin.name,
@@ -313,9 +342,9 @@ async def council(request: CouncilRequest) -> CouncilResponse:
 
         rounds.append({"round": round_num, "messages": round_messages})
 
-    # 生成摘要（用第一个Forgekin）— 直接基于讨论记录总结
+    # 生成摘要（用第一个Forgekin）
     summary_msg = (
-        f"用户问题: {user_message}\n\n"
+        f"MindCouncil主题: {request.topic}\n\n"
         f"以下是 {len(participants)} 位Forgekin的讨论记录，请总结共识与分歧（300 字以内）:\n"
     )
     for msg in discussion_history:
@@ -410,189 +439,3 @@ async def evolve(
             triggered=False,
             result={"error": str(exc)},
         )
-
-
-# ── WebSocket 端点 ──────────────────────────────────────────────
-
-@router.websocket("/council/ws")
-async def council_ws(websocket: WebSocket) -> None:
-    """MindCouncil WebSocket — 群聊实时消息流.
-
-    用途：
-        - 推送灵议进度（灵智体开始思考/发言完成）
-        - 推送心跳（避免前端误判超时）
-        - 未来扩展：多客户端协同编辑、实时 @mention 提醒
-
-    协议：
-        - 服务端 → 客户端：JSON 消息 ``{"type": "...", "data": {...}}``
-        - 客户端 → 服务端：JSON 消息（如 ``{"type": "ping"}``）
-
-    消息类型：
-        - ``connected``: 连接成功
-        - ``pong``: 心跳响应
-        - ``error``: 错误消息
-
-    注意：
-        群聊主流程仍通过 HTTP POST ``/api/v1/forgemind/council`` 触发，
-        本 WebSocket 仅用于实时进度推送和心跳保活。
-
-    详见 MERGE-SPEC.md §3.2 WS /api/v1/forgemind/council/ws。
-    """
-    await websocket.accept()
-    logger.info("MindCouncil WebSocket 已连接")
-
-    # 发送连接成功消息
-    await websocket.send_json({
-        "type": "connected",
-        "data": {
-            "message": "MindCouncil WebSocket 已连接",
-            "hint": "群聊主流程请使用 POST /api/v1/forgemind/council",
-        },
-    })
-
-    try:
-        while True:
-            # 监听客户端消息（主要用于 ping/pong 心跳）
-            message = await websocket.receive_text()
-            try:
-                import json
-                data = json.loads(message)
-                msg_type = data.get("type", "unknown")
-
-                if msg_type == "ping":
-                    await websocket.send_json({"type": "pong", "data": {"ts": __import__("time").time()}})
-                elif msg_type == "subscribe":
-                    # 订阅特定主题的群聊事件（未来扩展）
-                    await websocket.send_json({
-                        "type": "subscribed",
-                        "data": {"topic": data.get("topic", "default")},
-                    })
-                else:
-                    await websocket.send_json({
-                        "type": "error",
-                        "data": {"message": f"未知消息类型: {msg_type}"},
-                    })
-            except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "data": {"message": "无效的 JSON 消息"},
-                })
-    except WebSocketDisconnect:
-        logger.info("MindCouncil WebSocket 已断开")
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(f"MindCouncil WebSocket 异常: {exc}")
-        try:
-            await websocket.close()
-        except Exception:  # noqa: BLE001
-            pass
-
-
-# ── AutonomousDaemon 端点（F052: 5 灵智体自主运行可观测性）──────────
-
-def _get_daemon(request: Request) -> Any:
-    """从 app.state 获取 AutonomousDaemon 实例（可能为 None）."""
-    return getattr(request.app.state, "autonomous_daemon", None)
-
-
-@router.get("/autonomous/status")
-async def autonomous_status(request: Request) -> dict[str, Any]:
-    """获取 AutonomousDaemon 运行状态.
-
-    返回：
-        - running: 是否在运行
-        - scan_interval_seconds: 扫描间隔（默认 600s = 10 分钟）
-        - scan_count: 已扫描轮数
-        - total_tasks/pending/assigned/completed/failed: 任务统计
-        - recent_activities: 最近 20 条活动记录
-    """
-    daemon = _get_daemon(request)
-    if daemon is None:
-        return {
-            "running": False,
-            "available": False,
-            "message": "AutonomousDaemon 未启动（可能因配置或启动异常）",
-        }
-    status = daemon.get_status()
-    status["available"] = True
-    return status
-
-
-@router.get("/autonomous/activities")
-async def autonomous_activities(request: Request, limit: int = 50) -> dict[str, Any]:
-    """获取自进化活动历史（供 Web 可观测性展示）.
-
-    Args:
-        limit: 返回最近 N 条活动（默认 50，最大 200）
-    """
-    daemon = _get_daemon(request)
-    if daemon is None:
-        return {"available": False, "activities": [], "message": "AutonomousDaemon 未启动"}
-    limit = max(1, min(limit, 200))
-    activities = daemon.get_activity_log(limit=limit)
-    return {
-        "available": True,
-        "total": len(activities),
-        "activities": activities,
-    }
-
-
-@router.get("/autonomous/outputs")
-async def autonomous_outputs(request: Request, limit: int = 20) -> dict[str, Any]:
-    """获取已完成任务的产出（供 Web 聊天和可观测性展示）.
-
-    Args:
-        limit: 返回最近 N 条产出（默认 20，最大 50）
-    """
-    daemon = _get_daemon(request)
-    if daemon is None:
-        return {"available": False, "outputs": [], "message": "AutonomousDaemon 未启动"}
-    limit = max(1, min(limit, 50))
-    outputs = daemon.get_completed_outputs(limit=limit)
-    return {
-        "available": True,
-        "total": len(outputs),
-        "outputs": outputs,
-    }
-
-
-@router.post("/autonomous/trigger-scan")
-async def autonomous_trigger_scan(request: Request) -> dict[str, Any]:
-    """手动触发一次扫描（不等 10 分钟间隔）.
-
-    用于 operator 在 Web 界面点击"立即扫描"按钮。
-    """
-    daemon = _get_daemon(request)
-    if daemon is None:
-        return {"available": False, "message": "AutonomousDaemon 未启动"}
-    try:
-        tasks = daemon._scan_project()
-        submitted = 0
-        for task in tasks[: daemon._max_tasks_per_scan]:
-            # 状态感知去重（与 daemon 主循环一致）：
-            #   - PENDING/ASSIGNED/RUNNING → 跳过
-            #   - COMPLETED/FAILED/CANCELLED/None → 允许重新提交
-            # 修复：原代码引用已删除的 _submitted_titles 属性导致 trigger-scan 抛 AttributeError
-            if daemon._is_task_in_progress(task.title):
-                continue
-            daemon._coord.submit_task(task)
-            daemon._title_to_task_id[task.title] = task.task_id
-            submitted += 1
-            daemon._log_activity(
-                "task_submitted",
-                task.title,
-                task_id=task.task_id,
-                required_capabilities=task.required_capabilities,
-                triggered_by="manual",
-            )
-        # 立即执行已分配的任务
-        import asyncio
-        asyncio.create_task(daemon._execute_assigned_tasks())
-        return {
-            "available": True,
-            "triggered": True,
-            "discovered_tasks": len(tasks),
-            "submitted_tasks": submitted,
-            "message": f"扫描完成：发现 {len(tasks)} 个任务，提交 {submitted} 个",
-        }
-    except Exception as exc:  # noqa: BLE001
-        return {"available": True, "triggered": False, "error": str(exc)}

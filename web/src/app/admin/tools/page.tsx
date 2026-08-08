@@ -10,7 +10,7 @@ import { HubToolUsageTab } from "@/components/hub/HubToolUsageTab";
  *   - 成功率与平均耗时
  *   - 按工具分类（rag/publish/search/exec/io）
  *
- * 依据 WEB-FUSION-DESIGN.md §8：移植自 clowder-ai HubToolUsageTab。
+ * 整合 HubToolUsageTab。
  */
 
 export default function ToolsPage() {

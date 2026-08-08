@@ -2,9 +2,6 @@
 
 /**
  * ActivityBar — 全局活动栏（52px）
- *
- * 来源：clowder-ai/packages/web/src/components/ActivityBar.tsx（简化版）
- *
  * 重构说明（v2）：
  *   - 将原"对话"小图标拆为两个独立入口：对话（/solo）+ 群聊（/council）
  *   - 原因：Helm 是单人对话、Council 是群聊，二者 UI 框架完全不同（Helm 三栏 vs Council 全屏），
@@ -13,7 +10,7 @@
  *
  * 命名规范（依据 naming-contract.md）：
  *   - 使用 P0 命名 "智能体" / "记忆中心" 等
- *   - 路径与 clowder-ai 对齐（/solo /council /memory /mission-hub /signals /admin/settings）
+ *   - 路径
  */
 
 import { usePathname, useRouter } from "next/navigation";

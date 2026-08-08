@@ -3,7 +3,6 @@
 /**
  * HubQuotaBoardTab — 配额看板 Tab
  *
- * 移植自 clowder-ai HubQuotaBoardTab，简化为 FlowForge 适配版。
  * 用于 /admin/quotas，监控 Token 配额、调用限制、用量统计。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

@@ -45,9 +45,10 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -218,7 +219,7 @@ class ProviderQuotaManager:
     def __init__(
         self,
         configs: dict[str, ProviderQuotaConfig],
-        metrics_collector: Optional[Any] = None,
+        metrics_collector: Any | None = None,
     ) -> None:
         self._configs: dict[str, ProviderQuotaConfig] = dict(configs)
         self._metrics_collector = metrics_collector
@@ -233,20 +234,20 @@ class ProviderQuotaManager:
         """初始化指定 provider 的使用量记录。"""
         return QuotaUsage(
             provider=provider,
-            date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            date=datetime.now(UTC).strftime("%Y-%m-%d"),
         )
 
-    def _get_usage(self, provider: str) -> Optional[QuotaUsage]:
+    def _get_usage(self, provider: str) -> QuotaUsage | None:
         """获取指定 provider 的使用量记录，不存在则返回 None。"""
         return self._usage.get(provider)
 
-    def _get_config(self, provider: str) -> Optional[ProviderQuotaConfig]:
+    def _get_config(self, provider: str) -> ProviderQuotaConfig | None:
         """获取指定 provider 的配额配置，不存在则返回 None。"""
         return self._configs.get(provider)
 
     def _ensure_same_day(self, usage: QuotaUsage) -> None:
         """若跨天则重置每日计数。"""
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        today = datetime.now(UTC).strftime("%Y-%m-%d")
         if usage.date != today:
             usage.reset_daily()
             usage.date = today
@@ -513,7 +514,7 @@ class ProviderQuotaManager:
                 f"Provider '{provider}' marked cooldown for {cooldown_seconds}s: {reason}"
             )
 
-    async def get_backup_model(self, provider: str) -> Optional[str]:
+    async def get_backup_model(self, provider: str) -> str | None:
         """获取指定 provider 的首选备用模型。
 
         按配置中 backup_models 列表顺序返回第一个。
@@ -657,7 +658,7 @@ class ProviderQuotaManager:
         注意：并发计数与冷却状态不在每日重置范围内。
         """
         async with self._lock:
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            today = datetime.now(UTC).strftime("%Y-%m-%d")
             for provider, usage in self._usage.items():
                 usage.reset_daily()
                 usage.date = today

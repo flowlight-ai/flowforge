@@ -5,10 +5,8 @@
 """
 from __future__ import annotations
 
-import json
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -17,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 class ResumeCommand(BaseModel):
     """LangGraph Command(resume=...) 的适配模型"""
-    resume_values: Dict[str, Any] = {}
-    interrupt_before: List[str] = []
+    resume_values: dict[str, Any] = {}
+    interrupt_before: list[str] = []
     checkpoint_id: str = ""
     workflow_id: str = ""
     node_name: str = ""
@@ -30,8 +28,8 @@ class HumanReviewConfig(BaseModel):
     interrupt_before: bool = True
     timeout: float = 3600.0  # 审核超时（秒）
     auto_approve_after_timeout: bool = False
-    required_fields: List[str] = []  # 审核必须填写的字段
-    allowed_actions: List[str] = ["approve", "reject", "request_changes"]
+    required_fields: list[str] = []  # 审核必须填写的字段
+    allowed_actions: list[str] = ["approve", "reject", "request_changes"]
 
 
 class ResumeAdapter:
@@ -47,9 +45,9 @@ class ResumeAdapter:
     def __init__(self, event_bus: Any = None, checkpoint_manager: Any = None):
         self._event_bus = event_bus
         self._checkpoint_manager = checkpoint_manager
-        self._pending_reviews: Dict[str, Dict[str, Any]] = {}
+        self._pending_reviews: dict[str, dict[str, Any]] = {}
 
-    def compile_interrupt_config(self, workflow_config: Dict[str, Any]) -> Dict[str, Any]:
+    def compile_interrupt_config(self, workflow_config: dict[str, Any]) -> dict[str, Any]:
         """从Workflow YAML配置编译LangGraph interrupt_before配置
 
         扫描workflow_config中的human_review节点，生成interrupt_before列表
@@ -80,9 +78,9 @@ class ResumeAdapter:
         self,
         workflow_id: str,
         node_name: str,
-        state: Dict[str, Any],
-        config: Optional[HumanReviewConfig] = None,
-    ) -> Dict[str, Any]:
+        state: dict[str, Any],
+        config: HumanReviewConfig | None = None,
+    ) -> dict[str, Any]:
         """创建审核请求
 
         当工作流执行到human_review节点时调用
@@ -124,9 +122,9 @@ class ResumeAdapter:
         workflow_id: str,
         node_name: str,
         review_action: str,
-        review_data: Optional[Dict[str, Any]] = None,
+        review_data: dict[str, Any] | None = None,
         reviewer: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """恢复工作流 — 对应LangGraph的Command(resume=...)
 
         Args:
@@ -187,14 +185,14 @@ class ResumeAdapter:
 
         return command.model_dump()
 
-    def get_pending_reviews(self, workflow_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_pending_reviews(self, workflow_id: str | None = None) -> list[dict[str, Any]]:
         """获取待审核列表"""
         reviews = list(self._pending_reviews.values())
         if workflow_id:
             reviews = [r for r in reviews if r["workflow_id"] == workflow_id]
         return reviews
 
-    def check_timeout(self) -> List[str]:
+    def check_timeout(self) -> list[str]:
         """检查超时的审核请求"""
         import time
         now = time.time()

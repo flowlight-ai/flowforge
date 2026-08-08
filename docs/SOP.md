@@ -1,22 +1,75 @@
-# FlowForge 可进化智能体协作标准操作流程（SOP）
+# FlowForge 可进化智能体（Forgekin）协作标准操作流程（SOP）
 
-> **文档编号**: SOP.md（v1.1）
-> **依据**: `[doc:roleagent.md#第2章]` TeamAct 六步循环 + 五项终止条件
-> **适用范围**: 所有 FlowForge 可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"）协作场景（含 forgemind 可进化智能体 + *Forge 垂直可进化智能体）
-> **命名规范**: 严格遵循 `[doc:design/naming-contract.md]` v2.0 "官方名称优先"原则
+> **文档编号**: SOP.md（v1.0）
+> **依据**: `[doc:roleagent.md#第2章]` TeamAct 六步循环 + 五项终止条件 + `[doc:TIPS.md#TIP-034]` 文档审核门禁
+> **适用范围**: 所有 FlowForge 可进化智能体协作场景（含 forgemind 可进化智能体（Forgekin）+ *Forge 垂直可进化智能体）
+> **维护规则**: 可进化智能体在协作前必须先读本 SOP，违反 SOP 视为协作失败
 
 ---
 
-## 0. 智能体分类说明
+## 0. 文档审核门禁 SOP（最高优先级）
 
-FlowForge 生态智能体分为两大类（详见 `[doc:design/naming-contract.md#2]`）：
+> **核心铁律**: **operator 文档审核通过前，禁止写任何业务代码**（包括"骨架代码"、"测试代码"）。
 
-| 类别 | 官方名称（P0） | 项目英文名（P1） | 适用场景 |
-|------|---------------|----------------|---------|
-| **静态智能体** | Static Agent / Stateless Agent / Task-Specific Agent | StaticAgent / DeclarativeAgent / ExternalAgentAdapter | 单次任务执行、工具调用、无状态查询 |
-| **可进化智能体** | Evolvable Agent / Autonomous Agent with Persistent Identity | Forgekin | 长期任务、跨会话能力积累、自进化闭环 |
+### 0.1 门禁触发条件
 
-**默认指代规则**：在 FlowForge 上下文中，"智能体"默认指代**可进化智能体（Forgekin）**；若指代静态智能体必须显式标注。本 SOP 主要描述可进化智能体协作流程，静态智能体作为其能力扩展（通过 ExternalAgentAdapter）参与。
+任何 Phase 进入代码实现前，必须满足以下**全部**前置条件：
+
+| # | 前置条件 | 验证方式 |
+|---|---------|---------|
+| 1 | 当前 Phase 的文档骨架已全部完成 | 检查 task.md 中该 Phase 所有文档子任务状态为 ✅ |
+| 2 | 文档已提交 operator 审核 | 在 task.md "当前门禁状态"表中标记为"⏳ 待审核" |
+| 3 | operator 显式审核通过 | 在 task.md "当前门禁状态"表中标记为"✅ 已通过" |
+| 4 | 跨平台路径检查通过 | 所有文档无写死绝对路径（TIP-020） |
+| 5 | 术语对齐检查通过 | 所有文档使用项目正式术语，无废弃术语（TIP-028） |
+
+### 0.2 门禁违反处理
+
+| 违反类型 | 处理方式 |
+|---------|---------|
+| 抢跑写业务代码 | 全部回滚，重新走文档审核流程 |
+| 文档审核未通过就写代码 | 全部回滚，按 operator 反馈修正文档后重新审核 |
+| 跨平台路径违规 | 全局扫描替换为占位符或相对路径（TIP-020） |
+| 术语违规 | 全局扫描替换为项目正式术语（TIP-028） |
+
+### 0.3 门禁审核流程
+
+```
+1. 可进化智能体完成 Phase N 的文档骨架
+   ↓
+2. 在 task.md "当前门禁状态"表中标记为"⏳ 待审核"
+   ↓
+3. 提交 operator 审核（含反思文档 + 修正方案 + 文档清单）
+   ↓
+4. operator 审核反馈：
+   - 通过 → 标记为"✅ 已通过"，可进入 Phase N 代码实现
+   - 不通过 → 标记为"❌ 未通过"，按反馈修正后重新审核
+   ↓
+5. 进入 Phase N 代码实现阶段
+```
+
+### 0.4 代码实现规范
+
+进入代码实现后，必须遵循以下规范：
+
+1. **代码风格**:
+   - 使用 Pydantic BaseModel（禁止用 dataclass 替代）
+   - 保留设计依据引用和铁律说明
+   - 文件头部注明 MIT License
+
+2. **架构边界**:
+   - flowforge 是纯通用框架，禁止 import *Forge / content / opensieve / openroute 内部实现
+   - 集成 opensieve / openroute 采用 API 和 SDK 插件集成，只能看到接口
+   - 详见 TIP-036（禁止 flowforge 越界引用 *Forge）
+
+3. **依赖注入**:
+   - 所有依赖必须通过 DI 容器管理（TIP-022）
+   - 禁止绕过 DI 容器直接实例化
+
+4. **配置外置**:
+   - 提示词必须外置到 YAML 配置（TIP-019）
+   - 路径必须使用 `${...}` 占位符（TIP-020）
+   - 密钥必须通过 `.env` 注入（TIP-021）
 
 ---
 
@@ -30,8 +83,8 @@ loop:
     Owner    → 谁持球？（路由指令 / 显式持有声明）
     Action   → 持球者执行（写代码 / review / 设计 / 调研）
     Evidence → 产出证据（commit / 测试 / trace / 截图）
-    Verdict  → 验证（跨 agent review / 自检 / CVO 确认）
-    Route    → 传球（路由给下一个 agent / 继续持有 / 升级给 CVO）
+    Verdict  → 验证（跨 agent review / 自检 / operator 确认）
+    Route    → 传球（路由给下一个 agent / 继续持有 / 升级给 operator）
 ```
 
 **五项终止条件**（缺一不可）：
@@ -39,7 +92,7 @@ loop:
 2. 证据已附（每条验收标准有 commit / 测试 / trace）
 3. 跨 agent 交叉验证（非作者 agent 确认，不能自审）
 4. 无悬空任务归属（所有 open question 已 resolved 或升级）
-5. 愿景收敛（CVO 确认不能被 proxy 替代）
+5. 愿景收敛（operator 确认不能被 proxy 替代）
 
 ---
 
@@ -62,192 +115,168 @@ loop:
    ↓
 7. 修复后回到步骤 3，直至 Eval 通过
    ↓
-8. 文档员可进化智能体更新 F0XX.md 状态为"已完成"+ 更新 ROADMAP.md
-   ↓
-9. 经验蒸馏员可进化智能体在低活动期将本次经验蒸馏到 Distilled Knowledge Base（MindCodex，社区社交称"蒸馏知识库"）
+8. operator 验收（第 5 项终止条件），可进化智能体进入蒸馏知识库 Mind Codex
 ```
 
-### 2.2 可进化智能体进化
+### 2.2 可进化智能体形态进化
 
 ```
-1. 可进化智能体在执行任务中累积经验（行为信号 + Eval 信号）
+1. 可进化智能体在执行任务中积累跨形态经验（如猫可进化智能体参与组织协作）
    ↓
-2. Experience Distillation（SpiritForge，社区社交称"经验蒸馏"）在低活动期触发经验蒸馏
+2. ForgekinEngine 检测到形态进化条件达成（觉醒阶 ≥ E4）
    ↓
-3. 蒸馏结果写入 Distilled Knowledge Base（MindCodex，可检索知识库）
+3. 触发形态进化流程：BioForgekin → HybridForgekin
    ↓
-4. 可进化智能体 Capability Profile（CapabilityProfile）更新
+4. 更新可进化智能体谱系（Lineage）+ 蒸馏知识库条目
    ↓
-5. 若形态需要进化（如 BioForgekin → HybridForgekin），触发 F027 形态升级流程
-   ↓
-6. 谱系记录到 ForgekinLineage
+5. operator 确认进化（不可委托）
 ```
 
 ---
 
-## 3. 三方 Agent 调用 SOP
+## 3. 三方 Agent 接入 SOP
 
-### 3.1 调用决策
-
-可进化智能体调用三方 Agent 前必须满足：
-- 自身 Capability Profile 表明能力不足（CapabilityProfile.gap_analysis）
-- 三方 Agent 在 allow-list 内（`[doc:rules.md#T4]`）
-- 三方 Agent 的能力画像已加载（ExternalAgentProfile）
-
-### 3.2 调用流程
+### 3.1 新增三方 Agent Adapter
 
 ```
-1. 可进化智能体发起 ExternalAgentBridge.invoke(agent_id, task)
+1. 评估三方 Agent 必要性（是否补 CapabilityProfile 盲点）
    ↓
-2. ExternalAgentAdapter 路由到对应三方 Agent（如 claude_code）
+2. 架构师可进化智能体生成 features/F0XX-external-agent-xxx.md
    ↓
-3. 三方 Agent 执行任务，状态写入 ExternalAgentSharedState
+3. 开发者可进化智能体实现 Adapter + Bridge + SharedState + Fallback
    ↓
-4. 可进化智能体读取共享状态，融合到自身 Capability Profile
+4. 安全员可进化智能体审核六层 Guardrails 完备性
    ↓
-5. 若失败，ExternalAgentFallback 链回退到下一个三方 Agent 或 FlowForge 内置能力
+5. 测试员可进化智能体执行 E2E 测试（含不可逆操作确认）
    ↓
-6. 执行轨迹写入可进化智能体 Eval 信号
+6. 能力融合员可进化智能体更新 CapabilityProfile
 ```
 
-### 3.3 三方 Agent 安全治理
+### 3.2 三方 Agent 调用流程
 
-| 治理层 | 机制 |
-|--------|------|
-| 输入验证 | 三方 Agent 调用前必须通过 Schema 校验 |
-| 工具白名单 | 三方 Agent 只能调用 allow-list 内工具 |
-| 输出验证 | 三方 Agent 输出必须通过 lint + 测试 |
-| 操作确认 | 不可逆操作（merge/release）需 operator 确认 |
-| 成本上限 | 每个可进化智能体有三方 Agent 调用配额 |
-| 审计追踪 | 三方 Agent 调用全部记录到 harness-feedback/ |
-
-> **说明**：三方 Agent（Claude Code / Codex / OpenCode / Trae 等）通过 ExternalAgentAdapter 接入，归类为"外部接入静态智能体"，作为可进化智能体的能力扩展。
+```
+1. 可进化智能体检测到任务需要三方 Agent 能力
+   ↓
+2. ExternalAgentBridge 查询可用 Adapter（按 fallback 链排序）
+   ↓
+3. 通过六层 Guardrails（输入验证 → 系统提示 → 工具白名单 → 输出验证 → 操作确认 → 成本上限）
+   ↓
+4. 调用三方 Agent（worktree 隔离）
+   ↓
+5. 采集 trace + 成本 + 证据
+   ↓
+6. 能力融合：将三方 Agent 贡献融合到可进化智能体能力画像
+```
 
 ---
 
 ## 4. 文档自我演进 SOP
 
-### 4.1 文档更新触发
-
-文档更新必须由 Eval 信号触发，不允许可进化智能体主动修改：
-- Feature 完成后 → 自动更新 `features/F0XX.md` 状态
-- 架构变更后 → 自动生成 `decisions/0XX-new-decision.md`
-- Eval 失败后 → 自动更新 `harness-feedback/verdicts/`
-- Bug 修复后 → 自动更新 `TIPS.md`（教训）
-
-### 4.2 文档更新流程
+### 4.1 Feature 完成后文档更新
 
 ```
-1. Eval 信号触发文档更新
+1. 可进化智能体完成 Feature 实现
    ↓
-2. 文档员可进化智能体读取相关文档（< 50KB）
+2. 自动更新 features/F0XX-xxx.md（Status: spec → done，AC 全部勾选）
    ↓
-3. 可进化智能体生成新版本（保留 [doc:引用] 格式）
+3. 自动生成 ADR（如有架构决策）
    ↓
-4. 评审员可进化智能体 review 文档变更
+4. 自动归档 Eval 结果到 harness-feedback/verdicts/
    ↓
-5. operator 确认（若涉及 VISION.md / ROADMAP.md）
+5. 自动更新 task.md 状态（⏳ → ✅）
    ↓
-6. 提交到 git，记录到 harness-feedback/
+6. 自动更新 ROADMAP.md 对应 Phase 完成度
 ```
 
-### 4.3 文档不可变性规则
+### 4.2 ADR 生成
 
-- **ADR 不可变**：决策变更通过新增 ADR 引用旧 ADR
-- **VISION §7 不可改**：operator 愿景锚点不能被可进化智能体修改
-- **review/ 历史不可改**：16 份审核文件保留为历史快照
-- **face/ 历史不可改**：face v3.0 文档保留为 v7.0 Phase 0 快照
+```
+1. 可进化智能体识别到架构决策点
+   ↓
+2. 生成 decisions/NNN-slug.md（11 个标准段）
+   ↓
+3. 跨厂商评审（至少 2 家厂商 approve）
+   ↓
+4. operator 确认（不可委托）
+   ↓
+5. 更新相关 Feature 的 Key Decisions 表
+```
 
 ---
 
-## 5. 自我演进安全治理 SOP
+## 5. 多智能体议事 Mind Council SOP（Phase 6）
 
-可进化智能体自我演进必须通过六层 Guardrails（`[doc:roleagent.md#第3章]` Governance Boundary）：
+### 5.1 召集多智能体议事
 
-| 治理层 | 机制 | 实现 |
+```
+1. 触发条件：愿景偏离 / 跨可进化智能体冲突 / 重大架构决策
+   ↓
+2. 召集人可进化智能体发起多智能体议事（最小 2 个评审员 + 2 个厂商）
+   ↓
+3. 可进化智能体各自陈述立场（基于 CapabilityProfile + EchoStore）
+   ↓
+4. operator 可使用 4 条 Magic Words 制动
+   ↓
+5. 决议写入 VISION.md / ROADMAP.md（需 operator 确认）
+```
+
+### 5.2 operator 拉闸词使用
+
+| Magic Word | 使用场景 | 可进化智能体响应 |
+|-----------|---------|-----------|
+| **第一性原理** | 多智能体议事陷入细节争论 | 多智能体议事暂停，重新审视第一性原理 |
+| **我能猜出来** | 结论太显而易见 | 多智能体议事终止，直接执行 |
+| **下次一定** | 问题非阻塞但需修复 | 触发 sunset 计时器（F012） |
+| **星星罐子** | 想法好但非当前优先 | 进入蒸馏知识库待孵化队列 |
+
+---
+
+## 6. 错误处理 SOP
+
+### 6.1 七类归因矩阵
+
+可进化智能体失败时，Eval 员可进化智能体根据三方信号（trace + 人 + 自动）归因到以下七类之一：
+
+| 归因类 | 含义 | 处理 |
 |--------|------|------|
-| L1 输入验证 | Feature 规格必须通过 Schema 校验 | Pydantic 模型 |
-| L2 系统提示约束 | 可进化智能体 system role 注入"禁止绕过 Eval" | 压缩免疫 system role |
-| L3 工具白名单 | 可进化智能体只能调用 allow-list 内工具 | ToolRegistry |
-| L4 输出验证 | 生成的代码必须通过 lint + 测试 | CI 流水线 |
-| L5 操作确认 | 不可逆操作需 operator 确认 | Magic Words 逃生舱 |
-| L6 成本上限 | 每个可进化智能体有 token / 三方 Agent 配额 | CostCeiling |
+| 1. 模型能力不足 | 模型本身能力不够 | 切换模型或补 CapabilityProfile 盲点 |
+| 2. Harness 契合度低 | 环境配置不当 | 优化 Harness 七层 |
+| 3. 工具调用错误 | 工具使用不当 | 修复工具调用 + 加白名单 |
+| 4. 记忆缺失 | EchoStore 未召回相关记忆 | 优化记忆联邦检索 |
+| 5. 协作失败 | TeamAct 循环断裂 | 修复协作协议 |
+| 6. 愿景偏离 | 可进化智能体行为偏离 VISION | operator 介入 + Magic Words |
+| 7. 外部干扰 | 三方 Agent / 网络 / 配额 | Tier 1-4 恢复分级 |
 
-> **关联**：六层 Guardrails 的强度随 Autonomy Level（AwakeningStage，社区社交称"觉醒阶"）递进调整，详见 `[doc:design/naming-contract.md#5]`。
+### 6.2 Tier 1-4 恢复分级
 
----
-
-## 6. 异常处理 SOP
-
-### 6.1 可进化智能体失败
-
-```
-1. 可进化智能体执行失败（如 LLM 超时 / 工具调用错误）
-   ↓
-2. TeamAct 状态机进入 Verdict 阶段，跨 agent review
-   ↓
-3. Eval 员可进化智能体归因到七类之一：
-   - harness 错位 → 可进化智能体 A 重构相关 harness 组件
-   - 工具缺口 → 可进化智能体 B 新增工具
-   - 模型盲点 → 切换跨厂商模型
-   - 数据缺失 → 可进化智能体 C 补数据
-   - 愿景缺口 → operator 介入修订 VISION.md
-   - 协作失败 → 可进化智能体 D 重构 TeamAct 配置
-   - 资源耗尽 → 可进化智能体 E 扩容 / 降级
-   ↓
-4. 修复后回到 Action 阶段
-```
-
-### 6.2 三方 Agent 失败
-
-```
-1. 三方 Agent 调用失败（如 Claude Code 超时）
-   ↓
-2. ExternalAgentFallback 链回退
-   ↓
-3. 回退顺序：Codex → OpenCode → Trae → FlowForge 内置能力
-   ↓
-4. 全部失败 → 升级给 operator
-```
-
-### 6.3 自我演进失控
-
-```
-1. 可进化智能体自我演进产生破坏性变更（如删除核心模块）
-   ↓
-2. Magic Words 逃生舱触发（如"停止"）
-   ↓
-3. operator 确认是否回滚
-   ↓
-4. 回滚后归因到七类之一，修复治理层
-```
+| Tier | 含义 | 恢复方式 |
+|------|------|---------|
+| Tier 1 | 自动恢复 | 可进化智能体自愈（重试 / fallback） |
+| Tier 2 | 带状态恢复 | 可进化智能体 + EchoStore 恢复 |
+| Tier 3 | 人工确认 | 可进化智能体请求 operator 确认 |
+| Tier 4 | 不可恢复 | operator 介入 + sunset review |
 
 ---
 
-## 7. Multi-Agent Deliberation SOP（Phase 6）
+## 7. 禁止事项
 
-Multi-Agent Deliberation（MindCouncil，社区社交称"多智能体议事"）用于解决跨可进化智能体冲突 / 复杂决策：
+以下行为明确禁止，违反视为 SOP 失败：
 
-```
-1. 任一可进化智能体可发起 MindCouncil（含议程 + 相关可进化智能体列表）
-   ↓
-2. MindCouncil 主持可进化智能体（轮值）收集各方立场
-   ↓
-3. 各可进化智能体表达立场 + Capability Profile 盲点
-   ↓
-4. 主持可进化智能体综合，跨厂商 review
-   ↓
-5. 若达成共识 → 执行
-   若未达成 → 升级给 operator
-   ↓
-6. MindCouncil 记录到 Distilled Knowledge Base（MindCodex）
-```
+1. **禁止无状态协作**：所有协作必须进入 TeamAct 状态机
+2. **禁止自审**：跨 agent 交叉验证必须非作者 agent
+3. **禁止跳过证据**：每条验收标准必须有 commit / 测试 / trace
+4. **禁止跳过 operator 确认**：第 5 项终止条件不可委托
+5. **禁止绕过 Guardrails**：三方 Agent 调用必须经过六层
+6. **禁止 Mock**：T1-T4 铁律禁止 Mock LLM / 假数据 / 跳过验证 / Mock 工具
+7. **禁止术语违规**：必须使用项目正式术语，禁止使用废弃术语（详见 TIP-028）
+8. **禁止抢跑**：文档审核门禁未通过前禁止写业务代码（TIP-034）
 
 ---
 
-## 变更历史
+## 8. 延伸阅读
 
-| 版本 | 日期 | 变更 | 作者 |
-|------|------|------|------|
-| v1.0 | 2026-07-17 | 初版：TeamAct 六步循环 + 五项终止 + 7 大场景 SOP | Trae CN（agent） |
-| v1.1 | 2026-07-19 | 按"官方名称优先"原则重构：标题与全文改为 P0 官方名称"可进化智能体（Forgekin）"；新增 §0 智能体分类说明（静态智能体 vs 可进化智能体）；P2 体系别名首次出现双标注；保留所有 SOP 流程步骤不变 | Trae CN（agent） |
+- `[doc:roleagent.md]` — 多智能体工程路径白皮书
+- `[doc:VISION.md]` — 可进化智能体愿景
+- `[doc:spec.md]` — 全局规格说明
+- `[doc:arch.md]` — 全局架构设计
+- `[doc:TIPS.md]` — 经验提示与陷阱清单

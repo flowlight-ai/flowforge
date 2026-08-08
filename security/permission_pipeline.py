@@ -7,9 +7,10 @@ Implements FR-HRN-05:
 - Rule priority: deny > ask > allow
 """
 
-import time
+from collections.abc import Callable
 from enum import Enum
-from typing import Optional, Dict, Any, List, Callable
+from typing import Any
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("security.permission_pipeline")
@@ -33,12 +34,12 @@ class PermissionPipeline:
     Default: if no rule matches, action is denied (fail-closed).
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
-        self._deny_rules: List[Dict[str, Any]] = []
-        self._ask_rules: List[Dict[str, Any]] = []
-        self._allow_rules: List[Dict[str, Any]] = []
-        self._approval_callback: Optional[Callable] = None
+        self._deny_rules: list[dict[str, Any]] = []
+        self._ask_rules: list[dict[str, Any]] = []
+        self._allow_rules: list[dict[str, Any]] = []
+        self._approval_callback: Callable | None = None
         self._check_count = 0
         self._deny_count = 0
         self._ask_count = 0
@@ -47,7 +48,7 @@ class PermissionPipeline:
         # Load rules from config
         self._load_rules(self.config.get("rules", []))
 
-    def _load_rules(self, rules: List[Dict[str, Any]]):
+    def _load_rules(self, rules: list[dict[str, Any]]):
         """Load permission rules from config."""
         for rule in rules:
             action = rule.get("action", "allow")
@@ -72,8 +73,8 @@ class PermissionPipeline:
         self,
         tool_name: str,
         action_level: ActionLevel = ActionLevel.EXECUTE,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Check permission for a tool action.
 
         Returns dict with:
@@ -137,10 +138,10 @@ class PermissionPipeline:
 
     def _matches_rule(
         self,
-        rule: Dict[str, Any],
+        rule: dict[str, Any],
         tool_name: str,
         action_level: ActionLevel,
-        context: Optional[Dict[str, Any]],
+        context: dict[str, Any] | None,
     ) -> bool:
         """Check if a rule matches the current action."""
         # Tool name match (wildcard support)

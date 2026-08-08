@@ -30,7 +30,7 @@ Canon 写入权限（铁律 CL-010 / CL-021）:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from flowforge.core.world_engine.canon_memory import CanonMemory
@@ -73,14 +73,14 @@ class WorldDriver:
 
     def __init__(
         self,
-        world: "WorldLayer",
+        world: WorldLayer,
         canon_memory: CanonMemory,
     ) -> None:
         if world is None:
             raise ValueError("world 不能为 None。")
         if canon_memory is None:
             raise ValueError("canon_memory 不能为 None。")
-        self._world: "WorldLayer" = world
+        self._world: WorldLayer = world
         self._canon_memory: CanonMemory = canon_memory
         self._tick_count: int = 0
         self._last_tick_at: datetime | None = None
@@ -88,7 +88,7 @@ class WorldDriver:
         self._pending_events: list[dict[str, Any]] = []
 
     @property
-    def world(self) -> "WorldLayer":
+    def world(self) -> WorldLayer:
         """返回驱动的世界层。"""
         return self._world
 
@@ -110,7 +110,7 @@ class WorldDriver:
             本 tick 产生的事件列表（每个事件是一个 dict）。
         """
         self._tick_count += 1
-        self._last_tick_at = datetime.now(timezone.utc)
+        self._last_tick_at = datetime.now(UTC)
         # 骨架：产生一个占位事件
         event: dict[str, Any] = {
             "tick": self._tick_count,

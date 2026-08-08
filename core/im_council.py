@@ -26,9 +26,9 @@ import json
 import os
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -49,7 +49,7 @@ logger = get_logger("flowforge.core.im_council")
 
 def _now_utc() -> datetime:
     """返回时区感知的当前 UTC 时间。"""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _new_id(prefix: str) -> str:
@@ -132,7 +132,7 @@ class IMCouncilChannel(ABC):
     @abstractmethod
     async def wait_reply(
         self, message_id: str, timeout: float
-    ) -> Optional[CouncilReply]:
+    ) -> CouncilReply | None:
         """等待回复，超时返回 None."""
 
     @abstractmethod
@@ -185,7 +185,7 @@ class ConsoleChannel(IMCouncilChannel):
 
     async def wait_reply(
         self, message_id: str, timeout: float
-    ) -> Optional[CouncilReply]:
+    ) -> CouncilReply | None:
         """阻塞等待 operator 输入 approve/reject，超时返回 None.
 
         实现细节：
@@ -206,7 +206,7 @@ class ConsoleChannel(IMCouncilChannel):
                 loop.run_in_executor(None, self._read_input, message),
                 timeout=timeout,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.info(
                 "ConsoleChannel.wait_reply: timeout message_id=%s timeout=%ss",
                 message_id,
@@ -341,7 +341,7 @@ class WebChatChannel(IMCouncilChannel):
 
     async def wait_reply(
         self, message_id: str, timeout: float
-    ) -> Optional[CouncilReply]:
+    ) -> CouncilReply | None:
         """等待 Web UI 回复 — Phase 2 实现.
 
         Phase 2 实现计划：
@@ -429,7 +429,7 @@ class TraeBridgeChannel(IMCouncilChannel):
 
     async def wait_reply(
         self, message_id: str, timeout: float
-    ) -> Optional[CouncilReply]:
+    ) -> CouncilReply | None:
         """等待 Trae IDE 回复 — Phase 3 实现.
 
         Phase 3 实现计划：
@@ -549,7 +549,7 @@ class IMCouncilManager:
         self._channels[name] = channel
         logger.info("IMCouncilManager.register_channel: %s", name)
 
-    def unregister_channel(self, name: str) -> Optional[IMCouncilChannel]:
+    def unregister_channel(self, name: str) -> IMCouncilChannel | None:
         """注销通道，返回被移除的通道实例（不存在时返回 None）."""
         channel = self._channels.pop(name, None)
         if channel is not None:
@@ -601,7 +601,7 @@ class IMCouncilManager:
 
     async def _send_with_fallback(self, message: CouncilMessage) -> str:
         """I1 降级链路：按 _CHANNEL_PRIORITY 顺序尝试，全部失败时抛异常."""
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for name in self._CHANNEL_PRIORITY:
             channel = self._channels.get(name)
             if channel is None:
@@ -628,7 +628,7 @@ class IMCouncilManager:
     # ----- 完整审批流程（I3 强制入口 + I4 超时 + I5 归档）-----
 
     async def request_approval(
-        self, request: ApprovalRequest, timeout: Optional[float] = None
+        self, request: ApprovalRequest, timeout: float | None = None
     ) -> bool:
         """发起审批请求 → 推送 → 等待回复 → 调用 ApprovalHub.decide → 归档.
 
@@ -702,7 +702,7 @@ class IMCouncilManager:
             await self._handle_no_channel(request, message)
             return False
 
-        reply: Optional[CouncilReply] = await selected_channel.wait_reply(
+        reply: CouncilReply | None = await selected_channel.wait_reply(
             msg_id, actual_timeout
         )
 
@@ -766,8 +766,8 @@ class IMCouncilManager:
     async def _archive_record(
         self,
         message: CouncilMessage,
-        reply: Optional[CouncilReply],
-        decision: Optional[ApprovalDecision],
+        reply: CouncilReply | None,
+        decision: ApprovalDecision | None,
     ) -> None:
         """归档一条完整议事记录到 JSONL（I2 append-only + I5 落盘）.
 

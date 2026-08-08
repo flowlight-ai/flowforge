@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * useInputHistory — 输入历史记录 Hook
  *
- * 来源：clowder-ai/packages/web/src/stores/inputHistoryStore.ts（简化版）
  * 用途：在聊天输入框中按 ↑/↓ 键召回历史消息（类似终端历史）
  *
  * 行为：

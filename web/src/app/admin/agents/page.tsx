@@ -9,7 +9,6 @@ import { HubForgekinEditor } from "@/components/admin/agents/HubForgekinEditor";
 /**
  * 智能体管理中心 — 双 Tab 布局
  *
- * 依据 WEB-FUSION-DESIGN.md §6：
  *   Tab 1: 可进化智能体 (Evolvable Agent / Forgekin) — 5 个内置 Forgekin
  *   Tab 2: 静态智能体 (Static Agent) — 内置 4 种 + 外部接入 5 种
  *

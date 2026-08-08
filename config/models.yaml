@@ -6,8 +6,8 @@ providers:
   openroute:
     base_url: http://127.0.0.1:13001/v1
     api_key_env: OPENROUTE_API_KEY
-    # v5.25a: 更新为当前有效的API key（旧key已被403拒绝）
-    api_key_default: or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7
+    # 铁律5: 禁止硬编码密钥 — 通过 OPENROUTE_API_KEY 环境变量注入
+    api_key_default: ""
     protected: true
     description: 预装默认供应商，用户不可删除或修改
   openrouter:
@@ -234,48 +234,48 @@ assignments:
   # 原因：OpenRoute Playwright在高负载(14次LLM调用)下可能崩溃，导致所有webchat评委失败
   # 约束：webchat模型优先（用户要求5评委评审只用webchat），free模型仅作backup
   judge:
-    # v5.99.3: webchat后端大面积故障(GLM/Doubao/Qwen/HunYuan/Kimi全部timeout~70s)
-    # 实测可用模型(2026-07-27): zhipu/glm-4-flash(API)=8.4s✓, MiniMax-M3(webchat)=45s✓, DeepSeek-V4-Pro(webchat)=21s✓
-    # 策略: API优先(zhipu/glm-4-flash, 快速稳定), webchat作为fallback
-    # project_memory约束: webchat优先, 但webchat故障时API作为backup确保100%成功
-    primary: zhipu/glm-4-flash
+    # v5.16: 基于 v515 单评委测试数据调整
+    # 移除 Kimi-K2.6（300s 超时不可用），保留 Qwen3.6-Plus（89s 最快）
+    # webchat 模型优先（用户要求5评委评审只用webchat）
+    primary: Doubao-Seed2.0
     fallbacks:
-    - openroute/MiniMax-M3
-    - openroute/DeepSeek-V4-Pro
+    - Qwen3.6-Plus
+    - HunYuan3
+    - GLM-5.1
+    - MiniMax-M3
+    - DeepSeek-V4-Pro
   content_create:
-    # v5.99.70: 实测模型可用性(2026-08-01 06:40) — 重新排序候选链
-    # Qwen3.6-Plus: 24.6s/189字✓ 内容正常无回显
-    # HunYuan3: 34.3s/213字✓ 内容正常无回显
-    # Kimi-K2.6: 62.9s/355字⚠ 有回显问题("用户要求..."开头需清理)
-    # MiniMax-M3: 120s超时✗ 不可用
-    # DeepSeek-V4-Pro/Doubao-Seed2.0: "无法回答"✗ 不可用
-    # 候选链: Qwen3.6-Plus(24s/快稳) → HunYuan3(34s/backup) → Kimi-K2.6(62s/慢backup)
-    primary: openroute/Qwen3.6-Plus
+    # v5.82: primary从Doubao-Seed2.0改为DeepSeek-V4-Pro — Doubao-Seed2.0 API后端(ark/doubao-1-5-pro-32k)
+    # 生成短内容(730字)，导致质量分0.69 FAIL。DeepSeek-V4-Pro首个API后端是ark/deepseek-v3-2-251201
+    # (DeepSeek V3.2以长文本生成能力著称)，预期生成更长内容
+    # v5.81: primary从GLM-5.1改为Doubao-Seed2.0 — GLM-5.1 webchat截断长prompt(15547字符)
+    primary: openroute/DeepSeek-V4-Pro
     fallbacks:
-    - openroute/HunYuan3
+    - openroute/Doubao-Seed2.0
+    - openroute/GLM-5.1
+    - openroute/Qwen3.6-Plus
     - openroute/Kimi-K2.6
-    - zhipu/glm-4-flash
-  content_refine:
-    # v5.99.70: 同步content_create — 使用Qwen3.6-Plus作为primary
-    primary: openroute/Qwen3.6-Plus
-    fallbacks:
-    - openroute/HunYuan3
-    - openroute/Kimi-K2.6
-    - zhipu/glm-4-flash
-  content_eval:
-    # v5.99.3: 使用可用模型
-    primary: zhipu/glm-4-flash
-    fallbacks:
     - openroute/MiniMax-M3
-    - openroute/DeepSeek-V4-Pro
-  # v5.99.70: 选题专用assignment — 使用实测可用模型
-  # 选题需要快速稳定(避免长时间卡住)，Qwen3.6-Plus实测24.6s最快
-  topic:
-    primary: openroute/Qwen3.6-Plus
-    fallbacks:
     - openroute/HunYuan3
+  content_refine:
+    # v5.84: primary从Kimi-K2.6改为Doubao-Seed2.0 — Kimi-K2.6反思重写把2279字缩到1110字，
+    # 导致质量分从0.903降到0.8055。Doubao-Seed2.0在writer阶段生成2184-2279字稳定长内容
+    # 铁律变更: 之前"polisher必须使用Kimi-K2.6"是基于旧测试，v5.84实测Doubao-Seed2.0更稳定
+    # Kimi-K2.6作为fallback保留
+    primary: openroute/Doubao-Seed2.0
+    fallbacks:
     - openroute/Kimi-K2.6
-    - zhipu/glm-4-flash
+    - openroute/Qwen3.6-Plus
+    - openroute/HunYuan3
+    - openroute/GLM-5.1
+    - openroute/DeepSeek-V4-Pro
+  content_eval:
+    primary: openroute/GLM-5.1
+    fallbacks:
+    - openroute/Doubao-Seed2.0
+    - openroute/DeepSeek-V4-Pro
+    - openrouter/nvidia/nemotron-3-super-120b-a12b:free
+    - openrouter/openai/gpt-oss-120b:free
   # P0-27: reflexion_evaluator/reflexion_reflector 显式 assignments
   # v2: 移除 MiniMax-M3（openroute minimax 平台持续 connection failed），
   # 替换为 Kimi-K2.6（更稳定的 webchat 模型）

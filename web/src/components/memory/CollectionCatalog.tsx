@@ -4,7 +4,6 @@
  * CollectionCatalog — 记忆集合目录
  *
  * 列出所有记忆集合（Collection）的清单与文档数、状态、敏感度。
- * 移植自 clowder-ai CollectionCatalog，简化为 FlowForge 内联样式版。
  *
  * API：GET /api/v1/memory/collections
  */

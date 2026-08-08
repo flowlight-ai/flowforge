@@ -26,11 +26,10 @@ from flowforge.core.plugin_protocol import (
     FlowForgePlugin,
     PluginManifest,
 )
-from flowforge.forgemind.forms import ForgekinFormData
 from flowforge.forgemind.forging.pipeline import ForgePipeline
+from flowforge.forgemind.forms import ForgekinFormData
 from flowforge.forgemind.species import ForgekinSpecies
 from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
-
 
 # ── 通用Forgekin模板（forgemind 应用层默认Forge Nurturing清单）──────────────────
 # 详见 [doc:decisions/005-forgemind-application-layer.md#4]

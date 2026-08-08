@@ -8,7 +8,7 @@ import asyncio
 import json
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -22,7 +22,7 @@ class EventStoreEntry(BaseModel):
 
     id: int = 0
     event_type: str = ""
-    data: Dict[str, Any] = {}
+    data: dict[str, Any] = {}
     timestamp: float = 0.0
     trace_id: str = ""
 
@@ -42,9 +42,9 @@ class EventStore:
         self._store_dir = store_dir
         self._wal_file = os.path.join(store_dir, "wal.jsonl")
         self._snapshot_file = os.path.join(store_dir, "snapshot.json")
-        self._entries: List[EventStoreEntry] = []
+        self._entries: list[EventStoreEntry] = []
         self._next_id = 1
-        self._batch: List[EventStoreEntry] = []
+        self._batch: list[EventStoreEntry] = []
         self._batch_size = 100
         self._lock = asyncio.Lock()
         os.makedirs(store_dir, exist_ok=True)
@@ -55,7 +55,7 @@ class EventStore:
         # 1. 加载快照
         if os.path.exists(self._snapshot_file):
             try:
-                with open(self._snapshot_file, "r", encoding="utf-8") as f:
+                with open(self._snapshot_file, encoding="utf-8") as f:
                     data = json.load(f)
                 self._entries = [EventStoreEntry(**e) for e in data.get("entries", [])]
                 self._next_id = data.get("next_id", 1)
@@ -69,7 +69,7 @@ class EventStore:
         if os.path.exists(self._wal_file):
             replay_count = 0
             try:
-                with open(self._wal_file, "r", encoding="utf-8") as f:
+                with open(self._wal_file, encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if not line:
@@ -87,7 +87,7 @@ class EventStore:
             except Exception as e:
                 logger.error(f"EventStore重放WAL失败: {e}")
 
-    async def append(self, event_type: str, data: Dict[str, Any], trace_id: str = "") -> EventStoreEntry:
+    async def append(self, event_type: str, data: dict[str, Any], trace_id: str = "") -> EventStoreEntry:
         """追加事件.
 
         先写WAL保证持久性，积累到batch_size后自动提交快照。
@@ -139,13 +139,13 @@ class EventStore:
 
     async def query(
         self,
-        event_type: Optional[str] = None,
-        trace_id: Optional[str] = None,
-        since: Optional[float] = None,
+        event_type: str | None = None,
+        trace_id: str | None = None,
+        since: float | None = None,
         limit: int = 100,
-    ) -> List[EventStoreEntry]:
+    ) -> list[EventStoreEntry]:
         """查询事件（按时间倒序返回最新事件）."""
-        results: List[EventStoreEntry] = []
+        results: list[EventStoreEntry] = []
         for entry in reversed(self._entries):
             if event_type and entry.event_type != event_type:
                 continue

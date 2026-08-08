@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.tracing import get_logger
@@ -28,9 +28,9 @@ class ContextCompressor:
 
     async def compress_if_needed(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         context=None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         total_tokens = self._estimate_messages_tokens(messages)
         if total_tokens <= self._max_context_tokens * COMPRESSION_THRESHOLD:
             return messages
@@ -59,7 +59,7 @@ class ContextCompressor:
         return result
 
     def _split_messages(
-        self, messages: List[Dict[str, Any]]
+        self, messages: list[dict[str, Any]]
     ) -> tuple:
         decision_indices = []
         for i, msg in enumerate(messages):
@@ -78,9 +78,9 @@ class ContextCompressor:
 
     async def _compress_early_history(
         self,
-        early: List[Dict[str, Any]],
+        early: list[dict[str, Any]],
         context=None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         llm = None
         if context and context.tools:
             try:
@@ -125,7 +125,7 @@ class ContextCompressor:
             logger.error(f"LLM compression failed: {e}")
             return early
 
-    def _is_decision_or_tool_result(self, msg: Dict[str, Any]) -> bool:
+    def _is_decision_or_tool_result(self, msg: dict[str, Any]) -> bool:
         role = msg.get("role", "")
         if role in ("tool",):
             return True
@@ -142,7 +142,7 @@ class ContextCompressor:
                 return True
         return False
 
-    async def _save_to_memory(self, context, messages: List[Dict[str, Any]]):
+    async def _save_to_memory(self, context, messages: list[dict[str, Any]]):
         try:
             await context.memory.save(
                 "long_term",
@@ -157,7 +157,7 @@ class ContextCompressor:
         except Exception as e:
             logger.error(f"Failed to save compressed messages to memory: {e}")
 
-    def _estimate_messages_tokens(self, messages: List[Dict[str, Any]]) -> int:
+    def _estimate_messages_tokens(self, messages: list[dict[str, Any]]) -> int:
         total = 0
         for msg in messages:
             content = msg.get("content", "")

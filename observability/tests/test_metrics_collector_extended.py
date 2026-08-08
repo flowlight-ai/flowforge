@@ -7,12 +7,10 @@
 """
 
 import time
-from typing import List
 
 import pytest
 
 from flowforge.observability.metrics_collector import MetricsCollector
-
 
 # ──────────────────────────────────────────────────────────────────
 # Loop 执行指标测试

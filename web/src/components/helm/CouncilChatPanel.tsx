@@ -44,7 +44,7 @@ interface CouncilChatPanelProps {
  *   - 添加消息 hover 操作按钮（复制、引用回复）
  *   - 改进消息气泡视觉层次
  *
- * 参考 clowder-ai ChatInputMenus 的 @mention 弹窗设计：
+ * 参考 ChatInputMenus 的 @mention 弹窗设计：
  *   - 键盘导航（↑↓ 选择，Enter 确认，Esc 关闭）
  *   - 头像 + 名称 + 描述
  *   - "还有更多"滚动提示
@@ -68,6 +68,8 @@ export default function CouncilChatPanel({
     toggleParticipant,
     setForgekinRole,
     reloadRoster,
+    interruptedRequest,
+    retryInterrupted,
   } = useCouncilChat();
 
   const [inputText, setInputText] = useState("");
@@ -97,14 +99,14 @@ export default function CouncilChatPanel({
   // 右侧边栏标签：智能体花名册 / 上下文面板
   const [sidebarTab, setSidebarTab] = useState<"agents" | "context">("agents");
 
-  // 斜杠命令菜单状态（参考 clowder-ai ChatInputMenus）
+  // 斜杠命令菜单状态（参考 ChatInputMenus）
   // 当输入框内容以 / 开头时显示命令列表
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashFilter, setSlashFilter] = useState("");
   const [slashSelectedIdx, setSlashSelectedIdx] = useState(0);
 
   // IME 输入法组合状态（关键：中文输入法回车确认拼音时不应发送消息）
-  // clowder-ai 使用 useIMEGuard hook，这里用 ref 简化实现
+  // 原实现使用 useIMEGuard hook，这里用 ref 简化
   const isComposingRef = useRef(false);
 
   // 输入历史记录（↑/↓ 召回）
@@ -410,7 +412,7 @@ export default function CouncilChatPanel({
         mentioned.push(item.id);
       }
     }
-    // 静音的智能体不参与默认触发（但 @ 显式调用仍生效，符合 clowder-ai 的静音语义）
+    // 静音的智能体不参与默认触发（但 @ 显式调用仍生效，符合静音语义）
     const candidateIds = mentioned.length > 0
       ? mentioned
       : config.participantIds.filter((id) => !mutedIds.includes(id));
@@ -642,7 +644,7 @@ export default function CouncilChatPanel({
 
   /**
    * 重新生成 — 重新发送上一条用户消息触发新一轮灵议
-   * 参考 clowder-ai MessageActions 的"重新生成"功能
+   * 参考 MessageActions 的"重新生成"功能
    * 仅对智能体消息有效，使用最近一条用户消息作为输入
    */
   const handleRegenerate = useCallback((msg: CouncilMessage) => {
@@ -657,7 +659,7 @@ export default function CouncilChatPanel({
 
   /**
    * 转发消息 — 复制到剪贴板，附加来源与时间戳
-   * 参考 clowder-ai MessageActions 的转发功能
+   * 参考 MessageActions 的转发功能
    * 格式：[来源] 时间\n内容
    */
   const handleForward = useCallback((msg: CouncilMessage) => {
@@ -717,7 +719,7 @@ export default function CouncilChatPanel({
             {config.participantIds.length} 智能体 · {config.maxRounds} 轮
           </span>
           <div className="ml-auto flex items-center gap-1">
-            {/* 发起投票按钮 — 参考 clowder-ai ChatContainerHeader 的投票入口 */}
+            {/* 发起投票按钮 — 参考 ChatContainerHeader 的投票入口 */}
             <button
               onClick={() => setShowVoteModal(true)}
               className="text-xs px-2 py-1 transition-colors"
@@ -898,7 +900,7 @@ export default function CouncilChatPanel({
           </div>
         )}
 
-        {/* VoteActiveBar — 投票进行中状态栏（参考 clowder-ai ChatContainer） */}
+        {/* VoteActiveBar — 投票进行中状态栏（参考 ChatContainer） */}
         <VoteActiveBar
           vote={activeVote}
           onEnd={handleVoteEnd}
@@ -914,7 +916,7 @@ export default function CouncilChatPanel({
             borderColor: "var(--border)",
           }}
         >
-          {/* @mention 菜单 — 参考 clowder-ai ChatInputMenus 设计 */}
+          {/* @mention 菜单 — 参考 ChatInputMenus 设计 */}
           {showMentionMenu && (
             <div
               ref={mentionMenuRef}
@@ -943,7 +945,7 @@ export default function CouncilChatPanel({
                   </div>
                 ) : (
                   <>
-                    {/* 群组提及选项 — @all 触发所有参与者，参考 clowder-ai ChatInputMenus 的 isGroup */}
+                    {/* 群组提及选项 — @all 触发所有参与者，参考 ChatInputMenus 的 isGroup */}
                     {mentionFilter === "" && (
                       <button
                         onClick={() => {
@@ -1075,7 +1077,7 @@ export default function CouncilChatPanel({
                   </>
                 )}
               </div>
-              {/* "还有更多"滚动指示器 — 参考 clowder-ai ChatInputMenus */}
+              {/* "还有更多"滚动指示器 — 参考 ChatInputMenus */}
               {mentionCanScrollDown && (
                 <div
                   className="px-3 py-1 text-[10px] text-center border-t"
@@ -1150,6 +1152,38 @@ export default function CouncilChatPanel({
               style={{ color: "var(--semantic-critical, #ef4444)" }}
             >
               {error}
+            </div>
+          )}
+          {interruptedRequest && !isLoading && (
+            <div
+              className="mt-2 flex items-center gap-2"
+              style={{
+                fontSize: "12px",
+                padding: "6px 10px",
+                borderRadius: "var(--radius-sm)",
+                background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <span style={{ color: "var(--muted)" }}>
+                ⚠ 上次灵议因页面刷新中断
+              </span>
+              <button
+                type="button"
+                onClick={retryInterrupted}
+                style={{
+                  padding: "3px 10px",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--accent)",
+                  color: "var(--accent-foreground, #fff)",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                }}
+              >
+                ⟳ 重试
+              </button>
             </div>
           )}
         </div>
@@ -1245,7 +1279,7 @@ export default function CouncilChatPanel({
         </div>
       )}
 
-      {/* VoteConfigModal — 发起投票弹窗（参考 clowder-ai VoteConfigModal） */}
+      {/* VoteConfigModal — 发起投票弹窗（参考 VoteConfigModal） */}
       {showVoteModal && (
         <VoteConfigModal
           roster={roster}

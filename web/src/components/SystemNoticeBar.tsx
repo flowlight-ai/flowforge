@@ -4,7 +4,6 @@
  * SystemNoticeBar — 系统通知栏
  *
  * 在 TopBar 内显示系统级公告/维护通知；用户可关闭单条通知。
- * 移植自 clowder-ai SystemNoticeBar，简化为受控组件。
  *
  * API：GET /api/v1/system/notices
  */

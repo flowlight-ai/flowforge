@@ -1,7 +1,6 @@
 /**
  * ThemeApplier — 主题应用器
  *
- * 来源：clowder-ai/packages/web/src/components/ThemeApplier.tsx（简化版）
  * 职责：在主题切换时应用主题相关的副作用（如更新 meta theme-color、触发过渡动画）
  *
  * 必须放在 ThemeProvider 内部使用

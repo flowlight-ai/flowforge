@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -28,14 +28,13 @@ from flowforge.core.tracing import get_logger
 from flowforge.sop.models import (
     HardRule,
     Pitfall,
-    PredicateConfig,
     PredicateResult,
+    Severity,
     SOPDefinition,
     SOPExecutionResult,
     SOPExecutionState,
     SOPStage,
     SOPStageResult,
-    Severity,
 )
 from flowforge.sop.predicate import PredicateChecker
 
@@ -106,7 +105,7 @@ class SOPExecutor:
             )
         return self._sop.stages[self._state.stage_index]
 
-    def get_stage(self, stage_id: str) -> Optional[SOPStage]:
+    def get_stage(self, stage_id: str) -> SOPStage | None:
         """按 ID 查找阶段。"""
         for stage in self._sop.stages:
             if stage.id == stage_id:
@@ -121,7 +120,7 @@ class SOPExecutor:
         """
         if self._state.stage_index >= len(self._sop.stages) - 1:
             self._state.completed = True
-            logger.info(f"SOPExecutor: reached final stage, SOP completed")
+            logger.info("SOPExecutor: reached final stage, SOP completed")
             return False
         self._state.stage_index += 1
         next_stage = self._sop.stages[self._state.stage_index]
@@ -179,7 +178,7 @@ class SOPExecutor:
     async def execute_stage(
         self,
         stage_id: str,
-        context: Optional[dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> SOPStageResult:
         """执行单个阶段的门禁检查。
 
@@ -296,7 +295,7 @@ class SOPExecutor:
     async def execute_sop(
         self,
         feature_id: str,
-        context: Optional[dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> SOPExecutionResult:
         """执行完整 SOP — 按顺序执行所有阶段。
 
@@ -404,7 +403,7 @@ def load_sop_from_yaml(yaml_path: str | Path) -> SOPDefinition:
     """
     path = Path(yaml_path)
     logger.info(f"load_sop_from_yaml: loading SOP from {path}")
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return SOPDefinition.model_validate(data)
 

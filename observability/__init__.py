@@ -8,13 +8,13 @@ Provides:
 - register_metrics_endpoint: FastAPI /metrics 路由注册函数
 """
 
-from flowforge.observability.tracer import Tracer
-from flowforge.observability.metrics_collector import MetricsCollector
 from flowforge.observability.alerts import AlertManager
+from flowforge.observability.metrics_collector import MetricsCollector
 from flowforge.observability.prometheus_exporter import (
     PrometheusExporter,
     register_metrics_endpoint,
 )
+from flowforge.observability.tracer import Tracer
 
 __all__ = [
     "Tracer",

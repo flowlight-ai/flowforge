@@ -36,7 +36,6 @@ import asyncio
 import re
 import threading
 from pathlib import Path
-from typing import Dict, Optional, Set
 
 from flowforge.core.tracing import get_logger
 from flowforge.llm.trae.config import TraeBridgeConfig
@@ -52,7 +51,7 @@ _CANCEL_RE = re.compile(r"^cancel_(.+)\.json$")
 # ── watchdog 可选导入（失败时降级到轮询）────────────────────────────
 
 try:
-    from watchdog.events import FileSystemEventHandler, FileSystemEvent
+    from watchdog.events import FileSystemEvent, FileSystemEventHandler
     from watchdog.observers import Observer
 
     _WATCHDOG_AVAILABLE = True
@@ -73,8 +72,8 @@ class _BridgeEventHandler(FileSystemEventHandler):
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
-        response_callbacks: Dict[str, asyncio.Future],
-        cancel_callbacks: Dict[str, asyncio.Future],
+        response_callbacks: dict[str, asyncio.Future],
+        cancel_callbacks: dict[str, asyncio.Future],
     ) -> None:
         super().__init__()
         self._loop = loop
@@ -112,7 +111,7 @@ class _BridgeEventHandler(FileSystemEventHandler):
 
     def _notify(
         self,
-        callbacks: Dict[str, asyncio.Future],
+        callbacks: dict[str, asyncio.Future],
         rid: str,
         file_path: str,
     ) -> None:
@@ -148,19 +147,19 @@ class TraeBridgeWatcher:
     - _BridgeEventHandler 在 watchdog 线程中读这些 dict（dict 读写本身线程安全）
     """
 
-    def __init__(self, config: Optional[TraeBridgeConfig] = None) -> None:
+    def __init__(self, config: TraeBridgeConfig | None = None) -> None:
         self._config = config or TraeBridgeConfig()
         self._shared_dir = Path(self._config.shared_dir)
         self._responses_dir = self._shared_dir / self._config.responses_dir
         self._cancels_dir = self._shared_dir / self._config.cancels_dir
 
         # request_id → future（等待响应文件路径）
-        self._response_callbacks: Dict[str, asyncio.Future] = {}
+        self._response_callbacks: dict[str, asyncio.Future] = {}
         # request_id → future（等待取消文件路径）
-        self._cancel_callbacks: Dict[str, asyncio.Future] = {}
+        self._cancel_callbacks: dict[str, asyncio.Future] = {}
 
-        self._observer: Optional["Observer"] = None
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._observer: Observer | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._started = False
         self._lock = threading.Lock()
 
@@ -258,7 +257,7 @@ class TraeBridgeWatcher:
         self._started = False
         logger.info("TraeBridgeWatcher 已停止")
 
-    async def __aenter__(self) -> "TraeBridgeWatcher":
+    async def __aenter__(self) -> TraeBridgeWatcher:
         await self.start()
         return self
 
@@ -271,7 +270,7 @@ class TraeBridgeWatcher:
         self,
         request_id: str,
         *,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> str:
         """等待 response_{uuid}.json 文件创建.
 
@@ -310,7 +309,7 @@ class TraeBridgeWatcher:
             else:
                 file_path = await asyncio.wait_for(fut, timeout=timeout)
             return file_path
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.debug(
                 f"wait_for_response 超时: request_id={request_id}, timeout={timeout}s"
             )
@@ -323,7 +322,7 @@ class TraeBridgeWatcher:
         self,
         request_id: str,
         *,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> str:
         """等待 cancel_{uuid}.json 文件创建（不变量 8 逃生舱监听）.
 
@@ -360,7 +359,7 @@ class TraeBridgeWatcher:
             else:
                 file_path = await asyncio.wait_for(fut, timeout=timeout)
             return file_path
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.debug(
                 f"wait_for_cancel 超时: request_id={request_id}, timeout={timeout}s"
             )
@@ -381,7 +380,7 @@ class TraeBridgeWatcher:
         with self._lock:
             return len(self._cancel_callbacks)
 
-    def pending_request_ids(self) -> Set[str]:
+    def pending_request_ids(self) -> set[str]:
         """当前等待中的所有 request_id（调试用）."""
         with self._lock:
             return set(self._response_callbacks.keys())

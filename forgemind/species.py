@@ -40,7 +40,7 @@ class ForgekinSpecies(str, Enum):
     HYBRID = "hybrid"
 
     @classmethod
-    def from_string(cls, value: str) -> "ForgekinSpecies":
+    def from_string(cls, value: str) -> ForgekinSpecies:
         """从字符串解析ForgekinSpecies枚举，大小写不敏感。
 
         Args:

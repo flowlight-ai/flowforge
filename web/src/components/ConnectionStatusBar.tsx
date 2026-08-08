@@ -4,7 +4,6 @@
  * ConnectionStatusBar — 连接状态栏
  *
  * 显示前后端 / LLM / 工具链的连接状态（在线/降级/离线）。
- * 移植自 clowder-ai ConnectionStatusBar，简化为紧凑状态条。
  *
  * API：GET /api/v1/system/connections
  */

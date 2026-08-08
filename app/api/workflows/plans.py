@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -33,38 +32,38 @@ def get_helm_db() -> HelmDatabase:
 
 class GeneratePlanRequest(BaseModel):
     intent: str
-    persona: Optional[str] = None
-    mode: Optional[str] = None
+    persona: str | None = None
+    mode: str | None = None
 
 
 class GeneratePlanLLMRequest(BaseModel):
     intent: str
-    persona: Optional[str] = None
-    mode: Optional[str] = None
-    conversation_context: Optional[list[dict[str, str]]] = None
+    persona: str | None = None
+    mode: str | None = None
+    conversation_context: list[dict[str, str]] | None = None
 
 
 class UpdatePlanRequest(BaseModel):
     new_message: str
-    conversation_context: Optional[list[dict[str, str]]] = None
+    conversation_context: list[dict[str, str]] | None = None
 
 
 class UpdateStepStatusRequest(BaseModel):
     status: str  # pending | running | completed | failed | skipped
-    result_summary: Optional[str] = None
+    result_summary: str | None = None
 
 
 class ConfirmPlanRequest(BaseModel):
     plan_id: int
-    edited_steps: Optional[list[dict[str, Any]]] = None
+    edited_steps: list[dict[str, Any]] | None = None
 
 
 class UpdateStepRequest(BaseModel):
-    name: Optional[str] = None
-    task: Optional[str] = None
-    agent: Optional[str] = None
-    tool: Optional[str] = None
-    mode: Optional[str] = None
+    name: str | None = None
+    task: str | None = None
+    agent: str | None = None
+    tool: str | None = None
+    mode: str | None = None
 
 
 # ── 响应辅助 ──

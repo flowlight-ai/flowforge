@@ -8,7 +8,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any
 
-from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
+from flowforge.core.base_agent import AgentInput, AgentOutput, BaseAgent
 from flowforge.evaluators.models import Score
 
 

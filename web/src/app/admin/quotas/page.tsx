@@ -11,7 +11,7 @@ import { HubQuotaBoardTab } from "@/components/hub/HubQuotaBoardTab";
  *   - 用量统计（按可进化智能体/模型细分）
  *   - 超配额降级策略
  *
- * 依据 WEB-FUSION-DESIGN.md §8：移植自 clowder-ai HubQuotaBoardTab。
+ * 整合 HubQuotaBoardTab。
  */
 
 export default function QuotasPage() {

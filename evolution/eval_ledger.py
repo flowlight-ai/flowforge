@@ -23,10 +23,11 @@ License: MIT
 from __future__ import annotations
 
 import secrets
+from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Literal, Protocol
+from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.models import EvalLedger

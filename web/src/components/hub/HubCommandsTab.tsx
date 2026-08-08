@@ -3,7 +3,6 @@
 /**
  * HubCommandsTab — 斜杠命令与快捷键参考 Tab
  *
- * 移植自 clowder-ai HubCommandsTab，适配 FlowForge 命令体系。
  * 用于 /admin/settings?s=rules，展示：
  *   - 斜杠命令清单（按 category 分组：general/memory/knowledge/task/forgekin/council）
  *   - 全局快捷键清单（如 Cmd+K 命令面板、Cmd+/ 斜杠触发等）
@@ -12,7 +11,7 @@
  * 主题：使用 var(--cafe-xxx) CSS 变量。
  * 独立性：内联命令清单，不依赖外部 registry 配置文件。
  *
- * 注：原 clowder-ai 版本从 @/config/command-registry 与 @/config/shortcut-registry
+ * 注：原版本从 @/config/command-registry 与 @/config/shortcut-registry
  * 导入，FlowForge 暂未建立这两个 registry，故在此内联一份精简版清单。
  * 后续若建立 registry，可平滑迁移。
  */

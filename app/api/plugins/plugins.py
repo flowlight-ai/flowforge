@@ -1,9 +1,11 @@
 import subprocess
 import sys
-from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, HTTPException
+
 from flowforge.app.deps import get_plugin_manager, get_plugin_registry
-from flowforge.core.tracing import get_trace_id, get_logger
+from flowforge.core.tracing import get_logger, get_trace_id
 
 logger = get_logger("plugins_api")
 
@@ -14,7 +16,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 
@@ -22,7 +24,7 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
     return {
         "status": "error",
         "error": {"code": code, "message": message, "details": details or {}},
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 
@@ -152,9 +154,9 @@ async def get_plugin_frontend(plugin_name: str):
     Returns the plugin's frontend_entry and mount_points so that
     the web UI can dynamically load plugin components.
     """
-    from flowforge.app.main import _loaded_plugins
+    from flowforge.app.main import plugin_loader
 
-    for p in _loaded_plugins:
+    for p in plugin_loader.loaded_plugins:
         if p.name == plugin_name:
             manifest = p.manifest
             if not manifest.frontend_entry:

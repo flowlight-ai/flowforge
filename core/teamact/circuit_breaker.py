@@ -22,8 +22,7 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from flowforge.core.tracing import get_logger
 
@@ -54,7 +53,7 @@ class PingPongCircuitBreaker:
         max_rounds: int = 5,
         threshold: int = 3,
         cooldown: int = 60,
-        logger: Optional[object] = None,
+        logger: object | None = None,
     ) -> None:
         self.max_rounds: int = max_rounds
         self.threshold: int = threshold
@@ -75,7 +74,7 @@ class PingPongCircuitBreaker:
         """
         self.rounds_count[agent_id] = self.rounds_count.get(agent_id, 0) + 1
         self.last_failure[agent_id] = (
-            datetime.now(timezone.utc),
+            datetime.now(UTC),
             reason,
         )
         count = self.rounds_count[agent_id]

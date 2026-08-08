@@ -1,7 +1,6 @@
 /**
  * Sidebar Store (Zustand)
  *
- * 来源：clowder-ai/packages/web/src/stores/sidebarStore.ts
  * 职责：管理左侧 ThreadSidebar 的展开/折叠、宽度、调整逻辑
  *
  * 设计原则：

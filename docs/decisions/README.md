@@ -1,103 +1,109 @@
-# FlowForge 架构决策记录（ADR）
+# Architecture Decision Records (ADRs)
 
-> **文档编号**: decisions/README.md（v1.0）
-> **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构
-> **参考**: 标准 ADR 目录结构
+> **目录作用**: 存放 FlowForge 架构决策记录（ADR），每个 ADR 记录一个重要架构决策的上下文、决策、方案对比、理由、风险
+> **维护规则**: 新增 ADR 时参考 `decisions/` 现有 ADR 格式（NNN-slug.md，11 个标准段）
 
 ---
 
-## 1. ADR 规范
+## ADR 编号规则
 
-每个架构决策记录（ADR）遵循以下格式：
+- 格式：`NNN-slug.md`（NNN 三位数字递增，slug 用英文短横线分隔）
+- 稳定性：已发布编号不重排、不复用
+- 状态：`proposed` → `accepted` → `deprecated` / `superseded by NNN`
+
+---
+
+## ADR 11 个标准段
 
 ```markdown
-# ADR 0XX: 决策标题
+# ADR NNN: {决策标题}
 
-> **状态**: proposed | accepted | deprecated | superseded by ADR 0YY
+> **状态**: proposed|accepted|deprecated|superseded
 > **日期**: YYYY-MM-DD
-> **决策者**: operator | 架构师可进化智能体 | 多智能体议事（MindCouncil）
-> **依赖**: [doc:xxx]
+> **决策者**: {决策者}
+> **依赖**: [doc:xxx.md]
+> **依据**: [doc:xxx.md]
 
-## 上下文
-[为什么需要这个决策？当前问题是什么？]
+## 1. 上下文
+{为什么要做这个决策}
 
-## 决策
-[我们决定什么？]
+## 2. 决策
+{决策内容}
 
-## 后果
-[决策带来的正面 / 负面后果]
+## 3. 方案对比
+| 方案 | 优点 | 缺点 |
+|------|------|------|
 
-## 替代方案
-[考虑过但未选择的方案]
+## 4. 理由
+{为什么选这个方案}
 
-## 引用
-- [doc:features/F0XX-xxx.md]
-- [doc:roleagent.md#第X章]
+## 5. 风险
+| 风险 | 缓解 |
+|------|------|
+
+## 6. 否决理由
+{为什么否决其他方案}
+
+## 7. 参与者
+{参与决策的可进化智能体（Forgekin）/operator}
+
+## 8. 修订记录
+| 日期 | 修订 | 修订者 |
+|------|------|--------|
 ```
 
-**不可变性规则**：ADR 一旦 accepted 不可修改，决策变更通过新增 ADR 引用旧 ADR（superseded by）。
+---
+
+## P0 ADR 清单（5 份，已完成）
+
+| ADR | 标题 | 状态 | 文件 |
+|-----|------|------|------|
+| ADR-004 | 能力画像路由 | ✅ | `[doc:decisions/004-capability-profile-routing.md]` |
+| ADR-005 | forgemind 应用层 | ✅ | `[doc:decisions/005-forgemind-application-layer.md]` |
+| ADR-006 | 三方 Agent 集成 | ✅ | `[doc:decisions/006-external-agent-integration.md]` |
+| ADR-012 | 命名融合 | ✅ | `[doc:decisions/012-naming-fusion.md]` |
+| ADR-013 | 可进化智能体愿景 | ✅ | `[doc:decisions/013-all-things-spirit-mind-vision.md]` |
 
 ---
 
-## 2. ADR 清单（13 份核心 ADR）
+## P1 ADR 清单（7 份，已完成）
 
-| ADR | 标题 | 状态 | 依据 |
-|-----|------|:----:|------|
-| [001-agent-invocation-approach.md](001-agent-invocation-approach.md) | Agent 调用方式 | ⏳ | roleagent.md §3 |
-| [002-collaboration-protocol.md](002-collaboration-protocol.md) | TeamAct 协作协议 | ⏳ | RA-009~RA-016 |
-| [003-project-thread-architecture.md](003-project-thread-architecture.md) | 线程架构 | ⏳ | roleagent.md §3 |
-| [004-capability-profile-routing.md](004-capability-profile-routing.md) | 能力画像路由 | ⏳ | RA-001~RA-008 |
-| [005-forgemind-application-layer.md](005-forgemind-application-layer.md) | forgemind 应用层 | ⏳ | FM-001~FM-012 |
-| [006-external-agent-integration.md](006-external-agent-integration.md) | 三方 Agent 集成 | ⏳ | EX-001~EX-010 |
-| [007-harness-engineering.md](007-harness-engineering.md) | Harness 工程路径 | ⏳ | RA-017~RA-023 |
-| [008-memory-federation.md](008-memory-federation.md) | 多域记忆联邦 | ⏳ | RA-024~RA-030 |
-| [009-eval-self-metabolism.md](009-eval-self-metabolism.md) | Eval 自代谢 | ⏳ | RA-031~RA-036 |
-| [010-distributed-reliability.md](010-distributed-reliability.md) | 分布式可靠性 | ⏳ | RA-037~RA-042 |
-| [011-partnership-math.md](011-partnership-math.md) | 伙伴系统数学 | ⏳ | RA-043~RA-047 |
-| [012-naming-fusion.md](012-naming-fusion.md) | 命名融合（ForgeMind 主名） | ⏳ | review.md §6 |
-| [013-all-things-spirit-mind-vision.md](013-all-things-spirit-mind-vision.md) | 可进化智能体愿景 | ⏳ | VISION.md |
+> P1 ADR 对应 Phase 1 代码实现，为追溯性决策记录（代码先行、ADR 追溯补齐）。
+
+| ADR | 标题 | 状态 | 文件 |
+|-----|------|------|------|
+| ADR-002 | TeamAct 协作协议 | ✅ | `[doc:decisions/002-teamact-collaboration-protocol.md]` |
+| ADR-007 | Harness 工程路径 | ✅ | `[doc:decisions/007-harness-engineering.md]` |
+| ADR-008 | 多域记忆联邦 | ✅ | `[doc:decisions/008-memory-federation.md]` |
+| ADR-009 | Eval 自代谢 | ✅ | `[doc:decisions/009-eval-self-metabolism.md]` |
+| ADR-010 | 分布式可靠性 | ✅ | `[doc:decisions/010-distributed-reliability.md]` |
+| ADR-011 | 伙伴系统数学 | ✅ | `[doc:decisions/011-partnership-math.md]` |
+| ADR-014 | 自进化三模式 | ✅ | `[doc:decisions/014-self-evolution-three-modes.md]` |
 
 ---
 
-## 3. ADR 优先级
+## 完整 ADR 清单（14 份，12 份已完成 / 2 份待创建）
 
-### P0（Phase 0 必须完成）
-- ADR 004: 能力画像路由
-- ADR 005: forgemind 应用层
-- ADR 006: 三方 Agent 集成
-- ADR 012: 命名融合
-- ADR 013: 可进化智能体愿景
-
-### P1（Phase 1 完成前必须完成）
-- ADR 002: TeamAct 协作协议
-- ADR 007: Harness 工程路径
-- ADR 008: 多域记忆联邦
-
-### P2（Phase 4 完成前必须完成）
-- ADR 009: Eval 自代谢
-- ADR 010: 分布式可靠性
-- ADR 011: 伙伴系统数学
-
-### P3（背景 ADR）
-- ADR 001: Agent 调用方式
-- ADR 003: 线程架构
+| ADR | 标题 | 优先级 | 状态 |
+|-----|------|--------|------|
+| ADR-001 | Agent 调用方式 | P1 | ⏳ |
+| ADR-002 | TeamAct 协作协议 | P1 | ✅ |
+| ADR-003 | 线程架构 | P1 | ⏳ |
+| ADR-004 | 能力画像路由 | P0 | ✅ |
+| ADR-005 | forgemind 应用层 | P0 | ✅ |
+| ADR-006 | 三方 Agent 集成 | P0 | ✅ |
+| ADR-007 | Harness 工程路径 | P1 | ✅ |
+| ADR-008 | 多域记忆联邦 | P1 | ✅ |
+| ADR-009 | Eval 自代谢 | P1 | ✅ |
+| ADR-010 | 分布式可靠性 | P1 | ✅ |
+| ADR-011 | 伙伴系统数学 | P1 | ✅ |
+| ADR-012 | 命名融合 | P0 | ✅ |
+| ADR-013 | 可进化智能体愿景 | P0 | ✅ |
+| ADR-014 | 自进化三模式 | P1 | ✅ |
 
 ---
 
-## 4. ADR 决策者
+## 延伸阅读
 
-| ADR 类别 | 决策者 | 备注 |
-|---------|--------|------|
-| 愿景类（013） | operator | 不可委托 |
-| 命名类（012） | operator | 不可委托 |
-| 架构类（002-011） | 架构师可进化智能体 + operator 审核 | 多智能体议事（MindCouncil） 协助 |
-| 应用层类（005） | operator + 架构师可进化智能体 | 涉及可进化智能体愿景 |
-| 三方 Agent 类（006） | 架构师可进化智能体 + 三方厂商视角 | 多智能体议事协助 |
-
----
-
-## 5. ADR 引用约定
-
-其他文档引用 ADR 使用：`[doc:decisions/0XX-title.md]`
-
-示例：`[doc:decisions/004-capability-profile-routing.md]` 引用能力画像路由决策。
+- `[doc:arch.md]` — 架构索引（顶层）
+- `[doc:spec.md]` — 项目全局规格

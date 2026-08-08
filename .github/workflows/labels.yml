@@ -1,4 +1,4 @@
-﻿# OpenRoute Labels - Auto-label Issues and PRs
+# FlowForge Labels - Auto-label Issues and PRs
 # Uses GitHub-provided labeler for path-based labeling
 # Also syncs labels defined in this file
 
@@ -27,10 +27,10 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Label PR by paths
-        uses: actions/labeler@v5
+        uses: actions/labeler@v7
         with:
           configuration-path: .github/labeler.yml
           sync-labels: true
@@ -53,7 +53,7 @@ jobs:
     if: github.event_name == 'push'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Sync labels
         uses: crazy-max/ghaction-github-labeler@v5

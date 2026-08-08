@@ -16,7 +16,6 @@ import os
 import platform
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -64,7 +63,7 @@ def _derive_fernet_key() -> bytes:
 class _EncryptedFileBackend:
     """Store credentials in an encrypted JSON file."""
 
-    def __init__(self, file_path: Optional[Path] = None) -> None:
+    def __init__(self, file_path: Path | None = None) -> None:
         if not _fernet_available:
             raise RuntimeError(
                 "cryptography package is required for encrypted file backend. "
@@ -72,7 +71,7 @@ class _EncryptedFileBackend:
             )
         self._path = file_path or _DEFAULT_CREDENTIAL_FILE
         self._fernet = Fernet(_derive_fernet_key())
-        self._cache: Dict[str, str] = {}
+        self._cache: dict[str, str] = {}
         self._loaded = False
 
     def _load(self) -> None:
@@ -96,7 +95,7 @@ class _EncryptedFileBackend:
         encrypted = self._fernet.encrypt(data)
         self._path.write_bytes(encrypted)
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         self._load()
         return self._cache.get(key)
 
@@ -111,7 +110,7 @@ class _EncryptedFileBackend:
             del self._cache[key]
             self._save()
 
-    def list_keys(self) -> List[str]:
+    def list_keys(self) -> list[str]:
         self._load()
         return list(self._cache.keys())
 
@@ -133,9 +132,9 @@ class CredentialStore:
     to the env backend.
     """
 
-    def __init__(self, credential_file: Optional[Path] = None) -> None:
+    def __init__(self, credential_file: Path | None = None) -> None:
         self._env_backend = _EnvBackend()
-        self._encrypted_backend: Optional[_EncryptedFileBackend] = None
+        self._encrypted_backend: _EncryptedFileBackend | None = None
         self._credential_file = credential_file
 
         if _fernet_available:
@@ -153,7 +152,7 @@ class CredentialStore:
                 "Install cryptography for encrypted file support."
             )
 
-    def get_credential(self, key_name: str) -> Optional[str]:
+    def get_credential(self, key_name: str) -> str | None:
         """Retrieve a credential value.
 
         Resolution order: encrypted file → environment variable.
@@ -195,7 +194,7 @@ class CredentialStore:
         if self._encrypted_backend is not None:
             self._encrypted_backend.delete(key_name)
 
-    def list_credentials(self) -> List[str]:
+    def list_credentials(self) -> list[str]:
         """List credential key names (never values).
 
         Returns a deduplicated union of keys from all backends.
@@ -215,7 +214,7 @@ class CredentialStore:
 class _EnvBackend:
     """Environment variable backend with FLOWFORGE_ prefix."""
 
-    def get(self, key_name: str) -> Optional[str]:
+    def get(self, key_name: str) -> str | None:
         env_key = f"{_ENV_PREFIX}{key_name}".upper()
         return os.environ.get(env_key)
 
@@ -227,7 +226,7 @@ class _EnvBackend:
         env_key = f"{_ENV_PREFIX}{key_name}".upper()
         os.environ.pop(env_key, None)
 
-    def list_keys(self) -> List[str]:
+    def list_keys(self) -> list[str]:
         prefix_len = len(_ENV_PREFIX)
         return [
             key[prefix_len:].lower()
@@ -240,10 +239,10 @@ class _EnvBackend:
 # Singleton
 # ---------------------------------------------------------------------------
 
-_credential_store_instance: Optional[CredentialStore] = None
+_credential_store_instance: CredentialStore | None = None
 
 
-def get_credential_store(credential_file: Optional[Path] = None) -> CredentialStore:
+def get_credential_store(credential_file: Path | None = None) -> CredentialStore:
     """Return the singleton CredentialStore instance.
 
     On first call the instance is created.  If *credential_file* is

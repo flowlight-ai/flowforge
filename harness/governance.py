@@ -35,10 +35,8 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
-from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -89,7 +87,7 @@ class GovernanceRule(BaseModel):
         description="注入点（默认 SYSTEM_ROLE，压缩免疫）",
     )
     created_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="创建时间 ISO 8601",
     )
     enabled: bool = Field(default=True, description="是否启用")
@@ -135,8 +133,8 @@ class GovernanceInjector:
     def __init__(
         self,
         critical_priority_threshold: int = 90,
-        system_role_template: Optional[str] = None,
-        user_message_template: Optional[str] = None,
+        system_role_template: str | None = None,
+        user_message_template: str | None = None,
     ) -> None:
         self.rules: dict[str, GovernanceRule] = {}
         self.critical_priority_threshold = critical_priority_threshold
@@ -200,8 +198,8 @@ class GovernanceInjector:
 
     async def inject_to_system_role(
         self,
-        rule: Optional[GovernanceRule] = None,
-        rule_id: Optional[str] = None,
+        rule: GovernanceRule | None = None,
+        rule_id: str | None = None,
     ) -> str:
         """注入治理规则到 SYSTEM_ROLE（压缩免疫）。
 
@@ -233,8 +231,8 @@ class GovernanceInjector:
 
     async def inject_to_user_message(
         self,
-        rule: Optional[GovernanceRule] = None,
-        rule_id: Optional[str] = None,
+        rule: GovernanceRule | None = None,
+        rule_id: str | None = None,
     ) -> str:
         """注入治理规则到 USER_MESSAGE（可被压缩吞掉）。
 
@@ -256,7 +254,7 @@ class GovernanceInjector:
 
         if actual_point == InjectionPoint.SYSTEM_ROLE:
             # critical 规则被强制改为 SYSTEM_ROLE
-            return await self.inject_to_system_rule(target)
+            return await self.inject_to_system_role(target)
 
         text = self.user_message_template.format(
             rule_id=target.rule_id,
@@ -271,7 +269,7 @@ class GovernanceInjector:
         return text
 
     async def inject_to_system_role_batch(
-        self, rule_ids: Optional[list[str]] = None
+        self, rule_ids: list[str] | None = None
     ) -> str:
         """批量注入治理规则到 SYSTEM_ROLE。
 
@@ -301,8 +299,8 @@ class GovernanceInjector:
 
     def _resolve_rule(
         self,
-        rule: Optional[GovernanceRule],
-        rule_id: Optional[str],
+        rule: GovernanceRule | None,
+        rule_id: str | None,
     ) -> GovernanceRule:
         """解析规则参数。"""
         if rule is not None:

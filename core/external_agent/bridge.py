@@ -23,8 +23,8 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -59,11 +59,11 @@ class BridgeInvokeRequest(BaseModel):
         default_factory=list,
         description="首选 Provider 列表（空时使用默认 fallback 链）",
     )
-    required_capability: Optional[str] = Field(
+    required_capability: str | None = Field(
         default=None,
         description="所需能力（用于 discover，EX-008 能力发现）",
     )
-    worktree_root: Optional[str] = Field(
+    worktree_root: str | None = Field(
         default=None, description="worktree 根目录（None 时无 worktree 隔离）"
     )
 
@@ -74,7 +74,7 @@ class BridgeInvokeResponse(BaseModel):
     success: bool = Field(..., description="最终是否成功")
     winning_provider: str = Field(default="", description="成功的 Provider")
     result: Any = Field(default=None, description="调用结果")
-    fusion_result: Optional[FusionResult] = Field(
+    fusion_result: FusionResult | None = Field(
         default=None, description="能力融合结果（EX-010）"
     )
     fallback_attempts: list[dict[str, Any]] = Field(
@@ -84,7 +84,7 @@ class BridgeInvokeResponse(BaseModel):
         default_factory=dict, description="总成本信息（EX-006）"
     )
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="响应时间戳",
     )
 
@@ -120,7 +120,7 @@ class ExternalAgentBridge:
         fallback: ExternalAgentFallback,
         fusion: ExternalAgentCapabilityFusion,
         shared_state: ExternalAgentSharedState,
-        adapter_factory: Optional[Any] = None,
+        adapter_factory: Any | None = None,
     ) -> None:
         """注入所有依赖（铁律 3 + 编程红线 12）。
 
@@ -147,9 +147,9 @@ class ExternalAgentBridge:
         self,
         forgekin_id: str,
         task: str,
-        context: Optional[dict[str, Any]] = None,
-        preferred_providers: Optional[list[str]] = None,
-        required_capability: Optional[str] = None,
+        context: dict[str, Any] | None = None,
+        preferred_providers: list[str] | None = None,
+        required_capability: str | None = None,
     ) -> BridgeInvokeResponse:
         """Forgekin调用三方 Agent 完成任务。
 
@@ -200,12 +200,12 @@ class ExternalAgentBridge:
         )
 
         # 4. 成功时写入 shared_state + 触发能力融合
-        fusion_result: Optional[FusionResult] = None
+        fusion_result: FusionResult | None = None
         if fallback_result.success:
             # 4a. 写入 shared_state（EX-004）
             await self._shared_state.write(
                 forgekin_id=forgekin_id,
-                key=f"task_result/{datetime.now(timezone.utc).isoformat()}",
+                key=f"task_result/{datetime.now(UTC).isoformat()}",
                 value={
                     "task": task,
                     "provider": fallback_result.winning_provider,
@@ -243,7 +243,7 @@ class ExternalAgentBridge:
         self,
         provider_name: str,
         task: str,
-        context: Optional[dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ):
         """流式调用三方 Agent（EX-009 流式语义）。
 
@@ -294,8 +294,8 @@ class ExternalAgentBridge:
 
     def _select_providers(
         self,
-        preferred: Optional[list[str]],
-        required_capability: Optional[str],
+        preferred: list[str] | None,
+        required_capability: str | None,
     ) -> list[str]:
         """选择 Provider 调用顺序。"""
         if preferred:
@@ -329,7 +329,7 @@ class ExternalAgentBridge:
             try:
                 adapter: ExternalAgentAdapter = self._adapter_factory(manifest)
                 # 注入 sandbox（如配置了 worktree_root）
-                sandbox: Optional[SandboxConfig] = None
+                sandbox: SandboxConfig | None = None
                 worktree_root = context.get("worktree_root")
                 if worktree_root:
                     sandbox = self._host_injector.inject_sandbox(

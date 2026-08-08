@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -10,7 +10,7 @@ logger = get_logger("publish")
 # (e.g. ContentForge) can register additional publishers via
 # _PLATFORM_TOOL_MAP or by registering a 'publish_{platform}' tool
 # in the ToolRegistry.
-_PLATFORM_TOOL_MAP: Dict[str, tuple[str, str]] = {
+_PLATFORM_TOOL_MAP: dict[str, tuple[str, str]] = {
     "wechat": ("flowforge.tools.wechat_publisher", "WeChatPublisherTool"),
     "toutiao": ("flowforge.tools.toutiao_publisher", "ToutiaoPublisherTool"),
 }
@@ -62,14 +62,14 @@ class PublishTool(BaseTool):
         },
     }
 
-    def __init__(self, tool_registry: Optional[Any] = None) -> None:
+    def __init__(self, tool_registry: Any | None = None) -> None:
         self._tool_registry = tool_registry
-        self._publisher_cache: Dict[str, BaseTool] = {}
+        self._publisher_cache: dict[str, BaseTool] = {}
 
     def set_tool_registry(self, tool_registry: Any) -> None:
         self._tool_registry = tool_registry
 
-    def _get_platform_publisher(self, platform: str) -> Optional[BaseTool]:
+    def _get_platform_publisher(self, platform: str) -> BaseTool | None:
         """Lazily instantiate and cache a platform-specific publisher."""
         if platform in self._publisher_cache:
             return self._publisher_cache[platform]
@@ -105,7 +105,7 @@ class PublishTool(BaseTool):
         title: str = input.params["title"]
         content: str = input.params["content"]
         publish_mode: str = input.params.get("publish_mode", "draft")
-        images: List[str] = input.params.get("images", [])
+        images: list[str] = input.params.get("images", [])
 
         # Validate required params
         if not platform.strip():
@@ -124,7 +124,7 @@ class PublishTool(BaseTool):
                 f"mode={publish_mode}, images={len(images)}"
             )
             try:
-                publisher_params: Dict[str, Any] = {
+                publisher_params: dict[str, Any] = {
                     "title": title,
                     "content": content,
                 }

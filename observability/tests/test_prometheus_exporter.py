@@ -28,7 +28,6 @@ from flowforge.observability.prometheus_exporter import (
     reset_default_exporter,
 )
 
-
 # ── 公共 fixture ────────────────────────────────────────────────────────
 
 
@@ -559,7 +558,7 @@ def test_grafana_dashboard_json_exists_and_valid() -> None:
         Path(__file__).parent.parent / "grafana" / "flowforge-dashboard.json"
     )
     assert dashboard_path.exists(), f"仪表盘文件不存在: {dashboard_path}"
-    with open(dashboard_path, "r", encoding="utf-8") as f:
+    with open(dashboard_path, encoding="utf-8") as f:
         dashboard = json.load(f)
     # 验证关键字段
     assert dashboard["uid"] == "flowforge-main"

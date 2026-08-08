@@ -19,9 +19,9 @@ from __future__ import annotations
 
 import json
 import pickle
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -32,7 +32,6 @@ from flowforge.core.restart_recovery import (
     RestartRecoveryPipeline,
     StaleRecord,
 )
-
 
 # ── FakeRedisClient：基础设施 Mock（非 LLM Mock，T1 允许）─────────
 
@@ -51,20 +50,20 @@ class FakeRedisClient:
     """
 
     def __init__(self) -> None:
-        self._data: dict[str, tuple[Any, Optional[int], dict[str, str]]] = {}
+        self._data: dict[str, tuple[Any, int | None, dict[str, str]]] = {}
 
     def set_key(
         self,
         key: str,
         value: Any,
-        ttl: Optional[int],
+        ttl: int | None,
         status: str = "running",
-        created_at: Optional[str] = None,
+        created_at: str | None = None,
     ) -> None:
         """注入测试 key（真实场景数据）。"""
         fields = {
             "status": status,
-            "created_at": created_at or datetime.now(timezone.utc).isoformat(),
+            "created_at": created_at or datetime.now(UTC).isoformat(),
         }
         self._data[key] = (value, ttl, fields)
 
@@ -72,19 +71,19 @@ class FakeRedisClient:
         """模拟 SCAN 命令（返回所有 key，简化 pattern 匹配为 *）。"""
         return list(self._data.keys())
 
-    async def ttl(self, key: str) -> Optional[int]:
+    async def ttl(self, key: str) -> int | None:
         """模拟 TTL 命令。"""
         if key not in self._data:
             return -2
         return self._data[key][1]
 
-    async def hget(self, key: str, field: str) -> Optional[str]:
+    async def hget(self, key: str, field: str) -> str | None:
         """模拟 HGET 命令。"""
         if key not in self._data:
             return None
         return self._data[key][2].get(field)
 
-    async def dump(self, key: str) -> Optional[bytes]:
+    async def dump(self, key: str) -> bytes | None:
         """模拟 DUMP 命令（pickle 序列化整个 tuple）。"""
         if key not in self._data:
             return None

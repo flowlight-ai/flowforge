@@ -51,8 +51,8 @@ from flowforge.core.world_engine.citizens import (
     Turn,
     World,
 )
-from flowforge.core.world_engine.core_identity import CoreIdentityLayer
 from flowforge.core.world_engine.coordinator import RuntimeCoordinator
+from flowforge.core.world_engine.core_identity import CoreIdentityLayer
 from flowforge.core.world_engine.driver import WorldDriver
 from flowforge.core.world_engine.relational_memory import (
     RelationalMemory,

@@ -1,10 +1,8 @@
-﻿# OpenRoute Release - Auto-publish to PyPI and GitHub Releases
+# FlowForge Release - 自动发布到 PyPI 和 GitHub Releases
 # Triggers on version tags (v0.1.0, v1.0.0, etc.)
-# 1. Validates tag (semver)
-# 2. Builds package
-# 3. Publishes to PyPI (via trusted publisher)
-# 4. Creates GitHub Release with auto-generated notes
-# 5. Notifies
+# 1. Builds package
+# 2. Publishes to PyPI (via trusted publisher)
+# 3. Creates GitHub Release with auto-generated notes
 
 name: Release
 
@@ -46,10 +44,10 @@ jobs:
     needs: validate-tag
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -62,7 +60,7 @@ jobs:
         run: python -m build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -73,12 +71,12 @@ jobs:
     needs: build
     environment:
       name: pypi
-      url: https://pypi.org/p/openroute
+      url: https://pypi.org/p/flowforge
     permissions:
       id-token: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -94,12 +92,12 @@ jobs:
     needs: [validate-tag, build]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -108,7 +106,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: OpenRoute ${{ github.ref_name }}
+          name: FlowForge ${{ github.ref_name }}
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -116,12 +114,12 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
           body: |
-            ## OpenRoute ${{ github.ref_name }}
+            ## FlowForge ${{ github.ref_name }}
 
             ### Installation
 
             ```bash
-            pip install openroute==${{ needs.validate-tag.outputs.version }}
+            pip install flowforge==${{ needs.validate-tag.outputs.version }}
             ```
 
             ### What's Changed

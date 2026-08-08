@@ -1,8 +1,11 @@
-from sqlalchemy import create_engine, Column, String, Integer, Text
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
-from datetime import datetime, timezone
 import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import Column, Integer, String, Text, create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
 from flowforge.core.config import system_config
+
 
 class Base(DeclarativeBase):
     pass
@@ -16,13 +19,13 @@ class TaskModel(Base):
     status = Column(String, default="pending")
     trace_id = Column(String, nullable=True)
     state_json = Column(Text, nullable=True)
-    created_at = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    created_at = Column(String, default=lambda: datetime.now(UTC).isoformat())
     completed_at = Column(String, nullable=True)
 
 class AuditLogModel(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(String, default=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp = Column(String, default=lambda: datetime.now(UTC).isoformat())
     level = Column(String, nullable=False)
     task_id = Column(String, nullable=True)
     step_name = Column(String, nullable=True)

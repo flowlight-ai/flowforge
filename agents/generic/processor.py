@@ -1,5 +1,5 @@
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
-from typing import Optional
+
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
 
 
 class ProcessorAgent(GenericAgent):
@@ -7,7 +7,7 @@ class ProcessorAgent(GenericAgent):
     description = "通用处理：根据分析结果执行核心处理逻辑"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         analysis = input.params.get("analysis", {})
         method = input.params.get("method", "standard")

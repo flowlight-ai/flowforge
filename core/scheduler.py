@@ -28,9 +28,10 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Literal
 
 import yaml
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -186,7 +187,7 @@ class TaskRegistry:
             return True
         return False
 
-    def get(self, name: str) -> Optional[Callable]:
+    def get(self, name: str) -> Callable | None:
         """获取任务处理函数.
 
         Args:
@@ -292,7 +293,7 @@ async def metrics_summary_report(*args: Any, **kwargs: Any) -> dict[str, Any]:
         "counter_count": counter_count,
         "gauge_count": gauge_count,
         "histogram_count": histogram_count,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }
 
     # 打印摘要（生产环境可由 logger 接管）
@@ -547,7 +548,7 @@ class FlowForgeScheduler:
         loaded_count = 0
         for yaml_file in sorted(path.glob("*.yaml")):
             try:
-                with open(yaml_file, "r", encoding="utf-8") as f:
+                with open(yaml_file, encoding="utf-8") as f:
                     data = yaml.safe_load(f)
             except yaml.YAMLError as exc:
                 raise ValueError(f"YAML 解析错误 {yaml_file}: {exc}") from exc
@@ -815,7 +816,7 @@ class FlowForgeScheduler:
         Returns:
             :class:`TaskExecutionResult`。
         """
-        started_dt = datetime.now(timezone.utc)
+        started_dt = datetime.now(UTC)
         started_at = started_dt.isoformat()
         start_perf = _perf_counter()
 
@@ -828,7 +829,7 @@ class FlowForgeScheduler:
 
         handler = self._task_registry.get(config.task_handler)
         if handler is None:
-            finished_dt = datetime.now(timezone.utc)
+            finished_dt = datetime.now(UTC)
             result = TaskExecutionResult(
                 task_name=config.name,
                 success=False,
@@ -869,7 +870,7 @@ class FlowForgeScheduler:
                 )
                 success = True
                 break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 last_error = (
                     f"timeout after {config.timeout_seconds}s "
                     f"(attempt {attempt + 1}/{max_attempts})"
@@ -891,7 +892,7 @@ class FlowForgeScheduler:
             else:
                 break
 
-        finished_dt = datetime.now(timezone.utc)
+        finished_dt = datetime.now(UTC)
         duration = _perf_counter() - start_perf
         result = TaskExecutionResult(
             task_name=config.name,

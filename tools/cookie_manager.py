@@ -9,10 +9,10 @@
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from flowforge.core.tracing import get_logger
 from flowforge.core.credential_store import get_credential_store
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("tools.cookie_manager")
 
@@ -54,7 +54,7 @@ class AccountInfo:
     display_name: str = ""
     last_used: float = 0.0
     use_count: int = 0
-    cookies: List[CookieEntry] = field(default_factory=list)
+    cookies: list[CookieEntry] = field(default_factory=list)
 
     def is_valid(self) -> bool:
         """检查账号 Cookie 是否全部有效."""
@@ -70,8 +70,8 @@ class CookieManager:
 
     def __init__(self):
         self._credential_store = get_credential_store()
-        self._accounts: Dict[str, Dict[str, AccountInfo]] = {}  # platform -> account_id -> info
-        self._rr_index: Dict[str, int] = {}  # round robin counter per platform
+        self._accounts: dict[str, dict[str, AccountInfo]] = {}  # platform -> account_id -> info
+        self._rr_index: dict[str, int] = {}  # round robin counter per platform
 
     def _credential_key(self, platform: str, account_id: str) -> str:
         """生成 CredentialStore 中的 key."""
@@ -81,7 +81,7 @@ class CookieManager:
         self,
         platform: str,
         account_id: str,
-        cookies: List[Dict[str, Any]],
+        cookies: list[dict[str, Any]],
         display_name: str = "",
     ) -> None:
         """保存 Cookie 到加密存储.
@@ -159,7 +159,7 @@ class CookieManager:
 
     def load_cookies(
         self, platform: str, account_id: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """从加密存储加载 Cookie.
 
         Returns:
@@ -256,7 +256,7 @@ class CookieManager:
         )
         return expired
 
-    def list_accounts(self, platform: str) -> List[str]:
+    def list_accounts(self, platform: str) -> list[str]:
         """列出某平台的所有账号 ID."""
         if platform in self._accounts:
             accounts = list(self._accounts[platform].keys())
@@ -297,8 +297,8 @@ class AccountSelector:
         self,
         platform: str,
         strategy: AccountSelectionStrategy = AccountSelectionStrategy.ROUND_ROBIN,
-        manual_account_id: Optional[str] = None,
-    ) -> Optional[str]:
+        manual_account_id: str | None = None,
+    ) -> str | None:
         """选择一个可用账号.
 
         Args:

@@ -19,8 +19,7 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -71,10 +70,10 @@ class SyncResult(BaseModel):
     provider_name: str = Field(..., description="Provider 名称")
     success: bool = Field(..., description="是否成功")
     synced_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="同步时间（UTC）",
     )
-    error: Optional[str] = Field(default=None, description="错误信息")
+    error: str | None = Field(default=None, description="错误信息")
 
 
 class AvatarSyncAdapter:
@@ -120,7 +119,7 @@ class AvatarSyncAdapter:
         """
         provider_map = self._synced.setdefault(forgekin_id, {})
         results: dict[str, SyncResult] = {}
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for provider in target_providers:
             # 骨架实现：直接写入内存并返回成功
             provider_map[provider] = avatar_spec
@@ -140,7 +139,7 @@ class AvatarSyncAdapter:
 
     def get_synced_avatar(
         self, forgekin_id: str, provider_name: str
-    ) -> Optional[AvatarSpec]:
+    ) -> AvatarSpec | None:
         """获取已同步到指定 Provider 的Forgekin形象。
 
         Args:

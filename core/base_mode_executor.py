@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import List
+
 from flowforge.core.task_context import TaskContext
 
 
 class BaseModeExecutor(ABC):
     mode_name: str
-    capabilities: List[str] = []
+    capabilities: list[str] = []
 
     async def _prepare(self, ctx: TaskContext) -> TaskContext:
         return ctx

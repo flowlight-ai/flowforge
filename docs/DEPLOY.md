@@ -195,11 +195,7 @@ npm run dev
 
 ```bash
 # flowlight-ai 组织根目录（所有生态项目的父目录）
-# 跨平台约定：不要写死操作系统绝对路径（团队含 Linux / Win11 / iOS）。
-# 推荐由仓库位置推导，例如在仓库根执行：
-#   export FLOWLIGHT_AI_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-# 未设置时默认取 flowforge 的父目录。
-FLOWLIGHT_AI_ROOT="${FLOWLIGHT_AI_ROOT:-..}"
+FLOWLIGHT_AI_ROOT="D:/projects/flowlight-ai"
 
 # FlowForge 工作目录（状态、检查点、中间产物）
 FLOWFORGE_WORK_DIR="${FLOWLIGHT_AI_ROOT}/flowforge/.work"

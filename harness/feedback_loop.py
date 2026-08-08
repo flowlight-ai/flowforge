@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import time
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.prompt_manager import get_prompt
@@ -95,9 +95,9 @@ class FeedbackResult:
         self,
         gate: ClassificationGate,
         overall_score: float,
-        dimension_scores: Dict[str, float],
-        issues: List[str],
-        recommendations: List[str],
+        dimension_scores: dict[str, float],
+        issues: list[str],
+        recommendations: list[str],
         mode: EvaluationMode,
         llm_calls: int,
     ) -> None:
@@ -109,7 +109,7 @@ class FeedbackResult:
         self.mode = mode
         self.llm_calls = llm_calls
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "gate": self.gate.value,
             "overall_score": self.overall_score,
@@ -139,13 +139,13 @@ class FeedbackLoop:
     The method detects the call style by keyword argument presence.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
         self.evaluation_mode = self.config.get("evaluation_mode", EVAL_MODE_LIGHTWEIGHT)
         self.quality_threshold = self.config.get("quality_threshold", 0.7)
         self.max_corrections = self.config.get("max_corrections", 1)
         self._evaluation_count = 0
-        self._gate_counts: Dict[str, int] = {"PASS": 0, "CONDITIONAL": 0, "FAIL": 0}
+        self._gate_counts: dict[str, int] = {"PASS": 0, "CONDITIONAL": 0, "FAIL": 0}
         # v6.0: LLM client for judge evaluation calls
         self._llm_client = self.config.get("llm_client")
 
@@ -159,7 +159,7 @@ class FeedbackLoop:
 
     # ── Public evaluate (backward-compatible signature) ───────────────────
 
-    async def evaluate(self, result: dict, ctx, *, evaluation_mode: Optional[EvaluationMode] = None) -> dict:
+    async def evaluate(self, result: dict, ctx, *, evaluation_mode: EvaluationMode | None = None) -> dict:
         """Evaluate agent output quality.
 
         This is the post_execute hook. It runs the classification gate
@@ -192,7 +192,7 @@ class FeedbackLoop:
         # result["content"] 是简短描述(36字符), result["report"] 是完整报告(2000+字符)
         content = ""
         if isinstance(result, dict):
-            for key in ("report", "edited_draft", "polished_content", "content", "response", "output", "draft", "final_answer"):
+            for key in ("report", "edited_draft", "content", "response", "output", "draft", "final_answer"):
                 val = result.get(key, "")
                 if isinstance(val, str) and val.strip():
                     content = val
@@ -329,7 +329,7 @@ class FeedbackLoop:
 
     # ── Full evaluation (2 LLM calls) ─────────────────────────────────────
 
-    async def _full_evaluation(self, content: str, ctx) -> Dict[str, float]:
+    async def _full_evaluation(self, content: str, ctx) -> dict[str, float]:
         """Full 4-dimension scoring (2 LLM calls).
 
         Tries LLM-based evaluation first; falls back to heuristic
@@ -496,7 +496,7 @@ class FeedbackLoop:
 
     # ── Classification helpers ─────────────────────────────────────────────
 
-    def _classify_with_scores(self, scores: Dict[str, float]) -> str:
+    def _classify_with_scores(self, scores: dict[str, float]) -> str:
         """Classify based on 4-dimension scores (config-based threshold)."""
         avg = sum(scores.values()) / len(scores) if scores else 0
 
@@ -530,7 +530,7 @@ class FeedbackLoop:
 
     def _build_combined_prompt(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         ctx,
     ) -> str:
         """Build the combined judge + scoring prompt for lightweight mode.
@@ -558,7 +558,7 @@ class FeedbackLoop:
 
     def _build_judge_prompt(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         ctx,
     ) -> str:
         """Build the independent judge prompt for full mode (call 1).
@@ -585,7 +585,7 @@ class FeedbackLoop:
 
     def _build_scoring_prompt(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         judge_assessment: str,
         ctx,
     ) -> str:
@@ -604,7 +604,7 @@ class FeedbackLoop:
 
     # ── LLM call ───────────────────────────────────────────────────────────
 
-    async def _call_llm(self, prompt: str, ctx) -> Optional[str]:
+    async def _call_llm(self, prompt: str, ctx) -> str | None:
         """Make an LLM call through the registered client.
 
         Args:
@@ -657,7 +657,7 @@ class FeedbackLoop:
 
     # ── Response parsing ───────────────────────────────────────────────────
 
-    def _parse_scoring_response(self, response: str) -> Dict[str, Any]:
+    def _parse_scoring_response(self, response: str) -> dict[str, Any]:
         """Parse the LLM scoring response into structured data.
 
         Attempts to extract a JSON object from the response. Falls back
@@ -709,7 +709,7 @@ class FeedbackLoop:
             logger.warning(f"Failed to parse scoring response as JSON | error={exc}")
             return {
                 "overall_score": 0.5,
-                "dimension_scores": {d: 0.5 for d in DIMENSIONS},
+                "dimension_scores": dict.fromkeys(DIMENSIONS, 0.5),
                 "issues": ["Failed to parse judge response"],
                 "recommendations": [],
             }
@@ -735,7 +735,7 @@ class FeedbackLoop:
         return FeedbackResult(
             gate=ClassificationGate.CONDITIONAL,
             overall_score=0.5,
-            dimension_scores={d: 0.5 for d in DIMENSIONS},
+            dimension_scores=dict.fromkeys(DIMENSIONS, 0.5),
             issues=["LLM evaluation unavailable — using fallback scoring"],
             recommendations=["Manual review recommended"],
             mode=mode,

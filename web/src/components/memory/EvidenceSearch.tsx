@@ -4,7 +4,6 @@
  * EvidenceSearch — 证据检索
  *
  * 输入查询，召回相关记忆证据（带出处锚点）。
- * 移植自 clowder-ai EvidenceSearch，简化为单栏结果列表。
  *
  * API：GET /api/v1/memory/search?q={query}&limit={limit}
  */

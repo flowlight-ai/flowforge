@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Coroutine
 from enum import Enum
-from typing import Any, Callable, Coroutine
+from typing import Any
 
 from flowforge.core.gate.models import GateStatus, GateVerdict, Score
 from flowforge.core.tracing import get_logger
@@ -201,7 +202,7 @@ class GateTimer:
 
             return scores
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return self.timeout_verdict(gate_name, task_id)
 
 

@@ -18,10 +18,10 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
-from flowforge.core.tracing import get_logger
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("harness.entropy_manager")
 
@@ -45,7 +45,7 @@ class DocEntry:
     last_modified: float = 0.0
     last_checked: float = 0.0
     staleness_score: float = 0.0
-    linked_sources: Set[str] = field(default_factory=set)
+    linked_sources: set[str] = field(default_factory=set)
 
 
 class DocGardener:
@@ -73,14 +73,14 @@ class DocGardener:
     def __init__(self, stale_threshold: float = 0.7, mtime_cache_ttl: float = 60.0) -> None:
         self.stale_threshold = stale_threshold
         self.mtime_cache_ttl = mtime_cache_ttl
-        self.entries: Dict[str, DocEntry] = {}
+        self.entries: dict[str, DocEntry] = {}
         # Cache: {file_path: (mtime, timestamp_when_cached)}
-        self._mtime_cache: Dict[str, tuple] = {}
+        self._mtime_cache: dict[str, tuple] = {}
         # Batch stat cache: {dir_path: {filename: mtime, ...}}
-        self._dir_cache: Dict[str, Dict[str, float]] = {}
-        self._dir_cache_ts: Dict[str, float] = {}
+        self._dir_cache: dict[str, dict[str, float]] = {}
+        self._dir_cache_ts: dict[str, float] = {}
 
-    def _get_mtime(self, file_path: str) -> Optional[float]:
+    def _get_mtime(self, file_path: str) -> float | None:
         """Get file mtime using cache + batch stat fallback.
 
         1. Check in-memory mtime cache (fastest).
@@ -138,7 +138,7 @@ class DocGardener:
             self._mtime_cache[file_path] = (None, now)
             return None
 
-    def invalidate_cache(self, file_path: Optional[str] = None) -> None:
+    def invalidate_cache(self, file_path: str | None = None) -> None:
         """Invalidate mtime cache for a specific file or all files.
 
         Args:
@@ -160,7 +160,7 @@ class DocGardener:
     def register_doc(
         self,
         doc_path: str,
-        linked_sources: Optional[Set[str]] = None,
+        linked_sources: set[str] | None = None,
     ) -> None:
         """Register a documentation file for freshness tracking.
 
@@ -180,7 +180,7 @@ class DocGardener:
             linked_sources=linked_sources or set(),
         )
 
-    async def check_freshness(self, *, force: bool = False) -> List[Dict[str, Any]]:
+    async def check_freshness(self, *, force: bool = False) -> list[dict[str, Any]]:
         """Check freshness of all tracked documentation.
 
         Updates staleness scores based on source file modification times
@@ -198,7 +198,7 @@ class DocGardener:
             ``staleness_score``, and ``reason``.
         """
         now = time.time()
-        stale: List[Dict[str, Any]] = []
+        stale: list[dict[str, Any]] = []
 
         for doc_path, entry in self.entries.items():
             # Skip recently checked docs (unless forced)
@@ -215,7 +215,7 @@ class DocGardener:
             entry.last_checked = now
 
             max_source_staleness = 0.0
-            stale_sources: List[str] = []
+            stale_sources: list[str] = []
 
             for source_path in entry.linked_sources:
                 source_mtime = self._get_mtime(source_path)
@@ -242,7 +242,7 @@ class DocGardener:
             entry.staleness_score = max(max_source_staleness, age_staleness)
 
             if entry.staleness_score >= self.stale_threshold:
-                reason_parts: List[str] = []
+                reason_parts: list[str] = []
                 if stale_sources:
                     reason_parts.append(f"sources modified: {', '.join(stale_sources[:3])}")
                 if age_staleness >= self.stale_threshold:
@@ -298,7 +298,7 @@ class DebtItem:
     status: DebtStatus = DebtStatus.OPEN
     created_at: float = 0.0
     source: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class DebtTracker:
@@ -312,7 +312,7 @@ class DebtTracker:
     """
 
     def __init__(self) -> None:
-        self.items: Dict[str, DebtItem] = {}
+        self.items: dict[str, DebtItem] = {}
         self._next_id = 1
 
     def record(
@@ -320,7 +320,7 @@ class DebtTracker:
         description: str,
         severity: DebtSeverity = DebtSeverity.MEDIUM,
         source: str = "",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Record a new technical debt item.
 
@@ -370,7 +370,7 @@ class DebtTracker:
         item.status = status
         return True
 
-    def get_open_items(self) -> List[DebtItem]:
+    def get_open_items(self) -> list[DebtItem]:
         """Get all open (non-resolved) debt items.
 
         Returns:
@@ -381,14 +381,14 @@ class DebtTracker:
             if item.status in (DebtStatus.OPEN, DebtStatus.ACKNOWLEDGED, DebtStatus.IN_PROGRESS)
         ]
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get a summary of the current debt landscape.
 
         Returns:
             A dictionary with total counts by severity and status.
         """
-        by_severity: Dict[str, int] = {s.value: 0 for s in DebtSeverity}
-        by_status: Dict[str, int] = {s.value: 0 for s in DebtStatus}
+        by_severity: dict[str, int] = {s.value: 0 for s in DebtSeverity}
+        by_status: dict[str, int] = {s.value: 0 for s in DebtStatus}
 
         for item in self.items.values():
             by_severity[item.severity.value] += 1
@@ -438,8 +438,8 @@ class EvolvingRule:
     created_at: float = 0.0
     mutated_at: float = 0.0
     mutation_count: int = 0
-    parent_id: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    parent_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class RuleEvolution:
@@ -454,14 +454,14 @@ class RuleEvolution:
     """
 
     def __init__(self) -> None:
-        self.rules: Dict[str, EvolvingRule] = {}
+        self.rules: dict[str, EvolvingRule] = {}
         self._next_id = 1
 
     def propose(
         self,
         name: str,
         description: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Propose a new rule.
 
@@ -511,8 +511,8 @@ class RuleEvolution:
         self,
         rule_id: str,
         new_description: str,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Optional[str]:
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None:
         """Mutate an active rule, creating a new version.
 
         The original rule is deprecated and a new rule with an incremented
@@ -592,7 +592,7 @@ class RuleEvolution:
         logger.info("Rule retired", rule_id=rule_id)
         return True
 
-    def get_active_rules(self) -> List[EvolvingRule]:
+    def get_active_rules(self) -> list[EvolvingRule]:
         """Get all currently active rules.
 
         Returns:
@@ -632,7 +632,7 @@ class GarbageCollection:
     """
 
     def __init__(self) -> None:
-        self.schedules: Dict[str, GCSchedule] = {}
+        self.schedules: dict[str, GCSchedule] = {}
         self._register_default_schedules()
 
     def _register_default_schedules(self) -> None:
@@ -654,7 +654,7 @@ class GarbageCollection:
         """
         self.schedules[schedule.resource_type] = schedule
 
-    async def check_and_collect(self) -> Dict[str, Any]:
+    async def check_and_collect(self) -> dict[str, Any]:
         """Check all schedules and execute GC for due resources.
 
         Returns:
@@ -662,8 +662,8 @@ class GarbageCollection:
             and ``details`` (per-type collection info).
         """
         now = time.time()
-        collected: List[str] = []
-        details: Dict[str, Any] = {}
+        collected: list[str] = []
+        details: dict[str, Any] = {}
 
         for resource_type, schedule in self.schedules.items():
             hours_since_last = (now - schedule.last_run) / 3600
@@ -684,13 +684,13 @@ class GarbageCollection:
         self,
         resource_type: str,
         schedule: GCSchedule,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         now = time.time()
         max_age_seconds = schedule.max_age_days * 86400
         cutoff = now - max_age_seconds
         data_dir = Path("data")
         tmp_extensions = {".tmp", ".bak", ".log", ".temp", ".cache"}
-        deleted_files: List[str] = []
+        deleted_files: list[str] = []
         total_size: int = 0
 
         if data_dir.exists():
@@ -742,14 +742,14 @@ class EntropyManager:
         garbage_collection: Garbage collection scheduler.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
         self.doc_gardener_enabled = self.config.get("doc_gardener_enabled", True)
         self.debt_tracker_enabled = self.config.get("debt_tracker_enabled", True)
         self.rule_evolution_enabled = self.config.get("rule_evolution_enabled", True)
         self._pre_check_count = 0
         self._post_track_count = 0
-        self._entropy_flags: Dict[str, Any] = {}
+        self._entropy_flags: dict[str, Any] = {}
 
         # Instantiate sub-components based on config flags
         self.doc_gardener = DocGardener(
@@ -856,7 +856,7 @@ class EntropyManager:
                 metadata={"task_id": task_id, "error": error_preview},
             )
 
-    async def run_doc_gardener(self) -> List[dict]:
+    async def run_doc_gardener(self) -> list[dict]:
         """Run document freshness scan (background Cron task).
 
         Scans project documentation for:
@@ -881,7 +881,7 @@ class EntropyManager:
 
         return stale_docs
 
-    async def run_debt_tracker(self) -> List[dict]:
+    async def run_debt_tracker(self) -> list[dict]:
         """Run technical debt scan (background Cron task).
 
         Scans for:
@@ -922,7 +922,7 @@ class EntropyManager:
             for item in open_items
         ]
 
-    async def run_rule_evolution(self, failures: List[dict]) -> List[dict]:
+    async def run_rule_evolution(self, failures: list[dict]) -> list[dict]:
         """Analyze failures and suggest new rules.
 
         Delegates to RuleEvolution to propose rules from failure patterns.
@@ -940,7 +940,7 @@ class EntropyManager:
             return []
 
         logger.info(f"[RuleEvolution] Analyzing {len(failures)} failures")
-        proposed: List[dict] = []
+        proposed: list[dict] = []
 
         for failure in failures:
             task_id = failure.get("task_id", "unknown")
@@ -961,7 +961,7 @@ class EntropyManager:
 
         return proposed
 
-    async def check(self, ctx: TaskContext) -> Dict[str, Any]:
+    async def check(self, ctx: TaskContext) -> dict[str, Any]:
         """Run all entropy checks and return a combined report.
 
         Checks documentation freshness, runs garbage collection, and
@@ -1008,7 +1008,7 @@ class EntropyManager:
                         metadata=lv,
                     )
 
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "doc_freshness": {
                 "stale_count": len(stale_docs),
                 "stale_docs": stale_docs[:10],

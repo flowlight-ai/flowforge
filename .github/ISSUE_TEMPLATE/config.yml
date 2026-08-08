@@ -4,22 +4,22 @@
 blank_issues_enabled: false
 contact_links:
   - name: 💬 Ask a Question / 提问
-    url: https://github.com/flowlight-ai/openroute/discussions/new?category=q-a
+    url: https://github.com/flowlight-ai/flowforge/discussions/new?category=q-a
     about: |
       For questions, help, and general discussion, please use GitHub Discussions instead of Issues.
       提问、求助和一般讨论请使用 GitHub Discussions，而不是 Issue。
   - name: 📖 Read Documentation / 阅读文档
-    url: https://github.com/flowlight-ai/openroute/tree/main/docs
+    url: https://github.com/flowlight-ai/flowforge/tree/main/docs
     about: |
       Check the documentation before asking — your answer may already be there.
       提问前请先查阅文档，答案可能已有。
   - name: 🛡️ Report Security Vulnerability / 报告安全漏洞
-    url: https://github.com/flowlight-ai/openroute/security/policy
+    url: https://github.com/flowlight-ai/flowforge/security/policy
     about: |
       Please report security vulnerabilities through the responsible disclosure process, NOT as a public Issue.
       请通过负责任的披露流程报告安全漏洞，切勿作为公开 Issue 提交。
   - name: 💡 Feature Ideas / 功能想法
-    url: https://github.com/flowlight-ai/openroute/discussions/new?category=ideas
+    url: https://github.com/flowlight-ai/flowforge/discussions/new?category=ideas
     about: |
       Brainstorm feature ideas in Discussions before formally proposing them.
       在正式提议前，先在讨论区头脑风暴功能想法。

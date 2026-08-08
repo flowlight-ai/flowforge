@@ -46,11 +46,12 @@ awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
 # ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: codebuddy  # 通过 CodeBuddy CLI（codebuddy -p）调用 LLM
-  model: hy3  # codebuddy 预置默认模型
-  mode: cli
+  provider: trae
+  model: trae  # Trae CN 桥接，模型由 operator 选择
+  mode: bridge
   session_id_prefix: "forgemind:davinci"  # 会话隔离
-  bridge_timeout: 180  # 增加超时以支持长任务
+  bridge_timeout: 300
+  bridge_poll_interval: 2
   temperature: 0.4  # 测试生成需要确定性
   max_tokens: 8192
 

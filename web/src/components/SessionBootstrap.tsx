@@ -1,7 +1,6 @@
 /**
  * SessionBootstrap — 会话引导组件
  *
- * 来源：clowder-ai/packages/web/src/components/SessionBootstrap.tsx（简化版）
  * 职责：在应用启动时拉取会话基础数据（用户信息、配置、待审批计数）
  *
  * 设计原则：

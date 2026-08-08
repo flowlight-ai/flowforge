@@ -24,7 +24,7 @@
 from __future__ import annotations
 
 import inspect
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -35,7 +35,6 @@ from flowforge.core.event_memory import (
     EventType,
     ResolutionLink,
 )
-
 
 # ── 测试夹具：真实场景数据（ContentForge 内容创作 + NovelForge 小说创作）──
 
@@ -186,17 +185,17 @@ async def test_list_by_thread(
     """list_by_thread 返回该线程下所有事件，按时间戳升序."""
     # 同一线程下记录 3 个事件（时间递增）
     e1 = content_task_started_event.model_copy()
-    e1.timestamp = datetime(2026, 7, 18, 9, 0, tzinfo=timezone.utc)
+    e1.timestamp = datetime(2026, 7, 18, 9, 0, tzinfo=UTC)
     e1.message_id = "msg-001"
 
     e2 = content_task_started_event.model_copy()
-    e2.timestamp = datetime(2026, 7, 18, 10, 0, tzinfo=timezone.utc)
+    e2.timestamp = datetime(2026, 7, 18, 10, 0, tzinfo=UTC)
     e2.message_id = "msg-002"
     e2.type = EventType.TASK_COMPLETED
     e2.summary = "技术文章创作完成"
 
     e3 = content_task_started_event.model_copy()
-    e3.timestamp = datetime(2026, 7, 18, 11, 0, tzinfo=timezone.utc)
+    e3.timestamp = datetime(2026, 7, 18, 11, 0, tzinfo=UTC)
     e3.message_id = "msg-003"
     e3.type = EventType.ERROR_OCCURRED
     e3.summary = "发布阶段发生错误"
@@ -235,7 +234,7 @@ async def test_list_by_thread_limit(
     """list_by_thread 的 limit 参数生效."""
     for i in range(5):
         e = content_task_started_event.model_copy()
-        e.timestamp = datetime(2026, 7, 18, 9 + i, 0, tzinfo=timezone.utc)
+        e.timestamp = datetime(2026, 7, 18, 9 + i, 0, tzinfo=UTC)
         e.message_id = f"msg-limit-{i:03d}"
         await store.record(e)
 
@@ -312,7 +311,7 @@ async def test_list_by_type_with_time_filter(
     content_task_started_event: EventRecord,
 ) -> None:
     """list_by_type 按 EventType 过滤，并可叠加 since 时间过滤."""
-    base_time = datetime(2026, 7, 18, 9, 0, tzinfo=timezone.utc)
+    base_time = datetime(2026, 7, 18, 9, 0, tzinfo=UTC)
 
     # 记录 3 个 TASK_STARTED 事件（时间不同）+ 1 个 ERROR_OCCURRED 事件
     e_old = content_task_started_event.model_copy()
@@ -378,14 +377,14 @@ async def test_resolution_chain(
     # 事件 A: 任务启动
     event_a = content_task_started_event.model_copy()
     event_a.message_id = "msg-a-task-started"
-    event_a.timestamp = datetime(2026, 7, 18, 9, 0, tzinfo=timezone.utc)
+    event_a.timestamp = datetime(2026, 7, 18, 9, 0, tzinfo=UTC)
     event_a.summary = "用户请求创作技术文章，任务启动"
     id_a = await store.record(event_a)
 
     # 事件 B: 认知变迁（A 导致 B）
     event_b = content_task_started_event.model_copy()
     event_b.message_id = "msg-b-cognitive-shift"
-    event_b.timestamp = datetime(2026, 7, 18, 10, 0, tzinfo=timezone.utc)
+    event_b.timestamp = datetime(2026, 7, 18, 10, 0, tzinfo=UTC)
     event_b.type = EventType.COGNITIVE_SHIFT
     event_b.summary = "从需求理解进入素材搜集，认知 E1→E2"
     event_b.cognitive_transition = "E1→E2"
@@ -394,7 +393,7 @@ async def test_resolution_chain(
     # 事件 C: 范围发散（B 导致 C）
     event_c = content_task_started_event.model_copy()
     event_c.message_id = "msg-c-scope-divergence"
-    event_c.timestamp = datetime(2026, 7, 18, 11, 0, tzinfo=timezone.utc)
+    event_c.timestamp = datetime(2026, 7, 18, 11, 0, tzinfo=UTC)
     event_c.type = EventType.SCOPE_DIVERGENCE
     event_c.summary = "素材搜集超出原始 scope，检测到范围发散"
     event_c.cognitive_transition = "E2→scope_guard"
@@ -475,7 +474,7 @@ async def test_analyze_trend(
     novel_outline_shift_event: EventRecord,
 ) -> None:
     """analyze_trend 按 type/trigger/cat 聚合统计."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 窗口内事件：e1/e2 在 24h 窗口内但超出 1h 窗口；e3 在两个窗口内
     e1 = content_task_started_event.model_copy()
@@ -555,7 +554,7 @@ async def test_purge_expired(
     content_task_started_event: EventRecord,
 ) -> None:
     """purge_expired 按 timestamp 清理过期事件，并联动清理 links 和 teleport 索引."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 过期事件（35 天前）
     e_expired = content_task_started_event.model_copy()

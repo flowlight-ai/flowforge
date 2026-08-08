@@ -18,7 +18,6 @@ License: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import yaml
 from pydantic import ValidationError
@@ -96,7 +95,7 @@ class ProviderTransportRegistry:
         )
         return matched
 
-    def get(self, provider_name: str) -> Optional[AgentProviderManifest]:
+    def get(self, provider_name: str) -> AgentProviderManifest | None:
         """按名称获取 Provider Manifest。
 
         Args:

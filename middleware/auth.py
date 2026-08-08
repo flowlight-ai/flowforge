@@ -11,7 +11,7 @@ import hashlib
 import logging
 import os
 import time
-from typing import Optional, Dict, Any
+from typing import Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class APIKeyAuth:
     """API Key 认证管理器 — 通用版本，可被任何 FlowForge 项目复用。"""
 
-    def __init__(self, env_prefix: str = "FLOWFORGE", config_keys: Optional[Dict[str, Any]] = None):
+    def __init__(self, env_prefix: str = "FLOWFORGE", config_keys: dict[str, Any] | None = None):
         """初始化认证管理器。
 
         Args:
@@ -34,7 +34,7 @@ class APIKeyAuth:
                     ...
                 ]
         """
-        self._api_keys: Dict[str, Dict[str, Any]] = {}  # key_hash -> info
+        self._api_keys: dict[str, dict[str, Any]] = {}  # key_hash -> info
         self._env_prefix = env_prefix
         self._load_keys(config_keys or [])
 
@@ -87,7 +87,7 @@ class APIKeyAuth:
         """SHA256 哈希 API Key。"""
         return hashlib.sha256(key.encode()).hexdigest()
 
-    def validate_key(self, key: str) -> Optional[dict]:
+    def validate_key(self, key: str) -> dict | None:
         """验证 API Key，返回 key info 或 None。"""
         if not key:
             return None

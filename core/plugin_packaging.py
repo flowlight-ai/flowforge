@@ -18,9 +18,9 @@ pyproject.toml entry:
 
 import importlib
 import importlib.metadata
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from flowforge.core.plugin_protocol import FlowForgePlugin, PluginManifest
+from flowforge.core.plugin_protocol import FlowForgePlugin
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("plugin_packaging")
@@ -28,7 +28,7 @@ logger = get_logger("plugin_packaging")
 ENTRY_POINT_GROUP = "flowforge.plugins"
 
 
-def discover_entry_point_plugins() -> List[Dict[str, Any]]:
+def discover_entry_point_plugins() -> list[dict[str, Any]]:
     """Discover plugins registered via setuptools entry points.
 
     Scans the 'flowforge.plugins' entry point group for installed
@@ -36,7 +36,7 @@ def discover_entry_point_plugins() -> List[Dict[str, Any]]:
 
     Returns a list of dicts with 'name', 'module', 'entry_point' keys.
     """
-    plugins: List[Dict[str, Any]] = []
+    plugins: list[dict[str, Any]] = []
     try:
         eps = importlib.metadata.entry_points()
         # Python 3.12+ returns a SelectableGroups, 3.9+ returns dict
@@ -60,7 +60,7 @@ def discover_entry_point_plugins() -> List[Dict[str, Any]]:
     return plugins
 
 
-def load_entry_point_plugin(name: str) -> Optional[FlowForgePlugin]:
+def load_entry_point_plugin(name: str) -> FlowForgePlugin | None:
     """Load a specific plugin by its entry point name.
 
     Args:

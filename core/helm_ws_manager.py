@@ -6,10 +6,8 @@ Provides:
 - Event buffering for disconnection replay (up to EVENT_BUFFER_SIZE events)
 - Auto-cleanup on task completion
 """
-from datetime import datetime
 import json
-import asyncio
-from typing import Dict, Optional
+from datetime import datetime
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -24,9 +22,9 @@ EVENT_BUFFER_SIZE = 2000
 class HelmWSManager(HelmEventEmitter):
 
     def __init__(self):
-        self._connections: Dict[str, WebSocket] = {}
-        self._event_buffers: Dict[str, list] = {}
-        self._seq_counters: Dict[str, int] = {}
+        self._connections: dict[str, WebSocket] = {}
+        self._event_buffers: dict[str, list] = {}
+        self._seq_counters: dict[str, int] = {}
 
     async def connect(self, task_id: str, ws: WebSocket):
         await ws.accept()

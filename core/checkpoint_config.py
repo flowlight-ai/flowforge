@@ -14,9 +14,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import get_logger
 
@@ -75,7 +75,7 @@ class CheckpointConfig(BaseModel):
 
     model_config = {"extra": "allow"}
 
-    def resolve_path(self, config: Optional[Dict[str, Any]] = None) -> str:
+    def resolve_path(self, config: dict[str, Any] | None = None) -> str:
         """解析路径中的变量引用。
 
         将 ${config.data_dir}/checkpoints 替换为实际值。
@@ -97,7 +97,7 @@ class CheckpointConfig(BaseModel):
             resolved = re.sub(r'\$\{config\.(\w+)\}', _replace, resolved)
         return resolved
 
-    def to_checkpoint_manager_kwargs(self, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def to_checkpoint_manager_kwargs(self, config: dict[str, Any] | None = None) -> dict[str, Any]:
         """转换为 CheckpointManager 构造参数。
 
         Args:
@@ -113,7 +113,7 @@ class CheckpointConfig(BaseModel):
 
 # ── 预定义配置模板 ────────────────────────────────────────────
 
-CHECKPOINT_TEMPLATES: Dict[str, CheckpointConfig] = {
+CHECKPOINT_TEMPLATES: dict[str, CheckpointConfig] = {
     "default": CheckpointConfig(),
     "lightweight": CheckpointConfig(
         enabled=True,
@@ -163,7 +163,7 @@ def get_checkpoint_config(name: str = "default") -> CheckpointConfig:
     return config.model_copy()
 
 
-def checkpoint_config_from_dict(config: Dict[str, Any]) -> CheckpointConfig:
+def checkpoint_config_from_dict(config: dict[str, Any]) -> CheckpointConfig:
     """从配置字典创建 CheckpointConfig。
 
     支持 template 字段指定预定义模板，再用配置字段覆盖。

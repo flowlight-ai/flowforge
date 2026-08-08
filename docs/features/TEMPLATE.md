@@ -1,218 +1,153 @@
-# Feature 模板（v2.0）
+# Feature Doc 标准模板
 
-> **文档编号**: TEMPLATE.md（v2.0）
-> **更新日期**: 2026-07-19
-> **用途**: 所有 Feature 规格文件的模板，复制本文件创建新 Feature
-> **依赖**: `[doc:roleagent.md]` + `[doc:VISION.md]` + `[doc:SOP.md]` + `[doc:../spec.md]` + `[doc:../../CONTRIBUTING.md]`
-
----
+> **用途**：新 Feature 立项时复制此模板到 `docs/features/F{NNN}-{slug}.md`
+> **为什么规范化**：Feature 文档需要统一格式，便于可进化智能体（Forgekin）增量维护和 parser 自动提取进度
+> **决策来源**：FlowForge 项目需求 + 11 段标准 ADR 格式借鉴
 
 ---
 
-
----
-
-## 复制以下内容创建新 Feature
+## 模板正文（复制以下内容）
 
 ```markdown
-# F0XX: [Feature 标题]
-
-> **状态**: ⏳ pending | 🔄 in_progress | ✅ done | ❌ deprecated | 🚫 blocked
-> **类型**: core | harness | collaboration | memory | eval | reliability | forgemind | external_agent
-> **创建日期**: YYYY-MM-DD
-> **完成日期**: YYYY-MM-DD（若已完成）
-> **负责人**: operator | 架构师 Forgekin（猫头鹰·鲁班） | 开发者 Forgekin（猎犬·夏洛克）
-> **对应 spec.md**: [doc:../spec.md#§3.X]（FR-CORE-0XX，与本文档同号对应）
-> **对应 arch.md**: [doc:../arch.md#§3.X]（待创建）
-> **对应 design.md**: [doc:../design.md#§3.X]（待创建）
-> **依赖 ADR**: [doc:../decisions/0XX-xxx.md]
-> **依赖 Feature**: [doc:features/F0YY-xxx.md]
-> **依据**: [doc:../review/review.md#第X章] RA-XXX / FM-XXX / EX-XXX
-> **roleagent 章节**: [doc:../roleagent.md#第X章]
-> **关联 VISION**: [doc:../VISION.md#X]
-
 ---
+feature_ids: [F{NNN}]
+related_features: []
+topics: []
+doc_kind: spec
+created: {YYYY-MM-DD}
+# Optional exemption for pure internal/no-user-visible changes only:
+# tips_exempt: {reason}
+---
+
+# F{NNN}: {Feature Name}
+
+> **状态**: spec | **负责人**: {可进化智能体名/operator} | **优先级**: {P0/P1/P2}
+> **依赖 ADR**: [doc:decisions/NNN-xxx.md]
+> **依赖 Feature**: [doc:features/F0xx-xxx.md]
+> **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径
 
 ## 1. 上下文
 
 ### 1.1 问题陈述
-[这个 Feature 解决什么问题？为什么需要它？]
+{一段话说清楚为什么要做。operator experience 如有请引用。}
 
 ### 1.2 当前痛点
-[当前没有这个 Feature 时的具体痛点，引用实际案例或 Eval 数据]
+{列出当前存在的问题}
 
 ### 1.3 不做的影响
-[如果不做这个 Feature，会影响哪些后续工作？]
-
----
+{如果不做这个 Feature 会怎样}
 
 ## 2. 决策
 
 ### 2.1 核心设计
-[这个 Feature 的核心设计是什么？包括数据模型、接口、状态机等]
+{核心设计方案}
 
 ### 2.2 关键接口
 \`\`\`python
 # Python 接口示例
-class F0XXComponent:
-    async def method_name(self, input: Input) -> Output:
-        ...
 \`\`\`
 
-### 2.3 关键不变量
-- 不变量 1
-- 不变量 2
+## 3. 验收标准
 
----
+### Phase A（{Phase 名称}）
+- [ ] AC-A1: {验收条件}
+- [ ] AC-A2: {验收条件}
 
-## 3. 实现路径
+### Phase B（{Phase 名称}）
+- [ ] AC-B1: {验收条件}
 
-### 3.1 代码位置
-- `flowforge/<module>/f0xx_xxx.py`
-- `flowforge/<module>/tests/test_f0xx.py`
+## 4. 依赖
 
-### 3.2 实现步骤
-1. 步骤 1
-2. 步骤 2
-3. 步骤 3
+- **Evolved from**: {F0xx}（{说明}）
+- **Blocked by**: {F0xx}（{说明}）
+- **Related**: {F0xx}（{说明}）
 
-### 3.3 依赖关系
-- 依赖 F0YY 的 XXX 接口
-- 依赖 ADR 0ZZ 的决策
+## 5. 风险
 
----
+| 风险 | 缓解 |
+|------|------|
+| {风险描述} | {缓解方案} |
 
-## 4. 验收标准
+## 6. Open Questions
 
-### 4.1 功能验收
-- [ ] AC-1: [具体可验证的功能]
-- [ ] AC-2: [具体可验证的功能]
-- [ ] AC-3: [具体可验证的功能]
+| # | 问题 | 状态 |
+|---|------|------|
+| OQ-1 | {问题} | ⬜ 未定 |
 
-### 4.2 性能验收
-- [ ] AC-4: [具体性能指标]
+## 7. Key Decisions
 
-### 4.3 安全验收
-- [ ] AC-5: [具体安全要求]
+| # | 决策 | 理由 | 日期 |
+|---|------|------|------|
+| KD-1 | {决策} | {理由} | {YYYY-MM-DD} |
 
-### 4.4 Eval 验收
-- [ ] AC-6: Eval Contract 五问全部回答
-- [ ] AC-7: 三方信号交叉通过
-- [ ] AC-8: 归因到七类矩阵之一（若失败）
+## 8. Timeline
 
----
+| 日期 | 事件 |
+|------|------|
+| {YYYY-MM-DD} | 立项 |
 
-## 5. 测试计划
+## 9. Review Gate
 
-### 5.1 单元测试
-- 测试用例 1
-- 测试用例 2
+- Phase A: {review 策略}
 
-### 5.2 集成测试
-- 测试用例 1
+## 10. Links
 
-### 5.3 E2E 测试
-- 测试用例 1（必须遵守 T1-T8 铁律）
-
----
-
-## 6. Eval Contract（五问）
-
-### 6.1 谁评估
-[评估者]
-
-### 6.2 评估什么
-[评估对象]
-
-### 6.3 何时评估
-[评估时机]
-
-### 6.4 评估信号
-- trace 信号: ...
-- 用户信号: ...
-- 探针信号: ...
-
-### 6.5 评估后做什么
-- 通过 → 状态改为 ✅ done
-- 失败 → 归因到七类矩阵 + 修复
-
----
-
-## 7. Build to Delete vs Built to Persist
-
-### 7.1 半衰期标记
-本 Feature 主要属于：[ ] Build to Delete | [x] Built to Persist | [ ] 混合
-
-### 7.2 理由
-[为什么这样标记？]
-
-### 7.3 sunset 触发条件（若 Build to Delete）
-[什么信号触发 sunset review？]
-
----
-
-## 8. 后果
-
-### 8.1 正面后果
-- 好处 1
-- 好处 2
-
-### 8.2 负面后果
-- 代价 1
-- 代价 2
-
-### 8.3 风险
-- 风险 1（缓解措施）
-- 风险 2（缓解措施）
-
----
-
-## 9. 替代方案
-
-### 9.1 方案 A
-[方案描述]
-- 优点: ...
-- 缺点: ...
-- 未选择原因: ...
-
-### 9.2 方案 B
-[方案描述]
-- 优点: ...
-- 缺点: ...
-- 未选择原因: ...
-
----
-
-## 10. 引用
-
-- [doc:../spec.md#§3.X]
-- [doc:../arch.md#§3.X]
-- [doc:../design.md#§3.X]
-- [doc:../roleagent.md#第X章]
-- [doc:../VISION.md#X]
-- [doc:../decisions/0XX-xxx.md]
-- [doc:features/F0YY-xxx.md]
-- [doc:../../CONTRIBUTING.md#32-t1-t8-测试铁律]
-- [doc:../../CONTRIBUTING.md]
-
----
-
-## 11. 变更历史
-
-| 日期 | 版本 | 变更 | 变更者 |
-|------|:----:|------|--------|
-| YYYY-MM-DD | v0.1 | 初始创建 | operator / 架构师 Forgekin（猫头鹰·鲁班） |
-| YYYY-MM-DD | v0.2 |  | 文档员Forgekin（钢笔·文心） |
+| 类型 | 路径 | 说明 |
+|------|------|------|
+| **Feature** | `docs/features/F0xx-xxx.md` | {关联说明} |
+| **ADR** | `docs/decisions/NNN-xxx.md` | {关联说明} |
 ```
 
 ---
 
-## 模板使用规则（v2.0）
+## 格式要求（Parser 依赖）
 
-1. **复制本节内容**（`# F0XX: ...` 到变更历史末尾）到新 Feature 文件
-2. **替换所有占位符**（`[xxx]`、`F0XX`、`YYYY-MM-DD` 等）
-3. **删除不需要的章节**（如某些 Feature 无替代方案）
-4. **保留所有 `[doc:xxx]` 引用格式**
-5. **单文件 < 50KB**，超出请拆分为多个 Feature
-6. **必须填写"对应 spec.md §3.X"字段**，确保 Feature 与 spec.md §3 章节同号互链
-7. **必须**（双轨命名 + AI 术语优先 + 弱化万物 + 去 AGI 化）
+### 1. YAML Frontmatter（必须）
+| 字段 | 必须 | 说明 |
+|------|------|------|
+| `feature_ids` | ✅ | `[F001]`，单元素数组 |
+| `related_features` | ✅ | `[F049, F037]`，可为空数组 `[]` |
+| `topics` | ✅ | 分类标签，可为空 |
+| `doc_kind` | ✅ | `spec`（活跃）/ `note`（回顾/关闭） |
+| `created` | ✅ | `YYYY-MM-DD` |
+
+### 2. 状态行（必须）
+```
+> **状态**: {status} | **负责人**: {owner}
+```
+有效 status 值：`spec` → `in-progress` → `done`
+
+### 3. 验收标准格式（必须）
+```
+- [ ] AC-{Phase}{N}: {描述}      ← 未完成
+- [x] AC-{Phase}{N}: {描述}      ← 已完成
+```
+- AC 编号格式：`AC-A1`、`AC-B2`（Phase 字母 + 序号）
+
+### 4. 依赖段（推荐）
+```
+- **Evolved from**: F0xx
+- **Blocked by**: F0xx
+- **Related**: F0xx
+```
+
+### 5. 风险表格（推荐）
+保持 `| 风险 | 缓解 |` 两列表格格式。
+
+---
+
+## 轻量 vs 完整
+
+- **小 Feature**（≤1 Phase，几天完成）：可以省略 Timeline、Review Gate、Links、Key Decisions
+- **大 Feature**（多 Phase，跨周）：建议所有段落都填
+- **最低要求**：Frontmatter + 状态行 + 上下文 + 决策 + 验收标准 + 依赖
+
+---
+
+## FlowForge 项目特殊要求
+
+1. **术语对齐**：必须使用项目正式术语（详见 `[doc:decisions/012-naming-fusion.md]`），禁止废弃术语
+2. **跨文档引用**：使用 `[doc:path]` 格式
+3. **路径铁律**：禁止硬编码绝对路径
+4. **T1-T8 铁律**：验收标准必须包含 T1-T8 测试铁律的遵守声明
+5. **operator 7 原则**：如有涉及，必须引用 `[doc:VISION.md#6]` 对应原则

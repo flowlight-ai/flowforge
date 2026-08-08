@@ -3,7 +3,6 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -176,7 +175,7 @@ class VideoGenerateTool(BaseTool):
 
     def _build_ffmpeg_cmd(
         self, audio_path: str, output_path: str, bg_image: str, tmp_dir: str
-    ) -> List[str]:
+    ) -> list[str]:
         """Build the FFmpeg command based on whether a background image is provided."""
         if bg_image and os.path.exists(bg_image):
             # Use background image with audio

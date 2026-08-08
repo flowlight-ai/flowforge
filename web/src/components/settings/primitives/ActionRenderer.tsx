@@ -8,7 +8,7 @@ import { SettingsText } from './SettingsText';
 /**
  * ActionRenderer — 简化版连接器动作渲染器
  *
- * 从 clowder-ai 移植并大幅简化：
+ * 从 移植并大幅简化：
  *   - 移除 polling/state machine（AC-A26 复杂逻辑）
  *   - 移除 ActionRendererParts/ActionRendererState 子模块依赖
  *   - 保留 button + status 两种 render 类型

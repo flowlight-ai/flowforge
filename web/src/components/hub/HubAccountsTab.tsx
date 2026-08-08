@@ -3,7 +3,6 @@
 /**
  * HubAccountsTab — 账户管理 Tab
  *
- * 移植自 clowder-ai HubAccountsTab，简化为 FlowForge 适配版。
  * 用于 /admin/settings?s=accounts，管理 Provider 账户与认证。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

@@ -4,7 +4,6 @@
  * MermaidDiagram — Mermaid 图表渲染
  *
  * 懒加载渲染 Mermaid 图表；解析失败时展示原始源码。
- * 移植自 clowder-ai MermaidDiagram，简化为动态导入版。
  *
  * 注意：依赖 mermaid 包，运行时动态 import；若包未安装则降级展示源码。
  *       当 mermaid 包未安装时，通过下方 declare module shim 让 TS 编译通过。
