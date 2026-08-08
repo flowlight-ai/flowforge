@@ -2,9 +2,9 @@ import json
 import re
 import time
 from abc import ABC
-from typing import Any
+from typing import Any, Optional
 
-from flowforge.core.base_agent import AgentInput, AgentOutput, BaseAgent
+from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
@@ -13,7 +13,7 @@ logger = get_logger("generic_agent")
 
 
 class GenericAgent(BaseAgent, ABC):
-    default_mode: str | None = "react"
+    default_mode: Optional[str] = "react"
 
     def __init__(self, llm_client: Any = None, tool_registry: Any = None) -> None:
         self._llm_client = llm_client
@@ -22,7 +22,7 @@ class GenericAgent(BaseAgent, ABC):
     async def execute(self, input: AgentInput) -> AgentOutput:
         return await self.execute_with_context(input, None)
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         agent_name = getattr(self, 'name', type(self).__name__)
         task_id = context.task_id if context else "no_context"
         logger.info(f"[generic_agent] execute_with_context entry: agent={agent_name}, task_id={task_id}")
@@ -37,7 +37,7 @@ class GenericAgent(BaseAgent, ABC):
             logger.error(f"[generic_agent] execute_with_context failed: agent={agent_name}, task_id={task_id}, elapsed={elapsed:.2f}s, error={e}")
             raise
 
-    async def _call_llm(self, context: TaskContext | None, prompt: str) -> str:
+    async def _call_llm(self, context: Optional[TaskContext], prompt: str) -> str:
         agent_name = getattr(self, 'name', type(self).__name__)
         task_id = context.task_id if context else "no_context"
         logger.info(f"[generic_agent] LLM call start: agent={agent_name}, task_id={task_id}, prompt_len={len(prompt)}")
@@ -59,7 +59,7 @@ class GenericAgent(BaseAgent, ABC):
             return content
         raise RuntimeError("No LLM client available: provide context or llm_client")
 
-    async def _call_tool(self, context: TaskContext | None, tool_name: str, params: dict[str, Any]) -> dict[str, Any]:
+    async def _call_tool(self, context: Optional[TaskContext], tool_name: str, params: dict[str, Any]) -> dict[str, Any]:
         agent_name = getattr(self, 'name', type(self).__name__)
         task_id = context.task_id if context else "no_context"
         logger.info(f"[generic_agent] Tool call start: agent={agent_name}, task_id={task_id}, tool={tool_name}")

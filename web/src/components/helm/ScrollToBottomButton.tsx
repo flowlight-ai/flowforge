@@ -14,6 +14,7 @@ interface ScrollToBottomButtonProps {
 /**
  * ScrollToBottomButton — 回到底部按钮
  *
+ * 来源：clowder-ai/packages/web/src/components/ScrollToBottomButton.tsx（简化版）
  * 行为：
  *   - 监听滚动容器，远离底部时显示按钮
  *   - 点击平滑滚动到底部（messagesEndRef）

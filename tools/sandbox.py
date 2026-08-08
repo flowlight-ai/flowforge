@@ -96,7 +96,7 @@ class CodeSandbox:
                     proc.communicate(),
                     timeout=self.config.timeout_seconds,
                 )
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 proc.kill()
                 await proc.wait()
                 logger.warning(f"[sandbox] execution timed out after {self.config.timeout_seconds}s")

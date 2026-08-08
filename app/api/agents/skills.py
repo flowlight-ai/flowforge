@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Query
@@ -27,7 +27,7 @@ class SkillCreate(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(UTC).isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat() + "Z"
 
 
 @router.get("")
@@ -43,7 +43,7 @@ async def list_skills(
 async def create_skill(payload: SkillCreate) -> dict[str, Any]:
     """创建 Skill（stub 返回占位对象）。"""
     return {
-        "id": f"skill_stub_{int(datetime.now(UTC).timestamp())}",
+        "id": f"skill_stub_{int(datetime.now(timezone.utc).timestamp())}",
         "name": payload.name,
         "description": payload.description,
         "version": payload.version,

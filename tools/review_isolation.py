@@ -9,7 +9,7 @@
 import copy
 import hashlib
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Dict, List, Optional, Set
 
 from flowforge.core.tracing import get_logger
 
@@ -22,9 +22,9 @@ class IsolatedContext:
 
     reviewer_id: str
     anonymous_id: str  # 匿名 ID（哈希）
-    assigned_dimensions: list[str] = field(default_factory=list)
-    content: dict[str, Any] = field(default_factory=dict)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    assigned_dimensions: List[str] = field(default_factory=list)
+    content: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     # 隔离标记
     is_isolated: bool = True
@@ -35,9 +35,9 @@ class IsolatedContext:
 class ArbitratorView:
     """仲裁者视图 — 汇总所有审核但隐藏审核者身份."""
 
-    reviews: list[dict[str, Any]] = field(default_factory=list)
-    dimension_scores: dict[str, list[float]] = field(default_factory=dict)
-    anonymous_reviewer_map: dict[str, str] = field(default_factory=dict)
+    reviews: List[Dict[str, Any]] = field(default_factory=list)
+    dimension_scores: Dict[str, List[float]] = field(default_factory=dict)
+    anonymous_reviewer_map: Dict[str, str] = field(default_factory=dict)
 
 
 class ReviewIsolation:
@@ -62,7 +62,7 @@ class ReviewIsolation:
         "user_id",
     }
 
-    def __init__(self, dimensions: list[str] | None = None):
+    def __init__(self, dimensions: Optional[List[str]] = None):
         """初始化.
 
         Args:
@@ -75,13 +75,13 @@ class ReviewIsolation:
             "logic",
             "emotion",
         ]
-        self._isolated_contexts: dict[str, IsolatedContext] = {}
+        self._isolated_contexts: Dict[str, IsolatedContext] = {}
 
     def create_isolated_context(
         self,
-        task_context: dict[str, Any],
+        task_context: Dict[str, Any],
         reviewer_id: str,
-        assigned_dimensions: list[str] | None = None,
+        assigned_dimensions: Optional[List[str]] = None,
     ) -> IsolatedContext:
         """为审核者创建隔离上下文.
 
@@ -147,7 +147,7 @@ class ReviewIsolation:
 
         return context
 
-    def isolation_copy(self, task_context: dict[str, Any]) -> dict[str, Any]:
+    def isolation_copy(self, task_context: Dict[str, Any]) -> Dict[str, Any]:
         """深拷贝任务上下文并移除身份信息.
 
         Args:
@@ -180,8 +180,8 @@ class ReviewIsolation:
         return isolated
 
     def subset_view(
-        self, reviewer_id: str, full_content: dict[str, Any]
-    ) -> dict[str, Any]:
+        self, reviewer_id: str, full_content: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """按 reviewer 分配审核维度子集视图.
 
         每个审核者只能看到自己分配的维度内容。
@@ -229,7 +229,7 @@ class ReviewIsolation:
         return subset
 
     def get_arbitrator_view(
-        self, reviews: list[dict[str, Any]]
+        self, reviews: List[Dict[str, Any]]
     ) -> ArbitratorView:
         """生成仲裁者视图 — 汇总所有审核但隐藏审核者身份.
 
@@ -243,8 +243,8 @@ class ReviewIsolation:
             f"get_arbitrator_view: enter review_count={len(reviews)}"
         )
         anonymous_reviews = []
-        dimension_scores: dict[str, list[float]] = {}
-        anonymous_map: dict[str, str] = {}
+        dimension_scores: Dict[str, List[float]] = {}
+        anonymous_map: Dict[str, str] = {}
 
         for review in reviews:
             reviewer_id = review.get("reviewer_id", "")
@@ -287,7 +287,7 @@ class ReviewIsolation:
         )
         return hashed
 
-    def _auto_assign_dimensions(self, reviewer_id: str) -> list[str]:
+    def _auto_assign_dimensions(self, reviewer_id: str) -> List[str]:
         """自动为审核者分配审核维度.
 
         策略：轮询分配，确保每个维度至少有一个审核者。

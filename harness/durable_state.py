@@ -36,9 +36,9 @@ import sqlite3
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -77,11 +77,11 @@ class DurableState(BaseModel):
     version: int = Field(default=1, ge=1, description="乐观锁版本号")
     last_writer: str = Field(..., description="最后写入者标识")
     created_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="创建时间 ISO 8601",
     )
     updated_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="最后更新时间 ISO 8601",
     )
 
@@ -105,7 +105,7 @@ class DurableStateSurface(ABC):
     """
 
     @abstractmethod
-    async def read(self, key: str) -> Any | None:
+    async def read(self, key: str) -> Optional[Any]:
         """读取指定 key 的当前值。
 
         Args:
@@ -114,7 +114,7 @@ class DurableStateSurface(ABC):
         Returns:
             状态值；不存在时返回 None。
         """
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     async def write(self, key: str, value: Any, writer: str) -> DurableState:
@@ -128,7 +128,7 @@ class DurableStateSurface(ABC):
         Returns:
             写入后的 DurableState 记录。
         """
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     async def delete(self, key: str) -> bool:
@@ -140,7 +140,7 @@ class DurableStateSurface(ABC):
         Returns:
             True 表示删除成功；False 表示 key 不存在。
         """
-        raise NotImplementedError
+        ...
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -225,22 +225,20 @@ class SqliteDurableState(DurableStateSurface):
     @staticmethod
     def _row_to_state(row: sqlite3.Row) -> DurableState:
         """将 SQLite 行映射为 DurableState 模型。"""
-        import json as _json
-
         return DurableState(
             state_id=row["state_id"],
             key=row["key"],
-            value=_json.loads(row["value_json"]),
+            value=json.loads(row["value_json"]),
             version=row["version"],
             last_writer=row["last_writer"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
 
-    async def read(self, key: str) -> Any | None:
+    async def read(self, key: str) -> Optional[Any]:
         """读取指定 key 的当前值。"""
         # SQLite 操作放线程池避免阻塞事件循环
-        def _read_sync() -> DurableState | None:
+        def _read_sync() -> Optional[DurableState]:
             conn = self._get_conn()
             try:
                 cur = conn.execute(
@@ -277,7 +275,7 @@ class SqliteDurableState(DurableStateSurface):
                     (key,),
                 )
                 existing = cur.fetchone()
-                now = datetime.now(UTC).isoformat()
+                now = datetime.now(timezone.utc).isoformat()
                 if existing is None:
                     state = DurableState(
                         key=key,
@@ -421,8 +419,8 @@ class GitDurableState(DurableStateSurface):
             # 初始提交（空仓库也需要一个 commit 作为基线）
             readme = self.repo_path / "README.md"
             readme.write_text(
-                "# Durable State Repository\n\n"
-                "Auto-initialized by GitDurableState (harness).\n",
+                f"# Durable State Repository\n\n"
+                f"Auto-initialized by GitDurableState (harness).\n",
                 encoding="utf-8",
             )
             self._run_git(["add", "README.md"])
@@ -480,11 +478,11 @@ class GitDurableState(DurableStateSurface):
         safe = hashlib.sha1(key.encode("utf-8")).hexdigest()[:24]
         return self.repo_path / f"{safe}.json"
 
-    async def read(self, key: str) -> Any | None:
+    async def read(self, key: str) -> Optional[Any]:
         """读取指定 key 的当前值。"""
         path = self._key_to_path(key)
 
-        def _read_sync() -> Any | None:
+        def _read_sync() -> Optional[Any]:
             if not path.exists():
                 return None
             try:
@@ -510,7 +508,7 @@ class GitDurableState(DurableStateSurface):
     async def write(self, key: str, value: Any, writer: str) -> DurableState:
         """写入状态并提交到 git。"""
         path = self._key_to_path(key)
-        now = datetime.now(UTC).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         def _write_sync() -> DurableState:
             # 读取旧版本以计算 version

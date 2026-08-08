@@ -1,0 +1,275 @@
+# FlowForge Plugin Configuration
+# All tools are declared here — zero hardcoded imports in application code.
+# Transport types: local, mcp, openapi, graphql
+#
+# Environment variable substitution: ${ENV_VAR:default_value}
+# Dependencies: depends_on ensures load order
+
+plugins:
+  # === Search & Retrieval ===
+  - name: opensieve_search
+    transport: local
+    entry_point: flowforge.tools.opensieve_client:OpenSieveClient
+    description: "HelixRAG/OpenSieve RAG 检索服务（搜索回退链首选）"
+    tags: [search, retrieval]
+    config:
+      endpoint: "${OPENSIEVE_ENDPOINT:http://localhost:8100/api/v1/retrieve}"
+      timeout: 120
+    parameters_schema:
+      type: object
+      required: [query]
+      properties:
+        query: {type: string, description: "搜索查询"}
+        max_results: {type: integer, default: 5}
+        min_score: {type: number, default: 0.3}
+        max_age_days: {type: integer, default: 30}
+    health_endpoint: "${OPENSIEVE_ENDPOINT:http://localhost:8100}/health"
+    health_interval: 60
+
+  - name: web_search
+    transport: local
+    entry_point: flowforge.tools.web_search:WebSearchTool
+    description: "网络搜索聚合工具：HelixRAG→DuckDuckGo→LLM联网搜索回退链"
+    tags: [search]
+    depends_on: [opensieve_search]
+    config:
+      fallback_chain:
+        - opensieve_search
+        - duckduckgo_search
+    parameters_schema:
+      type: object
+      required: [query]
+      properties:
+        query: {type: string}
+        max_results: {type: integer, default: 5}
+
+  - name: tavily_search
+    transport: local
+    entry_point: flowforge.tools.tavily_search:TavilySearchTool
+    description: "Tavily AI Search API"
+    tags: [search, external]
+    parameters_schema:
+      type: object
+      required: [query]
+      properties:
+        query: {type: string}
+        max_results: {type: integer, default: 5}
+        search_depth: {type: string, default: basic, enum: [basic, advanced]}
+        include_answer: {type: boolean, default: true}
+
+  - name: duckduckgo_search
+    transport: local
+    entry_point: flowforge.tools.duckduckgo_search:DuckDuckGoSearchTool
+    description: "DuckDuckGo 搜索"
+    tags: [search, free]
+    parameters_schema:
+      type: object
+      required: [query]
+      properties:
+        query: {type: string}
+        max_results: {type: integer, default: 5}
+
+  # === LLM Proxy ===
+  - name: openroute
+    transport: local
+    entry_point: flowforge.services.openroute_service:OpenRouteService
+    description: "OpenRoute LLM代理服务（浏览器自动化）"
+    tags: [infrastructure, llm_proxy]
+    safety_level: readonly
+    config:
+      openroute_dir: "${OPENROUTE_DIR:}"
+      port: "${OPENROUTE_PORT:13001}"
+      host: "127.0.0.1"
+    health_endpoint: "http://127.0.0.1:${OPENROUTE_PORT:13001}/health"
+    health_interval: 120
+
+  # === Content Tools ===
+  - name: web_scraper
+    transport: local
+    entry_point: flowforge.tools.web_scraper:WebScraperTool
+    description: "网页内容抓取"
+    tags: [content]
+    parameters_schema:
+      type: object
+      required: [url]
+      properties:
+        url: {type: string}
+        timeout: {type: integer, default: 15}
+        max_length: {type: integer, default: 5000}
+
+  - name: python_executor
+    transport: local
+    entry_point: flowforge.tools.python_executor:PythonExecutorTool
+    description: "Python 代码执行器"
+    tags: [code, dangerous]
+    safety_level: dangerous
+    parameters_schema:
+      type: object
+      required: [code]
+      properties:
+        code: {type: string}
+        timeout: {type: integer, default: 10}
+        max_memory_mb: {type: integer, default: 64}
+
+  # === Publishing ===
+  - name: toutiao_publisher
+    transport: local
+    entry_point: flowforge.tools.toutiao_publisher:ToutiaoPublisherTool
+    description: "头条号发布"
+    tags: [publishing]
+    safety_level: dangerous
+    parameters_schema:
+      type: object
+      required: [title, content]
+      properties:
+        title: {type: string}
+        content: {type: string}
+        cover_image: {type: string}
+
+  - name: wechat_publisher
+    transport: local
+    entry_point: flowforge.tools.wechat_publisher:WeChatPublisherTool
+    description: "微信公众号发布"
+    tags: [publishing]
+    safety_level: dangerous
+    parameters_schema:
+      type: object
+      required: [title, content]
+      properties:
+        title: {type: string}
+        content: {type: string}
+        thumb_media_id: {type: string}
+        digest: {type: string}
+
+  - name: local_publish
+    transport: local
+    entry_point: flowforge.tools.local_publish:LocalPublishTool
+    description: "本地文件发布"
+    tags: [publishing]
+    parameters_schema:
+      type: object
+      required: [title, content]
+      properties:
+        title: {type: string}
+        content: {type: string}
+        platform: {type: string, default: local}
+
+  # === Utilities ===
+  - name: file_rw
+    transport: local
+    entry_point: flowforge.tools.file_rw:FileReadWriteTool
+    description: "文件读写"
+    tags: [utility]
+    parameters_schema:
+      type: object
+      required: [path, action]
+      properties:
+        path: {type: string}
+        action: {type: string, enum: [read, write, delete]}
+        content: {type: string}
+
+  - name: shell_command
+    transport: local
+    entry_point: flowforge.tools.shell_command:ShellCommandTool
+    description: "Shell 命令执行"
+    tags: [utility, dangerous]
+    safety_level: dangerous
+    parameters_schema:
+      type: object
+      required: [command]
+      properties:
+        command: {type: string}
+        timeout: {type: integer, default: 30}
+
+  - name: cache
+    transport: local
+    entry_point: flowforge.tools.cache:CacheTool
+    description: "缓存工具"
+    tags: [utility]
+    parameters_schema:
+      type: object
+      required: [key]
+      properties:
+        key: {type: string}
+        action: {type: string, enum: [get, set, delete], default: get}
+        value: {type: object}
+        ttl: {type: integer, default: 3600}
+
+  - name: webhook
+    transport: local
+    entry_point: flowforge.tools.webhook:WebhookTool
+    description: "Webhook 调用"
+    tags: [utility]
+    parameters_schema:
+      type: object
+      required: [url]
+      properties:
+        url: {type: string}
+        method: {type: string, default: POST, enum: [GET, POST, PUT, DELETE]}
+        headers: {type: object, default: {}}
+        body: {type: object, default: {}}
+        timeout: {type: integer, default: 15}
+
+  - name: workspace_file
+    transport: local
+    entry_point: flowforge.tools.workspace_file:WorkspaceFileTool
+    description: "工作区文件操作"
+    tags: [utility]
+    parameters_schema:
+      type: object
+      required: [action, path]
+      properties:
+        action: {type: string, enum: [read, write, list, delete, mkdir, exists]}
+        path: {type: string}
+        content: {type: string}
+
+  - name: sendgrid_mail
+    transport: local
+    entry_point: flowforge.tools.sendgrid_mail:SendGridMailTool
+    description: "SendGrid 邮件发送"
+    tags: [communication, external]
+    parameters_schema:
+      type: object
+      required: [to, subject, content]
+      properties:
+        to: {type: string}
+        subject: {type: string}
+        content: {type: string}
+        content_type: {type: string, default: "text/plain"}
+  - name: translation
+    transport: local
+    entry_point: flowforge.tools.translation:TranslationTool
+    description: "跨境电商多语言翻译工具（11种语言，LLM驱动）"
+    tags: [ecommerce, translation]
+    parameters_schema:
+      type: object
+      required: [action]
+      properties:
+        action: {type: string, enum: [translate, batch_translate], description: "操作类型"}
+        text: {type: string, description: "待翻译文本"}
+        texts: {type: array, items: {type: string}, description: "待翻译文本列表"}
+        source_lang: {type: string, default: auto, description: "源语言代码"}
+        target_lang: {type: string, default: en, description: "目标语言代码"}
+        context: {type: string, default: ecommerce, description: "翻译上下文"}
+
+# ── MCP Servers (external tool providers) ──────────────────────────
+# Uncomment and configure to connect external MCP servers.
+# External server tools are auto-registered with prefix: mcp.{name}.{tool}
+# and become available through the FlowForge ToolRegistry.
+#
+# NOTE: Runtime MCP server connection is managed by config/default.yaml
+#       (mcp.servers). This template documents the expected schema.
+#
+# mcp_servers:
+#   - name: "filesystem"
+#     transport: "stdio"
+#     command: "npx"
+#     args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]
+#     enabled: false
+#   - name: "github"
+#     transport: "stdio"
+#     command: "npx"
+#     args: ["-y", "@modelcontextprotocol/server-github"]
+#     env:
+#       GITHUB_TOKEN: "${GITHUB_TOKEN}"
+#     enabled: false

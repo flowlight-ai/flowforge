@@ -18,9 +18,8 @@ License: MIT
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from datetime import UTC, datetime
-from typing import Any, Protocol
+from datetime import datetime, timezone
+from typing import Any, AsyncIterator, Optional, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -44,7 +43,7 @@ class ACPMessage(BaseModel):
     method: str = Field(..., description="调用方法（如 invoke / stream / cancel）")
     params: dict[str, Any] = Field(default_factory=dict, description="调用参数")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="消息时间戳",
     )
 
@@ -56,12 +55,12 @@ class ACPResponse(BaseModel):
     provider: str = Field(..., description="来源 Provider")
     success: bool = Field(..., description="是否成功")
     result: Any = Field(default=None, description="调用结果")
-    error: str | None = Field(default=None, description="错误信息")
+    error: Optional[str] = Field(default=None, description="错误信息")
     cost: dict[str, Any] = Field(
         default_factory=dict, description="成本信息（token / call 数，EX-006）"
     )
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="响应时间戳",
     )
 
@@ -193,5 +192,5 @@ class ACPTransport:
     @staticmethod
     def _gen_message_id(provider: str, method: str) -> str:
         """生成消息 ID（provider-method-timestamp，用于追踪）。"""
-        ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         return f"{provider}-{method}-{ts}"

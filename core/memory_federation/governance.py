@@ -25,7 +25,8 @@ License: MIT
 from __future__ import annotations
 
 import math
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -83,8 +84,8 @@ class MemoryGovernance:
 
     def __init__(
         self,
-        config: GovernanceConfig | None = None,
-        logger: TraceLogger | None = None,
+        config: Optional[GovernanceConfig] = None,
+        logger: Optional[TraceLogger] = None,
     ) -> None:
         self._config: GovernanceConfig = config or GovernanceConfig()
         self._logger: TraceLogger = logger or get_logger(
@@ -157,7 +158,7 @@ class MemoryGovernance:
             衰减后的新 MemoryEntry（authority_level 已衰减）。
         """
         last_accessed_dt = self._parse_iso(entry.last_accessed)
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         elapsed_days = (now - last_accessed_dt).total_seconds() / 86400.0
         # 半衰期衰减
         decay_factor = 0.5 ** (
@@ -191,8 +192,8 @@ class MemoryGovernance:
         try:
             dt = datetime.fromisoformat(ts)
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=UTC)
+                dt = dt.replace(tzinfo=timezone.utc)
             return dt
         except ValueError:
             logger.warning(f"Invalid ISO timestamp: {ts}, using now")
-            return datetime.now(UTC)
+            return datetime.now(timezone.utc)

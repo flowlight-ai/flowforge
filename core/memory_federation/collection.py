@@ -22,8 +22,8 @@ License: MIT
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
-from typing import Any, Protocol, runtime_checkable
+from datetime import datetime, timezone
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
@@ -49,17 +49,17 @@ class CollectionBackend(Protocol):
     协议方法签名与 CollectionManager 的持久化操作一一对应。
     """
 
-    async def save_collection(self, collection: MemoryCollection) -> None:
+    async def save_collection(self, collection: "MemoryCollection") -> None:
         """保存或更新集合。"""
         ...
 
     async def load_collection(
         self, collection_id: str
-    ) -> MemoryCollection | None:
+    ) -> Optional["MemoryCollection"]:
         """加载集合（不存在返回 None）。"""
         ...
 
-    async def list_collections(self) -> list[MemoryCollection]:
+    async def list_collections(self) -> list["MemoryCollection"]:
         """列出所有集合。"""
         ...
 
@@ -98,11 +98,11 @@ class MemoryEntry(BaseModel):
         default=0, ge=0, description="消费次数（行为信号）"
     )
     last_accessed: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="最后访问时间 ISO 8601",
     )
     created_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="创建时间 ISO 8601",
     )
     authority_level: float = Field(
@@ -112,7 +112,7 @@ class MemoryEntry(BaseModel):
         description="权威等级（由治理层计算后注入）",
     )
 
-    def mark_consumed(self) -> MemoryEntry:
+    def mark_consumed(self) -> "MemoryEntry":
         """标记为已消费——返回新的 MemoryEntry（不修改原对象）。
 
         consumption_count += 1，last_accessed 更新为当前时间。
@@ -121,7 +121,7 @@ class MemoryEntry(BaseModel):
         return self.model_copy(
             update={
                 "consumption_count": self.consumption_count + 1,
-                "last_accessed": datetime.now(UTC).isoformat(),
+                "last_accessed": datetime.now(timezone.utc).isoformat(),
             }
         )
 
@@ -155,7 +155,7 @@ class MemoryCollection(BaseModel):
         default=0.5, ge=0.0, le=1.0, description="集合级权威等级"
     )
     created_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="创建时间 ISO 8601",
     )
 
@@ -180,8 +180,8 @@ class CollectionManager:
 
     def __init__(
         self,
-        logger: TraceLogger | None = None,
-        backend: Any | None = None,
+        logger: Optional[TraceLogger] = None,
+        backend: Optional[Any] = None,
     ) -> None:
         self._logger: TraceLogger = logger or get_logger(
             "memory_federation.collection_manager"
@@ -233,7 +233,7 @@ class CollectionManager:
 
     async def get(
         self, collection_id: str
-    ) -> MemoryCollection | None:
+    ) -> Optional[MemoryCollection]:
         """获取集合（不存在返回 None）。"""
         collection = self._collections.get(collection_id)
         if collection is None and self._backend is not None:

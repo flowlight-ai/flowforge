@@ -36,9 +36,9 @@ import asyncio
 import json
 import re
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple
 
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.self_dev_base import (
@@ -123,7 +123,7 @@ class SelfDevReviewLoop(SelfDevLoopBase):
     def __init__(
         self,
         trae_client: Any,
-        forgekin_config: dict[str, Any],
+        forgekin_config: Dict[str, Any],
         evolution_engine: Any,
         *,
         awakening_stage: str = "E3",
@@ -147,7 +147,7 @@ class SelfDevReviewLoop(SelfDevLoopBase):
     # §1 Discover — 发现审查任务
     # ══════════════════════════════════════════════════════════════
 
-    async def discover(self, context: dict[str, Any]) -> list[DevTask]:
+    async def discover(self, context: Dict[str, Any]) -> List[DevTask]:
         """发现审查任务（F046 §9.5）.
 
         支持三种任务来源：
@@ -179,7 +179,7 @@ class SelfDevReviewLoop(SelfDevLoopBase):
             f"recent_commits={recent_commits}"
         )
 
-        tasks: list[DevTask] = []
+        tasks: List[DevTask] = []
 
         if target_files:
             # 协同协议主入口：从 target_files 创建审查任务
@@ -225,7 +225,7 @@ class SelfDevReviewLoop(SelfDevLoopBase):
         self._logger.info(f"[Discover] 完成: {len(tasks)} 个任务, 耗时 {elapsed_ms}ms")
         return tasks
 
-    async def _discover_from_recent_commits(self, n: int) -> list[DevTask]:
+    async def _discover_from_recent_commits(self, n: int) -> List[DevTask]:
         """扫描最近 n 个 commit 的变更文件."""
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -258,7 +258,7 @@ class SelfDevReviewLoop(SelfDevLoopBase):
                 )
                 for f in sorted(files)
             ]
-        except TimeoutError:
+        except asyncio.TimeoutError:
             self._logger.warning("[Discover] git log 超时")
             return []
         except Exception as e:
@@ -433,7 +433,7 @@ class SelfDevReviewLoop(SelfDevLoopBase):
 
     def _parse_plan_response(
         self, content: str, task: DevTask, reviewer_model: str
-    ) -> tuple[list[dict[str, Any]], str, str]:
+    ) -> Tuple[List[Dict[str, Any]], str, str]:
         """解析 LLM 返回的 Plan JSON."""
         # 清理 markdown 代码块包裹
         cleaned = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.MULTILINE)
@@ -492,8 +492,8 @@ class SelfDevReviewLoop(SelfDevLoopBase):
             f"[Act] 开始: plan_id={plan.plan_id}, steps={len(plan.steps)}"
         )
 
-        changed_files: list[str] = []
-        diff_summary_parts: list[str] = []
+        changed_files: List[str] = []
+        diff_summary_parts: List[str] = []
         success = True
         error_message = ""
 
@@ -568,9 +568,9 @@ class SelfDevReviewLoop(SelfDevLoopBase):
         self,
         target: str,
         content: str,
-        checklist: list[str],
+        checklist: List[str],
         reviewer_model: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """调用 LLM 生成审查报告."""
         from flowforge.llm.trae.models import BridgeRequestContext
 
@@ -641,10 +641,10 @@ class SelfDevReviewLoop(SelfDevLoopBase):
             "p1_count": p1_count,
             "p2_count": p2_count,
             "p3_count": p3_count,
-            "reviewed_at": datetime.now(UTC).isoformat(),
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    def _parse_review_response(self, content: str) -> tuple[list[dict], str, float]:
+    def _parse_review_response(self, content: str) -> Tuple[List[Dict], str, float]:
         """解析 LLM 返回的审查报告 JSON."""
         cleaned = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.MULTILINE)
         cleaned = re.sub(r"\s*```$", "", cleaned.strip())
@@ -666,12 +666,12 @@ class SelfDevReviewLoop(SelfDevLoopBase):
 
         格式：docs/reviews/YYYY-MM-DD_HH-MM-SS_<filename>.md
         """
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
         filename = Path(target).stem
         return f"{self._reviews_dir}/{timestamp}_{filename}.md"
 
-    async def _write_report(self, abs_path: Path, report: dict[str, Any]) -> None:
+    async def _write_report(self, abs_path: Path, report: Dict[str, Any]) -> None:
         """写入审查报告文件（Markdown 格式）."""
         parent = abs_path.parent
         if not parent.exists():
@@ -681,12 +681,12 @@ class SelfDevReviewLoop(SelfDevLoopBase):
         await asyncio.to_thread(abs_path.write_text, md, encoding="utf-8")
         self._logger.info(f"[Act] 写入审查报告: {abs_path}")
 
-    def _format_report_markdown(self, report: dict[str, Any]) -> str:
+    def _format_report_markdown(self, report: Dict[str, Any]) -> str:
         """将审查报告格式化为 Markdown."""
         lines = [
             "---",
-            "status: review",
-            "type: code_review",
+            f"status: review",
+            f"type: code_review",
             f"target: {report['target']}",
             f"reviewer: {report['reviewer_model']}",
             f"score: {report['score']}",
@@ -756,8 +756,8 @@ class SelfDevReviewLoop(SelfDevLoopBase):
             f"reports={len(result.changed_files)}"
         )
 
-        checks: list[dict[str, Any]] = []
-        failure_reasons: list[str] = []
+        checks: List[Dict[str, Any]] = []
+        failure_reasons: List[str] = []
 
         # 检查 1: 报告文件存在性
         for rel_path in result.changed_files:

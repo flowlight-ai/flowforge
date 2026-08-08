@@ -4,6 +4,7 @@
  * Marketplace — 能力市场主页
  *
  * 搜索栏 + 分类标签 + 卡片网格。整合 MarketplaceSearch 与 MarketplaceCard。
+ * 移植自 clowder-ai MarketplacePanel，简化为无 store 单容器版。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
  * API：GET /api/v1/marketplace/artifacts?keyword=&category=&sort=

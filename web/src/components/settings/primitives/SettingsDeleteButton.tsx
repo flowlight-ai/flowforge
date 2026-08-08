@@ -9,7 +9,7 @@ interface SettingsDeleteButtonProps {
 /**
  * SettingsDeleteButton — 删除按钮（图标按钮）
  *
- * 使用 lucide-react Trash2 图标替代原 HubIcon。
+ * 使用 lucide-react Trash2 图标替代 clowder-ai 的 HubIcon。
  */
 export function SettingsDeleteButton({
   onClick,

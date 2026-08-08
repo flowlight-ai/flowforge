@@ -9,6 +9,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -24,26 +25,26 @@ class FeatureFlag:
     name: str
     enabled: bool = False
     rollout_percentage: int = 0
-    allowed_projects: list[str] = field(default_factory=list)
+    allowed_projects: List[str] = field(default_factory=list)
     fallback_to_old: bool = True
     switch_strategy: SwitchStrategy = SwitchStrategy.FEATURE_FLAG
     created_at: float = field(default_factory=time.time)
-    expires_at: float | None = None
+    expires_at: Optional[float] = None
     description: str = ""
 
 
 class FeatureFlagManager:
     """Feature Flag 管理器"""
 
-    def __init__(self, config_path: str | None = None):
-        self._flags: dict[str, FeatureFlag] = {}
+    def __init__(self, config_path: Optional[str] = None):
+        self._flags: Dict[str, FeatureFlag] = {}
         if config_path:
             self.load_from_yaml(config_path)
 
     def load_from_yaml(self, path: str) -> None:
         if not os.path.exists(path):
             return
-        with open(path, encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         features = data.get("features", {})
         for name, config in features.items():
@@ -60,7 +61,7 @@ class FeatureFlagManager:
                     description=config.get("description", ""),
                 )
 
-    def is_enabled(self, name: str, project: str | None = None) -> bool:
+    def is_enabled(self, name: str, project: Optional[str] = None) -> bool:
         flag = self._flags.get(name)
         if flag is None:
             return False
@@ -77,7 +78,7 @@ class FeatureFlagManager:
             return True
         return True
 
-    def get_flag(self, name: str) -> FeatureFlag | None:
+    def get_flag(self, name: str) -> Optional[FeatureFlag]:
         return self._flags.get(name)
 
     def set_flag(self, name: str, enabled: bool) -> None:
@@ -90,5 +91,5 @@ class FeatureFlagManager:
         flag = self._flags.get(name)
         return flag.fallback_to_old if flag else True
 
-    def all_flags(self) -> dict[str, FeatureFlag]:
+    def all_flags(self) -> Dict[str, FeatureFlag]:
         return dict(self._flags)

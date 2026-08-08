@@ -1,7 +1,7 @@
 /**
  * settings/primitives — 设置区基础组件库
  *
- * 简化实现（去除 Tailwind 类与 cafe/conn 颜色 token、
+ * 从 clowder-ai 移植并简化（去除 Tailwind 类与 cafe/conn 颜色 token、
  * HubIcon 依赖），改用 FlowForge CSS 变量内联样式。
  *
  * 共 22 个文件（21 个组件 + 1 个 index）。

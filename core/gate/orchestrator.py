@@ -7,10 +7,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Optional
 
 import yaml
 
@@ -19,7 +18,7 @@ from flowforge.core.gate.models import (
     GateVerdict,
     Score,
 )
-from flowforge.core.gate.timeout import create_timer_from_config
+from flowforge.core.gate.timeout import GateTimer, create_timer_from_config
 from flowforge.core.gate.voting import VotingStrategy, resolve_gate
 from flowforge.core.tracing import get_logger
 
@@ -51,16 +50,16 @@ class GateOrchestrator:
         gates_path = Path(gates_dir)
         logger.info(f"GateOrchestrator: loading gate configs from {gates_dir}")
         if not gates_path.exists():
-            logger.info("GateOrchestrator: gates directory does not exist, skipping")
+            logger.info(f"GateOrchestrator: gates directory does not exist, skipping")
             return
         for yaml_file in gates_path.glob("*.yaml"):
-            with open(yaml_file, encoding="utf-8") as f:
+            with open(yaml_file, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
             if data and "name" in data:
                 self._gate_configs[data["name"]] = data
         logger.info(f"GateOrchestrator: loaded {len(self._gate_configs)} gate configs")
 
-    def get_gate_config(self, gate_name: str) -> dict[str, Any] | None:
+    def get_gate_config(self, gate_name: str) -> Optional[dict[str, Any]]:
         return self._gate_configs.get(gate_name)
 
     async def _emit(self, task_id: str, event_type: str, payload: dict[str, Any]) -> None:

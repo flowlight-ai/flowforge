@@ -14,7 +14,7 @@ This module defines:
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -48,18 +48,18 @@ class PluginManifest(BaseModel):
     description: str = ""
     transport: PluginTransport = PluginTransport.LOCAL
     # For LOCAL: fully-qualified class name (e.g., "flowforge.tools.opensieve_client:OpenSieveClient")
-    entry_point: str | None = None
+    entry_point: Optional[str] = None
     # For MCP/OPENAPI/GRAPHQL: connection config
-    endpoint: str | None = None
-    api_key_env: str | None = None  # env var name for API key
+    endpoint: Optional[str] = None
+    api_key_env: Optional[str] = None  # env var name for API key
     # Tool schema (OpenAI function-calling format)
-    parameters_schema: dict[str, Any] = Field(default_factory=dict)
+    parameters_schema: Dict[str, Any] = Field(default_factory=dict)
     safety_level: str = "normal"
-    tags: list[str] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
     # Dependencies — other plugin names that must be loaded first
-    depends_on: list[str] = Field(default_factory=list)
+    depends_on: List[str] = Field(default_factory=list)
     # Health check
-    health_endpoint: str | None = None
+    health_endpoint: Optional[str] = None
     health_interval: int = 60  # seconds
 
 
@@ -67,8 +67,8 @@ class PluginHealth(BaseModel):
     """Health status of a plugin instance."""
     state: PluginState = PluginState.UNINITIALIZED
     message: str = ""
-    last_check: float | None = None
-    latency_ms: float | None = None
+    last_check: Optional[float] = None
+    latency_ms: Optional[float] = None
 
 
 class ToolPlugin(ABC):
@@ -88,10 +88,10 @@ class ToolPlugin(ABC):
 
     # Class-level manifest (overridden by YAML config if present)
     manifest: PluginManifest
-    _last_health_check_time: float | None = None
+    _last_health_check_time: Optional[float] = None
 
     @abstractmethod
-    async def execute(self, params: dict[str, Any]) -> dict[str, Any]:
+    async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the tool.
 
         Args:
@@ -116,7 +116,7 @@ class ToolPlugin(ABC):
     async def health_check(self) -> PluginHealth:
         return PluginHealth(state=PluginState.UNKNOWN, message="No health check implemented")
 
-    def validate_params(self, params: dict[str, Any]) -> bool:
+    def validate_params(self, params: Dict[str, Any]) -> bool:
         """Validate params against manifest.parameters_schema.
 
         Checks that all required fields are present in the params dict.

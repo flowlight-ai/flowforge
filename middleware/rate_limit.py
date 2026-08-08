@@ -6,8 +6,9 @@
 - 可配置默认 RPM 和突发数
 """
 
-import logging
 import time
+import logging
+from typing import Dict, Optional
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -50,8 +51,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.default_rpm = default_rpm
         self.burst = burst
-        self._ip_buckets: dict[str, TokenBucket] = {}
-        self._key_buckets: dict[str, TokenBucket] = {}
+        self._ip_buckets: Dict[str, TokenBucket] = {}
+        self._key_buckets: Dict[str, TokenBucket] = {}
 
     def _get_ip_bucket(self, ip: str) -> TokenBucket:
         if ip not in self._ip_buckets:

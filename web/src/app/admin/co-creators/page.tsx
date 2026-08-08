@@ -10,7 +10,7 @@ import { HubCoCreatorEditor } from "@/components/hub/HubCoCreatorEditor";
  *   - 角色权限分配（Owner/Editor/Viewer）
  *   - 共创者增删改
  *
- * 整合 HubCoCreatorEditor。
+ * 依据 WEB-FUSION-DESIGN.md §8：移植自 clowder-ai HubCoCreatorEditor。
  */
 
 export default function CoCreatorsPage() {

@@ -3,6 +3,7 @@
 /**
  * HubAccountItem — Provider 账户行项
  *
+ * 移植自 clowder-ai HubAccountItem，适配 FlowForge 暗色主题。
  * 用于 HubAccountsTab 内部，渲染单个 Provider 账户的行项：
  *   - 显示名称、摘要元信息（host/auth/models）
  *   - 认证类型徽章（oauth / api_key）
@@ -11,7 +12,7 @@
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
- * 独立性：不依赖上游，内联类型与原语。
+ * 独立性：不依赖 clowder-ai 任何组件，内联类型与原语。
  */
 
 import { useConfirm } from "@/components/useConfirm";
@@ -76,7 +77,7 @@ function summaryMeta(profile: ProfileItem): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* 内联原语（替代 settings/primitives）                      */
+/* 内联原语（替代 clowder-ai settings/primitives）                      */
 /* ------------------------------------------------------------------ */
 
 const TONE_CLASSES: Record<string, string> = {

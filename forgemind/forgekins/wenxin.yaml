@@ -44,15 +44,14 @@ team_strengths: "文档扫描、生成、审核，知识传承"
 evolution_stage: E3  # 精英阶（Practitioner）
 awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
-# ── Trae CN 桥接方案 ─────────────────────────────────────────
+# ── OpenCode CLI 后端 ─────────────────────────────────────
 llm:
-  provider: trae
-  model: trae  # Trae CN 桥接，模型由 operator 选择
-  mode: bridge
+  provider: opencode  # 通过 opencode CLI（opencode run）调用 LLM
+  model: deepseek-v4-flash-free  # opencode 默认模型（build）
+  mode: cli
   session_id_prefix: "forgemind:wenxin"  # 会话隔离
-  bridge_timeout: 300
-  bridge_poll_interval: 2
-  temperature: 0.5  # 文档生成需要适度确定性 + 适度表达力
+  bridge_timeout: 180  # 文档生成提示词长，Doubao-Seed2.0需要更多时间
+  temperature: 0.7
   max_tokens: 8192
 
 # ── 能力画像 ────────────────────────────────────────────────

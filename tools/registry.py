@@ -7,9 +7,7 @@ can optionally delegate to PluginRegistry for tools not found locally.
 
 import asyncio
 import time
-from collections.abc import Callable
-from typing import Any
-
+from typing import Dict, Optional, Callable, Any
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.errors import ToolNotFoundError
 from flowforge.core.tracing import get_logger
@@ -29,9 +27,9 @@ class ToolRegistry:
     """
 
     def __init__(self, tool_timeout: int = 120):
-        self._tools: dict[str, Any] = {}
-        self._plugin_registry: Any | None = None
-        self._emit_callback: Callable | None = None
+        self._tools: Dict[str, Any] = {}
+        self._plugin_registry: Optional[Any] = None
+        self._emit_callback: Optional[Callable] = None
         self._tool_timeout = tool_timeout
 
     def set_plugin_registry(self, plugin_registry: Any) -> None:
@@ -50,7 +48,7 @@ class ToolRegistry:
         """Register a tool (BaseTool or ToolPlugin)."""
         tool_name = getattr(tool, 'name', None) or getattr(getattr(tool, 'manifest', None), 'name', None)
         if not tool_name:
-            raise ValueError("Tool must have 'name' attribute or manifest.name")
+            raise ValueError(f"Tool must have 'name' attribute or manifest.name")
         if tool_name in self._tools:
             logger.debug(f"Tool '{tool_name}' already registered, skipping duplicate")
             return

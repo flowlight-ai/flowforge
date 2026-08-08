@@ -13,9 +13,8 @@ from __future__ import annotations
 
 import inspect
 import logging
-from collections.abc import Callable
 from enum import Enum
-from typing import Any
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +35,8 @@ class _Registration:
         self,
         factory: Callable,
         lifetime: ServiceLifetime,
-        dependencies: list[str] | None = None,
-        registered_type: type | None = None,
+        dependencies: Optional[List[str]] = None,
+        registered_type: Optional[Type] = None,
     ):
         self.factory = factory
         self.lifetime = lifetime
@@ -56,7 +55,7 @@ class Scope:
 
     def __init__(self, container: DIContainer):
         self._container = container
-        self._scoped_instances: dict[str, Any] = {}
+        self._scoped_instances: Dict[str, Any] = {}
         self._disposed = False
 
     def resolve(self, name_or_type: Any) -> Any:
@@ -97,13 +96,13 @@ class DIContainer:
 
     def __init__(self):
         # 名称注册表（向后兼容）
-        self._registry: dict[str, _Registration] = {}
+        self._registry: Dict[str, _Registration] = {}
         # 类型注册表（自动依赖解析）
-        self._type_registry: dict[type, _Registration] = {}
+        self._type_registry: Dict[Type, _Registration] = {}
         # 单例缓存（名称键）
-        self._instances: dict[str, Any] = {}
+        self._instances: Dict[str, Any] = {}
         # 单例缓存（类型键）
-        self._type_instances: dict[type, Any] = {}
+        self._type_instances: Dict[Type, Any] = {}
         # Agent 名称集合
         self._agent_keys: set = set()
 
@@ -139,8 +138,8 @@ class DIContainer:
         self,
         factory: Callable,
         lifetime: ServiceLifetime = ServiceLifetime.SINGLETON,
-        dependencies: list[str] | None = None,
-        name: str | None = None,
+        dependencies: Optional[List[str]] = None,
+        name: Optional[str] = None,
     ) -> None:
         """通用注册方法
 
@@ -172,7 +171,7 @@ class DIContainer:
         if reg_type is not None:
             self._type_registry[reg_type] = reg
 
-    def register_scoped(self, cls: type, factory: Callable | None = None) -> None:
+    def register_scoped(self, cls: Type, factory: Optional[Callable] = None) -> None:
         """注册 scoped 服务
 
         Args:
@@ -188,7 +187,7 @@ class DIContainer:
         self._registry[cls.__name__] = reg
         self._type_registry[cls] = reg
 
-    def register_transient(self, cls: type, factory: Callable | None = None) -> None:
+    def register_transient(self, cls: Type, factory: Optional[Callable] = None) -> None:
         """注册瞬态服务
 
         Args:
@@ -220,7 +219,7 @@ class DIContainer:
         except (KeyError, TypeError):
             return None
 
-    def _resolve_internal(self, name_or_type: Any, scope: Scope | None = None) -> Any:
+    def _resolve_internal(self, name_or_type: Any, scope: Optional[Scope] = None) -> Any:
         """内部解析实现
 
         Args:
@@ -237,7 +236,7 @@ class DIContainer:
 
         raise TypeError(f"Invalid resolve key: {name_or_type!r}, expected str or type")
 
-    def _resolve_by_name(self, name: str, scope: Scope | None = None) -> Any:
+    def _resolve_by_name(self, name: str, scope: Optional[Scope] = None) -> Any:
         """按名称解析"""
         # 已有实例直接返回（单例）
         if name in self._instances:
@@ -268,7 +267,7 @@ class DIContainer:
 
         raise ValueError(f"Unknown lifetime: {reg.lifetime}")
 
-    def _resolve_by_type(self, cls: type, scope: Scope | None = None) -> Any:
+    def _resolve_by_type(self, cls: Type, scope: Optional[Scope] = None) -> Any:
         """按类型解析（自动依赖解析）"""
         # 已有实例直接返回
         if cls in self._type_instances:
@@ -299,7 +298,7 @@ class DIContainer:
 
         raise ValueError(f"Unknown lifetime: {reg.lifetime}")
 
-    def _invoke_factory(self, reg: _Registration, scope: Scope | None = None) -> Any:
+    def _invoke_factory(self, reg: _Registration, scope: Optional[Scope] = None) -> Any:
         """调用工厂函数，支持自动依赖注入"""
         # 如果有显式依赖列表，按名称解析
         if reg.dependencies is not None:
@@ -330,7 +329,7 @@ class DIContainer:
 
     # ─── 自动依赖解析 ───
 
-    def _get_constructor_params(self, cls: type) -> list[tuple[str, type | None]]:
+    def _get_constructor_params(self, cls: Type) -> List[Tuple[str, Optional[Type]]]:
         """获取构造函数参数列表
 
         Returns:
@@ -361,7 +360,7 @@ class DIContainer:
         return params
 
     def _resolve_param(
-        self, param_name: str, param_type: type | None, scope: Scope | None = None
+        self, param_name: str, param_type: Optional[Type], scope: Optional[Scope] = None
     ) -> Any:
         """解析单个参数
 
@@ -379,7 +378,7 @@ class DIContainer:
 
     # ─── 依赖图验证 ───
 
-    def validate_dependencies(self) -> list[str]:
+    def validate_dependencies(self) -> List[str]:
         """验证依赖图无循环
 
         Returns:
@@ -388,13 +387,13 @@ class DIContainer:
         graph = self._build_dependency_graph()
         return self._detect_cycle(graph)
 
-    def _build_dependency_graph(self) -> dict[str, set[str]]:
+    def _build_dependency_graph(self) -> Dict[str, Set[str]]:
         """构建依赖图
 
         Returns:
             {name: {dep1, dep2, ...}} 邻接表
         """
-        graph: dict[str, set[str]] = {}
+        graph: Dict[str, Set[str]] = {}
 
         for name, reg in self._registry.items():
             deps = set()
@@ -412,16 +411,16 @@ class DIContainer:
 
         return graph
 
-    def _detect_cycle(self, graph: dict[str, set[str]]) -> list[str]:
+    def _detect_cycle(self, graph: Dict[str, Set[str]]) -> List[str]:
         """检测循环依赖（DFS 三色标记法）
 
         Returns:
             循环依赖描述列表
         """
         WHITE, GRAY, BLACK = 0, 1, 2
-        color: dict[str, int] = dict.fromkeys(graph, WHITE)
-        errors: list[str] = []
-        path: list[str] = []
+        color: Dict[str, int] = {node: WHITE for node in graph}
+        errors: List[str] = []
+        path: List[str] = []
 
         def dfs(node: str) -> None:
             color[node] = GRAY
@@ -459,6 +458,6 @@ class DIContainer:
 
     # ─── 向后兼容 API ───
 
-    def resolve_all_agents(self) -> dict[str, Any]:
+    def resolve_all_agents(self) -> Dict[str, Any]:
         """解析所有已注册的 Agent"""
         return {k: self.resolve(k) for k in self._agent_keys}

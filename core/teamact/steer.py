@@ -41,13 +41,14 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from flowforge.core.tracing import get_logger
-from pydantic import BaseModel, ConfigDict, Field
 
 logger = get_logger("flowforge.core.teamact.steer")
 
@@ -147,7 +148,7 @@ class SteerCommand(BaseModel):
         default=SteerPriority.NORMAL, description="Steer 优先级"
     )
     target_task_id: str = Field(..., description="目标任务 ID")
-    target_agent_id: str | None = Field(
+    target_agent_id: Optional[str] = Field(
         default=None, description="REDIRECT 时的目标Forgekin ID"
     )
     reason: str = Field(..., min_length=1, description="operator 必填理由")
@@ -156,14 +157,14 @@ class SteerCommand(BaseModel):
         default_factory=dict, description="附加数据"
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="创建时间（UTC）",
     )
-    expires_at: datetime | None = Field(
+    expires_at: Optional[datetime] = Field(
         default=None, description="超时自动失效时间"
     )
 
-    def is_expired(self, now: datetime | None = None) -> bool:
+    def is_expired(self, now: Optional[datetime] = None) -> bool:
         """检查指令是否已过期.
 
         Args:
@@ -174,7 +175,7 @@ class SteerCommand(BaseModel):
         """
         if self.expires_at is None:
             return False
-        current = now or datetime.now(UTC)
+        current = now or datetime.now(timezone.utc)
         return current >= self.expires_at
 
     def is_emergency(self) -> bool:
@@ -210,7 +211,7 @@ class SteerEffect(BaseModel):
         default_factory=dict, description="副作用记录"
     )
     applied_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="应用时间（UTC）",
     )
     message: str = Field(default="", description="附加消息")
@@ -247,7 +248,7 @@ class SteerQueue:
                 - trace_archive.path: str — 归档文件路径（相对路径）
     """
 
-    def __init__(self, config: dict[str, Any] | None = None) -> None:
+    def __init__(self, config: Optional[dict[str, Any]] = None) -> None:
         self._pending: list[SteerCommand] = []
         self._applied: list[tuple[SteerCommand, SteerEffect]] = []
         self._paused: bool = False
@@ -261,7 +262,7 @@ class SteerQueue:
         )
         archive_cfg = self._config.get("trace_archive", {}) or {}
         self._archive_enabled: bool = bool(archive_cfg.get("enabled", True))
-        self._archive_path: str | None = archive_cfg.get("path")
+        self._archive_path: Optional[str] = archive_cfg.get("path")
 
     # ── 公开属性 ──────────────────────────────────────────────────
 
@@ -919,7 +920,7 @@ class SteerQueue:
     @staticmethod
     def _find_task_index(
         task_queue: list[Any], target_task_id: str
-    ) -> int | None:
+    ) -> Optional[int]:
         """在队列中查找目标任务的位置索引.
 
         Args:

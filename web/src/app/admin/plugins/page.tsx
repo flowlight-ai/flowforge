@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
  * 插件管理页面 — 合并 plugins + marketplace + skills
  *
  * 管理插件状态、外部集成、安装结果、能力市场
+ * 详见 MERGE-SPEC.md §3.3 F7 插件合并
  */
 
 interface Plugin {

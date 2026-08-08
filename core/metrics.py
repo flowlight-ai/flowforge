@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import time
-
+from typing import Dict, List, Optional
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("metrics")
 
 _prometheus_available = False
 try:
-    from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, generate_latest
+    from prometheus_client import Counter, Histogram, Gauge, generate_latest, CollectorRegistry
     _prometheus_available = True
 except ImportError:
     pass
@@ -106,14 +106,14 @@ if _prometheus_available:
             "llm_token_stats": get_llm_token_stats(),
         }
 
-    _tool_call_data: dict[str, list[float]] = {}
-    _task_created_data: dict[str, int] = {}
-    _task_completed_data: dict[str, int] = {}
-    _task_failed_data: dict[str, int] = {}
-    _task_durations_data: dict[str, list[float]] = {}
-    _llm_token_data: dict[str, int] = {}
+    _tool_call_data: Dict[str, List[float]] = {}
+    _task_created_data: Dict[str, int] = {}
+    _task_completed_data: Dict[str, int] = {}
+    _task_failed_data: Dict[str, int] = {}
+    _task_durations_data: Dict[str, List[float]] = {}
+    _llm_token_data: Dict[str, int] = {}
 
-    def get_tool_stats() -> dict[str, dict]:
+    def get_tool_stats() -> Dict[str, dict]:
         stats = {}
         for name, durations in _tool_call_data.items():
             if not durations:
@@ -134,7 +134,7 @@ if _prometheus_available:
             stats[name] = entry
         return stats
 
-    def get_task_stats() -> dict[str, dict]:
+    def get_task_stats() -> Dict[str, dict]:
         stats = {}
         all_keys = set(_task_created_data) | set(_task_completed_data) | set(_task_failed_data)
         for key in all_keys:
@@ -147,14 +147,14 @@ if _prometheus_available:
             }
         return stats
 
-    def get_llm_token_stats() -> dict[str, int]:
+    def get_llm_token_stats() -> Dict[str, int]:
         return dict(_llm_token_data)
 
 else:
-    _tool_call_durations: dict[str, list[float]] = {}
-    _tool_error_counts: dict[str, int] = {}
-    _llm_token_counts: dict[str, int] = {}
-    _llm_error_counts: dict[str, dict[str, int]] = {}
+    _tool_call_durations: Dict[str, List[float]] = {}
+    _tool_error_counts: Dict[str, int] = {}
+    _llm_token_counts: Dict[str, int] = {}
+    _llm_error_counts: Dict[str, Dict[str, int]] = {}
 
     def record_tool_call(tool_name: str, duration: float):
         if tool_name not in _tool_call_durations:
@@ -176,11 +176,11 @@ else:
         _llm_error_counts[provider][error_type] = _llm_error_counts[provider].get(error_type, 0) + 1
         logger.debug(f"llm_error recorded: {provider} error_type={error_type}")
 
-    _task_created: dict[str, int] = {}
-    _task_completed: dict[str, int] = {}
-    _task_failed: dict[str, int] = {}
-    _task_durations: dict[str, list[float]] = {}
-    _persona_running_counts: dict[str, int] = {}
+    _task_created: Dict[str, int] = {}
+    _task_completed: Dict[str, int] = {}
+    _task_failed: Dict[str, int] = {}
+    _task_durations: Dict[str, List[float]] = {}
+    _persona_running_counts: Dict[str, int] = {}
 
     def record_task_created(mode: str, persona: str):
         key = f"{mode}/{persona}"
@@ -206,7 +206,7 @@ else:
     def get_prometheus_metrics() -> bytes:
         return b""
 
-    def get_tool_stats() -> dict[str, dict]:
+    def get_tool_stats() -> Dict[str, dict]:
         stats = {}
         for name, durations in _tool_call_durations.items():
             if not durations:
@@ -227,7 +227,7 @@ else:
                 }
         return stats
 
-    def get_task_stats() -> dict[str, dict]:
+    def get_task_stats() -> Dict[str, dict]:
         stats = {}
         all_keys = set(_task_created) | set(_task_completed) | set(_task_failed)
         for key in all_keys:
@@ -240,7 +240,7 @@ else:
             }
         return stats
 
-    def get_llm_token_stats() -> dict[str, int]:
+    def get_llm_token_stats() -> Dict[str, int]:
         return dict(_llm_token_counts)
 
     def get_metrics() -> dict:
@@ -255,7 +255,7 @@ else:
 # MetricsCollector — 单任务指标采集器
 # ---------------------------------------------------------------------------
 
-_metrics_collectors: dict[str, MetricsCollector] = {}
+_metrics_collectors: Dict[str, MetricsCollector] = {}
 
 
 class MetricsCollector:
@@ -272,7 +272,7 @@ class MetricsCollector:
         self.cost: float = 0.0
         self.steps_total: int = 0
         self.steps_completed: int = 0
-        self.errors: list[str] = []
+        self.errors: List[str] = []
 
     # -- 记录方法 ----------------------------------------------------------
 
@@ -303,7 +303,7 @@ class MetricsCollector:
 
     # -- 汇总方法 ----------------------------------------------------------
 
-    def get_summary(self) -> dict[str, object]:
+    def get_summary(self) -> Dict[str, object]:
         """返回指标汇总字典，同时将 end_time 设为当前时间。"""
         end = self.end_time if self.end_time > 0 else time.time()
         duration = end - self.start_time
@@ -322,7 +322,7 @@ class MetricsCollector:
             "errors": list(self.errors),
         }
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> Dict[str, object]:
         """将完整指标序列化为字典。"""
         return {
             "task_id": self.task_id,

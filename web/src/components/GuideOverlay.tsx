@@ -1,6 +1,7 @@
 /**
  * GuideOverlay — 引导覆盖层
  *
+ * 来源：clowder-ai/packages/web/src/components/GuideOverlay.tsx（简化版）
  * 职责：首次访问应用时显示引导教程，引导用户认识 4 种聊天模式、智能体管理、设置中心
  *
  * 设计原则：

@@ -7,6 +7,7 @@
 import asyncio
 import time
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel
@@ -53,9 +54,9 @@ class LLMRouter:
     """
 
     def __init__(self, config_path: str = ""):
-        self._models: dict[str, ModelStatus] = {}
-        self._cascade_strategies: dict[str, dict] = {}  # 兼容字段，实际从 assignments 加载
-        self._model_specs: dict[str, dict] = {}
+        self._models: Dict[str, ModelStatus] = {}
+        self._cascade_strategies: Dict[str, dict] = {}  # 兼容字段，实际从 assignments 加载
+        self._model_specs: Dict[str, dict] = {}
         self._lock = asyncio.Lock()
         if config_path:
             self._load_config(config_path)
@@ -66,7 +67,7 @@ class LLMRouter:
         兼容旧配置：若 assignments 不存在，回退到 cascade_strategies。
         """
         try:
-            with open(path, encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
         except Exception as e:
             logger.error(f"LLMRouter加载配置失败: {path}, 错误: {e}")
@@ -201,15 +202,15 @@ class LLMRouter:
                     f"标记为DEGRADED"
                 )
 
-    def get_model_status(self, model_id: str) -> ModelStatus | None:
+    def get_model_status(self, model_id: str) -> Optional[ModelStatus]:
         """获取模型状态."""
         return self._models.get(model_id)
 
-    def get_all_status(self) -> dict[str, ModelStatus]:
+    def get_all_status(self) -> Dict[str, ModelStatus]:
         """获取所有模型状态."""
         return dict(self._models)
 
-    def get_strategies(self) -> dict[str, dict]:
+    def get_strategies(self) -> Dict[str, dict]:
         """获取所有级联策略."""
         return dict(self._cascade_strategies)
 

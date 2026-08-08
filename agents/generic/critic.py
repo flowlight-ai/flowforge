@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class CriticAgent(GenericAgent):
@@ -7,7 +7,7 @@ class CriticAgent(GenericAgent):
     description = "评审反馈：对当前版本进行质量评审，指出问题和改进方向"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         draft = input.params.get("draft", "")
         task = input.params.get("task", input.params.get("query", ""))
         criteria = input.params.get("criteria", [])

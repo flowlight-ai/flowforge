@@ -10,9 +10,9 @@ import re
 from typing import TYPE_CHECKING
 
 from flowforge.core.base_agent import AgentInput
-from flowforge.core.base_tool import BaseTool, ToolInput
-from flowforge.core.prompt_manager import get_prompt
+from flowforge.core.base_tool import ToolInput, BaseTool
 from flowforge.core.tracing import get_logger
+from flowforge.core.prompt_manager import get_prompt
 
 if TYPE_CHECKING:
     from flowforge.modes.workflow_executor import WorkflowExecutor

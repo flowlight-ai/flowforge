@@ -22,7 +22,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -35,7 +35,8 @@ from flowforge.llm.trae.models import (
     BridgeResponseStatus,
 )
 from flowforge.llm.trae.protocol import TraeBridgeProtocol
-from flowforge.llm.trae.watcher import _WATCHDOG_AVAILABLE, TraeBridgeWatcher
+from flowforge.llm.trae.watcher import TraeBridgeWatcher, _WATCHDOG_AVAILABLE
+
 
 pytestmark = pytest.mark.skipif(
     not _WATCHDOG_AVAILABLE,
@@ -105,7 +106,7 @@ def _make_response_payload(
         "usage": {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80},
         "tool_calls": [],
         "error": "",
-        "completed_at": datetime.now(UTC).isoformat(),
+        "completed_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -284,7 +285,7 @@ class TestWaitForCancel:
                 "request_id": request_id,
                 "reason": "测试取消",
                 "cancelled_by": "operator",
-                "cancelled_at": datetime.now(UTC).isoformat(),
+                "cancelled_at": datetime.now(timezone.utc).isoformat(),
             }
             cancel_file.write_text(json.dumps(cancel_payload), encoding="utf-8")
 
@@ -461,7 +462,7 @@ class TestProtocolWatcherIntegration:
                 "request_id": request_id,
                 "reason": "测试事件驱动取消",
                 "cancelled_by": "operator",
-                "cancelled_at": datetime.now(UTC).isoformat(),
+                "cancelled_at": datetime.now(timezone.utc).isoformat(),
             }
 
             async def write_cancel_after_delay():

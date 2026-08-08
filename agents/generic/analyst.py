@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class AnalystAgent(GenericAgent):
@@ -7,7 +7,7 @@ class AnalystAgent(GenericAgent):
     description = "需求分析：深入分析任务需求，提取关键信息和约束"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         background = input.params.get("background", "")
         constraints = input.params.get("constraints", [])

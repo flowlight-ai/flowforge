@@ -10,7 +10,7 @@ import { HubEvalTab } from "@/components/hub/HubEvalTab";
  *   - 质量/摩擦分数展示
  *   - 判决提交（通过/驳回/重做）
  *
- * 整合 HubEvalTab + HubEvalVerdictCard。
+ * 依据 WEB-FUSION-DESIGN.md §8：移植自 clowder-ai HubEvalTab + HubEvalVerdictCard。
  * HubEvalTab 在选中任务后内部渲染 HubEvalVerdictCard。
  */
 

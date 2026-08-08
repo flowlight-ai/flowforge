@@ -3,6 +3,7 @@
 /**
  * HubConnectorConfigTab — 连接器配置 Tab
  *
+ * 移植自 clowder-ai HubConnectorConfigTab，简化为 FlowForge 适配版。
  * 用于 /admin/routing 子 Tab，管理外部连接器（飞书/钉钉/企微等）的接入配置。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

@@ -1,9 +1,10 @@
 /**
  * observability-helpers — Observability 面板纯逻辑工具
  *
+ * 移植自 clowder-ai observability-helpers，纯逻辑函数（无 React 依赖）。
  * 提供 HealthData / MetricsSnapshot / EnvVar 类型 + 过滤/求和/格式化工具。
  *
- * 独立性：不依赖任何外部模块，可直接用于单元测试。
+ * 独立性：不依赖任何 clowder-ai 模块，可直接用于单元测试。
  */
 
 export interface HealthData {

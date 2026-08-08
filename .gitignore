@@ -1,180 +1,211 @@
-# ===== Python =====
+# ==================== Python ====================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
 *.egg
-MANIFEST
+dist/
+build/
+.eggs/
+*.whl
 
-# Virtual environments
+# ==================== Environment & Secrets ====================
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.crt
+secrets.db
+
+# ==================== Python venv (moved/regenerated per-machine) ====================
 .venv/
 venv/
-env/
-ENV/
 
-# Testing & coverage
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
+# ==================== Data & Logs ====================
+data/
+logs/
+*.log
+*.db
+*.sqlite3
+*.db-journal
+
+# ==================== Test & Coverage & Reports ====================
 .pytest_cache/
-dephell/
-
-# Type checkers
+.coverage
+htmlcov/
 .mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.pytype/
 .ruff_cache/
+test_reports/
+*.json.bak
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# ===== IDEs =====
+# ==================== IDE ====================
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
-.DS_Store
-Thumbs.db
 
-# ===== Project data =====
-data/*.db
-data/*.sqlite
-data/*.sqlite3
-*.db
-*.sqlite
-*.sqlite3
-
-# ===== Logs =====
-logs/
-*.log
-*.err
-
-# ===== Secrets =====
-.env
-.env.*
-!.env.template
-!.env.example
-*.pem
-*.key
-*.p12
-secrets.yaml
-credentials.json
-
-# ===== Build artifacts =====
-*.whl
-*.tar.gz
-
-# ===== OS =====
-.DS_Store
-Thumbs.db
-
-# ===== Temporary =====
-tmp/
-.tmp_*
-_*.py
-_*.ps1
-# Exception: __init__.py is a Python package marker, NOT a temporary script
-!__init__.py
-
-# ===== Internal migration documents (not for public GitHub) =====
-# These files reveal migration from legacy project — keep locally for reference
-# but exclude from public commits so GitHub users see a clean new project.
-docs/task.md
-docs/legacy-projects.md
-docs/reflection/
-docs/archive/
-docs/_archive/
-docs/design/minimal-skeleton-proposal.md
-
-# Migration notes (root-level, contains legacy project paths and references)
-MIGRATION-NOTES.md
-*.migration.md
-*.migration.*
-.migration_*
-
-# ===== FlowForge runtime working directory =====
-.work/
-
-# ===== Local forgekin runtime state (energy/mood/history snapshots) =====
-.runtime/
-.runtime_state/
-*.forgekin-state.json
-
-# ===== Local IM channel credentials (web群/飞信群 tokens) =====
-config/im_channels.local.yaml
-config/secrets.local.yaml
-*.local.yaml
-
-# ===== Local external agent credentials =====
-config/external_agents.local.yaml
-
-# ===== Local test artifacts and demo outputs =====
-demo_outputs/
-test_outputs/
-*.demo.json
-*.demo.log
-pytest_clean.txt
-pytest_*.txt
-*.pytest_cache
-
-# ===== Backup files =====
-*.bak
-*.backup
-*.orig
-
-# ===== Editor local overrides =====
-*.code-workspace
-.idea/
-.vscode/settings.json
-.vscode/launch.json
-
-# ===== Node modules (CRITICAL: never commit dependencies) =====
+# ==================== Node.js / Next.js ====================
 node_modules/
-
-# ===== Next.js build output (generated, not source) =====
 .next/
 out/
+web/dist/
+next-env.d.ts
+tsconfig.tsbuildinfo
+package-lock.json
 
-# ===== Local backup directories (do not publish) =====
-docs/setup/README.md
+# ==================== OS ====================
+.DS_Store
+Thumbs.db
+desktop.ini
 
-# ===== TypeScript incremental build cache =====
-*.tsbuildinfo
+# ==================== FlowForge specific ====================
+flowforge.egg-info/
 
-# ===== FlowForge runtime data directory (generated at runtime, not source) =====
-data/
+# ==================== Temporary & backup ====================
+tmp/
+docs_tmp/
 
-# ===== Developer scratch / diagnostic files =====
-_diag*.py
-.tmp_chat*.json
+# ==================== Ad-hoc test scripts (use proper test structure) ====================
+scripts/test_*.py
+tests/debug_*.py
+tests/check_*.py
+tests/quick_test.py
+tests/single_test.py
+tests/full_e2e_test.py
+tests/real_llm_test*.py
 
-# ===== Source maps (reduce repo bloat) =====
-*.map
+# ==================== Ad-hoc root-level scripts ====================
+quick_checks.py
+quick_test.py
+run_regression.py
+run_server.py
+test_e2e.py
+test_llm.py
+check_*.py
+tmp_*.py
+fix_*.py
+query_*.py
+debug_*.py
+simple_test.py
+py_check_runner.py
 
+# ==================== Ad-hoc test scripts in tests/ ====================
+tests/test_api_live*.py
+tests/test_api_quick.py
+tests/test_api_all_in_one.py
+tests/test_api_testclient.py
+tests/test_debug_api.py
+tests/test_deep_article.py
+tests/test_llm_direct.py
+tests/test_llm_models.py
+tests/test_multi_project_flows.py
+tests/test_opensieve.py
+tests/test_solo_apis.py
+tests/test_solo_dynamic_update.py
+tests/test_complex_flow_dynamic_update.py
+tests/search_debug.py
+tests/translate_test.py
+tests/val_test.py
+tests/wf_quick_test.py
+tests/regression_test.py
+tests/run_all_tests.py
+tests/run_tests.py
+tests/metrics_collector.py
+tests/TEST_REPORT_*.md
+
+# ==================== Ad-hoc test output & logs ====================
+*_output.txt
+*_output2.txt
+*_result.txt
+*_exit.txt
+*_check.txt
+*_report.txt
+regression_report.txt
+e2e_results.txt
+*_test_*.log
+debug.log
+task_status.txt
+resp.txt
+
+# ==================== E2E test artifacts ====================
+e2e_*.json
+e2e_*.ps1
+e2e_*.py
+e2e_*.txt
+e2e_*.log
+
+# ==================== PowerShell ad-hoc scripts ====================
+cf_*.ps1
+cf_*.py
+check_*.ps1
+read_*.ps1
+run_*.ps1
+poll_*.ps1
+read_log_tail*.ps1
+read_task_log*.ps1
+read_writer_llm.ps1
+run_e2e_check.ps1
+run_port_check.ps1
+
+# ==================== Workflow artifacts (generated, not source) ====================
+workflows/*.yaml
+
+# ==================== Internal development documents (not for GitHub) ====================
+# task.md: 内部任务索引，包含移植计划与进度，不公开
+docs/task.md
+# _archive/: 历史归档目录，包含过程记录、中间态文档
+docs/_archive/
+# harness-feedback/: 内部反馈记录
+docs/harness-feedback/
+# perspectives/: 内部视角记录
+docs/perspectives/
+# setup/: 内部安装配置记录（如包含敏感信息）
+docs/setup/
+# review/: 内部审核追溯文档（含 RA/FM/FR/CL ID 命名空间）
+docs/review/
+# process/: 内部过程文档
+docs/process/
+
+# ==================== Local config overrides (P3-011) ====================
+config/local/
+config/system.local.yaml
+config/system.local.yml
+config/secrets.yaml
+config/secrets.yml
+config/generated.yaml  # D046 OOTB 生成的配置（审计用，不入仓）
+
+# ==================== Local databases & caches (P3-011) ====================
+*.sqlite
+*.sqlite-journal
+flowforge.db
+flowforge_state.db
+.cache/
+
+# ==================== Local LLM profiles & browser sessions (P3-011) ====================
+webchat_profile/
+chrome_profile/
+.playwright/
+
+# ==================== Local logs & crash dumps (P3-011) ====================
+crash_dumps/
+*.dmp
+*.dump
+.trae_bridge
+
+# ==================== Refactor temp files (2026-07-29) ====================
+# Web dev server error log (Next.js HMR noise)
+web/.next-dev.err
+web/.next-dev.log
+
+# Ad-hoc test scripts with _ prefix (temporary debugging)
+**/_test_*.py
+**/_test_*.json
+**/_test_*.md
+
+# Logs from local runs (single-file, not the directory)
+*.log.*
+.autonomous

@@ -1,7 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
+
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false, loading: () => <span className="text-xs opacity-50">…</span> });
 
 interface MarkdownRendererProps {
   /** Markdown 内容 */

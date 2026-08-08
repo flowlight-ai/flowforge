@@ -10,10 +10,10 @@ import json
 import re
 from typing import TYPE_CHECKING
 
-from flowforge.core.errors import WorkflowRecursionError
-from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.tracing import get_logger
-from flowforge.modes.workflow_validator import _SEARCH_AGENTS, _SEARCH_TOOLS, is_error_content
+from flowforge.core.prompt_manager import get_prompt
+from flowforge.core.errors import WorkflowRecursionError
+from flowforge.modes.workflow_validator import is_error_content, _SEARCH_TOOLS, _SEARCH_AGENTS
 
 if TYPE_CHECKING:
     from flowforge.modes.workflow_executor import WorkflowExecutor
@@ -46,7 +46,7 @@ class ChatHandler:
                 if isinstance(r, dict):
                     memory_snippets.append(str(r.get("intent", r.get("trace", "")))[:200])
             if memory_snippets:
-                messages.insert(1, {"role": "system", "content": "相关历史记忆：\n" + "\n".join(memory_snippets)})
+                messages.insert(1, {"role": "system", "content": f"相关历史记忆：\n" + "\n".join(memory_snippets)})
 
         result_content = ""
         try:
@@ -97,7 +97,7 @@ class ChatHandler:
                 if isinstance(r, dict):
                     memory_snippets.append(str(r.get("intent", r.get("trace", "")))[:200])
             if memory_snippets:
-                plan_messages.insert(1, {"role": "system", "content": "相关历史记忆：\n" + "\n".join(memory_snippets)})
+                plan_messages.insert(1, {"role": "system", "content": f"相关历史记忆：\n" + "\n".join(memory_snippets)})
 
         plan_content = ""
         try:
@@ -167,7 +167,7 @@ class ChatHandler:
                                      "description": "翻译文本"}
                     steps.append(translate_step)
                     step_count = len(steps)
-                    logger.info("Compound intent: added translation step for '翻译' in user input")
+                    logger.info(f"Compound intent: added translation step for '翻译' in user input")
 
             if any(kw in intent_lower for kw in ["搜索", "调研", "研究", "search", "research"]):
                 has_search = any("搜索" in s or "search" in s or "web_search" in s or "research" in s for s in step_names_lower)
@@ -178,7 +178,7 @@ class ChatHandler:
                     steps.insert(0, search_step)
                     step_count = len(steps)
                     step_names_lower = [s.get("name", "").lower() + s.get("agent", "").lower() + s.get("tool", "").lower() for s in steps]
-                    logger.info("Compound intent: added search step for '搜索/调研' in user input")
+                    logger.info(f"Compound intent: added search step for '搜索/调研' in user input")
 
             if any(kw in intent_lower for kw in ["写", "文章", "撰写", "分析", "write", "article"]):
                 has_writing = any("撰写" in s or "写作" in s or "writing" in s or "article_writing" in s for s in step_names_lower)
@@ -189,7 +189,7 @@ class ChatHandler:
                     steps.append(write_step)
                     step_count = len(steps)
                     step_names_lower = [s.get("name", "").lower() + s.get("agent", "").lower() + s.get("tool", "").lower() for s in steps]
-                    logger.info("Compound intent: added writing step for '写/文章' in user input")
+                    logger.info(f"Compound intent: added writing step for '写/文章' in user input")
 
                 has_eval = any("评估" in s or "eval" in s or "article_eval" in s for s in step_names_lower)
                 if not has_eval:
@@ -199,7 +199,7 @@ class ChatHandler:
                     steps.append(eval_step)
                     step_count = len(steps)
                     step_names_lower = [s.get("name", "").lower() + s.get("agent", "").lower() + s.get("tool", "").lower() for s in steps]
-                    logger.info("Compound intent: added eval step for '写/文章' in user input")
+                    logger.info(f"Compound intent: added eval step for '写/文章' in user input")
 
                 has_audit = any("审核" in s or "audit" in s or "content_audit" in s for s in step_names_lower)
                 if not has_audit:
@@ -209,7 +209,7 @@ class ChatHandler:
                     steps.append(audit_step)
                     step_count = len(steps)
                     step_names_lower = [s.get("name", "").lower() + s.get("agent", "").lower() + s.get("tool", "").lower() for s in steps]
-                    logger.info("Compound intent: added audit step for '写/文章' in user input")
+                    logger.info(f"Compound intent: added audit step for '写/文章' in user input")
 
             if any(kw in intent_lower for kw in ["代码", "编程", "写代码", "code", "python", "算法"]):
                 has_code = any("代码" in s or "code" in s or "code_writer" in s for s in step_names_lower)
@@ -220,7 +220,7 @@ class ChatHandler:
                     steps.append(code_step)
                     step_count = len(steps)
                     step_names_lower = [s.get("name", "").lower() + s.get("agent", "").lower() + s.get("tool", "").lower() for s in steps]
-                    logger.info("Compound intent: added code step for '代码/编程' in user input")
+                    logger.info(f"Compound intent: added code step for '代码/编程' in user input")
 
         if step_count > 0:
             step_names = [s.get("name", s.get("step", "")) for s in steps[:5]]
@@ -659,7 +659,7 @@ class ChatHandler:
                 if isinstance(r, dict):
                     memory_snippets.append(str(r.get("intent", r.get("trace", "")))[:200])
             if memory_snippets:
-                response_messages.insert(1, {"role": "system", "content": "相关历史记忆：\n" + "\n".join(memory_snippets)})
+                response_messages.insert(1, {"role": "system", "content": f"相关历史记忆：\n" + "\n".join(memory_snippets)})
 
         final_content = ""
         try:

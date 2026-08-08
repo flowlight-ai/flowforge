@@ -33,8 +33,7 @@ FlowForge production metrics (P3-003 - T6 测试铁律：E2E 必采完整指标)
 """
 
 import time
-from typing import Any
-
+from typing import Optional, Dict, Any, List, Tuple
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("observability.metrics_collector")
@@ -50,7 +49,7 @@ class MetricsCollector:
     """
 
     # 关键指标的默认 bucket 配置（按基础指标名索引）
-    DEFAULT_BUCKETS: dict[str, list[float]] = {
+    DEFAULT_BUCKETS: Dict[str, List[float]] = {
         "flowforge_loop_duration_seconds": [10, 30, 60, 90, 120, 180, 300, 600],
         "flowforge_loop_step_duration_seconds": [1, 5, 10, 30, 60, 120, 300],
         "flowforge_llm_duration_seconds": [0.5, 1, 2, 5, 10, 30, 60, 120],
@@ -66,24 +65,24 @@ class MetricsCollector:
     SLO_WINDOW_SECONDS: float = 300.0  # 最近 5 分钟
     DEGRADATION_RATE_THRESHOLD: float = 0.05
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.enabled = self.config.get("enabled", True)
 
         # In-memory metric storage
-        self._counters: dict[str, float] = {}
-        self._histograms: dict[str, list] = {}
-        self._gauges: dict[str, float] = {}
+        self._counters: Dict[str, float] = {}
+        self._histograms: Dict[str, list] = {}
+        self._gauges: Dict[str, float] = {}
 
         # 与 _histograms 并行的时间戳记录，用于时间窗口聚合（SLO 计算）
-        self._histogram_timestamps: dict[str, list[float]] = {}
+        self._histogram_timestamps: Dict[str, List[float]] = {}
 
         # 每个基础指标名的 bucket 配置（按基础指标名索引）
-        self._histogram_buckets: dict[str, list[float]] = dict(self.DEFAULT_BUCKETS)
+        self._histogram_buckets: Dict[str, List[float]] = dict(self.DEFAULT_BUCKETS)
 
     # ── Core metric operations ──────────────────────────────────────
 
-    def inc_counter(self, name: str, value: float = 1.0, labels: dict[str, str] | None = None):
+    def inc_counter(self, name: str, value: float = 1.0, labels: Optional[Dict[str, str]] = None):
         """Increment a counter metric."""
         if not self.enabled:
             return
@@ -94,8 +93,8 @@ class MetricsCollector:
         self,
         name: str,
         value: float,
-        labels: dict[str, str] | None = None,
-        buckets: list[float] | None = None,
+        labels: Optional[Dict[str, str]] = None,
+        buckets: Optional[List[float]] = None,
     ):
         """Record a histogram observation.
 
@@ -118,45 +117,45 @@ class MetricsCollector:
         if buckets is not None:
             self._histogram_buckets[name] = list(buckets)
 
-    def set_gauge(self, name: str, value: float, labels: dict[str, str] | None = None):
+    def set_gauge(self, name: str, value: float, labels: Optional[Dict[str, str]] = None):
         """Set a gauge metric value."""
         if not self.enabled:
             return
         key = self._make_key(name, labels)
         self._gauges[key] = value
 
-    def _make_key(self, name: str, labels: dict[str, str] | None = None) -> str:
+    def _make_key(self, name: str, labels: Optional[Dict[str, str]] = None) -> str:
         """Create a metric key with optional labels."""
         if not labels:
             return name
         label_str = ",".join(f"{k}={v}" for k, v in sorted(labels.items()))
         return f"{name}{{{label_str}}}"
 
-    def _parse_key(self, key: str) -> tuple[str, dict[str, str]]:
+    def _parse_key(self, key: str) -> Tuple[str, Dict[str, str]]:
         """将指标 key 解析为 (基础名, 标签字典)。"""
         if '{' not in key:
             return key, {}
         base_name = key.split('{', 1)[0]
         labels_str = key.split('{', 1)[1].rstrip('}')
-        labels: dict[str, str] = {}
+        labels: Dict[str, str] = {}
         for pair in labels_str.split(','):
             if '=' in pair:
                 k, v = pair.split('=', 1)
                 labels[k] = v
         return base_name, labels
 
-    def _format_prometheus_labels(self, labels: dict[str, str]) -> str:
+    def _format_prometheus_labels(self, labels: Dict[str, str]) -> str:
         """按 Prometheus 文本格式（带引号）输出标签。"""
         if not labels:
             return ''
         return '{' + ','.join(f'{k}="{v}"' for k, v in sorted(labels.items())) + '}'
 
-    def _get_buckets(self, metric_name: str) -> list[float]:
+    def _get_buckets(self, metric_name: str) -> List[float]:
         """获取指定指标的 bucket 配置。"""
         return self._histogram_buckets.get(metric_name, [])
 
     @staticmethod
-    def _percentile(values: list[float], p: float) -> float:
+    def _percentile(values: List[float], p: float) -> float:
         """计算分位数（线性插值法）。
 
         Args:
@@ -175,11 +174,11 @@ class MetricsCollector:
             return sorted_vals[f]
         return sorted_vals[f] + (sorted_vals[c] - sorted_vals[f]) * (k - f)
 
-    def _recent_histogram_values(self, base_name: str, window_seconds: float) -> list[float]:
+    def _recent_histogram_values(self, base_name: str, window_seconds: float) -> List[float]:
         """获取最近 window_seconds 秒内指定基础指标名的所有观测值。"""
         now = time.time()
         cutoff = now - window_seconds
-        result: list[float] = []
+        result: List[float] = []
         for key, values in self._histograms.items():
             parsed_name, _ = self._parse_key(key)
             if parsed_name != base_name:

@@ -9,9 +9,12 @@
     orchestrator = LoopOrchestrator(sdk)
     result = await orchestrator.run(task_id, input_data, template_name, persona)
 """
+import uuid
+import logging
+from typing import Any, Optional
 
-from flowforge.core.tracing import get_logger
 from flowforge.loop.result_extractor import extract_result_summary
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("loop.orchestrator")
 
@@ -94,7 +97,7 @@ class LoopOrchestrator:
 
     async def _run_via_loop(
         self, task_id: str, input_data: dict, template_name: str, persona: str, sop_name: str
-    ) -> dict | None:
+    ) -> Optional[dict]:
         """通过 LoopExecutor 执行。"""
         if self._sdk is None:
             return None
@@ -105,9 +108,8 @@ class LoopOrchestrator:
             return None
 
         # 获取 Loop 模板配置
-        import os
-
         from flowforge.loop.registry import LoopRegistry
+        import os
         config_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "loops")
         # 也检查项目级配置
         project_config_dir = os.path.join(os.getcwd(), "config", "loops")
@@ -168,7 +170,7 @@ class LoopOrchestrator:
 
     async def _run_via_agent(
         self, task_id: str, input_data: dict, agent_name: str, persona: str
-    ) -> dict | None:
+    ) -> Optional[dict]:
         """降级：直接调用 Agent 执行。"""
         if self._sdk is None:
             return None

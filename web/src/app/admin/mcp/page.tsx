@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 
 /**
- * MCP 管理页面 — 合并 MCPConfigPanel
+ * MCP 管理页面 — 合并 MCPConfigPanel + clowder-ai mcp section
  *
  * 管理 MCP（Model Context Protocol）服务器和工具目录
+ * 详见 MERGE-SPEC.md §3.3 F6 MCP 配置合并
  */
 
 interface McpServer {

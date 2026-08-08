@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class ReactThinkerAgent(GenericAgent):
@@ -7,7 +7,7 @@ class ReactThinkerAgent(GenericAgent):
     description = "ReAct 思考步骤：分析当前状态，推理下一步行动"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         query = input.params.get("query", input.params.get("task", ""))
         observation = input.params.get("observation", "")
         iteration = input.params.get("iteration", 0)

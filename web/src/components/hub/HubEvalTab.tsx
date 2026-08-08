@@ -3,6 +3,7 @@
 /**
  * HubEvalTab — 评估中心 Tab
  *
+ * 移植自 clowder-ai HubEvalTab，简化为 FlowForge 适配版。
  * 用于 /review，展示可进化智能体产出物的评估任务、摩擦分析与判决。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

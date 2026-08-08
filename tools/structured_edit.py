@@ -11,9 +11,10 @@
 """
 from __future__ import annotations
 
-import difflib
 import re
+import difflib
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -127,7 +128,7 @@ class StructuredEditTool(BaseTool):
 
     def __init__(self) -> None:
         """初始化，创建文件快照字典用于陈旧内容检测."""
-        self._file_snapshots: dict[str, str] = {}
+        self._file_snapshots: Dict[str, str] = {}
 
     async def execute(self, input: ToolInput) -> ToolOutput:
         action = input.params.get("action")
@@ -169,7 +170,7 @@ class StructuredEditTool(BaseTool):
 
     # ── 文件读写辅助 ──────────────────────────────────────────
 
-    def _read_file(self, path: str) -> tuple[str, str, str]:
+    def _read_file(self, path: str) -> Tuple[str, str, str]:
         """读取文件，返回 (content, encoding, line_ending)."""
         file_path = Path(path)
         if not file_path.exists():
@@ -231,7 +232,7 @@ class StructuredEditTool(BaseTool):
 
     # ── 1. replace — 精确字符串替换 ────────────────────────────
 
-    async def _replace(self, path: str, params: dict) -> ToolOutput:
+    async def _replace(self, path: str, params: Dict) -> ToolOutput:
         """精确字符串替换，对标 Claude Code Edit."""
         old_string = params.get("old_string")
         new_string = params.get("new_string", "")
@@ -285,7 +286,7 @@ class StructuredEditTool(BaseTool):
 
     # ── 2. insert — 在指定行插入内容 ──────────────────────────
 
-    async def _insert(self, path: str, params: dict) -> ToolOutput:
+    async def _insert(self, path: str, params: Dict) -> ToolOutput:
         """在指定行号处插入内容."""
         line_number = params.get("line_number")
         content_to_insert = params.get("content", "")
@@ -344,7 +345,7 @@ class StructuredEditTool(BaseTool):
 
     # ── 3. delete_lines — 删除行范围 ──────────────────────────
 
-    async def _delete_lines(self, path: str, params: dict) -> ToolOutput:
+    async def _delete_lines(self, path: str, params: Dict) -> ToolOutput:
         """删除指定行范围."""
         start_line = params.get("start_line")
         end_line = params.get("end_line")
@@ -391,7 +392,7 @@ class StructuredEditTool(BaseTool):
 
     # ── 4. search_replace — 正则搜索替换 ─────────────────────
 
-    async def _search_replace(self, path: str, params: dict) -> ToolOutput:
+    async def _search_replace(self, path: str, params: Dict) -> ToolOutput:
         """正则表达式搜索替换."""
         pattern = params.get("pattern")
         replacement = params.get("replacement", "")
@@ -455,7 +456,7 @@ class StructuredEditTool(BaseTool):
 
     # ── 5. apply_patch — 应用 unified diff 补丁 ───────────────
 
-    async def _apply_patch(self, path: str, params: dict) -> ToolOutput:
+    async def _apply_patch(self, path: str, params: Dict) -> ToolOutput:
         """应用 unified diff 补丁，对标 Codex CLI apply_patch."""
         patch_text = params.get("patch", "")
 
@@ -530,7 +531,7 @@ class StructuredEditTool(BaseTool):
 
         return "".join(lines)
 
-    def _parse_hunks(self, patch_lines: list[str]) -> list[dict]:
+    def _parse_hunks(self, patch_lines: List[str]) -> List[Dict]:
         """解析 unified diff 中的 hunk."""
         hunks = []
         i = 0
@@ -597,7 +598,7 @@ class StructuredEditTool(BaseTool):
         return hunks
 
     def _context_mismatch_detail(
-        self, expected: list[str], actual: list[str], start: int
+        self, expected: List[str], actual: List[str], start: int
     ) -> str:
         """生成上下文不匹配的详细信息."""
         details = []
@@ -612,7 +613,7 @@ class StructuredEditTool(BaseTool):
 
     # ── 6. multi_edit — 原子性多编辑 ──────────────────────────
 
-    async def _multi_edit(self, path: str, params: dict) -> ToolOutput:
+    async def _multi_edit(self, path: str, params: Dict) -> ToolOutput:
         """原子性多编辑：先验证所有 old_string 存在，再统一应用."""
         edits = params.get("edits", [])
 
@@ -717,7 +718,7 @@ class StructuredEditTool(BaseTool):
         candidates.sort(key=lambda x: x[0], reverse=True)
         return "\n".join(c[1] for c in candidates[:max_hints])
 
-    def _find_all_positions(self, content: str, target: str) -> list[int]:
+    def _find_all_positions(self, content: str, target: str) -> List[int]:
         """查找 target 在 content 中所有出现的字符偏移位置."""
         positions = []
         start = 0

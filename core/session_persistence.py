@@ -39,7 +39,7 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -80,7 +80,7 @@ class SessionTurn:
     session_id: str = ""
     events: list[SessionEvent] = field(default_factory=list)
     start_time: float = field(default_factory=time.time)
-    end_time: float | None = None
+    end_time: Optional[float] = None
 
 
 @dataclass
@@ -112,7 +112,7 @@ class SessionStore:
     def __init__(self, db_path: str = "data/sessions.db") -> None:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn: sqlite3.Connection | None = None
+        self._conn: Optional[sqlite3.Connection] = None
         self._init_db()
 
     def _init_db(self) -> None:
@@ -185,7 +185,7 @@ class SessionStore:
         )
         conn.commit()
 
-    def load_session(self, session_id: str) -> Session | None:
+    def load_session(self, session_id: str) -> Optional[Session]:
         """加载会话及其全部轮次和事件."""
         conn = self._get_conn()
         row = conn.execute(
@@ -262,8 +262,8 @@ class SessionStore:
 
     def list_sessions(
         self,
-        project: str | None = None,
-        status: str | None = None,
+        project: Optional[str] = None,
+        status: Optional[str] = None,
     ) -> list[Session]:
         """列出会话，支持按项目和状态过滤."""
         conn = self._get_conn()
@@ -291,7 +291,7 @@ class SessionStore:
     def get_events(
         self,
         session_id: str,
-        event_type: EventType | None = None,
+        event_type: Optional[EventType] = None,
     ) -> list[SessionEvent]:
         """获取会话事件，支持按事件类型过滤."""
         conn = self._get_conn()

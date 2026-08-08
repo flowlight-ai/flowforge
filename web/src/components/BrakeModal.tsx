@@ -1,6 +1,7 @@
 /**
  * BrakeModal — 紧急刹车模态框
  *
+ * 来源：clowder-ai/packages/web/src/components/BrakeModal.tsx（简化版）
  * 职责：监听全局 "flowforge:brake" 事件，弹出紧急刹车确认框
  * 用户确认后调用 /api/v1/brake 触发后端紧急停止所有任务
  *

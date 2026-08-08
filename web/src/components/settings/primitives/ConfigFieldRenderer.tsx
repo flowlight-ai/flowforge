@@ -3,7 +3,7 @@
 /**
  * ConfigFieldRenderer — 简化版配置字段渲染器
  *
- * 简化实现：
+ * 从 clowder-ai 移植并简化：
  *   - 移除 HubConfigIcons / LockIcon / PlatformFieldStatus 类型依赖
  *   - 保留 input/select/toggle/list 四种字段类型
  *   - 字段定义使用本地 ConfigField 类型

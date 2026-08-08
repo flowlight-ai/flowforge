@@ -2,12 +2,15 @@
 
 import asyncio
 import json
+import uuid
+from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from flowforge.core.tracing import get_logger
 from flowforge.memory.helm_db import get_helm_db
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.api.loops")
 
@@ -23,10 +26,10 @@ _running_loop_tasks: dict[str, asyncio.Task] = {}
 class CreateLoopRequest(BaseModel):
     task_id: str
     template_name: str
-    overrides: dict | None = None
+    overrides: Optional[dict] = None
 
 class StopLoopRequest(BaseModel):
-    reason: str | None = None
+    reason: Optional[str] = None
 
 
 # --- Helper ---
@@ -99,19 +102,19 @@ async def _run_loop_background(loop_id: str, task_id: str, template_config: dict
             logger.info(f"Using HybridExecutor's injected LoopExecutor for loop_id={loop_id}")
         else:
             # 回退：自行构建 LoopExecutor（向后兼容）
-            from flowforge.core.checkpoint_manager import CheckpointManager
-            from flowforge.harness.entropy_manager import EntropyManager, RuleEvolution
-            from flowforge.harness.orchestrator import HarnessOrchestrator
             from flowforge.loop.executor import LoopExecutor
             from flowforge.loop.planner import LLMPlanner
-            from flowforge.loop.reflector import ReflexionReflector
             from flowforge.loop.verifier import RuleBasedVerifier
+            from flowforge.loop.reflector import ReflexionReflector
+            from flowforge.harness.orchestrator import HarnessOrchestrator
+            from flowforge.harness.entropy_manager import EntropyManager, RuleEvolution
+            from flowforge.core.checkpoint_manager import CheckpointManager
 
             harness = getattr(hybrid_executor, "harness", None) if hybrid_executor else None
             harness = harness or HarnessOrchestrator()
             planner = LLMPlanner()
             verifier = RuleBasedVerifier()
-            reflector = ReflexionReflector()
+            reflector = ReflexionReflector(llm_client=getattr(_main.app.state, 'llm_client', None) or getattr(_main.app.state, 'sdk', None) and getattr(_main.app.state.sdk, 'llm', None))
             checkpoint_mgr = getattr(
                 hybrid_executor, "checkpoint_manager",
                 CheckpointManager("data/loop_checkpoints.db"),
@@ -355,7 +358,7 @@ async def list_loop_templates():
                 "max_retries": t.max_retries,
             })
         return _make_response(templates)
-    except Exception:
+    except Exception as e:
         return _make_response([])
 
 

@@ -16,7 +16,7 @@ The server exposes this metadata via API, and the Next.js frontend
 uses a dynamic loader to render plugin components at mount points.
 """
 
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -39,7 +39,7 @@ class FrontendPluginRegistry:
     MOUNT_REVIEW_PANEL = "review_panel"
 
     def __init__(self):
-        self._plugins: dict[str, dict[str, Any]] = {}
+        self._plugins: Dict[str, Dict[str, Any]] = {}
 
     def register(self, plugin_name: str, manifest: Any) -> None:
         """Register a plugin's frontend metadata.
@@ -65,17 +65,17 @@ class FrontendPluginRegistry:
         if plugin_name in self._plugins:
             del self._plugins[plugin_name]
 
-    def get_plugins_for_mount(self, mount_point: str) -> list[dict[str, Any]]:
+    def get_plugins_for_mount(self, mount_point: str) -> List[Dict[str, Any]]:
         """Get all plugins that provide components for a specific mount point."""
         return [
             p for p in self._plugins.values()
             if mount_point in p.get("mount_points", [])
         ]
 
-    def get_all_plugins(self) -> list[dict[str, Any]]:
+    def get_all_plugins(self) -> List[Dict[str, Any]]:
         """Get all registered frontend plugins."""
         return list(self._plugins.values())
 
-    def get_plugin(self, plugin_name: str) -> dict[str, Any] | None:
+    def get_plugin(self, plugin_name: str) -> Optional[Dict[str, Any]]:
         """Get frontend metadata for a specific plugin."""
         return self._plugins.get(plugin_name)

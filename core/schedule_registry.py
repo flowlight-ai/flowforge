@@ -31,7 +31,7 @@ import asyncio
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
@@ -83,17 +83,17 @@ class FactoryRegistration(BaseModel):
     plugin_id: str = Field(..., description="Plugin 标识")
     factory_id: str = Field(..., description="Factory 标识（plugin 内唯一）")
     schedule_type: ScheduleType = Field(..., description="调度类型")
-    cron_expr: str | None = Field(
+    cron_expr: Optional[str] = Field(
         None, description="cron 表达式（schedule_type=cron 时必填）"
     )
-    interval_seconds: int | None = Field(
+    interval_seconds: Optional[int] = Field(
         None, description="间隔秒数（schedule_type=interval 时必填）"
     )
     max_concurrent: int = Field(default=1, ge=1, description="最大并发数")
     owner_user_id: str = Field(..., description="所有者用户 ID")
 
     @model_validator(mode="after")
-    def validate_schedule_type_fields(self) -> FactoryRegistration:
+    def validate_schedule_type_fields(self) -> "FactoryRegistration":
         """根据 schedule_type 校验必填字段。
 
         - cron 类型必须提供 cron_expr
@@ -396,7 +396,7 @@ class ScheduleFactoryRegistry:
 
     async def list_factories(
         self,
-        plugin_id: str | None = None,
+        plugin_id: Optional[str] = None,
     ) -> list[FactoryRegistration]:
         """列出 factory。
 
@@ -419,7 +419,7 @@ class ScheduleFactoryRegistry:
         self,
         plugin_id: str,
         factory_id: str,
-    ) -> FactoryRegistration | None:
+    ) -> Optional[FactoryRegistration]:
         """查询单个 factory。
 
         Args:
@@ -502,7 +502,7 @@ class ScheduleFactoryRegistry:
 
         铁律 6：async I/O 的同步部分拆分到此方法，由 asyncio.to_thread 包装。
         """
-        with open(file_path, encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
 
 

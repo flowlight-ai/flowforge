@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from flowforge.core.tracing import get_logger
 from flowforge.memory.helm_db import HelmDatabase
-from flowforge.tools.upload_validator import UploadValidator
+from flowforge.tools.upload_validator import MAX_FILE_SIZE, UploadValidator
 
 logger = get_logger("flowforge.uploads_api")
 
@@ -45,7 +46,7 @@ async def upload_file(task_id: str, file: UploadFile = File(...)):
     if not _validator.check_rate_limit(task_id):
         raise HTTPException(
             status_code=429,
-            detail="上传频率超限，每分钟最多 10 次",
+            detail=f"上传频率超限，每分钟最多 10 次",
         )
 
     # 2. 读取文件内容

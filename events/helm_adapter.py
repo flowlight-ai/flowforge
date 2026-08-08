@@ -7,10 +7,9 @@ to the Helm WebSocket frontend.
 License: MIT
 """
 
-from flowforge.core.tracing import get_logger
-from flowforge.core.workspace import get_workspace_manager
-
 from .event_bus import EventBus
+from flowforge.core.workspace import get_workspace_manager
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("helm_adapter")
 

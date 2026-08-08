@@ -5,8 +5,9 @@ import { SettingsShell } from "@/components/settings/SettingsShell";
 /**
  * 设置中心 — Phase 5 SettingsShell 架构
  *
+ * 依据 WEB-FUSION-DESIGN.md §7 重构：
  *   - 旧版 509 行单页 7-Tab 设置已迁移为 SettingsShell 架构
- *   - 14 个 section + 22 个 primitives（简化实现）
+ *   - 14 个 section + 22 个 primitives（从 clowder-ai 移植并简化）
  *   - 左侧导航 + 右侧内容，支持 URL 深链（?s=sectionId）
  *
  * 旧版功能映射：

@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class ValidatorAgent(GenericAgent):
@@ -7,7 +7,7 @@ class ValidatorAgent(GenericAgent):
     description = "验证检查：验证处理结果是否正确和完整"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         processed = input.params.get("processed", "")
         analysis = input.params.get("analysis", {})

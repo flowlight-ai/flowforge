@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class ReactObserverAgent(GenericAgent):
@@ -7,7 +7,7 @@ class ReactObserverAgent(GenericAgent):
     description = "ReAct 观察步骤：分析执行结果，提取关键信息"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         action_output = input.params.get("action_output", "")
         thought = input.params.get("thought", "")
         query = input.params.get("query", input.params.get("task", ""))

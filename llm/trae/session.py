@@ -6,10 +6,12 @@
 
 from __future__ import annotations
 
+import json
 import time
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
+
 from flowforge.llm.trae.config import TraeConfig
 
 logger = get_logger("trae_llm.session")
@@ -28,10 +30,10 @@ class TraeSession:
     def __init__(self, session_id: str, config: TraeConfig):
         self.session_id = session_id
         self._config = config
-        self._messages: list[dict[str, str]] = []
+        self._messages: List[Dict[str, str]] = []
         self._created_at: float = time.time()
         self._updated_at: float = time.time()
-        self._memory_manager: Any | None = None
+        self._memory_manager: Optional[Any] = None
 
     def add_message(self, role: str, content: str) -> None:
         """添加消息到会话历史.
@@ -49,7 +51,7 @@ class TraeSession:
             f"len={len(content)}, total_messages={len(self._messages)}"
         )
 
-    def get_context(self) -> list[dict[str, str]]:
+    def get_context(self) -> List[Dict[str, str]]:
         """获取会话上下文（role/content 列表）.
 
         Returns:
@@ -125,7 +127,7 @@ class TraeSession:
         except Exception as e:
             logger.warning(f"Session {self.session_id} 加载失败: {e}")
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """序列化会话为字典."""
         return {
             "session_id": self.session_id,
@@ -135,7 +137,7 @@ class TraeSession:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any], config: TraeConfig) -> TraeSession:
+    def from_dict(cls, data: Dict[str, Any], config: TraeConfig) -> TraeSession:
         """从字典反序列化会话."""
         session = cls(data["session_id"], config)
         session._messages = data.get("messages", [])
@@ -150,10 +152,10 @@ class TraeSessionManager:
     管理多个 TraeSession 实例，支持创建、获取、关闭会话。
     """
 
-    def __init__(self, config: TraeConfig | None = None):
+    def __init__(self, config: Optional[TraeConfig] = None):
         self._config = config or TraeConfig()
-        self._sessions: dict[str, TraeSession] = {}
-        self._memory_manager: Any | None = None
+        self._sessions: Dict[str, TraeSession] = {}
+        self._memory_manager: Optional[Any] = None
 
     def set_memory_manager(self, memory_manager: Any) -> None:
         """注入 MemoryManager（依赖注入，铁律3）.
@@ -183,7 +185,7 @@ class TraeSessionManager:
         logger.info(f"创建会话: {session_id}")
         return session
 
-    def get_session(self, session_id: str) -> TraeSession | None:
+    def get_session(self, session_id: str) -> Optional[TraeSession]:
         """获取会话.
 
         Args:
@@ -206,7 +208,7 @@ class TraeSessionManager:
             del self._sessions[session_id]
             logger.info(f"关闭会话: {session_id}")
 
-    def list_sessions(self) -> list[str]:
+    def list_sessions(self) -> List[str]:
         """列出所有活跃会话 ID."""
         return list(self._sessions.keys())
 

@@ -19,12 +19,19 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Awaitable, Callable, Dict, List, Literal, Optional
+
+import yaml
 
 from flowforge.core.approval_hub import ApprovalHub, ApprovalRequest
+from flowforge.core.im_council import (
+    ConsoleChannel,
+    IMCouncilManager,
+    TraeBridgeChannel,
+    WebChatChannel,
+)
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.engine import ForgeMindEngine
 from flowforge.evolution.self_dev_base import DevPlan, DevTask
@@ -44,8 +51,11 @@ logger = get_logger("flowforge.evolution.runtime")
 # 默认 trae_bridge.yaml 路径（相对项目根，红线 11 不硬编码绝对路径）
 _DEFAULT_TRAE_BRIDGE_YAML = "flowforge/config/trae_bridge.yaml"
 
+# 默认 im_council.yaml 路径（相对项目根，红线 11 不硬编码绝对路径）
+_DEFAULT_IM_COUNCIL_YAML = "flowforge/config/im_council.yaml"
+
 # forgekin_id → SelfDev 闭环类映射（F046 v1.1 五闭环扩展）
-_FORGEKIN_LOOP_CLASSES: dict[str, type] = {
+_FORGEKIN_LOOP_CLASSES: Dict[str, type] = {
     "wenxin": SelfDevDocLoop,
     "sherlock": SelfDevCodeLoop,
     "luban": SelfDevFrameworkLoop,
@@ -85,9 +95,10 @@ class SelfDevRuntime:
         protocol: TraeBridgeProtocol,
         engine: ForgeMindEngine,
         approval_hub: ApprovalHub,
-        forgekin_configs: dict[str, dict[str, Any]],
+        forgekin_configs: Dict[str, Dict[str, Any]],
         approval_mode: ApprovalMode = "manual",
         approval_timeout_seconds: int = 300,
+        im_council_manager: Optional[IMCouncilManager] = None,
     ) -> None:
         """初始化 SelfDevRuntime（由 bootstrap 调用，不直接实例化）.
 
@@ -100,6 +111,7 @@ class SelfDevRuntime:
             forgekin_configs: 5 个 forgekin 的配置字典
             approval_mode: 审批模式（"auto"/"manual"/"im"）
             approval_timeout_seconds: 审批超时秒数（从 trae_bridge.yaml 读取）
+            im_council_manager: F047 IM 议事管理器（approval_mode="im" 时必填；符合红线 12 DI 注入）
         """
         self._trae_client = trae_client
         self._bridge_config = bridge_config
@@ -109,11 +121,13 @@ class SelfDevRuntime:
         self._forgekin_configs = forgekin_configs
         self._approval_mode: ApprovalMode = approval_mode
         self._approval_timeout_seconds: int = approval_timeout_seconds
+        # F047 IM 议事管理器（approval_mode="im" 时由 bootstrap 注入，红线 12）
+        self._im_council_manager: Optional[IMCouncilManager] = im_council_manager
 
         # request_id -> asyncio.Event（operator 决策后 set，唤醒等待中的 callback）
-        self._pending_events: dict[str, asyncio.Event] = {}
+        self._pending_events: Dict[str, asyncio.Event] = {}
         # request_id -> approved（决策结果缓存，供 approval_callback 读取）
-        self._decisions: dict[str, bool] = {}
+        self._decisions: Dict[str, bool] = {}
 
         self._logger = logger
         self._logger.info(
@@ -132,8 +146,9 @@ class SelfDevRuntime:
         *,
         trae_bridge_yaml_path: str = _DEFAULT_TRAE_BRIDGE_YAML,
         approval_mode: ApprovalMode = "manual",
-        project_root: str | None = None,
-    ) -> SelfDevRuntime:
+        project_root: Optional[str] = None,
+        im_council_yaml_path: str = _DEFAULT_IM_COUNCIL_YAML,
+    ) -> "SelfDevRuntime":
         """生产装配入口 — 加载配置 + 创建实例 + 注册闭环.
 
         Args:
@@ -141,8 +156,9 @@ class SelfDevRuntime:
             approval_mode: 审批模式：
                 - "auto": 自动批准（仅 demo / 测试用，记录警告日志）
                 - "manual": 通过 ApprovalHub，operator 调用 runtime.approve/reject 决策
-                - "im": 通过 F047 IM 议事通道推送（F047 完成后启用，当前降级为 manual）
+                - "im": 通过 F047 IM 议事通道推送（推送至 console/trae/webchat，经 I1 降级链路）
             project_root: 项目根目录（None 用当前工作目录）
+            im_council_yaml_path: im_council.yaml 路径（approval_mode="im" 时从该文件加载通道配置）
 
         Returns:
             SelfDevRuntime 实例（已注册 5 个 SelfDev 闭环）
@@ -169,7 +185,7 @@ class SelfDevRuntime:
 
         # 4. 加载 5 个 forgekin YAML 配置（铁律 5：配置外置到 YAML）
         root = project_root or str(Path.cwd())
-        forgekin_configs: dict[str, dict[str, Any]] = {}
+        forgekin_configs: Dict[str, Dict[str, Any]] = {}
         for forgekin_id in BUILTIN_FORGEKINS:
             try:
                 cfg = load_forgekin_config(forgekin_id)
@@ -192,7 +208,20 @@ class SelfDevRuntime:
         # 6. 创建 ApprovalHub（CL-033 跨 thread 统一审批中心）
         approval_hub = ApprovalHub()
 
-        # 7. 创建 SelfDevRuntime 实例（提前创建以便注入 approval_callback 闭包）
+        # 7. approval_mode=="im" 时构建 F047 IM 议事管理器（DI 注入通道，红线 12）；
+        #    manual/auto 模式下不构建，保持与既有行为一致
+        im_council_manager: Optional[IMCouncilManager] = None
+        if approval_mode == "im":
+            im_council_manager = cls._build_im_council_manager(
+                approval_hub=approval_hub,
+                im_council_yaml_path=im_council_yaml_path,
+            )
+            logger.info(
+                f"bootstrap 构建 IM 议事管理器: "
+                f"channels={im_council_manager.list_channels()}"
+            )
+
+        # 8. 创建 SelfDevRuntime 实例（提前创建以便注入 approval_callback 闭包）
         approval_timeout = bridge_config.default_timeout_seconds
         runtime = cls(
             trae_client=trae_client,
@@ -203,9 +232,10 @@ class SelfDevRuntime:
             forgekin_configs=forgekin_configs,
             approval_mode=approval_mode,
             approval_timeout_seconds=approval_timeout,
+            im_council_manager=im_council_manager,
         )
 
-        # 8. 为 luban 注入 approval_callback（I8 不变量：framework 闭环必须注入）
+        # 9. 为 luban 注入 approval_callback（I8 不变量：framework 闭环必须注入）
         approval_callback = runtime._make_approval_callback(_FRAMEWORK_FORGEKIN_ID)
         if _FRAMEWORK_FORGEKIN_ID in forgekin_configs:
             forgekin_configs[_FRAMEWORK_FORGEKIN_ID]["approval_callback"] = approval_callback
@@ -244,6 +274,71 @@ class SelfDevRuntime:
         )
         return runtime
 
+    @classmethod
+    def _build_im_council_manager(
+        cls,
+        *,
+        approval_hub: ApprovalHub,
+        im_council_yaml_path: str = _DEFAULT_IM_COUNCIL_YAML,
+    ) -> IMCouncilManager:
+        """从 im_council.yaml 构建 F047 IM 议事管理器（含 I1 降级链路）.
+
+        - 加载 im_council.yaml（红线 11：路径不硬编码，从配置读取）
+        - 按 channels 段的 enabled 开关实例化 Console/WebChat/Trae 通道
+          （DI 注入，红线 12），并按 im_council.enabled 整体开关校验
+        - 通过 register_channel 注入 IMCouncilManager（I1 降级链路在管理器内部）
+
+        Args:
+            approval_hub: ApprovalHub 实例（CL-033，依赖注入）
+            im_council_yaml_path: im_council.yaml 路径
+
+        Returns:
+            已注册可用通道的 IMCouncilManager 实例
+
+        Raises:
+            FileNotFoundError: im_council.yaml 不存在
+            KeyError: 配置缺少 im_council 段
+        """
+        with open(im_council_yaml_path, "r", encoding="utf-8") as f:
+            raw_cfg = yaml.safe_load(f) or {}
+
+        cfg = raw_cfg.get("im_council", {})
+        if not cfg:
+            raise KeyError(
+                f"im_council.yaml 缺少 im_council 段: {im_council_yaml_path}"
+            )
+        if not cfg.get("enabled", True):
+            logger.warning(
+                f"_build_im_council_manager: im_council.enabled=false，"
+                f"仍构建空通道管理器（approval_mode='im' 需通道）"
+            )
+
+        manager = IMCouncilManager(approval_hub=approval_hub, config=cfg)
+
+        channel_specs: Dict[str, Callable[[Dict[str, Any]], IMCouncilChannel]] = {  # noqa: F821
+            "console": ConsoleChannel,
+            "webchat": WebChatChannel,
+            "trae": TraeBridgeChannel,
+        }
+        channels_cfg = cfg.get("channels", {})
+        for name, ctor in channel_specs.items():
+            ch_cfg = channels_cfg.get(name, {})
+            if not ch_cfg.get("enabled", False):
+                logger.debug(f"_build_im_council_manager: 通道 {name} 未启用，跳过")
+                continue
+            runtime_channel = ctor(ch_cfg)
+            manager.register_channel(name, runtime_channel)
+            logger.info(f"_build_im_council_manager: 注册通道 {name}")
+
+        if not manager.list_channels():
+            logger.warning(
+                f"_build_im_council_manager: 无可用通道"
+                f"（enabled_channels={list(channels_cfg.keys())}），"
+                f"IM 审批将无法送达 operator"
+            )
+
+        return manager
+
     # ══════════════════════════════════════════════════════════════
     # §2 approval_callback 工厂
     # ══════════════════════════════════════════════════════════════
@@ -254,7 +349,8 @@ class SelfDevRuntime:
         行为根据 approval_mode：
         - "auto": 记录警告日志，自动返回 True（仅 demo / 测试用）
         - "manual": 提交到 ApprovalHub，等待 operator 决策（通过 asyncio.Event）
-        - "im": 通过 F047 IM 议事通道推送（F047 完成后启用，当前降级为 manual）
+        - "im": 通过 F047 IM 议事通道推送（IMCouncilManager.request_approval，
+          含 I1 通道降级链路、I4 超时拒绝、I5 JSONL 归档）
 
         Args:
             forgekin_id: 发起审批的Forgekin ID
@@ -271,7 +367,7 @@ class SelfDevRuntime:
         async def approval_callback(plan: DevPlan, task: DevTask) -> bool:
             """I8 approval 回调 — 提交审批请求并等待 operator 决策."""
             request_id = f"approval-{uuid.uuid4().hex[:16]}"
-            expires_at = datetime.now(UTC) + timedelta(seconds=timeout_seconds)
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=timeout_seconds)
 
             # 提取目标路径（优先 task.target_path，回退到 plan.steps[0].path）
             target_path = task.target_path
@@ -317,15 +413,27 @@ class SelfDevRuntime:
                 )
                 return True
 
-            # im 模式：通过 F047 IM 议事通道推送（F047 完成前降级为 manual）
+            # im 模式：通过 F047 IM 议事通道推送
+            # （IMCouncilManager.request_approval 完整五步：提交→推送→等待→decide→归档）
             if mode == "im":
-                log.info(
-                    f"approval_callback im 模式：通过 F047 IM 议事通道推送 "
-                    f"request_id={request_id}（F047 未完成，降级为 manual 等待）"
+                manager = runtime._im_council_manager
+                if manager is None:
+                    log.error(
+                        f"approval_callback im 模式：缺少 IMCouncilManager "
+                        f"(bootstrap 未注入)，request_id={request_id}，按拒绝处理"
+                    )
+                    hub.submit(request)
+                    return False
+                approved = await manager.request_approval(
+                    request, timeout=float(timeout_seconds)
                 )
-                # TODO: F047 完成后接入 IM 推送，当前降级为 manual 等待
+                log.info(
+                    f"approval_callback im 模式：F047 议事完成 "
+                    f"request_id={request_id}, approved={approved}"
+                )
+                return approved
 
-            # manual / im 降级：提交到 ApprovalHub，等待 operator 决策
+            # manual 模式：提交到 ApprovalHub，等待 operator 决策
             hub.submit(request)
 
             # 创建 asyncio.Event 等待 operator 决策
@@ -340,7 +448,7 @@ class SelfDevRuntime:
 
             try:
                 await asyncio.wait_for(event.wait(), timeout=timeout_seconds)
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 log.warning(
                     f"approval_callback 超时: request_id={request_id}, "
                     f"timeout={timeout_seconds}s（视为拒绝）"
@@ -499,7 +607,7 @@ class SelfDevRuntime:
         self._logger.info(f"reject 成功: request_id={request_id}")
         return True
 
-    def list_pending_approvals(self) -> list[dict[str, Any]]:
+    def list_pending_approvals(self) -> List[Dict[str, Any]]:
         """列出所有待审批请求（operator 查看用）.
 
         Returns:
@@ -523,7 +631,7 @@ class SelfDevRuntime:
             for r in pending
         ]
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """获取运行时统计信息.
 
         Returns:

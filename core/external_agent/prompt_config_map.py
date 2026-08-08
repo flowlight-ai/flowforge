@@ -20,6 +20,8 @@ License: MIT
 
 from __future__ import annotations
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import get_logger
@@ -50,7 +52,7 @@ class PromptConfig(BaseModel):
     restrictions: list[str] = Field(
         default_factory=list, description="限制列表"
     )
-    extra_yaml_path: str | None = Field(
+    extra_yaml_path: Optional[str] = Field(
         default=None,
         description="额外 YAML 文件路径（承载长提示词或模板片段，铁律 5+P16）",
     )
@@ -104,7 +106,7 @@ class PromptConfigMap:
 
     def get_mapping(
         self, forgekin_id: str, provider_name: str
-    ) -> PromptConfig | None:
+    ) -> Optional[PromptConfig]:
         """获取指定的提示词配置。
 
         Args:

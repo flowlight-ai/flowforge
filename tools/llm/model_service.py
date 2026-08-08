@@ -1,10 +1,10 @@
-import asyncio
-import json
 import os
+import json
 import time
+import asyncio
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Dict, List, Optional, Tuple, Any
 
 import httpx
 
@@ -47,10 +47,10 @@ class ModelService:
 
     def _load_config(self):
         cfg = self._config_loader.get_models_config()
-        self.providers: dict[str, dict] = cfg.get("providers", {})
-        self.models: list[dict] = cfg.get("models", [])
-        self.assignments: dict[str, dict] = cfg.get("assignments", {})
-        self.active_providers: list[str] = cfg.get("active_providers", list(self.providers.keys()))
+        self.providers: Dict[str, dict] = cfg.get("providers", {})
+        self.models: List[dict] = cfg.get("models", [])
+        self.assignments: Dict[str, dict] = cfg.get("assignments", {})
+        self.active_providers: List[str] = cfg.get("active_providers", list(self.providers.keys()))
 
     def _save_config(self):
         self._config_loader.save_yaml("models.yaml", {
@@ -63,8 +63,8 @@ class ModelService:
     def _load_health_state(self):
         if self._health_state_file.exists():
             try:
-                with open(self._health_state_file, encoding="utf-8") as f:
-                    self._health_data: dict[str, dict] = json.load(f)
+                with open(self._health_state_file, "r", encoding="utf-8") as f:
+                    self._health_data: Dict[str, dict] = json.load(f)
             except Exception:
                 self._health_data = {}
         else:
@@ -128,13 +128,13 @@ class ModelService:
         provider_config = self.providers.get(provider, {})
         return provider_config.get("base_url", "")
 
-    def _resolve_model(self, model_id: str) -> dict | None:
+    def _resolve_model(self, model_id: str) -> Optional[dict]:
         for m in self.models:
             if m.get("id") == model_id:
                 return m
         return None
 
-    def _get_model_key(self, model_id: str) -> str | None:
+    def _get_model_key(self, model_id: str) -> Optional[str]:
         model = self._resolve_model(model_id)
         if model is None:
             return None
@@ -144,7 +144,7 @@ class ModelService:
         async with self._lock:
             return await self._check_with_cache(model_key, force)
 
-    async def health_check_all(self, force: bool = False) -> list[dict]:
+    async def health_check_all(self, force: bool = False) -> List[dict]:
         async with self._lock:
             results = []
             seen: set = set()
@@ -518,9 +518,9 @@ class ModelService:
 
     def _classify_error(
         self,
-        error: Exception | None,
-        response: httpx.Response | None = None,
-    ) -> tuple[str, int]:
+        error: Optional[Exception],
+        response: Optional[httpx.Response] = None,
+    ) -> Tuple[str, int]:
         """分类错误并返回 (error_type, suspend_seconds).
 
         所有错误类型都返回正数 suspend_seconds（可恢复的 SUSPENDED），
@@ -668,7 +668,7 @@ class ModelService:
 
         return report
 
-    async def _find_healthy_model(self) -> str | None:
+    async def _find_healthy_model(self) -> Optional[str]:
         for model in self.models:
             if not model.get("enabled", True):
                 continue
@@ -678,7 +678,7 @@ class ModelService:
                 return model["id"]
         return None
 
-    def get_models(self) -> list[dict]:
+    def get_models(self) -> List[dict]:
         result = []
         for m in self.models:
             if m["provider"] not in self.active_providers:
@@ -741,13 +741,13 @@ class ModelService:
         logger.info(f"Model updated: {model_id}")
         return dict(model)
 
-    def get_providers(self) -> list[dict]:
+    def get_providers(self) -> List[dict]:
         return [{"name": name, **config} for name, config in self.providers.items()]
 
     def get_assignments(self) -> dict:
         return dict(self.assignments)
 
-    def update_assignment(self, key: str, primary: str, fallbacks: list[str] = None):
+    def update_assignment(self, key: str, primary: str, fallbacks: List[str] = None):
         self.assignments[key] = {
             "primary": primary,
             "fallbacks": fallbacks or [],
@@ -801,7 +801,7 @@ class ModelService:
             self._save_health_state()
             logger.info(f"Cleaned up {len(to_remove)} old health records")
 
-    def get_model_chain(self, assignment_key: str) -> list[str]:
+    def get_model_chain(self, assignment_key: str) -> List[str]:
         assignment = self.assignments.get(assignment_key, {})
         primary = assignment.get("primary", "")
         fallbacks = assignment.get("fallbacks", [])
@@ -816,7 +816,7 @@ class ModelService:
                 chain.append(mk)
         return chain
 
-    def get_available_fallback_chain(self, assignment_key: str = "default") -> list[str]:
+    def get_available_fallback_chain(self, assignment_key: str = "default") -> List[str]:
         """Get fallback chain containing only available models.
 
         Filters out disabled and suspended models from the fallback chain.
@@ -981,7 +981,7 @@ class ModelService:
         logger.info(f"[force_update] 开始强制更新模型健康状态, active_providers={self.active_providers}")
         active_models = [m for m in self.models
                          if m.get("enabled", True) and m["provider"] in self.active_providers]
-        provider_groups: dict[str, list[str]] = {}
+        provider_groups: Dict[str, List[str]] = {}
         for m in active_models:
             mk = f"{m['provider']}/{m['id']}"
             provider_groups.setdefault(m["provider"], []).append(mk)

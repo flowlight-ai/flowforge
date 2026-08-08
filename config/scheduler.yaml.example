@@ -1,0 +1,166 @@
+# ====================================================================
+# FlowForge Scheduler 配置示例（P3-010）
+# ====================================================================
+# 本文件为示例模板，复制为 scheduler.yaml 后由 FlowForgeScheduler 加载。
+#
+# 加载方式:
+#     scheduler = FlowForgeScheduler(config_dir="config/scheduler")
+#     # 或显式调用:
+#     # scheduler.load_configs_from_dir("config/scheduler")
+#
+# 字段说明:
+#   name               : 任务名称（唯一标识，作为 APScheduler job_id）
+#   description        : 任务描述（人类可读，可选）
+#   enabled            : 是否启用（false 时仅记录配置，不向 APScheduler 注册 job）
+#   trigger_type       : 触发类型，可选 cron / interval / date
+#   trigger_args       : 触发参数（详见下方各任务示例）
+#   task_handler       : 任务处理函数名（必须在 TaskRegistry 中注册）
+#   task_args          : 位置参数列表（可选，默认 []）
+#   task_kwargs        : 关键字参数字典（可选，默认 {}）
+#                        运行期会自动注入：scheduler / event_bus /
+#                        metrics_collector / task_registry
+#   max_instances      : 最大并发实例数（默认 1）
+#   coalesce           : 是否合并积压任务（默认 true）
+#   misfire_grace_time : 错过执行宽限期秒数（默认 60）
+#   retry_on_failure   : 失败是否重试（默认 true）
+#   max_retries        : 最大重试次数（默认 3）
+#   retry_delay_seconds: 重试间隔秒数（默认 60）
+#   timeout_seconds    : 执行超时秒数，0 表示无超时（默认 0）
+#   metadata           : 元数据字典（如 category / owner，可选）
+#
+# 触发参数示例:
+#   cron     : {hour: 2, minute: 0}                 # 每日 02:00
+#              {day_of_week: "mon-fri", hour: 9}    # 工作日 09:00
+#   interval : {minutes: 30}                        # 每 30 分钟
+#              {seconds: 15}                        # 每 15 秒
+#   date     : {run_date: "2026-12-31T23:59:59"}    # 一次性 2026-12-31 23:59:59
+#
+# 内置任务处理函数（已在默认 TaskRegistry 中注册）:
+#   - daily_quota_reset        : 每日配额重置
+#   - metrics_summary_report   : 指标摘要报告
+#   - health_check             : 关键组件健康检查
+#   - cleanup_expired_events   : 清理过期事件
+# ====================================================================
+
+tasks:
+  # ────────────────────────────────────────────────────────────────
+  # 内置任务 1：每日凌晨 2 点重置 Provider 配额
+  # ────────────────────────────────────────────────────────────────
+  - name: daily_quota_reset
+    description: "每日凌晨重置 Provider 配额（TPM/RPM/月度预算）"
+    enabled: true
+    trigger_type: cron
+    trigger_args:
+      hour: 2
+      minute: 0
+    task_handler: daily_quota_reset
+    task_kwargs:
+      # quota_manager 由运行期通过 task_kwargs 注入（如未提供则跳过）
+      # quota_manager: "${quota_manager}"
+    max_instances: 1
+    coalesce: true
+    misfire_grace_time: 300
+    retry_on_failure: true
+    max_retries: 3
+    retry_delay_seconds: 60
+    timeout_seconds: 120
+    metadata:
+      category: builtin
+      owner: system
+
+  # ────────────────────────────────────────────────────────────────
+  # 内置任务 2：每小时生成指标摘要
+  # ────────────────────────────────────────────────────────────────
+  - name: hourly_metrics_summary
+    description: "每小时生成指标摘要并上报事件总线"
+    enabled: true
+    trigger_type: interval
+    trigger_args:
+      minutes: 60
+    task_handler: metrics_summary_report
+    max_instances: 1
+    coalesce: true
+    misfire_grace_time: 60
+    retry_on_failure: true
+    max_retries: 2
+    retry_delay_seconds: 30
+    timeout_seconds: 60
+    metadata:
+      category: builtin
+      owner: system
+
+  # ────────────────────────────────────────────────────────────────
+  # 内置任务 3：每 5 分钟健康检查
+  # ────────────────────────────────────────────────────────────────
+  - name: periodic_health_check
+    description: "每 5 分钟检查关键组件健康状态（event_bus / metrics_collector / task_registry）"
+    enabled: true
+    trigger_type: interval
+    trigger_args:
+      minutes: 5
+    task_handler: health_check
+    max_instances: 1
+    coalesce: true
+    misfire_grace_time: 30
+    retry_on_failure: true
+    max_retries: 2
+    retry_delay_seconds: 15
+    timeout_seconds: 30
+    metadata:
+      category: builtin
+      owner: system
+
+  # ────────────────────────────────────────────────────────────────
+  # 内置任务 4：每天凌晨 3 点清理过期审批/事件
+  # ────────────────────────────────────────────────────────────────
+  - name: daily_cleanup_expired_events
+    description: "每天凌晨 3 点清理 ApprovalHub 过期审批与 event_store 过期事件"
+    enabled: true
+    trigger_type: cron
+    trigger_args:
+      hour: 3
+      minute: 0
+    task_handler: cleanup_expired_events
+    task_kwargs:
+      # approval_hub / event_store 由运行期通过 task_kwargs 注入
+      # approval_hub: "${approval_hub}"
+      # event_store: "${event_store}"
+    max_instances: 1
+    coalesce: true
+    misfire_grace_time: 600
+    retry_on_failure: true
+    max_retries: 3
+    retry_delay_seconds: 60
+    timeout_seconds: 180
+    metadata:
+      category: builtin
+      owner: system
+
+  # ────────────────────────────────────────────────────────────────
+  # 用户自定义任务示例：早间定时发布（通用示例）
+  # 实际业务场景（如 ContentForge 早间发布）由 *Forge 业务项目通过 Plugin V3
+  # 协议注册对应的 task_handler 到 TaskRegistry 后启用。
+  # ────────────────────────────────────────────────────────────────
+  - name: sample_morning_publish
+    description: "早间定时发布任务示例（每日 9 点）"
+    enabled: false  # 默认禁用，需在 TaskRegistry 注册 sample_publish 后启用
+    trigger_type: cron
+    trigger_args:
+      hour: 9
+      minute: 0
+    task_handler: sample_publish  # 需在 TaskRegistry 中注册
+    task_args:
+      - "morning_digest"
+    task_kwargs:
+      persona: "default"
+      mode: "workflow"
+    max_instances: 1
+    coalesce: true
+    misfire_grace_time: 600
+    retry_on_failure: true
+    max_retries: 3
+    retry_delay_seconds: 120
+    timeout_seconds: 1800
+    metadata:
+      category: sample
+      owner: operator_001

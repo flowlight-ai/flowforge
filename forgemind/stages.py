@@ -52,7 +52,7 @@ class EvolutionStage(str, Enum):
     E6 = "E6"  # ForgeMind阶 ForgeMind — Master / Forge Master
 
     @classmethod
-    def from_string(cls, value: str) -> EvolutionStage:
+    def from_string(cls, value: str) -> "EvolutionStage":
         """从字符串解析进化阶枚举，大小写不敏感。"""
         normalized = value.strip().upper()
         for member in cls:
@@ -134,7 +134,7 @@ class AwakeningStage(str, Enum):
     E6 = "E6"  # ForgeMind主导阶 ForgeMind-Led — L5 ForgeMind-Led / Master
 
     @classmethod
-    def from_string(cls, value: str) -> AwakeningStage:
+    def from_string(cls, value: str) -> "AwakeningStage":
         """从字符串解析觉醒阶枚举，大小写不敏感。"""
         normalized = value.strip().upper()
         for member in cls:

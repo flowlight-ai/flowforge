@@ -8,6 +8,8 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+from pathlib import Path
+from typing import Any, Dict, List
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -71,7 +73,7 @@ class GitDeepTool(BaseTool):
             logger.error(f"git_deep error: action={action} error={e}")
             return ToolOutput(error=str(e))
 
-    async def _run_git(self, args: list[str], cwd: str, timeout: int = 30) -> dict:
+    async def _run_git(self, args: List[str], cwd: str, timeout: int = 30) -> Dict:
         """执行git命令."""
         cmd = ["git", "-C", cwd] + args
         t0 = time.time()
@@ -83,7 +85,7 @@ class GitDeepTool(BaseTool):
         )
         try:
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        except TimeoutError:
+        except asyncio.TimeoutError:
             proc.kill()
             return {"success": False, "error": f"Git command timed out after {timeout}s"}
         elapsed = round(time.time() - t0, 2)
@@ -95,7 +97,7 @@ class GitDeepTool(BaseTool):
             "elapsed_s": elapsed,
         }
 
-    async def _log(self, cwd: str, params: dict) -> ToolOutput:
+    async def _log(self, cwd: str, params: Dict) -> ToolOutput:
         """查看提交历史."""
         max_count = params.get("max_count", 20)
         revision_range = params.get("revision_range", "")
@@ -140,7 +142,7 @@ class GitDeepTool(BaseTool):
             "elapsed_s": result["elapsed_s"],
         })
 
-    async def _diff(self, cwd: str, params: dict) -> ToolOutput:
+    async def _diff(self, cwd: str, params: Dict) -> ToolOutput:
         """查看差异."""
         revision = params.get("revision", "")
         revision_range = params.get("revision_range", "")
@@ -178,7 +180,7 @@ class GitDeepTool(BaseTool):
             "has_changes": bool(diff.strip()),
         })
 
-    async def _blame(self, cwd: str, params: dict) -> ToolOutput:
+    async def _blame(self, cwd: str, params: Dict) -> ToolOutput:
         """查看行级 blame 信息."""
         path = params.get("path", "")
         if not path:
@@ -210,7 +212,7 @@ class GitDeepTool(BaseTool):
             "total_lines": len(lines),
         })
 
-    async def _status(self, cwd: str, params: dict) -> ToolOutput:
+    async def _status(self, cwd: str, params: Dict) -> ToolOutput:
         """查看工作区状态."""
         args = ["status", "--porcelain=v2", "--branch"]
         result = await self._run_git(args, cwd)
@@ -246,7 +248,7 @@ class GitDeepTool(BaseTool):
             "is_clean": not (staged or unstaged or untracked),
         })
 
-    async def _show(self, cwd: str, params: dict) -> ToolOutput:
+    async def _show(self, cwd: str, params: Dict) -> ToolOutput:
         """查看提交详情."""
         revision = params.get("revision", "HEAD")
         args = ["show", "--stat", revision]
@@ -258,7 +260,7 @@ class GitDeepTool(BaseTool):
             "output": result["stdout"][:10000],
         })
 
-    async def _stash_list(self, cwd: str, params: dict) -> ToolOutput:
+    async def _stash_list(self, cwd: str, params: Dict) -> ToolOutput:
         """查看stash列表."""
         args = ["stash", "list"]
         result = await self._run_git(args, cwd)
@@ -267,7 +269,7 @@ class GitDeepTool(BaseTool):
         stashes = [line.strip() for line in result["stdout"].strip().split("\n") if line.strip()]
         return ToolOutput(result={"stashes": stashes, "total": len(stashes)})
 
-    async def _merge_base(self, cwd: str, params: dict) -> ToolOutput:
+    async def _merge_base(self, cwd: str, params: Dict) -> ToolOutput:
         """查找合并基点."""
         revisions = params.get("revision_range", "HEAD HEAD~1").split()
         args = ["merge-base"] + revisions
@@ -276,7 +278,7 @@ class GitDeepTool(BaseTool):
             return ToolOutput(error=f"git merge-base failed: {result['stderr']}")
         return ToolOutput(result={"merge_base": result["stdout"].strip()})
 
-    async def _rev_parse(self, cwd: str, params: dict) -> ToolOutput:
+    async def _rev_parse(self, cwd: str, params: Dict) -> ToolOutput:
         """解析Git引用."""
         revision = params.get("revision", "HEAD")
         args = ["rev-parse", revision]

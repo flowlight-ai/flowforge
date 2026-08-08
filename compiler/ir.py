@@ -6,7 +6,7 @@ MVP2 扩展 CONDITIONAL 模式（条件分支）。
 """
 
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -36,32 +36,32 @@ class IRStep(BaseModel):
     id: str
     name: str
     type: StepType = StepType.AGENT
-    agent: str | None = None
-    tool: str | None = None
-    input_mapping: dict[str, str] = {}
-    output_key: str | None = None
-    execution_policy: dict[str, Any] = {}
-    checkpoint: dict[str, Any] = {}
+    agent: Optional[str] = None
+    tool: Optional[str] = None
+    input_mapping: Dict[str, str] = {}
+    output_key: Optional[str] = None
+    execution_policy: Dict[str, Any] = {}
+    checkpoint: Dict[str, Any] = {}
     # MVP2: 条件分支字段
-    condition: str | None = None   # 条件表达式，如 "${state.score >= 70}"
-    on_true: str | None = None     # 条件为真时跳转的步骤ID
-    on_false: str | None = None    # 条件为假时跳转的步骤ID
+    condition: Optional[str] = None   # 条件表达式，如 "${state.score >= 70}"
+    on_true: Optional[str] = None     # 条件为真时跳转的步骤ID
+    on_false: Optional[str] = None    # 条件为假时跳转的步骤ID
     # PARALLEL: 并行执行的子步骤列表
-    parallel_steps: list["IRStep"] = []
+    parallel_steps: List["IRStep"] = []
     # FALLBACK: 主步骤和回退步骤
-    primary: list["IRStep"] = []
-    fallback: list["IRStep"] = []
+    primary: List["IRStep"] = []
+    fallback: List["IRStep"] = []
     # LOOP: 循环执行
-    loop_steps: list["IRStep"] = []
-    max_iterations: int | None = None  # loop最大迭代次数
-    exit_condition: str | None = None  # loop退出条件表达式
-    loop_variable: str | None = None
+    loop_steps: List["IRStep"] = []
+    max_iterations: Optional[int] = None  # loop最大迭代次数
+    exit_condition: Optional[str] = None  # loop退出条件表达式
+    loop_variable: Optional[str] = None
     # ERROR_HANDLER / LOOP: 子步骤
-    body: list["IRStep"] | None = None  # loop/error_handler的子步骤
+    body: Optional[List["IRStep"]] = None  # loop/error_handler的子步骤
     # SUB_WORKFLOW: 引用的workflow名称
-    workflow_ref: str | None = None  # sub-workflow引用的workflow名称
+    workflow_ref: Optional[str] = None  # sub-workflow引用的workflow名称
     # ERROR_HANDLER: 错误处理步骤
-    on_error: list["IRStep"] | None = None  # 错误处理步骤
+    on_error: Optional[List["IRStep"]] = None  # 错误处理步骤
 
     model_config = {"extra": "allow"}
 
@@ -78,9 +78,9 @@ class IRWorkflow(BaseModel):
     name: str
     description: str = ""
     version: str = "1.0"
-    steps: list[IRStep] = []
-    state_schema: dict[str, Any] = {}
-    execution_policy: dict[str, Any] = {}
-    checkpoint: dict[str, Any] = {}
+    steps: List[IRStep] = []
+    state_schema: Dict[str, Any] = {}
+    execution_policy: Dict[str, Any] = {}
+    checkpoint: Dict[str, Any] = {}
 
     model_config = {"extra": "allow"}

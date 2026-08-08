@@ -15,8 +15,7 @@ import asyncio
 import logging
 import socket
 import threading
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Callable, Dict, List, Optional
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -53,15 +52,15 @@ class NativeToolServer:
         self._host = host
         self._port = port
         self._token = token
-        self._tools: dict[str, Callable] = {}
+        self._tools: Dict[str, Callable] = {}
         self._app = FastAPI(
             title="FlowForge Native Tool Server",
             docs_url=None,
             redoc_url=None,
         )
-        self._server: uvicorn.Server | None = None
-        self._thread: threading.Thread | None = None
-        self._actual_port: int | None = None
+        self._server: Optional[uvicorn.Server] = None
+        self._thread: Optional[threading.Thread] = None
+        self._actual_port: Optional[int] = None
         self._setup_routes()
 
     # ── 路由设置 ──────────────────────────────────────────────────
@@ -123,7 +122,7 @@ class NativeToolServer:
                 )
 
         @self._app.get("/health")
-        async def health() -> dict[str, Any]:
+        async def health() -> Dict[str, Any]:
             return {
                 "status": "ok",
                 "tools": list(self._tools.keys()),
@@ -153,7 +152,7 @@ class NativeToolServer:
             logger.info(f"Unregistered native tool: {name}")
 
     @property
-    def registered_tools(self) -> list[str]:
+    def registered_tools(self) -> List[str]:
         """返回已注册的工具名称列表。"""
         return list(self._tools.keys())
 
@@ -239,7 +238,7 @@ class NativeToolServer:
         logger.info("NativeToolServer stopped")
 
     @property
-    def url(self) -> str | None:
+    def url(self) -> Optional[str]:
         """返回当前服务器URL，未启动时返回None。"""
         if self._actual_port is not None:
             return f"http://{self._host}:{self._actual_port}"

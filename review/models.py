@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 
 def _utcnow() -> datetime:
     """返回当前 UTC 时间（带时区）。"""
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 def _gen_id(prefix: str = "") -> str:

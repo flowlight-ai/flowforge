@@ -23,6 +23,7 @@ interface VoteConfigModalProps {
 /**
  * VoteConfigModal — 发起投票配置弹窗
  *
+ * 来源：clowder-ai/packages/web/src/components/VoteConfigModal.tsx（适配 Forgekin 版）
  * 字段：
  *   - 问题（必填，最多 500 字符）
  *   - 选项（2-10 个，每个最多 100 字符）

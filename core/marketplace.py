@@ -33,9 +33,10 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import os
 import shutil
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -63,14 +64,14 @@ class PluginManifest(BaseModel):
     author: str = ""
     category: Literal["tool", "agent", "mode", "integration", "theme"] = "tool"
     tags: list[str] = Field(default_factory=list)
-    homepage: str | None = None
-    repository: str | None = None
+    homepage: Optional[str] = None
+    repository: Optional[str] = None
     license: str = "MIT"
-    min_flowforge_version: str | None = None
+    min_flowforge_version: Optional[str] = None
     dependencies: list[str] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=list)
     entry_point: str = ""
-    checksum: str | None = None
+    checksum: Optional[str] = None
 
 
 # ── Marketplace Registry ─────────────────────────────────────────────
@@ -114,7 +115,7 @@ class MarketplaceRegistry:
         )
         for yaml_file in yaml_files:
             try:
-                with open(yaml_file, encoding="utf-8") as f:
+                with open(yaml_file, "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f) or {}
                 plugin_list = data.get("plugins", [])
                 for plugin_data in plugin_list:
@@ -151,7 +152,7 @@ class MarketplaceRegistry:
                 results.append(manifest)
         return results
 
-    async def get_plugin(self, name: str) -> PluginManifest | None:
+    async def get_plugin(self, name: str) -> Optional[PluginManifest]:
         """Get a specific plugin manifest by name."""
         await self._ensure_loaded()
         return self._plugins.get(name)
@@ -268,7 +269,7 @@ class Marketplace:
             return
         if self._installed_manifest_path.exists():
             try:
-                with open(self._installed_manifest_path, encoding="utf-8") as f:
+                with open(self._installed_manifest_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 for name, manifest_data in data.items():
                     self._installed[name] = PluginManifest(**manifest_data)
@@ -299,7 +300,7 @@ class Marketplace:
         """
         return await self._registry.search(query, category)
 
-    async def get_plugin(self, name: str) -> PluginManifest | None:
+    async def get_plugin(self, name: str) -> Optional[PluginManifest]:
         """Get detailed information about a specific plugin.
 
         Args:
@@ -645,7 +646,7 @@ class Marketplace:
         except Exception:
             # If version cannot be determined, allow installation
             logger.warning(
-                "Cannot determine FlowForge version, skipping compatibility check"
+                f"Cannot determine FlowForge version, skipping compatibility check"
             )
             return True
 

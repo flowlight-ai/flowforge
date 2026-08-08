@@ -48,7 +48,7 @@ class WorkflowParser:
         file_path = Path(path)
         if not file_path.exists():
             raise FileNotFoundError(f"Workflow YAML file not found: {path}")
-        with open(file_path, encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             return self.parse(f.read())
 
     def _parse_workflow(self, data: dict[str, Any]) -> IRWorkflow:

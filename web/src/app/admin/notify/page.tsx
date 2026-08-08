@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 /**
- * 通知设置页面 — 
+ * 通知设置页面 — 来自 clowder-ai notify section
  *
  * 功能：
  *   - 推送订阅
@@ -29,7 +29,7 @@ export default function NotifyPage() {
           </button>
         </div>
         <p className="page-sub" style={{ marginBottom: "16px" }}>
-          推送订阅、提醒策略、设备联动 · 
+          推送订阅、提醒策略、设备联动 · 来自 clowder-ai notify section
         </p>
         <div className="empty">暂无数据 · 功能开发中</div>
         <div style={{ marginTop: "16px", padding: "12px 16px", background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "8px", fontSize: "12px", color: "var(--text-secondary)" }}>

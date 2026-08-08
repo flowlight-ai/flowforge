@@ -1,129 +1,183 @@
-# Feature 规格文档
+# FlowForge Feature 规格
 
-> **目录作用**: 存放 FlowForge Feature 规格文档（F001-F040），每个 Feature 记录一个独立功能的上下文、决策、接口、验收标准
-> **维护规则**: 新增 Feature 时复制 `TEMPLATE.md` 到 `F{NNN}-{slug}.md`
-
----
-
-## Feature 编号规则
-
-- 格式：`F{NNN}-{slug}.md`（NNN 三位数字递增，slug 用英文短横线分隔）
-- 稳定性：已发布编号不重排、不复用
-- 状态：`spec` → `in-progress` → `done`
+> **文档编号**: features/README.md（v1.1）
+> **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构
+> **参考**: 标准 Feature 目录结构（已归档，F001-F255）
 
 ---
 
-## P0 核心 Feature（4 份，✅ 已完成）
+## 1. Feature 规范
 
-| Feature | 标题 | 状态 | 文件 |
-|---------|------|------|------|
-| F001 | 能力画像 CapabilityProfile | ✅ | `[doc:features/F001-capability-profile.md]` |
-| F002 | TeamAct 六步循环 | ✅ | `[doc:features/F002-teamact-loop.md]` |
-| F026 | forgemind 应用层 | ✅ | `[doc:features/F026-forgemind-app-layer.md]` |
-| F031 | 三方 Agent 适配层 | ✅ | `[doc:features/F031-external-agent-adapter.md]` |
+每个 Feature 是一个独立的可演进单元，对应 roleagent.md 中的"Feature 规格"。**单文件 < 50KB**，Forgekin可在单次任务中完整重写。
 
----
+### 1.1 Feature 文件命名
 
-## P1 七大工程路径 Feature（23 份，✅ 已完成）
+```
+F0XX-kebab-case-name.md
+```
 
-> P1 Feature 对应 Phase 1 代码实现，为追溯性规格记录（代码先行、Feature 追溯补齐）。
-> 全部基于 `flowforge/core/` 下真实代码提取接口，术语对齐 ADR-012。
+示例：
+- `F001-capability-profile.md`
+- `F026-forgemind-app-layer.md`
+- `F031-external-agent-adapter.md`
 
-### TeamAct 子 Feature（F003-F007，5 份）
-> 依赖 ADR-002，参考代码 `flowforge/core/teamact/`
+### 1.2 Feature 编号规则
 
-| Feature | 标题 | 状态 | 文件 |
-|---------|------|------|------|
-| F003 | 交接胶囊 Handoff Capsule | ✅ | `[doc:features/F003-handoff-capsule.md]` |
-| F004 | @mention 路由 AtMention Router | ✅ | `[doc:features/F004-at-mention-router.md]` |
-| F005 | 球权租借 Ball Custody Lease | ✅ | `[doc:features/F005-ball-custody-lease.md]` |
-| F006 | 推回协议 Push Back Protocol | ✅ | `[doc:features/F006-push-back-protocol.md]` |
-| F007 | 乒乓球熔断器 PingPong Circuit Breaker | ✅ | `[doc:features/F007-pingpong-circuit-breaker.md]` |
+| 编号范围 | 类别 | 依据 |
+|---------|------|------|
+| F001-F007 | TeamAct 协作 | RA-009~RA-016 |
+| F008-F013 | Harness 七层 | RA-017~RA-023 |
+| F014-F017 | 多域记忆 | RA-024~RA-030 |
+| F018-F020 | Eval 自代谢 | RA-031~RA-036 |
+| F021-F025 | 分布式可靠性 | RA-037~RA-042 |
+| F026-F030 | forgemind 应用层 | FM-001~FM-012 |
+| F031-F035 | 三方 Agent 集成 | EX-001~EX-010 |
+| F036-F040 | 其他 | — |
+| F041-F044 | 可进化智能体（4 种组织角色） | FM-013~FM-016 |
 
-### Harness 七层 Feature（F008-F013，6 份）
-> 依赖 ADR-007，参考代码 `flowforge/core/harness/`
-> 说明：F013 合并熵控制（Layer 6）+ 可驾驭性评分（Layer 7），因两者紧密相关——熵控制器产生 artifact 状态信号，可驾驭性评分器基于这些信号 + 其他 5 维信号打分。
+### 1.3 Feature 模板
 
-| Feature | 标题 | 状态 | 文件 |
-|---------|------|------|------|
-| F008 | 持久状态表面 Durable State Surface | ✅ | `[doc:features/F008-durable-state-surface.md]` |
-| F009 | 工具中介 Tool Mediation | ✅ | `[doc:features/F009-tool-mediation.md]` |
-| F010 | 证据传感器 Evidence Sensors | ✅ | `[doc:features/F010-evidence-sensors.md]` |
-| F011 | 治理边界 Governance Boundary | ✅ | `[doc:features/F011-governance-boundary.md]` |
-| F012 | Magic Words 逃生舱 | ✅ | `[doc:features/F012-magic-words.md]` |
-| F013 | 熵控制 + 可驾驭性评分 Entropy + Harnessability | ✅ | `[doc:features/F013-entropy-harnessability.md]` |
-
-### 多域记忆联邦 Feature（F014-F017，4 份）
-> 依赖 ADR-008，参考代码 `flowforge/core/memory/`
-> 说明：F017 合并记忆治理 + 蒸馏知识库（MindCodex），因蒸馏知识库是治理保护的对象，二者在同一模块下紧密耦合。
-
-| Feature | 标题 | 状态 | 文件 |
-|---------|------|------|------|
-| F014 | 记忆收集 + 多域存储 Memory Collection | ✅ | `[doc:features/F014-memory-collection.md]` |
-| F015 | 三检索入口 Retrieval Entries | ✅ | `[doc:features/F015-retrieval-entries.md]` |
-| F016 | 消费加权评分 Consumption Weighted | ✅ | `[doc:features/F016-consumption-weighted.md]` |
-| F017 | 记忆治理 + 蒸馏知识库 Memory Governance + MindCodex | ✅ | `[doc:features/F017-memory-governance-mind-codex.md]` |
-
-### Eval 自代谢 Feature（F018-F020，3 份）
-> 依赖 ADR-009，参考代码 `flowforge/core/eval/`
-
-| Feature | 标题 | 状态 | 文件 |
-|---------|------|------|------|
-| F018 | Eval Contract 五问 | ✅ | `[doc:features/F018-eval-contract.md]` |
-| F019 | 三方信号交叉验证 Three Signals | ✅ | `[doc:features/F019-three-signals.md]` |
-| F020 | 七类归因矩阵 Attribution Matrix | ✅ | `[doc:features/F020-attribution-matrix.md]` |
-
-### 分布式可靠性 Feature（F021-F025，5 份）
-> 依赖 ADR-010，参考代码 `flowforge/core/reliability/`
-
-| Feature | 标题 | 状态 | 文件 |
-|---------|------|------|------|
-| F021 | 副作用预写日志 Side-Effect WAL | ✅ | `[doc:features/F021-side-effect-wal.md]` |
-| F022 | Tier 1-4 恢复分级 Tiered Recovery | ✅ | `[doc:features/F022-tier-recovery.md]` |
-| F023 | Liveness 规范读 Liveness Probe | ✅ | `[doc:features/F023-liveness-probe.md]` |
-| F024 | Weak State vs Strong Workflow | ✅ | `[doc:features/F024-state-workflow-comparator.md]` |
-| F025 | Provider Host 抽象 | ✅ | `[doc:features/F025-provider-host.md]` |
+详见 [TEMPLATE.md](TEMPLATE.md)。
 
 ---
 
-## 完整 Feature 清单（F001-F040）
+## 2. Feature 清单（44 份核心 Feature）
 
-### 已完成（27 份 ✅）
+### 2.1 TeamAct 协作（F001-F007）
 
-| 范围 | 标题 | 数量 | 状态 |
-|------|------|:----:|:----:|
-| F001-F002 | 能力画像 + TeamAct 主循环 | 2 | ✅ |
-| F003-F007 | TeamAct 子 Feature | 5 | ✅ |
-| F008-F013 | Harness 七层 | 6 | ✅ |
-| F014-F017 | 多域记忆联邦 | 4 | ✅ |
-| F018-F020 | Eval 自代谢 | 3 | ✅ |
-| F021-F025 | 分布式可靠性 | 5 | ✅ |
-| F026 | forgemind 应用层 | 1 | ✅ |
-| F031 | 三方 Agent 适配层 | 1 | ✅ |
+| Feature | 标题 | 状态 | 依据 |
+|---------|------|:----:|------|
+| [F001-capability-profile.md](F001-capability-profile.md) | 能力画像 | ⏳ | RA-001~RA-008 |
+| [F002-teamact-loop.md](F002-teamact-loop.md) | TeamAct 六步循环 | ⏳ | RA-009~RA-016 |
+| [F003-handoff-capsule.md](F003-handoff-capsule.md) | 交接胶囊 | ⏳ | RA-011 |
+| [F004-pingpong-circuit-breaker.md](F004-pingpong-circuit-breaker.md) | 乒乓球熔断器 | ⏳ | RA-012 |
+| [F005-at-mention-routing.md](F005-at-mention-routing.md) | 行首 @ 路由 | ⏳ | RA-013 |
+| [F006-ball-custody-lease.md](F006-ball-custody-lease.md) | 持球注册 lease | ⏳ | RA-014 |
+| [F007-push-back-protocol.md](F007-push-back-protocol.md) | Generator Push Back | ⏳ | RA-015 |
 
-### 待创建（13 份 ⏳，Phase 2-6 视进度补齐）
+### 2.2 Harness 七层（F008-F013）
 
-| 范围 | 标题 | 依赖 ADR | 优先级 |
-|------|------|---------|--------|
-| F027-F030 | 可进化智能体（Forgekin）形态分类（5 形态 + 物理 AI 传感器 + 虚拟世界设定层 + 进化谱系） | ADR-013 | Phase 2 启动前 |
-| F028 | 可进化智能体（Forgekin）锻造流水线 | ADR-005 | Phase 2 |
-| F032-F035 | 三方 Agent 子 Feature（Adapter / Bridge / SharedState / Fallback / CapabilityFusion） | ADR-006 | Phase 3 |
-| F036-F038 | forgemind 高级 Feature（市场 / 谱系 / council） | ADR-005 | Phase 2-6 |
-| F040 | Harness Eval 控制面 | ADR-009 | Phase 4 |
+| Feature | 标题 | 状态 | 依据 |
+|---------|------|:----:|------|
+| [F008-durable-state-surfaces.md](F008-durable-state-surfaces.md) | Durable State Surfaces | ⏳ | RA-017 |
+| [F009-evidence-sensors.md](F009-evidence-sensors.md) | Evidence & Sensors | ⏳ | RA-018 |
+| [F010-governance-boundary.md](F010-governance-boundary.md) | Governance 压缩免疫 | ⏳ | RA-019 |
+| [F011-magic-words.md](F011-magic-words.md) | Magic Words 逃生舱 | ⏳ | RA-020 |
+| [F012-entropy-control.md](F012-entropy-control.md) | Entropy Control 退役 | ⏳ | RA-021 |
+| [F013-harnessability.md](F013-harnessability.md) | Harnessability 评估 | ⏳ | RA-022 |
 
-> **说明**：F039 蒸馏知识库可检索知识库已合并入 F017（记忆治理 + 蒸馏知识库 MindCodex），F039 编号保留不复用但不再单独创建。
+### 2.3 多域记忆（F014-F017）
+
+| Feature | 标题 | 状态 | 依据 |
+|---------|------|:----:|------|
+| [F014-memory-collection.md](F014-memory-collection.md) | 多域记忆 Collection | ⏳ | RA-024 |
+| [F015-three-retrieval-entry.md](F015-three-retrieval-entry.md) | 三检索入口 | ⏳ | RA-025 |
+| [F016-memory-governance.md](F016-memory-governance.md) | 记忆治理三要素 | ⏳ | RA-026 |
+| [F017-consumption-weighted-ranking.md](F017-consumption-weighted-ranking.md) | 消费加权排序 | ⏳ | RA-027 |
+
+### 2.4 Eval 自代谢（F018-F020）
+
+| Feature | 标题 | 状态 | 依据 |
+|---------|------|:----:|------|
+| [F018-eval-contract.md](F018-eval-contract.md) | Eval Contract 五问 | ⏳ | RA-032 |
+| [F019-three-signal-cross.md](F019-three-signal-cross.md) | 三方信号交叉 | ⏳ | RA-033 |
+| [F020-seven-attribution.md](F020-seven-attribution.md) | 七类归因矩阵 | ⏳ | RA-034 |
+
+### 2.5 分布式可靠性（F021-F025）
+
+| Feature | 标题 | 状态 | 依据 |
+|---------|------|:----:|------|
+| [F021-side-effect-wal.md](F021-side-effect-wal.md) | 副作用日志 WAL | ⏳ | RA-037 |
+| [F022-tier-1-4-recovery.md](F022-tier-1-4-recovery.md) | Tier 1-4 恢复分级 | ⏳ | RA-038 |
+| [F023-liveness-canonical-read.md](F023-liveness-canonical-read.md) | liveness 规范读模型 | ⏳ | RA-039 |
+| [F024-weak-state-vs-strong-workflow.md](F024-weak-state-vs-strong-workflow.md) | 弱状态机 vs 强 workflow | ⏳ | RA-040 |
+| [F025-provider-host-abstraction.md](F025-provider-host-abstraction.md) | 跨 provider 宿主抽象 | ⏳ | RA-041 |
+
+### 2.6 forgemind 应用层（F026-F030）
+
+| Feature | 标题 | 状态 | 依据 |
+|---------|------|:----:|------|
+| [F026-forgemind-app-layer.md](F026-forgemind-app-layer.md) | forgemind 应用层 | ⏳ | FM-001~FM-012 |
+| [F027-all-things-spirit-species.md](F027-all-things-spirit-species.md) | 可进化智能体形态分类 | ⏳ | FM-003 |
+| [F028-forging-pipeline.md](F028-forging-pipeline.md) | Forgekin锻造流水线 | ⏳ | FM-006 |
+| [F029-physical-ai-sensors.md](F029-physical-ai-sensors.md) | 物理 AI 传感器接入 | ⏳ | FM-009 |
+| [F030-virtual-world-setting.md](F030-virtual-world-setting.md) | 虚拟世界设定层 | ⏳ | FM-010 |
+
+### 2.7 三方 Agent 集成（F031-F035）
+
+| Feature | 标题 | 状态 | 依据 |
+|---------|------|:----:|------|
+| [F031-external-agent-adapter.md](F031-external-agent-adapter.md) | 三方 Agent 适配层 | ⏳ | EX-003 |
+| [F032-external-agent-profile.md](F032-external-agent-profile.md) | 三方 Agent 能力画像 | ⏳ | EX-002 |
+| [F033-external-agent-shared-state.md](F033-external-agent-shared-state.md) | 三方 Agent 状态共享 | ⏳ | EX-004 |
+| [F034-external-agent-fallback.md](F034-external-agent-fallback.md) | 三方 Agent 失败回退 | ⏳ | EX-007 |
+| [F035-external-agent-capability-fusion.md](F035-external-agent-capability-fusion.md) | 三方 Agent 能力融合 | ⏳ | EX-010 |
+
+### 2.8 其他（F036-F040）
+
+| Feature | 标题 | 状态 | 依据 |
+|---------|------|:----:|------|
+| [F036-forgemind-forge-relationship.md](F036-forgemind-forge-relationship.md) | forgemind 与 *Forge 关系 | ⏳ | FM-005 |
+| [F037-forgemind-marketplace.md](F037-forgemind-marketplace.md) | Forgekin市场 | ⏳ | FM-007 |
+| [F038-forgemind-lineage.md](F038-forgemind-lineage.md) | Forgekin进化谱系 | ⏳ | FM-008 |
+| [F039-mind-codex-searchable.md](F039-mind-codex-searchable.md) | MindCodex可检索知识库 | ⏳ | RA-029 |
+| [F040-harness-eval-control-plane.md](F040-harness-eval-control-plane.md) | Harness Eval 控制面 | ⏳ | RA-036 |
+
+### 2.9 可进化智能体（F041-F044）
+
+> 4 种组织形态可进化智能体（OrgForgekin），从 design.md §2.7 提取。每种智能体有独立代号 + 5 种 action.type + 觉醒阶上限 + 进化阶路径。
+
+| Feature | 标题 | 状态 | 依据 | 代号 |
+|---------|------|:----:|------|------|
+| [F041-product-manager.md](F041-product-manager.md) | 产品经理可进化智能体 | ⏳ | FM-013 | 鹰·凯恩（Eagle Kane） |
+| [F042-devops.md](F042-devops.md) | 运维可进化智能体 | ⏳ | FM-014 | 蜂鸟·闪电（Hummingbird Flash） |
+| [F043-security-officer.md](F043-security-officer.md) | 安全官可进化智能体 | ⏳ | FM-015 | 狼·阿尔法（Wolf Alpha） |
+| [F044-delivery-manager.md](F044-delivery-manager.md) | 交付经理可进化智能体 | ⏳ | FM-016 | 象·牛顿（Elephant Newton） |
 
 ---
 
-## Feature 文档模板
+## 3. Feature 状态定义
 
-详见 `[doc:features/TEMPLATE.md]`
+| 状态 | 含义 |
+|------|------|
+| ⏳ pending | 未开始 |
+| 🔄 in_progress | 开发中 |
+| ✅ done | 已完成并通过 Eval |
+| ❌ deprecated | 已废弃 |
+| 🚫 blocked | 被阻塞（需依赖解决） |
 
 ---
 
-## 延伸阅读
+## 4. Feature 生命周期
 
-- `[doc:features/TEMPLATE.md]` — Feature 文档模板
-- `[doc:task.md#P0-6]` — P0 Feature 任务清单
-- `[doc:decisions/README.md]` — ADR 清单
-- `[doc:roleagent.md]` — 七大工程路径白皮书
+```
+1. operator / 架构师提出 Feature 需求
+   ↓
+2. 创建 F0XX-xxx.md（基于 TEMPLATE.md）
+   ↓
+3. 评审员Forgekin review Feature 规格
+   ↓
+4. 开发者 Forgekin实现代码骨架
+   ↓
+5. 测试员Forgekin执行 E2E 测试（T1-T8）
+   ↓
+6. Eval 员Forgekin归因到七类矩阵
+   ↓
+7. 若 Eval 通过 → 状态改为 ✅ done
+   若 Eval 失败 → 回到步骤 4 修复
+   ↓
+8. 文档员Forgekin更新 F0XX.md + ROADMAP.md
+   ↓
+9. SpiritForge 经验蒸馏到 MindCodex（蒸馏知识库）
+```
+
+---
+
+## 5. Feature 自我演进
+
+Feature 文档可由Forgekin自我演进更新，但必须：
+1. 通过 Eval 信号触发（不能主动修改）
+2. 保留 `[doc:引用]` 格式
+3. 单文件 < 50KB
+4. 不违反 `[doc:VISION.md#7]` operator 愿景锚点
+5. 不修改 ADR（ADR 不可变）

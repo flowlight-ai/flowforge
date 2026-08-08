@@ -147,7 +147,7 @@ class FieldConditionGate:
         """Load gate definitions from a YAML file."""
         import yaml
         logger.info(f"FieldConditionGate.from_yaml: loading from '{yaml_path}'")
-        with open(yaml_path, encoding="utf-8") as f:
+        with open(yaml_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
         gates = data.get("gates", {})
         # Normalize field names: to_phase -> next_phase, from_phase is informational

@@ -1,6 +1,6 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput
 from flowforge.core.task_context import TaskContext
+from typing import Optional
 
 
 class TrendAnalysisAgent(GenericAgent):
@@ -8,7 +8,7 @@ class TrendAnalysisAgent(GenericAgent):
     description = "分析领域热点趋势，评估传播潜力"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         domain = input.params.get("domain", "科技")
         data = input.params.get("data", "")
 

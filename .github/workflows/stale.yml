@@ -1,4 +1,4 @@
-# FlowForge Stale - Auto-close stale issues and PRs
+﻿# OpenRoute Stale - Auto-close stale issues and PRs
 # Marks issues/PRs as stale after 30 days of inactivity
 # Closes them after 7 more days without activity
 
@@ -17,7 +17,7 @@ jobs:
     name: Mark Stale
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v11
+      - uses: actions/stale@v9
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 

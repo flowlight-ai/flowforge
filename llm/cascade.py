@@ -61,10 +61,10 @@ class LLMCascadeExecutor:
         if path is None:
             default_path = Path(__file__).parent.parent / "config" / "cascade.yaml"
             if default_path.exists():
-                with open(default_path, encoding="utf-8") as f:
+                with open(default_path, "r", encoding="utf-8") as f:
                     return yaml.safe_load(f) or {}
             return {}
-        with open(path, encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
 
     def get_chain(self, mode: str | None = None, task_type: str | None = None) -> list[dict]:

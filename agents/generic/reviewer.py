@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class ReviewerAgent(GenericAgent):
@@ -7,7 +7,7 @@ class ReviewerAgent(GenericAgent):
     description = "审核协调：协调人工审核流程，汇总审核意见"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         content_to_review = input.params.get("generated", input.params.get("execution_result", ""))
         review_type = input.params.get("review_type", "general")

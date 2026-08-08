@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any
 
 from flowforge.core.gate.models import GateStatus, GateVerdict, Score
 from flowforge.core.tracing import get_logger

@@ -1,0 +1,53 @@
+# Trae 桥接协议配置 — F045 §2.2 + §3.1
+#
+# 对应 F045 §2.3 不变量：
+#   - 不变量 3（超时保证）：default_timeout_seconds / long_task_timeout_seconds
+#   - 不变量 4（不丢数据）：archive_completed / max_archive_files
+#   - 不变量 6（路径不硬编码）：shared_dir 支持 ${ENV_VAR} 占位符
+#
+# 环境变量（优先级高于本文件）：
+#   - FLOWFORGE_BRIDGE_DIR: 共享目录路径（覆盖 shared_dir）
+#   - FLOWFORGE_BRIDGE_POLL_INTERVAL: 轮询间隔秒数
+#   - FLOWFORGE_BRIDGE_TIMEOUT: 默认超时秒数
+
+bridge:
+  # 是否启用桥接（false 时 TraeLLMClient.chat 直接抛 TraeBridgeConfigError）
+  enabled: true
+
+  # 共享目录路径（支持 ${ENV_VAR} 占位符，不变量 6）
+  # 默认指向 flowforge/.trae_bridge/
+  shared_dir: "${FLOWFORGE_BRIDGE_DIR:d:/software/openclaw/flowforge/.trae_bridge}"
+
+  # 子目录命名（与 F045 §2.1 协议流程对应）
+  # requests/  — request_{uuid}.json（Forgekin → Trae）
+  # responses/ — response_{uuid}.json（Trae → Forgekin）
+  # cancels/   — cancel_{uuid}.json（operator 逃生舱，不变量 8）
+  # acks/      — ack_{uuid}.json（operator 确认收到，可选）
+  # archive/   — 归档目录（不变量 4 不丢数据）
+  requests_dir: "requests"
+  responses_dir: "responses"
+  cancels_dir: "cancels"
+  acks_dir: "acks"
+  archive_dir: "archive"
+
+  # 轮询参数（不变量 3 超时保证）
+  poll_interval_seconds: 2.0      # 轮询响应文件间隔（最小 0.5 秒）
+  default_timeout_seconds: 300    # 默认超时 5 分钟
+  long_task_timeout_seconds: 1800 # 长任务超时 30 分钟（文档生成等）
+  ack_timeout_seconds: 60         # 等待 operator ack 的超时（可选，0=不等待）
+
+  # 归档机制（不变量 4 不丢数据）
+  archive_completed: true         # 完成的请求是否归档
+  max_archive_files: 1000         # 归档目录最大文件数（超过自动清理最旧）
+  cleanup_on_startup: false       # 启动时清理遗留的 pending 请求（标记为 timeout）
+
+  # 状态总览（status.json）
+  update_status_on_write: true    # 写入 request 时更新 status.json
+  update_status_on_complete: true # 完成响应时更新 status.json
+
+  # 流式响应（F045 §2.1 双向通信支持，预留）
+  stream_enabled: false           # 是否启用流式响应（Phase 3 实现）
+  stream_chunk_interval: 0.5      # 流式轮询间隔
+
+  # 健康检查
+  health_check_on_init: true      # 初始化时检查目录可写性

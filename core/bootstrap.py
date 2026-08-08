@@ -14,16 +14,16 @@ import os
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.core.plugin_registry import PluginRegistry
 from flowforge.core.tracing import get_logger
-from flowforge.modes.agent_judge import AgentJudgeExecutor
-from flowforge.modes.graph_of_thoughts import GraphOfThoughtsExecutor
-from flowforge.modes.multi_agent import MultiAgentExecutor
-from flowforge.modes.plan_execute import PlanExecuteExecutor
-from flowforge.modes.react import ReActExecutor
-from flowforge.modes.reflexion import ReflexionExecutor
 from flowforge.modes.registry import ModeRegistry
+from flowforge.modes.workflow import WorkflowExecutor
+from flowforge.modes.reflexion import ReflexionExecutor
+from flowforge.modes.react import ReActExecutor
+from flowforge.modes.plan_execute import PlanExecuteExecutor
+from flowforge.modes.multi_agent import MultiAgentExecutor
 from flowforge.modes.rewoo import ReWOOExecutor
 from flowforge.modes.self_discover import SelfDiscoverExecutor
-from flowforge.modes.workflow import WorkflowExecutor
+from flowforge.modes.agent_judge import AgentJudgeExecutor
+from flowforge.modes.graph_of_thoughts import GraphOfThoughtsExecutor
 from flowforge.tools.registry import ToolRegistry
 
 logger = get_logger("flowforge.core.bootstrap")
@@ -31,9 +31,9 @@ logger = get_logger("flowforge.core.bootstrap")
 
 def register_core_tools(tool_registry: ToolRegistry, plugin_registry: PluginRegistry) -> None:
     """Register built-in tools (python/file/cache/workspace + optional)."""
-    from flowforge.tools.cache import CacheTool
-    from flowforge.tools.file_rw import FileReadWriteTool
     from flowforge.tools.python_executor import PythonExecutorTool
+    from flowforge.tools.file_rw import FileReadWriteTool
+    from flowforge.tools.cache import CacheTool
     from flowforge.tools.workspace_file import WorkspaceFileTool
 
     tool_registry.register(PythonExecutorTool())

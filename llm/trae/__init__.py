@@ -34,16 +34,14 @@
     print(result["content"])
 """
 
-# adapter 必须在最后导入（依赖 provider 模块，导入时触发 register_provider）
-from flowforge.llm.trae.adapter import TraeModelCapabilityAdapter, get_trae_adapter, reset_trae_adapter
 from flowforge.llm.trae.client import (
-    TraeLLMApiError,
     TraeLLMClient,
+    TraeLLMApiError,
     TraeLLMCliError,
     TraeLLMError,
     TraeLLMTimeoutError,
 )
-from flowforge.llm.trae.config import TraeBridgeConfig, TraeConfig
+from flowforge.llm.trae.config import TraeConfig, TraeBridgeConfig
 from flowforge.llm.trae.exceptions import (
     TraeBridgeCancelledError,
     TraeBridgeConfigError,
@@ -66,6 +64,9 @@ from flowforge.llm.trae.models import (
 from flowforge.llm.trae.protocol import TraeBridgeProtocol
 from flowforge.llm.trae.session import TraeSession, TraeSessionManager
 from flowforge.llm.trae.watcher import TraeBridgeWatcher
+
+# adapter 必须在最后导入（依赖 provider 模块，导入时触发 register_provider）
+from flowforge.llm.trae.adapter import TraeModelCapabilityAdapter, get_trae_adapter, reset_trae_adapter
 
 __all__ = [
     # 客户端

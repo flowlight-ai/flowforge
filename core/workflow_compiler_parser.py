@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -74,7 +74,7 @@ class VariableRef(BaseModel):
     model_config = {"frozen": True}
 
 
-def parse_variable_refs(text: str) -> list[VariableRef]:
+def parse_variable_refs(text: str) -> List[VariableRef]:
     """Extract all variable references from a string.
 
     Supports both ${{prefix.path}} and legacy {{prefix.path}} formats.
@@ -85,7 +85,7 @@ def parse_variable_refs(text: str) -> list[VariableRef]:
     Returns:
         A list of VariableRef instances found in the text.
     """
-    refs: list[VariableRef] = []
+    refs: List[VariableRef] = []
     seen: set[str] = set()
 
     for match in _VAR_REF_PATTERN.finditer(text):
@@ -110,9 +110,9 @@ def parse_variable_refs(text: str) -> list[VariableRef]:
     return refs
 
 
-def extract_variable_refs_from_value(value: Any) -> list[VariableRef]:
+def extract_variable_refs_from_value(value: Any) -> List[VariableRef]:
     """Recursively extract variable references from any value (dict, list, str)."""
-    refs: list[VariableRef] = []
+    refs: List[VariableRef] = []
     if isinstance(value, str):
         refs.extend(parse_variable_refs(value))
     elif isinstance(value, dict):
@@ -131,7 +131,7 @@ class ConditionIR(BaseModel):
     """A conditional routing entry."""
     expression: str
     target: str
-    variable_refs: list[VariableRef] = Field(default_factory=list)
+    variable_refs: List[VariableRef] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -160,7 +160,7 @@ class StateUpdateIR(BaseModel):
     """A single state update entry."""
     key: str
     expression: str
-    variable_refs: list[VariableRef] = Field(default_factory=list)
+    variable_refs: List[VariableRef] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -168,10 +168,10 @@ class StateUpdateIR(BaseModel):
 class EdgeIR(BaseModel):
     """A transition edge between steps."""
     source: str
-    target: str | None = None
-    targets: list[str] | None = None
-    condition: str | None = None
-    conditions: list[ConditionIR] = Field(default_factory=list)
+    target: Optional[str] = None
+    targets: Optional[List[str]] = None
+    condition: Optional[str] = None
+    conditions: List[ConditionIR] = Field(default_factory=list)
 
     model_config = {"extra": "allow"}
 
@@ -180,20 +180,20 @@ class StepIR(BaseModel):
     """A single step/node in the workflow IR."""
     name: str
     step_type: StepType = StepType.SEQUENCE
-    agent: str | None = None
-    tool: str | None = None
-    mode: str | None = None
-    prompt: str | None = None
-    input: dict[str, Any] | None = None
-    output: str | None = None
-    meta: dict[str, Any] | None = None
-    execution_policy: ExecutionPolicyIR | None = None
-    checkpoint: CheckpointIR | None = None
-    state_updates: list[StateUpdateIR] = Field(default_factory=list)
-    fallback_chain: list[dict[str, Any]] | None = None
-    variable_refs: list[VariableRef] = Field(default_factory=list)
+    agent: Optional[str] = None
+    tool: Optional[str] = None
+    mode: Optional[str] = None
+    prompt: Optional[str] = None
+    input: Optional[Dict[str, Any]] = None
+    output: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+    execution_policy: Optional[ExecutionPolicyIR] = None
+    checkpoint: Optional[CheckpointIR] = None
+    state_updates: List[StateUpdateIR] = Field(default_factory=list)
+    fallback_chain: Optional[List[Dict[str, Any]]] = None
+    variable_refs: List[VariableRef] = Field(default_factory=list)
     # Agent namespace: {project}:{agent_name}
-    agent_namespace: str | None = None
+    agent_namespace: Optional[str] = None
 
     model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
 
@@ -203,14 +203,14 @@ class WorkflowIR(BaseModel):
     name: str
     description: str = ""
     version: float = 1.0
-    steps: list[StepIR] = Field(default_factory=list)
-    edges: list[EdgeIR] = Field(default_factory=list)
-    entry_point: str | None = None
-    interrupt_before: list[str] = Field(default_factory=list)
-    state_config: dict[str, Any] | None = None
-    config: dict[str, Any] | None = None
-    checkpoint: CheckpointIR | None = None
-    source_path: str | None = None
+    steps: List[StepIR] = Field(default_factory=list)
+    edges: List[EdgeIR] = Field(default_factory=list)
+    entry_point: Optional[str] = None
+    interrupt_before: List[str] = Field(default_factory=list)
+    state_config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None
+    checkpoint: Optional[CheckpointIR] = None
+    source_path: Optional[str] = None
 
     model_config = {"arbitrary_types_allowed": True, "extra": "allow"}
 
@@ -246,7 +246,7 @@ class WorkflowParser:
         if not path.exists():
             raise FileNotFoundError(f"Workflow YAML file not found: {yaml_path}")
 
-        with open(path, encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             raw_config = yaml.safe_load(f)
 
         if not isinstance(raw_config, dict):
@@ -255,7 +255,7 @@ class WorkflowParser:
         logger.info(f"Loaded workflow YAML from {yaml_path}")
         return self.parse_from_dict(raw_config, source_path=yaml_path)
 
-    def parse_from_dict(self, config: dict[str, Any], source_path: str | None = None) -> WorkflowIR:
+    def parse_from_dict(self, config: dict[str, Any], source_path: Optional[str] = None) -> WorkflowIR:
         """Parse a workflow config dict into IR.
 
         Args:
@@ -355,7 +355,7 @@ class WorkflowParser:
             state_updates = self._parse_state_updates(node_config["state_updates"])
 
         # Collect variable refs from all string values in the step
-        variable_refs: list[VariableRef] = []
+        variable_refs: List[VariableRef] = []
         for field in ("prompt", "output"):
             val = node_config.get(field)
             if isinstance(val, str):
@@ -367,7 +367,7 @@ class WorkflowParser:
 
         # Deduplicate variable refs
         seen_keys: set[str] = set()
-        unique_refs: list[VariableRef] = []
+        unique_refs: List[VariableRef] = []
         for ref in variable_refs:
             key = f"{ref.prefix}.{ref.path}"
             if key not in seen_keys:
@@ -428,7 +428,7 @@ class WorkflowParser:
     def _parse_edge(self, edge_config: dict[str, Any]) -> EdgeIR:
         """Parse an edge config into EdgeIR."""
         condition_str = edge_config.get("condition")
-        conditions: list[ConditionIR] = []
+        conditions: List[ConditionIR] = []
 
         # Parse conditional_router if present
         router = edge_config.get("conditional_router")
@@ -482,9 +482,9 @@ class WorkflowParser:
             every_n_steps=checkpoint_config.get("every_n_steps", 5),
         )
 
-    def _parse_state_updates(self, updates_config: dict[str, Any]) -> list[StateUpdateIR]:
+    def _parse_state_updates(self, updates_config: dict[str, Any]) -> List[StateUpdateIR]:
         """Parse state_updates config into a list of StateUpdateIR."""
-        result: list[StateUpdateIR] = []
+        result: List[StateUpdateIR] = []
         if not isinstance(updates_config, dict):
             return result
         for key, expression in updates_config.items():
@@ -499,7 +499,7 @@ class WorkflowParser:
 
     # ──────────────────────────── Entry Point Inference ────────────────────────────
 
-    def _infer_entry_point(self, steps: list[StepIR], edges: list[EdgeIR]) -> str:
+    def _infer_entry_point(self, steps: List[StepIR], edges: List[EdgeIR]) -> str:
         """Infer the entry point from steps and edges.
 
         The entry point is a step that is never a target of any edge.

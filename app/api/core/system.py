@@ -1,14 +1,12 @@
-import asyncio
-import platform
 import sys
-from datetime import UTC, datetime
-from pathlib import Path
-
+import platform
 import yaml
+import asyncio
+from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-
-from flowforge.core.tracing import get_logger, get_trace_id
+from flowforge.core.tracing import get_trace_id, get_logger
 
 logger = get_logger("api.system")
 
@@ -31,7 +29,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
     }
 
 
@@ -150,7 +148,7 @@ def _load_workflow_steps_for_graph() -> list:
             continue
         for f in sorted(wf_dir.glob("*.yaml")):
             try:
-                with open(f, encoding="utf-8") as fh:
+                with open(f, "r", encoding="utf-8") as fh:
                     data = yaml.safe_load(fh) or {}
                 name = data.get("name", f.stem)
                 if name in seen_names:
@@ -346,8 +344,8 @@ async def execute_command(req: ExecuteRequest):
             raise HTTPException(status_code=403, detail=f"禁止执行危险命令: {d}")
 
     try:
-        import subprocess
         import sys
+        import subprocess
         if sys.platform == "win32":
             # Windows: use cmd.exe /c to execute commands
             proc = subprocess.run(
@@ -380,7 +378,7 @@ async def execute_command(req: ExecuteRequest):
             return {"output": output, "returncode": proc.returncode}
     except subprocess.TimeoutExpired:
         return {"output": f"命令超时（{req.timeout}秒）", "error": True}
-    except TimeoutError:
+    except asyncio.TimeoutError:
         try:
             proc.kill()
         except Exception:

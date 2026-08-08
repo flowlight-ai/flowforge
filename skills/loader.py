@@ -12,8 +12,9 @@ Auto-detects format based on file structure and naming conventions.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -40,7 +41,7 @@ class SkillLoader:
     # File extensions that may contain skill definitions
     SKILL_EXTENSIONS = {".yaml", ".yml", ".json", ".md"}
 
-    def load_from_directory(self, dir_path: str) -> list[SkillBase]:
+    def load_from_directory(self, dir_path: str) -> List[SkillBase]:
         """Load all skill files from a directory.
 
         Scans recursively for files with recognized extensions and
@@ -52,7 +53,7 @@ class SkillLoader:
         Returns:
             List of successfully loaded SkillBase instances.
         """
-        skills: list[SkillBase] = []
+        skills: List[SkillBase] = []
         dir_path_obj = Path(dir_path)
 
         if not dir_path_obj.exists():
@@ -81,7 +82,7 @@ class SkillLoader:
 
         return skills
 
-    def _load_file(self, file_path: str) -> SkillBase | None:
+    def _load_file(self, file_path: str) -> Optional[SkillBase]:
         """Auto-detect format and load a single skill file."""
         path = Path(file_path)
 
@@ -99,7 +100,7 @@ class SkillLoader:
 
         return None
 
-    def _detect_format(self, path: Path) -> SkillFormat | None:
+    def _detect_format(self, path: Path) -> Optional[SkillFormat]:
         """Detect skill format from file structure and content.
 
         Detection heuristics:
@@ -152,7 +153,7 @@ class SkillLoader:
 
         return None
 
-    def _read_raw(self, path: Path) -> dict[str, Any]:
+    def _read_raw(self, path: Path) -> Dict[str, Any]:
         """Read a YAML or JSON file into a dict."""
         suffix = path.suffix.lower()
         text = path.read_text(encoding="utf-8")
@@ -164,7 +165,7 @@ class SkillLoader:
 
     # ── Format-specific loaders ──────────────────────────────────────
 
-    def load_flowforge_skill(self, file_path: str) -> SkillBase | None:
+    def load_flowforge_skill(self, file_path: str) -> Optional[SkillBase]:
         """Load a FlowForge native YAML/JSON skill definition.
 
         Expected structure::
@@ -207,7 +208,7 @@ class SkillLoader:
             source_path=str(path.absolute()),
         )
 
-    def load_claude_code_skill(self, file_path: str) -> SkillBase | None:
+    def load_claude_code_skill(self, file_path: str) -> Optional[SkillBase]:
         """Parse a Claude Code skill format.
 
         Claude Code skills are typically Markdown files with YAML
@@ -226,7 +227,7 @@ class SkillLoader:
         text = path.read_text(encoding="utf-8")
 
         # Parse frontmatter
-        metadata: dict[str, Any] = {}
+        metadata: Dict[str, Any] = {}
         body = text
 
         if text.startswith("---"):
@@ -267,7 +268,7 @@ class SkillLoader:
             source_path=str(path.absolute()),
         )
 
-    def load_anthropic_skill(self, file_path: str) -> SkillBase | None:
+    def load_anthropic_skill(self, file_path: str) -> Optional[SkillBase]:
         """Parse an Anthropic skill format.
 
         Anthropic skills use a JSON structure with tool definitions
@@ -319,7 +320,7 @@ class SkillLoader:
             source_path=str(path.absolute()),
         )
 
-    def load_trae_cn_skill(self, file_path: str) -> SkillBase | None:
+    def load_trae_cn_skill(self, file_path: str) -> Optional[SkillBase]:
         """Parse a Trae CN skill format.
 
         Trae CN skills are YAML files with a specific structure that
