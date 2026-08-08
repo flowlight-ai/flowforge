@@ -100,3 +100,34 @@ FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent F
 | 2026-07-19 | v1.1 | 新增 test.md v2.0 条目；移除 design-system.md / public-lessons.md 死链 | 鲁班（猫头鹰 Owl） |
 | 2026-07-19 | v1.2 | 补全 test/ 子目录导航；新增 _archive/ 子目录条目；同步 SOP.md / TIPS.md 版本状态至 v1.1 | 鲁班（猫头鹰 Owl） |
 | 2026-07-21 | v1.3 | 移除对内部文档（task.md / _archive / harness-feedback / perspectives / setup）的死链；六大子目录导航聚焦公开文档 | 架构师可进化智能体 |
+
+## 协作规范：提示词与规则（AI 必读）
+
+> **AI 助手注意**：执行本项目任何任务前，请先阅读 `docs/rules/` 下的开发规范与 `docs/prompts/` 下的提示词模板；公共规范在 9 仓库中各自完整存放（自包含），无需跨仓库查找。
+
+### 提示词模板 docs/prompts/
+
+| 文件 | 说明 |
+|------|------|
+| [P-common.md](./prompts/P-common.md) | 公共提示词模板（P41-P50 等，全项目通用） |
+| [P-v7.md](./prompts/P-v7.md) | v7.0 规范配套提示词 |
+| [P-methodology.md](./prompts/P-methodology.md) | 方法论提示词 |
+| [LLM-review.md](./prompts/LLM-review.md) | LLM 评审提示词 |
+| [Q-followup.md](./prompts/Q-followup.md) | 追问/纠偏提示词 |
+| [TEMPLATE.md](./prompts/TEMPLATE.md) | 提示词模板骨架 |
+| [FF-flowforge.md](./prompts/FF-flowforge.md) | 本项目专属提示词 | 本项目专属提示词 |
+
+### 开发规范 docs/rules/
+
+完整规范共 15 份（00-v7-supplement ～ 12-doc-refactor-methodology、coding-redlines、test-iron-rules、01-architecture-overview 等），入口见 [rules/README.md](./rules/README.md)。核心：架构总览、核心架构原则、编码红线、测试铁律、文档分层。
+
+### 历史原件 docs/legacy/
+
+| 文件 | 说明 |
+|------|------|
+| [prompts.md](./legacy/prompts.md) | 生态提示词大全原件（180KB，3888 行） |
+| [rules.md](./legacy/rules.md) | 生态规范大全原件（79KB） |
+| [README-platform.md](./legacy/README-platform.md) | OpenClaw 智能内容创作平台 README 原件（三大核心项目、快速开始、一键启动） |
+
+拆解后的章节版见 [conventions/](./conventions/)（prompts-common / prompts-project / rules-common / architecture-overview / README）。
+

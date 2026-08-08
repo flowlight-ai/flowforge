@@ -1,0 +1,48 @@
+# 第四部分：代码风格规范
+
+> **来源**：原 `hiclaw/rules.md` 第四部分
+> **关联**：[doc:rules/05-dev-spec.md]（开发规范）
+
+---
+
+## 4.1 Python 代码规范
+
+1. **字符串与正则**：包含 `\` 的正则表达式**必须使用 raw string** `r"..."`
+2. **导入顺序**：标准库 → 第三方库 → 本地模块
+3. **函数命名**：snake_case，前缀 `_` 表示私有方法
+4. **异常处理**：必须明确返回状态
+5. **asyncio**：使用 `get_running_loop()` 而非已废弃的 `get_event_loop()`；sync代码用 `ThreadPoolExecutor`
+
+## 4.2 模板文件规范（.j2）
+
+1. **Jinja2 语法**：变量 `{{ var }}`，条件 `{% if %}`
+2. **中文内容**：使用中文引号 `""` 或 `''`
+3. **prompt 结构**：角色定义 → 分层规则 → `★★★` 最高优先级 → `❌` 禁止事项
+
+## 4.3 配置文件规范
+
+1. **YAML**：缩进 2 空格，不用 tab
+2. **JSON**：合法 JSON
+3. **环境变量**：`.env` 文件，绝不提交密钥到 git
+
+## 4.4 Web 前端多语言（i18n）规范
+
+**框架**：`react-i18next` + `i18next`
+
+**支持语言**：中文（zh）、英文（en）
+
+**铁律**：
+1. ❌ 禁止在组件中硬编码用户可见文本
+2. ❌ 禁止只更新一种语言的翻译文件
+3. ❌ 禁止在翻译键中使用拼接
+4. ✅ 新增页面/组件时，必须同时添加翻译键到 en.json 和 zh.json
+
+## 4.5 变量引用规范（跨项目统一）
+
+- `${{state.xxx}}` / `${{params.xxx}}` / `${{result.xxx}}` / `${{outputs.xxx.yyy}}`
+- Agent命名空间：`项目名:agent名`（如 `stockforge:technical_indicator`）
+- 状态输出：`state_updates: {key: expression}`
+
+---
+
+> **本文件来源**：原 `hiclaw/rules.md` 第四部分 代码风格规范
