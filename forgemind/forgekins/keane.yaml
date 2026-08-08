@@ -45,7 +45,7 @@ awakening_stage: E3
 # ── iFlow CLI 后端 ─────────────────────────────────────────
 llm:
   provider: iflow  # 通过 iFlow CLI（iflow -p）调用 OpenAI 兼容 API
-  model: Doubao-Seed2.0
+  model: GLM-5.1
   mode: cli
   session_id_prefix: "forgemind:keane"
   bridge_timeout: 180
