@@ -1,6 +1,6 @@
 # 第四部分：代码风格规范
 
-> **来源**：原 `hiclaw/rules.md` 第四部分
+> **来源**：生态规范大全原件 第四部分
 > **关联**：[doc:rules/05-dev-spec.md]（开发规范）
 
 ---
@@ -40,9 +40,9 @@
 ## 4.5 变量引用规范（跨项目统一）
 
 - `${{state.xxx}}` / `${{params.xxx}}` / `${{result.xxx}}` / `${{outputs.xxx.yyy}}`
-- Agent命名空间：`项目名:agent名`（如 `stockforge:technical_indicator`）
+- Agent命名空间：`项目名:agent名`（如 `myproject:my_agent`）
 - 状态输出：`state_updates: {key: expression}`
 
 ---
 
-> **本文件来源**：原 `hiclaw/rules.md` 第四部分 代码风格规范
+> **本文件来源**：生态规范大全原件 第四部分 代码风格规范

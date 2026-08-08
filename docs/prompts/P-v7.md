@@ -1,7 +1,7 @@
 # v7.0 增补公共模板（P41-P50）— 可进化智能体（Evolvable Agent）
 
 > **版本**: v7.0 增补提示词模板
-> **依据**: `flowforge/docs/review/review.md` 第六章/第八章/第九章 + ADR 005/006/012/013
+> **依据**: 评审规范文档 第六章/第八章/第九章 + ADR 005/006/012/013
 > **铁律**: 所有提示词模板用 YAML 格式（外置到 prompts.yaml，不在 .py 文件中硬编码）；使用 v7.0 新术语（灵智/育灵/灵忆/灵印/灵锻/灵典/进化阶/觉醒阶/MindCouncil/MindProfile/SpiritForge 等）
 > **命名说明**: 对外宣称使用"可进化智能体（Evolvable Agent）"或"多形态可进化智能体"，正式文档优先使用 AI 业界通用术语。
 > **引用**: `[doc:prompts/P-v7.md#PXX]`
@@ -299,7 +299,7 @@ guardrails:
   - "L6 成本上限: 配额控制"
 constraints:
   - "每次调用必须创建独立 worktree（网络隔离+权限控制+审计追踪+操作回滚）"
-  - "全部失败回退到 FlowForge 内置能力"
+  - "全部失败回退到平台内置能力"
 ```
 
 ---
@@ -403,7 +403,7 @@ constraints:
 > **适用阶段**: ForgeMindEngine 自我进化闭环
 > **输入**: 当前 feat 愿景 + 对话历史 + 错误模式 + 知识候选
 > **输出**: ScopeGuardLog / EvolutionProposal / EpisodeCard+MethodCard
-> **依据**: `hiclaw/rules.md#§0.10.1` + `flowforge/docs/review/review.md#13.1` CL-001~CL-006
+> **依据**: 生态规范 §0.10.1 + 评审规范 13.1 CL-001~CL-006
 
 ```yaml
 # prompts.yaml — P47 自我进化三模式提示词
@@ -490,7 +490,7 @@ constraints:
 > **适用阶段**: 智能体运行时（observe/act/verify 三协议）
 > **输入**: forgekin_id + 当前世界状态 + 感知输入 + 行动候选
 > **输出**: Core Identity 校验 + World 状态更新 + Bridge 协议响应
-> **依据**: `hiclaw/rules.md#§0.10.2` + `flowforge/docs/review/review.md#13.2` CL-007~CL-013
+> **依据**: 生态规范 §0.10.2 + 评审规范 13.2 CL-007~CL-013
 
 ```yaml
 # prompts.yaml — P48 世界引擎三层架构提示词
@@ -581,11 +581,11 @@ constraints:
 
 ### P49 三方 Agent Provider Plugin 提示词（F241 Manifest / Registry / Host Injection / ACP）
 
-> **用途**: 三方 Agent 厂商通过 Plugin 协议接入 FlowForge
+> **用途**: 三方 Agent 厂商通过 Plugin 协议接入平台
 > **适用阶段**: Provider 厂商接入流程（声明 Manifest → 实现 Adapter → 验证 → 注册）
 > **输入**: Provider 厂商信息 + 能力声明 + 安全级别
 > **输出**: AgentProviderManifest + Adapter 实现 + Reference Runtime 验证报告
-> **依据**: `hiclaw/rules.md#§0.10.3` + `flowforge/docs/review/review.md#13.3` CL-014~CL-017
+> **依据**: 生态规范 §0.10.3 + 评审规范 13.3 CL-014~CL-017
 
 ```yaml
 # prompts.yaml — P49 三方 Agent Provider Plugin 提示词
@@ -679,7 +679,7 @@ constraints:
 > **适用阶段**: 智能体状态切片迁移（Seed 播种 / Growth 增量 / Fruit 分享）
 > **输入**: Pack 类型 + 源智能体状态 + 目标智能体 ID
 > **输出**: Pack 文件 + 信任编译产物 + World Driver 播种报告
-> **依据**: `hiclaw/rules.md#§0.10.4` + `flowforge/docs/review/review.md#13.4` CL-018~CL-021
+> **依据**: 生态规范 §0.10.4 + 评审规范 13.4 CL-018~CL-021
 
 ```yaml
 # prompts.yaml — P50 Pack 系统提示词

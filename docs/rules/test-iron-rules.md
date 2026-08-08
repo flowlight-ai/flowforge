@@ -1,6 +1,6 @@
 # 测试铁律 T1-T9（独立索引）
 
-> **来源**：原 `hiclaw/rules.md` §5.5 抽取
+> **来源**：生态规范大全原件 §5.5 抽取
 > **用途**：本文件为测试铁律的独立索引，便于跨文档引用。规范正文见 [doc:rules/05-dev-spec.md#5.5]。
 > **关联**：[doc:rules/coding-redlines.md]（编程红线 15 条） | [doc:rules/07-coding-redlines.md]（第七部分 编程红线）
 
@@ -32,10 +32,10 @@
 - ❌ 用 `unittest.mock.Mock` 模拟 LLM 响应
 - ❌ 用预录制的 LLM 响应回放
 - ❌ 用 hash 生成假文本假装是 LLM 输出
-- ❌ 用本地小模型替代 OpenRoute 调用
+- ❌ 用本地小模型替代统一 LLM 网关调用
 
 **正确做法**：
-- ✅ 通过 OpenRoute 调用真实 LLM（豆包/Kimi/DeepSeek/通义/元宝/GLM/MiniMax）
+- ✅ 通过统一 LLM 网关调用真实 LLM
 - ✅ 使用真实模型候选链回退
 - ✅ 记录真实 LLM 调用的延迟/质量分
 
@@ -70,7 +70,7 @@
 - ❌ Mock `fact_check` 返回硬编码通过
 
 **正确做法**：
-- ✅ `web_search` 真实调用 OpenSieve / SearXNG
+- ✅ `web_search` 真实调用检索服务
 - ✅ `publish` 真实发布到头条/公众号/百家号/知乎（测试环境）
 - ✅ `fact_check` 真实调用 fact_check 工具
 
@@ -117,7 +117,7 @@
 4. 对 DOM 内容调用 LLM 审核质量（与 T7 结合）
 
 **Windows 平台注意**：
-- openroute browser 必须用 `headless=False`（可见模式）
+- 浏览器抓取必须用 `headless=False`（可见模式）
 - 默认超时从 30s 提升到 60s
 - 浏览器实例失效后必须重建（包括 `is_connected()` 检测和 `new_page()` 失败重试）
 
@@ -158,6 +158,6 @@
 
 ---
 
-> **本文件来源**：原 `hiclaw/rules.md` §5.5 测试铁律（独立抽取）
+> **本文件来源**：生态规范大全原件 §5.5 测试铁律（独立抽取）
 > **规范正文**：[doc:rules/05-dev-spec.md#5.5]
 > **关联文档**：[doc:prompts.md] P7（测试铁律自检）| [doc:prompts.md] P34（禁止事项清单）

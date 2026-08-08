@@ -134,19 +134,8 @@
 ### FF4d Loop 与上层项目集成验证
 
 ```
-请验证 Loop Engine 与上层项目的集成是否正确：
+请验证 Loop Engine 集成是否正确：
 1. FlowForge SDK — loop_executor 属性、create_loop_template() 方法、bootstrap() 自动初始化
-2. NovelForge — 8大创作阶段是否默认使用 Loop 执行
-   - 概念孵化 → novel-concept-loop
-   - 章节写作 → novel-chapter-loop
-   - 章节审核 → novel-review-loop
-   - 润色 → novel-polish-loop
-3. ContentForge — 4种创作流程是否默认使用 Loop 执行
-   - 深度文章 → deep-article-loop
-   - 内容润色 → content-polish-loop
-   - 事实核查 → fact-check-loop
-   - 发布 → publish-loop
-4. DevForge / MallForge — 是否已集成 Loop
 5. Loop 作为默认执行流程 — 当 loop_executor 可用且有对应模板时自动使用
 6. 向后兼容 — loop_executor 不可用时退化为 HybridExecutor 直接执行
 每个集成点用真实任务端到端验证。
@@ -220,8 +209,8 @@
 ### FF9 模型配置管理
 
 ```
-当前flowforge中的模型配置，只需要配置openroute和openrouter两个供应商。
-openroute作为预制默认模型进行配置管理，用户不可删除不可修改。
+当前flowforge中的模型配置，只需要配置统一LLM网关和openrouter两个供应商。
+统一LLM网关作为预制默认模型进行配置管理，用户不可删除不可修改。
 openrouter作为自定义模型进行配置管理。
 请按trae cn的模型管理界面开发，参考他们搞简洁一些，但是配置要是有效的。
 ```
@@ -299,13 +288,11 @@ L1 工具超时防御(120s) → L2 重复检测钩子 → L3 自修正重试(ref
 
 ## 2.7 架构原则
 
-### FF16 底座与上层项目关系
+### FF16 底座定位
 
 ```
-flowforge 是通用智能体框架，可以完成所有contentforge、devforge、novelforge、mallforge中的任务。
-contentforge、devforge、novelforge、mallforge是基于flowforge能力扩展的复杂场景专有智能体，
-继承flowforge所有能力，尤其是在界面可视化上边更适合对应的专业场景，
-其他基础能力都要复用flowforge的，相比flowforge就是多了更直观的界面操控。
+flowforge 是通用智能体框架，提供完整的智能体编排与执行能力；
+上层场景应用基于 flowforge 能力扩展，基础能力一律复用 flowforge。
 ```
 
 ### FF17 十大架构原则验证
@@ -421,9 +408,6 @@ contentforge、devforge、novelforge、mallforge是基于flowforge能力扩展�
 ```
 验证前后端 API 契约是否一致：
 1. 代理配置：next.config.js 中 rewrites 必须指向正确的后端端口
-   - FlowForge: 8000（非 8002 DevForge）
-   - ContentForge: 8001
-   - DevForge: 8002
 2. 路由命名：导航 href 必须与 app/ 下的实际页面目录一致
    - /solo 对应 app/solo/page.tsx（不是 /helm）
    - /admin/models 对应 app/admin/models/page.tsx
@@ -467,38 +451,6 @@ contentforge、devforge、novelforge、mallforge是基于flowforge能力扩展�
    - 修复方向：对 timeout/server_error 错误重试 1-2 次，指数退避
 ```
 
-### FF26 OpenRoute 回退机制规范（基于风险调研）
-
-> 来源：OpenRoute 回退机制调研。识别 10 个风险点（2 个严重级）。
-
-```
-验证 OpenRoute 服务回退机制是否符合规范：
-1. _browser_available 标记必须与实际浏览器状态一致
-   - 当前问题：_resolve_web_client 误将 _browser_available 重置为 True
-   - 修复方向：增加对 bm._context/bm._page 的实际存活检测
-2. SmartLLMRouter 必须接入主请求链路
-   - 当前问题：smart_router.py 实现完整但未被 chat_completions 调用
-   - 修复方向：将 SmartLLMRouter 作为统一调度入口
-3. _browser_available 禁止过早置 True
-   - 当前问题：app.py:222 在后台 task 启动前就置 True
-   - 修复方向：后台 init 成功后再置 True
-4. ApiProviderManager 与 ModelRouter 可用性判断必须一致
-   - 当前问题：web/api 模型在 ApiProviderManager 中"始终可用"，但 ModelRouter 依赖 _browser_available
-   - 修复方向：统一由 ModelRouter 作为可用性判断源
-5. API 组件初始化必须有 try/except 保护
-   - 当前问题：app.py:69-103 配置加载异常会冒泡到 startup，导致服务无法启动
-   - 修复方向：对 config 加载做容错（默认空配置 + 警告日志）
-6. WebChat 必须支持跨 provider 重试
-   - 当前问题：webchat_channel.py:330-335 异常直接返回 refusal
-   - 修复方向：失败时尝试其他 webchat provider（如 kimi-web → deepseek-web）
-7. BrowserManager.init() 必须加锁保护
-   - 当前问题：无 async with self._lock，并发调用可能重复启动浏览器
-   - 修复方向：init() 加锁或用 once-flag
-8. _kill_chrome_processes 必须改为异步执行
-   - 当前问题：使用 os.system 阻塞事件循环
-   - 修复方向：改用 asyncio.create_subprocess_exec
-```
-
 ---
 
 ## v7.0 增补 FlowForge 模板（FF22-FF23 forgemind/三方 Agent 集成）
@@ -509,7 +461,6 @@ contentforge、devforge、novelforge、mallforge是基于flowforge能力扩展�
 ### FF22 forgemind 集成验证模板（v7.0 增补）
 
 > **用途**: 验证 *Forge 是否正确通过 Plugin V3 四钩子注册可进化智能体到 forgemind
-> **适用项目**: FlowForge + 所有 *Forge（contentforge/devforge/novelforge/mallforge）
 > **验证项**: register_forgekins / register_forge_skills / register_council_channels / register_auto_forge_config
 
 ```yaml
@@ -518,7 +469,6 @@ template_id: FF22
 name: forgemind 集成验证模板
 version: v7.0
 purpose: "验证 *Forge 是否正确通过 Plugin V3 四钩子注册可进化智能体到 forgemind"
-applies_to: [FlowForge, ContentForge, DevForge, NovelForge, MallForge]
 verification_items:
   - hook: register_forgekins
     checks:
@@ -630,7 +580,7 @@ prompt: |
   7. 验证六层 Guardrails 全部生效
   8. 验证 worktree 隔离（网络/权限/审计/回滚）
   9. 验证调用语义统一（同步/异步/流式/委托）
-  10. 验证全部失败回退到 FlowForge 内置能力
+  10. 验证全部失败回退到平台内置能力
   对每个未通过项给出: 文件路径 → 行号 → 违规描述 → 修复方案。
 constraints:
   - "禁止 Mock（T1/T4）：必须真实调用三方 Agent（claude code/codex/opencode/trae）"

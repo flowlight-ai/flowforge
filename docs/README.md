@@ -103,31 +103,25 @@ FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent F
 
 ## 协作规范：提示词与规则（AI 必读）
 
-> **AI 助手注意**：执行本项目任何任务前，请先阅读 `docs/rules/` 下的开发规范与 `docs/prompts/` 下的提示词模板；公共规范在 9 仓库中各自完整存放（自包含），无需跨仓库查找。
+> **AI 助手注意**：执行本项目任何任务前，请先阅读 `docs/rules/` 下的开发规范与 `docs/prompts/` 下的提示词模板。本仓库 docs 只记录 智能体底座平台（flowforge）自身的内容，与其他项目解耦。
 
 ### 提示词模板 docs/prompts/
 
 | 文件 | 说明 |
 |------|------|
-| [P-common.md](./prompts/P-common.md) | 公共提示词模板（P41-P50 等，全项目通用） |
-| [P-v7.md](./prompts/P-v7.md) | v7.0 规范配套提示词 |
-| [P-methodology.md](./prompts/P-methodology.md) | 方法论提示词 |
-| [LLM-review.md](./prompts/LLM-review.md) | LLM 评审提示词 |
-| [Q-followup.md](./prompts/Q-followup.md) | 追问/纠偏提示词 |
-| [TEMPLATE.md](./prompts/TEMPLATE.md) | 提示词模板骨架 |
-| [FF-flowforge.md](./prompts/FF-flowforge.md) | 本项目专属提示词 | 本项目专属提示词 |
+| [FF-flowforge.md](./prompts/FF-flowforge.md) | 本项目专属提示词模板 |
+| [P-v7.md](./prompts/P-v7.md) | v7.0 规范配套提示词（通用） |
+| [P-methodology.md](./prompts/P-methodology.md) | 方法论提示词（通用） |
+| [Q-followup.md](./prompts/Q-followup.md) | 追问/纠偏提示词（通用） |
 
-### 开发规范 docs/rules/
+### 开发规范 docs/rules/（8 份通用规范）
 
-完整规范共 15 份（00-v7-supplement ～ 12-doc-refactor-methodology、coding-redlines、test-iron-rules、01-architecture-overview 等），入口见 [rules/README.md](./rules/README.md)。核心：架构总览、核心架构原则、编码红线、测试铁律、文档分层。
-
-### 历史原件 docs/legacy/
-
-| 文件 | 说明 |
-|------|------|
-| [prompts.md](./legacy/prompts.md) | 生态提示词大全原件（180KB，3888 行） |
-| [rules.md](./legacy/rules.md) | 生态规范大全原件（79KB） |
-| [README-platform.md](./legacy/README-platform.md) | OpenClaw 智能内容创作平台 README 原件（三大核心项目、快速开始、一键启动） |
-
-拆解后的章节版见 [conventions/](./conventions/)（prompts-common / prompts-project / rules-common / architecture-overview / README）。
+- [04-code-style.md](./rules/04-code-style.md)
+- [05-dev-spec.md](./rules/05-dev-spec.md)
+- [06-ai-behavior.md](./rules/06-ai-behavior.md)
+- [07-coding-redlines.md](./rules/07-coding-redlines.md)
+- [08-flowforge-boundary.md](./rules/08-flowforge-boundary.md)
+- [11-doc-layering.md](./rules/11-doc-layering.md)
+- [12-doc-refactor-methodology.md](./rules/12-doc-refactor-methodology.md)
+- [test-iron-rules.md](./rules/test-iron-rules.md)
 

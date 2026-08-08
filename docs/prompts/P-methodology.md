@@ -137,7 +137,7 @@
 [单向依赖 / 配置驱动 > 代码继承 > 独立实现 / Plugin V3 / Eval 自代谢 等]
 
 ### §2.2 N 层架构模型
-[FlowForge 七层架构 + forgemind 应用层；或 *Forge 简化版]
+[平台七层架构 + 应用层；或简化版]
 
 ### §2.3 完整架构图
 [ASCII 架构图 + 模块依赖关系]
@@ -235,7 +235,7 @@
 > 仅放**核心关键功能**详细设计（非核心放 design/D0XX）
 
 ### §3.1 [核心模块 1]
-**模块路径**：`flowforge/xxx/yyy.py`
+**模块路径**：`<project>/xxx/yyy.py`
 **类与接口**：
 ```python
 class XXX:

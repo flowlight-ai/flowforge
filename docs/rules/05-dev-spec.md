@@ -1,6 +1,6 @@
 # 第五部分：开发规范与最佳实践
 
-> **来源**：原 `hiclaw/rules.md` 第五部分
+> **来源**：生态规范大全原件 第五部分
 > **关联**：[doc:rules/test-iron-rules.md]（测试铁律 T1-T9 独立索引） | [doc:rules/04-code-style.md]（代码风格） | [doc:rules/coding-redlines.md]（编程红线 15 条）
 
 ---
@@ -8,7 +8,7 @@
 ## 5.1 铁律：禁止盲目覆盖
 
 ```
-🚫 绝对禁止：cp content/file.py content/backup/file.py（跨目录盲目覆盖）
+🚫 绝对禁止：cp src/file.py src/backup/file.py（跨目录盲目覆盖）
 🚫 绝对禁止：shutil.copy(src, dst) 跨实例覆盖
 🚫 绝对禁止：批量复制模板文件
 ```
@@ -62,4 +62,4 @@
 
 ---
 
-> **本文件来源**：原 `hiclaw/rules.md` 第五部分 开发规范与最佳实践
+> **本文件来源**：生态规范大全原件 第五部分 开发规范与最佳实践

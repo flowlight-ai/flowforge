@@ -1,6 +1,6 @@
 # 第八部分：FlowForge 与 *Forge 架构边界验证（P8A 核心铁律）
 
-> **来源**：原 `hiclaw/rules.md` 第八部分
+> **来源**：生态规范大全原件 第八部分
 > **关联**：[doc:rules/02-core-architecture-principles.md]（核心架构原则） | [doc:rules/01-architecture-overview.md#1.4]（目录结构约定）
 
 ---
@@ -33,4 +33,4 @@
 
 ---
 
-> **本文件来源**：原 `hiclaw/rules.md` 第八部分 FlowForge 与 *Forge 架构边界验证
+> **本文件来源**：生态规范大全原件 第八部分 FlowForge 与 *Forge 架构边界验证
