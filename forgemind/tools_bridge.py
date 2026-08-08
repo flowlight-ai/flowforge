@@ -208,7 +208,7 @@ def _extract_file_path(message: str) -> str | None:
 
     支持格式:
         - "读取文件 flowforge/forgemind/base.py"
-        - "看下文件 d:\\\\software\\\\openclaw\\\\README.md"
+        - "看下文件 flowforge/README.md"
         - "cat config.yaml"
     """
     import re

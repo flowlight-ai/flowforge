@@ -6,8 +6,8 @@
     3. IM MindCouncil — 3 只Forgekin共同讨论
     4. 自进化触发 — ForgeMindEngine Mode A/B/C
 
-运行方式:
-    cd d:\\software\\openclaw
+运行方式（在 flowforge 的父目录执行；跨平台，勿写死操作系统绝对路径）:
+    cd <workspace-root>            # 即 flowforge 的上一级目录
     python flowforge/scripts/verify_forgemind_pipeline.py
 
 详见:

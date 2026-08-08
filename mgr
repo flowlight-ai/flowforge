@@ -1,0 +1,308 @@
+#!/bin/bash
+# ============================================================================
+# mgr — FlowLight 多仓库管理 (Gitee ⇄ GitHub 双平台/双目录)
+#
+# 目录模型 (相对定位, 跨平台克隆位置无关):
+#   <workspace>/flowlight/<repo>/mgr   → Gitee 端 (origin=gitee.com)
+#   <workspace>/flowlight-ai/<repo>    → GitHub端 (origin=github.com)
+#
+# 作用域 (9 个项目脚本主体一致, 按所在仓库自动决定默认行为):
+#   content/mgr   → 默认管理全部 9 个仓库 (总控)
+#   其他仓库/mgr  → 默认仅管理本仓库自身
+#   --all         → 强制管理全部 9 个仓库
+#   --repo NAME   → 仅管理指定仓库 (可叠加使用于任意项目)
+#
+# 用法:
+#   ./mgr [--all|--repo NAME] status | commit | push | pull | clone | log | diff | branch | list
+#   ./mgr sync              推送双端 (从已改动端推 origin → 再推 mirror)
+#   ./mgr pr "标题"         双平台创建 PR (Gitee + GitHub)
+#   ./mgr mirror-setup      一键配置双端互指 mirror 远程
+#   ./mgr dev-setup         批量创建 dev 分支
+#   ./mgr protect           设置 master 分支保护 (仅 Gitee)
+# ============================================================================
+set -e
+_git() { local d="$1"; shift; (cd "$d" && git "$@"); }
+
+# ── 路径 (相对定位) ────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_GITEE="$(cd "$SCRIPT_DIR/.." && pwd)"
+ROOT_GITHUB="$(cd "$(dirname "$ROOT_GITEE")/flowlight-ai" 2>/dev/null && pwd || echo "$(dirname "$ROOT_GITEE")/flowlight-ai")"
+GITEE_ORG="flowlight-ai"; GH_ORG="flowlight-ai"
+SELF="$(basename "$SCRIPT_DIR")"
+
+# ── 注册: 名称 gitee子路径 github子路径 ─────────────────────────
+declare -a NAMES=()
+declare -A GPATH=()    # gitee 本地路径
+declare -A GH_PATH=()  # github 本地路径
+declare -A GURL=()     # gitee 远程 URL
+declare -A GH_URL=()   # github 远程 URL
+
+reg() { local n="$1" gr="$2" ghr="$3"; NAMES+=("$n")
+  GPATH["$n"]="$ROOT_GITEE/$gr"; GH_PATH["$n"]="$ROOT_GITHUB/$ghr"
+  GURL["$n"]="https://gitee.com/${GITEE_ORG}/${n}.git"
+  GH_URL["$n"]="https://github.com/${GH_ORG}/${n}.git"; }
+
+reg "content"      "content"      "content"
+reg "openroute"    "openroute"    "openroute"
+reg "flowforge"    "flowforge"    "flowforge"
+reg "stockforge"   "stockforge"   "stockforge"
+reg "contentforge" "contentforge" "contentforge"
+reg "devforge"     "devforge"     "devforge"
+reg "novelforge"   "novelforge"   "novelforge"
+reg "mallforge"    "mallforge"    "mallforge"
+reg "opensieve"    "opensieve"    "opensieve"
+
+# ── 作用域解析: content 默认全部, 其他仓库默认自身 ───────────────
+SCOPE="default"
+SCOPE_REPO=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --all)  SCOPE="all"; shift ;;
+    --repo) SCOPE="repo"; SCOPE_REPO="${2:-}"; shift 2 ;;
+    *) break ;;
+  esac
+done
+if [ "$SCOPE" = "default" ]; then
+  if [ "$SELF" = "content" ]; then SCOPE="all"; else SCOPE="self"; fi
+fi
+case "$SCOPE" in
+  all)  : ;;  # NAMES 保持全部 9 个
+  self) NAMES=("$SELF") ;;
+  repo)
+    if [[ ! " ${NAMES[*]} " =~ " ${SCOPE_REPO} " ]]; then
+      echo "错误: 未知仓库 '$SCOPE_REPO' (可选: ${NAMES[*]})" >&2; exit 1
+    fi
+    NAMES=("$SCOPE_REPO") ;;
+esac
+
+# ── 颜色 ────────────────────────────────────────────────────────
+R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; B='\033[1m'; N='\033[0m'
+
+# ── Token (本仓库 .mgr-token → 工作区根 .mgr-token → 环境变量) ──
+load_token() {
+  local f="$SCRIPT_DIR/.mgr-token"
+  [ ! -f "$f" ] && f="$ROOT_GITEE/.mgr-token"
+  [ -f "$f" ] && MGR_TOKEN="$(cat "$f"|tr -d '[:space:]')" || MGR_TOKEN="${GITEE_TOKEN:-}"; }
+load_gh_token() { MGR_GH_TOKEN="${GITHUB_TOKEN:-}"; [ -z "$MGR_GH_TOKEN" ] && [ -f "$HOME/.github-token" ] && MGR_GH_TOKEN="$(cat "$HOME/.github-token"|tr -d '[:space:]')"; }
+
+# ── 辅助 ────────────────────────────────────────────────────────
+usage() { sed -n '2,20p' "$0"; exit 0; }
+
+# ──────── 命令 ──────────────────────────────────────────────────
+
+cmd_status() {
+  for n in "${NAMES[@]}"; do
+    for side in gitee github; do
+      local d; [ "$side" = "gitee" ] && d="${GPATH[$n]}" || d="${GH_PATH[$n]}"
+      [ ! -d "$d/.git" ] && continue
+      local out; out=$(_git "$d" status --short 2>&1) || true
+      [ -n "$out" ] && { echo -e "${B}${Y}-- ${n} (${side}) --${N}"; echo "$out"; }
+    done
+  done
+  echo -e "${B}分支 & 同步状态:${N}"
+  for n in "${NAMES[@]}"; do
+    for side in gitee github; do
+      local d; [ "$side" = "gitee" ] && d="${GPATH[$n]}" || d="${GH_PATH[$n]}"
+      [ ! -d "$d/.git" ] && continue
+      local b; b=$(_git "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+      _git "$d" remote update origin &>/dev/null || true
+      local a=$(_git "$d" rev-list --count "origin/${b}..${b}" 2>/dev/null || echo "?")
+      local be=$(_git "$d" rev-list --count "${b}..origin/${b}" 2>/dev/null || echo "?")
+      printf "  %-14s ${C}%s${N} [${Y}%s${N}] ${G}↑%s${N} ${R}↓%s${N}\n" "$n" "$side" "$b" "$a" "$be"
+    done
+  done
+  echo ""
+}
+
+# ── 容错状态文件 ────────────────────────────────────────────────
+SYNC_STATE="$SCRIPT_DIR/.mgr-sync-state"
+
+_sync_fail() { echo "$1" >> "$SYNC_STATE"; }
+_sync_report() {
+  echo -e "\n${B}═══ Sync 报告 ═══${N}"
+  local ok=0 fail=0
+  if [ -f "$SYNC_STATE" ]; then
+    while IFS= read -r line; do
+      case "$line" in
+        OK:*) ok=$((ok+1)); echo -e "  ${G}✓${N} ${line#OK:}" ;;
+        FAIL:*) fail=$((fail+1)); echo -e "  ${R}✗${N} ${line#FAIL:}";;
+      esac
+    done < "$SYNC_STATE"
+  fi
+  echo -e "  ${G}${ok} 成功${N}  ${R}${fail} 失败${N}"
+  if [ $fail -gt 0 ]; then
+    echo -e "  ${Y}运行: ./mgr sync --retry 重试失败项${N}"
+  fi
+  rm -f "$SYNC_STATE"
+}
+
+cmd_sync() {
+  local RETRY=false
+  [ "${1:-}" = "--retry" ] && { RETRY=true; shift; }
+
+  # 如果 --retry，从状态文件读取失败项
+  local -A FAILED=()
+  if $RETRY && [ -f "$SYNC_STATE" ]; then
+    while IFS= read -r line; do
+      case "$line" in FAIL:*) FAILED["${line#FAIL:}"]=1;; esac
+    done < "$SYNC_STATE"
+    rm -f "$SYNC_STATE"
+  fi
+
+  >"$SYNC_STATE"  # 清空状态文件
+
+  local TMPERR; TMPERR="$(mktemp)"
+  for n in "${NAMES[@]}"; do
+    [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue
+
+    # ── Gitee 端 ──
+    local gd="${GPATH[$n]}"
+    if [ -d "$gd/.git" ]; then
+      local b; b=$(_git "$gd" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+      local dirty; dirty=$(_git "$gd" status --short 2>/dev/null | wc -l)
+      local ahead; ahead=$(_git "$gd" rev-list --count "origin/${b}..${b}" 2>/dev/null || echo "0")
+
+      # --retry 模式跳过已成功的
+      local gitee_origin_key="Gitee:$n:origin/$b"
+      local gitee_mirror_key="Gitee:$n:mirror->github/$b"
+      $RETRY && [ -z "${FAILED[$gitee_origin_key]}" -a -z "${FAILED[$gitee_mirror_key]}" ] && continue
+
+      echo -e "${B}${Y}══ ${n} / Gitee [${b}]${N}"
+      [ "$dirty" -gt 0 ] && echo -n "  ${Y}dirty:${dirty}${N}" || true
+      [ "$ahead" != "0" ] && echo -n "  ${Y}↑${ahead}${N}" || true
+      echo ""
+
+      # 确保 github mirror 远程存在
+      _git "$gd" remote get-url github &>/dev/null && _git "$gd" remote set-url github "${GH_URL[$n]}" 2>/dev/null || _git "$gd" remote add github "${GH_URL[$n]}" 2>/dev/null || true
+
+      # Push to Gitee origin
+      echo -n "  gitee.com ... "
+      if _git "$gd" push -u origin "$b" 2>"$TMPERR"; then
+        echo -e "${G}OK${N}"; _sync_fail "OK:$gitee_origin_key"
+      else
+        local err1; err1=$(head -2 "$TMPERR" 2>/dev/null | tr '\n' ' ' | cut -c1-80)
+        echo -e "${R}FAIL: ${err1:-network error}${N}"; _sync_fail "FAIL:$gitee_origin_key"
+      fi
+
+      # Push to GitHub mirror (from Gitee side)
+      echo -n "  → github.com (mirror) ... "
+      if _git "$gd" push github "$b" 2>"$TMPERR"; then
+        echo -e "${G}OK${N}"; _sync_fail "OK:$gitee_mirror_key"
+      else
+        local err2; err2=$(head -2 "$TMPERR" 2>/dev/null | tr '\n' ' ' | cut -c1-80)
+        echo -e "${R}FAIL: ${err2:-network error}${N}"; _sync_fail "FAIL:$gitee_mirror_key"
+      fi
+    fi
+
+    # ── GitHub 端 ──
+    local ghd="${GH_PATH[$n]}"
+    if [ -d "$ghd/.git" ]; then
+      local b; b=$(_git "$ghd" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+      local dirty; dirty=$(_git "$ghd" status --short 2>/dev/null | wc -l)
+      local ahead; ahead=$(_git "$ghd" rev-list --count "origin/${b}..${b}" 2>/dev/null || echo "0")
+
+      local gh_origin_key="GitHub:$n:origin/$b"
+      local gh_mirror_key="GitHub:$n:mirror->gitee/$b"
+      $RETRY && [ -z "${FAILED[$gh_origin_key]}" -a -z "${FAILED[$gh_mirror_key]}" ] && continue
+
+      echo -e "${B}${C}══ ${n} / GitHub [${b}]${N}"
+      [ "$dirty" -gt 0 ] && echo -n "  ${Y}dirty:${dirty}${N}" || true
+      [ "$ahead" != "0" ] && echo -n "  ${Y}↑${ahead}${N}" || true
+      echo ""
+
+      _git "$ghd" remote get-url gitee &>/dev/null && _git "$ghd" remote set-url gitee "${GURL[$n]}" 2>/dev/null || _git "$ghd" remote add gitee "${GURL[$n]}" 2>/dev/null || true
+
+      # Push to GitHub origin
+      echo -n "  github.com ... "
+      if _git "$ghd" push -u origin "$b" 2>"$TMPERR"; then
+        echo -e "${G}OK${N}"; _sync_fail "OK:$gh_origin_key"
+      else
+        local err3; err3=$(head -2 "$TMPERR" 2>/dev/null | tr '\n' ' ' | cut -c1-80)
+        echo -e "${R}FAIL: ${err3:-network error}${N}"; _sync_fail "FAIL:$gh_origin_key"
+      fi
+
+      # Push to Gitee mirror (from GitHub side)
+      echo -n "  → gitee.com (mirror) ... "
+      if _git "$ghd" push gitee "$b" 2>"$TMPERR"; then
+        echo -e "${G}OK${N}"; _sync_fail "OK:$gh_mirror_key"
+      else
+        local err4; err4=$(head -2 "$TMPERR" 2>/dev/null | tr '\n' ' ' | cut -c1-80)
+        echo -e "${R}FAIL: ${err4:-network error}${N}"; _sync_fail "FAIL:$gh_mirror_key"
+      fi
+    fi
+    echo ""
+  done
+  _sync_report
+  rm -f "$TMPERR"
+}
+
+cmd_mirror_setup() {
+  for n in "${NAMES[@]}"; do
+    echo -e "${B}${n}:${N}"
+    local gd="${GPATH[$n]}" ghd="${GH_PATH[$n]}"
+    if [ -d "$gd/.git" ]; then
+      _git "$gd" remote get-url github &>/dev/null && _git "$gd" remote set-url github "${GH_URL[$n]}" || _git "$gd" remote add github "${GH_URL[$n]}" 2>/dev/null
+      echo "  gitee dir: github mirror ready"
+    fi
+    if [ -d "$ghd/.git" ]; then
+      _git "$ghd" remote get-url gitee &>/dev/null && _git "$ghd" remote set-url gitee "${GURL[$n]}" || _git "$ghd" remote add gitee "${GURL[$n]}" 2>/dev/null
+      echo "  github dir: gitee mirror ready"
+    fi
+  done
+  echo -e "\n${B}现在运行 ${C}./mgr sync${N}${B} 双向推送${N}"
+}
+
+cmd_pr() {
+  local title="${*:-feat: dev -> master}"; load_token; load_gh_token
+  for n in "${NAMES[@]}"; do
+    local gd="${GPATH[$n]}"; [ ! -d "$gd/.git" ] && gd="${GH_PATH[$n]}"
+    [ ! -d "$gd/.git" ] && continue
+    local b; b=$(_git "$gd" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+    [ "$b" != "dev" ] && { echo -e "${Y}${n}: branch=${b} skip${N}"; continue; }
+    echo -e "${B}═══ ${n} PR ═══${N}"
+    echo -n "  Gitee: "
+    [ -n "$MGR_TOKEN" ] && {
+      r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"dev\",\"base\":\"master\",\"access_token\":\"${MGR_TOKEN}\"}")
+      u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
+      [ -n "$u" ] && echo -e "${G}$u${N}" || echo -e "${R}FAILED${N}"
+    } || echo -e "${Y}no token${N}"
+    echo -n "  GitHub: "
+    [ -n "$MGR_GH_TOKEN" ] && {
+      r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"dev\",\"base\":\"master\"}")
+      u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
+      [ -n "$u" ] && echo -e "${G}$u${N}" || echo -e "${R}FAILED${N}"
+    } || echo -e "${Y}no token${N}"
+    echo ""
+  done
+}
+
+cmd_commit() { local m="$*"; [ -z "$m" ] && { echo -e "${R}缺少msg${N}"; exit 1; }; for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; _git "$d" add -A; _git "$d" diff --cached --quiet && continue; echo -e "${B}${n}${N}"; _git "$d" commit -m "$m" 2>&1|tail -1; done; done; echo ""; }
+cmd_push()   { for n in "${NAMES[@]}"; do [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue; for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; local b=$(_git "$d" rev-parse --abbrev-ref HEAD); _git "$d" push -u origin "$b" 2>&1|tail -1; echo -e "  ${G}${n} → origin/${b}${N}"; done; done; echo ""; }
+cmd_pull()   { for n in "${NAMES[@]}"; do [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue; for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; echo -e "${B}${n}${N}"; _git "$d" pull 2>&1|tail -1; done; done; echo ""; }
+cmd_log()    { local L=5; [ -n "${1:-}" ] && [[ "${1:-}" =~ ^[0-9]+$ ]] && { L="$1"; shift; }; for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; echo -e "${B}${n}${N}"; _git "$d" log --oneline -"$L"; done; done; echo ""; }
+cmd_diff()   { for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; local out; out=$(_git "$d" diff --stat 2>&1); [ -n "$out" ] && { echo -e "${B}${n}${N}"; echo "$out"; }; done; done; echo ""; }
+cmd_branch() { for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; printf "  %-14s %s\n" "$n" "$(_git "$d" branch --show-current)"; done; done; echo ""; }
+cmd_list()   { echo -e "${B}双目录模型:${N}\n  Gitee:  ${ROOT_GITEE}\n  GitHub: ${ROOT_GITHUB}\n  本仓库: ${SELF} (默认作用域: $([ "$SELF" = content ] && echo "全部 9 仓库" || echo "仅本仓库"))\n\n${B}${#NAMES[@]} projects (当前作用域):${N}"; for n in "${NAMES[@]}"; do printf "  %-14s gitee=%s github=%s\n" "$n" "${GURL[$n]}" "${GH_URL[$n]}"; done; echo ""; }
+cmd_dev_setup(){ for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; _git "$d" checkout master 2>/dev/null||true; _git "$d" fetch origin master 2>/dev/null||true; _git "$d" branch -D dev 2>/dev/null||true; _git "$d" checkout -b dev 2>/dev/null||true; _git "$d" push -u origin dev 2>&1|tail -1; echo "  ${n}: dev ready"; done; done; echo ""; }
+cmd_protect() { load_token; [ -z "$MGR_TOKEN" ] && { echo -e "${R}no token${N}"; exit 1; }; for n in "${NAMES[@]}"; do echo -n "  $n: "; r=$(curl -s -X PUT "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/branches/setting/new" -H "Content-Type: application/json" -d "{\"wildcard\":\"master\",\"pusher\":\"none\",\"merger\":\"admin\",\"mode\":\"review\",\"access_token\":\"${MGR_TOKEN}\"}"); echo "$r"|python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d.get('branch_name') else d.get('message','?'))" 2>/dev/null; done; echo ""; }
+
+main() {
+  case "${1:-}" in
+    status|st)    cmd_status ;;
+    sync)         shift; cmd_sync "$@" ;;
+    sync:--retry)  shift; cmd_sync "--retry" "$@" ;;  # 额外的入口风格
+    mirror-setup) cmd_mirror_setup ;;
+    pr)           shift; cmd_pr "$@" ;;
+    commit|ci)    shift; cmd_commit "$@" ;;
+    push)         shift; cmd_push "${1:-}" ;;
+    pull|pl)      shift; cmd_pull "${1:-}" ;;
+    log)          shift; cmd_log "$@" ;;
+    diff|df)      shift; cmd_diff "${1:-}" ;;
+    branch|br)    cmd_branch ;;
+    list|ls)      cmd_list ;;
+    dev-setup)    cmd_dev_setup ;;
+    protect)      cmd_protect ;;
+    *) usage ;;
+  esac
+}
+main "$@"

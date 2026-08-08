@@ -45,8 +45,8 @@ def _load_zhipu_api_key() -> str:
         return key
 
     # 2. 回退：从 openroute .env 文件读取
-    #    路径：d:\\software\\openclaw\\hiclaw\\tool\\openroute\\.env
-    #    使用基于代码文件位置的绝对路径计算
+    #    路径（相对 flowforge 的父目录）：hiclaw/tool/openroute/.env
+    #    由 __file__ 推导，勿写死操作系统绝对路径（团队含 Linux / Win11 / iOS）
     try:
         openroute_env = (
             Path(__file__).resolve().parent.parent.parent

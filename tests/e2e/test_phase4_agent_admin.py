@@ -16,7 +16,9 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-WEB_ROOT = Path(r"D:\software\openclaw\flowforge\web")
+# 由本文件位置推导，勿写死操作系统绝对路径（团队含 Linux / Win11 / iOS）
+# tests/e2e/<this>.py -> parents[2] == flowforge 仓库根
+WEB_ROOT = Path(__file__).resolve().parents[2] / "web"
 BASE_URL = "http://localhost:5174"
 
 PASS = "\033[92m✓ PASS\033[0m"

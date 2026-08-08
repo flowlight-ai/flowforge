@@ -8,9 +8,10 @@
     5. webchat — Forgekin汇报任务完成情况
     6. IM MindCouncil — 3 只Forgekin共同总结
 
-运行方式:
-    $env:PYTHONIOENCODING="utf-8"; cd d:\\software\\openclaw
-    python flowforge/scripts/evolve_forgekins.py
+运行方式（在 flowforge 的父目录执行；跨平台，勿写死操作系统绝对路径）:
+    cd <workspace-root>            # 即 flowforge 的上一级目录
+    PYTHONIOENCODING=utf-8 python flowforge/scripts/evolve_forgekins.py
+    # Windows PowerShell: $env:PYTHONIOENCODING="utf-8"; python flowforge/scripts/evolve_forgekins.py
 
 详见:
     - [doc:review/review.md#第十四章] CL-022~CL-041 责任方分配

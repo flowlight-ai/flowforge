@@ -45,7 +45,7 @@ from typing import Any, Optional
 # 脚本位于 flowforge/scripts/ 下，需将仓库根目录（flowforge 的父目录）
 # 加入 sys.path，以便 `from flowforge.core import xxx` 可解析。
 _SCRIPT_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = _SCRIPT_DIR.parent.parent  # d:\software\openclaw
+_REPO_ROOT = _SCRIPT_DIR.parent.parent  # flowforge 的父目录（workspace root）
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 

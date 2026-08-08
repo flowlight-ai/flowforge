@@ -9,8 +9,8 @@
 3. 对DOM内容调用LLM审核质量 — T7+T8联合验证
 4. 采集MetricsCollector指标 — T6
 
-运行方式：
-    cd d:\software\openclaw
+运行方式（在 flowforge 的父目录执行；跨平台，勿写死操作系统绝对路径）：
+    cd <workspace-root>            # 即 flowforge 的上一级目录
     python -m pytest flowforge/tests/e2e/test_t8_dom_verify.py -v -s
 """
 import asyncio

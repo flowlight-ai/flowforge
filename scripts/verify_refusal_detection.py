@@ -8,8 +8,8 @@
 3. 正常对话 → Loop 正常完成
 4. 混合场景（正常→拒绝→恢复）→ Loop 行为正确
 
-运行方式:
-    cd d:\\software\\openclaw\\flowlight-ai\\flowforge
+运行方式（在 flowforge 仓库根执行；跨平台，勿写死操作系统绝对路径）:
+    cd <flowforge-repo-root>
     python scripts/verify_refusal_detection.py
     python scripts/verify_refusal_detection.py --concurrency 50  # 指定轮次
 """

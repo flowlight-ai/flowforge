@@ -935,7 +935,7 @@ class DefaultRetrievalFusion(RetrievalFusion):
 ```yaml
 # config/system.yaml（片段）
 retrieval:
-  ripgrep_path: "/usr/bin/rg"  # 或 Windows: "C:\\Program Files\\ripgrep\\rg.exe"
+  ripgrep_path: "rg"  # 默认走 PATH 查找（跨平台）；仅在非标准安装时才覆盖为具体路径
 ```
 
 **集成测试点**：ripgrep 不存在时，grep 入口返回失败但不影响其他入口。
