@@ -1,10 +1,10 @@
 # Git 工作流规范（强制）
 
-> FlowLight 生态 9 仓库（content / contentforge / devforge / flowforge / mallforge / novelforge / openroute / opensieve / stockforge）统一执行本规范。
+> 本规范在 flowforge 仓库执行。
 
 ## 1. 分支模型：仅主干开发（最高优先级）
 
-- **Gitee 主干分支 = `master`；GitHub 主干分支 = `main`**，全部 9 仓库统一（含 stockforge/novelforge/mallforge，其 GitHub 默认分支已统一改为 `main`）。
+- **Gitee 主干分支 = `master`；GitHub 主干分支 = `main`**。
 - **所有代码变更必须通过 Pull Request 合入主干**：本地在主干分支提交后直接 `push`，Gitee 的 master 保护分支会自动将推送转为 PR（重定向到 `auto/master/*` 分支），评审合入后才出现在 master 上。
 - **双平台同步**：同一提交须同时推送到 Gitee 和 GitHub（`./mgr sync` 或分别 push），保持两端主干内容一致。
 - **禁止创建/使用 `dev`、`develop` 等长期分支**；历史遗留 dev 分支一律删除。
@@ -13,23 +13,16 @@
 
 ## 1.1 双平台仓库地址与目录模型
 
-| 仓库 | Gitee（origin） | GitHub |
-|------|-----------------|--------|
-| content | https://gitee.com/flowlight-ai/content.git | https://github.com/flowlight-ai/content.git |
-| openroute | https://gitee.com/flowlight-ai/openroute.git | https://github.com/flowlight-ai/openroute.git |
-| flowforge | https://gitee.com/flowlight-ai/flowforge.git | https://github.com/flowlight-ai/flowforge.git |
-| opensieve | https://gitee.com/flowlight-ai/opensieve.git | https://github.com/flowlight-ai/opensieve.git |
-| stockforge | https://gitee.com/flowlight-ai/stockforge.git | https://github.com/flowlight-ai/stockforge.git |
-| contentforge | https://gitee.com/flowlight-ai/contentforge.git | https://github.com/flowlight-ai/contentforge.git |
-| devforge | https://gitee.com/flowlight-ai/devforge.git | https://github.com/flowlight-ai/devforge.git |
-| novelforge | https://gitee.com/flowlight-ai/novelforge.git | https://github.com/flowlight-ai/novelforge.git |
-| mallforge | https://gitee.com/flowlight-ai/mallforge.git | https://github.com/flowlight-ai/mallforge.git |
+| 平台 | 地址 |
+|------|------|
+| Gitee（origin） | https://gitee.com/flowlight-ai/flowforge.git |
+| GitHub | https://github.com/flowlight-ai/flowforge.git |
 
 双目录模型（相对定位，克隆位置无关）：
 
 ```
-<workspace>/flowlight/<repo>     → Gitee 端工作副本 (origin=gitee.com, 分支 master)
-<workspace>/flowlight-ai/<repo>  → GitHub 端工作副本 (origin=github.com, 分支 main)
+<workspace>/flowlight/flowforge     → Gitee 端工作副本 (origin=gitee.com, 分支 master)
+<workspace>/flowlight-ai/flowforge  → GitHub 端工作副本 (origin=github.com, 分支 main)
 ```
 
 - Gitee 端仓库配 `github` mirror 远程，GitHub 端仓库配 `gitee` mirror 远程（`./mgr mirror-setup` 一键配置）。
@@ -37,7 +30,7 @@
 
 ## 2. 提交前必拉取、收尾必提交
 
-- 开始修改前先 `git pull`（多仓库用 `./mgr pull`），确保基于最新代码工作。
+- 开始修改前先 `git pull`（`./mgr pull`），确保基于最新代码工作。
 - 若本地有未提交改动，先提交或 stash 后再 pull。
 - 任务完成、验证通过后必须提交并推送，禁止搁置改动（避免跨会话丢失）。
 
@@ -48,7 +41,7 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 ```
 
 - `type` 遵循 Conventional Commits：`feat` / `fix` / `refactor` / `chore` / `docs` / `test` / `ci` / `perf`；`scope` 为可选模块名。
-- **每次提交必须带 FlowForge 九大灵智能体（Forgekin）署名**，按角色职责选取，不得留空：
+- **每次提交必须带九大灵智能体（Forgekin）署名**，按角色职责选取，不得留空：
 
 | ID | 名称 | 角色 |
 |---|---:|---|
@@ -72,19 +65,18 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 - `.venv/`、`node_modules/`、`__pycache__/`、运行时数据等一律不入库。
 - 涉及 LLM 生成或网页发布的变更，遵守铁律：T7（LLM 二次审核）、T8（浏览器 DOM 验证）。
 
-## 5. 多仓库工具
+## 5. 仓库工具
 
-仓库根目录的 `./mgr` 支持多仓库管理：
+仓库根目录的 `./mgr`：
 
 ```bash
-./mgr status   # 查看各仓库同步状态（↑N 领先 / ↓N 落后）
-./mgr pull     # 批量拉取
-./mgr commit "fix(x): 描述 [署名]"   # 自动提交所有有改动的仓库
+./mgr status   # 查看本仓库同步状态（↑N 领先 / ↓N 落后）
+./mgr pull     # 拉取（自动处理分支改名/分叉，输出详情）
+./mgr commit "fix(x): 描述 [署名]"   # 提交
 ./mgr push     # 推送到远端（保护分支自动转 PR）
 ./mgr mirror-setup   # 一键配置双端互指 mirror 远程
 ./mgr sync     # 双平台同步推送（改动端 origin → 对端 mirror）
-./mgr protect  # 设置 master 分支保护（仅 Gitee，需 token）
 ```
 
-- `content/mgr` 默认管理全部 9 个仓库；其他仓库的 `mgr` 默认仅管理本仓库，`--all` 强制全量。
+- `./mgr` 默认仅管理本仓库，`--all` 可管理同工作区全部仓库。
 - **日常双平台提交流程**：`./mgr commit "msg"` → `./mgr sync`（先推改动端 origin，再推对端 mirror，实现 Gitee 与 GitHub 同时提交）。
