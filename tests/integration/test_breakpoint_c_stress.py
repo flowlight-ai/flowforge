@@ -17,9 +17,9 @@ T8 不涉及Web功能（纯API测试）
   4. 压力测试：连续 10 次 LLM 调用，验证 100% 成功率
   5. T7审核：LLM 生成内容经 LLM 审核通过
 
-运行方式：
-  cd d:\software\openclaw
-  python flowforge\tests\integration\test_breakpoint_c_stress.py
+运行方式（在 flowforge 的父目录执行；跨平台，勿写死操作系统绝对路径）：
+  cd <workspace-root>            # 即 flowforge 的上一级目录
+  python -m flowforge.tests.integration.test_breakpoint_c_stress
 """
 import json
 import os

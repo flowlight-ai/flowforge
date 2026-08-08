@@ -23,8 +23,8 @@ r"""T8 v3 测试套件 — 8 层验证体系（用户任务完成度导向）。
 - T7: LLM 内容必须经 LLM 审核 — L8 调用 LLM 审核
 - T8: Web 功能必须操控浏览器验证 DOM — 使用 Playwright
 
-运行方式：
-    cd d:\software\openclaw\flowforge
+运行方式（在 flowforge 仓库根执行；跨平台，勿写死操作系统绝对路径）：
+    cd <flowforge-repo-root>
     python -m pytest tests/e2e/test_t8_v3.py -v --timeout=120
 
 环境要求：

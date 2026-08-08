@@ -7,9 +7,9 @@
     4. 完成后触发 I5 跨厂商独立 review
     5. 输出完整任务执行报告
 
-使用方式：
-    cd d:\\software\\openclaw
-    python flowforge\\forgemind\\tests\\_autonomous_work_demo.py
+使用方式（在 flowforge 的父目录执行；跨平台，勿写死操作系统绝对路径）：
+    cd <workspace-root>            # 即 flowforge 的上一级目录
+    python flowforge/forgemind/tests/_autonomous_work_demo.py
 """
 import asyncio
 import sys

@@ -8,10 +8,10 @@
 3. 采集MetricsCollector指标 — T6
 4. 生成TestReporter报告
 
-运行方式：
-    cd d:\software\openclaw
-    set FLOWFORGE_REAL_LLM=1
-    python -m pytest flowforge/tests/e2e/test_t7_llm_review.py -v -s
+运行方式（在 flowforge 的父目录执行；跨平台，勿写死操作系统绝对路径）：
+    cd <workspace-root>            # 即 flowforge 的上一级目录
+    FLOWFORGE_REAL_LLM=1 python -m pytest flowforge/tests/e2e/test_t7_llm_review.py -v -s
+    # Windows PowerShell: $env:FLOWFORGE_REAL_LLM="1"; python -m pytest ...
 """
 import asyncio
 import os
