@@ -4,7 +4,9 @@
 # ============================================================
 
 $ErrorActionPreference = "Stop"
-$RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+# 脚本位于 flowforge\scripts\ 下，项目根为其上级目录
+$RootDir = Split-Path -Parent $ScriptDir
 Set-Location $RootDir
 
 # ── 颜色输出函数 ──────────────────────────────────────────────
@@ -75,7 +77,7 @@ foreach ($port in $portsToCheck) {
     }
 }
 if (-not $portOk) {
-    Write-Warn "部分端口已被占用，服务可能无法启动。运行 .\stop.ps1 可释放端口。"
+    Write-Warn "部分端口已被占用，服务可能无法启动。运行 .\scripts\stop.ps1 可释放端口。"
 }
 
 # 1.3 .env 文件
@@ -738,5 +740,5 @@ if ($failCount -gt 0) {
 }
 
 Write-Host ""
-Write-Host "  停止服务: .\stop.ps1" -ForegroundColor Gray
+Write-Host "  停止服务: .\scripts\stop.ps1" -ForegroundColor Gray
 Write-Host ""

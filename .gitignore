@@ -20,6 +20,10 @@ build/
 *.crt
 secrets.db
 
+# ==================== Python venv (moved/regenerated per-machine) ====================
+.venv/
+venv/
+
 # ==================== Data & Logs ====================
 data/
 logs/
