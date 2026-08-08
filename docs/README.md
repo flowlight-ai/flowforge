@@ -100,3 +100,28 @@ FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent F
 | 2026-07-19 | v1.1 | 新增 test.md v2.0 条目；移除 design-system.md / public-lessons.md 死链 | 鲁班（猫头鹰 Owl） |
 | 2026-07-19 | v1.2 | 补全 test/ 子目录导航；新增 _archive/ 子目录条目；同步 SOP.md / TIPS.md 版本状态至 v1.1 | 鲁班（猫头鹰 Owl） |
 | 2026-07-21 | v1.3 | 移除对内部文档（task.md / _archive / harness-feedback / perspectives / setup）的死链；六大子目录导航聚焦公开文档 | 架构师可进化智能体 |
+
+## 协作规范：提示词与规则（AI 必读）
+
+> **AI 助手注意**：执行本项目任何任务前，请先阅读 `docs/rules/` 下的开发规范与 `docs/prompts/` 下的提示词模板。本仓库 docs 只记录 智能体底座平台（flowforge）自身的内容，与其他项目解耦。
+
+### 提示词模板 docs/prompts/
+
+| 文件 | 说明 |
+|------|------|
+| [FF-flowforge.md](./prompts/FF-flowforge.md) | 本项目专属提示词模板 |
+| [P-v7.md](./prompts/P-v7.md) | v7.0 规范配套提示词（通用） |
+| [P-methodology.md](./prompts/P-methodology.md) | 方法论提示词（通用） |
+| [Q-followup.md](./prompts/Q-followup.md) | 追问/纠偏提示词（通用） |
+
+### 开发规范 docs/rules/（8 份通用规范）
+
+- [04-code-style.md](./rules/04-code-style.md)
+- [05-dev-spec.md](./rules/05-dev-spec.md)
+- [06-ai-behavior.md](./rules/06-ai-behavior.md)
+- [07-coding-redlines.md](./rules/07-coding-redlines.md)
+- [08-flowforge-boundary.md](./rules/08-flowforge-boundary.md)
+- [11-doc-layering.md](./rules/11-doc-layering.md)
+- [12-doc-refactor-methodology.md](./rules/12-doc-refactor-methodology.md)
+- [test-iron-rules.md](./rules/test-iron-rules.md)
+

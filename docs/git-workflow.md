@@ -4,11 +4,36 @@
 
 ## 1. 分支模型：仅主干开发（最高优先级）
 
-- **Gitee 主干分支 = `master`；GitHub 主干分支 = `main`。**
+- **Gitee 主干分支 = `master`；GitHub 主干分支 = `main`**，全部 9 仓库统一（含 stockforge/novelforge/mallforge，其 GitHub 默认分支已统一改为 `main`）。
 - **所有代码变更必须通过 Pull Request 合入主干**：本地在主干分支提交后直接 `push`，Gitee 的 master 保护分支会自动将推送转为 PR（重定向到 `auto/master/*` 分支），评审合入后才出现在 master 上。
+- **双平台同步**：同一提交须同时推送到 Gitee 和 GitHub（`./mgr sync` 或分别 push），保持两端主干内容一致。
 - **禁止创建/使用 `dev`、`develop` 等长期分支**；历史遗留 dev 分支一律删除。
 - **禁止绕过 PR 直接向 master/main 合并**（保护分支 review 模式，仅管理员经 PR 合入）。
 - 临时分支（如 `fix/xxx`）仅在确有必要时使用，合入后立即删除。
+
+## 1.1 双平台仓库地址与目录模型
+
+| 仓库 | Gitee（origin） | GitHub |
+|------|-----------------|--------|
+| content | https://gitee.com/flowlight-ai/content.git | https://github.com/flowlight-ai/content.git |
+| openroute | https://gitee.com/flowlight-ai/openroute.git | https://github.com/flowlight-ai/openroute.git |
+| flowforge | https://gitee.com/flowlight-ai/flowforge.git | https://github.com/flowlight-ai/flowforge.git |
+| opensieve | https://gitee.com/flowlight-ai/opensieve.git | https://github.com/flowlight-ai/opensieve.git |
+| stockforge | https://gitee.com/flowlight-ai/stockforge.git | https://github.com/flowlight-ai/stockforge.git |
+| contentforge | https://gitee.com/flowlight-ai/contentforge.git | https://github.com/flowlight-ai/contentforge.git |
+| devforge | https://gitee.com/flowlight-ai/devforge.git | https://github.com/flowlight-ai/devforge.git |
+| novelforge | https://gitee.com/flowlight-ai/novelforge.git | https://github.com/flowlight-ai/novelforge.git |
+| mallforge | https://gitee.com/flowlight-ai/mallforge.git | https://github.com/flowlight-ai/mallforge.git |
+
+双目录模型（相对定位，克隆位置无关）：
+
+```
+<workspace>/flowlight/<repo>     → Gitee 端工作副本 (origin=gitee.com, 分支 master)
+<workspace>/flowlight-ai/<repo>  → GitHub 端工作副本 (origin=github.com, 分支 main)
+```
+
+- Gitee 端仓库配 `github` mirror 远程，GitHub 端仓库配 `gitee` mirror 远程（`./mgr mirror-setup` 一键配置）。
+- **凭据**：GitHub 推送凭据存于 `~/.github-token`（chmod 600，不入库）或 `GITHUB_TOKEN` 环境变量；Token 需含 `repo` + `workflow` 权限（缺 `workflow` 时无法推送含 `.github/workflows/` 变更的提交）。
 
 ## 2. 提交前必拉取、收尾必提交
 
@@ -56,7 +81,10 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 ./mgr pull     # 批量拉取
 ./mgr commit "fix(x): 描述 [署名]"   # 自动提交所有有改动的仓库
 ./mgr push     # 推送到远端（保护分支自动转 PR）
+./mgr mirror-setup   # 一键配置双端互指 mirror 远程
+./mgr sync     # 双平台同步推送（改动端 origin → 对端 mirror）
 ./mgr protect  # 设置 master 分支保护（仅 Gitee，需 token）
 ```
 
 - `content/mgr` 默认管理全部 9 个仓库；其他仓库的 `mgr` 默认仅管理本仓库，`--all` 强制全量。
+- **日常双平台提交流程**：`./mgr commit "msg"` → `./mgr sync`（先推改动端 origin，再推对端 mirror，实现 Gitee 与 GitHub 同时提交）。

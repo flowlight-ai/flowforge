@@ -23,6 +23,7 @@ pip install -r requirements.txt
 ## Documentation / 文档
 
 - [中文文档](./docs/README.md)
+- [完整用户指南（英/中/日三语原件）](./docs/README-original.md)
 - [English Docs](./docs/README_EN.md) (coming soon)
 - [Contributing Guide](./CONTRIBUTING.md)
 - [Changelog](./CHANGELOG.md)
