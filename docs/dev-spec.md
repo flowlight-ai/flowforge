@@ -1,6 +1,6 @@
 # 工程通用规范（强制）
 
-> FlowLight 生态 9 仓库统一执行本规范。Git 工作流规范见 [git-workflow.md](git-workflow.md)。
+> 本规范在 flowforge 项目执行。Git 工作流规范见 [git-workflow.md](git-workflow.md)。
 
 ## 1. 测试交付规范
 

@@ -208,4 +208,11 @@ web/.next-dev.log
 
 # Logs from local runs (single-file, not the directory)
 *.log.*
+<<<<<<< HEAD
 .autonomous
+=======
+.autonomous*.bak
+*.bak.*
+_tmp*
+d:/
+>>>>>>> gitee/master

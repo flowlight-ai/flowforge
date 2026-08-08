@@ -279,8 +279,81 @@ cmd_pr() {
 }
 
 cmd_commit() { local m="$*"; [ -z "$m" ] && { echo -e "${R}缺少msg${N}"; exit 1; }; for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; _git "$d" add -A; _git "$d" diff --cached --quiet && continue; echo -e "${B}${n}${N}"; _git "$d" commit -m "$m" 2>&1|tail -1; done; done; echo ""; }
-cmd_push()   { for n in "${NAMES[@]}"; do [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue; for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; local b=$(_git "$d" rev-parse --abbrev-ref HEAD); _git "$d" push -u origin "$b" 2>&1|tail -1; echo -e "  ${G}${n} → origin/${b}${N}"; done; done; echo ""; }
-cmd_pull()   { for n in "${NAMES[@]}"; do [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue; for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; echo -e "${B}${n}${N}"; _git "$d" pull 2>&1|tail -1; done; done; echo ""; }
+cmd_push()   {
+  local TMP; TMP="$(mktemp)"
+  for n in "${NAMES[@]}"; do
+    [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue
+    for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do
+      [ -d "$d/.git" ] || continue
+      local b=$(_git "$d" rev-parse --abbrev-ref HEAD)
+      echo -ne "  ${B}${n}$(case "$d" in *flowlight-ai*) echo " (github)";; *) echo " (gitee)";; esac) → origin/${b} ... ${N}"
+      if _git "$d" push -u origin "$b" 2>"$TMP"; then
+        echo -e "${G}OK${N}"
+      else
+        echo -e "${R}FAIL${N}"; sed 's/^/    /' "$TMP" | head -6
+      fi
+    done
+  done
+  rm -f "$TMP"; echo ""
+}
+cmd_pull()   {
+  local TMP; TMP="$(mktemp)"
+  for n in "${NAMES[@]}"; do
+    [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue
+    for side in gitee github; do
+      local d; [ "$side" = "gitee" ] && d="${GPATH[$n]}" || d="${GH_PATH[$n]}"
+      [ -d "$d/.git" ] || continue
+      local b; b=$(_git "$d" branch --show-current 2>/dev/null || echo "?")
+      echo -e "${B}══ ${n} (${side}) [${b}]${N}"
+      if ! _git "$d" fetch origin 2>"$TMP"; then
+        echo -e "  ${R}✗ fetch origin 失败: $(head -2 "$TMP"|tr '\n' ' ')${N}"; continue
+      fi
+      # 远端无同名分支 (如 master 已改名 main): 自动对齐远端默认分支
+      if ! _git "$d" show-ref --verify --quiet "refs/remotes/origin/${b}"; then
+        _git "$d" remote set-head origin -a &>/dev/null || true
+        local rb; rb=$(_git "$d" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+        if [ -n "$rb" ] && [ "$rb" != "$b" ]; then
+          if [ "$(_git "$d" rev-parse "${b}^{tree}" 2>/dev/null)" = "$(_git "$d" rev-parse "origin/${rb}^{tree}" 2>/dev/null)" ]; then
+            echo -e "  ${Y}⚠ 远端无 origin/${b} (已改名 ${rb}), 本地内容已等价 → 切换到 ${rb}${N}"
+            _git "$d" checkout -q -B "$rb" "origin/${rb}" && _git "$d" branch -q -D "$b" 2>/dev/null || true
+            b="$rb"
+          else
+            echo -e "  ${R}✗ 远端无 origin/${b} (默认分支=${rb:-?}), 且本地内容与 origin/${rb} 不一致, 请人工处理${N}"; continue
+          fi
+        else
+          echo -e "  ${R}✗ 远端无 origin/${b}, 也无法确定默认分支${N}"; continue
+        fi
+      fi
+      local a be
+      a=$(_git "$d" rev-list --count "origin/${b}..${b}" 2>/dev/null || echo 0)
+      be=$(_git "$d" rev-list --count "${b}..origin/${b}" 2>/dev/null || echo 0)
+      if [ "$a" = 0 ] && [ "$be" = 0 ]; then echo -e "  ${G}✓ 已同步${N}"; continue; fi
+      if [ "$a" != 0 ] && [ "$be" = 0 ]; then
+        echo -e "  ${Y}↑ 本地领先 ${a} 个提交 (远端未变化, 待 PR 合入或待 push), 无需拉取${N}"; continue
+      fi
+      if [ "$a" = 0 ]; then
+        if _git "$d" merge --ff-only -q "origin/${b}" 2>"$TMP"; then
+          echo -e "  ${G}✓ 已快进 ${be} 个提交${N}"
+        else
+          echo -e "  ${R}✗ 快进失败: $(head -1 "$TMP")${N}"
+        fi
+        continue
+      fi
+      # 分叉: 展示双方独有提交, 尝试 rebase, 失败则回滚并给出指引
+      echo -e "  ${Y}⚠ 分叉: 本地领先 ${a} / 远端领先 ${be}${N}"
+      echo "  本地独有:"; _git "$d" log --oneline "origin/${b}..${b}" | head -5 | sed 's/^/    /'
+      echo "  远端独有:"; _git "$d" log --oneline "${b}..origin/${b}" | head -5 | sed 's/^/    /'
+      if _git "$d" rebase -q "origin/${b}" 2>"$TMP"; then
+        echo -e "  ${G}✓ rebase 成功, 本地提交已重放到远端之上${N}"
+      else
+        _git "$d" rebase --abort 2>/dev/null || true
+        echo -e "  ${R}✗ rebase 失败已还原: $(head -1 "$TMP")${N}"
+        echo -e "  ${Y}指引: 若本地提交已以新哈希合入远端(PR合入), 确认树内容一致后可执行: git reset --hard origin/${b}${N}"
+      fi
+    done
+  done
+  rm -f "$TMP"; echo ""
+}
 cmd_log()    { local L=5; [ -n "${1:-}" ] && [[ "${1:-}" =~ ^[0-9]+$ ]] && { L="$1"; shift; }; for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; echo -e "${B}${n}${N}"; _git "$d" log --oneline -"$L"; done; done; echo ""; }
 cmd_diff()   { for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; local out; out=$(_git "$d" diff --stat 2>&1); [ -n "$out" ] && { echo -e "${B}${n}${N}"; echo "$out"; }; done; done; echo ""; }
 cmd_branch() { for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; printf "  %-14s %s\n" "$n" "$(_git "$d" branch --show-current)"; done; done; echo ""; }
