@@ -38,7 +38,6 @@ from flowforge.core.world_engine.citizens import (
     Artifact,
     Branch,
     Character,
-    CanonDecision,
     Relationship,
     Round,
     Scene,

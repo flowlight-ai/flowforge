@@ -24,19 +24,14 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from flowforge.core.tracing import get_logger
-
 from flowforge.llm.trae.config import TraeBridgeConfig, TraeConfig
 from flowforge.llm.trae.exceptions import (
-    TraeBridgeCancelledError,
     TraeBridgeConfigError,
     TraeBridgeError,
-    TraeBridgeIOError,
-    TraeBridgeProtocolError,
-    TraeBridgeTimeoutError,
-    # 向后兼容别名
     TraeLLMApiError,
     TraeLLMCliError,
     TraeLLMError,
@@ -44,7 +39,7 @@ from flowforge.llm.trae.exceptions import (
 )
 from flowforge.llm.trae.models import BridgeRequestContext, BridgeResponse
 from flowforge.llm.trae.protocol import TraeBridgeProtocol
-from flowforge.llm.trae.session import TraeSession, TraeSessionManager
+from flowforge.llm.trae.session import TraeSessionManager
 
 logger = get_logger("trae_llm.client")
 
@@ -83,9 +78,9 @@ class TraeLLMClient:
     def __init__(
         self,
         *,
-        config: Optional[TraeConfig] = None,
-        bridge_config: Optional[TraeBridgeConfig] = None,
-        protocol: Optional[TraeBridgeProtocol] = None,
+        config: TraeConfig | None = None,
+        bridge_config: TraeBridgeConfig | None = None,
+        protocol: TraeBridgeProtocol | None = None,
     ) -> None:
         """初始化 TraeLLMClient.
 
@@ -135,14 +130,14 @@ class TraeLLMClient:
 
     async def chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         *,
-        context: Optional[BridgeRequestContext] = None,
+        context: BridgeRequestContext | None = None,
         session_id: str = "",
         task_id: str = "",
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """发送聊天请求并返回响应.
 
         对应 F045 §2.1 协议流程步骤 1-6。
@@ -264,9 +259,9 @@ class TraeLLMClient:
 
     async def stream_chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         *,
-        context: Optional[BridgeRequestContext] = None,
+        context: BridgeRequestContext | None = None,
         session_id: str = "",
         task_id: str = "",
         **kwargs,
@@ -302,12 +297,12 @@ class TraeLLMClient:
 
     async def chat_with_tools(
         self,
-        messages: List[Dict[str, str]],
-        tools: List[Dict[str, Any]],
+        messages: list[dict[str, str]],
+        tools: list[dict[str, Any]],
         *,
-        context: Optional[BridgeRequestContext] = None,
+        context: BridgeRequestContext | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """支持工具调用的聊天.
 
         Args:
@@ -373,7 +368,7 @@ class TraeLLMClient:
         *,
         language: str = "python",
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """代码审查专用方法.
 
         Args:
@@ -406,7 +401,7 @@ class TraeLLMClient:
         result = await self.chat(messages, context=ctx, temperature=0.3, **kwargs)
         content = result.get("content", "")
 
-        review_result: Dict[str, Any] = {
+        review_result: dict[str, Any] = {
             "findings": [],
             "severity": "P3",
             "summary": content,

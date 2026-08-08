@@ -8,9 +8,10 @@ Implements:
 """
 import asyncio
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from flowforge.core.circuit_breaker import CircuitBreaker, CircuitOpenError
 from flowforge.core.tracing import get_logger
@@ -70,7 +71,7 @@ class PublishResult:
     error: str = ""
     adapted_title: str = ""
     adapted_content_length: int = 0
-    published_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    published_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 class ContentAdapter:
@@ -264,7 +265,7 @@ class PublishEngine:
         )
     """
 
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: dict | None = None):
         self._config = config or {}
         self._adapter = ContentAdapter()
         self._staggered = StaggeredPublisher(

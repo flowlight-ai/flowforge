@@ -19,7 +19,7 @@ License: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field
@@ -67,7 +67,7 @@ class TaskProfile(BaseModel):
     preferred_cognitive_styles: list[str] = Field(
         default_factory=list, description="期望解释风格列表"
     )
-    min_context_window: Optional[int] = Field(
+    min_context_window: int | None = Field(
         default=None, gt=0, description="最小上下文窗口要求"
     )
 
@@ -132,7 +132,7 @@ class GapReport(BaseModel):
 _DEFAULT_PROMPTS_RELATIVE_PATH = Path("core") / "capability" / "config" / "prompts.yaml"
 
 
-def _load_recommendation_templates(prompts_path: Optional[Path]) -> dict[str, str]:
+def _load_recommendation_templates(prompts_path: Path | None) -> dict[str, str]:
     """加载推荐文案模板。
 
     铁律 5+P16：禁止硬编码提示词。模板从 config/prompts.yaml 加载。
@@ -151,7 +151,7 @@ def _load_recommendation_templates(prompts_path: Optional[Path]) -> dict[str, st
         if not path.exists():
             logger.debug(f"prompts.yaml not found at {path}, using fallback")
             return {}
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         return dict(data.get("recommendations", {}))
     except Exception as e:  # noqa: BLE001
@@ -160,7 +160,7 @@ def _load_recommendation_templates(prompts_path: Optional[Path]) -> dict[str, st
 
 
 def _format_recommendation(
-    template: Optional[str], fallback: str, **kwargs: Any
+    template: str | None, fallback: str, **kwargs: Any
 ) -> str:
     """格式化推荐文案——优先用模板，失败回退到 fallback。"""
     if template:
@@ -194,7 +194,7 @@ class ProfileAnalyzer:
     def compute_gap(
         profile: CapabilityProfile,
         task_profile: TaskProfile,
-        prompts_path: Optional[Path] = None,
+        prompts_path: Path | None = None,
     ) -> GapReport:
         """任务画像 × 能力画像 gap 分析。
 
@@ -357,7 +357,7 @@ class ProfileAnalyzer:
     def recommend_pairing(
         author: CapabilityProfile,
         candidates: list[CapabilityProfile],
-    ) -> Optional[CapabilityProfile]:
+    ) -> CapabilityProfile | None:
         """为作者推荐跨厂商 reviewer。
 
         策略（ADR 004 §5）：

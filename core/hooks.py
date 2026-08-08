@@ -37,9 +37,10 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 
@@ -78,7 +79,7 @@ class HookContext:
     tool_name: str = ""
     tool_params: dict = field(default_factory=dict)
     result: Any = None
-    error: Optional[str] = None
+    error: str | None = None
     timestamp: float = field(default_factory=time.time)
     metadata: dict = field(default_factory=dict)
 
@@ -88,7 +89,7 @@ class HookResult:
     """Hook 处理结果."""
 
     action: HookAction = HookAction.CONTINUE
-    modified_params: Optional[dict] = None
+    modified_params: dict | None = None
     message: str = ""
 
 
@@ -169,7 +170,7 @@ class HookSystem:
 
         return result
 
-    def get_audit_log(self, event: Optional[HookEvent] = None) -> list[dict]:
+    def get_audit_log(self, event: HookEvent | None = None) -> list[dict]:
         """获取审计日志，可按事件类型过滤."""
         if event:
             return [l for l in self._audit_log if l["event"] == event.value]

@@ -2,11 +2,11 @@
 
 按架构层次/模块组织（2026-07-29 重组）:
     - core/       架构基础设施层（system/auth/metrics/logs/openroute）
-    - agents/     智能体模块（agents/forgemind/modes/external_agents）
+    - agents/     智能体模块（agents/forgemind/council/modes/external_agents/verify）
     - workflows/  工作流模块（workflows/plans/tasks/loops）
     - memory/     记忆模块（memory/graph）
     - plugins/    插件模块（plugins/domain_plugins）
-    - admin/      后台管理模块（admin/admin_models/settings/review/schedules/prompts/env_vars）
+    - admin/      后台管理模块（admin/admin_models/settings/review/schedules/prompts）
     - workspace/  工作区模块（workspace/uploads）
     - endpoints/  独立组件（dashboard/websocket）
 
@@ -14,32 +14,32 @@
 """
 from fastapi import APIRouter
 
-# ── 架构基础设施层 ──────────────────────────────────────────────
-from flowforge.app.api.core import system, auth, metrics, logs
+# ── 后台管理模块 ────────────────────────────────────────────────
+from flowforge.app.api.admin import admin, admin_models, prompts, review, schedules, settings
 
 # ── 智能体模块 ──────────────────────────────────────────────────
-from flowforge.app.api.agents import agents, modes, forgemind, external_agents
+from flowforge.app.api.agents import agents, external_agents_api, forgemind, modes, verify
 
-# ── 工作流模块 ──────────────────────────────────────────────────
-from flowforge.app.api.workflows import workflows, tasks
+# ── 架构基础设施层 ──────────────────────────────────────────────
+from flowforge.app.api.core import auth, logs, metrics, system
+
+# ── 独立组件 ────────────────────────────────────────────────────
+from flowforge.app.api.endpoints import dashboard
+from flowforge.app.api.marketplace_api import router as marketplace_router
 
 # ── 记忆模块 ────────────────────────────────────────────────────
 from flowforge.app.api.memory import memory
 from flowforge.app.api.memory.graph import router as graph_router
 
+# ── 根级 API 模块 ───────────────────────────────────────────────
+from flowforge.app.api.plugin_management import router as plugin_management_router
+
 # ── 插件模块 ────────────────────────────────────────────────────
 from flowforge.app.api.plugins import plugins
 from flowforge.app.api.plugins.domain_plugins import router as domain_plugins_router
 
-# ── 后台管理模块 ────────────────────────────────────────────────
-from flowforge.app.api.admin import admin, admin_models, settings, review, schedules, prompts, env_vars
-
-# ── 独立组件 ────────────────────────────────────────────────────
-from flowforge.app.api.endpoints import dashboard
-
-# ── 根级 API 模块 ───────────────────────────────────────────────
-from flowforge.app.api.plugin_management import router as plugin_management_router
-from flowforge.app.api.marketplace_api import router as marketplace_router
+# ── 工作流模块 ──────────────────────────────────────────────────
+from flowforge.app.api.workflows import tasks, workflows
 
 router = APIRouter(prefix="/api/v1")
 
@@ -52,10 +52,9 @@ router.include_router(logs.router)
 # ── 智能体 ──────────────────────────────────────────────────────
 router.include_router(agents.router)
 router.include_router(modes.router)
-# v7.0: ForgeMind Forgekin应用层 API（Trae CN 桥接 + webchat + IM MindCouncil + 自进化）
 router.include_router(forgemind.router)
-# 外部接入智能体状态检查（WEB-FUSION §6.3）
-router.include_router(external_agents.router)
+router.include_router(verify.router)
+router.include_router(external_agents_api.router)
 
 # ── 工作流 ──────────────────────────────────────────────────────
 router.include_router(workflows.router)
@@ -78,7 +77,6 @@ router.include_router(settings.router)
 router.include_router(review.router)
 router.include_router(schedules.router)
 router.include_router(prompts.router)
-router.include_router(env_vars.router)
 
 # ── 独立组件 ────────────────────────────────────────────────────
 router.include_router(dashboard.router)

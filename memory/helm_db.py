@@ -8,9 +8,9 @@
 
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 
@@ -140,10 +140,10 @@ class HelmRepository:
         steps_json: str,
         status: str,
         total_steps: int,
-        persona: Optional[str],
-        mode: Optional[str],
+        persona: str | None,
+        mode: str | None,
         created_at: str,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> int:
         """创建计划，返回自增 id。"""
         cursor = self.conn.execute(
@@ -157,14 +157,14 @@ class HelmRepository:
         self.conn.commit()
         return cursor.lastrowid
 
-    def get_plan(self, plan_id: int) -> Optional[tuple]:
+    def get_plan(self, plan_id: int) -> tuple | None:
         """按 id 获取计划行，返回原始 tuple 或 None。"""
         return self.conn.execute(
             "SELECT * FROM plans WHERE id = ?",
             (plan_id,),
         ).fetchone()
 
-    def get_plan_by_task(self, task_id: str) -> Optional[tuple]:
+    def get_plan_by_task(self, task_id: str) -> tuple | None:
         """按 task_id 获取最新一条计划行。"""
         return self.conn.execute(
             "SELECT * FROM plans WHERE task_id = ? ORDER BY created_at DESC LIMIT 1",
@@ -276,8 +276,8 @@ class HelmRepository:
         storage_path: str,
         status: str,
         uploaded_at: str,
-        mime_type: Optional[str] = None,
-        extension: Optional[str] = None,
+        mime_type: str | None = None,
+        extension: str | None = None,
     ) -> int:
         """创建附件记录，返回自增 id。"""
         cursor = self.conn.execute(
@@ -293,7 +293,7 @@ class HelmRepository:
         self.conn.commit()
         return cursor.lastrowid
 
-    def get_attachment(self, attachment_id: int) -> Optional[tuple]:
+    def get_attachment(self, attachment_id: int) -> tuple | None:
         """按 id 获取附件行。"""
         return self.conn.execute(
             "SELECT * FROM attachments WHERE id = ?",
@@ -341,7 +341,7 @@ class HelmRepository:
         )
         self.conn.commit()
 
-    def get_loop(self, loop_id: str) -> Optional[tuple]:
+    def get_loop(self, loop_id: str) -> tuple | None:
         """按 id 获取 Loop 行。"""
         return self.conn.execute("SELECT * FROM loops WHERE id = ?", (loop_id,)).fetchone()
 
@@ -367,10 +367,10 @@ class HelmRepository:
         iter_id: str,
         loop_id: str,
         attempt: int,
-        plan_json: Optional[str],
-        result_json: Optional[str],
-        verdict_json: Optional[str],
-        reflection_json: Optional[str],
+        plan_json: str | None,
+        result_json: str | None,
+        verdict_json: str | None,
+        reflection_json: str | None,
         started_at: str,
     ) -> None:
         """创建 Loop 迭代记录。"""
@@ -453,12 +453,12 @@ class HelmDatabase:
         title: str,
         steps: list[dict[str, Any]],
         *,
-        description: Optional[str] = None,
-        persona: Optional[str] = None,
-        mode: Optional[str] = None,
+        description: str | None = None,
+        persona: str | None = None,
+        mode: str | None = None,
     ) -> int:
         """创建计划，返回自增 id。"""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         plan_id = self._repo.create_plan(
             task_id=task_id,
             title=title,
@@ -473,14 +473,14 @@ class HelmDatabase:
         logger.info(f"Plan created: id={plan_id}, task_id={task_id}, title={title}")
         return plan_id
 
-    def get_plan(self, plan_id: int) -> Optional[dict[str, Any]]:
+    def get_plan(self, plan_id: int) -> dict[str, Any] | None:
         """按 id 获取计划，返回字典或 None。"""
         row = self._repo.get_plan(plan_id)
         if row is None:
             return None
         return self._plan_row_to_dict(row)
 
-    def get_plan_by_task(self, task_id: str) -> Optional[dict[str, Any]]:
+    def get_plan_by_task(self, task_id: str) -> dict[str, Any] | None:
         """按 task_id 获取最新一条计划。"""
         row = self._repo.get_plan_by_task(task_id)
         if row is None:
@@ -492,14 +492,14 @@ class HelmDatabase:
         plan_id: int,
         status: str,
         *,
-        current_step: Optional[int] = None,
-        edited_steps: Optional[list[dict[str, Any]]] = None,
-        results: Optional[list[dict[str, Any]]] = None,
-        completion_status: Optional[str] = None,
-        error_message: Optional[str] = None,
+        current_step: int | None = None,
+        edited_steps: list[dict[str, Any]] | None = None,
+        results: list[dict[str, Any]] | None = None,
+        completion_status: str | None = None,
+        error_message: str | None = None,
     ) -> bool:
         """更新计划状态及关联字段，返回是否成功。"""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         sets: list[str] = ["status = ?"]
         params: list[Any] = [status]
 
@@ -554,11 +554,11 @@ class HelmDatabase:
         file_type: str,
         storage_path: str,
         *,
-        mime_type: Optional[str] = None,
-        extension: Optional[str] = None,
+        mime_type: str | None = None,
+        extension: str | None = None,
     ) -> int:
         """创建附件记录，返回自增 id。"""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         att_id = self._repo.create_attachment(
             task_id=task_id,
             file_name=file_name,
@@ -573,7 +573,7 @@ class HelmDatabase:
         logger.info(f"Attachment created: id={att_id}, task_id={task_id}, file={file_name}")
         return att_id
 
-    def get_attachment(self, attachment_id: int) -> Optional[dict[str, Any]]:
+    def get_attachment(self, attachment_id: int) -> dict[str, Any] | None:
         """按 id 获取附件，返回字典或 None。"""
         row = self._repo.get_attachment(attachment_id)
         if row is None:
@@ -590,7 +590,7 @@ class HelmDatabase:
         attachment_id: int,
         status: str,
         *,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> bool:
         """更新附件状态，返回是否成功。"""
         sets: list[str] = ["status = ?"]
@@ -611,7 +611,7 @@ class HelmDatabase:
 
     def mark_accessed(self, attachment_id: int) -> bool:
         """更新附件最后访问时间。"""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         rowcount = self._repo.mark_accessed(attachment_id, now)
         success = rowcount > 0
         if success:
@@ -629,7 +629,7 @@ class HelmDatabase:
         plan_id: int,
         delta: Any,
         expected_version: int,
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """增量更新计划，使用乐观并发控制。
 
         Args:
@@ -692,7 +692,7 @@ class HelmDatabase:
         title = delta.title_updated or plan["title"]
         description = delta.description_updated or plan.get("description", "")
 
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         new_version = expected_version + 1
 
         self._repo.update_plan_incremental(
@@ -739,7 +739,7 @@ class HelmDatabase:
             sets.append("status = ?")
             params.append(self.PLAN_EXECUTING)
             sets.append("started_at = ?")
-            params.append(datetime.now(timezone.utc).isoformat())
+            params.append(datetime.now(UTC).isoformat())
 
         # 检查是否所有步骤都已完成
         if status in ("completed", "failed", "skipped"):
@@ -751,7 +751,7 @@ class HelmDatabase:
                 sets.append("status = ?")
                 params.append(self.PLAN_COMPLETED)
                 sets.append("completed_at = ?")
-                params.append(datetime.now(timezone.utc).isoformat())
+                params.append(datetime.now(UTC).isoformat())
 
         params.append(plan_id)
         self._repo.update_step_status(sets, params)
@@ -789,12 +789,12 @@ class HelmDatabase:
         """创建 Loop 实例，返回 loop_id。"""
         import uuid
         loop_id = f"loop-{uuid.uuid4().hex[:12]}"
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         self._repo.create_loop(loop_id, task_id, template_name, max_retries, now, now)
         logger.info(f"Loop created: id={loop_id}, task_id={task_id}, template={template_name}")
         return loop_id
 
-    def get_loop(self, loop_id: str) -> Optional[dict[str, Any]]:
+    def get_loop(self, loop_id: str) -> dict[str, Any] | None:
         """按 id 获取 Loop 实例，返回字典或 None。"""
         row = self._repo.get_loop(loop_id)
         if row is None:
@@ -831,7 +831,7 @@ class HelmDatabase:
 
     def update_loop_state(self, loop_id: str, state_json: str, phase: str, attempt: int) -> bool:
         """更新 Loop 状态，返回是否成功。"""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         rowcount = self._repo.update_loop_state(loop_id, state_json, phase, attempt, now)
         success = rowcount > 0
         if success:
@@ -852,7 +852,7 @@ class HelmDatabase:
         """创建 Loop 迭代记录，返回迭代 id。"""
         import uuid
         iter_id = f"iter-{uuid.uuid4().hex[:12]}"
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         self._repo.create_loop_iteration(
             iter_id, loop_id, attempt, plan_json, result_json, verdict_json, reflection_json, now
         )
@@ -891,7 +891,7 @@ class HelmDatabase:
 
     def complete_loop_iteration(self, iteration_id: str) -> bool:
         """标记 Loop 迭代记录为已完成（设置 completed_at）。"""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         rowcount = self._repo.complete_loop_iteration(iteration_id, now)
         success = rowcount > 0
         if success:

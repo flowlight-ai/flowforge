@@ -18,8 +18,8 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional, Protocol
+from datetime import UTC, datetime
+from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -237,7 +237,7 @@ class CostCeilingGuardrail:
                     "cost_quota", self._config.default_cost_quota
                 ),
             },
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
     async def reset_quota(self, forgekin_id: str) -> None:

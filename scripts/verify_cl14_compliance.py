@@ -39,13 +39,13 @@ import inspect
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # ── 确保 flowforge 包可被导入 ──────────────────────────────────
 # 脚本位于 flowforge/scripts/ 下，需将仓库根目录（flowforge 的父目录）
 # 加入 sys.path，以便 `from flowforge.core import xxx` 可解析。
 _SCRIPT_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = _SCRIPT_DIR.parent.parent  # flowforge 的父目录（workspace root）
+_REPO_ROOT = _SCRIPT_DIR.parent.parent  # d:\software\openclaw
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
@@ -366,7 +366,7 @@ def verify_cl027() -> tuple[str, str]:
 
         # SteerCommand 存在 — 检查 priority_boost / interrupt / requeue 字段
         mod = importlib.import_module(steer_command_location)
-        SteerCommand = getattr(mod, "SteerCommand")
+        SteerCommand = mod.SteerCommand
 
         try:
             instance = SteerCommand()
@@ -421,8 +421,8 @@ def verify_cl028() -> tuple[str, str]:
 
         return (
             "PASS",
-            f"RestartRecoveryPipeline 实例化成功，含 4 个阶段方法"
-            f"（Phase A/A+/B persist/B replay）"
+            "RestartRecoveryPipeline 实例化成功，含 4 个阶段方法"
+            "（Phase A/A+/B persist/B replay）"
             + ("+ run_full_pipeline 完整流水线" if has_full else ""),
         )
     except ImportError as e:
@@ -561,7 +561,7 @@ def verify_cl033() -> tuple[str, str]:
         if has_submit and has_approve and has_reject:
             return (
                 "PASS",
-                f"ApprovalHub 实例化成功，含提交/批准/拒绝方法",
+                "ApprovalHub 实例化成功，含提交/批准/拒绝方法",
             )
 
         missing_actions = []
@@ -633,8 +633,8 @@ def verify_cl034() -> tuple[str, str]:
 
         return (
             "PASS",
-            f"QCLoop 实例化成功，含 7 步方法"
-            f"（prepare/scan/analyze/fix/verify/iterate/close）",
+            "QCLoop 实例化成功，含 7 步方法"
+            "（prepare/scan/analyze/fix/verify/iterate/close）",
         )
     except ImportError as e:
         return "FAIL", f"导入失败: {e}"
@@ -679,8 +679,8 @@ def verify_cl037() -> tuple[str, str]:
         if len(found_keywords) >= 3:
             return (
                 "PASS",
-                f"HostInjector.inject_mcp_config 存在，"
-                f"MCP 配置支持 collab/memory/signals 3 职能分离",
+                "HostInjector.inject_mcp_config 存在，"
+                "MCP 配置支持 collab/memory/signals 3 职能分离",
             )
 
         if has_mcp_servers:
@@ -694,8 +694,8 @@ def verify_cl037() -> tuple[str, str]:
 
         return (
             "PARTIAL",
-            f"HostInjector.inject_mcp_config 存在，"
-            f"但未实现 collab/memory/signals 1→3 server 拆分",
+            "HostInjector.inject_mcp_config 存在，"
+            "但未实现 collab/memory/signals 1→3 server 拆分",
         )
     except ImportError as e:
         return "FAIL", f"导入失败: {e}"
@@ -707,9 +707,9 @@ def verify_cl038() -> tuple[str, str]:
     """CL-038 CLI stderr + NDJSON."""
     try:
         from flowforge.core.external_agent import (
+            CLIResult,
             NDJSONParser,
             StderrCollector,
-            CLIResult,
             parse_cli_invocation,
             stream_cli_invocation,
         )

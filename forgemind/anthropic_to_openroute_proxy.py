@@ -26,7 +26,6 @@ Claude CLI 配置 (~/.claude/settings.json):
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import logging
 import os
@@ -35,44 +34,28 @@ import time
 from typing import Any
 
 import httpx
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-import uvicorn
 
 # ── 配置 ────────────────────────────────────────────────────────────────────
 
 OPENROUTE_BASE_URL = os.environ.get("OPENROUTE_BASE_URL", "http://localhost:13001/v1")
 OPENROUTE_API_KEY = os.environ.get(
     "OPENROUTE_API_KEY",
-    "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
+    "",  # 铁律5: 禁止硬编码密钥 — 必须通过 OPENROUTE_API_KEY 环境变量注入
 )
 DEFAULT_PORT = int(os.environ.get("ANTHROPIC_PROXY_PORT", "8083"))
 DEFAULT_HOST = os.environ.get("ANTHROPIC_PROXY_HOST", "127.0.0.1")
 # 默认模型切换为 Doubao-Seed2.0 —— OpenRoute 2026-07-25 实测：
 #   - Doubao-Seed2.0:  14.6s 返回 PONG ✓ (稳定)
-#   - Doubao-Seed2.0:    33.9s 返回 PONG ✓ (慢但可用)
-#   - Doubao-Seed2.0: 返回 "无法回答"（被识别为拒绝）
+#   - Qwen3.6-Plus:    33.9s 返回 PONG ✓ (慢但可用)
+#   - DeepSeek-V4-Pro: 返回 "无法回答"（被识别为拒绝）
 #   - MiniMax-M3:      返回 HTML 主页内容（不可用）
 #   - Kimi-K2.6:       返回 "无法回答"
 #   - GLM-5.1:         返回部分英文片段
 #   - HunYuan3:        返回 "点击全选以下消息"
 DEFAULT_MODEL = os.environ.get("ANTHROPIC_PROXY_MODEL", "Doubao-Seed2.0")
-
-# 客户端模型名 → OpenRoute 可用模型名映射
-MODEL_MAPPING = {
-    "claude-3-5-sonnet-20241022": "Doubao-Seed2.0",
-    "claude-3-5-haiku-20241022": "Doubao-Seed2.0",
-    "claude-3-opus-20240229": "Doubao-Seed2.0",
-    "claude-3-sonnet-20240229": "Doubao-Seed2.0",
-    "claude-3-haiku-20240307": "Doubao-Seed2.0",
-    "claude-2.1": "Doubao-Seed2.0",
-    "claude-2": "Doubao-Seed2.0",
-    "claude-instant-1": "Doubao-Seed2.0",
-    "claude-4-sonnet": "Doubao-Seed2.0",
-    "claude-4-opus": "Doubao-Seed2.0",
-    "claude-4.8-sonnet": "Doubao-Seed2.0",
-}
-
 
 # Claude 模型名 → OpenRoute 模型名映射
 # Claude CLI 默认用 claude-sonnet-4 / claude-haiku 等，映射到 openroute 的国产模型。
@@ -84,10 +67,10 @@ CLAUDE_TO_OPENROUTE_MODEL = {
     "claude-sonnet-4": DEFAULT_MODEL,
     "claude-3-7-sonnet": DEFAULT_MODEL,
     "claude-3-5-sonnet": DEFAULT_MODEL,
-    # Opus 系列 → Doubao-Seed2.0（推理能力较强，作为 Opus 替代）
-    "claude-opus-4-7": "Doubao-Seed2.0",
-    "claude-opus-4-5": "Doubao-Seed2.0",
-    "claude-opus-4": "Doubao-Seed2.0",
+    # Opus 系列 → Qwen3.6-Plus（推理能力较强，作为 Opus 替代）
+    "claude-opus-4-7": "Qwen3.6-Plus",
+    "claude-opus-4-5": "Qwen3.6-Plus",
+    "claude-opus-4": "Qwen3.6-Plus",
     # Haiku 系列 → Doubao-Seed2.0（响应快）
     "claude-haiku-4-5": DEFAULT_MODEL,
     "claude-3-5-haiku": DEFAULT_MODEL,
@@ -137,7 +120,7 @@ def anthropic_to_openai(body: dict[str, Any]) -> dict[str, Any]:
 
     OpenAI 请求体示例:
         {
-          "model": "Doubao-Seed2.0",
+          "model": "Qwen3.6-Plus",
           "messages": [
             {"role": "system", "content": "You are helpful."},
             {"role": "user", "content": "Hi"},
@@ -203,7 +186,6 @@ def anthropic_to_openai(body: dict[str, Any]) -> dict[str, Any]:
 
     # 模型映射 (剥离 [1m]/[5m] 等推理预算后缀后再查表)
     model = body.get("model", "claude-sonnet-4")
-    model = MODEL_MAPPING.get(model, model)
     base_model = _strip_model_suffix(model)
     openai_model = CLAUDE_TO_OPENROUTE_MODEL.get(base_model, DEFAULT_MODEL)
 
@@ -416,105 +398,30 @@ async def stream_openai_to_anthropic(oa_resp: httpx.Response, model: str, msg_id
 
 # ── HTTP 客户端 ─────────────────────────────────────────────────────────────
 
-# Invalid response patterns that indicate silent failure
-INVALID_RESPONSE_PATTERNS = [
-    "无法回答",
-    "当前不可用，请稍后重试",
-    "当前不可用,请稍后重试",
-    "我无法回答",
-    "我不能回答",
-    "我无法提供",
-    "我无法完成",
-]
-
-# Fallback models to try when primary model fails
-FALLBACK_MODELS = ["Doubao-Seed2.0", "Kimi-K2.6", "DeepSeek-V4-Pro", "auto"]
-
-
-def _is_invalid_response(content: str) -> bool:
-    """Check if the LLM response is invalid (silent failure)."""
-    if not content or len(content.strip()) < 2:
-        return True
-    content_stripped = content.strip()
-    for pattern in INVALID_RESPONSE_PATTERNS:
-        if pattern in content_stripped:
-            return True
-    return False
-
-
 async def call_openroute(openai_body: dict[str, Any], stream: bool = False) -> httpx.Response:
-    """Call OpenRoute with retry logic and invalid response detection.
+    """Call OpenRoute. We ALWAYS use non-stream mode because OpenRoute's stream
+    implementation has a bug — it returns non-SSE JSON (object=chat.completion
+    with message instead of delta) even when stream=true is requested.
 
-    On invalid response or error, retries with fallback models.
-    Max 3 attempts. Always uses stream=False (OpenRoute stream has a bug);
-    callers synthesize SSE from the non-stream response.
+    The caller (messages endpoint) handles stream=true by synthesizing SSE
+    events from the non-stream response, so claude CLI's stream expectation
+    is still satisfied.
     """
     headers = {
         "Authorization": f"Bearer {OPENROUTE_API_KEY}",
         "Content-Type": "application/json",
     }
+    # Force stream=False to OpenRoute regardless of what the caller requested.
+    # We synthesize SSE ourselves in stream_openai_to_anthropic().
+    openai_body = {**openai_body, "stream": False}
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        return await client.post(
+            f"{OPENROUTE_BASE_URL}/chat/completions",
+            json=openai_body,
+            headers=headers,
+        )
 
-    original_model = openai_body.get("model", DEFAULT_MODEL)
-    last_response: httpx.Response | None = None
 
-    for attempt in range(1, 4):
-        # Select model: original on attempt 1, fallback on later attempts
-        if attempt == 1:
-            model = original_model
-        else:
-            fallback_idx = min(attempt - 2, len(FALLBACK_MODELS) - 1)
-            model = FALLBACK_MODELS[fallback_idx]
-            log.info(f"Retry {attempt}/3 with fallback model: {model}")
-
-        request_body = {**openai_body, "model": model, "stream": False}
-
-        def _call() -> httpx.Response:
-            with httpx.Client(timeout=180.0) as client:
-                return client.post(
-                    f"{OPENROUTE_BASE_URL}/chat/completions",
-                    json=request_body,
-                    headers=headers,
-                )
-
-        try:
-            resp = await asyncio.to_thread(_call)
-            if resp.status_code != 200:
-                log.warning(f"OpenRoute returned {resp.status_code} (attempt {attempt})")
-                last_response = resp
-                if attempt < 3:
-                    continue
-                return resp
-
-            # Check for invalid response
-            try:
-                data = resp.json()
-                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                if _is_invalid_response(content):
-                    log.warning(f"Invalid response from {model} (attempt {attempt}): {content[:50]}")
-                    last_response = resp
-                    if attempt < 3:
-                        continue
-                    return resp
-            except Exception:
-                pass
-
-            # Valid response
-            return resp
-
-        except Exception as e:
-            log.warning(f"OpenRoute call failed (attempt {attempt}): {e}")
-            if attempt < 3:
-                continue
-            raise
-
-    # All retries exhausted, return last response (may be None)
-    if last_response is not None:
-        return last_response
-    # Create a synthetic error response
-    return httpx.Response(
-        status_code=503,
-        json={"error": {"message": "All retry attempts failed", "type": "api_error"}},
-    )
 # ── 路由 ────────────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -532,7 +439,6 @@ async def messages(request: Request) -> Any:
     """Anthropic /v1/messages 端点."""
     body = await request.json()
     model = body.get("model", "claude-sonnet-4")
-    model = MODEL_MAPPING.get(model, model)
     stream = body.get("stream", False)
     log.info(f"messages: model={model} stream={stream}")
 

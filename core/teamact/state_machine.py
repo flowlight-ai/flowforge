@@ -26,14 +26,13 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional
-
-from pydantic import BaseModel, Field
+from datetime import UTC, datetime
+from typing import Any
 
 from flowforge.core.teamact.handoff import HandoffCapsule
 from flowforge.core.teamact.types import BallStatus, TeamActStep, TerminationCondition
 from flowforge.core.tracing import get_logger
+from pydantic import BaseModel, Field
 
 logger = get_logger("teamact.state_machine")
 
@@ -59,10 +58,10 @@ class HistoryEntry(BaseModel):
     action: str = Field(default="", description="执行的动作")
     evidence: str = Field(default="", description="产出证据")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="记录时间",
     )
-    agent: Optional[str] = Field(default=None, description="执行Forgekin")
+    agent: str | None = Field(default=None, description="执行Forgekin")
     ball_status: BallStatus = Field(
         default=BallStatus.HELD, description="持球状态"
     )
@@ -186,7 +185,7 @@ class TeamActState(BaseModel):
         default=TeamActStep.STATE, description="当前 TeamAct 步骤"
     )
     task_id: str = Field(..., description="当前任务标识")
-    ball_holder: Optional[str] = Field(
+    ball_holder: str | None = Field(
         default=None, description="当前持球Forgekin"
     )
     history: list[HistoryEntry] = Field(

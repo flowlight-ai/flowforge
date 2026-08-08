@@ -2,7 +2,7 @@
 import os
 import re
 
-with open("flowforge/config/plugins.yaml", "r", encoding="utf-8") as f:
+with open("flowforge/config/plugins.yaml", encoding="utf-8") as f:
     content = f.read()
 
 pattern = r"\$\{([^}:]+)(?::([^}]*))?\}"

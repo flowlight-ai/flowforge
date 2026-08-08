@@ -1,7 +1,7 @@
-import os
+from pathlib import Path
+
 import yaml
 from fastapi import APIRouter
-from pathlib import Path
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
@@ -12,7 +12,7 @@ _WORKFLOW_DIRS = [
 
 
 def _load_workflow_file(f: Path) -> dict:
-    with open(f, "r", encoding="utf-8") as fh:
+    with open(f, encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
     return {
         "name": data.get("name", f.stem),

@@ -1,10 +1,12 @@
-import uuid
 import os
-from datetime import datetime, timedelta, timezone
+import uuid
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from flowforge.core.tracing import get_trace_id, get_logger
+
 from flowforge.core.config import system_config
+from flowforge.core.tracing import get_logger, get_trace_id
 
 logger = get_logger("auth_api")
 
@@ -49,7 +51,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 
@@ -57,14 +59,14 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
     return {
         "status": "error",
         "error": {"code": code, "message": message, "details": details or {}},
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
     }
 
 
 def _create_token(user_id: str, role: str, expires_delta: timedelta) -> str:
     if not _JWT_AVAILABLE:
         raise RuntimeError("PyJWT is not installed. Run: pip install PyJWT")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": user_id,
         "role": role,

@@ -3,7 +3,6 @@
 /**
  * StaticAgentTab — 静态智能体 Tab
  *
- * 依据 WEB-FUSION-DESIGN.md §6.3：
  *   子 Tab 1: FlowForge 内置（DeclarativeAgent / ReActAgent / PlanExecuteAgent / ReflexionAgent）
  *   子 Tab 2: 外部接入（Claude Code / Codex / OpenCode / Trae / Gemini）
  *

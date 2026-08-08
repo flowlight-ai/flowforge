@@ -5,7 +5,7 @@
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
  *
- * 依赖：仅依赖 @/lib/council-types 的 ForgekinRosterItem，不依赖 clowder-ai 任何组件。
+ * 依赖：仅依赖 @/lib/council-types 的 ForgekinRosterItem，不依赖上游
  */
 
 import type { ForgekinRosterItem } from "@/lib/council-types";

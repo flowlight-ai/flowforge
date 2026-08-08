@@ -36,7 +36,7 @@ import json
 import re
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.self_dev_base import (
@@ -119,7 +119,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
     def __init__(
         self,
         trae_client: Any,
-        forgekin_config: Dict[str, Any],
+        forgekin_config: dict[str, Any],
         evolution_engine: Any,
         *,
         awakening_stage: str = "E3",
@@ -145,7 +145,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
     # §1 Discover — 发现测试任务
     # ══════════════════════════════════════════════════════════════
 
-    async def discover(self, context: Dict[str, Any]) -> List[DevTask]:
+    async def discover(self, context: dict[str, Any]) -> list[DevTask]:
         """发现测试任务（F046 §9.6）.
 
         支持四种任务来源：
@@ -181,7 +181,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
             f"task_source={task_source}, strategy={test_strategy}"
         )
 
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
 
         if target_files:
             # 协同协议主入口：为指定文件生成测试
@@ -248,13 +248,13 @@ class SelfDevTestLoop(SelfDevLoopBase):
         parts[-1] = f"test_{parts[-1]}" if not parts[-1].startswith("test_") else parts[-1]
         return f"tests/{'/'.join(parts)}"
 
-    async def _discover_from_pytest_failure(self, pytest_output: str) -> List[DevTask]:
+    async def _discover_from_pytest_failure(self, pytest_output: str) -> list[DevTask]:
         """从 pytest 失败输出提取待修复测试任务."""
         if not pytest_output:
             self._logger.warning("[Discover] pytest_failure 模式但无 pytest_output")
             return []
 
-        tasks: List[DevTask] = []
+        tasks: list[DevTask] = []
         # 匹配 FAILED 模式
         failed_pattern = re.compile(
             r"FAILED\s+(\S+?\.py)::(\S+)\s*-\s*(.+?)(?:\n|$)"
@@ -281,7 +281,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
             ))
         return tasks
 
-    async def _discover_from_coverage_gap(self) -> List[DevTask]:
+    async def _discover_from_coverage_gap(self) -> list[DevTask]:
         """检测覆盖率不足的模块（运行 pytest --cov 提取）."""
         self._logger.info("[Discover] coverage_gap 模式：运行 pytest --cov")
         try:
@@ -297,7 +297,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
             output = stdout.decode("utf-8", errors="replace")
 
             # 提取覆盖率不足的文件（Cover < 80%）
-            tasks: List[DevTask] = []
+            tasks: list[DevTask] = []
             cov_pattern = re.compile(
                 r"^(flowforge/\S+\.py)\s+\d+\s+\d+\s+(\d+)%"
             )
@@ -323,7 +323,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
                         },
                     ))
             return tasks
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._logger.warning("[Discover] pytest --cov 超时")
             return []
         except Exception as e:
@@ -494,7 +494,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
 
     def _parse_plan_response(
         self, content: str, task: DevTask
-    ) -> Tuple[List[Dict[str, Any]], str, str]:
+    ) -> tuple[list[dict[str, Any]], str, str]:
         """解析 LLM 返回的 Plan JSON."""
         # 清理 markdown 代码块包裹
         cleaned = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.MULTILINE)
@@ -559,8 +559,8 @@ class SelfDevTestLoop(SelfDevLoopBase):
             f"[Act] 开始: plan_id={plan.plan_id}, steps={len(plan.steps)}"
         )
 
-        changed_files: List[str] = []
-        diff_summary_parts: List[str] = []
+        changed_files: list[str] = []
+        diff_summary_parts: list[str] = []
         success = True
         error_message = ""
 
@@ -635,7 +635,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
             elapsed_ms=elapsed_ms,
         )
 
-    def _check_test_quality(self, content: str, target: str) -> List[str]:
+    def _check_test_quality(self, content: str, target: str) -> list[str]:
         """T1-T8 铁律检查 — 返回违规列表（仅警告，不阻止写入）.
 
         检查项：
@@ -644,7 +644,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
         - T3: 是否有模糊断言
         - T7: 是否调用 llm_review_content（仅对涉及 LLM 的测试）
         """
-        violations: List[str] = []
+        violations: list[str] = []
 
         # 仅对 Python 测试文件做检查
         if not target.endswith(".py"):
@@ -727,8 +727,8 @@ class SelfDevTestLoop(SelfDevLoopBase):
             f"changed_files={len(result.changed_files)}"
         )
 
-        checks: List[Dict[str, Any]] = []
-        failure_reasons: List[str] = []
+        checks: list[dict[str, Any]] = []
+        failure_reasons: list[str] = []
 
         # 检查 1: 测试文件存在性
         for rel_path in result.changed_files:
@@ -863,7 +863,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
             elapsed_ms=elapsed_ms,
         )
 
-    async def _check_python_syntax(self, abs_path: Path) -> Tuple[bool, str]:
+    async def _check_python_syntax(self, abs_path: Path) -> tuple[bool, str]:
         """检查 Python 文件语法（用 py_compile）."""
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -875,14 +875,14 @@ class SelfDevTestLoop(SelfDevLoopBase):
             if proc.returncode == 0:
                 return True, ""
             return False, stderr.decode("utf-8", errors="replace").strip()
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False, "py_compile 超时（10s）"
         except Exception as e:
             return False, f"py_compile 异常: {e}"
 
     async def _run_pytest(
-        self, test_files: List[str]
-    ) -> Tuple[bool, str, str]:
+        self, test_files: list[str]
+    ) -> tuple[bool, str, str]:
         """运行 pytest 验证测试.
 
         Returns:
@@ -923,7 +923,7 @@ class SelfDevTestLoop(SelfDevLoopBase):
                 f"[Verify] pytest 完成: passed={passed}, summary={summary}"
             )
             return passed, full_output, summary
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._logger.warning(
                 f"[Verify] pytest 超时（{self._pytest_timeout}s）"
             )

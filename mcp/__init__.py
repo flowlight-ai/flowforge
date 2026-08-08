@@ -7,9 +7,9 @@ Four-layer architecture:
 - L4 MCPToolAdapter: Adapter layer (MCP Tool → FlowForge BaseTool)
 """
 
+from flowforge.mcp.broker import CircuitBreaker, CircuitState, MCPBroker
 from flowforge.mcp.client import MCPClient
 from flowforge.mcp.gateway import MCPGateway
-from flowforge.mcp.broker import MCPBroker, CircuitBreaker, CircuitState
 from flowforge.mcp.tool_adapter import MCPToolAdapter, register_mcp_tools
 
 __all__ = [

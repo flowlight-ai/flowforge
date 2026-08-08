@@ -8,10 +8,11 @@ Implements FR-CAP-03 L4:
 - Batch registration of tools from an MCP server
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Any
+
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
-from flowforge.mcp.gateway import MCPGateway
 from flowforge.core.tracing import get_logger
+from flowforge.mcp.gateway import MCPGateway
 
 logger = get_logger("mcp.tool_adapter")
 
@@ -27,7 +28,7 @@ class MCPToolAdapter(BaseTool):
     safety_level = "normal"
     is_concurrency_safe = True
 
-    def __init__(self, tool_info: Dict[str, Any], gateway: Optional[MCPGateway] = None):
+    def __init__(self, tool_info: dict[str, Any], gateway: MCPGateway | None = None):
         self._tool_info = tool_info
         self._gateway = gateway
 
@@ -47,7 +48,7 @@ class MCPToolAdapter(BaseTool):
         if "safety_level" in tool_info:
             self.safety_level = tool_info["safety_level"]
 
-    def _convert_schema(self, mcp_schema: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_schema(self, mcp_schema: dict[str, Any]) -> dict[str, Any]:
         """Convert MCP JSON Schema to FlowForge parameters_schema."""
         if not mcp_schema:
             return {"type": "object", "properties": {}}
@@ -86,7 +87,7 @@ class MCPToolAdapter(BaseTool):
         ):
             yield chunk
 
-    def get_tool_info(self) -> Dict[str, Any]:
+    def get_tool_info(self) -> dict[str, Any]:
         """Get the original MCP tool info."""
         return dict(self._tool_info)
 
@@ -103,10 +104,10 @@ class MCPToolAdapter(BaseTool):
 async def register_mcp_tools(
     tool_registry,
     broker,
-    server_name: Optional[str] = None,
-    gateway: Optional[MCPGateway] = None,
+    server_name: str | None = None,
+    gateway: MCPGateway | None = None,
     prefix: str = "",
-) -> List[MCPToolAdapter]:
+) -> list[MCPToolAdapter]:
     """Discover and register all tools from MCP servers into FlowForge ToolRegistry.
 
     This is the primary bridge between MCP tool ecosystem and FlowForge.
@@ -125,7 +126,7 @@ async def register_mcp_tools(
     Returns:
         List of MCPToolAdapter instances that were registered.
     """
-    adapters: List[MCPToolAdapter] = []
+    adapters: list[MCPToolAdapter] = []
 
     if server_name:
         servers_to_index = {server_name: broker._servers.get(server_name)}

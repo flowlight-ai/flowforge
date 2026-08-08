@@ -3,7 +3,6 @@
 /**
  * HubConfigIcons — 配置图标与平台视觉工具集
  *
- * 移植自 clowder-ai HubConfigIcons，适配 FlowForge 暗色主题。
  * 提供：
  *   - 平台图标构建（buildPlatformVisual）：基于 manifest 的 icon + themeColor
  *   - 通用 SVG 图标组件（ChevronRight/ChevronDown/TrashIcon 等）

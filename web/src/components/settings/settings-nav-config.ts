@@ -1,7 +1,6 @@
 /**
  * SettingsShell 导航配置 — 14 个 section
  *
- * 依据 WEB-FUSION-DESIGN.md §7.2 移植清单：
  *   - 命名遵循 FlowForge 规范（禁止 cat/clowder/cat-cafe 字样）
  *   - 使用 "Forgekin" 替代 "Cat"，"可进化智能体" 替代 "灵智体"
  *   - icon 对应 lucide-react 图标名（在 SettingsNav 中映射）

@@ -2,8 +2,8 @@
 
 Generic framework for registering and dispatching messages to channel plugins.
 """
+
 from flowforge.core.interfaces.plugin import MessageChannelPlugin
-from typing import Dict
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("channel_manager")
@@ -11,7 +11,7 @@ logger = get_logger("channel_manager")
 
 class ChannelManager:
     def __init__(self):
-        self._channels: Dict[str, MessageChannelPlugin] = {}
+        self._channels: dict[str, MessageChannelPlugin] = {}
 
     def register(self, plugin: MessageChannelPlugin):
         self._channels[plugin.name] = plugin

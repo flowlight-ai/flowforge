@@ -7,10 +7,10 @@ violations. Supports both pattern-based and function-based rule checks.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List
+from typing import Any
 
-from flowforge.core.tracing import get_logger
 from flowforge.core.task_context import TaskContext
+from flowforge.core.tracing import get_logger
 from flowforge.harness.constraints.linter_rules import LinterRule, LinterRules, Severity
 
 logger = get_logger("harness.linter_runner")
@@ -37,8 +37,8 @@ class LinterRunner:
         ctx: TaskContext,
         *,
         file_path: str | None = None,
-        rule_ids: List[str] | None = None,
-    ) -> Dict[str, Any]:
+        rule_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Run linter checks against source code.
 
         Applies all enabled rules (or a specified subset) to the source
@@ -59,8 +59,8 @@ class LinterRunner:
         if rule_ids:
             enabled = [r for r in enabled if r.id in rule_ids]
 
-        all_violations: List[Dict[str, Any]] = []
-        severity_counts: Dict[str, int] = {s.value: 0 for s in Severity}
+        all_violations: list[dict[str, Any]] = []
+        severity_counts: dict[str, int] = {s.value: 0 for s in Severity}
 
         for rule in enabled:
             violations = self._check_rule(rule, source_code)
@@ -72,7 +72,7 @@ class LinterRunner:
 
         has_errors = severity_counts.get(Severity.ERROR.value, 0) > 0
 
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "passed": not has_errors,
             "violations": all_violations,
             "rules_checked": len(enabled),
@@ -96,7 +96,7 @@ class LinterRunner:
         self,
         rule: LinterRule,
         source_code: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Apply a single rule to source code.
 
         Uses the rule's ``check_fn`` if available, otherwise falls back
@@ -109,7 +109,7 @@ class LinterRunner:
         Returns:
             A list of violation dictionaries.
         """
-        violations: List[Dict[str, Any]] = []
+        violations: list[dict[str, Any]] = []
 
         if rule.check_fn:
             try:

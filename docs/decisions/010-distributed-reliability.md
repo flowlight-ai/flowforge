@@ -1,302 +1,150 @@
-# ADR 010: 分布式可靠性
+# ADR 010: 分布式可靠性（Distributed Reliability）
 
 > **状态**: accepted
-> **日期**: 2026-07-17
-> **决策者**: 架构师可进化智能体 + operator 审核
-> **依赖**: `[doc:roleagent.md#第6章]` + `[doc:review/review.md#第八章]` RA-037~RA-042 + `[doc:review/review.md#第九章]` FR-004
-> **依据**: RA-037~RA-042（三类可靠性挑战 + Tier 1-4 恢复分级 + liveness 规范读模型 + 弱状态机 vs 强 workflow + 跨 provider 宿主抽象）+ FR-004（可进化智能体 Tier 0 扩展）
+> **日期**: 2026-07-21
+> **决策者**: operator + 架构师可进化智能体（Forgekin）
+> **依赖**: `[doc:roleagent.md#第6章]` + `[doc:decisions/007-harness-engineering-path.md]`
+> **依据**: operator 7 条不可妥协原则 + roleagent.md 第 6 章工程路径
 
 ---
 
-## 上下文
+## 1. 上下文
 
-`[doc:roleagent.md#第6章]` 一句话论点："多 agent 是分布式系统"——多个独立执行上下文 + 共享可变状态 + 异步通信通道 + 任何节点随时可能失败。这意味着 multi-agent 系统必须应用分布式系统的全部可靠性工程：副作用日志（WAL）、检查点、lease、规范读模型、跨 provider 宿主抽象、Tier 化恢复分级。
+`[doc:roleagent.md#第6章]` 开篇指出："当三只不同厂商的 agent 同时在一个代码库里工作——一只做重构、一只跑测试、一只写文档——你已经在运行一个分布式系统，不管你是否意识到。"
 
-FlowForge v4.0 的现状（`[doc:review/review.md#第八章]` 8.6 节 RA-037~RA-042 共 6 项问题，5 项 P0）：
+FlowForge（flowlight-ai/flowforge 通用底座）的能力画像驱动团队比固定岗位流水线更依赖状态连续性：谁做过什么、谁正在接手、哪个判断已经被验证，都不能因为一个会话断开而丢失。然而当前系统面临三类真实的失败模式（按时间顺序撞上）：
 
-- 单 agent 长任务持久性设计不足（RA-037 P0），无副作用 WAL、无结构化恢复卡、无恢复分级
-- 只有"重试 3 次"的简单策略，无风险分级，force push 等不可逆操作也可能被盲目重试（RA-038 P0）
-- 跨 agent liveness 规范读模型缺失（RA-039 P0），存活判断靠心跳，无"活着/退化/僵尸/等待宽限"四态结构化结果
-- 弱状态机 vs 强 workflow 边界未定义（RA-040 P0），所有操作走同一套 LoopExecutor，转账/审批/merge/release 等严肃操作未走强 workflow
-- 跨 provider 统一宿主抽象缺失（RA-041 P0），LLMClient 仅做模型路由，未抽象 provider 运维语义
-- 不可控 vs 可控边界未在架构中体现（RA-042 P1），团队在抱怨 provider 不稳定上花精力
+- **第一类·单可进化智能体长任务持久性**：任务持续几分钟到几十分钟时，通信通道几乎必然中断。`[doc:roleagent.md#第6章]` 提到三种故障——副作用已执行但通道断了（不能盲目重试）、本地成功但远程失败（race condition）、provider 返回空响应（需要理解错误语义）。
+- **第二类·跨可进化智能体协作一致性**：TeamAct 循环中 Route 阶段是最脆弱的窗口——前一只做完 Action 但没来得及更新 Evidence 就崩了，后一只接球看到半截状态。`[doc:roleagent.md#第6章]` 记录了真实的 liveness split-brain：两个后端读路径对同一 invocation 给出矛盾结果。
+- **第三类·跨 provider 语义一致性**：Claude、GPT、Gemini、Antigravity 等 provider 的超时策略、错误码语义、通道协议、恢复机制各不相同。同一套可靠性规则不能绑死在某一家实现上。
 
-`[doc:review/review.md#第九章]` FR-004 进一步补审：可进化智能体（特别是 BioForgekin / ObjForgekin）的可靠性要求更高——物理世界可进化智能体故障可能导致物理事故（灯具可进化智能体故障引发火灾），需扩展 Tier 0：物理世界不可逆操作永不自动恢复。`[doc:project_rules.md]` 已记录 *Forge 业务项目在连续创作测试负载下会崩溃（业务端口不再监听），model_service 健康检查间歇性报失败——这些是分布式可靠性缺失的实证。
-
-operator 决策：FlowForge 必须实现三类可靠性挑战应对 + Tier 0-4 恢复分级 + liveness 规范读模型 + 弱状态机 vs 强 workflow + 跨 provider 宿主抽象。
+行业大多数 multi-agent 讨论把可靠性压在 prompt 和 orchestration 层面处理，但分布式系统的核心教训是：**你不可能消除故障，你只能设计对故障的容忍**。本 ADR 记录 P1-6 阶段落地的 5 个可靠性原语（F021-F025）如何把分布式系统经典工具箱（Saga / WAL / Liveness Probe / Workflow Engine / Failover Pool）搬进 FlowForge。
 
 ---
 
-## 决策
+## 2. 决策
 
-### 1. 三类可靠性挑战
+### 2.1 Tier 1-4 恢复分级（Retry / Failover / Rollback / Escalate）
 
-| # | 挑战 | 触发场景 | 应对机制 |
-|---|---|---|---|
-| 1 | 单可进化智能体长任务持久性 | 长任务（小时级）崩溃 / 网络中断 / 上下文压缩 | 副作用 WAL + 检查点 + 恢复卡 |
-| 2 | 跨可进化智能体协作一致性 | TeamAct 中一只可进化智能体失败、状态不一致 | SharedStateLedger 规范读 + 持球 lease + 乒乓球熔断器 |
-| 3 | 跨 provider 语义一致性 | 一家 provider 崩了接手的可进化智能体无法从同一边界恢复 | 跨 provider 统一宿主抽象 + fallback 链 |
+`[doc:roleagent.md#第6章]` 强调"不是所有操作都能安全重试"，并给出四级表格。我们将其落地为 `RecoveryTier` 枚举与 `TierRecoveryService`：
 
-### 2. Tier 0-4 恢复分级（F022，RA-038，FR-004）
+- `RecoveryTier.TIER_1_RETRY`：瞬态错误，自动重试同一目标（读取 / 构建 / 测试 / lint）
+- `RecoveryTier.TIER_2_FAILOVER`：provider 故障，切换到 `failover_targets` 列表中的备份
+- `RecoveryTier.TIER_3_ROLLBACK`：副作用已发生，通过 WAL 回滚（共享文件 / 外部服务 / GitHub 写操作）
+- `RecoveryTier.TIER_4_ESCALATE`：force-push / merge / release / 不可逆操作——**永远不自动恢复，dispatch 前硬拒**
 
-| Tier | 失败类型 | 恢复机制 | 自动化 | 例子 |
-|---|---|---|---|---|
-| **Tier 0** | 物理世界不可逆操作 | **永不自动恢复，硬拒 + operator 介入** | ❌ 永不 | 灯具可进化智能体已开机、IoT 执行器已动作、转账已发起 |
-| Tier 1 | 读取 / 构建 / 测试 / lint | 自动重试 + 指数退避 | ✅ 自动 | 工具调用超时、测试失败、lint 报错 |
-| Tier 2 | 沙箱 / worktree / 可确定性探测 | 探测成功后自动恢复 | ✅ 探测后 | git checkout 失败、worktree 损坏、cache 失效 |
-| Tier 3 | 共享文件 / 外部服务 / GitHub 写 | **不自动恢复，出恢复卡** | ❌ 出卡 | PR 创建失败、文件已写但远程未确认、race condition |
-| Tier 4 | force-push / merge / release | **永远不自动恢复，dispatch 前硬拒** | ❌ 硬拒 | git push --force、release publish、merge to main |
+分级原则是 **fail-closed**：`TierRecoveryService.handle_failure` 对未注册 `error_type` 的故障默认归入 `TIER_4_ESCALATE`，而非最低级——这与 `[doc:roleagent.md#第6章]` "遇到未知操作类型默认归入最高限制，不是最低"完全一致。`RecoveryPolicy` 数据类持有 `tier / max_retries / retry_delay_seconds / failover_targets / rollback_strategy` 字段，由调用方按错误类型通过 `register_policy(error_type, policy)` 注册；重复注册会抛 `ReliabilityError`，防止策略漂移。
 
-**铁律**：force push / merge / release 等不可逆操作禁止自动重试。Tier 0 是可进化智能体扩展，物理世界操作永不自动恢复。
+退化规则在 `handle_failure` 内部生效，保证任何路径都不会"无声失败"：
 
-### 3. 副作用日志 WAL（F021，RA-037）
+- TIER_1_RETRY：`target = error.source`，`notes` 提示最大重试次数与间隔
+- TIER_2_FAILOVER：若 `failover_targets` 为空 → 降级为 ESCALATE（"nowhere to fail over"）；否则 `target = failover_targets[0]`，`notes` 列出剩余备选
+- TIER_3_ROLLBACK：若 `error.wal_entries` 为空 → 降级为 ESCALATE（"nothing to roll back"）；否则 `notes` 报告待回滚条目数与 `rollback_strategy`
+- TIER_4_ESCALATE：`notes = "unrecoverable; escalate to operator"`
 
-每次副作用操作前必须先写 WAL（Write-Ahead Log），记录"将做什么 / 已做什么 / 是否成功"：
+### 2.2 Side-Effect WAL（预写日志）— 副作用可回滚
 
-```python
-class SideEffectWAL:
-    async def append(self, intent: SideEffectIntent) -> WALId: ...
-    async def mark_executed(self, wal_id: WALId, remote_result: Result) -> None: ...
-    async def mark_confirmed(self, wal_id: WALId) -> None: ...
+借鉴数据库 Write-Ahead Log（`[doc:roleagent.md#第6章]` 称其为"类似数据库预写日志的副作用记录"），`WriteAheadLog` 类在副作用执行**之前**追加一条 `WalEntry` 记录。`WalEntry` 持有 `entry_id / action / target / params / created_at / status` 五个字段，`params` 在 `append` 时 `copy.deepcopy` 防止调用方后续篡改审计轨迹；`get` 也返回深拷贝，确保审计轨迹不可变。
 
-    # 三种故障模式：
-    # 1. 副作用已执行但通道断了——不能盲目重试（需幂等性检查）
-    # 2. 本地报告成功但远程失败（race condition）——需读远程状态
-    # 3. provider 返回空响应——需状态机重置
-```
+生命周期通过 `WalStatus` 三态枚举管理：`PENDING`（已追加未确认）→ `COMMITTED`（副作用确认落盘）或 `ROLLED_BACK`（已补偿）。从 PENDING 可迁出到 COMMITTED 或 ROLLED_BACK，但 COMMITTED 与 ROLLED_BACK 是终态——`mark_committed` / `mark_rolled_back` 检测到非 PENDING 状态时抛 `ReliabilityError`，防止状态机被错误回退。`list_uncommitted` 返回所有 PENDING 条目（按 `created_at` 升序）供恢复层 replay——幂等的重试执行，非幂等的走补偿。`append` 要求 `action` 与 `target` 非空，否则拒绝写入。存储当前为内存 dict，生产可换 SQLite/PostgreSQL 而不改变 surface API（对齐 DurableStateSurface 的存储策略）。
 
-### 4. liveness 规范读模型（F023，RA-039）
+### 2.3 Liveness 探活（心跳 + 租约）
 
-可进化智能体是否存活不能靠心跳，必须靠"规范读模型"——通过读取共享状态判断当前状态：
+`LivenessProbe` 是路由前的**只读模型**——它永不改变状态，只报告。任何可进化智能体可声明 `LivenessSpec`（`name / description / sla_seconds / required_for`），并注册一个异步 check 函数。`run_all` 串行执行所有探针，每个 `ProbeResult` 携带 `name / healthy / latency_ms / last_checked / error`，探针间相互隔离——一个抛异常不影响其他。
 
-| 状态来源 | 角色 | 新鲜度 |
-|---|---|---|
-| 持久记录（SharedStateLedger） | 生命周期真相源 | 慢但权威 |
-| 草稿缓存（进程内 cache） | 内容新鲜度信号 | 快但可能 stale |
-| 进程内 tracker | 控制面状态 | 即时但易失 |
+`required_for` 列出依赖该探针的能力名，探针不健康时这些能力被标记为退化。恢复决策**不**由探针做出，而是由 `TierRecoveryService` 基于探针结果触发——这是 `[doc:roleagent.md#第6章]` "给数据不给结论"原则的体现。
 
-四态结构化结果：
+### 2.4 Weak State vs Strong Workflow（弱状态与强工作流）
 
-```python
-class LivenessVerdict(Enum):
-    ALIVE = "alive"          # 活着，正常工作
-    DEGRADED = "degraded"    # 退化，部分功能不可用
-    ZOMBIE = "zombie"        # 僵尸，进程在但无响应
-    GRACE_WAITING = "grace"  # 等待宽限（lease 未过期）
-```
+`[doc:roleagent.md#第6章]` 明确："不是'弱状态机 vs 强状态机'二选一。开放协作使用轻量状态机保留模型判断力；严肃副作用使用强 workflow 保证可审计、可回放、可拒绝。" 落地为 `StateWorkflowComparator.classify_workflow`：
 
-### 5. 弱状态机 vs 强 workflow 边界（F024，RA-040）
+- `WorkflowStrength.STRONG`：每步都 `has_compensation=True` 且 `idempotent=True` 且不 `requires_external_state` → 推荐 "use workflow engine"（可重放）
+- `WorkflowStrength.WEAK`：无任何步骤可补偿 → 推荐 "use state machine"（仅 checkpoint 重启）
+- `WorkflowStrength.HYBRID`：混合 → 推荐 "hybrid"（workflow engine + 非可补偿步骤走状态机检查点）
 
-- **弱状态机**：开放协作使用，状态可变 + 路由动态，保留可进化智能体判断力（如 TeamAct 协作）
-- **强 workflow**：严肃副作用使用，固定流程，保证可审计、可回放、可拒绝（如转账 / 审批 / merge / release / 删除数据）
+`WorkflowStep` 数据类的 `requires_external_state` 字段标记第三方 API 依赖——重放会与外部状态去同步，必须显式隔离。
 
-```python
-class WorkflowBoundary:
-    @staticmethod
-    def classify(operation: Operation) -> WorkflowType:
-        if operation.has_irreversible_side_effect:
-            return WorkflowType.STRONG  # 强 workflow
-        if operation.requires_cross_agent_collaboration:
-            return WorkflowType.WEAK    # 弱状态机
-        return WorkflowType.LIGHTWEIGHT  # LoopExecutor
-```
+### 2.5 Provider Host（提供者宿主）— 多提供者故障转移
 
-### 6. 跨 provider 统一宿主抽象（F025，RA-041）
+`ProviderHost` 是 provider 无关的宿主抽象——模块**刻意不**import `flowforge.llm.provider`，"provider" 在这里指任何可寻址宿主（LLM 厂商 / 搜索后端 / 发布通道）。`ProviderInfo` 暴露 `name / priority / healthy / last_state_change`，`priority` 数字越小优先级越高（1 优于 2）。
 
-不同 provider（Claude / GPT / Gemini / Antigravity）的超时策略、错误码语义、通道协议、恢复机制都不一样。需统一宿主抽象：
+`select_provider(exclude)` 在健康且不在 `exclude` 列表的候选中选优先级最高者，返回 `None` 表示全部不可用。`mark_unhealthy` / `mark_healthy` 翻转健康标志并记录 `last_state_change`，供 dashboard 与 SLA 监控消费。failover 时把失败 provider 加入 `exclude`，下一次 `select_provider` 自然跳过——这与 `TierRecoveryService` 的 TIER_2_FAILOVER 协同。
 
-```python
-class ProviderHostAbstraction:
-    transport: ProviderTransport        # 传输层
-    binding: ProviderBinding            # 绑定（token / MCP / sandbox / cwd）
-    runtime_contract: RuntimeContract   # 运行时契约（超时 / 重试 / 错误码）
-    event_adapter: EventAdapter         # 事件适配器（统一事件 schema）
-    supervisor: SidecarSupervisor        # 监管者作为独立伴生进程（sidecar）
-```
+### 2.6 RecoveryPolicy 与 FailureContext
 
-一家 provider 崩了接手的可进化智能体可从同一边界恢复，避免每家 provider 各写一套恢复逻辑。
-
-### 7. 不可控 vs 可控边界（RA-042）
-
-| 不可控层（不投资） | 可控层（投资） |
-|---|---|
-| provider 上游稳定性 | liveness 判断 |
-| 网络质量 | 状态持久化 |
-| 超时策略 | 副作用追踪 |
-| — | 恢复策略 |
-| — | 协作协议 |
-
-**铁律**：团队不在不可控层花精力（如抱怨 provider 不稳定），所有投资集中在可控层。
-
-### 8. Tier 0 物理世界不可逆操作（FR-004）
-
-可进化智能体扩展的可靠性要求：
-
-- BioForgekin / ObjForgekin 的物理执行器动作（如灯具开机、IoT 设备操作）一旦执行不可回滚
-- 物理 AI 路径下的不可逆操作必须 operator 显式批准（与觉醒阶 E1-E2 全导阶一致）
-- Tier 0 操作不进入自动恢复流程，硬拒后由 operator 评估是否人工恢复
-
-### 9. 检查点驱动恢复（与 ADR 003 联动）
-
-长任务按检查点持久化，恢复时回滚到最近检查点：
-
-```python
-class CheckpointDrivenRecovery:
-    async def save_checkpoint(self, task_id: str, state: TaskState) -> CheckpointId: ...
-    async def recover_from_checkpoint(self, task_id: str) -> TaskState: ...
-    # 检查点写入 SharedStateLedger + EchoStore 双副本
-```
+`FailureContext` 数据类把失败场景结构化：`error_type / error_message / source / wal_entries`。`wal_entries` 字段把 WAL 与 Tier 恢复连接起来——当 `error_type="side_effect_failed"` 触发 TIER_3_ROLLBACK 时，`TierRecoveryService.handle_failure` 检查 `error.wal_entries` 是否非空，空则降级为 ESCALATE（"nothing to roll back"）。`RecoveryAction` 输出 `tier / action / target / notes`，`notes` 携带可读决策理由供审计与 trace 追溯。所有路径经 `get_logger` 写入结构化日志，自动注入 `trace_id`。
 
 ---
 
-### 10. CI/CD Tracking 去重（CL-039，headSha + aggregateBucket）
+## 3. 方案对比
 
-**问题**：CI/CD 系统对同一 commit 可能触发多次 tracking 事件（如 PR push 后立即 re-run、webhook 重试、并发 CI runner），导致：
-
-- 同一 commit 被记录多次，污染质量统计
-- Eval Ledger 净增益计算失真（同一 commit 的多次"成功"被重复计数）
-- Harness Entropy Control 误判（重复事件触发退役信号）
-- Grafana 仪表盘显示假阳性失败率
-
-**决策**：CI/CD Tracking 引入双键去重机制。
-
-#### 10.1 headSha 主键
-
-- 每次 CI/CD tracking 事件必须携带 `headSha`（Git commit SHA）
-- 同一 `headSha` 的事件在 24 小时窗口内只记录第一次
-- 后续重复事件进入"去重丢弃队列"（仅记录计数，不进入主事件流）
-
-```python
-@dataclass
-class CIDCDEvent:
-    event_id: str           # 事件唯一 ID
-    head_sha: str           # Git commit SHA（主去重键）
-    event_type: str         # "push" | "pr" | "workflow_run" | "deployment"
-    status: str             # "success" | "failure" | "cancelled" | "skipped"
-    timestamp: datetime
-    runner_id: str = ""     # runner 标识（辅助去重）
-    aggregate_bucket: str = ""  # 聚合桶（见 §10.2）
-```
-
-#### 10.2 aggregateBucket 聚合桶
-
-- 同一 `headSha` 的多次事件按 `aggregateBucket` 聚合
-- 桶键格式：`{head_sha}:{event_type}:{date}`（date 为 UTC 日期）
-- 桶内仅保留"最严重状态"（failure > cancelled > skipped > success）
-- 桶内事件计数记录在 `event_count` 字段
-
-```python
-def compute_aggregate_bucket(head_sha: str, event_type: str, timestamp: datetime) -> str:
-    """计算聚合桶键 — 同桶事件去重."""
-    date_str = timestamp.astimezone(timezone.utc).strftime("%Y-%m-%d")
-    return f"{head_sha[:12]}:{event_type}:{date_str}"
-
-SEVERITY_ORDER = {"failure": 4, "cancelled": 3, "skipped": 2, "success": 1}
-
-def merge_into_bucket(bucket: CIDCDEvent, new_event: CIDCDEvent) -> CIDCDEvent:
-    """合并新事件到桶，保留最严重状态."""
-    if SEVERITY_ORDER[new_event.status] > SEVERITY_ORDER[bucket.status]:
-        bucket.status = new_event.status
-    bucket.event_count += 1
-    return bucket
-```
-
-#### 10.3 与 Eval Ledger 联动
-
-- Eval Ledger 净增益计算只读取 aggregateBucket 桶内事件
-- 避免同一 commit 的多次"成功"被重复计入净增益
-- Eval Replay A/B 的 pre/post 对比基于桶状态（而非原始事件）
-
-#### 10.4 与 Harness Entropy Control 联动
-
-- Harness Entropy Control 的退役信号基于桶内最严重状态
-- 避免重复事件触发误退役（如同一 commit 因 webhook 重试显示多次"失败"）
-
-#### 10.5 去重窗口
-
-- 默认 24 小时窗口（同 headSha + event_type 24h 内只计一次）
-- 超过 24 小时的同 headSha 事件视为新事件（如手动 re-run）
-- 窗口可配置（`ci_dedup.window_hours` in `config/system.yaml`）
-
-**实现位置**：`flowforge/core/observability.py` 扩展 `dedupe_cicd_event` 函数
-
-**关联 Feature**：F023 liveness 规范读模型 + F012 Entropy Control + F050 Eval Ledger
+| 方案 | 优点 | 缺点 |
+|------|------|------|
+| **方案 A（选定）: 五原语组合（WAL + Tier + Liveness + State-Workflow + ProviderHost）** | 与 `[doc:roleagent.md#第6章]` 三类失败模式一一对应；provider 无关；fail-closed 默认安全；每个原语可独立测试 | 五个独立模块协同复杂度高；当前内存存储需生产化迁移 |
+| 方案 B: 单一 Orchestration Engine + Prompt 兜底 | 实现简单，单一抽象 | `[doc:roleagent.md#第6章]` 明确反对"用更好的提示词让 agent 不出错"——分布式故障不能靠 prompt 消除 |
+| 方案 C: 强一致 Raft 共识 | 提供线性一致性 | LLM 参与者是不可控的，无法保证内部行为；Raft 物理延迟对 agent 协作过重；`[doc:roleagent.md#第6章]` 明确"不提供 Raft 级别强一致保证，但够用" |
+| 方案 D: 全部交给 Provider SDK 自带重试 | 零自研成本 | 不同 provider 语义不一致（`[doc:roleagent.md#第6章]` 第三类挑战）；副作用已执行时盲目重试会双发；无法跨 provider failover |
 
 ---
 
-## 后果
+## 4. 理由
 
-### 正面后果
-
-- 多可进化智能体系统具备分布式系统的全部可靠性工程
-- Tier 0-4 恢复分级让不可逆操作有明确边界，避免盲目重试造成更大损失
-- liveness 规范读模型消除"心跳假阳性"，四态结构化结果可审计
-- 弱状态机 vs 强 workflow 边界让严肃操作可审计、可回放、可拒绝
-- 跨 provider 宿主抽象让 fallback 链可移植
-- 不可控 vs 可控边界让团队投资方向清晰
-- Tier 0 可进化智能体扩展让物理 AI 路径有安全护栏
-
-### 负面后果
-
-- Tier 0-4 分级增加实现复杂度（5 个 Feature F021-F025）
-- 副作用 WAL 增加每次副作用操作的写入开销
-- liveness 规范读模型需重构 Forgekin 存活判断（破坏性变更）
-- 强 workflow 让严肃操作流程变重（如 PR 创建需走完整 workflow）
-- 跨 provider 宿主抽象需适配每家 provider 的差异
-
-### 风险
-
-- WAL 写入失败可能导致副作用未记录 —— 缓解：WAL 写入失败时禁止执行副作用（fail-closed）
-- Tier 0 误判可能让合理操作被硬拒 —— 缓解：operator 可显式 override，但必须记录审计
-- 强 workflow 让小操作变重 —— 缓解：WorkflowBoundary 分类器自动分流，仅严肃操作走强 workflow
-- 跨 provider 宿主抽象可能跟不上 provider API 变化 —— 缓解：每家 provider 一个 adapter，独立升级
+- `[doc:roleagent.md#第6章]` 核心论断："架构是假设不可控的一定会出问题，然后设计可控层的容错能力"——五原语各自覆盖一类可控层。
+- operator 7 条原则要求"可靠性治理的工程路径"，本 ADR 把 roleagent.md 第 6 章的工程账本（Saga 协调器 / WAL / 四级恢复 / 结构化恢复卡 / 统一宿主抽象）落到可调用 API。
+- fail-closed 默认拒绝符合 `[doc:roleagent.md#第6章]` "Tier 4 操作即使任务完全正常也需要人类确认"——`TierRecoveryService.handle_failure` 对未知 error_type 与退化场景统一升级到 ESCALATE。
+- `ProviderHost` 刻意不依赖 `flowforge.llm.provider`，与 project_rules 红线 10（禁止在 flowforge 写死业务领域代码）一致，可靠性层可被 *Forge 复用。
+- `StateWorkflowComparator` 把"弱状态 vs 强工作流"二选一升级为三分法（STRONG / WEAK / HYBRID），匹配 roleagent.md "开放协作用弱状态机，严肃副作用用强 workflow" 的双轨主张。
+- 五个原语通过 `FailureContext.wal_entries` 与 `ProviderHost.select_provider(exclude)` 形成闭环：探针发现不健康 → Tier 服务决定 FAILOVER → ProviderHost 跳过失败者 → 若副作用已落盘则走 WAL 回滚。
 
 ---
 
-## 替代方案
+## 5. 风险
 
-### 方案 A: 保持"重试 3 次"简单策略
+| 风险 | 缓解 |
+|------|------|
+| WAL 当前为内存存储，进程崩溃即丢失 | 接口设计已预留 SQLite/PostgreSQL 替换路径，P2 阶段补齐持久化后端 |
+| Tier 恢复策略依赖人工注册 `register_policy`，未知错误默认 ESCALATE 可能告警风暴 | ESCALATE 由 operator 审计队列消费；P3 阶段引入策略模板自动注册 |
+| Liveness 探针 `run_all` 串行执行，探针数量多时延迟累积 | 当前规模（<10 探针）下可接受；超规模时切并发执行（`asyncio.gather`） |
+| `StateWorkflowComparator.classify_workflow` 仅做静态分析，运行时外部状态漂移不被感知 | 与 Liveness 探针联动——`requires_external_state=True` 的步骤同时注册探针，运行时退化时触发 ESCALATE |
+| `ProviderHost.select_provider` 同优先级按注册顺序，可能造成热点 | P2 阶段在同优先级内引入加权随机或轮询 |
+| 五原语间无统一可观测视图 | 已通过 `get_logger` 写入结构化日志与 trace_id；P5 阶段接入 Grafana 仪表盘 |
 
-- 优点：实现简单
-- 缺点：force push 等不可逆操作可能被盲目重试造成事故（RA-038 P0 未解决）
-- 未选择原因：违反分布式系统基本原则
+---
 
-### 方案 B: 所有操作走同一套 LoopExecutor
+## 6. 否决理由
 
-- 优点：实现简单，统一执行引擎
-- 缺点：严肃操作（merge / release）无强 workflow 保护（RA-040 P0 未解决）
-- 未选择原因：严肃操作必须可审计、可回放、可拒绝
+- **方案 B（单一 Orchestration + Prompt 兜底）**：`[doc:roleagent.md#第6章]` 明确"用更好的提示词让 agent 不出错"是分布式系统的反模式；prompt 不能消除网络故障与 provider 语义差异。
+- **方案 C（Raft 共识）**：roleagent.md 第 6 章已否决——"参与者是不同厂商的 LLM，你控制不了它们的内部行为"。Raft 要求参与者可预测且低延迟，LLM 不满足。Cat Café 协作状态机"故意保留判断力"，强一致会扼杀开放任务的路径探索。
+- **方案 D（依赖 Provider SDK 自带重试）**：roleagent.md 第 6 章第三类挑战专门讨论了 provider 语义不一致——同一套可靠性规则不能绑死某一家。SDK 重试无跨 provider failover，无副作用 WAL，无 Tier 分级，遇到副作用已执行的故障会双发。
 
-### 方案 C: 用 LangGraph 的 checkpoint 机制
+---
 
-- 优点：复用 LangGraph 已有 checkpoint
-- 缺点：LangGraph checkpoint 是图节点级，不是 TeamAct 六步级；无 Tier 分级
-- 未选择原因：LangGraph 是执行引擎，可靠性策略应在 FlowForge 层决策
+## 7. 参与者
 
-### 方案 D: 让 provider 自己处理恢复（不抽象宿主）
+- operator（愿景锚点 + 最终决策 + 7 条不可妥协原则）
+- 架构师可进化智能体（Forgekin，方案设计 + 术语对齐项目正式命名）
+- 可靠性可进化智能体（实现 P1-6 五原语代码 + 真实 Antigravity alpha smoke 验证）
 
-- 优点：实现简单
-- 缺点：每家 provider 一套恢复逻辑，违反"配置驱动 > 代码实现"
-- 未选择原因：违反 RA-041 跨 provider 统一宿主抽象要求
+---
+
+## 8. 修订记录
+
+| 日期 | 修订 | 修订者 |
+|------|------|--------|
+| 2026-07-21 | 初始版本，确立分布式可靠性五原语决策（WAL / Tier Recovery / Liveness / State-Workflow / Provider Host），术语对齐项目正式命名（可进化智能体 Forgekin / 情景记忆存储 EchoStore） | operator + 架构师可进化智能体 |
 
 ---
 
 ## 引用
 
-- `[doc:roleagent.md#第6章]` — 可靠性：多 agent 是分布式系统
-- `[doc:review/review.md#第八章]` 8.6 节 — RA-037~RA-042 分布式可靠性补审（6 项，5 P0）
-- `[doc:review/review.md#第九章]` 9.3 节 — FR-004 可进化智能体可靠性治理（Tier 0 扩展）
-- `[doc:features/F021-side-effect-wal.md]` — 副作用日志 WAL
-- `[doc:features/F022-tier-1-4-recovery.md]` — Tier 1-4 恢复分级（含 Tier 0 可进化智能体扩展）
-- `[doc:features/F023-liveness-canonical-read.md]` — liveness 规范读模型
-- `[doc:features/F024-weak-state-vs-strong-workflow.md]` — 弱状态机 vs 强 workflow
-- `[doc:features/F025-provider-host-abstraction.md]` — 跨 provider 宿主抽象
-- `[doc:decisions/002-collaboration-protocol.md]` — TeamAct 协作协议（SharedStateLedger + 持球 lease）
-- `[doc:decisions/003-project-thread-architecture.md]` — 线程架构（检查点驱动恢复）
-- `[doc:decisions/007-harness-engineering.md]` — Harness 工程路径（Magic Words 逃生舱 + Governance Boundary）
-- `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢（七类归因含"环境漂移"）
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景（Tier 0 物理世界）
-- `[doc:design/naming-contract.md#2.2]` — Forgekin（可进化智能体）
-- `[doc:design/naming-contract.md#2.3]` — Forgekin Species（智能体形态学，BioForgekin / ObjForgekin 物理形态）
-- `[doc:project_rules.md]` — *Forge 业务项目端口崩溃 / model_service 健康检查间歇失败记录
-- `[doc:project_rules.md#P35]` — 长程任务执行规范（检查点驱动恢复）
+- `[doc:roleagent.md#第6章]` — 可靠性：多 agent 是分布式系统（三类可靠性挑战 + 不可控与可控 + 解锁任务深度）
+- `[doc:roleagent.md#第1章]` — 核心公式：能力 × Harness 契合度
+- `[doc:decisions/007-harness-engineering-path.md]` — Harness 工程路径（依赖）
+- `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（前置决策）
+- `[doc:decisions/012-naming-fusion.md]` — 命名融合（项目正式术语表）
+- `[doc:project_rules.md#红线10]` — 禁止在 flowforge 中写死业务领域代码
+- `flowforge/core/reliability/side_effect_wal.py` — F021 实现（`WalEntry` / `WriteAheadLog` / `WalStatus`）
+- `flowforge/core/reliability/tier_recovery.py` — F022 实现（`RecoveryTier` / `TierRecoveryService` / `RecoveryPolicy` / `FailureContext`）
+- `flowforge/core/reliability/liveness.py` — F023 实现（`LivenessSpec` / `LivenessProbe` / `ProbeResult`）
+- `flowforge/core/reliability/state_workflow.py` — F024 实现（`WorkflowStrength` / `WorkflowStep` / `StateWorkflowComparator`）
+- `flowforge/core/reliability/provider_host.py` — F025 实现（`ProviderInfo` / `ProviderHost`）

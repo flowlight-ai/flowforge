@@ -17,7 +17,7 @@ from __future__ import annotations
 import time
 from datetime import datetime
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -91,7 +91,7 @@ class QCLoop:
         if max_iterations < 1:
             raise ValueError(f"max_iterations must be >= 1, got {max_iterations}")
         self._max_iterations = max_iterations
-        self._last_report: Optional[QCLoopReport] = None
+        self._last_report: QCLoopReport | None = None
         logger.debug(f"qc_loop init: max_iterations={max_iterations}")
 
     async def run(
@@ -313,6 +313,6 @@ class QCLoop:
         """Public alias for _step_close."""
         return self._step_close(target_id, final_status)
 
-    def get_last_report(self) -> Optional[QCLoopReport]:
+    def get_last_report(self) -> QCLoopReport | None:
         """返回上次 QC Loop 报告。"""
         return self._last_report

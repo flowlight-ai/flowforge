@@ -4,7 +4,8 @@ Contains the data models that describe a workflow's structure:
 nodes (steps), edges (connections), and the graph itself.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -17,19 +18,19 @@ class WorkflowNode(BaseModel):
 
     name: str = Field(..., description="Unique step name within the workflow")
     type: str = Field("generate", description="Step type: agent | tool | generate | human")
-    agent: Optional[str] = Field(None, description="Agent name when type=agent")
-    tool: Optional[str] = Field(None, description="Tool name when type=tool")
-    mode: Optional[str] = Field(None, description="Mode executor hint for sub-step")
-    prompt: Optional[str] = Field(None, description="Prompt template (supports {{var}} interpolation)")
-    input: Dict[str, Any] = Field(default_factory=dict, description="Input parameters for the step")
-    output: Optional[str] = Field(None, description="Key name to store step result in context")
-    description: Optional[str] = Field(None, description="Human-readable step description")
+    agent: str | None = Field(None, description="Agent name when type=agent")
+    tool: str | None = Field(None, description="Tool name when type=tool")
+    mode: str | None = Field(None, description="Mode executor hint for sub-step")
+    prompt: str | None = Field(None, description="Prompt template (supports {{var}} interpolation)")
+    input: dict[str, Any] = Field(default_factory=dict, description="Input parameters for the step")
+    output: str | None = Field(None, description="Key name to store step result in context")
+    description: str | None = Field(None, description="Human-readable step description")
     on_error: str = Field("abort", description="Error handling: abort | skip | retry | reflexion_retry")
     retry_count: int = Field(1, description="Number of retries when on_error=retry")
     retry_delay: float = Field(2, description="Delay in seconds between retries")
     human: bool = Field(False, description="Whether this step requires human review")
     force_mode: bool = Field(False, description="Force the specified mode even if agent exists")
-    parallel_group: Optional[List[Dict[str, Any]]] = Field(
+    parallel_group: list[dict[str, Any]] | None = Field(
         None, description="List of sub-steps to execute in parallel"
     )
 
@@ -44,7 +45,7 @@ class WorkflowEdge(BaseModel):
 
     source: str = Field(..., description="Source node name")
     target: str = Field(..., description="Target node name")
-    condition: Optional[str] = Field(None, description="Optional condition expression for conditional edges")
+    condition: str | None = Field(None, description="Optional condition expression for conditional edges")
 
     model_config = {"extra": "allow"}
 
@@ -57,8 +58,8 @@ class WorkflowGraph(BaseModel):
     executed in list order (sequential SOP).
     """
 
-    nodes: List[WorkflowNode] = Field(default_factory=list, description="Ordered list of workflow steps")
-    edges: List[WorkflowEdge] = Field(default_factory=list, description="Optional directed edges between nodes")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Workflow-level metadata")
+    nodes: list[WorkflowNode] = Field(default_factory=list, description="Ordered list of workflow steps")
+    edges: list[WorkflowEdge] = Field(default_factory=list, description="Optional directed edges between nodes")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Workflow-level metadata")
 
     model_config = {"extra": "allow"}

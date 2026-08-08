@@ -1,7 +1,6 @@
 /**
  * ForgekinHueInjector — Forgekin 色相注入器
  *
- * 来源：clowder-ai/packages/web/src/components/CatHueInjector.tsx
  * 命名变更：Cat → Forgekin（依据 naming-contract.md §3.1）
  *
  * 职责：根据当前选中的 Forgekin（可进化智能体），向 <html> 标签注入对应的色相变量

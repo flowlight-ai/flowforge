@@ -12,7 +12,7 @@ import { HubConnectorConfigTab } from "@/components/hub/HubConnectorConfigTab";
  *   - 连接器配置（子 Tab）
  *   - 回退链（主模型失败自动切换）
  *
- * 依据 WEB-FUSION-DESIGN.md §8：合并 clowder-ai HubRoutingPolicyTab + HubConnectorConfigTab。
+ * 整合 HubRoutingPolicyTab + HubConnectorConfigTab。
  */
 
 type RoutingTab = "policies" | "connectors";

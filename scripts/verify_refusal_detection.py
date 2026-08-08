@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """验证 LoopExecutor 拒绝检测机制（2 次拒绝即终止）的自动化脚本。
 
 模拟连续 50 次多轮对话场景，验证：
@@ -8,8 +7,8 @@
 3. 正常对话 → Loop 正常完成
 4. 混合场景（正常→拒绝→恢复）→ Loop 行为正确
 
-运行方式（在 flowforge 仓库根执行；跨平台，勿写死操作系统绝对路径）:
-    cd <flowforge-repo-root>
+运行方式:
+    cd d:\\software\\openclaw\\flowlight-ai\\flowforge
     python scripts/verify_refusal_detection.py
     python scripts/verify_refusal_detection.py --concurrency 50  # 指定轮次
 """
@@ -23,7 +22,6 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 # 确保能导入 flowforge 包
 _project_root = Path(__file__).resolve().parent.parent
@@ -33,7 +31,6 @@ if str(_project_root) not in sys.path:
 from flowforge.loop.executor import LoopExecutor
 from flowforge.loop.state import LoopState
 from flowforge.loop.verifier import Verifier
-
 
 # ── 真实场景的拒绝响应文本（来自 OpenRoute 实际返回）──
 REFUSAL_RESPONSES = [

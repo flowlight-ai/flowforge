@@ -31,16 +31,14 @@ License: MIT
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
-
 from flowforge.core.tracing import TraceLogger, get_logger
-
+from pydantic import BaseModel, Field
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 七类归因枚举
@@ -113,7 +111,7 @@ class AttributionReport(BaseModel):
         default=0.5, ge=0.0, le=1.0, description="归因置信度"
     )
     attributed_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="归因时间 ISO 8601",
     )
 
@@ -182,7 +180,7 @@ def _build_default_rules() -> dict[AttributionCategory, list[str]]:
 
 
 def _load_attribution_templates(
-    prompts_path: Optional[Path],
+    prompts_path: Path | None,
 ) -> dict[str, dict[str, str]]:
     """加载归因文案模板（root_cause / recommendation）。
 
@@ -201,7 +199,7 @@ def _load_attribution_templates(
         path = Path(prompts_path)
         if not path.exists():
             return {}
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         return {
             "root_causes": dict(data.get("attribution_root_causes", {})),
@@ -209,7 +207,7 @@ def _load_attribution_templates(
                 data.get("attribution_recommendations", {})
             ),
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         return {}
 
 
@@ -284,12 +282,12 @@ class Attributor:
 
     def __init__(
         self,
-        logger: Optional[TraceLogger] = None,
-        prompts_path: Optional[Path] = None,
-        rules: Optional[dict[AttributionCategory, list[str]]] = None,
+        logger: TraceLogger | None = None,
+        prompts_path: Path | None = None,
+        rules: dict[AttributionCategory, list[str]] | None = None,
     ) -> None:
         self._logger: TraceLogger = logger or get_logger("eval.attribution")
-        self._prompts_path: Optional[Path] = prompts_path
+        self._prompts_path: Path | None = prompts_path
         self._rules: dict[AttributionCategory, list[str]] = (
             rules if rules is not None else _build_default_rules()
         )

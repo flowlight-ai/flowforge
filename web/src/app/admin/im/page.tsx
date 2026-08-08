@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 /**
- * IM 对接页面 — 来自 clowder-ai im section
+ * IM 对接页面 — 
  *
  * 功能：
  *   - 飞书机器人
@@ -29,7 +29,7 @@ export default function ImPage() {
           </button>
         </div>
         <p className="page-sub" style={{ marginBottom: "16px" }}>
-          飞书、钉钉、企微和外部消息入口 · 来自 clowder-ai im section
+          飞书、钉钉、企微和外部消息入口 · 
         </p>
         <div className="empty">暂无数据 · 功能开发中</div>
         <div style={{ marginTop: "16px", padding: "12px 16px", background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "8px", fontSize: "12px", color: "var(--text-secondary)" }}>

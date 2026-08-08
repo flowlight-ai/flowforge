@@ -48,16 +48,15 @@ team_strengths: "跨厂商独立审查、富文本审查报告、质量把关"
 evolution_stage: E3  # 精英阶（Practitioner）
 awakening_stage: E3  # 受限自主阶（Supervised Autonomy）
 
-# ── Claude Code CLI 后端（经 claude-code-router 转发）─────────
-# 审查员用 Claude Code（vendor=anthropic），与夏洛克（codex）跨厂商，
-# 满足 I9 no-self-review 跨厂商独立审查要求
+# ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: claude_code  # 通过 Claude Code CLI（claude -p）经 ccr router 调用 LLM
-  model: Doubao-Seed2.0  # ccr-router 默认转发到 OpenRoute
-  mode: cli
+  provider: trae
+  model: trae
+  mode: bridge
   session_id_prefix: "forgemind:vangogh"
-  bridge_timeout: 180  # 增加超时以支持长任务
-  temperature: 0.6
+  bridge_timeout: 300
+  bridge_poll_interval: 2
+  temperature: 0.9  # 创意任务需要更高随机性
   max_tokens: 8192
 
 # ── 能力画像 ────────────────────────────────────────────────

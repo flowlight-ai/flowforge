@@ -8,9 +8,10 @@ a check function that validates source code against the rule.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 
 class Severity(str, Enum):
@@ -38,8 +39,8 @@ class LinterRule:
     name: str
     description: str
     severity: Severity = Severity.WARNING
-    pattern: Optional[str] = None
-    check_fn: Optional[Callable[[str], List[Dict[str, Any]]]] = None
+    pattern: str | None = None
+    check_fn: Callable[[str], list[dict[str, Any]]] | None = None
     enabled: bool = True
 
 
@@ -59,7 +60,7 @@ class LinterRules:
     """
 
     def __init__(self) -> None:
-        self._rules: Dict[str, LinterRule] = {}
+        self._rules: dict[str, LinterRule] = {}
         self._register_builtin_rules()
 
     def _register_builtin_rules(self) -> None:
@@ -106,7 +107,7 @@ class LinterRules:
             self._rules[rule.id] = rule
 
     @staticmethod
-    def _check_di_bypass(source_code: str) -> List[Dict[str, Any]]:
+    def _check_di_bypass(source_code: str) -> list[dict[str, Any]]:
         """Check for direct instantiation patterns that bypass DI.
 
         Looks for patterns like ``SomeAgent()`` or ``SomeTool()`` that
@@ -118,7 +119,7 @@ class LinterRules:
         Returns:
             A list of violation dictionaries.
         """
-        violations: List[Dict[str, Any]] = []
+        violations: list[dict[str, Any]] = []
         pattern = re.compile(
             r'(\w+(?:Agent|Tool|Service|Repository|Store|Manager))\s*\(\s*\)'
         )
@@ -137,7 +138,7 @@ class LinterRules:
         return violations
 
     @staticmethod
-    def _check_async_await(source_code: str) -> List[Dict[str, Any]]:
+    def _check_async_await(source_code: str) -> list[dict[str, Any]]:
         """Check for async I/O calls missing await.
 
         Detects calls to common async I/O functions that are not preceded
@@ -149,7 +150,7 @@ class LinterRules:
         Returns:
             A list of violation dictionaries.
         """
-        violations: List[Dict[str, Any]] = []
+        violations: list[dict[str, Any]] = []
         async_io_pattern = re.compile(
             r'(?<!await\s)(?<!\w)'
             r'(\w+\.(?:execute|read|write|send|recv|fetch|post|get|put|delete|query|search))'
@@ -179,7 +180,7 @@ class LinterRules:
         """
         self._rules[rule.id] = rule
 
-    def get_rule(self, rule_id: str) -> Optional[LinterRule]:
+    def get_rule(self, rule_id: str) -> LinterRule | None:
         """Get a rule by its identifier.
 
         Args:
@@ -190,7 +191,7 @@ class LinterRules:
         """
         return self._rules.get(rule_id)
 
-    def get_all_rules(self) -> Dict[str, LinterRule]:
+    def get_all_rules(self) -> dict[str, LinterRule]:
         """Get all registered rules.
 
         Returns:
@@ -198,7 +199,7 @@ class LinterRules:
         """
         return dict(self._rules)
 
-    def get_enabled_rules(self) -> List[LinterRule]:
+    def get_enabled_rules(self) -> list[LinterRule]:
         """Get all enabled rules.
 
         Returns:

@@ -48,14 +48,15 @@ team_strengths: "代码实现、bug 定位、重构优化"
 evolution_stage: E4  # 自主阶（Autonomous）— 能力成熟度提升
 awakening_stage: E4  # 自主阶（Autonomous）— code 闭环门控（I1）
 
-# ── Codex CLI 后端 ─────────────────────────────────────────
+# ── Trae CN 桥接方案 ─────────────────────────────────────────
 llm:
-  provider: codex  # 通过 Codex CLI（codex exec）调用 LLM
-  model: Doubao-Seed2.0  # 经 OpenRoute responses 网关转发
-  mode: cli
+  provider: trae
+  model: trae
+  mode: bridge
   session_id_prefix: "forgemind:sherlock"
-  bridge_timeout: 180  # 增加超时以支持长任务
-  temperature: 0.5
+  bridge_timeout: 300
+  bridge_poll_interval: 2
+  temperature: 0.3  # 审查任务需要确定性
   max_tokens: 8192
 
 # ── 能力画像 ────────────────────────────────────────────────

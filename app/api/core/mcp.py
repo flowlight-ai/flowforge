@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter
@@ -28,7 +28,7 @@ class McpServerCreate(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat() + "Z"
+    return datetime.now(UTC).isoformat() + "Z"
 
 
 @router.get("/servers")
@@ -41,7 +41,7 @@ async def list_mcp_servers() -> dict[str, Any]:
 async def register_mcp_server(payload: McpServerCreate) -> dict[str, Any]:
     """注册 MCP 服务（stub 返回占位对象）。"""
     return {
-        "id": f"mcp_stub_{int(datetime.now(timezone.utc).timestamp())}",
+        "id": f"mcp_stub_{int(datetime.now(UTC).timestamp())}",
         "name": payload.name,
         "transport": payload.transport,
         "command": payload.command,

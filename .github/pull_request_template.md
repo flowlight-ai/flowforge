@@ -1,10 +1,8 @@
-﻿<!-- Thanks for contributing to OpenRoute! Please fill in the following. -->
-<!-- 感谢你为 OpenRoute 贡献代码！请填写以下内容。 -->
+<!-- Thanks for contributing to FlowForge! Please fill in the following. -->
 
 ## Description
 
 <!-- Briefly describe what this PR does and why. Link related issues. -->
-<!-- 简要描述本 PR 做了什么以及原因，并关联相关 Issue。 -->
 
 Fixes # (issue number)
 
@@ -26,15 +24,15 @@ Fixes # (issue number)
 <!-- Mark completed items with an "x". All items must be checked for review. -->
 
 - [ ] My code follows the [contribution guidelines](../CONTRIBUTING.md)
-- [ ] I have read the [SECURITY.md](../SECURITY.md)
+- [ ] I have read the [SECURITY.md](../SECURITY.md) and the five Iron Laws
 - [ ] Type annotations are added (Python 3.11+)
 - [ ] All I/O operations use `async/await`
 - [ ] No hardcoded prompts, paths, keys, or ports (externalized to YAML config)
 - [ ] Single-direction dependency rule is respected (no reverse imports)
 - [ ] I have added tests for my changes
 - [ ] All existing tests pass (`pytest tests/ -v`)
-- [ ] Linter passes (`ruff check .`)
-- [ ] Type checker passes (`mypy .`)
+- [ ] Linter passes (`ruff check flowforge/`)
+- [ ] Type checker passes (`mypy flowforge/`)
 - [ ] My commits follow [conventional commits](https://www.conventionalcommits.org/)
 - [ ] I have updated the [CHANGELOG.md](../CHANGELOG.md) if applicable
 - [ ] I have signed the [CLA](../CLA.md) (if first contribution)
@@ -44,8 +42,9 @@ Fixes # (issue number)
 <!-- For changes that touch core modules, confirm architectural integrity -->
 
 - [ ] No circular dependencies introduced
+- [ ] No hardcoded business domain logic in FlowForge core (if this is a *Forge project, business logic stays in plugins)
+- [ ] Plugin protocol respected (if applicable)
 - [ ] DI container used for all dependency injection
-- [ ] No business logic hardcoded in core modules
 
 ## Testing
 

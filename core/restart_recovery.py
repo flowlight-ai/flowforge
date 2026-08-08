@@ -23,9 +23,9 @@ import inspect
 import json
 import pickle
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -135,7 +135,7 @@ class RestartRecoveryPipeline:
 
     def __init__(
         self,
-        config: Optional[RestartRecoveryConfig] = None,
+        config: RestartRecoveryConfig | None = None,
         operator_user_id: str = "system",
     ) -> None:
         """初始化重启恢复流水线.
@@ -166,7 +166,7 @@ class RestartRecoveryPipeline:
         """
         logger.info("Phase A: 开始扫描 Redis 过期记录")
         swept: list[StaleRecord] = []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         keys = await self._scan_keys(redis_client, pattern="*")
         logger.info(f"Phase A: 扫描到 {len(keys)} 个 key")
@@ -215,7 +215,7 @@ class RestartRecoveryPipeline:
             构造的 RestartNotification 对象。
         """
         restart_id = str(uuid.uuid4())
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         notification = RestartNotification(
             restart_id=restart_id,
             swept_records_count=len(swept_records),
@@ -235,7 +235,7 @@ class RestartRecoveryPipeline:
     async def execute_phase_b_persist(
         self,
         redis_client: Any,
-        snapshot_path: Optional[Path] = None,
+        snapshot_path: Path | None = None,
     ) -> QueueStateSnapshot:
         """Phase B: 持久化队列状态到 RDB 快照.
 
@@ -281,7 +281,7 @@ class RestartRecoveryPipeline:
         aof_tail = await self._get_aof_tail_position()
         snapshot = QueueStateSnapshot(
             snapshot_id=str(uuid.uuid4()),
-            taken_at=datetime.now(timezone.utc),
+            taken_at=datetime.now(UTC),
             queue_states=queue_states,
             aof_tail_position=aof_tail,
         )
@@ -295,8 +295,8 @@ class RestartRecoveryPipeline:
 
     async def execute_phase_b_replay(
         self,
-        aof_log_path: Optional[Path] = None,
-        rdb_snapshot_path: Optional[Path] = None,
+        aof_log_path: Path | None = None,
+        rdb_snapshot_path: Path | None = None,
     ) -> dict:
         """Phase B: 重放 AOF 日志恢复状态.
 
@@ -467,7 +467,7 @@ class RestartRecoveryPipeline:
             return list(result)
         return []
 
-    async def _safe_ttl(self, redis_client: Any, key: str) -> Optional[int]:
+    async def _safe_ttl(self, redis_client: Any, key: str) -> int | None:
         """安全读取 key 的 TTL（None 表示客户端不支持或 key 不存在）。"""
         ttl_method = getattr(redis_client, "ttl", None)
         if ttl_method is None:
@@ -510,7 +510,7 @@ class RestartRecoveryPipeline:
         return value
 
     @staticmethod
-    def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+    def _parse_datetime(value: str | None) -> datetime | None:
         """解析 ISO 格式时间字符串（失败返回 None）。"""
         if not value:
             return None
@@ -548,7 +548,7 @@ class RestartRecoveryPipeline:
         except (TypeError, ValueError):
             return str(value)
 
-    def _enforce_ttl_red_line(self, key: str, ttl: Optional[int]) -> None:
+    def _enforce_ttl_red_line(self, key: str, ttl: int | None) -> None:
         """强制 TTL 红线（Phase B persist 调用，违反 raises ValueError）.
 
         红线规则：
@@ -575,7 +575,7 @@ class RestartRecoveryPipeline:
                     "(explicit TTL required: negative means no expiration or key missing)"
                 )
 
-    def _check_ttl_violation(self, ttl: Optional[int]) -> Optional[str]:
+    def _check_ttl_violation(self, ttl: int | None) -> str | None:
         """检查 TTL 合规性，返回违规原因字符串（无违规返回 None）.
 
         用于 ``validate_ttl_compliance``，仅报告不抛错。
@@ -639,7 +639,7 @@ class RestartRecoveryPipeline:
         """读取 AOF 日志条目（从 start_offset 字节开始，每行一个 JSON 对象）。"""
         def _read() -> list[dict]:
             entries: list[dict] = []
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 if start_offset > 0:
                     f.seek(start_offset)
                 for line in f:

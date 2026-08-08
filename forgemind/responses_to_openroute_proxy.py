@@ -11,7 +11,7 @@ OpenAI Codex CLI 强制使用 Responses API (``/v1/responses``)，不再支持 c
     python -m flowforge.forgemind.responses_to_openroute_proxy
 
 Codex CLI 配置 (~/.codex/config.toml):
-    model = "Doubao-Seed2.0"
+    model = "Qwen3.6-Plus"
     model_provider = "openroute_responses"
     [model_providers.openroute_responses]
     base_url = "http://127.0.0.1:8084/v1"
@@ -22,7 +22,6 @@ Codex CLI 配置 (~/.codex/config.toml):
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import logging
 import os
@@ -31,44 +30,24 @@ import time
 from typing import Any
 
 import httpx
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-import uvicorn
 
 # ── 配置 ────────────────────────────────────────────────────────────────────
 
 OPENROUTE_BASE_URL = os.environ.get("OPENROUTE_BASE_URL", "http://localhost:13001/v1")
 OPENROUTE_API_KEY = os.environ.get(
     "OPENROUTE_API_KEY",
-    "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
+    "",  # 铁律5: 禁止硬编码密钥 — 必须通过 OPENROUTE_API_KEY 环境变量注入
 )
 DEFAULT_PORT = int(os.environ.get("RESPONSES_PROXY_PORT", "8084"))
 DEFAULT_HOST = os.environ.get("RESPONSES_PROXY_HOST", "127.0.0.1")
 # 默认模型 Doubao-Seed2.0 —— OpenRoute 2026-07-25 实测：
 #   - Doubao-Seed2.0:  14.6s 返回 PONG ✓ (稳定)
-#   - Doubao-Seed2.0:    33.9s 返回 PONG ✓ (慢但可用)
-#   - Doubao-Seed2.0: 返回 "无法回答"
+#   - Qwen3.6-Plus:    33.9s 返回 PONG ✓ (慢但可用)
+#   - DeepSeek-V4-Pro: 返回 "无法回答"
 DEFAULT_MODEL = os.environ.get("RESPONSES_PROXY_MODEL", "Doubao-Seed2.0")
-
-# 客户端模型名 → OpenRoute 可用模型名映射
-MODEL_MAPPING = {
-    "gpt-4o": "Doubao-Seed2.0",
-    "gpt-4o-mini": "Doubao-Seed2.0",
-    "gpt-4-turbo": "Doubao-Seed2.0",
-    "gpt-4": "Doubao-Seed2.0",
-    "gpt-3.5-turbo": "Doubao-Seed2.0",
-    "gpt-5": "GPT-5.5",
-    "gpt-5-mini": "GPT-5.5",
-    "gpt-5.5": "GPT-5.5",
-    "o1": "Doubao-Seed2.0",
-    "o1-mini": "Doubao-Seed2.0",
-    "o1-preview": "Doubao-Seed2.0",
-    "o3": "Doubao-Seed2.0",
-    "o3-mini": "Doubao-Seed2.0",
-    "o4-mini": "Doubao-Seed2.0",
-    "text-davinci-003": "Doubao-Seed2.0",
-}
-
 
 # ── 日志 ────────────────────────────────────────────────────────────────────
 
@@ -99,7 +78,7 @@ def responses_to_chat(body: dict[str, Any]) -> dict[str, Any]:
 
     Chat Completions 请求体示例:
         {
-          "model": "Doubao-Seed2.0",
+          "model": "Qwen3.6-Plus",
           "messages": [
             {"role": "system", "content": "You are helpful."},
             {"role": "user", "content": "What is 2+2?"}
@@ -146,7 +125,6 @@ def responses_to_chat(body: dict[str, Any]) -> dict[str, Any]:
 
     # 模型
     model = body.get("model", DEFAULT_MODEL)
-    model = MODEL_MAPPING.get(model, model)
 
     chat_body: dict[str, Any] = {
         "model": model,
@@ -346,105 +324,25 @@ async def stream_chat_to_responses(oa_resp: httpx.Response, model: str, resp_id:
 
 # ── HTTP 客户端 ─────────────────────────────────────────────────────────────
 
-# Invalid response patterns that indicate silent failure
-INVALID_RESPONSE_PATTERNS = [
-    "无法回答",
-    "当前不可用，请稍后重试",
-    "当前不可用,请稍后重试",
-    "我无法回答",
-    "我不能回答",
-    "我无法提供",
-    "我无法完成",
-]
-
-# Fallback models to try when primary model fails
-FALLBACK_MODELS = ["Doubao-Seed2.0", "Kimi-K2.6", "DeepSeek-V4-Pro", "auto"]
-
-
-def _is_invalid_response(content: str) -> bool:
-    """Check if the LLM response is invalid (silent failure)."""
-    if not content or len(content.strip()) < 2:
-        return True
-    content_stripped = content.strip()
-    for pattern in INVALID_RESPONSE_PATTERNS:
-        if pattern in content_stripped:
-            return True
-    return False
-
-
 async def call_openroute(chat_body: dict[str, Any], stream: bool = False) -> httpx.Response:
-    """Call OpenRoute with retry logic and invalid response detection.
+    """转发请求到 OpenRoute. 总是用 stream=False（OpenRoute stream 有 bug）.
 
-    On invalid response or error, retries with fallback models.
-    Max 3 attempts. Always uses stream=False (OpenRoute stream has a bug);
-    callers synthesize SSE from the non-stream response.
+    stream=true 的请求由 stream_chat_to_responses 端点从非流式响应合成 SSE。
     """
     headers = {
         "Authorization": f"Bearer {OPENROUTE_API_KEY}",
         "Content-Type": "application/json",
     }
+    # 总是用 stream=False，OpenRoute 的 stream 实现有 bug
+    chat_body = {**chat_body, "stream": False}
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        return await client.post(
+            f"{OPENROUTE_BASE_URL}/chat/completions",
+            json=chat_body,
+            headers=headers,
+        )
 
-    original_model = chat_body.get("model", DEFAULT_MODEL)
-    last_response: httpx.Response | None = None
 
-    for attempt in range(1, 4):
-        # Select model: original on attempt 1, fallback on later attempts
-        if attempt == 1:
-            model = original_model
-        else:
-            fallback_idx = min(attempt - 2, len(FALLBACK_MODELS) - 1)
-            model = FALLBACK_MODELS[fallback_idx]
-            log.info(f"Retry {attempt}/3 with fallback model: {model}")
-
-        request_body = {**chat_body, "model": model, "stream": False}
-
-        def _call() -> httpx.Response:
-            with httpx.Client(timeout=180.0) as client:
-                return client.post(
-                    f"{OPENROUTE_BASE_URL}/chat/completions",
-                    json=request_body,
-                    headers=headers,
-                )
-
-        try:
-            resp = await asyncio.to_thread(_call)
-            if resp.status_code != 200:
-                log.warning(f"OpenRoute returned {resp.status_code} (attempt {attempt})")
-                last_response = resp
-                if attempt < 3:
-                    continue
-                return resp
-
-            # Check for invalid response
-            try:
-                data = resp.json()
-                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                if _is_invalid_response(content):
-                    log.warning(f"Invalid response from {model} (attempt {attempt}): {content[:50]}")
-                    last_response = resp
-                    if attempt < 3:
-                        continue
-                    return resp
-            except Exception:
-                pass
-
-            # Valid response
-            return resp
-
-        except Exception as e:
-            log.warning(f"OpenRoute call failed (attempt {attempt}): {e}")
-            if attempt < 3:
-                continue
-            raise
-
-    # All retries exhausted, return last response (may be None)
-    if last_response is not None:
-        return last_response
-    # Create a synthetic error response
-    return httpx.Response(
-        status_code=503,
-        json={"error": {"message": "All retry attempts failed", "type": "api_error"}},
-    )
 # ── 路由 ────────────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -462,7 +360,6 @@ async def responses(request: Request) -> Any:
     """OpenAI Responses API 端点."""
     body = await request.json()
     model = body.get("model", DEFAULT_MODEL)
-    model = MODEL_MAPPING.get(model, model)
     stream = body.get("stream", False)
     log.info(f"responses: model={model} stream={stream}")
 
@@ -507,7 +404,7 @@ async def list_models() -> dict:
             {"id": "Kimi-K2.6", "object": "model"},
             {"id": "GLM-5.1", "object": "model"},
             {"id": "Doubao-Seed2.0", "object": "model"},
-            {"id": "Doubao-Seed2.0", "object": "model"},
+            {"id": "DeepSeek-V4-Pro", "object": "model"},
         ]
     }
 

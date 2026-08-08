@@ -29,13 +29,10 @@ Usage:
 """
 
 import json
-import os
 import re
 import shutil
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -76,12 +73,12 @@ class WorkspaceManager:
         _base: Root directory for all workspaces.
     """
 
-    def __init__(self, base: Optional[Path] = None):
+    def __init__(self, base: Path | None = None):
         self._base = base or WORKSPACE_BASE
         self._base.mkdir(parents=True, exist_ok=True)
-        self._dir_map: Dict[str, Path] = {}
+        self._dir_map: dict[str, Path] = {}
 
-    def create_workspace(self, task_id: str, metadata: Optional[dict] = None, workspace_dir: Optional[str] = None, workspace_name: Optional[str] = None) -> Path:
+    def create_workspace(self, task_id: str, metadata: dict | None = None, workspace_dir: str | None = None, workspace_name: str | None = None) -> Path:
         # If workspace_name is provided, use the named workspace system
         if workspace_name:
             ws_path = self._base / workspace_name
@@ -97,7 +94,7 @@ class WorkspaceManager:
                 ws_meta = {
                     "name": workspace_name,
                     "display_name": workspace_name,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                     "path": str(ws_path),
                 }
                 self._write_json(ws_meta_path, ws_meta)
@@ -107,7 +104,7 @@ class WorkspaceManager:
             task_meta = {
                 "task_id": task_id,
                 "workspace": workspace_name,
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
                 "status": "running",
                 "message_count": 0,
                 **(metadata or {}),
@@ -134,7 +131,7 @@ class WorkspaceManager:
 
         task_meta = {
             "task_id": task_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "status": "running",
             "message_count": 0,
             "workspace_dir": workspace_dir,
@@ -148,7 +145,7 @@ class WorkspaceManager:
         logger.info(f"Workspace created: {ws_path}")
         return ws_path
 
-    def create_named_workspace(self, name: str, path: Optional[str] = None) -> Path:
+    def create_named_workspace(self, name: str, path: str | None = None) -> Path:
         """Create a named workspace directory.
 
         Args:
@@ -171,13 +168,13 @@ class WorkspaceManager:
         meta = {
             "name": safe_name,
             "display_name": name,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "path": str(ws_path),
         }
         self._write_json(ws_path / HELM_DIR / "workspace.json", meta)
         return ws_path
 
-    def list_named_workspaces(self) -> List[dict]:
+    def list_named_workspaces(self) -> list[dict]:
         """List all named workspaces (not task-id directories)."""
         results = []
         if not self._base.exists():
@@ -207,7 +204,7 @@ class WorkspaceManager:
             self.create_named_workspace("default")
         return "default"
 
-    def add_task_to_workspace(self, workspace_name: str, task_id: str, metadata: Optional[dict] = None) -> Path:
+    def add_task_to_workspace(self, workspace_name: str, task_id: str, metadata: dict | None = None) -> Path:
         """Add a task to a named workspace."""
         ws_path = self._base / workspace_name
         if not ws_path.exists() or not (ws_path / HELM_DIR / "workspace.json").exists():
@@ -218,7 +215,7 @@ class WorkspaceManager:
         task_meta = {
             "task_id": task_id,
             "workspace": workspace_name,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "status": "running",
             **(metadata or {}),
         }
@@ -236,7 +233,7 @@ class WorkspaceManager:
 
         return ws_path
 
-    def list_workspace_tasks(self, workspace_name: str) -> List[dict]:
+    def list_workspace_tasks(self, workspace_name: str) -> list[dict]:
         """List all tasks in a named workspace."""
         ws_path = self._base / workspace_name
         tasks_dir = ws_path / HELM_DIR / "tasks"
@@ -252,7 +249,7 @@ class WorkspaceManager:
         results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return results
 
-    def get_task_workspace(self, task_id: str) -> Optional[str]:
+    def get_task_workspace(self, task_id: str) -> str | None:
         """Find which workspace a task belongs to."""
         if not self._base.exists():
             return None
@@ -266,7 +263,7 @@ class WorkspaceManager:
                     return ws_dir.name
         return None
 
-    def get_workspace_path(self, task_id: str) -> Optional[Path]:
+    def get_workspace_path(self, task_id: str) -> Path | None:
         if task_id in self._dir_map:
             p = self._dir_map[task_id]
             return p if p.exists() else None
@@ -294,7 +291,7 @@ class WorkspaceManager:
         return output
 
     def save_output_file(self, task_id: str, filename: str, content: str,
-                          metadata: Optional[dict] = None) -> Optional[dict]:
+                          metadata: dict | None = None) -> dict | None:
         """Save content as a workspace output file.
 
         Args:
@@ -328,7 +325,7 @@ class WorkspaceManager:
             logger.error(f"Failed to save output file {filename} for task {task_id}: {e}")
             return None
 
-    def save_content_file(self, task_id: str, filename: str, content: str) -> Optional[dict]:
+    def save_content_file(self, task_id: str, filename: str, content: str) -> dict | None:
         """Save generated content as a workspace file.
         
         Shortcut for save_output_file with content-specific metadata."""
@@ -377,7 +374,7 @@ class WorkspaceManager:
         chat_path = helm_dir / CHAT_FILE
 
         if "timestamp" not in message:
-            message["timestamp"] = datetime.now(timezone.utc).isoformat()
+            message["timestamp"] = datetime.now(UTC).isoformat()
 
         # Save to legacy chat.jsonl
         with open(chat_path, "a", encoding="utf-8") as f:
@@ -393,7 +390,7 @@ class WorkspaceManager:
         task_meta = self._load_task_meta(task_id)
         if task_meta:
             task_meta["message_count"] = task_meta.get("message_count", 0) + 1
-            task_meta["updated_at"] = datetime.now(timezone.utc).isoformat()
+            task_meta["updated_at"] = datetime.now(UTC).isoformat()
             self._write_json(helm_dir / TASK_FILE, task_meta)
             # Also update task-specific metadata
             if tasks_dir.exists():
@@ -401,7 +398,7 @@ class WorkspaceManager:
                 if task_file.exists():
                     self._write_json(task_file, task_meta)
 
-    def load_messages(self, task_id: str) -> List[dict]:
+    def load_messages(self, task_id: str) -> list[dict]:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return []
@@ -412,7 +409,7 @@ class WorkspaceManager:
             return []
 
         messages = []
-        with open(chat_path, "r", encoding="utf-8") as f:
+        with open(chat_path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -428,10 +425,10 @@ class WorkspaceManager:
             return
         helm_dir = ws_path / HELM_DIR
         helm_dir.mkdir(parents=True, exist_ok=True)
-        context["saved_at"] = datetime.now(timezone.utc).isoformat()
+        context["saved_at"] = datetime.now(UTC).isoformat()
         self._write_json(helm_dir / CONTEXT_FILE, context)
 
-    def load_context(self, task_id: str) -> Optional[dict]:
+    def load_context(self, task_id: str) -> dict | None:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return None
@@ -452,7 +449,7 @@ class WorkspaceManager:
         if not task_meta:
             return
         task_meta["status"] = status
-        task_meta["updated_at"] = datetime.now(timezone.utc).isoformat()
+        task_meta["updated_at"] = datetime.now(UTC).isoformat()
         task_meta.update(kwargs)
         ws_path = self._resolve_ws_path(task_id)
         if ws_path:
@@ -464,12 +461,12 @@ class WorkspaceManager:
                 if task_file.exists():
                     self._write_json(task_file, task_meta)
 
-    def update_task_metadata(self, task_id: str, updates: dict) -> Optional[dict]:
+    def update_task_metadata(self, task_id: str, updates: dict) -> dict | None:
         task_meta = self._load_task_meta(task_id)
         if not task_meta:
             return None
         task_meta.update(updates)
-        task_meta["updated_at"] = datetime.now(timezone.utc).isoformat()
+        task_meta["updated_at"] = datetime.now(UTC).isoformat()
         ws_path = self._resolve_ws_path(task_id)
         if ws_path:
             self._write_json(ws_path / HELM_DIR / TASK_FILE, task_meta)
@@ -481,7 +478,7 @@ class WorkspaceManager:
                     self._write_json(task_file, task_meta)
         return task_meta
 
-    def list_workspaces(self, status: Optional[str] = None) -> List[dict]:
+    def list_workspaces(self, status: str | None = None) -> list[dict]:
         if not self._base.exists():
             return []
 
@@ -525,13 +522,13 @@ class WorkspaceManager:
             return True
         return False
 
-    def _resolve_ws_path(self, task_id: str) -> Optional[Path]:
+    def _resolve_ws_path(self, task_id: str) -> Path | None:
         if task_id in self._dir_map:
             return self._dir_map[task_id]
         ws_path = self._base / task_id
         return ws_path if ws_path.exists() else None
 
-    def read_file(self, task_id: str, filename: str) -> Optional[str]:
+    def read_file(self, task_id: str, filename: str) -> str | None:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return None
@@ -547,7 +544,7 @@ class WorkspaceManager:
         except Exception:
             return None
 
-    def list_all_files(self, task_id: str, pattern: str = "*", subdir: str = "") -> List[dict]:
+    def list_all_files(self, task_id: str, pattern: str = "*", subdir: str = "") -> list[dict]:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return []
@@ -567,13 +564,13 @@ class WorkspaceManager:
                     "name": entry.name,
                     "path": str(rel),
                     "size": stat.st_size,
-                    "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                    "modified": datetime.fromtimestamp(stat.st_mtime, tz=UTC).isoformat(),
                     "is_dir": False,
                 })
         results.sort(key=lambda x: x["path"])
         return results
 
-    def search_files(self, task_id: str, query: str) -> List[dict]:
+    def search_files(self, task_id: str, query: str) -> list[dict]:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return []
@@ -598,7 +595,7 @@ class WorkspaceManager:
         results.sort(key=lambda x: x["matches"], reverse=True)
         return results
 
-    def write_file(self, task_id: str, filename: str, content: str) -> Optional[dict]:
+    def write_file(self, task_id: str, filename: str, content: str) -> dict | None:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return None
@@ -637,10 +634,10 @@ class WorkspaceManager:
         if not ws_path:
             return
         ws_path.mkdir(parents=True, exist_ok=True)
-        state["saved_at"] = datetime.now(timezone.utc).isoformat()
+        state["saved_at"] = datetime.now(UTC).isoformat()
         self._write_json(ws_path / ".checkpoint.json", state)
 
-    def load_checkpoint(self, task_id: str) -> Optional[dict]:
+    def load_checkpoint(self, task_id: str) -> dict | None:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return None
@@ -649,7 +646,7 @@ class WorkspaceManager:
             return None
         return self._load_json(cp_path)
 
-    def get_incomplete_tasks(self) -> List[dict]:
+    def get_incomplete_tasks(self) -> list[dict]:
         results = []
         if not self._base.exists():
             return results
@@ -661,7 +658,7 @@ class WorkspaceManager:
                 results.append(task_meta)
         return results
 
-    def _load_task_meta(self, task_id: str) -> Optional[dict]:
+    def _load_task_meta(self, task_id: str) -> dict | None:
         ws_path = self._resolve_ws_path(task_id)
         if not ws_path:
             return None
@@ -674,15 +671,15 @@ class WorkspaceManager:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-    def _load_json(self, path: Path) -> Optional[dict]:
+    def _load_json(self, path: Path) -> dict | None:
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, FileNotFoundError):
             return None
 
 
-_workspace_manager: Optional[WorkspaceManager] = None
+_workspace_manager: WorkspaceManager | None = None
 
 
 def get_workspace_manager() -> WorkspaceManager:

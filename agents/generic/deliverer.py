@@ -1,5 +1,5 @@
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
-from typing import Optional
+
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
 
 
 class DelivererAgent(GenericAgent):
@@ -7,7 +7,7 @@ class DelivererAgent(GenericAgent):
     description = "交付输出：格式化并交付最终结果"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         processed = input.params.get("processed", "")
         validation = input.params.get("validation", {})

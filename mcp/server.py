@@ -4,7 +4,8 @@ Supports SSE transport for web-based clients and stdio for CLI clients.
 Only exposes tools with safety_level <= 'normal' by default.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("mcp.server")
@@ -39,7 +40,7 @@ class MCPServer:
             <= self._safety_order.get(self._max_safety_level, 1)
         )
 
-    def list_tools(self) -> List[Dict[str, Any]]:
+    def list_tools(self) -> list[dict[str, Any]]:
         """List all available tools in MCP format."""
         if not self._tool_registry:
             return []
@@ -60,7 +61,7 @@ class MCPServer:
 
         return tools
 
-    async def call_tool(self, name: str, arguments: Dict[str, Any]) -> Any:
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
         """Invoke a tool by name with given arguments."""
         if not self._tool_registry:
             raise RuntimeError("Tool registry not available")
@@ -90,7 +91,7 @@ class MCPServer:
             return self.list_tools()
 
         @router.post("/tools/{tool_name}")
-        async def call_tool(tool_name: str, arguments: Dict[str, Any]):
+        async def call_tool(tool_name: str, arguments: dict[str, Any]):
             try:
                 result = await self.call_tool(tool_name, arguments)
                 return {"status": "success", "result": result}

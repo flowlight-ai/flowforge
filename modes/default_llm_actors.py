@@ -1,9 +1,10 @@
 import json
 import re
-from flowforge.core.base_agent import BaseAgent, AgentInput, AgentOutput
+
+from flowforge.core.base_agent import AgentInput, AgentOutput, BaseAgent
 from flowforge.core.base_tool import ToolInput
-from flowforge.core.task_context import TaskContext
 from flowforge.core.prompt_manager import get_prompt
+from flowforge.core.task_context import TaskContext
 
 
 class DefaultLLMActor(BaseAgent):

@@ -1,6 +1,6 @@
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput
+
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent
 from flowforge.core.task_context import TaskContext
-from typing import Optional
 
 
 class MultilingualAgent(GenericAgent):
@@ -8,7 +8,7 @@ class MultilingualAgent(GenericAgent):
     description = "多语言翻译：检测语言、翻译、验证翻译质量"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         text = input.params.get("text", "")
         mode = input.params.get("mode", "translate")
         source_lang = input.params.get("source_lang", "")

@@ -7,12 +7,14 @@ Implements FR-CAP-03 L1:
 - Server-name aware routing (for broker integration)
 """
 
-import json
-import time
 import asyncio
+import json
 import subprocess
-from typing import Optional, Dict, Any, List
+import time
+from typing import Any
+
 import httpx
+
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("mcp.client")
@@ -27,30 +29,30 @@ class MCPClient:
     over stdio, HTTP, or WebSocket transport.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
-        self._tool_cache: Dict[str, Any] = {}
+        self._tool_cache: dict[str, Any] = {}
         self._cache_timestamp: float = 0
-        self._process: Optional[subprocess.Popen] = None
-        self._ws: Optional[Any] = None  # websockets client
+        self._process: subprocess.Popen | None = None
+        self._ws: Any | None = None  # websockets client
         self._connected = False
         self._request_id = 0
         self._timeout = self.config.get("timeout", 30)
-        self._server_name: Optional[str] = self.config.get("server_name")
-        self._transport: Optional[str] = None  # "stdio" | "http" | "ws"
+        self._server_name: str | None = self.config.get("server_name")
+        self._transport: str | None = None  # "stdio" | "http" | "ws"
 
     @property
-    def server_name(self) -> Optional[str]:
+    def server_name(self) -> str | None:
         """Get the server name this client is connected to."""
         return self._server_name
 
     async def connect(
         self,
-        command: Optional[str] = None,
-        args: Optional[List[str]] = None,
-        url: Optional[str] = None,
-        ws_url: Optional[str] = None,
-        server_name: Optional[str] = None,
+        command: str | None = None,
+        args: list[str] | None = None,
+        url: str | None = None,
+        ws_url: str | None = None,
+        server_name: str | None = None,
     ) -> bool:
         """Connect to an MCP server.
 
@@ -112,7 +114,7 @@ class MCPClient:
         logger.warning("No connection method specified")
         return False
 
-    async def list_tools(self, server_name: Optional[str] = None, force_refresh: bool = False) -> List[Dict[str, Any]]:
+    async def list_tools(self, server_name: str | None = None, force_refresh: bool = False) -> list[dict[str, Any]]:
         """List available tools from the MCP server.
 
         Args:
@@ -144,9 +146,9 @@ class MCPClient:
     async def call_tool(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
-        server_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        arguments: dict[str, Any],
+        server_name: str | None = None,
+    ) -> dict[str, Any]:
         """Call a tool on the MCP server via JSON-RPC 2.0.
 
         Args:
@@ -170,7 +172,7 @@ class MCPClient:
             logger.error(f"MCP call_tool '{tool_name}' failed: {e}")
             return {"result": None, "error": str(e)}
 
-    async def _send_jsonrpc(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_jsonrpc(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         """Send a JSON-RPC 2.0 request and return the response.
 
         Automatically selects the transport based on connection state:
@@ -193,7 +195,7 @@ class MCPClient:
         else:
             raise RuntimeError("No transport available (neither stdio process, WebSocket, nor HTTP url configured)")
 
-    async def _send_jsonrpc_stdio(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_jsonrpc_stdio(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send JSON-RPC request via stdio transport."""
         payload = json.dumps(request) + "\n"
         loop = asyncio.get_event_loop()
@@ -210,7 +212,7 @@ class MCPClient:
 
         return await asyncio.wait_for(loop.run_in_executor(None, _write_and_read), timeout=self._timeout)
 
-    async def _send_jsonrpc_http(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_jsonrpc_http(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send JSON-RPC request via HTTP transport."""
         url = self.config["url"]
         async with httpx.AsyncClient(timeout=self._timeout) as client:
@@ -218,7 +220,7 @@ class MCPClient:
             resp.raise_for_status()
             return resp.json()
 
-    async def _send_jsonrpc_ws(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_jsonrpc_ws(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send JSON-RPC request via WebSocket transport."""
         if self._ws is None:
             raise RuntimeError("WebSocket not connected")

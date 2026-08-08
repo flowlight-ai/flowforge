@@ -28,7 +28,8 @@ import asyncio
 import hashlib
 import os
 import time
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -51,7 +52,7 @@ class ModerationError(Exception):
     - 配置错误（如未配置 API key）
     """
 
-    def __init__(self, message: str, *, cause: Optional[BaseException] = None) -> None:
+    def __init__(self, message: str, *, cause: BaseException | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.cause = cause
@@ -68,7 +69,7 @@ class ModerationBlockedError(Exception):
         risk_labels: 命中的风险标签列表
     """
 
-    def __init__(self, content: str, risk_labels: List[str]) -> None:
+    def __init__(self, content: str, risk_labels: list[str]) -> None:
         self.content = content[:200]
         self.risk_labels = list(risk_labels)
         super().__init__(
@@ -119,13 +120,13 @@ class ModerationConfig(BaseModel):
     #   degrade_to_human: 降级人工审核（适用于高风险场景）
     fallback_action: str = "allow"
     # 必须拦截的风险标签（命中任一即 allowed=False）
-    block_labels: List[str] = Field(
+    block_labels: list[str] = Field(
         default_factory=lambda: ["porn", "violence", "political", "abuse"]
     )
     # 扩展元数据（业务可附加 trace_id、tenant_id 等）
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
-    def resolve_api_key(self) -> Optional[str]:
+    def resolve_api_key(self) -> str | None:
         """从环境变量解析 API key.
 
         Returns:
@@ -147,13 +148,13 @@ class ModerationResult(BaseModel):
     # 是否允许通过（业务决策）
     allowed: bool = True
     # 命中的风险标签（来自 API 响应或本地匹配）
-    risk_labels: List[str] = Field(default_factory=list)
+    risk_labels: list[str] = Field(default_factory=list)
     # 风险详情（API 原始结构，每个元素为 dict）
-    risk_details: List[Dict[str, Any]] = Field(default_factory=list)
+    risk_details: list[dict[str, Any]] = Field(default_factory=list)
     # 置信度 0.0-1.0（API 未返回时默认 1.0）
     confidence: float = 1.0
     # 原始响应（调试用，生产环境日志中可脱敏）
-    raw_response: Dict[str, Any] = Field(default_factory=dict)
+    raw_response: dict[str, Any] = Field(default_factory=dict)
     # 是否命中缓存
     cache_hit: bool = False
     # 本次调用耗时（秒），含重试
@@ -198,7 +199,7 @@ class DoubaoModerationClient:
         self._logger: Any = logger or globals()["logger"]
 
         # 缓存：{cache_key: (ModerationResult, expire_timestamp)}
-        self._cache: Dict[str, Tuple[ModerationResult, float]] = {}
+        self._cache: dict[str, tuple[ModerationResult, float]] = {}
 
         # 调用统计
         self._total_calls: int = 0
@@ -254,29 +255,27 @@ class DoubaoModerationClient:
                 ],
                 confidence=1.0,
                 duration_seconds=time.time() - start_ts,
-                error="内容长度超过上限 {0} 字符".format(self.MAX_CONTENT_LENGTH),
+                error=f"内容长度超过上限 {self.MAX_CONTENT_LENGTH} 字符",
                 action_taken="deny",
             )
             self._logger.warning(
-                "moderation 拒绝：内容长度 {0} 超过上限 {1}".format(
-                    len(content), self.MAX_CONTENT_LENGTH
-                )
+                f"moderation 拒绝：内容长度 {len(content)} 超过上限 {self.MAX_CONTENT_LENGTH}"
             )
             return result
 
         # 3. 缓存查询
         cache_key: str = self._get_cache_key(content)
-        cached: Optional[ModerationResult] = self._lookup_cache(cache_key)
+        cached: ModerationResult | None = self._lookup_cache(cache_key)
         if cached is not None:
             self._cache_hits += 1
             cached.cache_hit = True
             cached.duration_seconds = time.time() - start_ts
-            self._logger.debug("moderation 缓存命中: key={0}".format(cache_key[:12]))
+            self._logger.debug(f"moderation 缓存命中: key={cache_key[:12]}")
             return cached
 
         # 4. 调用 API
         try:
-            raw_response: Dict[str, Any] = await self._call_api(content)
+            raw_response: dict[str, Any] = await self._call_api(content)
         except ModerationTimeoutError as e:
             self._failed_calls += 1
             self._record_metrics(
@@ -286,7 +285,7 @@ class DoubaoModerationClient:
                 duration=time.time() - start_ts,
             )
             return self._build_fallback_result(
-                error="moderation 超时: {0}".format(e),
+                error=f"moderation 超时: {e}",
                 start_ts=start_ts,
             )
         except ModerationError as e:
@@ -298,15 +297,15 @@ class DoubaoModerationClient:
                 duration=time.time() - start_ts,
             )
             return self._build_fallback_result(
-                error="moderation 失败: {0}".format(e),
+                error=f"moderation 失败: {e}",
                 start_ts=start_ts,
             )
 
         # 5. 解析响应
         blocked, hit_labels = self._check_block(raw_response)
-        data: Dict[str, Any] = raw_response.get("data", raw_response or {})
-        risk_labels: List[str] = list(data.get("risk_labels", []) or [])
-        risk_details: List[Dict[str, Any]] = list(data.get("risk_details", []) or [])
+        data: dict[str, Any] = raw_response.get("data", raw_response or {})
+        risk_labels: list[str] = list(data.get("risk_labels", []) or [])
+        risk_details: list[dict[str, Any]] = list(data.get("risk_details", []) or [])
         access_flag: bool = bool(data.get("access", True))
 
         allowed: bool = (not blocked) and access_flag
@@ -327,9 +326,7 @@ class DoubaoModerationClient:
         if not allowed:
             self._blocked_calls += 1
             self._logger.info(
-                "moderation 拦截: labels={0}, 预览={1!r}".format(
-                    result.risk_labels, content[:80]
-                )
+                f"moderation 拦截: labels={result.risk_labels}, 预览={content[:80]!r}"
             )
 
         # 6. 写入缓存
@@ -347,9 +344,9 @@ class DoubaoModerationClient:
 
     async def moderate_batch(
         self,
-        contents: List[str],
+        contents: list[str],
         content_type: str = "text",
-    ) -> List[ModerationResult]:
+    ) -> list[ModerationResult]:
         """批量审核（并发调用 moderate）.
 
         使用 asyncio.gather 并发执行；单条失败不影响其他条目。
@@ -363,7 +360,7 @@ class DoubaoModerationClient:
         """
         if not contents:
             return []
-        tasks: List[Awaitable[ModerationResult]] = [
+        tasks: list[Awaitable[ModerationResult]] = [
             self.moderate(c, content_type=content_type) for c in contents
         ]
         return await asyncio.gather(*tasks)
@@ -377,10 +374,10 @@ class DoubaoModerationClient:
         count: int = len(self._cache)
         self._cache.clear()
         if count > 0:
-            self._logger.info("moderation 缓存已清理: {0} 条".format(count))
+            self._logger.info(f"moderation 缓存已清理: {count} 条")
         return count
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """获取客户端状态.
 
         Returns:
@@ -404,7 +401,7 @@ class DoubaoModerationClient:
 
     # ── 内部实现 ──────────────────────────────────────────────────────
 
-    async def _call_api(self, content: str) -> Dict[str, Any]:
+    async def _call_api(self, content: str) -> dict[str, Any]:
         """调用 Doubao moderation API（带重试 + 超时）.
 
         Args:
@@ -417,62 +414,55 @@ class DoubaoModerationClient:
             ModerationError: 配置错误或非超时类失败
             ModerationTimeoutError: 所有重试均超时
         """
-        api_key: Optional[str] = self.config.resolve_api_key()
+        api_key: str | None = self.config.resolve_api_key()
         if not api_key:
             raise ModerationError(
-                "未配置 API key：环境变量 {0} 未设置".format(self.config.api_key_env)
+                f"未配置 API key：环境变量 {self.config.api_key_env} 未设置"
             )
 
         url: str = self.config.api_base.rstrip("/") + self.MODERATION_PATH
-        headers: Dict[str, str] = {
-            "Authorization": "Bearer {0}".format(api_key),
+        headers: dict[str, str] = {
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "content": content,
             "scene": self.config.scene,
         }
 
-        last_error: Optional[BaseException] = None
+        last_error: BaseException | None = None
         timeouts: int = 0
         attempts: int = self.config.retry_count + 1
 
         for attempt in range(1, attempts + 1):
             try:
-                response_dict: Dict[str, Any] = await self._do_http_post(
+                response_dict: dict[str, Any] = await self._do_http_post(
                     url=url,
                     headers=headers,
                     payload=payload,
                 )
                 return response_dict
-            except asyncio.TimeoutError as e:
+            except TimeoutError as e:
                 timeouts += 1
                 last_error = e
                 self._logger.warning(
-                    "moderation 调用超时 attempt={0}/{1}".format(attempt, attempts)
+                    f"moderation 调用超时 attempt={attempt}/{attempts}"
                 )
             except httpx.HTTPStatusError as e:
                 last_error = e
                 # 4xx 永久错误不重试
                 if 400 <= e.response.status_code < 500:
                     raise ModerationError(
-                        "moderation HTTP {0}: {1}".format(
-                            e.response.status_code,
-                            e.response.text[:200],
-                        ),
+                        f"moderation HTTP {e.response.status_code}: {e.response.text[:200]}",
                         cause=e,
                     )
                 self._logger.warning(
-                    "moderation HTTP {0} attempt={1}/{2}".format(
-                        e.response.status_code, attempt, attempts
-                    )
+                    f"moderation HTTP {e.response.status_code} attempt={attempt}/{attempts}"
                 )
             except (httpx.RequestError, httpx.HTTPError) as e:
                 last_error = e
                 self._logger.warning(
-                    "moderation 网络错误 attempt={0}/{1}: {2}".format(
-                        attempt, attempts, e
-                    )
+                    f"moderation 网络错误 attempt={attempt}/{attempts}: {e}"
                 )
 
             # 末次重试后不再 sleep
@@ -481,22 +471,20 @@ class DoubaoModerationClient:
 
         if timeouts > 0:
             raise ModerationTimeoutError(
-                "moderation 重试 {0} 次均超时".format(timeouts),
+                f"moderation 重试 {timeouts} 次均超时",
                 timeout_seconds=self.config.timeout_seconds,
             )
         raise ModerationError(
-            "moderation 重试 {0} 次均失败: {1}".format(
-                self.config.retry_count + 1, last_error
-            ),
+            f"moderation 重试 {self.config.retry_count + 1} 次均失败: {last_error}",
             cause=last_error,
         )
 
     async def _do_http_post(
         self,
         url: str,
-        headers: Dict[str, str],
-        payload: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        headers: dict[str, str],
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         """执行 HTTP POST 请求.
 
         优先使用注入的 llm_client.http_post；否则使用 httpx.AsyncClient。
@@ -549,7 +537,7 @@ class DoubaoModerationClient:
         content_bytes: bytes = content.encode("utf-8")
         return hashlib.md5(scene_bytes + b"|" + content_bytes).hexdigest()
 
-    def _lookup_cache(self, cache_key: str) -> Optional[ModerationResult]:
+    def _lookup_cache(self, cache_key: str) -> ModerationResult | None:
         """查询缓存，过期自动剔除.
 
         Returns:
@@ -557,7 +545,7 @@ class DoubaoModerationClient:
         """
         if not self.config.cache_enabled:
             return None
-        entry: Optional[Tuple[ModerationResult, float]] = self._cache.get(cache_key)
+        entry: tuple[ModerationResult, float] | None = self._cache.get(cache_key)
         if entry is None:
             return None
         result, expire_ts = entry
@@ -575,7 +563,7 @@ class DoubaoModerationClient:
         expire_ts: float = time.time() + self.config.cache_ttl_seconds
         self._cache[cache_key] = (result.model_copy(deep=True), expire_ts)
 
-    def _check_block(self, result: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    def _check_block(self, result: dict[str, Any]) -> tuple[bool, list[str]]:
         """检查响应是否命中 block_labels.
 
         Args:
@@ -584,10 +572,10 @@ class DoubaoModerationClient:
         Returns:
             (is_blocked, hit_labels) 元组
         """
-        data: Dict[str, Any] = result.get("data", result or {})
-        risk_labels: List[str] = list(data.get("risk_labels", []) or [])
+        data: dict[str, Any] = result.get("data", result or {})
+        risk_labels: list[str] = list(data.get("risk_labels", []) or [])
         block_set: set = set(self.config.block_labels)
-        hit: List[str] = [label for label in risk_labels if label in block_set]
+        hit: list[str] = [label for label in risk_labels if label in block_set]
         return (len(hit) > 0, hit)
 
     def _build_disabled_result(self, start_ts: float) -> ModerationResult:
@@ -609,9 +597,7 @@ class DoubaoModerationClient:
         if action not in ("allow", "deny", "degrade_to_human"):
             action = "allow"
             self._logger.warning(
-                "未知 fallback_action={0}，回退为 allow".format(
-                    self.config.fallback_action
-                )
+                f"未知 fallback_action={self.config.fallback_action}，回退为 allow"
             )
 
         # action_taken 与 allowed 的对应关系
@@ -621,7 +607,7 @@ class DoubaoModerationClient:
         allowed: bool = action == "allow"
 
         self._logger.warning(
-            "moderation 降级: fallback_action={0}, error={1}".format(action, error)
+            f"moderation 降级: fallback_action={action}, error={error}"
         )
         return ModerationResult(
             allowed=allowed,
@@ -672,7 +658,7 @@ class DoubaoModerationClient:
                     labels={"content_type": content_type},
                 )
         except Exception as e:  # metrics 失败不影响主流程
-            self._logger.warning("metrics 上报失败: {0}".format(e))
+            self._logger.warning(f"metrics 上报失败: {e}")
 
 
 # ── 装饰器 ──────────────────────────────────────────────────────────────
@@ -703,13 +689,13 @@ def require_moderation(
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # 支持 content 在 kwargs 或位置参数中（简单处理：仅支持 kwargs
             # 与第一位置参数；复杂场景调用方应直接调 client.moderate）
-            content: Optional[str] = kwargs.get(content_arg)
+            content: str | None = kwargs.get(content_arg)
             if content is None and args:
                 # 假设第一参数为 content（最常见的函数签名形式）
                 content = args[0]
             if content is None:
                 raise ModerationError(
-                    "require_moderation 未找到参数: {0}".format(content_arg)
+                    f"require_moderation 未找到参数: {content_arg}"
                 )
             result: ModerationResult = await client.moderate(content)
             if not result.allowed:

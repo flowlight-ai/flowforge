@@ -8,8 +8,9 @@ License: MIT
 """
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from flowforge.core.task_context import TaskContext
@@ -23,8 +24,8 @@ class AgentInput(BaseModel):
         params: Arbitrary key-value parameters for the agent.
         state: Optional shared state dict from the execution context.
     """
-    params: Dict[str, Any] = Field(default_factory=dict)
-    state: Optional[Dict[str, Any]] = Field(default=None)
+    params: dict[str, Any] = Field(default_factory=dict)
+    state: dict[str, Any] | None = Field(default=None)
 
 
 class AgentOutput(BaseModel):
@@ -35,9 +36,9 @@ class AgentOutput(BaseModel):
         metadata: Optional metadata (tokens used, latency, etc.).
         state_updates: Partial state updates to merge back into the task state.
     """
-    result: Dict[str, Any] = Field(...)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    state_updates: Dict[str, Any] = Field(default_factory=dict)
+    result: dict[str, Any] = Field(...)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    state_updates: dict[str, Any] = Field(default_factory=dict)
 
 
 class BaseAgent(ABC):
@@ -60,12 +61,12 @@ class BaseAgent(ABC):
 
     name: str = "base"
     description: str = ""
-    default_mode: Optional[str] = "react"
+    default_mode: str | None = "react"
 
     def __init__(self, tool_registry=None, llm_client=None):
         self._tool_registry = tool_registry
         self._llm_client = llm_client
-        self._context: Optional['TaskContext'] = None
+        self._context: TaskContext | None = None
         if 'name' not in type(self).__dict__:
             self.name = self.__class__.__name__
 
@@ -133,8 +134,8 @@ class BaseAgent(ABC):
         input: AgentInput,
         context: 'TaskContext',
         tool_chain_executor: 'ToolChainExecutor',
-        tools: Optional[List[str]] = None,
-        system_prompt: Optional[str] = None,
+        tools: list[str] | None = None,
+        system_prompt: str | None = None,
     ) -> AgentOutput:
         prompt = system_prompt
         if not prompt:
@@ -179,7 +180,7 @@ class BaseAgent(ABC):
             "tool_calls_made": len(chain_result.get("execution_trace", [])),
         }
 
-        state_updates: Dict[str, Any] = {}
+        state_updates: dict[str, Any] = {}
         if chain_result.get("execution_trace"):
             state_updates["tool_execution_trace"] = chain_result["execution_trace"]
 
@@ -201,7 +202,7 @@ class BaseAgent(ABC):
                     break
         return has_valid_field
 
-    def get_cost_estimate(self, input: AgentInput) -> Dict[str, Any]:
+    def get_cost_estimate(self, input: AgentInput) -> dict[str, Any]:
         import re
         total_chars = 0
         for value in input.params.values():

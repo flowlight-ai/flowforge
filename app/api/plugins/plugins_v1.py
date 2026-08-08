@@ -12,7 +12,7 @@ execute/health/frontend 等子路径。本 stub **不**重复定义 GET /plugins
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter
@@ -39,12 +39,12 @@ async def register_plugin(payload: PluginCreate) -> dict[str, Any]:
     本端点提供更通用的 POST /plugins 用于注册（stub 实现）。
     """
     return {
-        "id": f"plugin_stub_{int(datetime.now(timezone.utc).timestamp())}",
+        "id": f"plugin_stub_{int(datetime.now(UTC).timestamp())}",
         "name": payload.name,
         "version": payload.version,
         "description": payload.description,
         "entry": payload.entry,
         "config": payload.config,
         "status": "registered",
-        "created_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "created_at": datetime.now(UTC).isoformat() + "Z",
     }

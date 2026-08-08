@@ -29,7 +29,8 @@ Usage in upper projects:
 from __future__ import annotations
 
 import time
-from typing import Any, AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.config import ConfigLoader
@@ -54,7 +55,7 @@ class ModelCapability:
     This class is a singleton: repeated construction returns the same instance.
     """
 
-    _instance: Optional[ModelCapability] = None
+    _instance: ModelCapability | None = None
 
     def __new__(cls) -> ModelCapability:
         if cls._instance is None:
@@ -65,9 +66,9 @@ class ModelCapability:
         if hasattr(self, "_initialized"):
             return
         self._initialized = True
-        self._llm_client: Optional[Any] = None
-        self._model_service: Optional[ModelService] = None
-        self._provider: Optional[ModelCapabilityProvider] = None
+        self._llm_client: Any | None = None
+        self._model_service: ModelService | None = None
+        self._provider: ModelCapabilityProvider | None = None
 
     # ── Lazy initialization ─────────────────────────────────────────
 
@@ -121,12 +122,12 @@ class ModelCapability:
         agent_name: str = "",
         model: str = "",
         temperature: float = 0.7,
-        top_p: Optional[float] = None,
+        top_p: float | None = None,
         max_tokens: int = 4000,
         task_id: str = "sdk",
-        tools: Optional[list] = None,
+        tools: list | None = None,
         prefer_api: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Send a chat message and return the response dict.
 
         When no explicit model is specified, uses ModelCapabilityProvider
@@ -170,7 +171,7 @@ class ModelCapability:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -257,7 +258,7 @@ class ModelCapability:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -295,7 +296,7 @@ class ModelCapability:
         temperature: float = 0.3,
         max_tokens: int = 4096,
         task_id: str = "sdk",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Send a chat message and parse the response as JSON.
 
         Convenience wrapper around :meth:`chat` that strips markdown
@@ -347,7 +348,7 @@ class ModelCapability:
 
     # ── Model discovery & health ────────────────────────────────────
 
-    def list_models(self) -> List[dict]:
+    def list_models(self) -> list[dict]:
         """List all available models with health status.
 
         Returns:
@@ -356,7 +357,7 @@ class ModelCapability:
         svc = self._ensure_model_service()
         return svc.get_models()
 
-    def list_assignments(self) -> Dict[str, dict]:
+    def list_assignments(self) -> dict[str, dict]:
         """List all model assignments (persona → model chain).
 
         Returns:
@@ -365,7 +366,7 @@ class ModelCapability:
         svc = self._ensure_model_service()
         return svc.get_assignments()
 
-    async def check_health(self, force: bool = False) -> List[dict]:
+    async def check_health(self, force: bool = False) -> list[dict]:
         """Run health checks on all models.
 
         Args:
@@ -386,7 +387,7 @@ class ModelCapability:
         svc = self._ensure_model_service()
         return svc.get_health_report()
 
-    def get_candidate_chain(self, persona: str = "", agent_name: str = "") -> List[str]:
+    def get_candidate_chain(self, persona: str = "", agent_name: str = "") -> list[str]:
         """Get the model candidate chain for a persona/agent.
 
         Args:

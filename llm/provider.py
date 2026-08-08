@@ -1,22 +1,45 @@
-"""LLM Provider 抽象层 — Protocol/Route/Provider 三层分离的 Provider 层.
+"""LLM provider abstraction.
 
-每个 LLM 供应商实现 LLMProvider 接口，提供统一的 chat/stream/health_check 方法。
-LLMRouter 通过 Provider 层与具体 LLM 服务解耦。
+Three provider kinds (configurable via llm_route.yaml):
+- DirectProvider  — calls vendor API directly (Anthropic, OpenAI, Zhipu, etc.)
+- OpenRouteProvider — calls OpenRoute /v1/chat/completions gateway
+- WebchatProvider — drives a browser session for webchat-only models
+
+All providers implement the same async interface so the client can fall back
+across vendors seamlessly.
 """
 
-import asyncio
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 
-logger = get_logger("llm.provider")
+logger = get_logger("flowforge.llm.provider")
+
+
+@dataclass
+class ProviderResponse:
+    """Normalized response from any provider."""
+
+    text: str
+    model: str
+    provider: str
+    raw: dict[str, Any] | None = field(default=None)
+    latency_ms: float = 0.0
+    finish_reason: str = "stop"
 
 
 @dataclass
 class LLMResponse:
-    """LLM 调用统一响应."""
+    """LLM 调用统一响应（与老项目 flowforge/llm/provider.py 一致）.
+
+    保留此类以确保 ``llm/trae/adapter.py``、``llm/route.py``、
+    ``forgemind`` 模块等使用 ``LLMResponse`` 命名的代码正常工作。
+    字段集合为 ``ProviderResponse`` 的超集（含 token 计数 / 成本 / 原始响应）。
+    """
 
     content: str
     model: str
@@ -26,355 +49,256 @@ class LLMResponse:
     latency_ms: float = 0.0
     cost: float = 0.0
     finish_reason: str = ""
-    raw_response: Optional[Dict[str, Any]] = None
+    raw_response: dict[str, Any] | None = field(default=None)
 
 
 class LLMProvider(ABC):
-    """LLM 供应商抽象基类.
+    """Async LLM provider protocol."""
 
-    每个供应商（Doubao/Qwen/DeepSeek 等）实现此接口，
-    提供 chat/stream/health_check 统一方法。
+    provider_kind: str = "abstract"
+    vendor: str = "unknown"
+
+    @abstractmethod
+    async def complete(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        system_prompt: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        timeout: float = 90.0,
+        **kwargs: Any,
+    ) -> ProviderResponse:
+        """Produce a completion. Raises on transport error; caller classifies."""
+
+
+class DirectProvider(LLMProvider):
+    """Calls vendor API directly via httpx.
+
+    A DirectProvider is constructed with a base_url + api_key + a request
+    formatter. Production code wires this up from llm_route.yaml.
     """
 
-    provider_name: str = ""
+    provider_kind = "direct"
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        self._config = config or {}
-        self._healthy = True
-        self._consecutive_errors = 0
-
-    @abstractmethod
-    async def chat(
+    def __init__(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> LLMResponse:
-        """同步聊天调用."""
+        vendor: str,
+        base_url: str,
+        api_key: str,
+        request_formatter: Any | None = None,
+    ) -> None:
+        self.vendor = vendor
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        # request_formatter: (prompt, system_prompt, model, **kwargs) -> dict body
+        self.request_formatter = request_formatter or self._default_formatter
 
-    @abstractmethod
-    async def stream(
+    async def complete(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        prompt: str,
+        *,
+        model: str,
+        system_prompt: str | None = None,
         temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> AsyncIterator[str]:
-        """流式聊天调用."""
+        max_tokens: int = 2000,
+        timeout: float = 90.0,
+        **kwargs: Any,
+    ) -> ProviderResponse:
+        import time
 
-    @abstractmethod
-    async def health_check(self) -> bool:
-        """检查供应商是否健康."""
+        import httpx
 
-    def get_provider_name(self) -> str:
-        return self.provider_name
+        body = self.request_formatter(prompt, system_prompt, model, temperature, max_tokens, **kwargs)
+        url = f"{self.base_url}/v1/chat/completions"
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        start = time.perf_counter()
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, json=body, headers=headers)
+            latency_ms = (time.perf_counter() - start) * 1000
+            resp.raise_for_status()
+            data = resp.json()
+        text = _extract_text(data)
+        return ProviderResponse(
+            text=text,
+            model=data.get("model", model),
+            provider=self.vendor,
+            raw=data,
+            latency_ms=latency_ms,
+            finish_reason=_extract_finish_reason(data),
+        )
 
-    def is_healthy(self) -> bool:
-        return self._healthy
+    @staticmethod
+    def _default_formatter(
+        prompt: str,
+        system_prompt: str | None,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **_: Any,
+    ) -> dict[str, Any]:
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
 
-    def record_success(self):
-        self._consecutive_errors = 0
-        self._healthy = True
 
-    def record_error(self):
-        self._consecutive_errors += 1
-        if self._consecutive_errors >= 3:
-            self._healthy = False
-            logger.warning(
-                f"Provider {self.provider_name} 连续 {self._consecutive_errors} 次错误，标记为不健康"
+class OpenRouteProvider(LLMProvider):
+    """Calls OpenRoute /v1/chat/completions gateway (multi-model aggregator)."""
+
+    provider_kind = "openroute"
+    vendor = "openroute"
+
+    def __init__(self, base_url: str, api_key: str) -> None:
+        # Use .removesuffix("/v1") to avoid stripping trailing '1' from port numbers
+        self.base_url = base_url.removesuffix("/v1").rstrip("/")
+        self.api_key = api_key
+
+    async def complete(
+        self,
+        prompt: str,
+        *,
+        model: str,
+        system_prompt: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        timeout: float = 90.0,
+        **kwargs: Any,
+    ) -> ProviderResponse:
+        import time
+
+        import httpx
+
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        body = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            **kwargs,
+        }
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        # Only add Authorization when api_key is non-empty — local OpenRoute
+        # (port 13001) doesn't require auth, and an empty Bearer header
+        # causes httpx.LocalProtocolError("Illegal header value b'Bearer '").
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        url = f"{self.base_url}/v1/chat/completions"
+        start = time.perf_counter()
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, json=body, headers=headers)
+            latency_ms = (time.perf_counter() - start) * 1000
+            resp.raise_for_status()
+            data = resp.json()
+        # OpenRoute silent failure: HTTP 200 with error body
+        if isinstance(data, dict) and "error" in data:
+            err = data["error"]
+            err_msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+            logger.warning(f"openroute silent failure: {err_msg}")
+            # Return the error text so the client can classify it
+            return ProviderResponse(
+                text=err_msg,
+                model=model,
+                provider="openroute",
+                raw=data,
+                latency_ms=latency_ms,
+                finish_reason="error",
             )
+        text = _extract_text(data)
+        return ProviderResponse(
+            text=text,
+            model=data.get("model", model),
+            provider="openroute",
+            raw=data,
+            latency_ms=latency_ms,
+            finish_reason=_extract_finish_reason(data),
+        )
 
 
-class DoubaoProvider(LLMProvider):
-    """豆包（Doubao）供应商实现.
+class WebchatProvider(LLMProvider):
+    """Drives a browser session for webchat-only models (Doubao/Kimi/etc).
 
-    通过 FlowForge LLMClient 调用豆包 API，
-    支持 doubao-seed2、doubao-pro、doubao-lite 等模型。
+    v0.1 stub: returns NotImplemented to indicate the caller should skip this
+    provider in unit tests. Production code injects a real browser manager.
     """
 
-    provider_name = "doubao"
+    provider_kind = "webchat"
+    vendor = "webchat"
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        super().__init__(config)
-        self._default_model = (config or {}).get("default_model", "doubao-seed2")
+    def __init__(self, browser_manager: Any | None = None) -> None:
+        self.browser_manager = browser_manager
 
-    async def chat(
+    async def complete(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        prompt: str,
+        *,
+        model: str,
+        system_prompt: str | None = None,
         temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> LLMResponse:
-        """调用豆包聊天 API."""
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            result = await client.chat(
-                messages=messages,
-                model=model or self._default_model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs,
-            )
-            self.record_success()
-            return LLMResponse(
-                content=result.get("content", ""),
-                model=model or self._default_model,
-                provider=self.provider_name,
-                input_tokens=result.get("input_tokens", 0),
-                output_tokens=result.get("output_tokens", 0),
-                latency_ms=result.get("latency_ms", 0.0),
-                cost=result.get("cost", 0.0),
-                finish_reason=result.get("finish_reason", ""),
-                raw_response=result,
-            )
-        except Exception as e:
-            self.record_error()
-            logger.error(f"DoubaoProvider.chat 失败: {e}")
-            raise
-
-    async def stream(
-        self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> AsyncIterator[str]:
-        """调用豆包流式 API."""
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            async for chunk in client.stream(
-                messages=messages,
-                model=model or self._default_model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs,
-            ):
-                yield chunk
-            self.record_success()
-        except Exception as e:
-            self.record_error()
-            logger.error(f"DoubaoProvider.stream 失败: {e}")
-            raise
-
-    async def health_check(self) -> bool:
-        """检查豆包 API 是否可达."""
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            result = await client.chat(
-                messages=[{"role": "user", "content": "ping"}],
-                model=self._default_model,
-                max_tokens=5,
-            )
-            self._healthy = bool(result)
-            return self._healthy
-        except Exception:
-            self._healthy = False
-            return False
+        max_tokens: int = 2000,
+        timeout: float = 90.0,
+        **kwargs: Any,
+    ) -> ProviderResponse:
+        if self.browser_manager is None:
+            raise NotImplementedError("WebchatProvider requires a browser_manager")
+        # Production: drive browser, scrape reply, return ProviderResponse
+        raise NotImplementedError("WebchatProvider.complete not implemented in v0.1")
 
 
-class QwenProvider(LLMProvider):
-    """通义千问（Qwen）供应商实现."""
-
-    provider_name = "qwen"
-
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        super().__init__(config)
-        self._default_model = (config or {}).get("default_model", "qwen3.6-plus")
-
-    async def chat(
-        self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> LLMResponse:
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            result = await client.chat(
-                messages=messages,
-                model=model or self._default_model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs,
-            )
-            self.record_success()
-            return LLMResponse(
-                content=result.get("content", ""),
-                model=model or self._default_model,
-                provider=self.provider_name,
-                input_tokens=result.get("input_tokens", 0),
-                output_tokens=result.get("output_tokens", 0),
-                latency_ms=result.get("latency_ms", 0.0),
-                cost=result.get("cost", 0.0),
-                finish_reason=result.get("finish_reason", ""),
-                raw_response=result,
-            )
-        except Exception as e:
-            self.record_error()
-            logger.error(f"QwenProvider.chat 失败: {e}")
-            raise
-
-    async def stream(
-        self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> AsyncIterator[str]:
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            async for chunk in client.stream(
-                messages=messages,
-                model=model or self._default_model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs,
-            ):
-                yield chunk
-            self.record_success()
-        except Exception as e:
-            self.record_error()
-            logger.error(f"QwenProvider.stream 失败: {e}")
-            raise
-
-    async def health_check(self) -> bool:
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            result = await client.chat(
-                messages=[{"role": "user", "content": "ping"}],
-                model=self._default_model,
-                max_tokens=5,
-            )
-            self._healthy = bool(result)
-            return self._healthy
-        except Exception:
-            self._healthy = False
-            return False
+def _extract_text(data: dict[str, Any]) -> str:
+    """Extract text from a chat.completion response, tolerating shape variants."""
+    if not isinstance(data, dict):
+        return ""
+    if "error" in data:
+        return ""
+    choices = data.get("choices") or []
+    if not choices:
+        return ""
+    first = choices[0] if isinstance(choices, list) else {}
+    msg = first.get("message", {}) if isinstance(first, dict) else {}
+    return msg.get("content", "") or ""
 
 
-class DeepSeekProvider(LLMProvider):
-    """DeepSeek 供应商实现."""
-
-    provider_name = "deepseek"
-
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        super().__init__(config)
-        self._default_model = (config or {}).get("default_model", "deepseek-chat")
-
-    async def chat(
-        self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> LLMResponse:
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            result = await client.chat(
-                messages=messages,
-                model=model or self._default_model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs,
-            )
-            self.record_success()
-            return LLMResponse(
-                content=result.get("content", ""),
-                model=model or self._default_model,
-                provider=self.provider_name,
-                input_tokens=result.get("input_tokens", 0),
-                output_tokens=result.get("output_tokens", 0),
-                latency_ms=result.get("latency_ms", 0.0),
-                cost=result.get("cost", 0.0),
-                finish_reason=result.get("finish_reason", ""),
-                raw_response=result,
-            )
-        except Exception as e:
-            self.record_error()
-            logger.error(f"DeepSeekProvider.chat 失败: {e}")
-            raise
-
-    async def stream(
-        self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
-        **kwargs,
-    ) -> AsyncIterator[str]:
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            async for chunk in client.stream(
-                messages=messages,
-                model=model or self._default_model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs,
-            ):
-                yield chunk
-            self.record_success()
-        except Exception as e:
-            self.record_error()
-            logger.error(f"DeepSeekProvider.stream 失败: {e}")
-            raise
-
-    async def health_check(self) -> bool:
-        try:
-            from flowforge.tools.llm_client import LLMClient
-
-            client = LLMClient()
-            result = await client.chat(
-                messages=[{"role": "user", "content": "ping"}],
-                model=self._default_model,
-                max_tokens=5,
-            )
-            self._healthy = bool(result)
-            return self._healthy
-        except Exception:
-            self._healthy = False
-            return False
+def _extract_finish_reason(data: dict[str, Any]) -> str:
+    choices = data.get("choices") or []
+    if not choices:
+        return "stop"
+    first = choices[0] if isinstance(choices, list) else {}
+    return first.get("finish_reason", "stop") if isinstance(first, dict) else "stop"
 
 
-# Provider 注册表
-_PROVIDER_REGISTRY: Dict[str, type] = {
-    "doubao": DoubaoProvider,
-    "qwen": QwenProvider,
-    "deepseek": DeepSeekProvider,
+# Provider 注册表（与老项目 flowforge/llm/provider.py 一致，
+# 确保 ``llm/trae/adapter.py``、``llm/route.py`` 等使用
+# ``register_provider`` / ``get_provider`` 的代码正常工作）
+_PROVIDER_REGISTRY: dict[str, type] = {
+    "direct": DirectProvider,
+    "openroute": OpenRouteProvider,
+    "webchat": WebchatProvider,
 }
 
 
-def register_provider(name: str, provider_cls: type):
+def register_provider(name: str, provider_cls: type) -> None:
     """注册自定义 Provider."""
     _PROVIDER_REGISTRY[name] = provider_cls
 
 
-def get_provider(name: str, config: Optional[Dict[str, Any]] = None) -> LLMProvider:
+def get_provider(name: str, config: dict[str, Any] | None = None) -> LLMProvider:
     """获取 Provider 实例."""
     cls = _PROVIDER_REGISTRY.get(name)
     if not cls:
-        raise ValueError(f"未知 Provider: {name}，可用: {list(_PROVIDER_REGISTRY.keys())}")
+        raise ValueError(
+            f"未知 Provider: {name}，可用: {list(_PROVIDER_REGISTRY.keys())}"
+        )
     return cls(config=config)

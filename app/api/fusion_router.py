@@ -13,16 +13,31 @@ from fastapi import APIRouter
 # Web Fusion 端点（原 v1/ 目录，现合并到各模块）
 from flowforge.app.api.admin import audit, env_files, leaderboard, ops
 from flowforge.app.api.agents import (
-    capability, co_creators, concierge, forgekins, forgekins_council,
-    signals, skills, threads, voice,
+    capability,
+    co_creators,
+    concierge,
+    forgekins,
+    forgekins_council,
+    signals,
+    skills,
+    threads,
+    voice,
 )
 from flowforge.app.api.core import (
-    connectors, eval, governance, mcp, notify, permissions,
-    quotas, routing, tool_usage,
+    connectors,
+    eval,
+    governance,
+    mcp,
+    notify,
+    permissions,
+    quotas,
+    routing,
+    tool_usage,
 )
-from flowforge.app.api.workflows import callbacks, missions
 from flowforge.app.api.memory import memory_v1 as memory
-from flowforge.app.api.plugins import marketplace, plugins_v1 as plugins
+from flowforge.app.api.plugins import marketplace
+from flowforge.app.api.plugins import plugins_v1 as plugins
+from flowforge.app.api.workflows import callbacks, missions
 
 router = APIRouter(prefix="/api/v1", tags=["web-fusion-v1"])
 

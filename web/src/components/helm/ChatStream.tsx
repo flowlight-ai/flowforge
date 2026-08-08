@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useCallback, useMemo, memo } from "react";
+import ReactMarkdown from "react-markdown";
 import { ChatMessage, StepGroupData } from "./helm-types";
 import { HelmTaskPhase } from "../../lib/helm-types";
 import { useShellConfig } from "../../lib/shell-config";
@@ -17,7 +18,6 @@ import { ApprovalCard } from "./ChatPrimitives";
 import PlanPanel, { Plan } from "./PlanPanel";
 
 const StepSummary = dynamic(() => import("./StepSummary"), { ssr: false });
-const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false, loading: () => <span className="text-xs opacity-50">…</span> });
 
 const LONG_CONTENT_THRESHOLD = 500;
 

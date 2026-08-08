@@ -1,6 +1,5 @@
 import ast
-import re
-from typing import Any, Dict, List
+from typing import Any
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -27,8 +26,8 @@ class LinterTool(BaseTool):
     safety_level = "normal"
     is_concurrency_safe = True
 
-    def _lint_python(self, code: str, rule_ids: List[str] | None = None) -> Dict[str, Any]:
-        violations: List[Dict[str, Any]] = []
+    def _lint_python(self, code: str, rule_ids: list[str] | None = None) -> dict[str, Any]:
+        violations: list[dict[str, Any]] = []
 
         try:
             tree = ast.parse(code)
@@ -79,7 +78,7 @@ class LinterTool(BaseTool):
             "severity_counts": severity_counts,
         }
 
-    def _check_bare_except(self, code: str, tree: ast.AST) -> List[Dict[str, Any]]:
+    def _check_bare_except(self, code: str, tree: ast.AST) -> list[dict[str, Any]]:
         violations = []
         for node in ast.walk(tree):
             if isinstance(node, ast.ExceptHandler) and node.type is None:
@@ -91,7 +90,7 @@ class LinterTool(BaseTool):
                 })
         return violations
 
-    def _check_mutable_defaults(self, code: str, tree: ast.AST) -> List[Dict[str, Any]]:
+    def _check_mutable_defaults(self, code: str, tree: ast.AST) -> list[dict[str, Any]]:
         violations = []
         mutable_types = (ast.List, ast.Dict, ast.Set)
         for node in ast.walk(tree):
@@ -106,7 +105,7 @@ class LinterTool(BaseTool):
                         })
         return violations
 
-    def _check_star_imports(self, code: str, tree: ast.AST) -> List[Dict[str, Any]]:
+    def _check_star_imports(self, code: str, tree: ast.AST) -> list[dict[str, Any]]:
         violations = []
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and any(alias.name == "*" for alias in node.names):
@@ -118,7 +117,7 @@ class LinterTool(BaseTool):
                 })
         return violations
 
-    def _check_debug_statements(self, code: str, tree: ast.AST) -> List[Dict[str, Any]]:
+    def _check_debug_statements(self, code: str, tree: ast.AST) -> list[dict[str, Any]]:
         violations = []
         debug_funcs = {"breakpoint", "pdb"}
         for node in ast.walk(tree):
@@ -137,7 +136,7 @@ class LinterTool(BaseTool):
                     })
         return violations
 
-    def _check_function_length(self, code: str, tree: ast.AST) -> List[Dict[str, Any]]:
+    def _check_function_length(self, code: str, tree: ast.AST) -> list[dict[str, Any]]:
         violations = []
         max_lines = 50
         lines = code.split("\n")
@@ -153,7 +152,7 @@ class LinterTool(BaseTool):
                     })
         return violations
 
-    def _check_unused_import_hints(self, code: str, tree: ast.AST) -> List[Dict[str, Any]]:
+    def _check_unused_import_hints(self, code: str, tree: ast.AST) -> list[dict[str, Any]]:
         violations = []
         imported_names = set()
         for node in ast.walk(tree):
@@ -204,9 +203,9 @@ class LinterTool(BaseTool):
             }
 
         try:
-            from flowforge.harness.constraints.linter_runner import LinterRunner
-            from flowforge.harness.constraints.linter_rules import LinterRules
             from flowforge.core.task_context import TaskContext
+            from flowforge.harness.constraints.linter_rules import LinterRules
+            from flowforge.harness.constraints.linter_runner import LinterRunner
 
             rules = LinterRules()
             runner = LinterRunner(rules)

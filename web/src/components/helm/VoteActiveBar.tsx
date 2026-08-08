@@ -35,11 +35,10 @@ interface VoteActiveBarProps {
 /**
  * VoteActiveBar — 投票进行中状态栏
  *
- * 来源：clowder-ai/packages/web/src/components/VoteActiveBar.tsx（适配 Forgekin 版）
  * 用途：在聊天输入框上方显示活跃投票的进度、倒计时、结束按钮
  *
  * 视觉：
- *   - 黄色/橙色背景（参考 clowder-ai conn-amber 色系，但用 CSS 变量适配主题）
+ *   - 黄色/橙色背景（参考 conn-amber 色系，但用 CSS 变量适配主题）
  *   - 投票图标 + 问题（截断）
  *   - 进度文本：已投 X/Y
  *   - 倒计时：M:SS

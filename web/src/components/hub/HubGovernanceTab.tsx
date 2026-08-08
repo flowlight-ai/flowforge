@@ -3,7 +3,6 @@
 /**
  * HubGovernanceTab — 治理状态 Tab
  *
- * 移植自 clowder-ai HubGovernanceTab，简化为 FlowForge 适配版。
  * 用于 /admin/governance，展示治理规则、合规审计与价值锚点。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

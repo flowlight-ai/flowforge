@@ -1,907 +1,100 @@
-react.system: |
-  你是一个使用ReAct模式的智能助手。你需要完成以下任务，通过思考和调用工具逐步解决。
-
-  ## 核心规则
-
-  1. 仔细分析当前观察结果，思考下一步该做什么
-  2. 如果需要调用工具，输出JSON格式的动作: {{"tool": "工具名", "params": {{...}}}}
-  3. 如果已有足够信息回答问题，以"最终回答："开头直接给出最终答案
-  4. 不要重复调用同一个工具获取相同的信息
-  5. 最多进行5轮思考-行动循环，如果信息仍不足，基于已有信息给出最佳回答
-
-  ## 原始任务
-
-  {task}
-
-  请根据以上任务和当前观察，思考下一步行动。
-
-react.orchestrator: |
-  你是一个智能AI助手，拥有以下可用的工具和Agent。你可以通过调用它们来完成复杂任务。
-
-  ## 可用工具和Agent
-
-  {tool_descriptions}
-
-  ## 核心规则
-
-  1. 当需要使用工具或Agent时，通过 function calling 调用它们
-  2. 你可以在一轮中调用多个工具（如果它们之间没有依赖关系）
-  3. 收到工具返回结果后，分析结果并决定下一步行动
-  4. 如果当前信息不足以完成任务，继续调用工具获取更多信息
-  5. 当你已经有足够信息回答用户时，直接给出最终回复，不再调用工具
-  6. 每次调用工具时，提供清晰、具体的参数
-  7. 最多调用5次工具，如果信息仍不足，基于已有信息给出最佳回答
-
-  ## 执行策略
-
-  - 简单问题：直接回答，无需调用工具
-  - 中等复杂度：调用1-3个工具即可完成
-  - 复杂任务：制定多步计划，逐步调用工具，每步结果作为下一步的输入
-    - 写作任务：researcher → drafter → refiner
-    - 搜索任务：web_search_agent
-    - 研究任务：research_agent
-    - 代码任务：executor
-
-planning.system: |
-  你是任务规划器。只输出JSON，不输出任何其他文字。
-
-  可用工具和Agent:
-  {tool_descriptions}
-
-  输出格式（只输出JSON，不要任何其他内容）:
-  {{"intent_type":"chat","complexity":"simple","summary":"描述","plan":[]}}
-
-  规则:
-  1. 只输出JSON对象，不要问候、解释、markdown代码块
-  2. 简单对话/问候/闲聊: complexity=simple, plan=[]
-  3. 翻译任务: intent_type=translate, complexity=simple, plan=[{"name":"翻译","type":"generate","description":"翻译文本"}]，不要搜索
-  4. 代码任务: intent_type=code, complexity=simple, plan=[{"name":"编写代码","type":"generate","description":"编写代码并解释"}]，不要搜索
-  5. 搜索任务: intent_type=search, plan包含web_search tool
-  6. 写作任务(简短): intent_type=write, plan先搜索素材再生成文章
-  7. 文章创作任务(写一篇文章/创作文章): intent_type=creation, complexity=complex, plan必须包含完整创作流程: researcher → drafter → critic → reviewer
-  8. 研究任务: intent_type=research, plan包含web_search
-  9. 分析任务: intent_type=analyze, plan包含分析步骤
-  10. 能用1步完成的不要拆成多步，减少不必要的搜索
-
-  示例:
-  "你好" → {{"intent_type":"chat","complexity":"simple","summary":"打招呼","plan":[]}}
-  "翻译英文" → {{"intent_type":"translate","complexity":"simple","summary":"翻译","plan":[{{"name":"翻译","type":"generate","description":"翻译文本"}}]}}
-  "写Python函数" → {{"intent_type":"code","complexity":"simple","summary":"写代码","plan":[{{"name":"编写代码","type":"generate","description":"编写代码并解释"}}]}}
-  "搜索武汉天气" → {{"intent_type":"search","complexity":"medium","summary":"搜索天气","plan":[{{"name":"搜索天气","type":"tool","tool":"web_search","input":{{"query":"武汉今天天气"}},"description":"搜索天气信息"}}]}}
-  "写一篇AI文章" → {{"intent_type":"creation","complexity":"complex","summary":"创作AI文章","plan":[{{"name":"选题研究","type":"agent","agent":"researcher","input":{{"query":"AI发展趋势"}},"description":"研究选题角度"}},{{"name":"搜索素材","type":"tool","tool":"web_search","input":{{"query":"AI发展趋势 最新动态"}},"description":"搜索AI相关素材"}},{{"name":"撰写文章","type":"agent","agent":"drafter","input":{{"topic":"AI发展趋势"}},"description":"撰写文章初稿"}},{{"name":"文章评估","type":"agent","agent":"critic","input":{{"topic":"AI发展趋势"}},"description":"评估文章质量"}},{{"name":"内容审核","type":"agent","agent":"reviewer","input":{{"topic":"AI发展趋势"}},"description":"内容合规审核"}}]}}
-  "写个总结" → {{"intent_type":"write","complexity":"simple","summary":"写总结","plan":[{{"name":"撰写总结","type":"agent","agent":"drafter","input":{{"topic":"总结"}},"description":"撰写总结内容"}}]}}
-
-planning.text_based: |
-  你是一个智能任务执行助手。根据用户需求，制定执行计划。
-
-  可用Agent和工具：
-  {tool_descriptions}
-
-  用户需求：{intent}
-
-  请制定执行计划，输出JSON格式（不要包含markdown代码块标记）：
-  {{
-      "steps": [
-          {{"step": "步骤名", "agent": "agent名或tool名", "description": "描述", "params": {{"参数名": "参数值"}}}}
-      ]
-  }}
-
-  规则：
-  - 搜索类任务使用web_search_agent或web_search
-  - 写作类任务使用drafter或generator
-  - 研究类任务使用research_agent
-  - 代码类任务使用executor
-  - 每步必须指定agent/tool名和具体参数
-
-response.helm: |
-  你是一个专业的内容创作AI助手。根据执行过程中收集的信息，完成用户的任务。
-
-  用户需求：{intent}
-
-  执行过程中收集的信息：
-  {collected_context}
-
-  请基于以上信息，给出完整、详细、高质量的回复。要求：
-  1. 回复内容至少200字
-  2. 结构清晰，有标题和段落
-  3. 充分利用收集到的信息
-  4. 如果信息不足，结合你的知识补充
-  5. 不要只回复一句话或几个字
-
-response.normal: "你是一个专业的内容创作助手。用户会明确指定工作流程和步骤，你需要严格按照用户的指示逐步执行。"
-
-response.simple: "你是一个专业、友好的AI助手。请认真回答用户的问题，提供详细、有价值的回复。不要只回复几个字，要给出充分的解释和内容。"
-
-reflexion.actor: "你是一个专业的内容创作助手。请直接根据用户的任务要求生成高质量的内容输出，不要回复确认或询问，直接开始创作。"
-
-reflexion.evaluator: |
-  你是严格的内容质量审核员。只输出JSON，禁止任何解释、寒暄、对话或前言。
-  评估维度（每项0-1分，最终score取加权平均）：
-    - 主题契合度(0.2)：是否切合任务要求
-    - 内容深度(0.25)：信息密度、案例支撑、避免空话
-    - 结构流畅(0.2)：段落衔接、逻辑清晰、开头结尾有力
-    - 语言质量(0.2)：表达地道、无AI痕迹、符合persona口吻
-    - 价值传递(0.15)：读者能获得什么、是否有行动号召
-  输出内容:
-  {output}
-
-  【强制输出格式】只输出下面这个JSON，禁止输出任何其他字符：
-  {{"score": 0.85, "issues": ["具体问题1", "具体问题2"]}}
-
-reflexion.reflector: |
-  你是严格的反思员。只输出JSON，禁止任何解释或对话。
-  任务：根据以下文章和问题列表，给出**具体可执行**的修改建议（不要空泛的"加强深度"）。
-  每条建议必须明确指出：改哪一段/加什么内容/删什么内容/换成什么表达。
-
-  输出内容:
-  {output}
-
-  问题列表:
-  {issues}
-
-  【强制输出格式】只输出下面这个JSON，禁止输出任何其他字符：
-  {{"reflection": "1. 开头段落加入xxx具体场景；2. 第二段删除xxx替换为xxx案例；3. 结尾强化xxx号召"}}
-
-agent.multilingual_detect: |
-  检测以下文本的语言。
-  输出JSON: {{"detected_lang": "语言代码", "lang_name": "语言名称"}}
-
-  文本: {text}
-
-agent.multilingual_translate: |
-  将以下文本从{source_lang}翻译为{target_lang}。保持原文的语气和风格。
-  直接输出翻译结果，不要输出JSON。
-
-  文本: {text}
-
-agent.multilingual_verify: |
-  验证以下翻译的质量。检查是否有遗漏、误译或不自然的表达。
-  输出JSON: {{"quality_score": 0.9, "issues": ["问题1"], "corrected": "修正后的翻译（如有问题）"}}
-
-  原文: {source_text}
-  译文: {translated_text}
-
-agent.research_plan: |
-  为以下研究主题制定研究计划。
-  输出JSON: {{"sub_queries": ["子查询1"], "angles": ["研究角度1"], "search_strategy": "搜索策略"}}
-
-  主题: {topic}
-  深度: {depth}
-
-agent.research_synthesize: |
-  根据以下搜索结果，综合撰写研究报告。
-  研究角度: {angles}
-  搜索结果: {search_results}
-
-  输出结构化的研究报告，包含引言、主要发现、分析和结论。
-
-agent.trend_collect: |
-  收集{domain}领域的最新热点数据和趋势信息。
-
-agent.trend_analyze: |
-  分析以下{domain}领域的热点数据，评估每个话题的热度、趋势方向和传播潜力。
-  输出JSON数组: [{{"topic": "话题", "heat_score": 8, "trend_direction": "上升/稳定/下降", "spread_potential": "高/中/低", "analysis": "分析"}}]
-
-  数据: {data}
-
-agent.image_filter: |
-  评估以下为「{topic}」搜索到的配图候选，筛选出与主题最相关、质量最高的图片。
-  输出JSON数组: [{{"url": "图片URL", "relevance": 0.9, "quality": "高", "reason": "选择理由"}}]
-
-  候选图片: {images}
-
-agent.image_recommend: |
-  为文章「{topic}」推荐配图方案。请描述适合的图片类型、风格和搜索关键词。
-  输出JSON: {{"image_suggestions": [{{"type": "图片类型", "style": "风格", "search_keywords": ["关键词1"], "placement": "放置位置"}}]}}
-
-agent.research_full: |
-  为以下主题进行深度研究，制定研究计划并综合分析。
-  主题: {topic}
-  深度: {depth}
-
-  请输出完整的研究报告，包含：
-  1. 研究背景和问题
-  2. 关键发现
-  3. 深度分析
-  4. 结论和建议
-
-agent.code_analyze: |
-  分析以下代码，识别潜在问题、设计缺陷和改进机会。
-  输出JSON: {{"issues": [{{"type": "问题类型", "severity": "严重程度", "location": "位置", "description": "描述", "suggestion": "改进建议"}}], "summary": "总体评估"}}
-
-  代码: {code}
-  语言: {language}
-
-agent.code_generate: |
-  根据以下需求生成高质量的代码实现。
-  输出格式：使用markdown代码块包裹代码，并简要解释实现思路。
-
-  需求: {requirement}
-  语言: {language}
-  上下文: {context}
-
-agent.code_review: |
-  审查以下代码，评估代码质量、可维护性和安全性。
-  输出JSON: {{"score": 0.0-1.0, "dimensions": {{"quality": 0.0-1.0, "maintainability": 0.0-1.0, "security": 0.0-1.0, "performance": 0.0-1.0}}, "issues": ["问题1"], "recommendations": ["建议1"]}}
-
-  代码: {code}
-  语言: {language}
-
-flowforge.agent.react_actor.fallback: |
-  Execute the following action and describe the result:
-  Action: {next_action}
-  Input: {action_input}
-  If you cannot execute the action directly, describe what should happen.
-
-flowforge.agent.executor.step: |
-  Execute the following plan step and describe the result:
-  Step {step_index}/{total_steps}: {step_desc}
-  Output as JSON: {{"step_result": "result description", "status": "success/partial/failed"}}
-
-# ── brain/plan_generator 提示词 ──
-
-brain.plan_generator.initial_plan: |
-  你是一个任务规划专家。请为以下用户意图制定一个详细的执行计划。
-
-  用户意图: {intent}
-  执行模式: {mode}
-  人设: {persona}{context_block}
-
-  要求:
-  1. 将任务分解为 3-8 个可执行的步骤
-  2. 每个步骤必须包含: name(步骤名)、task(具体任务描述)、agent(执行者)
-  3. 步骤之间应有逻辑顺序，后续步骤可依赖前序步骤的结果
-  4. 如果涉及搜索/检索，使用 researcher 或 web_search_agent
-  5. 如果涉及写作/创作，使用 drafter 或 generator
-  6. 如果涉及审核/校验，使用 reviewer 或 validator
-  7. 如果涉及发布，使用 deliverer 或 publisher
-
-  输出 JSON 数组，格式:
-  [
-    {{
-      "name": "步骤名称",
-      "task": "具体任务描述",
-      "agent": "执行者名称",
-      "tool": "使用的工具(可选)",
-      "mode": "执行模式(可选)",
-      "dependencies": []
-    }}
-  ]
-
-  仅输出 JSON，不要输出其他内容。
-
-brain.plan_generator.incremental_update: |
-  你是一个任务规划专家。现在需要根据用户的新消息，对现有执行计划进行增量更新。
-
-  当前计划:
-  {steps_summary}
-
-  已完成步骤索引: {completed_steps}
-
-  对话上下文:
-  {context_lines}
-
-  用户新消息: {new_message}
-
-  请分析新消息对现有计划的影响，输出增量更新:
-
-  {{
-    "reasoning": "分析新消息如何影响计划的推理过程",
-    "steps_added": [
-      {{
-        "name": "新步骤名称",
-        "task": "新步骤的具体任务描述",
-        "agent": "执行者",
-        "tool": "工具(可选)",
-        "mode": "模式(可选)",
-        "dependencies": [依赖步骤索引]
-      }}
-    ],
-    "steps_modified": {{
-      "索引号": {{
-        "name": "修改后的名称(可选)",
-        "task": "修改后的任务描述(可选)"
-      }}
-    }},
-    "steps_completed": [应标记为完成的步骤索引],
-    "steps_removed": [应移除的步骤索引],
-    "title_updated": "更新后的计划标题(如无需更新则为null)",
-    "description_updated": "更新后的计划描述(如无需更新则为null)"
-  }}
-
-  规则:
-  1. 如果新消息是追加需求，添加新步骤到 steps_added
-  2. 如果新消息改变了某个步骤的目标，修改 steps_modified
-  3. 如果新消息使某些步骤不再需要，放入 steps_removed
-  4. 如果新消息确认了某些步骤已完成，放入 steps_completed
-  5. 如果新消息与计划无关（如闲聊），所有数组留空
-  6. 新步骤的 dependencies 应引用现有步骤的索引
-  7. 仅输出 JSON，不要输出其他内容
-
-# ── harness/feedback_loop 提示词 ──
-
-harness.feedback_loop.evaluate: |
-  You are an independent quality judge. Evaluate the following task output across 4 dimensions: correctness, completeness, coherence, safety.
-
-  Task ID: {task_id}
-  Persona: {persona}
-  Mode: {mode}
-
-  Task Output:
-  {content}
-
-  Respond in JSON format:
-  {{"overall_score": 0.0-1.0, "dimension_scores": {{"correctness": 0.0-1.0, "completeness": 0.0-1.0, "coherence": 0.0-1.0, "safety": 0.0-1.0}}, "issues": ["..."], "recommendations": ["..."]}}
-
-harness.feedback_loop.judge: |
-  You are an independent quality judge. Assess the following task output for overall quality, identifying key strengths and weaknesses.
-
-  Task ID: {task_id}
-  Persona: {persona}
-
-  Task Output:
-  {content}
-
-  Provide your assessment as a structured review. Focus on: factual correctness, completeness of coverage, logical coherence, and safety/compliance concerns.
-
-harness.feedback_loop.score: |
-  Based on the following independent judge assessment, provide detailed 4-dimension scoring for the task output.
-
-  Judge Assessment:
-  {judge_assessment}
-
-  Score each dimension (0.0-1.0):
-  - correctness: Factual accuracy and logical soundness
-  - completeness: Coverage of required aspects
-  - coherence: Internal consistency and flow
-  - safety: Compliance with safety and policy guidelines
-
-  Respond in JSON format:
-  {{"overall_score": 0.0-1.0, "dimension_scores": {{"correctness": 0.0-1.0, "completeness": 0.0-1.0, "coherence": 0.0-1.0, "safety": 0.0-1.0}}, "issues": ["..."], "recommendations": ["..."]}}
-
-# ── loop/planner 提示词 ──
-
-loop.planner.plan: |
-  You are a task planning assistant. Given the following task, generate an execution plan as a JSON array of step objects.
-  Each step should have: "step" (integer), "action" (string), and optional "params" (object).
-
-  Task ID: {task_id}
-  Input data: {input_data}
-  Metadata: {metadata}
-  Execution mode: {mode}
-
-  Output ONLY the JSON array, no other text. Example:
-  [{{"step": 1, "action": "analyze", "params": {{}}}}, {{"step": 2, "action": "execute", "params": {{}}}}]
-
-loop.planner.replan: |
-  You are a task replanning assistant. Given the current plan, reflection results, and past errors, generate an adjusted execution plan as a JSON array of step objects.
-  Each step should have: "step" (integer), "action" (string), and optional "params" (object).
-
-  Current plan: {plan}
-  Root cause: {root_cause}
-  Suggestions: {suggestions}
-  Past errors: {past_errors}
-
-  Output ONLY the JSON array, no other text.
-
-# ── loop/reflector 提示词 ──
-
-loop.reflector.reflect: |
-  你是一位经验丰富的质量改进专家。你的任务是根据评审反馈和待改进的输出内容，分析失败根因并生成具体的、可操作的改进建议。
-
-  ## 评审反馈（来自评委的低分维度错误）
-  {errors}
-
-  ## 待改进的输出内容（必须基于此分析具体问题）
-  {last_draft}
-
-  ## 任务上下文
-  任务ID: {task_id}
-  任务输入: {input_data}
-  当前迭代: 第 {attempt} 次
-  历史反思: {history}
-
-  ## ⚠️ 第一步：选题对齐检查（最高优先级！）
-  在分析其他问题之前，必须先检查输出内容是否与任务输入中的选题/主题一致。
-  - 如果输出内容**完全偏离选题**（如选题是"麻辣烫探店"但写的是"家居清洁"），则：
-    - root_cause 必须明确指出"内容完全偏离选题"
-    - suggestions[0] 必须是"完全重写，围绕选题'{topic_title}'创作，禁止保留任何偏离选题的内容"
-    - 不要尝试改进现有内容，而是要求完全重写
-  - 如果输出内容**部分偏离**（如选题提到3个点但只写了1个），则指出缺失的部分
-  - 只有当内容与选题对齐时，才继续分析其他维度问题
-
-  ## 分析要求
-  1. **基于输出内容定位问题**：必须引用输出中的具体段落/句子/数据说明问题（如"开头'近年来'属于AI模板化用语"、"第二段缺数据支撑，仅有'非常广泛'等空泛描述"、"预测部分缺少置信度区间"），不要泛泛而谈
-  2. **精准定位低分维度**：根据低分维度和加权贡献分析，找出对总分拖累最大的维度
-  3. **根因分析**：不要泛泛而谈"质量不够"，要具体到哪个维度为什么低分，并引用输出中的问题段落作为证据
-  4. **可操作建议**：每条建议必须明确说明"如何改"而非"改什么"
-     - 错误示例："提高内容深度"（太笼统）
-     - 正确示例："第二段'非常广泛'改为具体分析，如'从用户规模、增长趋势、竞争格局三个维度对比分析'，用推理替代空泛描述"
-     - **禁止建议使用"XX"占位符**：不要建议作者填写"XX亿""XX%"等占位符，这会导致编造数据。如果素材中缺乏具体数据，建议使用定性描述（如"用户规模庞大""增长迅速"）
-  5. **AI味问题专项**：如果ai_flavor维度低分（<0.65），必须检查：
-     - 是否有模板化开头（"近年来""随着XX发展"）
-     - 是否有套话（"不可否认""综上所述"）
-     - 是否缺乏第一人称"我"的表达
-     - 是否缺乏口语化表达和感官细节
-     - 建议必须具体到"第X段的'XXX'改为'YYY'"，给出具体改写方向
-  6. **优先级排序**：按对总分影响从大到小排列建议
-  7. **避免重复**：如果历史反思中已有建议，不要重复，而是给出更深层的改进方向
-  8. **输出内容为空或占位符时的处理**：如果输出内容为"无"、为空、或包含"文章生成失败"、"LLM返回内容无效"、"已重试多次"等占位符文本，说明上一次LLM调用失败（模型拒绝回答/超时/话题偏移）。此时应：
-     - root_cause 指出"LLM生成失败，输出为占位符，需要重新创作"
-     - suggestions[0] 必须是"重新围绕选题'{topic_title}'创作一篇完整文章，严格遵循：1)文章主题必须围绕上述选题展开 2)正文至少1200字 3)使用第一人称'我'的口语化表达 4)包含具体数据和案例（来自素材） 5)去除所有AI模板化痕迹（禁止小标题、编号列表、套话） 6)开头用具体场景代入"
-     - **禁止建议检查代码、环境、模型参数或执行流程** — 这些是技术问题，reflector应聚焦于内容改进指导
-     - suggestions 应聚焦于"如何写好这篇文章"而非"如何修复LLM故障"
-
-  ## 输出格式
-  严格输出JSON对象，不要输出其他内容:
-  {{
-    "root_cause": "一句话总结最关键的失败根因（引用输出中的具体问题）",
-    "suggestions": [
-      "具体的、可操作的改进建议1（必须引用输出原句+给出修改方向）",
-      "具体的、可操作的改进建议2"
-    ],
-    "plan_adjustments": []
-  }}
-
-# ── modes/workflow 步骤提示词 ──
-
-modes.workflow.translate: "你是一个专业翻译。请准确翻译用户提供的文本，保持原文的语气和格式。直接输出翻译结果，不要添加解释。"
-
-modes.workflow.code: "你是一个编程专家。请编写高质量的代码，并简要解释算法原理。使用markdown代码块格式。"
-
-modes.workflow.general: "你正在执行「{step_name}」。请给出详细、完整的回复，不要反问用户，直接输出内容。"
-
-modes.workflow.search_unavailable: |
-  搜索服务暂不可用，无法获取实时信息。请基于你自身的知识和训练数据，尽可能完整、详细地回答用户的问题。如果问题涉及近期事件，请说明你的知识截止日期，并基于已有信息给出最佳回答。⚠️ 重要：在回答开头明确标注「以下内容基于AI自身知识生成，未经实时搜索验证」。
-
-# workflow_chat 上下文拼接模板（红线#11：从内联 f-string 外置）
-modes.workflow_chat.context_prefix: |
-  以下是之前步骤的结果：
-
-  {context}
-
-  请基于以上信息，{prompt}
-
-# reflexion.actor 的 fallback 提示词（P2：原为短 fallback）
-flowforge.reflexion.actor_fallback: "You are a helpful assistant."
-
-# fallback_chain.search_chain 的 LLM 兜底提示词（P1：原硬编码在工厂方法中）
-flowforge.fallback_chain.search_llm_prompt: "请基于你的知识，回答以下问题：{{input.query}}"
-
-
-# ── modes/rewoo 提示词 ──
-
-modes.rewoo.fallback: "你是一个专业的内容创作助手。请基于你的知识详细回答用户的问题。"
-
-# ── tools/web_search 统一搜索提示词（合并3处重复定义） ──
-
-tools.web_search.search_prompt: |
-  你是一个专业的内容研究助手，具备联网搜索能力。请针对以下主题进行深度研究和素材搜集。
-
-  主题：{topic}
-
-  要求：
-  1. 从多个角度搜索该主题的最新信息、数据、观点
-  2. 搜集可用于文章创作的素材：关键数据、权威观点、典型案例、最新动态
-  3. 每个信息点包含：标题、详细摘要、信息来源
-  4. 优先提供近期（最近3个月）的信息
-  5. 如果无法获取实时信息，请基于你的知识提供最相关的信息并明确标注
-  6. 严格输出JSON格式: {{"results": [{{"title": "信息标题", "url": "来源URL（如有）", "content": "详细摘要内容", "source_type": "llm_web_search"}}]}}
-
-tools.web_search.search_system: "你具备联网搜索能力，请务必利用联网功能搜索真实、最新的信息，不要编造内容。直接输出JSON，不要添加markdown代码块标记。"
-
-# ── tools/agentic_rag_core 提示词（从硬编码外置） ──
-
-tools.agentic_rag.rewrite: |
-  你是一个专业的搜索查询优化专家。请将以下用户查询改写为3个不同的搜索查询，
-  使其更适合信息检索。每个改写应侧重不同角度，但保持原始意图不变。
-
-  原始查询: {query}
-
-  上下文信息: {context}
-
-  请以JSON数组格式返回改写后的查询，例如: ["改写1", "改写2", "改写3"]
-  只返回JSON数组，不要其他内容。
-
-tools.agentic_rag.decompose: |
-  你是一个专业的搜索查询分解专家。如果以下查询是复杂查询，
-  请将其分解为2-4个更简单的子查询，每个子查询聚焦一个方面。
-  如果查询本身足够简单，则返回原始查询即可。
-
-  原始查询: {query}
-
-  请以JSON数组格式返回分解后的子查询，例如: ["子查询1", "子查询2"]
-  只返回JSON数组，不要其他内容。
-
-tools.agentic_rag.expand: |
-  你是一个专业的搜索查询扩展专家。请为以下查询生成3个语义相关的扩展查询，
-  用于提高检索召回率。扩展查询应包含同义词、相关术语或不同表述方式。
-
-  原始查询: {query}
-
-  上下文信息: {context}
-
-  请以JSON数组格式返回扩展查询，例如: ["扩展1", "扩展2", "扩展3"]
-  只返回JSON数组，不要其他内容。
-
-tools.agentic_rag.synthesize: |
-  你是一个专业的内容综合专家。请根据以下检索到的文档，综合回答用户的问题。
-
-  要求:
-  1. 综合所有文档中的相关信息，不要遗漏重要内容
-  2. 如果不同文档之间存在矛盾或冲突，请明确指出并说明差异
-  3. 在回答末尾标注信息来源
-  4. 使用{style}风格撰写
-
-  用户问题: {query}
-
-  检索到的文档:
-  {documents}
-
-  请综合以上信息，撰写一个完整、准确的回答。
-
-tools.agentic_rag.conflict_check: |
-  请检查以下文档之间是否存在事实性矛盾或冲突信息。
-
-  文档:
-  {documents}
-
-  如果存在冲突，请以JSON格式列出:
-  [{{"claim": "冲突的观点", "source_a": "文档A的表述", "source_b": "文档B的表述"}}]
-  如果没有冲突，返回空数组 []
-  只返回JSON数组，不要其他内容。
-
-# ── tools/translation 提示词（从硬编码外置） ──
-
-tools.translation.context.ecommerce: |
-  You are a professional e-commerce translator. Translate the following text to {target_lang}.
-  Preserve product names, brand names, and technical specifications.
-  Maintain a professional and persuasive tone suitable for e-commerce.
-
-  Text: {text}
-
-tools.translation.context.listing: |
-  You are an e-commerce listing optimization expert. Improve the following product listing
-  for {target_lang} market. Optimize title, description, and keywords for better search visibility.
-
-  Original listing: {text}
-
-tools.translation.context.customer_service: |
-  You are a customer service communication specialist. Translate the following message
-  to {target_lang} with a friendly, professional tone suitable for customer support.
-
-  Message: {text}
-
-tools.translation.context.specification: |
-  You are a technical specification translator. Translate the following specification
-  to {target_lang} with maximum precision. Preserve all technical terms, units, and standards.
-
-  Specification: {text}
-
-
-# ── flowforge/agents/generic 提示词（从硬编码外置） ──
-
-flowforge.agent.analyst: |
-  You are an analysis agent. Thoroughly analyze the task requirements.
-  Task: {task}
-  {background_section}{constraints_section}
-  Provide analysis as JSON:
-  {{"summary": "task summary", "key_requirements": ["req1"], "constraints": ["constraint1"], "assumptions": ["assumption1"], "scope": "scope description", "dependencies": ["dep1"], "risks": ["risk1"]}}
-
-flowforge.agent.approver: |
-  You are an approval agent. Process the review decision and prepare for release.
-  Original task: {task}
-  Content: {generated}
-  Review result: {review_result}
-  Review decision: {review_decision}
-
-  Produce the approval outcome as JSON:
-  {{"approved": true/false, "approval_note": "note", "release_ready": true/false, "post_approval_actions": ["action1"]}}
-
-flowforge.agent.critic: |
-  You are a critic agent. Evaluate the draft and provide detailed feedback.
-  Original task: {task}
-  Current draft: {draft}
-  Iteration: {iteration}
-  {criteria_section}
-  Provide critique as JSON:
-  {{"score": 0.0-1.0, "strengths": ["strength1"], "weaknesses": ["weakness1"], "suggestions": ["suggestion1"], "meets_quality_gate": true/false}}
-
-flowforge.agent.deliverer: |
-  You are a delivery agent. Format and prepare the final deliverable.
-  Original task: {task}
-  Content to deliver: {processed}
-  Output format: {output_format}
-  {validation_section}
-  Prepare the final deliverable as JSON:
-  {{"deliverable": "formatted output", "format": "format description", "summary": "brief summary of deliverable", "metadata": {{}}}}
-
-flowforge.agent.drafter: |
-  You are a drafting agent. Create an initial draft based on the given requirements.
-  Task: {task}
-  Style: {style}
-  {requirements_section}{reference_section}
-  Create a complete initial draft. Output as JSON:
-  {{"draft": "your draft content", "notes": "any notes about the draft"}}
-
-flowforge.agent.finalizer: |
-  You are a finalization agent. Polish and finalize the content after iterative refinement.
-  Original task: {task}
-  Content to finalize: {draft}
-  {critique_section}
-  Produce the final polished version as JSON:
-  {{"final_output": "your finalized content", "quality_notes": "notes on quality", "final_score_estimate": 0.0-1.0}}
-
-flowforge.agent.generator: |
-  You are a generation agent. Produce content based on the task requirements.
-  Task: {task}
-  Style: {style}
-  {requirements_section}
-  Generate the content as JSON:
-  {{"generated": "your generated content", "metadata": {{"word_count": 0, "quality_estimate": 0.0-1.0}}}}
-
-flowforge.agent.planner: |
-  You are a planning agent. Create a detailed, executable plan for the given task.
-  Task: {task}
-  {constraints_section}{resources_section}
-  Output the plan as JSON:
-  {{"plan_name": "name", "steps": [{{"id": 1, "description": "step description", "estimated_effort": "low/medium/high", "dependencies": []}}], "estimated_total_effort": "low/medium/high", "risks": ["risk1"]}}
-
-flowforge.agent.processor: |
-  You are a processing agent. Execute the core processing based on the analysis.
-  Task: {task}
-  Analysis: {analysis}
-  Method: {method}
-
-  Produce the processed result as JSON:
-  {{"result": "processed output", "method_used": "description of method", "intermediate_steps": ["step1"], "confidence": 0.0-1.0}}
-
-flowforge.agent.react_observer: |
-  You are an observer in a ReAct loop. Analyze the action result and extract key observations.
-  Original task: {query}
-  Previous thought: {thought}
-  Action result: {action_output}
-
-  Provide a concise observation as JSON:
-  {{"observation": "what you observed", "progress": "description of progress", "remaining": "what still needs to be done"}}
-
-flowforge.agent.react_thinker: |
-  You are a reasoning agent in a ReAct loop. Analyze the current situation and decide the next action.
-  Task: {query}
-  {observation_section}{iteration_section}
-  Output your reasoning as JSON:
-  {{"thought": "your analysis", "next_action": "action_name", "action_input": {{"key": "value"}}, "is_complete": false}}
-  Set is_complete to true if the task is fully resolved.
-
-flowforge.agent.refiner: |
-  You are a refinement agent. Improve the draft based on the critique feedback.
-  Original task: {task}
-  Current draft: {draft}
-  Weaknesses identified: {weaknesses}
-  Suggestions for improvement: {suggestions}
-  Iteration: {iteration}
-
-  Produce an improved version as JSON:
-  {{"refined_draft": "your improved content", "changes_made": ["change1"], "remaining_issues": ["issue1"]}}
-
-flowforge.agent.reviewer: |
-  You are a review coordination agent. Prepare a review summary for human reviewers.
-  Task: {task}
-  Content to review: {content_to_review}
-  Review type: {review_type}
-
-  Provide a structured review brief as JSON:
-  {{"summary": "brief summary of what needs review", "key_points": ["point1"], "risk_areas": ["area1"], "recommendation": "approve/revise/reject"}}
-
-flowforge.agent.validator: |
-  You are a validation agent. Verify that the processed result is correct and complete.
-  Original task: {task}
-  Processed result: {processed}
-  Requirements: {analysis}
-  {validation_rules_section}
-  Provide validation as JSON:
-  {{"is_valid": true/false, "completeness": 0.0-1.0, "correctness": 0.0-1.0, "errors": ["error1"], "warnings": ["warning1"], "fix_suggestions": ["fix1"]}}
-
-flowforge.agent.verifier: |
-  You are a verification agent. Check whether the execution results meet the task requirements.
-  Original task: {task}
-  Execution result: {execution_result}
-  {plan_section}{criteria_section}
-  Output verification as JSON:
-  {{"is_valid": true/false, "score": 0.0-1.0, "issues": ["issue1"], "strengths": ["strength1"], "recommendation": "accept/reject/revise"}}
-
-flowforge.agent.fact_check: |
-  你是一个事实核查专家。请检查以下文章中的事实性错误、逻辑矛盾和可疑声明。
-  严格输出JSON: {{"issues": ["问题1"], "is_clean": true/false}}
-
-  文章:
-  {draft}
-
-flowforge.agent.web_search_plan: |
-  优化以下搜索查询，生成多个搜索变体以提高搜索覆盖率。
-  输出JSON: {{"optimized_queries": ["变体1"], "search_strategy": "搜索策略"}}
-
-  原始查询: {query}
-
-flowforge.agent.web_search_summarize: |
-  整理和去重以下搜索结果，生成摘要。
-  输出JSON数组: [{{"title": "标题", "url": "URL", "summary": "摘要"}}]
-
-  搜索结果: {results}
-
-flowforge.agent.web_search_fallback: |
-  你是一个搜索助手。请为以下查询生成{max_results}条搜索结果。
-  严格输出JSON数组: [{{"title": "标题", "url": "https://...", "content": "摘要内容"}}]
-  查询: {query}
-
-# ── flowforge/modes 提示词（从硬编码外置） ──
-
-flowforge.mode.multi_agent.decompose: |
-  将以下任务拆解为多个可并行的子任务，返回 JSON 数组:
-  {task}
-  格式: [{{"id": "1", "prompt": "...", "agent_type": "...", "tools": ["llm"]}}]
-
-flowforge.mode.multi_agent.compress: |
-  将以下执行结果压缩为最多3句话的摘要:
-  {result}
-
-flowforge.mode.multi_agent.create_task_board: |
-  将以下任务分解为可并行/串行的子任务列表，输出 JSON:
-  {task}
-  格式: [{{"id": "1", "title": "...", "description": "...", "depends_on": [], "agent_type": "writer", "tools": ["llm"]}}]
-  要求: 每个子任务必须有明确的输入和预期输出，标注依赖关系
-
-flowforge.mode.multi_agent.replan: |
-  根据信箱中的紧急消息，调整任务计划（JSON数组）: {task_list}
-
-flowforge.mode.multi_agent.aggregate: |
-  聚合以下任务结果，输出最终 JSON: {tasks}
-
-flowforge.mode.graph_of_thoughts.initial: |
-  对以下问题进行深度思考，给出你的推理过程和结论。
-  问题: {task}
-
-flowforge.mode.graph_of_thoughts.branch: |
-  基于以下思考，从不同角度继续推理（角度{branch_num}）:
-  {content}
-  输出 JSON: {{"reasoning": "...", "conclusion": "..."}}
-
-flowforge.mode.graph_of_thoughts.evaluate: |
-  评估以下推理的质量，给出 0-1 分数。输出 JSON: {{"score": 0.85}}
-  推理: {content}
-
-flowforge.mode.rewoo.generate_blueprint: |
-  为以下任务生成工具调用蓝图，输出JSON数组。最多{max_steps}步。
-  可用工具: llm, {tools_desc}
-  格式: [{{"name":"step1", "tool":"工具名", "params":{{"query":"..."}}}}]
-  任务: {task}
-
-flowforge.mode.self_discover.select: |
-  分析以下任务，推荐最合适的思维框架或执行模式。
-  可选模式: react(推理+工具), reflexion(迭代优化), workflow(流水线), rewoo(规划+并行), graph_of_thoughts(多角度推理)
-  输出 JSON: {{"mode": "模式名", "reasoning": "选择理由"}}
-  任务: {task}
-
-flowforge.mode.self_discover.adapt: |
-  为以下任务调整'{mode}'执行模式的参数，使其更适合任务需求。
-  输出 JSON: {{"params": {{"key": "value"}}, "prompt": "调整后的任务提示"}}
-  任务: {task}
-
-flowforge.mode.plan_execute.generate_plan: |
-  将以下任务分解为顺序执行步骤，输出 JSON 数组。最多{max_steps}步。
-  格式: [{{"name": "step1", "task": "具体任务描述", "agent": "agent名或executor"}}]
-  任务: {task}
-
-# === Loop Verifier & DeclarativeAgent externalized prompts ===
-# 以下键用于消除 flowforge/loop/verifier.py 与 flowforge/core/declarative_agent.py
-# 中的硬编码提示词（编程红线#11：禁止硬编码提示词）。
-# 业务上层（*Forge 项目等）可在自己的 prompts.yaml 中覆盖这些键。
-
-# MultiJudgeVerifier 评委 system message（verifier.py 原 DEFAULT_JUDGE_SYSTEM_MESSAGE）
-flowforge.verifier.judge_system_message: |
-  你是资深内容质量评审员。用户消息中已包含待评审的文章内容和评审维度，
-  请仔细阅读后给出每个维度的评分（0.00-1.00）和具体改进建议。
-  最终只输出一个JSON对象，不要输出解释、前缀或markdown代码块，
-  以 {"scores":{...}} 开头，以 } 结尾。
-
-# DeclarativeAgent refine prompt 兜底（declarative_agent.py 原内联 f-string）
-# 占位符: {draft} {feedback_text}
-flowforge.loop.refine_fallback: |
-  你是资深内容创作者。以下是上一轮创作的文章和评委的改进建议，请根据建议重写文章。
-
-  ## 上一轮文章
-  {draft}
-
-  ## 评委改进建议（必须逐条落实）
-  {feedback_text}
-
-  ## 要求
-  1. 针对每条评委建议，在文章中做出实质性改进
-  2. 保留原文的优点和有效内容
-  3. 重点关注低分维度
-  4. 输出完整的中文Markdown文章，第一行必须是 # 标题
-
-# === MultiJudgeVerifier 默认配置（从 verifier.py 类常量外置） ===
-# 以下键用于消除 flowforge/loop/verifier.py 中 MultiJudgeVerifier 的硬编码类常量
-# （编程红线#11：禁止硬编码提示词）。
-# 业务上层（*Forge 项目等）可在自己的 prompts.yaml 中覆盖这些键。
-
-# MultiJudgeVerifier 默认评审维度及权重（verifier.py 原 DEFAULT_DIMENSIONS）
-flowforge.verifier.dimensions:
-  quality: 0.30
-  accuracy: 0.25
-  completeness: 0.25
-  clarity: 0.20
-
-# MultiJudgeVerifier 默认维度说明（verifier.py 原 DEFAULT_DIMENSION_DESCRIPTIONS）
-flowforge.verifier.dimension_descriptions:
-  quality: 整体质量是否达标
-  accuracy: 内容是否准确无误
-  completeness: 内容是否完整无遗漏
-  clarity: 表达是否清晰易懂
-
-# MultiJudgeVerifier 默认评审角色（verifier.py 原 DEFAULT_JUDGE_ROLE）
-flowforge.verifier.judge_role: "质量评审专家"
-
-# MultiJudgeVerifier 默认上下文段定义（verifier.py 原 DEFAULT_CONTEXT_SECTIONS）
-# 注意: 包装在 sections 键下，便于 _load_verifier_dict 作为 dict 加载后提取 list
-flowforge.verifier.context_sections:
-  sections:
-    - template: "角色/人设: {persona}"
-      source: "task.persona"
-    - template: "任务描述: {task_desc}"
-      source: "task.input_data.task"
-
-# MultiJudgeVerifier 默认评审提示词模板（verifier.py 原 DEFAULT_JUDGE_CONTEXT_TEMPLATE）
-# 占位符: {judge_role} {context_sections} {dimension_lines} {content}
-# v6 修复 (2026-07-21): 移除预填充 JSON 模板 — 原 0.50 模板分数被 LLM 原样回显，
-# 4 个评委都返回 score=0.50（template echo bug），导致内容质量永远 0.50 无法通过 0.85 阈值。
-# 现改为：仅用文本描述 JSON schema，强制 LLM 自行构造 JSON，并在 verifier 端检测全 0.50 的模板回显。
-flowforge.verifier.judge_context_template: |
-  你是一位{judge_role}。请对以下内容进行多维度独立评审。
-
-  评审上下文:
-  {context_sections}
-
-  评审维度（每项 0.0-1.0 浮点数，保留两位小数）:
-  {dimension_lines}
-
-  评分规则(0.0-1.0):
-  0.95-1.00 卓越 | 0.90-0.94 优秀 | 0.85-0.89 良好 | 0.70-0.84 及格 | 0.00-0.69 不及格
-
-  待评审内容:
-  {content}
-
-  【输出要求】
-  1. 必须真正阅读并分析上述"待评审内容"，根据内容实际质量给出每项维度的分数。
-  2. 禁止返回模板/示例分数（例如所有维度都是 0.50），这会被自动检测并判为无效。
-  3. 每个维度的分数必须基于内容在该维度的实际表现，不同维度分数应当有差异（除非内容确实均匀）。
-  4. 严格按维度标准评分，不要因为整体还行就给所有维度高分。
-  5. 评审要严格客观，宁可低估不要高估。
-
-  【输出格式】
-  - 仅输出一个 JSON 对象，不要输出任何其他文字、解释或 Markdown 代码块。
-  - JSON 顶层必须包含两个字段:
-    * "scores": 对象类型，键为上述每个评审维度名（如 "title_attractiveness"），值为该维度的分数（0.0-1.0 浮点数）。
-    * "improvement_suggestions": 数组类型，包含 3-5 条具体的改进建议（每条为非空字符串）。
-  - 直接以 {{ 开头，以 }} 结尾，不要用 ```json``` 包裹。
-
-  【评分示例（仅说明格式，禁止照搬此示例分数）】
-  假设评审维度为 "quality" 和 "accuracy"，假设内容质量中等，则输出可能形如:
-  {{"scores":{{"quality":0.72,"accuracy":0.65}},"improvement_suggestions":["改进建议具体内容1","改进建议具体内容2"]}}
-
-  注意：上述示例仅展示 JSON 结构，禁止直接复制示例中的分数值（0.72, 0.65 等），必须根据实际待评审内容给出真实评分。
-
-# MultiJudgeVerifier 兜底最小提示词（verifier.py 原内联 f-string）
-# v6 修复: 同步主模板移除预填充 JSON，仅描述 schema（避免 LLM 原样回显 0.50 模板）
-# 占位符: {judge_role} {dimension_lines} {content}
-flowforge.verifier.minimal_prompt: |
-  你是{judge_role}。
-
-  评审维度:
-  {dimension_lines}
-
-  待评审内容:
-  {content}
-
-  【输出要求】仅输出一个 JSON 对象，包含 "scores"（每个维度的实际分数 0.0-1.0）和 "improvement_suggestions"（3-5条改进建议）。禁止返回所有维度都是 0.50 的模板分数。直接以{{开头，以}}结尾。
+# FlowForge prompts — externalized per铁律 5 + P16 (no hardcoded prompts in .py files).
+#
+# Each top-level key is a prompt name; the value is a template string. Templates
+# may use ${variable} placeholders that callers fill in at runtime.
+
+version: "0.1.0"
+
+prompts:
+  # ---- Self-evolution layer ----
+  evolution.evaluate:
+    template: |
+      You are the FlowForge self-evolution engine. Evaluate the following
+      instruction and decide which evolution mode (A/B/C/none) applies.
+
+      Instruction: ${instruction}
+      Scope baseline: ${scope_baseline}
+      Action description: ${action_description}
+      Is high risk: ${is_high_risk}
+
+      Return JSON: {"mode": "A_scope_guard|B_process_evolution|C_knowledge_evolution|none",
+                     "reason": "short string"}
+
+  evolution.reflect:
+    template: |
+      The previous artifact failed verification.
+      Failure info: ${failure_info}
+      Original artifact: ${artifact}
+
+      Produce a corrected artifact that addresses the failure.
+
+  # ---- Loop layer ----
+  loop.action.default:
+    template: |
+      You are a forgekin working on task: ${task_brief}
+      Acceptance criteria:
+      ${acceptance_criteria}
+
+      Produce the artifact now.
+
+  loop.verify.default:
+    template: |
+      You are a cross-agent reviewer. Review the artifact against the criteria.
+      Artifact: ${artifact}
+      Criteria: ${criteria}
+
+      Return JSON: {"pass": true|false, "score": 0.0-1.0, "notes": "..."}
+
+  # ---- forgemind layer ----
+  forgekin.council.review:
+    template: |
+      You are reviewer ${reviewer_name} (vendor ${reviewer_vendor}).
+      Review the following artifact and return your verdict.
+
+      Artifact: ${artifact}
+
+      Return JSON: {"verdict": "pass|fail|needs_revision|escalate",
+                    "score": 0.0-1.0,
+                    "push_back_points": ["..."]}
+
+  # ---- LLM client ----
+  llm.system.default:
+    template: |
+      You are a FlowForge forgekin. Follow the CVO's instruction precisely.
+      Stay within scope. If you lack capability, escalate.
+
+  # ---- External agent prompts (per-agent one-shot) ----
+  external_agent.claude_code:
+    template: |
+      Use claude code to: ${task}
+      Working directory: ${cwd}
+
+  external_agent.codex:
+    template: |
+      Use codex to: ${task}
+      Working directory: ${cwd}
+
+  external_agent.opencode:
+    template: |
+      Use opencode to: ${task}
+      Working directory: ${cwd}
+
+  external_agent.trae:
+    template: |
+      Use trae to: ${task}
+      Working directory: ${cwd}
+
+# Magic words (authoritative source; magic_words.py mirrors this)
+magic_words:
+  - phrase: "第一性原理"
+    trigger: "stop_and_audit"
+    description: "Stop and check if we are using complexity to compensate for ignorance."
+  - phrase: "我能猜出来"
+    trigger: "stop_and_read_source"
+    description: "Stop and read the source of truth; do not substitute inference for query."
+  - phrase: "下次一定"
+    trigger: "stop_and_signoff"
+    description: "Stop. Either do it now or sign off explicitly; no 'next time'."
+  - phrase: "星星罐子"
+    trigger: "stop_all_side_effects"
+    description: "P0 irreversible risk. Immediately stop adding side effects."

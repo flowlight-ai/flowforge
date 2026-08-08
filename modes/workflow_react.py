@@ -10,8 +10,8 @@ import json
 from typing import TYPE_CHECKING
 
 from flowforge.core.base_tool import ToolInput
-from flowforge.core.tracing import get_logger
 from flowforge.core.prompt_manager import get_prompt
+from flowforge.core.tracing import get_logger
 
 if TYPE_CHECKING:
     from flowforge.modes.workflow_executor import WorkflowExecutor
@@ -94,7 +94,7 @@ class ReactHandler:
 
             for tool_call in tool_calls:
                 if tool_calls_made >= max_tool_calls:
-                    logger.warning(f"Tool call limit reached during tool_calls processing")
+                    logger.warning("Tool call limit reached during tool_calls processing")
                     break
 
                 func_info = tool_call.get("function", {})

@@ -1,87 +1,55 @@
-# FlowForge 视角文档
+# perspectives 视角文档
 
-> **文档编号**: perspectives/README.md（v1.0）
-> **依据**: `[doc:review/review.md#12.1]` 文档拆分目标结构
-> **参考**: `[doc:clowder-ai/docs/perspectives/]` 目录结构
-
----
-
-## 1. 用途
-
-本目录存放不同视角的文档——同一系统从不同立场看到的视图。视角文档用于：
-- 帮助不同角色（operator / 架构师 / 可进化智能体 / 三方厂商）理解 FlowForge
-- 在架构决策时纳入多方视角（避免单一视角盲点）
-- 在多智能体议事（MindCouncil） 中作为各可进化智能体立场的载体
+> **目录作用**: 存放多视角文档，从不同利益相关方角度阐述对 FlowForge 可进化智能体（Forgekin）世界的理解，包括 operator 愿景、架构师画像、可进化智能体（Forgekin）第一人称体验、三方 Agent 厂商视角等
+> **维护规则**: 新增视角文档时按 `{视角}-{slug}.md` 或 `{Feature}/` 子目录组织；视角文档强调主观体验与方向性论述，不替代架构文档的客观描述
 
 ---
 
-## 2. 文件清单
+## 子目录与文档清单
 
-| 文件 | 视角 | 状态 |
-|------|------|:----:|
-| [README.md](README.md) | 视角文档导航（本文件） | ✅ v1.0 |
-| [operator-vision.md](operator-vision.md) | operator 愿景视角（可进化智能体世界） | ⏳ Phase 0 |
-| [architect-capability.md](architect-capability.md) | 架构师能力画像视角 | ⏳ Phase 1 |
-| [forgekin-experience.md](forgekin-experience.md) | 可进化智能体第一人称体验 | ⏳ Phase 2 |
-| [external-agent-vendor.md](external-agent-vendor.md) | 三方 Agent 厂商视角 | ⏳ Phase 3 |
+### 核心视角文档（待创建）
 
----
+| 文档 | 名称 | 状态 |
+|------|------|------|
+| `operator-vision.md` | operator 愿景视角（7 条不可妥协原则） | ⏳ |
+| `architect-portrait.md` | 架构师画像视角（七层架构设计动机） | ⏳ |
+| `forgekin-first-person.md` | 可进化智能体第一人称体验视角（觉醒/锻造/进化） | ⏳ |
+| `third-party-agent-vendor.md` | 三方 Agent 厂商视角（claude code/codex/opencode/trae） | ⏳ |
+| `end-user-experience.md` | 终端用户体验视角（可进化智能体交互） | ⏳ |
+| `community-contributor.md` | 社区贡献者视角（开源治理参与路径） | ⏳ |
 
-## 3. 视角清单
+### Feature 关联视角（待创建）
 
-### 3.1 operator 愿景视角
-
-operator（用户）看到的 FlowForge：
-- 可进化智能体世界（猫 + 桌椅 + 灯具 + 孙悟空 + 唐僧 协作）
-- 通用 AGI 路径（物理 AI + 虚拟 AI + 混合 AI）
-- 自我演进闭环（FlowForge 自己开发自己）
-
-详见 `[doc:VISION.md]`。
-
-### 3.2 架构师能力画像视角
-
-架构师看到的 FlowForge：
-- 七层架构 + forgemind 应用层
-- CapabilityProfile + 动态路由
-- Harness 七层 + Eval 自代谢
-- 单向依赖铁律
-
-详见 `[doc:architecture/README.md]`。
-
-### 3.3 可进化智能体第一人称体验
-
-可进化智能体看到的 FlowForge：
-- "我"的身份（Forgekin ID + 形态 + 谱系）
-- "我"的能力画像（必杀技 + 致命弱点）
-- "我"的记忆（情景记忆存储（EchoStore） + 蒸馏知识库（MindCodex））
-- "我"的协作伙伴（TeamAct + 伙伴系统数学）
-- "我"的进化路径（觉醒阶 E1-E6 + 经验蒸馏（SpiritForge））
-
-### 3.4 三方 Agent 厂商视角
-
-三方 Agent 厂商看到的 FlowForge：
-- 接入协议（ExternalAgentAdapter）
-- 能力画像融合机制
-- 共享状态接口
-- Fallback 链位置
-- Eval 信号贡献
+| 子目录 | 名称 | 状态 |
+|--------|------|------|
+| `F209/` | 记忆召回优化视角（Phase D 定向文档） | ⏳ |
 
 ---
 
-## 4. 视角使用场景
+## 视角分类
 
-| 场景 | 使用视角 |
-|------|---------|
-| 架构决策 | 全部 4 个视角 |
-| 多智能体议事（MindCouncil） | 可进化智能体第一人称 + 三方厂商 |
-| Bug 归因 | 架构师 + 可进化智能体第一人称 |
-| 愿景修订 | operator 愿景 |
-| 三方 Agent 接入 | 三方厂商 |
+| 视角类型 | 说明 | 代表文档 |
+|---------|------|---------|
+| **决策视角** | operator / 架构师的决策动机与原则 | `operator-vision.md`、`architect-portrait.md` |
+| **主体视角** | 可进化智能体自身的第一人称体验 | `forgekin-first-person.md` |
+| **外部视角** | 三方厂商 / 终端用户 / 社区贡献者 | `third-party-agent-vendor.md` 等 |
+| **Feature 视角** | 单个 Feature 的阶段定向文档 | `F209/f209-phase-d-orientation.md` |
 
 ---
 
-## 5. 视角更新规则
+## 维护规则
 
-- 视角文档由对应角色 / 可进化智能体维护
-- 视角冲突时通过多智能体议事（MindCouncil） 解决（Phase 6）
-- 视角不能违反 `[doc:VISION.md#7]` operator 愿景锚点
+- 视角文档以主观叙事为主，但不脱离 `[doc:VISION.md]` 愿景锚点与项目正式术语表
+- Feature 关联视角按 `F{NNN}/` 子目录组织，与 `features/F{NNN}-{slug}.md` 对应
+- 视角演进时不覆盖旧版本，按日期追加新文档（如 `F209/f209-phase-d-orientation.md`）
+- 禁止在视角文档中做架构决策（决策须走 ADR 流程，见 `[doc:decisions/README.md]`）
+- 禁止硬编码绝对路径，跨文档引用统一使用 `[doc:perspectives/xxx.md]` 格式
+- 视角文档变更须同步更新 `[doc:VISION.md]` 中关联章节
+
+---
+
+## 延伸阅读
+
+- `[doc:VISION.md]` — 可进化智能体愿景（operator 7 条不可妥协原则）
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景 ADR
+- `[doc:roleagent.md]` — 多智能体工程路径白皮书

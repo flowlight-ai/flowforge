@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter
@@ -26,7 +26,7 @@ class NotifySubscriptionCreate(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat() + "Z"
+    return datetime.now(UTC).isoformat() + "Z"
 
 
 @router.get("/subscriptions")
@@ -39,7 +39,7 @@ async def list_subscriptions() -> dict[str, Any]:
 async def create_subscription(payload: NotifySubscriptionCreate) -> dict[str, Any]:
     """创建通知订阅（stub 返回占位对象）。"""
     return {
-        "id": f"sub_stub_{int(datetime.now(timezone.utc).timestamp())}",
+        "id": f"sub_stub_{int(datetime.now(UTC).timestamp())}",
         "channel": payload.channel,
         "target": payload.target,
         "events": payload.events,

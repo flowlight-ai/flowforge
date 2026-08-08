@@ -4,7 +4,6 @@
  * MarketplaceCard — 能力包卡片
  *
  * 展示能力包名称、作者、简介、安装数、评分、版本、安装按钮。
- * 移植自 clowder-ai artifact-card，简化为只读卡片。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
  */

@@ -1,6 +1,6 @@
-from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput
+
+from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent
 from flowforge.core.task_context import TaskContext
-from typing import Optional
 
 
 class FactCheckAgent(GenericAgent):
@@ -8,7 +8,7 @@ class FactCheckAgent(GenericAgent):
     description = "事实核查：检查文章中的事实性错误和可疑声明"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
         draft = input.params.get("draft", "")
 
         prompt = self._get_prompt(

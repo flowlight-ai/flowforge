@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -34,7 +34,6 @@ from flowforge.evolution.self_dev_base import (
 )
 from flowforge.evolution.self_dev_review import SelfDevReviewLoop
 
-
 # ══════════════════════════════════════════════════════════════════
 # §1 Fake/Stub 工具类
 # ══════════════════════════════════════════════════════════════════
@@ -43,12 +42,12 @@ from flowforge.evolution.self_dev_review import SelfDevReviewLoop
 class _FakeTraeClient:
     """Stub TraeLLMClient — 按顺序返回预设响应."""
 
-    def __init__(self, responses: List[Dict[str, Any]] | None = None) -> None:
+    def __init__(self, responses: list[dict[str, Any]] | None = None) -> None:
         self._responses = list(responses or [])
         self.call_count = 0
-        self.calls: List[Dict[str, Any]] = []
+        self.calls: list[dict[str, Any]] = []
 
-    async def chat(self, messages: List[Dict[str, str]], *, context=None, **kwargs) -> Dict[str, Any]:
+    async def chat(self, messages: list[dict[str, str]], *, context=None, **kwargs) -> dict[str, Any]:
         self.call_count += 1
         self.calls.append({"messages": messages, "context": context, "kwargs": kwargs})
         if self._responses:
@@ -101,7 +100,7 @@ def temp_project(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def forgekin_config(temp_project: Path) -> Dict[str, Any]:
+def forgekin_config(temp_project: Path) -> dict[str, Any]:
     return {
         "project_root": str(temp_project),
         "forgekin_id": "forgemind:vangogh",

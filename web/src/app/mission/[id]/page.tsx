@@ -4,7 +4,6 @@
  * /mission/[id] — 任务详情页
  *
  * 展示单个任务的完整信息、进度历史、关联可进化智能体。
- * 移植自 clowder-ai mission/[id]，简化为只读详情视图。
  *
  * API：GET /api/v1/missions/{id}
  */

@@ -28,11 +28,11 @@
 from __future__ import annotations
 
 import asyncio
-import importlib
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from flowforge.core.tracing import get_logger
 
@@ -54,13 +54,13 @@ class ForemanConfig:
     task_scan_limit: int = DEFAULT_TASK_SCAN_LIMIT
     emergency_poll_interval_seconds: float = EMERGENCY_POLL_INTERVAL_SECONDS
     max_concurrent_tasks: int = 3  # 最大并发任务数
-    magic_words_stop: List[str] = field(
+    magic_words_stop: list[str] = field(
         default_factory=lambda: ["停止", "stop", "exit", "quit"]
     )
-    magic_words_pause: List[str] = field(
+    magic_words_pause: list[str] = field(
         default_factory=lambda: ["暂停", "pause", "hold"]
     )
-    magic_words_resume: List[str] = field(
+    magic_words_resume: list[str] = field(
         default_factory=lambda: ["继续", "resume", "go"]
     )
 
@@ -69,14 +69,14 @@ class ForemanConfig:
 class ForemanStats:
     """Foreman 运行统计."""
 
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     total_loops: int = 0
     total_tasks_dispatched: int = 0
     total_tasks_completed: int = 0
     total_tasks_failed: int = 0
     total_emergencies: int = 0
-    last_loop_at: Optional[datetime] = None
-    last_task_at: Optional[datetime] = None
+    last_loop_at: datetime | None = None
+    last_task_at: datetime | None = None
     current_state: str = "idle"  # idle / running / paused / stopped
 
 
@@ -101,8 +101,8 @@ class ContinuousForeman:
         self,
         runtime: Any,  # SelfDevRuntime 实例（避免循环导入用 Any）
         *,
-        config: Optional[ForemanConfig] = None,
-        swarm_coordinator: Optional[Any] = None,
+        config: ForemanConfig | None = None,
+        swarm_coordinator: Any | None = None,
     ) -> None:
         """初始化 Foreman.
 
@@ -117,12 +117,12 @@ class ContinuousForeman:
 
         # 运行状态
         self._stats = ForemanStats()
-        self._task: Optional[asyncio.Task] = None  # 主循环 task
+        self._task: asyncio.Task | None = None  # 主循环 task
         self._emergency_queue: asyncio.Queue = asyncio.Queue()
-        self._running_tasks: Dict[str, asyncio.Task] = {}  # task_id -> asyncio.Task
+        self._running_tasks: dict[str, asyncio.Task] = {}  # task_id -> asyncio.Task
 
         # Magic Words 监听（通过 stdin 或 IM 通道）
-        self._magic_words_callback: Optional[Callable[[str], Awaitable[None]]] = None
+        self._magic_words_callback: Callable[[str], Awaitable[None]] | None = None
 
         # 状态标志
         self._stop_requested = False
@@ -248,7 +248,7 @@ class ContinuousForeman:
                     continue
 
                 self._stats.total_loops += 1
-                self._stats.last_loop_at = datetime.now(timezone.utc)
+                self._stats.last_loop_at = datetime.now(UTC)
                 self._logger.debug(
                     f"Foreman 主循环 #{self._stats.total_loops} 启动"
                 )
@@ -318,7 +318,7 @@ class ContinuousForeman:
                         for task_id in dispatched:
                             await self._start_task_execution(task_id)
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
 
         except asyncio.CancelledError:
@@ -365,7 +365,7 @@ class ContinuousForeman:
     # §3 任务源扫描
     # ══════════════════════════════════════════════════════════════
 
-    async def _scan_task_sources(self, limit: int = 5) -> List[Dict[str, Any]]:
+    async def _scan_task_sources(self, limit: int = 5) -> list[dict[str, Any]]:
         """扫描所有任务源，返回待处理任务列表.
 
         任务源优先级：
@@ -380,7 +380,7 @@ class ContinuousForeman:
         Returns:
             任务字典列表，每个含 title/description/required_capabilities/loop_type 等
         """
-        tasks: List[Dict[str, Any]] = []
+        tasks: list[dict[str, Any]] = []
 
         # 任务源 1: operator 显式提交的任务（通过 emergency_queue 或 submit_operator_task）
         # 已在 _emergency_loop 中处理，这里不重复
@@ -401,7 +401,7 @@ class ContinuousForeman:
         tasks = sorted(tasks, key=lambda t: t.get("priority", "normal"))
         return tasks[:limit]
 
-    async def _scan_task_md(self) -> List[Dict[str, Any]]:
+    async def _scan_task_md(self) -> list[dict[str, Any]]:
         """扫描 task.md 中的待办任务.
 
         Returns:
@@ -411,7 +411,7 @@ class ContinuousForeman:
         # 当前返回空列表，避免在没有 task.md 时报错
         return []
 
-    async def _scan_periodic(self) -> List[Dict[str, Any]]:
+    async def _scan_periodic(self) -> list[dict[str, Any]]:
         """定时扫描任务源（文档过期/代码 bug 等）.
 
         触发的 SelfDev 闭环：
@@ -446,7 +446,7 @@ class ContinuousForeman:
     # §4 任务执行
     # ══════════════════════════════════════════════════════════════
 
-    def _submit_to_swarm(self, task_data: Dict[str, Any]) -> None:
+    def _submit_to_swarm(self, task_data: dict[str, Any]) -> None:
         """提交任务到 SwarmCoordinator.
 
         Args:
@@ -522,7 +522,7 @@ class ContinuousForeman:
         # 创建执行 task
         async def _execute():
             try:
-                self._stats.last_task_at = datetime.now(timezone.utc)
+                self._stats.last_task_at = datetime.now(UTC)
 
                 # 发送心跳（任务开始）
                 if self._swarm is not None:
@@ -552,7 +552,7 @@ class ContinuousForeman:
                     self._swarm._tasks[task_id].status = "completed"
                     self._swarm._tasks[task_id].result = result
                     self._swarm._tasks[task_id].completed_at = datetime.now(
-                        timezone.utc
+                        UTC
                     )
 
                 self._stats.total_tasks_completed += 1
@@ -580,8 +580,8 @@ class ContinuousForeman:
         self._running_tasks[task_id] = asyncio_task
 
     async def _route_to_loop(
-        self, loop_type: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, loop_type: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         """路由任务到对应的 SelfDev 闭环.
 
         Args:
@@ -650,9 +650,9 @@ class ContinuousForeman:
         title: str,
         description: str,
         loop_type: str,
-        forgekin_id: Optional[str] = None,
+        forgekin_id: str | None = None,
         priority: str = "normal",
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> str:
         """operator 提交显式任务（通过 IM 议事或 API）.
 
@@ -691,7 +691,7 @@ class ContinuousForeman:
 
         return task_data.get("task_id", "")
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取 Foreman 运行统计."""
         return {
             "started_at": self._stats.started_at.isoformat(),
@@ -711,7 +711,7 @@ class ContinuousForeman:
             "emergency_queue_size": self._emergency_queue.qsize(),
         }
 
-    def get_swarm_workload(self) -> Dict[str, int]:
+    def get_swarm_workload(self) -> dict[str, int]:
         """获取 Swarm 各 agent 当前任务数."""
         if self._swarm is None:
             return {}
@@ -755,7 +755,7 @@ class ContinuousForeman:
             # 返回一个简易的 mock（仅用于不阻塞 foreman 启动）
             return _MockSwarmCoordinator()
 
-    def _load_agents_config(self) -> Dict[str, Dict[str, Any]]:
+    def _load_agents_config(self) -> dict[str, dict[str, Any]]:
         """加载 5 Forgekin能力画像配置.
 
         Returns:
@@ -824,7 +824,7 @@ class _MockSwarmCoordinator:
     """
 
     def __init__(self) -> None:
-        self._tasks: Dict[str, Any] = {}
+        self._tasks: dict[str, Any] = {}
         self._logger = logger
 
     def submit_task(self, task: Any) -> str:
@@ -834,15 +834,15 @@ class _MockSwarmCoordinator:
         self._logger.warning(f"MockSwarm 提交任务（降级模式）: {task_id}")
         return task_id
 
-    async def dispatch(self) -> List[str]:
+    async def dispatch(self) -> list[str]:
         """分发任务（返回空列表）."""
         return []
 
-    async def check_timeouts(self) -> List[str]:
+    async def check_timeouts(self) -> list[str]:
         """检查超时（返回空列表）."""
         return []
 
-    def get_agent_workload(self) -> Dict[str, int]:
+    def get_agent_workload(self) -> dict[str, int]:
         """获取 workload（返回空字典）."""
         return {}
 
@@ -857,7 +857,7 @@ class _MockSwarmCoordinator:
 def create_foreman(
     runtime: Any,
     *,
-    config: Optional[ForemanConfig] = None,
+    config: ForemanConfig | None = None,
 ) -> ContinuousForeman:
     """创建 ContinuousForeman 实例.
 

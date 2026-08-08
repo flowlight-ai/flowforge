@@ -7,8 +7,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -19,7 +19,7 @@ class QuotaResult(BaseModel):
     allowed: bool = True
     reason: str = ""
     action: str = "proceed"
-    current_usage: Dict[str, Any] = {}
+    current_usage: dict[str, Any] = {}
 
 
 @dataclass
@@ -47,10 +47,10 @@ class QuotaConfig:
 class ProviderQuotaManager:
     """Provider级成本/配额管理"""
 
-    def __init__(self, configs: Optional[Dict[str, QuotaConfig]] = None):
-        self._configs: Dict[str, QuotaConfig] = configs or {}
-        self._states: Dict[str, QuotaState] = {}
-        self._alert_callbacks: List[Any] = []
+    def __init__(self, configs: dict[str, QuotaConfig] | None = None):
+        self._configs: dict[str, QuotaConfig] = configs or {}
+        self._states: dict[str, QuotaState] = {}
+        self._alert_callbacks: list[Any] = []
 
     def register_provider(self, provider: str, config: QuotaConfig) -> None:
         self._configs[provider] = config
@@ -94,14 +94,14 @@ class ProviderQuotaManager:
         state.total_tokens += total_tokens
         state.total_cost += cost
 
-    def get_budget_status(self, provider: str) -> Dict[str, Any]:
+    def get_budget_status(self, provider: str) -> dict[str, Any]:
         config = self._configs.get(provider)
         state = self._states.get(provider)
         if not config or not state:
             return {"provider": provider, "status": "unknown"}
         return {"provider": provider, "budget_used": round(state.budget_used, 4), "budget_limit": config.monthly_budget_usd, "budget_ratio": round(state.budget_used / config.monthly_budget_usd, 4) if config.monthly_budget_usd > 0 else 0, "tpm_used": state.tpm_used, "tpm_limit": config.tpm_limit, "rpm_used": state.rpm_used, "rpm_limit": config.rpm_limit, "total_requests": state.total_requests, "total_tokens": state.total_tokens, "total_cost": round(state.total_cost, 4)}
 
-    def get_all_status(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_status(self) -> dict[str, dict[str, Any]]:
         return {provider: self.get_budget_status(provider) for provider in self._configs}
 
     def _get_state(self, provider: str) -> QuotaState:
@@ -118,7 +118,7 @@ class ProviderQuotaManager:
             state.rpm_used = 0
             state.rpm_window_start = now
 
-    async def _emit_alert(self, provider: str, metric: str, ratio: float, current_usage: Dict[str, Any]) -> None:
+    async def _emit_alert(self, provider: str, metric: str, ratio: float, current_usage: dict[str, Any]) -> None:
         alert_data = {"provider": provider, "metric": metric, "ratio": round(ratio, 4), "threshold": self._configs[provider].alert_threshold, "current_usage": current_usage}
         logger.warning(f"Quota alert: {provider} {metric} at {ratio:.1%}")
         for callback in self._alert_callbacks:
@@ -130,7 +130,7 @@ class ProviderQuotaManager:
             except Exception as e:
                 logger.error(f"Alert callback error: {e}")
 
-    def load_from_config(self, config_data: Dict[str, Any]) -> None:
+    def load_from_config(self, config_data: dict[str, Any]) -> None:
         for provider, quota_config in config_data.items():
             if isinstance(quota_config, dict):
                 self.register_provider(provider, QuotaConfig(

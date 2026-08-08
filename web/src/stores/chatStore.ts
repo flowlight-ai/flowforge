@@ -1,7 +1,6 @@
 /**
  * Chat Store (Zustand)
  *
- * 来源：clowder-ai/packages/web/src/stores/chatStore.ts（简化版）
  * 职责：管理聊天消息、流式响应、附件、Diff 文件
  *
  * 设计原则：

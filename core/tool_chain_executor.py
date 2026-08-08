@@ -8,11 +8,11 @@ License: MIT
 
 import json
 import time
-from typing import Dict, List, Optional, Any
+from typing import Any
 
+from flowforge.core import metrics
 from flowforge.core.base_tool import ToolInput
 from flowforge.core.tracing import get_logger
-from flowforge.core import metrics
 
 logger = get_logger("tool_chain_executor")
 
@@ -41,15 +41,15 @@ class ToolChainExecutor:
     async def execute(
         self,
         task_id: str,
-        messages: List[Dict[str, Any]],
-        tools: Optional[List[str]] = None,
-        system_prompt: Optional[str] = None,
+        messages: list[dict[str, Any]],
+        tools: list[str] | None = None,
+        system_prompt: str | None = None,
         model: str = "auto",
         persona: str = "default",
         agent_name: str = "helm_assistant",
         temperature: float = 0.7,
         max_tokens: int = 4000,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a tool chain loop.
 
         1. Build messages with system prompt + tool schemas
@@ -75,17 +75,17 @@ class ToolChainExecutor:
         """
         tool_schemas = self._build_tool_schemas(tools)
 
-        all_messages: List[Dict[str, Any]] = []
+        all_messages: list[dict[str, Any]] = []
         if system_prompt:
             all_messages.append({"role": "system", "content": system_prompt})
         all_messages.extend(messages)
 
-        execution_trace: List[Dict[str, Any]] = []
+        execution_trace: list[dict[str, Any]] = []
         total_tokens = 0
         final_content = ""
         used_model = ""
         used_provider = ""
-        tool_call_history: List[str] = []
+        tool_call_history: list[str] = []
 
         for iteration in range(self.max_iterations):
             if len(all_messages) > 12:
@@ -224,8 +224,8 @@ class ToolChainExecutor:
             "model": used_model,
         }
 
-    def _build_tool_schemas(self, tool_names: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        schemas: List[Dict[str, Any]] = []
+    def _build_tool_schemas(self, tool_names: list[str] | None = None) -> list[dict[str, Any]]:
+        schemas: list[dict[str, Any]] = []
         available_tools = self.tool_registry.list_tools()
 
         target_tools = tool_names if tool_names else available_tools
@@ -250,7 +250,7 @@ class ToolChainExecutor:
 
         return schemas
 
-    def _parse_tool_calls(self, llm_response: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _parse_tool_calls(self, llm_response: dict[str, Any]) -> list[dict[str, Any]]:
         """Extract tool calls from LLM response.
 
         Args:
@@ -272,7 +272,7 @@ class ToolChainExecutor:
             parsed.append({"name": name, "arguments": arguments, "id": tc.get("id", "")})
         return parsed
 
-    async def _execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_tool_call(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Execute a single tool call and return the result.
 
         Args:

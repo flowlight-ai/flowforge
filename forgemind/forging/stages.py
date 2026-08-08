@@ -44,7 +44,7 @@ class ForgingStage(str, Enum):
     AWAKENING_PROMOTION = "awakening_promotion"
 
     @classmethod
-    def ordered(cls) -> list["ForgingStage"]:
+    def ordered(cls) -> list[ForgingStage]:
         """返回按流水线顺序排列的阶段列表。"""
         return [
             cls.SPECIES_DEFINITION,

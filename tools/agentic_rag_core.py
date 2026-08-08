@@ -19,12 +19,10 @@ Dependencies:
 import hashlib
 import os
 import re
-from typing import Dict, List, Optional
 
 import yaml
 
 from flowforge.core.tracing import get_logger
-
 from flowforge.tools.agentic_rag import (
     RetrievalResult,
     RRFFusion,
@@ -58,7 +56,7 @@ def _load_agentic_rag_prompt(key: str, **kwargs) -> str:
         if not os.path.exists(_PROMPTS_PATH):
             logger.error(f"[agentic_rag_core] prompts file not found: {_PROMPTS_PATH} (fail-open)")
             return ""
-        with open(_PROMPTS_PATH, "r", encoding="utf-8") as f:
+        with open(_PROMPTS_PATH, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         template = data.get(full_key, "")
         if not template:
@@ -123,7 +121,7 @@ class QueryExpander:
             logger.warning(f"QueryExpander LLM call failed: {e}")
             return ""
 
-    def _parse_json_list(self, text: str) -> List[str]:
+    def _parse_json_list(self, text: str) -> list[str]:
         """Parse a JSON array from LLM response text."""
         if not text:
             return []
@@ -141,8 +139,8 @@ class QueryExpander:
         return []
 
     async def expand(
-        self, query: str, context: Optional[Dict] = None
-    ) -> List[str]:
+        self, query: str, context: dict | None = None
+    ) -> list[str]:
         """Expand a query into multiple variations using LLM.
 
         Steps:
@@ -160,7 +158,7 @@ class QueryExpander:
                 f"{k}: {v}" for k, v in context.items() if v is not None
             )
 
-        all_variations: List[str] = [query]  # Always start with original
+        all_variations: list[str] = [query]  # Always start with original
 
         # Step 1: Rewrite
         rewrite_prompt = _load_agentic_rag_prompt(
@@ -188,7 +186,7 @@ class QueryExpander:
 
         # Deduplicate while preserving order
         seen = set()
-        unique: List[str] = []
+        unique: list[str] = []
         for v in all_variations:
             normalized = v.strip().lower()
             if normalized and normalized not in seen:
@@ -253,7 +251,7 @@ class ContentSynthesizer:
             logger.warning(f"ContentSynthesizer LLM call failed: {e}")
             return ""
 
-    def _format_documents(self, documents: List[Dict]) -> str:
+    def _format_documents(self, documents: list[dict]) -> str:
         """Format documents for inclusion in LLM prompt."""
         parts = []
         for i, doc in enumerate(documents, 1):
@@ -262,7 +260,7 @@ class ContentSynthesizer:
             parts.append(f"[文档{i}] (来源: {source})\n{content}")
         return "\n\n---\n\n".join(parts)
 
-    async def _check_conflicts(self, documents: List[Dict]) -> List[Dict]:
+    async def _check_conflicts(self, documents: list[dict]) -> list[dict]:
         """Check for conflicting information across documents.
 
         Returns list of conflict dicts with claim, source_a, source_b.
@@ -292,8 +290,8 @@ class ContentSynthesizer:
     async def synthesize(
         self,
         query: str,
-        documents: List[Dict],
-        style: Optional[str] = None,
+        documents: list[dict],
+        style: str | None = None,
     ) -> str:
         """Synthesize multiple retrieved documents into coherent output.
 
@@ -380,7 +378,7 @@ class AgenticRAGCore:
         }
     """
 
-    def __init__(self, config: Optional[Dict] = None):
+    def __init__(self, config: dict | None = None):
         self._config = config or {}
         self._deduplicator = SimHashDeduplicator(
             hash_bits=self._config.get("simhash_bits", 64)
@@ -396,7 +394,7 @@ class AgenticRAGCore:
             model=self._config.get("synthesizer_model", "doubao-pro-32k")
         )
         self._tool_registry = None
-        self._indexed_docs: Dict[str, dict] = {}
+        self._indexed_docs: dict[str, dict] = {}
 
     def set_tool_registry(self, registry) -> None:
         """Set tool registry for dependency injection (LLM + search tools)."""
@@ -406,13 +404,13 @@ class AgenticRAGCore:
 
     async def _search_with_tool(
         self, tool_name: str, query: str
-    ) -> List[RetrievalResult]:
+    ) -> list[RetrievalResult]:
         """Try calling a search tool via tool_registry, return results or empty list."""
         if self._tool_registry is None:
             return []
         try:
             result = await self._tool_registry.execute(tool_name, {"query": query})
-            items: List[RetrievalResult] = []
+            items: list[RetrievalResult] = []
             raw = result.result if hasattr(result, "result") else result
             if isinstance(raw, list):
                 for item in raw:
@@ -440,9 +438,9 @@ class AgenticRAGCore:
             logger.warning(f"Tool {tool_name} search failed for '{query[:50]}': {e}")
             return []
 
-    def _keyword_search_local(self, query: str) -> List[RetrievalResult]:
+    def _keyword_search_local(self, query: str) -> list[RetrievalResult]:
         """Fallback: keyword matching in the local knowledge base."""
-        results: List[RetrievalResult] = []
+        results: list[RetrievalResult] = []
         query_terms = set(re.findall(r'\w+', query.lower()))
         for doc_id, doc_data in self._indexed_docs.items():
             content = doc_data.get("content", "")
@@ -464,9 +462,9 @@ class AgenticRAGCore:
     async def search(
         self,
         query: str,
-        style: Optional[str] = None,
+        style: str | None = None,
         max_results: int = 10,
-    ) -> Dict:
+    ) -> dict:
         """Main entry point — full AgenticRAG pipeline.
 
         Steps:
@@ -490,9 +488,9 @@ class AgenticRAGCore:
         expanded_queries = await self._query_expander.expand(query)
 
         # Step 2: Multi-source search
-        all_result_lists: List[List[RetrievalResult]] = []
+        all_result_lists: list[list[RetrievalResult]] = []
         for q in expanded_queries:
-            source_results: List[RetrievalResult] = []
+            source_results: list[RetrievalResult] = []
 
             # 2a. HelixRAG (primary)
             helixrag_results = await self._search_with_tool("helixrag_search", q)
@@ -517,7 +515,7 @@ class AgenticRAGCore:
         weighted = self._decay.weight(fused)
 
         # Step 5: Deduplication
-        unique: List[RetrievalResult] = []
+        unique: list[RetrievalResult] = []
         for result in weighted:
             doc_id = result.doc_id or hashlib.md5(
                 result.content.encode()
@@ -566,7 +564,7 @@ class AgenticRAGCore:
         return result
 
     def index_document(
-        self, doc_id: str, content: str, metadata: Optional[Dict] = None
+        self, doc_id: str, content: str, metadata: dict | None = None
     ) -> None:
         """Index a document for knowledge accumulation."""
         self._indexed_docs[doc_id] = {
@@ -575,6 +573,6 @@ class AgenticRAGCore:
         }
         logger.info(f"AgenticRAGCore: indexed document {doc_id}")
 
-    def get_indexed_document(self, doc_id: str) -> Optional[Dict]:
+    def get_indexed_document(self, doc_id: str) -> dict | None:
         """Retrieve an indexed document."""
         return self._indexed_docs.get(doc_id)

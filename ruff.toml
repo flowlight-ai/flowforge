@@ -1,9 +1,0 @@
-# FlowLight Ruff 配置 — 真实门禁
-# install/ 为 Jinja2 安装模板(含 {{ }} 占位符), 非合法 Python, 排除检查
-exclude = ["install", ".git", "__pycache__", "node_modules", ".venv", "dist", "build", "web"]
-
-[lint]
-select = ["E", "F", "I", "W"]
-
-[lint.per-file-ignores]
-"tests/**" = ["F821"]

@@ -1,10 +1,12 @@
 """API端点：提供workflow/agent/模式的静态关系图数据"""
+import os
+
+import yaml
 from fastapi import APIRouter, HTTPException
+
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.modes.registry import ModeRegistry
 from flowforge.tools.registry import ToolRegistry
-import os
-import yaml
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 
@@ -143,7 +145,7 @@ def _load_workflow_defs():
     if os.path.isdir(wf_dir):
         for f in os.listdir(wf_dir):
             if f.endswith((".yaml", ".yml")):
-                with open(os.path.join(wf_dir, f), "r", encoding="utf-8") as fh:
+                with open(os.path.join(wf_dir, f), encoding="utf-8") as fh:
                     data = yaml.safe_load(fh)
                     name = f.replace(".yaml", "").replace(".yml", "")
                     workflows[name] = data

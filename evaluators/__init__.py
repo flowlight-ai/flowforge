@@ -5,8 +5,8 @@ EvaluatorRegistry/EvaluatorConfig/ScoringRule which are generic platform capabil
 Business-specific evaluator agents are registered by *Forge plugins via Plugin V3
 protocol to maintain P8A architecture boundary (no *Forge code in FlowForge core).
 """
-from flowforge.evaluators.models import Score
 from flowforge.evaluators.base import EvaluatorAgent
+from flowforge.evaluators.models import Score
 from flowforge.evaluators.registry import EvaluatorConfig, EvaluatorRegistry, ScoringRule
 
 __all__ = [

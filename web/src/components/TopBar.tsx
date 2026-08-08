@@ -3,7 +3,7 @@
 /**
  * TopBar — 全局顶栏（52px）
  *
- * 来源：新建（依据 WEB-FUSION-DESIGN.md §4.2）
+ * 来源：新建
  *
  * 职责：
  *   - 左侧：品牌名 + 当前路径面包屑
@@ -15,7 +15,6 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useShellConfig } from "@/lib/shell-config";
-import { ThemeToggle } from "./ThemeToggle";
 
 interface TopBarProps {
   className?: string;
@@ -131,7 +130,6 @@ export function TopBar({ className }: TopBarProps) {
       <div className="flex-1" />
 
       <div className="flex items-center gap-3">
-        <ThemeToggle />
         <span
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
           style={{

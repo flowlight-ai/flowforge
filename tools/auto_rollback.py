@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -41,7 +40,7 @@ class RollbackRecord(BaseModel):
     reason: str
     metrics_snapshot: dict = Field(default_factory=dict)
     rollback_version: str = ""
-    rolled_back_at: Optional[str] = None
+    rolled_back_at: str | None = None
 
 
 class AutoRollbackManager:
@@ -128,7 +127,7 @@ class AutoRollbackManager:
         task_id: str,
         metrics: dict,
         rollback_version: str = "",
-    ) -> Optional[RollbackRecord]:
+    ) -> RollbackRecord | None:
         """检查指标并在需要时执行回滚。
 
         Returns:
