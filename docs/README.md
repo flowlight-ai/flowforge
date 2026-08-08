@@ -7,6 +7,13 @@
 
 ---
 
+## 工程规范（9 仓库统一）
+
+| 文档 | 说明 |
+|------|------|
+| [git-workflow.md](./git-workflow.md) | Git 工作流规范：仅主干开发（Gitee=master / GitHub=main）、PR 合入、提交署名 |
+| [dev-spec.md](./dev-spec.md) | 工程通用规范：测试交付三件套、测试铁律 T1-T9、编程红线 15 条 |
+
 ## 1. 这是什么
 
 FlowForge 是一个**可进化智能体锻造厂**（Persistent Identity Agent Framework，项目代号 ForgeMind，社区社交称"通用智能体框架"）——用自进化的核心框架，给各类实体锻造可进化智能体（Evolvable Agent，项目代号 Forgekin，社区社交称"可进化智能体"），构建具身智能（Embodied AI）与虚拟角色智能体（Character AI）工程落地的可进化智能体生态。详见 [VISION.md](VISION.md)。
