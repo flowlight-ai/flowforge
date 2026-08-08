@@ -14,13 +14,15 @@
 #
 # 用法:
 #   ./mgr [--all|--repo NAME] status | commit | push | pull | clone | log | diff | branch | list
-#   ./mgr sync              推送双端 (从已改动端推 origin → 再推 mirror)
+#   ./mgr sync              双平台同步 (自动创建临时分支 → push → 创建 PR, 禁止直接push主干)
+#   ./mgr push --pr         push 当前分支并自动创建 PR
 #   ./mgr pr "标题"         双平台创建 PR (当前分支 → Gitee master / GitHub main)
 #   ./mgr mirror-setup      一键配置双端互指 mirror 远程
 #   ./mgr protect           设置 master 分支保护 (仅 Gitee)
 #
 # 分支模型 (强制): 仅主干开发 — Gitee=master / GitHub=main, 一律经 PR 合入;
-#   向 Gitee 保护分支 push 会自动转为 PR; 禁止使用 dev 等长期分支。
+#   禁止直接 push 到 master/main (cmd_push 会拒绝并提示用 PR);
+#   sync 命令自动创建临时 sync/* 分支, push 后创建 PR, 不触碰主干。
 # ============================================================================
 set -e
 _git() { local d="$1"; shift; (cd "$d" && git "$@"); }
@@ -139,6 +141,9 @@ _sync_report() {
 }
 
 cmd_sync() {
+  # ⚠ sync 已废弃直接 push 行为, 改为强制走 PR (主干保护)
+  # 用法: ./mgr sync [--retry]
+  # 行为: 对有领先提交的仓库, 在非主干分支上创建临时分支, push 并创建 PR
   local RETRY=false
   [ "${1:-}" = "--retry" ] && { RETRY=true; shift; }
 
@@ -152,86 +157,62 @@ cmd_sync() {
   fi
 
   >"$SYNC_STATE"  # 清空状态文件
-
   local TMPERR; TMPERR="$(mktemp)"
+  load_token; load_gh_token
+
   for n in "${NAMES[@]}"; do
     [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue
 
-    # ── Gitee 端 ──
-    local gd="${GPATH[$n]}"
-    if [ -d "$gd/.git" ]; then
-      local b; b=$(_git "$gd" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
-      local dirty; dirty=$(_git "$gd" status --short 2>/dev/null | wc -l)
-      local ahead; ahead=$(_git "$gd" rev-list --count "origin/${b}..${b}" 2>/dev/null || echo "0")
+    for side in gitee github; do
+      local d; [ "$side" = "gitee" ] && d="${GPATH[$n]}" || d="${GH_PATH[$n]}"
+      [ -d "$d/.git" ] || continue
 
-      # --retry 模式跳过已成功的
-      local gitee_origin_key="Gitee:$n:origin/$b"
-      local gitee_mirror_key="Gitee:$n:mirror->github/$b"
-      $RETRY && [ -z "${FAILED[$gitee_origin_key]}" -a -z "${FAILED[$gitee_mirror_key]}" ] && continue
+      local b; b=$(_git "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+      local base; [ "$side" = "gitee" ] && base="master" || base="main"
+      local dirty; dirty=$(_git "$d" status --short 2>/dev/null | wc -l)
+      local ahead; ahead=$(_git "$d" rev-list --count "origin/${base}..${b}" 2>/dev/null || echo "0")
 
-      echo -e "${B}${Y}══ ${n} / Gitee [${b}]${N}"
-      [ "$dirty" -gt 0 ] && echo -n "  ${Y}dirty:${dirty}${N}" || true
-      [ "$ahead" != "0" ] && echo -n "  ${Y}↑${ahead}${N}" || true
-      echo ""
+      local sync_key="${side^}:$n:${b}"
+      $RETRY && [ -z "${FAILED[$sync_key]}" ] && continue
 
-      # 确保 github mirror 远程存在
-      _git "$gd" remote get-url github &>/dev/null && _git "$gd" remote set-url github "${GH_URL[$n]}" 2>/dev/null || _git "$gd" remote add github "${GH_URL[$n]}" 2>/dev/null || true
+      echo -e "${B}══ ${n} / ${side^} [${b}]${N}"
 
-      # Push to Gitee origin
-      echo -n "  gitee.com ... "
-      if _git "$gd" push -u origin "$b" 2>"$TMPERR"; then
-        echo -e "${G}OK${N}"; _sync_fail "OK:$gitee_origin_key"
-      else
-        local err1; err1=$(head -2 "$TMPERR" 2>/dev/null | tr '\n' ' ' | cut -c1-80)
-        echo -e "${R}FAIL: ${err1:-network error}${N}"; _sync_fail "FAIL:$gitee_origin_key"
+      # 无领先提交, 跳过
+      if [ "$ahead" = "0" ] && [ "$dirty" = "0" ]; then
+        echo -e "  ${G}✓ 已同步${N}"; _sync_fail "OK:$sync_key"; continue
       fi
 
-      # Push to GitHub mirror (from Gitee side)
-      echo -n "  → github.com (mirror) ... "
-      if _git "$gd" push github "$b" 2>"$TMPERR"; then
-        echo -e "${G}OK${N}"; _sync_fail "OK:$gitee_mirror_key"
-      else
-        local err2; err2=$(head -2 "$TMPERR" 2>/dev/null | tr '\n' ' ' | cut -c1-80)
-        echo -e "${R}FAIL: ${err2:-network error}${N}"; _sync_fail "FAIL:$gitee_mirror_key"
-      fi
-    fi
-
-    # ── GitHub 端 ──
-    local ghd="${GH_PATH[$n]}"
-    if [ -d "$ghd/.git" ]; then
-      local b; b=$(_git "$ghd" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
-      local dirty; dirty=$(_git "$ghd" status --short 2>/dev/null | wc -l)
-      local ahead; ahead=$(_git "$ghd" rev-list --count "origin/${b}..${b}" 2>/dev/null || echo "0")
-
-      local gh_origin_key="GitHub:$n:origin/$b"
-      local gh_mirror_key="GitHub:$n:mirror->gitee/$b"
-      $RETRY && [ -z "${FAILED[$gh_origin_key]}" -a -z "${FAILED[$gh_mirror_key]}" ] && continue
-
-      echo -e "${B}${C}══ ${n} / GitHub [${b}]${N}"
-      [ "$dirty" -gt 0 ] && echo -n "  ${Y}dirty:${dirty}${N}" || true
-      [ "$ahead" != "0" ] && echo -n "  ${Y}↑${ahead}${N}" || true
-      echo ""
-
-      _git "$ghd" remote get-url gitee &>/dev/null && _git "$ghd" remote set-url gitee "${GURL[$n]}" 2>/dev/null || _git "$ghd" remote add gitee "${GURL[$n]}" 2>/dev/null || true
-
-      # Push to GitHub origin
-      echo -n "  github.com ... "
-      if _git "$ghd" push -u origin "$b" 2>"$TMPERR"; then
-        echo -e "${G}OK${N}"; _sync_fail "OK:$gh_origin_key"
-      else
-        local err3; err3=$(head -2 "$TMPERR" 2>/dev/null | tr '\n' ' ' | cut -c1-80)
-        echo -e "${R}FAIL: ${err3:-network error}${N}"; _sync_fail "FAIL:$gh_origin_key"
+      # 在主干分支: 创建临时 sync 分支, 避免直接 push 主干
+      local sync_branch="${b}"
+      local need_branch=false
+      if [ "$b" = "$base" ]; then
+        sync_branch="sync/${base}-$(date +%s | tail -c 5)"
+        _git "$d" checkout -b "$sync_branch" 2>/dev/null || true
+        need_branch=true
+        echo -e "  ${Y}主干分支, 创建临时分支: ${sync_branch}${N}"
       fi
 
-      # Push to Gitee mirror (from GitHub side)
-      echo -n "  → gitee.com (mirror) ... "
-      if _git "$ghd" push gitee "$b" 2>"$TMPERR"; then
-        echo -e "${G}OK${N}"; _sync_fail "OK:$gh_mirror_key"
-      else
-        local err4; err4=$(head -2 "$TMPERR" 2>/dev/null | tr '\n' ' ' | cut -c1-80)
-        echo -e "${R}FAIL: ${err4:-network error}${N}"; _sync_fail "FAIL:$gh_mirror_key"
+      # dirty 文件先 commit
+      if [ "$dirty" -gt 0 ]; then
+        _git "$d" add -A
+        _git "$d" commit -m "sync: 双平台同步提交 [humming]" 2>/dev/null || true
       fi
-    fi
+
+      # Push 临时分支
+      echo -n "  ${side} push ${sync_branch} ... "
+      if _git "$d" push -u origin "$sync_branch" 2>"$TMPERR"; then
+        echo -e "${G}OK${N}"
+        # 创建 PR
+        _create_pr "$n" "$d" "$sync_branch"
+        _sync_fail "OK:$sync_key"
+      else
+        echo -e "${R}FAIL: $(head -2 "$TMPERR"|tr '\n' ' '|cut -c1-80)${N}"
+        _sync_fail "FAIL:$sync_key"
+      fi
+
+      # 回到主干分支
+      $need_branch && _git "$d" checkout "$base" 2>/dev/null && _git "$d" branch -D "$sync_branch" 2>/dev/null || true
+    done
     echo ""
   done
   _sync_report
@@ -255,40 +236,66 @@ cmd_mirror_setup() {
 }
 
 cmd_pr() {
-  local title="${*:-feat: merge to master}"; load_token; load_gh_token
+  local title="${*:-feat: merge to trunk}"; load_token; load_gh_token
   for n in "${NAMES[@]}"; do
     local gd="${GPATH[$n]}"; [ ! -d "$gd/.git" ] && gd="${GH_PATH[$n]}"
     [ ! -d "$gd/.git" ] && continue
     local b; b=$(_git "$gd" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
-    [ "$b" = "master" -o "$b" = "main" ] && { echo -e "${Y}${n}: 在主干分支 ${b} 上, push 会自动转 PR, 无需手动创建${N}"; continue; }
     echo -e "${B}═══ ${n} PR (head=${b}) ═══${N}"
-    echo -n "  Gitee: "
-    [ -n "$MGR_TOKEN" ] && {
-      r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"${b}\",\"base\":\"master\",\"access_token\":\"${MGR_TOKEN}\"}")
-      u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
-      [ -n "$u" ] && echo -e "${G}$u${N}" || echo -e "${R}FAILED${N}"
-    } || echo -e "${Y}no token${N}"
-    echo -n "  GitHub: "
-    [ -n "$MGR_GH_TOKEN" ] && {
-      r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"${b}\",\"base\":\"main\"}")
-      u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
-      [ -n "$u" ] && echo -e "${G}$u${N}" || echo -e "${R}FAILED${N}"
-    } || echo -e "${Y}no token${N}"
+    # 判断当前目录属于哪个平台
+    local side; case "$gd" in *flowlight-ai*) side="github";; *) side="gitee";; esac
+    local base; [ "$side" = "gitee" ] && base="master" || base="main"
+
+    # 如果在主干分支, 警告 (主干无法直接创建 PR, head==base)
+    if [ "$b" = "$base" ]; then
+      echo -e "  ${Y}当前在主干 ${b} 上, head==base 无法创建PR${N}"
+      echo -e "  ${Y}请先切到非主干分支再创建PR: git checkout -b feat/xxx${N}"
+      continue
+    fi
+
+    _create_pr "$n" "$gd" "$b" "$title"
     echo ""
   done
+}
+
+# ── 内部: 创建 PR (支持自定义标题) ─────────────────────────────
+_create_pr() {
+  local n="$1" d="$2" b="$3" title="${4:-merge: ${b}}"
+  load_token; load_gh_token
+  local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
+  local base; [ "$side" = "gitee" ] && base="master" || base="main"
+  if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
+    local r; r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"${b}\",\"base\":\"${base}\",\"access_token\":\"${MGR_TOKEN}\"}")
+    local u; u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
+    [ -n "$u" ] && echo -e "  ${G}Gitee PR: $u${N}" || echo -e "  ${R}Gitee PR FAILED${N}"
+  elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
+    local r; r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"${b}\",\"base\":\"${base}\"}")
+    local u; u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
+    [ -n "$u" ] && echo -e "  ${G}GitHub PR: $u${N}" || echo -e "  ${R}GitHub PR FAILED${N}"
+  fi
 }
 
 cmd_commit() { local m="$*"; [ -z "$m" ] && { echo -e "${R}缺少msg${N}"; exit 1; }; for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; _git "$d" add -A; _git "$d" diff --cached --quiet && continue; echo -e "${B}${n}${N}"; _git "$d" commit -m "$m" 2>&1|tail -1; done; done; echo ""; }
 cmd_push()   {
   local TMP; TMP="$(mktemp)"
+  local DO_PR=false
+  [ "${1:-}" = "--pr" ] && { DO_PR=true; shift; }
   for n in "${NAMES[@]}"; do
     [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue
     for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do
       [ -d "$d/.git" ] || continue
       local b=$(_git "$d" rev-parse --abbrev-ref HEAD)
-      echo -ne "  ${B}${n}$(case "$d" in *flowlight-ai*) echo " (github)";; *) echo " (gitee)";; esac) → origin/${b} ... ${N}"
+      local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
+      # 主干分支保护: 禁止直接 push 到 master/main, 必须走 PR
+      if [ "$b" = "master" -o "$b" = "main" ]; then
+        echo -e "  ${Y}${n} (${side}): 在主干 ${b} 上, 禁止直接push, 请用 ./mgr pr 创建PR${N}"
+        continue
+      fi
+      echo -ne "  ${B}${n} (${side}) → origin/${b} ... ${N}"
       if _git "$d" push -u origin "$b" 2>"$TMP"; then
         echo -e "${G}OK${N}"
+        # --pr 模式: push 后自动创建 PR
+        $DO_PR && _create_pr "$n" "$d" "$b"
       else
         echo -e "${R}FAIL${N}"; sed 's/^/    /' "$TMP" | head -6
       fi
@@ -296,6 +303,7 @@ cmd_push()   {
   done
   rm -f "$TMP"; echo ""
 }
+
 cmd_pull()   {
   local TMP; TMP="$(mktemp)"
   for n in "${NAMES[@]}"; do
