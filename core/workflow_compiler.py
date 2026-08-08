@@ -7,13 +7,14 @@
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
-from flowforge.compiler.codegen import WorkflowCodeGen
 from flowforge.compiler.compiler import WorkflowCompiler
-from flowforge.compiler.ir import IRStep, IRWorkflow, StepType
 from flowforge.compiler.parser import WorkflowParser
+from flowforge.compiler.ir import IRStep, IRWorkflow, StepType
 from flowforge.compiler.validator import WorkflowValidator
+from flowforge.compiler.codegen import WorkflowCodeGen
+
 
 # ── 旧版 CompiledWorkflow（core 版本独有，compiler 包使用元组返回） ──
 
@@ -33,14 +34,14 @@ class CompiledWorkflow:
         name: str,
         description: str = "",
         version: float = 1.0,
-        nodes: dict | None = None,
-        edges: list | None = None,
+        nodes: Optional[dict] = None,
+        edges: Optional[list] = None,
         entry_point: str = "",
-        interrupt_before: list | None = None,
+        interrupt_before: Optional[list] = None,
         state_config: Any = None,
         config: Any = None,
-        sop_steps: list | None = None,
-        adjacency: dict | None = None,
+        sop_steps: Optional[list] = None,
+        adjacency: Optional[dict] = None,
     ) -> None:
         self.name = name
         self.description = description

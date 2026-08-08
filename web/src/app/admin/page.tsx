@@ -5,12 +5,13 @@ import Link from "next/link";
 /**
  * 管理中心首页 — 统一入口
  *
- * 整合 FlowForge 管理页面：
+ * 整合 FlowForge 原有管理页面 + clowder-ai 设置页面概念：
  *   - 灵智体管理（合并 agents + members + profiles）
  *   - Provider 配置（合并 models + accounts）
  *   - 系统设置（合并 settings + system + rules）
  *   - MCP 管理、插件管理、可观测性等
  *
+ * 详见 MERGE-SPEC.md §3.3 设置页面融合设计
  */
 
 interface AdminCard {

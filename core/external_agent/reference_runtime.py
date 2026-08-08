@@ -20,8 +20,7 @@ License: MIT
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, AsyncIterator, Optional
 
 from pydantic import BaseModel, Field
 
@@ -75,7 +74,7 @@ class ReferenceAgentAdapter(ExternalAgentAdapter):
         self,
         manifest: AgentProviderManifest,
         host_injector: HostInjector,
-        config: ReferenceRuntimeConfig | None = None,
+        config: Optional[ReferenceRuntimeConfig] = None,
     ) -> None:
         super().__init__(manifest=manifest, host_injector=host_injector)
         self._config = config or ReferenceRuntimeConfig()
@@ -84,7 +83,7 @@ class ReferenceAgentAdapter(ExternalAgentAdapter):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: SandboxConfig | None = None,
+        sandbox: Optional[SandboxConfig] = None,
     ) -> ExternalAgentResult:
         """参考 invoke 实现。
 
@@ -123,7 +122,7 @@ class ReferenceAgentAdapter(ExternalAgentAdapter):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: SandboxConfig | None = None,
+        sandbox: Optional[SandboxConfig] = None,
     ) -> AsyncIterator[str]:
         """参考 stream 实现（EX-009 流式语义）。"""
         logger.info(

@@ -7,14 +7,13 @@ Extends the original PluginManager with:
 - Listing of all discovered plugins with metadata
 """
 
-import importlib
-import importlib.metadata
 import subprocess
 import sys
-from collections.abc import Callable
-
-from flowforge.core.errors import ConfigurationError
+import importlib
+import importlib.metadata
+from typing import Dict, List, Callable, Optional, Any
 from flowforge.core.tracing import get_logger
+from flowforge.core.errors import ConfigurationError
 
 logger = get_logger("plugin_manager")
 
@@ -32,11 +31,11 @@ class PluginManager:
     ENTRY_POINT_GROUP = "flowforge.plugins"
 
     def __init__(self):
-        self._loaded: dict[str, list[str]] = {
+        self._loaded: Dict[str, List[str]] = {
             "modes": [], "agents": [], "tools": [], "workflows": [],
         }
-        self._config_results: dict[str, list[Callable]] = {}
-        self._installed_plugins: dict[str, dict] = {}
+        self._config_results: Dict[str, List[Callable]] = {}
+        self._installed_plugins: Dict[str, dict] = {}
         self._discover_entry_points()
 
     # ── Entry-points discovery ─────────────────────────────────────
@@ -62,11 +61,11 @@ class PluginManager:
         except Exception as e:
             logger.warning(f"Failed to discover entry_points: {e}")
 
-    def list_available_plugins(self) -> list[dict]:
+    def list_available_plugins(self) -> List[dict]:
         """List all discovered plugins (from entry_points)."""
         return list(self._installed_plugins.values())
 
-    def get_plugin_class(self, name: str) -> type | None:
+    def get_plugin_class(self, name: str) -> Optional[type]:
         """Load and return the plugin class for a given name.
 
         Args:
@@ -144,7 +143,7 @@ class PluginManager:
 
     # ── Legacy: entry_points discovery for modes/agents/tools ──────
 
-    def discover_entry_points(self, group: str) -> list[Callable]:
+    def discover_entry_points(self, group: str) -> List[Callable]:
         """Discover and load entry_points for a given group (legacy)."""
         factories = []
         try:
@@ -167,7 +166,7 @@ class PluginManager:
 
     # ── Legacy: config-based loading ───────────────────────────────
 
-    def load_from_config(self, config: dict) -> dict[str, list[Callable]]:
+    def load_from_config(self, config: dict) -> Dict[str, List[Callable]]:
         results = {}
         for plugin_type in ["modes", "agents", "tools", "workflows"]:
             plugins = config.get(plugin_type, [])

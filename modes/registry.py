@@ -8,7 +8,7 @@ License: MIT
 """
 
 import logging
-
+from typing import Dict
 from flowforge.core.base_mode_executor import BaseModeExecutor
 from flowforge.core.errors import ModeNotFoundError
 
@@ -27,7 +27,7 @@ class ModeRegistry:
 
     def __init__(self):
         """Initialize the ModeRegistry with an empty mode map."""
-        self._modes: dict[str, BaseModeExecutor] = {}
+        self._modes: Dict[str, BaseModeExecutor] = {}
 
     def register(self, executor: BaseModeExecutor) -> None:
         """Register a mode executor.

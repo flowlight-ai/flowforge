@@ -1,11 +1,12 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from flowforge.core.config import ConfigLoader
 from flowforge.core.secret_store import get_secret_store
-from flowforge.core.tracing import get_logger, get_trace_id
+from flowforge.core.config import ConfigLoader
+from flowforge.core.tracing import get_trace_id, get_logger
 
 logger = get_logger("settings_api")
 
@@ -16,7 +17,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
     }
 
 
@@ -24,7 +25,7 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
     return {
         "status": "error",
         "error": {"code": code, "message": message, "details": details or {}},
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
     }
 
 
@@ -41,7 +42,7 @@ class ConfigUpdateInput(BaseModel):
 
 
 @router.get("/secrets")
-async def list_secrets(category: str | None = None):
+async def list_secrets(category: Optional[str] = None):
     store = get_secret_store()
     secrets = store.list_keys(category=category)
     for s in secrets:

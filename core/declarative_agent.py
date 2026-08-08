@@ -38,11 +38,11 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import functools
 import inspect
 import re
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -74,10 +74,10 @@ class CheckpointConfig(BaseModel):
     """Agent checkpoint configuration."""
     enabled: bool = Field(default=False, description="Enable checkpointing")
     mode: str = Field(default="step", description="Checkpoint mode: step | state")
-    interrupt_before: list[str] = Field(
+    interrupt_before: List[str] = Field(
         default_factory=list, description="Step names to interrupt before"
     )
-    persist_fields: list[str] = Field(
+    persist_fields: List[str] = Field(
         default_factory=list, description="State fields to persist in checkpoint"
     )
 
@@ -112,20 +112,20 @@ class AgentConfig(BaseModel):
 
     name: str = Field(..., description="Unique agent identifier")
     description: str = Field(default="", description="Agent purpose")
-    model: str | None = Field(
+    model: Optional[str] = Field(
         default=None, description="Preferred LLM model"
     )
-    model_params: dict[str, Any] = Field(
+    model_params: Dict[str, Any] = Field(
         default_factory=dict,
         description="Per-agent model parameters (temperature, top_p, max_tokens, etc.)",
     )
-    tools: list[str] = Field(
+    tools: List[str] = Field(
         default_factory=list, description="Tool names this agent can use"
     )
-    instructions: str | None = Field(
+    instructions: Optional[str] = Field(
         default=None, description="System prompt for LLM-based execution"
     )
-    prompt_template: str | None = Field(
+    prompt_template: Optional[str] = Field(
         default=None,
         description="Key in prompts.yaml for loading instructions",
     )
@@ -133,40 +133,40 @@ class AgentConfig(BaseModel):
         default="single",
         description="Execution mode: single/react/reflexion/plan_execute/rewoo/graph_of_thoughts",
     )
-    persona: dict[str, Any] | None = Field(
+    persona: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Persona config for auto-injection: {persona_id, sections: [soul, memory, creation]}",
     )
-    input_mapping: dict[str, str] = Field(
+    input_mapping: Dict[str, str] = Field(
         default_factory=dict,
         description="Map input params: {param_name: '${state.xxx}' or '${params.xxx}'}",
     )
-    output_key: str | None = Field(
+    output_key: Optional[str] = Field(
         default=None,
         description="Key in workflow state to store this agent's output",
     )
-    handoffs: list[str] = Field(
+    handoffs: List[str] = Field(
         default_factory=list,
         description="Agent names this agent can delegate to",
     )
-    guardrails: list[str] = Field(
+    guardrails: List[str] = Field(
         default_factory=list, description="Guardrail names to enforce"
     )
-    execution_policy: ExecutionPolicy | None = Field(
+    execution_policy: Optional[ExecutionPolicy] = Field(
         default=None, description="Timeout, retry, and error handling"
     )
-    checkpoint: CheckpointConfig | None = Field(
+    checkpoint: Optional[CheckpointConfig] = Field(
         default=None, description="Checkpoint and interrupt configuration"
     )
-    fallback_chain: list[str] = Field(
+    fallback_chain: List[str] = Field(
         default_factory=list,
         description="Ordered list of tool/agent names for fallback execution",
     )
-    post_processors: list[str] = Field(
+    post_processors: List[str] = Field(
         default_factory=list,
         description="Post-processor names: deai_postprocess, quality_filter, word_count_check, etc.",
     )
-    prefer_api: bool | None = Field(
+    prefer_api: Optional[bool] = Field(
         default=None,
         description="Prefer API backend over WebChat backend to avoid session timeout (P0-5)",
     )
@@ -176,7 +176,7 @@ class AgentConfig(BaseModel):
                     "Useful when agent is a tool wrapper (e.g., writer_engine, editor_engine) "
                     "and the webchat LLM doesn't reliably call tools. Saves ~50s per agent.",
     )
-    metadata: dict[str, Any] = Field(
+    metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Arbitrary metadata"
     )
 
@@ -201,7 +201,7 @@ class DeclarativeAgent(BaseAgent):
     def __init__(
         self,
         config: AgentConfig,
-        execute_fn: Callable | None = None,
+        execute_fn: Optional[Callable] = None,
     ) -> None:
         super().__init__()
         self.config = config
@@ -294,6 +294,7 @@ class DeclarativeAgent(BaseAgent):
         - fallback_chain: try tools in order on failure
         - post_processors: apply transformations to output
         """
+        from flowforge.core.base_tool import ToolInput
         from flowforge.core.model_capability import ModelCapability
 
         # 1. Resolve instructions: prompt_template > instructions > description
@@ -417,12 +418,12 @@ class DeclarativeAgent(BaseAgent):
         model = self.config.model or ""
 
         # Resolve tool schemas from ToolRegistry if config.tools is set
-        tools_schema: list | None = None
+        tools_schema: Optional[list] = None
         if self.config.tools:
             tools_schema = self._resolve_tools_schema()
 
         # Build model_params from config
-        model_kwargs: dict[str, Any] = {}
+        model_kwargs: Dict[str, Any] = {}
         if self.config.model_params:
             model_kwargs.update(self.config.model_params)
 
@@ -449,7 +450,7 @@ class DeclarativeAgent(BaseAgent):
 
         # Handle tool_calls from LLM response
         tool_calls = llm_result.get("tool_calls", [])
-        tool_results: list[dict[str, Any]] = []
+        tool_results: List[Dict[str, Any]] = []
         if tool_calls:
             tool_results = await self._execute_tool_calls(tool_calls, input)
 
@@ -476,7 +477,7 @@ class DeclarativeAgent(BaseAgent):
             if fallback_result is not None:
                 return await self._apply_post_processors(fallback_result)
 
-        result: dict[str, Any] = {
+        result: Dict[str, Any] = {
             "content": llm_result.get("content", ""),
             "provider": llm_result.get("provider", ""),
             "model": llm_result.get("model", ""),
@@ -485,11 +486,11 @@ class DeclarativeAgent(BaseAgent):
             result["tool_results"] = tool_results
 
         # Map output to output_key if configured
-        state_updates: dict[str, Any] = {}
+        state_updates: Dict[str, Any] = {}
         if self.config.output_key:
             state_updates[self.config.output_key] = result
 
-        metadata: dict[str, Any] = {
+        metadata: Dict[str, Any] = {
             "tokens": llm_result.get("tokens", 0),
             "agent_type": "declarative",
             "config_model": self.config.model,
@@ -566,7 +567,7 @@ class DeclarativeAgent(BaseAgent):
             else:
                 return str(val)[:500]
 
-        def _smart_extract_nested(var_name: str) -> str | None:
+        def _smart_extract_nested(var_name: str) -> Optional[str]:
             """通用智能嵌套字段提取(不写死业务字段名)
 
             规则:
@@ -801,7 +802,7 @@ class DeclarativeAgent(BaseAgent):
 
     async def _execute_via_mode(
         self, mode: str, input: AgentInput, instructions: str
-    ) -> AgentOutput | None:
+    ) -> Optional[AgentOutput]:
         """Route to the appropriate execution mode executor."""
         try:
             from flowforge.core.task_context import TaskContext
@@ -920,7 +921,7 @@ class DeclarativeAgent(BaseAgent):
 
     async def _execute_fallback_chain(
         self, input: AgentInput, instructions: str
-    ) -> AgentOutput | None:
+    ) -> Optional[AgentOutput]:
         """Execute tools in fallback_chain order until one succeeds.
 
         P0-35 修复：
@@ -1141,7 +1142,7 @@ class DeclarativeAgent(BaseAgent):
 
         return schemas
 
-    async def _execute_tool_calls(self, tool_calls: list, input: AgentInput | None = None) -> list[dict[str, Any]]:
+    async def _execute_tool_calls(self, tool_calls: list, input: Optional[AgentInput] = None) -> List[Dict[str, Any]]:
         """Execute tool_calls returned by the LLM via ToolRegistry.
 
         Args:
@@ -1157,7 +1158,7 @@ class DeclarativeAgent(BaseAgent):
         from flowforge.core.base_tool import ToolInput
         from flowforge.core.tool_decorator import get_tool_registry
 
-        results: list[dict[str, Any]] = []
+        results: List[Dict[str, Any]] = []
         registry = get_tool_registry()
         if registry is None:
             logger.warning(f"Agent '{self.name}': ToolRegistry not available for tool execution")
@@ -1224,7 +1225,7 @@ class DeclarativeAgent(BaseAgent):
 
     async def _check_and_execute_handoff(
         self, output: AgentOutput, input: AgentInput
-    ) -> AgentOutput | None:
+    ) -> Optional[AgentOutput]:
         """Check if the LLM response indicates a handoff and execute it.
 
         Looks for the pattern ``[HANDOFF_TO: agent_name]`` in the
@@ -1236,9 +1237,8 @@ class DeclarativeAgent(BaseAgent):
             or None if no handoff was detected.
         """
         import re
-
-        from flowforge.core.agent_registry import AgentRegistry
         from flowforge.core.handoff import Handoff, HandoffManager
+        from flowforge.core.agent_registry import AgentRegistry
 
         content = output.result.get("content", "") if output.result else ""
         match = re.search(r"\[HANDOFF_TO:\s*(\w[\w\-]*)\]", content)
@@ -1291,14 +1291,14 @@ class DeclarativeAgent(BaseAgent):
 
     async def _run_input_guardrails(
         self, input_text: str, context: dict
-    ) -> AgentOutput | None:
+    ) -> Optional[AgentOutput]:
         """Run input guardrails from config.guardrails.
 
         Returns:
             An AgentOutput with error if any guardrail blocks, or None
             if all guardrails pass.
         """
-        from flowforge.core.guardrails import GuardrailExecutor, GuardrailRegistry
+        from flowforge.core.guardrails import GuardrailRegistry, GuardrailExecutor
 
         try:
             registry = GuardrailRegistry()
@@ -1331,14 +1331,14 @@ class DeclarativeAgent(BaseAgent):
 
     async def _run_output_guardrails(
         self, output_text: str, context: dict
-    ) -> AgentOutput | None:
+    ) -> Optional[AgentOutput]:
         """Run output guardrails from config.guardrails.
 
         Returns:
             An AgentOutput with error if any guardrail blocks, or None
             if all guardrails pass.
         """
-        from flowforge.core.guardrails import GuardrailExecutor, GuardrailRegistry
+        from flowforge.core.guardrails import GuardrailRegistry, GuardrailExecutor
 
         try:
             registry = GuardrailRegistry()
@@ -1375,7 +1375,7 @@ class DeclarativeAgent(BaseAgent):
     def from_config(
         cls,
         config: dict[str, Any],
-        execute_fn: Callable | None = None,
+        execute_fn: Optional[Callable] = None,
     ) -> DeclarativeAgent:
         """Create a DeclarativeAgent from a config dict.
 
@@ -1393,7 +1393,7 @@ class DeclarativeAgent(BaseAgent):
     def from_yaml(
         cls,
         path: str | Path,
-        execute_fn: Callable | None = None,
+        execute_fn: Optional[Callable] = None,
     ) -> DeclarativeAgent:
         """Create a DeclarativeAgent from a YAML file.
 
@@ -1407,7 +1407,7 @@ class DeclarativeAgent(BaseAgent):
             A ready-to-use :class:`DeclarativeAgent`.
         """
         yaml_path = Path(path)
-        with open(yaml_path, encoding="utf-8") as f:
+        with open(yaml_path, "r", encoding="utf-8") as f:
             raw = yaml.safe_load(f)
 
         if not isinstance(raw, dict):
@@ -1423,10 +1423,10 @@ class DeclarativeAgent(BaseAgent):
 
 # Module-level registry used by the @agent decorator to auto-register
 # agents.  Populated by the decorator, consumed by the SDK.
-_decorator_agents: dict[str, DeclarativeAgent] = {}
+_decorator_agents: Dict[str, DeclarativeAgent] = {}
 
 
-def get_decorator_agents() -> dict[str, DeclarativeAgent]:
+def get_decorator_agents() -> Dict[str, DeclarativeAgent]:
     """Return all agents registered via the ``@agent`` decorator."""
     return dict(_decorator_agents)
 
@@ -1435,23 +1435,23 @@ def agent(
     *,
     name: str,
     description: str = "",
-    model: str | None = None,
-    model_params: dict[str, Any] | None = None,
-    tools: list[str] | None = None,
-    instructions: str | None = None,
-    prompt_template: str | None = None,
+    model: Optional[str] = None,
+    model_params: Optional[Dict[str, Any]] = None,
+    tools: Optional[List[str]] = None,
+    instructions: Optional[str] = None,
+    prompt_template: Optional[str] = None,
     execution_mode: str = "single",
-    persona: dict[str, Any] | None = None,
-    input_mapping: dict[str, str] | None = None,
-    output_key: str | None = None,
-    handoffs: list[str] | None = None,
-    guardrails: list[str] | None = None,
-    execution_policy: dict[str, Any] | None = None,
-    checkpoint: dict[str, Any] | None = None,
-    fallback_chain: list[str] | None = None,
-    post_processors: list[str] | None = None,
-    prefer_api: bool | None = None,
-    metadata: dict[str, Any] | None = None,
+    persona: Optional[Dict[str, Any]] = None,
+    input_mapping: Optional[Dict[str, str]] = None,
+    output_key: Optional[str] = None,
+    handoffs: Optional[List[str]] = None,
+    guardrails: Optional[List[str]] = None,
+    execution_policy: Optional[Dict[str, Any]] = None,
+    checkpoint: Optional[Dict[str, Any]] = None,
+    fallback_chain: Optional[List[str]] = None,
+    post_processors: Optional[List[str]] = None,
+    prefer_api: Optional[bool] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> Callable:
     """Decorator that registers a function as a DeclarativeAgent.
 

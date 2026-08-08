@@ -10,7 +10,7 @@
     "./style": "./src/app/globals.css"
   },
   "scripts": {
-    "dev": "next dev --port 5175",
+    "dev": "next dev --port 5174",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

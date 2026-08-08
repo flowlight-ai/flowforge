@@ -1,8 +1,7 @@
 import os
-from typing import Any
+from typing import Any, Dict, List
 
 import httpx
-
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
 
@@ -60,7 +59,7 @@ class PexelsSearchTool(BaseTool):
                 resp.raise_for_status()
                 data = resp.json()
 
-            images: list[dict[str, Any]] = []
+            images: List[Dict[str, Any]] = []
             for photo in data.get("photos", []):
                 src = photo.get("src", {})
                 images.append({

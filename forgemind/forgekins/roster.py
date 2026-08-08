@@ -1,19 +1,23 @@
 """花名册加载器（Roster Loader）— 从 YAML 加载预置Forgekin配置.
 
 提供:
-- BUILTIN_FORGEKINS: 5 只预置Forgekin ID 清单（F046 v1.1 五闭环扩展）
+- BUILTIN_FORGEKINS: 9 只预置Forgekin ID 清单（F046 v1.1 五闭环扩展 + F041/042 + 专属态）
 - ROSTER_FILES: ID → YAML 文件路径映射
 - load_forgekin_config(forgekin_id): 加载单个Forgekin配置
 - list_builtin_forgekins(): 列出所有预置Forgekin元信息
 
 配置驱动（铁律5+P16）: 所有Forgekin配置外置到 YAML,不在 .py 中硬编码.
 
-五Forgekin（F046 v1.1 §9.2）：
-- wenxin（文心, doc, E3）— 文档员
-- sherlock（夏洛克, code, E4）— 开发者
-- luban（鲁班, framework, E5）— 架构师
-- vangogh（梵高, review, E3）— 审查员
-- davinci（达芬奇, test, E3）— 测试员
+九Forgekin（5 通用 + 4 新增）：
+- wenxin（文心, doc, E3）— 文档员 → OpenCode CLI
+- sherlock（夏洛克, code, E4）— 开发者 → Codex CLI
+- luban（鲁班, framework, E5）— 架构师 → Gemini CLI
+- vangogh（梵高, review, E3）— 审查员 → Claude Code CLI（ccr-router）
+- davinci（达芬奇, test, E3）— 测试员 → CodeBuddy CLI
+- keane（鹰·凯恩, product, E3）— 产品经理（F041）→ iFlow CLI
+- humming（蜂鸟·闪电, ops, E3）— 运维（F042）→ OpenCode CLI
+- sqrl（铃鼓, coder, E3）— 开源程序员（专属态）→ OpenCode CLI
+- butterfly（幻蝶, bridge, E3）— Trae 桥接（F045）→ Trae CN 文件桥接
 """
 
 from __future__ import annotations
@@ -25,9 +29,11 @@ import yaml
 
 _ROSTER_DIR = Path(__file__).resolve().parent
 
-# 5 只预置Forgekin（F046 v1.1 §9.2 五闭环扩展：原 3 只 → 5 只）
-# 参考 3 agent → 5 agent sweet spot 模式
-BUILTIN_FORGEKINS: list[str] = ["wenxin", "sherlock", "luban", "vangogh", "davinci"]
+# 9 只预置Forgekin（F046 v1.1 §9.2 五闭环 + F041/F042 角色 + F045 桥接 + 专属态）
+BUILTIN_FORGEKINS: list[str] = [
+    "wenxin", "sherlock", "luban", "vangogh", "davinci",
+    "keane", "humming", "sqrl", "butterfly",
+]
 
 ROSTER_FILES: dict[str, Path] = {
     "wenxin": _ROSTER_DIR / "wenxin.yaml",
@@ -35,6 +41,10 @@ ROSTER_FILES: dict[str, Path] = {
     "luban": _ROSTER_DIR / "luban.yaml",
     "vangogh": _ROSTER_DIR / "vangogh.yaml",
     "davinci": _ROSTER_DIR / "davinci.yaml",
+    "keane": _ROSTER_DIR / "keane.yaml",
+    "humming": _ROSTER_DIR / "humming.yaml",
+    "sqrl": _ROSTER_DIR / "sqrl.yaml",
+    "butterfly": _ROSTER_DIR / "butterfly.yaml",
 }
 
 
@@ -80,6 +90,11 @@ def list_builtin_forgekins() -> list[dict[str, Any]]:
                 "species": cfg.get("species", ""),
                 "role": cfg.get("role", {}),
                 "available": cfg.get("available", True),
+                "mention_patterns": cfg.get("mention_patterns", []),
+                "avatar": cfg.get("avatar", ""),
+                "color": cfg.get("color", {}),
+                "breed": cfg.get("breed", ""),
+                "llm_provider": cfg.get("llm", {}).get("provider", "trae"),
             })
         except Exception:  # noqa: BLE001
             summary.append({"id": fid, "error": "config_load_failed"})

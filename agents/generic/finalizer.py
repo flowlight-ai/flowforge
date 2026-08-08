@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class FinalizerAgent(GenericAgent):
@@ -7,7 +7,7 @@ class FinalizerAgent(GenericAgent):
     description = "最终定稿：对迭代优化后的内容进行最终润色和定稿"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         draft = input.params.get("draft", input.params.get("refined_draft", ""))
         task = input.params.get("task", input.params.get("query", ""))
         critique = input.params.get("critique", {})

@@ -27,9 +27,12 @@ Relationship to existing modules:
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Optional
 
-from flowforge.a2a.channel import Channel, ChannelRegistry
+from flowforge.core.tracing import get_logger
+
+from flowforge.a2a.channel import Channel, ChannelRegistry, InMemoryChannel
 from flowforge.a2a.protocol import (
     A2AHandoff,
     A2AMention,
@@ -38,7 +41,6 @@ from flowforge.a2a.protocol import (
     A2AThread,
 )
 from flowforge.a2a.router import MentionRouter, ThreadManager
-from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.a2a.manager")
 
@@ -87,7 +89,7 @@ class A2AManager:
         from_agent: str,
         to_agent: str,
         content: str,
-        thread_id: str | None = None,
+        thread_id: Optional[str] = None,
     ) -> A2AMention:
         """Send an @mention message to a target agent.
 

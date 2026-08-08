@@ -1,4 +1,4 @@
-# FlowForge Welcome - Welcome first-time contributors
+﻿# OpenRoute Welcome - Welcome first-time contributors
 # Posts a welcome message when a new contributor opens their first Issue or PR
 
 name: "Welcome"
@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Check if first-time contributor
         id: check
-        uses: actions/github-script@v9
+        uses: actions/github-script@v7
         with:
           script: |
             const author = context.payload[context.eventName].user.login;
@@ -60,7 +60,7 @@ jobs:
 
       - name: Welcome on First Issue
         if: github.event_name == 'issues' && steps.check.outputs.is_first_time == 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@v7
         with:
           script: |
             const author = '${{ steps.check.outputs.author }}';
@@ -69,7 +69,7 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: [
-                `👋 Welcome to FlowForge, @${author}!`,
+                `👋 Welcome to OpenRoute, @${author}!`,
                 ``,
                 `Thanks for opening your first issue! We're glad to have you here.`,
                 ``,
@@ -78,14 +78,14 @@ jobs:
                 `- 💬 Join the [discussions](https://github.com/${context.repo.owner}/${context.repo.repo}/discussions)`,
                 `- 🤝 Read our [contributing guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md)`,
                 ``,
-                `欢迎来到 FlowForge！感谢你提交第一个 Issue！`,
+                `欢迎来到 OpenRoute！感谢你提交第一个 Issue！`,
                 `等待回复期间，你可以查看文档、参与讨论、阅读贡献指南。`
               ].join('\n')
             });
 
       - name: Welcome on First PR
         if: github.event_name == 'pull_request' && steps.check.outputs.is_first_time == 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@v7
         with:
           script: |
             const author = '${{ steps.check.outputs.author }}';
@@ -94,7 +94,7 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: [
-                `👋 Welcome to FlowForge, @${author}!`,
+                `👋 Welcome to OpenRoute, @${author}!`,
                 ``,
                 `Thanks for opening your first Pull Request! 🎉`,
                 ``,

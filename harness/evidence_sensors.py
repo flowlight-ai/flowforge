@@ -32,9 +32,9 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -90,7 +90,7 @@ class Evidence(BaseModel):
         default_factory=dict, description="附加元数据"
     )
     created_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="采集时间 ISO 8601",
     )
     verified: bool = Field(default=False, description="是否已通过 verify")
@@ -118,7 +118,7 @@ class SensorReading(BaseModel):
     value: Any = Field(..., description="读数值")
     unit: str = Field(default="", description="单位")
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="读数时间 ISO 8601",
     )
     anomaly: bool = Field(default=False, description="是否异常")
@@ -155,7 +155,7 @@ class EvidenceCollector:
         hash_algorithm: str = "sha256",
         retention_days: int = 90,
         auto_verify: bool = True,
-        enabled_sources: set[EvidenceSource] | None = None,
+        enabled_sources: Optional[set[EvidenceSource]] = None,
     ) -> None:
         self.hash_algorithm = hash_algorithm
         self.retention_days = retention_days
@@ -188,7 +188,7 @@ class EvidenceCollector:
         self,
         source_type: EvidenceSource,
         content: str,
-        metadata: dict[str, Any] | None = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> Evidence:
         """采集一条证据。
 
@@ -257,12 +257,12 @@ class EvidenceCollector:
         )
         return True
 
-    def get_evidence(self, evidence_id: str) -> Evidence | None:
+    def get_evidence(self, evidence_id: str) -> Optional[Evidence]:
         """按 ID 查询证据。"""
         return self.storage.get(evidence_id)
 
     def list_evidence(
-        self, source_type: EvidenceSource | None = None
+        self, source_type: Optional[EvidenceSource] = None
     ) -> list[Evidence]:
         """列出证据（可按来源过滤）。"""
         if source_type is None:
@@ -301,8 +301,11 @@ class SensorBase(ABC):
 
         实现者应在此方法中执行具体感知逻辑（如读文件 / 调 API / 跑测试）。
         若检测到异常，应设置 SensorReading.anomaly=True。
+
+        注意：本方法为抽象契约（铁律 3），由 @abstractmethod 在实例化时强制
+        子类实现，因此基类不提供默认实现，也不应被直接调用。
         """
-        raise NotImplementedError
+        ...
 
 
 __all__ = [

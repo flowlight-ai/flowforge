@@ -1,95 +1,66 @@
----
-feature_ids: [F031]
-related_features: [F001, F026, F032, F033, F034, F035]
-topics: [external-agent, adapter, capability-fusion, fallback, guardrails]
-doc_kind: spec
-created: 2026-07-17
----
+# F031: 三方 Agent 适配层（ExternalAgentAdapter）
 
-# F031: 三方 Agent 适配层
-
-> **状态**: spec | **负责人**: operator + 架构师Forgekin | **优先级**: P0
+> **状态**: ⏳ pending
+> **类型**: external_agent
+> **创建日期**: 2026-07-17
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
 > **依赖 ADR**: [doc:decisions/006-external-agent-integration.md]
-> **依赖 Feature**: [doc:features/F001-capability-profile.md] + [doc:features/F026-forgemind-app-layer.md]
-> **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径
-> **关联 VISION**: [doc:VISION.md#5]（三方 Agent 集成）、[doc:VISION.md#6]（operator 原则第 3 条：三方 Agent 是能力扩展不是工具）
+> **依赖 Feature**: [doc:features/F001-capability-profile.md]
+> **依据**: [doc:review/review.md#第九章] EX-001~EX-010
+> **关联 VISION**: [doc:VISION.md#5]（三方 Agent 集成：Forgekin的能力扩展）
+> **对应 spec.md**: [doc:../spec.md#§3.10]（FR-CORE-010，与本文档同号对应）
+> **对应 arch.md**: [doc:../arch.md#§3.10]（待创建）
+> **对应 design.md**: [doc:../design.md#§3.10]（待创建）
+
+---
 
 ## 1. 上下文
 
 ### 1.1 问题陈述
 
-operator 指示（2026-07-17）：
+当前 FlowForge 三方 Agent 集成被弱化为 ToolRegistry 普通工具调用。operator 指示（2026-07-17）：
 
 > 我们的Forgekin除了可以调用 flowforge 核心框架的能力外，还可以接入和使用任何三方的 Agent 的（这个也是我们的强大优势，比喻目前设计接入的编程 Agent：claude code、codex、opencode、trae，将来可扩展接入更多的编程 Agent 和其他的 Agent 的，这些都是可以给Forgekin调用），目前你这块的设计感觉也比较弱，请加强。
 
-flowlight-ai/flowforge 新仓库设计中，三方 Agent 集成被弱化为 ToolRegistry 中的普通工具调用。这导致：
+### 1.2 当前痛点
 
-- 三方 Agent 的能力画像未纳入Forgekin能力画像融合
-- 三方 Agent 执行状态未写入Forgekin共享状态（EchoStore）
+- 三方 Agent 能力画像未纳入Forgekin能力画像融合
+- 三方 Agent 执行状态未写入Forgekin共享状态
 - 三方 Agent 失败时无 fallback 链
 - 三方 Agent 执行轨迹未纳入 Eval 信号
 
-本 Feature 是 operator 愿景锚点第 3 条（三方 Agent 是能力扩展不是工具）的落地基础——三方 Agent 不是工具，而是Forgekin能力画像的扩展。
-
-### 1.2 当前痛点
-
-- 三方 Agent 调用走 `ToolRegistry.execute()`，能力画像无法融合（违反 operator 原则第 3 条）
-- 无 ExternalAgentProfile 机制，三方 Agent 的能力差异（Claude Code 强于代码理解、Codex 强于推理、Trae 强于 IDE 集成）未建模
-- 三方 Agent 失败无回退链，单点依赖导致可用性差
-- 三方 Agent 在主进程执行，无 worktree 隔离，存在安全风险
-- 三方 Agent 执行轨迹未写入EchoStore，Forgekin重启即失忆
-
 ### 1.3 不做的影响
 
-- Forgekin能力被限制在 FlowForge 内置能力（违反 operator 愿景锚点第 3 条）
-- 无法实现"自己开发自己"闭环（ForgeMindEngine 缺少三方 Agent 协作）
-- 单点依赖导致可用性差（任一三方 Agent API 宕机即阻塞）
-- 三方 Agent 执行无法审计，违反六层 Guardrails 治理要求
+- Forgekin能力受限（不能接入顶级编程 Agent）
+- 三方 Agent 失败导致任务失败
+- 无法体现"能力扩展"vs"工具调用"的区别
+
+---
 
 ## 2. 决策
 
 ### 2.1 核心设计
 
-ExternalAgentAdapter 抽象层位于核心框架层（`flowforge/core/external_agent/`），是 operator 原则第 3 条的落地——三方 Agent 不是工具，而是能力扩展：
+ExternalAgentAdapter 抽象层 + 4 大机制（能力画像 / 共享状态 / 失败回退 / 能力融合）+ 4 个具体 Adapter（Claude Code / Codex / OpenCode / Trae）。
 
-```
-flowforge/core/external_agent/
-├── __init__.py
-├── adapter.py             # ExternalAgentAdapter 抽象基类
-├── bridge.py              # ExternalAgentBridge（Forgekin调用入口）
-├── profile.py             # ExternalAgentProfile（三方 Agent 能力画像）
-├── shared_state.py        # ExternalAgentSharedState（状态共享，写入EchoStore）
-├── fallback.py            # ExternalAgentFallback（失败回退链）
-├── capability_fusion.py   # ExternalAgentCapabilityFusion（能力融合到SoulImprint）
-└── adapters/              # 具体三方 Agent 适配器
-    ├── __init__.py
-    ├── claude_code.py     # Claude Code Adapter（fallback 优先级 1）
-    ├── codex.py           # Codex Adapter（fallback 优先级 2）
-    ├── opencode.py        # OpenCode Adapter（fallback 优先级 3）
-    └── trae.py            # Trae Adapter（fallback 优先级 4）
-```
+**EAC v1 七契约（External Agent Contract v1）**——所有三方 Agent Adapter 必须实现以下七个契约才能纳入 ExternalAgentBridge：
 
-**调用流程（九步）**：
+1. **Invocation Contract**：同步调用契约（`invoke(task) -> result`），定义任务输入/输出 schema、超时、错误码。
+2. **Stream Contract**：流式输出契约（SSE/WebSocket），支持增量 token、工具调用事件、思考过程事件。
+3. **Session Contract**：会话契约，三方 Agent 必须支持 session_id 复用、上下文延续、会话级取消。
+4. **Capability Contract**：能力声明契约，三方 Agent 必须暴露 `get_profile` 返回能力画像（capabilities / proficiency / cost / latency / reliability）。
+5. **Collaboration Contract**：协作契约，三方 Agent 必须支持与 FlowForge Forgekin的 Handoff Capsule（F003）交接、Ping-Pong 心跳（F004）、@-mention 路由（F005）。
+6. **Safety Contract**：安全契约，三方 Agent 必须接受六层 Guardrails 包裹（详见下文），并暴露 `health_check` 与审计日志 hook。
+7. **Avatar Sync + System Prompt Configuration Map**：化身同步与系统提示词配置契约，三方 Agent 必须接受 FlowForge 下发的 System Prompt 配置图（包含 Role Mask 五层 / Core Identity / World Setting 引用），并在执行期间保持化身一致性（Avatar Sync）。
 
-```
-1. Forgekin发起 ExternalAgentBridge.invoke(agent_id, task)
-   ↓
-2. Forgekin能力画像 gap_analysis 判断需要三方 Agent
-   ↓
-3. ExternalAgentAdapter 路由到对应三方 Agent
-   ↓
-4. 三方 Agent 在独立 worktree 执行（隔离 + 审计）
-   ↓
-5. 执行状态写入 ExternalAgentSharedState（同步到EchoStore）
-   ↓
-6. Forgekin读取共享状态，融合到自身能力画像（SoulImprint）
-   ↓
-7. 若失败，ExternalAgentFallback 链回退到下一个三方 Agent
-   ↓
-8. 全部失败 → 回退到 FlowForge 内置能力（ForgeMindEngine）
-   ↓
-9. 执行轨迹写入Forgekin Eval 信号
-```
+**六层 Guardrails（Six-Layer Guardrails）**——三方 Agent 调用必须穿过以下六层防护，缺一不可：
+
+1. **Input Validation**：输入校验层，校验 task.input_data 的 schema、长度、敏感字段、注入风险。
+2. **System Prompt Constraints**：系统提示词约束层，通过 System Prompt Configuration Map 注入 Core Identity / Role Mask / World Setting / 不可越界指令。
+3. **Tool Allow-Lists**：工具白名单层，三方 Agent 仅可调用 allow-list 中的工具/文件路径/网络出口，禁止越权。
+4. **Output Validation**：输出校验层，校验 result.output 的 schema、内容安全、PII 脱敏、有害内容过滤。
+5. **Action Confirmation**：操作确认层，对副作用操作（写入文件 / 提交代码 / 发送消息）必须经 operator 或评审员Forgekin二次确认。
+6. **Cost Ceiling**：成本上限层，单次调用 cost_incurred 不得超过预算上限，超限自动熔断并触发 fallback。
 
 ### 2.2 关键接口
 
@@ -101,273 +72,366 @@ from enum import Enum
 from datetime import datetime
 
 
-class ExternalAgentVendor(str, Enum):
-    """三方 Agent 厂商"""
-    ANTHROPIC = "anthropic"        # Claude Code
-    OPENAI = "openai"              # Codex
-    OPEN_SOURCE = "open_source"    # OpenCode
-    BYTEDANCE = "bytedance"        # Trae
-
-
-class ExternalAgentAccessMode(str, Enum):
-    """接入方式"""
-    CLI = "cli"
-    SDK = "sdk"
-    API = "api"
-    IDE = "ide"
+class ExternalAgentType(str, Enum):
+    """三方 Agent 类型"""
+    CLAUDE_CODE = "claude_code"
+    CODEX = "codex"
+    OPENCODE = "opencode"
+    TRAE = "trae"
 
 
 class ExternalAgentProfile(BaseModel):
-    """三方 Agent 能力画像（F032 详细定义）"""
-    agent_id: str                          # 如 "claude_code_v1"
-    vendor: ExternalAgentVendor
-    access_mode: ExternalAgentAccessMode
-    capability_tags: list[str]             # 如 ["code_understanding", "refactor"]
-    cognitive_style: str                   # 与 F001 CapabilityProfile 对齐
-    blind_spots: list[str]                 # 与 F001 对齐，用于跨厂商 review
-    fallback_priority: int = Field(ge=1)   # 1=最高优先级
-    cost_per_call: float = 0.0             # 用于 L6 成本上限治理
-    rate_limit: Optional[int] = None       # 每分钟调用上限
-
-
-class ExternalAgentSharedState(BaseModel):
-    """三方 Agent 状态共享（F033 详细定义，写入EchoStore）"""
-    invocation_id: str
+    """三方 Agent 能力画像"""
     agent_id: str
-    forgekin_id: str                       # 发起调用的Forgekin ID
-    task_summary: str
-    started_at: datetime = Field(default_factory=datetime.now)
-    completed_at: Optional[datetime] = None
-    status: str = "pending"                # pending / running / success / failed
-    artifacts: list[str] = Field(default_factory=list)   # 产出 commit / 文件路径
-    evidence_refs: list[str] = Field(default_factory=list)  # Eval trace ID
-    error_message: Optional[str] = None
+    agent_type: ExternalAgentType
+    vendor: str
+    capabilities: list[str]      # 能力列表
+    proficiency: dict[str, float]  # 能力熟练度
+    cost_per_call: float         # 调用成本
+    avg_latency_ms: int          # 平均延迟
+    reliability: float = Field(ge=0.0, le=1.0)  # 可靠性
 
 
-class ExternalAgentFallback(BaseModel):
-    """失败回退链（F034 详细定义）"""
-    primary_agent_id: str
-    fallback_chain: list[str]              # 按 priority 排序的 agent_id 列表
-    max_retries: int = 1
-    last_failed_agent: Optional[str] = None
-
-    def next_agent(self) -> Optional[str]:
-        """返回下一个 fallback Agent"""
-        if self.last_failed_agent is None:
-            return self.primary_agent_id
-        try:
-            idx = self.fallback_chain.index(self.last_failed_agent)
-            if idx + 1 < len(self.fallback_chain):
-                return self.fallback_chain[idx + 1]
-        except ValueError:
-            return self.primary_agent_id
-        return None  # 全部失败，回退到 ForgeMindEngine
+class ExternalAgentTask(BaseModel):
+    """三方 Agent 任务"""
+    task_id: str
+    description: str
+    input_data: dict
+    expected_output: dict
+    worktree_path: Optional[str] = None  # 独立 worktree 路径
+    timeout_seconds: int = 300
 
 
-class ExternalAgentCapabilityFusion(BaseModel):
-    """能力画像融合（F035 详细定义，融合到ForgekinSoulImprint）"""
-    forgekin_id: str
-    source_agent_id: str
-    fused_capabilities: list[str]          # 融合进来的能力标签
-    fused_blind_spots: list[str]           # 融合进来的盲点（用于跨厂商 review）
-    fusion_confidence: float = Field(ge=0.0, le=1.0)
-    fused_at: datetime = Field(default_factory=datetime.now)
+class ExternalAgentResult(BaseModel):
+    """三方 Agent 执行结果"""
+    task_id: str
+    success: bool
+    output: Optional[dict] = None
+    error: Optional[str] = None
+    execution_trace: list[dict] = Field(default_factory=list)
+    cost_incurred: float = 0.0
+    duration_ms: int = 0
 
 
 class ExternalAgentAdapter(ABC):
-    """三方 Agent 适配器抽象基类"""
-
+    """三方 Agent 适配器抽象"""
+    
     @abstractmethod
-    def profile(self) -> ExternalAgentProfile:
-        """返回该三方 Agent 的能力画像"""
+    async def invoke(self, task: ExternalAgentTask) -> ExternalAgentResult:
+        """调用三方 Agent"""
         ...
-
+    
     @abstractmethod
-    async def invoke(
-        self,
-        task: str,
-        worktree_path: str,
-        shared_state: ExternalAgentSharedState,
-    ) -> ExternalAgentSharedState:
-        """
-        在独立 worktree 中调用三方 Agent。
-
-        Args:
-            task: 任务描述
-            worktree_path: 隔离的 worktree 路径（受限网络 + 仅 read/write_code/run_tests 权限）
-            shared_state: 共享状态（执行过程会更新此对象）
-
-        Returns:
-            更新后的共享状态（含产出 artifacts 和 evidence_refs）
-        """
+    def get_profile(self) -> ExternalAgentProfile:
+        """获取三方 Agent 能力画像"""
         ...
-
+    
     @abstractmethod
     async def health_check(self) -> bool:
-        """健康检查（用于 fallback 决策）"""
+        """健康检查"""
         ...
 
 
 class ExternalAgentBridge:
-    """Forgekin调用三方 Agent 的入口（核心 API）"""
-
+    """Forgekin调用三方 Agent 的入口"""
+    
     def __init__(
         self,
-        adapters: dict[str, ExternalAgentAdapter],
-        shared_state_writer: Any,   # 写入EchoStore 的 Repository
-        eval_collector: Any,        # Eval 信号采集器
-        fallback_registry: dict[str, ExternalAgentFallback],
+        adapters: dict[ExternalAgentType, ExternalAgentAdapter],
+        fallback_chain: list[ExternalAgentType],
+        shared_state: "ExternalAgentSharedState",
+        fusion: "ExternalAgentCapabilityFusion",
     ):
-        self._adapters = adapters
-        self._shared_state_writer = shared_state_writer
-        self._eval_collector = eval_collector
-        self._fallback_registry = fallback_registry
-
+        self.adapters = adapters
+        self.fallback_chain = fallback_chain
+        self.shared_state = shared_state
+        self.fusion = fusion
+    
     async def invoke(
         self,
-        agent_id: str,
-        task: str,
         forgekin_id: str,
-        worktree_path: str,
-    ) -> ExternalAgentSharedState:
+        task: ExternalAgentTask,
+    ) -> ExternalAgentResult:
         """
-        Forgekin调用三方 Agent（含 fallback 链 + 共享状态写入 + Eval 采集）。
+        Forgekin调用三方 Agent：
+        1. 检查 forgekin 能力画像 gap_analysis
+        2. 选择最佳三方 Agent
+        3. 创建独立 worktree
+        4. 调用三方 Agent
+        5. 写入共享状态
+        6. 失败 → fallback 链
+        7. 全部失败 → 回退到 FlowForge 内置能力
+        8. 执行轨迹写入 Eval 信号
+        """
+        for agent_type in self.fallback_chain:
+            adapter = self.adapters[agent_type]
+            result = await adapter.invoke(task)
+            await self.shared_state.write(forgekin_id, task.task_id, result)
+            if result.success:
+                await self.fusion.fuse(forgekin_id, adapter.get_profile)
+                return result
+        # 全部失败 → 回退
+        return ExternalAgentResult(
+            task_id=task.task_id,
+            success=False,
+            error="all_external_agents_failed",
+        )
 
-        流程：
-            1. 创建 ExternalAgentSharedState
-            2. 路由到 adapter.invoke()
-            3. 失败则走 fallback_chain
-            4. 全部失败则回退到 ForgeMindEngine（由调用方处理）
-            5. 写入EchoStore
-            6. 采集 Eval 信号
-        """
+
+class ExternalAgentSharedState:
+    """三方 Agent 执行状态写入Forgekin共享状态"""
+    
+    async def write(self, forgekin_id: str, task_id: str, result: ExternalAgentResult) -> None:
+        """写入共享状态（通过 Repository 层）"""
+        ...
+    
+    async def read(self, forgekin_id: str, task_id: str) -> Optional[ExternalAgentResult]:
+        """读取共享状态"""
         ...
 
 
-# ---------- L1-L6 Guardrails ----------
+class ExternalAgentFallback:
+    """三方 Agent 失败回退链"""
+    
+    def __init__(self, chain: list[ExternalAgentType]):
+        self.chain = chain  # 默认: [CLAUDE_CODE, CODEX, OPENCODE, TRAE]
+    
+    def next_agent(self, current: ExternalAgentType) -> Optional[ExternalAgentType]:
+        """获取下一个 fallback Agent"""
+        try:
+            idx = self.chain.index(current)
+            if idx + 1 < len(self.chain):
+                return self.chain[idx + 1]
+        except ValueError:
+            pass
+        return None
 
-class ExternalAgentGuardrails(BaseModel):
-    """六层 Guardrails 治理配置"""
-    l1_input_schema: str                   # 输入 Schema 校验规则 ID
-    l2_system_prompt_constraint: str       # system role 注入的约束 ID
-    l3_tool_allow_list: list[str]          # 三方 Agent 可调用工具白名单
-    l4_output_validation: str              # 输出 lint + 测试规则 ID
-    l5_operator_confirm_actions: list[str] # 不可逆操作（如 merge/release）
-    l6_cost_ceiling_per_call: float        # 单次调用成本上限
-    l6_cost_ceiling_per_forgekin: float    # 单Forgekin日成本上限
+
+class ExternalAgentCapabilityFusion:
+    """三方 Agent 能力画像融合到Forgekin能力画像"""
+    
+    async def fuse(self, forgekin_id: str, external_profile: ExternalAgentProfile) -> None:
+        """
+        融合流程：
+        1. 读取 forgekin 原 CapabilityProfile
+        2. 将 external_profile.capabilities 添加到 skill_packages
+        3. 更新 tool_boundary（三方 Agent 作为扩展工具）
+        4. 更新 historical_performance（三方 Agent 成功率）
+        5. 持久化新 CapabilityProfile
+        """
+        ...
 ```
 
-### 2.3 边界规则（TIP-044）
+### 2.3 具体三方 Agent Adapter
 
-flowforge 是纯通用框架，ExternalAgentAdapter 抽象层位于核心框架层，但**不感知** *Forge / content / opensieve / openroute 内部实现：
+| Adapter | 文件 | 接入方式 |
+|---------|------|---------|
+| ClaudeCodeAdapter | `adapters/claude_code.py` | CLI / SDK |
+| CodexAdapter | `adapters/codex.py` | CLI / API |
+| OpenCodeAdapter | `adapters/opencode.py` | CLI |
+| TraeAdapter | `adapters/trae.py` | IDE / API |
 
-- ✅ flowforge 定义 `ExternalAgentAdapter` 抽象基类和 `ExternalAgentBridge` 入口
-- ✅ *Forge 项目可通过继承 `ExternalAgentAdapter` 实现自己的三方 Agent 集成
-- ❌ flowforge 禁止 import 任何 *Forge / content / opensieve / openroute 模块
-- ❌ flowforge 不内置 *Forge 专属的三方 Agent 适配器
+### 2.4 关键不变量
 
-### 2.4 worktree 隔离
+- 三方 Agent 调用必须创建独立 worktree（隔离 + 审计）
+- 三方 Agent 失败必须 fallback
+- 三方 Agent 能力画像必须融合到Forgekin主画像
+- 三方 Agent 执行轨迹必须写入 Eval 信号
+- 三方 Agent 调用必须通过六层 Guardrails
 
-每个三方 Agent 调用必须创建独立 worktree：
+---
 
-| 隔离维度 | 规则 |
-|---------|------|
-| 网络隔离 | 受限网络访问（白名单域名） |
-| 权限控制 | 仅 `read` + `write_code` + `run_tests` |
-| 审计追踪 | 全部记录到 `harness-feedback/external-agent-traces/` |
-| 资源限额 | CPU / 内存 / 磁盘配额，超限自动终止 |
-| 超时控制 | 单次调用默认 30 分钟，可配置 |
+## 3. 实现路径
 
-## 3. 验收标准
+### 3.1 代码位置
 
-### Phase A（抽象层 + Plugin 注册）
+```
+flowforge/core/external_agent/
+├── __init__.py
+├── adapter.py             # ExternalAgentAdapter 抽象
+├── bridge.py              # ExternalAgentBridge
+├── profile.py             # ExternalAgentProfile
+├── shared_state.py        # ExternalAgentSharedState
+├── fallback.py            # ExternalAgentFallback
+├── capability_fusion.py   # ExternalAgentCapabilityFusion
+└── adapters/
+    ├── __init__.py
+    ├── claude_code.py
+    ├── codex.py
+    ├── opencode.py
+    └── trae.py
+```
 
-- [ ] AC-A1: `flowforge/core/external_agent/` 目录骨架完整（adapter/bridge/profile/shared_state/fallback/capability_fusion + adapters/）
-- [ ] AC-A2: `ExternalAgentAdapter` 抽象基类可被继承（profile/invoke/health_check 三方法）
-- [ ] AC-A3: `ExternalAgentBridge.invoke()` 实现九步调用流程
-- [ ] AC-A4: `ExternalAgentFallback.next_agent()` 可按 priority 推进 fallback 链
-- [ ] AC-A5: 六层 Guardrails 配置通过 Pydantic Schema 强校验
-- [ ] AC-A6: 调用状态通过 Repository 层持久化到EchoStore（禁直接操作数据库）
-- [ ] AC-A7: 调用轨迹写入 `harness-feedback/external-agent-traces/`（JSON Lines 格式）
-- [ ] AC-A8: flowforge 不 import 任何 *Forge / content / opensieve / openroute 模块（边界验证 TIP-044）
+### 3.2 实现步骤
 
-### Phase B（首批 4 个 Adapter + E2E）
+1. 定义 Pydantic 数据模型（profile.py / shared_state.py）
+2. 实现 ExternalAgentAdapter 抽象（adapter.py）
+3. 实现 4 个具体 Adapter（adapters/*.py）
+4. 实现 ExternalAgentBridge 调用入口（bridge.py）
+5. 实现 ExternalAgentFallback 回退链（fallback.py）
+6. 实现 ExternalAgentCapabilityFusion 融合（capability_fusion.py）
+7. 实现 worktree 隔离机制
+8. 集成到 ForgekinEngine
 
-- [ ] AC-B1: 4 个 Adapter 实现完整（ClaudeCodeAdapter / CodexAdapter / OpenCodeAdapter / TraeAdapter）
-- [ ] AC-B2: 每个 Adapter 的 `profile()` 返回正确的 ExternalAgentProfile（vendor / access_mode / capability_tags / blind_spots / fallback_priority）
-- [ ] AC-B3: 每个 Adapter 的 `health_check()` 可正确检测三方 Agent 可用性
-- [ ] AC-B4: worktree 隔离生效（网络/权限/审计/资源/超时五维度）
-- [ ] AC-B5: fallback 链 E2E 测试 — Claude Code 不可用时自动回退到 Codex，依此类推
-- [ ] AC-B6: 全部三方 Agent 失败时回退到 ForgeMindEngine（不抛异常给Forgekin）
-- [ ] AC-B7: 能力融合 E2E 测试 — 三方 Agent 执行完成后，能力画像融合到ForgekinSoulImprint
-- [ ] AC-B8: L6 成本上限触发时自动终止调用并记录告警
-- [ ] AC-B9: 单次调用延迟 < 30s（不含三方 Agent 自身执行时间）
-- [ ] AC-B10: E2E 测试 — Forgekin调用 Claude Code 完成一个真实编程任务（如新增单元测试），worktree 隔离 + fallback 链 + 能力融合 + Eval 采集全部生效
-- [ ] AC-B11: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
+### 3.3 依赖关系
 
-## 4. 依赖
+- 依赖 ADR 006（三方 Agent 集成决策）
+- 依赖 F001 CapabilityProfile（能力画像融合目标）
+- 被 F032-F035 依赖（具体机制）
 
-- **Evolved from**: 无
-- **Blocked by**: F001（CapabilityProfile 用于能力画像融合）、F026（forgemind 应用层是首批调用方）、Plugin V3 协议（核心框架层注册机制）
-- **Related**: F032（ExternalAgentProfile）、F033（ExternalAgentSharedState）、F034（ExternalAgentFallback）、F035（ExternalAgentCapabilityFusion）
+---
 
-## 5. 风险
+## 4. 验收标准
 
-| 风险 | 缓解 |
-|------|------|
-| 三方 Agent API 不稳定 | fallback 链 + 重试机制 + Tier 1-4 恢复分级（F022） |
-| 三方 Agent 能力画像融合可能引入盲点 | 跨厂商 review + 盲点画像识别（F001 blind_spots） |
-| worktree 隔离可能被绕过 | 审计追踪 + L5 操作确认 + MindCouncil 审查 |
-| 三方 Agent 调用成本较高 | L6 成本上限 + 配额管理 + Token 账本 |
-| 三方 Agent API key 泄露风险 | 配置外置（编程红线第 11 条）+ 密钥管理服务 |
-| 单点 Adapter 实现质量参差 | 抽象基类强约束 + 跨厂商 review + Eval 信号反馈 |
-| flowforge 越界引用 *Forge（TIP-044） | flowforge 只提供抽象基类，*Forge 自己实现适配器 |
+### 4.1 功能验收
 
-## 6. Open Questions
+- [ ] AC-1: 4 个三方 Agent Adapter 全部可调用
+- [ ] AC-2: ExternalAgentBridge 选择最佳 Agent（基于 gap_analysis）
+- [ ] AC-3: 三方 Agent 执行状态写入共享状态
+- [ ] AC-4: 失败时 fallback 链按顺序回退
+- [ ] AC-5: 全部失败时回退到 FlowForge 内置能力
 
-| # | 问题 | 状态 |
-|---|------|------|
-| OQ-1 | 三方 Agent 的 API key 是否通过 `${ENV_VAR}` 注入，还是通过密钥管理服务？ | ⬜ 未定 |
-| OQ-2 | worktree 隔离是否使用 Docker 容器还是 git worktree + 权限隔离？ | ⬜ 未定 |
-| OQ-3 | fallback 链是否需要支持运行时动态调整（基于历史成功率）？ | ⬜ 未定 |
-| OQ-4 | 能力融合的 `fusion_confidence` 如何计算？基于历史成功率还是单次执行质量？ | ⬜ 未定 |
-| OQ-5 | 三方 Agent 调用是否需要MindCouncil 审查？还是仅 L5 操作确认？ | ⬜ 未定 |
+### 4.2 性能验收
 
-## 7. Key Decisions
+- [ ] AC-6: 三方 Agent 调用延迟 < 60s（含 LLM 推理）
+- [ ] AC-7: worktree 创建延迟 < 1s
 
-| # | 决策 | 理由 | 日期 |
-|---|------|------|------|
-| KD-1 | 三方 Agent 作为能力扩展而非工具 | operator 愿景锚点第 3 条（三方 Agent 是能力扩展不是工具） | 2026-07-17 |
-| KD-2 | ExternalAgentAdapter 抽象层位于核心框架层 | 核心能力应放核心框架层，*Forge 垂直业务层也需要使用 | 2026-07-17 |
-| KD-3 | 首批接入 4 个三方 Agent（Claude Code/Codex/OpenCode/Trae） | operator 明确指示首批接入清单 | 2026-07-17 |
-| KD-4 | fallback 链按 priority 推进，全部失败回退到 ForgeMindEngine | 避免单点依赖，保证可用性 | 2026-07-17 |
-| KD-5 | 六层 Guardrails 强约束（L1-L6） | 三方 Agent 调用必须安全可控 | 2026-07-17 |
-| KD-6 | worktree 隔离 + 审计追踪 | 三方 Agent 在隔离环境执行，全部记录到 traces/ | 2026-07-17 |
-| KD-7 | flowforge 只提供抽象基类，*Forge 自己实现适配器 | TIP-044 边界隔离规则 | 2026-07-17 |
-| KD-8 | 使用项目正式术语（EchoStore / SoulImprint / MindCouncil / ForgeMindEngine） | ADR-012 命名融合 | 2026-07-17 |
+### 4.3 安全验收
 
-## 8. Timeline
+- [ ] AC-8: 三方 Agent 在独立 worktree 执行（隔离）
+- [ ] AC-9: 三方 Agent 调用通过六层 Guardrails
+- [ ] AC-10: 三方 Agent 执行轨迹写入审计日志
 
-| 日期 | 事件 |
-|------|------|
-| 2026-07-17 | 立项，确立三方 Agent 适配层 Feature 规格，术语对齐项目正式命名 |
+### 4.4 Eval 验收
 
-## 9. Review Gate
+- [ ] AC-11: 三方 Agent 调用成功率 ≥ 85%
+- [ ] AC-12: 能力画像融合正确率 100%
 
-- Phase A: 单元测试通过，ExternalAgentBridge 九步流程由架构师Forgekin review
-- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，fallback 链和六层 Guardrails 全部生效
+---
 
-## 10. Links
+## 5. 测试计划
 
-| 类型 | 路径 | 说明 |
-|------|------|------|
-| **ADR** | `docs/decisions/006-external-agent-integration.md` | 三方 Agent 集成决策 |
-| **Feature** | `docs/features/F001-capability-profile.md` | 能力画像（融合目标） |
-| **Feature** | `docs/features/F026-forgemind-app-layer.md` | forgemind 应用层（首批调用方） |
-| **Feature** | `docs/features/F032-external-agent-profile.md` | 三方 Agent 能力画像 |
-| **Feature** | `docs/features/F033-external-agent-shared-state.md` | 三方 Agent 状态共享 |
-| **Feature** | `docs/features/F034-external-agent-fallback.md` | 三方 Agent 失败回退 |
-| **Feature** | `docs/features/F035-external-agent-capability-fusion.md` | 三方 Agent 能力融合 |
-| **VISION** | `docs/VISION.md#5` | 三方 Agent 集成 |
-| **VISION** | `docs/VISION.md#6` | operator 原则第 3 条（三方 Agent 是能力扩展） |
-| **TIPS** | `docs/TIPS.md#TIP-044` | flowforge 边界隔离规则 |
+### 5.1 单元测试
+
+- 测试 4 个 Adapter 健康检查
+- 测试 ExternalAgentBridge 调用流程
+- 测试 Fallback 链回退
+- 测试能力画像融合
+
+### 5.2 集成测试
+
+- 测试 worktree 隔离
+- 测试六层 Guardrails
+- 测试审计日志
+
+### 5.3 E2E 测试
+
+- Forgekin调用 Claude Code 完成一个代码生成任务
+- 模拟 Claude Code 失败，验证 fallback 到 Codex
+- 验证能力画像融合
+- **遵守 T1-T8 铁律**：真实 LLM、真实数据、真实工具调用
+
+---
+
+## 6. Eval Contract（五问）
+
+### 6.1 谁评估
+
+- 自动探针（调用成功率）
+- 跨厂商 reviewer Forgekin（能力画像融合正确性）
+
+### 6.2 评估什么
+
+- 4 个 Adapter 调用成功率
+- Fallback 链有效性
+- 能力画像融合正确性
+- worktree 隔离有效性
+
+### 6.3 何时评估
+
+- 每次三方 Agent 调用后
+- 每周汇总调用成功率
+
+### 6.4 评估信号
+
+- trace 信号：三方 Agent 执行轨迹
+- 用户信号：任务结果反馈
+- 探针信号：定期健康检查
+
+### 6.5 评估后做什么
+
+- 通过 → 持续使用
+- 失败 → 归因到七类矩阵（通常是工具缺口或资源耗尽）
+
+---
+
+## 7. Build to Delete vs Built to Persist
+
+### 7.1 半衰期标记
+
+**Built to Persist（复利型基础设施）**
+
+### 7.2 理由
+
+ExternalAgentAdapter 是 roleagent.md 第 1 章明确的"agent 交接协议与路由"扩展——编码Forgekin与三方 Agent 的协作关系，不会因为单个模型更聪明而消失。
+
+具体 Adapter（如 ClaudeCodeAdapter）可能随厂商 API 变化而调整，但抽象层（ExternalAgentAdapter）是永久维护。
+
+---
+
+## 8. 后果
+
+### 8.1 正面后果
+
+- Forgekin能力大幅扩展
+- 三方 Agent 失败有 fallback 保证
+- 能力画像融合让Forgekin能力画像更完整
+
+### 8.2 负面后果
+
+- 实现复杂度增加
+- 三方 Agent 调用成本较高
+- worktree 隔离增加 I/O 开销
+
+### 8.3 风险
+
+- 三方 Agent API 不稳定（缓解：fallback 链 + 重试）
+- worktree 隔离可能被绕过（缓解：审计 + 操作确认）
+
+---
+
+## 9. 替代方案
+
+### 9.1 方案 A: 把三方 Agent 作为 ToolRegistry 普通工具
+
+- 优点：实现简单
+- 缺点：能力画像无法融合，无 fallback
+- 未选择原因：operator 指示"目前你这块的设计感觉也比较弱，请加强"
+
+### 9.2 方案 B: 只接入 Claude Code
+
+- 优点：实现简单
+- 缺点：单点依赖
+- 未选择原因：违反 fallback 设计
+
+---
+
+## 10. 引用
+
+- [doc:VISION.md#5]
+- [doc:decisions/006-external-agent-integration.md]
+- [doc:features/F001-capability-profile.md]
+- [doc:features/F032-external-agent-profile.md]
+- [doc:features/F033-external-agent-shared-state.md]
+- [doc:features/F034-external-agent-fallback.md]
+- [doc:features/F035-external-agent-capability-fusion.md]
+- [doc:SOP.md#3]
+- [doc:project_rules.md#红线11]
+
+---
+
+## 11. 变更历史
+
+| 日期 | 版本 | 变更 | 变更者 |
+|------|:----:|------|--------|
+| 2026-07-17 | v0.1 | 初始创建 | 架构师 Forgekin |

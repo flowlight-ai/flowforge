@@ -12,6 +12,7 @@ interface ReplyPillProps {
 /**
  * ReplyPill — 引用回复消息的 pill 显示
  *
+ * 来源：clowder-ai/packages/web/src/components/ReplyPill.tsx（简化版）
  * 用途：在新消息气泡内显示被引用的原消息片段
  *
  * 视觉：

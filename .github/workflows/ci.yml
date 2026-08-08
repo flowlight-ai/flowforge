@@ -1,7 +1,3 @@
-# FlowForge CI - Continuous Integration
-# Runs on every push to main and every Pull Request
-# Jobs: lint (ruff) + type-check (mypy) + test (pytest) + build
-
 name: CI
 
 on:
@@ -13,127 +9,166 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  lint:
-    name: Lint (ruff)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Install ruff
-        run: pip install "ruff>=0.16.0,<0.17.0"
-
-      - name: Run ruff check
-        run: ruff check . || echo "::warning::ruff check issues"
-
-      - name: Run ruff format check
-        run: ruff format --check . || echo "::warning::ruff format issues"
-
-  type-check:
-    name: Type Check (mypy)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: |
-          pip install -e ".[dev]" || pip install mypy
-
-      - name: Run mypy
-        run: mypy . || echo "::warning::mypy not fully configured yet"
-
   test:
-    name: Test (pytest)
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          cache: pip
+          cache-dependency-path: |
+            **/requirements*.txt
+            **/pyproject.toml
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -e ".[dev]" || pip install pytest pytest-asyncio pytest-cov
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pytest pytest-asyncio pytest-cov mypy ruff
 
-      - name: Run tests
-        run: pytest tests/ -v --cov=. --cov-report=xml || echo "::warning::tests not fully configured yet"
-        continue-on-error: true
+      - name: Lint with ruff
+        run: |
+          ruff check flowforge/ --output-format=github || true
 
-      - name: Upload coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      - name: Type check with mypy
+        run: |
+          mypy flowforge/ --ignore-missing-imports || true
+
+      - name: Run unit tests
+        env:
+          PYTEST_ADDOPTS: "--tb=short -q"
+        run: |
+          pytest flowforge/tests/ \
+            --ignore=flowforge/tests/e2e \
+            --ignore=flowforge/tests/test_e2e_real_llm.py \
+            --ignore=flowforge/tests/test_api_testclient.py \
+            --cov=flowforge \
+            --cov-report=xml \
+            --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
 
-  build:
-    name: Build Package
+  docs-frontmatter-check:
+    name: Docs Front-Matter Check (D045)
     runs-on: ubuntu-latest
-    needs: [lint, test]
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: "3.12"
 
-      - name: Install build tools
-        run: pip install build
+      - name: Verify docs front-matter
+        run: |
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+          import re
 
-      - name: Build package
-        run: python -m build || echo "::warning::pyproject.toml not configured yet"
+          REQUIRED_FIELDS = {"feature_ids", "related_features", "topics", "doc_kind", "created"}
+          DOC_KIND_VALUES = {"spec", "arch", "design", "feature", "decision", "review", "adr"}
+          errors = []
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: dist
-          path: dist/
-          retention-days: 7
+          docs_dirs = [
+              Path("docs/design"),
+              Path("docs/features"),
+              Path("docs/decisions"),
+          ]
 
-  # Ensure conventional commits are used
-  commitlint:
-    name: Commit Lint
+          for docs_dir in docs_dirs:
+              if not docs_dir.exists():
+                  continue
+              for md_file in docs_dir.glob("*.md"):
+                  if md_file.name in {"README.md", "TEMPLATE.md"}:
+                      continue
+                  text = md_file.read_text(encoding="utf-8")
+                  if not text.startswith("---"):
+                      errors.append(f"{md_file}: missing front-matter (must start with ---)")
+                      continue
+                  # Extract front-matter
+                  parts = text.split("---", 2)
+                  if len(parts) < 3:
+                      errors.append(f"{md_file}: malformed front-matter")
+                      continue
+                  fm_text = parts[1]
+                  # Check required fields
+                  for field in REQUIRED_FIELDS:
+                      if not re.search(rf"^{field}\s*:", fm_text, re.MULTILINE):
+                          errors.append(f"{md_file}: missing required field '{field}'")
+
+          if errors:
+              print("❌ Docs front-matter check failed:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+          else:
+              print("✅ All docs front-matter checks passed")
+          EOF
+
+  brand-purification-check:
+    name: Brand Purification Check (CL-041)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
-      - name: Lint commits
-        uses: wagoid/commitlint-github-action@v5
-        with:
-          configFile: ".commitlintrc.json"
-        continue-on-error: true
+      - name: Verify no internal brand leakage
+        run: |
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+
+          # CL-041 禁止在 GitHub 公开仓库出现 cat-cafe / Clowder AI 字样
+          # 例外：design/naming-contract.md §7.3（声明位置）
+          FORBIDDEN_TERMS = ["cat-cafe", "cat_cafe", "catcafe", "Clowder AI"]
+          EXEMPT_FILES = {
+              "docs/design/naming-contract.md",  # 唯一允许声明 cat-cafe 的位置
+          }
+
+          errors = []
+          for path in Path(".").rglob("*.md"):
+              rel = str(path).replace("\\", "/")
+              if rel in EXEMPT_FILES:
+                  continue
+              if rel.startswith(".git/"):
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8", errors="ignore")
+              except Exception:
+                  continue
+              for term in FORBIDDEN_TERMS:
+                  if term in text:
+                      # 找到第一次出现的位置
+                      idx = text.find(term)
+                      line_no = text[:idx].count("\n") + 1
+                      errors.append(f"{rel}:{line_no}: forbidden term '{term}'")
+
+          if errors:
+              print("❌ Brand purification check failed:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+          else:
+              print("✅ Brand purification check passed (no forbidden terms)")
+          EOF

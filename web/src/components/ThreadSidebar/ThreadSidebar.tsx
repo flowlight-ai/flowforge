@@ -2,6 +2,9 @@
 
 /**
  * ThreadSidebar — 左侧线程栏
+ *
+ * 来源：clowder-ai/packages/web/src/components/ThreadSidebar/ThreadSidebar.tsx（简化版）
+ *
  * Phase 2 简化策略：
  *   - 基于现有 flowforge Sidebar 改造，保留导航分组结构
  *   - 添加 onClose prop（移动端关闭）

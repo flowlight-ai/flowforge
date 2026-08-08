@@ -15,14 +15,16 @@ Usage:
     bridge.stop()
 """
 
+import asyncio
+from typing import Dict, List, Optional, Set
 
-from flowforge.core.tracing import get_logger
 from flowforge.events.event_bus import EventBus
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("event_bridge")
 
 # Default event types to bridge between projects
-DEFAULT_BRIDGED_EVENTS: set[str] = {
+DEFAULT_BRIDGED_EVENTS: Set[str] = {
     "task.created",
     "task.completed",
     "task.failed",
@@ -50,8 +52,8 @@ class EventBusBridge:
     def __init__(
         self,
         flowforge_bus: EventBus,
-        peer_bus: EventBus | None = None,
-        bridged_types: set[str] | None = None,
+        peer_bus: Optional[EventBus] = None,
+        bridged_types: Optional[Set[str]] = None,
     ):
         self._ff_bus = flowforge_bus
         self._peer_bus = peer_bus
@@ -103,7 +105,7 @@ class EventBusBridge:
         logger.info(f"EventBusBridge: added bridged type '{event_type}'")
 
     @property
-    def bridged_types(self) -> set[str]:
+    def bridged_types(self) -> Set[str]:
         """Return the set of currently bridged event types."""
         return set(self._bridged_types)
 

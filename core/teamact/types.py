@@ -44,11 +44,11 @@ class TeamActStep(str, Enum):
     ROUTE = "route"
 
     @classmethod
-    def ordered(cls) -> list[TeamActStep]:
+    def ordered(cls) -> list["TeamActStep"]:
         """返回六步循环的有序列表。"""
         return [cls.STATE, cls.OWNER, cls.ACTION, cls.EVIDENCE, cls.VERDICT, cls.ROUTE]
 
-    def next(self) -> TeamActStep:
+    def next(self) -> "TeamActStep":
         """返回下一步（ROUTE 之后循环回 STATE）。"""
         order = self.ordered()
         idx = order.index(self)
@@ -75,7 +75,7 @@ class TerminationCondition(str, Enum):
     VISION_CONVERGED = "vision_converged"
 
     @classmethod
-    def all(cls) -> list[TerminationCondition]:
+    def all(cls) -> list["TerminationCondition"]:
         """返回五项终止条件的完整列表。"""
         return [
             cls.ACCEPTANCE_DONE,

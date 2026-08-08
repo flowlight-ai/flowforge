@@ -1,6 +1,7 @@
 /**
  * ConfirmProvider — 确认对话框 Provider
  *
+ * 来源：clowder-ai/packages/web/src/components/useConfirm.tsx（简化版）
  * 职责：提供全局确认对话框 API（const confirm = useConfirm(); await confirm({ ... })）
  *
  * 设计原则：

@@ -1,98 +1,144 @@
-# harness-feedback Eval 反馈
+# FlowForge Harness Eval 反馈
 
-> **目录作用**: 存放 FlowForge Harness Eval 反馈规范与产物，包括评估域 YAML 配置、裁决记录、评估快照 bundles 等
-> **维护规则**: 新增评估域时同步注册到 `eval-domains/`；裁决产物按 `bundles/{YYYY-MM-DD}-{domain}-{slug}/` 归档，禁止覆盖历史 bundle
-
----
-
-## 子目录
-
-| 子目录 | 作用 |
-|--------|------|
-| `eval-domains/` | 评估域 YAML 配置（每个 domain 一个 `.yaml`，定义评估契约） |
-| `bundles/` | 评估快照 bundles（按日期 + domain + slug 归档，含 snapshot/attribution/provenance） |
-| `verdicts/` | 裁决记录（Markdown 文档，记录评估结论与改进建议） |
+> **文档编号**: harness-feedback/README.md（v1.0）
+> **依据**: `[doc:roleagent.md#第5章]` Eval 自代谢系统
+> **参考**: `[doc:clowder-ai/docs/harness-feedback/]` 目录结构
 
 ---
 
-## 文档清单
+## 1. 用途
 
-### 评估域 YAML（待创建）
+本目录存放 FlowForge Harness Eval 反馈数据，与设计文档分离。Eval 结果驱动文档自我演进（`[doc:review/review.md#12.3]` 自我演进三层架构）。
 
-| 文档 | 名称 | 状态 |
-|------|------|------|
-| `eval-domains/eval-teamact.yaml` | TeamAct 协作评估域 | ⏳ |
-| `eval-domains/eval-memory.yaml` | 多域记忆联邦评估域 | ⏳ |
-| `eval-domains/eval-forgemind.yaml` | forgemind 可进化智能体（Forgekin）评估域 | ⏳ |
-| `eval-domains/eval-harness.yaml` | Harness 七层护栏评估域 | ⏳ |
-| `eval-domains/eval-reliability.yaml` | 分布式可靠性评估域 | ⏳ |
-| `eval-domains/eval-friction.yaml` | 摩擦信号评估域 | ⏳ |
-| `eval-domains/community-fixtures/` | 社区样本夹具（脱敏 issue packet 等） | ⏳ |
+---
 
-### 裁决记录（待创建）
-
-| 文档 | 名称 | 状态 |
-|------|------|------|
-| `verdicts/README.md` | 裁决记录索引 | ⏳ |
-| `verdicts/fixtures/` | 裁决样本夹具 | ⏳ |
-
-### bundles 归档规范
-
-每个 bundle 目录结构：
+## 2. 目录结构
 
 ```
-bundles/{YYYY-MM-DD}-{domain}-{slug}/
-├── snapshot.json       # 评估快照（输入数据 + 运行时状态）
-├── attribution.json    # 归因矩阵（七类归因）
-├── provenance.json     # 数据来源溯源
-└── raw/                # 原始产物（rollup-report 等，可选）
+harness-feedback/
+├── README.md                          # 本文件
+├── bundles/                           # Eval 结果打包（按日期）
+│   └── YYYY-MM-DD-eval-<domain>/      # 单次 Eval 包
+│       ├── snapshot.json              # 状态快照
+│       ├── attribution.json           # 归因结果
+│       └── provenance.json            # 出处溯源
+├── eval-domains/                      # Eval 域定义（YAML）
+│   ├── eval-a2a.yaml                  # A2A 协作 eval
+│   ├── eval-memory.yaml               # 记忆召回 eval
+│   ├── eval-forgemind.yaml            # 可进化智能体 eval
+│   ├── eval-external-agent.yaml       # 三方 Agent eval
+│   └── eval-friction.yaml             # 摩擦信号 eval
+└── verdicts/                          # Eval 裁决记录
+    └── YYYY-MM-DD-eval-<domain>-<slug>.md
 ```
 
 ---
 
-## 评估域 YAML 字段规范
+## 3. Eval 域定义
 
-```yaml
+### 3.1 eval-a2a.yaml — A2A 协作 eval
+
+评估 TeamAct 协作：交接胶囊完整度、五项终止条件达成度、跨厂商 review 有效性、乒乓球熔断器触发频率。
+
+### 3.2 eval-memory.yaml — 记忆召回 eval
+
+评估多域记忆联邦：三入口检索准确率、消费加权排序有效性、记忆治理三要素执行度。
+
+### 3.3 eval-forgemind.yaml — 可进化智能体 eval
+
+评估可进化智能体锻造：5 种形态可进化智能体创建正确性、传感器接入稳定性、虚拟世界设定一致性、形态进化合法性。
+
+### 3.4 eval-external-agent.yaml — 三方 Agent eval
+
+评估三方 Agent 集成：4 个 Agent 调用成功率、能力画像融合正确性、fallback 链有效性、状态共享一致性。
+
+### 3.5 eval-friction.yaml — 摩擦信号 eval
+
+评估可进化智能体协作摩擦：返工率、跨厂商盲点检出率、用户可见崩塌率、波动吸收因子。
+
 ---
-domainId: eval:{slug}              # 评估域唯一标识
-displayName: {显示名}              # 中文显示名
-systemThreadId: thread_eval_{slug} # 评估系统线程 ID
-evalCat:                           # 执行评估的可进化智能体
-  catId: {id}
-  handle: "@{handle}"
-  model: {model}
-frequency: daily|weekly|on-demand  # 评估频率
-sourceAdapter: {adapter-name}      # 信号源适配器
-sourceRefsKind: {kind}             # 信号引用类型
-threadPolicy:                      # 线程策略
-  role: working-home
-  stateSot: registry
-  allowedContent: [...]
-handoffTargetResolver:             # 交接目标解析
-  featureId: F{NNN}
-  ownerCatId: {id}
-  threadLookup: feature-thread
-sla:                               # SLA
-  acknowledgeHours: 24
-  reevalWithinHours: 72
----
+
+## 4. Eval 数据生命周期
+
+```
+1. Feature 执行 → trace 数据采集
+   ↓
+2. 三方信号交叉（trace + 用户反馈 + 自动探针）
+   ↓
+3. 归因到七类矩阵之一
+   ↓
+4. 打包到 bundles/YYYY-MM-DD-eval-<domain>/
+   ↓
+5. 裁决记录到 verdicts/
+   ↓
+6. 触发文档自我演进（更新 features/F0XX.md 状态）
+   ↓
+7. 触发代码自我演进（Build to Delete sunset / Built to Persist 加固）
+   ↓
+8. 触发框架自我演进（ForgekinEngine 路由策略优化）
 ```
 
 ---
 
-## 维护规则
+## 5. Eval 数据格式
 
-- 评估域 YAML 必须有 `domainId`、`displayName`、`evalCat`、`frequency`、`sourceAdapter` 五个核心字段
-- bundle 归档按日期命名，已发布日期不重排、不复用
-- 裁决记录必须包含具体断言与改进建议，禁止 `status in ("completed","error")` 模糊结论（违反 T3 测试铁律）
-- 评估必须调用真实 LLM，禁止 Mock（违反 T1 测试铁律）
-- 评估输入必须是真实场景数据，禁止假数据（违反 T2 测试铁律）
-- 禁止硬编码绝对路径，跨文档引用统一使用 `[doc:harness-feedback/xxx]` 格式
-- 退役 scheduled task 清理须在 YAML `legacyScheduledTaskIds` 字段注释清理日期与归档位置
+### 5.1 snapshot.json
+
+```json
+{
+  "eval_id": "2026-07-17-eval-forgemind-cat-creation",
+  "timestamp": "2026-07-17T10:30:00Z",
+  "domain": "forgemind",
+  "forgekin_id": "cat-001",
+  "feature_id": "F027",
+  "trace_id": "trace-xxx",
+  "state_snapshot": {
+    "teamact_step": "Verdict",
+    "termination_conditions": {
+      "acceptance_met": true,
+      "evidence_attached": true,
+      "cross_agent_verified": true,
+      "no_dangling_ownership": true,
+      "vision_converged": true
+    }
+  }
+}
+```
+
+### 5.2 attribution.json
+
+```json
+{
+  "eval_id": "2026-07-17-eval-forgemind-cat-creation",
+  "attribution_class": "harness_misalignment",
+  "confidence": 0.87,
+  "evidence": [
+    {"signal": "trace", "value": "CapabilityProfile.gap_analysis skipped"},
+    {"signal": "user_feedback", "value": "可进化智能体未识别猫的习性"},
+    {"signal": "probe", "value": "memory_recall_accuracy=0.42"}
+  ],
+  "recommended_action": "refactor_harness"
+}
+```
+
+### 5.3 provenance.json
+
+```json
+{
+  "eval_id": "2026-07-17-eval-forgemind-cat-creation",
+  "evaluator_agent_id": "eval-agent-001",
+  "model": "Qwen3.6-Plus",
+  "input_files": ["trace-xxx.jsonl", "user-feedback-xxx.json"],
+  "eval_contract_version": "1.0",
+  "scripts": ["eval/forgemind_eval.py@v1.2"]
+}
+```
 
 ---
 
-## 延伸阅读
+## 6. Eval 数据治理
 
-- `[doc:features/F040-harness-eval-control-plane.md]` — Harness Eval 控制面 Feature（待创建）
-- `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢 ADR（待创建）
+- **不可变性**：bundles/ 数据写入后不可修改（审计要求）
+- **保留期**：verdicts/ 永久保留；bundles/ 保留 90 天
+- **隐私**：用户反馈数据脱敏后存储
+- **可检索**：所有 Eval 数据通过蒸馏知识库（MindCodex） 可检索（`[doc:features/F039-mind-codex-searchable.md]`）

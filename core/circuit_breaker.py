@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 
 class CircuitState(Enum):
@@ -122,7 +121,7 @@ class CircuitBreaker:
             result = await func(*args, **kwargs)
             self.record_success()
             return result
-        except Exception:
+        except Exception as e:
             self.record_failure()
             raise
 

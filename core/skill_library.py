@@ -27,7 +27,7 @@ from __future__ import annotations
 import re
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -51,7 +51,7 @@ _CONFIDENCE_SMOOTH_ALPHA = 0.3  # 置信度平滑系数（新 = 旧*0.7 + 最近
 
 def _now_iso() -> str:
     """返回当前 UTC 时间的 ISO 8601 字符串."""
-    return datetime.now(UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _parse_semver(version: str) -> tuple[int, int, int]:
@@ -334,7 +334,7 @@ class SkillLibrary:
             return
         for path in self._storage_dir.glob("*.yaml"):
             try:
-                with open(path, encoding="utf-8") as f:
+                with open(path, "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f)
                 if data and isinstance(data, dict):
                     skill = Skill(**data)
@@ -964,7 +964,7 @@ class SkillMarket:
         if not path.exists():
             return None
         try:
-            with open(path, encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
             if data and isinstance(data, dict):
                 return Skill(**data)
@@ -979,7 +979,7 @@ class SkillMarket:
         skills: list[Skill] = []
         for path in self._market_dir.glob("*.yaml"):
             try:
-                with open(path, encoding="utf-8") as f:
+                with open(path, "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f)
                 if data and isinstance(data, dict):
                     skills.append(Skill(**data))

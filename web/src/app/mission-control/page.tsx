@@ -4,6 +4,7 @@
  * /mission-control — 任务控制台（简化版）
  *
  * 提供只读的任务监控视图：状态分布、阻塞任务列表、近期更新。
+ * 移植自 clowder-ai mission-control，简化为单卡片聚合版。
  *
  * API：GET /api/v1/missions?view=summary
  */

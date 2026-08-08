@@ -10,7 +10,7 @@ import { HubGovernanceTab } from "@/components/hub/HubGovernanceTab";
  *   - 合规审计
  *   - 价值锚点 + Magic Words 逃生舱
  *
- * 整合 HubGovernanceTab。
+ * 依据 WEB-FUSION-DESIGN.md §8：移植自 clowder-ai HubGovernanceTab。
  */
 
 export default function GovernancePage() {

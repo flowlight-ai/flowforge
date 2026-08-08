@@ -6,6 +6,8 @@ Provides:
 - Degradation: fallback to alternative models on failure
 - Health tracking: track model availability and latency
 """
+import time
+from typing import Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -34,7 +36,7 @@ class ModelInfo:
 class ModelCapabilityProvider:
     """Zero-config model access with smart routing and degradation fallback."""
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: Optional[dict] = None):
         self._models: dict[str, ModelInfo] = {}
         self._capability_map: dict[str, list[str]] = {}  # capability -> [model_names]
         self._config = config or {}
@@ -76,7 +78,7 @@ class ModelCapabilityProvider:
             self._capability_map[cap].append(name)
         logger.info(f"Registered model: {name} (provider={provider}, caps={capabilities})")
 
-    def get_model(self, capability: str | None = None, preferred: str | None = None) -> str | None:
+    def get_model(self, capability: Optional[str] = None, preferred: Optional[str] = None) -> Optional[str]:
         """Get best available model for a capability.
 
         Strategy:

@@ -3,6 +3,7 @@
 /**
  * /signals — 信号总览
  *
+ * 依据 WEB-FUSION-DESIGN.md §9.4：使用 SignalsOverview 组件。
  */
 
 import { Suspense } from "react";

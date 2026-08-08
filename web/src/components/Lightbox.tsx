@@ -4,6 +4,7 @@
  * Lightbox — 图片预览
  *
  * 全屏遮罩展示放大图片；支持 ESC 关闭、点击空白关闭、上一张/下一张。
+ * 移植自 clowder-ai Lightbox，简化为受控组件。
  */
 
 import { useCallback, useEffect } from "react";

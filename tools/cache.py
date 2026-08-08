@@ -1,5 +1,5 @@
 import time
-
+from typing import Any, Dict, Optional
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 
 
@@ -17,7 +17,7 @@ class CacheTool(BaseTool):
         }
     }
 
-    _store: dict[str, tuple] = {}
+    _store: Dict[str, tuple] = {}
 
     async def execute(self, input: ToolInput) -> ToolOutput:
         key = input.params["key"]

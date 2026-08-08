@@ -29,12 +29,14 @@ License: MIT
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import TraceLogger, get_logger
-from pydantic import BaseModel, Field
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 信号类型枚举
@@ -85,13 +87,13 @@ class Signal(BaseModel):
         default=None, description="信号内容（推荐 dict 含 verdict/score 字段）"
     )
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="采集时间 ISO 8601",
     )
     confidence: float = Field(
         default=0.5, ge=0.0, le=1.0, description="信号置信度"
     )
-    component_ref: str | None = Field(
+    component_ref: Optional[str] = Field(
         default=None, description="关联的 harness 组件引用"
     )
 
@@ -117,7 +119,7 @@ class CrossValidationResult(BaseModel):
     """
 
     consensus: bool = Field(..., description="是否达成共识")
-    consensus_value: str | None = Field(
+    consensus_value: Optional[str] = Field(
         default=None, description="共识值（pass / fail / None）"
     )
     disagreements: list[str] = Field(
@@ -180,7 +182,7 @@ class ThreeSignalCrossValidator:
         logger: TraceLogger 实例。若未注入，使用默认 "eval.three_signals" logger。
     """
 
-    def __init__(self, logger: TraceLogger | None = None) -> None:
+    def __init__(self, logger: Optional[TraceLogger] = None) -> None:
         self._logger: TraceLogger = logger or get_logger("eval.three_signals")
 
     # ── 信号采集 ──────────────────────────────────────────────────
@@ -326,7 +328,7 @@ class ThreeSignalCrossValidator:
         fail_count = signal_count - pass_count
 
         # 多数投票
-        majority_verdict: str | None
+        majority_verdict: Optional[str]
         majority_count: int
         if pass_count > fail_count:
             majority_verdict = "pass"

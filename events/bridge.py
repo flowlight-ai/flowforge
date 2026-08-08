@@ -13,13 +13,14 @@ Design principles:
 
 from __future__ import annotations
 
+import asyncio
 import fnmatch
-from collections.abc import Callable
-from dataclasses import dataclass
-from typing import Any
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional, Union
 
-from flowforge.core.tracing import get_logger
 from flowforge.events.event_bus import EventBus
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("events.bridge")
 
@@ -42,8 +43,8 @@ class BridgeConfig:
     """
 
     event_prefix: str = ""
-    event_filter: list[str] | None = None
-    event_transform: dict[str, str] | None = None
+    event_filter: Optional[List[str]] = None
+    event_transform: Optional[Dict[str, str]] = None
     bidirectional: bool = False
 
 
@@ -78,16 +79,16 @@ class EventBridge:
 
     def __init__(self, main_bus: EventBus) -> None:
         self._main_bus: EventBus = main_bus
-        self._bridges: dict[str, _ProjectBridge] = {}
-        self._cross_subscribers: list[_CrossSubscription] = []
+        self._bridges: Dict[str, _ProjectBridge] = {}
+        self._cross_subscribers: List[_CrossSubscription] = []
 
     # ── Project registration ──────────────────────────────────────────
 
     def register_project(
         self,
         project_name: str,
-        local_bus_or_callback: EventBus | Callable[[dict], None] | None = None,
-        config: BridgeConfig | None = None,
+        local_bus_or_callback: Union[EventBus, Callable[[dict], None], None] = None,
+        config: Optional[BridgeConfig] = None,
     ) -> None:
         """Register a project's event source into the bridge.
 
@@ -230,11 +231,11 @@ class EventBridge:
 
     # ── Query ─────────────────────────────────────────────────────────
 
-    def list_registered_projects(self) -> list[str]:
+    def list_registered_projects(self) -> List[str]:
         """Return names of all registered projects."""
         return list(self._bridges.keys())
 
-    def get_project_config(self, project_name: str) -> BridgeConfig | None:
+    def get_project_config(self, project_name: str) -> Optional[BridgeConfig]:
         """Return the BridgeConfig for a project, or ``None``."""
         bridge = self._bridges.get(project_name)
         return bridge._config if bridge is not None else None
@@ -247,8 +248,8 @@ class _ProjectBridge:
         self,
         project_name: str,
         main_bus: EventBus,
-        local_bus: EventBus | None,
-        callback: Callable[[dict], Any] | None,
+        local_bus: Optional[EventBus],
+        callback: Optional[Callable[[dict], Any]],
         config: BridgeConfig,
     ) -> None:
         self._project_name = project_name

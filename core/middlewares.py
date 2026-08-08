@@ -1,10 +1,8 @@
 import time
-
-from fastapi import HTTPException, Request
+from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-
-from flowforge.core.tracing import generate_trace_id, get_logger, get_trace_id, set_trace_id
+from flowforge.core.tracing import set_trace_id, generate_trace_id, get_trace_id, get_logger
 
 logger = get_logger("flowforge.middlewares")
 

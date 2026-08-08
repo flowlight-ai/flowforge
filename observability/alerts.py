@@ -4,9 +4,7 @@ Implements FR-OBS-04: Alert rules for critical system events.
 """
 
 import time
-from collections.abc import Callable
-from typing import Any
-
+from typing import Optional, Dict, Any, List, Callable
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("observability.alerts")
@@ -18,7 +16,7 @@ class AlertRule:
     def __init__(
         self,
         name: str,
-        condition: Callable[[dict[str, Any]], bool],
+        condition: Callable[[Dict[str, Any]], bool],
         severity: str = "warning",
         message: str = "",
         cooldown_seconds: int = 300,
@@ -30,14 +28,14 @@ class AlertRule:
         self.cooldown_seconds = cooldown_seconds
         self._last_triggered: float = 0
 
-    def check(self, context: dict[str, Any]) -> bool:
+    def check(self, context: Dict[str, Any]) -> bool:
         """Check if the alert condition is met."""
         try:
             return self.condition(context)
         except Exception:
             return False
 
-    def should_trigger(self, context: dict[str, Any]) -> bool:
+    def should_trigger(self, context: Dict[str, Any]) -> bool:
         """Check if alert should trigger (with cooldown)."""
         if not self.check(context):
             return False
@@ -57,11 +55,11 @@ class AlertManager:
     and triggers notifications when conditions are met.
     """
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
-        self._rules: list[AlertRule] = []
-        self._notifications: list[dict[str, Any]] = []
-        self._notification_callback: Callable | None = None
+        self._rules: List[AlertRule] = []
+        self._notifications: List[Dict[str, Any]] = []
+        self._notification_callback: Optional[Callable] = None
         self._max_notifications = self.config.get("max_notifications", 100)
 
         # Register default alert rules
@@ -104,7 +102,7 @@ class AlertManager:
         """Set the callback for alert notifications."""
         self._notification_callback = callback
 
-    async def evaluate(self, context: dict[str, Any]):
+    async def evaluate(self, context: Dict[str, Any]):
         """Evaluate all alert rules against the current context."""
         for rule in self._rules:
             if rule.should_trigger(context):
@@ -128,7 +126,7 @@ class AlertManager:
                     except Exception as e:
                         logger.error(f"Alert notification callback failed: {e}")
 
-    def get_alerts(self, severity: str | None = None, limit: int = 20) -> list[dict]:
+    def get_alerts(self, severity: Optional[str] = None, limit: int = 20) -> List[dict]:
         """Get recent alerts, optionally filtered by severity."""
         alerts = self._notifications
         if severity:

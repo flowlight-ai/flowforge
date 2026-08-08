@@ -11,7 +11,7 @@ import { HubPermissionsTab } from "@/components/hub/HubPermissionsTab";
  *   - 工具白名单（tools_allowlist）
  *   - 文件/网络/数据库操作授权
  *
- * 整合 HubPermissionsTab。
+ * 依据 WEB-FUSION-DESIGN.md §8：移植自 clowder-ai HubPermissionsTab。
  */
 
 const CONNECTORS = [

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -43,7 +43,7 @@ def _load_translation_context_prompt(context_type: str, target_lang: str = "", t
         if not os.path.exists(_PROMPTS_PATH):
             logger.error(f"[translation] prompts file not found: {_PROMPTS_PATH} (fail-open)")
             return ""
-        with open(_PROMPTS_PATH, encoding="utf-8") as f:
+        with open(_PROMPTS_PATH, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         template = data.get(full_key, "")
         if not template:
@@ -70,7 +70,7 @@ class TranslationTool(BaseTool):
 
     name = "translation"
     description = "跨境电商多语言翻译工具：支持11种语言的商品名称、描述、规格、客服话术翻译"
-    parameters_schema: dict[str, Any] = {
+    parameters_schema: Dict[str, Any] = {
         "type": "object",
         "required": ["action"],
         "properties": {
@@ -109,7 +109,7 @@ class TranslationTool(BaseTool):
     safety_level = "readonly"
     is_concurrency_safe = True
 
-    SUPPORTED_LANGUAGES: dict[str, str] = {
+    SUPPORTED_LANGUAGES: Dict[str, str] = {
         "en": "English",
         "zh": "中文",
         "ja": "日本語",
@@ -123,7 +123,7 @@ class TranslationTool(BaseTool):
         "ru": "Русский",
     }
 
-    CONTEXT_PROMPTS: dict[str, str] = {}  # 外置到 config/prompts.yaml（tools.translation.context.*）
+    CONTEXT_PROMPTS: Dict[str, str] = {}  # 外置到 config/prompts.yaml（tools.translation.context.*）
     # 调用处通过 _load_translation_context_prompt() 加载
 
     def __init__(self, tool_registry=None):
@@ -142,7 +142,7 @@ class TranslationTool(BaseTool):
         else:
             return ToolOutput(result={}, error=f"Unknown action: {action}")
 
-    async def _translate_single(self, params: dict[str, Any]) -> ToolOutput:
+    async def _translate_single(self, params: Dict[str, Any]) -> ToolOutput:
         text = params.get("text", "")
         source_lang = params.get("source_lang", "auto")
         target_lang = params.get("target_lang", "en")
@@ -192,8 +192,9 @@ class TranslationTool(BaseTool):
             "context": context_type,
         })
 
-    async def _translate_batch(self, params: dict[str, Any]) -> ToolOutput:
+    async def _translate_batch(self, params: Dict[str, Any]) -> ToolOutput:
         texts = params.get("texts", [])
+        text = texts[0] if texts else ""
         source_lang = params.get("source_lang", "auto")
         target_lang = params.get("target_lang", "en")
         context_type = params.get("context", "ecommerce")
@@ -210,10 +211,10 @@ class TranslationTool(BaseTool):
 
         source_desc = self.SUPPORTED_LANGUAGES.get(source_lang, source_lang) if source_lang != "auto" else "auto-detect"
         target_desc = self.SUPPORTED_LANGUAGES.get(target_lang, target_lang)
-        context_prompt = _load_translation_context_prompt(context_type, target_lang=target_desc, text=texts[0] if texts else "")
+        context_prompt = _load_translation_context_prompt(context_type, target_lang=target_desc, text=text)
         if not context_prompt:
             # fail-open: 使用 ecommerce 作为默认场景
-            context_prompt = _load_translation_context_prompt("ecommerce", target_lang=target_desc, text=texts[0] if texts else "")
+            context_prompt = _load_translation_context_prompt("ecommerce", target_lang=target_desc, text=text)
 
         # Build a structured prompt for batch translation
         numbered_texts = "\n".join(f"{i+1}. {t}" for i, t in enumerate(texts))
@@ -277,7 +278,7 @@ class TranslationTool(BaseTool):
             "data_source": "llm_single_fallback",
         })
 
-    async def _call_llm(self, prompt: str) -> str | None:
+    async def _call_llm(self, prompt: str) -> Optional[str]:
         """Call the LLM tool for translation."""
         if not self._tool_registry:
             logger.warning("No tool_registry available for LLM call")
@@ -304,7 +305,7 @@ class TranslationTool(BaseTool):
             return None
 
     @staticmethod
-    def _parse_json_array(text: str) -> list | None:
+    def _parse_json_array(text: str) -> Optional[list]:
         """Extract a JSON array from LLM output text."""
         text = text.strip()
         # Try direct parse

@@ -15,11 +15,12 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
 
 # ── 枚举 ────────────────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ class BridgeResponseStatus(str, Enum):
     COMPLETED = "completed"      # 正常完成
     ERROR = "error"              # LLM 调用失败
     PARTIAL = "partial"          # 流式响应的部分片段（预留）
+    TIMEOUT = "timeout"          # LLM 调用超时
 
 
 # ── 核心模型 ────────────────────────────────────────────────────────
@@ -86,7 +88,7 @@ class BridgeRequestContext(BaseModel):
     model: str = Field(default="trae", description="期望模型名")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=4096, ge=1)
-    tools: list[dict[str, Any]] | None = Field(
+    tools: Optional[List[Dict[str, Any]]] = Field(
         default=None, description="可选工具定义（OpenAI function-calling 格式）"
     )
 
@@ -110,11 +112,11 @@ class BridgeRequest(BaseModel):
 
     request_id: str = Field(min_length=1, description="UUID4 请求 ID")
     session_id: str = Field(default="", description="会话 ID（可选）")
-    messages: list[BridgeMessage] = Field(min_length=1)
+    messages: List[BridgeMessage] = Field(min_length=1)
     context: BridgeRequestContext
     timeout_seconds: int = Field(default=300, ge=1, description="超时秒数")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="创建时间（UTC）",
     )
     status: BridgeRequestStatus = Field(default=BridgeRequestStatus.PENDING)
@@ -142,15 +144,15 @@ class BridgeResponse(BaseModel):
     content: str = Field(default="", description="LLM 响应内容")
     status: BridgeResponseStatus = Field(default=BridgeResponseStatus.COMPLETED)
     model: str = Field(default="trae", description="实际使用的模型名")
-    usage: dict[str, Any] = Field(
+    usage: Dict[str, Any] = Field(
         default_factory=dict, description="token 用量等元信息"
     )
-    tool_calls: list[dict[str, Any]] | None = Field(
+    tool_calls: Optional[List[Dict[str, Any]]] = Field(
         default=None, description="工具调用列表"
     )
     error: str = Field(default="", description="错误信息（status=error 时必填）")
     completed_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="完成时间（UTC）",
     )
 
@@ -173,7 +175,7 @@ class BridgeCancel(BaseModel):
     reason: str = Field(default="", description="取消原因")
     cancelled_by: str = Field(default="operator")
     cancelled_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC)
+        default_factory=lambda: datetime.now(timezone.utc)
     )
 
 
@@ -194,7 +196,7 @@ class BridgeAck(BaseModel):
     request_id: str = Field(min_length=1)
     acked_by: str = Field(default="operator")
     acked_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC)
+        default_factory=lambda: datetime.now(timezone.utc)
     )
 
 
@@ -220,7 +222,7 @@ class BridgeStatus(BaseModel):
     completed_total: int = Field(default=0, ge=0)
     timeout_total: int = Field(default=0, ge=0)
     cancelled_total: int = Field(default=0, ge=0)
-    last_activity_at: datetime | None = Field(default=None)
+    last_activity_at: Optional[datetime] = Field(default=None)
 
 
 __all__ = [

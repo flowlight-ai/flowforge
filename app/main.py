@@ -6,28 +6,35 @@ mounting, and trivial health/metrics endpoints.  All implementation code
 
 - :mod:`flowforge.core.bootstrap` — registry bootstrap helpers
 - :mod:`flowforge.core.plugin_loader` — plugin lifecycle orchestration
+
+Backward compatibility: module-level ``__getattr__`` exposes legacy names
+(``_load_single_plugin``, ``_loaded_plugins``, ``lifecycle_manager``, etc.)
+so existing tests that import them continue to work.
 """
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from flowforge.app.api.router import router
 from flowforge.app.deps import (
-    set_event_store_instance,
     set_executor_instance,
     set_llm_client_instance,
     set_model_service_instance,
-    set_plugin_manager_instance,
     set_plugin_registry_instance,
+    set_plugin_manager_instance,
     set_scheduler_instance,
     set_tool_chain_executor_instance,
+    set_event_store_instance,
 )
+from flowforge.core import metrics
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.core.bootstrap import (
     register_all_modes,
@@ -103,7 +110,45 @@ async def lifespan(app: FastAPI):
         f"{len(plugin_registry.list_plugin_names())} plugins, "
         f"{len(agent_registry.list_agents())} agents"
     )
+
+    # F052: 启动 AutonomousDaemon — 5 灵智体 24h 自主运行（10 分钟自动找需求）
+    # operator 要求：自进化能力必须自动运行，并在 Web 可观测性中可见
+    autonomous_daemon: Any = None
+    autonomous_task: Any = None
+    try:
+        import os as _os
+        if _os.environ.get("FLOWFORGE_DISABLE_AUTONOMOUS", "").lower() in ("1", "true", "yes"):
+            logger.info("AutonomousDaemon disabled by FLOWFORGE_DISABLE_AUTONOMOUS=1")
+        else:
+            from flowforge.forgemind.autonomous import create_autonomous_daemon
+            project_root_str = _os.environ.get(
+                "FLOWFORGE_AUTONOMOUS_ROOT",
+                str(Path(__file__).resolve().parents[2]),
+            )
+            autonomous_daemon = await create_autonomous_daemon(Path(project_root_str))
+            autonomous_task = asyncio.create_task(autonomous_daemon.run_forever())
+            logger.info(
+                "AutonomousDaemon 已启动 — 5 灵智体每 %ds 自动扫描需求",
+                autonomous_daemon._scan_interval,
+            )
+            app.state.autonomous_daemon = autonomous_daemon
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"AutonomousDaemon 启动失败（非致命，API 可正常工作）: {exc}", exc_info=True)
+
     yield
+
+    # 停止 AutonomousDaemon
+    if autonomous_daemon is not None:
+        try:
+            autonomous_daemon.stop()
+        except Exception:  # noqa: BLE001
+            pass
+    if autonomous_task is not None:
+        try:
+            autonomous_task.cancel()
+            await asyncio.wait_for(autonomous_task, timeout=5.0)
+        except (asyncio.TimeoutError, asyncio.CancelledError, Exception):  # noqa: BLE001
+            pass
 
     plugin_loader.shutdown_all()
     await plugin_registry.shutdown_all()
@@ -151,9 +196,6 @@ def _init_mcp_client_integration(app: FastAPI) -> None:
 app = FastAPI(title="FlowForge API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    # NOTE: allow_origins=["*"] + allow_credentials=True causes Starlette to
-    # reject WebSocket upgrade requests with 403 Forbidden. For local dev we
-    # use wildcard origins with credentials disabled.
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
@@ -289,19 +331,15 @@ init_memory_api(memory_manager)
 
 # ── Route registration ─────────────────────────────────────────────────────
 
-# Web Fusion v1 router — must register before legacy router so static paths
-# (e.g. /memory/collections) aren't captured by dynamic paths.
 from flowforge.app.api.fusion_router import router as v1_fusion_router
-
 app.include_router(v1_fusion_router)
 
 app.include_router(router)
 
 from flowforge.app.api.plugin_frontend_api import router as frontend_api_router
-
 app.include_router(frontend_api_router)
 
-# Optional routers (guarded imports for environments without these modules)
+# Optional routers (guarded imports)
 for _module_path, _attr in [
     ("flowforge.app.api.endpoints.websocket", "router"),
     ("flowforge.app.api.core.openroute", "router"),
@@ -316,67 +354,9 @@ for _module_path, _attr in [
     except ImportError:
         pass
 
-# ForgeMind Council Chat — mounted directly on app
-try:
-    from flowforge.app.api.agents import council as council_endpoints
-    app.include_router(council_endpoints.router)
-except ImportError as _e:
-    logger.warning(f"council router not loaded: {_e}")
-
-# Static web UI (Forgekin Council chat page)
-try:
-    from fastapi.responses import HTMLResponse
-    from fastapi.staticfiles import StaticFiles
-
-    _web_static_dir = Path(__file__).resolve().parent.parent / "web_legacy_backup" / "static"
-    if _web_static_dir.exists():
-        app.mount("/static", StaticFiles(directory=str(_web_static_dir)), name="web_static")
-
-        @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-        async def _serve_chat_ui() -> str:
-            return (_web_static_dir / "index.html").read_text(encoding="utf-8")
-
-        logger.info(f"Web UI mounted at / (static dir: {_web_static_dir})")
-    else:
-        logger.warning(f"Web static dir not found: {_web_static_dir}")
-except Exception as _e:  # noqa: BLE001
-    logger.warning(f"Web UI mount failed: {_e}")
-
-# Legacy compat routes for T7/T8 E2E tests
-try:
-    from flowforge.app.api.agents import council as _council_compat
-    from flowforge.app.api.agents import verify as _verify_compat
-
-    @app.get("/api/agents", include_in_schema=False)
-    async def _legacy_list_agents() -> dict:
-        return await _council_compat.list_agents()
-
-    @app.post("/api/chat", include_in_schema=False)
-    async def _legacy_send_message(payload: dict) -> dict:
-        return await _council_compat.send_message(payload)
-
-    app.include_router(_verify_compat.router, prefix="/api")
-    logger.info("Legacy compat routes mounted: /api/agents, /api/chat, /api/verify/t7, /api/verify/t8")
-except ImportError as _e:
-    logger.warning(f"Legacy compat routes not mounted: {_e}")
-
-
-@app.websocket("/test-ws")
-async def diagnostic_ws(ws: WebSocket):
-    """Bare-minimum WebSocket echo for connectivity testing."""
-    logger.info(f"[test-ws] CONNECT ATTEMPT from {ws.client.host if ws.client else '?'}")
-    try:
-        await ws.accept()
-        logger.info("[test-ws] ACCEPTED")
-        await ws.send_text("hello from /test-ws")
-        while True:
-            data = await ws.receive_text()
-            await ws.send_text(f"echo: {data}")
-    except Exception as exc:
-        logger.warning(f"[test-ws] ERROR: {exc!r}")
-
 
 @app.get("/health")
+@app.get("/api/v1/health")
 def health():
     components = {
         "mode_registry": {"status": "healthy", "modes": len(mode_registry.list_modes())},
@@ -416,13 +396,49 @@ def health():
 
 @app.get("/metrics")
 def get_metrics_endpoint():
-    from flowforge.core.metrics import get_metrics as gm
-    from flowforge.core.metrics import get_prometheus_metrics
+    from flowforge.core.metrics import get_metrics as gm, get_prometheus_metrics
     prom_data = get_prometheus_metrics()
     if prom_data:
         from starlette.responses import Response
         return Response(content=prom_data, media_type="text/plain; version=0.0.4; charset=utf-8")
     return gm()
+
+
+# ── Backward-compatible module-level access ────────────────────────────────
+# Tests and a few API modules import legacy names directly from main.py.
+# Using __getattr__ keeps these working without polluting the module namespace.
+
+def __getattr__(name: str):
+    """Lazy backward-compatible access to legacy plugin-loader attributes."""
+    if name == "_loaded_plugins":
+        return plugin_loader.loaded_plugins
+    if name == "lifecycle_manager":
+        return plugin_loader.lifecycle_manager
+    if name == "frontend_registry":
+        return plugin_loader.frontend_registry
+    if name == "sandbox_manager":
+        return plugin_loader.sandbox_manager
+    if name == "_load_single_plugin":
+        # Backward-compatible wrapper: old signature took multiple registries
+        # as arguments; the new PluginLoader stores them internally.
+        def _load_single_plugin_compat(plugin_instance, *args, **kwargs):
+            return plugin_loader.load_single_plugin(plugin_instance)
+        return _load_single_plugin_compat
+    if name == "unload_plugin":
+        return plugin_loader.unload_plugin
+    if name == "reload_plugin":
+        return plugin_loader.reload_plugin
+    if name == "get_loaded_plugins":
+        return plugin_loader.get_loaded_plugins
+    if name == "_topological_sort_plugins":
+        return PluginLoader._topological_sort_plugins
+    if name == "_check_version_compatibility":
+        return PluginLoader._check_version_compatibility
+    if name == "_load_domain_plugins":
+        return plugin_loader.load_domain_plugins
+    if name == "auto_discover_plugins":
+        return plugin_loader.auto_discover_plugins
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 if __name__ == "__main__":

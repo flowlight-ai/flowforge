@@ -9,19 +9,17 @@ Implements a candidate chain system inspired by FlowForge's model_manager:
 License: MIT
 """
 
-import asyncio
+import os
 import json
 import time
-from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Optional
-
+import asyncio
 import httpx
-
-from flowforge.core import metrics
+from typing import List, Dict, Optional, AsyncIterator, TYPE_CHECKING
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
-from flowforge.core.circuit_breaker import get_circuit_breaker
 from flowforge.core.secret_store import get_secret_store
 from flowforge.core.tracing import get_logger, get_trace_id
+from flowforge.core import metrics
+from flowforge.core.circuit_breaker import get_circuit_breaker
 from flowforge.llm.call_event import LLMCallEvent, get_call_event_collector
 
 if TYPE_CHECKING:
@@ -196,9 +194,9 @@ def is_invalid_response(content: str, agent_name: str = "", min_length: int = 50
 
 
 def build_cross_fallback_chain(
-    available_models: dict[str, list[str]],
-    health_status: dict[str, dict],
-) -> list[str]:
+    available_models: Dict[str, List[str]],
+    health_status: Dict[str, dict],
+) -> List[str]:
     """Build an interleaved candidate chain across providers.
 
     Inspired by FlowForge cross_fallback() algorithm:
@@ -219,7 +217,7 @@ def build_cross_fallback_chain(
     SPECIAL_FALLBACK_ENTRIES = {"auto", "free", "proxy"}
 
     provider_order = ["openroute", "openrouter"]
-    grouped: dict[str, list[str]] = {}
+    grouped: Dict[str, List[str]] = {}
     for provider in provider_order:
         models = available_models.get(provider, [])
         healthy = []
@@ -303,10 +301,10 @@ class LLMClient(BaseTool):
         self._assignments = self._models_config.get("assignments", {})
         self._event_bus = event_bus
         self._llm_router = llm_router
-        self._health_status: dict[str, dict] = {}
-        self._available_models: dict[str, list[str]] = {}
-        self._task_call_counts: dict[str, int] = {}
-        self._task_used_models: dict[str, set] = {}
+        self._health_status: Dict[str, dict] = {}
+        self._available_models: Dict[str, List[str]] = {}
+        self._task_call_counts: Dict[str, int] = {}
+        self._task_used_models: Dict[str, set] = {}
         self._webchat_rotation_index: int = 0
         # P0-1/P0-4: 从 llm_route.yaml 读取 timeout_seconds，禁止硬编码 300s
         # P0-4: 加载所有路由的超时配置和 agent_routes 映射，支持按 agent_name 查找超时
@@ -328,15 +326,14 @@ class LLMClient(BaseTool):
             - route_timeouts: {route_name: timeout_seconds}
             - agent_routes: {agent_name: route_name}
         """
-        route_timeouts: dict[str, float] = {"default": 30.0}
-        agent_routes: dict[str, str] = {}
+        route_timeouts: Dict[str, float] = {"default": 30.0}
+        agent_routes: Dict[str, str] = {}
         try:
-            from pathlib import Path
-
             import yaml
+            from pathlib import Path
             config_path = Path(__file__).parent.parent / "config" / "llm_route.yaml"
             if config_path.exists():
-                with open(config_path, encoding="utf-8") as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     cfg = yaml.safe_load(f) or {}
                 routes = cfg.get("routes", {})
                 for route_name, route_cfg in routes.items():
@@ -393,12 +390,11 @@ class LLMClient(BaseTool):
         老版本content的100%成功率设计：永不放弃，但失败后立即切换模型，不重试同一模型。
         """
         try:
-            from pathlib import Path
-
             import yaml
+            from pathlib import Path
             config_path = Path(__file__).parent.parent / "config" / "llm_route.yaml"
             if config_path.exists():
-                with open(config_path, encoding="utf-8") as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     cfg = yaml.safe_load(f) or {}
                 routes = cfg.get("routes", {})
                 default_route = routes.get("default", {})
@@ -456,7 +452,7 @@ class LLMClient(BaseTool):
         self._llm_router = llm_router
         logger.info("LLMRouter已注入到LLMClient")
 
-    async def _get_routed_model(self, strategy: str = "default") -> str | None:
+    async def _get_routed_model(self, strategy: str = "default") -> Optional[str]:
         """通过 LLMRouter 获取策略路由的模型ID.
 
         Args:
@@ -563,7 +559,7 @@ class LLMClient(BaseTool):
             return key[:4] + "..." + key[-4:] if len(key) > 8 else key[:3] + "..."
         return key[:8] + "..." + key[-4:]
 
-    def _get_model_chain(self, persona: str = "", agent_name: str = "", task_id: str = "", assignment: str = "") -> list[str]:
+    def _get_model_chain(self, persona: str = "", agent_name: str = "", task_id: str = "", assignment: str = "") -> List[str]:
         # assignment 优先：任务类型路由键（如 content_create/content_refine/judge），
         # 优先于 persona，让 models.yaml 中专用的 assignment 真正生效。
         # 这是修复"专用 assignment 从未生效"bug 的关键（参考审核报告缺陷 D3）。
@@ -621,7 +617,7 @@ class LLMClient(BaseTool):
             return persona_strategy_map[persona]
         return "default"
 
-    def _build_assignment_chain(self, persona: str = "", agent_name: str = "", task_id: str = "", assignment: str = "") -> list[str]:
+    def _build_assignment_chain(self, persona: str = "", agent_name: str = "", task_id: str = "", assignment: str = "") -> List[str]:
         """构建模型候选链（参考老版本content model_manager的17候选链设计）.
 
         查找优先级（从高到低）：
@@ -699,14 +695,14 @@ class LLMClient(BaseTool):
         # 5. 跨供应商兜底
         return build_cross_fallback_chain(self._available_models, self._health_status)
 
-    def _apply_rotation_and_cross_validation(self, chain: list[str], persona: str, task_id: str) -> list[str]:
+    def _apply_rotation_and_cross_validation(self, chain: List[str], persona: str, task_id: str) -> List[str]:
         chain = self._resolve_model_candidates(chain)
         chain = self._apply_webchat_rotation(chain, task_id)
         chain = self._filter_disabled_models(chain)
         chain = self._apply_cross_validation(chain, persona, task_id)
         return chain
 
-    def _resolve_model_candidates(self, chain: list[str]) -> list[str]:
+    def _resolve_model_candidates(self, chain: List[str]) -> List[str]:
         """Resolve raw model IDs to provider/model_id format.
 
         Handles three cases:
@@ -749,7 +745,7 @@ class LLMClient(BaseTool):
 
         return resolved
 
-    def _apply_webchat_rotation(self, chain: list[str], task_id: str) -> list[str]:
+    def _apply_webchat_rotation(self, chain: List[str], task_id: str) -> List[str]:
         used = self._task_used_models.get(task_id, set())
         available = [m for m in WEB_CHAT_ROTATION_POOL
                      if m not in used and self._is_model_healthy(m)]
@@ -770,7 +766,7 @@ class LLMClient(BaseTool):
                 rotated.append(m)
         return rotated
 
-    def _filter_disabled_models(self, models: list[str]) -> list[str]:
+    def _filter_disabled_models(self, models: List[str]) -> List[str]:
         """过滤已禁用的模型，同时匹配带前缀和不带前缀的名称。
 
         从 self._disabled_models（配置驱动）加载禁用列表，
@@ -809,7 +805,7 @@ class LLMClient(BaseTool):
             return True
         return False
 
-    def _filter_webchat_models(self, chain: list[str]) -> list[str]:
+    def _filter_webchat_models(self, chain: List[str]) -> List[str]:
         """过滤候选链中的 WebChat backend 模型，仅保留 API backend 模型。
 
         用于 prefer_api 场景（如评委调用），避免 WebChat backend 的
@@ -827,7 +823,7 @@ class LLMClient(BaseTool):
             return False
         return True
 
-    def _apply_cross_validation(self, chain: list[str], persona: str, task_id: str) -> list[str]:
+    def _apply_cross_validation(self, chain: List[str], persona: str, task_id: str) -> List[str]:
         if not task_id or persona not in ("judge", "evaluator", "reviewer", "reflexion_evaluator"):
             return chain
         used = self._task_used_models.get(task_id, set())
@@ -1018,8 +1014,8 @@ class LLMClient(BaseTool):
                 "model": model_id, "messages": messages,
                 "temperature": temperature, "max_tokens": max_tokens,
             }
-            # top_p placeholder — will be parameterized
-            pass
+            if top_p is not None:
+                payload["top_p"] = top_p
             # 只有明确要求stream时才传stream参数
             # 老版本content不传stream，走非流式路径，从来没有英文CoT问题
             if stream:
@@ -1252,7 +1248,7 @@ class LLMClient(BaseTool):
                             )
                             self._update_health(provider, model_id, False, "echo_response")
                             self._record_model_result(f"{provider}/{model_id}", False, "echo_response")
-                            last_error = Exception("echo_response: LLM returned user message content")
+                            last_error = Exception(f"echo_response: LLM returned user message content")
                             break  # echo_response → next candidate, no retry
                     except Exception as echo_e:
                         logger.debug(f"[Echo响应] 检测失败: {echo_e}")
@@ -1619,6 +1615,7 @@ class LLMClient(BaseTool):
         persona = input.params.get("persona")
         agent_name = input.params.get("agent_name")
         task_id = input.params.get("task_id", "unknown")
+        top_p = input.params.get("top_p")
         prefer_api = input.params.get("prefer_api", False)
         # P0-4: 根据 agent_name 查找对应路由的 timeout
         agent_timeout = self._get_timeout_for_agent(agent_name or "")
@@ -1665,8 +1662,8 @@ class LLMClient(BaseTool):
                 "temperature": temperature, "max_tokens": max_tokens,
                 "stream": True,
             }
-            # top_p placeholder — will be parameterized
-            pass
+            if top_p is not None:
+                payload["top_p"] = top_p
             url = base_url.rstrip("/") + "/chat/completions"
 
             self._emit_event(task_id, "llm.start", {
@@ -1826,7 +1823,7 @@ class LLMClient(BaseTool):
         except Exception as e:
             logger.debug(f"[断点B] 同步 model_service 健康状态失败: {e}")
 
-    async def _trigger_force_update_and_rebuild(self) -> list[str]:
+    async def _trigger_force_update_and_rebuild(self) -> List[str]:
         """候选链耗尽时触发 force_update 并重建（断点C修复）.
 
         当 build_cross_fallback_chain 返回空链时，说明所有模型都在 cooldown。
@@ -1844,7 +1841,7 @@ class LLMClient(BaseTool):
             logger.info("[断点C] 候选链耗尽，触发 force_update_models 重建...")
             try:
                 await asyncio.wait_for(svc.force_update_models(), timeout=30)
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 logger.warning("[断点C] force_update 超时(30s)，使用当前状态重建")
             except Exception as e:
                 logger.warning(f"[断点C] force_update 失败: {e}")
@@ -1910,10 +1907,10 @@ class LLMClient(BaseTool):
             "fallbacks": fallback_models or [],
         }
 
-    def get_available_models(self) -> dict[str, list[str]]:
+    def get_available_models(self) -> Dict[str, List[str]]:
         return dict(self._available_models)
 
-    def get_candidate_chain(self, persona: str = "", agent_name: str = "") -> list[str]:
+    def get_candidate_chain(self, persona: str = "", agent_name: str = "") -> List[str]:
         return self._get_model_chain(persona, agent_name)
 
     def _report_router_health(

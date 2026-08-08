@@ -4,9 +4,9 @@
 """
 import json
 import sqlite3
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -38,14 +38,14 @@ class TaskStore:
 
     _instance: Optional["TaskStore"] = None
 
-    def __init__(self, db_path: Path | None = None) -> None:
+    def __init__(self, db_path: Optional[Path] = None) -> None:
         self._db_path = db_path or _DEFAULT_DB_PATH
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn: sqlite3.Connection | None = None
+        self._conn: Optional[sqlite3.Connection] = None
         self._init_db()
 
     @classmethod
-    def instance(cls, db_path: Path | None = None) -> "TaskStore":
+    def instance(cls, db_path: Optional[Path] = None) -> "TaskStore":
         if cls._instance is None:
             cls._instance = cls(db_path=db_path)
         return cls._instance
@@ -64,7 +64,7 @@ class TaskStore:
         self._conn.commit()
         logger.info(f"[TaskStore] 初始化完成: db={self._db_path}")
 
-    def _row_to_dict(self, row: sqlite3.Row) -> dict[str, Any]:
+    def _row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
         """将数据库行转换为字典。"""
         result = {
             "task_id": row["task_id"],
@@ -112,10 +112,10 @@ class TaskStore:
             self._conn = None
 
     async def create_task(self, task_id: str, type: str,
-                          request: dict[str, Any],
-                          idempotency_key: str = "") -> dict[str, Any]:
+                          request: Dict[str, Any],
+                          idempotency_key: str = "") -> Dict[str, Any]:
         """创建任务记录。"""
-        now = datetime.now(UTC).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         request_json = json.dumps(request, ensure_ascii=False, default=str)
         try:
             self._conn.execute(
@@ -133,7 +133,7 @@ class TaskStore:
             "idempotency_key": idempotency_key,
         }
 
-    async def get_task(self, task_id: str) -> dict[str, Any] | None:
+    async def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """获取任务记录。"""
         row = self._conn.execute(
             "SELECT * FROM tasks WHERE task_id = ?", (task_id,)
@@ -146,7 +146,7 @@ class TaskStore:
         """更新任务记录。支持: status, result, error, progress, completed_at。"""
         sets = []
         params = []
-        now = datetime.now(UTC).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         for key, value in kwargs.items():
             if key == "result":
@@ -185,7 +185,7 @@ class TaskStore:
             logger.error(f"[TaskStore] 更新任务失败: task_id={task_id}, error={e}")
             return False
 
-    async def get_by_idempotency_key(self, key: str) -> str | None:
+    async def get_by_idempotency_key(self, key: str) -> Optional[str]:
         """通过幂等键查找任务ID。"""
         if not key:
             return None
@@ -195,8 +195,8 @@ class TaskStore:
         ).fetchone()
         return row["task_id"] if row else None
 
-    async def list_tasks(self, status: str | None = None,
-                         limit: int = 50) -> list[dict[str, Any]]:
+    async def list_tasks(self, status: Optional[str] = None,
+                         limit: int = 50) -> List[Dict[str, Any]]:
         """列出任务。"""
         if status:
             rows = self._conn.execute(

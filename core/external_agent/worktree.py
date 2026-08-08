@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import shutil
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -38,7 +38,7 @@ class WorktreeConfig(BaseModel):
     """worktree 配置（host 注入，铁律 5）。"""
 
     worktree_root: str = Field(..., description="worktree 根目录（host 决定）")
-    source_repo: str | None = Field(
+    source_repo: Optional[str] = Field(
         default=None, description="源仓库路径（用于 git worktree 创建）"
     )
     network_allowlist: list[str] = Field(
@@ -57,7 +57,7 @@ class AuditEntry(BaseModel):
     """操作审计条目（EX-005 操作审计）。"""
 
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="操作时间戳",
     )
     provider_name: str = Field(..., description="执行操作的三方 Agent")
@@ -97,8 +97,8 @@ class ExternalAgentWorktree:
             config: worktree 配置（worktree_root 由 host 注入）。
         """
         self._config = config
-        self._worktree_path: Path | None = None
-        self._snapshot_path: Path | None = None
+        self._worktree_path: Optional[Path] = None
+        self._snapshot_path: Optional[Path] = None
         self._audit_log: list[AuditEntry] = []
         self._forgekin_id: str = ""
         self._provider_name: str = ""
@@ -114,7 +114,7 @@ class ExternalAgentWorktree:
         self,
         provider_name: str,
         forgekin_id: str,
-        source_subdir: str | None = None,
+        source_subdir: Optional[str] = None,
     ) -> str:
         """创建独立 worktree。
 
@@ -128,7 +128,7 @@ class ExternalAgentWorktree:
         """
         # 生成唯一 worktree 名（provider-forgekin-uuid8）
         short_uuid = uuid.uuid4().hex[:8]
-        timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         worktree_name = f"{provider_name.replace('.', '_')}-{forgekin_id.replace(':', '_')}-{timestamp}-{short_uuid}"
         worktree_path = Path(self._config.worktree_root) / worktree_name
         worktree_path.mkdir(parents=True, exist_ok=True)
@@ -191,7 +191,7 @@ class ExternalAgentWorktree:
         operation: str,
         target: str,
         success: bool,
-        details: dict[str, Any] | None = None,
+        details: Optional[dict[str, Any]] = None,
     ) -> None:
         """记录操作审计（EX-005 操作审计）。
 

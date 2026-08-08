@@ -21,9 +21,8 @@ License: MIT
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, AsyncIterator, Optional
 
 from pydantic import BaseModel, Field
 
@@ -63,9 +62,9 @@ class ExternalAgentResult(BaseModel):
     capability_contribution: dict[str, Any] = Field(
         default_factory=dict, description="能力画像贡献（EX-010）"
     )
-    error: str | None = Field(default=None, description="错误信息")
+    error: Optional[str] = Field(default=None, description="错误信息")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="调用完成时间戳",
     )
 
@@ -114,7 +113,7 @@ class ExternalAgentAdapter(ABC):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: SandboxConfig | None = None,
+        sandbox: Optional[SandboxConfig] = None,
     ) -> ExternalAgentResult:
         """同步调用三方 Agent 完成任务。
 
@@ -126,14 +125,14 @@ class ExternalAgentAdapter(ABC):
         Returns:
             ExternalAgentResult 调用结果。
         """
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     async def stream(
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: SandboxConfig | None = None,
+        sandbox: Optional[SandboxConfig] = None,
     ) -> AsyncIterator[str]:
         """流式调用三方 Agent（EX-009 流式语义）。
 
@@ -148,9 +147,8 @@ class ExternalAgentAdapter(ABC):
         Yields:
             响应片段字符串。
         """
-        raise NotImplementedError
-        # 下面这行是为了让 mypy 知道这是 async iterator（不会执行）
-        yield ""  # pragma: no cover
+        ...
+        yield  # pragma: no cover
 
     @abstractmethod
     def get_capability_profile(self) -> dict[str, Any]:
@@ -166,12 +164,12 @@ class ExternalAgentAdapter(ABC):
                 - best_practices: 最佳使用场景
                 - anti_patterns: 反模式（不该用此 Agent 的场景）
         """
-        raise NotImplementedError
+        ...
 
     def prepare_sandbox(
         self,
         worktree_path: str,
-        network_allowlist: list[str] | None = None,
+        network_allowlist: Optional[list[str]] = None,
     ) -> SandboxConfig:
         """准备 sandbox 配置（host-owned，CL-015）。
 

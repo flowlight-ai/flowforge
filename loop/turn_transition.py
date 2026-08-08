@@ -10,6 +10,7 @@ IDLE → EXECUTING → EVALUATING → REFLECTING → COMPACTING → AGENT_SWITCH
 
 import time
 from enum import Enum
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -116,7 +117,7 @@ class TurnTransitionEngine:
         self._state = to_state
         return transition
 
-    def try_transition(self, to_state: TurnState, reason: str = "") -> TurnTransition | None:
+    def try_transition(self, to_state: TurnState, reason: str = "") -> Optional[TurnTransition]:
         """尝试状态转换，如果非法则返回 None 而非抛异常
 
         Args:
@@ -142,6 +143,6 @@ class TurnTransitionEngine:
         """获取已执行的转换次数"""
         return len(self._history)
 
-    def get_last_transition(self) -> TurnTransition | None:
+    def get_last_transition(self) -> Optional[TurnTransition]:
         """获取最后一次转换记录"""
         return self._history[-1] if self._history else None

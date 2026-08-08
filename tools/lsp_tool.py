@@ -8,7 +8,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -111,7 +111,7 @@ class LSPTool(BaseTool):
     # ------------------------------------------------------------------
 
     def _diagnostics(self, source: str, file_path: Path, params: dict[str, Any]) -> dict[str, Any]:
-        severity_filter: str | None = params.get("severity")
+        severity_filter: Optional[str] = params.get("severity")
         diagnostics: list[dict[str, Any]] = []
 
         # 1. 语法错误 — ast.parse
@@ -166,7 +166,7 @@ class LSPTool(BaseTool):
             "min", "max", "sum", "any", "all", "bin", "hex", "oct", "chr", "ord",
             "open", "input", "iter", "next", "slice", "complex",
             "frozenset", "bytearray", "memoryview", "dict_keys", "dict_values",
-            "dict_items", "NotImplemented", "Ellipsis",
+            "dict_items", "reversed", "NotImplemented", "Ellipsis",
             "__builtins__", "exit", "quit", "help", "license", "credits",
             "copyright", "ascii", "breakpoint",
         }
@@ -262,7 +262,7 @@ class LSPTool(BaseTool):
         return diagnostics
 
     def _filter_diagnostics(
-        self, diagnostics: list[dict[str, Any]], severity_filter: str | None
+        self, diagnostics: list[dict[str, Any]], severity_filter: Optional[str]
     ) -> dict[str, Any]:
         if severity_filter:
             diagnostics = [d for d in diagnostics if d["severity"] == severity_filter]
@@ -689,8 +689,8 @@ class LSPTool(BaseTool):
             return {"success": True, "implementations": [], "message": "Cannot parse file"}
 
         # 判断符号是类还是方法：先找类定义，再找包含该符号的方法所属类
-        target_class: ast.ClassDef | None = None
-        method_name: str | None = None
+        target_class: Optional[ast.ClassDef] = None
+        method_name: Optional[str] = None
 
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name == symbol:
@@ -979,7 +979,7 @@ class LSPTool(BaseTool):
 
         return line_text[start:end]
 
-    def _find_project_root(self, file_path: Path) -> Path | None:
+    def _find_project_root(self, file_path: Path) -> Optional[Path]:
         """向上查找项目根目录（包含 pyproject.toml / setup.py / .git 的目录）."""
         current = file_path.parent
         markers = ["pyproject.toml", "setup.py", "setup.cfg", ".git"]
@@ -1024,9 +1024,9 @@ class LSPTool(BaseTool):
 
     def _find_function_at_position(
         self, tree: ast.AST, line: int
-    ) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    ) -> Optional[ast.FunctionDef | ast.AsyncFunctionDef]:
         """查找包含指定行号（0-based）的最内层函数/方法节点."""
-        best: ast.FunctionDef | ast.AsyncFunctionDef | None = None
+        best: Optional[ast.FunctionDef | ast.AsyncFunctionDef] = None
         best_start = -1
         for node in ast.walk(tree):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

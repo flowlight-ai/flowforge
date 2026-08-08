@@ -20,17 +20,18 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import get_logger
 from flowforge.observability.metrics_collector import MetricsCollector
 
+
 # ── SLO 定义 ──────────────────────────────────────────────────────────
 
 
-SLO_DEFINITIONS: dict[str, dict[str, Any]] = {
+SLO_DEFINITIONS: Dict[str, Dict[str, Any]] = {
     "SLO-1": {
         "name": "Loop 执行时长",
         "target": "P95 < 180s",
@@ -99,7 +100,7 @@ class SLOValidationResult(BaseModel):
     passed: bool
     burn_rate: float = 0.0
     error_budget_remaining: float = 1.0
-    details: dict[str, Any] = Field(default_factory=dict)
+    details: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ── 验证器 ────────────────────────────────────────────────────────────
@@ -129,20 +130,20 @@ class SLOValidator:
     def __init__(
         self,
         metrics_collector: MetricsCollector,
-        logger: Any | None = None,
+        logger: Optional[Any] = None,
     ) -> None:
         self.metrics_collector: MetricsCollector = metrics_collector
         self.logger = logger if logger is not None else get_logger("tools.slo_validator")
 
     # ── 公开 API ──────────────────────────────────────────────────────
 
-    def validate_all(self) -> dict[str, SLOValidationResult]:
+    def validate_all(self) -> Dict[str, SLOValidationResult]:
         """验证所有 5 个 SLO。
 
         Returns:
             以 SLO ID 为键的验证结果字典。
         """
-        results: dict[str, SLOValidationResult] = {}
+        results: Dict[str, SLOValidationResult] = {}
         for slo_id in SLO_DEFINITIONS:
             results[slo_id] = self.validate_slo(slo_id)
         self.logger.debug(

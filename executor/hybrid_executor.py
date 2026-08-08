@@ -10,21 +10,21 @@ v6.0: Integrates Harness Layer hooks (pre_execute / post_execute).
 License: MIT
 """
 
-import asyncio
 import time
-
-from flowforge.core import metrics as ff_metrics
+import asyncio
+from typing import Dict, Optional
+from flowforge.core.task_context import TaskContext
+from flowforge.core.errors import ConflictError, StepTimeoutError
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.core.checkpoint_manager import CheckpointManager
-from flowforge.core.errors import ConflictError, StepTimeoutError
-from flowforge.core.task_context import TaskContext
-from flowforge.core.tracing import get_logger
 from flowforge.core.workspace import get_workspace_manager
+from flowforge.modes.registry import ModeRegistry
 from flowforge.events.event_bus import EventBus
 from flowforge.events.helm_adapter import EventBusHelmAdapter
 from flowforge.executor.state_manager import StateManager
 from flowforge.memory.manager import MemoryManager
-from flowforge.modes.registry import ModeRegistry
+from flowforge.core import metrics as ff_metrics
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("executor")
 
@@ -106,16 +106,17 @@ class HybridExecutor:
         self.checkpoint_manager = CheckpointManager(checkpointer_path)
         self.harness = harness
         self._loop_executor = loop_executor
-        self._running_tasks: dict[str, str] = {}
+        self._running_tasks: Dict[str, str] = {}
         # 陈旧锁检测：记录每个 persona 任务开始时间，超过 STALE_LOCK_TIMEOUT 自动清除
         # 修复"异常处理了一直不返回导致业务卡死"问题
-        self._running_task_start_times: dict[str, float] = {}
+        self._running_task_start_times: Dict[str, float] = {}
+        import time as _time_mod
         self._stale_lock_timeout = 900  # 15分钟，超过此时间的运行任务视为陈旧锁
-        self._helm_adapter: EventBusHelmAdapter | None = None
-        self._review_events: dict[str, asyncio.Event] = {}
-        self._pause_events: dict[str, asyncio.Event] = {}
-        self._task_contexts: dict[str, TaskContext] = {}
-        self._task_futures: dict[str, asyncio.Task] = {}
+        self._helm_adapter: Optional[EventBusHelmAdapter] = None
+        self._review_events: Dict[str, asyncio.Event] = {}
+        self._pause_events: Dict[str, asyncio.Event] = {}
+        self._task_contexts: Dict[str, TaskContext] = {}
+        self._task_futures: Dict[str, asyncio.Task] = {}
 
     def set_helm_manager(self, helm_manager):
         """Attach a HelmManager and create the event bridge adapter.
@@ -384,7 +385,7 @@ class HybridExecutor:
                         state_update["output_data"] = {"response": str(result)}
                     self.state_manager.update_state(context.task_id, state_update)
                 return result
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 logger.error(f"[hybrid_executor] Loop task timed out: task_id={context.task_id}, timeout={TASK_TIMEOUT_SECONDS}s")
                 self.event_bus.emit(context.task_id, "task.error", {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})
                 if not _is_substep:
@@ -492,7 +493,7 @@ class HybridExecutor:
                     state_update["output_data"] = {"response": str(result)}
                 self.state_manager.update_state(context.task_id, state_update)
             return result
-        except TimeoutError:
+        except asyncio.TimeoutError:
             logger.error(f"[hybrid_executor] Task timed out: mode={mode}, task_id={context.task_id}, timeout={TASK_TIMEOUT_SECONDS}s")
             self.event_bus.emit(context.task_id, "mode.exit", {"mode": mode})
             self.event_bus.emit(context.task_id, "task.error", {"error": f"Task timed out after {TASK_TIMEOUT_SECONDS}s"})

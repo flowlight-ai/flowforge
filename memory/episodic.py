@@ -1,9 +1,9 @@
-import datetime
 import json
 import sqlite3
+import datetime
+from datetime import timezone
 from pathlib import Path
 from typing import Any
-
 
 class EpisodicMemory:
     def __init__(self, db_url: str = None):
@@ -15,7 +15,7 @@ class EpisodicMemory:
 
     async def store(self, key: str, value: Any) -> None:
         self.conn.execute("INSERT INTO episodes (task_id, trace, created_at) VALUES (?, ?, ?)",
-                          (key, json.dumps(value), datetime.datetime.now(datetime.UTC).isoformat()))
+                          (key, json.dumps(value), datetime.datetime.now(timezone.utc).isoformat()))
         self.conn.commit()
 
     async def search(self, query: str, limit: int = 10) -> list:

@@ -26,8 +26,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
-from collections.abc import Callable
-from typing import Any, Optional, get_type_hints
+from typing import Any, Callable, Dict, List, Optional, Type, get_type_hints
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -36,7 +35,7 @@ logger = get_logger("tool_decorator")
 
 # ── JSON Schema type mapping ────────────────────────────────────────
 
-_PYTHON_TYPE_TO_JSON_SCHEMA: dict[type, str] = {
+_PYTHON_TYPE_TO_JSON_SCHEMA: Dict[Type, str] = {
     str: "string",
     int: "integer",
     float: "number",
@@ -46,7 +45,7 @@ _PYTHON_TYPE_TO_JSON_SCHEMA: dict[type, str] = {
 }
 
 
-def _type_to_json_schema(py_type: Any) -> dict[str, Any]:
+def _type_to_json_schema(py_type: Any) -> Dict[str, Any]:
     """Convert a Python type hint to a JSON Schema fragment."""
     origin = getattr(py_type, "__origin__", None)
 
@@ -68,7 +67,7 @@ def _type_to_json_schema(py_type: Any) -> dict[str, Any]:
     return {"type": schema_type}
 
 
-def _parse_docstring_params(docstring: str) -> dict[str, str]:
+def _parse_docstring_params(docstring: str) -> Dict[str, str]:
     """Extract parameter descriptions from a Google-style docstring.
 
     Parses the ``Args:`` section and returns a mapping of param name → description.
@@ -76,10 +75,10 @@ def _parse_docstring_params(docstring: str) -> dict[str, str]:
     if not docstring:
         return {}
 
-    params: dict[str, str] = {}
+    params: Dict[str, str] = {}
     in_args = False
-    current_param: str | None = None
-    current_desc: list[str] = []
+    current_param: Optional[str] = None
+    current_desc: List[str] = []
 
     for line in docstring.splitlines():
         stripped = line.strip()
@@ -117,16 +116,16 @@ def _parse_docstring_params(docstring: str) -> dict[str, str]:
 
 def _build_parameters_schema(
     func: Callable,
-    type_hints: dict[str, Any],
-    param_descriptions: dict[str, str],
-) -> dict[str, Any]:
+    type_hints: Dict[str, Any],
+    param_descriptions: Dict[str, str],
+) -> Dict[str, Any]:
     """Build a JSON Schema from function type hints and docstring.
 
     Skips 'return' annotation and parameters without type hints.
     """
     sig = inspect.signature(func)
-    properties: dict[str, Any] = {}
-    required: list[str] = []
+    properties: Dict[str, Any] = {}
+    required: List[str] = []
 
     for param_name, param in sig.parameters.items():
         if param_name in ("self", "cls"):
@@ -135,7 +134,7 @@ def _build_parameters_schema(
         hint = type_hints.get(param_name)
         if hint is None:
             # No type hint — default to string
-            prop: dict[str, Any] = {"type": "string"}
+            prop: Dict[str, Any] = {"type": "string"}
         else:
             prop = _type_to_json_schema(hint)
 
@@ -150,7 +149,7 @@ def _build_parameters_schema(
 
         properties[param_name] = prop
 
-    schema: dict[str, Any] = {
+    schema: Dict[str, Any] = {
         "type": "object",
         "properties": properties,
     }
@@ -172,7 +171,7 @@ class DecoratedTool(BaseTool):
         func: Callable,
         name: str,
         description: str,
-        parameters_schema: dict[str, Any],
+        parameters_schema: Dict[str, Any],
         safety_level: str = "normal",
     ) -> None:
         self._func = func
@@ -202,7 +201,7 @@ class DecoratedTool(BaseTool):
 
 # ── Global registry reference (set by FlowForgeSDK or manually) ─────
 
-_global_tool_registry: Any | None = None
+_global_tool_registry: Optional[Any] = None
 
 
 def set_tool_registry(registry: Any) -> None:
@@ -214,7 +213,7 @@ def set_tool_registry(registry: Any) -> None:
     _global_tool_registry = registry
 
 
-def get_tool_registry() -> Any | None:
+def get_tool_registry() -> Optional[Any]:
     """Get the global ToolRegistry set by FlowForgeSDK.
 
     Returns None if not set. Callers should fall back to creating a new

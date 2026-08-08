@@ -9,10 +9,8 @@ License: MIT
 
 import asyncio
 import json
-from datetime import UTC, datetime
-
+from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-
 from flowforge.app.deps import get_executor
 from flowforge.core.tracing import get_logger
 
@@ -118,7 +116,7 @@ class ConnectionManager:
         message = {
             "type": event_type,
             "seq": self._next_seq(),
-            "timestamp": datetime.now(UTC).isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
             "payload": payload or {},
         }
         if not self.active_connections.get(task_id):
@@ -169,7 +167,7 @@ async def helm_websocket(websocket: WebSocket, task_id: str):
                             await websocket.send_json(event)
                         except Exception:
                             break
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 continue
     except WebSocketDisconnect:
         manager.disconnect(task_id, websocket)
@@ -188,6 +186,7 @@ async def events_websocket(websocket: WebSocket):
     await websocket.accept()
     event_bus = None
     try:
+        from flowforge.events.event_bus import EventBus
         from flowforge.app.main import event_bus as global_event_bus
         event_bus = global_event_bus
     except Exception as e:
@@ -222,7 +221,7 @@ async def logs_websocket(websocket: WebSocket):
 
     pos = 0
     if log_file.exists():
-        with open(log_file, encoding="utf-8") as f:
+        with open(log_file, "r", encoding="utf-8") as f:
             f.seek(0, 2)
             pos = f.tell()
 
@@ -237,7 +236,7 @@ async def logs_websocket(websocket: WebSocket):
                     pos = 0
                 if current_size == pos:
                     continue
-                with open(log_file, encoding="utf-8") as f:
+                with open(log_file, "r", encoding="utf-8") as f:
                     f.seek(pos)
                     new_lines = f.readlines()
                     pos = f.tell()
@@ -250,7 +249,7 @@ async def logs_websocket(websocket: WebSocket):
                     await websocket.send_json({
                         "type": "log",
                         "line": stripped,
-                        "timestamp": datetime.now(UTC).isoformat() + "Z",
+                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                     })
             except Exception as e:
                 logger.debug(f"Failed to read/send log line: {e}")

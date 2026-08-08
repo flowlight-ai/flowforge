@@ -18,9 +18,11 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 import pytest
 
@@ -37,6 +39,7 @@ from flowforge.evolution.self_dev_base import (
 )
 from flowforge.evolution.self_dev_framework import SelfDevFrameworkLoop
 
+
 # ══════════════════════════════════════════════════════════════════
 # §1 Fake/Stub 工具类
 # ══════════════════════════════════════════════════════════════════
@@ -48,12 +51,12 @@ class _FakeTraeClient:
     策略：根据调用顺序返回预设响应列表，第 N 次调用返回第 N 个响应.
     """
 
-    def __init__(self, responses: list[dict[str, Any]] | None = None) -> None:
+    def __init__(self, responses: List[Dict[str, Any]] | None = None) -> None:
         self._responses = list(responses or [])
         self.call_count = 0
-        self.calls: list[dict[str, Any]] = []
+        self.calls: List[Dict[str, Any]] = []
 
-    async def chat(self, messages: list[dict[str, str]], *, context=None, **kwargs) -> dict[str, Any]:
+    async def chat(self, messages: List[Dict[str, str]], *, context=None, **kwargs) -> Dict[str, Any]:
         self.call_count += 1
         self.calls.append({"messages": messages, "context": context, "kwargs": kwargs})
         if self._responses:
@@ -149,7 +152,7 @@ def reject_callback():
 
 
 @pytest.fixture
-def forgekin_config(temp_project: Path, approval_callback) -> dict[str, Any]:
+def forgekin_config(temp_project: Path, approval_callback) -> Dict[str, Any]:
     return {
         "project_root": str(temp_project),
         "forgekin_id": "forgemind:luban",

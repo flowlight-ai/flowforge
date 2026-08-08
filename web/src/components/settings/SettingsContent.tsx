@@ -56,6 +56,7 @@ function SettingsPageHeader({ title, subtitle, children }: SettingsPageHeaderPro
 /**
  * SettingsContent — Section 调度器
  *
+ * 依据 WEB-FUSION-DESIGN.md §7.2，根据 activeSection 渲染对应的 section 组件。
  * 每个 section 组件自带数据获取逻辑；此处仅负责分发与页头包装。
  */
 export function SettingsContent({ section }: SettingsContentProps) {

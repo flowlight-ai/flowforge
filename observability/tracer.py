@@ -4,11 +4,10 @@ Implements FR-OBS-01: Full-chain distributed tracing.
 Provides trace_id propagation across all execution layers.
 """
 
-import contextvars
 import time
 import uuid
-from typing import Any
-
+import contextvars
+from typing import Optional, Dict, Any
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("observability.tracer")
@@ -27,8 +26,8 @@ class Span:
         self.span_id = str(uuid.uuid4())[:8]
         self.parent_id = parent_id
         self.start_time = time.time()
-        self.end_time: float | None = None
-        self.attributes: dict[str, Any] = {}
+        self.end_time: Optional[float] = None
+        self.attributes: Dict[str, Any] = {}
         self.status = "ok"
 
     def set_attribute(self, key: str, value: Any):
@@ -68,10 +67,10 @@ class Tracer:
     enabling full-chain observability.
     """
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.enabled = self.config.get("enabled", True)
-        self._spans: dict[str, Span] = {}
+        self._spans: Dict[str, Span] = {}
         self._completed_spans: list = []
         self._max_completed = self.config.get("max_completed_spans", 1000)
 

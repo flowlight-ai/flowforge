@@ -1,215 +1,122 @@
+# Feature F003: 交接胶囊（Handoff Capsule）
+
+> **状态**: draft
+> **版本**: v0.1
+> **依赖**: [doc:review/review.md#RA-011] + [doc:roleagent.md#第2章]
+> **关联 ADR**: [doc:decisions/002-collaboration-protocol.md]
+> **类型**: collaboration
+> **创建日期**: 2026-07-17
+> **负责人**: 架构师 Forgekin（猫头鹰·鲁班）
+> **对应 spec.md**: [doc:../spec.md#§3.2]（FR-CORE-002，与本文档同号对应）
+> **对应 arch.md**: [doc:../arch.md#§3.2]（待创建）
+> **对应 design.md**: [doc:../design.md#§3.2]（待创建）
+
 ---
-feature_ids: [F003]
-related_features: [F002, F004, F005, F006, F007]
-topics: [teamact, handoff, capsule, protocol]
-doc_kind: spec
-created: 2026-07-21
----
 
-# F003: 交接胶囊（Handoff Capsule）
+## 1. 概述（Overview）
 
-> **状态**: spec | **负责人**: 架构师Forgekin | **优先级**: P0
-> **依赖 ADR**: [doc:decisions/002-teamact-collaboration-protocol.md]
-> **依赖 Feature**: [doc:features/F002-teamact-loop.md]
-> **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径（RA-011 协议层硬要求）
-> **关联 VISION**: [doc:VISION.md#4]（协作单位：动态能力画像路由）
+交接胶囊（Handoff Capsule）是 TeamAct 六步循环中 Route 步的协议层硬要求：前一个Forgekin传球时必须留下 5 段结构化摘要——What / Why / Tradeoff / Open / Next。它不是可选礼貌，而是接手 Forgekin 快速 bootstrap 的唯一入口。
 
-## 1. 上下文
+本 Feature 在 F002 TeamAct 状态机之上，把 `HandoffCapsule` 从骨架字段升级为带 Schema 校验、版本化、可审计、可回放的协议对象，并接入跨厂商 review 的盲点提示（依赖 F001 CapabilityProfile）。
 
-### 1.1 问题陈述
+## 2. 动机（Motivation）
 
-TeamAct 六步循环（F002）在 ROUTE 步骤把球权从当前持球Forgekin交给下一个Forgekin时，如果只传递一个 `to_owner` 字符串，后继Forgekin必须重读全部上下文（对话流、共享状态、EchoStore）才能判断"该做什么、做到哪一步、为什么这样做"。这导致上下文窗口浪费、推理质量下降，且无法被跨厂商 review 系统复用。本 Feature 提供结构化的 HandoffCapsule，作为 TeamAct 协议层硬要求（roleagent.md RA-011），让球权交接携带最小必要信息，使后继Forgekin无需重读全部上下文即可接管任务。
+`[doc:review/review.md#RA-011]` 指出：v7.0 的 `handoff.py` 只传递任务 ID 和状态枚举，未实现交接胶囊的结构化内容，导致接手 Forgekin 必须重读完整上下文。roleagent.md 第 2 章明确："交接胶囊是协议层硬要求：前一个 agent 传球时必须留下 What/Why/Tradeoff/Open/Next 五段结构化摘要"。
 
-### 1.2 当前痛点
+不做这个 Feature，TeamAct 五项终止条件中的"无悬空任务归属"无法验证，接手 Forgekin 无法区分"作者已决"与"作者未决"的开放问题，会反复重做已决策的权衡。跨厂商 review 也会因为缺少 rationale 而误判 author 的设计意图。
 
-- Forgekin交接只传 `to_owner`，后继Forgekin重读全部上下文，Token 成本高
-- 缺少"做了什么 / 下一步该做什么"的结构化字段，交接质量不可观测
-- 没有 `required_capabilities` 字段，无法驱动 F001 CapabilityProfile 路由
-- 没有 `custody_lease_id` 字段，无法与 F005 BallCustodyRegistry 联动
-- 交接格式漂移，Pydantic / dataclass Schema 缺失，跨厂商 review 无法复用
+交接胶囊还承载 Build to Persist 属性：它编码的是 agent 之间的协作规则，模型越强越值钱，不会因为单个模型升级而退役。
 
-### 1.3 不做的影响
+## 3. 详细设计（Detailed Design）
 
-- TeamAct ROUTE 步骤退化为"口头交接"，违反 RA-011 协议层硬要求
-- 后继Forgekin上下文窗口爆炸，推理质量下降
-- 无法与 F001 CapabilityProfile / F005 BallCustodyRegistry 联动
-- 跨厂商 review 缺少结构化输入，F002 五项终止条件中 `cross_agent_verified` 难以达成
-
-## 2. 决策
-
-### 2.1 核心设计
-
-HandoffCapsule 是 TeamAct 层（区别于 loop 层 `flowforge/loop/state.py` 的 HandoffCapsule）的结构化交接胶囊，由 `flowforge/core/teamact/handoff.py` 实现。设计要点：
-
-- **dataclass 而非 Pydantic**：与 TeamAct 子组件（F004/F005/F006/F007）保持一致，避免引入额外依赖
-- **`from_owner` 与 `summary` 强制非空**：`validate()` 在 `from_owner` 或 `summary` 为空时抛 `TeamActError`，正是 RA-011 指出的"匿名无摘要胶囊迫使接收方重读上下文"故障
-- **`to_owner` 与 `required_capabilities` 二选一**：当 `to_owner` 为空时必须提供 `required_capabilities`，让 AtMentionRouter（F004）+ CapabilityProfile（F001）能解析出下一个持球者
-- **`custody_lease_id` 桥接 F005**：胶囊携带球权 lease id，让 F005 BallCustodyRegistry 能跟踪"哪个 lease 随胶囊流转"
-- **`capsule_id` 自动生成**：`ta-hc-{uuid4_hex[:10]}` 前缀，便于跨厂商 review 与 Eval 系统引用
-- **`created_at` 用 timezone-aware datetime**：避免 naive datetime 在跨时区协作中产生歧义
-
-### 2.2 关键接口
+### 3.1 数据模型
 
 ```python
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-import uuid
-from flowforge.core.errors import TeamActError
+class HandoffCapsule(BaseModel):
+    capsule_id: str
+    author_forgekin_id: str           # 作者Forgekin ID
+    team_id: str                       # TeamAct team_id
+    iteration: int                     # 第几轮迭代
+    what: str                          # 做了什么（事实陈述）
+    why: str                           # 为什么这样做（设计意图）
+    tradeoffs: str                     # 权衡了什么（放弃的选项）
+    open_questions: list[str]          # 留下什么开放问题
+    next_step: str                     # 下一步该做什么
+    evidence_refs: list[str]           # 关联 commit/测试/trace ID
+    blind_spot_hints: list[str]        # 作者已知的盲点提示
+    created_at: datetime
+    schema_version: str = "1.0"
+```
 
+### 3.2 核心接口
 
-@dataclass
-class HandoffCapsule:
-    """Self-contained message passed from one TeamAct owner to the next.
+```python
+class HandoffCapsuleStore(ABC):
+    @abstractmethod
+    async def write(self, capsule: HandoffCapsule) -> str: ...
+    @abstractmethod
+    async def read_latest(self, team_id: str) -> Optional[HandoffCapsule]: ...
+    @abstractmethod
+    async def list_chain(self, team_id: str) -> list[HandoffCapsule]: ...
 
-    Fields:
-        from_owner:           id of the forgekin handing off
-        to_owner:             id of the forgekin picking up (may be empty if
-                              routing is deferred to the at-mention router)
-        summary:              what was done (the "What")
-        next_action_hint:     what the next owner should do (the "Next")
-        required_capabilities: capabilities the next owner must have (drives
-                              CapabilityProfile-based routing, F001)
-        custody_lease_id:     ball-custody lease id (F005) being transferred;
-                              empty when no lease is in play
-    """
-    from_owner: str = ""
-    to_owner: str = ""
-    summary: str = ""
-    next_action_hint: str = ""
-    required_capabilities: list[str] = field(default_factory=list)
-    custody_lease_id: str = ""
-    capsule_id: str = field(default_factory=lambda: f"ta-hc-{uuid.uuid4().hex[:10]}")
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+class HandoffCapsuleValidator:
+    """五段非空校验 + 开放问题可追溯校验"""
+    def validate(self, capsule: HandoffCapsule) -> ValidationResult: ...
+```
 
-    def validate(self) -> None:
-        """Check required fields; raise TeamActError on violation."""
-        if not self.from_owner.strip():
-            raise TeamActError("HandoffCapsule.from_owner must not be empty")
-        if not self.summary.strip():
-            raise TeamActError("HandoffCapsule.summary must not be empty")
-        if not self.to_owner.strip() and not self.required_capabilities:
-            raise TeamActError(
-                "HandoffCapsule must specify either to_owner or required_capabilities "
-                "so the next owner can be resolved"
-            )
+### 3.3 关键算法
 
-### 2.3 协作流程
+- **五段非空校验**：what/why/tradeoffs/open_questions/next_step 任一为空即拒绝写入。
+- **开放问题去重**：与链上前一胶囊的 open_questions 比对，标记"已解决 / 仍开放 / 新增"。
+- **盲点提示注入**：从 F001 CapabilityProfile 读取 author 的 blind_spots，自动附加到 blind_spot_hints，供接手 reviewer 参考。
 
-HandoffCapsule 在 TeamAct 生态中与其他 4 份子 Feature 协作：
+### 3.4 配置外置（YAML 示例）
 
-- **F004 AtMentionRouter**：`to_owner` 字段由 `AtMentionRouter.route()` 解析行首 @ 指令填充；当 `to_owner` 为空时，`required_capabilities` 驱动 F001 CapabilityProfile 路由
-- **F005 BallCustodyRegistry**：`custody_lease_id` 字段桥接球权 lease，ROUTE 步骤生成 capsule 时同步 acquire lease，接收方消费 capsule 时同步 release 旧 lease
-- **F006 PushBackProtocol**：推回触发时生成 capsule 通知 `to_owner`（被推回方），capsule 的 `summary` 携带推回理由摘要
-- **F007 PingPongCircuitBreaker**：熔断后生成升级 capsule，`to_owner="operator"`，`next_action_hint` 携带熔断原因与失败计数
+```yaml
+handoff_capsule:
+  schema_version: "1.0"
+  max_open_questions: 7
+  enforce_blind_spot_hints: true
+  storage_backend: sqlite
+  retention_days: 90
+```
 
-协作时序：F004 路由解析 → F003 capsule 生成（validate）→ F005 lease 流转 → F006 推回（可选）→ F007 熔断（可选）→ operator 升级。
+## 4. 验收标准（Acceptance Criteria）
 
-### 2.4 关键不变量
+- [ ] AC-1: 写入交接胶囊时五段字段任一为空即抛 SchemaError
+- [ ] AC-2: 可按 team_id 读取最新胶囊与完整链
+- [ ] AC-3: blind_spot_hints 自动从 author CapabilityProfile 注入
+- [ ] AC-4: 开放问题可标记"已解决/仍开放/新增"状态
+- [ ] AC-5: 胶囊通过 Repository 层持久化，禁直操作数据库
 
-- INV-1: capsule 在 ROUTE 步骤生成时必须 `validate()` 通过，否则 TeamAct 循环中止
-- INV-2: `from_owner` 与 `summary` 永不为空（RA-011 协议层硬要求，违反抛 `TeamActError`）
-- INV-3: `to_owner` 与 `required_capabilities` 至少一个非空，保证下一个持球者可被解析
-- INV-4: `custody_lease_id` 非空时必须对应 F005 BallCustodyRegistry 中活跃（未过期）的 lease
-- INV-5: `created_at` 必须 timezone-aware（`datetime.now(timezone.utc)`），禁 naive datetime
-- INV-6: `capsule_id` 自动生成且全局唯一（`ta-hc-` 前缀 + 10 位 hex），禁手工填充
+## 5. 测试策略
 
-### 2.5 失败模式与恢复
+### 5.1 单元测试
 
-| # | 失败模式 | 检测 | 恢复 |
-|---|---------|------|------|
-| FM-1 | `from_owner` 为空 | `validate()` 抛 `TeamActError` | operator 手动补全或重新生成 capsule |
-| FM-2 | `custody_lease_id` 与 F005 lease 不同步 | 接收方 acquire 失败 | 重新 acquire 新 lease，更新 capsule 字段 |
-| FM-3 | `required_capabilities` 无法被任何Forgekin满足 | F001 路由返回空 | 升级 operator，手动指定 `to_owner` |
-| FM-4 | capsule 字段缺失或格式漂移 | dataclass Schema 校验 | 架构师Forgekin review，对齐 `handoff.py` |
-| FM-5 | 与 loop 层 HandoffCapsule 混淆 | 模块路径隔离 + docstring 区分 | 引用 `core/teamact/handoff.py` 而非 `loop/state.py` |
+- 五段非空校验、Schema 序列化、开放问题去重、盲点提示注入。
 
-恢复原则：`validate()` 失败即中止 ROUTE 步骤，禁生成非法 capsule；所有失败均升级 trace 供 operator 排查。
+### 5.2 集成测试
 
-触发阈值：ROUTE 步骤生成 capsule 时强制 `validate()`；接收方消费 capsule 时校验 `custody_lease_id` 活跃性。
+- 接入 F002 TeamActState.advance，验证 Route 步强制写胶囊。
+- 接入 F001 CapabilityProfile，验证盲点提示正确注入。
 
-### 2.6 监控指标
+### 5.3 E2E 测试（必须遵守 T1-T8 测试铁律）
 
-| 指标 | 含义 | 采集方式 |
-|------|------|---------|
-| capsule_validate_failure_count | `validate()` 失败次数 | trace 日志统计 |
-| capsule_custody_lease_mismatch_count | `custody_lease_id` 与 F005 lease 不同步次数 | 接收方 acquire 失败统计 |
-| capsule_complete_rate | capsule 8 字段完整率 | F002 AC-B4 联动验收 |
-| handoff_latency_ms | ROUTE 步骤生成 capsule 延迟 | trace 时间戳差 |
+- 3 个不同厂商Forgekin协作完成一个 Feature，验证胶囊在三者间正确传递且开放问题状态正确流转。**遵守 T1-T8**：真实 LLM、真实数据、真实工具调用，LLM 生成内容经 LLM 审核。
 
-监控原则：所有指标通过 `core.tracing.get_logger` 注入 trace_id，禁裸 print（铁律 5）。
+## 6. 引用
 
-## 3. 验收标准
+- [doc:roleagent.md#第2章]
+- [doc:review/review.md#第八章/RA-011]
+- [doc:decisions/002-collaboration-protocol.md]
+- [doc:design/naming-contract.md#2.2]（Forgekin Forgekin）
+- [doc:features/F001-capability-profile.md]
+- [doc:features/F002-teamact-loop.md]
+- [doc:project_rules.md#T1-T8]
 
-### Phase A（数据结构 + 协议层硬要求）
+---
 
-- [ ] AC-A1: `HandoffCapsule` 包含 8 个字段（from_owner / to_owner / summary / next_action_hint / required_capabilities / custody_lease_id / capsule_id / created_at）
-- [ ] AC-A2: `validate()` 在 `from_owner` 为空时抛 `TeamActError`
-- [ ] AC-A3: `validate()` 在 `summary` 为空时抛 `TeamActError`
-- [ ] AC-A4: `validate()` 在 `to_owner` 与 `required_capabilities` 同时为空时抛 `TeamActError`
-- [ ] AC-A5: `capsule_id` 自动生成 `ta-hc-` 前缀 + 10 位 hex，保证全局唯一
-- [ ] AC-A6: `created_at` 默认 timezone-aware（`datetime.now(timezone.utc)`），禁 naive datetime
-- [ ] AC-A7: 持久化通过 Repository 层（Durable State Surfaces），禁直接操作数据库（编程红线第 13 条）
+## 7. 变更历史
 
-### Phase B（TeamAct 集成 + E2E）
-
-- [ ] AC-B1: F002 TeamActState 在 ROUTE 步骤必须生成 HandoffCapsule 并 validate 通过
-- [ ] AC-B2: 当 `to_owner` 为空时，胶囊的 `required_capabilities` 能被 F004 AtMentionRouter + F001 CapabilityProfile 解析出下一个持球者
-- [ ] AC-B3: 胶囊的 `custody_lease_id` 能驱动 F005 BallCustodyRegistry 完成 lease 流转
-- [ ] AC-B4: 交接胶囊完整率 100%（F002 AC-B4 联动验收）
-- [ ] AC-B5: E2E 测试 — 3 个Forgekin协作完成一个 Feature，胶囊正确传递，后继Forgekin无需重读全部上下文
-- [ ] AC-B6: 遵守 T1-T8 测试铁律（真实 LLM 调用、真实场景数据、不跳过验证、不 Mock 工具、采集完整指标、LLM 生成内容经 LLM 审核、Web 功能操控浏览器验证 DOM）
-
-## 4. 依赖
-
-- **Evolved from**: F002（TeamAct 主循环 ROUTE 步骤）
-- **Blocked by**: F002
-- **Related**: F001（CapabilityProfile 路由依赖 `required_capabilities`）、F004（AtMentionRouter 解析 `to_owner`）、F005（BallCustodyRegistry 流转 `custody_lease_id`）、F006（PushBack 可触发交接）、F007（熔断后生成升级胶囊给 operator）
-
-## 5. 风险
-
-| 风险 | 缓解 |
-|------|------|
-| 胶囊字段过多导致Forgekin懒得填 | `validate()` 强制 `from_owner` + `summary` 非空，其余字段按场景填写 |
-| `required_capabilities` 命名不规范导致路由失败 | 与 F001 CapabilityProfile 命名契约对齐，由架构师Forgekin review |
-| `custody_lease_id` 与 F005 状态不同步 | 胶囊生成时同步 acquire lease，胶囊消费时同步 release 旧 lease |
-| 与 loop 层 HandoffCapsule 混淆 | 模块路径隔离（`core/teamact/handoff.py` vs `loop/state.py`）+ docstring 明确区分 |
-
-## 6. Open Questions
-
-| # | 问题 | 状态 |
-|---|------|------|
-| OQ-1 | 胶囊是否需要支持版本号字段，用于跨Forgekin迭代时追踪 capsule 演化？ | ⬜ 未定 |
-| OQ-2 | `next_action_hint` 是否需要结构化为 Pydantic 模型（如 `{step, args, expected_output}`）？ | ⬜ 未定 |
-| OQ-3 | 胶囊是否需要签名（SoulImprint）防止伪造？ | ⬜ 未定 |
-
-## 7. Key Decisions
-
-| # | 决策 | 理由 | 日期 |
-|---|------|------|------|
-| KD-1 | dataclass 而非 Pydantic | 与 F004/F005/F006/F007 子组件一致，避免引入额外依赖 | 2026-07-21 |
-| KD-2 | `from_owner` + `summary` 强制非空 | RA-011：匿名无摘要胶囊迫使接收方重读全部上下文 | 2026-07-21 |
-| KD-3 | `to_owner` 与 `required_capabilities` 二选一 | 支持显式路由（to_owner）与能力路由（required_capabilities）两种模式 | 2026-07-21 |
-| KD-4 | `capsule_id` 用 `ta-hc-` 前缀 | 与 loop 层 HandoffCapsule 区分，便于日志与 Eval 检索 | 2026-07-21 |
-
-## 8. Timeline
-
-| 日期 | 事件 |
-|------|------|
-| 2026-07-21 | 立项，基于 ADR-002 与 F002 提取交接胶囊子 Feature 规格，术语对齐 Forgekin |
-
-## 9. Review Gate
-
-- Phase A: 单元测试通过（`validate()` 全部分支覆盖），由架构师Forgekin review
-- Phase B: E2E 测试由跨厂商 reviewer Forgekin review，胶囊完整率 100% + 后继Forgekin无需重读上下文验证通过
-
-## 10. Links
-
-| 类型 | 路径 | 说明 |
-|------|------|------|
-| **ADR** | `docs/decisions/002-teamact-collaboration-protocol.md` | TeamAct 协作协议决策 |
-| **Feature** | `docs/features/F002-teamact-loop.md` | TeamAct 主循环 |
-| **Feature** | `docs/features/F004-at-mention-router.md` | @mention 路由 |
-| **Feature** | `docs/features/F005-ball-custody-lease.md` | 球权租借 |
-| **Feature** | `docs/features/F006-push-back-protocol.md` | 推回协议 |
-| **Feature** | `docs/features/F007-pingpong-circuit-breaker.md` | 乒乓球熔断器 |
-| **代码** | `flowforge/core/teamact/handoff.py` | HandoffCapsule 实现 |
+| 日期 | 版本 | 变更 | 变更者 |
+|------|:----:|------|--------|

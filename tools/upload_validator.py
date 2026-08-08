@@ -5,8 +5,9 @@ from __future__ import annotations
 import fnmatch
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import PurePosixPath
+from typing import Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -51,9 +52,9 @@ class UploadValidationResult:
     """上传校验结果。"""
 
     valid: bool
-    error: str | None = None
-    safe_filename: str | None = None
-    file_type: str | None = None
+    error: Optional[str] = None
+    safe_filename: Optional[str] = None
+    file_type: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +163,7 @@ class UploadValidator:
                 return True
         return False
 
-    def _extract_extension(self, file_name: str) -> str | None:
+    def _extract_extension(self, file_name: str) -> Optional[str]:
         """从文件名中提取扩展名（小写），支持 .env.example 等多段扩展名。"""
         # 先尝试匹配多段扩展名（如 .env.example, .gitignore）
         lower = file_name.lower()
@@ -176,7 +177,7 @@ class UploadValidator:
     def _is_extension_allowed(self, ext: str) -> bool:
         return ext.lower() in ALLOWED_EXTENSIONS
 
-    def _sanitize_filename(self, file_name: str) -> str | None:
+    def _sanitize_filename(self, file_name: str) -> Optional[str]:
         """剥离路径组件，拒绝包含 .. / \\ 的文件名。"""
         # 拒绝路径穿越符号
         if ".." in file_name or "/" in file_name or "\\" in file_name:

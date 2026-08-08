@@ -25,7 +25,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -40,11 +40,12 @@ from flowforge.core.world_engine.citizens import (
     World,
 )
 from flowforge.core.world_engine.core_identity import CoreIdentityLayer
-from flowforge.core.world_engine.driver import WorldDriver
 from flowforge.core.world_engine.relational_memory import RelationalMemory
 from flowforge.core.world_engine.role_mask import RoleMask, RoleMaskLayer
+from flowforge.core.world_engine.driver import WorldDriver
 from flowforge.core.world_engine.session_memory import SessionMemory
 from flowforge.core.world_engine.world import WorldLayer
+
 
 # ── 测试夹具：真实西游记世界观数据 ──────────────────────────────
 
@@ -111,7 +112,7 @@ def wukong_identity() -> CoreIdentityLayer:
         forgekin_id="forgemind:writer_cat_001",
         name="墨灵",
         species="virtual",
-        birth_timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        birth_timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
         core_personality=["沉稳", "好奇", "严谨"],
         value_anchors=[
             "禁止删除测试用例",
@@ -204,7 +205,7 @@ async def test_canon_memory_rejects_unconfirmed_writer(
         world_id=journey_world.world_id,
         decision="孙悟空是齐天大圣",
         decided_by="operator",
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
     # Forgekin自身（forgekin:xxx）无 Canon 写入权限
     ok = await canon_memory.write(decision, confirmed_by="forgemind:writer_cat_001")
@@ -223,7 +224,7 @@ async def test_canon_memory_accepts_operator(
         world_id=journey_world.world_id,
         decision="唐僧取经九九八十一难",
         decided_by="operator",
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
     ok = await canon_memory.write(decision, confirmed_by="operator")
     assert ok is True
@@ -243,7 +244,7 @@ async def test_canon_memory_rejects_invalid_decider(
             world_id=journey_world.world_id,
             decision="无效决策",
             decided_by="forgemind:writer_cat_001",  # 非法 decider
-            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
         )
 
 
@@ -455,7 +456,7 @@ async def test_session_clear_does_not_pollute_canon(
         world_id=journey_world.world_id,
         decision="唐僧是金蝉子转世",
         decided_by="operator",
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
     await canon_memory.write(canon_decision, confirmed_by="operator")
     # 3. 清理 Session

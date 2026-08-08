@@ -1,9 +1,9 @@
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from typing import Optional
 
-from flowforge.core.tracing import get_logger
 from flowforge.core.workspace import get_workspace_manager
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("workspace_api")
 
@@ -12,8 +12,8 @@ router = APIRouter(prefix="/api/v1/workspace", tags=["workspace"])
 
 class CreateWorkspaceRequest(BaseModel):
     task_id: str
-    metadata: dict | None = None
-    workspace_dir: str | None = None
+    metadata: Optional[dict] = None
+    workspace_dir: Optional[str] = None
 
 
 class WriteFileRequest(BaseModel):
@@ -32,7 +32,7 @@ class ValidateCommandRequest(BaseModel):
 class SaveMessageRequest(BaseModel):
     role: str = "user"
     content: str = ""
-    model: str | None = None
+    model: Optional[str] = None
 
 
 # ── Named Workspace Endpoints ──
@@ -117,12 +117,12 @@ async def get_workspace(task_id: str):
         raise HTTPException(status_code=404, detail=f"Workspace not found: {task_id}")
     messages = ws.load_messages(task_id)
     context = ws.load_context(task_id)
-    import json
     from pathlib import Path
+    import json
     task_meta_path = Path(str(path)) / ".helm" / "task.json"
     task_meta = None
     if task_meta_path.exists():
-        with open(task_meta_path, encoding="utf-8") as f:
+        with open(task_meta_path, "r", encoding="utf-8") as f:
             task_meta = json.load(f)
     files = ws.list_all_files(task_id)
     return {
@@ -239,18 +239,18 @@ async def get_status(task_id: str):
     path = ws.get_workspace_path(task_id)
     if not path:
         raise HTTPException(status_code=404, detail=f"Workspace not found: {task_id}")
-    import json
     from pathlib import Path
+    import json
     task_meta_path = Path(str(path)) / ".helm" / "task.json"
     task_meta = None
     if task_meta_path.exists():
-        with open(task_meta_path, encoding="utf-8") as f:
+        with open(task_meta_path, "r", encoding="utf-8") as f:
             task_meta = json.load(f)
     # Also check .checkpoint.json for the latest status
     checkpoint_path = Path(str(path)) / ".checkpoint.json"
     checkpoint = None
     if checkpoint_path.exists():
-        with open(checkpoint_path, encoding="utf-8") as f:
+        with open(checkpoint_path, "r", encoding="utf-8") as f:
             checkpoint = json.load(f)
     current_status = "unknown"
     if task_meta and isinstance(task_meta, dict):

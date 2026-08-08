@@ -16,7 +16,7 @@ routing and thread logic lives in ``A2AManager`` / ``MentionRouter``.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from typing import AsyncIterator
 
 from flowforge.a2a.protocol import A2AMention, A2AMessage
 

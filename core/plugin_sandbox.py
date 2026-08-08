@@ -13,8 +13,7 @@ Full process isolation would require IPC and is planned for a future release.
 
 import asyncio
 import time
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from flowforge.core.plugin_protocol import PluginManifest
 from flowforge.core.tracing import get_logger
@@ -33,14 +32,14 @@ class Permission:
     ENVIRONMENT = "environment"
 
 
-ALL_PERMISSIONS: set[str] = {
+ALL_PERMISSIONS: Set[str] = {
     Permission.NETWORK, Permission.FILESYSTEM,
     Permission.DATABASE, Permission.SUBPROCESS,
     Permission.ENVIRONMENT,
 }
 
 # Default permission sets per safety level
-SAFETY_PERMISSIONS: dict[str, set[str]] = {
+SAFETY_PERMISSIONS: Dict[str, Set[str]] = {
     "readonly": set(),  # No permissions needed
     "normal": {Permission.NETWORK, Permission.FILESYSTEM},
     "dangerous": ALL_PERMISSIONS,
@@ -61,13 +60,13 @@ class SandboxConfig:
 
     def __init__(
         self,
-        allowed_permissions: set[str] | None = None,
+        allowed_permissions: Optional[Set[str]] = None,
         max_execution_time: float = 300.0,
         max_memory_mb: int = 512,
-        allowed_domains: set[str] | None = None,
-        denied_paths: set[str] | None = None,
+        allowed_domains: Optional[Set[str]] = None,
+        denied_paths: Optional[Set[str]] = None,
     ):
-        self.allowed_permissions: set[str] = (
+        self.allowed_permissions: Set[str] = (
             allowed_permissions if allowed_permissions is not None
             else {Permission.NETWORK, Permission.FILESYSTEM}
         )
@@ -91,13 +90,13 @@ class PluginSandbox:
        a specific plugin name and manifest
     """
 
-    def __init__(self, config: SandboxConfig | None = None):
+    def __init__(self, config: Optional[SandboxConfig] = None):
         self._config = config or SandboxConfig()
-        self._audit_log: list[dict] = []
+        self._audit_log: List[dict] = []
 
         # Per-plugin sandbox fields (used when created via SandboxManager)
         self._plugin_name: str = ""
-        self._manifest: PluginManifest | None = None
+        self._manifest: Optional[PluginManifest] = None
         self._timeout_seconds: int = 300
         self._execution_count: int = 0
         self._total_execution_time: float = 0.0
@@ -112,7 +111,7 @@ class PluginSandbox:
         return self._plugin_name
 
     @property
-    def permissions(self) -> set[str]:
+    def permissions(self) -> Set[str]:
         return self._config.allowed_permissions
 
     def check_permission(self, plugin_name: str, permission: str) -> bool:
@@ -176,7 +175,7 @@ class PluginSandbox:
                 timeout=self._config.max_execution_time,
             )
             return result
-        except TimeoutError:
+        except asyncio.TimeoutError:
             logger.error(
                 f"[sandbox] Plugin {plugin_name} timed out "
                 f"after {self._config.max_execution_time}s"
@@ -189,7 +188,7 @@ class PluginSandbox:
             raise
 
     async def execute_with_timeout(
-        self, coro, timeout: int | None = None,
+        self, coro, timeout: Optional[int] = None,
     ) -> Any:
         """Execute a coroutine with timeout and resource tracking.
 
@@ -220,7 +219,7 @@ class PluginSandbox:
                 duration_ms=int(elapsed * 1000),
             )
             return result
-        except TimeoutError:
+        except asyncio.TimeoutError:
             elapsed = time.time() - start
             self._total_execution_time += elapsed
             self._audit(
@@ -250,7 +249,7 @@ class PluginSandbox:
         self._audit_log.append(entry)
         logger.debug(f"[sandbox:{self._plugin_name}] {action}: {kwargs}")
 
-    def get_audit_log(self, plugin_name: str | None = None) -> list[dict]:
+    def get_audit_log(self, plugin_name: Optional[str] = None) -> List[dict]:
         """Get audit log entries, optionally filtered by plugin name."""
         if plugin_name:
             return [e for e in self._audit_log if e.get("plugin") == plugin_name]
@@ -260,7 +259,7 @@ class PluginSandbox:
         """Clear the audit log."""
         self._audit_log.clear()
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """Return sandbox statistics."""
         return {
             "plugin": self._plugin_name,
@@ -278,7 +277,7 @@ class PluginSandbox:
 def create_plugin_sandbox(
     plugin_name: str,
     manifest: PluginManifest,
-    permissions: set[str] | None = None,
+    permissions: Optional[Set[str]] = None,
     timeout_seconds: int = 300,
     max_memory_mb: int = 512,
 ) -> PluginSandbox:
@@ -308,7 +307,7 @@ class SandboxManager:
     """Manages sandboxes for all loaded plugins."""
 
     def __init__(self, default_timeout: int = 300):
-        self._sandboxes: dict[str, PluginSandbox] = {}
+        self._sandboxes: Dict[str, PluginSandbox] = {}
         self._default_timeout = default_timeout
 
     def create_sandbox(self, plugin_name: str, manifest: PluginManifest) -> PluginSandbox:
@@ -325,7 +324,7 @@ class SandboxManager:
         )
         return sandbox
 
-    def get_sandbox(self, plugin_name: str) -> PluginSandbox | None:
+    def get_sandbox(self, plugin_name: str) -> Optional[PluginSandbox]:
         """Get the sandbox for a plugin, or None."""
         return self._sandboxes.get(plugin_name)
 
@@ -334,6 +333,6 @@ class SandboxManager:
         if plugin_name in self._sandboxes:
             del self._sandboxes[plugin_name]
 
-    def list_sandboxes(self) -> list[dict[str, Any]]:
+    def list_sandboxes(self) -> List[Dict[str, Any]]:
         """Return stats for all managed sandboxes."""
         return [s.get_stats() for s in self._sandboxes.values()]

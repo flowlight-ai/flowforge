@@ -3,6 +3,7 @@
 /**
  * ExternalAgentList — 外部接入智能体列表
  *
+ * 依据 WEB-FUSION-DESIGN.md §6.3：
  *   Claude Code / Codex / OpenCode / Trae / Gemini（通过 ExternalAgentAdapter）
  *
  * 数据来源：/api/v1/external-agents

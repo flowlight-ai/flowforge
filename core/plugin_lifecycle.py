@@ -10,9 +10,9 @@ Manages the full lifecycle of protocol-based plugins:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, List, Optional
 
-from flowforge.core.plugin_protocol import FlowForgePlugin, PluginContext, PluginState
+from flowforge.core.plugin_protocol import FlowForgePlugin, PluginState, PluginContext
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("plugin_lifecycle")
@@ -23,23 +23,23 @@ class PluginRegistrationRecord:
 
     def __init__(self, plugin_name: str):
         self.plugin_name = plugin_name
-        self.agent_names: list[str] = []
-        self.tool_names: list[str] = []
-        self.mode_names: list[str] = []
-        self.route_prefixes: list[str] = []
-        self.event_subscriptions: list[tuple] = []  # (event_type, handler)
-        self.schedule_ids: list[str] = []
+        self.agent_names: List[str] = []
+        self.tool_names: List[str] = []
+        self.mode_names: List[str] = []
+        self.route_prefixes: List[str] = []
+        self.event_subscriptions: List[tuple] = []  # (event_type, handler)
+        self.schedule_ids: List[str] = []
         self.middleware_added: bool = False
         # V2 tracking
-        self.workflow_names: list[str] = []
-        self.gate_names: list[str] = []
-        self.evaluator_names: list[str] = []
-        self.sop_names: list[str] = []
-        self.quality_gate_names: list[str] = []
-        self.context_layer_names: list[str] = []
-        self.step_handler_names: list[str] = []
+        self.workflow_names: List[str] = []
+        self.gate_names: List[str] = []
+        self.evaluator_names: List[str] = []
+        self.sop_names: List[str] = []
+        self.quality_gate_names: List[str] = []
+        self.context_layer_names: List[str] = []
+        self.step_handler_names: List[str] = []
 
-    def summary(self) -> dict[str, Any]:
+    def summary(self) -> Dict[str, Any]:
         return {
             "plugin": self.plugin_name,
             "agents": len(self.agent_names),
@@ -89,10 +89,10 @@ class PluginLifecycleManager:
         self._plugin_registry = plugin_registry
         self._event_store = event_store
 
-        self._plugins: dict[str, FlowForgePlugin] = {}
-        self._states: dict[str, PluginState] = {}
-        self._records: dict[str, PluginRegistrationRecord] = {}
-        self._contexts: dict[str, PluginContext] = {}
+        self._plugins: Dict[str, FlowForgePlugin] = {}
+        self._states: Dict[str, PluginState] = {}
+        self._records: Dict[str, PluginRegistrationRecord] = {}
+        self._contexts: Dict[str, PluginContext] = {}
 
     def register_plugin(self, plugin: FlowForgePlugin) -> None:
         """Register a loaded plugin and track its state."""
@@ -110,16 +110,16 @@ class PluginLifecycleManager:
         """Store a plugin's context for later use (reload, shutdown)."""
         self._contexts[plugin_name] = context
 
-    def get_plugin(self, name: str) -> FlowForgePlugin | None:
+    def get_plugin(self, name: str) -> Optional[FlowForgePlugin]:
         return self._plugins.get(name)
 
-    def get_state(self, name: str) -> PluginState | None:
+    def get_state(self, name: str) -> Optional[PluginState]:
         return self._states.get(name)
 
-    def get_record(self, name: str) -> PluginRegistrationRecord | None:
+    def get_record(self, name: str) -> Optional[PluginRegistrationRecord]:
         return self._records.get(name)
 
-    def list_plugins(self) -> list[dict[str, Any]]:
+    def list_plugins(self) -> List[Dict[str, Any]]:
         """List all managed plugins with their state."""
         result = []
         for name, plugin in self._plugins.items():
@@ -136,7 +136,7 @@ class PluginLifecycleManager:
             result.append(entry)
         return result
 
-    async def unload_plugin(self, name: str) -> dict[str, Any]:
+    async def unload_plugin(self, name: str) -> Dict[str, Any]:
         """Unload a plugin: call on_shutdown, remove all registrations."""
         plugin = self._plugins.get(name)
         if not plugin:
@@ -148,7 +148,7 @@ class PluginLifecycleManager:
 
         self._states[name] = PluginState.STOPPING
         record = self._records.get(name, PluginRegistrationRecord(name))
-        removed: dict[str, Any] = {}
+        removed: Dict[str, Any] = {}
 
         try:
             # 1. Call on_shutdown
@@ -219,7 +219,7 @@ class PluginLifecycleManager:
             logger.error(f"Failed to unload plugin '{name}': {e}", exc_info=True)
             return {"status": "error", "error": str(e)}
 
-    async def reload_plugin(self, name: str) -> dict[str, Any]:
+    async def reload_plugin(self, name: str) -> Dict[str, Any]:
         """Reload a plugin: unload then load."""
         plugin = self._plugins.get(name)
         if not plugin:
@@ -248,7 +248,7 @@ class PluginLifecycleManager:
             logger.error(f"Failed to reload plugin '{name}': {e}", exc_info=True)
             return {"status": "error", "error": str(e)}
 
-    async def pause_plugin(self, name: str) -> dict[str, Any]:
+    async def pause_plugin(self, name: str) -> Dict[str, Any]:
         """Pause a plugin: stop event handlers and schedules, keep agents/tools."""
         plugin = self._plugins.get(name)
         if not plugin:
@@ -280,7 +280,7 @@ class PluginLifecycleManager:
         logger.info(f"Plugin '{name}' paused (agents/tools/routes still active)")
         return {"status": "success", "plugin": name, "state": "paused"}
 
-    async def resume_plugin(self, name: str) -> dict[str, Any]:
+    async def resume_plugin(self, name: str) -> Dict[str, Any]:
         """Resume a paused plugin: restart event handlers and schedules."""
         plugin = self._plugins.get(name)
         if not plugin:
@@ -327,12 +327,8 @@ class PluginLifecycleManager:
         # V2 hooks
         try:
             from flowforge.sdk import (
-                ContextLayerRegistry,
-                EvaluatorRegistry,
-                GateRegistry,
-                QualityGateRegistry,
-                SOPRegistry,
-                WorkflowRegistry,
+                WorkflowRegistry, GateRegistry, QualityGateRegistry,
+                EvaluatorRegistry, SOPRegistry, ContextLayerRegistry,
                 WorkflowStepHandlerRegistry,
             )
             # Use SDK shared instances to avoid isolation from SDK's lazy-loaded registries

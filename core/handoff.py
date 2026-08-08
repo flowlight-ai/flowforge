@@ -29,7 +29,7 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -52,7 +52,7 @@ class Handoff(BaseModel):
 
     target: str
     condition: str
-    description: str | None = None
+    description: Optional[str] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

@@ -1,0 +1,54 @@
+# IM 议事通道配置 — F047 §2.4 + §3.3
+#
+# 对应 F047 §2.5 不变量：
+#   - I1 通道故障降级：channels 顺序决定降级优先级（console > trae > webchat）
+#   - I2 议事不可篡改：archive.enabled + JSONL append-only
+#   - I3 operator 决策必经：所有审批通过 IMCouncilManager.request_approval
+#   - I4 超时自动拒绝：approval.timeout_seconds + auto_reject_on_timeout
+#   - I5 议事记录归档：archive.path 落盘 + Phase 3 同步 MindCodex
+#
+# 红线 11（禁止硬编码路径）：所有路径支持 ${ENV_VAR} 或 ${ENV_VAR:default} 占位符
+# 红线 12（DI 注入）：通道实例通过 IMCouncilManager.register_channel 注入
+# 铁律 5（配置外置）：所有可调参数集中在本文件
+#
+# 环境变量（优先级高于本文件）：
+#   - FLOWFORGE_BRIDGE_DIR: Trae 桥接共享目录（与 F045 共用，复用 ${FLOWFORGE_BRIDGE_DIR}）
+#   - FLOWFORGE_IM_ARCHIVE_DIR: 归档目录路径（覆盖 archive.path）
+
+im_council:
+  # 是否启用 IM 议事通道（false 时 IMCouncilManager.register_channel 拒绝注册）
+  enabled: true
+
+  # 默认通道：auto 时启用 I1 降级链路（console > trae > webchat）
+  # 指定具体通道名时强制使用该通道，失败时降级到 auto
+  default_channel: "console"
+
+  # 通道配置（每个通道独立 enabled 开关 + 通道专属参数）
+  channels:
+    # CLI 终端通道（Phase 1 完整实现）
+    console:
+      enabled: true
+      prompt_prefix: "[FlowForge]"
+
+    # Web 版群通道（Phase 2 启用，当前 skeleton）
+    webchat:
+      enabled: false
+      websocket_url: "ws://localhost:8000/ws/im"
+
+    # Trae IDE 桥接通道（Phase 1 骨架，Phase 3 完整）
+    # 复用 F045 ${FLOWFORGE_BRIDGE_DIR} 共享目录
+    trae:
+      enabled: true
+      bridge_dir: "${FLOWFORGE_BRIDGE_DIR:d:/software/openclaw/flowforge/.trae_bridge}"
+
+  # 审批流程参数（I4 超时控制）
+  approval:
+    timeout_seconds: 300          # 默认审批超时（5 分钟）
+    auto_reject_on_timeout: true  # 超时是否自动 decide(rejected, "timeout")
+
+  # 归档配置（I2 append-only + I5 落盘 + Phase 3 MindCodex 同步）
+  archive:
+    enabled: true
+    # 归档目录路径（支持 ${ENV_VAR:default}，红线 11）
+    # 每日生成一个 JSONL 文件：{archive.path}/{YYYY-MM-DD}.jsonl
+    path: "${FLOWFORGE_IM_ARCHIVE_DIR:data/im_council/archive}"

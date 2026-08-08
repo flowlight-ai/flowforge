@@ -18,11 +18,11 @@
 
 from flowforge.review.engine import ReviewEngine
 from flowforge.review.models import (
-    ReviewerInfo,
     ReviewFinding,
     ReviewProvenance,
     ReviewRequest,
     ReviewResponse,
+    ReviewerInfo,
     SeverityLevel,
 )
 from flowforge.review.pairing import ReviewerPairing

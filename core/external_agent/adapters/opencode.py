@@ -19,17 +19,72 @@ License: MIT
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from typing import Any
+import asyncio
+import json
+import os
+from typing import Any, AsyncIterator, Optional
 
 from flowforge.core.external_agent.adapter import (
     ExternalAgentAdapter,
     ExternalAgentResult,
 )
+from flowforge.core.external_agent.cli_ndjson import (
+    parse_cli_invocation,
+    stream_cli_invocation,
+)
 from flowforge.core.external_agent.host_injection import SandboxConfig
+from flowforge.core.external_agent.manifest import AgentProviderManifest
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("external_agent.adapter.opencode")
+
+
+def _text_parts(ndjson_objects: list[dict[str, Any]]) -> str:
+    """从 OpenCode ``--format json`` 事件流中提取 assistant 文本输出。
+
+    OpenCode SDK 的事件流中，``type == "text"`` 且 ``part.type == "text"``
+    的事件携带最终文本（``part.text``）。将多个文本片段按行合并，作为
+    三方 Agent 的原始输出。
+
+    Returns:
+        合并后的文本字符串（无文本事件时返回空串）。
+    """
+    parts: list[str] = []
+    for obj in ndjson_objects:
+        if not isinstance(obj, dict):
+            continue
+        if obj.get("type") != "text":
+            continue
+        part = obj.get("part")
+        if not isinstance(part, dict) or part.get("type") != "text":
+            continue
+        text = part.get("text")
+        if isinstance(text, str) and text:
+            parts.append(text)
+    return "\n".join(parts)
+
+
+def _token_usage(ndjson_objects: list[dict[str, Any]]) -> tuple[int, float]:
+    """从 ``step_finish`` 事件中累计 token 与成本（EX-006）。
+
+    Returns:
+        (total_tokens, total_cost) 元组。
+    """
+    total_tokens = 0
+    total_cost = 0.0
+    for obj in ndjson_objects:
+        if not isinstance(obj, dict) or obj.get("type") != "step_finish":
+            continue
+        part = obj.get("part")
+        if not isinstance(part, dict):
+            continue
+        tokens = part.get("tokens")
+        if isinstance(tokens, dict):
+            total_tokens += int(tokens.get("total") or 0)
+        cost = part.get("cost")
+        if isinstance(cost, (int, float)):
+            total_cost += float(cost)
+    return total_tokens, total_cost
 
 
 class OpenCodeAdapter(ExternalAgentAdapter):
@@ -75,44 +130,144 @@ class OpenCodeAdapter(ExternalAgentAdapter):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: SandboxConfig | None = None,
+        sandbox: Optional[SandboxConfig] = None,
     ) -> ExternalAgentResult:
-        """调用 OpenCode 完成任务。
+        """调用 OpenCode 完成任务（SDK + plugin 协议，stdio 传输）。
 
-        实现要点（厂商参考）：
-            1. 通过 self.prepare_credentials() 获取 OPCODE_API_KEY（如需）
-            2. 通过 SDK 加载 plugin 配置
-            3. 调用 OpenCode SDK 完成任务
+        OpenCode 的 SDK 与 Claude Code 类似，通过 CLI 驱动：``opencode run``
+        以非交互方式执行任务，``--format json`` 输出 NDJSON 事件流（stdio）。
+
+        实现要点：
+            1. OpenCode 为开源项目，Manifest 声明 ``required_env_vars=[]``，
+               自身管理 provider 凭据，无需 host 注入 API key。
+            2. 通过 ``asyncio.create_subprocess_exec`` 以 stdio 调用
+               ``opencode run --format json``，cwd 锁定到 sandbox.cwd。
+            3. 用 parse_cli_invocation 解析 NDJSON 事件流 + 收集 stderr。
+            4. ``success`` 仅看 returncode==0（CL-038 "stderr 也算活着"）。
         """
         logger.info(
             "opencode.invoke task_len=%d sandbox=%s",
             len(task),
             sandbox is not None,
         )
-        # OpenCode 是开源项目，可能不需要 API key
-        try:
-            env_vars = self.prepare_credentials()
-        except ValueError as e:
-            # OpenCode 凭据可选（开源场景可能无需 token）
-            logger.info(
-                "opencode.invoke credentials_optional skipped: %s", e
-            )
-            env_vars = {}
+        # OpenCode 是开源项目，凭据由 opencode 自身管理（Manifest 无必需 env）
+        env_vars = self.prepare_credentials()
+        for var, value in env_vars.items():
+            os.environ.setdefault(var, value)
 
-        # TODO: 厂商实现 —— 调用真实 OpenCode SDK
-        logger.warning(
-            "opencode.invoke NOT_IMPLEMENTED provider=%s 厂商需替换为真实 SDK 调用",
-            self.provider_name,
+        command = [
+            "opencode",
+            "run",
+            "--format",
+            "json",
+            "--title",
+            f"flowforge:{self.provider_name}",
+            task,
+        ]
+        logger.debug(
+            "opencode.invoke exec=%s cwd=%s",
+            " ".join(command),
+            sandbox.cwd if sandbox else None,
         )
+
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=sandbox.cwd if sandbox else None,
+            )
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                process.communicate(),
+                timeout=self.manifest.timeout_seconds,
+            )
+        except asyncio.TimeoutError:
+            if process is not None:
+                process.kill()
+                await process.communicate()
+            logger.error(
+                "opencode.invoke timeout provider=%s",
+                self.provider_name,
+            )
+            return ExternalAgentResult(
+                provider_name=self.provider_name,
+                success=False,
+                error=(
+                    f"OpenCodeAdapter.invoke timeout after "
+                    f"{self.manifest.timeout_seconds}s"
+                ),
+                cost={"total_tokens": 0, "total_calls": 1, "total_cost": 0.0},
+                capability_contribution=self.get_capability_profile(),
+            )
+        except OSError as e:
+            logger.error(
+                "opencode.invoke spawn_failed provider=%s error=%s",
+                self.provider_name,
+                e,
+            )
+            return ExternalAgentResult(
+                provider_name=self.provider_name,
+                success=False,
+                error=f"OpenCode CLI 启动失败：{e}",
+                cost={"total_tokens": 0, "total_calls": 0, "total_cost": 0.0},
+                capability_contribution=self.get_capability_profile(),
+            )
+
+        stdout_text = stdout_bytes.decode("utf-8", errors="replace")
+        stderr_text = stderr_bytes.decode("utf-8", errors="replace")
+        cli_result = parse_cli_invocation(
+            stdout=stdout_text,
+            stderr=stderr_text,
+            returncode=process.returncode if process.returncode is not None else 0,
+        )
+
+        output_text = _text_parts(cli_result.ndjson_objects)
+        total_tokens, total_cost = _token_usage(cli_result.ndjson_objects)
+
+        logger.info(
+            "opencode.invoke provider=%s success=%s returncode=%s "
+            "output_len=%d ndjson_count=%d tokens=%d",
+            self.provider_name,
+            cli_result.success,
+            cli_result.returncode,
+            len(output_text),
+            len(cli_result.ndjson_objects),
+            total_tokens,
+        )
+
+        if not cli_result.success:
+            return ExternalAgentResult(
+                provider_name=self.provider_name,
+                success=False,
+                output=output_text or None,
+                error=(
+                    f"OpenCode exit {cli_result.returncode}："
+                    f"{cli_result.error or 'no error'} stderr_total="
+                    f"{cli_result.stderr_summary.get('total', 0)}"
+                ),
+                cost={
+                    "total_tokens": total_tokens,
+                    "total_calls": 1,
+                    "total_cost": total_cost,
+                },
+                capability_contribution=self.get_capability_profile(),
+            )
+
         return ExternalAgentResult(
             provider_name=self.provider_name,
-            success=False,
-            output=None,
-            error=(
-                "OpenCodeAdapter.invoke 尚未实现真实 SDK 调用——"
-                "厂商应参照 reference_runtime.py 实现"
-            ),
-            cost={"total_tokens": 0, "total_calls": 0, "total_cost": 0.0},
+            success=True,
+            output={
+                "task": task,
+                "output": output_text,
+                "stderr_summary": cli_result.stderr_summary,
+                "ndjson_count": len(cli_result.ndjson_objects),
+            },
+            artifacts=[],
+            cost={
+                "total_tokens": total_tokens,
+                "total_calls": 1,
+                "total_cost": total_cost,
+            },
             capability_contribution=self.get_capability_profile(),
         )
 
@@ -120,19 +275,66 @@ class OpenCodeAdapter(ExternalAgentAdapter):
         self,
         task: str,
         context: dict[str, Any],
-        sandbox: SandboxConfig | None = None,
+        sandbox: Optional[SandboxConfig] = None,
     ) -> AsyncIterator[str]:
-        """流式调用 OpenCode（EX-009 流式语义）。"""
+        """流式调用 OpenCode（EX-009 流式语义）。
+
+        通过 ``opencode run --format json`` 以 stdio 启动子进程，
+        用 stream_cli_invocation 逐行解析 NDJSON 事件流；仅转发
+        ``type == "text"`` 的文本片段保持流式语义，最后透传 ``_final`` 帧。
+        """
         logger.info(
             "opencode.stream task_len=%d sandbox=%s",
             len(task),
             sandbox is not None,
         )
-        # TODO: 厂商实现 —— 通过 SDK 流式读取
-        logger.warning(
-            "opencode.stream NOT_IMPLEMENTED provider=%s", self.provider_name
+        env_vars = self.prepare_credentials()
+        for var, value in env_vars.items():
+            os.environ.setdefault(var, value)
+
+        command = [
+            "opencode",
+            "run",
+            "--format",
+            "json",
+            "--title",
+            f"flowforge:{self.provider_name}",
+            task,
+        ]
+
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=sandbox.cwd if sandbox else None,
+            )
+        except OSError as e:
+            logger.error(
+                "opencode.stream spawn_failed provider=%s error=%s",
+                self.provider_name,
+                e,
+            )
+            yield (
+                '{"_type":"_error","error":' + json.dumps(str(e), ensure_ascii=False) + "}\n"
+            )
+            return
+
+        async for obj in stream_cli_invocation(process):
+            if obj.get("_type") == "_final":
+                yield json.dumps(obj, ensure_ascii=False) + "\n"
+                break
+            if obj.get("type") == "text":
+                part = obj.get("part")
+                if isinstance(part, dict) and part.get("type") == "text":
+                    text = part.get("text")
+                    if isinstance(text, str) and text:
+                        yield text
+
+        logger.info(
+            "opencode.stream provider=%s done",
+            self.provider_name,
         )
-        yield "[opencode] stream 尚未实现——厂商应替换为真实 SDK 流式调用\n"
 
     def get_capability_profile(self) -> dict[str, Any]:
         """返回 OpenCode 能力画像（EX-002）。"""

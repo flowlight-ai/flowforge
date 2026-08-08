@@ -1,196 +1,283 @@
-# ADR 007: Harness 工程路径（七层驾驭层）
+# ADR 007: Harness 工程路径
 
 > **状态**: accepted
-> **日期**: 2026-07-21
-> **决策者**: operator + 架构师可进化智能体（Forgekin）
-> **依赖**: `[doc:roleagent.md#第3章]` + `[doc:decisions/004-capability-profile-routing.md]`
-> **依据**: operator 7 条不可妥协原则 + roleagent.md 工程路径
+> **日期**: 2026-07-17
+> **决策者**: 架构师可进化智能体 + operator 审核
+> **依赖**: `[doc:roleagent.md#第3章]` + `[doc:review/review.md#第八章]` RA-017~RA-023 + `[doc:review/review.md#第十三章]` CL-019
+> **依据**: RA-017~RA-023（Harness 七层现实表面）+ CL-019（双轨信任编译 guardrails + defaults）
 
 ---
 
-## 1. 上下文
+## 上下文
 
-`[doc:roleagent.md#第3章]` 指出："模型本身像一个缸中之脑。它能推理，能生成方案……但它天然没有稳定的现实感知、现实记忆、现实行动后果、现实验证，也没有可靠的人机边界。"
+`[doc:roleagent.md#第3章]` 一句话核心论点："Harness 不是给模型一段更好的话，而是把世界做成模型可以感知、可以行动、可以验证、可以恢复、可以学习的样子。" 这是 FlowForge v7.0 与普通 multi-agent 框架的根本差异——后者把 agent 当纯函数调用，前者把 agent 嵌入一个有现实表面的运行时。
 
-role-agent 直接调用 LLM 会失败，原因在于开放环境中的五类模型自身解决不了的问题：
+FlowForge v4.0 现状（`[doc:review/review.md#第八章]` 8.3 节 RA-017~RA-023 共 7 项 P0）：
 
-1. **状态持久性**：长任务跨 session、跨 thread、跨天推进，模型上下文窗口撑不住，压缩会丢信息
-2. **目标一致性**：Agent 容易漂移、自嗨，或被 RLHF 训练出"该收尾了"的惯性反射而提前宣布完成
-3. **行动可验证性**：模型说"我做了"不等于做对了，自评存在系统偏差
-4. **熵增抑制**：长期运行会积累冗余规则、过期文档、临时补丁、重复记忆
-5. **人机边界**：模型没有稳定的"我现在不该继续"自觉，不可逆操作必须有外部边界
+- Durable State Surfaces 设计不完整（对话历史是最脆的状态表面，会被压缩截断丢失，真相源未外部化）
+- Evidence & Sensors 层弱（未禁止"approve 但后续再说"的模棱两可 review 结论）
+- Governance Boundary 上下文压缩免疫缺失（治理规则仍用 user message prepend 注入，上下文一压缩规则就消失）
+- Magic Words 逃生舱协议缺失（无任何低带宽人类打断机制）
+- Entropy Control 退役机制缺失（脚手架代码无限期占用注意力预算）
+- Harnessability 适配性评估缺失（接入低 harnessability 系统只能靠猜和点页面硬跑）
+- 低保真矩阵（治理规则 × 可进化智能体类型）缺失（所有治理规则一视同仁注入所有可进化智能体）
 
-`[doc:roleagent.md#第1章]` 给出核心公式：**Agent 质量 = 模型能力 × Harness 契合度**。能力画像（CapabilityProfile）只有进入具体运行环境后，才会从静态描述变成可验证能力。当前 FlowForge 仓库中 `[doc:flowforge/core/harness/]` 已落地七层 guardrail 的 P1 代码骨架，本 ADR 把这七层正式确立为 FlowForge 的 Harness 工程路径决策。
+`[doc:review/review.md#第十三章]` 13.4 节 CL-019 进一步补审：前期 Pack 系统设计（已归档）把 shared-rules 拆为 guardrails（硬约束，只能加严）和 defaults（默认行为，可覆盖）——这是 Harness 治理规则的结构性升级。v7.0 治理规则是扁平列表，无此区分，导致可进化智能体可覆盖硬约束（自己决定"这次不写测试"）。
 
----
-
-## 2. 决策
-
-七层驾驭层在代码中分别对应 `flowforge/core/harness/` 下的七个模块。每层都是"Built to Persist（复利型基础设施）"——编码外部现实、协作协议和可验证边界，模型越强越值钱。
-
-### 2.1 Durable State Surface（持久状态表面 / DurableStateSurface）
-
-`[doc:roleagent.md#第3章]`："感知现实——让 agent 不再失忆上岗。"
-
-代码实现于 `flowforge/core/harness/durable_state.py`：
-
-- `DurableState`：不可变快照数据类，含 `snapshot_id` / `state_dict` / `created_at` / `parent_snapshot_id`，支持父子链
-- `DurableStateSurface.snapshot(state_dict, parent_snapshot_id)`：deep-copy 入存，返回 `snapshot_id`
-- `DurableStateSurface.restore(snapshot_id)`：deep-copy 出存，调用方修改不污染快照
-- `DurableStateSurface.list_snapshots()`：枚举所有快照
-
-tradeoff 明确：状态越外部化，系统越可恢复；表面越多越需要治理（故与第 6 层 EntropyControl 配套）。生产环境可换 SQLite/PostgreSQL 后端而不改 surface API——这是压缩免疫的"现实状态层"，承载情景记忆存储（EchoStore）的持久化语义。
-
-### 2.2 Tool Mediation（工具中介 / ToolMediator）
-
-`[doc:roleagent.md#第3章]`："改变现实——能力半径变大后，边界必须显式化。"
-
-代码实现于 `flowforge/core/harness/tool_mediation.py`：
-
-- `ToolMediator.register_tool(name, handler, allowlist)`：注册工具时绑定允许调用者名单
-- `ToolMediator.invoke(tool_name, args, caller)`：异步入口，调用前先校验 `caller in allowlist`，否则抛 `ToolAllowlistViolation`
-- `ToolResult`：含 `success` / `output` / `error` / `duration_ms`，handler 失败被捕获为 `success=False` 而非抛出，让上层决策
-- 自动检测 sync/async handler（`inspect.iscoroutinefunction`）
-
-这是项目规则"工具调用必须通过 ToolRegistry.execute()"的结构性 enforcement——比在 prompt 里写"请不要调用某工具"可靠得多。
-
-### 2.3 Evidence Sensors（证据传感器 / EvidenceCollector）
-
-`[doc:roleagent.md#第3章]`："验证现实——做了不等于做对了。"
-
-代码实现于 `flowforge/core/harness/evidence_sensors.py`：
-
-- `EvidenceCollector.record_evidence(source, content, evidence_type)`：未验证即入库，返回 `Evidence`
-- `EvidenceCollector.verify(evidence_id, verifier)`：显式打标，必须由非作者 verifier 完成
-- `EvidenceCollector.list_unverified()`：暴露待验证证据，给 review pipeline 用
-- `EvidenceCollector.cross_check(evidence_a, evidence_b)`：基于 `difflib.SequenceMatcher` 计算 [0.0, 1.0] 相似度，支持跨厂商 review 的一致性检查
-
-完成感从模型嘴里移到证据链里——commit、先红后绿测试、cross-check ratio 都是不可伪造的客观信号。
-
-### 2.4 Governance（治理 / GovernanceBoundary）
-
-`[doc:roleagent.md#第3章]`："约束现实——长任务跑久了，压缩不理解什么是治理规则。"
-
-代码实现于 `flowforge/core/harness/governance.py`：
-
-- `GovernanceRule`：结构化规则对象（`rule_id` / `description` / `severity` / `created_at`），**永不序列化进 prompt**
-- `GovernanceBoundary.add_rule(rule_id, description, severity)`：注册规则
-- `GovernanceBoundary.check_violation(action)`：case-insensitive 子串匹配，返回 `list[GovernanceViolation]`
-
-关键设计：治理规则作为结构化对象在程序侧检查，**不进入 LLM prompt context**——这就是压缩免疫的实现路径。这区别于 roleagent.md 早期教训："user message prepend 的规则每压缩一次丢一次"。
-
-### 2.5 Magic Words（魔法词 / MagicWordsRegistry）
-
-`[doc:roleagent.md#第3章]`："人机边界——Runtime 逃生舱，让人类用极低带宽打断 agent 的错误轨迹。"
-
-代码实现于 `flowforge/core/harness/magic_words.py`：
-
-- `MagicWordAction` 枚举：`HALT` / `PAUSE` / `ESCALATE` / `ROLLBACK`
-- `DEFAULT_MAGIC_WORDS`：双语词表（"stop" / "停止" / "halt" / "中止" / "abort" / "pause" / "暂停" / "escalate" / "升级" / "rollback" / "回滚"）
-- `MagicWordsRegistry.with_defaults()`：预装默认词表
-- `MagicWordsRegistry.register_word(word, action)`：扩展词表
-- `MagicWordsRegistry.detect(text)`：返回 `list[DetectedMagicWord]`，含 `position` 与 ±20 字符 `context`
-
-模块注释明确：此 registry 区别于 `flowforge.forgemind.magic_words`（CVO 中断协议），是 harness 层任一层都可监听的逃生舱。约束：仅在当前 CVO 指令中触发，复述历史中的短语不触发——避免治理协议本身变成误触源。
-
-### 2.6 Entropy Control（熵控 / EntropyController）
-
-`[doc:roleagent.md#第3章]`："清理现实——Harness 有两种死法，第二种是规则只增不减变成技术债。"
-
-代码实现于 `flowforge/core/harness/entropy_control.py`：
-
-- `EntropyEntry`：含 `artifact_id` / `created_at` / `last_touched` / `ttl_seconds`
-- `EntropyController.register_artifact(artifact_id, ttl_seconds)`：注册待清理对象
-- `EntropyController.touch(artifact_id)`：重置 `last_touched`，延后过期
-- `EntropyController.list_expired()`：返回 `now - last_touched > ttl_seconds` 的 artifact
-- `EntropyController.cleanup_expired()`：批量删除并返回计数
-
-对应 roleagent.md 的"hotfix 合入后两周自动触发升级 review"和"Build to Delete 类规则要标 sunset"——TTL 机制让脚手架不能无限期占用注意力预算。
-
-### 2.7 Harnessability（可驾驭性评分 / HarnessabilityScorer）
-
-`[doc:roleagent.md#第3章]`："适配现实——不是每个系统都同样适合交给 agent。"
-
-代码实现于 `flowforge/core/harness/harnessability.py`：
-
-- 权重常量：`WEIGHT_DURABLE_STATE=0.20` / `WEIGHT_TOOL_ALLOWLIST=0.20` / `WEIGHT_EVIDENCE=0.20` / `WEIGHT_GOVERNANCE=0.15` / `WEIGHT_MAGIC_WORD=0.15` / `WEIGHT_ENTROPY=0.10`（合 1.0）
-- `GOVERNANCE_FULL_RULE_COUNT=5`：5 条规则即得满分
-- `HarnessabilityFactors`：6 维输入数据类（governance_rule_count 是整数，其余 5 维 [0.0, 1.0]）
-- `HarnessabilityScorer.score(factors)`：加权平均后 clamp 到 [0.0, 1.0]
-- `HarnessabilityScorer.grade(score)`：A(≥0.9) / B(≥0.8) / C(≥0.6) / D(≥0.4) / F
-
-这一层把第 1 章公式 `Agent 质量 = 模型能力 × Harness 契合度` 中的右项量化为可计算指标——是 ADR-004 中 `harness_fit_score` 字段的实际供给源。
+operator 决策：FlowForge 必须实现 Harness 七层现实表面 + Build to Delete vs Built to Persist 半衰期标注 + 双轨信任编译（guardrails + defaults），让可进化智能体的能力 × Harness 契合度真正可度量（见 ADR 004 公式）。
 
 ---
 
-## 3. 方案对比
+## 决策
 
-| 方案 | 优点 | 缺点 |
-|------|------|------|
-| **方案 A（选定）: 七层独立模块 + 加权评分** | 每层可独立测试与演进；权重显式可调；评分驱动 ADR-004 的 `harness_fit_score`；与 roleagent.md 第 3 章七节一一对应 | 7 个文件 + 1 个 scorer 增加初次实现成本；需要后续把内存存储换成 SQLite/PostgreSQL 后端 |
-| 方案 B: 单一 monolithic Harness 类 | 实现简单，调用方少 import | 违反单一职责；七层耦合后无法独立演进；测试粒度过粗；评分算法无法独立替换 |
-| 方案 C: 全部塞进 system prompt 让 LLM 自我治理 | 零代码 | 违反"压缩免疫"铁律——治理规则会被上下文压缩吞掉；与 roleagent.md 第 3 章核心主张直接冲突 |
+### 1. Harness 七层现实表面（F008-F013）
+
+| 层 | 机制 | FlowForge Feature | 解决的失败 |
+|---|---|---|---|
+| 感知现实 | Durable State Surfaces | F008 | 感知失败（agent 不知道现实发生了什么） |
+| 改变现实 | Tool Mediation | （ToolRegistry 已有） | 行动失败（调用工具但实际没改变现实） |
+| 验证现实 | Evidence & Sensors | F009 | 验证失败（声称做完但没证据） |
+| 约束现实 | Governance Boundary（压缩免疫） | F010 | 治理失败（绕过规则 / 上下文压缩吞掉规则） |
+| 人机边界 | Runtime 逃生舱（Magic Words） | F011 | 逃生失败（陷入死循环，无人介入） |
+| 清理现实 | Entropy Control（退役） | F012 | Harness 增生不代谢（RA-031~RA-036 联动） |
+| 适配现实 | Harnessability 评估 | F013 | 接入低 harnessability 系统 |
+
+### 2. Durable State Surfaces（F008，RA-017）
+
+六类持久状态表面，所有状态写入必须落盘（持久化是真相源，进程内 cache 仅是新鲜度信号）：
+
+1. **feature spec** — Feature 规格（YAML 文件）
+2. **git** — 代码仓（worktree 隔离）
+3. **task queue** — 任务队列（SharedStateLedger）
+4. **thread session trace** — 会话轨迹（EchoStore 情景记忆存储）
+5. **memory federation** — 多域记忆联邦（见 ADR 008）
+6. **handoff capsule** — 交接胶囊（见 ADR 002 F003）
+
+### 3. Evidence & Sensors（F009，RA-018）
+
+"做了不等于做对了"。Evidence 要求：
+
+- 代码修改必须有 commit
+- bug 修复必须有先红后绿的测试
+- 合入前必须过 quality gate（lint / type check / test / review）
+- 跨可进化智能体 review 必须 approve 或 blocking，**禁止 "approve 但后续再说"** 的模棱两可结论
+
+### 4. Governance Boundary 压缩免疫（F010，RA-019）
+
+治理规则不能通过 user message prepend 注入（会被上下文压缩吞掉），必须通过 **system role** 注入。每压缩一次规则丢一次，团队被迫"十轮对话教十次传球"。
+
+**铁律**：禁止 user message prepend 治理规则。所有治理规则通过 system role 注入，由 ForgekinHost 在可进化智能体构造时统一注入（见 ADR 001）。
+
+### 5. Magic Words 逃生舱（F011，RA-020）
+
+人到 agent 的 runtime 低带宽协议，operator 在任何觉醒阶（Awakening Stage）都可触发：
+
+| Magic Word | 触发动作 |
+|---|---|
+| 第一性原理 | 检查是否用复杂度代偿无知 |
+| 我能猜出来 | 读真相源别用推理替代查询 |
+| 下次一定 | 能做的现在做 |
+| 星星罐子 | P0 不可逆风险立即停止 |
+
+Magic Words 是协议层硬要求，不能被任何觉醒阶绕过（包括 E6 通用智能体框架主导阶）。与 ADR 013 可进化智能体愿景的"Magic Words 逃生舱始终可触发"原则一致。
+
+### 6. Entropy Control 退役（F012，RA-021）
+
+hotfix 合入后两周自动触发升级 review：①正式修复 ②接受永久方案 ③已不再相关，三选一，**没有第四项叫"再看看"**。每块 Harness 必须标记半衰期：
+
+| Build to Delete（有保质期脚手架） | Built to Persist（复利型基础设施） |
+|---|---|
+| 详细的思维链模板 | 文件系统 / git / 搜索工具接入 |
+| 多步推理引导 | trace 基础设施与可观测性 |
+| 错误恢复样板代码 | 测试 / lint / review 反馈回路 |
+| 工具调用别名兜底 | 可进化智能体交接协议与路由 |
+| 人格装饰文字 | 不可逆操作护栏与应急开关 |
+
+**判别器**：这层 harness 是在补模型当前的认知缺陷（→ Build to Delete，标 sunset），还是在编码外部现实和协作协议（→ Built to Persist，加测试，长期维护）？
+
+### 7. Harnessability 评估（F013，RA-022）
+
+不是每个系统都同样适合交给可进化智能体。Harnessability 五维：
+
+1. 有稳定 API
+2. 有事件流回调
+3. 有持久状态
+4. 有可验证输出
+5. 操作幂等可回滚 + 权限边界清楚
+
+接入外部系统（如发布平台）前必须做 Harnessability 评估，低分系统接入必须先建适配层。
+
+### 8. 双轨信任编译（CL-019，guardrails + defaults）
+
+参考前期 Pack 系统设计（已归档）的双轨信任编译：
+
+```python
+class DualTrackPolicy:
+    guardrails: list[Guardrail]   # 硬约束（如"禁止删除测试用例"）—— 只能加严，不可放宽
+    defaults: list[Default]       # 默认行为（如"优先用 pytest"）—— 可被个人偏好覆盖
+```
+
+| 轨 | 可变性 | 例子 | 谁能修改 |
+|---|---|---|---|
+| guardrails | 只能加严（monotonic tightening） | 禁止删除测试用例 / 禁止绕过 Eval | 仅 operator + 多智能体议事（MindCouncil） |
+| defaults | 可覆盖（overridable） | 优先用 pytest / 优先走 worktree | 可进化智能体可覆盖（需声明） |
+
+每条治理规则必须在 YAML 中标记 `track: guardrail | default`，未标记默认 `default`。新规则通过多智能体议事（MindCouncil） 提案，guardrail 提案需 Replay A/B 验证净增益（见 ADR 009 CL-004 Eval Ledger）。
+
+### 9. 低保真矩阵（RA-023）
+
+同一条治理规则在不同可进化智能体类型上的命中率不同。维护"治理规则 × 可进化智能体类型"低保真矩阵，识别"某规则只是补偿某模型坏习惯"（→ Build to Delete，标 sunset 后该模型退役）vs"跨可进化智能体资产"（→ Built to Persist）。
+
+| 治理规则 | 糊弄惯性型 | 推迟闭环型 | 错误坐标系补丁型 | 创意漂移型 |
+|---|:---:|:---:|:---:|:---:|
+| 必须先红后绿 | 高命中 | 中 | 低 | 低 |
+| 禁止 deferred 验收 | 中 | 高命中 | 低 | 中 |
+| ... | | | | |
 
 ---
 
-## 4. 理由
+### 10. Hyperfocus Brake（CL-036，90 分钟 timer + typed check-in）
 
-- operator 明确要求走向"能力画像、动态路由、共享状态、eval 和可靠性治理"的工程路径，Harness 是这条路径的现实闭环运行时
-- `[doc:roleagent.md#第3章]` 明确主张"现实闭环不能只靠注意力维持……Harness 会把关键约束放到更可靠的表面上：文件、任务、工具协议、队列、钩子、测试、审查、trace、人工确认和记忆系统"
-- 七层对应 roleagent.md 列出的开放环境五类失败模式 + Tool Mediation + Harnessability，覆盖完整
-- 治理层采用结构化对象（`GovernanceRule`）而非 prompt 文本——直接吸取"user message prepend 被压缩吞掉"的历史教训
-- Harnessability 量化是 ADR-004 `harness_fit_score` 字段的实际供给源，与已 accepted 的 ADR-004 形成闭环
-- 七层模块全部为 Built to Persist：编码外部现实、协作协议、可验证边界——模型越强越值钱
+**问题**：可进化智能体（特别是 Siamese / hotfix 家族）在长时间自主执行时，容易陷入"超聚焦"状态——反复尝试同一方案、忽略外部信号、拒绝切换任务。这会导致：
+
+- 注意力预算被单一任务耗尽
+- 错过 Magic Words 打断信号
+- 累积技术债（"再试一次"循环）
+- 阻塞 Pack 协作（其他可进化智能体等待结果）
+
+**决策**：实现 Hyperfocus Brake 双组件机制。
+
+#### 10.1 90 分钟 Timer
+
+- 每个可进化智能体进入"深度自主执行"模式时启动 90 分钟倒计时
+- 90 分钟到点后，可进化智能体必须暂停当前任务并触发 typed check-in
+- Timer 通过 `asyncio.Task` 实现，支持取消和重置
+- 多次超时（默认 3 次）自动升级到 operator approval
+
+```python
+@dataclass
+class HyperfocusTimer:
+    forgekin_id: str
+    task_id: str
+    started_at: datetime
+    duration_minutes: int = 90  # 默认 90 分钟
+    extension_count: int = 0   # 已延期次数
+    max_extensions: int = 3    # 最多延期 3 次
+```
+
+#### 10.2 Typed Check-in
+
+超时后可进化智能体必须提交 typed check-in（结构化签到），含 5 个字段：
+
+```python
+class HyperfocusCheckIn(BaseModel):
+    forgekin_id: str
+    task_id: str
+    elapsed_minutes: int
+    progress_summary: str       # 当前进展摘要
+    blockers: list[str]         # 阻塞项
+    next_action: Literal["continue", "switch", "escalate", "abort"]
+    next_action_reason: str
+```
+
+- `continue`：继续当前任务（自动延期一次 timer）
+- `switch`：切换到其他任务（释放注意力预算）
+- `escalate`：升级到 operator approval（需人工介入）
+- `abort`：放弃当前任务（清理副作用）
+
+#### 10.3 与 Magic Words 联动
+
+- Magic Words 信号可强制中断 Hyperfocus Timer
+- 中断后可进化智能体必须先响应 Magic Words，再决定是否恢复 timer
+- 防止"超聚焦 + Magic Words 信号被忽略"的双重失败
+
+#### 10.4 与 MindFamily 联动
+
+| 家族 | Hyperfocus Brake 行为 |
+|------|----------------------|
+| Ragdoll | 默认启用，60 分钟 timer（更短） |
+| Maine Coon | 默认启用，90 分钟 timer |
+| Siamese | 默认启用，90 分钟 timer + 2 次自动延期上限 |
+| hotfix | 默认禁用，紧急修复时不打断（事后追审） |
+
+**实现位置**：`flowforge/core/harness_v7/hyperfocus_brake.py`（待实现）
+
+**关联 Feature**：F011 Magic Words 逃生舱 + F013 Harnessability 评估
 
 ---
 
-## 5. 风险
+## 后果
 
-| 风险 | 缓解 |
-|------|------|
-| 内存存储 (`dict`) 在生产场景丢数据 | 接口设计为可换后端（SQLite/PostgreSQL），surface API 不变；P2 阶段引入持久化实现 |
-| ToolMediator allowlist 维护成本随工具数量上升 | 配置驱动注册（YAML），与项目规则"工具调用必须通过 ToolRegistry"对齐 |
-| Governance 子串匹配可能误判（如"force"出现在合法描述中） | P2 阶段引入结构化 action schema，匹配从 substring 升级为字段精确比对 |
-| Magic Words 默认词表可能与正常用户输入冲突 | 仅在 CVO 当前指令中触发；复述历史短语不触发；`detect` 返回 context 供人工复核 |
-| EntropyControl TTL 设置不当导致有用 artifact 被误删 | `touch()` 允许延后过期；`list_expired` 与 `cleanup_expired` 分离，可先审计再清理 |
-| Harnessability 权重静态写死，无法适配不同领域 | 权重以模块常量形式存在，未来可由 Loop 配置注入（与质量分阈值 0.85 同套机制） |
+### 正面后果
+
+- Harness 从"给模型更好的话"升维到"把世界做成模型可感知可行动可验证可恢复可学习的样子"
+- 治理规则压缩免疫，团队不再"十轮对话教十次传球"
+- Magic Words 提供 operator 低带宽打断通道，任何觉醒阶可介入
+- Entropy Control 让 Harness 周期性代谢，避免技术债无限累积
+- 双轨信任编译让硬约束不可被可进化智能体覆盖，软约束可个性化演化
+- Build to Delete / Built to Persist 半衰期标注让 Harness 投资方向清晰
+
+### 负面后果
+
+- 七层 Harness 增加实现复杂度（6 个 Feature F008-F013）
+- system role 注入治理规则需要 ForgekinHost 重构（破坏性变更）
+- Magic Words 协议需要 operator 培训（低带宽协议有学习曲线）
+- Entropy Control 两周 sunset 强制审查可能误伤合法的 hotfix —— 缓解：可由 operator 显式延期一次
+- 双轨信任编译需要维护 guardrails / defaults 两个列表，治理规则 YAML 体积增加
+
+### 风险
+
+- Harness 层间循环依赖（Durable State 依赖 Evidence，Evidence 依赖 Governance）—— 缓解：每层只依赖下层，禁止反向依赖（rules.md 架构约束）
+- Magic Words 可能被可进化智能体误触发（如任务内容中包含"第一性原理"）—— 缓解：Magic Words 必须由 operator 显式输入，可进化智能体不可触发
+- guardrail 加严策略可能导致治理规则单调膨胀 —— 缓解：Entropy Control 周期 review，已失效 guardrail 可降级为 default
+- 低保真矩阵数据可能不足（需大量 Eval 信号积累）—— 缓解：与 ADR 009 Eval 自代谢联动，初期矩阵稀疏可接受
 
 ---
 
-## 6. 否决理由
+## 替代方案
 
-- **方案 B（单一 monolithic Harness 类）**：违反项目规则"组合优于继承"和单一职责原则；七层在 roleagent.md 中本就是独立工程层，强行合并会让演进耦合；测试粒度过粗，无法独立验证某一层的压缩免疫性
-- **方案 C（全部塞进 system prompt）**：与 roleagent.md 第 3 章核心主张直接冲突——治理规则进入 prompt 就会被上下文压缩吞掉，正是 Cat Café 早期踩过的坑（"治理规则每压缩一次丢一次，团队被迫十轮对话教十次传球"）；同时违反项目规则"禁止硬编码提示词"和 P16
+### 方案 A: 继续用 user message prepend 注入治理规则
 
----
+- 优点：实现简单，无需重构 ForgekinHost
+- 缺点：上下文一压缩规则就消失（RA-019 P0 问题未解决）
+- 未选择原因：违反 roleagent.md 明确铁律（治理规则必须 system role 注入）
 
-## 7. 参与者
+### 方案 B: 把所有治理规则作为 guardrails（无 defaults 轨）
 
-- operator（愿景锚点 + 最终决策 + Magic Words 词义来源）
-- 架构师可进化智能体（Forgekin）（七层模块设计 + 权重标定 + 术语对齐项目正式命名）
+- 优点：治理一致性最强
+- 缺点：可进化智能体无法个性化演化，所有偏好都被锁死
+- 未选择原因：违反 CL-019 双轨信任编译设计，无法实现 Pack/Growth 种子果实模型
 
----
+### 方案 C: 把所有治理规则作为 defaults（无 guardrails 轨）
 
-## 8. 修订记录
+- 优点：可进化智能体完全自主
+- 缺点：硬约束可被覆盖，可进化智能体可"自己决定不写测试"
+- 未选择原因：违反 operator 安全治理要求，觉醒阶 E5/E6 可进化智能体可能绕过红线
 
-| 日期 | 修订 | 修订者 |
-|------|------|--------|
-| 2026-07-21 | 初始版本，确立 Harness 七层工程路径决策，对齐 `flowforge/core/harness/` 七个 P1 模块实现 | operator + 架构师可进化智能体 |
+### 方案 D: 用 LLM 在线判断治理规则适用性
+
+- 优点：灵活
+- 缺点：每次行动都要 LLM 调用判断规则，延迟高 + 成本高
+- 未选择原因：性能不可接受，且 LLM 判断不可审计
 
 ---
 
 ## 引用
 
-- `[doc:roleagent.md#第1章]` — 核心公式：能力 × Harness 契合度
-- `[doc:roleagent.md#第3章]` — Harness：让模型完成现实闭环的运行时（七层）
-- `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（harness_fit_score 字段消费方）
-- `[doc:decisions/012-naming-fusion.md]` — 命名融合（项目正式术语表：情景记忆存储 EchoStore / 持久身份 SoulImprint / 多智能体议事 MindCouncil / 可进化智能体 Forgekin / 智能体入职与终身学习 Forge Nurturing）
-- `[doc:flowforge/core/harness/durable_state.py]` — DurableStateSurface 实现
-- `[doc:flowforge/core/harness/tool_mediation.py]` — ToolMediator 实现
-- `[doc:flowforge/core/harness/evidence_sensors.py]` — EvidenceCollector 实现
-- `[doc:flowforge/core/harness/governance.py]` — GovernanceBoundary 实现
-- `[doc:flowforge/core/harness/magic_words.py]` — MagicWordsRegistry 实现
-- `[doc:flowforge/core/harness/entropy_control.py]` — EntropyController 实现
-- `[doc:flowforge/core/harness/harnessability.py]` — HarnessabilityScorer 实现
-- `[doc:project_rules.md#红线10]` — 禁止在 flowforge 中写死业务领域代码
-- `[doc:project_rules.md#铁律5]` — 禁止硬编码路径和密钥
+- `[doc:roleagent.md#第3章]` — Harness：让模型完成现实闭环的运行时（七层现实表面）
+- `[doc:roleagent.md#第1章]` — Build to Delete vs Built to Persist 半衰期判别器
+- `[doc:review/review.md#第八章]` 8.3 节 — RA-017~RA-023 Harness 现实闭环运行时补审（7 项 P0）
+- `[doc:review/review.md#第十三章]` 13.4 节 — CL-019 双轨信任编译（guardrails + defaults）
+- `[doc:features/F008-durable-state-surfaces.md]` — Durable State Surfaces
+- `[doc:features/F009-evidence-sensors.md]` — Evidence & Sensors
+- `[doc:features/F010-governance-boundary.md]` — Governance Boundary 压缩免疫
+- `[doc:features/F011-magic-words.md]` — Magic Words 逃生舱
+- `[doc:features/F012-entropy-control.md]` — Entropy Control 退役
+- `[doc:features/F013-harnessability.md]` — Harnessability 评估
+- 前期 Pack 系统设计（已归档） — Pack 系统双轨信任编译
+- `[doc:decisions/001-agent-invocation-approach.md]` — Agent 调用方式（ForgekinHost 注入治理规则）
+- `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（能力 × Harness 契合度公式）
+- `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢（Entropy Control 联动）
+- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体愿景（Magic Words 逃生舱始终可触发）
+- `[doc:design/naming-contract.md#2.9]` — MindCouncil（多智能体议事，guardrail 提案审批）
+- `[doc:project_rules.md#铁律]` — 治理规则必须 system role 注入

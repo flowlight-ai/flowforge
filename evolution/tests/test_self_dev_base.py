@@ -21,13 +21,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+import asyncio
+from typing import Any, Dict, List
+from unittest.mock import MagicMock
 
 import pytest
 
 from flowforge.evolution.engine import ForgeMindEngine
 from flowforge.evolution.self_dev_base import (
-    MAX_REFLECT_RETRIES,
     ApprovalRequiredError,
     AwakeningStageBlockedError,
     DevPlan,
@@ -35,12 +36,14 @@ from flowforge.evolution.self_dev_base import (
     DevTask,
     LLMReviewFailedError,
     LoopExecutionRecord,
+    MAX_REFLECT_RETRIES,
     ReflectRetryExhaustedError,
     ScopeGuardBlockedError,
     SelfDevError,
     SelfDevLoopBase,
     VerifyResult,
 )
+
 
 # ══════════════════════════════════════════════════════════════════
 # §1 Fake/Stub 工具类（单元测试用，非 Mock LLM）
@@ -56,8 +59,8 @@ class _FakeTraeClient:
     def __init__(
         self,
         *,
-        chat_responses: list[dict[str, Any]] | None = None,
-        review_response: dict[str, Any] | None = None,
+        chat_responses: List[Dict[str, Any]] | None = None,
+        review_response: Dict[str, Any] | None = None,
     ) -> None:
         self._chat_responses = list(chat_responses or [])
         self._review_response = review_response or {
@@ -67,9 +70,9 @@ class _FakeTraeClient:
             "suggestions": [],
         }
         self.chat_call_count = 0
-        self.chat_calls: list[dict[str, Any]] = []
+        self.chat_calls: List[Dict[str, Any]] = []
 
-    async def chat(self, messages: list[dict[str, str]], *, context=None, **kwargs) -> dict[str, Any]:
+    async def chat(self, messages: List[Dict[str, str]], *, context=None, **kwargs) -> Dict[str, Any]:
         self.chat_call_count += 1
         self.chat_calls.append({"messages": messages, "context": context, "kwargs": kwargs})
         if self._chat_responses:
@@ -116,7 +119,7 @@ class _CountingSelfDevLoop(SelfDevLoopBase):
         self._verify_results = list(verify_results or [])
         self._plan_requires_approval = plan_requires_approval
 
-    async def discover(self, context: dict[str, Any]) -> list[DevTask]:
+    async def discover(self, context: Dict[str, Any]) -> List[DevTask]:
         self.discover_count += 1
         return list(self._discover_tasks)
 
@@ -171,7 +174,7 @@ class _CountingSelfDevLoop(SelfDevLoopBase):
         self.reflect_count_call += 1
         return await super().reflect_and_replan(task, result, verify)
 
-    async def persist(self, record: LoopExecutionRecord) -> dict[str, Any]:
+    async def persist(self, record: LoopExecutionRecord) -> Dict[str, Any]:
         self.persist_count += 1
         # 单元测试中跳过真实 persist（避免依赖 ForgeMindEngine 三模式）
         record.persisted = True
@@ -195,7 +198,7 @@ def fake_engine() -> ForgeMindEngine:
 
 
 @pytest.fixture
-def forgekin_config() -> dict[str, Any]:
+def forgekin_config() -> Dict[str, Any]:
     return {
         "project_root": "/tmp/fake-flowforge",
         "forgekin_id": "forgemind:luban",

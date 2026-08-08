@@ -109,7 +109,7 @@ function NavItem({
 /**
  * SettingsNav — 左侧 14 section 导航
  *
- * 简化实现：
+ * 从 clowder-ai 移植并简化：
  *   - 移除 usePinnedSections（FlowForge 未提供此 hook）
  *   - 移除 HubIcon，改用 lucide-react
  *   - 保留搜索过滤（基于 SECTION_KEYWORDS）

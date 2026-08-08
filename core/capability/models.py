@@ -22,12 +22,12 @@ License: MIT
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, Field, field_validator
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 常量层：模型固有能力 + 认知风格 + 盲点
@@ -143,10 +143,10 @@ class BlindSpot(BaseModel):
 
     category: BlindSpotCategory = Field(..., description="盲点类别")
     description: str = Field(..., description="盲点描述")
-    example: str | None = Field(default=None, description="触发盲点的示例")
-    scenario: str | None = Field(default=None, description="易暴露场景")
+    example: Optional[str] = Field(default=None, description="触发盲点的示例")
+    scenario: Optional[str] = Field(default=None, description="易暴露场景")
     detected_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="检测时间 ISO 8601",
     )
     evidence: list[str] = Field(default_factory=list, description="证据 trace ID 列表")
@@ -182,8 +182,8 @@ class SkillPackage(BaseModel):
     name: str = Field(..., description="知识包名称")
     domain: str = Field(..., description="所属领域")
     version: str = Field(default="0.1.0", description="知识包版本")
-    loader: str | None = Field(default=None, description="加载器标识")
-    load_fn: Callable[..., Any] | None = Field(
+    loader: Optional[str] = Field(default=None, description="加载器标识")
+    load_fn: Optional[Callable[..., Any]] = Field(
         default=None,
         exclude=True,
         description="加载回调函数（运行时注入，不序列化）",
@@ -191,7 +191,7 @@ class SkillPackage(BaseModel):
     proficiency: float = Field(
         default=0.5, ge=0.0, le=1.0, description="熟练度"
     )
-    last_used: str | None = Field(default=None, description="上次使用时间 ISO 8601")
+    last_used: Optional[str] = Field(default=None, description="上次使用时间 ISO 8601")
     usage_count: int = Field(default=0, ge=0, description="累计使用次数")
 
 
@@ -242,7 +242,7 @@ class PerformanceLog(BaseModel):
     avg_latency: float = Field(default=0.0, ge=0.0, description="平均延迟（秒）")
     token_usage: int = Field(default=0, ge=0, description="累计 token 消耗")
     last_updated: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="最后更新时间 ISO 8601",
     )
     sample_count: int = Field(default=0, ge=0, description="样本数")
@@ -274,7 +274,7 @@ class AgentState(BaseModel):
     fatigue: float = Field(default=0.0, ge=0.0, le=1.0, description="疲劳度")
     mood: str = Field(default="focused", description="情绪标签")
     active_tasks: int = Field(default=0, ge=0, description="活跃任务数")
-    last_break: str | None = Field(default=None, description="上次休息时间 ISO 8601")
+    last_break: Optional[str] = Field(default=None, description="上次休息时间 ISO 8601")
 
     @field_validator("mood")
     @classmethod

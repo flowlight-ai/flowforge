@@ -2,14 +2,14 @@
 
 确保 ``flowforge`` 包可被导入，并设置测试环境变量。
 """
-import gc
 import os
 import sys
+import gc
 from pathlib import Path
 
 import pytest
 
-# flowforge/observability/tests/conftest.py -> d:\software\openclaw
+# flowforge/observability/tests/conftest.py -> flowforge 的父目录（workspace root）
 _WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_WORKSPACE_ROOT) not in sys.path:
     sys.path.insert(0, str(_WORKSPACE_ROOT))

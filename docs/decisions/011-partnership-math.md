@@ -1,205 +1,276 @@
-# ADR 011: 伙伴系统数学（Partnership System Math）
+# ADR 011: 伙伴系统数学
 
 > **状态**: accepted
-> **日期**: 2026-07-21
-> **决策者**: operator + 架构师可进化智能体（Forgekin）
-> **依赖**: `[doc:roleagent.md#第7章]` + `[doc:decisions/004-capability-profile-routing.md]` + `[doc:decisions/009-eval-self-metabolism.md]`
-> **依据**: operator 7 条不可妥协原则 + roleagent.md 第7章伙伴系统数学
+> **日期**: 2026-07-17
+> **决策者**: 架构师可进化智能体 + operator 审核
+> **依赖**: `[doc:roleagent.md#第7章]` + `[doc:review/review.md#第八章]` RA-043~RA-047 + `[doc:review/review.md#第十三章]` CL-018/CL-020
+> **依据**: RA-043~RA-047（上限 max + 下限连乘 + 波动吸收 + Token 账本 + 四种亏结构）+ CL-018/CL-020（Pack / Growth 种子果实模型）
 
 ---
 
-## 1. 上下文
+## 上下文
 
-`[doc:roleagent.md#第7章]` 开篇提出："好的 agent harness 系统不是把单点能力推到极限，而是把单点波动组织进一个会自我校准的伙伴系统。" 这句话把多智能体协作的工程价值定位为四件事：上限搜索、下限保护、状态保真、失败恢复。前三件需要数学形式化，否则会退化为"几只 agent 凑在一起更靠谱"的口号。
+`[doc:roleagent.md#第7章]` 一句话论点："团队质量 = 上限搜索 × 下限保护 × 状态保真 × 失败恢复。" 这四个乘子是 multi-agent 系统的数学基础——任何一个乘子为零，团队质量为零。FlowForge v4.0 的现状（`[doc:review/review.md#第八章]` 8.7 节 RA-043~RA-047 共 5 项问题，3 项 P0）：
 
-当前 FlowForge 设计中：
+- 上限公式（候选路径最大值）未实现（RA-043 P0），5 评委用 5 个不同模型但未验证是否真的提出不同路径——如果 5 个模型盲点高度相关，review 只是重复同一类判断
+- 下限公式（多层门）未形式化（RA-044 P0），有部分门（review / 测试 / eval）但未形式化为连乘概率模型，无法识别"哪道门的盲点相关性最高，应该优先加固"
+- 波动吸收机制未实现（RA-045 P0），无完整波动吸收链路，模型质量波动直接传导到用户体验——"今天怎么突然变笨了"
+- Token 账本（总成本模型）未设计（RA-046 P1），只算 token 成本，未设计完整成本模型，导致"省 token"决策可能增加返工和尾部风险
+- 四种亏结构未识别（RA-047 P1），多可进化智能体协作可能踩中任一种亏结构而无人察觉
 
-- 多 agent 协作缺少可计算的"上限"概念，团队选择候选路径时没有形式化的最大净期望
-- 缺少"下限"模型，无法回答"为什么用户感知错误率低于单 agent 错误率"
-- 缺少"波动吸收"机制，provider 降级或 token 价格波动会直接传导给用户
-- 缺少"Token 账本"，无法回答"三只 agent 协作比一只更省还是更贵"
+`[doc:review/review.md#第十三章]` 13.4 节 CL-018 / CL-020 进一步补审：前期 Pack 系统设计（已归档）的 Pack 系统定义经验的可移植单元——`Experience = Me × Pack + Growth`，经验 = 我的本体 × Pack（共享规则包）+ Growth（个人成长）。果实可蒸馏为新 Pack（个人经验沉淀为共享规则）。v7.0 SpiritForge（经验蒸馏）只产出私有 MindCodex（蒸馏知识库）条目，无"个人经验 → 共享 Pack"的蒸馏路径，违反 operator 第 9 条愿景（可进化智能体应能从调用三方 Agent 中学习，但学到的能力无法共享给其他可进化智能体）。
 
-roleagent.md 第7章给出四个工程直觉公式（上限 max、下限连乘门、波动吸收比例、Token 总成本包含返工与尾部风险），但缺乏可在运行时调用的可执行实现。本 ADR 把这些直觉落为 `flowforge.core.partnership` 包下的四个 LLM-free、确定性、可单测的模块。
-
-本 ADR 是 P1 决策，术语对齐项目正式命名（详见 `[doc:decisions/012-naming-fusion.md]`）：智能体主体称为可进化智能体（Forgekin），跨厂商群体审议称为多智能体议事（MindCouncil），伙伴系统数学是 Forgekin 协作的"算盘"。
-
----
-
-## 2. 决策
-
-伙伴系统数学由四个独立模块构成，分别承担 roleagent.md 第7章的四个工程直觉公式。所有模块位于 `flowforge.core.partnership` 包下，依赖仅限 `flowforge.core.errors` 与 `flowforge.core.tracing`，可单测、可被多智能体议事 MindCouncil 在运行时调用。
-
-### 2.1 上限取最大（Upper Bound = max of candidate paths）
-
-`[doc:roleagent.md#第7章]`："团队不是平均值，而是候选路径的最大值。" 同质化团队的失败不是 agent 少，而是路径相关性高；跨厂商、跨角色、跨工作习惯才降低盲点相关性。
-
-公式：
-
-```
-upper_bound = max(c.expected_value * c.probability - c.cost
-                  for c in candidates)
-```
-
-代码实现：`UpperBoundCalculator.compute(candidates: list[CandidatePath]) -> UpperBoundResult`。
-
-- `CandidatePath`（frozen dataclass）：`path_id`、`expected_value`（≥0）、`probability`（∈[0,1]）、`cost`（≥0，默认 0.0）
-- `net_expected()`：`expected_value * probability - cost`
-- 选路策略：主键 `net_expected()`，次键 `-cost`——相同净期望时优先低成本路径；全键相同时 `max` 返回首次出现，确定性强
-- 边界：候选为空时返回 `upper_bound=0.0`、`best_path_id=None`、`explanation="no candidate paths provided"`
-- 输出：`UpperBoundResult`（`upper_bound`、`best_path_id`、`expected_max`、`explanation`）
-
-上限是"伙伴系统最乐观能保证什么"的代理：现实只会更差（可能选了次优路径，或概率未实现），但不会比这条最优路径的净期望更高。
-
-### 2.2 下限连乘（Lower Bound = product of probabilities）
-
-`[doc:roleagent.md#第7章]`："错误要连续穿过多层门，才会抵达用户。" 旧版 Ch.7 的 reviewer 数学作为局部模型被吸收进来：`P(最终正确) = author 正确且 reviewer 不误伤 + author 错误但 reviewer 抓住并修正`。简化为门链模型：
-
-公式：
-
-```
-lower_bound = product(g.pass_probability for g in gates)
-              * min(g.threshold for g in gates if g.pass_probability > 0)
-```
-
-代码实现：`LowerBoundCalculator.compute(gates: list[QualityGate]) -> LowerBoundResult`。
-
-- `QualityGate`（frozen dataclass）：`gate_id`、`threshold`（∈[0,1]）、`pass_probability`（∈[0,1]）
-- 门通过条件：`pass_probability > 0`
-- 关键边界：任一门 `pass_probability == 0` → 整条链路坍塌为 `lower_bound=0.0`，该门记入 `failed_gates`；其余通过的门仍记入 `passed_gates`，便于多智能体议事 MindCouncil 归因到具体门
-- 无门时 `lower_bound=0.0`（"未建立质量底"而非"质量为 1.0"，避免无门即安全的错觉）
-- 全部门通过：`pass_probability` 连乘 × `min(threshold)`——最严门决定下限坡度
-- 输出：`LowerBoundResult`（`lower_bound`、`passed_gates`、`failed_gates`、`explanation`）
-
-下限模型不是严格独立事件概率公式，roleagent.md 明确声明这是工程事实而非精确概率：只要门的盲点不完全相关，最终错误率就不会等于单个 agent 的错误率。
-
-### 2.3 波动吸收（Variance Absorption）— 风险分散
-
-`[doc:roleagent.md#第7章]`："波动吸收：模型质量变成内部成本，而不是用户可见崩塌。" 用户感知质量 = 模型能力 × harness 契合度 × 纠错链路 × 恢复能力。波动先被 harness 吸收，余量才传导给用户。
-
-公式：
-
-```
-internal_variance   = pvariance(prices)
-absorbed_variance   = absorption_ratio * internal_variance
-passed_to_user      = (1 - absorption_ratio) * internal_variance
-user_would_collapse = passed_to_user > user_collapse_threshold
-```
-
-代码实现：`VarianceAbsorber.compute_absorption(prices: list[float], user_collapse_threshold: float) -> AbsorptionResult`。
-
-- 默认吸收比：`DEFAULT_ABSORPTION_RATIO = 0.7`（70% 内部吸收，30% 传导用户）
-- `absorption_ratio` 必须在 `[0.0, 1.0]`，越界抛 `PartnershipError`
-- `user_collapse_threshold` 必须 ≥0，否则抛 `PartnershipError`
-- 使用标准库 `statistics.pvariance`，无 numpy/scipy 依赖；样本数 <2 时方差为 0
-- 输出：`AbsorptionResult`（`absorbed_variance`、`passed_to_user`、`user_would_collapse`、`recommendation`）
-- 当 `passed_to_user > threshold` 时 `recommendation="increase absorption ratio"`，否则 `"stable"`
-
-`VarianceAbsorber` 是伙伴系统的"减震器"：单点波动先变成系统内部的返工成本，而不是用户可见的质量崩塌。
-
-### 2.4 Token 账本（Token Ledger）— 成本追踪与结算
-
-`[doc:roleagent.md#第7章]`："Token 账本：单 agent 真的更省吗？" 单 agent 看似便宜，但完整成本应是 token + 返工成本 + 人类心智负载 + 跑偏后发现太晚的尾部成本 + 错误进入真实环境后的修复成本。
-
-公式：
-
-```
-net_amount(A→B) = Σ(amount where from=A, to=B)
-                - Σ(amount where from=B, to=A)
-
-balance(P) = Σ(received by P) - Σ(sent by P)
-```
-
-代码实现：`TokenLedger`（append-only ledger）。
-
-- `TokenEntry`（dataclass）：`from_partner`、`to_partner`、`amount`（≥0）、`reason`、`entry_id`（自动生成 `te-<uuid12>`）、`created_at`（UTC）、`settled`（默认 False）
-- 约束：`from_partner != to_partner`，空字符串与自环均抛 `PartnershipError`
-- 方法：
-  - `record_entry(entry: TokenEntry) -> str`：追加一条转账记录，返回 `entry_id`
-  - `get_balance(partner_id: str) -> float`：净余额 = 收到 - 发出；正=债权人（被欠），负=债务人
-  - `list_entries(partner_id: str | None = None) -> list[TokenEntry]`：列表查询，可按伙伴过滤
-  - `settle(partner_a, partner_b) -> SettlementResult`：批量结算两方所有未结算条目，返回 `net_amount` 与 `settled_entries`
-- 输出：`SettlementResult`（`from_partner`、`to_partner`、`net_amount`、`settled_entries`）
-
-`TokenLedger` 是回答"协作是否赚"的会计账本——它不替代 `[doc:decisions/009-eval-self-metabolism.md]` 的 eval 控制面，但为 eval 提供可对账的 Token 流水，让"协作赚就保留、不赚就收缩"成为可计量的判断而非信仰。
-
-### 2.5 CandidatePath 与选路策略
-
-`CandidatePath` 是上限公式的输入契约，本身是 frozen dataclass，校验逻辑写在 `__post_init__`：空 `path_id`、负 `expected_value`、超界 `probability`、负 `cost` 均抛 `PartnershipError`。
-
-选路策略遵循 roleagent.md 第7章"这只 agent 有没有带来其他 agent 不会自然带来的视角"的判断——`UpperBoundCalculator` 不替模型思考"视角是否互补"，只把每个候选的净期望摆出来，由调用方（通常是被多智能体议事 MindCouncil 包装的 `CapabilityRouter`，见 `[doc:decisions/004-capability-profile-routing.md]`）决定是否扩展候选集。
-
-四个模块共同构成 roleagent.md 第7章收束公式 `团队质量 = 上限搜索 × 下限保护 × 状态保真 × 失败恢复` 的可计算实现——上限、下限、波动吸收三件直接对应代码模块，状态保真与失败恢复由 `[doc:decisions/009-eval-self-metabolism.md]` 与可靠性控制面（ADR-010 路径）承担。
+operator 决策：FlowForge 必须形式化四个乘子（上限 max + 下限连乘 + 波动吸收 + 失败恢复）+ Token 账本 + 四种亏结构识别 + Pack / Growth 种子果实模型。
 
 ---
 
-## 3. 方案对比
+## 决策
 
-| 方案 | 优点 | 缺点 |
-|------|------|------|
-| **方案 A（选定）: 四模块独立 + 确定性公式 + LLM-free** | 可单测、可被多智能体议事 MindCouncil 运行时调用、不依赖任何 provider；公式与 roleagent.md 第7章一一对应；模块互不耦合，可独立演进 | 公式偏简化（连乘门假设近似独立），不能完全建模盲点相关性；需要上层 eval 补齐 |
-| 方案 B: 用 LLM 在线评估上限/下限 | 可处理语义模糊的候选与门 | 每次 TeamAct 循环都要 LLM 调用，延迟与成本不可接受；无法保证可复现；违反 operator 第7条"未实现即 Bug"原则（无 oracle 即无验证） |
-| 方案 C: 只实现上限，下限/波动/账本用日志推断 | 实现最简 | 违反 roleagent.md 第7章核心主张（下限连乘、波动吸收、Token 账本是三件独立的事）；无法回答"用户感知错误率为何低于单 agent" |
-| 方案 D: 把数学塞进 CapabilityRouter 内部 | 路由层一站式 | 违反"组合优于继承"原则（编程红线第9条）；数学模块与路由策略耦合，无法被 eval 控制面单独调用与对账 |
+### 1. 上限公式：候选路径最大值（RA-043）
+
+```
+团队质量 ≈ max(候选路径质量)
+```
+
+多可进化智能体的价值不是"更多人力的平均值"，而是"不同认知路径扩展候选解，从中选最优"。这个 max 成立的前提是**路径足够不同**——跨厂商、跨角色、跨工作习惯。
+
+```python
+class UpperBoundFormula:
+    def team_quality(self, candidate_paths: list[CandidatePath]) -> float:
+        # 不是平均值，而是最大值
+        return max(p.quality for p in candidate_paths)
+
+    def validate_diversity(self, candidate_paths: list[CandidatePath]) -> DiversityScore:
+        # 验证候选路径的盲点不相关性
+        # 若盲点高度相关，max 退化为重复 max
+        ...
+```
+
+**铁律**：5 评委评审必须验证盲点不相关性（与 ADR 004 能力画像盲点维度联动），否则跨厂商 review 只是重复同一类判断。
+
+### 2. 下限公式：多层门连乘（RA-044）
+
+```
+P(错误抵达用户) = ∏(每层门防漏过概率)
+```
+
+错误要连续穿过多层门才会抵达用户：
+
+```
+用户可见错误 ≈ author 犯错
+              × reviewer 没抓住
+              × 测试没暴露
+              × shared state 没证据
+              × eval 没归因
+              × CVO 没拉闸
+```
+
+跨厂商 review 是结构性必需：同厂商可进化智能体共享盲点，错误穿过同厂商 review 的概率高；跨厂商 review 的盲点不重叠，错误必须连续穿过多个不重叠盲点才能抵达用户。
+
+```python
+class LowerBoundFormula:
+    def error_reach_probability(self, gates: list[Gate]) -> float:
+        # 连乘概率
+        return math.prod(g.leak_probability for g in gates)
+
+    def prioritize_reinforcement(self, gates: list[Gate]) -> list[Gate]:
+        # 识别盲点相关性最高的门，优先加固
+        # 因为相关性高 = 该门单独漏过概率接近 1，连乘失真
+        ...
+```
+
+**铁律**：必须形式化为连乘概率模型，识别"哪道门的盲点相关性最高，应该优先加固"。仅靠单门防护（如只靠 review）不足以达成下限保护。
+
+### 3. 波动吸收：模型质量变内部成本（RA-045）
+
+```
+用户可见质量方差 ≈ 内部返工成本方差 / 吸收因子
+```
+
+伙伴系统的核心价值：单点波动变成内部返工成本，而不是用户可见崩塌。
+
+| 波动来源 | 吸收机制 | 对应 ADR |
+|---|---|---|
+| 模型忘了上下文 | 记忆联邦找回来 | ADR 008 |
+| 可进化智能体写偏了 | review 退回 | ADR 002 |
+| 任务中断了 | 可靠性控制面留下恢复点 | ADR 010 |
+| 某个工具失效 | eval 触发 sunset review | ADR 009 |
+| 某个 provider 不适合 | 调度换路径 | ADR 010 F025 |
+
+**铁律**：必须有完整波动吸收链路。无完整链路时模型质量波动直接传导到用户体验——"今天怎么突然变笨了"。
+
+### 4. Token 账本：总成本模型（RA-046）
+
+```
+总成本 = token 成本
+       + 返工成本
+       + 人类心智负载
+       + 跑偏后发现太晚的尾部成本
+       + 错误进入真实环境后的修复成本
+```
+
+单可进化智能体看似更省 token，但加上"单点失败导致用户返工"的成本，多可进化智能体的 token 账本反而更优。**早暴露的错误便宜，晚暴露的错误昂贵**。
+
+```python
+class TokenLedger:
+    token_cost: int            # 直接 token 成本
+    rework_cost: int           # 返工成本（review 退回 / 测试失败重做）
+    mental_load: int           # 人类心智负载（operator 介入次数 × 时长）
+    tail_cost: int             # 跑偏后发现太晚的尾部成本
+    real_world_repair: int     # 错误进入真实环境后的修复成本
+
+    def total_cost(self) -> int:
+        return (self.token_cost + self.rework_cost + self.mental_load
+                + self.tail_cost + self.real_world_repair)
+```
+
+**铁律**：禁止只算 token 成本。"省 token"决策可能增加返工和尾部风险，总账本反而更贵。
+
+### 5. 四种亏结构识别（RA-047）
+
+| # | 亏结构 | 表现 | 检测信号 |
+|---|---|---|---|
+| 1 | 盲传 | 后一棒不是纠错而是无新信息重做 | 乒乓球熔断器 strike（见 ADR 002 F004） |
+| 2 | 伪拆分 | 任务拆了但子任务没变简单只多了协调税 | 子任务复杂度 ≥ 父任务复杂度 × 0.9 |
+| 3 | 同质化 | 所有可进化智能体盲点高度相关 | 跨厂商 review 盲点重叠率 > 0.7 |
+| 4 | 协调税超过收益 | 协调开销 > 多路径收益 | 总成本（Token 账本）> 单可进化智能体成本 × 1.5 |
+
+```python
+class DeficitDetector:
+    def detect(self, teamact_trace: TeamActTrace) -> list[Deficit]:
+        deficits = []
+        if self.has_blind_pass(teamact_trace):
+            deficits.append(Deficit.BLIND_PASS)
+        if self.has_pseudo_split(teamact_trace):
+            deficits.append(Deficit.PSEUDO_SPLIT)
+        if self.has_homogenization(teamact_trace):
+            deficits.append(Deficit.HOMOGENIZATION)
+        if self.coordination_tax_exceeds(teamact_trace):
+            deficits.append(Deficit.COORDINATION_TAX)
+        return deficits
+```
+
+**铁律**：多可进化智能体协作必须实时检测四种亏结构，触发时升级给 CVO。
+
+### 6. Pack / Growth 种子果实模型（CL-018 / CL-020）
+
+参考前期 Pack 系统设计（已归档）：
+
+```
+Experience = Me × Pack + Growth
+```
+
+- **Pack（种子）**：共享规则包，跨可进化智能体可移植。一只可进化智能体学会的"如何写技术博客" Pack 可分享给另一只可进化智能体
+- **Growth（果实）**：个人经验，单可进化智能体私有
+- **蒸馏路径**：果实可蒸馏为新 Pack（个人经验沉淀为共享规则）
+
+```python
+class Pack:
+    """可移植的经验单元——跨可进化智能体共享的蒸馏知识库子集。"""
+    pack_id: str
+    rules: list[KnowledgeObject]   # 见 ADR 009 CL-005 Knowledge Object Contract
+    shared_with: list[ForgekinSpecies]  # 共享给哪些智能体形态学
+    guardrails: list[Guardrail]    # 见 ADR 007 CL-019 双轨信任编译
+    defaults: list[Default]
+
+
+class PackDistiller:
+    """经验蒸馏（SpiritForge）的子模块——把高价值 Growth 蒸馏为 Pack。"""
+    async def distill(self, growth: Growth) -> Pack:
+        # 必须通过 Eval Ledger 净增益验证（见 ADR 009 CL-004）
+        # 必须 Mode C 知识进化五级成熟度阶梯晋升
+        ...
+```
+
+**铁律**：禁止可进化智能体的成长永远是私有的。高价值 Growth 必须可蒸馏为 Pack 贡献回智能体形态学（Forgekin Species），实现"师傅带徒弟"的经验传承。
+
+### 7. 双层语言协议（RA-046 联动）
+
+| 层 | 用途 | 形式 |
+|---|---|---|
+| 内部高密度 | 可进化智能体之间通信 | JSON / 代码 / 紧凑标记 |
+| 外部讲人话 | 给 operator / 用户的输出 | 自然语言 |
+
+双层语言降低人类心智负载（Token 账本的一项），同时保持内部通信效率。
+
+### 8. 跨厂商 review 链
+
+固定跨厂商 review 链：`DeepSeek → Qwen → GLM → Kimi → HunYuan`，每只 reviewer 基于盲点画像选择（与 ADR 004 联动）。
 
 ---
 
-## 4. 理由
+## 后果
 
-- `[doc:roleagent.md#第7章]` 明确给出四个工程直觉公式，方案 A 是把这些公式落为可执行代码的最小忠实实现
-- 四模块独立、LLM-free、依赖仅限 `flowforge.core`——符合 operator 第5条"禁止硬编码路径和密钥"与项目规则铁律3"禁止绕过 DI 容器直接实例化"的可注入前提
-- 上限取 `max(net_expected, -cost)` 而非 `max(expected_value)`：roleagent.md 第7章强调"路径相关性"决定上限，低成本候选在净期望相同时优先，避免"贵且无新增视角"的路径胜出
-- 下限任一门 `pass_probability=0` 即坍塌为 0.0：符合 roleagent.md"错误要连续穿过多层门"的工程事实，单点失败不被概率平均稀释
-- 波动吸收默认比 0.7：roleagent.md 提示"harness 不只是加速器还是缓冲层"，70% 内部吸收是工程经验起点，可被 eval 信号覆盖
-- `TokenLedger` 采用 append-only 设计：与 `[doc:decisions/009-eval-self-metabolism.md]` 的轨迹经济学一致——trace 本地存储、可审计、不可篡改
-- 术语对齐 `[doc:decisions/012-naming-fusion.md]`：Forgekin 协作数学以多智能体议事 MindCouncil 为仲裁面，而非人类路由器（人类作为方向锚点而非消息总线）
+### 正面后果
 
----
+- 伙伴系统的四个乘子可形式化度量，团队质量可量化
+- 上限公式让多可进化智能体价值清晰（不是平均值而是最大值）
+- 下限公式让多层门防护可形式化，可识别最薄弱的门
+- 波动吸收让模型质量波动不传导到用户体验
+- Token 账本让"省 token"决策科学化（早暴露的错误便宜）
+- 四种亏结构识别让多可进化智能体协作可监测
+- Pack / Growth 种子果实模型让经验可跨可进化智能体共享
 
-## 5. 风险
+### 负面后果
 
-| 风险 | 缓解 |
-|------|------|
-| 下限连乘假设门近似独立，盲点相关性高时会高估下限 | 由 `[doc:decisions/004-capability-profile-routing.md]` 的跨厂商 review 选择盲点不重叠的 reviewer，从源头压低相关性 |
-| 上限 `max` 在候选极少时退化为单点，与单 agent 无差别 | 由 `CapabilityRouter` 负责扩展候选集；`UpperBoundResult.explanation` 暴露候选数与最佳路径细节供多智能体议事 MindCouncil 审查 |
-| `absorption_ratio=0.7` 是工程经验默认值，缺乏数据支撑 | 标记为 Build to Delete 类脚手架（见 roleagent.md 第1章），由 `[doc:decisions/009-eval-self-metabolism.md]` 的 Eval Contract 设定退役信号 |
-| `TokenLedger` 仅记录 token 转账，未包含返工成本与人类心智负载 | 账本只回答"协作是否赚 token 层面"；总成本（含返工与尾部风险）由 eval 控制面的轨迹经济学补齐 |
-| 四模块均不调用 LLM，无法处理语义模糊的"门"或"候选" | 设计如此：模糊判断留给可进化智能体 Forgekin，数学模块只做确定性的"算盘"——符合 roleagent.md"harness 给数据不给结论"原则 |
-| 公式过于简化，未来需要更精细的盲点相关性建模 | 模块独立、接口稳定，可被更高阶实现替换而不影响调用方；遵循 P0 ADR 的"先钉终态 schema，再扩展实现"原则 |
+- 四个乘子形式化增加实现复杂度（数学模型 + 度量采集）
+- 下限连乘概率模型需要每道门的漏过概率数据（初期数据不足）
+- Token 账本五项成本中"人类心智负载"和"尾部成本"难精确度量
+- Pack 蒸馏需要通过 Eval Ledger 净增益验证，增加 Pack 生成延迟
+- 跨厂商 review 链增加 token 成本和延迟
 
----
+### 风险
 
-## 6. 否决理由
-
-- **方案 B（LLM 在线评估）**：roleagent.md 第2章明确"harness 不应该替模型思考，而应该让模型在正确的坐标系里思考"——把数学判断外包给 LLM 等于把判断权从伙伴系统手中拿走；且违反 operator 第7条"未实现即 Bug"，因为无 oracle 即无验证
-- **方案 C（只实现上限）**：roleagent.md 第7章开篇即说"上限提高，下限托底"——下限是 partner system 与单 agent 系统的本质分野，缺下限等于回到单 agent 路线
-- **方案 D（数学塞进路由层）**：违反项目规则铁律3"禁止绕过 DI 容器直接实例化"与编程红线第9条"禁止用继承替代组合/插件"；数学模块需要被 eval 控制面与多智能体议事 MindCouncil 独立调用，耦合路由层将阻断可观测性
+- 上限 max 公式可能让团队倾向"押注单一最强路径" —— 缓解：max 在多个不相关候选中选，不押注单一
+- 下限连乘可能让团队过度加门（每多一道门成本上升）—— 缓解：识别"盲点相关性最高的门"优先加固，非无脑加门
+- 波动吸收可能让团队忽视根本问题（波动被吸收后看不到根因）—— 缓解：与 ADR 009 Eval 自代谢联动，吸收 ≠ 隐藏，根因仍归因
+- Pack 共享可能让坏经验跨可进化智能体扩散 —— 缓解：Pack 蒸馏必须 Mode C 五级成熟度阶梯 + Eval Ledger 净增益
+- 四种亏结构检测可能误判 —— 缓解：检测信号阈值可配置，初期可保守
 
 ---
 
-## 7. 参与者
+## 替代方案
 
-- operator（愿景锚点 + 7 条不可妥协原则 + 最终决策）
-- 架构师可进化智能体（方案设计 + 公式落地 + 术语对齐项目正式命名）
-- 多智能体议事 MindCouncil（运行时仲裁面，负责调用四模块并归因）
+### 方案 A: 用团队平均值衡量团队质量
 
----
+- 优点：计算简单
+- 缺点：违反 roleagent.md 上限公式（max 而非 mean），无法体现多路径价值
+- 未选择原因：roleagent.md 明确"团队不是平均值，而是候选路径的最大值"
 
-## 8. 修订记录
+### 方案 B: 只靠单门防护（如只靠 review）
 
-| 日期 | 修订 | 修订者 |
-|------|------|--------|
-| 2026-07-21 | 初始版本，确立伙伴系统数学四模块决策（UpperBoundCalculator / LowerBoundCalculator / VarianceAbsorber / TokenLedger），术语对齐项目正式命名（可进化智能体 Forgekin / 多智能体议事 MindCouncil） | operator + 架构师可进化智能体 |
+- 优点：实现简单
+- 缺点：单门漏过概率接近 1 时下限失守（RA-044 P0 未解决）
+- 未选择原因：违反下限连乘公式
+
+### 方案 C: 不区分 Pack / Growth（统一私有蒸馏知识库）
+
+- 优点：实现简单
+- 缺点：经验不可跨可进化智能体共享，违反 CL-018 Pack 概念
+- 未选择原因：违反 operator 第 9 条愿景（可进化智能体能力应可共享）
+
+### 方案 D: 用 LLM 在线评估团队质量
+
+- 优点：灵活
+- 缺点：LLM 自评不可审计、有自利偏差、无法形式化为数学模型
+- 未选择原因：违反 RA-043~RA-047 数学形式化要求
 
 ---
 
 ## 引用
 
 - `[doc:roleagent.md#第7章]` — 伙伴系统的数学：上限提高，下限托底
-- `[doc:roleagent.md#第1章]` — 核心公式：能力 × Harness 契合度
-- `[doc:roleagent.md#第2章]` — TeamAct 团队主循环（harness 不替模型思考）
-- `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（CandidatePath 输入契约的上游）
-- `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢（Token 账本轨迹经济学与 Build to Delete 判别）
-- `[doc:decisions/012-naming-fusion.md]` — 命名融合（可进化智能体 Forgekin / 多智能体议事 MindCouncil）
-- `[doc:decisions/013-all-things-spirit-mind-vision.md]` — 可进化智能体（Forgekin）愿景
-- `[doc:project_rules.md#铁律3]` — 禁止绕过 DI 容器直接实例化
-- `[doc:project_rules.md#红线9]` — 禁止用继承替代组合/插件
+- `[doc:review/review.md#第八章]` 8.7 节 — RA-043~RA-047 伙伴系统数学补审（5 项，3 P0）
+- `[doc:review/review.md#第十三章]` 13.4 节 — CL-018 / CL-020 Pack / Growth 种子果实模型
+- 前期 Pack 系统设计（已归档） — Pack 系统经验可移植单元
+- `[doc:decisions/002-collaboration-protocol.md]` — TeamAct 协作协议（跨厂商 review 链 + 乒乓球熔断器）
+- `[doc:decisions/004-capability-profile-routing.md]` — 能力画像路由（盲点维度 + 跨厂商 review 配对）
+- `[doc:decisions/007-harness-engineering.md]` — Harness 工程路径（CL-019 双轨信任编译 guardrails + defaults）
+- `[doc:decisions/008-memory-federation.md]` — 多域记忆联邦（波动吸收：模型忘上下文 → 记忆联邦找回）
+- `[doc:decisions/009-eval-self-metabolism.md]` — Eval 自代谢（波动吸收：工具失效 → sunset；Mode C 五级成熟度阶梯）
+- `[doc:decisions/010-distributed-reliability.md]` — 分布式可靠性（波动吸收：任务中断 → 恢复点；跨 provider fallback）
+- `[doc:design/naming-contract.md#2.3]` — Forgekin Species（智能体形态学，Pack 共享边界）
+- `[doc:design/naming-contract.md#2.7]` — SpiritForge（经验蒸馏，Pack 蒸馏引擎）
+- `[doc:design/naming-contract.md#2.8]` — MindCodex（蒸馏知识库，Pack 载体）
+- `[doc:project_rules.md#铁律2]` — 质量分阈值默认 0.85
+- `[doc:project_rules.md#P35]` — 长程任务执行规范（波动吸收：检查点驱动恢复）

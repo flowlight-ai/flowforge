@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Query
@@ -41,7 +41,7 @@ class RecallRequest(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(UTC).isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat() + "Z"
 
 
 @router.get("/collections")
@@ -57,7 +57,7 @@ async def list_collections(
 async def create_collection(payload: CollectionCreate) -> dict[str, Any]:
     """创建记忆集合（stub 返回占位对象）。"""
     return {
-        "id": f"col_stub_{int(datetime.now(UTC).timestamp())}",
+        "id": f"col_stub_{int(datetime.now(timezone.utc).timestamp())}",
         "name": payload.name,
         "description": payload.description,
         "embed_model": payload.embed_model,

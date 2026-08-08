@@ -4,6 +4,7 @@
  * IndexStatus — 索引状态
  *
  * 展示语义索引服务的实时状态、队列长度、上次重建时间、降级标记。
+ * 移植自 clowder-ai IndexStatus，简化为状态卡片 + 队列列表。
  *
  * API：GET /api/v1/memory/index-status
  */

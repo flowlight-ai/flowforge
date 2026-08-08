@@ -20,7 +20,7 @@ interface ContextPanelProps {
 /**
  * ContextPanel — 群聊上下文面板
  *
- * 提供群聊会话的实时上下文信息，参考 RightStatusPanel 设计：
+ * 提供群聊会话的实时上下文信息，参考 clowder-ai RightStatusPanel 设计：
  *   - 讨论摘要：消息数、参与智能体、时间范围、关键字
  *   - 共识决议：智能体表达赞同/确认的要点
  *   - 待解决问题：会话中提出但未明确回答的问题

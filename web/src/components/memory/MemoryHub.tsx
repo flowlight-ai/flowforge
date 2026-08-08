@@ -3,6 +3,7 @@
 /**
  * MemoryHub — 记忆中心主容器
  *
+ * 移植自 clowder-ai MemoryHub（简化版），适配 FlowForge CSS 变量体系。
  * 左侧导航 + 右侧内容布局；导航项与路由一一对应。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

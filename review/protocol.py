@@ -16,11 +16,12 @@
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from flowforge.core.tracing import get_logger
 from flowforge.review.models import (
+    ReviewFinding,
     ReviewRequest,
     ReviewResponse,
     SeverityLevel,
@@ -122,7 +123,7 @@ class ReviewProtocol:
             test_evidence=test_evidence,
             self_check_report=self_check_report,
             design_doc_ref=design_doc_ref,
-            created_at=datetime.now(UTC),
+            created_at=datetime.now(timezone.utc),
         )
         if request_id:
             request.request_id = request_id

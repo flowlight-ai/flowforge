@@ -175,6 +175,39 @@ def seed_env() -> bool:
     return True
 
 
+def setup_cli_agents() -> bool:
+    """Step 8: Install/configure third-party coding-agent CLIs.
+
+    On POSIX, runs scripts/setup_cli_agents.sh (npm installs + writes CLI
+    configs + starts protocol proxies + starts claude-code-router).
+    On Windows, falls back to the legacy install_agents.py (best-effort).
+    """
+    section("Step 8: Install/configure third-party coding-agent CLIs")
+    script = PROJECT_ROOT / "scripts" / "setup_cli_agents.sh"
+    if sys.platform == "win32":
+        legacy = PROJECT_ROOT / "scripts" / "install_agents.py"
+        if legacy.exists():
+            rc = run([str(venv_python()), str(legacy)], cwd=PROJECT_ROOT)
+            if rc == 0:
+                ok("Third-party agents installed (legacy installer)")
+                return True
+        fail("Install third-party agents manually (see docs/design/D011-cli-external-agents.md)")
+        return False
+    if not script.exists():
+        fail(f"setup_cli_agents.sh not found at {script}")
+        print("    Install third-party agents manually (docs/design/D011-cli-external-agents.md)")
+        return False
+    if not shutil.which("bash"):
+        fail("bash not found")
+        return False
+    rc = run([shutil.which("bash"), str(script), "--no-start"], cwd=PROJECT_ROOT)
+    if rc == 0:
+        ok("Third-party coding agents installed and configured")
+        return True
+    fail("setup_cli_agents.sh failed (see output above)")
+    return False
+
+
 def print_next_steps() -> None:
     section("Setup Complete")
     print("Next steps:")
@@ -183,9 +216,8 @@ def print_next_steps() -> None:
     else:
         print("  1. Activate venv:  source .venv/bin/activate")
     print("  2. Edit .env and fill in required API keys")
-    print("  3. Install external coding agents:  python scripts/install_agents.py")
-    print("  4. Start the stack:                 python scripts/start.py")
-    print("  5. Verify forgekins:               python scripts/verify_five_forgekins.py")
+    print("  3. Start the stack:                 python scripts/start.py")
+    print("  4. Verify 9 forgekin CLIs:          python scripts/verify_forgekin.py --live")
 
 
 def main() -> int:
@@ -200,6 +232,7 @@ def main() -> int:
             "  4. npm install (frontend)\n"
             "  5. npm run build (frontend)\n"
             "  6. Copy .env.example -> .env (if missing)\n"
+            "  7. Install/configure third-party coding CLIs + protocol proxies\n"
         ),
     )
     parser.parse_args()
@@ -218,6 +251,7 @@ def main() -> int:
         ("Frontend deps", install_frontend),
         ("Frontend build", build_frontend),
         (".env seed", seed_env),
+        ("CLI agents", setup_cli_agents),
     ]
     results: list[tuple[str, bool]] = []
     for name, fn in steps:

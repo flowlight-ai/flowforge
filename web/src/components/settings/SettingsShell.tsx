@@ -10,13 +10,14 @@ import { DEFAULT_SECTION } from './settings-nav-config';
 /**
  * SettingsShell — 设置中心主容器
  *
- * 简化实现：
+ * 从 clowder-ai 移植并简化：
  *   - 左侧 220px 导航 + 右侧内容区
  *   - URL 参数 s= 控制活动 section（支持深链）
- *   - 移除 standalone 模式与 initialEditCatId
+ *   - 移除 standalone 模式与 initialEditCatId（clowder-ai 特有）
  *   - 添加搜索框过滤导航项
  *   - 添加 data-* 标记（T8 测试用）：data-settings / data-settings-nav / data-settings-content
  *
+ * 依据 WEB-FUSION-DESIGN.md §7.1。
  */
 function SettingsShellInner() {
   const router = useRouter();

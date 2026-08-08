@@ -12,6 +12,7 @@
 
 import re
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -35,7 +36,7 @@ class ModerationResult(BaseModel):
 
     safe: bool = True
     level: ModerationLevel = ModerationLevel.L5_CONTENT_MODERATION
-    risk_tags: list[str] = []
+    risk_tags: List[str] = []
     reason: str = ""
     confidence: float = 1.0
 
@@ -56,7 +57,7 @@ class ContentModerationChecker:
     """
 
     # 敏感词分类（实际部署时应从配置文件加载）
-    SENSITIVE_CATEGORIES: dict[str, list[str]] = {
+    SENSITIVE_CATEGORIES: Dict[str, List[str]] = {
         "political": ["敏感词1", "敏感词2"],
         "violence": ["暴力", "凶杀"],
         "adult": ["色情", "裸体"],
@@ -70,7 +71,7 @@ class ContentModerationChecker:
     async def check(
         self,
         content: str,
-        check_types: list[str] | None = None,
+        check_types: Optional[List[str]] = None,
     ) -> ModerationResult:
         """执行内容安全检查.
 
@@ -85,7 +86,7 @@ class ContentModerationChecker:
             ModerationResult 审核结果
         """
         types = check_types or ["sensitive_words", "privacy", "compliance"]
-        risk_tags: list[str] = []
+        risk_tags: List[str] = []
 
         if "sensitive_words" in types:
             tags = self._check_sensitive_words(content)
@@ -115,9 +116,9 @@ class ContentModerationChecker:
 
         return result
 
-    def _check_sensitive_words(self, content: str) -> list[str]:
+    def _check_sensitive_words(self, content: str) -> List[str]:
         """敏感词检查."""
-        tags: list[str] = []
+        tags: List[str] = []
         for category, words in self.SENSITIVE_CATEGORIES.items():
             for word in words:
                 if word in content:
@@ -125,9 +126,9 @@ class ContentModerationChecker:
                     break  # 每个分类只标记一次
         return tags
 
-    def _check_privacy_leak(self, content: str) -> list[str]:
+    def _check_privacy_leak(self, content: str) -> List[str]:
         """隐私泄露检查."""
-        tags: list[str] = []
+        tags: List[str] = []
         # 手机号
         if re.search(r"1[3-9]\d{9}", content):
             tags.append("privacy:phone_number")
@@ -139,15 +140,15 @@ class ContentModerationChecker:
             tags.append("privacy:bank_card")
         return tags
 
-    def _check_compliance(self, content: str) -> list[str]:
+    def _check_compliance(self, content: str) -> List[str]:
         """合规性检查."""
-        tags: list[str] = []
+        tags: List[str] = []
         # 检查虚假宣传
         if any(w in content for w in self.FALSE_ADVERTISING_WORDS):
             tags.append("compliance:false_advertising")
         return tags
 
-    def add_sensitive_words(self, category: str, words: list[str]):
+    def add_sensitive_words(self, category: str, words: List[str]):
         """动态添加敏感词.
 
         Args:
