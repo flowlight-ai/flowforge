@@ -15,10 +15,12 @@
 # 用法:
 #   ./mgr [--all|--repo NAME] status | commit | push | pull | clone | log | diff | branch | list
 #   ./mgr sync              推送双端 (从已改动端推 origin → 再推 mirror)
-#   ./mgr pr "标题"         双平台创建 PR (Gitee + GitHub)
+#   ./mgr pr "标题"         双平台创建 PR (当前分支 → Gitee master / GitHub main)
 #   ./mgr mirror-setup      一键配置双端互指 mirror 远程
-#   ./mgr dev-setup         批量创建 dev 分支
 #   ./mgr protect           设置 master 分支保护 (仅 Gitee)
+#
+# 分支模型 (强制): 仅主干开发 — Gitee=master / GitHub=main, 一律经 PR 合入;
+#   向 Gitee 保护分支 push 会自动转为 PR; 禁止使用 dev 等长期分支。
 # ============================================================================
 set -e
 _git() { local d="$1"; shift; (cd "$d" && git "$@"); }
@@ -86,7 +88,7 @@ load_token() {
 load_gh_token() { MGR_GH_TOKEN="${GITHUB_TOKEN:-}"; [ -z "$MGR_GH_TOKEN" ] && [ -f "$HOME/.github-token" ] && MGR_GH_TOKEN="$(cat "$HOME/.github-token"|tr -d '[:space:]')"; }
 
 # ── 辅助 ────────────────────────────────────────────────────────
-usage() { sed -n '2,20p' "$0"; exit 0; }
+usage() { sed -n '2,24p' "$0"; exit 0; }
 
 # ──────── 命令 ──────────────────────────────────────────────────
 
@@ -253,22 +255,22 @@ cmd_mirror_setup() {
 }
 
 cmd_pr() {
-  local title="${*:-feat: dev -> master}"; load_token; load_gh_token
+  local title="${*:-feat: merge to master}"; load_token; load_gh_token
   for n in "${NAMES[@]}"; do
     local gd="${GPATH[$n]}"; [ ! -d "$gd/.git" ] && gd="${GH_PATH[$n]}"
     [ ! -d "$gd/.git" ] && continue
     local b; b=$(_git "$gd" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
-    [ "$b" != "dev" ] && { echo -e "${Y}${n}: branch=${b} skip${N}"; continue; }
-    echo -e "${B}═══ ${n} PR ═══${N}"
+    [ "$b" = "master" -o "$b" = "main" ] && { echo -e "${Y}${n}: 在主干分支 ${b} 上, push 会自动转 PR, 无需手动创建${N}"; continue; }
+    echo -e "${B}═══ ${n} PR (head=${b}) ═══${N}"
     echo -n "  Gitee: "
     [ -n "$MGR_TOKEN" ] && {
-      r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"dev\",\"base\":\"master\",\"access_token\":\"${MGR_TOKEN}\"}")
+      r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"${b}\",\"base\":\"master\",\"access_token\":\"${MGR_TOKEN}\"}")
       u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
       [ -n "$u" ] && echo -e "${G}$u${N}" || echo -e "${R}FAILED${N}"
     } || echo -e "${Y}no token${N}"
     echo -n "  GitHub: "
     [ -n "$MGR_GH_TOKEN" ] && {
-      r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"dev\",\"base\":\"master\"}")
+      r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json" -d "{\"title\":\"${title}\",\"head\":\"${b}\",\"base\":\"main\"}")
       u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
       [ -n "$u" ] && echo -e "${G}$u${N}" || echo -e "${R}FAILED${N}"
     } || echo -e "${Y}no token${N}"
@@ -283,7 +285,6 @@ cmd_log()    { local L=5; [ -n "${1:-}" ] && [[ "${1:-}" =~ ^[0-9]+$ ]] && { L="
 cmd_diff()   { for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; local out; out=$(_git "$d" diff --stat 2>&1); [ -n "$out" ] && { echo -e "${B}${n}${N}"; echo "$out"; }; done; done; echo ""; }
 cmd_branch() { for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; printf "  %-14s %s\n" "$n" "$(_git "$d" branch --show-current)"; done; done; echo ""; }
 cmd_list()   { echo -e "${B}双目录模型:${N}\n  Gitee:  ${ROOT_GITEE}\n  GitHub: ${ROOT_GITHUB}\n  本仓库: ${SELF} (默认作用域: $([ "$SELF" = content ] && echo "全部 9 仓库" || echo "仅本仓库"))\n\n${B}${#NAMES[@]} projects (当前作用域):${N}"; for n in "${NAMES[@]}"; do printf "  %-14s gitee=%s github=%s\n" "$n" "${GURL[$n]}" "${GH_URL[$n]}"; done; echo ""; }
-cmd_dev_setup(){ for n in "${NAMES[@]}"; do for d in "${GPATH[$n]}" "${GH_PATH[$n]}"; do [ -d "$d/.git" ] || continue; _git "$d" checkout master 2>/dev/null||true; _git "$d" fetch origin master 2>/dev/null||true; _git "$d" branch -D dev 2>/dev/null||true; _git "$d" checkout -b dev 2>/dev/null||true; _git "$d" push -u origin dev 2>&1|tail -1; echo "  ${n}: dev ready"; done; done; echo ""; }
 cmd_protect() { load_token; [ -z "$MGR_TOKEN" ] && { echo -e "${R}no token${N}"; exit 1; }; for n in "${NAMES[@]}"; do echo -n "  $n: "; r=$(curl -s -X PUT "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/branches/setting/new" -H "Content-Type: application/json" -d "{\"wildcard\":\"master\",\"pusher\":\"none\",\"merger\":\"admin\",\"mode\":\"review\",\"access_token\":\"${MGR_TOKEN}\"}"); echo "$r"|python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d.get('branch_name') else d.get('message','?'))" 2>/dev/null; done; echo ""; }
 
 main() {
@@ -300,7 +301,6 @@ main() {
     diff|df)      shift; cmd_diff "${1:-}" ;;
     branch|br)    cmd_branch ;;
     list|ls)      cmd_list ;;
-    dev-setup)    cmd_dev_setup ;;
     protect)      cmd_protect ;;
     *) usage ;;
   esac
