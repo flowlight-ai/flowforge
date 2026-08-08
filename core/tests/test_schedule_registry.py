@@ -43,6 +43,7 @@ from flowforge.core.schedule_registry import (
     ScheduleType,
 )
 
+
 # ── 测试数据：真实场景白名单 YAML（contentforge / devforge）─────────────────
 # 铁律 T2：使用真实场景数据，非 "test"/"hello" 等假数据
 WHITELIST_YAML_CONTENT = """\

@@ -3,6 +3,7 @@
 /**
  * HubObservabilityOverview — Observability 概览面板
  *
+ * 移植自 clowder-ai HubObservabilityOverview，适配 FlowForge 暗色主题。
  * 用于 /admin/observability 的主视图，提供：
  *   - OTel 启用状态横幅（disabled 时给出原因 + 配置指引）
  *   - 指标卡片网格（invocation ok/error/active/snapshots）
@@ -15,7 +16,7 @@
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
- * 独立性：仅依赖 observability-helpers 类型/工具，不依赖上游
+ * 独立性：仅依赖 observability-helpers 类型/工具，不依赖 clowder-ai apiFetch。
  *
  * API 端点（FlowForge 风格）：
  *   - GET /api/v1/telemetry/metrics/history?since=   获取指标历史快照

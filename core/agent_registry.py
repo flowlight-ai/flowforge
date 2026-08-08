@@ -1,6 +1,6 @@
-from collections.abc import Callable
-
+from typing import Dict, List, Optional, Callable
 from flowforge.core.base_agent import BaseAgent
+from flowforge.core.errors import AgentNotFoundError
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("agent_registry")
@@ -10,8 +10,8 @@ class AgentRegistry:
     """独立 Agent 注册中心，与 DIContainer 解耦。"""
 
     def __init__(self):
-        self._agents: dict[str, BaseAgent] = {}
-        self._factories: dict[str, Callable] = {}
+        self._agents: Dict[str, BaseAgent] = {}
+        self._factories: Dict[str, Callable] = {}
 
     def register(self, agent: BaseAgent) -> None:
         if agent.name in self._agents:
@@ -25,7 +25,7 @@ class AgentRegistry:
             return
         self._factories[name] = factory
 
-    def get(self, name: str) -> BaseAgent | None:
+    def get(self, name: str) -> Optional[BaseAgent]:
         if name in self._agents:
             return self._agents[name]
         if name in self._factories:
@@ -34,7 +34,7 @@ class AgentRegistry:
             return agent
         return None
 
-    def list_agents(self) -> list[str]:
+    def list_agents(self) -> List[str]:
         names = set(self._agents.keys()) | set(self._factories.keys())
         return sorted(names)
 
@@ -56,7 +56,7 @@ class AgentRegistry:
         if not found:
             raise KeyError(f"Agent '{name}' not registered")
 
-    def get_all(self) -> dict[str, BaseAgent]:
+    def get_all(self) -> Dict[str, BaseAgent]:
         for name in list(self._factories.keys()):
             if name not in self._agents:
                 self._agents[name] = self._factories[name]()

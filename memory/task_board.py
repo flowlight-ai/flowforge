@@ -1,9 +1,10 @@
-import asyncio
-import datetime
 import json
 import sqlite3
+import asyncio
+import datetime
+from datetime import timezone
 from pathlib import Path
-from typing import Any
+from typing import List, Optional, Dict, Any
 
 from flowforge.core.tracing import get_logger
 
@@ -51,7 +52,7 @@ class TaskBoard:
             return False
 
     async def add_task(self, task_id: str, task_type: str, payload: dict) -> int:
-        now = datetime.datetime.now(datetime.UTC).isoformat()
+        now = datetime.datetime.now(timezone.utc).isoformat()
         cursor = self.conn.execute(
             "INSERT INTO tasks (task_id, task_type, payload, status, created_at) VALUES (?, ?, ?, ?, ?)",
             (task_id, task_type, json.dumps(payload), self.STATUS_PENDING, now),
@@ -60,8 +61,8 @@ class TaskBoard:
         logger.info(f"Task added: task_id={task_id}, type={task_type}")
         return cursor.lastrowid
 
-    async def add_tasks_batch(self, tasks: list[dict[str, Any]]) -> list[int]:
-        now = datetime.datetime.now(datetime.UTC).isoformat()
+    async def add_tasks_batch(self, tasks: List[Dict[str, Any]]) -> List[int]:
+        now = datetime.datetime.now(timezone.utc).isoformat()
         ids = []
         for t in tasks:
             cursor = self.conn.execute(
@@ -73,8 +74,8 @@ class TaskBoard:
         logger.info(f"Batch added {len(tasks)} tasks")
         return ids
 
-    async def claim_task(self, claimant: str, task_type: str | None = None) -> dict | None:
-        now = datetime.datetime.now(datetime.UTC).isoformat()
+    async def claim_task(self, claimant: str, task_type: Optional[str] = None) -> Optional[dict]:
+        now = datetime.datetime.now(timezone.utc).isoformat()
         if self._supports_returning:
             if task_type:
                 query = (
@@ -130,8 +131,8 @@ class TaskBoard:
             logger.info(f"Task claimed: task_id={updated[1]}, claimant={claimant}")
             return self._row_to_dict(updated)
 
-    async def complete_task(self, task_id: str, result: dict | None = None) -> bool:
-        now = datetime.datetime.now(datetime.UTC).isoformat()
+    async def complete_task(self, task_id: str, result: Optional[dict] = None) -> bool:
+        now = datetime.datetime.now(timezone.utc).isoformat()
         payload = json.dumps(result) if result else None
         cursor = self.conn.execute(
             "UPDATE tasks SET status = ?, completed_at = ?, payload = ? WHERE task_id = ? AND status = ?",
@@ -146,7 +147,7 @@ class TaskBoard:
         return success
 
     async def fail_task(self, task_id: str, error_message: str) -> bool:
-        now = datetime.datetime.now(datetime.UTC).isoformat()
+        now = datetime.datetime.now(timezone.utc).isoformat()
         cursor = self.conn.execute(
             "UPDATE tasks SET status = ?, completed_at = ?, error_message = ? WHERE task_id = ? AND status = ?",
             (self.STATUS_FAILED, now, error_message, task_id, self.STATUS_CLAIMED),
@@ -159,7 +160,7 @@ class TaskBoard:
             logger.warning(f"Task fail failed: task_id={task_id}")
         return success
 
-    async def get_all_tasks(self, status: str | None = None) -> list[dict]:
+    async def get_all_tasks(self, status: Optional[str] = None) -> List[dict]:
         if status:
             rows = self.conn.execute(
                 "SELECT id, task_id, task_type, payload, status, claimed_by, created_at, claimed_at "
@@ -175,7 +176,7 @@ class TaskBoard:
 
     async def reset_stuck_tasks(self, timeout_seconds: int = 3600) -> int:
         cutoff = (
-            datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=timeout_seconds)
+            datetime.datetime.now(timezone.utc) - datetime.timedelta(seconds=timeout_seconds)
         ).isoformat()
         cursor = self.conn.execute(
             "UPDATE tasks SET status = ?, claimed_by = NULL, claimed_at = NULL "

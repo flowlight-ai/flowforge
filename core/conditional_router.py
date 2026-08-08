@@ -20,7 +20,7 @@ from __future__ import annotations
 import ast
 import operator
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
@@ -405,7 +405,7 @@ class RouteConfig(BaseModel):
     description: str = ""
 
     @model_validator(mode="after")
-    def _validate_condition_syntax(self) -> RouteConfig:
+    def _validate_condition_syntax(self) -> "RouteConfig":
         """Validate that the condition expression is parseable."""
         try:
             preprocessed = _preprocess_expression(self.condition, {})
@@ -557,7 +557,7 @@ class ConditionalRouter:
         return list(self._routes)
 
     @classmethod
-    def from_yaml(cls, yaml_path: str | Path) -> ConditionalRouter:
+    def from_yaml(cls, yaml_path: str | Path) -> "ConditionalRouter":
         """Load router configuration from a YAML file.
 
         Expected YAML structure::
@@ -587,7 +587,7 @@ class ConditionalRouter:
         if not path.exists():
             raise FileNotFoundError(f"Router config not found: {path}")
 
-        with open(path, encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
         try:

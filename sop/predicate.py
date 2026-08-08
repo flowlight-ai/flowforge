@@ -14,8 +14,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
-from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, Awaitable, Callable, Optional
 
 from flowforge.core.tracing import get_logger
 from flowforge.sop.models import (
@@ -29,7 +28,7 @@ logger = get_logger("sop.predicate")
 
 async def _run_command(
     cmd: list[str],
-    cwd: str | None = None,
+    cwd: Optional[str] = None,
     timeout: float = 30.0,
 ) -> tuple[int, str, str]:
     """异步执行命令并返回 (returncode, stdout, stderr)。
@@ -53,7 +52,7 @@ async def _run_command(
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
                 process.communicate(), timeout=timeout
             )
-        except TimeoutError:
+        except asyncio.TimeoutError:
             process.kill()
             await process.wait()
             return -1, "", f"command timed out after {timeout}s"
@@ -374,7 +373,7 @@ class PredicateChecker:
     async def check(
         self,
         config: PredicateConfig,
-        context: dict[str, Any] | None = None,
+        context: Optional[dict[str, Any]] = None,
     ) -> PredicateResult:
         """执行谓词检查。
 

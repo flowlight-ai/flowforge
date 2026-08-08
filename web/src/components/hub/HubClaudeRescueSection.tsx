@@ -3,13 +3,14 @@
 /**
  * HubClaudeRescueSection — Claude 会话救援中心
  *
+ * 移植自 clowder-ai HubClaudeRescueSection，适配 FlowForge 暗色主题。
  * 用于 /admin/observability 或 /admin/settings?s=tools，扫描本机
  * ~/.claude/projects/**/*.jsonl 中的坏 thinking signature session
  * 并提供一键修复（删除纯 thinking-only assistant turn，执行前自动备份）。
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
- * 独立性：内联 Toast 原语，不依赖上游
+ * 独立性：内联 Toast 原语，不依赖 clowder-ai useToastStore / apiFetch。
  *
  * API 端点（FlowForge 风格）：
  *   - GET  /api/v1/claude-rescue/sessions   扫描需要救援的 session

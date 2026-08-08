@@ -35,9 +35,7 @@ from __future__ import annotations
 import pytest
 
 from flowforge.forgemind import (
-    AwakeningStage,
     BioForgekin,
-    EvolutionStage,
     ForgekinBase,
     ForgekinFormData,
     ForgekinSpecies,
@@ -46,7 +44,10 @@ from flowforge.forgemind import (
     OrgForgekin,
     SoulImprint,
     VirtualForgekin,
+    AwakeningStage,
+    EvolutionStage,
 )
+
 
 # ── 测试辅助 ──────────────────────────────────────────────────────
 

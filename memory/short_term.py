@@ -1,9 +1,8 @@
 import json
-import sqlite3
 import time
+import sqlite3
 from pathlib import Path
 from typing import Any
-
 
 class ShortTermMemory:
     def __init__(self, db_url: str = None):

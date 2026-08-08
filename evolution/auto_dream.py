@@ -31,9 +31,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import secrets
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Protocol
+from typing import Any, Awaitable, Callable, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -79,7 +79,7 @@ class DreamCluster(BaseModel):
     centroid_signature: str  # 簇心签名（用于幂等性校验，I1）
     domain: str  # 簇所属领域（development/medical/legal/...）
     similarity_score: float = 0.0  # 簇内平均相似度 0.0~1.0
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DreamSnapshot(BaseModel):
@@ -92,7 +92,7 @@ class DreamSnapshot(BaseModel):
     distilled_method_cards: list[MethodCard] = Field(default_factory=list)
     surface_payload: dict[str, Any] = Field(default_factory=dict)  # 浮现到前台的内容
     telemetry: dict[str, float] = Field(default_factory=dict)  # 4 信号 telemetry
-    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     finished_at: datetime | None = None
     interrupted: bool = False  # 是否被 Magic Words 中断
 
@@ -357,7 +357,7 @@ class DreamCycle:
                     clusters=[],
                     distilled_cards=[],
                 )
-                snapshot.finished_at = datetime.now(UTC)
+                snapshot.finished_at = datetime.now(timezone.utc)
                 return snapshot
 
             # §2 聚类
@@ -365,7 +365,7 @@ class DreamCycle:
             if self._interrupt_event.is_set():
                 snapshot.interrupted = True
                 snapshot.phase = DreamPhase.INTERRUPTED
-                snapshot.finished_at = datetime.now(UTC)
+                snapshot.finished_at = datetime.now(timezone.utc)
                 return snapshot
 
             clusters = self._cluster_episodes(episodes)
@@ -379,7 +379,7 @@ class DreamCycle:
             if self._interrupt_event.is_set():
                 snapshot.interrupted = True
                 snapshot.phase = DreamPhase.INTERRUPTED
-                snapshot.finished_at = datetime.now(UTC)
+                snapshot.finished_at = datetime.now(timezone.utc)
                 return snapshot
 
             distilled_cards: list[MethodCard] = []
@@ -441,7 +441,7 @@ class DreamCycle:
             snapshot.phase = DreamPhase.INTERRUPTED
             snapshot.interrupted = True
         finally:
-            snapshot.finished_at = datetime.now(UTC)
+            snapshot.finished_at = datetime.now(timezone.utc)
             self._phase = DreamPhase.IDLE
             logger.info(
                 f"DreamCycle 结束: cycle_id={self._cycle_id}, "
@@ -656,14 +656,14 @@ class DreamCycle:
     @staticmethod
     def _gen_cycle_id() -> str:
         """生成 cycle_id: dream-cycle-{utc_timestamp}-{rand6}."""
-        ts = int(datetime.now(UTC).timestamp())
+        ts = int(datetime.now(timezone.utc).timestamp())
         rand = secrets.token_hex(3)
         return f"dream-cycle-{ts}-{rand}"
 
     @staticmethod
     def _gen_snapshot_id() -> str:
         """生成 snapshot_id: dream-snapshot-{utc_timestamp}-{rand6}."""
-        ts = int(datetime.now(UTC).timestamp())
+        ts = int(datetime.now(timezone.utc).timestamp())
         rand = secrets.token_hex(3)
         return f"dream-snapshot-{ts}-{rand}"
 
@@ -747,7 +747,7 @@ class BackgroundDreamLoop:
         if self._task:
             try:
                 await asyncio.wait_for(self._task, timeout=timeout)
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 logger.warning(
                     f"BackgroundDreamLoop 停止超时（{timeout}s），强制取消"
                 )
@@ -789,7 +789,7 @@ class BackgroundDreamLoop:
                     self._stop_event.wait(),
                     timeout=self._config.consolidation_interval_seconds,
                 )
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 # 正常超时，继续下一轮
                 pass
         logger.info("BackgroundDreamLoop 主循环退出")

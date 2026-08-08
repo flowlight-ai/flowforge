@@ -31,7 +31,7 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -62,7 +62,7 @@ class MCPToolWrapper(BaseTool):
     def __init__(
         self,
         server_name: str,
-        tool_info: dict[str, Any],
+        tool_info: Dict[str, Any],
         integration: MCPIntegration,
     ) -> None:
         self._server_name = server_name
@@ -78,7 +78,7 @@ class MCPToolWrapper(BaseTool):
         )
 
     @staticmethod
-    def _convert_schema(mcp_schema: dict[str, Any]) -> dict[str, Any]:
+    def _convert_schema(mcp_schema: Dict[str, Any]) -> Dict[str, Any]:
         """Convert MCP JSON Schema to FlowForge parameters_schema."""
         if not mcp_schema:
             return {"type": "object", "properties": {}}
@@ -114,7 +114,7 @@ class MCPToolWrapper(BaseTool):
             )
             return ToolOutput(result={}, error=str(e))
 
-    def get_tool_info(self) -> dict[str, Any]:
+    def get_tool_info(self) -> Dict[str, Any]:
         """Return the original MCP tool metadata."""
         return dict(self._tool_info)
 
@@ -134,8 +134,8 @@ class MCPIntegration:
     def __init__(self, tool_registry: ToolRegistry) -> None:
         self._tool_registry = tool_registry
         # server_name -> {client, config, tools}
-        self._servers: dict[str, dict[str, Any]] = {}
-        self._mcp_client_available: bool | None = None
+        self._servers: Dict[str, Dict[str, Any]] = {}
+        self._mcp_client_available: Optional[bool] = None
 
     def is_available(self) -> bool:
         """Check whether the MCP client library is available.
@@ -165,10 +165,10 @@ class MCPIntegration:
     async def connect_server(
         self,
         name: str,
-        command: str | None = None,
-        args: list[str] | None = None,
-        url: str | None = None,
-        env: dict[str, str] | None = None,
+        command: Optional[str] = None,
+        args: Optional[List[str]] = None,
+        url: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
     ) -> None:
         """Connect to an MCP server and register its tools.
 
@@ -218,7 +218,7 @@ class MCPIntegration:
             f"url={url or 'N/A'})"
         )
 
-        server_config: dict[str, Any] = {
+        server_config: Dict[str, Any] = {
             "name": name,
             "transport": transport,
             "command": command,
@@ -233,7 +233,7 @@ class MCPIntegration:
         discovered_tools = await self._discover_tools(name, server_config)
 
         # Wrap and register each tool
-        wrappers: list[MCPToolWrapper] = []
+        wrappers: List[MCPToolWrapper] = []
         for tool_info in discovered_tools:
             wrapper = MCPToolWrapper(
                 server_name=name,
@@ -290,13 +290,13 @@ class MCPIntegration:
 
     # ── Query helpers ───────────────────────────────────────────────
 
-    async def list_servers(self) -> list[dict[str, Any]]:
+    async def list_servers(self) -> List[Dict[str, Any]]:
         """List all connected MCP servers.
 
         Returns:
             A list of dicts with keys: name, transport, tool_count, connected.
         """
-        result: list[dict[str, Any]] = []
+        result: List[Dict[str, Any]] = []
         for name, server in self._servers.items():
             result.append({
                 "name": name,
@@ -307,8 +307,8 @@ class MCPIntegration:
         return result
 
     async def list_tools(
-        self, server_name: str | None = None
-    ) -> list[dict[str, Any]]:
+        self, server_name: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """List available MCP tools, optionally filtered by server.
 
         Args:
@@ -317,7 +317,7 @@ class MCPIntegration:
         Returns:
             A list of tool info dicts with keys: name, server, description.
         """
-        tools: list[dict[str, Any]] = []
+        tools: List[Dict[str, Any]] = []
         for name, server in self._servers.items():
             if server_name and name != server_name:
                 continue
@@ -335,7 +335,7 @@ class MCPIntegration:
         self,
         server_name: str,
         tool_name: str,
-        arguments: dict[str, Any],
+        arguments: Dict[str, Any],
     ) -> Any:
         """Dispatch a tool call to the MCP server via MCPClient."""
         server = self._servers.get(server_name)
@@ -369,8 +369,8 @@ class MCPIntegration:
     async def _discover_tools(
         self,
         server_name: str,
-        server_config: dict[str, Any],
-    ) -> list[dict[str, Any]]:
+        server_config: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
         """Discover tools exposed by an MCP server via MCPClient."""
         client = server_config.get("client")
         if not client:
@@ -407,7 +407,7 @@ class MCPIntegration:
     # 详见 [doc:review/review.md#CL-037] MCP 1→3 server 拆分
 
     # 三类拆分的工具名关键词映射
-    SPLIT_KEYWORDS: dict[str, list[str]] = {
+    SPLIT_KEYWORDS: Dict[str, List[str]] = {
         "collab": [
             "agent", "session", "handoff", "council", "forgekin",
             "swarm", "team", "collaborate", "delegate", "approval",
@@ -465,8 +465,8 @@ class MCPIntegration:
     async def split_server(
         self,
         source_server: str,
-        target_prefix: str | None = None,
-    ) -> dict[str, int]:
+        target_prefix: Optional[str] = None,
+    ) -> Dict[str, int]:
         """将已连接的 MCP server 工具拆分到 3 个虚拟 server 命名空间.
 
         P2-024 / CL-037: MCP 1→3 server 拆分。
@@ -489,10 +489,10 @@ class MCPIntegration:
 
         server = self._servers[source_server]
         prefix = target_prefix or source_server
-        wrappers: list[MCPToolWrapper] = server.get("tools", [])
+        wrappers: List[MCPToolWrapper] = server.get("tools", [])
 
         # 按类别分组
-        grouped: dict[str, list[MCPToolWrapper]] = {
+        grouped: Dict[str, List[MCPToolWrapper]] = {
             "collab": [], "memory": [], "signals": [],
         }
         for wrapper in wrappers:
@@ -509,10 +509,10 @@ class MCPIntegration:
                 logger.debug(f"Tool '{wrapper.name}' already unregistered")
 
         # 重新注册到新命名空间 + 应用 prompt 瘦身
-        new_servers_config: dict[str, dict[str, Any]] = {}
+        new_servers_config: Dict[str, Dict[str, Any]] = {}
         for category, cat_wrappers in grouped.items():
             new_server_name = f"{prefix}-{category}"
-            new_wrappers: list[MCPToolWrapper] = []
+            new_wrappers: List[MCPToolWrapper] = []
             for wrapper in cat_wrappers:
                 # 创建新 wrapper（新命名空间）
                 new_tool_info = dict(wrapper._tool_info)
@@ -556,15 +556,15 @@ class MCPIntegration:
         )
         return counts
 
-    def get_split_status(self) -> dict[str, list[str]]:
+    def get_split_status(self) -> Dict[str, List[str]]:
         """查询当前所有 server 的拆分状态.
 
         Returns:
             dict 形如 {"original": [...], "split": [...]}，分别列出
             未拆分和已拆分的 server 名称。
         """
-        original: list[str] = []
-        split_servers: list[str] = []
+        original: List[str] = []
+        split_servers: List[str] = []
         for name, server in self._servers.items():
             if server.get("split_from"):
                 split_servers.append(name)

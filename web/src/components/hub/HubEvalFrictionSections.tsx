@@ -3,6 +3,7 @@
 /**
  * HubEvalFrictionSections — 评估摩擦分析分区
  *
+ * 移植自 clowder-ai HubEvalFrictionSections，适配 FlowForge 暗色主题。
  * 用于 HubEvalTab 内部，渲染 EvalHubFrictionProjection 的摩擦分析视图：
  *   - 建议修复条目（actionableCandidates）：含 followupDraft 草案
  *   - 仅引用条目（referenceOnly）：仅保留链接语义
@@ -10,7 +11,7 @@
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
  * 主题：使用 var(--cafe-xxx) CSS 变量。
- * 独立性：仅依赖 HubEvalTypes 类型，不依赖上游
+ * 独立性：仅依赖 HubEvalTypes 类型，不依赖 clowder-ai 任何组件。
  */
 
 import type { ReactNode } from "react";

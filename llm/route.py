@@ -6,10 +6,10 @@ RouteResolver 根据路由规则和 Provider 健康状态选择最优 Provider�
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
-from flowforge.llm.provider import LLMProvider
+from flowforge.llm.provider import LLMProvider, LLMResponse, get_provider
 
 logger = get_logger("llm.route")
 
@@ -28,7 +28,7 @@ class FailoverCondition(str, Enum):
 class FailoverPolicy:
     """故障转移策略."""
 
-    conditions: list[FailoverCondition] = field(
+    conditions: List[FailoverCondition] = field(
         default_factory=lambda: [
             FailoverCondition.RATE_LIMITED,
             FailoverCondition.TIMEOUT,
@@ -50,14 +50,14 @@ class LLMRoute:
     route_name: str
     primary_provider: str  # provider name (e.g. "doubao")
     primary_model: str = ""  # specific model (e.g. "doubao-seed2")
-    fallback_providers: list[str] = field(default_factory=list)
-    fallback_models: list[str] = field(default_factory=list)
+    fallback_providers: List[str] = field(default_factory=list)
+    fallback_models: List[str] = field(default_factory=list)
     failover_policy: FailoverPolicy = field(default_factory=FailoverPolicy)
     default_temperature: float = 0.7
     default_max_tokens: int = 4096
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def get_provider_chain(self) -> list[tuple]:
+    def get_provider_chain(self) -> List[tuple]:
         """获取完整 Provider 链 [(provider_name, model), ...]."""
         chain = [(self.primary_provider, self.primary_model)]
         for i, provider in enumerate(self.fallback_providers):
@@ -76,9 +76,9 @@ class RouteResolver:
     4. 返回第一个可用的 Provider
     """
 
-    def __init__(self, providers: dict[str, LLMProvider] | None = None):
-        self._providers: dict[str, LLMProvider] = providers or {}
-        self._routes: dict[str, LLMRoute] = {}
+    def __init__(self, providers: Optional[Dict[str, LLMProvider]] = None):
+        self._providers: Dict[str, LLMProvider] = providers or {}
+        self._routes: Dict[str, LLMRoute] = {}
 
     def register_provider(self, name: str, provider: LLMProvider):
         """注册 Provider 实例."""
@@ -88,7 +88,7 @@ class RouteResolver:
         """注册路由定义."""
         self._routes[route.route_name] = route
 
-    def resolve_provider(self, route_name: str) -> LLMProvider | None:
+    def resolve_provider(self, route_name: str) -> Optional[LLMProvider]:
         """根据路由名解析到最优 Provider.
 
         遍历 Provider 链，返回第一个健康的 Provider。
@@ -118,11 +118,11 @@ class RouteResolver:
         )
         return self._providers.get(route.primary_provider)
 
-    def resolve_route(self, route_name: str) -> LLMRoute | None:
+    def resolve_route(self, route_name: str) -> Optional[LLMRoute]:
         """获取路由定义."""
         return self._routes.get(route_name)
 
-    def get_route_for_agent(self, agent_name: str) -> LLMRoute | None:
+    def get_route_for_agent(self, agent_name: str) -> Optional[LLMRoute]:
         """根据 Agent 名称查找匹配的路由.
 
         优先查找 agent 专属路由（如 "contentforge:writer"），
@@ -142,11 +142,11 @@ class RouteResolver:
         # 3. 默认路由
         return self._routes.get("default")
 
-    def list_routes(self) -> dict[str, LLMRoute]:
+    def list_routes(self) -> Dict[str, LLMRoute]:
         """列出所有路由."""
         return dict(self._routes)
 
-    def load_routes_from_config(self, config: dict[str, Any]):
+    def load_routes_from_config(self, config: Dict[str, Any]):
         """从配置加载路由定义.
 
         配置格式（llm_route.yaml）:

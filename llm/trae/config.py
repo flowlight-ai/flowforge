@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import os
+from typing import List
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
@@ -33,7 +34,7 @@ class TraeConfig(BaseSettings):
         default="trae",
         description="CLI 模式的命令名",
     )
-    cli_args: list[str] = Field(
+    cli_args: List[str] = Field(
         default_factory=lambda: ["--print", "--output-format", "json"],
         description="CLI 模式的参数列表",
     )
@@ -274,7 +275,7 @@ class TraeBridgeConfig(BaseSettings):
         import re
 
         try:
-            with open(yaml_path, encoding="utf-8") as f:
+            with open(yaml_path, "r", encoding="utf-8") as f:
                 raw = f.read()
         except FileNotFoundError:
             # 配置文件不存在时使用默认值

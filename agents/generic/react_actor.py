@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class ReactActorAgent(GenericAgent):
@@ -7,7 +7,7 @@ class ReactActorAgent(GenericAgent):
     description = "ReAct 执行步骤：根据思考结果调用工具或执行操作"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         next_action = input.params.get("next_action", "")
         action_input = input.params.get("action_input", {})
 
@@ -20,7 +20,7 @@ class ReactActorAgent(GenericAgent):
                 result={"action_taken": next_action, "action_output": tool_result},
                 state_updates={"last_action": next_action}
             )
-        except Exception:
+        except Exception as e:
             prompt = self._get_prompt(
                 "flowforge.agent.react_actor.fallback",
                 next_action=next_action,

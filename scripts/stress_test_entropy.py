@@ -20,18 +20,21 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import List
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from flowforge.core.task_context import TaskContext
 from flowforge.harness.entropy_manager import (
+    DocGardener,
+    DocEntry,
+    DebtTracker,
     DebtSeverity,
     DebtStatus,
-    DebtTracker,
-    DocGardener,
     EntropyManager,
 )
+from flowforge.core.task_context import TaskContext
+
 
 # ── Color output helpers ─────────────────────────────────────────────────────
 
@@ -69,8 +72,8 @@ async def stress_doc_gardener(num_docs: int, iterations: int) -> dict:
 
     # Phase 1: Register documents
     t_register_start = time.time()
-    doc_paths: list[str] = []
-    source_paths: list[str] = []
+    doc_paths: List[str] = []
+    source_paths: List[str] = []
 
     for i in range(num_docs):
         # Create doc file
@@ -97,7 +100,7 @@ async def stress_doc_gardener(num_docs: int, iterations: int) -> dict:
     # Phase 2: Iterative freshness checks
     t_check_start = time.time()
     total_stale = 0
-    check_times: list[float] = []
+    check_times: List[float] = []
 
     for iteration in range(iterations):
         # Randomly modify some source files to trigger staleness
@@ -176,7 +179,7 @@ async def stress_debt_tracker(num_items: int, iterations: int) -> dict:
 
     # Phase 1: Record debt items
     t_record_start = time.time()
-    item_ids: list[str] = []
+    item_ids: List[str] = []
     severities = [DebtSeverity.LOW, DebtSeverity.MEDIUM, DebtSeverity.HIGH, DebtSeverity.CRITICAL]
 
     for i in range(num_items):
@@ -211,7 +214,7 @@ async def stress_debt_tracker(num_items: int, iterations: int) -> dict:
 
     # Phase 3: Repeated queries
     t_query_start = time.time()
-    query_times: list[float] = []
+    query_times: List[float] = []
 
     for _ in range(iterations):
         t_iter_start = time.time()
@@ -279,7 +282,7 @@ async def stress_concurrent_mixed(num_docs: int, num_debts: int, concurrency: in
     tmpdir = tempfile.mkdtemp(prefix="entropy_stress_")
 
     # Prepare doc files
-    doc_paths: list[str] = []
+    doc_paths: List[str] = []
     for i in range(num_docs):
         doc_path = os.path.join(tmpdir, f"doc_{i:04d}.md")
         with open(doc_path, "w") as f:
@@ -295,7 +298,7 @@ async def stress_concurrent_mixed(num_docs: int, num_debts: int, concurrency: in
 
     async def doc_check_task(task_id: int, rounds: int) -> dict:
         """Simulate repeated doc freshness checks with source modifications."""
-        times: list[float] = []
+        times: List[float] = []
         stale_count = 0
         for r in range(rounds):
             # Modify a random source file
@@ -321,7 +324,7 @@ async def stress_concurrent_mixed(num_docs: int, num_debts: int, concurrency: in
 
     async def debt_record_task(task_id: int, rounds: int) -> dict:
         """Simulate rapid debt recording and querying."""
-        times: list[float] = []
+        times: List[float] = []
         for r in range(rounds):
             t_start = time.time()
             manager.debt_tracker.record(
@@ -361,12 +364,12 @@ async def stress_concurrent_mixed(num_docs: int, num_debts: int, concurrency: in
     debt_summary = manager.debt_tracker.get_summary()
 
     print(f"\n  Concurrent execution completed in {t_total_ms:.1f}ms")
-    print("  DocGardener:")
+    print(f"  DocGardener:")
     print(f"    Total checks:     {len(all_doc_times)}")
     print(f"    Avg per check:    {avg_doc_ms:.2f}ms")
     print(f"    Max per check:    {max_doc_ms:.2f}ms")
     print(f"    Total stale hits: {total_stale}")
-    print("  DebtTracker:")
+    print(f"  DebtTracker:")
     print(f"    Total operations: {len(all_debt_times)}")
     print(f"    Avg per op:       {avg_debt_ms:.2f}ms")
     print(f"    Max per op:       {max_debt_ms:.2f}ms")

@@ -13,8 +13,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Any, Literal
+from datetime import datetime, timezone
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,7 +25,7 @@ logger = get_logger("flowforge.core.approval_hub")
 
 def _now_utc() -> datetime:
     """返回时区感知的当前 UTC 时间（避免 naive vs aware 比较问题）。"""
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 class ApprovalRequest(BaseModel):
@@ -84,7 +84,7 @@ class ApprovalHub:
         )
         return request.request_id
 
-    def get(self, request_id: str) -> ApprovalRequest | None:
+    def get(self, request_id: str) -> Optional[ApprovalRequest]:
         """获取单个审批请求。"""
         return self._requests.get(request_id)
 
@@ -237,7 +237,7 @@ def _is_expired(expires_at: datetime, now: datetime) -> bool:
         return expires_at < now
     # 一侧 naive 一侧 aware：将 naive 视为 UTC 再比较
     if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=UTC)
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
     if now.tzinfo is None:
-        now = now.replace(tzinfo=UTC)
+        now = now.replace(tzinfo=timezone.utc)
     return expires_at < now

@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Query
@@ -36,7 +36,7 @@ class ThreadForgekinsUpdate(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(UTC).isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat() + "Z"
 
 
 @router.get("")
@@ -52,7 +52,7 @@ async def list_threads(
 async def create_thread(payload: ThreadCreate) -> dict[str, Any]:
     """创建线程（stub 返回占位对象）。"""
     return {
-        "id": f"thread_stub_{int(datetime.now(UTC).timestamp())}",
+        "id": f"thread_stub_{int(datetime.now(timezone.utc).timestamp())}",
         "title": payload.title,
         "forgekin_ids": payload.forgekin_ids,
         "metadata": payload.metadata,

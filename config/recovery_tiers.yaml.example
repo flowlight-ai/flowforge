@@ -1,0 +1,257 @@
+# ==============================================================================
+# P3-007 Tier 1-4 恢复分级 — RecoveryTierManager 配置示例
+# ==============================================================================
+# 拷贝为 recovery_tiers.yaml 后按实际环境修改；recovery_tiers.yaml 不入库。
+# 由 DI 容器读取后注入 RecoveryTierManager 构造函数（铁律12 不绕过 DI）。
+#
+# 对应实现：flowforge/core/recovery_tier.py
+# 对应设计：docs/design/D022-tier-1-4-recovery.md
+# ==============================================================================
+
+# 各 tier 的恢复策略表
+# 字段含义：
+#   strategy              : 恢复策略类型（retry/switch_provider/use_memory_fallback/
+#                           use_hardcoded_sop/degrade_to_human/switch_region/abort）
+#   max_retries           : 单 tier 内部最大重试次数（仅 retry/switch_provider 生效）
+#   retry_delay_seconds   : 重试基准延迟（指数退避：delay = base * 2^attempt）
+#   timeout_seconds       : 单次尝试的超时阈值
+#   fallback_value        : 兜底值（use_memory_fallback/use_hardcoded_sop/
+#                           degrade_to_human/switch_region 使用）
+#   notify_human          : 是否通知人工（Tier 3/4 默认 true）
+#   escalate_after_seconds: 累计停机时间超过此值后升级；0 表示不基于时间升级
+#   metadata              : 自定义元数据（如 backup_providers 列表）
+strategies:
+  tier_1_soft:
+    tier: 1
+    strategy: retry
+    max_retries: 3
+    retry_delay_seconds: 1.0
+    timeout_seconds: 30.0
+    fallback_value: null
+    notify_human: false
+    escalate_after_seconds: 0.0
+    metadata: {}
+
+  tier_2_component:
+    tier: 2
+    strategy: switch_provider
+    max_retries: 2
+    retry_delay_seconds: 2.0
+    timeout_seconds: 60.0
+    fallback_value: null
+    notify_human: false
+    # 累计停机超过 120s → 升级到 Tier 3
+    escalate_after_seconds: 120.0
+    metadata:
+      # 备选 provider 列表（switch_provider 策略使用）
+      # 应与 models.yaml 中 providers 键对齐，且覆盖不同厂商以避免同因故障
+      backup_providers:
+        - doubao
+        - glm
+        - qwen
+
+  tier_3_system:
+    tier: 3
+    strategy: use_memory_fallback
+    max_retries: 1
+    retry_delay_seconds: 0.0
+    timeout_seconds: 120.0
+    # 内存模式的兜底值（如缓存数据 / 空列表 / 默认配置）
+    fallback_value: null
+    notify_human: true
+    # 累计停机超过 600s（10 分钟）→ 升级到 Tier 4
+    escalate_after_seconds: 600.0
+    metadata:
+      # 降级模式下允许的功能白名单（其余功能禁用）
+      enabled_features:
+        - cache_read
+        - memory_read
+        - sync_read
+
+  tier_4_disaster:
+    tier: 4
+    strategy: switch_region
+    max_retries: 1
+    retry_delay_seconds: 0.0
+    timeout_seconds: 300.0
+    # 灾备机房的兜底返回值（实际值由灾备 SDK 提供）
+    fallback_value: null
+    notify_human: true
+    # 0 表示 Tier 4 不再升级（终态）
+    escalate_after_seconds: 0.0
+    metadata:
+      # 灾备机房配置（实际由灾备 SDK 读取）
+      backup_region: cn-shanghai-2
+      # DNS 切换开关（true=通过 DNS 切换，false=通过负载均衡切换）
+      dns_failover: true
+      # RTO（恢复时间目标，秒）
+      rto_seconds: 300
+      # RPO（恢复点目标，秒）
+      rpo_seconds: 60
+
+# ==============================================================================
+# 自定义错误类型映射示例
+# ==============================================================================
+# RecoveryTierManager.classify_error 默认按错误类型名 + 关键词匹配。
+# 若需要扩展自定义错误类型，可在 error_type_mappings 中追加。
+#
+# 匹配优先级：T4 > T3 > T2 > T1（严重优先，避免灾难性故障被误判为软故障）
+error_type_mappings:
+  tier_1_soft:
+    # 软故障错误类型（瞬时网络抖动 / 单次超时）
+    error_types:
+      - TimeoutError
+      - asyncio.TimeoutError
+      - ConnectionError
+      - ConnectionResetError
+      - ConnectionAbortedError
+      - BrokenPipeError
+      - LLMRateLimitError
+      - RateLimitError
+      - LLMTimeoutError
+      - APITimeoutError
+    keywords:
+      - timeout
+      - timed out
+      - connection reset
+      - connection aborted
+      - broken pipe
+      - "429"
+      - rate_limit
+      - rate limit
+      - too many requests
+      - temporary
+      - transient
+
+  tier_2_component:
+    # 组件故障错误类型（单 provider / 单工具失败）
+    error_types:
+      - ModelNotFoundError
+      - ModelNotAvailableError
+      - ProviderUnavailableError
+      - ToolExecutionError
+      - ToolTimeoutError
+      - ToolNotFoundError
+      - LLMAuthError
+      - LLMConnectionError
+    keywords:
+      - model_not_found
+      - model not found
+      - model disabled
+      - provider unavailable
+      - provider failed
+      - tool execution
+      - tool not found
+      - tool failed
+      - auth
+      - unauthorized
+      - no permission
+
+  tier_3_system:
+    # 系统故障错误类型（关键依赖不可用）
+    error_types:
+      - DatabaseError
+      - DatabaseCorruptError
+      - SQLiteError
+      - OperationalError
+      - StorageError
+      - EventBusError
+      - EventBusUnavailableError
+      - RedisError
+      - PostgresError
+    keywords:
+      - database
+      - sqlite
+      - postgres
+      - redis
+      - event_bus
+      - event bus
+      - event-bus
+      - storage error
+      - storage unavailable
+      - multiple providers failed
+      - all backups failed
+
+  tier_4_disaster:
+    # 灾难故障错误类型（region 不可用 / 数据损坏 / 全部 provider 失败）
+    error_types:
+      - RegionUnreachableError
+      - DataCorruptionError
+      - DataLossError
+      - CatastrophicFailureError
+      - AllProvidersFailedError
+    keywords:
+      - region unreachable
+      - region unavailable
+      - region down
+      - data corruption
+      - data corrupt
+      - data loss
+      - all providers failed
+      - all backends failed
+      - catastrophic
+      - disaster
+
+# ==============================================================================
+# escalate_after_seconds 调优说明
+# ==============================================================================
+# escalate_after_seconds 控制单 tier 在累计停机多久后自动升级到下一 tier。
+# 设置过低 → 频繁升级，可能本可通过重试解决的故障被升级到更高 tier 浪费资源
+# 设置过高 → 故障持续时间长，影响用户体验
+#
+# 推荐值（按 tier 递增，越严重越耐心）：
+#   Tier 1: 0     （不基于时间升级，仅按 retry_count 升级）
+#   Tier 2: 120   （2 分钟，给 backup provider 足够切换时间）
+#   Tier 3: 600   （10 分钟，给系统依赖足够恢复时间）
+#   Tier 4: 0     （终态，不再升级）
+#
+# 调优建议：
+#   1. 监控 recovery.escalated 事件频率，过高说明阈值过低
+#   2. 监控 recovery.failed 事件中 tier 分布，Tier 4 占比应 < 1%
+#   3. 生产环境可通过 canary 发布验证阈值调整效果
+#   4. 不同组件可设置不同阈值（通过 metadata.component_overrides 覆盖）
+escalate_after_tuning:
+  enabled: false
+  # 按组件覆盖默认 escalate_after_seconds
+  component_overrides:
+    openroute:
+      tier_2_component: 60      # openroute 切换 backup 较快，1 分钟即升级
+      tier_3_system: 300
+    database:
+      tier_3_system: 900        # 数据库恢复较慢，给 15 分钟
+    event_bus:
+      tier_3_system: 180        # 事件总线恢复较快，3 分钟即升级
+
+# ==============================================================================
+# metrics 采集配置
+# ==============================================================================
+# RecoveryTierManager 优先调用 metrics_collector.record_recovery(component,
+# duration_seconds, success)；若不存在则回退到 inc_counter(name, labels=...)。
+metrics:
+  enabled: true
+  # record_recovery 覆盖的指标：
+  #   flowforge_recovery_total{component, success}        (counter)
+  #   flowforge_recovery_duration_seconds{component}      (histogram)
+  #
+  # inc_counter 回退路径覆盖的指标：
+  #   flowforge_recovery_success_total{component, tier, strategy}
+  #   flowforge_recovery_failure_total{component, tier, strategy}
+  success_counter: flowforge_recovery_success_total
+  failure_counter: flowforge_recovery_failure_total
+
+# ==============================================================================
+# event_bus 事件配置
+# ==============================================================================
+# RecoveryTierManager 通过 event_bus.emit(task_id, event_type, payload) 发出事件。
+# 订阅方可监听以下事件类型：
+#   recovery.started    : 恢复开始（含 tier/strategy/error_type）
+#   recovery.succeeded  : 恢复成功（含 tier/strategy/attempts/duration）
+#   recovery.failed     : 恢复失败（含 tier/strategy/error）
+#   recovery.escalated  : 跨 tier 升级（含 from_tier/to_tier/reason）
+events:
+  enabled: true
+  event_types:
+    - recovery.started
+    - recovery.succeeded
+    - recovery.failed
+    - recovery.escalated

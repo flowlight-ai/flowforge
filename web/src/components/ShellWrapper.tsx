@@ -13,10 +13,10 @@ import { FloatingPresentationSurfaceHost } from "./workspace/FloatingPresentatio
 import { ApprovalHubDrawer } from "./ApprovalHubDrawer";
 import { ResizeHandle } from "./workspace/ResizeHandle";
 
-// 
-const CHROMELESS_ROUTES = ["/showcase", "/story", "/story-export"];
+// 与 clowder-ai 一致：展示页无 Shell
+const CHROMELESS_ROUTES: string[] = [];
 
-// 
+// 与 clowder-ai 一致：这些路由隐藏 ThreadSidebar（因为有自带侧边栏）
 const SIDEBAR_HIDDEN_ROUTES = [
   "/admin/settings",
   "/admin/marketplace",

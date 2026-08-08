@@ -5,9 +5,12 @@
 """
 from __future__ import annotations
 
-import difflib
+import os
 import re
+import json
+import difflib
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -79,7 +82,7 @@ class FileReadWriteTool(BaseTool):
             logger.error(f"file_rw error: action={action} path={path} error={e}")
             return ToolOutput(error=str(e))
 
-    async def _read(self, path: str, params: dict) -> ToolOutput:
+    async def _read(self, path: str, params: Dict) -> ToolOutput:
         """读取文件内容."""
         file_path = Path(path)
         if not file_path.exists():
@@ -92,7 +95,7 @@ class FileReadWriteTool(BaseTool):
         line_end = params.get("line_end")
 
         try:
-            with open(file_path, encoding=encoding, errors="replace") as f:
+            with open(file_path, "r", encoding=encoding, errors="replace") as f:
                 lines = f.readlines()
 
             total_lines = len(lines)
@@ -118,7 +121,7 @@ class FileReadWriteTool(BaseTool):
         except Exception as e:
             return ToolOutput(error=f"Read error: {e}")
 
-    async def _write(self, path: str, params: dict) -> ToolOutput:
+    async def _write(self, path: str, params: Dict) -> ToolOutput:
         """写入文件内容（覆盖）."""
         content = params.get("content", "")
         encoding = params.get("encoding", "utf-8")
@@ -159,7 +162,7 @@ class FileReadWriteTool(BaseTool):
             "diff": diff[:2000],  # 限制diff大小
         })
 
-    async def _append(self, path: str, params: dict) -> ToolOutput:
+    async def _append(self, path: str, params: Dict) -> ToolOutput:
         """追加内容到文件."""
         content = params.get("content", "")
         encoding = params.get("encoding", "utf-8")
@@ -174,7 +177,7 @@ class FileReadWriteTool(BaseTool):
             "bytes_appended": len(content.encode(encoding)),
         })
 
-    async def _search(self, path: str, params: dict) -> ToolOutput:
+    async def _search(self, path: str, params: Dict) -> ToolOutput:
         """搜索文件内容（支持正则）."""
         pattern = params.get("pattern", "")
         file_path = Path(path)
@@ -225,7 +228,7 @@ class FileReadWriteTool(BaseTool):
             "files_searched": files_searched,
         })
 
-    async def _list(self, path: str, params: dict) -> ToolOutput:
+    async def _list(self, path: str, params: Dict) -> ToolOutput:
         """列出目录内容."""
         file_path = Path(path)
         if not file_path.is_dir():
@@ -249,13 +252,13 @@ class FileReadWriteTool(BaseTool):
             "total": len(entries),
         })
 
-    async def _mkdir(self, path: str, params: dict) -> ToolOutput:
+    async def _mkdir(self, path: str, params: Dict) -> ToolOutput:
         """创建目录."""
         file_path = Path(path)
         file_path.mkdir(parents=True, exist_ok=True)
         return ToolOutput(result={"path": str(file_path), "created": True})
 
-    async def _delete(self, path: str, params: dict) -> ToolOutput:
+    async def _delete(self, path: str, params: Dict) -> ToolOutput:
         """删除文件或目录."""
         file_path = Path(path)
         if self._is_dangerous_path(file_path):
@@ -269,7 +272,7 @@ class FileReadWriteTool(BaseTool):
             return ToolOutput(error=f"Path not found: {path}")
         return ToolOutput(result={"path": str(file_path), "deleted": True})
 
-    async def _diff(self, path: str, params: dict) -> ToolOutput:
+    async def _diff(self, path: str, params: Dict) -> ToolOutput:
         """比较内容差异."""
         original = params.get("original", "")
         modified = params.get("modified", "")
@@ -284,7 +287,7 @@ class FileReadWriteTool(BaseTool):
             "has_changes": bool(diff_lines),
         })
 
-    async def _exists(self, path: str, params: dict) -> ToolOutput:
+    async def _exists(self, path: str, params: Dict) -> ToolOutput:
         """检查路径是否存在."""
         file_path = Path(path)
         return ToolOutput(result={
@@ -295,7 +298,7 @@ class FileReadWriteTool(BaseTool):
             "size": file_path.stat().st_size if file_path.is_file() else 0,
         })
 
-    async def _copy(self, path: str, params: dict) -> ToolOutput:
+    async def _copy(self, path: str, params: Dict) -> ToolOutput:
         """复制文件."""
         import shutil
         source = Path(params.get("source", path))
@@ -306,7 +309,7 @@ class FileReadWriteTool(BaseTool):
         shutil.copy2(source, destination)
         return ToolOutput(result={"source": str(source), "destination": str(destination)})
 
-    async def _move(self, path: str, params: dict) -> ToolOutput:
+    async def _move(self, path: str, params: Dict) -> ToolOutput:
         """移动文件."""
         import shutil
         source = Path(params.get("source", path))

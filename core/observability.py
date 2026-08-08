@@ -13,11 +13,10 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator
 
 import yaml
 
@@ -210,10 +209,10 @@ class ObservabilityManager:
         if path is None:
             default_path = Path(__file__).parent.parent / "config" / "observability.yaml"
             if default_path.exists():
-                with open(default_path, encoding="utf-8") as f:
+                with open(default_path, "r", encoding="utf-8") as f:
                     return yaml.safe_load(f) or {}
             return {}
-        with open(path, encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
 
     @asynccontextmanager
@@ -227,7 +226,7 @@ class ObservabilityManager:
             self.metrics.observe("agent_execution_seconds",
                                  (time.time() - start) * 1000, agent=agent_name)
             self.trace.finish_span(span, "ok")
-        except Exception:
+        except Exception as e:
             self.metrics.increment("agent_execution_errors", agent=agent_name)
             self.trace.finish_span(span, "error")
             raise

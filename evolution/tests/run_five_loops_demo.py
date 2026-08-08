@@ -39,11 +39,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 # 确保能导入 flowforge
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -62,6 +63,7 @@ from flowforge.evolution.self_dev_doc import SelfDevDocLoop
 from flowforge.evolution.self_dev_framework import SelfDevFrameworkLoop
 from flowforge.evolution.self_dev_review import SelfDevReviewLoop
 from flowforge.evolution.self_dev_test import SelfDevTestLoop
+
 
 # ══════════════════════════════════════════════════════════════════
 # §1 配置日志输出
@@ -97,7 +99,7 @@ class FakeTraeClient:
 
     def __init__(self) -> None:
         # 按 (loop_type, stage) 索引的响应队列
-        self._responses: dict[str, list[dict[str, Any]]] = {
+        self._responses: Dict[str, List[Dict[str, Any]]] = {
             "doc_plan": [],
             "doc_review": [],
             "code_plan": [],
@@ -111,19 +113,19 @@ class FakeTraeClient:
             "framework_review": [],
         }
         self.call_count = 0
-        self.calls: list[dict[str, Any]] = []
+        self.calls: List[Dict[str, Any]] = []
 
-    def set_responses(self, stage: str, responses: list[dict[str, Any]]) -> None:
+    def set_responses(self, stage: str, responses: List[Dict[str, Any]]) -> None:
         """为指定阶段设置响应队列."""
         self._responses[stage] = list(responses)
 
     async def chat(
         self,
-        messages: list[dict[str, str]],
+        messages: List[Dict[str, str]],
         *,
         context: Any = None,
         **kwargs: Any,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         self.call_count += 1
         self.calls.append({"messages": messages, "context": context, "kwargs": kwargs})
 
@@ -208,14 +210,14 @@ def build_collaborative_project(root: Path) -> None:
         "- AC4: 测试闭环生成测试\n",
         encoding="utf-8",
     )
-    print("[Setup] 创建: docs/features/F500-demo.md (触发 doc 闭环)")
+    print(f"[Setup] 创建: docs/features/F500-demo.md (触发 doc 闭环)")
 
     # flowforge/ 目录（code 闭环目标）
     ff_dir = root / "flowforge"
     ff_dir.mkdir(parents=True, exist_ok=True)
-    print("[Setup] 创建: flowforge/ (code 闭环目标目录)")
+    print(f"[Setup] 创建: flowforge/ (code 闭环目标目录)")
 
-    print("[Setup] Mock 项目构造完成\n")
+    print(f"[Setup] Mock 项目构造完成\n")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -470,7 +472,7 @@ def register_five_forgekins(
     engine: ForgeMindEngine,
     client: FakeTraeClient,
     project_root: str,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """注册 5 个Forgekin到 ForgeMindEngine（含 framework 鲁班 + I8 approval）.
 
     返回：
@@ -491,28 +493,28 @@ def register_five_forgekins(
     doc_loop = SelfDevDocLoop(client, doc_config, engine, awakening_stage="E3")
     doc_loop.persist = _noop_persist
     engine.register_self_dev_loop(doc_loop)
-    print("[Register] 文心（forgemind:wenxin）— doc, E3 — 已注册")
+    print(f"[Register] 文心（forgemind:wenxin）— doc, E3 — 已注册")
 
     # 2. 夏洛克（code, E4）
     code_config = {**base_config, "forgekin_id": "forgemind:sherlock"}
     code_loop = SelfDevCodeLoop(client, code_config, engine, awakening_stage="E4")
     code_loop.persist = _noop_persist
     engine.register_self_dev_loop(code_loop)
-    print("[Register] 夏洛克（forgemind:sherlock）— code, E4 — 已注册")
+    print(f"[Register] 夏洛克（forgemind:sherlock）— code, E4 — 已注册")
 
     # 3. 梵高（review, E3）
     review_config = {**base_config, "forgekin_id": "forgemind:vangogh", "reviews_dir": "docs/reviews"}
     review_loop = SelfDevReviewLoop(client, review_config, engine, awakening_stage="E3")
     review_loop.persist = _noop_persist
     engine.register_self_dev_loop(review_loop)
-    print("[Register] 梵高（forgemind:vangogh）— review, E3 — 已注册")
+    print(f"[Register] 梵高（forgemind:vangogh）— review, E3 — 已注册")
 
     # 4. 达芬奇（test, E3）
     test_config = {**base_config, "forgekin_id": "forgemind:davinci", "tests_dir": "tests"}
     test_loop = SelfDevTestLoop(client, test_config, engine, awakening_stage="E3")
     test_loop.persist = _noop_persist
     engine.register_self_dev_loop(test_loop)
-    print("[Register] 达芬奇（forgemind:davinci）— test, E3 — 已注册")
+    print(f"[Register] 达芬奇（forgemind:davinci）— test, E3 — 已注册")
 
     # 5. 鲁班（framework, E5）— I8 approval_callback 在 demo 中自动批准
     # 生产环境必须由 operator 在 IM 议事中显式批准（F046 §2.6 I8 不变量）
@@ -527,7 +529,7 @@ def register_five_forgekins(
         approval_count["n"] += 1
         print(f"[Approval] I8 自动批准 #{approval_count['n']}: plan_id={plan.plan_id}, "
               f"target={task.target_path}, expected_effect={plan.expected_effect}")
-        print("[Approval] ⚠️  生产环境必须由 operator 显式批准（I8 不变量）")
+        print(f"[Approval] ⚠️  生产环境必须由 operator 显式批准（I8 不变量）")
         return True
 
     framework_config = {
@@ -538,9 +540,9 @@ def register_five_forgekins(
     framework_loop = SelfDevFrameworkLoop(client, framework_config, engine, awakening_stage="E5")
     framework_loop.persist = _noop_persist
     engine.register_self_dev_loop(framework_loop)
-    print("[Register] 鲁班（forgemind:luban）— framework, E5, I8 approval 自动 — 已注册")
+    print(f"[Register] 鲁班（forgemind:luban）— framework, E5, I8 approval 自动 — 已注册")
 
-    print("[Register] 共注册 5 个Forgekin（含 framework 鲁班）")
+    print(f"[Register] 共注册 5 个Forgekin（含 framework 鲁班）")
 
     # 验证注册
     loops = engine.list_self_dev_loops()
@@ -563,7 +565,7 @@ def register_five_forgekins(
 async def run_five_loops_collaboration(
     engine: ForgeMindEngine,
     temp_project: Path,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """执行五闭环协同主流程.
 
     协同链路（F046 §9.3 v1.1 扩展）：
@@ -572,7 +574,7 @@ async def run_five_loops_collaboration(
     返回：
         协同结果字典，含每个闭环的 summary 和 cross-loop context
     """
-    results: dict[str, Any] = {}
+    results: Dict[str, Any] = {}
 
     # ──────────────────────────────────────────────────────────────
     # 阶段 1: 文心（doc 闭环）— 发现缺失 design 文档并生成
@@ -607,7 +609,7 @@ async def run_five_loops_collaboration(
         }
         print(f"[Doc] cross-loop context: changed_files={doc_changed_files}")
     else:
-        print("\n[Doc] ❌ design 文档未创建，协同链路中断")
+        print(f"\n[Doc] ❌ design 文档未创建，协同链路中断")
         results["doc"] = {"error": "design 文档未创建"}
         return results
 
@@ -644,7 +646,7 @@ async def run_five_loops_collaboration(
         }
         print(f"[Code] cross-loop context: changed_files={code_changed_files}")
     else:
-        print("\n[Code] ❌ 代码文件未创建，协同链路中断")
+        print(f"\n[Code] ❌ 代码文件未创建，协同链路中断")
         results["code"] = {"error": "代码文件未创建"}
         return results
 
@@ -684,7 +686,7 @@ async def run_five_loops_collaboration(
         }
         print(f"[Review] cross-loop context: review_passed={review_passed}")
     else:
-        print("\n[Review] ❌ 审查报告未创建，协同链路中断")
+        print(f"\n[Review] ❌ 审查报告未创建，协同链路中断")
         results["review"] = {"error": "审查报告未创建"}
         return results
 
@@ -724,7 +726,7 @@ async def run_five_loops_collaboration(
         }
         print(f"[Test] cross-loop context: changed_files={test_changed_files}")
     else:
-        print("\n[Test] ❌ 测试文件未创建")
+        print(f"\n[Test] ❌ 测试文件未创建")
         results["test"] = {"error": "测试文件未创建"}
         return results
 
@@ -735,7 +737,7 @@ async def run_five_loops_collaboration(
     print("阶段 5/5: 鲁班（forgemind:luban）— 框架闭环（I8 approval）")
     print("═" * 70)
     print(f"[Framework] 接收 test.changed_files 作为 target_files: {test_changed_files}")
-    print("[Framework] 触发 framework 闭环：沉淀五闭环协同方法论为新 ADR")
+    print(f"[Framework] 触发 framework 闭环：沉淀五闭环协同方法论为新 ADR")
 
     start = time.monotonic()
     # framework 闭环通过 force_targets 指定目标（避免 Discover 扫描全项目）
@@ -769,9 +771,9 @@ async def run_five_loops_collaboration(
             "changed_files": ["docs/decisions/014-five-loops-collaboration.md"],
             "elapsed_ms": int(framework_elapsed * 1000),
         }
-        print("[Framework] cross-loop context: 新 ADR 已落盘，方法论已沉淀")
+        print(f"[Framework] cross-loop context: 新 ADR 已落盘，方法论已沉淀")
     else:
-        print("\n[Framework] ❌ 新 ADR 未创建")
+        print(f"\n[Framework] ❌ 新 ADR 未创建")
         results["framework"] = {"error": "新 ADR 未创建"}
 
     return results

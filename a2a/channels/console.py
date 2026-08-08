@@ -16,11 +16,12 @@ Configuration (from ``a2a_channels.yaml``)::
 from __future__ import annotations
 
 import sys
-from collections.abc import AsyncIterator
+from typing import AsyncIterator
+
+from flowforge.core.tracing import get_logger
 
 from flowforge.a2a.channels.base import ChannelAdapter
 from flowforge.a2a.protocol import A2AMention, A2AMessage
-from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.a2a.channels.console")
 

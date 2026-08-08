@@ -1,6 +1,7 @@
 /**
  * ThemeProvider — 主题 Provider
  *
+ * 来源：clowder-ai/packages/web/src/components/ThemeProvider.tsx（简化版）
  * 职责：管理 light/dark/system 三态主题切换，提供主题上下文给子组件
  *
  * 设计原则：
@@ -67,18 +68,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.setAttribute("data-theme", resolved);
       // 同时设置 data-theme-pref，保留用户偏好（system/light/dark）
       document.documentElement.setAttribute("data-theme-pref", theme);
-      // 调试日志：追踪主题状态传递
-      console.log(
-        "%c[ThemeProvider] theme changed",
-        "color: #ff5c5c; font-weight: bold",
-        {
-          theme,
-          resolvedTheme: resolved,
-          dataThemeAttr: document.documentElement.getAttribute("data-theme"),
-          dataThemePrefAttr: document.documentElement.getAttribute("data-theme-pref"),
-          timestamp: new Date().toISOString(),
-        }
-      );
     }
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, theme);

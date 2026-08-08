@@ -10,14 +10,13 @@ Implements FR-CAP-03 L3:
 - Retry (3 times, exponential backoff)
 """
 
-import asyncio
 import time
+import asyncio
 from enum import Enum
-from typing import Any
-
-from flowforge.core.tracing import get_logger
+from typing import Optional, Dict, Any, List
 from flowforge.mcp.client import MCPClient
 from flowforge.mcp.gateway import MCPGateway
+from flowforge.core.tracing import get_logger
 
 logger = get_logger("mcp.broker")
 
@@ -93,7 +92,7 @@ class CircuitBreaker:
 
         return False
 
-    def get_status(self) -> dict[str, Any]:
+    def get_status(self) -> Dict[str, Any]:
         """Get circuit breaker status."""
         return {
             "state": self.state.value,
@@ -112,16 +111,16 @@ class MCPBroker:
     with circuit breaker (closed → open → half-open) and retry mechanisms.
     """
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
-        self._servers: dict[str, MCPClient] = {}
-        self._gateways: dict[str, MCPGateway] = {}
-        self._tool_index: dict[str, str] = {}  # tool_name → server_name
-        self._circuit_breakers: dict[str, CircuitBreaker] = {}  # server_name → CircuitBreaker
+        self._servers: Dict[str, MCPClient] = {}
+        self._gateways: Dict[str, MCPGateway] = {}
+        self._tool_index: Dict[str, str] = {}  # tool_name → server_name
+        self._circuit_breakers: Dict[str, CircuitBreaker] = {}  # server_name → CircuitBreaker
         self._cb_failure_threshold = self.config.get("circuit_breaker_threshold", CIRCUIT_BREAKER_THRESHOLD)
         self._cb_recovery_timeout = self.config.get("circuit_breaker_recovery_timeout", CIRCUIT_OPEN_TIMEOUT)
 
-    def register_server(self, name: str, client: MCPClient, gateway: MCPGateway | None = None):
+    def register_server(self, name: str, client: MCPClient, gateway: Optional[MCPGateway] = None):
         """Register an MCP server."""
         self._servers[name] = client
         if gateway:
@@ -157,7 +156,7 @@ class MCPBroker:
 
         logger.info(f"Indexed {len(tools)} tools from server '{server_name}'")
 
-    async def index_all_tools(self) -> dict[str, int]:
+    async def index_all_tools(self) -> Dict[str, int]:
         """Index tools from all registered servers.
 
         Returns:
@@ -175,7 +174,7 @@ class MCPBroker:
                 results[name] = 0
         return results
 
-    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Route a tool call to the appropriate server.
 
         Uses tool_index for efficient routing. Falls back to
@@ -209,8 +208,8 @@ class MCPBroker:
         self,
         server_name: str,
         tool_name: str,
-        arguments: dict[str, Any],
-    ) -> dict[str, Any] | None:
+        arguments: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
         """Execute with retry and circuit breaker.
 
         Circuit breaker state machine:
@@ -263,7 +262,7 @@ class MCPBroker:
 
         return {"error": f"All retries failed for tool '{tool_name}' on server '{server_name}': {last_error}"}
 
-    def list_all_tools(self) -> list[dict[str, Any]]:
+    def list_all_tools(self) -> List[Dict[str, Any]]:
         """List all indexed tools."""
         return [{"name": name, "server": server} for name, server in self._tool_index.items()]
 

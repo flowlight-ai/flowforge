@@ -27,7 +27,7 @@ Usage:
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple
 
 from flowforge.core.tracing import get_logger
 
@@ -48,7 +48,7 @@ LEGACY_DOLLAR_PATTERN = re.compile(r'\$(outputs|state|params|result|config)\.([\
 LEGACY_SINGLE_BRACE_PATTERN = re.compile(r'\{(output|state|params|result)\.([\w.\[\]]+)\}')
 
 # 前缀别名映射 (旧 → 新)
-PREFIX_ALIASES: dict[str, str] = {
+PREFIX_ALIASES: Dict[str, str] = {
     "output": "outputs",
     "auto": "state",  # auto.persona → state.persona (向后兼容)
 }
@@ -63,7 +63,7 @@ class VariableResolver:
     向后兼容旧格式: {{state.xxx}}, $outputs.xxx, {output.xxx}
     """
 
-    def __init__(self, context: dict[str, Any]) -> None:
+    def __init__(self, context: Dict[str, Any]) -> None:
         self._context = context
 
     def resolve(self, template: str) -> str:
@@ -119,8 +119,8 @@ class VariableResolver:
         return self.resolve(template)
 
     def resolve_state_updates(
-        self, updates: dict[str, str]
-    ) -> dict[str, Any]:
+        self, updates: Dict[str, str]
+    ) -> Dict[str, Any]:
         """解析 state_updates 配置中的表达式。
 
         规范格式:
@@ -137,7 +137,7 @@ class VariableResolver:
         Returns:
             解析后的字典，值替换为实际值。
         """
-        resolved: dict[str, Any] = {}
+        resolved: Dict[str, Any] = {}
         for key, expr in updates.items():
             if isinstance(expr, str):
                 resolved[key] = self._resolve_expression(expr)
@@ -261,14 +261,14 @@ class VariableResolver:
         return current
 
     @staticmethod
-    def _parse_path(path: str) -> list[str | int]:
+    def _parse_path(path: str) -> List[str | int]:
         """将路径字符串解析为段列表。
 
         "novel.chapters[0].title" → ["novel", "chapters", 0, "title"]
         "audit_result.score" → ["audit_result", "score"]
         "items[0][1]" → ["items", 0, 1]
         """
-        segments: list[str | int] = []
+        segments: List[str | int] = []
         tokens = re.findall(r'[^.\[\]]+|\[\d+\]', path)
         for token in tokens:
             if token.startswith("[") and token.endswith("]"):
@@ -282,11 +282,11 @@ class VariableResolver:
 
 
 def create_resolver_from_state(
-    state: dict[str, Any],
-    params: dict[str, Any] | None = None,
-    result: dict[str, Any] | None = None,
-    outputs: dict[str, Any] | None = None,
-    config: dict[str, Any] | None = None,
+    state: Dict[str, Any],
+    params: Optional[Dict[str, Any]] = None,
+    result: Optional[Dict[str, Any]] = None,
+    outputs: Optional[Dict[str, Any]] = None,
+    config: Optional[Dict[str, Any]] = None,
 ) -> VariableResolver:
     """从常见上下文组件创建 VariableResolver 的便捷工厂。
 

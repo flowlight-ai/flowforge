@@ -17,6 +17,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 
 class TraeBridgeError(Exception):
     """Trae 桥接协议基础异常.

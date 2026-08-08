@@ -1,43 +1,31 @@
-# FlowForge local deployment composition.
-#
-#   docker compose up -d        → start in background
-#   docker compose logs -f     → follow logs
-#   docker compose down        → stop & remove container
-#
-# An optional .env file next to this compose file provides secrets/runtime config
-# (see .env.example). A missing .env is fine — it is loaded only if present.
-
+version: "3.9"
 services:
   flowforge:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: flowforge-council:0.1.0
-    container_name: flowforge-council
+    build: .
+    image: flowforge:latest
+    container_name: flowforge-api
     restart: unless-stopped
-    ports:
-      - "8765:8765"
     environment:
-      # Ensure `python flowforge/web/app.py` (Dockerfile CMD) finds the real
-      # `flowforge` package at /app/flowforge/ instead of the pip-installed
-      # stub in site-packages. Without this, sys.path[0] is the script's
-      # directory (/app/flowforge/web/) and Python picks up the stub.
-      PYTHONPATH: /app
-      # Override .env's localhost:13001 — inside the container, localhost is
-      # the container itself, not the host. host.docker.internal resolves to
-      # the Docker host's network so the container can reach OpenRoute.
-      FLOWFORGE_LLM_ROUTE_OPENROUTE_BASE_URL: "http://host.docker.internal:13001"
-    env_file:
-      - path: .env
-        required: false
+      - SECRET_KEY=${SECRET_KEY:-changeme}
+      - DB_URL=sqlite:///data/flowforge.db
     volumes:
-      # Persist logs across container rebuilds.
+      - ./data:/app/data
+      - ./config:/app/config
       - ./logs:/app/logs
-      # Mount the docs tree so self_dev_doc_loop can read/write design docs.
-      - ./docs:/app/docs
+    ports:
+      - "8000:8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8765/api/agents')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
-      start_period: 20s
       retries: 3
+      start_period: 40s
+
+# API keys are managed via Web UI (Settings page) or stored in data/secrets.db.
+# On first startup, you can pass keys as environment variables and they will be
+# automatically imported into the secrets store via the resolve() fallback chain:
+#   DB → env var → .env file → default
+#
+# Example: docker run -e OPENROUTER_API_KEY=sk-xxx flowforge:latest
+# The key will be available through SecretStore.resolve("OPENROUTER_API_KEY")
+# and can then be managed via the Web UI at /admin/settings.

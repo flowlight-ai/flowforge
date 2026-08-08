@@ -1,11 +1,10 @@
-import hashlib
 import os
+import hashlib
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import httpx
-
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
 
@@ -13,9 +12,8 @@ logger = get_logger("image_download")
 
 # PIL is optional — if unavailable we skip dimension checks
 try:
-    import io
-
     from PIL import Image
+    import io
 
     _PIL_AVAILABLE = True
 except ImportError:
@@ -68,7 +66,7 @@ class ImageDownloadTool(BaseTool):
     }
 
     async def execute(self, input: ToolInput) -> ToolOutput:
-        urls: list[str] = input.params["urls"]
+        urls: List[str] = input.params["urls"]
         output_dir: str = input.params["output_dir"]
         min_width: int = input.params.get("min_width", 400)
         min_height: int = input.params.get("min_height", 300)
@@ -89,8 +87,8 @@ class ImageDownloadTool(BaseTool):
                 error=f"Cannot create output directory: {e}",
             )
 
-        downloaded: list[dict[str, Any]] = []
-        failed: list[str] = []
+        downloaded: List[Dict[str, Any]] = []
+        failed: List[str] = []
 
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             for url in urls:

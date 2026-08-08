@@ -44,7 +44,7 @@ interface SettingsTextProps {
 /**
  * SettingsText — 设置区通用文本组件
  *
- * 简化实现：去除 Tailwind 类，改用 FlowForge CSS 变量内联样式。
+ * 从 clowder-ai 移植并简化：去除 Tailwind 类，改用 FlowForge CSS 变量内联样式。
  */
 export function SettingsText({
   as: Tag = 'span',

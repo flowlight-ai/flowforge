@@ -27,7 +27,8 @@ VENV_DIR = PROJECT_ROOT / ".venv"
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_BACKEND_PORT = 8000
-DEFAULT_FRONTEND_PORT = 5175
+# 与 web/package.json 的 "dev": "next dev --port 5174" 保持一致
+DEFAULT_FRONTEND_PORT = 5174
 
 BACKEND_READY_TIMEOUT = 90.0  # backend imports many modules; allow generous time
 FRONTEND_READY_TIMEOUT = 90.0  # Next.js first compile can be slow
@@ -56,10 +57,7 @@ def npm_args(extra: list[str]) -> list[str]:
 
 
 def start_process(
-    cmd: list[str],
-    log_path: Path,
-    cwd: Path | None = None,
-    env: dict[str, str] | None = None,
+    cmd: list[str], log_path: Path, cwd: Path | None = None
 ) -> tuple[subprocess.Popen, object]:
     """Start a background process whose stdout+stderr append to log_path.
 
@@ -72,8 +70,6 @@ def start_process(
         "stderr": subprocess.STDOUT,
         "cwd": str(cwd) if cwd else None,
     }
-    if env is not None:
-        kwargs["env"] = env
     if sys.platform == "win32":
         # New process group so CTRL_BREAK_EVENT can reach the whole tree
         # (npm spawns child processes — killing only npm would orphan them).
@@ -190,7 +186,7 @@ def main() -> int:
         print(f"\n  [WARN] .venv not found at {VENV_DIR}")
         print("         Run `python scripts/setup.py` first, or activate your venv.")
     if start_frontend and not (WEB_DIR / "node_modules").is_dir():
-        print("\n  [WARN] web/node_modules not found")
+        print(f"\n  [WARN] web/node_modules not found")
         print("         Run `python scripts/setup.py` (or `cd web && npm install`) first.")
 
     procs: list[tuple[str, subprocess.Popen, object]] = []
@@ -203,15 +199,9 @@ def main() -> int:
                 py, "-m", "uvicorn", "flowforge.app.main:app",
                 "--host", args.host, "--port", str(args.backend_port),
             ]
-            # The repo root IS the ``flowforge`` package (root __init__.py), so
-            # the parent directory must be importable for ``flowforge.app.main``.
-            env = dict(os.environ)
-            parent = str(PROJECT_ROOT.parent)
-            existing = env.get("PYTHONPATH", "")
-            env["PYTHONPATH"] = f"{parent}{os.pathsep}{existing}" if existing else parent
             print(f"  $ {' '.join(cmd)}")
             print(f"  log -> {backend_log}")
-            proc, lf = start_process(cmd, backend_log, cwd=PROJECT_ROOT, env=env)
+            proc, lf = start_process(cmd, backend_log, cwd=PROJECT_ROOT)
             procs.append(("backend", proc, lf))
 
         if start_frontend:
@@ -227,7 +217,7 @@ def main() -> int:
         if start_backend:
             health_url = f"http://{args.host}:{args.backend_port}/health"
             if wait_for_url(health_url, BACKEND_READY_TIMEOUT, "backend"):
-                print("  [OK] backend ready")
+                print(f"  [OK] backend ready")
             else:
                 print(f"  [FAIL] backend not ready after {BACKEND_READY_TIMEOUT:.0f}s")
                 print(f"         check {backend_log}")
@@ -235,7 +225,7 @@ def main() -> int:
         if start_frontend:
             web_url = f"http://127.0.0.1:{DEFAULT_FRONTEND_PORT}/"
             if wait_for_url(web_url, FRONTEND_READY_TIMEOUT, "frontend"):
-                print("  [OK] frontend ready")
+                print(f"  [OK] frontend ready")
             else:
                 print(f"  [FAIL] frontend not ready after {FRONTEND_READY_TIMEOUT:.0f}s")
                 print(f"         check {frontend_log}")

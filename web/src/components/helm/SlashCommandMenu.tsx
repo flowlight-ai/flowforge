@@ -76,6 +76,7 @@ interface SlashCommandMenuProps {
 /**
  * SlashCommandMenu — 斜杠命令菜单
  *
+ * 来源：参考 clowder-ai ChatInputMenus 的 @mention 弹窗设计
  * 用途：在输入框输入 / 时弹出命令列表，支持键盘导航
  *
  * 键盘交互：

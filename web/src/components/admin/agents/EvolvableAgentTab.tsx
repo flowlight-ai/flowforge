@@ -3,6 +3,7 @@
 /**
  * EvolvableAgentTab — 可进化智能体 Tab
  *
+ * 依据 WEB-FUSION-DESIGN.md §6.2：
  *   显示 5 个内置 Forgekin 卡片网格
  *
  * 数据来源：/api/v1/forgemind/roster

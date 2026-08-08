@@ -11,35 +11,22 @@ Plus infrastructure:
 6. Session Manager - Context compression and handoff
 """
 
-from flowforge.harness.context_engine import ContextEngine
-from flowforge.harness.entropy_manager import (
-    DebtItem,
-    DebtSeverity,
-    DebtStatus,
-    DebtTracker,
-    DocEntry,
-    DocGardener,
-    EntropyManager,
-    EvolvingRule,
-    GarbageCollection,
-    GCSchedule,
-    RuleEvolution,
-    RuleLifecycle,
-)
-from flowforge.harness.feedback_loop import (
-    EVAL_MODE_FULL,
-    EVAL_MODE_LIGHTWEIGHT,
-    EVAL_MODE_SKIP,
-    GATE_CONDITIONAL,
-    GATE_FAIL,
-    GATE_PASS,
-    ClassificationGate,
-    EvaluationMode,
-    FeedbackLoop,
-    FeedbackResult,
-)
 from flowforge.harness.orchestrator import HarnessOrchestrator
+from flowforge.harness.context_engine import ContextEngine
 from flowforge.harness.session_manager import SessionManager
+from flowforge.harness.feedback_loop import (
+    FeedbackLoop, FeedbackResult,
+    EvaluationMode, ClassificationGate,
+    EVAL_MODE_FULL, EVAL_MODE_LIGHTWEIGHT, EVAL_MODE_SKIP,
+    GATE_PASS, GATE_CONDITIONAL, GATE_FAIL,
+)
+from flowforge.harness.entropy_manager import (
+    EntropyManager,
+    DocGardener, DocEntry,
+    DebtTracker, DebtItem, DebtSeverity, DebtStatus,
+    RuleEvolution, EvolvingRule, RuleLifecycle,
+    GarbageCollection, GCSchedule,
+)
 
 __all__ = [
     "HarnessOrchestrator",

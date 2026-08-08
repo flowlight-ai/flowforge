@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class DrafterAgent(GenericAgent):
@@ -7,7 +7,7 @@ class DrafterAgent(GenericAgent):
     description = "初稿生成：根据需求生成初始版本"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         requirements = input.params.get("requirements", [])
         style = input.params.get("style", "professional")

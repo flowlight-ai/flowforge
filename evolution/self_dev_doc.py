@@ -25,10 +25,12 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 from flowforge.evolution.self_dev_base import (
@@ -90,7 +92,7 @@ class SelfDevDocLoop(SelfDevLoopBase):
     def __init__(
         self,
         trae_client: Any,
-        forgekin_config: dict[str, Any],
+        forgekin_config: Dict[str, Any],
         evolution_engine: Any,
         *,
         awakening_stage: str = "E3",
@@ -112,7 +114,7 @@ class SelfDevDocLoop(SelfDevLoopBase):
     # §1 Discover — 发现文档任务
     # ══════════════════════════════════════════════════════════════
 
-    async def discover(self, context: dict[str, Any]) -> list[DevTask]:
+    async def discover(self, context: Dict[str, Any]) -> List[DevTask]:
         """发现文档任务（F046 §2.5.1）.
 
         检测三类问题：
@@ -142,7 +144,7 @@ class SelfDevDocLoop(SelfDevLoopBase):
             f"force_targets={force_targets}"
         )
 
-        tasks: list[DevTask] = []
+        tasks: List[DevTask] = []
 
         # 处理 force_targets（定向更新，跳过扫描）
         if force_targets:
@@ -196,7 +198,7 @@ class SelfDevDocLoop(SelfDevLoopBase):
         self._logger.info(f"[Discover] 完成: {len(tasks)} 个任务, 耗时 {elapsed_ms}ms")
         return tasks
 
-    async def _check_stale(self, doc_path: Path, rel_path: str, max_age_days: int) -> DevTask | None:
+    async def _check_stale(self, doc_path: Path, rel_path: str, max_age_days: int) -> Optional[DevTask]:
         """检测过期文档."""
         try:
             mtime = doc_path.stat().st_mtime
@@ -217,7 +219,7 @@ class SelfDevDocLoop(SelfDevLoopBase):
             self._logger.warning(f"[Discover] 无法读取文件状态 {rel_path}: {e}")
         return None
 
-    async def _check_format_issues(self, doc_path: Path, rel_path: str) -> DevTask | None:
+    async def _check_format_issues(self, doc_path: Path, rel_path: str) -> Optional[DevTask]:
         """检测格式问题（无 front-matter / 标题层级错乱）."""
         try:
             content = await asyncio.to_thread(doc_path.read_text, encoding="utf-8")
@@ -225,7 +227,7 @@ class SelfDevDocLoop(SelfDevLoopBase):
             self._logger.warning(f"[Discover] 无法读取文件 {rel_path}: {e}")
             return None
 
-        issues: list[str] = []
+        issues: List[str] = []
 
         # 检查 front-matter（仅对 docs/ 下的文档强制要求）
         if rel_path.startswith("docs/") and not _FRONT_MATTER_RE.match(content):
@@ -250,9 +252,9 @@ class SelfDevDocLoop(SelfDevLoopBase):
             )
         return None
 
-    async def _check_missing_docs(self, project_root: Path) -> list[DevTask]:
+    async def _check_missing_docs(self, project_root: Path) -> List[DevTask]:
         """检测缺失文档（features/F0XX 存在但 design/D0XX 缺失）."""
-        tasks: list[DevTask] = []
+        tasks: List[DevTask] = []
         features_dir = project_root / "docs" / "features"
         design_dir = project_root / "docs" / "design"
 
@@ -420,7 +422,7 @@ class SelfDevDocLoop(SelfDevLoopBase):
 
     def _parse_plan_response(
         self, content: str, task: DevTask
-    ) -> tuple[list[dict[str, Any]], str, str]:
+    ) -> tuple[List[Dict[str, Any]], str, str]:
         """解析 LLM 返回的 Plan JSON."""
         import json
 
@@ -476,8 +478,8 @@ class SelfDevDocLoop(SelfDevLoopBase):
             f"[Act] 开始: plan_id={plan.plan_id}, steps={len(plan.steps)}"
         )
 
-        changed_files: list[str] = []
-        diff_summary_parts: list[str] = []
+        changed_files: List[str] = []
+        diff_summary_parts: List[str] = []
         success = True
         error_message = ""
 
@@ -613,8 +615,8 @@ class SelfDevDocLoop(SelfDevLoopBase):
             f"changed_files={len(result.changed_files)}"
         )
 
-        checks: list[dict[str, Any]] = []
-        failure_reasons: list[str] = []
+        checks: List[Dict[str, Any]] = []
+        failure_reasons: List[str] = []
 
         # 检查 1: 文件存在性
         for rel_path in result.changed_files:

@@ -1,5 +1,6 @@
-from flowforge.core.base_agent import AgentInput
 from flowforge.core.base_mode_executor import BaseModeExecutor
+from flowforge.core.base_agent import AgentInput
+from flowforge.core.base_tool import ToolInput
 from flowforge.core.task_context import TaskContext
 from flowforge.core.tracing import get_logger
 
@@ -80,12 +81,11 @@ class AgentJudgeExecutor(BaseModeExecutor):
     def _get_judge_model(self, ctx: TaskContext) -> str:
         """获取judge阶段应使用的不同模型（deepseek-web/chat作为评审LLM）。"""
         try:
-            from pathlib import Path
-
             import yaml
+            from pathlib import Path
             config_path = Path(__file__).parent.parent / "config" / "models.yaml"
             if config_path.exists():
-                with open(config_path, encoding="utf-8") as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     models_config = yaml.safe_load(f)
                 assignments = models_config.get("assignments", {})
                 judge_primary = assignments.get("judge", {}).get("primary", "")

@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class RefinerAgent(GenericAgent):
@@ -7,7 +7,7 @@ class RefinerAgent(GenericAgent):
     description = "迭代优化：根据评审反馈改进当前版本"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         draft = input.params.get("draft", "")
         critique = input.params.get("critique", {})
         task = input.params.get("task", input.params.get("query", ""))

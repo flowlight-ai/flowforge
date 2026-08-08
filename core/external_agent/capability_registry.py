@@ -23,8 +23,8 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -50,7 +50,7 @@ class CapabilityEntry(BaseModel):
         default_factory=dict, description="Manifest 引用（来自 YAML 配置）"
     )
     registered_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="注册时间（UTC）",
     )
     success_rate: float = Field(
@@ -176,7 +176,7 @@ class CapabilityRegistry:
         self,
         capability: str,
         exclude: list[str] | None = None,
-    ) -> CapabilityEntry | None:
+    ) -> Optional[CapabilityEntry]:
         """按 success_rate 返回最优 Provider（EX-008 能力发现 + 排序）。
 
         Args:

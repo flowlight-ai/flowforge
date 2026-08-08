@@ -26,11 +26,14 @@ License: MIT
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import TraceLogger, get_logger
-from pydantic import BaseModel, Field
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 枚举：五问的推荐取值（非强制约束，允许自由文本以适配自定义场景）
@@ -174,11 +177,11 @@ class EvalContract(BaseModel):
         description="该 eval 契约的成熟度（诚实标注）",
     )
     created_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="创建时间 ISO 8601",
     )
     updated_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="最后更新时间 ISO 8601",
     )
 
@@ -214,7 +217,7 @@ class ContractRegistry:
         logger: TraceLogger 实例。若未注入，使用默认 "eval.contract" logger。
     """
 
-    def __init__(self, logger: TraceLogger | None = None) -> None:
+    def __init__(self, logger: Optional[TraceLogger] = None) -> None:
         self._logger: TraceLogger = logger or get_logger("eval.contract")
         # 按 component_ref 索引（一个组件一个 contract）
         self._contracts: dict[str, EvalContract] = {}
@@ -240,7 +243,7 @@ class ContractRegistry:
             f"component '{contract.component_ref}' (maturity={contract.maturity.value})"
         )
 
-    async def get(self, component_ref: str) -> EvalContract | None:
+    async def get(self, component_ref: str) -> Optional[EvalContract]:
         """按 component_ref 查询契约。
 
         Args:

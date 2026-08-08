@@ -1,32 +1,33 @@
-import os
-
+from pathlib import Path
+from typing import Optional
+from flowforge.core.config import SystemConfig, ConfigLoader, system_config
 from flowforge.core.agent_registry import AgentRegistry
-from flowforge.core.config import ConfigLoader, system_config
 from flowforge.core.di import DIContainer
-from flowforge.core.plugin_manager import PluginManager
-from flowforge.core.tracing import get_logger
 from flowforge.events.event_bus import EventBus
-from flowforge.executor.hybrid_executor import HybridExecutor
-from flowforge.llm.router import LLMRouter
-from flowforge.memory.manager import MemoryManager
 from flowforge.modes.registry import ModeRegistry
+from flowforge.tools.registry import ToolRegistry
+from flowforge.tools.llm_client import LLMClient
+from flowforge.llm.router import LLMRouter
+from flowforge.tools.opensieve_client import OpenSieveClient
+from flowforge.tools.web_search import WebSearchTool
+from flowforge.tools.python_executor import PythonExecutorTool
+from flowforge.tools.file_rw import FileReadWriteTool
 from flowforge.tools.cache import CacheTool
 from flowforge.tools.duckduckgo_search import DuckDuckGoSearchTool
-from flowforge.tools.file_rw import FileReadWriteTool
-from flowforge.tools.llm_client import LLMClient
-from flowforge.tools.opensieve_client import OpenSieveClient
-from flowforge.tools.python_executor import PythonExecutorTool
-from flowforge.tools.registry import ToolRegistry
-from flowforge.tools.sendgrid_mail import SendGridMailTool
 from flowforge.tools.web_scraper import WebScraperTool
-from flowforge.tools.web_search import WebSearchTool
+from flowforge.tools.sendgrid_mail import SendGridMailTool
 from flowforge.tools.webhook import WebhookTool
+from flowforge.memory.manager import MemoryManager
+from flowforge.executor.hybrid_executor import HybridExecutor
+from flowforge.core.plugin_manager import PluginManager
+from flowforge.core.tracing import get_logger
+import os
 
 logger = get_logger("flowforge")
 
 
 class FlowForge:
-    def __init__(self, config_path: str | None = None):
+    def __init__(self, config_path: Optional[str] = None):
         self.config = system_config
         self.config_loader = ConfigLoader()
         if config_path:

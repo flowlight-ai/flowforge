@@ -14,6 +14,7 @@ interface PendingMemberBubbleProps {
 /**
  * PendingMemberBubble — 智能体响应中占位气泡
  *
+ * 来源：clowder-ai/packages/web/src/components/PendingMemberBubble.tsx（简化版）
  * 用途：当智能体已被触发但消息未到达时，显示带头像和动画的占位气泡
  *
  * 视觉：

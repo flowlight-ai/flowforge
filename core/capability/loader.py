@@ -102,9 +102,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Callable, Optional, Union
 
 import yaml
 from pydantic import ValidationError
@@ -142,13 +141,13 @@ class ProfileLoader:
 
     def __init__(
         self,
-        logger: TraceLogger | None = None,
-        config_loader: Callable[[str], Any] | None = None,
+        logger: Optional[TraceLogger] = None,
+        config_loader: Optional[Callable[[str], Any]] = None,
     ) -> None:
         self._logger: TraceLogger = logger or get_logger(
             "capability.profile_loader"
         )
-        self._config_loader: Callable[[str], Any] | None = config_loader
+        self._config_loader: Optional[Callable[[str], Any]] = config_loader
 
     # ── 单文件加载 ──────────────────────────────────────────────────
 

@@ -1,13 +1,12 @@
 import json
 import sqlite3
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
-
+from typing import Optional
 from fastapi import APIRouter, Query
-
+from flowforge.core.tracing import get_trace_id, get_logger, get_log_file_path
 from flowforge.core.config import system_config
-from flowforge.core.tracing import get_log_file_path, get_logger, get_trace_id
 
 logger = get_logger("audit_logger")
 
@@ -41,7 +40,7 @@ class AuditLogger:
     def log(self, level: str, action: str, task_id: str = "",
             mode: str = "", details: dict = None, trace_id: str = ""):
         log_id = str(uuid.uuid4())
-        timestamp = datetime.now(UTC).isoformat() + "Z"
+        timestamp = datetime.now(timezone.utc).isoformat() + "Z"
         details_json = json.dumps(details or {}, ensure_ascii=False, default=str)
         self._conn.execute(
             "INSERT INTO audit_logs (id, timestamp, level, task_id, mode, action, details, trace_id) "
@@ -82,7 +81,7 @@ class AuditLogger:
         return {"items": items, "total": total}
 
 
-_audit_logger: AuditLogger | None = None
+_audit_logger: Optional[AuditLogger] = None
 
 
 def get_audit_logger() -> AuditLogger:
@@ -96,7 +95,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(UTC).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
     }
 
 
@@ -121,7 +120,7 @@ async def stream_logs(
     log_file = get_log_file_path()
     if not log_file.exists():
         return _make_response({"items": [], "total": 0})
-    with open(log_file, encoding="utf-8") as f:
+    with open(log_file, "r", encoding="utf-8") as f:
         all_lines = f.readlines()
     filtered = []
     for line in all_lines:
@@ -142,7 +141,7 @@ async def get_log_file():
     if not log_file.exists():
         return Response(content="", media_type="text/plain; charset=utf-8")
     size = log_file.stat().st_size
-    with open(log_file, encoding="utf-8") as f:
+    with open(log_file, "r", encoding="utf-8") as f:
         if size > 51200:
             f.seek(size - 51200)
             f.readline()

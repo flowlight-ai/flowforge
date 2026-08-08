@@ -25,9 +25,8 @@ import asyncio
 import inspect
 import logging
 import time
-from collections.abc import Callable
 from enum import IntEnum
-from typing import Any, Literal
+from typing import Any, Callable, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -52,7 +51,7 @@ class RecoveryTier(IntEnum):
 
 
 # 升级路径：T1 → T2 → T3 → T4（T4 不再升级）
-_TIER_NEXT: dict[RecoveryTier, RecoveryTier] = {
+_TIER_NEXT: Dict[RecoveryTier, RecoveryTier] = {
     RecoveryTier.TIER_1_SOFT: RecoveryTier.TIER_2_COMPONENT,
     RecoveryTier.TIER_2_COMPONENT: RecoveryTier.TIER_3_SYSTEM,
     RecoveryTier.TIER_3_SYSTEM: RecoveryTier.TIER_4_DISASTER,
@@ -82,7 +81,7 @@ class RecoveryAction(BaseModel):
     fallback_value: Any = None
     notify_human: bool = False
     escalate_after_seconds: float = 0.0  # 0 表示不升级
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class RecoveryContext(BaseModel):
@@ -97,8 +96,8 @@ class RecoveryContext(BaseModel):
     occurred_at: float
     retry_count: int = 0
     total_downtime_seconds: float = 0.0
-    previous_tier: RecoveryTier | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    previous_tier: Optional[RecoveryTier] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class RecoveryResult(BaseModel):
@@ -119,7 +118,7 @@ class RecoveryResult(BaseModel):
 # ===========================================================================
 
 
-DEFAULT_STRATEGIES: dict[RecoveryTier, RecoveryAction] = {
+DEFAULT_STRATEGIES: Dict[RecoveryTier, RecoveryAction] = {
     RecoveryTier.TIER_1_SOFT: RecoveryAction(
         tier=RecoveryTier.TIER_1_SOFT,
         strategy="retry",
@@ -250,13 +249,13 @@ class RecoveryTierManager:
 
     def __init__(
         self,
-        strategies: dict[RecoveryTier, RecoveryAction] | None = None,
+        strategies: Optional[Dict[RecoveryTier, RecoveryAction]] = None,
         degradation_tree: Any = None,
         metrics_collector: Any = None,
         event_bus: Any = None,
-        logger: logging.Logger | None = None,
+        logger: Optional[logging.Logger] = None,
     ) -> None:
-        self._strategies: dict[RecoveryTier, RecoveryAction] = (
+        self._strategies: Dict[RecoveryTier, RecoveryAction] = (
             dict(strategies) if strategies is not None else dict(DEFAULT_STRATEGIES)
         )
         self._degradation_tree: Any = degradation_tree
@@ -265,10 +264,10 @@ class RecoveryTierManager:
         self._logger: logging.Logger = logger or logging.getLogger(__name__)
 
         # 恢复历史记录（内存；持久化由 Repository 层负责，铁律 13）
-        self._recovery_history: list[dict[str, Any]] = []
+        self._recovery_history: List[Dict[str, Any]] = []
 
         # 各 tier 统计
-        self._tier_stats: dict[RecoveryTier, dict[str, int]] = {
+        self._tier_stats: Dict[RecoveryTier, Dict[str, int]] = {
             tier: {"attempts": 0, "successes": 0, "failures": 0, "escalations": 0}
             for tier in RecoveryTier
         }
@@ -612,7 +611,7 @@ class RecoveryTierManager:
         )
 
         # 9. 记录历史
-        history_record: dict[str, Any] = {
+        history_record: Dict[str, Any] = {
             "component": context.component,
             "error_type": context.error_type,
             "error": context.error[:200],
@@ -721,7 +720,7 @@ class RecoveryTierManager:
         attempts: int = 0
 
         # 备选 provider 列表（从 metadata 读取，或用默认）
-        backup_providers: list[str] = list(
+        backup_providers: List[str] = list(
             action.metadata.get("backup_providers", ["backup"])
         )
 
@@ -776,7 +775,7 @@ class RecoveryTierManager:
         error_msg = context.error
 
         # 尝试用已知异常类构造
-        known_types: dict[str, type] = {
+        known_types: Dict[str, type] = {
             "TimeoutError": TimeoutError,
             "asyncio.TimeoutError": TimeoutError,
             "ConnectionError": ConnectionError,
@@ -793,7 +792,7 @@ class RecoveryTierManager:
         except Exception:
             return RuntimeError(error_msg)
 
-    async def _emit_event(self, event_type: str, payload: dict[str, Any]) -> None:
+    async def _emit_event(self, event_type: str, payload: Dict[str, Any]) -> None:
         """发出事件到 event_bus（兼容 sync/async emit 与不同签名）。"""
         if self._event_bus is None:
             return
@@ -858,9 +857,9 @@ class RecoveryTierManager:
 
     def get_recovery_history(
         self,
-        component: str | None = None,
+        component: Optional[str] = None,
         limit: int = 50,
-    ) -> list[dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """获取恢复历史记录。
 
         Args:
@@ -878,7 +877,7 @@ class RecoveryTierManager:
         records_sorted = sorted(records, key=lambda h: h.get("timestamp", 0), reverse=True)
         return records_sorted[:limit]
 
-    def get_status(self) -> dict[str, Any]:
+    def get_status(self) -> Dict[str, Any]:
         """返回各 tier 的统计信息。
 
         Returns:

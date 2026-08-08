@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -109,11 +109,11 @@ class ExecutionPolicy(BaseModel):
         default=OnAnomalyStrategy.REFLECT,
         description="异常结果处理策略",
     )
-    fallback_agent: str | None = Field(
+    fallback_agent: Optional[str] = Field(
         default=None,
         description="fallback 策略使用的备选 Agent",
     )
-    fallback_tool: str | None = Field(
+    fallback_tool: Optional[str] = Field(
         default=None,
         description="fallback 策略使用的备选 Tool",
     )
@@ -140,12 +140,12 @@ class ExecutionPolicy(BaseModel):
             return self.retry_delay * (self.backoff_base ** (attempt - 1))
         return self.retry_delay
 
-    def to_workflow_node_config(self) -> dict[str, Any]:
+    def to_workflow_node_config(self) -> Dict[str, Any]:
         """转换为 WorkflowNodeConfig 兼容的配置字典。
 
         用于 WorkflowCompiler 编译时合并策略。
         """
-        config: dict[str, Any] = {
+        config: Dict[str, Any] = {
             "timeout": self.timeout,
             "retry_count": self.retry,
             "retry_delay": self.retry_delay,
@@ -160,7 +160,7 @@ class ExecutionPolicy(BaseModel):
 
 # ── 预定义策略模板 ────────────────────────────────────────────
 
-POLICY_TEMPLATES: dict[str, ExecutionPolicy] = {
+POLICY_TEMPLATES: Dict[str, ExecutionPolicy] = {
     "default": ExecutionPolicy(),
     "strict": ExecutionPolicy(
         timeout=600,
@@ -213,7 +213,7 @@ def get_policy(name: str = "default") -> ExecutionPolicy:
     return policy.model_copy()
 
 
-def policy_from_config(config: dict[str, Any]) -> ExecutionPolicy:
+def policy_from_config(config: Dict[str, Any]) -> ExecutionPolicy:
     """从配置字典创建 ExecutionPolicy。
 
     支持 template 字段指定预定义模板，再用配置字段覆盖。

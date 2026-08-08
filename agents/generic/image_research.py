@@ -1,6 +1,6 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput
 from flowforge.core.task_context import TaskContext
+from typing import Optional
 
 
 class ImageResearchAgent(GenericAgent):
@@ -8,7 +8,7 @@ class ImageResearchAgent(GenericAgent):
     description = "配图研究：为文章搜索和筛选合适的配图"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         topic = input.params.get("topic", "")
         images = input.params.get("images", [])
         mode = input.params.get("mode", "filter")

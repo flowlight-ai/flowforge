@@ -4,6 +4,7 @@
  * /memory — 记忆中心主页（默认 feed 动态视图）
  *
  * 使用 MemoryHub 容器，feed tab 展示最近召回流（简化版）。
+ * 依据 WEB-FUSION-DESIGN.md §9.2。
  */
 
 import { MemoryHub } from "@/components/memory";

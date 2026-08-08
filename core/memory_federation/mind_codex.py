@@ -27,9 +27,9 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -75,7 +75,7 @@ class MindCodexEntry(BaseModel):
         default="", description="来源经验标识（episode_id / trace_id）"
     )
     created_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="创建时间 ISO 8601",
     )
 
@@ -86,7 +86,7 @@ class MindCodexEntry(BaseModel):
 
 
 def _load_codex_prompts(
-    prompts_path: Path | None,
+    prompts_path: Optional[Path],
 ) -> dict[str, str]:
     """加载MindCodex提示词模板。
 
@@ -110,7 +110,7 @@ def _load_codex_prompts(
                 f"prompts.yaml not found at {path}, using rule-based fallback"
             )
             return {}
-        with open(path, encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         return dict(data.get("mind_codex", {}))
     except Exception as e:  # noqa: BLE001
@@ -144,9 +144,9 @@ class MindCodex:
 
     def __init__(
         self,
-        llm_client: Any | None = None,
-        prompts_path: Path | None = None,
-        logger: TraceLogger | None = None,
+        llm_client: Optional[Any] = None,
+        prompts_path: Optional[Path] = None,
+        logger: Optional[TraceLogger] = None,
     ) -> None:
         self._llm_client = llm_client
         self._prompts_path = prompts_path
@@ -373,7 +373,7 @@ class MindCodex:
         return result
 
     @staticmethod
-    def _extract_json(text: str) -> str | None:
+    def _extract_json(text: str) -> Optional[str]:
         """从 LLM 响应中提取 JSON 块。
 
         支持三种格式：

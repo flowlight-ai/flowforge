@@ -8,9 +8,10 @@
     5. webchat — Forgekin汇报任务完成情况
     6. IM MindCouncil — 3 只Forgekin共同总结
 
-运行方式:
-    $env:PYTHONIOENCODING="utf-8"; cd d:\\software\\openclaw
-    python flowforge/scripts/evolve_forgekins.py
+运行方式（在 flowforge 的父目录执行；跨平台，勿写死操作系统绝对路径）:
+    cd <workspace-root>            # 即 flowforge 的上一级目录
+    PYTHONIOENCODING=utf-8 python flowforge/scripts/evolve_forgekins.py
+    # Windows PowerShell: $env:PYTHONIOENCODING="utf-8"; python flowforge/scripts/evolve_forgekins.py
 
 详见:
     - [doc:review/review.md#第十四章] CL-022~CL-041 责任方分配
@@ -24,9 +25,9 @@ import asyncio
 import sys
 import tempfile
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 # Windows GBK 兜底：强制 stdout 走 UTF-8
 try:
@@ -39,9 +40,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from pydantic import BaseModel
+
 from flowforge.forgemind.forgekins import BUILTIN_FORGEKINS, ROSTER_FILES
 from flowforge.forgemind.forging.pipeline import ForgePipeline
-from pydantic import BaseModel
+
 
 # ── 任务结果模型 ────────────────────────────────────────────────
 
@@ -143,31 +146,31 @@ class _FakeRedisClient:
 
     def __init__(self) -> None:
         # key -> (value, ttl_seconds, fields_dict)
-        self._data: dict[str, tuple[Any, int | None, dict[str, str]]] = {}
+        self._data: dict[str, tuple[Any, Optional[int], dict[str, str]]] = {}
 
     def set_key(
         self,
         key: str,
         value: Any,
-        ttl: int | None,
+        ttl: Optional[int],
         status: str = "running",
-        created_at: str | None = None,
+        created_at: Optional[str] = None,
     ) -> None:
         fields = {
             "status": status,
-            "created_at": created_at or datetime.now(UTC).isoformat(),
+            "created_at": created_at or datetime.now(timezone.utc).isoformat(),
         }
         self._data[key] = (value, ttl, fields)
 
     async def scan(self, pattern: str = "*") -> list[str]:
         return list(self._data.keys())
 
-    async def ttl(self, key: str) -> int | None:
+    async def ttl(self, key: str) -> Optional[int]:
         if key not in self._data:
             return -2
         return self._data[key][1]
 
-    async def hget(self, key: str, field: str) -> str | None:
+    async def hget(self, key: str, field: str) -> Optional[str]:
         if key not in self._data:
             return None
         return self._data[key][2].get(field)
@@ -219,7 +222,7 @@ async def claim_tasks(forgekins: dict[str, Any]) -> None:
               f" — {profile['role']}")
         print("-" * 70)
         print(f"责任范围: {profile['responsibility']}")
-        print("本次代理任务:")
+        print(f"本次代理任务:")
         for idx, (task_id, task_name, cl_id) in enumerate(profile["tasks"], 1):
             print(f"  {idx}. {task_name}（{cl_id}）")
         # Forgekin自报家门（通过 chat 降级模式）
@@ -529,7 +532,7 @@ async def execute_sherlock_tasks(forgekin: Any) -> list[TaskResult]:
         decision = CloseGateDecision(
             decision="immediate",
             decided_by="sherlock",
-            decided_at=datetime.now(UTC),
+            decided_at=datetime.now(timezone.utc),
             rationale="All ACs passed, no follow-up items",
         )
         is_valid, msg = validator.validate_close_decision(decision)
@@ -979,9 +982,9 @@ def print_final_report(
     # 表格输出
     print("\nForgekin任务完成情况:")
     header = (
-        "┌──────────┬─────────────────────┬──────────┬──────┬──────┬──────────┐\n"
-        "│ Forgekin   │ 形态                │ 任务数   │ PASS │ FAIL │ 耗时(ms) │\n"
-        "├──────────┼─────────────────────┼──────────┼──────┼──────┼──────────┤"
+        f"┌──────────┬─────────────────────┬──────────┬──────┬──────┬──────────┐\n"
+        f"│ Forgekin   │ 形态                │ 任务数   │ PASS │ FAIL │ 耗时(ms) │\n"
+        f"├──────────┼─────────────────────┼──────────┼──────┼──────┼──────────┤"
     )
     print(header)
     for fid in BUILTIN_FORGEKINS:
@@ -1065,7 +1068,7 @@ async def main() -> int:
     print_banner("ForgeMind v7.1 Forgekin自进化 + task.md 剩余任务代理执行")
     print(f"项目根: {PROJECT_ROOT}")
     print(f"预置Forgekin: {BUILTIN_FORGEKINS}")
-    print(f"运行时间: {datetime.now(UTC).isoformat()}")
+    print(f"运行时间: {datetime.now(timezone.utc).isoformat()}")
 
     # 阶段 1: 锻造 3 只Forgekin
     forgekins = await forge_all_forgekins()

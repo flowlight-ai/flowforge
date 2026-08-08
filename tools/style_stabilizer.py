@@ -7,7 +7,7 @@
 
 import hashlib
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -20,8 +20,8 @@ class DriftReport:
 
     chapter_id: str
     drift_score: float  # 0.0 ~ 1.0
-    drifted_dimensions: list[str] = field(default_factory=list)
-    suggestions: list[str] = field(default_factory=list)
+    drifted_dimensions: List[str] = field(default_factory=list)
+    suggestions: List[str] = field(default_factory=list)
 
 
 class StyleStabilizer:
@@ -33,7 +33,7 @@ class StyleStabilizer:
     3. 锚点短语作为风格参照，保持跨章节一致性
     """
 
-    def compute_style_seed(self, style_profile: dict[str, Any]) -> int:
+    def compute_style_seed(self, style_profile: Dict[str, Any]) -> int:
         """从风格配置计算确定性 seed.
 
         Args:
@@ -55,7 +55,7 @@ class StyleStabilizer:
         return seed
 
     def stabilize_prompt(
-        self, prompt: str, style_profile: dict[str, Any]
+        self, prompt: str, style_profile: Dict[str, Any]
     ) -> str:
         """将风格约束注入提示词.
 
@@ -102,7 +102,7 @@ class StyleStabilizer:
         )
         return prompt
 
-    def get_style_anchor(self, style_profile: dict[str, Any]) -> str:
+    def get_style_anchor(self, style_profile: Dict[str, Any]) -> str:
         """提取风格锚点短语 — 用于风格一致性参照.
 
         Args:
@@ -152,7 +152,7 @@ class StyleDriftDetector:
     DRIFT_CRITICAL_THRESHOLD = 0.5
 
     def compute_drift_score(
-        self, chapter_text: str, style_profile: dict[str, Any]
+        self, chapter_text: str, style_profile: Dict[str, Any]
     ) -> float:
         """计算单章风格漂移分数.
 
@@ -228,9 +228,9 @@ class StyleDriftDetector:
 
     def detect_drift(
         self,
-        chapters: list[dict[str, str]],
-        style_profile: dict[str, Any],
-    ) -> list[DriftReport]:
+        chapters: List[Dict[str, str]],
+        style_profile: Dict[str, Any],
+    ) -> List[DriftReport]:
         """批量检测多章节的风格漂移.
 
         Args:
@@ -312,7 +312,7 @@ class StyleDriftDetector:
         )
         return False
 
-    def _extract_style_features(self, text: str) -> dict[str, float]:
+    def _extract_style_features(self, text: str) -> Dict[str, float]:
         """提取文本风格特征."""
         import re
 
@@ -348,12 +348,12 @@ class StyleDriftDetector:
             "avg_paragraph_length": avg_paragraph_length,
         }
 
-    def _get_expected_sentence_length(self, style_profile: dict[str, Any]) -> float:
+    def _get_expected_sentence_length(self, style_profile: Dict[str, Any]) -> float:
         """根据风格配置获取期望句长."""
         pacing = style_profile.get("pacing_tendency", "medium")
         return {"fast": 30, "medium": 60, "slow": 100}.get(pacing, 60)
 
-    def _get_expected_dialogue_ratio(self, style_profile: dict[str, Any]) -> float:
+    def _get_expected_dialogue_ratio(self, style_profile: Dict[str, Any]) -> float:
         """根据风格配置获取期望对话比例."""
         dialogue_style = style_profile.get("dialogue_style", "balanced")
         return {

@@ -8,9 +8,10 @@ License: MIT
 """
 
 import asyncio
+import time
 from collections import deque
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 
 from flowforge.core.tracing import get_logger
 
@@ -74,10 +75,10 @@ class LLMCallEventCollector:
 
     async def get_events(
         self,
-        trace_id: str | None = None,
-        agent_name: str | None = None,
-        time_range: tuple[float, float] | None = None,
-    ) -> list[LLMCallEvent]:
+        trace_id: Optional[str] = None,
+        agent_name: Optional[str] = None,
+        time_range: Optional[Tuple[float, float]] = None,
+    ) -> List[LLMCallEvent]:
         """Query events with optional filters.
 
         Args:
@@ -89,7 +90,7 @@ class LLMCallEventCollector:
             List of matching events (newest first).
         """
         async with self._lock:
-            results: list[LLMCallEvent] = []
+            results: List[LLMCallEvent] = []
             for ev in reversed(self._events):
                 if trace_id and ev.trace_id != trace_id:
                     continue
@@ -105,8 +106,8 @@ class LLMCallEventCollector:
     # -- Summarisation -------------------------------------------------------
 
     async def get_summary(
-        self, time_range: tuple[float, float] | None = None
-    ) -> dict[str, Any]:
+        self, time_range: Optional[Tuple[float, float]] = None
+    ) -> Dict[str, Any]:
         """Return an aggregated summary of collected events.
 
         Args:
@@ -145,7 +146,7 @@ class LLMCallEventCollector:
         avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
 
         # Per-provider breakdown
-        by_provider: dict[str, dict[str, Any]] = {}
+        by_provider: Dict[str, Dict[str, Any]] = {}
         for e in events:
             if e.provider not in by_provider:
                 by_provider[e.provider] = {
@@ -186,7 +187,7 @@ class LLMCallEventCollector:
 
     # -- Prometheus-compatible export ----------------------------------------
 
-    async def export_metrics(self) -> dict[str, Any]:
+    async def export_metrics(self) -> Dict[str, Any]:
         """Export metrics in a Prometheus-compatible format.
 
         Returns a dict with ``counters`` and ``histograms`` keys whose
@@ -196,7 +197,7 @@ class LLMCallEventCollector:
         summary = await self.get_summary()
         by_provider = summary.get("by_provider", {})
 
-        counters: list[dict[str, Any]] = [
+        counters: List[Dict[str, Any]] = [
             {
                 "name": "flowforge_llm_calls_total",
                 "help": "Total LLM calls",
@@ -248,7 +249,7 @@ class LLMCallEventCollector:
                 "labels": {"provider": provider},
             })
 
-        histograms: list[dict[str, Any]] = [
+        histograms: List[Dict[str, Any]] = [
             {
                 "name": "flowforge_llm_latency_ms",
                 "help": "LLM call latency in milliseconds",
@@ -267,7 +268,7 @@ class LLMCallEventCollector:
 # Singleton
 # ---------------------------------------------------------------------------
 
-_collector_instance: LLMCallEventCollector | None = None
+_collector_instance: Optional[LLMCallEventCollector] = None
 
 
 def get_call_event_collector(

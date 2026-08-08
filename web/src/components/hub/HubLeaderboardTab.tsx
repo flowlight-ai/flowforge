@@ -3,6 +3,7 @@
 /**
  * HubLeaderboardTab — 排行榜 Tab
  *
+ * 移植自 clowder-ai HubLeaderboardTab，简化为 FlowForge 适配版。
  * 用于仪表盘子模块，展示可进化智能体的产出/质量/活跃度排行。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

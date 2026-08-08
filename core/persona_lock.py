@@ -9,6 +9,7 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+from typing import Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -91,6 +92,6 @@ class PersonaLock:
         lock = self._locks.get(persona_id)
         return lock is not None and lock.locked()
 
-    def get_holder(self, persona_id: str) -> str | None:
+    def get_holder(self, persona_id: str) -> Optional[str]:
         """获取 persona_id 对应锁的持有者信息。"""
         return self._holders.get(persona_id)

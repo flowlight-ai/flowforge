@@ -22,7 +22,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 
 import httpx
 
@@ -87,8 +87,8 @@ class OpenRouteService(ToolPlugin):
     ):
         self._port = int(port)
         self._host = host
-        self._process: subprocess.Popen | None = None
-        self._started_at: float | None = None
+        self._process: Optional[subprocess.Popen] = None
+        self._started_at: Optional[float] = None
         self._running: bool = False
 
         # Resolve openroute_dir: explicit > env > empty (must be configured)
@@ -153,7 +153,7 @@ class OpenRouteService(ToolPlugin):
                 last_check=time.time(),
             )
 
-    async def execute(self, params: dict[str, Any]) -> dict[str, Any]:
+    async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute an OpenRoute action.
 
         Args:
@@ -354,7 +354,7 @@ class OpenRouteService(ToolPlugin):
         else:
             self._running = False
 
-        uptime: float | None = None
+        uptime: Optional[float] = None
         if self._started_at and process_alive:
             uptime = round(time.time() - self._started_at, 1)
 
@@ -402,7 +402,7 @@ class OpenRouteService(ToolPlugin):
             pass
         return []
 
-    async def chat(self, model: str, messages: list, **kwargs: Any) -> dict | None:
+    async def chat(self, model: str, messages: list, **kwargs: Any) -> Optional[dict]:
         """Send a chat completion request through the openroute.
 
         Args:

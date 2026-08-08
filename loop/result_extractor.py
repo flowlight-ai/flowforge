@@ -11,6 +11,7 @@
 import json
 import logging
 import os
+from typing import Any
 
 from flowforge.loop.state import LoopResult
 
@@ -131,18 +132,73 @@ def extract_result_summary(result: LoopResult, task_context=None) -> dict:
     }
 
 
+def _looks_like_echo_or_instructions(content: str) -> bool:
+    """检测内容是否为 LLM echo（回显提示词指令）而非真实文章。
+
+    LLM 偶尔会将提示词指令作为内容返回，例如：
+    - "我需要严格遵守以下规则..."
+    - "让我思考一下..."
+    - "按照以下要求撰写..."
+    - "根据提示，我需要..."
+
+    这类内容不能作为最终文章输出，必须跳过。
+    """
+    if not content or not isinstance(content, str):
+        return False
+    head = content[:500]  # 只检查开头500字（echo 通常在开头）
+    echo_patterns = (
+        "我需要严格遵守",
+        "我需要严格按照",
+        "让我思考一下",
+        "让我数一下",
+        "让我分析一下",
+        "按照以下要求",
+        "根据提示",
+        "根据上述要求",
+        "根据您的要求",
+        "我需要遵循以下",
+        "我需要按照",
+        "我要按照以下",
+        "我需要先",
+        "我需要增加",
+        "我需要确保",
+        "我需要撰写",
+        "我将按照",
+        "我会按照",
+        "我的任务",
+        "根据规则",
+        "根据以下规则",
+        "严格按照规则",
+        "下面我来",
+        "接下来我",
+        "我打算",
+        "首先我需要",
+    )
+    for pat in echo_patterns:
+        if pat in head:
+            if CF_DEBUG:
+                logger.info(f"[CF-DEBUG] echo检测命中: pattern={pat!r}, head={head[:100]!r}")
+            return True
+    return False
+
+
 def _deep_extract_content(data: dict, depth: int = 0) -> str:
     """递归提取内容：优先查找已知键，然后遍历所有值找长文本。"""
     if depth > 3 or not isinstance(data, dict):
         return ""
-    # v2.6 修复: 调整优先级，润色后字段优先于原始 draft
-    # 原顺序 ("draft", "edited_draft", "content", "response") 中 draft 排第一，
-    # 导致 polish 任务返回原始输入 draft 而非润色后的 content。
-    # 新顺序: edited_draft（editor_engine 输出）> polished_content（润色结果）
-    #         > content（FeedbackLoop 评估用的润色后内容）> response > draft（原始输入/创作输出）
-    # 对比长度兜底：如果多个键都有内容，取较长的（润色后通常更长）
+    # v5.99.30 修复: echo 污染防护
+    # 问题: glm-4-flash 等模型有时将提示词指令作为 draft 返回（如"我需要严格遵守以下规则..."），
+    #   导致 draft 字段被 echo 污染且字数虚高（3819字 > edited_draft 2334字），
+    #   旧逻辑"取较长者"会错误选中被污染的 draft。
+    # 修复策略:
+    #   1. 按优先级顺序遍历 (edited_draft > polished_content > content > response > draft)
+    #   2. 跳过被 echo 污染的候选（_looks_like_echo_or_instructions）
+    #   3. 返回第一个干净的候选（尊重优先级，而非取最长）
+    #   4. 若全部被污染，取最长者兜底（总比返回空好，下游还有清洗逻辑）
     candidate = ""
     candidate_key = ""
+    fallback = ""  # 被echo污染的候选中最长者（最后兜底用）
+    fallback_key = ""
     for key in ("edited_draft", "polished_content", "content", "response", "draft"):
         val = data.get(key, "")
         if isinstance(val, str) and len(val.strip()) > 100:
@@ -150,10 +206,22 @@ def _deep_extract_content(data: dict, depth: int = 0) -> str:
             val = _strip_json_wrapper(val)
             if not isinstance(val, str) or len(val.strip()) <= 100:
                 continue
-            # 取较长的内容（避免原始 draft 覆盖润色后的 content）
-            if len(val) > len(candidate):
-                candidate = val
-                candidate_key = key
+            # v5.99.30: 检测 echo/指令污染，跳过被污染的候选
+            if _looks_like_echo_or_instructions(val):
+                logger.warning(f"[result_extractor] key={key} 疑似echo污染(len={len(val)})，跳过")
+                if len(val) > len(fallback):
+                    fallback = val
+                    fallback_key = key
+                continue
+            # v5.99.30: 返回第一个干净候选（尊重优先级），不再取最长
+            candidate = val
+            candidate_key = key
+            break
+    # 若无干净候选，用被污染的最长者兜底（下游仍有 _strip_intent_echo 等清洗）
+    if not candidate and fallback:
+        logger.warning(f"[result_extractor] 所有候选均疑似echo污染，使用兜底 key={fallback_key} len={len(fallback)}")
+        candidate = fallback
+        candidate_key = fallback_key
     if candidate:
         if depth == 0:
             logger.info(f"[result_extractor] 提取自 key={candidate_key}, len={len(candidate)}")

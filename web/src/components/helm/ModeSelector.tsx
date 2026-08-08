@@ -6,7 +6,7 @@
  * 重构说明：
  *   - 原 4 模式（normal/helm/auto/council）精简为 1 模式（仅 helm）
  *   - 原因：normal 和 auto 模式无实际价值，已废弃
- *   - 群聊（council）已迁移到独立路由 /council，使用 移植的 UI 框架
+ *   - 群聊（council）已迁移到独立路由 /council，使用 clowder-ai 移植的 UI 框架
  *   - /solo 路由现专注于单 Agent 的 Helm 模式（AI 自主规划执行）
  *
  * 兼容性：

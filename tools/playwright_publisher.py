@@ -9,7 +9,7 @@
 """
 
 import asyncio
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.tracing import get_logger
@@ -17,7 +17,7 @@ from flowforge.core.tracing import get_logger
 logger = get_logger("playwright_publisher")
 
 # 平台选择器配置
-_PLATFORM_SELECTORS: dict[str, dict[str, str]] = {
+_PLATFORM_SELECTORS: Dict[str, Dict[str, str]] = {
     "wechat": {
         "login_url": "https://mp.weixin.qq.com/",
         "new_article_btn": 'a[href*="operate_appmsg"]',
@@ -120,7 +120,7 @@ class PlaywrightPublisherTool(BaseTool):
             except Exception:
                 self._browser = None
 
-        launch_kwargs: dict[str, Any] = {
+        launch_kwargs: Dict[str, Any] = {
             "headless": headless,
             "args": [
                 "--disable-blink-features=AutomationControlled",
@@ -150,7 +150,7 @@ class PlaywrightPublisherTool(BaseTool):
         title: str = input.params.get("title", "")
         content: str = input.params.get("content", "")
         action: str = input.params.get("action", "draft")
-        images: list[str] = input.params.get("images", [])
+        images: List[str] = input.params.get("images", [])
         headless: bool = input.params.get("headless", True)
         user_data_dir: str = input.params.get("user_data_dir", "")
 
@@ -196,9 +196,9 @@ class PlaywrightPublisherTool(BaseTool):
         title: str,
         content: str,
         action: str,
-        images: list[str],
-        selectors: dict[str, str],
-    ) -> dict[str, Any]:
+        images: List[str],
+        selectors: Dict[str, str],
+    ) -> Dict[str, Any]:
         """带重试的发布流程。"""
         last_error = ""
 
@@ -250,9 +250,9 @@ class PlaywrightPublisherTool(BaseTool):
         title: str,
         content: str,
         action: str,
-        images: list[str],
-        selectors: dict[str, str],
-    ) -> dict[str, Any]:
+        images: List[str],
+        selectors: Dict[str, str],
+    ) -> Dict[str, Any]:
         """执行完整的发布流程：导航 → 登录检查 → 编辑 → 操作。"""
         # Step 1: 导航到平台
         login_url = selectors.get("login_url", "")
@@ -278,7 +278,7 @@ class PlaywrightPublisherTool(BaseTool):
             try:
                 await page.click(new_article_btn, timeout=_DEFAULT_TIMEOUT)
                 await page.wait_for_load_state("networkidle", timeout=_DEFAULT_TIMEOUT)
-                logger.info("[playwright_publisher] Clicked new article button")
+                logger.info(f"[playwright_publisher] Clicked new article button")
             except Exception as e:
                 logger.warning(f"[playwright_publisher] Failed to click new article: {e}")
 
@@ -311,7 +311,7 @@ class PlaywrightPublisherTool(BaseTool):
                         }}""",
                         content[:5000],
                     )
-                    logger.info("[playwright_publisher] Content injected via JS")
+                    logger.info(f"[playwright_publisher] Content injected via JS")
                 except Exception as js_error:
                     logger.warning(
                         f"[playwright_publisher] Failed to fill content: {e}, JS fallback: {js_error}"
@@ -359,7 +359,7 @@ class PlaywrightPublisherTool(BaseTool):
     async def _upload_images(
         self,
         page: Any,
-        images: list[str],
+        images: List[str],
         platform: str,
     ) -> int:
         """上传图片到编辑器。"""
@@ -380,8 +380,8 @@ class PlaywrightPublisherTool(BaseTool):
         self,
         page: Any,
         platform: str,
-        selectors: dict[str, str],
-    ) -> dict[str, Any]:
+        selectors: Dict[str, str],
+    ) -> Dict[str, Any]:
         """保存草稿。"""
         # 微信公众号的草稿保存
         if platform == "wechat":
@@ -411,8 +411,8 @@ class PlaywrightPublisherTool(BaseTool):
         self,
         page: Any,
         platform: str,
-        selectors: dict[str, Any],
-    ) -> dict[str, Any]:
+        selectors: Dict[str, Any],
+    ) -> Dict[str, Any]:
         """预览文章。"""
         preview_btn = selectors.get("preview_btn", "")
         if preview_btn:
@@ -439,8 +439,8 @@ class PlaywrightPublisherTool(BaseTool):
         self,
         page: Any,
         platform: str,
-        selectors: dict[str, str],
-    ) -> dict[str, Any]:
+        selectors: Dict[str, str],
+    ) -> Dict[str, Any]:
         """发布文章。"""
         submit_btn = selectors.get("submit_btn", "")
         if submit_btn:

@@ -1,0 +1,79 @@
+# ==============================================================================
+# P3-005 灾备降级 100% 成功保障 — ResilienceExecutor 配置示例
+# ==============================================================================
+# 拷贝为 resilience.yaml 后按实际环境修改；resilience.yaml 不入库。
+# 由 DI 容器读取后注入 ResilienceExecutor 构造函数（铁律12 不绕过 DI）。
+# ==============================================================================
+
+# 主 provider（与 models.yaml 中 providers 键对齐）
+primary_provider: openroute
+
+# 备选 provider 链路：主 provider 失败时按顺序尝试
+# 100% 成功保障关键：至少配置 2 个 backup，覆盖不同厂商以避免同因故障
+backup_providers:
+  - doubao        # 火山引擎 Ark
+  - glm           # 智谱 GLM
+  - qwen          # 阿里通义千问
+
+# 单 provider 内部重试次数（仅临时错误触发；永久错误直接切换）
+max_retries: 3
+
+# 指数退避基准延迟（秒），实际延迟 = base_retry_delay * 2^attempt
+# attempt=0 → 1s, attempt=1 → 2s, attempt=2 → 4s
+base_retry_delay: 1.0
+
+# 所有 provider 都失败时的兜底策略：
+#   - raise          抛出 AllProvidersFailedError（默认）
+#   - return_default 返回 default_value（需调用方通过 kwargs 提供）
+#   - degrade_to_human 调用 DegradationDecisionTree 决定降级动作并发出事件
+on_all_fail: degrade_to_human
+
+# 质量门禁：成功响应必须通过 quality_check_fn 校验才算成功
+# enabled=true 时，调用方需通过 kwargs 传入 quality_check_fn
+quality_check:
+  enabled: true
+  # 默认质量分阈值（仅在 quality_check_fn 内部使用，ResilienceExecutor 不强依赖）
+  min_quality_score: 0.85
+
+# 配额检查：调用前先检查 provider_quota_manager.check_quota()
+# enabled=false 时跳过配额检查（开发期可关闭）
+quota_check:
+  enabled: true
+  # 超限行为：skip（跳过该 provider）/ wait（等待重试）
+  over_limit_action: skip
+
+# 静默失败检测：openroute 偶发 HTTP 200 + "当前不可用，请稍后重试"
+# 命中关键词时判定为永久错误，直接切换下一 provider
+silent_failure_detection:
+  enabled: true
+  keywords:
+    - "当前不可用，请稍后重试"
+    - "当前不可用,请稍后重试"
+    - "服务暂时不可用"
+
+# 指标采集：通过 metrics_collector 注入
+# ResilienceExecutor 优先调用 record_degradation；若不存在则回退到 inc_counter
+metrics:
+  enabled: true
+  success_counter: resilience_success_total
+  failure_counter: resilience_failure_total
+
+# 永久错误关键词（命中后不重试，直接切换下一 provider）
+permanent_error_keywords:
+  - "model_not_found"
+  - "no_permission"
+  - "model disabled"
+  - "all_backends_failed"
+  - "无权访问"
+  - "当前不可用"
+  - "empty_response"
+  - "无法回答"
+
+# 临时错误关键词（命中后按指数退避重试）
+temporary_error_keywords:
+  - "timeout"
+  - "rate_limit"
+  - "429"
+  - "connection"
+  - "503"
+  - "502"

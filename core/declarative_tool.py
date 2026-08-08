@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import subprocess
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -38,11 +40,11 @@ class HTTPToolConfig(BaseModel):
     base_url: str
     method: str = "GET"
     path: str = ""
-    auth: HTTPAuthConfig | None = None
-    headers: dict[str, str] = {}
+    auth: Optional[HTTPAuthConfig] = None
+    headers: Dict[str, str] = {}
     timeout: float = 30.0
-    response_mapping: dict[str, str] | None = None  # JMESPath表达式
-    error_path: str | None = None  # 错误响应路径
+    response_mapping: Optional[Dict[str, str]] = None  # JMESPath表达式
+    error_path: Optional[str] = None  # 错误响应路径
 
 
 class ScriptToolConfig(BaseModel):
@@ -51,14 +53,14 @@ class ScriptToolConfig(BaseModel):
     work_dir: str = ""
     timeout: float = 60.0
     output_format: str = "text"  # text / json
-    env: dict[str, str] = {}
+    env: Dict[str, str] = {}
 
 
 class TransformToolConfig(BaseModel):
     """Transform Tool配置"""
     expression: str  # JMESPath/JSONata表达式
     default: Any = None
-    input_schema: dict[str, Any] | None = None
+    input_schema: Optional[Dict[str, Any]] = None
 
 
 class DeclarativeToolConfig(BaseModel):
@@ -68,13 +70,13 @@ class DeclarativeToolConfig(BaseModel):
     name: str = Field(..., description="Tool名称")
     description: str = Field(default="", description="Tool描述")
     type: str = Field(default="http", description="Tool类型: http | script | transform")
-    parameters_schema: dict[str, Any] = Field(default_factory=dict, description="参数JSON Schema")
+    parameters_schema: Dict[str, Any] = Field(default_factory=dict, description="参数JSON Schema")
     safety_level: str = Field(default="read", description="安全级别: read | suggest | prepare | execute")
 
     # 类型特定配置
-    http: HTTPToolConfig | None = None
-    script: ScriptToolConfig | None = None
-    transform: TransformToolConfig | None = None
+    http: Optional[HTTPToolConfig] = None
+    script: Optional[ScriptToolConfig] = None
+    transform: Optional[TransformToolConfig] = None
 
 
 class HTTPTool(BaseTool):
@@ -156,7 +158,7 @@ class HTTPTool(BaseTool):
         except Exception as e:
             return ToolOutput(result={"error": str(e)}, error=str(e))
 
-    def _apply_mapping(self, data: Any, mapping: dict[str, str]) -> dict[str, Any]:
+    def _apply_mapping(self, data: Any, mapping: Dict[str, str]) -> Dict[str, Any]:
         """应用JMESPath风格的映射"""
         result = {}
         for target_key, source_path in mapping.items():
@@ -289,7 +291,7 @@ class ScriptTool(BaseTool):
 
             return ToolOutput(result={"content": output_text})
 
-        except TimeoutError:
+        except asyncio.TimeoutError:
             return ToolOutput(result={"error": f"Command timed out after {self._script_config.timeout}s"}, error="timeout")
         except Exception as e:
             return ToolOutput(result={"error": str(e)}, error=str(e))
@@ -373,13 +375,13 @@ def create_declarative_tool(config: DeclarativeToolConfig) -> BaseTool:
         raise ValueError(f"Unknown declarative tool type: {tool_type}")
 
 
-def load_declarative_tools_from_yaml(yaml_path: str | Path) -> list[BaseTool]:
+def load_declarative_tools_from_yaml(yaml_path: str | Path) -> List[BaseTool]:
     """从YAML文件加载声明式Tool列表"""
     path = Path(yaml_path)
     if not path.exists():
         return []
 
-    with open(path, encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
 
     tools = []
@@ -403,7 +405,7 @@ def load_declarative_tools_from_yaml(yaml_path: str | Path) -> list[BaseTool]:
     return tools
 
 
-def load_declarative_tools_from_dir(dir_path: str | Path) -> list[BaseTool]:
+def load_declarative_tools_from_dir(dir_path: str | Path) -> List[BaseTool]:
     """从目录加载所有YAML文件中的声明式Tool"""
     path = Path(dir_path)
     if not path.exists():

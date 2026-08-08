@@ -20,9 +20,9 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from flowforge.core.agent_registry import AgentRegistry
 from flowforge.core.config import ConfigLoader, system_config
-from flowforge.core.plugin_lifecycle import PluginLifecycleManager
+from flowforge.core.agent_registry import AgentRegistry
+from flowforge.core.plugin_registry import PluginRegistry
 from flowforge.core.plugin_protocol import (
     FlowForgePlugin,
     PluginContext,
@@ -30,12 +30,12 @@ from flowforge.core.plugin_protocol import (
     fill_config_defaults,
     validate_plugin_config,
 )
-from flowforge.core.plugin_registry import PluginRegistry
+from flowforge.core.plugin_lifecycle import PluginLifecycleManager
 from flowforge.core.tracing import get_logger
 from flowforge.events.event_bus import EventBus
-from flowforge.modes.registry import ModeRegistry
 from flowforge.scheduler.scheduler import TaskScheduler
 from flowforge.tools.registry import ToolRegistry
+from flowforge.modes.registry import ModeRegistry
 
 logger = get_logger("flowforge.core.plugin_loader")
 
@@ -218,12 +218,8 @@ class PluginLoader:
             # 8–14. V2 hooks — call with corresponding registries
             try:
                 from flowforge.sdk import (
-                    ContextLayerRegistry,
-                    EvaluatorRegistry,
-                    GateRegistry,
-                    QualityGateRegistry,
-                    SOPRegistry,
-                    WorkflowRegistry,
+                    WorkflowRegistry, GateRegistry, QualityGateRegistry,
+                    EvaluatorRegistry, SOPRegistry, ContextLayerRegistry,
                     WorkflowStepHandlerRegistry,
                 )
             except ImportError:
@@ -784,8 +780,8 @@ class PluginLoader:
 
     def init_sandbox_and_frontend(self) -> None:
         """Initialize sandbox manager and frontend registry (Phase 4)."""
-        from flowforge.core.plugin_frontend import FrontendPluginRegistry
         from flowforge.core.plugin_sandbox import SandboxManager
+        from flowforge.core.plugin_frontend import FrontendPluginRegistry
         self.sandbox_manager = SandboxManager(default_timeout=300)
         self.frontend_registry = FrontendPluginRegistry()
 

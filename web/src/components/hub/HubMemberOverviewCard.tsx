@@ -3,6 +3,7 @@
 /**
  * HubMemberOverviewCard — 成员概览卡片
  *
+ * 移植自 clowder-ai HubMemberOverviewCard，简化为 FlowForge 适配版。
  * 用于 /admin/agents，展示可进化智能体的精简状态卡片，常用于列表网格。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

@@ -3,6 +3,7 @@
 /**
  * HubTraceTree — Trace 浏览器与瀑布图
  *
+ * 移植自 clowder-ai HubTraceTree，适配 FlowForge 暗色主题。
  * 用于 /admin/observability，提供：
  *   - 按 traceId / forgekinId 搜索 trace
  *   - Trace 卡片列表（展开/折叠）
@@ -13,7 +14,7 @@
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
- * 独立性：仅依赖 trace-tree-utils 工具，不依赖上游
+ * 独立性：仅依赖 trace-tree-utils 工具，不依赖 clowder-ai apiFetch。
  *
  * API 端点（FlowForge 风格）：
  *   - GET  /api/v1/telemetry/traces?traceId=&forgekinId=&limit=

@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -96,7 +95,7 @@ class CanaryDeploymentRegistry:
         else:
             self._configs[name] = CanaryDeploymentConfig(name=name, **config)
 
-    def get(self, name: str) -> CanaryDeploymentConfig | None:
+    def get(self, name: str) -> Optional[CanaryDeploymentConfig]:
         return self._configs.get(name)
 
     def list_deployments(self) -> list[str]:
@@ -193,7 +192,7 @@ CANARY_METRIC_ROLLBACK_TOTAL = "flowforge_canary_rollback_total"
 
 def _now_iso() -> str:
     """返回当前 UTC 时间的 ISO 8601 字符串."""
-    return datetime.now(UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 class CanaryExecutor:
@@ -244,14 +243,14 @@ class CanaryExecutor:
         self._paused_flags: dict[str, bool] = {}
 
         # 每次执行对应的 traffic_router（_rollback 复用）
-        self._traffic_routers: dict[str, Callable | None] = {}
+        self._traffic_routers: dict[str, Optional[Callable]] = {}
 
     # ── 公共接口 ──────────────────────────────────────────────────
 
     async def execute(
         self,
         deployment_name: str,
-        traffic_router: Callable | None = None,
+        traffic_router: Optional[Callable] = None,
     ) -> CanaryExecution:
         """执行一次完整的金丝雀发布流程.
 
@@ -454,7 +453,7 @@ class CanaryExecutor:
         self,
         execution: CanaryExecution,
         stage_index: int,
-        traffic_router: Callable | None,
+        traffic_router: Optional[Callable],
     ) -> CanaryStageResult:
         """执行单个金丝雀阶段：调整流量 → 等待观测 → 健康检查.
 
@@ -710,7 +709,7 @@ class CanaryExecutor:
         self._logger.info(f"[canary] resume requested: {deployment_name}")
         return True
 
-    def get_execution(self, deployment_name: str) -> CanaryExecution | None:
+    def get_execution(self, deployment_name: str) -> Optional[CanaryExecution]:
         """获取指定部署的当前执行状态.
 
         Args:
@@ -731,7 +730,7 @@ class CanaryExecutor:
 
     def get_execution_history(
         self,
-        deployment_name: str | None = None,
+        deployment_name: Optional[str] = None,
         limit: int = 20,
     ) -> list[CanaryExecution]:
         """获取执行历史记录.

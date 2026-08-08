@@ -1,6 +1,7 @@
 /**
  * HubEvalTypes — 评估中心共享类型定义
  *
+ * 移植自 clowder-ai HubEvalTypes，适配 FlowForge /api/v1/ 路径。
  * 仅包含类型定义与常量，不包含运行时逻辑，便于在 HubEvalTab、
  * HubEvalVerdictCard、HubEvalFrictionSections 间复用。
  *
@@ -25,7 +26,7 @@ export interface EvalHubFrictionProjection {
       summary: string;
       evidenceRefs: string[];
       reportingMode: 'none' | 'final-only' | 'state-transitions' | 'blocking-ack';
-      /** 建议负责的 Forgekin ID */
+      /** 建议负责的 Forgekin ID（原 clowder-ai suggestedOwnerCatId） */
       suggestedOwnerForgekinId?: string;
       projectPath?: string;
     };

@@ -1,6 +1,6 @@
 import asyncio
 import json
-
+import httpx
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.prompt_manager import get_prompt
 from flowforge.core.tracing import get_logger
@@ -85,7 +85,7 @@ class WebSearchTool(BaseTool):
                     logger.info(f"Search succeeded with engine: {engine}")
                     return ToolOutput(result=result)
                 logger.info(f"Search engine {engine} returned empty, trying next")
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 logger.warning(f"Search engine {engine} timed out after {timeout}s, trying next")
                 continue
             except Exception as e:
@@ -99,7 +99,7 @@ class WebSearchTool(BaseTool):
             )
             if llm_result and llm_result.get("results"):
                 return ToolOutput(result=llm_result)
-        except TimeoutError:
+        except asyncio.TimeoutError:
             logger.warning(f"LLM WebChat search timed out after {_LLM_SEARCH_TIMEOUT}s")
         except Exception as e:
             logger.warning(f"LLM WebChat search failed: {e}")

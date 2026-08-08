@@ -22,9 +22,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Mapping
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -88,7 +87,7 @@ class SoulImprint(BaseModel):
         description="命名空间（如 'contentforge' / 'forgemind' / 'novelforge'）。",
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="SoulImprint创建时间（UTC）。",
     )
 
@@ -143,7 +142,7 @@ class SoulImprint(BaseModel):
         seed_params: Mapping[str, Any],
         value_anchors: list[str],
         namespace: str,
-    ) -> SoulImprint:
+    ) -> "SoulImprint":
         """锻造一个新SoulImprint（推荐入口）。
 
         自动计算 ``imprint_hash`` 并构造不可变SoulImprint实例。这是创建SoulImprint的

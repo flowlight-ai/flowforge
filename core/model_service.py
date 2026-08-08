@@ -4,6 +4,7 @@ Generic implementation that works with any ModelService instance.
 Persona-specific logic is driven by the assignments config, not hardcoded lists.
 """
 import asyncio
+from typing import Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -29,9 +30,9 @@ class HealthChecker:
     def __init__(self, model_service, interval_seconds: int = 300):
         self._service = model_service
         self._interval = interval_seconds
-        self._task: asyncio.Task | None = None
+        self._task: Optional[asyncio.Task] = None
         self._running = False
-        self._last_report: dict = {}
+        self._last_report: Dict = {}
 
     async def start(self) -> None:
         """Start the periodic health check loop."""
@@ -53,7 +54,7 @@ class HealthChecker:
         logger.info("HealthChecker stopped")
 
     @property
-    def last_report(self) -> dict:
+    def last_report(self) -> Dict:
         """Return the most recent health check report."""
         return dict(self._last_report)
 
@@ -66,7 +67,7 @@ class HealthChecker:
                 logger.error(f"HealthChecker error: {e}", exc_info=True)
             await asyncio.sleep(self._interval)
 
-    async def _check_and_failover(self) -> dict:
+    async def _check_and_failover(self) -> Dict:
         """Check all models and auto-failover unhealthy ones.
 
         Returns a report dict with check results and failover actions taken.
@@ -78,7 +79,7 @@ class HealthChecker:
             if r.get("status") not in (self._service.STATUS_AVAILABLE,)
         ]
 
-        failovers: list[dict] = []
+        failovers: List[Dict] = []
         for result in unhealthy_models:
             model_key = result.get("model_key", "")
             affected = self._find_affected_assignments(model_key)
@@ -102,7 +103,7 @@ class HealthChecker:
 
         return report
 
-    def _find_affected_assignments(self, model_key: str) -> list[tuple]:
+    def _find_affected_assignments(self, model_key: str) -> List[tuple]:
         """Find all (assignment_key, sub_key) pairs that use the given model as primary.
 
         Works with both flat assignments (key -> {primary, fallbacks})
@@ -132,8 +133,8 @@ class HealthChecker:
 
         return affected
 
-    async def _auto_failover(self, assignment_key: str, sub_key: str | None,
-                             failed_model_key: str) -> dict | None:
+    async def _auto_failover(self, assignment_key: str, sub_key: Optional[str],
+                             failed_model_key: str) -> Optional[Dict]:
         """Attempt to failover a single assignment to a healthy fallback.
 
         Returns a dict describing the failover, or None if no replacement found.

@@ -13,8 +13,7 @@ Phase 2: Multi-language support
 
 import ast
 import os
-from typing import Any
-
+from typing import Optional, Dict, Any, List, Set, Tuple
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("security.arch_constraint")
@@ -68,16 +67,16 @@ class ArchitectureConstraintEngine:
     preventing lower layers from importing from higher layers.
     """
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.layer_order = self.config.get("layer_order", DEFAULT_LAYER_ORDER)
         self.layer_mapping = self.config.get("layer_mapping", {})
         self.enabled = self.config.get("enabled", True)
         self._violation_count = 0
         self._check_count = 0
-        self._violations: list[dict[str, Any]] = []
+        self._violations: List[Dict[str, Any]] = []
 
-    def get_layer(self, module_path: str) -> str | None:
+    def get_layer(self, module_path: str) -> Optional[str]:
         mapping = self.layer_mapping or DEFAULT_LAYER_MAPPING
         for module_prefix, layer_name in mapping.items():
             if isinstance(layer_name, list):
@@ -91,7 +90,7 @@ class ArchitectureConstraintEngine:
                     return layer_name
         return None
 
-    def extract_dependencies(self, source_code: str) -> list[str]:
+    def extract_dependencies(self, source_code: str) -> List[str]:
         """Extract import dependencies from Python source code.
 
         Uses the ast module to parse import statements.
@@ -115,7 +114,7 @@ class ArchitectureConstraintEngine:
         self,
         source_module: str,
         target_module: str,
-    ) -> dict[str, Any] | None:
+    ) -> Optional[Dict[str, Any]]:
         """Check if a dependency violates the layer model.
 
         Returns None if valid, or a violation dict if invalid.
@@ -154,7 +153,7 @@ class ArchitectureConstraintEngine:
 
         return None
 
-    def check_file(self, file_path: str) -> list[dict[str, Any]]:
+    def check_file(self, file_path: str) -> List[Dict[str, Any]]:
         """Check a single file for dependency violations."""
         if not self.enabled:
             return []
@@ -166,7 +165,7 @@ class ArchitectureConstraintEngine:
         violations = []
 
         try:
-            with open(file_path, encoding="utf-8") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 source = f.read()
 
             deps = self.extract_dependencies(source)
@@ -179,7 +178,7 @@ class ArchitectureConstraintEngine:
 
         return violations
 
-    def inject_violations_into_context(self, ctx, violations: list[dict[str, Any]]):
+    def inject_violations_into_context(self, ctx, violations: List[Dict[str, Any]]):
         """Inject violation information into agent context.
 
         This allows agents to be aware of architecture violations

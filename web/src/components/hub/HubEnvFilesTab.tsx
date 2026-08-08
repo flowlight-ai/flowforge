@@ -3,6 +3,7 @@
 /**
  * HubEnvFilesTab — 环境文件管理 Tab
  *
+ * 移植自 clowder-ai HubEnvFilesTab，简化为 FlowForge 适配版。
  * 用于 /admin/env，展示与编辑 .env 配置文件、敏感变量与配置文件清单。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。

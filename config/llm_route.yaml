@@ -1,148 +1,191 @@
-# FlowForge LLM routing configuration.
-#
-# The fallback chain is cross-vendor ordered so that vendor-specific outages
-# don't take down the entire system. Production deployments should override
-# the api_key values via environment variables (FLOWFORGE_LLM_ROUTE_*).
+# ==================== LLM 路由配置 ====================
+# 定义多模型级联策略和 Agent 路由映射。
+# FlowForge LLMRouter + RouteResolver 加载此配置。
 
-version: "0.1.0"
+# ==================== 路由定义 ====================
+# 注意：primary_model 必须与 models.yaml 中 models[].id 完全一致（区分大小写）
+# openroute 暴露的模型 ID 为 Pascal-Case: Doubao-Seed2.0 / DeepSeek-V4-Pro / GLM-5.1 等
+routes:
+  # 默认路由：doubao 为主，多模型备选
+  default:
+    primary_provider: openroute
+    primary_model: Doubao-Seed2.0
+    fallback_providers:
+      - openroute
+    fallback_models:
+      - DeepSeek-V4-Pro
+      - GLM-5.1
+      - Kimi-K2.6
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+        - moderation_rejected
+      timeout_seconds: 200
+      max_retries: 2
+      retry_delay_seconds: 1.0
+    default_temperature: 0.7
+    default_max_tokens: 4096
 
-# Active providers — set to true to enable
-providers:
-  openroute:
-    enabled: true
-    # NOTE: use 127.0.0.1 (not localhost) to avoid Windows asyncio+httpx IPv6
-    # resolution issues that cause intermittent ConnectError.
-    base_url: "http://127.0.0.1:13001"  # override via FLOWFORGE_LLM_ROUTE_OPENROUTE_BASE_URL (default port 13001)
-    api_key: ""  # 铁律5: 禁止硬编码密钥 — 通过 FLOWFORGE_LLM_ROUTE_OPENROUTE_API_KEY 环境变量注入
-    kind: "openroute"
+  # 创意路由：高温度，适合写作/创意场景
+  # v5.99.40: timeout 180→60s — 解决5分钟超时问题
+  # 根因: webchat模型(DeepSeek/MiniMax/Kimi)各需75-195s, 3个webchat失败后
+  #   才回退到glm-4-flash(22s), 总耗时247s仅writer就超5分钟
+  # 策略: 60s超时让webchat快速失败回退到API模型
+  #   - DeepSeek-V4-Pro: 21s成功(60s内) | "无法回答"立即失败
+  #   - MiniMax-M3: 45s成功(60s内)
+  #   - Kimi-K2.6: 195s超60s失败, 跳到glm-4-flash
+  #   - glm-4-flash: 22s成功(API稳定)
+  # 最坏情况: 60+60+60+22=202s writer, +60s扩展+60s评委=322s
+  # 典型情况: 21s DeepSeek成功, +60s扩展+60s评委=141s < 300s ✓
+  creative:
+    # v5.7: primary改为Qwen3.6-Plus（Doubao-Seed2.0频繁echo/超时）
+    # Qwen实测稳定：228s产出1445字，0.832分
+    # Doubao降为fallback，echo_response加入failover条件
+    primary_provider: openroute
+    primary_model: Qwen3.6-Plus
+    fallback_providers:
+      - openroute
+    fallback_models:
+      - Doubao-Seed2.0
+      - HunYuan3
+      - DeepSeek-V4-Pro
+      - Kimi-K2.6
+      - GLM-5.1
+      - MiniMax-M3
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+        - invalid_response
+        - echo_response
+      timeout_seconds: 150  # v5.99.46: 90->150s — MiniMax-M3 webchat needs 128s
+      max_retries: 0
+    default_temperature: 0.9
+    default_max_tokens: 8192
 
-  direct_anthropic:
-    enabled: false
-    base_url: "https://api.anthropic.com"
-    api_key: ""
-    kind: "direct"
-    vendor: "anthropic"
+  # 精确路由：低温度，适合事实核查/代码生成
+  # 修复：DeepSeek-V4-Pro 持续超时(每次93s×3次=280s)阻塞 ReflexionEvaluator 导致迭代超时
+  # 改用 Doubao-Seed2.0 作为 primary（更稳定），DeepSeek-V4-Pro 降为 fallback
+  # max_retries 从 3 降为 2，避免 evaluator 单次调用 >120s
+  precise:
+    primary_provider: openroute
+    primary_model: Doubao-Seed2.0
+    fallback_providers:
+      - openroute
+    fallback_models:
+      - DeepSeek-V4-Pro
+      - GLM-5.1
+      - Kimi-K2.6
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+        - moderation_rejected
+      timeout_seconds: 60
+      max_retries: 2
+    default_temperature: 0.0
+    default_max_tokens: 4096
 
-  direct_openai:
-    enabled: false
-    base_url: "https://api.openai.com"
-    api_key: ""
-    kind: "direct"
-    vendor: "openai"
-
-  direct_zhipu:
-    enabled: false
-    base_url: "https://open.bigmodel.cn/api/paas/v4"
-    api_key: ""
-    kind: "direct"
-    vendor: "zhipu"
-
-  webchat_doubao:
-    enabled: false
-    kind: "webchat"
-    vendor: "doubao"
-
-  webchat_kimi:
-    enabled: false
-    kind: "webchat"
-    vendor: "kimi"
-
-# Fallback chains per role — cross-vendor ordered
-# (eval/designate models from different vendors to prevent vendor-wide outages)
-# 2026-07-27 更新: DeepSeek-V4-Pro 优先（实测最稳定，~27s响应），
-# GLM-5.1 间歇性超时降为次选，Qwen3.6-Plus 兜底。
-# 同时减少重试次数（max_retries=1）和超时时间（45s）以确保
-# webchat 在 3 分钟 SLO 内完成。
-fallback_chains:
-  # 2026-07-28 实测调优: openroute 后端为免费 web 抓取源，会间歇性"无法回答"或超时。
-  # 实测可稳定返回内容的源: DeepSeek-V4-Pro(~5s) Qwen3.6-Plus(~9s) HunYuan3(~27s) Ernie(~31s)。
-  # 已剔除频繁 ReadTimeout 的 Kimi-K2.6 / Doubao-Seed2.0 / MiniMax-M3 / GLM-5.1(慢)。
-  # 加宽 fallback 池以提高"至少一个成功"的概率（满足 T7/T8 可靠性）。
-  content_create:
-    - model: "DeepSeek-V4-Pro"
-      provider: "openroute"
-      priority: 0
-    - model: "Qwen3.6-Plus"
-      provider: "openroute"
-      priority: 1
-    - model: "HunYuan3"
-      provider: "openroute"
-      priority: 2
-    - model: "Ernie"
-      provider: "openroute"
-      priority: 3
-
+  # 评委路由：适合 MultiJudge 评委并行评审
+  # 评委 agent_name 为 multi_judge_<model>，前缀匹配 multi_judge_ → judge 路由
+  # v5.16: timeout 90→300s — v515 单评委实测 webchat 耗时 89-283s
+  # 90s 导致 HunYuan(125s)/Doubao(246s)/GLM(283s) 评委全部超时失败，质量分为 0
+  # 300s 覆盖最慢的 GLM 283s + 17s 缓冲，与 deep_article_loop.yaml judge_timeout 一致
+  # max_retries=0（失败立即换下一个模型，不重试）
+  # primary=Doubao-Seed2.0（DeepSeek账号被禁言）
+  # fallback 链由 models.yaml assignments.judge 提供，FlowForge 统一管理
   judge:
-    - model: "DeepSeek-V4-Pro"
-      provider: "openroute"
-      priority: 0
-    - model: "Qwen3.6-Plus"
-      provider: "openroute"
-      priority: 1
-    - model: "HunYuan3"
-      provider: "openroute"
-      priority: 2
-    - model: "Ernie"
-      provider: "openroute"
-      priority: 3
+    primary_provider: openroute
+    primary_model: Doubao-Seed2.0
+    fallback_providers:
+      - openroute
+    fallback_models:
+      - Kimi-K2.6
+      - GLM-5.1
+      - MiniMax-M3
+      - HunYuan3
+      - Qwen3.6-Plus
+      - DeepSeek-V4-Pro
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+      timeout_seconds: 300  # v5.16: 90→300s，覆盖 webchat 283s 响应时间
+      max_retries: 0
+      retry_delay_seconds: 1.0
+    default_temperature: 0.3
+    default_max_tokens: 2048
 
-  review:
-    - model: "DeepSeek-V4-Pro"
-      provider: "openroute"
-      priority: 0
-    - model: "Qwen3.6-Plus"
-      provider: "openroute"
-      priority: 1
-    - model: "HunYuan3"
-      provider: "openroute"
-      priority: 2
-    - model: "Ernie"
-      provider: "openroute"
-      priority: 3
+  # 反思路由：reflector 生成改进建议（原用 default 200s 超时，实际耗时 300s+）
+  # v2.1 修复: 限制到 90s + max_retries=1, 总上限 180s（原 300s 导致总超时）
+  # reflector 只需生成 3-5 条改进建议，不需要长文生成
+  # v3.4 修复: primary 改为 Doubao-Seed2.0（DeepSeek-V4-Pro webchat 返回"无法回答"）
+  # v3.4 性能修复: timeout 60→30s — webchat铁律30s，API优先(2-4s)
+  # v4.6 修复: timeout 30→60s — 配合 prefer_api=True 走 API backend，
+  # API backend 偶尔较慢（10-20s），30s 太紧导致误判超时触发 fallback
+  reflector:
+    # v5.7: primary改为Qwen3.6-Plus（Doubao-Seed2.0反思阶段echo+超时1113s）
+    primary_provider: openroute
+    primary_model: Qwen3.6-Plus
+    fallback_providers:
+      - openroute
+    fallback_models:
+      - Doubao-Seed2.0
+      - GLM-5.1
+      - DeepSeek-V4-Pro
+    failover_policy:
+      conditions:
+        - rate_limited
+        - timeout
+        - invalid_response
+        - echo_response
+      timeout_seconds: 60
 
-  t7_audit:
-    # I9 no-self-review: audit uses a different chain (t7_audit) than primary
-    # (content_create). DeepSeek-V4-Pro is primary's first choice, so the
-    # audit chain starts with Qwen3.6-Plus to ensure a different model.
-    - model: "Qwen3.6-Plus"
-      provider: "openroute"
-      priority: 0
-    - model: "DeepSeek-V4-Pro"
-      provider: "openroute"
-      priority: 1
-    - model: "HunYuan3"
-      provider: "openroute"
-      priority: 2
-    - model: "Ernie"
-      provider: "openroute"
-      priority: 3
+# ==================== Agent 路由映射 ====================
+# Agent 命名空间 -> 路由名
+# 支持前缀匹配: agent_name 以 "multi_judge_" 开头时自动匹配 judge 路由
+# (LLMClient._get_timeout_for_agent 会先精确匹配,再前缀匹配)
+#
+# 说明：*Forge 项目的 Agent 路由由各自项目通过 Plugin V3 协议在运行时注入，
+# FlowForge 核心仅保留通用路由映射（评委 / 反思等通用能力）。
+agent_routes:
+  # 评委路由(前缀匹配): multi_judge_<model> → judge 路由(240s 超时)
+  multi_judge_: judge
+  # 反思路由: reflexion_evaluator → reflector 路由(90s 超时, 原 default 200s 导致 300s 耗时)
+  reflexion_evaluator: reflector
+  # v2.3 修复: reflexion_reflector 也走 reflector 路由(90s)
+  # 原: DefaultLLMReflector 硬编码 agent_name="reflexion_reflector" 但 yaml 未映射 → default 200s
+  # 日志: agent=reflexion_reflector timeout=200.0s（应走 90s 路由）
+  reflexion_reflector: reflector
+  # v6.0修复: ContentForge 写作/编辑/选题 agent 走 creative 路由(90s超时, max_retries=0)
+  # 根因: writer 使用 default 路由(timeout=200s, max_retries=2), Kimi-K2.6 webchat超时后
+  #       重试2次共600s, 导致全流程21分钟超时
+  # 修复: writer→creative(90s, max_retries=0), 超时立即切换到下一个候选模型
+  contentforge:writer: creative
+  contentforge:editor: creative
+  contentforge:topic: creative
+  contentforge:research: creative
 
-# Caller preferences
-prefer_api: true  # API providers preferred over webchat for content_create/judge/review
+# ==================== Agent 模型参数覆盖 ====================
+# Agent 命名空间 -> 模型参数覆盖
+# 说明：*Forge 项目的 Agent 模型参数由各自项目通过 Plugin V3 协议在运行时注入，
+# FlowForge 核心仅保留通用 Agent 的参数覆盖。
+agent_model_params: {}
 
-# Retry / timeout tuning (T7 SLO: full chat must complete within 3 minutes)
-# DeepSeek-V4-Pro intermittently takes 60+s on OpenRoute webchat backend, so
-# we cap per-attempt timeout at 30s and limit retries to 1 to fail fast and
-# let the fallback chain take over (GLM-5.1 typically responds in <20s).
-max_retries: 1
-retry_delay: 1.0
-# 2026-07-28: 30s→35s，给较慢但可用的后端（GLM-5.1 ~28s）留出余量，避免误切。
-default_timeout: 35.0
-
-# Silent-failure patterns — HTTP 200 with disguised error text
-silent_failure_patterns:
-  - "当前不可用，请稍后重试"
-  - "当前不可用,请稍后重试"
-  - "当前不可用，请稍后"
-  - "当前不可用,请稍后"
-  - "model disabled"
-  - "all_backends_failed"
-
-# Refusal patterns — trigger fallback to next provider
-refusal_patterns:
-  - "无法回答"
-  - "无法回答这个问题"
-  - "我暂时无法回答"
-  - "我不能回答"
-  - "我无法提供"
-  - "我无法完成"
+# ==================== 故障转移条件定义 ====================
+failover_conditions:
+  rate_limited:
+    http_status: 429
+    action: fallback
+    cooldown_seconds: 60
+  timeout:
+    threshold_seconds: 90
+    action: fallback
+  moderation_rejected:
+    action: reject  # 不回退，直接拒绝
+    notify: true
+  error:
+    max_consecutive: 3
+    action: mark_unhealthy
+    recovery_check_seconds: 300

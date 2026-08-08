@@ -6,10 +6,10 @@
 - Saga 状态机跟踪
 """
 
-from collections.abc import Callable
+import asyncio
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Callable, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -52,9 +52,9 @@ class SagaContext:
 
     chapter_id: str
     novel_id: str = ""
-    state: dict[str, Any] = field(default_factory=dict)
-    step_results: list[SagaStepResult] = field(default_factory=list)
-    pre_saga_snapshot: dict[str, Any] = field(default_factory=dict)
+    state: Dict[str, Any] = field(default_factory=dict)
+    step_results: List[SagaStepResult] = field(default_factory=list)
+    pre_saga_snapshot: Dict[str, Any] = field(default_factory=dict)
 
 
 class ChapterWriteSaga:
@@ -76,10 +76,10 @@ class ChapterWriteSaga:
     """
 
     def __init__(self):
-        self._steps: list[SagaStep] = self._build_default_steps()
+        self._steps: List[SagaStep] = self._build_default_steps()
         self._state: SagaState = SagaState.PENDING
 
-    def _build_default_steps(self) -> list[SagaStep]:
+    def _build_default_steps(self) -> List[SagaStep]:
         """构建默认 5 步 Saga."""
         return [
             SagaStep(
@@ -136,7 +136,7 @@ class ChapterWriteSaga:
             f"snapshot_keys={list(context.pre_saga_snapshot.keys())}"
         )
 
-        completed_steps: list[SagaStep] = []
+        completed_steps: List[SagaStep] = []
 
         for step in self._steps:
             try:
@@ -216,7 +216,7 @@ class ChapterWriteSaga:
         return context
 
     async def _compensate(
-        self, completed_steps: list[SagaStep], context: SagaContext
+        self, completed_steps: List[SagaStep], context: SagaContext
     ) -> None:
         """执行已完成步骤的补偿（逆序）."""
         logger.debug(

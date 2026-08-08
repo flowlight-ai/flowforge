@@ -25,9 +25,8 @@ License: MIT
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from enum import Enum
-from typing import Any
+from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, Field
 
@@ -120,8 +119,8 @@ class GrepEntry:
 
     def __init__(
         self,
-        collections: list[MemoryCollection] | None = None,
-        logger: TraceLogger | None = None,
+        collections: Optional[list[MemoryCollection]] = None,
+        logger: Optional[TraceLogger] = None,
     ) -> None:
         self._collections: list[MemoryCollection] = collections or []
         self._logger: TraceLogger = logger or get_logger(
@@ -209,9 +208,9 @@ class SemanticEntry:
 
     def __init__(
         self,
-        embedding_fn: Callable[[str], list[float]] | None = None,
-        collections: list[MemoryCollection] | None = None,
-        logger: TraceLogger | None = None,
+        embedding_fn: Optional[Callable[[str], list[float]]] = None,
+        collections: Optional[list[MemoryCollection]] = None,
+        logger: Optional[TraceLogger] = None,
     ) -> None:
         self._embedding_fn = embedding_fn
         self._collections: list[MemoryCollection] = collections or []
@@ -334,8 +333,8 @@ class IndexEntry:
 
     def __init__(
         self,
-        collections: list[MemoryCollection] | None = None,
-        logger: TraceLogger | None = None,
+        collections: Optional[list[MemoryCollection]] = None,
+        logger: Optional[TraceLogger] = None,
     ) -> None:
         self._collections: list[MemoryCollection] = collections or []
         self._logger: TraceLogger = logger or get_logger(
@@ -427,10 +426,10 @@ class RetrievalCoordinator:
 
     def __init__(
         self,
-        grep_entry: GrepEntry | None = None,
-        semantic_entry: SemanticEntry | None = None,
-        index_entry: IndexEntry | None = None,
-        logger: TraceLogger | None = None,
+        grep_entry: Optional[GrepEntry] = None,
+        semantic_entry: Optional[SemanticEntry] = None,
+        index_entry: Optional[IndexEntry] = None,
+        logger: Optional[TraceLogger] = None,
     ) -> None:
         self._logger: TraceLogger = logger or get_logger(
             "memory_federation.coordinator"

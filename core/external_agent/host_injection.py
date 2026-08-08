@@ -18,7 +18,7 @@ License: MIT
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Optional, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -34,7 +34,7 @@ class CredentialStore(Protocol):
     此协议获取 token，**三方 Agent 不能直接访问此协议**。
     """
 
-    def get(self, env_var: str) -> str | None:
+    def get(self, env_var: str) -> Optional[str]:
         """按环境变量名获取凭据值（不写入日志）。"""
         ...
 
@@ -94,7 +94,7 @@ class HostInjector:
         self,
         provider_name: str,
         required_env_vars: list[str],
-        extra_env: dict[str, str] | None = None,
+        extra_env: Optional[dict[str, str]] = None,
     ) -> dict[str, str]:
         """注入 token / API key 到环境变量（不暴露给 plugin）。
 
@@ -140,9 +140,9 @@ class HostInjector:
         self,
         provider_name: str,
         worktree_path: str,
-        network_allowlist: list[str] | None = None,
-        writable_paths: list[str] | None = None,
-        readonly_paths: list[str] | None = None,
+        network_allowlist: Optional[list[str]] = None,
+        writable_paths: Optional[list[str]] = None,
+        readonly_paths: Optional[list[str]] = None,
     ) -> SandboxConfig:
         """注入 sandbox 配置（cwd / 网络白名单 / 文件权限）。
 

@@ -9,8 +9,8 @@ Implements FR-CAP-03 L2:
 """
 
 import time
-from typing import Any
-
+import asyncio
+from typing import Optional, Dict, Any, List
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("mcp.gateway")
@@ -26,23 +26,23 @@ class MCPGateway:
     for MCP tool calls.
     """
 
-    def __init__(self, config: dict[str, Any] | None = None, permission_pipeline=None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, permission_pipeline=None):
         self.config = config or {}
         self.permission_pipeline = permission_pipeline
         self.token_budget = self.config.get("token_budget", DEFAULT_TOKEN_BUDGET)
         self.rate_limit = self.config.get("rate_limit", DEFAULT_RATE_LIMIT)
-        self.whitelist: list[str] = self.config.get("whitelist", [])
+        self.whitelist: List[str] = self.config.get("whitelist", [])
         self._tokens_used = 0
-        self._call_timestamps: list[float] = []
+        self._call_timestamps: List[float] = []
         self._call_count = 0
         self._denied_count = 0
 
     async def execute_tool(
         self,
         tool_name: str,
-        arguments: dict[str, Any],
+        arguments: Dict[str, Any],
         client=None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Execute a tool through the gateway.
 
         Checks: whitelist → rate limit → token budget → permission → execute
@@ -84,7 +84,7 @@ class MCPGateway:
 
         return {"error": "No MCP client configured"}
 
-    async def execute_tool_stream(self, tool_name: str, arguments: dict[str, Any], client=None):
+    async def execute_tool_stream(self, tool_name: str, arguments: Dict[str, Any], client=None):
         """Execute a tool with streaming support.
 
         Yields result chunks as they arrive.
@@ -113,7 +113,7 @@ class MCPGateway:
         self._call_timestamps.append(now)
         return True
 
-    def _estimate_tokens(self, arguments: dict[str, Any]) -> int:
+    def _estimate_tokens(self, arguments: Dict[str, Any]) -> int:
         """Estimate token count for arguments."""
         text = str(arguments)
         return max(1, len(text) // 4)

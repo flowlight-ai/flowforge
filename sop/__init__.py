@@ -26,11 +26,6 @@ SOP（Standard Operating Procedure）执行引擎是 FlowForge 的核心组件�
 - 所有 I/O 操作使用 async/await
 """
 
-from flowforge.sop.engine import (
-    SOPExecutor,
-    load_sop_from_yaml,
-    load_sops_from_dir,
-)
 from flowforge.sop.models import (
     HardRule,
     Pitfall,
@@ -54,6 +49,11 @@ from flowforge.sop.predicate import (
     check_handle,
     check_manual_only,
     check_sha_dedup,
+)
+from flowforge.sop.engine import (
+    SOPExecutor,
+    load_sop_from_yaml,
+    load_sops_from_dir,
 )
 
 __all__ = [

@@ -16,10 +16,12 @@ The async dispatch to channels is handled by ``A2AManager``.
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from typing import Optional
+
+from flowforge.core.tracing import get_logger
 
 from flowforge.a2a.protocol import A2AMention, A2AMessage, A2AThread
-from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.a2a.router")
 
@@ -40,7 +42,7 @@ class MentionRouter:
     mentions to unknown agents.
     """
 
-    def __init__(self, known_agents: set[str] | None = None) -> None:
+    def __init__(self, known_agents: Optional[set[str]] = None) -> None:
         self._known_agents: set[str] = set(known_agents) if known_agents else set()
 
     def register_agent(self, name: str) -> None:
@@ -203,13 +205,13 @@ class ThreadManager:
             raise ValueError(f"Thread '{thread_id}' is closed; cannot add messages")
 
         thread.messages.append(message)
-        thread.updated_at = datetime.now(UTC)
+        thread.updated_at = datetime.now(timezone.utc)
         logger.debug(
             f"ThreadManager: appended message to thread '{thread_id}' "
             f"(total messages: {len(thread.messages)})"
         )
 
-    def get_thread(self, thread_id: str) -> A2AThread | None:
+    def get_thread(self, thread_id: str) -> Optional[A2AThread]:
         """Retrieve a thread by id, or ``None`` if not found."""
         return self._threads.get(thread_id)
 
@@ -257,5 +259,5 @@ class ThreadManager:
         if thread is None:
             raise KeyError(f"Thread '{thread_id}' not found")
         thread.closed = True
-        thread.updated_at = datetime.now(UTC)
+        thread.updated_at = datetime.now(timezone.utc)
         logger.info(f"ThreadManager: closed thread '{thread_id}'")

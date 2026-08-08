@@ -3,6 +3,7 @@
 /**
  * FlowForge Web — Vendor Assets Sync Script
  *
+ * 来源：clowder-ai/packages/web/scripts/sync-vendor-assets.mjs（简化版）
  * 改动：
  *   1. 删除 VAD/ONNX/esbuild 同步（FlowForge 不需要语音 VAD）
  *   2. 保留 xterm.css 同步（TerminalPanel 需要）

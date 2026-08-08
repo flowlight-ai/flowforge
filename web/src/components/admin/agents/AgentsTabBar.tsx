@@ -3,6 +3,7 @@
 /**
  * AgentsTabBar — 智能体管理双 Tab 切换栏
  *
+ * 依据 WEB-FUSION-DESIGN.md §6.1：
  *   Tab 1: 可进化智能体 (Evolvable Agent / Forgekin)
  *   Tab 2: 静态智能体 (Static Agent)
  */

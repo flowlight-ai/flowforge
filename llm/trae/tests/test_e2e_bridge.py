@@ -37,6 +37,7 @@ from flowforge.llm.trae.exceptions import (
 )
 from flowforge.llm.trae.tests.auto_operator import AutoOperator
 
+
 # ── 测试固件 ───────────────────────────────────────────────────────
 
 
@@ -433,6 +434,7 @@ class TestForgePipelineIntegration:
         self, bridge_config, sample_messages
     ):
         """ForgekinBase.chat() 通过注入 TraeLLMClient 调用 LLM."""
+        from flowforge.forgemind.base import ForgekinBase
         from flowforge.forgemind.forging.pipeline import ForgePipeline
 
         # 加载 luban.yaml（通过包路径定位，不硬编码）

@@ -19,11 +19,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shutil
 import sys
 import tempfile
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -44,6 +45,7 @@ from flowforge.llm.trae.models import (
     BridgeResponseStatus,
 )
 from flowforge.llm.trae.protocol import TraeBridgeProtocol
+
 
 # ── 测试固件 ────────────────────────────────────────────────────────
 
@@ -326,7 +328,7 @@ class TestPollResponse:
             "request_id": request_id,
             "reason": "测试取消机制",
             "cancelled_by": "operator",
-            "cancelled_at": datetime.now(UTC).isoformat(),
+            "cancelled_at": datetime.now(timezone.utc).isoformat(),
         }
         cancel_file.write_text(
             json.dumps(cancel_data, ensure_ascii=False, indent=2),

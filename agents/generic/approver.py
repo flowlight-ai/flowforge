@@ -1,5 +1,5 @@
-
-from flowforge.agents.generic.base import AgentInput, AgentOutput, GenericAgent, TaskContext
+from flowforge.agents.generic.base import GenericAgent, AgentInput, AgentOutput, TaskContext
+from typing import Optional
 
 
 class ApproverAgent(GenericAgent):
@@ -7,7 +7,7 @@ class ApproverAgent(GenericAgent):
     description = "确认发布：根据审核结果执行最终确认和发布操作"
     default_mode = "react"
 
-    async def execute_with_context(self, input: AgentInput, context: TaskContext | None) -> AgentOutput:
+    async def execute_with_context(self, input: AgentInput, context: Optional[TaskContext]) -> AgentOutput:
         task = input.params.get("task", input.params.get("query", ""))
         generated = input.params.get("generated", "")
         review_result = input.params.get("review_result", {})

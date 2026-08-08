@@ -11,7 +11,7 @@ Implements FR-HRN-06:
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
 
@@ -42,7 +42,7 @@ class SessionManager:
     parameter-based initialization.
     """
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.compact_threshold = self.config.get("compact_threshold", DEFAULT_COMPACT_THRESHOLD)
         self.context_window = self.config.get("context_window", DEFAULT_CONTEXT_WINDOW)
@@ -55,7 +55,7 @@ class SessionManager:
         self._compaction_count = 0
         self._truncation_count = 0
         # v6: per-session token usage tracking
-        self._session_usage: dict[str, int] = {}
+        self._session_usage: Dict[str, int] = {}
 
     # ------------------------------------------------------------------
     # Legacy methods
@@ -102,9 +102,9 @@ class SessionManager:
 
     async def compact_if_needed(
         self,
-        messages: list[dict[str, Any]],
+        messages: List[Dict[str, Any]],
         memory_manager=None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """Compact messages if context utilization exceeds threshold.
 
         Tries v6 summarization-based compaction first, then falls back to
@@ -141,7 +141,7 @@ class SessionManager:
         # 3. Fallback: simple sliding window (keep recent_rounds)
         return self._simple_compact(messages)
 
-    def _simple_compact(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _simple_compact(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Simple compaction: keep system message + last N rounds."""
         if len(messages) <= self.recent_rounds * 2 + 1:
             return messages
@@ -159,8 +159,8 @@ class SessionManager:
     def build_handoff(
         self,
         init_script: str = "",
-        progress_log: list[str] | None = None,
-        feature_checklist: list[str] | None = None,
+        progress_log: Optional[List[str]] = None,
+        feature_checklist: Optional[List[str]] = None,
     ) -> dict:
         """Build session handoff artifact for context resumption."""
         return {
@@ -186,7 +186,7 @@ class SessionManager:
     # v6 methods
     # ------------------------------------------------------------------
 
-    async def check_and_compact(self, ctx) -> dict[str, Any]:
+    async def check_and_compact(self, ctx) -> Dict[str, Any]:
         """Check context usage and compact if the threshold is exceeded.
 
         Estimates the token usage of the current conversation history stored
@@ -201,7 +201,7 @@ class SessionManager:
             ``after_tokens``, and ``threshold``.
         """
         state = getattr(ctx, 'state', None)
-        messages: list[dict[str, Any]] = state.get("messages", []) if state else []
+        messages: List[Dict[str, Any]] = state.get("messages", []) if state else []
         if not messages:
             return {
                 "compacted": False,
@@ -267,7 +267,7 @@ class SessionManager:
     # v6 internal methods
     # ------------------------------------------------------------------
 
-    def _estimate_messages_tokens(self, messages: list[dict[str, Any]]) -> int:
+    def _estimate_messages_tokens(self, messages: List[Dict[str, Any]]) -> int:
         """Estimate the total token count of a message list.
 
         Args:
@@ -294,9 +294,9 @@ class SessionManager:
 
     async def _compact_messages(
         self,
-        messages: list[dict[str, Any]],
+        messages: List[Dict[str, Any]],
         ctx=None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """Compact messages by summarizing older ones.
 
         Strategy: keep the system message (if any) and the most recent N
@@ -313,8 +313,8 @@ class SessionManager:
         if len(messages) <= 3:
             return messages
 
-        system_messages: list[dict[str, Any]] = []
-        conversation: list[dict[str, Any]] = []
+        system_messages: List[Dict[str, Any]] = []
+        conversation: List[Dict[str, Any]] = []
 
         for msg in messages:
             if msg.get("role") == "system":
@@ -330,14 +330,14 @@ class SessionManager:
             return messages
 
         summary_text = self._summarize_older_messages(older)
-        summary_msg: dict[str, Any] = {
+        summary_msg: Dict[str, Any] = {
             "role": "system",
             "content": f"[Context Summary — {len(older)} earlier messages compacted]\n{summary_text}",
         }
 
         return system_messages + [summary_msg] + recent
 
-    def _summarize_older_messages(self, messages: list[dict[str, Any]]) -> str:
+    def _summarize_older_messages(self, messages: List[Dict[str, Any]]) -> str:
         """Create a text summary of older messages.
 
         Extracts key information from each message and concatenates them
@@ -351,7 +351,7 @@ class SessionManager:
         Returns:
             A summary string.
         """
-        parts: list[str] = []
+        parts: List[str] = []
         for msg in messages:
             role = msg.get("role", "unknown")
             content = msg.get("content", "")

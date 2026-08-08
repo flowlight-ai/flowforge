@@ -14,16 +14,16 @@ on other a2a modules, only on ``flowforge.core.tracing`` for logging.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
 
 def _utc_now() -> datetime:
     """Return the current UTC datetime (timezone-aware)."""
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 def _new_id(prefix: str = "") -> str:
@@ -59,17 +59,17 @@ class A2APart(BaseModel):
         default="text",
         description="Content kind: 'text', 'file', or 'data'.",
     )
-    text: str | None = Field(
+    text: Optional[str] = Field(
         default=None, description="Text content (when type == 'text')."
     )
-    file: dict[str, Any] | None = Field(
+    file: Optional[dict[str, Any]] = Field(
         default=None,
         description=(
             "File reference with keys: name, mimeType, bytes (base64). "
             "Populated when type == 'file'."
         ),
     )
-    data: Any | None = Field(
+    data: Optional[Any] = Field(
         default=None,
         description="Structured JSON payload (when type == 'data').",
     )
@@ -93,7 +93,7 @@ class A2AMessage(BaseModel):
         description="Ordered content parts of the message.",
     )
     # FlowForge extensions (not in upstream spec, but useful for routing)
-    sender: str | None = Field(
+    sender: Optional[str] = Field(
         default=None,
         description="Name of the sending agent (FlowForge extension).",
     )
@@ -112,10 +112,10 @@ class A2AArtifact(BaseModel):
     content is expressed as a list of A2A parts.
     """
 
-    name: str | None = Field(
+    name: Optional[str] = Field(
         default=None, description="Human-readable artifact name."
     )
-    description: str | None = Field(
+    description: Optional[str] = Field(
         default=None, description="What the artifact contains."
     )
     parts: list[A2APart] = Field(
@@ -161,7 +161,7 @@ class A2AAgentCard(BaseModel):
     """
 
     name: str = Field(..., description="Unique agent name.")
-    description: str | None = Field(
+    description: Optional[str] = Field(
         default=None, description="Human-readable summary of the agent."
     )
     url: str = Field(
@@ -190,7 +190,7 @@ class A2AMention(BaseModel):
     from_agent: str = Field(..., description="Agent sending the mention.")
     to_agent: str = Field(..., description="Agent being mentioned.")
     content: str = Field(..., description="Mention content body.")
-    thread_id: str | None = Field(
+    thread_id: Optional[str] = Field(
         default=None,
         description="Thread this mention belongs to (None = ad-hoc).",
     )
@@ -259,7 +259,7 @@ class A2AHandoff(BaseModel):
         default="",
         description="Why the handoff is being made.",
     )
-    thread_id: str | None = Field(
+    thread_id: Optional[str] = Field(
         default=None,
         description="Thread context for the handoff, if any.",
     )
