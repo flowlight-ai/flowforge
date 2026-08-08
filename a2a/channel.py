@@ -21,9 +21,11 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
+from typing import Optional
+
+from flowforge.core.tracing import get_logger
 
 from flowforge.a2a.protocol import A2AMessage
-from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.a2a.channel")
 
@@ -144,7 +146,7 @@ class ChannelRegistry:
         self._channels[name] = channel
         logger.info(f"ChannelRegistry: registered channel '{name}'")
 
-    def unregister(self, name: str) -> Channel | None:
+    def unregister(self, name: str) -> Optional[Channel]:
         """Remove and return a registered channel, or ``None`` if absent."""
         channel = self._channels.pop(name, None)
         if channel is not None:

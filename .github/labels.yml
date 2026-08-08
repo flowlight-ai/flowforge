@@ -1,4 +1,4 @@
-# Label Definitions for FlowForge
+﻿# Label Definitions for OpenRoute
 # Used by crazy-max/ghaction-github-labeler to sync labels
 # https://github.com/crazy-max/ghaction-github-labeler
 
@@ -40,37 +40,33 @@
   description: "Maintenance, dependencies, CI/CD"
 
 # Module labels
-- name: "module: evolution"
-  color: "5319e7"
-  description: "Self-evolution engine"
-
-- name: "module: loop"
-  color: "5319e7"
-  description: "Loop executor"
-
 - name: "module: core"
   color: "5319e7"
   description: "Core shared kernel (DI, plugin, tracing)"
 
-- name: "module: compiler"
+- name: "module: router"
   color: "5319e7"
-  description: "YAML workflow compiler"
+  description: "Routing & dispatch logic"
 
-- name: "module: tools"
+- name: "module: channel"
   color: "5319e7"
-  description: "Tools (RAG, publish, web search)"
+  description: "Provider channels"
 
-- name: "module: agents"
+- name: "module: infra"
   color: "5319e7"
-  description: "Agent implementations"
-
-- name: "module: modes"
-  color: "5319e7"
-  description: "Execution modes (react, plan_execute, reflexion)"
+  description: "Infrastructure (interceptor, pipeline)"
 
 - name: "module: config"
   color: "5319e7"
   description: "Configuration files"
+
+- name: "module: api"
+  color: "5319e7"
+  description: "REST API & admin endpoints"
+
+- name: "module: tests"
+  color: "5319e7"
+  description: "Test suite"
 
 # Priority labels
 - name: "priority: critical"

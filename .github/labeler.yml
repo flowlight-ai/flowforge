@@ -1,42 +1,44 @@
-# Path-based PR Labeler Configuration
+﻿# Path-based PR Labeler Configuration
 # https://github.com/actions/labeler
 # Labels are applied to PRs based on which files are changed
 
 # Core modules
-evolution:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "flowforge/evolution/**"
-
-loop:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "flowforge/loop/**"
-
 core:
   - changed-files:
       - any-glob-to-any-file:
-          - "flowforge/core/**"
+          - "core/**"
+          - "model/**"
 
-compiler:
+router:
   - changed-files:
       - any-glob-to-any-file:
-          - "flowforge/compiler/**"
+          - "router/**"
 
-tools:
+channel:
   - changed-files:
       - any-glob-to-any-file:
-          - "flowforge/tools/**"
+          - "channel/**"
 
-agents:
+infra:
   - changed-files:
       - any-glob-to-any-file:
-          - "flowforge/agents/**"
+          - "infra/**"
 
-modes:
+config:
   - changed-files:
       - any-glob-to-any-file:
-          - "flowforge/modes/**"
+          - "config/**"
+          - "**/*.yaml"
+          - "**/*.yml"
+          - "**/*.toml"
+          - "pyproject.toml"
+
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app.py"
+          - "admin/**"
+          - "user/**"
 
 # Non-code areas
 documentation:
@@ -44,7 +46,6 @@ documentation:
       - any-glob-to-any-file:
           - "docs/**"
           - "**/*.md"
-          - "mkdocs.yml"
 
 tests:
   - changed-files:
@@ -60,15 +61,6 @@ ci-cd:
           - ".gitignore"
           - ".editorconfig"
 
-config:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "config/**"
-          - "**/*.yaml"
-          - "**/*.yml"
-          - "**/*.toml"
-          - "pyproject.toml"
-
 dependencies:
   - changed-files:
       - any-glob-to-any-file:
@@ -81,6 +73,7 @@ security:
   - changed-files:
       - any-glob-to-any-file:
           - "SECURITY.md"
+          - "user/auth.py"
           - "**/auth*"
           - "**/secur*"
           - "**/permiss*"
