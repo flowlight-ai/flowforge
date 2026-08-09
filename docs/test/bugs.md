@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **7** |
 | **加权缺陷指数（DI）** | **50** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 7 |
-| 状态：修复中 | 0 |
+| 状态：Open | 6 |
+| 状态：Fixed（待回归） | 1 |
 | 状态：Closed | 0 |
 
 ### 按严重度（Severity）
@@ -53,11 +53,18 @@
 > 字段：ID ｜ 标题 ｜ 严重度 ｜ 分类 ｜ 状态 ｜ 文件:行号 ｜ 现象 ｜ 建议修复 ｜ T7/T8
 
 ### P-01 — 9 个文件硬编码 OpenRoute bearer token（含 config/models.yaml）
-- **严重度**：S1 ｜ **分类**：安全隐患 ｜ **状态**：Open
+- **严重度**：S1 ｜ **分类**：安全隐患 ｜ **状态**：Fixed（待回归）
 - **文件**：`llm/trae/bridge_operator.py:63`、`config/models.yaml:10`、`llm/cli_provider.py:93,101,112`、`llm/openroute_client.py:42`、`forgemind/responses_to_openroute_proxy.py:43`、`forgemind/anthropic_to_openroute_proxy.py:47`、`forgemind/gemini_to_openroute_proxy.py:55`、`tests/integration/test_openroute_health_integration.py:28`、`tests/integration/test_breakpoint_c_stress.py:48`
 - **现象**：9 个文件硬编码 3 个不同 OpenRoute 密钥（`or-6eb9e20d...` / `or-2c2e4d8e...` / `or-306e066e...`），其中 `config/models.yaml:10` 的 `api_key_default` 亦写入明文 token。凭据入库即泄露风险；一旦轮换即 401。
 - **建议**：移除全部硬编码，改从环境变量 / `.env`（已 gitignore）读取；必要时旋转已暴露的密钥。配置文件的默认密钥项改为占位符 + 运行时注入。
 - **T7/T8**：否
+- **开发自述**：修复提交 `9bd5340`。9 个文件全部移除硬编码 token，改由 `OPENROUTE_API_KEY` / `ANTHROPIC_API_KEY` / `CODEX_API_KEY` / `GEMINI_API_KEY` 环境变量读取；各源模块（`cli_provider.py`、3 个 forgemind proxy、`openroute_client.py`、`bridge_operator.py`）在模块顶部显式 `load_dotenv(<仓库根>/.env)` 注入 `.env`（已 gitignore，未入库）。`config/models.yaml:10` `api_key_default` 置空。自测（清空 env 后）：
+  ```bash
+  env -u OPENROUTE_API_KEY -u ANTHROPIC_API_KEY -u CODEX_API_KEY -u GEMINI_API_KEY python3 /tmp/opencode/p01_verify.py
+  # => cli(claude): or-6eb9e...  cli(codex): or-6eb9e...  bridge: or-6eb9e...  openroute_cli: or-6eb9e...
+  # => P-01 验证通过：全部从 env/.env 注入，源码零硬编码
+  ```
+  另：硬编码扫描 `grep -rn "or-6eb9e20d\|or-2c2e4d8e\|or-306e066e" --include=*.py --include=*.yaml .` 已无匹配（仅 `.env` 本地文件含真实值）。已暴露的 key 建议测试回归后由密钥责任人轮换。
 
 ### P-02 — 4 个 phase 脚本模块级调用 sys.exit，pytest 收集即 INTERNALERROR
 - **严重度**：S1 ｜ **分类**：CI / 配置 ｜ **状态**：Open
