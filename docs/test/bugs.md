@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **7** |
 | **加权缺陷指数（DI）** | **50** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 1 |
-| 状态：Fixed（待回归） | 6 |
+| 状态：Open | 0 |
+| 状态：Fixed（待回归） | 7 |
 | 状态：Closed | 0 |
 
 ### 按严重度（Severity）
@@ -138,11 +138,18 @@
 - **T7/T8**：否
 
 ### P-07 — 23 个 e2e 测试中 14 个未接 T7/T8
-- **严重度**：S2 ｜ **分类**：T7 / T8 合规 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：T7 / T8 合规 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/e2e/`（共 23 个 `test_*.py`，仅约 9 个引用 T7/T8 铁律，14 个无 T7/T8 审核/DOM 验证接线）
 - **现象**：按测试铁律 T7（LLM 内容审核）/ T8（浏览器 DOM 验证），涉及 LLM 生成与网页发布的 e2e 用例必须做二次审核与 DOM 校验。静态扫描显示 23 个 e2e 脚本中约 14 个完全未接线 T7/T8，违规铁律却仍可“通过”，质量闸门形同虚设。
 - **建议**：对生成/发布类 e2e 用例统一以 harness 的 `LLMReviewer` / `DOMVerifier` 为入口强制开启 T7/T8（提供 `--t7` / `--t8` 开关并在 CI 启用），补齐缺失接线。
 - **T7/T8**：是（T7 + T8）
+- **开发自述**：修复提交（P-07）+ 范围裁定。按用户确认口径“仅整改真生成/发布类”处理：逐脚本甄别后，9 个未接线脚本中仅 `test_helm_ui.py`（80 处真实 LLM 调用、产出问候/写作/搜索/研究/翻译/代码等面向用户内容）属真实生成类；其余 8 个为纯基础设施/API/搜索检索/机制验证类（`test_event_bridge_e2e/extreme` 事件桥接基础设施、`test_harness` harness 机制验证含 LLM 但断言对象是机制行为、`test_minimal_conn` 健康检查、`test_opensieve_full/quick/search/verify` OpenSieve 检索服务），不产出面向用户的新内容，T7/T8 不适用。修复内容：`test_helm_ui.py` 新增 `t7_assert()` helper（复用 `tests/utils/t7_reviewer.py` 的 `T7Reviewer.review_sync`，真实 LLM 6 维度审核，T1 禁 Mock），并在 IT-HELM-01/02/03/04/05/06/07/08/09 共 9 个正向意图用例的内容断言后追加 T7 审核，审核 FAIL 即测试失败。自测：
+  ```bash
+  python3 -m py_compile tests/e2e/test_helm_ui.py      # => OK
+  python3 -m pytest flowforge/tests/e2e/test_helm_ui.py --collect-only -q
+  # => 20 tests collected（T7Reviewer 导入/DOM 依赖完整，无收集错误）
+  ```
+  附注：T7 审核依赖 OpenRoute 真实 LLM 通道（与既有 `test_t7_llm_review.py` 同约定），实跑需服务在线；`test_harness` 是否部分用例（如质量反馈迭代产出内容）也应接 T7，可作后续细化项。
 
 ---
 
