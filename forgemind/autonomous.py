@@ -105,7 +105,7 @@ class AutonomousDaemon:
 
         daemon = AutonomousDaemon(
             coordinator=coord,
-            project_root=Path("d:/software/openclaw"),
+            project_root=Path.cwd(),
             forgekins={"forgemind:wenxin": wenkin_instance, ...},
         )
         await daemon.run_forever()

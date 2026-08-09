@@ -30,6 +30,7 @@ TraeModelCapabilityAdapter 将 TraeLLMClient 适配为 LLMProvider 兼容接口�
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
@@ -93,7 +94,7 @@ class TraeModelCapabilityAdapter(LLMProvider):
         else:
             yaml_path = cfg.get(
                 "bridge_yaml",
-                "d:/software/openclaw/flowforge/config/trae_bridge.yaml",
+                str(Path(__file__).resolve().parents[2] / "config" / "trae_bridge.yaml"),
             )
             try:
                 self._bridge_config = TraeBridgeConfig.load_from_yaml(yaml_path)

@@ -16,7 +16,7 @@ bridge:
 
   # 共享目录路径（支持 ${ENV_VAR} 占位符，不变量 6）
   # 默认指向 flowforge/.trae_bridge/
-  shared_dir: "${FLOWFORGE_BRIDGE_DIR:d:/software/openclaw/flowforge/.trae_bridge}"
+  shared_dir: "${FLOWFORGE_BRIDGE_DIR:}"
 
   # 子目录命名（与 F045 §2.1 协议流程对应）
   # requests/  — request_{uuid}.json（Forgekin → Trae）
