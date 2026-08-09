@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **7** |
 | **加权缺陷指数（DI）** | **50** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 3 |
-| 状态：Fixed（待回归） | 4 |
+| 状态：Open | 2 |
+| 状态：Fixed（待回归） | 5 |
 | 状态：Closed | 0 |
 
 ### 按严重度（Severity）
@@ -97,11 +97,17 @@
   `tests/core/partnership/test_math.py` 收集不再 ImportError（其自身因 `flowforge.core.partnership` 尚未实现而 `importorskip` 跳过，属预期，非本单引入）。`test_wal.py` 同样为 importorskip 前置保护。请测试回归时以“两个名称可从 `core/errors` 导入”为准；若测到子模块已实现则回归用例可正常执行。
 
 ### P-04 — `harness/governance.py:259` 拼写错误 `inject_to_system_rule`
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`harness/governance.py:259` → `return await self.inject_to_system_rule(target)`
 - **现象**：方法名 `inject_to_system_rule` 疑似拼写错误（应为 `inject_to_system_prompt` 或 `inject_into_system_rule`，取决于真实定义）。该 goroutine 治理注入路径调用不存在的方法名，运行期将抛 `AttributeError`，导致治理规则注入失效。
 - **建议**：核对该方法真实定义并修正拼写；补单测覆盖 `governance` 注入调用，避免再次拼写漂移。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-04），1 文件 1 行。真实定义为 `inject_to_system_role`（`harness/governance.py:201`），`inject_to_user_message` 内 `inject_to_system_rule` → `inject_to_system_role`，与定义对齐。自测：
+  ```bash
+  grep -rn "inject_to_system_rule" --include=*.py .   # scan=1 无残留
+  python3 -m pytest flowforge/tests/core/harness/test_durable_state.py -q -k governance
+  # => 6 passed, 24 deselected（governance 相关全部通过）
+  ```
 
 ### P-05 — `d:/software/openclaw` 硬编码 + 仓库根寄生 `d:` 目录（未 gitignore）
 - **严重度**：S2 ｜ **分类**：目录结构 ｜ **状态**：Fixed（待回归）
