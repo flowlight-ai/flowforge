@@ -486,12 +486,14 @@ cmd_mirror_setup() {
 }
 
 cmd_merge_cross() {
-  # 跨平台双向合并: 读取双端提交差异, 创建同步PR
+  # 跨平台双向合并: 基于文件内容(tree hash)比较双端差异, 创建同步PR
   # 用法: ./mgr merge-cross [--dry-run] [--g2l|--l2g]
-  #   --dry-run  仅显示差异, 不创建PR
+  #   --dry-run  仅显示文件差异, 不创建PR
   #   --g2l      仅 GitHub→Gitee
   #   --l2g      仅 Gitee→GitHub
   #   默认: 双向
+  # 原理: tree hash = 文件内容指纹, 相同=双端一致; 不同=显示文件diff并merge
+  #       (不受 squash merge / 提交历史分叉影响, 只看最终文件内容)
   local DRY_RUN=false DO_G2L=true DO_L2G=true
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -505,7 +507,7 @@ cmd_merge_cross() {
   load_token; load_gh_token
 
   echo -e "${B}════════ 跨平台合并 (${CURRENT_SIDE} 触发) ════════${N}"
-  $DRY_RUN && echo -e "${Y}[DRY-RUN] 仅显示差异, 不创建PR${N}\n"
+  $DRY_RUN && echo -e "${Y}[DRY-RUN] 仅显示文件差异, 不创建PR${N}\n"
 
   for n in "${NAMES[@]}"; do
     local gd="${GPATH[$n]}" ghd="${GH_PATH[$n]}"
@@ -529,34 +531,26 @@ cmd_merge_cross() {
       echo -e "  ${R}✗ 无法从 GitHub fetch (检查网络/token)${N}"; continue
     fi
 
-    # 用 patch-id 对比差异 (--cherry-pick 过滤等价提交)
-    local gh_unique g_unique
-    gh_unique=$(_git "$gd" log --cherry-pick --right-only --oneline "master...FETCH_HEAD" 2>/dev/null | grep -c . || echo 0)
-    g_unique=$(_git "$gd" log --cherry-pick --left-only --oneline "master...FETCH_HEAD" 2>/dev/null | grep -c . || echo 0)
+    # 比较 tree hash (文件内容指纹, 不受 squash merge / 提交历史影响)
+    local ge_tree gh_tree
+    ge_tree=$(_git "$gd" rev-parse "master^{tree}" 2>/dev/null || echo "")
+    gh_tree=$(_git "$gd" rev-parse "FETCH_HEAD^{tree}" 2>/dev/null || echo "")
 
-    if [ "$gh_unique" = "0" ] && [ "$g_unique" = "0" ]; then
-      echo -e "  ${G}✓ 双端已同步${N}"; continue
+    if [ "$ge_tree" = "$gh_tree" ] && [ -n "$ge_tree" ]; then
+      echo -e "  ${G}✓ 双端文件内容一致 (tree: ${ge_tree:0:8})${N}"
+      echo ""; continue
     fi
 
-    echo "  Gitee(master) 独有: ${g_unique} commits"
-    echo "  GitHub(main)  独有: ${gh_unique} commits"
-
-    # 显示差异详情
-    if [ "$gh_unique" -gt 0 ]; then
-      echo -e "  ${C}GitHub → Gitee 缺失的提交:${N}"
-      _git "$gd" log --cherry-pick --right-only --oneline "master...FETCH_HEAD" 2>/dev/null | head -8 | sed 's/^/    /'
-    fi
-    if [ "$g_unique" -gt 0 ]; then
-      echo -e "  ${C}Gitee → GitHub 缺失的提交:${N}"
-      _git "$gd" log --cherry-pick --left-only --oneline "master...FETCH_HEAD" 2>/dev/null | head -8 | sed 's/^/    /'
-    fi
+    # 显示文件级差异 (不显示提交历史, 避免误报)
+    echo -e "  ${C}文件差异 (Gitee master ←→ GitHub main):${N}"
+    _git "$gd" diff --stat "master" "FETCH_HEAD" 2>/dev/null | head -20 | sed 's/^/    /'
 
     $DRY_RUN && { echo ""; continue; }
 
     local ts branch
 
-    # ── github→gitee: 将 GitHub 独有提交合并到 Gitee ──
-    if $DO_G2L && [ "$gh_unique" -gt 0 ]; then
+    # ── github→gitee: merge GitHub main 到 Gitee ──
+    if $DO_G2L; then
       ts=$(date +%s | tail -c 5)
       branch="cross/gh2ge-${ts}"
       echo -e "  ${C}→ 创建 GitHub→Gitee 同步PR ...${N}"
@@ -579,8 +573,8 @@ cmd_merge_cross() {
       $gd_stashed && _git "$gd" stash pop 2>/dev/null || true
     fi
 
-    # ── gitee→github: 将 Gitee 独有提交合并到 GitHub ──
-    if $DO_L2G && [ "$g_unique" -gt 0 ]; then
+    # ── gitee→github: merge Gitee master 到 GitHub ──
+    if $DO_L2G; then
       # 在 github 目录 fetch gitee/master → FETCH_HEAD
       _git "$ghd" fetch "$ge_fetch_url" master 2>/dev/null || true
       local ge_ref; ge_ref=$(_git "$ghd" rev-parse FETCH_HEAD 2>/dev/null || echo "")
