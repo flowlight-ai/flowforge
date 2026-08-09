@@ -45,7 +45,7 @@ _t7_reviewer = T7Reviewer()
 
 BACKEND = "http://127.0.0.1:8000"
 OPENROUTE = "http://127.0.0.1:13001"
-API_KEY = os.environ.get("OPENROUTE_API_KEY", "or-306e066ec411840c019a1c1b2cd0b447bb62e6c976d27f73")
+API_KEY = os.environ.get("OPENROUTE_API_KEY", "")
 HEALTH_STATE_FILE = _PROJECT_ROOT / "flowforge" / "data" / "model_health_state.json"
 
 # ===== MetricsCollector (T6) =====

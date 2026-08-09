@@ -25,7 +25,7 @@ from flowforge.tests.utils.t7_reviewer import T7Reviewer
 # ---------------------------------------------------------------------------
 
 OPENROUTE_BASE_URL = "http://127.0.0.1:13001/v1"
-OPENROUTE_API_KEY = "or-2c2e4d8edd586e694139259e4b5cea7c25ace5e674ed5d46"
+OPENROUTE_API_KEY = os.environ.get("OPENROUTE_API_KEY", "")
 CONFIG_DIR = Path(__file__).parent.parent.parent / "config"
 
 

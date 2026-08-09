@@ -39,21 +39,25 @@ import logging
 import os
 import sys
 import time
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 import uvicorn
 
+# 从仓库根 .env（已 gitignore）加载密钥，避免硬编码（铁律5/红线11）
+_load_env = Path(__file__).resolve().parents[1] / ".env"
+if _load_env.exists():
+    load_dotenv(dotenv_path=_load_env)
+
 # ── 配置 ────────────────────────────────────────────────────────────────────
 
 OPENROUTE_BASE_URL = os.environ.get("OPENROUTE_BASE_URL", "http://localhost:13001/v1")
-OPENROUTE_API_KEY = os.environ.get(
-    "OPENROUTE_API_KEY",
-    "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
-)
+OPENROUTE_API_KEY = os.environ.get("OPENROUTE_API_KEY", "")
 DEFAULT_PORT = int(os.environ.get("GEMINI_PROXY_PORT", "8082"))
 DEFAULT_HOST = os.environ.get("GEMINI_PROXY_HOST", "127.0.0.1")
 

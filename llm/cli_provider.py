@@ -25,9 +25,16 @@ import os
 import shutil
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from flowforge.core.tracing import get_logger
+
+# 从仓库根 .env（已 gitignore）加载本地密钥，避免源码硬编码（铁律5/红线11）
+_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+if _ENV_FILE.exists():
+    load_dotenv(dotenv_path=_ENV_FILE)
 
 logger = get_logger("flowforge.llm.cli_provider")
 
@@ -90,7 +97,7 @@ PRESET_CONFIGS: dict[str, CLIProviderConfig] = {
         model_flag=["--model"],
         env={
             "ANTHROPIC_BASE_URL": "http://127.0.0.1:3456",
-            "ANTHROPIC_API_KEY": "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
+            "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY", ""),
         },
     ),
     "codex": CLIProviderConfig(
@@ -98,7 +105,7 @@ PRESET_CONFIGS: dict[str, CLIProviderConfig] = {
         binary="codex",
         cli_args=["exec"],
         model_flag=["-m"],
-        env={"CODEX_API_KEY": "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7"},
+        env={"CODEX_API_KEY": os.environ.get("CODEX_API_KEY", "")},
     ),
     "gemini": CLIProviderConfig(
         provider="gemini",
@@ -109,7 +116,7 @@ PRESET_CONFIGS: dict[str, CLIProviderConfig] = {
         trailer_args=["--output-format", "text"],
         env={
             "GOOGLE_GEMINI_BASE_URL": "http://127.0.0.1:8082",
-            "GEMINI_API_KEY": "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
+            "GEMINI_API_KEY": os.environ.get("GEMINI_API_KEY", ""),
             "GEMINI_CLI_TRUST_WORKSPACE": "true",
         },
     ),
