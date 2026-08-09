@@ -492,10 +492,9 @@ cmd_merge_cross() {
   # 方向:
   #   Gitee 触发  → Gitee master 同步到 GitHub main (创建 GitHub PR)
   #   GitHub 触发 → GitHub main 同步到 Gitee master (创建 Gitee PR)
-  # 守门 (merge-base, 防止反向同步导致冲突):
-  #   - 对端是当前平台祖先 → 对端落后 → 正常同步
-  #   - 当前平台是对端祖先 → 当前平台落后 → 跳过 (方向反了, 不操作)
-  #   - 双端分叉 → 跳过并提示 (需手动处理)
+  # 同步规则 (简单可靠):
+  #   - tree hash 相同 → 双端文件一致, 跳过
+  #   - tree hash 不同 → 直接 merge 同步 (merge 自动处理分叉, 冲突才中止)
   local DRY_RUN=false
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -557,32 +556,8 @@ cmd_merge_cross() {
       echo ""; continue
     fi
 
-    # 守门: 对端必须是当前平台的祖先 (对端落后), 否则跳过
-    # dst_ancestor_of_src: 对端是源端祖先 → 对端落后 → 可同步
-    # src_ancestor_of_dst: 源端是对端祖先 → 源端落后 → 方向反了, 跳过
-    local dst_ancestor_of_src=false src_ancestor_of_dst=false
-    if _git "$src_dir" merge-base --is-ancestor FETCH_HEAD "$src_ref" 2>/dev/null; then
-      dst_ancestor_of_src=true  # 对端落后于源端 (正常, 可同步)
-    fi
-    if _git "$src_dir" merge-base --is-ancestor "$src_ref" FETCH_HEAD 2>/dev/null; then
-      src_ancestor_of_dst=true  # 源端落后于对端 (方向反了)
-    fi
-
     echo -e "  ${C}文件差异 (${SRC_SIDE} ${src_ref} ←→ ${DST_SIDE} ${dst_ref}):${N}"
     _git "$src_dir" diff --stat "$src_ref" "FETCH_HEAD" 2>/dev/null | head -15 | sed 's/^/    /'
-
-    if $dst_ancestor_of_src && ! $src_ancestor_of_dst; then
-      echo -e "  ${Y}方向: ${DST_SIDE} 落后于 ${SRC_SIDE} → 同步 ${SRC_SIDE}→${DST_SIDE}${N}"
-    elif $src_ancestor_of_dst && ! $dst_ancestor_of_src; then
-      echo -e "  ${R}跳过: ${SRC_SIDE} 落后于 ${DST_SIDE} (方向反了, 请在对端平台执行)${N}"
-      echo ""; continue
-    elif $dst_ancestor_of_src && $src_ancestor_of_dst; then
-      echo -e "  ${G}双端等价 (merge-base 双向成立), 无需同步${N}"
-      echo ""; continue
-    else
-      echo -e "  ${R}跳过: 双端分叉 (都有独有提交), 需手动处理${N}"
-      echo ""; continue
-    fi
 
     $DRY_RUN && { echo ""; continue; }
 
