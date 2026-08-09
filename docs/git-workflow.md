@@ -114,8 +114,7 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 ### 5.4 作用域
 
 - `./mgr` 默认仅管理本仓库。
-- `flowforge/mgr` 默认仅管理本仓库；--all 对非 content 仓库仍只操作本仓库。
-- `--all` 对非 content 仓库仍只操作本仓库（仅 content 仓库的 `--all` 管理 9 个仓库）；`--repo NAME` 仅管理指定仓库。
+- `--all` 对本仓库仍只操作本仓库；`--repo NAME` 仅管理指定仓库（本仓库仅可填 flowforge）。
 
 ## 6. 标准工作流
 
