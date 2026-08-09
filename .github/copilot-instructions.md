@@ -1,4 +1,4 @@
-# AGENTS.md — AI 工具工作规范（强制）
+﻿# AGENTS.md — AI 工具工作规范（强制）
 
 > 本文件适用于所有 AI 编码工具：Trae / Claude Code / Cursor / Gemini / OpenCode / WorkBuddy / Qorder 等。
 > 工具在本仓库工作时**必须读取并遵守**本文件全部规则。

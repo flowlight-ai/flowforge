@@ -1,6 +1,6 @@
-# 工程通用规范（强制）
+﻿# 工程通用规范（强制）
 
-> 本规范在 flowforge 项目执行。Git 工作流规范见 [git-workflow.md](git-workflow.md)。
+> FlowLight 生态 9 仓库统一执行本规范。Git 工作流规范见 [git-workflow.md](git-workflow.md)。
 
 ## 1. 测试交付规范
 
@@ -71,20 +71,19 @@
 2. **顶层索引文件不重复正文**：rules.md / prompts.md 顶层仅做索引，正文在拆分文件中。
 3. **过程记录归档**：修改记录、版本变迁说明、修订日志不放在规范/模板正文中，归入 docs/archive/ 或 CHANGELOG。
 4. **术语规范**：统一使用既定术语表，禁止自造说法。
-
 ## 5. AI 工具合规（强制）
 
 > 所有 AI 编码工具（Trae / Claude Code / Cursor / Gemini / OpenCode / WorkBuddy / Qorder 等）在本仓库工作时必须遵守。
 
-1. **必须使用 `./mgr` 命令**进行 Git 操作，禁止直接 `git push`。
+1. **必须使用 ./mgr 命令**进行 Git 操作，禁止直接 git push。
 2. **必须遵守平台感知原则**：在当前平台目录下开发，仅向当前平台提交 PR。
-3. **跨平台同步使用 `./mgr merge-cross`**，禁止在日常开发中同时推送双端。
+3. **跨平台同步使用 ./mgr merge-cross**，禁止在日常开发中同时推送双端。
 4. **必须按 git-workflow.md §3 格式撰写提交信息**，包含 type、scope、智能体署名。
 5. **提交前必须运行 lint 和测试**，不引入新问题。
 6. AI 工具配置文件位置：
-   - `AGENTS.md`（仓库根目录，所有工具通用，**首要读取**）
-   - `CLAUDE.md`（Claude Code）
-   - `.cursorrules`（Cursor）
-   - `GEMINI.md`（Gemini）
-   - `.github/copilot-instructions.md`（GitHub Copilot）
+   - AGENTS.md（仓库根目录，所有工具通用，**首要读取**）
+   - CLAUDE.md（Claude Code）
+   - .cursorrules（Cursor）
+   - GEMINI.md（Gemini）
+   - .github/copilot-instructions.md（GitHub Copilot）
 7. 完整 Git 工作流规范见 [git-workflow.md](git-workflow.md)。

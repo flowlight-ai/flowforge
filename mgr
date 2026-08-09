@@ -71,15 +71,20 @@ reg() { local n="$1" gr="$2" ghr="$3"; NAMES+=("$n")
   GURL["$n"]="https://gitee.com/${GITEE_ORG}/${n}.git"
   GH_URL["$n"]="https://github.com/${GH_ORG}/${n}.git"; }
 
-reg "content"      "content"      "content"
-reg "openroute"    "openroute"    "openroute"
-reg "flowforge"    "flowforge"    "flowforge"
-reg "stockforge"   "stockforge"   "stockforge"
-reg "contentforge" "contentforge" "contentforge"
-reg "devforge"     "devforge"     "devforge"
-reg "novelforge"   "novelforge"   "novelforge"
-reg "mallforge"    "mallforge"    "mallforge"
-reg "opensieve"    "opensieve"    "opensieve"
+# content 总控: 注册全部 9 仓库; 其他仓库: 仅注册自己 (项目间去耦合)
+if [ "$SELF" = "content" ]; then
+  reg "content"      "content"      "content"
+  reg "openroute"    "openroute"    "openroute"
+  reg "flowforge"    "flowforge"    "flowforge"
+  reg "stockforge"   "stockforge"   "stockforge"
+  reg "contentforge" "contentforge" "contentforge"
+  reg "devforge"     "devforge"     "devforge"
+  reg "novelforge"   "novelforge"   "novelforge"
+  reg "mallforge"    "mallforge"    "mallforge"
+  reg "opensieve"    "opensieve"    "opensieve"
+else
+  reg "$SELF" "$SELF" "$SELF"
+fi
 
 # ── 作用域解析 ────────────────────────────────────────────────
 SCOPE="default"
@@ -174,6 +179,79 @@ cmd_commit() {
   echo ""
 }
 
+# ═══════════════════════════════════════════════════════════════
+#  智能推送 (核心): merge 远端更新到当前分支, push 同一分支累加到已有 PR
+#  原则: 不 rebase 不丢本地修改 / 不删不重建 PR / merge 主干保证 PR 无冲突
+# ═══════════════════════════════════════════════════════════════
+_smart_push() {
+  local n="$1" d="$2" b="$3" title="${4:-}" body="${5:-}" do_pr="${6:-false}"
+  local base; base=$(_cur_base)
+  # stash 未提交修改 (合并前保护工作区)
+  local stashed=false
+  if ! _git "$d" diff --quiet 2>/dev/null || ! _git "$d" diff --cached --quiet 2>/dev/null; then
+    _git "$d" stash 2>/dev/null && stashed=true
+  fi
+  # 1) origin/<b> 有新提交 → merge (累加别人对该 PR 分支的修改, 保留双方历史)
+  if _git "$d" show-ref --verify --quiet "refs/remotes/origin/${b}"; then
+    local be; be=$(_git "$d" rev-list --count "${b}..origin/${b}" 2>/dev/null || echo 0)
+    if [ "$be" -gt 0 ]; then
+      echo -e "  ${C}merge origin/${b} (${be} 个提交) → 累加到本分支 (保留双方历史, 不 rebase)${N}"
+      if ! _git "$d" merge --no-edit "origin/${b}" 2>"$MGR_TMP"; then
+        _git "$d" merge --abort 2>/dev/null || true
+        $stashed && _git "$d" stash pop 2>/dev/null || true
+        echo -e "  ${R}✗ 与 origin/${b} 存在真实冲突, 需手动解决 (本地 ${b} 已保留未改动, 未删任何 PR)${N}"
+        echo -e "  ${Y}指引: cd $d && git merge origin/${b} && 解决冲突 && git add . && git commit${N}"
+        return 1
+      fi
+    fi
+  fi
+  # 2) 本分支未含最新 origin/base → merge 主干 (保证 PR 合并无冲突, 不 rebase 不丢本地)
+  local mb ob
+  mb=$(_git "$d" merge-base "$b" "origin/${base}" 2>/dev/null || echo "")
+  ob=$(_git "$d" rev-parse "origin/${base}" 2>/dev/null || echo "")
+  if [ -n "$mb" ] && [ -n "$ob" ] && [ "$mb" != "$ob" ]; then
+    echo -e "  ${C}merge origin/${base} (主干已更新) → 保证 PR 无冲突${N}"
+    if ! _git "$d" merge --no-edit "origin/${base}" 2>"$MGR_TMP"; then
+      _git "$d" merge --abort 2>/dev/null || true
+      $stashed && _git "$d" stash pop 2>/dev/null || true
+      echo -e "  ${R}✗ 与 origin/${base} 存在真实冲突, 需手动解决 (本地 ${b} 已保留未改动, 未删任何 PR)${N}"
+      echo -e "  ${Y}指引: cd $d && git merge origin/${base} && 解决冲突 && git add . && git commit${N}"
+      return 1
+    fi
+  fi
+  # 恢复 stash
+  $stashed && _git "$d" stash pop 2>/dev/null || true
+  # 3) push 同一分支 (累加到已有 PR, 不新建 PR)
+  echo -ne "  ${B}${n} (${CURRENT_SIDE}) → origin/${b} ... ${N}"
+  if _git "$d" push -u origin "$b" 2>"$MGR_TMP"; then
+    echo -e "${G}OK${N}"
+    $do_pr && _ensure_pr "$n" "$d" "$b" "$title" "$body"
+    return 0
+  else
+    echo -e "${R}FAIL${N}"; sed 's/^/    /' "$MGR_TMP" | head -6
+    return 1
+  fi
+}
+
+# 确保分支有 PR: 已存在则报告 (累加更新), 不存在则创建 (绝不重复创建/删除重建)
+_ensure_pr() {
+  local n="$1" d="$2" b="$3" title="${4:-merge: ${b}}" body="${5:-}"
+  load_token; load_gh_token
+  local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
+  local base; [ "$side" = "gitee" ] && base="master" || base="main"
+  local exists_url=""
+  if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
+    exists_url=$(curl -s "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls?state=open&head=${GITEE_ORG}:${b}&access_token=${MGR_TOKEN}" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['html_url'] if isinstance(d,list) and d else '')" 2>/dev/null || echo "")
+  elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
+    exists_url=$(curl -s "https://api.github.com/repos/${GH_ORG}/${n}/pulls?state=open&head=${GH_ORG}:${b}" -H "Authorization: token ${MGR_GH_TOKEN}" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['html_url'] if isinstance(d,list) and d else '')" 2>/dev/null || echo "")
+  fi
+  if [ -n "$exists_url" ]; then
+    echo -e "    ${G}已有 PR 已累加更新 (未重建): $exists_url${N}"
+    return 0
+  fi
+  _create_pr "$n" "$d" "$b" "$title" "$body"
+}
+
 cmd_push() {
   local MGR_TMP; MGR_TMP="$(mktemp)"
   local DO_PR=false PR_TITLE="" PR_BODY=""
@@ -196,18 +274,11 @@ cmd_push() {
       echo -e "  ${Y}${n}: 在主干 ${b} 上, 禁止直接push, 请用 ./mgr sync 或先切分支${N}"
       continue
     fi
-    echo -ne "  ${B}${n} (${CURRENT_SIDE}) → origin/${b} ... ${N}"
-    if _git "$d" push -u origin "$b" 2>"$MGR_TMP"; then
-      echo -e "${G}OK${N}"
-      if $DO_PR; then
-        # PR 标题: 优先用 --title, 否则用最近 commit message
-        local t="$PR_TITLE"
-        [ -z "$t" ] && t=$(_git "$d" log -1 --format=%s 2>/dev/null || echo "feat: merge [sherlock]")
-        _create_pr "$n" "$d" "$b" "$t" "$PR_BODY"
-      fi
-    else
-      echo -e "${R}FAIL${N}"; sed 's/^/    /' "$MGR_TMP" | head -6
-    fi
+    _git "$d" fetch origin 2>/dev/null || true
+    local t="$PR_TITLE"
+    [ -z "$t" ] && t=$(_git "$d" log -1 --format=%s 2>/dev/null || echo "feat: merge [sherlock]")
+    echo -e "${B}${n} (${CURRENT_SIDE}) [${b}]${N}"
+    _smart_push "$n" "$d" "$b" "$t" "$PR_BODY" "$DO_PR"
   done
   rm -f "$MGR_TMP"; echo ""
 }
@@ -239,13 +310,13 @@ cmd_pr() {
       echo -e "  ${Y}请先切到非主干分支: git checkout -b feat/xxx${N}"
       continue
     fi
-    _create_pr "$n" "$d" "$b" "$title" "$body"
+    _ensure_pr "$n" "$d" "$b" "$title" "$body"
     echo ""
   done
 }
 
 cmd_sync() {
-  # 当前平台: commit dirty + push + PR (主干自动建临时分支)
+  # 当前平台: commit dirty + 智能push + PR (主干自动建临时分支, 功能分支累加到已有 PR)
   # 用法: ./mgr sync "PR标题" [--body "PR描述"]
   local pr_title="" pr_body=""
   while [ $# -gt 0 ]; do
@@ -268,40 +339,27 @@ cmd_sync() {
     [ -d "$d/.git" ] || continue
     local b; b=$(_git "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
     local dirty; dirty=$(_git "$d" status --short 2>/dev/null | wc -l)
-    local ahead; ahead=$(_git "$d" rev-list --count "origin/${base}..${b}" 2>/dev/null || echo "0")
 
     echo -e "${B}══ ${n} (${CURRENT_SIDE}) [${b}]${N}"
 
-    if [ "$ahead" = "0" ] && [ "$dirty" = "0" ]; then
-      echo -e "  ${G}✓ 已同步${N}"; continue
+    if ! _git "$d" fetch origin 2>"$MGR_TMP"; then
+      echo -e "  ${R}✗ fetch 失败: $(head -1 "$MGR_TMP")${N}"; continue
     fi
 
-    # 主干: 创建临时分支
-    local sync_branch="$b" need_branch=false
+    # 主干: 创建临时分支基于 origin/base (保证 PR 无冲突), 提交 dirty, 智能推送
     if [ "$b" = "$base" ]; then
-      sync_branch="sync/${base}-$(date +%s | tail -c 5)"
-      _git "$d" checkout -b "$sync_branch" 2>/dev/null || true
-      need_branch=true
-      echo -e "  ${Y}主干分支, 创建临时分支: ${sync_branch}${N}"
-    fi
-
-    # dirty 先 commit (符合规范的提交信息)
-    if [ "$dirty" -gt 0 ]; then
-      _git "$d" add -A
-      _git "$d" commit -m "$pr_title" 2>/dev/null || true
-    fi
-
-    # push + PR (带标题和描述)
-    echo -n "  push ${sync_branch} ... "
-    if _git "$d" push -u origin "$sync_branch" 2>"$MGR_TMP"; then
-      echo -e "${G}OK${N}"
-      _create_pr "$n" "$d" "$sync_branch" "$pr_title" "$pr_body"
+      local ts; ts=$(date +%s | tail -c 5)
+      local sb="sync/${base}-${ts}"
+      _git "$d" checkout -b "$sb" "origin/${base}" 2>"$MGR_TMP" || { echo -e "  ${R}✗ 创建临时分支失败${N}"; continue; }
+      [ "$dirty" -gt 0 ] && { _git "$d" add -A; _git "$d" commit -m "$pr_title" 2>/dev/null || true; }
+      _smart_push "$n" "$d" "$sb" "$pr_title" "$pr_body" true
+      _git "$d" checkout "$base" 2>/dev/null || true
+      _git "$d" branch -D "$sb" 2>/dev/null || true
     else
-      echo -e "${R}FAIL: $(head -2 "$MGR_TMP"|tr '\n' ' '|cut -c1-80)${N}"
+      # 功能分支: 先提交 dirty, 再智能推送 (merge 远端+主干, push 同一分支累加到已有 PR)
+      [ "$dirty" -gt 0 ] && { _git "$d" add -A; _git "$d" commit -m "$pr_title" 2>/dev/null || true; }
+      _smart_push "$n" "$d" "$b" "$pr_title" "$pr_body" true
     fi
-
-    # 回主干
-    $need_branch && { _git "$d" checkout "$base" 2>/dev/null; _git "$d" branch -D "$sync_branch" 2>/dev/null || true; }
     echo ""
   done
   rm -f "$MGR_TMP"
@@ -319,21 +377,38 @@ cmd_pull() {
     if ! _git "$d" fetch origin 2>"$MGR_TMP"; then
       echo -e "  ${R}✗ fetch origin 失败: $(head -2 "$MGR_TMP"|tr '\n' ' ')${N}"; continue
     fi
-    # 远端无同名分支: 自动对齐远端默认分支
+    # 远端无同名分支: 自动切回默认工作分支并拉取 (PR 合入后临时/功能分支远端被删的常见场景)
+    # 保护未提交修改: 有 dirty 则不切换, 仅提示
     if ! _git "$d" show-ref --verify --quiet "refs/remotes/origin/${b}"; then
       _git "$d" remote set-head origin -a &>/dev/null || true
       local rb; rb=$(_git "$d" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-      if [ -n "$rb" ] && [ "$rb" != "$b" ]; then
-        if [ "$(_git "$d" rev-parse "${b}^{tree}" 2>/dev/null)" = "$(_git "$d" rev-parse "origin/${rb}^{tree}" 2>/dev/null)" ]; then
-          echo -e "  ${Y}⚠ 远端无 origin/${b} (已改名 ${rb}), 本地内容已等价 → 切换到 ${rb}${N}"
-          _git "$d" checkout -q -B "$rb" "origin/${rb}" && _git "$d" branch -q -D "$b" 2>/dev/null || true
-          b="$rb"
-        else
-          echo -e "  ${R}✗ 远端无 origin/${b} (默认分支=${rb:-?}), 且本地内容与 origin/${rb} 不一致, 请人工处理${N}"; continue
-        fi
-      else
-        echo -e "  ${R}✗ 远端无 origin/${b}, 也无法确定默认分支${N}"; continue
+      [ -z "$rb" ] && rb="$base"
+      # 有未提交修改: 不切换 (保护本地工作)
+      if ! _git "$d" diff --quiet 2>/dev/null || ! _git "$d" diff --cached --quiet 2>/dev/null; then
+        echo -e "  ${Y}⚠ 远端无 origin/${b}, 且本地有未提交修改, 已保留在 ${b}${N}"
+        echo -e "  ${Y}  请先 commit/stash, 再: git checkout ${rb} && git pull${N}"
+        continue
       fi
+      # 干净: 切回默认分支并拉取
+      if [ "$b" != "$rb" ]; then
+        if _git "$d" checkout -q "$rb" 2>"$MGR_TMP"; then
+          # 旧分支已合入默认分支 → 删除本地旧分支 (保持整洁); 否则保留
+          if _git "$d" merge-base --is-ancestor "$b" "$rb" 2>/dev/null; then
+            _git "$d" branch -q -D "$b" 2>/dev/null || true
+            echo -e "  ${G}✓ ${b} 已合入 ${rb}, 切回 ${rb} 并清理旧分支${N}"
+          else
+            echo -e "  ${G}✓ 远端无 origin/${b}, 切回默认分支 ${rb} (本地 ${b} 保留)${N}"
+          fi
+        else
+          echo -e "  ${Y}⚠ 切换到 ${rb} 失败: $(head -1 "$MGR_TMP"), 保留在 ${b}${N}"; continue
+        fi
+      fi
+      if _git "$d" merge --ff-only -q "origin/${rb}" 2>"$MGR_TMP"; then
+        echo -e "  ${G}✓ ${rb} 已更新到最新${N}"
+      else
+        echo -e "  ${Y}⚠ ${rb} 快进失败: $(head -1 "$MGR_TMP")${N}"
+      fi
+      continue
     fi
     local a be
     a=$(_git "$d" rev-list --count "origin/${b}..${b}" 2>/dev/null || echo 0)
@@ -350,16 +425,16 @@ cmd_pull() {
       fi
       continue
     fi
-    # 分叉
-    echo -e "  ${Y}⚠ 分叉: 本地领先 ${a} / 远端领先 ${be}${N}"
+    # 分叉: 用 merge (不 rebase, 不丢本地提交)
+    echo -e "  ${Y}⚠ 分叉: 本地领先 ${a} / 远端领先 ${be} → merge (保留双方历史)${N}"
     echo "  本地独有:"; _git "$d" log --oneline "origin/${b}..${b}" | head -5 | sed 's/^/    /'
     echo "  远端独有:"; _git "$d" log --oneline "${b}..origin/${b}" | head -5 | sed 's/^/    /'
-    if _git "$d" rebase -q "origin/${b}" 2>"$MGR_TMP"; then
-      echo -e "  ${G}✓ rebase 成功${N}"
+    if _git "$d" merge --no-edit "origin/${b}" 2>"$MGR_TMP"; then
+      echo -e "  ${G}✓ merge 成功${N}"
     else
-      _git "$d" rebase --abort 2>/dev/null || true
-      echo -e "  ${R}✗ rebase 失败已还原: $(head -1 "$MGR_TMP")${N}"
-      echo -e "  ${Y}指引: 若本地提交已以新哈希合入远端(PR合入), 确认树内容一致后可执行: git reset --hard origin/${b}${N}"
+      _git "$d" merge --abort 2>/dev/null || true
+      echo -e "  ${R}✗ merge 失败已还原 (本地 ${b} 保留): $(head -1 "$MGR_TMP")${N}"
+      echo -e "  ${Y}指引: cd $d && git merge origin/${b} && 解决冲突 && git commit${N}"
     fi
   done
   rm -f "$MGR_TMP"; echo ""
