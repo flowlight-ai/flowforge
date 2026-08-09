@@ -11,11 +11,10 @@
 #   2. 跨平台合并 — 使用 merge-cross 命令手动触发, 读取双端提交差异并创建同步PR
 #   3. 主干保护 — 禁止直接 push 到 master/main, 一律经 PR 合入
 #
-# 作用域 (9 个项目脚本主体一致, 按所在仓库自动决定默认行为):
-#   content/mgr   → 默认管理全部 9 个仓库 (总控)
-#   其他仓库/mgr  → 默认仅管理本仓库自身
-#   --all         → 强制管理全部 9 个仓库
-#   --repo NAME   → 仅管理指定仓库
+# 作用域 (本仓库脚本, 仅管理自身):
+#   ./mgr         → 默认仅管理本仓库 (flowforge)
+#   --all         → 对本仓库仍只操作本仓库
+#   --repo NAME   → 仅管理指定仓库 (本仓库仅可填 flowforge)
 #
 # 用法:
 #   ./mgr [--all|--repo NAME] status | commit | push | pull | log | diff | branch | list
@@ -71,20 +70,8 @@ reg() { local n="$1" gr="$2" ghr="$3"; NAMES+=("$n")
   GURL["$n"]="https://gitee.com/${GITEE_ORG}/${n}.git"
   GH_URL["$n"]="https://github.com/${GH_ORG}/${n}.git"; }
 
-# content 总控: 注册全部 9 仓库; 其他仓库: 仅注册自己 (项目间去耦合)
-if [ "$SELF" = "content" ]; then
-  reg "content"      "content"      "content"
-  reg "openroute"    "openroute"    "openroute"
-  reg "flowforge"    "flowforge"    "flowforge"
-  reg "stockforge"   "stockforge"   "stockforge"
-  reg "contentforge" "contentforge" "contentforge"
-  reg "devforge"     "devforge"     "devforge"
-  reg "novelforge"   "novelforge"   "novelforge"
-  reg "mallforge"    "mallforge"    "mallforge"
-  reg "opensieve"    "opensieve"    "opensieve"
-else
-  reg "$SELF" "$SELF" "$SELF"
-fi
+# 本仓库仅注册自身 (项目间去耦合, 不感知其他仓库)
+reg "$SELF" "$SELF" "$SELF"
 
 # ── 作用域解析 ────────────────────────────────────────────────
 SCOPE="default"
@@ -96,9 +83,7 @@ while [ $# -gt 0 ]; do
     *) break ;;
   esac
 done
-if [ "$SCOPE" = "default" ]; then
-  if [ "$SELF" = "content" ]; then SCOPE="all"; else SCOPE="self"; fi
-fi
+if [ "$SCOPE" = "default" ]; then SCOPE="self"; fi
 case "$SCOPE" in
   all)  : ;;
   self) NAMES=("$SELF") ;;
@@ -693,7 +678,7 @@ cmd_list() {
   echo -e "  当前平台: ${C}${CURRENT_SIDE}${N} (base=$(_cur_base))"
   echo -e "  Gitee 目录:  ${ROOT_GITEE}"
   echo -e "  GitHub 目录: ${ROOT_GITHUB}"
-  echo -e "  本仓库: ${SELF} (作用域: $([ "$SELF" = content ] && echo "全部 9 仓库" || echo "仅本仓库"))"
+  echo -e "  本仓库: ${SELF} (作用域: 仅本仓库)"
   echo ""
   echo -e "${B}${#NAMES[@]} projects (当前作用域):${N}"
   for n in "${NAMES[@]}"; do
