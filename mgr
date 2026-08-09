@@ -486,27 +486,34 @@ cmd_mirror_setup() {
 }
 
 cmd_merge_cross() {
-  # 跨平台双向合并: 基于文件内容(tree hash)比较双端差异, 创建同步PR
-  # 用法: ./mgr merge-cross [--dry-run] [--g2l|--l2g]
+  # 跨平台单向合并: 当前平台 → 对端 (只此一个方向, 不支持反向, 避免误操作)
+  # 用法: ./mgr merge-cross [--dry-run]
   #   --dry-run  仅显示文件差异, 不创建PR
-  #   --g2l      仅 GitHub→Gitee
-  #   --l2g      仅 Gitee→GitHub
-  #   默认: 双向
-  # 原理: tree hash = 文件内容指纹, 相同=双端一致; 不同=显示文件diff并merge
-  #       (不受 squash merge / 提交历史分叉影响, 只看最终文件内容)
-  local DRY_RUN=false DO_G2L=true DO_L2G=true
+  # 方向:
+  #   Gitee 触发  → Gitee master 同步到 GitHub main (创建 GitHub PR)
+  #   GitHub 触发 → GitHub main 同步到 Gitee master (创建 Gitee PR)
+  # 守门 (merge-base, 防止反向同步导致冲突):
+  #   - 对端是当前平台祖先 → 对端落后 → 正常同步
+  #   - 当前平台是对端祖先 → 当前平台落后 → 跳过 (方向反了, 不操作)
+  #   - 双端分叉 → 跳过并提示 (需手动处理)
+  local DRY_RUN=false
   while [ $# -gt 0 ]; do
     case "$1" in
       --dry-run) DRY_RUN=true; shift ;;
-      --g2l) DO_L2G=false; shift ;;
-      --l2g) DO_G2L=false; shift ;;
       *) shift ;;
     esac
   done
 
   load_token; load_gh_token
 
-  echo -e "${B}════════ 跨平台合并 (${CURRENT_SIDE} 触发) ════════${N}"
+  # 单向: 当前平台 → 对端
+  local SRC_SIDE="$CURRENT_SIDE" DST_SIDE
+  if [ "$CURRENT_SIDE" = "gitee" ]; then DST_SIDE="github"; else DST_SIDE="gitee"; fi
+  local SRC_BASE DST_BASE
+  [ "$SRC_SIDE" = "gitee" ] && SRC_BASE="master" || SRC_BASE="main"
+  [ "$DST_SIDE" = "gitee" ] && DST_BASE="master" || DST_BASE="main"
+
+  echo -e "${B}════════ 跨平台单向合并 (${SRC_SIDE} → ${DST_SIDE}) ════════${N}"
   $DRY_RUN && echo -e "${Y}[DRY-RUN] 仅显示文件差异, 不创建PR${N}\n"
 
   for n in "${NAMES[@]}"; do
@@ -517,92 +524,105 @@ cmd_merge_cross() {
 
     echo -e "${B}═══ ${n} ═══${N}"
 
-    # 构建 token URL (避免依赖 mirror 远程配置)
+    # 构建 token URL
     local gh_fetch_url ge_fetch_url
     gh_fetch_url="https://github.com/${GH_ORG}/${n}.git"
     ge_fetch_url="https://gitee.com/${GITEE_ORG}/${n}.git"
     [ -n "$MGR_GH_TOKEN" ] && gh_fetch_url="https://${MGR_GH_TOKEN}@github.com/${GH_ORG}/${n}.git"
     [ -n "$MGR_TOKEN" ] && ge_fetch_url="https://${MGR_TOKEN}@gitee.com/${GITEE_ORG}/${n}.git"
 
-    # 在 gitee 目录 fetch github/main → FETCH_HEAD
-    _git "$gd" fetch "$gh_fetch_url" main 2>/dev/null || true
-    local gh_ref; gh_ref=$(_git "$gd" rev-parse FETCH_HEAD 2>/dev/null || echo "")
-    if [ -z "$gh_ref" ]; then
-      echo -e "  ${R}✗ 无法从 GitHub fetch (检查网络/token)${N}"; continue
+    # 源/目标目录与 ref (在源目录 fetch 对端主干 → FETCH_HEAD)
+    local src_dir dst_dir src_ref dst_ref dst_fetch_url
+    if [ "$SRC_SIDE" = "gitee" ]; then
+      src_dir="$gd"; dst_dir="$ghd"; src_ref="master"; dst_ref="main"; dst_fetch_url="$gh_fetch_url"
+    else
+      src_dir="$ghd"; dst_dir="$gd"; src_ref="main"; dst_ref="master"; dst_fetch_url="$ge_fetch_url"
     fi
 
-    # 比较 tree hash (文件内容指纹, 不受 squash merge / 提交历史影响)
-    local ge_tree gh_tree
-    ge_tree=$(_git "$gd" rev-parse "master^{tree}" 2>/dev/null || echo "")
-    gh_tree=$(_git "$gd" rev-parse "FETCH_HEAD^{tree}" 2>/dev/null || echo "")
+    # 在源目录 fetch 对端主干 → FETCH_HEAD
+    _git "$src_dir" fetch "$dst_fetch_url" "$dst_ref" 2>/dev/null || true
+    local dst_remote; dst_remote=$(_git "$src_dir" rev-parse FETCH_HEAD 2>/dev/null || echo "")
+    if [ -z "$dst_remote" ]; then
+      echo -e "  ${R}✗ 无法从 ${DST_SIDE} fetch (检查网络/token)${N}"; continue
+    fi
+    local src_remote; src_remote=$(_git "$src_dir" rev-parse "$src_ref" 2>/dev/null || echo "")
 
-    if [ "$ge_tree" = "$gh_tree" ] && [ -n "$ge_tree" ]; then
-      echo -e "  ${G}✓ 双端文件内容一致 (tree: ${ge_tree:0:8})${N}"
+    # 比较 tree hash (文件内容指纹)
+    local src_tree dst_tree
+    src_tree=$(_git "$src_dir" rev-parse "${src_ref}^{tree}" 2>/dev/null || echo "")
+    dst_tree=$(_git "$src_dir" rev-parse "FETCH_HEAD^{tree}" 2>/dev/null || echo "")
+
+    if [ "$src_tree" = "$dst_tree" ] && [ -n "$src_tree" ]; then
+      echo -e "  ${G}✓ 双端文件内容一致 (tree: ${src_tree:0:8})${N}"
       echo ""; continue
     fi
 
-    # 显示文件级差异 (不显示提交历史, 避免误报)
-    echo -e "  ${C}文件差异 (Gitee master ←→ GitHub main):${N}"
-    _git "$gd" diff --stat "master" "FETCH_HEAD" 2>/dev/null | head -20 | sed 's/^/    /'
+    # 守门: 对端必须是当前平台的祖先 (对端落后), 否则跳过
+    # dst_ancestor_of_src: 对端是源端祖先 → 对端落后 → 可同步
+    # src_ancestor_of_dst: 源端是对端祖先 → 源端落后 → 方向反了, 跳过
+    local dst_ancestor_of_src=false src_ancestor_of_dst=false
+    if _git "$src_dir" merge-base --is-ancestor FETCH_HEAD "$src_ref" 2>/dev/null; then
+      dst_ancestor_of_src=true  # 对端落后于源端 (正常, 可同步)
+    fi
+    if _git "$src_dir" merge-base --is-ancestor "$src_ref" FETCH_HEAD 2>/dev/null; then
+      src_ancestor_of_dst=true  # 源端落后于对端 (方向反了)
+    fi
+
+    echo -e "  ${C}文件差异 (${SRC_SIDE} ${src_ref} ←→ ${DST_SIDE} ${dst_ref}):${N}"
+    _git "$src_dir" diff --stat "$src_ref" "FETCH_HEAD" 2>/dev/null | head -15 | sed 's/^/    /'
+
+    if $dst_ancestor_of_src && ! $src_ancestor_of_dst; then
+      echo -e "  ${Y}方向: ${DST_SIDE} 落后于 ${SRC_SIDE} → 同步 ${SRC_SIDE}→${DST_SIDE}${N}"
+    elif $src_ancestor_of_dst && ! $dst_ancestor_of_src; then
+      echo -e "  ${R}跳过: ${SRC_SIDE} 落后于 ${DST_SIDE} (方向反了, 请在对端平台执行)${N}"
+      echo ""; continue
+    elif $dst_ancestor_of_src && $src_ancestor_of_dst; then
+      echo -e "  ${G}双端等价 (merge-base 双向成立), 无需同步${N}"
+      echo ""; continue
+    else
+      echo -e "  ${R}跳过: 双端分叉 (都有独有提交), 需手动处理${N}"
+      echo ""; continue
+    fi
 
     $DRY_RUN && { echo ""; continue; }
 
+    # 在对端目录创建同步 PR: fetch 源端主干 → merge 到对端主干新分支
+    local src_fetch_url_for_dst
+    if [ "$SRC_SIDE" = "gitee" ]; then
+      src_fetch_url_for_dst="$ge_fetch_url"
+    else
+      src_fetch_url_for_dst="$gh_fetch_url"
+    fi
+    _git "$dst_dir" fetch "$src_fetch_url_for_dst" "$src_ref" 2>/dev/null || true
+    local src_remote2; src_remote2=$(_git "$dst_dir" rev-parse FETCH_HEAD 2>/dev/null || echo "")
+    if [ -z "$src_remote2" ]; then
+      echo -e "  ${R}✗ 无法从 ${SRC_SIDE} fetch (检查网络/token)${N}"
+      echo ""; continue
+    fi
+
     local ts branch
-
-    # ── github→gitee: merge GitHub main 到 Gitee ──
-    if $DO_G2L; then
-      ts=$(date +%s | tail -c 5)
-      branch="cross/gh2ge-${ts}"
-      echo -e "  ${C}→ 创建 GitHub→Gitee 同步PR ...${N}"
-      # 暂存未提交的本地更改, 避免合并冲突
-      local gd_stashed=false
-      if ! _git "$gd" diff --quiet 2>/dev/null || ! _git "$gd" diff --cached --quiet 2>/dev/null; then
-        _git "$gd" stash 2>/dev/null && gd_stashed=true
-      fi
-      _git "$gd" checkout -b "$branch" master 2>/dev/null
-      if _git "$gd" merge FETCH_HEAD --no-edit 2>/dev/null; then
-        _git "$gd" push -u origin "$branch" 2>/dev/null
-        _create_pr "$n" "$gd" "$branch" "merge-cross: sync GitHub to Gitee"
-      else
-        echo -e "    ${R}✗ 合并冲突, 已中止, 请手动处理${N}"
-        _git "$gd" merge --abort 2>/dev/null || true
-      fi
-      _git "$gd" checkout master 2>/dev/null
-      _git "$gd" branch -D "$branch" 2>/dev/null || true
-      # 恢复暂存的更改
-      $gd_stashed && _git "$gd" stash pop 2>/dev/null || true
-    fi
-
-    # ── gitee→github: merge Gitee master 到 GitHub ──
-    if $DO_L2G; then
-      # 在 github 目录 fetch gitee/master → FETCH_HEAD
-      _git "$ghd" fetch "$ge_fetch_url" master 2>/dev/null || true
-      local ge_ref; ge_ref=$(_git "$ghd" rev-parse FETCH_HEAD 2>/dev/null || echo "")
-      if [ -z "$ge_ref" ]; then
-        echo -e "  ${R}✗ 无法从 Gitee fetch (检查网络/token)${N}"
-        echo ""; continue
-      fi
-      ts=$(date +%s | tail -c 5)
+    ts=$(date +%s | tail -c 5)
+    if [ "$SRC_SIDE" = "gitee" ]; then
       branch="cross/ge2gh-${ts}"
-      echo -e "  ${C}→ 创建 Gitee→GitHub 同步PR ...${N}"
-      # 暂存未提交的本地更改, 避免合并冲突
-      local ghd_stashed=false
-      if ! _git "$ghd" diff --quiet 2>/dev/null || ! _git "$ghd" diff --cached --quiet 2>/dev/null; then
-        _git "$ghd" stash 2>/dev/null && ghd_stashed=true
-      fi
-      _git "$ghd" checkout -b "$branch" main 2>/dev/null
-      if _git "$ghd" merge FETCH_HEAD --no-edit 2>/dev/null; then
-        _git "$ghd" push -u origin "$branch" 2>/dev/null
-        _create_pr "$n" "$ghd" "$branch" "merge-cross: sync Gitee to GitHub"
-      else
-        echo -e "    ${R}✗ 合并冲突, 已中止, 请手动处理${N}"
-        _git "$ghd" merge --abort 2>/dev/null || true
-      fi
-      _git "$ghd" checkout main 2>/dev/null
-      _git "$ghd" branch -D "$branch" 2>/dev/null || true
-      # 恢复暂存的更改
-      $ghd_stashed && _git "$ghd" stash pop 2>/dev/null || true
+    else
+      branch="cross/gh2ge-${ts}"
     fi
+    echo -e "  ${C}→ 创建 ${SRC_SIDE}→${DST_SIDE} 同步PR ...${N}"
+    local dst_stashed=false
+    if ! _git "$dst_dir" diff --quiet 2>/dev/null || ! _git "$dst_dir" diff --cached --quiet 2>/dev/null; then
+      _git "$dst_dir" stash 2>/dev/null && dst_stashed=true
+    fi
+    _git "$dst_dir" checkout -b "$branch" "$dst_ref" 2>/dev/null
+    if _git "$dst_dir" merge FETCH_HEAD --no-edit 2>/dev/null; then
+      _git "$dst_dir" push -u origin "$branch" 2>/dev/null
+      _create_pr "$n" "$dst_dir" "$branch" "merge-cross: sync ${SRC_SIDE} to ${DST_SIDE}"
+    else
+      echo -e "    ${R}✗ 合并冲突, 已中止, 请手动处理${N}"
+      _git "$dst_dir" merge --abort 2>/dev/null || true
+    fi
+    _git "$dst_dir" checkout "$dst_ref" 2>/dev/null
+    _git "$dst_dir" branch -D "$branch" 2>/dev/null || true
+    $dst_stashed && _git "$dst_dir" stash pop 2>/dev/null || true
     echo ""
   done
 }
