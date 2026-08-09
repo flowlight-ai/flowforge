@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **7** |
 | **加权缺陷指数（DI）** | **50** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 5 |
-| 状态：Fixed（待回归） | 2 |
+| 状态：Open | 4 |
+| 状态：Fixed（待回归） | 3 |
 | 状态：Closed | 0 |
 
 ### 按严重度（Severity）
@@ -67,11 +67,21 @@
   另：硬编码扫描 `grep -rn "or-6eb9e20d\|or-2c2e4d8e\|or-306e066e" --include=*.py --include=*.yaml .` 已无匹配（仅 `.env` 本地文件含真实值）。已暴露的 key 建议测试回归后由密钥责任人轮换。
 
 ### P-02 — 4 个 phase 脚本模块级调用 sys.exit，pytest 收集即 INTERNALERROR
-- **严重度**：S1 ｜ **分类**：CI / 配置 ｜ **状态**：Open
+- **严重度**：S1 ｜ **分类**：CI / 配置 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/e2e/test_phase1_foundation.py:285`、`test_phase2_shell_unified.py:292`、`test_phase3_mode_fusion.py:208`、`test_phase4_agent_admin.py:226`
 - **现象**：4 个 phase 脚本在模块顶层（非函数内）直接 `sys.exit(0 if failed == 0 else 1)`。pytest 收集阶段导入模块即触发 `SystemExit` → 整会话 `INTERNALERROR` 中止（见验证记录），导致 `pytest tests/ -q` 整轮失败、992 用例未被执行。
 - **建议**：将脚本主体移入 `def main():` 并加 `if __name__ == "__main__": sys.exit(main())` 守卫；或改为 pytest 用例 + `assert`，不依赖模块级退出码。
 - **T7/T8**：否
+- **开发自述**：修复提交 `c213563`。4 个 phase 脚本主体（首个 "验证开始" print 起）全部移入 `def main() -> int:`，末尾改为 `return 0 if failed == 0 else 1`，并追加 `if __name__ == "__main__": sys.exit(main())` 守卫。自测：
+  ```bash
+  # 1) 语法
+  python3 -m py_compile tests/e2e/test_phase{1..4}*.py  # => 全部 OK
+  # 2) pytest 收集（原为 INTERNALERROR）
+  python3 -m pytest tests/e2e/test_phase1_foundation.py tests/e2e/test_phase2_shell_unified.py \
+    tests/e2e/test_phase3_mode_fusion.py tests/e2e/test_phase4_agent_admin.py --collect-only -q
+  # => exit=5（no tests collected in 0.25s），无 INTERNALERROR / SystemExit
+  ```
+  说明：4 个 phase 脚本本质是独立运行的 E2E 验证脚本（无 `test_*` 函数），收集期退出码 5（无用例收集）为预期；修复目标是消除模块级 `SystemExit` 触发的 `INTERNALERROR`，已达成。
 
 ### P-03 — `core/errors.py` 缺失 PartnershipError / ReliabilityError
 - **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
