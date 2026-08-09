@@ -117,9 +117,17 @@ _cur_base() { [ "$CURRENT_SIDE" = "gitee" ] && echo "master" || echo "main"; }
 # ═══════════════════════════════════════════════════════════════
 
 cmd_status() {
-  # 默认仅显示当前平台; --cross 显示双端 (帮助判断是否需要 merge-cross)
-  local CROSS=false
-  [ "${1:-}" = "--cross" ] && CROSS=true
+  # 默认仅显示当前平台 (用本地 origin 缓存, 不 fetch, 避免多仓库卡住)
+  # --cross  显示双端 (帮助判断是否需要 merge-cross)
+  # --fetch  先 fetch 远端再显示 (慢, 但 ↑↓ 精确)
+  local CROSS=false DO_FETCH=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --cross) CROSS=true; shift ;;
+      --fetch) DO_FETCH=true; shift ;;
+      *) shift ;;
+    esac
+  done
   local sides=("$CURRENT_SIDE")
   $CROSS && sides=(gitee github)
   for n in "${NAMES[@]}"; do
@@ -130,13 +138,13 @@ cmd_status() {
       [ -n "$out" ] && { echo -e "${B}${Y}-- ${n} (${side}) --${N}"; echo "$out"; }
     done
   done
-  echo -e "${B}分支 & 同步状态 (当前平台: ${C}${CURRENT_SIDE}${B})${CROSS:+ ${Y}[--cross 双端]${N}}${B}:${N}"
+  echo -e "${B}分支 & 同步状态 (当前平台: ${C}${CURRENT_SIDE}${B})${CROSS:+ ${Y}[--cross 双端]${N}}${DO_FETCH:+ ${Y}[--fetch 精确]${N}}${B}:${N}"
   for n in "${NAMES[@]}"; do
     for side in "${sides[@]}"; do
       local d; [ "$side" = "gitee" ] && d="${GPATH[$n]}" || d="${GH_PATH[$n]}"
       [ ! -d "$d/.git" ] && continue
       local b; b=$(_git "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
-      _git "$d" remote update origin &>/dev/null || true
+      $DO_FETCH && _git "$d" fetch origin &>/dev/null || true
       local a=$(_git "$d" rev-list --count "origin/${b}..${b}" 2>/dev/null || echo "?")
       local be=$(_git "$d" rev-list --count "${b}..origin/${b}" 2>/dev/null || echo "?")
       local mark="  "; [ "$side" = "$CURRENT_SIDE" ] && mark="${G}→ ${N}"
