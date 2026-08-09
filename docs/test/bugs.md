@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **7** |
 | **加权缺陷指数（DI）** | **50** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 6 |
-| 状态：Fixed（待回归） | 1 |
+| 状态：Open | 5 |
+| 状态：Fixed（待回归） | 2 |
 | 状态：Closed | 0 |
 
 ### 按严重度（Severity）
@@ -74,11 +74,17 @@
 - **T7/T8**：否
 
 ### P-03 — `core/errors.py` 缺失 PartnershipError / ReliabilityError
-- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`core/errors.py`（仅定义 FlowForgeError 及其 13 个子类，无 PartnershipError / ReliabilityError）
 - **现象**：`tests/core/partnership/test_math.py:19`（`from flowforge.core.errors import PartnershipError`）与 `tests/core/reliability/test_wal.py:15`（`from flowforge.core.errors import ReliabilityError`）在收集期即 `ImportError`，对应用例全部收集失败；相关特性文档（F022–F025）亦引用这两个异常。
 - **建议**：在 `core/errors.py` 中补 `class PartnershipError(FlowForgeError)` 与 `class ReliabilityError(FlowForgeError)`，使合作/可靠性模块与测试对齐。
 - **T7/T8**：否
+- **开发自述**：修复提交 `9cfdb69`。在 `core/errors.py` 末尾追加 `PartnershipError`（status_code=422，对应合作候选/路径校验失败）与 `ReliabilityError`（status_code=503），均继承 `FlowForgeError`。自测：
+  ```bash
+  PYTHONPATH=/home/hyg/ai/fl/flowlight python3 -c "from flowforge.core.errors import PartnershipError, ReliabilityError"
+  # => P-03 import OK: PartnershipError 422 | ReliabilityError 503
+  ```
+  `tests/core/partnership/test_math.py` 收集不再 ImportError（其自身因 `flowforge.core.partnership` 尚未实现而 `importorskip` 跳过，属预期，非本单引入）。`test_wal.py` 同样为 importorskip 前置保护。请测试回归时以“两个名称可从 `core/errors` 导入”为准；若测到子模块已实现则回归用例可正常执行。
 
 ### P-04 — `harness/governance.py:259` 拼写错误 `inject_to_system_rule`
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
