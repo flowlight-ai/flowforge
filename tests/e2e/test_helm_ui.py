@@ -20,6 +20,7 @@ import threading
 import pytest
 import httpx
 import websockets
+from flowforge.tests.utils.t7_reviewer import T7Reviewer
 
 BASE_URL = os.environ.get("FLOWFORGE_BASE_URL", "http://127.0.0.1:8002")
 WS_URL = os.environ.get("FLOWFORGE_WS_URL", "ws://127.0.0.1:8002")
@@ -488,6 +489,22 @@ class HelmUITestBase:
                 return resp.json().get("messages", [])
             return []
 
+    def t7_assert(self, content: str, context: str = "", content_type: str = "内容") -> None:
+        """铁律T7：LLM生成内容必须经真实LLM二次审核通过。
+
+        使用 Unity 审核器（tests/utils/t7_reviewer.py）对生成内容做6维度审核。
+        T1铁律：禁止Mock LLM — 审核调用真实OpenRoute通道；审核失败即测试失败。
+        """
+        reviewer = T7Reviewer()
+        result = reviewer.review_sync(
+            content=content,
+            context=context,
+            content_type=content_type,
+        )
+        print(f"[T7] {content_type} 审核: {result['verdict']} — {result['reason']}")
+        assert result["verdict"] == "PASS", \
+            f"T7审核未通过 ({content_type}): {result['reason']}"
+
 
 # ---------------------------------------------------------------------------
 # IT-HELM-01: 简单问候（Fast-path）
@@ -522,6 +539,9 @@ class TestSimpleGreeting(HelmUITestBase):
 
         # T3铁律：具体断言 — 响应不应是错误信息
         assert "error" not in content.lower()[:50], f"响应不应是错误: {content[:200]}"
+
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="简单问候场景（Fast-path）", content_type="问候回复")
 
         # T3铁律：具体断言 — Fast-path应快速完成
         duration = report["total_duration_seconds"]
@@ -573,6 +593,9 @@ class TestWritingIntent(HelmUITestBase):
         # T3铁律：内容相关性验证
         has_topic = any(kw in content for kw in ["AI", "人工智能", "医疗", "应用"])
         assert has_topic, f"输出应与写作主题相关: {content[:200]}"
+
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="写作意图：AI在医疗领域的应用分析", content_type="写作内容")
 
         # T6铁律：指标验证
         # 写作任务LLM调用应≥2（Planning+撰写+Compile）
@@ -627,6 +650,9 @@ class TestSearchIntent(HelmUITestBase):
         web_search_count = report["tool"]["by_name"].get("web_search", 0)
         assert web_search_count >= 1, f"搜索意图应调用web_search，实际调用: {web_search_count}次"
 
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="搜索意图：AI Agent相关框架与技术", content_type="搜索总结")
+
         print(f"\n=== IT-HELM-03 指标报告 ===")
         print(json.dumps(report, indent=2, ensure_ascii=False))
 
@@ -664,6 +690,9 @@ class TestResearchIntent(HelmUITestBase):
         # T3铁律：内容相关性
         has_topic = any(kw in content for kw in ["量子", "密码", "计算", "加密", "安全"])
         assert has_topic, f"输出应与研究主题相关: {content[:200]}"
+
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="研究意图：量子通信领域的密码学进展", content_type="研究报告")
 
         # T6铁律：研究任务LLM调用应≥2
         assert report["llm"]["total_calls"] >= 2, \
@@ -714,6 +743,9 @@ class TestTranslateIntent(HelmUITestBase):
         assert english_ratio >= 0.3, \
             f"翻译输出应包含英文（ASCII字母占比{english_ratio:.1%}）: {content[:200]}"
 
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="翻译意图：中文结构化学术文献译英", content_type="翻译结果")
+
         # T6铁律：翻译任务LLM调用应≥2（Planning+翻译）
         assert report["llm"]["total_calls"] >= 2, \
             f"翻译任务LLM调用应≥2，实际: {report['llm']['total_calls']}"
@@ -762,6 +794,9 @@ class TestCodeIntent(HelmUITestBase):
         has_function = "def " in content
         assert has_function, f"代码输出应包含函数定义(def): {content[:300]}"
 
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="代码意图：Python快速排序算法实现", content_type="代码")
+
         # T6铁律：指标验证
         # code_writer_agent应被调用
         # Debug: print report before assertion
@@ -807,6 +842,9 @@ class TestPlanDegradation(HelmUITestBase):
         # T3铁律：降级输出应包含有意义的回复（不是错误信息）
         is_error_only = "error" in content.lower() and len(content) < 50
         assert not is_error_only, f"降级输出不应只是错误信息: {content}"
+
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="计划降级场景：数据分析请求", content_type="降级回复")
 
         # T6铁律：指标采集
         print(f"\n=== IT-HELM-07 指标报告 ===")
@@ -859,6 +897,9 @@ class TestComplexMultiStep(HelmUITestBase):
         assert ascii_alpha_count >= 20, \
             f"多步输出应包含英文翻译（ASCII字母≥20），实际: {ascii_alpha_count}"
 
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="多步任务：中国高铁技术文章撰写并译英", content_type="多步综合内容")
+
         # T6铁律：LLM调用次数应≥3（Planning+写作+翻译+Compile）
         assert report["llm"]["total_calls"] >= 3, \
             f"多步任务LLM调用应≥3，实际: {report['llm']['total_calls']}"
@@ -906,6 +947,9 @@ class TestFastpathNegative(HelmUITestBase):
         # T3铁律：内容应包含深度分析要素
         has_depth = any(kw in content for kw in ["气候", "经济", "影响", "数据", "案例", "分析"])
         assert has_depth, f"输出应包含深度分析要素: {content[:200]}"
+
+        # T7铁律：LLM生成内容必须经LLM审核通过（真实审核器，禁止Mock）
+        self.t7_assert(content, context="复杂请求：气候变化对经济影响深度分析", content_type="深度分析")
 
         # T6铁律：LLM调用次数应≥2（Planning+至少1步执行）
         assert report["llm"]["total_calls"] >= 2, \
