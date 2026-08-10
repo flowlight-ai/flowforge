@@ -8,7 +8,7 @@
 forgekin_id: forgemind:sqrl
 name: 铃鼓
 nickname: 铃鼓
-species: natural  # 生物形态Forgekin（松鼠）
+species: bio  # 生物形态Forgekin（松鼠）
 namespace: forgemind
 available: true
 
