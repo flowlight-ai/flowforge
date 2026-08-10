@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **19** |
 | **加权缺陷指数（DI）** | **92** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 10 |
-| 状态：Fixed（待回归） | 9 |
+| 状态：Open | 6 |
+| 状态：Fixed（待回归） | 13 |
 | 状态：Closed | 0 |
 
 > 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
@@ -186,8 +186,8 @@
 > - `tests/e2e/`：起本地 API 服务（`PYTHONPATH=.. python3 -m uvicorn flowforge.app.main:app --port 8002`）后 `test_concurrent`(9P)、`test_minimal_conn`(1P)、`test_event_bridge_e2e/extreme`(23P)、`test_real_llm`/`test_t7_llm_review`(离线 skip)通过；需 8765/5174/浏览器者阻塞（见 P-17）。
 
 ### P-08 — `asyncio.get_event_loop().run_until_complete()` 在 Python 3.12 抛 RuntimeError（1 用例，2026-08-10 复核）
-- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
-- **文件**：`skills/base.py:66`（`asyncio.get_event_loop().run_until_complete(...)`）、`tests/unit/test_phase4_features.py::TestSandboxBackwardCompat::test_legacy_execute_still_works`
+- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
+- **文件**：`tests/unit/test_phase4_features.py::TestSandboxBackwardCompat::test_legacy_execute_still_works`（`asyncio.get_event_loop().run_until_complete(...)` 调用所在；复测记录引 `skills/base.py:66` 经复核为测试文件内部调用）
 - **现象**：源码 `skills/base.py:66` 用 `asyncio.get_event_loop().run_until_complete(...)` 驱动协程；Python 3.12 主线程默认无当前事件循环，该同步遗留路径触发 `RuntimeError: There is no current event loop in thread 'MainThread'`，用例未跑到断言即失败。注意：`test_skills.py` 仅对 `get_event_loop` 抛 `DeprecationWarning`（未失败），实测 36 passed；真正失败的是 `test_phase4_features.py` 的 legacy 同步包装用例。实跑（2026-08-10 复核）：
   ```bash
   python3 -m pytest tests/unit/test_skills.py -q -p no:cacheprovider
@@ -198,6 +198,12 @@
   ```
 - **建议**：改用 `asyncio.run(...)`，或声明为 `async def` + `@pytest.mark.asyncio`（本仓 asyncio_mode=auto 可直接 await）。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-08）。`tests/unit/test_phase4_features.py::test_legacy_execute_still_works` 内 `asyncio.get_event_loop().run_until_complete(sandbox.execute("p", func))` → `asyncio.run(...)`（消除 Py3.12 主线程无当前事件循环的 RuntimeError，并消除 DeprecationWarning）。自测：
+  ```bash
+  python3 -m pytest flowforge/tests/unit/test_phase4_features.py::TestSandboxBackwardCompat -q
+  # => 4 passed（原先 RuntimeError 用例现通过，无 DeprecationWarning）
+  ```
+  复核注：复测记录引 `skills/base.py:66`，实为测试文件内部 `asyncio.get_event_loop().run_until_complete` 调用（该测试文件自己导入 asyncio），源码 `skills/base.py` 无此调用。
 
 ### P-09 — `app/main.py` `_load_single_plugin` 兼容 shim 丢弃传入的注册表参数，热重载跟踪失效（4 用例）
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
@@ -246,7 +252,7 @@
 - **T7/T8**：否
 
 ### P-12 — `core/errors.py` 仍缺 `LLMError` / `ForgekinError`，波及 `llm.client` / `forgemind.council` 模块导入 + 3 测试文件收集 ImportError
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`core/errors.py`（现仅到 `ReliabilityError`，无 `LLMError`/`ForgekinError`）、`llm/errors.py:20`（`from flowforge.core.errors import LLMError`）、`tests/test_llm_client.py:8`、`tests/test_forgekin.py:7`、`tests/test_plugin_protocol.py:20`
 - **现象**：与 P-03 同主题（core/errors 缺类）但**症状与影响面独立**：`LLMError` 缺失使 `flowforge.llm.errors`→`flowforge.llm.client` 整个模块无法导入；`ForgekinError` 缺失使 `flowforge.forgemind.council` 无法导入。运行时收集独立复现（开发在 P-06 附注亦已确认此类 collection error 存在、建议另开单）。实跑：
   ```bash
@@ -257,9 +263,17 @@
   ```
 - **建议**：在 `core/errors.py` 补 `class LLMError(FlowForgeError)`、`class ForgekinError(FlowForgeError)`（与既有子类同风格）；或修正 `llm/errors.py` 等改从各自模块定义处导入。修复后 llm/forgemind 模块与 3 测试文件方可导入。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-12）。`core/errors.py` 末尾追加 `LLMError(FlowForgeError)`（status_code=500）与 `ForgekinError(FlowForgeError)`（status_code=500），与既有子类同风格。自测：
+  ```bash
+  python3 -c "from flowforge.core.errors import LLMError, ForgekinError"  # => OK
+  python3 -c "import flowforge.forgemind.council"                            # => OK（此前 ImportError）
+  python3 -m pytest flowforge/tests/test_forgekin.py flowforge/tests/test_plugin_protocol.py --collect-only -q
+  # => 2 文件收集成功（此前 ImportError）
+  ```
+  注：`flowforge.llm.client` 仍因 `from flowforge.llm.provider import ProviderResponse` 报 ImportError，属 P-14 API 漂移范畴（ProviderResponse 名称已迁改），不在本单 LLMError 范围内，P-14 一并处理。
 
 ### P-13 — `flowforge.cli.__main__` 模块缺失：产品 CLI 入口崩溃 + `test_cli` 收集失败
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`cli/__init__.py:13`（`from flowforge.cli.__main__ import main`）、`pyproject.toml:63`（`flowforge = "flowforge.cli.__main__:main"`）、`tests/test_cli.py:12`
 - **现象**：`cli/` 包只有 `__init__.py`（无 `__main__.py`），而 `__init__` 与 console_script 均引用 `flowforge.cli.__main__:main`，导致产品 CLI 入口全崩、`test_cli` 收集期 `ModuleNotFoundError`。实跑：
   ```bash
@@ -269,6 +283,12 @@
   ```
 - **建议**：补 `cli/__main__.py`（实现 `main()` 及 `version/evolve/forgekin/loop` 子命令，见 `cli/__init__.py` docstring），或将入口指向真实存在的模块并同步 `pyproject.toml` console_script。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-13）。新增 `cli/__main__.py`（实现 `main(argv)->int`：`--version` 打印版本并 `SystemExit(0)`；`evolve --dry-run` 用 `forgemind.magic_words.detect_magic_word` 判定兜底词（魔术词触发输出 `Decision: A_scope_guard`），否则 `Decision: proceed`，均含 `dry-run`；`forgekin list` 复用 `engin examples` 三个内置 forgekin——猫(小煤球)、台灯(老灯)、Sherlock Holmes；`loop run` 冒烟输出 `Loop result: ok`），新增仓库根 `__main__.py` 使 `python -m flowforge` 可用。另在 `tests/conftest.py` 补 `project_root` fixture（测试 smoke 用例引用但缺定义）。自测：
+  ```bash
+  python3 -m pytest flowforge/tests/test_cli.py -q -p no:cacheprovider   # => 7 passed
+  python3 -m flowforge --version                                          # => flowforge 0.1.0
+  python3 -m flowforge forgekin list                                      # => 小煤球/老灯/Sherlock Holmes
+  ```
 
 ### P-14 — 测试/源码 API 漂移：4 个测试文件收集 ImportError（源码模块本身可导入）
 - **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
@@ -339,6 +359,11 @@
   ```
 - **建议**：对齐 example 文件与用例期望（择一改名），或用例改为断言 example 实际部署名/数量而非硬编码 `contentforge-publish`。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-18）。`config/canary.yaml.example` 两个部署名 `sample-publish`/`sample-deploy` → `contentforge-publish`/`devforge-deploy`（与 `test_canary_executor.py::test_canary_yaml_example_loads_into_registry` 断言一致；`*Forge` 业务项目部署名更贴合实际），文件头注释同步更新。自测：
+  ```bash
+  python3 -m pytest flowforge/tests/test_canary_executor.py -q -k yaml_example
+  # => 1 passed, 66 deselected（原先 1 failed，现通过）
+  ```
 
 ### P-19 — `test_breakpoint_c_stress.py` 辅助函数命名为 `test_*` 被 pytest 收集为用例 → fixture not found
 - **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open

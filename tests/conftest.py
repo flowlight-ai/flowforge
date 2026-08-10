@@ -10,6 +10,11 @@ sys.path.insert(0, str(PROJECT_ROOT.parent))
 DATA_DIR = PROJECT_ROOT / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+@pytest.fixture
+def project_root() -> Path:
+    """仓库根路径（即 flowforge 包本身所在目录）。"""
+    return PROJECT_ROOT
+
 @pytest.fixture(autouse=True)
 def setup_test_env():
     os.environ["FLOWFORGE_ENV"] = "test"
