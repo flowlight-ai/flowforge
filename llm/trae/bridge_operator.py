@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -60,7 +61,7 @@ class BridgeLLMOperator:
         config: Optional[TraeBridgeConfig] = None,
         *,
         openroute_base_url: str = "http://localhost:13001/v1",
-        openroute_api_key: str = "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
+        openroute_api_key: str = "",
         model: str = "Doubao-Seed2.0",
         poll_interval: float = 1.0,
         llm_timeout: float = 180.0,
@@ -77,7 +78,7 @@ class BridgeLLMOperator:
         """
         self._config = config or TraeBridgeConfig()
         self._openroute_base_url = openroute_base_url
-        self._openroute_api_key = openroute_api_key
+        self._openroute_api_key = openroute_api_key or os.environ.get("OPENROUTE_API_KEY", "")
         self._model = model
         self._poll_interval = poll_interval
         self._llm_timeout = llm_timeout

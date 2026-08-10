@@ -6,8 +6,8 @@ providers:
   openroute:
     base_url: http://127.0.0.1:13001/v1
     api_key_env: OPENROUTE_API_KEY
-    # v5.25a: 更新为当前有效的API key（旧key已被403拒绝）
-    api_key_default: or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7
+    # 密钥不硬编码——运行时从 $OPENROUTE_API_KEY（或仓库根 .env，已 gitignore）注入
+    api_key_default: ""
     protected: true
     description: 预装默认供应商，用户不可删除或修改
   openrouter:

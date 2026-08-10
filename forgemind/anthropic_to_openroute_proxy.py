@@ -32,20 +32,24 @@ import logging
 import os
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 import uvicorn
 
+# 从仓库根 .env（已 gitignore）加载密钥，避免硬编码（铁律5/红线11）
+_load_env = Path(__file__).resolve().parents[1] / ".env"
+if _load_env.exists():
+    load_dotenv(dotenv_path=_load_env)
+
 # ── 配置 ────────────────────────────────────────────────────────────────────
 
 OPENROUTE_BASE_URL = os.environ.get("OPENROUTE_BASE_URL", "http://localhost:13001/v1")
-OPENROUTE_API_KEY = os.environ.get(
-    "OPENROUTE_API_KEY",
-    "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
-)
+OPENROUTE_API_KEY = os.environ.get("OPENROUTE_API_KEY", "")
 DEFAULT_PORT = int(os.environ.get("ANTHROPIC_PROXY_PORT", "8083"))
 DEFAULT_HOST = os.environ.get("ANTHROPIC_PROXY_HOST", "127.0.0.1")
 # 默认模型切换为 Doubao-Seed2.0 —— OpenRoute 2026-07-25 实测：

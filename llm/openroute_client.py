@@ -37,10 +37,7 @@ _OPENROUTE_BASE_URL = os.environ.get(
     "http://localhost:13001/v1",
 ).removesuffix("/v1")
 
-_OPENROUTE_API_KEY = os.environ.get(
-    "OPENROUTE_API_KEY",
-    "or-6eb9e20d63d01d190b0e26d06c9f5acc4a0ea248a5dd62e7",
-)
+_OPENROUTE_API_KEY = os.environ.get("OPENROUTE_API_KEY", "")
 
 
 class OpenRouteLLMClient:
