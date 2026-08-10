@@ -430,7 +430,7 @@ def test_stress_100_percent_success():
     return passed, success_count, total
 
 
-def test_t7_llm_review(success_count, total):
+def _run_t7_llm_review(success_count, total):
     """T7审核：对 LLM 生成内容进行 LLM 审核（使用标准T7Reviewer框架）.
 
     从压力测试的响应中抽取样本，用 T7Reviewer 审核内容质量（T7铁律）。
@@ -509,7 +509,7 @@ def main():
     stress_result = test_stress_100_percent_success()
     success_count, total = stress_result[1], stress_result[2]
     results.append(("压力测试", stress_result[0]))
-    results.append(("T7审核", test_t7_llm_review(success_count, total)))
+    results.append(("T7审核", _run_t7_llm_review(success_count, total)))
 
     # 汇总
     print("\n" + "=" * 70)
