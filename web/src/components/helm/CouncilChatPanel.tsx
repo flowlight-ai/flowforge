@@ -22,6 +22,8 @@ import {
 } from "../../lib/council-types";
 
 interface CouncilChatPanelProps {
+  /** 当前会话 ID（多会话支持，传给 useCouncilChat） */
+  threadId?: string | null;
   /** 是否显示右侧灵智体面板（嵌入 HelmLayout 时可关闭） */
   showSidebar?: boolean;
   /** 紧凑模式（嵌入时使用） */
@@ -51,6 +53,7 @@ interface CouncilChatPanelProps {
  *   - 底部快捷键提示
  */
 export default function CouncilChatPanel({
+  threadId = null,
   showSidebar = true,
   compact = false,
 }: CouncilChatPanelProps) {
@@ -68,7 +71,7 @@ export default function CouncilChatPanel({
     toggleParticipant,
     setForgekinRole,
     reloadRoster,
-  } = useCouncilChat();
+  } = useCouncilChat(threadId);
 
   const [inputText, setInputText] = useState("");
   const [showMentionMenu, setShowMentionMenu] = useState(false);

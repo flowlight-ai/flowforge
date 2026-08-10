@@ -31,13 +31,13 @@
 import dynamic from "next/dynamic";
 import { useState, useCallback, useEffect } from "react";
 import { useShellConfig } from "@/lib/shell-config";
-import { useCouncilChat } from "@/hooks/useCouncilChat";
 import {
   FORGEKIN_COLORS,
   FORGEKIN_EMOJI,
   ROLE_CONFIG,
   type ForgekinRosterItem,
 } from "@/lib/council-types";
+import { CouncilThreadList } from "@/components/helm/CouncilThreadList";
 
 // CouncilChatPanel 已就绪，动态导入避免 SSR 问题（内部使用 fetch/浏览器 API）
 const CouncilChatPanel = dynamic(
@@ -63,6 +63,11 @@ const configLinkStyle: React.CSSProperties = {
 };
 
 export default function CouncilPage() {
+  return <CouncilContent threadId={null} />;
+}
+
+/** 群聊页面内容（/council 和 /council/[threadId] 共用） */
+export function CouncilContent({ threadId }: { threadId: string | null }) {
   const config = useShellConfig();
   const [showContextPanel, setShowContextPanel] = useState(false);
   const [taskTitle, setTaskTitle] = useState<string>("");
@@ -248,7 +253,7 @@ export default function CouncilPage() {
         </div>
       </header>
 
-      {/* 主体内容 — 全屏聊天布局（非 Helm 三栏） */}
+      {/* 主体内容 — 会话列表 + 全屏聊天布局 */}
       <div
         className="council-body"
         data-council="body"
@@ -259,6 +264,18 @@ export default function CouncilPage() {
           minHeight: 0,
         }}
       >
+        {/* 左侧：会话列表侧栏 */}
+        <aside
+          data-council="thread-list"
+          style={{
+            width: "240px",
+            flexShrink: 0,
+            overflow: "hidden",
+          }}
+        >
+          <CouncilThreadList currentThreadId={threadId} className="h-full" />
+        </aside>
+
         {/* 中央聊天区 — CouncilChatPanel 已内置 ForgekinSelector 侧栏 */}
         <main
           className="council-main"
@@ -271,7 +288,25 @@ export default function CouncilPage() {
             overflow: "hidden",
           }}
         >
-          <CouncilChatPanel showSidebar={true} compact={false} />
+          {threadId ? (
+            <CouncilChatPanel threadId={threadId} showSidebar={true} compact={false} />
+          ) : (
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--muted)",
+                fontSize: "14px",
+                flexDirection: "column",
+                gap: "12px",
+              }}
+            >
+              <span style={{ fontSize: "32px", opacity: 0.4 }}>◎</span>
+              <span>选择左侧会话或点击"新对话"开始群聊</span>
+            </div>
+          )}
         </main>
 
         {/* 右侧上下文面板（可折叠） */}
