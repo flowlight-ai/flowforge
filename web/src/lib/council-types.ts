@@ -51,12 +51,34 @@ export interface CouncilMessage {
   timestamp: number;
   /** 引用回复的原消息（当用户使用"引用回复"时） */
   replyTo?: CouncilMessage;
-  /** 该灵智体响应的元信息（model/usage 等） */
+  /** 该灵智体响应的元信息（model/usage/工具调用 等） */
   meta?: {
     model?: string;
     latency_ms?: number;
     usage?: Record<string, unknown>;
+    /** CLI 工具调用事件（参考 clowder-ai toolEvents）— 由 CliOutputBlock 渲染 */
+    toolEvents?: Array<{
+      type: "tool_use" | "tool_result" | "text";
+      name?: string;
+      input?: string;
+      content?: string;
+      status?: "streaming" | "done" | "failed" | "interrupted";
+      timestamp?: number;
+    }>;
+    /** CLI stdout 输出 — 由 CliOutputBlock 渲染 */
+    cliStdout?: string;
+    /** 兼容字段：工具调用列表（另一种格式） */
+    toolCalls?: Array<{
+      name: string;
+      args?: Record<string, unknown> | string;
+      result?: string;
+      status?: "streaming" | "done" | "failed";
+    }>;
+    /** 执行时长（ms）— 用于 CliOutputBlock 摘要 */
+    duration_ms?: number;
   };
+  /** 是否流式输出中（参考 clowder-ai streaming 状态）— 控制 CliOutputBlock 自动展开 */
+  streaming?: boolean;
   /** T7 审计徽章（隐藏在 UI 上，仅开发者可见） */
   t7Badge?: {
     verified: boolean;

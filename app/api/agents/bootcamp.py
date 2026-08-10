@@ -134,34 +134,73 @@ CORE_TOOLS = ["python", "git", "node", "npm"]
 OPTIONAL_TOOLS = ["pnpm", "docker", "uvicorn"]
 
 
-async def _check_tool(tool: str) -> dict[str, Any]:
-    """检测单个工具是否可用（异步执行避免阻塞）.
+def _check_tool_sync(tool: str) -> dict[str, Any]:
+    """检测单个工具是否可用（同步实现，由 _check_tool 在线程池中调用）.
+
+    Windows 注意：
+        - asyncio.create_subprocess_exec 在某些事件循环下会静默失败
+        - 改用 subprocess.run（同步）+ asyncio 线程池调度，稳定性更高
+        - Windows 下 uvicorn 不带 --version，需对 uvicorn 特殊处理
 
     Returns:
         {"ok": bool, "version": str, "note": str}
     """
-    try:
-        # Windows 下使用 where，Linux/Mac 使用 which
-        if shutil.which(tool) is None:
-            return {"ok": False, "version": "", "note": f"{tool} 未安装或不在 PATH"}
+    # 1. 先用 shutil.which 判断是否在 PATH
+    resolved = shutil.which(tool)
+    if resolved is None:
+        return {"ok": False, "version": "", "note": f"{tool} 未安装或不在 PATH"}
 
-        # 获取版本号
-        proc = await asyncio.create_subprocess_exec(
-            tool, "--version",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+    # 2. uvicorn 是 Python 模块，没有独立的 --version CLI
+    if tool == "uvicorn":
         try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5)
-            version = (stdout.decode("utf-8", errors="ignore").strip() or
-                       stderr.decode("utf-8", errors="ignore").strip())
-            # 取第一行（版本号通常在第一行）
-            version = version.split("\n")[0] if version else ""
+            import uvicorn as _uv  # noqa: F401
+            return {
+                "ok": True,
+                "version": f"v{_uv.__version__}",
+                "note": "",
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "version": "", "note": f"uvicorn 导入失败: {exc}"}
+
+    # 3. 通用：执行 `<tool> --version`
+    try:
+        proc = subprocess.run(
+            [tool, "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5,
+            shell=False,
+        )
+        version = (
+            proc.stdout.decode("utf-8", errors="ignore").strip()
+            or proc.stderr.decode("utf-8", errors="ignore").strip()
+        )
+        # 取第一行（版本号通常在第一行）
+        version = version.split("\n")[0] if version else ""
+        if proc.returncode == 0 or version:
             return {"ok": True, "version": version, "note": ""}
-        except asyncio.TimeoutError:
-            return {"ok": False, "version": "", "note": f"{tool} --version 超时"}
+        return {
+            "ok": False,
+            "version": "",
+            "note": f"{tool} --version 退出码 {proc.returncode}",
+        }
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "version": "", "note": f"{tool} --version 超时"}
+    except FileNotFoundError:
+        return {"ok": False, "version": "", "note": f"{tool} 未安装或不在 PATH"}
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "version": "", "note": f"{tool} 检测异常: {exc}"}
+
+
+async def _check_tool(tool: str) -> dict[str, Any]:
+    """检测单个工具是否可用（在线程池中执行同步检测）.
+
+    Returns:
+        {"ok": bool, "version": str, "note": str}
+    """
+    return await asyncio.get_event_loop().run_in_executor(
+        None, _check_tool_sync, tool
+    )
 
 
 async def run_environment_check() -> dict[str, Any]:
