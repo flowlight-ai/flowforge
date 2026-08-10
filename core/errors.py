@@ -66,3 +66,13 @@ class HarnessViolationError(FlowForgeError):
 class StepTimeoutError(FlowForgeError):
     status_code = 408
     detail = "Workflow step timed out"
+
+
+class PartnershipError(FlowForgeError):
+    status_code = 422
+    detail = "Invalid partnership candidate/path"
+
+
+class ReliabilityError(FlowForgeError):
+    status_code = 503
+    detail = "Reliability subsystem invariant violated"
