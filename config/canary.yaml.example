@@ -1,13 +1,13 @@
 # FlowForge 金丝雀发布配置示例（P3-008）
 #
-# 本文件包含 2 个通用部署示例（sample-publish / sample-deploy），
+# 本文件包含 2 个 *Forge 项目部署示例（contentforge-publish / devforge-deploy），
 # 每个示例使用 YAML 多文档（`---`）分隔。
 #
 # 实际使用时，请将每个文档拆分到独立文件并放入 `config/canary/` 目录，
 # 由 CanaryDeploymentRegistry.load_from_dir 自动加载（每个文件一个部署）。
 # 文件名建议与 `name` 字段一致，例如：
-#   config/canary/sample-publish.yaml
-#   config/canary/sample-deploy.yaml
+#   config/canary/contentforge-publish.yaml
+#   config/canary/devforge-deploy.yaml
 #
 # *Forge 业务项目（ContentForge / DevForge / NovelForge / MallForge 等）的金丝雀
 # 部署配置由各自项目维护，通过 Plugin V3 协议在运行时注入到 CanaryDeploymentRegistry。
@@ -33,8 +33,8 @@
 
 # ── 部署示例 1：通用发布场景 ────────────────────────────────────────
 ---
-name: sample-publish
-description: "通用发布金丝雀部署示例 — 10%→50%→100% 三阶段渐进发布"
+name: contentforge-publish
+description: "ContentForge 发布金丝雀部署示例 — 10%→50%→100% 三阶段渐进发布"
 enabled: true
 auto_rollback: true
 rollback_on_error_rate: 0.05
@@ -68,8 +68,8 @@ stages:
 
 # ── 部署示例 2：通用部署场景 ───────────────────────────────────────
 ---
-name: sample-deploy
-description: "通用部署金丝雀部署示例 — 10%→50%→100% 三阶段渐进发布"
+name: devforge-deploy
+description: "DevForge 部署金丝雀示例 — 10%→50%→100% 三阶段渐进发布"
 enabled: true
 auto_rollback: true
 rollback_on_error_rate: 0.03
