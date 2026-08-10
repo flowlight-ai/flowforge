@@ -8,6 +8,7 @@ import {
   CouncilResponse,
   ForgekinRosterItem,
   DEFAULT_COUNCIL_CONFIG,
+  isAllMention,
 } from "../lib/council-types";
 
 /**
@@ -262,30 +263,47 @@ export function useCouncilChat(threadId: string | null) {
         }).catch(() => { /* 静默失败 */ });
       }
 
-      // 解析 @mention，决定哪些灵智体参与
+      // ── 路由策略（参考 clowder-ai AgentRouter）──────────────
+      // 默认不传 forgekin_ids → 后端 fallback 链决定单智能体（上次回复者 > luban）
+      // @all → 后端展开为全部并行
+      // @特定 → 后端仅调用被提及的智能体
+      // 用户在 UI 显式选了多个参与者且未 @ → 传选中的 ID 列表
       const mentioned = parseMentions(text);
-      const participantIds =
-        mentioned.length > 0
-          ? mentioned
-          : config.participantIds;
+      const isAll = isAllMention(text);
+      let reqForgekinIds: string[] = [];
+      let reqMode: "auto" | "single" | "parallel" = "auto";
 
-      if (participantIds.length === 0) {
-        setError("请至少选择一个灵智体参与（或@mention）");
-        return;
+      if (isAll) {
+        // @all → 传空数组 + parallel，让后端展开为全部
+        reqForgekinIds = [];
+        reqMode = "parallel";
+      } else if (mentioned.length > 0) {
+        // @特定 → 传被提及的 ID
+        reqForgekinIds = mentioned;
+        reqMode = mentioned.length > 1 ? "parallel" : "single";
+      } else if (config.participantIds.length > 0) {
+        // 无 @，但用户在 UI 选了偏好参与者 → 传偏好列表
+        // 注意：如果只选了 1 个，后端会用这个；如果选了多个，后端会并行
+        reqForgekinIds = config.participantIds;
+        reqMode = config.participantIds.length > 1 ? "parallel" : "single";
       }
+      // 否则 reqForgekinIds 保持空数组，后端走 fallback 链（上次回复者 > luban）
 
       setIsLoading(true);
 
       // 创建 AbortController 用于超时取消
       const controller = new AbortController();
       abortRef.current = controller;
-      const timeoutId = setTimeout(() => controller.abort(), COUNCIL_TIMEOUT_MS);
+      // single 模式超时缩短到 60s（单智能体应该快）；parallel 保持 180s
+      const timeoutMs = reqMode === "single" ? 60_000 : COUNCIL_TIMEOUT_MS;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       // 添加"灵议进行中"系统消息
+      const modeLabel = reqMode === "parallel" ? "多智能体并行" : "单智能体";
       const sysMsg: CouncilMessage = {
         id: `sys-${Date.now()}`,
         source: "system",
-        content: `灵议进行中：${participantIds.length} 个灵智体参与，共 ${config.maxRounds} 轮...（超时 ${COUNCIL_TIMEOUT_MS / 1000}s）`,
+        content: `灵议进行中（${modeLabel}模式）...（超时 ${timeoutMs / 1000}s）`,
         timestamp: Date.now() + 1,
       };
       setMessages((prev) => [...prev, sysMsg]);
@@ -293,8 +311,10 @@ export function useCouncilChat(threadId: string | null) {
       try {
         const reqBody: CouncilRequest = {
           topic: text,
-          forgekin_ids: participantIds,
+          forgekin_ids: reqForgekinIds,
           max_rounds: config.maxRounds,
+          thread_id: threadId,
+          mode: reqMode,
         };
 
         const res = await fetch("/api/v1/forgemind/council", {
@@ -335,12 +355,13 @@ export function useCouncilChat(threadId: string | null) {
               meta: {
                 model,
                 usage,
+                routingMode: data.routing_mode,
               },
             });
           }
         }
 
-        // 添加摘要消息（如果有）
+        // 添加摘要消息（如果有 — 仅 parallel 模式且多轮时生成）
         let summaryMsg: CouncilMessage | null = null;
         if (data.summary) {
           summaryMsg = {
@@ -360,7 +381,7 @@ export function useCouncilChat(threadId: string | null) {
         setMessages((prev) => prev.filter((m) => m.id !== sysMsg.id));
         let errMsg: string;
         if (e instanceof DOMException && e.name === "AbortError") {
-          errMsg = `灵议超时（${COUNCIL_TIMEOUT_MS / 1000}s），请减少轮数或灵智体数量后重试`;
+          errMsg = `灵议超时（${timeoutMs / 1000}s），请减少轮数或灵智体数量后重试`;
         } else if (e instanceof Error) {
           errMsg = e.message;
         } else {

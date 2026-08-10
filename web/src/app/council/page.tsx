@@ -38,11 +38,24 @@ import {
   type ForgekinRosterItem,
 } from "@/lib/council-types";
 import { CouncilThreadList } from "@/components/helm/CouncilThreadList";
+import type { BootcampPhase, BootcampState } from "@/lib/bootcamp-types";
 
 // CouncilChatPanel 已就绪，动态导入避免 SSR 问题（内部使用 fetch/浏览器 API）
 const CouncilChatPanel = dynamic(
   () => import("@/components/helm/CouncilChatPanel"),
   { ssr: false, loading: () => <CouncilLoading /> }
+);
+
+// 灵智训练营向导 — 动态导入（仅用户点击时加载）
+const BootcampWizard = dynamic(
+  () => import("@/components/helm/BootcampWizard"),
+  { ssr: false }
+);
+
+// 训练营进度条 — 动态导入
+const BootcampProgressBar = dynamic(
+  () => import("@/components/helm/BootcampProgressBar").then((m) => m.BootcampProgressBar),
+  { ssr: false }
 );
 
 // 群聊配置跳转按钮样式 — 参考 clowder-ai ChatContainerHeader 的快捷链接
@@ -71,8 +84,35 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
   const config = useShellConfig();
   const [showContextPanel, setShowContextPanel] = useState(false);
   const [taskTitle, setTaskTitle] = useState<string>("");
+  const [showBootcampWizard, setShowBootcampWizard] = useState(false);
+  const [bootcampState, setBootcampState] = useState<BootcampState | null>(null);
 
   const handleTitleChange = useCallback((t: string) => setTaskTitle(t), []);
+
+  // 当 threadId 变化时，获取会话详情检查是否有 bootcamp_state
+  useEffect(() => {
+    if (!threadId) {
+      setBootcampState(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/v1/threads/${threadId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.bootcamp_state) {
+          setBootcampState(data.bootcamp_state as BootcampState);
+        } else {
+          setBootcampState(null);
+        }
+      } catch {
+        if (!cancelled) setBootcampState(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [threadId]);
 
   return (
     <div
@@ -202,6 +242,22 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
             >
               ◉ 记忆
             </a>
+            {/* 灵智训练营入口 — 参考 clowder-ai 猫猫训练营 */}
+            <button
+              type="button"
+              onClick={() => setShowBootcampWizard(true)}
+              aria-label="灵智训练营"
+              title="灵智训练营 — 引导配置环境、使用 FlowForge、训练智能体成长"
+              data-council-action="open-bootcamp"
+              style={{
+                ...configLinkStyle,
+                background: "var(--accent-subtle, color-mix(in srgb, var(--accent) 12%, transparent))",
+                color: "var(--accent)",
+                borderColor: "var(--accent)",
+              }}
+            >
+              🎓 训练营
+            </button>
           </nav>
 
           <span
@@ -289,7 +345,23 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
           }}
         >
           {threadId ? (
-            <CouncilChatPanel threadId={threadId} showSidebar={true} compact={false} />
+            <>
+              {/* 训练营进度条 — 当会话有 bootcamp_state 时显示 */}
+              {bootcampState && (
+                <BootcampProgressBar
+                  threadId={threadId}
+                  phase={bootcampState.phase}
+                  showAdvance={true}
+                  onPhaseAdvanced={(newPhase) => {
+                    setBootcampState({
+                      ...bootcampState,
+                      phase: newPhase,
+                    });
+                  }}
+                />
+              )}
+              <CouncilChatPanel threadId={threadId} showSidebar={true} compact={false} />
+            </>
           ) : (
             <div
               style={{
@@ -328,6 +400,18 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
           </aside>
         )}
       </div>
+
+      {/* 灵智训练营向导 — 点击"🎓 训练营"按钮时显示 */}
+      {showBootcampWizard && (
+        <BootcampWizard
+          onClose={() => setShowBootcampWizard(false)}
+          onCreated={(newThreadId) => {
+            setShowBootcampWizard(false);
+            // 跳转到新创建的训练营会话
+            window.location.href = `/council/${newThreadId}`;
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -571,11 +655,11 @@ function CouncilContextPanel() {
           <span>使用提示</span>
         </div>
         <ul style={{ margin: 0, paddingLeft: "16px" }}>
-          <li>使用 @mention 指定智能体发言</li>
-          <li>输入 @all 提及所有参与的智能体</li>
-          <li>不指定则所有参与的智能体依次发言</li>
-          <li>可配置讨论轮数（1-3 轮）</li>
-          <li>点击 ◎ 投票 发起群聊决议投票</li>
+          <li>默认单智能体回答（上次回复者或鲁班）</li>
+          <li>使用 @all / @全体 触发全部智能体并行</li>
+          <li>使用 @鲁班 / @sherlock 等指定智能体</li>
+          <li>可配置讨论轮数（1-3 轮，仅并行模式生效）</li>
+          <li>点击 🎓 训练营 开始灵智训练营</li>
           <li>消息支持 emoji 表情回复和引用</li>
         </ul>
       </div>

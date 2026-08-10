@@ -70,6 +70,10 @@ export interface CouncilRequest {
   topic: string;
   forgekin_ids: string[];
   max_rounds: number;
+  /** 会话 ID（用于后端查询上次回复者，实现 fallback 链） */
+  thread_id?: string;
+  /** 路由模式：auto=自动判断（默认）；single=强制单智能体；parallel=强制全部并行 */
+  mode?: "auto" | "single" | "parallel";
 }
 
 /** 灵议响应中的单轮单灵智体发言 */
@@ -95,6 +99,10 @@ export interface CouncilResponse {
   rounds: CouncilRound[];
   summary: string;
   participant_count: number;
+  /** 实际路由模式：single=单智能体回答；parallel=多智能体并行 */
+  routing_mode?: "single" | "parallel";
+  /** 实际参与回答的 Forgekin ID 列表 */
+  selected_forgekin_ids?: string[];
 }
 
 /** 群聊配置 */
@@ -109,9 +117,20 @@ export interface CouncilConfig {
   enableT7Audit: boolean;
 }
 
-/** 默认群聊配置 */
+/**
+ * 默认群聊配置
+ *
+ * 路由策略（参考 clowder-ai AgentRouter）：
+ *   - 默认不指定 participantIds（空数组）→ 后端 fallback 链决定单智能体
+ *   - @all / @全体 → 后端自动展开为全部 Forgekin 并行
+ *   - @特定智能体 → 后端仅调用被提及的智能体
+ *   - 无 @ → 后端使用上次回复者，若无则默认 luban
+ *
+ * 注意：participantIds 现在仅作为 UI 展示的"偏好列表"，
+ * 不再直接决定每次回答的参与者（由后端 @mention 解析决定）。
+ */
 export const DEFAULT_COUNCIL_CONFIG: CouncilConfig = {
-  participantIds: ["wenxin", "sherlock", "luban", "vangogh", "davinci"],
+  participantIds: ["luban"],
   roleAssignment: {
     luban: "primary",
     vangogh: "reviewer",
@@ -122,6 +141,25 @@ export const DEFAULT_COUNCIL_CONFIG: CouncilConfig = {
   maxRounds: 1,
   enableT7Audit: true,
 };
+
+/**
+ * @all / @全体 触发模式（与后端 council_router.py ALL_MENTION_PATTERNS 对应）
+ * 前端用于检测用户输入是否触发"全部并行"模式
+ */
+export const ALL_MENTION_PATTERNS = [
+  /@all\b/i,
+  /@全体\b/,
+  /@所有人\b/,
+  /@全部\b/,
+  /@大家\b/,
+];
+
+/**
+ * 检测消息是否包含 @all / @全体 等群组提及
+ */
+export function isAllMention(text: string): boolean {
+  return ALL_MENTION_PATTERNS.some((p) => p.test(text));
+}
 
 /** 角色显示配置 */
 export const ROLE_CONFIG: Record<ForgekinRole, { label: string; color: string; icon: string }> = {

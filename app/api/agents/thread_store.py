@@ -83,8 +83,17 @@ class ThreadStore:
         )
         return threads
 
-    def create_thread(self, title: str | None = None) -> dict[str, Any]:
-        """创建新会话。"""
+    def create_thread(
+        self,
+        title: str | None = None,
+        bootcamp_state: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """创建新会话.
+
+        Args:
+            title: 会话标题（默认"未命名讨论"）
+            bootcamp_state: 灵智训练营状态（可选，参考 clowder-ai BootcampStateV1）
+        """
         now_iso = _now_iso()
         thread = {
             "id": f"thr-{uuid.uuid4().hex[:12]}",
@@ -93,6 +102,7 @@ class ThreadStore:
             "updated_at": now_iso,
             "pinned": False,
             "deleted_at": None,
+            "bootcamp_state": bootcamp_state,
         }
         with self._lock:
             threads = self._load_threads()
@@ -171,6 +181,76 @@ class ThreadStore:
                     t["updated_at"] = _now_iso()
                     self._save_threads(threads)
                     break
+
+    # ── 灵智训练营（Bootcamp）状态管理 ──────────────────────────
+    # 参考 clowder-ai BootcampStateV1（packages/api/src/domains/cats/
+    # services/stores/ports/ThreadStore.ts:286-297）
+
+    def update_bootcamp_state(
+        self, thread_id: str, state: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """更新会话的灵智训练营状态.
+
+        Args:
+            thread_id: 会话 ID
+            state: 完整的 bootcamp_state 字典（覆盖写入）
+
+        Returns:
+            更新后的会话字典，若会话不存在返回 None
+        """
+        with self._lock:
+            threads = self._load_threads()
+            for t in threads:
+                if t["id"] == thread_id:
+                    t["bootcamp_state"] = state
+                    t["updated_at"] = _now_iso()
+                    self._save_threads(threads)
+                    return t
+        return None
+
+    def patch_bootcamp_state(
+        self, thread_id: str, updates: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """局部更新会话的灵智训练营状态（浅合并）.
+
+        Args:
+            thread_id: 会话 ID
+            updates: 要更新的字段（如 {"phase": "phase-2-env-check"}）
+
+        Returns:
+            更新后的完整 bootcamp_state，若会话不存在返回 None
+        """
+        with self._lock:
+            threads = self._load_threads()
+            for t in threads:
+                if t["id"] == thread_id:
+                    current = t.get("bootcamp_state") or {}
+                    current.update(updates)
+                    t["bootcamp_state"] = current
+                    t["updated_at"] = _now_iso()
+                    self._save_threads(threads)
+                    return t
+        return None
+
+    def get_bootcamp_state(self, thread_id: str) -> dict[str, Any] | None:
+        """获取会话的灵智训练营状态."""
+        with self._lock:
+            threads = self._load_threads()
+        for t in threads:
+            if t["id"] == thread_id:
+                return t.get("bootcamp_state")
+        return None
+
+    def list_bootcamp_threads(self) -> list[dict[str, Any]]:
+        """列出所有灵智训练营会话（有 bootcamp_state 的会话）."""
+        with self._lock:
+            threads = self._load_threads()
+        bootcamp = [
+            t for t in threads
+            if t.get("bootcamp_state") and not t.get("deleted_at")
+        ]
+        bootcamp.sort(key=lambda t: t.get("updated_at", ""), reverse=True)
+        return bootcamp
 
     # ── 消息 CRUD ────────────────────────────────────────────────
 
