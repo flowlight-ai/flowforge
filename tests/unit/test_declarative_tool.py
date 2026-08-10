@@ -217,7 +217,7 @@ class TestScriptTool:
             description="JSON输出命令",
             type="script",
             script=ScriptToolConfig(
-                command='python -c "import json; print(json.dumps({\\"key\\": \\"value\\"}))"',
+                command=sys.executable + ' -c "import json; print(json.dumps({\\"key\\": \\"value\\"}))"',
                 output_format="json",
             ),
         )
