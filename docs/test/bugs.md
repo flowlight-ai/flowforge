@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **19** |
 | **加权缺陷指数（DI）** | **92** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 8 |
-| 状态：Fixed（待回归） | 11 |
+| 状态：Open | 7 |
+| 状态：Fixed（待回归） | 12 |
 | 状态：Closed | 0 |
 
 > 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
@@ -264,7 +264,7 @@
 - **T7/T8**：否
 
 ### P-12 — `core/errors.py` 仍缺 `LLMError` / `ForgekinError`，波及 `llm.client` / `forgemind.council` 模块导入 + 3 测试文件收集 ImportError
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`core/errors.py`（现仅到 `ReliabilityError`，无 `LLMError`/`ForgekinError`）、`llm/errors.py:20`（`from flowforge.core.errors import LLMError`）、`tests/test_llm_client.py:8`、`tests/test_forgekin.py:7`、`tests/test_plugin_protocol.py:20`
 - **现象**：与 P-03 同主题（core/errors 缺类）但**症状与影响面独立**：`LLMError` 缺失使 `flowforge.llm.errors`→`flowforge.llm.client` 整个模块无法导入；`ForgekinError` 缺失使 `flowforge.forgemind.council` 无法导入。运行时收集独立复现（开发在 P-06 附注亦已确认此类 collection error 存在、建议另开单）。实跑：
   ```bash
@@ -275,6 +275,14 @@
   ```
 - **建议**：在 `core/errors.py` 补 `class LLMError(FlowForgeError)`、`class ForgekinError(FlowForgeError)`（与既有子类同风格）；或修正 `llm/errors.py` 等改从各自模块定义处导入。修复后 llm/forgemind 模块与 3 测试文件方可导入。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-12）。`core/errors.py` 末尾追加 `LLMError(FlowForgeError)`（status_code=500）与 `ForgekinError(FlowForgeError)`（status_code=500），与既有子类同风格。自测：
+  ```bash
+  python3 -c "from flowforge.core.errors import LLMError, ForgekinError"  # => OK
+  python3 -c "import flowforge.forgemind.council"                            # => OK（此前 ImportError）
+  python3 -m pytest flowforge/tests/test_forgekin.py flowforge/tests/test_plugin_protocol.py --collect-only -q
+  # => 2 文件收集成功（此前 ImportError）
+  ```
+  注：`flowforge.llm.client` 仍因 `from flowforge.llm.provider import ProviderResponse` 报 ImportError，属 P-14 API 漂移范畴（ProviderResponse 名称已迁改），不在本单 LLMError 范围内，P-14 一并处理。
 
 ### P-13 — `flowforge.cli.__main__` 模块缺失：产品 CLI 入口崩溃 + `test_cli` 收集失败
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open

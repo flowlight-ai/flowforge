@@ -76,3 +76,13 @@ class PartnershipError(FlowForgeError):
 class ReliabilityError(FlowForgeError):
     status_code = 503
     detail = "Reliability subsystem invariant violated"
+
+
+class LLMError(FlowForgeError):
+    status_code = 500
+    detail = "LLM provider error"
+
+
+class ForgekinError(FlowForgeError):
+    status_code = 500
+    detail = "Forgekin subsystem error"
