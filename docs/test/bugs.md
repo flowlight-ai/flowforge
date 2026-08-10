@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **7** |
 | **加权缺陷指数（DI）** | **50** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 7 |
-| 状态：修复中 | 0 |
+| 状态：Open | 6 |
+| 状态：Fixed（待回归） | 1 |
 | 状态：Closed | 0 |
 
 ### 按严重度（Severity）
@@ -81,11 +81,19 @@
 - **T7/T8**：否
 
 ### P-05 — `d:/software/openclaw` 硬编码 + 仓库根寄生 `d:` 目录（未 gitignore）
-- **严重度**：S2 ｜ **分类**：目录结构 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：目录结构 ｜ **状态**：Fixed（待回归）
 - **文件**：`llm/trae/config.py:167`、`llm/trae/adapter.py:96`、`forgemind/autonomous.py:108`（另 `config/im_council.yaml:42`、`config/trae_bridge.yaml:19` 含默认占位 `d:/software/openclaw/...`）
 - **现象**：Windows 绝对路径 `d:/software/openclaw/...` 写死于 3 处源码，并在仓库根寄生创建 `d:` 目录（实测根目录存在 `d:` 文件夹，且未在 `.gitignore` 中）。在非 `D:` 盘 / 非 Windows 环境（Linux、iOS）克隆即路径失效，`d:` 目录还会被误提交。
 - **建议**：改以相对路径 / `Path(__file__)` / 环境变量（`FLOWFORGE_BRIDGE_DIR` 等已有占位机制）解析；将根目录 `d:` 加入 `.gitignore` 并清理已寄生目录。
 - **T7/T8**：否
+- **开发自述**：修复提交 `80c4f1a`，共 6 文件。`llm/trae/config.py` 新增模块级 `_DEFAULT_SHARED_DIR = Path(__file__).resolve().parents[2] / ".trae_bridge"`（锚定仓库根），`TraeBridgeConfig.shared_dir` 默认改用它并加 `@field_validator("shared_dir")` 空值回退仓库根；`llm/trae/adapter.py` `bridge_yaml` 默认改 `Path(__file__).resolve().parents[2] / "config" / "trae_bridge.yaml"`；`forgemind/autonomous.py:108` docstring 示例改 `Path.cwd()`；两个 YAML 默认占位改 `${FLOWFORGE_BRIDGE_DIR:}`；`forgemind/_apply_retry_patch.py:140` 一次性脚本目录改 `Path(__file__).resolve().parent`。`.gitignore` 已含 `d:/`，寄生目录实测不存在。自测：
+  ```bash
+  python3 /tmp/opencode/p05_verify.py
+  # 默认 shared_dir: <仓库根>/.trae_bridge（含 d: 断言通过）
+  # yaml(env未设): <仓库根>/.trae_bridge   → validator 空值回退生效
+  # yaml(env=/tmp/br1): /tmp/br1            → 环境变量覆盖生效
+  # P-05 验证通过：无 d:/software 硬编码，yaml 占位回退仓库根
+  ```
 
 ### P-06 — `pytest.ini` 静默覆盖 `pyproject.toml` 的 pytest 配置
 - **严重度**：S2 ｜ **分类**：CI / 配置 ｜ **状态**：Open

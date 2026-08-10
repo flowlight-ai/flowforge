@@ -39,7 +39,7 @@ im_council:
     # 复用 F045 ${FLOWFORGE_BRIDGE_DIR} 共享目录
     trae:
       enabled: true
-      bridge_dir: "${FLOWFORGE_BRIDGE_DIR:d:/software/openclaw/flowforge/.trae_bridge}"
+      bridge_dir: "${FLOWFORGE_BRIDGE_DIR:}"
 
   # 审批流程参数（I4 超时控制）
   approval:

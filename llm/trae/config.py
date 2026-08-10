@@ -12,10 +12,15 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import List
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
+
+# 桥接共享目录默认值：锚定仓库根（本文件位于 flowforge/llm/trae/config.py，parents[2] 为仓库根）
+# 不硬编码机器绝对路径（铁律5）；可用 FLOWFORGE_BRIDGE_DIR 环境变量覆盖。
+_DEFAULT_SHARED_DIR = str(Path(__file__).resolve().parents[2] / ".trae_bridge")
 
 
 class TraeConfig(BaseSettings):
@@ -164,8 +169,8 @@ class TraeBridgeConfig(BaseSettings):
 
     # ── 目录配置（不变量 6 路径不硬编码）───────────────────────────
     shared_dir: str = Field(
-        default="d:/software/openclaw/flowforge/.trae_bridge",
-        description="共享目录路径（支持 ${ENV_VAR:default} 占位符）",
+        default=_DEFAULT_SHARED_DIR,
+        description="共享目录路径（默认仓库根 .trae_bridge，可用 FLOWFORGE_BRIDGE_DIR 覆盖）",
     )
     requests_dir: str = Field(
         default="requests",
@@ -258,6 +263,12 @@ class TraeBridgeConfig(BaseSettings):
         "extra": "ignore",
         "case_sensitive": False,
     }
+
+    @field_validator("shared_dir")
+    @classmethod
+    def _validate_shared_dir(cls, v: str) -> str:
+        """空值（${ENV_VAR:} 未配置）回退到仓库根 .trae_bridge，避免空路径."""
+        return v.strip() or _DEFAULT_SHARED_DIR
 
     @classmethod
     def load_from_yaml(cls, yaml_path: str) -> TraeBridgeConfig:

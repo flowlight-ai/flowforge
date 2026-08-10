@@ -1,5 +1,6 @@
 """Patch script: add retry logic to 3 proxy call_openroute functions."""
 import sys
+from pathlib import Path
 
 SHARED = '''# Invalid response patterns that indicate silent failure
 INVALID_RESPONSE_PATTERNS = [
@@ -137,7 +138,7 @@ def patch(path, p):
 
 
 def main():
-    b = r"d:\software\openclaw\flowforge\forgemind"
+    b = str(Path(__file__).resolve().parent)
     patch(b + r"\anthropic_to_openroute_proxy.py", "openai_body")
     patch(b + r"\gemini_to_openroute_proxy.py", "openai_body")
     patch(b + r"\responses_to_openroute_proxy.py", "chat_body")
