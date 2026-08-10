@@ -157,6 +157,8 @@ workflows/*.yaml
 # ==================== Internal development documents (not for GitHub) ====================
 # task.md: 内部任务索引，包含移植计划与进度，不公开
 docs/task.md
+# bugs 测试证据截图（二进制 PNG，不入库）
+docs/test/bugs/evidence/
 # _archive/: 历史归档目录，包含过程记录、中间态文档
 docs/_archive/
 # harness-feedback/: 内部反馈记录
@@ -200,6 +202,20 @@ crash_dumps/
 # Web dev server error log (Next.js HMR noise)
 web/.next-dev.err
 web/.next-dev.log
+
+# ==================== Root-level temp debug files (single _ prefix) ====================
+# 临时调试输出/探针脚本，仅本地使用，不入库
+/_*.txt
+/_*.py
+/_*.json
+/_*.md
+/_browsertest/
+/_driver*.txt
+/_mgr*.txt
+/_realrun*.txt
+/_suite*.txt
+/do_*.sh
+/commit_msg*.tmp
 
 # Ad-hoc test scripts with _ prefix (temporary debugging)
 **/_test_*.py

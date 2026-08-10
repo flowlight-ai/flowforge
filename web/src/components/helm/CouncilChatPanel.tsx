@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useCouncilChat } from "../../hooks/useCouncilChat";
+import { useCouncilSocket } from "../../hooks/useCouncilSocket";
 import { useInputHistory } from "../../hooks/useInputHistory";
 import { useThreadStore } from "../../stores/threadStore";
 import ForgekinSelector from "./ForgekinSelector";
@@ -70,6 +71,7 @@ export default function CouncilChatPanel({
     loadMore,
     editMessage,
     deleteMessage,
+    receiveMessage,
     clearMessages,
     addSystemMessage,
     updateConfig,
@@ -77,6 +79,25 @@ export default function CouncilChatPanel({
     setForgekinRole,
     reloadRoster,
   } = useCouncilChat(threadId);
+
+  // WebSocket 实时推送 — 当 threadId 存在时自动连接并订阅
+  const { status: wsStatus } = useCouncilSocket({
+    enabled: !!threadId,
+    threadId,
+    onMessage: useCallback((data: unknown) => {
+      const msg = data as Record<string, unknown>;
+      receiveMessage({
+        id: msg.id as string,
+        source: (msg.source as CouncilMessage["source"]) || "forgekin",
+        content: msg.content as string,
+        timestamp: (msg.timestamp as number) || Date.now(),
+        forgekinId: (msg.forgekin_id as string) || undefined,
+        forgekinName: (msg.forgekin_name as string) || undefined,
+        forgekinRole: (msg.forgekin_role as CouncilMessage["forgekinRole"]) || undefined,
+        meta: (msg.meta as Record<string, unknown>) || {},
+      });
+    }, [receiveMessage]),
+  });
 
   const [inputText, setInputText] = useState("");
   // thread-scoped 草稿管理：切换会话时保存/恢复未发送输入（不丢失）
@@ -782,6 +803,28 @@ export default function CouncilChatPanel({
           >
             ◎ 群聊
           </span>
+          {/* WebSocket 连接状态指示器 */}
+          {threadId && (
+            <span
+              className="text-[10px] flex items-center gap-1"
+              style={{ color: "var(--muted)" }}
+              title={`WebSocket: ${wsStatus}`}
+            >
+              <span
+                style={{
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background:
+                    wsStatus === "connected" ? "#10b981" :
+                    wsStatus === "connecting" || wsStatus === "reconnecting" ? "#f59e0b" :
+                    "#6b7280",
+                  display: "inline-block",
+                }}
+              />
+              {wsStatus === "connected" ? "实时" : wsStatus === "connecting" ? "连接中" : wsStatus === "reconnecting" ? "重连" : "离线"}
+            </span>
+          )}
           <span
             className="text-xs"
             style={{ color: "var(--muted)" }}

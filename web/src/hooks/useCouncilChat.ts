@@ -481,6 +481,15 @@ export function useCouncilChat(threadId: string | null) {
     [threadId]
   );
 
+  /** 接收 WebSocket 推送的消息（不持久化，因为后端已持久化） */
+  const receiveMessage = useCallback((msg: CouncilMessage) => {
+    setMessages((prev) => {
+      // 去重：避免 WebSocket 推送与 REST 响应重复
+      if (prev.some((m) => m.id === msg.id)) return prev;
+      return [...prev, msg];
+    });
+  }, []);
+
   /** 更新配置 */
   const updateConfig = useCallback((updates: Partial<CouncilConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
@@ -517,6 +526,7 @@ export function useCouncilChat(threadId: string | null) {
     loadMore,
     editMessage,
     deleteMessage,
+    receiveMessage,
     cancelRequest,
     clearMessages,
     addSystemMessage,

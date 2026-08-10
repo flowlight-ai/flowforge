@@ -23,11 +23,14 @@ interface CouncilThreadListProps {
   currentThreadId: string | null;
   /** className */
   className?: string;
+  /** 选中会话时的回调（不传则默认 router.push 到 /council/{id}） */
+  onThreadSelect?: (threadId: string) => void;
 }
 
 export function CouncilThreadList({
   currentThreadId,
   className,
+  onThreadSelect,
 }: CouncilThreadListProps) {
   const router = useRouter();
   const {
@@ -49,18 +52,32 @@ export function CouncilThreadList({
   const [editTitle, setEditTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showTrash, setShowTrash] = useState(false);
+  // 分组过滤：全部 / 置顶 / 最近（参考 clowder-ai LabelFilterBar + 项目分组）
+  const [filterGroup, setFilterGroup] = useState<"all" | "pinned" | "recent">("all");
   const editInputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // 搜索过滤（参考 clowder-ai ThreadSidebar 搜索）
+  // 搜索 + 分组过滤（参考 clowder-ai ThreadSidebar 搜索 + LabelFilterBar）
   const filteredThreads = useMemo(() => {
-    if (!searchQuery.trim()) return threads;
-    const q = searchQuery.toLowerCase();
-    return threads.filter(
-      (t) =>
-        t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q)
-    );
-  }, [threads, searchQuery]);
+    let result = threads;
+    // 分组过滤
+    if (filterGroup === "pinned") {
+      result = result.filter((t) => t.pinned);
+    } else if (filterGroup === "recent") {
+      // 最近 7 天的会话
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      result = result.filter((t) => new Date(t.updated_at).getTime() > sevenDaysAgo);
+    }
+    // 搜索过滤
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [threads, searchQuery, filterGroup]);
 
   // 初始加载会话列表
   useEffect(() => {
@@ -80,18 +97,26 @@ export function CouncilThreadList({
     const id = await createThread();
     if (id) {
       selectThread(id);
-      router.push(`/council/${id}`);
+      if (onThreadSelect) {
+        onThreadSelect(id);
+      } else {
+        router.push(`/council/${id}`);
+      }
     }
-  }, [createThread, selectThread, router]);
+  }, [createThread, selectThread, router, onThreadSelect]);
 
   /** 选择会话 */
   const handleSelect = useCallback(
     (threadId: string) => {
       if (editingId) return;
       selectThread(threadId);
-      router.push(`/council/${threadId}`);
+      if (onThreadSelect) {
+        onThreadSelect(threadId);
+      } else {
+        router.push(`/council/${threadId}`);
+      }
     },
-    [selectThread, router, editingId]
+    [selectThread, router, editingId, onThreadSelect]
   );
 
   /** 进入重命名模式 */
@@ -185,9 +210,9 @@ export function CouncilThreadList({
         </button>
       </div>
 
-      {/* 搜索框（参考 clowder-ai ThreadSidebar 搜索） */}
+      {/* 搜索框 + 分组过滤（参考 clowder-ai ThreadSidebar 搜索 + LabelFilterBar） */}
       {!showTrash && threads.length > 0 && (
-        <div className="px-2 py-1.5 border-b border-[var(--cafe-border-subtle,#2a2c3a)] flex-shrink-0">
+        <div className="px-2 py-1.5 border-b border-[var(--cafe-border-subtle,#2a2c3a)] flex-shrink-0 space-y-1.5">
           <input
             ref={searchRef}
             type="text"
@@ -197,6 +222,29 @@ export function CouncilThreadList({
             aria-label="搜索会话"
             className="w-full px-2 py-1 text-xs rounded bg-[var(--bg,#16171e)] border border-[var(--cafe-border-subtle,#2a2c3a)] text-[var(--cafe-text,#e5e7eb)] placeholder-[var(--cafe-text-muted,#6b7280)] outline-none focus:border-[var(--accent,#6366f1)]"
           />
+          {/* 分组过滤标签栏 — 参考 clowder-ai LabelFilterBar */}
+          <div className="flex items-center gap-1">
+            {([
+              { key: "all", label: "全部", count: threads.length },
+              { key: "pinned", label: "置顶", count: threads.filter((t) => t.pinned).length },
+              { key: "recent", label: "最近", count: threads.filter((t) => new Date(t.updated_at).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000).length },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setFilterGroup(tab.key)}
+                className={`px-1.5 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                  filterGroup === tab.key
+                    ? "bg-[var(--accent,#6366f1)] text-white"
+                    : "text-[var(--cafe-text-muted,#6b7280)] hover:bg-[var(--console-rail-item,#252633)] hover:text-[var(--cafe-text,#e5e7eb)]"
+                }`}
+                aria-pressed={filterGroup === tab.key}
+              >
+                {tab.label}
+                {tab.count > 0 && ` (${tab.count})`}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

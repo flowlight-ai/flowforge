@@ -19,6 +19,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback } from "react";
 import { useApprovalHubStore } from "@/stores/approvalHubStore";
+import { useThreadDrawerStore } from "@/stores/threadDrawerStore";
 import { useTheme } from "./ThemeProvider";
 
 interface NavItemDef {
@@ -131,10 +132,24 @@ function CouncilIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
+function DashboardIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className}>
+      <title>仪表盘</title>
+      <rect x="3" y="3" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="14" y="3" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3" y="14" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="14" y="14" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const NAV_ITEMS: NavItemDef[] = [
+  // 仪表盘（首页）— ThreadSidebar 移除后，仪表盘入口移至 ActivityBar
+  { id: "dashboard", path: "/", label: "仪表盘", match: (p) => p === "/", icon: DashboardIcon },
   // 两种对话模式拆为独立入口：对话（单人 Helm）+ 群聊（Council 多智能体）
   // 命名规范（v3）：toast 提示用 P0 用户术语"对话"/"群聊"，路由保持技术路径 /solo /council
-  { id: "solo", path: "/solo", label: "对话", match: (p) => p === "/" || p.startsWith("/solo"), icon: ChatIcon },
+  { id: "solo", path: "/solo", label: "对话", match: (p) => p.startsWith("/solo"), icon: ChatIcon },
   { id: "council", path: "/council", label: "群聊", match: (p) => p.startsWith("/council"), icon: CouncilIcon },
   { id: "memory", path: "/memory", label: "记忆中心", match: (p) => p.startsWith("/memory"), icon: MemoryIcon },
   { id: "mission", path: "/mission-hub", label: "Mission Hub", match: (p) => p.startsWith("/mission"), icon: MissionIcon },
@@ -176,6 +191,9 @@ export function ActivityBar({ className }: ActivityBarProps) {
     fetchPending();
   }, [toggleApproval, fetchPending]);
 
+  const toggleThreadDrawer = useThreadDrawerStore((s) => s.toggle);
+  const isThreadDrawerOpen = useThreadDrawerStore((s) => s.isOpen);
+
   const isSettingsRoute = pathname.startsWith("/admin/settings");
 
   return (
@@ -208,6 +226,23 @@ export function ActivityBar({ className }: ActivityBarProps) {
       })}
 
       <div className="mt-auto flex flex-col items-center gap-1.5">
+        {/* 全局会话列表抽屉 — 在任意路由下可切换群聊会话 */}
+        <button
+          type="button"
+          onClick={toggleThreadDrawer}
+          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-all ${
+            isThreadDrawerOpen
+              ? "bg-[var(--console-rail-active,#2a2c3a)] shadow-[var(--console-rail-shadow,0_1px_2px_rgba(0,0,0,0.3))]"
+              : "hover:bg-[var(--console-rail-item,#252633)] hover:shadow-[var(--console-rail-shadow,0_1px_2px_rgba(0,0,0,0.3))]"
+          }`}
+          title="会话列表"
+          aria-label="切换会话列表"
+          aria-pressed={isThreadDrawerOpen}
+          data-activity-bar-item="thread-drawer"
+        >
+          <CouncilIcon className="h-5 w-5" />
+        </button>
+
         <button
           type="button"
           onClick={handleApprovalClick}
