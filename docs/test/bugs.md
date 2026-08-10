@@ -105,32 +105,6 @@
   ```
   → 属**同一根因**（e2e/回归脚本在模块导入期执行逻辑），故按 BUG_PROTOCOL §一 B4 归于本单 P-02 主题、在此登记残留，不另开新单；本单修复仅覆盖 4 个 phase 脚本，`_test_comprehensive.py`/`_test_full_regression.py`/`test_opensieve_*` 仍待同法整改后方可整目录收集。
 
-### P-03 — `core/errors.py` 缺失 PartnershipError / ReliabilityError
-- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
-- **文件**：`core/errors.py`（仅定义 FlowForgeError 及其 13 个子类，无 PartnershipError / ReliabilityError）
-- **现象**：`tests/core/partnership/test_math.py:19`（`from flowforge.core.errors import PartnershipError`）与 `tests/core/reliability/test_wal.py:15`（`from flowforge.core.errors import ReliabilityError`）在收集期即 `ImportError`，对应用例全部收集失败；相关特性文档（F022–F025）亦引用这两个异常。
-- **建议**：在 `core/errors.py` 中补 `class PartnershipError(FlowForgeError)` 与 `class ReliabilityError(FlowForgeError)`，使合作/可靠性模块与测试对齐。
-- **T7/T8**：否
-- **开发自述**：修复提交 `9cfdb69`。在 `core/errors.py` 末尾追加 `PartnershipError`（status_code=422，对应合作候选/路径校验失败）与 `ReliabilityError`（status_code=503），均继承 `FlowForgeError`。自测：
-  ```bash
-  PYTHONPATH=/home/hyg/ai/fl/flowlight python3 -c "from flowforge.core.errors import PartnershipError, ReliabilityError"
-  # => P-03 import OK: PartnershipError 422 | ReliabilityError 503
-  ```
-  `tests/core/partnership/test_math.py` 收集不再 ImportError（其自身因 `flowforge.core.partnership` 尚未实现而 `importorskip` 跳过，属预期，非本单引入）。`test_wal.py` 同样为 importorskip 前置保护。请测试回归时以“两个名称可从 `core/errors` 导入”为准；若测到子模块已实现则回归用例可正常执行。
-- **【2026-08-09 复测·实跑】**（测试观察，非正式回归判定）：本单指定的两个类**确已可导入**——
-  ```bash
-  python3 -m pytest tests/core/ -q -p no:cacheprovider
-  # => 167 passed, 2 skipped（test_math/test_wal 因子模块未实现 importorskip 跳过，非 ImportError）
-  ```
-  但**同文件（`core/errors.py`）同主题的其它异常类仍缺失**，运行时收集独立复现（本单未覆盖）：`LLMError`、`ForgekinError` 均不在 `core/errors.py` 中，导致 `flowforge.llm.errors`（`llm/errors.py:20`）/`flowforge.llm.client` 整个模块 ImportError，`flowforge.forgemind.council` 亦 ImportError：
-  ```bash
-  python3 -c "import flowforge.llm.client"
-  # => ImportError: cannot import name 'LLMError' from 'flowforge.core.errors'
-  python3 -c "import flowforge.forgemind.council"
-  # => ImportError: cannot import name 'ForgekinError' from 'flowforge.core.errors'
-  ```
-  → 该残留虽与本单同属「`core/errors` 缺类」主题，但**波及产品模块导入链（llm.client / forgemind.council）**且症状、影响面均超出本单范围，已按运行时独立复现另开 **P-12**（见下）跟踪，不在此改本单状态。
-
 ### P-04 — `harness/governance.py:259` 拼写错误 `inject_to_system_rule`
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`harness/governance.py:259` → `return await self.inject_to_system_rule(target)`
@@ -171,6 +145,12 @@
   ```
   附：收集 `flowforge/tests` 全量时存在 13 个既有 collection errors（`test_scope_guard`、`test_cli.py` 缺 `flowforge/cli.__main__`、`test_evolution_engine.py` 缺 `EvolutionContext`、`test_forgekin.py` 缺 `ForgekinError`、`test_llm_client` 网络等），已通过 `git stash` 对照确认与配置源切换无关（stash 恢复 `pytest.ini` 后同为 13 errors），属既有待排问题，建议另开单。
 - **T7/T8**：否
+- **开发自述**：修复提交 `09349b3`。删除 `pytest.ini`（`git rm`），单一配置源收敛到 `pyproject.toml [tool.pytest.ini_options]`；将 `pytest.ini` 中独有且被测试实际使用的 `e2e` / `timeout` markers 合并进 pyproject（实测 `tests/` 用 `@pytest.mark.e2e`×1、`@pytest.mark.timeout`×10），并保留原 `slow` / `integration` 声明。自测：
+  ```bash
+  python3 -m pytest --collect-only -q tests/core/        # => 167 tests collected，无 unknown-marker warning
+  python3 -m pytest --collect-only -q tests/core/harness/  # strict-markers 生效，无未知 marker 报错
+  ```
+  附：收集 `flowforge/tests` 全量时存在 13 个既有 collection errors（`test_scope_guard`、`test_cli.py` 缺 `flowforge/cli.__main__`、`test_evolution_engine.py` 缺 `EvolutionContext`、`test_forgekin.py` 缺 `ForgekinError`、`test_llm_client` 网络等），已通过 git stash 对照确认与配置源切换无关（stash 恢复 `pytest.ini` 后同为 13 errors），属既有待排问题，建议另开单。
 
 ### P-07 — 23 个 e2e 测试中 14 个未接 T7/T8
 - **严重度**：S2 ｜ **分类**：T7 / T8 合规 ｜ **状态**：Fixed（待回归）
