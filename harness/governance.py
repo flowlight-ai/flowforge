@@ -256,7 +256,7 @@ class GovernanceInjector:
 
         if actual_point == InjectionPoint.SYSTEM_ROLE:
             # critical 规则被强制改为 SYSTEM_ROLE
-            return await self.inject_to_system_rule(target)
+            return await self.inject_to_system_role(target)
 
         text = self.user_message_template.format(
             rule_id=target.rule_id,
