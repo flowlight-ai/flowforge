@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **19** |
 | **加权缺陷指数（DI）** | **92** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 7 |
-| 状态：Fixed（待回归） | 12 |
+| 状态：Open | 6 |
+| 状态：Fixed（待回归） | 13 |
 | 状态：Closed | 0 |
 
 > 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
@@ -273,7 +273,7 @@
   注：`flowforge.llm.client` 仍因 `from flowforge.llm.provider import ProviderResponse` 报 ImportError，属 P-14 API 漂移范畴（ProviderResponse 名称已迁改），不在本单 LLMError 范围内，P-14 一并处理。
 
 ### P-13 — `flowforge.cli.__main__` 模块缺失：产品 CLI 入口崩溃 + `test_cli` 收集失败
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`cli/__init__.py:13`（`from flowforge.cli.__main__ import main`）、`pyproject.toml:63`（`flowforge = "flowforge.cli.__main__:main"`）、`tests/test_cli.py:12`
 - **现象**：`cli/` 包只有 `__init__.py`（无 `__main__.py`），而 `__init__` 与 console_script 均引用 `flowforge.cli.__main__:main`，导致产品 CLI 入口全崩、`test_cli` 收集期 `ModuleNotFoundError`。实跑：
   ```bash
@@ -283,6 +283,12 @@
   ```
 - **建议**：补 `cli/__main__.py`（实现 `main()` 及 `version/evolve/forgekin/loop` 子命令，见 `cli/__init__.py` docstring），或将入口指向真实存在的模块并同步 `pyproject.toml` console_script。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-13）。新增 `cli/__main__.py`（实现 `main(argv)->int`：`--version` 打印版本并 `SystemExit(0)`；`evolve --dry-run` 用 `forgemind.magic_words.detect_magic_word` 判定兜底词（魔术词触发输出 `Decision: A_scope_guard`），否则 `Decision: proceed`，均含 `dry-run`；`forgekin list` 复用 `engin examples` 三个内置 forgekin——猫(小煤球)、台灯(老灯)、Sherlock Holmes；`loop run` 冒烟输出 `Loop result: ok`），新增仓库根 `__main__.py` 使 `python -m flowforge` 可用。另在 `tests/conftest.py` 补 `project_root` fixture（测试 smoke 用例引用但缺定义）。自测：
+  ```bash
+  python3 -m pytest flowforge/tests/test_cli.py -q -p no:cacheprovider   # => 7 passed
+  python3 -m flowforge --version                                          # => flowforge 0.1.0
+  python3 -m flowforge forgekin list                                      # => 小煤球/老灯/Sherlock Holmes
+  ```
 
 ### P-14 — 测试/源码 API 漂移：4 个测试文件收集 ImportError（源码模块本身可导入）
 - **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
