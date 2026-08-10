@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **7** |
 | **加权缺陷指数（DI）** | **50** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 7 |
-| 状态：修复中 | 0 |
+| 状态：Open | 6 |
+| 状态：Fixed（待回归） | 1 |
 | 状态：Closed | 0 |
 
 ### 按严重度（Severity）
@@ -88,11 +88,17 @@
 - **T7/T8**：否
 
 ### P-06 — `pytest.ini` 静默覆盖 `pyproject.toml` 的 pytest 配置
-- **严重度**：S2 ｜ **分类**：CI / 配置 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：CI / 配置 ｜ **状态**：Fixed（待回归）
 - **文件**：`pytest.ini`（全量 `[pytest]` 段）覆盖 `pyproject.toml:108` `[tool.pytest.ini_options]`
 - **现象**：`pyproject.toml` 已声明 `minversion="8.0"` 与 `addopts=["-v","--strict-markers"]` 等，但 pytest 配置优先级 `pytest.ini` 高于 `pyproject.toml`，前者被静默采用、后者 `addopts` / `strict-markers` 等被忽略；两处重复声明 `testpaths` / `python_files` 易漂移且排查困难。
 - **建议**：保留单一配置源（推荐 `pyproject.toml` 的 `[tool.pytest.ini_options]`），删除 `pytest.ini` 或仅放 pytest 不覆盖的键；统一 markers / asyncio_mode 声明。
 - **T7/T8**：否
+- **开发自述**：修复提交 `09349b3`。删除 `pytest.ini`（`git rm`），单一配置源收敛到 `pyproject.toml [tool.pytest.ini_options]`；将 `pytest.ini` 中独有且被测试实际使用的 `e2e` / `timeout` markers 合并进 pyproject（实测 `tests/` 用 `@pytest.mark.e2e`×1、`@pytest.mark.timeout`×10），并保留原 `slow` / `integration` 声明。自测：
+  ```bash
+  python3 -m pytest --collect-only -q tests/core/        # => 167 tests collected，无 unknown-marker warning
+  python3 -m pytest --collect-only -q tests/core/harness/  # strict-markers 生效，无未知 marker 报错
+  ```
+  附：收集 `flowforge/tests` 全量时存在 13 个既有 collection errors（`test_scope_guard`、`test_cli.py` 缺 `flowforge/cli.__main__`、`test_evolution_engine.py` 缺 `EvolutionContext`、`test_forgekin.py` 缺 `ForgekinError`、`test_llm_client` 网络等），已通过 git stash 对照确认与配置源切换无关（stash 恢复 `pytest.ini` 后同为 13 errors），属既有待排问题，建议另开单。
 
 ### P-07 — 23 个 e2e 测试中 14 个未接 T7/T8
 - **严重度**：S2 ｜ **分类**：T7 / T8 合规 ｜ **状态**：Open
