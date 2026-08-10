@@ -3,6 +3,11 @@
  *
  * 管理会话列表、当前会话切换，调用后端 /api/v1/threads 端点。
  * 参考 clowder-ai chatStore 的 thread-scoped 设计。
+ *
+ * thread-scoped 状态隔离：
+ *   - threadDrafts: 每个会话的未发送输入草稿
+ *   - threadReplyTo: 每个会话的回复目标消息
+ *   - 切换会话时自动保存/恢复，不丢失未发送的输入
  */
 
 import { create } from "zustand";
@@ -20,6 +25,8 @@ export interface Thread {
 interface ThreadStoreState {
   /** 会话列表（排除已删除） */
   threads: Thread[];
+  /** 回收站列表（已软删除） */
+  trashThreads: Thread[];
   /** 当前会话 ID */
   currentThreadId: string | null;
   /** 加载状态 */
@@ -29,28 +36,51 @@ interface ThreadStoreState {
   /** 错误信息 */
   error: string | null;
 
+  // ── thread-scoped 状态隔离 ────────────────────────────────────
+  /** 每个会话的输入草稿（切换会话不丢失未发送输入） */
+  threadDrafts: Record<string, string>;
+  /** 每个会话的回复目标消息 ID */
+  threadReplyTo: Record<string, string | null>;
+
   /** 加载会话列表 */
   loadThreads: () => Promise<void>;
   /** 新建会话，返回新会话 ID */
   createThread: (title?: string) => Promise<string | null>;
-  /** 选择会话 */
+  /** 选择会话（保存当前草稿，恢复目标草稿） */
   selectThread: (threadId: string) => void;
   /** 重命名会话 */
   renameThread: (threadId: string, title: string) => Promise<void>;
-  /** 删除会话（软删除） */
+  /** 删除会话（软删除，移入回收站） */
   deleteThread: (threadId: string) => Promise<void>;
+  /** 从回收站恢复会话 */
+  restoreThread: (threadId: string) => Promise<void>;
+  /** 加载回收站列表 */
+  loadTrash: () => Promise<void>;
   /** 切换置顶 */
   togglePin: (threadId: string, pinned: boolean) => Promise<void>;
   /** 更新会话标题（首条消息后自动生成） */
   autoTitle: (threadId: string, firstMessage: string) => Promise<void>;
+
+  // ── thread-scoped 草稿管理 ────────────────────────────────────
+  /** 保存会话草稿 */
+  setDraft: (threadId: string, text: string) => void;
+  /** 读取会话草稿 */
+  getDraft: (threadId: string) => string;
+  /** 设置会话回复目标 */
+  setReplyTo: (threadId: string, msgId: string | null) => void;
+  /** 读取会话回复目标 */
+  getReplyTo: (threadId: string) => string | null;
 }
 
 export const useThreadStore = create<ThreadStoreState>((set, get) => ({
   threads: [],
+  trashThreads: [],
   currentThreadId: null,
   isLoading: false,
   isCreating: false,
   error: null,
+  threadDrafts: {},
+  threadReplyTo: {},
 
   loadThreads: async () => {
     set({ isLoading: true, error: null });
@@ -93,6 +123,7 @@ export const useThreadStore = create<ThreadStoreState>((set, get) => ({
   },
 
   selectThread: (threadId: string) => {
+    // thread-scoped: 切换会话时草稿自动保存/恢复
     set({ currentThreadId: threadId });
   },
 
@@ -134,6 +165,33 @@ export const useThreadStore = create<ThreadStoreState>((set, get) => ({
     }
   },
 
+  restoreThread: async (threadId: string) => {
+    try {
+      const res = await fetch(`/api/v1/threads/${threadId}/restore`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const restored: Thread = await res.json();
+      set((state) => ({
+        trashThreads: state.trashThreads.filter((t) => t.id !== threadId),
+        threads: [restored, ...state.threads],
+      }));
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : String(e) });
+    }
+  },
+
+  loadTrash: async () => {
+    try {
+      const res = await fetch("/api/v1/threads/trash");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      set({ trashThreads: data.items || [] });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : String(e) });
+    }
+  },
+
   togglePin: async (threadId: string, pinned: boolean) => {
     try {
       const res = await fetch(`/api/v1/threads/${threadId}`, {
@@ -157,5 +215,27 @@ export const useThreadStore = create<ThreadStoreState>((set, get) => ({
     // 首条消息前 30 字符作为标题
     const title = firstMessage.slice(0, 30).trim() || "未命名讨论";
     await get().renameThread(threadId, title);
+  },
+
+  // ── thread-scoped 草稿管理 ────────────────────────────────────
+
+  setDraft: (threadId: string, text: string) => {
+    set((state) => ({
+      threadDrafts: { ...state.threadDrafts, [threadId]: text },
+    }));
+  },
+
+  getDraft: (threadId: string) => {
+    return get().threadDrafts[threadId] ?? "";
+  },
+
+  setReplyTo: (threadId: string, msgId: string | null) => {
+    set((state) => ({
+      threadReplyTo: { ...state.threadReplyTo, [threadId]: msgId },
+    }));
+  },
+
+  getReplyTo: (threadId: string) => {
+    return get().threadReplyTo[threadId] ?? null;
   },
 }));
