@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **19** |
 | **加权缺陷指数（DI）** | **92** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 11 |
-| 状态：Fixed（待回归） | 8 |
+| 状态：Open | 10 |
+| 状态：Fixed（待回归） | 9 |
 | 状态：Closed | 0 |
 
 > 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
@@ -104,6 +104,14 @@
   # => ERROR ... json.decoder.JSONDecodeError: Expecting value（模块级 asyncio.run(main())）
   ```
   → 属**同一根因**（e2e/回归脚本在模块导入期执行逻辑），故按 BUG_PROTOCOL §一 B4 归于本单 P-02 主题、在此登记残留，不另开新单；本单修复仅覆盖 4 个 phase 脚本，`_test_comprehensive.py`/`_test_full_regression.py`/`test_opensieve_*` 仍待同法整改后方可整目录收集。
+
+### P-03 — `core/errors.py` 缺失 PartnershipError / ReliabilityError
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
+- **文件**：`core/errors.py`（仅定义 FlowForgeError 及其 13 个子类，无 PartnershipError / ReliabilityError）
+- **现象**：`tests/core/partnership/test_math.py:19`（`from flowforge.core.errors import PartnershipError`）与 `tests/core/reliability/test_wal.py:15`（`from flowforge.core.errors import ReliabilityError`）在收集期即 `ImportError`，对应用例全部收集失败；相关特性文档（F022–F025）亦引用这两个异常。
+- **建议**：在 `core/errors.py` 中补 `class PartnershipError(FlowForgeError)` 与 `class ReliabilityError(FlowForgeError)`，使合作/可靠性模块与测试对齐。
+- **T7/T8**：否
+- **开发自述**：修复提交 `9cfdb69`。在 `core/errors.py` 末尾追加 `PartnershipError`（status_code=422，对应合作候选/路径校验失败）与 `ReliabilityError`（status_code=503），均继承 `FlowForgeError`。自测：
 
 ### P-04 — `harness/governance.py:259` 拼写错误 `inject_to_system_rule`
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
@@ -298,6 +306,12 @@
   ```
 - **建议**：用例改用 `sys.executable`（或 `python3`）拼接命令，避免依赖裸 `python` 可执行名。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-16）。`tests/unit/test_declarative_tool.py::test_json_output` 的 `command` 由 `'python -c ...'` 改为 `sys.executable + ' -c ...'`（`sys` 本已导入），不依赖裸 `python` 可执行名。自测：
+  ```bash
+  python3 -m pytest flowforge/tests/unit/test_declarative_tool.py -q -k json_output
+  # => 1 passed, 22 deselected（原先 exit 127 断言失败，现通过）
+  ```
+  残留扫描 `grep -n "python -c" tests/unit/test_declarative_tool.py` 无匹配。
 
 ### P-17 — 依赖外部服务/浏览器的 e2e/集成用例阻塞（8765 web / 5174 前端+Playwright），且文档入口 `flowforge/web/app.py` 不存在
 - **严重度**：S2 ｜ **分类**：验证阻塞（环境） ｜ **状态**：Open（阻塞）
@@ -383,3 +397,4 @@ grep -lE "T7|T8|内容审核|DOM" tests/e2e/*.py | wc -l            # => 约 9�
 # governance 拼写错误确认
 grep -n "inject_to_system_rule" harness/governance.py           # => 259
 ```
+
