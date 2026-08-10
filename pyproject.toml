@@ -120,7 +120,9 @@ addopts = [
 asyncio_mode = "auto"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
+    "integration: integration tests that call real external APIs",
+    "e2e: end-to-end tests",
+    "timeout: per-test timeout (requires pytest-timeout)",
 ]
 
 [tool.coverage.run]
