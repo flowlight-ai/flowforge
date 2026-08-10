@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **19** |
 | **加权缺陷指数（DI）** | **92** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 9 |
-| 状态：Fixed（待回归） | 10 |
+| 状态：Open | 8 |
+| 状态：Fixed（待回归） | 11 |
 | 状态：Closed | 0 |
 
 > 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
@@ -198,8 +198,8 @@
 > - `tests/e2e/`：起本地 API 服务（`PYTHONPATH=.. python3 -m uvicorn flowforge.app.main:app --port 8002`）后 `test_concurrent`(9P)、`test_minimal_conn`(1P)、`test_event_bridge_e2e/extreme`(23P)、`test_real_llm`/`test_t7_llm_review`(离线 skip)通过；需 8765/5174/浏览器者阻塞（见 P-17）。
 
 ### P-08 — `asyncio.get_event_loop().run_until_complete()` 在 Python 3.12 抛 RuntimeError（1 用例，2026-08-10 复核）
-- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
-- **文件**：`skills/base.py:66`（`asyncio.get_event_loop().run_until_complete(...)`）、`tests/unit/test_phase4_features.py::TestSandboxBackwardCompat::test_legacy_execute_still_works`
+- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
+- **文件**：`tests/unit/test_phase4_features.py::TestSandboxBackwardCompat::test_legacy_execute_still_works`（`asyncio.get_event_loop().run_until_complete(...)` 调用所在；复测记录引 `skills/base.py:66` 经复核为测试文件内部调用）
 - **现象**：源码 `skills/base.py:66` 用 `asyncio.get_event_loop().run_until_complete(...)` 驱动协程；Python 3.12 主线程默认无当前事件循环，该同步遗留路径触发 `RuntimeError: There is no current event loop in thread 'MainThread'`，用例未跑到断言即失败。注意：`test_skills.py` 仅对 `get_event_loop` 抛 `DeprecationWarning`（未失败），实测 36 passed；真正失败的是 `test_phase4_features.py` 的 legacy 同步包装用例。实跑（2026-08-10 复核）：
   ```bash
   python3 -m pytest tests/unit/test_skills.py -q -p no:cacheprovider
@@ -210,6 +210,12 @@
   ```
 - **建议**：改用 `asyncio.run(...)`，或声明为 `async def` + `@pytest.mark.asyncio`（本仓 asyncio_mode=auto 可直接 await）。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-08）。`tests/unit/test_phase4_features.py::test_legacy_execute_still_works` 内 `asyncio.get_event_loop().run_until_complete(sandbox.execute("p", func))` → `asyncio.run(...)`（消除 Py3.12 主线程无当前事件循环的 RuntimeError，并消除 DeprecationWarning）。自测：
+  ```bash
+  python3 -m pytest flowforge/tests/unit/test_phase4_features.py::TestSandboxBackwardCompat -q
+  # => 4 passed（原先 RuntimeError 用例现通过，无 DeprecationWarning）
+  ```
+  复核注：复测记录引 `skills/base.py:66`，实为测试文件内部 `asyncio.get_event_loop().run_until_complete` 调用（该测试文件自己导入 asyncio），源码 `skills/base.py` 无此调用。
 
 ### P-09 — `app/main.py` `_load_single_plugin` 兼容 shim 丢弃传入的注册表参数，热重载跟踪失效（4 用例）
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
