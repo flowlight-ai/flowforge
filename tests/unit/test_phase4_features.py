@@ -559,9 +559,7 @@ class TestSandboxBackwardCompat:
         async def func():
             return "legacy_result"
 
-        result = asyncio.get_event_loop().run_until_complete(
-            sandbox.execute("p", func)
-        )
+        result = asyncio.run(sandbox.execute("p", func))
         assert result == "legacy_result"
 
     def test_legacy_audit_log_still_works(self):
