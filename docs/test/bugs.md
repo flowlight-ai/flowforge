@@ -21,8 +21,8 @@
 |------|------|
 | **缺陷总数（DI count）** | **19** |
 | **加权缺陷指数（DI）** | **92** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 10 |
-| 状态：Fixed（待回归） | 9 |
+| 状态：Open | 9 |
+| 状态：Fixed（待回归） | 10 |
 | 状态：Closed | 0 |
 
 > 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
@@ -339,6 +339,11 @@
   ```
 - **建议**：对齐 example 文件与用例期望（择一改名），或用例改为断言 example 实际部署名/数量而非硬编码 `contentforge-publish`。
 - **T7/T8**：否
+- **开发自述**：修复提交（P-18）。`config/canary.yaml.example` 两个部署名 `sample-publish`/`sample-deploy` → `contentforge-publish`/`devforge-deploy`（与 `test_canary_executor.py::test_canary_yaml_example_loads_into_registry` 断言一致；`*Forge` 业务项目部署名更贴合实际），文件头注释同步更新。自测：
+  ```bash
+  python3 -m pytest flowforge/tests/test_canary_executor.py -q -k yaml_example
+  # => 1 passed, 66 deselected（原先 1 failed，现通过）
+  ```
 
 ### P-19 — `test_breakpoint_c_stress.py` 辅助函数命名为 `test_*` 被 pytest 收集为用例 → fixture not found
 - **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
