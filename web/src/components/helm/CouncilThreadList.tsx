@@ -32,19 +32,23 @@ export function CouncilThreadList({
   const router = useRouter();
   const {
     threads,
+    trashThreads,
     isLoading,
     isCreating,
     loadThreads,
+    loadTrash,
     createThread,
     selectThread,
     renameThread,
     deleteThread,
+    restoreThread,
     togglePin,
   } = useThreadStore();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showTrash, setShowTrash] = useState(false);
   const editInputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -113,7 +117,7 @@ export function CouncilThreadList({
   const handleDelete = useCallback(
     async (e: React.MouseEvent, threadId: string) => {
       e.stopPropagation();
-      if (!confirm("确定删除这个会话吗？删除后不可恢复。")) return;
+      if (!confirm("确定删除这个会话吗？删除后可在回收站恢复。")) return;
       await deleteThread(threadId);
       // 如果删除的是当前会话，跳转到 /council
       if (threadId === currentThreadId) {
@@ -131,6 +135,34 @@ export function CouncilThreadList({
     },
     [togglePin]
   );
+
+  /** 进入回收站视图 */
+  const handleShowTrash = useCallback(() => {
+    setShowTrash(true);
+    loadTrash();
+  }, [loadTrash]);
+
+  /** 返回正常列表 */
+  const handleBackToList = useCallback(() => {
+    setShowTrash(false);
+  }, []);
+
+  /** 恢复会话 */
+  const handleRestore = useCallback(
+    async (e: React.MouseEvent, threadId: string) => {
+      e.stopPropagation();
+      await restoreThread(threadId);
+    },
+    [restoreThread]
+  );
+
+  /** 格式化删除时间 */
+  const formatDeletedAt = useCallback((raw: string | null) => {
+    if (!raw) return "";
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString();
+  }, []);
 
   return (
     <div
@@ -154,7 +186,7 @@ export function CouncilThreadList({
       </div>
 
       {/* 搜索框（参考 clowder-ai ThreadSidebar 搜索） */}
-      {threads.length > 0 && (
+      {!showTrash && threads.length > 0 && (
         <div className="px-2 py-1.5 border-b border-[var(--cafe-border-subtle,#2a2c3a)] flex-shrink-0">
           <input
             ref={searchRef}
@@ -168,9 +200,45 @@ export function CouncilThreadList({
         </div>
       )}
 
-      {/* 会话列表 */}
+      {/* 会话列表 / 回收站列表 */}
       <div className="flex-1 overflow-y-auto py-1 px-1.5">
-        {isLoading && threads.length === 0 ? (
+        {showTrash ? (
+          trashThreads.length === 0 ? (
+            <div className="px-3 py-4 text-xs text-[var(--cafe-text-muted,#6b7280)] text-center">
+              回收站为空
+            </div>
+          ) : (
+            trashThreads.map((thread) => {
+              const deletedAt = formatDeletedAt(thread.deleted_at);
+              return (
+                <div
+                  key={thread.id}
+                  className="group flex items-center gap-2 px-2.5 py-2 rounded-md mb-0.5 text-[var(--cafe-text-secondary,#9ca3af)] hover:bg-[var(--console-rail-item,#252633)]"
+                  data-council-trash-item={thread.id}
+                >
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <span className="truncate text-xs font-medium">
+                      {thread.title}
+                    </span>
+                    {deletedAt && (
+                      <span className="text-[10px] text-[var(--cafe-text-muted,#6b7280)] truncate">
+                        删除于 {deletedAt}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleRestore(e, thread.id)}
+                    className="flex-shrink-0 text-xs opacity-60 group-hover:opacity-100 hover:!opacity-100 transition-opacity text-emerald-400"
+                    title="恢复会话"
+                  >
+                    ↩ 恢复
+                  </button>
+                </div>
+              );
+            })
+          )
+        ) : isLoading && threads.length === 0 ? (
           <div className="px-3 py-2 text-xs text-[var(--cafe-text-muted,#6b7280)]">
             加载中...
           </div>
@@ -243,6 +311,35 @@ export function CouncilThreadList({
               </div>
             );
           })
+        )}
+      </div>
+
+      {/* 底部：回收站 / 返回列表 */}
+      <div className="flex-shrink-0 border-t border-[var(--cafe-border-subtle,#2a2c3a)] px-2 py-1.5">
+        {showTrash ? (
+          <button
+            type="button"
+            onClick={handleBackToList}
+            className="w-full px-2.5 py-1.5 text-xs font-medium rounded-md text-[var(--cafe-text,#e5e7eb)] hover:bg-[var(--console-rail-item,#252633)] transition-colors"
+            data-council-thread-list="back-btn"
+          >
+            ← 返回列表
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleShowTrash}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-md text-[var(--cafe-text-secondary,#9ca3af)] hover:bg-[var(--console-rail-item,#252633)] hover:text-[var(--cafe-text,#e5e7eb)] transition-colors"
+            data-council-thread-list="trash-btn"
+          >
+            <span className="flex items-center gap-1.5">
+              <span>🗑</span>
+              <span>回收站</span>
+            </span>
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold rounded-full bg-[var(--console-rail-item,#252633)] text-[var(--cafe-text-muted,#6b7280)]">
+              {trashThreads.length}
+            </span>
+          </button>
         )}
       </div>
     </div>

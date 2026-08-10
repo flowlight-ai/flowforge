@@ -16,8 +16,11 @@ import { ResizeHandle } from "./workspace/ResizeHandle";
 // 与 clowder-ai 一致：展示页无 Shell
 const CHROMELESS_ROUTES: string[] = [];
 
-// 与 clowder-ai 一致：这些路由隐藏 ThreadSidebar（因为有自带侧边栏）
+// 与 clowder-ai 一致：这些路由隐藏 ThreadSidebar（因为有自带侧边栏或全屏布局）
+// /solo (HelmLayout) 和 /council (全屏群聊) 有自己的完整布局，不需要 ThreadSidebar 导航栏
 const SIDEBAR_HIDDEN_ROUTES = [
+  "/solo",
+  "/council",
   "/admin/settings",
   "/admin/marketplace",
   "/signals",

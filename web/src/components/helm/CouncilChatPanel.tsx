@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useCouncilChat } from "../../hooks/useCouncilChat";
 import { useInputHistory } from "../../hooks/useInputHistory";
+import { useThreadStore } from "../../stores/threadStore";
 import ForgekinSelector from "./ForgekinSelector";
 import ContextPanel from "./ContextPanel";
 import ScrollToBottomButton from "./ScrollToBottomButton";
@@ -64,7 +65,11 @@ export default function CouncilChatPanel({
     isLoading,
     error,
     messagesEndRef,
+    hasMore,
     sendMessage,
+    loadMore,
+    editMessage,
+    deleteMessage,
     clearMessages,
     addSystemMessage,
     updateConfig,
@@ -74,6 +79,12 @@ export default function CouncilChatPanel({
   } = useCouncilChat(threadId);
 
   const [inputText, setInputText] = useState("");
+  // thread-scoped 草稿管理：切换会话时保存/恢复未发送输入（不丢失）
+  const setDraft = useThreadStore((s) => s.setDraft);
+  const getDraft = useThreadStore((s) => s.getDraft);
+  // 防止 threadId 切换后恢复草稿被同步 effect 反向覆盖
+  const skipDraftSyncRef = useRef(false);
+
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
   const [mentionStart, setMentionStart] = useState(-1); // @ 符号在输入框中的位置
@@ -84,6 +95,10 @@ export default function CouncilChatPanel({
   const [forwardedId, setForwardedId] = useState<string | null>(null);
   // 记录最近一条用户消息（用于"重新生成"重新发送原消息）
   const [lastUserMessage, setLastUserMessage] = useState<CouncilMessage | null>(null);
+  // 编辑中的消息（非 null 时显示编辑模态框）
+  const [editingMessage, setEditingMessage] = useState<CouncilMessage | null>(null);
+  // 待删除的消息（非 null 时显示确认对话框）
+  const [deletingMessage, setDeletingMessage] = useState<CouncilMessage | null>(null);
   // Reactions 状态：messageId → { emoji: count }
   // 客户端管理（无后端持久化），切换 toggle 添加/移除
   const [reactions, setReactions] = useState<Record<string, Record<string, number>>>({});
@@ -123,6 +138,31 @@ export default function CouncilChatPanel({
   const slashMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [mentionCanScrollDown, setMentionCanScrollDown] = useState(false);
+
+  // ── thread-scoped 草稿恢复/同步 ───────────────────────────────
+  // threadId 切换时从 store 恢复该会话的草稿（并重置相关 UI 状态）
+  useEffect(() => {
+    skipDraftSyncRef.current = true;
+    if (threadId) {
+      setInputText(getDraft(threadId));
+    } else {
+      setInputText("");
+    }
+    setShowMentionMenu(false);
+    setMentionStart(-1);
+    setReplyTo(null);
+  }, [threadId, getDraft]);
+
+  // inputText 变化时持久化到 store（跳过刚恢复的那次，避免反向覆盖）
+  useEffect(() => {
+    if (skipDraftSyncRef.current) {
+      skipDraftSyncRef.current = false;
+      return;
+    }
+    if (threadId) {
+      setDraft(threadId, inputText);
+    }
+  }, [inputText, threadId, setDraft]);
 
   // 过滤的斜杠命令列表（用于键盘导航）
   const filteredSlashCommands = useMemo(() => {
@@ -685,6 +725,35 @@ export default function CouncilChatPanel({
     });
   }, []);
 
+  /** 打开编辑模态框 */
+  const handleEditMessage = useCallback((msg: CouncilMessage) => {
+    setEditingMessage(msg);
+  }, []);
+
+  /** 保存编辑 — 调用 editMessage 并关闭模态框 */
+  const handleSaveEdit = useCallback(
+    async (newContent: string) => {
+      if (!editingMessage) return;
+      const trimmed = newContent.trim();
+      if (!trimmed) return;
+      await editMessage(editingMessage.id, trimmed);
+      setEditingMessage(null);
+    },
+    [editingMessage, editMessage],
+  );
+
+  /** 打开删除确认对话框 */
+  const handleDeleteMessage = useCallback((msg: CouncilMessage) => {
+    setDeletingMessage(msg);
+  }, []);
+
+  /** 确认删除 — 调用 deleteMessage 并关闭对话框 */
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deletingMessage) return;
+    await deleteMessage(deletingMessage.id);
+    setDeletingMessage(null);
+  }, [deletingMessage, deleteMessage]);
+
   /** 滚动选中项到视图 */
   const selectedRef = useCallback((node: HTMLButtonElement | null) => {
     if (node && typeof node.scrollIntoView === "function") {
@@ -813,6 +882,18 @@ export default function CouncilChatPanel({
             </div>
           )}
 
+          {/* 加载更多旧消息（hasMore 为 true 时显示） */}
+          {hasMore && (
+            <div className="flex justify-center py-2">
+              <button
+                onClick={() => loadMore()}
+                className="px-3 py-1 text-xs rounded bg-[var(--cafe-border-subtle,#2a2c3a)] text-[var(--cafe-text,#e5e7eb)] hover:bg-[var(--cafe-border,#3a3c4a)] transition"
+              >
+                ↑ 加载更多消息
+              </button>
+            </div>
+          )}
+
           {messages.map((msg, idx) => (
             <div key={msg.id} data-message-idx={idx + 1}>
               <CouncilMessageBubble
@@ -821,6 +902,8 @@ export default function CouncilChatPanel({
                 onReply={handleReplyMessage}
                 onRegenerate={handleRegenerate}
                 onForward={handleForward}
+                onEdit={handleEditMessage}
+                onDelete={handleDeleteMessage}
                 copied={copiedId === msg.id}
                 forwarded={forwardedId === msg.id}
                 isReplyTarget={replyTo?.id === msg.id}
@@ -1256,6 +1339,24 @@ export default function CouncilChatPanel({
           onCancel={() => setShowVoteModal(false)}
         />
       )}
+
+      {/* EditMessageModal — 消息编辑模态框 */}
+      {editingMessage && (
+        <EditMessageModal
+          message={editingMessage}
+          onSave={handleSaveEdit}
+          onCancel={() => setEditingMessage(null)}
+        />
+      )}
+
+      {/* DeleteConfirmDialog — 删除确认对话框 */}
+      {deletingMessage && (
+        <DeleteConfirmDialog
+          message={deletingMessage}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeletingMessage(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1267,6 +1368,8 @@ interface CouncilMessageBubbleProps {
   onReply: (msg: CouncilMessage) => void;
   onRegenerate: (msg: CouncilMessage) => void;
   onForward: (msg: CouncilMessage) => void;
+  onEdit: (msg: CouncilMessage) => void;
+  onDelete: (msg: CouncilMessage) => void;
   copied: boolean;
   forwarded: boolean;
   isReplyTarget: boolean;
@@ -1282,6 +1385,8 @@ function CouncilMessageBubble({
   onReply,
   onRegenerate,
   onForward,
+  onEdit,
+  onDelete,
   copied,
   forwarded,
   isReplyTarget,
@@ -1350,6 +1455,8 @@ function CouncilMessageBubble({
                 onReply={onReply}
                 onRegenerate={onRegenerate}
                 onForward={onForward}
+                onEdit={onEdit}
+                onDelete={onDelete}
                 copied={copied}
                 forwarded={forwarded}
                 onToggleReactionPicker={onToggleReactionPicker}
@@ -1458,6 +1565,8 @@ function CouncilMessageBubble({
                 onReply={onReply}
                 onRegenerate={onRegenerate}
                 onForward={onForward}
+                onEdit={onEdit}
+                onDelete={onDelete}
                 copied={copied}
                 forwarded={forwarded}
                 onToggleReactionPicker={onToggleReactionPicker}
@@ -1548,6 +1657,8 @@ function MessageActions({
   onReply,
   onRegenerate,
   onForward,
+  onEdit,
+  onDelete,
   copied,
   forwarded,
   onToggleReactionPicker,
@@ -1557,6 +1668,8 @@ function MessageActions({
   onReply: (msg: CouncilMessage) => void;
   onRegenerate: (msg: CouncilMessage) => void;
   onForward: (msg: CouncilMessage) => void;
+  onEdit: (msg: CouncilMessage) => void;
+  onDelete: (msg: CouncilMessage) => void;
   copied: boolean;
   forwarded: boolean;
   onToggleReactionPicker: () => void;
@@ -1581,6 +1694,8 @@ function MessageActions({
   };
   // 仅智能体消息可重新生成（用户消息无意义）
   const canRegenerate = message.source === "forgekin";
+  // 仅用户消息可编辑
+  const canEdit = message.source === "user";
   return (
     <div className="flex items-center gap-0.5">
       <button
@@ -1592,6 +1707,17 @@ function MessageActions({
       >
         {copied ? "✓ 已复制" : "⎘ 复制"}
       </button>
+      {canEdit && (
+        <button
+          onClick={() => onEdit(message)}
+          style={btnStyle}
+          title="编辑消息"
+          onMouseEnter={attachHover}
+          onMouseLeave={attachLeave}
+        >
+          ✏️ 编辑
+        </button>
+      )}
       {message.source !== "user" && (
         <button
           onClick={() => onReply(message)}
@@ -1632,6 +1758,198 @@ function MessageActions({
       >
         ☺ 表情
       </button>
+      <button
+        onClick={() => onDelete(message)}
+        style={btnStyle}
+        title="删除消息"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = "var(--semantic-critical, #ef4444)";
+          e.currentTarget.style.background = "var(--bg-hover, color-mix(in srgb, var(--semantic-critical, #ef4444) 10%, transparent))";
+        }}
+        onMouseLeave={attachLeave}
+      >
+        🗑 删除
+      </button>
+    </div>
+  );
+}
+
+/** 编辑消息模态框 — textarea + 保存/取消，Ctrl+Enter 快捷保存 */
+function EditMessageModal({
+  message,
+  onSave,
+  onCancel,
+}: {
+  message: CouncilMessage;
+  onSave: (newContent: string) => void;
+  onCancel: () => void;
+}) {
+  const [text, setText] = useState(message.content);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 打开时聚焦并选中末尾
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ctrl+Enter / Cmd+Enter 保存
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (text.trim()) onSave(text);
+      return;
+    }
+    // Esc 取消
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel();
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={onCancel}
+    >
+      <div
+        className="rounded-lg shadow-xl w-full max-w-lg mx-4 p-4 flex flex-col gap-3"
+        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium" style={{ color: "var(--text)" }}>
+            ✏️ 编辑消息
+          </span>
+          <button
+            onClick={onCancel}
+            style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", padding: "2px 6px" }}
+            title="取消"
+          >
+            ✕
+          </button>
+        </div>
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          rows={5}
+          className="rounded-lg px-3 py-2 text-sm resize-none focus:outline-none"
+          style={{
+            background: "var(--bg)",
+            border: "1px solid var(--border)",
+            color: "var(--text)",
+            minHeight: "80px",
+          }}
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-[10px]" style={{ color: "var(--muted)" }}>
+            Ctrl+Enter 保存 · Esc 取消
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onCancel}
+              className="px-3 py-1.5 rounded-lg text-sm transition-colors"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border)",
+                color: "var(--text)",
+                cursor: "pointer",
+              }}
+            >
+              取消
+            </button>
+            <button
+              onClick={() => text.trim() && onSave(text)}
+              disabled={!text.trim()}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                background: "var(--accent)",
+                color: "var(--accent-foreground, #fff)",
+                border: "none",
+                cursor: text.trim() ? "pointer" : "not-allowed",
+                opacity: text.trim() ? 1 : 0.4,
+              }}
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 删除确认对话框 — 二次确认避免误删 */
+function DeleteConfirmDialog({
+  message,
+  onConfirm,
+  onCancel,
+}: {
+  message: CouncilMessage;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={onCancel}
+    >
+      <div
+        className="rounded-lg shadow-xl w-full max-w-sm mx-4 p-4 flex flex-col gap-3"
+        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-sm font-medium" style={{ color: "var(--text)" }}>
+          🗑 确认删除消息？
+        </div>
+        <div
+          className="text-xs rounded px-2 py-1.5 max-h-24 overflow-y-auto"
+          style={{
+            background: "var(--bg)",
+            border: "1px solid var(--border)",
+            color: "var(--muted)",
+          }}
+        >
+          {message.content.slice(0, 200).replace(/\n/g, " ")}
+          {message.content.length > 200 ? "..." : ""}
+        </div>
+        <p className="text-xs" style={{ color: "var(--semantic-critical, #ef4444)" }}>
+          删除后不可恢复。
+        </p>
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 rounded-lg text-sm transition-colors"
+            style={{
+              background: "transparent",
+              border: "1px solid var(--border)",
+              color: "var(--text)",
+              cursor: "pointer",
+            }}
+          >
+            取消
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              background: "var(--semantic-critical, #ef4444)",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            删除
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

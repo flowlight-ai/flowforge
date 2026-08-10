@@ -81,30 +81,39 @@ export function useCouncilChat(threadId: string | null) {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const offsetRef = useRef(0);
 
   // 持久化 config 到 localStorage
   useEffect(() => {
     saveToStorage(STORAGE_KEY_CONFIG, config);
   }, [config]);
 
-  // 切换会话时从后端加载消息历史
+  // 切换会话时从后端加载消息历史（分页：初始加载 50 条）
   useEffect(() => {
     if (!threadId) {
       setMessages([]);
+      setHasMore(false);
       return;
     }
     let cancelled = false;
+    offsetRef.current = 0;
     (async () => {
       try {
-        const res = await fetch(`/api/v1/threads/${threadId}/messages?limit=500`);
+        const res = await fetch(`/api/v1/threads/${threadId}/messages?limit=50&offset=0`);
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
         const msgs: CouncilMessage[] = (data.items || []).map(backendMsgToCouncil);
         setMessages(msgs);
+        offsetRef.current = msgs.length;
+        setHasMore(typeof data.total === "number" ? msgs.length < data.total : msgs.length === 50);
       } catch {
         // 静默失败，空消息列表
-        if (!cancelled) setMessages([]);
+        if (!cancelled) {
+          setMessages([]);
+          setHasMore(false);
+        }
       }
     })();
     return () => {
@@ -412,6 +421,66 @@ export function useCouncilChat(threadId: string | null) {
     [persistMessage]
   );
 
+  /** 加载更多历史消息（分页，在前面插入旧消息） */
+  const loadMore = useCallback(async () => {
+    if (!threadId || !hasMore) return;
+    try {
+      const offset = offsetRef.current;
+      const res = await fetch(`/api/v1/threads/${threadId}/messages?limit=50&offset=${offset}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const msgs: CouncilMessage[] = (data.items || []).map(backendMsgToCouncil);
+      if (msgs.length === 0) {
+        setHasMore(false);
+        return;
+      }
+      // offset=0 是最新消息，越大越旧 → 旧消息插入到前面
+      setMessages((prev) => [...msgs, ...prev]);
+      offsetRef.current = offset + msgs.length;
+      setHasMore(typeof data.total === "number" ? offsetRef.current < data.total : msgs.length === 50);
+    } catch {
+      // 静默失败
+    }
+  }, [threadId, hasMore]);
+
+  /** 编辑消息内容 */
+  const editMessage = useCallback(
+    async (msgId: string, newContent: string) => {
+      if (!threadId) return;
+      try {
+        const res = await fetch(`/api/v1/threads/${threadId}/messages/${msgId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: newContent }),
+        });
+        if (!res.ok) return;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === msgId ? { ...m, content: newContent } : m))
+        );
+      } catch {
+        // 静默失败
+      }
+    },
+    [threadId]
+  );
+
+  /** 删除消息（软删除） */
+  const deleteMessage = useCallback(
+    async (msgId: string) => {
+      if (!threadId) return;
+      try {
+        const res = await fetch(`/api/v1/threads/${threadId}/messages/${msgId}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) return;
+        setMessages((prev) => prev.filter((m) => m.id !== msgId));
+      } catch {
+        // 静默失败
+      }
+    },
+    [threadId]
+  );
+
   /** 更新配置 */
   const updateConfig = useCallback((updates: Partial<CouncilConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
@@ -443,7 +512,11 @@ export function useCouncilChat(threadId: string | null) {
     isLoading,
     error,
     messagesEndRef,
+    hasMore,
     sendMessage,
+    loadMore,
+    editMessage,
+    deleteMessage,
     cancelRequest,
     clearMessages,
     addSystemMessage,
