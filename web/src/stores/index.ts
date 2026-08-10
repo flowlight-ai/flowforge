@@ -7,7 +7,7 @@
  *   - 可测试：所有状态变更通过 actions 显式触发
  *   - TypeScript 严格类型：所有 stores 使用 TypeScript 类型注解
  *
- * 7 个 stores：
+ * 8 个 stores：
  *   1. sidebarStore       — 左侧 ThreadSidebar 状态
  *   2. chatStore          — 聊天消息、附件、Diff
  *   3. helmWorkspaceStore — HelmLayout 工作区
@@ -15,6 +15,7 @@
  *   5. helmEditorStore    — 右侧编辑器 Tab
  *   6. helmPanelStore     — 面板可见性、模态框开关
  *   7. approvalHubStore   — 审批中心
+ *   8. threadStore        — 群聊会话管理（CRUD + 持久化）
  */
 
 export { useSidebarStore } from "./sidebarStore";
@@ -37,3 +38,6 @@ export type { PanelVisibility, TerminalCommand, HelmPanelState } from "./helmPan
 
 export { useApprovalHubStore } from "./approvalHubStore";
 export type { ApprovalItem, ApprovalStatus, ApprovalHubState } from "./approvalHubStore";
+
+export { useThreadStore } from "./threadStore";
+export type { Thread, ThreadStoreState } from "./threadStore";

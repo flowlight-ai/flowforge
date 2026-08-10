@@ -11,33 +11,28 @@ import {
 } from "../lib/council-types";
 
 /**
- * useCouncilChat — 5 灵智体协作群聊 Hook
+ * useCouncilChat — 5 灵智体协作群聊 Hook（多会话版）
  *
- * 调用 FlowForge 8000 后端 /api/v1/forgemind/* 端点：
- *   - GET  /api/v1/forgemind/roster    → 加载花名册
- *   - POST /api/v1/forgemind/council    → 发起灵议（多轮讨论）
+ * 调用后端端点：
+ *   - GET  /api/v1/forgemind/roster           → 加载花名册
+ *   - POST /api/v1/forgemind/council           → 发起灵议（多轮讨论）
+ *   - GET  /api/v1/threads/{id}/messages       → 加载会话消息历史
+ *   - POST /api/v1/threads/{id}/messages       → 追加单条消息
+ *   - POST /api/v1/threads/{id}/messages/batch → 批量追加消息
  *
- * 群聊状态管理：
- *   - messages: 消息流（用户消息 + 灵智体响应 + 系统消息）
- *   - roster: 灵智体花名册
- *   - config: 群聊配置（参与灵智体/角色分配/轮数）
- *   - isLoading: 灵议进行中标志
- *
- * 持久化：
- *   - messages + config 自动保存到 localStorage
- *   - 页面刷新/中断后自动恢复对话记录
+ * 多会话支持：
+ *   - 接收 threadId 参数，切换会话时自动加载对应消息历史
+ *   - 发送消息和灵议响应自动持久化到后端
+ *   - 不再依赖 localStorage（改为后端持久化，支持跨设备）
  *
  * 超时处理：
- *   - council 请求使用 AbortController，超时 180s（与 3 分钟限制一致）
+ *   - council 请求使用 AbortController，超时 180s
  *   - 超时后自动取消并提示用户
- *
- * 详见 MERGE-SPEC.md §3.2 聊天模式融合设计
  */
 
-// localStorage 键名
-const STORAGE_KEY_MESSAGES = "flowforge:council:messages";
+// config 仍用 localStorage（会话级配置不影响跨设备）
 const STORAGE_KEY_CONFIG = "flowforge:council:config";
-// council 请求超时（毫秒）— 5 灵智体多轮串行调用 LLM，与 3 分钟限制一致
+// council 请求超时（毫秒）
 const COUNCIL_TIMEOUT_MS = 180_000;
 
 /** 从 localStorage 安全读取 JSON */
@@ -62,11 +57,22 @@ function saveToStorage(key: string, value: unknown): void {
   }
 }
 
-export function useCouncilChat() {
-  // 初始化时从 localStorage 恢复对话记录和配置
-  const [messages, setMessages] = useState<CouncilMessage[]>(() =>
-    loadFromStorage<CouncilMessage[]>(STORAGE_KEY_MESSAGES, [])
-  );
+/** 后端消息 → CouncilMessage 转换 */
+function backendMsgToCouncil(msg: Record<string, unknown>): CouncilMessage {
+  return {
+    id: msg.id as string,
+    source: msg.source as CouncilMessage["source"],
+    content: msg.content as string,
+    timestamp: msg.timestamp as number,
+    forgekinId: (msg.forgekin_id as string) || undefined,
+    forgekinName: (msg.forgekin_name as string) || undefined,
+    forgekinRole: (msg.forgekin_role as CouncilMessage["forgekinRole"]) || undefined,
+    meta: (msg.meta as Record<string, unknown>) || {},
+  };
+}
+
+export function useCouncilChat(threadId: string | null) {
+  const [messages, setMessages] = useState<CouncilMessage[]>([]);
   const [roster, setRoster] = useState<ForgekinRosterItem[]>([]);
   const [config, setConfig] = useState<CouncilConfig>(() =>
     loadFromStorage<CouncilConfig>(STORAGE_KEY_CONFIG, DEFAULT_COUNCIL_CONFIG)
@@ -74,18 +80,37 @@ export function useCouncilChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // AbortController 引用 — 用于取消进行中的 council 请求
   const abortRef = useRef<AbortController | null>(null);
-
-  // 持久化 messages 到 localStorage
-  useEffect(() => {
-    saveToStorage(STORAGE_KEY_MESSAGES, messages);
-  }, [messages]);
 
   // 持久化 config 到 localStorage
   useEffect(() => {
     saveToStorage(STORAGE_KEY_CONFIG, config);
   }, [config]);
+
+  // 切换会话时从后端加载消息历史
+  useEffect(() => {
+    if (!threadId) {
+      setMessages([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/v1/threads/${threadId}/messages?limit=500`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const msgs: CouncilMessage[] = (data.items || []).map(backendMsgToCouncil);
+        setMessages(msgs);
+      } catch {
+        // 静默失败，空消息列表
+        if (!cancelled) setMessages([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [threadId]);
 
   // 页面卸载时取消进行中的请求
   useEffect(() => {
@@ -143,14 +168,70 @@ export function useCouncilChat() {
     [roster]
   );
 
+  /** 持久化单条消息到后端 */
+  const persistMessage = useCallback(
+    async (msg: CouncilMessage) => {
+      if (!threadId) return;
+      try {
+        await fetch(`/api/v1/threads/${threadId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source: msg.source,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            forgekin_id: msg.forgekinId || null,
+            forgekin_name: msg.forgekinName || null,
+            forgekin_role: msg.forgekinRole || null,
+            meta: msg.meta || {},
+          }),
+        });
+      } catch {
+        // 持久化失败不阻断 UI
+      }
+    },
+    [threadId]
+  );
+
+  /** 批量持久化消息到后端 */
+  const persistMessages = useCallback(
+    async (msgs: CouncilMessage[]) => {
+      if (!threadId || msgs.length === 0) return;
+      try {
+        await fetch(`/api/v1/threads/${threadId}/messages/batch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: msgs.map((m) => ({
+              source: m.source,
+              content: m.content,
+              timestamp: m.timestamp,
+              forgekin_id: m.forgekinId || null,
+              forgekin_name: m.forgekinName || null,
+              forgekin_role: m.forgekinRole || null,
+              meta: m.meta || {},
+            })),
+          }),
+        });
+      } catch {
+        // 持久化失败不阻断 UI
+      }
+    },
+    [threadId]
+  );
+
   /** 发送消息（触发灵议） */
   const sendMessage = useCallback(
     async (text: string, replyTo?: CouncilMessage) => {
       if (!text.trim() || isLoading) return;
+      if (!threadId) {
+        setError("请先选择或新建一个会话");
+        return;
+      }
 
       setError(null);
 
-      // 添加用户消息（可选包含引用回复的原消息）
+      // 添加用户消息（乐观更新）
       const userMsg: CouncilMessage = {
         id: `user-${Date.now()}`,
         source: "user",
@@ -159,6 +240,18 @@ export function useCouncilChat() {
         replyTo,
       };
       setMessages((prev) => [...prev, userMsg]);
+      // 持久化用户消息到后端
+      void persistMessage(userMsg);
+
+      // autoTitle：首条消息后自动更新会话标题（参考 clowder-ai F164）
+      if (messages.length === 0 && threadId) {
+        const title = text.slice(0, 30).trim() || "未命名讨论";
+        fetch(`/api/v1/threads/${threadId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        }).catch(() => { /* 静默失败 */ });
+      }
 
       // 解析 @mention，决定哪些灵智体参与
       const mentioned = parseMentions(text);
@@ -220,7 +313,6 @@ export function useCouncilChat() {
               (r) => r.id === msg.forgekin_id || r.name === msg.name
             );
             const role = forgekin ? config.roleAssignment[forgekin.id] || "observer" : "observer";
-            // 使用后端返回的真实 model 字段（铁律2：禁止硬编码）
             const model = msg.model || "unknown";
             const usage = msg.usage || {};
             newMessages.push({
@@ -240,16 +332,20 @@ export function useCouncilChat() {
         }
 
         // 添加摘要消息（如果有）
+        let summaryMsg: CouncilMessage | null = null;
         if (data.summary) {
-          newMessages.push({
+          summaryMsg = {
             id: `summary-${Date.now()}`,
             source: "system",
             content: `📋 灵议摘要：${data.summary}`,
             timestamp: Date.now() + newMessages.length + 1,
-          });
+          };
         }
 
-        setMessages((prev) => [...prev, ...newMessages]);
+        const allNew = summaryMsg ? [...newMessages, summaryMsg] : newMessages;
+        setMessages((prev) => [...prev, ...allNew]);
+        // 批量持久化灵议响应到后端
+        void persistMessages(allNew);
       } catch (e) {
         // 移除"灵议进行中"系统消息
         setMessages((prev) => prev.filter((m) => m.id !== sysMsg.id));
@@ -263,7 +359,6 @@ export function useCouncilChat() {
         }
         setError(`灵议失败: ${errMsg}`);
 
-        // 添加错误系统消息
         const errorMsg: CouncilMessage = {
           id: `error-${Date.now()}`,
           source: "system",
@@ -277,7 +372,7 @@ export function useCouncilChat() {
         setIsLoading(false);
       }
     },
-    [config, isLoading, parseMentions, roster]
+    [config, isLoading, messages.length, parseMentions, roster, threadId, persistMessage, persistMessages]
   );
 
   /** 取消进行中的灵议请求 */
@@ -289,28 +384,33 @@ export function useCouncilChat() {
     setIsLoading(false);
   }, []);
 
-  /** 清空消息（同时清除 localStorage） */
+  /** 清空当前会话消息（同步后端，保留会话本身） */
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(STORAGE_KEY_MESSAGES);
+    if (threadId) {
+      fetch(`/api/v1/threads/${threadId}/messages`, { method: "DELETE" })
+        .catch(() => { /* 静默失败 */ });
     }
-  }, []);
+  }, [threadId]);
 
   /**
    * 添加系统消息 — 供 UI 层主动推送通知（投票发起、命令帮助等）
-   * 不触发 LLM 调用，仅插入消息流
+   * 不触发 LLM 调用，仅插入消息流并持久化
    */
-  const addSystemMessage = useCallback((content: string) => {
-    const sysMsg: CouncilMessage = {
-      id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      source: "system",
-      content,
-      timestamp: Date.now(),
-    };
-    setMessages((prev) => [...prev, sysMsg]);
-  }, []);
+  const addSystemMessage = useCallback(
+    (content: string) => {
+      const sysMsg: CouncilMessage = {
+        id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        source: "system",
+        content,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, sysMsg]);
+      void persistMessage(sysMsg);
+    },
+    [persistMessage]
+  );
 
   /** 更新配置 */
   const updateConfig = useCallback((updates: Partial<CouncilConfig>) => {

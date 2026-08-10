@@ -19,6 +19,7 @@ from flowforge.app.api.core import system, auth, metrics, logs
 
 # ── 智能体模块 ──────────────────────────────────────────────────
 from flowforge.app.api.agents import agents, modes, forgemind, external_agents
+from flowforge.app.api.agents import threads
 
 # ── 工作流模块 ──────────────────────────────────────────────────
 from flowforge.app.api.workflows import workflows, tasks
@@ -56,6 +57,8 @@ router.include_router(modes.router)
 router.include_router(forgemind.router)
 # 外部接入智能体状态检查（WEB-FUSION §6.3）
 router.include_router(external_agents.router)
+# 会话管理（群聊会话 CRUD + 消息持久化）
+router.include_router(threads.router)
 
 # ── 工作流 ──────────────────────────────────────────────────────
 router.include_router(workflows.router)
