@@ -27,7 +27,7 @@ from flowforge.llm.errors import (
     classify_error,
     is_invalid_content,
 )
-from flowforge.llm.provider import LLMProvider, ProviderResponse
+from flowforge.llm.provider import LLMProvider, LLMResponse
 
 logger = get_logger("flowforge.llm.client")
 
@@ -69,7 +69,7 @@ class LLMClient:
         max_tokens: int = 2000,
         timeout: float = 90.0,
         **kwargs: Any,
-    ) -> ProviderResponse:
+    ) -> LLMResponse:
         """Try every provider in the fallback chain until one succeeds.
 
         If ``self.prefer_api`` is True and the caller hasn't already set
@@ -93,7 +93,7 @@ class LLMClient:
                     **kwargs,
                 )
                 # Validate the response is not a silent refusal
-                if is_invalid_content(resp.text):
+                if is_invalid_content(resp.content):
                     logger.warning(
                         f"llm invalid/refusal content from {entry.provider.vendor}/{entry.model}"
                     )
@@ -129,7 +129,7 @@ class LLMClient:
         max_tokens: int,
         timeout: float,
         **kwargs: Any,
-    ) -> ProviderResponse:
+    ) -> LLMResponse:
         """Try one provider up to max_retries with exponential backoff."""
         attempt = 0
         last_exc: Exception | None = None
@@ -156,12 +156,12 @@ class LLMClient:
                     outcome="success",
                 )
                 # Silent failure detection: HTTP 200 with disguised error
-                if resp.finish_reason == "error" or _looks_like_silent_failure(resp.text):
+                if resp.finish_reason == "error" or _looks_like_silent_failure(resp.content):
                     raise SilentFailureError(
                         f"silent failure from {entry.provider.vendor}/{entry.model}: "
-                        f"{resp.text[:120]!r}"
+                        f"{resp.content[:120]!r}"
                     )
-                if not resp.text.strip():
+                if not resp.content.strip():
                     raise EmptyResponseError(
                         f"empty response from {entry.provider.vendor}/{entry.model}"
                     )
@@ -200,7 +200,7 @@ class LLMClient:
         *,
         entry: FallbackEntry,
         prompt_len: int,
-        response: ProviderResponse | None,
+        response: LLMResponse | None,
         elapsed_ms: float,
         attempt: int,
         outcome: str,
@@ -210,7 +210,7 @@ class LLMClient:
             "vendor": entry.provider.vendor,
             "model": entry.model,
             "prompt_len": prompt_len,
-            "response_len": len(response.text) if response else 0,
+            "response_len": len(response.content) if response else 0,
             "elapsed_ms": round(elapsed_ms, 2),
             "attempt": attempt,
             "outcome": outcome,

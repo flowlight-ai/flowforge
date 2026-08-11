@@ -11,7 +11,7 @@ from flowforge.llm.errors import (
     is_invalid_content,
     is_silent_failure,
 )
-from flowforge.llm.provider import LLMProvider, ProviderResponse
+from flowforge.llm.provider import LLMProvider, LLMResponse
 
 
 class _StubProvider(LLMProvider):
@@ -24,19 +24,30 @@ class _StubProvider(LLMProvider):
         self.scripts = list(scripts)
         self.calls = 0
 
-    async def complete(self, prompt: str, *, model: str, **kwargs) -> ProviderResponse:
+    async def complete(self, prompt: str, *, model: str, **kwargs) -> LLMResponse:
         if self.calls >= len(self.scripts):
             raise RuntimeError("stub script exhausted")
         script = self.scripts[self.calls]
         self.calls += 1
         if isinstance(script, Exception):
             raise script
-        return ProviderResponse(
-            text=script,
+        return LLMResponse(
+            content=script,
             model=model,
             provider=self.vendor,
             latency_ms=10.0,
         )
+
+    async def chat(self, messages, model=None, temperature=0.7, max_tokens=4096, **kwargs) -> LLMResponse:
+        script = self.scripts[0] if self.scripts and isinstance(self.scripts[0], str) else ""
+        return LLMResponse(content=script, model=model or "", provider=self.vendor)
+
+    async def stream(self, messages, model=None, temperature=0.7, max_tokens=4096, **kwargs):
+        self._stream = messages  # noqa: F841
+        return None
+
+    async def health_check(self) -> bool:
+        return True
 
 
 def test_classify_permanent_keywords() -> None:
@@ -88,7 +99,7 @@ async def test_client_succeeds_on_first_provider() -> None:
     p = _StubProvider("vendor_a", ["hello world"])
     client = LLMClient(fallback_chain=[FallbackEntry(model="m1", provider=p)])
     resp = await client.complete("hi")
-    assert resp.text == "hello world"
+    assert resp.content == "hello world"
     assert resp.vendor_vendor if False else True  # noqa: F841 — placeholder
 
 
@@ -103,7 +114,7 @@ async def test_client_falls_through_on_empty() -> None:
         ]
     )
     resp = await client.complete("hi")
-    assert resp.text == "good response"
+    assert resp.content == "good response"
 
 
 @pytest.mark.asyncio
@@ -117,7 +128,7 @@ async def test_client_falls_through_on_refusal_content() -> None:
         ]
     )
     resp = await client.complete("hi")
-    assert resp.text == "real answer"
+    assert resp.content == "real answer"
 
 
 @pytest.mark.asyncio
@@ -133,7 +144,7 @@ async def test_client_skips_retry_on_permanent_error() -> None:
         max_retries=5,  # if permanent were retried, this would loop
     )
     resp = await client.complete("hi")
-    assert resp.text == "fallback"
+    assert resp.content == "fallback"
     assert p1.calls == 1
 
 
@@ -153,7 +164,7 @@ async def test_client_retries_on_temporary_error() -> None:
         retry_delay=0.01,  # speed up tests
     )
     resp = await client.complete("hi")
-    assert resp.text == "third time lucky"
+    assert resp.content == "third time lucky"
     assert p.calls == 3
 
 

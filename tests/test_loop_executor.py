@@ -9,6 +9,7 @@ RuleEvolution 等组件；旧 `action_fn`/`max_iterations` 构造已删除。
 
 from __future__ import annotations
 
+import inspect
 from typing import Any, Callable
 
 import pytest
@@ -39,7 +40,10 @@ class _StubExecutor:
         self.result_fn = result_fn
 
     async def run(self, task: TaskContext, mode_hint: str = "") -> dict:
-        return self.result_fn(task)
+        result = self.result_fn(task)
+        if inspect.isawaitable(result):
+            result = await result
+        return result
 
 
 class _StubHarness:
