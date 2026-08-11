@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * CouncilThreadList — 群聊会话列表侧栏
@@ -7,7 +7,7 @@
  *   - "+ 新对话"按钮 → 创建新会话并跳转
  *   - 会话列表（置顶优先 + 按更新时间降序）
  *   - 搜索框（按标题/ID 过滤）
- *   - Tab 分组：全部 / 置顶 / 收藏 / 最近
+ *   - Tab 分组：置顶 / 最近 / 收藏 / 系统 / 回收站
  *   - 标签筛选栏（动态从会话标签聚合）
  *   - 切换会话（点击列表项）
  *   - 重命名会话（双击标题进入编辑）
@@ -21,13 +21,11 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useThreadStore, type Thread } from "@/stores/threadStore";
+import { useThreadStore, getThreadsByTab, searchThreads, type Thread } from "@/stores/threadStore";
 import { ThreadItemMenu } from "./ThreadItemMenu";
 import { formatRelativeTime } from "./thread-time-utils";
 import { exportThreadAsMarkdown } from "./thread-export-utils";
-
-/** Tab 分组类型 */
-type FilterGroup = "all" | "pinned" | "favorites" | "recent";
+import { THREAD_TABS, type ThreadTab } from "@/lib/council-types";
 
 /** 右键菜单定位 */
 interface ContextMenuState {
@@ -72,17 +70,14 @@ export function CouncilThreadList({
   const [editTitle, setEditTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showTrash, setShowTrash] = useState(false);
-  // 分组过滤：全部 / 置顶 / 收藏 / 最近（参考 clowder-ai 5 Tab 分组）
-  const [filterGroup, setFilterGroup] = useState<FilterGroup>("all");
+  // 分组过滤：置顶 / 最近 / 收藏 / 系统 / 回收站（参考 clowder-ai 5 Tab 分组）
+  const [filterGroup, setFilterGroup] = useState<ThreadTab>("pinned");
   // 标签筛选：null = 不筛选
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-
-  // 七天前的时间戳，用于"最近"分组
-  const sevenDaysAgo = useMemo(() => Date.now() - 7 * 24 * 60 * 60 * 1000, []);
 
   // 从所有会话中聚合出可用标签列表（去重）
   const availableLabels = useMemo(() => {
@@ -95,35 +90,18 @@ export function CouncilThreadList({
     return Array.from(set).sort();
   }, [threads]);
 
-  // 搜索 + 分组 + 标签过滤
+  // 搜索 + 分组 + 标签过滤（使用 store 工具函数）
   const filteredThreads = useMemo(() => {
-    let result = threads;
-    // 分组过滤
-    if (filterGroup === "pinned") {
-      result = result.filter((t) => t.pinned);
-    } else if (filterGroup === "favorites") {
-      result = result.filter((t) => t.favorited);
-    } else if (filterGroup === "recent") {
-      result = result.filter(
-        (t) => new Date(t.updated_at).getTime() > sevenDaysAgo
-      );
-    }
+    let result = getThreadsByTab(threads, filterGroup);
     // 标签过滤
     if (labelFilter) {
       result = result.filter(
         (t) => t.labels?.includes(labelFilter) ?? false
       );
     }
-    // 搜索过滤
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [threads, searchQuery, filterGroup, labelFilter, sevenDaysAgo]);
+    // 搜索过滤（使用 store 工具函数）
+    return searchThreads(result, searchQuery);
+  }, [threads, searchQuery, filterGroup, labelFilter]);
 
   // 排序：置顶优先，再按更新时间降序
   const sortedThreads = useMemo(() => {
@@ -133,15 +111,22 @@ export function CouncilThreadList({
     });
   }, [filteredThreads]);
 
-  // Tab 计数
-  const tabCounts = useMemo(() => ({
-    all: threads.length,
-    pinned: threads.filter((t) => t.pinned).length,
-    favorites: threads.filter((t) => t.favorited).length,
-    recent: threads.filter(
-      (t) => new Date(t.updated_at).getTime() > sevenDaysAgo
-    ).length,
-  }), [threads, sevenDaysAgo]);
+  // 各 Tab 计数（使用 getThreadsByTab 统一计算）
+  const tabCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      pinned: 0,
+      recent: 0,
+      favorites: 0,
+      system: 0,
+      trash: 0,
+    };
+    for (const tab of Object.keys(counts)) {
+      counts[tab] = getThreadsByTab(threads, tab as any).length;
+    }
+    // 回收站计数从 trashThreads 获取
+    counts.trash = trashThreads.length;
+    return counts;
+  }, [threads, trashThreads]);
 
   // 初始加载会话列表
   useEffect(() => {
@@ -250,12 +235,14 @@ export function CouncilThreadList({
   /** 进入回收站视图 */
   const handleShowTrash = useCallback(() => {
     setShowTrash(true);
+    setFilterGroup("trash");
     loadTrash();
   }, [loadTrash]);
 
   /** 返回正常列表 */
   const handleBackToList = useCallback(() => {
     setShowTrash(false);
+    setFilterGroup("pinned");
   }, []);
 
   /** 恢复会话 */
@@ -365,27 +352,34 @@ export function CouncilThreadList({
           />
           {/* 分组过滤标签栏 — 参考 clowder-ai LabelFilterBar */}
           <div className="flex items-center gap-1 flex-wrap">
-            {([
-              { key: "all", label: "全部", count: tabCounts.all },
-              { key: "pinned", label: "置顶", count: tabCounts.pinned },
-              { key: "favorites", label: "收藏", count: tabCounts.favorites },
-              { key: "recent", label: "最近", count: tabCounts.recent },
-            ] as const).map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setFilterGroup(tab.key)}
-                className={`px-1.5 py-0.5 text-[10px] font-medium rounded transition-colors ${
-                  filterGroup === tab.key
-                    ? "bg-[var(--accent)] text-[var(--accent-foreground,#fff)]"
-                    : "text-[var(--muted)] hover:bg-[var(--bg-hover,var(--bg-accent))] hover:text-[var(--text)]"
-                }`}
-                aria-pressed={filterGroup === tab.key}
-              >
-                {tab.label}
-                {tab.count > 0 && ` (${tab.count})`}
-              </button>
-            ))}
+            {THREAD_TABS.map((tab) => {
+              const count = tabCounts[tab.key] ?? 0;
+              const isTrashTab = tab.key === "trash";
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    if (isTrashTab) {
+                      setShowTrash(true);
+                      loadTrash();
+                    } else {
+                      setShowTrash(false);
+                      setFilterGroup(tab.key);
+                    }
+                  }}
+                  className={`px-1.5 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                    (filterGroup === tab.key || (isTrashTab && showTrash))
+                      ? "bg-[var(--accent)] text-[var(--accent-foreground,#fff)]"
+                      : "text-[var(--muted)] hover:bg-[var(--bg-hover,var(--bg-accent))] hover:text-[var(--text)]"
+                  }`}
+                  aria-pressed={filterGroup === tab.key}
+                >
+                  {tab.icon} {tab.label}
+                  {count > 0 && ` (${count})`}
+                </button>
+              );
+            })}
           </div>
           {/* 标签筛选栏 — 仅当存在标签时显示 */}
           {availableLabels.length > 0 && (
@@ -628,3 +622,6 @@ export function CouncilThreadList({
     </div>
   );
 }
+
+
+

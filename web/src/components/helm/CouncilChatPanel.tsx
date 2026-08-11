@@ -15,14 +15,20 @@ import VoteConfigModal, { type VoteConfig } from "./VoteConfigModal";
 import ReplyPill from "./ReplyPill";
 import SlashCommandMenu, { type SlashCommand, COUNCIL_SLASH_COMMANDS } from "./SlashCommandMenu";
 import MarkdownRenderer from "./MarkdownRenderer";
-// CLI 执行内容展示区 — 参考 clowder-ai CliOutputBlock，在消息流中展示工具调用/stdout
-import CliOutputBlock from "./CliOutputBlock";
+// CLI 执行内容展示区 — 增强版 CliOutputBlock（含诊断面板、结构化工具展示）
+import CliOutputBlock from "../cli-output/CliOutputBlock";
 import {
   CouncilMessage,
   FORGEKIN_COLORS,
   FORGEKIN_EMOJI,
   ROLE_CONFIG,
 } from "../../lib/council-types";
+import {
+  formatTime,
+  getMessageStatusLabel,
+  getMessageStatusColor,
+  getMessageTypeIcon,
+} from "../../utils/message-utils";
 
 interface CouncilChatPanelProps {
   /** 当前会话 ID（多会话支持，传给 useCouncilChat） */
@@ -1373,6 +1379,25 @@ function CouncilMessageBubble({
   const [showActions, setShowActions] = useState(false);
   const reactionEntries = Object.entries(reactions);
 
+  // 软删除的消息显示占位提示
+  if (message.softDelete?.deleted) {
+    return (
+      <div className="flex justify-center my-1">
+        <div
+          className="text-[10px] px-2 py-0.5 rounded-full italic"
+          style={{
+            color: "var(--muted)",
+            background: "color-mix(in srgb, var(--bg-elevated) 40%, transparent)",
+            opacity: 0.6,
+          }}
+          title={`已由 ${message.softDelete.deletedBy === "user" ? "用户" : "系统"} 删除${message.softDelete.reason ? `: ${message.softDelete.reason}` : ""}`}
+        >
+          {getMessageTypeIcon(message.messageType)} 该消息已被删除
+        </div>
+      </div>
+    );
+  }
+
   if (isSystem) {
     return (
       <div className="flex justify-center my-2">
@@ -1434,11 +1459,28 @@ function CouncilMessageBubble({
                 onToggleReactionPicker={onToggleReactionPicker}
               />
             )}
+            {/* 消息状态指示器（发送中/已发送/已读/失败） */}
+            {message.status && (
+              <span
+                className="text-[10px] flex items-center gap-1"
+                style={{
+                  color: getMessageStatusColor(message.status),
+                  opacity: message.status === "failed" ? 1 : 0.7,
+                }}
+                title={getMessageStatusLabel(message.status)}
+              >
+                {message.status === "sending" && "◌"}
+                {message.status === "sent" && "✓"}
+                {message.status === "read" && "✓✓"}
+                {message.status === "failed" && "✕"}
+                <span>{getMessageStatusLabel(message.status)}</span>
+              </span>
+            )}
             <span
               className="text-[10px]"
               style={{ color: "var(--muted)", opacity: 0.7 }}
             >
-              {new Date(message.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
+              {formatTime(message.timestamp)}
             </span>
           </div>
           {showReactionPicker && (
@@ -1502,6 +1544,29 @@ function CouncilMessageBubble({
                 · {message.meta.model}
               </span>
             )}
+            {/* 消息类型标识 */}
+            {message.messageType && message.messageType !== "text" && (
+              <span
+                className="text-[10px]"
+                style={{ color: "var(--muted)", opacity: 0.6 }}
+                title={`类型: ${message.messageType}`}
+              >
+                · {getMessageTypeIcon(message.messageType)}
+              </span>
+            )}
+            {/* 分支标识 */}
+            {message.branch && (
+              <span
+                className="text-[10px] px-1 py-0.5 rounded"
+                style={{
+                  background: "color-mix(in srgb, var(--accent) 12%, transparent)",
+                  color: "var(--accent)",
+                }}
+                title={`分支: ${message.branch.type === "branch-confirm" ? "确认分支" : "直接分支"} · ${message.branch.reason || ""}`}
+              >
+                {message.branch.type === "branch-confirm" ? "↳ 分支" : "↬ 分支"}
+              </span>
+            )}
           </div>
           <div
             className="rounded-lg px-3 py-2 text-sm border"
@@ -1515,13 +1580,16 @@ function CouncilMessageBubble({
             {message.replyTo && <ReplyPill replyTo={message.replyTo} />}
             {/* 使用 MarkdownRenderer 渲染智能体回复（支持代码块、列表、链接等） */}
             <MarkdownRenderer content={message.content} />
-            {/* CLI 执行内容展示区 — 参考 clowder-ai CliOutputBlock
-                当消息 meta 含 toolEvents/cliStdout/toolCalls 时展示工具调用和 stdout */}
+            {/* CLI 执行内容展示区 — 增强版 CliOutputBlock
+                当消息 meta 含 toolEvents/cliStdout/toolCalls 时展示工具调用和 stdout
+                当 meta.diagnostics 存在时展示诊断面板 */}
             <CliOutputBlock
               meta={message.meta}
               isStreaming={message.streaming ?? false}
               accentColor={colors.primary}
               disclosureKey={`${message.id}`}
+              diagnostics={message.meta?.diagnostics ?? null}
+              errorMessage={message.content}
             />
           </div>
           {/* reactions 显示 */}
@@ -1552,11 +1620,27 @@ function CouncilMessageBubble({
                 onToggleReactionPicker={onToggleReactionPicker}
               />
             )}
+            {/* 消息状态指示器 */}
+            {message.status && message.status !== "sent" && (
+              <span
+                className="text-[10px] flex items-center gap-1"
+                style={{
+                  color: getMessageStatusColor(message.status),
+                  opacity: 0.7,
+                }}
+                title={getMessageStatusLabel(message.status)}
+              >
+                {message.status === "sending" && "◌"}
+                {message.status === "read" && "✓✓"}
+                {message.status === "failed" && "✕"}
+                <span>{getMessageStatusLabel(message.status)}</span>
+              </span>
+            )}
             <span
               className="text-[10px]"
               style={{ color: "var(--muted)", opacity: 0.7 }}
             >
-              {new Date(message.timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
+              {formatTime(message.timestamp)}
             </span>
             {showReactionPicker && (
               <ReactionPicker onPick={onAddReaction} />

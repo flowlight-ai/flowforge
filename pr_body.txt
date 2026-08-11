@@ -1,0 +1,24 @@
+﻿## 变更内容
+
+### 1. 关键bug修复
+- gitee_pr.py: 移除硬编码token改用环境变量(红线11)
+- start_all.py: 修复shutil导入bug+添加warn函数+添加bridge_operator自动启动
+- TraeBridgeChannel: 从骨架改为完整实现(复用TraeBridgeProtocol文件协议)
+- bootcamp.py: 环境检测联动doctor.py覆盖9个灵智体全部依赖
+
+### 2. 灵智体与三方Agent绑定
+- PUT /api/v1/forgekins/{id} 持久化到YAML(行级编辑保留注释)
+- 新增GET/POST /api/v1/forgekins/{id}/binding 绑定API
+- HubForgekinEditor添加CLI工具下拉框/模型ID/API Key/连接模式UI
+- ExternalAgentList展示绑定关系
+
+### 3. 性能优化(PWA)
+- next.config.js: 启用@ducanh2912/next-pwa, runtimeCaching策略
+- offline-store.ts: IndexedDB三级缓存(threads/thread-messages/thread-active-state)
+- manifest.json: PWA配置(display:standalone)
+- useFetchWithCache: 增强IDB缓存优先策略
+
+### 4. 脚本体系增强
+- install_all.py: 添加qodercli+Trae桥接目录初始化步骤
+- doctor.py: CLI列表与install_all.py对齐
+- BootcampWizard: 显示CLI工具/Trae桥接/.env/venv等丰富检测结果
