@@ -16,6 +16,8 @@ import VoteConfigModal, { type VoteConfig } from "./VoteConfigModal";
 import ReplyPill from "./ReplyPill";
 import SlashCommandMenu, { type SlashCommand, COUNCIL_SLASH_COMMANDS } from "./SlashCommandMenu";
 import MarkdownRenderer from "./MarkdownRenderer";
+// CLI 执行内容展示区 — 参考 clowder-ai CliOutputBlock，在消息流中展示工具调用/stdout
+import CliOutputBlock from "./CliOutputBlock";
 import {
   CouncilMessage,
   FORGEKIN_COLORS,
@@ -1586,6 +1588,14 @@ function CouncilMessageBubble({
             {message.replyTo && <ReplyPill replyTo={message.replyTo} />}
             {/* 使用 MarkdownRenderer 渲染智能体回复（支持代码块、列表、链接等） */}
             <MarkdownRenderer content={message.content} />
+            {/* CLI 执行内容展示区 — 参考 clowder-ai CliOutputBlock
+                当消息 meta 含 toolEvents/cliStdout/toolCalls 时展示工具调用和 stdout */}
+            <CliOutputBlock
+              meta={message.meta}
+              isStreaming={message.streaming ?? false}
+              accentColor={colors.primary}
+              disclosureKey={`${message.id}`}
+            />
           </div>
           {/* reactions 显示 */}
           {reactionEntries.length > 0 && (

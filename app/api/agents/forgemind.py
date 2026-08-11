@@ -188,15 +188,22 @@ async def webchat(forgekin_id: str, request: WebChatRequest) -> WebChatResponse:
 async def council(request: CouncilRequest) -> CouncilResponse:
     """IM MindCouncil — 多Forgekin协同决策.
 
-    MindCouncil（ForgeCouncil）是多个Forgekin就用户提出的问题进行协同讨论的机制。
-    每轮所有参与Forgekin依次发言，下一轮可以看到前一轮的所有发言。
+    路由策略（参考 clowder-ai AgentRouter，详见 council_router.py）：
+        - 默认单智能体回答（fallback 链：上次回复者 > 默认 luban）
+        - @all / @全体 / @所有人 → 全部 Forgekin 并行
+        - @特定智能体（@鲁班 / @sherlock）→ 仅指定智能体
+        - 显式传 forgekin_ids 且非空 → 使用指定列表
+
+    多轮讨论规则：
+        - single 模式（单智能体）：max_rounds 强制为 1（单回答无需多轮）
+        - parallel 模式（多智能体）：按 request.max_rounds 多轮讨论
+
     所有响应来自真实 LLM 调用（forgekin.chat → ZHIPU/OpenRoute API），
     禁止硬编码提示语（铁律2+P16）。
 
     端到端打通（tools_bridge）:
         用户请求若含动作意图（查系统信息/git状态/读文件等），先执行真实工具
         获取真实数据，再把数据注入 LLM 上下文——让智能体能"做"而不只是"说"。
-        这解决了用户反馈"问系统信息只回复'我会检查'但实际不查"的问题。
 
     Args:
         request: MindCouncil请求体，topic 为用户原始消息。
@@ -204,8 +211,12 @@ async def council(request: CouncilRequest) -> CouncilResponse:
     Returns:
         MindCouncil结果，含每轮发言（含真实 model/usage）和最终摘要。
     """
-    # 确定参与Forgekin
-    forgekin_ids = request.forgekin_ids or list(BUILTIN_FORGEKINS)
+    # ── 路由解析：决定参与 Forgekin 和模式 ──────────────────────
+    from flowforge.app.api.agents.council_router import resolve_participants
+    from flowforge.app.api.agents.thread_store import ThreadStore
+
+    thread_store = ThreadStore()
+    forgekin_ids, routing_mode = resolve_participants(request, thread_store)
 
     # 确保所有Forgekin已锻造
     for fid in forgekin_ids:
@@ -221,10 +232,10 @@ async def council(request: CouncilRequest) -> CouncilResponse:
             detail="无可用Forgekin参与MindCouncil",
         )
 
+    # single 模式强制单轮（单智能体无需多轮讨论）
+    effective_max_rounds = 1 if routing_mode == "single" else request.max_rounds
+
     # ── 端到端打通：工具桥接层 ──────────────────────────────────
-    # 检测用户消息中的动作意图，执行真实工具获取真实数据。
-    # 这样当用户问"查询系统信息"时，智能体会拿到真实 CPU/内存数据，
-    # 而不是只回复"我会检查"（铁律 T2: 禁止假数据/假逻辑）。
     from flowforge.forgemind.tools_bridge import (
         detect_and_execute, build_observation_context,
     )
@@ -260,7 +271,7 @@ async def council(request: CouncilRequest) -> CouncilResponse:
                 "usage": {"latency_ms": 0, "error": True},
             }
 
-    for round_num in range(1, request.max_rounds + 1):
+    for round_num in range(1, effective_max_rounds + 1):
         # 构造本轮所有灵智体的上下文消息（同轮共享相同历史）
         if round_num == 1 and not discussion_history:
             # 第一轮：所有灵智体直接回应用户消息
@@ -313,23 +324,28 @@ async def council(request: CouncilRequest) -> CouncilResponse:
 
         rounds.append({"round": round_num, "messages": round_messages})
 
-    # 生成摘要（用第一个Forgekin）— 直接基于讨论记录总结
-    summary_msg = (
-        f"用户问题: {user_message}\n\n"
-        f"以下是 {len(participants)} 位Forgekin的讨论记录，请总结共识与分歧（300 字以内）:\n"
-    )
-    for msg in discussion_history:
-        summary_msg += f"[{msg['role']}]: {msg['content'][:150]}\n"
+    # 生成摘要（仅 parallel 模式且多轮时生成；single 模式跳过摘要以降低延迟）
+    summary = ""
+    if routing_mode == "parallel" and len(participants) > 1:
+        summary_msg = (
+            f"用户问题: {user_message}\n\n"
+            f"以下是 {len(participants)} 位Forgekin的讨论记录，请总结共识与分歧（300 字以内）:\n"
+        )
+        for msg in discussion_history:
+            summary_msg += f"[{msg['role']}]: {msg['content'][:150]}\n"
 
-    summary_result = await participants[0].chat(
-        [{"role": "user", "content": summary_msg}]
-    )
+        summary_result = await participants[0].chat(
+            [{"role": "user", "content": summary_msg}]
+        )
+        summary = summary_result.get("content", "")
 
     return CouncilResponse(
         topic=request.topic,
         rounds=rounds,
-        summary=summary_result.get("content", ""),
+        summary=summary,
         participant_count=len(participants),
+        routing_mode=routing_mode,
+        selected_forgekin_ids=[p.forgekin_id for p in participants],
     )
 
 

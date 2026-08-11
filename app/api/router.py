@@ -20,6 +20,7 @@ from flowforge.app.api.core import system, auth, metrics, logs
 # ── 智能体模块 ──────────────────────────────────────────────────
 from flowforge.app.api.agents import agents, modes, forgemind, external_agents
 from flowforge.app.api.agents import threads
+from flowforge.app.api.agents import bootcamp
 
 # ── 工作流模块 ──────────────────────────────────────────────────
 from flowforge.app.api.workflows import workflows, tasks
@@ -59,6 +60,8 @@ router.include_router(forgemind.router)
 router.include_router(external_agents.router)
 # 会话管理（群聊会话 CRUD + 消息持久化）
 router.include_router(threads.router)
+# 灵智训练营（Bootcamp）— 用户引导 + 智能体成长训练（参考 clowder-ai F087）
+router.include_router(bootcamp.router)
 
 # ── 工作流 ──────────────────────────────────────────────────────
 router.include_router(workflows.router)
