@@ -32,8 +32,50 @@ from flowforge.tools.llm_client import LLMClient
 from flowforge.tools.llm.model_service import ModelService
 from flowforge.core.base_tool import ToolInput
 from flowforge.events.event_bus import EventBus
-from flowforge.tests.metrics_collector import TestMetricsCollector
 from flowforge.tests.utils.t7_reviewer import T7Reviewer
+
+
+class LlmMetricsCollector:
+    """订阅 EventBus 的 LLM 事件，统计调用指标。
+
+    P-14 修复：flowforge.tests.metrics_collector 模块已随 v7.0 重构删除，
+    此处内联轻量实现（订阅 llm.start / llm.end / llm.error），保持原 report 结构。
+    """
+
+    def __init__(self, event_bus: EventBus, task_id: str):
+        self.task_id = task_id
+        self._calls = 0
+        self._errors = 0
+        self._latency_ms = 0.0
+        self._models: list[str] = []
+        self._event_bus = event_bus
+        self._event_bus.subscribe("llm.start", self._on_llm_start)
+        self._event_bus.subscribe("llm.end", self._on_llm_end)
+        self._event_bus.subscribe("llm.error", self._on_llm_error)
+
+    def _on_llm_start(self, event: dict) -> None:
+        payload = event.get("payload", {})
+        model = payload.get("model", "")
+        if model and model not in self._models:
+            self._models.append(model)
+
+    def _on_llm_end(self, event: dict) -> None:
+        payload = event.get("payload", {})
+        self._calls += 1
+        self._latency_ms += float(payload.get("duration_ms", 0) or 0)
+
+    def _on_llm_error(self, event: dict) -> None:
+        self._errors += 1
+
+    def generate_report(self) -> dict:
+        return {
+            "llm": {
+                "total_calls": self._calls,
+                "errors": self._errors,
+                "latency_ms": self._latency_ms,
+                "model_chain": list(self._models),
+            },
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -141,9 +183,9 @@ async def available_model(model_service):
 
 @pytest.fixture
 def metrics_collector(event_bus):
-    """Create a TestMetricsCollector for tracking LLM call metrics."""
+    """Create a LlmMetricsCollector for tracking LLM call metrics."""
     task_id = f"test-llm-integration-{int(time.time())}"
-    return TestMetricsCollector(event_bus, task_id)
+    return LlmMetricsCollector(event_bus, task_id)
 
 
 # ---------------------------------------------------------------------------
