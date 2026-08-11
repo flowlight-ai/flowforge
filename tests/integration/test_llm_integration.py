@@ -32,8 +32,46 @@ from flowforge.tools.llm_client import LLMClient
 from flowforge.tools.llm.model_service import ModelService
 from flowforge.core.base_tool import ToolInput
 from flowforge.events.event_bus import EventBus
-from flowforge.tests.metrics_collector import TestMetricsCollector
 from flowforge.tests.utils.t7_reviewer import T7Reviewer
+from flowforge.tests.utils.t7_t8_base import MetricsCollector
+
+
+class _CollectorMetricsAdapter(MetricsCollector):
+    """集成测试版指标采集器 — 订阅 event_bus 自动记录 LLM 调用事件。
+
+    原 `flowforge.tests.metrics_collector.TestMetricsCollector` 已迁至
+    `flowforge.tests.utils.t7_t8_base.MetricsCollector`（纯 dataclass，不再内嵌
+    事件订阅）。此处以薄兼容层恢复旧构造签名 `(event_bus, task_id)` 与
+    `generate_report()` 结构，避免改全部断言。
+    """
+
+    def __init__(self, event_bus: EventBus, task_id: str) -> None:
+        super().__init__(task_id=task_id)
+        self._llm_total = 0
+        self._latency_sum_ms = 0.0
+        self._model_chain: list[str] = []
+        if event_bus is not None:
+            event_bus.subscribe("llm.start", self._on_llm_start)
+            event_bus.subscribe("llm.end", self._on_llm_end)
+
+    def _on_llm_start(self, event: dict) -> None:
+        model = (event.get("payload") or {}).get("model")
+        if model and model not in self._model_chain:
+            self._model_chain.append(model)
+
+    def _on_llm_end(self, event: dict) -> None:
+        payload = event.get("payload") or {}
+        self._llm_total += 1
+        self._latency_sum_ms += payload.get("duration_ms", 0)
+
+    def generate_report(self) -> dict:
+        return {
+            "llm": {
+                "total_calls": self._llm_total,
+                "latency_ms": round(self._latency_sum_ms),
+                "model_chain": self._model_chain,
+            }
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +181,13 @@ async def available_model(model_service):
 def metrics_collector(event_bus):
     """Create a TestMetricsCollector for tracking LLM call metrics."""
     task_id = f"test-llm-integration-{int(time.time())}"
-    return TestMetricsCollector(event_bus, task_id)
+    return _CollectorMetricsAdapter(event_bus, task_id)
+
+
+@pytest.fixture
+def t7_reviewer():
+    """T7 LLM内容审核器"""
+    return T7Reviewer()
 
 
 # ---------------------------------------------------------------------------

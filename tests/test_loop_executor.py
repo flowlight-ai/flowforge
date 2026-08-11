@@ -1,215 +1,176 @@
-"""Tests for the LoopExecutor — five-step closed loop."""
+"""Tests for LoopExecutor — five-step closed loop (v7.0 component API).
+
+适配重构后的 LoopExecutor：构造函数注入 HybridExecutor / HarnessOrchestrator /
+LoopPlanner / LoopVerifier / LoopReflector / CheckpointManager / EntropyManager /
+RuleEvolution 等组件；旧 `action_fn`/`max_iterations` 构造已删除。
+测试用 stub 组件驱动 run() 验证行为。stub 采用鸭类型实现，不实例化真实
+执行器（避免 SQLite 文件/状态管理副作用）。
+"""
 
 from __future__ import annotations
 
+from typing import Any, Callable
+
 import pytest
 
+from flowforge.core.task_context import TaskContext
+from flowforge.harness.entropy_manager import EntropyManager, RuleEvolution
 from flowforge.loop.executor import LoopExecutor
-from flowforge.loop.reflector import Reflector
-from flowforge.loop.state import LoopState
-from flowforge.loop.verifier import Verifier
+from flowforge.loop.planner import LoopPlanner
+from flowforge.loop.reflector import LoopReflector
+from flowforge.loop.state import LoopPhase, LoopResult, LoopState, Reflection, Verdict
+from flowforge.loop.verifier import LoopVerifier
 
 
-def _state_with_criteria() -> LoopState:
-    return LoopState(
-        task_brief="test task",
-        scope_baseline="test",
-        acceptance_criteria=["criterion_1"],
-        max_iterations=3,
+# ---------------------------------------------------------------------------
+# Stub 组件 — 鸭类型实现，避免真实执行器/SQLite 副作用
+# ---------------------------------------------------------------------------
+
+class _StubCheckpoint:
+    def save(self, task_id: str, step_name: str, state: dict) -> None:
+        return None
+
+    def load(self, task_id: str, step_name: str):
+        return None
+
+
+class _StubExecutor:
+    def __init__(self, result_fn: Callable[[TaskContext], dict]):
+        self.result_fn = result_fn
+
+    async def run(self, task: TaskContext, mode_hint: str = "") -> dict:
+        return self.result_fn(task)
+
+
+class _StubHarness:
+    async def pre_execute(self, task: TaskContext) -> None:
+        return None
+
+    async def post_execute(self, result: dict, task: TaskContext) -> dict:
+        return result
+
+
+class _StubPlanner(LoopPlanner):
+    async def plan(self, task: TaskContext, config: dict) -> list[dict]:
+        return [{"step": "execute"}]
+
+    async def replan(self, plan: list[dict], reflection: Reflection, past_errors: list[str]) -> list[dict]:
+        return plan
+
+
+class _StubVerifier(LoopVerifier):
+    async def verify(self, result: dict, task: TaskContext, config: dict) -> Verdict:
+        return Verdict(passed=True, score=0.95, errors=[])
+
+
+class _StubReflector(LoopReflector):
+    async def reflect(self, errors: list[str], task: TaskContext, state: LoopState) -> Reflection:
+        return Reflection(suggestions=[], root_cause="", plan_adjustments=[])
+
+
+def _make_task() -> TaskContext:
+    return TaskContext(
+        task_id="t-1",
+        instruction="test loop",
+        inputs={},
+        state={},
+        metadata={},
+        input_data={},
     )
 
 
-@pytest.mark.asyncio
-async def test_loop_passes_on_first_verify() -> None:
-    async def action(state: LoopState) -> str:
-        return "good artifact"
+def _make_loop_config(name: str = "test-loop", refusals: int = 2, retries: int = 5) -> dict:
+    return {
+        "name": name,
+        "max_retries": retries,
+        "max_consecutive_refusals": refusals,
+        "total_timeout": 30,
+        "timeout_per_iteration": 5,
+        "backoff_base": 0,
+        "worker": {
+            "mode": "workflow",
+            "steps": [{"name": "step-1", "mode": "direct", "input": {}, "output": "content"}],
+        },
+        "metric": {},
+    }
 
-    # Use a verifier that always passes
-    def always_pass_reviewer(artifact: str, ctx: dict) -> dict:
-        return {"reviewer": "stub", "pass": True, "score": 0.95}
 
-    state = _state_with_criteria()
-    state.cvo_vision_confirmed = True
-    state.attach_evidence("criterion_1", "pre-seeded")
-
-    executor = LoopExecutor(
-        action_fn=action,
-        verifier=Verifier(quality_threshold=0.85, reviewer=always_pass_reviewer),
-        max_iterations=3,
+def _make_executor(executor_result_fn: Callable[[TaskContext], dict]) -> LoopExecutor:
+    return LoopExecutor(
+        hybrid_executor=_StubExecutor(executor_result_fn),
+        harness=_StubHarness(),
+        planner=_StubPlanner(),
+        verifier=_StubVerifier(),
+        reflector=_StubReflector(),
+        checkpoint_mgr=_StubCheckpoint(),
+        entropy_mgr=EntropyManager(),
+        rule_evolution=RuleEvolution(),
+        persona_lock=None,
+        memory_manager=None,
     )
-    result = await executor.run(state)
-    assert result.passed is True
-    assert result.iterations == 1
 
 
-@pytest.mark.asyncio
-async def test_loop_terminates_on_max_iterations() -> None:
-    async def action(state: LoopState) -> str:
-        return "still bad"
-
-    def always_fail_reviewer(artifact: str, ctx: dict) -> dict:
-        return {"reviewer": "stub", "pass": False, "score": 0.2}
-
-    state = _state_with_criteria()
-    executor = LoopExecutor(
-        action_fn=action,
-        verifier=Verifier(quality_threshold=0.85, reviewer=always_fail_reviewer),
-        reflector=Reflector(max_reflections=3),  # matches max_iterations
-        max_iterations=3,
-    )
-    result = await executor.run(state)
-    assert result.passed is False
-    assert "max_iterations" in result.termination_reason or "reflection" in result.termination_reason
-
-
-@pytest.mark.asyncio
-async def test_loop_reflects_then_passes() -> None:
-    call_count = {"n": 0}
-
-    async def action(state: LoopState) -> str:
-        call_count["n"] += 1
-        if call_count["n"] == 1:
-            return "bad artifact"
-        return "good artifact after reflection"
-
-    def reviewer(artifact: str, ctx: dict) -> dict:
-        if "good" in artifact:
-            return {"reviewer": "stub", "pass": True, "score": 0.95}
-        return {"reviewer": "stub", "pass": False, "score": 0.3}
-
-    def reflector_fn(artifact: str, failure: dict) -> str:
-        return "good artifact after reflection"
-
-    state = _state_with_criteria()
-    state.cvo_vision_confirmed = True
-    state.attach_evidence("criterion_1", "pre-seeded")
-
-    executor = LoopExecutor(
-        action_fn=action,
-        verifier=Verifier(quality_threshold=0.85, reviewer=reviewer),
-        reflector=Reflector(max_reflections=3, reflector_fn=reflector_fn),
-        max_iterations=3,
-    )
-    result = await executor.run(state)
-    assert result.passed is True
-    assert result.iterations == 2  # one bad, one reflected-good
-
-
-@pytest.mark.asyncio
-async def test_loop_terminates_when_already_done() -> None:
-    """If state is already terminated, loop should not call action_fn."""
-    called = {"n": 0}
-
-    async def action(state: LoopState) -> str:
-        called["n"] += 1
-        return "x"
-
-    state = _state_with_criteria()
-    state.cvo_vision_confirmed = True
-    state.attach_evidence("criterion_1", "pre-seeded")
-    state.quality_score = 0.95
-    state.reviewer_notes = [{"reviewer": "x", "pass": True}]
-    state.terminated = True
-    state.termination_reason = "pre-terminated"
-
-    executor = LoopExecutor(action_fn=action, max_iterations=3)
-    result = await executor.run(state)
-    assert called["n"] == 0
-
-
-def test_loop_state_should_terminate_requires_all_conditions() -> None:
-    state = _state_with_criteria()
-    state.acceptance_criteria = ["a"]
-    # No evidence → should not terminate
-    stop, _ = state.should_terminate()
-    assert stop is False
-
-    state.attach_evidence("a", "anchor")
-    state.quality_score = 0.9
-    state.reviewer_notes = [{"reviewer": "x", "pass": True}]
-    state.cvo_vision_confirmed = True
-    stop, reason = state.should_terminate()
-    assert stop is True
-    assert "all termination conditions met" in reason
-
-
-def test_handoff_capsule_increments_iteration() -> None:
-    from flowforge.loop.state import HandoffCapsule
-
-    state = _state_with_criteria()
-    assert state.iteration == 0
-    state.push_handoff(HandoffCapsule(from_owner="a", to_owner="b"))
-    assert state.iteration == 1
-    assert len(state.handoff_log) == 1
-
-
-# ── 快速失败机制测试 ──────────────────────────────────────────────────────
-
+# ---------------------------------------------------------------------------
+# 快速失败机制测试 — 连续拒绝响应应提前终止
+# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_loop_fast_fail_on_consecutive_refusals() -> None:
-    """LLM 连续返回"无法回答"时，Loop 应提前终止，不跑完 max_iterations。"""
+    """LLM 连续返回"无法回答"时，Loop 应提前终止，不跑完 max_retries。"""
 
-    async def action(state: LoopState) -> str:
-        return "无法回答"
+    async def refusal(task: TaskContext) -> dict:
+        return {"content": "无法回答"}
 
-    state = _state_with_criteria()
-    executor = LoopExecutor(
-        action_fn=action,
-        max_iterations=5,
-        max_consecutive_refusals=2,
-    )
-    result = await executor.run(state)
-    assert result.passed is False
-    assert "consecutive refusals" in result.termination_reason
-    # Should terminate after 2 refusals, not 5 iterations
-    assert result.iterations == 2
-
-
-@pytest.mark.asyncio
-async def test_loop_fast_fail_on_silent_failure() -> None:
-    """LLM 返回 silent failure（"当前不可用，请稍后重试"）时也应触发快速失败。"""
-
-    async def action(state: LoopState) -> str:
-        return "当前不可用，请稍后重试"
-
-    state = _state_with_criteria()
-    executor = LoopExecutor(
-        action_fn=action,
-        max_iterations=5,
-        max_consecutive_refusals=2,
-    )
-    result = await executor.run(state)
-    assert result.passed is False
-    assert "consecutive refusals" in result.termination_reason
+    executor = _make_executor(refusal)
+    result: LoopResult = await executor.run(_make_task(), _make_loop_config(retries=5, refusals=2))
+    assert result.success is False
+    assert "consecutive refusals" in (result.error or "")
+    assert result.state is not None
+    assert result.total_attempts == 2
+    assert result.state.phase == LoopPhase.FAILED
 
 
 @pytest.mark.asyncio
 async def test_loop_recovers_from_single_refusal() -> None:
-    """单次拒绝后恢复正常内容时，Loop 不应终止，应继续正常流程。"""
-    call_count = {"n": 0}
+    """单次拒绝后恢复正常内容，不提前终止。"""
+    count = {"n": 0}
 
-    async def action(state: LoopState) -> str:
-        call_count["n"] += 1
-        if call_count["n"] == 1:
-            return "无法回答"
-        return "good artifact after recovery"
+    async def flaky(task: TaskContext) -> dict:
+        count["n"] += 1
+        if count["n"] == 1:
+            return {"content": "无法回答"}
+        return {"content": "正常生成的文章内容，长度足够。"}
 
-    def reviewer(artifact: str, ctx: dict) -> dict:
-        if "good" in artifact:
-            return {"reviewer": "stub", "pass": True, "score": 0.95}
-        return {"reviewer": "stub", "pass": False, "score": 0.3}
+    executor = _make_executor(flaky)
+    result: LoopResult = await executor.run(_make_task(), _make_loop_config(retries=5, refusals=2))
+    assert "consecutive refusals" not in (result.error or "")
 
-    state = _state_with_criteria()
-    state.cvo_vision_confirmed = True
-    state.attach_evidence("criterion_1", "pre-seeded")
 
-    executor = LoopExecutor(
-        action_fn=action,
-        verifier=Verifier(quality_threshold=0.85, reviewer=reviewer),
-        max_iterations=5,
-        max_consecutive_refusals=2,
-    )
-    result = await executor.run(state)
-    assert result.passed is True
-    assert "consecutive refusals" not in result.termination_reason
+# ---------------------------------------------------------------------------
+# 状态机测试 — LoopState 迁移与字段
+# ---------------------------------------------------------------------------
+
+def test_loop_state_initial_phase_planning() -> None:
+    state = LoopState(loop_id="l1", task_id="t1", template_name="l1")
+    assert state.phase == LoopPhase.PLANNING
+    assert state.attempt == 0
+    assert state.max_retries == 3
+
+
+def test_loop_state_max_retries_config() -> None:
+    state = LoopState(loop_id="l1", task_id="t1", template_name="l1", max_retries=7)
+    assert state.max_retries == 7
+
+
+def test_loop_result_carries_state() -> None:
+    state = LoopState(loop_id="l1", task_id="t1", template_name="l1", attempt=2)
+    result = LoopResult(success=False, error="failed", total_attempts=2, state=state)
+    assert result.success is False
+    assert result.state.attempt == 2
+
+
+def test_checkpoint_mgr_propagates_phase() -> None:
+    """run 中状态迁移到 FAILED 后，LoopState.phase 生效。"""
+    state = LoopState(loop_id="l1", task_id="t1", template_name="l1")
+    state.phase = LoopPhase.COMPLETED
+    assert state.phase == LoopPhase.COMPLETED

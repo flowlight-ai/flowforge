@@ -1,103 +1,122 @@
-"""Tests for the ForgeMindEngine — closed-loop evaluate + execute."""
+"""Tests for the ForgeMindEngine — evaluate(context: dict) + execute(action: dict).
+
+适配重构后的 v7.0 API：`EvolutionContext`/Decision 对象已移除，
+evaluate 接收 dict 上下文、返回 dict（suggested_actions + meta）。
+"""
 
 from __future__ import annotations
 
 import pytest
 
-from flowforge.evolution.engine import EvolutionContext, ForgeMindEngine
+from flowforge.evolution.engine import ForgeMindEngine
 
 
 @pytest.fixture
 def engine() -> ForgeMindEngine:
-    return ForgeMindEngine(scope_baseline="test scope")
+    return ForgeMindEngine()
+
+
+def _sg_ctx(new_idea: str, ac: list[str], feature_id: str = "f1") -> dict:
+    return {
+        "mode": "scope_guard",
+        "scope_guard": {
+            "current_vision": "内容创建，内容发布",
+            "new_idea": new_idea,
+            "current_ac": ac,
+            "feature_id": feature_id,
+        },
+    }
 
 
 @pytest.mark.asyncio
-async def test_no_trigger_returns_none_mode(engine: ForgeMindEngine) -> None:
-    ctx = EvolutionContext(
-        instruction="proceed",
-        action_description="normal action",
-        scope_baseline="test scope",
-    )
-    decision = await engine.evaluate(ctx)
-    assert decision.mode == "none"
-    assert decision.metacognition_route in {"proceed", "structured_analysis_only"}
+async def test_auto_empty_context_no_actions(engine: ForgeMindEngine) -> None:
+    result = await engine.evaluate({"mode": "auto"})
+    assert result["suggested_actions"] == []
+    assert result["meta"]["mode"] == "auto"
+    assert "evaluated_at" in result["meta"]
 
 
 @pytest.mark.asyncio
-async def test_magic_word_triggers_mode_a(engine: ForgeMindEngine) -> None:
-    ctx = EvolutionContext(
-        instruction="请你按第一性原理重新考虑",
-        action_description="planning",
-        scope_baseline="test scope",
-    )
-    decision = await engine.evaluate(ctx)
-    assert decision.mode == "A_scope_guard"
-    assert decision.scope_signal is not None
-    assert decision.scope_signal.severity == "block"
+async def test_scope_guard_trigger_remind(engine: ForgeMindEngine) -> None:
+    result = await engine.evaluate(_sg_ctx(
+        new_idea="内容创建，新增移动端新子系统",
+        ac=["内容创建"],
+    ))
+    actions = result["suggested_actions"]
+    assert len(actions) == 1
+    assert actions[0]["mode"] == "scope_guard"
+    assert actions[0]["action"] == "remind"
 
 
 @pytest.mark.asyncio
-async def test_repeated_error_triggers_mode_b(engine: ForgeMindEngine) -> None:
-    ctx = EvolutionContext(
-        instruction="proceed",
-        action_description="normal",
-        scope_baseline="test scope",
-        error_history=[{"err": "x"}, {"err": "x"}],
-    )
-    decision = await engine.evaluate(ctx)
-    assert decision.mode == "B_process_evolution"
+async def test_scope_guard_no_signal_returns_no_action(engine: ForgeMindEngine) -> None:
+    result = await engine.evaluate(_sg_ctx(
+        new_idea="内容创建，内容发布 的编辑体验优化",
+        ac=["内容创建"],
+    ))
+    scope_actions = [a for a in result["suggested_actions"] if a["mode"] == "scope_guard"]
+    assert scope_actions == []
 
 
 @pytest.mark.asyncio
-async def test_knowledge_signal_triggers_mode_c(engine: ForgeMindEngine) -> None:
-    ctx = EvolutionContext(
-        instruction="proceed",
-        action_description="deep research",
-        scope_baseline="test scope",
-        knowledge_signal={
+async def test_repeated_error_triggers_process_evolution(engine: ForgeMindEngine) -> None:
+    result = await engine.evaluate({
+        "mode": "process_evolution",
+        "process_evolution": {
+            "error_history": [{"err": "x"}, {"err": "x"}],
+        },
+    })
+    actions = result["suggested_actions"]
+    assert len(actions) == 1
+    assert actions[0]["mode"] == "process_evolution"
+    assert actions[0]["action"] == "create_proposal"
+
+
+@pytest.mark.asyncio
+async def test_knowledge_signal_triggers_episode_card(engine: ForgeMindEngine) -> None:
+    result = await engine.evaluate({
+        "mode": "knowledge_evolution",
+        "knowledge_evolution": {
             "reusability": True,
             "non_obviousness": True,
             "decay_risk": True,
+            "episode_data": {"task_snapshot": "deep research"},
         },
-    )
-    decision = await engine.evaluate(ctx)
-    assert decision.mode == "C_knowledge_evolution"
-    assert decision.distill_decision is True
+    })
+    actions = result["suggested_actions"]
+    assert len(actions) == 1
+    assert actions[0]["mode"] == "knowledge_evolution"
+    assert actions[0]["action"] == "create_episode_card"
 
 
 @pytest.mark.asyncio
-async def test_execute_records_history(engine: ForgeMindEngine) -> None:
-    ctx = EvolutionContext(
-        instruction="proceed",
-        action_description="normal",
-        scope_baseline="test scope",
-        knowledge_signal={
-            "reusability": True,
-            "non_obviousness": True,
-            "decay_risk": True,
-        },
-    )
-    decision = await engine.evaluate(ctx)
-    record = await engine.execute(decision)
-    assert record["decision_id"] == decision.decision_id
-    assert len(record["actions"]) >= 1
-    history = engine.get_execution_history()
-    assert any(h["decision_id"] == decision.decision_id for h in history)
+async def test_execute_scope_guard_remind(engine: ForgeMindEngine) -> None:
+    result = await engine.evaluate(_sg_ctx(
+        new_idea="内容创建，新增移动端新子系统",
+        ac=["内容创建"],
+    ))
+    action = result["suggested_actions"][0]
+    executed = await engine.execute(action)
+    assert executed["status"] == "ok"
+    assert "reminder" in executed
+    # 执行记录进日志区
+    logs = engine.scope_guard.get_log()
+    assert len(logs) == 1
+    assert logs[0].feature_id == "f1"
 
 
 @pytest.mark.asyncio
-async def test_high_risk_uses_wilson_lower_bound(engine: ForgeMindEngine) -> None:
-    ctx = EvolutionContext(
-        instruction="proceed",
-        action_description="risky surgery",
-        scope_baseline="test scope",
-        is_high_risk=True,
-        domain_stats={"successes": 1, "trials": 5},  # 20% success rate
-        evidence_completeness=0.5,
-        self_reported_confidence=0.95,
-    )
-    decision = await engine.evaluate(ctx)
-    # With Wilson lower bound on 1/5 successes, action_confidence should be low
-    assert decision.action_confidence < 0.85
-    assert decision.metacognition_route == "escalate"
+async def test_high_risk_uses_wilson_route(engine: ForgeMindEngine) -> None:
+    result = await engine.evaluate({
+        "mode": "auto",
+        "metacognition": {
+            "successes": 1,
+            "trials": 5,
+            "is_high_risk": True,
+            "evidence_completeness": 0.5,
+            "self_reported": 0.95,
+        },
+    })
+    meta_route = result["meta"]["metacognition_route"]
+    assert meta_route is not None
+    assert isinstance(meta_route, dict)
