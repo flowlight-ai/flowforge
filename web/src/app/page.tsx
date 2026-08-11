@@ -1,11 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useShellConfig } from "@/lib/shell-config";
 import { TaskItem, SystemStatus } from "@/lib/types";
 import { useFetchWithCache } from "@/hooks/useFetchWithCache";
-import { HubLeaderboardTab } from "@/components/hub/HubLeaderboardTab";
+
+// 性能优化：HubLeaderboardTab 动态导入（首屏不需要，延迟加载减少 JS 体积）
+const HubLeaderboardTab = dynamic(
+  () => import("@/components/hub/HubLeaderboardTab").then((m) => m.HubLeaderboardTab),
+  { ssr: false, loading: () => <div style={{ height: "200px" }} /> }
+);
 
 function StatusCards({ systemStatus, statusLoading, version }: { systemStatus: SystemStatus | null; statusLoading: boolean; version: string }) {
   const stats = [

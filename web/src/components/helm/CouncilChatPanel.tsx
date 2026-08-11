@@ -5,8 +5,7 @@ import { useCouncilChat } from "../../hooks/useCouncilChat";
 import { useCouncilSocket } from "../../hooks/useCouncilSocket";
 import { useInputHistory } from "../../hooks/useInputHistory";
 import { useThreadStore } from "../../stores/threadStore";
-import ForgekinSelector from "./ForgekinSelector";
-import ContextPanel from "./ContextPanel";
+import { useCouncilPanelStore } from "../../stores/councilPanelStore";
 import ScrollToBottomButton from "./ScrollToBottomButton";
 import PendingMemberBubble from "./PendingMemberBubble";
 import ThinkingIndicator from "./ThinkingIndicator";
@@ -16,6 +15,8 @@ import VoteConfigModal, { type VoteConfig } from "./VoteConfigModal";
 import ReplyPill from "./ReplyPill";
 import SlashCommandMenu, { type SlashCommand, COUNCIL_SLASH_COMMANDS } from "./SlashCommandMenu";
 import MarkdownRenderer from "./MarkdownRenderer";
+// CLI 执行内容展示区 — 参考 clowder-ai CliOutputBlock，在消息流中展示工具调用/stdout
+import CliOutputBlock from "./CliOutputBlock";
 import {
   CouncilMessage,
   FORGEKIN_COLORS,
@@ -133,8 +134,6 @@ export default function CouncilChatPanel({
   const [pendingForgekinIds, setPendingForgekinIds] = useState<string[]>([]);
   // 已静音的智能体 ID 列表（静音后该智能体不参与消息触发，但仍可被 @ 显式调用）
   const [mutedIds, setMutedIds] = useState<string[]>([]);
-  // 右侧边栏标签：智能体花名册 / 上下文面板
-  const [sidebarTab, setSidebarTab] = useState<"agents" | "context">("agents");
 
   // 斜杠命令菜单状态（参考 clowder-ai ChatInputMenus）
   // 当输入框内容以 / 开头时显示命令列表
@@ -272,6 +271,23 @@ export default function CouncilChatPanel({
         : [...prev, forgekinId]
     );
   }, []);
+
+  // ── 同步状态到 councilPanelStore ──
+  // 使 WorkspacePanel 的"智能体"/"上下文" Tab 能访问 CouncilChatPanel 的实时状态
+  const syncToPanelStore = useCouncilPanelStore((s) => s.syncState);
+  useEffect(() => {
+    syncToPanelStore({
+      roster,
+      messages,
+      config,
+      mutedIds,
+      threadId,
+      activeVoteQuestion: activeVote?.question ?? null,
+      toggleParticipant,
+      setForgekinRole,
+      toggleMute: handleToggleMute,
+    });
+  }, [roster, messages, config, mutedIds, threadId, activeVote, toggleParticipant, setForgekinRole, handleToggleMute, syncToPanelStore]);
 
   /** 过滤的灵智体列表（用于 mention 菜单） */
   const filteredRoster = useMemo(() => {
@@ -1284,95 +1300,8 @@ export default function CouncilChatPanel({
         </div>
       </div>
 
-      {/* 右侧灵智体面板 + 上下文面板（带标签切换） */}
-      {showSidebar && (
-        <div
-          className="w-64 border-l flex-shrink-0 flex flex-col"
-          style={{
-            background: "var(--bg-elevated)",
-            borderColor: "var(--border)",
-          }}
-        >
-          {/* 标签切换栏 */}
-          <div
-            className="flex border-b flex-shrink-0"
-            style={{ borderColor: "var(--border)" }}
-            role="tablist"
-            aria-label="右侧面板标签"
-          >
-            <button
-              onClick={() => setSidebarTab("agents")}
-              className="flex-1 text-[11px] font-semibold py-2 transition-colors"
-              style={{
-                color: sidebarTab === "agents" ? "var(--accent)" : "var(--muted)",
-                background: sidebarTab === "agents"
-                  ? "color-mix(in srgb, var(--accent) 8%, transparent)"
-                  : "transparent",
-                border: "none",
-                borderBottom: sidebarTab === "agents"
-                  ? "2px solid var(--accent)"
-                  : "2px solid transparent",
-                cursor: "pointer",
-              }}
-              role="tab"
-              aria-selected={sidebarTab === "agents"}
-              aria-controls="sidebar-agents"
-            >
-              🤝 智能体
-            </button>
-            <button
-              onClick={() => setSidebarTab("context")}
-              className="flex-1 text-[11px] font-semibold py-2 transition-colors"
-              style={{
-                color: sidebarTab === "context" ? "var(--accent)" : "var(--muted)",
-                background: sidebarTab === "context"
-                  ? "color-mix(in srgb, var(--accent) 8%, transparent)"
-                  : "transparent",
-                border: "none",
-                borderBottom: sidebarTab === "context"
-                  ? "2px solid var(--accent)"
-                  : "2px solid transparent",
-                cursor: "pointer",
-              }}
-              role="tab"
-              aria-selected={sidebarTab === "context"}
-              aria-controls="sidebar-context"
-            >
-              📊 上下文
-            </button>
-          </div>
-
-          {/* 标签内容 */}
-          <div className="flex-1 overflow-hidden">
-            {sidebarTab === "agents" && (
-              <div id="sidebar-agents" role="tabpanel" className="h-full overflow-y-auto">
-                <ForgekinSelector
-                  roster={roster}
-                  participantIds={config.participantIds}
-                  roleAssignment={config.roleAssignment}
-                  mutedIds={mutedIds}
-                  onToggleParticipant={toggleParticipant}
-                  onSetRole={setForgekinRole}
-                  onToggleMute={handleToggleMute}
-                  compact={compact}
-                />
-              </div>
-            )}
-            {sidebarTab === "context" && (
-              <div id="sidebar-context" role="tabpanel" className="h-full">
-                <ContextPanel
-                  messages={messages}
-                  roster={roster}
-                  participantIds={config.participantIds}
-                  maxRounds={config.maxRounds}
-                  activeVoteQuestion={activeVote?.question ?? null}
-                  compact={compact}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* 右侧灵智体面板 + 上下文面板已移至 WorkspacePanel 的"智能体"/"上下文" Tab
+          （原内嵌侧栏导致 4 栏布局过于拥挤，现合并到右栏工作区） */}
 
       {/* VoteConfigModal — 发起投票弹窗（参考 clowder-ai VoteConfigModal） */}
       {showVoteModal && (
@@ -1586,6 +1515,14 @@ function CouncilMessageBubble({
             {message.replyTo && <ReplyPill replyTo={message.replyTo} />}
             {/* 使用 MarkdownRenderer 渲染智能体回复（支持代码块、列表、链接等） */}
             <MarkdownRenderer content={message.content} />
+            {/* CLI 执行内容展示区 — 参考 clowder-ai CliOutputBlock
+                当消息 meta 含 toolEvents/cliStdout/toolCalls 时展示工具调用和 stdout */}
+            <CliOutputBlock
+              meta={message.meta}
+              isStreaming={message.streaming ?? false}
+              accentColor={colors.primary}
+              disclosureKey={`${message.id}`}
+            />
           </div>
           {/* reactions 显示 */}
           {reactionEntries.length > 0 && (

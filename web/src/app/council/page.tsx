@@ -37,12 +37,36 @@ import {
   ROLE_CONFIG,
   type ForgekinRosterItem,
 } from "@/lib/council-types";
-import { CouncilThreadList } from "@/components/helm/CouncilThreadList";
+import type { BootcampPhase, BootcampState } from "@/lib/bootcamp-types";
+
+// 性能优化：CouncilThreadList 动态导入（减少首屏 JS 体积）
+const CouncilThreadList = dynamic(
+  () => import("@/components/helm/CouncilThreadList").then((m) => m.CouncilThreadList),
+  { ssr: false, loading: () => <div style={{ width: "240px", flexShrink: 0 }} /> }
+);
 
 // CouncilChatPanel 已就绪，动态导入避免 SSR 问题（内部使用 fetch/浏览器 API）
 const CouncilChatPanel = dynamic(
   () => import("@/components/helm/CouncilChatPanel"),
   { ssr: false, loading: () => <CouncilLoading /> }
+);
+
+// 灵智训练营向导 — 动态导入（仅用户点击时加载）
+const BootcampWizard = dynamic(
+  () => import("@/components/helm/BootcampWizard"),
+  { ssr: false }
+);
+
+// 训练营进度条 — 动态导入
+const BootcampProgressBar = dynamic(
+  () => import("@/components/helm/BootcampProgressBar").then((m) => m.BootcampProgressBar),
+  { ssr: false }
+);
+
+// 右栏 Workspace 工作区 — 动态导入（参考 clowder-ai WorkspacePanel 9 模块）
+const WorkspacePanel = dynamic(
+  () => import("@/components/helm/WorkspacePanel"),
+  { ssr: false }
 );
 
 // 群聊配置跳转按钮样式 — 参考 clowder-ai ChatContainerHeader 的快捷链接
@@ -69,10 +93,38 @@ export default function CouncilPage() {
 /** 群聊页面内容（/council 和 /council/[threadId] 共用） */
 export function CouncilContent({ threadId }: { threadId: string | null }) {
   const config = useShellConfig();
-  const [showContextPanel, setShowContextPanel] = useState(false);
+  // 右栏 Workspace 默认显示（参考 clowder-ai 三栏布局）
+  const [showWorkspace, setShowWorkspace] = useState(true);
   const [taskTitle, setTaskTitle] = useState<string>("");
+  const [showBootcampWizard, setShowBootcampWizard] = useState(false);
+  const [bootcampState, setBootcampState] = useState<BootcampState | null>(null);
 
   const handleTitleChange = useCallback((t: string) => setTaskTitle(t), []);
+
+  // 当 threadId 变化时，获取会话详情检查是否有 bootcamp_state
+  useEffect(() => {
+    if (!threadId) {
+      setBootcampState(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/v1/threads/${threadId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.bootcamp_state) {
+          setBootcampState(data.bootcamp_state as BootcampState);
+        } else {
+          setBootcampState(null);
+        }
+      } catch {
+        if (!cancelled) setBootcampState(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [threadId]);
 
   return (
     <div
@@ -202,6 +254,22 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
             >
               ◉ 记忆
             </a>
+            {/* 灵智训练营入口 — 参考 clowder-ai 猫猫训练营 */}
+            <button
+              type="button"
+              onClick={() => setShowBootcampWizard(true)}
+              aria-label="灵智训练营"
+              title="灵智训练营 — 引导配置环境、使用 FlowForge、训练智能体成长"
+              data-council-action="open-bootcamp"
+              style={{
+                ...configLinkStyle,
+                background: "var(--accent-subtle, color-mix(in srgb, var(--accent) 12%, transparent))",
+                color: "var(--accent)",
+                borderColor: "var(--accent)",
+              }}
+            >
+              🎓 训练营
+            </button>
           </nav>
 
           <span
@@ -213,23 +281,23 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
 
           <button
             type="button"
-            onClick={() => setShowContextPanel((v) => !v)}
-            aria-pressed={showContextPanel}
-            aria-label="切换上下文面板"
-            title="切换上下文面板"
-            data-council-action="toggle-context"
+            onClick={() => setShowWorkspace((v) => !v)}
+            aria-pressed={showWorkspace}
+            aria-label="切换工作区"
+            title="切换工作区（开发/记忆/调度/任务/社区/产物/审批/轨迹/评估）"
+            data-council-action="toggle-workspace"
             style={{
               padding: "6px 10px",
               borderRadius: "var(--radius-sm)",
-              background: showContextPanel ? "var(--accent-subtle)" : "transparent",
-              color: showContextPanel ? "var(--accent)" : "var(--muted)",
+              background: showWorkspace ? "var(--accent-subtle, color-mix(in srgb, var(--accent) 12%, transparent))" : "transparent",
+              color: showWorkspace ? "var(--accent)" : "var(--muted)",
               border: "1px solid var(--border)",
               cursor: "pointer",
               fontSize: "12px",
               fontWeight: 600,
             }}
           >
-            ◧ 上下文
+            ▣ 工作区
           </button>
           <a
             href="/solo"
@@ -289,7 +357,23 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
           }}
         >
           {threadId ? (
-            <CouncilChatPanel threadId={threadId} showSidebar={true} compact={false} />
+            <>
+              {/* 训练营进度条 — 当会话有 bootcamp_state 时显示 */}
+              {bootcampState && (
+                <BootcampProgressBar
+                  threadId={threadId}
+                  phase={bootcampState.phase}
+                  showAdvance={true}
+                  onPhaseAdvanced={(newPhase) => {
+                    setBootcampState({
+                      ...bootcampState,
+                      phase: newPhase,
+                    });
+                  }}
+                />
+              )}
+              <CouncilChatPanel threadId={threadId} showSidebar={false} compact={false} />
+            </>
           ) : (
             <div
               style={{
@@ -309,25 +393,36 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
           )}
         </main>
 
-        {/* 右侧上下文面板（可折叠） */}
-        {showContextPanel && (
+        {/* 右侧 Workspace 工作区（可折叠，默认显示）— 9 模块 Tab */}
+        {showWorkspace && (
           <aside
-            className="council-context"
-            data-council="context-panel"
+            className="council-workspace"
+            data-council="workspace-panel"
             style={{
-              width: "320px",
+              width: "360px",
               flexShrink: 0,
-              borderLeft: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
-              background: "var(--bg-elevated)",
-              overflow: "auto",
+              borderLeft: "1px solid var(--border)",
+              overflow: "hidden",
               display: "flex",
               flexDirection: "column",
             }}
           >
-            <CouncilContextPanel />
+            <WorkspacePanel threadId={threadId} />
           </aside>
         )}
       </div>
+
+      {/* 灵智训练营向导 — 点击"🎓 训练营"按钮时显示 */}
+      {showBootcampWizard && (
+        <BootcampWizard
+          onClose={() => setShowBootcampWizard(false)}
+          onCreated={(newThreadId) => {
+            setShowBootcampWizard(false);
+            // 跳转到新创建的训练营会话
+            window.location.href = `/council/${newThreadId}`;
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -366,261 +461,6 @@ function CouncilLoading() {
 }
 
 /**
- * CouncilContextPanel — 上下文面板（增强版）
- *
- * 显示：
- *   1. 当前会话配置（可用智能体数、轮数、投票状态）
- *   2. 智能体花名册（实时获取，显示头像/名称/物种）
- *   3. 使用提示
- *   4. 快捷操作入口
- *
- * 数据来源：独立 fetch /api/v1/forgemind/roster（只读，不与主聊天面板共享状态）
- * 主题：CSS 变量驱动
+ * CouncilContextPanel 已被 WorkspacePanel（9 模块工作区）替代。
+ * 参考组件：@/components/helm/WorkspacePanel
  */
-function CouncilContextPanel() {
-  const [roster, setRoster] = useState<ForgekinRosterItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // 独立获取花名册（只读展示，不与主聊天面板共享状态）
-  useEffect(() => {
-    let cancelled = false;
-    const loadRoster = async () => {
-      try {
-        const res = await fetch("/api/v1/forgemind/roster");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (cancelled) return;
-        const items: ForgekinRosterItem[] = data.builtin || [];
-        setRoster(items.filter((r) => r.available && !r.error));
-      } catch (e) {
-        if (!cancelled) {
-          setError(`加载花名册失败: ${e instanceof Error ? e.message : String(e)}`);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    loadRoster();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const sectionStyle: React.CSSProperties = {
-    padding: "12px",
-    borderRadius: "var(--radius-md)",
-    background: "var(--bg)",
-    border: "1px solid var(--border)",
-    fontSize: "12px",
-    color: "var(--muted)",
-    lineHeight: 1.6,
-  };
-
-  const sectionTitleStyle: React.CSSProperties = {
-    marginBottom: "8px",
-    fontWeight: 600,
-    color: "var(--text)",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  };
-
-  return (
-    <div
-      data-council="context-content"
-      style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}
-    >
-      <h3
-        style={{
-          fontSize: "11px",
-          fontWeight: 700,
-          color: "var(--muted)",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-          margin: 0,
-        }}
-      >
-        上下文
-      </h3>
-
-      {/* 当前会话配置 */}
-      <div style={sectionStyle}>
-        <div style={sectionTitleStyle}>
-          <span>当前会话</span>
-          <span style={{ color: "var(--accent)", fontSize: "10px" }}>● 在线</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <div>
-            <span style={{ color: "var(--muted)" }}>可用智能体：</span>
-            <span style={{ color: "var(--text)", fontWeight: 600 }}>
-              {loading ? "加载中..." : `${roster.length} 个`}
-            </span>
-          </div>
-          <div>
-            <span style={{ color: "var(--muted)" }}>默认轮数：</span>
-            <span style={{ color: "var(--text)", fontWeight: 600 }}>1 轮</span>
-          </div>
-          <div>
-            <span style={{ color: "var(--muted)" }}>投票状态：</span>
-            <span style={{ color: "var(--text)", fontWeight: 600 }}>无活跃投票</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 智能体花名册 */}
-      <div style={sectionStyle}>
-        <div style={sectionTitleStyle}>
-          <span>智能体花名册</span>
-          <span style={{ color: "var(--muted)", fontSize: "10px" }}>
-            {roster.length} 个
-          </span>
-        </div>
-        {error && (
-          <div style={{ color: "var(--semantic-critical, #ef4444)", fontSize: "11px" }}>
-            {error}
-          </div>
-        )}
-        {loading ? (
-          <div style={{ color: "var(--muted)", fontSize: "11px" }}>加载中...</div>
-        ) : roster.length === 0 ? (
-          <div style={{ color: "var(--muted)", fontSize: "11px" }}>
-            暂无可用智能体，请检查后端服务
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            {roster.map((item) => {
-              const colors = FORGEKIN_COLORS[item.id] || { primary: "#888", secondary: "#333" };
-              const emoji = FORGEKIN_EMOJI[item.id] || "🤖";
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "6px",
-                    borderRadius: "var(--radius-sm)",
-                    background: `linear-gradient(135deg, ${colors.primary}11, transparent)`,
-                    border: `1px solid ${colors.primary}44`,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      borderRadius: "50%",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "14px",
-                      background: `linear-gradient(135deg, ${colors.primary}33, ${colors.secondary}33)`,
-                      border: `1px solid ${colors.primary}66`,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {emoji}
-                  </span>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div
-                      style={{
-                        color: "var(--text)",
-                        fontWeight: 600,
-                        fontSize: "12px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                    <div
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: "10px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {item.role?.primary}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "9px",
-                      padding: "1px 4px",
-                      borderRadius: "4px",
-                      background: colors.primary,
-                      color: "#fff",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {item.species}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 使用提示 */}
-      <div style={sectionStyle}>
-        <div style={sectionTitleStyle}>
-          <span>使用提示</span>
-        </div>
-        <ul style={{ margin: 0, paddingLeft: "16px" }}>
-          <li>使用 @mention 指定智能体发言</li>
-          <li>输入 @all 提及所有参与的智能体</li>
-          <li>不指定则所有参与的智能体依次发言</li>
-          <li>可配置讨论轮数（1-3 轮）</li>
-          <li>点击 ◎ 投票 发起群聊决议投票</li>
-          <li>消息支持 emoji 表情回复和引用</li>
-        </ul>
-      </div>
-
-      {/* 快捷操作 */}
-      <div style={sectionStyle}>
-        <div style={sectionTitleStyle}>
-          <span>快捷操作</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <a
-            href="/admin/agents"
-            style={{
-              color: "var(--accent)",
-              fontSize: "11px",
-              textDecoration: "none",
-              padding: "4px 0",
-            }}
-          >
-            → 管理智能体花名册
-          </a>
-          <a
-            href="/admin/settings?section=routing"
-            style={{
-              color: "var(--accent)",
-              fontSize: "11px",
-              textDecoration: "none",
-              padding: "4px 0",
-            }}
-          >
-            → 配置路由策略
-          </a>
-          <a
-            href="/review"
-            style={{
-              color: "var(--accent)",
-              fontSize: "11px",
-              textDecoration: "none",
-              padding: "4px 0",
-            }}
-          >
-            → 查看评审中心
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}

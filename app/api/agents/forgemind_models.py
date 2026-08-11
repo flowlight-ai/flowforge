@@ -46,21 +46,43 @@ class WebChatResponse(BaseModel):
 
 
 class CouncilRequest(BaseModel):
-    """IM MindCouncil请求体。"""
+    """IM MindCouncil请求体.
+
+    路由策略（参考 clowder-ai AgentRouter）：
+        - 默认单智能体回答（fallback 链：上次回复者 > preferred > 默认）
+        - @all / @全体 / @所有人 → 全部 Forgekin 并行回答
+        - @特定智能体 → 仅指定智能体回答
+        - 显式传 forgekin_ids 且非空 → 使用指定的 ID 列表
+    """
     topic: str = Field(
         ...,
         min_length=1,
-        description="MindCouncil主题（如 '是否采用 ADR-014 提议的 Plugin V4 协议'）",
+        description="用户原始消息（含可能的 @mention，如 '@all 大家怎么看'）",
     )
     forgekin_ids: list[str] = Field(
         default_factory=list,
-        description="参与MindCouncil的Forgekin ID 列表（默认 3 只预置Forgekin全部参与）",
+        description=(
+            "参与MindCouncil的Forgekin ID 列表。"
+            "为空时走 fallback 链：@all → 全部；@特定 → 指定；"
+            "无 @ → 上次回复者 > preferred > 默认（luban）"
+        ),
     )
     max_rounds: int = Field(
         default=1,
         ge=1,
         le=3,
         description="MindCouncil最大轮数（每轮所有Forgekin各发言一次）",
+    )
+    thread_id: str | None = Field(
+        default=None,
+        description="会话 ID（用于查询上次回复者，实现 fallback 链）",
+    )
+    mode: str = Field(
+        default="auto",
+        description=(
+            "路由模式：auto=自动判断（默认）；"
+            "single=强制单智能体；parallel=强制全部并行"
+        ),
     )
 
 
@@ -70,6 +92,14 @@ class CouncilResponse(BaseModel):
     rounds: list[dict[str, Any]]
     summary: str
     participant_count: int
+    routing_mode: str = Field(
+        default="single",
+        description="实际使用的路由模式：single/parallel（便于前端展示状态）",
+    )
+    selected_forgekin_ids: list[str] = Field(
+        default_factory=list,
+        description="实际参与回答的 Forgekin ID 列表（便于前端展示）",
+    )
 
 
 class ForgeResponse(BaseModel):
