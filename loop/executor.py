@@ -1307,6 +1307,7 @@ class LoopExecutor:
         # 错误消息：根据终止原因动态生成（快速失败 vs 重试耗尽 vs 超时）
         if consecutive_refusals >= max_consecutive_refusals:
             final_error = (
+                f"consecutive refusals ({consecutive_refusals}) reached threshold — "
                 f"LLM 连续拒绝响应 {consecutive_refusals} 次（≥阈值 {max_consecutive_refusals}），"
                 f"Loop 快速失败 — 请检查 OpenRoute 服务与 LLM 账号可用性"
             )

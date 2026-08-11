@@ -50,7 +50,7 @@ from flowforge.llm.provider import (
     DirectProvider,
     LLMProvider,
     OpenRouteProvider,
-    ProviderResponse,
+    LLMResponse,
 )
 
 logger = get_logger("flowforge.llm.council_bridge")
@@ -437,7 +437,7 @@ class ForgekinLLMBridge:
             f"role={role} chain={chain} prompt_len={len(user_prompt)} "
             f"timeout={timeout}s temp={temperature}"
         )
-        resp: ProviderResponse = await client.complete(
+        resp: LLMResponse = await client.complete(
             user_prompt,
             system_prompt=system_prompt,
             temperature=temperature,
@@ -448,10 +448,10 @@ class ForgekinLLMBridge:
             f"[trace_id={tid}] bridge.respond DONE: fk={fk_cfg.get('forgekin_id')} "
             f"model={resp.model} provider={resp.provider} "
             f"latency={resp.latency_ms:.0f}ms finish={resp.finish_reason} "
-            f"len={len(resp.text)}"
+            f"len={len(resp.content)}"
         )
         return ForgekinReply(
-            text=resp.text,
+            text=resp.content,
             model=resp.model,
             provider=resp.provider,
             latency_ms=resp.latency_ms,
@@ -586,7 +586,7 @@ class ForgekinLLMBridge:
             raise
         latency_ms = (time.perf_counter() - t0) * 1000
 
-        score, verdict, reasons, raw_text = _parse_t7_response(resp.text, self._quality_threshold)
+        score, verdict, reasons, raw_text = _parse_t7_response(resp.content, self._quality_threshold)
         logger.info(
             f"[trace_id={get_trace_id()}] bridge.audit_t7 DONE: primary={primary_name} "
             f"score={score:.2f} verdict={verdict} model={resp.model} "
