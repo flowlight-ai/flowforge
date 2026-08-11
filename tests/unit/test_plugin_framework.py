@@ -3,6 +3,8 @@ import asyncio
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -60,6 +62,7 @@ def test_registry_instantiation():
     print("  registry instantiation: OK")
 
 
+@pytest.mark.asyncio
 async def test_register_tool_plugin():
     from flowforge.core.plugin_registry import PluginRegistry
     from flowforge.tools.opensieve_client import OpenSieveClient
@@ -80,6 +83,7 @@ async def test_register_tool_plugin():
     print("  register ToolPlugin: OK")
 
 
+@pytest.mark.asyncio
 async def test_register_base_tool():
     from flowforge.core.plugin_registry import PluginRegistry
     from flowforge.tools.duckduckgo_search import DuckDuckGoSearchTool
@@ -96,6 +100,7 @@ async def test_register_base_tool():
     print("  register BaseTool (via adapter): OK")
 
 
+@pytest.mark.asyncio
 async def test_load_from_config():
     from flowforge.core.plugin_registry import PluginRegistry
     from flowforge.core.config import ConfigLoader

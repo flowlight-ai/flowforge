@@ -15,10 +15,15 @@ import pytest
 from flowforge.core.errors import ReliabilityError
 
 # The reliability subsystem is specified in docs/decisions/010-distributed-reliability.md
-# but is NOT yet implemented. Skip these spec tests until it lands.
+# but is NOT yet implemented. These are spec tests: pytest.importorskip keeps them
+# collected-but-skipped (not @pytest.mark.skip) so they auto-enable the moment
+# flowforge.core.reliability lands — zero coverage loss is intentional until then.
 pytest.importorskip(
     "flowforge.core.reliability",
-    reason="flowforge.core.reliability not implemented (docs/decisions/010-distributed-reliability.md) — TODO",
+    reason=(
+        "flowforge.core.reliability not implemented (docs/decisions/010-distributed-reliability.md) — "
+        "spec tests auto-enable via importorskip when the module lands (P-79)"
+    ),
 )
 
 from flowforge.core.reliability import (  # noqa: E402
