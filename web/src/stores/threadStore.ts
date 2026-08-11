@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Thread Store (Zustand) — 群聊会话管理
  *
  * 管理会话列表、当前会话切换，调用后端 /api/v1/threads 端点。
@@ -26,6 +26,8 @@ export interface Thread {
   labels?: string[];
   /** 未读消息数（UI 态，后端可选支持，缺失时为 0） */
   unread_count?: number;
+  /** 系统会话标志（引导/教程类会话，后端可选支持） */
+  isSystem?: boolean;
 }
 
 interface ThreadStoreState {
@@ -310,3 +312,49 @@ export const useThreadStore = create<ThreadStoreState>((set, get) => ({
     return get().threadReplyTo[threadId] ?? null;
   },
 }));
+
+// ── 增强的会话查询方法（参考 clowder-ai ThreadSidebar Tab 分组） ──
+
+import type { ThreadTab, ThreadStatus } from "@/lib/council-types";
+
+/**
+ * 按 Tab 分组获取会话列表。
+ * pinned=仅置顶 / recent=7天内更新 / favorites=仅收藏 / system=系统会话 / trash=回收站
+ */
+export function getThreadsByTab(threads: Thread[], tab: ThreadTab): Thread[] {
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+
+  switch (tab) {
+    case "pinned":
+      return threads.filter((t) => t.pinned);
+    case "recent":
+      return threads.filter(
+        (t) => new Date(t.updated_at).getTime() > sevenDaysAgo
+      );
+    case "favorites":
+      return threads.filter((t) => t.favorited);
+    case "system":
+      // 系统会话：通过标签或 isSystem 字段识别
+      return threads.filter(
+        (t) => (t as Thread & { isSystem?: boolean }).isSystem ?? (t.labels?.includes("system") ?? false)
+      );
+    case "trash":
+      // 回收站由 loadTrash 单独加载，此处返回空
+      return [];
+  }
+}
+
+/**
+ * 搜索会话（标题/ID 模糊匹配）。
+ * 参考 clowder-ai ThreadSidebar 的 searchFilter 实现。
+ */
+export function searchThreads(threads: Thread[], query: string): Thread[] {
+  if (!query.trim()) return threads;
+  const q = query.toLowerCase();
+  return threads.filter(
+    (t) =>
+      t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q)
+  );
+}
+

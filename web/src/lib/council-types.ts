@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Council Chat 类型定义 — 5 灵智体协作群聊
  *
  * 对应后端 /api/v1/forgemind/* 端点：
@@ -43,6 +43,71 @@ export interface ForgekinRosterItem {
 /** 群聊消息来源类型 */
 export type CouncilMessageSource = "user" | "forgekin" | "system";
 
+/** 消息内容类型枚举 */
+export type CouncilMessageType = "text" | "cli_output" | "approval" | "rich_block" | "system";
+
+/** 消息发送状态 */
+export type MessageStatus = "sending" | "sent" | "read" | "failed";
+
+/** 消息分支类型 */
+export type BranchType = "branch-confirm" | "branch-direct";
+
+/** 消息分支信息 */
+export interface MessageBranch {
+  /** 分支类型 */
+  type: BranchType;
+  /** 父消息 ID（从哪条消息分支） */
+  parentId: string;
+  /** 分支时间戳 */
+  timestamp: number;
+  /** 分支原因（如：用户确认修改、用户直接修改） */
+  reason?: string;
+}
+
+/** 消息软删除标记 */
+export interface MessageSoftDelete {
+  /** 是否已软删除 */
+  deleted: boolean;
+  /** 删除时间戳 */
+  deletedAt?: number;
+  /** 删除者（"user" | "system"） */
+  deletedBy?: "user" | "system";
+  /** 删除原因（可选） */
+  reason?: string;
+}
+
+/** 富内容块类型 */
+export type RichBlockType =
+  | "proposal"
+  | "community"
+  | "diff"
+  | "file"
+  | "media"
+  | "audio"
+  | "html_widget"
+  | "interactive"
+  | "vote"
+  | "code_review"
+  | "diagram"
+  | "mermaid"
+  | "table"
+  | "chart"
+  | "timeline"
+  | "kanban"
+  | "calendar"
+  | "poll";
+
+/** 富内容块 */
+export interface RichBlock {
+  type: RichBlockType;
+  title?: string;
+  data: Record<string, unknown>;
+  /** 是否可折叠 */
+  collapsible?: boolean;
+  /** 默认展开（仅在 collapsible=true 时生效） */
+  defaultExpanded?: boolean;
+}
+
 /** 群聊消息（UI 内部状态） */
 export interface CouncilMessage {
   id: string;
@@ -57,6 +122,14 @@ export interface CouncilMessage {
   timestamp: number;
   /** 引用回复的原消息（当用户使用"引用回复"时） */
   replyTo?: CouncilMessage;
+  /** 消息内容类型（默认 text） */
+  messageType?: CouncilMessageType;
+  /** 发送状态 */
+  status?: MessageStatus;
+  /** 消息分支信息 */
+  branch?: MessageBranch;
+  /** 软删除标记 */
+  softDelete?: MessageSoftDelete;
   /** 该灵智体响应的元信息（model/usage/工具调用 等） */
   meta?: {
     model?: string;
@@ -69,6 +142,8 @@ export interface CouncilMessage {
       input?: string;
       content?: string;
       status?: "streaming" | "done" | "failed" | "interrupted";
+      label?: string;
+      detail?: string;
       timestamp?: number;
     }>;
     /** CLI stdout 输出 — 由 CliOutputBlock 渲染 */
@@ -82,9 +157,24 @@ export interface CouncilMessage {
     }>;
     /** 执行时长（ms）— 用于 CliOutputBlock 摘要 */
     duration_ms?: number;
+    /** 诊断信息（CLI 执行出错时使用） */
+    diagnostics?: {
+      reasonCode: string;
+      publicSummary: string;
+      publicHint?: string;
+      safeExcerpt?: string;
+      debugRef: {
+        command: string;
+        exitCode?: number | null;
+        signal?: string | null;
+        invocationId?: string;
+      };
+    };
   };
   /** 是否流式输出中（参考 clowder-ai streaming 状态）— 控制 CliOutputBlock 自动展开 */
   streaming?: boolean;
+  /** 富内容块列表 */
+  richBlocks?: RichBlock[];
   /** T7 审计徽章（隐藏在 UI 上，仅开发者可见） */
   t7Badge?: {
     verified: boolean;
@@ -214,3 +304,38 @@ export const FORGEKIN_EMOJI: Record<string, string> = {
   vangogh: "🦊",    // 狐狸
   davinci: "🐻",    // 熊
 };
+
+// ── 会话列表增强类型（参考 clowder-ai ThreadSidebar Tab 分组） ──
+
+/** 会话 Tab 分组类型：置顶 / 最近 / 收藏 / 系统 / 回收站 */
+export type ThreadTab = "pinned" | "recent" | "favorites" | "system" | "trash";
+
+/** 会话标签（彩色圆点标签，用于过滤和分类） */
+export interface ThreadTag {
+  id: string;
+  /** 标签显示名 */
+  name: string;
+  /** 标签颜色（CSS 色值，如 #ff6b6b） */
+  color: string;
+}
+
+/** 会话状态：active=活跃 / trashed=回收站 / archived=归档 */
+export type ThreadStatus = "active" | "trashed" | "archived";
+
+/** 会话 Tab 配置（用于渲染 Tab 按钮） */
+export interface ThreadTabConfig {
+  key: ThreadTab;
+  /** 中文标签 */
+  label: string;
+  /** 图标 emoji */
+  icon: string;
+}
+
+/** 预定义 Tab 列表 */
+export const THREAD_TABS: ThreadTabConfig[] = [
+  { key: "pinned", label: "置顶", icon: "📌" },
+  { key: "recent", label: "最近", icon: "🕐" },
+  { key: "favorites", label: "收藏", icon: "★" },
+  { key: "system", label: "系统", icon: "⚙" },
+  { key: "trash", label: "回收站", icon: "🗑" },
+];

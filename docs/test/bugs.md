@@ -19,9 +19,9 @@
 
 | 指标 | 数值 |
 |------|------|
-| **缺陷总数（DI count）** | **322**（19 原有 + 9 浏览器实测 + 48 功能对比 clowder-ai + 2 功能对比 opencode + 9 代码缺陷第一轮 + 26 第二轮深度分析 + 13 第三轮深度分析 + 44 第五轮 web 前端深度分析 + 3 第六轮浏览器实测 + 3 第六轮前端稳定性 + 25 第七轮 web 前端深度分析 + 8 第七轮浏览器实测 + 20 第七轮 clowder-ai 对比 + 10 第八轮 web 前端深度分析 + 20 第八轮 clowder-ai 对比 + 30 第九轮 web 前端深度分析 + 8 第九轮浏览器实测 + 25 第九轮 clowder-ai 对比） |
-| **加权缺陷指数（DI）** | **1016** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 312（9 原有 Open + 9 浏览器实测 Open + 48 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open + 44 第五轮 web 前端深度分析 Open + 3 第六轮浏览器实测 Open + 3 第六轮前端稳定性 Open + 25 第七轮 web 前端深度分析 Open + 8 第七轮浏览器实测 Open + 20 第七轮 clowder-ai 对比 Open + 10 第八轮 web 前端深度分析 Open + 20 第八轮 clowder-ai 对比 Open + 30 第九轮 web 前端深度分析 Open + 8 第九轮浏览器实测 Open + 25 第九轮 clowder-ai 对比 Open） |
+| **缺陷总数（DI count）** | **354**（19 原有 + 9 浏览器实测 + 48 功能对比 clowder-ai + 2 功能对比 opencode + 9 代码缺陷第一轮 + 26 第二轮深度分析 + 13 第三轮深度分析 + 44 第五轮 web 前端深度分析 + 3 第六轮浏览器实测 + 3 第六轮前端稳定性 + 25 第七轮 web 前端深度分析 + 8 第七轮浏览器实测 + 20 第七轮 clowder-ai 对比 + 10 第八轮 web 前端深度分析 + 20 第八轮 clowder-ai 对比 + 30 第九轮 web 前端深度分析 + 8 第九轮浏览器实测 + 25 第九轮 clowder-ai 对比 + 32 第十轮 web 前端深度分析） |
+| **加权缺陷指数（DI）** | **1073** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
+| 状态：Open | 344（9 原有 Open + 9 浏览器实测 Open + 48 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open + 44 第五轮 web 前端深度分析 Open + 3 第六轮浏览器实测 Open + 3 第六轮前端稳定性 Open + 25 第七轮 web 前端深度分析 Open + 8 第七轮浏览器实测 Open + 20 第七轮 clowder-ai 对比 Open + 10 第八轮 web 前端深度分析 Open + 20 第八轮 clowder-ai 对比 Open + 30 第九轮 web 前端深度分析 Open + 8 第九轮浏览器实测 Open + 25 第九轮 clowder-ai 对比 Open + 32 第十轮 web 前端深度分析 Open） |
 | 状态：Fixed（待回归） | 10 |
 | 状态：Closed | 0 |
 
@@ -56,6 +56,8 @@
 > 2026-08-11 第八轮浏览器实测：Playwright 驱动系统 Chrome 遍历 10 个前端路由（/、/solo、/council、/admin、/admin/agents、/admin/autonomous、/admin/observability、/memory/graph、/memory/search、/signals/sources）。所有页面 UI 加载正常，无白屏或崩溃。控制台存在健康检查中断错误（预期内，后端未运行）。2 个页面（/admin/marketplace、/mission-control）因预算限制未完成测试。所有页面 API 请求失败（后端未运行）。
 >
 > 2026-08-11 第八轮 clowder-ai 功能对比：深入分析后新增 20 个缺失功能（P-413~P-432），包括：Prompt 模板管理和版本控制、AI 模型比较、AI 成本跟踪、AI 使用配额管理、内容过滤/审核、数据管理（清洗/标注/版本控制/管线）、数据质量监控、数据血缘追踪、多因素认证、SSO/LDAP 集成、OAuth 提供商集成、API 密钥管理、API 文档自动生成、API 速率限制、可访问性（WCAG 合规）、前端性能监控、错误追踪、功能开关/灰度发布、A/B 测试平台、系统自诊断工具。累计 259 个工单，DI 885。
+>
+> 2026-08-11 第十轮 web 前端深度分析：覆盖 admin/agents/ 全部 8 个文件、components/helm/ 新增 6 个文件（BootcampWizard、HelmModals、HelmCreateDialog、HelmMainPanel、DiffViewer、DynamicGraph）、components/ 顶层 12 个文件（ApprovalHubDrawer、BrakeModal、FirstRunQuestWizard、MermaidDiagram、ForgekinHueInjector、OklchTuner、Lightbox、ToastContainer、ConnectionStatusBar、FloatingPresentationSurfaceHost、ThreadSidebar）、hub/ 新增 4 个文件（HubAgentSessionsTab、HubCoCreatorEditor、HubTraceTree）、sdk/index.ts、utils/offline-store.ts。发现 32 个新缺陷（P-496~P-527），包括：5 个 S2 重要缺陷（XSS 风险、MermaidDiagram securityLevel loose、直接 DOM 操作违反 React 声明式）、25 个 S3 一般缺陷（空 catch 吞异常、响应解析过于宽松、JSON.stringify 比较、内联样式不一致、占位空壳组件、生产环境 console.log、keyframes 名称冲突）、7 个 S4 轻微缺陷（硬编码数量、注释与实际不符、巨型组件、skipSync 反模式、空占位组件）。累计 354 个工单，DI 1073。
 
 ### 按严重度（Severity）
 
