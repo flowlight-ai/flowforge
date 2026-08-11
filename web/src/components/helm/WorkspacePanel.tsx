@@ -23,10 +23,15 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { useCouncilPanelStore } from "../../stores/councilPanelStore";
+import ForgekinSelector from "./ForgekinSelector";
+import ContextPanel from "./ContextPanel";
 
 // ── 模式定义（参考 clowder-ai workspace-modes.ts）──────────────
 
 export type WorkspaceMode =
+  | "agents"
+  | "context"
   | "dev"
   | "recall"
   | "schedule"
@@ -45,6 +50,8 @@ interface ModeConfig {
 }
 
 const MODES: ModeConfig[] = [
+  { id: "agents", label: "智能体", icon: "🤝", description: "花名册 / 角色 / 静音 / 在线状态" },
+  { id: "context", label: "上下文", icon: "📊", description: "消息统计 / 参与者 / 轮次 / 投票" },
   { id: "dev", label: "开发", icon: "▣", description: "文件树 / 代码查看 / 终端 / 浏览器" },
   { id: "recall", label: "记忆", icon: "◉", description: "记忆流 / 事件时间线 / 账本" },
   { id: "schedule", label: "调度", icon: "⏰", description: "定时任务 / 调度规则" },
@@ -77,8 +84,8 @@ export default function WorkspacePanel({
   threadId,
   className,
 }: WorkspacePanelProps) {
-  // 内部状态（非受控模式）
-  const [internalMode, setInternalMode] = useState<WorkspaceMode>("dev");
+  // 内部状态（非受控模式）— 默认"智能体" Tab（从原内嵌侧栏迁移）
+  const [internalMode, setInternalMode] = useState<WorkspaceMode>("agents");
   const mode = externalMode ?? internalMode;
 
   // 模式持久化（按 threadId 隔离）
@@ -196,6 +203,10 @@ function WorkspaceModeContent({
   threadId?: string | null;
 }) {
   switch (mode) {
+    case "agents":
+      return <AgentsPanel />;
+    case "context":
+      return <ContextPanelWrapper />;
     case "dev":
       return <DevPanel threadId={threadId} />;
     case "recall":
@@ -217,6 +228,90 @@ function WorkspaceModeContent({
     default:
       return null;
   }
+}
+
+// ── 智能体面板（从 CouncilChatPanel 内嵌侧栏迁移） ───────────
+
+function AgentsPanel() {
+  const roster = useCouncilPanelStore((s) => s.roster);
+  const config = useCouncilPanelStore((s) => s.config);
+  const mutedIds = useCouncilPanelStore((s) => s.mutedIds);
+  const toggleParticipant = useCouncilPanelStore((s) => s.toggleParticipant);
+  const setForgekinRole = useCouncilPanelStore((s) => s.setForgekinRole);
+  const toggleMute = useCouncilPanelStore((s) => s.toggleMute);
+
+  if (roster.length === 0) {
+    return (
+      <div
+        style={{
+          padding: "24px 20px",
+          color: "var(--muted)",
+          fontSize: "12px",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: "28px", marginBottom: "8px", opacity: 0.4 }}>🤝</div>
+        <div>等待智能体花名册加载...</div>
+        <div style={{ marginTop: "4px", fontSize: "11px" }}>
+          选择左侧会话后，智能体列表将在此显示
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: "100%", overflow: "auto" }}>
+      <ForgekinSelector
+        roster={roster}
+        participantIds={config.participantIds}
+        roleAssignment={config.roleAssignment}
+        mutedIds={mutedIds}
+        onToggleParticipant={toggleParticipant ?? (() => {})}
+        onSetRole={setForgekinRole ?? (() => {})}
+        onToggleMute={toggleMute ?? (() => {})}
+        compact={false}
+      />
+    </div>
+  );
+}
+
+// ── 上下文面板（从 CouncilChatPanel 内嵌侧栏迁移） ───────────
+
+function ContextPanelWrapper() {
+  const roster = useCouncilPanelStore((s) => s.roster);
+  const messages = useCouncilPanelStore((s) => s.messages);
+  const config = useCouncilPanelStore((s) => s.config);
+  const activeVoteQuestion = useCouncilPanelStore((s) => s.activeVoteQuestion);
+
+  if (messages.length === 0) {
+    return (
+      <div
+        style={{
+          padding: "24px 20px",
+          color: "var(--muted)",
+          fontSize: "12px",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: "28px", marginBottom: "8px", opacity: 0.4 }}>📊</div>
+        <div>暂无上下文数据</div>
+        <div style={{ marginTop: "4px", fontSize: "11px" }}>
+          发送消息后，会话统计和参与者信息将在此显示
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ContextPanel
+      messages={messages}
+      roster={roster}
+      participantIds={config.participantIds}
+      maxRounds={config.maxRounds}
+      activeVoteQuestion={activeVoteQuestion}
+      compact={false}
+    />
+  );
 }
 
 // ── 占位面板基础组件 ───────────────────────────────────────────

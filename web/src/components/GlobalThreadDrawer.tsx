@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * GlobalThreadDrawer — 全局会话列表抽屉
@@ -14,7 +14,13 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useThreadDrawerStore } from "@/stores/threadDrawerStore";
 import { useThreadStore } from "@/stores/threadStore";
-import { CouncilThreadList } from "./helm/CouncilThreadList";
+import dynamic from "next/dynamic";
+
+// 性能优化：CouncilThreadList 动态导入（仅在抽屉打开时加载）
+const CouncilThreadList = dynamic(
+  () => import("./helm/CouncilThreadList").then((m) => m.CouncilThreadList),
+  { ssr: false, loading: () => <div style={{ padding: "20px", color: "var(--muted)", fontSize: "12px" }}>加载会话列表...</div> }
+);
 
 export default function GlobalThreadDrawer() {
   const isOpen = useThreadDrawerStore((s) => s.isOpen);
