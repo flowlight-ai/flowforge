@@ -18,8 +18,10 @@ def project_root() -> Path:
 @pytest.fixture(autouse=True)
 def setup_test_env():
     os.environ["FLOWFORGE_ENV"] = "test"
-    os.environ["OPENROUTER_API_KEY"] = "test-key"
-    os.environ["OPENROUTE_API_KEY"] = "test-key"
+    # 不覆盖已注入的真实 key——否则 T7 真实 LLM 用例会因 test-key 401 假失败。
+    # 仅当环境完全无 key 时设置占位（供不调用 LLM 的用例使用）。
+    os.environ.setdefault("OPENROUTER_API_KEY", "test-key")
+    os.environ.setdefault("OPENROUTE_API_KEY", "test-key")
     yield
     gc.collect()
 
