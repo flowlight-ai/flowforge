@@ -422,7 +422,7 @@ def __getattr__(name: str):
         # Backward-compatible wrapper: old signature took multiple registries
         # as arguments; the new PluginLoader stores them internally.
         def _load_single_plugin_compat(plugin_instance, *args, **kwargs):
-            return plugin_loader.load_single_plugin(plugin_instance)
+            return plugin_loader.load_single_plugin(plugin_instance, *args, **kwargs)
         return _load_single_plugin_compat
     if name == "unload_plugin":
         return plugin_loader.unload_plugin
