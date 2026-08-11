@@ -19,9 +19,9 @@
 
 | 指标 | 数值 |
 |------|------|
-| **缺陷总数（DI count）** | **19** |
-| **加权缺陷指数（DI）** | **92** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 6 |
+| **缺陷总数（DI count）** | **20** |
+| **加权缺陷指数（DI）** | **94** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
+| 状态：Open | 7 |
 | 状态：Fixed（待回归） | 13 |
 | 状态：Closed | 0 |
 
@@ -37,7 +37,7 @@
 |------|------|:----:|------|
 | **S1 阻断** | 测试/安全不可用，须立即修复 | 3 | P-01, P-02, P-03 |
 | **S2 严重** | 核心功能/质量受损 | 10 | P-04, P-05, P-06, P-07, P-09, P-10, P-11, P-12, P-13, P-17 |
-| **S3 一般** | 明显缺陷但可绕过 | 6 | P-08, P-14, P-15, P-16, P-18, P-19 |
+| **S3 一般** | 明显缺陷但可绕过 | 7 | P-08, P-14, P-15, P-16, P-18, P-19, P-20 |
 | **S4 轻微** | 文档/小修 | 0 | — |
 
 ### 按分类（Category）
@@ -49,7 +49,7 @@
 | 代码缺陷 | 7 | P-03, P-04, P-09, P-10, P-12, P-13, P-15 |
 | 目录结构 | 1 | P-05 |
 | T7 / T8 合规 | 1 | P-07 |
-| 测试脚本缺陷 | 6 | P-08, P-11, P-14, P-16, P-18, P-19 |
+| 测试脚本缺陷 | 7 | P-08, P-11, P-14, P-16, P-18, P-19, P-20 |
 | 验证阻塞（环境） | 1 | P-17 |
 
 > 说明：本单可派生多个输出文件（如按严重度/分类/测试轮次），统一置于 `docs/test/` 下；本文件为唯一主索引。
@@ -376,6 +376,23 @@
 - **建议**：辅助函数改名去掉 `test_` 前缀（如 `_run_t7_llm_review`），或标 `@pytest.mark.usefixtures`/移出模块顶层，避免被收集。
 - **T7/T8**：否
 - **开发自述**：修复提交（P-19）。`tests/integration/test_breakpoint_c_stress.py:433` 辅助函数 `test_t7_llm_review` → `_run_t7_llm_review`（`:512` 调用点同步改），以 `_` 前缀避免被 pytest 收集为用例（收集中设 fixture 报错）。自测：`py_compile` OK；全文件无可收集的 `test_` 辅助函数残留。
+
+### P-20 — 占位 `assert True` 僵尸测试：被移除功能以 TODO 测试伪装成「通过」，掩盖覆盖缺口
+- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
+- **文件**：`tests/core/harness/test_durable_state.py:406`（`test_removed_harness_collaborators_todo`）；`tests/core/teamact/test_state_machine.py:385`（`test_removed_collaborators_todo`）
+- **现象（2026-08-11 白盒扫描）**：两个测试函数体仅为一行 `assert True`，docstring 注明对应功能（MagicWordsRegistry / GovernanceBoundary / HarnessabilityScorer、AtMentionRouter / BallCustodyRegistry / PushBackProtocol）已在重构中被**移除**，当前为 `TODO(refactor): re-add coverage when reimplemented`。即：被测功能已不存在，测试却不报错、在套件中计为「通过」，制造「已覆盖」的假象。
+  ```bash
+  $ grep -n "assert True" tests/core/harness/test_durable_state.py tests/core/teamact/test_state_machine.py
+  # => 406:    assert True
+  # => 385:    assert True
+  ```
+- **危害**：CI 绿态下这些用例 100% 通过，但零断言、零覆盖；一旦被移除功能被重新实现或回归，无人能从其「通过」状态发现缺口，属典型「假通过（false-pass）」。
+- **建议**：将此类占位测试改为**显式标记**，避免伪装成通过——
+  - 用 `@pytest.mark.skip(reason="功能已移除，待重实现后补覆盖 (P-20)")` 替代 `assert True`，使 CI 明确显示「跳过」而非「通过」；或
+  - 直接删除并在 `bugs.md`/覆盖率报告登记覆盖缺口（推荐，避免僵尸测试堆积）。
+  同时建议接入覆盖率门禁（`pytest --cov --cov-fail-under`），让零覆盖模块在 CI 标红。
+- **T7/T8**：否
+- **🔒测试回归结论（2026-08-11 白盒）**：⏳待回归。白盒静态确认两处 `assert True` 占位；修复（skip/删除）由开发侧实施，修复后验证 `pytest` 不再将这两个用例计为「passed」且覆盖率报告显式标注缺口。
 
 ---
 
