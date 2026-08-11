@@ -68,15 +68,31 @@ export async function fetchForgekinDetail(id: string): Promise<ForgekinRosterIte
   return found;
 }
 
+/** Forgekin CLI 绑定关系（GET /api/v1/forgekins/{id}/binding 返回） */
+export interface ForgekinBinding {
+  forgekin_id: string;
+  forgekin_name: string;
+  cli_tool: string;
+  model: string;
+  mode: string;
+  connected: boolean;
+  connectivity_reason: string;
+  cli_binary: string;
+  cli_path: string | null;
+  api_key_configured: boolean;
+  api_key_env_var: string;
+  api_key_has_value: boolean;
+}
+
 /**
- * saveForgekinConfig —— 保存 Forgekin 配置到 /api/v1/forgemind/{id}。
+ * saveForgekinConfig —— 保存 Forgekin 配置到 /api/v1/forgekins/{id}。
  *
- * 以 PUT 方法提交完整配置（PATCH 语义在路由层用 PUT 模拟）。
+ * 以 PUT 方法提交完整配置（含 LLM 绑定 + API key），后端持久化到 YAML + .env。
  *
  * @returns true 表示保存成功；false 表示失败（错误细节通过抛出异常传递）
  */
 export async function saveForgekinConfig(id: string, payload: object): Promise<boolean> {
-  const res = await fetch(`/api/v1/forgemind/${encodeURIComponent(id)}`, {
+  const res = await fetch(`/api/v1/forgekins/${encodeURIComponent(id)}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -92,4 +108,17 @@ export async function saveForgekinConfig(id: string, payload: object): Promise<b
     throw new Error(detail);
   }
   return true;
+}
+
+/**
+ * fetchForgekinBinding —— 从 /api/v1/forgekins/{id}/binding 拉取 CLI 绑定关系。
+ *
+ * 返回该 Forgekin 绑定的 CLI 工具名、连通状态、API key 配置状态。
+ */
+export async function fetchForgekinBinding(id: string): Promise<ForgekinBinding> {
+  const res = await fetch(`/api/v1/forgekins/${encodeURIComponent(id)}/binding`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  }
+  return (await res.json()) as ForgekinBinding;
 }

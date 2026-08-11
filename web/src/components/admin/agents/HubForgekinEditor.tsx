@@ -21,16 +21,27 @@ import { useConfirm } from "@/components/useConfirm";
 import {
   initialState,
   buildPatchPayload,
+  type CliBinding,
   type ForgekinFormData,
 } from "./hub-forgekin-editor/model";
-import { fetchForgekinDetail, saveForgekinConfig } from "./hub-forgekin-editor/client";
+import {
+  fetchForgekinDetail,
+  saveForgekinConfig,
+  fetchForgekinBinding,
+  type ForgekinBinding,
+} from "./hub-forgekin-editor/client";
 import {
   IdentitySection,
   AccountSection,
   RoutingSection,
   TagSection,
 } from "./hub-forgekin-editor/sections";
-import { SystemPromptField, PersistenceBanner, type PersistenceState } from "./hub-forgekin-editor/fields";
+import {
+  SystemPromptField,
+  PersistenceBanner,
+  CliBindingSection,
+  type PersistenceState,
+} from "./hub-forgekin-editor/fields";
 import { AdvancedRuntimeSection } from "./hub-forgekin-editor/advanced";
 import { VoiceSection } from "./hub-forgekin-editor/voice";
 import { validatePayload } from "./hub-forgekin-editor/payload";
@@ -66,6 +77,7 @@ export function HubForgekinEditor({
   const [persistence, setPersistence] = useState<PersistenceState>("idle");
   const [persistenceMsg, setPersistenceMsg] = useState<string | undefined>(undefined);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [bindingStatus, setBindingStatus] = useState<ForgekinBinding | null>(null);
 
   const isOpen = open && forgekinId !== null;
 
@@ -80,6 +92,7 @@ export function HubForgekinEditor({
     setPersistence("idle");
     setPersistenceMsg(undefined);
     setValidationErrors([]);
+    setBindingStatus(null);
     fetchForgekinDetail(forgekinId)
       .then((item) => {
         if (cancelled) return;
@@ -94,6 +107,14 @@ export function HubForgekinEditor({
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    // 异步拉取 CLI 绑定状态（不阻塞表单加载）
+    fetchForgekinBinding(forgekinId)
+      .then((binding) => {
+        if (!cancelled) setBindingStatus(binding);
+      })
+      .catch(() => {
+        // 绑定状态获取失败不影响编辑器使用
+      });
     return () => {
       cancelled = true;
     };
@@ -107,6 +128,13 @@ export function HubForgekinEditor({
   /** 通用更新函数：合并 patch 到当前 form */
   const patchForm = useCallback((patch: Partial<ForgekinFormData>) => {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
+  /** CLI 绑定字段更新：合并 patch 到 form.cliBinding */
+  const patchCliBinding = useCallback((patch: Partial<CliBinding>) => {
+    setForm((prev) =>
+      prev ? { ...prev, cliBinding: { ...prev.cliBinding, ...patch } } : prev
+    );
   }, []);
 
   /** 关闭前确认（如有未保存改动） */
@@ -143,6 +171,10 @@ export function HubForgekinEditor({
       setPersistence("saved");
       setPersistenceMsg(undefined);
       onSaved?.();
+      // 保存成功后刷新绑定状态（连通性 + API key 配置状态）
+      fetchForgekinBinding(forgekinId)
+        .then(setBindingStatus)
+        .catch(() => {});
     } catch (e: unknown) {
       setPersistence("error");
       setPersistenceMsg(e instanceof Error ? e.message : String(e));
@@ -261,6 +293,13 @@ export function HubForgekinEditor({
             <AccountSection
               value={{ model: form.model }}
               onChange={patchForm}
+            />
+
+            <CliBindingSection
+              value={form.cliBinding}
+              onChange={patchCliBinding}
+              bindingStatus={bindingStatus}
+              disabled={persistence === "saving"}
             />
 
             <RoutingSection

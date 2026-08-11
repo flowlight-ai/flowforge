@@ -29,6 +29,12 @@ export interface ChatMessage {
     judge_score?: number;
     reviewer?: string;
   };
+  /**
+   * 离线缓存来源标记（参考 clowder-ai cachedFrom）。
+   * 仅在从 IndexedDB 加载时盖 'idb' 戳，供 hydration merge 层识别
+   * "此消息来自缓存"并在服务端真相到达后替换。不持久化到快照。
+   */
+  cachedFrom?: "idb";
 }
 
 export interface Attachment {

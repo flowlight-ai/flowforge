@@ -22,6 +22,34 @@ export type ModelAccount = "builtin" | "openai" | "anthropic" | "zhipu" | "douba
 /** 路由策略（Routing Strategy）—— 多模型/多通道选择策略 */
 export type RoutingStrategy = "round-robin" | "priority" | "weight";
 
+/** CLI 工具 Provider — 可绑定的三方 Agent CLI 工具 */
+export type CliTool =
+  | "claude_code"
+  | "codex"
+  | "gemini"
+  | "opencode"
+  | "codebuddy"
+  | "iflow"
+  | "qodercli"
+  | "kimi"
+  | "trae"
+  | "trae_cn_ide";
+
+/** 连接模式 — CLI 工具的接入方式 */
+export type ConnectionMode = "cli" | "bridge" | "api";
+
+/** CLI 绑定配置 */
+export interface CliBinding {
+  /** 绑定的 CLI 工具 provider 名 */
+  cli_tool: CliTool;
+  /** 模型 ID */
+  model_id: string;
+  /** API Key（明文，保存时写入 .env；空字符串表示未修改） */
+  api_key: string;
+  /** 连接模式 */
+  mode: ConnectionMode;
+}
+
 /** 语音配置 */
 export interface VoiceConfig {
   /** TTS 语音 ID（如 zh-CN-XiaoxiaoNeural） */
@@ -55,6 +83,8 @@ export interface ForgekinFormData {
   voiceConfig: VoiceConfig;
   /** 路由策略 */
   routing: RoutingStrategy;
+  /** CLI 工具绑定配置 */
+  cliBinding: CliBinding;
 }
 
 /** 角色可选项（供 RoleField 下拉使用） */
@@ -71,6 +101,27 @@ export const ROUTING_OPTIONS: { value: RoutingStrategy; label: string }[] = [
   { value: "round-robin", label: "轮询" },
   { value: "priority", label: "优先级" },
   { value: "weight", label: "权重" },
+];
+
+/** CLI 工具可选项（供 CliBindingSection 下拉使用） */
+export const CLI_TOOL_OPTIONS: { value: CliTool; label: string }[] = [
+  { value: "claude_code", label: "Claude Code" },
+  { value: "codex", label: "Codex" },
+  { value: "gemini", label: "Gemini" },
+  { value: "opencode", label: "OpenCode" },
+  { value: "codebuddy", label: "CodeBuddy" },
+  { value: "iflow", label: "iFlow" },
+  { value: "qodercli", label: "Qoder CLI" },
+  { value: "kimi", label: "Kimi" },
+  { value: "trae", label: "Trae CN（桥接）" },
+  { value: "trae_cn_ide", label: "Trae CN IDE" },
+];
+
+/** 连接模式可选项 */
+export const CONNECTION_MODE_OPTIONS: { value: ConnectionMode; label: string }[] = [
+  { value: "cli", label: "CLI（命令行调用）" },
+  { value: "bridge", label: "Bridge（文件桥接）" },
+  { value: "api", label: "API（HTTP 直连）" },
 ];
 
 /** 默认主题色（兜底） */
@@ -104,6 +155,27 @@ function coerceRole(raw: string | undefined | null): RoleKind {
 }
 
 /**
+ * 将任意字符串安全转换为 CliTool，无法匹配时回退到 "trae"。
+ */
+function coerceCliTool(raw: string | undefined | null): CliTool {
+  const valid = CLI_TOOL_OPTIONS.map((o) => o.value);
+  if (raw && (valid as string[]).includes(raw)) {
+    return raw as CliTool;
+  }
+  return "trae";
+}
+
+/**
+ * 将任意字符串安全转换为 ConnectionMode，无法匹配时回退到 "cli"。
+ */
+function coerceConnectionMode(raw: string | undefined | null): ConnectionMode {
+  if (raw === "cli" || raw === "bridge" || raw === "api") {
+    return raw;
+  }
+  return "cli";
+}
+
+/**
  * initialState —— 从花名册项初始化表单数据。
  *
  * 当 roster 项缺少某些字段时，使用合理默认值兜底，确保表单始终可编辑。
@@ -124,6 +196,12 @@ export function initialState(forgekin: ForgekinRosterItem): ForgekinFormData {
     themeColor: DEFAULT_THEME_COLOR,
     voiceConfig: { ...DEFAULT_VOICE_CONFIG },
     routing: "round-robin",
+    cliBinding: {
+      cli_tool: coerceCliTool(forgekin.llm_provider),
+      model_id: forgekin.llm_model ?? "",
+      api_key: "",
+      mode: coerceConnectionMode(forgekin.llm_mode),
+    },
   };
 }
 
@@ -133,7 +211,7 @@ export function initialState(forgekin: ForgekinRosterItem): ForgekinFormData {
  * 仅包含可写字段（不含 id），将表单扁平结构转换回 roster 兼容的嵌套结构。
  */
 export function buildPatchPayload(form: ForgekinFormData): Record<string, unknown> {
-  return {
+  const payload: Record<string, unknown> = {
     name: form.name,
     nickname: form.nickname,
     species: form.species,
@@ -156,5 +234,15 @@ export function buildPatchPayload(form: ForgekinFormData): Record<string, unknow
       pitch: form.voiceConfig.pitch,
     },
     routing: form.routing,
+    llm: {
+      provider: form.cliBinding.cli_tool,
+      model: form.cliBinding.model_id,
+      mode: form.cliBinding.mode,
+    },
   };
+  // API key 仅在用户填写时传递（空字符串不提交，避免覆盖已有 key）
+  if (form.cliBinding.api_key) {
+    payload.api_key = form.cliBinding.api_key;
+  }
+  return payload;
 }

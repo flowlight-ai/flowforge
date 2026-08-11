@@ -98,6 +98,14 @@ CLI_TOOLS = [
         "env_key": "KIMI_API_KEY",
         "env_desc": "Moonshot Kimi API Key",
     },
+    {
+        "name": "qodercli",
+        "package": "@qoder/cli",
+        "forgekin": "未绑定",
+        "install": "npm",
+        "env_key": "QODER_API_KEY",
+        "env_desc": "Qoder API Key（需 Qoder 账号）",
+    },
 ]
 
 
@@ -365,9 +373,69 @@ def step_proxy_config(proxy: str | None) -> bool:
     return True
 
 
+def step_trae_bridge() -> bool:
+    """步骤 6: 初始化 Trae 桥接目录（butterfly 灵智体依赖）.
+
+    创建 FLOWFORGE_BRIDGE_DIR 目录结构：
+      .trae_bridge/
+        ├── requests/     # FlowForge → Trae IDE 请求文件
+        ├── responses/    # Trae IDE → FlowForge 响应文件
+        ├── cancels/      # 取消请求文件
+        ├── acks/         # 确认文件
+        └── archive/      # 归档目录
+    """
+    section("[6/7] Trae 桥接目录")
+
+    bridge_dir = os.environ.get("FLOWFORGE_BRIDGE_DIR", "")
+    if not bridge_dir:
+        bridge_dir = str(PROJECT_ROOT / ".trae_bridge")
+
+    bridge_path = Path(bridge_dir)
+    info(f"桥接目录: {bridge_path}")
+
+    # 创建子目录
+    subdirs = ["requests", "responses", "cancels", "acks", "archive"]
+    for subdir in subdirs:
+        (bridge_path / subdir).mkdir(parents=True, exist_ok=True)
+
+    # 创建 status.json（operator 可见性）
+    status_file = bridge_path / "status.json"
+    if not status_file.exists():
+        status_file.write_text(
+            '{"pending": 0, "completed": 0, "failed": 0, "last_updated": ""}',
+            encoding="utf-8",
+        )
+
+    # 写入 .env（如果 FLOWFORGE_BRIDGE_DIR 未设置）
+    if ENV_FILE.exists():
+        content = ENV_FILE.read_text(encoding="utf-8")
+        if "FLOWFORGE_BRIDGE_DIR=" in content:
+            # 更新为实际路径（如果为空）
+            import re
+            content = re.sub(
+                r"FLOWFORGE_BRIDGE_DIR=\s*$",
+                f"FLOWFORGE_BRIDGE_DIR={bridge_dir}",
+                content,
+                flags=re.MULTILINE,
+            )
+            ENV_FILE.write_text(content, encoding="utf-8")
+            ok(f"已更新 .env 中 FLOWFORGE_BRIDGE_DIR={bridge_dir}")
+        else:
+            ok(".env 中已有 FLOWFORGE_BRIDGE_DIR 配置")
+    else:
+        # 追加到 .env
+        with open(ENV_FILE, "a", encoding="utf-8") as f:
+            f.write(f"\n# === Trae 桥接 ===\nFLOWFORGE_BRIDGE_DIR={bridge_dir}\n")
+        ok(f"已将 FLOWFORGE_BRIDGE_DIR 写入 .env")
+
+    ok(f"Trae 桥接目录已初始化: {bridge_path}")
+    info("butterfly 灵智体（幻蝶）将通过此目录与 Trae IDE 通信")
+    return True
+
+
 def step_summary(installed: list, failed: list) -> None:
-    """步骤 6: 汇总"""
-    section("[6/6] 安装汇总")
+    """步骤 7: 汇总"""
+    section("[7/7] 安装汇总")
 
     print(f"\n  已安装 CLI: {len(installed)}/{len(CLI_TOOLS)}")
     if installed:
@@ -413,6 +481,7 @@ def main():
     cli_result = step_install_cli_tools(npm_registry, pip_index, proxy)
     step_env_file()
     step_proxy_config(proxy)
+    step_trae_bridge()
     step_summary(cli_result["installed"], cli_result["failed"])
 
     if not step1_ok or not step2_ok:

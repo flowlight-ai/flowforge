@@ -204,18 +204,32 @@ async def _check_tool(tool: str) -> dict[str, Any]:
 
 
 async def run_environment_check() -> dict[str, Any]:
-    """运行完整环境检测（参考 clowder-ai runEnvironmentCheck）.
+    """运行完整环境检测（联动 doctor.py，覆盖 9 个灵智体所需全部依赖）.
 
-    检测项：
-        - 核心工具：python, git, node, npm（决定是否跳过 phase-3）
-        - 可选工具：pnpm, docker, uvicorn
+    检测项（通过调用 doctor.py 的 run_doctor 实现）：
+        - Python/Node/Git 基础环境
+        - 8 个 CLI 工具（claude/codex/gemini/opencode/codebuddy/qodercli/iflow/kimi）
+        - 3 个协议代理（claude-code-router/responses-proxy/gemini-proxy）
+        - Trae 桥接目录（butterfly 灵智体）
+        - .env 配置文件（含 API key 检测）
+        - .venv 虚拟环境
+        - web/node_modules 前端依赖
 
     Returns:
         {
             "tools": {tool_name: {ok, version, note}},
             "all_core_ok": bool,
+            "cli_tools": [...],
+            "proxies": [...],
+            "trae_bridge": {...},
+            "env_file": {...},
+            "venv": {...},
+            "web_deps": {...},
+            "missing_cli": [...],
+            "install_hint": str,
         }
     """
+    # 先运行基础工具检测（保持兼容性）
     all_tools = CORE_TOOLS + OPTIONAL_TOOLS
     results = await asyncio.gather(*[_check_tool(t) for t in all_tools])
 
@@ -225,16 +239,102 @@ async def run_environment_check() -> dict[str, Any]:
 
     all_core_ok = all(tools[t]["ok"] for t in CORE_TOOLS)
 
+    # 联动 doctor.py 进行深度检测（在线程池中运行避免阻塞）
+    doctor_results = await asyncio.get_event_loop().run_in_executor(
+        None, _run_doctor_sync
+    )
+
+    # 提取 CLI 工具检测结果
+    cli_tools = doctor_results.get("cli_tools", [])
+    missing_cli = [
+        t["name"] for t in cli_tools
+        if isinstance(t, dict) and t.get("status") == "missing"
+    ]
+
+    # 提取 Trae 桥接状态
+    trae_bridge = doctor_results.get("trae_bridge", {})
+
+    # 提取 .env 配置状态
+    env_file = doctor_results.get("env_file", {})
+
+    # 提取 venv 状态
+    venv = doctor_results.get("venv", {})
+
+    # 提取 web 依赖状态
+    web_deps = doctor_results.get("web_deps", {})
+
+    # 生成安装提示
+    install_hint = ""
+    if missing_cli:
+        install_hint = (
+            f"检测到 {len(missing_cli)} 个 CLI 工具未安装: {', '.join(missing_cli)}。"
+            "请运行 install.bat（Windows）或 ./install.sh（Unix）一键安装。"
+        )
+    elif not all_core_ok:
+        install_hint = "核心开发工具缺失，请先安装 Python/Node.js/Git。"
+    elif not env_file.get("exists", False):
+        install_hint = ".env 配置文件不存在，请运行 install 脚本生成。"
+    elif not venv.get("exists", False):
+        install_hint = ".venv 虚拟环境不存在，请运行 install 脚本创建。"
+    else:
+        install_hint = "环境就绪！可以开始使用 FlowForge。"
+
     logger.info(
-        "bootcamp 环境检测: core_ok=%s tools=%s",
+        "bootcamp 环境检测（联动 doctor）: core_ok=%s missing_cli=%s trae_bridge=%s",
         all_core_ok,
-        {t: tools[t]["ok"] for t in all_tools},
+        missing_cli,
+        trae_bridge.get("status", "unknown"),
     )
 
     return {
         "tools": tools,
         "all_core_ok": all_core_ok,
+        "cli_tools": cli_tools,
+        "proxies": doctor_results.get("proxies", []),
+        "trae_bridge": trae_bridge,
+        "env_file": env_file,
+        "venv": venv,
+        "web_deps": web_deps,
+        "missing_cli": missing_cli,
+        "install_hint": install_hint,
     }
+
+
+def _run_doctor_sync() -> dict[str, Any]:
+    """同步调用 doctor.py 的 run_doctor（在线程池中执行）.
+
+    将 doctor.py 的检测结果作为 dict 返回，供 bootcamp 使用。
+    如果 doctor 模块不可用，返回空 dict 降级。
+    """
+    try:
+        # 动态导入 doctor 模块（避免硬依赖）
+        import importlib
+        import sys as _sys
+        from pathlib import Path
+
+        # 将 scripts 目录加入 sys.path
+        scripts_dir = str(Path(__file__).resolve().parents[3] / "scripts")
+        if scripts_dir not in _sys.path:
+            _sys.path.insert(0, scripts_dir)
+
+        doctor_mod = importlib.import_module("doctor")
+        # 调用 run_doctor(json_output=True) 获取结构化结果
+        # 注意：run_doctor 会打印到 stdout，我们用 json_output 获取 JSON
+        import io
+        import contextlib
+
+        # 捕获 stdout（doctor 会打印检测结果）
+        old_stdout = _sys.stdout
+        _sys.stdout = io.StringIO()
+        try:
+            results = doctor_mod.run_doctor(json_output=True)
+        finally:
+            _sys.stdout = old_stdout
+
+        return results
+    except Exception as exc:
+        logger.warning("doctor.py 联动失败，降级为基础检测: %s", exc)
+        return {}
 
 
 # ── API 端点 ─────────────────────────────────────────────────────

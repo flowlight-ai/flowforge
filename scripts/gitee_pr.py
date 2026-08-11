@@ -14,14 +14,30 @@ gitee_pr.py - Gitee PR 管理（UTF-8 安全）
 
 import argparse
 import json
+import os
 import sys
 import urllib.request
 import urllib.error
+from pathlib import Path
 
 GITEE_API = "https://gitee.com/api/v5"
-OWNER = "flowlight-ai"
-REPO = "flowforge"
-TOKEN = "0d9679b7801e116d8c9975ac5eb37fb6"
+OWNER = os.environ.get("GITEE_OWNER", "flowlight-ai")
+REPO = os.environ.get("GITEE_REPO", "flowforge")
+TOKEN = os.environ.get("GITEE_TOKEN", "")
+
+if not TOKEN:
+    # 尝试从 .env 或 git config 读取（红线 11：禁止硬编码密钥）
+    _env_file = Path(__file__).resolve().parent.parent / ".env"
+    if _env_file.exists():
+        for _line in _env_file.read_text(encoding="utf-8").split("\n"):
+            _line = _line.strip()
+            if _line.startswith("GITEE_TOKEN="):
+                TOKEN = _line.split("=", 1)[1].strip().strip('"').strip("'")
+                break
+    if not TOKEN:
+        print("错误: GITEE_TOKEN 未设置。请设置环境变量或在 .env 中配置 GITEE_TOKEN", file=sys.stderr)
+        print("用法: set GITEE_TOKEN=your_token_here", file=sys.stderr)
+        sys.exit(1)
 
 
 def api_request(method, path, data=None):

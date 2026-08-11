@@ -373,7 +373,7 @@ class WebChatChannel(IMCouncilChannel):
 
 
 # ---------------------------------------------------------------------------
-# TraeBridgeChannel — Trae IDE 桥接通道（Phase 1 骨架，Phase 3 完整）
+# TraeBridgeChannel — Trae IDE 桥接通道（完整实现，复用 F045 文件协议）
 # ---------------------------------------------------------------------------
 
 
@@ -383,10 +383,12 @@ class TraeBridgeChannel(IMCouncilChannel):
     适用场景：operator 主力 IDE 工作流，在 Trae CN 内接收审批请求并回写决策。
 
     传输介质：F045 共享 JSON 文件协议（${FLOWFORGE_BRIDGE_DIR}），
-    复用 request_{uuid}.json / response_{uuid}.json 命名约定。
+    复用 TraeBridgeProtocol 的 request_{uuid}.json / response_{uuid}.json 命名约定。
 
-    Phase 状态：🔄 骨架（Phase 3 完整实现）。当前 send/wait_reply/broadcast
-    仅记录 TODO 日志并返回降级结果，**不抛 NotImplementedError**。
+    完整实现：
+    - send: 通过 TraeBridgeProtocol.write_request 写入请求文件
+    - wait_reply: 通过 TraeBridgeProtocol.poll_response 轮询响应文件
+    - broadcast: 并发写入多个 bridge_dir
 
     配置项（来自 im_council.yaml channels.trae）：
     - bridge_dir: F045 共享目录路径（支持 ${ENV_VAR} 占位符，红线 11）
@@ -403,61 +405,192 @@ class TraeBridgeChannel(IMCouncilChannel):
         """
         raw_dir = config.get("bridge_dir", "${FLOWFORGE_BRIDGE_DIR}")
         self._bridge_dir: str = _expand_env(raw_dir)
-        # Phase 3 将填充：self._protocol = TraeBridgeProtocol(...)
-        logger.debug(
-            "TraeBridgeChannel init (skeleton): bridge_dir=%s", self._bridge_dir
-        )
+
+        # 延迟导入 TraeBridgeProtocol 避免循环依赖
+        try:
+            from flowforge.llm.trae.config import TraeBridgeConfig
+            from flowforge.llm.trae.models import BridgeRequestContext
+            from flowforge.llm.trae.protocol import TraeBridgeProtocol
+
+            # 构造 TraeBridgeConfig（如果 bridge_dir 非空则覆盖默认值）
+            if self._bridge_dir:
+                bridge_config = TraeBridgeConfig(shared_dir=self._bridge_dir)
+            else:
+                bridge_config = TraeBridgeConfig()
+
+            self._protocol = TraeBridgeProtocol(bridge_config)
+            self._BridgeRequestContext = BridgeRequestContext
+            self._available = True
+            logger.info(
+                "TraeBridgeChannel init: bridge_dir=%s available=True",
+                self._bridge_dir,
+            )
+        except Exception as e:
+            logger.warning(
+                "TraeBridgeChannel init failed: %s, channel 将降级为不可用", e
+            )
+            self._protocol = None
+            self._BridgeRequestContext = None
+            self._available = False
 
     async def send(self, message: CouncilMessage) -> str:
-        """发送消息到 Trae IDE — Phase 3 实现.
+        """发送消息到 Trae IDE — 通过 F045 文件协议写入 request 文件.
 
-        Phase 3 实现计划：
-        - TODO: 复用 F045 TraeBridgeProtocol 文件命名约定
-        - TODO: 写入 {bridge_dir}/requests/council_request_{message_id}.json
-        - TODO: operator 在 Trae 内监听并调用 LLM 辅助决策
-        - TODO: 写入失败时抛异常触发 I1 降级
+        复用 TraeBridgeProtocol.write_request，将 CouncilMessage 转换为
+        BridgeRequest 格式，operator 在 Trae 内监听并处理。
+
+        Args:
+            message: 议事消息
+
+        Returns:
+            message_id: 用于后续 wait_reply 配对
+
+        Raises:
+            RuntimeError: 桥接协议不可用时抛异常触发 I1 降级
         """
-        logger.warning(
-            "TraeBridgeChannel.send: skeleton not implemented (Phase 3), "
-            "message_id=%s forgekin=%s bridge_dir=%s",
-            message.message_id,
-            message.forgekin_id,
-            self._bridge_dir,
-        )
-        # 骨架降级：返回 message_id 但标记未送达
-        return message.message_id
+        if not self._available or self._protocol is None:
+            logger.warning(
+                "TraeBridgeChannel.send: 桥接不可用, message_id=%s",
+                message.message_id,
+            )
+            raise RuntimeError("TraeBridgeChannel 不可用")
+
+        try:
+            # 构造 BridgeRequestContext
+            context = self._BridgeRequestContext(
+                forgekin_id=message.forgekin_id,
+                task_type="council_approval",
+                task_summary=message.content[:200] if message.content else "",
+                model="trae",
+            )
+
+            # 构造消息列表（OpenAI 兼容格式）
+            messages = [
+                {
+                    "role": "user",
+                    "content": (
+                        f"[IM Council 议事请求]\n"
+                        f"消息ID: {message.message_id}\n"
+                        f"发起者: {message.forgekin_id}\n"
+                        f"类型: {message.message_type}\n"
+                        f"内容: {message.content}\n"
+                        f"附加数据: {json.dumps(message.payload, ensure_ascii=False)}"
+                        if message.payload
+                        else f"[IM Council 议事请求]\n"
+                        f"消息ID: {message.message_id}\n"
+                        f"发起者: {message.forgekin_id}\n"
+                        f"类型: {message.message_type}\n"
+                        f"内容: {message.content}",
+                    ),
+                }
+            ]
+
+            # 写入 request 文件（使用 message_id 作为 request_id 便于配对）
+            request_id = await self._protocol.write_request(
+                messages=messages,
+                context=context,
+                request_id=message.message_id,
+                timeout_seconds=300,
+            )
+
+            logger.info(
+                "TraeBridgeChannel.send: 请求已写入, message_id=%s forgekin=%s",
+                request_id,
+                message.forgekin_id,
+            )
+            return request_id
+
+        except Exception as e:
+            logger.error(
+                "TraeBridgeChannel.send 失败: message_id=%s error=%s",
+                message.message_id,
+                e,
+            )
+            raise RuntimeError(f"TraeBridgeChannel 发送失败: {e}") from e
 
     async def wait_reply(
         self, message_id: str, timeout: float
     ) -> Optional[CouncilReply]:
-        """等待 Trae IDE 回复 — Phase 3 实现.
+        """等待 Trae IDE 回复 — 轮询 response 文件.
 
-        Phase 3 实现计划：
-        - TODO: 轮询 {bridge_dir}/responses/council_response_{message_id}.json
-        - TODO: 解析 JSON 为 CouncilReply
-        - TODO: 超时返回 None
+        通过 TraeBridgeProtocol.poll_response 等待 operator 回写的响应文件，
+        解析为 CouncilReply 返回。超时返回 None 触发 I4 超时拒绝。
+
+        Args:
+            message_id: 对应 send 返回的 request_id
+            timeout: 超时秒数
+
+        Returns:
+            CouncilReply 或 None（超时）
         """
-        logger.warning(
-            "TraeBridgeChannel.wait_reply: skeleton not implemented (Phase 3), "
-            "message_id=%s timeout=%ss",
-            message_id,
-            timeout,
-        )
-        # 骨架降级：返回 None 触发 I4 超时拒绝
-        return None
+        if not self._available or self._protocol is None:
+            logger.warning(
+                "TraeBridgeChannel.wait_reply: 桥接不可用, message_id=%s",
+                message_id,
+            )
+            return None
+
+        try:
+            # 轮询响应文件
+            response = await self._protocol.poll_response(
+                message_id,
+                timeout=timeout,
+            )
+
+            # 解析响应内容为 CouncilReply
+            content = response.content or ""
+            reply_type = "decision"
+            # 简单解析：如果内容是 approve/reject 则为 decision
+            lower_content = content.lower().strip()
+            if lower_content in ("approve", "approved", "同意", "批准"):
+                content = "approve"
+                reply_type = "decision"
+            elif lower_content in ("reject", "rejected", "拒绝", "否决"):
+                content = "reject"
+                reply_type = "decision"
+            elif "?" in content:
+                reply_type = "question"
+            else:
+                reply_type = "comment"
+
+            reply = CouncilReply(
+                reply_id=_new_id("reply"),
+                message_id=message_id,
+                replier="operator",
+                content=content,
+                reply_type=reply_type,
+            )
+
+            logger.info(
+                "TraeBridgeChannel.wait_reply: 收到回复, message_id=%s reply_type=%s",
+                message_id,
+                reply_type,
+            )
+            return reply
+
+        except Exception as e:
+            logger.warning(
+                "TraeBridgeChannel.wait_reply 超时或失败: message_id=%s error=%s",
+                message_id,
+                e,
+            )
+            return None
 
     async def broadcast(self, message: CouncilMessage) -> list[str]:
-        """广播给多个 Trae IDE 接收者 — Phase 3 实现.
+        """广播给多个 Trae IDE 接收者 — 当前实现为单目录写入.
 
-        Phase 3 实现计划：
-        - TODO: 多个 bridge_dir 并发写入
+        未来扩展：支持多个 bridge_dir 并发写入。
         """
-        logger.warning(
-            "TraeBridgeChannel.broadcast: skeleton not implemented (Phase 3), "
-            "message_id=%s",
-            message.message_id,
-        )
-        return []
+        try:
+            sent_id = await self.send(message)
+            return [sent_id]
+        except Exception as e:
+            logger.warning(
+                "TraeBridgeChannel.broadcast 失败: message_id=%s error=%s",
+                message.message_id,
+                e,
+            )
+            return []
 
 
 # ---------------------------------------------------------------------------
