@@ -17,9 +17,12 @@ def project_root() -> Path:
 
 @pytest.fixture(autouse=True)
 def setup_test_env():
-    os.environ["FLOWFORGE_ENV"] = "test"
-    os.environ["OPENROUTER_API_KEY"] = "test-key"
-    os.environ["OPENROUTE_API_KEY"] = "test-key"
+    # P-10: 用 setdefault 而非直接赋值，避免覆盖真实环境中的 API key。
+    # 直接覆盖为 test-key 会使 T7Reviewer 解析到无效 key，导致依赖 T7
+    # 审核的用例全部 401 假失败（本地 OpenRoute 网关实际可用）。
+    os.environ.setdefault("FLOWFORGE_ENV", "test")
+    os.environ.setdefault("OPENROUTER_API_KEY", "test-key")
+    os.environ.setdefault("OPENROUTE_API_KEY", "test-key")
     yield
     gc.collect()
 
