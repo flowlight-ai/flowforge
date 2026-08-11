@@ -22,7 +22,7 @@ interface NotifyChannel {
 /**
  * NotifySection — 通知
  *
- * 合并 /admin/notify。数据源：GET /api/v1/notify/channels。
+ * 合并 /admin/notify。数据源：GET /api/v1/notify/subscriptions。
  */
 export function NotifySection() {
   const [channels, setChannels] = useState<NotifyChannel[]>([]);
@@ -31,14 +31,20 @@ export function NotifySection() {
   const fetchChannels = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/notify/channels').catch(() => null);
+      const res = await fetch('/api/v1/notify/subscriptions').catch(() => null);
       if (!res || !res.ok) {
         setChannels([]);
         return;
       }
-      const data = await res.json().catch(() => ({ data: { channels: [] } }));
-      const list = data?.data?.channels || data?.channels || [];
-      setChannels(Array.isArray(list) ? list : []);
+      const data = await res.json().catch(() => ({ items: [] }));
+      const list = data?.items || [];
+      setChannels(Array.isArray(list) ? list.map((item: any, i: number) => ({
+        id: item.id || `sub_${i}`,
+        name: item.channel || item.target || `渠道 ${i + 1}`,
+        type: item.channel,
+        enabled: item.status === 'active',
+        target: item.target,
+      })) : []);
     } catch {
       setChannels([]);
     } finally {

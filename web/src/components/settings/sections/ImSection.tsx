@@ -28,9 +28,14 @@ export function ImSection() {
         setConnectors([]);
         return;
       }
-      const data = await res.json().catch(() => ({ data: { connectors: [] } }));
-      const list = data?.data?.connectors || data?.connectors || [];
-      setConnectors(Array.isArray(list) ? list : []);
+      const data = await res.json().catch(() => ({ items: [] }));
+      const list = data?.items || [];
+      setConnectors(Array.isArray(list) ? list.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        platform: item.platform,
+        configured: item.configured,
+      })) : []);
     } catch {
       setConnectors([]);
     } finally {

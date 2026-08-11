@@ -29,9 +29,15 @@ export function SkillsSection() {
         setSkills([]);
         return;
       }
-      const data = await res.json().catch(() => ({ data: { skills: [] } }));
-      const list = data?.data?.skills || data?.skills || [];
-      setSkills(Array.isArray(list) ? list : []);
+      const data = await res.json().catch(() => ({ items: [] }));
+      const list = data?.items || [];
+      setSkills(Array.isArray(list) ? list.map((item: any) => ({
+        id: item.id || item.name,
+        name: item.name,
+        description: item.description,
+        version: item.version,
+        installed: item.installed,
+      })) : []);
     } catch {
       setSkills([]);
     } finally {
