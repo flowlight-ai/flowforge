@@ -75,16 +75,26 @@ REQUIRE_REAL_LLM = os.environ.get("FLOWFORGE_REAL_LLM", "1") == "1"
 # ==================== pytest fixtures ====================
 
 
-@pytest.fixture(scope="module")
-def browser_manager():
-    """模块级浏览器管理器（懒加载，参考 DOMVerifier 模式）。
+@pytest.fixture
+async def browser_manager():
+    """每个测试函数独立创建并销毁浏览器管理器。
 
-    使用 BrowserManager 避免在 fixture 中调用 run_until_complete
-    与 pytest-asyncio 事件循环冲突。浏览器在首次 new_page() 时启动。
+    必须为 function 作用域：Playwright 的 async API 绑定到创建它的事件循环，
+    而 pytest-asyncio（auto 模式）为每个 async 测试分配独立的 function 级事件循环。
+    若浏览器为 module 作用域，它会在首个测试的循环中创建，后续测试在各自的新循环中
+    await 同一浏览器实例会跨循环死锁（表现为测试 2 起无限挂起）。改为 function 作用域
+    后，浏览器总是在当前测试的循环中创建/销毁，彻底规避跨循环死锁。
 
     T8 铁律：必须操控真实浏览器查看 DOM。使用 Playwright async API。
     """
-    return BrowserManager()
+    mgr = BrowserManager()
+    try:
+        yield mgr
+    finally:
+        try:
+            await mgr.close()
+        except Exception:
+            pass
 
 
 @pytest.fixture
