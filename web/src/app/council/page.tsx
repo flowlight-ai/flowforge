@@ -37,8 +37,13 @@ import {
   ROLE_CONFIG,
   type ForgekinRosterItem,
 } from "@/lib/council-types";
-import { CouncilThreadList } from "@/components/helm/CouncilThreadList";
 import type { BootcampPhase, BootcampState } from "@/lib/bootcamp-types";
+
+// 性能优化：CouncilThreadList 动态导入（减少首屏 JS 体积）
+const CouncilThreadList = dynamic(
+  () => import("@/components/helm/CouncilThreadList").then((m) => m.CouncilThreadList),
+  { ssr: false, loading: () => <div style={{ width: "240px", flexShrink: 0 }} /> }
+);
 
 // CouncilChatPanel 已就绪，动态导入避免 SSR 问题（内部使用 fetch/浏览器 API）
 const CouncilChatPanel = dynamic(
@@ -367,7 +372,7 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
                   }}
                 />
               )}
-              <CouncilChatPanel threadId={threadId} showSidebar={true} compact={false} />
+              <CouncilChatPanel threadId={threadId} showSidebar={false} compact={false} />
             </>
           ) : (
             <div

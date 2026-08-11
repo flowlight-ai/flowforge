@@ -2,13 +2,29 @@
 
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useShellConfig } from "../lib/shell-config";
 import { ActivityBar } from "./ActivityBar";
 import { TopBar } from "./TopBar";
-import { ConciergeHost } from "./concierge/ConciergeHost";
-import { FloatingPresentationSurfaceHost } from "./workspace/FloatingPresentationSurfaceHost";
-import { ApprovalHubDrawer } from "./ApprovalHubDrawer";
-import GlobalThreadDrawer from "./GlobalThreadDrawer";
+
+// 性能优化：非首屏关键组件动态导入（减少首屏 JS 体积）
+// 这些组件都是条件渲染或隐藏的，不需要在首屏加载
+const ConciergeHost = dynamic(
+  () => import("./concierge/ConciergeHost").then((m) => m.ConciergeHost),
+  { ssr: false, loading: () => null }
+);
+const FloatingPresentationSurfaceHost = dynamic(
+  () => import("./workspace/FloatingPresentationSurfaceHost").then((m) => m.FloatingPresentationSurfaceHost),
+  { ssr: false, loading: () => null }
+);
+const ApprovalHubDrawer = dynamic(
+  () => import("./ApprovalHubDrawer").then((m) => m.ApprovalHubDrawer),
+  { ssr: false, loading: () => null }
+);
+const GlobalThreadDrawer = dynamic(
+  () => import("./GlobalThreadDrawer"),
+  { ssr: false, loading: () => null }
+);
 
 // 与 clowder-ai 一致：展示页无 Shell
 const CHROMELESS_ROUTES: string[] = [];
