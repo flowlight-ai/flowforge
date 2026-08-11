@@ -5,18 +5,18 @@ import { Key } from 'lucide-react';
 import { SettingsBadge, SettingsEmptyState, SettingsRow, SettingsSection, SettingsText } from '../primitives';
 
 interface ProviderAccount {
-  id: string;
   name: string;
-  provider?: string;
-  model?: string;
-  configured?: boolean;
+  base_url?: string;
+  api_key_env?: string;
+  key_configured?: boolean;
+  key_masked?: string;
 }
 
 /**
  * AccountsSection — 账户与密钥
  *
  * 合并 /admin/models 的 providers。
- * 数据源：GET /api/v1/models/providers（回退到 /api/v1/models）。
+ * 数据源：GET /api/v1/settings/providers（回退到 /api/v1/settings/providers）。
  */
 export function AccountsSection() {
   const [accounts, setAccounts] = useState<ProviderAccount[]>([]);
@@ -27,20 +27,13 @@ export function AccountsSection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/v1/models/providers').catch(() => null);
+      const res = await fetch('/api/v1/settings/providers').catch(() => null);
       if (!res || !res.ok) {
-        const fallback = await fetch('/api/v1/models').catch(() => null);
-        if (!fallback || !fallback.ok) {
-          setAccounts([]);
-          return;
-        }
-        const data = await fallback.json().catch(() => ({ data: { providers: [] } }));
-        const list = data?.data?.providers || data?.providers || [];
-        setAccounts(Array.isArray(list) ? list : []);
+        setAccounts([]);
         return;
       }
       const data = await res.json().catch(() => ({ data: { providers: [] } }));
-      const list = data?.data?.providers || data?.providers || [];
+      const list = data?.data?.providers || [];
       setAccounts(Array.isArray(list) ? list : []);
     } catch {
       setError('账户列表加载失败');
@@ -76,18 +69,22 @@ export function AccountsSection() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {accounts.map((a) => (
             <SettingsRow
-              key={a.id}
+              key={a.name}
               icon={<Key size={16} color="var(--accent)" />}
               title={a.name}
-              meta={a.model ? `模型: ${a.model}` : a.provider}
+              meta={a.base_url}
               badges={
-                a.configured !== undefined ? (
-                  <SettingsBadge tone={a.configured ? 'emerald' : 'amber'} size="xxs">
-                    {a.configured ? '已配置' : '未配置'}
-                  </SettingsBadge>
-                ) : null
+                <SettingsBadge tone={a.key_configured ? 'emerald' : 'amber'} size="xxs">
+                  {a.key_configured ? '已配置' : '未配置'}
+                </SettingsBadge>
               }
-            />
+            >
+              {a.key_masked && (
+                <SettingsText as="span" variant="xs" tone="muted" style={{ fontFamily: 'var(--mono)' }}>
+                  {a.key_masked}
+                </SettingsText>
+              )}
+            </SettingsRow>
           ))}
         </div>
       )}

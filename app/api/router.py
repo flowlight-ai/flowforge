@@ -15,12 +15,13 @@
 from fastapi import APIRouter
 
 # ── 架构基础设施层 ──────────────────────────────────────────────
-from flowforge.app.api.core import system, auth, metrics, logs
+from flowforge.app.api.core import system, auth, metrics, logs, mcp, connectors, notify
 
 # ── 智能体模块 ──────────────────────────────────────────────────
 from flowforge.app.api.agents import agents, modes, forgemind, external_agents
 from flowforge.app.api.agents import threads
 from flowforge.app.api.agents import bootcamp
+from flowforge.app.api.agents import skills, concierge, voice, capability
 
 # ── 工作流模块 ──────────────────────────────────────────────────
 from flowforge.app.api.workflows import workflows, tasks
@@ -34,7 +35,7 @@ from flowforge.app.api.plugins import plugins
 from flowforge.app.api.plugins.domain_plugins import router as domain_plugins_router
 
 # ── 后台管理模块 ────────────────────────────────────────────────
-from flowforge.app.api.admin import admin, admin_models, settings, review, schedules, prompts, env_vars
+from flowforge.app.api.admin import admin, admin_models, settings, review, schedules, prompts, env_vars, ops
 
 # ── 独立组件 ────────────────────────────────────────────────────
 from flowforge.app.api.endpoints import dashboard
@@ -50,6 +51,9 @@ router.include_router(system.router)
 router.include_router(auth.router)
 router.include_router(metrics.router)
 router.include_router(logs.router)
+router.include_router(mcp.router)
+router.include_router(connectors.router)
+router.include_router(notify.router)
 
 # ── 智能体 ──────────────────────────────────────────────────────
 router.include_router(agents.router)
@@ -62,6 +66,14 @@ router.include_router(external_agents.router)
 router.include_router(threads.router)
 # 灵智训练营（Bootcamp）— 用户引导 + 智能体成长训练（参考 clowder-ai F087）
 router.include_router(bootcamp.router)
+# 技能管理（Skill 注册、发现、安装）
+router.include_router(skills.router)
+# 管家配置（Concierge 形象、值班策略、主动性配置）
+router.include_router(concierge.router)
+# 语音管理（TTS/STT 服务、术语表、语音配置）
+router.include_router(voice.router)
+# 能力画像（CapabilityProfile 路由信号与来源追溯）
+router.include_router(capability.router)
 
 # ── 工作流 ──────────────────────────────────────────────────────
 router.include_router(workflows.router)
@@ -85,6 +97,7 @@ router.include_router(review.router)
 router.include_router(schedules.router)
 router.include_router(prompts.router)
 router.include_router(env_vars.router)
+router.include_router(ops.router)
 
 # ── 独立组件 ────────────────────────────────────────────────────
 router.include_router(dashboard.router)

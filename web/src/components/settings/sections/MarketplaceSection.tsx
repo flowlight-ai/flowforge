@@ -15,7 +15,7 @@ interface MarketPackage {
 /**
  * MarketplaceSection — 能力市场
  *
- * 合并 /admin/marketplace。数据源：GET /api/v1/marketplace。
+ * 合并 /admin/marketplace。数据源：GET /api/v1/marketplace/installed。
  */
 export function MarketplaceSection() {
   const [packages, setPackages] = useState<MarketPackage[]>([]);
@@ -24,14 +24,20 @@ export function MarketplaceSection() {
   const fetchPackages = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/marketplace').catch(() => null);
+      const res = await fetch('/api/v1/marketplace/installed').catch(() => null);
       if (!res || !res.ok) {
         setPackages([]);
         return;
       }
-      const data = await res.json().catch(() => ({ data: { packages: [] } }));
-      const list = data?.data?.packages || data?.packages || [];
-      setPackages(Array.isArray(list) ? list : []);
+      const data = await res.json().catch(() => ({ plugins: [] }));
+      const list = data?.plugins || [];
+      setPackages(Array.isArray(list) ? list.map((p: any) => ({
+        id: p.name || p.id,
+        name: p.name || p.display_name || '未知',
+        description: p.description,
+        type: 'plugin',
+        installed: true,
+      })) : []);
     } catch {
       setPackages([]);
     } finally {

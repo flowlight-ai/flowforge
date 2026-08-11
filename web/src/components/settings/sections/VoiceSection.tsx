@@ -16,7 +16,7 @@ interface VoiceService {
  * VoiceSection — 语音管理
  *
  * 语音输入输出、术语表和 TTS 服务状态。
- * 数据源：GET /api/v1/voice/services。
+ * 数据源：GET /api/v1/voice/config。
  */
 export function VoiceSection() {
   const [services, setServices] = useState<VoiceService[]>([]);
@@ -25,14 +25,26 @@ export function VoiceSection() {
   const fetchServices = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/voice/services').catch(() => null);
+      const res = await fetch('/api/v1/voice/config').catch(() => null);
       if (!res || !res.ok) {
         setServices([]);
         return;
       }
-      const data = await res.json().catch(() => ({ data: { services: [] } }));
-      const list = data?.data?.services || data?.services || [];
-      setServices(Array.isArray(list) ? list : []);
+      const data = await res.json().catch(() => ({}));
+      // 将单个配置对象转换为服务列表格式
+      const cfg = data?.data || data;
+      if (cfg && typeof cfg === 'object') {
+        const list: VoiceService[] = [];
+        if (cfg.tts_provider) {
+          list.push({ id: 'tts', name: `TTS: ${cfg.tts_provider}`, type: 'tts', enabled: cfg.enabled, language: cfg.language });
+        }
+        if (cfg.stt_provider) {
+          list.push({ id: 'stt', name: `STT: ${cfg.stt_provider}`, type: 'stt', enabled: cfg.enabled, language: cfg.language });
+        }
+        setServices(list);
+      } else {
+        setServices([]);
+      }
     } catch {
       setServices([]);
     } finally {

@@ -37,7 +37,7 @@ const statusLabel: Record<NonNullable<ServiceHealth['status']>, string> = {
 /**
  * OpsSection — 运维监控
  *
- * 合并 /admin/observability。数据源：GET /api/v1/health/services。
+ * 合并 /admin/observability。数据源：GET /api/v1/ops/services。
  */
 export function OpsSection() {
   const [services, setServices] = useState<ServiceHealth[]>([]);
@@ -48,14 +48,20 @@ export function OpsSection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/v1/health/services').catch(() => null);
+      const res = await fetch('/api/v1/ops/services').catch(() => null);
       if (!res || !res.ok) {
         setServices([]);
         return;
       }
-      const data = await res.json().catch(() => ({ data: { services: [] } }));
-      const list = data?.data?.services || data?.services || [];
-      setServices(Array.isArray(list) ? list : []);
+      const data = await res.json().catch(() => ({ items: [] }));
+      const list = data?.items || [];
+      setServices(Array.isArray(list) ? list.map((item: any, i: number) => ({
+        id: item.id || `svc_${i}`,
+        name: item.name || `服务 ${i + 1}`,
+        status: item.status || 'unknown',
+        message: item.message,
+        latencyMs: item.latency_ms || item.latencyMs,
+      })) : []);
     } catch {
       setError('健康检查加载失败');
     } finally {

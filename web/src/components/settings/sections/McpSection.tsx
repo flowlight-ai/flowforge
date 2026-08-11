@@ -29,9 +29,15 @@ export function McpSection() {
         setServers([]);
         return;
       }
-      const data = await res.json().catch(() => ({ data: { servers: [] } }));
-      const list = data?.data?.servers || data?.servers || [];
-      setServers(Array.isArray(list) ? list : []);
+      const data = await res.json().catch(() => ({ items: [] }));
+      const list = data?.items || [];
+      setServers(Array.isArray(list) ? list.map((item: any) => ({
+        id: item.id || item.name,
+        name: item.name,
+        description: item.description,
+        tools: item.tools,
+        enabled: item.enabled,
+      })) : []);
     } catch {
       setServers([]);
     } finally {
