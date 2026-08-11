@@ -3,13 +3,20 @@
 参考 clowder-ai ThreadStore/MessageStore 设计，使用 JSON 文件持久化。
 
 端点：
-    - ``GET    /api/v1/threads``                    — 会话列表
-    - ``POST   /api/v1/threads``                    — 新建会话
-    - ``GET    /api/v1/threads/{id}``               — 会话详情
-    - ``PATCH  /api/v1/threads/{id}``               — 更新会话（标题/置顶）
-    - ``DELETE /api/v1/threads/{id}``               — 软删除会话
-    - ``GET    /api/v1/threads/{id}/messages``      — 会话消息历史
-    - ``POST   /api/v1/threads/{id}/messages``      — 追加消息
+    - ``GET    /api/v1/threads``                       — 会话列表
+    - ``POST   /api/v1/threads``                       — 新建会话
+    - ``GET    /api/v1/threads/trash``                 — 回收站（已删除会话）
+    - ``GET    /api/v1/threads/{id}``                  — 会话详情
+    - ``PATCH  /api/v1/threads/{id}``                  — 更新会话（标题/置顶）
+    - ``DELETE /api/v1/threads/{id}``                  — 软删除会话
+    - ``POST   /api/v1/threads/{id}/restore``          — 恢复软删除会话
+    - ``GET    /api/v1/threads/{id}/messages``         — 会话消息历史（分页）
+    - ``POST   /api/v1/threads/{id}/messages``         — 追加消息
+    - ``POST   /api/v1/threads/{id}/messages/batch``   — 批量追加消息
+    - ``DELETE /api/v1/threads/{id}/messages``         — 清空所有消息
+    - ``PATCH  /api/v1/threads/{id}/messages/{msg_id}``— 编辑消息
+    - ``DELETE /api/v1/threads/{id}/messages/{msg_id}``— 软删除单条消息
+    - ``POST   /api/v1/threads/{id}/messages/{msg_id}/restore`` — 恢复消息
 """
 
 from __future__ import annotations
@@ -58,6 +65,12 @@ class MessageBatchCreate(BaseModel):
     messages: list[MessageCreate] = Field(..., description="消息列表")
 
 
+class MessageEdit(BaseModel):
+    """消息编辑请求体。"""
+
+    content: str = Field(..., description="新内容")
+
+
 # ── 会话端点 ────────────────────────────────────────────────────
 
 
@@ -80,6 +93,14 @@ async def create_thread(payload: ThreadCreate) -> dict[str, Any]:
     store = get_thread_store()
     thread = store.create_thread(title=payload.title)
     return thread
+
+
+@router.get("/trash")
+async def list_trash_threads() -> dict[str, Any]:
+    """列出回收站中的已删除会话。"""
+    store = get_thread_store()
+    deleted = store.list_deleted_threads()
+    return {"items": deleted, "total": len(deleted)}
 
 
 @router.get("/{thread_id}")
@@ -108,12 +129,22 @@ async def update_thread(thread_id: str, payload: ThreadUpdate) -> dict[str, Any]
 
 @router.delete("/{thread_id}")
 async def delete_thread(thread_id: str) -> dict[str, Any]:
-    """软删除会话。"""
+    """软删除会话（移入回收站，可恢复）。"""
     store = get_thread_store()
     ok = store.delete_thread(thread_id)
     if not ok:
         raise HTTPException(status_code=404, detail=f"会话 {thread_id} 不存在")
     return {"id": thread_id, "deleted": True}
+
+
+@router.post("/{thread_id}/restore")
+async def restore_thread(thread_id: str) -> dict[str, Any]:
+    """从回收站恢复会话。"""
+    store = get_thread_store()
+    thread = store.restore_thread(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail=f"会话 {thread_id} 不存在或未删除")
+    return thread
 
 
 # ── 消息端点 ────────────────────────────────────────────────────
@@ -122,16 +153,16 @@ async def delete_thread(thread_id: str) -> dict[str, Any]:
 @router.get("/{thread_id}/messages")
 async def list_thread_messages(
     thread_id: str,
-    limit: int = Query(200, ge=1, le=500),
+    limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ) -> dict[str, Any]:
-    """获取会话消息历史。"""
+    """获取会话消息历史（分页，默认排除软删除消息）。"""
     store = get_thread_store()
     thread = store.get_thread(thread_id)
     if thread is None:
         raise HTTPException(status_code=404, detail=f"会话 {thread_id} 不存在")
-    msgs = store.list_messages(thread_id, limit=limit, offset=offset)
-    total = store.count_messages(thread_id)
+    msgs = store.list_messages(thread_id, limit=limit, offset=offset, include_deleted=False)
+    total = store.count_messages(thread_id, include_deleted=False)
     return {"thread_id": thread_id, "items": msgs, "total": total, "limit": limit, "offset": offset}
 
 
@@ -168,3 +199,42 @@ async def clear_thread_messages(thread_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"会话 {thread_id} 不存在")
     cleared = store.clear_messages(thread_id)
     return {"thread_id": thread_id, "cleared": cleared}
+
+
+@router.patch("/{thread_id}/messages/{msg_id}")
+async def edit_message(thread_id: str, msg_id: str, payload: MessageEdit) -> dict[str, Any]:
+    """编辑单条消息内容。"""
+    store = get_thread_store()
+    thread = store.get_thread(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail=f"会话 {thread_id} 不存在")
+    msg = store.update_message(thread_id, msg_id, payload.content)
+    if msg is None:
+        raise HTTPException(status_code=404, detail=f"消息 {msg_id} 不存在")
+    return msg
+
+
+@router.delete("/{thread_id}/messages/{msg_id}")
+async def delete_message(thread_id: str, msg_id: str) -> dict[str, Any]:
+    """软删除单条消息（可恢复）。"""
+    store = get_thread_store()
+    thread = store.get_thread(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail=f"会话 {thread_id} 不存在")
+    ok = store.delete_message(thread_id, msg_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"消息 {msg_id} 不存在")
+    return {"id": msg_id, "thread_id": thread_id, "deleted": True}
+
+
+@router.post("/{thread_id}/messages/{msg_id}/restore")
+async def restore_message(thread_id: str, msg_id: str) -> dict[str, Any]:
+    """恢复软删除的单条消息。"""
+    store = get_thread_store()
+    thread = store.get_thread(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail=f"会话 {thread_id} 不存在")
+    msg = store.restore_message(thread_id, msg_id)
+    if msg is None:
+        raise HTTPException(status_code=404, detail=f"消息 {msg_id} 不存在或未删除")
+    return msg

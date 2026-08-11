@@ -142,6 +142,26 @@ class ThreadStore:
                     return True
         return False
 
+    def restore_thread(self, thread_id: str) -> dict[str, Any] | None:
+        """恢复软删除的会话。"""
+        with self._lock:
+            threads = self._load_threads()
+            for t in threads:
+                if t["id"] == thread_id and t.get("deleted_at"):
+                    t["deleted_at"] = None
+                    t["updated_at"] = _now_iso()
+                    self._save_threads(threads)
+                    return t
+        return None
+
+    def list_deleted_threads(self) -> list[dict[str, Any]]:
+        """列出已软删除的会话（回收站）。"""
+        with self._lock:
+            threads = self._load_threads()
+        deleted = [t for t in threads if t.get("deleted_at")]
+        deleted.sort(key=lambda t: t.get("deleted_at", ""), reverse=True)
+        return deleted
+
     def touch_thread(self, thread_id: str) -> None:
         """更新会话的 updated_at（追加消息时调用）。"""
         with self._lock:
@@ -155,17 +175,22 @@ class ThreadStore:
     # ── 消息 CRUD ────────────────────────────────────────────────
 
     def list_messages(
-        self, thread_id: str, limit: int = 200, offset: int = 0
+        self, thread_id: str, limit: int = 200, offset: int = 0,
+        include_deleted: bool = False,
     ) -> list[dict[str, Any]]:
-        """获取会话消息（分页）。"""
+        """获取会话消息（分页，默认排除软删除消息）。"""
         with self._lock:
             msgs = self._load_messages(thread_id)
+        if not include_deleted:
+            msgs = [m for m in msgs if not m.get("deleted_at")]
         return msgs[offset : offset + limit]
 
-    def count_messages(self, thread_id: str) -> int:
-        """获取会话消息总数（高效计数，不加载全部内容）。"""
+    def count_messages(self, thread_id: str, include_deleted: bool = False) -> int:
+        """获取会话消息总数（默认排除软删除）。"""
         with self._lock:
             msgs = self._load_messages(thread_id)
+        if not include_deleted:
+            msgs = [m for m in msgs if not m.get("deleted_at")]
         return len(msgs)
 
     def clear_messages(self, thread_id: str) -> int:
@@ -218,6 +243,49 @@ class ThreadStore:
             self._save_messages(thread_id, msgs)
         self.touch_thread(thread_id)
         return result
+
+    def update_message(
+        self, thread_id: str, msg_id: str, content: str
+    ) -> dict[str, Any] | None:
+        """编辑消息内容（保留原文到 meta.edited_history）。"""
+        with self._lock:
+            msgs = self._load_messages(thread_id)
+            for m in msgs:
+                if m["id"] == msg_id:
+                    # 保存编辑历史
+                    history = m.get("meta", {}).get("edited_history", [])
+                    history.append({
+                        "content": m["content"],
+                        "edited_at": _now_iso(),
+                    })
+                    m["content"] = content
+                    m.setdefault("meta", {})["edited_history"] = history
+                    m["meta"]["edited_at"] = _now_iso()
+                    self._save_messages(thread_id, msgs)
+                    return m
+        return None
+
+    def delete_message(self, thread_id: str, msg_id: str) -> bool:
+        """软删除单条消息（设置 deleted_at）。"""
+        with self._lock:
+            msgs = self._load_messages(thread_id)
+            for m in msgs:
+                if m["id"] == msg_id:
+                    m["deleted_at"] = _now_iso()
+                    self._save_messages(thread_id, msgs)
+                    return True
+        return False
+
+    def restore_message(self, thread_id: str, msg_id: str) -> dict[str, Any] | None:
+        """恢复软删除的消息。"""
+        with self._lock:
+            msgs = self._load_messages(thread_id)
+            for m in msgs:
+                if m["id"] == msg_id and m.get("deleted_at"):
+                    m.pop("deleted_at", None)
+                    self._save_messages(thread_id, msgs)
+                    return m
+        return None
 
     # ── 文件 IO（调用方需持有 _lock）─────────────────────────────
 
