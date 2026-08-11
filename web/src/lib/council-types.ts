@@ -30,6 +30,12 @@ export interface ForgekinRosterItem {
   evolutionStage?: string;
   /** 觉醒阶（Awakening Stage / 自主性等级 E1-E6） */
   awakeningStage?: string;
+  /** LLM Provider（CLI 工具名，如 claude_code/codex/gemini/opencode/trae） */
+  llm_provider?: string;
+  /** LLM 模型 ID（如 gemini-2.5-flash） */
+  llm_model?: string;
+  /** LLM 连接模式（cli/bridge/api） */
+  llm_mode?: string;
   /** 错误信息（API 返回的临时错误标记，用于过滤不可用项） */
   error?: string;
 }

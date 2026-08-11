@@ -95,6 +95,8 @@ def list_builtin_forgekins() -> list[dict[str, Any]]:
                 "color": cfg.get("color", {}),
                 "breed": cfg.get("breed", ""),
                 "llm_provider": cfg.get("llm", {}).get("provider", "trae"),
+                "llm_model": cfg.get("llm", {}).get("model", ""),
+                "llm_mode": cfg.get("llm", {}).get("mode", "cli"),
             })
         except Exception:  # noqa: BLE001
             summary.append({"id": fid, "error": "config_load_failed"})

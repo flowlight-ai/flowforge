@@ -73,10 +73,82 @@ export interface ToolCheckResult {
   note: string;
 }
 
-/** 环境检测结果 */
+/** 单个 CLI 工具检测结果（联动 doctor.py） */
+export interface CliToolCheck {
+  name: string;
+  status: "ok" | "missing" | "fail" | "unknown";
+  /** 可执行文件路径（status=ok 时存在） */
+  path?: string;
+  /** 版本号（status=ok 时存在） */
+  version?: string;
+  /** 绑定的灵智体名称 */
+  forgekin?: string;
+  /** 安装命令（status=missing 时存在） */
+  install_cmd?: string;
+}
+
+/** 单个代理服务检测结果 */
+export interface ProxyCheck {
+  name: string;
+  status: "running" | "stopped" | "unknown";
+  port?: number;
+}
+
+/** Trae 桥接检测结果（butterfly 灵智体） */
+export interface TraeBridgeCheck {
+  status: "ok" | "missing" | "unknown";
+  /** 桥接目录路径 */
+  bridge_dir?: string;
+  name?: string;
+}
+
+/** .env 配置文件检测结果 */
+export interface EnvFileCheck {
+  /** 任务文档格式：直接标记是否存在 */
+  exists?: boolean;
+  /** 是否已配置 API key */
+  has_api_keys?: boolean;
+  /** doctor.py 格式：状态字符串 */
+  status?: string;
+  name?: string;
+}
+
+/** .venv 虚拟环境检测结果 */
+export interface VenvCheck {
+  exists?: boolean;
+  status?: string;
+  name?: string;
+}
+
+/** 前端依赖检测结果（web/node_modules） */
+export interface WebDepsCheck {
+  exists?: boolean;
+  status?: string;
+  name?: string;
+}
+
+/** 环境检测结果（增强版，联动 doctor.py 深度检测） */
 export interface EnvCheckResult {
+  /** 基础工具检测：{tool_name: {ok, version, note}} */
   tools: Record<string, ToolCheckResult>;
+  /** 核心工具（python/git/node/npm）是否全部可用 */
   all_core_ok: boolean;
+  /** CLI 工具检测列表（8 个灵智体所需 CLI） */
+  cli_tools?: CliToolCheck[];
+  /** 代理服务检测列表 */
+  proxies?: ProxyCheck[];
+  /** Trae 桥接状态 */
+  trae_bridge?: TraeBridgeCheck;
+  /** .env 配置文件状态 */
+  env_file?: EnvFileCheck;
+  /** .venv 虚拟环境状态 */
+  venv?: VenvCheck;
+  /** 前端依赖状态（web/node_modules） */
+  web_deps?: WebDepsCheck;
+  /** 缺失的 CLI 工具名称列表 */
+  missing_cli?: string[];
+  /** 安装提示文案 */
+  install_hint?: string;
 }
 
 /** 训练营会话（Thread + bootcamp_state） */

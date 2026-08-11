@@ -26,11 +26,11 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import time
-import urllib.request
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -67,6 +67,10 @@ def fail(msg: str) -> None:
 
 def info(msg: str) -> None:
     print(f"  [INFO] {msg}")
+
+
+def warn(msg: str) -> None:
+    print(f"  [WARN] {msg}")
 
 
 def get_python() -> str:
@@ -159,11 +163,9 @@ def start_frontend(env: dict, prod: bool = False) -> subprocess.Popen | None:
     """启动前端 Next.js"""
     section("[2/3] 前端 Next.js")
 
-    # 检测包管理器
-    pnpm = shutil.which("pnpm") or shutil.which("pnpm.cmd") if hasattr(shutil, "which") else None
-    import shutil as sh
-    pnpm = sh.which("pnpm") or sh.which("pnpm.cmd")
-    npm = sh.which("npm") or sh.which("npm.cmd")
+    # 检测包管理器（shutil 已在文件顶部导入）
+    pnpm = shutil.which("pnpm") or shutil.which("pnpm.cmd")
+    npm = shutil.which("npm") or shutil.which("npm.cmd")
 
     if pnpm:
         pkg_manager = pnpm
@@ -207,7 +209,7 @@ def start_frontend(env: dict, prod: bool = False) -> subprocess.Popen | None:
 
 def start_proxies(env: dict) -> list[subprocess.Popen]:
     """启动协议转换代理"""
-    section("[3/3] 协议转换代理")
+    section("[3/4] 协议转换代理")
 
     python = get_python()
     started = []
@@ -248,6 +250,56 @@ def start_proxies(env: dict) -> list[subprocess.Popen]:
     return started
 
 
+def start_bridge_operator(env: dict) -> subprocess.Popen | None:
+    """启动 Trae 桥接 operator（butterfly 灵智体依赖）.
+
+    butterfly 灵智体通过 TraeLLMClient 写入 request 文件，
+    需要 bridge_operator 进程读取并调用 LLM 后写回 response 文件。
+    若不启动此进程，butterfly 的所有请求会超时（5 分钟）。
+    """
+    section("[4/4] Trae 桥接 Operator")
+
+    # 检查是否配置了 OpenRoute API key
+    api_key = env.get("OPENROUTE_API_KEY", "")
+    if not api_key:
+        warn("OPENROUTE_API_KEY 未配置，butterfly 灵智体将无法使用 LLM 能力")
+        warn("请在 .env 中设置 OPENROUTE_API_KEY=sk-or-v1-xxx")
+        return None
+
+    python = get_python()
+    log_file = LOGS_DIR / "bridge_operator.log"
+
+    # 检查 bridge_dir 是否配置
+    bridge_dir = env.get("FLOWFORGE_BRIDGE_DIR", "")
+    if not bridge_dir:
+        bridge_dir = str(PROJECT_ROOT / ".trae_bridge")
+        env["FLOWFORGE_BRIDGE_DIR"] = bridge_dir
+
+    info(f"桥接目录: {bridge_dir}")
+    info(f"启动 Trae 桥接 Operator ...")
+
+    try:
+        cmd = [python, "-m", "flowforge.llm.trae.bridge_operator"]
+        with open(log_file, "w", encoding="utf-8") as f:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=PROJECT_ROOT,
+                env=env,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+            )
+        processes.append(proc)
+        ok(f"Trae 桥接 Operator PID: {proc.pid}")
+        ok(f"日志: {log_file}")
+        return proc
+    except FileNotFoundError:
+        warn("flowforge.llm.trae.bridge_operator 模块未找到，跳过")
+        return None
+    except Exception as e:
+        warn(f"Trae 桥接 Operator 启动失败: {e}")
+        return None
+
+
 def cleanup(signum=None, frame=None):
     """清理所有子进程"""
     section("停止服务")
@@ -272,6 +324,7 @@ def main():
     parser.add_argument("--frontend-only", action="store_true", help="仅启动前端")
     parser.add_argument("--prod", action="store_true", help="生产模式")
     parser.add_argument("--no-proxy", action="store_true", help="不启动协议转换代理")
+    parser.add_argument("--no-bridge", action="store_true", help="不启动 Trae 桥接 Operator")
     args = parser.parse_args()
 
     # 注册信号处理
@@ -303,6 +356,10 @@ def main():
 
     if not args.no_proxy and not args.backend_only and not args.frontend_only:
         start_proxies(env)
+
+    # 启动 Trae 桥接 Operator（butterfly 灵智体依赖）
+    if not args.no_bridge and not args.backend_only and not args.frontend_only:
+        start_bridge_operator(env)
 
     if started_any:
         section("启动完成")

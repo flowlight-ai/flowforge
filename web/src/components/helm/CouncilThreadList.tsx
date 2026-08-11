@@ -6,10 +6,15 @@
  * 功能：
  *   - "+ 新对话"按钮 → 创建新会话并跳转
  *   - 会话列表（置顶优先 + 按更新时间降序）
+ *   - 搜索框（按标题/ID 过滤）
+ *   - Tab 分组：全部 / 置顶 / 收藏 / 最近
+ *   - 标签筛选栏（动态从会话标签聚合）
  *   - 切换会话（点击列表项）
  *   - 重命名会话（双击标题进入编辑）
- *   - 删除会话（hover 显示删除按钮）
- *   - 置顶/取消置顶
+ *   - 右键上下文菜单 / hover 更多菜单（重命名/置顶/收藏/导出/删除）
+ *   - 未读数显示
+ *   - 相对时间显示
+ *   - 回收站（查看/恢复）
  *
  * 参考 clowder-ai ThreadSidebar 的会话列表设计
  */
@@ -17,6 +22,19 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useThreadStore, type Thread } from "@/stores/threadStore";
+import { ThreadItemMenu } from "./ThreadItemMenu";
+import { formatRelativeTime } from "./thread-time-utils";
+import { exportThreadAsMarkdown } from "./thread-export-utils";
+
+/** Tab 分组类型 */
+type FilterGroup = "all" | "pinned" | "favorites" | "recent";
+
+/** 右键菜单定位 */
+interface ContextMenuState {
+  threadId: string;
+  x: number;
+  y: number;
+}
 
 interface CouncilThreadListProps {
   /** 当前选中的会话 ID */
@@ -46,27 +64,55 @@ export function CouncilThreadList({
     deleteThread,
     restoreThread,
     togglePin,
+    toggleFavorite,
+    markRead,
   } = useThreadStore();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showTrash, setShowTrash] = useState(false);
-  // 分组过滤：全部 / 置顶 / 最近（参考 clowder-ai LabelFilterBar + 项目分组）
-  const [filterGroup, setFilterGroup] = useState<"all" | "pinned" | "recent">("all");
+  // 分组过滤：全部 / 置顶 / 收藏 / 最近（参考 clowder-ai 5 Tab 分组）
+  const [filterGroup, setFilterGroup] = useState<FilterGroup>("all");
+  // 标签筛选：null = 不筛选
+  const [labelFilter, setLabelFilter] = useState<string | null>(null);
+  // 右键菜单状态
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // 搜索 + 分组过滤（参考 clowder-ai ThreadSidebar 搜索 + LabelFilterBar）
+  // 七天前的时间戳，用于"最近"分组
+  const sevenDaysAgo = useMemo(() => Date.now() - 7 * 24 * 60 * 60 * 1000, []);
+
+  // 从所有会话中聚合出可用标签列表（去重）
+  const availableLabels = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of threads) {
+      if (t.labels && t.labels.length > 0) {
+        for (const l of t.labels) set.add(l);
+      }
+    }
+    return Array.from(set).sort();
+  }, [threads]);
+
+  // 搜索 + 分组 + 标签过滤
   const filteredThreads = useMemo(() => {
     let result = threads;
     // 分组过滤
     if (filterGroup === "pinned") {
       result = result.filter((t) => t.pinned);
+    } else if (filterGroup === "favorites") {
+      result = result.filter((t) => t.favorited);
     } else if (filterGroup === "recent") {
-      // 最近 7 天的会话
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      result = result.filter((t) => new Date(t.updated_at).getTime() > sevenDaysAgo);
+      result = result.filter(
+        (t) => new Date(t.updated_at).getTime() > sevenDaysAgo
+      );
+    }
+    // 标签过滤
+    if (labelFilter) {
+      result = result.filter(
+        (t) => t.labels?.includes(labelFilter) ?? false
+      );
     }
     // 搜索过滤
     if (searchQuery.trim()) {
@@ -77,7 +123,25 @@ export function CouncilThreadList({
       );
     }
     return result;
-  }, [threads, searchQuery, filterGroup]);
+  }, [threads, searchQuery, filterGroup, labelFilter, sevenDaysAgo]);
+
+  // 排序：置顶优先，再按更新时间降序
+  const sortedThreads = useMemo(() => {
+    return [...filteredThreads].sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
+  }, [filteredThreads]);
+
+  // Tab 计数
+  const tabCounts = useMemo(() => ({
+    all: threads.length,
+    pinned: threads.filter((t) => t.pinned).length,
+    favorites: threads.filter((t) => t.favorited).length,
+    recent: threads.filter(
+      (t) => new Date(t.updated_at).getTime() > sevenDaysAgo
+    ).length,
+  }), [threads, sevenDaysAgo]);
 
   // 初始加载会话列表
   useEffect(() => {
@@ -105,18 +169,19 @@ export function CouncilThreadList({
     }
   }, [createThread, selectThread, router, onThreadSelect]);
 
-  /** 选择会话 */
+  /** 选择会话（同时清零未读数） */
   const handleSelect = useCallback(
     (threadId: string) => {
       if (editingId) return;
       selectThread(threadId);
+      markRead(threadId);
       if (onThreadSelect) {
         onThreadSelect(threadId);
       } else {
         router.push(`/council/${threadId}`);
       }
     },
-    [selectThread, router, editingId, onThreadSelect]
+    [selectThread, router, editingId, onThreadSelect, markRead]
   );
 
   /** 进入重命名模式 */
@@ -138,13 +203,10 @@ export function CouncilThreadList({
     setEditingId(null);
   }, []);
 
-  /** 删除会话 */
-  const handleDelete = useCallback(
-    async (e: React.MouseEvent, threadId: string) => {
-      e.stopPropagation();
-      if (!confirm("确定删除这个会话吗？删除后可在回收站恢复。")) return;
+  /** 删除会话（已在外层 ThreadItemMenu 中确认过） */
+  const handleDeleteConfirmed = useCallback(
+    async (threadId: string) => {
       await deleteThread(threadId);
-      // 如果删除的是当前会话，跳转到 /council
       if (threadId === currentThreadId) {
         router.push("/council");
       }
@@ -154,12 +216,36 @@ export function CouncilThreadList({
 
   /** 切换置顶 */
   const handleTogglePin = useCallback(
-    (e: React.MouseEvent, thread: Thread) => {
-      e.stopPropagation();
+    (thread: Thread) => {
       togglePin(thread.id, !thread.pinned);
     },
     [togglePin]
   );
+
+  /** 切换收藏 */
+  const handleToggleFavorite = useCallback(
+    (thread: Thread) => {
+      toggleFavorite(thread.id, !thread.favorited);
+    },
+    [toggleFavorite]
+  );
+
+  /** 右键菜单触发 */
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, thread: Thread) => {
+      // 编辑模式下不弹右键菜单
+      if (editingId === thread.id) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setContextMenu({ threadId: thread.id, x: e.clientX, y: e.clientY });
+    },
+    [editingId]
+  );
+
+  /** 关闭右键菜单 */
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
 
   /** 进入回收站视图 */
   const handleShowTrash = useCallback(() => {
@@ -238,6 +324,12 @@ export function CouncilThreadList({
     }
   }, []);
 
+  // 当前右键菜单指向的会话对象
+  const contextMenuThread = useMemo(() => {
+    if (!contextMenu) return null;
+    return threads.find((t) => t.id === contextMenu.threadId) ?? null;
+  }, [contextMenu, threads]);
+
   return (
     <div
       className={`flex flex-col h-full bg-[var(--bg-elevated)] border-r border-[var(--border)] ${className ?? ""}`}
@@ -259,7 +351,7 @@ export function CouncilThreadList({
         </button>
       </div>
 
-      {/* 搜索框 + 分组过滤（参考 clowder-ai ThreadSidebar 搜索 + LabelFilterBar） */}
+      {/* 搜索框 + 分组过滤 + 标签过滤（参考 clowder-ai ThreadSidebar） */}
       {!showTrash && threads.length > 0 && (
         <div className="px-2 py-1.5 border-b border-[var(--border)] flex-shrink-0 space-y-1.5">
           <input
@@ -272,11 +364,12 @@ export function CouncilThreadList({
             className="w-full px-2 py-1 text-xs rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--muted)] outline-none focus:border-[var(--accent)]"
           />
           {/* 分组过滤标签栏 — 参考 clowder-ai LabelFilterBar */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             {([
-              { key: "all", label: "全部", count: threads.length },
-              { key: "pinned", label: "置顶", count: threads.filter((t) => t.pinned).length },
-              { key: "recent", label: "最近", count: threads.filter((t) => new Date(t.updated_at).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000).length },
+              { key: "all", label: "全部", count: tabCounts.all },
+              { key: "pinned", label: "置顶", count: tabCounts.pinned },
+              { key: "favorites", label: "收藏", count: tabCounts.favorites },
+              { key: "recent", label: "最近", count: tabCounts.recent },
             ] as const).map((tab) => (
               <button
                 key={tab.key}
@@ -294,6 +387,38 @@ export function CouncilThreadList({
               </button>
             ))}
           </div>
+          {/* 标签筛选栏 — 仅当存在标签时显示 */}
+          {availableLabels.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] text-[var(--muted)] flex-shrink-0">标签:</span>
+              <button
+                type="button"
+                onClick={() => setLabelFilter(null)}
+                className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
+                  labelFilter === null
+                    ? "bg-[var(--accent)] text-[var(--accent-foreground,#fff)]"
+                    : "text-[var(--muted)] hover:bg-[var(--bg-hover,var(--bg-accent))] hover:text-[var(--text)]"
+                }`}
+              >
+                全部
+              </button>
+              {availableLabels.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setLabelFilter(label)}
+                  className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
+                    labelFilter === label
+                      ? "bg-[var(--accent)] text-[var(--accent-foreground,#fff)]"
+                      : "text-[var(--muted)] hover:bg-[var(--bg-hover,var(--bg-accent))] hover:text-[var(--text)]"
+                  }`}
+                  title={`按标签 ${label} 过滤`}
+                >
+                  #{label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -343,19 +468,21 @@ export function CouncilThreadList({
           <div className="px-3 py-4 text-xs text-[var(--muted)] text-center">
             暂无会话，点击"新对话"开始
           </div>
-        ) : filteredThreads.length === 0 ? (
+        ) : sortedThreads.length === 0 ? (
           <div className="px-3 py-4 text-xs text-[var(--muted)] text-center">
             未找到匹配的会话
           </div>
         ) : (
-          filteredThreads.map((thread) => {
+          sortedThreads.map((thread) => {
             const isActive = thread.id === currentThreadId;
             const isEditing = thread.id === editingId;
+            const unread = thread.unread_count ?? 0;
             return (
               <div
                 key={thread.id}
                 onClick={() => handleSelect(thread.id)}
                 onDoubleClick={() => handleStartRename(thread)}
+                onContextMenu={(e) => handleContextMenu(e, thread)}
                 className={`group flex items-center gap-2 px-2.5 py-2 rounded-md cursor-pointer transition-colors mb-0.5 ${
                   isActive
                     ? "bg-[var(--accent-subtle,color-mix(in_srgb,var(--accent)_12%,transparent))] text-[var(--text)]"
@@ -366,31 +493,71 @@ export function CouncilThreadList({
                 {/* 置顶图标 */}
                 <button
                   type="button"
-                  onClick={(e) => handleTogglePin(e, thread)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTogglePin(thread);
+                  }}
                   className="flex-shrink-0 text-xs opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
                   title={thread.pinned ? "取消置顶" : "置顶"}
+                  aria-label={thread.pinned ? "取消置顶" : "置顶"}
                 >
                   {thread.pinned ? "📌" : "📍"}
                 </button>
 
-                {/* 标题 / 编辑框 */}
-                {isEditing ? (
-                  <input
-                    ref={editInputRef}
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    onBlur={handleConfirmRename}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleConfirmRename();
-                      if (e.key === "Escape") handleCancelRename();
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-1 min-w-0 bg-[var(--bg)] border border-[var(--accent)] rounded px-1.5 py-0.5 text-xs text-[var(--text)] outline-none"
-                  />
-                ) : (
-                  <span className="flex-1 min-w-0 truncate text-xs font-medium">
-                    {thread.pinned && "📌 "}
-                    {thread.title}
+                {/* 标题 / 编辑框 + 副信息（时间/未读） */}
+                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  {isEditing ? (
+                    <input
+                      ref={editInputRef}
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onBlur={handleConfirmRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleConfirmRename();
+                        if (e.key === "Escape") handleCancelRename();
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full bg-[var(--bg)] border border-[var(--accent)] rounded px-1.5 py-0.5 text-xs text-[var(--text)] outline-none"
+                    />
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-1 truncate text-xs font-medium">
+                        {thread.pinned && <span aria-hidden>📌</span>}
+                        {thread.favorited && (
+                          <span className="text-amber-400" aria-label="已收藏">★</span>
+                        )}
+                        <span className="truncate">{thread.title}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5 text-[10px] text-[var(--muted)]">
+                        <span>{formatRelativeTime(thread.updated_at)}</span>
+                        {thread.labels && thread.labels.length > 0 && (
+                          <span className="flex items-center gap-0.5 truncate">
+                            {thread.labels.slice(0, 2).map((l) => (
+                              <span
+                                key={l}
+                                className="px-1 rounded-sm bg-[var(--bg-hover,var(--bg-accent))] truncate max-w-[60px]"
+                              >
+                                #{l}
+                              </span>
+                            ))}
+                            {thread.labels.length > 2 && (
+                              <span>+{thread.labels.length - 2}</span>
+                            )}
+                          </span>
+                        )}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* 未读数徽章 */}
+                {!isEditing && unread > 0 && (
+                  <span
+                    className="flex-shrink-0 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 text-[10px] font-semibold rounded-full bg-red-500 text-white"
+                    aria-label={`${unread} 条未读消息`}
+                    title={`${unread} 条未读消息`}
+                  >
+                    {unread > 99 ? "99+" : unread}
                   </span>
                 )}
 
@@ -399,14 +566,10 @@ export function CouncilThreadList({
                   <ThreadItemMenu
                     thread={thread}
                     onRename={() => handleStartRename(thread)}
-                    onTogglePin={() => togglePin(thread.id, !thread.pinned)}
-                    onDelete={() => {
-                      if (confirm("确定删除这个会话吗？删除后可在回收站恢复。")) {
-                        deleteThread(thread.id);
-                        if (thread.id === currentThreadId) router.push("/council");
-                      }
-                    }}
+                    onTogglePin={() => handleTogglePin(thread)}
+                    onToggleFavorite={() => handleToggleFavorite(thread)}
                     onExport={() => handleExportThread(thread)}
+                    onDelete={() => handleDeleteConfirmed(thread.id)}
                   />
                 )}
               </div>
@@ -443,102 +606,24 @@ export function CouncilThreadList({
           </button>
         )}
       </div>
-    </div>
-  );
-}
 
-/**
- * ThreadItemMenu — 会话项更多操作下拉菜单
- *
- * 参考 clowder-ai ThreadItem.tsx:312-377 的 MoreVerticalIcon 下拉菜单。
- * 功能：重命名 / 置顶切换 / 导出 / 删除
- */
-function ThreadItemMenu({
-  thread,
-  onRename,
-  onTogglePin,
-  onDelete,
-  onExport,
-}: {
-  thread: Thread;
-  onRename: () => void;
-  onTogglePin: () => void;
-  onDelete: () => void;
-  onExport: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // 点击外部关闭菜单
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  return (
-    <div
-      ref={menuRef}
-      className="relative flex-shrink-0"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((v) => !v);
-        }}
-        className="text-xs opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-[var(--muted)] hover:text-[var(--text)] px-1"
-        title="更多操作"
-        aria-label="更多操作"
-        aria-expanded={open}
-      >
-        ⋮
-      </button>
-      {open && (
-        <div
-          className="absolute right-0 top-full mt-1 z-50 min-w-[140px] py-1 rounded-md border border-[var(--border)] bg-[var(--bg-elevated)] shadow-lg"
-          role="menu"
-        >
-          <button
-            type="button"
-            onClick={() => { onRename(); setOpen(false); }}
-            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text)] hover:bg-[var(--bg-hover,var(--bg-accent))] transition-colors"
-            role="menuitem"
-          >
-            ✎ 重命名
-          </button>
-          <button
-            type="button"
-            onClick={() => { onTogglePin(); setOpen(false); }}
-            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text)] hover:bg-[var(--bg-hover,var(--bg-accent))] transition-colors"
-            role="menuitem"
-          >
-            {thread.pinned ? "📍 取消置顶" : "📌 置顶"}
-          </button>
-          <button
-            type="button"
-            onClick={() => { onExport(); setOpen(false); }}
-            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text)] hover:bg-[var(--bg-hover,var(--bg-accent))] transition-colors"
-            role="menuitem"
-          >
-            ⬇ 导出
-          </button>
-          <div className="my-1 border-t border-[var(--border)]" />
-          <button
-            type="button"
-            onClick={() => { onDelete(); setOpen(false); }}
-            className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-[color-mix(in_srgb,#ef4444_10%,transparent)] transition-colors"
-            role="menuitem"
-          >
-            🗑 删除
-          </button>
-        </div>
+      {/* 右键上下文菜单 — 参考 clowder-ai ThreadItem 下拉菜单但定位为右键触发 */}
+      {contextMenu && contextMenuThread && (
+        <ThreadItemMenu
+          thread={contextMenuThread}
+          mode="context"
+          open
+          onClose={handleCloseContextMenu}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onRename={() => {
+            handleCloseContextMenu();
+            handleStartRename(contextMenuThread);
+          }}
+          onTogglePin={() => handleTogglePin(contextMenuThread)}
+          onToggleFavorite={() => handleToggleFavorite(contextMenuThread)}
+          onExport={() => handleExportThread(contextMenuThread)}
+          onDelete={() => handleDeleteConfirmed(contextMenuThread.id)}
+        />
       )}
     </div>
   );

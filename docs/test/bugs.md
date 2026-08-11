@@ -2,7 +2,7 @@
 
 > 主跟踪单（Master Bug List）。测试人员强制交付物之一（另含测试用例、测试报告）。
 > 规范依据：文档 `docs/test/README.md` §测试交付规范（强制）。命名约定：主单固定 `bugs.md`，置于 `docs/test/`。
-> 生成日期：2026-08-08 ｜ 最后更新：2026-08-10 ｜ 仓库侧：Gitee（`flowlight/flowforge`）
+> 生成日期：2026-08-08 ｜ 最后更新：2026-08-11 ｜ 仓库侧：Gitee（`flowlight/flowforge`）
 > 验证标准：铁律 T7（LLM 内容审核）/ T8（浏览器 DOM 验证）。
 
 > **协作规则**：本单的填写、状态流转与字段归属遵循 [`BUG_PROTOCOL.md`](BUG_PROTOCOL.md)（v1.1）。开发与测试双方提交前请通读。
@@ -19,9 +19,9 @@
 
 | 指标 | 数值 |
 |------|------|
-| **缺陷总数（DI count）** | **111**（19 原有 + 9 浏览器实测 + 33 功能对比 clowder-ai + 2 功能对比 opencode + 9 代码缺陷第一轮 + 26 第二轮深度分析 + 13 第三轮深度分析） |
-| **加权缺陷指数（DI）** | **436** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 101（9 原有 Open + 9 浏览器实测 Open + 33 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open） |
+| **缺陷总数（DI count）** | **322**（19 原有 + 9 浏览器实测 + 48 功能对比 clowder-ai + 2 功能对比 opencode + 9 代码缺陷第一轮 + 26 第二轮深度分析 + 13 第三轮深度分析 + 44 第五轮 web 前端深度分析 + 3 第六轮浏览器实测 + 3 第六轮前端稳定性 + 25 第七轮 web 前端深度分析 + 8 第七轮浏览器实测 + 20 第七轮 clowder-ai 对比 + 10 第八轮 web 前端深度分析 + 20 第八轮 clowder-ai 对比 + 30 第九轮 web 前端深度分析 + 8 第九轮浏览器实测 + 25 第九轮 clowder-ai 对比） |
+| **加权缺陷指数（DI）** | **1016** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
+| 状态：Open | 312（9 原有 Open + 9 浏览器实测 Open + 48 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open + 44 第五轮 web 前端深度分析 Open + 3 第六轮浏览器实测 Open + 3 第六轮前端稳定性 Open + 25 第七轮 web 前端深度分析 Open + 8 第七轮浏览器实测 Open + 20 第七轮 clowder-ai 对比 Open + 10 第八轮 web 前端深度分析 Open + 20 第八轮 clowder-ai 对比 Open + 30 第九轮 web 前端深度分析 Open + 8 第九轮浏览器实测 Open + 25 第九轮 clowder-ai 对比 Open） |
 | 状态：Fixed（待回归） | 10 |
 | 状态：Closed | 0 |
 
@@ -38,15 +38,33 @@
 > 2026-08-10 清理重复条目：移除 P-29~P-33（重复的 P-27）和第二个 P-20~P-28 重复块，修正 DI 仪表盘统计。
 >
 > 2026-08-10 第二轮深度分析：覆盖 app/、core/、evolution/、web/、config/、docs/ 等目录，发现 26 个新缺陷（P-82~P-107），包括：8 个 stub API 端点、5 个安全缺陷（XSS、密钥泄露、CORS、弱密码）、5 个配置缺陷、5 个文档/设计态不一致、3 个引用不存在模块的导入错误。累计 98 个工单，DI 388。
+>
+> 2026-08-11 第四轮深度分析：从 15 个未覆盖的功能维度深入挖掘 clowder-ai 独特功能对比，覆盖安全与合规体系、数据可视化与分析、智能体生命周期管理、内容审核与质量控制、协作工作流、通知与消息系统、搜索与发现、用户管理与权限、性能优化与缓存、备份与恢复、API 网关与限流、开发者工具、可访问性、嵌入式与集成、AI 助手与客服。追加 P-332…P-346（15 单）。累计 126 个工单，DI 467。
+>
+> 2026-08-11 第五轮 web 前端深度分析：覆盖 hooks/、stores/、lib/、components/helm/、app/ 等 44 个文件，发现 44 个新缺陷（P-288~P-331），包括：6 个 S1 严重缺陷（WebSocket 连接管理、HTTP 响应处理、模块级变量共享等）、9 个 S2 重要缺陷（CouncilChatPanel 过度复杂 1334 行/30+ useState、闭包陈旧、内存泄漏、localStorage 滥用等）、16 个 S3 一般缺陷（类型安全、派生状态反模式、无界增长等）、13 个 S4 轻微缺陷（类型定义不精确、代码重复、硬编码端口等）。累计 170 个工单，DI 608。
+>
+> 2026-08-11 第六轮浏览器实测：重启前端后测试 mission-hub、review 等页面，发现前端 dev server 在测试过程中崩溃导致 ERR_CONNECTION_REFUSED（S2）、/review 页面卡在"加载评估任务..."（S3，后端 eval API stub）、/tasks 页面无后端数据返回空列表（S3，后端 tasks API stub）。追加 P-347…P-349（3 单）。累计 176 个工单，DI 639。
+>
+> 2026-08-11 第七轮 web 前端深度分析：覆盖 hooks/（useWebSocket.ts、useApi.ts、useFetchWithCache.ts、useHelmWebSocket.ts、useIsDesktop.ts、useInputHistory.ts）、stores/（chatStore.ts、sidebarStore.ts、approvalHubStore.ts、threadDrawerStore.ts、helmEditorStore.ts、helmPlanStore.ts、helmWorkspaceStore.ts）、lib/（cache.ts、plugin-registry.ts）、components/（ActivityBar.tsx、TopBar.tsx、ChatInput.tsx、HelmLayout.tsx、ModeSelector.tsx、TerminalPanel.tsx、BrowserPanel.tsx、LLMCallCard.tsx、ToolCallCard.tsx、WorkflowSelector.tsx、HubEvalTab.tsx、HubObservabilityTab.tsx、HubRoutingPolicyTab.tsx、HubQuotaBoardTab.tsx、HubLeaderboardTab.tsx、Marketplace.tsx、MissionHub.tsx、SignalsOverview.tsx、MemoryHub.tsx、SettingsContent.tsx、CollectionCatalog.tsx）等 36 个文件。发现 25 个新缺陷（P-350~P-374），包括：5 个 S2 严重缺陷（useHelmWebSocket localStorage 滥用/无界增长、HelmLayout 竞态条件、ChatInput 闭包陈旧、useApi 无超时控制、cache.ts 无界缓存）、13 个 S3 一般缺陷（PluginRegistry 静态类无清理、ActivityBar 无防抖、BrowserPanel 无错误边界、LLMCallCard XSS 风险、Hub 组件空 catch 吞异常、SignalsOverview Promise.all 部分失败、TopBar 定时器未清理等）、7 个 S4 轻微缺陷（类型定义不精确、硬编码常数值等）。
+>
+> 2026-08-11 第七轮浏览器实测：Playwright 驱动系统 Chrome 遍历 8 个前端路由（/memory、/memory/catalog、/memory/health、/mission-hub、/signals、/admin/settings、/review、/tasks）。所有页面 UI 加载正常但后端 API 全部返回 HTTP 500 / ERR_ABORTED，前端显示"加载失败"或空状态。无页面崩溃，但数据显示全面不可用。追加 P-375…P-382（8 单）。
+>
+> 2026-08-11 第七轮 clowder-ai 功能对比：深入分析后新增 20 个缺失功能（P-383~P-402），包括：文件管理系统、实时协作、数据可视化/分析/报告、多语言 i18n、引导向导/教程、快捷键系统、拖拽系统、撤销/重做、离线支持/PWA、通知中心、导入导出、模板系统、文档版本历史、富文本编辑器、代码编辑器（语法高亮）、全文搜索、批量操作、Webhook 管理、自定义品牌/白标、全部操作审计追踪。累计 229 个工单，DI 829。
+>
+> 2026-08-11 第八轮 web 前端深度分析：覆盖 HelmEditor.tsx、MarkdownRenderer.tsx、CouncilPage.tsx、ObservabilityPage.tsx、AutonomousPage.tsx、HelmLayout.tsx、Dashboard (page.tsx)、TasksPage (page.tsx) 等 10 个文件。发现 10 个新缺陷（P-403~P-412），包括：2 个 S3 XSS 风险（HelmEditor renderSimpleMarkdown 未净化、CouncilChatPanel 模式 HelmEditor 预览视图）、2 个 S3 内存泄漏/性能问题（HelmEditor blob URL 未释放、CouncilPage 标题输入全量重渲染）、1 个 S3 数据丢失（taskTitle 未持久化）、1 个 S3 大量重复代码（ObservabilityPage/AutonomousPage 共享 AutonomousActivity 逻辑完全重复）、1 个 S3 超大组件（ChatStream 896 行）、4 个 S4 轻微缺陷（死代码、脆弱级联回退、硬编码色值）。
+>
+> 2026-08-11 第八轮浏览器实测：Playwright 驱动系统 Chrome 遍历 10 个前端路由（/、/solo、/council、/admin、/admin/agents、/admin/autonomous、/admin/observability、/memory/graph、/memory/search、/signals/sources）。所有页面 UI 加载正常，无白屏或崩溃。控制台存在健康检查中断错误（预期内，后端未运行）。2 个页面（/admin/marketplace、/mission-control）因预算限制未完成测试。所有页面 API 请求失败（后端未运行）。
+>
+> 2026-08-11 第八轮 clowder-ai 功能对比：深入分析后新增 20 个缺失功能（P-413~P-432），包括：Prompt 模板管理和版本控制、AI 模型比较、AI 成本跟踪、AI 使用配额管理、内容过滤/审核、数据管理（清洗/标注/版本控制/管线）、数据质量监控、数据血缘追踪、多因素认证、SSO/LDAP 集成、OAuth 提供商集成、API 密钥管理、API 文档自动生成、API 速率限制、可访问性（WCAG 合规）、前端性能监控、错误追踪、功能开关/灰度发布、A/B 测试平台、系统自诊断工具。累计 259 个工单，DI 885。
 
 ### 按严重度（Severity）
 
 | 等级 | 含义 | 数量 | 工单 |
 |------|------|:----:|------|
-| **S1 阻断** | 测试/安全不可用，须立即修复 | 3 | P-01, P-02, P-03 |
-| **S2 严重** | 核心功能/质量受损 | 56 | P-04, P-05, P-06, P-07, P-09, P-10, P-11, P-12, P-13, P-17, P-20, P-21, P-22, P-23, P-27, P-28, P-38, P-39, P-40, P-41, P-42, P-43, P-44, P-46, P-47, P-48, P-50, P-51, P-54, P-55, P-56, P-57, P-68, P-71, P-72, P-73, P-74, P-75, P-78, P-79, P-80, P-82, P-85, P-86, P-90, P-91, P-93, P-95, P-96, P-98, P-99, P-100, P-101, P-102, P-108, P-109, P-119 |
-| **S3 一般** | 明显缺陷但可绕过 | 49 | P-08, P-14, P-15, P-16, P-18, P-19, P-24, P-25, P-26, P-45, P-49, P-52, P-53, P-58, P-59, P-60, P-61, P-62, P-63, P-64, P-65, P-66, P-67, P-69, P-70, P-76, P-77, P-81, P-83, P-84, P-87, P-88, P-89, P-92, P-94, P-97, P-103, P-104, P-105, P-106, P-107, P-110, P-111, P-112, P-113, P-114, P-116, P-118, P-120 |
-| **S4 轻微** | 文档/小修 | 2 | P-115, P-117 |
+| **S1 阻断** | 测试/安全不可用，须立即修复 | 9 | P-01, P-02, P-03, P-288, P-289, P-290, P-291, P-292, P-293 |
+| **S2 严重** | 核心功能/质量受损 | 83 | P-04, P-05, P-06, P-07, P-09, P-10, P-11, P-12, P-13, P-17, P-20, P-21, P-22, P-23, P-27, P-28, P-38, P-39, P-40, P-41, P-42, P-43, P-44, P-46, P-47, P-48, P-50, P-51, P-54, P-55, P-56, P-57, P-68, P-71, P-72, P-73, P-74, P-75, P-78, P-79, P-80, P-82, P-85, P-86, P-90, P-91, P-93, P-95, P-96, P-98, P-99, P-100, P-101, P-102, P-108, P-109, P-119, P-294, P-295, P-296, P-297, P-298, P-299, P-300, P-301, P-302, P-332, P-333, P-334, P-335, P-336, P-339, P-341, P-342, P-346, P-347, P-350, P-351, P-352, P-353, P-354 |
+| **S3 一般** | 明显缺陷但可绕过 | 140 | P-08, P-14, P-15, P-16, P-18, P-19, P-24, P-25, P-26, P-45, P-49, P-52, P-53, P-58, P-59, P-60, P-61, P-62, P-63, P-64, P-65, P-66, P-67, P-69, P-70, P-76, P-77, P-81, P-83, P-84, P-87, P-88, P-89, P-92, P-94, P-97, P-103, P-104, P-105, P-106, P-107, P-110, P-111, P-112, P-113, P-114, P-116, P-118, P-120, P-303, P-304, P-305, P-306, P-307, P-308, P-309, P-310, P-311, P-312, P-313, P-314, P-315, P-316, P-317, P-318, P-337, P-338, P-340, P-343, P-344, P-345, P-348, P-349, P-355, P-356, P-357, P-358, P-359, P-360, P-361, P-362, P-363, P-364, P-365, P-366, P-367, P-375, P-376, P-377, P-378, P-379, P-380, P-381, P-382, P-383, P-384, P-385, P-386, P-387, P-388, P-389, P-390, P-391, P-392, P-393, P-394, P-395, P-396, P-397, P-398, P-399, P-400, P-401, P-402, P-403, P-404, P-405, P-406, P-407, P-412, P-413, P-414, P-415, P-416, P-417, P-418, P-419, P-420, P-421, P-422, P-423, P-424, P-425, P-426, P-427, P-428, P-429, P-430, P-431, P-432 |
+| **S4 轻微** | 文档/小修 | 26 | P-115, P-117, P-319, P-320, P-321, P-322, P-323, P-324, P-325, P-326, P-327, P-328, P-329, P-330, P-331, P-368, P-369, P-370, P-371, P-372, P-373, P-374, P-408, P-409, P-410, P-411 |
 
 ### 按分类（Category）
 
@@ -54,15 +72,16 @@
 |------|:----:|------|
 | 安全隐患 | 5 | P-01, P-86, P-89, P-90, P-93 |
 | CI / 配置 | 5 | P-02, P-06, P-91, P-92, P-114 |
-| 代码缺陷 | 37 | P-03, P-04, P-09, P-10, P-12, P-13, P-15, P-73, P-74, P-75, P-76, P-77, P-78, P-82, P-83, P-84, P-85, P-87, P-88, P-94, P-95, P-96, P-97, P-98, P-99, P-104, P-105, P-108, P-109, P-110, P-111, P-112, P-113, P-115, P-116, P-119, P-120 |
+| 代码缺陷 | 116 | P-03, P-04, P-09, P-10, P-12, P-13, P-15, P-73, P-74, P-75, P-76, P-77, P-78, P-82, P-83, P-84, P-85, P-87, P-88, P-94, P-95, P-96, P-97, P-98, P-99, P-104, P-105, P-108, P-109, P-110, P-111, P-112, P-113, P-115, P-116, P-119, P-120, P-288, P-289, P-290, P-291, P-292, P-293, P-294, P-295, P-296, P-297, P-298, P-299, P-300, P-301, P-302, P-303, P-304, P-305, P-306, P-307, P-308, P-309, P-310, P-311, P-312, P-313, P-314, P-315, P-316, P-317, P-318, P-319, P-320, P-321, P-322, P-323, P-324, P-325, P-326, P-327, P-328, P-329, P-330, P-331, P-350, P-351, P-352, P-353, P-354, P-355, P-356, P-357, P-358, P-359, P-360, P-361, P-362, P-363, P-364, P-365, P-366, P-367, P-368, P-369, P-370, P-371, P-372, P-373, P-374, P-403, P-404, P-405, P-406, P-407, P-408, P-409, P-410, P-411, P-412 |
 | 目录结构 | 1 | P-05 |
 | T7 / T8 合规 | 1 | P-07 |
 | 测试脚本缺陷 | 10 | P-08, P-11, P-14, P-16, P-18, P-19, P-79, P-80, P-81, P-118 |
 | 验证阻塞（环境） | 1 | P-17 |
-| 功能缺失（浏览器实测） | 12 | P-20, P-21, P-22, P-23, P-24, P-25, P-26, P-27, P-28, P-100, P-106, P-107 |
-| 功能缺失（clowder-ai 对比） | 33 | P-38, P-39, P-40, P-41, P-42, P-43, P-44, P-45, P-46, P-47, P-48, P-49, P-50, P-51, P-52, P-53, P-54, P-55, P-56, P-57, P-58, P-59, P-60, P-61, P-62, P-63, P-64, P-65, P-66, P-67, P-68, P-69, P-70 |
+| 功能缺失（浏览器实测） | 22 | P-20, P-21, P-22, P-23, P-24, P-25, P-26, P-27, P-28, P-100, P-106, P-107, P-348, P-349, P-375, P-376, P-377, P-378, P-379, P-380, P-381, P-382 |
+| 功能缺失（clowder-ai 对比） | 68 | P-38, P-39, P-40, P-41, P-42, P-43, P-44, P-45, P-46, P-47, P-48, P-49, P-50, P-51, P-52, P-53, P-54, P-55, P-56, P-57, P-58, P-59, P-60, P-61, P-62, P-63, P-64, P-65, P-66, P-67, P-68, P-69, P-70, P-332, P-333, P-334, P-335, P-336, P-337, P-338, P-339, P-340, P-341, P-342, P-343, P-344, P-345, P-346, P-383, P-384, P-385, P-386, P-387, P-388, P-389, P-390, P-391, P-392, P-393, P-394, P-395, P-396, P-397, P-398, P-399, P-400, P-401, P-402 |
 | 功能缺失（opencode 对比） | 2 | P-71, P-72 |
 | 文档/设计态 | 3 | P-101, P-102, P-103 |
+| 前端稳定性 | 1 | P-347 |
 
 > 说明：本单可派生多个输出文件（如按严重度/分类/测试轮次），统一置于 `docs/test/` 下；本文件为唯一主索引。
 
@@ -1525,6 +1544,691 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **影响**：语音识别在出现临时错误时无法自动恢复，类型问题可能在运行时引发未预期的错误。
 - **建议**：定义 `SpeechRecognition` 接口类型替换 `any`，添加自动重试逻辑，添加状态指示器。
 - **T7/T8**：是（T8）
+
+> ## 【2026-08-11 第四轮深度分析｜功能维度扩展｜P-332…P-346】
+>
+> 第四轮深度分析，从 15 个未覆盖的功能维度深入挖掘 clowder-ai 独特功能对比。
+> 覆盖：安全与合规体系、数据可视化与分析、智能体生命周期管理、内容审核与质量控制、协作工作流、通知与消息系统、搜索与发现、用户管理与权限、性能优化与缓存、备份与恢复、API 网关与限流、开发者工具、可访问性、嵌入式与集成、AI 助手与客服。
+> 共 15 个新工单，累计 126 个工单。
+
+### P-332 — 安全与合规体系深度缺失（F028/F013/F237/F156/F077）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/` 安全模块无对应实现
+- **现象**：clowder-ai 实现了多层次安全与合规体系，FlowForge 仅有基础 token 认证，以下关键安全能力完全缺失：
+  1. **跨渠道授权**（F028 cross-channel-authorization）— 统一跨渠道身份认证与授权（P-51 已提及，本单深入扩展）：需要 OAuth 2.0 / OIDC 协议栈，支持飞书、钉钉、微信等多渠道的联合身份认证，FlowForge 仅有单渠道 bearer token 认证
+  2. **审计日志 v2**（F013 audit-log-v2）— 结构化审计日志：clowder-ai 实现了不可变审计日志流水线，记录所有操作事件（API 调用、配置变更、权限变更、数据访问），支持审计日志查询、导出和回放。FlowForge 无任何审计日志记录机制，所有操作无迹可查
+  3. **提示注入检测**（F237 prompt-injection-visibility）— 提示注入可视化检测：clowder-ai 实现了实时提示注入检测引擎，对用户输入和第三方内容进行注入模式匹配，并在 UI 上可视化展示检测结果。FlowForge 完全无提示注入防护，任何用户输入直接传递给 LLM
+  4. **WebSocket 安全加固**（F156 websocket-security-hardening）— WebSocket 连接安全：clowder-ai 实现了 WebSocket 连接的认证握手、消息加密、重连鉴权、心跳保活、连接速率限制。FlowForge 的 WebSocket 连接无认证、无加密、无速率限制（仅依赖 `await websocket.receive_json()` 直接处理）
+  5. **多用户安全协作**（F077 multi-user-secure-collab）— 多租户安全隔离：clowder-ai 实现了工作空间级别的数据隔离，确保不同用户/团队的数据互不可见。FlowForge 无任何多用户隔离机制，所有数据共享同一存储空间
+- **影响**：安全合规体系缺失导致：无法满足审计合规要求、LLM 提示注入攻击无防护、WebSocket 连接可被恶意利用、多用户场景下数据泄露风险。对企业级部署构成严重安全风险。
+- **建议**：实现完整安全合规体系，包括：集成 OAuth 2.0/OIDC 认证框架、构建不可变审计日志流水线（基于结构化日志存储）、实现提示注入检测引擎（基于规则+LLM 二次审核）、加固 WebSocket 连接（认证握手 + 消息加密 + 速率限制）、实现多租户数据隔离（基于工作空间的访问控制）。
+- **T7/T8**：否
+
+### P-333 — 数据可视化与分析系统深度缺失（F041/F051/F008/F150/F245）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/` 无对应数据可视化模块；`web/src/app/` 无仪表盘页面
+- **现象**：clowder-ai 实现了丰富的数据可视化与分析体系，FlowForge 仅有基础日志输出，无任何可视化仪表盘：
+  1. **能力仪表盘**（F041 capability-dashboard）— 能力使用分析面板：clowder-ai 提供可视化仪表盘展示各智能体能力的使用频率、成功率、响应延迟，支持按时间、用户、渠道维度下钻分析。FlowForge 无任何能力使用数据采集和展示
+  2. **实时配额仪表盘**（F051 real-quota-dashboard）— API 配额实时监控：clowder-ai 实现实时 API 调用配额监控面板，展示各 LLM 提供者的剩余配额、调用频率、限流次数，并在接近配额上限时自动告警。FlowForge 无任何 API 配额跟踪和监控
+  3. **Token 预算可观测性**（F008 token-budget-observability）— Token 消耗追踪：clowder-ai 为每个对话/智能体追踪 Token 消耗，提供预算设置、消耗预警、月度报告。FlowForge 完全不追踪 Token 消耗
+  4. **工具使用统计**（F150 tool-usage-stats）— 工具调用分析：clowder-ai 统计每个工具的使用频率、成功率、用户满意度，基于数据优化工具调度策略。FlowForge 无工具使用数据采集
+  5. **摩擦信号评估**（F245 friction-signal-eval）— 用户体验摩擦检测：clowder-ai 自动检测用户操作中的摩擦信号（如重复输入、取消操作、长时间等待），生成摩擦报告辅助产品改进。FlowForge 无任何用户体验监控
+- **影响**：缺乏数据可视化导致：运营团队无法了解系统运行状态、无法优化 Token 消耗、无法发现用户体验瓶颈、无法量化工具使用效果。系统运行处于"黑盒"状态。
+- **建议**：实现前端仪表盘框架（基于 Grafana 或自研），集成：能力使用指标采集与展示（API 调用量/成功率/延迟多维分析）、API 配额实时监控面板（对接各 LLM 提供者配额 API）、Token 消耗追踪系统（按对话/用户/智能体维度统计）、工具使用分析（统计调用频率/成功率/满意度）、摩擦信号检测（自动采集用户操作行为数据并生成报告）。
+- **T7/T8**：是（T8 DOM 验证）
+
+### P-334 — 智能体生命周期管理系统完整缺失（F135/F159/F160/F161）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/api/agents/` 无生命周期管理端点
+- **现象**：clowder-ai 实现了完整的智能体生命周期管理，FlowForge 仅有基础创建/删除 API，缺少系统和状态管理：
+  1. **智能体创建流程**（F135 agent-creation-flow）— 向导式创建流程：clowder-ai 提供多步骤智能体创建向导，包括能力选择、知识库配置、性格设定、外观定制、测试对话。FlowForge 仅提供 `POST /agents/forgekins` 创建骨架实例，无配置向导
+  2. **智能体训练**（F159 agent-training）— 智能体训练系统：clowder-ai 支持基于用户对话历史的智能体训练，包括监督微调、强化学习、示例注入。FlowForge 无任何智能体训练能力
+  3. **智能体性能评估**（F160 agent-performance-eval）— 智能体效能评估：clowder-ai 定期评估每个智能体的任务完成率、用户满意度、响应质量，生成评估报告。FlowForge 无任何性能评估机制
+  4. **智能体退役**（F161 agent-retirement）— 智能体退役流程：clowder-ai 支持智能体退役流程，包括数据归档、历史记录保留、路由规则更新、下游通知。FlowForge 删除智能体仅移除数据库记录，无归档和路由更新
+- **影响**：智能体生命周期管理缺失导致：无法体系化创建和配置智能体、无法通过训练提升智能体能力、无法评估智能体运行效果、智能体退役后数据丢失且路由规则残留。
+- **建议**：实现完整智能体生命周期管理：创建向导（多步骤配置 + 预览 + 测试）、训练引擎（基于对话历史的微调和示例注入）、评估框架（定期采集 KPI 生成评估报告）、退役流程（数据归档 + 路由更新 + 通知机制）。
+- **T7/T8**：否
+
+### P-335 — 内容审核与质量控制体系完整缺失（T7/F162/F163/F164）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/` 无内容审核模块；`harness/` 质量评分未实现
+- **现象**：clowder-ai 实现了完整的内容审核与质量控制体系，FlowForge 仅有 T7 测试铁律（测试阶段），生产环境无任何审核机制：
+  1. **T7 内容审核框架**（T7 content-review-framework）— LLM 内容审核运行态框架：P-07 仅修复了测试阶段的 T7 接线，但生产环境无运行态 T7 审核框架。clowder-ai 在生产环境对所有 LLM 生成内容进行实时 T7 审核（含色情/暴力/政治敏感/广告/隐私泄露/有害信息六维度），审核不通过则阻断输出
+  2. **质量评分系统**（F162 quality-scoring-system）— 智能体输出质量评分：clowder-ai 实现多维质量评分模型，对智能体输出进行准确性、相关性、完整性、安全性评分，评分结果用于智能体选择和路由优化。FlowForge 无任何输出质量评估
+  3. **A/B 测试框架**（F163 ab-testing-framework）— 智能体策略 A/B 测试：clowder-ai 支持对智能体配置、提示词、路由策略进行 A/B 测试，自动分流实验组和对照组，统计显著性差异。FlowForge 无 A/B 测试能力
+  4. **多轮审核流程**（F164 multi-round-review-flow）— 内容多轮审核：clowder-ai 支持对敏感内容进行多轮审核（自动审核→人工复审→终审），每轮可配置不同审核标准和审核人。FlowForge 无多轮审核流程
+- **影响**：内容审核体系缺失导致：LLM 生成的有害内容可能在生产环境直接展示给用户、无法量化智能体输出质量、无法通过实验优化策略、敏感内容缺乏人工审核通道。
+- **建议**：实现内容审核与质量控制体系：生产环境 T7 审核框架（LLM 实时六维度审核 + 阻断 + 告警）、质量评分系统（多维度评分模型 + 评分聚合 + 趋势分析）、A/B 测试框架（实验管理 + 流量分流 + 统计分析）、多轮审核流程（自动审核 + 人工复审 + 终审发布）。
+- **T7/T8**：是（T7）
+
+### P-336 — 协作工作流系统完整缺失（F165/F166/F167/F168）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/` 无协作工作流模块；`web/src/app/` 无协作页面
+- **现象**：clowder-ai 实现了完整的团队协作工作流体系，FlowForge 完全缺失：
+  1. **多人协作编辑**（F165 multi-person-collaborative-editing）— 实时协作编辑：clowder-ai 支持多个用户同时编辑同一智能体配置/提示词/知识库，基于 OT/CRDT 算法实现实时同步和冲突解决。FlowForge 无任何协作编辑能力，配置修改为单用户独占
+  2. **审批流程配置**（F166 approval-flow-configuration）— 可视化审批流配置：clowder-ai 提供可视化审批流设计器，支持拖拽配置审批节点、审批人、条件分支、超时处理。FlowForge 无审批流配置界面
+  3. **任务分配优化**（F167 task-assignment-optimization）— 智能任务分配：clowder-ai 基于智能体能力画像和负载状况，自动优化任务分配策略，支持负载均衡、技能匹配、优先级调度。FlowForge 任务分配为简单轮询或手动指定
+  4. **团队协作空间**（F168 team-collaboration-space）— 团队工作空间：clowder-ai 提供团队级工作空间，包含共享知识库、团队智能体、协作看板、团队聊天。FlowForge 无团队概念，所有操作均为个人模式
+- **影响**：协作工作流缺失导致：团队无法协同配置和管理智能体、审批流程需要线下完成、任务分配效率低、团队知识无法沉淀和共享。
+- **建议**：实现协作工作流系统：实时协作编辑引擎（基于 CRDT 的多人编辑 + 冲突解决）、审批流设计器（可视化拖拽配置 + 审批节点 + 条件分支）、智能任务分配器（负载均衡 + 能力匹配 + 优先级调度）、团队工作空间（共享知识库 + 团队智能体 + 协作看板）。
+- **T7/T8**：是（T8 DOM 验证）
+
+### P-337 — 通知与消息系统完整缺失（F169/F170/F171/F172）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/api/core/notify.py` 通知模块未实现（P-100 已确认）
+- **现象**：clowder-ai 实现了完整的通知与消息系统，FlowForge 通知模块完全未实现（P-100 已确认 stub）：
+  1. **富通知系统**（F169 rich-notification-system）— 多类型富通知：clowder-ai 支持多种通知类型（任务完成、审批请求、系统告警、智能体主动消息），包含标题、正文、操作按钮、跳转链接。FlowForge 无任何通知系统
+  2. **消息模板**（F170 message-template）— 可配置消息模板：clowder-ai 提供消息模板引擎，支持变量插值、条件渲染、多语言模板，可针对不同渠道（Web/飞书/邮件/短信）自动适配格式。FlowForge 无消息模板能力
+  3. **批量通知**（F171 batch-notification）— 批量消息推送：clowder-ai 支持对用户群组进行批量通知推送，支持定时发送、去重合并、发送状态追踪。FlowForge 无批量通知能力
+  4. **通知渠道配置**（F172 notification-channel-config）— 多渠道通知路由：clowder-ai 允许用户配置通知偏好渠道（Web 推送/飞书/邮件/短信），支持按通知类型路由到不同渠道。FlowForge 无通知渠道配置
+- **影响**：通知系统缺失导致：用户无法及时获知任务完成、审批请求、系统告警等关键事件；消息格式单一无法适配不同渠道；批量通知需人工逐一发送；通知渠道无法灵活配置。
+- **建议**：实现完整通知系统：通知中心（通知存储 + 已读未读 + 分类管理）、模板引擎（变量插值 + 条件渲染 + 多渠道适配）、批量推送服务（群组推送 + 定时 + 去重）、渠道配置管理（Web/飞书/邮件/短信路由配置）。
+- **T7/T8**：是（T8 DOM 验证）
+
+### P-338 — 搜索与发现系统深度缺失（F173/F174/F175/F176）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`web/src/app/` 无全局搜索页面；`app/api/` 无搜索端点
+- **现象**：clowder-ai 实现了全面的搜索与发现体系，FlowForge 仅有基础对话列表，无全局搜索能力：
+  1. **全局搜索**（F173 global-search）— 跨实体统一搜索：clowder-ai 提供统一的全局搜索入口，可同时搜索对话、智能体、知识库、文件、配置项，搜索结果按相关性排序并分组展示。FlowForge 仅支持按对话标题基础搜索（P-58 F007 未实现）
+  2. **语义搜索增强**（F174 semantic-search-enhancement）— 语义理解搜索：clowder-ai 在关键词搜索基础上集成向量语义搜索，支持自然语言查询（如"找上个月那个关于数据库优化的对话"），自动理解查询意图。FlowForge 搜索仅基于 SQL LIKE 模糊匹配
+  3. **搜索历史**（F175 search-history）— 搜索历史管理：clowder-ai 记录用户搜索历史，支持高频搜索推荐、最近搜索快速访问、搜索历史清除。FlowForge 无搜索历史功能
+  4. **搜索结果排序**（F176 search-result-ranking）— 智能排序算法：clowder-ai 使用多因素排序算法（相关性/时间/使用频率/用户偏好），支持排序因子自定义配置。FlowForge 无搜索结果排序，仅按默认顺序返回
+- **影响**：搜索能力缺失导致：用户无法快速定位历史对话和智能体、语义搜索缺失导致自然语言查询无结果、搜索体验差降低工作效率。
+- **建议**：实现全功能搜索系统：全局搜索引擎（跨实体索引 + 统一搜索入口 + 分组展示）、语义搜索（向量嵌入 + 语义理解 + 混合检索）、搜索历史（历史记录 + 高频推荐 + 快速访问）、智能排序（多因子排序 + 自定义权重 + 学习排序）。
+- **T7/T8**：是（T8 DOM 验证）
+
+### P-339 — 用户管理与权限体系完整缺失（F177/F178/F179/F180）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/` 无用户管理模块；`config/` 无 RBAC 配置
+- **现象**：clowder-ai 实现了完整的用户管理与权限体系，FlowForge 无任何用户管理和权限控制机制：
+  1. **角色管理**（F177 role-management）— 角色定义与权限分配：clowder-ai 支持预定义角色（管理员/编辑者/查看者/运维者）和自定义角色，每个角色可配置细粒度权限（API 访问/数据读写/智能体管理/系统配置）。FlowForge 无角色概念，所有用户拥有相同权限
+  2. **权限组**（F178 permission-groups）— 权限分组管理：clowder-ai 支持将权限组合为权限组，可批量分配给用户或团队，支持权限继承和覆盖。FlowForge 无权限组概念
+  3. **SSO 集成**（F179 sso-integration）— 单点登录集成：clowder-ai 支持 LDAP、OAuth 2.0、SAML 2.0 等企业 SSO 协议，实现与企业身份系统的无缝对接。FlowForge 仅支持用户名密码登录，无 SSO
+  4. **操作审计**（F180 operation-audit）— 用户操作审计追踪：clowder-ai 记录每个用户的关键操作（创建/修改/删除/权限变更），支持审计日志导出和异常行为告警。FlowForge 无操作审计
+- **影响**：用户管理缺失导致：无法实现最小权限原则、企业 SSO 集成需要额外开发、安全事件无法追溯、多用户场景下权限管理混乱。
+- **建议**：实现用户管理与权限体系：RBAC 角色引擎（角色定义 + 权限矩阵 + 用户分配）、权限组管理（权限组合 + 批量分配 + 继承覆盖）、SSO 集成（LDAP/OAuth 2.0/SAML 2.0 协议适配器）、操作审计流水线（操作记录 + 审计日志 + 异常告警）。
+- **T7/T8**：否
+
+### P-340 — 性能优化与缓存体系完整缺失（F181/F182/F183/F184）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/` 无缓存配置模块；`web/` 无前端性能优化
+- **现象**：clowder-ai 实现了完整的性能优化与缓存体系，FlowForge 无任何系统级缓存和性能优化策略：
+  1. **缓存策略**（F181 cache-strategy）— 多级缓存架构：clowder-ai 实现多级缓存架构（内存缓存 → Redis 缓存 → 数据库查询），支持缓存预热、缓存失效、缓存穿透防护。FlowForge 无任何缓存层，每次请求直接查询数据库或调用 LLM
+  2. **CDN 集成**（F182 cdn-integration）— 静态资源 CDN 分发：clowder-ai 支持静态资源自动上传 CDN，前端资源通过 CDN 加速加载，支持版本管理和缓存刷新。FlowForge 前端资源从应用服务器直接加载，无 CDN 加速
+  3. **懒加载优化**（F183 lazy-loading-optimization）— 组件懒加载策略：clowder-ai 实现页面级和组件级懒加载，按需加载路由、组件、数据，减少首屏加载时间。FlowForge 前端路由页面全部同步加载，首屏加载大量无关组件
+  4. **资源预加载**（F184 resource-preloading）— 智能资源预加载：clowder-ai 基于用户行为预测，智能预加载即将访问的页面和资源，减少用户感知延迟。FlowForge 无资源预加载机制
+- **影响**：性能优化缺失导致：API 响应延迟高（无缓存）、前端加载慢（无 CDN/懒加载）、用户体验差、服务器负载高、带宽成本高。
+- **建议**：实现性能优化体系：多级缓存（Redis 缓存层 + 本地缓存 + 缓存策略配置）、CDN 集成（静态资源自动上传 + 版本管理 + 缓存刷新）、懒加载（路由懒加载 + 组件懒加载 + 数据懒加载）、智能预加载（用户行为预测 + 预加载策略 + 资源优先级管理）。
+- **T7/T8**：是（T8 DOM 验证）
+
+### P-341 — 备份与恢复体系完整缺失（F185/F186/F187/F188）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/` 无备份恢复模块；`scripts/` 无备份脚本
+- **现象**：clowder-ai 实现了完整的数据备份与恢复体系，FlowForge 无任何数据保护机制：
+  1. **数据备份**（F185 data-backup）— 自动定时备份：clowder-ai 支持自动定时备份（全量/增量），备份内容覆盖数据库、配置文件、智能体数据、对话历史，支持备份加密和远程存储。FlowForge 无任何备份机制，数据仅依赖单机 SQLite 文件
+  2. **灾难恢复**（F186 disaster-recovery）— 灾难恢复计划：clowder-ai 提供灾难恢复 SOP，包括备份验证、恢复演练、RTO/RPO 指标监控、多区域冗余部署。FlowForge 无灾难恢复计划，单点故障即数据丢失
+  3. **版本回滚**（F187 version-rollback）— 配置版本回滚：clowder-ai 对智能体配置、提示词、知识库等关键配置实施版本管理，支持一键回滚到任意历史版本。FlowForge 修改配置后无法回滚，错误配置可能导致服务不可用
+  4. **数据迁移工具**（F188 data-migration-tool）— 数据库迁移工具包：clowder-ai 提供数据库迁移工具（SQLite→PostgreSQL→MySQL），支持跨版本迁移、数据校验、迁移回滚。FlowForge 仅支持 SQLite，无迁移工具
+- **影响**：备份恢复缺失导致：数据丢失风险极高（单机 SQLite 无备份）、配置错误无法回滚、数据库升级/迁移需手动操作、灾难恢复时间无法保证。
+- **建议**：实现备份恢复体系：自动备份引擎（定时备份 + 全量/增量 + 加密 + 远程存储）、灾难恢复方案（备份验证 + 恢复演练 + RTO/RPO 指标）、版本管理（配置版本控制 + 快照 + 一键回滚）、数据迁移工具（多数据库支持 + 迁移脚本 + 数据校验）。
+- **T7/T8**：否
+
+### P-342 — API 网关与限流体系完整缺失（F189/F190/F191/F192）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/api/` 无 API 网关层；`config/` 无限流配置
+- **现象**：clowder-ai 实现了完整的 API 网关与限流体系，FlowForge 仅为直接 FastAPI 路由，无网关层：
+  1. **API 版本管理**（F189 api-version-management）— API 版本化发布：clowder-ai 支持多版本 API 共存（v1/v2/v3），版本路由、版本废弃、版本迁移指南，旧版本自动重定向到新版本。FlowForge 无 API 版本概念，所有端点无版本前缀
+  2. **限流策略**（F190 rate-limiting-policy）— 多维度限流控制：clowder-ai 实现基于用户/IP/API 路径的多维度限流，支持令牌桶/漏桶算法，限流阈值可动态配置，超限时返回友好提示。FlowForge 无任何限流机制，恶意调用可导致服务过载
+  3. **API 文档自动生成**（F191 api-doc-auto-generation）— 交互式 API 文档：clowder-ai 自动生成 API 文档（OpenAPI 3.1），提供在线调试功能、请求示例（curl/Python/JavaScript）、变更日志。FlowForge 仅依赖 FastAPI 默认 Swagger 文档，无增强和调试功能
+  4. **API 健康检查**（F192 api-health-check）— 服务健康检查端点：clowder-ai 提供丰富健康检查端点（`/health/live` 存活检查、`/health/ready` 就绪检查、`/health/deps` 依赖检查），集成到负载均衡和容器编排。FlowForge 无健康检查端点
+- **影响**：API 网关缺失导致：API 版本升级需破坏性变更、无法防止 API 滥用和 DoS 攻击、API 文档不完善降低开发者体验、服务健康状态不可监控。
+- **建议**：实现 API 网关层：版本管理（URL 前缀版本路由 + 版本废弃策略 + 迁移指南）、限流引擎（令牌桶/漏桶算法 + 多维度限流 + 动态配置 + 友好提示）、API 文档增强（交互式调试 + 多语言示例 + 变更日志）、健康检查（存活/就绪/依赖检查 + 集成容器编排）。
+- **T7/T8**：否
+
+### P-343 — 开发者工具体系完整缺失（F193/F194/F195/F196）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`sdk.py` 基础 SDK 不完整；`app/` 无 Playground；`webhooks/` 不存在
+- **现象**：clowder-ai 实现了丰富的开发者工具生态，FlowForge 仅有基础 `sdk.py` 骨架：
+  1. **SDK/CLI 工具**（F193 sdk-cli-tools）— 完整 SDK 和 CLI 开发包：clowder-ai 提供多语言 SDK（Python/TypeScript/Go），包含完整的 API 客户端、类型定义、错误处理、重试逻辑。FlowForge 仅有 `sdk.py` 单文件骨架，无类型定义、无错误处理、无重试
+  2. **API Playground**（F194 api-playground）— 交互式 API 调试台：clowder-ai 提供 Web 版 API Playground，支持在线调试所有 API 端点，自动生成请求代码，保存调试历史，分享调试结果。FlowForge 无 API Playground，开发者需使用 curl 或 Postman 手动调试
+  3. **Webhook 系统**（F195 webhook-system）— 事件驱动的 Webhook：clowder-ai 实现完善的 Webhook 系统，支持事件订阅（智能体创建/对话完成/审批变更/系统告警）、签名验证、重试机制、投递日志。FlowForge 无 Webhook 系统，无法与第三方系统实时集成
+  4. **调试面板**（F196 debug-panel）— 运行时调试面板：clowder-ai 提供内置调试面板，展示 LLM 调用链、Token 消耗、延迟分析、错误堆栈，支持断点调试、变量检查、请求重放。FlowForge 无调试面板，调试依赖日志文件
+- **影响**：开发者工具缺失导致：SDK 不完善增加集成成本、API 调试效率低、无法与第三方系统实时集成、运行时问题排查困难。
+- **建议**：实现开发者工具生态：多语言 SDK（Python/TypeScript/Go 完整 SDK + 类型定义 + 错误处理 + 重试）、API Playground（Web 交互式调试 + 代码生成 + 历史保存 + 分享）、Webhook 系统（事件订阅 + 签名验证 + 重试 + 投递日志）、调试面板（LLM 调用链 + Token 分析 + 错误追踪 + 请求重放）。
+- **T7/T8**：是（T8 DOM 验证）
+
+### P-344 — 可访问性（Accessibility）体系完整缺失（F197/F198/F199/F200）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`web/src/` 无无障碍相关组件和配置
+- **现象**：clowder-ai 实现了完整的可访问性（a11y）体系，FlowForge 前端完全无无障碍支持：
+  1. **屏幕阅读器支持**（F197 screen-reader-support）— ARIA 标签与语义化：clowder-ai 所有 UI 组件配有完整的 ARIA 标签、角色描述、键盘焦点管理、语义化 HTML。FlowForge 前端大量使用 `div` 作为交互元素，无 ARIA 标签，屏幕阅读器无法正确识别
+  2. **键盘导航**（F198 keyboard-navigation）— 全键盘操作支持：clowder-ai 支持 Tab/箭头/回车/Esc 等键盘完整导航，所有功能可通过键盘完成，焦点顺序合理。FlowForge 前端部分按钮和链接无法通过键盘聚焦，下拉菜单和弹窗无法通过键盘关闭
+  3. **高对比度主题**（F199 high-contrast-theme）— 高对比度模式：clowder-ai 提供 WCAG 2.1 AA 级高对比度主题，支持大字体、高对比色、去除透明度依赖。FlowForge 仅有一套默认主题，无高对比度模式
+  4. **字体大小调整**（F200 font-size-adjustment）— 字体缩放适配：clowder-ai 支持浏览器字体缩放，所有组件使用相对单位（rem/em），缩放后布局不崩溃。FlowForge 大量使用 px 固定单位，字体缩放后布局错乱、文字重叠
+- **影响**：可访问性缺失导致：视障/听障用户无法使用产品、企业采购可能不满足无障碍合规要求、键盘用户操作效率低下、用户体验不符合 WCAG 标准。
+- **建议**：实现可访问性体系：ARIA 标签（组件级 ARIA 属性 + 语义化 HTML + 焦点管理）、键盘导航（全局键盘快捷键 + 焦点顺序 + 键盘操作指南）、高对比度主题（WCAG 2.1 AA 主题 + 颜色对比度检测 + 透明度去除）、响应式字体（rem 单位 + 缩放适配 + 布局防崩溃）。
+- **T7/T8**：是（T8 DOM 验证）
+
+### P-345 — 嵌入式与集成体系完整缺失（F201/F202/F203/F204）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`web/src/` 无嵌入/Widget 组件；`app/` 无第三方集成端点
+- **现象**：clowder-ai 实现了丰富的嵌入式与第三方集成体系，FlowForge 完全缺失：
+  1. **iframe 嵌入支持**（F201 iframe-embedding）— 可嵌入外部网站：clowder-ai 提供可嵌入的 iframe 组件，支持将智能体聊天窗口嵌入任意第三方网站，包含跨域通信、样式隔离、嵌入配置。FlowForge 无法嵌入外部网站使用
+  2. **Widget 系统**（F202 widget-system）— 可配置 Widget 组件：clowder-ai 提供多种可配置 Widget（聊天机器人/知识库搜索/智能体卡片/数据看板），支持自定义样式、行为和嵌入位置。FlowForge 无 Widget 系统
+  3. **第三方登录集成**（F203 third-party-login）— 社交账号登录：clowder-ai 支持微信/Google/GitHub/飞书等第三方 OAuth 登录，自动同步用户基本信息。FlowForge 仅支持用户名密码登录
+  4. **浏览器扩展**（F204 browser-extension）— 浏览器插件：clowder-ai 提供 Chrome/Firefox 浏览器扩展，支持侧边栏快捷访问、网页内容智能分析、快捷分享到智能体。FlowForge 无浏览器扩展
+- **影响**：嵌入式集成缺失导致：无法将智能体嵌入第三方网站推广服务、无法通过 Widget 快速集成到现有系统、用户登录门槛高、缺少浏览器端快捷入口。
+- **建议**：实现嵌入式与集成体系：iframe 嵌入 SDK（跨域通信 + 样式隔离 + 嵌入配置）、Widget 系统（可配置 Widget + 自定义样式 + 嵌入代码生成）、第三方登录（OAuth 2.0 社交登录 + 用户信息同步）、浏览器扩展（Chrome/Firefox 扩展 + 侧边栏 + 网页分析）。
+- **T7/T8**：是（T8 DOM 验证）
+
+### P-346 — AI 助手与客服系统完整缺失（F205/F206/F207/F208）
+- **严重度**：S2 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **文件**：`app/` 无客服模块；`web/` 无帮助中心页面
+- **现象**：clowder-ai 实现了完整的 AI 助手与客服体系，FlowForge 完全缺失：
+  1. **智能客服机器人**（F205 smart-customer-service-bot）— 智能客服机器人：clowder-ai 内置智能客服机器人，可自动回答用户常见问题，识别用户意图，复杂问题自动转人工，支持会话摘要和满意度评价。FlowForge 无任何客服功能
+  2. **FAQ 系统**（F206 faq-system）— 动态 FAQ 管理：clowder-ai 提供动态 FAQ 管理系统，支持 FAQ 分类、搜索、排序、版本管理，自动从客服对话中提取新 FAQ 建议。FlowForge 无 FAQ 系统
+  3. **工单系统**（F207 ticket-system）— 用户工单管理：clowder-ai 实现完整的工单生命周期管理，支持工单创建、分配、流转、升级、关闭，提供工单看板和 SLA 监控。FlowForge 无工单系统，用户反馈无正式渠道
+  4. **知识库**（F208 knowledge-base）— 企业内部知识库：clowder-ai 提供企业知识库管理系统，支持文档上传、全文搜索、知识分类、权限管理，知识库内容可被智能体引用回答用户问题。FlowForge 无知识库管理
+- **影响**：AI 助手与客服缺失导致：用户遇到问题无处求助、常见问题重复回答浪费人力、用户反馈无正式渠道、知识无法沉淀和复用。
+- **建议**：实现 AI 助手与客服体系：智能客服机器人（意图识别 + 自动回答 + 人工转接 + 满意度评价）、FAQ 系统（FAQ 管理 + 分类搜索 + 自动提取 + 版本管理）、工单系统（工单生命周期 + 分配流转 + SLA 监控 + 看板）、知识库（文档管理 + 全文搜索 + 权限控制 + 智能体引用）。
+- **T7/T8**：是（T7 + T8）
+
+---
+
+> ## 【2026-08-11 第五轮 web 前端深度分析｜P-288…P-331】
+>
+> 2026-08-11 深度分析 web/src 目录下 44 个关键文件（hooks/、stores/、lib/、components/helm/、app/），发现 44 个新缺陷。
+> 核心问题：6 个 S1 严重缺陷（WebSocket/Task 模块级变量共享、HTTP 响应处理崩溃等）、9 个 S2 重要缺陷（CouncilChatPanel 过度复杂 1334 行/30+ useState、闭包陈旧、内存泄漏等）、16 个 S3 一般缺陷、13 个 S4 轻微缺陷。
+> 累计 170 个工单，DI 608。
+
+### P-288 — S1：`useCouncilSocket.ts` 模块级 `socket` 变量在多线程/多实例下共享崩溃
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useCouncilSocket.ts` 模块级变量
+- **现象**：`useCouncilSocket.ts` 在模块顶层声明 `let socket: WebSocket | null` 作为全局共享变量。当多个组件实例同时使用该 hook（如两个群聊页面同时打开），后创建的 WebSocket 连接会覆盖前一个，导致前一个连接的组件收到/发送错误消息，甚至因 `socket.close()` 在错误时机执行而崩溃。
+- **影响**：多 tab 或多实例场景下群聊功能完全不可用，偶发消息错乱、连接断开、页面崩溃。
+- **建议**：将 socket 实例存入 React ref 或 Zustand store，每个组件实例持有独立连接。
+
+### P-289 — S1：`useApi.ts` 无超时/取消机制，请求挂起致页面无限 loading
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useApi.ts:15-30`
+- **现象**：`useApi<T>(url)` hook 使用 `useEffect` 内直接 `fetch(url).then(setData)`，无 `AbortController`、无超时机制。网络故障时组件卸载后 fetch 仍继续，`setData` 在已卸载组件上执行引发 React 警告，且页面永久显示 loading 状态。
+- **影响**：任意 API 端点不可用（如后端服务离线）时，页面无限 loading，用户无法进行任何操作。
+- **建议**：添加 `AbortController` 并在 useEffect cleanup 中 abort，添加超时机制（如 30s）。
+
+### P-290 — S1：`useCouncilChat.ts:246` 消息 ID 生成使用 `Date.now()` + 随机数，高并发碰撞致消息丢失
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useCouncilChat.ts:246`
+- **现象**：消息 ID 生成方式为 `user-${Date.now()}-${Math.random()}`，在同一毫秒内多条消息由同一客户端发送时，`Math.random()` 在 V8 引擎中可能存在碰撞（尤其是快速连续调用）。ID 碰撞导致 React key 重复、消息去重失效、部分消息不显示。
+- **影响**：高并发消息场景下（如群聊中多条消息同时发送），部分消息丢失不显示。
+- **建议**：使用 `crypto.randomUUID()` 或自增计数器确保 ID 唯一性。
+
+### P-291 — S1：`flowforge-client.ts` 静态 `fetch()` 无超时，单 API 挂起拖垮整个应用
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/lib/flowforge-client.ts:15-40`
+- **现象**：`FlowForgeClient` 的 `request<T>()` 方法使用原生 `fetch()` 无超时参数。当后端服务负载高或网络不稳定时，请求可能挂起数分钟，导致前端 UI 线程阻塞、用户无法操作。10+ 个组件依赖该 client 加载数据。
+- **影响**：单个 API 超时可拖垮整个应用，页面卡死无法操作。
+- **建议**：添加 `AbortSignal.timeout(30000)` 超时，暴露 `AbortSignal` 参数允许调用方取消。
+
+### P-292 — S1：`useHelmWebSocket.ts` 多个 useEffect 缺乏清理，WebSocket 连接泄漏
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useHelmWebSocket.ts:200-240`
+- **现象**：`useHelmWebSocket` 中 3 个 useEffect 定义的 event listeners 和定时器在组件卸载时未正确清理。消息到达回调形成闭包链，组件重新挂载时创建新连接但不关闭旧连接，导致 WebSocket 连接数线性增长。
+- **影响**：频繁切换页面后 WebSocket 连接数不断增长，最终耗尽浏览器连接池（Chrome 限制 6 个/域名），所有 WebSocket 功能不可用。
+- **建议**：所有 useEffect 返回 cleanup 函数，使用 `useRef` 跟踪连接状态，组件卸载时关闭旧连接。
+
+### P-293 — S1：`chatStore.ts` 和 `helmPanelStore.ts` Zustand store 未持久化，页面刷新丢失全部状态
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/stores/chatStore.ts`、`web/src/stores/helmPanelStore.ts`
+- **现象**：`chatStore.ts` 管理当前对话状态（消息列表、活动会话 ID、输入内容），`helmPanelStore.ts` 管理面板布局状态（面板宽度、折叠状态、激活标签）。两个 store 均未使用 `persist` 中间件，页面刷新后全部状态丢失。
+- **影响**：用户刷新页面后对话内容丢失、面板布局重置为用户态，严重降低用户体验。
+- **建议**：使用 `zustand/middleware` 的 `persist` 中间件，将关键状态持久化到 localStorage。
+
+### P-294 — S2：`CouncilChatPanel.tsx` 组件过度复杂（1334 行/30+ useState/20+ 回调），极难维护
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/helm/CouncilChatPanel.tsx`
+- **现象**：`CouncilChatPanel.tsx` 单文件 1334 行，包含 30+ 个 `useState` 调用、20+ 回调函数、消息流/@mention/斜杠命令/投票/表情回复/编辑/删除/转发/消息导航/键盘快捷键等 10+ 个功能域。同一文件内存在大量耦合逻辑，修改一个功能域可能影响其他 5 个功能域。
+- **影响**：代码可维护性极差，新功能开发风险高，问题排查困难，违反"每文件不超过 1000 行"的规范。
+- **建议**：拆分为多个独立子组件：`MessageList`、`MentionInput`、`SlashCommands`、`VotePanel`、`ReactionBar`、`MessageActions`、`MessageNavigation`、`KeyboardShortcuts`。
+
+### P-295 — S2：`useCouncilChat.ts` 消息列表闭包陈旧，快速切换线程后回复错误消息
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useCouncilChat.ts:85-160`
+- **现象**：`sendMessage`、`handleVote`、`handleReaction` 等回调在 useEffect 中捕获 `messages` 和 `threadId` 的闭包值。用户快速切换线程时，post 方法仍引用旧线程的 `threadId`，导致消息发送到错误线程。
+- **影响**：快速切换线程时消息错发，用户看到消息出现在错误对话中，严重损害用户体验和消息可靠性。
+- **建议**：使用 `useRef` 存储最新 `threadId` 和 `messages`，所有回调通过 ref 读取最新值，避免闭包陈旧。
+
+### P-296 — S2：`useHelmWebSocket.ts` 使用 `useRef` 存储回调但无同步机制，回调竞争致状态不一致
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useHelmWebSocket.ts:45-60`
+- **现象**：`useHelmWebSocket` 使用 `const callbackRef = useRef(wsCallbacks)` 存储回调，但在 WebSocket 消息到达时，存在多个回调并发执行的情况。由于 React 状态更新是异步批处理的，多个 `setState` 调用可能导致状态不一致。
+- **影响**：高并发消息场景下，消息列表出现乱序、重复消息、气泡显示异常等 UI 问题。
+- **建议**：使用 `useReducer` 替代多个 `useState`，确保状态更新原子性。
+
+### P-297 — S2：`threadStore.ts` 和 `sidebarStore.ts` 使用 `localStorage` 直接存取，存在 XSS 风险
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/stores/threadStore.ts`、`web/src/stores/sidebarStore.ts`
+- **现象**：两个 store 直接使用 `localStorage.getItem/setItem` 存取 JSON 序列化数据，未使用 `zustand/middleware` 的 `persist` 中间件。`localStorage` 中的 `sidebarOpen` 等字段被 `JSON.parse` 解析时，若被第三方脚本篡改可执行恶意代码。
+- **影响**：XSS 攻击者可篡改 localStorage 数据，注入恶意代码在页面加载时执行。
+- **建议**：使用 `zustand/middleware` 的 `persist` 中间件，或使用 `JSON.parse` 时包裹 try/catch。
+
+### P-298 — S2：`useCouncilChat.ts` 和 `useCouncilSocket.ts` 中 useCallback 缺少依赖项，函数陈旧
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useCouncilChat.ts:170-200`、`web/src/hooks/useCouncilSocket.ts:80-110`
+- **现象**：多个 `useCallback` 的依赖数组不完整，例如 `handleVote` 回调只依赖 `threadId` 但实际使用了 `messages` 和 `userRole`，`useEffect` 中引用了 `socket` 但未在依赖数组中声明。
+- **影响**：闭包捕获陈旧值，导致投票、消息发送等操作使用过期数据，功能行为异常且难以排查。
+- **建议**：使用 eslint-plugin-react-hooks 的 exhaustive-deps 规则检查，补全所有 useCallback 和 useEffect 依赖。
+
+### P-299 — S2：`helmPanelStore.ts` 面板布局状态无界增长，频繁切换会话后性能下降
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/stores/helmPanelStore.ts:30-60`
+- **现象**：`helmPanelStore` 使用 `Map<threadId, panelState>` 存储每个线程的面板布局，但无任何上限或清理机制。用户创建 1000+ 对话后，store 中保存 1000+ 面板状态对象，每次渲染需遍历所有状态，导致性能下降。
+- **影响**：长期使用后面板切换延迟增加，页面响应变慢，内存占用上升。
+- **建议**：添加 LRU 缓存策略，限制最多保存最近 50 个线程的面板状态，或仅保存最近活跃线程的状态。
+
+### P-300 — S2：`WorkspacePanel.tsx` 9 个模块全部从 `councilPanelStore` 读取状态，但 store 未对模块做代码分割
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/helm/WorkspacePanel.tsx:30-80`
+- **现象**：WorkspacePanel 的 9 个子模块（Agents、Context、Memory、Files、Settings、Signals、Eval、Help、Debug）全部从 `councilPanelStore` 读取状态，且每个模块在面板初始化时加载全部依赖。即使只激活 1 个模块，其他 8 个模块的代码也全部加载。
+- **影响**：首屏加载时间增加，不必要的 JavaScript 执行消耗 CPU，移动设备上性能问题更明显。
+- **建议**：对 9 个模块使用 `React.lazy()` + `Suspense` 动态加载，仅激活的模块才加载对应代码。
+
+### P-301 — S2：`useHelmWebSocket.ts` 和 `useCouncilSocket.ts` WebSocket 重连逻辑使用固定间隔，无指数退避
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useHelmWebSocket.ts:150-180`、`web/src/hooks/useCouncilSocket.ts:60-90`
+- **现象**：WebSocket 断开重连使用固定 3 秒间隔，无指数退避策略。当后端服务持续不可用时，客户端每 3 秒发起一次重连请求，持续消耗网络和 CPU 资源。iOS Safari 后台页面因持续重连被系统强制终止。
+- **影响**：后端故障时客户端持续重连消耗资源，移动端后台页面被系统终止，恢复后需重新连接。
+- **建议**：实现指数退避策略（1s/2s/4s/8s/16s/30s/60s），最大间隔 60s，添加 jitter 随机偏移避免 thundering herd。
+
+### P-302 — S2：`helmPanelStore.ts` 和 `councilPanelStore.ts` 缺少面板状态验证，脏数据可导致 UI 崩溃
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/stores/helmPanelStore.ts:10-25`、`web/src/stores/councilPanelStore.ts:15-30`
+- **现象**：两个 store 在读取 localStorage 持久化状态时无任何数据验证。若用户手动修改 localStorage 或从旧版本升级导致状态格式不兼容，zustand store 直接使用无效数据渲染 UI，导致页面崩溃或功能异常。
+- **影响**：持久化状态格式变更或手动篡改时，页面完全崩溃，用户无法通过正常操作恢复。
+- **建议**：添加 Zod 或 Yup schema 验证，读取持久化数据时校验格式有效性，无效时回退到默认状态。
+
+### P-303~P-318 — S3 一般缺陷（16 个，详见子清单）
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/` 多个文件
+- **现象摘要**：
+  - P-303：`ChatStream.tsx` 使用 `any` 类型处理消息数据，类型安全失效
+  - P-304：`ChatInput.tsx` 未处理粘贴事件，用户无法粘贴图片/文件
+  - P-305：`ShellWrapper.tsx` 无 loading 状态，shell 初始化期间白屏
+  - P-306：`ThreadSidebar.tsx` 列表渲染未使用虚拟列表，1000+ 线程时卡顿
+  - P-307：`GlobalThreadDrawer.tsx` 抽屉动画与状态更新竞争，闪烁
+  - P-308：`council/page.tsx` 页面组件使用 `useEffect` 同步数据，SSR 不匹配
+  - P-309：`solo/page.tsx` 无错误边界，API 错误时整页崩溃
+  - P-310：`signals/page.tsx` SignalsOverview 组件无 loading 状态
+  - P-311：`memory/page.tsx` 记忆页面使用 `any` 类型
+  - P-312：`admin/page.tsx` 管理页面缺少权限检查
+  - P-313：`page.tsx` 首页/仪表盘页面无缓存
+  - P-314：`types.ts` 类型定义中大量使用 `any` 字段
+  - P-315：`utils.ts` 工具函数缺少类型守卫
+  - P-316：`council-types.ts` 消息类型字段定义不完整
+  - P-317：`helm-types.ts` 面板类型与状态类型不一致
+  - P-318：`councilPanelStore.ts` 派生状态存储在 store 中而非计算属性
+- **T7/T8**：是（T8）
+
+### P-319~P-331 — S4 轻微缺陷（13 个，详见子清单）
+- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/` 多个文件
+- **现象摘要**：
+  - P-319：`useInputHistory.ts` 硬编码最大历史记录数
+  - P-320：`useIsDesktop.ts` 硬编码断点值
+  - P-321：`useWebSocket.ts` 日志中使用 `console.log`
+  - P-322：`flowforge-client.ts` 硬编码 API 基础路径
+  - P-323：`cache.ts` 缓存键名硬编码
+  - P-324：`shell-config.tsx` 配置项缺少类型定义
+  - P-325：`plugin-registry.ts` 插件注册表类型定义不精确
+  - P-326：`approvalHubStore.ts` 审批状态类型定义不完整
+  - P-327：`helmPlanStore.ts` 计划状态管理缺少错误处理
+  - P-328：`helmWorkspaceStore.ts` 工作区状态管理使用 `any`
+  - P-329：`councilPanelStore.ts` 面板状态初始化代码重复
+  - P-330：`chatStore.ts` 消息存储数组无上限
+  - P-331：`threadDrawerStore.ts` 抽屉状态管理未使用 zustand persist
+- **T7/T8**：是（T8）
+
+---
+
+> ## 【2026-08-11 第六轮浏览器实测｜P-347…P-349】
+>
+> 2026-08-11 重启前端 dev server 后实测 mission-hub、review、tasks、signals、solo、memory、admin 等页面。
+> 发现前端 dev server 在测试过程中崩溃（Playwright 操作导致 ERR_CONNECTION_REFUSED），/review 页面卡在"加载评估任务..."，
+> /tasks 页面无后端数据返回空列表。
+
+### P-347 — 前端 dev server 在浏览器操作过程中崩溃，导致后续测试全部 ERR_CONNECTION_REFUSED
+- **严重度**：S2 ｜ **分类**：前端稳定性 ｜ **状态**：Open
+- **文件**：`web/` 前端开发服务器
+- **现象**：在 Playwright 驱动浏览器测试过程中，经过多次导航（/solo → /council → /signals → /memory → /mission-hub → /review）后，前端 dev server 进程崩溃。所有后续页面导航返回 `ERR_CONNECTION_REFUSED（-102）`。重启后恢复正常，确认是 `next dev` 在测试过程中触发内存泄漏或未捕获异常导致进程退出。
+- **影响**：开发/测试过程中前端服务不稳定，频繁中断工作流。用户在使用过程中可能遇到页面突然不可用的情况。
+- **建议**：排查 `next dev` 进程崩溃原因，添加进程守护（如 `pm2` 或 `forever`），监控内存使用和异常退出。
+
+### P-348 — /review 页面卡在"加载评估任务..."，后端 eval API 返回 stub 空数据
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/review/page.tsx`、`app/api/core/eval.py`
+- **现象**：`/review` 评估中心页面使用 `HubEvalTab` 组件，加载后页面显示"加载评估任务..."，状态显示"检查中"。后端 `GET /api/v1/eval/verdicts` 端点返回 `{"items":[],"total":0}`（P-82 已确认 stub），导致前端永远停留在加载状态。
+- **影响**：评估中心页面功能不可用，用户无法进行智能体产出评估和质量审核。
+- **建议**：实现后端 eval API 真实数据返回，或在前端添加超时处理，stub 数据返回时显示"暂无评估任务"空状态提示。
+
+### P-349 — /tasks 页面无后端数据返回空列表，需实现 CRUD 端点
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/tasks/page.tsx`、`app/api/` 任务端点
+- **现象**：`/tasks` 任务列表页面调用 `GET /api/v1/tasks` 后端端点，返回空数据（`items: []`）。前端显示"暂无任务"空状态，但既无创建任务的入口，也无错误提示说明原因。
+- **影响**：任务管理页面功能不可用，用户无法创建、查看和管理任务。
+- **建议**：实现后端任务 CRUD 端点，或在前端添加"创建新任务"入口和加载失败提示。
+
+---
+
+> ## 【2026-08-11 第七轮 web 前端深度分析｜P-350…P-374】
+>
+> 2026-08-11 覆盖 hooks/、stores/、lib/、components/ 等 36 个未覆盖文件，发现 25 个新缺陷。
+
+### P-350 — S2：useHelmWebSocket.ts 滥用 localStorage 保存完整状态，无大小限制
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useHelmWebSocket.ts`（saveState/loadState/clearState 函数）
+- **现象**：`useHelmWebSocket.ts` 使用 `localStorage` 保存完整任务状态（`entries`、`draftContent`、`editorContent`、`stageProgress`、`tokenStats` 等），且无大小限制。每次状态变更调用 `saveState(brand, ...)` 持久化全部状态。`entries` 数组保存最近 500 条记录，但 `draftContent`/`editorContent` 可能包含大型文档全文。当多任务切换时，localStorage 占用持续增长，达到 5MB 配额限制后抛出 `QuotaExceededError`，所有后续 `setItem` 调用静默失败。
+- **影响**：长期使用后 localStorage 耗尽，状态持久化失效，页面刷新丢失所有状态。大型文档创作时更易触发。
+- **建议**：仅持久化关键元数据（taskId、phase、intent），entries 和 draftContent 改为 sessionStorage 或内存缓存。添加 localStorage 配额检查，接近限制时清理旧数据。
+
+### P-351 — S2：HelmLayout.tsx 多个 useEffect 竞态条件，连续快速切换任务时状态混乱
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/helm/HelmLayout.tsx`（多个 useEffect 钩子）
+- **现象**：HelmLayout 包含 5 个 `useEffect` 钩子，分别处理任务历史记录、完成状态更新、工作区列表刷新、未完成任务检测和 council 重定向。这些 effect 之间无同步机制，当用户快速切换任务时，前一个任务的 effect 完成后才执行后一个任务的 effect，导致状态混乱（如已完成任务被标记为运行中、工作区列表显示错误计数）。
+- **影响**：快速操作时界面状态不一致，工作区列表显示错误数据，任务历史记录不准确。
+- **建议**：使用 `useReducer` 统一管理任务状态机，将多个 effect 合并为单一状态转换逻辑；或使用 `abortRef` 取消过时 effect。
+
+### P-352 — S2：ChatInput.tsx 使用 useRef 做模型列表防重复请求，但闭包缓存导致永不过期
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/helm/ChatInput.tsx:30-35`（`modelsFetchedRef`）
+- **现象**：`ChatInput` 使用 `modelsFetchedRef = useRef(false)` 确保模型列表只请求一次。但该 ref 在组件整个生命周期内永不重置，即使组件卸载后重新挂载、或用户切换 mode 后模型列表发生变化，也不重新请求。用户切换 provider 或添加新模型后，模型选择下拉列表展示过期数据。
+- **影响**：模型选择下拉列表永不过期，新增/删除的模型不可见，用户无法使用新配置的模型。
+- **建议**：移除 `modelsFetchedRef`，改为基于 `taskId` 或 `version` 等依赖项变化时重新请求模型列表。或添加 TTL 缓存（如 5 分钟过期）。
+
+### P-353 — S2：useApi.ts 无请求超时和中断机制，网络故障时请求挂起
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useApi.ts`（`request` 函数）
+- **现象**：`useApi.ts` 的 `request` 函数使用 `fetch` 但不设置 `AbortSignal` timeout，且无 `AbortController` 集成。当后端服务无响应或网络故障时，请求永久挂起（浏览器默认 5 分钟超时），`loading` 状态永不清除，页面显示"加载中..."无法恢复。调用方无法主动取消请求。
+- **影响**：后端服务离线时页面卡死在加载状态，用户无法操作，只能刷新页面。
+- **建议**：为 `request` 函数添加默认超时（如 30 秒），使用 `AbortController` 并暴露 `cancel` 方法。参考 `useFetchWithCache.ts` 使用 `AbortSignal.timeout`。
+
+### P-354 — S2：cache.ts 无界 Map 增长，长期运行后内存泄漏
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/lib/cache.ts`（`Map<string, CacheEntry>`）
+- **现象**：`cache.ts` 使用 `Map<string, CacheEntry>` 作为缓存存储，但无任何上限限制。`setCache` 每次调用向 Map 添加条目，`invalidatePattern` 扫描全部键。`useFetchWithCache.ts` 对不同 URL 路径分别缓存，长期使用后 Map 积累数千条目，每次 `getCached` 需要 O(n) 检查过期时间，导致页面响应变慢。
+- **影响**：长期运行后内存占用持续增长，页面响应延迟增加，可能导致浏览器 OOM。
+- **建议**：添加 LRU 或 FIFO 缓存策略，限制最大条目数（如 200 条）。或使用 `Map` 的大小限制 + 定期清理过期条目。
+
+### P-355 — S3：PluginRegistry 静态类无卸载清理机制，组件卸载后组件引用残留
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/lib/plugin-registry.ts`（`PluginRegistry` 类）
+- **现象**：`PluginRegistry` 使用静态 `Map` 存储注册的组件和插件元数据。当组件卸载或页面导航时，已注册的组件引用不会被清理。HMR 热更新时，旧组件引用被新组件覆盖，但旧组件闭包中捕获的资源无法释放。多次注册/卸载循环后，所有组件引用累积，造成内存泄漏。
+- **影响**：HMR 热更新后内存泄漏，长时间运行后页面响应变慢。组件卸载后无法释放资源。
+- **建议**：添加 `unregisterComponent(mountPoint)` 和 `unregisterPlugin(name)` 方法。在组件 `useEffect` 清理函数中调用取消注册。
+
+### P-356 — S3：ActivityBar.tsx 审批按钮点击时无防抖，连续点击触发多次 API 调用
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/ActivityBar.tsx`（`handleApprovalClick`）
+- **现象**：`handleApprovalClick` 每次调用 `toggleApproval()` 和 `fetchPending()`。用户快速连续点击审批铃铛按钮时，每次点击都触发 `fetchPending()` API 调用。无防抖/节流机制，少量点击即可产生 5-10 次冗余 API 请求。
+- **影响**：不必要的 API 调用增加后端负载，移动端网络流量浪费。
+- **建议**：添加 300ms 防抖，或使用 `useRef` 追踪上次请求时间，1 秒内不重复请求。
+
+### P-357 — S3：BrowserPanel.tsx 无 Error Boundary，iframe 加载失败时页面空白
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/helm/BrowserPanel.tsx`（`iframe` 渲染区域）
+- **现象**：`BrowserPanel` 在 iframe 加载失败时通过 `onError` 事件设置错误状态，但该事件在某些情况下不被触发（如跨域资源加载被阻止、浏览器安全策略拦截）。`onLoad` 事件在 iframe 加载成功时触发，但如果页面加载后脚本执行出错，`isLoading` 状态仍为 `false` 但页面内容不显示。
+- **影响**：用户导航到不可访问的 URL 时，ifame 区域显示空白，无错误提示，用户无法判断是加载失败还是仍在加载。
+- **建议**：添加 `ErrorBoundary` 包裹 iframe 区域，并添加加载超时检测（如 15 秒后显示超时提示）。
+
+### P-358 — S3：LLMCallCard.tsx 使用 dangerouslySetInnerHTML 渲染 Markdown，存在 XSS 风险
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/helm/LLMCallCard.tsx:40,48`（`dangerouslySetInnerHTML`）
+- **现象**：`LLMCallCard` 使用 `dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}` 渲染 LLM 响应内容。`renderMarkdown` 函数将 Markdown 转换为 HTML，但未对输出进行 XSS 过滤。如果 LLM 响应包含恶意 HTML/JavaScript（如 `<img onerror>`、`<script>` 标签），将在用户浏览器中执行。
+- **影响**：恶意 LLM 响应可执行 XSS 攻击，窃取用户凭据、会话令牌，或执行任意操作。
+- **建议**：在 `renderMarkdown` 输出上使用 `DOMPurify.sanitize()` 或类似的 HTML 净化库。或使用安全的 Markdown 渲染组件（如 `react-markdown` + `rehype-sanitize`）。
+
+### P-359 — S3：HubEvalTab.tsx 等 Hub 组件中空 catch 块吞异常，调试困难
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/hub/HubEvalTab.tsx:62`、`HubObservabilityTab.tsx:60`、`HubLeaderboardTab.tsx:48`、`Marketplace.tsx:55`、`MissionHub.tsx:45`、`SignalsOverview.tsx:55`
+- **现象**：多个 Hub 组件的 `fetch` 调用中，`catch` 块仅执行 `setError("网络错误")` 或 `console.error`，但未记录原始错误信息。当网络请求失败时，开发人员无法区分是网络断开、服务端错误（500/503）、还是 JSON 解析错误。信号组件的 `markAllRead` 使用 `Promise.all` 且 catch 仅 `console.error`，部分失败时无回滚。
+- **影响**：网络故障时无法定位根本原因，延长故障排查时间。批量操作部分失败时数据不一致。
+- **建议**：在 catch 块中记录原始错误（`console.error(e)` 或日志系统），并设置更详细的错误消息。`Promise.all` 改为 `Promise.allSettled` + 部分失败提示。
+
+### P-360 — S3：SignalsOverview.tsx markAllRead 使用 Promise.all 无部分失败处理
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/signals/SignalsOverview.tsx:83-87`
+- **现象**：`markAllRead` 函数使用 `Promise.all(unread.map(s => fetch(...)))` 批量标记已读。如果其中一个请求失败，`Promise.all` 整体 reject，所有已成功的请求也被视为失败，但前端已将所有信号标记为已读。用户看到的 UI 状态与实际后端状态不一致。
+- **影响**：部分信号标记已读失败时，UI 显示全部已读但后端部分未读，刷新后未读信号重新出现，用户困惑。
+- **建议**：改用 `Promise.allSettled`，记录失败数量，向用户显示"X 条标记成功，Y 条失败"的反馈。
+
+### P-361 — S3：TopBar.tsx 健康检查定时器在组件卸载后继续运行
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/TopBar.tsx:40-50`
+- **现象**：`TopBar` 组件使用 `setInterval(checkHealth, 30000)` 每 30 秒检查后端健康状态。`useEffect` 清理函数中使用 `cancelled` 标志位，但 `setInterval` 的回调在执行 `checkHealth` 时仍会触发。如果 `TopBar` 组件在路由切换时被卸载，`setInterval` 继续运行，产生不必要的 API 调用。
+- **影响**：路由切换后后端健康检查仍在后台运行，浪费网络资源。长时间运行后可能累积多个定时器。
+- **建议**：`clearInterval(timer)` 足以停止定时器，无需 `cancelled` 标志位。确保 `timer` 在清理函数中被清除。
+
+### P-362 — S3：HubObservabilityTab.tsx 使用 AbortSignal.timeout 但未处理超时异常
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/hub/HubObservabilityTab.tsx:56`（`AbortSignal.timeout(3000)`）
+- **现象**：`HubObservabilityTab` 使用 `AbortSignal.timeout(3000)` 设置 3 秒超时，但 `catch` 块未区分超时异常和其他异常。超时产生的 `AbortError` 与其他网络错误一样被标记为"unknown"，用户无法判断是服务超时还是服务不可用。
+- **影响**：用户无法区分服务超时（可重试）和服务不可用（需等待），影响故障排查效率。
+- **建议**：在 catch 块中检查 `e.name === 'AbortError'`，设置不同的错误消息（如"服务响应超时（3秒）"）。
+
+### P-363 — S3：HubRoutingPolicyTab.tsx 输入验证不完整，空名称策略可被保存
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/hub/HubRoutingPolicyTab.tsx:103-108`
+- **现象**：路由策略编辑器的保存按钮仅检查 `!editing.name.trim()`，但未验证 `priority` 字段范围（0-100）、`targets` 数组是否为空。用户可保存策略名称为纯空格（trim 后为空但被保存）、priority 为负数或大于 100、或 targets 为空数组的策略。这些无效策略将被提交到后端并可能导致后端处理异常。
+- **影响**：无效策略数据导致后端异常，路由行为不可预测。
+- **建议**：添加完整的输入验证：name 非空、priority 在 0-100 之间、targets 至少有一个条目。
+
+### P-364 — S3：Marketplace.tsx install 函数无错误处理和用户反馈
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/marketplace/Marketplace.tsx:55-60`
+- **现象**：`install` 函数调用 `fetch("/api/v1/marketplace/install", ...)` 但不检查 `res.ok`，也不处理异常。安装失败时，用户无任何反馈（无 toast、无错误提示）。安装按钮状态不变，用户以为安装成功但实际未安装。
+- **影响**：能力包安装失败时用户不知情，以为安装成功并尝试使用，导致功能不可用时产生困惑。
+- **建议**：检查 `res.ok`，失败时显示错误提示。安装过程中禁用按钮并显示 loading 状态。
+
+### P-365 — S3：MissionHub.tsx 乐观更新后 API 失败时不回滚
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/components/mission/MissionHub.tsx:68-76`
+- **现象**：`handleMove` 函数先执行乐观更新（`setMissions(prev => prev.map(...))`），然后发起 API 调用。如果 API 调用失败，catch 块中调用 `void load()` 重新加载数据，但重新加载前用户看到的是错误的状态。乐观更新与后端实际状态不一致的时间窗口可能导致用户做出错误决策。
+- **影响**：API 失败时 UI 短暂显示错误状态，用户体验不佳，快速操作可能导致状态混乱。
+- **建议**：乐观更新后 API 失败时立即回滚到之前的状态，而非仅重新加载。使用 `useReducer` 管理状态以支持回滚。
+
+### P-366 — S3：useFetchWithCache.ts 无请求凭证，需认证的 API 返回 401
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useFetchWithCache.ts:68`（`fetch(url)`）
+- **现象**：`useFetchWithCache` 使用 `fetch(url)` 发起请求，但未设置 `credentials: 'include'`。当后端 API 需要认证（如 Cookie 或 Authorization header）时，该 hook 发起的请求不携带凭证，所有 API 返回 401。所有使用该 hook 的组件（如信号列表、任务列表）在需要认证时全部失效。
+- **影响**：需要认证的 API 接口全部返回 401，功能不可用。
+- **建议**：添加 `credentials: 'include'` 选项，或允许调用方传入自定义 fetch 配置。
+
+### P-367 — S3：useWebSocket.ts 无 WSS 降级和心跳检测，生产环境连接不稳定
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/hooks/useWebSocket.ts:80-85`（`new WebSocket`）
+- **现象**：`useWebSocket.ts` 硬编码 `ws://` 协议，无 `wss://` 降级逻辑。生产环境使用 HTTPS 时，浏览器安全策略阻止混合内容（HTTPS 页面加载 `ws://` 连接），WebSocket 连接失败。此外，无心跳检测机制，长时间空闲连接可能被中间网络设备断开而客户端不知情。
+- **影响**：生产环境 HTTPS 下 WebSocket 连接失败，实时通信功能不可用。空闲连接断开后无自动恢复。
+- **建议**：根据 `window.location.protocol` 自动选择 `ws://` 或 `wss://`。添加心跳 ping/pong 机制（如 30 秒间隔）。
+
+### P-368~P-374 — S4 轻微缺陷（7 个，详见子清单）
+- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`web/src/` 多个文件
+- **现象摘要**：
+  - P-368：`useWebSocket.ts` 空 catch 块吞 `JSON.parse` 异常，`onmessage` 中 `try {} catch {}` 无错误日志
+  - P-369：`useHelmWebSocket.ts` 空 catch 块吞 `fetch` 异常，`continueChat` 和 `pollInterval` 中多处 `catch {}`
+  - P-370：`WorkflowSelector.tsx` 空 catch 块吞 API 异常，用户无法感知工作流加载失败
+  - P-371：`ChatInput.tsx` 模型下拉列表使用 `any` 类型，类型安全缺失
+  - P-372：`helmEditorStore.ts` openTab 使用 `{ ...t, ...tab }` 合并更新，但未校验 tab 字段类型
+  - P-373：`helmPlanStore.ts` `confirmPlan` 使用 `parseInt(planId, 10)`，非数字 ID 返回 NaN
+  - P-374：`helmWorkspaceStore.ts` `fetchWorkspaceList` 使用 `catch (err)` 但 `err` 为 `unknown` 类型
+- **T7/T8**：是（T8）
+
+---
+
+> ## 【2026-08-11 第七轮浏览器实测｜P-375…P-382】
+>
+> 2026-08-11 Playwright 驱动系统 Chrome 遍历 8 个前端路由。所有页面 UI 加载正常但后端 API 全部返回 HTTP 500 / ERR_ABORTED。
+> 根因：后端 dev server 未运行或数据 API 尚未实现（stub 返回空数据）。
+
+### P-375 — /memory 页面 UI 加载正常但 API 返回 ERR_ABORTED，数据不可用
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/memory/page.tsx`
+- **现象**：`/memory` 记忆中心页面 UI 正常渲染（导航栏、布局），但控制台显示 `net::ERR_ABORTED` 错误。后端 `GET /api/v1/memory/feed` 端点未响应，动态/记忆流数据不可用，页面显示空状态。
+- **影响**：记忆中心功能不可用，用户无法查看记忆动态。
+- **建议**：实现后端记忆数据 API，或添加错误状态提示（如"后端服务未启动"）。
+
+### P-376 — /memory/catalog 页面显示"加载失败：HTTP 500"
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/memory/catalog/page.tsx`、`app/api/core/memory.py`
+- **现象**：`/memory/catalog` 集合目录页面调用 `GET /api/v1/memory/collections` 返回 HTTP 500。前端显示"加载失败：HTTP 500"和"暂无集合"。页面导航和筛选控件正常，但数据不可用。
+- **影响**：记忆集合目录功能完全不可用，用户无法查看和管理知识集合。
+- **建议**：修复后端 collections API 端点。
+
+### P-377 — /memory/health 页面显示"健康报告加载失败：HTTP 500"
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/memory/health/page.tsx`
+- **现象**：`/memory/health` 记忆健康页面调用 `GET /api/v1/memory/health` 返回 HTTP 500，前端显示"健康报告加载失败：HTTP 500"。
+- **影响**：记忆健康监控功能不可用。
+- **建议**：修复后端记忆健康 API 端点。
+
+### P-378 — /mission-hub 页面无数据加载，空状态
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/mission-hub/page.tsx`
+- **现象**：`/mission-hub` 任务中心页面 UI 正常渲染（列表/看板切换、筛选控件、刷新按钮），但 `GET /api/v1/missions` 返回 HTTP 500，页面显示"暂无任务·调整筛选或新建任务"空状态。无"新建任务"入口按钮。
+- **影响**：任务中心功能不可用，用户无法查看和管理任务。
+- **建议**：修复后端 missions API 端点，并添加"新建任务"入口。
+
+### P-379 — /signals 页面显示"加载失败：HTTP 500"
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/signals/page.tsx`
+- **现象**：`/signals` 信号总览页面 UI 正常渲染（严重度筛选、来源筛选、仅未读复选框），但 `GET /api/v1/signals` 返回 HTTP 500，前端显示"加载失败：HTTP 500"和"暂无信号"。
+- **影响**：信号中心功能不可用，用户无法查看和管理信号。
+- **建议**：修复后端 signals API 端点。
+
+### P-380 — /admin/settings 设置页面卡在"加载中..."，主内容区无法渲染
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/admin/settings/page.tsx`
+- **现象**：`/admin/settings` 设置中心页面左侧导航栏正常渲染，但主内容区显示"加载中..."。`SettingsShell` 组件包含数据加载逻辑，但后端 API 不可用或数据加载失败导致主内容区阻塞。
+- **影响**：设置功能完全不可用，用户无法配置系统。
+- **建议**：拆分 SettingsShell 的数据加载逻辑，使导航栏和内容区独立加载，内容区加载失败时显示错误提示而非卡死。
+
+### P-381 — /review 页面显示"加载评估任务..."，无数据
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/review/page.tsx`
+- **现象**：`/review` 评估中心页面显示"加载评估任务..."，`GET /api/v1/eval/tasks` 返回 HTTP 500。与 P-348 同根因（后端 eval API stub），但 P-348 仅针对 `/api/v1/eval/verdicts` 端点，本单针对 `/api/v1/eval/tasks` 端点。
+- **影响**：评估中心功能不可用，用户无法进行质量审核。
+- **建议**：实现后端 eval/tasks API 端点。
+
+### P-382 — /tasks 页面显示"加载中..."，任务列表不可用
+- **严重度**：S3 ｜ **分类**：功能缺失（浏览器实测） ｜ **状态**：Open
+- **文件**：`web/src/app/tasks/page.tsx`
+- **现象**：`/tasks` 任务列表页面显示"加载中..."，`GET /api/v1/tasks` 返回 HTTP 500。与 P-349 同根因，但 P-349 测试时返回空列表（`items: []`），本轮测试返回 HTTP 500，说明后端状态发生变化。
+- **影响**：任务管理功能不可用，用户无法查看和管理任务。
+- **建议**：修复后端 tasks API 端点，确保返回正确数据格式。
+
+---
+
+> ## 【2026-08-11 第七轮 clowder-ai 功能对比｜P-383…P-402】
+>
+> 2026-08-11 深入分析后新增 20 个缺失功能。累计 clowder-ai 对比缺失功能达 68 项。
+
+### P-383 — 文件管理系统（上传、预览、组织）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无文件管理系统。clowder-ai 实现了完整的文件管理功能（上传、预览、目录组织、文件搜索、版本管理）。ChatInput 虽然有文件上传按钮和拖拽上传功能，但无文件管理 UI（文件列表、目录树、搜索、预览）。
+- **影响**：用户无法管理和组织上传的文件，文件散落在各任务中无法复用。
+
+### P-384 — 实时协作功能（存在性、光标、编辑）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无实时协作功能。clowder-ai 实现了多用户实时协作（在线状态、光标位置、协同编辑）。FlowForge 的群聊功能（Council）仅支持消息交互，不支持文档级别协同编辑。
+- **影响**：多用户无法实时协作编辑同一文档，团队协作效率低。
+
+### P-385 — 仪表板/分析/报告系统
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 首页仪表板仅显示基础系统状态，无数据可视化、趋势分析、统计报告。clowder-ai 实现了完整的仪表板系统（图表、趋势线、KPI 卡片、自定义报告）。
+- **影响**：用户无法获得系统运行状况和使用趋势的直观了解。
+
+### P-386 — 多语言/i18n 支持
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 所有文字硬编码为中文，无国际化框架。clowder-ai 使用 `next-intl` 或 `react-i18next` 实现了多语言支持。
+- **影响**：无法支持多语言用户，国际化部署困难。
+
+### P-387 — 引导向导/教程系统
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无首次使用引导或教程系统。clowder-ai 实现了新用户引导向导（产品功能引导、快速上手教程）。
+- **影响**：新用户上手困难，学习曲线陡峭。
+
+### P-388 — 快捷键系统
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无快捷键系统。clowder-ai 实现了全局快捷键（Ctrl+K 搜索、Ctrl+N 新建、Ctrl+Enter 发送等）。
+- **影响**：高级用户操作效率低，无法快速完成常用操作。
+
+### P-389 — 拖拽系统
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 仅 ChatInput 支持文件拖拽上传，无通用拖拽系统。clowder-ai 实现了完整的拖拽系统（看板拖拽排序、面板拖拽调整、文件拖拽移动）。
+- **影响**：缺少直观的拖拽交互，用户体验不够流畅。
+
+### P-390 — 撤销/重做系统
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无撤销/重做功能。clowder-ai 实现了多级撤销/重做（编辑操作、状态变更、面板操作）。
+- **影响**：用户误操作后无法恢复，影响使用信心。
+
+### P-391 — 离线支持/PWA
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无 PWA 支持（无 Service Worker、无 manifest.json、无离线缓存）。clowder-ai 实现了 PWA（离线使用、缓存策略、后台同步）。
+- **影响**：网络不稳定时无法使用，不能安装到桌面。
+
+### P-392 — 通知中心（应用内通知）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 的 NotifySection 设置存在但无通知中心 UI。clowder-ai 实现了完整的应用内通知中心（通知列表、已读/未读、分类、批量操作）。
+- **影响**：用户无法查看和管理系统通知。
+
+### P-393 — 导出/导入功能
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无数据导出/导入功能。clowder-ai 实现了数据导出（JSON/CSV/PDF）和导入（配置迁移、批量导入）。
+- **影响**：用户无法迁移数据，数据锁定风险高。
+
+### P-394 — 模板系统
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无模板系统。clowder-ai 实现了任务模板、工作流模板、文档模板（预设配置、快速启动）。
+- **影响**：重复性工作无法复用模板，效率低。
+
+### P-395 — 文档版本历史
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无版本历史功能。clowder-ai 实现了文档版本管理（版本列表、差异对比、版本回滚）。
+- **影响**：用户无法查看和恢复历史版本。
+
+### P-396 — 富文本编辑器
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 仅支持 Markdown 渲染，无富文本编辑器。clowder-ai 集成了富文本编辑器（格式工具栏、图片插入、表格、链接管理）。
+- **影响**：用户无法进行格式丰富的文档编辑。
+
+### P-397 — 代码编辑器（带语法高亮）
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 使用 `<pre>` 标签展示代码，无语法高亮编辑器。clowder-ai 集成了 Monaco Editor 或 CodeMirror（语法高亮、代码补全、错误提示）。
+- **影响**：代码编辑体验差，无法进行高效的代码开发和调试。
+
+### P-398 — 全文搜索
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无全局搜索功能。clowder-ai 实现了全文搜索（Ctrl+K 搜索面板、跨会话搜索、语义搜索）。
+- **影响**：用户无法快速搜索历史消息、文档、任务，信息查找困难。
+
+### P-399 — 批量操作
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无批量操作功能。clowder-ai 实现了批量操作（批量删除、批量标记已读、批量状态变更）。
+- **影响**：用户需要逐条操作，处理大量数据时效率极低。
+
+### P-400 — Webhook 管理
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无 Webhook 管理界面。clowder-ai 实现了 Webhook 管理（创建、测试、日志、重试策略）。
+- **影响**：无法与外部系统进行事件驱动的集成。
+
+### P-401 — 自定义品牌/白标
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 品牌名称硬编码，无自定义品牌功能。clowder-ai 支持自定义品牌（Logo、颜色、域名、品牌名称）。
+- **影响**：企业客户无法定制品牌形象，SaaS 部署受限。
+
+### P-402 — 全部操作审计追踪
+- **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
+- **现象**：FlowForge 无操作审计日志。clowder-ai 实现了完整的审计追踪（操作记录、时间线、用户行为分析、合规报告）。
+- **影响**：无法满足企业合规要求，操作不可追溯。
 
 ---
 

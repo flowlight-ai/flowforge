@@ -20,6 +20,12 @@ export interface Thread {
   updated_at: string;
   pinned: boolean;
   deleted_at: string | null;
+  /** 收藏标志（UI 态，后端可选支持，缺失时仅在内存中维护） */
+  favorited?: boolean;
+  /** 会话标签 ID 列表（UI 态，后端可选支持） */
+  labels?: string[];
+  /** 未读消息数（UI 态，后端可选支持，缺失时为 0） */
+  unread_count?: number;
 }
 
 interface ThreadStoreState {
@@ -58,6 +64,12 @@ interface ThreadStoreState {
   loadTrash: () => Promise<void>;
   /** 切换置顶 */
   togglePin: (threadId: string, pinned: boolean) => Promise<void>;
+  /** 切换收藏（后端不支持时仅更新内存） */
+  toggleFavorite: (threadId: string, favorited: boolean) => Promise<void>;
+  /** 更新会话标签（后端不支持时仅更新内存） */
+  updateLabels: (threadId: string, labels: string[]) => Promise<void>;
+  /** 标记会话已读（清零未读数） */
+  markRead: (threadId: string) => void;
   /** 更新会话标题（首条消息后自动生成） */
   autoTitle: (threadId: string, firstMessage: string) => Promise<void>;
 
@@ -209,6 +221,65 @@ export const useThreadStore = create<ThreadStoreState>((set, get) => ({
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) });
     }
+  },
+
+  toggleFavorite: async (threadId: string, favorited: boolean) => {
+    // 乐观更新：先改本地，再尝试同步到后端
+    set((state) => ({
+      threads: state.threads.map((t) =>
+        t.id === threadId ? { ...t, favorited } : t
+      ),
+    }));
+    try {
+      const res = await fetch(`/api/v1/threads/${threadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ favorited }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const updated: Thread = await res.json();
+      // 后端返回的可能不含 favorited 字段，这里强制保留乐观值
+      set((state) => ({
+        threads: state.threads.map((t) =>
+          t.id === threadId ? { ...updated, favorited } : t
+        ),
+      }));
+    } catch {
+      // 后端不支持时静默失败，本地状态已更新
+    }
+  },
+
+  updateLabels: async (threadId: string, labels: string[]) => {
+    // 乐观更新
+    set((state) => ({
+      threads: state.threads.map((t) =>
+        t.id === threadId ? { ...t, labels } : t
+      ),
+    }));
+    try {
+      const res = await fetch(`/api/v1/threads/${threadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ labels }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const updated: Thread = await res.json();
+      set((state) => ({
+        threads: state.threads.map((t) =>
+          t.id === threadId ? { ...updated, labels } : t
+        ),
+      }));
+    } catch {
+      // 后端不支持时静默失败
+    }
+  },
+
+  markRead: (threadId: string) => {
+    set((state) => ({
+      threads: state.threads.map((t) =>
+        t.id === threadId ? { ...t, unread_count: 0 } : t
+      ),
+    }));
   },
 
   autoTitle: async (threadId: string, firstMessage: string) => {

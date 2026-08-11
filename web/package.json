@@ -19,10 +19,12 @@
     "prebuild": "node scripts/sync-vendor-assets.mjs"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@xyflow/react": "^12.10.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "diff": "^9.0.0",
+    "idb": "^8.0.3",
     "lucide-react": "^0.372.0",
     "next": "^14.2.0",
     "react": "^18.3.0",
@@ -40,5 +42,6 @@
     "postcss": "^8.5.23",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.4.0"
-  }
+  },
+  "packageManager": "pnpm@11.21.0+sha512.521705bce689924eac72f5a3587122f362689ef6571e55ba80076fd637c11132ecffada26fad4ea79c485bfddbfd3d5a2a5b05805a77e893de71ec8a6cca3bb1"
 }

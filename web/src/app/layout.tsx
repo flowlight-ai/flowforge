@@ -83,6 +83,21 @@ const shellConfig: ShellConfig = {
 export const metadata: Metadata = {
   title: "FlowForge - AI Agent OS",
   description: "AI Agent Operating System",
+  // PWA：manifest 链接（Next.js 自动渲染 <link rel="manifest">）
+  manifest: "/manifest.json",
+  // PWA：iOS Safari 全屏独立应用支持（等同 apple-mobile-web-app-capable）
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "FlowForge",
+  },
+};
+
+// PWA：theme-color 移至 viewport 导出（Next.js 14 规范）
+export const viewport: Viewport = {
+  themeColor: "#ff5c5c",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

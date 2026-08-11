@@ -3,15 +3,22 @@
 /**
  * fields.tsx — 基础表单字段组件
  *
- * 提供 Forgekin 编辑器的基础输入控件：名称 / 角色 / 形态 / 系统提示词 / 保存状态提示。
+ * 提供 Forgekin 编辑器的基础输入控件：名称 / 角色 / 形态 / 系统提示词 / CLI 绑定 / 保存状态提示。
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
  * 独立性：不依赖 clowder-ai 任何组件。
  */
 
-import type { RoleKind, SpeciesKind } from "./model";
-import { ROLE_OPTIONS, SPECIES_OPTIONS } from "./model";
+import { useState } from "react";
+import type { CliBinding, CliTool, ConnectionMode, RoleKind, SpeciesKind } from "./model";
+import {
+  ROLE_OPTIONS,
+  SPECIES_OPTIONS,
+  CLI_TOOL_OPTIONS,
+  CONNECTION_MODE_OPTIONS,
+} from "./model";
+import type { ForgekinBinding } from "./client";
 
 /* ------------------------------------------------------------------ */
 /* 共用样式                                                            */
@@ -225,5 +232,183 @@ export function PersistenceBanner({ state, message }: PersistenceBannerProps) {
       <span className="font-medium">{style.label}</span>
       {message && <span className="opacity-80">· {message}</span>}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* CliBindingSection                                                   */
+/* ------------------------------------------------------------------ */
+
+interface CliBindingSectionProps {
+  /** CLI 绑定表单值 */
+  value: CliBinding;
+  /** 表单变更回调 */
+  onChange: (patch: Partial<CliBinding>) => void;
+  /** 后端绑定状态（连通性 + API key 配置状态），可选 */
+  bindingStatus?: ForgekinBinding | null;
+  disabled?: boolean;
+}
+
+/**
+ * CliBindingSection —— CLI 工具绑定分区。
+ *
+ * 提供以下编辑能力：
+ *   - CLI 工具下拉选择（claude_code/codex/gemini/opencode/...）
+ *   - 模型 ID 输入
+ *   - API Key 输入（密码类型，支持显示/隐藏切换）
+ *   - 连接模式选择（cli/bridge/api）
+ *
+ * 当传入 bindingStatus 时，额外展示连通状态与 API key 配置状态徽章。
+ *
+ * 红线 11：API key 通过 PUT 请求传给后端，后端存到 .env（已 gitignore），
+ * 前端不持久化密钥，仅在输入框中暂存于组件状态。
+ */
+export function CliBindingSection({
+  value,
+  onChange,
+  bindingStatus,
+  disabled,
+}: CliBindingSectionProps) {
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  return (
+    <section
+      className="rounded-lg border border-[var(--cafe-border,#2a2c3a)] bg-[var(--cafe-surface-elevated,#15151c)] p-4 space-y-3"
+      data-forgekin-section="cli-binding"
+    >
+      <h3 className="text-xs font-semibold text-[var(--cafe-text-secondary,#9ca3af)] uppercase tracking-wider mb-2">
+        CLI 工具绑定
+      </h3>
+
+      {/* CLI 工具选择 */}
+      <div className="forgekin-field" data-forgekin-field="cli-tool">
+        <label className={FIELD_LABEL_CLASS} htmlFor="forgekin-cli-tool">
+          CLI 工具
+        </label>
+        <select
+          id="forgekin-cli-tool"
+          className={FIELD_INPUT_CLASS}
+          value={value.cli_tool}
+          onChange={(e) => onChange({ cli_tool: e.target.value as CliTool })}
+          disabled={disabled}
+          data-forgekin-input="cli-tool"
+        >
+          {CLI_TOOL_OPTIONS.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 模型 ID */}
+      <div className="forgekin-field" data-forgekin-field="model-id">
+        <label className={FIELD_LABEL_CLASS} htmlFor="forgekin-model-id">
+          模型 ID
+        </label>
+        <input
+          id="forgekin-model-id"
+          type="text"
+          className={`${FIELD_INPUT_CLASS} font-mono`}
+          value={value.model_id}
+          onChange={(e) => onChange({ model_id: e.target.value })}
+          disabled={disabled}
+          maxLength={128}
+          placeholder="如 gemini-2.5-flash / Doubao-Seed2.0"
+          data-forgekin-input="model-id"
+        />
+      </div>
+
+      {/* API Key（密码类型，支持显示/隐藏） */}
+      <div className="forgekin-field" data-forgekin-field="api-key">
+        <label className={FIELD_LABEL_CLASS} htmlFor="forgekin-api-key">
+          API Key
+        </label>
+        <div className="relative">
+          <input
+            id="forgekin-api-key"
+            type={showApiKey ? "text" : "password"}
+            className={`${FIELD_INPUT_CLASS} font-mono pr-16`}
+            value={value.api_key}
+            onChange={(e) => onChange({ api_key: e.target.value })}
+            disabled={disabled}
+            maxLength={256}
+            placeholder={bindingStatus?.api_key_configured ? "已配置（输入可覆盖）" : "输入 API Key"}
+            data-forgekin-input="api-key"
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            onClick={() => setShowApiKey((prev) => !prev)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded text-[var(--cafe-text-muted,#6b7280)] hover:text-[var(--cafe-text,#e5e7eb)] hover:bg-[var(--console-rail-item,#252633)] transition-colors"
+            tabIndex={-1}
+            aria-label={showApiKey ? "隐藏 API Key" : "显示 API Key"}
+          >
+            {showApiKey ? "隐藏" : "显示"}
+          </button>
+        </div>
+        <p className="mt-1 text-[10px] text-[var(--cafe-text-muted,#6b7280)]">
+          密钥存储到 .env 文件（已 gitignore），YAML 中仅存环境变量引用。
+        </p>
+      </div>
+
+      {/* 连接模式 */}
+      <div className="forgekin-field" data-forgekin-field="connection-mode">
+        <label className={FIELD_LABEL_CLASS} htmlFor="forgekin-connection-mode">
+          连接模式
+        </label>
+        <select
+          id="forgekin-connection-mode"
+          className={FIELD_INPUT_CLASS}
+          value={value.mode}
+          onChange={(e) => onChange({ mode: e.target.value as ConnectionMode })}
+          disabled={disabled}
+          data-forgekin-input="connection-mode"
+        >
+          {CONNECTION_MODE_OPTIONS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 绑定状态徽章 */}
+      {bindingStatus && (
+        <div className="flex flex-wrap items-center gap-2 pt-1" data-forgekin-binding-status="true">
+          <span
+            className="text-[10px] px-2 py-0.5 rounded font-medium"
+            style={{
+              background: bindingStatus.connected
+                ? "var(--semantic-success-surface,rgba(34,197,94,0.15))"
+                : "var(--semantic-critical-surface,rgba(239,68,68,0.15))",
+              color: bindingStatus.connected
+                ? "var(--semantic-success,#22c55e)"
+                : "var(--semantic-critical,#ef4444)",
+            }}
+          >
+            {bindingStatus.connected ? "● CLI 已连通" : "○ CLI 未连通"}
+          </span>
+          <span
+            className="text-[10px] px-2 py-0.5 rounded font-medium"
+            style={{
+              background: bindingStatus.api_key_configured
+                ? "var(--semantic-info-surface,rgba(59,130,246,0.15))"
+                : "var(--semantic-warning-surface,rgba(245,158,11,0.15))",
+              color: bindingStatus.api_key_configured
+                ? "var(--semantic-info,#3b82f6)"
+                : "var(--semantic-warning,#f59e0b)",
+            }}
+          >
+            {bindingStatus.api_key_configured ? "● API Key 已配置" : "○ API Key 未配置"}
+          </span>
+          {bindingStatus.connectivity_reason && (
+            <span className="text-[10px] text-[var(--cafe-text-muted,#6b7280)]">
+              {bindingStatus.connectivity_reason}
+            </span>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
