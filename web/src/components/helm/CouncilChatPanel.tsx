@@ -1252,6 +1252,27 @@ export default function CouncilChatPanel({
             </div>
           )}
 
+          {/* 斜杠命令菜单 — 与 @mention 菜单同层（输入区）；参考 clowder-ai ChatInputMenus 设计 */}
+          {showSlashMenu && filteredSlashCommands.length > 0 && (
+            <SlashCommandMenu
+              show={showSlashMenu}
+              filter={slashFilter}
+              selectedIdx={slashSelectedIdx}
+              onSelectIdx={setSlashSelectedIdx}
+              onSelect={(cmd) => {
+                handleSlashCommand(cmd);
+                setShowSlashMenu(false);
+                setSlashFilter("");
+                setInputText("");
+              }}
+              onClose={() => {
+                setShowSlashMenu(false);
+                setSlashFilter("");
+              }}
+              menuRef={slashMenuRef}
+            />
+          )}
+
           <div className="flex items-end gap-2">
             <textarea
               ref={inputRef}
