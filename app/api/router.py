@@ -22,6 +22,7 @@ from flowforge.app.api.agents import agents, modes, forgemind, external_agents
 from flowforge.app.api.agents import threads
 from flowforge.app.api.agents import bootcamp
 from flowforge.app.api.agents import skills, concierge, voice, capability
+from flowforge.app.api.agents import approvals
 
 # ── 工作流模块 ──────────────────────────────────────────────────
 from flowforge.app.api.workflows import workflows, tasks
@@ -62,6 +63,8 @@ router.include_router(modes.router)
 router.include_router(forgemind.router)
 # 外部接入智能体状态检查（WEB-FUSION §6.3）
 router.include_router(external_agents.router)
+# 审批中心（ApprovalHub：待审批列表 + 审批/拒绝）— 参考 clowder-ai approvalHubStore
+router.include_router(approvals.router)
 # 会话管理（群聊会话 CRUD + 消息持久化）
 router.include_router(threads.router)
 # 灵智训练营（Bootcamp）— 用户引导 + 智能体成长训练（参考 clowder-ai F087）
