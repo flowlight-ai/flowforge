@@ -118,7 +118,7 @@ class ConnectionManager:
         message = {
             "type": event_type,
             "seq": self._next_seq(),
-            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "payload": payload or {},
         }
         if not self.active_connections.get(task_id):
@@ -257,7 +257,7 @@ async def logs_websocket(websocket: WebSocket):
                     await websocket.send_json({
                         "type": "log",
                         "line": stripped,
-                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+                        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                     })
             except (OSError, RuntimeError) as e:
                 # 日志文件读失败（OSError）或连接已关闭（RuntimeError）— P-78

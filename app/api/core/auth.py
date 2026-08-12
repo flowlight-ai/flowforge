@@ -49,7 +49,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")},
     }
 
 
@@ -57,7 +57,7 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
     return {
         "status": "error",
         "error": {"code": code, "message": message, "details": details or {}},
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")},
     }
 
 

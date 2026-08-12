@@ -40,7 +40,7 @@ class AuditLogger:
     def log(self, level: str, action: str, task_id: str = "",
             mode: str = "", details: dict = None, trace_id: str = ""):
         log_id = str(uuid.uuid4())
-        timestamp = datetime.now(timezone.utc).isoformat() + "Z"
+        timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         details_json = json.dumps(details or {}, ensure_ascii=False, default=str)
         self._conn.execute(
             "INSERT INTO audit_logs (id, timestamp, level, task_id, mode, action, details, trace_id) "
@@ -95,7 +95,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")},
     }
 
 
