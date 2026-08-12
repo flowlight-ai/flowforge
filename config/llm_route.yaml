@@ -39,19 +39,18 @@ routes:
   # 最坏情况: 60+60+60+22=202s writer, +60s扩展+60s评委=322s
   # 典型情况: 21s DeepSeek成功, +60s扩展+60s评委=141s < 300s ✓
   creative:
-    # v5.7: primary改为Qwen3.6-Plus（Doubao-Seed2.0频繁echo/超时）
-    # Qwen实测稳定：228s产出1445字，0.832分
-    # Doubao降为fallback，echo_response加入failover条件
+    # v5.99.78修复(P-51): 按 openroute 实测速度重排 (2026-08-12 重启后实测)
+    # GLM-5.1=6.3s/Doubao-Seed2.0=9.8s 最快, Qwen3.6-Plus=23-88s慢+会话污染,
+    # HunYuan3=45s+(元宝页goto慢), 3分钟全流程目标下首选必须快稳模型
     primary_provider: openroute
-    primary_model: Qwen3.6-Plus
+    primary_model: GLM-5.1
     fallback_providers:
       - openroute
     fallback_models:
       - Doubao-Seed2.0
-      - HunYuan3
-      - DeepSeek-V4-Pro
+      - Qwen3.6-Plus
       - Kimi-K2.6
-      - GLM-5.1
+      - HunYuan3
       - MiniMax-M3
     failover_policy:
       conditions:
