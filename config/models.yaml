@@ -258,9 +258,11 @@ assignments:
     - zhipu/glm-4-flash
   content_refine:
     # v5.99.78修复(P-51): 同步content_create — GLM-5.1首选(实测6s最快)
-    primary: openroute/GLM-5.1
+    # 2026-08-12修复2(P-51): GLM-5.1润色实测返回prompt分析过程("- Role: Query understanding expert."6257字)而非润色正文
+    #   已加echo签名拦截(editor_engine), 但拦截后降级返回原draft等于润色失效; Doubao-Seed2.0实测稳定输出正文, 改首选
+    primary: openroute/Doubao-Seed2.0
     fallbacks:
-    - openroute/Doubao-Seed2.0
+    - openroute/GLM-5.1
     - openroute/Qwen3.6-Plus
     - openroute/Kimi-K2.6
     - zhipu/glm-4-flash
