@@ -29,9 +29,11 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from flowforge.core.tracing import get_logger
@@ -103,6 +105,8 @@ class ContinuousForeman:
         *,
         config: Optional[ForemanConfig] = None,
         swarm_coordinator: Optional[Any] = None,
+        eval_ledger_store: Optional[Any] = None,
+        workspace_root: Optional[str] = None,
     ) -> None:
         """初始化 Foreman.
 
@@ -110,10 +114,20 @@ class ContinuousForeman:
             runtime: SelfDevRuntime 实例（提供 5 个 run_xxx_loop 方法）
             config: Foreman 配置（None 用默认）
             swarm_coordinator: SwarmCoordinator 实例（None 在第一次 start 时创建）
+            eval_ledger_store: EvalLedgerStore 实例（P-77：任务源 2 失败信号）
+            workspace_root: 工作区根目录（P-77：task.md / 代码 TODO 扫描基准）
         """
         self._runtime = runtime
         self._config = config or ForemanConfig()
         self._swarm = swarm_coordinator
+        self._eval_ledger_store = eval_ledger_store
+        self._workspace_root = (
+            Path(workspace_root).resolve()
+            if workspace_root
+            else Path.cwd().resolve()
+        )
+        self._seen_task_md_titles: set[str] = set()
+        self._last_periodic_scan_at: Optional[datetime] = None
 
         # 运行状态
         self._stats = ForemanStats()
@@ -385,9 +399,9 @@ class ContinuousForeman:
         # 任务源 1: operator 显式提交的任务（通过 emergency_queue 或 submit_operator_task）
         # 已在 _emergency_loop 中处理，这里不重复
 
-        # 任务源 2: Eval Ledger 失败信号（TODO: Phase 2 实现，需集成 EvalLedger）
-        # eval_tasks = await self._scan_eval_ledger_failures()
-        # tasks.extend(eval_tasks)
+        # 任务源 2: Eval Ledger 失败信号（P-77：集成 EvalLedgerStore）
+        eval_tasks = await self._scan_eval_ledger_failures()
+        tasks.extend(eval_tasks)
 
         # 任务源 3: task.md 中 ⏳/🔄 状态的任务
         task_md_tasks = await self._scan_task_md()
@@ -401,15 +415,138 @@ class ContinuousForeman:
         tasks = sorted(tasks, key=lambda t: t.get("priority", "normal"))
         return tasks[:limit]
 
-    async def _scan_task_md(self) -> List[Dict[str, Any]]:
-        """扫描 task.md 中的待办任务.
+    async def _scan_eval_ledger_failures(self) -> List[Dict[str, Any]]:
+        """任务源 2: Eval Ledger 失败信号（P-77）.
+
+        从注入的 EvalLedgerStore 查询被拒绝（未合入）的 Eval 记录，
+        转为 code 闭环任务交给 sherlock 修复。
 
         Returns:
             任务字典列表
         """
-        # TODO: Phase 2 实现 — 解析 task.md 提取 ⏳/🔄 状态任务
-        # 当前返回空列表，避免在没有 task.md 时报错
-        return []
+        if self._eval_ledger_store is None:
+            self._logger.debug(
+                "任务源 2 跳过: 未注入 eval_ledger_store "
+                "（构造时传入 EvalLedgerStore 实例）"
+            )
+            return []
+
+        list_rejected = getattr(self._eval_ledger_store, "list_rejected", None)
+        if list_rejected is None:
+            return []
+        try:
+            rejected = list_rejected()
+        except Exception as e:
+            self._logger.warning(f"任务源 2 读取 Eval Ledger 失败: {e}")
+            return []
+
+        tasks: List[Dict[str, Any]] = []
+        for ledger in rejected:
+            eval_id = getattr(ledger, "eval_id", "")
+            method_id = getattr(ledger, "method_id", "")
+            proposal_id = getattr(ledger, "proposal_id", "")
+            net_gain = getattr(ledger, "net_gain", None)
+            reject_reason = getattr(ledger, "reject_reason", "") or ""
+            tasks.append(
+                {
+                    "title": f"Eval 失败修复: {method_id}",
+                    "description": (
+                        f"Eval Ledger 记录 {eval_id} 未通过评估"
+                        f"（net_gain={net_gain}, reason={reject_reason}），"
+                        f"关联提案 {proposal_id}，请分析失败原因并改进。"
+                    ),
+                    "required_capabilities": ["code_generation", "bug_fixing"],
+                    "loop_type": "code",
+                    "forgekin_id": "sherlock",
+                    "priority": "normal",
+                    "context": {
+                        "task_source": "eval_ledger",
+                        "eval_id": eval_id,
+                        "method_id": method_id,
+                        "proposal_id": proposal_id,
+                    },
+                }
+            )
+        if tasks:
+            self._logger.info(
+                f"任务源 2: Eval Ledger 发现 {len(tasks)} 条失败信号"
+            )
+        return tasks
+
+    async def _scan_task_md(self) -> List[Dict[str, Any]]:
+        """扫描 task.md 中的待办任务（P-77）. 
+
+        解析工作区根目录 task.md 中 ⏳（待办）/ 🔄（进行中）状态的行，
+        按关键词推断 SelfDev 闭环类型。已生成过的任务标题去重。
+
+        Returns:
+            任务字典列表
+        """
+        task_md = self._workspace_root / "task.md"
+        if not task_md.is_file():
+            return []
+
+        try:
+            text = await asyncio.to_thread(task_md.read_text, encoding="utf-8")
+        except OSError as e:
+            self._logger.warning(f"任务源 3 读取 task.md 失败: {e}")
+            return []
+
+        tasks: List[Dict[str, Any]] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            # 匹配 ⏳ 或 🔄 开头的任务行（允许前导列表符号）
+            if "⏳" not in stripped and "🔄" not in stripped:
+                continue
+            # 去掉 Markdown 列表符号与状态图标
+            cleaned = re.sub(r"^[-*]\s+", "", stripped)
+            cleaned = cleaned.replace("⏳", "").replace("🔄", "").strip()
+            if not cleaned or len(cleaned) < 3:
+                continue
+            if cleaned in self._seen_task_md_titles:
+                continue
+            self._seen_task_md_titles.add(cleaned)
+            loop_type = self._infer_loop_type_from_text(cleaned)
+            tasks.append(
+                {
+                    "title": f"task.md: {cleaned[:60]}",
+                    "description": f"task.md 待办任务：{cleaned}",
+                    "required_capabilities": [],
+                    "loop_type": loop_type,
+                    "forgekin_id": self._loop_type_to_forgekin(loop_type),
+                    "priority": "normal",
+                    "context": {"task_source": "task_md", "source_line": stripped},
+                }
+            )
+        if tasks:
+            self._logger.info(f"任务源 3: task.md 发现 {len(tasks)} 个待办任务")
+        return tasks
+
+    @staticmethod
+    def _infer_loop_type_from_text(text: str) -> str:
+        """根据任务文本关键词推断 SelfDev 闭环类型（P-77）. """
+        lower = text.lower()
+        # “代码审查”含“代码”，review 需先于 code 判定
+        if any(k in lower for k in ("审查", "review", "检查")):
+            return "review"
+        if any(k in lower for k in ("bug", "修复", "fix", "代码", "重构", "todo")):
+            return "code"
+        if any(k in lower for k in ("测试", "test", "用例", "coverage", "覆盖率")):
+            return "test"
+        if any(k in lower for k in ("架构", "arch", "adr", "设计决策", "框架")):
+            return "framework"
+        return "doc"  # 默认文档闭环
+
+    @staticmethod
+    def _loop_type_to_forgekin(loop_type: str) -> str:
+        """闭环类型 → 默认 Forgekin ID（与 _infer_loop_type 映射一致）. """
+        return {
+            "doc": "wenxin",
+            "code": "sherlock",
+            "framework": "luban",
+            "review": "vangogh",
+            "test": "davinci",
+        }.get(loop_type, "wenxin")
 
     async def _scan_periodic(self) -> List[Dict[str, Any]]:
         """定时扫描任务源（文档过期/代码 bug 等）.
@@ -427,20 +564,94 @@ class ContinuousForeman:
         # 低频扫描（每 10 次主循环才触发一次）
         if self._stats.total_loops % 10 != 0:
             return []
+        # P-77: 冷却期内跳过全部定时扫描（含 doc 示例任务）
+        if self._last_periodic_scan_at is not None:
+            elapsed = datetime.now(timezone.utc) - self._last_periodic_scan_at
+            if elapsed.total_seconds() < 600:
+                return []
 
-        # TODO: Phase 2 实现 — 实际扫描文档/代码/架构
-        # 当前返回一个示例任务（doc 闭环扫描文档过期）
-        return [
-            {
-                "title": "定时扫描：文档过期检测",
-                "description": "SelfDevDocLoop Discover 阶段扫描过期文档",
-                "required_capabilities": ["doc_generation"],
-                "loop_type": "doc",
-                "forgekin_id": "wenxin",
-                "priority": "low",
-                "context": {"task_source": "periodic_scan"},
-            }
-        ]
+        tasks: List[Dict[str, Any]] = []
+
+        # P-77: 代码 TODO/FIXME 扫描（code 闭环）
+        todo_tasks = await self._scan_code_todos()
+        tasks.extend(todo_tasks)
+
+        # 文档过期检测（doc 闭环，低频示例保留）
+        if not todo_tasks:
+            tasks.append(
+                {
+                    "title": "定时扫描：文档过期检测",
+                    "description": "SelfDevDocLoop Discover 阶段扫描过期文档",
+                    "required_capabilities": ["doc_generation"],
+                    "loop_type": "doc",
+                    "forgekin_id": "wenxin",
+                    "priority": "low",
+                    "context": {"task_source": "periodic_scan"},
+                }
+            )
+        return tasks
+
+    async def _scan_code_todos(self) -> List[Dict[str, Any]]:
+        """扫描工作区代码中的 TODO/FIXME 标记（P-77，低频）. 
+
+        仅扫描工作区根目录下的 *.py 文件（跳过 .venv/.git/node_modules），
+        同一文件只生成一个任务。
+
+        Returns:
+            任务字典列表
+        """
+        if self._last_periodic_scan_at is not None:
+            # 距上次扫描不足 10 分钟则跳过（避免重复任务风暴）
+            elapsed = datetime.now(timezone.utc) - self._last_periodic_scan_at
+            if elapsed.total_seconds() < 600:
+                return []
+        self._last_periodic_scan_at = datetime.now(timezone.utc)
+        excluded_dirs = {".venv", "venv", ".git", "node_modules", "__pycache__", ".next"}
+        todo_pattern = re.compile(r"#\s*TODO[:\s]", re.IGNORECASE)
+        tasks: List[Dict[str, Any]] = []
+
+        def _collect() -> List[Dict[str, str]]:
+            hits: List[Dict[str, str]] = []
+            for py_file in self._workspace_root.rglob("*.py"):
+                if any(part in excluded_dirs for part in py_file.parts):
+                    continue
+                try:
+                    content = py_file.read_text(encoding="utf-8", errors="ignore")
+                except OSError:
+                    continue
+                if todo_pattern.search(content):
+                    rel = py_file.relative_to(self._workspace_root)
+                    hits.append({"path": str(rel), "count": str(len(todo_pattern.findall(content)))})
+            return hits
+
+        try:
+            hits = await asyncio.to_thread(_collect)
+        except Exception as e:
+            self._logger.warning(f"任务源 4 代码 TODO 扫描失败: {e}")
+            return []
+
+        for hit in hits[:5]:  # 单次最多 5 个文件，避免任务风暴
+            tasks.append(
+                {
+                    "title": f"修复代码 TODO: {hit['path']}",
+                    "description": (
+                        f"文件 {hit['path']} 中发现 {hit['count']} 处 "
+                        "TODO/FIXME 标记，请分析并实现缺失逻辑。"
+                    ),
+                    "required_capabilities": ["code_generation", "bug_fixing"],
+                    "loop_type": "code",
+                    "forgekin_id": "sherlock",
+                    "priority": "low",
+                    "context": {
+                        "task_source": "periodic_scan",
+                        "scan_type": "code_todos",
+                        "file": hit["path"],
+                    },
+                }
+            )
+        if tasks:
+            self._logger.info(f"任务源 4: 代码扫描发现 {len(tasks)} 个 TODO 文件")
+        return tasks
 
     # ══════════════════════════════════════════════════════════════
     # §4 任务执行
@@ -858,17 +1069,26 @@ def create_foreman(
     runtime: Any,
     *,
     config: Optional[ForemanConfig] = None,
+    eval_ledger_store: Optional[Any] = None,
+    workspace_root: Optional[str] = None,
 ) -> ContinuousForeman:
     """创建 ContinuousForeman 实例.
 
     Args:
         runtime: SelfDevRuntime 实例
         config: Foreman 配置（None 用默认）
+        eval_ledger_store: EvalLedgerStore 实例（P-77 任务源 2）
+        workspace_root: 工作区根目录（P-77 任务源 3/4）
 
     Returns:
         ContinuousForeman 实例
     """
-    return ContinuousForeman(runtime, config=config)
+    return ContinuousForeman(
+        runtime,
+        config=config,
+        eval_ledger_store=eval_ledger_store,
+        workspace_root=workspace_root,
+    )
 
 
 __all__ = [
