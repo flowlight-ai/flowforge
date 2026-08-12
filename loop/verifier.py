@@ -551,11 +551,23 @@ class MultiJudgeVerifier(LoopVerifier):
                 "max_concurrency": max_concurrency,
             })
         _judges_start = time.time()
-        judge_tasks = [_limited_call_judge(m, prompt, task, pa, judge_timeout) for m, pa in active_judges]
-        judge_results = await asyncio.gather(
-            *(asyncio.wait_for(t, timeout=judge_timeout) for t in judge_tasks),
-            return_exceptions=True,
-        )
+        judge_tasks = [asyncio.create_task(_limited_call_judge(m, prompt, task, pa, judge_timeout)) for m, pa in active_judges]
+        # 2026-08-12修复(P-58): 移除外层重复wait_for — _call_judge内部已有每评委judge_timeout超时,
+        #   外层wait_for从任务创建时计时(含信号量排队等待),并发=评委数时第3个评委排队后
+        #   剩余时间不足被误杀;且wait_for超时取消会丢引用产生孤儿请求继续占用webchat会话,
+        #   导致后续请求"正在处理您的其他请求"。现保留create_task引用,超时由内层负责,
+        #   内层超时后任务正常结束不产生孤儿。
+        judge_results = await asyncio.gather(*judge_tasks, return_exceptions=True)
+        # 安全网: 若某评委任务意外挂起(内层超时未生效),等待有限时间后主动取消避免孤儿请求
+        _grace = judge_timeout + 30
+        _t_grace = time.time()
+        while any(not t.done() for t in judge_tasks) and time.time() - _t_grace < _grace:
+            await asyncio.sleep(1.0)
+        for i, t in enumerate(judge_tasks):
+            if not t.done():
+                t.cancel()
+                logger.warning(f"[评委安全网] judge '{judge_names[i]}' 任务挂起超过{_grace}s,已取消")
+        judge_results = [t.result() if t.done() and not t.cancelled() and t.exception() is None else (t.exception() or asyncio.TimeoutError(f"judge '{judge_names[i]}' cancelled")) for i, t in enumerate(judge_tasks)]
         _judges_dur = time.time() - _judges_start
         _success_count = sum(1 for r in judge_results if r and not isinstance(r, Exception))
         logger.info(
