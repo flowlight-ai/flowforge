@@ -78,13 +78,27 @@ class MessageEdit(BaseModel):
 async def list_threads(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    q: str | None = Query(None, description="标题搜索关键字（子串匹配，大小写不敏感）"),
+    date_from: str | None = Query(None, description="更新时间起（ISO 格式，含）"),
+    date_to: str | None = Query(None, description="更新时间止（ISO 格式，含）"),
 ) -> dict[str, Any]:
-    """列出所有会话（排除已删除，置顶优先，按更新时间降序）。"""
+    """列出所有会话（排除已删除，置顶优先，按更新时间降序）。
+
+    支持分页（limit/offset）、标题搜索（q）与更新时间范围过滤
+    （date_from/date_to）— P-106。
+    """
     store = get_thread_store()
     threads = store.list_threads(include_deleted=False)
+    if q:
+        ql = q.lower()
+        threads = [t for t in threads if ql in (t.get("title") or "").lower()]
+    if date_from:
+        threads = [t for t in threads if (t.get("updated_at") or "") >= date_from]
+    if date_to:
+        threads = [t for t in threads if (t.get("updated_at") or "") <= date_to]
     total = len(threads)
     items = threads[offset : offset + limit]
-    return {"items": items, "total": total, "limit": limit, "offset": offset}
+    return {"items": items, "total": total, "limit": limit, "offset": offset, "q": q}
 
 
 @router.post("")

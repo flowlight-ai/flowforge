@@ -9,7 +9,7 @@ logger = get_logger("memory_api")
 
 router = APIRouter(prefix="/memory", tags=["memory"])
 
-_memory_manager: MemoryManager = None
+_memory_manager: MemoryManager | None = None
 
 
 def init_memory_api(mm: MemoryManager):

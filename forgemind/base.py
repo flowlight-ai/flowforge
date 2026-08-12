@@ -28,8 +28,11 @@ Forgekin是"赋予灵魂和感情的智能体"——区别于主流 multi-agent 
 
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Any
+
+import httpx
 
 from flowforge.forgemind.soul_imprint import SoulImprint
 from flowforge.forgemind.species import ForgekinSpecies
@@ -146,9 +149,12 @@ class ForgekinBase(ABC):
                      f"觉醒阶是 {self.awakening_stage.value}（{self.awakening_stage.chinese_name}）。")
 
         # ── 真实项目上下文（让响应项目相关，避免泛泛而谈）──────────
+        from pathlib import Path
+
+        project_root = Path(__file__).resolve().parents[2]
         parts.append("\n## 当前项目上下文（真实信息）")
         parts.append("- 项目名: FlowForge（AI Agent OS / 灵智体锻造平台）")
-        parts.append("- 项目根: d:\\software\\openclaw\\flowforge")
+        parts.append(f"- 项目根: {project_root}")
         parts.append("- 技术栈: Python 3.11+ / FastAPI / LangGraph / Next.js 14")
         parts.append("- 你的 LLM 后端: 智谱 GLM-4-Flash（真实 API 调用，非模拟）")
         parts.append("- 5个灵智体: 文心(wenxin/文档员)、夏洛克(sherlock/开发者)、鲁班(luban/架构师)、梵高(vangogh/审查员)、达芬奇(davinci/测试员)")
@@ -251,14 +257,9 @@ class ForgekinBase(ABC):
                     result.setdefault("forgekin_id", self.forgekin_id)
                     result.setdefault("session_id", session_id)
                     return result
-                except Exception as exc:  # noqa: BLE001
-                    return {
-                        "content": f"[{self.name} ZHIPU 异常] {type(exc).__name__}: {exc}",
-                        "model": provider,
-                        "usage": {"latency_ms": 0, "error": True},
-                        "session_id": session_id,
-                        "forgekin_id": self.forgekin_id,
-                    }
+                except Exception as exc:  # noqa: BLE001 — P-116: 分类后统一返回错误响应
+                    # P-116: 区分可重试（超时/网络）与不可重试（配置）异常
+                    return self._chat_error("ZHIPU", exc, session_id, model=provider)
 
         # openroute provider：通过 HTTP 调用 OpenRoute 网关（推荐，稳定快速）
         if provider == "openroute":
@@ -277,14 +278,9 @@ class ForgekinBase(ABC):
                     result.setdefault("forgekin_id", self.forgekin_id)
                     result.setdefault("session_id", session_id)
                     return result
-                except Exception as exc:  # noqa: BLE001
-                    return {
-                        "content": f"[{self.name} OpenRoute 异常] {type(exc).__name__}: {exc}",
-                        "model": provider,
-                        "usage": {"latency_ms": 0, "error": True},
-                        "session_id": session_id,
-                        "forgekin_id": self.forgekin_id,
-                    }
+                except Exception as exc:  # noqa: BLE001 — P-116: 分类后统一返回错误响应
+                    # P-116: 区分可重试（超时/网络）与不可重试（配置）异常
+                    return self._chat_error("OpenRoute", exc, session_id, model=provider)
 
         # CLI provider：通过 subprocess 调用三方 Agent CLI（claude_code/codex/gemini/opencode/codebuddy/qodercli/iflow）
         if provider not in ("trae", "openroute", "zhipu"):
@@ -303,14 +299,9 @@ class ForgekinBase(ABC):
                     result.setdefault("forgekin_id", self.forgekin_id)
                     result.setdefault("session_id", session_id)
                     return result
-                except Exception as exc:  # noqa: BLE001
-                    return {
-                        "content": f"[{self.name} CLI 异常] {type(exc).__name__}: {exc}",
-                        "model": provider,
-                        "usage": {"latency_ms": 0, "error": True},
-                        "session_id": session_id,
-                        "forgekin_id": self.forgekin_id,
-                    }
+                except Exception as exc:  # noqa: BLE001 — P-116: 分类后统一返回错误响应
+                    # P-116: 区分可重试（超时/网络）与不可重试（配置）异常
+                    return self._chat_error("CLI", exc, session_id, model=provider)
 
         # 降级处理：未注入 LLM 客户端（trae 模式）
         if self._llm_client is None:
@@ -337,15 +328,30 @@ class ForgekinBase(ABC):
             result.setdefault("forgekin_id", self.forgekin_id)
             result.setdefault("session_id", session_id)
             return result
-        except Exception as exc:  # noqa: BLE001 — chat 需捕获所有 LLM 异常
-            return {
-                "content": f"[{self.name} 桥接异常] {type(exc).__name__}: {exc}",
-                "model": "error",
-                "usage": {"latency_ms": 0, "error": True},
-                "session_id": session_id,
-                "forgekin_id": self.forgekin_id,
-                "error": str(exc),
-            }
+        except Exception as exc:  # noqa: BLE001 — P-116: 分类后统一返回错误响应
+            # P-116: 区分可重试（超时/网络）与不可重试（配置）异常
+            return self._chat_error("桥接", exc, session_id, model="error")
+
+    def _chat_error(
+        self, provider_label: str, exc: Exception, session_id: str, *, model: str
+    ) -> dict[str, Any]:
+        """构造统一的 LLM 错误响应，标注可重试性 — P-116.
+
+        可重试异常（asyncio.TimeoutError / httpx.HTTPError 网络类）标注
+        ``retryable: True``，上层可据此重试；配置类异常（ValueError/
+        KeyError/TypeError）标注 ``error_type: config`` 应快速失败。
+        """
+        retryable = isinstance(exc, (asyncio.TimeoutError, httpx.HTTPError))
+        return {
+            "content": f"[{self.name} {provider_label} 异常] {type(exc).__name__}: {exc}",
+            "model": model,
+            "usage": {"latency_ms": 0, "error": True},
+            "session_id": session_id,
+            "forgekin_id": self.forgekin_id,
+            "error": str(exc),
+            "error_type": "retryable" if retryable else "config",
+            "retryable": retryable,
+        }
 
     # ── 抽象方法：现实闭环（观察 → 行动 → 验证）──────────────────
 

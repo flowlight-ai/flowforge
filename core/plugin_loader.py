@@ -155,20 +155,33 @@ class PluginLoader:
 
     # ── Single plugin loading ────────────────────────────────────────────
 
-    def load_single_plugin(self, plugin_instance: FlowForgePlugin) -> None:
+    def load_single_plugin(
+        self,
+        plugin_instance: FlowForgePlugin,
+        agent_registry: AgentRegistry | None = None,
+        tool_registry: ToolRegistry | None = None,
+        mode_registry: ModeRegistry | None = None,
+        event_bus: EventBus | None = None,
+        scheduler: TaskScheduler | None = None,
+        app: FastAPI | None = None,
+    ) -> None:
         """Load a single plugin instance — register hooks and track entries.
 
         Reused by the hot-reload mechanism (``reload_plugin``).
+
+        Optional registries override the loader's internal (global) ones,
+        allowing callers to load a plugin into local registries (P-09:
+        backward-compat shim must not drop explicitly-passed registries).
         """
         plugin_instance.state = PluginState.STARTING
 
         try:
-            app = self._app
-            agent_registry = self._agent_registry
-            tool_registry = self._tool_registry
-            mode_registry = self._mode_registry
-            event_bus = self._event_bus
-            scheduler = self._scheduler
+            app = app if app is not None else self._app
+            agent_registry = agent_registry if agent_registry is not None else self._agent_registry
+            tool_registry = tool_registry if tool_registry is not None else self._tool_registry
+            mode_registry = mode_registry if mode_registry is not None else self._mode_registry
+            event_bus = event_bus if event_bus is not None else self._event_bus
+            scheduler = scheduler if scheduler is not None else self._scheduler
 
             # 1. middleware
             if app is not None:

@@ -6,10 +6,12 @@ import os
 import logging
 from typing import Any
 
+from .base import EchoStore
+
 logger = logging.getLogger(__name__)
 
 
-class SemanticMemory:
+class SemanticMemory(EchoStore):
     def __init__(self, db_path: str = None):
         if db_path is None:
             db_path = "data/semantic.db"
@@ -79,7 +81,7 @@ class SemanticMemory:
 
         await asyncio.get_event_loop().run_in_executor(None, _store)
 
-    async def search(self, query: str, top_k: int = 5) -> list:
+    async def search(self, query: str, limit: int = 5) -> list:
         def _search():
             conn = self._get_conn()
             try:
@@ -92,7 +94,7 @@ class SemanticMemory:
                     WHERE semantic_fts MATCH ?
                     ORDER BY rank
                     LIMIT ?
-                """, (fts_query, top_k)).fetchall()
+                """, (fts_query, limit)).fetchall()
 
                 if not rows:
                     return []

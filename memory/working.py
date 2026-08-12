@@ -1,6 +1,9 @@
 from typing import Any, Dict
 
-class WorkingMemory:
+from .base import EchoStore
+
+
+class WorkingMemory(EchoStore):
     def __init__(self):
         self._store: Dict[str, Any] = {}
 

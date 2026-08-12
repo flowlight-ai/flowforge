@@ -38,7 +38,7 @@ from flowforge.app.api.plugins.domain_plugins import router as domain_plugins_ro
 from flowforge.app.api.admin import admin, admin_models, settings, review, schedules, prompts, env_vars, ops
 
 # ── 独立组件 ────────────────────────────────────────────────────
-from flowforge.app.api.endpoints import dashboard
+from flowforge.app.api.endpoints import dashboard, websocket
 
 # ── 根级 API 模块 ───────────────────────────────────────────────
 from flowforge.app.api.plugin_management import router as plugin_management_router
@@ -101,3 +101,9 @@ router.include_router(ops.router)
 
 # ── 独立组件 ────────────────────────────────────────────────────
 router.include_router(dashboard.router)
+
+# WebSocket 端点（/ws/helm/{task_id} /ws/events /ws/logs）— P-119
+# 注册到独立的无前缀 router：若并入 /api/v1 前缀 router，路径会被改写为
+# /api/v1/ws/...，而前端连接的是无前缀 /ws/...（见 web/src/hooks/useHelmWebSocket.ts）。
+ws_router = APIRouter()
+ws_router.include_router(websocket.router)

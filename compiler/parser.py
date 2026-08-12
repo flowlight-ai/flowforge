@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from flowforge.compiler.errors import WorkflowCompileError
 from flowforge.compiler.ir import IRStep, IRWorkflow, StepType
 
 
@@ -26,11 +27,21 @@ class WorkflowParser:
             解析后的 IRWorkflow 实例。
 
         Raises:
-            ValueError: YAML 格式无效或内容非映射类型。
+            WorkflowCompileError: YAML 格式无效或内容非映射类型（P-97 结构化）。
         """
-        data = yaml.safe_load(yaml_content)
+        try:
+            data = yaml.safe_load(yaml_content)
+        except yaml.YAMLError as e:
+            raise WorkflowCompileError(
+                f"Invalid YAML: {e}",
+                error_code="PARSE_ERROR",
+                errors=[str(e)],
+            ) from e
         if not isinstance(data, dict):
-            raise ValueError(f"Invalid YAML: expected mapping, got {type(data).__name__}")
+            raise WorkflowCompileError(
+                f"Invalid YAML: expected mapping, got {type(data).__name__}",
+                error_code="PARSE_ERROR",
+            )
         return self._parse_workflow(data)
 
     def parse_file(self, path: str) -> IRWorkflow:
@@ -69,7 +80,15 @@ class WorkflowParser:
 
     def _parse_step(self, step_data: dict[str, Any], index: int) -> IRStep:
         """将原始字典解析为 IRStep"""
-        step_type = StepType(step_data.get("type", "agent"))
+        try:
+            step_type = StepType(step_data.get("type", "agent"))
+        except ValueError as e:
+            # P-97: 非法 step type 转为结构化解析错误
+            raise WorkflowCompileError(
+                f"Step {index}: invalid type {step_data.get('type')!r}: {e}",
+                error_code="PARSE_ERROR",
+                errors=[f"Step {index}: {e}"],
+            ) from e
 
         # MVP2: 条件分支字段解析
         condition = step_data.get("condition")
