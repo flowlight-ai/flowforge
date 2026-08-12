@@ -270,13 +270,15 @@ assignments:
     fallbacks:
     - openroute/MiniMax-M3
     - openroute/DeepSeek-V4-Pro
-  # v5.99.70: 选题专用assignment — 使用实测可用模型
-  # 选题需要快速稳定(避免长时间卡住)，Qwen3.6-Plus实测24.6s最快
+  # v5.99.78修复(P-51): 选题专用assignment — 需输出严格JSON数组
+  # Doubao-Seed2.0(40s)实测输出正确JSON数组; GLM-5.1虽快(6s)但返回分析过程非JSON,
+  # Qwen3.6-Plus会话污染返回评审JSON; 故Doubao首选, GLM仅作长文fallback
   topic:
-    primary: openroute/Qwen3.6-Plus
+    primary: openroute/Doubao-Seed2.0
     fallbacks:
-    - openroute/HunYuan3
     - openroute/Kimi-K2.6
+    - openroute/GLM-5.1
+    - openroute/Qwen3.6-Plus
     - zhipu/glm-4-flash
   # P0-27: reflexion_evaluator/reflexion_reflector 显式 assignments
   # v2: 移除 MiniMax-M3（openroute minimax 平台持续 connection failed），

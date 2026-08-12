@@ -47,7 +47,7 @@ class OpenSieveClient(BaseTool):
     )
     parameters_schema = {
         "type": "object",
-        "required": ["action"],
+        "required": [],
         "properties": {
             "action": {
                 "type": "string",
