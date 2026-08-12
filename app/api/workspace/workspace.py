@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+from pathlib import Path
 
 from flowforge.core.workspace import get_workspace_manager
 from flowforge.core.tracing import get_logger
@@ -70,6 +71,110 @@ async def delete_named_workspace(workspace_name: str):
         shutil.rmtree(ws_path)
         return {"status": "deleted", "name": workspace_name}
     raise HTTPException(status_code=404, detail=f"Workspace not found: {workspace_name}")
+
+
+# ── 开发面板端点（文件树 / 文件读取 / 命令执行） ──────────────
+# 注意：必须声明在 /{task_id} 通配路由之前，否则 /tree /file /exec 会被当作 task_id
+
+
+def _dev_workspace_root(ws) -> Path:
+    """开发面板默认工作区根目录（default named workspace）。"""
+    for meta in ws.list_named_workspaces():
+        if meta.get("name") == "default":
+            return Path(meta["path"])
+    ws.get_default_workspace()
+    return ws._base / "default"
+
+
+def _build_tree(root: Path, depth: int, _current: int = 0) -> list:
+    """递归构建前端 TreeNode 结构（name/path/type/children）。"""
+    nodes = []
+    try:
+        entries = sorted(root.iterdir(), key=lambda p: (p.is_file(), p.name.lower()))
+    except OSError:
+        return nodes
+    for entry in entries:
+        if entry.name.startswith(".") or entry.name in ("node_modules", "__pycache__"):
+            continue
+        if entry.is_dir():
+            node = {"name": entry.name, "path": str(entry), "type": "directory"}
+            if _current < depth:
+                node["children"] = _build_tree(entry, depth, _current + 1)
+            nodes.append(node)
+        else:
+            nodes.append({"name": entry.name, "path": str(entry), "type": "file"})
+    return nodes
+
+
+def _ensure_inside_root(target: Path, root: Path) -> bool:
+    """校验 target 位于 root 内（防目录穿越）。"""
+    try:
+        import os
+        return os.path.commonpath([str(target), str(root)]) == str(root)
+    except ValueError:
+        return False
+
+
+@router.get("/tree")
+async def get_dev_file_tree(depth: int = 3):
+    """开发面板文件树（默认工作区目录树）。"""
+    ws = get_workspace_manager()
+    root = _dev_workspace_root(ws)
+    tree = _build_tree(root, max(0, min(depth, 6)))
+    return {"tree": tree, "root": str(root)}
+
+
+@router.get("/file")
+async def get_dev_file(path: str):
+    """读取工作区内文件内容（防目录穿越）。"""
+    ws = get_workspace_manager()
+    root = _dev_workspace_root(ws).resolve()
+    target = Path(path).resolve()
+    if not _ensure_inside_root(target, root):
+        raise HTTPException(status_code=400, detail="Path outside workspace root")
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail=f"File not found: {path}")
+    content = target.read_text(encoding="utf-8", errors="replace")
+    return {"path": path, "content": content, "size": target.stat().st_size}
+
+
+class ExecCommandRequest(BaseModel):
+    command: str
+    cwd: Optional[str] = None
+
+
+@router.post("/exec")
+async def exec_command(payload: ExecCommandRequest, timeout: int = 30):
+    """在默认工作区内执行命令（终端桥接，CLI 真实执行）。"""
+    import subprocess
+    ws = get_workspace_manager()
+    root = _dev_workspace_root(ws).resolve()
+    cwd = Path(payload.cwd).resolve() if payload.cwd else root
+    if not _ensure_inside_root(cwd, root):
+        raise HTTPException(status_code=400, detail="cwd outside workspace root")
+    if not payload.command.strip():
+        raise HTTPException(status_code=400, detail="Empty command")
+    try:
+        proc = subprocess.run(
+            payload.command,
+            shell=True,
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            timeout=max(1, min(timeout, 120)),
+            encoding="utf-8",
+            errors="replace",
+        )
+    except subprocess.TimeoutExpired as e:
+        return {
+            "status": "timeout",
+            "stdout": e.stdout or "",
+            "stderr": f"Command timed out after {timeout}s",
+            "exit_code": -1,
+        }
+    except Exception as e:
+        return {"status": "error", "stdout": "", "stderr": str(e), "exit_code": -2}
+    return {"status": "done", "stdout": proc.stdout, "stderr": proc.stderr, "exit_code": proc.returncode}
 
 
 # ── Legacy Workspace Endpoints ──
