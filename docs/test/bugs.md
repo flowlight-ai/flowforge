@@ -23,9 +23,7 @@
 | **加权缺陷指数（DI）** | **1123** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
 | 状态：Open | 369（9 原有 Open + 9 浏览器实测 Open + 48 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open + 44 第五轮 web 前端深度分析 Open + 3 第六轮浏览器实测 Open + 3 第六轮前端稳定性 Open + 25 第七轮 web 前端深度分析 Open + 8 第七轮浏览器实测 Open + 20 第七轮 clowder-ai 对比 Open + 10 第八轮 web 前端深度分析 Open + 20 第八轮 clowder-ai 对比 Open + 30 第九轮 web 前端深度分析 Open + 8 第九轮浏览器实测 Open + 25 第九轮 clowder-ai 对比 Open + 32 第十轮 web 前端深度分析 Open + 25 第十一轮 clowder-ai 对比 Open） |
 | 状态：Fixed（待回归） | 10 |
-| 状态：Closed | 0 |
-
-> 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
+| 状态：Closed | 0 |> 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
 >
 > 2026-08-10 续跑复核：独立复跑确认 P-08…P-19 全部 12 单（实跑证据与既有记录一致）。修正前序笔记两处不实描述——P-02 误记 `_test_*` 模块级 `sys.exit`/`SystemExit`（实测为模块级 `httpx` 网络调用致收集期 `ConnectError`）；P-08 误记 6 例失败（实测仅 `test_phase4_features.py::test_legacy_execute_still_works` 1 例，`test_skills.py` 36 passed 仅 DeprecationWarning）。
 >
@@ -60,7 +58,13 @@
 > 2026-08-11 第十轮 web 前端深度分析：覆盖 admin/agents/ 全部 8 个文件、components/helm/ 新增 6 个文件（BootcampWizard、HelmModals、HelmCreateDialog、HelmMainPanel、DiffViewer、DynamicGraph）、components/ 顶层 12 个文件（ApprovalHubDrawer、BrakeModal、FirstRunQuestWizard、MermaidDiagram、ForgekinHueInjector、OklchTuner、Lightbox、ToastContainer、ConnectionStatusBar、FloatingPresentationSurfaceHost、ThreadSidebar）、hub/ 新增 4 个文件（HubAgentSessionsTab、HubCoCreatorEditor、HubTraceTree）、sdk/index.ts、utils/offline-store.ts。发现 32 个新缺陷（P-496~P-527），包括：5 个 S2 重要缺陷（XSS 风险、MermaidDiagram securityLevel loose、直接 DOM 操作违反 React 声明式）、25 个 S3 一般缺陷（空 catch 吞异常、响应解析过于宽松、JSON.stringify 比较、内联样式不一致、占位空壳组件、生产环境 console.log、keyframes 名称冲突）、7 个 S4 轻微缺陷（硬编码数量、注释与实际不符、巨型组件、skipSync 反模式、空占位组件）。累计 354 个工单，DI 1073。
 > 
 > 2026-08-11 第十一轮 clowder-ai 深度对比：深入分析 clowder-ai 完整 API 路由体系（108 个路由文件）+ 前端组件体系后，发现 FlowForge 大量缺失的 AI 智能体协作与自管理功能。覆盖提案系统、反思系统、自动梦境、礼宾服务、猫咪角色系统、跨线程协调、会话链管理、浏览器推送、积压工作、门控系统、救援机制、证据系统、触感反馈、持球机制、知识流、标签系统、提炼系统、值班简报、视角分析、配置包、信号学习、决议系统、回流系统、服务生命周期、锚定遥测等 25 个维度。追加 P-471…P-495（25 单）。累计 379 个工单，DI 1123。
-
+>
+> 2026-08-11 回归验证轮次（测试侧）：对开发交付的 10 个 `Fixed（待回归）` 工单（P-01…P-08、P-12、P-13）逐单实跑验证，全部完成回归判定，`Fixed（待回归）` 清零：
+> - **✅ Verified → Closed（8 单）**：P-01、P-03、P-04、P-05、P-06、P-08、P-12、P-13。
+> - **⚠️ Partial → 回退 Open（2 单）**：**P-02**（4 个 phase 脚本已修，但本单内登记的残留仍在，且症状由"快速报错"恶化为"收集期挂死 ≈18.7 分钟"）、**P-07**（14 个未接线 e2e 仅推进 1 个，且 `test_harness.py` 被错误裁定为"T7 不适用"）。按 BUG_PROTOCOL §四拆出 P-121、P-122。
+> - **回归过程新发现 5 单（P-121…P-125）**：其中 3 单是"修复本身掩盖了更深问题"的典型——**P-125**（P-06 把 `timeout` 注册进 markers，恰好消除了本可暴露 `pytest-timeout` 未安装的 strict-markers 告警，10 处超时保护静默失效）、**P-124**（P-05 的 env 覆盖只在 YAML 路径生效，与字段文档承诺不符）、**P-123**（P-13 新增的 CLI 入口触发 runpy 双导入告警）。
+> - 判定口径：全部结论均附**可复现命令 + 真实输出**；对开发自述中引用 `/tmp/opencode/*.py` 等机器相关临时脚本的证据一律不予采信（违反 BUG_PROTOCOL §五），改在仓库内独立复验。
+> - 同时更正两处前序测试记录：`test_t8_v3.py` 曾因窄口径扫描被误列为"T8 未接线"（实为通过 Playwright 封装做真实 DOM 验证）；P-02 残留曾记为 `ConnectError`（实为当时 `localhost:8001` 未起的偶然表现，服务在线时反而挂死更久）。
 ### 按严重度（Severity）
 
 | 等级 | 含义 | 数量 | 工单 |
@@ -68,18 +72,14 @@
 | **S1 阻断** | 测试/安全不可用，须立即修复 | 9 | P-01, P-02, P-03, P-288, P-289, P-290, P-291, P-292, P-293 |
 | **S2 严重** | 核心功能/质量受损 | 83 | P-04, P-05, P-06, P-07, P-09, P-10, P-11, P-12, P-13, P-17, P-20, P-21, P-22, P-23, P-27, P-28, P-38, P-39, P-40, P-41, P-42, P-43, P-44, P-46, P-47, P-48, P-50, P-51, P-54, P-55, P-56, P-57, P-68, P-71, P-72, P-73, P-74, P-75, P-78, P-79, P-80, P-82, P-85, P-86, P-90, P-91, P-93, P-95, P-96, P-98, P-99, P-100, P-101, P-102, P-108, P-109, P-119, P-294, P-295, P-296, P-297, P-298, P-299, P-300, P-301, P-302, P-332, P-333, P-334, P-335, P-336, P-339, P-341, P-342, P-346, P-347, P-350, P-351, P-352, P-353, P-354 |
 | **S3 一般** | 明显缺陷但可绕过 | 165 | P-08, P-14, P-15, P-16, P-18, P-19, P-24, P-25, P-26, P-45, P-49, P-52, P-53, P-58, P-59, P-60, P-61, P-62, P-63, P-64, P-65, P-66, P-67, P-69, P-70, P-76, P-77, P-81, P-83, P-84, P-87, P-88, P-89, P-92, P-94, P-97, P-103, P-104, P-105, P-106, P-107, P-110, P-111, P-112, P-113, P-114, P-116, P-118, P-120, P-303, P-304, P-305, P-306, P-307, P-308, P-309, P-310, P-311, P-312, P-313, P-314, P-315, P-316, P-317, P-318, P-337, P-338, P-340, P-343, P-344, P-345, P-348, P-349, P-355, P-356, P-357, P-358, P-359, P-360, P-361, P-362, P-363, P-364, P-365, P-366, P-367, P-375, P-376, P-377, P-378, P-379, P-380, P-381, P-382, P-383, P-384, P-385, P-386, P-387, P-388, P-389, P-390, P-391, P-392, P-393, P-394, P-395, P-396, P-397, P-398, P-399, P-400, P-401, P-402, P-403, P-404, P-405, P-406, P-407, P-412, P-413, P-414, P-415, P-416, P-417, P-418, P-419, P-420, P-421, P-422, P-423, P-424, P-425, P-426, P-427, P-428, P-429, P-430, P-431, P-432, P-471, P-472, P-473, P-474, P-475, P-476, P-477, P-478, P-479, P-480, P-481, P-482, P-483, P-484, P-485, P-486, P-487, P-488, P-489, P-490, P-491, P-492, P-493, P-494, P-495 |
-| **S4 轻微** | 文档/小修 | 26 | P-115, P-117, P-319, P-320, P-321, P-322, P-323, P-324, P-325, P-326, P-327, P-328, P-329, P-330, P-331, P-368, P-369, P-370, P-371, P-372, P-373, P-374, P-408, P-409, P-410, P-411 |
-
-### 按分类（Category）
+| **S4 轻微** | 文档/小修 | 26 | P-115, P-117, P-319, P-320, P-321, P-322, P-323, P-324, P-325, P-326, P-327, P-328, P-329, P-330, P-331, P-368, P-369, P-370, P-371, P-372, P-373, P-374, P-408, P-409, P-410, P-411 |### 按分类（Category）
 
 | 分类 | 数量 | 工单 |
 |------|:----:|------|
 | 安全隐患 | 5 | P-01, P-86, P-89, P-90, P-93 |
 | CI / 配置 | 5 | P-02, P-06, P-91, P-92, P-114 |
-| 代码缺陷 | 116 | P-03, P-04, P-09, P-10, P-12, P-13, P-15, P-73, P-74, P-75, P-76, P-77, P-78, P-82, P-83, P-84, P-85, P-87, P-88, P-94, P-95, P-96, P-97, P-98, P-99, P-104, P-105, P-108, P-109, P-110, P-111, P-112, P-113, P-115, P-116, P-119, P-120, P-288, P-289, P-290, P-291, P-292, P-293, P-294, P-295, P-296, P-297, P-298, P-299, P-300, P-301, P-302, P-303, P-304, P-305, P-306, P-307, P-308, P-309, P-310, P-311, P-312, P-313, P-314, P-315, P-316, P-317, P-318, P-319, P-320, P-321, P-322, P-323, P-324, P-325, P-326, P-327, P-328, P-329, P-330, P-331, P-350, P-351, P-352, P-353, P-354, P-355, P-356, P-357, P-358, P-359, P-360, P-361, P-362, P-363, P-364, P-365, P-366, P-367, P-368, P-369, P-370, P-371, P-372, P-373, P-374, P-403, P-404, P-405, P-406, P-407, P-408, P-409, P-410, P-411, P-412 |
-| 目录结构 | 1 | P-05 |
-| T7 / T8 合规 | 1 | P-07 |
-| 测试脚本缺陷 | 10 | P-08, P-11, P-14, P-16, P-18, P-19, P-79, P-80, P-81, P-118 |
+| 代码缺陷 | 116 | P-03, P-04, P-09, P-10, P-12, P-13, P-15, P-73, P-74, P-75, P-76, P-77, P-78, P-82, P-83, P-84, P-85, P-87, P-88, P-94, P-95, P-96, P-97, P-98, P-99, P-104, P-105, P-108, P-109, P-110, P-111, P-112, P-113, P-115, P-116, P-119, P-120, P-288, P-289, P-290, P-291, P-292, P-293, P-294, P-295, P-296, P-297, P-298, P-299, P-300, P-301, P-302, P-303, P-304, P-305, P-306, P-307, P-308, P-309, P-310, P-311, P-312, P-313, P-314, P-315, P-316, P-317, P-318, P-319, P-320, P-321, P-322, P-323, P-324, P-325, P-326, P-327, P-328, P-329, P-330, P-331, P-350, P-351, P-352, P-353, P-354, P-355, P-356, P-357, P-358, P-359, P-360, P-361, P-362, P-363, P-364, P-365, P-366, P-367, P-368, P-369, P-370, P-371, P-372, P-373, P-374, P-403, P-404, P-405, P-406, P-407, P-408, P-409, P-410, P-411, P-412 || 目录结构 | 1 | P-05 || T7 / T8 合规 | 2 | P-07, P-122 |
+| 测试脚本缺陷 | 11 | P-08, P-11, P-14, P-16, P-18, P-19, P-79, P-80, P-81, P-118, P-125 |
 | 验证阻塞（环境） | 1 | P-17 |
 | 功能缺失（浏览器实测） | 22 | P-20, P-21, P-22, P-23, P-24, P-25, P-26, P-27, P-28, P-100, P-106, P-107, P-348, P-349, P-375, P-376, P-377, P-378, P-379, P-380, P-381, P-382 |
 | 功能缺失（clowder-ai 对比） | 93 | P-38, P-39, P-40, P-41, P-42, P-43, P-44, P-45, P-46, P-47, P-48, P-49, P-50, P-51, P-52, P-53, P-54, P-55, P-56, P-57, P-58, P-59, P-60, P-61, P-62, P-63, P-64, P-65, P-66, P-67, P-68, P-69, P-70, P-332, P-333, P-334, P-335, P-336, P-337, P-338, P-339, P-340, P-341, P-342, P-343, P-344, P-345, P-346, P-383, P-384, P-385, P-386, P-387, P-388, P-389, P-390, P-391, P-392, P-393, P-394, P-395, P-396, P-397, P-398, P-399, P-400, P-401, P-402, P-471, P-472, P-473, P-474, P-475, P-476, P-477, P-478, P-479, P-480, P-481, P-482, P-483, P-484, P-485, P-486, P-487, P-488, P-489, P-490, P-491, P-492, P-493, P-494, P-495 |
@@ -96,7 +96,7 @@
 > 字段：ID ｜ 标题 ｜ 严重度 ｜ 分类 ｜ 状态 ｜ 文件:行号 ｜ 现象 ｜ 建议修复 ｜ T7/T8
 
 ### P-01 — 9 个文件硬编码 OpenRoute bearer token（含 config/models.yaml）
-- **严重度**：S1 ｜ **分类**：安全隐患 ｜ **状态**：Fixed（待回归）
+- **严重度**：S1 ｜ **分类**：安全隐患 ｜ **状态**：Closed（🔒测试回归结论：✅Verified）
 - **文件**：`llm/trae/bridge_operator.py:63`、`config/models.yaml:10`、`llm/cli_provider.py:93,101,112`、`llm/openroute_client.py:42`、`forgemind/responses_to_openroute_proxy.py:43`、`forgemind/anthropic_to_openroute_proxy.py:47`、`forgemind/gemini_to_openroute_proxy.py:55`、`tests/integration/test_openroute_health_integration.py:28`、`tests/integration/test_breakpoint_c_stress.py:48`
 - **现象**：9 个文件硬编码 3 个不同 OpenRoute 密钥（`or-6eb9e20d...` / `or-2c2e4d8e...` / `or-306e066e...`），其中 `config/models.yaml:10` 的 `api_key_default` 亦写入明文 token。凭据入库即泄露风险；一旦轮换即 401。
 - **建议**：移除全部硬编码，改从环境变量 / `.env`（已 gitignore）读取；必要时旋转已暴露的密钥。配置文件的默认密钥项改为占位符 + 运行时注入。
@@ -108,9 +108,27 @@
   # => P-01 验证通过：全部从 env/.env 注入，源码零硬编码
   ```
   另：硬编码扫描 `grep -rn "or-6eb9e20d\|or-2c2e4d8e\|or-306e066e" --include=*.py --include=*.yaml .` 已无匹配（仅 `.env` 本地文件含真实值）。已暴露的 key 建议测试回归后由密钥责任人轮换。
+- 🔒 **测试回归结论（2026-08-11）：✅ Verified → Closed**。除复跑开发自述的 3 key 定向扫描外，另加做**广谱密钥正则扫描**（覆盖 `.py/.yaml/.yml/.json/.toml`），避免只验"这 3 个 key"而漏其它凭据：
+  ```bash
+  # 1) 定向扫描（开发自述口径）
+  grep -rn "or-6eb9e20d\|or-2c2e4d8e\|or-306e066e" --include=*.py --include=*.yaml .
+  # => 零匹配
+  # 2) 广谱扫描（测试补强口径）
+  grep -rnE "(or-[a-f0-9]{16,}|sk-[A-Za-z0-9_-]{20,})" --include=*.py --include=*.yaml --include=*.yml \
+       --include=*.json --include=*.toml . | grep -v "\.venv\|node_modules"
+  # => 仅 1 处：core/external_agent/tests/test_bridge.py:761
+  #    output="API key is sk-abcdefghijklmnopqrstuvwxyz123456"  ← 断言用假 key（脱敏用例数据），非真实凭据
+  # 3) 配置默认项
+  sed -n '8,12p' config/models.yaml
+  # =>     api_key_env: OPENROUTE_API_KEY
+  #        # 密钥不硬编码——运行时从 $OPENROUTE_API_KEY（或仓库根 .env，已 gitignore）注入
+  #        api_key_default: ""      ← 已置空，符合"占位符 + 运行时注入"要求
+  ```
+  判定：源码零真实凭据残留，配置默认项已置空并改走 env 注入，工单声明范围全部达成。
+  **遗留提醒（不影响本单终态）**：已泄露的 3 个 key 仍需由密钥责任人执行轮换——这是仓库外动作，测试侧无法验证，请安全责任人确认后在 CHANGELOG 留痕。另建议补 CI 密钥扫描闸门以防回潮（同类诉求 openroute 侧已立 P-13 单）。
 
 ### P-02 — 4 个 phase 脚本模块级调用 sys.exit，pytest 收集即 INTERNALERROR
-- **严重度**：S1 ｜ **分类**：CI / 配置 ｜ **状态**：Fixed（待回归）
+- **严重度**：S1 ｜ **分类**：CI / 配置 ｜ **状态**：Open（🔒测试回归结论：⚠️Partial，残留拆出 P-121）
 - **文件**：`tests/e2e/test_phase1_foundation.py:285`、`test_phase2_shell_unified.py:292`、`test_phase3_mode_fusion.py:208`、`test_phase4_agent_admin.py:226`
 - **现象**：4 个 phase 脚本在模块顶层（非函数内）直接 `sys.exit(0 if failed == 0 else 1)`。pytest 收集阶段导入模块即触发 `SystemExit` → 整会话 `INTERNALERROR` 中止（见验证记录），导致 `pytest tests/ -q` 整轮失败、992 用例未被执行。
 - **建议**：将脚本主体移入 `def main():` 并加 `if __name__ == "__main__": sys.exit(main())` 守卫；或改为 pytest 用例 + `assert`，不依赖模块级退出码。
@@ -139,9 +157,50 @@
   # => ERROR ... json.decoder.JSONDecodeError: Expecting value（模块级 asyncio.run(main())）
   ```
   → 属**同一根因**（e2e/回归脚本在模块导入期执行逻辑），故按 BUG_PROTOCOL §一 B4 归于本单 P-02 主题、在此登记残留，不另开新单；本单修复仅覆盖 4 个 phase 脚本，`_test_comprehensive.py`/`_test_full_regression.py`/`test_opensieve_*` 仍待同法整改后方可整目录收集。
+- 🔒 **测试回归结论（2026-08-11）：⚠️ Partial → 状态回退 Open，残留拆出新单 P-121**。
+  **① 工单声明范围（4 个 phase 脚本）已修复**：
+  ```bash
+  python3 -m pytest tests/e2e/test_phase1_foundation.py tests/e2e/test_phase2_shell_unified.py \
+    tests/e2e/test_phase3_mode_fusion.py tests/e2e/test_phase4_agent_admin.py --collect-only -q -p no:cacheprovider
+  # => collected 0 items / no tests collected in 1.04s，exit=5；无 INTERNALERROR / SystemExit
+  ```
+  **② 本单内登记的残留仍复现，且症状已恶化——由"快速报错"变为"收集期无限挂死"**，按 BUG_PROTOCOL §四 `⚠️Partial → Open + 拆出新工单` 处理：
+  ```bash
+  # 残留 A：_test_full_regression.py —— 不再是 ConnectError，而是挂死被 timeout 杀掉
+  time timeout 60 python3 -m pytest tests/_test_full_regression.py --collect-only -q -p no:cacheprovider
+  # => 无任何输出；exit=124（timeout 强杀），耗时 61s
+  # 定位挂死点（SIGINT 取栈）：
+  timeout -s INT 40 python3 -m pytest tests/_test_full_regression.py --collect-only -q -p no:cacheprovider
+  # => KeyboardInterrupt @ tests/_test_full_regression.py:26  ← wait_for_task() 内的 time.sleep(3)
+
+  # 残留 B：test_opensieve_quick.py —— 与 2026-08-10 记录一致，未修复
+  timeout 120 python3 -m pytest tests/e2e/test_opensieve_quick.py --collect-only -q -p no:cacheprovider
+  # => ERROR tests/e2e/test_opensieve_quick.py - json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+  # => Interrupted: 1 error during collection；no tests collected, 1 error in 5.70s
+  ```
+  **③ 症状变化的根因已查明（更正前序记录）**：2026-08-10 记为 `ConnectError` 是因当时 `localhost:8001` 未起；本轮实测该服务**在线**（`curl http://localhost:8001/health` → `http_code=200`，`ss -ltn` 确认 `0.0.0.0:8001` LISTEN），故模块级 `httpx.get(f"{API}/health", timeout=5)`（`:41`）通过，执行流继续深入到 7 处模块级 `wait_for_task(...)` 轮询（`:56/:74/:90/:107/:123/:140/:157`，`max_wait` 分别 300/300/180/180/120/120/120 秒）。该函数 `except Exception: continue` 吞掉全部异常且每轮固定 `time.sleep(3)`，不会提前跳出 → **仅此一文件最坏可在 pytest 收集期阻塞约 1120 秒（≈18.7 分钟）**。
+  → 结论：本单"消除模块级副作用破坏收集"的目标**未整体达成**；且残留 A 的危害等级高于原始缺陷（无限挂死使 CI 无告警卡死至 job 超时，比 INTERNALERROR 更难定位）。故本单降为 Partial 回退 Open（仅 4 个 phase 脚本部分有效），残留另立 **P-121** 独立跟踪与定级。
 
 ### P-03 — `core/errors.py` 缺失 PartnershipError / ReliabilityError
-- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Closed（🔒测试回归结论：✅Verified，残留归 P-75）
+- 🔒 **测试回归结论（2026-08-11）：✅ Verified → Closed（附重要限定）**。
+  ```bash
+  # 1) 两个异常类已存在且继承链正确
+  PYTHONPATH=<flowlight父目录> python3 -c "from flowforge.core.errors import PartnershipError, ReliabilityError; \
+    print('OK:', PartnershipError.__mro__[1].__name__, ReliabilityError.__mro__[1].__name__)"
+  # => OK: FlowForgeError FlowForgeError
+  # 2) 原收集期 ImportError 已消除
+  python3 -m pytest tests/core/partnership/test_math.py tests/core/reliability/test_wal.py -q -p no:cacheprovider -rs
+  # => collected 0 items / 2 skipped ...  2 skipped, 1 warning in 1.42s（无 ImportError）
+  ```
+  判定：本单声明范围（`core/errors.py` 缺两个异常类 → 收集期 ImportError）已完全消除，故置 Closed。
+  ⚠️ **但必须明确记录：本单修复未带来任何实际用例执行**。上述两个文件现在是「收集 0 项 / 全量 skip」，跳过原因为：
+  ```
+  SKIPPED tests/core/partnership/test_math.py:23: flowforge.core.partnership not implemented (docs/decisions/011-partnership-math.md) — TODO
+  SKIPPED tests/core/reliability/test_wal.py:19:   flowforge.core.reliability not implemented (docs/decisions/010-distributed-reliability.md) — TODO
+  ```
+  实测 `ls -d core/partnership core/reliability` → 两目录均不存在；`grep -rn "PartnershipError\|ReliabilityError" --include=*.py .` 显示除 `core/errors.py` 定义处外，**仅被这两个已跳过的测试文件引用**，生产代码零使用（当前为死代码）。
+  → 该残留**不属于本单范围**（本单只认"缺异常类"），已由 **P-75**（`core/partnership` 与 `core/reliability` 核心模块完全未实现）独立跟踪，故本单按 BUG_PROTOCOL §四"残留已拆出独立工单"口径判 Verified 而非 Partial。**验收提醒：P-75 关闭前，这两个异常类始终无真实断言覆盖，不可据本单认为合作/可靠性子系统已具备质量保障。**
 - **文件**：`core/errors.py`（仅定义 FlowForgeError 及其 13 个子类，无 PartnershipError / ReliabilityError）
 - **现象**：`tests/core/partnership/test_math.py:19`（`from flowforge.core.errors import PartnershipError`）与 `tests/core/reliability/test_wal.py:15`（`from flowforge.core.errors import ReliabilityError`）在收集期即 `ImportError`，对应用例全部收集失败；相关特性文档（F022–F025）亦引用这两个异常。
 - **建议**：在 `core/errors.py` 中补 `class PartnershipError(FlowForgeError)` 与 `class ReliabilityError(FlowForgeError)`，使合作/可靠性模块与测试对齐。
@@ -149,7 +208,7 @@
 - **开发自述**：修复提交 `9cfdb69`。在 `core/errors.py` 末尾追加 `PartnershipError`（status_code=422，对应合作候选/路径校验失败）与 `ReliabilityError`（status_code=503），均继承 `FlowForgeError`。自测：
 
 ### P-04 — `harness/governance.py:259` 拼写错误 `inject_to_system_rule`
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Closed（🔒测试回归结论：✅Verified）
 - **文件**：`harness/governance.py:259` → `return await self.inject_to_system_rule(target)`
 - **现象**：方法名 `inject_to_system_rule` 疑似拼写错误（应为 `inject_to_system_prompt` 或 `inject_into_system_rule`，取决于真实定义）。该 goroutine 治理注入路径调用不存在的方法名，运行期将抛 `AttributeError`，导致治理规则注入失效。
 - **建议**：核对该方法真实定义并修正拼写；补单测覆盖 `governance` 注入调用，避免再次拼写漂移。
@@ -160,9 +219,23 @@
   python3 -m pytest flowforge/tests/core/harness/test_durable_state.py -q -k governance
   # => 6 passed, 24 deselected（governance 相关全部通过）
   ```
+- 🔒 **测试回归结论（2026-08-11）：✅ Verified → Closed**。独立复跑，拼写漂移已消除且调用点与定义对齐：
+  ```bash
+  grep -rn "inject_to_system_rule" --include=*.py .
+  # => 零匹配（错误拼写已无残留）
+  grep -n "inject_to_system_role" harness/governance.py
+  # => 201:    async def inject_to_system_role(          ← 定义
+  #    259:            return await self.inject_to_system_role(target)   ← 原缺陷行，已改对
+  #    273:    async def inject_to_system_role_batch(
+  #    299:            parts.append(await self.inject_to_system_role(r))
+  python3 -m pytest tests/core/harness/test_durable_state.py -q -p no:cacheprovider -k governance
+  # => 6 passed, 24 deselected, 1 warning in 6.19s
+  ```
+  判定：`:259` 调用名与 `:201` 定义一致，`AttributeError` 运行期风险消除，6 个 governance 用例实跑通过，与开发自述一致。
+  **遗留提醒（不影响本单终态）**：工单"建议"中的第二项——*补单测覆盖 governance 注入调用以防拼写再漂移*——本次修复未落地（6 个既有用例是原有覆盖，非新增防漂移用例）。此类"调用不存在方法名"缺陷靠人工 review 易漏，建议后续在 CI 接入静态检查（如 `ruff`/`pylint` 的 `no-member`）从机制上拦截；测试侧不另立单，在此登记。
 
 ### P-05 — `d:/software/openclaw` 硬编码 + 仓库根寄生 `d:` 目录（未 gitignore）
-- **严重度**：S2 ｜ **分类**：目录结构 ｜ **状态**：Fixed（待回归）
+- **严重度**：S2 ｜ **分类**：目录结构 ｜ **状态**：Closed（🔒测试回归结论：✅Verified）
 - **文件**：`llm/trae/config.py:167`、`llm/trae/adapter.py:96`、`forgemind/autonomous.py:108`（另 `config/im_council.yaml:42`、`config/trae_bridge.yaml:19` 含默认占位 `d:/software/openclaw/...`）
 - **现象**：Windows 绝对路径 `d:/software/openclaw/...` 写死于 3 处源码，并在仓库根寄生创建 `d:` 目录（实测根目录存在 `d:` 文件夹，且未在 `.gitignore` 中）。在非 `D:` 盘 / 非 Windows 环境（Linux、iOS）克隆即路径失效，`d:` 目录还会被误提交。
 - **建议**：改以相对路径 / `Path(__file__)` / 环境变量（`FLOWFORGE_BRIDGE_DIR` 等已有占位机制）解析；将根目录 `d:` 加入 `.gitignore` 并清理已寄生目录。
@@ -173,11 +246,41 @@
   # 默认 shared_dir: <仓库根>/.trae_bridge（含 d: 断言通过）
   # yaml(env未设): <仓库根>/.trae_bridge   → validator 空值回退生效
   # yaml(env=/tmp/br1): /tmp/br1           → 环境变量覆盖生效
+
   # P-05 验证通过：无 d:/software 硬编码，yaml 占位回退仓库根
   ```
+- 🔒 **测试回归结论（2026-08-11）：✅ Verified → Closed**。**未采信开发自述引用的 `/tmp/opencode/p05_verify.py`**（该路径是机器相关绝对路径、且属临时目录不可复现，违反 BUG_PROTOCOL §五），改为在仓库内独立复验四项断言：
+  ```bash
+  # 1) 源码/配置零 d:/software 残留（扩到 .py/.yaml/.yml 全仓）
+  grep -rn "d:/software" --include=*.py --include=*.yaml --include=*.yml .
+  # => 零匹配
+  # 2) 仓库根无寄生 d: 目录，且已被 gitignore
+  ls -d ./d:            # => 不存在
+  grep -n "^d:" .gitignore   # => 231:d:/
+  # 3) 默认 shared_dir 锚定仓库根、无盘符
+  python3 -c "from flowforge.llm.trae.config import TraeBridgeConfig; c=TraeBridgeConfig(); \
+    print(c.shared_dir); print('含d:盘符?', 'd:' in str(c.shared_dir).lower())"
+  # => <仓库根>/.trae_bridge
+  # => 含d:盘符? False
+  # 4) YAML 占位符两态（空值回退 / env 覆盖）
+  python3 -c "from flowforge.llm.trae.config import TraeBridgeConfig; \
+    print(TraeBridgeConfig.load_from_yaml('config/trae_bridge.yaml').shared_dir)"
+  # => <仓库根>/.trae_bridge                      ← ${FLOWFORGE_BRIDGE_DIR:} 空值回退生效
+  FLOWFORGE_BRIDGE_DIR=/tmp/br1 python3 -c "from flowforge.llm.trae.config import TraeBridgeConfig; \
+    print(TraeBridgeConfig.load_from_yaml('config/trae_bridge.yaml').shared_dir)"
+  # => /tmp/br1                                   ← env 覆盖生效
+  ```
+  判定：四项断言全部成立，跨平台路径可移植性恢复，本单声明范围达成。
+  ⚠️ **回归中另发现一处行为与文档不符（已另立 P-124，不阻塞本单关闭）**：`FLOWFORGE_BRIDGE_DIR` **仅在 `load_from_yaml()` 路径生效**；直接构造 `TraeBridgeConfig()` 时该环境变量被完全忽略——
+  ```bash
+  FLOWFORGE_BRIDGE_DIR=/tmp/br1 python3 -c "from flowforge.llm.trae.config import TraeBridgeConfig; \
+    print(TraeBridgeConfig().shared_dir)"
+  # => <仓库根>/.trae_bridge   ← 期望 /tmp/br1，env 未被读取
+  ```
+  而 `llm/trae/config.py:173` 的字段说明写的是「共享目录路径（默认仓库根 .trae_bridge，**可用 FLOWFORGE_BRIDGE_DIR 覆盖**）」，`:22` 注释亦同。任何绕过 YAML 直接构造配置的调用方都会静默拿到错误目录。
 
 ### P-06 — `pytest.ini` 静默覆盖 `pyproject.toml` 的 pytest 配置
-- **严重度**：S2 ｜ **分类**：CI / 配置 ｜ **状态**：Fixed（待回归）
+- **严重度**：S2 ｜ **分类**：CI / 配置 ｜ **状态**：Closed（🔒测试回归结论：✅Verified）
 - **文件**：`pytest.ini`（全量 `[pytest]` 段）覆盖 `pyproject.toml:108` `[tool.pytest.ini_options]`
 - **现象**：`pyproject.toml` 已声明 `minversion="8.0"` 与 `addopts=["-v","--strict-markers"]` 等，但 pytest 配置优先级 `pytest.ini` 高于 `pyproject.toml`，前者被静默采用、后者 `addopts` / `strict-markers` 等被忽略；两处重复声明 `testpaths` / `python_files` 易漂移且排查困难。
 - **建议**：保留单一配置源（推荐 `pyproject.toml` 的 `[tool.pytest.ini_options]`），删除 `pytest.ini` 或仅放 pytest 不覆盖的键；统一 markers / asyncio_mode 声明。
@@ -194,9 +297,35 @@
   python3 -m pytest --collect-only -q tests/core/harness/  # strict-markers 生效，无未知 marker 报错
   ```
   附：收集 `flowforge/tests` 全量时存在 13 个既有 collection errors（`test_scope_guard`、`test_cli.py` 缺 `flowforge/cli.__main__`、`test_evolution_engine.py` 缺 `EvolutionContext`、`test_forgekin.py` 缺 `ForgekinError`、`test_llm_client` 网络等），已通过 git stash 对照确认与配置源切换无关（stash 恢复 `pytest.ini` 后同为 13 errors），属既有待排问题，建议另开单。
+- 🔒 **测试回归结论（2026-08-11）：✅ Verified → Closed**。不满足于"无 warning"这一弱证据，改用 pytest 自报的 `configfile` 直接确认生效配置源：
+  ```bash
+  ls pytest.ini
+  # => 没有那个文件或目录（已 git rm）
+  python3 -m pytest --collect-only -q tests/core/ -p no:cacheprovider   # 观察头部元信息
+  # => rootdir: <仓库根>
+  # => configfile: pyproject.toml     ← 决定性证据：单一配置源已收敛
+  # => 167 tests collected（无 unknown-marker 报错，--strict-markers 生效）
+  ```
+  并核对 `pyproject.toml [tool.pytest.ini_options]` 实际内容：`minversion=8.0`、`addopts=["-v","--strict-markers","--tb=short","--color=yes"]`、`asyncio_mode="auto"`、`markers` 四项（`slow`/`integration`/`e2e`/`timeout`）齐备，与开发自述一致。判定：配置双源漂移风险消除，本单声明范围达成。
+  ⚠️ **回归中发现本单修复掩盖了一个更严重的问题（已另立 P-125，不阻塞本单关闭）**：合并进 pyproject 的 `timeout` marker **对应的 `pytest-timeout` 插件根本没有安装、也从未被声明为依赖**——
+  ```bash
+  python3 -c "import pytest_timeout"
+  # => ModuleNotFoundError: No module named 'pytest_timeout'
+  python3 -m pytest tests/core/ --collect-only -q | grep ^plugins
+  # => plugins: langsmith-0.9.7, asyncio-1.4.0, anyio-4.13.0   ← 无 timeout 插件
+  grep -n "pytest-timeout" pyproject.toml requirements*.txt
+  # => 仅 pyproject.toml:125 的 marker 描述字符串 "timeout: per-test timeout (requires pytest-timeout)"，无任何依赖声明
+  ```
+  因 `timeout` 已被登记为已知 marker，`--strict-markers` **不再报错**，10 处 `@pytest.mark.timeout(N)` 遂静默降级为空操作。反证实验：
+  ```bash
+  # 构造 @pytest.mark.timeout(1) + time.sleep(3) 的用例，用本仓 pyproject 配置运行
+  python3 -m pytest /tmp/p6chk/test_to.py -q -p no:cacheprovider -c pyproject.toml
+  # => 1 passed in 8.77s   ← 1 秒超时形同虚设，sleep 3s 仍判通过
+  ```
+  → 本单"让 strict-markers 真正生效"的目标在 `timeout` 这一项上是**表面达成、实质失效**：marker 被登记恰好消除了本可暴露缺失插件的告警。该问题独立于配置源收敛，故不判 Partial，另立 P-125 跟踪。
 
 ### P-07 — 23 个 e2e 测试中 14 个未接 T7/T8
-- **严重度**：S2 ｜ **分类**：T7 / T8 合规 ｜ **状态**：Fixed（待回归）
+- **严重度**：S2 ｜ **分类**：T7 / T8 合规 ｜ **状态**：Open（🔒测试回归结论：⚠️Partial，残留拆出 P-122）
 - **文件**：`tests/e2e/`（共 23 个 `test_*.py`，仅约 9 个引用 T7/T8 铁律，14 个无 T7/T8 审核/DOM 验证接线）
 - **现象**：按测试铁律 T7（LLM 内容审核）/ T8（浏览器 DOM 验证），涉及 LLM 生成与网页发布的 e2e 用例必须做二次审核与 DOM 校验。静态扫描显示 23 个 e2e 脚本中约 14 个完全未接线 T7/T8，违规铁律却仍可“通过”，质量闸门形同虚设。
 - **建议**：对生成/发布类 e2e 用例统一以 harness 的 `LLMReviewer` / `DOMVerifier` 为入口强制开启 T7/T8（提供 `--t7` / `--t8` 开关并在 CI 启用），补齐缺失接线。
@@ -208,6 +337,41 @@
   # => 20 tests collected（T7Reviewer 导入/DOM 依赖完整，无收集错误）
   ```
   附注：T7 审核依赖 OpenRoute 真实 LLM 通道（与既有 `test_t7_llm_review.py` 同约定），实跑需服务在线；`test_harness` 是否部分用例（如质量反馈迭代产出内容）也应接 T7，可作后续细化项。
+- 🔒 **测试回归结论（2026-08-11）：⚠️ Partial → 状态回退 Open，残留拆出新单 P-122**。
+  **① `test_helm_ui.py` 的 T7 接线属实、有效**（非纸面声明）：
+  ```bash
+  grep -n "t7_assert" tests/e2e/test_helm_ui.py
+  # => :492 def t7_assert(...)  ← helper 定义
+  # => :544/:598/:654/:695/:747/:798/:847/:901/:952  ← 9 个正向意图用例的调用点，逐条覆盖
+  #    （问候/写作/搜索总结/研究报告/翻译/代码/降级回复/多步综合/深度分析）
+  python3 -m pytest tests/e2e/test_helm_ui.py --collect-only -q -p no:cacheprovider
+  # => 20 tests collected（T7Reviewer 导入链完整，无收集错误）
+  ```
+  **② 全量重扫 23 个 e2e 脚本的 T7/T8 实际接线**（本轮扩大匹配面，除 `T7Reviewer/t7_assert` 外补入 `review_sync/llm_review`，T8 侧补入 `playwright/goto_safe/query_selector/async_playwright`，避免只认类名而误判）：
+  ```bash
+  for f in tests/e2e/test_*.py; do
+    t7=$(grep -clE "T7Reviewer|t7_assert|review_sync|llm_review" $f)
+    t8=$(grep -clE "playwright|goto_safe|query_selector|async_playwright|DOMVerifier" $f)
+    printf "%-40s T7=%s T8=%s\n" "$(basename $f)" "${t7:+Y}" "${t8:+Y}"; done
+  # => 已接 T7 共 10 个：helm_ui / model_management / modes / quick_e2e / real_llm /
+  #                      t7_llm_review / t8_dom_verify / t8_v3 / workflow_5step / workflow_api
+  # => 未接 T7 共 13 个：concurrent / event_bridge_e2e / event_bridge_extreme / harness /
+  #                      minimal_conn / opensieve_{full,quick,search,verify} / phase1~4
+  ```
+  与工单原始基线（9 接线 / 14 未接）对比：**9 → 10、14 → 13，本单仅推进 1 个脚本**。
+  **更正前序测试记录**：早前用 `T7Reviewer|t7_assert|DOMVerifier` 窄口径扫描时，`test_t8_v3.py` 曾被误列为"T8 未接线"。实测该文件通过 `goto_safe/query_selector_safe` 等 Playwright 封装做真实 DOM 验证（文件头声明 L1–L8 共 33 用例的 8 层验证体系），**接线属实，此前判读有误，特此更正**。
+  **③ 开发的范围裁定大体成立，但有一处不成立——即开发自述末尾自行存疑的 `test_harness.py`**。逐条核验开发列出的"不适用"清单：`test_concurrent.py` 实测 `grep -nE "chat|generate|prompt|message|content"` **零匹配**，确不产出内容，裁定成立；`phase1~4` 无 `test_*` 函数（收集 0 项，见 P-02），裁定成立；`opensieve_*` 为检索服务验证，裁定成立。**但 `test_harness.py` 裁定不成立**：
+  ```bash
+  grep -nE "llm|LLM|content" tests/e2e/test_harness.py
+  # :4   严格遵守测试铁律：零Mock、零假数据、真实LLM、具体断言
+  # :15  # T1铁律：测试始终使用真实LLM，不设skipif跳过条件
+  # :119 assert len(content) >= 100, f"长上下文输出应≥100字符: {len(content)}"
+  # :166 assert len(content) >= 100, f"搜索输出应≥100字符: {len(content)}"
+  # :168 assert "http" in content or "搜索" in content or "search" in content.lower(), ...
+  grep -c "def test_" tests/e2e/test_harness.py   # => 8
+  ```
+  该文件 8 个用例**确实调用真实 LLM 并产出面向用户的内容**（长上下文输出、搜索总结），而断言强度仅为 `len(content) >= 100` 与子串包含——这恰恰是 T7 存在的意义所在：**长度与关键词断言无法识别语义错误、答非所问、事实编造**，LLM 只要吐够 100 字符含 "搜索" 二字即可通过。开发自述"断言对象是机制行为"与代码实际断言不符。
+  → 判定：本单声明的整改范围（14 个未接线脚本）仅完成 1 个，且其中至少 1 个被错误裁定为"不适用"。按 BUG_PROTOCOL §四 `⚠️Partial → Open + 拆出新工单`，本单回退 Open，`test_harness.py` 的 T7 接线缺口另立 **P-122** 跟踪。
 
 ---
 
@@ -221,7 +385,7 @@
 > - `tests/e2e/`：起本地 API 服务（`PYTHONPATH=.. python3 -m uvicorn flowforge.app.main:app --port 8002`）后 `test_concurrent`(9P)、`test_minimal_conn`(1P)、`test_event_bridge_e2e/extreme`(23P)、`test_real_llm`/`test_t7_llm_review`(离线 skip)通过；需 8765/5174/浏览器者阻塞（见 P-17）。
 
 ### P-08 — `asyncio.get_event_loop().run_until_complete()` 在 Python 3.12 抛 RuntimeError（1 用例，2026-08-10 复核）
-- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
+- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Closed（🔒测试回归结论：✅Verified）
 - **文件**：`tests/unit/test_phase4_features.py::TestSandboxBackwardCompat::test_legacy_execute_still_works`（`asyncio.get_event_loop().run_until_complete(...)` 调用所在；复测记录引 `skills/base.py:66` 经复核为测试文件内部调用）
 - **现象**：源码 `skills/base.py:66` 用 `asyncio.get_event_loop().run_until_complete(...)` 驱动协程；Python 3.12 主线程默认无当前事件循环，该同步遗留路径触发 `RuntimeError: There is no current event loop in thread 'MainThread'`，用例未跑到断言即失败。注意：`test_skills.py` 仅对 `get_event_loop` 抛 `DeprecationWarning`（未失败），实测 36 passed；真正失败的是 `test_phase4_features.py` 的 legacy 同步包装用例。实跑（2026-08-10 复核）：
   ```bash
@@ -238,6 +402,13 @@
   python3 -m pytest flowforge/tests/unit/test_phase4_features.py::TestSandboxBackwardCompat -q
   # => 4 passed（原先 RuntimeError 用例现通过，无 DeprecationWarning）
   ```
+- 🔒 **测试回归结论（2026-08-11）：✅ Verified → Closed**。
+  ```bash
+  python3 -m pytest tests/unit/test_phase4_features.py::TestSandboxBackwardCompat -q -p no:cacheprovider
+  # => 4 passed, 1 warning in 2.25s
+  #    （原 test_legacy_execute_still_works 的 RuntimeError: There is no current event loop 已消失）
+  ```
+  判定：Python 3.12 主线程无当前事件循环导致的 `RuntimeError` 已消除，4 个向后兼容用例全部实跑通过。开发在自述中对前序记录的更正（真正失败点是测试文件内部调用而非 `skills/base.py:66`）经本轮复核属实，予以采信。
   复核注：复测记录引 `skills/base.py:66`，实为测试文件内部 `asyncio.get_event_loop().run_until_complete` 调用（该测试文件自己导入 asyncio），源码 `skills/base.py` 无此调用。
 
 ### P-09 — `app/main.py` `_load_single_plugin` 兼容 shim 丢弃传入的注册表参数，热重载跟踪失效（4 用例）
@@ -287,7 +458,7 @@
 - **T7/T8**：否
 
 ### P-12 — `core/errors.py` 仍缺 `LLMError` / `ForgekinError`，波及 `llm.client` / `forgemind.council` 模块导入 + 3 测试文件收集 ImportError
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Closed（🔒测试回归结论：✅Verified）
 - **文件**：`core/errors.py`（现仅到 `ReliabilityError`，无 `LLMError`/`ForgekinError`）、`llm/errors.py:20`（`from flowforge.core.errors import LLMError`）、`tests/test_llm_client.py:8`、`tests/test_forgekin.py:7`、`tests/test_plugin_protocol.py:20`
 - **现象**：与 P-03 同主题（core/errors 缺类）但**症状与影响面独立**：`LLMError` 缺失使 `flowforge.llm.errors`→`flowforge.llm.client` 整个模块无法导入；`ForgekinError` 缺失使 `flowforge.forgemind.council` 无法导入。运行时收集独立复现（开发在 P-06 附注亦已确认此类 collection error 存在、建议另开单）。实跑：
   ```bash
@@ -306,9 +477,22 @@
   # => 2 文件收集成功（此前 ImportError）
   ```
   注：`flowforge.llm.client` 仍因 `from flowforge.llm.provider import ProviderResponse` 报 ImportError，属 P-14 API 漂移范畴（ProviderResponse 名称已迁改），不在本单 LLMError 范围内，P-14 一并处理。
+- 🔒 **测试回归结论（2026-08-11）：✅ Verified → Closed**。工单声明的 3 条症状（异常类缺失 / 2 个模块无法导入 / 3 测试文件收集 ImportError）逐条复跑：
+  ```bash
+  python3 -c "from flowforge.core.errors import LLMError, ForgekinError; print('errors OK')"
+  # => errors OK
+  python3 -c "import flowforge.forgemind.council; print('council OK')"
+  # => council OK        （此前 ImportError: cannot import name 'ForgekinError'）
+  python3 -c "import flowforge.llm.client; print('llm.client OK')"
+  # => llm.client OK     （此前 ImportError: cannot import name 'LLMError'）
+  python3 -m pytest tests/test_llm_client.py tests/test_forgekin.py tests/test_plugin_protocol.py \
+    --collect-only -q -p no:cacheprovider
+  # => 61 tests collected in 5.75s（3 个文件全部收集成功，此前 3 errors during collection）
+  ```
+  判定：三条症状全部消除。**补充说明**：开发自述遗留的"`flowforge.llm.client` 仍因 `ProviderResponse` 报 ImportError，留待 P-14"一项，本轮实测**已不再复现**——该模块现可正常导入（对应 P-14 修复提交 `742728b` `fix(llm): 修复 P-14 API 漂移 — ProviderResponse→LLMResponse`）。故本单三条症状连同其跨单依赖均已解除，收集数由 0（3 errors）恢复为 61 项。P-14 本单状态另行判定，不在此处推进。
 
 ### P-13 — `flowforge.cli.__main__` 模块缺失：产品 CLI 入口崩溃 + `test_cli` 收集失败
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Closed（🔒测试回归结论：✅Verified）
 - **文件**：`cli/__init__.py:13`（`from flowforge.cli.__main__ import main`）、`pyproject.toml:63`（`flowforge = "flowforge.cli.__main__:main"`）、`tests/test_cli.py:12`
 - **现象**：`cli/` 包只有 `__init__.py`（无 `__main__.py`），而 `__init__` 与 console_script 均引用 `flowforge.cli.__main__:main`，导致产品 CLI 入口全崩、`test_cli` 收集期 `ModuleNotFoundError`。实跑：
   ```bash
@@ -324,6 +508,23 @@
   python3 -m flowforge --version                                          # => flowforge 0.1.0
   python3 -m flowforge forgekin list                                      # => 小煤球/老灯/Sherlock Holmes
   ```
+- 🔒 **测试回归结论（2026-08-11）：✅ Verified → Closed**。工单两条症状（产品 CLI 入口崩溃 / `test_cli` 收集失败）逐条复跑：
+  ```bash
+  ls cli/__main__.py
+  # => cli/__main__.py（已补齐）
+  python3 -m flowforge.cli --version
+  # => flowforge 0.1.0          （此前 ModuleNotFoundError: No module named 'flowforge.cli.__main__'）
+  python3 -m pytest tests/test_cli.py -q -p no:cacheprovider
+  # => 7 passed, 1 warning in 12.07s   （此前收集期 ModuleNotFoundError，0 用例）
+  ```
+  判定：CLI 入口可用、7 个用例实跑通过，本单声明范围达成。
+  ⚠️ **回归中发现一处新的入口告警（已另立 P-123，S4，不阻塞本单关闭）**：以 `python -m flowforge.cli` 形式启动会稳定抛出——
+  ```
+  <frozen runpy>:128: RuntimeWarning: 'flowforge.cli.__main__' found in sys.modules after import of
+  package 'flowforge.cli', but prior to execution of 'flowforge.cli.__main__'; this may result in
+  unpredictable behaviour
+  ```
+  根因是 `cli/__init__.py:13` 在包导入期即 `from flowforge.cli.__main__ import main`，与 `runpy` 随后再次执行 `__main__` 形成双导入。功能当前未受影响（版本号正确输出），但模块级状态会被初始化两次，属真实隐患。
 
 ### P-14 — 测试/源码 API 漂移：4 个测试文件收集 ImportError（源码模块本身可导入）
 - **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
@@ -2358,6 +2559,170 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **严重度**：S3 ｜ **分类**：功能缺失（clowder-ai 对比） ｜ **状态**：Open
 - **现象**：FlowForge 无锚定遥测系统。clowder-ai 实现了锚定遥测、事件日志、采用汇总等（anchor-telemetry.ts、anchor-event-log.ts、anchor-adoption-rollup.ts），追踪用户行为模式和系统采用率。
 - **影响**：无法衡量 AI 功能的采用率和用户行为模式，数据驱动优化缺失。
+
+---
+
+> ## 【2026-08-11 回归验证轮次｜P-121…P-125】
+>
+> 环境：Python 3.12.3 ｜ pytest 9.1.1 ｜ 分支 `fix/p14-apidrift`（已合并 origin/master）｜ `PYTHONPATH=<flowlight 父目录>`。
+> 本批 5 单**全部产生于对 P-01…P-08 / P-12 / P-13 共 10 个「Fixed（待回归）」工单的回归验证过程**，均为实跑复现，非静态推测。其中 P-121 / P-122 为 Partial 判定后按 BUG_PROTOCOL §四拆出的残留单，P-123 / P-124 / P-125 为回归过程中顺带发现的新缺陷。
+
+### P-121 — `tests/_test_full_regression.py` 模块级轮询致 pytest 收集期挂死约 18.7 分钟（CI 无告警卡死）
+- **严重度**：S1 ｜ **分类**：CI / 配置 ｜ **状态**：Open
+- **文件**：`tests/_test_full_regression.py:23-36`（`wait_for_task` 定义）、`:41`（模块级 `httpx.get`）、`:56,74,90,107,123,140,157`（7 处模块级 `wait_for_task` 调用）；另 `tests/e2e/test_opensieve_quick.py:63`、`tests/_test_comprehensive.py`
+- **来源**：P-02 回归判定 ⚠️Partial 后拆出的残留单（P-02 仅修复 4 个 phase 脚本）。
+- **现象**：该文件全部逻辑写在**模块顶层**，pytest 收集期导入即执行。`wait_for_task()` 的实现是致命组合——
+  ```python
+  def wait_for_task(task_id, max_wait=300):
+      for i in range(max_wait // 3):     # 固定循环 max_wait/3 次，不因失败提前退出
+          time.sleep(3)                  # 每轮无条件先睡 3 秒
+          try:
+              resp = httpx.get(...)
+              ...
+          except Exception:
+              continue                   # 吞掉所有异常（含 ConnectError），继续下一轮
+  ```
+  异常被静默吞掉 + 固定次数轮询 ⇒ **无论服务是否健康都会跑满全部轮次**。7 处调用的 `max_wait` 为 300/300/180/180/120/120/120 秒，合计 **1120 秒 ≈ 18.7 分钟**，全部发生在 pytest **收集阶段**。实跑：
+  ```bash
+  time timeout 60 python3 -m pytest tests/_test_full_regression.py --collect-only -q -p no:cacheprovider
+  # => 无任何输出；exit=124（被 timeout 强杀），耗时 61s
+  timeout -s INT 40 python3 -m pytest tests/_test_full_regression.py --collect-only -q -p no:cacheprovider
+  # => !!!!!! KeyboardInterrupt !!!!!!
+  # => /home/.../tests/_test_full_regression.py:26: KeyboardInterrupt   ← 卡在 wait_for_task 的 time.sleep(3)
+  ```
+  同批残留 `test_opensieve_quick.py` 则是另一种表现（模块级 `asyncio.run(main())` 发起外部 HTTP）：
+  ```bash
+  timeout 120 python3 -m pytest tests/e2e/test_opensieve_quick.py --collect-only -q -p no:cacheprovider
+  # => ERROR tests/e2e/test_opensieve_quick.py - json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+  # => Interrupted: 1 error during collection；no tests collected, 1 error in 5.70s
+  ```
+- **为何比原 P-02 更严重（定级 S1 的依据）**：
+  1. **无告警卡死**：P-02 的 `INTERNALERROR`/`ConnectError` 会立刻失败并打印堆栈；本单是静默挂起，CI 上表现为"任务一直在跑"，直到 job 级超时才被杀，排查成本极高。
+  2. **服务在线时反而更糟**：本轮实测 `localhost:8001` **在线**（`curl http://localhost:8001/health` → `http_code=200`，`ss -ltn` 显示 `0.0.0.0:8001` LISTEN），故 `:41` 的健康检查通过、执行流深入到 7 处轮询，挂死时间达到最大值。2026-08-10 记录的"快速 ConnectError"只是当时服务未起的偶然表现，**不可据此认为问题较轻**。
+  3. **污染任意包含该文件的收集**：只要 `pytest tests/` 整目录收集就会命中，使全量回归无法执行。
+- **建议**：
+  1. 将模块级逻辑收入 `def main():` + `if __name__ == "__main__":` 守卫（与 P-02 对 4 个 phase 脚本的整改同法）；
+  2. `wait_for_task` 改为**失败即退出**（连续 N 次异常/连接失败直接 `raise` 或 `return None`），禁止 `except Exception: continue` 静默吞异常；
+  3. 轮询改为"先查后睡"并加总时长上限，避免必然 `sleep` 满全程；
+  4. 文件名以 `_` 开头本意是避开收集，但 `--collect-only` 指定路径仍会导入，建议移出 `tests/` 或改置 `scripts/`。
+- **T7/T8**：否
+
+### P-122 — `tests/e2e/test_harness.py` 8 个用例产出真实 LLM 面向用户内容却未接 T7，断言仅长度/子串
+- **严重度**：S2 ｜ **分类**：T7 / T8 合规 ｜ **状态**：Open
+- **文件**：`tests/e2e/test_harness.py:119`、`:166`、`:168`（弱断言处）；全文件 8 个 `def test_`
+- **来源**：P-07 回归判定 ⚠️Partial 后拆出的残留单。开发在 P-07 自述中将本文件裁定为"harness 机制验证，断言对象是机制行为，T7/T8 不适用"，并在末尾自行存疑"是否部分用例也应接 T7"——经核验，**该裁定与代码实际不符**。
+- **现象**：文件头即声明"零Mock、零假数据、**真实LLM**、具体断言"（`:4`）、"T1铁律：测试始终使用真实LLM，不设 skipif 跳过条件"（`:15`），8 个用例确实调用真实 LLM 并产出**面向用户的内容**（长上下文输出、搜索结果总结）。但内容断言强度极弱：
+  ```python
+  :119  assert len(content) >= 100, f"长上下文输出应≥100字符: {len(content)}"
+  :166  assert len(content) >= 100, f"搜索输出应≥100字符: {len(content)}"
+  :168  assert "http" in content or "搜索" in content or "search" in content.lower(), ...
+  ```
+  **这正是 T7 存在的理由**：长度与关键词断言无法识别语义错误、答非所问、事实编造、格式崩坏。LLM 只要返回 100 个字符且含"搜索"二字即判通过——例如返回一段与提问无关的道歉文本亦可蒙混过关，质量闸门形同虚设。
+- **复现**：
+  ```bash
+  grep -nE "llm|LLM|content" tests/e2e/test_harness.py   # 确认真实 LLM 调用与内容断言
+  grep -c "def test_" tests/e2e/test_harness.py          # => 8
+  grep -clE "T7Reviewer|t7_assert|review_sync|llm_review" tests/e2e/test_harness.py  # => 无匹配（未接 T7）
+  ```
+- **建议**：参照 P-07 中 `test_helm_ui.py` 的既有做法，引入 `tests/utils/t7_reviewer.py` 的 `T7Reviewer.review_sync` 并新增 `t7_assert()` helper，对**产出面向用户内容**的用例（长上下文输出、搜索总结）在长度断言之后追加 T7 六维度审核，审核 FAIL 即失败；纯机制类断言（上下文隔离、不含前一任务关键信息等）可维持现状。
+- **T7/T8**：是（T7）
+
+### P-123 — `python -m flowforge.cli` 触发 runpy 双导入 RuntimeWarning（`__main__` 模块级状态被初始化两次）
+- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`cli/__init__.py:13`（`from flowforge.cli.__main__ import main`）、`cli/__main__.py`
+- **来源**：P-13 回归验证过程中发现。
+- **现象**：以模块形式启动 CLI 时稳定抛出 RuntimeWarning：
+  ```bash
+  python3 -m flowforge.cli --version
+  # => <frozen runpy>:128: RuntimeWarning: 'flowforge.cli.__main__' found in sys.modules after
+  #    import of package 'flowforge.cli', but prior to execution of 'flowforge.cli.__main__';
+  #    this may result in unpredictable behaviour
+  # => flowforge 0.1.0
+  ```
+  根因：`runpy` 执行 `flowforge.cli.__main__` 前会先导入父包 `flowforge.cli`，而该包 `__init__.py:13` 又主动导入了 `__main__`，导致 `__main__` 被载入两次（一次作为 `flowforge.cli.__main__`，一次作为 `__main__`）。模块级定义的常量/单例/注册表会被初始化两次，若后续在 `__main__` 中引入模块级副作用（注册、连接、计数器）将出现难以定位的重复行为。
+- **影响**：当前功能未受损（版本号正确输出、`tests/test_cli.py` 7 passed），属潜伏隐患 + 每次调用都向用户输出一行警告，影响 CLI 观感。
+- **建议**：将 `cli/__init__.py` 对 `main` 的导入改为惰性（`def main(*a, **kw): from .__main__ import main as _m; return _m(*a, **kw)`），或把 `main()` 的实现移入独立模块（如 `cli/app.py`），由 `__init__.py` 与 `__main__.py` 分别引用，消除包与 `__main__` 的循环引用。
+- **T7/T8**：否
+
+### P-124 — `FLOWFORGE_BRIDGE_DIR` 仅在 `load_from_yaml` 路径生效，直接构造配置时被静默忽略（与字段文档不符）
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`llm/trae/config.py:173`（字段 description）、`:22`（模块注释）、`:274-303`（`load_from_yaml` 中的 `${ENV}` 展开逻辑）
+- **来源**：P-05 回归验证过程中发现。
+- **现象**：文档承诺与实现不一致。`llm/trae/config.py:173` 的字段说明写明「共享目录路径（默认仓库根 .trae_bridge，**可用 FLOWFORGE_BRIDGE_DIR 覆盖**）」，`:22` 注释同样声明"可用 FLOWFORGE_BRIDGE_DIR 环境变量覆盖"。但环境变量展开只实现在 `load_from_yaml()`（`:296` 的 `_expand` + `:303` 的 `re.sub(r"\$\{([^}]+)\}", ...)`）中，`shared_dir` 字段默认值直接取模块级常量 `_DEFAULT_SHARED_DIR`，**不读取环境变量**。实跑对比：
+  ```bash
+  # 路径 A：走 YAML —— env 生效
+  FLOWFORGE_BRIDGE_DIR=/tmp/br1 python3 -c "from flowforge.llm.trae.config import TraeBridgeConfig; \
+    print(TraeBridgeConfig.load_from_yaml('config/trae_bridge.yaml').shared_dir)"
+  # => /tmp/br1                    ✅ 符合文档
+
+  # 路径 B：直接构造 —— env 被忽略
+  FLOWFORGE_BRIDGE_DIR=/tmp/br1 python3 -c "from flowforge.llm.trae.config import TraeBridgeConfig; \
+    print(TraeBridgeConfig().shared_dir)"
+  # => <仓库根>/.trae_bridge       ❌ 与文档承诺不符，env 未被读取
+  ```
+- **影响**：任何绕过 YAML 直接构造 `TraeBridgeConfig()` 的调用方（含测试夹具）都会**静默**拿到仓库根默认目录而非用户指定目录。此类"配置未生效"缺陷无报错、无日志，排查代价高；在多实例/容器部署中还可能导致多个进程争用同一 `.trae_bridge` 目录。
+- **建议**：二选一——(a) 在 `shared_dir` 字段改用 `default_factory=lambda: Path(os.getenv("FLOWFORGE_BRIDGE_DIR") or _DEFAULT_SHARED_DIR)`，使两条路径行为一致；(b) 若刻意只支持 YAML 覆盖，则修正 `:173` 与 `:22` 的措辞为"仅在通过 YAML 加载时可用 `${FLOWFORGE_BRIDGE_DIR}` 占位符覆盖"。推荐 (a)。
+- **T7/T8**：否
+
+### P-125 — `pytest-timeout` 未安装亦未声明依赖，10 处 `@pytest.mark.timeout` 静默失效（超时保护形同虚设）
+- **严重度**：S2 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
+- **文件**：`pyproject.toml:125`（`"timeout: per-test timeout (requires pytest-timeout)"`）、`tests/integration/test_llm_integration.py:202,253,298,339,404,464,489,509,536,581`（10 处 `@pytest.mark.timeout`）
+- **来源**：P-06 回归验证过程中发现。
+- **现象**：`@pytest.mark.timeout(N)` 依赖 `pytest-timeout` 插件，但该插件**既未安装、也从未在任何依赖清单中声明**——`pyproject.toml:125` 只在 marker 的描述字符串里提到 `requires pytest-timeout`，那只是一行说明文字，不产生任何依赖约束：
+  ```bash
+  python3 -c "import pytest_timeout"
+  # => ModuleNotFoundError: No module named 'pytest_timeout'
+  python3 -m pytest tests/core/ --collect-only -q | grep ^plugins
+  # => plugins: langsmith-0.9.7, asyncio-1.4.0, anyio-4.13.0     ← 无 timeout 插件
+  grep -n "pytest-timeout" pyproject.toml requirements*.txt
+  # => 仅命中 pyproject.toml:125 的描述字符串，无依赖声明
+  ```
+  **更隐蔽的是：`timeout` 已被登记进 `markers` 列表，`--strict-markers` 因而不会报未知 marker**，本可暴露该问题的唯一告警被消除，marker 遂静默降级为空操作。反证实验（以本仓 `pyproject.toml` 为配置运行 1 秒超时 + 3 秒 sleep）：
+  ```bash
+  cat > /tmp/p6chk/test_to.py <<'PY'
+  import time, pytest
+  @pytest.mark.timeout(1)
+  def test_should_timeout_at_1s():
+      time.sleep(3)
+  PY
+  python3 -m pytest /tmp/p6chk/test_to.py -q -p no:cacheprovider -c pyproject.toml
+  # => 1 passed in 8.77s      ← 1 秒超时完全未触发，sleep 3 秒仍判通过
+  ```
+- **影响**：`tests/integration/test_llm_integration.py` 的 10 个用例本意是对真实 LLM 调用设 10/30/60 秒的时间上限，实际**零超时保护**。一旦上游 LLM 网关无响应，这些用例会无限期挂起，与 P-121 叠加将使 CI 完全失去时间兜底能力。同时这也是一类"假绿"：用例的时间性能约束从未被真正校验过。
+- **建议**：
+  1. 在 `pyproject.toml` 的测试依赖组（`[project.optional-dependencies].dev` 或等价位置）显式声明 `pytest-timeout`，并在 CI 安装步骤中确保装入；
+  2. 在 CI 增加插件在位断言（如 `python -m pytest --version` 输出中校验 `timeout` 在 plugins 列表内），避免依赖漂移后再次静默失效；
+  3. 作为兜底，可在 `addopts` 增加全局 `--timeout=<N>`——注意此项同样依赖插件，缺插件时 pytest 会直接报未知参数而**快速失败**，反而比静默通过更安全。
+- **T7/T8**：否
+
+### P-126 — `result_extractor` 的「最终安全网」漏掉 3 类最常见 LLM 输出形态，原始 JSON / ```json 围栏直接透传给终端用户
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **文件**：`loop/result_extractor.py:24-56`（`_strip_json_wrapper`）、`loop/result_extractor.py:85`（守卫 `content.strip().startswith("{")`）；下游内联副本 `contentforge/app/api/endpoints/content.py:248-278`（逐行一致）
+- **现象**：`extract_content()` 在 `:84-91` 标注为「v4.6 最终安全网: 确保返回纯 markdown，剥离任何残留的 JSON 包装」，是**所有 Loop 产出内容抵达用户前的最后一道清洗**（contentforge 文章、mallforge 文案、novelforge 章节、stockforge 研报共用）。但其入口守卫是 `content.strip().startswith("{")`，且剥离逻辑仅对整串做 `json.loads`，因此：
+  1. **```json 代码围栏包裹**（LLM 最常见输出形态）——首字符是反引号而非 `{`，**根本不进入剥离分支**；
+  2. **JSON + 尾部寒暄**（`…{json}\n\n希望这篇文章对你有帮助！`）——进入分支但整串 `json.loads` 解析失败，`except JSONDecodeError: break` 后 `return content` **原样返回**；
+  3. **前言 + JSON**（`好的，这是您要的文章：\n{json}`）——首字符非 `{`，同样不进入分支。
+- **实跑复现**（7 种真实 LLM 输出形态，`PYTHONPATH=<仓库上级目录>`）：
+  ```python
+  from flowforge.loop.result_extractor import _strip_json_wrapper as S
+  S('```json\n{"draft": "# 标题\\n\\n正文内容"}\n```')
+  # -> '```json\n{"draft": "# 标题\\n\\n正文内容"}\n```'          ❌ 原样泄露
+  S('{"draft": "# 标题\\n\\n正文"}\n\n希望这篇文章对你有帮助！')
+  # -> '{"draft": "# 标题\\n\\n正文"}\n\n希望这篇文章对你有帮助！'    ❌ 原样泄露
+  S('好的，这是您要的文章：\n{"draft": "# 标题\\n\\n正文"}')
+  # -> '好的，这是您要的文章：\n{"draft": "# 标题\\n\\n正文"}'        ❌ 原样泄露
+  # 对照 ✅ 正确的 4 种：纯 JSON 包装 / 嵌套两层 JSON / content 为空回落 draft / 纯 markdown 不改动
+  ```
+  统计：**7 种形态中 3 种把原始 JSON 或 ```json 围栏直接透给终端用户**——发布出去即为用户可见的脏内容。
+- **佐证（同仓已知该形态，但清洗路径未覆盖）**：`tests/unit/test_harness.py:1222-1224` 明确针对 ```json 围栏写了 `_parse_scoring_response` 解析用例，说明本代码库清楚 LLM 会输出围栏 JSON；然而**面向用户内容**的 `result_extractor` 却未做同等处理。
+- **测试缺口**：`grep -rn "_strip_json_wrapper\|result_extractor" tests/ --include=*.py` → **0 命中**，该「最终安全网」当前**零单测覆盖**，任何回归都不会被发现。
+- **建议**：
+  1. 剥离前先去除 markdown 代码围栏（含 ```json 变体）；
+  2. 整串 `json.loads` 失败时回退到「提取首个平衡 `{...}` 片段」再解析，覆盖前言/尾巴场景；
+  3. 守卫条件由 `startswith("{")` 放宽为「包含疑似 JSON 包装」；
+  4. 补 `tests/unit/test_result_extractor.py`，以上述 7 种形态做参数化用例固化行为；
+  5. contentforge 的内联副本（`content.py:248-278`）改为直接复用本函数或同步修复，避免两处漂移。
+- **T7/T8**：是（T7——直接影响交付给用户的 LLM 内容质量；若 T7 审核只校验 `len(content)`，此类脏内容可完全绕过，参见 P-122）
 
 ---
 
