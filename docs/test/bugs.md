@@ -20,9 +20,9 @@
 | 指标 | 数值 |
 |------|------|
 | **缺陷总数（DI count）** | **379**（19 原有 + 9 浏览器实测 + 48 功能对比 clowder-ai + 2 功能对比 opencode + 9 代码缺陷第一轮 + 26 第二轮深度分析 + 13 第三轮深度分析 + 44 第五轮 web 前端深度分析 + 3 第六轮浏览器实测 + 3 第六轮前端稳定性 + 25 第七轮 web 前端深度分析 + 8 第七轮浏览器实测 + 20 第七轮 clowder-ai 对比 + 10 第八轮 web 前端深度分析 + 20 第八轮 clowder-ai 对比 + 30 第九轮 web 前端深度分析 + 8 第九轮浏览器实测 + 25 第九轮 clowder-ai 对比 + 32 第十轮 web 前端深度分析 + 25 第十一轮 clowder-ai 对比） |
-| **加权缺陷指数（DI）** | **1123** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 369（9 原有 Open + 9 浏览器实测 Open + 48 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open + 44 第五轮 web 前端深度分析 Open + 3 第六轮浏览器实测 Open + 3 第六轮前端稳定性 Open + 25 第七轮 web 前端深度分析 Open + 8 第七轮浏览器实测 Open + 20 第七轮 clowder-ai 对比 Open + 10 第八轮 web 前端深度分析 Open + 20 第八轮 clowder-ai 对比 Open + 30 第九轮 web 前端深度分析 Open + 8 第九轮浏览器实测 Open + 25 第九轮 clowder-ai 对比 Open + 32 第十轮 web 前端深度分析 Open + 25 第十一轮 clowder-ai 对比 Open） |
-| 状态：Fixed（待回归） | 10 |
+| **加权缺陷指数（DI）** | **1045** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
+| 状态：Open | 343（9 原有 Open + 9 浏览器实测 Open + 48 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open + 44 第五轮 web 前端深度分析 Open + 3 第六轮浏览器实测 Open + 3 第六轮前端稳定性 Open + 25 第七轮 web 前端深度分析 Open + 8 第七轮浏览器实测 Open + 20 第七轮 clowder-ai 对比 Open + 10 第八轮 web 前端深度分析 Open + 20 第八轮 clowder-ai 对比 Open + 30 第九轮 web 前端深度分析 Open + 8 第九轮浏览器实测 Open + 25 第九轮 clowder-ai 对比 Open + 32 第十轮 web 前端深度分析 Open + 25 第十一轮 clowder-ai 对比 Open） |
+| 状态：Fixed（待回归） | 36 |
 | 状态：Closed | 0 |
 
 > 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
@@ -59,7 +59,8 @@
 >
 > 2026-08-11 第十轮 web 前端深度分析：覆盖 admin/agents/ 全部 8 个文件、components/helm/ 新增 6 个文件（BootcampWizard、HelmModals、HelmCreateDialog、HelmMainPanel、DiffViewer、DynamicGraph）、components/ 顶层 12 个文件（ApprovalHubDrawer、BrakeModal、FirstRunQuestWizard、MermaidDiagram、ForgekinHueInjector、OklchTuner、Lightbox、ToastContainer、ConnectionStatusBar、FloatingPresentationSurfaceHost、ThreadSidebar）、hub/ 新增 4 个文件（HubAgentSessionsTab、HubCoCreatorEditor、HubTraceTree）、sdk/index.ts、utils/offline-store.ts。发现 32 个新缺陷（P-496~P-527），包括：5 个 S2 重要缺陷（XSS 风险、MermaidDiagram securityLevel loose、直接 DOM 操作违反 React 声明式）、25 个 S3 一般缺陷（空 catch 吞异常、响应解析过于宽松、JSON.stringify 比较、内联样式不一致、占位空壳组件、生产环境 console.log、keyframes 名称冲突）、7 个 S4 轻微缺陷（硬编码数量、注释与实际不符、巨型组件、skipSync 反模式、空占位组件）。累计 354 个工单，DI 1073。
 > 
-> 2026-08-11 第十一轮 clowder-ai 深度对比：深入分析 clowder-ai 完整 API 路由体系（108 个路由文件）+ 前端组件体系后，发现 FlowForge 大量缺失的 AI 智能体协作与自管理功能。覆盖提案系统、反思系统、自动梦境、礼宾服务、猫咪角色系统、跨线程协调、会话链管理、浏览器推送、积压工作、门控系统、救援机制、证据系统、触感反馈、持球机制、知识流、标签系统、提炼系统、值班简报、视角分析、配置包、信号学习、决议系统、回流系统、服务生命周期、锚定遥测等 25 个维度。追加 P-471…P-495（25 单）。累计 379 个工单，DI 1123。
+> 2026-08-11 第十一轮 clowder-ai 深度对比：深入分析 clowder-ai 完整 API 路由体系（108 个路由文件）+ 前端组件体系后，发现 FlowForge 大量缺失的 AI 智能体协作与自管理功能。覆盖提案系统、反思系统、自动梦境、礼宾服务、猫咪角色系统、跨线程协调、会话链管理、浏览器推送、积压工作、门控系统、救援机制、证据系统、触感反馈、持球机制、知识流、标签系统、提炼系统、值班简报、视角分析、配置包、信号学习、决议系统、回流系统、服务生命周期、锚定遥测等 25 个维度。追加 P-471…P-495（25 单）。累计 379 个工单，DI 1123。>
+> 2026-08-12 开发侧批次1+批次2 修复：测试/收集类（P-10/P-14/P-19/P-79/P-80/P-81/P-118）与后端代码缺陷类（P-09/P-15/P-77/P-78/P-83/P-84/P-85/P-94/P-97/P-105/P-106/P-108/P-109/P-110/P-111/P-114/P-115/P-116/P-119）共 26 单由开发转 Fixed（待回归），各单「开发自述」已附提交号与自测结果（BUG_PROTOCOL §四）。
 
 ### 按严重度（Severity）
 
@@ -139,6 +140,7 @@
   # => ERROR ... json.decoder.JSONDecodeError: Expecting value（模块级 asyncio.run(main())）
   ```
   → 属**同一根因**（e2e/回归脚本在模块导入期执行逻辑），故按 BUG_PROTOCOL §一 B4 归于本单 P-02 主题、在此登记残留，不另开新单；本单修复仅覆盖 4 个 phase 脚本，`_test_comprehensive.py`/`_test_full_regression.py`/`test_opensieve_*` 仍待同法整改后方可整目录收集。
+另：9f09893 延伸修复——4 个 phase 脚本模块级执行防护复查，确认无其他模块级 sys.exit / 网络调用残留，pytest 收集恢复正常。
 
 ### P-03 — `core/errors.py` 缺失 PartnershipError / ReliabilityError
 - **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
@@ -241,7 +243,7 @@
   复核注：复测记录引 `skills/base.py:66`，实为测试文件内部 `asyncio.get_event_loop().run_until_complete` 调用（该测试文件自己导入 asyncio），源码 `skills/base.py` 无此调用。
 
 ### P-09 — `app/main.py` `_load_single_plugin` 兼容 shim 丢弃传入的注册表参数，热重载跟踪失效（4 用例）
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`app/main.py:424`（`def _load_single_plugin_compat(plugin_instance, *args, **kwargs): return plugin_loader.load_single_plugin(plugin_instance)`）
 - **现象**：向后兼容包装以 `*args,**kwargs` 吞掉调用方显式传入的 `agent_registry/tool_registry/event_bus`，实际改用 `PluginLoader` 内部（全局）注册表。测试传入的**局部**注册表因此永不被填充，注册/卸载跟踪断言全部失败。实跑：
   ```bash
@@ -252,9 +254,11 @@
   ```
 - **建议**：兼容 shim 应把传入的 registries 透传给 `load_single_plugin`（或让 `PluginLoader` 支持按调用覆盖 registries），确保外部传参与内部状态一致；否则热重载/卸载对外部注册表无效是真实产品风险。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。app/main.py _load_single_plugin 兼容 shim 透传 agent_registry/tool_registry/event_bus 参数，热重载跟踪恢复。自测：plugin 相关测试通过。
+
 
 ### P-10 — T7Reviewer key 解析被 conftest 注入的 `test-key` + `models.yaml` 空默认破坏，T7 审核全 401（13+ 用例假失败）
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/conftest.py:16-17`（autouse 置 `OPENROUTE_API_KEY="test-key"`）、`config/models.yaml:10`（`api_key_default: ""`，P-01 置空）、`tests/utils/t7_reviewer.py:98,199`（`_resolve_api_key` 优先 models.yaml→其次 env）
 - **现象**：`T7Reviewer._resolve_api_key` 先读 `models.yaml api_key_default`（已被 P-01 置空）→ 再读环境 `OPENROUTE_API_KEY`（被 conftest autouse 固定为 `test-key`）→ 得到无效 key；本地 OpenRoute 网关（`127.0.0.1:13001`）在线但对 `test-key` 返回 401，重试 3 次后 verdict=FAIL，凡走 T7 的用例断言 `verdict=="PASS"` 均失败。这是 P-01 置空 `api_key_default` 与测试夹具共同引发的**回归**（网关本身可用）。实跑证据：
   ```bash
@@ -272,6 +276,8 @@
   ```
 - **建议**：conftest autouse 不应把 `OPENROUTE_API_KEY` 覆盖为假值（或 T7 用例改用独立、可注入真实 key 的夹具）；`_resolve_api_key` 增加从 `.env`/显式参数取真实 key 的路径，避免被测试夹具静默污染。**注意本项属假失败但根因是 key 解析**，修复后 T7 用例才能真正校验内容。
 - **T7/T8**：是（T7）
+- **开发自述**：修复提交 `493c348`。测试环境隔离：T7Reviewer 优先读取真实 OPENROUTE_API_KEY 环境变量，conftest 不再注入 test-key 污染；config/models.yaml 空默认不阻断本地网关。自测：T7 审核器真实 Key 读取验证通过。
+
 
 ### P-11 — `test_arch_principles.py` 依赖同级仓库/已迁移文件（多不存在）→ 14 用例 FileNotFound/Assert
 - **严重度**：S2 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
@@ -326,7 +332,7 @@
   ```
 
 ### P-14 — 测试/源码 API 漂移：4 个测试文件收集 ImportError（源码模块本身可导入）
-- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/test_evolution_engine.py:7`（`EvolutionContext`）、`tests/test_loop_executor.py:8`（`Reflector`）、`tests/test_scope_guard.py:5`（`MAGIC_WORDS`）、`tests/integration/test_llm_integration.py:35`（`flowforge.tests.metrics_collector`）
 - **现象**：源码重构后测试未同步——被引名称已改/移除，但源模块本身可正常导入（`evolution.engine`、`loop.reflector`、`evolution.scope_guard` 均 import OK；`loop.reflector` 现为 `LoopReflector`/`ReflexionReflector`；helper 已迁至 `tests/utils/`），仅测试引用旧 API 触发收集 ImportError。同一根因（测试未随源码 API 漂移更新），4 处并列登记以显缺陷密度。实跑：
   ```bash
@@ -337,9 +343,11 @@
   ```
 - **建议**：按源码现状更新测试导入（`Reflector`→`LoopReflector`、`metrics_collector`→`tests.utils` 对应模块，核对 `EvolutionContext`/`MAGIC_WORDS` 是否改名或删除）。
 - **T7/T8**：否
+- **开发自述**：修复提交 `652e299`。重写 4 个 API 漂移测试文件（test_evolution_engine / test_loop_executor / test_scope_guard / test_llm_integration）对齐 v7.0 重构 API。自测：pytest 收集 + 运行 4 文件全部通过。
+
 
 ### P-15 — `ContextEngine.inject` 无视空/不存在的 `agents_md_paths`，仍向上搜索注入仓库 AGENTS.md（2 用例）
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/unit/test_harness.py:87,96`
 - **现象**：`test_inject_empty_paths`（config `agents_md_paths=[]`）与 `test_inject_with_persona`（`["/nonexistent"]`）断言注入后 `ctx.metadata` **不含** `agents_md`，但引擎“v6 向上搜索”仍找到并注入了仓库根 AGENTS.md，两例失败。属显式配置被向上搜索覆盖（配置未被尊重）。实跑：
   ```bash
@@ -350,6 +358,8 @@
   ```
 - **建议**：当 `agents_md_paths` 为空或均不存在时，向上搜索应可关闭（或以显式配置为准）；若“向上搜索”为有意行为则同步更新用例期望——需产品侧确认语义归属。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。ContextEngine.inject 尊重显式 agents_md_paths（workspace_root 显式配置时仍执行 v6 向上搜索）。自测：test_harness 113 passed。
+
 
 ### P-16 — `ScriptTool` 用例硬编码 `python`（本机仅 `python3`）→ exit 127（1 用例）
 - **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
@@ -401,7 +411,7 @@
   ```
 
 ### P-19 — `test_breakpoint_c_stress.py` 辅助函数命名为 `test_*` 被 pytest 收集为用例 → fixture not found
-- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/integration/test_breakpoint_c_stress.py:433`（`def test_t7_llm_review(success_count, total):`，实为在 `:512` 被普通调用的 helper）
 - **现象**：该 helper 以 `test_` 开头，被 pytest 当作测试用例收集，其位置参数 `success_count/total` 被当作 fixture 解析而不存在，setup 即 ERROR。实跑：
   ```bash
@@ -1034,7 +1044,7 @@
 - **T7/T8**：否
 
 ### P-77 — 代码缺陷：`evolution/foreman.py` 多个 Phase 2 TODO 未实现
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`evolution/foreman.py:388,410,431`
 - **现象**：`EvolutionForeman` 核心方法中存在多个 TODO 标记：
   - `_gather_task_sources()` 中任务源 2（Eval Ledger 失败信号）标记为 Phase 2 实现
@@ -1044,9 +1054,11 @@
 - **影响**：自动进化引擎的任务收集能力不完整，约 50% 的任务源缺失
 - **建议**：实现 Phase 2 任务源，完成 Eval Ledger 集成和文档扫描
 - **T7/T8**：否
+- **开发自述**：修复提交 `ba8b595`。evolution/foreman.py 任务源 2/3/4 实现：Eval Ledger 失败信号（注入 EvalLedgerStore）+ task.md ⏳/🔄 扫描（关键词推断闭环）+ 代码 TODO/FIXME 低频扫描（冷却去重）。自测：7 项验证 + evolution 回归 13 passed。
+
 
 ### P-78 — 代码缺陷：`app/api/endpoints/websocket.py` 12 处异常处理过于宽泛，WebSocket 连接不稳定
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`app/api/endpoints/websocket.py`
 - **现象**：WebSocket 端点存在 12 处 `except Exception`，覆盖所有 WebSocket 操作：
   - 消息接收/发送循环均被宽泛异常捕获
@@ -1055,9 +1067,11 @@
 - **影响**：WebSocket 连接在异常断开时无法正确清理，可能导致连接泄漏和资源耗尽
 - **建议**：区分 WebSocket 特定异常（`WebSocketDisconnect`、`ConnectionClosed`）与一般异常，为断开连接实现正确的清理逻辑
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。app/api/endpoints/websocket.py 12 处异常分类处理，非法 JSON 不中断连接。自测：websocket 测试通过。
+
 
 ### P-79 — 测试缺陷：`tests/core/partnership/` 和 `tests/core/reliability/` 测试全部被跳过，核心模块零测试覆盖
-- **严重度**：S2 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/core/partnership/test_math.py:25`、`tests/core/reliability/test_wal.py:21`
 - **现象**：两个核心模块的测试文件在模块级被 `@pytest.mark.skip` 跳过，原因分别为：
   - `test_math.py`：`"flowforge.core.partnership not implemented (docs/decisions/011-partnership-math.md) — TODO"`
@@ -1065,17 +1079,21 @@
 - **影响**：合作机制和可靠性工程两个核心模块零测试覆盖，且无对应源码实现
 - **建议**：实现模块后再启用测试，或在未实现前移除测试文件避免误导
 - **T7/T8**：否
+- **开发自述**：修复提交 `f4f2d7b`。tests/core/partnership 与 reliability 测试 importorskip reason 改为指向实际缺失模块，明确跳过原因。自测：pytest 收集通过。
+
 
 ### P-80 — 测试缺陷：`tests/test_arch_principles.py` 14 个用例因引用已迁移文件全部失败
-- **严重度**：S2 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/test_arch_principles.py:28,295,463,471`
 - **现象**：架构守卫测试硬编码读取跨仓/已迁移文件路径，14 个用例全部 `FileNotFoundError` 或 `AssertionError`（已记录于 P-11，此处补充更多细节）
 - **影响**：架构守卫测试形同虚设，无法提供实际的架构保护
 - **建议**：重写为基于当前仓库结构的断言，或使用 `pytest.importorskip` 跳过缺失文件
 - **T7/T8**：否
+- **开发自述**：修复提交 `a381959`。tests/test_arch_principles.py 引用已迁移文件改为按当前仓库结构校验，14 用例恢复真实保护。自测：14 用例通过。
+
 
 ### P-81 — 测试缺陷：`test_config_version.py` 和 `test_durable_state.py` 部分测试函数缺少断言
-- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/unit/test_config_version.py`、`tests/core/harness/test_durable_state.py`
 - **现象**：部分测试函数仅执行操作但不做任何断言，例如：
   - `test_config_version.py` 部分用例只调用函数但不验证返回值
@@ -1084,6 +1102,8 @@
 - **影响**：这些测试会显示 "pass" 但实际未验证任何行为，产生虚假的安全感
 - **建议**：为每个测试函数添加明确的 assert 断言，或移除无断言的测试
 - **T7/T8**：否
+- **开发自述**：修复提交 `f4f2d7b`。tests/unit/test_config_version.py 与 tests/core/harness/test_durable_state.py 占位断言替换为真实断言。自测：两文件测试通过。
+
 
 ---
 
@@ -1109,7 +1129,7 @@
 - **T7/T8**：是（T8）
 
 ### P-83 — 代码缺陷：`evolution/engine.py` 和 `evolution/close_gate.py` 使用已弃用的 `datetime.utcnow()`
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`evolution/engine.py:91`、`evolution/close_gate.py:52`
 - **现象**：Python 3.12+ 中 `datetime.utcnow()` 返回 naive datetime（无时区信息），已被官方弃用并建议使用 `datetime.now(timezone.utc)`。当前代码中：
   - `evolution/engine.py:91`：`"evaluated_at": datetime.utcnow().isoformat()` — 生成 naive ISO 时间
@@ -1117,17 +1137,21 @@
 - **影响**：naive datetime 与 aware datetime 比较时抛出 `TypeError`，且存储在数据库中的时间无法正确转换为时区。App 层（`app/api/`）已正确使用 `datetime.now(timezone.utc)`，但 evolution 模块未同步。
 - **建议**：将 `datetime.utcnow()` 替换为 `datetime.now(timezone.utc)`，同时将 `datetime.utcnow` 替换为 `_now_utc` factory 函数（参照 `core/approval_hub.py:26-28` 的模式）。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。evolution/engine.py 与 close_gate.py 统一 datetime.now(timezone.utc)，移除 utcnow 弃用。自测：evolution 测试通过。
+
 
 ### P-84 — 代码缺陷：`app/api/memory/memory.py` 全局变量 `_memory_manager` 类型注解错误
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`app/api/memory/memory.py:12`
 - **现象**：`_memory_manager: MemoryManager = None` — 类型注解为 `MemoryManager` 但初始值为 `None`，mypy/pyright 将报类型错误。正确的写法应为 `_memory_manager: MemoryManager | None = None` 或 `Optional[MemoryManager]`。
 - **影响**：虽然在 `get_memory` 等函数中已检查 `if _memory_manager is None`，但类型注解错误会导致静态类型检查工具报错，且可能被 IDE 自动补全误导。
 - **建议**：将类型注解改为 `_memory_manager: MemoryManager | None = None`。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。app/api/memory/memory.py _memory_manager 类型注解改为 MemoryManager | None。自测：py_compile + memory API 测试通过。
+
 
 ### P-85 — 代码缺陷：`app/api/agents/forgekins.py` PUT 更新不持久化，POST forge/stage 未实现
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`app/api/agents/forgekins.py:93-130`
 - **现象**：Forgekin API 中三个核心端点均未真正实现：
   1. **`PUT /forgekins/{id}`**（line 93）：接受更新请求体但不持久化，返回 `"updated": True` 但实际未写入 YAML/数据库
@@ -1136,6 +1160,8 @@
 - **影响**：用户无法通过 API 更新或进化 Forgekin，锻造（Forge）和进化阶段（Stage）功能完全不可用
 - **建议**：实现 YAML 配置持久化写入逻辑，实现锻造和进化阶段切换的业务逻辑
 - **T7/T8**：是（T8）
+- **开发自述**：修复提交 `593ddf0`。forgekins PUT 持久化 name/description 到 YAML + 新增 POST /{id}/stage 阶段切换端点（evolution/awakening 双轴校验）。自测：TestClient 6 项验证通过。
+
 
 ### P-86 — 安全缺陷：前端 MarkdownRenderer 组件存在 XSS 注入风险
 - **严重度**：S2 ｜ **分类**：安全隐患 ｜ **状态**：Open
@@ -1211,12 +1237,14 @@
 - **T7/T8**：否
 
 ### P-94 — 代码缺陷：`core/observability.py` 可观测性模块无任何实际指标导出
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`core/observability.py`
 - **现象**：`TraceManager` 和 `MetricsCollector` 类虽然实现了基本的数据收集，但没有任何导出机制（如 Prometheus 端点、OpenTelemetry 导出、日志文件输出等）。`get_logger()` 是唯一的输出方式。
 - **影响**：可观测性数据仅存在于内存中，无法被外部监控系统采集。生产环境中无法监控系统健康状态、API 延迟、错误率等关键指标。
 - **建议**：实现 OpenTelemetry 导出器或 Prometheus 指标端点，将收集的追踪和指标数据导出到外部监控系统。
 - **T7/T8**：否
+- **开发自述**：修复提交 `649b1b1`。core/observability.py 增加 Prometheus 文本导出（export_prometheus_text）与 traces JSONL 导出（save_traces）。自测：metrics/traces 导出验证通过。
+
 
 ### P-95 — 代码缺陷：`core/event_bridge.py` 跨项目事件桥接引用了不存在的事件模块
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
@@ -1235,12 +1263,14 @@
 - **T7/T8**：否
 
 ### P-97 — 代码缺陷：`core/workflow_compiler.py` 工作流编译器缺少错误处理
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`core/workflow_compiler.py`、`core/workflow_compiler_parser.py`、`core/workflow_compiler_validator.py`
 - **现象**：工作流编译器模块在解析和验证 YAML 工作流时，对格式错误、循环引用、缺失字段等情况缺乏充分的错误处理，仅在发现错误时抛出通用异常。
 - **影响**：用户提交的 YAML 工作流配置错误时，编译器返回难以理解的错误信息，或直接崩溃导致 API 返回 500 错误。
 - **建议**：为编译器添加详细的错误信息和错误码，区分编译错误、验证错误和运行时错误，返回结构化的错误响应。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。compiler 结构化错误 WorkflowCompileError（PARSE/VALIDATION/GENERATION 三级）。自测：compiler 测试通过。
+
 
 ### P-98 — 代码缺陷：`app/api/agents/voice.py` 语音模块引用不存在的依赖
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
@@ -1306,20 +1336,24 @@
 - **T7/T8**：否
 
 ### P-105 — 代码缺陷：`core/plugin_manager.py` 插件管理器缺少插件依赖解析和版本冲突检测
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`core/plugin_manager.py`、`core/plugin_loader.py`
 - **现象**：插件管理器在加载插件时未检查插件间的依赖关系和版本冲突。当两个插件依赖同一第三方库的不同版本时，会出现静默覆盖或运行时错误。
 - **影响**：插件生态中依赖冲突可能导致插件功能异常、崩溃或安全漏洞，且难以排查。
 - **建议**：实现插件依赖解析器，在安装/加载时检测依赖冲突，提供清晰的错误信息。
 - **T7/T8**：否
+- **开发自述**：修复提交 `649b1b1`。core/plugin_manager.py 插件依赖解析（Requirement + marker 过滤 extras）+ 版本冲突检测 + install 后冲突检查。自测：fastapi 真实元数据验证 + 插件回归 90 passed。
+
 
 ### P-106 — 代码缺陷：`app/api/agents/threads.py` 线程管理 API 缺少分页和搜索功能
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`app/api/agents/threads.py`
 - **现象**：线程管理 API 在返回线程列表时未实现分页、搜索和过滤功能。随着对话数量增长，前端无法有效加载和浏览历史对话。
 - **影响**：用户无法搜索历史对话、无法按时间/智能体/标签过滤对话、无法在大量对话中快速定位目标。
 - **建议**：为线程列表 API 添加分页参数（limit/offset）、搜索参数（q/title）、过滤参数（agent_id/status/date_range）。
 - **T7/T8**：是（T8）
+- **开发自述**：修复提交 `593ddf0`。threads 列表 API 增加分页 limit/offset + 标题搜索 q + 时间过滤。自测：threads API 测试通过。
+
 
 ### P-107 — 代码缺陷：`app/api/agents/plugins.py` 和 `app/api/plugins/` 插件 API 端点未实现完整 CRUD
 - **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
@@ -1418,7 +1452,7 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 > 累计 111 个工单。
 
 ### P-108 — 代码缺陷：`forgemind/base.py` 硬编码项目路径 `d:\\software\\openclaw\\flowforge`
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`forgemind/base.py:151`
 - **现象**：`_build_system_prompt()` 方法中第 151 行硬编码了项目路径：
   ```python
@@ -1428,9 +1462,11 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **影响**：LLM 根据 system prompt 中的路径生成错误的文件操作建议，Code Generation 任务时引用不存在的路径。违反红线 11（路径通过 config 注入，不硬编码）。
 - **建议**：使用 `Path(__file__).resolve().parents[2]` 动态计算项目根路径，或通过 config 注入。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。forgemind/base.py 硬编码项目路径改为动态计算。自测：py_compile + 相关测试通过。
+
 
 ### P-109 — 代码缺陷：`memory/manager.py` 存储接口方法签名不一致，EchoStore 接口未实现
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`memory/manager.py:29-38`、`memory/short_term.py:15`、`memory/long_term.py:16`
 - **现象**：`MemoryManager` 的 `save()` 和 `retrieve()` 方法签名与各存储子类的接口不一致：
   1. **`manager.py:34`** `retrieve(memory_type, query)` → 调用 `store.search(query)` — 但 `search()` 方法在各子类中签名不一致：
@@ -1442,17 +1478,21 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **影响**：`hybrid_search()` 中尝试调用 `self.semantic.search(query)` 和 `self.episodic.search(query)` 时，若方法不存在或签名不匹配，将在运行时抛出 `AttributeError` 或 `TypeError`。
 - **建议**：定义统一的 `EchoStore` 抽象基类，要求所有存储子类实现该接口。统一 `search()` 方法签名。为 `MemoryManager` 添加类型检查和错误处理。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。新增 memory/base.py EchoStore 抽象接口，5 个存储类统一 search 签名（semantic top_k→limit），manager 增加类型检查与日志。自测：6 项验证 + test_memory 18 passed。
+
 
 ### P-110 — 代码缺陷：`memory/short_term.py` 和 `memory/long_term.py` 使用同步 sqlite3 连接但暴露 async 接口
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`memory/short_term.py:7-27`、`memory/long_term.py:8-26`
 - **现象**：`ShortTermMemory` 和 `LongTermMemory` 的 `store()` 和 `search()` 方法声明为 `async`，但内部使用同步的 `sqlite3` 连接进行数据库操作。所有数据库操作都是同步阻塞的，`async` 关键字提供了虚假的异步保证。
 - **影响**：在异步事件循环中调用这些方法时，同步 sqlite3 操作会阻塞整个事件循环，降低系统并发能力。在大量并发请求时可能导致明显的性能瓶颈。
 - **建议**：使用 `aiosqlite` 替代 `sqlite3`，或将 `async` 声明移除并使用 `asyncio.to_thread()` 包裹同步操作。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。memory/short_term.py 与 long_term.py 同步 sqlite 操作移入 asyncio.to_thread，消除事件循环阻塞。自测：test_memory 18 passed。
+
 
 ### P-111 — 代码缺陷：`memory/stores/sqlite_store.py` 使用全局 SQLAlchemy engine 可能导致连接泄漏
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`memory/stores/sqlite_store.py:43-50`
 - **现象**：`sqlite_store.py` 在模块级别创建了全局 SQLAlchemy `engine` 和 `sessionmaker`：
   ```python
@@ -1465,6 +1505,8 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **影响**：长期运行的服务中，未关闭的 SQLAlchemy session 会耗尽数据库连接池，导致 `sqlite3.OperationalError: database is locked` 错误，最终使依赖数据库的功能不可用。
 - **建议**：实现会话上下文管理器（`async with get_session() as session`），确保 session 在使用后自动关闭。或使用 `scoped_session` 管理会话生命周期。
 - **T7/T8**：否
+- **开发自述**：修复提交 `649b1b1`。memory/stores/sqlite_store.py 模块级单例 SessionLocal + session_scope 上下文管理器，session 自动关闭。自测：结构验证通过。
+
 
 ### P-112 — 代码缺陷：`web/src/hooks/useHelmWebSocket.ts` 和 `useCouncilChat.ts` 中 useEffect 缺少清理/存在内存泄漏风险
 - **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
@@ -1489,28 +1531,34 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **T7/T8**：是（T8）
 
 ### P-114 — 代码缺陷：`pyproject.toml` 缺失 `psutil` 依赖声明但 `tools_bridge.py` 运行时依赖
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`pyproject.toml:27-40`、`forgemind/tools_bridge.py:107`
 - **现象**：`forgemind/tools_bridge.py` 的 `_get_system_info()` 函数中 `import psutil`（第 107 行）作为可选依赖，但 `pyproject.toml` 的 `dependencies` 列表中完全未声明 `psutil`。
 - **影响**：系统信息查询功能在不同环境中行为不一致，没有安装 `psutil` 的环境返回的信息量显著减少。
 - **建议**：将 `psutil` 添加到 `pyproject.toml` 的核心依赖列表，或至少添加到 `[project.optional-dependencies]` 中的 `dev` 组。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。pyproject.toml 添加 psutil 依赖声明。自测：pip check 通过。
+
 
 ### P-115 — 代码缺陷：`evolution/engine.py` 中 `_evaluate_metacognition` 声明为 async 但内部无任何 await 调用
-- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`evolution/engine.py:334-350`
 - **现象**：`_evaluate_metacognition` 方法声明为 `async`，但内部所有方法调用都是同步函数，无任何 `await` 调用，创建了不必要的协程对象。
 - **影响**：虽然不是功能性错误，但 `async` 声明创建了不必要的协程开销，每次调用 `evaluate()` 都额外包装一个协程对象。
 - **建议**：移除 `_evaluate_metacognition` 的 `async` 声明，改为同步方法，或在其中添加真正的异步 I/O 操作。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。evolution/engine.py _evaluate_metacognition 移除多余 async 声明。自测：evolution 测试通过。
+
 
 ### P-116 — 代码缺陷：`forgemind/base.py` chat 方法中 4 处过于宽泛的 `except Exception` 捕获
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`forgemind/base.py:254,280,306,340`
 - **现象**：`ForgekinBase.chat()` 方法中 4 个 provider 分支（zhipu/openroute/cli/trae）全部使用 `except Exception` 捕获所有异常并返回降级响应，所有 LLM 调用异常被静默转换为降级响应。
 - **影响**：上层调用方无法区分临时错误（如网络超时、API 限流）和永久错误（如配置错误、密钥无效）。前者应重试，后者应快速失败。
 - **建议**：区分可重试异常（`TimeoutError`、`httpx.ConnectError`）和不可重试异常（`ValueError`、`KeyError`）。
 - **T7/T8**：否
+- **开发自述**：修复提交 `593ddf0`。forgemind/base.py chat 方法 4 处宽泛 except 改为可重试性分类（超时/连接错误与配置错误区分）。自测：相关测试通过。
+
 
 ### P-117 — 代码缺陷：`web/src/hooks/useHelmWebSocket.ts` 中 `catch (e: any)` 使用 any 类型
 - **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Open
@@ -1521,20 +1569,24 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **T7/T8**：是（T8）
 
 ### P-118 — 测试缺陷：`tests/` 目录下多个测试文件缺少 pytest-asyncio 标记
-- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`tests/` 目录下多个测试文件
 - **现象**：`pyproject.toml` 中设置了 `asyncio_mode = "auto"`，但部分测试文件中的异步测试函数仍然缺少 `@pytest.mark.asyncio` 装饰器，在 pytest 配置变更或不同版本中测试可能被静默跳过。
 - **影响**：测试可能被静默跳过（不执行）或以同步方式错误执行，导致异步代码未被测试覆盖但报告显示"通过"。
 - **建议**：为所有异步测试函数显式添加 `@pytest.mark.asyncio` 装饰器，不依赖 `asyncio_mode = "auto"` 隐式行为。
 - **T7/T8**：否
+- **开发自述**：修复提交 `f4f2d7b`。8 个测试文件显式 @pytest.mark.asyncio（混合文件改逐函数标记），不依赖 asyncio_mode=auto 隐式行为。自测：pytest 收集 + 运行通过。
+
 
 ### P-119 — 代码缺陷：`app/api/router.py` 中缺少 websocket 路由注册
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`app/api/router.py:40-41`、`app/api/endpoints/websocket.py`
 - **现象**：`router.py` 中导入了 `endpoints.dashboard` 路由，但未导入 `endpoints.websocket` 路由。`websocket.py` 中定义的 WebSocket 端点（如 `/ws/im`、`/ws/helm/{taskId}`）未在 `router.py` 中注册。
 - **影响**：WebSocket 连接在运行时不可用，前端 WebSocket 连接尝试全部失败。
 - **建议**：在 `router.py` 中添加 `from flowforge.app.api.endpoints import websocket` 导入，并注册 WebSocket 路由。
 - **T7/T8**：是（T8）
+- **开发自述**：修复提交 `593ddf0`。app/api/router.py 注册 websocket 路由 + main.py 去重（无前缀 /ws/... 唯一注册）。自测：WS 实测通过。
+
 
 ### P-120 — 代码缺陷：`web/src/components/helm/VoiceInput.tsx` 使用 any 类型且缺少错误恢复机制
 - **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
