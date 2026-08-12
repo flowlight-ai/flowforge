@@ -412,10 +412,10 @@ export function useHelmWebSocket(opts?: HelmWSOptions) {
       taskIdRef.current = tid;
       saveState(brand, { taskId: tid });
       connectWS(tid);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setPhase("error");
       saveState(brand, { phase: "error" });
-      optionsRef.current?.onError?.("create", e.message);
+      optionsRef.current?.onError?.("create", e instanceof Error ? e.message : String(e));
     }
   }, [connectWS, brand, interactionMode]);
 
@@ -467,10 +467,10 @@ export function useHelmWebSocket(opts?: HelmWSOptions) {
       }
       saveState(brand, { taskId: existingTaskId, phase: "creating", intent: taskIntent });
       connectWS(existingTaskId);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setPhase("error");
       saveState(brand, { phase: "error" });
-      optionsRef.current?.onError?.("continue", e.message);
+      optionsRef.current?.onError?.("continue", e instanceof Error ? e.message : String(e));
     }
   }, [taskId, connectWS, brand, interactionMode]);
 

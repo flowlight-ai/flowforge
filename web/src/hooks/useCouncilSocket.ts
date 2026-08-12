@@ -31,7 +31,8 @@ interface CouncilSocketOptions {
 }
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
-const RECONNECT_DELAY_MS = 3_000;
+const BASE_RECONNECT_DELAY_MS = 1_000;
+const MAX_RECONNECT_DELAY_MS = 60_000;
 
 export function useCouncilSocket(options: CouncilSocketOptions = {}) {
   const {
@@ -46,6 +47,7 @@ export function useCouncilSocket(options: CouncilSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptRef = useRef(0);
   const subscribedThreadRef = useRef<string | null>(null);
 
   // 回调存储到 ref 避免重连
@@ -98,6 +100,7 @@ export function useCouncilSocket(options: CouncilSocketOptions = {}) {
 
       ws.onopen = () => {
         setStatus("connected");
+        reconnectAttemptRef.current = 0;
         // 启动心跳
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);
         heartbeatRef.current = setInterval(() => {
@@ -152,12 +155,15 @@ export function useCouncilSocket(options: CouncilSocketOptions = {}) {
           clearInterval(heartbeatRef.current);
           heartbeatRef.current = null;
         }
-        // 自动重连
+        // 自动重连：指数退避 + 随机 jitter（1s/2s/4s/.../60s）避免 thundering herd
         if (enabled) {
           setStatus("reconnecting");
+          const attempt = reconnectAttemptRef.current++;
+          const base = Math.min(BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt), MAX_RECONNECT_DELAY_MS);
+          const delay = base + Math.random() * 500;
           reconnectRef.current = setTimeout(() => {
             connect();
-          }, RECONNECT_DELAY_MS);
+          }, delay);
         }
       };
     } catch {
@@ -171,6 +177,7 @@ export function useCouncilSocket(options: CouncilSocketOptions = {}) {
       clearTimeout(reconnectRef.current);
       reconnectRef.current = null;
     }
+    reconnectAttemptRef.current = 0;
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);
       heartbeatRef.current = null;

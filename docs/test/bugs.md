@@ -2,7 +2,7 @@
 
 > 主跟踪单（Master Bug List）。测试人员强制交付物之一（另含测试用例、测试报告）。
 > 规范依据：文档 `docs/test/README.md` §测试交付规范（强制）。命名约定：主单固定 `bugs.md`，置于 `docs/test/`。
-> 生成日期：2026-08-08 ｜ 最后更新：2026-08-11 ｜ 仓库侧：Gitee（`flowlight/flowforge`）
+> 生成日期：2026-08-08 ｜ 最后更新：2026-08-12 ｜ 仓库侧：Gitee（`flowlight/flowforge`）
 > 验证标准：铁律 T7（LLM 内容审核）/ T8（浏览器 DOM 验证）。
 
 > **协作规则**：本单的填写、状态流转与字段归属遵循 [`BUG_PROTOCOL.md`](BUG_PROTOCOL.md)（v1.1）。开发与测试双方提交前请通读。
@@ -20,9 +20,9 @@
 | 指标 | 数值 |
 |------|------|
 | **缺陷总数（DI count）** | **379**（19 原有 + 9 浏览器实测 + 48 功能对比 clowder-ai + 2 功能对比 opencode + 9 代码缺陷第一轮 + 26 第二轮深度分析 + 13 第三轮深度分析 + 44 第五轮 web 前端深度分析 + 3 第六轮浏览器实测 + 3 第六轮前端稳定性 + 25 第七轮 web 前端深度分析 + 8 第七轮浏览器实测 + 20 第七轮 clowder-ai 对比 + 10 第八轮 web 前端深度分析 + 20 第八轮 clowder-ai 对比 + 30 第九轮 web 前端深度分析 + 8 第九轮浏览器实测 + 25 第九轮 clowder-ai 对比 + 32 第十轮 web 前端深度分析 + 25 第十一轮 clowder-ai 对比） |
-| **加权缺陷指数（DI）** | **1045** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
-| 状态：Open | 343（9 原有 Open + 9 浏览器实测 Open + 48 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open + 44 第五轮 web 前端深度分析 Open + 3 第六轮浏览器实测 Open + 3 第六轮前端稳定性 Open + 25 第七轮 web 前端深度分析 Open + 8 第七轮浏览器实测 Open + 20 第七轮 clowder-ai 对比 Open + 10 第八轮 web 前端深度分析 Open + 20 第八轮 clowder-ai 对比 Open + 30 第九轮 web 前端深度分析 Open + 8 第九轮浏览器实测 Open + 25 第九轮 clowder-ai 对比 Open + 32 第十轮 web 前端深度分析 Open + 25 第十一轮 clowder-ai 对比 Open） |
-| 状态：Fixed（待回归） | 36 |
+| **加权缺陷指数（DI）** | **994** ＝ S1×10 + S2×5 + S3×2 + S4×1 |
+| 状态：Open | 333（9 原有 Open + 9 浏览器实测 Open + 48 clowder-ai 对比 Open + 2 opencode 对比 Open + 9 代码缺陷第一轮 Open + 26 第二轮深度分析 Open + 13 第三轮深度分析 Open + 44 第五轮 web 前端深度分析 Open + 3 第六轮浏览器实测 Open + 3 第六轮前端稳定性 Open + 25 第七轮 web 前端深度分析 Open + 8 第七轮浏览器实测 Open + 20 第七轮 clowder-ai 对比 Open + 10 第八轮 web 前端深度分析 Open + 20 第八轮 clowder-ai 对比 Open + 30 第九轮 web 前端深度分析 Open + 8 第九轮浏览器实测 Open + 25 第九轮 clowder-ai 对比 Open + 32 第十轮 web 前端深度分析 Open + 25 第十一轮 clowder-ai 对比 Open） |
+| 状态：Fixed（待回归） | 46 |
 | 状态：Closed | 0 |
 
 > 更新：2026-08-09「实跑复测轮次」在 HEAD `5144892` 真实运行测试套件后追加 P-08…P-19（12 单，均运行时复现，状态 Open）。旧 7 单（P-01…P-07）字段本轮未改（P-04…P-07 由开发侧转 Fixed 待回归）；仅在 P-02/P-03 追加 `【2026-08-09 复测·实跑】` 观察，未作正式回归判定。
@@ -61,6 +61,8 @@
 > 
 > 2026-08-11 第十一轮 clowder-ai 深度对比：深入分析 clowder-ai 完整 API 路由体系（108 个路由文件）+ 前端组件体系后，发现 FlowForge 大量缺失的 AI 智能体协作与自管理功能。覆盖提案系统、反思系统、自动梦境、礼宾服务、猫咪角色系统、跨线程协调、会话链管理、浏览器推送、积压工作、门控系统、救援机制、证据系统、触感反馈、持球机制、知识流、标签系统、提炼系统、值班简报、视角分析、配置包、信号学习、决议系统、回流系统、服务生命周期、锚定遥测等 25 个维度。追加 P-471…P-495（25 单）。累计 379 个工单，DI 1123。>
 > 2026-08-12 开发侧批次1+批次2 修复：测试/收集类（P-10/P-14/P-19/P-79/P-80/P-81/P-118）与后端代码缺陷类（P-09/P-15/P-77/P-78/P-83/P-84/P-85/P-94/P-97/P-105/P-106/P-108/P-109/P-110/P-111/P-114/P-115/P-116/P-119）共 26 单由开发转 Fixed（待回归），各单「开发自述」已附提交号与自测结果（BUG_PROTOCOL §四）。
+>
+> 2026-08-12 开发侧批次3 修复：前端 web/ 缺陷 10 单（P-113/P-117/P-120/P-289/P-290/P-291/P-301/P-353/P-354/P-368~P-374 合并单）由开发转 Fixed（待回归），各单「开发自述」已附修复说明与自测结果（web 全量 tsc --noEmit 通过）。另修复 `web/src/components/hub/HubClaudeRescueSection.tsx` 块注释内 glob 表达式提前终止注释导致的编译级错误（非清单工单，随批次3 一并修复，未新开工单）。
 
 ### 按严重度（Severity）
 
@@ -1520,7 +1522,7 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **T7/T8**：是（T8）
 
 ### P-113 — 代码缺陷：`web/src/lib/flowforge-client.ts` 缺少请求超时和取消机制
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/lib/flowforge-client.ts:15-25`
 - **现象**：`FlowForgeClient` 的 `request<T>()` 方法使用原生的 `fetch()`，但未设置超时控制和取消机制：
   1. 无请求超时 — 网络故障时请求可能挂起数分钟
@@ -1529,6 +1531,7 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **影响**：网络不稳定时，API 请求可能无限挂起，用户无法取消操作，页面可能因等待响应而卡死。
 - **建议**：添加 `AbortSignal` 支持，实现默认超时（如 30s），改进错误信息包含请求路径和耗时。
 - **T7/T8**：是（T8）
+- **开发自述**：修复提交（批次3）。web/src/lib/flowforge-client.ts request() 增加默认 30s 超时（AbortSignal.timeout 机制自实现）+ 透传调用方 AbortSignal + 错误信息含请求路径与超时/取消区分。自测：tsc --noEmit 全量通过（含本文件）。
 
 ### P-114 — 代码缺陷：`pyproject.toml` 缺失 `psutil` 依赖声明但 `tools_bridge.py` 运行时依赖
 - **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
@@ -1561,12 +1564,13 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 
 
 ### P-117 — 代码缺陷：`web/src/hooks/useHelmWebSocket.ts` 中 `catch (e: any)` 使用 any 类型
-- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/hooks/useHelmWebSocket.ts:415,471`
 - **现象**：`createTask` 和 `continueChat` 方法中的 catch 块使用 `catch (e: any)`，`e.message` 可能为 `undefined`。
 - **影响**：运行时显示"undefined"错误信息，无法通过 TypeScript 编译器捕获可能的类型错误。
 - **建议**：将 `catch (e: any)` 改为 `catch (e: unknown)`，添加类型守卫判断 `e instanceof Error`。
 - **T7/T8**：是（T8）
+- **开发自述**：修复提交（批次3）。web/src/hooks/useHelmWebSocket.ts createTask/continueChat 两处 catch (e: any) → catch (e: unknown) + instanceof Error 守卫，避免 undefined 错误信息。自测：tsc --noEmit 全量通过。
 
 ### P-118 — 测试缺陷：`tests/` 目录下多个测试文件缺少 pytest-asyncio 标记
 - **严重度**：S3 ｜ **分类**：测试脚本缺陷 ｜ **状态**：Fixed（待回归）
@@ -1589,7 +1593,7 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 
 
 ### P-120 — 代码缺陷：`web/src/components/helm/VoiceInput.tsx` 使用 any 类型且缺少错误恢复机制
-- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/components/helm/VoiceInput.tsx:32,37,72,92`
 - **现象**：语音输入组件存在多个类型安全和错误处理问题：
   1. `recognitionRef: any`（line 32）— 使用 `any` 类型
@@ -1600,6 +1604,7 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **影响**：语音识别在出现临时错误时无法自动恢复，类型问题可能在运行时引发未预期的错误。
 - **建议**：定义 `SpeechRecognition` 接口类型替换 `any`，添加自动重试逻辑，添加状态指示器。
 - **T7/T8**：是（T8）
+- **开发自述**：修复提交（批次3）。web/src/components/helm/VoiceInput.tsx 移除全部 any（recognitionRef/window.SpeechRecognition/事件回调），定义 Web Speech API 最小类型；临时错误（network/no-speech/aborted 等）自动重试最多 2 次，权限拒绝不重试。自测：tsc --noEmit 全量通过。
 
 > ## 【2026-08-11 第四轮深度分析｜功能维度扩展｜P-332…P-346】
 >
@@ -1805,26 +1810,26 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **建议**：将 socket 实例存入 React ref 或 Zustand store，每个组件实例持有独立连接。
 
 ### P-289 — S1：`useApi.ts` 无超时/取消机制，请求挂起致页面无限 loading
-- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/hooks/useApi.ts:15-30`
 - **现象**：`useApi<T>(url)` hook 使用 `useEffect` 内直接 `fetch(url).then(setData)`，无 `AbortController`、无超时机制。网络故障时组件卸载后 fetch 仍继续，`setData` 在已卸载组件上执行引发 React 警告，且页面永久显示 loading 状态。
 - **影响**：任意 API 端点不可用（如后端服务离线）时，页面无限 loading，用户无法进行任何操作。
 - **建议**：添加 `AbortController` 并在 useEffect cleanup 中 abort，添加超时机制（如 30s）。
-
+- **开发自述**：修复提交（批次3）。web/src/hooks/useApi.ts request() 增加 AbortController + 默认 30s 超时（可传 timeoutMs 覆盖）+ 外部 signal 透传（组件卸载可中止）+ catch unknown 类型守卫。自测：tsc --noEmit 全量通过。
 ### P-290 — S1：`useCouncilChat.ts:246` 消息 ID 生成使用 `Date.now()` + 随机数，高并发碰撞致消息丢失
-- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/hooks/useCouncilChat.ts:246`
 - **现象**：消息 ID 生成方式为 `user-${Date.now()}-${Math.random()}`，在同一毫秒内多条消息由同一客户端发送时，`Math.random()` 在 V8 引擎中可能存在碰撞（尤其是快速连续调用）。ID 碰撞导致 React key 重复、消息去重失效、部分消息不显示。
 - **影响**：高并发消息场景下（如群聊中多条消息同时发送），部分消息丢失不显示。
 - **建议**：使用 `crypto.randomUUID()` 或自增计数器确保 ID 唯一性。
-
+- **开发自述**：修复提交（批次3）。web/src/hooks/useCouncilChat.ts 全部消息 ID 生成改为 newMsgId()（优先 crypto.randomUUID，旧环境降级时间戳+随机串），消除 Date.now()+Math.random 碰撞。自测：tsc --noEmit 全量通过。
 ### P-291 — S1：`flowforge-client.ts` 静态 `fetch()` 无超时，单 API 挂起拖垮整个应用
-- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/lib/flowforge-client.ts:15-40`
 - **现象**：`FlowForgeClient` 的 `request<T>()` 方法使用原生 `fetch()` 无超时参数。当后端服务负载高或网络不稳定时，请求可能挂起数分钟，导致前端 UI 线程阻塞、用户无法操作。10+ 个组件依赖该 client 加载数据。
 - **影响**：单个 API 超时可拖垮整个应用，页面卡死无法操作。
 - **建议**：添加 `AbortSignal.timeout(30000)` 超时，暴露 `AbortSignal` 参数允许调用方取消。
-
+- **开发自述**：修复提交（批次3）。web/src/lib/flowforge-client.ts request() 增加超时（30s）与取消支持，AbortError 区分超时/外部取消并含路径。与 P-113 同一次修复。自测：tsc --noEmit 全量通过。
 ### P-292 — S1：`useHelmWebSocket.ts` 多个 useEffect 缺乏清理，WebSocket 连接泄漏
 - **严重度**：S1 ｜ **分类**：代码缺陷 ｜ **状态**：Open
 - **文件**：`web/src/hooks/useHelmWebSocket.ts:200-240`
@@ -1889,12 +1894,12 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **建议**：对 9 个模块使用 `React.lazy()` + `Suspense` 动态加载，仅激活的模块才加载对应代码。
 
 ### P-301 — S2：`useHelmWebSocket.ts` 和 `useCouncilSocket.ts` WebSocket 重连逻辑使用固定间隔，无指数退避
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/hooks/useHelmWebSocket.ts:150-180`、`web/src/hooks/useCouncilSocket.ts:60-90`
 - **现象**：WebSocket 断开重连使用固定 3 秒间隔，无指数退避策略。当后端服务持续不可用时，客户端每 3 秒发起一次重连请求，持续消耗网络和 CPU 资源。iOS Safari 后台页面因持续重连被系统强制终止。
 - **影响**：后端故障时客户端持续重连消耗资源，移动端后台页面被系统终止，恢复后需重新连接。
 - **建议**：实现指数退避策略（1s/2s/4s/8s/16s/30s/60s），最大间隔 60s，添加 jitter 随机偏移避免 thundering herd。
-
+- **开发自述**：修复提交（批次3）。web/src/hooks/useCouncilSocket.ts 固定 3s 重连 → 指数退避（1s/2s/4s.../60s 上限）+ 随机 jitter 500ms，连接成功/断开时重置计数（useHelmWebSocket 部分核查确认已有指数退避）。自测：tsc --noEmit 全量通过。
 ### P-302 — S2：`helmPanelStore.ts` 和 `councilPanelStore.ts` 缺少面板状态验证，脏数据可导致 UI 崩溃
 - **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
 - **文件**：`web/src/stores/helmPanelStore.ts:10-25`、`web/src/stores/councilPanelStore.ts:15-30`
@@ -2000,19 +2005,19 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **建议**：移除 `modelsFetchedRef`，改为基于 `taskId` 或 `version` 等依赖项变化时重新请求模型列表。或添加 TTL 缓存（如 5 分钟过期）。
 
 ### P-353 — S2：useApi.ts 无请求超时和中断机制，网络故障时请求挂起
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/hooks/useApi.ts`（`request` 函数）
 - **现象**：`useApi.ts` 的 `request` 函数使用 `fetch` 但不设置 `AbortSignal` timeout，且无 `AbortController` 集成。当后端服务无响应或网络故障时，请求永久挂起（浏览器默认 5 分钟超时），`loading` 状态永不清除，页面显示"加载中..."无法恢复。调用方无法主动取消请求。
 - **影响**：后端服务离线时页面卡死在加载状态，用户无法操作，只能刷新页面。
 - **建议**：为 `request` 函数添加默认超时（如 30 秒），使用 `AbortController` 并暴露 `cancel` 方法。参考 `useFetchWithCache.ts` 使用 `AbortSignal.timeout`。
-
+- **开发自述**：修复提交（批次3）。web/src/hooks/useApi.ts 超时中断机制：超时自动 abort 并提示「请求超时（Ns）: path」，与 P-289 同一次修复。自测：tsc --noEmit 全量通过。
 ### P-354 — S2：cache.ts 无界 Map 增长，长期运行后内存泄漏
-- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S2 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/lib/cache.ts`（`Map<string, CacheEntry>`）
 - **现象**：`cache.ts` 使用 `Map<string, CacheEntry>` 作为缓存存储，但无任何上限限制。`setCache` 每次调用向 Map 添加条目，`invalidatePattern` 扫描全部键。`useFetchWithCache.ts` 对不同 URL 路径分别缓存，长期使用后 Map 积累数千条目，每次 `getCached` 需要 O(n) 检查过期时间，导致页面响应变慢。
 - **影响**：长期运行后内存占用持续增长，页面响应延迟增加，可能导致浏览器 OOM。
 - **建议**：添加 LRU 或 FIFO 缓存策略，限制最大条目数（如 200 条）。或使用 `Map` 的大小限制 + 定期清理过期条目。
-
+- **开发自述**：修复提交（批次3）。web/src/lib/cache.ts 缓存 Map 增加 MAX_ENTRIES=500 上限，超出按最旧条目淘汰（简单 LRU），防无界增长/内存泄漏。自测：tsc --noEmit 全量通过。
 ### P-355 — S3：PluginRegistry 静态类无卸载清理机制，组件卸载后组件引用残留
 - **严重度**：S3 ｜ **分类**：代码缺陷 ｜ **状态**：Open
 - **文件**：`web/src/lib/plugin-registry.ts`（`PluginRegistry` 类）
@@ -2105,7 +2110,7 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 - **建议**：根据 `window.location.protocol` 自动选择 `ws://` 或 `wss://`。添加心跳 ping/pong 机制（如 30 秒间隔）。
 
 ### P-368~P-374 — S4 轻微缺陷（7 个，详见子清单）
-- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Open
+- **严重度**：S4 ｜ **分类**：代码缺陷 ｜ **状态**：Fixed（待回归）
 - **文件**：`web/src/` 多个文件
 - **现象摘要**：
   - P-368：`useWebSocket.ts` 空 catch 块吞 `JSON.parse` 异常，`onmessage` 中 `try {} catch {}` 无错误日志
@@ -2116,6 +2121,7 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
   - P-373：`helmPlanStore.ts` `confirmPlan` 使用 `parseInt(planId, 10)`，非数字 ID 返回 NaN
   - P-374：`helmWorkspaceStore.ts` `fetchWorkspaceList` 使用 `catch (err)` 但 `err` 为 `unknown` 类型
 - **T7/T8**：是（T8）
+- **开发自述**：修复提交（批次3）。合并单 7 项：P-368 useWebSocket 空 catch 加 console.warn 日志；P-369 核查确认轮询 catch 为有意静默（轮询失败不阻断主流程）；P-370 WorkflowSelector 空 catch → 错误提示（校验 r.ok + 显示「工作流加载失败」）；P-371 ChatInput 模型列表 any[] → AvailableModel 强类型；P-372 核查确认 helmEditorStore openTab 合并已由 TS 强类型（tab: OpenTab）覆盖；P-373 helmPlanStore plan_id 数字正则转换，非数字 ID 原样透传（消除 NaN/0）；P-374 helmWorkspaceStore catch 错误信息 instanceof Error 守卫。自测：tsc --noEmit 全量通过。
 
 ---
 
