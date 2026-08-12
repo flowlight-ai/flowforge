@@ -149,7 +149,7 @@ async def _test_llm_connection(payload: dict) -> dict:
             "model": resp.model,
             "provider": resp.provider,
             "latency_ms": resp.latency_ms,
-            "response_preview": (resp.text or "")[:120],
+            "response_preview": (resp.content or "")[:120],
         }
     except Exception as exc:  # noqa: BLE001
         logger.error(f"LLM connection test failed: {exc!r}", exc_info=True)

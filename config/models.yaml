@@ -243,23 +243,27 @@ assignments:
     - openroute/MiniMax-M3
     - openroute/DeepSeek-V4-Pro
   content_create:
-    # v5.99.70: 实测模型可用性(2026-08-01 06:40) — 重新排序候选链
-    # Qwen3.6-Plus: 24.6s/189字✓ 内容正常无回显
-    # HunYuan3: 34.3s/213字✓ 内容正常无回显
-    # Kimi-K2.6: 62.9s/355字⚠ 有回显问题("用户要求..."开头需清理)
-    # MiniMax-M3: 120s超时✗ 不可用
-    # DeepSeek-V4-Pro/Doubao-Seed2.0: "无法回答"✗ 不可用
-    # 候选链: Qwen3.6-Plus(24s/快稳) → HunYuan3(34s/backup) → Kimi-K2.6(62s/慢backup)
-    primary: openroute/Qwen3.6-Plus
+    # v5.99.78修复(P-51): 按 openroute 实测速度重排 (2026-08-12 重启后实测)
+    # GLM-5.1:      6.3s 最快最稳
+    # Doubao-Seed2.0: 9.8s 稳定
+    # Qwen3.6-Plus: 23-88s (qianwen-web会话慢且可能污染)
+    # HunYuan3:     45s+ (元宝页goto慢)
+    # Kimi-K2.6:    76.8s (慢)
+    # 3分钟全流程目标下, writer首选必须快稳模型; Qwen/Kimi保留兜底保证成功率
+    primary: openroute/GLM-5.1
     fallbacks:
-    - openroute/HunYuan3
+    - openroute/Doubao-Seed2.0
+    - openroute/Qwen3.6-Plus
     - openroute/Kimi-K2.6
     - zhipu/glm-4-flash
   content_refine:
-    # v5.99.70: 同步content_create — 使用Qwen3.6-Plus作为primary
-    primary: openroute/Qwen3.6-Plus
+    # v5.99.78修复(P-51): 同步content_create — GLM-5.1首选(实测6s最快)
+    # 2026-08-12修复2(P-51): GLM-5.1润色实测返回prompt分析过程("- Role: Query understanding expert."6257字)而非润色正文
+    #   已加echo签名拦截(editor_engine), 但拦截后降级返回原draft等于润色失效; Doubao-Seed2.0实测稳定输出正文, 改首选
+    primary: openroute/Doubao-Seed2.0
     fallbacks:
-    - openroute/HunYuan3
+    - openroute/GLM-5.1
+    - openroute/Qwen3.6-Plus
     - openroute/Kimi-K2.6
     - zhipu/glm-4-flash
   content_eval:
@@ -268,13 +272,15 @@ assignments:
     fallbacks:
     - openroute/MiniMax-M3
     - openroute/DeepSeek-V4-Pro
-  # v5.99.70: 选题专用assignment — 使用实测可用模型
-  # 选题需要快速稳定(避免长时间卡住)，Qwen3.6-Plus实测24.6s最快
+  # v5.99.78修复(P-51): 选题专用assignment — 需输出严格JSON数组
+  # Doubao-Seed2.0(40s)实测输出正确JSON数组; GLM-5.1虽快(6s)但返回分析过程非JSON,
+  # Qwen3.6-Plus会话污染返回评审JSON; 故Doubao首选, GLM仅作长文fallback
   topic:
-    primary: openroute/Qwen3.6-Plus
+    primary: openroute/Doubao-Seed2.0
     fallbacks:
-    - openroute/HunYuan3
     - openroute/Kimi-K2.6
+    - openroute/GLM-5.1
+    - openroute/Qwen3.6-Plus
     - zhipu/glm-4-flash
   # P0-27: reflexion_evaluator/reflexion_reflector 显式 assignments
   # v2: 移除 MiniMax-M3（openroute minimax 平台持续 connection failed），

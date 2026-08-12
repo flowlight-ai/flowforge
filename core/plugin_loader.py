@@ -169,9 +169,9 @@ class PluginLoader:
 
         Reused by the hot-reload mechanism (``reload_plugin``).
 
-        Optional registries override the loader's internal (global) ones,
-        allowing callers to load a plugin into local registries (P-09:
-        backward-compat shim must not drop explicitly-passed registries).
+        Optional registries may be passed to override the loader's internal
+        instances (used by the backward-compat ``_load_single_plugin`` shim in
+        ``app.main`` so callers' local registries are actually populated).
         """
         plugin_instance.state = PluginState.STARTING
 

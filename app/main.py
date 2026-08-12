@@ -23,7 +23,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from flowforge.app.api.router import router, ws_router
+from flowforge.app.api.router import router
 from flowforge.app.deps import (
     set_executor_instance,
     set_llm_client_instance,
@@ -335,14 +335,13 @@ from flowforge.app.api.fusion_router import router as v1_fusion_router
 app.include_router(v1_fusion_router)
 
 app.include_router(router)
-# WebSocket 端点（无前缀 /ws/...，见 router.py 中 ws_router）— P-119
-app.include_router(ws_router)
 
 from flowforge.app.api.plugin_frontend_api import router as frontend_api_router
 app.include_router(frontend_api_router)
 
 # Optional routers (guarded imports)
 for _module_path, _attr in [
+    ("flowforge.app.api.endpoints.websocket", "router"),
     ("flowforge.app.api.core.openroute", "router"),
     ("flowforge.app.api.workspace.workspace", "router"),
     ("flowforge.app.api.workflows.plans", "router"),
@@ -421,28 +420,9 @@ def __getattr__(name: str):
         return plugin_loader.sandbox_manager
     if name == "_load_single_plugin":
         # Backward-compatible wrapper: old signature took multiple registries
-        # as arguments; the new PluginLoader stores them internally.  Pass
-        # explicit registries through so callers can load into local
-        # registries (P-09: shim must not drop them).
-        def _load_single_plugin_compat(
-            plugin_instance,
-            agent_registry=None,
-            tool_registry=None,
-            mode_registry=None,
-            event_bus=None,
-            scheduler=None,
-            app=None,
-            **kwargs,
-        ):
-            return plugin_loader.load_single_plugin(
-                plugin_instance,
-                agent_registry=agent_registry,
-                tool_registry=tool_registry,
-                mode_registry=mode_registry,
-                event_bus=event_bus,
-                scheduler=scheduler,
-                app=app,
-            )
+        # as arguments; the new PluginLoader stores them internally.
+        def _load_single_plugin_compat(plugin_instance, *args, **kwargs):
+            return plugin_loader.load_single_plugin(plugin_instance, *args, **kwargs)
         return _load_single_plugin_compat
     if name == "unload_plugin":
         return plugin_loader.unload_plugin
