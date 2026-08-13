@@ -21,6 +21,40 @@ const SUPPORTED_LANGUAGES = [
   { code: "fr-FR", label: "Français" },
 ];
 
+/** Web Speech API 最小类型定义（浏览器实现差异大，仅声明使用到的成员） */
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  [index: number]: { transcript: string };
+}
+
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: ArrayLike<SpeechRecognitionResultLike>;
+}
+
+interface SpeechRecognitionErrorLike {
+  error: string;
+}
+
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorLike) => void) | null;
+  onend: (() => void) | null;
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+/** 可自动恢复的临时错误（网络波动/无语音/被系统打断），权限类错误不自动重试 */
+const RETRYABLE_ERRORS = new Set(["network", "no-speech", "aborted", "audio-capture", "service-not-allowed"]);
+const MAX_AUTO_RETRY = 2;
+
 /** 语音输入组件 — 基于 Web Speech API 实现语音转文字 */
 export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false);
@@ -29,12 +63,20 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [error, setError] = useState<string | null>(null);
   const [pulsePhase, setPulsePhase] = useState(0);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const retryCountRef = useRef(0);
   const pulseRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Check browser support
   const SpeechRecognition = typeof window !== "undefined"
-    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    ? (window as unknown as {
+        SpeechRecognition?: SpeechRecognitionCtor;
+        webkitSpeechRecognition?: SpeechRecognitionCtor;
+      }).SpeechRecognition ||
+      (window as unknown as {
+        SpeechRecognition?: SpeechRecognitionCtor;
+        webkitSpeechRecognition?: SpeechRecognitionCtor;
+      }).webkitSpeechRecognition
     : null;
   const isSupported = !!SpeechRecognition;
 
@@ -69,7 +111,7 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
       setIsListening(true);
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       let interim = "";
       let final = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -89,13 +131,30 @@ export default function VoiceInput({ onTranscript, isEnabled, language }: VoiceI
       }
     };
 
-    recognition.onerror = (event: any) => {
-      setError(event.error === "not-allowed" ? "麦克风权限被拒绝" : `识别错误: ${event.error}`);
+    recognition.onerror = (event: SpeechRecognitionErrorLike) => {
+      if (event.error === "not-allowed") {
+        setError("麦克风权限被拒绝");
+        setIsListening(false);
+        return;
+      }
+      // 临时错误自动重试（最多 MAX_AUTO_RETRY 次），避免用户手动重新点击
+      if (RETRYABLE_ERRORS.has(event.error) && retryCountRef.current < MAX_AUTO_RETRY) {
+        retryCountRef.current++;
+        setError(`识别出错（${event.error}），正在重试...`);
+        try {
+          recognition.start();
+        } catch {
+          setIsListening(false);
+        }
+        return;
+      }
+      setError(`识别错误: ${event.error}`);
       setIsListening(false);
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      retryCountRef.current = 0;
       setInterimText("");
     };
 

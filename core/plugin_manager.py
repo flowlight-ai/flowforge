@@ -12,6 +12,9 @@ import sys
 import importlib
 import importlib.metadata
 from typing import Dict, List, Callable, Optional, Any
+
+from packaging.requirements import Requirement
+
 from flowforge.core.tracing import get_logger
 from flowforge.core.errors import ConfigurationError
 
@@ -86,6 +89,61 @@ class PluginManager:
             logger.error(f"Failed to load plugin class for {name}: {e}")
             return None
 
+    # ── 依赖解析与版本冲突检测（P-105）─────────────────────────────
+
+    def get_plugin_dependencies(self, name: str) -> dict:
+        """读取插件包的依赖元数据并检测版本冲突（P-105）。
+
+        Args:
+            name: 插件名（entry_point 注册名）。
+
+        Returns:
+            {name, dependencies: [Requires-Dist 原文], conflicts: [冲突描述]}
+        """
+        info = self._installed_plugins.get(name)
+        if not info:
+            return {"name": name, "dependencies": [], "conflicts": []}
+        module_root = (info.get("module") or "").split(".")[0]
+        try:
+            dist = importlib.metadata.distribution(module_root)
+        except importlib.metadata.PackageNotFoundError:
+            return {"name": name, "dependencies": [], "conflicts": []}
+
+        deps: List[str] = []
+        conflicts: List[str] = []
+        for req_str in (dist.requires or []):
+            try:
+                req = Requirement(req_str)
+            except Exception:  # noqa: BLE001 — 无法解析的依赖条目跳过
+                continue
+            # P-105: 带 marker 的依赖（如 extras 可选依赖）在
+            # 当前环境不满足条件时不视为冲突
+            if req.marker and not req.marker.evaluate():
+                continue
+            deps.append(req_str)
+            if not req.specifier:
+                continue
+            try:
+                installed = importlib.metadata.version(req.name)
+            except importlib.metadata.PackageNotFoundError:
+                conflicts.append(f"{req.name} 未安装（需要 {req}）")
+                continue
+            if not req.specifier.contains(installed):
+                conflicts.append(f"{req.name}=={installed} 不满足 {req}")
+        return {"name": name, "dependencies": deps, "conflicts": conflicts}
+
+    def check_plugin_conflicts(self) -> List[dict]:
+        """检查所有已发现插件的依赖冲突（P-105）。
+
+        Returns:
+            存在冲突的插件列表（每项含 name/dependencies/conflicts）。
+        """
+        return [
+            dep
+            for name in self._installed_plugins
+            if (dep := self.get_plugin_dependencies(name)).get("conflicts")
+        ]
+
     # ── Package management ─────────────────────────────────────────
 
     def install_plugin(self, package_name: str) -> dict:
@@ -105,7 +163,12 @@ class PluginManager:
             if result.returncode == 0:
                 # Re-discover entry points after install
                 self._discover_entry_points()
-                return {"status": "success", "package": package_name, "output": result.stdout}
+                # P-105: 安装后检查新插件的依赖冲突
+                conflicts = self.check_plugin_conflicts()
+                result = {"status": "success", "package": package_name, "output": result.stdout}
+                if conflicts:
+                    result["conflicts"] = conflicts
+                return result
             else:
                 return {"status": "error", "package": package_name, "error": result.stderr}
         except subprocess.TimeoutExpired:

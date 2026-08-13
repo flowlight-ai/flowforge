@@ -125,7 +125,20 @@ class T7Reviewer:
                     return default_key
         except Exception as e:
             logger.warning(f"T7审核器加载API Key失败: {e}")
-        # 2. 环境变量备选（仅当models.yaml读取失败时）
+        # 2. 从项目根 .env 读取真实 key（本地真实值，避免被测试夹具静默污染）
+        try:
+            env_path = Path(__file__).resolve().parents[2] / ".env"
+            if env_path.exists():
+                for line in env_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, _, value = line.partition("=")
+                    if key.strip() in ("OPENROUTE_API_KEY", "OR_API_KEY") and value.strip():
+                        return value.strip()
+        except Exception as e:
+            logger.warning(f"T7审核器加载 .env 失败: {e}")
+        # 3. 环境变量备选（仅当 models.yaml / .env 读取失败时）
         for env_var in ("OPENROUTE_API_KEY", "OR_API_KEY"):
             val = os.getenv(env_var, "").strip()
             if val:

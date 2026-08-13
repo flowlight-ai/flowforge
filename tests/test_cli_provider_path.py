@@ -116,6 +116,7 @@ def test_expand_extra_path_dirs_env(monkeypatch, tmp_path) -> None:
     assert str(tmp_path / "b") in dirs
 
 
+@pytest.mark.asyncio
 async def test_chat_invokes_cli_via_fallback(tmp_path, monkeypatch, clean_env) -> None:
     """PATH 缺失但兜底目录存在时，chat() 真实调用 CLI 成功.
 
@@ -137,6 +138,7 @@ async def test_chat_invokes_cli_via_fallback(tmp_path, monkeypatch, clean_env) -
     assert result["usage"]["latency_ms"] >= 0
 
 
+@pytest.mark.asyncio
 async def test_chat_returns_unavailable_when_not_found(
     tmp_path, monkeypatch, clean_env
 ) -> None:

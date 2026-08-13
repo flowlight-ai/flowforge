@@ -41,7 +41,7 @@ class RecallRequest(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 @router.get("/collections")

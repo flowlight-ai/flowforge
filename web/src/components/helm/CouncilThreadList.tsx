@@ -71,7 +71,8 @@ export function CouncilThreadList({
   const [searchQuery, setSearchQuery] = useState("");
   const [showTrash, setShowTrash] = useState(false);
   // 分组过滤：置顶 / 最近 / 收藏 / 系统 / 回收站（参考 clowder-ai 5 Tab 分组）
-  const [filterGroup, setFilterGroup] = useState<ThreadTab>("pinned");
+  // 默认「最近」：新建/更新的会话立即可见（clowder-ai 默认展示最近会话）
+  const [filterGroup, setFilterGroup] = useState<ThreadTab>("recent");
   // 标签筛选：null = 不筛选
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
   // 右键菜单状态
@@ -145,6 +146,8 @@ export function CouncilThreadList({
   const handleCreate = useCallback(async () => {
     const id = await createThread();
     if (id) {
+      // 新建会话非置顶，自动切到「最近」分组保证列表可见
+      setFilterGroup("recent");
       selectThread(id);
       if (onThreadSelect) {
         onThreadSelect(id);

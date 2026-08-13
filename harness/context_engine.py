@@ -59,8 +59,13 @@ class ContextEngine:
 
         # 1. AGENTS.md injection — legacy path-based search
         agents_md = self._load_agents_md(persona)
-        # Also try v6 upward search if legacy didn't find it
-        if not agents_md:
+        # Also try v6 upward search if legacy didn't find it — but only when
+        # agents_md_paths was NOT explicitly configured (P-15: explicit config
+        # — including an empty list / nonexistent paths — must be respected,
+        # not overridden by the v6 upward search). Exception: workspace_root
+        # explicitly configured ⇒ v6 search from that root is user intent
+        # (tests/unit/test_harness.py::test_load_agents_md_v6_from_workspace).
+        if not agents_md and ("agents_md_paths" not in self.config or "workspace_root" in self.config):
             agents_md = await self._load_agents_md_v6(ctx)
 
         # 2. Failure case retrieval

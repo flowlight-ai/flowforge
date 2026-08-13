@@ -142,6 +142,7 @@ def test_fail_task_from_running(tmp_path) -> None:
 # ── Bug 4: 未注册 forgekin ─────────────────────────────────────
 
 
+@pytest.mark.asyncio
 async def test_unregistered_forgekin_fails_task(tmp_path) -> None:
     """未注册灵智体的任务被显式标记 FAILED（不再静默悬挂）."""
     coord, daemon = _make_daemon(tmp_path)
@@ -168,6 +169,7 @@ async def test_unregistered_forgekin_fails_task(tmp_path) -> None:
 # ── Bug 2: CLI 错误标记检测 ────────────────────────────────────
 
 
+@pytest.mark.asyncio
 async def test_cli_unavailable_marker_marks_invalid(tmp_path) -> None:
     """[CLI 不可用] 前缀内容被判无效产出 → 任务 FAILED."""
     stub = _StubForgekin(
@@ -185,6 +187,7 @@ async def test_cli_unavailable_marker_marks_invalid(tmp_path) -> None:
     assert stub.calls == 1
 
 
+@pytest.mark.asyncio
 async def test_usage_error_marks_invalid(tmp_path) -> None:
     """usage.error 字段非空被判无效产出（即使内容看似正常）."""
     stub = _StubForgekin(
@@ -202,6 +205,7 @@ async def test_usage_error_marks_invalid(tmp_path) -> None:
     assert t is not None and "binary_not_found" in (t.failure_reason or "")
 
 
+@pytest.mark.asyncio
 async def test_valid_output_still_completes(tmp_path) -> None:
     """正常产出不受影响（不误伤）：仍走到 COMPLETED."""
     stub = _StubForgekin(
@@ -223,6 +227,7 @@ async def test_valid_output_still_completes(tmp_path) -> None:
 # ── Bug 5: 执行异常终态 ────────────────────────────────────────
 
 
+@pytest.mark.asyncio
 async def test_execution_exception_fails_task(tmp_path) -> None:
     """chat 抛出异常时任务立即 FAILED（不再等待超时回收）."""
     stub = _StubForgekin(raise_error=True)

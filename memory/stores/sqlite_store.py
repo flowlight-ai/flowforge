@@ -2,6 +2,8 @@ from sqlalchemy import create_engine, Column, String, Integer, Text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from datetime import datetime, timezone
 import uuid
+from contextlib import contextmanager
+from typing import Iterator
 from flowforge.core.config import system_config
 
 class Base(DeclarativeBase):
@@ -40,11 +42,27 @@ class ModelHealthModel(Base):
     disabled_until = Column(String, nullable=True)
     reason = Column(String, nullable=True)
 
+# P-111: 模块级单例 engine + 单例 sessionmaker。避免每次调用都新建
+# sessionmaker 实例；会话统一经 session_scope() 上下文管理器管理，
+# with 块结束后自动关闭，防止未关闭会话导致的连接泄漏。
 engine = create_engine(system_config.db_url, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+
 
 def init_db():
     Base.metadata.create_all(engine)
 
+
 def get_session():
-    Session = sessionmaker(bind=engine)
-    return Session()
+    """获取新会话（调用方需负责关闭；推荐使用 session_scope 上下文管理器）。"""
+    return SessionLocal()
+
+
+@contextmanager
+def session_scope() -> Iterator:
+    """会话上下文管理器：with 块结束后自动关闭会话 — P-111。"""
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()

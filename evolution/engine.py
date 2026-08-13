@@ -16,7 +16,7 @@ engine.evaluate() / engine.execute() 为 async I/O 入口（符合规范：所�
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict
 
 from flowforge.core.tracing import get_logger
@@ -82,13 +82,13 @@ class ForgeMindEngine:
         meta_route = None
         mc_ctx = context.get("metacognition")
         if mc_ctx:
-            meta_route = await self._evaluate_metacognition(mc_ctx)
+            meta_route = self._evaluate_metacognition(mc_ctx)
 
         result = {
             "suggested_actions": actions,
             "meta": {
                 "mode": mode,
-                "evaluated_at": datetime.utcnow().isoformat(),
+                "evaluated_at": datetime.now(timezone.utc).isoformat(),
                 "actions_count": len(actions),
                 "metacognition_route": meta_route,
             },
@@ -331,7 +331,8 @@ class ForgeMindEngine:
 
     # ---- Metacognition ----
 
-    async def _evaluate_metacognition(self, mc_ctx: dict) -> dict:
+    def _evaluate_metacognition(self, mc_ctx: dict) -> dict:
+        """元认知路由（纯计算，无 I/O —— P-115: 移除冗余 async 声明）."""
         successes = mc_ctx.get("successes", 0)
         trials = mc_ctx.get("trials", 0)
         is_high_risk = mc_ctx.get("is_high_risk", False)

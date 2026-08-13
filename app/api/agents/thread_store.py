@@ -21,7 +21,7 @@ from typing import Any
 
 def _now_iso() -> str:
     """UTC ISO 时间戳。"""
-    return datetime.now(timezone.utc).isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _now_ms() -> int:

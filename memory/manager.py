@@ -4,7 +4,11 @@ from .long_term import LongTermMemory
 from .semantic import SemanticMemory
 from .episodic import EpisodicMemory
 from .compressor import ContextCompressor
+from .base import EchoStore
 from typing import Any, List, Optional, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryManager:
@@ -28,14 +32,19 @@ class MemoryManager:
 
     async def save(self, memory_type: str, key: str, data: Any) -> None:
         store = getattr(self, memory_type, None)
-        if store:
-            await store.store(key, data)
+        if not isinstance(store, EchoStore):
+            # P-109: 未知存储类型记录日志，避免静默丢失写入
+            logger.warning("save: 未知记忆存储类型 %r（可选：%s）", memory_type, self.list_stores())
+            return
+        await store.store(key, data)
 
     async def retrieve(self, memory_type: str, query: Any) -> Any:
         store = getattr(self, memory_type, None)
-        if store:
-            return await store.search(query)
-        return []
+        if not isinstance(store, EchoStore):
+            # P-109: 未知存储类型返回空结果并记录日志
+            logger.warning("retrieve: 未知记忆存储类型 %r（可选：%s）", memory_type, self.list_stores())
+            return []
+        return await store.search(query)
 
     def list_stores(self) -> List[str]:
         stores = ["working", "short_term", "long_term", "episodic"]
@@ -43,16 +52,18 @@ class MemoryManager:
             stores.append("semantic")
         return stores
 
-    async def hybrid_search(self, query: str, types: List[str] = None) -> List[Any]:
+    async def hybrid_search(self, query: str, types: List[str] = None, limit: int = 10) -> List[Any]:
         if types is None:
             types = ["semantic", "long_term", "episodic"]
         results = []
-        if "semantic" in types and self.semantic:
-            results.extend(await self.semantic.search(query))
-        if "long_term" in types:
-            results.extend(await self.long_term.search(query))
-        if "episodic" in types:
-            results.extend(await self.episodic.search(query))
+        # P-109: 过滤未知存储类型，避免 getattr 返回 None 后调用崩溃
+        known = {"semantic": self.semantic, "long_term": self.long_term, "episodic": self.episodic}
+        for t in types:
+            store = known.get(t)
+            if store is None:
+                logger.warning("hybrid_search: 忽略未知存储类型 %r", t)
+                continue
+            results.extend(await store.search(query, limit=limit))
         return results
 
     async def list_memories(self, limit: int = 50, offset: int = 0, task_id: Optional[str] = None) -> dict:

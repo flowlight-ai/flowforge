@@ -125,7 +125,7 @@ def _build_env_summary(content: str, env_path: Path) -> dict[str, Any]:
         files.append({
             "path": str(env_path),
             "size": stat.st_size,
-            "modifiedAt": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat() + "Z",
+            "modifiedAt": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat().replace("+00:00", "Z"),
             "envCount": len(pairs),
         })
 
@@ -256,6 +256,6 @@ async def update_env_var(var_name: str, payload: EnvVarUpdate) -> dict[str, Any]
         "message": "变量已更新，需重启服务生效",
         "meta": {
             "trace_id": get_trace_id(),
-            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         },
     }

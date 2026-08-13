@@ -22,5 +22,5 @@ async def governance_status() -> dict[str, Any]:
         "active_policies": 0,
         "pending_approvals": 0,
         "violations_24h": 0,
-        "checked_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "checked_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }

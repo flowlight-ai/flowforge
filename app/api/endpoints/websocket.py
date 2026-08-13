@@ -67,7 +67,8 @@ class ConnectionManager:
             for event in buffered:
                 try:
                     await websocket.send_json(event)
-                except Exception as e:
+                except (RuntimeError, WebSocketDisconnect) as e:
+                    # 连接已关闭（Starlette 关闭后 send 抛 RuntimeError）— P-78
                     logger.debug(f"Failed to replay buffered event to websocket: {e}")
 
     def disconnect(self, task_id: str, websocket: WebSocket):
@@ -92,7 +93,8 @@ class ConnectionManager:
             try:
                 await ws.send_json(message)
                 delivered = True
-            except Exception as e:
+            except (RuntimeError, WebSocketDisconnect) as e:
+                # 发送失败 = 连接已断开，标记为 dead 等待清理 — P-78
                 logger.debug(f"Failed to broadcast to websocket for task {task_id}: {e}")
                 dead.append(ws)
         for ws in dead:
@@ -116,7 +118,7 @@ class ConnectionManager:
         message = {
             "type": event_type,
             "seq": self._next_seq(),
-            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "payload": payload or {},
         }
         if not self.active_connections.get(task_id):
@@ -138,7 +140,7 @@ async def helm_websocket(websocket: WebSocket, task_id: str):
             try:
                 await websocket.send_json({"type": "server_ping"})
                 last_ping = asyncio.get_event_loop().time()
-            except Exception as e:
+            except (RuntimeError, WebSocketDisconnect) as e:
                 logger.debug(f"Server ping failed for helm websocket {task_id}: {e}")
                 break
 
@@ -147,31 +149,37 @@ async def helm_websocket(websocket: WebSocket, task_id: str):
         while True:
             try:
                 data = await asyncio.wait_for(websocket.receive_text(), timeout=30)
-                msg = json.loads(data)
-                if msg.get("type") == "ping":
-                    await websocket.send_json({"type": "pong"})
-                elif msg.get("type") == "pong":
-                    pass
-                elif msg.get("type") == "review_submit":
-                    executor = await get_executor()
-                    if executor:
-                        await executor.submit_review(
-                            task_id, msg.get("verdict", "pass"),
-                            msg.get("feedback", ""), msg.get("edited_content", "")
-                        )
-                elif msg.get("type") == "replay":
-                    from_seq = msg.get("from_seq", 0)
-                    buffered = manager.get_buffered_events(task_id, from_seq)
-                    for event in buffered:
-                        try:
-                            await websocket.send_json(event)
-                        except Exception:
-                            break
             except asyncio.TimeoutError:
                 continue
+            try:
+                msg = json.loads(data)
+            except json.JSONDecodeError:
+                # 非 JSON 消息忽略，不中断连接 — P-78
+                logger.debug(f"Ignoring non-JSON message on helm websocket {task_id}")
+                continue
+            if msg.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
+            elif msg.get("type") == "pong":
+                pass
+            elif msg.get("type") == "review_submit":
+                executor = await get_executor()
+                if executor:
+                    await executor.submit_review(
+                        task_id, msg.get("verdict", "pass"),
+                        msg.get("feedback", ""), msg.get("edited_content", "")
+                    )
+            elif msg.get("type") == "replay":
+                from_seq = msg.get("from_seq", 0)
+                buffered = manager.get_buffered_events(task_id, from_seq)
+                for event in buffered:
+                    try:
+                        await websocket.send_json(event)
+                    except (RuntimeError, WebSocketDisconnect):
+                        break
     except WebSocketDisconnect:
         manager.disconnect(task_id, websocket)
     except Exception as e:
+        # 意外异常（非断开类）：记录并清理，避免连接泄漏 — P-78
         logger.debug(f"Helm websocket disconnected with error for task {task_id}: {e}")
         manager.disconnect(task_id, websocket)
     finally:
@@ -189,7 +197,7 @@ async def events_websocket(websocket: WebSocket):
         from flowforge.events.event_bus import EventBus
         from flowforge.app.main import event_bus as global_event_bus
         event_bus = global_event_bus
-    except Exception as e:
+    except ImportError as e:
         logger.debug(f"Failed to import EventBus for events websocket: {e}")
 
     received_events = []
@@ -203,7 +211,7 @@ async def events_websocket(websocket: WebSocket):
                 event = received_events.pop(0)
                 try:
                     await websocket.send_json(event)
-                except Exception as e:
+                except (RuntimeError, WebSocketDisconnect) as e:
                     logger.debug(f"Failed to send event to events websocket: {e}")
             await asyncio.sleep(0.1)
     except WebSocketDisconnect:
@@ -249,9 +257,10 @@ async def logs_websocket(websocket: WebSocket):
                     await websocket.send_json({
                         "type": "log",
                         "line": stripped,
-                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+                        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                     })
-            except Exception as e:
+            except (OSError, RuntimeError) as e:
+                # 日志文件读失败（OSError）或连接已关闭（RuntimeError）— P-78
                 logger.debug(f"Failed to read/send log line: {e}")
     except WebSocketDisconnect:
         pass

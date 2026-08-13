@@ -5,7 +5,7 @@
  *
  * 移植自 clowder-ai HubClaudeRescueSection，适配 FlowForge 暗色主题。
  * 用于 /admin/observability 或 /admin/settings?s=tools，扫描本机
- * ~/.claude/projects/**/*.jsonl 中的坏 thinking signature session
+ * ~/.claude/projects 下所有 *.jsonl 中的坏 thinking signature session
  * 并提供一键修复（删除纯 thinking-only assistant turn，执行前自动备份）。
  *
  * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。

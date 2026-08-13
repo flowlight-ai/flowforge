@@ -8,6 +8,7 @@ MVP2 扩展 CONDITIONAL 模式（条件分支）。
 from typing import Any
 
 from flowforge.compiler.codegen import WorkflowCodeGen
+from flowforge.compiler.errors import WorkflowCompileError
 from flowforge.compiler.ir import IRWorkflow
 from flowforge.compiler.parser import WorkflowParser
 from flowforge.compiler.validator import WorkflowValidator
@@ -35,12 +36,16 @@ class WorkflowCompiler:
             ir 为中间表示供调试或二次处理。
 
         Raises:
-            ValueError: YAML 格式无效或校验失败。
+            WorkflowCompileError: YAML 格式无效或校验失败（P-97 结构化）。
         """
         ir = self.parser.parse(yaml_content)
         errors = self.validator.validate(ir)
         if errors:
-            raise ValueError(f"Workflow validation failed: {errors}")
+            raise WorkflowCompileError(
+                f"Workflow validation failed: {errors}",
+                error_code="VALIDATION_ERROR",
+                errors=errors,
+            )
         sop_steps = self.codegen.generate(ir)
         return sop_steps, ir
 
@@ -55,11 +60,15 @@ class WorkflowCompiler:
 
         Raises:
             FileNotFoundError: 文件不存在。
-            ValueError: 校验失败。
+            WorkflowCompileError: 校验失败（P-97 结构化）。
         """
         ir = self.parser.parse_file(path)
         errors = self.validator.validate(ir)
         if errors:
-            raise ValueError(f"Workflow validation failed: {errors}")
+            raise WorkflowCompileError(
+                f"Workflow validation failed: {errors}",
+                error_code="VALIDATION_ERROR",
+                errors=errors,
+            )
         sop_steps = self.codegen.generate(ir)
         return sop_steps, ir
