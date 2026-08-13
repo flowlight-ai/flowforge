@@ -129,7 +129,11 @@ async def get_dev_file(path: str):
     """读取工作区内文件内容（防目录穿越）。"""
     ws = get_workspace_manager()
     root = _dev_workspace_root(ws).resolve()
-    target = Path(path).resolve()
+    target = Path(path)
+    if not target.is_absolute():
+        # 相对路径基于工作区根解析（而非进程 cwd），与 tree 返回的 path 一致
+        target = root / target
+    target = target.resolve()
     if not _ensure_inside_root(target, root):
         raise HTTPException(status_code=400, detail="Path outside workspace root")
     if not target.is_file():
