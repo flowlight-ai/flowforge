@@ -16,19 +16,21 @@ from fastapi import APIRouter
 
 # ── 架构基础设施层 ──────────────────────────────────────────────
 from flowforge.app.api.core import system, auth, metrics, logs, mcp, connectors, notify
+from flowforge.app.api.core import routing, quotas, permissions, tool_usage, eval
 
 # ── 智能体模块 ──────────────────────────────────────────────────
 from flowforge.app.api.agents import agents, modes, forgemind, external_agents
 from flowforge.app.api.agents import threads
 from flowforge.app.api.agents import bootcamp
 from flowforge.app.api.agents import skills, concierge, voice, capability
+from flowforge.app.api.agents import signals
 from flowforge.app.api.agents import approvals
 
 # ── 工作流模块 ──────────────────────────────────────────────────
-from flowforge.app.api.workflows import workflows, tasks
+from flowforge.app.api.workflows import workflows, tasks, callbacks
 
 # ── 记忆模块 ────────────────────────────────────────────────────
-from flowforge.app.api.memory import memory
+from flowforge.app.api.memory import memory, memory_v1
 from flowforge.app.api.memory.graph import router as graph_router
 
 # ── 插件模块 ────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ from flowforge.app.api.plugins.domain_plugins import router as domain_plugins_ro
 
 # ── 后台管理模块 ────────────────────────────────────────────────
 from flowforge.app.api.admin import admin, admin_models, settings, review, schedules, prompts, env_vars, ops
+from flowforge.app.api.admin import leaderboard, env_files
 
 # ── 独立组件 ────────────────────────────────────────────────────
 from flowforge.app.api.endpoints import dashboard, websocket
@@ -77,12 +80,31 @@ router.include_router(concierge.router)
 router.include_router(voice.router)
 # 能力画像（CapabilityProfile 路由信号与来源追溯）
 router.include_router(capability.router)
+# 信号中心（SignalStore：真实 RSS 抓取 + 审计派生 + 已读/信号源开关）
+router.include_router(signals.router)
+# 路由策略（JSON 持久化 + llm_route.yaml 派生默认策略）
+router.include_router(routing.router)
+# 配额池（从 llm_route 派生模型池 + 用量记录）
+router.include_router(quotas.router)
+# 配额池旧路径 /quota/pools 兼容
+router.include_router(quotas.legacy_router)
+# 权限配置（按 connector 持久化，camelCase 前端契约）
+router.include_router(permissions.router)
+# 工具使用统计（真实指标 + 日志解析）
+router.include_router(tool_usage.router)
+# Eval 评估（checkpoints 真实任务 + 判决持久化）
+router.include_router(eval.router)
 
 # ── 工作流 ──────────────────────────────────────────────────────
 router.include_router(workflows.router)
 router.include_router(tasks.router)
+# 回调鉴权（JSON 持久化 + 密钥脱敏）
+router.include_router(callbacks.router)
 
 # ── 记忆 ────────────────────────────────────────────────────────
+# 注意：memory_v1 必须先注册，避免 /memory/{memory_id} 动态路径抢占
+# /memory/collections /memory/recall /memory/health 静态路径
+router.include_router(memory_v1.router)
 router.include_router(memory.router)
 router.include_router(graph_router)
 
@@ -101,6 +123,10 @@ router.include_router(schedules.router)
 router.include_router(prompts.router)
 router.include_router(env_vars.router)
 router.include_router(ops.router)
+# Forgekin 排行榜（swarm_trace 真实统计）
+router.include_router(leaderboard.router)
+# 环境文件管理（真实读写 + 脱敏）
+router.include_router(env_files.router)
 
 # ── 独立组件 ────────────────────────────────────────────────────
 router.include_router(dashboard.router)
