@@ -2,26 +2,50 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
-import { SettingsBadge, SettingsEmptyState, SettingsRow, SettingsSection, SettingsText } from '../primitives';
+import {
+  SettingsBadge,
+  SettingsEmptyState,
+  SettingsPrimaryButton,
+  SettingsRow,
+  SettingsSection,
+  SettingsText,
+} from '../primitives';
 
 interface MarketPackage {
   id: string;
   name: string;
   description?: string;
-  type?: 'mcp' | 'skill' | 'plugin';
+  version?: string;
   installed?: boolean;
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 320,
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-strong)',
+  background: 'var(--bg-elevated)',
+  padding: '6px 10px',
+  fontSize: '13px',
+  color: 'var(--text-strong)',
+  outline: 'none',
+};
+
 /**
- * MarketplaceSection — 能力市场
+ * MarketplaceSection — 能力市场（可搜索/安装/卸载）
  *
- * 合并 /admin/marketplace。数据源：GET /api/v1/marketplace/installed。
+ * 数据源：GET /api/v1/marketplace/installed、POST /api/v1/marketplace/install、uninstall。
  */
 export function MarketplaceSection() {
   const [packages, setPackages] = useState<MarketPackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<MarketPackage[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  const fetchPackages = useCallback(async () => {
+  const fetchInstalled = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/v1/marketplace/installed').catch(() => null);
@@ -35,7 +59,7 @@ export function MarketplaceSection() {
         id: p.name || p.id,
         name: p.name || p.display_name || '未知',
         description: p.description,
-        type: 'plugin',
+        version: p.version,
         installed: true,
       })) : []);
     } catch {
@@ -46,8 +70,75 @@ export function MarketplaceSection() {
   }, []);
 
   useEffect(() => {
-    fetchPackages();
-  }, [fetchPackages]);
+    fetchInstalled();
+  }, [fetchInstalled]);
+
+  const search = async () => {
+    if (!query.trim()) return;
+    setSearching(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/v1/marketplace/search?q=${encodeURIComponent(query.trim())}`).catch(() => null);
+      if (!res || !res.ok) {
+        setResults([]);
+        return;
+      }
+      const data = await res.json().catch(() => ({ plugins: [] }));
+      const list = data?.plugins || [];
+      setResults(Array.isArray(list) ? list.map((p: any) => ({
+        id: p.name || p.id,
+        name: p.name || p.display_name || '未知',
+        description: p.description,
+        version: p.version,
+        installed: packages.some((x) => x.id === (p.name || p.id)),
+      })) : []);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const install = async (name: string) => {
+    setBusy(name);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/v1/marketplace/install', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setMessage(`已安装 ${name}`);
+      setResults(null);
+      await fetchInstalled();
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage(`安装 ${name} 失败`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const uninstall = async (name: string) => {
+    setBusy(name);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/v1/marketplace/uninstall', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setMessage(`已卸载 ${name}`);
+      await fetchInstalled();
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage(`卸载 ${name} 失败`);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   if (loading) {
     return <SettingsText as="p" tone="muted">加载中...</SettingsText>;
@@ -59,15 +150,65 @@ export function MarketplaceSection() {
       description="搜索和安装 MCP、Skill、插件等能力包。"
       badge={<SettingsBadge tone="slate" size="xxs">{packages.length}</SettingsBadge>}
     >
-      {packages.length === 0 ? (
-        <SettingsEmptyState
-          icon={<Search size={32} color="var(--muted)" />}
-          title="暂无能力包"
-          description="市场接口尚未返回数据，或未连接到能力市场。"
-        />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {packages.map((p) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input
+            style={inputStyle}
+            value={query}
+            placeholder="搜索市场插件，如 web-search"
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') search();
+            }}
+          />
+          <SettingsPrimaryButton onClick={search} disabled={searching || !query.trim()}>
+            {searching ? '搜索中...' : '搜索'}
+          </SettingsPrimaryButton>
+        </div>
+        {message && <SettingsText as="span" variant="xs" tone={message.includes('失败') ? 'red' : 'muted'}>{message}</SettingsText>}
+
+        {results !== null && (
+          <>
+            <SettingsText as="p" variant="xs" tone="muted">
+              搜索结果（{results.length}）：点击「安装」即可从市场安装
+            </SettingsText>
+            {results.length === 0 ? (
+              <SettingsText as="p" variant="xs" tone="muted">没有匹配的插件</SettingsText>
+            ) : (
+              results.map((p) => (
+                <SettingsRow
+                  key={p.id}
+                  icon={<Search size={16} color="var(--accent-2)" />}
+                  title={p.name}
+                  meta={p.description}
+                  badges={
+                    <>
+                      {p.version && <SettingsBadge tone="slate" size="xxs">v{p.version}</SettingsBadge>}
+                      {p.installed && <SettingsBadge tone="emerald" size="xxs">已安装</SettingsBadge>}
+                    </>
+                  }
+                  actions={
+                    !p.installed ? (
+                      <SettingsPrimaryButton onClick={() => install(p.name)} disabled={busy === p.name}>
+                        {busy === p.name ? '安装中...' : '安装'}
+                      </SettingsPrimaryButton>
+                    ) : undefined
+                  }
+                />
+              ))
+            )}
+          </>
+        )}
+
+        <SettingsText as="p" variant="xs" tone="muted">已安装（{packages.length}）</SettingsText>
+        {packages.length === 0 ? (
+          <SettingsEmptyState
+            icon={<Search size={32} color="var(--muted)" />}
+            title="暂无能力包"
+            description="在上方搜索并安装能力包。"
+          />
+        ) : (
+          packages.map((p) => (
             <SettingsRow
               key={p.id}
               icon={<Search size={16} color="var(--accent-2)" />}
@@ -75,18 +216,19 @@ export function MarketplaceSection() {
               meta={p.description}
               badges={
                 <>
-                  {p.type && <SettingsBadge tone="purple" size="xxs">{p.type}</SettingsBadge>}
-                  {p.installed !== undefined && (
-                    <SettingsBadge tone={p.installed ? 'emerald' : 'slate'} size="xxs">
-                      {p.installed ? '已安装' : '可安装'}
-                    </SettingsBadge>
-                  )}
+                  <SettingsBadge tone="purple" size="xxs">plugin</SettingsBadge>
+                  {p.version && <SettingsBadge tone="slate" size="xxs">v{p.version}</SettingsBadge>}
                 </>
               }
+              actions={
+                <SettingsPrimaryButton onClick={() => uninstall(p.name)} disabled={busy === p.name}>
+                  {busy === p.name ? '卸载中...' : '卸载'}
+                </SettingsPrimaryButton>
+              }
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </SettingsSection>
   );
 }

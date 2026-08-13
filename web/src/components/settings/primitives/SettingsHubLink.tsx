@@ -1,15 +1,16 @@
-import type { MouseEvent, ReactNode } from 'react';
+import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 
 interface SettingsHubLinkProps {
   onClick: (e: MouseEvent) => void;
   title: string;
   children: ReactNode;
+  style?: CSSProperties;
 }
 
 /**
  * SettingsHubLink — Hub 跳转链接（用于在设置区内跳转到详情页）
  */
-export function SettingsHubLink({ onClick, title, children }: SettingsHubLinkProps) {
+export function SettingsHubLink({ onClick, title, children, style }: SettingsHubLinkProps) {
   return (
     <button
       type="button"
@@ -25,6 +26,7 @@ export function SettingsHubLink({ onClick, title, children }: SettingsHubLinkPro
         textDecoration: 'underline',
         textUnderlineOffset: '2px',
         padding: 0,
+        ...style,
       }}
     >
       {children}

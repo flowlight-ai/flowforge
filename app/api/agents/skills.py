@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import json
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -20,6 +22,8 @@ from flowforge.core.tracing import get_logger
 logger = get_logger("api.skills")
 
 router = APIRouter(prefix="/skills", tags=["skills"])
+
+_lock = threading.Lock()
 
 
 class SkillCreate(BaseModel):
@@ -39,6 +43,27 @@ def _now() -> str:
 def _get_config_path() -> Path:
     """获取 config 目录路径（铁律 5 禁止硬编码路径）。"""
     return Path(__file__).resolve().parents[3] / "config"
+
+
+def _custom_file() -> Path:
+    """自定义 Skill 持久化文件。"""
+    return Path(__file__).resolve().parents[3] / "data" / "settings" / "skills_custom.json"
+
+
+def _read_custom() -> list[dict[str, Any]]:
+    try:
+        data = json.loads(_custom_file().read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def _write_custom(skills: list[dict[str, Any]]) -> None:
+    path = _custom_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(skills, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
 
 
 def _load_skills() -> list[dict[str, Any]]:
@@ -95,22 +120,31 @@ async def list_skills(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> dict[str, Any]:
-    """列出 Skill（从 prompts.yaml / plugins.yaml 读取）。"""
-    all_skills = _load_skills()
+    """列出 Skill（yaml 内置 + 自定义持久化条目）。"""
+    custom = _read_custom()
+    all_skills = custom + _load_skills()
     paginated = all_skills[offset:offset + limit]
     return {"items": paginated, "total": len(all_skills), "limit": limit, "offset": offset}
 
 
 @router.post("")
 async def create_skill(payload: SkillCreate) -> dict[str, Any]:
-    """创建 Skill（返回占位对象，持久化需后续支持）。"""
-    return {
+    """创建 Skill（持久化到 data/settings/skills_custom.json）。"""
+    entry = {
         "id": f"skill_{int(datetime.now(timezone.utc).timestamp())}",
         "name": payload.name,
         "description": payload.description,
         "version": payload.version,
         "entry": payload.entry,
         "config": payload.config,
+        "installed": True,
+        "type": "custom",
         "status": "registered",
         "created_at": _now(),
     }
+    with _lock:
+        custom = _read_custom()
+        custom.insert(0, entry)
+        _write_custom(custom)
+    logger.info(f"skills: 已创建并持久化 Skill {payload.name}")
+    return entry
