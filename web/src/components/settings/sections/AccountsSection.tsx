@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Key } from 'lucide-react';
-import { SettingsBadge, SettingsEmptyState, SettingsRow, SettingsSection, SettingsText } from '../primitives';
+import {
+  SettingsBadge,
+  SettingsEmptyState,
+  SettingsField,
+  SettingsPrimaryButton,
+  SettingsRow,
+  SettingsSection,
+  SettingsText,
+} from '../primitives';
 
 interface ProviderAccount {
   name: string;
@@ -12,16 +20,31 @@ interface ProviderAccount {
   key_masked?: string;
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 320,
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-strong)',
+  background: 'var(--bg-elevated)',
+  padding: '6px 10px',
+  fontSize: '13px',
+  color: 'var(--text-strong)',
+  outline: 'none',
+};
+
 /**
- * AccountsSection — 账户与密钥
+ * AccountsSection — 账户与密钥（可配置密钥）
  *
- * 合并 /admin/models 的 providers。
- * 数据源：GET /api/v1/settings/providers（回退到 /api/v1/settings/providers）。
+ * 数据源：GET /api/v1/settings/providers + POST /api/v1/settings/secrets。
  */
 export function AccountsSection() {
   const [accounts, setAccounts] = useState<ProviderAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [keyValue, setKeyValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true);
@@ -46,6 +69,35 @@ export function AccountsSection() {
     fetchAccounts();
   }, [fetchAccounts]);
 
+  const saveKey = async (account: ProviderAccount) => {
+    const envName = account.api_key_env?.trim() || `${account.name.toUpperCase()}_API_KEY`;
+    if (!keyValue.trim()) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/v1/settings/secrets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: envName,
+          value: keyValue.trim(),
+          category: 'api_key',
+          description: `${account.name} API Key`,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setMessage(`已保存 ${account.name} 密钥`);
+      setKeyValue('');
+      setEditing(null);
+      await fetchAccounts();
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage('密钥保存失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <SettingsText as="p" tone="muted">加载中...</SettingsText>;
   }
@@ -56,9 +108,10 @@ export function AccountsSection() {
   return (
     <SettingsSection
       title="模型 Provider 与密钥"
-      description="模型账户、API Key 与执行身份归属。完整管理请前往 /admin/models。"
+      description="模型账户、API Key 与执行身份归属。"
       badge={<SettingsBadge tone="slate" size="xxs">{accounts.length}</SettingsBadge>}
     >
+      {message && <SettingsText as="span" variant="xs" tone={message.includes('失败') ? 'red' : 'muted'}>{message}</SettingsText>}
       {accounts.length === 0 ? (
         <SettingsEmptyState
           icon={<Key size={32} color="var(--muted)" />}
@@ -78,11 +131,39 @@ export function AccountsSection() {
                   {a.key_configured ? '已配置' : '未配置'}
                 </SettingsBadge>
               }
+              actions={
+                <SettingsPrimaryButton onClick={() => setEditing(editing === a.name ? null : a.name)}>
+                  {editing === a.name ? '取消' : a.key_configured ? '更新密钥' : '配置密钥'}
+                </SettingsPrimaryButton>
+              }
             >
-              {a.key_masked && (
-                <SettingsText as="span" variant="xs" tone="muted" style={{ fontFamily: 'var(--mono)' }}>
-                  {a.key_masked}
-                </SettingsText>
+              {editing === a.name && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <SettingsField label="环境变量名" hint={`写入 ${a.api_key_env || `${a.name.toUpperCase()}_API_KEY`} 到密钥存储`}>
+                    <SettingsText as="span" variant="xs" tone="muted" style={{ fontFamily: 'var(--mono)' }}>
+                      {a.api_key_env || `${a.name.toUpperCase()}_API_KEY`}
+                    </SettingsText>
+                  </SettingsField>
+                  <SettingsField label="API Key">
+                    <input
+                      type="password"
+                      style={inputStyle}
+                      value={keyValue}
+                      placeholder="粘贴新的 API Key"
+                      onChange={(e) => setKeyValue(e.target.value)}
+                    />
+                  </SettingsField>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <SettingsPrimaryButton onClick={() => saveKey(a)} disabled={saving || !keyValue.trim()}>
+                      {saving ? '保存中...' : '保存密钥'}
+                    </SettingsPrimaryButton>
+                  </div>
+                  {a.key_masked && (
+                    <SettingsText as="span" variant="xs" tone="muted" style={{ fontFamily: 'var(--mono)' }}>
+                      当前：{a.key_masked}
+                    </SettingsText>
+                  )}
+                </div>
               )}
             </SettingsRow>
           ))}
