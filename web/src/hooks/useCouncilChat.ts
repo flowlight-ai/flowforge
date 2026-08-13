@@ -58,6 +58,14 @@ function saveToStorage(key: string, value: unknown): void {
   }
 }
 
+/** 生成唯一消息 ID：优先 crypto.randomUUID，旧环境降级到时间戳+随机串 */
+function newMsgId(prefix: string): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /** 后端消息 → CouncilMessage 转换 */
 function backendMsgToCouncil(msg: Record<string, unknown>): CouncilMessage {
   return {
@@ -243,7 +251,7 @@ export function useCouncilChat(threadId: string | null) {
 
       // 添加用户消息（乐观更新）
       const userMsg: CouncilMessage = {
-        id: `user-${Date.now()}`,
+        id: newMsgId("user"),
         source: "user",
         content: text,
         timestamp: Date.now(),
@@ -301,7 +309,7 @@ export function useCouncilChat(threadId: string | null) {
       // 添加"灵议进行中"系统消息
       const modeLabel = reqMode === "parallel" ? "多智能体并行" : "单智能体";
       const sysMsg: CouncilMessage = {
-        id: `sys-${Date.now()}`,
+        id: newMsgId("sys"),
         source: "system",
         content: `灵议进行中（${modeLabel}模式）...（超时 ${timeoutMs / 1000}s）`,
         timestamp: Date.now() + 1,
@@ -345,7 +353,7 @@ export function useCouncilChat(threadId: string | null) {
             const model = msg.model || "unknown";
             const usage = msg.usage || {};
             newMessages.push({
-              id: `forgekin-${round.round}-${msg.forgekin_id}-${Date.now()}-${Math.random()}`,
+              id: newMsgId(`forgekin-${round.round}-${msg.forgekin_id}`),
               source: "forgekin",
               forgekinId: msg.forgekin_id,
               forgekinName: msg.name,
@@ -365,7 +373,7 @@ export function useCouncilChat(threadId: string | null) {
         let summaryMsg: CouncilMessage | null = null;
         if (data.summary) {
           summaryMsg = {
-            id: `summary-${Date.now()}`,
+            id: newMsgId("summary"),
             source: "system",
             content: `📋 灵议摘要：${data.summary}`,
             timestamp: Date.now() + newMessages.length + 1,
@@ -390,7 +398,7 @@ export function useCouncilChat(threadId: string | null) {
         setError(`灵议失败: ${errMsg}`);
 
         const errorMsg: CouncilMessage = {
-          id: `error-${Date.now()}`,
+          id: newMsgId("error"),
           source: "system",
           content: `⚠ 灵议失败：${errMsg}`,
           timestamp: Date.now(),
@@ -431,7 +439,7 @@ export function useCouncilChat(threadId: string | null) {
   const addSystemMessage = useCallback(
     (content: string) => {
       const sysMsg: CouncilMessage = {
-        id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: newMsgId("sys"),
         source: "system",
         content,
         timestamp: Date.now(),

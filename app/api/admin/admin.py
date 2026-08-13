@@ -13,7 +13,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")},
     }
 
 
@@ -21,7 +21,7 @@ def _make_error(code: str, message: str, details: dict = None) -> dict:
     return {
         "status": "error",
         "error": {"code": code, "message": message, "details": details or {}},
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")},
     }
 
 
@@ -63,7 +63,7 @@ async def trigger_autofix(llm_client=Depends(get_llm_client)):
             key = f"{provider}/{model_id}"
             llm_client._health_status[key] = {
                 "success_count": 0, "error_count": 0,
-                "last_error": "", "last_check": datetime.now(timezone.utc).isoformat() + "Z",
+                "last_error": "", "last_check": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             }
             fixed.append(key)
             logger.info(f"autofix: reset health for {key}")
@@ -83,7 +83,7 @@ async def force_refresh_health(llm_client=Depends(get_llm_client)):
     if llm_client is None:
         return _make_error("SERVICE_UNAVAILABLE", "LLM client not initialized")
     for key in list(llm_client._health_status.keys()):
-        llm_client._health_status[key]["last_check"] = datetime.now(timezone.utc).isoformat() + "Z"
+        llm_client._health_status[key]["last_check"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     report = llm_client.get_health_report()
     return _make_response(report)
 

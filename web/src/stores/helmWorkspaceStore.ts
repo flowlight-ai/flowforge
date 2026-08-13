@@ -123,7 +123,7 @@ export const useHelmWorkspaceStore = create<HelmWorkspaceState>((set, get) => ({
       get().setWorkspaceList(workspaces);
       set({ loading: false });
     } catch (err) {
-      set({ workspaceList: [], loading: false, error: String(err) });
+      set({ workspaceList: [], loading: false, error: err instanceof Error ? err.message : String(err) });
     }
   },
 
@@ -143,7 +143,7 @@ export const useHelmWorkspaceStore = create<HelmWorkspaceState>((set, get) => ({
       set({ currentWorkspace: name.trim(), newWorkspaceName: "", showNewWorkspaceInput: false });
       return true;
     } catch (err) {
-      set({ error: String(err) });
+      set({ error: err instanceof Error ? err.message : String(err) });
       return false;
     }
   },

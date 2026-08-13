@@ -21,8 +21,13 @@ import sys
 import os
 import time
 
+import pytest
+
 # Ensure project root is on path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+
+# P-118: 显式 asyncio 标记，不依赖 asyncio_mode="auto" 隐式行为
+pytestmark = pytest.mark.asyncio
 
 from flowforge.harness.orchestrator import HarnessOrchestrator
 from flowforge.harness.context_engine import ContextEngine

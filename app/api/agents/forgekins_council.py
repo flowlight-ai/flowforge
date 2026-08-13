@@ -107,7 +107,7 @@ def _parse_mentions(content: str) -> list[str]:
 @router.post("/chat")
 async def send_council_chat(payload: CouncilChatRequest) -> dict[str, Any]:
     """发送群聊消息，如果 @mention 了灵智体则触发响应。"""
-    now = datetime.now(timezone.utc).isoformat() + "Z"
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     # 存储用户消息
     user_msg = {
@@ -159,7 +159,7 @@ async def send_council_chat(payload: CouncilChatRequest) -> dict[str, Any]:
                     "sender_name": fk_id,
                     "sender_type": "forgekin",
                     "thread_id": payload.thread_id,
-                    "created_at": datetime.now(timezone.utc).isoformat() + "Z",
+                    "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                     "error": True,
                 }
                 _store.add(error_msg)
@@ -200,7 +200,7 @@ async def _trigger_forgekin_response(forgekin_id: str, user_message: str) -> dic
         "sender": forgekin_id,
         "sender_name": forgekin.name,
         "sender_type": "forgekin",
-        "created_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "model": result.get("model", "unknown"),
         "usage": result.get("usage", {}),
     }

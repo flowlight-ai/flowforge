@@ -400,7 +400,18 @@ def test_rule_evolution_unknown_operations_return_false() -> None:
 def test_removed_harness_collaborators_todo() -> None:
     """MagicWordsRegistry / GovernanceBoundary / HarnessabilityScorer were removed.
 
-    Magic-words moved to flowforge.forgemind.magic_words (see tests/test_forgekin.py).
-    TODO(refactor): re-add coverage for the missing layers when reimplemented.
+    Magic-words moved to flowforge.forgemind.magic_words (see tests/test_forgekin.py);
+    verify the migrated module is importable and functional so the removal is
+    covered by a real assertion instead of a no-op (P-81).
     """
-    assert True
+    from flowforge.forgemind.magic_words import (
+        MAGIC_WORDS,
+        all_phrases,
+        detect_magic_word,
+    )
+
+    assert len(MAGIC_WORDS) >= 4
+    assert "第一性原理" in all_phrases()
+    assert detect_magic_word("用第一性原理重新考虑") is not None
+    assert detect_magic_word("proceed normally") is None
+    assert detect_magic_word("") is None

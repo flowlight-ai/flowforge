@@ -227,6 +227,6 @@ async def list_external_agents() -> dict[str, Any]:
         "total": len(agents_status),
         "meta": {
             "trace_id": get_trace_id(),
-            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         },
     }

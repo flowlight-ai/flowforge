@@ -34,7 +34,7 @@ class McpServerCreate(BaseModel):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _get_config_path() -> Path:

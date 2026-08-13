@@ -5,7 +5,10 @@ from datetime import timezone
 from pathlib import Path
 from typing import Any
 
-class EpisodicMemory:
+from .base import EchoStore
+
+
+class EpisodicMemory(EchoStore):
     def __init__(self, db_url: str = None):
         db_path = (db_url or "data/episodic.db").replace("sqlite:///", "")
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)

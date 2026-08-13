@@ -460,12 +460,42 @@ function TerminalPanel({ worktreeId }: { worktreeId?: string }) {
     "> 输入命令开始...",
   ]);
   const [cmd, setCmd] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 终端桥接：命令经 POST /api/v1/workspace/exec 在默认工作区内真实执行
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cmd.trim()) return;
-    setHistory((prev) => [...prev, `$ ${cmd}`, `> 命令已发送: ${cmd}`]);
+    const command = cmd.trim();
+    if (!command || busy) return;
     setCmd("");
+    setBusy(true);
+    setHistory((prev) => [...prev, `$ ${command}`]);
+    try {
+      const res = await fetch("/api/v1/workspace/exec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const lines = [
+        ...(data.stdout || "").split(/\r?\n/).filter((l: string) => l !== ""),
+        ...(data.stderr || "").split(/\r?\n/).filter((l: string) => l !== ""),
+      ];
+      if (data.status === "timeout") lines.push("⚠ 命令执行超时");
+      if (lines.length === 0) lines.push(`(exit ${data.exit_code})`);
+      if (data.exit_code !== 0 && data.exit_code > 0) {
+        lines.push(`(exit ${data.exit_code})`);
+      }
+      setHistory((prev) => [...prev, ...lines]);
+    } catch (err) {
+      setHistory((prev) => [
+        ...prev,
+        `✗ 执行失败: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -484,7 +514,11 @@ function TerminalPanel({ worktreeId }: { worktreeId?: string }) {
           <div
             key={i}
             style={{
-              color: line.startsWith("$") ? "var(--accent)" : "var(--text)",
+              color: line.startsWith("$")
+                ? "var(--accent)"
+                : line.startsWith("✗") || line.startsWith("⚠")
+                  ? "var(--warn)"
+                  : "var(--text)",
               lineHeight: 1.6,
               whiteSpace: "pre-wrap",
             }}
@@ -492,6 +526,9 @@ function TerminalPanel({ worktreeId }: { worktreeId?: string }) {
             {line}
           </div>
         ))}
+        {busy && (
+          <div style={{ color: "var(--muted)", lineHeight: 1.6 }}>... 执行中</div>
+        )}
       </div>
       <form
         onSubmit={handleSubmit}
@@ -508,7 +545,8 @@ function TerminalPanel({ worktreeId }: { worktreeId?: string }) {
           type="text"
           value={cmd}
           onChange={(e) => setCmd(e.target.value)}
-          placeholder="输入命令..."
+          placeholder={busy ? "执行中..." : "输入命令..."}
+          disabled={busy}
           style={{
             flex: 1,
             background: "none",

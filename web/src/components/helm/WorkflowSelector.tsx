@@ -4,12 +4,16 @@ import { useState, useEffect } from "react";
 
 export default function WorkflowSelector({ selected, onChange }: { selected: string | null; onChange: (wf: string | null) => void }) {
   const [workflows, setWorkflows] = useState<{name: string; display_name: string}[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/v1/graph/workflows")
-      .then((r) => r.json())
-      .then((data) => setWorkflows(data || []))
-      .catch(() => {});
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => setWorkflows(Array.isArray(data) ? data : []))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
 
   return (
@@ -34,6 +38,11 @@ export default function WorkflowSelector({ selected, onChange }: { selected: str
           {wf.display_name || wf.name}
         </option>
       ))}
+      {error && (
+        <option value="" disabled>
+          工作流加载失败（{error}）
+        </option>
+      )}
     </select>
   );
 }

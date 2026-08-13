@@ -11,6 +11,16 @@ import AttachmentPreview, { Attachment } from "./AttachmentPreview";
 
 const VoiceInput = dynamic(() => import("./VoiceInput"), { ssr: false });
 
+/** 后端 /api/v1/admin/models/available 返回的模型条目（仅声明用到的字段） */
+interface AvailableModel {
+  model_id?: string;
+  id?: string;
+  name?: string;
+  display_name?: string;
+  provider?: string;
+  health_status?: string;
+}
+
 export default function ChatInput({
   phase, onSubmit, onReview, onCommand, onStop,
   interactionMode, onInteractionModeChange, selectedModel, onModelChange,
@@ -37,7 +47,7 @@ export default function ChatInput({
   const [showCommands, setShowCommands] = useState(false);
   const [commandFilter, setCommandFilter] = useState("");
   const [activeCmdIndex, setActiveCmdIndex] = useState(0);
-  const [models, setModels] = useState<any[]>([]);
+  const [models, setModels] = useState<AvailableModel[]>([]);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [voiceActive, setVoiceActive] = useState(false);
@@ -257,7 +267,7 @@ export default function ChatInput({
               </button>
               <div className="chat-model-group-label">指定模型</div>
               {(() => {
-                const groups: Record<string, any[]> = {};
+                const groups: Record<string, AvailableModel[]> = {};
                 for (const m of models) {
                   if (m.health_status && m.health_status !== "available" && m.health_status !== "unknown") continue;
                   const provider = m.provider || "other";
@@ -268,13 +278,17 @@ export default function ChatInput({
                 return Object.entries(groups).map(([provider, providerModels]) => (
                   <Fragment key={provider}>
                     <div className="chat-model-group-label">{provider}</div>
-                    {providerModels.map((m) => (
-                      <button key={m.model_id || m.id || m.name} className={`chat-model-option${selectedModel === (m.model_id || m.id || m.name) ? " active" : ""}`}
-                        onClick={() => { onModelChange?.(m.model_id || m.id || m.name); setShowModelDropdown(false); }}>
-                        <span className="chat-model-option-name">{m.display_name || m.name || m.model_id}</span>
-                        <span className="chat-model-option-status" />
-                      </button>
-                    ))}
+                    {providerModels.map((m) => {
+                      const modelId = m.model_id || m.id || m.name;
+                      if (!modelId) return null;
+                      return (
+                        <button key={modelId} className={`chat-model-option${selectedModel === modelId ? " active" : ""}`}
+                          onClick={() => { onModelChange?.(modelId); setShowModelDropdown(false); }}>
+                          <span className="chat-model-option-name">{m.display_name || m.name || m.model_id}</span>
+                          <span className="chat-model-option-status" />
+                        </button>
+                      );
+                    })}
                   </Fragment>
                 ));
               })()}

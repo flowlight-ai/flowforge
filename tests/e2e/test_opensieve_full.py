@@ -124,4 +124,8 @@ async def main():
         print("  Image Download: Tested")
         print("  Scrape: Tested")
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    # P-02: 模块级执行会污染 pytest 收集（导入即发起网络调用导致
+    # 收集期 ConnectError/JSONDecodeError），改为仅在直接运行时执行。
+    asyncio.run(main())

@@ -28,6 +28,11 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+import pytest
+
+# P-118: 显式 asyncio 标记，不依赖 asyncio_mode="auto" 隐式行为
+pytestmark = pytest.mark.asyncio
+
 from flowforge.forgemind.autonomous import AutonomousDaemon
 from flowforge.forgemind.swarm import (
     SwarmCoordinator,

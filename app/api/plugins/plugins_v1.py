@@ -46,5 +46,5 @@ async def register_plugin(payload: PluginCreate) -> dict[str, Any]:
         "entry": payload.entry,
         "config": payload.config,
         "status": "registered",
-        "created_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }

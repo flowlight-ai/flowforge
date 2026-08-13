@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -22,6 +22,11 @@ from pydantic import BaseModel, Field
 from flowforge.core.tracing import get_logger
 
 logger = get_logger("flowforge.evolution.close_gate")
+
+
+def _now_utc() -> datetime:
+    """返回时区感知的当前 UTC 时间（避免 naive vs aware 比较问题）。"""
+    return datetime.now(timezone.utc)
 
 # 默认 follow-up 屏蔽词清单（编程红线 11：可配置，不硬编码到逻辑）
 _DEFAULT_FOLLOW_UP_BLOCKLIST: list[str] = [
@@ -49,7 +54,7 @@ class CloseGateDecision(BaseModel):
 
     decision: Literal["immediate", "delete", "cvo_signoff"]
     decided_by: str  # 决策者（如 "sherlock" / "operator"）
-    decided_at: datetime = Field(default_factory=datetime.utcnow)
+    decided_at: datetime = Field(default_factory=_now_utc)
     rationale: str  # 决策理由
 
 

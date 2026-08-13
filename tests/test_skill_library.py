@@ -387,11 +387,13 @@ class TestSkillLibraryInit:
 class TestSkillLibraryRegister:
     """SkillLibrary 注册/更新/注销."""
 
+    @pytest.mark.asyncio
     async def test_register_returns_skill_id(self, library: SkillLibrary, code_review_skill: Skill) -> None:
         """register_skill 返回 skill_id."""
         sid = await library.register_skill(code_review_skill)
         assert sid == code_review_skill.skill_id
 
+    @pytest.mark.asyncio
     async def test_register_persists_yaml_file(self, library: SkillLibrary, code_review_skill: Skill, storage_dir: Path) -> None:
         """register_skill 持久化 YAML 文件."""
         sid = await library.register_skill(code_review_skill)
@@ -403,6 +405,7 @@ class TestSkillLibraryRegister:
         assert data["name"] == "代码审查"
         assert data["forgekin_species"] == "luban"
 
+    @pytest.mark.asyncio
     async def test_register_assigns_new_id_on_conflict(self, library: SkillLibrary, code_review_skill: Skill) -> None:
         """ID 冲突时自动生成新 ID（不覆盖既有技能）."""
         original_id = code_review_skill.skill_id
@@ -416,6 +419,7 @@ class TestSkillLibraryRegister:
         orig = await library.get_skill(original_id)
         assert orig is not None
 
+    @pytest.mark.asyncio
     async def test_update_skill_modifies_fields(self, library: SkillLibrary, code_review_skill: Skill) -> None:
         """update_skill 修改字段并持久化."""
         sid = await library.register_skill(code_review_skill)
@@ -430,17 +434,20 @@ class TestSkillLibraryRegister:
         assert loaded is not None
         assert loaded.confidence == 0.9
 
+    @pytest.mark.asyncio
     async def test_update_skill_unknown_raises(self, library: SkillLibrary) -> None:
         """update_skill 不存在的技能抛出 KeyError."""
         with pytest.raises(KeyError):
             await library.update_skill("skill_unknown", {"confidence": 0.5})
 
+    @pytest.mark.asyncio
     async def test_update_skill_does_not_change_skill_id(self, library: SkillLibrary, code_review_skill: Skill) -> None:
         """update_skill 不能修改 skill_id."""
         sid = await library.register_skill(code_review_skill)
         updated = await library.update_skill(sid, {"skill_id": "skill_hacker"})
         assert updated.skill_id == sid  # 未改变
 
+    @pytest.mark.asyncio
     async def test_unregister_skill_removes_record(self, library: SkillLibrary, code_review_skill: Skill, storage_dir: Path) -> None:
         """unregister_skill 删除内存与磁盘记录."""
         sid = await library.register_skill(code_review_skill)
@@ -452,6 +459,7 @@ class TestSkillLibraryRegister:
         # 磁盘文件已删除
         assert not (storage_dir / f"{sid}.yaml").exists()
 
+    @pytest.mark.asyncio
     async def test_unregister_skill_unknown_returns_false(self, library: SkillLibrary) -> None:
         """unregister_skill 不存在时返回 False."""
         ok = await library.unregister_skill("skill_unknown")
@@ -466,10 +474,12 @@ class TestSkillLibraryRegister:
 class TestSkillLibraryLookup:
     """SkillLibrary 检索与过滤."""
 
+    @pytest.mark.asyncio
     async def test_get_skill_returns_none_for_unknown(self, library: SkillLibrary) -> None:
         """get_skill 不存在时返回 None."""
         assert await library.get_skill("skill_unknown") is None
 
+    @pytest.mark.asyncio
     async def test_list_skills_no_filter(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill, perf_analysis_skill: Skill
     ) -> None:
@@ -480,6 +490,7 @@ class TestSkillLibraryLookup:
         result = await library.list_skills()
         assert len(result) == 3
 
+    @pytest.mark.asyncio
     async def test_list_skills_filter_by_species(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill, perf_analysis_skill: Skill
     ) -> None:
@@ -491,6 +502,7 @@ class TestSkillLibraryLookup:
         assert len(result) == 2
         assert all(s.forgekin_species == "luban" for s in result)
 
+    @pytest.mark.asyncio
     async def test_list_skills_filter_by_tags(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill
     ) -> None:
@@ -504,6 +516,7 @@ class TestSkillLibraryLookup:
         result = await library.list_skills(tags=["code-review", "markdown"])
         assert len(result) == 2
 
+    @pytest.mark.asyncio
     async def test_list_skills_filter_by_maturity_min(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill, perf_analysis_skill: Skill
     ) -> None:
@@ -515,6 +528,7 @@ class TestSkillLibraryLookup:
         assert len(result) == 2
         assert all(s.maturity_level >= 2 for s in result)
 
+    @pytest.mark.asyncio
     async def test_search_skills_by_name(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill
     ) -> None:
@@ -529,6 +543,7 @@ class TestSkillLibraryLookup:
         assert len(result) == 1
         assert result[0].name == "代码审查"
 
+    @pytest.mark.asyncio
     async def test_search_skills_by_description(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill
     ) -> None:
@@ -539,6 +554,7 @@ class TestSkillLibraryLookup:
         assert len(result) == 1
         assert result[0].name == "技术文档生成"
 
+    @pytest.mark.asyncio
     async def test_search_skills_by_tags(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill
     ) -> None:
@@ -549,6 +565,7 @@ class TestSkillLibraryLookup:
         assert len(result) == 1
         assert result[0].name == "技术文档生成"
 
+    @pytest.mark.asyncio
     async def test_search_skills_respects_limit(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill
     ) -> None:
@@ -563,6 +580,7 @@ class TestSkillLibraryLookup:
         # limit=0 应返回空
         assert await library.search_skills("生成", limit=0) == []
 
+    @pytest.mark.asyncio
     async def test_search_skills_empty_query_returns_empty(self, library: SkillLibrary) -> None:
         """search_skills 空查询返回空列表."""
         assert await library.search_skills("") == []
@@ -637,6 +655,7 @@ class TestCheckPreconditionHelper:
 class TestSkillLibraryMatch:
     """SkillLibrary.match_skills."""
 
+    @pytest.mark.asyncio
     async def test_match_by_keyword_pattern(
         self, library: SkillLibrary, code_review_skill: Skill, doc_gen_skill: Skill
     ) -> None:
@@ -653,6 +672,7 @@ class TestSkillLibraryMatch:
         assert len(result) == 1
         assert result[0].name == "代码审查"
 
+    @pytest.mark.asyncio
     async def test_match_by_regex_pattern(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -665,6 +685,7 @@ class TestSkillLibraryMatch:
         assert len(result) == 1
         assert result[0].name == "代码审查"
 
+    @pytest.mark.asyncio
     async def test_match_filters_by_preconditions(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -680,6 +701,7 @@ class TestSkillLibraryMatch:
         )
         assert len(result) == 1
 
+    @pytest.mark.asyncio
     async def test_match_sorts_by_confidence_times_success_rate(
         self, library: SkillLibrary
     ) -> None:
@@ -706,6 +728,7 @@ class TestSkillLibraryMatch:
         assert result[0].name == "高置信技能"
         assert result[1].name == "低置信技能"
 
+    @pytest.mark.asyncio
     async def test_match_no_trigger_patterns_excluded(
         self, library: SkillLibrary
     ) -> None:
@@ -724,6 +747,7 @@ class TestSkillLibraryMatch:
 class TestSkillLibraryInvoke:
     """SkillLibrary.invoke_skill + record_invocation_result."""
 
+    @pytest.mark.asyncio
     async def test_invoke_creates_invocation(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -740,6 +764,7 @@ class TestSkillLibraryInvoke:
         assert inv.success is False
         assert inv.duration_seconds == 0.0
 
+    @pytest.mark.asyncio
     async def test_invoke_unknown_skill_raises(
         self, library: SkillLibrary
     ) -> None:
@@ -749,6 +774,7 @@ class TestSkillLibraryInvoke:
                 "skill_unknown", {}, invoked_by="forgemind:luban_001"
             )
 
+    @pytest.mark.asyncio
     async def test_invoke_emits_event(
         self, library: SkillLibrary, event_bus: _FakeEventBus, code_review_skill: Skill
     ) -> None:
@@ -760,6 +786,7 @@ class TestSkillLibraryInvoke:
         assert len(invoked_events) >= 1
         assert invoked_events[-1]["payload"]["skill_id"] == sid
 
+    @pytest.mark.asyncio
     async def test_record_invocation_result_updates_counts_success(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -777,6 +804,7 @@ class TestSkillLibraryInvoke:
         assert skill.success_count == 1
         assert skill.failure_count == 0
 
+    @pytest.mark.asyncio
     async def test_record_invocation_result_updates_counts_failure(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -799,6 +827,7 @@ class TestSkillLibraryInvoke:
         assert inv.error == "timeout"
         assert inv.feedback == "需要重试"
 
+    @pytest.mark.asyncio
     async def test_record_invocation_result_records_metrics(
         self, library: SkillLibrary, metrics: _FakeMetricsCollector, code_review_skill: Skill
     ) -> None:
@@ -819,6 +848,7 @@ class TestSkillLibraryInvoke:
         assert labels.get("skill_id") == sid
         assert labels.get("success") == "true"
 
+    @pytest.mark.asyncio
     async def test_record_invocation_result_emits_event(
         self, library: SkillLibrary, event_bus: _FakeEventBus, code_review_skill: Skill
     ) -> None:
@@ -835,6 +865,7 @@ class TestSkillLibraryInvoke:
         assert len(completed_events) >= 1
         assert completed_events[-1]["payload"]["success"] is True
 
+    @pytest.mark.asyncio
     async def test_record_invocation_result_unknown_id_warns(
         self, library: SkillLibrary
     ) -> None:
@@ -853,6 +884,7 @@ class TestSkillLibraryInvoke:
 class TestSkillLibraryEvolve:
     """SkillLibrary.evolve_skill."""
 
+    @pytest.mark.asyncio
     async def test_evolve_updates_procedure(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -865,6 +897,7 @@ class TestSkillLibraryEvolve:
         assert evolved.procedure == "改进后的流程：读取 → 静态分析 → 生成 findings"
         assert evolved.procedure != original_procedure
 
+    @pytest.mark.asyncio
     async def test_evolve_appends_anti_patterns(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -883,6 +916,7 @@ class TestSkillLibraryEvolve:
         assert len(evolved.anti_patterns) == original_count + 1
         assert "忽略测试覆盖率" in evolved.anti_patterns
 
+    @pytest.mark.asyncio
     async def test_evolve_adjusts_confidence(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -901,6 +935,7 @@ class TestSkillLibraryEvolve:
         assert evolved.confidence == pytest.approx(expected, abs=0.01)
         assert evolved.confidence > original_conf
 
+    @pytest.mark.asyncio
     async def test_evolve_promotes_maturity(
         self, library: SkillLibrary
     ) -> None:
@@ -920,6 +955,7 @@ class TestSkillLibraryEvolve:
         evolved = await library.evolve_skill(sid, {})
         assert evolved.maturity_level == 3  # 提升一级
 
+    @pytest.mark.asyncio
     async def test_evolve_does_not_promote_above_max(
         self, library: SkillLibrary
     ) -> None:
@@ -939,6 +975,7 @@ class TestSkillLibraryEvolve:
         evolved = await library.evolve_skill(sid, {})
         assert evolved.maturity_level == 5  # 不超过 max
 
+    @pytest.mark.asyncio
     async def test_evolve_unknown_skill_raises(self, library: SkillLibrary) -> None:
         """evolve_skill 不存在的技能抛出 KeyError."""
         with pytest.raises(KeyError):
@@ -953,6 +990,7 @@ class TestSkillLibraryEvolve:
 class TestSkillLibraryImportExport:
     """SkillLibrary.export_skill / import_skill."""
 
+    @pytest.mark.asyncio
     async def test_export_skill_returns_dict(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -964,11 +1002,13 @@ class TestSkillLibraryImportExport:
         assert data["forgekin_species"] == "luban"
         assert data["confidence"] == 0.82
 
+    @pytest.mark.asyncio
     async def test_export_skill_unknown_raises(self, library: SkillLibrary) -> None:
         """export_skill 不存在抛出 KeyError."""
         with pytest.raises(KeyError):
             await library.export_skill("skill_unknown")
 
+    @pytest.mark.asyncio
     async def test_import_skill_creates_new(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -981,6 +1021,7 @@ class TestSkillLibraryImportExport:
         assert imported.skill_id == "skill_imported_new"
         assert await library.get_skill("skill_imported_new") is not None
 
+    @pytest.mark.asyncio
     async def test_import_skill_generates_new_id_on_conflict(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -993,6 +1034,7 @@ class TestSkillLibraryImportExport:
         # 原技能仍存在
         assert await library.get_skill(sid) is not None
 
+    @pytest.mark.asyncio
     async def test_import_skill_overwrite_replaces(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -1005,6 +1047,7 @@ class TestSkillLibraryImportExport:
         assert imported.skill_id == sid
         assert imported.confidence == 0.95
 
+    @pytest.mark.asyncio
     async def test_export_import_roundtrip(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -1033,6 +1076,7 @@ class TestSkillLibraryStatistics:
         """get_skill_statistics 不存在的技能返回空 dict."""
         assert library.get_skill_statistics("skill_unknown") == {}
 
+    @pytest.mark.asyncio
     async def test_get_skill_statistics_with_invocations(
         self, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -1056,6 +1100,7 @@ class TestSkillLibraryStatistics:
         assert stats["confidence"] == code_review_skill.confidence
         assert stats["maturity_level"] == code_review_skill.maturity_level
 
+    @pytest.mark.asyncio
     async def test_get_library_status(
         self, library: SkillLibrary, code_review_skill: Skill, perf_analysis_skill: Skill
     ) -> None:
@@ -1087,6 +1132,7 @@ class TestSkillLibraryStatistics:
 class TestSkillMarket:
     """SkillMarket publish / browse / install / rate."""
 
+    @pytest.mark.asyncio
     async def test_publish_to_market_writes_file(
         self, market: SkillMarket, library: SkillLibrary, code_review_skill: Skill, market_dir: Path
     ) -> None:
@@ -1096,6 +1142,7 @@ class TestSkillMarket:
         assert ok is True
         assert (market_dir / f"{sid}.yaml").exists()
 
+    @pytest.mark.asyncio
     async def test_publish_to_market_rejects_non_public(
         self, market: SkillMarket, library: SkillLibrary
     ) -> None:
@@ -1105,6 +1152,7 @@ class TestSkillMarket:
         ok = await market.publish_to_market(sid)
         assert ok is False
 
+    @pytest.mark.asyncio
     async def test_publish_to_market_unknown_returns_false(
         self, market: SkillMarket
     ) -> None:
@@ -1112,6 +1160,7 @@ class TestSkillMarket:
         ok = await market.publish_to_market("skill_unknown")
         assert ok is False
 
+    @pytest.mark.asyncio
     async def test_browse_market_no_filter(
         self, market: SkillMarket, library: SkillLibrary,
         code_review_skill: Skill, perf_analysis_skill: Skill
@@ -1124,6 +1173,7 @@ class TestSkillMarket:
         result = await market.browse_market()
         assert len(result) == 2
 
+    @pytest.mark.asyncio
     async def test_browse_market_filter_by_species(
         self, market: SkillMarket, library: SkillLibrary,
         code_review_skill: Skill, perf_analysis_skill: Skill
@@ -1137,6 +1187,7 @@ class TestSkillMarket:
         assert len(result) == 1
         assert result[0].forgekin_species == "sherlock"
 
+    @pytest.mark.asyncio
     async def test_browse_market_filter_by_tags(
         self, market: SkillMarket, library: SkillLibrary,
         code_review_skill: Skill, perf_analysis_skill: Skill
@@ -1150,6 +1201,7 @@ class TestSkillMarket:
         assert len(result) == 1
         assert result[0].name == "性能瓶颈分析"
 
+    @pytest.mark.asyncio
     async def test_browse_market_sort_by_usage_count(
         self, market: SkillMarket, library: SkillLibrary
     ) -> None:
@@ -1164,6 +1216,7 @@ class TestSkillMarket:
         assert result[0].name == "高使用技能"
         assert result[1].name == "低使用技能"
 
+    @pytest.mark.asyncio
     async def test_browse_market_sort_by_confidence(
         self, market: SkillMarket, library: SkillLibrary
     ) -> None:
@@ -1177,6 +1230,7 @@ class TestSkillMarket:
         result = await market.browse_market(sort_by="confidence")
         assert result[0].name == "高置信"
 
+    @pytest.mark.asyncio
     async def test_install_from_market_copies_to_library(
         self, market: SkillMarket, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -1190,6 +1244,7 @@ class TestSkillMarket:
         assert installed.skill_id == sid
         assert await library.get_skill(sid) is not None
 
+    @pytest.mark.asyncio
     async def test_install_from_market_unknown_raises(
         self, market: SkillMarket
     ) -> None:
@@ -1197,6 +1252,7 @@ class TestSkillMarket:
         with pytest.raises(KeyError):
             await market.install_from_market("skill_unknown")
 
+    @pytest.mark.asyncio
     async def test_rate_skill_appends_rating(
         self, market: SkillMarket, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -1213,6 +1269,7 @@ class TestSkillMarket:
         assert ratings[0]["rating"] == 5
         assert ratings[0]["comment"] == "非常实用"
 
+    @pytest.mark.asyncio
     async def test_rate_skill_invalid_rating_raises(
         self, market: SkillMarket, library: SkillLibrary, code_review_skill: Skill
     ) -> None:
@@ -1224,6 +1281,7 @@ class TestSkillMarket:
         with pytest.raises(ValueError):
             await market.rate_skill(sid, rating=6)
 
+    @pytest.mark.asyncio
     async def test_rate_skill_unknown_raises(
         self, market: SkillMarket
     ) -> None:
@@ -1231,6 +1289,7 @@ class TestSkillMarket:
         with pytest.raises(KeyError):
             await market.rate_skill("skill_unknown", rating=5)
 
+    @pytest.mark.asyncio
     async def test_get_market_status(
         self, market: SkillMarket, library: SkillLibrary,
         code_review_skill: Skill, perf_analysis_skill: Skill
@@ -1250,6 +1309,7 @@ class TestSkillMarket:
         assert status["avg_rating"] == 4.0  # (5+3)/2
         assert "market_dir" in status
 
+    @pytest.mark.asyncio
     async def test_get_market_status_empty(self, market: SkillMarket) -> None:
         """空市场状态正确."""
         status = await market.get_market_status()
@@ -1266,6 +1326,7 @@ class TestSkillMarket:
 class TestMetricsAndEventIntegration:
     """metrics_collector 与 event_bus 集成测试."""
 
+    @pytest.mark.asyncio
     async def test_register_skill_records_metrics(
         self, library: SkillLibrary, metrics: _FakeMetricsCollector, code_review_skill: Skill
     ) -> None:
@@ -1283,6 +1344,7 @@ class TestMetricsAndEventIntegration:
         assert len(size_gauges) >= 1
         assert size_gauges[-1][1] == 1.0  # 1 个技能
 
+    @pytest.mark.asyncio
     async def test_unregister_skill_updates_gauge(
         self, library: SkillLibrary, metrics: _FakeMetricsCollector, code_review_skill: Skill
     ) -> None:
@@ -1295,6 +1357,7 @@ class TestMetricsAndEventIntegration:
         # 最后一次应反映 size=0
         assert size_gauges[-1][1] == 0.0
 
+    @pytest.mark.asyncio
     async def test_register_skill_emits_event(
         self, library: SkillLibrary, event_bus: _FakeEventBus, code_review_skill: Skill
     ) -> None:
@@ -1306,6 +1369,7 @@ class TestMetricsAndEventIntegration:
         assert len(registered_events) >= 1
         assert registered_events[-1]["payload"]["skill_id"] == sid
 
+    @pytest.mark.asyncio
     async def test_metrics_collector_failure_does_not_break(
         self, storage_dir: Path, event_bus: _FakeEventBus, code_review_skill: Skill
     ) -> None:
@@ -1327,6 +1391,7 @@ class TestMetricsAndEventIntegration:
         sid = await lib.register_skill(code_review_skill)
         assert sid == code_review_skill.skill_id
 
+    @pytest.mark.asyncio
     async def test_event_bus_failure_does_not_break(
         self, storage_dir: Path, metrics: _FakeMetricsCollector, code_review_skill: Skill
     ) -> None:

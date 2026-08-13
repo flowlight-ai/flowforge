@@ -97,7 +97,8 @@ export const useHelmPlanStore = create<HelmPlanState>((set, get) => ({
     if (!taskId) return false;
     try {
       const body: Record<string, unknown> = {
-        plan_id: parseInt(planId, 10) || 0,
+        // 数字 ID 转 number，字符串 ID 原样透传（避免 parseInt 非数字 → NaN/0）
+        plan_id: /^\d+$/.test(planId) ? parseInt(planId, 10) : planId,
       };
       if (editedSteps && editedSteps.length > 0) {
         body.edited_steps = editedSteps;

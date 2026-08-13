@@ -99,6 +99,31 @@ class TraceManager:
             self.finish_span(span, "error")
             raise
 
+    def export_spans(self) -> list[dict[str, Any]]:
+        """导出全部 span 为 JSON 可序列化结构（P-94）。"""
+        return [
+            {
+                "trace_id": s.trace_id,
+                "span_id": s.span_id,
+                "operation": s.operation,
+                "start_time": s.start_time,
+                "end_time": s.end_time,
+                "duration_ms": round(s.duration_ms, 3),
+                "parent_span_id": s.parent_span_id,
+                "attributes": s.attributes,
+                "status": s.status,
+            }
+            for s in self._spans
+        ]
+
+    def save_traces(self, path: str | Path = "logs/traces.jsonl") -> None:
+        """将全部 span 追加写入 JSONL 文件（P-94）。"""
+        out = Path(path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with open(out, "a", encoding="utf-8") as f:
+            for entry in self.export_spans():
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
 
 class MetricsCollector:
     """指标采集器。
@@ -138,6 +163,50 @@ class MetricsCollector:
                 for k, v in self._histograms.items()
             },
         }
+
+    def export_prometheus_text(self) -> str:
+        """导出为 Prometheus 文本格式（P-94）。
+
+        无第三方依赖的轻量导出：counter/gauge 按标准文本格式输出，
+        histogram 以 ``_count`` / ``_sum`` 摘要形式输出。
+        """
+        lines: list[str] = []
+        for key, value in sorted(self._counters.items()):
+            name, labels = self._make_key_parts(key)
+            lines.append(f"# TYPE {name} counter")
+            lines.append(f"{self._format_metric(name, labels)} {value:g}")
+        for key, value in sorted(self._gauges.items()):
+            name, labels = self._make_key_parts(key)
+            lines.append(f"# TYPE {name} gauge")
+            lines.append(f"{self._format_metric(name, labels)} {value:g}")
+        for key, values in sorted(self._histograms.items()):
+            name, labels = self._make_key_parts(key)
+            lines.append(f"# TYPE {name} summary")
+            lines.append(f"{self._format_metric(name + '_count', labels)} {len(values)}")
+            lines.append(f"{self._format_metric(name + '_sum', labels)} {sum(values):g}")
+        return "\n".join(lines) + "\n" if lines else ""
+
+    @staticmethod
+    def _make_key_parts(key: str) -> tuple[str, dict[str, str]]:
+        """拆分复合键为 (metric_name, labels)。"""
+        if "{" not in key:
+            return key, {}
+        name, labels_part = key.split("{", 1)
+        labels_part = labels_part.rstrip("}")
+        labels: dict[str, str] = {}
+        if labels_part:
+            for pair in labels_part.split(","):
+                if "=" in pair:
+                    k, v = pair.split("=", 1)
+                    labels[k] = v
+        return name, labels
+
+    @staticmethod
+    def _format_metric(name: str, labels: dict[str, str]) -> str:
+        if not labels:
+            return name
+        label_str = ",".join(f'{k}="{v}"' for k, v in sorted(labels.items()))
+        return f"{name}{{{label_str}}}"
 
     @staticmethod
     def _make_key(name: str, labels: dict) -> str:
@@ -230,3 +299,13 @@ class ObservabilityManager:
             self.metrics.increment("agent_execution_errors", agent=agent_name)
             self.trace.finish_span(span, "error")
             raise
+
+    # ── 导出机制（P-94：指标/追踪可被外部监控系统采集）───────────────────
+
+    def export_metrics_text(self) -> str:
+        """导出 Prometheus 文本格式指标。"""
+        return self.metrics.export_prometheus_text()
+
+    def export_traces(self, path: str | Path = "logs/traces.jsonl") -> None:
+        """导出全部追踪到 JSONL 文件。"""
+        self.trace.save_traces(path)

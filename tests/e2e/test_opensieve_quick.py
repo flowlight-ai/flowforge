@@ -1,6 +1,11 @@
 """Quick test: OpenSieve API direct + FlowForge plugin."""
 import httpx, asyncio, json
 
+import pytest
+
+# P-118: 显式 asyncio 标记，不依赖 asyncio_mode="auto" 隐式行为
+pytestmark = pytest.mark.asyncio
+
 async def test_direct():
     """Test OpenSieve API directly."""
     print("=== Test 1: OpenSieve API Direct (8101) ===")
@@ -60,4 +65,8 @@ async def main():
     await test_direct()
     await test_flowforge()
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    # P-02: 模块级执行会污染 pytest 收集（导入即发起网络调用导致
+    # 收集期 ConnectError/JSONDecodeError），改为仅在直接运行时执行。
+    asyncio.run(main())

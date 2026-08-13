@@ -113,7 +113,10 @@ export function useWebSocket(opts?: UseWebSocketOptions) {
         const data: HelmWSEvent = JSON.parse(event.data);
         if (data.type === "pong") return;
         handleEvent(data);
-      } catch {}
+      } catch (e) {
+        // 非 JSON 消息：记录日志便于排查，不影响连接
+        console.warn("[useWebSocket] 忽略非 JSON 消息", e instanceof Error ? e.message : e);
+      }
     };
 
     ws.onclose = () => {

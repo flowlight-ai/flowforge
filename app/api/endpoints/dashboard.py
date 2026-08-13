@@ -11,7 +11,7 @@ def _make_response(data: dict) -> dict:
     return {
         "status": "success",
         "data": data,
-        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+        "meta": {"trace_id": get_trace_id(), "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")},
     }
 
 

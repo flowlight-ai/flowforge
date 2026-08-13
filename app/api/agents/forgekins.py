@@ -31,6 +31,7 @@ from flowforge.forgemind.forgekins import (
     load_forgekin_config,
     list_builtin_forgekins,
 )
+from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
 
 logger = get_logger("api.v1.forgekins")
 
@@ -89,6 +90,13 @@ class ChatRequest(BaseModel):
 
     message: str = Field(..., min_length=1, description="消息内容")
     session_id: str | None = Field(default=None, description="会话 ID")
+
+
+class StageUpdate(BaseModel):
+    """进化/觉醒阶段切换请求体 — P-85。"""
+
+    axis: str = Field(default="evolution", description="进阶轴: evolution / awakening")
+    stage: str = Field(..., description="目标阶段（E1-E6）")
 
 
 # ── 持久化辅助函数 ────────────────────────────────────────────────
@@ -153,6 +161,33 @@ def _update_yaml_llm_fields(yaml_path: Path, fields: dict[str, str | None]) -> N
 
     result = lines[: llm_start + 1] + new_section + lines[llm_end:]
     yaml_path.write_text("".join(result), encoding="utf-8")
+
+
+def _update_yaml_top_fields(yaml_path: Path, fields: dict[str, str]) -> None:
+    """定向更新 YAML 顶层字段（如 name / description / evolution_stage）— P-85。
+
+    采用行级编辑而非全量 safe_dump，以保护 YAML 中珍贵的设计注释。
+    字段不存在时追加到文件末尾。
+
+    Args:
+        yaml_path: YAML 文件路径
+        fields: {field_name: new_value}
+    """
+    text = yaml_path.read_text(encoding="utf-8")
+    lines = text.splitlines(keepends=True)
+    pattern = re.compile(r"^(\w+):\s*(.*)$")
+    updated: set[str] = set()
+    for i, line in enumerate(lines):
+        m = pattern.match(line)
+        if m and m.group(1) in fields:
+            lines[i] = f"{m.group(1)}: {fields[m.group(1)]}\n"
+            updated.add(m.group(1))
+    if lines and not lines[-1].endswith("\n"):
+        lines[-1] += "\n"
+    for key, val in fields.items():
+        if key not in updated:
+            lines.append(f"{key}: {val}\n")
+    yaml_path.write_text("".join(lines), encoding="utf-8")
 
 
 def _persist_api_key_to_env(forgekin_id: str, api_key: str) -> str:
@@ -306,11 +341,16 @@ async def update_forgekin(
         _update_yaml_llm_fields(yaml_path, {"api_key": f"${{{env_var_written}}}"})
         updated_fields.append("llm.api_key (ref)")
 
-    # 处理 name / description（简单字段，暂仅记录日志）
+    # 处理 name / description（持久化到 YAML 顶层）— P-85
+    top_fields: dict[str, str] = {}
     if payload.name is not None:
+        top_fields["name"] = payload.name
         updated_fields.append("name")
     if payload.description is not None:
+        top_fields["description"] = payload.description
         updated_fields.append("description")
+    if top_fields:
+        _update_yaml_top_fields(yaml_path, top_fields)
 
     logger.info(
         "forgekin updated: id=%s fields=%s env_var=%s",
@@ -454,6 +494,50 @@ async def forge_forgekin(forgekin_id: str) -> dict[str, Any]:
 
     _registry.register(forgekin)
     return {"id": forgekin_id, "status": "forged", **forgekin.describe()}
+
+
+@router.post("/{forgekin_id}/stage")
+async def stage_forgekin(forgekin_id: str, payload: StageUpdate) -> dict[str, Any]:
+    """切换 Forgekin 进化/觉醒阶段并持久化到 YAML — P-85。
+
+    axis=evolution 更新 evolution_stage，axis=awakening 更新 awakening_stage。
+    阶段值经 EvolutionStage / AwakeningStage 枚举校验，非法值返回 400。
+    """
+    if forgekin_id not in BUILTIN_FORGEKINS:
+        raise HTTPException(
+            status_code=404,
+            detail=f"未知 Forgekin ID: {forgekin_id}. 可用: {BUILTIN_FORGEKINS}",
+        )
+    yaml_path = ROSTER_FILES[forgekin_id]
+    if not yaml_path.exists():
+        raise HTTPException(status_code=404, detail=f"花名册 YAML 不存在: {yaml_path}")
+
+    axis = (payload.axis or "evolution").lower()
+    if axis not in ("evolution", "awakening"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"未知进阶轴: {payload.axis!r}（合法值: evolution / awakening）",
+        )
+    stage_cls = EvolutionStage if axis == "evolution" else AwakeningStage
+    try:
+        target = stage_cls.from_string(payload.stage)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    field = "evolution_stage" if axis == "evolution" else "awakening_stage"
+    _update_yaml_top_fields(yaml_path, {field: target.value})
+    logger.info(
+        "forgekin stage switched: id=%s axis=%s stage=%s",
+        forgekin_id, axis, target.value,
+    )
+    return {
+        "forgekin_id": forgekin_id,
+        "axis": axis,
+        "stage": target.value,
+        "chinese_name": target.chinese_name,
+        "english_name": target.english_name,
+        "status": "persisted",
+    }
 
 
 @router.post("/{forgekin_id}/chat")

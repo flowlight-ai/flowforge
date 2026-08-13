@@ -403,6 +403,7 @@ class TestClientInit:
 class TestModerate:
     """moderate() 方法测试."""
 
+    @pytest.mark.asyncio
     async def test_disabled_returns_allow(
         self, doubao_api_key: str
     ):
@@ -415,6 +416,7 @@ class TestModerate:
         assert result.error == "moderation disabled"
         assert result.duration_seconds >= 0.0
 
+    @pytest.mark.asyncio
     async def test_content_too_long_rejected(
         self, default_config: ModerationConfig
     ):
@@ -429,6 +431,7 @@ class TestModerate:
         assert result.risk_details[0]["limit"] == DoubaoModerationClient.MAX_CONTENT_LENGTH
         assert client._blocked_calls == 1
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_api_success_allowed(
         self,
@@ -449,6 +452,7 @@ class TestModerate:
         assert result.duration_seconds >= 0.0
         assert mock_client.post.await_count == 1
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_api_success_blocked_by_label(
         self,
@@ -468,6 +472,7 @@ class TestModerate:
         assert result.risk_details[0]["label"] == "porn"
         assert client._blocked_calls == 1
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_api_access_false_without_block_label(
         self,
@@ -489,6 +494,7 @@ class TestModerate:
         assert result.action_taken == "deny"
         assert "minor_warning" in result.risk_labels
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_cache_hit_second_call(
         self,
@@ -510,6 +516,7 @@ class TestModerate:
         assert mock_client.post.await_count == 1
         assert client._cache_hits == 1
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_cache_disabled_no_hit(
         self,
@@ -531,6 +538,7 @@ class TestModerate:
         assert mock_client.post.await_count == 2
         assert client._cache_hits == 0
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_fallback_allow_on_network_error(
         self,
@@ -558,6 +566,7 @@ class TestModerate:
         # retry_count=1 → 2 次尝试
         assert mock_client.post.await_count == 2
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_fallback_deny_on_network_error(
         self,
@@ -582,6 +591,7 @@ class TestModerate:
         assert result.action_taken == "deny"
         assert result.confidence == 0.0
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_fallback_degrade_to_human(
         self,
@@ -606,6 +616,7 @@ class TestModerate:
         assert result.action_taken == "degrade_to_human"
         assert result.confidence == 0.0
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_retry_then_success(
         self,
@@ -633,6 +644,7 @@ class TestModerate:
         assert result.allowed is True
         assert mock_client.post.await_count == 2
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_4xx_no_retry(
         self,
@@ -657,6 +669,7 @@ class TestModerate:
         assert result.allowed is False
         assert result.action_taken == "deny"
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_5xx_retries(
         self,
@@ -681,6 +694,7 @@ class TestModerate:
         assert result.allowed is False
         assert result.action_taken == "deny"
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_timeout_fallback(
         self,
@@ -706,6 +720,7 @@ class TestModerate:
         assert "超时" in result.error
         assert mock_client.post.await_count == 2  # 重试 1 次
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_missing_api_key_raises_moderation_error(
         self,
@@ -733,12 +748,14 @@ class TestModerate:
 class TestModerateBatch:
     """moderate_batch() 并发测试."""
 
+    @pytest.mark.asyncio
     async def test_empty_list(self, default_config: ModerationConfig):
         """测试 29: 空列表返回空结果."""
         client = DoubaoModerationClient(default_config)
         results = await client.moderate_batch([])
         assert results == []
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_concurrent_batch(
         self,
@@ -771,6 +788,7 @@ class TestModerateBatch:
 class TestRequireModerationDecorator:
     """require_moderation 装饰器测试."""
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_decorator_allows_safe_content(
         self,
@@ -791,6 +809,7 @@ class TestRequireModerationDecorator:
         assert "published" in result
         assert "editor" in result
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_decorator_blocks_unsafe_content(
         self,
@@ -812,6 +831,7 @@ class TestRequireModerationDecorator:
         assert "porn" in exc_info.value.risk_labels
         assert exc_info.value.content == BLOCKED_PORN_CONTENT[:200]
 
+    @pytest.mark.asyncio
     async def test_decorator_missing_argument(
         self, default_config: ModerationConfig
     ):
@@ -826,6 +846,7 @@ class TestRequireModerationDecorator:
             await some_func(other="value")
         assert "missing_arg" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_decorator_positional_arg(
         self,
@@ -854,6 +875,7 @@ class TestRequireModerationDecorator:
 class TestMetricsIntegration:
     """metrics_collector 集成测试."""
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_metrics_recorded_on_success(
         self,
@@ -891,6 +913,7 @@ class TestMetricsIntegration:
         assert len(dur_calls) == 1
         assert dur_calls[0].kwargs.get("value", 0) >= 0.0
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_metrics_blocked_counter(
         self,
@@ -915,6 +938,7 @@ class TestMetricsIntegration:
         ]
         assert len(blocked_calls) == 1
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_metrics_not_failing_without_collector(
         self,
@@ -939,6 +963,7 @@ class TestMetricsIntegration:
 class TestCacheAndStatus:
     """缓存与状态测试."""
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_clear_cache(
         self,
@@ -986,6 +1011,7 @@ class TestCacheAndStatus:
         assert blocked is False
         assert hit_labels == []
 
+    @pytest.mark.asyncio
     @patch("flowforge.core.moderation.httpx.AsyncClient")
     async def test_status_after_calls(
         self,
@@ -1018,6 +1044,7 @@ class TestCacheAndStatus:
 class TestLLMClientInjection:
     """llm_client.http_post 注入路径测试（铁律12：通过 LLMClient 调用）."""
 
+    @pytest.mark.asyncio
     async def test_llm_client_http_post_called(
         self, default_config: ModerationConfig, safe_response_data: Dict[str, Any]
     ):
@@ -1040,6 +1067,7 @@ class TestLLMClientInjection:
         assert call["json"]["content"] == SAFE_ARTICLE_PARAGRAPH
         assert call["json"]["scene"] == "content_detection"
 
+    @pytest.mark.asyncio
     async def test_llm_client_with_blocked_response(
         self, default_config: ModerationConfig, blocked_response_data: Dict[str, Any]
     ):

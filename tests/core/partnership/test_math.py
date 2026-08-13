@@ -19,10 +19,15 @@ import pytest
 from flowforge.core.errors import PartnershipError
 
 # The partnership math subsystem is specified in docs/decisions/011-partnership-math.md
-# but is NOT yet implemented. Skip these spec tests until it lands.
+# but is NOT yet implemented. These are spec tests: pytest.importorskip keeps them
+# collected-but-skipped (not @pytest.mark.skip) so they auto-enable the moment
+# flowforge.core.partnership lands — zero coverage loss is intentional until then.
 pytest.importorskip(
     "flowforge.core.partnership",
-    reason="flowforge.core.partnership not implemented (docs/decisions/011-partnership-math.md) — TODO",
+    reason=(
+        "flowforge.core.partnership not implemented (docs/decisions/011-partnership-math.md) — "
+        "spec tests auto-enable via importorskip when the module lands (P-79)"
+    ),
 )
 
 from flowforge.core.partnership import (  # noqa: E402

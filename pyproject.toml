@@ -37,6 +37,7 @@ dependencies = [
     "pydantic-settings>=2.0",    # flowforge.core.config (BaseSettings)
     "apscheduler>=3.10",         # flowforge.scheduler.scheduler
     "python-multipart>=0.0.9",   # FastAPI Form/File route analysis
+    "psutil>=5.9",               # forgemind/tools_bridge.py + app/api/core/system.py (P-114)
 ]
 
 [project.optional-dependencies]
