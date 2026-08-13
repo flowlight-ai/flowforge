@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Puzzle, Plus, RefreshCw } from 'lucide-react';
+import { Puzzle, Plus, RefreshCw, HeartPulse } from 'lucide-react';
 import {
   SettingsBadge,
   SettingsEmptyState,
@@ -14,11 +14,19 @@ import {
 } from '../primitives';
 
 interface Plugin {
-  id: string;
   name: string;
+  category?: string;
+  status?: string;
+  transport?: string;
+  tags?: string[];
   description?: string;
-  version?: string;
-  enabled?: boolean;
+}
+
+interface PluginHealth {
+  state: string;
+  message?: string;
+  latency_ms?: number;
+  last_check?: string;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -33,10 +41,20 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
+/** 健康状态 → 徽章色调 */
+function healthTone(state?: string): 'emerald' | 'amber' | 'red' | 'slate' {
+  if (!state) return 'slate';
+  if (state === 'healthy' || state === 'loaded' || state === 'running') return 'emerald';
+  if (state === 'degraded' || state === 'starting') return 'amber';
+  if (state === 'error' || state === 'failed' || state === 'crashed') return 'red';
+  return 'slate';
+}
+
 /**
- * PluginsSection — 插件集成（可安装/卸载/重载）
+ * PluginsSection — 插件集成（对齐 clowder-ai PluginsContent）
  *
- * 合并 /admin/plugins。数据源：GET /api/v1/plugins + POST /install + DELETE /{name}。
+ * 数据源：GET /api/v1/plugins、GET /plugins/{name}/health、
+ * POST /install、DELETE /{name}、POST /reload。
  */
 export function PluginsSection() {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
@@ -45,6 +63,9 @@ export function PluginsSection() {
   const [packageName, setPackageName] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // 展开的健康检查详情（对齐 clowder-ai PluginsContent 的展开配置区）
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [healthMap, setHealthMap] = useState<Record<string, PluginHealth | 'error'>>({});
 
   const fetchPlugins = useCallback(async () => {
     setLoading(true);
@@ -123,9 +144,31 @@ export function PluginsSection() {
     }
   };
 
+  /** 展开/收起健康详情，展开时拉取最新健康数据 */
+  const toggleHealth = async (name: string) => {
+    if (expanded === name) {
+      setExpanded(null);
+      return;
+    }
+    setExpanded(name);
+    try {
+      const res = await fetch(`/api/v1/plugins/${encodeURIComponent(name)}/health`).catch(() => null);
+      if (!res || !res.ok) {
+        setHealthMap((m) => ({ ...m, [name]: 'error' }));
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      setHealthMap((m) => ({ ...m, [name]: data?.data || 'error' }));
+    } catch {
+      setHealthMap((m) => ({ ...m, [name]: 'error' }));
+    }
+  };
+
   if (loading) {
     return <SettingsText as="p" tone="muted">加载中...</SettingsText>;
   }
+
+  const healthyCount = plugins.filter((p) => healthTone(p.status) === 'emerald').length;
 
   return (
     <SettingsSection
@@ -134,6 +177,9 @@ export function PluginsSection() {
       badge={<SettingsBadge tone="slate" size="xxs">{plugins.length}</SettingsBadge>}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <SettingsText as="p" variant="xs" tone="muted">
+          共 {plugins.length} 个插件 · 健康 {healthyCount}
+        </SettingsText>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {!showForm && (
             <SettingsPrimaryButton onClick={() => setShowForm(true)} disabled={busy !== null}>
@@ -172,33 +218,66 @@ export function PluginsSection() {
             description="点击上方按钮安装插件。"
           />
         ) : (
-          plugins.map((p) => (
-            <SettingsRow
-              key={p.id}
-              icon={<Puzzle size={16} color="var(--accent-2)" />}
-              title={p.name}
-              meta={p.description}
-              badges={
-                <>
-                  {p.version && <SettingsBadge tone="slate" size="xxs">v{p.version}</SettingsBadge>}
-                  {p.enabled !== undefined && (
-                    <SettingsBadge tone={p.enabled ? 'emerald' : 'amber'} size="xxs">
-                      {p.enabled ? '启用' : '禁用'}
-                    </SettingsBadge>
-                  )}
-                </>
-              }
-              actions={
-                <SettingsHubLink
-                  title={`卸载 ${p.name}`}
-                  onClick={() => uninstall(p.name)}
-                  style={busy === p.name ? { opacity: 0.5 } : undefined}
-                >
-                  {busy === p.name ? '卸载中...' : '卸载'}
-                </SettingsHubLink>
-              }
-            />
-          ))
+          plugins.map((p) => {
+            const health = healthMap[p.name];
+            return (
+              <SettingsRow
+                key={p.name}
+                icon={<Puzzle size={16} color="var(--accent-2)" />}
+                title={p.name}
+                meta={p.description}
+                badges={
+                  <>
+                    {p.category && <SettingsBadge tone="blue" size="xxs">{p.category}</SettingsBadge>}
+                    {p.transport && <SettingsBadge tone="purple" size="xxs">{p.transport}</SettingsBadge>}
+                    <SettingsBadge tone={healthTone(p.status)} size="xxs">{p.status || 'unknown'}</SettingsBadge>
+                  </>
+                }
+                expanded={expanded === p.name}
+                onToggle={() => toggleHealth(p.name)}
+                actions={
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <SettingsHubLink
+                      title={`检查 ${p.name} 健康状态`}
+                      onClick={() => toggleHealth(p.name)}
+                      style={{ color: 'var(--accent)' }}
+                    >
+                      <HeartPulse size={12} style={{ marginRight: 4 }} />
+                      {expanded === p.name ? '收起' : '健康检查'}
+                    </SettingsHubLink>
+                    <SettingsHubLink
+                      title={`卸载 ${p.name}`}
+                      onClick={() => uninstall(p.name)}
+                      style={{ color: 'var(--danger)', opacity: busy === p.name ? 0.5 : 1 }}
+                    >
+                      {busy === p.name ? '卸载中...' : '卸载'}
+                    </SettingsHubLink>
+                  </div>
+                }
+              >
+                {health === 'error' && (
+                  <SettingsText as="p" variant="xs" tone="red">健康检查不可用（插件未注册到 Registry）</SettingsText>
+                )}
+                {health && health !== 'error' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <SettingsText as="p" variant="xs">
+                      状态：<SettingsBadge tone={healthTone(health.state)} size="xxs">{health.state}</SettingsBadge>
+                    </SettingsText>
+                    {health.message && <SettingsText as="p" variant="xs" tone="muted">{health.message}</SettingsText>}
+                    {health.latency_ms != null && (
+                      <SettingsText as="p" variant="xs" tone="muted">延迟：{health.latency_ms} ms</SettingsText>
+                    )}
+                    {health.last_check && (
+                      <SettingsText as="p" variant="xs" tone="muted">最近检查：{health.last_check}</SettingsText>
+                    )}
+                    {Array.isArray(p.tags) && p.tags.length > 0 && (
+                      <SettingsText as="p" variant="xs" tone="muted">标签：{p.tags.join('、')}</SettingsText>
+                    )}
+                  </div>
+                )}
+              </SettingsRow>
+            );
+          })
         )}
       </div>
     </SettingsSection>

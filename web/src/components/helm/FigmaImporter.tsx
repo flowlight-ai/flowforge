@@ -47,7 +47,7 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
     }
   }
 
-  const handleImport = useCallback(() => {
+  const handleImport = useCallback(async () => {
     if (!figmaUrl.trim()) return;
     setError(null);
 
@@ -60,50 +60,57 @@ export default function FigmaImporter({ onImport, onGenerateCode }: FigmaImporte
     setIsLoading(true);
     setFileKey(parsed.fileKey);
 
-    // In a real implementation, this would call the Figma API
-    // For now, we simulate the API response with mock data
-    setTimeout(() => {
-      const mockFrames: FigmaFrame[] = [
-        {
-          id: "frame-1",
-          name: "首页",
-          width: 1440,
-          height: 900,
-          childrenCount: 12,
-        },
-        {
-          id: "frame-2",
-          name: "详情页",
-          width: 1440,
-          height: 1200,
-          childrenCount: 18,
-        },
-        {
-          id: "frame-3",
-          name: "移动端 - 首页",
-          width: 375,
-          height: 812,
-          childrenCount: 8,
-        },
-        {
-          id: "frame-4",
-          name: "组件库 - 按钮",
-          width: 800,
-          height: 600,
-          childrenCount: 24,
-        },
-      ];
+    // 真实后端 API：POST /api/v1/figma/import（读取 SecretStore 中的 FIGMA_TOKEN）
+    try {
+      const res = await fetch("/api/v1/figma/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: figmaUrl.trim(),
+          node_id: parsed.nodeId || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({
+        ok: false,
+        code: "BAD_RESPONSE",
+        error: "导入接口返回异常",
+      }));
 
-      // If a specific nodeId was in the URL, filter to that frame
-      const filteredFrames = parsed.nodeId
-        ? mockFrames.filter((f) => f.id === `frame-${parsed.nodeId}`)
-        : mockFrames;
+      if (!data?.ok) {
+        const code = data?.code || "UNKNOWN";
+        const hint =
+          code === "NO_TOKEN"
+            ? "未配置 Figma 令牌，请先在「设置 → 账号与密钥」中配置 FIGMA_TOKEN。"
+            : code === "BAD_URL"
+              ? "无效的 Figma 链接，需包含 figma.com/file/ 或 figma.com/design/。"
+              : data?.error || "导入失败";
+        setError(hint);
+        setFrames([]);
+        setImported(false);
+        setIsLoading(false);
+        return;
+      }
 
-      setFrames(filteredFrames);
+      const framesData: FigmaFrame[] = (data?.frames || []).map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        thumbnailUrl: f.thumbnailUrl,
+        width: f.width,
+        height: f.height,
+        childrenCount: f.childrenCount,
+      }));
+
+      // URL 中带 node-id 时由后端过滤，若结果为空则提示
+      setFrames(framesData);
       setImported(true);
       setIsLoading(false);
-      onImport({ fileKey: parsed.fileKey, frames: filteredFrames });
-    }, 800);
+      onImport({ fileKey: parsed.fileKey, frames: framesData });
+    } catch {
+      setError("导入请求失败，请确认后端服务可用");
+      setFrames([]);
+      setImported(false);
+      setIsLoading(false);
+    }
   }, [figmaUrl, onImport]);
 
   const handleGenerate = useCallback(() => {

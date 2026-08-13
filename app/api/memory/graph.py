@@ -1,9 +1,12 @@
 """API端点：提供workflow/agent/模式的静态关系图数据"""
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from flowforge.core.agent_registry import AgentRegistry
 from flowforge.modes.registry import ModeRegistry
 from flowforge.tools.registry import ToolRegistry
+import json
 import os
+import threading
 import yaml
 
 router = APIRouter(prefix="/graph", tags=["graph"])
@@ -11,6 +14,40 @@ router = APIRouter(prefix="/graph", tags=["graph"])
 agent_registry: AgentRegistry = None
 mode_registry: ModeRegistry = None
 tool_registry: ToolRegistry = None
+
+# ── 成员名册覆盖层（对齐 clowder-ai roster.available 语义）──────────────
+_overlay_lock = threading.Lock()
+
+
+def _overlay_file():
+    return os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir, os.pardir,
+        "data", "settings", "members_overlay.json",
+    )
+
+
+def _read_overlay() -> dict:
+    try:
+        with open(os.path.normpath(_overlay_file()), "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+            return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _write_overlay(data: dict) -> None:
+    path = os.path.normpath(_overlay_file())
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
+class AgentRosterUpdate(BaseModel):
+    """成员名册更新请求体。"""
+
+    available: bool | None = None
 
 
 def init_graph_api(ar: AgentRegistry, mr: ModeRegistry, tr: ToolRegistry):
@@ -314,18 +351,35 @@ async def list_agents():
     if not agent_registry:
         return []
     agents = agent_registry.get_all() if hasattr(agent_registry, 'get_all') else {}
+    overlay = _read_overlay()
     result = []
     for name, agent in agents.items():
         mode_name = getattr(agent, 'default_mode', '')
         mode_def = MODE_GRAPH_DEFS.get(mode_name, {})
+        roster = overlay.get(name, {})
         result.append({
             "name": name,
             "display_name": getattr(agent, 'display_name', '') or name,
             "description": getattr(agent, 'description', ''),
             "default_mode": mode_name,
             "mode_display_name": mode_def.get("display_name", mode_name),
+            "available": roster.get("available", True),
         })
     return result
+
+
+@router.patch("/agents/{name}")
+async def update_agent_roster(name: str, payload: AgentRosterUpdate):
+    """更新成员名册状态（可用性开关，持久化到 members_overlay.json）。"""
+    if not agent_registry or not agent_registry.get(name):
+        raise HTTPException(404, f"Agent '{name}' not found")
+    with _overlay_lock:
+        overlay = _read_overlay()
+        entry = overlay.setdefault(name, {})
+        if payload.available is not None:
+            entry["available"] = payload.available
+        _write_overlay(overlay)
+    return {"name": name, "available": entry.get("available", True)}
 
 
 @router.get("/agents/{name}")

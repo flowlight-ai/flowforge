@@ -1,14 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Zap } from 'lucide-react';
 import {
   SettingsBadge,
   SettingsEmptyState,
   SettingsField,
+  SettingsFilterTabs,
   SettingsHubLink,
   SettingsPrimaryButton,
   SettingsRow,
+  SettingsSearchInput,
   SettingsSection,
   SettingsText,
 } from '../primitives';
@@ -19,7 +21,14 @@ interface Skill {
   description?: string;
   version?: string;
   installed?: boolean;
+  type?: string;
 }
+
+const TYPE_LABELS: Record<string, string> = {
+  prompt: '提示词模板',
+  tool: '工具插件',
+  custom: '自定义',
+};
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -44,7 +53,30 @@ export function SkillsSection() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', version: '0.1.0' });
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  // 筛选工具栏（对齐 clowder-ai SkillsContent 的搜索 + 分类过滤）
+  const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+
+  const filteredSkills = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return skills.filter((s) => {
+      if (typeFilter !== 'all' && (s.type || 'custom') !== typeFilter) return false;
+      if (!needle) return true;
+      return (
+        s.name.toLowerCase().includes(needle) ||
+        (s.description || '').toLowerCase().includes(needle)
+      );
+    });
+  }, [skills, query, typeFilter]);
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of skills) counts[s.type || 'custom'] = (counts[s.type || 'custom'] ?? 0) + 1;
+    return counts;
+  }, [skills]);
 
   const fetchSkills = useCallback(async () => {
     setLoading(true);
@@ -62,6 +94,7 @@ export function SkillsSection() {
         description: item.description,
         version: item.version,
         installed: item.installed,
+        type: item.type,
       })) : []);
     } catch {
       setSkills([]);
@@ -101,6 +134,22 @@ export function SkillsSection() {
     }
   };
 
+  const remove = async (id: string) => {
+    setBusy(id);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/v1/skills/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setMessage('已删除 Skill');
+      await fetchSkills();
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage('删除失败（内置 Skill 不可删除）');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (loading) {
     return <SettingsText as="p" tone="muted">加载中...</SettingsText>;
   }
@@ -112,6 +161,18 @@ export function SkillsSection() {
       badge={<SettingsBadge tone="slate" size="xxs">{skills.length}</SettingsBadge>}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* 筛选工具栏 */}
+        <SettingsFilterTabs
+          tabs={[
+            { key: 'all', label: `全部 (${skills.length})` },
+            { key: 'prompt', label: `提示词 (${typeCounts['prompt'] ?? 0})` },
+            { key: 'tool', label: `工具 (${typeCounts['tool'] ?? 0})` },
+            { key: 'custom', label: `自定义 (${typeCounts['custom'] ?? 0})` },
+          ]}
+          activeKey={typeFilter}
+          onTabChange={setTypeFilter}
+        />
+        <SettingsSearchInput value={query} onChange={setQuery} placeholder="搜索 Skill 名称或描述" />
         {!showForm && (
           <SettingsPrimaryButton onClick={() => setShowForm(true)} disabled={saving}>
             <Plus size={14} style={{ marginRight: 4 }} /> 注册 Skill
@@ -154,14 +215,14 @@ export function SkillsSection() {
           </SettingsRow>
         )}
         {message && <SettingsText as="span" variant="xs" tone={message.includes('失败') ? 'red' : 'muted'}>{message}</SettingsText>}
-        {skills.length === 0 ? (
+        {filteredSkills.length === 0 ? (
           <SettingsEmptyState
             icon={<Zap size={32} color="var(--muted)" />}
-            title="暂无 Skill"
-            description="点击上方按钮注册 Skill，或配置 prompts.yaml / plugins.yaml 内置能力。"
+            title={skills.length === 0 ? '暂无 Skill' : '无匹配结果'}
+            description={skills.length === 0 ? '点击上方按钮注册 Skill，或配置 prompts.yaml / plugins.yaml 内置能力。' : '调整搜索关键词或分类筛选'}
           />
         ) : (
-          skills.map((s) => (
+          filteredSkills.map((s) => (
             <SettingsRow
               key={s.id}
               icon={<Zap size={16} color="var(--accent-2)" />}
@@ -169,6 +230,11 @@ export function SkillsSection() {
               meta={s.description}
               badges={
                 <>
+                  {s.type && (
+                    <SettingsBadge tone="slate" size="xxs">
+                      {TYPE_LABELS[s.type] ?? s.type}
+                    </SettingsBadge>
+                  )}
                   {s.version && <SettingsBadge tone="slate" size="xxs">v{s.version}</SettingsBadge>}
                   {s.installed !== undefined && (
                     <SettingsBadge tone={s.installed ? 'emerald' : 'amber'} size="xxs">
@@ -177,8 +243,28 @@ export function SkillsSection() {
                   )}
                 </>
               }
+              actions={
+                (s.type || 'custom') === 'custom' ? (
+                  <SettingsHubLink
+                    title="删除该 Skill"
+                    onClick={() => remove(s.id)}
+                    style={busy === s.id ? { opacity: 0.5 } : undefined}
+                  >
+                    {busy === s.id ? '删除中...' : '删除'}
+                  </SettingsHubLink>
+                ) : (
+                  <SettingsText as="span" variant="xs" tone="muted">
+                    内置
+                  </SettingsText>
+                )
+              }
             />
           ))
+        )}
+        {skills.length > 0 && (
+          <SettingsText as="p" variant="xs" tone="muted">
+            共 {skills.length} 个 Skill，当前展示 {filteredSkills.length} 个
+          </SettingsText>
         )}
       </div>
     </SettingsSection>

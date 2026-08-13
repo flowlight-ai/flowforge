@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field
 from flowforge.app.api.agents.thread_store import get_thread_store
 from flowforge.app.api.core.logs import get_audit_logger
 from flowforge.app.api.agents.signals import ingest_signal
+from flowforge.core.tracing import get_logger
 
 router = APIRouter(prefix="/threads", tags=["threads"])
 

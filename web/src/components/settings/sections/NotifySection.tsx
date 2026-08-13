@@ -19,6 +19,7 @@ interface NotifyChannel {
   type?: string;
   enabled?: boolean;
   target?: string;
+  events?: string[];
 }
 
 const inputStyle: React.CSSProperties = {
@@ -46,6 +47,8 @@ export function NotifySection() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const [busy, setBusy] = useState<string | null>(null);
+
   const fetchChannels = useCallback(async () => {
     setLoading(true);
     try {
@@ -62,6 +65,7 @@ export function NotifySection() {
         type: item.channel,
         enabled: item.status === 'active',
         target: item.target,
+        events: Array.isArray(item.events) ? item.events : [],
       })) : []);
     } catch {
       setChannels([]);
@@ -98,6 +102,22 @@ export function NotifySection() {
       setMessage('新增失败');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    setBusy(id);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/v1/notify/subscriptions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setMessage('已删除订阅');
+      await fetchChannels();
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage('删除失败（内置订阅不可删除）');
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -174,12 +194,24 @@ export function NotifySection() {
               badges={
                 <>
                   {c.type && <SettingsBadge tone="blue" size="xxs">{c.type}</SettingsBadge>}
+                  {c.events && c.events.length > 0 && (
+                    <SettingsBadge tone="purple" size="xxs">{c.events.length} 事件</SettingsBadge>
+                  )}
                   {c.enabled !== undefined && (
                     <SettingsBadge tone={c.enabled ? 'emerald' : 'slate'} size="xxs">
                       {c.enabled ? '启用' : '禁用'}
                     </SettingsBadge>
                   )}
                 </>
+              }
+              actions={
+                <SettingsHubLink
+                  title={`删除订阅 ${c.name}`}
+                  onClick={() => remove(c.id)}
+                  style={busy === c.id ? { opacity: 0.5 } : undefined}
+                >
+                  {busy === c.id ? '删除中...' : '删除'}
+                </SettingsHubLink>
               }
             />
           ))

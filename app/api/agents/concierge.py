@@ -28,11 +28,18 @@ router = APIRouter(prefix="/concierge", tags=["concierge"])
 
 
 class ConciergeConfigUpdate(BaseModel):
-    """管家配置更新请求体。"""
+    """管家配置更新请求体（字段对齐 clowder-ai ConciergeConfig）。"""
 
     enabled: bool | None = Field(default=None)
+    muted: bool | None = Field(default=None, description="静音模式：一键隐藏悬浮球")
     greeting: str | None = Field(default=None)
-    default_forgekin: str | None = Field(default=None)
+    display_name: str | None = Field(default=None, description="显示名称（最多 50 字）")
+    persona_tone: str | None = Field(default=None, description="人设基调，注入值班智能体 prompt")
+    skin: str | None = Field(default=None, description="皮肤标识")
+    proactive_policy: str | None = Field(default=None, description="主动性策略 ambient|quiet-badge")
+    ball_size: int | None = Field(default=None, ge=32, le=200, description="悬浮球大小(px)")
+    ball_position: dict[str, float] | None = Field(default=None, description="悬浮球位置 {x,y}；null 重置")
+    default_forgekin: str | None = Field(default=None, description="值班 Forgekin")
     preferences: dict[str, Any] | None = Field(default=None)
 
 
@@ -48,7 +55,14 @@ _lock = threading.Lock()
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "enabled": False,
+    "muted": False,
     "greeting": "",
+    "display_name": "小烽",
+    "persona_tone": "",
+    "skin": "forgekin-v1",
+    "proactive_policy": "quiet-badge",
+    "ball_size": 72,
+    "ball_position": None,
     "default_forgekin": None,
     "preferences": {},
 }
@@ -84,7 +98,11 @@ async def get_concierge_config() -> dict[str, Any]:
 @router.put("/config")
 async def update_concierge_config(payload: ConciergeConfigUpdate) -> dict[str, Any]:
     """更新管家配置（字段级合并，持久化到 JSON）。"""
-    updates = payload.model_dump(exclude_none=True)
+    updates = payload.model_dump(exclude_none=True, exclude_unset=True)
+    # 显式传 null 的字段需要写入（如 ball_position 重置位置）
+    for field_name in ("ball_position", "default_forgekin"):
+        if field_name in payload.model_fields_set and getattr(payload, field_name) is None:
+            updates[field_name] = None
     with _lock:
         cfg = {**DEFAULT_CONFIG, **_read(), **updates}
         _write(cfg)
