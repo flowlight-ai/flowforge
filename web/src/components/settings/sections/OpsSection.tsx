@@ -87,7 +87,12 @@ export function OpsSection() {
     <SettingsSection
       title="运维监控"
       description="服务健康、可观测性和运行态观测。完整看板请前往 /admin/observability。"
-      badge={<SettingsBadge tone="slate" size="xxs">{services.length}</SettingsBadge>}
+      badge={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <SettingsBadge tone="slate" size="xxs">{services.length}</SettingsBadge>
+          <SettingsHubLink title="刷新健康检查" onClick={fetchServices}>刷新</SettingsHubLink>
+        </div>
+      }
     >
       {downCount > 0 && (
         <SettingsStatusStrip tone="error" style={{ marginBottom: '12px' }}>
