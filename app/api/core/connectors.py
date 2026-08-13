@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import json
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -20,6 +22,8 @@ from flowforge.core.tracing import get_logger
 logger = get_logger("api.connectors")
 
 router = APIRouter(prefix="/connectors", tags=["connectors"])
+
+_lock = threading.Lock()
 
 
 class ConnectorCreate(BaseModel):
@@ -37,6 +41,27 @@ def _now() -> str:
 def _get_config_path() -> Path:
     """获取 config 目录路径（铁律 5 禁止硬编码路径）。"""
     return Path(__file__).resolve().parents[3] / "config"
+
+
+def _custom_file() -> Path:
+    """自定义连接器持久化文件。"""
+    return Path(__file__).resolve().parents[3] / "data" / "settings" / "connectors_custom.json"
+
+
+def _read_custom() -> list[dict[str, Any]]:
+    try:
+        data = json.loads(_custom_file().read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def _write_custom(connectors: list[dict[str, Any]]) -> None:
+    path = _custom_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(connectors, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
 
 
 def _load_connectors() -> list[dict[str, Any]]:
@@ -89,19 +114,28 @@ def _load_connectors() -> list[dict[str, Any]]:
 
 @router.get("")
 async def list_connectors() -> dict[str, Any]:
-    """列出连接器（从 im_channels.yaml / a2a_channels.yaml 读取）。"""
+    """列出连接器（yaml 内置 + 自定义持久化条目）。"""
     connectors = _load_connectors()
-    return {"items": connectors, "total": len(connectors)}
+    custom = _read_custom()
+    return {"items": custom + connectors, "total": len(custom) + len(connectors)}
 
 
 @router.post("")
 async def create_connector(payload: ConnectorCreate) -> dict[str, Any]:
-    """创建连接器（返回占位对象，持久化需后续支持）。"""
-    return {
+    """创建连接器（持久化到 data/settings/connectors_custom.json）。"""
+    entry = {
         "id": f"conn_{int(datetime.now(timezone.utc).timestamp())}",
         "name": payload.name,
         "type": payload.type,
         "config": payload.config,
+        "configured": True,
+        "platform": payload.type,
         "status": "pending",
         "created_at": _now(),
     }
+    with _lock:
+        custom = _read_custom()
+        custom.insert(0, entry)
+        _write_custom(custom)
+    logger.info(f"connectors: 已创建并持久化连接器 {payload.name}")
+    return entry
