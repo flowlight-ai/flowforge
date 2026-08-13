@@ -26,7 +26,7 @@ from flowforge.tools.llm_client import is_invalid_response as _is_invalid_llm_re
 from flowforge.harness.orchestrator import HarnessOrchestrator
 from flowforge.harness.entropy_manager import EntropyManager, DebtSeverity, RuleEvolution
 from flowforge.core.checkpoint_manager import CheckpointManager
-from flowforge.loop.state import LoopState, LoopResult, LoopPhase, LoopNestingError, Verdict
+from flowforge.loop.state import LoopState, LoopResult, LoopPhase, LoopNestingError, Verdict, Reflection
 from flowforge.loop.planner import LoopPlanner
 from flowforge.loop.verifier import LoopVerifier
 from flowforge.loop.reflector import LoopReflector
@@ -1127,10 +1127,22 @@ class LoopExecutor:
             # 6. 失败：复盘
             state.phase = LoopPhase.REFLECTING
             self.turn_engine.try_transition(TurnState.REFLECTING, reason=f"iteration {attempt + 1} failed, reflecting")
-            _reflect_start = time.monotonic()
-            reflection = await self.reflector.reflect(verdict.errors, task, state)
-            _reflect_duration = time.monotonic() - _reflect_start
-            logger.info(f"[loop][阶段耗时] reflector.reflect: {_reflect_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}")
+            # 2026-08-12优化(P-61): 末轮迭代跳过LLM反思 — reflection输出仅作为下一轮迭代输入,
+            #   末轮后Loop即结束,反思结果不会被使用(Run 6实测: 末轮反思白耗32.6s)。
+            #   用轻量stub替代保证下游(memory/rule/replan)字段兼容,不牺牲成功率。
+            if attempt >= max_retries - 1:
+                reflection = Reflection(
+                    suggestions=[],
+                    root_cause=f"末轮迭代失败(已达max_retries={max_retries}), 跳过LLM反思: {verdict.errors[:2]}",
+                    plan_adjustments=[],
+                )
+                _reflect_duration = 0.0
+                logger.info(f"[loop][阶段耗时] reflector.reflect: 跳过(末轮迭代), 迭代{attempt + 1}, task_id={task.task_id}")
+            else:
+                _reflect_start = time.monotonic()
+                reflection = await self.reflector.reflect(verdict.errors, task, state)
+                _reflect_duration = time.monotonic() - _reflect_start
+                logger.info(f"[loop][阶段耗时] reflector.reflect: {_reflect_duration:.2f}s, 迭代{attempt + 1}, task_id={task.task_id}")
             if CF_DEBUG:
                 logger.info(f"[CF-DEBUG] 迭代{attempt + 1} 反思结果: "
                             f"root_cause={reflection.root_cause[:200]!r}, "

@@ -557,23 +557,77 @@ class MultiJudgeVerifier(LoopVerifier):
         #   剩余时间不足被误杀;且wait_for超时取消会丢引用产生孤儿请求继续占用webchat会话,
         #   导致后续请求"正在处理您的其他请求"。现保留create_task引用,超时由内层负责,
         #   内层超时后任务正常结束不产生孤儿。
-        judge_results = await asyncio.gather(*judge_tasks, return_exceptions=True)
-        # 安全网: 若某评委任务意外挂起(内层超时未生效),等待有限时间后主动取消避免孤儿请求
-        _grace = judge_timeout + 30
-        _t_grace = time.time()
-        while any(not t.done() for t in judge_tasks) and time.time() - _t_grace < _grace:
+        # 2026-08-12优化(P-61): 评委早停 — 有效评委达到early_stop_quorum(默认2)立即聚合返回,
+        #   不再等慢评委耗满judge_timeout(Run 6实测: 2个评委已返回仍等满92s)。
+        #   剩余评委不取消(避免P-58孤儿请求),任其自然结束;系统本就支持1-2个有效评委裁决,
+        #   早停不牺牲成功率,只消除无效等待。配置 early_stop_quorum=评委数 可关闭早停。
+        _early_quorum = max(1, min(int(config.get("early_stop_quorum", 2)), len(judge_tasks)))
+        judge_results = [None] * len(judge_tasks)
+
+        def _harvest_results():
+            """收割已完成评委结果, 返回(已完成数, 有效dict结果数)。"""
+            _done = 0
+            _valid = 0
+            for _i, _t in enumerate(judge_tasks):
+                if not _t.done():
+                    continue
+                _done += 1
+                if _t.cancelled():
+                    if judge_results[_i] is None:
+                        judge_results[_i] = TimeoutError(f"judge '{judge_names[_i]}' cancelled")
+                    continue
+                if judge_results[_i] is None:
+                    _exc = _t.exception()
+                    if _exc is not None:
+                        judge_results[_i] = _exc
+                    else:
+                        judge_results[_i] = _t.result()
+                if isinstance(judge_results[_i], dict):
+                    _valid += 1
+            return _done, _valid
+
+        _early_stopped = False
+        _hit_deadline = False
+        _deadline = time.time() + judge_timeout + 30
+        while True:
+            _done_n, _valid_n = _harvest_results()
+            if _valid_n >= _early_quorum:
+                if _done_n < len(judge_tasks):
+                    _early_stopped = True
+                    logger.info(
+                        f"[评委早停] task_id={task.task_id} 有效评委={_valid_n}>={_early_quorum}, "
+                        f"提前聚合返回(耗时={time.time()-_judges_start:.1f}s), "
+                        f"剩余{len(judge_tasks)-_done_n}个评委任其自然结束"
+                    )
+                break
+            if _done_n >= len(judge_tasks):
+                break
+            if time.time() > _deadline:
+                _hit_deadline = True
+                break
             await asyncio.sleep(1.0)
+        # 安全网: 仅在deadline超时时才取消挂起任务(保留引用);早停时剩余评委不取消,
+        # 任其自然结束(避免P-58孤儿请求占用webchat会话)
         for i, t in enumerate(judge_tasks):
             if not t.done():
-                t.cancel()
-                logger.warning(f"[评委安全网] judge '{judge_names[i]}' 任务挂起超过{_grace}s,已取消")
-        judge_results = [t.result() if t.done() and not t.cancelled() and t.exception() is None else (t.exception() or asyncio.TimeoutError(f"judge '{judge_names[i]}' cancelled")) for i, t in enumerate(judge_tasks)]
+                if _hit_deadline:
+                    t.cancel()
+                    logger.warning(f"[评委安全网] judge '{judge_names[i]}' 任务挂起超过{judge_timeout+30}s,已取消")
+                    judge_results[i] = TimeoutError(f"judge '{judge_names[i]}' 未返回有效结果")
+                else:
+                    judge_results[i] = TimeoutError(f"judge '{judge_names[i]}' 早停时未返回(后台继续运行)")
+            elif judge_results[i] is None:
+                if not t.cancelled() and t.exception() is None:
+                    judge_results[i] = t.result()
+                else:
+                    judge_results[i] = TimeoutError(f"judge '{judge_names[i]}' 未返回有效结果")
         _judges_dur = time.time() - _judges_start
         _success_count = sum(1 for r in judge_results if r and not isinstance(r, Exception))
         logger.info(
             f"[⏱️ PERF] verifier_judges task_id={task.task_id} "
             f"总耗时={_judges_dur:.2f}s judge_timeout={judge_timeout}s "
-            f"成功={_success_count}/{len(judge_results)} 并发={max_concurrency}"
+            f"成功={_success_count}/{len(judge_results)} 并发={max_concurrency} "
+            f"早停={'是' if _early_stopped else '否'}"
         )
         # SSE修复：评委调用后发射事件，汇报评委成功/失败情况
         # v3.4.3: 增强事件 — 包含每个评委的分数详情，让终端能看到每个评委的打分
