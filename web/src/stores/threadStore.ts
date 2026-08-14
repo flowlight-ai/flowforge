@@ -30,7 +30,7 @@ export interface Thread {
   isSystem?: boolean;
 }
 
-interface ThreadStoreState {
+export interface ThreadStoreState {
   /** 会话列表（排除已删除） */
   threads: Thread[];
   /** 回收站列表（已软删除） */

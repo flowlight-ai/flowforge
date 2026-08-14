@@ -151,10 +151,7 @@ export default function HelmRightPanel({
               />
             ) : (
               <WorkspacePanel
-                taskId={taskId}
-                workspaceName={workspaceName}
-                onFileOpen={onWorkspaceFileOpen}
-                highlightFilePath={highlightFilePath}
+                threadId={taskId}
               />
             )}
           </div>

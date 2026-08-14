@@ -9,6 +9,8 @@
  * 详见 MERGE-SPEC.md §3.2 聊天模式融合设计
  */
 
+import type { CliDiagnostics } from "@/components/cli-output/CliOutputBlock";
+
 /** 灵智体角色（运行时标签，区别于 capability_profile） */
 export type ForgekinRole = "primary" | "reviewer" | "tester" | "observer";
 
@@ -135,6 +137,10 @@ export interface CouncilMessage {
     model?: string;
     latency_ms?: number;
     usage?: Record<string, unknown>;
+    /** 路由模式（single/parallel）— council 响应 routing_mode */
+    routingMode?: string;
+    /** 编辑时间戳（editMessage 写入） */
+    editedAt?: number;
     /** CLI 工具调用事件（参考 clowder-ai toolEvents）— 由 CliOutputBlock 渲染 */
     toolEvents?: Array<{
       type: "tool_use" | "tool_result" | "text";
@@ -157,19 +163,8 @@ export interface CouncilMessage {
     }>;
     /** 执行时长（ms）— 用于 CliOutputBlock 摘要 */
     duration_ms?: number;
-    /** 诊断信息（CLI 执行出错时使用） */
-    diagnostics?: {
-      reasonCode: string;
-      publicSummary: string;
-      publicHint?: string;
-      safeExcerpt?: string;
-      debugRef: {
-        command: string;
-        exitCode?: number | null;
-        signal?: string | null;
-        invocationId?: string;
-      };
-    };
+    /** 诊断信息（CLI 执行出错时使用）— 复用 CliOutputBlock 的 CliDiagnostics */
+    diagnostics?: CliDiagnostics;
   };
   /** 是否流式输出中（参考 clowder-ai streaming 状态）— 控制 CliOutputBlock 自动展开 */
   streaming?: boolean;

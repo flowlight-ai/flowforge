@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 // 性能优化（参考 clowder-ai）：globals.css 通过 import 加载（Tailwind 需要 Next 处理），
 // 其他 vendor CSS 通过 <link> 静态加载，绕过 Next dev 的 flight CSS loader
