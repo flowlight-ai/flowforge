@@ -51,6 +51,19 @@ class WorkflowExecutor(BaseModeExecutor):
         self._react_handler = ReactHandler(self)
         self._chat_handler = ChatHandler(self)
 
+    @staticmethod
+    def _build_agent_params(ctx, context_data: dict) -> dict:
+        """组装传给 agent 的工具参数。
+
+        剔除 harness_context（含全量 AGENTS.md 注入）—— 它是面向 agent 上下文管理
+        的内部结构，不应作为 LLM 工具入参（避免 AGENTS.md/超大上下文泄漏到
+        模型输入与工具输出，参见 topic_strategist 污染事故）。
+        """
+        merged = {**ctx.state, **context_data}
+        if "harness_context" in merged:
+            merged.pop("harness_context")
+        return merged
+
     # ── Proxy methods: delegate to ContextHandler ──
 
     async def _call_llm(self, ctx, messages: list, model_hint: str,
@@ -224,7 +237,7 @@ class WorkflowExecutor(BaseModeExecutor):
                             break
                 if agent:
                     try:
-                        merged_data = {**ctx.state, **context_data}
+                        merged_data = self._build_agent_params(ctx, context_data)
                         # [修复断点2] 合并metadata中的loop反馈，确保agent能看到评委建议
                         if hasattr(ctx, 'metadata') and ctx.metadata:
                             for key in ('loop_reflections', 'loop_verifier_errors', 'last_draft'):
@@ -319,7 +332,7 @@ class WorkflowExecutor(BaseModeExecutor):
                             for i in range(retry_count):
                                 try:
                                     await asyncio.sleep(step.get("retry_delay", 2))
-                                    merged_data = {**ctx.state, **context_data}
+                                    merged_data = self._build_agent_params(ctx, context_data)
                                     agent_input = AgentInput(params=merged_data)
                                     agent_output = await asyncio.wait_for(
                                         agent.execute_with_context(agent_input, ctx),
@@ -346,7 +359,7 @@ class WorkflowExecutor(BaseModeExecutor):
                             retry_count = step.get("retry_count", 2)
                             for i in range(retry_count):
                                 try:
-                                    merged_data = {**ctx.state, **context_data}
+                                    merged_data = self._build_agent_params(ctx, context_data)
                                     agent_input = AgentInput(params=merged_data)
                                     agent_output = await asyncio.wait_for(
                                         agent.execute_with_context(agent_input, ctx),
