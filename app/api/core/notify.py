@@ -155,3 +155,16 @@ async def create_subscription(payload: NotifySubscriptionCreate) -> dict[str, An
         _write_custom(custom)
     logger.info(f"notify: 已创建并持久化订阅 {payload.channel} -> {payload.target}")
     return entry
+
+
+@router.delete("/subscriptions/{subscription_id}")
+async def delete_subscription(subscription_id: str) -> dict[str, Any]:
+    """删除自定义通知订阅（仅 custom 条目；内置 yaml 条目不可删）。"""
+    with _lock:
+        custom = _read_custom()
+        remaining = [s for s in custom if s.get("id") != subscription_id]
+        if len(remaining) == len(custom):
+            raise HTTPException(status_code=404, detail=f"订阅 {subscription_id} 不存在或为内置条目")
+        _write_custom(remaining)
+    logger.info(f"notify: 已删除订阅 {subscription_id}")
+    return {"id": subscription_id, "deleted": True}

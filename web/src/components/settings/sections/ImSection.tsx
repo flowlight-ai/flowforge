@@ -20,6 +20,13 @@ interface ImConnector {
   configured?: boolean;
 }
 
+interface ConnectorPermission {
+  whitelistEnabled?: boolean;
+  commandAdminOnly?: boolean;
+  adminOpenIds?: string[];
+  allowedGroups?: { externalChatId?: string; label?: string }[];
+}
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   maxWidth: 320,
@@ -43,7 +50,14 @@ export function ImSection() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', type: 'webhook', config: '' });
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  // 权限面板（对齐 clowder-ai HubConnectorConfigTab 的权限配置区）
+  const [permId, setPermId] = useState<string | null>(null);
+  const [perm, setPerm] = useState<ConnectorPermission | null>(null);
+  const [permLoading, setPermLoading] = useState(false);
+  const [permSaving, setPermSaving] = useState(false);
 
   const fetchConnectors = useCallback(async () => {
     setLoading(true);
@@ -100,6 +114,68 @@ export function ImSection() {
       setMessage('添加失败');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    setBusy(id);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/v1/connectors/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setMessage('已删除连接器');
+      await fetchConnectors();
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage('删除失败（内置连接器不可删除）');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const togglePermPanel = async (id: string) => {
+    if (permId === id) {
+      setPermId(null);
+      setPerm(null);
+      return;
+    }
+    setPermId(id);
+    setPerm(null);
+    setPermLoading(true);
+    try {
+      const res = await fetch(`/api/v1/permissions/${encodeURIComponent(id)}`);
+      if (res.ok) {
+        setPerm(await res.json());
+      } else {
+        setPerm({});
+      }
+    } catch {
+      setPerm({});
+    } finally {
+      setPermLoading(false);
+    }
+  };
+
+  const savePerm = async (patch: Record<string, unknown>) => {
+    if (!permId) return;
+    setPermSaving(true);
+    try {
+      const res = await fetch(`/api/v1/permissions/${encodeURIComponent(permId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (res.ok) {
+        setPerm(await res.json());
+      } else {
+        setMessage(`权限保存失败 (${res.status})`);
+        setTimeout(() => setMessage(null), 3000);
+      }
+    } catch {
+      setMessage('权限保存失败');
+      setTimeout(() => setMessage(null), 3000);
+    } finally {
+      setPermSaving(false);
     }
   };
 
@@ -180,7 +256,58 @@ export function ImSection() {
                   </SettingsBadge>
                 ) : null
               }
-            />
+              expanded={permId === c.id}
+              onToggle={() => togglePermPanel(c.id)}
+              actions={
+                <SettingsHubLink
+                  title="删除该连接器"
+                  onClick={() => remove(c.id)}
+                  style={busy === c.id ? { opacity: 0.5 } : undefined}
+                >
+                  {busy === c.id ? '删除中...' : '删除'}
+                </SettingsHubLink>
+              }
+            >
+              {permId === c.id && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {permLoading || !perm ? (
+                    <SettingsText as="p" tone="muted">
+                      权限加载中...
+                    </SettingsText>
+                  ) : (
+                    <>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!perm.whitelistEnabled}
+                          disabled={permSaving}
+                          onChange={(e) => savePerm({ whitelistEnabled: e.target.checked })}
+                        />
+                        启用群白名单（仅允许已登记的群接入）
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!perm.commandAdminOnly}
+                          disabled={permSaving}
+                          onChange={(e) => savePerm({ commandAdminOnly: e.target.checked })}
+                        />
+                        斜杠命令仅管理员可用
+                      </label>
+                      <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                        管理员 Open ID：{perm.adminOpenIds?.length ? perm.adminOpenIds.join('、') : '未配置'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                        已登记群：
+                        {perm.allowedGroups?.length
+                          ? perm.allowedGroups.map((g) => g.label || g.externalChatId).join('、')
+                          : '未登记'}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </SettingsRow>
           ))
         )}
       </div>

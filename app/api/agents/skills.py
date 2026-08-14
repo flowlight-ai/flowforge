@@ -148,3 +148,16 @@ async def create_skill(payload: SkillCreate) -> dict[str, Any]:
         _write_custom(custom)
     logger.info(f"skills: 已创建并持久化 Skill {payload.name}")
     return entry
+
+
+@router.delete("/{skill_id}")
+async def delete_skill(skill_id: str) -> dict[str, Any]:
+    """删除自定义 Skill（仅 custom 条目；内置 yaml 条目不可删）。"""
+    with _lock:
+        custom = _read_custom()
+        remaining = [s for s in custom if s.get("id") != skill_id]
+        if len(remaining) == len(custom):
+            raise HTTPException(status_code=404, detail=f"Skill {skill_id} 不存在或为内置条目")
+        _write_custom(remaining)
+    logger.info(f"skills: 已删除 Skill {skill_id}")
+    return {"id": skill_id, "deleted": True}

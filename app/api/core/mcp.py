@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import get_logger
@@ -147,3 +147,44 @@ async def register_mcp_server(payload: McpServerCreate) -> dict[str, Any]:
         _write_custom(custom)
     logger.info(f"mcp: 已注册并持久化 MCP 服务 {payload.name}")
     return entry
+
+
+class McpServerToggle(BaseModel):
+    """MCP 服务开关请求体。"""
+
+    enabled: bool
+
+
+@router.put("/servers/{server_id}")
+async def toggle_mcp_server(server_id: str, payload: McpServerToggle) -> dict[str, Any]:
+    """启用/禁用 MCP 服务（custom 条目直接更新；内置条目写入覆盖）。"""
+    with _lock:
+        custom = _read_custom()
+        for s in custom:
+            if s.get("id") == server_id:
+                s["enabled"] = payload.enabled
+                _write_custom(custom)
+                logger.info(f"mcp: 已{'启用' if payload.enabled else '禁用'}服务 {server_id}")
+                return s
+        # 内置条目：在 custom 中写入覆盖记录（id 保持原样，优先于内置）
+        builtin = [s for s in _load_mcp_servers() if s.get("id") == server_id]
+        if not builtin:
+            raise HTTPException(status_code=404, detail=f"MCP 服务 {server_id} 不存在")
+        override = {**builtin[0], "enabled": payload.enabled}
+        custom.insert(0, override)
+        _write_custom(custom)
+        logger.info(f"mcp: 已{'启用' if payload.enabled else '禁用'}内置服务 {server_id}（覆盖记录）")
+        return override
+
+
+@router.delete("/servers/{server_id}")
+async def delete_mcp_server(server_id: str) -> dict[str, Any]:
+    """删除自定义 MCP 服务（仅 custom 条目；内置条目不可删）。"""
+    with _lock:
+        custom = _read_custom()
+        remaining = [s for s in custom if s.get("id") != server_id]
+        if len(remaining) == len(custom):
+            raise HTTPException(status_code=404, detail=f"MCP 服务 {server_id} 不存在或为内置条目")
+        _write_custom(remaining)
+    logger.info(f"mcp: 已删除 MCP 服务 {server_id}")
+    return {"id": server_id, "deleted": True}
