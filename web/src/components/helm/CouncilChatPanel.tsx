@@ -1283,6 +1283,7 @@ export default function CouncilChatPanel({
             />
           )}
 
+<<<<<<< HEAD
           {/* @all 并行状态区 — 各灵智体处理过程展示在输入区上方（不入消息流），
               对齐 clowder-ai 群聊：状态/过程在上下方区域，仅汇总入消息流 */}
           {parallelStatus && parallelStatus.entries.length > 0 && (
@@ -1372,6 +1373,8 @@ export default function CouncilChatPanel({
             </div>
           )}
 
+=======
+>>>>>>> feat/multi-thread-council
           <div className="flex items-end gap-2">
             <textarea
               ref={inputRef}

@@ -98,6 +98,7 @@ class RecallRequest(BaseModel):
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+<<<<<<< HEAD
 
 
 def _extra_collections_path() -> Path:
@@ -170,6 +171,8 @@ def _builtin_collection_items() -> list[dict[str, Any]]:
             "updatedAt": updated_at or None,
         })
     return items
+=======
+>>>>>>> feat/multi-thread-council
 
 
 @router.get("/collections")
