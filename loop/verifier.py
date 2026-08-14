@@ -110,7 +110,17 @@ class RuleBasedVerifier(LoopVerifier):
         if not rules:
             rules = ["output_not_empty", "no_error"]
 
-        content = result.get("output", "") if isinstance(result, dict) else str(result)
+        # 兼容多种内容字段：Workflow worker 产出写入 content/draft/edited_draft，
+        # 而 result 可能用 output/response/result 等不同键名
+        content = ""
+        if isinstance(result, dict):
+            for _key in ("output", "content", "edited_draft", "draft", "response", "result", "article", "text"):
+                _val = result.get(_key, "")
+                if isinstance(_val, str) and _val.strip():
+                    content = _val
+                    break
+        else:
+            content = str(result)
         total = len(rules)
         passed_count = 0
         errors = []
