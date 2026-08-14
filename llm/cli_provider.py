@@ -23,6 +23,7 @@ import asyncio
 import glob
 import os
 import shutil
+import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -273,12 +274,23 @@ class CLILLMProvider:
         )
 
         try:
-            proc = await asyncio.create_subprocess_exec(
-                *args,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            # 线程内 subprocess.run — 兼容任意事件循环（SelectorEventLoop 不支持
+            # asyncio.create_subprocess_exec，Windows 下会抛 NotImplementedError）
+            completed = await asyncio.to_thread(
+                subprocess.run,
+                args,
+                capture_output=True,
                 env={**os.environ, **self.config.env},
+                timeout=timeout_s,
             )
+        except subprocess.TimeoutExpired:
+            logger.warning("cli_provider timeout after %ss: %s", timeout_s, self.config.binary)
+            return {
+                "content": f"[CLI 超时] {self.config.binary} 在 {timeout_s}s 后未响应",
+                "model": self.config.provider,
+                "usage": {"latency_ms": int(timeout_s * 1000), "error": "timeout"},
+                "session_id": session_id,
+            }
         except OSError as exc:
             logger.error("cli_provider spawn failed: %s", exc)
             return {
@@ -288,37 +300,22 @@ class CLILLMProvider:
                 "session_id": session_id,
             }
 
-        try:
-            stdout_b, stderr_b = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout_s
-            )
-        except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
-            logger.warning("cli_provider timeout after %ss: %s", timeout_s, self.config.binary)
-            return {
-                "content": f"[CLI 超时] {self.config.binary} 在 {timeout_s}s 后未响应",
-                "model": self.config.provider,
-                "usage": {"latency_ms": int(timeout_s * 1000), "error": "timeout"},
-                "session_id": session_id,
-            }
-
         latency_ms = int((time.monotonic() - start_ts) * 1000)
-        stdout = stdout_b.decode("utf-8", errors="replace") if stdout_b else ""
-        stderr = stderr_b.decode("utf-8", errors="replace") if stderr_b else ""
+        stdout = completed.stdout.decode("utf-8", errors="replace") if completed.stdout else ""
+        stderr = completed.stderr.decode("utf-8", errors="replace") if completed.stderr else ""
 
-        if proc.returncode != 0:
+        if completed.returncode != 0:
             logger.error(
                 "cli_provider exit %d: %s stderr=%s",
-                proc.returncode, self.config.binary, stderr[:300],
+                completed.returncode, self.config.binary, stderr[:300],
             )
             return {
                 "content": (
-                    f"[CLI 错误] {self.config.binary} 退出码 {proc.returncode}\n"
+                    f"[CLI 错误] {self.config.binary} 退出码 {completed.returncode}\n"
                     f"stderr: {stderr[:500]}"
                 ),
                 "model": self.config.provider,
-                "usage": {"latency_ms": latency_ms, "error": f"exit_{proc.returncode}"},
+                "usage": {"latency_ms": latency_ms, "error": f"exit_{completed.returncode}"},
                 "session_id": session_id,
             }
 
@@ -326,6 +323,23 @@ class CLILLMProvider:
             "cli_provider success: provider=%s latency=%dms stdout_len=%d",
             self.config.provider, latency_ms, len(stdout),
         )
+
+        # 空响应保护：部分 CLI 异常时仍返回退出码 0（如 gemini 代理 401），
+        # 此时将 stderr 摘要作为错误占位，避免前端渲染空气泡
+        if not stdout.strip():
+            logger.warning(
+                "cli_provider empty stdout: %s stderr=%s",
+                self.config.binary, stderr[:300],
+            )
+            return {
+                "content": (
+                    f"[CLI 空响应] {self.config.binary} 未返回内容"
+                    f"{f'（stderr: {stderr[:200]}）' if stderr.strip() else ''}"
+                ),
+                "model": self.config.provider,
+                "usage": {"latency_ms": latency_ms, "error": "empty_response"},
+                "session_id": session_id,
+            }
 
         return {
             "content": stdout.strip(),
