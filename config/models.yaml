@@ -279,20 +279,10 @@ assignments:
     - openroute/Kimi-K2.6
     - openroute/Doubao-Seed2.0
   reflexion_reflector:
-<<<<<<< HEAD
-    # v5.1临时: API配额耗尽，改用 zhipu/glm-4-flash
-    primary: zhipu/glm-4-flash
-    # P-67(2026-08-13): free模型挂起60s+排存活webchat之前 — Run13实测reflector耗178s
-    # (free挂满60s→Kimi失败→才到Doubao)。存活webchat前置,free降为末尾兜底,
-    # 候选链完整保留不牺牲成功率
-    fallbacks:
-    - openroute/Qwen3.6-Plus
-=======
     # v5.99.80: zhipu 无 key — 改用 openroute 稳定模型
     primary: openroute/DeepSeek-V4-Pro
     fallbacks:
     - openroute/DeepSeek-V4-Pro
     - openroute/Kimi-K2.6
->>>>>>> feat/multi-thread-council
     - openroute/Doubao-Seed2.0
     - openrouter/openai/gpt-oss-120b:free

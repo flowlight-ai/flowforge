@@ -58,13 +58,8 @@ class SignalSourceCreate(BaseModel):
     config: dict[str, Any] = Field(default_factory=dict)
 
 
-<<<<<<< HEAD
 def _store_dir() -> Path:
     return Path(__file__).resolve().parents[3] / "data" / "signals"
-=======
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
->>>>>>> feat/multi-thread-council
 
 
 class SignalStore:

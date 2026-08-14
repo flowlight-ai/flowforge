@@ -381,7 +381,6 @@ export function useCouncilChat(threadId: string | null) {
           }
         }
 
-<<<<<<< HEAD
         if (data.routing_mode === "parallel" && newMessages.length > 1) {
           // @all 并行（对齐 clowder-ai）：各灵智体的状态/过程消息展示在
           // 聊天窗口上下方状态区，仅主灵智体汇总消息进入消息流
@@ -403,15 +402,6 @@ export function useCouncilChat(threadId: string | null) {
             content: data.summary
               ? `📋 灵议汇总：${data.summary}`
               : lead.content,
-=======
-        // 添加摘要消息（如果有 — 仅 parallel 模式且多轮时生成）
-        let summaryMsg: CouncilMessage | null = null;
-        if (data.summary) {
-          summaryMsg = {
-            id: newMsgId("summary"),
-            source: "system",
-            content: `📋 灵议摘要：${data.summary}`,
->>>>>>> feat/multi-thread-council
             timestamp: Date.now() + newMessages.length + 1,
             meta: {
               model: (lead.meta?.model as string) ?? "",
