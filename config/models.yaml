@@ -296,7 +296,10 @@ assignments:
   reflexion_reflector:
     # v5.1临时: API配额耗尽，改用 zhipu/glm-4-flash
     primary: zhipu/glm-4-flash
+    # P-67(2026-08-13): free模型挂起60s+排存活webchat之前 — Run13实测reflector耗178s
+    # (free挂满60s→Kimi失败→才到Doubao)。存活webchat前置,free降为末尾兜底,
+    # 候选链完整保留不牺牲成功率
     fallbacks:
-    - openrouter/openai/gpt-oss-120b:free
     - openroute/Qwen3.6-Plus
     - openroute/Doubao-Seed2.0
+    - openrouter/openai/gpt-oss-120b:free

@@ -1058,8 +1058,17 @@ class LLMClient(BaseTool):
                 "total_candidates": len(candidates),
             })
 
+            # P-63: openrouter free模型 fail-fast — free模型正常响应30-90s,
+            # 挂起场景(Run9实测gpt-oss-20b:free挂305s后返回截断JSON)纯耗时间。
+            # 封顶150s快速失败换下一候选;webchat/付费模型超时不动,候选链完整保留,
+            # 只消除慢失败不牺牲成功率。
+            _call_timeout = agent_timeout
+            if provider == "openrouter" and model_id.endswith(":free") and (agent_timeout or 0) > 150:
+                _call_timeout = 150.0
+                logger.info(f"[P-63] free模型fail-fast: {model_id} timeout {agent_timeout}s→150s")
+
             logger.info(f"🤖 [LLM调用] agent={agent_name or '?'} → provider={provider} model={model_id} "
-                        f"(候选 {idx+1}/{len(candidates)} timeout={agent_timeout}s)")
+                        f"(候选 {idx+1}/{len(candidates)} timeout={_call_timeout}s)")
 
             # 🔍 关键诊断日志：记录喂给 LLM 的输入内容预览（用户反馈"喂给llm的内容有严重质量问题"）
             # 记录最后一条 user message 的前 800 字符，用于分析组合提示词是否有质量问题
@@ -1094,14 +1103,14 @@ class LLMClient(BaseTool):
                 try:
                     used_stream = stream
                     if stream:
-                        content = await self._stream_call(url, headers, payload, task_id, agent_name, provider, model_id, timeout=agent_timeout)
+                        content = await self._stream_call(url, headers, payload, task_id, agent_name, provider, model_id, timeout=_call_timeout)
                         if not content or (isinstance(content, str) and not content.strip()):
                             logger.info(f"Stream returned empty for {provider}/{model_id}, falling back to non-stream")
                             payload_fb = {**payload, "stream": False}
-                            content = await self._normal_call(url, headers, payload_fb, timeout=agent_timeout)
+                            content = await self._normal_call(url, headers, payload_fb, timeout=_call_timeout)
                             used_stream = False
                     else:
-                        content = await self._normal_call(url, headers, payload, timeout=agent_timeout)
+                        content = await self._normal_call(url, headers, payload, timeout=_call_timeout)
 
                     duration = time.time() - start
                     tokens = 0
@@ -1394,9 +1403,13 @@ class LLMClient(BaseTool):
                     url = base_url.rstrip("/") + "/chat/completions"
                     self._emit_event(task_id, "llm.start", {"agent_name": agent_name or "unknown", "model": f"{provider}/{model_id}", "candidate_index": candidates.index(candidate) + 1, "total_candidates": len(candidates)})
                     logger.info(f"🤖 [LLM回退] agent={agent_name or '?'} → {provider}/{model_id}")
+                    # P-63: fallback路径同样对free模型封顶150s fail-fast
+                    _fb_timeout = agent_timeout
+                    if provider == "openrouter" and model_id.endswith(":free") and (agent_timeout or 0) > 150:
+                        _fb_timeout = 150.0
                     start = time.time()
                     try:
-                        content = await self._stream_call(url, headers, payload_fb, task_id, agent_name, provider, model_id, timeout=agent_timeout) if stream else await self._normal_call(url, headers, payload_fb, timeout=agent_timeout)
+                        content = await self._stream_call(url, headers, payload_fb, task_id, agent_name, provider, model_id, timeout=_fb_timeout) if stream else await self._normal_call(url, headers, payload_fb, timeout=_fb_timeout)
                         duration = time.time() - start
                         tokens = 0
                         prompt_tokens = 0
