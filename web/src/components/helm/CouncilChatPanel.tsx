@@ -22,6 +22,7 @@ import {
   FORGEKIN_COLORS,
   FORGEKIN_EMOJI,
   ROLE_CONFIG,
+  isAllMention,
 } from "../../lib/council-types";
 import {
   formatTime,
@@ -72,6 +73,8 @@ export default function CouncilChatPanel({
     config,
     isLoading,
     error,
+    parallelStatus,
+    clearParallelStatus,
     messagesEndRef,
     hasMore,
     sendMessage,
@@ -86,6 +89,9 @@ export default function CouncilChatPanel({
     setForgekinRole,
     reloadRoster,
   } = useCouncilChat(threadId);
+
+  // @all 并行状态区展开/收起（默认展开）
+  const [parallelExpanded, setParallelExpanded] = useState(true);
 
   // WebSocket 实时推送 — 当 threadId 存在时自动连接并订阅
   const { status: wsStatus } = useCouncilSocket({
@@ -497,13 +503,18 @@ export default function CouncilChatPanel({
       }
     }
     // 静音的智能体不参与默认触发（但 @ 显式调用仍生效，符合 clowder-ai 的静音语义）
-    const candidateIds = mentioned.length > 0
+    // 路由对齐 clowder-ai：@特定→被提及者；@all→前 3 位（后端 MAX_PARALLEL 截断）；
+    // 无 @→默认主灵智体（lead 或 luban）单独回复，而非全体
+    const pendingIds = mentioned.length > 0
       ? mentioned
-      : config.participantIds.filter((id) => !mutedIds.includes(id));
-    const pendingIds = candidateIds.length > 0
-      ? candidateIds
-      // 全部静音时退化为全部参与者（避免无响应）
-      : config.participantIds;
+      : isAllMention(inputText)
+        ? roster.filter((r) => !mutedIds.includes(r.id)).slice(0, 3).map((r) => r.id)
+        : (() => {
+            const lead = roster.find((r) => r.role?.lead)
+              ?? roster.find((r) => r.id === "luban")
+              ?? roster[0];
+            return lead ? [lead.id] : [];
+          })();
     setPendingForgekinIds(pendingIds);
 
     // 4. 发送消息（replyTo 状态由 useCouncilChat 内部管理，这里清除 UI 引用）
@@ -526,7 +537,6 @@ export default function CouncilChatPanel({
     isLoading,
     sendMessage,
     roster,
-    config.participantIds,
     mutedIds,
     addToHistory,
     handleSlashCommand,
@@ -1271,6 +1281,95 @@ export default function CouncilChatPanel({
               }}
               menuRef={slashMenuRef}
             />
+          )}
+
+          {/* @all 并行状态区 — 各灵智体处理过程展示在输入区上方（不入消息流），
+              对齐 clowder-ai 群聊：状态/过程在上下方区域，仅汇总入消息流 */}
+          {parallelStatus && parallelStatus.entries.length > 0 && (
+            <div
+              data-council="parallel-status"
+              style={{
+                marginBottom: "8px",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-md, 8px)",
+                background: "color-mix(in srgb, var(--accent) 5%, var(--bg-elevated))",
+                fontSize: "12px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 10px",
+                  cursor: "pointer",
+                }}
+                onClick={() => setParallelExpanded((v) => !v)}
+                role="button"
+                aria-expanded={parallelExpanded}
+                aria-label="并行讨论状态"
+              >
+                <span style={{ color: "var(--accent)", fontWeight: 700 }}>◎</span>
+                <span style={{ fontWeight: 600, color: "var(--text)" }}>
+                  并行讨论完成 · {parallelStatus.entries.length} 位灵智体
+                </span>
+                <span style={{ flex: 1 }} />
+                {parallelStatus.entries.map((e) => (
+                  <span
+                    key={e.forgekinId}
+                    title={`${e.name}：${e.content.slice(0, 80)}`}
+                    style={{ fontSize: "14px" }}
+                  >
+                    {FORGEKIN_EMOJI[e.forgekinId] ?? "🤖"}
+                    <span style={{ color: "var(--muted)", fontSize: "10px" }}>✓</span>
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  aria-label="收起状态区"
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    clearParallelStatus();
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--muted)",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              {parallelExpanded && (
+                <div style={{ borderTop: "1px solid var(--border)", padding: "6px 10px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {parallelStatus.entries.map((e) => (
+                    <div key={e.forgekinId} style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                      <span style={{ flexShrink: 0 }}>{FORGEKIN_EMOJI[e.forgekinId] ?? "🤖"}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <span style={{ fontWeight: 600, color: "var(--text)", marginRight: "6px" }}>{e.name}</span>
+                        {e.model && (
+                          <span style={{ color: "var(--muted)", fontSize: "10px" }}>({e.model})</span>
+                        )}
+                        <div
+                          style={{
+                            color: "var(--muted)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                          }}
+                        >
+                          {e.content}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           <div className="flex items-end gap-2">

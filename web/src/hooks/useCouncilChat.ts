@@ -80,12 +80,27 @@ function backendMsgToCouncil(msg: Record<string, unknown>): CouncilMessage {
   };
 }
 
+/** @all 并行状态区条目 — 各灵智体的处理过程（不入消息流） */
+export interface ParallelStatusEntry {
+  forgekinId: string;
+  name: string;
+  content: string;
+  model: string;
+}
+
+/** @all 并行状态区状态 */
+export interface ParallelStatus {
+  entries: ParallelStatusEntry[];
+}
+
 export function useCouncilChat(threadId: string | null) {
   const [messages, setMessages] = useState<CouncilMessage[]>([]);
   const [roster, setRoster] = useState<ForgekinRosterItem[]>([]);
   const [config, setConfig] = useState<CouncilConfig>(() =>
     loadFromStorage<CouncilConfig>(STORAGE_KEY_CONFIG, DEFAULT_COUNCIL_CONFIG)
   );
+  // @all 并行状态区 — 各灵智体处理过程展示在聊天窗口上下方，不入消息流
+  const [parallelStatus, setParallelStatus] = useState<ParallelStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -273,9 +288,8 @@ export function useCouncilChat(threadId: string | null) {
 
       // ── 路由策略（参考 clowder-ai AgentRouter）──────────────
       // 默认不传 forgekin_ids → 后端 fallback 链决定单智能体（上次回复者 > luban）
-      // @all → 后端展开为全部并行
+      // @all → 后端展开为全体并行（后端截断前 3）
       // @特定 → 后端仅调用被提及的智能体
-      // 用户在 UI 显式选了多个参与者且未 @ → 传选中的 ID 列表
       const mentioned = parseMentions(text);
       const isAll = isAllMention(text);
       let reqForgekinIds: string[] = [];
@@ -289,15 +303,13 @@ export function useCouncilChat(threadId: string | null) {
         // @特定 → 传被提及的 ID
         reqForgekinIds = mentioned;
         reqMode = mentioned.length > 1 ? "parallel" : "single";
-      } else if (config.participantIds.length > 0) {
-        // 无 @，但用户在 UI 选了偏好参与者 → 传偏好列表
-        // 注意：如果只选了 1 个，后端会用这个；如果选了多个，后端会并行
-        reqForgekinIds = config.participantIds;
-        reqMode = config.participantIds.length > 1 ? "parallel" : "single";
       }
-      // 否则 reqForgekinIds 保持空数组，后端走 fallback 链（上次回复者 > luban）
+      // 无 @ → reqForgekinIds 保持空数组 + auto，后端 fallback 链
+      // 决定默认主灵智体回复（上次回复者 > luban），而非全体并行
 
       setIsLoading(true);
+      // 新讨论开始时清除上一轮 @all 并行状态区
+      setParallelStatus(null);
 
       // 创建 AbortController 用于超时取消
       const controller = new AbortController();
@@ -369,21 +381,52 @@ export function useCouncilChat(threadId: string | null) {
           }
         }
 
-        // 添加摘要消息（如果有 — 仅 parallel 模式且多轮时生成）
-        let summaryMsg: CouncilMessage | null = null;
-        if (data.summary) {
-          summaryMsg = {
+        if (data.routing_mode === "parallel" && newMessages.length > 1) {
+          // @all 并行（对齐 clowder-ai）：各灵智体的状态/过程消息展示在
+          // 聊天窗口上下方状态区，仅主灵智体汇总消息进入消息流
+          setParallelStatus({
+            entries: newMessages.map((m) => ({
+              forgekinId: m.forgekinId ?? "",
+              name: m.forgekinName ?? "",
+              content: m.content,
+              model: (m.meta?.model as string) ?? "",
+            })),
+          });
+          const lead = newMessages[0];
+          const summaryMsg: CouncilMessage = {
             id: newMsgId("summary"),
-            source: "system",
-            content: `📋 灵议摘要：${data.summary}`,
+            source: "forgekin",
+            forgekinId: lead.forgekinId,
+            forgekinName: lead.forgekinName,
+            forgekinRole: lead.forgekinRole,
+            content: data.summary
+              ? `📋 灵议汇总：${data.summary}`
+              : lead.content,
             timestamp: Date.now() + newMessages.length + 1,
+            meta: {
+              model: (lead.meta?.model as string) ?? "",
+              usage: lead.meta?.usage,
+              routingMode: data.routing_mode,
+            },
           };
+          setMessages((prev) => [...prev, summaryMsg]);
+          void persistMessages([summaryMsg]);
+        } else {
+          // single 模式（或仅 1 条响应）：全部入消息流
+          let summaryMsg: CouncilMessage | null = null;
+          if (data.summary) {
+            summaryMsg = {
+              id: newMsgId("summary"),
+              source: "system",
+              content: `📋 灵议摘要：${data.summary}`,
+              timestamp: Date.now() + newMessages.length + 1,
+            };
+          }
+          const allNew = summaryMsg ? [...newMessages, summaryMsg] : newMessages;
+          setMessages((prev) => [...prev, ...allNew]);
+          // 批量持久化灵议响应到后端
+          void persistMessages(allNew);
         }
-
-        const allNew = summaryMsg ? [...newMessages, summaryMsg] : newMessages;
-        setMessages((prev) => [...prev, ...allNew]);
-        // 批量持久化灵议响应到后端
-        void persistMessages(allNew);
       } catch (e) {
         // 移除"灵议进行中"系统消息
         setMessages((prev) => prev.filter((m) => m.id !== sysMsg.id));
@@ -524,6 +567,9 @@ export function useCouncilChat(threadId: string | null) {
     setConfig((prev) => ({ ...prev, ...updates }));
   }, []);
 
+  /** 清除 @all 并行状态区（用户关闭或发起新讨论时） */
+  const clearParallelStatus = useCallback(() => setParallelStatus(null), []);
+
   /** 切换灵智体参与状态 */
   const toggleParticipant = useCallback((forgekinId: string) => {
     setConfig((prev) => {
@@ -549,6 +595,8 @@ export function useCouncilChat(threadId: string | null) {
     config,
     isLoading,
     error,
+    parallelStatus,
+    clearParallelStatus,
     messagesEndRef,
     hasMore,
     sendMessage,
