@@ -34,9 +34,12 @@ from typing import Any
 
 import httpx
 
+from flowforge.core.tracing import get_logger
 from flowforge.forgemind.soul_imprint import SoulImprint
 from flowforge.forgemind.species import ForgekinSpecies
 from flowforge.forgemind.stages import AwakeningStage, EvolutionStage
+
+logger = get_logger("forgemind.base")
 
 
 class ForgekinBase(ABC):
@@ -301,6 +304,7 @@ class ForgekinBase(ABC):
                     return result
                 except Exception as exc:  # noqa: BLE001 — P-116: 分类后统一返回错误响应
                     # P-116: 区分可重试（超时/网络）与不可重试（配置）异常
+                    logger.exception("Forgekin %s CLI 调用异常", self.name)
                     return self._chat_error("CLI", exc, session_id, model=provider)
 
         # 降级处理：未注入 LLM 客户端（trae 模式）

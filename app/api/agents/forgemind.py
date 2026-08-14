@@ -232,6 +232,16 @@ async def council(request: CouncilRequest) -> CouncilResponse:
             detail="无可用Forgekin参与MindCouncil",
         )
 
+    # 并行上限 3（对齐 clowder-ai route-parallel ≤3 只猫）—
+    # 避免 9 个 CLI 进程并发导致长时间挂起/超时
+    MAX_PARALLEL = 3
+    if routing_mode == "parallel" and len(participants) > MAX_PARALLEL:
+        logger.info(
+            "council 并行截断: %d → %d 位Forgekin",
+            len(participants), MAX_PARALLEL,
+        )
+        participants = participants[:MAX_PARALLEL]
+
     # single 模式强制单轮（单智能体无需多轮讨论）
     effective_max_rounds = 1 if routing_mode == "single" else request.max_rounds
 
@@ -300,10 +310,28 @@ async def council(request: CouncilRequest) -> CouncilResponse:
                 for f in participants
             ]
 
-        # 并行调用所有灵智体（asyncio.gather 保持顺序）
-        results = await asyncio.gather(
-            *[_call_forgekin(f, ctx) for f, ctx in contexts]
-        )
+        # 并行调用所有灵智体（asyncio.gather 保持顺序）— 180s 超时兜底，
+        # 超时灵智体返回占位而非挂死整个群聊
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(
+                    *[_call_forgekin(f, ctx) for f, ctx in contexts]
+                ),
+                timeout=180,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("council 第 %d 轮并行超时(180s)", round_num)
+            results = [
+                (
+                    f,
+                    {
+                        "content": f"[{f.name} 响应超时]",
+                        "model": "timeout",
+                        "usage": {"latency_ms": 180000, "error": "timeout"},
+                    },
+                )
+                for f, _ in contexts
+            ]
 
         round_messages: list[dict[str, Any]] = []
         for forgekin, result in results:
@@ -334,10 +362,17 @@ async def council(request: CouncilRequest) -> CouncilResponse:
         for msg in discussion_history:
             summary_msg += f"[{msg['role']}]: {msg['content'][:150]}\n"
 
-        summary_result = await participants[0].chat(
-            [{"role": "user", "content": summary_msg}]
-        )
-        summary = summary_result.get("content", "")
+        try:
+            summary_result = await asyncio.wait_for(
+                participants[0].chat(
+                    [{"role": "user", "content": summary_msg}]
+                ),
+                timeout=120,
+            )
+            summary = summary_result.get("content", "")
+        except asyncio.TimeoutError:
+            logger.warning("council 汇总超时(120s)")
+            summary = "（汇总超时，请重试）"
 
     return CouncilResponse(
         topic=request.topic,
