@@ -15,7 +15,7 @@ interface FetchState<T> {
   fromCache: boolean;
 }
 
-interface UseFetchOptions {
+interface UseFetchOptions<T = unknown> {
   ttl?: number;
   enabled?: boolean;
   /**
@@ -34,7 +34,7 @@ const inFlightRequests = new Map<string, Promise<any>>();
 
 export function useFetchWithCache<T = any>(
   url: string | null,
-  options: UseFetchOptions = {}
+  options: UseFetchOptions<T> = {}
 ): FetchState<T> & { refetch: () => void } {
   const { ttl = 30_000, enabled = true, idbFallback, onRefresh } = options;
   const [state, setState] = useState<FetchState<T>>({
