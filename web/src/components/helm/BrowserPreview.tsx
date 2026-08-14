@@ -17,6 +17,13 @@ export interface ElementInfo {
   className?: string;
   textContent?: string;
   selector: string;
+  href?: string;
+  type?: string;
+  name?: string;
+}
+
+interface InspectElement extends ElementInfo {
+  total?: number;
 }
 
 type Viewport = "desktop" | "tablet" | "mobile";
@@ -27,7 +34,7 @@ const VIEWPORT_SIZES: Record<Viewport, { width: string; label: string }> = {
   mobile: { width: "375px", label: "手机" },
 };
 
-/** 内置浏览器预览 — iframe 预览 + 元素选择器 + 响应式视口 */
+/** 内置浏览器预览 — iframe 预览 + 真实 DOM 探测元素选择 + 响应式视口 */
 export default function BrowserPreview({ url, onElementSelect, onNavigate }: BrowserPreviewProps) {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [inputUrl, setInputUrl] = useState(url);
@@ -38,11 +45,68 @@ export default function BrowserPreview({ url, onElementSelect, onNavigate }: Bro
   const [history, setHistory] = useState<string[]>([url]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [inspectElements, setInspectElements] = useState<InspectElement[]>([]);
+  const [inspecting, setInspecting] = useState(false);
+  const [inspectError, setInspectError] = useState<string | null>(null);
 
   useEffect(() => {
     setCurrentUrl(url);
     setInputUrl(url);
   }, [url]);
+
+  // 元素选择器模式：通过后端代理抓取当前页面 HTML 并提取可交互元素（真实 DOM 探测）
+  const inspectPage = useCallback(async () => {
+    setInspecting(true);
+    setInspectError(null);
+    try {
+      const res = await fetch("/api/v1/browser/inspect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: currentUrl, max_elements: 60 }),
+      });
+      const data = await res.json().catch(() => ({
+        ok: false,
+        error: "DOM 探测接口返回异常",
+      }));
+      if (!data?.ok) {
+        setInspectError(data?.error || "DOM 探测失败");
+        setInspectElements([]);
+        return;
+      }
+      setInspectElements((data?.elements || []).map((e: any) => ({
+        tagName: e.tagName,
+        id: e.id,
+        className: e.className,
+        textContent: e.textContent,
+        selector: e.selector,
+        href: e.href,
+        type: e.type,
+        name: e.name,
+      })));
+    } catch {
+      setInspectError("DOM 探测请求失败，请确认后端服务可用");
+      setInspectElements([]);
+    } finally {
+      setInspecting(false);
+    }
+  }, [currentUrl]);
+
+  const handlePickerClick = useCallback(() => {
+    const next = !pickerMode;
+    setPickerMode(next);
+    setSelectedElement(null);
+    if (next) {
+      void inspectPage();
+    }
+  }, [pickerMode, inspectPage]);
+
+  const handleElementPick = useCallback(
+    (el: ElementInfo) => {
+      setSelectedElement(el);
+      onElementSelect?.(el.selector, el);
+    },
+    [onElementSelect],
+  );
 
   const navigate = useCallback((newUrl: string) => {
     setCurrentUrl(newUrl);
@@ -87,28 +151,6 @@ export default function BrowserPreview({ url, onElementSelect, onNavigate }: Bro
   const handleIframeLoad = useCallback(() => {
     setIsLoading(false);
   }, []);
-
-  const handlePickerClick = useCallback(() => {
-    setPickerMode(!pickerMode);
-    setSelectedElement(null);
-  }, [pickerMode]);
-
-  // Simulate element selection — in a real implementation, this would inject
-  // a script into the iframe to enable element picking
-  const handleIframeClick = useCallback((e: React.MouseEvent) => {
-    if (!pickerMode) return;
-    // Since cross-origin iframes don't allow direct DOM access,
-    // this is a simplified demonstration
-    const mockSelector = `body > div:nth-child(${Math.floor(Math.random() * 5) + 1})`;
-    const mockInfo: ElementInfo = {
-      tagName: "div",
-      className: "sample-element",
-      textContent: "选中的元素",
-      selector: mockSelector,
-    };
-    setSelectedElement(mockInfo);
-    onElementSelect?.(mockSelector, mockInfo);
-  }, [pickerMode, onElementSelect]);
 
   return (
     <div className="flex flex-col h-full bg-[#0c0d12]">
@@ -219,7 +261,6 @@ export default function BrowserPreview({ url, onElementSelect, onNavigate }: Bro
             ref={iframeRef}
             src={currentUrl}
             onLoad={handleIframeLoad}
-            onClick={handleIframeClick}
             className="w-full h-full border border-gray-700 rounded-lg bg-white"
             sandbox="allow-scripts allow-same-origin allow-forms"
             title="浏览器预览"
@@ -233,6 +274,55 @@ export default function BrowserPreview({ url, onElementSelect, onNavigate }: Bro
           )}
         </div>
       </div>
+
+      {/* Element picker panel（真实 DOM 探测结果） */}
+      {pickerMode && (
+        <div className="border-t border-gray-800 bg-[#12131a] flex-shrink-0 max-h-48 overflow-y-auto">
+          <div className="px-3 py-2 flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">
+              {inspecting ? "正在探测页面元素..." : `可交互元素（${inspectElements.length}）· 点击选择`}
+            </span>
+            <button
+              onClick={() => void inspectPage()}
+              disabled={inspecting}
+              className="text-[10px] text-indigo-400 hover:text-indigo-300 disabled:opacity-40"
+            >
+              重新探测
+            </button>
+          </div>
+          {inspectError && (
+            <div className="px-3 pb-2 text-[10px] text-red-400">{inspectError}</div>
+          )}
+          {!inspecting && inspectElements.length === 0 && !inspectError && (
+            <div className="px-3 pb-2 text-[10px] text-gray-500">未探测到可交互元素</div>
+          )}
+          <div className="px-2 pb-2 space-y-1">
+            {inspectElements.map((el, i) => (
+              <button
+                key={`${el.selector}-${i}`}
+                onClick={() => handleElementPick(el)}
+                className={`w-full text-left rounded px-2 py-1.5 transition-colors ${
+                  selectedElement?.selector === el.selector
+                    ? "bg-indigo-600/20 border border-indigo-500"
+                    : "hover:bg-white/5 border border-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] px-1 py-0.5 rounded bg-gray-800 text-gray-300 font-mono flex-shrink-0">
+                    {el.tagName}
+                  </span>
+                  <span className="text-[11px] text-gray-200 truncate flex-1">
+                    {el.textContent || el.name || el.href || el.id || el.selector}
+                  </span>
+                </div>
+                <code className="text-[9px] text-indigo-400/80 font-mono block truncate mt-0.5">
+                  {el.selector}
+                </code>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Selected element info */}
       {selectedElement && (

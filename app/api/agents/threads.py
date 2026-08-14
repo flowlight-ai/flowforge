@@ -27,8 +27,47 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from flowforge.app.api.agents.thread_store import get_thread_store
+from flowforge.app.api.core.logs import get_audit_logger
+from flowforge.app.api.agents.signals import ingest_signal
+from flowforge.core.tracing import get_logger
 
 router = APIRouter(prefix="/threads", tags=["threads"])
+
+
+def _audit_message(thread_id: str, msg: dict[str, Any]) -> None:
+    """群聊消息审计：写入 audit_logs + 注入信号（供 signals/能力画像消费）。"""
+    source = msg.get("source") or "user"
+    content = msg.get("content") or ""
+    try:
+        get_audit_logger().log(
+            "info",
+            "council.message_sent",
+            task_id=thread_id,
+            mode="council",
+            details={
+                "source": source,
+                "content_len": len(content),
+                "forgekin": msg.get("forgekin_name"),
+                "thread_id": thread_id,
+            },
+        )
+    except Exception as e:  # noqa: BLE001 — 审计失败不影响消息写入
+        logger = get_logger("threads_audit")
+        logger.warning(f"audit log failed: {e}")
+    try:
+        ingest_signal(
+            source_id="council",
+            source_name="群聊会话",
+            title=f"群聊消息 · {msg.get('forgekin_name') or source}",
+            summary=(content[:120] + ("…" if len(content) > 120 else "")),
+            severity="info",
+            strength=0.5,
+            anchor=f"thread:{thread_id}",
+            tags=["council", source],
+        )
+    except Exception as e:  # noqa: BLE001 — 信号注入失败不影响消息写入
+        logger = get_logger("threads_signal")
+        logger.warning(f"signal ingest failed: {e}")
 
 
 # ── 请求模型 ────────────────────────────────────────────────────
@@ -182,12 +221,13 @@ async def list_thread_messages(
 
 @router.post("/{thread_id}/messages")
 async def append_message(thread_id: str, payload: MessageCreate) -> dict[str, Any]:
-    """追加单条消息到会话。"""
+    """追加单条消息到会话（写审计日志 + 注入信号）。"""
     store = get_thread_store()
     thread = store.get_thread(thread_id)
     if thread is None:
         raise HTTPException(status_code=404, detail=f"会话 {thread_id} 不存在")
     msg = store.append_message(thread_id, payload.model_dump())
+    _audit_message(thread_id, msg)
     return msg
 
 
@@ -201,6 +241,8 @@ async def append_messages(thread_id: str, payload: MessageBatchCreate) -> dict[s
     msgs = store.append_messages(
         thread_id, [m.model_dump() for m in payload.messages]
     )
+    for m in msgs:
+        _audit_message(thread_id, m)
     return {"thread_id": thread_id, "appended": len(msgs), "items": msgs}
 
 

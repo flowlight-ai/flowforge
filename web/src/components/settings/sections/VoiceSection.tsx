@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Mic } from 'lucide-react';
+import { Activity, Mic } from 'lucide-react';
 import {
   SettingsBadge,
   SettingsEmptyState,
@@ -20,6 +20,19 @@ interface VoiceConfig {
   default_voice: string | null;
   language: string;
 }
+
+interface ServiceStatus {
+  id: string;
+  name: string;
+  status?: string;
+  message?: string;
+}
+
+const SERVICE_TONES: Record<string, 'emerald' | 'amber' | 'red' | 'slate'> = {
+  healthy: 'emerald',
+  degraded: 'amber',
+  down: 'red',
+};
 
 const DEFAULT_CONFIG: VoiceConfig = {
   enabled: false,
@@ -52,6 +65,8 @@ export function VoiceSection() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // 服务状态面板（对齐 clowder-ai ServiceStatusPanel）
+  const [services, setServices] = useState<ServiceStatus[]>([]);
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
@@ -75,9 +90,30 @@ export function VoiceSection() {
     }
   }, []);
 
+  const fetchServices = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/ops/services').catch(() => null);
+      if (!res || !res.ok) {
+        setServices([]);
+        return;
+      }
+      const data = await res.json().catch(() => ({ items: [] }));
+      const list = data?.items || [];
+      setServices(Array.isArray(list) ? list.map((item: any, i: number) => ({
+        id: item.id || `svc_${i}`,
+        name: item.name || `服务 ${i + 1}`,
+        status: item.status,
+        message: item.message,
+      })) : []);
+    } catch {
+      setServices([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchConfig();
-  }, [fetchConfig]);
+    fetchServices();
+  }, [fetchConfig, fetchServices]);
 
   const saveConfig = async () => {
     setSaving(true);
@@ -204,6 +240,22 @@ export function VoiceSection() {
             </SettingsField>
           </div>
         </SettingsRow>
+
+        {services.length > 0 && (
+          <SettingsRow icon={<Activity size={16} color="var(--info)" />} title="服务运行状态">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {services.map((s) => (
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <SettingsBadge tone={SERVICE_TONES[s.status || ''] || 'slate'} size="xxs">
+                    {s.status || 'unknown'}
+                  </SettingsBadge>
+                  <SettingsText as="span" variant="xs">{s.name}</SettingsText>
+                  {s.message && <SettingsText as="span" variant="xs" tone="muted">{s.message}</SettingsText>}
+                </div>
+              ))}
+            </div>
+          </SettingsRow>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <SettingsPrimaryButton onClick={saveConfig} disabled={saving || !dirty}>

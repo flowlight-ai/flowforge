@@ -5,8 +5,10 @@ import { Search } from 'lucide-react';
 import {
   SettingsBadge,
   SettingsEmptyState,
+  SettingsHubLink,
   SettingsPrimaryButton,
   SettingsRow,
+  SettingsSearchInput,
   SettingsSection,
   SettingsText,
 } from '../primitives';
@@ -18,18 +20,6 @@ interface MarketPackage {
   version?: string;
   installed?: boolean;
 }
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  maxWidth: 320,
-  borderRadius: 'var(--radius-md)',
-  border: '1px solid var(--border-strong)',
-  background: 'var(--bg-elevated)',
-  padding: '6px 10px',
-  fontSize: '13px',
-  color: 'var(--text-strong)',
-  outline: 'none',
-};
 
 /**
  * MarketplaceSection — 能力市场（可搜索/安装/卸载）
@@ -140,6 +130,22 @@ export function MarketplaceSection() {
     }
   };
 
+  const update = async (name: string) => {
+    setBusy(`update:${name}`);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/v1/marketplace/update/${encodeURIComponent(name)}`, { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setMessage(`已更新 ${name}`);
+      await fetchInstalled();
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage(`更新 ${name} 失败（可能已是最新版本）`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (loading) {
     return <SettingsText as="p" tone="muted">加载中...</SettingsText>;
   }
@@ -152,15 +158,18 @@ export function MarketplaceSection() {
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input
-            style={inputStyle}
-            value={query}
-            placeholder="搜索市场插件，如 web-search"
-            onChange={(e) => setQuery(e.target.value)}
+          <div
+            style={{ flex: 1, maxWidth: 320 }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') search();
             }}
-          />
+          >
+            <SettingsSearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="搜索市场插件，如 web-search"
+            />
+          </div>
           <SettingsPrimaryButton onClick={search} disabled={searching || !query.trim()}>
             {searching ? '搜索中...' : '搜索'}
           </SettingsPrimaryButton>
@@ -221,9 +230,18 @@ export function MarketplaceSection() {
                 </>
               }
               actions={
-                <SettingsPrimaryButton onClick={() => uninstall(p.name)} disabled={busy === p.name}>
-                  {busy === p.name ? '卸载中...' : '卸载'}
-                </SettingsPrimaryButton>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <SettingsHubLink
+                    title={`更新 ${p.name} 到最新版本`}
+                    onClick={() => update(p.name)}
+                    style={{ opacity: busy === `update:${p.name}` ? 0.5 : 1 }}
+                  >
+                    {busy === `update:${p.name}` ? '更新中...' : '更新'}
+                  </SettingsHubLink>
+                  <SettingsPrimaryButton onClick={() => uninstall(p.name)} disabled={busy === p.name}>
+                    {busy === p.name ? '卸载中...' : '卸载'}
+                  </SettingsPrimaryButton>
+                </div>
               }
             />
           ))

@@ -17,6 +17,7 @@ from fastapi import APIRouter
 # ── 架构基础设施层 ──────────────────────────────────────────────
 from flowforge.app.api.core import system, auth, metrics, logs, mcp, connectors, notify
 from flowforge.app.api.core import routing, quotas, permissions, tool_usage, eval
+from flowforge.app.api.core import figma, browser
 
 # ── 智能体模块 ──────────────────────────────────────────────────
 from flowforge.app.api.agents import agents, modes, forgemind, external_agents
@@ -58,6 +59,9 @@ router.include_router(logs.router)
 router.include_router(mcp.router)
 router.include_router(connectors.router)
 router.include_router(notify.router)
+# Figma 导入（真实 REST API）与浏览器 DOM 探测（元素选择器）
+router.include_router(figma.router)
+router.include_router(browser.router)
 
 # ── 智能体 ──────────────────────────────────────────────────────
 router.include_router(agents.router)

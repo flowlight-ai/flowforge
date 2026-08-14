@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from flowforge.core.tracing import get_logger
@@ -139,3 +139,16 @@ async def create_connector(payload: ConnectorCreate) -> dict[str, Any]:
         _write_custom(custom)
     logger.info(f"connectors: 已创建并持久化连接器 {payload.name}")
     return entry
+
+
+@router.delete("/{connector_id}")
+async def delete_connector(connector_id: str) -> dict[str, Any]:
+    """删除自定义连接器（仅 custom 条目；内置 yaml 条目不可删）。"""
+    with _lock:
+        custom = _read_custom()
+        remaining = [c for c in custom if c.get("id") != connector_id]
+        if len(remaining) == len(custom):
+            raise HTTPException(status_code=404, detail=f"连接器 {connector_id} 不存在或为内置条目")
+        _write_custom(remaining)
+    logger.info(f"connectors: 已删除连接器 {connector_id}")
+    return {"id": connector_id, "deleted": True}
