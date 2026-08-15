@@ -3,7 +3,7 @@
  * lifecycle (created/ready/dispose) and service injection.
  */
 import { describe, expect, it } from 'vitest'
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context, Service } from '@flowforge/cordis'
 import { Host, createHost, sortManifests, type PluginManifest } from '../src/index.ts'
 
 /** 简单服务：提供 ctx.greeter。 */
@@ -32,7 +32,7 @@ class Farewell extends Service {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@flowforge/cordis' {
   interface Context {
     greeter: Greeter
     farewell: Farewell

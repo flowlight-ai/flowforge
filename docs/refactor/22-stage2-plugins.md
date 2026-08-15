@@ -7,7 +7,7 @@
 ## 插件开发契约（本阶段起强制，R13）
 
 每个插件包必须满足：
-1. `package.json`：`name: @flowforge/<域>-<名>`，`peerDependencies: { "@deepseek-ai/cordis": ... }`；
+1. `package.json`：`name: @flowforge/<域>-<名>`，`peerDependencies: { "@flowforge/cordis": ... }`；
 2. 导出 `apply(ctx)` 或插件类；
 3. `inject` 声明依赖的 `ctx.*` 服务；
 4. 可选 `schema`（schemastery）声明配置；
@@ -56,6 +56,10 @@
 - [ ] T2.28 `packages/plugins/resilience`：弹性栈（F23；对照 P: `core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_*}.py`）
 - [ ] T2.29 集成测试补充：session-query 检索/导出；sdk JSON-RPC 往返；ACP 桥接会话；
       preset 装配 forgekins 档案；skill-security 拒绝越权技能；弹性栈故障注入恢复
+- [ ] T2.30 `packages/hooks/*` + `packages/context/*`：事件钩子与上下文辅助域
+      （承接阶段 1 T1.9：hook-protocol / hooks-claude-code / hooks-codex /
+      agent-instructions / session-reference / time-context / tmux-context，共 7 包；
+      依赖 T2.3/T2.5/T2.10/T2.16 的 subagent/shell/fs/session-query，随本阶段一并移植）
 
 ## 验收标准
 

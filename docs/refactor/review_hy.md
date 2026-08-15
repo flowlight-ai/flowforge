@@ -1,4 +1,4 @@
-# FlowForge 2.0 重构方案 — 评审意见（review_hy）
+# FlowForge 0.2.0 重构方案 — 评审意见（review_hy）
 
 > 评审人：hy（Agent 高级工程师 / 全栈视角）
 > 评审对象：`docs/refactor/` 下 `00-overview.md`、`01-stack-decision.md`、`10-stage-map.md`、`20`–`30-*.md`
@@ -173,7 +173,7 @@ Explore-2 已完成 `ex/deepseek-harness` 源码级分析，确认 §3.2 全部�
 | 原发现 | 修订后落点 | 状态 |
 |---|---|---|
 | #1 缺 crosswalk | 新增 `02-source-crosswalk.md`（D→T / C→T / P→T 三向 file→file 地图 + 行为基线流程 §4） | ✅ |
-| #2 双栈路由 / DB 隔离 | R18（Python `/api/v1/*` + TS `/api/v2/*`、socket.io `/v2`；`data/flowforge-v2.db` + `ff2:` keyPrefix 物理隔离）+ `31-stage11-sunset.md` | ✅ |
+| #2 双栈路由 / DB 隔离 | R18（Python `/api/v1/*` + TS `/api/v2/*`、socket.io `/v2`；`data/flowforge-v0.2.db` + `ff2:` keyPrefix 物理隔离）+ `31-stage11-sunset.md` | ✅ |
 | #3 C21-C25 范围过大 | `10-stage-map.md §3.4` Stretch 清单（S1 IM / S2 TTS / S3 world·community），Phase 11 之后，不阻塞主线 | ✅ |
 | #4 vendor 策略未定 | R16 定为"源码 vendor + 快照锁定 + 显式 re-sync"，re-sync 流程已写明 | ✅ |
 | #5 插件发现两说 | R13 + `22-stage2-plugins.md`：内核 cordis 契约 + 应用层 `@flowforge/plugin-contract`（源自 clowder），统一 dsh YAML 装配模型，否决 clowder 目录扫描 | ✅ |

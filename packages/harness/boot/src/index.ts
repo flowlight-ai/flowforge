@@ -7,8 +7,8 @@
  * 3. 依赖等待与生命周期（created/ready/dispose）由 cordis Context 保证；
  * 4. 卸载 = ctx.stop()，卸载后 ctx.* 服务不可用（root context 为宽松读取：返回 undefined）。
  */
-import { Context } from '@deepseek-ai/cordis'
-import type { Plugin } from '@deepseek-ai/cordis'
+import { Context } from '@flowforge/cordis'
+import type { Plugin } from '@flowforge/cordis'
 
 /** 插件清单条目：R13 契约的 manifest 形态。 */
 export interface PluginManifest {

@@ -1,4 +1,4 @@
-# FlowForge 2.0 — 源码对照地图（Source Crosswalk）
+# FlowForge 0.2.0 — 源码对照地图（Source Crosswalk）
 
 > 状态：进行中 ｜ 创建：2026-08-16 ｜ 更新：2026-08-16（补全三源能力：dsh session-query/sdk/code-runtime/acp/web工具族/test-support/util 等；clowder auto-dream/guides/harness-eval 等；flowforge 魔法词/群/IM议会/进化引擎/弹性栈等）
 > 关联：`03-fusion-strategy.md`（融合分层与概念映射）

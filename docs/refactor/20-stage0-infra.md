@@ -38,7 +38,7 @@
 ## 验收标准
 
 1. `pnpm install && pnpm test` 在仓库根目录零报错。
-2. `import { Context } from '@deepseek-ai/cordis'` 可用（vendor 包可解析）。
+2. `import { Context } from '@flowforge/cordis'` 可用（vendor 包可解析）。
 3. **插件基座可用**：`packages/harness/boot` 能按 manifest 加载插件并完成
    生命周期（加载→启动→服务注入→停止），冒烟测试全绿。
 4. Python `pytest` 回归全绿，证明新增 TS 目录不影响旧版。
@@ -57,5 +57,5 @@ chore(refactor): 阶段0 TS基础设施/插件基座与重构计划文档 [luban
 
 - pnpm 本机为 10.30.3（dsh 声明 11.7.0）：lockfile 版本差异一般兼容；若 `pnpm install`
   报 lockfile 版本错误，先 `pnpm install --lockfile-only` 生成 v9 格式再装。
-- vendor 包 peerDependencies 指向 `@deepseek-ai/cordis-plugin-*`：一并 vendor 后
+- vendor 包 peerDependencies 指向 `@flowforge/cordis-plugin-*`：一并 vendor 后
   在根 `pnpm-workspace.yaml` 中注册，确保解析。

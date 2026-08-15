@@ -1,10 +1,10 @@
 /**
  * Stage-0 smoke test: verifies the vendored cordis runtime resolves and works
- * inside the FlowForge 2.0 TypeScript workspace, including the plugin host
+ * inside the FlowForge 0.2.0 TypeScript workspace, including the plugin host
  * (packages/harness/boot) assembly.
  */
 import { describe, expect, it } from 'vitest'
-import { Context, FiberState, Service } from '@deepseek-ai/cordis'
+import { Context, FiberState, Service } from '@flowforge/cordis'
 import { createHost } from '@flowforge/harness-boot'
 
 /** Minimal example service, mirroring cordis README conventions. */
@@ -20,7 +20,7 @@ class Clock extends Service {
   }
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@flowforge/cordis' {
   interface Context {
     clock: Clock
   }
