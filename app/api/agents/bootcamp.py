@@ -20,12 +20,17 @@
     phase-11-farewell    — 毕业
 
 端点：
-    - ``GET  /api/v1/bootcamp/env-check``              — 环境检测
+    - ``GET  /api/v1/bootcamp/env-check``              — 环境检测（联动 doctor_lib 深度检测）
     - ``GET  /api/v1/bootcamp/threads``                — 列出所有训练营会话
     - ``POST /api/v1/bootcamp/threads``                — 创建训练营会话
     - ``GET  /api/v1/bootcamp/threads/{id}``           — 获取训练营会话详情
     - ``POST /api/v1/bootcamp/threads/{id}/advance``   — 推进到下一阶段
     - ``POST /api/v1/bootcamp/threads/{id}/env-check`` — 触发环境检测并更新状态
+
+环境检测说明：
+    - 不再使用本文件自有的 _check_tool_sync 逻辑（仅检测 7 个基础工具）
+    - 改为联动 scripts/doctor_lib.py 的 run_full_check() 进行深度检测
+    - 覆盖 5 个核心工具 + 8 个 AI CLI 工具 + 3 个代理服务 + Trae 桥接 + .env/.venv/web 依赖
 
 状态机约束（参考 clowder-ai callback-bootcamp-routes.ts）：
     - forward-only：只允许前进，每次最多推进 1 步
@@ -36,8 +41,9 @@
 from __future__ import annotations
 
 import asyncio
-import shutil
-import subprocess
+import importlib
+import sys as _sys
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -117,233 +123,135 @@ class BootcampAdvanceRequest(BaseModel):
 
 
 class EnvCheckResult(BaseModel):
-    """环境检测结果。"""
-    tools: dict[str, dict[str, Any]] = Field(
-        default_factory=dict,
-        description="工具检测结果：{tool_name: {ok, version, note}}",
-    )
-    all_core_ok: bool = Field(
-        default=False,
-        description="核心工具是否全部可用",
-    )
+    """环境检测结果（联动 scripts/doctor_lib.py 的 run_full_check 深度检测）。
 
-
-# ── 环境检测逻辑（参考 clowder-ai env-check.ts runEnvironmentCheck）──
-
-CORE_TOOLS = ["python", "git", "node", "npm"]
-OPTIONAL_TOOLS = ["pnpm", "docker", "uvicorn"]
-
-
-def _check_tool_sync(tool: str) -> dict[str, Any]:
-    """检测单个工具是否可用（同步实现，由 _check_tool 在线程池中调用）.
-
-    Windows 注意：
-        - asyncio.create_subprocess_exec 在某些事件循环下会静默失败
-        - 改用 subprocess.run（同步）+ asyncio 线程池调度，稳定性更高
-        - Windows 下 uvicorn 不带 --version，需对 uvicorn 特殊处理
-
-    Returns:
-        {"ok": bool, "version": str, "note": str}
-    """
-    # 1. 先用 shutil.which 判断是否在 PATH
-    resolved = shutil.which(tool)
-    if resolved is None:
-        return {"ok": False, "version": "", "note": f"{tool} 未安装或不在 PATH"}
-
-    # 2. uvicorn 是 Python 模块，没有独立的 --version CLI
-    if tool == "uvicorn":
-        try:
-            import uvicorn as _uv  # noqa: F401
-            return {
-                "ok": True,
-                "version": f"v{_uv.__version__}",
-                "note": "",
-            }
-        except Exception as exc:  # noqa: BLE001
-            return {"ok": False, "version": "", "note": f"uvicorn 导入失败: {exc}"}
-
-    # 3. 通用：执行 `<tool> --version`
-    try:
-        proc = subprocess.run(
-            [tool, "--version"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=5,
-            shell=False,
-        )
-        version = (
-            proc.stdout.decode("utf-8", errors="ignore").strip()
-            or proc.stderr.decode("utf-8", errors="ignore").strip()
-        )
-        # 取第一行（版本号通常在第一行）
-        version = version.split("\n")[0] if version else ""
-        if proc.returncode == 0 or version:
-            return {"ok": True, "version": version, "note": ""}
-        return {
-            "ok": False,
-            "version": "",
-            "note": f"{tool} --version 退出码 {proc.returncode}",
-        }
-    except subprocess.TimeoutExpired:
-        return {"ok": False, "version": "", "note": f"{tool} --version 超时"}
-    except FileNotFoundError:
-        return {"ok": False, "version": "", "note": f"{tool} 未安装或不在 PATH"}
-    except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "version": "", "note": f"{tool} 检测异常: {exc}"}
-
-
-async def _check_tool(tool: str) -> dict[str, Any]:
-    """检测单个工具是否可用（在线程池中执行同步检测）.
-
-    Returns:
-        {"ok": bool, "version": str, "note": str}
-    """
-    return await asyncio.get_event_loop().run_in_executor(
-        None, _check_tool_sync, tool
-    )
-
-
-async def run_environment_check() -> dict[str, Any]:
-    """运行完整环境检测（联动 doctor.py，覆盖 9 个灵智体所需全部依赖）.
-
-    检测项（通过调用 doctor.py 的 run_doctor 实现）：
-        - Python/Node/Git 基础环境
-        - 8 个 CLI 工具（claude/codex/gemini/opencode/codebuddy/qodercli/iflow/kimi）
-        - 3 个协议代理（claude-code-router/responses-proxy/gemini-proxy）
+    返回格式与 doctor_lib.run_full_check() 完全一致，覆盖：
+        - 5 个核心工具 (python/node/npm/git/pnpm)
+        - 8 个 AI CLI 工具 (claude/codex/gemini/opencode/codebuddy/qodercli/iflow/kimi)
+        - 3 个协议代理 (claude-code-router/responses-proxy/gemini-proxy)
         - Trae 桥接目录（butterfly 灵智体）
-        - .env 配置文件（含 API key 检测）
-        - .venv 虚拟环境
-        - web/node_modules 前端依赖
+        - .env 配置文件、.venv 虚拟环境、web 前端依赖
+    """
+    core_tools: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="核心工具检测结果：{python/node/npm/git/pnpm: {ok, version, path}}",
+    )
+    cli_tools: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="AI CLI 工具检测结果（8 个灵智体所需）",
+    )
+    proxy_services: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="代理服务检测结果：{claude-code-router/responses-proxy/gemini-proxy}",
+    )
+    trae_bridge: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Trae 桥接状态：{ok, dir, status}",
+    )
+    env_file: dict[str, Any] = Field(
+        default_factory=dict,
+        description=".env 配置文件状态",
+    )
+    venv: dict[str, Any] = Field(
+        default_factory=dict,
+        description=".venv 虚拟环境状态",
+    )
+    web_deps: dict[str, Any] = Field(
+        default_factory=dict,
+        description="前端依赖状态（web/node_modules）",
+    )
+    all_ready: bool = Field(
+        default=False,
+        description="是否全部就绪（核心+CLI+代理+桥接）",
+    )
+    missing: list[str] = Field(
+        default_factory=list,
+        description="缺失项名称列表（如 ['codex', 'responses-proxy']）",
+    )
+    install_hint: str = Field(
+        default="",
+        description="给用户的安装提示文案",
+    )
+
+
+# ── 环境检测逻辑（联动 doctor_lib.run_full_check）─────────────────
+
+def _run_doctor_lib_sync() -> dict[str, Any]:
+    """同步调用 scripts/doctor_lib.py 的 run_full_check（在线程池中执行）.
+
+    将 doctor_lib 的结构化检测结果作为 dict 返回，供 bootcamp 使用。
+    如果 doctor_lib 不可用，返回最小降级结构。
 
     Returns:
-        {
-            "tools": {tool_name: {ok, version, note}},
-            "all_core_ok": bool,
-            "cli_tools": [...],
-            "proxies": [...],
-            "trae_bridge": {...},
-            "env_file": {...},
-            "venv": {...},
-            "web_deps": {...},
-            "missing_cli": [...],
-            "install_hint": str,
-        }
-    """
-    # 先运行基础工具检测（保持兼容性）
-    all_tools = CORE_TOOLS + OPTIONAL_TOOLS
-    results = await asyncio.gather(*[_check_tool(t) for t in all_tools])
-
-    tools: dict[str, dict[str, Any]] = {}
-    for tool, result in zip(all_tools, results):
-        tools[tool] = result
-
-    all_core_ok = all(tools[t]["ok"] for t in CORE_TOOLS)
-
-    # 联动 doctor.py 进行深度检测（在线程池中运行避免阻塞）
-    doctor_results = await asyncio.get_event_loop().run_in_executor(
-        None, _run_doctor_sync
-    )
-
-    # 提取 CLI 工具检测结果
-    cli_tools = doctor_results.get("cli_tools", [])
-    missing_cli = [
-        t["name"] for t in cli_tools
-        if isinstance(t, dict) and t.get("status") == "missing"
-    ]
-
-    # 提取 Trae 桥接状态
-    trae_bridge = doctor_results.get("trae_bridge", {})
-
-    # 提取 .env 配置状态
-    env_file = doctor_results.get("env_file", {})
-
-    # 提取 venv 状态
-    venv = doctor_results.get("venv", {})
-
-    # 提取 web 依赖状态
-    web_deps = doctor_results.get("web_deps", {})
-
-    # 生成安装提示
-    install_hint = ""
-    if missing_cli:
-        install_hint = (
-            f"检测到 {len(missing_cli)} 个 CLI 工具未安装: {', '.join(missing_cli)}。"
-            "请运行 install.bat（Windows）或 ./install.sh（Unix）一键安装。"
-        )
-    elif not all_core_ok:
-        install_hint = "核心开发工具缺失，请先安装 Python/Node.js/Git。"
-    elif not env_file.get("exists", False):
-        install_hint = ".env 配置文件不存在，请运行 install 脚本生成。"
-    elif not venv.get("exists", False):
-        install_hint = ".venv 虚拟环境不存在，请运行 install 脚本创建。"
-    else:
-        install_hint = "环境就绪！可以开始使用 FlowForge。"
-
-    logger.info(
-        "bootcamp 环境检测（联动 doctor）: core_ok=%s missing_cli=%s trae_bridge=%s",
-        all_core_ok,
-        missing_cli,
-        trae_bridge.get("status", "unknown"),
-    )
-
-    return {
-        "tools": tools,
-        "all_core_ok": all_core_ok,
-        "cli_tools": cli_tools,
-        "proxies": doctor_results.get("proxies", []),
-        "trae_bridge": trae_bridge,
-        "env_file": env_file,
-        "venv": venv,
-        "web_deps": web_deps,
-        "missing_cli": missing_cli,
-        "install_hint": install_hint,
-    }
-
-
-def _run_doctor_sync() -> dict[str, Any]:
-    """同步调用 doctor.py 的 run_doctor（在线程池中执行）.
-
-    将 doctor.py 的检测结果作为 dict 返回，供 bootcamp 使用。
-    如果 doctor 模块不可用，返回空 dict 降级。
+        doctor_lib.run_full_check() 的完整 dict，或降级结构
     """
     try:
-        # 动态导入 doctor 模块（避免硬依赖）
-        import importlib
-        import sys as _sys
-        from pathlib import Path
-
-        # 将 scripts 目录加入 sys.path
+        # 将 scripts 目录加入 sys.path（避免硬编码包路径）
         scripts_dir = str(Path(__file__).resolve().parents[3] / "scripts")
         if scripts_dir not in _sys.path:
             _sys.path.insert(0, scripts_dir)
 
-        doctor_mod = importlib.import_module("doctor")
-        # 调用 run_doctor(json_output=True) 获取结构化结果
-        # 注意：run_doctor 会打印到 stdout，我们用 json_output 获取 JSON
-        import io
-        import contextlib
+        doctor_lib = importlib.import_module("doctor_lib")
+        return doctor_lib.run_full_check()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("doctor_lib 联动失败，降级为最小结构: %s", exc)
+        return {
+            "core_tools": {},
+            "cli_tools": {},
+            "proxy_services": {},
+            "trae_bridge": {"ok": False, "dir": "", "status": "unknown"},
+            "env_file": {"status": "unknown"},
+            "venv": {"status": "unknown"},
+            "web_deps": {"status": "unknown"},
+            "all_ready": False,
+            "missing": ["doctor_lib_unavailable"],
+            "install_hint": (
+                f"环境检测联动 doctor_lib 失败: {exc}。"
+                "请检查 scripts/doctor_lib.py 是否存在。"
+            ),
+        }
 
-        # 捕获 stdout（doctor 会打印检测结果）
-        old_stdout = _sys.stdout
-        _sys.stdout = io.StringIO()
-        try:
-            results = doctor_mod.run_doctor(json_output=True)
-        finally:
-            _sys.stdout = old_stdout
 
-        return results
-    except Exception as exc:
-        logger.warning("doctor.py 联动失败，降级为基础检测: %s", exc)
-        return {}
+async def run_environment_check() -> dict[str, Any]:
+    """运行完整环境检测（联动 scripts/doctor_lib.py 的 run_full_check）.
+
+    检测覆盖（与 doctor.py --json 完全一致）：
+        - 核心工具：python / node / npm / git / pnpm（5 项）
+        - AI CLI 工具：claude/codex/gemini/opencode/codebuddy/qodercli/iflow/kimi（8 项）
+        - 协议代理：claude-code-router / responses-proxy / gemini-proxy（3 项）
+        - Trae 桥接目录（butterfly 灵智体，FLOWFORGE_BRIDGE_DIR 环境变量）
+        - .env 配置文件（含 4 个 API key 配置率检测）
+        - .venv 虚拟环境
+        - web/node_modules 前端依赖
+
+    在线程池中执行（doctor_lib 是同步阻塞的 socket/subprocess 调用），
+    避免阻塞 FastAPI 事件循环。
+
+    Returns:
+        doctor_lib.run_full_check() 的完整 dict，结构见 EnvCheckResult 模型。
+    """
+    # 在线程池中运行 doctor_lib（避免阻塞事件循环）
+    results = await asyncio.get_event_loop().run_in_executor(
+        None, _run_doctor_lib_sync
+    )
+
+    logger.info(
+        "bootcamp 环境检测（联动 doctor_lib）: all_ready=%s missing=%s",
+        results.get("all_ready", False),
+        results.get("missing", []),
+    )
+
+    return results
 
 
 # ── API 端点 ─────────────────────────────────────────────────────
 
 @router.get("/env-check")
 async def env_check() -> dict[str, Any]:
-    """环境检测 — 检测用户机器上的开发工具是否就绪.
+    """环境检测 — 联动 doctor_lib 深度检测用户机器开发工具就绪情况.
 
     用于训练营 phase-2-env-check 阶段，判断是否需要进入 phase-3-config-help。
+    返回格式见 EnvCheckResult 模型。
     """
     return await run_environment_check()
 
@@ -491,8 +399,12 @@ async def advance_phase(thread_id: str, payload: BootcampAdvanceRequest) -> dict
 async def trigger_env_check(thread_id: str) -> dict[str, Any]:
     """触发环境检测并更新训练营状态.
 
-    在 phase-2-env-check 阶段调用，检测结果写入 bootcamp_state.envCheck。
-    若核心工具全部可用，自动推进到 phase-4-task-select（跳过 phase-3）。
+    在 phase-2-env-check 阶段调用，检测结果写入 bootcamp_state.envCheck
+    （存完整 dict，供前端 BootcampWizard 展示 core_tools/cli_tools/proxy_services
+    等分块结果）。
+
+    若环境全部就绪（all_ready=True），自动推进到 phase-4-task-select
+    （跳过 phase-3-config-help）；否则推进到 phase-3-config-help。
     """
     store = get_thread_store()
     thread = store.get_thread(thread_id)
@@ -503,25 +415,25 @@ async def trigger_env_check(thread_id: str) -> dict[str, Any]:
     if not current_state:
         raise HTTPException(status_code=400, detail=f"会话 {thread_id} 不是训练营会话")
 
-    # 运行环境检测
+    # 运行环境检测（联动 doctor_lib.run_full_check）
     result = await run_environment_check()
 
-    # 更新 bootcamp_state.envCheck
-    store.patch_bootcamp_state(thread_id, {"envCheck": result["tools"]})
+    # 更新 bootcamp_state.envCheck（存完整结果，便于前端分块展示）
+    store.patch_bootcamp_state(thread_id, {"envCheck": result})
 
-    # 若核心工具全 OK 且当前在 phase-2，自动推进到 phase-4
+    # 若环境全部就绪且当前在 phase-2，自动推进到 phase-4
     current_phase = current_state.get("phase", "phase-1-intro")
     next_phase = None
     if current_phase == "phase-2-env-check":
-        if result["all_core_ok"]:
+        if result["all_ready"]:
             next_phase = "phase-4-task-select"
         else:
             next_phase = "phase-3-config-help"
 
         store.patch_bootcamp_state(thread_id, {"phase": next_phase})
         logger.info(
-            "训练营环境检测完成: thread=%s core_ok=%s → %s",
-            thread_id, result["all_core_ok"], next_phase,
+            "训练营环境检测完成: thread=%s all_ready=%s → %s",
+            thread_id, result["all_ready"], next_phase,
         )
 
     return {

@@ -19,6 +19,7 @@ Public surface:
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from pathlib import Path
 from typing import Any
@@ -144,39 +145,104 @@ def _forgekin_profile(fk_cfg: dict) -> dict:
     }
 
 
-def _route_message(content: str, forgekins: dict[str, dict]) -> list[dict]:
-    """Decide which forgekins respond, in what order, based on routing rules.
+# ── @mention routing tables (参考 clowder-ai AgentRouter) ─────────────────────
 
-    Mirrors config/im_channels.yaml keyword routing. Returns a list of
-    {forgekin_id, role, delay_ms} dicts.
+# forgekin_id => 所有可能的 @ 名称(小写),用于 @mention 解析
+_MENTION_MAP: dict[str, list[str]] = {
+    "fk-wenxin": ["wenxin", "文心", "fk-wenxin"],
+    "fk-sherlock": ["sherlock", "夏洛克", "fk-sherlock"],
+    "fk-luban": ["luban", "鲁班", "fk-luban"],
+    "fk-vangogh": ["vangogh", "梵高", "fk-vangogh"],
+    "fk-davinci": ["davinci", "达芬奇", "fk-davinci"],
+    "fk-keane": ["keane", "凯恩", "fk-keane"],
+    "fk-humming": ["humming", "蜂鸟", "fk-humming"],
+    "fk-sqrl": ["sqrl", "铃鼓", "fk-sqrl"],
+    "fk-butterfly": ["butterfly", "幻蝶", "fk-butterfly"],
+}
+# 触发"全员并行讨论"的关键词(小写)
+_ALL_MENTION_KEYWORDS: list[str] = ["all", "全体", "所有人", "thread", "本帖", "所有"]
+
+
+def _find_recent_forgekin(recent_messages: list) -> str | None:
+    """从消息历史中找出最近一条由灵智体回复的 author_id,找不到返回 None。"""
+    for msg in reversed(recent_messages or []):
+        # 兼容 ChatMessage dataclass 与 dict 两种形态
+        role = getattr(msg, "author_role", None)
+        if role is None and isinstance(msg, dict):
+            role = msg.get("author_role")
+        if role == "forgekin":
+            author_id = getattr(msg, "author_id", None)
+            if author_id is None and isinstance(msg, dict):
+                author_id = msg.get("author_id")
+            if author_id:
+                return author_id
+    return None
+
+
+def _parse_mentions(content: str, mentions: list[str]) -> list[str]:
+    """合并前端传入的 mentions 与从 content 扫描出的 @token,统一小写去重。"""
+    tokens: list[str] = [m.lower() for m in (mentions or [])]
+    for match in re.findall(r"@([^\s@]+)", content or ""):
+        tokens.append(match.lower())
+    seen: set[str] = set()
+    unique: list[str] = []
+    for tok in tokens:
+        if tok and tok not in seen:
+            seen.add(tok)
+            unique.append(tok)
+    return unique
+
+
+def _route_message(
+    content: str,
+    forgekins: dict[str, dict],
+    mentions: list[str] | None = None,
+    recent_messages: list | None = None,
+) -> list[dict]:
+    """基于 @mention 规则决定哪些灵智体回复。
+
+    路由规则(参考 clowder-ai AgentRouter):
+    1. @all/@全体/@thread/@本帖 → 所有灵智体并行讨论(ideate 模式)
+    2. @具体灵智体名(如 @文心/@wenxin/@fk-wenxin) → 仅该灵智体回复
+    3. 无 @mention → 路由到"最近回复的灵智体"(fallback 到默认主灵智体 fk-wenxin)
+
+    Returns list of {forgekin_id, role, delay_ms, strategy} dicts.
+    strategy: "serial"(默认) | "parallel"(@all 时并行讨论)
     """
-    content_lower = content.lower()
-    routing: list[dict] = []
+    all_tokens = _parse_mentions(content, mentions or [])
+    recent_fk = _find_recent_forgekin(recent_messages or [])
+    default_primary = recent_fk or "fk-wenxin"
 
-    if any(kw in content_lower for kw in ["doc", "文档", "spec", "readme", "文档审核"]):
-        routing.append({"forgekin_id": "fk-wenxin", "role": "primary", "delay_ms": 200})
-        routing.append({"forgekin_id": "fk-vangogh", "role": "reviewer", "delay_ms": 500})
-        routing.append({"forgekin_id": "fk-davinci", "role": "reviewer", "delay_ms": 800})
-    elif any(kw in content_lower for kw in ["code", "代码", "bug", "fix", "实现", "refactor"]):
-        routing.append({"forgekin_id": "fk-sherlock", "role": "primary", "delay_ms": 200})
-        routing.append({"forgekin_id": "fk-vangogh", "role": "reviewer", "delay_ms": 500})
-        routing.append({"forgekin_id": "fk-davinci", "role": "tester", "delay_ms": 800})
-    elif any(kw in content_lower for kw in ["framework", "框架", "架构", "core", "di"]):
-        routing.append({"forgekin_id": "fk-luban", "role": "primary", "delay_ms": 200})
-        routing.append({"forgekin_id": "fk-vangogh", "role": "reviewer", "delay_ms": 500})
-        routing.append({"forgekin_id": "fk-wenxin", "role": "reviewer", "delay_ms": 800})
-    elif any(kw in content_lower for kw in ["test", "测试", "pytest", "coverage", "t7", "t8"]):
-        routing.append({"forgekin_id": "fk-davinci", "role": "primary", "delay_ms": 200})
-        routing.append({"forgekin_id": "fk-sherlock", "role": "reviewer", "delay_ms": 500})
-    elif any(kw in content_lower for kw in ["review", "审查", "审核", "approve", "merge"]):
-        routing.append({"forgekin_id": "fk-vangogh", "role": "primary", "delay_ms": 200})
-        routing.append({"forgekin_id": "fk-davinci", "role": "reviewer", "delay_ms": 500})
-    else:
-        # Default: 文心 responds (general coordination)
-        routing.append({"forgekin_id": "fk-wenxin", "role": "primary", "delay_ms": 200})
-        routing.append({"forgekin_id": "fk-vangogh", "role": "reviewer", "delay_ms": 500})
+    # 规则1: @all → 所有 9 个灵智体并行讨论
+    if any(tok in _ALL_MENTION_KEYWORDS for tok in all_tokens):
+        routes: list[dict] = []
+        for fk_id in _MENTION_MAP:
+            role = "primary" if fk_id == default_primary else "discussant"
+            routes.append({
+                "forgekin_id": fk_id,
+                "role": role,
+                "delay_ms": 0,
+                "strategy": "parallel",
+            })
+        return routes
 
-    return routing
+    # 规则2: @具体灵智体名 → 仅该灵智体
+    for fk_id, aliases in _MENTION_MAP.items():
+        if any(tok in aliases for tok in all_tokens):
+            return [{
+                "forgekin_id": fk_id,
+                "role": "primary",
+                "delay_ms": 0,
+                "strategy": "serial",
+            }]
+
+    # 规则3: 无 @mention → 最近回复的灵智体(fallback fk-wenxin)
+    return [{
+        "forgekin_id": default_primary,
+        "role": "primary",
+        "delay_ms": 0,
+        "strategy": "serial",
+    }]
 
 
 def _find_forgekin_cfg(forgekins: dict[str, dict], fk_id: str) -> dict | None:

@@ -48,6 +48,21 @@ export default function HelmLayout() {
     }
   }, [urlMode, router]);
 
+  // 路由级预加载：空闲时预取 /council 代码与数据，
+  // 使 solo → council 跳转秒开（参考 clowder-ai 精确订阅 + 预加载策略）
+  useEffect(() => {
+    const idle =
+      (typeof window !== "undefined" && "requestIdleCallback" in window)
+        ? (window as any).requestIdleCallback
+        : (cb: () => void) => setTimeout(cb, 1500);
+    const handle = idle(() => router.prefetch("/council"));
+    return () => {
+      if (typeof window !== "undefined" && "cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(handle);
+      }
+    };
+  }, [router]);
+
   // normal/auto 静默映射为 helm
   const initialMode: HelmMode = urlMode === "council" ? "helm" : "helm";
   const [mode, setMode] = useState<HelmMode>(initialMode);

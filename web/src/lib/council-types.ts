@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Council Chat 类型定义 — 5 灵智体协作群聊
  *
  * 对应后端 /api/v1/forgemind/* 端点：
@@ -289,6 +289,10 @@ export const FORGEKIN_COLORS: Record<string, { primary: string; secondary: strin
   luban: { primary: "#8B7355", secondary: "#F5E6D3" },     // 猫头鹰棕褐
   vangogh: { primary: "#9B2C2C", secondary: "#FED7D7" },   // 狐狸红
   davinci: { primary: "#2D7D6E", secondary: "#C6E6D4" },   // 熊绿
+  keane: { primary: "#8B0000", secondary: "#D2B48C" },     // 鹰眼深邃红
+  humming: { primary: "#20B2AA", secondary: "#FFD700" },   // 蜂鸟翠绿
+  sqrl: { primary: "#A0522D", secondary: "#D2691E" },      // 松鼠棕
+  butterfly: { primary: "#DA70D6", secondary: "#FFB6C1" }, // 幻蝶紫
 };
 
 /** 灵智体图标 emoji（用于头像占位） */
@@ -298,6 +302,10 @@ export const FORGEKIN_EMOJI: Record<string, string> = {
   luban: "🦉",      // 猫头鹰
   vangogh: "🦊",    // 狐狸
   davinci: "🐻",    // 熊
+  keane: "🦅",      // 鹰
+  humming: "🐦",    // 蜂鸟
+  sqrl: "🐿️",      // 松鼠
+  butterfly: "🦋",  // 蝴蝶
 };
 
 // ── 会话列表增强类型（参考 clowder-ai ThreadSidebar Tab 分组） ──

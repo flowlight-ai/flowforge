@@ -8,6 +8,8 @@
  */
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
 import { useShellConfig } from "@/lib/shell-config";
 import type { BootcampState } from "@/lib/bootcamp-types";
@@ -61,6 +63,7 @@ const configLinkStyle: React.CSSProperties = {
 
 export function CouncilContent({ threadId }: { threadId: string | null }) {
   const config = useShellConfig();
+  const router = useRouter();
   // 右栏 Workspace 默认显示（参考 clowder-ai 三栏布局）
   const [showWorkspace, setShowWorkspace] = useState(true);
   const [taskTitle, setTaskTitle] = useState<string>("");
@@ -68,6 +71,21 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
   const [bootcampState, setBootcampState] = useState<BootcampState | null>(null);
 
   const handleTitleChange = useCallback((t: string) => setTaskTitle(t), []);
+
+  // 路由级预加载：空闲时预取 /solo 代码与数据，
+  // 使 council → solo 跳转秒开（参考 clowder-ai 精确订阅 + 预加载策略）
+  useEffect(() => {
+    const idle =
+      (typeof window !== "undefined" && "requestIdleCallback" in window)
+        ? (window as any).requestIdleCallback
+        : (cb: () => void) => setTimeout(cb, 1500);
+    const handle = idle(() => router.prefetch("/solo"));
+    return () => {
+      if (typeof window !== "undefined" && "cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(handle);
+      }
+    };
+  }, [router]);
 
   // 当 threadId 变化时，获取会话详情检查是否有 bootcamp_state
   useEffect(() => {
@@ -266,8 +284,9 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
           >
             ▣ 工作区
           </button>
-          <a
+          <Link
             href="/solo"
+            prefetch
             aria-label="返回对话"
             title="返回对话"
             data-council-action="back-to-solo"
@@ -284,7 +303,7 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
             }}
           >
             ← 对话
-          </a>
+          </Link>
         </div>
       </header>
 
