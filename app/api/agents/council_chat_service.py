@@ -23,7 +23,7 @@ from flowforge.core.errors import LLMError
 from flowforge.core.tracing import generate_trace_id, get_logger, set_trace_id
 from flowforge.forgemind.external_agents import ExternalAgentError
 from flowforge.llm.council_bridge import ForgekinReply, T7AuditResult
-from flowforge.web_legacy_backup.metrics import get_collector as _get_metrics_collector
+from flowforge.observability.metrics_collector import get_collector as _get_metrics_collector
 
 from .council_helpers import (
     AVATARS,

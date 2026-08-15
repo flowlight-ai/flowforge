@@ -339,6 +339,10 @@ app.include_router(router)
 from flowforge.app.api.plugin_frontend_api import router as frontend_api_router
 app.include_router(frontend_api_router)
 
+# Forgekin Council API（前端群聊 /api/v1/forgemind/council/*）
+from flowforge.app.api.agents import council as _council
+app.include_router(_council.router)
+
 # Optional routers (guarded imports)
 for _module_path, _attr in [
     ("flowforge.app.api.endpoints.websocket", "router"),

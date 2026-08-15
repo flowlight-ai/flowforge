@@ -781,3 +781,32 @@ class MetricsCollector:
             "histogram_count": len(self._histograms),
             "bucket_config_count": len(self._histogram_buckets),
         }
+
+    def get_json_metrics(self) -> dict:
+        """返回 JSON 格式的完整指标（旧接口兼容）。
+
+        供 council dashboard 等调用（原 ``web_legacy_backup.metrics`` 提供）。
+        """
+        return self.get_all_metrics()
+
+
+# ── 全局单例 ────────────────────────────────────────────────────────────────
+# 供 council 等服务直接调用（原引用 flowforge.web_legacy_backup.metrics，已废弃）。
+
+_global_collector: Optional[MetricsCollector] = None
+
+
+def get_collector() -> MetricsCollector:
+    """返回进程级全局 MetricsCollector 单例（惰性创建）。
+
+    兼容旧接口 ``web_legacy_backup.metrics.get_collector``。
+    """
+    global _global_collector
+    if _global_collector is None:
+        _global_collector = MetricsCollector()
+    return _global_collector
+
+
+def get_json_metrics() -> dict:
+    """返回全局 collector 的 JSON 格式指标（旧接口兼容）。"""
+    return get_collector().get_all_metrics()

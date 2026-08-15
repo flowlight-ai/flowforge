@@ -7,7 +7,7 @@
  * 移植自 clowder-ai MarketplacePanel，简化为无 store 单容器版。
  *
  * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
- * API：GET /api/v1/marketplace/artifacts?keyword=&category=&sort=
+ * API：GET /api/v1/marketplace/search?q=&category=   （返回 plugins 清单）
  *      POST /api/v1/marketplace/install
  */
 
@@ -28,14 +28,34 @@ export function Marketplace() {
     setLoading(true);
     setError(null);
     try {
+      // 后端实际端点：GET /api/v1/marketplace/search?q=&category= 返回 { plugins: [PluginManifest] }
       const params = new URLSearchParams();
-      if (query.keyword) params.set("keyword", query.keyword);
+      if (query.keyword) params.set("q", query.keyword);
       if (query.category !== "all") params.set("category", query.category);
-      params.set("sort", query.sort);
-      const res = await fetch(`/api/v1/marketplace/artifacts?${params}`);
+      const res = await fetch(`/api/v1/marketplace/search?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const list: MarketplaceArtifact[] = data?.items ?? data?.artifacts ?? [];
+      const plugins: Array<Record<string, unknown>> = data?.plugins ?? data?.items ?? [];
+      // PluginManifest -> MarketplaceArtifact 字段映射
+      const list: MarketplaceArtifact[] = (Array.isArray(plugins) ? plugins : []).map((p) => ({
+        id: String(p.name ?? ""),
+        ecosystem: "flowforge",
+        artifactId: String(p.name ?? ""),
+        name: String(p.name ?? ""),
+        displayName: String(p.display_name ?? p.name ?? ""),
+        description: String(p.description ?? ""),
+        author: String(p.author ?? ""),
+        category: String(p.category ?? "tool"),
+        version: String(p.version ?? "1.0.0"),
+        installs: 0,
+        rating: 0,
+        tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+        verified: false,
+        featured: false,
+      }));
+      if (query.sort === "name") {
+        list.sort((a, b) => a.displayName.localeCompare(b.displayName));
+      }
       setItems(list);
       const cats = Array.from(new Set(list.map((i) => i.category))).sort();
       setCategories(cats.length > 0 ? cats : DEFAULT_CATEGORIES);
@@ -55,7 +75,7 @@ export function Marketplace() {
     await fetch("/api/v1/marketplace/install", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ artifactId: id }),
+      body: JSON.stringify({ name: id }),
     });
   }, []);
 

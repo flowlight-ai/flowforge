@@ -53,7 +53,7 @@ def _get_marketplace():
 
 @router.get("/search")
 async def search_plugins(
-    q: str = Query(..., description="Search query keyword"),
+    q: str = Query("", description="Search query keyword"),
     category: str | None = Query(None, description="Filter by category"),
 ):
     """Search the marketplace for plugins.

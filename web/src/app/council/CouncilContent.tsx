@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
 import { useShellConfig } from "@/lib/shell-config";
 import type { BootcampState } from "@/lib/bootcamp-types";
+import type { ForgekinRosterItem } from "@/lib/council-types";
+import { useCouncilPanelStore } from "@/stores/councilPanelStore";
 
 // 性能优化：CouncilThreadList 动态导入（减少首屏 JS 体积）
 const CouncilThreadList = dynamic(
@@ -111,6 +113,27 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
     })();
     return () => { cancelled = true; };
   }, [threadId]);
+
+  // 页面级加载灵智体花名册并同步到共享 store —
+  // 对齐 clowder-ai"打开即显示成员"：WorkspacePanel 的智能体面板
+  // 无需等选中会话即可展示成员列表（原逻辑依赖 CouncilChatPanel 挂载才加载）
+  const syncPanelStore = useCouncilPanelStore((s) => s.syncState);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/v1/forgemind/roster");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const items: ForgekinRosterItem[] = data.builtin || [];
+        syncPanelStore({ roster: items.filter((r) => r.available && !r.error) });
+      } catch {
+        // 静默失败：CouncilChatPanel 挂载后仍会尝试加载
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [syncPanelStore]);
 
   return (
     <div

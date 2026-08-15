@@ -37,7 +37,21 @@ export function SignalsOverview({ initialReferrerThread }: SignalsOverviewProps 
       const res = await fetch(`/api/v1/signals?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const list: Signal[] = data?.items ?? data?.signals ?? [];
+      // 后端返回 snake_case（observed_at/source_id/source_name），前端接口用 camelCase，这里做归一化
+      const raw: Array<Record<string, unknown>> = data?.items ?? data?.signals ?? [];
+      const list: Signal[] = raw.map((s) => ({
+        id: String(s.id ?? ""),
+        sourceId: String(s.source_id ?? s.sourceId ?? ""),
+        sourceName: String(s.source_name ?? s.sourceName ?? ""),
+        title: String(s.title ?? ""),
+        summary: String(s.summary ?? ""),
+        severity: (s.severity as SignalSeverity) ?? "info",
+        strength: Number(s.strength ?? 0),
+        observedAt: String(s.observed_at ?? s.observedAt ?? ""),
+        anchor: s.anchor ? String(s.anchor) : undefined,
+        tags: Array.isArray(s.tags) ? (s.tags as string[]) : undefined,
+        read: Boolean(s.read ?? false),
+      }));
       setSignals(list);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
