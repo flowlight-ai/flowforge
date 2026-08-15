@@ -137,6 +137,15 @@ e2e_*.ps1
 e2e_*.py
 e2e_*.txt
 e2e_*.log
+# 浏览器对比/巡检脚本生成产物 (报告 JSON / 截图 PNG / 截图目录)
+tests/e2e/*_report.json
+tests/e2e/browser_shots/
+tests/e2e/inspect_*.png
+tests/e2e/council_*.png
+tests/e2e/roster_check.png
+# 浏览器对比/巡检 ad-hoc 脚本 (含硬编码本地端口, 非正式测试)
+tests/e2e/browser_*.py
+tests/e2e/browser_*.json
 
 # ==================== PowerShell ad-hoc scripts ====================
 cf_*.ps1

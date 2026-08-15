@@ -24,10 +24,20 @@ export default function McpPage() {
 
   const loadServers = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/system/mcp-servers");
+      // 后端实际端点：GET /api/v1/mcp/servers 返回 { items: [...], total }
+      const res = await fetch("/api/v1/mcp/servers");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const list = data?.data?.servers || data?.servers || [];
-      setServers(Array.isArray(list) ? list : []);
+      const list = data?.items || data?.servers || [];
+      const servers = (Array.isArray(list) ? list : []).map((s) => ({
+        name: String(s?.name ?? s?.id ?? ""),
+        url: s?.url ? String(s.url) : undefined,
+        command: s?.command ? String(s.command) : undefined,
+        status: (s?.status as McpServer["status"]) ?? "unknown",
+        tools_count: typeof s?.tools === "number" ? s.tools : undefined,
+        description: s?.description ? String(s.description) : undefined,
+      }));
+      setServers(servers);
     } catch {
       setServers([]);
     }
