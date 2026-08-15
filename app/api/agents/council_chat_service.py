@@ -15,6 +15,7 @@ import asyncio
 import json
 import uuid
 from dataclasses import asdict
+from types import SimpleNamespace
 
 from fastapi import HTTPException, WebSocket
 
@@ -44,14 +45,215 @@ logger = get_logger("flowforge.app.api.agents.council_chat_service")
 
 # ── Chat message processing (POST /chat) ─────────────────────────────────────
 
+async def _broadcast_forgekin_error(
+    fk_cfg: dict, fk_id: str, role: str, exc: Exception,
+    bound_kind, chat_trace: str,
+) -> ChatMessage:
+    """灵智体调用失败时构建错误消息、广播并记录失败指标,返回错误 ChatMessage。"""
+    logger.error(
+        f"[trace_id={chat_trace}] call FAILED: fk={fk_id} role={role} "
+        f"error={exc!r}", exc_info=True,
+    )
+    if isinstance(exc, ExternalAgentError):
+        err_hint = (
+            f"[{fk_cfg['name']}] ⚠️ 外部 Agent 调用失败（{bound_kind.value if bound_kind else 'unknown'}）。\n"
+            f"错误：{exc!s}\n请检查该 CLI 是否已安装（PATH 或 %APPDATA%\\npm），"
+            f"或访问 /admin/external-agents 配置 binary 路径。"
+        )
+    else:
+        err_hint = (
+            f"[{fk_cfg['name']}] ⚠️ LLM 调用失败，所有 fallback 均已耗尽。\n"
+            f"错误：{exc!s}\n请检查 OpenRoute 服务 (端口 13001) 是否运行，"
+            f"以及 config/llm_route.yaml 中的 fallback_chains 配置。"
+        )
+    error_msg = ChatMessage(
+        message_id=f"msg-{uuid.uuid4().hex[:12]}",
+        author_id=fk_id, author_name=fk_cfg["name"], author_role="forgekin",
+        author_avatar=AVATARS.get(fk_id, "🤖"), content=err_hint,
+        role=role, trace_id=chat_trace,
+    )
+    state.add(error_msg)
+    await _broadcast(state, error_msg)
+    _mc = _get_metrics_collector()
+    _mc.inc_counter("flowforge_llm_calls_total", labels={
+        "model": "unknown", "provider": "unknown",
+        "role": role, "success": "false",
+    })
+    return error_msg
+
+
+async def _audit_primary_t7(
+    fk_cfg: dict, primary_output: str, chat_trace: str, bridge,
+) -> T7Badge:
+    """对 primary 灵智体产出执行 T7 审核(跨厂商独立审查),返回 T7Badge。"""
+    primary_name = fk_cfg["name"]
+    loop_type = fk_cfg.get("self_dev_loop", {}).get("loop_type", "")
+    logger.info(f"[trace_id={chat_trace}] T7 audit start: primary={primary_name} loop={loop_type}")
+    try:
+        audit: T7AuditResult = await bridge.audit_t7(
+            primary_name=primary_name,
+            primary_output=primary_output,
+            loop_type=loop_type,
+        )
+        logger.info(
+            f"[trace_id={chat_trace}] T7 audit done: primary={primary_name} "
+            f"score={audit.score:.2f} verdict={audit.verdict} "
+            f"model={audit.model} latency={audit.latency_ms:.0f}ms"
+        )
+        return T7Badge(
+            score=audit.score, verdict=audit.verdict, reasons=audit.reasons,
+            model=audit.model, provider=audit.provider, latency_ms=audit.latency_ms,
+            quality_threshold=audit.quality_threshold,
+        )
+    except LLMError as exc:
+        logger.error(
+            f"[trace_id={chat_trace}] T7 audit FAILED: primary={primary_name} error={exc!r}",
+            exc_info=True,
+        )
+        return T7Badge(
+            score=0.0, verdict="fail",
+            reasons=[f"T7 audit LLM call failed: {exc!s}"],
+            model="", provider="", latency_ms=0.0,
+            quality_threshold=bridge._quality_threshold,
+        )
+
+
+async def _forgekin_turn(
+    route: dict, content: str, chat_trace: str,
+    fk_cfgs: dict[str, dict], bridge, use_external_agent: bool,
+    recent_context: list | None = None,
+    discussant_texts: list[str] | None = None,
+) -> ChatMessage | None:
+    """执行单个灵智体的完整回复回合。
+
+    包含: 配置查找→上下文构建→LLM/外部Agent调用→错误处理→
+    指标采集→T7审核(仅primary)→状态写入→WebSocket广播。
+    返回 ChatMessage(成功/错误); 配置缺失返回 None。
+    discussant_texts 用于 @all 模式下 primary 汇总讨论者回复。
+    """
+    fk_id = route["forgekin_id"]
+    role = route["role"]
+    fk_cfg = _find_forgekin_cfg(fk_cfgs, fk_id)
+    if not fk_cfg:
+        logger.warning(
+            f"[trace_id={chat_trace}] routing referenced unknown "
+            f"forgekin_id={fk_id}, skipping"
+        )
+        return None
+
+    await asyncio.sleep(route.get("delay_ms", 0) / 1000.0)
+    ctx = recent_context if recent_context is not None else state.get_context(limit=6)
+    # @all 并行模式: primary 汇总时注入 discussant 回复作为额外上下文
+    if discussant_texts:
+        ctx = list(ctx) + [
+            SimpleNamespace(author_name="讨论者", content=t) for t in discussant_texts
+        ]
+
+    # 外部 Agent 仅 primary 角色可用; discussant/reviewer 始终走 LLM 网关
+    bound_kind = bridge.find_external_agent_for_forgekin(fk_cfg) if (use_external_agent and role == "primary") else None
+    logger.info(
+        f"[trace_id={chat_trace}] LLM call start: fk={fk_id} role={role} "
+        f"context_msgs={len(ctx) if ctx else 0} "
+        f"route={'external' if bound_kind else 'llm'}"
+    )
+    try:
+        if bound_kind is not None:
+            reply: ForgekinReply = await bridge.respond_via_external_agent(
+                fk_cfg, role=role, user_content=content, recent_context=ctx,
+            )
+        else:
+            reply: ForgekinReply = await bridge.respond(
+                fk_cfg, role=role, user_content=content, recent_context=ctx,
+                push_back_round=state.push_back_rounds,
+            )
+    except (LLMError, ExternalAgentError) as exc:
+        return await _broadcast_forgekin_error(fk_cfg, fk_id, role, exc, bound_kind, chat_trace)
+
+    llm_meta = LLMMeta(
+        model=reply.model, provider=reply.provider, latency_ms=reply.latency_ms,
+        finish_reason=reply.finish_reason, chain=bridge.DEFAULT_CHAIN,
+    )
+    # ── Metrics 收集（T6 必须采集指标）──
+    _mc = _get_metrics_collector()
+    _mc.inc_counter("flowforge_chat_messages_total")
+    _mc.inc_counter("flowforge_llm_calls_total", labels={
+        "model": reply.model, "provider": reply.provider,
+        "role": role, "success": "true",
+    })
+    _mc.observe_histogram("flowforge_llm_duration_seconds", reply.latency_ms / 1000.0, labels={"model": reply.model})
+    logger.info(
+        f"[trace_id={chat_trace}] LLM call done: fk={fk_id} role={role} "
+        f"model={reply.model} latency={reply.latency_ms:.0f}ms len={len(reply.text)}"
+    )
+
+    # T7 审核: 仅 primary 产出需审核(T7 铁律)
+    t7_badge: T7Badge | None = None
+    if role == "primary":
+        t7_badge = await _audit_primary_t7(fk_cfg, reply.text, chat_trace, bridge)
+        _mc.inc_counter("flowforge_t7_audit_total", labels={"verdict": t7_badge.verdict})
+        _mc.set_gauge("flowforge_t7_audit_score", t7_badge.score)
+
+    response_msg = ChatMessage(
+        message_id=f"msg-{uuid.uuid4().hex[:12]}",
+        author_id=fk_id, author_name=fk_cfg["name"], author_role="forgekin",
+        author_avatar=AVATARS.get(fk_id, "🤖"), content=reply.text, role=role,
+        llm_meta=llm_meta, t7_badge=t7_badge, trace_id=chat_trace,
+    )
+    state.add(response_msg)
+    await _broadcast(state, response_msg)
+    return response_msg
+
+
+async def _run_parallel_discussion(
+    routing: list[dict], content: str, chat_trace: str,
+    fk_cfgs: dict[str, dict], bridge, use_external_agent: bool,
+) -> list[dict]:
+    """@all 并行讨论: discussant 先并行回复, primary 最后汇总。
+
+    discussant 看到的是讨论前的基础上下文(彼此不可见);
+    primary 看到基础上下文 + 全部 discussant 回复后进行汇总。
+    """
+    discussant_routes = [r for r in routing if r["role"] == "discussant"]
+    primary_route = next((r for r in routing if r["role"] == "primary"), None)
+    responses: list[dict] = []
+
+    # 讨论前快照: 所有 discussant 共享同一基础上下文
+    base_context = state.get_context(limit=6)
+
+    # 1. discussant 并行回复
+    tasks = [
+        _forgekin_turn(r, content, chat_trace, fk_cfgs, bridge, use_external_agent, recent_context=base_context)
+        for r in discussant_routes
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    discussant_texts: list[str] = []
+    for r in results:
+        if isinstance(r, ChatMessage):
+            responses.append(asdict(r))
+            discussant_texts.append(r.content)
+        elif isinstance(r, Exception):
+            logger.error(f"[trace_id={chat_trace}] discussant 异常: {r!r}")
+
+    # 2. primary 汇总所有讨论
+    if primary_route:
+        primary_msg = await _forgekin_turn(
+            primary_route, content, chat_trace, fk_cfgs, bridge, use_external_agent,
+            recent_context=base_context, discussant_texts=discussant_texts,
+        )
+        if primary_msg:
+            responses.append(asdict(primary_msg))
+
+    return responses
+
+
 async def _process_chat_message(payload: dict) -> dict:
     """Route a user message to forgekins and return real LLM responses.
 
     Implements the body of the ``POST /chat`` endpoint: generates a
-    per-chat ``trace_id``, routes to forgekins via keyword matching,
-    calls the LLM bridge (or external agent when requested), runs T7
-    audit on primary responses, collects metrics (T6), and broadcasts
-    each forgekin reply over WebSocket.
+    per-chat ``trace_id``, routes to forgekins via @mention rules
+    (serial by default, parallel for @all), calls the LLM bridge (or
+    external agent when requested), runs T7 audit on primary responses,
+    collects metrics (T6), and broadcasts each forgekin reply over WebSocket.
     """
     # 为每次聊天生成独立 trace_id，贯穿消息路由→LLM调用→T7审核全链路
     chat_trace = set_trace_id(generate_trace_id())
@@ -84,197 +286,26 @@ async def _process_chat_message(payload: dict) -> dict:
     )
     state.add(user_msg)
 
-    routing = _route_message(content, fk_cfgs)
+    # @mention 路由: @all→并行讨论, @具体灵智体→单回复, 无@→最近回复灵智体
+    routing = _route_message(content, fk_cfgs, mentions, state.messages)
+    strategy = routing[0].get("strategy", "serial") if routing else "serial"
     logger.info(
         f"[trace_id={chat_trace}] routing: {len(routing)} forgekin(s) "
-        f"fk_ids={[r['forgekin_id'] for r in routing]}"
+        f"strategy={strategy} fk_ids={[r['forgekin_id'] for r in routing]}"
     )
-    responses: list[dict] = []
-    primary_output: str | None = None
-    primary_name: str | None = None
-    primary_loop_type: str | None = None
 
-    for route in routing:
-        fk_id = route["forgekin_id"]
-        role = route["role"]
-        delay_ms = route["delay_ms"]
-
-        fk_cfg = _find_forgekin_cfg(fk_cfgs, fk_id)
-        if not fk_cfg:
-            logger.warning(
-                f"[trace_id={chat_trace}] routing referenced unknown "
-                f"forgekin_id={fk_id}, skipping"
-            )
-            continue
-
-        # Stagger calls slightly so the UI animation feels natural; the
-        # delay is small (200-800ms) and never blocks the LLM call itself.
-        await asyncio.sleep(delay_ms / 1000.0)
-
-        recent_context = state.get_context(limit=6)
-
-        logger.info(
-            f"[trace_id={chat_trace}] LLM call start: fk={fk_id} role={role} "
-            f"context_msgs={len(recent_context) if recent_context else 0} "
-            f"use_external_agent={use_external_agent}"
+    if strategy == "parallel":
+        responses = await _run_parallel_discussion(
+            routing, content, chat_trace, fk_cfgs, bridge, use_external_agent,
         )
-        # External agent path: only for primary role, when user requests it,
-        # and when the forgekin has a bound external agent. Reviewer/tester
-        # roles always use the LLM gateway (external agents have no review concept).
-        bound_kind = bridge.find_external_agent_for_forgekin(fk_cfg) if use_external_agent else None
-        route_via_external = bound_kind is not None and role == "primary"
-        try:
-            if route_via_external:
-                logger.info(
-                    f"[trace_id={chat_trace}] external_agent call: fk={fk_id} "
-                    f"kind={bound_kind.value}"
-                )
-                reply: ForgekinReply = await bridge.respond_via_external_agent(
-                    fk_cfg,
-                    role=role,
-                    user_content=content,
-                    recent_context=recent_context,
-                )
-            else:
-                reply: ForgekinReply = await bridge.respond(
-                    fk_cfg,
-                    role=role,
-                    user_content=content,
-                    recent_context=recent_context,
-                    push_back_round=state.push_back_rounds,
-                )
-        except (LLMError, ExternalAgentError) as exc:
-            # Surface LLM/external-agent failure to the client without crashing.
-            logger.error(
-                f"[trace_id={chat_trace}] call FAILED: fk={fk_id} "
-                f"role={role} route={'external' if route_via_external else 'llm'} "
-                f"error={exc!r}",
-                exc_info=True,
+    else:
+        responses: list[dict] = []
+        for route in routing:
+            msg = await _forgekin_turn(
+                route, content, chat_trace, fk_cfgs, bridge, use_external_agent,
             )
-            if isinstance(exc, ExternalAgentError):
-                err_hint = (
-                    f"[{fk_cfg['name']}] ⚠️ 外部 Agent 调用失败（{bound_kind.value if bound_kind else 'unknown'}）。\n"
-                    f"错误：{exc!s}\n"
-                    f"请检查该 CLI 是否已安装（PATH 或 %APPDATA%\\npm），"
-                    f"或访问 /admin/external-agents 配置 binary 路径。"
-                )
-            else:
-                err_hint = (
-                    f"[{fk_cfg['name']}] ⚠️ LLM 调用失败，所有 fallback 均已耗尽。\n"
-                    f"错误：{exc!s}\n"
-                    f"请检查 OpenRoute 服务 (端口 13001) 是否运行，以及 "
-                    f"config/llm_route.yaml 中的 fallback_chains 配置。"
-                )
-            error_msg = ChatMessage(
-                message_id=f"msg-{uuid.uuid4().hex[:12]}",
-                author_id=fk_id,
-                author_name=fk_cfg["name"],
-                author_role="forgekin",
-                author_avatar=AVATARS.get(fk_id, "🤖"),
-                content=err_hint,
-                role=role,
-                trace_id=chat_trace,
-            )
-            state.add(error_msg)
-            await _broadcast(state, error_msg)
-            responses.append(asdict(error_msg))
-            # ── Metrics: LLM 失败计数（T6）──
-            _mc = _get_metrics_collector()
-            _mc.inc_counter("flowforge_llm_calls_total", labels={
-                "model": "unknown", "provider": "unknown",
-                "role": role, "success": "false",
-            })
-            continue
-
-        llm_meta = LLMMeta(
-            model=reply.model,
-            provider=reply.provider,
-            latency_ms=reply.latency_ms,
-            finish_reason=reply.finish_reason,
-            chain=bridge.DEFAULT_CHAIN,
-        )
-        # ── Metrics 收集（T6 必须采集指标）──
-        _mc = _get_metrics_collector()
-        _mc.inc_counter("flowforge_chat_messages_total")
-        _mc.inc_counter("flowforge_llm_calls_total", labels={
-            "model": reply.model, "provider": reply.provider,
-            "role": role, "success": "true",
-        })
-        _mc.observe_histogram("flowforge_llm_duration_seconds", reply.latency_ms / 1000.0, labels={"model": reply.model})
-        logger.info(
-            f"[trace_id={chat_trace}] LLM call done: fk={fk_id} role={role} "
-            f"model={reply.model} provider={reply.provider} "
-            f"latency={reply.latency_ms:.0f}ms finish={reply.finish_reason} "
-            f"len={len(reply.text)}"
-        )
-
-        # T7 audit: only primary responses are audited (per T7 spec —
-        # "凡LLM生成的内容必须经LLM审核"; reviewer/tester outputs are
-        # themselves part of the audit pipeline).
-        t7_badge: T7Badge | None = None
-        if role == "primary":
-            primary_output = reply.text
-            primary_name = fk_cfg["name"]
-            primary_loop_type = fk_cfg.get("self_dev_loop", {}).get("loop_type", "")
-            logger.info(
-                f"[trace_id={chat_trace}] T7 audit start: primary={primary_name} "
-                f"loop={primary_loop_type}"
-            )
-            try:
-                audit: T7AuditResult = await bridge.audit_t7(
-                    primary_name=primary_name,
-                    primary_output=primary_output,
-                    loop_type=primary_loop_type,
-                )
-                t7_badge = T7Badge(
-                    score=audit.score,
-                    verdict=audit.verdict,
-                    reasons=audit.reasons,
-                    model=audit.model,
-                    provider=audit.provider,
-                    latency_ms=audit.latency_ms,
-                    quality_threshold=audit.quality_threshold,
-                )
-                logger.info(
-                    f"[trace_id={chat_trace}] T7 audit done: primary={primary_name} "
-                    f"score={audit.score:.2f} verdict={audit.verdict} "
-                    f"model={audit.model} latency={audit.latency_ms:.0f}ms"
-                )
-            except LLMError as exc:
-                logger.error(
-                    f"[trace_id={chat_trace}] T7 audit FAILED: "
-                    f"primary={primary_name} error={exc!r}",
-                    exc_info=True,
-                )
-                t7_badge = T7Badge(
-                    score=0.0,
-                    verdict="fail",
-                    reasons=[f"T7 audit LLM call failed: {exc!s}"],
-                    model="",
-                    provider="",
-                    latency_ms=0.0,
-                    quality_threshold=bridge._quality_threshold,
-                )
-
-        response_msg = ChatMessage(
-            message_id=f"msg-{uuid.uuid4().hex[:12]}",
-            author_id=fk_id,
-            author_name=fk_cfg["name"],
-            author_role="forgekin",
-            author_avatar=AVATARS.get(fk_id, "🤖"),
-            content=reply.text,
-            role=role,
-            llm_meta=llm_meta,
-            t7_badge=t7_badge,
-            trace_id=chat_trace,
-        )
-        # ── T7 Metrics（T6 必须采集指标）──
-        if t7_badge is not None:
-            _mc.inc_counter("flowforge_t7_audit_total", labels={"verdict": t7_badge.verdict})
-            _mc.set_gauge("flowforge_t7_audit_score", t7_badge.score)
-        state.add(response_msg)
-        responses.append(asdict(response_msg))
-        await _broadcast(state, response_msg)
+            if msg:
+                responses.append(asdict(msg))
 
     return {
         "user_message": asdict(user_msg),

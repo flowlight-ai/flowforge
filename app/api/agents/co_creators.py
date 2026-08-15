@@ -31,8 +31,28 @@ def _now() -> str:
 
 @router.get("")
 async def list_co_creators() -> dict[str, Any]:
-    """列出共创者（stub 返回空列表）。"""
-    return {"items": [], "total": 0}
+    """列出共创者（包含主人+灵智体绑定关系）.
+
+    主人（co-creator）是拥有完全权限的操作者。
+    参考 clowder-ai 的 CoCreatorConfig: name="ME", mentionPatterns=["@co-creator"]。
+    与 CatConfig（可进化 AI / Forgekin）区分：CoCreatorConfig 是人类 operator。
+    """
+    return {
+        "items": [
+            {
+                "id": "coc-master",
+                "name": "ME",  # 主人名称
+                "role": "master",  # 完全权限
+                "forgekin_id": None,  # 主人不绑定具体灵智体
+                "permissions": ["all"],  # 所有权限
+                "status": "active",
+                "avatar": "👤",
+                "is_master": True,
+                "created_at": _now(),
+            }
+        ],
+        "total": 1,
+    }
 
 
 @router.post("")

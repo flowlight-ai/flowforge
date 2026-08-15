@@ -10,7 +10,7 @@ import { HubForgekinEditor } from "@/components/admin/agents/HubForgekinEditor";
  * 智能体管理中心 — 双 Tab 布局
  *
  * 依据 WEB-FUSION-DESIGN.md §6：
- *   Tab 1: 可进化智能体 (Evolvable Agent / Forgekin) — 5 个内置 Forgekin
+ *   Tab 1: 可进化智能体 (Evolvable Agent / Forgekin) — 9 个内置 Forgekin
  *   Tab 2: 静态智能体 (Static Agent) — 内置 4 种 + 外部接入 5 种
  *
  * 命名规范（依据 naming-contract.md）：
@@ -20,7 +20,7 @@ import { HubForgekinEditor } from "@/components/admin/agents/HubForgekinEditor";
 
 export default function AgentsPage() {
   const [tab, setTab] = useState<AgentTab>("evolvable");
-  const [evolvableCount, setEvolvableCount] = useState(5);
+  const [evolvableCount, setEvolvableCount] = useState(9);
   const [staticCount] = useState(9); // 4 内置 + 5 外部
   const [editingForgekinId, setEditingForgekinId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
