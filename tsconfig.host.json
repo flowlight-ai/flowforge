@@ -1,0 +1,15 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./vendor/cordis" },
+    { "path": "./vendor/cosmokit" },
+    { "path": "./vendor/schemastery" },
+    { "path": "./vendor/loader" },
+    { "path": "./vendor/include" },
+    { "path": "./vendor/group" },
+    { "path": "./vendor/timer" },
+    { "path": "./vendor/hmr" },
+    { "path": "./vendor/logger-console" },
+    { "path": "./packages/harness/boot" }
+  ]
+}

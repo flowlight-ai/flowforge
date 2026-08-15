@@ -238,3 +238,11 @@ web/.next-dev.log
 *.bak.*
 _tmp*
 d:/
+
+# ==================== TypeScript build artifacts (2026-08-16) ====================
+# tsc/tsdown 产物与增量构建缓存（源码在 src/，lib 由构建生成，不入库）
+vendor/*/lib/
+packages/*/*/lib/
+apps/*/lib/
+*.tsbuildinfo
+tsconfig.*.tsbuildinfo
