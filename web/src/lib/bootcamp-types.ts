@@ -61,54 +61,90 @@ export interface BootcampState {
   phase: BootcampPhase;
   leadForgekinId?: string;
   selectedTaskId?: string | null;
-  envCheck?: Record<string, ToolCheckResult>;
+  /** 环境检测结果（联动 doctor_lib.run_full_check 完整 dict） */
+  envCheck?: EnvCheckResult | Record<string, ToolCheckResult>;
   startedAt: number;
   completedAt?: number | null;
 }
 
-/** 单个工具检测结果 */
+/** 单个工具检测结果（向后兼容旧格式：{ok, version, note}） */
 export interface ToolCheckResult {
   ok: boolean;
   version: string;
-  note: string;
-}
-
-/** 单个 CLI 工具检测结果（联动 doctor.py） */
-export interface CliToolCheck {
-  name: string;
-  status: "ok" | "missing" | "fail" | "unknown";
-  /** 可执行文件路径（status=ok 时存在） */
+  note?: string;
+  /** 新格式字段：可执行文件路径 */
   path?: string;
-  /** 版本号（status=ok 时存在） */
-  version?: string;
-  /** 绑定的灵智体名称 */
-  forgekin?: string;
-  /** 安装命令（status=missing 时存在） */
-  install_cmd?: string;
+  /** 新格式字段：版本要求（如 "3.11+"） */
+  required?: string;
 }
 
-/** 单个代理服务检测结果 */
-export interface ProxyCheck {
-  name: string;
+/** 核心工具检测结果（python/node/npm/git/pnpm）—— value of core_tools dict */
+export interface CoreToolCheck {
+  ok: boolean;
+  version: string;
+  path: string;
+  /** 版本要求（如 "3.11+"，仅失败时填充） */
+  required?: string;
+}
+
+/** 单个 AI CLI 工具检测结果（联动 doctor_lib，value of cli_tools dict） */
+export interface CliToolCheck {
+  /** 是否安装可用 */
+  ok: boolean;
+  /** 可执行文件路径（ok=true 时存在） */
+  path?: string;
+  /** 版本号（ok=true 时存在） */
+  version?: string;
+  /** 错误信息（ok=false 时为 "not found"） */
+  error?: string;
+  /** 安装命令（ok=false 时存在，如 "npm install -g @openai/codex"） */
+  install_cmd?: string;
+  /** 绑定的灵智体名称（如 "sherlock (夏洛克)"） */
+  forgekin?: string;
+  /** 备注（如 "经 responses proxy 转发"） */
+  note?: string;
+  /** 工具名（仅当作为数组项时存在；dict 形式时由 key 隐式给出） */
+  name?: string;
+  /** 旧格式兼容：状态字符串 */
+  status?: "ok" | "missing" | "fail" | "unknown";
+}
+
+/** 单个代理服务检测结果（value of proxy_services dict） */
+export interface ProxyServiceCheck {
+  ok: boolean;
+  port: number;
+  /** 状态字符串：running / stopped / unknown */
   status: "running" | "stopped" | "unknown";
-  port?: number;
+  /** 服务描述（如 "Claude Code 转发代理"） */
+  desc?: string;
+  /** 旧格式兼容：服务名（仅数组项时存在） */
+  name?: string;
 }
 
 /** Trae 桥接检测结果（butterfly 灵智体） */
 export interface TraeBridgeCheck {
+  ok: boolean;
+  /** 桥接目录路径（ok=true 时为 FLOWFORGE_BRIDGE_DIR 值） */
+  dir: string;
+  /** 状态字符串：ok / missing / unknown */
   status: "ok" | "missing" | "unknown";
-  /** 桥接目录路径 */
+  /** 旧格式兼容 */
   bridge_dir?: string;
   name?: string;
+  exists?: boolean;
 }
 
 /** .env 配置文件检测结果 */
 export interface EnvFileCheck {
-  /** 任务文档格式：直接标记是否存在 */
+  /** 是否存在 */
   exists?: boolean;
   /** 是否已配置 API key */
   has_api_keys?: boolean;
-  /** doctor.py 格式：状态字符串 */
+  /** 已配置的 API key 数量 */
+  configured_keys?: number;
+  /** 总 API key 数量（默认 4） */
+  total_keys?: number;
+  /** 状态字符串：ok / missing / unknown */
   status?: string;
   name?: string;
 }
@@ -127,28 +163,37 @@ export interface WebDepsCheck {
   name?: string;
 }
 
-/** 环境检测结果（增强版，联动 doctor.py 深度检测） */
+/** 环境检测结果（联动 scripts/doctor_lib.py 的 run_full_check 深度检测）.
+ *
+ * 返回格式与后端 bootcamp env-check 端点完全一致：
+ *   - core_tools: 5 项核心工具（python/node/npm/git/pnpm）
+ *   - cli_tools: 8 个 AI CLI 工具（claude/codex/gemini/opencode/codebuddy/qodercli/iflow/kimi）
+ *   - proxy_services: 3 个协议代理（claude-code-router/responses-proxy/gemini-proxy）
+ *   - trae_bridge: Trae 桥接目录（butterfly 灵智体）
+ *   - all_ready: 是否全部就绪（核心+CLI+代理+桥接）
+ *   - missing: 缺失项名称列表
+ */
 export interface EnvCheckResult {
-  /** 基础工具检测：{tool_name: {ok, version, note}} */
-  tools: Record<string, ToolCheckResult>;
-  /** 核心工具（python/git/node/npm）是否全部可用 */
-  all_core_ok: boolean;
-  /** CLI 工具检测列表（8 个灵智体所需 CLI） */
-  cli_tools?: CliToolCheck[];
-  /** 代理服务检测列表 */
-  proxies?: ProxyCheck[];
-  /** Trae 桥接状态 */
-  trae_bridge?: TraeBridgeCheck;
+  /** 核心工具检测：{python/node/npm/git/pnpm: {ok, version, path}} */
+  core_tools: Record<string, CoreToolCheck>;
+  /** AI CLI 工具检测：{tool_name: {ok, version/path 或 error, install_cmd, forgekin}} */
+  cli_tools: Record<string, CliToolCheck>;
+  /** 代理服务检测：{name: {ok, port, status}} */
+  proxy_services: Record<string, ProxyServiceCheck>;
+  /** Trae 桥接状态：{ok, dir, status} */
+  trae_bridge: TraeBridgeCheck;
   /** .env 配置文件状态 */
-  env_file?: EnvFileCheck;
+  env_file: EnvFileCheck;
   /** .venv 虚拟环境状态 */
-  venv?: VenvCheck;
+  venv: VenvCheck;
   /** 前端依赖状态（web/node_modules） */
-  web_deps?: WebDepsCheck;
-  /** 缺失的 CLI 工具名称列表 */
-  missing_cli?: string[];
-  /** 安装提示文案 */
-  install_hint?: string;
+  web_deps: WebDepsCheck;
+  /** 是否全部就绪（核心+CLI+代理+桥接） */
+  all_ready: boolean;
+  /** 缺失项名称列表（如 ["codex", "responses-proxy"]） */
+  missing: string[];
+  /** 给用户的安装提示文案 */
+  install_hint: string;
 }
 
 /** 训练营会话（Thread + bootcamp_state） */

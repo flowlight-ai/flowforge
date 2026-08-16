@@ -19,7 +19,7 @@ from dataclasses import asdict
 from fastapi import HTTPException, Response, WebSocket, WebSocketDisconnect
 
 from flowforge.core.tracing import get_logger
-from flowforge.web_legacy_backup.metrics import get_collector as _get_metrics_collector
+from flowforge.observability.metrics_collector import get_collector as _get_metrics_collector
 
 from .council_helpers import (
     WORKFLOWS_DIR,

@@ -8,9 +8,13 @@
  */
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
 import { useShellConfig } from "@/lib/shell-config";
 import type { BootcampState } from "@/lib/bootcamp-types";
+import type { ForgekinRosterItem } from "@/lib/council-types";
+import { useCouncilPanelStore } from "@/stores/councilPanelStore";
 
 // 性能优化：CouncilThreadList 动态导入（减少首屏 JS 体积）
 const CouncilThreadList = dynamic(
@@ -61,6 +65,7 @@ const configLinkStyle: React.CSSProperties = {
 
 export function CouncilContent({ threadId }: { threadId: string | null }) {
   const config = useShellConfig();
+  const router = useRouter();
   // 右栏 Workspace 默认显示（参考 clowder-ai 三栏布局）
   const [showWorkspace, setShowWorkspace] = useState(true);
   const [taskTitle, setTaskTitle] = useState<string>("");
@@ -68,6 +73,21 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
   const [bootcampState, setBootcampState] = useState<BootcampState | null>(null);
 
   const handleTitleChange = useCallback((t: string) => setTaskTitle(t), []);
+
+  // 路由级预加载：空闲时预取 /solo 代码与数据，
+  // 使 council → solo 跳转秒开（参考 clowder-ai 精确订阅 + 预加载策略）
+  useEffect(() => {
+    const idle =
+      (typeof window !== "undefined" && "requestIdleCallback" in window)
+        ? (window as any).requestIdleCallback
+        : (cb: () => void) => setTimeout(cb, 1500);
+    const handle = idle(() => router.prefetch("/solo"));
+    return () => {
+      if (typeof window !== "undefined" && "cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(handle);
+      }
+    };
+  }, [router]);
 
   // 当 threadId 变化时，获取会话详情检查是否有 bootcamp_state
   useEffect(() => {
@@ -93,6 +113,48 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
     })();
     return () => { cancelled = true; };
   }, [threadId]);
+
+  // 默认态对齐 clowder-ai：访问 /council（无 threadId）时自动打开最近会话的聊天界面
+  // 而非空状态 — 加载会话列表取最近一条（后端置顶优先、按更新时间降序），跳转到其详情
+  useEffect(() => {
+    if (threadId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/v1/threads?limit=1");
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const first = Array.isArray(data.items) ? data.items[0] : null;
+        if (first?.id && !cancelled) {
+          router.replace(`/council/${first.id}`);
+        }
+      } catch {
+        // 网络/后端不可用时保留空状态引导
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [threadId, router]);
+
+  // 页面级加载灵智体花名册并同步到共享 store —
+  // 对齐 clowder-ai"打开即显示成员"：WorkspacePanel 的智能体面板
+  // 无需等选中会话即可展示成员列表（原逻辑依赖 CouncilChatPanel 挂载才加载）
+  const syncPanelStore = useCouncilPanelStore((s) => s.syncState);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/v1/forgemind/roster");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const items: ForgekinRosterItem[] = data.builtin || [];
+        syncPanelStore({ roster: items.filter((r) => r.available && !r.error) });
+      } catch {
+        // 静默失败：CouncilChatPanel 挂载后仍会尝试加载
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [syncPanelStore]);
 
   return (
     <div
@@ -266,8 +328,9 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
           >
             ▣ 工作区
           </button>
-          <a
+          <Link
             href="/solo"
+            prefetch
             aria-label="返回对话"
             title="返回对话"
             data-council-action="back-to-solo"
@@ -284,7 +347,7 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
             }}
           >
             ← 对话
-          </a>
+          </Link>
         </div>
       </header>
 

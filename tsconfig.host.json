@@ -1,0 +1,209 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/credentials/credentials-local"
+    },
+    {
+      "path": "./vendor/cordis"
+    },
+    {
+      "path": "./vendor/cosmokit"
+    },
+    {
+      "path": "./vendor/group"
+    },
+    {
+      "path": "./vendor/hmr"
+    },
+    {
+      "path": "./vendor/include"
+    },
+    {
+      "path": "./vendor/loader"
+    },
+    {
+      "path": "./vendor/logger-console"
+    },
+    {
+      "path": "./vendor/schemastery"
+    },
+    {
+      "path": "./vendor/timer"
+    },
+    {
+      "path": "./packages/attachment/attachment"
+    },
+    {
+      "path": "./packages/code-runtime/code-runtime"
+    },
+    {
+      "path": "./packages/compaction/compaction"
+    },
+    {
+      "path": "./packages/core/agent"
+    },
+    {
+      "path": "./packages/core/agent-default-model"
+    },
+    {
+      "path": "./packages/core/agent-loop"
+    },
+    {
+      "path": "./packages/core/scope"
+    },
+    {
+      "path": "./packages/core/session"
+    },
+    {
+      "path": "./packages/core/system-prompt"
+    },
+    {
+      "path": "./packages/core/tools"
+    },
+    {
+      "path": "./packages/credentials/credentials"
+    },
+    {
+      "path": "./packages/harness/boot"
+    },
+    {
+      "path": "./packages/identity/anonymous-user-id"
+    },
+    {
+      "path": "./packages/interaction/commands"
+    },
+    {
+      "path": "./packages/interaction/user-approval"
+    },
+    {
+      "path": "./packages/llm/llm"
+    },
+    {
+      "path": "./packages/llm/llm-deepseek"
+    },
+    {
+      "path": "./packages/llm/llm-pi-ai"
+    },
+    {
+      "path": "./packages/llm/llm-retry"
+    },
+    {
+      "path": "./packages/llm/token-meter"
+    },
+    {
+      "path": "./packages/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "./packages/session/session-persistence"
+    },
+    {
+      "path": "./packages/session/session-persistence-jsonl"
+    },
+    {
+      "path": "./packages/session/session-persistence-sqlite"
+    },
+    {
+      "path": "./packages/session/session-projection"
+    },
+    {
+      "path": "./packages/settings/settings"
+    },
+    {
+      "path": "./packages/settings/settings-file"
+    },
+    {
+      "path": "./packages/spill/spill"
+    },
+    {
+      "path": "./packages/storage/storage"
+    },
+    {
+      "path": "./packages/test-support/agent-loop-testkit"
+    },
+    {
+      "path": "./packages/test-support/llm-mock-server"
+    },
+    {
+      "path": "./packages/typert/protocol"
+    },
+    {
+      "path": "./packages/typert/registry"
+    },
+    {
+      "path": "./packages/util/atomic-write"
+    },
+    {
+      "path": "./packages/util/brand"
+    },
+    {
+      "path": "./packages/util/home-paths"
+    },
+    {
+      "path": "./packages/util/launch-environment"
+    },
+    {
+      "path": "./packages/util/native-command"
+    },
+    {
+      "path": "./packages/util/output-retention"
+    },
+    {
+      "path": "./packages/util/timeout"
+    },
+    {
+      "path": "./packages/session/session-checkpoint-policy"
+    },
+    {
+      "path": "./packages/session/session-projection-cache"
+    },
+    {
+      "path": "./packages/session/session-stats"
+    },
+    {
+      "path": "./packages/session/session-telemetry"
+    },
+    {
+      "path": "./packages/session/session-telemetry-otel"
+    },
+    {
+      "path": "./packages/session/session-title"
+    },
+    {
+      "path": "./packages/session/session-title-llm"
+    },
+    {
+      "path": "./packages/session/session-title-first-prompt-llm"
+    },
+    {
+      "path": "./packages/session/session-title-all-prompts-llm"
+    },
+    {
+      "path": "./packages/storage/storage-domain"
+    },
+    {
+      "path": "./packages/storage/storage-json"
+    },
+    {
+      "path": "./packages/storage/storage-sqlite"
+    },
+    {
+      "path": "./packages/feedback/command-feedback"
+    },
+    {
+      "path": "./packages/feedback/message-feedback"
+    },
+    {
+      "path": "./packages/test-support/acp-snapshot"
+    },
+    {
+      "path": "./packages/test-support/llm-replay"
+    },
+    {
+      "path": "./packages/test-support/loader-smoke"
+    },
+    {
+      "path": "./packages/code-runtime/code-runtime-worker-thread"
+    }
+  ]
+}

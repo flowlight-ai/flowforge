@@ -137,6 +137,15 @@ e2e_*.ps1
 e2e_*.py
 e2e_*.txt
 e2e_*.log
+# æµè§ˆå™¨å¯¹æ¯”/å·¡æ£€è„šæœ¬ç”Ÿæˆäº§ç‰© (æŠ¥å‘Š JSON / æˆªå›¾ PNG / æˆªå›¾ç›®å½•)
+tests/e2e/*_report.json
+tests/e2e/browser_shots/
+tests/e2e/inspect_*.png
+tests/e2e/council_*.png
+tests/e2e/roster_check.png
+# æµè§ˆå™¨å¯¹æ¯”/å·¡æ£€ ad-hoc è„šæœ¬ (å«ç¡¬ç¼–ç æœ¬åœ°ç«¯å£, éæ­£å¼æµ‹è¯•)
+tests/e2e/browser_*.py
+tests/e2e/browser_*.json
 
 # ==================== PowerShell ad-hoc scripts ====================
 cf_*.ps1
@@ -229,3 +238,11 @@ web/.next-dev.log
 *.bak.*
 _tmp*
 d:/
+
+# ==================== TypeScript build artifacts (2026-08-16) ====================
+# tsc/tsdown ²úÎïÓëÔöÁ¿¹¹½¨»º´æ£¨Ô´ÂëÔÚ src/£¬lib ÓÉ¹¹½¨Éú³É£¬²»Èë¿â£©
+vendor/*/lib/
+packages/*/*/lib/
+apps/*/lib/
+*.tsbuildinfo
+tsconfig.*.tsbuildinfo

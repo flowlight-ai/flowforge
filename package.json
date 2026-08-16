@@ -1,0 +1,41 @@
+{
+  "name": "flowforge",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "FlowForge — self-evolving agent harness (TS rewrite, aligned with DeepSeek Harness + Clowder AI)",
+  "license": "MIT",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "workspaces": [
+    "vendor/*",
+    "packages/*/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.host.json",
+    "typecheck": "tsc -b tsconfig.host.json",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "flowforge": "node --import tsx apps/cli/src/bin.ts",
+    "start": "node --import tsx apps/cli/src/bin.ts web"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "oxlint": "1.76.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "tsdown": "^0.22.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "fast-check": "^4.8.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

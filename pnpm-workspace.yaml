@@ -1,0 +1,9 @@
+packages:
+  - vendor/*
+  - packages/*/*
+  - apps/*
+allowBuilds:
+  '@google/genai': true
+  koffi: true
+  protobufjs: true
+  esbuild: true

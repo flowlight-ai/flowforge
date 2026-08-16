@@ -5,15 +5,28 @@
  *
  * 3 步流程：
  *   1. 欢迎 — 介绍训练营目的和12阶段流程
- *   2. 环境检测 — 自动检测开发工具是否就绪（联动 doctor.py 深度检测）
+ *   2. 环境检测 — 联动 scripts/doctor_lib.py 深度检测（核心工具+CLI+代理+桥接）
  *   3. 创建会话 — 选择引导 Forgekin 并进入群聊
  *
  * 创建后跳转到 /council/{threadId}，训练营状态通过 bootcamp_state 持久化。
+ *
+ * 环境检测展示分块（与后端 EnvCheckResult 一致）：
+ *   - 核心工具 (core_tools): python/node/npm/git/pnpm
+ *   - AI CLI 工具 (cli_tools): 8 个灵智体所需 claude/codex/...
+ *   - 协议代理 (proxy_services): claude-code-router/responses-proxy/gemini-proxy
+ *   - Trae 桥接 (trae_bridge): butterfly 灵智体所需
+ *   - 其他: .env / .venv / web_deps
+ *   - 状态汇总: all_ready + missing[] + install_hint + 一键安装按钮
  */
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { EnvCheckResult, ToolCheckResult, CliToolCheck } from "../../lib/bootcamp-types";
+import {
+  EnvCheckResult,
+  CoreToolCheck,
+  CliToolCheck,
+  ProxyServiceCheck,
+} from "../../lib/bootcamp-types";
 
 type WizardStep = "welcome" | "env-check" | "create" | "creating" | "done";
 
@@ -30,8 +43,15 @@ const LEAD_OPTIONS = [
   { id: "wenxin", name: "文心", nickname: "丹顶鹤", emoji: "🦩", desc: "文档员，擅长文档撰写和知识整理" },
 ];
 
-const CORE_TOOLS = ["python", "git", "node", "npm"];
-const OPTIONAL_TOOLS = ["pnpm", "docker", "uvicorn"];
+// 展示顺序（与后端 doctor_lib.run_full_check 的 dict 顺序对齐）
+const CORE_TOOL_ORDER = ["python", "node", "npm", "git", "pnpm"] as const;
+const CLI_TOOL_ORDER = [
+  "claude", "codex", "gemini", "opencode",
+  "codebuddy", "qodercli", "iflow", "kimi",
+] as const;
+const PROXY_ORDER = [
+  "claude-code-router", "responses-proxy", "gemini-proxy",
+] as const;
 
 export default function BootcampWizard({ onClose, onCreated }: BootcampWizardProps) {
   const router = useRouter();
@@ -135,22 +155,38 @@ export default function BootcampWizard({ onClose, onCreated }: BootcampWizardPro
 
   // ── 步骤2：环境检测 ────────────────────────────────────────
   if (step === "env-check") {
-    // 计算各检测项状态（兼容两种后端返回格式）
     const ec = envCheck;
-    const traeBridgeOk = ec?.trae_bridge?.status === "ok";
-    const envFileOk = ec?.env_file?.exists === true || ec?.env_file?.status === "ok";
-    const venvOk = ec?.venv?.exists === true || ec?.venv?.status === "ok";
-    const webDepsOk = ec?.web_deps?.exists === true || ec?.web_deps?.status === "ok";
-    const hintReady = ec?.install_hint?.includes("就绪") ?? false;
-    const cliTools = ec?.cli_tools ?? [];
-    const cliOkCount = cliTools.filter((t) => t.status === "ok").length;
+    // 兼容性兜底：若后端降级返回旧字段（tools / proxies / all_core_ok / missing_cli）
+    const coreTools: Record<string, CoreToolCheck> =
+      ec?.core_tools ?? (ec as any)?.tools ?? {};
+    const cliTools: Record<string, CliToolCheck> = ec?.cli_tools ?? {};
+    const proxyServices: Record<string, ProxyServiceCheck> =
+      ec?.proxy_services ?? (ec as any)?.proxies ?? {};
+    const traeBridge = ec?.trae_bridge;
+    const envFile = ec?.env_file;
+    const venv = ec?.venv;
+    const webDeps = ec?.web_deps;
+    const allReady = ec?.all_ready ?? (ec as any)?.all_core_ok ?? false;
+    const missing: string[] = ec?.missing ?? (ec as any)?.missing_cli ?? [];
+    const installHint = ec?.install_hint ?? "";
+
+    // 统计就绪数
+    const coreOkCount = CORE_TOOL_ORDER.filter((n) => coreTools[n]?.ok).length;
+    const cliOkCount = CLI_TOOL_ORDER.filter((n) => cliTools[n]?.ok).length;
+    const proxyOkCount = PROXY_ORDER.filter((n) => proxyServices[n]?.ok).length;
+
+    // 各分块状态判定（含旧字段兼容）
+    const traeBridgeOk = traeBridge?.ok === true || traeBridge?.status === "ok";
+    const envFileOk = envFile?.exists === true || envFile?.status === "ok";
+    const venvOk = venv?.exists === true || venv?.status === "ok";
+    const webDepsOk = webDeps?.exists === true || webDeps?.status === "ok";
 
     return (
       <div style={overlayStyle}>
         <div style={modalStyle}>
           <div style={{ textAlign: "center", marginBottom: "20px" }}>
             <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "4px", color: "var(--text)" }}>环境检测</h2>
-            <p style={{ fontSize: "12px", color: "var(--muted)" }}>检查你的机器是否已安装必要的开发工具</p>
+            <p style={{ fontSize: "12px", color: "var(--muted)" }}>联动 doctor_lib 深度检测（核心工具 + 8 CLI + 3 代理 + 桥接）</p>
           </div>
 
           {!ec ? (
@@ -160,53 +196,89 @@ export default function BootcampWizard({ onClose, onCreated }: BootcampWizardPro
             </div>
           ) : (
             <>
-              {/* 核心工具 */}
-              <SectionLabel>核心工具 {ec.all_core_ok ? "✓ 全部就绪" : "⚠ 部分缺失"}</SectionLabel>
-              <div style={{ display: "grid", gap: "6px", marginBottom: "16px" }}>
-                {CORE_TOOLS.map((tool) => (
-                  <ToolCheckItem key={tool} name={tool} result={ec.tools[tool]} isCore />
-                ))}
-              </div>
-
-              {/* 可选工具 */}
-              <SectionLabel>可选工具（不影响训练）</SectionLabel>
-              <div style={{ display: "grid", gap: "6px", marginBottom: "16px" }}>
-                {OPTIONAL_TOOLS.map((tool) => (
-                  <ToolCheckItem key={tool} name={tool} result={ec.tools[tool]} />
-                ))}
-              </div>
-
-              {/* AI CLI 工具（灵智体所需，新增） */}
-              {cliTools.length > 0 && (
-                <>
-                  <SectionLabel>AI CLI 工具（{cliOkCount}/{cliTools.length} 已安装）</SectionLabel>
-                  <div style={{ display: "grid", gap: "6px", marginBottom: "16px" }}>
-                    {cliTools.map((tool) => (
-                      <CliToolItem key={tool.name} tool={tool} />
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Trae 桥接 / .env / .venv / 前端依赖（新增） */}
-              {ec.trae_bridge && (
-                <StatusRow label="Trae 桥接" ok={traeBridgeOk}
-                  detail={ec.trae_bridge.bridge_dir || (traeBridgeOk ? "已配置" : "未配置 FLOWFORGE_BRIDGE_DIR")} />
-              )}
-              {ec.env_file && (
-                <StatusRow label=".env 配置文件" ok={envFileOk}
-                  detail={ec.env_file.has_api_keys ? "存在，API key 已配置" : envFileOk ? "存在，API key 未配置" : "不存在"} />
-              )}
-              {ec.venv && <StatusRow label=".venv 虚拟环境" ok={venvOk} detail={venvOk ? "已创建" : "未创建"} />}
-              {ec.web_deps && <StatusRow label="前端依赖 (node_modules)" ok={webDepsOk} detail={webDepsOk ? "已安装" : "未安装"} />}
-
-              {/* 安装提示 + 一键安装按钮（新增） */}
-              {ec.install_hint && (
-                <div style={hintStyle(hintReady)}>
-                  <span style={{ flex: 1, minWidth: "200px" }}>
-                    {hintReady ? "✅ " : "💡 "}{ec.install_hint}
+              {/* ── 状态汇总条：全部就绪 / 缺少 N 项 ── */}
+              <div style={summaryStyle(allReady)}>
+                {allReady ? (
+                  <span>✅ 全部就绪！FlowForge 环境检测通过。</span>
+                ) : (
+                  <span>
+                    ⚠ 缺少 <strong style={{ fontSize: "14px" }}>{missing.length}</strong> 项：
+                    <code style={{ marginLeft: "6px", fontFamily: "var(--mono)", fontSize: "11px" }}>
+                      {missing.join(", ")}
+                    </code>
                   </span>
-                  {!hintReady && (
+                )}
+              </div>
+
+              {/* ── 核心工具 ── */}
+              <SectionLabel>
+                核心工具 <StatusBadge ok={coreOkCount === CORE_TOOL_ORDER.length}>
+                  {coreOkCount}/{CORE_TOOL_ORDER.length} 就绪
+                </StatusBadge>
+              </SectionLabel>
+              <div style={{ display: "grid", gap: "6px", marginBottom: "14px" }}>
+                {CORE_TOOL_ORDER.map((tool) => (
+                  <CoreToolItem key={tool} name={tool} result={coreTools[tool]} />
+                ))}
+              </div>
+
+              {/* ── AI CLI 工具 ── */}
+              <SectionLabel>
+                AI CLI 工具 <StatusBadge ok={cliOkCount === CLI_TOOL_ORDER.length}>
+                  {cliOkCount}/{CLI_TOOL_ORDER.length} 已安装
+                </StatusBadge>
+              </SectionLabel>
+              <div style={{ display: "grid", gap: "6px", marginBottom: "14px" }}>
+                {CLI_TOOL_ORDER.map((tool) => (
+                  <CliToolItem key={tool} name={tool} tool={cliTools[tool]} />
+                ))}
+              </div>
+
+              {/* ── 协议代理服务 ── */}
+              <SectionLabel>
+                协议代理服务 <StatusBadge ok={proxyOkCount === PROXY_ORDER.length}>
+                  {proxyOkCount}/{PROXY_ORDER.length} 运行中
+                </StatusBadge>
+              </SectionLabel>
+              <div style={{ display: "grid", gap: "6px", marginBottom: "14px" }}>
+                {PROXY_ORDER.map((name) => (
+                  <ProxyServiceItem key={name} name={name} service={proxyServices[name]} />
+                ))}
+              </div>
+
+              {/* ── 其他状态：Trae 桥接 / .env / .venv / 前端依赖 ── */}
+              <SectionLabel>其他配置</SectionLabel>
+              <div style={{ display: "grid", gap: "6px", marginBottom: "14px" }}>
+                <StatusRow
+                  label="Trae 桥接"
+                  ok={traeBridgeOk}
+                  detail={
+                    traeBridge?.dir
+                      ? `已配置: ${traeBridge.dir}`
+                      : traeBridgeOk ? "已配置" : "未配置 FLOWFORGE_BRIDGE_DIR"
+                  }
+                />
+                <StatusRow
+                  label=".env 配置文件"
+                  ok={envFileOk}
+                  detail={
+                    !envFileOk ? "不存在" :
+                    envFile?.has_api_keys
+                      ? `存在，API key ${envFile.configured_keys ?? "?"}/${envFile.total_keys ?? 4} 已配置`
+                      : "存在，但 API key 未配置"
+                  }
+                />
+                <StatusRow label=".venv 虚拟环境" ok={venvOk} detail={venvOk ? "已创建" : "未创建"} />
+                <StatusRow label="前端依赖 (node_modules)" ok={webDepsOk} detail={webDepsOk ? "已安装" : "未安装"} />
+              </div>
+
+              {/* ── 安装提示 + 一键安装按钮 ── */}
+              {installHint && (
+                <div style={hintStyle(allReady)}>
+                  <span style={{ flex: 1, minWidth: "200px" }}>
+                    {allReady ? "✅ " : "💡 "}{installHint}
+                  </span>
+                  {!allReady && (
                     <button onClick={() => setShowInstallCmd(!showInstallCmd)} style={installBtnStyle}>
                       {showInstallCmd ? "隐藏命令" : "一键安装"}
                     </button>
@@ -314,11 +386,28 @@ export default function BootcampWizard({ onClose, onCreated }: BootcampWizardPro
 
 /** 区块标题 */
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <h3 style={{ fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: "var(--text)" }}>{children}</h3>;
+  return (
+    <h3 style={{ fontSize: "12px", fontWeight: 600, marginBottom: "8px", color: "var(--text)", display: "flex", alignItems: "center", gap: "8px" }}>
+      {children}
+    </h3>
+  );
 }
 
-/** 基础工具检测结果项 */
-function ToolCheckItem({ name, result, isCore = false }: { name: string; result?: ToolCheckResult; isCore?: boolean }) {
+/** 状态徽章（如 "5/5 就绪"） */
+function StatusBadge({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <span style={{
+      padding: "1px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: 500,
+      background: ok ? "var(--ok-subtle)" : "var(--warn-subtle)",
+      color: ok ? "var(--ok)" : "var(--warn)",
+    }}>
+      {children}
+    </span>
+  );
+}
+
+/** 核心工具检测项（python/node/npm/git/pnpm） */
+function CoreToolItem({ name, result }: { name: string; result?: CoreToolCheck }) {
   if (!result) {
     return (
       <div style={toolItemStyle}>
@@ -327,36 +416,105 @@ function ToolCheckItem({ name, result, isCore = false }: { name: string; result?
       </div>
     );
   }
+  const detail = result.ok
+    ? (result.version || "已安装")
+    : (result.required ? `需要 ${result.required}` : "未安装");
   return (
     <div style={toolItemStyle}>
-      <span style={{ fontWeight: isCore ? 600 : 400 }}>
+      <span style={{ fontWeight: 600 }}>
         {result.ok ? "✓" : "✗"} {name}
       </span>
-      <span style={{ color: result.ok ? "var(--ok)" : "var(--danger)", fontSize: "11px" }}>
-        {result.ok ? (result.version || "已安装") : (result.note || "未安装")}
+      <span style={{ display: "flex", gap: "8px", alignItems: "center", fontSize: "11px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <span style={{ color: result.ok ? "var(--ok)" : "var(--danger)" }}>{detail}</span>
+        {result.path && (
+          <span style={{ color: "var(--muted)", fontFamily: "var(--mono)", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={result.path}>
+            {result.path}
+          </span>
+        )}
       </span>
     </div>
   );
 }
 
-/** CLI 工具检测结果项（状态图标、名称、版本、绑定灵智体、安装命令） */
-function CliToolItem({ tool }: { tool: CliToolCheck }) {
-  const ok = tool.status === "ok";
+/** CLI 工具检测项（8 个灵智体所需）.
+ *  支持新格式（ok/version/path/error/install_cmd/forgekin）和旧格式（status/name）兼容。
+ */
+function CliToolItem({ name, tool }: { name: string; tool?: CliToolCheck }) {
+  if (!tool) {
+    return (
+      <div style={cliItemStyle(false)}>
+        <span>{name}</span>
+        <span style={{ color: "var(--muted)" }}>检测中...</span>
+      </div>
+    );
+  }
+  // 兼容旧格式：status 字段
+  const ok = tool.ok === true || tool.status === "ok";
+  const forgekin = tool.forgekin;
+  const version = tool.version;
+  const installCmd = tool.install_cmd;
+  const error = tool.error || (tool.status === "missing" ? "not found" : "");
+
   return (
     <div style={cliItemStyle(ok)}>
       <span style={{ fontWeight: 600, color: ok ? "var(--ok)" : "var(--danger)" }}>
-        {ok ? "✓" : "✗"} {tool.name}
+        {ok ? "✓" : "✗"} {name}
       </span>
       <span style={{ display: "flex", gap: "6px", alignItems: "center", fontSize: "11px", flex: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
-        {tool.version && <span style={{ color: "var(--muted)", fontFamily: "var(--mono)" }}>{tool.version}</span>}
-        {tool.forgekin && (
-          <span style={{ color: "var(--accent)", padding: "1px 6px", background: "var(--accent-subtle)", borderRadius: "3px", fontSize: "10px" }}>
-            {tool.forgekin}
-          </span>
+        {ok ? (
+          <>
+            {version && <span style={{ color: "var(--muted)", fontFamily: "var(--mono)" }}>{version}</span>}
+            {forgekin && (
+              <span style={{ color: "var(--accent)", padding: "1px 6px", background: "var(--accent-subtle)", borderRadius: "3px", fontSize: "10px" }}>
+                {forgekin}
+              </span>
+            )}
+          </>
+        ) : (
+          <>
+            {forgekin && (
+              <span style={{ color: "var(--muted)", padding: "1px 6px", background: "var(--bg)", borderRadius: "3px", fontSize: "10px" }}>
+                {forgekin}
+              </span>
+            )}
+            {error && <span style={{ color: "var(--danger)", fontSize: "10px" }}>{error}</span>}
+            {installCmd && (
+              <code style={{ color: "var(--warn)", fontSize: "10px", fontFamily: "var(--mono)" }}>{installCmd}</code>
+            )}
+          </>
         )}
-        {!ok && tool.install_cmd && (
-          <code style={{ color: "var(--warn)", fontSize: "10px", fontFamily: "var(--mono)" }}>{tool.install_cmd}</code>
-        )}
+      </span>
+    </div>
+  );
+}
+
+/** 代理服务检测项（claude-code-router/responses-proxy/gemini-proxy）.
+ *  支持新格式（ok/port/status/desc）和旧格式（name/port/status）兼容。
+ */
+function ProxyServiceItem({ name, service }: { name: string; service?: ProxyServiceCheck }) {
+  if (!service) {
+    return (
+      <div style={proxyItemStyle(false)}>
+        <span>{name}</span>
+        <span style={{ color: "var(--muted)" }}>检测中...</span>
+      </div>
+    );
+  }
+  // 兼容旧格式：service.name 或 ok 派生自 status
+  const ok = service.ok === true || service.status === "running";
+  const port = service.port;
+  const statusText = service.status === "running" ? "运行中"
+    : service.status === "stopped" ? "未运行"
+    : service.status === "unknown" ? "检测失败"
+    : service.status || "未知";
+  return (
+    <div style={proxyItemStyle(ok)}>
+      <span style={{ fontWeight: 600, color: ok ? "var(--ok)" : "var(--warn)" }}>
+        {ok ? "✓" : "⚠"} {name}
+      </span>
+      <span style={{ display: "flex", gap: "8px", alignItems: "center", fontSize: "11px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        <span style={{ color: "var(--muted)", fontFamily: "var(--mono)" }}>:{port}</span>
+        <span style={{ color: ok ? "var(--ok)" : "var(--warn)" }}>{statusText}</span>
       </span>
     </div>
   );
@@ -381,7 +539,7 @@ const overlayStyle: React.CSSProperties = {
 };
 
 const modalStyle: React.CSSProperties = {
-  width: "90%", maxWidth: "560px", maxHeight: "85vh", overflowY: "auto",
+  width: "90%", maxWidth: "580px", maxHeight: "85vh", overflowY: "auto",
   padding: "24px", background: "var(--bg)", border: "1px solid var(--border)",
   borderRadius: "12px", boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
 };
@@ -401,6 +559,15 @@ const toolItemStyle: React.CSSProperties = {
   padding: "8px 12px", background: "var(--bg-elevated)", borderRadius: "6px",
   border: "1px solid var(--border)", fontSize: "13px", color: "var(--text)",
 };
+
+/** 状态汇总条样式（根据是否全部就绪切换颜色） */
+const summaryStyle = (ready: boolean): React.CSSProperties => ({
+  marginBottom: "16px", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", lineHeight: 1.5,
+  display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap",
+  background: ready ? "var(--ok-subtle)" : "var(--warn-subtle)",
+  color: ready ? "var(--ok)" : "var(--warn)",
+  border: `1px solid ${ready ? "var(--ok)" : "var(--warn)"}`,
+});
 
 /** 安装提示框样式（根据是否就绪切换颜色） */
 const hintStyle = (ready: boolean): React.CSSProperties => ({
@@ -443,8 +610,15 @@ const cliItemStyle = (ok: boolean): React.CSSProperties => ({
   background: ok ? "var(--bg-elevated)" : "var(--danger-subtle)",
 });
 
+/** 代理服务检测项样式（缺失时用警告色而非错误色） */
+const proxyItemStyle = (ok: boolean): React.CSSProperties => ({
+  ...toolItemStyle, flexWrap: "wrap", gap: "4px 8px",
+  borderColor: ok ? "var(--border)" : "var(--warn)",
+  background: ok ? "var(--bg-elevated)" : "var(--warn-subtle)",
+});
+
 /** 通用状态行样式（根据状态切换边框色） */
 const statusRowStyle = (ok: boolean): React.CSSProperties => ({
-  ...toolItemStyle, marginBottom: "6px",
+  ...toolItemStyle,
   borderColor: ok ? "var(--border)" : "var(--warn)",
 });

@@ -144,3 +144,40 @@ class ExternalAgentAdapter:
 def build_default_adapters() -> dict[ExternalAgentKind, ExternalAgentAdapter]:
     """Construct adapters for all four built-in external agents."""
     return {kind: ExternalAgentAdapter(cfg) for kind, cfg in DEFAULT_CONFIGS.items()}
+
+
+def load_adapters_from_config(
+    forgemind_cfg: dict[str, Any],
+) -> dict[ExternalAgentKind, ExternalAgentAdapter]:
+    """从 forgemind 配置加载外部 Agent 适配器.
+
+    配置格式 (config/forgemind.yaml 中的 external_agents 段):
+        external_agents:
+          claude_code:
+            binary: claude
+            env:
+              ANTHROPIC_API_KEY: xxx
+          codex:
+            binary: codex
+
+    若配置中没有 external_agents 段或为空, 则回退到 build_default_adapters().
+    """
+    raw = forgemind_cfg.get("external_agents") or {}
+    if not raw:
+        return build_default_adapters()
+
+    adapters: dict[ExternalAgentKind, ExternalAgentAdapter] = {}
+    for kind, cfg in DEFAULT_CONFIGS.items():
+        override = raw.get(kind.value) or raw.get(kind.value.replace("_", "-")) or {}
+        if override:
+            merged = ExternalAgentConfig(
+                kind=kind,
+                binary=override.get("binary", cfg.binary),
+                description=override.get("description", cfg.description),
+                env={**cfg.env, **override.get("env", {})},
+                default_timeout=override.get("default_timeout", cfg.default_timeout),
+            )
+        else:
+            merged = cfg
+        adapters[kind] = ExternalAgentAdapter(merged)
+    return adapters
