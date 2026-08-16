@@ -79,6 +79,13 @@ ERROR_COOLDOWNS = {
 MAX_CANDIDATES = 20
 MAX_FALLBACK_CANDIDATES = 20
 MAX_CALLS_PER_TASK = 200
+# P-59 修复: task_id 为 "unknown" 时不允许入计数 — 该值无法标识具体任务，
+#   多个独立调用共享同名计数，一旦达到上限会永久锁死所有任务（8-14 实测
+#   "Task unknown exceeded max calls (200)" 之后 writer/editor 全部快速失败）。
+# 另引入滑窗计数：每个 task_id 的计数带 300s 窗口，窗口过期自动重置，
+#   防止长跑任务（cron 单篇 30 分钟）因窗口内偶然低频调用而误触发封顶。
+TASK_CALL_WINDOW_SECONDS = 300
+IGNORED_TASK_IDS = {"unknown", ""}
 
 # WebChat 轮询池：使用 openroute 的 proxy 模型
 # openroute 的 proxy 模型已内置 round-robin 负载均衡和繁忙模型跳过
@@ -231,6 +238,12 @@ def build_cross_fallback_chain(
             # 特殊入口（auto/free/proxy）跳过常规分组，作为最末兜底追加
             if m in SPECIAL_FALLBACK_ENTRIES:
                 continue
+            # v6.1: 排除 openrouter 具体 free 模型（openai/gpt-oss-*:free 等）。
+            # 用户要求：除 openclaw 对话外，选题/创作/润色/评委只用 openroute 无限 webchat，
+            # 绝不用 free 模型。这些 :free 模型高发 404/429，混入候选链会浪费时间且拉低质量分。
+            # openroute/free（特殊入口）仍保留，供 openclaw 对话专用。
+            if provider == "openrouter" and m.endswith(":free"):
+                continue
             key = f"{provider}/{m}"
             status = health_status.get(key, {})
             cooldown_until = status.get("cooldown_until", 0)
@@ -309,7 +322,7 @@ class LLMClient(BaseTool):
         self._llm_router = llm_router
         self._health_status: Dict[str, dict] = {}
         self._available_models: Dict[str, List[str]] = {}
-        self._task_call_counts: Dict[str, int] = {}
+        self._task_call_counts: Dict[str, list] = {}  # task_id -> [count, window_start_ts]
         self._task_used_models: Dict[str, set] = {}
         self._webchat_rotation_index: int = 0
         # P0-1/P0-4: 从 llm_route.yaml 读取 timeout_seconds，禁止硬编码 300s
@@ -849,6 +862,31 @@ class LLMClient(BaseTool):
         if self._event_bus:
             self._event_bus.emit(task_id, event_type, payload)
 
+    def _task_call_count(self, task_id: str) -> int:
+        """返回当前任务在滑动窗口内的调用次数（unknown 不入计数）."""
+        if task_id in IGNORED_TASK_IDS:
+            return 0
+        entry = self._task_call_counts.get(task_id)
+        if not entry:
+            return 0
+        count, window_start = entry
+        if time.time() - window_start >= TASK_CALL_WINDOW_SECONDS:
+            self._task_call_counts.pop(task_id, None)
+            return 0
+        return count
+
+    def _task_call_track(self, task_id: str) -> int:
+        """记录一次调用，返回窗口内累计次数（unknown 不入计数）."""
+        if task_id in IGNORED_TASK_IDS:
+            return 0
+        now = time.time()
+        entry = self._task_call_counts.get(task_id)
+        if not entry or now - entry[1] >= TASK_CALL_WINDOW_SECONDS:
+            self._task_call_counts[task_id] = [1, now]
+            return 1
+        self._task_call_counts[task_id][0] += 1
+        return self._task_call_counts[task_id][0]
+
     async def execute(self, input: ToolInput) -> ToolOutput:
         messages = input.params.get("messages", [])
         model = input.params.get("model")
@@ -880,7 +918,7 @@ class LLMClient(BaseTool):
                     f"timeout={agent_timeout}s")
 
         # Call counter check
-        call_count = self._task_call_counts.get(task_id, 0)
+        call_count = self._task_call_count(task_id)
         if call_count >= MAX_CALLS_PER_TASK:
             self._emit_event(task_id, "llm.error", {
                 "agent_name": agent_name or "unknown",
@@ -992,8 +1030,8 @@ class LLMClient(BaseTool):
                 continue
 
             # Increment call counter
-            self._task_call_counts[task_id] = self._task_call_counts.get(task_id, 0) + 1
-            if self._task_call_counts[task_id] > MAX_CALLS_PER_TASK:
+            self._task_call_track(task_id)
+            if self._task_call_count(task_id) > MAX_CALLS_PER_TASK:
                 logger.warning(f"Task {task_id} exceeded max calls ({MAX_CALLS_PER_TASK})")
                 break
 
@@ -1372,8 +1410,8 @@ class LLMClient(BaseTool):
                     if not skip_cooldown and time.time() < cooldown_until:
                         continue
                     # Increment call counter for fallback calls
-                    self._task_call_counts[task_id] = self._task_call_counts.get(task_id, 0) + 1
-                    if self._task_call_counts[task_id] > MAX_CALLS_PER_TASK:
+                    self._task_call_track(task_id)
+                    if self._task_call_count(task_id) > MAX_CALLS_PER_TASK:
                         logger.warning(f"Task {task_id} exceeded max calls ({MAX_CALLS_PER_TASK})")
                         break
                     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
