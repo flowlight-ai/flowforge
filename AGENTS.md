@@ -3,6 +3,58 @@
 > 本文件适用于所有 AI 编码工具：Trae / Claude Code / Cursor / Gemini / OpenCode / WorkBuddy / Qorder 等。
 > 工具在本仓库工作时**必须读取并遵守**本文件全部规则。
 
+## 仓库布局
+
+FlowForge 是 TypeScript pnpm 单体仓库，核心信条是**一切皆插件**，构建在 vendored 的 [Cordis](https://github.com/cordiverse/cordis) 内核之上（rescoop 为 `@flowforge/cordis`，源码在 `vendor/cordis`）。顶层目录结构：
+
+```
+flowforge/
+├── vendor/                 # vendored 依赖（rescoop 为 @flowforge/*）
+│   ├── cordis/             #   插件内核 → @flowforge/cordis（核心）
+│   ├── cosmokit/  schemastery/  loader/
+│   ├── group/  include/  hmr/  timer/  logger-console/
+├── packages/               # TS 插件（active rewrite），结构 packages/<group>/<pkg>/
+│   ├── core/  harness/  llm/  web/  acp/  workflow/  mcp/  ...
+├── apps/                   # (planned / stage 3) 主机 CLI，入口 apps/cli/src/bin.ts
+├── web/                    # Web UI（Next.js 前端）
+├── native/landlock-run/    # 原生沙箱运行器（独立子工程）
+├── docs/                   # 规范 / 架构 / 开发文档
+├── mgr  mgr.cmd  mgr.ps1   # 强制 Git 工作流 CLI（禁止直接 git 远程操作）
+├── scripts/                # 辅助脚本
+├── agents/  brain/  core/  llm/  loop/  forgemind/  web/  sdk.py   # Python 3.11+ 单体（legacy，sunset 路径）
+└── ...
+```
+
+- `packages/` 下的每个包都是 cordis 插件，按 `packages/<group>/<pkg>/` 组织；vendored 库统一放在 `vendor/`（cordis、cosmokit、schemastery、loader、group、include、hmr、timer、logger-console）。
+- TS 重写（`packages/*`）是当前活跃主线；Python 3.11+ 单体（`agents/`、`brain/`、`core/`、`llm/`、`loop/`、`forgemind/`、`web/`、`sdk.py`）为 legacy 实现，处于 sunset 路径——`pnpm` 管 TS，`pytest`/`ruff` 管 Python。
+
+## 常用命令
+
+```sh
+pnpm install                       # 安装依赖（Corepack pnpm@11.7.0）
+pnpm build                         # 构建 Host aggregate：tsc -b tsconfig.host.json
+pnpm typecheck                     # 类型检查（同 build 的 tsc 阶段）
+pnpm lint                          # oxlint 静态检查
+pnpm test                          # vitest run 运行测试
+
+# Git 远程操作一律走 ./mgr（详见下方 ./mgr  essentials）
+./mgr pull                                          # 拉取当前平台更新
+./mgr commit "type(scope): 描述 [agentID]"          # 提交（强制规范检查）
+./mgr push --pr --title "PR标题" --body "PR描述"     # push + 创建 PR（推荐）
+./mgr sync "type(scope): 描述 [agentID]" --body "PR描述" # 提交+push+PR 一键完成
+./mgr pr "type(scope): 描述 [agentID]" --body "PR描述"  # 为当前分支创建 PR
+./mgr merge-cross --dry-run                          # 查看双端差异
+./mgr merge-cross                                    # 跨平台双向合并（手动触发）
+```
+
+> **Node 版本**：`^22.19.0 || >=24.0.0`，pnpm `11.7.0`（Corepack）。
+> **平台感知**：`flowlight/flowforge/mgr` → Gitee（base `master`）；`flowlight-ai/...` → GitHub（base `main`）。
+> **主机 CLI** `pnpm flowforge` / `pnpm start`（`apps/cli/src/bin.ts`）为 **planned / stage 3**，目录尚未落地，暂不可运行。
+
+### 本地检查
+
+提交前只运行**覆盖你改动面的最小检查集**：纯 TS 改动跑 `pnpm typecheck` + `pnpm lint`；行为变更补 `pnpm test`；文档改动跑对应文档同步；依赖构建产物（`lib/`）的检查先 `pnpm build`。全量覆盖与兼容性矩阵由 CI 负责，不要本地全量跑。
+
 ## Git 工作流（最高优先级）
 
 ### 1. 平台感知
