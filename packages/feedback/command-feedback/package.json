@@ -1,0 +1,54 @@
+{
+  "name": "@flowforge/command-feedback",
+  "description": "Log-only session feedback producer and human-facing slash command",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/feedback/command-feedback"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/commands": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-telemetry": "workspace:^",
+    "@flowforge/anonymous-user-id": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-include": "workspace:^",
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/commands": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-telemetry": "workspace:^",
+    "@flowforge/anonymous-user-id": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

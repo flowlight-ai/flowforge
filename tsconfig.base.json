@@ -173,6 +173,60 @@
       ],
       "@flowforge/credentials-local": [
         "./packages/credentials/credentials-local/src"
+      ],
+      "@flowforge/session-checkpoint-policy": [
+        "./packages/session/session-checkpoint-policy/src"
+      ],
+      "@flowforge/session-projection-cache": [
+        "./packages/session/session-projection-cache/src"
+      ],
+      "@flowforge/session-stats": [
+        "./packages/session/session-stats/src"
+      ],
+      "@flowforge/session-telemetry": [
+        "./packages/session/session-telemetry/src"
+      ],
+      "@flowforge/session-telemetry-otel": [
+        "./packages/session/session-telemetry-otel/src"
+      ],
+      "@flowforge/session-title": [
+        "./packages/session/session-title/src"
+      ],
+      "@flowforge/session-title-llm": [
+        "./packages/session/session-title-llm/src"
+      ],
+      "@flowforge/session-title-first-prompt-llm": [
+        "./packages/session/session-title-first-prompt-llm/src"
+      ],
+      "@flowforge/session-title-all-prompts-llm": [
+        "./packages/session/session-title-all-prompts-llm/src"
+      ],
+      "@flowforge/storage-domain": [
+        "./packages/storage/storage-domain/src"
+      ],
+      "@flowforge/storage-json": [
+        "./packages/storage/storage-json/src"
+      ],
+      "@flowforge/storage-sqlite": [
+        "./packages/storage/storage-sqlite/src"
+      ],
+      "@flowforge/command-feedback": [
+        "./packages/feedback/command-feedback/src"
+      ],
+      "@flowforge/message-feedback": [
+        "./packages/feedback/message-feedback/src"
+      ],
+      "@flowforge/acp-snapshot": [
+        "./packages/test-support/acp-snapshot/src"
+      ],
+      "@flowforge/llm-replay": [
+        "./packages/test-support/llm-replay/src"
+      ],
+      "@flowforge/loader-smoke": [
+        "./packages/test-support/loader-smoke/src"
+      ],
+      "@flowforge/code-runtime-worker-thread": [
+        "./packages/code-runtime/code-runtime-worker-thread/src"
       ]
     }
   }

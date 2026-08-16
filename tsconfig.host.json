@@ -150,6 +150,60 @@
     },
     {
       "path": "./packages/util/timeout"
+    },
+    {
+      "path": "./packages/session/session-checkpoint-policy"
+    },
+    {
+      "path": "./packages/session/session-projection-cache"
+    },
+    {
+      "path": "./packages/session/session-stats"
+    },
+    {
+      "path": "./packages/session/session-telemetry"
+    },
+    {
+      "path": "./packages/session/session-telemetry-otel"
+    },
+    {
+      "path": "./packages/session/session-title"
+    },
+    {
+      "path": "./packages/session/session-title-llm"
+    },
+    {
+      "path": "./packages/session/session-title-first-prompt-llm"
+    },
+    {
+      "path": "./packages/session/session-title-all-prompts-llm"
+    },
+    {
+      "path": "./packages/storage/storage-domain"
+    },
+    {
+      "path": "./packages/storage/storage-json"
+    },
+    {
+      "path": "./packages/storage/storage-sqlite"
+    },
+    {
+      "path": "./packages/feedback/command-feedback"
+    },
+    {
+      "path": "./packages/feedback/message-feedback"
+    },
+    {
+      "path": "./packages/test-support/acp-snapshot"
+    },
+    {
+      "path": "./packages/test-support/llm-replay"
+    },
+    {
+      "path": "./packages/test-support/loader-smoke"
+    },
+    {
+      "path": "./packages/code-runtime/code-runtime-worker-thread"
     }
   ]
 }
