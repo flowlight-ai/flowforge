@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-SQLite 持久会话存储后端：第二个 `SessionPersistence` 提供方（见[会话持久化](../../../.agents/notes/implemented/architecture/2026-06-14-session-persistence.md)），满足与 `dsh-session-persistence-jsonl` 相同的约定（仅追加、连续 seq、延迟实体化、在 load 时关闭中断轮次），但用 `node:sqlite` 行而非文件字节表达。
+SQLite 持久会话存储后端：第二个 `SessionPersistence` 提供方（见[会话持久化](../../../.agents/notes/implemented/architecture/2026-06-14-session-persistence.md)），满足与 `flowforge-session-persistence-jsonl` 相同的约定（仅追加、连续 seq、延迟实体化、在 load 时关闭中断轮次），但用 `node:sqlite` 行而非文件字节表达。
 
 `locate(meta)` 返回 `undefined`：所有会话共享一个数据库，因此不存在真实、独立的逐会话 transcript（文本记录）路径。
 

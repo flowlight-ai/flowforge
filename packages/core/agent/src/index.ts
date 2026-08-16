@@ -40,7 +40,7 @@ declare module '@flowforge/cordis' {
      * The agent association installed as an own property on `Agent.ctx`, or
      * `undefined` on a plain context. Contexts derived from `Agent.ctx` inherit
      * the association; a deliberately nested scope may carry a nearer
-     * `dsh-scope` tag while retaining it, so this field is DX context rather
+     * `flowforge-scope` tag while retaining it, so this field is DX context rather
      * than the scope resolver. {@link AgentRegistry} registers a root accessor
      * defaulting to `undefined`, and core packages below the agent layer use
      * `scopeOf()` for layer selection instead of reading this field.
@@ -85,7 +85,7 @@ export interface CreateAgentOptions {
    * fork lineage, the `seedLength` seed boundary, the coarse `origin`
    * classification, and the `delegationDepth` recursion budget. Mirrors the
    * `cwd`/`parentSession`/`seedLength`/`origin`/`delegationDepth` fields of
-   * {@link CreateSessionOptions.meta} in dsh-session (the internal-only
+   * {@link CreateSessionOptions.meta} in flowforge-session (the internal-only
    * `createdAt`, used when reconstructing a persisted session, is deliberately
    * excluded — a factory caller never sets it). This is durable session data,
    * so the session boundary validates and snapshots it before asynchronous
@@ -176,9 +176,9 @@ export interface AgentHandle {
 
 /**
  * The agent-creation factory the loop implementation provides to the registry
- * via {@link AgentRegistry.setFactory}. Kept on the `dsh-agent` interface so
+ * via {@link AgentRegistry.setFactory}. Kept on the `flowforge-agent` interface so
  * consumers (e.g. the ACP bridge) program against `ctx.agents` without
- * depending on the concrete `dsh-agent-loop` package.
+ * depending on the concrete `flowforge-agent-loop` package.
  */
 export interface AgentFactory {
   /**

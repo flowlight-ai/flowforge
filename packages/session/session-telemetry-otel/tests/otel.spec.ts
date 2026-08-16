@@ -44,17 +44,17 @@ interface OtlpLogsRequest {
 const servers: Server[] = []
 
 // The backend resolves the harness home's anonymous user id at construction;
-// pin DSH_HOME to a temp dir so the suite never touches the ambient ~/.dsh.
+// pin FF_HOME to a temp dir so the suite never touches the ambient ~/.flowforge.
 let tempHome: string
-let previousDshHome: string | undefined
+let previousFlowforgeHome: string | undefined
 beforeAll(() => {
-  tempHome = mkdtempSync(join(tmpdir(), 'dsh-otel-home-'))
-  previousDshHome = process.env.DSH_HOME
-  process.env.DSH_HOME = tempHome
+  tempHome = mkdtempSync(join(tmpdir(), 'flowforge-otel-home-'))
+  previousFlowforgeHome = process.env.FF_HOME
+  process.env.FF_HOME = tempHome
 })
 afterAll(() => {
-  if (previousDshHome === undefined) delete process.env.DSH_HOME
-  else process.env.DSH_HOME = previousDshHome
+  if (previousFlowforgeHome === undefined) delete process.env.FF_HOME
+  else process.env.FF_HOME = previousFlowforgeHome
   rmSync(tempHome, { recursive: true, force: true })
 })
 
@@ -140,7 +140,7 @@ describe('OpenTelemetrySessionBackend wire', () => {
     expect(authorization).toBe('Bearer test-token')
 
     const resource = first.body.resourceLogs[0]!.resource.attributes
-    expect(resource).toContainEqual({ key: 'service.name', value: { stringValue: 'deepseek-harness' } })
+    expect(resource).toContainEqual({ key: 'service.name', value: { stringValue: 'flowforge' } })
     expect(resource).toContainEqual({ key: 'user.id', value: { stringValue: getOrCreateAnonymousUserId() } })
 
     const records = allRecords(captures)
@@ -490,7 +490,7 @@ describe('OpenTelemetrySessionBackend config fails loud', () => {
   })
 })
 
-describe('dsh-session-telemetry-otel real-load-path guard', () => {
+describe('flowforge-session-telemetry-otel real-load-path guard', () => {
   it('keeps the Service class with inject/Config through unwrapExports', async () => {
     const module = await import('../src/index.ts')
     const loader = Object.create(Loader.prototype) as Loader

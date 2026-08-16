@@ -1,0 +1,106 @@
+{
+  "name": "@flowforge/subagent",
+  "description": "Abstract subagent seam (ctx.subagents): named-provider registry for delegating to child agents",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/subagent/subagent"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./client": {
+      "types": "./lib/types/client.d.ts",
+      "default": "./lib/types/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-presets": "workspace:^",
+    "@flowforge/brand": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/scope": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-persistence": "workspace:^",
+    "@flowforge/session-projection": "workspace:^",
+    "@flowforge/session-projection-cache": "workspace:^",
+    "@flowforge/jobs": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/user-approval": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@flowforge/agent-presets": {
+      "optional": true
+    },
+    "@flowforge/sandbox": {
+      "optional": true
+    },
+    "@flowforge/sandbox-policy": {
+      "optional": true
+    },
+    "@flowforge/session-persistence": {
+      "optional": true
+    },
+    "@flowforge/session-projection": {
+      "optional": true
+    },
+    "@flowforge/session-projection-cache": {
+      "optional": true
+    },
+    "@flowforge/jobs": {
+      "optional": true
+    },
+    "@flowforge/user-approval": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-presets": "workspace:^",
+    "@flowforge/brand": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/scope": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-persistence": "workspace:^",
+    "@flowforge/session-projection": "workspace:^",
+    "@flowforge/session-projection-cache": "workspace:^",
+    "@flowforge/storage": "workspace:^",
+    "@flowforge/storage-domain": "workspace:^",
+    "@flowforge/jobs": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/user-approval": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

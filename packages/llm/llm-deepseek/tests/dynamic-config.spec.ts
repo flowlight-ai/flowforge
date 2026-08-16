@@ -24,7 +24,7 @@ afterEach(async () => {
 })
 
 async function home(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), 'dsh-llm-dynamic-'))
+  const dir = await mkdtemp(join(tmpdir(), 'flowforge-llm-dynamic-'))
   cleanups.push(() => rm(dir, { recursive: true, force: true }))
   return dir
 }
@@ -41,7 +41,7 @@ interface Harness {
  * file watching is the providers' own covered concern.
  */
 async function boot(dir: string, config: object): Promise<Harness> {
-  vi.stubEnv('DSH_HOME', dir)
+  vi.stubEnv('FF_HOME', dir)
   const ctx = new Context()
   cleanups.push(async () => {
     await ctx.fiber.dispose()

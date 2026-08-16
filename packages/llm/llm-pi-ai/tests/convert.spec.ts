@@ -210,7 +210,7 @@ describe('toPiContext', () => {
     })
     expect(context.messages[0]).toMatchObject({
       role: 'assistant',
-      api: 'dsh-foreign',
+      api: 'flowforge-foreign',
       provider: 'deepseek',
       model: 'old-model',
     })

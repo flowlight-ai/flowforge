@@ -1132,7 +1132,7 @@ export class PersistenceCoordinator<TornMarker = unknown> {
     ctx.on('session/disposed', (session) => { this.retire(session) })
 
     // HMR: a hot reload does not replay session/created, so seed existing live
-    // sessions (mirrors dsh-invariants).
+    // sessions (mirrors flowforge-invariants).
     for (const session of ctx.sessions.list()) void this.initFor(session)
   }
 

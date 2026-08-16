@@ -1,0 +1,73 @@
+{
+  "name": "@flowforge/agent-presets",
+  "description": "Per-session agent composition from preset cordis.yml files for the FlowForge",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/preset/agent-presets"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis-plugin-include": "workspace:^",
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/atomic-write": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/home-paths": "workspace:^",
+    "@flowforge/scope": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/settings": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "@flowforge/schemastery": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-include": "workspace:^",
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-loop": "workspace:^",
+    "@flowforge/atomic-write": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/home-paths": "workspace:^",
+    "@flowforge/scope": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/settings": "workspace:^",
+    "@flowforge/settings-file": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

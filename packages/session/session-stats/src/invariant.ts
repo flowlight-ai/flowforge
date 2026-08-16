@@ -20,7 +20,7 @@ export const inject = ['invariants']
  * snapshot and change-feed emission, and the event relations the fold relies
  * on (`step/end` exactly once per entered step, monotonic host-assigned turn
  * numbers, chunk and tool events carrying their step coordinates and call
- * ids) are owned and runtime-checked by dsh-agent-loop and the session
+ * ids) are owned and runtime-checked by flowforge-agent-loop and the session
  * surface, not here.
  */
 const install: InvariantInstaller = () => {}

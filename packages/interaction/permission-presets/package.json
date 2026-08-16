@@ -1,0 +1,71 @@
+{
+  "name": "@flowforge/permission-presets",
+  "description": "User-facing permission presets (ctx.permissionPresets) for the FlowForge: one product-level Permissions select bundling the sandbox-mode and approval-policy knobs, written through to their own session events",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/interaction/permission-presets"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./client": {
+      "types": "./lib/types/client.d.ts",
+      "default": "./lib/types/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/shell": "workspace:^",
+    "@flowforge/commands": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-projection": "workspace:^",
+    "@flowforge/settings": "workspace:^",
+    "@flowforge/user-approval": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "dependencies": {
+    "@flowforge/schemastery": "workspace:^",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@flowforge/shell": "workspace:^",
+    "@flowforge/commands": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-projection": "workspace:^",
+    "@flowforge/settings": "workspace:^",
+    "@flowforge/user-approval": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

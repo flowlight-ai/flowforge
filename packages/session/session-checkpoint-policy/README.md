@@ -1,4 +1,4 @@
-# dsh-session-checkpoint-policy
+# flowforge-session-checkpoint-policy
 
 English | [中文](README.zh.md)
 
@@ -28,7 +28,7 @@ Checkpoint rejection is fail-closed at the model and tool boundaries: neither th
 
 #### What the model sees
 
-The plugin adds no prompt or tool schema. A hard crash after a tool checkpoint but before its result leaves a durable unmatched call; session recovery supplies the model-visible `TOOL_OUTCOME_UNKNOWN` result owned by `dsh-session`. The message permits retry for read-only or idempotent work and requires state verification or user confirmation for calls that may have side effects.
+The plugin adds no prompt or tool schema. A hard crash after a tool checkpoint but before its result leaves a durable unmatched call; session recovery supplies the model-visible `TOOL_OUTCOME_UNKNOWN` result owned by `flowforge-session`. The message permits retry for read-only or idempotent work and requires state verification or user confirmation for calls that may have side effects.
 
 #### Token effect
 

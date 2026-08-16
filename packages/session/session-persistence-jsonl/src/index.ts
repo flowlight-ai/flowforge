@@ -870,7 +870,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
       entries = await readdir(project, { withFileTypes: true })
     } catch (error) {
       // A concurrent creator may tear the project down while listing (win32
-      // durable-directory staging publishes via .dsh-mkdir-* siblings); treat
+      // durable-directory staging publishes via .flowforge-mkdir-* siblings); treat
       // its disappearance as no sessions rather than a list failure.
       if (isENOENT(error)) return []
       throw error
@@ -881,7 +881,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
     if (legacy !== undefined) throw this.legacyLayout(join(project, legacy.name))
     // Skip win32 durable-directory staging siblings: they are never sessions.
     return entries
-      .filter(entry => entry.isDirectory() && !entry.name.startsWith('.dsh-mkdir-'))
+      .filter(entry => entry.isDirectory() && !entry.name.startsWith('.flowforge-mkdir-'))
       .map(entry => join(project, entry.name))
   }
 

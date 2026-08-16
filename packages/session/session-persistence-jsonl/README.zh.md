@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-JSONL 持久会话存储后端：`SessionPersistence` 的一个具体实现（`dsh-session-persistence` seam）。每个会话有一个仅追加的逻辑 JSONL 日志，默认存储为 `.jsonl.zstd`；禁用压缩时使用原始 `.jsonl`。
+JSONL 持久会话存储后端：`SessionPersistence` 的一个具体实现（`flowforge-session-persistence` seam）。每个会话有一个仅追加的逻辑 JSONL 日志，默认存储为 `.jsonl.zstd`；禁用压缩时使用原始 `.jsonl`。
 
 ## 磁盘布局
 

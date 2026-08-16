@@ -158,7 +158,7 @@ export class BlockAssembler {
    * @param source - producer attribution for the assembled message.
    * @returns a frozen assistant-role message over `blocks()` (same open-block assembly rules).
    */
-  message(source: MessageSource = { kind: 'plugin', plugin: 'dsh-llm/assembler' }): Message {
+  message(source: MessageSource = { kind: 'plugin', plugin: 'flowforge-llm/assembler' }): Message {
     return createMessage({ role: 'assistant', content: this.blocks(), source })
   }
 }

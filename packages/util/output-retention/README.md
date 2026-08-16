@@ -1,4 +1,4 @@
-# dsh-output-retention
+# flowforge-output-retention
 
 English | [中文](README.zh.md)
 
@@ -35,7 +35,7 @@ import type {
 The two retainers are separate names, not one generic collector, because they differ in **resource model**.
 
 - **`ItemRetainer` bounds ordered logical units.** A search tool can collect a full result set for spill-file recovery while retaining only the first `maxItems` for the model-facing preview. The omission count is exact because the caller keeps feeding every observed item.
-- **`TextRetainer` bounds byte-oriented text.** `head`, `tail`, and `headTail` preserve UTF-8 boundaries at `finish()`; `headTail` is the shape `dsh-spill-policy` uses to build a bounded preview around a spill-file notice.
+- **`TextRetainer` bounds byte-oriented text.** `head`, `tail`, and `headTail` preserve UTF-8 boundaries at `finish()`; `headTail` is the shape `flowforge-spill-policy` uses to build a bounded preview around a spill-file notice.
 
 ## `truncated` is a budget fact, never "incomplete"
 

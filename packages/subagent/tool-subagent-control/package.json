@@ -1,0 +1,62 @@
+{
+  "name": "@flowforge/tool-subagent-control",
+  "description": "Globally named send_message, interrupt_agent, and list_agents tools over ctx.subagents continuations",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/subagent/tool-subagent-control"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./list-agents": {
+      "types": "./lib/types/list-agents.d.ts",
+      "default": "./lib/types/list-agents.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/subagent": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-loop": "workspace:^",
+    "@flowforge/agent-loop-testkit": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-persistence": "workspace:^",
+    "@flowforge/session-persistence-jsonl": "workspace:^",
+    "@flowforge/session-projection": "workspace:^",
+    "@flowforge/subagent": "workspace:^",
+    "@flowforge/subagent-spawn-in-process": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

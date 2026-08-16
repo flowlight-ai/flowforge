@@ -1,0 +1,52 @@
+{
+  "name": "@flowforge/pwsh-sandbox",
+  "description": "Sandbox-consuming implementation of the FlowForge PowerShell executor seam (confines every command via ctx.sandbox, reports denial/enforcement result facts)",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/shell/pwsh-sandbox"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/shell": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/pwsh-local": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/shell": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/pwsh-local": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-local": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/subprocess-local": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

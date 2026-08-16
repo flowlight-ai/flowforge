@@ -58,14 +58,17 @@ async function scenario(behavior: object): Promise<{ dir: string; fixtureFile: s
   return { dir, fixtureFile: join(dir, 'session.jsonl') }
 }
 
+// Negative-path wait budgets use 250ms here (upstream: 20ms): under the
+// parallel Windows lane the first vi.waitFor poll cannot start within 20ms,
+// surfacing the generic waitFor timeout instead of the specific rejection.
 const boot: InputStep[] = [{ op: 'initialize' }, { op: 'newSession' }]
 
 it('keeps scenario-owned snapshot spill root length stable across platforms', () => {
   const fixtureFile = '/fixtures/scenario/session.jsonl'
   const posix = snapshotSpillRoot(fixtureFile, 'linux')
   const windows = snapshotSpillRoot(fixtureFile, 'win32')
-  expect(posix).toMatch(/^\/tmp\/dsh-acp-snap-[0-9a-f]{9}$/)
-  expect(windows).toMatch(/^\/t\/dsh-acp-snap-[0-9a-f]{9}$/)
+  expect(posix).toMatch(/^\/tmp\/flowforge-acp-snap-[0-9a-f]{9}$/)
+  expect(windows).toMatch(/^\/t\/flowforge-acp-snap-[0-9a-f]{9}$/)
   expect(windows.length + 2).toBe(posix.length)
 })
 
@@ -104,9 +107,9 @@ describe('runScenario', () => {
       cwd: dir,
       configPath: AGENT.configPath,
       env: {
-        DSH_SNAPSHOT: 'replay',
-        DSH_SNAPSHOT_FILE: fixtureFile,
-        DSH_SNAPSHOT_SESSIONS_ROOT: sessionsRoot,
+        FF_SNAPSHOT: 'replay',
+        FF_SNAPSHOT_FILE: fixtureFile,
+        FF_SNAPSHOT_SESSIONS_ROOT: sessionsRoot,
       },
     })
     await launched.client.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} })
@@ -147,7 +150,7 @@ describe('runScenario', () => {
     const launched = launchAcpTestAgent({
       agent: AGENT,
       cwd: dir,
-      env: { DSH_SNAPSHOT_FILE: fixtureFile },
+      env: { FF_SNAPSHOT_FILE: fixtureFile },
     })
     await launched.client.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} })
     await launched.client.newSession({ cwd: dir, mcpServers: [] })
@@ -326,7 +329,7 @@ describe('runScenario', () => {
     const launched = launchAcpTestAgent({
       agent: AGENT,
       cwd: dir,
-      env: { DSH_SNAPSHOT_FILE: fixtureFile },
+      env: { FF_SNAPSHOT_FILE: fixtureFile },
       async requestPermission() {
         markPermissionStarted?.()
         await permissionReleased
@@ -361,7 +364,7 @@ describe('runScenario', () => {
 
   it('preserves launch-resolution errors when no child process exists', async () => {
     const { dir, fixtureFile } = await scenario({})
-    vi.stubEnv('DSH_EXAMPLE_MODE', 'lib')
+    vi.stubEnv('FF_EXAMPLE_MODE', 'lib')
     try {
       await expect(runScenario(
         { steps: [] },
@@ -543,11 +546,11 @@ describe('runScenario', () => {
         steps: [...boot, {
           op: 'promptAndCancel',
           text: 'hang',
-          waitForFile: { path: 'never.txt', timeoutMs: 20 },
+          waitForFile: { path: 'never.txt', timeoutMs: 250 },
         }],
       },
       { agent: AGENT, mode: 'replay', fixtureFile: missing.fixtureFile },
-    )).rejects.toThrow(/workspace file "never\.txt" did not appear within 20ms/)
+    )).rejects.toThrow(/workspace file "never\.txt" did not appear within 250ms/)
   })
 
   it('promptAndWaitForAgentMessage keeps the app live through a matching later update', { timeout: 20_000 }, async () => {
@@ -615,9 +618,9 @@ describe('runScenario', () => {
   it('waitForInboxMessage times out when the session log or matching insertion is absent', { timeout: 20_000 }, async () => {
     const absent = await scenario({ prompt: 'hang-until-cancel', persistLogsOnCancel: true })
     await expect(runScenario(
-      { steps: [...boot, { op: 'promptAndCancel', text: 'hang' }, { op: 'waitForInboxMessage', text: 'missing', timeoutMs: 20 }] },
+      { steps: [...boot, { op: 'promptAndCancel', text: 'hang' }, { op: 'waitForInboxMessage', text: 'missing', timeoutMs: 250 }] },
       { agent: AGENT, mode: 'replay', fixtureFile: absent.fixtureFile },
-    )).rejects.toThrow(/did not persist expected inbox message within 20ms/)
+    )).rejects.toThrow(/did not persist expected inbox message within 250ms/)
 
     const unmatched = await scenario({
       prompt: 'hang-until-cancel',
@@ -628,9 +631,9 @@ describe('runScenario', () => {
       }],
     })
     await expect(runScenario(
-      { steps: [...boot, { op: 'promptAndCancel', text: 'hang' }, { op: 'waitForInboxMessage', text: 'missing', timeoutMs: 20 }] },
+      { steps: [...boot, { op: 'promptAndCancel', text: 'hang' }, { op: 'waitForInboxMessage', text: 'missing', timeoutMs: 250 }] },
       { agent: AGENT, mode: 'replay', fixtureFile: unmatched.fixtureFile },
-    )).rejects.toThrow(/did not persist expected inbox message within 20ms/)
+    )).rejects.toThrow(/did not persist expected inbox message within 250ms/)
   })
 
   it('waitForTitleAfterTurnEnd holds the app through a standalone durable title', { timeout: 20_000 }, async () => {
@@ -687,9 +690,9 @@ describe('runScenario', () => {
   it('waitForTurnStart rejects missing, earlier, and malformed durable turns', { timeout: 20_000 }, async () => {
     const missing = await scenario({})
     await expect(runScenario(
-      { steps: [...boot, { op: 'waitForTurnStart', timeoutMs: 20 }] },
+      { steps: [...boot, { op: 'waitForTurnStart', timeoutMs: 250 }] },
       { agent: AGENT, mode: 'replay', fixtureFile: missing.fixtureFile },
-    )).rejects.toThrow(/did not persist turn\/start within 20ms/)
+    )).rejects.toThrow(/did not persist turn\/start within 250ms/)
 
     const earlier = await scenario({
       prompt: 'hang-until-cancel',
@@ -707,11 +710,11 @@ describe('runScenario', () => {
         steps: [
           ...boot,
           { op: 'promptAndCancel', text: 'hang' },
-          { op: 'waitForTurnStart', minimumTurn: 3, timeoutMs: 20 },
+          { op: 'waitForTurnStart', minimumTurn: 3, timeoutMs: 250 },
         ],
       },
       { agent: AGENT, mode: 'replay', fixtureFile: earlier.fixtureFile },
-    )).rejects.toThrow(/turn\/start at or beyond turn 3 within 20ms/)
+    )).rejects.toThrow(/turn\/start at or beyond turn 3 within 250ms/)
 
     const closed = await scenario({
       prompt: 'hang-until-cancel',
@@ -730,11 +733,11 @@ describe('runScenario', () => {
         steps: [
           ...boot,
           { op: 'promptAndCancel', text: 'hang' },
-          { op: 'waitForTurnStart', timeoutMs: 20 },
+          { op: 'waitForTurnStart', timeoutMs: 250 },
         ],
       },
       { agent: AGENT, mode: 'replay', fixtureFile: closed.fixtureFile },
-    )).rejects.toThrow(/did not persist turn\/start within 20ms/)
+    )).rejects.toThrow(/did not persist turn\/start within 250ms/)
 
     for (const turn of [undefined, 0]) {
       const malformed = await scenario({
@@ -764,9 +767,9 @@ describe('runScenario', () => {
   it('waitForTurnEnd times out for a missing log and an open logged turn', { timeout: 20_000 }, async () => {
     const missing = await scenario({})
     await expect(runScenario(
-      { steps: [...boot, { op: 'waitForTurnEnd', timeoutMs: 20 }] },
+      { steps: [...boot, { op: 'waitForTurnEnd', timeoutMs: 250 }] },
       { agent: AGENT, mode: 'replay', fixtureFile: missing.fixtureFile },
-    )).rejects.toThrow(/did not persist turn\/end within 20ms/)
+    )).rejects.toThrow(/did not persist turn\/end within 250ms/)
 
     const open = await scenario({
       prompt: 'hang-until-cancel',
@@ -784,11 +787,11 @@ describe('runScenario', () => {
         steps: [
           ...boot,
           { op: 'promptAndCancel', text: 'hang' },
-          { op: 'waitForTurnEnd', timeoutMs: 20 },
+          { op: 'waitForTurnEnd', timeoutMs: 250 },
         ],
       },
       { agent: AGENT, mode: 'replay', fixtureFile: open.fixtureFile },
-    )).rejects.toThrow(/did not persist turn\/end within 20ms/)
+    )).rejects.toThrow(/did not persist turn\/end within 250ms/)
   })
 
   it('waitForGoalPhase requires the requested durable goal phase', { timeout: 20_000 }, async () => {
@@ -818,9 +821,9 @@ describe('runScenario', () => {
 
     const missing = await scenario({})
     await expect(runScenario(
-      { steps: [...boot, { op: 'waitForGoalPhase', phase: 'blocked', timeoutMs: 20 }] },
+      { steps: [...boot, { op: 'waitForGoalPhase', phase: 'blocked', timeoutMs: 250 }] },
       { agent: AGENT, mode: 'replay', fixtureFile: missing.fixtureFile },
-    )).rejects.toThrow(/did not persist goal phase "blocked" within 20ms/)
+    )).rejects.toThrow(/did not persist goal phase "blocked" within 250ms/)
   })
 
   it('waitForSubagentTurnEnd requires a closed child work turn', { timeout: 20_000 }, async () => {
@@ -863,11 +866,11 @@ describe('runScenario', () => {
         steps: [
           ...boot,
           { op: 'promptAndCancel', text: 'hang' },
-          { op: 'waitForSubagentTurnEnd', minimumTurn: 2, timeoutMs: 20 },
+          { op: 'waitForSubagentTurnEnd', minimumTurn: 2, timeoutMs: 250 },
         ],
       },
       { agent: AGENT, mode: 'replay', fixtureFile: closed.fixtureFile },
-    )).rejects.toThrow(/subagent child #1 did not persist closed turn 2 within 20ms/)
+    )).rejects.toThrow(/subagent child #1 did not persist closed turn 2 within 250ms/)
 
     const seedOnly = await scenario({
       prompt: 'hang-until-cancel',
@@ -897,17 +900,17 @@ describe('runScenario', () => {
         steps: [
           ...boot,
           { op: 'promptAndCancel', text: 'hang' },
-          { op: 'waitForSubagentTurnEnd', timeoutMs: 20 },
+          { op: 'waitForSubagentTurnEnd', timeoutMs: 250 },
         ],
       },
       { agent: AGENT, mode: 'replay', fixtureFile: seedOnly.fixtureFile },
-    )).rejects.toThrow(/subagent child #1 did not persist closed turn 1 within 20ms/)
+    )).rejects.toThrow(/subagent child #1 did not persist closed turn 1 within 250ms/)
 
     const missing = await scenario({})
     await expect(runScenario(
-      { steps: [...boot, { op: 'waitForSubagentTurnEnd', child: 2, timeoutMs: 20 }] },
+      { steps: [...boot, { op: 'waitForSubagentTurnEnd', child: 2, timeoutMs: 250 }] },
       { agent: AGENT, mode: 'replay', fixtureFile: missing.fixtureFile },
-    )).rejects.toThrow(/subagent child #2 did not persist closed turn 1 within 20ms/)
+    )).rejects.toThrow(/subagent child #2 did not persist closed turn 1 within 250ms/)
   })
 
   it('waitForTitleAfterTurnEnd times out when the title precedes the boundary', { timeout: 20_000 }, async () => {
@@ -928,11 +931,11 @@ describe('runScenario', () => {
         steps: [
           ...boot,
           { op: 'promptAndCancel', text: 'hang' },
-          { op: 'waitForTitleAfterTurnEnd', timeoutMs: 20 },
+          { op: 'waitForTitleAfterTurnEnd', timeoutMs: 250 },
         ],
       },
       { agent: AGENT, mode: 'replay', fixtureFile },
-    )).rejects.toThrow(/did not persist session\/title after turn\/end within 20ms/)
+    )).rejects.toThrow(/did not persist session\/title after turn\/end within 250ms/)
   })
 
   it('waitForEventAfterTurnEnd holds the app for a typed post-boundary record and times out otherwise', { timeout: 20_000 }, async () => {
@@ -977,11 +980,11 @@ describe('runScenario', () => {
         steps: [
           ...boot,
           { op: 'promptAndCancel', text: 'hang' },
-          { op: 'waitForEventAfterTurnEnd', type: 'user/message', timeoutMs: 20 },
+          { op: 'waitForEventAfterTurnEnd', type: 'user/message', timeoutMs: 250 },
         ],
       },
       { agent: AGENT, mode: 'replay', fixtureFile: early.fixtureFile },
-    )).rejects.toThrow(/did not persist user\/message after turn\/end within 20ms/)
+    )).rejects.toThrow(/did not persist user\/message after turn\/end within 250ms/)
   })
 
   it('promptExpectError swallows a model-error response as the expected outcome', { timeout: 20_000 }, async () => {

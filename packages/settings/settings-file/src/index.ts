@@ -14,15 +14,15 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, resolve } from 'node:path'
 import { Document, parseDocument } from 'yaml'
 import { withFileLock, writeFileAtomic } from '@flowforge/atomic-write'
-import { canonicalizeWatchPath, resolveDshHome } from '@flowforge/home-paths'
+import { canonicalizeWatchPath, resolveFlowforgeHome } from '@flowforge/home-paths'
 import { SettingsProvider, deepEqualJson, type SettingsNamespace } from '@flowforge/settings'
 
 /** Plugin config: file location and hot-reload behavior. */
 export interface Config {
   /** Settings document path; defaults to `settings.yaml` under the harness home. */
   path?: string
-  /** Harness home used when `path` is omitted; defaults to `$DSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  /** Harness home used when `path` is omitted; defaults to `$FF_HOME` or `~/.flowforge`. */
+  flowforgeHome?: string
   /** Watch the document and hot-publish external edits; defaults to true. */
   watch?: boolean
   /** Watcher write-settle window in milliseconds; defaults to 100. */
@@ -53,7 +53,7 @@ interface ResolvedSpec {
  * @returns the resolved file location, format, and watch behavior.
  */
 export function resolveSpec(config: Config): ResolvedSpec {
-  const filename = resolve(config.path ?? join(resolveDshHome(config.dshHome), 'settings.yaml'))
+  const filename = resolve(config.path ?? join(resolveFlowforgeHome(config.flowforgeHome), 'settings.yaml'))
   const format = FORMATS[extname(filename)]
   if (format === undefined) {
     throw new Error(`settings-file: extension "${extname(filename)}" is not supported (use .yaml, .yml, or .json)`)
@@ -105,7 +105,7 @@ function isEEXIST(error: unknown): boolean {
 export class FileSettingsProvider extends SettingsProvider {
   static Config: z<Config> = z.object({
     path: z.string(),
-    dshHome: z.string(),
+    flowforgeHome: z.string(),
     watch: z.boolean().default(true),
     debounceMs: z.number().min(0).default(100),
   })

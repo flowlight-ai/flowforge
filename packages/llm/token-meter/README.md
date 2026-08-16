@@ -50,11 +50,11 @@ The [Agent Note](../../../.agents/notes/implemented/architecture/2026-07-29-proj
 - name: '@flowforge/compaction-basic'
 ```
 
-Both plugins have usable defaults. The meter remains independent of model routing and optional compaction. A deployment configures capacity on its LLM adapter and compaction policy on `dsh-compaction-basic`.
+Both plugins have usable defaults. The meter remains independent of model routing and optional compaction. A deployment configures capacity on its LLM adapter and compaction policy on `flowforge-compaction-basic`.
 
 ## Model Experience
 
-Indirectly, through consumers such as `dsh-compaction-basic`; the service itself adds no prompt, message, schema, tool, or model call.
+Indirectly, through consumers such as `flowforge-compaction-basic`; the service itself adds no prompt, message, schema, tool, or model call.
 
 #### KV Cache effect
 

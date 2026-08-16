@@ -50,11 +50,11 @@ fold 跟踪完整请求标头快照、步骤边界、表层追加与替换、成
 - name: '@flowforge/compaction-basic'
 ```
 
-两个插件都有可用默认值。meter 保持与模型路由和可选压缩无关。部署会在 LLM（大语言模型）适配器上配置容量，并在 `dsh-compaction-basic` 上配置压缩策略。
+两个插件都有可用默认值。meter 保持与模型路由和可选压缩无关。部署会在 LLM（大语言模型）适配器上配置容量，并在 `flowforge-compaction-basic` 上配置压缩策略。
 
 ## 模型体验
 
-通过 `dsh-compaction-basic` 等消费方间接影响；该服务自身不添加提示词、消息、schema、工具或模型调用。
+通过 `flowforge-compaction-basic` 等消费方间接影响；该服务自身不添加提示词、消息、schema、工具或模型调用。
 
 #### KV Cache 影响
 

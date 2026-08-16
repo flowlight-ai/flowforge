@@ -1,13 +1,13 @@
 {
   "name": "@flowforge/message-feedback",
-  "description": "Lifecycle-bound per-message rating and note sidecar for the DeepSeek Harness",
+  "description": "Lifecycle-bound per-message rating and note sidecar for the FlowForge",
   "version": "0.1.0-rc.5",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
     "directory": "packages/feedback/message-feedback"
   },
   "type": "module",

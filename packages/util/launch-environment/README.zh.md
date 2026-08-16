@@ -1,4 +1,4 @@
-# dsh-launch-environment
+# flowforge-launch-environment
 
 [English](README.md) | 中文
 
@@ -8,7 +8,7 @@
 |---|---|---|
 | 继承的进程环境 | `process` | 启动 shell、CI 任务或容器传入的东西——本次运行的明确意图 |
 | `<invocation cwd>/.env` | `project-env` | harness 被启动于其中的项目；产品信任它配置自己的 agent（智能体） |
-| `$DSH_HOME/.env` | `user-env` | 用户自己的机器级默认值 |
+| `$FF_HOME/.env` | `user-env` | 用户自己的机器级默认值 |
 
 这些值同样会进入 `process.env`——用户自己的 `--config` 树和第三方库要读它——但那份压平的视图不是 harness 解析任何值的依据。
 
@@ -32,5 +32,5 @@ const endpoint = launchEnvironmentOf(ctx).get('DEEPSEEK_BASE_URL')?.value
 
 ## 已知限制与暂缓事项
 
-- **快照不是子进程边界**：每一层同样会被物化进 `process.env`，因此项目里的普通变量会按 [`dsh-subprocess`](../../subprocess/subprocess/README.md) 的清洗规则抵达子进程。产品启动器的 [`.env` 约定](../../boot/app-boot/README.md#profiles) 会在物化之前拒绝 bootstrap 变量。
+- **快照不是子进程边界**：每一层同样会被物化进 `process.env`，因此项目里的普通变量会按 [`flowforge-subprocess`](../../subprocess/subprocess/README.md) 的清洗规则抵达子进程。产品启动器的 [`.env` 约定](../../boot/app-boot/README.md#profiles) 会在物化之前拒绝 bootstrap 变量。
 - **没有按工作区划分的层**：项目层是*调用*目录，在启动时固定。之后在 Web UI 中选择的工作区不贡献任何内容，这是刻意的：跟随它等于让模型自己的工作区在会话中途改变 harness 的环境。

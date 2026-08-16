@@ -818,7 +818,7 @@ export class SessionStore extends Service {
    * loop's final events are published before the store attachment ends), do NOT use this
    * — fold the session lifecycle into the agent's own effect via
    * {@link prepare} + {@link enter} + {@link announce} (see
-   * `dsh-agent-loop`'s creation transaction).
+   * `flowforge-agent-loop`'s creation transaction).
    *
    * @param id - the session id; omitted, the store mints `session-<n>`.
    * @param options - seed events and/or creation metadata for the header.

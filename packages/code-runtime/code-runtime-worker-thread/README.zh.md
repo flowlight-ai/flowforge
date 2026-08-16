@@ -38,7 +38,7 @@ SDK 对外提供默认及具名导出的 `WorkerThreadCodeRuntime` 类，以及 
 
 ## 模型体验
 
-通过 [`dsh-tools`](../../core/tools/README.md) 中的 Code Mode 间接提供；如果外层值能容纳则原样渲染，否则返回明确的 `invalid-output`／`output-limit` 失败。只有外层 `run_code` 结果进入模型上下文并使用普通落盘策略；绑定通信与中间值始终只存在于执行环境中。
+通过 [`flowforge-tools`](../../core/tools/README.md) 中的 Code Mode 间接提供；如果外层值能容纳则原样渲染，否则返回明确的 `invalid-output`／`output-limit` 失败。只有外层 `run_code` 结果进入模型上下文并使用普通落盘策略；绑定通信与中间值始终只存在于执行环境中。
 
 #### KV Cache 影响
 

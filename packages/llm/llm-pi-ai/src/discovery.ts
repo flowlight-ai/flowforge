@@ -19,7 +19,7 @@
  * that it cannot be interrogated so the surface falls back to hand-entry
  * rather than guessing a response shape.
  *
- * @module dsh-llm-pi-ai/discovery
+ * @module flowforge-llm-pi-ai/discovery
  */
 
 import { INVALID_CREDENTIAL_CODE, LlmError, normalizeApiKey } from '@flowforge/llm'
@@ -43,7 +43,7 @@ const LISTABLE_PROTOCOLS: ReadonlySet<string> = new Set([
 /**
  * Endpoint replies larger than this are refused. The endpoint is whatever URL
  * the user typed, so the ceiling holds on the bytes actually read rather than
- * on the length the server claims — the same two-stage shape `dsh-web-fetch`
+ * on the length the server claims — the same two-stage shape `flowforge-web-fetch`
  * uses for its own caller-supplied URLs, except that a truncated model listing
  * is not parseable, so overflow rejects instead of truncating.
  */

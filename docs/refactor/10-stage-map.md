@@ -1,9 +1,9 @@
 # FlowForge 0.2.0 — 阶段地图与功能全集矩阵
 
 > 更新：2026-08-16 阶段 0 增加插件基座与配置体系基座；新增阶段 11 Python 日落；
-> 全部阶段以插件形式接入；clowder IM/TTS/世界等扩展降级为 stretch（§3.4）；技术栈/配置全景对齐 R17/R19；
-> 开发/测试规范对齐 R20/R21；**能力全集三源补全**：D29-D44（dsh 会话族/sdk/acp/code-runtime/
-> web 工具族等）、C23-C42（clowder auto-dream/harness-eval/env-registry 等）、F15-F44（flowforge
+> 全部阶段以插件形式接入；上游应用平台 IM/TTS/世界等扩展降级为 stretch（§3.4）；技术栈/配置全景对齐 R17/R19；
+> 开发/测试规范对齐 R20/R21；**能力全集三源补全**：D29-D44（上游框架参考会话族/sdk/acp/code-runtime/
+> web 工具族等）、C23-C42（上游应用平台 auto-dream/harness-eval/env-registry 等）、F15-F44（flowforge
 > 魔法词/swarm/IM 议会/进化引擎/弹性栈等），编号与 `02-source-crosswalk.md` 完全一致。
 
 ## 1. 阶段依赖图
@@ -22,7 +22,7 @@
 - **插件化前置**：阶段 0 先搭好 cordis 插件基座（宿主装配器 + 生命周期冒烟），阶段 1-8 所有
   域（core/cats/chat/limb/forgekin/api/cli）均以 cordis 插件包形态接入与重构（契约见
   `01-stack-decision.md` R13），禁止游离于 `ctx` 之外的模块。
-- 阶段 1-3 为 dsh 骨架（框架层），阶段 4-6 为 clowder 功能（应用层），阶段 7 为
+- 阶段 1-3 为上游框架参考实现骨架（框架层），阶段 4-6 为上游应用平台功能（应用层），阶段 7 为
   flowforge 特色（品牌层），阶段 8-10 为融合收尾，阶段 11 为 Python 日落（`31-stage11-sunset.md`）。
 - 每阶段完成 = 实现 + vitest 通过 + `./mgr` 提交，Python 旧版全程保底（行为基线）。
 
@@ -52,7 +52,7 @@
 
 图例：⬜ 未开始 ｜ 🟦 进行中 ｜ ✅ 完成
 
-### 3.1 DeepSeek Harness 侧（框架/插件）
+### 3.1 上游框架参考侧（框架/插件）
 
 | # | 能力 | 来源包 | 阶段 | 状态 |
 |---|---|---|---|---|
@@ -63,22 +63,22 @@
 | D5 | 默认模型选择 | core/agent-default-model | 1 | ✅ |
 | D6 | 默认 agent 驱动循环 | core/agent-loop | 1 | ✅ |
 | D7 | scope 作用域原语 | core/scope | 1 | ✅ |
-| D8 | hooks 事件钩子 | packages/hooks | 2 | ⬜ |
-| D9 | MCP 客户端/服务器 | packages/mcp | 2 | ⬜ |
-| D10 | 技能系统（fs/badge/tool-skill） | packages/skill | 2 | ⬜ |
-| D11 | 子代理 subagent | packages/subagent | 2 | ⬜ |
-| D12 | 沙箱（landlock-run + e2b 可选） | packages/sandbox | 2 | ⬜ |
-| D13 | Shell / Terminal / Subprocess | packages/shell 等 | 2 | ⬜ |
-| D14 | 工作流 workflow | packages/workflow | 2 | ⬜ |
-| D15 | 计划 plan / 目标 goal / 待办 todo | packages/plan 等 | 2 | ⬜ |
-| D16 | 调度 schedule / 作业 jobs | packages/schedule 等 | 2 | ⬜ |
-| D17 | 凭证 credentials / 设置 settings | packages/credentials + dsh settings 包 | 2 | ✅（阶段 1 提前移植，含 credentials-local） |
-| D18 | LSP / FS / Workspace | packages/lsp 等 | 2 | ⬜ |
+| D8 | hooks 事件钩子 | packages/hooks | 2 | ✅ |
+| D9 | MCP 客户端/服务器 | packages/mcp | 2 | ✅ |
+| D10 | 技能系统（fs/badge/tool-skill） | packages/skill | 2 | ✅ |
+| D11 | 子代理 subagent | packages/subagent | 2 | ✅ |
+| D12 | 沙箱（landlock-run + e2b 可选） | packages/sandbox | 2 | ✅ |
+| D13 | Shell / Terminal / Subprocess | packages/shell 等 | 2 | ✅ |
+| D14 | 工作流 workflow | packages/workflow | 2 | ✅ |
+| D15 | 计划 plan / 目标 goal / 待办 todo | packages/plan 等 | 2 | ✅ |
+| D16 | 调度 schedule / 作业 jobs | packages/schedule 等 | 2 | ✅ |
+| D17 | 凭证 credentials / 设置 settings | packages/credentials + settings 包 | 2 | ✅（阶段 1 提前移植，含 credentials-local） |
+| D18 | LSP / FS / Workspace | packages/lsp 等 | 2 | ✅ |
 | D19 | 上下文压缩 compaction / spill | packages/compaction | 2 | ✅（阶段 1 提前移植） |
-| D20 | 反馈 feedback / 护栏 guard | packages/feedback | 2 | 🟦（command-feedback/message-feedback 已随阶段 1 移植；guard 待阶段 2） |
-| D21 | 身份 identity / 交互 interaction / 审批 approval | packages/* | 2 | ⬜ |
-| D22 | 插件扩展（tool-cordis/ui-cordis/runner） | packages/extensions | 2 | ⬜ |
-| D22b | 应用层插件契约（@flowforge/plugin-contract，映射 clowder plugin-contract） | packages/plugin-contract | 2 | ⬜ |
+| D20 | 反馈 feedback / 护栏 guard | packages/feedback | 2 | ✅（guard 随阶段 2 移植完成） |
+| D21 | 身份 identity / 交互 interaction / 审批 approval | packages/* | 2 | ✅ |
+| D22 | 插件扩展（tool-cordis/ui-cordis/runner） | packages/extensions | 2 | ✅ |
+| D22b | 应用层插件契约（@flowforge/plugin-contract，对齐上游 plugin-contract 参考） | packages/plugin-contract | 2 | ✅（T2.15：manifest/capability/grants/routes/lifecycle/conformance + 20 vitest） |
 | D23 | API 网关 + Web 服务 | packages/web | 3 | ⬜ |
 | D24 | CLI（web/headless/jsonrpc/acp 模式） | apps/cli | 3 | ⬜ |
 | D25 | boot 引导 / bundle 打包 / client / host | packages/boot 等 | 3 | ⬜ |
@@ -88,21 +88,21 @@
 | D29 | 会话标题 session-title（first-prompt-llm/all-prompts-llm） | packages/session/session-title | 1 | ✅ |
 | D30 | 会话遥测 session-telemetry（otel/stats/checkpoint-policy） | packages/session/* | 1 | ✅ |
 | D31 | 会话持久化（jsonl zstd/sqlite/projection/cache） | packages/session/* | 1-2 | ✅ |
-| D32 | 会话查询族 session-query（sqlite/export/tool） | packages/session-query/* | 2 | ⬜ |
-| D33 | SDK（client/protocol/server，JSON-RPC） | packages/sdk/* | 2 | ⬜ |
-| D34 | ACP 会话桥 | packages/acp | 2 | ⬜ |
+| D32 | 会话查询族 session-query（sqlite/export/tool） | packages/session-query/* | 2 | ✅ |
+| D33 | SDK（client/protocol/server，JSON-RPC） | packages/sdk/* | 2 | ✅ |
+| D34 | ACP 会话桥 | packages/acp | 2 | ✅ |
 | D35 | 代码运行时 code-runtime（worker-thread） | packages/code-runtime/* | 2 | ✅（阶段 1 提前移植） |
 | D36 | 附件 attachment | packages/attachment | 2 | ✅（阶段 1 提前移植） |
-| D37 | Web 工具族（web-fetch-http/web-search-deepseek|exa|perplexity/tool-web） | packages/plugins/web* | 2 | ⬜ |
-| D38 | 目标族 goal（goal-round-driver/tool-goal/command-goal） | packages/plugins/goal | 2 | ⬜ |
+| D37 | Web 工具族（web-fetch-http/web-search-deepseek|exa|perplexity/tool-web） | packages/web/* | 2 | ✅ |
+| D38 | 目标族 goal（goal-round-driver/tool-goal/command-goal） | packages/goal | 2 | ✅ |
 | D39 | 上下文族 context（agent-instructions/packed-chunks/prompt-assembly） | packages/core/context | 1 | ⬜ |
 | D40 | host 族（apiproxy/directory-picker/frontend-static/plugin-inventory/webserver） | packages/host/* | 3 | ⬜ |
-| D41 | e2b（fs-e2b/subprocess-e2b，可选沙箱后端） | packages/e2b/* | 2 | ⬜ |
+| D41 | e2b（fs-e2b/subprocess-e2b，可选沙箱后端） | packages/e2b/* | 2 | ✅ |
 | D42 | test-support 族（agent-loop-testkit/acp-snapshot/client-runtime/llm-replay/loader-smoke） | packages/test-support/* | 1-2 | 🟦（4/5 已移植；client-runtime 依赖阶段 3 client/host 域） |
 | D43 | util 族（atomic-write/brand/home-paths/launch-environment/native-command/output-retention/timeout） | packages/harness/util | 0-1 | ✅ |
-| D44 | 预设 preset（agent-presets/persona，结构对齐 forgekins 档案） | packages/preset | 2 | ⬜ |
+| D44 | 预设 preset（agent-presets/persona，结构对齐 forgekins 档案） | packages/preset | 2 | ✅ |
 
-### 3.2 Clowder AI 侧（群聊/灵智/CLI 控制）
+### 3.2 上游应用平台参考侧（群聊/灵智/CLI 控制）
 
 | # | 能力 | 来源 | 阶段 | 状态 |
 |---|---|---|---|---|
@@ -135,13 +135,13 @@
 | C27 | 健康检查 health | domains/health | 3 | ⬜ |
 | C28 | 人性倾向/项目/预览/工作区（human-disposition/projects/preview/workspace） | domains/* | 4-5 | ⬜ |
 | C29 | 品味记忆 taste | domains/taste | 4 | ⬜ |
-| C30 | 技能包 packs + 插件控制面 plugin（host-inventory 仅视图，发现模型统一 dsh cordis，F15） | domains/packs + domains/plugin | 5 | ⬜ |
+| C30 | 技能包 packs + 插件控制面 plugin（host-inventory 仅视图，发现模型统一上游 cordis，F15） | domains/packs + domains/plugin | 5 | ⬜ |
 | C31 | agent 生命周期钩子 agent-hooks | agent-hooks | 4 | ⬜ |
 | C32 | harness-eval 16 域评估（a2a/anchor-first/capability-tips/freshness/sop/task-outcome 等） | infrastructure/harness-eval | 7 | ⬜ |
 | C33 | infrastructure 域（commands/debug/distillation/document/email/enterprise/github/grounding/scheduler/telemetry） | infrastructure/* | 3-5 | ⬜ |
 | C34 | 能力/治理/挂载配置（capabilities/governance/mount） | config/* | 3-4 | ⬜ |
-| C35 | clowder 插件（github/video-analysis/video-gen/wechat-visible-reader/weixin-mp，manifest 迁移装配声明） | plugins/* | 5-6 | ⬜ |
-| C36 | 技能安全 skill-security | skill-security | 2 | ⬜ |
+| C35 | 上游参考插件（github/video-analysis/video-gen/wechat-visible-reader/weixin-mp，manifest 迁移装配声明） | plugins/* | 5-6 | ⬜ |
+| C36 | 技能安全 skill-security | skill-security | 2 | ✅（packages/plugins/skill-security，13 vitest） |
 | C37 | 档案目录模型 cat-template.json（breeds/variants/CLI 适配器；Forgekin 档案保持 YAML） | packages/cats/catalog | 4 | ⬜ |
 | C38 | .cat-cafe 运行态 JSON（accounts/user-preferences/proxy-upstreams/provider-profiles） | data/ + ~/.flowforge | 4 | ⬜ |
 | C39 | 环境变量注册表 env-registry（CAT_CAFE_* → FF_*） | packages/harness/env-registry | 0 | ⬜ |
@@ -156,15 +156,15 @@
 
 | # | 能力 | 来源 | 建议阶段 | 状态 |
 |---|---|---|---|---|
-| S1 | IM 通道（飞书/Telegram/钉钉/企微/WebChat） | clowder routes/push 等 | 11+ | ⬜ |
-| S2 | TTS/语音 / RSS / 邮件 / GitHub signals | clowder services | 11+ | ⬜ |
-| S3 | 世界 world / 社区 / 故事 / 排行榜 | clowder routes/* | 11+ | ⬜ |
-| S4 | 桌面端 desktop | clowder desktop/ | 11+ | ⬜ |
-| S5 | 游戏/信号（clowder games） | clowder routes/* | 11+ | ⬜ |
+| S1 | IM 通道（飞书/Telegram/钉钉/企微/WebChat） | 上游应用平台 routes/push 等 | 11+ | ⬜ |
+| S2 | TTS/语音 / RSS / 邮件 / GitHub signals | 上游应用平台 services | 11+ | ⬜ |
+| S3 | 世界 world / 社区 / 故事 / 排行榜 | 上游应用平台 routes/* | 11+ | ⬜ |
+| S4 | 桌面端 desktop | 上游应用平台 desktop/ | 11+ | ⬜ |
+| S5 | 游戏/信号（games） | 上游应用平台 routes/* | 11+ | ⬜ |
 | S6 | Python↔TS 桥接 SDK（`python/sdk`） | 本项目 | 10-11 | ⬜ |
 | S7 | 物理 AI 传感器 / 虚拟世界设置（F44） | P: core/world_engine + conditional_router | 11+ | ⬜ |
 
-- S1-S3 对应 clowder 历史能力编号 C23-C25（IM/世界/TTS 等，`02-source-crosswalk.md` §2 中
+- S1-S3 对应上游应用平台历史能力编号 C23-C25（IM/世界/TTS 等，`02-source-crosswalk.md` §2 中
   world/community/story 等行）与 S7（F44）同步标注 stretch，与主表 C23-C42 编号互不冲突；
 - IM 通道若在阶段 5-6 确有真实凭据需求，按"接口 + mock 先行"原则只留 ports，不实现通道。
 
@@ -194,10 +194,10 @@
 | F20 | 自主进化 autonomous + 梦境回放 auto_dream | forgemind/autonomous.py + evolution/auto_dream.py（F051） | 7 | ⬜ |
 | F21 | Side-Effect WAL（记忆写前日志） | core/event_memory.py 相关（F021） | 7 | ⬜ |
 | F22 | 进化引擎三循环（engine/foreman/runtime/qc_loop/close_gate/process_evolution/scope_guard/metacognition/models） | evolution/*.py（F046） | 7 | ⬜ |
-| F23 | 弹性栈（熔断/降级/恢复层级/检查点/重启恢复） | core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_*}.py + config/resilience.yaml|recovery_tiers.yaml（F022；A004/A022） | 2/7 | ⬜ |
-| F24 | 特性开关 + 金丝雀 | core/feature_flags.py + core/canary.py + config/canary/default.yaml | 2 | ⬜ |
-| F25 | 模式执行器（modes/执行策略/步长限制/超时） | core/base_mode_executor.py + modes/ + execution_policy.py + step_limiter.py + agent_timeout.py | 1/2 | ⬜ |
-| F26 | 内容审核与护栏（moderation/gate/guardrails） | core/{content_moderation,moderation,guardrails}.py + core/gate/（对照 F007 push-back） | 2 | ⬜ |
+| F23 | 弹性栈（熔断/降级/恢复层级/检查点/重启恢复） | core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_*}.py + config/resilience.yaml|recovery_tiers.yaml（F022；A004/A022） | 2/7 | ✅（packages/plugins/resilience，23 vitest；阶段 7 应用层接线待做） |
+| F24 | 特性开关 + 金丝雀 | core/feature_flags.py + core/canary.py + config/canary/default.yaml | 2 | ✅（packages/plugins/feature-flags 8 + canary 10 vitest） |
+| F25 | 模式执行器（modes/执行策略/步长限制/超时） | core/base_mode_executor.py + modes/ + execution_policy.py + step_limiter.py + agent_timeout.py | 1/2 | ✅（packages/plugins/modes，14 vitest） |
+| F26 | 内容审核与护栏（moderation/gate/guardrails） | core/{content_moderation,moderation,guardrails}.py + core/gate/（对照 F007 push-back） | 2 | ✅（packages/plugins/guard，16 vitest） |
 | F27 | 状态机族（handoff/状态映射/变量解析/命名空间/上下文层/工具链执行/字段门控） | core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py（F003/F024；A003/A024） | 1/7 | ⬜ |
 | F28 | LLM 路由/模型服务/提供商配额 | core/{model_service,model_capability,provider_quota}.py + config/llm_route.yaml|provider_quota.yaml*（F025） | 1/3 | ⬜ |
 | F29 | SOP 标准作业程序 | sop/ + config/sops/*.yaml | 7 | ⬜ |
