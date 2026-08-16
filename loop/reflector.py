@@ -144,6 +144,41 @@ _RECOVERY_SUGGESTION_KEYWORDS: tuple[str, ...] = (
 )
 
 
+def _safe_topic_list(input_data: object) -> list[dict]:
+    """v6.1 提示词泄漏修复: 从 task.input_data 只提取选题白名单字段。
+
+    原实现把整个 task.input_data (含 system_prompt 人设 + research_materials +
+    topic_list 全量) 塞给反射器，实测引发模型回显整条用户消息(泄漏 1.4万字符)。
+    反射器只需要选题对齐检查所需的 title/angle/highlights。
+    """
+    safe: list[dict] = []
+    try:
+        src = input_data if isinstance(input_data, dict) else {}
+        tlist = src.get("topic_list") or []
+        if isinstance(tlist, list):
+            for t in tlist:
+                if not isinstance(t, dict):
+                    continue
+                entry: dict = {}
+                for k in ("title", "angle", "highlights"):
+                    v = t.get(k)
+                    if isinstance(v, str) and v:
+                        entry[k] = v
+                    elif isinstance(v, (int, float)):
+                        entry[k] = v
+                if entry:
+                    safe.append(entry)
+        if not safe:
+            for k in ("topic_title", "title"):
+                v = src.get(k)
+                if isinstance(v, str) and v:
+                    safe.append({"title": v})
+                    break
+    except Exception as _e:
+        logger.warning(f"[reflector] _safe_topic_list 失败: {_e}")
+    return safe
+
+
 def filter_ai_pattern_suggestions(suggestions: list[str]) -> tuple[list[str], list[str]]:
     """过滤包含 AI 模式内容的建议。
 
@@ -286,7 +321,13 @@ class ReflexionReflector(LoopReflector):
         prompt = get_prompt("loop.reflector.reflect",
                             errors=json.dumps(errors, ensure_ascii=False),
                             task_id=task.task_id,
-                            input_data=json.dumps(task.input_data, ensure_ascii=False, default=str),
+                            # v6.1 修复(P-L): 原`json.dumps(task.input_data)`把完整 system_prompt(人设+写作方法论)
+                            # + research_materials + topic_list 整包塞给反射器，实测引发 Doubao 回显14423字
+                            # 用户消息(提示词泄漏)。反射器只需选题对齐检查，白名单字段足够。
+                            input_data=json.dumps({
+                                "topic_list": _safe_topic_list(task.input_data),
+                                "draft_preview": last_draft_preview,
+                            }, ensure_ascii=False, default=str),
                             attempt=str(state.attempt),
                             history=history_str,
                             last_draft=last_draft_preview,
