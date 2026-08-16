@@ -27,8 +27,8 @@ async function setGate(next: Promise<void>): Promise<void> {
   mocked.__setGate(next)
 }
 
-const KEY = credentialRef('DSH_CRED_DRAIN_A')
-const OTHER = credentialRef('DSH_CRED_DRAIN_B')
+const KEY = credentialRef('FF_CRED_DRAIN_A')
+const OTHER = credentialRef('FF_CRED_DRAIN_B')
 
 const cleanups: Array<() => Promise<void>> = []
 
@@ -39,7 +39,7 @@ afterEach(async () => {
 
 describe('write-drain teardown', () => {
   it('lets the in-flight write land and fails the queued one after disposal', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'dsh-credentials-drain-'))
+    const dir = await mkdtemp(join(tmpdir(), 'flowforge-credentials-drain-'))
     cleanups.push(() => rm(dir, { recursive: true, force: true }))
     const ctx = new Context()
     const fiber = ctx.plugin(LocalCredentialProvider, { path: join(dir, '.credentials.yaml'), watch: false })

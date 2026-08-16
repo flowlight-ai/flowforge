@@ -26,9 +26,9 @@ fixture 就是持久化的会话日志（`<scenario>/session.jsonl`）。其 `as
 
 | 键 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `file` | string | `$DSH_SNAPSHOT_FILE` | 主（父）`session.jsonl` fixture 的路径。必需（配置或 env）。 |
-| `overrideFile` | string | `$DSH_SNAPSHOT_OVERRIDE` | 主会话的可选 `ReplayOverrideDoc` 伴随文件：裸 `ReplayEntry[]` 替换其派生脚本，`{ patches }` 则按调用索引增补该脚本。 |
-| `childFiles` | string[] | `$DSH_SNAPSHOT_CHILD_FILES`（以路径分隔符分隔） | 嵌套场景中已记录的 subagent 子会话日志；单会话场景为空。 |
+| `file` | string | `$FF_SNAPSHOT_FILE` | 主（父）`session.jsonl` fixture 的路径。必需（配置或 env）。 |
+| `overrideFile` | string | `$FF_SNAPSHOT_OVERRIDE` | 主会话的可选 `ReplayOverrideDoc` 伴随文件：裸 `ReplayEntry[]` 替换其派生脚本，`{ patches }` 则按调用索引增补该脚本。 |
+| `childFiles` | string[] | `$FF_SNAPSHOT_CHILD_FILES`（以路径分隔符分隔） | 嵌套场景中已记录的 subagent 子会话日志；单会话场景为空。 |
 | `providers` | `ReplayProviderConfig[]` | 无 | 可选的仅回放提供方和模型目录。每个提供方可以设置 `retryPolicy`，每个模型可以发布 `contextWindow` 和仅包含 `text`、`image` 的 `inputModalities` 数组；模态配置无效时，插件加载会失败。已配置路由通过回放适配器分派，绝不执行提供方 I/O。 |
 | `paceMs` | number | 无（突发） | 可选的每分片延迟（单位为毫秒），使下游传输（例如真实浏览器观察到的 Web SSE（Server-Sent Events）多路复用器）看到真正的增量传递。它只是用于提高真实性的调节项，测试不得依赖它保证正确性。值必须是非负整数；pace 等待期间中止会迅速取消流。 |
 
@@ -49,8 +49,8 @@ fixture 就是持久化的会话日志（`<scenario>/session.jsonl`）。其 `as
           - id: deepseek-v4-flash
             contextWindow: 128000
           - id: deepseek-v4-pro
-  # file/overrideFile/childFiles default to $DSH_SNAPSHOT_FILE /
-  # $DSH_SNAPSHOT_OVERRIDE / $DSH_SNAPSHOT_CHILD_FILES, set by the snapshot
+  # file/overrideFile/childFiles default to $FF_SNAPSHOT_FILE /
+  # $FF_SNAPSHOT_OVERRIDE / $FF_SNAPSHOT_CHILD_FILES, set by the snapshot
   # harness per scenario.
 ```
 

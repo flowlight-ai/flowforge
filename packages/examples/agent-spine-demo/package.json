@@ -1,0 +1,100 @@
+{
+  "name": "@flowforge/agent-spine-demo",
+  "description": "The default executor-less/UI-less agent spine with fallback session titles, provider-routed retry, and optional persisted goals",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/examples/agent-spine-demo"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis-plugin-timer": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-loop": "workspace:^",
+    "@flowforge/goal": "workspace:^",
+    "@flowforge/goal-round-driver": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/home-paths": "workspace:^",
+    "@flowforge/llm-retry": "workspace:^",
+    "@flowforge/scope": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-title": "workspace:^",
+    "@flowforge/skill": "workspace:^",
+    "@flowforge/skill-filesystem": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/jobs-local": "workspace:^",
+    "@flowforge/shell-env": "workspace:^",
+    "@flowforge/tool-bash": "workspace:^",
+    "@flowforge/tool-goal": "workspace:^",
+    "@flowforge/tool-skill": "workspace:^",
+    "@flowforge/tool-jobs": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/agent-instructions": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-timer": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-loop": "workspace:^",
+    "@flowforge/shell-env": "workspace:^",
+    "@flowforge/bash-local": "workspace:^",
+    "@flowforge/bash-sandbox": "workspace:^",
+    "@flowforge/fs-local": "workspace:^",
+    "@flowforge/fs-observation-policy": "workspace:^",
+    "@flowforge/fs-sandbox": "workspace:^",
+    "@flowforge/goal": "workspace:^",
+    "@flowforge/goal-round-driver": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/home-paths": "workspace:^",
+    "@flowforge/llm-retry": "workspace:^",
+    "@flowforge/subprocess-local": "workspace:^",
+    "@flowforge/sandbox-local": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/scope": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-title": "workspace:^",
+    "@flowforge/skill": "workspace:^",
+    "@flowforge/skill-filesystem": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/jobs": "workspace:^",
+    "@flowforge/jobs-local": "workspace:^",
+    "@flowforge/tool-bash": "workspace:^",
+    "@flowforge/tool-fs": "workspace:^",
+    "@flowforge/tool-goal": "workspace:^",
+    "@flowforge/tool-skill": "workspace:^",
+    "@flowforge/tool-jobs": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/agent-instructions": "workspace:^",
+    "@flowforge/node-addon-landlock-run": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "dependencies": {
+    "@flowforge/schemastery": "workspace:^"
+  }
+}

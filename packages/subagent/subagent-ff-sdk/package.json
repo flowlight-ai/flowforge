@@ -1,0 +1,60 @@
+{
+  "name": "@flowforge/subagent-ff-sdk",
+  "description": "Out-of-process SDK subagent backend: drives a child FlowForge runtime subprocess over stdio JSON-RPC through the TypeScript SDK client",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/subagent/subagent-ff-sdk"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/sdk-client": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/subagent": "workspace:^",
+    "@flowforge/subprocess": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "dependencies": {
+    "@flowforge/schemastery": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/loader-smoke": "workspace:^",
+    "@flowforge/sdk-client": "workspace:^",
+    "@flowforge/sdk-protocol": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/subagent": "workspace:^",
+    "@flowforge/subprocess": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

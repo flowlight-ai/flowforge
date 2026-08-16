@@ -1,4 +1,4 @@
-/** Unified JSON-value schema DSL, inference, compilation, and typed tool helper. @module dsh-tools/schema */
+/** Unified JSON-value schema DSL, inference, compilation, and typed tool helper. @module flowforge-tools/schema */
 
 import { HarnessError } from '@flowforge/llm'
 import type { ContentBlock } from '@flowforge/llm'

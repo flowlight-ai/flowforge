@@ -5,7 +5,7 @@
  * cut that gives the SQLite backend the SAME crash-tail-on-load semantics as
  * the JSONL backend.
  *
- * @module dsh-session-persistence-sqlite/schema
+ * @module flowforge-session-persistence-sqlite/schema
  */
 
 import { randomUUID } from 'node:crypto'

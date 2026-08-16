@@ -1,0 +1,29 @@
+{
+  "name": "@flowforge/guard",
+  "description": "Guardrails and content moderation for FlowForge: parallel input/output guardrail execution with early blocking, five-layer moderation chain (keyword/regex/rule/llm/platform) with injected providers and caching — mapped from flowforge Python legacy core/guardrails.py + core/moderation.py + security/moderation.py (F25)",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/plugins/guard"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT"
+}

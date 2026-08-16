@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "FlowForge — self-evolving agent harness (TS rewrite, aligned with DeepSeek Harness + Clowder AI)",
+  "description": "FlowForge — self-evolving agent harness (TS rewrite)",
   "license": "MIT",
   "packageManager": "pnpm@11.7.0",
   "engines": {
@@ -24,7 +24,13 @@
     "start": "node --import tsx apps/cli/src/bin.ts web"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/mdast": "^4.0.4",
     "@types/node": "^22.20.0",
+    "execa": "^10.0.0",
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-gfm": "^3.1.0",
+    "micromark-extension-gfm": "^3.0.0",
     "oxlint": "1.76.0",
     "oxlint-tsgolint": "^7.0.2001",
     "tsdown": "^0.22.2",
@@ -32,10 +38,5 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.8",
     "fast-check": "^4.8.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   }
 }

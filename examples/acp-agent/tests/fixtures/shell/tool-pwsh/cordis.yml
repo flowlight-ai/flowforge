@@ -1,0 +1,27 @@
+# Minimal tool-pwsh composition: real app boot path, real pwsh executor, real
+# foreground + background tool calls; driven by the package's loader.spec.ts.
+- id: system-prompt
+  name: '@flowforge/system-prompt'
+
+- id: tools
+  name: '@flowforge/tools'
+
+- id: subprocess
+  name: '@flowforge/subprocess-local'
+
+- id: bash
+  name: '@flowforge/pwsh-local'
+  config:
+    graceMs: 200
+
+- id: shell-env
+  name: '@flowforge/shell-env'
+
+- id: tasks
+  name: '@flowforge/jobs-local'
+
+- id: tool-jobs
+  name: '@flowforge/tool-jobs'
+
+- id: tool-pwsh
+  name: '@flowforge/tool-pwsh'

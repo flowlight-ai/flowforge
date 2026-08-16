@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { withFileLock, writeFileAtomic } from '../src/index.ts'
 
 async function scratch(): Promise<string> {
-  return mkdtemp(join(tmpdir(), 'dsh-atomic-write-'))
+  return mkdtemp(join(tmpdir(), 'flowforge-atomic-write-'))
 }
 
 describe('writeFileAtomic', () => {

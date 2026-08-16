@@ -24,209 +24,1148 @@
       "node"
     ],
     "paths": {
-      "@flowforge/cordis": [
-        "./vendor/cordis/src"
-      ],
-      "@flowforge/cosmokit": [
-        "./vendor/cosmokit/src"
-      ],
-      "@flowforge/cordis-plugin-group": [
-        "./vendor/group/src"
-      ],
-      "@flowforge/cordis-plugin-hmr": [
-        "./vendor/hmr/src"
-      ],
-      "@flowforge/cordis-plugin-include": [
-        "./vendor/include/src"
-      ],
-      "@flowforge/cordis-plugin-loader": [
-        "./vendor/loader/src"
-      ],
-      "@flowforge/cordis-plugin-logger-console": [
-        "./vendor/logger-console/src"
-      ],
-      "@flowforge/schemastery": [
-        "./vendor/schemastery/src"
-      ],
-      "@flowforge/cordis-plugin-timer": [
-        "./vendor/timer/src"
-      ],
-      "@flowforge/attachment": [
-        "./packages/attachment/attachment/src"
-      ],
-      "@flowforge/code-runtime": [
-        "./packages/code-runtime/code-runtime/src"
-      ],
-      "@flowforge/compaction": [
-        "./packages/compaction/compaction/src"
-      ],
-      "@flowforge/agent": [
-        "./packages/core/agent/src"
-      ],
-      "@flowforge/agent-default-model": [
-        "./packages/core/agent-default-model/src"
-      ],
-      "@flowforge/agent-loop": [
-        "./packages/core/agent-loop/src"
-      ],
-      "@flowforge/scope": [
-        "./packages/core/scope/src"
-      ],
-      "@flowforge/session": [
-        "./packages/core/session/src"
-      ],
-      "@flowforge/system-prompt": [
-        "./packages/core/system-prompt/src"
-      ],
-      "@flowforge/tools": [
-        "./packages/core/tools/src"
-      ],
-      "@flowforge/credentials": [
-        "./packages/credentials/credentials/src"
-      ],
-      "@flowforge/harness-boot": [
-        "./packages/harness/boot/src"
-      ],
-      "@flowforge/anonymous-user-id": [
-        "./packages/identity/anonymous-user-id/src"
-      ],
-      "@flowforge/commands": [
-        "./packages/interaction/commands/src"
-      ],
-      "@flowforge/user-approval": [
-        "./packages/interaction/user-approval/src"
-      ],
-      "@flowforge/llm": [
-        "./packages/llm/llm/src"
-      ],
-      "@flowforge/llm-deepseek": [
-        "./packages/llm/llm-deepseek/src"
-      ],
-      "@flowforge/llm-pi-ai": [
-        "./packages/llm/llm-pi-ai/src"
-      ],
-      "@flowforge/llm-retry": [
-        "./packages/llm/llm-retry/src"
-      ],
-      "@flowforge/token-meter": [
-        "./packages/llm/token-meter/src"
-      ],
-      "@flowforge/invariants": [
-        "./packages/runtime-diagnostics/invariants/src"
-      ],
-      "@flowforge/session-persistence": [
-        "./packages/session/session-persistence/src"
-      ],
-      "@flowforge/session-persistence-jsonl": [
-        "./packages/session/session-persistence-jsonl/src"
-      ],
-      "@flowforge/session-persistence-sqlite": [
-        "./packages/session/session-persistence-sqlite/src"
-      ],
-      "@flowforge/session-projection": [
-        "./packages/session/session-projection/src"
-      ],
-      "@flowforge/settings": [
-        "./packages/settings/settings/src"
-      ],
-      "@flowforge/settings-file": [
-        "./packages/settings/settings-file/src"
-      ],
-      "@flowforge/spill": [
-        "./packages/spill/spill/src"
-      ],
-      "@flowforge/storage": [
-        "./packages/storage/storage/src"
-      ],
-      "@flowforge/agent-loop-testkit": [
-        "./packages/test-support/agent-loop-testkit/src"
-      ],
-      "@flowforge/llm-mock-server": [
-        "./packages/test-support/llm-mock-server/src"
-      ],
-      "@flowforge/typert-protocol": [
-        "./packages/typert/protocol/src"
-      ],
-      "@flowforge/typert-registry": [
-        "./packages/typert/registry/src"
-      ],
-      "@flowforge/atomic-write": [
-        "./packages/util/atomic-write/src"
-      ],
-      "@flowforge/brand": [
-        "./packages/util/brand/src"
-      ],
-      "@flowforge/home-paths": [
-        "./packages/util/home-paths/src"
-      ],
-      "@flowforge/launch-environment": [
-        "./packages/util/launch-environment/src"
-      ],
-      "@flowforge/native-command": [
-        "./packages/util/native-command/src"
-      ],
-      "@flowforge/output-retention": [
-        "./packages/util/output-retention/src"
-      ],
-      "@flowforge/timeout": [
-        "./packages/util/timeout/src"
-      ],
-      "@flowforge/credentials-local": [
-        "./packages/credentials/credentials-local/src"
-      ],
-      "@flowforge/session-checkpoint-policy": [
-        "./packages/session/session-checkpoint-policy/src"
-      ],
-      "@flowforge/session-projection-cache": [
-        "./packages/session/session-projection-cache/src"
-      ],
-      "@flowforge/session-stats": [
-        "./packages/session/session-stats/src"
-      ],
-      "@flowforge/session-telemetry": [
-        "./packages/session/session-telemetry/src"
-      ],
-      "@flowforge/session-telemetry-otel": [
-        "./packages/session/session-telemetry-otel/src"
-      ],
-      "@flowforge/session-title": [
-        "./packages/session/session-title/src"
-      ],
-      "@flowforge/session-title-llm": [
-        "./packages/session/session-title-llm/src"
-      ],
       "@flowforge/session-title-first-prompt-llm": [
-        "./packages/session/session-title-first-prompt-llm/src"
+        "./packages/session/session-title-first-prompt-llm/src/index.ts"
+      ],
+      "@flowforge/session-title-first-prompt-llm/invariant": [
+        "./packages/session/session-title-first-prompt-llm/src/invariant.ts"
+      ],
+      "@flowforge/compaction-tool-result-pruner": [
+        "./packages/compaction/compaction-tool-result-pruner/src/index.ts"
+      ],
+      "@flowforge/compaction-tool-result-pruner/invariant": [
+        "./packages/compaction/compaction-tool-result-pruner/src/invariant.ts"
       ],
       "@flowforge/session-title-all-prompts-llm": [
-        "./packages/session/session-title-all-prompts-llm/src"
+        "./packages/session/session-title-all-prompts-llm/src/index.ts"
       ],
-      "@flowforge/storage-domain": [
-        "./packages/storage/storage-domain/src"
+      "@flowforge/session-title-all-prompts-llm/invariant": [
+        "./packages/session/session-title-all-prompts-llm/src/invariant.ts"
       ],
-      "@flowforge/storage-json": [
-        "./packages/storage/storage-json/src"
-      ],
-      "@flowforge/storage-sqlite": [
-        "./packages/storage/storage-sqlite/src"
-      ],
-      "@flowforge/command-feedback": [
-        "./packages/feedback/command-feedback/src"
-      ],
-      "@flowforge/message-feedback": [
-        "./packages/feedback/message-feedback/src"
-      ],
-      "@flowforge/acp-snapshot": [
-        "./packages/test-support/acp-snapshot/src"
-      ],
-      "@flowforge/llm-replay": [
-        "./packages/test-support/llm-replay/src"
-      ],
-      "@flowforge/loader-smoke": [
-        "./packages/test-support/loader-smoke/src"
+      "@flowforge/cordis-plugin-logger-console": [
+        "./vendor/logger-console/src/index.ts"
       ],
       "@flowforge/code-runtime-worker-thread": [
-        "./packages/code-runtime/code-runtime-worker-thread/src"
+        "./packages/code-runtime/code-runtime-worker-thread/src/index.ts"
+      ],
+      "@flowforge/code-runtime-worker-thread/invariant": [
+        "./packages/code-runtime/code-runtime-worker-thread/src/invariant.ts"
+      ],
+      "@flowforge/code-runtime-worker-thread/worker": [
+        "./packages/code-runtime/code-runtime-worker-thread/src/worker.ts"
+      ],
+      "@flowforge/session-persistence-sqlite": [
+        "./packages/session/session-persistence-sqlite/src/index.ts"
+      ],
+      "@flowforge/session-persistence-sqlite/invariant": [
+        "./packages/session/session-persistence-sqlite/src/invariant.ts"
+      ],
+      "@flowforge/subagent-in-process-driver": [
+        "./packages/subagent/subagent-in-process-driver/src/index.ts"
+      ],
+      "@flowforge/subagent-in-process-driver/invariant": [
+        "./packages/subagent/subagent-in-process-driver/src/invariant.ts"
+      ],
+      "@flowforge/session-checkpoint-policy": [
+        "./packages/session/session-checkpoint-policy/src/index.ts"
+      ],
+      "@flowforge/session-checkpoint-policy/invariant": [
+        "./packages/session/session-checkpoint-policy/src/invariant.ts"
+      ],
+      "@flowforge/session-persistence-jsonl": [
+        "./packages/session/session-persistence-jsonl/src/index.ts"
+      ],
+      "@flowforge/session-persistence-jsonl/invariant": [
+        "./packages/session/session-persistence-jsonl/src/invariant.ts"
+      ],
+      "@flowforge/subagent-spawn-in-process": [
+        "./packages/subagent/subagent-spawn-in-process/src/index.ts"
+      ],
+      "@flowforge/subagent-spawn-in-process/invariant": [
+        "./packages/subagent/subagent-spawn-in-process/src/invariant.ts"
+      ],
+      "@flowforge/session-projection-cache": [
+        "./packages/session/session-projection-cache/src/index.ts"
+      ],
+      "@flowforge/session-projection-cache/invariant": [
+        "./packages/session/session-projection-cache/src/invariant.ts"
+      ],
+      "@flowforge/subagent-fork-in-process": [
+        "./packages/subagent/subagent-fork-in-process/src/index.ts"
+      ],
+      "@flowforge/subagent-fork-in-process/invariant": [
+        "./packages/subagent/subagent-fork-in-process/src/invariant.ts"
+      ],
+      "@flowforge/tool-call-timeout-policy": [
+        "./packages/guard/timeout-policy/src/index.ts"
+      ],
+      "@flowforge/tool-call-timeout-policy/invariant": [
+        "./packages/guard/timeout-policy/src/invariant.ts"
+      ],
+      "@flowforge/agent-tool-presentation": [
+        "./packages/core/agent-tool-presentation/src/index.ts"
+      ],
+      "@flowforge/agent-tool-presentation/invariant": [
+        "./packages/core/agent-tool-presentation/src/invariant.ts"
+      ],
+      "@flowforge/node-addon-landlock-run": [
+        "./native/landlock-run/packages/entry/src/index.ts"
+      ],
+      "@flowforge/tool-str-replace-editor": [
+        "./packages/fs/tool-str-replace-editor/src/index.ts"
+      ],
+      "@flowforge/tool-str-replace-editor/invariant": [
+        "./packages/fs/tool-str-replace-editor/src/invariant.ts"
+      ],
+      "@flowforge/session-telemetry-otel": [
+        "./packages/session/session-telemetry-otel/src/index.ts"
+      ],
+      "@flowforge/session-telemetry-otel/invariant": [
+        "./packages/session/session-telemetry-otel/src/invariant.ts"
+      ],
+      "@flowforge/workflow-worker-thread": [
+        "./packages/workflow/workflow-worker-thread/src/index.ts"
+      ],
+      "@flowforge/workflow-worker-thread/invariant": [
+        "./packages/workflow/workflow-worker-thread/src/invariant.ts"
+      ],
+      "@flowforge/workflow-worker-thread/worker": [
+        "./packages/workflow/workflow-worker-thread/src/worker.ts"
+      ],
+      "@flowforge/cordis-plugin-include": [
+        "./vendor/include/src/index.ts"
+      ],
+      "@flowforge/fs-observation-policy": [
+        "./packages/fs/fs-observation-policy/src/index.ts"
+      ],
+      "@flowforge/fs-observation-policy/invariant": [
+        "./packages/fs/fs-observation-policy/src/invariant.ts"
+      ],
+      "@flowforge/tool-subagent-control": [
+        "./packages/subagent/tool-subagent-control/src/index.ts"
+      ],
+      "@flowforge/tool-subagent-control/invariant": [
+        "./packages/subagent/tool-subagent-control/src/invariant.ts"
+      ],
+      "@flowforge/tool-subagent-control/list-agents": [
+        "./packages/subagent/tool-subagent-control/src/list-agents.ts"
+      ],
+      "@flowforge/web-search-perplexity": [
+        "./packages/web/web-search-perplexity/src/index.ts"
+      ],
+      "@flowforge/web-search-perplexity/invariant": [
+        "./packages/web/web-search-perplexity/src/invariant.ts"
+      ],
+      "@flowforge/cordis-plugin-loader": [
+        "./vendor/loader/src/index.ts"
+      ],
+      "@flowforge/repeat-tool-reminder": [
+        "./packages/guard/repeat-tool-reminder/src/index.ts"
+      ],
+      "@flowforge/repeat-tool-reminder/invariant": [
+        "./packages/guard/repeat-tool-reminder/src/invariant.ts"
+      ],
+      "@flowforge/session-query-sqlite": [
+        "./packages/session-query/session-query-sqlite/src/index.ts"
+      ],
+      "@flowforge/session-query-sqlite/invariant": [
+        "./packages/session-query/session-query-sqlite/src/invariant.ts"
+      ],
+      "@flowforge/subagent-claude-code": [
+        "./packages/subagent/subagent-claude-code/src/index.ts"
+      ],
+      "@flowforge/subagent-claude-code/invariant": [
+        "./packages/subagent/subagent-claude-code/src/invariant.ts"
+      ],
+      "@flowforge/tool-bash-persistent": [
+        "./packages/shell/tool-bash-persistent/src/index.ts"
+      ],
+      "@flowforge/tool-bash-persistent/invariant": [
+        "./packages/shell/tool-bash-persistent/src/invariant.ts"
+      ],
+      "@flowforge/tool-subagent-report": [
+        "./packages/subagent/tool-subagent-report/src/index.ts"
+      ],
+      "@flowforge/tool-subagent-report/invariant": [
+        "./packages/subagent/tool-subagent-report/src/invariant.ts"
+      ],
+      "@flowforge/agent-default-model": [
+        "./packages/core/agent-default-model/src/index.ts"
+      ],
+      "@flowforge/agent-default-model/invariant": [
+        "./packages/core/agent-default-model/src/invariant.ts"
+      ],
+      "@flowforge/cordis-plugin-group": [
+        "./vendor/group/src/index.ts"
+      ],
+      "@flowforge/cordis-plugin-timer": [
+        "./vendor/timer/src/index.ts"
+      ],
+      "@flowforge/sandbox-windows-acl": [
+        "./packages/sandbox/sandbox-windows-acl/src/index.ts"
+      ],
+      "@flowforge/sandbox-windows-acl/runner": [
+        "./packages/sandbox/sandbox-windows-acl/src/runner.ts"
+      ],
+      "@flowforge/sandbox-windows-acl/invariant": [
+        "./packages/sandbox/sandbox-windows-acl/src/invariant.ts"
+      ],
+      "@flowforge/session-persistence": [
+        "./packages/session/session-persistence/src/index.ts"
+      ],
+      "@flowforge/session-persistence/invariant": [
+        "./packages/session/session-persistence/src/invariant.ts"
+      ],
+      "@flowforge/web-search-deepseek": [
+        "./packages/web/web-search-deepseek/src/index.ts"
+      ],
+      "@flowforge/web-search-deepseek/invariant": [
+        "./packages/web/web-search-deepseek/src/invariant.ts"
+      ],
+      "@flowforge/agent-instructions": [
+        "./packages/context/agent-instructions/src/index.ts"
+      ],
+      "@flowforge/agent-instructions/invariant": [
+        "./packages/context/agent-instructions/src/invariant.ts"
+      ],
+      "@flowforge/agent-loop-testkit": [
+        "./packages/test-support/agent-loop-testkit/src/index.ts"
+      ],
+      "@flowforge/agent-loop-testkit/invariant": [
+        "./packages/test-support/agent-loop-testkit/src/invariant.ts"
+      ],
+      "@flowforge/cordis-host-runner": [
+        "./packages/extensions/cordis-host-runner/src/index.ts"
+      ],
+      "@flowforge/cordis-host-runner/invariant": [
+        "./packages/extensions/cordis-host-runner/src/invariant.ts"
+      ],
+      "@flowforge/cordis-host-runner/types": [
+        "./packages/extensions/cordis-host-runner/src/types.ts"
+      ],
+      "@flowforge/launch-environment": [
+        "./packages/util/launch-environment/src/index.ts"
+      ],
+      "@flowforge/launch-environment/invariant": [
+        "./packages/util/launch-environment/src/invariant.ts"
+      ],
+      "@flowforge/permission-presets": [
+        "./packages/interaction/permission-presets/src/index.ts"
+      ],
+      "@flowforge/permission-presets/invariant": [
+        "./packages/interaction/permission-presets/src/invariant.ts"
+      ],
+      "@flowforge/permission-presets/types": [
+        "./packages/interaction/permission-presets/src/types.ts"
+      ],
+      "@flowforge/permission-presets/client": [
+        "./packages/interaction/permission-presets/src/client.ts"
+      ],
+      "@flowforge/sdk-jsonrpc-server": [
+        "./packages/sdk/server/src/index.ts"
+      ],
+      "@flowforge/sdk-jsonrpc-server/invariant": [
+        "./packages/sdk/server/src/invariant.ts"
+      ],
+      "@flowforge/session-projection": [
+        "./packages/session/session-projection/src/index.ts"
+      ],
+      "@flowforge/session-projection/invariant": [
+        "./packages/session/session-projection/src/invariant.ts"
+      ],
+      "@flowforge/session-projection/types": [
+        "./packages/session/session-projection/src/types.ts"
+      ],
+      "@flowforge/tool-session-query": [
+        "./packages/session-query/tool-session-query/src/index.ts"
+      ],
+      "@flowforge/tool-session-query/invariant": [
+        "./packages/session-query/tool-session-query/src/invariant.ts"
+      ],
+      "@flowforge/anonymous-user-id": [
+        "./packages/identity/anonymous-user-id/src/index.ts"
+      ],
+      "@flowforge/anonymous-user-id/invariant": [
+        "./packages/identity/anonymous-user-id/src/invariant.ts"
+      ],
+      "@flowforge/cordis-plugin-hmr": [
+        "./vendor/hmr/src/index.ts"
+      ],
+      "@flowforge/credentials-local": [
+        "./packages/credentials/credentials-local/src/index.ts"
+      ],
+      "@flowforge/credentials-local/invariant": [
+        "./packages/credentials/credentials-local/src/invariant.ts"
+      ],
+      "@flowforge/goal-round-driver": [
+        "./packages/goal/goal-round-driver/src/index.ts"
+      ],
+      "@flowforge/goal-round-driver/invariant": [
+        "./packages/goal/goal-round-driver/src/invariant.ts"
+      ],
+      "@flowforge/hooks-claude-code": [
+        "./packages/hooks/hooks-claude-code/src/index.ts"
+      ],
+      "@flowforge/hooks-claude-code/invariant": [
+        "./packages/hooks/hooks-claude-code/src/invariant.ts"
+      ],
+      "@flowforge/session-reference": [
+        "./packages/context/session-reference/src/index.ts"
+      ],
+      "@flowforge/session-reference/invariant": [
+        "./packages/context/session-reference/src/invariant.ts"
+      ],
+      "@flowforge/session-telemetry": [
+        "./packages/session/session-telemetry/src/index.ts"
+      ],
+      "@flowforge/session-telemetry/invariant": [
+        "./packages/session/session-telemetry/src/invariant.ts"
+      ],
+      "@flowforge/session-title-llm": [
+        "./packages/session/session-title-llm/src/index.ts"
+      ],
+      "@flowforge/session-title-llm/invariant": [
+        "./packages/session/session-title-llm/src/invariant.ts"
+      ],
+      "@flowforge/agent-spine-demo": [
+        "./packages/examples/agent-spine-demo/src/index.ts"
+      ],
+      "@flowforge/agent-spine-demo/invariant": [
+        "./packages/examples/agent-spine-demo/src/invariant.ts"
+      ],
+      "@flowforge/attachment-local": [
+        "./packages/attachment/attachment-local/src/index.ts"
+      ],
+      "@flowforge/attachment-local/invariant": [
+        "./packages/attachment/attachment-local/src/invariant.ts"
+      ],
+      "@flowforge/command-feedback": [
+        "./packages/feedback/command-feedback/src/index.ts"
+      ],
+      "@flowforge/command-feedback/invariant": [
+        "./packages/feedback/command-feedback/src/invariant.ts"
+      ],
+      "@flowforge/compaction-basic": [
+        "./packages/compaction/compaction-basic/src/index.ts"
+      ],
+      "@flowforge/compaction-basic/invariant": [
+        "./packages/compaction/compaction-basic/src/invariant.ts"
+      ],
+      "@flowforge/message-feedback": [
+        "./packages/feedback/message-feedback/src/index.ts"
+      ],
+      "@flowforge/message-feedback/invariant": [
+        "./packages/feedback/message-feedback/src/invariant.ts"
+      ],
+      "@flowforge/message-feedback/types": [
+        "./packages/feedback/message-feedback/src/types.ts"
+      ],
+      "@flowforge/output-retention": [
+        "./packages/util/output-retention/src/index.ts"
+      ],
+      "@flowforge/output-retention/invariant": [
+        "./packages/util/output-retention/src/invariant.ts"
+      ],
+      "@flowforge/skill-filesystem": [
+        "./packages/skill/skill-filesystem/src/index.ts"
+      ],
+      "@flowforge/skill-filesystem/invariant": [
+        "./packages/skill/skill-filesystem/src/invariant.ts"
+      ],
+      "@flowforge/subprocess-local": [
+        "./packages/subprocess/subprocess-local/src/index.ts"
+      ],
+      "@flowforge/subprocess-local/invariant": [
+        "./packages/subprocess/subprocess-local/src/invariant.ts"
+      ],
+      "@flowforge/typert-generator": [
+        "./packages/typert/generator/src/index.ts"
+      ],
+      "@flowforge/typert-generator/invariant": [
+        "./packages/typert/generator/src/invariant.ts"
+      ],
+      "@flowforge/command-compact": [
+        "./packages/compaction/command-compact/src/index.ts"
+      ],
+      "@flowforge/command-compact/invariant": [
+        "./packages/compaction/command-compact/src/invariant.ts"
+      ],
+      "@flowforge/llm-mock-server": [
+        "./packages/test-support/llm-mock-server/src/index.ts"
+      ],
+      "@flowforge/llm-mock-server/invariant": [
+        "./packages/test-support/llm-mock-server/src/invariant.ts"
+      ],
+      "@flowforge/plugin-contract": [
+        "./packages/plugin-contract/plugin-contract/src/index.ts"
+      ],
+      "@flowforge/subagent-ff-sdk": [
+        "./packages/subagent/subagent-ff-sdk/src/index.ts"
+      ],
+      "@flowforge/subagent-ff-sdk/invariant": [
+        "./packages/subagent/subagent-ff-sdk/src/invariant.ts"
+      ],
+      "@flowforge/typert-protocol": [
+        "./packages/typert/protocol/src/index.ts"
+      ],
+      "@flowforge/typert-protocol/invariant": [
+        "./packages/typert/protocol/src/invariant.ts"
+      ],
+      "@flowforge/typert-protocol/types": [
+        "./packages/typert/protocol/src/types.ts"
+      ],
+      "@flowforge/typert-registry": [
+        "./packages/typert/registry/src/index.ts"
+      ],
+      "@flowforge/typert-registry/invariant": [
+        "./packages/typert/registry/src/invariant.ts"
+      ],
+      "@flowforge/typert-registry/client": [
+        "./packages/typert/registry/src/client/index.ts"
+      ],
+      "@flowforge/typert-registry/types": [
+        "./packages/typert/registry/src/types.ts"
+      ],
+      "@flowforge/native-command": [
+        "./packages/util/native-command/src/index.ts"
+      ],
+      "@flowforge/native-command/invariant": [
+        "./packages/util/native-command/src/invariant.ts"
+      ],
+      "@flowforge/sandbox-policy": [
+        "./packages/sandbox/sandbox-policy/src/index.ts"
+      ],
+      "@flowforge/sandbox-policy/invariant": [
+        "./packages/sandbox/sandbox-policy/src/invariant.ts"
+      ],
+      "@flowforge/skill-security": [
+        "./packages/plugins/skill-security/src/index.ts"
+      ],
+      "@flowforge/storage-domain": [
+        "./packages/storage/storage-domain/src/index.ts"
+      ],
+      "@flowforge/storage-domain/invariant": [
+        "./packages/storage/storage-domain/src/invariant.ts"
+      ],
+      "@flowforge/storage-sqlite": [
+        "./packages/storage/storage-sqlite/src/index.ts"
+      ],
+      "@flowforge/storage-sqlite/invariant": [
+        "./packages/storage/storage-sqlite/src/invariant.ts"
+      ],
+      "@flowforge/subagent-codex": [
+        "./packages/subagent/subagent-codex/src/index.ts"
+      ],
+      "@flowforge/subagent-codex/invariant": [
+        "./packages/subagent/subagent-codex/src/invariant.ts"
+      ],
+      "@flowforge/subprocess-e2b": [
+        "./packages/e2b/subprocess-e2b/src/index.ts"
+      ],
+      "@flowforge/subprocess-e2b/invariant": [
+        "./packages/e2b/subprocess-e2b/src/invariant.ts"
+      ],
+      "@flowforge/tool-fs-search": [
+        "./packages/fs/tool-fs-search/src/index.ts"
+      ],
+      "@flowforge/tool-fs-search/invariant": [
+        "./packages/fs/tool-fs-search/src/invariant.ts"
+      ],
+      "@flowforge/user-questions": [
+        "./packages/interaction/user-questions/src/index.ts"
+      ],
+      "@flowforge/user-questions/invariant": [
+        "./packages/interaction/user-questions/src/invariant.ts"
+      ],
+      "@flowforge/user-questions/types": [
+        "./packages/interaction/user-questions/src/types.ts"
+      ],
+      "@flowforge/web-fetch-http": [
+        "./packages/web/web-fetch-http/src/index.ts"
+      ],
+      "@flowforge/web-fetch-http/invariant": [
+        "./packages/web/web-fetch-http/src/invariant.ts"
+      ],
+      "@flowforge/web-search-exa": [
+        "./packages/web/web-search-exa/src/index.ts"
+      ],
+      "@flowforge/web-search-exa/invariant": [
+        "./packages/web/web-search-exa/src/invariant.ts"
+      ],
+      "@flowforge/agent-presets": [
+        "./packages/preset/agent-presets/src/index.ts"
+      ],
+      "@flowforge/agent-presets/invariant": [
+        "./packages/preset/agent-presets/src/invariant.ts"
+      ],
+      "@flowforge/agent-presets/types": [
+        "./packages/preset/agent-presets/src/types.ts"
+      ],
+      "@flowforge/feature-flags": [
+        "./packages/plugins/feature-flags/src/index.ts"
+      ],
+      "@flowforge/hook-protocol": [
+        "./packages/hooks/hook-protocol/src/index.ts"
+      ],
+      "@flowforge/hook-protocol/invariant": [
+        "./packages/hooks/hook-protocol/src/invariant.ts"
+      ],
+      "@flowforge/sandbox-local": [
+        "./packages/sandbox/sandbox-local/src/index.ts"
+      ],
+      "@flowforge/sandbox-local/invariant": [
+        "./packages/sandbox/sandbox-local/src/invariant.ts"
+      ],
+      "@flowforge/session-query": [
+        "./packages/session-query/session-query/src/index.ts"
+      ],
+      "@flowforge/session-query/invariant": [
+        "./packages/session-query/session-query/src/invariant.ts"
+      ],
+      "@flowforge/session-stats": [
+        "./packages/session/session-stats/src/index.ts"
+      ],
+      "@flowforge/session-stats/invariant": [
+        "./packages/session/session-stats/src/invariant.ts"
+      ],
+      "@flowforge/session-stats/types": [
+        "./packages/session/session-stats/src/types.ts"
+      ],
+      "@flowforge/session-stats/client": [
+        "./packages/session/session-stats/src/client.ts"
+      ],
+      "@flowforge/session-title": [
+        "./packages/session/session-title/src/index.ts"
+      ],
+      "@flowforge/session-title/invariant": [
+        "./packages/session/session-title/src/invariant.ts"
+      ],
+      "@flowforge/session-title/types": [
+        "./packages/session/session-title/src/types.ts"
+      ],
+      "@flowforge/session-title/client": [
+        "./packages/session/session-title/src/client.ts"
+      ],
+      "@flowforge/settings-file": [
+        "./packages/settings/settings-file/src/index.ts"
+      ],
+      "@flowforge/settings-file/invariant": [
+        "./packages/settings/settings-file/src/invariant.ts"
+      ],
+      "@flowforge/system-prompt": [
+        "./packages/core/system-prompt/src/index.ts"
+      ],
+      "@flowforge/system-prompt/invariant": [
+        "./packages/core/system-prompt/src/invariant.ts"
+      ],
+      "@flowforge/terminal-bash": [
+        "./packages/terminal/terminal-bash/src/index.ts"
+      ],
+      "@flowforge/terminal-bash/invariant": [
+        "./packages/terminal/terminal-bash/src/invariant.ts"
+      ],
+      "@flowforge/tool-ask-user": [
+        "./packages/interaction/tool-ask-user/src/index.ts"
+      ],
+      "@flowforge/tool-ask-user/invariant": [
+        "./packages/interaction/tool-ask-user/src/invariant.ts"
+      ],
+      "@flowforge/tool-subagent": [
+        "./packages/subagent/tool-subagent/src/index.ts"
+      ],
+      "@flowforge/tool-subagent/invariant": [
+        "./packages/subagent/tool-subagent/src/invariant.ts"
+      ],
+      "@flowforge/tool-terminal": [
+        "./packages/terminal/tool-terminal/src/index.ts"
+      ],
+      "@flowforge/tool-terminal/invariant": [
+        "./packages/terminal/tool-terminal/src/invariant.ts"
+      ],
+      "@flowforge/tool-workflow": [
+        "./packages/workflow/tool-workflow/src/index.ts"
+      ],
+      "@flowforge/tool-workflow/invariant": [
+        "./packages/workflow/tool-workflow/src/invariant.ts"
+      ],
+      "@flowforge/tool-workflow/types": [
+        "./packages/workflow/tool-workflow/src/types.ts"
+      ],
+      "@flowforge/typert-loader": [
+        "./packages/typert/loader/src/index.ts"
+      ],
+      "@flowforge/typert-loader/invariant": [
+        "./packages/typert/loader/src/invariant.ts"
+      ],
+      "@flowforge/user-approval": [
+        "./packages/interaction/user-approval/src/index.ts"
+      ],
+      "@flowforge/user-approval/invariant": [
+        "./packages/interaction/user-approval/src/invariant.ts"
+      ],
+      "@flowforge/user-approval/types": [
+        "./packages/interaction/user-approval/src/types.ts"
+      ],
+      "@flowforge/acp-snapshot": [
+        "./packages/test-support/acp-snapshot/src/index.ts"
+      ],
+      "@flowforge/acp-snapshot/invariant": [
+        "./packages/test-support/acp-snapshot/src/invariant.ts"
+      ],
+      "@flowforge/atomic-write": [
+        "./packages/util/atomic-write/src/index.ts"
+      ],
+      "@flowforge/atomic-write/invariant": [
+        "./packages/util/atomic-write/src/invariant.ts"
+      ],
+      "@flowforge/bash-sandbox": [
+        "./packages/shell/bash-sandbox/src/index.ts"
+      ],
+      "@flowforge/bash-sandbox/invariant": [
+        "./packages/shell/bash-sandbox/src/invariant.ts"
+      ],
+      "@flowforge/code-runtime": [
+        "./packages/code-runtime/code-runtime/src/index.ts"
+      ],
+      "@flowforge/code-runtime/invariant": [
+        "./packages/code-runtime/code-runtime/src/invariant.ts"
+      ],
+      "@flowforge/command-goal": [
+        "./packages/goal/command-goal/src/index.ts"
+      ],
+      "@flowforge/command-goal/invariant": [
+        "./packages/goal/command-goal/src/invariant.ts"
+      ],
+      "@flowforge/harness-boot": [
+        "./packages/harness/boot/src/index.ts"
+      ],
+      "@flowforge/llm-deepseek": [
+        "./packages/llm/llm-deepseek/src/index.ts"
+      ],
+      "@flowforge/llm-deepseek/invariant": [
+        "./packages/llm/llm-deepseek/src/invariant.ts"
+      ],
+      "@flowforge/loader-smoke": [
+        "./packages/test-support/loader-smoke/src/index.ts"
+      ],
+      "@flowforge/loader-smoke/invariant": [
+        "./packages/test-support/loader-smoke/src/invariant.ts"
+      ],
+      "@flowforge/pwsh-sandbox": [
+        "./packages/shell/pwsh-sandbox/src/index.ts"
+      ],
+      "@flowforge/pwsh-sandbox/invariant": [
+        "./packages/shell/pwsh-sandbox/src/invariant.ts"
+      ],
+      "@flowforge/sdk-protocol": [
+        "./packages/sdk/protocol/src/index.ts"
+      ],
+      "@flowforge/sdk-protocol/invariant": [
+        "./packages/sdk/protocol/src/invariant.ts"
+      ],
+      "@flowforge/spill-policy": [
+        "./packages/spill/spill-policy/src/index.ts"
+      ],
+      "@flowforge/spill-policy/invariant": [
+        "./packages/spill/spill-policy/src/invariant.ts"
+      ],
+      "@flowforge/storage-json": [
+        "./packages/storage/storage-json/src/index.ts"
+      ],
+      "@flowforge/storage-json/invariant": [
+        "./packages/storage/storage-json/src/invariant.ts"
+      ],
+      "@flowforge/subagent-acp": [
+        "./packages/subagent/subagent-acp/src/index.ts"
+      ],
+      "@flowforge/subagent-acp/invariant": [
+        "./packages/subagent/subagent-acp/src/invariant.ts"
+      ],
+      "@flowforge/time-context": [
+        "./packages/context/time-context/src/index.ts"
+      ],
+      "@flowforge/time-context/invariant": [
+        "./packages/context/time-context/src/invariant.ts"
+      ],
+      "@flowforge/tmux-context": [
+        "./packages/context/tmux-context/src/index.ts"
+      ],
+      "@flowforge/tmux-context/invariant": [
+        "./packages/context/tmux-context/src/invariant.ts"
+      ],
+      "@flowforge/credentials": [
+        "./packages/credentials/credentials/src/index.ts"
+      ],
+      "@flowforge/credentials/invariant": [
+        "./packages/credentials/credentials/src/invariant.ts"
+      ],
+      "@flowforge/credentials/types": [
+        "./packages/credentials/credentials/src/types.ts"
+      ],
+      "@flowforge/hooks-codex": [
+        "./packages/hooks/hooks-codex/src/index.ts"
+      ],
+      "@flowforge/hooks-codex/invariant": [
+        "./packages/hooks/hooks-codex/src/invariant.ts"
+      ],
+      "@flowforge/schemastery": [
+        "./vendor/schemastery/src/index.ts"
+      ],
+      "@flowforge/skill-badge": [
+        "./packages/skill/skill-badge/src/index.ts"
+      ],
+      "@flowforge/skill-badge/invariant": [
+        "./packages/skill/skill-badge/src/invariant.ts"
+      ],
+      "@flowforge/spill-local": [
+        "./packages/spill/spill-local/src/index.ts"
+      ],
+      "@flowforge/spill-local/invariant": [
+        "./packages/spill/spill-local/src/invariant.ts"
+      ],
+      "@flowforge/token-meter": [
+        "./packages/llm/token-meter/src/index.ts"
+      ],
+      "@flowforge/token-meter/invariant": [
+        "./packages/llm/token-meter/src/invariant.ts"
+      ],
+      "@flowforge/token-meter/client": [
+        "./packages/llm/token-meter/src/client.ts"
+      ],
+      "@flowforge/tool-cordis": [
+        "./packages/extensions/tool-cordis/src/index.ts"
+      ],
+      "@flowforge/tool-cordis/invariant": [
+        "./packages/extensions/tool-cordis/src/invariant.ts"
+      ],
+      "@flowforge/agent-loop": [
+        "./packages/core/agent-loop/src/index.ts"
+      ],
+      "@flowforge/agent-loop/invariant": [
+        "./packages/core/agent-loop/src/invariant.ts"
+      ],
+      "@flowforge/attachment": [
+        "./packages/attachment/attachment/src/index.ts"
+      ],
+      "@flowforge/attachment/invariant": [
+        "./packages/attachment/attachment/src/invariant.ts"
+      ],
+      "@flowforge/bash-local": [
+        "./packages/shell/bash-local/src/index.ts"
+      ],
+      "@flowforge/bash-local/invariant": [
+        "./packages/shell/bash-local/src/invariant.ts"
+      ],
+      "@flowforge/compaction": [
+        "./packages/compaction/compaction/src/index.ts"
+      ],
+      "@flowforge/compaction/invariant": [
+        "./packages/compaction/compaction/src/invariant.ts"
+      ],
+      "@flowforge/compaction/types": [
+        "./packages/compaction/compaction/src/types.ts"
+      ],
+      "@flowforge/compaction/checkpoint": [
+        "./packages/compaction/compaction/src/checkpoint.ts"
+      ],
+      "@flowforge/fs-sandbox": [
+        "./packages/fs/fs-sandbox/src/index.ts"
+      ],
+      "@flowforge/fs-sandbox/invariant": [
+        "./packages/fs/fs-sandbox/src/invariant.ts"
+      ],
+      "@flowforge/home-paths": [
+        "./packages/util/home-paths/src/index.ts"
+      ],
+      "@flowforge/home-paths/invariant": [
+        "./packages/util/home-paths/src/invariant.ts"
+      ],
+      "@flowforge/invariants": [
+        "./packages/runtime-diagnostics/invariants/src/index.ts"
+      ],
+      "@flowforge/invariants/invariant": [
+        "./packages/runtime-diagnostics/invariants/src/invariant.ts"
+      ],
+      "@flowforge/jobs-local": [
+        "./packages/jobs/jobs-local/src/index.ts"
+      ],
+      "@flowforge/jobs-local/invariant": [
+        "./packages/jobs/jobs-local/src/invariant.ts"
+      ],
+      "@flowforge/llm-replay": [
+        "./packages/test-support/llm-replay/src/index.ts"
+      ],
+      "@flowforge/llm-replay/invariant": [
+        "./packages/test-support/llm-replay/src/invariant.ts"
+      ],
+      "@flowforge/mcp-client": [
+        "./packages/mcp/mcp-client/src/index.ts"
+      ],
+      "@flowforge/mcp-client/invariant": [
+        "./packages/mcp/mcp-client/src/invariant.ts"
+      ],
+      "@flowforge/pwsh-local": [
+        "./packages/shell/pwsh-local/src/index.ts"
+      ],
+      "@flowforge/pwsh-local/invariant": [
+        "./packages/shell/pwsh-local/src/invariant.ts"
+      ],
+      "@flowforge/resilience": [
+        "./packages/plugins/resilience/src/index.ts"
+      ],
+      "@flowforge/sdk-client": [
+        "./packages/sdk/client/src/index.ts"
+      ],
+      "@flowforge/sdk-client/invariant": [
+        "./packages/sdk/client/src/invariant.ts"
+      ],
+      "@flowforge/subprocess": [
+        "./packages/subprocess/subprocess/src/index.ts"
+      ],
+      "@flowforge/subprocess/invariant": [
+        "./packages/subprocess/subprocess/src/invariant.ts"
+      ],
+      "@flowforge/tool-ralph": [
+        "./packages/workflow/tool-ralph/src/index.ts"
+      ],
+      "@flowforge/tool-ralph/invariant": [
+        "./packages/workflow/tool-ralph/src/invariant.ts"
+      ],
+      "@flowforge/tool-skill": [
+        "./packages/skill/tool-skill/src/index.ts"
+      ],
+      "@flowforge/tool-skill/invariant": [
+        "./packages/skill/tool-skill/src/invariant.ts"
+      ],
+      "@flowforge/llm-pi-ai": [
+        "./packages/llm/llm-pi-ai/src/index.ts"
+      ],
+      "@flowforge/llm-pi-ai/invariant": [
+        "./packages/llm/llm-pi-ai/src/invariant.ts"
+      ],
+      "@flowforge/llm-retry": [
+        "./packages/llm/llm-retry/src/index.ts"
+      ],
+      "@flowforge/llm-retry/invariant": [
+        "./packages/llm/llm-retry/src/invariant.ts"
+      ],
+      "@flowforge/llm-retry/types": [
+        "./packages/llm/llm-retry/src/types.ts"
+      ],
+      "@flowforge/lsp-stdio": [
+        "./packages/lsp/lsp-stdio/src/index.ts"
+      ],
+      "@flowforge/lsp-stdio/invariant": [
+        "./packages/lsp/lsp-stdio/src/invariant.ts"
+      ],
+      "@flowforge/plan-mode": [
+        "./packages/plan/plan-mode/src/index.ts"
+      ],
+      "@flowforge/plan-mode/invariant": [
+        "./packages/plan/plan-mode/src/invariant.ts"
+      ],
+      "@flowforge/plan-mode/types": [
+        "./packages/plan/plan-mode/src/types.ts"
+      ],
+      "@flowforge/plan-mode/client": [
+        "./packages/plan/plan-mode/src/client.ts"
+      ],
+      "@flowforge/shell-env": [
+        "./packages/shell/shell-env/src/index.ts"
+      ],
+      "@flowforge/shell-env/invariant": [
+        "./packages/shell/shell-env/src/invariant.ts"
+      ],
+      "@flowforge/tool-bash": [
+        "./packages/shell/tool-bash/src/index.ts"
+      ],
+      "@flowforge/tool-bash/invariant": [
+        "./packages/shell/tool-bash/src/invariant.ts"
+      ],
+      "@flowforge/tool-goal": [
+        "./packages/goal/tool-goal/src/index.ts"
+      ],
+      "@flowforge/tool-goal/invariant": [
+        "./packages/goal/tool-goal/src/invariant.ts"
+      ],
+      "@flowforge/tool-jobs": [
+        "./packages/jobs/tool-jobs/src/index.ts"
+      ],
+      "@flowforge/tool-jobs/invariant": [
+        "./packages/jobs/tool-jobs/src/invariant.ts"
+      ],
+      "@flowforge/tool-pwsh": [
+        "./packages/shell/tool-pwsh/src/index.ts"
+      ],
+      "@flowforge/tool-pwsh/invariant": [
+        "./packages/shell/tool-pwsh/src/invariant.ts"
+      ],
+      "@flowforge/tool-todo": [
+        "./packages/todo/tool-todo/src/index.ts"
+      ],
+      "@flowforge/tool-todo/invariant": [
+        "./packages/todo/tool-todo/src/invariant.ts"
+      ],
+      "@flowforge/tool-todo/client": [
+        "./packages/todo/tool-todo/src/client.ts"
+      ],
+      "@flowforge/workspace": [
+        "./packages/workspace/workspace/src/index.ts"
+      ],
+      "@flowforge/workspace/invariant": [
+        "./packages/workspace/workspace/src/invariant.ts"
+      ],
+      "@flowforge/workspace/types": [
+        "./packages/workspace/workspace/src/types.ts"
+      ],
+      "@flowforge/commands": [
+        "./packages/interaction/commands/src/index.ts"
+      ],
+      "@flowforge/commands/invariant": [
+        "./packages/interaction/commands/src/invariant.ts"
+      ],
+      "@flowforge/commands/types": [
+        "./packages/interaction/commands/src/types.ts"
+      ],
+      "@flowforge/commands/brand": [
+        "./packages/interaction/commands/src/brand.ts"
+      ],
+      "@flowforge/cosmokit": [
+        "./vendor/cosmokit/src/index.ts"
+      ],
+      "@flowforge/fs-local": [
+        "./packages/fs/fs-local/src/index.ts"
+      ],
+      "@flowforge/fs-local/invariant": [
+        "./packages/fs/fs-local/src/invariant.ts"
+      ],
+      "@flowforge/schedule": [
+        "./packages/schedule/schedule/src/index.ts"
+      ],
+      "@flowforge/schedule/invariant": [
+        "./packages/schedule/schedule/src/invariant.ts"
+      ],
+      "@flowforge/settings": [
+        "./packages/settings/settings/src/index.ts"
+      ],
+      "@flowforge/settings/invariant": [
+        "./packages/settings/settings/src/invariant.ts"
+      ],
+      "@flowforge/settings/types": [
+        "./packages/settings/settings/src/types.ts"
+      ],
+      "@flowforge/subagent": [
+        "./packages/subagent/subagent/src/index.ts"
+      ],
+      "@flowforge/subagent/invariant": [
+        "./packages/subagent/subagent/src/invariant.ts"
+      ],
+      "@flowforge/subagent/client": [
+        "./packages/subagent/subagent/src/client.ts"
+      ],
+      "@flowforge/terminal": [
+        "./packages/terminal/terminal/src/index.ts"
+      ],
+      "@flowforge/terminal/invariant": [
+        "./packages/terminal/terminal/src/invariant.ts"
+      ],
+      "@flowforge/tool-lsp": [
+        "./packages/lsp/tool-lsp/src/index.ts"
+      ],
+      "@flowforge/tool-lsp/invariant": [
+        "./packages/lsp/tool-lsp/src/invariant.ts"
+      ],
+      "@flowforge/tool-web": [
+        "./packages/web/tool-web/src/index.ts"
+      ],
+      "@flowforge/tool-web/invariant": [
+        "./packages/web/tool-web/src/invariant.ts"
+      ],
+      "@flowforge/workflow": [
+        "./packages/workflow/workflow/src/index.ts"
+      ],
+      "@flowforge/workflow/invariant": [
+        "./packages/workflow/workflow/src/invariant.ts"
+      ],
+      "@flowforge/workflow/types": [
+        "./packages/workflow/workflow/src/types.ts"
+      ],
+      "@flowforge/persona": [
+        "./packages/preset/persona/src/index.ts"
+      ],
+      "@flowforge/persona/invariant": [
+        "./packages/preset/persona/src/invariant.ts"
+      ],
+      "@flowforge/sandbox": [
+        "./packages/sandbox/sandbox/src/index.ts"
+      ],
+      "@flowforge/sandbox/invariant": [
+        "./packages/sandbox/sandbox/src/invariant.ts"
+      ],
+      "@flowforge/session": [
+        "./packages/core/session/src/index.ts"
+      ],
+      "@flowforge/session/invariant": [
+        "./packages/core/session/src/invariant.ts"
+      ],
+      "@flowforge/session/types": [
+        "./packages/core/session/src/types.ts"
+      ],
+      "@flowforge/session/surface": [
+        "./packages/core/session/src/surface.ts"
+      ],
+      "@flowforge/storage": [
+        "./packages/storage/storage/src/index.ts"
+      ],
+      "@flowforge/storage/invariant": [
+        "./packages/storage/storage/src/invariant.ts"
+      ],
+      "@flowforge/timeout": [
+        "./packages/util/timeout/src/index.ts"
+      ],
+      "@flowforge/timeout/invariant": [
+        "./packages/util/timeout/src/invariant.ts"
+      ],
+      "@flowforge/tool-fs": [
+        "./packages/fs/tool-fs/src/index.ts"
+      ],
+      "@flowforge/tool-fs/invariant": [
+        "./packages/fs/tool-fs/src/invariant.ts"
+      ],
+      "@flowforge/canary": [
+        "./packages/plugins/canary/src/index.ts"
+      ],
+      "@flowforge/cordis": [
+        "./vendor/cordis/src/index.ts"
+      ],
+      "@flowforge/fs-e2b": [
+        "./packages/e2b/fs-e2b/src/index.ts"
+      ],
+      "@flowforge/fs-e2b/invariant": [
+        "./packages/e2b/fs-e2b/src/invariant.ts"
+      ],
+      "@flowforge/agent": [
+        "./packages/core/agent/src/index.ts"
+      ],
+      "@flowforge/agent/invariant": [
+        "./packages/core/agent/src/invariant.ts"
+      ],
+      "@flowforge/agent/types": [
+        "./packages/core/agent/src/types.ts"
+      ],
+      "@flowforge/brand": [
+        "./packages/util/brand/src/index.ts"
+      ],
+      "@flowforge/brand/invariant": [
+        "./packages/util/brand/src/invariant.ts"
+      ],
+      "@flowforge/guard": [
+        "./packages/plugins/guard/src/index.ts"
+      ],
+      "@flowforge/modes": [
+        "./packages/plugins/modes/src/index.ts"
+      ],
+      "@flowforge/scope": [
+        "./packages/core/scope/src/index.ts"
+      ],
+      "@flowforge/scope/invariant": [
+        "./packages/core/scope/src/invariant.ts"
+      ],
+      "@flowforge/shell": [
+        "./packages/shell/shell/src/index.ts"
+      ],
+      "@flowforge/shell/invariant": [
+        "./packages/shell/shell/src/invariant.ts"
+      ],
+      "@flowforge/skill": [
+        "./packages/skill/skill/src/index.ts"
+      ],
+      "@flowforge/skill/invariant": [
+        "./packages/skill/skill/src/invariant.ts"
+      ],
+      "@flowforge/spill": [
+        "./packages/spill/spill/src/index.ts"
+      ],
+      "@flowforge/spill/invariant": [
+        "./packages/spill/spill/src/invariant.ts"
+      ],
+      "@flowforge/tools": [
+        "./packages/core/tools/src/index.ts"
+      ],
+      "@flowforge/tools/invariant": [
+        "./packages/core/tools/src/invariant.ts"
+      ],
+      "@flowforge/tools/types": [
+        "./packages/core/tools/src/types.ts"
+      ],
+      "@flowforge/tools/presentation": [
+        "./packages/core/tools/src/presentation.ts"
+      ],
+      "@flowforge/goal": [
+        "./packages/goal/goal/src/index.ts"
+      ],
+      "@flowforge/goal/invariant": [
+        "./packages/goal/goal/src/invariant.ts"
+      ],
+      "@flowforge/goal/types": [
+        "./packages/goal/goal/src/types.ts"
+      ],
+      "@flowforge/goal/client": [
+        "./packages/goal/goal/src/client.ts"
+      ],
+      "@flowforge/jobs": [
+        "./packages/jobs/jobs/src/index.ts"
+      ],
+      "@flowforge/jobs/invariant": [
+        "./packages/jobs/jobs/src/invariant.ts"
+      ],
+      "@flowforge/jobs/brand": [
+        "./packages/jobs/jobs/src/brand.ts"
+      ],
+      "@flowforge/acp": [
+        "./packages/acp/acp/src/index.ts"
+      ],
+      "@flowforge/acp/invariant": [
+        "./packages/acp/acp/src/invariant.ts"
+      ],
+      "@flowforge/e2b": [
+        "./packages/e2b/e2b/src/index.ts"
+      ],
+      "@flowforge/e2b/invariant": [
+        "./packages/e2b/e2b/src/invariant.ts"
+      ],
+      "@flowforge/llm": [
+        "./packages/llm/llm/src/index.ts"
+      ],
+      "@flowforge/llm/invariant": [
+        "./packages/llm/llm/src/invariant.ts"
+      ],
+      "@flowforge/llm/types": [
+        "./packages/llm/llm/src/types.ts"
+      ],
+      "@flowforge/llm/brand": [
+        "./packages/llm/llm/src/brand.ts"
+      ],
+      "@flowforge/llm/message": [
+        "./packages/llm/llm/src/message.ts"
+      ],
+      "@flowforge/lsp": [
+        "./packages/lsp/lsp/src/index.ts"
+      ],
+      "@flowforge/lsp/invariant": [
+        "./packages/lsp/lsp/src/invariant.ts"
+      ],
+      "@flowforge/web": [
+        "./packages/web/web/src/index.ts"
+      ],
+      "@flowforge/web/invariant": [
+        "./packages/web/web/src/invariant.ts"
+      ],
+      "@flowforge/fs": [
+        "./packages/fs/fs/src/index.ts"
+      ],
+      "@flowforge/fs/invariant": [
+        "./packages/fs/fs/src/invariant.ts"
       ]
     }
   }

@@ -1,8 +1,8 @@
-# dsh-atomic-write
+# flowforge-atomic-write
 
 [English](README.md) | 中文
 
-零依赖的原子文件替换，供绝不允许在磁盘上留下不完整、被符号链接劫持或权限过宽内容的文件型存储共用：用户设置文档（`dsh-settings-file`）与凭据存储（`dsh-credentials-local`）。
+零依赖的原子文件替换，供绝不允许在磁盘上留下不完整、被符号链接劫持或权限过宽内容的文件型存储共用：用户设置文档（`flowforge-settings-file`）与凭据存储（`flowforge-credentials-local`）。
 
 ## 接口面
 
@@ -12,11 +12,11 @@ import { withFileLock, writeFileAtomic } from '@flowforge/atomic-write'
 declare const text: string
 declare const render: (previous: string) => string
 
-await writeFileAtomic('/home/u/.dsh/settings.yaml', text, { mode: 0o600 })
+await writeFileAtomic('/home/u/.flowforge/settings.yaml', text, { mode: 0o600 })
 
 // Read-modify-write against the same file from several processes.
-await withFileLock('/home/u/.dsh/settings.yaml', async () => {
-  await writeFileAtomic('/home/u/.dsh/settings.yaml', render(text), { mode: 0o600 })
+await withFileLock('/home/u/.flowforge/settings.yaml', async () => {
+  await writeFileAtomic('/home/u/.flowforge/settings.yaml', render(text), { mode: 0o600 })
 })
 ```
 

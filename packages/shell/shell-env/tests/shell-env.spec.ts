@@ -1,0 +1,238 @@
+/**
+ * Registry tests for `@flowforge/shell-env`: built-in facts, contributor
+ * ownership and validation, collection ordering, effect-scoped disposal, and
+ * the explicit disposer contract.
+ */
+
+import { homedir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Context } from '@flowforge/cordis'
+import { CallId } from '@flowforge/llm'
+import type { Agent } from '@flowforge/agent'
+import type { ToolExecution } from '@flowforge/tools'
+import { ShellEnvRegistry } from '@flowforge/shell-env'
+import * as BashEnvPlugin from '@flowforge/shell-env'
+
+const testToolSignal = new AbortController().signal
+
+afterEach(() => vi.unstubAllEnvs())
+
+function execution(sessionId?: string): ToolExecution {
+  return {
+    signal: testToolSignal,
+    token: Symbol('bash-env-test') as ToolExecution['token'],
+    callId: CallId('bash-env-call'),
+    rootCallId: CallId('bash-env-call'),
+    name: 'bash',
+    arguments: { command: 'true' },
+    ...(sessionId === undefined
+      ? {}
+      : { agent: { session: { header: { version: 0, id: sessionId, createdAt: 0 } } } as Agent }),
+  }
+}
+
+describe('ShellEnvRegistry', () => {
+  it('collects unconditional shell facts and the current agent session id', () => {
+    const ctx = new Context()
+    const registry = new ShellEnvRegistry(ctx, { flowforgeHome: './test-flowforge-home' })
+
+    expect(registry.collect(execution())).toEqual({
+      FF_HOME: resolve('./test-flowforge-home'),
+      FF_SHELL: '1',
+    })
+    expect(registry.collect(execution('session-a'))).toEqual({
+      FF_HOME: resolve('./test-flowforge-home'),
+      FF_SESSION_ID: 'session-a',
+      FF_SHELL: '1',
+    })
+  })
+
+  it('resolves FF_HOME from the ambient override or the user-home default', () => {
+    vi.stubEnv('FF_HOME', './ambient-flowforge-home')
+    const fromEnvironment = new ShellEnvRegistry(new Context())
+    expect(fromEnvironment.collect(execution()).FF_HOME).toBe(resolve('./ambient-flowforge-home'))
+
+    vi.stubEnv('FF_HOME', undefined)
+    const fromDefault = new ShellEnvRegistry(new Context())
+    expect(fromDefault.collect(execution()).FF_HOME).toBe(join(homedir(), '.flowforge'))
+  })
+
+  it('collects declared contributor variables and omits unavailable values', () => {
+    const ctx = new Context()
+    const registry = new ShellEnvRegistry(ctx, { flowforgeHome: './test-flowforge-home' })
+    registry.register({
+      name: 'optional-session-fact',
+      variables: {
+        FF_SESSION_OPTIONAL: { description: 'Optional session-scoped test fact.' },
+      },
+      resolve: exec => exec.agent === undefined ? {} : { FF_SESSION_OPTIONAL: exec.agent.session.header.id },
+    })
+    registry.register({
+      name: 'always-available-fact',
+      variables: {
+        FF_ALWAYS_AVAILABLE: { description: 'Always-available test fact.' },
+      },
+      resolve: () => ({ FF_ALWAYS_AVAILABLE: 'yes' }),
+    })
+
+    expect(registry.collect(execution())).not.toHaveProperty('FF_SESSION_OPTIONAL')
+    expect(registry.collect(execution()).FF_ALWAYS_AVAILABLE).toBe('yes')
+    expect(registry.collect(execution('session-b')).FF_SESSION_OPTIONAL).toBe('session-b')
+    expect(registry.list()).toEqual([
+      {
+        contributor: 'always-available-fact',
+        description: 'Always-available test fact.',
+        key: 'FF_ALWAYS_AVAILABLE',
+      },
+      {
+        contributor: 'optional-session-fact',
+        description: 'Optional session-scoped test fact.',
+        key: 'FF_SESSION_OPTIONAL',
+      },
+    ])
+  })
+
+  it('rejects duplicate variable ownership at registration time', () => {
+    const ctx = new Context()
+    const registry = new ShellEnvRegistry(ctx, { flowforgeHome: './test-flowforge-home' })
+    registry.register({
+      name: 'first',
+      variables: { FF_SHARED: { description: 'First owner.' } },
+      resolve: () => ({ FF_SHARED: 'first' }),
+    })
+
+    expect(() => registry.register({
+      name: 'second',
+      variables: { FF_SHARED: { description: 'Second owner.' } },
+      resolve: () => ({ FF_SHARED: 'second' }),
+    })).toThrow(/FF_SHARED.*first.*second|FF_SHARED.*second.*first/)
+  })
+
+  it('rejects duplicate contributor names and malformed declarations', () => {
+    const registry = new ShellEnvRegistry(new Context(), { flowforgeHome: './test-flowforge-home' })
+    registry.register({
+      name: 'declared',
+      variables: { FF_DECLARED: { description: 'Declared fact.' } },
+      resolve: () => ({}),
+    })
+
+    expect(() => registry.register({
+      name: 'declared',
+      variables: { FF_ANOTHER: { description: 'Another fact.' } },
+      resolve: () => ({}),
+    })).toThrow(/already registered/)
+    expect(() => registry.register({
+      name: ' ',
+      variables: { FF_BLANK_NAME: { description: 'Blank owner.' } },
+      resolve: () => ({}),
+    })).toThrow(/name must be non-empty/)
+    expect(() => registry.register({
+      name: 'invalid-key',
+      variables: { ff_invalid: { description: 'Invalid key.' } } as unknown as Record<'FF_INVALID', { description: string }>,
+      resolve: () => ({}),
+    })).toThrow(/invalid key/)
+    expect(() => registry.register({
+      name: 'reserved-key',
+      variables: { FF_HOME: { description: 'Reserved key.' } },
+      resolve: () => ({}),
+    })).toThrow(/reserved key/)
+    expect(() => registry.register({
+      name: 'blank-description',
+      variables: { FF_BLANK_DESCRIPTION: { description: ' ' } },
+      resolve: () => ({}),
+    })).toThrow(/must describe/)
+  })
+
+  it('rejects undeclared variables returned by a contributor', () => {
+    const ctx = new Context()
+    const registry = new ShellEnvRegistry(ctx, { flowforgeHome: './test-flowforge-home' })
+    registry.register({
+      name: 'drifted-provider',
+      variables: { FF_DECLARED: { description: 'Declared fact.' } },
+      resolve: () => ({ FF_UNDECLARED: 'bad' }),
+    })
+
+    expect(() => registry.collect(execution())).toThrow(/drifted-provider.*FF_UNDECLARED/)
+  })
+
+  it('rejects non-string values returned by a contributor', () => {
+    const registry = new ShellEnvRegistry(new Context(), { flowforgeHome: './test-flowforge-home' })
+    registry.register({
+      name: 'wrong-value-type',
+      variables: { FF_STRING: { description: 'String fact.' } },
+      resolve: () => ({ FF_STRING: 42 }) as unknown as Record<'FF_STRING', string>,
+    })
+
+    expect(() => registry.collect(execution())).toThrow(/wrong-value-type.*non-string.*FF_STRING/)
+  })
+
+  it('removes an effect-scoped contributor when its plugin is disposed', async () => {
+    const ctx = new Context()
+    const registry = new ShellEnvRegistry(ctx, { flowforgeHome: './test-flowforge-home' })
+    const fiber = await ctx.plugin({
+      inject: ['shellEnv'],
+      apply(inner: Context) {
+        inner.shellEnv.register({
+          name: 'temporary',
+          variables: { FF_TEMPORARY: { description: 'Temporary fact.' } },
+          resolve: () => ({ FF_TEMPORARY: 'present' }),
+        })
+      },
+    })
+
+    expect(registry.collect(execution()).FF_TEMPORARY).toBe('present')
+    await fiber.dispose()
+    expect(registry.collect(execution())).not.toHaveProperty('FF_TEMPORARY')
+  })
+
+  it('returns an explicit contributor disposer', () => {
+    const registry = new ShellEnvRegistry(new Context(), { flowforgeHome: './test-flowforge-home' })
+    const dispose = registry.register({
+      name: 'explicit-disposal',
+      variables: { FF_EXPLICIT_DISPOSAL: { description: 'Explicitly disposed fact.' } },
+      resolve: () => ({ FF_EXPLICIT_DISPOSAL: 'present' }),
+    })
+
+    expect(registry.collect(execution()).FF_EXPLICIT_DISPOSAL).toBe('present')
+    dispose()
+    expect(registry.collect(execution())).not.toHaveProperty('FF_EXPLICIT_DISPOSAL')
+  })
+
+  it('the plugin registers the service and the persistence contributor on load', async () => {
+    const ctx = new Context()
+    await ctx.plugin(BashEnvPlugin)
+    expect(ctx.shellEnv).toBeInstanceOf(ShellEnvRegistry)
+    expect(ctx.shellEnv.list()).toEqual([
+      {
+        contributor: 'session-persistence',
+        description: 'Absolute target path of the current session JSONL when the active persistence backend provides one.',
+        key: 'FF_SESSION_JSONL',
+      },
+    ])
+  })
+
+  it('the persistence contributor resolves FF_SESSION_JSONL only for a jsonl backend', async () => {
+    const ctx = new Context()
+    await ctx.plugin(BashEnvPlugin)
+    ctx.provide('sessionPersistence', {
+      locate: () => ({ kind: 'jsonl' as const, path: 'C:\\sessions\\s.jsonl' }),
+    })
+    expect(ctx.shellEnv.collect(execution('sess-p')).FF_SESSION_JSONL).toBe('C:\\sessions\\s.jsonl')
+  })
+
+  it('the persistence contributor omits the variable for a non-jsonl backend', async () => {
+    const ctx = new Context()
+    await ctx.plugin(BashEnvPlugin)
+    ctx.provide('sessionPersistence', {
+      locate: () => ({ kind: 'sqlite' as const, path: 'C:\\sessions\\s.db' }),
+    })
+    expect(ctx.shellEnv.collect(execution('sess-p'))).not.toHaveProperty('FF_SESSION_JSONL')
+  })
+
+  it('the persistence contributor omits the variable without a persistence backend', async () => {
+    const ctx = new Context()
+    await ctx.plugin(BashEnvPlugin)
+    expect(ctx.shellEnv.collect(execution('sess-p'))).not.toHaveProperty('FF_SESSION_JSONL')
+  })
+})

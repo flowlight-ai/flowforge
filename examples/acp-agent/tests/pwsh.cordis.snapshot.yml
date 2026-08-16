@@ -1,0 +1,38 @@
+# Minimal keyless composition: real app, pwsh executor, and pwsh tool; replayed model.
+- id: llm-replay
+  name: '@flowforge/llm-replay'
+  config:
+    providers:
+      - id: deepseek-official
+        name: DeepSeek
+        models:
+          - id: deepseek-v4-pro
+
+- id: subprocess
+  name: '@flowforge/subprocess-local'
+
+- id: bash
+  name: '@flowforge/pwsh-local'
+
+- id: shell-env
+  name: '@flowforge/shell-env'
+
+- id: acp-agent
+  name: '@flowforge/acp-demo'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-pro
+    persistenceRoot: !!js process.env.FF_SNAPSHOT_SESSIONS_ROOT ?? './.sessions'
+    persistenceCompression: none
+    workspaceContext: false
+    skills:
+      enabled: false
+    # job_output/job_kill stay mounted (the bundle's toolJobs default) so
+    # background pwsh runs are readable and killable.
+    goals: false
+    # The pwsh tool replaces the bundle's bash tool in this composition.
+    toolBash: false
+    persona: You are a concise snapshot agent working in {{cwd}}.
+
+- id: tool-pwsh
+  name: '@flowforge/tool-pwsh'

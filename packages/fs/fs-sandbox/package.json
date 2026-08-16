@@ -1,0 +1,50 @@
+{
+  "name": "@flowforge/fs-sandbox",
+  "description": "Sandbox-enforcing implementation of the FlowForge filesystem seam: fences write/edit by the per-call sandbox mode (read-only denies mutation, workspace-write contains it to the workspace + temp roots) while reads pass through",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/fs/fs-sandbox"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/fs": "workspace:^",
+    "@flowforge/fs-local": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/fs": "workspace:^",
+    "@flowforge/fs-local": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

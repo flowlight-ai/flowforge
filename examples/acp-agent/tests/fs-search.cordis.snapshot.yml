@@ -1,0 +1,35 @@
+# Minimal keyless composition: real app, bash, and search tool; replayed model.
+- id: llm-replay
+  name: '@flowforge/llm-replay'
+  config:
+    providers:
+      - id: deepseek-official
+        name: DeepSeek
+        models:
+          - id: deepseek-v4-pro
+
+- id: subprocess
+  name: '@flowforge/subprocess-local'
+
+- id: bash
+  name: '@flowforge/bash-local'
+
+- id: acp-agent
+  name: '@flowforge/acp-demo'
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-pro
+    persistenceRoot: !!js process.env.FF_SNAPSHOT_SESSIONS_ROOT ?? './.sessions'
+    persistenceCompression: none
+    workspaceContext: false
+    skills:
+      enabled: false
+    toolJobs: false
+    goals: false
+    persona: You are a concise snapshot agent working in {{cwd}}.
+
+- id: tool-fs-search
+  name: '@flowforge/tool-fs-search'
+  config:
+    sampleOverCapGlobResults: true
+    globMaxResults: 4

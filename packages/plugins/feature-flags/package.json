@@ -1,0 +1,32 @@
+{
+  "name": "@flowforge/feature-flags",
+  "description": "Feature flags for FlowForge: old/new path switching, percentage rollout (stable md5 bucketing), project allowlists, expiry and fallback policy, YAML assembly (R17) — mapped from flowforge Python legacy core/feature_flags.py (F24)",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/plugins/feature-flags"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

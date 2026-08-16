@@ -305,8 +305,8 @@ export type StreamChunk =
 /**
  * JSON-schema description of a tool, as sent to the model.
  *
- * Declared here (not in dsh-tools) because it is part of {@link GenerateOptions};
- * dsh-tools' ToolDefinition and dsh-system-prompt's PromptAssembly both import
+ * Declared here (not in flowforge-tools) because it is part of {@link GenerateOptions};
+ * flowforge-tools' ToolDefinition and flowforge-system-prompt's PromptAssembly both import
  * it from this package.
  */
 export interface ToolSchema {
@@ -326,7 +326,7 @@ export interface GenerateOptions {
   /**
    * Ordered conversation messages, exactly as the provider sees them (after
    * the `system` slot). A loop-built request assembles them as
-   * the derived history (dsh-agent-loop); a hand-built one-shot passes any list.
+   * the derived history (flowforge-agent-loop); a hand-built one-shot passes any list.
    */
   messages: Message[]
   /** System prompt text (adapters map to the provider's system slot). */

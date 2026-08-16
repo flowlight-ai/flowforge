@@ -38,7 +38,7 @@ The SDK API is the default/named `WorkerThreadCodeRuntime` class plus `Config`. 
 
 ## Model Experience
 
-Indirectly, through Code Mode in [`dsh-tools`](../../core/tools/README.md), which renders the exact outer value when it fits or an explicit `invalid-output` / `output-limit` failure. Only the outer `run_code` result enters model context and its ordinary spill policy; binding traffic and intermediate values remain execution-local.
+Indirectly, through Code Mode in [`flowforge-tools`](../../core/tools/README.md), which renders the exact outer value when it fits or an explicit `invalid-output` / `output-limit` failure. Only the outer `run_code` result enters model context and its ordinary spill policy; binding traffic and intermediate values remain execution-local.
 
 #### KV Cache effect
 

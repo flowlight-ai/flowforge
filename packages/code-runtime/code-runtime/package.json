@@ -1,13 +1,13 @@
 {
   "name": "@flowforge/code-runtime",
-  "description": "Abstract code-execution seam (ctx.codeRuntime) for the DeepSeek Harness",
+  "description": "Abstract code-execution seam (ctx.codeRuntime) for the FlowForge",
   "version": "0.1.0-rc.5",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
     "directory": "packages/code-runtime/code-runtime"
   },
   "type": "module",

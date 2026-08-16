@@ -4,7 +4,7 @@
  * Assistant reasoning is replayed as `reasoning_content` only on tool-call turns, as required by
  * thinking-mode passback. Core image blocks are rejected explicitly because this wire route is text-only;
  * unknown declaration-merged block types retain the adapter's documented extension fallback.
- * @module dsh-llm-deepseek/serialize
+ * @module flowforge-llm-deepseek/serialize
  */
 
 import { contentHasImage, LlmError } from '@flowforge/llm'

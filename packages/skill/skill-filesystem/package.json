@@ -1,0 +1,53 @@
+{
+  "name": "@flowforge/skill-filesystem",
+  "description": "Local filesystem skill provider for the FlowForge",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/skill/skill-filesystem"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/fs": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/home-paths": "workspace:^",
+    "@flowforge/skill": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "dependencies": {
+    "chokidar": "^5.0.0",
+    "@flowforge/schemastery": "workspace:^",
+    "yaml": "^2.4.2"
+  },
+  "devDependencies": {
+    "@flowforge/fs": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/home-paths": "workspace:^",
+    "@flowforge/skill": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

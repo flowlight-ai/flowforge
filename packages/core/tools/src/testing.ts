@@ -1,4 +1,4 @@
-/** Canonical tool-definition fixtures for repository tests. @module dsh-tools/testing */
+/** Canonical tool-definition fixtures for repository tests. @module flowforge-tools/testing */
 
 import type { ContentBlock } from '@flowforge/llm'
 import type { JsonValue } from '@flowforge/session'

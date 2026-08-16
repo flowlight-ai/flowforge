@@ -29,7 +29,7 @@ declare module '@flowforge/cordis' {
 describe('vendor/cordis runtime', () => {
   it('creates an ACTIVE root Context; root fiber dispose restarts', async () => {
     const ctx = new Context()
-    // cordis 4（dsh 定制版）：root fiber 恒 ACTIVE，无 start()
+    // cordis 4（flowforge 定制版）：root fiber 恒 ACTIVE，无 start()
     expect(ctx.fiber.state).toBe(FiberState.ACTIVE)
     await ctx.fiber.dispose()
     expect(ctx.fiber.state).toBe(FiberState.ACTIVE)

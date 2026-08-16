@@ -35,7 +35,7 @@ async function expectFlushError(promise: Promise<unknown>, message: RegExp): Pro
 }
 
 async function freshDbPath(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), 'dsh-sqlite-'))
+  const dir = await mkdtemp(join(tmpdir(), 'flowforge-sqlite-'))
   dirs.push(dir)
   return join(dir, 'sessions.db')
 }
@@ -62,7 +62,7 @@ runPersistenceContract('sqlite', async () => {
 // A file-backed database lets two mounts share rows across reload. `corruptTail` inserts invalid
 // JSON past the committed seq, exercising coordinator repair against real database rows.
 runCoordinatorContract('sqlite', async (): Promise<CoordinatorFixture> => {
-  const dir = await mkdtemp(join(tmpdir(), 'dsh-sqlite-coord-'))
+  const dir = await mkdtemp(join(tmpdir(), 'flowforge-sqlite-coord-'))
   const path = join(dir, 'sessions.db')
   return {
     mount: async ctx => ctx.plugin(SqliteSessionPersistence, { path }),

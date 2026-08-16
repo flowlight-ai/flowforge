@@ -79,7 +79,7 @@ export class Host {
 
   /** 按依赖顺序安装启用的插件并等待全部加载完成。
    *
-   * cordis 4（dsh 定制版）：Context 无 start()，`ctx.plugin()` 返回可 await 的
+   * cordis 4（flowforge 定制版）：Context 无 start()，`ctx.plugin()` 返回可 await 的
    * Fiber，await 即等待加载完成（配置校验/启动错误在此重抛）。
    */
   async start(): Promise<void> {

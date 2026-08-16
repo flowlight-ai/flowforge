@@ -1,0 +1,58 @@
+{
+  "name": "@flowforge/session-query-sqlite",
+  "description": "Concrete ctx.sessionQuery backend with SQLite FTS5 search",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/session-query/session-query-sqlite"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-persistence": "workspace:^",
+    "@flowforge/session-query": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@flowforge/session-persistence": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@flowforge/schemastery": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-persistence": "workspace:^",
+    "@flowforge/session-persistence-sqlite": "workspace:^",
+    "@flowforge/session-query": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

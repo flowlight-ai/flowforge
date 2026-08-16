@@ -18,7 +18,7 @@
  * pi-ai treats as the highest-priority auth override — so `Models` never holds
  * a credential store and the harness keeps its fail-loud reference semantics.
  *
- * @module dsh-llm-pi-ai/adapter
+ * @module flowforge-llm-pi-ai/adapter
  */
 
 import { createModels, getSupportedThinkingLevels } from '@earendil-works/pi-ai'

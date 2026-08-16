@@ -26,7 +26,7 @@
 - name: '@flowforge/llm-retry'
 ```
 
-执行器没有策略配置。`dsh-llm-pi-ai` 等多提供方适配器会把 `retryPolicy` 放在每个提供方 profile 内，避免维护第二份提供方名称列表。
+执行器没有策略配置。`flowforge-llm-pi-ai` 等多提供方适配器会把 `retryPolicy` 放在每个提供方 profile 内，避免维护第二份提供方名称列表。
 
 ## 模型体验
 

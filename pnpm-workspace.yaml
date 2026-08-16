@@ -2,8 +2,20 @@ packages:
   - vendor/*
   - packages/*/*
   - apps/*
+  # The Landlock launcher keeps its native build and publication scripts
+  # under native/landlock-run; entry + per-platform prebuilt packages live there.
+  - native/landlock-run
+  - native/landlock-run/packages/*
 allowBuilds:
-  '@google/genai': true
-  koffi: true
-  protobufjs: true
   esbuild: true
+  # Cross-platform boundary for the persistent PTY backend, including ConPTY on Windows.
+  node-pty: true
+  # JSONL durability calls MoveFileExW with write-through publication on Windows.
+  koffi: true
+  # Reviewed workspace postinstall restores node-pty's spawn helper exec bit.
+  '@flowforge/subprocess-local': true
+  # Pulled in by @earendil-works/pi-ai (optional LLM API backend). Their
+  # lifecycle scripts are no-ops we don't need, so deny them -- install still
+  # succeeds.
+  '@google/genai': false
+  protobufjs: false

@@ -1,0 +1,61 @@
+{
+  "name": "@flowforge/tool-bash-persistent",
+  "description": "Model-facing owner-scoped persistent Bash tool backed by the Harness PTY service",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/shell/tool-bash-persistent"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/terminal": "workspace:^",
+    "@flowforge/timeout": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "dependencies": {
+    "@flowforge/schemastery": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-include": "workspace:^",
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/terminal": "workspace:^",
+    "@flowforge/terminal-bash": "workspace:^",
+    "@flowforge/sandbox": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/subprocess-local": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/timeout": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

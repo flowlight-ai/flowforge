@@ -26,7 +26,7 @@ The separately published `./invariant` companion checks that every scheduled ret
 - name: '@flowforge/llm-retry'
 ```
 
-The executor has no policy config. Multi-provider adapters such as `dsh-llm-pi-ai` place `retryPolicy` inside each provider profile, avoiding a second provider-name list.
+The executor has no policy config. Multi-provider adapters such as `flowforge-llm-pi-ai` place `retryPolicy` inside each provider profile, avoiding a second provider-name list.
 
 ## Model Experience
 

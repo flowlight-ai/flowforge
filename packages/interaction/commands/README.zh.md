@@ -16,7 +16,7 @@
 
 ## 组合
 
-随产品交付的 `dsh` 基础组合会挂载此服务，Web 客户端通过它分派命令。无 UI 的演示主干和 ACP（Agent Client Protocol）自动化不提供命令适配器。自定义交互式组合与命令生产方会显式挂载 `@flowforge/commands`。
+随产品交付的 `flowforge` 基础组合会挂载此服务，Web 客户端通过它分派命令。无 UI 的演示主干和 ACP（Agent Client Protocol）自动化不提供命令适配器。自定义交互式组合与命令生产方会显式挂载 `@flowforge/commands`。
 
 ## 模型体验
 
@@ -24,7 +24,7 @@
 
 #### 模型看到的内容
 
-注册表自身不会提交任何内容。已知斜杠命令在 UI 命令平面执行，其 `CommandResult` 文本不会作为用户消息提交。已交付的适配器会拒绝未知斜杠命令输入，而不是将其变成模型提示词。命令生产方可以显式使用接收命令的 `Agent`；例如，[`dsh-plan-mode`](../../plan/plan-mode/README.md#model-and-human-interactions)在选择 plan mode 后，会提交 `/plan [message]` 中的可选消息。
+注册表自身不会提交任何内容。已知斜杠命令在 UI 命令平面执行，其 `CommandResult` 文本不会作为用户消息提交。已交付的适配器会拒绝未知斜杠命令输入，而不是将其变成模型提示词。命令生产方可以显式使用接收命令的 `Agent`；例如，[`flowforge-plan-mode`](../../plan/plan-mode/README.md#model-and-human-interactions)在选择 plan mode 后，会提交 `/plan [message]` 中的可选消息。
 
 #### Token 影响
 

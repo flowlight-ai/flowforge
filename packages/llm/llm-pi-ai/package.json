@@ -1,13 +1,13 @@
 {
   "name": "@flowforge/llm-pi-ai",
-  "description": "pi-ai-backed DeepSeek adapter for the DeepSeek Harness LLM seam (design-verification twin of dsh-llm-deepseek)",
+  "description": "pi-ai-backed DeepSeek adapter for the FlowForge LLM seam (design-verification twin of flowforge-llm-deepseek)",
   "version": "0.1.0-rc.5",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
     "directory": "packages/llm/llm-pi-ai"
   },
   "type": "module",

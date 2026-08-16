@@ -1,13 +1,13 @@
 {
   "name": "@flowforge/launch-environment",
-  "description": "Immutable DeepSeek Harness launch environment that records which layer supplied each value",
+  "description": "Immutable FlowForge launch environment that records which layer supplied each value",
   "version": "0.1.0-rc.5",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
     "directory": "packages/util/launch-environment"
   },
   "type": "module",

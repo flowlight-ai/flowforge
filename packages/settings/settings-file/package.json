@@ -1,13 +1,13 @@
 {
   "name": "@flowforge/settings-file",
-  "description": "File-backed settings provider (settings.yaml) for the DeepSeek Harness",
+  "description": "File-backed settings provider (settings.yaml) for the FlowForge",
   "version": "0.1.0-rc.5",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
     "directory": "packages/settings/settings-file"
   },
   "type": "module",

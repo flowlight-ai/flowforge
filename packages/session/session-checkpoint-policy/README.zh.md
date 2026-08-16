@@ -1,4 +1,4 @@
-# dsh-session-checkpoint-policy
+# flowforge-session-checkpoint-policy
 
 [English](README.md) | 中文
 
@@ -28,7 +28,7 @@
 
 #### 模型看到的内容
 
-插件不添加提示词或工具 schema。工具检查点后、结果前的硬崩溃会留下持久的未匹配调用；会话恢复会提供模型可见的 `TOOL_OUTCOME_UNKNOWN` 结果，该结果由 `dsh-session` 负责。该消息允许重试只读或幂等工作，并要求对可能有副作用的调用验证状态或请求用户确认。
+插件不添加提示词或工具 schema。工具检查点后、结果前的硬崩溃会留下持久的未匹配调用；会话恢复会提供模型可见的 `TOOL_OUTCOME_UNKNOWN` 结果，该结果由 `flowforge-session` 负责。该消息允许重试只读或幂等工作，并要求对可能有副作用的调用验证状态或请求用户确认。
 
 #### Token 影响
 

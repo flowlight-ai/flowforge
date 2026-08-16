@@ -1,0 +1,40 @@
+# Test-only composition of the public opt-in provider and foreground tool.
+# The owning e2e boots this tree but never invokes the model or Codex.
+- id: fixture
+  name: './fixture.ts'
+
+- id: subagent
+  name: '@flowforge/subagent'
+
+- id: subprocess
+  name: '@flowforge/subprocess-local'
+
+- id: subagent-codex
+  name: '@flowforge/subagent-codex'
+
+- id: tool-subagent-codex
+  name: '@flowforge/tool-subagent'
+  config:
+    provider: codex
+    toolName: subagent_codex
+    enableRunInBackground: false
+    maxDepth: 'provider-managed'
+
+- id: agent-spine
+  name: '@flowforge/agent-spine-demo'
+  config:
+    agents:
+      - id: main
+        provider: mock
+        model: mock-delegate
+        cwd: !!js process.cwd()
+    persona: 'This composition test must not start a model turn.'
+    workspaceContext: false
+
+- id: persistence
+  name: '@flowforge/session-persistence-jsonl'
+  config:
+    root: './.sessions'
+
+- id: checkpoint-policy
+  name: '@flowforge/session-checkpoint-policy'

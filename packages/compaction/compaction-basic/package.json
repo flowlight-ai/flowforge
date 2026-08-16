@@ -1,0 +1,70 @@
+{
+  "name": "@flowforge/compaction-basic",
+  "description": "Token-meter-driven compaction policy and LLM summarization backend for the FlowForge",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/compaction/compaction-basic"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/compaction": "workspace:^",
+    "@flowforge/commands": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/token-meter": "workspace:^",
+    "@flowforge/compaction-tool-result-pruner": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@flowforge/compaction-tool-result-pruner": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@flowforge/schemastery": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-include": "workspace:^",
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-loop": "workspace:^",
+    "@flowforge/agent-loop-testkit": "workspace:^",
+    "@flowforge/compaction": "workspace:^",
+    "@flowforge/commands": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/llm-retry": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/token-meter": "workspace:^",
+    "@flowforge/compaction-tool-result-pruner": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}
