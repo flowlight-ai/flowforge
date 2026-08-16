@@ -1,4 +1,4 @@
-# FlowForge 2.0 — 阶段地图与功能全集矩阵
+# FlowForge 0.2.0 — 阶段地图与功能全集矩阵
 
 > 更新：2026-08-16 阶段 0 增加插件基座与配置体系基座；新增阶段 11 Python 日落；
 > 全部阶段以插件形式接入；clowder IM/TTS/世界等扩展降级为 stretch（§3.4）；技术栈/配置全景对齐 R17/R19；
@@ -56,13 +56,13 @@
 
 | # | 能力 | 来源包 | 阶段 | 状态 |
 |---|---|---|---|---|
-| D1 | Session 事件溯源日志 + 内存存储 | core/session | 1 | ⬜ |
-| D2 | System-prompt 组装 + 工具 schema 注册 | core/system-prompt | 1 | ⬜ |
-| D3 | Scoped tool 注册与执行管线 | core/tools | 1 | ⬜ |
-| D4 | Agent 接口/注册表/事件词汇 | core/agent | 1 | ⬜ |
-| D5 | 默认模型选择 | core/agent-default-model | 1 | ⬜ |
-| D6 | 默认 agent 驱动循环 | core/agent-loop | 1 | ⬜ |
-| D7 | scope 作用域原语 | core/scope | 1 | ⬜ |
+| D1 | Session 事件溯源日志 + 内存存储 | core/session | 1 | ✅ |
+| D2 | System-prompt 组装 + 工具 schema 注册 | core/system-prompt | 1 | ✅ |
+| D3 | Scoped tool 注册与执行管线 | core/tools | 1 | ✅ |
+| D4 | Agent 接口/注册表/事件词汇 | core/agent | 1 | ✅ |
+| D5 | 默认模型选择 | core/agent-default-model | 1 | ✅ |
+| D6 | 默认 agent 驱动循环 | core/agent-loop | 1 | ✅ |
+| D7 | scope 作用域原语 | core/scope | 1 | ✅ |
 | D8 | hooks 事件钩子 | packages/hooks | 2 | ⬜ |
 | D9 | MCP 客户端/服务器 | packages/mcp | 2 | ⬜ |
 | D10 | 技能系统（fs/badge/tool-skill） | packages/skill | 2 | ⬜ |
@@ -72,34 +72,34 @@
 | D14 | 工作流 workflow | packages/workflow | 2 | ⬜ |
 | D15 | 计划 plan / 目标 goal / 待办 todo | packages/plan 等 | 2 | ⬜ |
 | D16 | 调度 schedule / 作业 jobs | packages/schedule 等 | 2 | ⬜ |
-| D17 | 凭证 credentials / 设置 settings | packages/credentials + dsh settings 包 | 2 | ⬜ |
+| D17 | 凭证 credentials / 设置 settings | packages/credentials + dsh settings 包 | 2 | ✅（阶段 1 提前移植，含 credentials-local） |
 | D18 | LSP / FS / Workspace | packages/lsp 等 | 2 | ⬜ |
-| D19 | 上下文压缩 compaction / spill | packages/compaction | 2 | ⬜ |
-| D20 | 反馈 feedback / 护栏 guard | packages/feedback | 2 | ⬜ |
+| D19 | 上下文压缩 compaction / spill | packages/compaction | 2 | ✅（阶段 1 提前移植） |
+| D20 | 反馈 feedback / 护栏 guard | packages/feedback | 2 | 🟦（command-feedback/message-feedback 已随阶段 1 移植；guard 待阶段 2） |
 | D21 | 身份 identity / 交互 interaction / 审批 approval | packages/* | 2 | ⬜ |
 | D22 | 插件扩展（tool-cordis/ui-cordis/runner） | packages/extensions | 2 | ⬜ |
 | D22b | 应用层插件契约（@flowforge/plugin-contract，映射 clowder plugin-contract） | packages/plugin-contract | 2 | ⬜ |
 | D23 | API 网关 + Web 服务 | packages/web | 3 | ⬜ |
 | D24 | CLI（web/headless/jsonrpc/acp 模式） | apps/cli | 3 | ⬜ |
 | D25 | boot 引导 / bundle 打包 / client / host | packages/boot 等 | 3 | ⬜ |
-| D26 | runtime-diagnostics / typert / util / spill | packages/* | 1-2 | ⬜ |
-| D27 | LLM 抽象 + mock server | packages/llm | 1 | ⬜ |
+| D26 | runtime-diagnostics / typert / util / spill | packages/* | 1-2 | ✅ |
+| D27 | LLM 抽象 + mock server | packages/llm | 1 | ✅ |
 | D28 | 配置体系基座（patch 装配/env-registry/前端 schema 校验） | packages/bundle + core/config | 0-3 | ⬜ |
-| D29 | 会话标题 session-title（first-prompt-llm/all-prompts-llm） | packages/session/session-title | 1 | ⬜ |
-| D30 | 会话遥测 session-telemetry（otel/stats/checkpoint-policy） | packages/session/* | 1 | ⬜ |
-| D31 | 会话持久化（jsonl zstd/sqlite/projection/cache） | packages/session/* | 1-2 | ⬜ |
+| D29 | 会话标题 session-title（first-prompt-llm/all-prompts-llm） | packages/session/session-title | 1 | ✅ |
+| D30 | 会话遥测 session-telemetry（otel/stats/checkpoint-policy） | packages/session/* | 1 | ✅ |
+| D31 | 会话持久化（jsonl zstd/sqlite/projection/cache） | packages/session/* | 1-2 | ✅ |
 | D32 | 会话查询族 session-query（sqlite/export/tool） | packages/session-query/* | 2 | ⬜ |
 | D33 | SDK（client/protocol/server，JSON-RPC） | packages/sdk/* | 2 | ⬜ |
 | D34 | ACP 会话桥 | packages/acp | 2 | ⬜ |
-| D35 | 代码运行时 code-runtime（worker-thread） | packages/code-runtime/* | 2 | ⬜ |
-| D36 | 附件 attachment | packages/attachment | 2 | ⬜ |
+| D35 | 代码运行时 code-runtime（worker-thread） | packages/code-runtime/* | 2 | ✅（阶段 1 提前移植） |
+| D36 | 附件 attachment | packages/attachment | 2 | ✅（阶段 1 提前移植） |
 | D37 | Web 工具族（web-fetch-http/web-search-deepseek|exa|perplexity/tool-web） | packages/plugins/web* | 2 | ⬜ |
 | D38 | 目标族 goal（goal-round-driver/tool-goal/command-goal） | packages/plugins/goal | 2 | ⬜ |
 | D39 | 上下文族 context（agent-instructions/packed-chunks/prompt-assembly） | packages/core/context | 1 | ⬜ |
 | D40 | host 族（apiproxy/directory-picker/frontend-static/plugin-inventory/webserver） | packages/host/* | 3 | ⬜ |
 | D41 | e2b（fs-e2b/subprocess-e2b，可选沙箱后端） | packages/e2b/* | 2 | ⬜ |
-| D42 | test-support 族（agent-loop-testkit/acp-snapshot/client-runtime/llm-replay/loader-smoke） | packages/test-support/* | 1-2 | ⬜ |
-| D43 | util 族（atomic-write/brand/home-paths/launch-environment/native-command/output-retention/timeout） | packages/harness/util | 0-1 | ⬜ |
+| D42 | test-support 族（agent-loop-testkit/acp-snapshot/client-runtime/llm-replay/loader-smoke） | packages/test-support/* | 1-2 | 🟦（4/5 已移植；client-runtime 依赖阶段 3 client/host 域） |
+| D43 | util 族（atomic-write/brand/home-paths/launch-environment/native-command/output-retention/timeout） | packages/harness/util | 0-1 | ✅ |
 | D44 | 预设 preset（agent-presets/persona，结构对齐 forgekins 档案） | packages/preset | 2 | ⬜ |
 
 ### 3.2 Clowder AI 侧（群聊/灵智/CLI 控制）

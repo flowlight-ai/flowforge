@@ -1,4 +1,4 @@
-# FlowForge 2.0 — 技术栈决策（ADR-R01 ~ ADR-R19）
+# FlowForge 0.2.0 — 技术栈决策（ADR-R01 ~ ADR-R19）
 
 > 依据：`00-overview.md` §3；对齐基线：DeepSeek Harness（dsh，`ex/deepseek-harness`）与
 > Clowder AI（cat-cafe，`ex/clowder-ai`）。
@@ -78,7 +78,14 @@
 
 ## R11 命名与目录（P1 契约）
 
-- 包命名：`@flowforge/*`（如 `@flowforge/core-agent`）；vendor 包保持 `@deepseek-ai/*` 原名。
+- **全量移植原则（2026-08-16 修订）**：dsh 与 clowder 的全部能力代码**整体复制**进本仓库
+  （`packages/` 域/包布局对齐 dsh），**不留 `@deepseek-ai/*` / `@clowder-ai/*` 包依赖**；
+  依赖闭包（cordis 生态 vendor 包、dsh 支撑包）一并复制并**统一改名 `@flowforge/*`**。
+- 包命名：`@flowforge/*`；改名映射规则（机械替换，无特例）：
+  `@deepseek-ai/cordis*` → `@flowforge/cordis*`、`@deepseek-ai/cosmokit` → `@flowforge/cosmokit`、
+  `@deepseek-ai/schemastery` → `@flowforge/schemastery`、`@deepseek-ai/dsh-*` → `@flowforge/*`
+  （去掉 `dsh-` 前缀，如 `@flowforge/scope`/`@flowforge/llm`），源码内 import 同步替换；
+  `THIRD_PARTY_NOTICES.md` 保留原始包名与 LICENSE 声明。
 - 代码标识：`Forgekin`/`SoulImprint`/`EchoStore`/`MindCodex`/`SpiritForge`/`MindCouncil`；
   禁止 P2 别名进入代码标识（`docs/design/naming-contract.md`）。
 
@@ -93,7 +100,7 @@
 - 结论：**插件化前置**。阶段 0 即落地插件基座（宿主装配器 + 生命周期冒烟），
   阶段 1-8 所有产出均以 cordis 插件包形态接入，禁止游离于 `ctx` 之外的模块。
 - 每个功能包必须满足六条契约：
-  1. `package.json`：`name: @flowforge/<域>-<名>`，`peerDependencies: { "@deepseek-ai/cordis": ... }`；
+  1. `package.json`：`name: @flowforge/<域>-<名>`，`peerDependencies: { "@flowforge/cordis": ... }`；
   2. 导出插件：`apply(ctx)` 函数或插件类（cordis 约定）；
   3. 依赖声明：`inject` 列出所需 `ctx.*` 服务（如 `['sessions', 'tools']`）；
   4. 配置 schema：可选 `schema`（schemastery），由 boot 合并进配置；
@@ -224,7 +231,7 @@ JSON 仅用于运行态数据与工程链；环境变量统一走注册表。
 | `core/memory_federation/config/*.yaml`、`core/world_engine/config/*.yaml` | YAML | `packages/forgekin/stores` + stretch S3 | 迁移 |
 | `forgemind/config/{forging,prompts}.yaml` | YAML | `packages/forgekin/forging` | 迁移（F31） |
 | `harness/config/{harness,prompts}.yaml` | YAML | `packages/harness/*` | 迁移（F10/F36） |
-| `data/*.db`（flowforge/checkpoints/event_stream/states/tasks） | SQLite | `data/flowforge-v2.db` 分域 | 物理隔离只读迁移（R18） |
+| `data/*.db`（flowforge/checkpoints/event_stream/states/tasks） | SQLite | `data/flowforge-v0.2.db` 分域 | 物理隔离只读迁移（R18） |
 
 **D. 格式边界裁决（写入编码规范）**
 
@@ -240,7 +247,7 @@ JSON 仅用于运行态数据与工程链；环境变量统一走注册表。
   - **HTTP 路由分流**：Python 旧版保持 `/api/v1/*`（现网路径不变）；TS 版全部新路由
     挂 `/api/v2/*`（含 socket.io 命名空间 `/v2`），双栈可在同一进程端口或独立端口共存，
     前端按部署版本来选择前缀；阶段 10 切入口后 v1 进入日落（`31-stage11-sunset.md`）；
-  - **存储物理隔离**：TS 版 better-sqlite3 数据库文件独立命名（`data/flowforge-v2.db`，
+  - **存储物理隔离**：TS 版 better-sqlite3 数据库文件独立命名（`data/flowforge-v0.2.db`，
     分域表前缀），与 Python `data/` 现有库（不同文件名/目录）**绝不共享写**；
     Redis 客户端 = ioredis（clowder 同款，`keyPrefix: 'ff2:'` 约定）；迁移与只读挂载见
     `31-stage11-sunset.md` §4；

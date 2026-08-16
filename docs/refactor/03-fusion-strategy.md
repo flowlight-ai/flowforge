@@ -1,4 +1,4 @@
-# FlowForge 2.0 — 三项目融合策略（深度思考）
+# FlowForge 0.2.0 — 三项目融合策略（深度思考）
 
 > 状态：进行中 ｜ 创建：2026-08-16 ｜ 关联：`00-overview.md` §3、`01-stack-decision.md` R13-R18、
 > `02-source-crosswalk.md`（file→file 三方对照地图）

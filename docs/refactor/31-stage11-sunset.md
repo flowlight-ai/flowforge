@@ -16,7 +16,7 @@
 ### S11.1 冻结期（Freeze，1-2 个发布迭代）
 
 - [ ] Python 启动路径（`python -m flowforge` / `start_py.bat`）打印
-      `DEPRECATED: Python 版本已冻结，请使用 pnpm start（FlowForge 2.0 TS）`
+      `DEPRECATED: Python 版本已冻结，请使用 pnpm start（FlowForge 0.2.0 TS）`
 - [ ] Python 代码只接受 P0 修复；新功能一律只在 TS 版开发
 - [ ] `pytest` 继续纳入 CI 回归（防数据迁移期间行为漂移），但标记 `legacy`
 - [ ] README / docs/spec.md 顶部标注 Python 版状态为 deprecated

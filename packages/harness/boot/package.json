@@ -1,6 +1,6 @@
 {
   "name": "@flowforge/harness-boot",
-  "description": "Minimal cordis plugin host: manifest-driven plugin assembly (apply order by inject/provide) for FlowForge 2.0",
+  "description": "Minimal cordis plugin host: manifest-driven plugin assembly (apply order by inject/provide) for FlowForge 0.2.0",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,9 +12,9 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@flowforge/cordis": "workspace:^"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:^"
+    "@flowforge/cordis": "workspace:^"
   }
 }

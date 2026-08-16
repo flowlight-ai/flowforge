@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-FlowForge 2.0 (TypeScript) vendors and adapts source code from the following
+FlowForge 0.2.0 (TypeScript) vendors and adapts source code from the following
 MIT-licensed open-source projects. Each vendored package retains its upstream
 LICENSE file inside its directory.
 
@@ -8,15 +8,15 @@ LICENSE file inside its directory.
 
 | Package | Upstream | License |
 |---|---|---|
-| `@deepseek-ai/cordis` | DeepSeek Harness / Cordis (https://github.com/cordiverse/cordis) | MIT |
-| `@deepseek-ai/cosmokit` | DeepSeek Harness / Cosmokit | MIT |
-| `@deepseek-ai/schemastery` | DeepSeek Harness / Schemastery | MIT |
-| `@deepseek-ai/cordis-plugin-loader` | DeepSeek Harness / Cordis Loader | MIT |
-| `@deepseek-ai/cordis-plugin-include` | DeepSeek Harness / Cordis Include | MIT |
-| `@deepseek-ai/cordis-plugin-group` | DeepSeek Harness / Cordis Group | MIT |
-| `@deepseek-ai/cordis-plugin-timer` | DeepSeek Harness / Cordis Timer | MIT |
-| `@deepseek-ai/cordis-plugin-hmr` | DeepSeek Harness / Cordis HMR | MIT |
-| `@deepseek-ai/cordis-plugin-logger-console` | DeepSeek Harness / Cordis Logger Console | MIT |
+| `@flowforge/cordis` | DeepSeek Harness / Cordis (https://github.com/cordiverse/cordis) | MIT |
+| `@flowforge/cosmokit` | DeepSeek Harness / Cosmokit | MIT |
+| `@flowforge/schemastery` | DeepSeek Harness / Schemastery | MIT |
+| `@flowforge/cordis-plugin-loader` | DeepSeek Harness / Cordis Loader | MIT |
+| `@flowforge/cordis-plugin-include` | DeepSeek Harness / Cordis Include | MIT |
+| `@flowforge/cordis-plugin-group` | DeepSeek Harness / Cordis Group | MIT |
+| `@flowforge/cordis-plugin-timer` | DeepSeek Harness / Cordis Timer | MIT |
+| `@flowforge/cordis-plugin-hmr` | DeepSeek Harness / Cordis HMR | MIT |
+| `@flowforge/cordis-plugin-logger-console` | DeepSeek Harness / Cordis Logger Console | MIT |
 
 Source of vendored upstream: https://github.com/deepseek-ai/deepseek-harness
 (version snapshot as of 2026-08-16; licensed under MIT).
