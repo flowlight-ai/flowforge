@@ -51,6 +51,34 @@ export type {
   UpdateMemoryPatch,
 } from './memory-store.ts'
 
+// ============================================================================
+// Invocation-related ports (batch 3.2) — full branded contracts.
+// Branded primitive types (InvocationId / ThreadId / UserId / CatId /
+// ManagedWorkBinding) are imported by consumers directly from
+// `@flowforge/cats-shared`; each port only exports its own contract types.
+// ============================================================================
+
+export type {
+  IInvocationRecordStore,
+  StoreCreateInvocationOutcome,
+  StoreUpdateInvocationInput,
+  StoreUpdateInvocationOutcome,
+} from './invocation-record-store.ts'
+
+export type {
+  ITaskProgressStore,
+  SetSnapshotOptions,
+  TaskProgressItem,
+  TaskProgressSnapshot,
+  TaskProgressStatus,
+} from './task-progress-store.ts'
+
+export type {
+  ITaskManagedWorkRegistrationStore,
+  ManagedWorkBindingConflict,
+  UpsertManagedWorkBindingOutcome,
+} from './task-managed-work-registration-store.ts'
+
 export type {
   IAuthorizationAuditStore,
   IAuthorizationRuleStore,
@@ -63,7 +91,6 @@ export type {
   IDraftStore,
   IFrustrationIssueStore,
   IGameStore,
-  IInvocationRecordStore,
   ILabelStore,
   IMemoryGovernanceStore,
   IPendingRequestStore,

@@ -18,12 +18,18 @@ import type {
   IBacklogStore,
   IMemoryStore,
   IMessageStore,
+  IInvocationRecordStore,
+  ITaskManagedWorkRegistrationStore,
+  ITaskProgressStore,
   ITaskStore,
   IThreadStore,
 } from '../ports/index.ts'
 import { MemoryBacklogStore } from './backlog-store.ts'
+import { MemoryInvocationRecordStore } from './invocation-record-store.ts'
 import { MemoryMemoryStore } from './memory-store.ts'
 import { MemoryMessageStore } from './message-store.ts'
+import { MemoryTaskManagedWorkRegistrationStore } from './task-managed-work-registration-store.ts'
+import { MemoryTaskProgressStore } from './task-progress-store.ts'
 import { MemoryTaskStore } from './task-store.ts'
 import { MemoryThreadStore } from './thread-store.ts'
 
@@ -62,6 +68,10 @@ export class MemoryStoresBackend extends Service {
   readonly taskStore: MemoryTaskStore
   readonly backlogStore: MemoryBacklogStore
   readonly memoryStore: MemoryMemoryStore
+  /** Batch 3.2 — invocation-related stores. */
+  readonly invocationRecordStore: MemoryInvocationRecordStore
+  readonly taskProgressStore: MemoryTaskProgressStore
+  readonly taskManagedWorkRegistrationStore: MemoryTaskManagedWorkRegistrationStore
 
   constructor(ctx: Context) {
     super(ctx, 'catStoresMemory')
@@ -70,6 +80,9 @@ export class MemoryStoresBackend extends Service {
     this.taskStore = new MemoryTaskStore()
     this.backlogStore = new MemoryBacklogStore()
     this.memoryStore = new MemoryMemoryStore()
+    this.invocationRecordStore = new MemoryInvocationRecordStore()
+    this.taskProgressStore = new MemoryTaskProgressStore()
+    this.taskManagedWorkRegistrationStore = new MemoryTaskManagedWorkRegistrationStore()
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(MEMORY_BACKEND_NAME, {
@@ -78,6 +91,9 @@ export class MemoryStoresBackend extends Service {
         taskStore: this.taskStore,
         backlogStore: this.backlogStore,
         memoryStore: this.memoryStore,
+        invocationRecordStore: this.invocationRecordStore,
+        taskProgressStore: this.taskProgressStore,
+        taskManagedWorkRegistrationStore: this.taskManagedWorkRegistrationStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(MEMORY_BACKEND_NAME)
@@ -109,6 +125,21 @@ export class MemoryStoresBackend extends Service {
   get longTermMemory(): MemoryMemoryStore {
     return this.memoryStore
   }
+
+  /** Expose the underlying invocation record store (for tests / direct inspection). */
+  get invocationRecords(): MemoryInvocationRecordStore {
+    return this.invocationRecordStore
+  }
+
+  /** Expose the underlying task progress store (for tests / direct inspection). */
+  get taskProgress(): MemoryTaskProgressStore {
+    return this.taskProgressStore
+  }
+
+  /** Expose the underlying task managed-work registration store (for tests / direct inspection). */
+  get taskManagedWorkRegistrations(): MemoryTaskManagedWorkRegistrationStore {
+    return this.taskManagedWorkRegistrationStore
+  }
 }
 
 /** Type helpers for backend accessors. */
@@ -116,6 +147,9 @@ export type {
   IBacklogStore,
   IMemoryStore,
   IMessageStore,
+  IInvocationRecordStore,
+  ITaskManagedWorkRegistrationStore,
+  ITaskProgressStore,
   ITaskStore,
   IThreadStore,
 }

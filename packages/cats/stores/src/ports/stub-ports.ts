@@ -1,15 +1,21 @@
 /**
  * Stub port interfaces for batch 2 — declared so the aggregate CatStores
- * has a single source of truth for all 29 cats-domain stores (5 core ports
- * with full Memory implementation live in sibling files; the 24 stub ports
- * below have method signatures deferred to incremental batches as their
- * dependent services land: cats-invocation, cats-orchestration, cats-profile).
- * Method shapes here are intentionally permissive (`Record<string, unknown>`)
- * to keep the contract honest about its stub status.
+ * has a single source of truth for all cats-domain stores. The 5 core ports
+ * and 3 invocation-related ports have full Memory implementations in sibling
+ * files; the remaining 21 stub ports below have method signatures deferred
+ * to incremental batches as their dependent services land (cats-orchestration,
+ * cats-profile). Method shapes here are intentionally permissive
+ * (`Record<string, unknown>`) to keep the contract honest about its stub
+ * status.
  *
- * The full contracts will be ported from clowder-ai
+ * Ports promoted out of this file (full branded contracts + Memory backend):
+ * - `IInvocationRecordStore` → `./invocation-record-store.ts` (batch 3.2)
+ * - `ITaskProgressStore`     → `./task-progress-store.ts`     (batch 3.2)
+ * - `ITaskManagedWorkRegistrationStore` → `./task-managed-work-registration-store.ts` (batch 3.2)
+ *
+ * The remaining stub contracts will be ported from clowder-ai
  * `packages/api/src/domains/cats/services/stores/ports/` as their dependent
- * services land (cats-invocation, cats-orchestration, cats-profile).
+ * services land (cats-orchestration, cats-profile).
  *
  * @module @flowforge/cats-stores/ports
  */
@@ -185,11 +191,4 @@ export interface ITurnExecutionStore {
   record(turnId: string, entry: Record<string, unknown>): void | Promise<void>
   getTurn(turnId: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
   listTurnsForThread(threadId: string, options?: { readonly limit?: number }): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-}
-
-/** Invocation record store (per-invocation audit + outcome). */
-export interface IInvocationRecordStore {
-  record(invocationId: string, entry: Record<string, unknown>): void | Promise<void>
-  getInvocation(invocationId: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  listForThread(threadId: string, options?: { readonly limit?: number }): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
 }

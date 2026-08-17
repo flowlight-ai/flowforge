@@ -85,6 +85,40 @@
 > 设计：参考 dsh `@flowforge/jobs` 范式（`JobRegistry extends Service` + 子插件 backend），
 > 将 InvocationQueue/Tracker/Processor 改造为 Cordis Service，全部挂载到 `ctx.catsInvocation`。
 > 补全 clowder-ai `TaskManagedWorkRegistrationStore` port。
+>
+> **批次3 子任务分解**（实施进度：）：
+> - 批次3.1 ✅ cats-shared 补全 invocation/queue-entry/session-mutex/zombie 类型 + invocation-state-machine 纯函数
+> - 批次3.2 ✅ cats-stores 补全 IInvocationRecordStore/ITaskManagedWorkRegistrationStore/ITaskProgressStore ports + Memory 实现
+> - 批次3.3 ⏳ 创建 @flowforge/cats-invocation 包骨架 (package.json/tsconfig/invariant.ts)
+> - 批次3.4 ⏳ 实现 InvocationQueueService/InvocationTrackerService/SessionMutexService/TaskProgressService (Cordis Service)
+> - 批次3.5 ⏳ 实现最小骨架 QueueProcessorService + reconcileZombies/StartupReconciler 纯函数
+> - 批次3.6 ⏳ 编写 .spec.ts 测试 + 类型检查 + mgr sync PR
+
+#### 批次3.1：cats-shared 类型 + 状态机纯函数 ✅
+
+- [x] T4.3.0.1 移植 `types/invocation.ts`（InvocationId/InvocationRecord/InvocationStatus/CreateInvocationInput/UpdateInvocationInput/CreateInvocationOutcome/UpdateInvocationOutcome + 品牌类型生成函数）
+- [x] T4.3.0.2 移植 `types/queue-entry.ts`（QueueEntry/EnqueueResult/EnqueueOutcome/MAX_QUEUE_DEPTH + 生成函数）
+- [x] T4.3.0.3 移植 `types/session-mutex.ts`（SessionLockOwner/SessionLockScope/ForceReleaseOptions/ForceReleaseResult）
+- [x] T4.3.0.4 移植 `types/zombie.ts`（ZombieRecord/ZombieReason/InvocationRecoveryStatus/LiveInvocation/LivenessReason/ReconcileZombieResult）
+- [x] T4.3.0.5 移植 `invocation-state-machine.ts`（isValidTransition/classifyInvocationRecoveryStatus 纯函数 + VALID_TRANSITIONS 表）
+- [x] T4.3.0.6 在 `cats-shared/src/index.ts` 导出 `invocation-state-machine.ts`（修复 isValidTransition 未导出）
+
+#### 批次3.2：cats-stores ports + Memory 后端 ✅
+
+- [x] T4.3.2.1 创建 `ports/invocation-record-store.ts`（IInvocationRecordStore 严格契约，使用 InvocationId/ThreadId/UserId/InvocationRecord 品牌类型；StoreUpdateInvocationInput/StoreCreateInvocationOutcome/StoreUpdateInvocationOutcome 拆分 store 层类型）
+- [x] T4.3.2.2 创建 `ports/task-progress-store.ts`（ITaskProgressStore 严格契约，使用 CatId/ThreadId/InvocationId 品牌类型；TaskProgressSnapshot/TaskProgressItem/SetSnapshotOptions）
+- [x] T4.3.2.3 创建 `ports/task-managed-work-registration-store.ts`（ITaskManagedWorkRegistrationStore 严格契约，去耦 clowder-ai 原版的 TaskStore host 依赖；ManagedWorkBindingConflict/UpsertManagedWorkBindingOutcome）
+- [x] T4.3.2.4 从 `ports/stub-ports.ts` 移除 IInvocationRecordStore stub；ports/index.ts 导出 3 个新 port（不重导出品牌类型，避免 barrel 冲突）
+- [x] T4.3.2.5 创建 `memory/invocation-record-store.ts`（MemoryInvocationRecordStore：bounded Map(500) + 5min TTL 去重 + state-machine + CAS + executionStartedAt 守护）
+- [x] T4.3.2.6 创建 `memory/task-progress-store.ts`（MemoryTaskProgressStore：Map<Thread, Map<Cat, Snapshot>>，原子 CAS deleteSnapshotIfOwner）
+- [x] T4.3.2.7 创建 `memory/task-managed-work-registration-store.ts`（MemoryTaskManagedWorkRegistrationStore：taskId→binding 正向索引 + workId:attemptId→taskId 反向索引）
+- [x] T4.3.2.8 扩展 `CatStores` 聚合服务（CatStoresBackend 新增 3 个 optional 字段 + 3 个访问器 invocationRecords()/taskProgress()/taskManagedWorkRegistrations()，未注册时抛错）
+- [x] T4.3.2.9 更新 `MemoryStoresBackend`：实例化 3 个新 store + 注册到 backend + 暴露 3 个 getter（invocationRecords/taskProgress/taskManagedWorkRegistrations）
+- [x] T4.3.2.10 创建 3 个 `.spec.ts` 测试（36 测试覆盖 create+dedupe+TTL / state machine+CAS / listRunningByThread / eviction / scanAll / setSnapshot+getSnapshot+deleteSnapshotIfOwner CAS / upsert+conflict+bind+reverse-lookup）
+- [x] T4.3.2.11 修复 cats-shared 中 unused import（invocation.ts: generateId / zombie.ts: InvocationRecord）和 ports/index.ts 中 ICommunityPrStores→ICommunityPrStore 拼写
+- [x] T4.3.2.12 类型检查 + 全部 109 测试通过（73 既有 + 36 新增）
+
+#### 批次3.3-3.6：cats-invocation 包 + Cordis Service 层
 
 - [ ] T4.3.1 创建 `@flowforge/cats-invocation` 包骨架（package.json/tsconfig.json/tsdown.config.ts/invariant.ts）
 - [ ] T4.3.2 移植 InvocationQueue → `InvocationQueueService extends Service` → `ctx.catsInvocation.queue`
@@ -93,12 +127,12 @@
       （per-slot 互斥锁 + AbortController）
 - [ ] T4.3.4 移植 QueueProcessor → `QueueProcessorService extends Service` → `ctx.catsInvocation.processor`
       （调度器 + 终态机 + zombie 恢复）
-- [ ] T4.3.5 移植 TaskProgressStore（IAuthInvocationBackend 端口 + Memory 实现，挂载到 `ctx.catStores`）
+- [ ] T4.3.5 移植 TaskProgressService → `TaskProgressService extends Service` → `ctx.catsInvocation.progress`
+      （基于 batch 3.2 的 ITaskProgressStore，提供 snapshot 增删+owner-guarded 清理的 Cordis 包装）
 - [ ] T4.3.6 移植 SessionMutex / AgentSessionMutex → `SessionMutexService extends Service` → `ctx.catsInvocation.mutex`
       （per-session 串行化锁）
 - [ ] T4.3.7 移植 reconcileZombies / convergeZombieQueue / StartupReconciler
       （作为 `InvocationQueueService` 的 `[Service.init]()` 钩子实现）
-- [ ] T4.3.8 补全 `TaskManagedWorkRegistrationStore` port 到 `cats-stores/ports/`
 - [ ] T4.3.9 测试：入队→出队→执行→完成全链路（mock provider，`vitest .spec.ts`）
 
 ### 批次 4：`@flowforge/cats-profile`（档案插件）

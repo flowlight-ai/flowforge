@@ -28,6 +28,8 @@ export * from './avatar-limits.ts'
 export * from './capability-tip-telemetry.ts'
 export * from './capability-tips.ts'
 export * from './cli-effort.ts'
+// Invocation state machine (batch 3.1) — pure function + transition table
+export * from './invocation-state-machine.ts'
 export { parseCommand } from './command-parser.ts'
 export type {
   AutonomousPetState,

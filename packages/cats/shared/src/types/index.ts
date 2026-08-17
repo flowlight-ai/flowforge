@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Types Index
  * 导出所有类型定义
  */
@@ -1299,3 +1299,60 @@ export type {
   UpdateWorkflowSopInput,
   WorkflowSop,
 } from './workflow-sop.ts';
+
+// ============================================================================
+// Stage 4 — Invocation domain types (batch 3)
+// ============================================================================
+
+// Invocation core types (灵智体调用 record + state machine)
+export type {
+  CreateInvocationInput,
+  CreateInvocationOutcome,
+  InvocationActionLeaseCarrier,
+  InvocationId,
+  InvocationRecord,
+  InvocationSource,
+  InvocationSourceCategory,
+  InvocationStatus,
+  UpdateInvocationInput,
+  UpdateInvocationOutcome,
+} from './invocation.ts';
+export {
+  createInvocationId,
+  generateInvocationId,
+} from './invocation.ts';
+
+// Queue entry types (per-thread × per-user FIFO scheduling tokens)
+export type {
+  EnqueueOutcome,
+  EnqueueResult,
+  QueueEntry,
+  QueueEntryId,
+} from './queue-entry.ts';
+export {
+  createQueueEntryId,
+  generateQueueEntryId,
+  MAX_QUEUE_DEPTH,
+} from './queue-entry.ts';
+
+// Session mutex types (per-session serialization primitive)
+export type {
+  ForceReleaseOptions,
+  ForceReleaseResult,
+  SessionLockCancelReason,
+  SessionLockOwner,
+  SessionLockScope,
+} from './session-mutex.ts';
+
+// Zombie reconciliation types (orphan invocation recovery)
+export type {
+  InvocationRecoveryStatus,
+  LiveInvocation,
+  LivenessReason,
+  LivenessSource,
+  PerZombieOutcome,
+  ReconcileZombieDeps,
+  ReconcileZombieResult,
+  ZombieReason,
+  ZombieRecord,
+} from './zombie.ts';

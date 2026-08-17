@@ -22,8 +22,11 @@
 import { Context, Service } from '@flowforge/cordis'
 import type {
   IBacklogStore,
+  IInvocationRecordStore,
   IMemoryStore,
   IMessageStore,
+  ITaskManagedWorkRegistrationStore,
+  ITaskProgressStore,
   ITaskStore,
   IThreadStore,
 } from './ports/index.ts'
@@ -35,6 +38,14 @@ export interface CatStoresBackend {
   readonly taskStore: ITaskStore
   readonly backlogStore: IBacklogStore
   readonly memoryStore: IMemoryStore
+  /**
+   * Invocation-related ports (batch 3.2). Backends registered before batch 3.2
+   * (e.g. an old Sqlite backend) may omit these; consumers should fall back
+   * via `backend.invocationRecordStore ?? null`.
+   */
+  readonly invocationRecordStore?: IInvocationRecordStore
+  readonly taskProgressStore?: ITaskProgressStore
+  readonly taskManagedWorkRegistrationStore?: ITaskManagedWorkRegistrationStore
   /** Additional ports may be added incrementally — backend plugins opt-in. */
   readonly [key: string]: unknown
 }
@@ -122,6 +133,52 @@ export class CatStores extends Service {
   /** Resolve the active IMemoryStore (long-term memory). */
   memory(): IMemoryStore {
     return this.active().memoryStore
+  }
+
+  /**
+   * Resolve the active IInvocationRecordStore. Throws if the active backend
+   * did not register one (only backends from batch 3.2+ do). Tests / callers
+   * that need to detect optional support should use `active().invocationRecordStore`.
+   */
+  invocationRecords(): IInvocationRecordStore {
+    const store = this.active().invocationRecordStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IInvocationRecordStore; ' +
+          'load @flowforge/cats-stores/memory (batch 3.2) or a backend that supports invocation records.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active ITaskProgressStore. Throws if the active backend
+   * did not register one (only backends from batch 3.2+ do).
+   */
+  taskProgress(): ITaskProgressStore {
+    const store = this.active().taskProgressStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an ITaskProgressStore; ' +
+          'load @flowforge/cats-stores/memory (batch 3.2) or a backend that supports task progress.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active ITaskManagedWorkRegistrationStore. Throws if the
+   * active backend did not register one (only backends from batch 3.2+ do).
+   */
+  taskManagedWorkRegistrations(): ITaskManagedWorkRegistrationStore {
+    const store = this.active().taskManagedWorkRegistrationStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an ITaskManagedWorkRegistrationStore; ' +
+          'load @flowforge/cats-stores/memory (batch 3.2) or a backend that supports managed-work bindings.',
+      )
+    }
+    return store
   }
 
   /** List all registered backend names. */
