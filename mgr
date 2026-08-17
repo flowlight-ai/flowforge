@@ -21,8 +21,8 @@
 #   ./mgr commit "type(scope): 描述 [署名]"   提交到当前平台 (强制规范检查)
 #   ./mgr push [--pr] [--title "PR标题"] [--body "PR描述"]   push 当前分支
 #   ./mgr pr "type(scope): 描述 [署名]" [--body "PR描述"]   创建PR (当前平台)
-#   ./mgr sync "type(scope): 描述 [署名]" [--body "PR描述"]  提交+push+PR
-#   ./mgr merge-cross [--dry-run] [--g2l|--l2g]   跨平台双向合并 (手动触发)
+#   ./mgr sync "type(scope): 描述 [署名]" [--body "PR描述"]  提交+push到固定远端分支sync/<agent>+PR (本地不切换)
+#   ./mgr merge-cross [--dry-run]   跨平台单向合并 (当前平台→对端, 手动触发)
 #   ./mgr mirror-setup          配置双端互指 mirror 远程
 #   ./mgr protect               设置 master 分支保护 (仅Gitee)
 #
@@ -32,10 +32,10 @@
 #   合法署名: wenxin sherlock luban vangogh davinci keane humming sqrl butterfly
 #   不合规则本地报错中止, 不会提交或创建 PR
 #
-# merge-cross 工作流:
+# merge-cross 工作流 (单向: 当前平台 → 对端):
 #   1. 在某个平台开发并合入 PR 后, 运行 ./mgr merge-cross --dry-run 查看差异
-#   2. 确认后运行 ./mgr merge-cross 创建双向同步PR
-#   3. 分别在两个平台合入同步PR
+#   2. 确认后运行 ./mgr merge-cross 创建单向同步PR (当前平台主干 → 对端主干)
+#   3. 在对端平台合入同步PR
 #   4. 若有冲突, 解决后重新运行
 # ============================================================================
 set -e
@@ -112,6 +112,12 @@ _cur_dir() { [ "$CURRENT_SIDE" = "gitee" ] && echo "${GPATH[$1]}" || echo "${GH_
 # 当前平台主干分支名
 _cur_base() { [ "$CURRENT_SIDE" = "gitee" ] && echo "master" || echo "main"; }
 
+# 从提交信息/PR标题提取末尾 [署名] (如 sherlock); 无则空
+_extract_agent() { echo "$1" | grep -oE '\[[a-z0-9]+\]$' | tr -d '[]'; }
+
+# 构造 JSON 字符串 (转义 \ " 与换行), 避免依赖 python3 (本环境 python3 不可用)
+_json_str() { local s="$1"; s="${s//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//$'\n'/'\\n'}"; printf '"%s"' "$s"; }
+
 # ═══════════════════════════════════════════════════════════════
 #  平台感知命令 (仅操作当前平台)
 # ═══════════════════════════════════════════════════════════════
@@ -164,8 +170,11 @@ cmd_commit() {
   for n in "${NAMES[@]}"; do
     local d; d=$(_cur_dir "$n")
     [ -d "$d/.git" ] || continue
-    _git "$d" add -A
-    _git "$d" diff --cached --quiet && continue
+    # 共享环境: 仅提交已 git add 的文件, 避免把他人未提交改动一起带入
+    if _git "$d" diff --cached --quiet 2>/dev/null; then
+      echo -e "  ${Y}${n}: 没有已暂存改动, 跳过 (请先 git add 你的文件)${N}"
+      continue
+    fi
     echo -e "${B}${n} (${CURRENT_SIDE})${N}"
     _git "$d" commit -m "$m" 2>&1 | tail -1
   done
@@ -226,7 +235,58 @@ _smart_push() {
   fi
 }
 
+# 固定远端分支推送: 当前本地分支(停留在主干, 不切换) → origin/sync/<agent>
+# 累加已有 origin/sync/<agent> 与 origin/<base>, 保证 PR 无冲突; push HEAD:refs/heads/sync/<agent>
+_sync_push_fixed() {
+  local n="$1" d="$2" sb="$3" title="${4:-}" body="${5:-}"
+  local base; base=$(_cur_base)
+  # stash 未提交修改 (保护共享工作区中他人的改动)
+  local stashed=false
+  if ! _git "$d" diff --quiet 2>/dev/null || ! _git "$d" diff --cached --quiet 2>/dev/null; then
+    _git "$d" stash 2>/dev/null && stashed=true
+  fi
+  # 1) origin/sync/<agent> 已有提交 → merge (累加自己/他人之前的同步, 保留双方历史)
+  if _git "$d" show-ref --verify --quiet "refs/remotes/origin/${sb}"; then
+    local be; be=$(_git "$d" rev-list --count "HEAD..origin/${sb}" 2>/dev/null || echo 0)
+    if [ "$be" -gt 0 ]; then
+      echo -e "  ${C}merge origin/${sb} (${be} 提交) → 累加到 ${sb}${N}"
+      if ! _git "$d" merge --no-edit "origin/${sb}" 2>"$MGR_TMP"; then
+        _git "$d" merge --abort 2>/dev/null || true
+        $stashed && _git "$d" stash pop 2>/dev/null || true
+        echo -e "  ${R}✗ 与 origin/${sb} 冲突, 需手动解决 (本地已保留未改动)${N}"
+        return 1
+      fi
+    fi
+  fi
+  # 2) 主干已更新 → merge (保证 PR 合并无冲突)
+  local mb ob
+  mb=$(_git "$d" merge-base HEAD "origin/${base}" 2>/dev/null || echo "")
+  ob=$(_git "$d" rev-parse "origin/${base}" 2>/dev/null || echo "")
+  if [ -n "$mb" ] && [ "$mb" != "$ob" ]; then
+    echo -e "  ${C}merge origin/${base} → 保证 PR 无冲突${N}"
+    if ! _git "$d" merge --no-edit "origin/${base}" 2>"$MGR_TMP"; then
+      _git "$d" merge --abort 2>/dev/null || true
+      $stashed && _git "$d" stash pop 2>/dev/null || true
+      echo -e "  ${R}✗ 与 origin/${base} 冲突, 需手动解决 (本地已保留未改动)${N}"
+      return 1
+    fi
+  fi
+  # 恢复 stash (他人改动原位归还)
+  $stashed && _git "$d" stash pop 2>/dev/null || true
+  # 3) push 当前本地分支 HEAD 到固定远端分支 (不切换本地分支!)
+  echo -ne "  ${B}${n} (${CURRENT_SIDE}) → origin/${sb} ... ${N}"
+  if _git "$d" push -u origin "HEAD:refs/heads/${sb}" 2>"$MGR_TMP"; then
+    echo -e "${G}OK${N}"
+    _ensure_pr "$n" "$d" "$sb" "$title" "$body"
+    return 0
+  else
+    echo -e "${R}FAIL${N}"; sed 's/^/    /' "$MGR_TMP" | head -6
+    return 1
+  fi
+}
+
 # 确保分支有 PR: 已存在则报告 (累加更新), 不存在则创建 (绝不重复创建/删除重建)
+# 注: 用 curl + grep 解析, 不依赖 python3 (本环境 python3 退出码 49 不可用)
 _ensure_pr() {
   local n="$1" d="$2" b="$3" title="${4:-merge: ${b}}" body="${5:-}"
   load_token; load_gh_token
@@ -234,9 +294,9 @@ _ensure_pr() {
   local base; [ "$side" = "gitee" ] && base="master" || base="main"
   local exists_url=""
   if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
-    exists_url=$(curl -s "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls?state=open&head=${GITEE_ORG}:${b}&access_token=${MGR_TOKEN}" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['html_url'] if isinstance(d,list) and d else '')" 2>/dev/null || echo "")
+    exists_url=$(curl -s "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls?state=open&head=${GITEE_ORG}:${b}&access_token=${MGR_TOKEN}" 2>/dev/null | grep -oE '"html_url":"https://gitee.com/[^"]*pulls/[0-9]+"' | head -1 | sed -E 's/.*"(https:[^"]*)".*/\1/')
   elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
-    exists_url=$(curl -s "https://api.github.com/repos/${GH_ORG}/${n}/pulls?state=open&head=${GH_ORG}:${b}" -H "Authorization: token ${MGR_GH_TOKEN}" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['html_url'] if isinstance(d,list) and d else '')" 2>/dev/null || echo "")
+    exists_url=$(curl -s "https://api.github.com/repos/${GH_ORG}/${n}/pulls?state=open&head=${GH_ORG}:${b}" -H "Authorization: token ${MGR_GH_TOKEN}" 2>/dev/null | grep -oE '"html_url":"https://github.com/[^"]*pulls/[0-9]+"' | head -1 | sed -E 's/.*"(https:[^"]*)".*/\1/')
   fi
   if [ -n "$exists_url" ]; then
     echo -e "    ${G}已有 PR 已累加更新 (未重建): $exists_url${N}"
@@ -309,7 +369,8 @@ cmd_pr() {
 }
 
 cmd_sync() {
-  # 当前平台: commit dirty + 智能push + PR (主干自动建临时分支, 功能分支累加到已有 PR)
+  # 当前平台: 本地不切换分支, 提交已暂存改动 + 推送到固定远端分支 sync/<agent> + PR
+  # 主干: 直接推 HEAD 到 origin/sync/<agent> (不 checkout 临时分支); 功能分支: 累加到已有 PR
   # 用法: ./mgr sync "PR标题" [--body "PR描述"]
   local pr_title="" pr_body=""
   while [ $# -gt 0 ]; do
@@ -331,7 +392,6 @@ cmd_sync() {
     local d; d=$(_cur_dir "$n")
     [ -d "$d/.git" ] || continue
     local b; b=$(_git "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-    local dirty; dirty=$(_git "$d" status --short 2>/dev/null | wc -l)
 
     echo -e "${B}══ ${n} (${CURRENT_SIDE}) [${b}]${N}"
 
@@ -339,18 +399,27 @@ cmd_sync() {
       echo -e "  ${R}✗ fetch 失败: $(head -1 "$MGR_TMP")${N}"; continue
     fi
 
-    # 主干: 创建临时分支基于 origin/base (保证 PR 无冲突), 提交 dirty, 智能推送
+    # 主干: 不切换本地分支! 仅提交已暂存改动到本地主干, 推送到固定远程分支 sync/<agent>
     if [ "$b" = "$base" ]; then
-      local ts; ts=$(date +%s | tail -c 5)
-      local sb="sync/${base}-${ts}"
-      _git "$d" checkout -b "$sb" "origin/${base}" 2>"$MGR_TMP" || { echo -e "  ${R}✗ 创建临时分支失败${N}"; continue; }
-      [ "$dirty" -gt 0 ] && { _git "$d" add -A; _git "$d" commit -m "$pr_title" 2>/dev/null || true; }
-      _smart_push "$n" "$d" "$sb" "$pr_title" "$pr_body" true
-      _git "$d" checkout "$base" 2>/dev/null || true
-      _git "$d" branch -D "$sb" 2>/dev/null || true
+      local agent; agent=$(_extract_agent "$pr_title")
+      local sb="sync/${agent:-master}"   # 固定远程分支 (按 [署名] 派生, 落在有界集合, 不再时间戳)
+      # 仅提交已暂存改动 (共享环境避免把他人未提交改动一起带入 PR)
+      if _git "$d" diff --cached --quiet 2>/dev/null; then
+        # 无暂存改动: 若本地主干已领先 origin/base (之前已 commit), 直接推送已有提交
+        local ahead; ahead=$(_git "$d" rev-list --count "origin/${base}..HEAD" 2>/dev/null || echo 0)
+        if [ "$ahead" -eq 0 ]; then
+          echo -e "  ${Y}⚠ 无已暂存改动且本地未领先主干, 跳过 (请先 git add 你的文件, 或 ./mgr commit)${N}"
+          continue
+        fi
+      else
+        _git "$d" commit -m "$pr_title" 2>/dev/null || true
+      fi
+      _sync_push_fixed "$n" "$d" "$sb" "$pr_title" "$pr_body"
     else
-      # 功能分支: 先提交 dirty, 再智能推送 (merge 远端+主干, push 同一分支累加到已有 PR)
-      [ "$dirty" -gt 0 ] && { _git "$d" add -A; _git "$d" commit -m "$pr_title" 2>/dev/null || true; }
+      # 功能分支: 先提交已暂存改动, 再智能推送 (merge 远端+主干, push 同一分支累加到已有 PR)
+      if ! _git "$d" diff --cached --quiet 2>/dev/null; then
+        _git "$d" commit -m "$pr_title" 2>/dev/null || true
+      fi
       _smart_push "$n" "$d" "$b" "$pr_title" "$pr_body" true
     fi
     echo ""
@@ -638,7 +707,7 @@ _check_msg_format() {
 }
 
 # ═══════════════════════════════════════════════════════════════
-#  内部: 创建 PR (自动检测目标平台, 用 python3 构造 JSON 避免编码问题)
+#  内部: 创建 PR (自动检测目标平台, 用 curl + printf 构造 JSON, 不依赖 python3)
 # ═══════════════════════════════════════════════════════════════
 _create_pr() {
   local n="$1" d="$2" b="$3" title="${4:-merge: ${b}}" body="${5:-}"
@@ -646,21 +715,16 @@ _create_pr() {
   local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
   local base; [ "$side" = "gitee" ] && base="master" || base="main"
   if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
-    local payload; payload=$(python3 -c "
-import json,sys
-print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],
-  'body':sys.argv[4] or '无描述','access_token':sys.argv[5]}))
-" "$title" "$b" "$base" "$body" "$MGR_TOKEN" 2>/dev/null)
-    local r; r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json" -d "$payload")
-    local u; u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
+    local json; json=$(printf '{"title":%s,"head":%s,"base":%s,"body":%s,"access_token":%s}' \
+      "$(_json_str "$title")" "$(_json_str "$b")" "$(_json_str "$base")" "$(_json_str "$body")" "$(_json_str "$MGR_TOKEN")")
+    local r; r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json" -d "$json")
+    local u; u=$(echo "$r" | grep -oE '"html_url":"https://gitee.com/[^"]*pulls/[0-9]+"' | head -1 | sed -E 's/.*"(https:[^"]*)".*/\1/')
     [ -n "$u" ] && echo -e "    ${G}Gitee PR: $u${N}" || echo -e "    ${R}Gitee PR FAILED: $(echo "$r"|head -c 200)${N}"
   elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
-    local payload; payload=$(python3 -c "
-import json,sys
-print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4] or '无描述'}))
-" "$title" "$b" "$base" "$body" 2>/dev/null)
-    local r; r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json" -d "$payload")
-    local u; u=$(echo "$r"|python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url',''))" 2>/dev/null||echo "")
+    local json; json=$(printf '{"title":%s,"head":%s,"base":%s,"body":%s}' \
+      "$(_json_str "$title")" "$(_json_str "$b")" "$(_json_str "$base")" "$(_json_str "$body")")
+    local r; r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json" -d "$json")
+    local u; u=$(echo "$r" | grep -oE '"html_url":"https://github.com/[^"]*pulls/[0-9]+"' | head -1 | sed -E 's/.*"(https:[^"]*)".*/\1/')
     [ -n "$u" ] && echo -e "    ${G}GitHub PR: $u${N}" || echo -e "    ${R}GitHub PR FAILED: $(echo "$r"|head -c 200)${N}"
   else
     echo -e "    ${R}无 token, 跳过 PR 创建 (${side})${N}"
@@ -691,7 +755,7 @@ cmd_protect() {
   for n in "${NAMES[@]}"; do
     echo -n "  $n: "
     local r; r=$(curl -s -X PUT "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/branches/setting/new" -H "Content-Type: application/json" -d "{\"wildcard\":\"master\",\"pusher\":\"none\",\"merger\":\"admin\",\"mode\":\"review\",\"access_token\":\"${MGR_TOKEN}\"}")
-    echo "$r"|python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d.get('branch_name') else d.get('message','?'))" 2>/dev/null
+    echo "$r" | grep -q '"branch_name"' && echo "OK" || echo "$r" | head -c 200
   done
   echo ""
 }

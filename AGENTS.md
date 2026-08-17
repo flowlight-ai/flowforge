@@ -40,7 +40,7 @@ pnpm test                          # vitest run 运行测试
 # Git 远程操作一律走 ./mgr（详见下方 ./mgr  essentials）
 ./mgr pull                                          # 拉取当前平台更新（保持在共享主干分支）
 ./mgr commit "type(scope): 描述 [agentID]"          # 本地提交（强制规范检查；本地始终在主干，不建私有分支）
-./mgr sync "type(scope): 描述 [agentID]" --body "PR描述" # 提交+远端临时分支+PR 一键完成（推荐：本地停留在主干）
+./mgr sync "type(scope): 描述 [agentID]" --body "PR描述" # 提交+固定远端分支 sync/<agent>+PR 一键完成（推荐：本地停留在主干）
 ./mgr push --pr --title "PR标题" --body "PR描述"     # 备选：若当前已在非主干分支，push+创建 PR
 ./mgr pr "type(scope): 描述 [agentID]" --body "PR描述"  # 为当前分支创建 PR（通常配合 ./mgr sync 使用）
 ./mgr merge-cross --dry-run                          # 查看双端差异
@@ -87,7 +87,7 @@ pnpm test                          # vitest run 运行测试
 ### 3. 主干保护
 
 - **本地分支公用**：开发者始终停留在共享主干分支（Gitee=`master` / GitHub=`main`）上工作，**不创建任务级本地分支**（`feat/xxx`、`fix/xxx` 等）。本地分支是团队共享状态，开私有本地分支会偏离共享状态、影响他人协作。
-- 提交时通过 `./mgr sync` 在**远端**自动生成临时 PR 分支（`cross/...` / `feat/...`），该分支仅存在于远端、PR 合入后清理；本地始终停留在主干。
+- 提交时通过 `./mgr sync` 在**远端**生成**固定** PR 分支 `sync/<agent>`（`<agent>` 取自标题 `[署名]`），该分支仅存在于远端、PR 合入后清理；本地始终停留在主干，**绝不切换本地分支**。
 - **禁止直接 push 到 master/main**，必须走 PR。
 - 禁止创建 dev 等长期分支。
 - 远端临时 PR 分支合入后由平台/`./mgr` 自动清理，不要手动保留。
@@ -132,7 +132,7 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 ```
 1. ./mgr pull                          # 拉取最新（保持在共享主干分支 master/main）
 2. ... 开发 ...                        # 始终在 master/main 上工作，不切私有本地分支
-3. ./mgr sync "feat(x): 描述 [id]" --body "PR描述"   # 一键：提交本地改动 + 远端临时分支 + PR（仅当前平台）
+3. ./mgr sync "feat(x): 描述 [id]" --body "PR描述"   # 一键：提交已暂存改动 + 固定远端分支 sync/<id> + PR（本地停留主干）
 4. 平台 Web 合入 PR
 5. ./mgr pull                          # 合入后拉回主干，保持本地 master/main 最新
 6. ./mgr merge-cross                   # 需要时跨平台同步
