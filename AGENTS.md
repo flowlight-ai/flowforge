@@ -38,13 +38,13 @@ pnpm lint                          # oxlint 静态检查
 pnpm test                          # vitest run 运行测试
 
 # Git 远程操作一律走 ./mgr（详见下方 ./mgr  essentials）
-./mgr pull                                          # 拉取当前平台更新
-./mgr commit "type(scope): 描述 [agentID]"          # 提交（强制规范检查）
-./mgr push --pr --title "PR标题" --body "PR描述"     # push + 创建 PR（推荐）
-./mgr sync "type(scope): 描述 [agentID]" --body "PR描述" # 提交+push+PR 一键完成
-./mgr pr "type(scope): 描述 [agentID]" --body "PR描述"  # 为当前分支创建 PR
+./mgr pull                                          # 拉取当前平台更新（保持在共享主干分支）
+./mgr commit "type(scope): 描述 [agentID]"          # 本地提交（强制规范检查；本地始终在主干，不建私有分支）
+./mgr sync "type(scope): 描述 [agentID]" --body "PR描述" # 提交+远端临时分支+PR 一键完成（推荐：本地停留在主干）
+./mgr push --pr --title "PR标题" --body "PR描述"     # 备选：若当前已在非主干分支，push+创建 PR
+./mgr pr "type(scope): 描述 [agentID]" --body "PR描述"  # 为当前分支创建 PR（通常配合 ./mgr sync 使用）
 ./mgr merge-cross --dry-run                          # 查看双端差异
-./mgr merge-cross                                    # 跨平台双向合并（手动触发）
+./mgr merge-cross                                    # 跨平台单向合并（手动触发，当前平台→对端）
 ```
 
 > **Node 版本**：`^22.19.0 || >=24.0.0`，pnpm `11.7.0`（Corepack）。
@@ -74,11 +74,11 @@ pnpm test                          # vitest run 运行测试
 ```bash
 ./mgr pull                                          # 拉取当前平台更新
 ./mgr commit "type(scope): 描述 [署名]"              # 提交（强制规范检查）
-./mgr push --pr --title "PR标题" --body "PR描述"     # push + 创建 PR（推荐）
-./mgr sync "type(scope): 描述 [署名]" --body "PR描述" # 提交+push+PR 一键完成
+./mgr sync "type(scope): 描述 [署名]" --body "PR描述" # 提交+远端临时分支+PR 一键完成（推荐：本地停留在主干）
+./mgr push --pr --title "PR标题" --body "PR描述"     # 备选：若已在非主干分支，push+创建 PR
 ./mgr pr "type(scope): 描述 [署名]" --body "PR描述"  # 为当前分支创建 PR
 ./mgr merge-cross --dry-run                          # 查看双端差异
-./mgr merge-cross                                    # 跨平台双向合并（手动触发）
+./mgr merge-cross                                    # 跨平台单向合并（手动触发，当前平台→对端）
 ```
 
 > **AI 工具特别注意**：即使你认为"只是创建一个 PR"，也必须用 `./mgr pr`。
@@ -86,9 +86,11 @@ pnpm test                          # vitest run 运行测试
 
 ### 3. 主干保护
 
+- **本地分支公用**：开发者始终停留在共享主干分支（Gitee=`master` / GitHub=`main`）上工作，**不创建任务级本地分支**（`feat/xxx`、`fix/xxx` 等）。本地分支是团队共享状态，开私有本地分支会偏离共享状态、影响他人协作。
+- 提交时通过 `./mgr sync` 在**远端**自动生成临时 PR 分支（`cross/...` / `feat/...`），该分支仅存在于远端、PR 合入后清理；本地始终停留在主干。
 - **禁止直接 push 到 master/main**，必须走 PR。
 - 禁止创建 dev 等长期分支。
-- 临时分支（feat/xxx、fix/xxx）合入后立即删除。
+- 远端临时 PR 分支合入后由平台/`./mgr` 自动清理，不要手动保留。
 
 ### 4. 跨平台同步
 
@@ -128,11 +130,10 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 ## 标准开发流程
 
 ```
-1. ./mgr pull                          # 拉取最新
-2. git checkout -b feat/xxx            # 创建功能分支
-3. ... 开发 ...
-4. ./mgr commit "feat(x): 描述 [id]"   # 提交
-5. ./mgr push --pr                     # push + PR（仅当前平台）
-6. 平台 Web 合入 PR
-7. ./mgr merge-cross                   # 需要时跨平台同步
+1. ./mgr pull                          # 拉取最新（保持在共享主干分支 master/main）
+2. ... 开发 ...                        # 始终在 master/main 上工作，不切私有本地分支
+3. ./mgr sync "feat(x): 描述 [id]" --body "PR描述"   # 一键：提交本地改动 + 远端临时分支 + PR（仅当前平台）
+4. 平台 Web 合入 PR
+5. ./mgr pull                          # 合入后拉回主干，保持本地 master/main 最新
+6. ./mgr merge-cross                   # 需要时跨平台同步
 ```
