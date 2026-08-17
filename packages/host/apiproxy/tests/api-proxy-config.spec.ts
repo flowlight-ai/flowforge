@@ -240,7 +240,7 @@ describe('settings domain', () => {
     const api = createApiProxy(ctx, DEFAULTS)
     const error = expectErr(await api.settings.describe(request({})))
     expect(error.code).toBe('internal')
-    expect(error.message).toContain('ff-settings-file')
+    expect(error.message).toContain('@flowforge/settings-file')
   })
 
   it('describes layered redacted namespaces with their secret slots', async () => {
@@ -584,7 +584,7 @@ describe('credentials domain', () => {
     const api = createApiProxy(ctx, DEFAULTS)
     const error = expectErr(await api.credentials.describe(request({ refs: ['A'] })))
     expect(error.code).toBe('internal')
-    expect(error.message).toContain('ff-credentials-local')
+    expect(error.message).toContain('@flowforge/credentials-local')
   })
 
   it('describes value-free views and flips state through set/unset with frames', async () => {
