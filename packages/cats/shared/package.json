@@ -1,0 +1,64 @@
+{
+  "name": "@flowforge/cats-shared",
+  "description": "Forgekin (cats) shared types, schemas, pure functions, and CatRegistry service",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/cats/shared"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./dossier": {
+      "types": "./lib/types/dossier.d.ts",
+      "default": "./lib/dossier.js"
+    },
+    "./profile-frontmatter-parser": {
+      "types": "./lib/types/profile-frontmatter-parser.d.ts",
+      "default": "./lib/profile-frontmatter-parser.js"
+    },
+    "./profile-contract": {
+      "types": "./lib/types/profile-contract.d.ts",
+      "default": "./lib/profile-contract.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/dossier.js",
+    "lib/profile-frontmatter-parser.js",
+    "lib/profile-contract.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "zod": "^3.25.0",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "zod": "^3.25.0",
+    "yaml": "^2.6.0"
+  }
+}
