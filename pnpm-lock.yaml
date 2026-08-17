@@ -56,15 +56,57 @@ importers:
 
   apps/cli:
     dependencies:
+      '@flowforge/agent':
+        specifier: workspace:^
+        version: link:../../packages/core/agent
+      '@flowforge/agent-default-model':
+        specifier: workspace:^
+        version: link:../../packages/core/agent-default-model
+      '@flowforge/agent-instructions':
+        specifier: workspace:^
+        version: link:../../packages/context/agent-instructions
+      '@flowforge/agent-loop':
+        specifier: workspace:^
+        version: link:../../packages/core/agent-loop
+      '@flowforge/api-gateway':
+        specifier: workspace:^
+        version: link:../../packages/api/gateway
       '@flowforge/app-boot':
         specifier: workspace:^
         version: link:../../packages/boot/app-boot
+      '@flowforge/attachment-local':
+        specifier: workspace:^
+        version: link:../../packages/attachment/attachment-local
       '@flowforge/base':
         specifier: workspace:^
         version: link:../../packages/bundle/base
+      '@flowforge/bash-sandbox':
+        specifier: workspace:^
+        version: link:../../packages/shell/bash-sandbox
       '@flowforge/cmdline':
         specifier: workspace:^
         version: link:../../packages/boot/cmdline
+      '@flowforge/code-runtime-worker-thread':
+        specifier: workspace:^
+        version: link:../../packages/code-runtime/code-runtime-worker-thread
+      '@flowforge/command-compact':
+        specifier: workspace:^
+        version: link:../../packages/compaction/command-compact
+      '@flowforge/command-feedback':
+        specifier: workspace:^
+        version: link:../../packages/feedback/command-feedback
+      '@flowforge/command-goal':
+        specifier: workspace:^
+        version: link:../../packages/goal/command-goal
+      '@flowforge/commands':
+        specifier: workspace:^
+        version: link:../../packages/interaction/commands
+      '@flowforge/compaction-basic':
+        specifier: workspace:^
+        version: link:../../packages/compaction/compaction-basic
+      '@flowforge/compaction-tool-result-pruner':
+        specifier: workspace:^
+        version: link:../../packages/compaction/compaction-tool-result-pruner
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../vendor/cordis
@@ -80,15 +122,198 @@ importers:
       '@flowforge/cordis-plugin-timer':
         specifier: workspace:^
         version: link:../../vendor/timer
+      '@flowforge/credentials-local':
+        specifier: workspace:^
+        version: link:../../packages/credentials/credentials-local
+      '@flowforge/fs-observation-policy':
+        specifier: workspace:^
+        version: link:../../packages/fs/fs-observation-policy
+      '@flowforge/fs-sandbox':
+        specifier: workspace:^
+        version: link:../../packages/fs/fs-sandbox
+      '@flowforge/goal':
+        specifier: workspace:^
+        version: link:../../packages/goal/goal
+      '@flowforge/goal-round-driver':
+        specifier: workspace:^
+        version: link:../../packages/goal/goal-round-driver
       '@flowforge/headless':
         specifier: workspace:^
         version: link:../../packages/bundle/headless
       '@flowforge/home-paths':
         specifier: workspace:^
         version: link:../../packages/util/home-paths
+      '@flowforge/jobs-local':
+        specifier: workspace:^
+        version: link:../../packages/jobs/jobs-local
       '@flowforge/launch-environment':
         specifier: workspace:^
         version: link:../../packages/util/launch-environment
+      '@flowforge/llm':
+        specifier: workspace:^
+        version: link:../../packages/llm/llm
+      '@flowforge/llm-deepseek':
+        specifier: workspace:^
+        version: link:../../packages/llm/llm-deepseek
+      '@flowforge/llm-pi-ai':
+        specifier: workspace:^
+        version: link:../../packages/llm/llm-pi-ai
+      '@flowforge/llm-retry':
+        specifier: workspace:^
+        version: link:../../packages/llm/llm-retry
+      '@flowforge/permission-presets':
+        specifier: workspace:^
+        version: link:../../packages/interaction/permission-presets
+      '@flowforge/plan-mode':
+        specifier: workspace:^
+        version: link:../../packages/plan/plan-mode
+      '@flowforge/pwsh-sandbox':
+        specifier: workspace:^
+        version: link:../../packages/shell/pwsh-sandbox
+      '@flowforge/repeat-tool-reminder':
+        specifier: workspace:^
+        version: link:../../packages/guard/repeat-tool-reminder
+      '@flowforge/sandbox-local':
+        specifier: workspace:^
+        version: link:../../packages/sandbox/sandbox-local
+      '@flowforge/sandbox-policy':
+        specifier: workspace:^
+        version: link:../../packages/sandbox/sandbox-policy
+      '@flowforge/session':
+        specifier: workspace:^
+        version: link:../../packages/core/session
+      '@flowforge/session-checkpoint-policy':
+        specifier: workspace:^
+        version: link:../../packages/session/session-checkpoint-policy
+      '@flowforge/session-persistence-jsonl':
+        specifier: workspace:^
+        version: link:../../packages/session/session-persistence-jsonl
+      '@flowforge/session-projection':
+        specifier: workspace:^
+        version: link:../../packages/session/session-projection
+      '@flowforge/session-query-sqlite':
+        specifier: workspace:^
+        version: link:../../packages/session-query/session-query-sqlite
+      '@flowforge/session-telemetry-otel':
+        specifier: workspace:^
+        version: link:../../packages/session/session-telemetry-otel
+      '@flowforge/session-title':
+        specifier: workspace:^
+        version: link:../../packages/session/session-title
+      '@flowforge/session-title-first-prompt-llm':
+        specifier: workspace:^
+        version: link:../../packages/session/session-title-first-prompt-llm
+      '@flowforge/settings-file':
+        specifier: workspace:^
+        version: link:../../packages/settings/settings-file
+      '@flowforge/shell-env':
+        specifier: workspace:^
+        version: link:../../packages/shell/shell-env
+      '@flowforge/skill':
+        specifier: workspace:^
+        version: link:../../packages/skill/skill
+      '@flowforge/skill-badge':
+        specifier: workspace:^
+        version: link:../../packages/skill/skill-badge
+      '@flowforge/skill-filesystem':
+        specifier: workspace:^
+        version: link:../../packages/skill/skill-filesystem
+      '@flowforge/spill-local':
+        specifier: workspace:^
+        version: link:../../packages/spill/spill-local
+      '@flowforge/spill-policy':
+        specifier: workspace:^
+        version: link:../../packages/spill/spill-policy
+      '@flowforge/subagent':
+        specifier: workspace:^
+        version: link:../../packages/subagent/subagent
+      '@flowforge/subagent-fork-in-process':
+        specifier: workspace:^
+        version: link:../../packages/subagent/subagent-fork-in-process
+      '@flowforge/subagent-spawn-in-process':
+        specifier: workspace:^
+        version: link:../../packages/subagent/subagent-spawn-in-process
+      '@flowforge/subprocess-local':
+        specifier: workspace:^
+        version: link:../../packages/subprocess/subprocess-local
+      '@flowforge/system-prompt':
+        specifier: workspace:^
+        version: link:../../packages/core/system-prompt
+      '@flowforge/token-meter':
+        specifier: workspace:^
+        version: link:../../packages/llm/token-meter
+      '@flowforge/tool-bash':
+        specifier: workspace:^
+        version: link:../../packages/shell/tool-bash
+      '@flowforge/tool-call-timeout-policy':
+        specifier: workspace:^
+        version: link:../../packages/guard/timeout-policy
+      '@flowforge/tool-fs':
+        specifier: workspace:^
+        version: link:../../packages/fs/tool-fs
+      '@flowforge/tool-fs-search':
+        specifier: workspace:^
+        version: link:../../packages/fs/tool-fs-search
+      '@flowforge/tool-goal':
+        specifier: workspace:^
+        version: link:../../packages/goal/tool-goal
+      '@flowforge/tool-jobs':
+        specifier: workspace:^
+        version: link:../../packages/jobs/tool-jobs
+      '@flowforge/tool-pwsh':
+        specifier: workspace:^
+        version: link:../../packages/shell/tool-pwsh
+      '@flowforge/tool-ralph':
+        specifier: workspace:^
+        version: link:../../packages/workflow/tool-ralph
+      '@flowforge/tool-skill':
+        specifier: workspace:^
+        version: link:../../packages/skill/tool-skill
+      '@flowforge/tool-str-replace-editor':
+        specifier: workspace:^
+        version: link:../../packages/fs/tool-str-replace-editor
+      '@flowforge/tool-subagent':
+        specifier: workspace:^
+        version: link:../../packages/subagent/tool-subagent
+      '@flowforge/tool-subagent-control':
+        specifier: workspace:^
+        version: link:../../packages/subagent/tool-subagent-control
+      '@flowforge/tool-subagent-report':
+        specifier: workspace:^
+        version: link:../../packages/subagent/tool-subagent-report
+      '@flowforge/tool-todo':
+        specifier: workspace:^
+        version: link:../../packages/todo/tool-todo
+      '@flowforge/tool-web':
+        specifier: workspace:^
+        version: link:../../packages/web/tool-web
+      '@flowforge/tool-workflow':
+        specifier: workspace:^
+        version: link:../../packages/workflow/tool-workflow
+      '@flowforge/tools':
+        specifier: workspace:^
+        version: link:../../packages/core/tools
+      '@flowforge/typert-loader':
+        specifier: workspace:^
+        version: link:../../packages/typert/loader
+      '@flowforge/typert-registry':
+        specifier: workspace:^
+        version: link:../../packages/typert/registry
+      '@flowforge/user-approval':
+        specifier: workspace:^
+        version: link:../../packages/interaction/user-approval
+      '@flowforge/user-questions':
+        specifier: workspace:^
+        version: link:../../packages/interaction/user-questions
+      '@flowforge/web':
+        specifier: workspace:^
+        version: link:../../packages/web/web
+      '@flowforge/web-search-deepseek':
+        specifier: workspace:^
+        version: link:../../packages/web/web-search-deepseek
+      '@flowforge/workflow-worker-thread':
+        specifier: workspace:^
+        version: link:../../packages/workflow/workflow-worker-thread
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -99,12 +324,6 @@ importers:
       '@flowforge/mcp-client':
         specifier: workspace:^
         version: link:../../packages/mcp/mcp-client
-      '@flowforge/system-prompt':
-        specifier: workspace:^
-        version: link:../../packages/core/system-prompt
-      '@flowforge/tools':
-        specifier: workspace:^
-        version: link:../../packages/core/tools
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
