@@ -30,7 +30,7 @@
 - **本地分支公用**：开发者始终停留在共享主干分支（Gitee=`master` / GitHub=`main`）上工作，**不创建任务级本地分支**（`feat/xxx`、`fix/xxx` 等）。本地分支是团队共享状态，开私有本地分支会偏离共享状态、影响他人协作。
 - **仅主干开发**：Gitee = `master` / GitHub = `main`，所有代码变更必须通过 PR 合入。
 - **禁止直接 push 到 master/main**：`./mgr push` 会拒绝并提示创建 PR。
-- **禁止创建/使用 `dev`、`develop` 等长期分支**。提交时通过 `./mgr sync` 在**远端**自动生成临时 PR 分支（`cross/...` / `feat/...`），仅存在于远端、PR 合入后清理；不要在本地保留任务分支。
+- **禁止创建/使用 `dev`、`develop` 等长期分支**。提交时通过 `./mgr sync` 在**远端**自动生成**固定** PR 分支 `sync/<agent>`（`<agent>` 取自提交标题的 `[署名]`，落在合法署名的有界集合内，如 `sync/sherlock`、`sync/wenxin`），仅存在于远端、PR 合入后清理；**不切换本地分支**，本地始终停留在主干。
 - Gitee master 分支保护：pusher=none, merger=admin, mode=review（`./mgr protect` 配置）。
 
 ## 2. 提交前必拉取、收尾必提交
@@ -85,7 +85,7 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 ./mgr push --pr           # push 当前分支并自动创建 PR (推荐)
 ./mgr push                # 仅 push, 不创建 PR
 ./mgr pr "标题"           # 为当前分支创建 PR
-./mgr sync                # 提交+push+PR 一键完成 (主干自动建临时分支)
+./mgr sync "type(scope): 描述 [署名]" --body "PR描述"   # 推荐：本地停留在主干, 推送已暂存改动到固定远端分支 sync/<agent> 并建 PR
 ./mgr log [N]             # 查看最近 N 条提交 (默认 5)
 ./mgr diff                # 查看未提交改动
 ./mgr branch              # 查看当前分支
@@ -116,6 +116,19 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 - `./mgr` 默认仅管理本仓库。
 - `--all` 对本仓库仍只操作本仓库；`--repo NAME` 仅管理指定仓库（本仓库仅可填 flowforge）。
 
+### 5.5 固定远程同步分支（sync/&lt;agent&gt;）
+
+`sync` 不再生成带时间戳的临时分支（如 `sync/master-1712xxxx`），而是使用**固定、有界**的远端分支集合，便于多人协作与 PR 追溯：
+
+- **分支命名**：`sync/<agent>`，`<agent>` 取自 sync 标题末尾的 `[署名]`，例如：
+  - `sync/sherlock`、`sync/wenxin`、`sync/luban`、`sync/vangogh`、`sync/davinci`、`sync/keane`、`sync/humming`、`sync/sqrl`、`sync/butterfly`
+  - 取不到署名时回退为 `sync/master`。
+- **有界集合**：合法 `<agent>` 与 `git-workflow.md §3` 的署名列表一致，因此远端同步分支最多 9 个，**不会随每次提交膨胀**。
+- **不切换本地分支**：`sync` 始终在本地共享主干（master/main）上工作，仅把已 `git add` 的改动提交到本地主干，再把本地 HEAD **推送**到 `origin/sync/<agent>`，绝不做 `checkout`/建删本地分支。
+- **累加而非重建**：同一 `sync/<agent>` 的后续 `sync` 会 `merge` 已有的 `origin/sync/<agent>` 与 `origin/master` 后再推送，对应 PR 自动累加更新（去重、不重建）。
+- **共享环境安全**：`commit`/`sync` 只提交**已暂存**的改动（`git add` 你的文件），不会用 `git add -A` 把他人未提交的改动一起带入 PR；若有未提交改动，`sync` 会先 `stash` 保护、合并后 `pop` 还原。
+- **清理**：PR 合入主干后，该 `sync/<agent>` 远端分支即失去意义，可删除（不影响主干）。
+
 ## 6. 标准工作流
 
 ### 6.1 日常开发流程（单平台）
@@ -125,12 +138,12 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 2. ./mgr pull                      # 拉取最新代码（保持在共享主干分支 master/main）
 3. ... 开发 ...                     # 始终在 master/main 上工作，不创建任务级本地分支
 4. ./mgr sync "feat(x): 功能描述 [sherlock]" --body "PR描述"
-                                   # 一键：提交本地改动 + 远端临时分支 + PR（仅当前平台）
+                                   # 一键：提交已暂存改动 + 推送到固定远端分支 sync/sherlock + PR（本地停留主干, 不切换）
 5. 在平台 Web 界面合入 PR
 6. ./mgr pull                      # 合入后拉回主干，保持本地 master/main 最新
 ```
 
-> **本地分支公用（红线）**：开发者始终停留在共享主干分支（Gitee=`master` / GitHub=`main`）上工作，**不创建任务级本地分支**（`feat/xxx`、`fix/xxx` 等）。本地分支是团队共享状态，开私有本地分支会偏离共享状态、影响他人协作。提交时通过 `./mgr sync` 在**远端**自动生成临时 PR 分支（`cross/...` / `feat/...`），该分支仅存在于远端、PR 合入后清理；本地始终停留在主干。
+> **本地分支公用（红线）**：开发者始终停留在共享主干分支（Gitee=`master` / GitHub=`main`）上工作，**不创建任务级本地分支**（`feat/xxx`、`fix/xxx` 等）。本地分支是团队共享状态，开私有本地分支会偏离共享状态、影响他人协作。提交时通过 `./mgr sync` 在**远端**生成**固定** PR 分支 `sync/<agent>`（`<agent>` 取自标题 `[署名]`），该分支仅存在于远端、PR 合入后清理；本地始终停留在主干，**绝不切换本地分支**。多人协作时各自使用自己的 `sync/<agent>`，互不干扰；同一人的多次 sync 累加到同一远端分支与 PR。
 
 ### 6.2 跨平台同步流程（阶段性触发）
 
