@@ -67,7 +67,9 @@ export function clientBundle(
     const face = buildFace(env?.FF_BUILD_FACE)
     const node = [lib, ...(options.companions ?? [])]
     // Client pass pending: the browser artifact is part of the client stage.
-    if (face === 'host') return options.hostPhase === true ? node : [SKIP_WORKSPACE_BUILD]
+    // Until it lands, the Node half builds during the Host pass for every
+    // consumer — without it the host Loader cannot resolve lib/index.js.
+    if (face === 'host') return node
     if (face === 'client') return [SKIP_WORKSPACE_BUILD]
     return node
   }
