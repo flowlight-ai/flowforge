@@ -169,7 +169,7 @@ cmd_commit() {
   fi
   for n in "${NAMES[@]}"; do
     local d; d=$(_cur_dir "$n")
-    [ -d "$d/.git" ] || continue
+    [ -e "$d/.git" ] || continue
     # 共享环境: 仅提交已 git add 的文件, 避免把他人未提交改动一起带入
     if _git "$d" diff --cached --quiet 2>/dev/null; then
       echo -e "  ${Y}${n}: 没有已暂存改动, 跳过 (请先 git add 你的文件)${N}"
@@ -320,7 +320,7 @@ cmd_push() {
   for n in "${NAMES[@]}"; do
     [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue
     local d; d=$(_cur_dir "$n")
-    [ -d "$d/.git" ] || continue
+    [ -e "$d/.git" ] || continue
     local b=$(_git "$d" rev-parse --abbrev-ref HEAD)
     # 主干保护
     if [ "$b" = "$base" ]; then
@@ -355,7 +355,7 @@ cmd_pr() {
   local base; base=$(_cur_base)
   for n in "${NAMES[@]}"; do
     local d; d=$(_cur_dir "$n")
-    [ -d "$d/.git" ] || continue
+    [ -e "$d/.git" ] || continue
     local b; b=$(_git "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
     echo -e "${B}═══ ${n} (${CURRENT_SIDE}) PR (head=${b}) ═══${N}"
     if [ "$b" = "$base" ]; then
@@ -390,7 +390,7 @@ cmd_sync() {
   load_token; load_gh_token
   for n in "${NAMES[@]}"; do
     local d; d=$(_cur_dir "$n")
-    [ -d "$d/.git" ] || continue
+    [ -e "$d/.git" ] || continue
     local b; b=$(_git "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 
     echo -e "${B}══ ${n} (${CURRENT_SIDE}) [${b}]${N}"
@@ -433,7 +433,7 @@ cmd_pull() {
   for n in "${NAMES[@]}"; do
     [ -n "${1:-}" -a "$n" != "${1:-}" ] && continue
     local d; d=$(_cur_dir "$n")
-    [ -d "$d/.git" ] || continue
+    [ -e "$d/.git" ] || continue
     local b; b=$(_git "$d" branch --show-current 2>/dev/null || echo "?")
     echo -e "${B}══ ${n} (${CURRENT_SIDE}) [${b}]${N}"
     if ! _git "$d" fetch origin 2>"$MGR_TMP"; then
@@ -506,7 +506,7 @@ cmd_log() {
   local L=5; [ -n "${1:-}" ] && [[ "${1:-}" =~ ^[0-9]+$ ]] && { L="$1"; shift; }
   for n in "${NAMES[@]}"; do
     local d; d=$(_cur_dir "$n")
-    [ -d "$d/.git" ] || continue
+    [ -e "$d/.git" ] || continue
     echo -e "${B}${n} (${CURRENT_SIDE})${N}"
     _git "$d" log --oneline -"$L"
   done
@@ -516,7 +516,7 @@ cmd_log() {
 cmd_diff() {
   for n in "${NAMES[@]}"; do
     local d; d=$(_cur_dir "$n")
-    [ -d "$d/.git" ] || continue
+    [ -e "$d/.git" ] || continue
     local out; out=$(_git "$d" diff --stat 2>&1)
     [ -n "$out" ] && { echo -e "${B}${n} (${CURRENT_SIDE})${N}"; echo "$out"; }
   done
@@ -526,7 +526,7 @@ cmd_diff() {
 cmd_branch() {
   for n in "${NAMES[@]}"; do
     local d; d=$(_cur_dir "$n")
-    [ -d "$d/.git" ] || continue
+    [ -e "$d/.git" ] || continue
     printf "  %-14s %s (%s)\n" "$n" "$(_git "$d" branch --show-current)" "$CURRENT_SIDE"
   done
   echo ""
@@ -717,13 +717,13 @@ _create_pr() {
   if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
     local json; json=$(printf '{"title":%s,"head":%s,"base":%s,"body":%s,"access_token":%s}' \
       "$(_json_str "$title")" "$(_json_str "$b")" "$(_json_str "$base")" "$(_json_str "$body")" "$(_json_str "$MGR_TOKEN")")
-    local r; r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json" -d "$json")
+    local r; r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json; charset=utf-8" -d "$json")
     local u; u=$(echo "$r" | grep -oE '"html_url":"https://gitee.com/[^"]*pulls/[0-9]+"' | head -1 | sed -E 's/.*"(https:[^"]*)".*/\1/')
     [ -n "$u" ] && echo -e "    ${G}Gitee PR: $u${N}" || echo -e "    ${R}Gitee PR FAILED: $(echo "$r"|head -c 200)${N}"
   elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
     local json; json=$(printf '{"title":%s,"head":%s,"base":%s,"body":%s}' \
       "$(_json_str "$title")" "$(_json_str "$b")" "$(_json_str "$base")" "$(_json_str "$body")")
-    local r; r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json" -d "$json")
+    local r; r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json; charset=utf-8" -d "$json")
     local u; u=$(echo "$r" | grep -oE '"html_url":"https://github.com/[^"]*pulls/[0-9]+"' | head -1 | sed -E 's/.*"(https:[^"]*)".*/\1/')
     [ -n "$u" ] && echo -e "    ${G}GitHub PR: $u${N}" || echo -e "    ${R}GitHub PR FAILED: $(echo "$r"|head -c 200)${N}"
   else
