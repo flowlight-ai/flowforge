@@ -23,7 +23,37 @@
     "types": [
       "node"
     ],
+    "customConditions": [
+      "@zod/source"
+    ],
     "paths": {
+      "@flowforge/cats-shared": [
+        "./packages/cats/shared/src/index.ts"
+      ],
+      "@flowforge/cats-shared/types": [
+        "./packages/cats/shared/src/types/index.ts"
+      ],
+      "@flowforge/cats-shared/schemas": [
+        "./packages/cats/shared/src/schemas/index.ts"
+      ],
+      "@flowforge/cats-shared/utils": [
+        "./packages/cats/shared/src/utils/index.ts"
+      ],
+      "@flowforge/cats-shared/registry": [
+        "./packages/cats/shared/src/registry/index.ts"
+      ],
+      "@flowforge/cats-shared/dossier": [
+        "./packages/cats/shared/src/dossier/index.ts"
+      ],
+      "@flowforge/cats-shared/scanner-discovery-pure": [
+        "./packages/cats/shared/src/scanner-discovery-pure.ts"
+      ],
+      "@flowforge/cats-shared/profile-frontmatter-parser": [
+        "./packages/cats/shared/src/profile-frontmatter-parser.ts"
+      ],
+      "@flowforge/cats-shared/profile-contract": [
+        "./packages/cats/shared/src/profile-contract.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],

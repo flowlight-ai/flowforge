@@ -29,7 +29,7 @@ export interface ParsedCommand {
   /** Matched command name, e.g. '/signals' */
   readonly name: string;
   /** Matched subcommand, e.g. 'search' for '/signals search cats' */
-  readonly subcommand?: string;
+  readonly subcommand?: string | undefined;
   /** Remaining text after command + subcommand */
   readonly args: string;
   /** Original input */

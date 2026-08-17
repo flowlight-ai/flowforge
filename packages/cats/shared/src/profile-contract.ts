@@ -38,5 +38,5 @@ export function relationshipKeyFromPrimerRelativePath(targetPath: string): strin
   const normalized = targetPath.replaceAll('\\', '/');
   const match = /^relationship\/([A-Za-z0-9][A-Za-z0-9._-]{0,127})-primer\.md$/.exec(normalized);
   if (!match) throw new Error(`Invalid relationship primer target "${targetPath}"`);
-  return assertProfilePathSegment('relationshipKey', match[1]);
+  return assertProfilePathSegment('relationshipKey', match[1]!);
 }
