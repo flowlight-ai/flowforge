@@ -470,6 +470,7 @@ const aliasEntries = [
       { find: '@flowforge/api-remotes', replacement: path.resolve(import.meta.dirname, 'packages/api/remotes/src') },
       { find: '@flowforge/host-webserver/src', replacement: path.resolve(import.meta.dirname, 'packages/host/webserver/src') },
       { find: '@flowforge/host-webserver', replacement: path.resolve(import.meta.dirname, 'packages/host/webserver/src') },
+      { find: '@flowforge/host-apiproxy/client', replacement: path.resolve(import.meta.dirname, 'packages/host/apiproxy/src/fetch/client.ts') },
       { find: '@flowforge/host-apiproxy/src', replacement: path.resolve(import.meta.dirname, 'packages/host/apiproxy/src') },
       { find: '@flowforge/host-apiproxy', replacement: path.resolve(import.meta.dirname, 'packages/host/apiproxy/src') },
       { find: '@flowforge/host-directory-picker-browse/src', replacement: path.resolve(import.meta.dirname, 'packages/host/directory-picker-browse/src') },
