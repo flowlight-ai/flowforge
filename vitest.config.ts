@@ -44,7 +44,9 @@ const processBoundTests = [
   'packages/workflow/workflow-worker-thread/tests/session.spec.ts',
 ]
 
-const testInclude = ['tests/**/*.test.ts', 'packages/*/*/tests/**/*.{test,spec}.ts', 'packages/*/*/test/**/*.{test,spec}.ts']
+// cats/shared ports its clowder suites as plain .test.js files (vitest-style
+// imports, no TS), so the workspace lanes also admit .js test files.
+const testInclude = ['tests/**/*.test.ts', 'packages/*/*/tests/**/*.{test,spec}.{ts,js}', 'packages/*/*/test/**/*.{test,spec}.{ts,js}']
 
 // Bash-requiring suites (a real POSIX shell is unavailable on Windows); the
 // pwsh suites deliberately stay INCLUDED since PowerShell ships with Windows
