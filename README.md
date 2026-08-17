@@ -1,77 +1,78 @@
 <div align="center">
 
-# FlowForge (English)
+# FlowForge
 
-### Persistent-Identity Agent Framework · Self-Evolving Closed Loops
+### Self-evolving agent harness · persistent identity framework
 
 [![CI](https://github.com/flowlight-ai/flowforge/actions/workflows/ci.yml/badge.svg)](https://github.com/flowlight-ai/flowforge/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/flowlight-ai/flowforge/actions/workflows/codeql.yml/badge.svg)](https://github.com/flowlight-ai/flowforge/actions/workflows/codeql.yml)
+[![Node](https://img.shields.io/badge/node-%5E22.19.0%20%7C%7C%20%3E%3D24.0.0-blue.svg)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-11.7.0-orange.svg)](https://pnpm.io/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://docs.astral.sh/ruff/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/flowlight-ai/flowforge/blob/main/CONTRIBUTING.md)
-[![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-purple.svg)](https://github.com/flowlight-ai/flowforge/discussions)
 
-> *Forging persistent identity — endowing agents with memory, multi-agent deliberation (MindCouncil), and self-evolution (Self-Devolution).*
+> *Forge durable identity. Give agents memory, multi-agent deliberation (MindCouncil), and self-evolution (Self-Devolution).*
 
 </div>
 
 ---
 
-[🇺🇸 English](README.md) · [🇨🇳 简体中文](README.zh-CN.md) · [🇯🇵 日本語](README.ja.md)
+[🇺🇸 English](README.md) · [🇨🇳 简体中文](README.zh.md) · [🇯🇵 日本語](README.ja.md)
+
+## What is FlowForge?
+
+FlowForge (`flowforge`) is an **enterprise agent harness** built on an **everything-is-a-plugin** architecture, powered by a vendored [Cordis](https://github.com/cordiverse/cordis) kernel rescooped as `@flowforge/cordis`. Its design follows [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper).
+
+It ships as a TypeScript pnpm monorepo where **every capability is a Cordis plugin** (`packages/*`, scoped `@flowforge/*`). A Python 3.11+ monolith (`agents/`, `brain/`, `core/`, `llm/`, `loop/`, `forgemind/`, `web/`, `sdk.py`) exists as a legacy implementation on a sunset path.
+
+FlowForge is a **harness layer** for agents: rather than replacing your agents, it *employs* them as capability extensions and cultivates them into durable, evolvable agents — *Forgekin* — with a name, memory, growth trail, and accountability.
 
 ## Why FlowForge?
 
-FlowForge is a **Harness Layer** that provides agents with persistent identity, self-evolution capabilities, and a governance framework. It does not replace your agents — it **hires** them as capability extensions and cultivates them into professional **Evolvable Agents (Forgekin)**: with names, memories, growth trajectories, and responsibilities. Every capability of existing agents is inherited by FlowForge — plus six core capabilities of its own.
-
-| Capability | Claude Code | OpenCode | Codex | WorkBuddy | Trae | Qoder | FlowForge |
-|------|:-----------:|:--------:|:-----:|:---------:|:----:|:-----:|:---------:|
-| Autonomous task execution | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Multi-agent orchestration | ✅ subagents | ✅ | — | ✅ Agent Team | — | ✅ expert teams | ✅ MindCouncil |
-| Context & long-term memory | ✅ `CLAUDE.md` | ✅ | ✅ `AGENTS.md` | ✅ multi-layer memory | ✅ | ✅ Knowledge Engine | ✅ EchoStore + MindCodex |
-| Tool calling & API orchestration | ✅ MCP | ✅ MCP | ✅ MCP | ✅ MCP | ✅ | ✅ MCP | ✅ MCP |
-| Cross-system integration | ✅ IDE/Git | ✅ | ✅ IDE/Git/CI | ✅ Office/WeCom | ✅ Lark/IDE | ✅ IDE | ✅ via hired agents |
-| Web search & multimodal | — | ✅ | ✅ | ✅ | ✅ image→code | — | ✅ |
-| Desktop & office automation | — | — | — | ✅ Word/Excel/PPT | ✅ | ✅ QoderWork | ✅ |
-| Self-reflection & continuous improvement | — | — | — | — | — | ✅ consciousness | ✅ |
-| **Agent-level persistent identity** | — | — | — | — | — | — | ✅ Soul Imprint |
-| **Structured self-evolution closed loops** | — | — | — | — | — | — | ✅ 5 loops: docs/code/framework/review/test |
-| **Cross-vendor independent review** | — | — | — | — | — | — | ✅ structurally enforced |
-| **Experience distillation pipeline** | — | — | — | — | — | — | ✅ SpiritForge → MindCodex |
-| **Progressive autonomy (6 levels + guardrails)** | — | — | — | — | — | — | ✅ Awakening stage |
-| **Multi-form** | — | — | — | — | — | — | ✅ 5 evolvable forms |
+| Capability | What FlowForge adds |
+|------------|---------------------|
+| **Agent-level durable identity** | Forgekin survive crashes, model upgrades, and session boundaries through a persistent *Soul Imprint*. |
+| **Structured self-evolution loops** | Five *Self-Devolution* loops let Forgekin evolve their own docs, code, framework, reviews, and tests under governance gates. |
+| **Cross-vendor review** | Reviewers must come from a different vendor than the author — no agent approves its own output. |
+| **Experience-distillation pipeline** | *SpiritForge* distills lessons into the *MindCodex* procedural-memory store. |
+| **Graduated autonomy (6 stages + guardrails)** | *Awakening stages* let operators dial autonomy up safely. |
+| **Multi-form agents** | Five evolvable forms cover a range of roles and mandates. |
+| **Multi-agent deliberation** | *MindCouncil* coordinates multiple Forgekin on shared missions. |
+| **Three-party agent integration** | Bind Claude Code / Codex / Gemini / OpenCode / Trae CN as capability extensions. |
 
 > **Build AI teams, not just agents. Hard rails, soft power, shared mission.**
 
-## Core Features
+## Core features
 
-- **Persistent Identity (Evolvable Agent / Forgekin)** — Long-lived Evolvable Agents (Forgekin) with a Soul Imprint, Capability Profile, and Episodic Memory Store (EchoStore) that survive across crashes, model upgrades, and session boundaries.
-- **Self-Devolution Loops** — Five closed loops that let Evolvable Agents (Forgekin) autonomously evolve their own documentation, code, framework, reviews, and tests under governance gates.
-- **Cross-Vendor Review** — Reviewers must come from a different vendor than the author; no agent can approve its own output.
-- **Multi-Domain Memory Federation** — Five memory domains federated through the MindCodex (distilled knowledge base) as a procedural memory carrier.
-- **Seven-Layer Harness Engineering** — `durable_state` · `tool_mediation` · `evidence_sensors` · `governance` · `magic_words` · `entropy_control` · `harnessability`.
-- **Configuration-Driven Evolvable Agents (Forgekin)** — Register any number of Evolvable Agents (Forgekin) via YAML profiles. The 5 default Forgekin are reference examples, not an upper limit.
-- **Third-Party Agent (Capability Extension) Integration** — Bind Claude Code / Codex / Gemini / OpenCode / Trae CN as capability extensions.
+- **Durable identity (Forgekin)** — long-lived evolvable agents with a persistent identity (*Soul Imprint*), a capability profile, and an episodic memory store (*EchoStore*).
+- **Self-Devolution loops** — five governance-gated loops that let Forgekin evolve their own documentation, code, framework, reviews, and tests.
+- **Cross-vendor review** — enforced structural separation; reviewers must differ in vendor from the author.
+- **Multi-domain memory federation** — five memory domains federated through the *MindCodex* distilled-knowledge carrier.
+- **Seven-layer harness engineering** — `durable_state` · `tool_mediation` · `evidence_sensors` · `governance` · `magic_words` · `entropy_control` · `harnessability`.
+- **Config-driven Forgekin** — register any number of Forgekin via YAML profiles in `config/forgekins/`. The five defaults are reference examples, not a cap.
+- **Three-party agent integration** — bind Claude Code / Codex / Gemini / OpenCode / Trae CN as capability extensions.
 
-## Evolvable Agents (Forgekin): Configurable Self-Evolving Agents
+## Forgekin: configurable, self-evolving agents
 
-**The architecture is not fixed to any number of Evolvable Agents (Forgekin).** An Evolvable Agent (Forgekin) is a configuration-driven entity — drop a YAML profile into `config/forgekins/` to register one, bind it to a Self-Devolution Loop, and (optionally) bind a third-party coding agent (capability extension). The ForgeMind Engine (general-purpose agent framework) routes tasks at runtime based on capability profiles, not hardcoded roles.
+**The architecture is not fixed to any number of Forgekin.** A Forgekin is a config-driven entity — drop a YAML profile into `config/forgekins/` to register one, bind it to a Self-Devolution loop, and optionally bind a three-party coding agent. The ForgeMind engine routes tasks at runtime by capability profile, not hardcoded roles.
 
-**Self-evolution is the core of the architecture, not the number of Evolvable Agents (Forgekin).**
+**Self-evolution is the architecture's core — not the count of Forgekin.**
 
-### 5 Default Evolvable Agents (Forgekin, reference examples)
+### Five default Forgekin (reference examples)
 
-| Evolvable Agent (Forgekin) | Vendor | Self-Devolution Loop | Third-Party Agent (Capability Extension) |
-|--------------------------|------|-----------|------------------------|
-| **Wenxin (文心)** | anthropic | Documentation evolution | Claude Code |
-| **Sherlock (夏洛克)** | openai | Code evolution | Codex |
-| **Vangogh (梵高)** | google | Cross-vendor review | Gemini |
-| **Da Vinci (达芬奇)** | open_source | Test evolution | OpenCode |
-| **Luban (鲁班)** | bytedance | Framework evolution *(requires operator approval)* | Trae CN |
+| Forgekin | Vendor | Self-Devolution loop | Three-party agent |
+|----------|--------|----------------------|-------------------|
+| **Wenxin** | anthropic | Doc evolution | Claude Code |
+| **Sherlock** | openai | Code evolution | Codex |
+| **Vangogh** | google | Cross-vendor review | Gemini |
+| **Da Vinci** | open_source | Test evolution | OpenCode |
+| **Luban** | bytedance | Framework evolution *(operator approval required)* | Trae CN |
 
-### Add Your Own Evolvable Agent (Forgekin)
+### Add your own Forgekin
 
-Registering a new Evolvable Agent (Forgekin) is a **pure configuration operation** — no framework code changes needed:
+Registering a new Forgekin is a **pure config operation** — no framework code changes:
 
 ```yaml
 # config/forgekins/my-forgekin.yaml
@@ -90,150 +91,104 @@ blind_spots: ["frontend"]
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Application Layer · forgemind/                                  │
-│  ForgekinRegistry · MindCouncil · Third-Party Agents (Capability │
-│  Extensions)                                                     │
+│  App layer · forgemind/                                          │
+│  ForgekinRegistry · MindCouncil (multi-agent) · external agents  │
 ├─────────────────────────────────────────────────────────────────┤
-│  Instruction Layer · evolution/                                  │
-│  ForgeMind Engine · Metacognition Routing · Maturity Ladder      │
+│  Directive layer · evolution/                                    │
+│  ForgeMind engine · metacognitive routing · maturity ladder      │
 ├─────────────────────────────────────────────────────────────────┤
-│  Execution Layer · workers/ · loop/                              │
-│  Self-Devolution Loops · Loop Executors · Execution Modes        │
+│  Execution layer · workers/ · loop/                             │
+│  Self-Devolution loops · loop executor · execution modes         │
 ├─────────────────────────────────────────────────────────────────┤
-│  Tools & Memory Layer · core/                                    │
-│  capability · teamact · harness · memory · eval · reliability    │
+│  Tools & memory layer · core/                                    │
+│  capability · teamact · harness · memory · eval · reliability     │
 └─────────────────────────────────────────────────────────────────┘
-       ↕ Shared Kernel: DI Container · Plugin Protocol · Tracing ↕
+       ↕  shared kernel: DI container · plugin protocol · tracing  ↕
 ```
 
-**Unidirectional dependency**: upper layers depend on lower layers; lower layers never import upper layers.
+**One-way dependency**: upper layers depend on lower layers; lower layers never import upper layers.
 
-## Quick Start
+In the active TypeScript rewrite, the Cordis kernel (`@flowforge/cordis`) provides the plugin runtime, and every capability lives under `packages/<group>/<pkg>/` as a Cordis plugin.
 
-### One-Click Install (Recommended)
+## Developer preview
 
-```bash
-git clone https://github.com/flowlight-ai/flowforge.git
+FlowForge is currently in **developer preview** and is iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
+
+> The TypeScript `packages/*` rewrite is the active line; the Python monolith is legacy and frozen for sunset. Use `pnpm` for TS and `pytest`/`ruff` for Python.
+
+## Quick start
+
+### Run from source (TypeScript, active line)
+
+Clone the repository and use pnpm (Corepack `pnpm@11.7.0`, Node `^22.19.0 || >=24.0.0`):
+
+```sh
+git clone https://gitee.com/flowlight/flowforge.git   # Gitee (base: master)
 cd flowforge
-
-# Set up Python environment + install backend deps + build frontend
-python scripts/setup.py
-
-# (Optional) Install third-party coding agent CLIs
-python scripts/install_agents.py
-
-# Start backend (port 8000) + frontend (port 5175)
-python scripts/start.py
+pnpm install
+pnpm build          # tsc -b tsconfig.host.json
+pnpm flowforge      # host CLI — PLANNED / stage 3 (apps/cli not yet present)
+pnpm start          # alias for `pnpm flowforge web` — PLANNED / stage 3
 ```
 
-Then open **http://localhost:5175** in your browser.
+The Web UI and host entrypoints land with `apps/cli`; until then, exercise packages through their own examples and the test suite. See the [development guide](docs/development.md).
 
-### Manual Install
+### Local checks before committing
 
-> **Note on package structure**: The repository root *is* the `flowforge` package (it contains a top-level `__init__.py`). When starting the backend, you must add the repository's **parent directory** to `PYTHONPATH` so that `flowforge.app.main` resolves correctly.
+Run the **minimal check set that covers your change surface** (exhaustive coverage is CI's job):
 
-```bash
-pip install -e ".[dev]"
-cd web && npm install && npm run build && cd ..
-
-# Copy environment variable template
-cp .env.example .env  # then fill in your keys
-
-# Start backend (repo root is the flowforge package → parent dir on PYTHONPATH)
-export PYTHONPATH="$PWD/.."          # PowerShell: $env:PYTHONPATH = "$PWD\.."
-python -m uvicorn flowforge.app.main:app --host 127.0.0.1 --port 8000
-
-# Start frontend (in another terminal)
-cd web && npm run dev
+```sh
+pnpm typecheck   # TypeScript type-check (same tsc pass as build)
+pnpm lint        # oxlint static analysis
+pnpm test        # vitest run
 ```
 
-### Verify the 5 Default Evolvable Agents (Forgekin)
+- Pure TS change → `pnpm typecheck` + `pnpm lint`
+- Behavioral change → add `pnpm test`
+- Docs change → sync the corresponding doc
+- Dependency/build output (`lib/`) change → `pnpm build` first
 
-```bash
-python scripts/verify_five_forgekins.py
+## Project layout
+
 ```
-
-**Environment variables** (see `.env.example`):
-
+flowforge/
+├── vendor/                 # vendored deps (rescooped as @flowforge/*): cordis, cosmokit, ...
+├── packages/               # TS plugins (active rewrite) — packages/<group>/<pkg>/
+├── apps/                   # (planned / stage 3) host CLI — apps/cli/src/bin.ts
+├── web/                    # Web UI (Next.js frontend)
+├── native/landlock-run/    # native sandbox runner (standalone subproject)
+├── docs/                   # spec / architecture / development docs
+├── mgr  mgr.cmd  mgr.ps1   # mandatory Git-workflow CLI (direct git remote ops forbidden)
+├── scripts/                # helper scripts
+└── agents/ brain/ core/ llm/ loop/ forgemind/ web/ sdk.py  # Python 3.11+ monolith (legacy, sunset)
 ```
-FLOWFORGE_WEBCHAT_TOKEN=...
-FEISHU_APP_ID=...
-FEISHU_APP_SECRET=...
-FEISHU_CHAT_ID=...
-```
-
-## Configuration
-
-```yaml
-# config/forgemind.yaml
-external_agents:
-  claude_code: { enabled: true, binary: "claude" }
-  codex:       { enabled: true, binary: "codex" }
-  gemini:      { enabled: true, binary: "gemini" }
-  opencode:    { enabled: true, binary: "opencode" }
-  trae:        { enabled: true, binary: "trae" }
-
-council:
-  min_reviewers: 2
-  min_distinct_vendors: 2     # cross-vendor enforcement
-  pass_threshold: 0.85        # quality threshold
-```
-
-Each Evolvable Agent (Forgekin) is described by a YAML profile under `config/forgekins/*.yaml`. **The framework imposes no upper limit on the number of Evolvable Agents (Forgekin)** — add or remove profiles as needed to match your deployment.
 
 ## Documentation
 
-| Document | Description |
-|------|------|
-| [docs/VISION.md](docs/VISION.md) | Project vision & design philosophy |
+| Document | Purpose |
+|----------|---------|
+| [docs/VISION.md](docs/VISION.md) | Project vision and design philosophy |
 | [docs/spec.md](docs/spec.md) | Project specification |
 | [docs/arch.md](docs/arch.md) | Architecture design |
 | [docs/design.md](docs/design.md) | Detailed design |
 | [docs/roadmap.md](docs/roadmap.md) | Development roadmap |
-| [docs/decisions/](docs/decisions/) | Architecture Decision Records (ADRs) |
+| [docs/decisions/](docs/decisions/) | Architecture decision records (ADRs) |
 | [docs/features/](docs/features/) | Feature designs |
-| [docs/roleagent.md](docs/roleagent.md) | Multi-agent engineering paths |
+| [docs/development.md](docs/development.md) | How to build, test, and develop |
+| [AGENTS.md](AGENTS.md) | Mandatory AI-tool and Git workflow rules |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guide |
 | [SECURITY.md](SECURITY.md) | Security policy |
 
-## Roadmap
-
-| Phase | Scope | Status |
-|------|------|------|
-| **0** | Project scaffolding + cross-platform config + docs skeleton | ✅ Done |
-| **1** | Seven engineering paths code skeleton | 🔄 In progress (~70%) |
-| **2** | forgemind application layer + Evolvable Agent forms | 🔄 In progress (~85%) |
-| **3** | Third-party agent adaptation layer | 🔄 In progress (~80%) |
-| **4** | Evaluation self-metabolism + distributed reliability | 🔄 In progress (~40%) |
-| **5** | Collaboration math + self-evolution closed loops | 🔄 In progress (~60%) |
-| **6** | SpiritForge experience distillation + MindCouncil | 🔄 In progress (~40%) |
-
-See [docs/roadmap.md](docs/roadmap.md) for details.
-
-## Project Structure
-
-```
-flowforge/
-├── core/              # Shared kernel: capability · teamact · harness · memory · eval
-├── evolution/         # ForgeMind Engine (general-purpose agent framework, self-evolution orchestration)
-├── forgemind/         # Application layer: forgekin · registry · council · external_agents
-├── web/               # Web UI (Next.js 14 + FastAPI backend)
-├── config/            # forgemind.yaml · forgekins/*.yaml · evolution.yaml
-├── docs/              # spec · arch · design · roadmap · ADRs · features
-├── scripts/           # setup.py · install_agents.py · start.py · verify_five_forgekins.py
-└── tests/             # Test suites
-```
-
 ## Contributing
 
-We welcome contributions of any kind — new Evolvable Agent (Forgekin) profiles, adapter integrations, documentation improvements, or core framework work.
+Follow [AGENTS.md](AGENTS.md) for the mandatory AI-tool and Git workflow rules, and read the [development guide](docs/development.md) before contributing. All commits, pushes, PRs, and cross-platform syncs go through the root `./mgr` CLI — direct `git` remote operations are forbidden.
 
-- 🐛 [Report a Bug](https://github.com/flowlight-ai/flowforge/issues/new?template=bug_report.yml)
-- 💡 [Submit a Feature Request](https://github.com/flowlight-ai/flowforge/issues/new?template=feature_request.yml)
-- 💬 [Join the Discussion](https://github.com/flowlight-ai/flowforge/discussions)
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a Pull Request.
+- 🐛 [Report a bug](https://github.com/flowlight-ai/flowforge/issues/new?template=bug_report.yml)
+- 💡 [Request a feature](https://github.com/flowlight-ai/flowforge/issues/new?template=feature_request.yml)
+- 💬 [Join the discussion](https://github.com/flowlight-ai/flowforge/discussions)
 
 ## License
 
 FlowForge is released under the **[MIT License](LICENSE)**.
+
+Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
