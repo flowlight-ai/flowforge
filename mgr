@@ -715,15 +715,19 @@ _create_pr() {
   local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
   local base; [ "$side" = "gitee" ] && base="master" || base="main"
   if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
-    local json; json=$(printf '{"title":%s,"head":%s,"base":%s,"body":%s,"access_token":%s}' \
-      "$(_json_str "$title")" "$(_json_str "$b")" "$(_json_str "$base")" "$(_json_str "$body")" "$(_json_str "$MGR_TOKEN")")
-    local r; r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json; charset=utf-8" -d "$json")
+    local jf; jf="$(mktemp)"
+    printf '{"title":%s,"head":%s,"base":%s,"body":%s,"access_token":%s}' \
+      "$(_json_str "$title")" "$(_json_str "$b")" "$(_json_str "$base")" "$(_json_str "$body")" "$(_json_str "$MGR_TOKEN")" > "$jf"
+    local r; r=$(curl -s -X POST "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls" -H "Content-Type: application/json; charset=utf-8" -d @"$jf")
+    rm -f "$jf"
     local u; u=$(echo "$r" | grep -oE '"html_url":"https://gitee.com/[^"]*pulls/[0-9]+"' | head -1 | sed -E 's/.*"(https:[^"]*)".*/\1/')
     [ -n "$u" ] && echo -e "    ${G}Gitee PR: $u${N}" || echo -e "    ${R}Gitee PR FAILED: $(echo "$r"|head -c 200)${N}"
   elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
-    local json; json=$(printf '{"title":%s,"head":%s,"base":%s,"body":%s}' \
-      "$(_json_str "$title")" "$(_json_str "$b")" "$(_json_str "$base")" "$(_json_str "$body")")
-    local r; r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json; charset=utf-8" -d "$json")
+    local jf; jf="$(mktemp)"
+    printf '{"title":%s,"head":%s,"base":%s,"body":%s}' \
+      "$(_json_str "$title")" "$(_json_str "$b")" "$(_json_str "$base")" "$(_json_str "$body")" > "$jf"
+    local r; r=$(curl -s -X POST "https://api.github.com/repos/${GH_ORG}/${n}/pulls" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json; charset=utf-8" -d @"$jf")
+    rm -f "$jf"
     local u; u=$(echo "$r" | grep -oE '"html_url":"https://github.com/[^"]*pulls/[0-9]+"' | head -1 | sed -E 's/.*"(https:[^"]*)".*/\1/')
     [ -n "$u" ] && echo -e "    ${G}GitHub PR: $u${N}" || echo -e "    ${R}GitHub PR FAILED: $(echo "$r"|head -c 200)${N}"
   else
