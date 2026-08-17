@@ -1,0 +1,67 @@
+{
+  "name": "@flowforge/client-connection",
+  "description": "Wire consumer layer: HTTP-up/WebSocket-down client, ConnectionController dual streams with reconnect, and fixture api",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/client/connection"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "flowforge": {
+    "client": {
+      "inject": [],
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@flowforge/attachment": "workspace:^",
+    "@flowforge/host-apiproxy": "workspace:^",
+    "@flowforge/commands": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/schemastery": "workspace:^",
+    "ws": "^8.21.0"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/client.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "peerDependencies": {
+    "@flowforge/host-webserver": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/host-webserver": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@types/ws": "^8.18.1",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

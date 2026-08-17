@@ -15,19 +15,22 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "tsc -b tsconfig.host.json",
+    "build": "tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host",
     "typecheck": "tsc -b tsconfig.host.json",
     "lint": "oxlint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "flowforge": "node --import tsx apps/cli/src/bin.ts",
-    "start": "node --import tsx apps/cli/src/bin.ts web"
+    "flowforge": "node --import tsx/esm apps/cli/src/bin.ts",
+    "start": "node --import tsx/esm apps/cli/src/bin.ts web",
+    "build:lib:host": "tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/mdast": "^4.0.4",
     "@types/node": "^22.20.0",
     "execa": "^10.0.0",
+    "fast-check": "^4.8.0",
+    "js-yaml": "^4.2.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
     "micromark-extension-gfm": "^3.0.0",
@@ -36,7 +39,6 @@
     "tsdown": "^0.22.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
-    "fast-check": "^4.8.0"
+    "vitest": "^4.1.8"
   }
 }
