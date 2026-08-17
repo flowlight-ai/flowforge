@@ -27,9 +27,10 @@
 
 ### 1.3 分支模型
 
+- **本地分支公用**：开发者始终停留在共享主干分支（Gitee=`master` / GitHub=`main`）上工作，**不创建任务级本地分支**（`feat/xxx`、`fix/xxx` 等）。本地分支是团队共享状态，开私有本地分支会偏离共享状态、影响他人协作。
 - **仅主干开发**：Gitee = `master` / GitHub = `main`，所有代码变更必须通过 PR 合入。
 - **禁止直接 push 到 master/main**：`./mgr push` 会拒绝并提示创建 PR。
-- **禁止创建/使用 `dev`、`develop` 等长期分支**；临时分支（如 `fix/xxx`、`feat/xxx`）合入后立即删除。
+- **禁止创建/使用 `dev`、`develop` 等长期分支**。提交时通过 `./mgr sync` 在**远端**自动生成临时 PR 分支（`cross/...` / `feat/...`），仅存在于远端、PR 合入后清理；不要在本地保留任务分支。
 - Gitee master 分支保护：pusher=none, merger=admin, mode=review（`./mgr protect` 配置）。
 
 ## 2. 提交前必拉取、收尾必提交
@@ -95,12 +96,11 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 
 ```bash
 ./mgr merge-cross --dry-run     # 查看双端提交差异 (不创建 PR)
-./mgr merge-cross               # 双向合并: GitHub→Gitee + Gitee→GitHub
-./mgr merge-cross --g2l         # 仅 GitHub→Gitee
-./mgr merge-cross --l2g         # 仅 Gitee→GitHub
+./mgr merge-cross               # 单向合并: 当前平台主干 → 对端主干 (创建对端同步 PR)
 ```
 
-- `merge-cross` 读取双端提交差异（使用 patch-id 对比，自动过滤等价提交），在目标平台创建同步 PR。
+- `merge-cross` 为**单向**（当前平台 → 对端）：Gitee 触发则同步到 GitHub，GitHub 触发则同步到 Gitee；**不支持反向，也不支持 `--g2l` / `--l2g`**。
+- `merge-cross` 读取双端提交差异（使用 tree-hash 对比，自动跳过内容一致的仓库），在目标平台创建同步 PR。
 - 若有合并冲突，脚本自动中止并提示手动处理，不会破坏工作区。
 - 脚本会自动 stash 未提交的本地更改，合并完成后恢复。
 
@@ -122,22 +122,23 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 
 ```
 1. cd flowlight/flowforge          # 或 cd flowlight-ai/flowforge (GitHub 端)
-2. ./mgr pull                      # 拉取最新代码
-3. git checkout -b feat/xxx        # 创建功能分支
-4. ... 开发 ...
-5. ./mgr commit "feat(x): 功能描述 [sherlock]"
-6. ./mgr push --pr                 # push 并创建 PR (仅当前平台)
-7. 在平台 Web 界面合入 PR
-8. git checkout master && git pull # 回到主干并更新
+2. ./mgr pull                      # 拉取最新代码（保持在共享主干分支 master/main）
+3. ... 开发 ...                     # 始终在 master/main 上工作，不创建任务级本地分支
+4. ./mgr sync "feat(x): 功能描述 [sherlock]" --body "PR描述"
+                                   # 一键：提交本地改动 + 远端临时分支 + PR（仅当前平台）
+5. 在平台 Web 界面合入 PR
+6. ./mgr pull                      # 合入后拉回主干，保持本地 master/main 最新
 ```
+
+> **本地分支公用（红线）**：开发者始终停留在共享主干分支（Gitee=`master` / GitHub=`main`）上工作，**不创建任务级本地分支**（`feat/xxx`、`fix/xxx` 等）。本地分支是团队共享状态，开私有本地分支会偏离共享状态、影响他人协作。提交时通过 `./mgr sync` 在**远端**自动生成临时 PR 分支（`cross/...` / `feat/...`），该分支仅存在于远端、PR 合入后清理；本地始终停留在主干。
 
 ### 6.2 跨平台同步流程（阶段性触发）
 
 ```
 1. 确认源平台 PR 已合入主干
-2. ./mgr merge-cross --dry-run     # 查看双端差异
-3. ./mgr merge-cross               # 创建双向同步 PR
-4. 分别在两个平台合入同步 PR
+2. ./mgr merge-cross --dry-run     # 查看双端差异（当前平台 → 对端）
+3. ./mgr merge-cross               # 跨平台单向合并（当前平台→对端），在**对端**创建同步 PR
+4. 在**对端**平台合入同步 PR（merge-cross 为单向，不支持反向）
 5. 若有冲突, 解决后重新运行 merge-cross
 ```
 
