@@ -86,7 +86,7 @@ export function normalizeCatId(input: string, registry: CatRegistry): NormalizeC
   const partials = findPartialMatches(allConfigs, lower);
 
   if (partials.length === 1) {
-    return { ok: true, catId: createCatId(partials[0]) };
+    return { ok: true, catId: createCatId(partials[0]!) };
   }
   if (partials.length > 1) {
     return { ok: false, reason: 'ambiguous', input: cleaned, candidates: partials };

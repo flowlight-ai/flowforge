@@ -11,9 +11,9 @@ export interface ProfileEntry {
   description_source: DescriptionSource | null;
   description_author: string | null;
   description_updated_at: string | null;
-  description_generated_by?: string;
-  description_generated_at?: string;
-  description_confirmed_by?: string;
+  description_generated_by?: string | undefined;
+  description_generated_at?: string | undefined;
+  description_confirmed_by?: string | undefined;
   topics: string[];
   feature_ids: string[];
   doc_kind: string | null;

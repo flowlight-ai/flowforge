@@ -1,17 +1,16 @@
-﻿/**
+/**
  * Message Zod Schemas
  * 用于运行时验证的 Zod schemas
  */
 
 import { z } from 'zod';
-import { catIdSchema } from '../registry/cat-id-schema.ts';
 
 /**
  * Message sender schema - discriminated union
  *
- * Note: catId uses z.string().refine() (via catIdSchema) instead of z.enum()
- * because route modules are imported before the registry is populated.
- * z.string().refine() defers validation to request time.
+ * Note: catId uses plain z.string() because route modules are imported
+ * before the registry is populated. Runtime catId validation against the
+ * live CatRegistry is deferred to the RPC layer.
  *
  * Consequence: discriminatedUnion requires z.literal or z.enum for the
  * discriminator. Since we're inside a discriminated union on 'type',
@@ -24,7 +23,7 @@ export const MessageSenderSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('cat'),
-    catId: catIdSchema(),
+    catId: z.string(),
   }),
 ]);
 
@@ -111,7 +110,7 @@ export const MessageSchema = z.object({
 export const SendMessageRequestSchema = z.object({
   threadId: z.string().min(1),
   content: z.array(MessageContentSchema).min(1),
-  targetCatId: catIdSchema().optional(),
+  targetCatId: z.string().optional(),
 });
 
 /**
