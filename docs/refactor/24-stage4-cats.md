@@ -12,59 +12,121 @@
 
 | clowder-ai 模式 | flowforge 改造 |
 |---|---|
-| `catRegistry` 模块级单例 | `CatRegistry extends Service` → `ctx.cats` |
+| `catRegistry` 模块级单例 | `CatRegistry extends Service` → `ctx.cats`（dsh 风格 `export default class`） |
 | `new InvocationQueue()` 手写组合根 | `@flowforge/cats-invocation` 插件，`ctx.catsInvocation` |
 | `createXxxStore(redis?)` 工厂 | `@flowforge/cats-stores` 插件，`ctx.catStores` |
 | Fastify `app.register(route, {deps})` | typert RPC 域（阶段5 chat 域处理 HTTP/WS） |
 | Redis Lua CAS 脚本 | sqlite 事务 CAS（`better-sqlite3`） |
 | `process.once('SIGTERM', shutdown)` | Cordis fiber dispose 自动清理 |
 | `@cat-cafe/shared` workspace 包 | `@flowforge/cats-shared` workspace 包 |
+| 测试 `node:assert` + `.test.js` + 模块单例 | `vitest` `expect` + `.spec.ts` + `new Context()` + `await ctx.plugin()` |
+
+## 插件化审查（2026-08-17）
+
+对照 dsh 范式审查批次1+2 实际产出，确认：
+
+✓ **代码层面已完全对齐"一切皆插件"**：
+- `CatRegistry` `extends Service` → `ctx.cats`，`ctx.effect()` 管理 register 生命周期，`export default CatRegistry`（dsh 风格，无函数包裹）
+- `CatStores` `extends Service` → `ctx.catStores`，访问器返回 port 接口而非具体类
+- `MemoryStoresBackend` `extends Service`，`static inject = ['catStores']`，`ctx.effect()` 管理注册/清理
+- 无 clowder-ai / @cat-cafe / deepseek 命名空间残留
+- 默认 Plugin 同时挂载 CatStores + MemoryStoresBackend（聚合服务 + 默认后端的合理复合插件模式）
+
+✓ **本次修复（同 PR）**：
+- 删除破损测试 `normalize-cat-id.test.js`（导入已删除的 `catRegistry` 单例）
+- 新建 `normalize-cat-id.spec.ts`：Cordis 模式（`await ctx.plugin(CatRegistry)` + `ctx.cats` + vitest expect）
+- 简化 `cats-shared/src/index.ts` 默认导出 → `export default CatRegistry`（对齐 dsh `export default class`）
+- 清理 `cats/shared/package.json` 不存在的子路径导出（`./types` 指向不存在的 `src/types.ts`）
+- 清理陈旧 lib 构建产物（含残留 `new CatRegistry()` 单例代码）
+- 修正 `stub-ports.ts` 注释 off-by-one（实际 29 个 port：5 核心 + 24 stub）
+- 13 个 `.test.js` 风格陈旧（仍用 `node:assert` + `.js` 路径）但功能可用，后续批次统一改为 `.spec.ts`
+
+⚠ **待补差距**（不阻塞本批次）：
+- clowder-ai `TaskManagedWorkRegistrationStore` port 未在 flowforge 声明（批次3 cats-invocation 引入时补）
+- 24 个 stub port 的实际方法签名待批次3-5 随依赖服务落地补全
+- Memory 后端缺 `static Config` Schemastery schema（Sqlite 后端必须补，本批次 Memory 后端无配置项）
 
 ## 批次与任务清单
 
-### 批次 1：`@flowforge/cats-shared`（类型/schema/纯函数 + CatRegistry Service）
+### 批次 1：`@flowforge/cats-shared`（类型/schema/纯函数 + CatRegistry Service）✅
 
-- [ ] T4.1.1 移植 types/（CatId/CatConfig/Profile/Message/Thread/Task 等全部类型定义）
-- [ ] T4.1.2 移植 schemas/（zod schema：cat-id/message/command/signals/world/pack）
-- [ ] T4.1.3 移植 utils/（text-utils/command-parser/eval-metric-ref 等纯函数，**排除 redis.ts**）
-- [ ] T4.1.4 移植 registry/（CatRegistry → 改造为 `CatRegistry extends Service`，`ctx.cats`）
-- [ ] T4.1.5 移植 dossier/（dossier profile 解析/加载纯函数）
-- [ ] T4.1.6 移植 concierge/（pet-skin-projection 纯函数）
-- [ ] T4.1.7 移植 profile-frontmatter-parser / profile-contract / scanner-discovery-pure
-- [ ] T4.1.8 移植 approval-producer-catalog / capability-tips / cli-effort / core-commands 等顶层纯函数
-- [ ] T4.1.9 测试：catId 规范化 / frontmatter 解析 / command-parser / dossier profile
+- [x] T4.1.1 移植 types/（CatId/CatConfig/Profile/Message/Thread/Task 等全部类型定义）— 完成
+- [x] T4.1.2 移植 schemas/（zod schema：cat-id/message/command/signals/world/pack）— 完成
+- [x] T4.1.3 移植 utils/（text-utils/command-parser/eval-metric-ref 等纯函数，**排除 redis.ts**）— 完成
+- [x] T4.1.4 移植 registry/（CatRegistry → 改造为 `CatRegistry extends Service`，`ctx.cats`）— 完成
+- [x] T4.1.5 移植 dossier/（dossier profile 解析/加载纯函数）— 完成
+- [x] T4.1.6 移植 concierge/（pet-skin-projection 纯函数）— 完成
+- [x] T4.1.7 移植 profile-frontmatter-parser / profile-contract / scanner-discovery-pure — 完成
+- [x] T4.1.8 移植 approval-producer-catalog / capability-tips / cli-effort / core-commands 等顶层纯函数 — 完成
+- [x] T4.1.9 测试：normalize-cat-id / frontmatter 解析 / command-parser / dossier profile — Cordis 模式重写完成
 
-### 批次 2：`@flowforge/cats-stores`（存储 ports + Memory/Sqlite 双后端插件）
+### 批次 2：`@flowforge/cats-stores`（存储 ports + Memory 后端 Cordis 插件）✅
 
-- [ ] T4.2.1 移植 ports/（IThreadStore/IMessageStore/ITaskStore/IBacklogStore/IMemoryStore/
-      ISessionChainStore/IDraftStore/ISummaryStore/ITurnExecutionStore/IInvocationRecordStore 等 28 个接口）
-- [ ] T4.2.2 移植 ports/ 内嵌的 in-memory 参考实现（LRU + 容量上限）
-- [ ] T4.2.3 创建 `CatStores extends Service` → `ctx.catStores`，聚合所有 store 实例
-- [ ] T4.2.4 sqlite 后端实现（better-sqlite3，CAS 用事务，替代 Redis Lua）
-- [ ] T4.2.5 测试：port 契约单测（memory 后端）+ sqlite 后端集成测试
+- [x] T4.2.1 创建 `@flowforge/cats-stores` 包骨架（package.json/tsconfig.json/tsdown.config.ts/invariant.ts）— 完成
+- [x] T4.2.2 移植 ports/（IMessageStore/IThreadStore/ITaskStore/IBacklogStore/IMemoryStore
+      /ISessionChainStore/IDraftStore/ISummaryStore/ITurnExecutionStore/IInvocationRecordStore
+      /IReadStateStore/ILabelStore/IPendingRequestStore/IProposalStore/IPushSubscriptionStore
+      /IAuthorizationAuditStore/IAuthorizationRuleStore/ICommunityIssueStore/ICommunityIssueDraftStore
+      /ICommunityPrStore/IFrustrationIssueStore/IDossierDistillationProposalStore/IDossierObservationStore
+      /IDeliveryCursorStore/IGameStore/IMemoryGovernanceStore/IProfileUpdateProposalStore
+      /ISessionHandoffProposalStore/IWorkflowSopStore 等 29 个接口）— 完成（5 核心 + 24 stub）
+- [x] T4.2.3 创建 `CatStores extends Service` → `ctx.catStores`，含 `registerBackend(name, backend)`
+      /`messages()`/`threads()`/`tasks()`/`backlogs()`/`memory()` 等访问器；并发后端用 `static inject = ['catStores']` — 完成
+- [x] T4.2.4 实现 Memory 后端插件 `MemoryStoresBackend extends Service`：
+      `MemoryMessageStore`/`MemoryThreadStore`/`MemoryTaskStore`/`MemoryBacklogStore`/`MemoryMemoryStore`
+      全部移植到 `memory/`，构造时由 `ctx.plugin(MemoryStoresBackend)` 挂载到 `ctx.catStoresMemory`（含
+      `declare module '@flowforge/cordis'` Context augmentation）— 完成
+- [x] T4.2.5 测试：port 契约单测（memory 后端：append/getById/getByThreadAfter/softDelete 等）— 完成（73 测试通过）
+- [ ] T4.2.6 Sqlite 后端单独成包 `@flowforge/cats-stores-sqlite`（CAS 用事务替代 Redis Lua）
+      — **拆分到独立批次**，本批次仅交付 Memory + 接口契约
 
 ### 批次 3：`@flowforge/cats-invocation`（调用队列/调度/tracker 插件）
 
-- [ ] T4.3.1 移植 InvocationQueue（per-thread×per-user FIFO，`ctx.catsInvocation.queue`）
-- [ ] T4.3.2 移植 InvocationTracker（per-slot 互斥锁 + AbortController，`ctx.catsInvocation.tracker`）
-- [ ] T4.3.3 移植 QueueProcessor（调度器 + 终态机 + zombie 恢复）
-- [ ] T4.3.4 移植 TaskProgressStore（IAuthInvocationBackend 端口 + Memory 实现）
-- [ ] T4.3.5 移植 SessionMutex / AgentSessionMutex（per-session 串行化锁）
-- [ ] T4.3.6 移植 reconcileZombies / convergeZombieQueue / StartupReconciler
-- [ ] T4.3.7 测试：入队→出队→执行→完成全链路（mock provider）
+> 设计：参考 dsh `@flowforge/jobs` 范式（`JobRegistry extends Service` + 子插件 backend），
+> 将 InvocationQueue/Tracker/Processor 改造为 Cordis Service，全部挂载到 `ctx.catsInvocation`。
+> 补全 clowder-ai `TaskManagedWorkRegistrationStore` port。
+
+- [ ] T4.3.1 创建 `@flowforge/cats-invocation` 包骨架（package.json/tsconfig.json/tsdown.config.ts/invariant.ts）
+- [ ] T4.3.2 移植 InvocationQueue → `InvocationQueueService extends Service` → `ctx.catsInvocation.queue`
+      （per-thread×per-user FIFO，effect 管理队列生命周期）
+- [ ] T4.3.3 移植 InvocationTracker → `InvocationTrackerService extends Service` → `ctx.catsInvocation.tracker`
+      （per-slot 互斥锁 + AbortController）
+- [ ] T4.3.4 移植 QueueProcessor → `QueueProcessorService extends Service` → `ctx.catsInvocation.processor`
+      （调度器 + 终态机 + zombie 恢复）
+- [ ] T4.3.5 移植 TaskProgressStore（IAuthInvocationBackend 端口 + Memory 实现，挂载到 `ctx.catStores`）
+- [ ] T4.3.6 移植 SessionMutex / AgentSessionMutex → `SessionMutexService extends Service` → `ctx.catsInvocation.mutex`
+      （per-session 串行化锁）
+- [ ] T4.3.7 移植 reconcileZombies / convergeZombieQueue / StartupReconciler
+      （作为 `InvocationQueueService` 的 `[Service.init]()` 钩子实现）
+- [ ] T4.3.8 补全 `TaskManagedWorkRegistrationStore` port 到 `cats-stores/ports/`
+- [ ] T4.3.9 测试：入队→出队→执行→完成全链路（mock provider，`vitest .spec.ts`）
 
 ### 批次 4：`@flowforge/cats-profile`（档案插件）
 
-- [ ] T4.4.1 移植 ProfileRepository（档案解析/写入/迁移/审批）
-- [ ] T4.4.2 移植 approveProfileUpdate 流程
-- [ ] T4.4.3 测试：档案迁移/审批单测
+> 设计：参考 dsh `@flowforge/agent-default-model` 范式，将 ProfileRepository 改造为
+> `ProfileRepositoryService extends Service` → `ctx.catsProfile`，审批流程用 Cordis effect 管理。
+
+- [ ] T4.4.1 创建 `@flowforge/cats-profile` 包骨架
+- [ ] T4.4.2 移植 ProfileRepository → `ProfileRepositoryService extends Service` → `ctx.catsProfile`
+      （档案解析/写入/迁移/审批，全部通过 `ctx.catStores` 注入存储）
+- [ ] T4.4.3 移植 approveProfileUpdate 流程 → `ProfileApprovalService extends Service`
+      （通过 `ctx.effect` 管理审批提案生命周期）
+- [ ] T4.4.4 测试：档案迁移/审批单测（`vitest .spec.ts`，Cordis Context setup）
 
 ### 批次 5：`@flowforge/cats-orchestration`（编排/审计/蒸馏插件）
 
-- [ ] T4.5.1 移植 EventAuditLog / AutoSummarizer / TaskExtractor
-- [ ] T4.5.2 移植 Dossier 蒸馏管线（经验→dossier 草案应用）
-- [ ] T4.5.3 移植 freshness / duty-briefing / usage-aggregator
-- [ ] T4.5.4 测试：蒸馏管线单测
+> 设计：参考 dsh `@flowforge/compaction` 范式，将 EventAuditLog / AutoSummarizer /
+> DossierDistillationPipeline 改造为 Cordis Service。
+
+- [ ] T4.5.1 创建 `@flowforge/cats-orchestration` 包骨架
+- [ ] T4.5.2 移植 EventAuditLog → `EventAuditLogService extends Service` → `ctx.catsAudit`
+      （同时扩展 `Context` + `Events`，对齐 dsh llm/fs 范式）
+- [ ] T4.5.3 移植 AutoSummarizer / TaskExtractor → `AutoSummarizerService extends Service` → `ctx.catsSummarizer`
+- [ ] T4.5.4 移植 Dossier 蒸馏管线 → `DossierDistillationService extends Service` → `ctx.catsDistiller`
+      （经验 → dossier 草案 → 应用为档案更新）
+- [ ] T4.5.5 移植 freshness / duty-briefing / usage-aggregator
+      → `FreshnessService` / `DutyBriefingService` / `UsageAggregatorService`
+- [ ] T4.5.6 测试：蒸馏管线单测（`vitest .spec.ts`）
 
 ## 验收标准
 
@@ -72,8 +134,9 @@
 2. 调用队列支持并发限制、超时、失败重试、进度事件。
 3. 会话转录可持久化（sqlite）并可回放。
 4. 蒸馏：任务成功经验 → Dossier → 可应用为档案更新。
-5. **所有 cats 服务均为 Cordis 插件**，可通过 `ctx.cats` / `ctx.catStores` / `ctx.catsInvocation` 访问。
-6. Python 旧版 `pytest` 回归全绿。
+5. **所有 cats 服务均为 Cordis 插件**，可通过 `ctx.cats` / `ctx.catStores` / `ctx.catsInvocation` / `ctx.catsProfile` / `ctx.catsAudit` / `ctx.catsDistiller` 访问。
+6. 测试统一 `vitest .spec.ts` + `new Context()` + `await ctx.plugin()` 模式，无 `node:assert` / `.js` import 路径残留。
+7. Python 旧版 `pytest` 回归全绿。
 
 ## 提交信息模板
 

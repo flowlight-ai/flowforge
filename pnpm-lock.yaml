@@ -864,6 +864,15 @@ importers:
         specifier: ^3.25.0
         version: 3.25.0
 
+  packages/cats/stores:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/client/connection:
     dependencies:
       '@flowforge/attachment':

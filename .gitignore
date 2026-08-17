@@ -240,9 +240,15 @@ _tmp*
 d:/
 
 # ==================== TypeScript build artifacts (2026-08-16) ====================
-# tsc/tsdown ²úÎïÓëÔöÁ¿¹¹½¨»º´æ£¨Ô´ÂëÔÚ src/£¬lib ÓÉ¹¹½¨Éú³É£¬²»Èë¿â£©
+# tsc/tsdown ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ£¨Ô´ï¿½ï¿½ï¿½ï¿½ src/ï¿½ï¿½lib ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½â£©
 vendor/*/lib/
 packages/*/*/lib/
 apps/*/lib/
 *.tsbuildinfo
 tsconfig.*.tsbuildinfo
+# tsc -b misconfigured output to src/ (vendor tsconfig lacks composite: true)
+vendor/*/src/*.d.ts
+vendor/*/src/*.d.ts.map
+vendor/*/src/*.js
+vendor/*/src/*.js.map
+vendor/*/src/*.map

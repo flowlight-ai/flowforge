@@ -54,6 +54,21 @@
       "@flowforge/cats-shared/profile-contract": [
         "./packages/cats/shared/src/profile-contract.ts"
       ],
+      "@flowforge/cats-shared/invariant": [
+        "./packages/cats/shared/src/invariant.ts"
+      ],
+      "@flowforge/cats-stores": [
+        "./packages/cats/stores/src/index.ts"
+      ],
+      "@flowforge/cats-stores/ports": [
+        "./packages/cats/stores/src/ports/index.ts"
+      ],
+      "@flowforge/cats-stores/memory": [
+        "./packages/cats/stores/src/memory/index.ts"
+      ],
+      "@flowforge/cats-stores/invariant": [
+        "./packages/cats/stores/src/invariant.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],

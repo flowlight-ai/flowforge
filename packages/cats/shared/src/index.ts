@@ -9,7 +9,6 @@
  * @module @flowforge/cats-shared
  */
 
-import type { Context } from '@flowforge/cordis'
 import { CatRegistry } from './registry/CatRegistry.ts'
 
 // Registry (CatRegistry Service, catIdSchema, normalizeCatId)
@@ -52,13 +51,14 @@ export * from './utils/subject-key.ts'
 export * from './scanner-discovery-pure.ts'
 
 /**
- * Default Cordis plugin: mounts CatRegistry at `ctx.cats`.
+ * Default Cordis plugin (dsh-style: `export default class extends Service`).
+ *
+ * Loading `@flowforge/cats-shared` via `ctx.plugin(catsSharedDefault)` (or via
+ * `cordis.patch.yml` entry) mounts CatRegistry at `ctx.cats`.
  *
  * Register in cordis.patch.yml:
  * ```yaml
  * - name: '@flowforge/cats-shared'
  * ```
  */
-export default function Plugin(ctx: Context) {
-  ctx.plugin(CatRegistry)
-}
+export default CatRegistry

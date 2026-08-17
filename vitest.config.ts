@@ -109,6 +109,11 @@ const testExclude = [
 // NB: workspace projects build their own vite configs and do NOT inherit the
 // root resolve.alias, so the alias list is injected into every project.
 const aliasEntries = [
+      // zod 3.25.0 ships src-only (no dist/); the @zod/source custom condition
+      // points at src/, which TypeScript honours via tsconfig.base.json
+      // customConditions but Vite does not. Map `zod` directly to its src so
+      // `import { z } from 'zod'` resolves to node_modules/zod/src/index.ts.
+      { find: /^zod$/, replacement: path.resolve(import.meta.dirname, 'node_modules/zod/src/index.ts') },
       // tools sub-paths: '@flowforge/tools/src/*' (self-imports spelled with
       // the src/ component) and exports like '@flowforge/tools/invariant'
       // both map into src/; the package's lib/ is not built in test mode.
@@ -127,6 +132,14 @@ const aliasEntries = [
       { find: '@flowforge/session-title-all-prompts-llm/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-title-all-prompts-llm/src') },
       { find: '@flowforge/session-title-all-prompts-llm', replacement: path.resolve(import.meta.dirname, 'packages/session/session-title-all-prompts-llm/src') },
       { find: '@flowforge/cordis-plugin-logger-console', replacement: path.resolve(import.meta.dirname, 'vendor/logger-console/src') },
+      // cats domain (stage 4): src-only resolution since lib/ is gitignored
+      // and unbulked during test runs; aligns with every other @flowforge/* pkg.
+      { find: '@flowforge/cats-shared/src', replacement: path.resolve(import.meta.dirname, 'packages/cats/shared/src') },
+      { find: '@flowforge/cats-shared', replacement: path.resolve(import.meta.dirname, 'packages/cats/shared/src') },
+      { find: /^@flowforge\/cats-shared$/, replacement: path.resolve(import.meta.dirname, 'packages/cats/shared/src') },
+      { find: '@flowforge/cats-stores/src', replacement: path.resolve(import.meta.dirname, 'packages/cats/stores/src') },
+      { find: '@flowforge/cats-stores', replacement: path.resolve(import.meta.dirname, 'packages/cats/stores/src') },
+      { find: /^@flowforge\/cats-stores$/, replacement: path.resolve(import.meta.dirname, 'packages/cats/stores/src') },
       { find: '@flowforge/code-runtime-worker-thread/src', replacement: path.resolve(import.meta.dirname, 'packages/code-runtime/code-runtime-worker-thread/src') },
       { find: '@flowforge/code-runtime-worker-thread', replacement: path.resolve(import.meta.dirname, 'packages/code-runtime/code-runtime-worker-thread/src') },
       { find: '@flowforge/session-persistence-sqlite/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-persistence-sqlite/src') },
