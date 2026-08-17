@@ -1,0 +1,75 @@
+{
+  "name": "@flowforge/api-gateway",
+  "description": "Typert Remote Host dispatcher and Client API endpoint",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/api/gateway"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "flowforge": {
+    "client": {
+      "inject": [
+        "@flowforge/typert-registry",
+        "@flowforge/client-connection"
+      ],
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "scripts": {
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/client.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@flowforge/typert-protocol": "workspace:^"
+  },
+  "peerDependencies": {
+    "@flowforge/client-connection": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/typert-registry": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/client-connection": "workspace:^",
+    "@flowforge/host-webserver": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/typert-registry": "workspace:^",
+    "@flowforge/cordis": "workspace:^",
+    "zod": "^4.4.3"
+  }
+}

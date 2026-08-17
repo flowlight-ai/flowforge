@@ -15,13 +15,14 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "tsc -b tsconfig.host.json",
+    "build": "tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host",
     "typecheck": "tsc -b tsconfig.host.json",
     "lint": "oxlint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "flowforge": "node --import tsx apps/cli/src/bin.ts",
-    "start": "node --import tsx apps/cli/src/bin.ts web"
+    "flowforge": "node --import tsx/esm apps/cli/src/bin.ts",
+    "start": "node --import tsx/esm apps/cli/src/bin.ts web",
+    "build:lib:host": "tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

@@ -1,0 +1,42 @@
+{
+  "name": "@flowforge/cli",
+  "description": "flowforge CLI: profile boot, plugin management, and the browser UI alias",
+  "version": "0.1.0-rc.5",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "apps/cli"
+  },
+  "type": "module",
+  "bin": {
+    "flowforge": "lib/bin.js"
+  },
+  "files": [
+    "lib/*.js",
+    "config"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@flowforge/cordis-plugin-hmr": "workspace:^",
+    "@flowforge/cordis-plugin-include": "workspace:^",
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/cordis-plugin-timer": "workspace:^",
+    "@flowforge/app-boot": "workspace:^",
+    "@flowforge/cmdline": "workspace:^",
+    "@flowforge/base": "workspace:^",
+    "@flowforge/headless": "workspace:^",
+    "@flowforge/home-paths": "workspace:^",
+    "@flowforge/launch-environment": "workspace:^",
+    "@flowforge/cordis": "workspace:^",
+    "commander": "^15.0.0",
+    "js-yaml": "^4.2.0"
+  },
+  "devDependencies": {
+    "@flowforge/mcp-client": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@types/js-yaml": "^4.0.9",
+    "execa": "^10.0.0"
+  }
+}

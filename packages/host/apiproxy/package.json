@@ -1,0 +1,94 @@
+{
+  "name": "@flowforge/host-apiproxy",
+  "description": "API gateway: the ApiProxy contract (api/), the fetch carrier pair (fetch/), and the host-side gateway plugin providing ctx.apiProxy",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/host/apiproxy"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./api": {
+      "types": "./lib/types/api/index.d.ts",
+      "default": "./lib/types/api/index.js"
+    },
+    "./api/*": {
+      "types": "./lib/types/api/*.d.ts",
+      "default": "./lib/types/api/*.js"
+    },
+    "./client": {
+      "types": "./lib/types/fetch/client.d.ts",
+      "default": "./lib/types/fetch/client.js"
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@flowforge/attachment": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-default-model": "workspace:^",
+    "@flowforge/api-remotes": "workspace:^",
+    "@flowforge/brand": "workspace:^",
+    "@flowforge/commands": "workspace:^",
+    "@flowforge/credentials": "workspace:^",
+    "@flowforge/goal": "workspace:^",
+    "@flowforge/host-directory-picker": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/native-command": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-persistence": "workspace:^",
+    "@flowforge/session-projection": "workspace:^",
+    "@flowforge/session-projection-cache": "workspace:^",
+    "@flowforge/session-query": "workspace:^",
+    "@flowforge/session-title": "workspace:^",
+    "@flowforge/settings": "workspace:^",
+    "@flowforge/skill": "workspace:^",
+    "@flowforge/subagent": "workspace:^",
+    "@flowforge/jobs": "workspace:^",
+    "@flowforge/tools": "workspace:^",
+    "@flowforge/user-approval": "workspace:^",
+    "@flowforge/user-questions": "workspace:^",
+    "@flowforge/workspace": "workspace:^",
+    "@flowforge/schemastery": "workspace:^",
+    "fflate": "^0.8.2",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/agent-presets": "workspace:^",
+    "@flowforge/cordis-host-runner": "workspace:^",
+    "@flowforge/invariants": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/agent-presets": "workspace:^",
+    "@flowforge/cordis-host-runner": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/storage": "workspace:^",
+    "@flowforge/storage-domain": "workspace:^",
+    "@flowforge/typert-protocol": "workspace:^",
+    "@flowforge/typert-registry": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

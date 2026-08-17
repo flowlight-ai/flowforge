@@ -21,16 +21,40 @@
   ],
   "references": [
     {
+      "path": "./apps/cli"
+    },
+    {
       "path": "./native/landlock-run/packages/entry"
     },
     {
       "path": "./packages/acp/acp"
     },
     {
+      "path": "./packages/api/gateway/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/api/remotes/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {
       "path": "./packages/attachment/attachment-local"
+    },
+    {
+      "path": "./packages/boot/app-boot"
+    },
+    {
+      "path": "./packages/boot/cmdline"
+    },
+    {
+      "path": "./packages/bundle/base"
+    },
+    {
+      "path": "./packages/bundle/headless"
+    },
+    {
+      "path": "./packages/client/connection/tsconfig.host.json"
     },
     {
       "path": "./packages/code-runtime/code-runtime"
@@ -157,6 +181,27 @@
     },
     {
       "path": "./packages/harness/boot"
+    },
+    {
+      "path": "./packages/host/apiproxy"
+    },
+    {
+      "path": "./packages/host/directory-picker"
+    },
+    {
+      "path": "./packages/host/directory-picker-browse"
+    },
+    {
+      "path": "./packages/host/directory-picker-native"
+    },
+    {
+      "path": "./packages/host/frontend-static"
+    },
+    {
+      "path": "./packages/host/plugin-inventory"
+    },
+    {
+      "path": "./packages/host/webserver"
     },
     {
       "path": "./packages/hooks/hook-protocol"
