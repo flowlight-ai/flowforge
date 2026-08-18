@@ -79,12 +79,12 @@
 | D21 | 身份 identity / 交互 interaction / 审批 approval | packages/* | 2 | ✅ |
 | D22 | 插件扩展（tool-cordis/ui-cordis/runner） | packages/extensions | 2 | ✅ |
 | D22b | 应用层插件契约（@flowforge/plugin-contract，对齐上游 plugin-contract 参考） | packages/plugin-contract | 2 | ✅（T2.15：manifest/capability/grants/routes/lifecycle/conformance + 20 vitest） |
-| D23 | API 网关 + Web 服务 | packages/web | 3 | ⬜ |
-| D24 | CLI（web/headless/jsonrpc/acp 模式） | apps/cli | 3 | ⬜ |
-| D25 | boot 引导 / bundle 打包 / client / host | packages/boot 等 | 3 | ⬜ |
+| D23 | API 网关 + Web 服务 | packages/web | 3 | ✅（api-gateway/api-remotes/host-webserver/host-apiproxy，PR #86） |
+| D24 | CLI（web/headless/jsonrpc/acp 模式） | apps/cli | 3 | ✅（profile/plugin/dump-config + headless 端到端 mock 冒烟通过；web profile 依赖阶段 8 web-app bundle） |
+| D25 | boot 引导 / bundle 打包 / client / host | packages/boot 等 | 3 | ✅（app-boot/cmdline/base/headless/client-connection，PR #86） |
 | D26 | runtime-diagnostics / typert / util / spill | packages/* | 1-2 | ✅ |
 | D27 | LLM 抽象 + mock server | packages/llm | 1 | ✅ |
-| D28 | 配置体系基座（patch 装配/env-registry/前端 schema 校验） | packages/bundle + core/config | 0-3 | ⬜ |
+| D28 | 配置体系基座（patch 装配/env-registry/前端 schema 校验） | packages/bundle + core/config | 0-3 | 🟦（patch 装配链随阶段 3 落地：bundle patch/profile 层/--patch 覆盖 + 热更新；env-registry 见 C39、前端校验随阶段 8） |
 | D29 | 会话标题 session-title（first-prompt-llm/all-prompts-llm） | packages/session/session-title | 1 | ✅ |
 | D30 | 会话遥测 session-telemetry（otel/stats/checkpoint-policy） | packages/session/* | 1 | ✅ |
 | D31 | 会话持久化（jsonl zstd/sqlite/projection/cache） | packages/session/* | 1-2 | ✅ |
@@ -96,7 +96,7 @@
 | D37 | Web 工具族（web-fetch-http/web-search-deepseek|exa|perplexity/tool-web） | packages/web/* | 2 | ✅ |
 | D38 | 目标族 goal（goal-round-driver/tool-goal/command-goal） | packages/goal | 2 | ✅ |
 | D39 | 上下文族 context（agent-instructions/packed-chunks/prompt-assembly） | packages/core/context | 1 | ⬜ |
-| D40 | host 族（apiproxy/directory-picker/frontend-static/plugin-inventory/webserver） | packages/host/* | 3 | ⬜ |
+| D40 | host 族（apiproxy/directory-picker/frontend-static/plugin-inventory/webserver） | packages/host/* | 3 | ✅（9 包随阶段 3 移植，PR #86） |
 | D41 | e2b（fs-e2b/subprocess-e2b，可选沙箱后端） | packages/e2b/* | 2 | ✅ |
 | D42 | test-support 族（agent-loop-testkit/acp-snapshot/client-runtime/llm-replay/loader-smoke） | packages/test-support/* | 1-2 | 🟦（4/5 已移植；client-runtime 依赖阶段 3 client/host 域） |
 | D43 | util 族（atomic-write/brand/home-paths/launch-environment/native-command/output-retention/timeout） | packages/harness/util | 0-1 | ✅ |
@@ -132,7 +132,7 @@
 | C24 | 球权托管租约 ball-custody | domains/ball-custody | 5 | ⬜ |
 | C25 | 礼宾 concierge + 指南 guides（registry.yaml + flows/*.yaml） | domains/concierge + domains/guides | 4 | ⬜ |
 | C26 | 功能轨迹 feat-trajectory | domains/feat-trajectory | 4 | ⬜ |
-| C27 | 健康检查 health | domains/health | 3 | ⬜ |
+| C27 | 健康检查 health | domains/health | 3 | ✅（阶段 3 以 apiproxy RPC 域承载：health/session/settings/credentials 全测试覆盖） |
 | C28 | 人性倾向/项目/预览/工作区（human-disposition/projects/preview/workspace） | domains/* | 4-5 | ⬜ |
 | C29 | 品味记忆 taste | domains/taste | 4 | ⬜ |
 | C30 | 技能包 packs + 插件控制面 plugin（host-inventory 仅视图，发现模型统一上游 cordis，F15） | domains/packs + domains/plugin | 5 | ⬜ |
