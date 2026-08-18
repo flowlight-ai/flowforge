@@ -89,8 +89,8 @@
 > **批次3 子任务分解**（实施进度：）：
 > - 批次3.1 ✅ cats-shared 补全 invocation/queue-entry/session-mutex/zombie 类型 + invocation-state-machine 纯函数
 > - 批次3.2 ✅ cats-stores 补全 IInvocationRecordStore/ITaskManagedWorkRegistrationStore/ITaskProgressStore ports + Memory 实现
-> - 批次3.3 ⏳ 创建 @flowforge/cats-invocation 包骨架 (package.json/tsconfig/invariant.ts)
-> - 批次3.4 ⏳ 实现 InvocationQueueService/InvocationTrackerService/SessionMutexService/TaskProgressService (Cordis Service)
+> - 批次3.3 ✅ 创建 @flowforge/cats-invocation 包骨架 (package.json/tsconfig/invariant.ts)
+> - 批次3.4 ✅ 实现 InvocationQueueService/InvocationTrackerService/SessionMutexService/TaskProgressService (Cordis Service 抽象+Memory实现)
 > - 批次3.5 ⏳ 实现最小骨架 QueueProcessorService + reconcileZombies/StartupReconciler 纯函数
 > - 批次3.6 ⏳ 编写 .spec.ts 测试 + 类型检查 + mgr sync PR
 
@@ -120,9 +120,9 @@
 
 #### 批次3.3-3.6：cats-invocation 包 + Cordis Service 层
 
-> **批次3.3 子任务分解**（实施进度：）：
+> **批次3.3-3.6 子任务分解**（实施进度：）：
 > - 批次3.3 ✅ 创建 @flowforge/cats-invocation 包骨架 (package.json/tsconfig/invariant.ts) + 抽象 CatsInvocation Service 契约
-> - 批次3.4 ⏳ 实现 InvocationQueueService/InvocationTrackerService/SessionMutexService/TaskProgressService (Cordis Service)
+> - 批次3.4 ✅ 实现 InvocationQueueService/InvocationTrackerService/SessionMutexService/TaskProgressService (Cordis Service 抽象+Memory实现)
 > - 批次3.5 ⏳ 实现最小骨架 QueueProcessorService + reconcileZombies/StartupReconciler 纯函数
 > - 批次3.6 ⏳ 编写 .spec.ts 测试 + 类型检查 + mgr sync PR
 
@@ -130,19 +130,54 @@
       — 对齐 dsh `@flowforge/jobs` 范式：抽象 `CatsInvocation extends Service` 挂载到 `ctx.catsInvocation`，
       构造时 `new.target === CatsInvocation` 守护防止直接加载抽象 seam；re-export cats-shared/cats-stores
       invocation 相关类型 + 状态机纯函数 + store ports 供消费者一站式导入
-- [ ] T4.3.2 移植 InvocationQueue → `InvocationQueueService extends Service` → `ctx.catsInvocation.queue`
-      （per-thread×per-user FIFO，effect 管理队列生命周期）
-- [ ] T4.3.3 移植 InvocationTracker → `InvocationTrackerService extends Service` → `ctx.catsInvocation.tracker`
-      （per-slot 互斥锁 + AbortController）
-- [ ] T4.3.4 移植 QueueProcessor → `QueueProcessorService extends Service` → `ctx.catsInvocation.processor`
+- [x] T4.3.2 移植 InvocationQueue → `InvocationQueueService extends Service` → `ctx.catsInvocationQueue`
+      （per-thread×per-user FIFO，幂等去重，容量控制；`MemoryInvocationQueueService` 基于 Map 实现）
+- [x] T4.3.3 移植 InvocationTracker → `InvocationTrackerService extends Service` → `ctx.catsInvocationTracker`
+      （per-slot 互斥锁 + AbortController；F108/F118 D3/F-parallel-cancel 全量语义；`MemoryInvocationTrackerService` 完整移植 start/tryStart/guardDelete/cancel/cancelAll/cancelInvocation/resolveFinalStatus/complete/completeByExecutionId/startAll/tryStartThreadAll/bindExecutionId/trackExternalSlot/getActiveSlots 等 25 个方法）
+- [ ] T4.3.4 移植 QueueProcessor → `QueueProcessorService extends Service` → `ctx.catsInvocationProcessor`
       （调度器 + 终态机 + zombie 恢复）
-- [ ] T4.3.5 移植 TaskProgressService → `TaskProgressService extends Service` → `ctx.catsInvocation.progress`
-      （基于 batch 3.2 的 ITaskProgressStore，提供 snapshot 增删+owner-guarded 清理的 Cordis 包装）
-- [ ] T4.3.6 移植 SessionMutex / AgentSessionMutex → `SessionMutexService extends Service` → `ctx.catsInvocation.mutex`
-      （per-session 串行化锁）
+- [x] T4.3.5 移植 TaskProgressService → `TaskProgressService extends Service` → `ctx.catsInvocationProgress`
+      （基于 batch 3.2 的 ITaskProgressStore，提供 snapshot 增删+owner-guarded 清理的 Cordis 包装；`MemoryTaskProgressService` 委托 store 实现）
+- [x] T4.3.6 移植 SessionMutex / AgentSessionMutex → `SessionMutexService extends Service` → `ctx.catsInvocationMutex`
+      （per-session 串行化锁；`MemorySessionMutexService` 基于 Map+waiter 队列实现；修复 `ForceReleaseResult` 类型对齐 clowder-ai 契约）
 - [ ] T4.3.7 移植 reconcileZombies / convergeZombieQueue / StartupReconciler
       （作为 `InvocationQueueService` 的 `[Service.init]()` 钩子实现）
 - [ ] T4.3.9 测试：入队→出队→执行→完成全链路（mock provider，`vitest .spec.ts`）
+
+#### 批次3.4 实施详情
+
+已完成 4 个 Cordis Service 抽象 + Memory 实现：
+
+1. **InvocationQueueService** (`src/queue.ts`)：抽象基类 + `MemoryInvocationQueueService`
+   - 挂载到 `ctx.catsInvocationQueue`，通过 `CatsInvocation.queue` 访问器聚合
+   - 方法：`enqueue/dequeue/peek/size/remove/markProcessing/markProcessed`
+   - 幂等去重（idempotencyKey）+ 用户消息容量控制（MAX_QUEUE_DEPTH）
+
+2. **InvocationTrackerService** (`src/tracker.ts`)：抽象基类 + `MemoryInvocationTrackerService`
+   - 挂载到 `ctx.catsInvocationTracker`，通过 `CatsInvocation.tracker` 访问器聚合
+   - 全量移植 clowder-ai `InvocationTracker` 的 25 个方法
+   - 保留 F108（per-slot 并发模型）、F118 D3（TTL auto-cleanup）、F-parallel-cancel（独立 batch gate + tombstone 语义）
+   - 使用品牌类型（ThreadId/CatId/UserId），`exactOptionalPropertyTypes` 兼容
+
+3. **SessionMutexService** (`src/mutex.ts`)：抽象基类 + `MemorySessionMutexService`
+   - 挂载到 `ctx.catsInvocationMutex`，通过 `CatsInvocation.mutex` 访问器聚合
+   - 方法：`acquire/forceReleaseByScope/isHeld`
+   - 修复 `ForceReleaseResult` 类型与 clowder-ai 契约对齐（releasedHolders/rejectedWaiters/catIds）
+   - `exactOptionalPropertyTypes` 兼容（Waiter/HeldLock owner 可选属性）
+
+4. **TaskProgressService** (`src/progress.ts`)：抽象基类 + `MemoryTaskProgressService`
+   - 挂载到 `ctx.catsInvocationProgress`，通过 `CatsInvocation.progress` 访问器聚合
+   - 委托 `ITaskProgressStore`（来自 cats-stores batch 3.2）实现所有方法
+   - 方法：`getSnapshot/setSnapshot/deleteSnapshot/deleteSnapshotIfOwner/getThreadSnapshots/deleteThread`
+
+5. **CatsInvocation 聚合服务** (`src/index.ts`)：
+   - 更新 4 个访问器（queue/tracker/mutex/progress），通过 `ctx.get()` 查找子服务
+   - 未注册时抛出明确的配置错误信息
+   - processor 访问器留待批次3.5
+
+6. **类型一致性修复**：
+   - `cats-shared/types/session-mutex.ts`：`ForceReleaseResult` 从 `{released, canceledWaiters}` 改为 `{releasedHolders, rejectedWaiters, catIds?}` 对齐 clowder-ai
+   - `package.json`：新增 `./queue`、`./tracker`、`./mutex`、`./progress` 子路径导出
 
 ### 批次 4：`@flowforge/cats-profile`（档案插件）
 

@@ -39,6 +39,12 @@
       "path": "./packages/cats/shared/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/stores/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/invocation/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

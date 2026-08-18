@@ -7,11 +7,5 @@
   },
   "include": [
     "src"
-  ],
-  "references": [
-    { "path": "../../../vendor/cosmokit" },
-    { "path": "../../../vendor/cordis" },
-    { "path": "../shared" },
-    { "path": "../stores" }
   ]
 }
