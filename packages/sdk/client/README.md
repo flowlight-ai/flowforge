@@ -2,16 +2,16 @@
 
 English | [中文](README.zh.md)
 
-The TypeScript client SDK for driving a FlowForge runtime as a subprocess over stdio JSON-RPC — the design twin of the [Python SDK](../../../python/README.md) (`flowforge`), sharing the same runtime peer, protocol, and layering: `DeepSeekHarness` is the high-level owned-run API, `HarnessClient` the lower-level protocol client. The package root enumerates the consumer interface: the two client layers, caller-facing types, and `JsonRpcResponseError`; source modules, normalization helpers, and subscription-delivery machinery are not consumer imports. A pure library: it registers nothing on a Cordis context; the runtime process it spawns is a complete harness whose composition its own `cordis.yml` decides.
+The TypeScript client SDK for driving a FlowForge runtime as a subprocess over stdio JSON-RPC — the design twin of the [Python SDK](../../../python/README.md) (`flowforge`), sharing the same runtime peer, protocol, and layering: `FlowForgeHarness` is the high-level owned-run API, `HarnessClient` the lower-level protocol client. The package root enumerates the consumer interface: the two client layers, caller-facing types, and `JsonRpcResponseError`; source modules, normalization helpers, and subscription-delivery machinery are not consumer imports. A pure library: it registers nothing on a Cordis context; the runtime process it spawns is a complete harness whose composition its own `cordis.yml` decides.
 
 Unlike the Python SDK, the launch spec is fully explicit (`command`/`args`): this package is for repo-adjacent TypeScript consumers — including the [`flowforge-subagent-ff-sdk`](../../subagent/subagent-ff-sdk/README.md) backend and automation — that know which runtime they are launching. Bundled-runtime resolution (finding a packaged executable) remains the Python distribution's concern.
 
-## DeepSeekHarness
+## FlowForgeHarness
 
 ```ts
-import { DeepSeekHarness } from '@flowforge/sdk-client'
+import { FlowForgeHarness } from '@flowforge/sdk-client'
 
-await using harness = new DeepSeekHarness({
+await using harness = new FlowForgeHarness({
   launch: { command: 'node', args: ['lib/bin.js', 'cordis.yml'] },
   provider: 'deepseek-official',
   model: 'deepseek-v4-flash',

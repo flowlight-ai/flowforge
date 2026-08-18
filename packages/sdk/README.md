@@ -14,7 +14,7 @@ its own `cordis.yml`; the SDK only carries control in and events out.
 | --- | --- | --- |
 | `@flowforge/sdk-protocol` | Shared wire protocol: the newline-delimited JSON-RPC stdio transport plus the named request / result / notification types spoken on the wire. Single source of truth for both ends. | — (library) |
 | `@flowforge/sdk-jsonrpc-server` | Stdio JSON-RPC **server plugin** that exposes the running runtime to external drivers/CLIs. Registered via `ctx.plugin`. | `sdk-jsonrpc-server` (plugin, `apply` via `ctx.plugin`) |
-| `@flowforge/sdk-client` | TypeScript **client SDK**: spawns the runtime over stdio JSON-RPC. `DeepSeekHarness` is the high-level run API; `HarnessClient` is the lower-level protocol client. | — (library) |
+| `@flowforge/sdk-client` | TypeScript **client SDK**: spawns the runtime over stdio JSON-RPC. `FlowForgeHarness` is the high-level run API; `HarnessClient` is the lower-level protocol client. | — (library) |
 
 ## How an external system drives FlowForge
 

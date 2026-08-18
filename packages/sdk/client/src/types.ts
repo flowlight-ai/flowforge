@@ -44,8 +44,8 @@ export interface HarnessClientOptions {
   disposeGraceMs?: number
 }
 
-/** Options for the high-level {@link DeepSeekHarness} wrapper. */
-export interface DeepSeekHarnessOptions {
+/** Options for the high-level {@link FlowForgeHarness} wrapper. */
+export interface FlowForgeHarnessOptions {
   /** Launch spec for the runtime subprocess (command, args, cwd, env, timeouts). */
   launch: HarnessClientOptions
   /** Workspace cwd recorded on every SDK-created session (default: the launch cwd, else `process.cwd()`). */

@@ -262,11 +262,11 @@ const WEB_SEARCH_RESULT: Omit<Extract<ToolResultView, { card: 'web'; kind: 'sear
       publishedAt: '2026-07-01',
     },
     {
-      url: 'https://www.deepseek.com/blog/harness-architecture',
+      url: 'https://gitee.com/flowlight-ai/flowforge/wikis/capability-seams',
       snippet: 'The capability-seam pattern splits each capability into interface, implementation, and consumer packages.',
     },
     {
-      url: 'https://docs.deepseek.com/harness/plugins',
+      url: 'https://gitee.com/flowlight-ai/flowforge/wikis/writing-plugins',
       title: 'Writing a harness plugin',
       publishedAt: '2026-06-15',
     },
@@ -276,7 +276,7 @@ const WEB_SEARCH_RESULT: Omit<Extract<ToolResultView, { card: 'web'; kind: 'sear
 
 /** The `web_fetch` result view for the web-fetch turn, authored inline for the same reason. */
 const WEB_FETCH_RESULT: Omit<Extract<ToolResultView, { card: 'web'; kind: 'fetch' }>, 'card' | 'kind'> = {
-  url: 'https://www.deepseek.com/blog/harness-architecture',
+  url: 'https://gitee.com/flowlight-ai/flowforge/wikis/capability-seams',
   statusCode: 200,
   truncated: false,
 }
@@ -545,8 +545,8 @@ function buildAlphaLog(): SessionEvent[] {
   // the real tools so they hit the keyed WebRow registration. Ordered BEFORE
   // the todo turn for the same reason turn 66 is: the standing plan retires at
   // the next turn/start, so a turn after it would empty the dock's plan strip.
-  toolTurn(70, 'web_search', '{"query":"deepseek harness architecture"}', 'Search results for deepseek harness architecture.')
-  toolTurn(71, 'web_fetch', '{"url":"https://www.deepseek.com/blog/harness-architecture"}', '# Harness architecture\n\nEverything is a plugin.')
+  toolTurn(70, 'web_search', '{"query":"flowforge plugin architecture"}', 'Search results for flowforge plugin architecture.')
+  toolTurn(71, 'web_fetch', '{"url":"https://gitee.com/flowlight-ai/flowforge/wikis/capability-seams"}', '# Harness architecture\n\nEverything is a plugin.')
 
   // Turn 72: max-tokens sample — the provider ends the turn at its output cap
   // mid-sentence, so the chat flow must render the turn-max-tokens notice

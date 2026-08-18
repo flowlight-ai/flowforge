@@ -6,7 +6,7 @@ SDK 提供方会在全新的子进程中把每个 subagent 作为完整的 FlowF
 
 ## 启动与所有权
 
-`start(request)` 先解析子进程工作目录，通过 `DeepSeekHarness` spawn 运行时，并在履行前完成 `initialize` 握手（携带配置的 `provider`/`model` 路由及可选的 `maxTokens` 输出上限）。因此，履行意味着子运行时已就绪、所有权已移交给调用方。spawn、握手或发布前取消失败时，只会在子进程被回收后拒绝；工作目录解析失败则会在尚未 spawn 任何内容时拒绝。
+`start(request)` 先解析子进程工作目录，通过 `FlowForgeHarness` spawn 运行时，并在履行前完成 `initialize` 握手（携带配置的 `provider`/`model` 路由及可选的 `maxTokens` 输出上限）。因此，履行意味着子运行时已就绪、所有权已移交给调用方。spawn、握手或发布前取消失败时，只会在子进程被回收后拒绝；工作目录解析失败则会在尚未 spawn 任何内容时拒绝。
 
 工作目录的解析与 ACP 后端完全一致，并使用 seam 共享的进程外辅助工具（[`flowforge-subagent`](../subagent/README.md)）：设置了 `cwd` 覆盖值时使用该值（加载时校验一次），否则使用发起委派的父会话 cwd，绝不使用服务器进程自身的 cwd。解析出的路径同时成为子进程 cwd 和其 SDK 会话的工作区 cwd。
 
