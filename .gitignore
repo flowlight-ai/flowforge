@@ -252,3 +252,9 @@ vendor/*/src/*.d.ts.map
 vendor/*/src/*.js
 vendor/*/src/*.js.map
 vendor/*/src/*.map
+# cats/ 等包 tsdown 误输出到 src/ 的构建产物（源码仅 .ts，lib/ 才是产物目录）
+packages/*/*/src/**/*.d.ts
+packages/*/*/src/**/*.d.ts.map
+packages/*/*/src/**/*.js
+packages/*/*/src/**/*.js.map
+packages/*/*/src/**/*.map
