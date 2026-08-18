@@ -21,7 +21,7 @@ export const SignalSourceFetchConfigSchema = z.object({
   method: SignalFetchMethodSchema,
   selector: z.string().min(1).optional(),
   timeoutMs: z.number().int().positive().optional(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
 });
 
 export const SignalSourceScheduleSchema = z.object({

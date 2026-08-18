@@ -49,12 +49,12 @@
   "license": "MIT",
   "peerDependencies": {
     "@flowforge/cordis": "workspace:^",
-    "zod": "^3.25.0",
+    "zod": "^4.4.3",
     "yaml": "^2.6.0"
   },
   "devDependencies": {
     "@flowforge/cordis": "workspace:^",
-    "zod": "^3.25.0",
+    "zod": "^4.4.3",
     "yaml": "^2.6.0"
   }
 }

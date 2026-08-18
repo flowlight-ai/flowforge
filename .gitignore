@@ -207,6 +207,10 @@ crash_dumps/
 *.dump
 .trae_bridge
 
+# ==================== typert test temp fixtures (2026-08-18) ====================
+# typert generator 测试运行残留的临时工程目录（如 .typert-artifact-path-*/）
+.typert-*/
+
 # ==================== Refactor temp files (2026-07-29) ====================
 # Web dev server error log (Next.js HMR noise)
 web/.next-dev.err

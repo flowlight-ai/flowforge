@@ -23,9 +23,6 @@
     "types": [
       "node"
     ],
-    "customConditions": [
-      "@zod/source"
-    ],
     "paths": {
       "@flowforge/cats-shared": [
         "./packages/cats/shared/src/index.ts"

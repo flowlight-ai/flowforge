@@ -61,7 +61,7 @@ export const ToolCallContentSchema = z.object({
   type: z.literal('tool_call'),
   toolName: z.string().min(1),
   toolId: z.string().min(1),
-  input: z.record(z.unknown()),
+  input: z.record(z.string(), z.unknown()),
 });
 
 /**
@@ -101,7 +101,7 @@ export const MessageSchema = z.object({
   status: MessageStatusSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
