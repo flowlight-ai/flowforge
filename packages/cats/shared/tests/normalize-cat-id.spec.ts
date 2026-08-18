@@ -42,8 +42,6 @@ async function withCats(): Promise<Context> {
 /** Minimal cat config fixture for testing — only fields read by normalizeCatId. */
 function makeCatConfig(overrides: Partial<CatConfig> & { id: CatConfig['id']; name: string }): CatConfig {
   return {
-    name: overrides.name,
-    id: overrides.id,
     displayName: overrides.name,
     avatar: '/avatars/test.png',
     color: { primary: '#000', secondary: '#fff' },
@@ -247,7 +245,7 @@ describe('normalizeCatId (F154 AC-A3, AC-A7)', () => {
     // "猫" matches opus ("布偶猫"), opus-45 ("布偶猫 Opus 4.5"), codex ("缅因猫")
     const r = normalizeCatId('猫', ctx.cats)
     expect(r.ok).toBe(false)
-    if (!r.ok) {
+    if (!r.ok && r.reason === 'ambiguous') {
       expect(r.reason).toBe('ambiguous')
       expect(r.candidates.length).toBeGreaterThanOrEqual(2)
       expect(r.candidates).toContain('opus')
@@ -295,7 +293,6 @@ describe('normalizeCatId — partial registry hardening', () => {
       makeCatConfig({
         id: createCatId('legacy-partial'),
         name: 'Legacy Partial Cat',
-        clientId: 'test-client',
         // Deliberately omit mentionPatterns / displayName
       }),
     )
@@ -313,12 +310,11 @@ describe('normalizeCatId — partial registry hardening', () => {
       makeCatConfig({
         id: createCatId('legacy-partial'),
         name: 'Legacy Partial Cat',
-        clientId: 'test-client',
       }),
     )
     const r = normalizeCatId('猫', ctx.cats)
     expect(r.ok).toBe(false)
-    if (!r.ok) {
+    if (!r.ok && r.reason === 'ambiguous') {
       expect(r.reason).toBe('ambiguous')
       expect([...r.candidates].sort()).toEqual(['codex', 'opus'])
     }

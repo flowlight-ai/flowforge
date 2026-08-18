@@ -7,5 +7,16 @@
   },
   "include": [
     "src"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../shared/tsconfig.host.json"
+    },
+    {
+      "path": "../stores/tsconfig.host.json"
+    }
   ]
 }
