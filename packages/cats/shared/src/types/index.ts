@@ -1,0 +1,1358 @@
+/**
+ * Types Index
+ * 导出所有类型定义
+ */
+
+// F093 World Engine types (re-exported from schemas for convenience)
+export type {
+  CanonPromotionRecord,
+  CanonStatus,
+  CanonSummaryEntry,
+  CareLoopHint,
+  CharacterCoreIdentity,
+  CharacterGrowthState,
+  CharacterInnerDrive,
+  CharacterMaskOverlay,
+  CharacterRecord,
+  CharacterRelationshipTension,
+  CharacterVoiceAndImage,
+  JsonPatchOperation,
+  RelationshipBond,
+  SceneRecord,
+  SceneStatus,
+  WorldAction,
+  WorldActionEnvelope,
+  WorldActorKind,
+  WorldActorRef,
+  WorldContextEnvelope,
+  WorldEventEntry,
+  WorldEventType,
+  WorldMode,
+  WorldRecallResult,
+  WorldRecord,
+  WorldStatus,
+} from '../schemas/world.ts';
+// A2A Protocol types (F050 Phase 3)
+export type {
+  A2AAgentCard,
+  A2AAgentConfig,
+  A2AArtifact,
+  A2AJsonRpcResponse,
+  A2AMessage,
+  A2APart,
+  A2ATask,
+  A2ATaskStatus,
+} from './a2a.ts';
+// F167 Phase S: action-scoped A2A successor single-flight contract
+export {
+  ACTION_SUCCESSOR_ACTION_FAMILIES,
+  ACTION_SUCCESSOR_SLOTS,
+  ACTION_TERMINAL_PREDICATE_KINDS,
+  type ActionSuccessorActionFamily,
+  type ActionSuccessorClaimOrigin,
+  type ActionSuccessorMode,
+  type ActionSuccessorRequestMetadata,
+  type ActionSuccessorSlot,
+  type ActionTerminalPredicateInput,
+  type ActionTerminalPredicateKind,
+  actionSuccessorMetadataSchema,
+  actionTerminalPredicateInputSchema,
+  DISPATCH_PROPOSED_ACTION_CAPABILITIES,
+  type DispatchProposedActionInput,
+  dispatchProposedActionInputSchema,
+  isAllowedActionSuccessorSlot,
+  REVIEW_REENTRY_REASONS,
+  type ReviewReentry,
+  type ReviewReentryReason,
+  reviewReentrySchema,
+} from './action-successor.ts';
+// F178 Phase B: agent-key record + verify result
+export type { AgentKeyRecord, AgentKeyVerifyResult } from './agent-key.ts';
+// F178 Phase B: agent-key reason taxonomy
+export {
+  AGENT_KEY_FAILURE_REASONS,
+  type AgentKeyFailureReason,
+  isAgentKeyFailureReason,
+} from './agent-key-reasons.ts';
+// Approval Hub types and provenance validators (F246 Phase I)
+export {
+  type ApprovalCardRef,
+  type ApprovalDecisionMode,
+  type ApprovalEnvelope,
+  type ApprovalEnvelopeIdentity,
+  ApprovalFeatureId,
+  ApprovalItem,
+  ApprovalItemStatus,
+  type ApprovalNavigation,
+  type ApprovalOriginRef,
+  type ApprovalProducerId,
+  type ApprovalPublication,
+  assertApprovalEnvelopeIdentity,
+  commitApprovalEnvelope,
+  SettledApprovalItem,
+  SettledStatus,
+  validateApprovalCardRef,
+  validateApprovalEnvelope,
+  validateApprovalNavigation,
+  validateApprovalOriginRef,
+  validateApprovalPublication,
+} from './approval-hub.ts';
+// Authorization types (猫猫授权系统)
+export type {
+  AuthorizationAuditEntry,
+  AuthorizationRequestEvent,
+  AuthorizationRespondEvent,
+  AuthorizationRule,
+  PendingRequestRecord,
+  PermissionRequest,
+  PermissionResponse,
+  PermissionStatusResponse,
+  RespondScope,
+} from './authorization.ts';
+// Backlog types (F049 Mission Control)
+export type {
+  AcquireBacklogLeaseInput,
+  AtomicDispatchInput,
+  BacklogAuditAction,
+  BacklogAuditActor,
+  BacklogAuditEntry,
+  BacklogClaimSuggestion,
+  BacklogDependencies,
+  BacklogItem,
+  BacklogLease,
+  BacklogLeaseState,
+  BacklogPriority,
+  BacklogStatus,
+  BacklogSuggestionStatus,
+  CreateBacklogItemInput,
+  DecideBacklogClaimInput,
+  DispatchBacklogItemInput,
+  FeatureDocAC,
+  FeatureDocDetail,
+  FeatureDocPhase,
+  FeatureDocRisk,
+  HeartbeatBacklogLeaseInput,
+  MarkDoneInput,
+  ReclaimBacklogLeaseInput,
+  RefreshBacklogItemInput,
+  ReleaseBacklogLeaseInput,
+  SuggestBacklogClaimInput,
+  ThreadPhase,
+  UpdateBacklogDispatchProgressInput,
+} from './backlog.ts';
+// F233 Phase B + Phase C: Ball Custody event-stream types (event-sourcing; impl stays in api)
+export type {
+  BallCustodyEvent,
+  BallCustodyProjection,
+  BallEuthanasiaKind, // Phase C C1a (KD-C1/C2): cloud R1 P2 修正 — C1b/C1c consumers 经 @flowforge/cats-shared barrel 拿 type
+  BallEventClassification,
+  BallEventKind,
+  BallIntent,
+  BallResolveMode,
+  BallState,
+} from './ball-custody.ts';
+// Brake types (F085 Phase 4+6 — 平台级健康守护 + 社区 opt-in + 双档)
+export type {
+  BrakeCheckinRequest,
+  BrakeCheckinResponse,
+  BrakeEvent,
+  BrakeMode,
+  BrakeSettings,
+  BrakeState,
+} from './brake.ts';
+// F183 Phase B0: Bubble pipeline identity contract + invariant diagnostics
+export {
+  BUBBLE_EVENT_TYPES,
+  BUBBLE_KINDS,
+  type BubbleEventType,
+  type BubbleInvariantViolation,
+  type BubbleKind,
+  type BubbleOriginPhase,
+  type BubbleRecoveryAction,
+  type BubbleSourcePath,
+  type BubbleStableIdentity,
+  type BubbleViolationKind,
+  isBubbleEventType,
+  isBubbleKind,
+} from './bubble-pipeline.ts';
+// F174 Phase A: shared reason taxonomy for callback auth failures
+export {
+  CALLBACK_AUTH_FAILURE_REASONS,
+  type CallbackAuthFailureReason,
+  isCallbackAuthFailureReason,
+} from './callback-auth-reasons.ts';
+// F178 Phase B: unified callback principal (KD-3)
+export type { CallbackPrincipal } from './callback-principal.ts';
+// Capability types (F041 统一能力模型)
+export type {
+  BootstrapAction,
+  BootstrapReport,
+  CapabilitiesConfig,
+  CapabilityAuditEntry,
+  CapabilityBoardItem,
+  CapabilityBoardResponse,
+  CapabilityEntry,
+  CapabilityPatchRequest,
+  CatCapabilityOverride,
+  CatFamily,
+  DispatchExecutionDigest,
+  DispatchMissionPack,
+  DoneWhenResult,
+  GovernanceCategory,
+  GovernanceFinding,
+  GovernanceHealthSummary,
+  GovernancePackMeta,
+  GovernanceRule,
+  LockVersion,
+  McpDeleteParams,
+  McpEnvEntry,
+  McpInstallPreview,
+  McpInstallRequest,
+  McpServerDescriptor,
+  McpSyncState,
+  McpToolInfo,
+  McpTransport,
+  ProbeState,
+  SkillHealthSummary,
+} from './capability.ts';
+// Cat types
+export type {
+  AgyProfileConfig,
+  CatColor,
+  CatConfig,
+  /** @deprecated clowder-ai#340: Use ClientId instead. */
+  CatProvider,
+  CatState,
+  CatStatus,
+  ClientId,
+} from './cat.ts';
+// Cat breed/variant types (Breed+Variant two-layer schema)
+export type {
+  // F136 Phase 4: Account config types
+  AccountConfig,
+  AccountProtocol,
+  CatBreed,
+  CatCafeConfig,
+  CatCafeConfigV1,
+  CatCafeConfigV2,
+  CatFeatures,
+  CatVariant,
+  CliConfig,
+  // F067: Co-Creator config for @ mention routing
+  CoCreatorConfig,
+  ContextBudget,
+  CredentialEntry,
+  MissionHubSelfClaimScope,
+  // F032: Roster types for collaboration rules
+  ReviewPolicy,
+  Roster,
+  RosterEntry,
+} from './cat-breed.ts';
+// F182: Cat routing error types
+export type { CatAlternative, CatRoutingError } from './cat-routing.ts';
+// F212: CLI error diagnostics (cross-package data contract; classifier/sanitizer impl stays in api)
+export type { CliDiagnostics, CliErrorReasonCode } from './cli-diagnostics.ts';
+export type { BuiltinAccountClient } from './client-routing.ts';
+export {
+  builtinAccountFamilyForClient,
+  builtinAccountIdForClient,
+  protocolForClient,
+} from './client-routing.ts';
+// Command types (F142 Phase B — slash command framework)
+export type {
+  CommandSource,
+  CommandSurface,
+  ParsedCommand,
+  SlashCommandDefinition,
+} from './command.ts';
+// Community Ops Event types (F168 Phase A/B — event-sourcing engine)
+export type {
+  CloudReviewPolicy,
+  CommunityClosureWaiver,
+  CommunityEvent,
+  CommunityEventClassification,
+  CommunityEventKind,
+  CommunityNextOwner,
+  CommunityObjectProjection,
+  CommunityObjectState,
+  ExternalCiStatus,
+  ExternalCloudReviewStatus,
+  ExternalReviewAggregate,
+  ExternalReviewLifecycle,
+  ExternalReviewMode,
+  GitHubAuthorAssociation,
+  IssueCommentSuppressionReason,
+  IssueFixEvidence,
+  ReviewDeliveryOutcome,
+} from './community-event.ts';
+export type {
+  CommunityIssueItem,
+  CommunityRepoConfig,
+  ConsensusResult,
+  ConsensusState,
+  CreateCommunityIssueInput,
+  DirectionCardPayload,
+  GuardianAssignment,
+  IntakeChecklistItem,
+  IssueState,
+  IssueType,
+  ParseRouteRecommendationResult,
+  PrBoardGroup,
+  QuestionGrade,
+  QuestionId,
+  QuestionResult,
+  ReplyState,
+  RouteAcceptance,
+  RouteRecommendation,
+  RouteSource,
+  TriageConfidence,
+  TriageEntry,
+  UpdateCommunityIssueInput,
+  Verdict,
+} from './community-issue.ts';
+// Community Issue types (F168 社区事务编排引擎)
+export {
+  DEFAULT_INTAKE_CHECKLIST,
+  deriveTriageConfidence,
+  parseRouteRecommendation,
+  validateIntakeChecklist,
+} from './community-issue.ts';
+// Community Issue Draft types (F235)
+export type {
+  CommunityIssueDraft,
+  CommunityIssueDraftId,
+  CommunityIssueDraftSourceType,
+  CommunityIssueDraftStatus,
+  CreateCommunityIssueDraftInput,
+} from './community-issue-draft.ts';
+export { createCommunityIssueDraft, generateCommunityIssueDraftId } from './community-issue-draft.ts';
+// F168 Phase C: Community Role Registry (engine routes by role, never cat name)
+export {
+  COMMUNITY_ROLES,
+  type CommunityRole,
+  isCommunityRole,
+  isRoleCapability,
+  ROLE_CAPABILITIES,
+  type RoleCapability,
+  type RoleExecutor,
+  type RoleResolver,
+} from './community-role.ts';
+// F229: 猫猫球前台猫 shared types
+export type {
+  ConciergeBallState,
+  ConciergeCardAction,
+  ConciergeConfig,
+  ConciergeThreadKind,
+  ConfirmationStatus,
+  GateKeepingThreadKind,
+  InvestigationAnchor,
+  InvestigationJob,
+  InvestigationJobStatus,
+  InvestigationReport,
+  PendingConfirmation,
+  RelayReceipt,
+  RelayReceiptStatus,
+  ThreadKind,
+  TriagePlan,
+  TriagePlanIntent,
+  TriagePlanResult,
+  TriagePlanStatus,
+  TriagePlanTarget,
+} from './concierge.ts';
+export {
+  BALL_SIZE_DEFAULT,
+  BALL_SIZE_MAX,
+  BALL_SIZE_MIN,
+  CONCIERGE_CONFIG_DEFAULTS,
+  clampBallSize,
+} from './concierge.ts';
+// Unified Config Field types (F240 KD-15 — shared by Plugin + IM Connector)
+export type {
+  ActionDef,
+  ConfigField,
+  ConfigFieldType,
+  InputConfigField,
+  ListConfigField,
+  OperationConfigField,
+  OperationState,
+  RequiredWhen,
+  SelectConfigField,
+  ToggleConfigField,
+  ValueConfigField,
+} from './config-field.ts';
+export { isOperationField, isValueField, matchesRequiredWhen } from './config-field.ts';
+export { decodeFieldValue, encodeFieldValue } from './config-field-codec.ts';
+// Connector types (F97 外部信息源抽象)
+export type {
+  ConnectorDefinition,
+  ConnectorIconSpec,
+  ConnectorSource,
+  ConnectorThreadBinding,
+  OutboundDeliveryTarget,
+  ReplyPreview,
+  ReplyPreviewKind,
+  SchedulerLifecycleEvent,
+  SchedulerMessageExtra,
+  SchedulerToastPayload,
+} from './connector.ts';
+export {
+  getAllConnectorDefinitions,
+  getConnectorDefinition,
+  isStaticConnectorId,
+  registerConnectorDefinition,
+  SCHEDULER_TRIGGER_PREFIX,
+  unregisterConnectorDefinition,
+} from './connector.ts';
+export type {
+  CrossThreadCoordination,
+  CrossThreadCoordinationInput,
+  CrossThreadCoordinationInputPhase,
+} from './cross-thread-coordination.ts';
+export { isCrossThreadProvenance } from './cross-thread-coordination.ts';
+// Deliberate types (4-E 两轮制 - 类型预埋)
+export type {
+  DeliberateEvent,
+  DeliberatePhase,
+  DeliberateSession,
+  DeliberateTransition,
+} from './deliberate.ts';
+// Dispatch proposal types (F246 Phase B: F193 E3 cross-thread dispatch)
+export {
+  type DispatchProposal,
+  type DispatchProposalStatus,
+  deriveDispatchProposalSourceInvocationId,
+  type EffectClass,
+} from './dispatch-proposal.ts';
+// Dossier distillation proposal types (F208 Phase E 画像蒸馏)
+export type {
+  DistillationEvidenceRef,
+  DistillationProposalStatus,
+  DistillationSourceEvent,
+  DossierDistillationProposal,
+} from './dossier-distillation.ts';
+export {
+  DISTILLATION_SOURCE_EVENTS,
+  isDistillationSourceEvent,
+} from './dossier-distillation.ts';
+// F233 Phase A: 值班简报 DTO (pure-projection aggregator output; impl stays in api)
+export type { BallEntry, BallEntryKind, DutyBriefing, DutyBriefingCounts } from './duty-briefing.ts';
+// Entity proposal types (F260 Phase A 实体治理)
+export type {
+  EntityConflictContext,
+  EntityConflictReason,
+  EntityConflictRecord,
+  EntityConflictResolutionAction,
+  EntityConflictResolutionRequest,
+  EntityProposal,
+  EntityProposalApprovalDetail,
+  EntityProposalProvenance,
+  EntityProposalStatus,
+  EntityStance,
+  EntityType as SharedEntityType,
+  EntityVisibilityScope,
+} from './entity-proposal.ts';
+export {
+  ENTITY_CONFLICT_RESOLUTION_ACTIONS,
+  ENTITY_STANCES,
+  ENTITY_VISIBILITY_SCOPES,
+} from './entity-proposal.ts';
+// F227: Event Memory types (cognitive-transition event index)
+export {
+  COGNITIVE_TRANSITIONS,
+  type CognitiveTransition,
+  EVENT_CONFIDENCES,
+  EVENT_TRIGGERS,
+  type EventConfidence,
+  type EventMemoryId,
+  type EventMemoryRecord,
+  type EventTrigger,
+  generateEventId,
+  isEventMemoryRecord,
+  isValidOwnerUserId,
+  type StoredEventMemory,
+} from './event-memory.ts';
+// External project types (F076 跨项目作战面板)
+export type {
+  CreateExternalProjectInput,
+  ExternalProject,
+} from './external-project.ts';
+// F233 Phase C C2a: Feat Trajectory types (OQ-8 三源 source-contract: event-stream / historical-stitched / git-ref-snapshot)
+export type {
+  BallShapedTrajectoryKind,
+  FeatThreadJoinMethod,
+  FeatThreadJoinProvenance,
+  FeatTrajectoryEntry,
+  FeatTrajectoryKind,
+  FeatTrajectoryProjection,
+  FeatTrajectorySource,
+  GitRefEntryIdParts,
+  GitRefSnapshot,
+  GitShapedTrajectoryKind,
+  HistoricalTrajectoryKind,
+  StaleBucket,
+  TrajectoryProvenance,
+} from './feat-trajectory.ts';
+export { makeGitRefEntryId } from './feat-trajectory.ts';
+// F254 Phase E: persistent catch-closure responsibility and output-commit decisions
+export type {
+  ClosureDraftBody,
+  FreshnessClosureAggregate,
+  FreshnessClosureAttempt,
+  FreshnessClosureBlockedReason,
+  FreshnessClosureDisposition,
+  FreshnessClosureProjection,
+  FreshnessClosureStatus,
+  FreshnessSupplementAggregate,
+  FreshnessSupplementFailureReason,
+  FreshnessSupplementProjection,
+  FreshnessSupplementStatus,
+  LegacyClosureMigrationOutcomeCounts,
+  OutputCommitDecision,
+  PublishedFreshnessAnnotation,
+} from './freshness-closure.ts';
+// F245: Friction Signal Eval types
+export type {
+  ActionableFrictionCandidate,
+  ClassifiedFrictionCluster,
+  FrictionChannel,
+  FrictionCluster,
+  FrictionClusterActionability,
+  FrictionClusterMember,
+  FrictionFollowupDraft,
+  FrictionRollupInput,
+  FrictionRollupReport,
+  FrictionRollupSourceSelector,
+  FrictionRootCause,
+  FrictionSensorForm,
+  FrictionSeverity,
+  FrictionSignal,
+  FrictionTailSummary,
+  ReferenceOnlyFrictionCluster,
+} from './friction-signal.ts';
+// F222: Frustration Auto-Issue types
+export type {
+  CreateFrustrationIssueInput,
+  FrustrationContextMessage,
+  FrustrationContextToolCall,
+  FrustrationIssue,
+  FrustrationIssueContext,
+  FrustrationIssueId,
+  FrustrationIssueStatus,
+  FrustrationSignalType,
+} from './frustration-issue.ts';
+export { createFrustrationIssue, generateFrustrationIssueId } from './frustration-issue.ts';
+// Game engine types (F101)
+export type {
+  ActionDefinition,
+  ActionStatus,
+  ActorType,
+  Ballot,
+  EventScope,
+  GameAction,
+  GameConfig,
+  GameDefinition,
+  GameEvent,
+  GameResultStats,
+  GameRuntime,
+  GameView,
+  PendingAction,
+  PhaseDefinition,
+  Resolution,
+  RoleDefinition,
+  Seat,
+  SeatId,
+  SeatView,
+  WinCondition,
+} from './game.ts';
+export {
+  isGameEvent,
+  isSeatId,
+  isValidActionStatus,
+  isValidScope,
+} from './game.ts';
+export {
+  type AwaitStateV1,
+  GITHUB_WAIT_PREDICATE_KINDS,
+  type GitHubCiBaselineBucket,
+  type GitHubReviewThreadBaseline,
+  type GitHubWaitBaseline,
+  type GitHubWaitMatchedDelta,
+  type GitHubWaitPredicate,
+  type GitHubWaitPredicateKind,
+  type WaitOutcomeDelivery,
+  type WaitOutcomeV1,
+  type WaitOwnerFence,
+} from './github-wait.ts';
+// F281 Phase A: server-bound human disposition feedback and exact-subject eligibility contract
+export {
+  buildHumanDispositionEnvelope,
+  buildHumanDispositionLedgerEntry,
+  buildHumanDispositionLedgerReceipt,
+  classifyHumanDispositionFeedbackReplay,
+  classifyHumanDispositionSourceReplay,
+  HUMAN_DISPOSITION_REASON_CODES,
+  HUMAN_DISPOSITION_REASON_CORRECTIONS,
+  type HumanDispositionDecision,
+  type HumanDispositionDecisionEpisode,
+  type HumanDispositionEligibilityContext,
+  type HumanDispositionEnvelope,
+  type HumanDispositionExpiry,
+  type HumanDispositionFeedbackInput,
+  type HumanDispositionFeedbackReplay,
+  type HumanDispositionInteractionKind,
+  type HumanDispositionInvalidator,
+  type HumanDispositionInvalidatorTruth,
+  type HumanDispositionLedgerEntry,
+  type HumanDispositionLedgerReceipt,
+  type HumanDispositionLineageTruth,
+  type HumanDispositionReasonCode,
+  type HumanDispositionScope,
+  type HumanDispositionServerBinding,
+  type HumanDispositionSourceRef,
+  type HumanDispositionSourceReplay,
+  humanDispositionDecisionEpisodeSchema,
+  humanDispositionDecisionSchema,
+  humanDispositionEligibilityContextSchema,
+  humanDispositionEnvelopeSchema,
+  humanDispositionExpirySchema,
+  humanDispositionFeedbackInputSchema,
+  humanDispositionInteractionKindSchema,
+  humanDispositionInvalidatorSchema,
+  humanDispositionInvalidatorTruthSchema,
+  humanDispositionLedgerEntrySchema,
+  humanDispositionLedgerReceiptSchema,
+  humanDispositionLineageTruthSchema,
+  humanDispositionScopeSchema,
+  humanDispositionServerBindingSchema,
+  isHumanDispositionEnvelopeEligible,
+} from './human-disposition-feedback.ts';
+// ID types
+export type {
+  CatId,
+  MessageId,
+  ProposalId,
+  SessionId,
+  ThreadId,
+  UserId,
+} from './ids.ts';
+export {
+  createCatId,
+  createMessageId,
+  createProposalId,
+  createSessionId,
+  createThreadId,
+  createUserId,
+  generateId,
+  generateMessageId,
+  generateProposalId,
+  generateSessionId,
+  generateThreadId,
+} from './ids.ts';
+// F237: Injection Trace types (v0 — observability layer)
+export type {
+  DeliveryChannel,
+  InjectionStage,
+  InjectionTraceDetail,
+  InjectionTraceSummary,
+  ObservedSegment,
+  StageDeliveryDecision,
+} from './injection-trace.ts';
+// Intent Card + Need Audit types (F076 需求翻译官)
+export type {
+  CreateIntentCardInput,
+  CreateNeedAuditFrameInput,
+  IntentCard,
+  NeedAuditFrame,
+  ResolutionPath,
+  RiskDetectionResult,
+  RiskSignal,
+  SizeBand,
+  SourceTag,
+  TriageBucket,
+  TriageIntentCardInput,
+  TriageResult,
+} from './intent-card.ts';
+// Leaderboard types (F075 排行榜)
+export type {
+  Achievement,
+  CvoLevel,
+  GameRecord,
+  GameRecordInput,
+  GameStats,
+  LeaderboardEvent,
+  LeaderboardRange,
+  LeaderboardStatsResponse,
+  MentionStats,
+  RankedCat,
+  SillyCatEntry,
+  SillyStats,
+  StreakCat,
+  WorkStats,
+} from './leaderboard.ts';
+// Limb types (F126 四肢控制面)
+export type {
+  ILimbNode,
+  LimbAccessEntry,
+  LimbActionLogEntry,
+  LimbAuthLevel,
+  LimbCapability,
+  LimbCommandParamSchema,
+  LimbCommandSchema,
+  LimbInvocationContext,
+  LimbInvokeResult,
+  LimbLease,
+  LimbNodeRecord,
+  LimbNodeStatus,
+} from './limb.ts';
+// F275 Phase B: internal managed-work identity kernel
+export type {
+  ManagedWorkBinding,
+  WorkAdmission,
+  WorkAdmissionProducerKind,
+  WorkAttempt,
+  WorkflowSopAdmissionBundle,
+} from './managed-work.ts';
+// Marketplace types (F146 MCP Marketplace Control Plane)
+export type {
+  InstallMode,
+  InstallPlan,
+  MarketplaceAdapter,
+  MarketplaceArtifactKind,
+  MarketplaceEcosystem,
+  MarketplaceSearchQuery,
+  MarketplaceSearchResult,
+  TrustLevel,
+} from './marketplace.ts';
+export {
+  INSTALL_MODES,
+  MARKETPLACE_ARTIFACT_KINDS,
+  MARKETPLACE_ECOSYSTEMS,
+  TRUST_LEVELS,
+} from './marketplace.ts';
+// Meeting types (F195 Phase C — Meeting Copilot)
+export type {
+  MeetingParticipant,
+  MeetingSession,
+  MeetingStatus,
+  ParticipantRole,
+} from './meeting.ts';
+export {
+  createMeetingSession,
+  transitionMeetingStatus,
+  validateParticipant,
+} from './meeting.ts';
+// Meeting context block (F195 Phase C — untrusted transcript isolation)
+export type {
+  MeetingContextBlock,
+  MeetingContextProvenance,
+} from './meeting-context-block.ts';
+export { createMeetingContextBlock } from './meeting-context-block.ts';
+// Memory types (F3-lite 显式记忆)
+export type {
+  MemoryEntry,
+  MemoryInput,
+} from './memory.ts';
+// F287 Phase C: bounded Memory Cue Plane shared contract.
+export {
+  type CueEnvelopeV1,
+  cueEnvelopeV1Schema,
+  type DeliveryDecisionCueCarrierV1,
+  type DeliveryDecisionOpportunityV1,
+  deliveryDecisionCueCarrierV1Schema,
+  deliveryDecisionOpportunityV1Schema,
+  isCueEnvelopeV1,
+  isRecallOpportunityV1,
+  type JudgmentSurfaceEnteredOpportunityV1,
+  judgmentSurfaceEnteredOpportunityV1Schema,
+  MEMORY_CUE_INVALIDATORS,
+  type MemoryCueInvalidator,
+  RECALL_OPPORTUNITY_CATALOG_VERSION,
+  RECALL_OPPORTUNITY_V1_PAIRS,
+  RECALL_RESOLVER_FAMILIES,
+  type RecallOpportunityV1,
+  type RecallResolverFamily,
+  type RecallScopeV1,
+  recallOpportunityV1Schema,
+  recallScopeV1Schema,
+  type SubjectSeenOpportunityV1,
+  subjectSeenOpportunityV1Schema,
+} from './memory-cue.ts';
+// Message types
+export type {
+  AgentStreamMessage,
+  CodeContent,
+  ImageContent,
+  Message,
+  MessageContent,
+  MessageSender,
+  MessageStatus,
+  TextContent,
+  ToolCallContent,
+  ToolResultContent,
+} from './message.ts';
+export {
+  createCatMessage,
+  createUserMessage,
+} from './message.ts';
+// Mount Rules types (F228 Skill 挂载规则解耦)
+export type {
+  CustomMountPointRule,
+  MountRuleEntry,
+  MountRules,
+  SkillsSyncState,
+  StandardMountPointId,
+  StandardMountPointRule,
+} from './mount-rules.ts';
+export { DEFAULT_MOUNT_RULES, STANDARD_MOUNT_POINT_IDS } from './mount-rules.ts';
+// Multi-mention types (F086 Cat Orchestration)
+export type {
+  MultiMentionRequest,
+  MultiMentionResponse,
+  MultiMentionResponseStatus,
+  MultiMentionResult,
+  MultiMentionStatus,
+  MultiMentionTriggerType,
+} from './multi-mention.ts';
+export {
+  ALL_MULTI_MENTION_STATUSES,
+  DEFAULT_TIMEOUT_MINUTES,
+  MAX_MULTI_MENTION_TARGETS,
+  MAX_TIMEOUT_MINUTES,
+  MIN_TIMEOUT_MINUTES,
+  MULTI_MENTION_TERMINAL_STATES,
+} from './multi-mention.ts';
+// Pack System types (F129 Multi-Agent Mod)
+export type {
+  CompiledPackBlocks,
+  ConstraintSeverity,
+  MaskActivation,
+  PackBehavior,
+  PackCompatibility,
+  PackConstraint,
+  PackDefaults,
+  PackGuardrails,
+  PackManifest,
+  PackMask,
+  PackOnDisk,
+  PackScope,
+  PackType,
+  PackWorkflow,
+  PackWorkflowStep,
+  PackWorldDriver,
+  ResolverType,
+  WorkflowAction,
+} from './pack.ts';
+// F278: Paw-Feel Disposition Inbox contracts
+export {
+  isCompletePawFeelDutyConfig,
+  PAW_FEEL_DISPOSITION_STATES,
+  PAW_FEEL_INBOX_SORTS,
+  PAW_FEEL_NO_ACTION_REASONS,
+  PAW_FEEL_REVIEW_BUNDLE_BASES,
+  type PawFeelCaptureAssessment,
+  type PawFeelCaptureMethod,
+  type PawFeelDenominator,
+  type PawFeelDispositionActor,
+  type PawFeelDispositionEvent,
+  type PawFeelDispositionProjection,
+  type PawFeelDispositionState,
+  type PawFeelDutyConfig,
+  type PawFeelEventBase,
+  type PawFeelInboxCounts,
+  type PawFeelInboxItem,
+  type PawFeelInboxPage,
+  type PawFeelInboxSort,
+  type PawFeelNoActionReason,
+  type PawFeelReconciliationCoverage,
+  type PawFeelReviewBundle,
+  type PawFeelReviewBundleBasis,
+  type PawFeelReviewBundleCounts,
+  type PawFeelSignalId,
+  type PawFeelSourceRef,
+  type PawFeelSourceResolution,
+} from './paw-feel-disposition.ts';
+// F276 owner-private people and relationship memory contracts
+export {
+  type CandidateClaimDraft,
+  type CandidateClaimDraftId,
+  type CandidateInteractionDraft,
+  type CandidateInteractionProposal,
+  type CandidateRelationshipDraft,
+  type CaptureCandidate,
+  type CaptureCandidateId,
+  type CaptureCandidateState,
+  candidateClaimDraftIdSchema,
+  candidateClaimDraftSchema,
+  candidateInteractionDraftSchema,
+  candidateInteractionProposalSchema,
+  candidateRelationshipDraftSchema,
+  captureCandidateIdSchema,
+  captureCandidateSchema,
+  createTemporalValueSchema,
+  type InteractionEvent,
+  type InteractionEventId,
+  interactionEventIdSchema,
+  interactionEventSchema,
+  interactionSourceEvidenceSchema,
+  type JsonValue,
+  jsonValueSchema,
+  type MaterializableClaimPayload,
+  type MaterializationAuthority,
+  materializableClaimPayloadSchema,
+  materializationAuthoritySchema,
+  PERSON_MEMORY_CANDIDATE_STATES,
+  PERSON_MEMORY_INTERACTION_EVIDENCE_FIELDS,
+  PERSON_MEMORY_LIMITS,
+  type PersonClaimId,
+  type PersonClaimVersion,
+  type PersonId,
+  type PersonIdentity,
+  type PersonIdentityDraft,
+  type PersonMemoryApprovalProjection,
+  type PersonMemoryAssertionBinding,
+  type PersonMemoryAssertionMatrixInput,
+  type PersonMemoryAssertionRole,
+  type PersonMemoryDeletionReceipt,
+  type PersonMemoryInteractionApprovalDetail,
+  type PersonMemoryResolvedSourceBundle,
+  type PersonMemorySourceBundleInput,
+  type PersonMemorySourceInput,
+  type PersonMemorySourceRef,
+  type PersonMemorySuppressionToken,
+  type PersonRelationship,
+  type PersonRelationshipId,
+  personClaimIdSchema,
+  personClaimVersionSchema,
+  personForgetRequestIdSchema,
+  personIdentityDraftSchema,
+  personIdentitySchema,
+  personIdSchema,
+  personMemoryApprovalProjectionSchema,
+  personMemoryAssertionBindingSchema,
+  personMemoryAssertionRoleSchema,
+  personMemoryDeletionReceiptSchema,
+  personMemoryInteractionApprovalDetailSchema,
+  personMemoryInteractionEvidenceFieldSchema,
+  personMemoryResolvedSourceBundleSchema,
+  personMemorySourceBundleInputSchema,
+  personMemorySourceInputSchema,
+  personMemorySourceRefSchema,
+  personMemorySuppressionTokenSchema,
+  personRelationshipIdSchema,
+  personRelationshipSchema,
+  personSuppressionTokenIdSchema,
+  type RelationshipCard,
+  type ResolvedPersonMemoryAssertionBinding,
+  type ResolvedPersonMemorySource,
+  relationshipCardSchema,
+  resolvedPersonMemoryAssertionBindingSchema,
+  resolvedPersonMemorySourceSchema,
+  type TemporalValue,
+  temporalValueSchema,
+  validatePersonMemoryAssertionMatrix,
+  type WorkspaceEntityLink,
+  workspaceEntityLinkSchema,
+} from './person-memory.ts';
+export {
+  PERSON_MEMORY_PREFLIGHT_ISSUE_CODES,
+  type PersonMemoryInformedEvidence,
+  type PersonMemoryProposalPreflightBlock,
+  type PersonMemoryProposalPreflightBudget,
+  type PersonMemoryProposalPreflightIssue,
+  personMemoryInformedEvidenceSchema,
+  personMemoryProposalPreflightBlockSchema,
+  personMemoryProposalPreflightBudgetSchema,
+  personMemoryProposalPreflightIssueSchema,
+} from './person-memory-preflight.ts';
+// Plugin Framework types (F202 声明式插件注册)
+export type {
+  PluginConfigField,
+  PluginHealthCheck,
+  PluginInfo,
+  PluginManifest,
+  PluginResourceDef,
+  PluginResourceStatus,
+  PluginStatus,
+} from './plugin.ts';
+// F282 Phase D: opaque opportunity episode and calibrated-abstention contract
+export {
+  PROACTIVE_MEMORY_ABSTENTION_REASON_CODES,
+  type ProactiveMemoryAbstentionInput,
+  type ProactiveMemoryAbstentionReasonCode,
+  type ProactiveMemoryOpportunityEpisode,
+  type ProactiveMemoryOpportunityRef,
+  proactiveMemoryAbstentionInputSchema,
+  proactiveMemoryAbstentionReasonCodeSchema,
+  proactiveMemoryOpportunityEpisodeSchema,
+  proactiveMemoryOpportunityRefSchema,
+} from './proactive-memory-opportunity.ts';
+export type {
+  CollectionSignalKind,
+  ProfileUpdateApproveOverrides,
+  ProfileUpdateProposal,
+  ProfileUpdateProposalStatus,
+  ProfileUpdateSignalProvenance,
+  ProfileUpdateTargetLayer,
+} from './profile-update.ts';
+// Profile update proposal types (F231 Phase C 养熟循环)
+export {
+  COLLECTION_SIGNAL_KINDS,
+  isAllowedCollectionSignal,
+} from './profile-update.ts';
+export type {
+  ActiveParticipantInput,
+  AssemblerInput,
+  BootcampInput,
+  CallableMentionsData,
+  CatConfigSnapshot,
+  CrossThreadHintInput,
+  DirectMessageInfo,
+  GovernanceTier,
+  HookManifest,
+  HookResolver,
+  HookStage,
+  PingPongInput,
+  PromptPatch,
+  RegisteredHook,
+  ResolveResult,
+  RoutingMode,
+  SafetyTier,
+  SopStageInput,
+  TeammateSnapshot,
+  TraceEvent,
+  TraceEventDisabled,
+  TraceEventFired,
+  TraceEventObserved,
+  TraceEventSkipped,
+  TraceEventSummary,
+  TransparencyTier,
+  WorldContextInput,
+} from './prompt-hook.ts';
+// Proposal types (F128 Cat Thread Proposal)
+export type {
+  CommunityPrProposalContext,
+  ProposalApproveOverrides,
+  ProposalStatus,
+  ReportingMode,
+  ThreadProposal,
+} from './proposal.ts';
+// F264: durable per-target queued-message receipt and manual reminder truth
+export type {
+  FreshnessCarrier,
+  FreshnessCarrierCapability,
+  FreshnessCarrierDeliverySemantics,
+  FreshnessCarrierProvider,
+  MessageWorkDisposition,
+  QueueAuthorIntent,
+  QueueAuthorIntentFallbackReason,
+  QueueAuthorIntentReceipt,
+  QueueHandledDisposition,
+  QueueLineageEvidenceRef,
+  QueueMessageReceipt,
+  QueueReceiptTarget,
+  QueueReceiptTargetState,
+  QueueReminderAttempt,
+  QueueReminderAttemptState,
+  QueueReminderMissedReason,
+  QueueSourceResponseConsumptionWitness,
+  QueueTargetOutcome,
+  QueueTerminalConsumptionWitness,
+  QueueTerminalSilentConsumptionWitness,
+} from './queue-receipt.ts';
+// Reflux types (F076 Phase 2 — 回流)
+export type {
+  CreateRefluxPatternInput,
+  RefluxCategory,
+  RefluxPattern,
+} from './reflux.ts';
+// Resolution types (F076 Phase 2 — 风险消解)
+export type {
+  AnswerResolutionInput,
+  CreateResolutionInput,
+  ResolutionItem,
+  ResolutionStatus,
+} from './resolution.ts';
+// Rich block types (F22 Rich Blocks 富消息系统)
+export type {
+  InteractiveOption,
+  RichAudioBlock,
+  RichBlock,
+  RichBlockBase,
+  RichBlockKind,
+  RichCardBlock,
+  RichChecklistBlock,
+  RichDiffBlock,
+  RichFileBlock,
+  RichHtmlWidgetBlock,
+  RichInteractiveBlock,
+  RichMediaGalleryBlock,
+  RichMessageExtra,
+  RichPersonMemoryProposalCardBlock,
+} from './rich.ts';
+export { isPersonMemoryProposalCardBlock, isValidRichBlock, normalizeRichBlock } from './rich.ts';
+// F246 Phase I Wave 1: F139 schedule mutation proposal + audit contract
+export type {
+  ScheduleMutation,
+  ScheduleMutationAuditAction,
+  ScheduleMutationAuditEntry,
+  ScheduleMutationDisplayCategory,
+  ScheduleMutationEffectCheckpoint,
+  ScheduleMutationProposal,
+  ScheduleMutationProposalStatus,
+  ScheduleMutationTaskDefinition,
+  ScheduleMutationTrigger,
+} from './schedule-mutation.ts';
+// Session chain types (F24 Session Chain + Context Health)
+export type {
+  ContextHealth,
+  ContextHealthConfig,
+  ContextManagementHint,
+  SealReason,
+  SealResult,
+  SessionRecord,
+  SessionStatus,
+  SessionStrategy,
+  SessionStrategyConfig,
+  SessionUsageSnapshot,
+  StrategyAction,
+} from './session.ts';
+// Session handoff proposal types (F225 Cat-Initiated Session Handoff)
+export type {
+  CatHandoffNote,
+  HandoffProposalStatus,
+  SessionHandoffProposal,
+} from './session-handoff-proposal.ts';
+// Signals types (F21 Signal Hunter)
+export type {
+  SignalArticle,
+  SignalArticleStatus,
+  SignalCategory,
+  SignalFetchMethod,
+  SignalKeywordFilter,
+  SignalScheduleFrequency,
+  SignalSource,
+  SignalSourceConfig,
+  SignalSourceFetchConfig,
+  SignalSourceSchedule,
+  SignalTier,
+} from './signals.ts';
+// Skill security types (F146 Phase C)
+export type {
+  ContentScanFinding,
+  InstallPolicy,
+  PolicyEvaluation,
+  SkillFingerprint,
+  SkillPermissionSet,
+  SkillSecurityEntry,
+  SkillSecurityStatus,
+} from './skill-security.ts';
+export { DEFAULT_INSTALL_POLICY } from './skill-security.ts';
+// Slice types (F076 Phase 2 — 切片)
+export type {
+  CreateSliceInput,
+  Slice,
+  SliceStatus,
+  SliceType,
+  UpdateSliceInput,
+} from './slice.ts';
+// SOP definition generated truth source (#748)
+export {
+  DEVELOPMENT_SOP_DEFINITION,
+  DEVELOPMENT_SOP_STAGE_IDS,
+  type DevelopmentSopStageId,
+  getSopDefinition,
+  isSopDefinitionId,
+  normalizeSopDefinitionId,
+  type ResolvedWorkflowSopSkill,
+  type RuntimeSopStageId,
+  resolveWorkflowSopSkill,
+  SOP_DEFINITION_IDS,
+  SOP_DEFINITIONS,
+  type SopDefinition,
+  type SopDefinitionId,
+} from './sop-definition.generated.ts';
+// F252: Story Annotation types (Phase D — annotations at arbitrary timeline points)
+export type { AnnotationSet, StoryAnnotation } from './story-annotation.ts';
+// F252: Story Rendering types (Phase C BFF → Frontend)
+export type {
+  CausalEdgeDTO,
+  FeatureStoryRenderingDTO,
+  SwimlaneDTO,
+  TimelineMilestoneDTO,
+  TrajectoryMarkerDTO,
+} from './story-rendering.ts';
+// STT types (F088 Phase 6 — Speech-to-Text)
+export type { ISttProvider, SttTranscribeRequest, SttTranscribeResult } from './stt.ts';
+// Study types (F091 Signal Study Mode)
+export type {
+  ArtifactJobState,
+  ArtifactKind,
+  StudyArtifact,
+  StudyMeta,
+  StudyThreadLink,
+} from './study.ts';
+// Summary types (拍立得照片墙)
+export type {
+  CreateSummaryInput,
+  ThreadSummary,
+} from './summary.ts';
+// Task types (毛线球)
+export type {
+  AutomationState,
+  CiAutomationState,
+  ConflictAutomationState,
+  CreateTaskInput,
+  DispatchGateState,
+  IssueAutomationState,
+  IssuePendingWake,
+  IssueTrackingWakePolicy,
+  LegacyIssueAutomationState,
+  PrAutomationState,
+  ReviewAutomationState,
+  SuggestedCrossPostAction,
+  SuggestedCrossPostActionSource,
+  TaskItem,
+  TaskKind,
+  TaskProbeSpec,
+  TaskStatus,
+  UpdateTaskInput,
+} from './task.ts';
+export { extractFeatureIds, isTrackingKind } from './task.ts';
+// F193 Phase E: SuggestedCrossPostAction + DispatchGateState re-exported via task.ts
+// (canonical source: cross-thread-affordance.ts; E2/E4 consumers can also import directly)
+export type { CancelReasonValue, PermissionCancelEvent } from './task-outcome.ts';
+// Task Outcome types (F192 Phase G)
+export { CANCEL_REASON_OPTIONS } from './task-outcome.ts';
+// Taste Proposal types (F221 品味信号捕获)
+export type {
+  TasteDimension,
+  TasteProposal,
+  TasteProposalStatus,
+} from './taste-proposal.ts';
+// F232: thread artifacts panel DTO
+export type {
+  GlobalArtifactDTO,
+  GlobalArtifactsResponse,
+  ThreadArtifactDTO,
+  ThreadArtifactsResponse,
+  ThreadArtifactType,
+} from './thread-artifact.ts';
+// F262: thread-scoped cat effort read/write contract
+export type {
+  ThreadMemberEffortListResponse,
+  ThreadMemberEffortPatch,
+  ThreadMemberEffortRow,
+} from './thread-effort.ts';
+// TTS types (F34 TTS Provider)
+export type {
+  ITtsProvider,
+  TtsStreamEvent,
+  TtsStreamRequest,
+  TtsSynthesizeRequest,
+  TtsSynthesizeResult,
+  VoiceChunkEvent,
+  VoiceConfig,
+  VoiceStreamEndEvent,
+  VoiceStreamEvent,
+  VoiceStreamStartEvent,
+} from './tts.ts';
+// F177/F254/F264: durable child execution lifecycle and message projection.
+export type {
+  CreateTurnExecutionInput,
+  CreateTurnExecutionOutcome,
+  CreateTurnExecutionResult,
+  InterruptRunningTurnExecutionsInput,
+  TransitionTurnExecutionOutcome,
+  TransitionTurnExecutionResult,
+  TurnExecutionCausalRefs,
+  TurnExecutionKind,
+  TurnExecutionMessageProjection,
+  TurnExecutionRecord,
+  TurnExecutionStatus,
+  TurnExecutionTerminalInput,
+  TurnExecutionTerminalStatus,
+} from './turn-execution.ts';
+// User preferences types (F166 猫猫排序自定义)
+export type {
+  MessageDispositionPreferenceSnapshot,
+  MessageDispositionPreferenceSource,
+  MessageDispositionPreferences,
+  UserPreferences,
+} from './user-preferences.ts';
+// F280: canonical wait termination event consumed by F281 feedback adapters.
+export {
+  type UserCancelWaitTerminationEventV1,
+  userCancelWaitTerminationEventSchema,
+  type WaitTerminationActor,
+  type WaitTerminationEventV1,
+  type WaitTerminationReason,
+  waitTerminationActorSchema,
+  waitTerminationEventSchema,
+  waitTerminationReasonSchema,
+} from './wait-termination.ts';
+// Workflow SOP types (F073 告示牌)
+export type {
+  CheckStatus,
+  ResumeCapsule,
+  SopChecks,
+  SopStage,
+  UpdateWorkflowSopInput,
+  WorkflowSop,
+} from './workflow-sop.ts';
+
+// ============================================================================
+// Stage 4 — Invocation domain types (batch 3)
+// ============================================================================
+
+// Invocation core types (灵智体调用 record + state machine)
+export type {
+  CreateInvocationInput,
+  CreateInvocationOutcome,
+  InvocationActionLeaseCarrier,
+  InvocationId,
+  InvocationRecord,
+  InvocationSource,
+  InvocationSourceCategory,
+  InvocationStatus,
+  UpdateInvocationInput,
+  UpdateInvocationOutcome,
+} from './invocation.ts';
+export {
+  createInvocationId,
+  generateInvocationId,
+} from './invocation.ts';
+
+// Queue entry types (per-thread × per-user FIFO scheduling tokens)
+export type {
+  EnqueueOutcome,
+  EnqueueResult,
+  QueueEntry,
+  QueueEntryId,
+} from './queue-entry.ts';
+export {
+  createQueueEntryId,
+  generateQueueEntryId,
+  MAX_QUEUE_DEPTH,
+} from './queue-entry.ts';
+
+// Session mutex types (per-session serialization primitive)
+export type {
+  ForceReleaseOptions,
+  ForceReleaseResult,
+  SessionLockCancelReason,
+  SessionLockOwner,
+  SessionLockScope,
+} from './session-mutex.ts';
+
+// Zombie reconciliation types (orphan invocation recovery)
+export type {
+  InvocationRecoveryStatus,
+  LiveInvocation,
+  LivenessReason,
+  LivenessSource,
+  PerZombieOutcome,
+  ReconcileZombieDeps,
+  ReconcileZombieResult,
+  ZombieReason,
+  ZombieRecord,
+} from './zombie.ts';

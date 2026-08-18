@@ -36,6 +36,9 @@
       "path": "./packages/api/remotes/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/shared/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {
