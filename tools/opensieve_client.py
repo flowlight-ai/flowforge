@@ -232,9 +232,11 @@ class OpenSieveClient(BaseTool):
             payload["source_filter"] = source_filter
 
         # v2.1: 双端点策略 — 先尝试 /api/v1/retrieve（完整Pipeline，含向量检索+知识图谱），
-        # 超时(15s)后 fallback 到 /api/v1/search（纯网络搜索，快速）
-        # 原因：/api/v1/retrieve 的查询理解阶段 LLM 调用可能耗时 90s，导致 ContentForge 素材获取超时
-        retrieve_timeout = 15  # /api/v1/retrieve 超时阈值（秒）
+        # 超时后 fallback 到 /api/v1/search（纯网络搜索，快速）
+        # v2.2: 超时阈值可配置（OPENSIEVE_RETRIEVE_TIMEOUT），默认 60s（ES 文档库检索通常 <5s）
+        retrieve_timeout = int(
+            os.getenv("OPENSIEVE_RETRIEVE_TIMEOUT", "60")
+        )  # /api/v1/retrieve 超时阈值（秒）
         try:
             async with httpx.AsyncClient(timeout=retrieve_timeout) as client:
                 resp = await client.post(
