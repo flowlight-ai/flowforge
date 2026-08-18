@@ -18,7 +18,7 @@ import type { InvocationStatus } from './types/invocation.ts';
  * Same-status transitions are allowed (idempotent no-op).
  * Terminal statuses (succeeded/failed/canceled) have no outgoing transitions.
  */
-const VALID_TRANSITIONS: Readonly<Record<InvocationStatus, readonly InvocationStatus[]>> = {
+export const VALID_TRANSITIONS: Readonly<Record<InvocationStatus, readonly InvocationStatus[]>> = {
   queued: ['running', 'failed', 'canceled'],
   running: ['succeeded', 'failed', 'canceled'],
   succeeded: [],

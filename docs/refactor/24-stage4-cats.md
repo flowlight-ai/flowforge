@@ -120,7 +120,16 @@
 
 #### 批次3.3-3.6：cats-invocation 包 + Cordis Service 层
 
-- [ ] T4.3.1 创建 `@flowforge/cats-invocation` 包骨架（package.json/tsconfig.json/tsdown.config.ts/invariant.ts）
+> **批次3.3 子任务分解**（实施进度：）：
+> - 批次3.3 ✅ 创建 @flowforge/cats-invocation 包骨架 (package.json/tsconfig/invariant.ts) + 抽象 CatsInvocation Service 契约
+> - 批次3.4 ⏳ 实现 InvocationQueueService/InvocationTrackerService/SessionMutexService/TaskProgressService (Cordis Service)
+> - 批次3.5 ⏳ 实现最小骨架 QueueProcessorService + reconcileZombies/StartupReconciler 纯函数
+> - 批次3.6 ⏳ 编写 .spec.ts 测试 + 类型检查 + mgr sync PR
+
+- [x] T4.3.1 创建 `@flowforge/cats-invocation` 包骨架（package.json/tsconfig.json/tsconfig.host.json/invariant.ts）
+      — 对齐 dsh `@flowforge/jobs` 范式：抽象 `CatsInvocation extends Service` 挂载到 `ctx.catsInvocation`，
+      构造时 `new.target === CatsInvocation` 守护防止直接加载抽象 seam；re-export cats-shared/cats-stores
+      invocation 相关类型 + 状态机纯函数 + store ports 供消费者一站式导入
 - [ ] T4.3.2 移植 InvocationQueue → `InvocationQueueService extends Service` → `ctx.catsInvocation.queue`
       （per-thread×per-user FIFO，effect 管理队列生命周期）
 - [ ] T4.3.3 移植 InvocationTracker → `InvocationTrackerService extends Service` → `ctx.catsInvocation.tracker`
