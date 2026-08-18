@@ -25,6 +25,7 @@
 import type {
   CatId,
   InvocationId,
+  MessageId,
   PerZombieOutcome,
   QueueEntry,
   ReconcileZombieDeps,
@@ -70,7 +71,7 @@ export type QueueConvergedHandler = (info: {
  */
 export function convergeZombieQueueEntry(
   queue: ZombieQueueConverger | undefined,
-  record: { readonly threadId: ThreadId; readonly userId: UserId; readonly userMessageId?: string | null },
+  record: { readonly threadId: ThreadId; readonly userId: UserId; readonly userMessageId?: MessageId | null },
   zombie: { readonly invocationId: InvocationId; readonly reason: string },
   log: { readonly info: (msg: string) => void; readonly warn: (msg: string) => void },
   onQueueConverged: QueueConvergedHandler | undefined,
@@ -123,7 +124,7 @@ export function convergeZombieQueueEntry(
  */
 export function makeConvergeQueueEntry(
   queue: ZombieQueueConverger | undefined,
-  record: { readonly threadId: ThreadId; readonly userId: UserId; readonly userMessageId?: string | null },
+  record: { readonly threadId: ThreadId; readonly userId: UserId; readonly userMessageId?: MessageId | null },
   log: { readonly info: (msg: string) => void; readonly warn: (msg: string) => void },
   onQueueConverged?: QueueConvergedHandler,
 ): ((invocationId: InvocationId, reason: string) => Promise<{ converged: number; errors: number }>) | undefined {
@@ -159,12 +160,6 @@ async function clearTaskProgress(
     }
   }
   return { cleared, errors }
-}
-
-function taskProgressTargets(targetCats: readonly CatId[], detectorCatIds: readonly CatId[]): CatId[] {
-  const durable = [...new Set(targetCats)]
-  if (durable.length > 0) return durable
-  return [...new Set(detectorCatIds)]
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +228,7 @@ export async function reconcileZombies(
       if (deps.convergeQueueEntry) {
         try {
           const qc = await deps.convergeQueueEntry(zombie.invocationId)
+          if (!qc) continue
           queueConverged += qc.converged
           errors += qc.errors
         } catch (err) {
@@ -301,6 +297,7 @@ export async function reconcileZombies(
 export type {
   CatId,
   InvocationId,
+  MessageId,
   PerZombieOutcome,
   QueueEntry,
   ReconcileZombieDeps,
