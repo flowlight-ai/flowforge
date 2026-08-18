@@ -3,7 +3,8 @@
  * @module @flowforge/session-title
  */
 
-import { Context, FiberState, Service, type Fiber } from '@flowforge/cordis'
+import { Context, Service, type Fiber } from '@flowforge/cordis'
+import type { FiberState } from '@flowforge/cordis'
 import z from '@flowforge/schemastery'
 import { z as zod } from 'zod'
 import type { Branded } from '@flowforge/brand'
@@ -21,6 +22,13 @@ import type {} from '@flowforge/session-projection'
 // declarations still receive the SessionProjectionMap merge.
 export type * from './types.ts'
 import { fallbackSessionTitle, normalizeSessionTitle } from './normalize.ts'
+
+/**
+ * Value mirror of the `FiberState.ACTIVE` member `serviceActive` gates on: a
+ * const enum has no runtime object to import, and the value is needed at
+ * runtime (same rationale as the settings boot driver's mirror).
+ */
+const FIBER_ACTIVE = 2 as FiberState.ACTIVE
 
 export { fallbackSessionTitle, normalizeSessionTitle, truncateTitleUtf8 } from './normalize.ts'
 
@@ -709,7 +717,7 @@ export class SessionTitleService extends Service {
   private serviceActive(): boolean {
     return !this.lifetime.signal.aborted
       && this.ownerFiber.uid !== null
-      && this.ownerFiber.state === FiberState.ACTIVE
+      && this.ownerFiber.state === FIBER_ACTIVE
   }
 
   /** Reject work once the owning plugin fiber has begun unloading. */

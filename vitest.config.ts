@@ -443,7 +443,10 @@ const aliasEntries = [
       { find: '@flowforge/tool-fs', replacement: path.resolve(import.meta.dirname, 'packages/fs/tool-fs/src') },
       { find: '@flowforge/canary/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/canary/src') },
       { find: '@flowforge/canary', replacement: path.resolve(import.meta.dirname, 'packages/plugins/canary/src') },
-      { find: '@flowforge/cordis', replacement: path.resolve(import.meta.dirname, 'vendor/cordis/src') },
+      // Explicit index.ts: a bare directory falls through to the package.json
+      // `main` (lib/index.js bundle), whose tsc build inlines away the
+      // `FiberState` const enum and breaks runtime imports of it.
+      { find: '@flowforge/cordis', replacement: path.resolve(import.meta.dirname, 'vendor/cordis/src/index.ts') },
       { find: '@flowforge/fs-e2b/src', replacement: path.resolve(import.meta.dirname, 'packages/e2b/fs-e2b/src') },
       { find: '@flowforge/fs-e2b', replacement: path.resolve(import.meta.dirname, 'packages/e2b/fs-e2b/src') },
       { find: '@flowforge/agent/src', replacement: path.resolve(import.meta.dirname, 'packages/core/agent/src') },

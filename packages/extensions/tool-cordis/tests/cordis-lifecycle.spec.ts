@@ -1,4 +1,6 @@
-import { Context, CordisError, FiberState, type Fiber } from '@flowforge/cordis'
+import { Context, CordisError, type Fiber } from '@flowforge/cordis'
+// Runtime mirror of the cordis FiberState const enum (it has no runtime object).
+import { FiberState } from '../src/fiber-state.ts'
 import { describe, expect, it } from 'vitest'
 
 /**
