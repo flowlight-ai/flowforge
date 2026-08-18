@@ -22,12 +22,47 @@
       "types": "./lib/types/invariant.d.ts",
       "default": "./lib/invariant.js"
     },
+    "./queue": {
+      "types": "./lib/types/queue.d.ts",
+      "default": "./lib/queue.js"
+    },
+    "./tracker": {
+      "types": "./lib/types/tracker.d.ts",
+      "default": "./lib/tracker.js"
+    },
+    "./mutex": {
+      "types": "./lib/types/mutex.d.ts",
+      "default": "./lib/mutex.js"
+    },
+    "./progress": {
+      "types": "./lib/types/progress.d.ts",
+      "default": "./lib/progress.js"
+    },
+    "./processor": {
+      "types": "./lib/types/processor.d.ts",
+      "default": "./lib/processor.js"
+    },
+    "./reconcile": {
+      "types": "./lib/types/reconcile.d.ts",
+      "default": "./lib/reconcile.js"
+    },
+    "./startup-reconciler": {
+      "types": "./lib/types/startup-reconciler.d.ts",
+      "default": "./lib/startup-reconciler.js"
+    },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/index.js",
     "lib/invariant.js",
+    "lib/queue.js",
+    "lib/tracker.js",
+    "lib/mutex.js",
+    "lib/progress.js",
+    "lib/processor.js",
+    "lib/reconcile.js",
+    "lib/startup-reconciler.js",
     "lib/types/**/*.js",
     "lib/types/**/*.d.ts"
   ],
