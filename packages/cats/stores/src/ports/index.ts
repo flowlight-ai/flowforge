@@ -131,8 +131,18 @@ export type {
   IPendingRequestStore,
   IProposalStore,
   IPushSubscriptionStore,
-  IReadStateStore,
   ISessionHandoffProposalStore,
   ITurnExecutionStore,
   IWorkflowSopStore,
 } from './stub-ports.ts'
+
+// ============================================================================
+// Read-state port (stage-5 batch 1) — promoted from stub-ports.ts to the
+// full monotonic-cursor contract (F069; clowder-ai ThreadReadStateStore).
+// ============================================================================
+
+export type {
+  IThreadReadStateStore,
+  ThreadReadState,
+  ThreadUnreadSummary,
+} from './read-state-store.ts'

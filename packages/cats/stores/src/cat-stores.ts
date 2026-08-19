@@ -34,6 +34,7 @@ import type {
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
+  IThreadReadStateStore,
   IThreadStore,
 } from './ports/index.ts'
 
@@ -61,6 +62,8 @@ export interface CatStoresBackend {
   readonly deliveryCursorStore?: IDeliveryCursorStore
   /** Session chain store (batch 6.2a — F24 session lineage per cat × thread). */
   readonly sessionChainStore?: ISessionChainStore
+  /** Thread read-state store (stage-5 batch 1 — F069 unread cursor). */
+  readonly threadReadStateStore?: IThreadReadStateStore
   /** Additional ports may be added incrementally — backend plugins opt-in. */
   readonly [key: string]: unknown
 }
@@ -281,6 +284,21 @@ export class CatStores extends Service {
       throw new Error(
         'Active cats-stores backend did not register an ISessionChainStore; ' +
           'load @flowforge/cats-stores/memory (batch 6.2a) or a backend that supports session chains.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active IThreadReadStateStore. Throws if the active backend
+   * did not register one (only backends from stage-5 batch 1+ do).
+   */
+  readStates(): IThreadReadStateStore {
+    const store = this.active().threadReadStateStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IThreadReadStateStore; ' +
+          'load @flowforge/cats-stores/memory (stage-5 batch 1) or a backend that supports read states.',
       )
     }
     return store

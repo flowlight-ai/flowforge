@@ -1,0 +1,59 @@
+{
+  "name": "@flowforge/chat-threads",
+  "description": "FlowForge chat thread domain Cordis plugin — thread CRUD / read state / branch / export at ctx.chatThreads / ctx.chatReadState / ctx.chatBranch / ctx.chatExport",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/chat/threads"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./service": {
+      "types": "./lib/types/thread-service.d.ts",
+      "default": "./lib/thread-service.js"
+    },
+    "./read-state": {
+      "types": "./lib/types/read-state-service.d.ts",
+      "default": "./lib/read-state-service.js"
+    },
+    "./branch": {
+      "types": "./lib/types/branch-service.d.ts",
+      "default": "./lib/branch-service.js"
+    },
+    "./export": {
+      "types": "./lib/types/export-service.d.ts",
+      "default": "./lib/export-service.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

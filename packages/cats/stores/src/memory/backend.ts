@@ -28,9 +28,11 @@ import type {
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
+  IThreadReadStateStore,
   IThreadStore,
 } from '../ports/index.ts'
 import { MemoryBacklogStore } from './backlog-store.ts'
+import { MemoryThreadReadStateStore } from './read-state-store.ts'
 import { MemoryDeliveryCursorStore } from './delivery-cursor-store.ts'
 import { MemoryDossierDistillationProposalStore } from './dossier-distillation-proposal-store.ts'
 import { MemoryDossierObservationStore } from './dossier-observation-store.ts'
@@ -93,6 +95,8 @@ export class MemoryStoresBackend extends Service {
   readonly deliveryCursorStore: MemoryDeliveryCursorStore
   /** Batch 6.2a — session chain store (F24 session lineage). */
   readonly sessionChainStore: MemorySessionChainStore
+  /** Stage-5 batch 1 — thread read-state store (F069 unread cursor). */
+  readonly threadReadStateStore: MemoryThreadReadStateStore
 
   constructor(ctx: Context) {
     super(ctx, 'catStoresMemory')
@@ -110,6 +114,7 @@ export class MemoryStoresBackend extends Service {
     this.dossierObservationStore = new MemoryDossierObservationStore()
     this.deliveryCursorStore = new MemoryDeliveryCursorStore()
     this.sessionChainStore = new MemorySessionChainStore()
+    this.threadReadStateStore = new MemoryThreadReadStateStore()
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(MEMORY_BACKEND_NAME, {
@@ -127,6 +132,7 @@ export class MemoryStoresBackend extends Service {
         dossierObservationStore: this.dossierObservationStore,
         deliveryCursorStore: this.deliveryCursorStore,
         sessionChainStore: this.sessionChainStore,
+        threadReadStateStore: this.threadReadStateStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(MEMORY_BACKEND_NAME)
@@ -220,5 +226,6 @@ export type {
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
+  IThreadReadStateStore,
   IThreadStore,
 }

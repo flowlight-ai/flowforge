@@ -152,6 +152,11 @@ const aliasEntries = [
       { find: '@flowforge/cats-session/src', replacement: path.resolve(import.meta.dirname, 'packages/cats/session/src') },
       { find: '@flowforge/cats-session', replacement: path.resolve(import.meta.dirname, 'packages/cats/session/src') },
       { find: /^@flowforge\/cats-session$/, replacement: path.resolve(import.meta.dirname, 'packages/cats/session/src') },
+      // chat domain (stage 5): src-only resolution since lib/ is gitignored
+      // and unbulked during test runs; aligns with every other @flowforge/* pkg.
+      { find: '@flowforge/chat-threads/src', replacement: path.resolve(import.meta.dirname, 'packages/chat/threads/src') },
+      { find: '@flowforge/chat-threads', replacement: path.resolve(import.meta.dirname, 'packages/chat/threads/src') },
+      { find: /^@flowforge\/chat-threads$/, replacement: path.resolve(import.meta.dirname, 'packages/chat/threads/src') },
       { find: '@flowforge/code-runtime-worker-thread/src', replacement: path.resolve(import.meta.dirname, 'packages/code-runtime/code-runtime-worker-thread/src') },
       { find: '@flowforge/code-runtime-worker-thread', replacement: path.resolve(import.meta.dirname, 'packages/code-runtime/code-runtime-worker-thread/src') },
       { find: '@flowforge/session-persistence-sqlite/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-persistence-sqlite/src') },

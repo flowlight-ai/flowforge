@@ -106,15 +106,15 @@
 
 | # | 能力 | 来源 | 阶段 | 状态 |
 |---|---|---|---|---|
-| C1 | 灵智体档案（profile/迁移/审批） | cats/services/profile | 4 | ⬜ |
-| C2 | 灵智体注册表 AgentRegistry | cats/services/agents/registry | 4 | ⬜ |
-| C3 | 调用队列/进度跟踪 InvocationQueue | cats/services/agents/invocation | 4 | ⬜ |
-| C4 | 编排 orchestration + 事件审计 | cats/services/orchestration | 4 | ⬜ |
-| C5 | 会话转录 TranscriptWriter | cats/services/session | 4 | ⬜ |
-| C6 | 存储层 ports（Thread/Message/Task/Backlog/Memory） | cats/services/stores | 4 | ⬜ |
-| C7 | 经验蒸馏 Dossier/Distillation | cats/services/distillation | 4 | ⬜ |
-| C8 | Bootcamp 引导 / 值班简报 / 新鲜度 | cats/services/* | 4 | ⬜ |
-| C9 | 用量聚合 usage-aggregator | cats/services | 4 | ⬜ |
+| C1 | 灵智体档案（profile/迁移/审批） | cats/services/profile | 4 | ✅（批次4 cats-profile：ProfileRepository/审批管线） |
+| C2 | 灵智体注册表 AgentRegistry | cats/services/agents/registry | 4 | ✅（批次1 cats-shared CatRegistry） |
+| C3 | 调用队列/进度跟踪 InvocationQueue | cats/services/agents/invocation | 4 | ✅（批次3 cats-invocation，PR #90） |
+| C4 | 编排 orchestration + 事件审计 | cats/services/orchestration | 4 | ✅（批次5 cats-orchestration：EventAuditLog/AutoSummarizer 等） |
+| C5 | 会话转录 TranscriptWriter | cats/services/session | 4 | ✅（批次6 cats-session：Writer/Reader/Sealer，PR #94） |
+| C6 | 存储层 ports（Thread/Message/Task/Backlog/Memory） | cats/services/stores | 4 | ✅（批次2 ports+Memory；批次6.5 cats-stores-sqlite） |
+| C7 | 经验蒸馏 Dossier/Distillation | cats/services/distillation | 4 | ✅（批次5 DossierDistillationService） |
+| C8 | Bootcamp 引导 / 值班简报 / 新鲜度 | cats/services/* | 4 | 🟦（duty-briefing/freshness 批次5 已交付；bootcamp 引导待补） |
+| C9 | 用量聚合 usage-aggregator | cats/services | 4 | ✅（批次5 UsageAggregatorService） |
 | C10 | 群聊线程 Threads（CRUD/成员） | routes/threads | 5 | ⬜ |
 | C11 | 消息 Messages + 消息行动 | routes/messages | 5 | ⬜ |
 | C12 | @mention 路由 + 多 @ 编排 | routes/callback-multi-mention | 5 | ⬜ |
@@ -147,7 +147,7 @@
 | C39 | 环境变量注册表 env-registry（CAT_CAFE_* → FF_*） | packages/harness/env-registry | 0 | ⬜ |
 | C40 | 连接器配置 cat-config-loader + connector.yaml（IM stretch 时仅 ports） | packages/chat|limb | 5-6 | ⬜ |
 | C41 | prompt 钩子 hook.yaml | packages/core/system-prompt + packages/forgekin | 1/4 | ⬜ |
-| C42 | shared 包（catId/threadId schema、frontmatter-parser、registry 纯函数） | packages/shared | 0 | ⬜ |
+| C42 | shared 包（catId/threadId schema、frontmatter-parser、registry 纯函数） | packages/shared | 0 | ✅（批次1 cats-shared，100+ 类型文件） |
 
 ### 3.4 Stretch 清单（Phase 11 之后，功能全集之外的扩展目标）
 

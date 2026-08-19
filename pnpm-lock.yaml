@@ -934,6 +934,18 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/chat/threads:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../../cats/stores
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/client/connection:
     dependencies:
       '@flowforge/attachment':

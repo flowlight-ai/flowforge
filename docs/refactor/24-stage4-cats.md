@@ -77,10 +77,11 @@
       全部移植到 `memory/`，构造时由 `ctx.plugin(MemoryStoresBackend)` 挂载到 `ctx.catStoresMemory`（含
       `declare module '@flowforge/cordis'` Context augmentation）— 完成
 - [x] T4.2.5 测试：port 契约单测（memory 后端：append/getById/getByThreadAfter/softDelete 等）— 完成（73 测试通过）
-- [ ] T4.2.6 Sqlite 后端单独成包 `@flowforge/cats-stores-sqlite`（CAS 用事务替代 Redis Lua）
-      — **拆分到独立批次**，本批次仅交付 Memory + 接口契约
+- [x] T4.2.6 Sqlite 后端单独成包 `@flowforge/cats-stores-sqlite`（CAS 用事务替代 Redis Lua）
+      — 批次6.5 已交付首版（node:sqlite 9 表 + 核心 5 store + 4 CAS store；其余 optional
+      store 的 sqlite 实现随后续批次依赖落地补全）
 
-### 批次 3：`@flowforge/cats-invocation`（调用队列/调度/tracker 插件）
+### 批次 3：`@flowforge/cats-invocation`（调用队列/调度/tracker 插件）✅
 
 > 设计：参考 dsh `@flowforge/jobs` 范式（`JobRegistry extends Service` + 子插件 backend），
 > 将 InvocationQueue/Tracker/Processor 改造为 Cordis Service，全部挂载到 `ctx.catsInvocation`。
