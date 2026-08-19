@@ -229,20 +229,68 @@
    （.js/.d.ts/.js.map/.d.ts.map，均为 gitignore 未跟踪产物）——Vite 别名目录解析时 `.js` 优先于
    `.ts`，包名导入命中 8/18 陈旧构建导致新方法在运行时"消失"；清理后包名导入与相对导入类身份一致，
    cats 域 26 文件 365 测试全绿。
-### 批次 5：`@flowforge/cats-orchestration`（编排/审计/蒸馏插件）
+### 批次 5：`@flowforge/cats-orchestration`（编排/审计/蒸馏插件）✅
 
 > 设计：参考 dsh `@flowforge/compaction` 范式，将 EventAuditLog / AutoSummarizer /
-> DossierDistillationPipeline 改造为 Cordis Service。
+> DossierDistillationPipeline / Freshness / DutyBriefing / UsageAggregator 改造为 Cordis Service。
+>
+> **批次5 子任务分解**（实施进度：）：
+> - 批次5.1 ✅ 调研 clowder-ai 六服务源码（EventAuditLog/AutoSummarizer+TaskExtractor/
+>   DossierDistillation/Freshness/DutyBriefing/ToolUsage）+ port 契约 + flowforge 类型基础
+> - 批次5.2 ✅ cats-shared 类型补齐（audit/tool-usage/freshness/dossier-distillation）+
+>   4 个 stub port 提升为完整契约（ISummaryStore/IDossierDistillationProposalStore/
+>   IDossierObservationStore/IDeliveryCursorStore）+ Memory 实现 + CatStores 聚合访问器
+> - 批次5.3 ✅ 创建 @flowforge/cats-orchestration 包骨架 + index.ts 插件入口
+> - 批次5.4 ✅ EventAuditLog/AutoSummarizer+TaskExtractor/Freshness/UsageAggregator → Cordis Service
+> - 批次5.5 ✅ Dossier 蒸馏管线（含 dossier-applier 纯函数）+ DutyBriefing → Cordis Service
+> - 批次5.6 ✅ 六域单测（Cordis Context 模式，33 测试全绿）
+> - 批次5.7 ✅ typecheck + 全量测试 + mgr sync PR + 文档更新
 
-- [ ] T4.5.1 创建 `@flowforge/cats-orchestration` 包骨架
-- [ ] T4.5.2 移植 EventAuditLog → `EventAuditLogService extends Service` → `ctx.catsAudit`
-      （同时扩展 `Context` + `Events`，对齐 dsh llm/fs 范式）
-- [ ] T4.5.3 移植 AutoSummarizer / TaskExtractor → `AutoSummarizerService extends Service` → `ctx.catsSummarizer`
-- [ ] T4.5.4 移植 Dossier 蒸馏管线 → `DossierDistillationService extends Service` → `ctx.catsDistiller`
-      （经验 → dossier 草案 → 应用为档案更新）
-- [ ] T4.5.5 移植 freshness / duty-briefing / usage-aggregator
+- [x] T4.5.1 创建 `@flowforge/cats-orchestration` 包骨架（package.json/tsconfig.json/
+      tsconfig.host.json/invariant.ts；子路径导出 `./audit` `./summarizer` `./task-extractor`
+      `./freshness` `./tool-usage` `./distiller` `./dossier-applier` `./duty-briefing`；
+      peerDeps：cats-shared/cats-stores/cordis）
+- [x] T4.5.2 移植 EventAuditLog → `EventAuditLogService extends Service` → `ctx.catsAudit`
+      （NDJSON 按日分片 append-only 事件日志：append/readByDate/readByTypeAndThread/
+      listShards；randomUUID 主键 + 时间戳；auditDir 可配置，默认 data/audit）
+- [x] T4.5.3 移植 AutoSummarizer / TaskExtractor → `AutoSummarizerService extends Service` → `ctx.catsSummarizer`
+      （消息阈值 + 冷却期双闸门；inFlight 去重防并发重入；模式法摘要兜底；
+      TaskExtractor：LLM JSON 提取 + 模式匹配降级（markdown checkbox/TODO 标签）、
+      ownerCatId 注册表校验、signal 中断协作）
+- [x] T4.5.4 移植 Dossier 蒸馏管线 → `DossierDistillationService extends Service` → `ctx.catsDistiller`
+      （经验 → dossier 草案 → 应用为档案更新；addObservation/propose/applyProposal 三段式；
+      dossier-applier 纯函数：prepareDraft 实现 KD-17 stale-write 锁（baseHash 复核）+
+      分节锚定（cat:section 边界替换）+ NOT_APPROVED 状态守护 + evidenceRefs 非空 fail-closed）
+- [x] T4.5.5 移植 freshness / duty-briefing / usage-aggregator
       → `FreshnessService` / `DutyBriefingService` / `UsageAggregatorService`
-- [ ] T4.5.6 测试：蒸馏管线单测（`vitest .spec.ts`）
+      （Freshness：未见消息门控 AC-A3/A4/A5（cursor 缺失 fail-open / 预览截断 / acknowledgeHeld 直通）；
+      DutyBriefing：INV-5 每日一次投递（cursor 去重）+ 纯聚合器/渲染器（blocked 任务按 1d~7d/>7d
+      分流 needsUser/staleBlocked，僵尸→deadBalls，≤15 行折叠卡片）+ degraded 绑定回退；
+      UsageAggregator：classifyTool 三分类（native/mcp/skill，MCP server 归一化）+
+      (date,catId,category,toolName) 计数聚合 + 有界 ToolEvent 环形序列）
+- [x] T4.5.6 测试：orchestration.spec.ts 33 测试（audit 3/summarizer 2/task-extractor 5/
+      freshness 6/tool-usage 3/distiller 7/duty-briefing 7），Cordis Context 模式全绿
+
+#### 批次5 实施详情
+
+1. **类型与契约先行**（批次5.2）：cats-shared 新增 `types/audit.ts`（AuditEvent/AuditEventInput/
+   AUDIT_EVENT_TYPES）、`types/tool-usage.ts`（ToolEvent 判别联合 + SkillLoadedEvent +
+   ToolUsageEntry/Report 聚合）、`types/freshness.ts`（FreshnessDecision/FreshnessCheckInput，
+   held 预览截断常量）、`types/dossier-distillation.ts` 扩展（观察/提案/应用三态 + KD-17 错误码）。
+2. **4 个 stub port 提升为完整契约**：ISummaryStore（线程摘要 create/listByThread）、
+   IDossierObservationStore（add/listByCat newest-first）、IDossierDistillationProposalStore
+   （create/get/approve/reject/markApplied CAS 状态机）、IDeliveryCursorStore（seen/held cursor
+   get/set，duty-briefing INV-5 每日去重依赖）；stub-ports.ts 同步移除，Memory 后端全部实现
+   并注册到 MemoryStoresBackend + CatStores 聚合访问器（summaries()/dossierObservations()/
+   dossierDistillationProposals()/deliveryCursors()）。
+3. **六服务全部 Cordis 化**：均 `extends Service` + `static inject`（audit/tool-usage 零依赖可
+   独立挂载；summarizer/freshness/distiller/duty-briefing 注入 catStores），默认 Plugin 聚合挂载
+   六服务；Context augmentation 声明 ctx.catsAudit/catsSummarizer/catsFreshness/catsToolUsage/
+   catsDistiller/catsDutyBriefing。
+4. **降级语义保留**：TaskExtractor 无 LLM invoker 或 JSON 解析失败时模式匹配降级并标记
+   degraded+reason；Freshness cursor 缺失 fail-open（forward）；DutyBriefing 未绑定目标线程时
+   unbound 静默、degraded 无回退时报 error 不静默（INV-2）。
+5. **测试基建**：tsconfig.host.json / vitest.config.ts 加入 cats-orchestration 引用与别名。
 
 ## 验收标准
 

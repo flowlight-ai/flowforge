@@ -425,15 +425,21 @@ export {
 } from './dispatch-proposal.ts';
 // Dossier distillation proposal types (F208 Phase E 画像蒸馏)
 export type {
+  AddDossierObservationInput,
   DistillationEvidenceRef,
   DistillationProposalStatus,
   DistillationSourceEvent,
   DossierDistillationProposal,
+  DossierObservation,
+  DossierObservationProvenance,
 } from './dossier-distillation.ts';
 export {
   DISTILLATION_SOURCE_EVENTS,
   isDistillationSourceEvent,
 } from './dossier-distillation.ts';
+// Event audit log types (批次5 cats-orchestration 审计)
+export type { AuditEvent, AuditEventInput, AuditEventType } from './audit.ts';
+export { AuditEventTypes } from './audit.ts';
 // F233 Phase A: 值班简报 DTO (pure-projection aggregator output; impl stays in api)
 export type { BallEntry, BallEntryKind, DutyBriefing, DutyBriefingCounts } from './duty-briefing.ts';
 // Entity proposal types (F260 Phase A 实体治理)
@@ -510,6 +516,33 @@ export type {
   OutputCommitDecision,
   PublishedFreshnessAnnotation,
 } from './freshness-closure.ts';
+// Freshness gate types (F254 批次5 cats-orchestration)
+export type {
+  FreshnessCheckInput,
+  FreshnessDecision,
+  FreshnessReadableMessage,
+  FreshnessRelevanceContext,
+  FreshnessRelevanceDecision,
+  FreshnessRelevanceReason,
+  FreshnessUnseenResult,
+  UnseenMessage,
+} from './freshness.ts';
+// Tool usage telemetry types (F150/F188 批次5 cats-orchestration)
+export type {
+  BaseToolEvent,
+  GenericSummary,
+  GraphResolveSummary,
+  ListRecentSummary,
+  NudgeFollowupAnalysis,
+  SearchEvidenceSummary,
+  SkillLoadedEvent,
+  ToolCategory,
+  ToolClassification,
+  ToolEvent,
+  ToolStatus,
+  ToolUsageEntry,
+  ToolUsageReport,
+} from './tool-usage.ts';
 // F245: Friction Signal Eval types
 export type {
   ActionableFrictionCandidate,

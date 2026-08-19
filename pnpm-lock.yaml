@@ -864,6 +864,18 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/orchestration:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../stores
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/cats/profile:
     devDependencies:
       '@flowforge/cats-shared':

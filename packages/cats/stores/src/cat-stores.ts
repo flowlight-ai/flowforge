@@ -22,10 +22,14 @@
 import { Context, Service } from '@flowforge/cordis'
 import type {
   IBacklogStore,
+  IDeliveryCursorStore,
+  IDossierDistillationProposalStore,
+  IDossierObservationStore,
   IInvocationRecordStore,
   IMemoryStore,
   IMessageStore,
   IProfileUpdateProposalStore,
+  ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
@@ -49,6 +53,11 @@ export interface CatStoresBackend {
   readonly taskManagedWorkRegistrationStore?: ITaskManagedWorkRegistrationStore
   /** Profile-update proposal store (batch 4.2). */
   readonly profileUpdateProposalStore?: IProfileUpdateProposalStore
+  /** Orchestration-related ports (batch 5.2). */
+  readonly summaryStore?: ISummaryStore
+  readonly dossierDistillationProposalStore?: IDossierDistillationProposalStore
+  readonly dossierObservationStore?: IDossierObservationStore
+  readonly deliveryCursorStore?: IDeliveryCursorStore
   /** Additional ports may be added incrementally — backend plugins opt-in. */
   readonly [key: string]: unknown
 }
@@ -194,6 +203,66 @@ export class CatStores extends Service {
       throw new Error(
         'Active cats-stores backend did not register an IProfileUpdateProposalStore; ' +
           'load @flowforge/cats-stores/memory (batch 4.2) or a backend that supports profile-update proposals.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active ISummaryStore. Throws if the active backend did not
+   * register one (only backends from batch 5.2+ do).
+   */
+  summaries(): ISummaryStore {
+    const store = this.active().summaryStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an ISummaryStore; ' +
+          'load @flowforge/cats-stores/memory (batch 5.2) or a backend that supports thread summaries.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active IDossierDistillationProposalStore. Throws if the
+   * active backend did not register one (only backends from batch 5.2+ do).
+   */
+  dossierDistillationProposals(): IDossierDistillationProposalStore {
+    const store = this.active().dossierDistillationProposalStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IDossierDistillationProposalStore; ' +
+          'load @flowforge/cats-stores/memory (batch 5.2) or a backend that supports dossier distillation.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active IDossierObservationStore. Throws if the active
+   * backend did not register one (only backends from batch 5.2+ do).
+   */
+  dossierObservations(): IDossierObservationStore {
+    const store = this.active().dossierObservationStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IDossierObservationStore; ' +
+          'load @flowforge/cats-stores/memory (batch 5.2) or a backend that supports dossier observations.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active IDeliveryCursorStore. Throws if the active backend
+   * did not register one (only backends from batch 5.2+ do).
+   */
+  deliveryCursors(): IDeliveryCursorStore {
+    const store = this.active().deliveryCursorStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IDeliveryCursorStore; ' +
+          'load @flowforge/cats-stores/memory (batch 5.2) or a backend that supports delivery cursors.',
       )
     }
     return store

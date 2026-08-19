@@ -85,15 +85,31 @@ export type {
   ProfileUpdateCheckpoint,
 } from './profile-update-proposal-store.ts'
 
+// ============================================================================
+// Orchestration-related ports (batch 5.2) — promoted from stub-ports.ts to
+// full branded contracts consumed by `@flowforge/cats-orchestration`.
+// ============================================================================
+
+export type {
+  CreateDistillationProposalInput,
+  IDossierDistillationProposalStore,
+} from './dossier-distillation-proposal-store.ts'
+
+export type {
+  AddDossierObservationInput,
+  IDossierObservationStore,
+} from './dossier-observation-store.ts'
+
+export type { IDeliveryCursorStore } from './delivery-cursor-store.ts'
+
+export type { ISummaryStore } from './summary-store.ts'
+
 export type {
   IAuthorizationAuditStore,
   IAuthorizationRuleStore,
   ICommunityIssueDraftStore,
   ICommunityIssueStore,
   ICommunityPrStore,
-  IDeliveryCursorStore,
-  IDossierDistillationProposalStore,
-  IDossierObservationStore,
   IDraftStore,
   IFrustrationIssueStore,
   IGameStore,
@@ -105,7 +121,6 @@ export type {
   IReadStateStore,
   ISessionChainStore,
   ISessionHandoffProposalStore,
-  ISummaryStore,
   ITurnExecutionStore,
   IWorkflowSopStore,
 } from './stub-ports.ts'

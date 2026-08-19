@@ -16,20 +16,28 @@
 import { Context, Service } from '@flowforge/cordis'
 import type {
   IBacklogStore,
+  IDeliveryCursorStore,
+  IDossierDistillationProposalStore,
+  IDossierObservationStore,
   IMemoryStore,
   IMessageStore,
   IInvocationRecordStore,
   IProfileUpdateProposalStore,
+  ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
   IThreadStore,
 } from '../ports/index.ts'
 import { MemoryBacklogStore } from './backlog-store.ts'
+import { MemoryDeliveryCursorStore } from './delivery-cursor-store.ts'
+import { MemoryDossierDistillationProposalStore } from './dossier-distillation-proposal-store.ts'
+import { MemoryDossierObservationStore } from './dossier-observation-store.ts'
 import { MemoryInvocationRecordStore } from './invocation-record-store.ts'
 import { MemoryMemoryStore } from './memory-store.ts'
 import { MemoryMessageStore } from './message-store.ts'
 import { MemoryProfileUpdateProposalStore } from './profile-update-proposal-store.ts'
+import { MemorySummaryStore } from './summary-store.ts'
 import { MemoryTaskManagedWorkRegistrationStore } from './task-managed-work-registration-store.ts'
 import { MemoryTaskProgressStore } from './task-progress-store.ts'
 import { MemoryTaskStore } from './task-store.ts'
@@ -76,6 +84,11 @@ export class MemoryStoresBackend extends Service {
   readonly taskManagedWorkRegistrationStore: MemoryTaskManagedWorkRegistrationStore
   /** Batch 4.2 — profile-update proposal store. */
   readonly profileUpdateProposalStore: MemoryProfileUpdateProposalStore
+  /** Batch 5.2 — orchestration stores (audit-adjacent persistence). */
+  readonly summaryStore: MemorySummaryStore
+  readonly dossierDistillationProposalStore: MemoryDossierDistillationProposalStore
+  readonly dossierObservationStore: MemoryDossierObservationStore
+  readonly deliveryCursorStore: MemoryDeliveryCursorStore
 
   constructor(ctx: Context) {
     super(ctx, 'catStoresMemory')
@@ -88,6 +101,10 @@ export class MemoryStoresBackend extends Service {
     this.taskProgressStore = new MemoryTaskProgressStore()
     this.taskManagedWorkRegistrationStore = new MemoryTaskManagedWorkRegistrationStore()
     this.profileUpdateProposalStore = new MemoryProfileUpdateProposalStore()
+    this.summaryStore = new MemorySummaryStore()
+    this.dossierDistillationProposalStore = new MemoryDossierDistillationProposalStore()
+    this.dossierObservationStore = new MemoryDossierObservationStore()
+    this.deliveryCursorStore = new MemoryDeliveryCursorStore()
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(MEMORY_BACKEND_NAME, {
@@ -100,6 +117,10 @@ export class MemoryStoresBackend extends Service {
         taskProgressStore: this.taskProgressStore,
         taskManagedWorkRegistrationStore: this.taskManagedWorkRegistrationStore,
         profileUpdateProposalStore: this.profileUpdateProposalStore,
+        summaryStore: this.summaryStore,
+        dossierDistillationProposalStore: this.dossierDistillationProposalStore,
+        dossierObservationStore: this.dossierObservationStore,
+        deliveryCursorStore: this.deliveryCursorStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(MEMORY_BACKEND_NAME)
@@ -151,15 +172,39 @@ export class MemoryStoresBackend extends Service {
   get profileUpdateProposals(): MemoryProfileUpdateProposalStore {
     return this.profileUpdateProposalStore
   }
+
+  /** Expose the underlying summary store (for tests / direct inspection). */
+  get summaries(): MemorySummaryStore {
+    return this.summaryStore
+  }
+
+  /** Expose the underlying dossier distillation proposal store (for tests / direct inspection). */
+  get dossierDistillationProposals(): MemoryDossierDistillationProposalStore {
+    return this.dossierDistillationProposalStore
+  }
+
+  /** Expose the underlying dossier observation store (for tests / direct inspection). */
+  get dossierObservations(): MemoryDossierObservationStore {
+    return this.dossierObservationStore
+  }
+
+  /** Expose the underlying delivery cursor store (for tests / direct inspection). */
+  get deliveryCursors(): MemoryDeliveryCursorStore {
+    return this.deliveryCursorStore
+  }
 }
 
 /** Type helpers for backend accessors. */
 export type {
   IBacklogStore,
+  IDeliveryCursorStore,
+  IDossierDistillationProposalStore,
+  IDossierObservationStore,
   IMemoryStore,
   IMessageStore,
   IInvocationRecordStore,
   IProfileUpdateProposalStore,
+  ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
