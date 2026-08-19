@@ -1,4 +1,4 @@
-﻿/**
+/**
  * F208 Phase E: Dossier Distillation Proposal types.
  *
  * Observations (Phase D) accumulate raw operator/peer signals. Distillation promotes
@@ -125,4 +125,33 @@ export interface DossierDistillationProposal {
   appliedAt?: number;
   /** Git commit SHA of the dossier update. */
   appliedCommitSha?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Phase D — Observation staging layer
+// ---------------------------------------------------------------------------
+
+/** Observation provenance (operator-authored, AC-D1). */
+export interface DossierObservationProvenance {
+  type: 'cvo';
+  author: string;
+  /** ISO date (YYYY-MM-DD). */
+  date: string;
+}
+
+/** A staged observation (pending layer — does NOT auto-replace summary layer, AC-D3). */
+export interface DossierObservation {
+  id: string;
+  catId: CatId;
+  content: string;
+  provenance: DossierObservationProvenance;
+  /** epoch ms */
+  createdAt: number;
+}
+
+/** Input for staging an observation (id/timestamps are store-owned). */
+export interface AddDossierObservationInput {
+  catId: CatId;
+  content: string;
+  author: string;
 }

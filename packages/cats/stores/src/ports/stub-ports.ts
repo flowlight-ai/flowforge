@@ -1,22 +1,26 @@
 /**
  * Stub port interfaces for batch 2 — declared so the aggregate CatStores
- * has a single source of truth for all cats-domain stores. The 5 core ports
- * and 3 invocation-related ports have full Memory implementations in sibling
- * files; the remaining 21 stub ports below have method signatures deferred
- * to incremental batches as their dependent services land (cats-orchestration,
- * cats-profile). Method shapes here are intentionally permissive
- * (`Record<string, unknown>`) to keep the contract honest about its stub
- * status.
+ * has a single source of truth for all cats-domain stores. The 5 core ports,
+ * 3 invocation-related ports, 4 orchestration-related ports and the
+ * profile-update port have full Memory implementations in sibling files;
+ * the remaining 17 stub ports below have method signatures deferred
+ * to incremental batches as their dependent services land. Method shapes
+ * here are intentionally permissive (`Record<string, unknown>`) to keep the
+ * contract honest about its stub status.
  *
  * Ports promoted out of this file (full branded contracts + Memory backend):
  * - `IInvocationRecordStore` → `./invocation-record-store.ts` (batch 3.2)
  * - `ITaskProgressStore`     → `./task-progress-store.ts`     (batch 3.2)
  * - `ITaskManagedWorkRegistrationStore` → `./task-managed-work-registration-store.ts` (batch 3.2)
  * - `IProfileUpdateProposalStore` → `./profile-update-proposal-store.ts` (batch 4.2)
+ * - `IDossierDistillationProposalStore` → `./dossier-distillation-proposal-store.ts` (batch 5.2)
+ * - `IDossierObservationStore` → `./dossier-observation-store.ts` (batch 5.2)
+ * - `IDeliveryCursorStore`   → `./delivery-cursor-store.ts`  (batch 5.2)
+ * - `ISummaryStore`          → `./summary-store.ts`          (batch 5.2)
  *
  * The remaining stub contracts will be ported from clowder-ai
  * `packages/api/src/domains/cats/services/stores/ports/` as their dependent
- * services land (cats-orchestration, cats-profile).
+ * services land.
  *
  * @module @flowforge/cats-stores/ports
  */
@@ -106,26 +110,12 @@ export interface IFrustrationIssueStore {
   resolve(id: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
 }
 
-/** Dossier distillation proposal store. */
-export interface IDossierDistillationProposalStore {
-  create(proposal: Record<string, unknown>): Record<string, unknown> | Promise<Record<string, unknown>>
-  getById(id: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  listForCat(catId: string): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-  approve(id: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  reject(id: string, reason: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-}
-
-/** Dossier observation store. */
-export interface IDossierObservationStore {
-  record(observation: Record<string, unknown>): void | Promise<void>
-  listForCat(catId: string, options?: { readonly limit?: number }): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-}
-
-/** Delivery cursor store (per-thread delivery position). */
-export interface IDeliveryCursorStore {
-  set(threadId: string, userId: string, cursor: string): void | Promise<void>
-  get(threadId: string, userId: string): string | null | Promise<string | null>
-}
+/** Dossier distillation proposal + observation + delivery cursor ports were
+ * promoted to full contracts in batch 5.2:
+ * - `IDossierDistillationProposalStore` → `./dossier-distillation-proposal-store.ts`
+ * - `IDossierObservationStore`           → `./dossier-observation-store.ts`
+ * - `IDeliveryCursorStore`               → `./delivery-cursor-store.ts`
+ */
 
 /** Game store (game state). */
 export interface IGameStore {
@@ -171,12 +161,9 @@ export interface IDraftStore {
   clear(threadId: string, userId: string): boolean | Promise<boolean>
 }
 
-/** Summary store (per-thread auto-summary). */
-export interface ISummaryStore {
-  set(threadId: string, summary: Record<string, unknown>): void | Promise<void>
-  get(threadId: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  listRecent(limit?: number): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-}
+/** Summary store was promoted to a full contract in batch 5.2:
+ * - `ISummaryStore` → `./summary-store.ts`
+ */
 
 /** Turn execution store (per-cat-turn execution metadata). */
 export interface ITurnExecutionStore {

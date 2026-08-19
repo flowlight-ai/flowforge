@@ -1,0 +1,85 @@
+{
+  "name": "@flowforge/cats-orchestration",
+  "description": "Forgekin (cats) orchestration Cordis plugin — audit log / summarizer / freshness gate / tool usage / distillation / duty briefing at ctx.catsAudit / ctx.catsSummarizer / ctx.catsFreshness / ctx.catsToolUsage / ctx.catsDistiller / ctx.catsDutyBriefing",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/cats/orchestration"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./audit": {
+      "types": "./lib/types/audit-log.d.ts",
+      "default": "./lib/audit-log.js"
+    },
+    "./summarizer": {
+      "types": "./lib/types/auto-summarizer.d.ts",
+      "default": "./lib/auto-summarizer.js"
+    },
+    "./task-extractor": {
+      "types": "./lib/types/task-extractor.d.ts",
+      "default": "./lib/task-extractor.js"
+    },
+    "./freshness": {
+      "types": "./lib/types/freshness.d.ts",
+      "default": "./lib/freshness.js"
+    },
+    "./tool-usage": {
+      "types": "./lib/types/tool-usage.d.ts",
+      "default": "./lib/tool-usage.js"
+    },
+    "./distiller": {
+      "types": "./lib/types/distillation.d.ts",
+      "default": "./lib/distillation.js"
+    },
+    "./dossier-applier": {
+      "types": "./lib/types/dossier-applier.d.ts",
+      "default": "./lib/dossier-applier.js"
+    },
+    "./duty-briefing": {
+      "types": "./lib/types/duty-briefing.d.ts",
+      "default": "./lib/duty-briefing.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/audit-log.js",
+    "lib/auto-summarizer.js",
+    "lib/task-extractor.js",
+    "lib/freshness.js",
+    "lib/tool-usage.js",
+    "lib/distillation.js",
+    "lib/dossier-applier.js",
+    "lib/duty-briefing.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}
