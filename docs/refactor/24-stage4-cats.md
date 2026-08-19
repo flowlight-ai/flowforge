@@ -292,7 +292,7 @@
    unbound 静默、degraded 无回退时报 error 不静默（INV-2）。
 5. **测试基建**：tsconfig.host.json / vitest.config.ts 加入 cats-orchestration 引用与别名。
 
-### 批次 6：阶段4 收尾（C5 会话转录 + Sqlite 后端 + 测试统一）🟦
+### 批次 6：阶段4 收尾（C5 会话转录 + Sqlite 后端 + 测试统一）✅
 
 > 目标：补齐阶段4 验收标准的剩余项——C5 TranscriptWriter/SessionSealer（会话转录落盘+回放）、
 > T4.2.6 `@flowforge/cats-stores-sqlite`（持久化后端）、13 个陈旧 `.test.js` 统一迁移 `.spec.ts`。
@@ -312,9 +312,11 @@
 > - 批次6.4 ✅ SessionSealerService（ctx.catsSessionSealer，static inject catStores+catsAudit，
 >       getEventAuditLog 单例→ctx.catsAudit）+ thread-memory/decision-signals/formatter/handoff/
 >       artifact 纯函数群，56 测试
-> - 批次6.5 ⬜ T4.2.6 `@flowforge/cats-stores-sqlite`：核心 5 store + invocation/delivery 等
->       CAS store 的 better-sqlite3 事务实现（对齐 dsh session-persistence-sqlite 模式）
-> - 批次6.6 ⬜ 测试 + typecheck + mgr sync PR + 文档更新
+> - 批次6.5 ✅ T4.2.6 `@flowforge/cats-stores-sqlite`：node:sqlite DatabaseSync（对齐 dsh
+>       session-persistence-sqlite 模式，非 better-sqlite3——零原生编译依赖），9 表 STRICT DDL+WAL，
+>       核心 5 store + invocation/sessionChain/deliveryCursor/summary 的 SQL 实现，CAS 用
+>       BEGIN IMMEDIATE 事务替代 Redis Lua，40 测试
+> - 批次6.6 ✅ 测试 + typecheck + mgr sync PR + 文档更新
 
 - [x] T4.6.1 13 个 `.test.js` → `.spec.ts`（meeting/meeting-context-block/frustration-issue/
       extract-feature-ids/event-memory-types/derive-triage-confidence/connector-definitions/
@@ -324,10 +326,24 @@
       持久化+回放，目录结构 threads/<threadId>/<catId>/sessions/<sessionId>/）— 完成
       （@flowforge/cats-session 包，82 测试：writer 26 + sealer 56）
 - [ ] T4.6.3 T4.2.6 Sqlite 后端（CAS 用事务替代 Redis Lua；`static Config` Schemastery schema）
+      — 批次6.5 已交付首版（核心 5 store + 4 CAS store；其余 optional store 的 sqlite 实现
+      随后续批次依赖落地补全）
 
 #### 批次6 实施详情
 
-（待实施后补充）
+1. **测试统一**（6.1）：13 个 `.test.js` 机械迁移 + 51 处类型错误修复（字面量联合 `as const`、
+   品牌类型转换函数、exactOptionalPropertyTypes 条件展开），cats-shared 14 文件 175 测试全绿。
+2. **会话链契约**（6.2a）：ISessionChainStore 从 stub 提升为完整 port，MemorySessionChainStore
+   全量移植（三索引/cliSessionId 冲突语义/F198 chainKey 写容忍/F118 sealing 扫描/容量三级驱逐
+   +真 active 拒绝驱逐回滚抛错）。
+3. **会话转录包**（6.3+6.4）：@flowforge/cats-session 三服务——Writer（增量崩溃恢复写 +
+   flush 合并去重重编号 + 稀疏索引 + 抽取式摘要含噪声分组/续接胶囊）、Reader（cursor 分页/
+   双域检索/调用级读取/handoff frontmatter 解析）、Sealer（CAS 封存 + 30s 超时守护 + 终态兜底
+   + F118 双回收器 + F231 post-seal hooks）；clowder-ai 的 getEventAuditLog() 模块单例改造为
+   ctx.catsAudit Cordis 注入。7 个纯函数依赖模块全量移植。
+4. **Sqlite 后端**（6.5）：node:sqlite DatabaseSync（Node 24 内建，对齐 dsh
+   session-persistence-sqlite 范式）；9 表 STRICT + WAL + user_version 守护；CAS 经
+   BEGIN IMMEDIATE 事务；与 Memory 版语义差异（无容量上限/UNIQUE 冲突显式化）已在文件头注明。
 
 ## 验收标准
 

@@ -42,6 +42,9 @@
       "path": "./packages/cats/stores/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/stores-sqlite/tsconfig.host.json"
+    },
+    {
       "path": "./packages/cats/invocation/tsconfig.host.json"
     },
     {

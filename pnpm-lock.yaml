@@ -918,6 +918,22 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/stores-sqlite:
+    dependencies:
+      '@flowforge/schemastery':
+        specifier: workspace:^
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../stores
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/client/connection:
     dependencies:
       '@flowforge/attachment':
