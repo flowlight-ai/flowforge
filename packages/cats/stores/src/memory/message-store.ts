@@ -223,6 +223,40 @@ export class MemoryMessageStore implements IMessageStore {
     return matches.slice(0, max)
   }
 
+  getByThreadBefore(
+    threadId: string,
+    beforeTs?: number,
+    limit?: number,
+    beforeId?: string,
+    userId?: string,
+  ): StoredMessage[] {
+    const max = Number.isFinite(limit as number) && (limit as number) > 0
+      ? (limit as number)
+      : DEFAULT_LIMIT
+    const matches: StoredMessage[] = []
+    for (const msg of this.messages) {
+      if (msg.threadId !== threadId) continue
+      if (msg.deletedAt) continue
+      if (!isTimelinePublished(msg) && !isDelivered(msg)) continue
+      if (userId && msg.userId !== userId) continue
+      matches.push(msg)
+    }
+    matches.sort((a, b) => {
+      const ta = getTimelineOrderTime(a)
+      const tb = getTimelineOrderTime(b)
+      if (ta !== tb) return ta - tb
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+    })
+    const older = beforeTs === undefined
+      ? matches
+      : matches.filter((m) => {
+          const t = getTimelineOrderTime(m)
+          if (t !== beforeTs) return t < beforeTs
+          return beforeId === undefined ? false : m.id < beforeId
+        })
+    return older.slice(-max)
+  }
+
   deleteByThread(threadId: string): number {
     const removed = this.messages.filter((m) => m.threadId === threadId)
     const before = this.messages.length

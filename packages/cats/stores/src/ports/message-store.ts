@@ -98,6 +98,22 @@ export interface IMessageStore {
     limit?: number,
     userId?: string,
   ): StoredMessage[] | Promise<StoredMessage[]>
+  /**
+   * History cursor pagination (clowder-ai GET /api/messages `before` window):
+   * returns the `limit` newest messages strictly older than the composite
+   * `(beforeTs, beforeId?)` cursor, oldest-first. `beforeTs` undefined → the
+   * newest window (equivalent to getByThread but on the timeline-published
+   * projection used by After). Same-timestamp ties break on id when
+   * `beforeId` is provided; without it, same-timestamp entries are excluded
+   * (legacy plain-timestamp cursor semantics).
+   */
+  getByThreadBefore(
+    threadId: string,
+    beforeTs?: number,
+    limit?: number,
+    beforeId?: string,
+    userId?: string,
+  ): StoredMessage[] | Promise<StoredMessage[]>
   deleteByThread(threadId: string): number | Promise<number>
   softDelete(id: string, deletedBy: string): StoredMessage | null | Promise<StoredMessage | null>
   hardDelete(id: string, deletedBy: string): StoredMessage | null | Promise<StoredMessage | null>

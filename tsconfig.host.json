@@ -60,6 +60,9 @@
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {
+      "path": "./packages/chat/messages/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

@@ -254,6 +254,40 @@ export class SqliteMessageStore implements IMessageStore {
     return matches.slice(0, max)
   }
 
+  getByThreadBefore(
+    threadId: string,
+    beforeTs?: number,
+    limit?: number,
+    beforeId?: string,
+    userId?: string,
+  ): StoredMessage[] {
+    const max = Number.isFinite(limit as number) && (limit as number) > 0
+      ? (limit as number)
+      : DEFAULT_LIMIT
+    // Same bounded per-thread scan + JS timeline sort as getByThreadAfter.
+    const rows = this.db.prepare('SELECT * FROM messages WHERE thread_id = ?').all(threadId) as unknown as unknown[]
+    const matches = this.parseAll(rows).filter((msg) => {
+      if (msg.deletedAt) return false
+      if (!isTimelinePublished(msg) && !isDelivered(msg)) return false
+      if (userId !== undefined && msg.userId !== userId) return false
+      return true
+    })
+    matches.sort((a, b) => {
+      const ta = getTimelineOrderTime(a)
+      const tb = getTimelineOrderTime(b)
+      if (ta !== tb) return ta - tb
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+    })
+    const older = beforeTs === undefined
+      ? matches
+      : matches.filter((m) => {
+          const t = getTimelineOrderTime(m)
+          if (t !== beforeTs) return t < beforeTs
+          return beforeId === undefined ? false : m.id < beforeId
+        })
+    return older.slice(-max)
+  }
+
   deleteByThread(threadId: string): number {
     const res = this.db.prepare('DELETE FROM messages WHERE thread_id = ?').run(threadId)
     return Number(res.changes)

@@ -44,11 +44,18 @@
 
 ### 批次 2：`@flowforge/chat-messages`（消息域服务，T5.2）
 
-- [ ] T5.2.1 `MessageService extends Service` → `ctx.chatMessages`：publish（幂等
-      idempotencyKey/deliveryStatus）/edit/softDelete/history（cursor after）/getByThread
-- [ ] T5.2.2 `MessageActionService`（message-actions 语义：message_id 行动受理）
-- [ ] T5.2.3 消息 disposition 准入（message-disposition-admission/config 纯函数）
-- [ ] T5.2.4 测试 + typecheck + mgr PR
+- [x] T5.2.1 `MessageService extends Service` → `ctx.chatMessages`：publish（#21/Phase D
+      线程存在性守卫 + 首消息自动标题 + #579 删除中守卫 + #699 replyTo 校验与 whisper
+      泄露防护 + 幂等 idempotencyKey + F39 immediate/queue/force 投递路由）/history
+      （"ts:id" 复合游标循环扫描分页 + 内部诊断过滤 + hasMore）/get/getByThread/
+      getByThreadAfter/markDelivered/markCanceled/revealWhispers
+- [x] T5.2.2 `MessageActionService` → `ctx.chatMessageActions`（ADR-008 D3/S5+S6：
+      soft/hard delete（confirmTitle 确认）/restore（tombstone 不可恢复）/
+      F096 block-state（仅 interactive 块））
+- [x] T5.2.3 消息 disposition 准入（F264 纯函数：resolveMessageDispositionForAdmission
+      /resolveQueueAuthorIntentByCatId/undeclared 组合边界；scoped preference 改为注入式）
+- [x] T5.2.4 测试 3 spec 54 用例 + `IMessageStore.getByThreadBefore` 端口扩展
+      （Memory/Sqlite 双后端）+ typecheck 退出码 0 + mgr PR
 
 ### 批次 3：`@flowforge/chat-realtime`（实时事件面，T5.11）
 
@@ -99,7 +106,7 @@
 ## 任务清单（原始索引→批次映射）
 
 - [x] T5.1 `packages/chat/threads`：线程 CRUD/详情/标题/删除/成员 + 线程读取状态 → 批次1
-- [ ] T5.2 `packages/chat/messages`：消息发布/编辑/删除/行动（message-action）+ 媒体附件 → 批次2
+- [x] T5.2 `packages/chat/messages`：消息发布/编辑/删除/行动（message-action）+ 媒体附件 → 批次2
 - [ ] T5.3 `packages/chat/mention`：@mention 路由 + 多 @ 并发编排 → 批次5
 - [ ] T5.4 `packages/chat/session-chain`：会话链管理 + 交接 handoff → 批次6
 - [x] T5.5 `packages/chat/thread-branch`：线程分支 → 批次1（并入 `@flowforge/chat-threads`
