@@ -45,6 +45,9 @@
       "path": "./packages/cats/invocation/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/profile/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

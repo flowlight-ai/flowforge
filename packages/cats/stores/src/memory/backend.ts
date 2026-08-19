@@ -19,6 +19,7 @@ import type {
   IMemoryStore,
   IMessageStore,
   IInvocationRecordStore,
+  IProfileUpdateProposalStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
@@ -28,6 +29,7 @@ import { MemoryBacklogStore } from './backlog-store.ts'
 import { MemoryInvocationRecordStore } from './invocation-record-store.ts'
 import { MemoryMemoryStore } from './memory-store.ts'
 import { MemoryMessageStore } from './message-store.ts'
+import { MemoryProfileUpdateProposalStore } from './profile-update-proposal-store.ts'
 import { MemoryTaskManagedWorkRegistrationStore } from './task-managed-work-registration-store.ts'
 import { MemoryTaskProgressStore } from './task-progress-store.ts'
 import { MemoryTaskStore } from './task-store.ts'
@@ -72,6 +74,8 @@ export class MemoryStoresBackend extends Service {
   readonly invocationRecordStore: MemoryInvocationRecordStore
   readonly taskProgressStore: MemoryTaskProgressStore
   readonly taskManagedWorkRegistrationStore: MemoryTaskManagedWorkRegistrationStore
+  /** Batch 4.2 — profile-update proposal store. */
+  readonly profileUpdateProposalStore: MemoryProfileUpdateProposalStore
 
   constructor(ctx: Context) {
     super(ctx, 'catStoresMemory')
@@ -83,6 +87,7 @@ export class MemoryStoresBackend extends Service {
     this.invocationRecordStore = new MemoryInvocationRecordStore()
     this.taskProgressStore = new MemoryTaskProgressStore()
     this.taskManagedWorkRegistrationStore = new MemoryTaskManagedWorkRegistrationStore()
+    this.profileUpdateProposalStore = new MemoryProfileUpdateProposalStore()
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(MEMORY_BACKEND_NAME, {
@@ -94,6 +99,7 @@ export class MemoryStoresBackend extends Service {
         invocationRecordStore: this.invocationRecordStore,
         taskProgressStore: this.taskProgressStore,
         taskManagedWorkRegistrationStore: this.taskManagedWorkRegistrationStore,
+        profileUpdateProposalStore: this.profileUpdateProposalStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(MEMORY_BACKEND_NAME)
@@ -140,6 +146,11 @@ export class MemoryStoresBackend extends Service {
   get taskManagedWorkRegistrations(): MemoryTaskManagedWorkRegistrationStore {
     return this.taskManagedWorkRegistrationStore
   }
+
+  /** Expose the underlying profile-update proposal store (for tests / direct inspection). */
+  get profileUpdateProposals(): MemoryProfileUpdateProposalStore {
+    return this.profileUpdateProposalStore
+  }
 }
 
 /** Type helpers for backend accessors. */
@@ -148,6 +159,7 @@ export type {
   IMemoryStore,
   IMessageStore,
   IInvocationRecordStore,
+  IProfileUpdateProposalStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,

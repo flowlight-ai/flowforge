@@ -80,6 +80,12 @@ export type {
 } from './task-managed-work-registration-store.ts'
 
 export type {
+  CreateProfileUpdateProposalInput,
+  IProfileUpdateProposalStore,
+  ProfileUpdateCheckpoint,
+} from './profile-update-proposal-store.ts'
+
+export type {
   IAuthorizationAuditStore,
   IAuthorizationRuleStore,
   ICommunityIssueDraftStore,
@@ -94,7 +100,6 @@ export type {
   ILabelStore,
   IMemoryGovernanceStore,
   IPendingRequestStore,
-  IProfileUpdateProposalStore,
   IProposalStore,
   IPushSubscriptionStore,
   IReadStateStore,

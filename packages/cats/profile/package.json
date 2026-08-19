@@ -1,0 +1,60 @@
+{
+  "name": "@flowforge/cats-profile",
+  "description": "Forgekin (cats) profile repository + approval pipeline Cordis plugin — mounted at ctx.catsProfile / ctx.catsProfileApproval",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/cats/profile"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./write": {
+      "types": "./lib/types/write-profile-update.d.ts",
+      "default": "./lib/write-profile-update.js"
+    },
+    "./repository": {
+      "types": "./lib/types/repository.d.ts",
+      "default": "./lib/repository.js"
+    },
+    "./approval": {
+      "types": "./lib/types/approval.d.ts",
+      "default": "./lib/approval.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/write-profile-update.js",
+    "lib/repository.js",
+    "lib/approval.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

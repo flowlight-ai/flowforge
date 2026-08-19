@@ -12,6 +12,7 @@ export {
 } from './invocation-record-store.ts'
 export { MemoryMemoryStore } from './memory-store.ts'
 export { MemoryMessageStore, DEFAULT_THREAD_ID } from './message-store.ts'
+export { MemoryProfileUpdateProposalStore } from './profile-update-proposal-store.ts'
 export { MemoryTaskManagedWorkRegistrationStore } from './task-managed-work-registration-store.ts'
 export { MemoryTaskProgressStore } from './task-progress-store.ts'
 export { MemoryTaskStore } from './task-store.ts'
