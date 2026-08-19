@@ -104,6 +104,19 @@ export type { IDeliveryCursorStore } from './delivery-cursor-store.ts'
 
 export type { ISummaryStore } from './summary-store.ts'
 
+// ============================================================================
+// Session-related ports (batch 6.2a) — promoted from stub-ports.ts to the
+// full branded contract (F24 session lineage; clowder-ai SessionChainStore).
+// ============================================================================
+
+export type {
+  CreateSessionInput,
+  ISessionChainStore,
+  SessionRecordPatch,
+  StoreReadOptions,
+} from './session-chain-store.ts'
+export { throwIfStoreReadAborted } from './session-chain-store.ts'
+
 export type {
   IAuthorizationAuditStore,
   IAuthorizationRuleStore,
@@ -119,7 +132,6 @@ export type {
   IProposalStore,
   IPushSubscriptionStore,
   IReadStateStore,
-  ISessionChainStore,
   ISessionHandoffProposalStore,
   ITurnExecutionStore,
   IWorkflowSopStore,

@@ -147,12 +147,9 @@ export interface IWorkflowSopStore {
   unregister(sopId: string): boolean | Promise<boolean>
 }
 
-/** Session chain store (per-cat session lineage for handoff). */
-export interface ISessionChainStore {
-  append(chainId: string, entry: Record<string, unknown>): void | Promise<void>
-  getChain(chainId: string): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-  listChainsForCat(catId: string): readonly string[] | Promise<readonly string[]>
-}
+/** Session chain store was promoted to a full contract in batch 6.2a:
+ * - `ISessionChainStore` → `./session-chain-store.ts`
+ */
 
 /** Draft store (per-thread unsent draft). */
 export interface IDraftStore {

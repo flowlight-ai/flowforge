@@ -1,11 +1,10 @@
-import assert from 'node:assert/strict';
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   getAllConnectorDefinitions,
   getConnectorDefinition,
   registerConnectorDefinition,
   unregisterConnectorDefinition,
-} from '../src/types/connector.js';
+} from '../src/types/connector.ts';
 
 describe('F140 ConnectorDefinitions', () => {
   it('GitHub connectors use a unified slate-gray gradient', () => {
@@ -20,27 +19,28 @@ describe('F140 ConnectorDefinitions', () => {
     };
     for (const [id, color] of Object.entries(expected)) {
       const def = getConnectorDefinition(id);
-      assert.ok(def, `${id} should be registered`);
-      assert.equal(def.themeColor, color, `${id} themeColor should be ${color}`);
-      assert.equal(def.icon.type, 'svg');
-      assert.equal(def.icon.iconId, 'github');
+      expect(def).toBeTruthy();
+      expect(def?.themeColor).toBe(color);
+      expect(def?.icon.type).toBe('svg');
+      // 测试便利性: 上一行已断言 icon.type === 'svg'，此处按 svg 变体读取 iconId
+      expect(def?.icon.type === 'svg' ? def.icon.iconId : undefined).toBe('github');
     }
   });
 
   it('all definitions have unique ids', () => {
     const all = getAllConnectorDefinitions();
     const ids = all.map((d) => d.id);
-    assert.equal(ids.length, new Set(ids).size, 'IDs must be unique');
+    expect(ids.length).toBe(new Set(ids).size);
   });
 
   it('all definitions have themeColor + structured icon', () => {
     for (const def of getAllConnectorDefinitions()) {
-      assert.match(def.themeColor, /^#[0-9a-fA-F]{6}$/, `${def.id} themeColor must be hex`);
-      assert.ok(def.icon, `${def.id} must have icon`);
+      expect(def.themeColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(def.icon).toBeTruthy();
       if (def.icon.type === 'svg') {
-        assert.equal(typeof def.icon.iconId, 'string', `${def.id} svg must have iconId`);
+        expect(typeof def.icon.iconId).toBe('string');
       } else {
-        assert.match(def.icon.src, /^\//, `${def.id} png must have absolute src`);
+        expect(def.icon.src).toMatch(/^\//);
       }
     }
   });
@@ -48,7 +48,8 @@ describe('F140 ConnectorDefinitions', () => {
   it('replaces runtime connector definitions without overriding static definitions', () => {
     const runtimeId = 'runtime-definition-update-probe';
     const builtInBefore = getConnectorDefinition('weixin');
-    assert.ok(builtInBefore);
+    expect(builtInBefore).toBeTruthy();
+    if (!builtInBefore) throw new Error('weixin connector definition not found');
 
     try {
       registerConnectorDefinition({
@@ -70,16 +71,8 @@ describe('F140 ConnectorDefinitions', () => {
         displayName: 'Overridden Weixin',
       });
 
-      assert.equal(
-        getConnectorDefinition(runtimeId)?.displayName,
-        'Runtime Probe v2',
-        'runtime connector metadata must refresh after plugin update',
-      );
-      assert.strictEqual(
-        getConnectorDefinition('weixin'),
-        builtInBefore,
-        'runtime registration must not replace static connector definitions',
-      );
+      expect(getConnectorDefinition(runtimeId)?.displayName).toBe('Runtime Probe v2');
+      expect(getConnectorDefinition('weixin')).toBe(builtInBefore);
     } finally {
       unregisterConnectorDefinition(runtimeId);
     }

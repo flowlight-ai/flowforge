@@ -51,6 +51,9 @@
       "path": "./packages/cats/profile/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/session/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

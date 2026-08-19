@@ -12,21 +12,20 @@
  *   4. ProfileUpdateSignalProvenance.kind type is a subset of the whitelist
  */
 
-import assert from 'node:assert/strict';
-import { describe, test } from 'vitest';
-import { COLLECTION_SIGNAL_KINDS, isAllowedCollectionSignal } from '../src/types/profile-update.js';
+import { describe, expect, test } from 'vitest';
+import { COLLECTION_SIGNAL_KINDS, isAllowedCollectionSignal } from '../src/types/profile-update.ts';
 
 describe('F231 AC-C3 — Collection signal whitelist (KD-9)', () => {
   describe('COLLECTION_SIGNAL_KINDS', () => {
     test('is a frozen array (closed enum, no runtime extension)', () => {
-      assert.ok(Array.isArray(COLLECTION_SIGNAL_KINDS), 'must be an array');
-      assert.ok(Object.isFrozen(COLLECTION_SIGNAL_KINDS), 'must be frozen');
+      expect(Array.isArray(COLLECTION_SIGNAL_KINDS)).toBeTruthy();
+      expect(Object.isFrozen(COLLECTION_SIGNAL_KINDS)).toBeTruthy();
     });
 
     test('contains all KD-9 whitelisted kinds', () => {
-      const required = ['cvo-instructed', 'cat-declared', 'magic-word', 'message-coordinate', 'sign-off', 'reaction'];
+      const required = ['cvo-instructed', 'cat-declared', 'magic-word', 'message-coordinate', 'sign-off', 'reaction'] as const;
       for (const kind of required) {
-        assert.ok(COLLECTION_SIGNAL_KINDS.includes(kind), `whitelist must include "${kind}"`);
+        expect(COLLECTION_SIGNAL_KINDS.includes(kind)).toBeTruthy();
       }
     });
 
@@ -40,7 +39,7 @@ describe('F231 AC-C3 — Collection signal whitelist (KD-9)', () => {
         'reaction',
       ]);
       for (const kind of COLLECTION_SIGNAL_KINDS) {
-        assert.ok(allowed.has(kind), `unexpected kind "${kind}" in whitelist`);
+        expect(allowed.has(kind)).toBeTruthy();
       }
     });
   });
@@ -48,21 +47,21 @@ describe('F231 AC-C3 — Collection signal whitelist (KD-9)', () => {
   describe('isAllowedCollectionSignal()', () => {
     test('accepts every whitelisted kind', () => {
       for (const kind of COLLECTION_SIGNAL_KINDS) {
-        assert.equal(isAllowedCollectionSignal(kind), true, `"${kind}" must be accepted`);
+        expect(isAllowedCollectionSignal(kind)).toBe(true);
       }
     });
 
     test('rejects classifier-inferred kinds (KD-9 forbidden)', () => {
       const forbidden = ['classifier-inferred', 'regex-scan', 'llm-annotation', 'sentiment-analysis', 'pattern-match'];
       for (const kind of forbidden) {
-        assert.equal(isAllowedCollectionSignal(kind), false, `"${kind}" must be rejected (KD-9 禁 classifier)`);
+        expect(isAllowedCollectionSignal(kind)).toBe(false);
       }
     });
 
     test('rejects empty string and undefined', () => {
-      assert.equal(isAllowedCollectionSignal(''), false);
-      assert.equal(isAllowedCollectionSignal(undefined), false);
-      assert.equal(isAllowedCollectionSignal(null), false);
+      expect(isAllowedCollectionSignal('')).toBe(false);
+      expect(isAllowedCollectionSignal(undefined)).toBe(false);
+      expect(isAllowedCollectionSignal(null)).toBe(false);
     });
   });
 });

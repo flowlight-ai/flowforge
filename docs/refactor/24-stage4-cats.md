@@ -292,6 +292,43 @@
    unbound 静默、degraded 无回退时报 error 不静默（INV-2）。
 5. **测试基建**：tsconfig.host.json / vitest.config.ts 加入 cats-orchestration 引用与别名。
 
+### 批次 6：阶段4 收尾（C5 会话转录 + Sqlite 后端 + 测试统一）🟦
+
+> 目标：补齐阶段4 验收标准的剩余项——C5 TranscriptWriter/SessionSealer（会话转录落盘+回放）、
+> T4.2.6 `@flowforge/cats-stores-sqlite`（持久化后端）、13 个陈旧 `.test.js` 统一迁移 `.spec.ts`。
+>
+> **批次6 子任务分解**（实施进度：）：
+> - 批次6.1 ✅ 13 个 `.test.js` → `.spec.ts` 统一迁移（node:assert/.js 路径 → vitest expect/.ts；
+>   迁移后修复 51 处类型错误：字面量联合/品牌类型/exactOptionalPropertyTypes）
+> - 批次6.2 ✅ C5 调研：clowder-ai `cats/services/session/`（TranscriptWriter 684L/TranscriptReader 406L/
+>   SessionSealer 506L + buildThreadMemory/extractDecisionSignals/TranscriptFormatter/
+>   HandoffDigestGenerator/CollaborationContinuityCapsule/stripLeakedToolCallPayload 依赖链）
+> - 批次6.2a ✅ ISessionChainStore stub → 完整 port + MemorySessionChainStore（F198 chainKey 写容忍/
+>   F118 listSealingSessions/MAX_RECORDS 三级驱逐）+ CatStores.sessionChains() 访问器 + 16 测试
+> - 批次6.3 ✅ 新建 @flowforge/cats-session 包：TranscriptWriterService（ctx.catsTranscriptWriter，
+>       events.live.jsonl 崩溃恢复增量写+flush 落盘 events.jsonl/index.json/digest.extractive.json）
+>       + TranscriptReaderService（ctx.catsTranscriptReader，分页/检索/调用级读取）+ capsule/sanitize
+>       纯函数，26 测试
+> - 批次6.4 ✅ SessionSealerService（ctx.catsSessionSealer，static inject catStores+catsAudit，
+>       getEventAuditLog 单例→ctx.catsAudit）+ thread-memory/decision-signals/formatter/handoff/
+>       artifact 纯函数群，56 测试
+> - 批次6.5 ⬜ T4.2.6 `@flowforge/cats-stores-sqlite`：核心 5 store + invocation/delivery 等
+>       CAS store 的 better-sqlite3 事务实现（对齐 dsh session-persistence-sqlite 模式）
+> - 批次6.6 ⬜ 测试 + typecheck + mgr sync PR + 文档更新
+
+- [x] T4.6.1 13 个 `.test.js` → `.spec.ts`（meeting/meeting-context-block/frustration-issue/
+      extract-feature-ids/event-memory-types/derive-triage-confidence/connector-definitions/
+      config-field-codec/community-issue-draft/collection-signal-whitelist/client-routing/
+      pet-skin-projection/concierge-config）— 完成（175 测试全绿 + 51 类型错误修复）
+- [x] T4.6.2 C5 TranscriptWriter/SessionSealer/TranscriptReader 移植为 Cordis 插件（会话转录
+      持久化+回放，目录结构 threads/<threadId>/<catId>/sessions/<sessionId>/）— 完成
+      （@flowforge/cats-session 包，82 测试：writer 26 + sealer 56）
+- [ ] T4.6.3 T4.2.6 Sqlite 后端（CAS 用事务替代 Redis Lua；`static Config` Schemastery schema）
+
+#### 批次6 实施详情
+
+（待实施后补充）
+
 ## 验收标准
 
 1. 可通过 YAML 档案注册/更新/停用灵智体（Forgekin），迁移与审批流程可用。

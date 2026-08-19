@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 /**
  * F227 PR-1 Task 1 — terminal EventMemory schema (10 fields) guard tests.
@@ -46,64 +45,60 @@ function validRecord() {
 describe('F227: EventMemory types', () => {
   describe('generateEventId', () => {
     it('generates ID with evt_ prefix', async () => {
-      const { generateEventId } = await import('../src/types/event-memory.js');
+      const { generateEventId } = await import('../src/types/event-memory.ts');
       const id = generateEventId();
-      assert.ok(id.startsWith('evt_'), `expected evt_ prefix, got: ${id}`);
+      expect(id.startsWith('evt_')).toBeTruthy();
     });
 
     it('generates unique IDs', async () => {
-      const { generateEventId } = await import('../src/types/event-memory.js');
-      assert.notEqual(generateEventId(), generateEventId(), 'IDs should be unique');
+      const { generateEventId } = await import('../src/types/event-memory.ts');
+      expect(generateEventId()).not.toBe(generateEventId());
     });
   });
 
   describe('isEventMemoryRecord — accepts', () => {
     it('accepts a fully-valid record', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord(validRecord()), true);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord(validRecord())).toBe(true);
     });
 
     it('accepts every trigger enum value', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
       for (const trigger of TRIGGERS) {
-        assert.equal(isEventMemoryRecord({ ...validRecord(), trigger }), true, `trigger=${trigger}`);
+        expect(isEventMemoryRecord({ ...validRecord(), trigger })).toBe(true);
       }
     });
 
     it('accepts every confidence enum value', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
       for (const confidence of CONFIDENCES) {
-        assert.equal(isEventMemoryRecord({ ...validRecord(), confidence }), true, `confidence=${confidence}`);
+        expect(isEventMemoryRecord({ ...validRecord(), confidence })).toBe(true);
       }
     });
 
     it('accepts every cognitiveTransition enum value', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
       for (const cognitiveTransition of TRANSITIONS) {
-        assert.equal(
-          isEventMemoryRecord({ ...validRecord(), cognitiveTransition }),
-          true,
-          `transition=${cognitiveTransition}`,
-        );
+        expect(isEventMemoryRecord({ ...validRecord(), cognitiveTransition })).toBe(true);
       }
     });
 
     it('accepts null cognitiveTransition', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), cognitiveTransition: null }), true);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), cognitiveTransition: null })).toBe(true);
     });
 
     it('accepts relatedHarness as string array', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), relatedHarness: ['commit:abc', 'skill:tdd'] }), true);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), relatedHarness: ['commit:abc', 'skill:tdd'] })).toBe(true);
     });
   });
 
   describe('isEventMemoryRecord — rejects non-objects', () => {
     it('rejects null / undefined / primitives / array', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
       for (const bad of [null, undefined, 'x', 42, true, []]) {
-        assert.equal(isEventMemoryRecord(bad), false, `value=${JSON.stringify(bad)}`);
+        expect(isEventMemoryRecord(bad)).toBe(false);
       }
     });
   });
@@ -123,48 +118,48 @@ describe('F227: EventMemory types', () => {
     ];
     for (const field of ALL_FIELDS) {
       it(`rejects record missing "${field}" key`, async () => {
-        const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-        const bad = validRecord();
+        const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+        const bad: Record<string, unknown> = validRecord();
         delete bad[field];
-        assert.equal(isEventMemoryRecord(bad), false, `missing ${field} should be invalid`);
+        expect(isEventMemoryRecord(bad)).toBe(false);
       });
     }
   });
 
   describe('isEventMemoryRecord — rejects wrong types & bad enums', () => {
     it('rejects invalid trigger enum', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), trigger: 'bogus' }), false);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), trigger: 'bogus' })).toBe(false);
     });
 
     it('rejects invalid confidence enum', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), confidence: 'sky-high' }), false);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), confidence: 'sky-high' })).toBe(false);
     });
 
     it('rejects invalid cognitiveTransition enum', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), cognitiveTransition: 'enlightenment' }), false);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), cognitiveTransition: 'enlightenment' })).toBe(false);
     });
 
     it('rejects non-string type', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), type: 123 }), false);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), type: 123 })).toBe(false);
     });
 
     it('rejects non-number timestamp', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), timestamp: '123' }), false);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), timestamp: '123' })).toBe(false);
     });
 
     it('rejects relatedHarness with non-string elements', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), relatedHarness: [1, 2] }), false);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), relatedHarness: [1, 2] })).toBe(false);
     });
 
     it('rejects relatedHarness that is neither null nor array', async () => {
-      const { isEventMemoryRecord } = await import('../src/types/event-memory.js');
-      assert.equal(isEventMemoryRecord({ ...validRecord(), relatedHarness: 'commit:abc' }), false);
+      const { isEventMemoryRecord } = await import('../src/types/event-memory.ts');
+      expect(isEventMemoryRecord({ ...validRecord(), relatedHarness: 'commit:abc' })).toBe(false);
     });
   });
 });

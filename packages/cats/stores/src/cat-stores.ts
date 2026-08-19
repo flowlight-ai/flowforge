@@ -29,6 +29,7 @@ import type {
   IMemoryStore,
   IMessageStore,
   IProfileUpdateProposalStore,
+  ISessionChainStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
@@ -58,6 +59,8 @@ export interface CatStoresBackend {
   readonly dossierDistillationProposalStore?: IDossierDistillationProposalStore
   readonly dossierObservationStore?: IDossierObservationStore
   readonly deliveryCursorStore?: IDeliveryCursorStore
+  /** Session chain store (batch 6.2a — F24 session lineage per cat × thread). */
+  readonly sessionChainStore?: ISessionChainStore
   /** Additional ports may be added incrementally — backend plugins opt-in. */
   readonly [key: string]: unknown
 }
@@ -263,6 +266,21 @@ export class CatStores extends Service {
       throw new Error(
         'Active cats-stores backend did not register an IDeliveryCursorStore; ' +
           'load @flowforge/cats-stores/memory (batch 5.2) or a backend that supports delivery cursors.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active ISessionChainStore. Throws if the active backend
+   * did not register one (only backends from batch 6.2a+ do).
+   */
+  sessionChains(): ISessionChainStore {
+    const store = this.active().sessionChainStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an ISessionChainStore; ' +
+          'load @flowforge/cats-stores/memory (batch 6.2a) or a backend that supports session chains.',
       )
     }
     return store

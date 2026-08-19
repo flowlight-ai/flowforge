@@ -3,7 +3,7 @@ import {
   PET_STATE_PROJECTION_V0,
   PET_STATE_PROJECTION_V1,
   projectToPetState,
-} from '../src/concierge/pet-skin-projection.js';
+} from '../src/concierge/pet-skin-projection.ts';
 
 describe('projectToPetState — v0 四態投影', () => {
   const proj = PET_STATE_PROJECTION_V0;

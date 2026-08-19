@@ -23,6 +23,7 @@ import type {
   IMessageStore,
   IInvocationRecordStore,
   IProfileUpdateProposalStore,
+  ISessionChainStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
@@ -37,6 +38,7 @@ import { MemoryInvocationRecordStore } from './invocation-record-store.ts'
 import { MemoryMemoryStore } from './memory-store.ts'
 import { MemoryMessageStore } from './message-store.ts'
 import { MemoryProfileUpdateProposalStore } from './profile-update-proposal-store.ts'
+import { MemorySessionChainStore } from './session-chain-store.ts'
 import { MemorySummaryStore } from './summary-store.ts'
 import { MemoryTaskManagedWorkRegistrationStore } from './task-managed-work-registration-store.ts'
 import { MemoryTaskProgressStore } from './task-progress-store.ts'
@@ -89,6 +91,8 @@ export class MemoryStoresBackend extends Service {
   readonly dossierDistillationProposalStore: MemoryDossierDistillationProposalStore
   readonly dossierObservationStore: MemoryDossierObservationStore
   readonly deliveryCursorStore: MemoryDeliveryCursorStore
+  /** Batch 6.2a — session chain store (F24 session lineage). */
+  readonly sessionChainStore: MemorySessionChainStore
 
   constructor(ctx: Context) {
     super(ctx, 'catStoresMemory')
@@ -105,6 +109,7 @@ export class MemoryStoresBackend extends Service {
     this.dossierDistillationProposalStore = new MemoryDossierDistillationProposalStore()
     this.dossierObservationStore = new MemoryDossierObservationStore()
     this.deliveryCursorStore = new MemoryDeliveryCursorStore()
+    this.sessionChainStore = new MemorySessionChainStore()
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(MEMORY_BACKEND_NAME, {
@@ -121,6 +126,7 @@ export class MemoryStoresBackend extends Service {
         dossierDistillationProposalStore: this.dossierDistillationProposalStore,
         dossierObservationStore: this.dossierObservationStore,
         deliveryCursorStore: this.deliveryCursorStore,
+        sessionChainStore: this.sessionChainStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(MEMORY_BACKEND_NAME)
@@ -192,6 +198,11 @@ export class MemoryStoresBackend extends Service {
   get deliveryCursors(): MemoryDeliveryCursorStore {
     return this.deliveryCursorStore
   }
+
+  /** Expose the underlying session chain store (for tests / direct inspection). */
+  get sessionChains(): MemorySessionChainStore {
+    return this.sessionChainStore
+  }
 }
 
 /** Type helpers for backend accessors. */
@@ -204,6 +215,7 @@ export type {
   IMessageStore,
   IInvocationRecordStore,
   IProfileUpdateProposalStore,
+  ISessionChainStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,

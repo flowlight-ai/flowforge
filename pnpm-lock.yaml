@@ -888,6 +888,15 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/session:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/cats/shared:
     devDependencies:
       '@flowforge/cordis':

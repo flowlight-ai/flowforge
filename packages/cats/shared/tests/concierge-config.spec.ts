@@ -13,7 +13,7 @@ import {
   BALL_SIZE_MIN,
   CONCIERGE_CONFIG_DEFAULTS,
   clampBallSize,
-} from '../src/types/concierge.js';
+} from '../src/types/concierge.ts';
 
 describe('ConciergeConfig ballSize (E3)', () => {
   it('CONCIERGE_CONFIG_DEFAULTS includes ballSize with value 72', () => {

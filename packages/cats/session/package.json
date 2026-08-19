@@ -1,0 +1,93 @@
+{
+  "name": "@flowforge/cats-session",
+  "description": "Forgekin (cats) session transcript writer/reader/sealer Cordis plugin — seal-time JSONL transcripts + sparse index + extractive digest + active→sealing→sealed lifecycle at ctx.catsTranscriptWriter / ctx.catsTranscriptReader / ctx.catsSessionSealer",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/cats/session"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./writer": {
+      "types": "./lib/types/transcript-writer.d.ts",
+      "default": "./lib/transcript-writer.js"
+    },
+    "./reader": {
+      "types": "./lib/types/transcript-reader.d.ts",
+      "default": "./lib/transcript-reader.js"
+    },
+    "./capsule": {
+      "types": "./lib/types/capsule.d.ts",
+      "default": "./lib/capsule.js"
+    },
+    "./sanitize": {
+      "types": "./lib/types/text-sanitize.d.ts",
+      "default": "./lib/text-sanitize.js"
+    },
+    "./sealer": {
+      "types": "./lib/types/session-sealer.d.ts",
+      "default": "./lib/session-sealer.js"
+    },
+    "./thread-memory": {
+      "types": "./lib/types/thread-memory.d.ts",
+      "default": "./lib/thread-memory.js"
+    },
+    "./decision-signals": {
+      "types": "./lib/types/decision-signals.d.ts",
+      "default": "./lib/decision-signals.js"
+    },
+    "./formatter": {
+      "types": "./lib/types/transcript-formatter.d.ts",
+      "default": "./lib/transcript-formatter.js"
+    },
+    "./handoff": {
+      "types": "./lib/types/handoff-digest.d.ts",
+      "default": "./lib/handoff-digest.js"
+    },
+    "./artifacts": {
+      "types": "./lib/types/artifact-tracking.d.ts",
+      "default": "./lib/artifact-tracking.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/transcript-writer.js",
+    "lib/transcript-reader.js",
+    "lib/capsule.js",
+    "lib/text-sanitize.js",
+    "lib/session-sealer.js",
+    "lib/thread-memory.js",
+    "lib/decision-signals.js",
+    "lib/transcript-formatter.js",
+    "lib/handoff-digest.js",
+    "lib/artifact-tracking.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

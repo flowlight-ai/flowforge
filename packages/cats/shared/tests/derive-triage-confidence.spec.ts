@@ -1,6 +1,5 @@
-import assert from 'node:assert/strict';
-import { describe, it } from 'vitest';
-import { deriveTriageConfidence } from '../src/types/community-issue.js';
+import { describe, expect, it } from 'vitest';
+import { deriveTriageConfidence, type TriageEntry } from '../src/types/community-issue.ts';
 
 /**
  * F168 Phase F — deriveTriageConfidence pure function tests
@@ -16,7 +15,7 @@ import { deriveTriageConfidence } from '../src/types/community-issue.js';
  */
 
 /** Helper: build a minimal TriageEntry with defaults for high confidence */
-function makeEntry(overrides = {}) {
+function makeEntry(overrides: Partial<TriageEntry> = {}): TriageEntry {
   return {
     catId: 'codex',
     verdict: 'WELCOME',
@@ -38,7 +37,7 @@ describe('deriveTriageConfidence', () => {
 
   it('returns high when all conditions met (5Q PASS + WELCOME + existing-thread)', () => {
     const entry = makeEntry();
-    assert.equal(deriveTriageConfidence(entry), 'high');
+    expect(deriveTriageConfidence(entry)).toBe('high');
   });
 
   it('returns high when questions mix PASS and WARN (no FAIL/UNKNOWN)', () => {
@@ -51,7 +50,7 @@ describe('deriveTriageConfidence', () => {
         { id: 'Q5', result: 'PASS' },
       ],
     });
-    assert.equal(deriveTriageConfidence(entry), 'high');
+    expect(deriveTriageConfidence(entry)).toBe('high');
   });
 
   it('returns high when all questions are WARN', () => {
@@ -64,7 +63,7 @@ describe('deriveTriageConfidence', () => {
         { id: 'Q5', result: 'WARN' },
       ],
     });
-    assert.equal(deriveTriageConfidence(entry), 'high');
+    expect(deriveTriageConfidence(entry)).toBe('high');
   });
 
   // --- LOW confidence cases ---
@@ -79,7 +78,7 @@ describe('deriveTriageConfidence', () => {
         { id: 'Q5', result: 'PASS' },
       ],
     });
-    assert.equal(deriveTriageConfidence(entry), 'low');
+    expect(deriveTriageConfidence(entry)).toBe('low');
   });
 
   it('returns low when any question is UNKNOWN', () => {
@@ -92,47 +91,47 @@ describe('deriveTriageConfidence', () => {
         { id: 'Q5', result: 'PASS' },
       ],
     });
-    assert.equal(deriveTriageConfidence(entry), 'low');
+    expect(deriveTriageConfidence(entry)).toBe('low');
   });
 
   it('returns low when verdict is NEEDS-DISCUSSION', () => {
     const entry = makeEntry({ verdict: 'NEEDS-DISCUSSION' });
-    assert.equal(deriveTriageConfidence(entry), 'low');
+    expect(deriveTriageConfidence(entry)).toBe('low');
   });
 
   it('returns low when verdict is POLITELY-DECLINE', () => {
     const entry = makeEntry({ verdict: 'POLITELY-DECLINE' });
-    assert.equal(deriveTriageConfidence(entry), 'low');
+    expect(deriveTriageConfidence(entry)).toBe('low');
   });
 
   it('returns low when routeRecommendation is new-thread', () => {
     const entry = makeEntry({
       routeRecommendation: { kind: 'new-thread' },
     });
-    assert.equal(deriveTriageConfidence(entry), 'low');
+    expect(deriveTriageConfidence(entry)).toBe('low');
   });
 
   it('returns low when routeRecommendation is decline', () => {
     const entry = makeEntry({
       routeRecommendation: { kind: 'decline' },
     });
-    assert.equal(deriveTriageConfidence(entry), 'low');
+    expect(deriveTriageConfidence(entry)).toBe('low');
   });
 
   // --- Edge cases ---
 
   it('returns low when routeRecommendation is undefined', () => {
-    const entry = makeEntry({ routeRecommendation: undefined });
-    assert.equal(deriveTriageConfidence(entry), 'low');
+    const { routeRecommendation, ...rest } = makeEntry();
+    expect(deriveTriageConfidence(rest as TriageEntry)).toBe('low');
   });
 
   it('returns low when questions array is empty', () => {
     const entry = makeEntry({ questions: [] });
-    assert.equal(deriveTriageConfidence(entry), 'low');
+    expect(deriveTriageConfidence(entry)).toBe('low');
   });
 
   it('returns low when questions is undefined', () => {
     const { questions, ...rest } = makeEntry();
-    assert.equal(deriveTriageConfidence(rest), 'low');
+    expect(deriveTriageConfidence(rest as TriageEntry)).toBe('low');
   });
 });
