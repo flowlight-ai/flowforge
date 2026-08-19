@@ -12,6 +12,7 @@
  * - `IInvocationRecordStore` → `./invocation-record-store.ts` (batch 3.2)
  * - `ITaskProgressStore`     → `./task-progress-store.ts`     (batch 3.2)
  * - `ITaskManagedWorkRegistrationStore` → `./task-managed-work-registration-store.ts` (batch 3.2)
+ * - `IProfileUpdateProposalStore` → `./profile-update-proposal-store.ts` (batch 4.2)
  *
  * The remaining stub contracts will be ported from clowder-ai
  * `packages/api/src/domains/cats/services/stores/ports/` as their dependent
@@ -138,15 +139,6 @@ export interface IGameStore {
 export interface IMemoryGovernanceStore {
   record(entry: Record<string, unknown>): void | Promise<void>
   listForCat(catId: string, options?: { readonly limit?: number }): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-}
-
-/** Profile update proposal store. */
-export interface IProfileUpdateProposalStore {
-  create(proposal: Record<string, unknown>): Record<string, unknown> | Promise<Record<string, unknown>>
-  getById(id: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  listForCat(catId: string): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-  approve(id: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  reject(id: string, reason: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
 }
 
 /** Session handoff proposal store. */

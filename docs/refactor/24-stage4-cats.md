@@ -1,4 +1,4 @@
-# 阶段 4：灵智体系统 cats（对齐 Clowder AI，改造为 Cordis 插件）
+﻿# 阶段 4：灵智体系统 cats（对齐 Clowder AI，改造为 Cordis 插件）
 
 > 目标：移植 clowder-ai `domains/cats` 核心，实现灵智体（Forgekin）档案/注册表/调用队列/
 > 编排/转录/蒸馏/存储层。品牌命名沿用 Forgekin，内部机制对齐 cats。
@@ -180,18 +180,55 @@
    - `cats-shared/types/session-mutex.ts`：`ForceReleaseResult` 从 `{released, canceledWaiters}` 改为 `{releasedHolders, rejectedWaiters, catIds?}` 对齐 clowder-ai
    - `package.json`：新增 `./queue`、`./tracker`、`./mutex`、`./progress` 子路径导出
 
-### 批次 4：`@flowforge/cats-profile`（档案插件）
+### 批次 4：`@flowforge/cats-profile`（档案插件）✅
 
 > 设计：参考 dsh `@flowforge/agent-default-model` 范式，将 ProfileRepository 改造为
 > `ProfileRepositoryService extends Service` → `ctx.catsProfile`，审批流程用 Cordis effect 管理。
+>
+> **批次4 子任务分解**（实施进度：）：
+> - 批次4.1 ✅ 调研 clowder-ai ProfileRepository/approveProfileUpdate/writeProfilePrimer 源码 + dsh 参考范式
+> - 批次4.2 ✅ cats-stores：IProfileUpdateProposalStore stub 提升为完整 port + Memory 实现；创建 cats-profile 包骨架
+> - 批次4.3 ✅ 移植 ProfileRepository → ProfileRepositoryService (ctx.catsProfile) + P1-1/P1-2 纯写入函数
+> - 批次4.4 ✅ 移植 approveProfileUpdate → ProfileApprovalService (ctx.catsProfileApproval，ctx.effect 管理审批生命周期)
+> - 批次4.5 ✅ 档案/审批单测（Cordis Context 模式，16 测试）
+> - 批次4.6 ✅ typecheck + cats 域 365 测试全绿 + mgr sync PR + 文档更新
 
-- [ ] T4.4.1 创建 `@flowforge/cats-profile` 包骨架
-- [ ] T4.4.2 移植 ProfileRepository → `ProfileRepositoryService extends Service` → `ctx.catsProfile`
-      （档案解析/写入/迁移/审批，全部通过 `ctx.catStores` 注入存储）
-- [ ] T4.4.3 移植 approveProfileUpdate 流程 → `ProfileApprovalService extends Service`
-      （通过 `ctx.effect` 管理审批提案生命周期）
-- [ ] T4.4.4 测试：档案迁移/审批单测（`vitest .spec.ts`，Cordis Context setup）
+- [x] T4.4.1 创建 `@flowforge/cats-profile` 包骨架（package.json/tsconfig.json/tsconfig.host.json/invariant.ts；
+      子路径导出 `./write` `./repository` `./approval`；peerDeps：cats-shared/cats-stores/cordis）
+- [x] T4.4.2 cats-stores：`IProfileUpdateProposalStore` 从 stub 提升为完整 port
+      （创建/读取/listPending/claimForApproval CAS/recordCheckpoint/finalizeApproval/rollbackClaim/
+      markRejected/客户端幂等去重 reserveDedup-releaseDedup/发布信封 setCardMessageId-commitEnvelope-abortStaged）；
+      `MemoryProfileUpdateProposalStore` 实现 + `CatStores.profileUpdateProposals()` 聚合访问器 + Memory 后端注册
+- [x] T4.4.3 移植 ProfileRepository → `ProfileRepositoryService extends Service` → `ctx.catsProfile`
+      （scope 解析：relationshipKey 默认经 `ctx.cats` 注册表解析（可注入 resolver 覆盖），未配置时拒绝构建
+      scope（杜绝 catId 回退）；profileDir/primerPath/readPrimer；scopeForPinnedPrimerTarget 阻断旧版
+      catId 键控 target 在人格迁移后被审批）
+- [x] T4.4.4 移植 writeProfilePrimer/writeProfileProvenance 纯函数（P1-1 崩溃恢复检查点语义 +
+      P1-2 乐观锁 baseContentHash 比对 + 原子写 .tmp→rename；InvalidPrimerPathError/StaleProfileUpdateError）
+- [x] T4.4.5 移植 approveProfileUpdate → `ProfileApprovalService extends Service` → `ctx.catsProfileApproval`
+      （per-target 锁（绝对 primer 路径为 key）串行化 + pending→approving→approved CAS 状态机 +
+      崩溃恢复（writtenPath/provenancePath 检查点幂等续作，approving 态重入即恢复）+ 拒绝单次性 +
+      `ctx.effect` 管理锁表生命周期（fiber dispose 时拒绝排队 waiters）；primer 写失败回滚 pending，
+      provenance 写失败保持 approving 等待恢复；writer 经构造参数注入，测试可替换）
+- [x] T4.4.6 测试：profile.spec.ts 16 测试（纯写入函数 happy/stale/already-applied、repository
+      scope/迁移守护/ctx.cats 注册表集成、审批 happy/幂等/stale 回滚/拒绝单次性/崩溃恢复/not_found/
+      write_failed 回滚/并发 per-target 锁串行化）
 
+#### 批次4 实施详情
+
+1. **存储契约**（cats-stores `ports/profile-update-proposal-store.ts`）：审批单状态机
+   （pending → approving → approved/rejected）的 store 层契约；claimForApproval/finalizeApproval 均为
+   CAS 语义（并发审批竞态时输者拿到 null）；`CreateProfileUpdateProposalInput.baseContentHash` 在创建时
+   锁定基准，审批写入前由 writeProfilePrimer 复核（P1-2）。
+2. **纯写入函数**（cats-profile `src/write-profile-update.ts`）：`writeProfilePrimer` 复核当前文件 hash
+   与提案基准一致后原子写入 afterContent；`allowAlreadyApplied` 分支支持崩溃后幂等重放；
+   `writeProfileProvenance` 写确定性 before/after 记录（signal 来源/rationale 全量落盘）。
+3. **审批管线锁语义**：锁 key 为解析后的绝对 primer 路径（与 session mutex 命名空间隔离）；锁内重读
+   提案防止等锁期间状态漂移；全程 `finally` 释放（INV-9）。
+4. **测试基建修复**：清理 `cats/shared/src` + `cats/stores/src` 内 592 个陈旧 tsc 构建镜像
+   （.js/.d.ts/.js.map/.d.ts.map，均为 gitignore 未跟踪产物）——Vite 别名目录解析时 `.js` 优先于
+   `.ts`，包名导入命中 8/18 陈旧构建导致新方法在运行时"消失"；清理后包名导入与相对导入类身份一致，
+   cats 域 26 文件 365 测试全绿。
 ### 批次 5：`@flowforge/cats-orchestration`（编排/审计/蒸馏插件）
 
 > 设计：参考 dsh `@flowforge/compaction` 范式，将 EventAuditLog / AutoSummarizer /
@@ -222,3 +259,4 @@
 ```
 feat(cats): 移植灵智体系统(档案/编排/调用队列/蒸馏) 改造为Cordis插件 [sherlock]
 ```
+

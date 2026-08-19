@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CatStores — Cordis service that aggregates all cats-domain store backends.
  *
  * Mounted at `ctx.catStores` by the `@flowforge/cats-stores` default plugin.
@@ -25,6 +25,7 @@ import type {
   IInvocationRecordStore,
   IMemoryStore,
   IMessageStore,
+  IProfileUpdateProposalStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
@@ -46,6 +47,8 @@ export interface CatStoresBackend {
   readonly invocationRecordStore?: IInvocationRecordStore
   readonly taskProgressStore?: ITaskProgressStore
   readonly taskManagedWorkRegistrationStore?: ITaskManagedWorkRegistrationStore
+  /** Profile-update proposal store (batch 4.2). */
+  readonly profileUpdateProposalStore?: IProfileUpdateProposalStore
   /** Additional ports may be added incrementally — backend plugins opt-in. */
   readonly [key: string]: unknown
 }
@@ -181,6 +184,21 @@ export class CatStores extends Service {
     return store
   }
 
+  /**
+   * Resolve the active IProfileUpdateProposalStore. Throws if the active
+   * backend did not register one (only backends from batch 4.2+ do).
+   */
+  profileUpdateProposals(): IProfileUpdateProposalStore {
+    const store = this.active().profileUpdateProposalStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IProfileUpdateProposalStore; ' +
+          'load @flowforge/cats-stores/memory (batch 4.2) or a backend that supports profile-update proposals.',
+      )
+    }
+    return store
+  }
+
   /** List all registered backend names. */
   backendNames(): readonly string[] {
     return Array.from(this.backends.keys())
@@ -191,3 +209,5 @@ export class CatStores extends Service {
     return this.activeName
   }
 }
+
+
