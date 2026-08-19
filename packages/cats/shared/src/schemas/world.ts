@@ -228,7 +228,7 @@ export const WorldEventEntrySchema = z.object({
   type: WorldEventTypeSchema,
   actor: WorldActorRefSchema,
   characterId: z.string().optional(),
-  payload: z.record(z.unknown()),
+  payload: z.record(z.string(), z.unknown()),
   canonRecordId: z.string().optional(),
   createdAt: z.string(),
 });

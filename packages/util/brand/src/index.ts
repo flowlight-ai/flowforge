@@ -21,6 +21,12 @@
  * @module @flowforge/brand
  */
 
+/**
+ * The brand phantom symbol. Module-local by design (dsh parity): exporting it
+ * makes downstream declaration emit attempt to name `BRAND` across the
+ * src/lib reference redirection and fail with TS4023; keeping it unexported
+ * preserves the `Branded<B>` alias in emitted `.d.ts` instead.
+ */
 declare const BRAND: unique symbol
 
 /** A string carrying a compile-time-only brand `B`. */

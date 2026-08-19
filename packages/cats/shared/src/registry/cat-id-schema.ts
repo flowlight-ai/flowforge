@@ -19,8 +19,8 @@ import type { CatRegistry } from './CatRegistry.ts';
 export function catIdSchema(registry: CatRegistry) {
   return z.string().refine(
     (id) => registry.has(id),
-    (id) => ({
-      message: `Unknown cat ID: "${id}". Valid: ${registry.getAllIds().join(', ')}`,
-    }),
+    {
+      error: issue => `Unknown cat ID: "${issue.input}". Valid: ${registry.getAllIds().join(', ')}`,
+    },
   );
 }

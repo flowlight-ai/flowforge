@@ -5,7 +5,8 @@
  * @module @flowforge/agent-loop
  */
 
-import { Context, FiberState, Service } from '@flowforge/cordis'
+import { Context, Service } from '@flowforge/cordis'
+import type { FiberState } from '@flowforge/cordis'
 import { randomUUID } from 'node:crypto'
 import z from '@flowforge/schemastery'
 import { emitAgentEvent } from '@flowforge/agent'
@@ -29,11 +30,22 @@ import type { SessionPersistence } from '@flowforge/session-persistence'
 import { ReactLoopAgent } from './agent.ts'
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS } from './constants.ts'
 
+/**
+ * Value mirror of the `FiberState` members the inactive set holds: a const
+ * enum has no runtime object to import, and the values are needed at runtime
+ * (same rationale as the settings boot driver's mirror).
+ */
+const FIBER_STATE = {
+  FAILED: 3 as FiberState.FAILED,
+  DISPOSED: 4 as FiberState.DISPOSED,
+  UNLOADING: 5 as FiberState.UNLOADING,
+} as const
+
 /** Fiber states that cannot own or serve a new lifecycle. */
-const INACTIVE_STATES: ReadonlySet<FiberState> = new Set([
-  FiberState.UNLOADING,
-  FiberState.DISPOSED,
-  FiberState.FAILED,
+const INACTIVE_STATES: ReadonlySet<FiberState> = new Set<FiberState>([
+  FIBER_STATE.UNLOADING,
+  FIBER_STATE.DISPOSED,
+  FIBER_STATE.FAILED,
 ])
 
 /** Factory-level ownership: live agent teardowns plus config startup work. */

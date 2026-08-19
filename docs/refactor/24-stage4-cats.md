@@ -91,8 +91,8 @@
 > - 批次3.2 ✅ cats-stores 补全 IInvocationRecordStore/ITaskManagedWorkRegistrationStore/ITaskProgressStore ports + Memory 实现
 > - 批次3.3 ✅ 创建 @flowforge/cats-invocation 包骨架 (package.json/tsconfig/invariant.ts)
 > - 批次3.4 ✅ 实现 InvocationQueueService/InvocationTrackerService/SessionMutexService/TaskProgressService (Cordis Service 抽象+Memory实现)
-> - 批次3.5 ⏳ 实现最小骨架 QueueProcessorService + reconcileZombies/StartupReconciler 纯函数
-> - 批次3.6 ⏳ 编写 .spec.ts 测试 + 类型检查 + mgr sync PR
+> - 批次3.5 ✅ 实现最小骨架 QueueProcessorService + reconcileZombies/StartupReconciler 纯函数
+> - 批次3.6 ✅ 编写 .spec.ts 测试 + 类型检查 + mgr sync PR（53 测试通过，PR #90 已合入）
 
 #### 批次3.1：cats-shared 类型 + 状态机纯函数 ✅
 
@@ -123,8 +123,8 @@
 > **批次3.3-3.6 子任务分解**（实施进度：）：
 > - 批次3.3 ✅ 创建 @flowforge/cats-invocation 包骨架 (package.json/tsconfig/invariant.ts) + 抽象 CatsInvocation Service 契约
 > - 批次3.4 ✅ 实现 InvocationQueueService/InvocationTrackerService/SessionMutexService/TaskProgressService (Cordis Service 抽象+Memory实现)
-> - 批次3.5 ⏳ 实现最小骨架 QueueProcessorService + reconcileZombies/StartupReconciler 纯函数
-> - 批次3.6 ⏳ 编写 .spec.ts 测试 + 类型检查 + mgr sync PR
+> - 批次3.5 ✅ 实现最小骨架 QueueProcessorService + reconcileZombies/StartupReconciler 纯函数
+> - 批次3.6 ✅ 编写 .spec.ts 测试 + 类型检查 + mgr sync PR（53 测试通过，PR #90 已合入）
 
 - [x] T4.3.1 创建 `@flowforge/cats-invocation` 包骨架（package.json/tsconfig.json/tsconfig.host.json/invariant.ts）
       — 对齐 dsh `@flowforge/jobs` 范式：抽象 `CatsInvocation extends Service` 挂载到 `ctx.catsInvocation`，
@@ -134,15 +134,16 @@
       （per-thread×per-user FIFO，幂等去重，容量控制；`MemoryInvocationQueueService` 基于 Map 实现）
 - [x] T4.3.3 移植 InvocationTracker → `InvocationTrackerService extends Service` → `ctx.catsInvocationTracker`
       （per-slot 互斥锁 + AbortController；F108/F118 D3/F-parallel-cancel 全量语义；`MemoryInvocationTrackerService` 完整移植 start/tryStart/guardDelete/cancel/cancelAll/cancelInvocation/resolveFinalStatus/complete/completeByExecutionId/startAll/tryStartThreadAll/bindExecutionId/trackExternalSlot/getActiveSlots 等 25 个方法）
-- [ ] T4.3.4 移植 QueueProcessor → `QueueProcessorService extends Service` → `ctx.catsInvocationProcessor`
-      （调度器 + 终态机 + zombie 恢复）
+- [x] T4.3.4 移植 QueueProcessor → `QueueProcessorService extends Service` → `ctx.catsInvocationProcessor`
+      （调度器 + 终态机 + zombie 恢复；最小骨架完成，processor.ts）
 - [x] T4.3.5 移植 TaskProgressService → `TaskProgressService extends Service` → `ctx.catsInvocationProgress`
       （基于 batch 3.2 的 ITaskProgressStore，提供 snapshot 增删+owner-guarded 清理的 Cordis 包装；`MemoryTaskProgressService` 委托 store 实现）
 - [x] T4.3.6 移植 SessionMutex / AgentSessionMutex → `SessionMutexService extends Service` → `ctx.catsInvocationMutex`
       （per-session 串行化锁；`MemorySessionMutexService` 基于 Map+waiter 队列实现；修复 `ForceReleaseResult` 类型对齐 clowder-ai 契约）
-- [ ] T4.3.7 移植 reconcileZombies / convergeZombieQueue / StartupReconciler
-      （作为 `InvocationQueueService` 的 `[Service.init]()` 钩子实现）
-- [ ] T4.3.9 测试：入队→出队→执行→完成全链路（mock provider，`vitest .spec.ts`）
+- [x] T4.3.7 移植 reconcileZombies / convergeZombieQueue / StartupReconciler
+      （reconcile.ts + startup-reconciler.ts，依赖注入纯函数改造）
+- [x] T4.3.9 测试：入队→出队→执行→完成全链路（mock provider，`vitest .spec.ts`）
+      （invocation.spec.ts 覆盖 queue/tracker/mutex/progress/zombie reconcile/startup sweep，53 测试通过）
 
 #### 批次3.4 实施详情
 

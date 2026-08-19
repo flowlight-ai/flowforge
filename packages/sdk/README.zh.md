@@ -15,7 +15,7 @@ Cordis 进程，由它自己的 `cordis.yml` 决定怎么装配；SDK 只负责�
 | --- | --- | --- |
 | `@flowforge/sdk-protocol` | 共享的**线协议**：基于换行的 JSON-RPC stdio 传输，加上请求/结果/通知的具名类型。client 与 server 共用的**唯一事实来源**。 | —（纯库） |
 | `@flowforge/sdk-jsonrpc-server` | 基于 stdio 的 JSON-RPC **服务端插件**，把正在运行的运行时暴露给外部驱动/CLI。通过 `ctx.plugin` 注册。 | `sdk-jsonrpc-server`（插件，`apply` 走 `ctx.plugin`） |
-| `@flowforge/sdk-client` | TypeScript **客户端 SDK**：以子进程方式拉起运行时并通过 stdio JSON-RPC 驱动。`DeepSeekHarness` 是高层运行接口，`HarnessClient` 是更底层的协议客户端。 | —（纯库） |
+| `@flowforge/sdk-client` | TypeScript **客户端 SDK**：以子进程方式拉起运行时并通过 stdio JSON-RPC 驱动。`FlowForgeHarness` 是高层运行接口，`HarnessClient` 是更底层的协议客户端。 | —（纯库） |
 
 ## 外部系统是怎么驱动 FlowForge 的
 

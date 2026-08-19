@@ -1,10 +1,11 @@
-# FlowForge 0.2.0 — 技术栈决策（ADR-R01 ~ ADR-R19）
+# FlowForge 0.2.0 — 技术栈决策（ADR-R01 ~ R22）
 
 > 依据：`00-overview.md` §3；对齐基线：DeepSeek Harness（dsh，`ex/deepseek-harness`）与
 > Clowder AI（cat-cafe，`ex/clowder-ai`）。
 > 更新：2026-08-16 追加 R13 插件化规范 / R14 融合分层 / R15 Python 日落 /
 > R16 vendor 维护 / R17 配置格式（全面对齐调查）/ R18 双栈隔离 / R19 技术栈对齐 /
-> R20 开发规范对齐 / R21 测试规范对齐。
+> R20 开发规范对齐 / R21 测试规范对齐；
+> 2026-08-18 追加 R22 zod 版本统一。
 > 本次对齐调查基线（2026-08-16 实测）：dsh `cordis.patch.yml` 分层 patch + `agent-presets`
 > YAML + settings 包；clowder `cat-template.json`(JSON) + `.cat-cafe/*.json` + frontmatter YAML
 > + `env-registry.ts`(CAT_CAFE_*) + connector.yaml；详见 R17。
@@ -260,7 +261,7 @@ JSON 仅用于运行态数据与工程链；环境变量统一走注册表。
     sqlite-vec（clowder 向量检索，可选）；dsh 侧 node:sqlite（session-query）作内嵌备选；
   - **Web**：fastify ^4 + @fastify/cookie|cors|multipart|static|websocket（clowder api 全套）+
     socket.io ^4 + ws + http-proxy（v1 反代）；
-  - **schema**：双轨——运行时数据 zod ^3（clowder）、配置 schema schemastery（dsh）；
+  - **schema**：双轨——运行时数据 zod ^4.4.3（统一决策见 R22）、配置 schema schemastery（dsh）；
   - **LLM/MCP**：@anthropic-ai/sdk、openai、@google/genai（dsh/clowder 实际引用）、
     @modelcontextprotocol/sdk ^1（clowder）；
   - **观测**：@opentelemetry 全套（api/core/sdk-node/trace/logs/metrics/exporter-otlp-http/
@@ -341,3 +342,34 @@ JSON 仅用于运行态数据与工程链；环境变量统一走注册表。
 - **clowder 补充**：交叉 review 协议（P1/P2/P3）+ 测试覆盖验证纳入 review checklist。
 - **冲突裁决**：dsh "coverage 100%/file" 与 clowder 覆盖率验证一致；dsh mock 边界与 T1 冲突时以 T1 为准（见上）。
 - **每阶段 DoD 门**（`10-stage-map.md` §4）：`pnpm typecheck` + `pnpm lint` + 域 vitest 全绿 + 相关 snapshot 更新 + Python pytest 回归全绿 + `./mgr` 提交。
+
+## R22 zod 版本统一（2026-08-18，全仓 `^4.4.3` 对齐 dsh）
+
+- 结论：**全仓 zod 统一 `^4.4.3`（dsh 基线），废弃 v3.25.0 路线**；根 package.json 与
+  全部依赖包（dsh 移植 22 包 + cats-shared peer/devDep）同版本。
+- 背景：阶段 3/4 移植期根 package.json 临时钉 `zod ^3.25.0`（commit 785d61a 脚手架时期），
+  依赖闭包同时存在 4.4.3（dsh 移植包）与 3.25.0（cats/根），双版本并存。本环境 registry 的
+  `zod@3.25.0` tarball 为 **src-only 异常版**（无 dist/index.d.cts），迫使 `tsconfig` 启用
+  `customConditions: ["@zod/source"]` 解析到源码，配合 `noUncheckedIndexedAccess` 产生海量
+  zod 内部类型错误；且 src 解析使 `skipLibCheck` 失效，branded 类型（`@flowforge/brand` 的
+  模块局部 `BRAND` unique symbol）经 zod v3 `ZodObject` 五参泛型的 `objectOutputType`
+  条件类型展开后无法在下游声明发射中命名 → 35×TS4023 阻断。
+- 决策依据（实测）：
+  - dsh 全部 22 个 schema 包依赖 `zod ^4.4.3`，其 zod@4.4.3 tarball 自带构建产物
+    （根级 `index.d.cts`/`index.js`），`skipLibCheck` 直接生效，零 hack；
+  - dsh 同款 brand 模式（BRAND 不导出）+ v4 声明下声明发射全绿（`ZodObject<Shape, Config>`
+    两参形态不展开 Output/Input 条件类型），证明 v4 消除 TS4023；
+  - clowder 用 zod 3.25.76（带构建产物），但 clowder 侧代码经批次移植已按 v4 习惯改写，
+    回归 v3 无收益；
+  - 曾尝试的 v3 路线（`tsconfig.zodgenv3.json` 生成 v3 声明 + `scripts/patch-zod-types.ts`
+    补丁折叠工厂签名）仍剩 35×TS4023 无法清零，维护成本高，已整体删除。
+- 落地变更：
+  - 根/cats-shared/22 个 dsh 移植包：`zod: ^4.4.3`（pnpm-lock 已清除 3.25.0）；
+  - 删除 `tsconfig.base.json` 的 `customConditions: ["@zod/source"]`（v4 有 dist 无需源码解析）；
+  - 删除 `tsconfig.zodgenv3.json` / `scripts/patch-zod-types.ts` / `gen:zod-types` 脚本钩子；
+  - cats-shared v3 习惯改造为 v4：`z.record` 单参 → 双参（6 处）、`refine` 回调第二参 →
+    `{ error: issue => … }` params 形式（cat-id-schema）；
+  - `@flowforge/brand` 保持 dsh 原样（BRAND 模块局部，不导出）。
+- 后续约束：新增包 schema 一律 `zod ^4.4.3`；禁止 `@zod/source` 条件与 zod 子路径
+  （`zod/v3`、`zod/v4`）导入；v4 API 注意点——`z.record` 必须双参、`.passthrough()` 用
+  `z.looseObject`、JSON 校验用 `z.json()`、JSON Schema 用 `z.toJSONSchema()`。

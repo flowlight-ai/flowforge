@@ -104,7 +104,7 @@ export const PackMaskSchema = z
 export const PackWorkflowStepSchema = z
   .object({
     action: WorkflowActionSchema,
-    params: z.record(z.union([z.string().max(200), z.number(), z.boolean()])).optional(),
+    params: z.record(z.string(), z.union([z.string().max(200), z.number(), z.boolean()])).optional(),
   })
   .strict();
 
@@ -121,7 +121,7 @@ export const PackWorkflowSchema = z
 
 export const PackWorldDriverSchema = z
   .object({
-    stateSchema: z.record(z.unknown()).optional(),
+    stateSchema: z.record(z.string(), z.unknown()).optional(),
     roles: z.array(boundedString(100)).max(20).optional(),
     actions: z.array(boundedString(100)).max(50).optional(),
     resolver: ResolverTypeSchema,

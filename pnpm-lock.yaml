@@ -57,8 +57,8 @@ importers:
         specifier: ^2.6.0
         version: 2.9.0
       zod:
-        specifier: ^3.25.0
-        version: 3.25.0
+        specifier: ^4.4.3
+        version: 4.4.3
 
   apps/cli:
     dependencies:
@@ -369,7 +369,7 @@ importers:
     dependencies:
       '@agentclientprotocol/sdk':
         specifier: 0.25.1
-        version: 0.25.1(zod@3.25.0)
+        version: 0.25.1(zod@4.4.3)
       '@flowforge/schemastery':
         specifier: workspace:^
         version: link:../../../vendor/schemastery
@@ -873,8 +873,8 @@ importers:
         specifier: ^2.6.0
         version: 2.9.0
       zod:
-        specifier: ^3.25.0
-        version: 3.25.0
+        specifier: ^4.4.3
+        version: 4.4.3
 
   packages/cats/stores:
     devDependencies:
@@ -4619,7 +4619,7 @@ importers:
     dependencies:
       '@agentclientprotocol/sdk':
         specifier: 0.25.1
-        version: 0.25.1(zod@3.25.0)
+        version: 0.25.1(zod@4.4.3)
       '@flowforge/schemastery':
         specifier: workspace:^
         version: link:../../../vendor/schemastery
@@ -4662,10 +4662,10 @@ importers:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
         specifier: 0.3.220
-        version: 0.3.220(@anthropic-ai/sdk@0.93.0(zod@3.25.0))(@modelcontextprotocol/sdk@1.30.0(zod@3.25.0))(zod@3.25.0)
+        version: 0.3.220(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(zod@4.4.3)
       '@anthropic-ai/sdk':
         specifier: 0.93.0
-        version: 0.93.0(zod@3.25.0)
+        version: 0.93.0(zod@4.4.3)
       '@flowforge/schemastery':
         specifier: workspace:^
         version: link:../../../vendor/schemastery
@@ -5224,7 +5224,7 @@ importers:
     dependencies:
       '@agentclientprotocol/sdk':
         specifier: 0.25.1
-        version: 0.25.1(zod@3.25.0)
+        version: 0.25.1(zod@4.4.3)
       '@flowforge/loader-smoke':
         specifier: workspace:*
         version: link:../loader-smoke
@@ -8883,9 +8883,6 @@ packages:
     peerDependencies:
       zod: ^3.25.28 || ^4
 
-  zod@3.25.0:
-    resolution: {integrity: sha512-ficnZKUW0mlNivqeJkosTEkGbJ6NKCtSaOHGx5aXbtfeWMdRyzXLbAIn19my4C/KB7WPY/p9vlGPt+qpOp6c4Q==}
-
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
@@ -8894,9 +8891,9 @@ packages:
 
 snapshots:
 
-  '@agentclientprotocol/sdk@0.25.1(zod@3.25.0)':
+  '@agentclientprotocol/sdk@0.25.1(zod@4.4.3)':
     dependencies:
-      zod: 3.25.0
+      zod: 4.4.3
 
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.220':
     optional: true
@@ -8922,11 +8919,11 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.220':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk@0.3.220(@anthropic-ai/sdk@0.93.0(zod@3.25.0))(@modelcontextprotocol/sdk@1.30.0(zod@3.25.0))(zod@3.25.0)':
+  '@anthropic-ai/claude-agent-sdk@0.3.220(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(zod@4.4.3)':
     dependencies:
-      '@anthropic-ai/sdk': 0.93.0(zod@3.25.0)
-      '@modelcontextprotocol/sdk': 1.30.0(zod@3.25.0)
-      zod: 3.25.0
+      '@anthropic-ai/sdk': 0.93.0(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
+      zod: 4.4.3
     optionalDependencies:
       '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.220
       '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.220
@@ -8943,11 +8940,11 @@ snapshots:
     optionalDependencies:
       zod: 4.4.3
 
-  '@anthropic-ai/sdk@0.93.0(zod@3.25.0)':
+  '@anthropic-ai/sdk@0.93.0(zod@4.4.3)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
-      zod: 3.25.0
+      zod: 4.4.3
 
   '@aws-crypto/sha256-browser@5.2.0':
     dependencies:
@@ -9500,28 +9497,6 @@ snapshots:
       - utf-8-validate
 
   '@mixmark-io/domino@2.2.0': {}
-
-  '@modelcontextprotocol/sdk@1.30.0(zod@3.25.0)':
-    dependencies:
-      '@hono/node-server': 2.1.1(hono@4.13.2)
-      ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
-      content-type: 1.0.5
-      cors: 2.8.6
-      cross-spawn: 7.0.6
-      eventsource: 3.0.2
-      eventsource-parser: 3.1.1
-      express: 5.2.1
-      express-rate-limit: 8.6.2(express@5.2.1)
-      hono: 4.13.2
-      jose: 6.2.8
-      json-schema-typed: 8.0.2
-      pkce-challenge: 5.0.0
-      raw-body: 3.0.0
-      zod: 3.25.0
-      zod-to-json-schema: 3.25.2(zod@3.25.0)
-    transitivePeerDependencies:
-      - supports-color
 
   '@modelcontextprotocol/sdk@1.30.0(zod@4.4.3)':
     dependencies:
@@ -11813,15 +11788,9 @@ snapshots:
       '@yuku-parser/binding-win32-arm64': 0.8.7
       '@yuku-parser/binding-win32-x64': 0.8.7
 
-  zod-to-json-schema@3.25.2(zod@3.25.0):
-    dependencies:
-      zod: 3.25.0
-
   zod-to-json-schema@3.25.2(zod@4.4.3):
     dependencies:
       zod: 4.4.3
-
-  zod@3.25.0: {}
 
   zod@4.4.3: {}
 

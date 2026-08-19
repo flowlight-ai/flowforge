@@ -12,7 +12,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import { DeepSeekHarness, type HarnessNotification } from '@flowforge/sdk-client'
+import { FlowForgeHarness, type HarnessNotification } from '@flowforge/sdk-client'
 import type { ContentBlock } from '@flowforge/llm'
 import { SessionId, type SessionEvent, type TurnEndReason } from '@flowforge/session'
 import type { SubagentResult, SubagentRun, SubagentStartRequest, SubagentStopReason } from '@flowforge/subagent'
@@ -115,7 +115,7 @@ export async function startSdkRun(request: SubagentStartRequest, spec: SdkRunSpe
   // (minted below, private to the wire) exists only inside the child process.
   const id = SessionId(randomUUID())
 
-  const harness = new DeepSeekHarness({
+  const harness = new FlowForgeHarness({
     launch: {
       command: spec.command,
       args: spec.args,

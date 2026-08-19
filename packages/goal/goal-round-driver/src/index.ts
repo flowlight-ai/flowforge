@@ -4,7 +4,7 @@
  */
 
 import { isDeepStrictEqual } from 'node:util'
-import { FiberState } from '@flowforge/cordis'
+import type { FiberState } from '@flowforge/cordis'
 import type { Context } from '@flowforge/cordis'
 import type { Agent, PreStepDecision } from '@flowforge/agent'
 import type { GoalMessageSource, GoalRef, GoalView } from '@flowforge/goal'
@@ -12,6 +12,13 @@ import { createUserMessage } from '@flowforge/llm'
 import type { ContentBlock, MessageId, MessageSource } from '@flowforge/llm'
 import type { Session, SessionEvent, UserMessage } from '@flowforge/session'
 import { renderGoalRoundPrompt } from './prompt.ts'
+
+/**
+ * Value mirror of the `FiberState.ACTIVE` member this driver gates on: a const
+ * enum has no runtime object to import, and the value is needed at runtime
+ * (same rationale as the settings boot driver's mirror).
+ */
+const FIBER_ACTIVE = 2 as FiberState.ACTIVE
 
 export { renderGoalRoundPrompt } from './prompt.ts'
 
@@ -101,7 +108,7 @@ export function apply(ctx: Context): void {
 
   /** Whether this exact lifecycle is quiescent with no competing prompt. */
   function readyToDrive(state: DriverState): boolean {
-    return ctx.fiber.state === FiberState.ACTIVE
+    return ctx.fiber.state === FIBER_ACTIVE
       && !state.stopping
       && ctx.agents.get(state.agent.id) === state.agent
       && state.agent.status === 'idle'
@@ -338,7 +345,7 @@ export function apply(ctx: Context): void {
     ): boolean {
       const attempt = state.attempt
       const goal = currentGoal(state)
-      return ctx.fiber.state === FiberState.ACTIVE
+      return ctx.fiber.state === FIBER_ACTIVE
         && !state.stopping && attempt !== undefined && attempt.phase === 'claimed'
       && !attempt.stale && sameQueued(content, source, attempt)
       && goal !== undefined && goal.id === source.goalId && goal.revision === source.revision

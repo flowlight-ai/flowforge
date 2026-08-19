@@ -5,7 +5,8 @@
  * @module @flowforge/agent
  */
 
-import { Context, FiberState, getTraceable, Service, symbols } from '@flowforge/cordis'
+import { Context, getTraceable, Service, symbols } from '@flowforge/cordis'
+import type { FiberState } from '@flowforge/cordis'
 import type { Fiber } from '@flowforge/cordis'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { isPromise } from 'node:util/types'
@@ -287,7 +288,10 @@ export class AgentRegistry extends Service {
     // unwinds with this service's fiber.
     ctx.accessor('agent', { get: () => undefined })
     ctx.on('internal/status', (fiber) => {
-      if (fiber.state === FiberState.UNLOADING && this.hasLifecycleAncestor(fiber)) {
+      // Value mirror: the cordis `FiberState` const enum has no runtime object
+      // to import (same rationale as the settings boot driver's mirror).
+      const FIBER_UNLOADING = 5 as FiberState.UNLOADING
+      if (fiber.state === FIBER_UNLOADING && this.hasLifecycleAncestor(fiber)) {
         this.closeInitiators()
       }
     })
