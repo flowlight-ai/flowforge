@@ -191,7 +191,7 @@ describe('notifier 决策去重', () => {
   })
 
   it('持久化失败回滚 dedup 槽位', async () => {
-    let now = 1_000_000
+    const now = 1_000_000
     const failingStore: CallbackAuthMessageStore = {
       append: async () => {
         throw new Error('store down')

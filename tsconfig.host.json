@@ -75,6 +75,9 @@
       "path": "./packages/chat/session-chain/tsconfig.host.json"
     },
     {
+      "path": "./packages/chat/misc/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

@@ -1,0 +1,37 @@
+{
+  "name": "@flowforge/chat-misc",
+  "description": "FlowForge chat misc domain Cordis plugin — T5.7 tasks/memory/signals + T5.8 marketplace bridge at ctx.chatTasks / ctx.chatMemory / ctx.chatMemoryPublish / ctx.chatSignals / ctx.chatMarketplace",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/chat/misc" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./task-service": { "types": "./lib/types/task-service.d.ts", "default": "./lib/task-service.js" },
+    "./memory-service": { "types": "./lib/types/memory-service.d.ts", "default": "./lib/memory-service.js" },
+    "./memory-publish-service": { "types": "./lib/types/memory-publish-service.d.ts", "default": "./lib/memory-publish-service.js" },
+    "./signal-service": { "types": "./lib/types/signal-service.d.ts", "default": "./lib/signal-service.js" },
+    "./signal-query": { "types": "./lib/types/signal-query.d.ts", "default": "./lib/signal-query.js" },
+    "./marketplace-service": { "types": "./lib/types/marketplace-service.d.ts", "default": "./lib/marketplace-service.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cats-orchestration": "workspace:^",
+    "@flowforge/chat-realtime": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cats-orchestration": "workspace:^",
+    "@flowforge/chat-realtime": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

@@ -946,6 +946,18 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/chat/mention:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../../cats/stores
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/chat/messages:
     devDependencies:
       '@flowforge/cats-shared':
@@ -958,6 +970,24 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/chat/misc:
+    devDependencies:
+      '@flowforge/cats-orchestration':
+        specifier: workspace:^
+        version: link:../../cats/orchestration
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../../cats/stores
+      '@flowforge/chat-realtime':
+        specifier: workspace:^
+        version: link:../realtime
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/chat/realtime:
     devDependencies:
       '@flowforge/cats-invocation':
@@ -966,6 +996,24 @@ importers:
       '@flowforge/cats-shared':
         specifier: workspace:^
         version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/chat/session-chain:
+    devDependencies:
+      '@flowforge/cats-session':
+        specifier: workspace:^
+        version: link:../../cats/session
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../../cats/stores
+      '@flowforge/chat-approval':
+        specifier: workspace:^
+        version: link:../approval
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis

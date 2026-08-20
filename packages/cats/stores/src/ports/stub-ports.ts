@@ -18,6 +18,8 @@
  * - `IDeliveryCursorStore`   → `./delivery-cursor-store.ts`  (batch 5.2)
  * - `ISummaryStore`          → `./summary-store.ts`          (batch 5.2)
  * - `IThreadReadStateStore`  → `./read-state-store.ts`       (stage-5 batch 1)
+ * - `IMemoryGovernanceStore` → `./memory-governance-store.ts` (stage-5 batch 7)
+ * - `IThreadMemoryStore`     → `./thread-memory-store.ts`     (stage-5 batch 7)
  *
  * The remaining stub contracts will be ported from clowder-ai
  * `packages/api/src/domains/cats/services/stores/ports/` as their dependent
@@ -116,11 +118,13 @@ export interface IGameStore {
   delete(id: string): boolean | Promise<boolean>
 }
 
-/** Memory governance store (memory access audit). */
-export interface IMemoryGovernanceStore {
-  record(entry: Record<string, unknown>): void | Promise<void>
-  listForCat(catId: string, options?: { readonly limit?: number }): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-}
+/** Memory governance store was promoted to a full contract in stage-5 batch 7:
+ * - `IMemoryGovernanceStore` → `./memory-governance-store.ts`
+ *   (发布门禁状态机 draft → pending_review → published → archived)
+ *
+ * Thread KV memory store was promoted likewise:
+ * - `IThreadMemoryStore` → `./thread-memory-store.ts` (F3-lite)
+ */
 
 /** Session handoff proposal store was promoted to a full contract in stage-5
  * batch 6:
