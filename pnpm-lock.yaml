@@ -946,6 +946,18 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/chat/realtime:
+    devDependencies:
+      '@flowforge/cats-invocation':
+        specifier: workspace:^
+        version: link:../../cats/invocation
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/chat/threads:
     devDependencies:
       '@flowforge/cats-shared':

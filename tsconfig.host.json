@@ -63,6 +63,9 @@
       "path": "./packages/chat/messages/tsconfig.host.json"
     },
     {
+      "path": "./packages/chat/realtime/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {
