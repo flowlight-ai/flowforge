@@ -57,6 +57,7 @@
 - [x] T5.2.4 测试 3 spec 54 用例 + `IMessageStore.getByThreadBefore` 端口扩展
       （Memory/Sqlite 双后端）+ typecheck 退出码 0 + mgr PR
 
+<<<<<<< HEAD
 ### 批次 3：`@flowforge/chat-realtime`（实时事件面，T5.11）✅
 
 - [x] T5.11.1 `ChatRealtimeService extends Service` → `ctx.chatRealtime`：SocketManager
@@ -71,6 +72,15 @@
       + `RealtimeTransport` 缝（InMemory 默认实现；socket.io 适配器留组合根注入）
 - [x] T5.11.4 测试 3 spec 49 用例（sequencer/rate-monitor/realtime 双客户端收发）+
       typecheck 退出码 0 + mgr PR
+=======
+### 批次 3：`@flowforge/chat-realtime`（实时事件面，T5.11）
+
+- [ ] T5.11.1 `ChatRealtimeService extends Service` → `ctx.chatRealtime`：SocketManager
+      全量语义（room join/leave、broadcast、cancel messages）改造 Cordis
+- [ ] T5.11.2 `ThreadSequencer`（thread 序号分配）+ `BroadcastRateMonitor`（广播限速）
+- [ ] T5.11.3 事件词汇：thread:message / invocation:progress / signal:new / approval:update
+- [ ] T5.11.4 测试（双客户端收发 mock io）+ mgr PR
+>>>>>>> origin/master
 
 ### 批次 4：`@flowforge/chat-approval`（审批/提案/投票，T5.6）
 
