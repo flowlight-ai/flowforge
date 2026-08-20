@@ -1,0 +1,33 @@
+{
+  "name": "@flowforge/chat-mention",
+  "description": "FlowForge chat @mention routing Cordis plugin — MentionParser / MultiMention @并发编排 (F086) / callback-auth signature at ctx.chatMention",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/chat/mention" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    "./mention-parser": { "types": "./lib/types/mention-parser.d.ts", "default": "./lib/mention-parser.js" },
+    "./multi-mention-state-machine": { "types": "./lib/types/multi-mention-state-machine.d.ts", "default": "./lib/multi-mention-state-machine.js" },
+    "./multi-mention-orchestrator": { "types": "./lib/types/multi-mention-orchestrator.d.ts", "default": "./lib/multi-mention-orchestrator.js" },
+    "./callback-auth": { "types": "./lib/types/callback-auth.d.ts", "default": "./lib/callback-auth.js" },
+    "./service": { "types": "./lib/types/multi-mention-service.d.ts", "default": "./lib/multi-mention-service.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}
