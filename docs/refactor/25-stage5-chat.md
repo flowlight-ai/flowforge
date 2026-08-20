@@ -57,13 +57,20 @@
 - [x] T5.2.4 测试 3 spec 54 用例 + `IMessageStore.getByThreadBefore` 端口扩展
       （Memory/Sqlite 双后端）+ typecheck 退出码 0 + mgr PR
 
-### 批次 3：`@flowforge/chat-realtime`（实时事件面，T5.11）
+### 批次 3：`@flowforge/chat-realtime`（实时事件面，T5.11）✅
 
-- [ ] T5.11.1 `ChatRealtimeService extends Service` → `ctx.chatRealtime`：SocketManager
+- [x] T5.11.1 `ChatRealtimeService extends Service` → `ctx.chatRealtime`：SocketManager
       全量语义（room join/leave、broadcast、cancel messages）改造 Cordis
-- [ ] T5.11.2 `ThreadSequencer`（thread 序号分配）+ `BroadcastRateMonitor`（广播限速）
-- [ ] T5.11.3 事件词汇：thread:message / invocation:progress / signal:new / approval:update
-- [ ] T5.11.4 测试（双客户端收发 mock io）+ mgr PR
+      （连接自动入 user 房间 F39 + join_room 白名单/F156 ACL + cancel_invocation 编排：
+      F254 溯源信任边界先行 + F108 槽级/全线程取消 + F-parallel-cancel 作用域广播 +
+      会话锁 forceReleaseByScope 活跃 holder preserve/卡死锁恢复 + 队列槽清理与
+      多 @ 编排中止 late-wiring 接线点）
+- [x] T5.11.2 `ThreadSequencer`（thread-scoped 单调 seq + epoch/bumpTo）+
+      `BroadcastRateMonitor`（滑动窗口限速观测，观测-only 不丢事件）
+- [x] T5.11.3 事件词汇：thread:message / invocation:progress / signal:new / approval:update
+      + `RealtimeTransport` 缝（InMemory 默认实现；socket.io 适配器留组合根注入）
+- [x] T5.11.4 测试 3 spec 49 用例（sequencer/rate-monitor/realtime 双客户端收发）+
+      typecheck 退出码 0 + mgr PR
 
 ### 批次 4：`@flowforge/chat-approval`（审批/提案/投票，T5.6）
 
@@ -117,7 +124,7 @@
 - [ ] T5.9 ~~world/community/story/排行榜~~ → **stretch**（`10-stage-map.md` §3.4 S3，仅留 ports）
 - [ ] T5.10 ~~IM 通道适配~~ → **stretch**（§3.4 S1：WebChat 内置可选，飞书/Telegram/钉钉/企微按凭据启用；
       仅留 ports 接口 + mock）
-- [ ] T5.11 socket.io 事件面 → 批次3
+- [x] T5.11 socket.io 事件面 → 批次3
 - [ ] T5.12 测试：双客户端实时收发；@ 多个灵智体并发响应且线程隔离；交接链正确；
       审批流状态机单测 → 批次8
 

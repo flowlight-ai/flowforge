@@ -1,0 +1,63 @@
+{
+  "name": "@flowforge/chat-realtime",
+  "description": "FlowForge chat realtime event face Cordis plugin — SocketManager semantics (rooms/broadcast/cancel) + ThreadSequencer + BroadcastRateMonitor + event vocabulary at ctx.chatRealtime",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/chat/realtime"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./events": {
+      "types": "./lib/types/events.d.ts",
+      "default": "./lib/events.js"
+    },
+    "./sequencer": {
+      "types": "./lib/types/thread-sequencer.d.ts",
+      "default": "./lib/thread-sequencer.js"
+    },
+    "./rate-monitor": {
+      "types": "./lib/types/rate-monitor.d.ts",
+      "default": "./lib/rate-monitor.js"
+    },
+    "./transport": {
+      "types": "./lib/types/transport.d.ts",
+      "default": "./lib/transport.js"
+    },
+    "./service": {
+      "types": "./lib/types/realtime-service.d.ts",
+      "default": "./lib/realtime-service.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-invocation": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-invocation": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}
