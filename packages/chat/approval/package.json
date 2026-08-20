@@ -1,0 +1,33 @@
+﻿{
+  "name": "@flowforge/chat-approval",
+  "description": "FlowForge chat approval domain Cordis plugin — F128 proposal state machine / F079 votes / Approval Hub projection at ctx.chatApproval",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/chat/approval" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    "./votes": { "types": "./lib/types/votes.d.ts", "default": "./lib/votes.js" },
+    "./stale-recovery": { "types": "./lib/types/stale-recovery.d.ts", "default": "./lib/stale-recovery.js" },
+    "./proposal-card": { "types": "./lib/types/proposal-card.d.ts", "default": "./lib/proposal-card.js" },
+    "./approval-hub": { "types": "./lib/types/approval-hub.d.ts", "default": "./lib/approval-hub.js" },
+    "./service": { "types": "./lib/types/proposal-service.d.ts", "default": "./lib/proposal-service.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

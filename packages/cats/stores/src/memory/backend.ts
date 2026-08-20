@@ -23,6 +23,7 @@ import type {
   IMessageStore,
   IInvocationRecordStore,
   IProfileUpdateProposalStore,
+  IProposalStore,
   ISessionChainStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
@@ -40,6 +41,8 @@ import { MemoryInvocationRecordStore } from './invocation-record-store.ts'
 import { MemoryMemoryStore } from './memory-store.ts'
 import { MemoryMessageStore } from './message-store.ts'
 import { MemoryProfileUpdateProposalStore } from './profile-update-proposal-store.ts'
+import { MemoryProposalStore } from './proposal-store.ts'
+import { MemoryVoteStore } from './vote-store.ts'
 import { MemorySessionChainStore } from './session-chain-store.ts'
 import { MemorySummaryStore } from './summary-store.ts'
 import { MemoryTaskManagedWorkRegistrationStore } from './task-managed-work-registration-store.ts'
@@ -97,6 +100,10 @@ export class MemoryStoresBackend extends Service {
   readonly sessionChainStore: MemorySessionChainStore
   /** Stage-5 batch 1 — thread read-state store (F069 unread cursor). */
   readonly threadReadStateStore: MemoryThreadReadStateStore
+  /** Stage-5 batch 4 — F128 proposal store. */
+  readonly proposalStore: MemoryProposalStore
+  /** Stage-5 batch 4 — F079 vote store. */
+  readonly voteStore: MemoryVoteStore
 
   constructor(ctx: Context) {
     super(ctx, 'catStoresMemory')
@@ -115,6 +122,8 @@ export class MemoryStoresBackend extends Service {
     this.deliveryCursorStore = new MemoryDeliveryCursorStore()
     this.sessionChainStore = new MemorySessionChainStore()
     this.threadReadStateStore = new MemoryThreadReadStateStore()
+    this.proposalStore = new MemoryProposalStore()
+    this.voteStore = new MemoryVoteStore()
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(MEMORY_BACKEND_NAME, {
@@ -133,6 +142,8 @@ export class MemoryStoresBackend extends Service {
         deliveryCursorStore: this.deliveryCursorStore,
         sessionChainStore: this.sessionChainStore,
         threadReadStateStore: this.threadReadStateStore,
+        proposalStore: this.proposalStore,
+        voteStore: this.voteStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(MEMORY_BACKEND_NAME)
@@ -221,6 +232,7 @@ export type {
   IMessageStore,
   IInvocationRecordStore,
   IProfileUpdateProposalStore,
+  IProposalStore,
   ISessionChainStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
