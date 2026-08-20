@@ -1,0 +1,434 @@
+/**
+ * TranscriptReaderService — F24 Phase D 会话转录读取 Cordis 服务。
+ *
+ * 移植自 clowder-ai
+ * `packages/api/src/domains/cats/services/session/TranscriptReader.ts`
+ * （全量移植；R13 一切皆插件改造，模块级类改为 Cordis 生命周期，
+ * `Context` 扩展挂载点：`ctx.catsTranscriptReader`）。
+ *
+ * 读取已 seal 的会话转录：
+ * - 经稀疏索引的分页事件读取（node:fs createReadStream + readline）
+ * - 抽取摘要读取
+ * - 跨事件与摘要的全文检索
+ * - invocation 事件过滤 / handoff 摘要解析
+ *
+ * @module @flowforge/cats-session/reader
+ */
+
+import { createReadStream } from 'node:fs'
+import { readdir, readFile, stat } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
+import { createInterface } from 'node:readline'
+import { Context, Service } from '@flowforge/cordis'
+import { DEFAULT_TRANSCRIPT_DIR } from './invariant.ts'
+
+export interface TranscriptEvent {
+  v: number;
+  t: number;
+  threadId: string;
+  catId: string;
+  sessionId: string;
+  cliSessionId: string;
+  invocationId?: string;
+  eventNo: number;
+  event: Record<string, unknown>;
+}
+
+export interface TranscriptIndex {
+  v: number;
+  eventCount: number;
+  stride: number;
+  offsets: number[];
+}
+
+export interface ReadEventsResult {
+  events: TranscriptEvent[];
+  nextCursor?: { eventNo: number };
+  total: number;
+}
+
+export interface SearchHit {
+  score: number;
+  sessionId: string;
+  seq?: number;
+  kind: 'digest' | 'event';
+  snippet: string;
+  pointer: {
+    eventNo?: number;
+    invocationId?: string;
+  };
+}
+
+export interface HandoffDigestResult {
+  v: number;
+  model: string;
+  generatedAt: number;
+  body: string;
+}
+
+export interface TranscriptReaderOptions {
+  /** 转录根目录；默认 `data/transcripts`（受 CATS_TRANSCRIPT_DIR 环境变量覆盖）。 */
+  dataDir?: string;
+}
+
+declare module '@flowforge/cordis' {
+  interface Context {
+    /**
+     * Forgekin (cats) 会话转录读取器 — mounted by `@flowforge/cats-session`.
+     * 分页读取 events.jsonl、摘要读取与全文检索。
+     */
+    catsTranscriptReader: TranscriptReaderService
+  }
+
+  interface Events {}
+}
+
+/**
+ * Cordis service exposing the session transcript reader at `ctx.catsTranscriptReader`.
+ */
+export class TranscriptReaderService extends Service {
+  static inject: readonly string[] = []
+
+  private readonly dataDir: string
+
+  constructor(ctx: Context, options: TranscriptReaderOptions = {}) {
+    super(ctx, 'catsTranscriptReader')
+    this.dataDir = resolve(options.dataDir ?? process.env.CATS_TRANSCRIPT_DIR ?? DEFAULT_TRANSCRIPT_DIR)
+  }
+
+  /**
+   * Read events from a sealed session transcript with pagination.
+   */
+  async readEvents(
+    sessionId: string,
+    threadId: string,
+    catId: string,
+    cursor?: { eventNo: number },
+    limit = 50,
+  ): Promise<ReadEventsResult> {
+    const sessionDir = this.sessionDir(threadId, catId, sessionId);
+    const jsonlPath = join(sessionDir, 'events.jsonl');
+
+    // Check if transcript exists
+    try {
+      await stat(jsonlPath);
+    } catch {
+      return { events: [], total: 0 };
+    }
+
+    // Try to read index for optimized pagination
+    const index = await this.readIndex(sessionDir);
+    const startEventNo = cursor?.eventNo ?? 0;
+
+    // Read events using streaming
+    const events: TranscriptEvent[] = [];
+    let lineNo = 0;
+
+    const rl = createInterface({
+      input: createReadStream(jsonlPath, 'utf-8'),
+      crlfDelay: Infinity,
+    });
+
+    for await (const line of rl) {
+      if (line.trim().length === 0) continue;
+      if (lineNo >= startEventNo && events.length < limit) {
+        try {
+          events.push(JSON.parse(line) as TranscriptEvent);
+        } catch {
+          /* skip malformed lines */
+        }
+      }
+      lineNo++;
+      // Early exit: we've collected enough and passed our window
+      if (events.length >= limit && lineNo > startEventNo + limit) {
+        break;
+      }
+    }
+
+    const total = index?.eventCount ?? lineNo;
+    const lastEvent = events.length > 0 ? events[events.length - 1] : undefined;
+    const lastEventNo = lastEvent ? lastEvent.eventNo : startEventNo;
+    const hasMore = lastEventNo + 1 < total;
+
+    return {
+      events,
+      ...(hasMore ? { nextCursor: { eventNo: lastEventNo + 1 } } : {}),
+      total,
+    };
+  }
+
+  /**
+   * Read extractive digest for a sealed session.
+   */
+  async readDigest(sessionId: string, threadId: string, catId: string): Promise<Record<string, unknown> | null> {
+    const digestPath = join(this.sessionDir(threadId, catId, sessionId), 'digest.extractive.json');
+    try {
+      const content = await readFile(digestPath, 'utf-8');
+      return JSON.parse(content) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Full-text search across transcripts and digests.
+   * Phase D: naive implementation (scan all files).
+   * Future: upgrade to indexed/vector search without breaking interface.
+   */
+  async search(
+    threadId: string,
+    query: string,
+    opts?: {
+      cats?: string[];
+      sessionIds?: string[];
+      limit?: number;
+      scope?: 'digests' | 'transcripts' | 'both';
+    },
+  ): Promise<SearchHit[]> {
+    const limit = opts?.limit ?? 10;
+    const scope = opts?.scope ?? 'both';
+    const hits: SearchHit[] = [];
+    const needle = query.toLowerCase();
+
+    // Find all session directories for this thread
+    const threadDir = join(this.dataDir, 'threads', threadId);
+    let catDirs: string[];
+    try {
+      catDirs = await readdir(threadDir);
+    } catch {
+      return [];
+    }
+
+    for (const catId of catDirs) {
+      if (opts?.cats && !opts.cats.includes(catId)) continue;
+
+      const sessionsDir = join(threadDir, catId, 'sessions');
+      let sessionDirs: string[];
+      try {
+        sessionDirs = await readdir(sessionsDir);
+      } catch {
+        continue;
+      }
+
+      for (const sessionId of sessionDirs) {
+        if (opts?.sessionIds && !opts.sessionIds.includes(sessionId)) continue;
+        if (hits.length >= limit) break;
+
+        const sessionDir = join(sessionsDir, sessionId);
+
+        // Search digests
+        if (scope === 'digests' || scope === 'both') {
+          try {
+            const digestContent = await readFile(join(sessionDir, 'digest.extractive.json'), 'utf-8');
+            const digestText = digestContent.toLowerCase();
+            if (digestText.includes(needle)) {
+              const digest = JSON.parse(digestContent);
+              hits.push({
+                score: 1.0,
+                sessionId,
+                seq: digest.seq,
+                kind: 'digest',
+                snippet: this.extractSnippet(digestContent, query),
+                pointer: {},
+              });
+            }
+          } catch {
+            /* no digest or parse error */
+          }
+        }
+
+        // Search transcripts
+        if ((scope === 'transcripts' || scope === 'both') && hits.length < limit) {
+          try {
+            const rl = createInterface({
+              input: createReadStream(join(sessionDir, 'events.jsonl'), 'utf-8'),
+              crlfDelay: Infinity,
+            });
+            for await (const line of rl) {
+              if (hits.length >= limit) break;
+              if (line.toLowerCase().includes(needle)) {
+                try {
+                  const evt = JSON.parse(line) as TranscriptEvent;
+                  hits.push({
+                    score: 0.8,
+                    sessionId,
+                    kind: 'event',
+                    snippet: this.extractSnippet(line, query),
+                    pointer: {
+                      eventNo: evt.eventNo,
+                      ...(evt.invocationId ? { invocationId: evt.invocationId } : {}),
+                    },
+                  });
+                } catch {
+                  /* skip */
+                }
+              }
+            }
+          } catch {
+            /* no transcript */
+          }
+        }
+      }
+    }
+
+    return hits.slice(0, limit);
+  }
+
+  /**
+   * Read all events belonging to a specific invocation from a session transcript.
+   * F98 Gap 2: supports read_invocation_detail MCP tool.
+   */
+  async readInvocationEvents(
+    sessionId: string,
+    threadId: string,
+    catId: string,
+    invocationId: string,
+  ): Promise<TranscriptEvent[] | null> {
+    const sessionDir = this.sessionDir(threadId, catId, sessionId);
+    const jsonlPath = join(sessionDir, 'events.jsonl');
+
+    try {
+      await stat(jsonlPath);
+    } catch {
+      return null;
+    }
+
+    const events: TranscriptEvent[] = [];
+    const rl = createInterface({
+      input: createReadStream(jsonlPath, 'utf-8'),
+      crlfDelay: Infinity,
+    });
+
+    for await (const line of rl) {
+      if (line.trim().length === 0) continue;
+      try {
+        const evt = JSON.parse(line) as TranscriptEvent;
+        if (evt.invocationId === invocationId) {
+          events.push(evt);
+        }
+      } catch {
+        /* skip malformed */
+      }
+    }
+
+    return events.length > 0 ? events : null;
+  }
+
+  /**
+   * Read handoff digest (LLM-generated) for a sealed session.
+   * F065 Phase C: returns parsed YAML frontmatter + markdown body.
+   */
+  async readHandoffDigest(sessionId: string, threadId: string, catId: string): Promise<HandoffDigestResult | null> {
+    const digestPath = join(this.sessionDir(threadId, catId, sessionId), 'digest.handoff.md');
+    try {
+      const content = await readFile(digestPath, 'utf-8');
+      return this.parseHandoffDigest(content);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Read ALL events from a sealed session transcript (no limit).
+   * F065 Phase C: needed for handoff digest generation on long sessions.
+   */
+  async readAllEvents(
+    sessionId: string,
+    threadId: string,
+    catId: string,
+    signal?: AbortSignal,
+  ): Promise<TranscriptEvent[]> {
+    signal?.throwIfAborted();
+    const jsonlPath = join(this.sessionDir(threadId, catId, sessionId), 'events.jsonl');
+
+    try {
+      await stat(jsonlPath);
+    } catch {
+      return [];
+    }
+
+    const events: TranscriptEvent[] = [];
+    const rl = createInterface({
+      input: createReadStream(jsonlPath, { encoding: 'utf-8', signal }),
+      crlfDelay: Infinity,
+    });
+
+    for await (const line of rl) {
+      signal?.throwIfAborted();
+      if (line.trim().length === 0) continue;
+      try {
+        events.push(JSON.parse(line) as TranscriptEvent);
+      } catch {
+        /* skip malformed */
+      }
+    }
+
+    return events;
+  }
+
+  /** Public accessor for session directory path. */
+  getSessionDir(threadId: string, catId: string, sessionId: string): string {
+    return this.sessionDir(threadId, catId, sessionId);
+  }
+
+  /** Check if a session has a transcript on disk. */
+  async hasTranscript(sessionId: string, threadId: string, catId: string): Promise<boolean> {
+    try {
+      await stat(join(this.sessionDir(threadId, catId, sessionId), 'events.jsonl'));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async readIndex(sessionDir: string): Promise<TranscriptIndex | null> {
+    try {
+      const content = await readFile(join(sessionDir, 'index.json'), 'utf-8');
+      return JSON.parse(content) as TranscriptIndex;
+    } catch {
+      return null;
+    }
+  }
+
+  private sessionDir(threadId: string, catId: string, sessionId: string): string {
+    return join(this.dataDir, 'threads', threadId, catId, 'sessions', sessionId);
+  }
+
+  /** Parse a handoff digest markdown file with YAML frontmatter. */
+  private parseHandoffDigest(content: string): HandoffDigestResult | null {
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+    if (!fmMatch || !fmMatch[1] || !fmMatch[2]) return null;
+
+    const frontmatter = fmMatch[1];
+    const body = fmMatch[2].trim();
+
+    // Simple YAML key-value parsing (no nested objects needed)
+    const meta: Record<string, string> = {};
+    for (const line of frontmatter.split('\n')) {
+      const colonIdx = line.indexOf(':');
+      if (colonIdx > 0) {
+        const key = line.slice(0, colonIdx).trim();
+        const val = line.slice(colonIdx + 1).trim();
+        meta[key] = val;
+      }
+    }
+
+    const v = Number(meta.v);
+    const generatedAt = Number(meta.generatedAt);
+    if (!Number.isFinite(v) || !meta.model || !Number.isFinite(generatedAt)) {
+      return null;
+    }
+
+    return { v, model: meta.model, generatedAt, body };
+  }
+
+  private extractSnippet(text: string, query: string, maxLen = 200): string {
+    const lower = text.toLowerCase();
+    const idx = lower.indexOf(query.toLowerCase());
+    if (idx < 0) return text.slice(0, maxLen);
+    const start = Math.max(0, idx - 40);
+    const end = Math.min(text.length, idx + query.length + 160);
+    const snippet = text.slice(start, end);
+    return (start > 0 ? '...' : '') + snippet + (end < text.length ? '...' : '');
+  }
+}

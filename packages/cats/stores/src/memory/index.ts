@@ -16,6 +16,8 @@ export {
 export { MemoryMemoryStore } from './memory-store.ts'
 export { MemoryMessageStore, DEFAULT_THREAD_ID } from './message-store.ts'
 export { MemoryProfileUpdateProposalStore } from './profile-update-proposal-store.ts'
+export { MemoryReadStateStore, MemoryThreadReadStateStore } from './read-state-store.ts'
+export { MemorySessionChainStore } from './session-chain-store.ts'
 export { MemorySummaryStore } from './summary-store.ts'
 export { MemoryTaskManagedWorkRegistrationStore } from './task-managed-work-registration-store.ts'
 export { MemoryTaskProgressStore } from './task-progress-store.ts'

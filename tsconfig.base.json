@@ -54,6 +54,9 @@
       "@flowforge/cats-shared/invariant": [
         "./packages/cats/shared/src/invariant.ts"
       ],
+      "@flowforge/cats-orchestration": [
+        "./packages/cats/orchestration/src/index.ts"
+      ],
       "@flowforge/cats-stores": [
         "./packages/cats/stores/src/index.ts"
       ],

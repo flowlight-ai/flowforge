@@ -42,6 +42,9 @@
       "path": "./packages/cats/stores/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/stores-sqlite/tsconfig.host.json"
+    },
+    {
       "path": "./packages/cats/invocation/tsconfig.host.json"
     },
     {
@@ -49,6 +52,15 @@
     },
     {
       "path": "./packages/cats/profile/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/session/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/threads/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/messages/tsconfig.host.json"
     },
     {
       "path": "./packages/attachment/attachment"

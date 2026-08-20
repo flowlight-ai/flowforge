@@ -17,6 +17,7 @@
  * - `IDossierObservationStore` → `./dossier-observation-store.ts` (batch 5.2)
  * - `IDeliveryCursorStore`   → `./delivery-cursor-store.ts`  (batch 5.2)
  * - `ISummaryStore`          → `./summary-store.ts`          (batch 5.2)
+ * - `IThreadReadStateStore`  → `./read-state-store.ts`       (stage-5 batch 1)
  *
  * The remaining stub contracts will be ported from clowder-ai
  * `packages/api/src/domains/cats/services/stores/ports/` as their dependent
@@ -25,12 +26,9 @@
  * @module @flowforge/cats-stores/ports
  */
 
-/** Read-state cursor (per-user, per-thread). */
-export interface IReadStateStore {
-  markRead(userId: string, threadId: string, messageId: string, at: number): void | Promise<void>
-  getReadCursor(userId: string, threadId: string): { messageId: string | null; at: number | null } | Promise<{ messageId: string | null; at: number | null }>
-  listUnreadForUser(userId: string): ReadonlyArray<{ threadId: string; lastReadMessageId: string | null }> | Promise<ReadonlyArray<{ threadId: string; lastReadMessageId: string | null }>>
-}
+/** Read-state store was promoted to a full contract in stage-5 batch 1:
+ * - `IThreadReadStateStore` → `./read-state-store.ts`
+ */
 
 /** Per-thread label set. */
 export interface ILabelStore {
@@ -147,12 +145,9 @@ export interface IWorkflowSopStore {
   unregister(sopId: string): boolean | Promise<boolean>
 }
 
-/** Session chain store (per-cat session lineage for handoff). */
-export interface ISessionChainStore {
-  append(chainId: string, entry: Record<string, unknown>): void | Promise<void>
-  getChain(chainId: string): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-  listChainsForCat(catId: string): readonly string[] | Promise<readonly string[]>
-}
+/** Session chain store was promoted to a full contract in batch 6.2a:
+ * - `ISessionChainStore` → `./session-chain-store.ts`
+ */
 
 /** Draft store (per-thread unsent draft). */
 export interface IDraftStore {
