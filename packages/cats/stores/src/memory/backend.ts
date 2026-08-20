@@ -42,6 +42,7 @@ import { MemoryMemoryStore } from './memory-store.ts'
 import { MemoryMessageStore } from './message-store.ts'
 import { MemoryProfileUpdateProposalStore } from './profile-update-proposal-store.ts'
 import { MemoryProposalStore } from './proposal-store.ts'
+import { MemorySessionHandoffProposalStore } from './session-handoff-proposal-store.ts'
 import { MemoryVoteStore } from './vote-store.ts'
 import { MemorySessionChainStore } from './session-chain-store.ts'
 import { MemorySummaryStore } from './summary-store.ts'
@@ -104,6 +105,8 @@ export class MemoryStoresBackend extends Service {
   readonly proposalStore: MemoryProposalStore
   /** Stage-5 batch 4 — F079 vote store. */
   readonly voteStore: MemoryVoteStore
+  /** Stage-5 batch 6 — F225 session-handoff proposal store. */
+  readonly sessionHandoffProposalStore: MemorySessionHandoffProposalStore
 
   constructor(ctx: Context) {
     super(ctx, 'catStoresMemory')
@@ -124,6 +127,7 @@ export class MemoryStoresBackend extends Service {
     this.threadReadStateStore = new MemoryThreadReadStateStore()
     this.proposalStore = new MemoryProposalStore()
     this.voteStore = new MemoryVoteStore()
+    this.sessionHandoffProposalStore = new MemorySessionHandoffProposalStore()
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(MEMORY_BACKEND_NAME, {
@@ -144,6 +148,7 @@ export class MemoryStoresBackend extends Service {
         threadReadStateStore: this.threadReadStateStore,
         proposalStore: this.proposalStore,
         voteStore: this.voteStore,
+        sessionHandoffProposalStore: this.sessionHandoffProposalStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(MEMORY_BACKEND_NAME)
@@ -219,6 +224,11 @@ export class MemoryStoresBackend extends Service {
   /** Expose the underlying session chain store (for tests / direct inspection). */
   get sessionChains(): MemorySessionChainStore {
     return this.sessionChainStore
+  }
+
+  /** Expose the underlying session-handoff proposal store (for tests / direct inspection). */
+  get sessionHandoffs(): MemorySessionHandoffProposalStore {
+    return this.sessionHandoffProposalStore
   }
 }
 

@@ -132,6 +132,17 @@ export type {
 export { throwIfStoreReadAborted } from './session-chain-store.ts'
 
 export type {
+  CreateHandoffProposalInput,
+  HandoffCheckpointPatch,
+  ISessionHandoffProposalStore,
+  RejectSessionHandoffInput,
+  SessionHandoffDispositionEntryLookup,
+  SessionHandoffRejectionOutcome,
+  SessionHandoffRejectionResult,
+} from './session-handoff-proposal-store.ts'
+export { sessionHandoffProposalIdFromSourceRef } from './session-handoff-proposal-store.ts'
+
+export type {
   IAuthorizationAuditStore,
   IAuthorizationRuleStore,
   ICommunityIssueDraftStore,
@@ -144,7 +155,6 @@ export type {
   IMemoryGovernanceStore,
   IPendingRequestStore,
   IPushSubscriptionStore,
-  ISessionHandoffProposalStore,
   ITurnExecutionStore,
   IWorkflowSopStore,
 } from './stub-ports.ts'

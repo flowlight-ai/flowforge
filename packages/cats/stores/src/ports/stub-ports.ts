@@ -122,13 +122,10 @@ export interface IMemoryGovernanceStore {
   listForCat(catId: string, options?: { readonly limit?: number }): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
 }
 
-/** Session handoff proposal store. */
-export interface ISessionHandoffProposalStore {
-  create(proposal: Record<string, unknown>): Record<string, unknown> | Promise<Record<string, unknown>>
-  getById(id: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  listForThread(threadId: string): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-  update(id: string, patch: Record<string, unknown>): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-}
+/** Session handoff proposal store was promoted to a full contract in stage-5
+ * batch 6:
+ * - `ISessionHandoffProposalStore` → `./session-handoff-proposal-store.ts`
+ */
 
 /** Workflow SOP store. */
 export interface IWorkflowSopStore {

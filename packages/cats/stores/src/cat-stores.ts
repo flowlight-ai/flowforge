@@ -31,6 +31,7 @@ import type {
   IProfileUpdateProposalStore,
   IProposalStore,
   ISessionChainStore,
+  ISessionHandoffProposalStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
@@ -70,6 +71,8 @@ export interface CatStoresBackend {
   readonly proposalStore?: IProposalStore
   /** F079 per-thread vote state store (stage-5 batch 4). */
   readonly voteStore?: IVoteStore
+  /** F225 session-handoff proposal store (stage-5 batch 6). */
+  readonly sessionHandoffProposalStore?: ISessionHandoffProposalStore
   /** Additional ports may be added incrementally — backend plugins opt-in. */
   readonly [key: string]: unknown
 }
@@ -336,6 +339,21 @@ export class CatStores extends Service {
       throw new Error(
         'Active cats-stores backend did not register an IVoteStore; ' +
           'load @flowforge/cats-stores/memory (stage-5 batch 4) or a backend that supports votes.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active ISessionHandoffProposalStore (F225). Throws if the
+   * active backend did not register one (only backends from stage-5 batch 6+ do).
+   */
+  sessionHandoffProposals(): ISessionHandoffProposalStore {
+    const store = this.active().sessionHandoffProposalStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an ISessionHandoffProposalStore; ' +
+          'load @flowforge/cats-stores/memory (stage-5 batch 6) or a backend that supports session handoffs.',
       )
     }
     return store

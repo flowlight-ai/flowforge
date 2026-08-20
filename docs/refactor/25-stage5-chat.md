@@ -94,13 +94,13 @@
 - [x] T5.3.3 callback-auth 签名校验纯函数（prehandler/system-message）
 - [x] T5.3.4 测试 + mgr PR
 
-### 批次 6：`@flowforge/chat-session-chain`（会话链/交接，T5.4）
+### 批次 6：`@flowforge/chat-session-chain`（会话链/交接，T5.4）✅
 
-- [ ] T5.4.1 `SessionChainService`（session-chain 路由语义，复用 cats-session Sealer）
-- [ ] T5.4.2 `SessionHandoffService`：handoff 提案/审批/执行（依赖批次4 approval +
+- [x] T5.4.1 `SessionChainService`（session-chain 路由语义，复用 cats-session Sealer）
+- [x] T5.4.2 `SessionHandoffService`：handoff 提案/审批/执行（依赖批次4 approval +
       ISessionHandoffProposalStore 提升）
-- [ ] T5.4.3 session-hooks / session-strategy-config
-- [ ] T5.4.4 测试 + mgr PR
+- [x] T5.4.3 session-hooks / session-strategy-config
+- [x] T5.4.4 测试 5 spec 80 用例 + typecheck 退出码 0 + mgr PR
 
 ### 批次 7：`@flowforge/chat-misc`（信号/记忆/任务/市场桥接，T5.7+T5.8）
 
@@ -122,7 +122,7 @@
 - [x] T5.1 `packages/chat/threads`：线程 CRUD/详情/标题/删除/成员 + 线程读取状态 → 批次1
 - [x] T5.2 `packages/chat/messages`：消息发布/编辑/删除/行动（message-action）+ 媒体附件 → 批次2
 - [x] T5.3 `packages/chat/mention`：@mention 路由 + 多 @ 并发编排 → 批次5
-- [ ] T5.4 `packages/chat/session-chain`：会话链管理 + 交接 handoff → 批次6
+- [x] T5.4 `packages/chat/session-chain`：会话链管理 + 交接 handoff → 批次6
 - [x] T5.5 `packages/chat/thread-branch`：线程分支 → 批次1（并入 `@flowforge/chat-threads`
       ThreadBranchService）
 - [x] T5.6 `packages/chat/approval`：审批 Hub / 提案 / 投票 / 治理 → 批次4
@@ -143,6 +143,13 @@
 4. 路由统一挂 `/api/v2/*`（R18），与 Python 旧版 `/api/v1/*` 物理隔离。
 5. **所有 chat 服务均为 Cordis 插件**（`ctx.chatThreads`/`ctx.chatMessages`/`ctx.chatRealtime`/
    `ctx.chatApproval`/`ctx.chatMention`/`ctx.chatSessionChain`）。
+6. Python 旧版 `pytest` 回归全绿。
+
+## 提交信息模板
+
+```
+feat(chat): 群聊系统(线程/@mention/会话链/实时投递) 改造为Cordis插件 [sherlock]
+```
 6. Python 旧版 `pytest` 回归全绿。
 
 ## 提交信息模板
