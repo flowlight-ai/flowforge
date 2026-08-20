@@ -88,11 +88,11 @@
 
 ### 批次 5：`@flowforge/chat-mention`（@mention 路由，T5.3）
 
-- [ ] T5.3.1 `MentionParser` 纯函数（user-mention/catId 提取）
-- [ ] T5.3.2 `MultiMentionOrchestratorService` → `ctx.chatMention`：多 @ 并发编排
+- [x] T5.3.1 `MentionParser` 纯函数（user-mention/catId 提取）
+- [x] T5.3.2 `MultiMentionOrchestratorService` → `ctx.chatMention`：多 @ 并发编排
       （callback-multi-mention 语义，对接 catsInvocationQueue）
-- [ ] T5.3.3 callback-auth 签名校验纯函数（prehandler/system-message）
-- [ ] T5.3.4 测试 + mgr PR
+- [x] T5.3.3 callback-auth 签名校验纯函数（prehandler/system-message）
+- [x] T5.3.4 测试 + mgr PR
 
 ### 批次 6：`@flowforge/chat-session-chain`（会话链/交接，T5.4）
 
@@ -121,7 +121,7 @@
 
 - [x] T5.1 `packages/chat/threads`：线程 CRUD/详情/标题/删除/成员 + 线程读取状态 → 批次1
 - [x] T5.2 `packages/chat/messages`：消息发布/编辑/删除/行动（message-action）+ 媒体附件 → 批次2
-- [ ] T5.3 `packages/chat/mention`：@mention 路由 + 多 @ 并发编排 → 批次5
+- [x] T5.3 `packages/chat/mention`：@mention 路由 + 多 @ 并发编排 → 批次5
 - [ ] T5.4 `packages/chat/session-chain`：会话链管理 + 交接 handoff → 批次6
 - [x] T5.5 `packages/chat/thread-branch`：线程分支 → 批次1（并入 `@flowforge/chat-threads`
       ThreadBranchService）
