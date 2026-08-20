@@ -86,6 +86,20 @@ export type {
 } from './profile-update-proposal-store.ts'
 
 // ============================================================================
+// Approval/vote ports (stage-5 batch 4) — IProposalStore promoted from
+// stub-ports.ts to the full F128 branded contract (clowder-ai ProposalStore);
+// IVoteStore carries per-thread F079 voting state.
+// ============================================================================
+
+export type {
+  CreateThreadProposalInput,
+  FinalizeApprovalInput,
+  IProposalStore,
+} from './proposal-store.ts'
+
+export type { IVoteStore } from './vote-store.ts'
+
+// ============================================================================
 // Orchestration-related ports (batch 5.2) — promoted from stub-ports.ts to
 // full branded contracts consumed by `@flowforge/cats-orchestration`.
 // ============================================================================
@@ -129,7 +143,6 @@ export type {
   ILabelStore,
   IMemoryGovernanceStore,
   IPendingRequestStore,
-  IProposalStore,
   IPushSubscriptionStore,
   ISessionHandoffProposalStore,
   ITurnExecutionStore,

@@ -1069,6 +1069,12 @@ export type {
   ReportingMode,
   ThreadProposal,
 } from './proposal.ts';
+// F079: thread vote (voting) state
+export type {
+  VoteResult,
+  VoteTally,
+  VotingStateV1,
+} from './vote.ts';
 // F264: durable per-target queued-message receipt and manual reminder truth
 export type {
   FreshnessCarrier,

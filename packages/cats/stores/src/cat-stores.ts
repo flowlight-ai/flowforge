@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CatStores — Cordis service that aggregates all cats-domain store backends.
  *
  * Mounted at `ctx.catStores` by the `@flowforge/cats-stores` default plugin.
@@ -29,6 +29,7 @@ import type {
   IMemoryStore,
   IMessageStore,
   IProfileUpdateProposalStore,
+  IProposalStore,
   ISessionChainStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
@@ -36,6 +37,7 @@ import type {
   ITaskStore,
   IThreadReadStateStore,
   IThreadStore,
+  IVoteStore,
 } from './ports/index.ts'
 
 /** A registered backend's store instances. */
@@ -64,6 +66,10 @@ export interface CatStoresBackend {
   readonly sessionChainStore?: ISessionChainStore
   /** Thread read-state store (stage-5 batch 1 — F069 unread cursor). */
   readonly threadReadStateStore?: IThreadReadStateStore
+  /** F128 cross-thread proposal store (stage-5 batch 4). */
+  readonly proposalStore?: IProposalStore
+  /** F079 per-thread vote state store (stage-5 batch 4). */
+  readonly voteStore?: IVoteStore
   /** Additional ports may be added incrementally — backend plugins opt-in. */
   readonly [key: string]: unknown
 }
@@ -304,6 +310,36 @@ export class CatStores extends Service {
     return store
   }
 
+
+  /**
+   * Resolve the active IProposalStore (F128). Throws if the active backend
+   * did not register one (only backends from stage-5 batch 4+ do).
+   */
+  proposals(): IProposalStore {
+    const store = this.active().proposalStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IProposalStore; ' +
+          'load @flowforge/cats-stores/memory (stage-5 batch 4) or a backend that supports proposals.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active IVoteStore (F079). Throws if the active backend
+   * did not register one (only backends from stage-5 batch 4+ do).
+   */
+  votes(): IVoteStore {
+    const store = this.active().voteStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IVoteStore; ' +
+          'load @flowforge/cats-stores/memory (stage-5 batch 4) or a backend that supports votes.',
+      )
+    }
+    return store
+  }
   /** List all registered backend names. */
   backendNames(): readonly string[] {
     return Array.from(this.backends.keys())

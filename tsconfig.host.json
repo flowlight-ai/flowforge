@@ -66,6 +66,9 @@
       "path": "./packages/chat/realtime/tsconfig.host.json"
     },
     {
+      "path": "./packages/chat/approval/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

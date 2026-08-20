@@ -57,7 +57,6 @@
 - [x] T5.2.4 测试 3 spec 54 用例 + `IMessageStore.getByThreadBefore` 端口扩展
       （Memory/Sqlite 双后端）+ typecheck 退出码 0 + mgr PR
 
-<<<<<<< HEAD
 ### 批次 3：`@flowforge/chat-realtime`（实时事件面，T5.11）✅
 
 - [x] T5.11.1 `ChatRealtimeService extends Service` → `ctx.chatRealtime`：SocketManager
@@ -72,22 +71,20 @@
       + `RealtimeTransport` 缝（InMemory 默认实现；socket.io 适配器留组合根注入）
 - [x] T5.11.4 测试 3 spec 49 用例（sequencer/rate-monitor/realtime 双客户端收发）+
       typecheck 退出码 0 + mgr PR
-=======
-### 批次 3：`@flowforge/chat-realtime`（实时事件面，T5.11）
 
-- [ ] T5.11.1 `ChatRealtimeService extends Service` → `ctx.chatRealtime`：SocketManager
-      全量语义（room join/leave、broadcast、cancel messages）改造 Cordis
-- [ ] T5.11.2 `ThreadSequencer`（thread 序号分配）+ `BroadcastRateMonitor`（广播限速）
-- [ ] T5.11.3 事件词汇：thread:message / invocation:progress / signal:new / approval:update
-- [ ] T5.11.4 测试（双客户端收发 mock io）+ mgr PR
->>>>>>> origin/master
+### 批次 4：`@flowforge/chat-approval`（审批/提案/投票，T5.6）✅
 
-### 批次 4：`@flowforge/chat-approval`（审批/提案/投票，T5.6）
-
-- [ ] T5.6.1 `IProposalStore` stub → 完整 port + Memory（proposal 状态机）
-- [ ] T5.6.2 `ProposalService` → `ctx.chatApproval`：create/list/vote/decide/close/stale-recovery
-- [ ] T5.6.3 votes（投票统计）+ approval-hub（聚合卡片）+ proposal-card/enrich-header 纯函数
-- [ ] T5.6.4 测试 + mgr PR
+- [x] T5.6.1 `IProposalStore` stub → 完整 port + Memory（proposal 状态机）
+      （pending→approving→approved；recordCreatedThread Stage 1.5 崩溃检查点；
+      stale-claim 恢复：已建线程 finalize / 未建线程 rollback；dedup 幂等）
+      + `IVoteStore` port + Memory（per-thread F079 状态），`ctx.catStores.proposals()/votes()`
+- [x] T5.6.2 `ProposalService` → `ctx.chatApproval`：create/list/vote/decide/close/stale-recovery
+      （createProposal dedup / approve 归属校验 + 终态冲突 + dedup 重放 + stale 恢复 +
+      建线程 Stage1.5+finalize / reject / withdraw / voteStart-voteCast-voteClose-voteStatus）
+- [x] T5.6.3 votes（tally/完成判定/文本提取）+ approval-hub（聚合卡片 pending/settled 投影）+
+      proposal-card/enrich-header 纯函数
+- [x] T5.6.4 测试 4 spec 67 用例（votes/stale-recovery/proposal-service/approval-hub）+
+      typecheck 退出码 0 + mgr PR
 
 ### 批次 5：`@flowforge/chat-mention`（@mention 路由，T5.3）
 
@@ -128,7 +125,7 @@
 - [ ] T5.4 `packages/chat/session-chain`：会话链管理 + 交接 handoff → 批次6
 - [x] T5.5 `packages/chat/thread-branch`：线程分支 → 批次1（并入 `@flowforge/chat-threads`
       ThreadBranchService）
-- [ ] T5.6 `packages/chat/approval`：审批 Hub / 提案 / 投票 / 治理 → 批次4
+- [x] T5.6 `packages/chat/approval`：审批 Hub / 提案 / 投票 / 治理 → 批次4
 - [ ] T5.7 `packages/chat/signals|memory|tasks` → 批次7
 - [ ] T5.8 `packages/chat/marketplace` → 批次7
 - [ ] T5.9 ~~world/community/story/排行榜~~ → **stretch**（`10-stage-map.md` §3.4 S3，仅留 ports）

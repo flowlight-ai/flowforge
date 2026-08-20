@@ -44,14 +44,7 @@ export interface IPendingRequestStore {
   expire(now?: number): number | Promise<number>
 }
 
-/** Cross-cat proposals (F-suggested cross-thread coordination). */
-export interface IProposalStore {
-  create(proposal: Record<string, unknown>): Record<string, unknown> | Promise<Record<string, unknown>>
-  getById(id: string): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  listForThread(threadId: string): readonly Record<string, unknown>[] | Promise<readonly Record<string, unknown>[]>
-  update(id: string, patch: Record<string, unknown>): Record<string, unknown> | null | Promise<Record<string, unknown> | null>
-  delete(id: string): boolean | Promise<boolean>
-}
+/** `IProposalStore` promoted to `./proposal-store.ts` (stage-5 batch 4). */
 
 /** Push subscription registration. */
 export interface IPushSubscriptionStore {
