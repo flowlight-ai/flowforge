@@ -36,11 +36,14 @@ export { LimbActionLog } from './limb-action-log.js';
 export { LimbPresenceManager, mapProbeStateToLimbStatus, StatusChangeCallback } from './limb-presence.js';
 export {
   ApprovedLimbPairingPersistence,
+  ApprovedLimbPairingRedisKeys,
   CreatePairingParams,
   LimbPairingOwnershipConflictError,
   LimbPairingStore,
   MemoryApprovedLimbPairingPersistence,
   PairingRequest,
+  RedisApprovedLimbPairingPersistence,
+  RedisHashLike,
 } from './limb-pairing-store.js';
 
 export interface LimbServiceOptions {

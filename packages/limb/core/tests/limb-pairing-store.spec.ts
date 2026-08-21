@@ -11,12 +11,15 @@
  * @module @flowforge/limb-core/tests
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   ApprovedLimbPairingPersistence,
+  ApprovedLimbPairingRedisKeys,
   LimbPairingOwnershipConflictError,
   LimbPairingStore,
   MemoryApprovedLimbPairingPersistence,
+  RedisApprovedLimbPairingPersistence,
+  RedisHashLike,
 } from '../src/limb-pairing-store.js';
 import { DEFAULT_CAPABILITIES } from './helpers.ts';
 
@@ -195,5 +198,50 @@ describe('ApprovedLimbPairingPersistence 持久化', () => {
       async remove() {},
     };
     await expect(LimbPairingStore.restore(bad)).rejects.toThrow(TypeError);
+  });
+
+  it('Redis 后端 put/list/remove roundtrip + 键常量', async () => {
+    const map = new Map<string, string>();
+    const redis: RedisHashLike = {
+      hvals: vi.fn(async (key) => [...map.values()].filter(() => key === ApprovedLimbPairingRedisKeys.approved)),
+      hset: vi.fn(async (key, field, value) => {
+        if (key === ApprovedLimbPairingRedisKeys.approved) map.set(field, value);
+      }),
+      hdel: vi.fn(async (key, field) => {
+        if (key === ApprovedLimbPairingRedisKeys.approved) map.delete(field);
+      }),
+    };
+    const persistence = new RedisApprovedLimbPairingPersistence(redis);
+    const store = new LimbPairingStore(persistence);
+    const req = store.createRequest(PARAMS);
+    const approved = await store.approve(req.requestId, 'user-1');
+    expect(approved?.status).toBe('approved');
+
+    const listed = await persistence.list();
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.nodeId).toBe(PARAMS.nodeId);
+
+    // 独立持久化实例可 restore（模拟进程重启）
+    const restored = await LimbPairingStore.restore(new RedisApprovedLimbPairingPersistence(redis));
+    expect(restored.findApprovedByNodeId(PARAMS.nodeId)?.approvedByUserId).toBe('user-1');
+
+    await persistence.remove(PARAMS.nodeId);
+    expect(await persistence.list()).toHaveLength(0);
+    expect(ApprovedLimbPairingRedisKeys.approved).toBe('limb:pairing:approved:v1');
+  });
+
+  it('Redis 后端拒绝非法记录（put 校验 + list 坏数据抛 TypeError）', async () => {
+    const redis: RedisHashLike = {
+      hvals: vi.fn(async () => ['not-json']),
+      hset: vi.fn(async () => undefined),
+      hdel: vi.fn(async () => undefined),
+    };
+    const persistence = new RedisApprovedLimbPairingPersistence(redis);
+    await expect(persistence.list()).rejects.toThrow(TypeError);
+
+    const store = new LimbPairingStore(persistence);
+    const req = store.createRequest(PARAMS);
+    // 绕过 store 直接写坏记录
+    await expect(persistence.put({ ...req, status: 'pending' })).rejects.toThrow(TypeError);
   });
 });

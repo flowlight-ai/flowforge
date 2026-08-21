@@ -946,6 +946,33 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/chat/e2e:
+    devDependencies:
+      '@flowforge/cats-invocation':
+        specifier: workspace:^
+        version: link:../../cats/invocation
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../../cats/stores
+      '@flowforge/chat-approval':
+        specifier: workspace:^
+        version: link:../approval
+      '@flowforge/chat-mention':
+        specifier: workspace:^
+        version: link:../mention
+      '@flowforge/chat-realtime':
+        specifier: workspace:^
+        version: link:../realtime
+      '@flowforge/chat-session-chain':
+        specifier: workspace:^
+        version: link:../session-chain
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/chat/mention:
     devDependencies:
       '@flowforge/cats-shared':
@@ -1014,6 +1041,12 @@ importers:
       '@flowforge/chat-approval':
         specifier: workspace:^
         version: link:../approval
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/chat/stretch-ports:
+    devDependencies:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
@@ -2946,6 +2979,39 @@ importers:
       '@flowforge/tools':
         specifier: workspace:^
         version: link:../../core/tools
+
+  packages/limb/core:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/limb/embodiment:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/limb-core':
+        specifier: workspace:^
+        version: link:../core
+      yaml:
+        specifier: ^2.6.0
+        version: 2.9.0
+
+  packages/limb/node:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/limb-core':
+        specifier: workspace:^
+        version: link:../core
+      '@flowforge/limb-embodiment':
+        specifier: workspace:^
+        version: link:../embodiment
 
   packages/llm/llm:
     dependencies:

@@ -80,7 +80,7 @@
 | `src/services/distillation/*`（Dossier） | `packages/cats/distillation` | vendor；对照 P: `evolution/knowledge_evolution.py` | ⬜ |
 | `src/services/bootcamp|freshness|duty-briefing|usage-aggregator|…` | `packages/cats/*` | vendor | ⬜ |
 | `src/domains/cats/*`（档案路由/技能包/记忆发布/任务积压） | `packages/cats/routes` | vendor，路由按域插件挂载 | ⬜ |
-| `src/domains/limb/*`（LimbRegistry/LeaseManager/PairingStore/AccessPolicy/ObservationRouter/RemoteLimbNode/PluginLimbAdapter/RestExecutor/yaml-loader） | `packages/limb` | vendor；全部 Cordis 插件化（R13） | 🟦（批次1 limb-core 六模块：Registry/Lease/Pairing/AccessPolicy/ActionLog/Presence；node/observation/embodiment/adapters 待批次 2-4） |
+| `src/domains/limb/*`（LimbRegistry/LeaseManager/PairingStore/AccessPolicy/ObservationRouter/RemoteLimbNode/PluginLimbAdapter/RestExecutor/yaml-loader） | `packages/limb` | vendor；全部 Cordis 插件化（R13） | 🟦（批次1 limb-core 六模块：Registry/Lease/Pairing/AccessPolicy/ActionLog/Presence + ApprovedPersistence；批次2 limb-node 四模块 + limb-embodiment BindingStore/yaml-loader/Redis 配对持久化；observation/adapters 待批次 3-4） |
 | `src/domains/terminal/*`（tmux-gateway/tmux-agent-spawner/session-store）+ Windows pty 回退 | `packages/limb/terminal` | vendor + node-pty（Windows） | ⬜ |
 | `src/domains/services/*`（memory/signals/approval/notifications 等） | `packages/cats|chat` 对应域 | vendor 按域拆分 | ⬜ |
 | `src/routes/threads|messages|callback-multi-mention|session-*|thread-branch|approval-hub|proposal|votes|world|community|story|leaderboard|marketplace|settings|…` | `packages/chat` + `packages/marketplace` | vendor；world/community/story 等 clowder 扩展降级 stretch（S1-S3/S7，见 `10-stage-map.md` §3.4） | ✅（批次1-8 chat-threads/messages/mention/session-chain/approval/realtime/misc + stretch-ports ports+mock + e2e） |

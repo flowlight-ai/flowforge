@@ -1,0 +1,29 @@
+{
+  "name": "@flowforge/limb-embodiment",
+  "description": "FlowForge limb embodiment domain Cordis plugin — T6.4 LimbEmbodimentBindingStore + limb-yaml-loader + ApprovedLimbPairingPersistence at ctx.limbEmbodiment",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/limb/embodiment" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./limb-yaml-loader": { "types": "./lib/types/limb-yaml-loader.d.ts", "default": "./lib/limb-yaml-loader.js" },
+    "./limb-embodiment-binding-store": { "types": "./lib/types/limb-embodiment-binding-store.d.ts", "default": "./lib/limb-embodiment-binding-store.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/limb-core": "workspace:^",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/limb-core": "workspace:^",
+    "yaml": "^2.6.0"
+  }
+}

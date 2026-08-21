@@ -9,12 +9,14 @@
 - [x] T6.1 `packages/limb/core`：LimbRegistry / LimbPairingStore / LimbLeaseManager /
       LimbAccessPolicy / LimbActionLog / LimbPresenceManager（批次1 交付：六模块 + Cordis 插件化
       LimbService 挂载 `ctx.limb` + 63 测试 + 接线 tsconfig/vitest）
-- [ ] T6.2 `packages/limb/node`：RemoteLimbNode（远端节点通信）+ PluginLimbAdapter +
-      PluginRestExecutor + PluginTokenManager
+- [x] T6.2 `packages/limb/node`：RemoteLimbNode（远端节点通信）+ PluginLimbAdapter +
+      PluginRestExecutor + PluginTokenManager（批次2 交付：四模块 + Cordis 插件化
+      LimbNodeService 挂载 `ctx.limbNodes` + 29 测试）
 - [ ] T6.3 `packages/limb/observation`：LimbObservationRouter + LimbOutboundDeliveryHook +
       LimbTranscriptCatDelivery（输出回传群聊）
-- [ ] T6.4 `packages/limb/embodiment`：LimbEmbodimentBindingStore + limb-yaml-loader +
-      ApprovedLimbPairingPersistence（具身绑定与配对持久化）
+- [x] T6.4 `packages/limb/embodiment`：LimbEmbodimentBindingStore + limb-yaml-loader +
+      ApprovedLimbPairingPersistence（批次2 交付：具身绑定 Memory/Redis 双后端 + YAML 声明
+      加载器 + 配对持久化 Redis 后端（limb-core）+ EmbodimentService 挂载 `ctx.limbEmbodiment` + 19 测试）
 - [ ] T6.5 `packages/terminal`：tmux-gateway / tmux-agent-spawner / agent-sessions-reader /
       session-store / agent-pane-registry（Windows 回退：node-pty 实现同接口）
 - [ ] T6.6 `packages/limb/adapters`：Claude Code（stream-json）、Codex（json）、Gemini CLI

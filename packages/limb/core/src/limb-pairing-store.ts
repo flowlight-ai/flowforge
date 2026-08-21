@@ -106,6 +106,50 @@ export class MemoryApprovedLimbPairingPersistence implements ApprovedLimbPairing
   }
 }
 
+/** Redis 后端最小接口（组合根注入真实 redis 客户端） */
+export interface RedisHashLike {
+  hvals(key: string): Promise<string[]>;
+  hset(key: string, field: string, value: string): Promise<unknown>;
+  hdel(key: string, field: string): Promise<unknown>;
+}
+
+const APPROVED_PAIRINGS_KEY = 'limb:pairing:approved:v1';
+
+/** Redis 持久化 — hash 表按 nodeId 字段存储已批准配对 */
+export class RedisApprovedLimbPairingPersistence implements ApprovedLimbPairingPersistence {
+  constructor(private readonly redis: RedisHashLike) {}
+
+  async list(): Promise<PairingRequest[]> {
+    const records = await this.redis.hvals(APPROVED_PAIRINGS_KEY);
+    return records.map((raw) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        throw new TypeError('Corrupt approved limb pairing record');
+      }
+      if (!isApprovedPairing(parsed)) {
+        throw new TypeError('Corrupt approved limb pairing record');
+      }
+      return structuredClone(parsed);
+    });
+  }
+
+  async put(pairing: PairingRequest): Promise<void> {
+    assertApprovedPairing(pairing);
+    // User-visible ownership state is intentionally persistent: no EX/PX.
+    await this.redis.hset(APPROVED_PAIRINGS_KEY, pairing.nodeId, JSON.stringify(pairing));
+  }
+
+  async remove(nodeId: string): Promise<void> {
+    await this.redis.hdel(APPROVED_PAIRINGS_KEY, nodeId);
+  }
+}
+
+export const ApprovedLimbPairingRedisKeys = {
+  approved: APPROVED_PAIRINGS_KEY,
+} as const;
+
 export class LimbPairingStore {
   private readonly requests = new Map<string, PairingRequest>();
   private mutationTail: Promise<void> = Promise.resolve();
