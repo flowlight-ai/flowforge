@@ -135,6 +135,12 @@
       "@flowforge/forgekin-loops": [
         "./packages/forgekin/loops/src/index.ts"
       ],
+      "@flowforge/forgekin-workflow-compiler": [
+        "./packages/forgekin/workflow-compiler/src/index.ts"
+      ],
+      "@flowforge/forgekin-external-agents": [
+        "./packages/forgekin/external-agents/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],

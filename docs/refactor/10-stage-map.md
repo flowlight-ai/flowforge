@@ -179,8 +179,8 @@
 | F5 | MindCouncil 跨厂商审议 | forgemind/council.py | 7 | ✅（批次2 forgekin-council：CouncilVerdict/CouncilSession 聚合 + min_reviewers/min_distinct_vendors/pass_threshold 强制 + 单厂商结构性拒绝 + `ctx.forgeCouncil`，18 测试） |
 | F6 | 五自进化闭环（docs/code/framework/review/test） | evolution/self_dev_*.py | 7 | ✅（批次2 forgekin-loops：SelfDevLoopBase 五步循环 + I1-I8 不变量 + `ctx.forgeLoops`，76 测试） |
 | F7 | 觉醒阶/进化阶 E1-E6 + 成熟度 | evolution/maturity.py | 7 | ✅（批次2 forgekin-stage：双轴阶模型 + KnowledgeMaturityLadder 五级晋升/降级/冻结 + `ctx.forgeStage`，42 测试） |
-| F8 | 工作流编译器 YAML→执行图 | core/workflow_compiler*.py | 7 | ⬜ |
-| F9 | 外部 agent 适配器 EAC 七契约 | forgemind/external_agents.py | 7 | ⬜ |
+| F8 | 工作流编译器 YAML→执行图 | core/workflow_compiler*.py | 7 | ✅（批次3 forgekin-workflow-compiler：三阶段 Parser/Validator/CodeGen + 条件路由/复合步骤 + `ctx.forgeWorkflowCompiler`，43 测试） |
+| F9 | 外部 agent 适配器 EAC 七契约 | forgemind/external_agents.py | 7 | ✅（批次3 forgekin-external-agents：五种内置 kind 子进程适配器 + Helm LLM 事件桥 + `ctx.forgeExternalAgents`，29 测试） |
 | F10 | 7 层 harness 工程（durable_state 等） | core/harness | 7 | ⬜ |
 | F11 | 插件市场 + 前端插件 | core/marketplace.py + plugin_* | 7 | ⬜ |
 | F12 | 团队协作 teamact + 审批 | core/teamact + approval_hub | 7 | ⬜ |

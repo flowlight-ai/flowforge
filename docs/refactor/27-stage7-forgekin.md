@@ -25,10 +25,12 @@
       （批次2：SelfDevLoopBase 五步循环 Discover→Plan→Act→Verify→Persist + I1-I8 不变量
       （觉醒阶门控/Scope Guard/Reflect≤3/LLM 审核必经/I8 approval）+ LoopsService 挂载
       `ctx.forgeLoops`，76 测试）
-- [ ] T7.8 `packages/forgekin/workflow-compiler`：YAML 工作流 → 执行图（TS 重写自
-      core/workflow_compiler*.py，含条件路由/字段门控）
-- [ ] T7.9 `packages/forgekin/external-agents`：EAC 七契约外部 agent 适配器（TS 重写自
-      forgemind/external_agents.py + helm_adapter.py），桥接 limb 域
+- [x] T7.8 `packages/forgekin/workflow-compiler`：YAML 工作流 → 执行图（TS 重写自
+      core/workflow_compiler*.py，三阶段 Parser/Validator/CodeGen + 条件路由/复合步骤，
+      `ctx.forgeWorkflowCompiler`，43 测试）
+- [x] T7.9 `packages/forgekin/external-agents`：EAC 七契约外部 agent 适配器（TS 重写自
+      forgemind/external_agents.py + helm_adapter.py，子进程隔离 + Helm LLM 事件桥），
+      `ctx.forgeExternalAgents`，29 测试
 - [ ] T7.10 `packages/forgekin/harness`：7 层 harness 工程（durable_state/tool_mediation/
       evidence_sensors/governance/magic_words/entropy_control/harnessability）
 - [ ] T7.11 `packages/forgekin/plugins`：插件市场 + 前端插件（桥接 chat marketplace）
