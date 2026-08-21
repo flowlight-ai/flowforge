@@ -121,7 +121,7 @@ describe('deriveTriageConfidence', () => {
   // --- Edge cases ---
 
   it('returns low when routeRecommendation is undefined', () => {
-    const { routeRecommendation, ...rest } = makeEntry();
+    const { routeRecommendation: _routeRecommendation, ...rest } = makeEntry();
     expect(deriveTriageConfidence(rest as TriageEntry)).toBe('low');
   });
 
@@ -131,7 +131,7 @@ describe('deriveTriageConfidence', () => {
   });
 
   it('returns low when questions is undefined', () => {
-    const { questions, ...rest } = makeEntry();
+    const { questions: _questions, ...rest } = makeEntry();
     expect(deriveTriageConfidence(rest as TriageEntry)).toBe('low');
   });
 });

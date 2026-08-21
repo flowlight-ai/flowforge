@@ -132,6 +132,48 @@ export type {
 export { throwIfStoreReadAborted } from './session-chain-store.ts'
 
 export type {
+  CreateHandoffProposalInput,
+  HandoffCheckpointPatch,
+  ISessionHandoffProposalStore,
+  RejectSessionHandoffInput,
+  SessionHandoffDispositionEntryLookup,
+  SessionHandoffRejectionOutcome,
+  SessionHandoffRejectionResult,
+} from './session-handoff-proposal-store.ts'
+export { sessionHandoffProposalIdFromSourceRef } from './session-handoff-proposal-store.ts'
+
+// ============================================================================
+// Chat-misc ports (stage-5 batch 7) — promoted from stub-ports.ts to full
+// branded contracts consumed by `@flowforge/chat-misc`:
+// - IThreadMemoryStore: F3-lite thread KV 记忆（clowder-ai MemoryStore）
+// - IMemoryGovernanceStore: 记忆发布门禁状态机（clowder-ai MemoryGovernanceStore）
+// - ISignalArticleStore: signal-hunter 文章存储（clowder-ai article-store）
+// ============================================================================
+
+export {
+  MAX_KEYS_PER_THREAD,
+  type IThreadMemoryStore,
+  type MemoryEntry,
+  type MemoryInput,
+} from './thread-memory-store.ts'
+
+export {
+  GovernanceConflictError,
+  resolveTransition,
+  type GovernanceEntry,
+  type GovernanceStatus,
+  type IMemoryGovernanceStore,
+  type PublishAction,
+} from './memory-governance-store.ts'
+
+export type {
+  ISignalArticleStore,
+  SignalArticleDetail,
+  UpdateSignalArticlePatch,
+  UpsertSignalArticleInput,
+} from './signal-article-store.ts'
+
+export type {
   IAuthorizationAuditStore,
   IAuthorizationRuleStore,
   ICommunityIssueDraftStore,
@@ -141,10 +183,8 @@ export type {
   IFrustrationIssueStore,
   IGameStore,
   ILabelStore,
-  IMemoryGovernanceStore,
   IPendingRequestStore,
   IPushSubscriptionStore,
-  ISessionHandoffProposalStore,
   ITurnExecutionStore,
   IWorkflowSopStore,
 } from './stub-ports.ts'

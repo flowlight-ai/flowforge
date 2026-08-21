@@ -19,16 +19,19 @@ import type {
   IDeliveryCursorStore,
   IDossierDistillationProposalStore,
   IDossierObservationStore,
+  IMemoryGovernanceStore,
   IMemoryStore,
   IMessageStore,
   IInvocationRecordStore,
   IProfileUpdateProposalStore,
   IProposalStore,
   ISessionChainStore,
+  ISignalArticleStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
+  IThreadMemoryStore,
   IThreadReadStateStore,
   IThreadStore,
 } from '../ports/index.ts'
@@ -38,16 +41,20 @@ import { MemoryDeliveryCursorStore } from './delivery-cursor-store.ts'
 import { MemoryDossierDistillationProposalStore } from './dossier-distillation-proposal-store.ts'
 import { MemoryDossierObservationStore } from './dossier-observation-store.ts'
 import { MemoryInvocationRecordStore } from './invocation-record-store.ts'
+import { MemoryMemoryGovernanceStore } from './memory-governance-store.ts'
 import { MemoryMemoryStore } from './memory-store.ts'
 import { MemoryMessageStore } from './message-store.ts'
 import { MemoryProfileUpdateProposalStore } from './profile-update-proposal-store.ts'
 import { MemoryProposalStore } from './proposal-store.ts'
+import { MemorySessionHandoffProposalStore } from './session-handoff-proposal-store.ts'
+import { MemorySignalArticleStore } from './signal-article-store.ts'
 import { MemoryVoteStore } from './vote-store.ts'
 import { MemorySessionChainStore } from './session-chain-store.ts'
 import { MemorySummaryStore } from './summary-store.ts'
 import { MemoryTaskManagedWorkRegistrationStore } from './task-managed-work-registration-store.ts'
 import { MemoryTaskProgressStore } from './task-progress-store.ts'
 import { MemoryTaskStore } from './task-store.ts'
+import { MemoryThreadMemoryStore } from './thread-memory-store.ts'
 import { MemoryThreadStore } from './thread-store.ts'
 
 /** Backend name registered with the CatStores aggregate. */
@@ -104,6 +111,14 @@ export class MemoryStoresBackend extends Service {
   readonly proposalStore: MemoryProposalStore
   /** Stage-5 batch 4 — F079 vote store. */
   readonly voteStore: MemoryVoteStore
+  /** Stage-5 batch 6 — F225 session-handoff proposal store. */
+  readonly sessionHandoffProposalStore: MemorySessionHandoffProposalStore
+  /** Stage-5 batch 7 — F3-lite thread KV memory store. */
+  readonly threadMemoryStore: MemoryThreadMemoryStore
+  /** Stage-5 batch 7 — memory publish governance state machine. */
+  readonly memoryGovernanceStore: MemoryMemoryGovernanceStore
+  /** Stage-5 batch 7 — signal-hunter article store. */
+  readonly signalArticleStore: MemorySignalArticleStore
 
   constructor(ctx: Context) {
     super(ctx, 'catStoresMemory')
@@ -124,6 +139,10 @@ export class MemoryStoresBackend extends Service {
     this.threadReadStateStore = new MemoryThreadReadStateStore()
     this.proposalStore = new MemoryProposalStore()
     this.voteStore = new MemoryVoteStore()
+    this.sessionHandoffProposalStore = new MemorySessionHandoffProposalStore()
+    this.threadMemoryStore = new MemoryThreadMemoryStore()
+    this.memoryGovernanceStore = new MemoryMemoryGovernanceStore()
+    this.signalArticleStore = new MemorySignalArticleStore()
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(MEMORY_BACKEND_NAME, {
@@ -144,6 +163,10 @@ export class MemoryStoresBackend extends Service {
         threadReadStateStore: this.threadReadStateStore,
         proposalStore: this.proposalStore,
         voteStore: this.voteStore,
+        sessionHandoffProposalStore: this.sessionHandoffProposalStore,
+        threadMemoryStore: this.threadMemoryStore,
+        memoryGovernanceStore: this.memoryGovernanceStore,
+        signalArticleStore: this.signalArticleStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(MEMORY_BACKEND_NAME)
@@ -220,6 +243,26 @@ export class MemoryStoresBackend extends Service {
   get sessionChains(): MemorySessionChainStore {
     return this.sessionChainStore
   }
+
+  /** Expose the underlying session-handoff proposal store (for tests / direct inspection). */
+  get sessionHandoffs(): MemorySessionHandoffProposalStore {
+    return this.sessionHandoffProposalStore
+  }
+
+  /** Expose the underlying thread KV memory store (for tests / direct inspection). */
+  get threadMemories(): MemoryThreadMemoryStore {
+    return this.threadMemoryStore
+  }
+
+  /** Expose the underlying memory governance store (for tests / direct inspection). */
+  get memoryGovernance(): MemoryMemoryGovernanceStore {
+    return this.memoryGovernanceStore
+  }
+
+  /** Expose the underlying signal article store (for tests / direct inspection). */
+  get signalArticles(): MemorySignalArticleStore {
+    return this.signalArticleStore
+  }
 }
 
 /** Type helpers for backend accessors. */
@@ -228,16 +271,19 @@ export type {
   IDeliveryCursorStore,
   IDossierDistillationProposalStore,
   IDossierObservationStore,
+  IMemoryGovernanceStore,
   IMemoryStore,
   IMessageStore,
   IInvocationRecordStore,
   IProfileUpdateProposalStore,
   IProposalStore,
   ISessionChainStore,
+  ISignalArticleStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
+  IThreadMemoryStore,
   IThreadReadStateStore,
   IThreadStore,
 }

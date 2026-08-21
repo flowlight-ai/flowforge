@@ -81,6 +81,9 @@ declare module '@flowforge/cordis' {
 export class SqliteStoresBackend extends Service {
   static inject = ['catStores']
 
+  /** 注入的 CatStores 聚合服务（见 static inject）。 */
+  readonly catStores!: CatStores
+
   static Config: z<Config> = z.object({
     path: z.string().default('data/cats.db'),
     journalMode: z.union(['wal', 'delete', 'truncate', 'persist'] as const).default('wal'),

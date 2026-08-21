@@ -26,15 +26,19 @@ import type {
   IDossierDistillationProposalStore,
   IDossierObservationStore,
   IInvocationRecordStore,
+  IMemoryGovernanceStore,
   IMemoryStore,
   IMessageStore,
   IProfileUpdateProposalStore,
   IProposalStore,
   ISessionChainStore,
+  ISessionHandoffProposalStore,
+  ISignalArticleStore,
   ISummaryStore,
   ITaskManagedWorkRegistrationStore,
   ITaskProgressStore,
   ITaskStore,
+  IThreadMemoryStore,
   IThreadReadStateStore,
   IThreadStore,
   IVoteStore,
@@ -70,6 +74,14 @@ export interface CatStoresBackend {
   readonly proposalStore?: IProposalStore
   /** F079 per-thread vote state store (stage-5 batch 4). */
   readonly voteStore?: IVoteStore
+  /** F225 session-handoff proposal store (stage-5 batch 6). */
+  readonly sessionHandoffProposalStore?: ISessionHandoffProposalStore
+  /** F3-lite thread KV memory store (stage-5 batch 7). */
+  readonly threadMemoryStore?: IThreadMemoryStore
+  /** Memory publish governance state machine (stage-5 batch 7). */
+  readonly memoryGovernanceStore?: IMemoryGovernanceStore
+  /** Signal-hunter article store (stage-5 batch 7). */
+  readonly signalArticleStore?: ISignalArticleStore
   /** Additional ports may be added incrementally — backend plugins opt-in. */
   readonly [key: string]: unknown
 }
@@ -336,6 +348,66 @@ export class CatStores extends Service {
       throw new Error(
         'Active cats-stores backend did not register an IVoteStore; ' +
           'load @flowforge/cats-stores/memory (stage-5 batch 4) or a backend that supports votes.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active ISessionHandoffProposalStore (F225). Throws if the
+   * active backend did not register one (only backends from stage-5 batch 6+ do).
+   */
+  sessionHandoffProposals(): ISessionHandoffProposalStore {
+    const store = this.active().sessionHandoffProposalStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an ISessionHandoffProposalStore; ' +
+          'load @flowforge/cats-stores/memory (stage-5 batch 6) or a backend that supports session handoffs.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active IThreadMemoryStore (F3-lite). Throws if the active
+   * backend did not register one (only backends from stage-5 batch 7+ do).
+   */
+  threadMemories(): IThreadMemoryStore {
+    const store = this.active().threadMemoryStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IThreadMemoryStore; ' +
+          'load @flowforge/cats-stores/memory (stage-5 batch 7) or a backend that supports thread memories.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active IMemoryGovernanceStore. Throws if the active backend
+   * did not register one (only backends from stage-5 batch 7+ do).
+   */
+  memoryGovernance(): IMemoryGovernanceStore {
+    const store = this.active().memoryGovernanceStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an IMemoryGovernanceStore; ' +
+          'load @flowforge/cats-stores/memory (stage-5 batch 7) or a backend that supports memory governance.',
+      )
+    }
+    return store
+  }
+
+  /**
+   * Resolve the active ISignalArticleStore. Throws if the active backend
+   * did not register one (only backends from stage-5 batch 7+ do).
+   */
+  signalArticles(): ISignalArticleStore {
+    const store = this.active().signalArticleStore
+    if (!store) {
+      throw new Error(
+        'Active cats-stores backend did not register an ISignalArticleStore; ' +
+          'load @flowforge/cats-stores/memory (stage-5 batch 7) or a backend that supports signal articles.',
       )
     }
     return store
