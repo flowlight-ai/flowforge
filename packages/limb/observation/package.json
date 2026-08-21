@@ -1,0 +1,32 @@
+{
+  "name": "@flowforge/limb-observation",
+  "description": "FlowForge limb observation domain Cordis plugin — T6.3 LimbObservationRouter + LimbOutboundDeliveryHook + LimbTranscriptCatDelivery at ctx.limbObservation",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/limb/observation" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./limb-observation-router": { "types": "./lib/types/limb-observation-router.d.ts", "default": "./lib/limb-observation-router.js" },
+    "./limb-outbound-delivery-hook": { "types": "./lib/types/limb-outbound-delivery-hook.d.ts", "default": "./lib/limb-outbound-delivery-hook.js" },
+    "./limb-transcript-cat-delivery": { "types": "./lib/types/limb-transcript-cat-delivery.d.ts", "default": "./lib/limb-transcript-cat-delivery.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/limb-core": "workspace:^",
+    "@flowforge/limb-embodiment": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/limb-core": "workspace:^",
+    "@flowforge/limb-embodiment": "workspace:^"
+  }
+}

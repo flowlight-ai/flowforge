@@ -78,6 +78,30 @@
       "path": "./packages/chat/misc/tsconfig.host.json"
     },
     {
+      "path": "./packages/chat/stretch-ports/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/e2e/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/core/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/adapters/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/embodiment/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/node/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/observation/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/terminal/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

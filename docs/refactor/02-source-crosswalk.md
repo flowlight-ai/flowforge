@@ -72,7 +72,7 @@
 | `plugins/{github,video-analysis,video-gen,wechat-visible-reader,weixin-mp}`（manifest `plugin.yaml` + `limbs/*.yml` + `protocols/*.yaml`） | `packages/plugins/*` | vendor（阶段 5/6 或 stretch）；manifest 迁移为插件装配声明（R17 §4） | ⬜ |
 | `skill-security`（技能安全） | `packages/plugins/skill-security` | vendor（阶段 2） | ⬜ |
 | `src/services/agents/invocation`（InvocationQueue/QueueProcessor/TaskProgressStore） | `packages/cats/invocation` | vendor；执行委托 `ctx.agentLoop`（F5） | ⬜ |
-| `src/services/agents/providers/*`（claude/codex/gemini/agy/opencode 适配器） | `packages/limb/adapters` | vendor；接口对齐 P: `forgemind/external_agents.py` EAC 七契约 | ⬜ |
+| `src/services/agents/providers/*`（claude/codex/gemini/agy/opencode 适配器） | `packages/limb/adapters` | vendor；接口对齐 P: `forgemind/external_agents.py` EAC 七契约 | ✅（批次5 limb-adapters：五 CLI 适配器全插件化 + 统一 CliEvent 契约 + LimbCliAdapterRegistry + LimbAdaptersService 挂载 `ctx.limbAdapters`，112 测试） |
 | `src/services/profile/*`（frontmatter 解析/迁移/审批） | `packages/cats/profile` | vendor；frontmatter 扩展 SoulImprint 字段（F6） | ⬜ |
 | `src/services/orchestration/*` | `packages/cats/orchestration` | vendor；对照 P: `forgemind/swarm.py` | ⬜ |
 | `src/services/session/*`（TranscriptWriter） | `packages/cats/session` | vendor；threadId↔sessionId 关联（F3） | ⬜ |
@@ -80,15 +80,15 @@
 | `src/services/distillation/*`（Dossier） | `packages/cats/distillation` | vendor；对照 P: `evolution/knowledge_evolution.py` | ⬜ |
 | `src/services/bootcamp|freshness|duty-briefing|usage-aggregator|…` | `packages/cats/*` | vendor | ⬜ |
 | `src/domains/cats/*`（档案路由/技能包/记忆发布/任务积压） | `packages/cats/routes` | vendor，路由按域插件挂载 | ⬜ |
-| `src/domains/limb/*`（LimbRegistry/LeaseManager/PairingStore/AccessPolicy/ObservationRouter/RemoteLimbNode/PluginLimbAdapter/RestExecutor/yaml-loader） | `packages/limb` | vendor | ⬜ |
-| `src/domains/terminal/*`（tmux-gateway/tmux-agent-spawner/session-store）+ Windows pty 回退 | `packages/limb/terminal` | vendor + node-pty（Windows） | ⬜ |
+| `src/domains/limb/*`（LimbRegistry/LeaseManager/PairingStore/AccessPolicy/ObservationRouter/RemoteLimbNode/PluginLimbAdapter/RestExecutor/yaml-loader） | `packages/limb` | vendor；全部 Cordis 插件化（R13） | ✅（批次1 limb-core 六模块：Registry/Lease/Pairing/AccessPolicy/ActionLog/Presence + ApprovedPersistence；批次2 limb-node 四模块 + limb-embodiment BindingStore/yaml-loader/Redis 配对持久化；批次3 limb-observation：ObservationRouter/OutboundDeliveryHook/TranscriptCatDelivery 观察路由/出站投递/转录入群全插件化；批次4 limb-terminal：tmux 网关/spawner/会话/诊断全插件化；批次5 limb-adapters：五 CLI 适配器全插件化；批次6 limb-e2e：mock CLI 端到端（配对→租约→执行→转录→回传 + 租约冲突拒绝 + Windows pty 冒烟）跨六域插件装配验证，371 测试） |
+| `src/domains/terminal/*`（tmux-gateway/tmux-agent-spawner/session-store）+ Windows pty 回退 | `packages/limb/terminal` | vendor + node-pty（Windows） | ✅（批次4 limb-terminal：TmuxGateway/TmuxAgentSpawner/AgentSessionsReader/SessionStore/AgentPaneRegistry + tmux-agent-carrier-session + F212 cli 诊断（cli-diagnostics/cli-spawn-helpers/cli-timeout）全插件化，LimbTerminalService 挂载 `ctx.limbTerminal`，115 测试；node-pty Windows 回退由组合根注入同接口） |
 | `src/domains/services/*`（memory/signals/approval/notifications 等） | `packages/cats|chat` 对应域 | vendor 按域拆分 | ⬜ |
-| `src/routes/threads|messages|callback-multi-mention|session-*|thread-branch|approval-hub|proposal|votes|world|community|story|leaderboard|marketplace|settings|…` | `packages/chat` + `packages/marketplace` | vendor；world/community/story 等 clowder 扩展降级 stretch（S1-S3/S7，见 `10-stage-map.md` §3.4） | ⬜ |
+| `src/routes/threads|messages|callback-multi-mention|session-*|thread-branch|approval-hub|proposal|votes|world|community|story|leaderboard|marketplace|settings|…` | `packages/chat` + `packages/marketplace` | vendor；world/community/story 等 clowder 扩展降级 stretch（S1-S3/S7，见 `10-stage-map.md` §3.4） | ✅（批次1-8 chat-threads/messages/mention/session-chain/approval/realtime/misc + stretch-ports ports+mock + e2e） |
 | `src/infrastructure/*`（websocket/socket.io、db better-sqlite3、redis、queues、events） | `packages/api/infrastructure` | vendor（阶段 3/5） | ⬜ |
 | `cat-template.json` + `.cat-cafe/cat-catalog.json`（**JSON** 档案/目录模型：breeds/variants/CLI 适配器定义） | `packages/cats/catalog` | 结构对齐；Forgekin 档案保持 YAML（R17） | ⬜ |
 | `.cat-cafe/` 运行态 JSON（accounts.json / user-preferences.json / proxy-upstreams.json / provider-profiles 迁移） | `data/` + `~/.flowforge/` | 格式对齐（JSON），改名 ff2 域（R17） | ⬜ |
 | `src/config/env-registry.ts`（`CAT_CAFE_*` 环境变量集中登记：名称/默认值/分类/敏感标记） | `packages/harness/env-registry` | 移植为 `FF_*` 注册表（R17，阶段 0 T0.19） | ⬜ |
-| `src/config/cat-config-loader.ts` + connector.yaml/plugin.yaml（connector 配置 YAML manifest） | `packages/chat|limb` 对应域 | 移植（R17；IM 通道为 stretch S1 时仅 ports） | ⬜ |
+| `src/config/cat-config-loader.ts` + connector.yaml/plugin.yaml（connector 配置 YAML manifest） | `packages/chat|limb` 对应域 | 移植（R17；IM 通道为 stretch S1 时仅 ports） | 🟦（批次8 chat-stretch 已交付 IM ports + mock；cat-config-loader 待阶段 6） |
 | `assets/prompt-hooks/*/hook.yaml`（prompt 钩子 YAML 定义） | `packages/core/system-prompt` + `packages/forgekin` | 移植（hook.yaml → prompt 插件 schema 段） | ⬜ |
 | `packages/shared/*`（catId/threadId schema、profile-frontmatter-parser、registry 纯函数） | `packages/shared` | vendor | ⬜ |
 | `apps/web`（页面与组件） | `apps/web` | 与 P: `web/` 前端融合（阶段 8） | ⬜ |
@@ -105,13 +105,13 @@
 | `evolution/self_dev_doc|code|framework|review|test.py` | `packages/forgekin/loops/*`（五闭环） | 直接翻译 | ⬜ |
 | `forgemind/stages.py` + `evolution/maturity.py` | `packages/forgekin/awakening`（觉醒阶/进化阶 E1-E6） | 直接翻译 | ⬜ |
 | `core/workflow_compiler.py` + `workflow_compiler_parser.py` + `workflow_compiler_validator.py` | `packages/forgekin/compiler` + `packages/plugins/workflow` | 直接翻译（YAML→执行图） | ⬜ |
-| `forgemind/external_agents.py` + `core/helm_adapter.py` + `helm_ws_manager.py` | `packages/limb/adapters`（EAC 七契约） | 直接翻译为适配器接口 | ⬜ |
+| `forgemind/external_agents.py` + `core/helm_adapter.py` + `helm_ws_manager.py` | `packages/limb/adapters`（EAC 七契约） | 直接翻译为适配器接口 | ✅（批次5：EAC 配置五项+能力 is_available/invoke → TS 六方法全插件化，详见 `services/agents/providers` 行） |
 | `forgemind/base.py` + `forgekin.py` + `registry.py` + `species.py` + `species_impl/` | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F6） | ⬜ |
 | `forgemind/stages.py`（觉醒流程）+ `forging/` | `packages/forgekin/awakening` + `packages/cats/bootcamp` | 直接翻译 | ⬜ |
 | `forgemind/autonomous.py` | `packages/forgekin/loops/autonomous` | 直接翻译 | ⬜ |
 | `core/plugin_loader.py` + `plugin_manager.py` + `plugin_registry.py` + `plugin_lifecycle.py` + `plugin_packaging.py` + `plugin_protocol.py` + `plugin_sandbox.py` + `plugin_frontend.py` | `packages/extensions/*` + `packages/marketplace` | 行为基线对照；机制统一为 cordis loader（R13） | ⬜ |
 | `core/marketplace.py` | `packages/marketplace` | 直接翻译 | ⬜ |
-| `core/approval_hub.py` + `core/teamact/` | `packages/chat/approval` + `packages/cats/teamact` | 直接翻译 | ⬜ |
+| `core/approval_hub.py` + `core/teamact/` | `packages/chat/approval` + `packages/cats/teamact` | 直接翻译 | 🟦（approval-hub 批次4 已交付；teamact 待阶段 7） |
 | `core/credential_store.py` + `secret_store.py` | `packages/plugins/credentials` | 行为基线；存储迁移 better-sqlite3 加密列 | ⬜ |
 | `core/scheduler.py` + `schedule_registry.py` + `job` 相关 | `packages/plugins/schedule|jobs` | 行为基线对照 | ⬜ |
 | `core/skill_library.py` | `packages/plugins/skill` | 行为基线对照（skill 格式迁移 YAML frontmatter） | ⬜ |

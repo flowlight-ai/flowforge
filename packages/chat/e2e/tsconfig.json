@@ -1,0 +1,21 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "composite": true,
+    "tsBuildInfoFile": "lib/.tsbuildinfo"
+  },
+  "include": [ "src" ],
+  "exclude": [ "lib", "node_modules", "tests" ],
+  "references": [
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../cats/invocation" },
+    { "path": "../../cats/shared" },
+    { "path": "../../cats/stores" },
+    { "path": "../approval" },
+    { "path": "../mention" },
+    { "path": "../realtime" },
+    { "path": "../session-chain" }
+  ]
+}

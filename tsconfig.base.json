@@ -69,6 +69,51 @@
       "@flowforge/cats-stores/invariant": [
         "./packages/cats/stores/src/invariant.ts"
       ],
+      "@flowforge/chat-threads": [
+        "./packages/chat/threads/src/index.ts"
+      ],
+      "@flowforge/chat-messages": [
+        "./packages/chat/messages/src/index.ts"
+      ],
+      "@flowforge/chat-realtime": [
+        "./packages/chat/realtime/src/index.ts"
+      ],
+      "@flowforge/chat-approval": [
+        "./packages/chat/approval/src/index.ts"
+      ],
+      "@flowforge/chat-mention": [
+        "./packages/chat/mention/src/index.ts"
+      ],
+      "@flowforge/chat-session-chain": [
+        "./packages/chat/session-chain/src/index.ts"
+      ],
+      "@flowforge/chat-misc": [
+        "./packages/chat/misc/src/index.ts"
+      ],
+      "@flowforge/chat-stretch": [
+        "./packages/chat/stretch-ports/src/index.ts"
+      ],
+      "@flowforge/chat-e2e": [
+        "./packages/chat/e2e/src/index.ts"
+      ],
+      "@flowforge/limb-core": [
+        "./packages/limb/core/src/index.ts"
+      ],
+      "@flowforge/limb-adapters": [
+        "./packages/limb/adapters/src/index.ts"
+      ],
+      "@flowforge/limb-embodiment": [
+        "./packages/limb/embodiment/src/index.ts"
+      ],
+      "@flowforge/limb-node": [
+        "./packages/limb/node/src/index.ts"
+      ],
+      "@flowforge/limb-observation": [
+        "./packages/limb/observation/src/index.ts"
+      ],
+      "@flowforge/limb-terminal": [
+        "./packages/limb/terminal/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],

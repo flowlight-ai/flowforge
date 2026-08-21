@@ -102,20 +102,23 @@
 - [x] T5.4.3 session-hooks / session-strategy-config
 - [x] T5.4.4 测试 5 spec 80 用例 + typecheck 退出码 0 + mgr PR
 
-### 批次 7：`@flowforge/chat-misc`（信号/记忆/任务/市场桥接，T5.7+T5.8）
+### 批次 7：`@flowforge/chat-misc`（信号/记忆/任务/市场桥接，T5.7+T5.8）✅
 
-- [ ] T5.7.1 `TaskService`（tasks 路由语义，桥接 catStores.tasks()）+ backlog
-- [ ] T5.7.2 `MemoryPublishService`（memory-publish/memory 路由，桥接 catStores.memory()）
-- [ ] T5.7.3 `SignalService`（signals/signal-study/signal-collection 查询服务）
-- [ ] T5.8.1 `MarketplaceService`（marketplace 搜索/安装计划，2KB 小路由）
-- [ ] T5.7.4 测试 + mgr PR
+- [x] T5.7.1 `TaskService`（tasks 路由语义，桥接 catStores.tasks()）+ backlog
+- [x] T5.7.2 `MemoryPublishService`（memory-publish/memory 路由，桥接 catStores.memory()）
+- [x] T5.7.3 `SignalService`（signals/signal-study/signal-collection 查询服务）
+- [x] T5.8.1 `MarketplaceService`（marketplace 搜索/安装计划，2KB 小路由）
+- [x] T5.7.4 测试 + mgr PR
 
-### 批次 8：阶段 5 收尾（T5.9/T5.10 stretch 界定 + e2e + 文档）
+### 批次 8：阶段 5 收尾（T5.9/T5.10 stretch 界定 + e2e + 文档）✅
 
-- [ ] T5.9/T5.10 stretch ports 界定（world/IM 仅留接口 + mock）
-- [ ] T5.12 e2e：双客户端实时收发；@ 多灵智体并发响应线程隔离；交接链上下文连续；
-      审批流状态机
-- [ ] stage-map 矩阵同步 + 25 文档收尾 + mgr PR
+- [x] T5.9/T5.10 stretch ports 界定（world/IM 仅留接口 + mock）：`@flowforge/chat-stretch`
+      `ChatStretchService` → `ctx.chatStretch`（IImChannelAdapter/ImChannelRegistry +
+      InMemoryImChannelAdapter 缺省 5 通道 mock；IStoryService/ICommunityService/
+      ILeaderboardService + InMemory 实现；autoRegisterMocks 注入开关）
+- [x] T5.12 e2e：`@flowforge/chat-e2e` 四场景（双客户端实时收发；@ 多灵智体并发响应
+      线程隔离；交接链上下文连续；审批流状态机），场景清单对齐验收标准 1-3
+- [x] stage-map 矩阵同步 + 25 文档收尾 + mgr PR
 
 ## 任务清单（原始索引→批次映射）
 
@@ -126,13 +129,13 @@
 - [x] T5.5 `packages/chat/thread-branch`：线程分支 → 批次1（并入 `@flowforge/chat-threads`
       ThreadBranchService）
 - [x] T5.6 `packages/chat/approval`：审批 Hub / 提案 / 投票 / 治理 → 批次4
-- [ ] T5.7 `packages/chat/signals|memory|tasks` → 批次7
-- [ ] T5.8 `packages/chat/marketplace` → 批次7
-- [ ] T5.9 ~~world/community/story/排行榜~~ → **stretch**（`10-stage-map.md` §3.4 S3，仅留 ports）
-- [ ] T5.10 ~~IM 通道适配~~ → **stretch**（§3.4 S1：WebChat 内置可选，飞书/Telegram/钉钉/企微按凭据启用；
+- [x] T5.7 `packages/chat/signals|memory|tasks` → 批次7
+- [x] T5.8 `packages/chat/marketplace` → 批次7
+- [x] T5.9 ~~world/community/story/排行榜~~ → **stretch**（`10-stage-map.md` §3.4 S3，仅留 ports）
+- [x] T5.10 ~~IM 通道适配~~ → **stretch**（§3.4 S1：WebChat 内置可选，飞书/Telegram/钉钉/企微按凭据启用；
       仅留 ports 接口 + mock）
 - [x] T5.11 socket.io 事件面 → 批次3
-- [ ] T5.12 测试：双客户端实时收发；@ 多个灵智体并发响应且线程隔离；交接链正确；
+- [x] T5.12 测试：双客户端实时收发；@ 多个灵智体并发响应且线程隔离；交接链正确；
       审批流状态机单测 → 批次8
 
 ## 验收标准
@@ -142,14 +145,7 @@
 3. 审批/提案/投票状态机正确流转。
 4. 路由统一挂 `/api/v2/*`（R18），与 Python 旧版 `/api/v1/*` 物理隔离。
 5. **所有 chat 服务均为 Cordis 插件**（`ctx.chatThreads`/`ctx.chatMessages`/`ctx.chatRealtime`/
-   `ctx.chatApproval`/`ctx.chatMention`/`ctx.chatSessionChain`）。
-6. Python 旧版 `pytest` 回归全绿。
-
-## 提交信息模板
-
-```
-feat(chat): 群聊系统(线程/@mention/会话链/实时投递) 改造为Cordis插件 [sherlock]
-```
+   `ctx.chatApproval`/`ctx.chatMention`/`ctx.chatSessionChain`/`ctx.chatMisc`/`ctx.chatStretch`）。
 6. Python 旧版 `pytest` 回归全绿。
 
 ## 提交信息模板
