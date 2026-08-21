@@ -97,10 +97,10 @@
 
 | 来源（P） | 落点（T） | 处理 | 状态 |
 |---|---|---|---|
-| `forgemind/soul_imprint.py` | `packages/forgekin/imprint`（SoulImprint） | 直接翻译 + golden tests | ⬜ |
-| `core/capability/*` | `packages/forgekin/capability`（CapabilityProfile/proficiency/blind_spots） | 直接翻译 | ⬜ |
-| `core/memory_federation/` + `core/event_memory.py` + `core/state_*` | `packages/forgekin/stores`（EchoStore 情景 + MindCodex 程序） | 直接翻译；数据迁移见 `31-stage11-sunset.md` §4 | ⬜ |
-| `evolution/knowledge_evolution.py` | `packages/forgekin/spirit-forge`（蒸馏管线） | 直接翻译 | ⬜ |
+| `forgemind/soul_imprint.py` | `packages/forgekin/soul`（SoulImprint） | 直接翻译 + golden tests | ✅（批次1 forgekin-soul：不可变哈希/命名空间隔离 + `ctx.forgeSoul`，8 测试） |
+| `core/capability/*` | `packages/forgekin/capability`（CapabilityProfile/proficiency/blind_spots） | 直接翻译 | ✅（批次1 forgekin-capability：models/analyzer/profile + `ctx.forgeCapability`，38 测试） |
+| `core/memory_federation/` + `core/event_memory.py` + `core/state_*` | `packages/forgekin/memory`（EchoStore 情景）+ `packages/forgekin/knowledge`（MindCodex 程序） | 直接翻译；数据迁移见 `31-stage11-sunset.md` §4 | ✅（批次1 forgekin-memory：五存储 + EpisodePersistenceHook + `ctx.forgeMemory`；forgekin-knowledge：MindCodex 检索三入口；记忆治理 stores 待 T7.22） |
+| `evolution/knowledge_evolution.py` | `packages/forgekin/knowledge`（SpiritForge 蒸馏管线） | 直接翻译 | ✅（批次1 forgekin-knowledge：三问→Episode→蒸馏→Eval 双门→storeToCodex，26 测试） |
 | `forgemind/council.py` + `core/im_council.py` | `packages/forgekin/council`（MindCouncil：min_reviewers/min_distinct_vendors/pass_threshold） | 直接翻译；审批基础复用 `packages/chat` approval-hub | ⬜ |
 | `evolution/self_dev_doc|code|framework|review|test.py` | `packages/forgekin/loops/*`（五闭环） | 直接翻译 | ⬜ |
 | `forgemind/stages.py` + `evolution/maturity.py` | `packages/forgekin/awakening`（觉醒阶/进化阶 E1-E6） | 直接翻译 | ⬜ |

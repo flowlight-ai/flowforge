@@ -5,10 +5,14 @@
 
 ## 任务清单
 
-- [ ] T7.1 `packages/forgekin/soul`：SoulImprint（持久身份标识，含物种 species/阶段 stages）
-- [ ] T7.2 `packages/forgekin/capability`：CapabilityProfile（proficiency/blind_spots/能力画像）
-- [ ] T7.3 `packages/forgekin/memory`：EchoStore（情景记忆，事件驱动持久化）
-- [ ] T7.4 `packages/forgekin/knowledge`：MindCodex（程序记忆库 + 检索）+ SpiritForge（经验蒸馏管线）
+- [x] T7.1 `packages/forgekin/soul`：SoulImprint（持久身份标识，含物种 species/阶段 stages）
+      （批次1：soul-imprint 哈希稳定/不可变/命名空间隔离 + SoulService 挂载 `ctx.forgeSoul`，8 测试）
+- [x] T7.2 `packages/forgekin/capability`：CapabilityProfile（proficiency/blind_spots/能力画像）
+      （批次1：models/analyzer/profile + CapabilityService 挂载 `ctx.forgeCapability`，38 测试）
+- [x] T7.3 `packages/forgekin/memory`：EchoStore（情景记忆，事件驱动持久化）
+      （批次1：echo-store/memory-manager + MemoryService 挂载 `ctx.forgeMemory` + EpisodePersistenceHook，9 测试）
+- [x] T7.4 `packages/forgekin/knowledge`：MindCodex（程序记忆库 + 检索）+ SpiritForge（经验蒸馏管线）
+      （批次1：models/knowledge-evolution/mind-codex/spirit-forge + KnowledgeService 挂载 `ctx.forgeKnowledge`，26 测试）
 - [ ] T7.5 `packages/forgekin/council`：MindCouncil（跨厂商审议：min_reviewers /
       min_distinct_vendors / pass_threshold 强制）
 - [ ] T7.6 `packages/forgekin/stage`：AwakeningStage / EvolutionStage E1-E6 + Maturity 成熟度
@@ -39,7 +43,8 @@
 - [ ] T7.21 `packages/plugins/resilience`：弹性栈（`core/{circuit_breaker,fallback_chain,degradation,recovery_tier,
       restart_recovery,checkpoint_*}.py` + `config/resilience.yaml|recovery_tiers.yaml`，F23）
 - [ ] T7.22 `packages/forgekin/stores`：Side-Effect WAL + 记忆治理（F21/F39；事件写前日志）
-- [ ] T7.23 `packages/forgekin/knowledge`：MindCodex 检索三入口/消费加权排名/可检索（F38）
+- [x] T7.23 `packages/forgekin/knowledge`：MindCodex 检索三入口/消费加权排名/可检索（F38）
+      （批次1：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 T7.4）
 - [ ] T7.24 `packages/forgekin/sop`：SOP 标准作业程序（`sop/` + `config/sops/*.yaml`，F29）
 - [ ] T7.25 `packages/forgekin/species` + `packages/forgekin/forging`：物种体系 + 锻造流水线
       （`forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forging/`，F30/F31）
