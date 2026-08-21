@@ -1,0 +1,152 @@
+/**
+ * Limb Types — F126 四肢控制面（本地化自 clowder-ai @cat-cafe/shared types/limb.ts）
+ *
+ * 四肢节点是外部设备/CLI 节点，不是灵智体 Provider。
+ */
+
+// ─── Node Status ─────────────────────────────────────────────
+
+/** 四肢节点状态 */
+export type LimbNodeStatus = 'online' | 'busy' | 'offline' | 'degraded';
+
+// ─── Authorization ───────────────────────────────────────────
+
+/** 能力授权级别 */
+export type LimbAuthLevel = 'free' | 'leased' | 'gated';
+
+// ─── Capabilities ────────────────────────────────────────────
+
+/** 单个四肢能力 */
+export interface LimbCapability {
+  /** 高级类别: "camera", "voice", "gpu_render", "browser", "exec" */
+  cap: string;
+  /** 精确命令白名单: ["camera.snap", "camera.record"] */
+  commands: string[];
+  /** 授权级别 */
+  authLevel: LimbAuthLevel;
+}
+
+// ─── Access Policy ───────────────────────────────────────────
+
+/** 三维权限条目: catId × nodeId × capability */
+export interface LimbAccessEntry {
+  catId: string;
+  nodeId: string;
+  capability: string;
+  authLevel: LimbAuthLevel;
+}
+
+// ─── Command Schemas (for limb_list_tools discovery) ─────────
+
+/** Single command parameter schema — exposed to agents for tool invocation */
+export interface LimbCommandParamSchema {
+  type: string;
+  required?: boolean;
+  /** Handler-owned validation preserves domain-specific typed refusals such as authorization_required. */
+  validation?: 'adapter' | 'handler';
+  default?: unknown;
+  desc?: string;
+}
+
+/** Command schema — description + typed params, exposed via limb_list_tools */
+export interface LimbCommandSchema {
+  description: string;
+  params: Record<string, LimbCommandParamSchema>;
+}
+
+// ─── ILimbNode Interface ─────────────────────────────────────
+
+/** 四肢调用结果 */
+export interface LimbInvokeResult {
+  success: boolean;
+  data?: unknown;
+  artifactUri?: string;
+  error?: string;
+}
+
+/**
+ * Server-derived provenance for one local limb invocation.
+ *
+ * `userMessageId` is present only after the callback route has resolved the
+ * durable parent invocation and verified that its trigger is an owner-authored
+ * message in the same user/thread scope. Callers cannot supply these fields
+ * through limb params. Remote limb transports must not serialize this context.
+ */
+export interface LimbInvocationContext {
+  readonly catId?: string;
+  readonly invocationId?: string;
+  readonly userId?: string;
+  readonly threadId?: string;
+  readonly userMessageId?: string;
+}
+
+/**
+ * ILimbNode — 所有四肢必须实现的接口
+ */
+export interface ILimbNode {
+  /** 节点唯一 ID */
+  readonly nodeId: string;
+  /** 显示名称 */
+  readonly displayName: string;
+  /** 运行平台 */
+  readonly platform: string;
+  /** 节点暴露的能力列表 */
+  readonly capabilities: LimbCapability[];
+  /** 命令参数 schema — 供 limb_list_tools 返回给 agent 构建 invoke 请求（可选，plugin 节点提供） */
+  readonly commandSchemas?: Readonly<Record<string, LimbCommandSchema>>;
+
+  /** 向 Registry 注册 */
+  register(): Promise<void>;
+  /** 调用节点能力 */
+  invoke(command: string, params: Record<string, unknown>, context?: LimbInvocationContext): Promise<LimbInvokeResult>;
+  /** 健康检查 */
+  healthCheck(): Promise<LimbNodeStatus>;
+  /** 从 Registry 注销 */
+  deregister(): Promise<void>;
+}
+
+// ─── Lease ───────────────────────────────────────────────────
+
+/** 租约记录 — 独占资源的锁 */
+export interface LimbLease {
+  leaseId: string;
+  nodeId: string;
+  capability: string;
+  catId: string;
+  acquiredAt: number;
+  expiresAt: number;
+  renewCount: number;
+}
+
+// ─── Action Log ──────────────────────────────────────────────
+
+/** Action Log 条目 — 最小 provenance 字段集 */
+export interface LimbActionLogEntry {
+  requestId: string;
+  invocationId: string;
+  leaseId: string | null;
+  catId: string;
+  nodeId: string;
+  capability: string;
+  command: string;
+  artifactUri: string | null;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  startedAt: number;
+  endedAt: number | null;
+  idempotencyKey: string | null;
+}
+
+// ─── Registry Record ─────────────────────────────────────────
+
+/** Registry 中的节点记录（运行时状态） */
+export interface LimbNodeRecord {
+  nodeId: string;
+  displayName: string;
+  platform: string;
+  capabilities: LimbCapability[];
+  /** 命令参数 schema — limb_list_tools 返回，agent 用来构建 invoke_tool 请求 */
+  commandSchemas?: Record<string, LimbCommandSchema>;
+  status: LimbNodeStatus;
+  registeredAt: number;
+  lastHeartbeatAt: number;
+}

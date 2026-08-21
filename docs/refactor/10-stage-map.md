@@ -122,7 +122,7 @@
 | C14 | 线程分支 thread-branch | routes/thread-branch | 5 | ✅（批次1 并入 chat-threads ThreadBranchService） |
 | C15 | 审批 Hub / 提案 / 投票 | routes/approval-hub 等 | 5 | ✅（批次4 chat-approval） |
 | C16 | socket.io 实时投递/进度/信号 | infrastructure/websocket | 5 | ✅（批次3 chat-realtime + RealtimeTransport 缝） |
-| C17 | Limb 注册/租约/配对/策略 | domains/limb | 6 | ⬜ |
+| C17 | Limb 注册/租约/配对/策略 | domains/limb | 6 | ✅（批次1 limb-core：Registry/Lease/Pairing/AccessPolicy/ActionLog/Presence 全插件化） |
 | C18 | RemoteLimbNode / PluginLimbAdapter / REST 执行 | domains/limb | 6 | ⬜ |
 | C19 | tmux 网关/生成器 + agent 会话 | domains/terminal | 6 | ⬜ |
 | C20 | CLI 适配器（claude/codex/gemini/agy/opencode） | services/agents/providers | 6 | ⬜ |

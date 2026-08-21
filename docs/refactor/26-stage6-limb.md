@@ -6,8 +6,9 @@
 
 ## 任务清单
 
-- [ ] T6.1 `packages/limb/core`：LimbRegistry / LimbPairingStore / LimbLeaseManager /
-      LimbAccessPolicy / LimbActionLog / LimbPresenceManager
+- [x] T6.1 `packages/limb/core`：LimbRegistry / LimbPairingStore / LimbLeaseManager /
+      LimbAccessPolicy / LimbActionLog / LimbPresenceManager（批次1 交付：六模块 + Cordis 插件化
+      LimbService 挂载 `ctx.limb` + 63 测试 + 接线 tsconfig/vitest）
 - [ ] T6.2 `packages/limb/node`：RemoteLimbNode（远端节点通信）+ PluginLimbAdapter +
       PluginRestExecutor + PluginTokenManager
 - [ ] T6.3 `packages/limb/observation`：LimbObservationRouter + LimbOutboundDeliveryHook +

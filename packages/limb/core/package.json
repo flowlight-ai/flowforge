@@ -1,0 +1,32 @@
+{
+  "name": "@flowforge/limb-core",
+  "description": "FlowForge limb core domain Cordis plugin — T6.1 LimbRegistry/LimbPairingStore/LimbLeaseManager/LimbAccessPolicy/LimbActionLog/LimbPresenceManager at ctx.limb",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/limb/core" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./limb-registry": { "types": "./lib/types/limb-registry.d.ts", "default": "./lib/limb-registry.js" },
+    "./limb-lease-manager": { "types": "./lib/types/limb-lease-manager.d.ts", "default": "./lib/limb-lease-manager.js" },
+    "./limb-access-policy": { "types": "./lib/types/limb-access-policy.d.ts", "default": "./lib/limb-access-policy.js" },
+    "./limb-action-log": { "types": "./lib/types/limb-action-log.d.ts", "default": "./lib/limb-action-log.js" },
+    "./limb-presence": { "types": "./lib/types/limb-presence.d.ts", "default": "./lib/limb-presence.js" },
+    "./limb-pairing-store": { "types": "./lib/types/limb-pairing-store.d.ts", "default": "./lib/limb-pairing-store.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

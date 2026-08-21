@@ -96,6 +96,9 @@
       "@flowforge/chat-e2e": [
         "./packages/chat/e2e/src/index.ts"
       ],
+      "@flowforge/limb-core": [
+        "./packages/limb/core/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],
