@@ -24,8 +24,11 @@
       tmux 五模块 + F212 cli 诊断体系（classifyCliError 16 reasonCode / buildCliDiagnostics /
       buildCliExitDiagnostic / buildSilentCompletionDiagnostic）+ tmux-agent-carrier-session
       duplex carrier + cli-spawn-helpers/cli-timeout + LimbTerminalService 挂载 `ctx.limbTerminal` + 115 测试）
-- [ ] T6.6 `packages/limb/adapters`：Claude Code（stream-json）、Codex（json）、Gemini CLI
-      （stream-json/ACP）、Antigravity agy（plain text）、opencode（ndjson）
+- [x] T6.6 `packages/limb/adapters`：Claude Code（stream-json）、Codex（json）、Gemini CLI
+      （stream-json/ACP）、Antigravity agy（plain text）、opencode（ndjson）（批次5 交付：
+      五 CLI 适配器全插件化（EAC 七契约→TS 六方法：isAvailable/buildSpawnArgs/createParser/
+      parsePlainText）+ 统一 CliEvent 契约 + LimbCliAdapterRegistry 默认装配 + LimbAdaptersService
+      挂载 `ctx.limbAdapters` + 112 测试；Windows PATH 分隔符兼容（binaryInPath））
 - [ ] T6.7 测试：mock CLI（输出固定 stream-json）完成配对→租约→执行→转录→回传；
       租约冲突拒绝；Windows pty 路径冒烟
 

@@ -87,6 +87,9 @@
       "path": "./packages/limb/core/tsconfig.host.json"
     },
     {
+      "path": "./packages/limb/adapters/tsconfig.host.json"
+    },
+    {
       "path": "./packages/limb/embodiment/tsconfig.host.json"
     },
     {

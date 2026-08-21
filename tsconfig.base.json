@@ -99,6 +99,9 @@
       "@flowforge/limb-core": [
         "./packages/limb/core/src/index.ts"
       ],
+      "@flowforge/limb-adapters": [
+        "./packages/limb/adapters/src/index.ts"
+      ],
       "@flowforge/limb-embodiment": [
         "./packages/limb/embodiment/src/index.ts"
       ],
