@@ -187,7 +187,7 @@
 | F13 | 观测/追踪/指标 | core/observability + tracing | 7 | ⬜ |
 | F14 | Web 页面（council/mission/memory/review/signals/admin） | web/src/app | 8 | ⬜ |
 | F15 | 魔法词 magic_words | forgemind/magic_words.py（F011/F012；A011） | 7 | ✅（批次4 forgekin-magic-words：4 条魔法短语 → stop-and-audit 触发检测 + `ctx.forgeMagicWords`，12 测试） |
-| F16 | 群聊编排 swarm | forgemind/swarm.py + config/agent_swarm.yaml（F049） | 7 | ⬜ |
+| F16 | 群聊编排 swarm | forgemind/swarm.py + config/agent_swarm.yaml（F049） | 7 | ✅（批次5 forgekin-swarm：SwarmCoordinator 能力路由/心跳回收/跨厂商过滤 + `ctx.forgeSwarm`，68 测试） |
 | F17 | IM 议会 im_council + 通道管理 | core/im_council.py + channel_manager.py + config/im_council|im_channels|a2a_channels.yaml（F047） | 7 | ⬜ |
 | F18 | TeamAct 转向与审批 | core/teamact/ + config/teamact_steer.yaml（F048；对照 F002） | 7 | ⬜ |
 | F19 | 评估台账 eval_ledger | evolution/eval_ledger.py（F050；对照 F018 评估契约） | 7 | ⬜ |

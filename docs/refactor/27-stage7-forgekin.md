@@ -40,7 +40,12 @@
 - [x] T7.14 `packages/forgekin/magic-words`：魔法词（TS 重写自 `forgemind/magic_words.py`，F15）
       （批次4：4 条魔法短语 → stop-and-audit 触发动作子串检测 + MagicWordsService 挂载
       `ctx.forgeMagicWords`，12 测试）
-- [ ] T7.15 `packages/forgekin/swarm`：群聊编排（`forgemind/swarm.py` + `config/agent_swarm.yaml`，F16）
+- [x] T7.15 `packages/forgekin/swarm`：群聊编排（`forgemind/swarm.py` + `config/agent_swarm.yaml`，F16）
+      （批次5：SwarmCoordinator 全量移植 — I2 submit 必有 trace / I3 capability routing
+      4 步过滤（能力包含→I5 跨厂商→I6 no-self-review→load balancing）/ I4 心跳超时
+      reassign（maxRetries 超限 FAILED）/ 能力互补 complement 推荐 / cancel-fail 终态 /
+      runContinuously 调度循环 + 单例工厂；agent_swarm.yaml 内置（5 Forgekin 画像，
+      heartbeat 200s）；SwarmService 挂载 `ctx.forgeSwarm`，68 测试）
 - [ ] T7.16 `packages/forgekin/im-council` + `packages/chat/channels`：IM 议会 + 通道管理
       （`core/im_council.py` + `channel_manager.py`，F17；IM 通道 stretch 时仅 ports，A2A 域独立 `packages/a2a`）
 - [ ] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
