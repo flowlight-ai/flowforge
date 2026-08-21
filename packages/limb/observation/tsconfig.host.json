@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
+  },
+  "include": [ "src" ],
+  "references": [
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../limb/core/tsconfig.host.json" },
+    { "path": "../../limb/embodiment/tsconfig.host.json" },
+    { "path": "../../cats/shared/tsconfig.host.json" }
+  ]
+}

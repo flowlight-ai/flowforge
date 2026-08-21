@@ -12,8 +12,10 @@
 - [x] T6.2 `packages/limb/node`：RemoteLimbNode（远端节点通信）+ PluginLimbAdapter +
       PluginRestExecutor + PluginTokenManager（批次2 交付：四模块 + Cordis 插件化
       LimbNodeService 挂载 `ctx.limbNodes` + 29 测试）
-- [ ] T6.3 `packages/limb/observation`：LimbObservationRouter + LimbOutboundDeliveryHook +
-      LimbTranscriptCatDelivery（输出回传群聊）
+- [x] T6.3 `packages/limb/observation`：LimbObservationRouter + LimbOutboundDeliveryHook +
+      LimbTranscriptCatDelivery（批次3 交付：观察路由 stale/unbound/duplicate/reflex_only/routed
+      + 失败释放 receipt 可重试 + Memory/Redis 回执双后端 + 出站 display+speaker 投递 4096 上限
+      + 120s 去重 + 转录→群聊幂等落库/广播/触发绑定猫 + ObservationService 挂载 `ctx.limbObservation` + 24 测试）
 - [x] T6.4 `packages/limb/embodiment`：LimbEmbodimentBindingStore + limb-yaml-loader +
       ApprovedLimbPairingPersistence（批次2 交付：具身绑定 Memory/Redis 双后端 + YAML 声明
       加载器 + 配对持久化 Redis 后端（limb-core）+ EmbodimentService 挂载 `ctx.limbEmbodiment` + 19 测试）

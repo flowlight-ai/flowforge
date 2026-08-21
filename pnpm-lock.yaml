@@ -3013,6 +3013,21 @@ importers:
         specifier: workspace:^
         version: link:../embodiment
 
+  packages/limb/observation:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/limb-core':
+        specifier: workspace:^
+        version: link:../core
+      '@flowforge/limb-embodiment':
+        specifier: workspace:^
+        version: link:../embodiment
+
   packages/llm/llm:
     dependencies:
       '@flowforge/schemastery':

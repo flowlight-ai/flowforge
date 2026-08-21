@@ -93,6 +93,9 @@
       "path": "./packages/limb/node/tsconfig.host.json"
     },
     {
+      "path": "./packages/limb/observation/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {
