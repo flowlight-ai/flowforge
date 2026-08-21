@@ -186,7 +186,7 @@
 | F12 | 团队协作 teamact + 审批 | core/teamact + approval_hub | 7 | ⬜ |
 | F13 | 观测/追踪/指标 | core/observability + tracing | 7 | ⬜ |
 | F14 | Web 页面（council/mission/memory/review/signals/admin） | web/src/app | 8 | ⬜ |
-| F15 | 魔法词 magic_words | forgemind/magic_words.py（F011/F012；A011） | 7 | ⬜ |
+| F15 | 魔法词 magic_words | forgemind/magic_words.py（F011/F012；A011） | 7 | ✅（批次4 forgekin-magic-words：4 条魔法短语 → stop-and-audit 触发检测 + `ctx.forgeMagicWords`，12 测试） |
 | F16 | 群聊编排 swarm | forgemind/swarm.py + config/agent_swarm.yaml（F049） | 7 | ⬜ |
 | F17 | IM 议会 im_council + 通道管理 | core/im_council.py + channel_manager.py + config/im_council|im_channels|a2a_channels.yaml（F047） | 7 | ⬜ |
 | F18 | TeamAct 转向与审批 | core/teamact/ + config/teamact_steer.yaml（F048；对照 F002） | 7 | ⬜ |
@@ -200,7 +200,7 @@
 | F26 | 内容审核与护栏（moderation/gate/guardrails） | core/{content_moderation,moderation,guardrails}.py + core/gate/（对照 F007 push-back） | 2 | ✅（packages/plugins/guard，16 vitest） |
 | F27 | 状态机族（handoff/状态映射/变量解析/命名空间/上下文层/工具链执行/字段门控） | core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py（F003/F024；A003/A024） | 1/7 | ⬜ |
 | F28 | LLM 路由/模型服务/提供商配额 | core/{model_service,model_capability,provider_quota}.py + config/llm_route.yaml|provider_quota.yaml*（F025） | 1/3 | ⬜ |
-| F29 | SOP 标准作业程序 | sop/ + config/sops/*.yaml | 7 | ⬜ |
+| F29 | SOP 标准作业程序 | sop/ + config/sops/*.yaml | 7 | ✅（批次4 forgekin-sop：阶段门禁引擎（PredicateChecker 8 检查器 + SOPExecutor 门禁/流转 + YAML 加载）+ `ctx.forgeSop`，71 测试） |
 | F30 | 物种体系（base/forgekin/registry/species + species_impl + forgekins/*.yaml 8 物种） | forgemind/*.py + forgemind/forgekins/*.yaml（F027；A027） | 4/7 | ⬜ |
 | F31 | 锻造流水线 forging | forging/ + forgemind/config/forging.yaml（F028；A028） | 7 | ⬜ |
 | F32 | Trae 桥接 | config/trae_bridge.yaml + .trae_bridge/（F045） | 7 | ⬜ |

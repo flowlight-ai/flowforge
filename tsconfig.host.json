@@ -129,6 +129,12 @@
       "path": "./packages/forgekin/external-agents/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/magic-words/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/sop/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

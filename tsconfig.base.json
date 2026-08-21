@@ -141,6 +141,12 @@
       "@flowforge/forgekin-external-agents": [
         "./packages/forgekin/external-agents/src/index.ts"
       ],
+      "@flowforge/forgekin-magic-words": [
+        "./packages/forgekin/magic-words/src/index.ts"
+      ],
+      "@flowforge/forgekin-sop": [
+        "./packages/forgekin/sop/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],

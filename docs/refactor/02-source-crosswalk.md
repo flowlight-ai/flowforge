@@ -125,7 +125,7 @@
 | `core/task_store.py` + `task_context.py` | `packages/cats/stores`（TaskStore） | 直接翻译 | ⬜ |
 | `core/world_engine/` + `core/conditional_router.py` | stretch（`10-stage-map.md` §3.4） | 降级 | ⬜ |
 | `forgemind/*_to_openroute_proxy.py` + `anthropic_to_openroute_proxy.py` | `packages/llm/openroute` | 直接翻译为 provider | ⬜ |
-| `forgemind/magic_words.py` | `packages/forgekin/magic-words` | 直接翻译（F15；A011） | ⬜ |
+| `forgemind/magic_words.py` | `packages/forgekin/magic-words` | 直接翻译（F15；A011） | ✅（批次4 forgekin-magic-words：4 条魔法短语子串检测 + `ctx.forgeMagicWords`，12 测试） |
 | `forgemind/swarm.py` + `config/agent_swarm.yaml` | `packages/forgekin/swarm` | 直接翻译（F16；F049） | ⬜ |
 | `core/im_council.py` + `config/im_council.yaml` + `config/im_channels.yaml` + `config/a2a_channels.yaml` + `core/channel_manager.py` | `packages/forgekin/im-council` + `packages/chat/channels` | 直接翻译（F17；F047）；A2A 域独立 `packages/a2a` | ⬜ |
 | `core/teamact/` + `config/teamact_steer.yaml` | `packages/cats/teamact` | 直接翻译（F18；F048） | ⬜ |
@@ -138,7 +138,7 @@
 | `core/{content_moderation,moderation}.py` + `core/gate/` + `core/guardrails.py` | `packages/plugins/guard` | 直接翻译（F26） | ⬜ |
 | `core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py` | `packages/forgekin/compiler` + `packages/core/state` | 直接翻译（F27；A003/A024） | ⬜ |
 | `core/{model_service,model_capability,provider_quota}.py` + `config/llm_route.yaml` + `config/provider_quota.yaml*` | `packages/llm/*` | 直接翻译（F28） | ⬜ |
-| `sop/` + `config/sops/*.yaml` | `packages/forgekin/sop` | 直接翻译（F29） | ⬜ |
+| `sop/` + `config/sops/*.yaml` | `packages/forgekin/sop` | 直接翻译（F29） | ✅（批次4 forgekin-sop：PredicateChecker 8 检查器 + SOPExecutor 阶段门禁/流转 + YAML 加载 + `ctx.forgeSop`，71 测试） |
 | `forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forgemind/forgekins/*.yaml`（8 物种档案） | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F30；A027） | ⬜ |
 | `forging/` + `forgemind/config/forging.yaml` | `packages/forgekin/forging` | 直接翻译（F31；A028） | ⬜ |
 | `core/event_memory.py` + `events/` + `middleware/` + `security/` + `vcs/` + `compiler/` + `loop/` + `evaluators/` + `a2a/` + `executor/` + `session/` + `scheduler/` + `skills/` + `llm/` + `agents/` + `brain/` + `services/` + `review/` | `packages/{core,harness,forgekin}/*` 对应域 | 逐目录盘点登记，移植前先读源再写 crosswalk 明细 | ⬜ |

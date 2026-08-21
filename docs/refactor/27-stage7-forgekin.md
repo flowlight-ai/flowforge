@@ -37,7 +37,9 @@
 - [ ] T7.12 `packages/forgekin/observability`：追踪/指标/事件总线
 - [ ] T7.13 测试：YAML 注册 Forgekin → 五闭环各跑通 mock 演进；跨厂商审议拒绝同厂商；
       工作流编译器 DAG 执行；SpiritForge 蒸馏入库可检索
-- [ ] T7.14 `packages/forgekin/magic-words`：魔法词（TS 重写自 `forgemind/magic_words.py`，F15）
+- [x] T7.14 `packages/forgekin/magic-words`：魔法词（TS 重写自 `forgemind/magic_words.py`，F15）
+      （批次4：4 条魔法短语 → stop-and-audit 触发动作子串检测 + MagicWordsService 挂载
+      `ctx.forgeMagicWords`，12 测试）
 - [ ] T7.15 `packages/forgekin/swarm`：群聊编排（`forgemind/swarm.py` + `config/agent_swarm.yaml`，F16）
 - [ ] T7.16 `packages/forgekin/im-council` + `packages/chat/channels`：IM 议会 + 通道管理
       （`core/im_council.py` + `channel_manager.py`，F17；IM 通道 stretch 时仅 ports，A2A 域独立 `packages/a2a`）
@@ -54,7 +56,11 @@
 - [ ] T7.22 `packages/forgekin/stores`：Side-Effect WAL + 记忆治理（F21/F39；事件写前日志）
 - [x] T7.23 `packages/forgekin/knowledge`：MindCodex 检索三入口/消费加权排名/可检索（F38）
       （批次1：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 T7.4）
-- [ ] T7.24 `packages/forgekin/sop`：SOP 标准作业程序（`sop/` + `config/sops/*.yaml`，F29）
+- [x] T7.24 `packages/forgekin/sop`：SOP 标准作业程序（`sop/` + `config/sops/*.yaml`，F29）
+      （批次4：SOPDefinition/Stage/HardRule/Pitfall 模型 + PredicateChecker 8 检查器
+      （manual/git_state/env/command_pattern/command_sequence/handle/sha_dedup/feature_doc）
+      + SOPExecutor 阶段门禁/可选阶段降级/for-break-success 流转 + YAML 加载，
+      SopService 挂载 `ctx.forgeSop`，71 测试）
 - [ ] T7.25 `packages/forgekin/species` + `packages/forgekin/forging`：物种体系 + 锻造流水线
       （`forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forging/`，F30/F31）
 - [ ] T7.26 `packages/forgekin/trae-bridge`：Trae 桥（`config/trae_bridge.yaml` + `.trae_bridge/`，F32）
