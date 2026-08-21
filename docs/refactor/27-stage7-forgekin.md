@@ -13,11 +13,18 @@
       （批次1：echo-store/memory-manager + MemoryService 挂载 `ctx.forgeMemory` + EpisodePersistenceHook，9 测试）
 - [x] T7.4 `packages/forgekin/knowledge`：MindCodex（程序记忆库 + 检索）+ SpiritForge（经验蒸馏管线）
       （批次1：models/knowledge-evolution/mind-codex/spirit-forge + KnowledgeService 挂载 `ctx.forgeKnowledge`，26 测试）
-- [ ] T7.5 `packages/forgekin/council`：MindCouncil（跨厂商审议：min_reviewers /
+- [x] T7.5 `packages/forgekin/council`：MindCouncil（跨厂商审议：min_reviewers /
       min_distinct_vendors / pass_threshold 强制）
-- [ ] T7.6 `packages/forgekin/stage`：AwakeningStage / EvolutionStage E1-E6 + Maturity 成熟度
-- [ ] T7.7 `packages/forgekin/loops`：五自进化闭环 self_dev_doc / self_dev_code /
+      （批次2：CouncilVerdict/CouncilSession 聚合 + 单厂商结构性拒绝 + CouncilChannel 通道适配
+      + CouncilService 挂载 `ctx.forgeCouncil`，18 测试）
+- [x] T7.6 `packages/forgekin/stage`：AwakeningStage / EvolutionStage E1-E6 + Maturity 成熟度
+      （批次2：双轴阶模型（觉醒/进化）+ KnowledgeMaturityLadder 五级晋升/降级/冻结
+      + StageService 挂载 `ctx.forgeStage`，42 测试）
+- [x] T7.7 `packages/forgekin/loops`：五自进化闭环 self_dev_doc / self_dev_code /
       self_dev_framework / self_dev_review / self_dev_test（TS 重写自 evolution/）
+      （批次2：SelfDevLoopBase 五步循环 Discover→Plan→Act→Verify→Persist + I1-I8 不变量
+      （觉醒阶门控/Scope Guard/Reflect≤3/LLM 审核必经/I8 approval）+ LoopsService 挂载
+      `ctx.forgeLoops`，76 测试）
 - [ ] T7.8 `packages/forgekin/workflow-compiler`：YAML 工作流 → 执行图（TS 重写自
       core/workflow_compiler*.py，含条件路由/字段门控）
 - [ ] T7.9 `packages/forgekin/external-agents`：EAC 七契约外部 agent 适配器（TS 重写自

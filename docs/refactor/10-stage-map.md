@@ -176,9 +176,9 @@
 | F2 | CapabilityProfile 能力画像 | core/capability | 7 | ✅（批次1 forgekin-capability：models/analyzer/profile + `ctx.forgeCapability`，38 测试） |
 | F3 | EchoStore 情景记忆 | core/memory | 7 | ✅（批次1 forgekin-memory：五存储 save/retrieve/hybrid + EpisodePersistenceHook + `ctx.forgeMemory`，9 测试） |
 | F4 | MindCodex 程序记忆 + SpiritForge 蒸馏 | core/knowledge_evolution.py | 7 | ✅（批次1 forgekin-knowledge：三问→Episode→蒸馏→双门→入库 + `ctx.forgeKnowledge`，26 测试） |
-| F5 | MindCouncil 跨厂商审议 | forgemind/council.py | 7 | ⬜ |
-| F6 | 五自进化闭环（docs/code/framework/review/test） | evolution/self_dev_*.py | 7 | ⬜ |
-| F7 | 觉醒阶/进化阶 E1-E6 + 成熟度 | evolution/maturity.py | 7 | ⬜ |
+| F5 | MindCouncil 跨厂商审议 | forgemind/council.py | 7 | ✅（批次2 forgekin-council：CouncilVerdict/CouncilSession 聚合 + min_reviewers/min_distinct_vendors/pass_threshold 强制 + 单厂商结构性拒绝 + `ctx.forgeCouncil`，18 测试） |
+| F6 | 五自进化闭环（docs/code/framework/review/test） | evolution/self_dev_*.py | 7 | ✅（批次2 forgekin-loops：SelfDevLoopBase 五步循环 + I1-I8 不变量 + `ctx.forgeLoops`，76 测试） |
+| F7 | 觉醒阶/进化阶 E1-E6 + 成熟度 | evolution/maturity.py | 7 | ✅（批次2 forgekin-stage：双轴阶模型 + KnowledgeMaturityLadder 五级晋升/降级/冻结 + `ctx.forgeStage`，42 测试） |
 | F8 | 工作流编译器 YAML→执行图 | core/workflow_compiler*.py | 7 | ⬜ |
 | F9 | 外部 agent 适配器 EAC 七契约 | forgemind/external_agents.py | 7 | ⬜ |
 | F10 | 7 层 harness 工程（durable_state 等） | core/harness | 7 | ⬜ |

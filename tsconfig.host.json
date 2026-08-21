@@ -114,6 +114,15 @@
       "path": "./packages/forgekin/knowledge/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/council/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/stage/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/loops/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

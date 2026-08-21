@@ -101,9 +101,9 @@
 | `core/capability/*` | `packages/forgekin/capability`（CapabilityProfile/proficiency/blind_spots） | 直接翻译 | ✅（批次1 forgekin-capability：models/analyzer/profile + `ctx.forgeCapability`，38 测试） |
 | `core/memory_federation/` + `core/event_memory.py` + `core/state_*` | `packages/forgekin/memory`（EchoStore 情景）+ `packages/forgekin/knowledge`（MindCodex 程序） | 直接翻译；数据迁移见 `31-stage11-sunset.md` §4 | ✅（批次1 forgekin-memory：五存储 + EpisodePersistenceHook + `ctx.forgeMemory`；forgekin-knowledge：MindCodex 检索三入口；记忆治理 stores 待 T7.22） |
 | `evolution/knowledge_evolution.py` | `packages/forgekin/knowledge`（SpiritForge 蒸馏管线） | 直接翻译 | ✅（批次1 forgekin-knowledge：三问→Episode→蒸馏→Eval 双门→storeToCodex，26 测试） |
-| `forgemind/council.py` + `core/im_council.py` | `packages/forgekin/council`（MindCouncil：min_reviewers/min_distinct_vendors/pass_threshold） | 直接翻译；审批基础复用 `packages/chat` approval-hub | ⬜ |
-| `evolution/self_dev_doc|code|framework|review|test.py` | `packages/forgekin/loops/*`（五闭环） | 直接翻译 | ⬜ |
-| `forgemind/stages.py` + `evolution/maturity.py` | `packages/forgekin/awakening`（觉醒阶/进化阶 E1-E6） | 直接翻译 | ⬜ |
+| `forgemind/council.py` + `core/im_council.py` | `packages/forgekin/council`（MindCouncil：min_reviewers/min_distinct_vendors/pass_threshold） | 直接翻译；审批基础复用 `packages/chat` approval-hub | ✅（批次2 forgekin-council：CouncilVerdict/CouncilSession + 单厂商结构性拒绝 + CouncilChannel 适配；im_council 通道管理待 T7.16） |
+| `evolution/self_dev_doc|code|framework|review|test.py` | `packages/forgekin/loops/*`（五闭环） | 直接翻译 | ✅（批次2 forgekin-loops：五步循环 + I1-I8 不变量 + `ctx.forgeLoops`，76 测试） |
+| `forgemind/stages.py` + `evolution/maturity.py` | `packages/forgekin/stage`（觉醒阶/进化阶 E1-E6 + 成熟度阶梯） | 直接翻译 | ✅（批次2 forgekin-stage：双轴阶模型 + KnowledgeMaturityLadder + `ctx.forgeStage`，42 测试） |
 | `core/workflow_compiler.py` + `workflow_compiler_parser.py` + `workflow_compiler_validator.py` | `packages/forgekin/compiler` + `packages/plugins/workflow` | 直接翻译（YAML→执行图） | ⬜ |
 | `forgemind/external_agents.py` + `core/helm_adapter.py` + `helm_ws_manager.py` | `packages/limb/adapters`（EAC 七契约） | 直接翻译为适配器接口 | ✅（批次5：EAC 配置五项+能力 is_available/invoke → TS 六方法全插件化，详见 `services/agents/providers` 行） |
 | `forgemind/base.py` + `forgekin.py` + `registry.py` + `species.py` + `species_impl/` | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F6） | ⬜ |
