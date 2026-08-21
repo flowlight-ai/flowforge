@@ -19,8 +19,11 @@
 - [x] T6.4 `packages/limb/embodiment`：LimbEmbodimentBindingStore + limb-yaml-loader +
       ApprovedLimbPairingPersistence（批次2 交付：具身绑定 Memory/Redis 双后端 + YAML 声明
       加载器 + 配对持久化 Redis 后端（limb-core）+ EmbodimentService 挂载 `ctx.limbEmbodiment` + 19 测试）
-- [ ] T6.5 `packages/terminal`：tmux-gateway / tmux-agent-spawner / agent-sessions-reader /
-      session-store / agent-pane-registry（Windows 回退：node-pty 实现同接口）
+- [x] T6.5 `packages/limb/terminal`：tmux-gateway / tmux-agent-spawner / agent-sessions-reader /
+      session-store / agent-pane-registry（Windows 回退：node-pty 实现同接口；批次4 交付：
+      tmux 五模块 + F212 cli 诊断体系（classifyCliError 16 reasonCode / buildCliDiagnostics /
+      buildCliExitDiagnostic / buildSilentCompletionDiagnostic）+ tmux-agent-carrier-session
+      duplex carrier + cli-spawn-helpers/cli-timeout + LimbTerminalService 挂载 `ctx.limbTerminal` + 115 测试）
 - [ ] T6.6 `packages/limb/adapters`：Claude Code（stream-json）、Codex（json）、Gemini CLI
       （stream-json/ACP）、Antigravity agy（plain text）、opencode（ndjson）
 - [ ] T6.7 测试：mock CLI（输出固定 stream-json）完成配对→租约→执行→转录→回传；

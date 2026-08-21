@@ -108,6 +108,9 @@
       "@flowforge/limb-observation": [
         "./packages/limb/observation/src/index.ts"
       ],
+      "@flowforge/limb-terminal": [
+        "./packages/limb/terminal/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],

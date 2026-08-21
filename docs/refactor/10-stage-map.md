@@ -124,7 +124,7 @@
 | C16 | socket.io 实时投递/进度/信号 | infrastructure/websocket | 5 | ✅（批次3 chat-realtime + RealtimeTransport 缝） |
 | C17 | Limb 注册/租约/配对/策略 | domains/limb | 6 | ✅（批次1 limb-core：Registry/Lease/Pairing/AccessPolicy/ActionLog/Presence 全插件化；批次2 补 RedisApprovedLimbPairingPersistence 配对持久化） |
 | C18 | RemoteLimbNode / PluginLimbAdapter / REST 执行 | domains/limb | 6 | ✅（批次2 limb-node：RemoteLimbNode/PluginLimbAdapter/PluginRestExecutor/PluginTokenManager + limb-embodiment：BindingStore/yaml-loader 全插件化；批次3 limb-observation：ObservationRouter/OutboundDeliveryHook/TranscriptCatDelivery 观察路由与输出回传全插件化） |
-| C19 | tmux 网关/生成器 + agent 会话 | domains/terminal | 6 | ⬜ |
+| C19 | tmux 网关/生成器 + agent 会话 | domains/terminal | 6 | ✅（批次4 limb-terminal：TmuxGateway/TmuxAgentSpawner/AgentSessionsReader/SessionStore/AgentPaneRegistry + F212 cli 诊断 + duplex carrier 全插件化，115 测试） |
 | C20 | CLI 适配器（claude/codex/gemini/agy/opencode） | services/agents/providers | 6 | ⬜ |
 | C21 | 市场 marketplace / 插件 plugin / 技能包 packs | routes/marketplace 等 | 5 | ✅（批次7 chat-misc MarketplaceService） |
 | C22 | 信号 signals / 记忆 memory / 任务 tasks | routes/* | 5 | ✅（批次7 chat-misc Signal/MemoryPublish/TaskService） |
