@@ -3028,6 +3028,12 @@ importers:
         specifier: workspace:^
         version: link:../embodiment
 
+  packages/limb/terminal:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/llm/llm:
     dependencies:
       '@flowforge/schemastery':

@@ -122,8 +122,8 @@
 | C14 | 线程分支 thread-branch | routes/thread-branch | 5 | ✅（批次1 并入 chat-threads ThreadBranchService） |
 | C15 | 审批 Hub / 提案 / 投票 | routes/approval-hub 等 | 5 | ✅（批次4 chat-approval） |
 | C16 | socket.io 实时投递/进度/信号 | infrastructure/websocket | 5 | ✅（批次3 chat-realtime + RealtimeTransport 缝） |
-| C17 | Limb 注册/租约/配对/策略 | domains/limb | 6 | ✅（批次1 limb-core：Registry/Lease/Pairing/AccessPolicy/ActionLog/Presence 全插件化；批次2 补 RedisApprovedLimbPairingPersistence 配对持久化） |
-| C18 | RemoteLimbNode / PluginLimbAdapter / REST 执行 | domains/limb | 6 | ✅（批次2 limb-node：RemoteLimbNode/PluginLimbAdapter/PluginRestExecutor/PluginTokenManager + limb-embodiment：BindingStore/yaml-loader 全插件化；批次3 limb-observation：ObservationRouter/OutboundDeliveryHook/TranscriptCatDelivery 观察路由与输出回传全插件化） |
+| C17 | Limb 注册/租约/配对/策略 | domains/limb | 6 | ✅（批次1 limb-core：Registry/Lease/Pairing/AccessPolicy/ActionLog/Presence 全插件化；批次2 补 RedisApprovedLimbPairingPersistence 配对持久化；批次6 limb-e2e mock CLI 端到端 7 用例：配对→租约→执行→转录→回传 + 租约冲突拒绝） |
+| C18 | RemoteLimbNode / PluginLimbAdapter / REST 执行 | domains/limb | 6 | ✅（批次2 limb-node：RemoteLimbNode/PluginLimbAdapter/PluginRestExecutor/PluginTokenManager + limb-embodiment：BindingStore/yaml-loader 全插件化；批次3 limb-observation：ObservationRouter/OutboundDeliveryHook/TranscriptCatDelivery 观察路由与输出回传全插件化；批次6 limb-e2e mock CLI 端到端：五模式解析（claude/codex/gemini/opencode/agy）+ 转录→群聊幂等落库/触发绑定猫 + Windows pty 路径冒烟） |
 | C19 | tmux 网关/生成器 + agent 会话 | domains/terminal | 6 | ✅（批次4 limb-terminal：TmuxGateway/TmuxAgentSpawner/AgentSessionsReader/SessionStore/AgentPaneRegistry + F212 cli 诊断 + duplex carrier 全插件化，115 测试） |
 | C20 | CLI 适配器（claude/codex/gemini/agy/opencode） | services/agents/providers | 6 | ✅（批次5 limb-adapters：五 CLI 适配器全插件化（EAC 七契约）+ 统一 CliEvent 契约 + Registry 默认装配 + LimbAdaptersService 挂载 `ctx.limbAdapters`，112 测试） |
 | C21 | 市场 marketplace / 插件 plugin / 技能包 packs | routes/marketplace 等 | 5 | ✅（批次7 chat-misc MarketplaceService） |

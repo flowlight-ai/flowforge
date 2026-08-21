@@ -29,8 +29,10 @@
       五 CLI 适配器全插件化（EAC 七契约→TS 六方法：isAvailable/buildSpawnArgs/createParser/
       parsePlainText）+ 统一 CliEvent 契约 + LimbCliAdapterRegistry 默认装配 + LimbAdaptersService
       挂载 `ctx.limbAdapters` + 112 测试；Windows PATH 分隔符兼容（binaryInPath））
-- [ ] T6.7 测试：mock CLI（输出固定 stream-json）完成配对→租约→执行→转录→回传；
-      租约冲突拒绝；Windows pty 路径冒烟
+- [x] T6.7 测试：mock CLI（输出固定 stream-json）完成配对→租约→执行→转录→回传；
+      租约冲突拒绝；Windows pty 路径冒烟（批次6 交付：limb-cli-flow e2e 7 用例跨六域插件
+      装配验证 + mock-cli.mjs 五模式固定输出 fixture（claude/codex/gemini/opencode NDJSON +
+      agy plain text）+ Windows pty 路径冒烟（node 进程跨平台 spawn，不依赖 tmux/pty））
 
 ## 验收标准
 
