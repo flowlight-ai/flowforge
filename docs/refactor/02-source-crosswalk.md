@@ -83,12 +83,12 @@
 | `src/domains/limb/*`（LimbRegistry/LeaseManager/PairingStore/AccessPolicy/ObservationRouter/RemoteLimbNode/PluginLimbAdapter/RestExecutor/yaml-loader） | `packages/limb` | vendor | ⬜ |
 | `src/domains/terminal/*`（tmux-gateway/tmux-agent-spawner/session-store）+ Windows pty 回退 | `packages/limb/terminal` | vendor + node-pty（Windows） | ⬜ |
 | `src/domains/services/*`（memory/signals/approval/notifications 等） | `packages/cats|chat` 对应域 | vendor 按域拆分 | ⬜ |
-| `src/routes/threads|messages|callback-multi-mention|session-*|thread-branch|approval-hub|proposal|votes|world|community|story|leaderboard|marketplace|settings|…` | `packages/chat` + `packages/marketplace` | vendor；world/community/story 等 clowder 扩展降级 stretch（S1-S3/S7，见 `10-stage-map.md` §3.4） | ⬜ |
+| `src/routes/threads|messages|callback-multi-mention|session-*|thread-branch|approval-hub|proposal|votes|world|community|story|leaderboard|marketplace|settings|…` | `packages/chat` + `packages/marketplace` | vendor；world/community/story 等 clowder 扩展降级 stretch（S1-S3/S7，见 `10-stage-map.md` §3.4） | ✅（批次1-8 chat-threads/messages/mention/session-chain/approval/realtime/misc + stretch-ports ports+mock + e2e） |
 | `src/infrastructure/*`（websocket/socket.io、db better-sqlite3、redis、queues、events） | `packages/api/infrastructure` | vendor（阶段 3/5） | ⬜ |
 | `cat-template.json` + `.cat-cafe/cat-catalog.json`（**JSON** 档案/目录模型：breeds/variants/CLI 适配器定义） | `packages/cats/catalog` | 结构对齐；Forgekin 档案保持 YAML（R17） | ⬜ |
 | `.cat-cafe/` 运行态 JSON（accounts.json / user-preferences.json / proxy-upstreams.json / provider-profiles 迁移） | `data/` + `~/.flowforge/` | 格式对齐（JSON），改名 ff2 域（R17） | ⬜ |
 | `src/config/env-registry.ts`（`CAT_CAFE_*` 环境变量集中登记：名称/默认值/分类/敏感标记） | `packages/harness/env-registry` | 移植为 `FF_*` 注册表（R17，阶段 0 T0.19） | ⬜ |
-| `src/config/cat-config-loader.ts` + connector.yaml/plugin.yaml（connector 配置 YAML manifest） | `packages/chat|limb` 对应域 | 移植（R17；IM 通道为 stretch S1 时仅 ports） | ⬜ |
+| `src/config/cat-config-loader.ts` + connector.yaml/plugin.yaml（connector 配置 YAML manifest） | `packages/chat|limb` 对应域 | 移植（R17；IM 通道为 stretch S1 时仅 ports） | 🟦（批次8 chat-stretch 已交付 IM ports + mock；cat-config-loader 待阶段 6） |
 | `assets/prompt-hooks/*/hook.yaml`（prompt 钩子 YAML 定义） | `packages/core/system-prompt` + `packages/forgekin` | 移植（hook.yaml → prompt 插件 schema 段） | ⬜ |
 | `packages/shared/*`（catId/threadId schema、profile-frontmatter-parser、registry 纯函数） | `packages/shared` | vendor | ⬜ |
 | `apps/web`（页面与组件） | `apps/web` | 与 P: `web/` 前端融合（阶段 8） | ⬜ |
@@ -111,7 +111,7 @@
 | `forgemind/autonomous.py` | `packages/forgekin/loops/autonomous` | 直接翻译 | ⬜ |
 | `core/plugin_loader.py` + `plugin_manager.py` + `plugin_registry.py` + `plugin_lifecycle.py` + `plugin_packaging.py` + `plugin_protocol.py` + `plugin_sandbox.py` + `plugin_frontend.py` | `packages/extensions/*` + `packages/marketplace` | 行为基线对照；机制统一为 cordis loader（R13） | ⬜ |
 | `core/marketplace.py` | `packages/marketplace` | 直接翻译 | ⬜ |
-| `core/approval_hub.py` + `core/teamact/` | `packages/chat/approval` + `packages/cats/teamact` | 直接翻译 | ⬜ |
+| `core/approval_hub.py` + `core/teamact/` | `packages/chat/approval` + `packages/cats/teamact` | 直接翻译 | 🟦（approval-hub 批次4 已交付；teamact 待阶段 7） |
 | `core/credential_store.py` + `secret_store.py` | `packages/plugins/credentials` | 行为基线；存储迁移 better-sqlite3 加密列 | ⬜ |
 | `core/scheduler.py` + `schedule_registry.py` + `job` 相关 | `packages/plugins/schedule|jobs` | 行为基线对照 | ⬜ |
 | `core/skill_library.py` | `packages/plugins/skill` | 行为基线对照（skill 格式迁移 YAML frontmatter） | ⬜ |

@@ -115,19 +115,19 @@
 | C7 | 经验蒸馏 Dossier/Distillation | cats/services/distillation | 4 | ✅（批次5 DossierDistillationService） |
 | C8 | Bootcamp 引导 / 值班简报 / 新鲜度 | cats/services/* | 4 | 🟦（duty-briefing/freshness 批次5 已交付；bootcamp 引导待补） |
 | C9 | 用量聚合 usage-aggregator | cats/services | 4 | ✅（批次5 UsageAggregatorService） |
-| C10 | 群聊线程 Threads（CRUD/成员） | routes/threads | 5 | ⬜ |
-| C11 | 消息 Messages + 消息行动 | routes/messages | 5 | ⬜ |
-| C12 | @mention 路由 + 多 @ 编排 | routes/callback-multi-mention | 5 | ⬜ |
-| C13 | 会话链 session-chain / 交接 handoff | routes/session-* | 5 | ⬜ |
-| C14 | 线程分支 thread-branch | routes/thread-branch | 5 | ⬜ |
-| C15 | 审批 Hub / 提案 / 投票 | routes/approval-hub 等 | 5 | ⬜ |
-| C16 | socket.io 实时投递/进度/信号 | infrastructure/websocket | 5 | ⬜ |
+| C10 | 群聊线程 Threads（CRUD/成员） | routes/threads | 5 | ✅（批次1 chat-threads，含读状态/分支/导出） |
+| C11 | 消息 Messages + 消息行动 | routes/messages | 5 | ✅（批次2 chat-messages，含 disposition 准入） |
+| C12 | @mention 路由 + 多 @ 编排 | routes/callback-multi-mention | 5 | ✅（批次5 chat-mention） |
+| C13 | 会话链 session-chain / 交接 handoff | routes/session-* | 5 | ✅（批次6 chat-session-chain） |
+| C14 | 线程分支 thread-branch | routes/thread-branch | 5 | ✅（批次1 并入 chat-threads ThreadBranchService） |
+| C15 | 审批 Hub / 提案 / 投票 | routes/approval-hub 等 | 5 | ✅（批次4 chat-approval） |
+| C16 | socket.io 实时投递/进度/信号 | infrastructure/websocket | 5 | ✅（批次3 chat-realtime + RealtimeTransport 缝） |
 | C17 | Limb 注册/租约/配对/策略 | domains/limb | 6 | ⬜ |
 | C18 | RemoteLimbNode / PluginLimbAdapter / REST 执行 | domains/limb | 6 | ⬜ |
 | C19 | tmux 网关/生成器 + agent 会话 | domains/terminal | 6 | ⬜ |
 | C20 | CLI 适配器（claude/codex/gemini/agy/opencode） | services/agents/providers | 6 | ⬜ |
-| C21 | 市场 marketplace / 插件 plugin / 技能包 packs | routes/marketplace 等 | 5 | ⬜ |
-| C22 | 信号 signals / 记忆 memory / 任务 tasks | routes/* | 5 | ⬜ |
+| C21 | 市场 marketplace / 插件 plugin / 技能包 packs | routes/marketplace 等 | 5 | ✅（批次7 chat-misc MarketplaceService） |
+| C22 | 信号 signals / 记忆 memory / 任务 tasks | routes/* | 5 | ✅（批次7 chat-misc Signal/MemoryPublish/TaskService） |
 | C23 | 梦境回放/自动化反思 auto-dream | domains/auto-dream | 7 | ⬜ |
 | C24 | 球权托管租约 ball-custody | domains/ball-custody | 5 | ⬜ |
 | C25 | 礼宾 concierge + 指南 guides（registry.yaml + flows/*.yaml） | domains/concierge + domains/guides | 4 | ⬜ |
@@ -145,7 +145,7 @@
 | C37 | 档案目录模型 cat-template.json（breeds/variants/CLI 适配器；Forgekin 档案保持 YAML） | packages/cats/catalog | 4 | ⬜ |
 | C38 | .cat-cafe 运行态 JSON（accounts/user-preferences/proxy-upstreams/provider-profiles） | data/ + ~/.flowforge | 4 | ⬜ |
 | C39 | 环境变量注册表 env-registry（CAT_CAFE_* → FF_*） | packages/harness/env-registry | 0 | ⬜ |
-| C40 | 连接器配置 cat-config-loader + connector.yaml（IM stretch 时仅 ports） | packages/chat|limb | 5-6 | ⬜ |
+| C40 | 连接器配置 cat-config-loader + connector.yaml（IM stretch 时仅 ports） | packages/chat|limb | 5-6 | 🟦（批次8 chat-stretch 已交付 IM ports + mock；cat-config-loader 待阶段 6） |
 | C41 | prompt 钩子 hook.yaml | packages/core/system-prompt + packages/forgekin | 1/4 | ⬜ |
 | C42 | shared 包（catId/threadId schema、frontmatter-parser、registry 纯函数） | packages/shared | 0 | ✅（批次1 cats-shared，100+ 类型文件） |
 
@@ -156,9 +156,9 @@
 
 | # | 能力 | 来源 | 建议阶段 | 状态 |
 |---|---|---|---|---|
-| S1 | IM 通道（飞书/Telegram/钉钉/企微/WebChat） | 上游应用平台 routes/push 等 | 11+ | ⬜ |
+| S1 | IM 通道（飞书/Telegram/钉钉/企微/WebChat） | 上游应用平台 routes/push 等 | 11+ | 🟦（批次8 chat-stretch 已交付 IImChannelAdapter ports + InMemory mock；真实通道按凭据启用） |
 | S2 | TTS/语音 / RSS / 邮件 / GitHub signals | 上游应用平台 services | 11+ | ⬜ |
-| S3 | 世界 world / 社区 / 故事 / 排行榜 | 上游应用平台 routes/* | 11+ | ⬜ |
+| S3 | 世界 world / 社区 / 故事 / 排行榜 | 上游应用平台 routes/* | 11+ | 🟦（批次8 chat-stretch 已交付 IStory/ICommunity/ILeaderboard ports + InMemory mock） |
 | S4 | 桌面端 desktop | 上游应用平台 desktop/ | 11+ | ⬜ |
 | S5 | 游戏/信号（games） | 上游应用平台 routes/* | 11+ | ⬜ |
 | S6 | Python↔TS 桥接 SDK（`python/sdk`） | 本项目 | 10-11 | ⬜ |

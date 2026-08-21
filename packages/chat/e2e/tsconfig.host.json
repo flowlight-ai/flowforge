@@ -1,0 +1,19 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
+  },
+  "include": [ "src" ],
+  "references": [
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../cats/invocation/tsconfig.host.json" },
+    { "path": "../../cats/shared/tsconfig.host.json" },
+    { "path": "../../cats/stores/tsconfig.host.json" },
+    { "path": "../approval/tsconfig.host.json" },
+    { "path": "../mention/tsconfig.host.json" },
+    { "path": "../realtime/tsconfig.host.json" },
+    { "path": "../session-chain/tsconfig.host.json" }
+  ]
+}

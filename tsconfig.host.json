@@ -78,6 +78,12 @@
       "path": "./packages/chat/misc/tsconfig.host.json"
     },
     {
+      "path": "./packages/chat/stretch-ports/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/e2e/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {
