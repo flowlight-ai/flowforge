@@ -1,0 +1,27 @@
+{
+  "name": "@flowforge/forgekin-loops",
+  "description": "FlowForge Forgekin self-dev loops Cordis plugin — T7.7 five loops (doc/code/framework/review/test): SelfDevLoopBase five-step Discover→Plan→Act→Verify→Persist with I1-I8 invariants at ctx.forgeLoops",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/loops" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./models": { "types": "./lib/types/models.d.ts", "default": "./lib/models.js" },
+    "./errors": { "types": "./lib/types/errors.d.ts", "default": "./lib/errors.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./self-dev-loop": { "types": "./lib/types/self-dev-loop.d.ts", "default": "./lib/self-dev-loop.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

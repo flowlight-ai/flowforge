@@ -1,0 +1,24 @@
+{
+  "name": "@flowforge/forgekin-soul",
+  "description": "FlowForge Forgekin soul domain Cordis plugin — T7.1 SoulImprint immutable identity (seed params + value anchors + namespace + SHA-256 hash) at ctx.forgeSoul",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/soul" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./soul-imprint": { "types": "./lib/types/soul-imprint.d.ts", "default": "./lib/soul-imprint.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

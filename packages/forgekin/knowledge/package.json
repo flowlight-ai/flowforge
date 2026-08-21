@@ -1,0 +1,27 @@
+{
+  "name": "@flowforge/forgekin-knowledge",
+  "description": "FlowForge Forgekin knowledge domain Cordis plugin — T7.4 MindCodex searchable codex + KnowledgeEvolution distillation (three questions/smoke+promotion gates) + SpiritForge pipeline at ctx.forgeKnowledge",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/knowledge" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./models": { "types": "./lib/types/models.d.ts", "default": "./lib/models.js" },
+    "./knowledge-evolution": { "types": "./lib/types/knowledge-evolution.d.ts", "default": "./lib/knowledge-evolution.js" },
+    "./mind-codex": { "types": "./lib/types/mind-codex.d.ts", "default": "./lib/mind-codex.js" },
+    "./spirit-forge": { "types": "./lib/types/spirit-forge.d.ts", "default": "./lib/spirit-forge.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

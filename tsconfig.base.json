@@ -114,6 +114,27 @@
       "@flowforge/limb-terminal": [
         "./packages/limb/terminal/src/index.ts"
       ],
+      "@flowforge/forgekin-soul": [
+        "./packages/forgekin/soul/src/index.ts"
+      ],
+      "@flowforge/forgekin-capability": [
+        "./packages/forgekin/capability/src/index.ts"
+      ],
+      "@flowforge/forgekin-memory": [
+        "./packages/forgekin/memory/src/index.ts"
+      ],
+      "@flowforge/forgekin-knowledge": [
+        "./packages/forgekin/knowledge/src/index.ts"
+      ],
+      "@flowforge/forgekin-council": [
+        "./packages/forgekin/council/src/index.ts"
+      ],
+      "@flowforge/forgekin-stage": [
+        "./packages/forgekin/stage/src/index.ts"
+      ],
+      "@flowforge/forgekin-loops": [
+        "./packages/forgekin/loops/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],

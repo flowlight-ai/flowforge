@@ -172,13 +172,13 @@
 
 | # | 能力 | 来源（Python） | 阶段 | 状态 |
 |---|---|---|---|---|
-| F1 | SoulImprint 灵魂印记 | forgemind/soul_imprint.py | 7 | ⬜ |
-| F2 | CapabilityProfile 能力画像 | core/capability | 7 | ⬜ |
-| F3 | EchoStore 情景记忆 | core/memory | 7 | ⬜ |
-| F4 | MindCodex 程序记忆 + SpiritForge 蒸馏 | core/knowledge_evolution.py | 7 | ⬜ |
-| F5 | MindCouncil 跨厂商审议 | forgemind/council.py | 7 | ⬜ |
-| F6 | 五自进化闭环（docs/code/framework/review/test） | evolution/self_dev_*.py | 7 | ⬜ |
-| F7 | 觉醒阶/进化阶 E1-E6 + 成熟度 | evolution/maturity.py | 7 | ⬜ |
+| F1 | SoulImprint 灵魂印记 | forgemind/soul_imprint.py | 7 | ✅（批次1 forgekin-soul：哈希稳定/不可变/命名空间隔离 + `ctx.forgeSoul`，8 测试） |
+| F2 | CapabilityProfile 能力画像 | core/capability | 7 | ✅（批次1 forgekin-capability：models/analyzer/profile + `ctx.forgeCapability`，38 测试） |
+| F3 | EchoStore 情景记忆 | core/memory | 7 | ✅（批次1 forgekin-memory：五存储 save/retrieve/hybrid + EpisodePersistenceHook + `ctx.forgeMemory`，9 测试） |
+| F4 | MindCodex 程序记忆 + SpiritForge 蒸馏 | core/knowledge_evolution.py | 7 | ✅（批次1 forgekin-knowledge：三问→Episode→蒸馏→双门→入库 + `ctx.forgeKnowledge`，26 测试） |
+| F5 | MindCouncil 跨厂商审议 | forgemind/council.py | 7 | ✅（批次2 forgekin-council：CouncilVerdict/CouncilSession 聚合 + min_reviewers/min_distinct_vendors/pass_threshold 强制 + 单厂商结构性拒绝 + `ctx.forgeCouncil`，18 测试） |
+| F6 | 五自进化闭环（docs/code/framework/review/test） | evolution/self_dev_*.py | 7 | ✅（批次2 forgekin-loops：SelfDevLoopBase 五步循环 + I1-I8 不变量 + `ctx.forgeLoops`，76 测试） |
+| F7 | 觉醒阶/进化阶 E1-E6 + 成熟度 | evolution/maturity.py | 7 | ✅（批次2 forgekin-stage：双轴阶模型 + KnowledgeMaturityLadder 五级晋升/降级/冻结 + `ctx.forgeStage`，42 测试） |
 | F8 | 工作流编译器 YAML→执行图 | core/workflow_compiler*.py | 7 | ⬜ |
 | F9 | 外部 agent 适配器 EAC 七契约 | forgemind/external_agents.py | 7 | ⬜ |
 | F10 | 7 层 harness 工程（durable_state 等） | core/harness | 7 | ⬜ |
@@ -209,7 +209,7 @@
 | F35 | 外部 agent 能力融合 | core/external_agent/（F035） | 6 | ⬜ |
 | F36 | harness-eval 控制面 | harness/ + evaluators/（F040） | 7 | ⬜ |
 | F37 | ForgeMind 锻造关系/谱系/应用层 | forgemind/（F026/F036/F038） | 7 | ⬜ |
-| F38 | MindCodex 检索（三入口/消费加权排名/可检索） | core/knowledge_evolution.py + memory_federation/（F015/F016/F039） | 7 | ⬜ |
+| F38 | MindCodex 检索（三入口/消费加权排名/可检索） | core/knowledge_evolution.py + memory_federation/（F015/F016/F039） | 7 | ✅（批次1 forgekin-knowledge：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 F4） |
 | F39 | 记忆治理 | core/memory_federation/ + core/event_memory.py（F014/F017） | 7 | ⬜ |
 | F40 | 球权托管 + push-back 协议 | docs/features/F005/F006（F006） | 5/7 | ⬜ |
 | F41 | 评估契约/三信号交叉/归因矩阵 | core/eval/ + evolution/eval_ledger.py（F018/F019/F020） | 7 | ⬜ |

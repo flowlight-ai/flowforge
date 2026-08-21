@@ -102,6 +102,27 @@
       "path": "./packages/limb/terminal/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/soul/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/capability/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/memory/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/knowledge/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/council/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/stage/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/loops/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {
