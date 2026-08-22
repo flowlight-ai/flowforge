@@ -194,7 +194,7 @@
 | F20 | 自主进化 autonomous + 梦境回放 auto_dream | forgemind/autonomous.py + evolution/auto_dream.py（F051） | 7 | ⬜ |
 | F21 | Side-Effect WAL（记忆写前日志） | core/event_memory.py 相关（F021） | 7 | ⬜ |
 | F22 | 进化引擎三循环（engine/foreman/runtime/qc_loop/close_gate/process_evolution/scope_guard/metacognition/models） | evolution/*.py（F046） | 7 | ⬜ |
-| F23 | 弹性栈（熔断/降级/恢复层级/检查点/重启恢复） | core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_*}.py + config/resilience.yaml|recovery_tiers.yaml（F022；A004/A022） | 2/7 | ✅（packages/plugins/resilience，23 vitest；阶段 7 应用层接线待做） |
+| F23 | 弹性栈（熔断/降级/恢复层级/检查点/重启恢复） | core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_*}.py + config/resilience.yaml|recovery_tiers.yaml（F022；A004/A022） | 2/7 | ✅（packages/plugins/resilience；批次9 补齐 ResilienceExecutor+CheckpointConfig+Cordis 插件 `ctx.forgeResilience`，58 vitest） |
 | F24 | 特性开关 + 金丝雀 | core/feature_flags.py + core/canary.py + config/canary/default.yaml | 2 | ✅（packages/plugins/feature-flags 8 + canary 10 vitest） |
 | F25 | 模式执行器（modes/执行策略/步长限制/超时） | core/base_mode_executor.py + modes/ + execution_policy.py + step_limiter.py + agent_timeout.py | 1/2 | ✅（packages/plugins/modes，14 vitest） |
 | F26 | 内容审核与护栏（moderation/gate/guardrails） | core/{content_moderation,moderation,guardrails}.py + core/gate/（对照 F007 push-back） | 2 | ✅（packages/plugins/guard，16 vitest） |

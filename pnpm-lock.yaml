@@ -3550,7 +3550,11 @@ importers:
 
   packages/plugins/modes: {}
 
-  packages/plugins/resilience: {}
+  packages/plugins/resilience:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
 
   packages/plugins/skill-security: {}
 

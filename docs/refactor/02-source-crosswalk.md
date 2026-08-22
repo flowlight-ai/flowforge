@@ -132,7 +132,7 @@
 | `evolution/eval_ledger.py` + `core/eval/`（contract/three_signals/attribution） | `packages/forgekin/eval-ledger` | 直接翻译（F19/F41；F050） | ✅（批次8 forgekin-eval-ledger：Replay A/B 七步台账 + 五问契约 + 三方信号交叉 + 七类归因，`ctx.forgeEvalLedger`，59 测试） |
 | `forgemind/autonomous.py` + `evolution/auto_dream.py` | `packages/forgekin/autonomous` + `packages/forgekin/auto-dream` | 直接翻译（F20；F051） | ⬜ |
 | `evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py` | `packages/forgekin/evolution-engine` | 直接翻译（F22；F046 三循环基础设施） | ⬜ |
-| `core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_manager,checkpoint_config}.py` + `config/resilience.yaml*` + `config/recovery_tiers.yaml*` | `packages/plugins/resilience` + `packages/core/session` | 直接翻译（F23；A004/A022） | ⬜ |
+| `core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_manager,checkpoint_config}.py` + `config/resilience.yaml*` + `config/recovery_tiers.yaml*` | `packages/plugins/resilience` + `packages/core/session` | 直接翻译（F23；A004/A022） | ✅（阶段2 基础核心；批次9 补齐 ResilienceExecutor+CheckpointConfig+Cordis 插件 `ctx.forgeResilience`，58 测试） |
 | `core/feature_flags.py` + `core/canary.py` + `config/canary/default.yaml` | `packages/plugins/feature-flags` + `packages/plugins/canary` | 直接翻译（F24） | ⬜ |
 | `core/base_mode_executor.py` + `modes/` + `core/execution_policy.py` + `core/step_limiter.py` + `core/agent_timeout.py` | `packages/plugins/modes` + `packages/core/agent` | 直接翻译（F25） | ⬜ |
 | `core/{content_moderation,moderation}.py` + `core/gate/` + `core/guardrails.py` | `packages/plugins/guard` | 直接翻译（F26） | ⬜ |

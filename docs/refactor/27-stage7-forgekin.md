@@ -61,8 +61,12 @@
       （`forgemind/autonomous.py` + `evolution/auto_dream.py`，F20）
 - [ ] T7.20 `packages/forgekin/evolution-engine`：进化引擎三循环
       （`evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py`，F22）
-- [ ] T7.21 `packages/plugins/resilience`：弹性栈（`core/{circuit_breaker,fallback_chain,degradation,recovery_tier,
+- [x] T7.21 `packages/plugins/resilience`：弹性栈（`core/{circuit_breaker,fallback_chain,degradation,recovery_tier,
       restart_recovery,checkpoint_*}.py` + `config/resilience.yaml|recovery_tiers.yaml`，F23）
+      （批次9：在阶段2 基础核心（熔断/回退链/降级决策树/恢复层级/重启恢复）之上补齐 —
+      ResilienceExecutor P3-005 灾备执行器（三级恢复执行 + 回退链降级）+
+      CheckpointConfig YAML 配置加载与校验 + ResilienceService Cordis 插件化
+      挂载 `ctx.forgeResilience`（decisionTree/executor/checkpoint 门面），58 测试）
 - [ ] T7.22 `packages/forgekin/stores`：Side-Effect WAL + 记忆治理（F21/F39；事件写前日志）
 - [x] T7.23 `packages/forgekin/knowledge`：MindCodex 检索三入口/消费加权排名/可检索（F38）
       （批次1：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 T7.4）
