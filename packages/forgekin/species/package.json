@@ -1,0 +1,32 @@
+{
+  "name": "@flowforge/forgekin-species",
+  "description": "FlowForge Forgekin species domain Cordis plugin — T7.25 ForgekinSpecies five forms (bio/org/obj/virtual/hybrid) + ForgekinBase observe/act/verify reality loop + ForgekinRegistry + ForgekinFormData, TS rewrite of forgemind/{species,forgekin,registry,base,forms}.py + species_impl/ at ctx.forgeSpecies (F30)",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/species" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./species-enum": { "types": "./lib/types/species-enum.d.ts", "default": "./lib/species-enum.js" },
+    "./models": { "types": "./lib/types/models.d.ts", "default": "./lib/models.js" },
+    "./registry": { "types": "./lib/types/registry.d.ts", "default": "./lib/registry.js" },
+    "./base": { "types": "./lib/types/base.d.ts", "default": "./lib/base.js" },
+    "./forms": { "types": "./lib/types/forms.d.ts", "default": "./lib/forms.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-soul": "workspace:^",
+    "@flowforge/forgekin-stage": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-soul": "workspace:^",
+    "@flowforge/forgekin-stage": "workspace:^"
+  }
+}

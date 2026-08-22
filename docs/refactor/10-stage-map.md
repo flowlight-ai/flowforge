@@ -201,8 +201,8 @@
 | F27 | 状态机族（handoff/状态映射/变量解析/命名空间/上下文层/工具链执行/字段门控） | core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py（F003/F024；A003/A024） | 1/7 | ⬜ |
 | F28 | LLM 路由/模型服务/提供商配额 | core/{model_service,model_capability,provider_quota}.py + config/llm_route.yaml|provider_quota.yaml*（F025） | 1/3 | ⬜ |
 | F29 | SOP 标准作业程序 | sop/ + config/sops/*.yaml | 7 | ✅（批次4 forgekin-sop：阶段门禁引擎（PredicateChecker 8 检查器 + SOPExecutor 门禁/流转 + YAML 加载）+ `ctx.forgeSop`，71 测试） |
-| F30 | 物种体系（base/forgekin/registry/species + species_impl + forgekins/*.yaml 8 物种） | forgemind/*.py + forgemind/forgekins/*.yaml（F027；A027） | 4/7 | ⬜ |
-| F31 | 锻造流水线 forging | forging/ + forgemind/config/forging.yaml（F028；A028） | 7 | ⬜ |
+| F30 | 物种体系（base/forgekin/registry/species + species_impl + forgekins/*.yaml 8 物种） | forgemind/*.py + forgemind/forgekins/*.yaml（F027；A027） | 4/7 | ✅（批次7 forgekin-species：五物种数据模型 + ForgekinBase chat 降级/重试分类 + Registry selectOwner + SpeciesFactoryRegistry 构造器注册表 + 五形态边界校验 + `ctx.forgeSpecies` 活实例表，69 测试） |
+| F31 | 锻造流水线 forging | forging/ + forgemind/config/forging.yaml（F028；A028） | 7 | ✅（批次7 forgekin-forging：六阶段 ForgePipeline（失败包装/计时）+ 默认锚点印记 + forgeFromYaml + 内置双 YAML，`ctx.forgeForging`，30 测试） |
 | F32 | Trae 桥接 | config/trae_bridge.yaml + .trae_bridge/（F045） | 7 | ✅（批次6 forgekin-trae-bridge：TraeBridgeProtocol 文件协议（F045 I1-I8）+ TraeLLMClient 门面 + BridgeLLMOperator OpenRoute 轮询 + 会话持久化 + YAML 配置）+ `ctx.forgeTraeBridge`，113 测试） |
 | F33 | 外部 agent 共享状态 | core/external_agent/（F033） | 6 | ⬜ |
 | F34 | 外部 agent 降级回退 | core/external_agent/ + fallback_chain（F034） | 6 | ⬜ |

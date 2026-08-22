@@ -1,0 +1,37 @@
+{
+  "name": "@flowforge/forgekin-forging",
+  "description": "FlowForge Forge Nurturing pipeline Cordis plugin — T7.25 ForgePipeline 6-stage forging (species_definition/capability_injection/memory_seeding/value_alignment/capability_verification/awakening_promotion) + forge_from_yaml config-driven entry, TS rewrite of forgemind/forging/{stages,pipeline}.py + config/{forging,prompts}.yaml at ctx.forgeForging (F31)",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/forging" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./forging-stages": { "types": "./lib/types/forging-stages.d.ts", "default": "./lib/forging-stages.js" },
+    "./config": { "types": "./lib/types/config.d.ts", "default": "./lib/config.js" },
+    "./pipeline": { "types": "./lib/types/pipeline.d.ts", "default": "./lib/pipeline.js" },
+    "./config/forging.yaml": "./config/forging.yaml",
+    "./config/prompts.yaml": "./config/prompts.yaml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts", "config/*.yaml" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-soul": "workspace:^",
+    "@flowforge/forgekin-stage": "workspace:^",
+    "@flowforge/forgekin-species": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-soul": "workspace:^",
+    "@flowforge/forgekin-stage": "workspace:^",
+    "@flowforge/forgekin-species": "workspace:^"
+  }
+}

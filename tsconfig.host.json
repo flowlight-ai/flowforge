@@ -141,6 +141,12 @@
       "path": "./packages/forgekin/trae-bridge/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/species/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/forging/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

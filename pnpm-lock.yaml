@@ -2006,6 +2006,25 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/forgekin/forging:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-soul':
+        specifier: workspace:^
+        version: link:../soul
+      '@flowforge/forgekin-species':
+        specifier: workspace:^
+        version: link:../species
+      '@flowforge/forgekin-stage':
+        specifier: workspace:^
+        version: link:../stage
+
   packages/forgekin/knowledge:
     devDependencies:
       '@flowforge/cordis':
@@ -2045,6 +2064,18 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+
+  packages/forgekin/species:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-soul':
+        specifier: workspace:^
+        version: link:../soul
+      '@flowforge/forgekin-stage':
+        specifier: workspace:^
+        version: link:../stage
 
   packages/forgekin/stage:
     devDependencies:

@@ -66,8 +66,14 @@
       （manual/git_state/env/command_pattern/command_sequence/handle/sha_dedup/feature_doc）
       + SOPExecutor 阶段门禁/可选阶段降级/for-break-success 流转 + YAML 加载，
       SopService 挂载 `ctx.forgeSop`，71 测试）
-- [ ] T7.25 `packages/forgekin/species` + `packages/forgekin/forging`：物种体系 + 锻造流水线
+- [x] T7.25 `packages/forgekin/species` + `packages/forgekin/forging`：物种体系 + 锻造流水线
       （`forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forging/`，F30/F31）
+      （批次7：forgekin-species 五物种数据模型 + ForgekinBase（chat 降级/注入/重试分类）
+      + ForgekinRegistry selectOwner 启发式 + SpeciesFactoryRegistry 构造器注册表（替代
+      Python importlib）+ 五形态 act 边界校验 + SpeciesService 活实例表（spawn/adopt）
+      挂载 `ctx.forgeSpecies`；forgekin-forging 六阶段 ForgePipeline（失败包装/计时/
+      lastStageResults）+ 默认锚点 SoulImprint + forgeFromYaml 配置驱动 + 内置
+      forging.yaml/prompts.yaml（import.meta.url 定位），ForgingService 挂载 `ctx.forgeForging`，99 测试）
 - [x] T7.26 `packages/forgekin/trae-bridge`：Trae 桥（`config/trae_bridge.yaml` + `.trae_bridge/`，F32；
       移植 `llm/trae/` 七模块：TraeBridgeProtocol 文件协议（writeRequest/pollResponse/cancel/归档/
       status.json，F045 I1-I8 不变量）+ TraeLLMClient 门面（chat/stream/completeCode/reviewCode/
