@@ -68,7 +68,12 @@
       SopService 挂载 `ctx.forgeSop`，71 测试）
 - [ ] T7.25 `packages/forgekin/species` + `packages/forgekin/forging`：物种体系 + 锻造流水线
       （`forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forging/`，F30/F31）
-- [ ] T7.26 `packages/forgekin/trae-bridge`：Trae 桥（`config/trae_bridge.yaml` + `.trae_bridge/`，F32）
+- [x] T7.26 `packages/forgekin/trae-bridge`：Trae 桥（`config/trae_bridge.yaml` + `.trae_bridge/`，F32；
+      移植 `llm/trae/` 七模块：TraeBridgeProtocol 文件协议（writeRequest/pollResponse/cancel/归档/
+      status.json，F045 I1-I8 不变量）+ TraeLLMClient 门面（chat/stream/completeCode/reviewCode/
+      generateTests + 会话持久化）+ BridgeLLMOperator（OpenRoute 轮询 + 原子重命名互斥 +
+      无效响应/超时重试 + fallback 模型切换）+ TraeSession/Manager + YAML 配置（${ENV} 占位符 +
+      环境变量覆盖），SopService 同构挂载 `ctx.forgeTraeBridge`，113 测试）
 - [ ] T7.27 `packages/forgekin/harness-eval`：harness-eval 控制面（F36；对照 clowder C32 16 域评估）
 - [ ] T7.28 `packages/forgekin/roles`：特种角色子代理（产品经理/DevOps/安全官/交付经理，F43）
 - [ ] T7.29 测试：魔法词触发/群编排/IM 议会拒绝同通道/评估台账记账/进化引擎三循环演进/

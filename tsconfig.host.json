@@ -138,6 +138,9 @@
       "path": "./packages/forgekin/swarm/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/trae-bridge/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

@@ -203,7 +203,7 @@
 | F29 | SOP 标准作业程序 | sop/ + config/sops/*.yaml | 7 | ✅（批次4 forgekin-sop：阶段门禁引擎（PredicateChecker 8 检查器 + SOPExecutor 门禁/流转 + YAML 加载）+ `ctx.forgeSop`，71 测试） |
 | F30 | 物种体系（base/forgekin/registry/species + species_impl + forgekins/*.yaml 8 物种） | forgemind/*.py + forgemind/forgekins/*.yaml（F027；A027） | 4/7 | ⬜ |
 | F31 | 锻造流水线 forging | forging/ + forgemind/config/forging.yaml（F028；A028） | 7 | ⬜ |
-| F32 | Trae 桥接 | config/trae_bridge.yaml + .trae_bridge/（F045） | 7 | ⬜ |
+| F32 | Trae 桥接 | config/trae_bridge.yaml + .trae_bridge/（F045） | 7 | ✅（批次6 forgekin-trae-bridge：TraeBridgeProtocol 文件协议（F045 I1-I8）+ TraeLLMClient 门面 + BridgeLLMOperator OpenRoute 轮询 + 会话持久化 + YAML 配置）+ `ctx.forgeTraeBridge`，113 测试） |
 | F33 | 外部 agent 共享状态 | core/external_agent/（F033） | 6 | ⬜ |
 | F34 | 外部 agent 降级回退 | core/external_agent/ + fallback_chain（F034） | 6 | ⬜ |
 | F35 | 外部 agent 能力融合 | core/external_agent/（F035） | 6 | ⬜ |

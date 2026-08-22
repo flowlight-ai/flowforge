@@ -150,6 +150,9 @@
       "@flowforge/forgekin-swarm": [
         "./packages/forgekin/swarm/src/index.ts"
       ],
+      "@flowforge/forgekin-trae-bridge": [
+        "./packages/forgekin/trae-bridge/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],
