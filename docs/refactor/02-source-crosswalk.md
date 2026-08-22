@@ -143,7 +143,7 @@
 | `forging/` + `forgemind/config/forging.yaml` | `packages/forgekin/forging` | 直接翻译（F31；A028） | ⬜ |
 | `core/event_memory.py` + `events/` + `middleware/` + `security/` + `vcs/` + `compiler/` + `loop/` + `evaluators/` + `a2a/` + `executor/` + `session/` + `scheduler/` + `skills/` + `llm/` + `agents/` + `brain/` + `services/` + `review/` | `packages/{core,harness,forgekin}/*` 对应域 | 逐目录盘点登记，移植前先读源再写 crosswalk 明细 | ⬜ |
 | `core/{prompt_manager,persona_injector,persona_lock}.py` | `packages/core/system-prompt` | 行为基线对照（D2） | ⬜ |
-| `config/trae_bridge.yaml` + `.trae_bridge/` | `packages/forgekin/trae-bridge` | 直接翻译（F32；F045） | ⬜ |
+| `config/trae_bridge.yaml` + `.trae_bridge/` | `packages/forgekin/trae-bridge` | 直接翻译（F32；F045） | ✅ |
 | `web/`（Next.js 前端） | `apps/web` | 与 clowder `apps/web` 融合（阶段 8） | ⬜ |
 
 ## 4. 行为基线工作流（每行的操作顺序）

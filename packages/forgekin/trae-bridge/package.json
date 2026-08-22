@@ -1,0 +1,33 @@
+{
+  "name": "@flowforge/forgekin-trae-bridge",
+  "description": "FlowForge Forgekin Trae Bridge domain Cordis plugin — T7.26 file-bridge LLM protocol (TraeBridgeProtocol write/poll/archive + TraeLLMClient facade + BridgeLLMOperator OpenRoute poller), TS rewrite of llm/trae/ at ctx.forgeTraeBridge (F045 invariants)",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/trae-bridge" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./models": { "types": "./lib/types/models.d.ts", "default": "./lib/models.js" },
+    "./errors": { "types": "./lib/types/errors.d.ts", "default": "./lib/errors.js" },
+    "./config": { "types": "./lib/types/config.d.ts", "default": "./lib/config.js" },
+    "./protocol": { "types": "./lib/types/protocol.d.ts", "default": "./lib/protocol.js" },
+    "./session": { "types": "./lib/types/session.d.ts", "default": "./lib/session.js" },
+    "./client": { "types": "./lib/types/client.d.ts", "default": "./lib/client.js" },
+    "./operator": { "types": "./lib/types/operator.d.ts", "default": "./lib/operator.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts", "config/**/*.yaml" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}
