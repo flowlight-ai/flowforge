@@ -123,6 +123,21 @@
       "path": "./packages/forgekin/loops/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/workflow-compiler/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/external-agents/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/magic-words/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/sop/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/swarm/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

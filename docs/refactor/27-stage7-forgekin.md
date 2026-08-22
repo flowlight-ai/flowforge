@@ -25,18 +25,27 @@
       （批次2：SelfDevLoopBase 五步循环 Discover→Plan→Act→Verify→Persist + I1-I8 不变量
       （觉醒阶门控/Scope Guard/Reflect≤3/LLM 审核必经/I8 approval）+ LoopsService 挂载
       `ctx.forgeLoops`，76 测试）
-- [ ] T7.8 `packages/forgekin/workflow-compiler`：YAML 工作流 → 执行图（TS 重写自
-      core/workflow_compiler*.py，含条件路由/字段门控）
-- [ ] T7.9 `packages/forgekin/external-agents`：EAC 七契约外部 agent 适配器（TS 重写自
-      forgemind/external_agents.py + helm_adapter.py），桥接 limb 域
+- [x] T7.8 `packages/forgekin/workflow-compiler`：YAML 工作流 → 执行图（TS 重写自
+      core/workflow_compiler*.py，三阶段 Parser/Validator/CodeGen + 条件路由/复合步骤，
+      `ctx.forgeWorkflowCompiler`，43 测试）
+- [x] T7.9 `packages/forgekin/external-agents`：EAC 七契约外部 agent 适配器（TS 重写自
+      forgemind/external_agents.py + helm_adapter.py，子进程隔离 + Helm LLM 事件桥），
+      `ctx.forgeExternalAgents`，29 测试
 - [ ] T7.10 `packages/forgekin/harness`：7 层 harness 工程（durable_state/tool_mediation/
       evidence_sensors/governance/magic_words/entropy_control/harnessability）
 - [ ] T7.11 `packages/forgekin/plugins`：插件市场 + 前端插件（桥接 chat marketplace）
 - [ ] T7.12 `packages/forgekin/observability`：追踪/指标/事件总线
 - [ ] T7.13 测试：YAML 注册 Forgekin → 五闭环各跑通 mock 演进；跨厂商审议拒绝同厂商；
       工作流编译器 DAG 执行；SpiritForge 蒸馏入库可检索
-- [ ] T7.14 `packages/forgekin/magic-words`：魔法词（TS 重写自 `forgemind/magic_words.py`，F15）
-- [ ] T7.15 `packages/forgekin/swarm`：群聊编排（`forgemind/swarm.py` + `config/agent_swarm.yaml`，F16）
+- [x] T7.14 `packages/forgekin/magic-words`：魔法词（TS 重写自 `forgemind/magic_words.py`，F15）
+      （批次4：4 条魔法短语 → stop-and-audit 触发动作子串检测 + MagicWordsService 挂载
+      `ctx.forgeMagicWords`，12 测试）
+- [x] T7.15 `packages/forgekin/swarm`：群聊编排（`forgemind/swarm.py` + `config/agent_swarm.yaml`，F16）
+      （批次5：SwarmCoordinator 全量移植 — I2 submit 必有 trace / I3 capability routing
+      4 步过滤（能力包含→I5 跨厂商→I6 no-self-review→load balancing）/ I4 心跳超时
+      reassign（maxRetries 超限 FAILED）/ 能力互补 complement 推荐 / cancel-fail 终态 /
+      runContinuously 调度循环 + 单例工厂；agent_swarm.yaml 内置（5 Forgekin 画像，
+      heartbeat 200s）；SwarmService 挂载 `ctx.forgeSwarm`，68 测试）
 - [ ] T7.16 `packages/forgekin/im-council` + `packages/chat/channels`：IM 议会 + 通道管理
       （`core/im_council.py` + `channel_manager.py`，F17；IM 通道 stretch 时仅 ports，A2A 域独立 `packages/a2a`）
 - [ ] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
@@ -52,7 +61,11 @@
 - [ ] T7.22 `packages/forgekin/stores`：Side-Effect WAL + 记忆治理（F21/F39；事件写前日志）
 - [x] T7.23 `packages/forgekin/knowledge`：MindCodex 检索三入口/消费加权排名/可检索（F38）
       （批次1：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 T7.4）
-- [ ] T7.24 `packages/forgekin/sop`：SOP 标准作业程序（`sop/` + `config/sops/*.yaml`，F29）
+- [x] T7.24 `packages/forgekin/sop`：SOP 标准作业程序（`sop/` + `config/sops/*.yaml`，F29）
+      （批次4：SOPDefinition/Stage/HardRule/Pitfall 模型 + PredicateChecker 8 检查器
+      （manual/git_state/env/command_pattern/command_sequence/handle/sha_dedup/feature_doc）
+      + SOPExecutor 阶段门禁/可选阶段降级/for-break-success 流转 + YAML 加载，
+      SopService 挂载 `ctx.forgeSop`，71 测试）
 - [ ] T7.25 `packages/forgekin/species` + `packages/forgekin/forging`：物种体系 + 锻造流水线
       （`forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forging/`，F30/F31）
 - [ ] T7.26 `packages/forgekin/trae-bridge`：Trae 桥（`config/trae_bridge.yaml` + `.trae_bridge/`，F32）

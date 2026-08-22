@@ -104,8 +104,8 @@
 | `forgemind/council.py` + `core/im_council.py` | `packages/forgekin/council`（MindCouncil：min_reviewers/min_distinct_vendors/pass_threshold） | 直接翻译；审批基础复用 `packages/chat` approval-hub | ✅（批次2 forgekin-council：CouncilVerdict/CouncilSession + 单厂商结构性拒绝 + CouncilChannel 适配；im_council 通道管理待 T7.16） |
 | `evolution/self_dev_doc|code|framework|review|test.py` | `packages/forgekin/loops/*`（五闭环） | 直接翻译 | ✅（批次2 forgekin-loops：五步循环 + I1-I8 不变量 + `ctx.forgeLoops`，76 测试） |
 | `forgemind/stages.py` + `evolution/maturity.py` | `packages/forgekin/stage`（觉醒阶/进化阶 E1-E6 + 成熟度阶梯） | 直接翻译 | ✅（批次2 forgekin-stage：双轴阶模型 + KnowledgeMaturityLadder + `ctx.forgeStage`，42 测试） |
-| `core/workflow_compiler.py` + `workflow_compiler_parser.py` + `workflow_compiler_validator.py` | `packages/forgekin/compiler` + `packages/plugins/workflow` | 直接翻译（YAML→执行图） | ⬜ |
-| `forgemind/external_agents.py` + `core/helm_adapter.py` + `helm_ws_manager.py` | `packages/limb/adapters`（EAC 七契约） | 直接翻译为适配器接口 | ✅（批次5：EAC 配置五项+能力 is_available/invoke → TS 六方法全插件化，详见 `services/agents/providers` 行） |
+| `core/workflow_compiler.py` + `workflow_compiler_parser.py` + `workflow_compiler_validator.py` | `packages/forgekin/workflow-compiler` + `packages/plugins/workflow` | 直接翻译（YAML→执行图） | ✅（批次3 forgekin-workflow-compiler：三阶段 Parser/Validator/CodeGen + 条件路由/复合步骤 + `ctx.forgeWorkflowCompiler`，43 测试） |
+| `forgemind/external_agents.py` + `core/helm_adapter.py` + `helm_ws_manager.py` | `packages/limb/adapters`（EAC 七契约）+ `packages/forgekin/external-agents`（Helm LLM 事件桥） | 直接翻译为适配器接口 | ✅（批次5 limb-adapters EAC 六方法；批次3 forgekin-external-agents：五种内置 kind 子进程适配器 + LLMClientHelmAdapter + `ctx.forgeExternalAgents`，29 测试） |
 | `forgemind/base.py` + `forgekin.py` + `registry.py` + `species.py` + `species_impl/` | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F6） | ⬜ |
 | `forgemind/stages.py`（觉醒流程）+ `forging/` | `packages/forgekin/awakening` + `packages/cats/bootcamp` | 直接翻译 | ⬜ |
 | `forgemind/autonomous.py` | `packages/forgekin/loops/autonomous` | 直接翻译 | ⬜ |
@@ -125,8 +125,8 @@
 | `core/task_store.py` + `task_context.py` | `packages/cats/stores`（TaskStore） | 直接翻译 | ⬜ |
 | `core/world_engine/` + `core/conditional_router.py` | stretch（`10-stage-map.md` §3.4） | 降级 | ⬜ |
 | `forgemind/*_to_openroute_proxy.py` + `anthropic_to_openroute_proxy.py` | `packages/llm/openroute` | 直接翻译为 provider | ⬜ |
-| `forgemind/magic_words.py` | `packages/forgekin/magic-words` | 直接翻译（F15；A011） | ⬜ |
-| `forgemind/swarm.py` + `config/agent_swarm.yaml` | `packages/forgekin/swarm` | 直接翻译（F16；F049） | ⬜ |
+| `forgemind/magic_words.py` | `packages/forgekin/magic-words` | 直接翻译（F15；A011） | ✅（批次4 forgekin-magic-words：4 条魔法短语子串检测 + `ctx.forgeMagicWords`，12 测试） |
+| `forgemind/swarm.py` + `config/agent_swarm.yaml` | `packages/forgekin/swarm` | 直接翻译（F16；F049） | ✅（批次5 forgekin-swarm：SwarmCoordinator 调度/心跳回收/跨厂商 + `ctx.forgeSwarm`，68 测试） |
 | `core/im_council.py` + `config/im_council.yaml` + `config/im_channels.yaml` + `config/a2a_channels.yaml` + `core/channel_manager.py` | `packages/forgekin/im-council` + `packages/chat/channels` | 直接翻译（F17；F047）；A2A 域独立 `packages/a2a` | ⬜ |
 | `core/teamact/` + `config/teamact_steer.yaml` | `packages/cats/teamact` | 直接翻译（F18；F048） | ⬜ |
 | `evolution/eval_ledger.py` | `packages/forgekin/eval-ledger` | 直接翻译（F19；F050） | ⬜ |
@@ -138,7 +138,7 @@
 | `core/{content_moderation,moderation}.py` + `core/gate/` + `core/guardrails.py` | `packages/plugins/guard` | 直接翻译（F26） | ⬜ |
 | `core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py` | `packages/forgekin/compiler` + `packages/core/state` | 直接翻译（F27；A003/A024） | ⬜ |
 | `core/{model_service,model_capability,provider_quota}.py` + `config/llm_route.yaml` + `config/provider_quota.yaml*` | `packages/llm/*` | 直接翻译（F28） | ⬜ |
-| `sop/` + `config/sops/*.yaml` | `packages/forgekin/sop` | 直接翻译（F29） | ⬜ |
+| `sop/` + `config/sops/*.yaml` | `packages/forgekin/sop` | 直接翻译（F29） | ✅（批次4 forgekin-sop：PredicateChecker 8 检查器 + SOPExecutor 阶段门禁/流转 + YAML 加载 + `ctx.forgeSop`，71 测试） |
 | `forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forgemind/forgekins/*.yaml`（8 物种档案） | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F30；A027） | ⬜ |
 | `forging/` + `forgemind/config/forging.yaml` | `packages/forgekin/forging` | 直接翻译（F31；A028） | ⬜ |
 | `core/event_memory.py` + `events/` + `middleware/` + `security/` + `vcs/` + `compiler/` + `loop/` + `evaluators/` + `a2a/` + `executor/` + `session/` + `scheduler/` + `skills/` + `llm/` + `agents/` + `brain/` + `services/` + `review/` | `packages/{core,harness,forgekin}/*` 对应域 | 逐目录盘点登记，移植前先读源再写 crosswalk 明细 | ⬜ |
