@@ -147,6 +147,9 @@
       "path": "./packages/forgekin/forging/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/eval-ledger/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

@@ -50,8 +50,13 @@
       （`core/im_council.py` + `channel_manager.py`，F17；IM 通道 stretch 时仅 ports，A2A 域独立 `packages/a2a`）
 - [ ] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
       与 `packages/chat/approval` 打通）
-- [ ] T7.18 `packages/forgekin/eval-ledger`：评估台账 + 评估契约/三信号交叉/归因矩阵
+- [x] T7.18 `packages/forgekin/eval-ledger`：评估台账 + 评估契约/三信号交叉/归因矩阵
       （`evolution/eval_ledger.py` + `core/eval/`，F19/F41）
+      （批次8：ReplayABRunner 七步流程（用例校验/净增益/烟雾门 2-3/晋升门 3-5+3 类覆盖/
+      决策与拒绝原因）+ EvalLedgerStore 五指标统计 + RuleBasedJudge 四档评分；
+      EvalContract 五问 + ContractRegistry；ThreeSignalCrossValidator 三方交叉（三级判定提取/
+      多数投票/置信度加权）；Attributor 七类归因（关键词规则 + category_hint 加权 + 外置
+      YAML 文案模板铁律5+P16），EvalLedgerService 挂载 `ctx.forgeEvalLedger`，59 测试）
 - [ ] T7.19 `packages/forgekin/autonomous` + `packages/forgekin/auto-dream`：自主进化 + 梦境回放
       （`forgemind/autonomous.py` + `evolution/auto_dream.py`，F20）
 - [ ] T7.20 `packages/forgekin/evolution-engine`：进化引擎三循环

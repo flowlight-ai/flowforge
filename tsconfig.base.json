@@ -159,6 +159,9 @@
       "@flowforge/forgekin-forging": [
         "./packages/forgekin/forging/src/index.ts"
       ],
+      "@flowforge/forgekin-eval-ledger": [
+        "./packages/forgekin/eval-ledger/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],
