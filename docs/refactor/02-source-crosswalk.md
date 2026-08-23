@@ -106,8 +106,8 @@
 | `forgemind/stages.py` + `evolution/maturity.py` | `packages/forgekin/stage`（觉醒阶/进化阶 E1-E6 + 成熟度阶梯） | 直接翻译 | ✅（批次2 forgekin-stage：双轴阶模型 + KnowledgeMaturityLadder + `ctx.forgeStage`，42 测试） |
 | `core/workflow_compiler.py` + `workflow_compiler_parser.py` + `workflow_compiler_validator.py` | `packages/forgekin/workflow-compiler` + `packages/plugins/workflow` | 直接翻译（YAML→执行图） | ✅（批次3 forgekin-workflow-compiler：三阶段 Parser/Validator/CodeGen + 条件路由/复合步骤 + `ctx.forgeWorkflowCompiler`，43 测试） |
 | `forgemind/external_agents.py` + `core/helm_adapter.py` + `helm_ws_manager.py` | `packages/limb/adapters`（EAC 七契约）+ `packages/forgekin/external-agents`（Helm LLM 事件桥） | 直接翻译为适配器接口 | ✅（批次5 limb-adapters EAC 六方法；批次3 forgekin-external-agents：五种内置 kind 子进程适配器 + LLMClientHelmAdapter + `ctx.forgeExternalAgents`，29 测试） |
-| `forgemind/base.py` + `forgekin.py` + `registry.py` + `species.py` + `species_impl/` | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F6） | ⬜ |
-| `forgemind/stages.py`（觉醒流程）+ `forging/` | `packages/forgekin/awakening` + `packages/cats/bootcamp` | 直接翻译 | ⬜ |
+| `forgemind/base.py` + `forgekin.py` + `registry.py` + `species.py` + `species_impl/` | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F6） | ✅（批次7 forgekin-species：五物种模型/工厂/注册表/活实例表全插件化，69 测试） |
+| `forgemind/stages.py`（觉醒流程）+ `forging/` | `packages/forgekin/awakening` + `packages/cats/bootcamp` | 直接翻译 | 🔶（批次7：`forging/` 已落 `packages/forgekin/forging`（ForgePipeline 六阶段 + `ctx.forgeForging`，30 测试）；觉醒流程仍待 `awakening`） |
 | `forgemind/autonomous.py` | `packages/forgekin/loops/autonomous` | 直接翻译 | ⬜ |
 | `core/plugin_loader.py` + `plugin_manager.py` + `plugin_registry.py` + `plugin_lifecycle.py` + `plugin_packaging.py` + `plugin_protocol.py` + `plugin_sandbox.py` + `plugin_frontend.py` | `packages/extensions/*` + `packages/marketplace` | 行为基线对照；机制统一为 cordis loader（R13） | ⬜ |
 | `core/marketplace.py` | `packages/marketplace` | 直接翻译 | ⬜ |
@@ -129,10 +129,10 @@
 | `forgemind/swarm.py` + `config/agent_swarm.yaml` | `packages/forgekin/swarm` | 直接翻译（F16；F049） | ✅（批次5 forgekin-swarm：SwarmCoordinator 调度/心跳回收/跨厂商 + `ctx.forgeSwarm`，68 测试） |
 | `core/im_council.py` + `config/im_council.yaml` + `config/im_channels.yaml` + `config/a2a_channels.yaml` + `core/channel_manager.py` | `packages/forgekin/im-council` + `packages/chat/channels` | 直接翻译（F17；F047）；A2A 域独立 `packages/a2a` | ⬜ |
 | `core/teamact/` + `config/teamact_steer.yaml` | `packages/cats/teamact` | 直接翻译（F18；F048） | ⬜ |
-| `evolution/eval_ledger.py` | `packages/forgekin/eval-ledger` | 直接翻译（F19；F050） | ⬜ |
+| `evolution/eval_ledger.py` + `core/eval/`（contract/three_signals/attribution） | `packages/forgekin/eval-ledger` | 直接翻译（F19/F41；F050） | ✅（批次8 forgekin-eval-ledger：Replay A/B 七步台账 + 五问契约 + 三方信号交叉 + 七类归因，`ctx.forgeEvalLedger`，59 测试） |
 | `forgemind/autonomous.py` + `evolution/auto_dream.py` | `packages/forgekin/autonomous` + `packages/forgekin/auto-dream` | 直接翻译（F20；F051） | ⬜ |
 | `evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py` | `packages/forgekin/evolution-engine` | 直接翻译（F22；F046 三循环基础设施） | ⬜ |
-| `core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_manager,checkpoint_config}.py` + `config/resilience.yaml*` + `config/recovery_tiers.yaml*` | `packages/plugins/resilience` + `packages/core/session` | 直接翻译（F23；A004/A022） | ⬜ |
+| `core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_manager,checkpoint_config}.py` + `config/resilience.yaml*` + `config/recovery_tiers.yaml*` | `packages/plugins/resilience` + `packages/core/session` | 直接翻译（F23；A004/A022） | ✅（阶段2 基础核心；批次9 补齐 ResilienceExecutor+CheckpointConfig+Cordis 插件 `ctx.forgeResilience`，58 测试） |
 | `core/feature_flags.py` + `core/canary.py` + `config/canary/default.yaml` | `packages/plugins/feature-flags` + `packages/plugins/canary` | 直接翻译（F24） | ⬜ |
 | `core/base_mode_executor.py` + `modes/` + `core/execution_policy.py` + `core/step_limiter.py` + `core/agent_timeout.py` | `packages/plugins/modes` + `packages/core/agent` | 直接翻译（F25） | ⬜ |
 | `core/{content_moderation,moderation}.py` + `core/gate/` + `core/guardrails.py` | `packages/plugins/guard` | 直接翻译（F26） | ⬜ |
@@ -140,7 +140,7 @@
 | `core/{model_service,model_capability,provider_quota}.py` + `config/llm_route.yaml` + `config/provider_quota.yaml*` | `packages/llm/*` | 直接翻译（F28） | ⬜ |
 | `sop/` + `config/sops/*.yaml` | `packages/forgekin/sop` | 直接翻译（F29） | ✅（批次4 forgekin-sop：PredicateChecker 8 检查器 + SOPExecutor 阶段门禁/流转 + YAML 加载 + `ctx.forgeSop`，71 测试） |
 | `forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forgemind/forgekins/*.yaml`（8 物种档案） | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F30；A027） | ⬜ |
-| `forging/` + `forgemind/config/forging.yaml` | `packages/forgekin/forging` | 直接翻译（F31；A028） | ⬜ |
+| `forging/` + `forgemind/config/forging.yaml` | `packages/forgekin/forging` | 直接翻译（F31；A028） | ✅（批次7 forgekin-forging：ForgePipeline 六阶段 + 内置双 YAML + `ctx.forgeForging`，30 测试） |
 | `core/event_memory.py` + `events/` + `middleware/` + `security/` + `vcs/` + `compiler/` + `loop/` + `evaluators/` + `a2a/` + `executor/` + `session/` + `scheduler/` + `skills/` + `llm/` + `agents/` + `brain/` + `services/` + `review/` | `packages/{core,harness,forgekin}/*` 对应域 | 逐目录盘点登记，移植前先读源再写 crosswalk 明细 | ⬜ |
 | `core/{prompt_manager,persona_injector,persona_lock}.py` | `packages/core/system-prompt` | 行为基线对照（D2） | ⬜ |
 | `config/trae_bridge.yaml` + `.trae_bridge/` | `packages/forgekin/trae-bridge` | 直接翻译（F32；F045） | ✅ |

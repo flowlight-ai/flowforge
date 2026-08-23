@@ -50,14 +50,23 @@
       （`core/im_council.py` + `channel_manager.py`，F17；IM 通道 stretch 时仅 ports，A2A 域独立 `packages/a2a`）
 - [ ] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
       与 `packages/chat/approval` 打通）
-- [ ] T7.18 `packages/forgekin/eval-ledger`：评估台账 + 评估契约/三信号交叉/归因矩阵
+- [x] T7.18 `packages/forgekin/eval-ledger`：评估台账 + 评估契约/三信号交叉/归因矩阵
       （`evolution/eval_ledger.py` + `core/eval/`，F19/F41）
+      （批次8：ReplayABRunner 七步流程（用例校验/净增益/烟雾门 2-3/晋升门 3-5+3 类覆盖/
+      决策与拒绝原因）+ EvalLedgerStore 五指标统计 + RuleBasedJudge 四档评分；
+      EvalContract 五问 + ContractRegistry；ThreeSignalCrossValidator 三方交叉（三级判定提取/
+      多数投票/置信度加权）；Attributor 七类归因（关键词规则 + category_hint 加权 + 外置
+      YAML 文案模板铁律5+P16），EvalLedgerService 挂载 `ctx.forgeEvalLedger`，59 测试）
 - [ ] T7.19 `packages/forgekin/autonomous` + `packages/forgekin/auto-dream`：自主进化 + 梦境回放
       （`forgemind/autonomous.py` + `evolution/auto_dream.py`，F20）
 - [ ] T7.20 `packages/forgekin/evolution-engine`：进化引擎三循环
       （`evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py`，F22）
-- [ ] T7.21 `packages/plugins/resilience`：弹性栈（`core/{circuit_breaker,fallback_chain,degradation,recovery_tier,
+- [x] T7.21 `packages/plugins/resilience`：弹性栈（`core/{circuit_breaker,fallback_chain,degradation,recovery_tier,
       restart_recovery,checkpoint_*}.py` + `config/resilience.yaml|recovery_tiers.yaml`，F23）
+      （批次9：在阶段2 基础核心（熔断/回退链/降级决策树/恢复层级/重启恢复）之上补齐 —
+      ResilienceExecutor P3-005 灾备执行器（三级恢复执行 + 回退链降级）+
+      CheckpointConfig YAML 配置加载与校验 + ResilienceService Cordis 插件化
+      挂载 `ctx.forgeResilience`（decisionTree/executor/checkpoint 门面），58 测试）
 - [ ] T7.22 `packages/forgekin/stores`：Side-Effect WAL + 记忆治理（F21/F39；事件写前日志）
 - [x] T7.23 `packages/forgekin/knowledge`：MindCodex 检索三入口/消费加权排名/可检索（F38）
       （批次1：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 T7.4）
@@ -66,8 +75,14 @@
       （manual/git_state/env/command_pattern/command_sequence/handle/sha_dedup/feature_doc）
       + SOPExecutor 阶段门禁/可选阶段降级/for-break-success 流转 + YAML 加载，
       SopService 挂载 `ctx.forgeSop`，71 测试）
-- [ ] T7.25 `packages/forgekin/species` + `packages/forgekin/forging`：物种体系 + 锻造流水线
+- [x] T7.25 `packages/forgekin/species` + `packages/forgekin/forging`：物种体系 + 锻造流水线
       （`forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forging/`，F30/F31）
+      （批次7：forgekin-species 五物种数据模型 + ForgekinBase（chat 降级/注入/重试分类）
+      + ForgekinRegistry selectOwner 启发式 + SpeciesFactoryRegistry 构造器注册表（替代
+      Python importlib）+ 五形态 act 边界校验 + SpeciesService 活实例表（spawn/adopt）
+      挂载 `ctx.forgeSpecies`；forgekin-forging 六阶段 ForgePipeline（失败包装/计时/
+      lastStageResults）+ 默认锚点 SoulImprint + forgeFromYaml 配置驱动 + 内置
+      forging.yaml/prompts.yaml（import.meta.url 定位），ForgingService 挂载 `ctx.forgeForging`，99 测试）
 - [x] T7.26 `packages/forgekin/trae-bridge`：Trae 桥（`config/trae_bridge.yaml` + `.trae_bridge/`，F32；
       移植 `llm/trae/` 七模块：TraeBridgeProtocol 文件协议（writeRequest/pollResponse/cancel/归档/
       status.json，F045 I1-I8 不变量）+ TraeLLMClient 门面（chat/stream/completeCode/reviewCode/

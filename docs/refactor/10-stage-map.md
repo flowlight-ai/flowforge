@@ -190,19 +190,19 @@
 | F16 | 群聊编排 swarm | forgemind/swarm.py + config/agent_swarm.yaml（F049） | 7 | ✅（批次5 forgekin-swarm：SwarmCoordinator 能力路由/心跳回收/跨厂商过滤 + `ctx.forgeSwarm`，68 测试） |
 | F17 | IM 议会 im_council + 通道管理 | core/im_council.py + channel_manager.py + config/im_council|im_channels|a2a_channels.yaml（F047） | 7 | ⬜ |
 | F18 | TeamAct 转向与审批 | core/teamact/ + config/teamact_steer.yaml（F048；对照 F002） | 7 | ⬜ |
-| F19 | 评估台账 eval_ledger | evolution/eval_ledger.py（F050；对照 F018 评估契约） | 7 | ⬜ |
+| F19 | 评估台账 eval_ledger | evolution/eval_ledger.py（F050；对照 F018 评估契约） | 7 | ✅（批次8 forgekin-eval-ledger：ReplayABRunner 七步（净增益/双门/3 类覆盖）+ Store 五指标 + RuleBasedJudge，59 测试） |
 | F20 | 自主进化 autonomous + 梦境回放 auto_dream | forgemind/autonomous.py + evolution/auto_dream.py（F051） | 7 | ⬜ |
 | F21 | Side-Effect WAL（记忆写前日志） | core/event_memory.py 相关（F021） | 7 | ⬜ |
 | F22 | 进化引擎三循环（engine/foreman/runtime/qc_loop/close_gate/process_evolution/scope_guard/metacognition/models） | evolution/*.py（F046） | 7 | ⬜ |
-| F23 | 弹性栈（熔断/降级/恢复层级/检查点/重启恢复） | core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_*}.py + config/resilience.yaml|recovery_tiers.yaml（F022；A004/A022） | 2/7 | ✅（packages/plugins/resilience，23 vitest；阶段 7 应用层接线待做） |
+| F23 | 弹性栈（熔断/降级/恢复层级/检查点/重启恢复） | core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_*}.py + config/resilience.yaml|recovery_tiers.yaml（F022；A004/A022） | 2/7 | ✅（packages/plugins/resilience；批次9 补齐 ResilienceExecutor+CheckpointConfig+Cordis 插件 `ctx.forgeResilience`，58 vitest） |
 | F24 | 特性开关 + 金丝雀 | core/feature_flags.py + core/canary.py + config/canary/default.yaml | 2 | ✅（packages/plugins/feature-flags 8 + canary 10 vitest） |
 | F25 | 模式执行器（modes/执行策略/步长限制/超时） | core/base_mode_executor.py + modes/ + execution_policy.py + step_limiter.py + agent_timeout.py | 1/2 | ✅（packages/plugins/modes，14 vitest） |
 | F26 | 内容审核与护栏（moderation/gate/guardrails） | core/{content_moderation,moderation,guardrails}.py + core/gate/（对照 F007 push-back） | 2 | ✅（packages/plugins/guard，16 vitest） |
 | F27 | 状态机族（handoff/状态映射/变量解析/命名空间/上下文层/工具链执行/字段门控） | core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py（F003/F024；A003/A024） | 1/7 | ⬜ |
 | F28 | LLM 路由/模型服务/提供商配额 | core/{model_service,model_capability,provider_quota}.py + config/llm_route.yaml|provider_quota.yaml*（F025） | 1/3 | ⬜ |
 | F29 | SOP 标准作业程序 | sop/ + config/sops/*.yaml | 7 | ✅（批次4 forgekin-sop：阶段门禁引擎（PredicateChecker 8 检查器 + SOPExecutor 门禁/流转 + YAML 加载）+ `ctx.forgeSop`，71 测试） |
-| F30 | 物种体系（base/forgekin/registry/species + species_impl + forgekins/*.yaml 8 物种） | forgemind/*.py + forgemind/forgekins/*.yaml（F027；A027） | 4/7 | ⬜ |
-| F31 | 锻造流水线 forging | forging/ + forgemind/config/forging.yaml（F028；A028） | 7 | ⬜ |
+| F30 | 物种体系（base/forgekin/registry/species + species_impl + forgekins/*.yaml 8 物种） | forgemind/*.py + forgemind/forgekins/*.yaml（F027；A027） | 4/7 | ✅（批次7 forgekin-species：五物种数据模型 + ForgekinBase chat 降级/重试分类 + Registry selectOwner + SpeciesFactoryRegistry 构造器注册表 + 五形态边界校验 + `ctx.forgeSpecies` 活实例表，69 测试） |
+| F31 | 锻造流水线 forging | forging/ + forgemind/config/forging.yaml（F028；A028） | 7 | ✅（批次7 forgekin-forging：六阶段 ForgePipeline（失败包装/计时）+ 默认锚点印记 + forgeFromYaml + 内置双 YAML，`ctx.forgeForging`，30 测试） |
 | F32 | Trae 桥接 | config/trae_bridge.yaml + .trae_bridge/（F045） | 7 | ✅（批次6 forgekin-trae-bridge：TraeBridgeProtocol 文件协议（F045 I1-I8）+ TraeLLMClient 门面 + BridgeLLMOperator OpenRoute 轮询 + 会话持久化 + YAML 配置）+ `ctx.forgeTraeBridge`，113 测试） |
 | F33 | 外部 agent 共享状态 | core/external_agent/（F033） | 6 | ⬜ |
 | F34 | 外部 agent 降级回退 | core/external_agent/ + fallback_chain（F034） | 6 | ⬜ |
@@ -212,7 +212,7 @@
 | F38 | MindCodex 检索（三入口/消费加权排名/可检索） | core/knowledge_evolution.py + memory_federation/（F015/F016/F039） | 7 | ✅（批次1 forgekin-knowledge：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 F4） |
 | F39 | 记忆治理 | core/memory_federation/ + core/event_memory.py（F014/F017） | 7 | ⬜ |
 | F40 | 球权托管 + push-back 协议 | docs/features/F005/F006（F006） | 5/7 | ⬜ |
-| F41 | 评估契约/三信号交叉/归因矩阵 | core/eval/ + evolution/eval_ledger.py（F018/F019/F020） | 7 | ⬜ |
+| F41 | 评估契约/三信号交叉/归因矩阵 | core/eval/ + evolution/eval_ledger.py（F018/F019/F020） | 7 | ✅（批次8 forgekin-eval-ledger：EvalContract 五问 + ContractRegistry + ThreeSignalCrossValidator + Attributor 七类归因，`ctx.forgeEvalLedger`） |
 | F42 | 活性探针与规范读（liveness canonical read） | core/（F023） | 3/7 | ⬜ |
 | F43 | 特种角色子代理（产品经理/DevOps/安全官/交付经理） | forgemind/forms.py 相关（F041-F044） | 7 | ⬜ |
 | F44 | 物理 AI 传感器 + 虚拟世界设置 | core/world_engine/ + conditional_router.py（F029/F030） | stretch | ⬜ |
