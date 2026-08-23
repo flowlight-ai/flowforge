@@ -1988,6 +1988,21 @@ importers:
         specifier: workspace:^
         version: link:../../typert/protocol
 
+  packages/forgekin/auto-dream:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/forgekin/autonomous:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-swarm':
+        specifier: workspace:^
+        version: link:../swarm
+
   packages/forgekin/capability:
     devDependencies:
       '@flowforge/cordis':
