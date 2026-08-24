@@ -160,6 +160,16 @@ class RuleBasedVerifier(LoopVerifier):
                 return True, ""
             return False, f"Output length {actual_len} is below minimum {min_len}"
 
+        if rule.startswith("max_length:"):
+            try:
+                max_len = int(rule.split(":", 1)[1])
+            except (ValueError, IndexError):
+                return True, ""
+            actual_len = len(str(content)) if content else 0
+            if actual_len <= max_len:
+                return True, ""
+            return False, f"Output length {actual_len} exceeds maximum {max_len}"
+
         if rule.startswith("contains:"):
             keyword = rule.split(":", 1)[1] if ":" in rule else ""
             if not keyword:
