@@ -156,6 +156,9 @@
       "path": "./packages/forgekin/autonomous/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/evolution-engine/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

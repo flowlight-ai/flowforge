@@ -60,8 +60,8 @@
 - [x] T7.19 `packages/forgekin/autonomous` + `packages/forgekin/auto-dream`：自主进化 + 梦境回放
       （`forgemind/autonomous.py` + `evolution/auto_dream.py`，F20；批次10：autonomous — F052 24h 自主守护进程（三类扫描：文档缺失/TODO/测试缺失三级查找 + 状态感知去重 + Bug1 消费循环与拾取即心跳 + 心跳保活 + Bug2 无效产出检测 + Bug4/5 主动 fail_task + 三类真实落盘 + 活动日志）
       `ctx.forgeAutonomous`；auto-dream — CL-031 双层架构（EpisodeCard/MethodCard L0-L2 模型 + 五级成熟度阶梯 + 贪心聚类 + 蒸馏 L2 草稿 + TopK 浮现 + 4 信号 telemetry + I1 幂等/I4 中断 + 后台循环）`ctx.forgeAutoDream`，81 测试）
-- [ ] T7.20 `packages/forgekin/evolution-engine`：进化引擎三循环
-      （`evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py`，F22）
+- [x] T7.20 `packages/forgekin/evolution-engine`：进化引擎三循环
+      （`evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py`，F22；批次11：ForgeMindEngine 三模式治理（Mode A Scope Guard 偏离检测 / Mode B Process Evolution 提案管理 / Mode C Knowledge Evolution + 元认知路由）+ CL-033 ApprovalHub 审批中心 + SelfDevRuntime 五闭环装配（auto/manual/im 三审批模式）+ ContinuousForeman 五 Forgekin 持续调度 + CL-034 QC Loop 7-Step + CL-025 Close Gate 判据，`ctx.forgeEvolution`，114 测试）
 - [x] T7.21 `packages/plugins/resilience`：弹性栈（`core/{circuit_breaker,fallback_chain,degradation,recovery_tier,
       restart_recovery,checkpoint_*}.py` + `config/resilience.yaml|recovery_tiers.yaml`，F23）
       （批次9：在阶段2 基础核心（熔断/回退链/降级决策树/恢复层级/重启恢复）之上补齐 —

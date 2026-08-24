@@ -1,8 +1,723 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "composite": false,
-    "noEmit": true
+    "noEmit": true,
+    "rewriteRelativeImportExtensions": false
   },
-  "include": ["tests"]
+  "include": [
+    "packages/*/*/tests/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "packages/client/*/src/**",
+    "packages/*/*/tests/**/*.client.ts",
+    "packages/*/*/tests/**/*.client.tsx",
+    "packages/*/*/tests/**/*.client.spec.ts",
+    "packages/*/*/tests/**/*.client.spec.tsx",
+    "packages/typert/generator/tests/fixtures/**",
+    "packages/typert/generator/tests/cordis-catalog.spec.ts",
+    "packages/examples/agent-spine-demo/tests/gen-config-catalog.spec.ts",
+    "packages/todo/tool-todo/tests/projection.spec.ts"
+  ],
+  "references": [
+    {
+      "path": "./apps/cli"
+    },
+    {
+      "path": "./native/landlock-run/packages/entry"
+    },
+    {
+      "path": "./packages/acp/acp"
+    },
+    {
+      "path": "./packages/api/gateway/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/api/remotes/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/shared/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/stores/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/stores-sqlite/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/invocation/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/orchestration/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/profile/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/session/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/threads/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/messages/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/realtime/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/approval/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/mention/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/session-chain/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/misc/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/stretch-ports/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/e2e/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/core/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/adapters/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/embodiment/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/node/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/observation/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/limb/terminal/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/soul/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/capability/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/memory/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/knowledge/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/council/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/stage/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/loops/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/workflow-compiler/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/external-agents/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/magic-words/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/sop/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/swarm/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/trae-bridge/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/species/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/forging/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/eval-ledger/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/auto-dream/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/autonomous/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/evolution-engine/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/attachment/attachment"
+    },
+    {
+      "path": "./packages/attachment/attachment-local"
+    },
+    {
+      "path": "./packages/boot/app-boot"
+    },
+    {
+      "path": "./packages/boot/cmdline"
+    },
+    {
+      "path": "./packages/bundle/base"
+    },
+    {
+      "path": "./packages/bundle/headless"
+    },
+    {
+      "path": "./packages/client/connection/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/code-runtime/code-runtime"
+    },
+    {
+      "path": "./packages/code-runtime/code-runtime-worker-thread"
+    },
+    {
+      "path": "./packages/compaction/command-compact"
+    },
+    {
+      "path": "./packages/compaction/compaction"
+    },
+    {
+      "path": "./packages/compaction/compaction-basic"
+    },
+    {
+      "path": "./packages/compaction/compaction-tool-result-pruner"
+    },
+    {
+      "path": "./packages/context/agent-instructions"
+    },
+    {
+      "path": "./packages/context/session-reference"
+    },
+    {
+      "path": "./packages/context/time-context"
+    },
+    {
+      "path": "./packages/context/tmux-context"
+    },
+    {
+      "path": "./packages/core/agent"
+    },
+    {
+      "path": "./packages/core/agent-default-model"
+    },
+    {
+      "path": "./packages/core/agent-loop"
+    },
+    {
+      "path": "./packages/core/agent-tool-presentation"
+    },
+    {
+      "path": "./packages/core/scope"
+    },
+    {
+      "path": "./packages/core/session"
+    },
+    {
+      "path": "./packages/core/system-prompt"
+    },
+    {
+      "path": "./packages/core/tools"
+    },
+    {
+      "path": "./packages/credentials/credentials"
+    },
+    {
+      "path": "./packages/credentials/credentials-local"
+    },
+    {
+      "path": "./packages/e2b/e2b"
+    },
+    {
+      "path": "./packages/e2b/fs-e2b"
+    },
+    {
+      "path": "./packages/e2b/subprocess-e2b"
+    },
+    {
+      "path": "./packages/examples/agent-spine-demo"
+    },
+    {
+      "path": "./packages/extensions/cordis-host-runner"
+    },
+    {
+      "path": "./packages/extensions/tool-cordis"
+    },
+    {
+      "path": "./packages/feedback/command-feedback"
+    },
+    {
+      "path": "./packages/feedback/message-feedback"
+    },
+    {
+      "path": "./packages/fs/fs"
+    },
+    {
+      "path": "./packages/fs/fs-local"
+    },
+    {
+      "path": "./packages/fs/fs-observation-policy"
+    },
+    {
+      "path": "./packages/fs/fs-sandbox"
+    },
+    {
+      "path": "./packages/fs/tool-fs"
+    },
+    {
+      "path": "./packages/fs/tool-fs-search"
+    },
+    {
+      "path": "./packages/fs/tool-str-replace-editor"
+    },
+    {
+      "path": "./packages/goal/command-goal"
+    },
+    {
+      "path": "./packages/goal/goal"
+    },
+    {
+      "path": "./packages/goal/goal-round-driver"
+    },
+    {
+      "path": "./packages/goal/tool-goal"
+    },
+    {
+      "path": "./packages/guard/repeat-tool-reminder"
+    },
+    {
+      "path": "./packages/guard/timeout-policy"
+    },
+    {
+      "path": "./packages/harness/boot"
+    },
+    {
+      "path": "./packages/host/apiproxy"
+    },
+    {
+      "path": "./packages/host/directory-picker"
+    },
+    {
+      "path": "./packages/host/directory-picker-browse"
+    },
+    {
+      "path": "./packages/host/directory-picker-native"
+    },
+    {
+      "path": "./packages/host/frontend-static"
+    },
+    {
+      "path": "./packages/host/plugin-inventory"
+    },
+    {
+      "path": "./packages/host/webserver"
+    },
+    {
+      "path": "./packages/hooks/hook-protocol"
+    },
+    {
+      "path": "./packages/hooks/hooks-claude-code"
+    },
+    {
+      "path": "./packages/hooks/hooks-codex"
+    },
+    {
+      "path": "./packages/identity/anonymous-user-id"
+    },
+    {
+      "path": "./packages/interaction/commands"
+    },
+    {
+      "path": "./packages/interaction/permission-presets"
+    },
+    {
+      "path": "./packages/interaction/tool-ask-user"
+    },
+    {
+      "path": "./packages/interaction/user-approval"
+    },
+    {
+      "path": "./packages/interaction/user-questions"
+    },
+    {
+      "path": "./packages/jobs/jobs"
+    },
+    {
+      "path": "./packages/jobs/jobs-local"
+    },
+    {
+      "path": "./packages/jobs/tool-jobs"
+    },
+    {
+      "path": "./packages/llm/llm"
+    },
+    {
+      "path": "./packages/llm/llm-deepseek"
+    },
+    {
+      "path": "./packages/llm/llm-pi-ai"
+    },
+    {
+      "path": "./packages/llm/llm-retry"
+    },
+    {
+      "path": "./packages/llm/token-meter"
+    },
+    {
+      "path": "./packages/lsp/lsp"
+    },
+    {
+      "path": "./packages/lsp/lsp-stdio"
+    },
+    {
+      "path": "./packages/lsp/tool-lsp"
+    },
+    {
+      "path": "./packages/mcp/mcp-client"
+    },
+    {
+      "path": "./packages/plan/plan-mode"
+    },
+    {
+      "path": "./packages/plugin-contract/plugin-contract"
+    },
+    {
+      "path": "./packages/plugins/canary"
+    },
+    {
+      "path": "./packages/plugins/feature-flags"
+    },
+    {
+      "path": "./packages/plugins/guard"
+    },
+    {
+      "path": "./packages/plugins/modes"
+    },
+    {
+      "path": "./packages/plugins/resilience"
+    },
+    {
+      "path": "./packages/plugins/skill-security"
+    },
+    {
+      "path": "./packages/preset/agent-presets"
+    },
+    {
+      "path": "./packages/preset/persona"
+    },
+    {
+      "path": "./packages/runtime-diagnostics/invariants"
+    },
+    {
+      "path": "./packages/sandbox/sandbox"
+    },
+    {
+      "path": "./packages/sandbox/sandbox-local"
+    },
+    {
+      "path": "./packages/sandbox/sandbox-policy"
+    },
+    {
+      "path": "./packages/sandbox/sandbox-windows-acl"
+    },
+    {
+      "path": "./packages/schedule/schedule"
+    },
+    {
+      "path": "./packages/sdk/client"
+    },
+    {
+      "path": "./packages/sdk/protocol"
+    },
+    {
+      "path": "./packages/sdk/server"
+    },
+    {
+      "path": "./packages/session-query/session-query"
+    },
+    {
+      "path": "./packages/session-query/session-query-sqlite"
+    },
+    {
+      "path": "./packages/session-query/tool-session-query"
+    },
+    {
+      "path": "./packages/session/session-checkpoint-policy"
+    },
+    {
+      "path": "./packages/session/session-persistence"
+    },
+    {
+      "path": "./packages/session/session-persistence-jsonl"
+    },
+    {
+      "path": "./packages/session/session-persistence-sqlite"
+    },
+    {
+      "path": "./packages/session/session-projection"
+    },
+    {
+      "path": "./packages/session/session-projection-cache"
+    },
+    {
+      "path": "./packages/session/session-stats"
+    },
+    {
+      "path": "./packages/session/session-telemetry"
+    },
+    {
+      "path": "./packages/session/session-telemetry-otel"
+    },
+    {
+      "path": "./packages/session/session-title"
+    },
+    {
+      "path": "./packages/session/session-title-all-prompts-llm"
+    },
+    {
+      "path": "./packages/session/session-title-first-prompt-llm"
+    },
+    {
+      "path": "./packages/session/session-title-llm"
+    },
+    {
+      "path": "./packages/settings/settings"
+    },
+    {
+      "path": "./packages/settings/settings-file"
+    },
+    {
+      "path": "./packages/shell/bash-local"
+    },
+    {
+      "path": "./packages/shell/bash-sandbox"
+    },
+    {
+      "path": "./packages/shell/pwsh-local"
+    },
+    {
+      "path": "./packages/shell/pwsh-sandbox"
+    },
+    {
+      "path": "./packages/shell/shell"
+    },
+    {
+      "path": "./packages/shell/shell-env"
+    },
+    {
+      "path": "./packages/shell/tool-bash"
+    },
+    {
+      "path": "./packages/shell/tool-bash-persistent"
+    },
+    {
+      "path": "./packages/shell/tool-pwsh"
+    },
+    {
+      "path": "./packages/skill/skill"
+    },
+    {
+      "path": "./packages/skill/skill-badge"
+    },
+    {
+      "path": "./packages/skill/skill-filesystem"
+    },
+    {
+      "path": "./packages/skill/tool-skill"
+    },
+    {
+      "path": "./packages/spill/spill"
+    },
+    {
+      "path": "./packages/spill/spill-local"
+    },
+    {
+      "path": "./packages/spill/spill-policy"
+    },
+    {
+      "path": "./packages/storage/storage"
+    },
+    {
+      "path": "./packages/storage/storage-domain"
+    },
+    {
+      "path": "./packages/storage/storage-json"
+    },
+    {
+      "path": "./packages/storage/storage-sqlite"
+    },
+    {
+      "path": "./packages/subagent/subagent"
+    },
+    {
+      "path": "./packages/subagent/subagent-acp"
+    },
+    {
+      "path": "./packages/subagent/subagent-claude-code"
+    },
+    {
+      "path": "./packages/subagent/subagent-codex"
+    },
+    {
+      "path": "./packages/subagent/subagent-ff-sdk"
+    },
+    {
+      "path": "./packages/subagent/subagent-fork-in-process"
+    },
+    {
+      "path": "./packages/subagent/subagent-in-process-driver"
+    },
+    {
+      "path": "./packages/subagent/subagent-spawn-in-process"
+    },
+    {
+      "path": "./packages/subagent/tool-subagent"
+    },
+    {
+      "path": "./packages/subagent/tool-subagent-control"
+    },
+    {
+      "path": "./packages/subagent/tool-subagent-report"
+    },
+    {
+      "path": "./packages/subprocess/subprocess"
+    },
+    {
+      "path": "./packages/subprocess/subprocess-local"
+    },
+    {
+      "path": "./packages/terminal/terminal"
+    },
+    {
+      "path": "./packages/terminal/terminal-bash"
+    },
+    {
+      "path": "./packages/terminal/tool-terminal"
+    },
+    {
+      "path": "./packages/test-support/acp-snapshot"
+    },
+    {
+      "path": "./packages/test-support/agent-loop-testkit"
+    },
+    {
+      "path": "./packages/test-support/llm-mock-server"
+    },
+    {
+      "path": "./packages/test-support/llm-replay"
+    },
+    {
+      "path": "./packages/test-support/loader-smoke"
+    },
+    {
+      "path": "./packages/todo/tool-todo"
+    },
+    {
+      "path": "./packages/typert/generator"
+    },
+    {
+      "path": "./packages/typert/loader"
+    },
+    {
+      "path": "./packages/typert/protocol"
+    },
+    {
+      "path": "./packages/typert/registry"
+    },
+    {
+      "path": "./packages/util/atomic-write"
+    },
+    {
+      "path": "./packages/util/brand"
+    },
+    {
+      "path": "./packages/util/home-paths"
+    },
+    {
+      "path": "./packages/util/launch-environment"
+    },
+    {
+      "path": "./packages/util/native-command"
+    },
+    {
+      "path": "./packages/util/output-retention"
+    },
+    {
+      "path": "./packages/util/timeout"
+    },
+    {
+      "path": "./packages/web/tool-web"
+    },
+    {
+      "path": "./packages/web/web"
+    },
+    {
+      "path": "./packages/web/web-fetch-http"
+    },
+    {
+      "path": "./packages/web/web-search-deepseek"
+    },
+    {
+      "path": "./packages/web/web-search-exa"
+    },
+    {
+      "path": "./packages/web/web-search-perplexity"
+    },
+    {
+      "path": "./packages/workflow/tool-ralph"
+    },
+    {
+      "path": "./packages/workflow/tool-workflow"
+    },
+    {
+      "path": "./packages/workflow/workflow"
+    },
+    {
+      "path": "./packages/workflow/workflow-worker-thread"
+    },
+    {
+      "path": "./packages/workspace/workspace"
+    },
+    {
+      "path": "./vendor/cordis"
+    },
+    {
+      "path": "./vendor/cosmokit"
+    },
+    {
+      "path": "./vendor/group"
+    },
+    {
+      "path": "./vendor/hmr"
+    },
+    {
+      "path": "./vendor/include"
+    },
+    {
+      "path": "./vendor/loader"
+    },
+    {
+      "path": "./vendor/logger-console"
+    },
+    {
+      "path": "./vendor/schemastery"
+    },
+    {
+      "path": "./vendor/timer"
+    }
+  ]
 }
