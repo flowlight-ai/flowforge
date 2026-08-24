@@ -116,7 +116,7 @@
 | `core/scheduler.py` + `schedule_registry.py` + `job` 相关 | `packages/plugins/schedule|jobs` | 行为基线对照 | ⬜ |
 | `core/skill_library.py` | `packages/plugins/skill` | 行为基线对照（skill 格式迁移 YAML frontmatter） | ⬜ |
 | `core/mcp_integration.py` + `native_tool_server.py` + `tools_bridge.py`（forgemind） | `packages/plugins/mcp` | 行为基线对照 | ⬜ |
-| `core/tracing.py` + `observability.py` + `metrics.py` | `packages/api`（OTEL）+ `packages/core` | 直接翻译 | ⬜ |
+| `core/tracing.py` + `observability.py` + `metrics.py` + `event_bridge.py` + `events/event_bus.py` | `packages/forgekin/observability`（ctx.forgeObservability） | 直接翻译（P-94） | ✅（批次13，48 测试） |
 | `core/guardrails.py` + `moderation.py` + `content_moderation.py` + `core/gate/` | `packages/plugins/guard` | 直接翻译 | ⬜ |
 | `core/workspace.py` + `core/external_agent/` | `packages/plugins/workspace` + `packages/limb` | 直接翻译 | ⬜ |
 | `core/event_bridge.py` + `hooks.py` | `packages/harness/hooks` | 行为基线对照 | ⬜ |
