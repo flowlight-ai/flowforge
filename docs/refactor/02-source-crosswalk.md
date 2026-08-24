@@ -99,7 +99,7 @@
 |---|---|---|---|
 | `forgemind/soul_imprint.py` | `packages/forgekin/soul`（SoulImprint） | 直接翻译 + golden tests | ✅（批次1 forgekin-soul：不可变哈希/命名空间隔离 + `ctx.forgeSoul`，8 测试） |
 | `core/capability/*` | `packages/forgekin/capability`（CapabilityProfile/proficiency/blind_spots） | 直接翻译 | ✅（批次1 forgekin-capability：models/analyzer/profile + `ctx.forgeCapability`，38 测试） |
-| `core/memory_federation/` + `core/event_memory.py` + `core/state_*` | `packages/forgekin/memory`（EchoStore 情景）+ `packages/forgekin/knowledge`（MindCodex 程序） | 直接翻译；数据迁移见 `31-stage11-sunset.md` §4 | ✅（批次1 forgekin-memory：五存储 + EpisodePersistenceHook + `ctx.forgeMemory`；forgekin-knowledge：MindCodex 检索三入口；记忆治理 stores 待 T7.22） |
+| `core/memory_federation/` + `core/event_memory.py` + `core/state_*` | `packages/forgekin/memory`（EchoStore 情景）+ `packages/forgekin/knowledge`（MindCodex 程序）+ `packages/forgekin/stores`（记忆治理） | 直接翻译；数据迁移见 `31-stage11-sunset.md` §4 | ✅（批次1 forgekin-memory：五存储 + EpisodePersistenceHook + `ctx.forgeMemory`；forgekin-knowledge：MindCodex 检索三入口；批次12 forgekin-stores：Collection/CollectionManager + 治理三要素，`ctx.forgeStores`） |
 | `evolution/knowledge_evolution.py` | `packages/forgekin/knowledge`（SpiritForge 蒸馏管线） | 直接翻译 | ✅（批次1 forgekin-knowledge：三问→Episode→蒸馏→Eval 双门→storeToCodex，26 测试） |
 | `forgemind/council.py` + `core/im_council.py` | `packages/forgekin/council`（MindCouncil：min_reviewers/min_distinct_vendors/pass_threshold） | 直接翻译；审批基础复用 `packages/chat` approval-hub | ✅（批次2 forgekin-council：CouncilVerdict/CouncilSession + 单厂商结构性拒绝 + CouncilChannel 适配；im_council 通道管理待 T7.16） |
 | `evolution/self_dev_doc|code|framework|review|test.py` | `packages/forgekin/loops/*`（五闭环） | 直接翻译 | ✅（批次2 forgekin-loops：五步循环 + I1-I8 不变量 + `ctx.forgeLoops`，76 测试） |

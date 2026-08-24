@@ -68,7 +68,12 @@
       ResilienceExecutor P3-005 灾备执行器（三级恢复执行 + 回退链降级）+
       CheckpointConfig YAML 配置加载与校验 + ResilienceService Cordis 插件化
       挂载 `ctx.forgeResilience`（decisionTree/executor/checkpoint 门面），58 测试）
-- [ ] T7.22 `packages/forgekin/stores`：Side-Effect WAL + 记忆治理（F21/F39；事件写前日志）
+- [x] T7.22 `packages/forgekin/stores`：Side-Effect WAL + 记忆治理（F21/F39；事件写前日志）
+      （批次12：WriteAheadLog 事件写前日志（append 深拷贝/get/mark_committed/mark_rolled_back
+      单向状态机/list_uncommitted 重放/count 审计，spec 移植自 tests/core/reliability/test_wal.py）
+      + MemoryCollection/CollectionManager（backend 协议注入铁律4 + mark_consumed 不可变）
+      + MemoryGovernance 三要素（权威等级/消费加权/衰减幂等），StoresService 挂载
+      `ctx.forgeStores`，35 测试）
 - [x] T7.23 `packages/forgekin/knowledge`：MindCodex 检索三入口/消费加权排名/可检索（F38）
       （批次1：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 T7.4）
 - [x] T7.24 `packages/forgekin/sop`：SOP 标准作业程序（`sop/` + `config/sops/*.yaml`，F29）

@@ -2126,6 +2126,12 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/forgekin/stores:
+    dependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/forgekin/swarm:
     dependencies:
       yaml:
