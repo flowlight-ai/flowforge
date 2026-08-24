@@ -150,6 +150,12 @@
       "path": "./packages/forgekin/eval-ledger/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/auto-dream/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/autonomous/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

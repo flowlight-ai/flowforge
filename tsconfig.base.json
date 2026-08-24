@@ -162,6 +162,12 @@
       "@flowforge/forgekin-eval-ledger": [
         "./packages/forgekin/eval-ledger/src/index.ts"
       ],
+      "@flowforge/forgekin-auto-dream": [
+        "./packages/forgekin/auto-dream/src/index.ts"
+      ],
+      "@flowforge/forgekin-autonomous": [
+        "./packages/forgekin/autonomous/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],
