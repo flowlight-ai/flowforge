@@ -168,6 +168,12 @@
       "@flowforge/forgekin-autonomous": [
         "./packages/forgekin/autonomous/src/index.ts"
       ],
+      "@flowforge/forgekin-evolution-engine": [
+        "./packages/forgekin/evolution-engine/src/index.ts"
+      ],
+      "@flowforge/forgekin-stores": [
+        "./packages/forgekin/stores/src/index.ts"
+      ],
       "@flowforge/session-title-first-prompt-llm": [
         "./packages/session/session-title-first-prompt-llm/src/index.ts"
       ],

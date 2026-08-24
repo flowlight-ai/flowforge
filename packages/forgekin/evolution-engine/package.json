@@ -1,0 +1,48 @@
+{
+  "name": "@flowforge/forgekin-evolution-engine",
+  "description": "FlowForge Forgekin evolution engine Cordis plugin — T7.20 three-mode self-evolution governance: ForgeMindEngine (Mode A Scope Guard / Mode B Process Evolution / Mode C Knowledge Evolution + metacognition routing) + CL-033 ApprovalHub + SelfDevRuntime assembly (approval auto/manual/im) + ContinuousForeman 5-forgekin scheduler + CL-034 QC Loop 7-step + CL-025 Close Gate, TS rewrite of evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py + core/approval_hub.py at ctx.forgeEvolution (F22)",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/evolution-engine" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./models": { "types": "./lib/types/models.d.ts", "default": "./lib/models.js" },
+    "./scope-guard": { "types": "./lib/types/scope-guard.d.ts", "default": "./lib/scope-guard.js" },
+    "./process-evolution": { "types": "./lib/types/process-evolution.d.ts", "default": "./lib/process-evolution.js" },
+    "./metacognition": { "types": "./lib/types/metacognition.d.ts", "default": "./lib/metacognition.js" },
+    "./qc-loop": { "types": "./lib/types/qc-loop.d.ts", "default": "./lib/qc-loop.js" },
+    "./close-gate": { "types": "./lib/types/close-gate.d.ts", "default": "./lib/close-gate.js" },
+    "./approval-hub": { "types": "./lib/types/approval-hub.d.ts", "default": "./lib/approval-hub.js" },
+    "./engine": { "types": "./lib/types/engine.d.ts", "default": "./lib/engine.js" },
+    "./foreman": { "types": "./lib/types/foreman.d.ts", "default": "./lib/foreman.js" },
+    "./runtime": { "types": "./lib/types/runtime.d.ts", "default": "./lib/runtime.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "dependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-knowledge": "workspace:^",
+    "@flowforge/forgekin-stage": "workspace:^",
+    "@flowforge/forgekin-loops": "workspace:^",
+    "@flowforge/forgekin-swarm": "workspace:^"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-knowledge": "workspace:^",
+    "@flowforge/forgekin-stage": "workspace:^",
+    "@flowforge/forgekin-loops": "workspace:^",
+    "@flowforge/forgekin-swarm": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-knowledge": "workspace:^",
+    "@flowforge/forgekin-stage": "workspace:^",
+    "@flowforge/forgekin-loops": "workspace:^",
+    "@flowforge/forgekin-swarm": "workspace:^"
+  }
+}

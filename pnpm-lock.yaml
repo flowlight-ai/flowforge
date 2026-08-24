@@ -2025,6 +2025,24 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/forgekin/evolution-engine:
+    dependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-knowledge':
+        specifier: workspace:^
+        version: link:../knowledge
+      '@flowforge/forgekin-loops':
+        specifier: workspace:^
+        version: link:../loops
+      '@flowforge/forgekin-stage':
+        specifier: workspace:^
+        version: link:../stage
+      '@flowforge/forgekin-swarm':
+        specifier: workspace:^
+        version: link:../swarm
+
   packages/forgekin/external-agents:
     devDependencies:
       '@flowforge/cordis':
@@ -2104,6 +2122,12 @@ importers:
 
   packages/forgekin/stage:
     devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/forgekin/stores:
+    dependencies:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis

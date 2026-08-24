@@ -192,8 +192,8 @@
 | F18 | TeamAct 转向与审批 | core/teamact/ + config/teamact_steer.yaml（F048；对照 F002） | 7 | ⬜ |
 | F19 | 评估台账 eval_ledger | evolution/eval_ledger.py（F050；对照 F018 评估契约） | 7 | ✅（批次8 forgekin-eval-ledger：ReplayABRunner 七步（净增益/双门/3 类覆盖）+ Store 五指标 + RuleBasedJudge，59 测试） |
 | F20 | 自主进化 autonomous + 梦境回放 auto_dream | forgemind/autonomous.py + evolution/auto_dream.py（F051） | 7 | ✅（批次10：forgekin-autonomous F052 24h 守护进程（三类扫描+消费循环+心跳保活+无效产出检测+真实落盘）`ctx.forgeAutonomous` + forgekin-auto-dream CL-031 梦境整合双层架构（聚类+蒸馏 L2 草稿+浮现+4 信号 telemetry）`ctx.forgeAutoDream`，81 测试） |
-| F21 | Side-Effect WAL（记忆写前日志） | core/event_memory.py 相关（F021） | 7 | ⬜ |
-| F22 | 进化引擎三循环（engine/foreman/runtime/qc_loop/close_gate/process_evolution/scope_guard/metacognition/models） | evolution/*.py（F046） | 7 | ⬜ |
+| F21 | Side-Effect WAL（记忆写前日志） | core/event_memory.py 相关（F021） | 7 | ✅（批次12 forgekin-stores：WriteAheadLog append/get/mark_committed/mark_rolled_back/list_uncommitted + 深拷贝 + 单向状态机 + count 审计，`ctx.forgeStores`，35 测试） |
+| F22 | 进化引擎三循环（engine/foreman/runtime/qc_loop/close_gate/process_evolution/scope_guard/metacognition/models） | evolution/*.py（F046） | 7 | ✅（批次11 evolution-engine：ForgeMindEngine 三模式治理 + CL-033 ApprovalHub + SelfDevRuntime 三审批模式 + ContinuousForeman + CL-034 QC Loop + CL-025 Close Gate，`ctx.forgeEvolution`，114 测试） |
 | F23 | 弹性栈（熔断/降级/恢复层级/检查点/重启恢复） | core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_*}.py + config/resilience.yaml|recovery_tiers.yaml（F022；A004/A022） | 2/7 | ✅（packages/plugins/resilience；批次9 补齐 ResilienceExecutor+CheckpointConfig+Cordis 插件 `ctx.forgeResilience`，58 vitest） |
 | F24 | 特性开关 + 金丝雀 | core/feature_flags.py + core/canary.py + config/canary/default.yaml | 2 | ✅（packages/plugins/feature-flags 8 + canary 10 vitest） |
 | F25 | 模式执行器（modes/执行策略/步长限制/超时） | core/base_mode_executor.py + modes/ + execution_policy.py + step_limiter.py + agent_timeout.py | 1/2 | ✅（packages/plugins/modes，14 vitest） |
@@ -210,7 +210,7 @@
 | F36 | harness-eval 控制面 | harness/ + evaluators/（F040） | 7 | ⬜ |
 | F37 | ForgeMind 锻造关系/谱系/应用层 | forgemind/（F026/F036/F038） | 7 | ⬜ |
 | F38 | MindCodex 检索（三入口/消费加权排名/可检索） | core/knowledge_evolution.py + memory_federation/（F015/F016/F039） | 7 | ✅（批次1 forgekin-knowledge：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 F4） |
-| F39 | 记忆治理 | core/memory_federation/ + core/event_memory.py（F014/F017） | 7 | ⬜ |
+| F39 | 记忆治理 | core/memory_federation/ + core/event_memory.py（F014/F017） | 7 | ✅（批次12 forgekin-stores：MemoryCollection/CollectionManager（backend 协议注入）+ MemoryGovernance 三要素（权威等级/消费加权/衰减策略，幂等），`ctx.forgeStores`） |
 | F40 | 球权托管 + push-back 协议 | docs/features/F005/F006（F006） | 5/7 | ⬜ |
 | F41 | 评估契约/三信号交叉/归因矩阵 | core/eval/ + evolution/eval_ledger.py（F018/F019/F020） | 7 | ✅（批次8 forgekin-eval-ledger：EvalContract 五问 + ContractRegistry + ThreeSignalCrossValidator + Attributor 七类归因，`ctx.forgeEvalLedger`） |
 | F42 | 活性探针与规范读（liveness canonical read） | core/（F023） | 3/7 | ⬜ |
