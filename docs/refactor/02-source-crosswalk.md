@@ -57,7 +57,7 @@
 | 来源（C） | 落点（T） | 处理 | 状态 |
 |---|---|---|---|
 | `src/services/agents/registry`（AgentRegistry） | `packages/cats/registry` | vendor；概念映射 cat→Forgekin | ⬜ |
-| `domains/auto-dream`（梦境回放/自动化反思） | `packages/forgekin/auto-dream` | vendor；对照 P: `evolution/auto_dream.py`（F20） | ⬜ |
+| `domains/auto-dream`（梦境回放/自动化反思） | `packages/forgekin/auto-dream` | vendor；对照 P: `evolution/auto_dream.py`（F20） | 🔶（批次10：梦境整合核心已落 `packages/forgekin/auto-dream`，CL-031 双层架构 `ctx.forgeAutoDream`） |
 | `domains/ball-custody`（球权托管租约） | `packages/chat/ball-custody` | vendor；对照 P: `docs/features/F006-ball-custody-lease.md`（F40） | ⬜ |
 | `domains/concierge` + `domains/guides`（礼宾/指南注册 `guides/registry.yaml` + `guides/flows/*.yaml`） | `packages/cats/guides` | vendor（阶段 4） | ⬜ |
 | `domains/feat-trajectory`（功能轨迹） | `packages/cats/feat-trajectory` | vendor（阶段 4） | ⬜ |
@@ -108,7 +108,7 @@
 | `forgemind/external_agents.py` + `core/helm_adapter.py` + `helm_ws_manager.py` | `packages/limb/adapters`（EAC 七契约）+ `packages/forgekin/external-agents`（Helm LLM 事件桥） | 直接翻译为适配器接口 | ✅（批次5 limb-adapters EAC 六方法；批次3 forgekin-external-agents：五种内置 kind 子进程适配器 + LLMClientHelmAdapter + `ctx.forgeExternalAgents`，29 测试） |
 | `forgemind/base.py` + `forgekin.py` + `registry.py` + `species.py` + `species_impl/` | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F6） | ✅（批次7 forgekin-species：五物种模型/工厂/注册表/活实例表全插件化，69 测试） |
 | `forgemind/stages.py`（觉醒流程）+ `forging/` | `packages/forgekin/awakening` + `packages/cats/bootcamp` | 直接翻译 | 🔶（批次7：`forging/` 已落 `packages/forgekin/forging`（ForgePipeline 六阶段 + `ctx.forgeForging`，30 测试）；觉醒流程仍待 `awakening`） |
-| `forgemind/autonomous.py` | `packages/forgekin/loops/autonomous` | 直接翻译 | ⬜ |
+| `forgemind/autonomous.py` | `packages/forgekin/loops/autonomous` | 直接翻译 | 🔶（批次10：已落 `packages/forgekin/autonomous`，F052 守护进程 `ctx.forgeAutonomous`；loops/autonomous 路径弃用） |
 | `core/plugin_loader.py` + `plugin_manager.py` + `plugin_registry.py` + `plugin_lifecycle.py` + `plugin_packaging.py` + `plugin_protocol.py` + `plugin_sandbox.py` + `plugin_frontend.py` | `packages/extensions/*` + `packages/marketplace` | 行为基线对照；机制统一为 cordis loader（R13） | ⬜ |
 | `core/marketplace.py` | `packages/marketplace` | 直接翻译 | ⬜ |
 | `core/approval_hub.py` + `core/teamact/` | `packages/chat/approval` + `packages/cats/teamact` | 直接翻译 | 🟦（approval-hub 批次4 已交付；teamact 待阶段 7） |
@@ -130,7 +130,7 @@
 | `core/im_council.py` + `config/im_council.yaml` + `config/im_channels.yaml` + `config/a2a_channels.yaml` + `core/channel_manager.py` | `packages/forgekin/im-council` + `packages/chat/channels` | 直接翻译（F17；F047）；A2A 域独立 `packages/a2a` | ⬜ |
 | `core/teamact/` + `config/teamact_steer.yaml` | `packages/cats/teamact` | 直接翻译（F18；F048） | ⬜ |
 | `evolution/eval_ledger.py` + `core/eval/`（contract/three_signals/attribution） | `packages/forgekin/eval-ledger` | 直接翻译（F19/F41；F050） | ✅（批次8 forgekin-eval-ledger：Replay A/B 七步台账 + 五问契约 + 三方信号交叉 + 七类归因，`ctx.forgeEvalLedger`，59 测试） |
-| `forgemind/autonomous.py` + `evolution/auto_dream.py` | `packages/forgekin/autonomous` + `packages/forgekin/auto-dream` | 直接翻译（F20；F051） | ⬜ |
+| `forgemind/autonomous.py` + `evolution/auto_dream.py` | `packages/forgekin/autonomous` + `packages/forgekin/auto-dream` | 直接翻译（F20；F051） | ✅（批次10：F052 自主守护进程 `ctx.forgeAutonomous` + CL-031 梦境整合 `ctx.forgeAutoDream`，81 测试） |
 | `evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py` | `packages/forgekin/evolution-engine` | 直接翻译（F22；F046 三循环基础设施） | ⬜ |
 | `core/{circuit_breaker,fallback_chain,degradation,recovery_tier,restart_recovery,checkpoint_manager,checkpoint_config}.py` + `config/resilience.yaml*` + `config/recovery_tiers.yaml*` | `packages/plugins/resilience` + `packages/core/session` | 直接翻译（F23；A004/A022） | ✅（阶段2 基础核心；批次9 补齐 ResilienceExecutor+CheckpointConfig+Cordis 插件 `ctx.forgeResilience`，58 测试） |
 | `core/feature_flags.py` + `core/canary.py` + `config/canary/default.yaml` | `packages/plugins/feature-flags` + `packages/plugins/canary` | 直接翻译（F24） | ⬜ |
