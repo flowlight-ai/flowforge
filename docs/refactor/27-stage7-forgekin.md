@@ -105,7 +105,14 @@
       无效响应/超时重试 + fallback 模型切换）+ TraeSession/Manager + YAML 配置（${ENV} 占位符 +
       环境变量覆盖），SopService 同构挂载 `ctx.forgeTraeBridge`，113 测试）
 - [ ] T7.27 `packages/forgekin/harness-eval`：harness-eval 控制面（F36；对照 clowder C32 16 域评估）
-- [ ] T7.28 `packages/forgekin/roles`：特种角色子代理（产品经理/DevOps/安全官/交付经理，F43）
+- [x] T7.28 `packages/forgekin/roles`：特种角色子代理（产品经理/DevOps/安全官/交付经理，F43；
+      移植 `forgemind/species_impl/org.py` + `forgemind/base.py` 契约 + F041-F044 文档：
+      ForgekinRole 基类（observe/act/verify 三方法 + lifecycle + 能力判定 + 审批辅助）+
+      四角色（ProductManager 鹰·凯恩 五动作/愿景变更审批/三段式用户故事/MoSCoW·RICE，
+      DevOps 蜂鸟·闪电 五动作/WAL 先行/Tier0 拒绝/金丝雀放量/重大变更审批，
+      SecurityOfficer 狼·阿尔法 五动作/阻断审批/扫描审计告警自主/审计 append-only，
+      DeliveryManager 象·牛顿 五动作/资源重分配审批/质量门禁不可绕过/阻塞风险上报）+
+      RolesService 挂载 `ctx.forgeRoles`（四角色注册表 + 自定义角色注册），56 测试）
 - [ ] T7.29 测试：魔法词触发/群编排/IM 议会拒绝同通道/评估台账记账/进化引擎三循环演进/
       弹性栈故障注入恢复/检索排序/锻造流水线产物验收
 

@@ -214,7 +214,7 @@
 | F40 | 球权托管 + push-back 协议 | docs/features/F005/F006（F006） | 5/7 | ⬜ |
 | F41 | 评估契约/三信号交叉/归因矩阵 | core/eval/ + evolution/eval_ledger.py（F018/F019/F020） | 7 | ✅（批次8 forgekin-eval-ledger：EvalContract 五问 + ContractRegistry + ThreeSignalCrossValidator + Attributor 七类归因，`ctx.forgeEvalLedger`） |
 | F42 | 活性探针与规范读（liveness canonical read） | core/（F023） | 3/7 | ⬜ |
-| F43 | 特种角色子代理（产品经理/DevOps/安全官/交付经理） | forgemind/forms.py 相关（F041-F044） | 7 | ⬜ |
+| F43 | 特种角色子代理（产品经理/DevOps/安全官/交付经理） | forgemind/forms.py 相关（F041-F044） | 7 | ✅（批次15b forgekin-roles：ForgekinRole 基类 + 四角色各 5 动作 + 审批降级不变量，`ctx.forgeRoles`，56 测试） |
 | F44 | 物理 AI 传感器 + 虚拟世界设置 | core/world_engine/ + conditional_router.py（F029/F030） | stretch | ⬜ |
 
 ## 4. 每阶段通用验收门（DoD）

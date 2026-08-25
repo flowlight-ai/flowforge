@@ -1,0 +1,29 @@
+{
+  "name": "@flowforge/forgekin-roles",
+  "description": "FlowForge Forgekin roles domain Cordis plugin — T7.28 four special-role sub-agents (ProductManager/DevOps/SecurityOfficer/DeliveryManager, F041-F044) at ctx.forgeRoles, TS rewrite of forgemind/forms.py + species_impl/org.py observe/act/verify contract",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/roles" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./base": { "types": "./lib/types/base.d.ts", "default": "./lib/base.js" },
+    "./product-manager": { "types": "./lib/types/product-manager.d.ts", "default": "./lib/product-manager.js" },
+    "./devops": { "types": "./lib/types/devops.d.ts", "default": "./lib/devops.js" },
+    "./security-officer": { "types": "./lib/types/security-officer.d.ts", "default": "./lib/security-officer.js" },
+    "./delivery-manager": { "types": "./lib/types/delivery-manager.d.ts", "default": "./lib/delivery-manager.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}
