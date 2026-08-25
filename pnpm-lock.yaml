@@ -934,6 +934,12 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/teamact:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/chat/approval:
     devDependencies:
       '@flowforge/cats-shared':

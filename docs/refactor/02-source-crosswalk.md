@@ -111,7 +111,7 @@
 | `forgemind/autonomous.py` | `packages/forgekin/loops/autonomous` | 直接翻译 | 🔶（批次10：已落 `packages/forgekin/autonomous`，F052 守护进程 `ctx.forgeAutonomous`；loops/autonomous 路径弃用） |
 | `core/plugin_loader.py` + `plugin_manager.py` + `plugin_registry.py` + `plugin_lifecycle.py` + `plugin_packaging.py` + `plugin_protocol.py` + `plugin_sandbox.py` + `plugin_frontend.py` | `packages/extensions/*` + `packages/marketplace` | 行为基线对照；机制统一为 cordis loader（R13） | ⬜ |
 | `core/marketplace.py` | `packages/marketplace` | 直接翻译 | ⬜ |
-| `core/approval_hub.py` + `core/teamact/` | `packages/chat/approval` + `packages/cats/teamact` | 直接翻译 | 🟦（approval-hub 批次4 已交付；teamact 待阶段 7） |
+| `core/approval_hub.py` + `core/teamact/` | `packages/chat/approval` + `packages/cats/teamact` | 直接翻译 | ✅（approval-hub 批次4 已交付；teamact 批次15a 交付，69 测试） |
 | `core/credential_store.py` + `secret_store.py` | `packages/plugins/credentials` | 行为基线；存储迁移 better-sqlite3 加密列 | ⬜ |
 | `core/scheduler.py` + `schedule_registry.py` + `job` 相关 | `packages/plugins/schedule|jobs` | 行为基线对照 | ⬜ |
 | `core/skill_library.py` | `packages/plugins/skill` | 行为基线对照（skill 格式迁移 YAML frontmatter） | ⬜ |
@@ -128,7 +128,7 @@
 | `forgemind/magic_words.py` | `packages/forgekin/magic-words` | 直接翻译（F15；A011） | ✅（批次4 forgekin-magic-words：4 条魔法短语子串检测 + `ctx.forgeMagicWords`，12 测试） |
 | `forgemind/swarm.py` + `config/agent_swarm.yaml` | `packages/forgekin/swarm` | 直接翻译（F16；F049） | ✅（批次5 forgekin-swarm：SwarmCoordinator 调度/心跳回收/跨厂商 + `ctx.forgeSwarm`，68 测试） |
 | `core/im_council.py` + `config/im_council.yaml` + `config/im_channels.yaml` + `config/a2a_channels.yaml` + `core/channel_manager.py` | `packages/forgekin/im-council` + `packages/chat/channels` | 直接翻译（F17；F047）；A2A 域独立 `packages/a2a` | ✅（批次14 forgekin-im-council：五步议事 + I1-I5 不变量 + Console/WebChat/TraeBridge 三通道 + `ctx.forgeImCouncil`；chat-channels：ChannelManager 注册/广播/分发，45 测试） |
-| `core/teamact/` + `config/teamact_steer.yaml` | `packages/cats/teamact` | 直接翻译（F18；F048） | ⬜ |
+| `core/teamact/` + `config/teamact_steer.yaml` | `packages/cats/teamact` | 直接翻译（F18；F048） | ✅（批次15a cats-teamact：TeamActState 六步循环 + TerminationReport 五项 + HandoffCapsule + PingPongCircuitBreaker + SteerQueue 7 动作 I1-I5，`ctx.catsTeamAct`，69 测试） |
 | `evolution/eval_ledger.py` + `core/eval/`（contract/three_signals/attribution） | `packages/forgekin/eval-ledger` | 直接翻译（F19/F41；F050） | ✅（批次8 forgekin-eval-ledger：Replay A/B 七步台账 + 五问契约 + 三方信号交叉 + 七类归因，`ctx.forgeEvalLedger`，59 测试） |
 | `forgemind/autonomous.py` + `evolution/auto_dream.py` | `packages/forgekin/autonomous` + `packages/forgekin/auto-dream` | 直接翻译（F20；F051） | ✅（批次10：F052 自主守护进程 `ctx.forgeAutonomous` + CL-031 梦境整合 `ctx.forgeAutoDream`，81 测试） |
 | `evolution/{engine,foreman,runtime,qc_loop,close_gate,process_evolution,scope_guard,metacognition,models}.py` | `packages/forgekin/evolution-engine` | 直接翻译（F22；F046 三循环基础设施） | ✅（批次11 forgekin-evolution-engine：ForgeMindEngine 三模式治理 + CL-033 ApprovalHub + SelfDevRuntime 五闭环装配 + ContinuousForeman 调度 + CL-034 QC Loop + CL-025 Close Gate，`ctx.forgeEvolution`，114 测试） |

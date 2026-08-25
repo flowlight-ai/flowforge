@@ -189,7 +189,7 @@
 | F15 | 魔法词 magic_words | forgemind/magic_words.py（F011/F012；A011） | 7 | ✅（批次4 forgekin-magic-words：4 条魔法短语 → stop-and-audit 触发检测 + `ctx.forgeMagicWords`，12 测试） |
 | F16 | 群聊编排 swarm | forgemind/swarm.py + config/agent_swarm.yaml（F049） | 7 | ✅（批次5 forgekin-swarm：SwarmCoordinator 能力路由/心跳回收/跨厂商过滤 + `ctx.forgeSwarm`，68 测试） |
 | F17 | IM 议会 im_council + 通道管理 | core/im_council.py + channel_manager.py + config/im_council|im_channels|a2a_channels.yaml（F047） | 7 | ✅（批次14 forgekin-im-council：五步议事 + I1 降级链路 + I2 append-only 归档 + I3 唯一入口 + I4 超时拒绝 + I5 落盘，Console/WebChat/TraeBridge 三通道 `ctx.forgeImCouncil` + chat-channels ChannelManager，45 测试） |
-| F18 | TeamAct 转向与审批 | core/teamact/ + config/teamact_steer.yaml（F048；对照 F002） | 7 | ⬜ |
+| F18 | TeamAct 转向与审批 | core/teamact/ + config/teamact_steer.yaml（F048；对照 F002） | 7 | ✅（批次15a cats-teamact：六步循环状态机 + 五项终止条件 + 交接胶囊 + 乒乓熔断 + SteerQueue 7 动作（I1-I5 不变量）`ctx.catsTeamAct`，69 测试；审批基础复用 chat approval） |
 | F19 | 评估台账 eval_ledger | evolution/eval_ledger.py（F050；对照 F018 评估契约） | 7 | ✅（批次8 forgekin-eval-ledger：ReplayABRunner 七步（净增益/双门/3 类覆盖）+ Store 五指标 + RuleBasedJudge，59 测试） |
 | F20 | 自主进化 autonomous + 梦境回放 auto_dream | forgemind/autonomous.py + evolution/auto_dream.py（F051） | 7 | ✅（批次10：forgekin-autonomous F052 24h 守护进程（三类扫描+消费循环+心跳保活+无效产出检测+真实落盘）`ctx.forgeAutonomous` + forgekin-auto-dream CL-031 梦境整合双层架构（聚类+蒸馏 L2 草稿+浮现+4 信号 telemetry）`ctx.forgeAutoDream`，81 测试） |
 | F21 | Side-Effect WAL（记忆写前日志） | core/event_memory.py 相关（F021） | 7 | ✅（批次12 forgekin-stores：WriteAheadLog append/get/mark_committed/mark_rolled_back/list_uncommitted + 深拷贝 + 单向状态机 + count 审计，`ctx.forgeStores`，35 测试） |

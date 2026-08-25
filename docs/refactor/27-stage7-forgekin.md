@@ -53,8 +53,12 @@
       Console/WebChat(Phase2 骨架)/TraeBridge(F045 复用 trae-bridge) 三通道；
       ChannelManager 注册/广播/分发；ImCouncilService 挂载 `ctx.forgeImCouncil`，45 测试；
       A2A 域独立 `packages/a2a`）
-- [ ] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
-      与 `packages/chat/approval` 打通）
+- [x] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
+      与 `packages/chat/approval` 打通；批次15a：六步循环状态机 TeamActState + 五项终止条件
+      TerminationReport + HandoffCapsule 交接胶囊 + PingPongCircuitBreaker 乒乓熔断 +
+      SteerQueue 7 动作队列干预（I1 frozen 不可篡改 + I2 operator 独占 + I3 JSONL trace 归档 +
+      I4 非 EMERGENCY 不修改队首 + I5 EMERGENCY 可中断/取消/重定向队首）
+      TeamActService 挂载 `ctx.catsTeamAct`，69 测试）
 - [x] T7.18 `packages/forgekin/eval-ledger`：评估台账 + 评估契约/三信号交叉/归因矩阵
       （`evolution/eval_ledger.py` + `core/eval/`，F19/F41）
       （批次8：ReplayABRunner 七步流程（用例校验/净增益/烟雾门 2-3/晋升门 3-5+3 类覆盖/
