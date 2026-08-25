@@ -162,6 +162,9 @@
       "path": "./packages/forgekin/stores/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/observability/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {

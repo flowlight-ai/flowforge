@@ -184,7 +184,7 @@
 | F10 | 7 层 harness 工程（durable_state 等） | core/harness | 7 | ⬜ |
 | F11 | 插件市场 + 前端插件 | core/marketplace.py + plugin_* | 7 | ⬜ |
 | F12 | 团队协作 teamact + 审批 | core/teamact + approval_hub | 7 | ⬜ |
-| F13 | 观测/追踪/指标 | core/observability + tracing | 7 | ⬜ |
+| F13 | 观测/追踪/指标 | core/observability + tracing | 7 | ✅（批次13 forgekin-observability：AsyncLocalStorage trace_id 全链路传播 + TraceManager span 链 + 三类指标采集器 + AuditLogger JSONL + EventBus 发布订阅/请求响应 + 跨项目桥，48 测试） |
 | F14 | Web 页面（council/mission/memory/review/signals/admin） | web/src/app | 8 | ⬜ |
 | F15 | 魔法词 magic_words | forgemind/magic_words.py（F011/F012；A011） | 7 | ✅（批次4 forgekin-magic-words：4 条魔法短语 → stop-and-audit 触发检测 + `ctx.forgeMagicWords`，12 测试） |
 | F16 | 群聊编排 swarm | forgemind/swarm.py + config/agent_swarm.yaml（F049） | 7 | ✅（批次5 forgekin-swarm：SwarmCoordinator 能力路由/心跳回收/跨厂商过滤 + `ctx.forgeSwarm`，68 测试） |

@@ -2092,6 +2092,12 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/forgekin/observability:
+    dependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/forgekin/sop:
     dependencies:
       yaml:

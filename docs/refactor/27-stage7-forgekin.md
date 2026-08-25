@@ -34,7 +34,7 @@
 - [ ] T7.10 `packages/forgekin/harness`：7 层 harness 工程（durable_state/tool_mediation/
       evidence_sensors/governance/magic_words/entropy_control/harnessability）
 - [ ] T7.11 `packages/forgekin/plugins`：插件市场 + 前端插件（桥接 chat marketplace）
-- [ ] T7.12 `packages/forgekin/observability`：追踪/指标/事件总线
+- [x] T7.12 `packages/forgekin/observability`：追踪/指标/事件总线（TS 重写自 `core/{tracing,observability,metrics,event_bridge}.py` + `events/event_bus.py`，F13/P-94，ctx.forgeObservability，48 测试）
 - [ ] T7.13 测试：YAML 注册 Forgekin → 五闭环各跑通 mock 演进；跨厂商审议拒绝同厂商；
       工作流编译器 DAG 执行；SpiritForge 蒸馏入库可检索
 - [x] T7.14 `packages/forgekin/magic-words`：魔法词（TS 重写自 `forgemind/magic_words.py`，F15）
