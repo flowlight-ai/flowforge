@@ -159,6 +159,9 @@
       "path": "./packages/forgekin/plugins/tsconfig.host.json"
     },
     {
+      "path": "./packages/core/state/tsconfig.host.json"
+    },
+    {
       "path": "./packages/forgekin/auto-dream/tsconfig.host.json"
     },
     {

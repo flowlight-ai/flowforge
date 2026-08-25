@@ -139,7 +139,7 @@
 | `core/feature_flags.py` + `core/canary.py` + `config/canary/default.yaml` | `packages/plugins/feature-flags` + `packages/plugins/canary` | 直接翻译（F24） | ⬜ |
 | `core/base_mode_executor.py` + `modes/` + `core/execution_policy.py` + `core/step_limiter.py` + `core/agent_timeout.py` | `packages/plugins/modes` + `packages/core/agent` | 直接翻译（F25） | ⬜ |
 | `core/{content_moderation,moderation}.py` + `core/gate/` + `core/guardrails.py` | `packages/plugins/guard` | 直接翻译（F26） | ⬜ |
-| `core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py` | `packages/forgekin/compiler` + `packages/core/state` | 直接翻译（F27；A003/A024） | ⬜ |
+| `core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py` | `packages/core/state`（F27；A003/A024；compiler 侧见 T7.8 workflow-compiler） | 直接翻译（F27；A003/A024） | ✅（批次19 core-state：NamespaceRegistry/HandoffManager/StateUpdateMapper/StateMapper/VariableResolver/FieldConditionGate/ContextLayerManager/StateQueryTool/ToolChainExecutor + `ctx.forgeState`，61 测试） |
 | `core/{model_service,model_capability,provider_quota}.py` + `config/llm_route.yaml` + `config/provider_quota.yaml*` | `packages/llm/*` | 直接翻译（F28） | ⬜ |
 | `sop/` + `config/sops/*.yaml` | `packages/forgekin/sop` | 直接翻译（F29） | ✅（批次4 forgekin-sop：PredicateChecker 8 检查器 + SOPExecutor 阶段门禁/流转 + YAML 加载 + `ctx.forgeSop`，71 测试） |
 | `forgemind/{base,forgekin,registry,species}.py` + `species_impl/` + `forgemind/forgekins/*.yaml`（8 物种档案） | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F30；A027） | ⬜ |
