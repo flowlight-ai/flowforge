@@ -946,6 +946,12 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/chat/channels:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/chat/e2e:
     devDependencies:
       '@flowforge/cats-invocation':
@@ -2067,6 +2073,18 @@ importers:
       '@flowforge/forgekin-stage':
         specifier: workspace:^
         version: link:../stage
+
+  packages/forgekin/im-council:
+    dependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-evolution-engine':
+        specifier: workspace:^
+        version: link:../evolution-engine
+      '@flowforge/forgekin-trae-bridge':
+        specifier: workspace:^
+        version: link:../trae-bridge
 
   packages/forgekin/knowledge:
     devDependencies:

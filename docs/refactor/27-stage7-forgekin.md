@@ -46,8 +46,13 @@
       reassign（maxRetries 超限 FAILED）/ 能力互补 complement 推荐 / cancel-fail 终态 /
       runContinuously 调度循环 + 单例工厂；agent_swarm.yaml 内置（5 Forgekin 画像，
       heartbeat 200s）；SwarmService 挂载 `ctx.forgeSwarm`，68 测试）
-- [ ] T7.16 `packages/forgekin/im-council` + `packages/chat/channels`：IM 议会 + 通道管理
-      （`core/im_council.py` + `channel_manager.py`，F17；IM 通道 stretch 时仅 ports，A2A 域独立 `packages/a2a`）
+- [x] T7.16 `packages/forgekin/im-council` + `packages/chat/channels`：IM 议会 + 通道管理
+      （`core/im_council.py` + `channel_manager.py`，F17/F047；批次14：IMCouncilManager 五步
+      议事流程（发起→推送→等待→decide→归档）+ I1 降级链路（console>trae>webchat）+
+      I2 append-only 归档 + I3 requestApproval 唯一入口 + I4 超时自动拒绝 + I5 JSONL 落盘；
+      Console/WebChat(Phase2 骨架)/TraeBridge(F045 复用 trae-bridge) 三通道；
+      ChannelManager 注册/广播/分发；ImCouncilService 挂载 `ctx.forgeImCouncil`，45 测试；
+      A2A 域独立 `packages/a2a`）
 - [ ] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
       与 `packages/chat/approval` 打通）
 - [x] T7.18 `packages/forgekin/eval-ledger`：评估台账 + 评估契约/三信号交叉/归因矩阵

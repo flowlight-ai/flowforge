@@ -1,0 +1,26 @@
+{
+  "name": "@flowforge/chat-channels",
+  "description": "FlowForge chat channels domain Cordis plugin — T7.16 ChannelManager (register/dispatch/broadcast message channel plugins) + MessageChannelPlugin contract, TS rewrite of core/channel_manager.py + core/interfaces/plugin.py at ctx.chatChannels",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/chat/channels" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./message-channel-plugin": { "types": "./lib/types/message-channel-plugin.d.ts", "default": "./lib/message-channel-plugin.js" },
+    "./channel-manager": { "types": "./lib/types/channel-manager.d.ts", "default": "./lib/channel-manager.js" },
+    "./service": { "types": "./lib/types/channels-service.d.ts", "default": "./lib/channels-service.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}
