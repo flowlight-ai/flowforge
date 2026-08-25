@@ -1,0 +1,31 @@
+{
+  "name": "@flowforge/forgekin-harness-eval",
+  "description": "FlowForge Forgekin harness-eval control plane Cordis plugin — T7.27 harness lifecycle control plane (F36/F040) at ctx.forgeHarnessEval, TS rewrite of harness/feedback_loop.py + evaluators/ + clowder infrastructure/harness-eval 16-domain registry (C32)",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/harness-eval" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./lifecycle": { "types": "./lib/types/lifecycle.d.ts", "default": "./lib/lifecycle.js" },
+    "./recommender": { "types": "./lib/types/recommender.d.ts", "default": "./lib/recommender.js" },
+    "./summarizer": { "types": "./lib/types/summarizer.d.ts", "default": "./lib/summarizer.js" },
+    "./evaluator": { "types": "./lib/types/evaluator.d.ts", "default": "./lib/evaluator.js" },
+    "./feedback-loop": { "types": "./lib/types/feedback-loop.d.ts", "default": "./lib/feedback-loop.js" },
+    "./registry": { "types": "./lib/types/registry.d.ts", "default": "./lib/registry.js" },
+    "./control-plane": { "types": "./lib/types/control-plane.d.ts", "default": "./lib/control-plane.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

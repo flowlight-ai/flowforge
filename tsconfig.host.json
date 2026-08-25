@@ -57,6 +57,9 @@
       "path": "./packages/cats/session/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/teamact/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {
@@ -67,6 +70,9 @@
     },
     {
       "path": "./packages/chat/approval/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/channels/tsconfig.host.json"
     },
     {
       "path": "./packages/chat/mention/tsconfig.host.json"
@@ -163,6 +169,15 @@
     },
     {
       "path": "./packages/forgekin/observability/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/im-council/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/roles/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/harness-eval/tsconfig.host.json"
     },
     {
       "path": "./packages/attachment/attachment"

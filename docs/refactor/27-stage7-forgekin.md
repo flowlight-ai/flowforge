@@ -46,10 +46,19 @@
       reassign（maxRetries 超限 FAILED）/ 能力互补 complement 推荐 / cancel-fail 终态 /
       runContinuously 调度循环 + 单例工厂；agent_swarm.yaml 内置（5 Forgekin 画像，
       heartbeat 200s）；SwarmService 挂载 `ctx.forgeSwarm`，68 测试）
-- [ ] T7.16 `packages/forgekin/im-council` + `packages/chat/channels`：IM 议会 + 通道管理
-      （`core/im_council.py` + `channel_manager.py`，F17；IM 通道 stretch 时仅 ports，A2A 域独立 `packages/a2a`）
-- [ ] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
-      与 `packages/chat/approval` 打通）
+- [x] T7.16 `packages/forgekin/im-council` + `packages/chat/channels`：IM 议会 + 通道管理
+      （`core/im_council.py` + `channel_manager.py`，F17/F047；批次14：IMCouncilManager 五步
+      议事流程（发起→推送→等待→decide→归档）+ I1 降级链路（console>trae>webchat）+
+      I2 append-only 归档 + I3 requestApproval 唯一入口 + I4 超时自动拒绝 + I5 JSONL 落盘；
+      Console/WebChat(Phase2 骨架)/TraeBridge(F045 复用 trae-bridge) 三通道；
+      ChannelManager 注册/广播/分发；ImCouncilService 挂载 `ctx.forgeImCouncil`，45 测试；
+      A2A 域独立 `packages/a2a`）
+- [x] T7.17 `packages/cats/teamact`：TeamAct 转向（`core/teamact/` + `config/teamact_steer.yaml`，F18；
+      与 `packages/chat/approval` 打通；批次15a：六步循环状态机 TeamActState + 五项终止条件
+      TerminationReport + HandoffCapsule 交接胶囊 + PingPongCircuitBreaker 乒乓熔断 +
+      SteerQueue 7 动作队列干预（I1 frozen 不可篡改 + I2 operator 独占 + I3 JSONL trace 归档 +
+      I4 非 EMERGENCY 不修改队首 + I5 EMERGENCY 可中断/取消/重定向队首）
+      TeamActService 挂载 `ctx.catsTeamAct`，69 测试）
 - [x] T7.18 `packages/forgekin/eval-ledger`：评估台账 + 评估契约/三信号交叉/归因矩阵
       （`evolution/eval_ledger.py` + `core/eval/`，F19/F41）
       （批次8：ReplayABRunner 七步流程（用例校验/净增益/烟雾门 2-3/晋升门 3-5+3 类覆盖/
@@ -95,8 +104,23 @@
       generateTests + 会话持久化）+ BridgeLLMOperator（OpenRoute 轮询 + 原子重命名互斥 +
       无效响应/超时重试 + fallback 模型切换）+ TraeSession/Manager + YAML 配置（${ENV} 占位符 +
       环境变量覆盖），SopService 同构挂载 `ctx.forgeTraeBridge`，113 测试）
-- [ ] T7.27 `packages/forgekin/harness-eval`：harness-eval 控制面（F36；对照 clowder C32 16 域评估）
-- [ ] T7.28 `packages/forgekin/roles`：特种角色子代理（产品经理/DevOps/安全官/交付经理，F43）
+- [x] T7.27 `packages/forgekin/harness-eval`：harness-eval 控制面（F36；对照 clowder C32 16 域评估）
+      （`harness/feedback_loop.py` + `evaluators/`，F040；批次16：LifecycleJudge 五态判定
+      （增值/折旧/行动/瓶颈/稳定）+ ActionRecommender 行动路由（F012 sunset / F020 fix /
+      escalate CVO）+ DailySummarizer 每日汇总（聚合 F018 契约 + F019 信号 + F020 归因）
+      + ScoringRuleEvaluator/MultiDimensionEvaluator 维度评估器 + FeedbackLoop 外环质量门控
+      （4 维评分 + PASS/CONDITIONAL/FAIL + full/lightweight/skip 三模式 + 启发式回退 +
+      数据富集短内容自动 PASS P0-22 + 字段优先级 P0-29）+ EvaluatorRegistry 注册中心 +
+      EvalDomainRegistry 16 域注册表（退役/重启用）；HarnessEvalControlPlaneService 挂载
+      `ctx.forgeHarnessEval`，86 测试）
+- [x] T7.28 `packages/forgekin/roles`：特种角色子代理（产品经理/DevOps/安全官/交付经理，F43；
+      移植 `forgemind/species_impl/org.py` + `forgemind/base.py` 契约 + F041-F044 文档：
+      ForgekinRole 基类（observe/act/verify 三方法 + lifecycle + 能力判定 + 审批辅助）+
+      四角色（ProductManager 鹰·凯恩 五动作/愿景变更审批/三段式用户故事/MoSCoW·RICE，
+      DevOps 蜂鸟·闪电 五动作/WAL 先行/Tier0 拒绝/金丝雀放量/重大变更审批，
+      SecurityOfficer 狼·阿尔法 五动作/阻断审批/扫描审计告警自主/审计 append-only，
+      DeliveryManager 象·牛顿 五动作/资源重分配审批/质量门禁不可绕过/阻塞风险上报）+
+      RolesService 挂载 `ctx.forgeRoles`（四角色注册表 + 自定义角色注册），56 测试）
 - [ ] T7.29 测试：魔法词触发/群编排/IM 议会拒绝同通道/评估台账记账/进化引擎三循环演进/
       弹性栈故障注入恢复/检索排序/锻造流水线产物验收
 

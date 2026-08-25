@@ -1,0 +1,39 @@
+{
+  "name": "@flowforge/forgekin-im-council",
+  "description": "FlowForge Forgekin IM council Cordis plugin — T7.16 F047 multi-channel council layer: IMCouncilChannel adapters (Console / WebChat / TraeBridge) + IMCouncilManager (I1 channel fallback console>trae>webchat, I2 append-only JSONL archive, I3 requestApproval single entry, I4 timeout auto-reject, I5 archive persist) integrated with CL-033 ApprovalHub, TS rewrite of core/im_council.py + config/im_council.yaml at ctx.forgeImCouncil (F17)",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/im-council" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./models": { "types": "./lib/types/models.d.ts", "default": "./lib/models.js" },
+    "./channel": { "types": "./lib/types/channel.d.ts", "default": "./lib/channel.js" },
+    "./console-channel": { "types": "./lib/types/console-channel.d.ts", "default": "./lib/console-channel.js" },
+    "./webchat-channel": { "types": "./lib/types/webchat-channel.d.ts", "default": "./lib/webchat-channel.js" },
+    "./trae-channel": { "types": "./lib/types/trae-channel.d.ts", "default": "./lib/trae-channel.js" },
+    "./im-council-manager": { "types": "./lib/types/im-council-manager.d.ts", "default": "./lib/im-council-manager.js" },
+    "./service": { "types": "./lib/types/im-council-service.d.ts", "default": "./lib/im-council-service.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "dependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-evolution-engine": "workspace:^",
+    "@flowforge/forgekin-trae-bridge": "workspace:^"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-evolution-engine": "workspace:^",
+    "@flowforge/forgekin-trae-bridge": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-evolution-engine": "workspace:^",
+    "@flowforge/forgekin-trae-bridge": "workspace:^"
+  }
+}

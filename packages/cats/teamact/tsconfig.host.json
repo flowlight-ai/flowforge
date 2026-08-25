@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "composite": true,
+    "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
+  },
+  "include": [ "src" ],
+  "exclude": [ "lib", "node_modules", "tests" ],
+  "references": [
+    { "path": "../../../vendor/cordis" }
+  ]
+}

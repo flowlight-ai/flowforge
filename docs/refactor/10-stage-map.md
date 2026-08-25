@@ -188,8 +188,8 @@
 | F14 | Web 页面（council/mission/memory/review/signals/admin） | web/src/app | 8 | ⬜ |
 | F15 | 魔法词 magic_words | forgemind/magic_words.py（F011/F012；A011） | 7 | ✅（批次4 forgekin-magic-words：4 条魔法短语 → stop-and-audit 触发检测 + `ctx.forgeMagicWords`，12 测试） |
 | F16 | 群聊编排 swarm | forgemind/swarm.py + config/agent_swarm.yaml（F049） | 7 | ✅（批次5 forgekin-swarm：SwarmCoordinator 能力路由/心跳回收/跨厂商过滤 + `ctx.forgeSwarm`，68 测试） |
-| F17 | IM 议会 im_council + 通道管理 | core/im_council.py + channel_manager.py + config/im_council|im_channels|a2a_channels.yaml（F047） | 7 | ⬜ |
-| F18 | TeamAct 转向与审批 | core/teamact/ + config/teamact_steer.yaml（F048；对照 F002） | 7 | ⬜ |
+| F17 | IM 议会 im_council + 通道管理 | core/im_council.py + channel_manager.py + config/im_council|im_channels|a2a_channels.yaml（F047） | 7 | ✅（批次14 forgekin-im-council：五步议事 + I1 降级链路 + I2 append-only 归档 + I3 唯一入口 + I4 超时拒绝 + I5 落盘，Console/WebChat/TraeBridge 三通道 `ctx.forgeImCouncil` + chat-channels ChannelManager，45 测试） |
+| F18 | TeamAct 转向与审批 | core/teamact/ + config/teamact_steer.yaml（F048；对照 F002） | 7 | ✅（批次15a cats-teamact：六步循环状态机 + 五项终止条件 + 交接胶囊 + 乒乓熔断 + SteerQueue 7 动作（I1-I5 不变量）`ctx.catsTeamAct`，69 测试；审批基础复用 chat approval） |
 | F19 | 评估台账 eval_ledger | evolution/eval_ledger.py（F050；对照 F018 评估契约） | 7 | ✅（批次8 forgekin-eval-ledger：ReplayABRunner 七步（净增益/双门/3 类覆盖）+ Store 五指标 + RuleBasedJudge，59 测试） |
 | F20 | 自主进化 autonomous + 梦境回放 auto_dream | forgemind/autonomous.py + evolution/auto_dream.py（F051） | 7 | ✅（批次10：forgekin-autonomous F052 24h 守护进程（三类扫描+消费循环+心跳保活+无效产出检测+真实落盘）`ctx.forgeAutonomous` + forgekin-auto-dream CL-031 梦境整合双层架构（聚类+蒸馏 L2 草稿+浮现+4 信号 telemetry）`ctx.forgeAutoDream`，81 测试） |
 | F21 | Side-Effect WAL（记忆写前日志） | core/event_memory.py 相关（F021） | 7 | ✅（批次12 forgekin-stores：WriteAheadLog append/get/mark_committed/mark_rolled_back/list_uncommitted + 深拷贝 + 单向状态机 + count 审计，`ctx.forgeStores`，35 测试） |
@@ -207,14 +207,14 @@
 | F33 | 外部 agent 共享状态 | core/external_agent/（F033） | 6 | ⬜ |
 | F34 | 外部 agent 降级回退 | core/external_agent/ + fallback_chain（F034） | 6 | ⬜ |
 | F35 | 外部 agent 能力融合 | core/external_agent/（F035） | 6 | ⬜ |
-| F36 | harness-eval 控制面 | harness/ + evaluators/（F040） | 7 | ⬜ |
+| F36 | harness-eval 控制面 | harness/ + evaluators/（F040） | 7 | ✅（批次16 forgekin-harness-eval：LifecycleJudge 五态判定 + ActionRecommender 行动路由 + DailySummarizer 每日汇总 + ScoringRule/MultiDimension 评估器 + FeedbackLoop 外环质量门控（4 维评分 + 三模式 + 启发式回退）+ EvaluatorRegistry + EvalDomainRegistry 16 域，`ctx.forgeHarnessEval`，86 测试） |
 | F37 | ForgeMind 锻造关系/谱系/应用层 | forgemind/（F026/F036/F038） | 7 | ⬜ |
 | F38 | MindCodex 检索（三入口/消费加权排名/可检索） | core/knowledge_evolution.py + memory_federation/（F015/F016/F039） | 7 | ✅（批次1 forgekin-knowledge：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 F4） |
 | F39 | 记忆治理 | core/memory_federation/ + core/event_memory.py（F014/F017） | 7 | ✅（批次12 forgekin-stores：MemoryCollection/CollectionManager（backend 协议注入）+ MemoryGovernance 三要素（权威等级/消费加权/衰减策略，幂等），`ctx.forgeStores`） |
 | F40 | 球权托管 + push-back 协议 | docs/features/F005/F006（F006） | 5/7 | ⬜ |
 | F41 | 评估契约/三信号交叉/归因矩阵 | core/eval/ + evolution/eval_ledger.py（F018/F019/F020） | 7 | ✅（批次8 forgekin-eval-ledger：EvalContract 五问 + ContractRegistry + ThreeSignalCrossValidator + Attributor 七类归因，`ctx.forgeEvalLedger`） |
 | F42 | 活性探针与规范读（liveness canonical read） | core/（F023） | 3/7 | ⬜ |
-| F43 | 特种角色子代理（产品经理/DevOps/安全官/交付经理） | forgemind/forms.py 相关（F041-F044） | 7 | ⬜ |
+| F43 | 特种角色子代理（产品经理/DevOps/安全官/交付经理） | forgemind/forms.py 相关（F041-F044） | 7 | ✅（批次15b forgekin-roles：ForgekinRole 基类 + 四角色各 5 动作 + 审批降级不变量，`ctx.forgeRoles`，56 测试） |
 | F44 | 物理 AI 传感器 + 虚拟世界设置 | core/world_engine/ + conditional_router.py（F029/F030） | stretch | ⬜ |
 
 ## 4. 每阶段通用验收门（DoD）

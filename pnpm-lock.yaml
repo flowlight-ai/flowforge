@@ -934,6 +934,12 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/teamact:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/chat/approval:
     devDependencies:
       '@flowforge/cats-shared':
@@ -942,6 +948,12 @@ importers:
       '@flowforge/cats-stores':
         specifier: workspace:^
         version: link:../../cats/stores
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/chat/channels:
+    devDependencies:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
@@ -2068,6 +2080,24 @@ importers:
         specifier: workspace:^
         version: link:../stage
 
+  packages/forgekin/harness-eval:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/forgekin/im-council:
+    dependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-evolution-engine':
+        specifier: workspace:^
+        version: link:../evolution-engine
+      '@flowforge/forgekin-trae-bridge':
+        specifier: workspace:^
+        version: link:../trae-bridge
+
   packages/forgekin/knowledge:
     devDependencies:
       '@flowforge/cordis':
@@ -2094,6 +2124,12 @@ importers:
 
   packages/forgekin/observability:
     dependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/forgekin/roles:
+    devDependencies:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis

@@ -1,0 +1,61 @@
+{
+  "name": "@flowforge/cats-teamact",
+  "description": "TeamAct 六步循环状态机 + HandoffCapsule 交接胶囊 + PingPong 熔断器 + F048 Steer 队列干预 Cordis 插件 — mounted at ctx.catsTeamAct",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/cats/teamact"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types.js"
+    },
+    "./handoff": {
+      "types": "./lib/types/handoff.d.ts",
+      "default": "./lib/handoff.js"
+    },
+    "./circuit-breaker": {
+      "types": "./lib/types/circuit-breaker.d.ts",
+      "default": "./lib/circuit-breaker.js"
+    },
+    "./state-machine": {
+      "types": "./lib/types/state-machine.d.ts",
+      "default": "./lib/state-machine.js"
+    },
+    "./steer": {
+      "types": "./lib/types/steer.d.ts",
+      "default": "./lib/steer.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types.js",
+    "lib/handoff.js",
+    "lib/circuit-breaker.js",
+    "lib/state-machine.js",
+    "lib/steer.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}
