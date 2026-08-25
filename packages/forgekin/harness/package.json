@@ -1,0 +1,31 @@
+{
+  "name": "@flowforge/forgekin-harness",
+  "description": "FlowForge Forgekin harness Cordis plugin — T7.10 Harness 七层工程（F008-F010/F040/FR-HRN-04）：DurableStateSurfaces 感知现实（sqlite/git 双后端乐观锁）+ ToolMediation 改变现实（白名单/危险等级/别名兜底/审计）+ EvidenceSensors 验证现实（证据哈希/传感器探针）+ GovernanceBoundary 约束现实（SYSTEM_ROLE 压缩免疫/关键规则不可降级）+ EntropyManager 清理现实（文档新鲜度/技术债/规则演化/垃圾回收）+ HarnessabilityScorer 适配现实（五维加权评估），TS rewrite of harness/{durable_state,tool_mediation,evidence_sensors,governance,entropy_manager}.py at ctx.forgeHarness",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/harness" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./durable-state": { "types": "./lib/types/durable-state.d.ts", "default": "./lib/durable-state.js" },
+    "./tool-mediation": { "types": "./lib/types/tool-mediation.d.ts", "default": "./lib/tool-mediation.js" },
+    "./evidence-sensors": { "types": "./lib/types/evidence-sensors.d.ts", "default": "./lib/evidence-sensors.js" },
+    "./governance": { "types": "./lib/types/governance.d.ts", "default": "./lib/governance.js" },
+    "./entropy-manager": { "types": "./lib/types/entropy-manager.d.ts", "default": "./lib/entropy-manager.js" },
+    "./harnessability": { "types": "./lib/types/harnessability.d.ts", "default": "./lib/harnessability.js" },
+    "./service": { "types": "./lib/types/service.d.ts", "default": "./lib/service.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

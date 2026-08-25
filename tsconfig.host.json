@@ -180,6 +180,9 @@
       "path": "./packages/forgekin/harness-eval/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/harness/tsconfig.host.json"
+    },
+    {
       "path": "./packages/attachment/attachment"
     },
     {
