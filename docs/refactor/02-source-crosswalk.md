@@ -109,8 +109,8 @@
 | `forgemind/base.py` + `forgekin.py` + `registry.py` + `species.py` + `species_impl/` | `packages/cats/registry` + `packages/forgekin/species` | 概念映射 cat→Forgekin（F6） | ✅（批次7 forgekin-species：五物种模型/工厂/注册表/活实例表全插件化，69 测试） |
 | `forgemind/stages.py`（觉醒流程）+ `forging/` | `packages/forgekin/awakening` + `packages/cats/bootcamp` | 直接翻译 | 🔶（批次7：`forging/` 已落 `packages/forgekin/forging`（ForgePipeline 六阶段 + `ctx.forgeForging`，30 测试）；觉醒流程仍待 `awakening`） |
 | `forgemind/autonomous.py` | `packages/forgekin/loops/autonomous` | 直接翻译 | 🔶（批次10：已落 `packages/forgekin/autonomous`，F052 守护进程 `ctx.forgeAutonomous`；loops/autonomous 路径弃用） |
-| `core/plugin_loader.py` + `plugin_manager.py` + `plugin_registry.py` + `plugin_lifecycle.py` + `plugin_packaging.py` + `plugin_protocol.py` + `plugin_sandbox.py` + `plugin_frontend.py` | `packages/extensions/*` + `packages/marketplace` | 行为基线对照；机制统一为 cordis loader（R13） | ⬜ |
-| `core/marketplace.py` | `packages/marketplace` | 直接翻译 | ⬜ |
+| `core/plugin_loader.py` + `plugin_manager.py` + `plugin_registry.py` + `plugin_lifecycle.py` + `plugin_packaging.py` + `plugin_protocol.py` + `plugin_sandbox.py` + `plugin_frontend.py` | `packages/extensions/*` + `packages/forgekin/plugins` | 行为基线对照；机制统一为 cordis loader（R13）；市场发现/安装记录/前端注册语义落 forgekin-plugins | ✅（批次18：Marketplace 七步安装/卸载/更新/四检查验证 + FrontendPluginRegistry 六挂载点 + `ctx.forgePlugins`，39 测试） |
+| `core/marketplace.py` | `packages/forgekin/plugins` | 直接翻译 | ✅（批次18：MarketplaceRegistry 本地/远程 + 内置 registry + MarketplaceService，39 测试） |
 | `core/approval_hub.py` + `core/teamact/` | `packages/chat/approval` + `packages/cats/teamact` | 直接翻译 | ✅（approval-hub 批次4 已交付；teamact 批次15a 交付，69 测试） |
 | `core/credential_store.py` + `secret_store.py` | `packages/plugins/credentials` | 行为基线；存储迁移 better-sqlite3 加密列 | ⬜ |
 | `core/scheduler.py` + `schedule_registry.py` + `job` 相关 | `packages/plugins/schedule|jobs` | 行为基线对照 | ⬜ |

@@ -38,7 +38,12 @@
       注入点优先级规则（5 规则 GOV-001~005）+ L6 entropy-manager 文档保鲜/债务追踪/规则演化/
       垃圾回收四组件 + L7 harnessability 六维加权评估到期检查；magic_words 见 T7.14（批次4）；
       HarnessService 挂载 `ctx.forgeHarness`，74 测试）
-- [ ] T7.11 `packages/forgekin/plugins`：插件市场 + 前端插件（桥接 chat marketplace）
+- [x] T7.11 `packages/forgekin/plugins`：插件市场 + 前端插件（桥接 chat marketplace）
+      （批次18：PluginManifest 清单（分类/挂载点/依赖/checksum）+ MarketplaceRegistry 本地/远程
+      注册表（search/list/getPlugin/refresh）+ 内置 registry 2 插件 + Marketplace 七步安装
+      （查找/版本/已装/FlowForge 兼容/依赖递归/checksum/下载复制 + installed.json 持久化）+
+      卸载依赖者拒绝/更新/四检查验证（files/entry/checksum/safety）+ FrontendPluginRegistry
+      六挂载点前端注册表 + MarketplaceService 挂载 `ctx.forgePlugins`，39 测试）
 - [x] T7.12 `packages/forgekin/observability`：追踪/指标/事件总线（TS 重写自 `core/{tracing,observability,metrics,event_bridge}.py` + `events/event_bus.py`，F13/P-94，ctx.forgeObservability，48 测试）
 - [ ] T7.13 测试：YAML 注册 Forgekin → 五闭环各跑通 mock 演进；跨厂商审议拒绝同厂商；
       工作流编译器 DAG 执行；SpiritForge 蒸馏入库可检索
