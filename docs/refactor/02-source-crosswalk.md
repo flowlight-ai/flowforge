@@ -124,6 +124,7 @@
 | `core/session_persistence.py` + `checkpoint_*` + `restart_recovery.py` | `packages/core/session` + `packages/harness/storage` | 行为基线对照 | ⬜ |
 | `core/task_store.py` + `task_context.py` | `packages/cats/stores`（TaskStore） | 直接翻译 | ⬜ |
 | `harness/feedback_loop.py` + `evaluators/` + `core/gate/` | `packages/forgekin/harness-eval` | 直接翻译（F36；F040） | ✅（批次16 forgekin-harness-eval：LifecycleJudge 五态判定 + ActionRecommender 行动路由 + DailySummarizer 每日汇总 + ScoringRuleEvaluator/MultiDimensionEvaluator + FeedbackLoop 外环质量门控（4 维评分 + 三模式 + 启发式回退 + P0-22 数据富集/P0-29 字段优先级）+ EvaluatorRegistry + EvalDomainRegistry 16 域，`ctx.forgeHarnessEval`，86 测试） |
+| `harness/{durable_state,tool_mediation,evidence_sensors,governance,entropy_manager}.py` + `harness/config/harness.yaml` | `packages/forgekin/harness` | 直接翻译（F10；F008-F010/FR-HRN-04） | ✅（批次17 forgekin-harness：L1 durable-state（sqlite/git 双后端 + 乐观锁版本自增）+ L2 tool-mediation（白名单/别名/审计 + 4 拒绝类别）+ L3 evidence-sensors（四类证据 + SHA-256 自验证）+ L4 governance（注入点/优先级 + 5 规则 GOV-001~005）+ L6 entropy-manager（DocGardener/DebtTracker/RuleEvolution/GarbageCollection）+ L7 harnessability（六维加权 + 到期检查），`ctx.forgeHarness`，74 测试） |
 | `core/world_engine/` + `core/conditional_router.py` | stretch（`10-stage-map.md` §3.4） | 降级 | ⬜ |
 | `forgemind/*_to_openroute_proxy.py` + `anthropic_to_openroute_proxy.py` | `packages/llm/openroute` | 直接翻译为 provider | ⬜ |
 | `forgemind/magic_words.py` | `packages/forgekin/magic-words` | 直接翻译（F15；A011） | ✅（批次4 forgekin-magic-words：4 条魔法短语子串检测 + `ctx.forgeMagicWords`，12 测试） |

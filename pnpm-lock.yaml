@@ -2080,6 +2080,12 @@ importers:
         specifier: workspace:^
         version: link:../stage
 
+  packages/forgekin/harness:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/forgekin/harness-eval:
     devDependencies:
       '@flowforge/cordis':

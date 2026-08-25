@@ -153,6 +153,9 @@
       "path": "./packages/forgekin/harness-eval/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/harness/tsconfig.host.json"
+    },
+    {
       "path": "./packages/forgekin/auto-dream/tsconfig.host.json"
     },
     {
