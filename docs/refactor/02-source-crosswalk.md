@@ -66,7 +66,7 @@
 | `domains/taste`（品味记忆） | `packages/cats/taste` | vendor（阶段 4） | ⬜ |
 | `domains/packs`（技能包）+ `domains/plugin`（host-inventory 控制面） | `packages/cats/packs` + `packages/plugin` | vendor；**发现模型统一 dsh cordis YAML 装配**（R13），host-inventory 仅作控制面视图 | ⬜ |
 | `agent-hooks`（agent 生命周期钩子） | `packages/harness/agent-hooks` | vendor；对照 P: `core/hooks.py` | ⬜ |
-| `infrastructure/harness-eval/*`（a2a/anchor-first/capability-tips/capability-wakeup/freshness/friction/memory/sop/task-outcome/measurement/publish-verdict/hub 等 16 域） | `packages/forgekin/harness-eval` | vendor；对照 P: `harness/` + `evaluators/`（F36/F40） | ⬜ |
+| `infrastructure/harness-eval/*`（a2a/anchor-first/capability-tips/capability-wakeup/freshness/friction/memory/sop/task-outcome/measurement/publish-verdict/hub 等 16 域） | `packages/forgekin/harness-eval` | vendor；对照 P: `harness/` + `evaluators/`（F36/F40） | ✅（批次16：EvalDomainRegistry 16 域内置注册 + 自定义追加 + 退役/重启用，见 Python 区 harness 行） |
 | `infrastructure/{commands,debug,distillation,document,email,enterprise,github,grounding,scheduler,telemetry}` | `packages/api/infrastructure` | vendor 按域拆分（阶段 3-5） | ⬜ |
 | `config/{capabilities,governance,mount}` | `packages/harness/config` | vendor；capability 声明对照 P: `core/capability/` | ⬜ |
 | `plugins/{github,video-analysis,video-gen,wechat-visible-reader,weixin-mp}`（manifest `plugin.yaml` + `limbs/*.yml` + `protocols/*.yaml`） | `packages/plugins/*` | vendor（阶段 5/6 或 stretch）；manifest 迁移为插件装配声明（R17 §4） | ⬜ |
@@ -123,6 +123,7 @@
 | `core/config.py`（ConfigLoader/system_config）+ `core/config_version.py`（迁移） | `packages/harness/config`（schemastery schema + 迁移函数，R17） | 加载链路重构：无校验 yaml.safe_load → schema 校验 + patch 装配；config/ 全量 YAML 清单登记（T0.19） | ⬜ |
 | `core/session_persistence.py` + `checkpoint_*` + `restart_recovery.py` | `packages/core/session` + `packages/harness/storage` | 行为基线对照 | ⬜ |
 | `core/task_store.py` + `task_context.py` | `packages/cats/stores`（TaskStore） | 直接翻译 | ⬜ |
+| `harness/feedback_loop.py` + `evaluators/` + `core/gate/` | `packages/forgekin/harness-eval` | 直接翻译（F36；F040） | ✅（批次16 forgekin-harness-eval：LifecycleJudge 五态判定 + ActionRecommender 行动路由 + DailySummarizer 每日汇总 + ScoringRuleEvaluator/MultiDimensionEvaluator + FeedbackLoop 外环质量门控（4 维评分 + 三模式 + 启发式回退 + P0-22 数据富集/P0-29 字段优先级）+ EvaluatorRegistry + EvalDomainRegistry 16 域，`ctx.forgeHarnessEval`，86 测试） |
 | `core/world_engine/` + `core/conditional_router.py` | stretch（`10-stage-map.md` §3.4） | 降级 | ⬜ |
 | `forgemind/*_to_openroute_proxy.py` + `anthropic_to_openroute_proxy.py` | `packages/llm/openroute` | 直接翻译为 provider | ⬜ |
 | `forgemind/magic_words.py` | `packages/forgekin/magic-words` | 直接翻译（F15；A011） | ✅（批次4 forgekin-magic-words：4 条魔法短语子串检测 + `ctx.forgeMagicWords`，12 测试） |

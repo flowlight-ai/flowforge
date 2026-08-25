@@ -104,7 +104,15 @@
       generateTests + 会话持久化）+ BridgeLLMOperator（OpenRoute 轮询 + 原子重命名互斥 +
       无效响应/超时重试 + fallback 模型切换）+ TraeSession/Manager + YAML 配置（${ENV} 占位符 +
       环境变量覆盖），SopService 同构挂载 `ctx.forgeTraeBridge`，113 测试）
-- [ ] T7.27 `packages/forgekin/harness-eval`：harness-eval 控制面（F36；对照 clowder C32 16 域评估）
+- [x] T7.27 `packages/forgekin/harness-eval`：harness-eval 控制面（F36；对照 clowder C32 16 域评估）
+      （`harness/feedback_loop.py` + `evaluators/`，F040；批次16：LifecycleJudge 五态判定
+      （增值/折旧/行动/瓶颈/稳定）+ ActionRecommender 行动路由（F012 sunset / F020 fix /
+      escalate CVO）+ DailySummarizer 每日汇总（聚合 F018 契约 + F019 信号 + F020 归因）
+      + ScoringRuleEvaluator/MultiDimensionEvaluator 维度评估器 + FeedbackLoop 外环质量门控
+      （4 维评分 + PASS/CONDITIONAL/FAIL + full/lightweight/skip 三模式 + 启发式回退 +
+      数据富集短内容自动 PASS P0-22 + 字段优先级 P0-29）+ EvaluatorRegistry 注册中心 +
+      EvalDomainRegistry 16 域注册表（退役/重启用）；HarnessEvalControlPlaneService 挂载
+      `ctx.forgeHarnessEval`，86 测试）
 - [x] T7.28 `packages/forgekin/roles`：特种角色子代理（产品经理/DevOps/安全官/交付经理，F43；
       移植 `forgemind/species_impl/org.py` + `forgemind/base.py` 契约 + F041-F044 文档：
       ForgekinRole 基类（observe/act/verify 三方法 + lifecycle + 能力判定 + 审批辅助）+
