@@ -1,0 +1,33 @@
+{
+  "name": "@flowforge/cats-ball-custody",
+  "description": "FlowForge ball custody lease + push-back + ball state machine Cordis plugin - F005 BallCustodyRegistry (acquire/renew/release/current_holder/is_expired, TTL 300s safety net, now_fn injectable, double-hold protection) + F006 PushBackProtocol (3-element enforcement, explicit resolve) + C24 ball custody state machine (8 states x 17 events table-driven transition + event-sourced projector), TS rewrite of docs/features/F005+F006 and clowder-ai domains/ball-custody at ctx.forgeBallCustody",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/ball-custody" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./models": { "types": "./lib/types/models.d.ts", "default": "./lib/models.js" },
+    "./registry": { "types": "./lib/types/registry.d.ts", "default": "./lib/registry.js" },
+    "./push-back": { "types": "./lib/types/push-back.d.ts", "default": "./lib/push-back.js" },
+    "./state-machine": { "types": "./lib/types/state-machine.d.ts", "default": "./lib/state-machine.js" },
+    "./projector": { "types": "./lib/types/projector.d.ts", "default": "./lib/projector.js" },
+    "./config": { "types": "./lib/types/config.d.ts", "default": "./lib/config.js" },
+    "./config/ball-custody.yaml": "./config/ball-custody.yaml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts", "config/*.yaml" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

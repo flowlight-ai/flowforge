@@ -58,7 +58,7 @@
 |---|---|---|---|
 | `src/services/agents/registry`（AgentRegistry） | `packages/cats/registry` | vendor；概念映射 cat→Forgekin | ⬜ |
 | `domains/auto-dream`（梦境回放/自动化反思） | `packages/forgekin/auto-dream` | vendor；对照 P: `evolution/auto_dream.py`（F20） | 🔶（批次10：梦境整合核心已落 `packages/forgekin/auto-dream`，CL-031 双层架构 `ctx.forgeAutoDream`） |
-| `domains/ball-custody`（球权托管租约） | `packages/chat/ball-custody` | vendor；对照 P: `docs/features/F006-ball-custody-lease.md`（F40） | ⬜ |
+| `domains/ball-custody`（球权托管租约） | `packages/cats/ball-custody` | vendor；对照 P: `docs/features/F006-ball-custody-lease.md`（F40） | ✅（批次23：C24 状态机 + 事件溯源 Projector 已落 cats-ball-custody，`ctx.catsBallCustody`） |
 | `domains/concierge` + `domains/guides`（礼宾/指南注册 `guides/registry.yaml` + `guides/flows/*.yaml`） | `packages/cats/guides` | vendor（阶段 4） | ⬜ |
 | `domains/feat-trajectory`（功能轨迹） | `packages/cats/feat-trajectory` | vendor（阶段 4） | ⬜ |
 | `domains/health`（健康检查） | `packages/api/health` | vendor（阶段 3） | ⬜ |
@@ -135,6 +135,7 @@
 | `forgemind/swarm.py` + `config/agent_swarm.yaml` | `packages/forgekin/swarm` | 直接翻译（F16；F049） | ✅（批次5 forgekin-swarm：SwarmCoordinator 调度/心跳回收/跨厂商 + `ctx.forgeSwarm`，68 测试） |
 | `core/im_council.py` + `config/im_council.yaml` + `config/im_channels.yaml` + `config/a2a_channels.yaml` + `core/channel_manager.py` | `packages/forgekin/im-council` + `packages/chat/channels` | 直接翻译（F17；F047）；A2A 域独立 `packages/a2a` | ✅（批次14 forgekin-im-council：五步议事 + I1-I5 不变量 + Console/WebChat/TraeBridge 三通道 + `ctx.forgeImCouncil`；chat-channels：ChannelManager 注册/广播/分发，45 测试） |
 | `core/teamact/` + `config/teamact_steer.yaml` | `packages/cats/teamact` | 直接翻译（F18；F048） | ✅（批次15a cats-teamact：TeamActState 六步循环 + TerminationReport 五项 + HandoffCapsule + PingPongCircuitBreaker + SteerQueue 7 动作 I1-I5，`ctx.catsTeamAct`，69 测试） |
+| `docs/features/F005/F006`（Python 老代码无 ball_custody/push_back，按文档契约建模） + clowder-ai `domains/ball-custody` + `packages/shared/src/types/ball-custody.ts` | `packages/cats/ball-custody` | 直接翻译（F40；C24） | ✅（批次23 cats-ball-custody：F005 BallCustodyRegistry + F006 PushBackProtocol + C24 8 态 × 17 事件表驱动状态机 + 事件溯源 Projector，`ctx.catsBallCustody`，61 测试） |
 | `forgemind/forms.py` + `forgemind/species_impl/org.py` + `forgemind/base.py` + `config/forgekins/keane.yaml*`（F041-F044） | `packages/forgekin/roles` | 直接翻译（F43；四角色子代理） | ✅（批次15b forgekin-roles：ForgekinRole 基类 observe/act/verify 三方法 + 四角色 ProductManager/DevOps/SecurityOfficer/DeliveryManager 各 5 动作 + 审批降级/WAL 先行/Tier0 拒绝/金丝雀/质量门禁不变量，`ctx.forgeRoles`，56 测试） |
 | `evolution/eval_ledger.py` + `core/eval/`（contract/three_signals/attribution） | `packages/forgekin/eval-ledger` | 直接翻译（F19/F41；F050） | ✅（批次8 forgekin-eval-ledger：Replay A/B 七步台账 + 五问契约 + 三方信号交叉 + 七类归因，`ctx.forgeEvalLedger`，59 测试） |
 | `forgemind/autonomous.py` + `evolution/auto_dream.py` | `packages/forgekin/autonomous` + `packages/forgekin/auto-dream` | 直接翻译（F20；F051） | ✅（批次10：F052 自主守护进程 `ctx.forgeAutonomous` + CL-031 梦境整合 `ctx.forgeAutoDream`，81 测试） |

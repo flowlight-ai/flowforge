@@ -129,7 +129,7 @@
 | C21 | 市场 marketplace / 插件 plugin / 技能包 packs | routes/marketplace 等 | 5 | ✅（批次7 chat-misc MarketplaceService） |
 | C22 | 信号 signals / 记忆 memory / 任务 tasks | routes/* | 5 | ✅（批次7 chat-misc Signal/MemoryPublish/TaskService） |
 | C23 | 梦境回放/自动化反思 auto-dream | domains/auto-dream | 7 | ✅（批次10 forgekin-auto-dream：双层架构 + 五级成熟度 + 贪心聚类 + L2 草稿 + TopK 浮现 + 4 信号 telemetry，见 F20） |
-| C24 | 球权托管租约 ball-custody | domains/ball-custody | 5 | ⬜ |
+| C24 | 球权托管租约 ball-custody | domains/ball-custody | 5 | ✅（批次23 cats-ball-custody：8 态 × 17 事件表驱动转移 + 事件溯源 Projector（apply/rebuild/rebuildAll）+ 内存 log/store，见 F40） |
 | C25 | 礼宾 concierge + 指南 guides（registry.yaml + flows/*.yaml） | domains/concierge + domains/guides | 4 | ⬜ |
 | C26 | 功能轨迹 feat-trajectory | domains/feat-trajectory | 4 | ⬜ |
 | C27 | 健康检查 health | domains/health | 3 | ✅（阶段 3 以 apiproxy RPC 域承载：health/session/settings/credentials 全测试覆盖） |
@@ -211,7 +211,7 @@
 | F37 | ForgeMind 锻造关系/谱系/应用层 | forgemind/（F026/F036/F038） | 7 | ✅（批次22 forgekin-relationship：层动态注册 + 进化/回炉协议（Eval≥0.85 + 5任务 + operator 审批 + 仅蒸馏通用能力）+ `ctx.forgeRelationship`，28 测试；forgekin-lineage：LineageNode/Edge/Store 双向遍历 + 分裂/融合执行器（加权合并）+ `ctx.forgeLineage`，26 测试；forgekin-app：F026 四钩子注册表（4 模板/4 技能/2 通道/1 自我进化配置）+ forgeFromTemplate 便捷锻造 + `ctx.forgeMind`，12 测试） |
 | F38 | MindCodex 检索（三入口/消费加权排名/可检索） | core/knowledge_evolution.py + memory_federation/（F015/F016/F039） | 7 | ✅（批次1 forgekin-knowledge：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 F4） |
 | F39 | 记忆治理 | core/memory_federation/ + core/event_memory.py（F014/F017） | 7 | ✅（批次12 forgekin-stores：MemoryCollection/CollectionManager（backend 协议注入）+ MemoryGovernance 三要素（权威等级/消费加权/衰减策略，幂等），`ctx.forgeStores`） |
-| F40 | 球权托管 + push-back 协议 | docs/features/F005/F006（F006） | 5/7 | ⬜ |
+| F40 | 球权托管 + push-back 协议 | docs/features/F005/F006（F006） | 5/7 | ✅（批次23 cats-ball-custody：F005 BallCustodyRegistry（TTL 300s + now_fn 注入 + 双持球防护 + 懒清理 + lease-{10hex}） + F006 PushBackProtocol（三要素强制 + 显式 resolve + pb-{10hex}）+ C24 球状态机合包，61 测试全绿，`ctx.catsBallCustody`） |
 | F41 | 评估契约/三信号交叉/归因矩阵 | core/eval/ + evolution/eval_ledger.py（F018/F019/F020） | 7 | ✅（批次8 forgekin-eval-ledger：EvalContract 五问 + ContractRegistry + ThreeSignalCrossValidator + Attributor 七类归因，`ctx.forgeEvalLedger`） |
 | F42 | 活性探针与规范读（liveness canonical read） | core/（F023） | 3/7 | ⬜ |
 | F43 | 特种角色子代理（产品经理/DevOps/安全官/交付经理） | forgemind/forms.py 相关（F041-F044） | 7 | ✅（批次15b forgekin-roles：ForgekinRole 基类 + 四角色各 5 动作 + 审批降级不变量，`ctx.forgeRoles`，56 测试） |

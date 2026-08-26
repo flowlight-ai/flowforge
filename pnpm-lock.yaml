@@ -852,6 +852,16 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
 
+  packages/cats/ball-custody:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/cats/invocation:
     devDependencies:
       '@flowforge/cats-shared':

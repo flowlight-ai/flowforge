@@ -184,6 +184,18 @@
       ForgeMind 应用层四钩子注册表（4 通用模板/4 锻造技能/2 MindCouncil 通道/1 自我进化配置，
       同名覆盖 + YAML 配置驱动）+ forgeFromTemplate 便捷锻造入口（构造 ForgekinFormData 调
       ForgePipeline.forge），`ctx.forgeMind`，12 测试）
+- [x] T7.34 `packages/cats/ball-custody`：F40 球权托管 + push-back 协议 + C24 球状态机
+      （TS 重写自 `docs/features/F005-ball-custody-lease.md` + `F006-push-back-protocol.md`
+      （Python 老代码无 ball_custody/push_back，按文档契约建模）+ clowder-ai
+      `domains/ball-custody`，F005/F006/C24）
+      （批次23：BallCustodyRegistry（F005：TTL 300s 安全网 + now_fn 注入 + 双持球防护 +
+      懒清理过期 lease + lease-{10hex} + metrics 四计数，AC-A1~A9）+ PushBackProtocol
+      （F006：三要素强制（from_owner/reason/evidence）+ 显式 resolve + pb-{10hex}，
+      AC-A1~A10）+ 球状态机（C24：8 态 × 17 事件表驱动 STATIC_TABLE+DYNAMIC_TABLE +
+      DEAD_BALL_ZOMBIE_GRACE_MS=600s + handed_cvo/hold_expired/heartbeat 三动态 resolver
+      + 穷举 INV-10）+ BallCustodyProjector 事件溯源（apply/rebuild/rebuildAll + 字段 effect
+      + stale 清理 + rejected 记录）+ 内存 log/store（可换持久实现）+ 内置 ball-custody.yaml；
+      BallCustodyService 挂载 `ctx.catsBallCustody`，61 测试）
 
 ## 验收标准
 

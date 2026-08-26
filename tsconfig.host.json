@@ -60,6 +60,12 @@
       "path": "./packages/cats/teamact/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/ball-custody/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/ball-custody/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {
