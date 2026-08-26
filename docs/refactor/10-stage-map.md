@@ -208,7 +208,7 @@
 | F34 | 外部 agent 降级回退 | core/external_agent/ + fallback_chain（F034） | 6 | ✅（批次21 packages/external/agent：ExternalAgentFallback withFallback 双层循环（provider × retry，success===true 判定，失败退避）+ getDefaultChain 默认链只保留已注册 Provider） |
 | F35 | 外部 agent 能力融合 | core/external_agent/（F035） | 6 | ✅（批次21 packages/external/agent：ExternalAgentCapabilityFusion fuse（min_invocations=3 / min_success_rate=0.7 门槛 + weight=min(base×count, max) + 能力/盲点不去重合并 + 融合历史）） |
 | F36 | harness-eval 控制面 | harness/ + evaluators/（F040） | 7 | ✅（批次16 forgekin-harness-eval：LifecycleJudge 五态判定 + ActionRecommender 行动路由 + DailySummarizer 每日汇总 + ScoringRule/MultiDimension 评估器 + FeedbackLoop 外环质量门控（4 维评分 + 三模式 + 启发式回退）+ EvaluatorRegistry + EvalDomainRegistry 16 域，`ctx.forgeHarnessEval`，86 测试） |
-| F37 | ForgeMind 锻造关系/谱系/应用层 | forgemind/（F026/F036/F038） | 7 | ⬜ |
+| F37 | ForgeMind 锻造关系/谱系/应用层 | forgemind/（F026/F036/F038） | 7 | ✅（批次22 forgekin-relationship：层动态注册 + 进化/回炉协议（Eval≥0.85 + 5任务 + operator 审批 + 仅蒸馏通用能力）+ `ctx.forgeRelationship`，28 测试；forgekin-lineage：LineageNode/Edge/Store 双向遍历 + 分裂/融合执行器（加权合并）+ `ctx.forgeLineage`，26 测试；forgekin-app：F026 四钩子注册表（4 模板/4 技能/2 通道/1 自我进化配置）+ forgeFromTemplate 便捷锻造 + `ctx.forgeMind`，12 测试） |
 | F38 | MindCodex 检索（三入口/消费加权排名/可检索） | core/knowledge_evolution.py + memory_federation/（F015/F016/F039） | 7 | ✅（批次1 forgekin-knowledge：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 F4） |
 | F39 | 记忆治理 | core/memory_federation/ + core/event_memory.py（F014/F017） | 7 | ✅（批次12 forgekin-stores：MemoryCollection/CollectionManager（backend 协议注入）+ MemoryGovernance 三要素（权威等级/消费加权/衰减策略，幂等），`ctx.forgeStores`） |
 | F40 | 球权托管 + push-back 协议 | docs/features/F005/F006（F006） | 5/7 | ⬜ |

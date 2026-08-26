@@ -2020,6 +2020,22 @@ importers:
         specifier: workspace:^
         version: link:../../typert/protocol
 
+  packages/forgekin/app:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-forging':
+        specifier: workspace:^
+        version: link:../forging
+      '@flowforge/forgekin-species':
+        specifier: workspace:^
+        version: link:../species
+
   packages/forgekin/auto-dream:
     devDependencies:
       '@flowforge/cordis':
@@ -2130,6 +2146,19 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/forgekin/lineage:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-soul':
+        specifier: workspace:^
+        version: link:../soul
+
   packages/forgekin/loops:
     devDependencies:
       '@flowforge/cordis':
@@ -2155,6 +2184,16 @@ importers:
         version: link:../../../vendor/cordis
 
   packages/forgekin/plugins:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/forgekin/relationship:
     dependencies:
       yaml:
         specifier: ^2.4.0

@@ -168,6 +168,22 @@
       传输层 + ReferenceAgentAdapter 参考运行时 + 六层 Guardrails（L1 输入/L2 提示词/L3 工具
       白名单/L4 输出脱敏/L5 操作确认/L6 成本上限）+ 内置 claude_code.yaml 等 4 Manifest；
       ExternalAgentService 挂载 `ctx.forgeExternalAgent`，113 测试）
+- [x] T7.33 `packages/forgekin/{relationship,lineage,app}`：F37 ForgeMind 锻造关系/谱系/应用层
+      （TS 重写自 `docs/features/F036-forgemind-forge-relationship.md` +
+      `docs/features/F038-forgemind-lineage.md` + `forgemind/plugins.py`，F026/F036/F038）
+      （批次22：forgekin-relationship（F036）：ForgeLayer 层动态注册（插件注册垂直层自动加入
+      通用层 can_evolve_to）+ 进化协议（Eval≥0.85 + 5+ 任务 + operator 审批 → 能力画像复制 +
+      垂直技能注入）+ 回炉协议（仅蒸馏通用能力 distill_general_only + 垂直能力保留原层）+ 幂等
+      执行（重复执行返回既有记录；其后有迁移则拒绝）+ computeCapabilityDelta 差异计算，
+      `ctx.forgeRelationship`，28 测试；forgekin-lineage（F038）：LineageNode 以 soul_imprint
+      为唯一锚点（capability_profile/value_anchors 工程补充）+ LineageStore 双向遍历
+      （getAncestry/getDescendants）+ LineageSplitExecutor 分裂（一父多子、复制父能力 +
+      capability_adjust 调整、保留父血缘）+ LineageFuseExecutor 融合（≥2 父、数值加权平均/
+      数组并集/其余取权重最大、保留多父血缘）+ 六类 LineageRelation（forged/split/fused/
+      cloned/traded/layer）校验，`ctx.forgeLineage`，26 测试；forgekin-app（F026）：
+      ForgeMind 应用层四钩子注册表（4 通用模板/4 锻造技能/2 MindCouncil 通道/1 自我进化配置，
+      同名覆盖 + YAML 配置驱动）+ forgeFromTemplate 便捷锻造入口（构造 ForgekinFormData 调
+      ForgePipeline.forge），`ctx.forgeMind`，12 测试）
 
 ## 验收标准
 

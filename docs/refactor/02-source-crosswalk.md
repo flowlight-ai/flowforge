@@ -98,6 +98,9 @@
 | 来源（P） | 落点（T） | 处理 | 状态 |
 |---|---|---|---|
 | `forgemind/soul_imprint.py` | `packages/forgekin/soul`（SoulImprint） | 直接翻译 + golden tests | ✅（批次1 forgekin-soul：不可变哈希/命名空间隔离 + `ctx.forgeSoul`，8 测试） |
+| `docs/features/F036-forgemind-forge-relationship.md`（无 Python 实现，按文档建模） | `packages/forgekin/relationship`（ForgeLayer/LayerTransition/ForgeRelationship） | 直接翻译（F036） | ✅（批次22 forgekin-relationship：层动态注册 + 进化/回炉协议（Eval≥0.85 + 5任务 + operator 审批 + 仅蒸馏通用能力）+ `ctx.forgeRelationship`，28 测试） |
+| `docs/features/F038-forgemind-lineage.md`（无 Python 实现，按文档建模） | `packages/forgekin/lineage`（LineageNode/Edge/Store + split/fuse 执行器） | 直接翻译（F038） | ✅（批次22 forgekin-lineage：SoulImprint 唯一锚点 + 双向遍历 + 分裂保留父血缘/融合加权合并 + `ctx.forgeLineage`，26 测试） |
+| `forgemind/plugins.py`（F026 四钩子 + forge_from_template） | `packages/forgekin/app`（ForgeMind 应用层） | 直接翻译（F026） | ✅（批次22 forgekin-app：四钩子注册表（4 模板/4 技能/2 通道/1 自我进化配置 YAML 驱动）+ forgeFromTemplate 便捷锻造 + `ctx.forgeMind`，12 测试） |
 | `core/capability/*` | `packages/forgekin/capability`（CapabilityProfile/proficiency/blind_spots） | 直接翻译 | ✅（批次1 forgekin-capability：models/analyzer/profile + `ctx.forgeCapability`，38 测试） |
 | `core/memory_federation/` + `core/event_memory.py` + `core/state_*` | `packages/forgekin/memory`（EchoStore 情景）+ `packages/forgekin/knowledge`（MindCodex 程序）+ `packages/forgekin/stores`（记忆治理） | 直接翻译；数据迁移见 `31-stage11-sunset.md` §4 | ✅（批次1 forgekin-memory：五存储 + EpisodePersistenceHook + `ctx.forgeMemory`；forgekin-knowledge：MindCodex 检索三入口；批次12 forgekin-stores：Collection/CollectionManager + 治理三要素，`ctx.forgeStores`） |
 | `evolution/knowledge_evolution.py` | `packages/forgekin/knowledge`（SpiritForge 蒸馏管线） | 直接翻译 | ✅（批次1 forgekin-knowledge：三问→Episode→蒸馏→Eval 双门→storeToCodex，26 测试） |
