@@ -128,7 +128,7 @@
 | C20 | CLI 适配器（claude/codex/gemini/agy/opencode） | services/agents/providers | 6 | ✅（批次5 limb-adapters：五 CLI 适配器全插件化（EAC 七契约）+ 统一 CliEvent 契约 + Registry 默认装配 + LimbAdaptersService 挂载 `ctx.limbAdapters`，112 测试） |
 | C21 | 市场 marketplace / 插件 plugin / 技能包 packs | routes/marketplace 等 | 5 | ✅（批次7 chat-misc MarketplaceService） |
 | C22 | 信号 signals / 记忆 memory / 任务 tasks | routes/* | 5 | ✅（批次7 chat-misc Signal/MemoryPublish/TaskService） |
-| C23 | 梦境回放/自动化反思 auto-dream | domains/auto-dream | 7 | ⬜ |
+| C23 | 梦境回放/自动化反思 auto-dream | domains/auto-dream | 7 | ✅（批次10 forgekin-auto-dream：双层架构 + 五级成熟度 + 贪心聚类 + L2 草稿 + TopK 浮现 + 4 信号 telemetry，见 F20） |
 | C24 | 球权托管租约 ball-custody | domains/ball-custody | 5 | ⬜ |
 | C25 | 礼宾 concierge + 指南 guides（registry.yaml + flows/*.yaml） | domains/concierge + domains/guides | 4 | ⬜ |
 | C26 | 功能轨迹 feat-trajectory | domains/feat-trajectory | 4 | ⬜ |
@@ -137,7 +137,7 @@
 | C29 | 品味记忆 taste | domains/taste | 4 | ⬜ |
 | C30 | 技能包 packs + 插件控制面 plugin（host-inventory 仅视图，发现模型统一上游 cordis，F15） | domains/packs + domains/plugin | 5 | ⬜ |
 | C31 | agent 生命周期钩子 agent-hooks | agent-hooks | 4 | ⬜ |
-| C32 | harness-eval 16 域评估（a2a/anchor-first/capability-tips/freshness/sop/task-outcome 等） | infrastructure/harness-eval | 7 | ⬜ |
+| C32 | harness-eval 16 域评估（a2a/anchor-first/capability-tips/freshness/sop/task-outcome 等） | infrastructure/harness-eval | 7 | ✅（批次16 forgekin-harness-eval：EvalDomainRegistry 16 域注册表，见 F36） |
 | C33 | infrastructure 域（commands/debug/distillation/document/email/enterprise/github/grounding/scheduler/telemetry） | infrastructure/* | 3-5 | ⬜ |
 | C34 | 能力/治理/挂载配置（capabilities/governance/mount） | config/* | 3-4 | ⬜ |
 | C35 | 上游参考插件（github/video-analysis/video-gen/wechat-visible-reader/weixin-mp，manifest 迁移装配声明） | plugins/* | 5-6 | ⬜ |
@@ -182,8 +182,8 @@
 | F8 | 工作流编译器 YAML→执行图 | core/workflow_compiler*.py | 7 | ✅（批次3 forgekin-workflow-compiler：三阶段 Parser/Validator/CodeGen + 条件路由/复合步骤 + `ctx.forgeWorkflowCompiler`，43 测试） |
 | F9 | 外部 agent 适配器 EAC 七契约 | forgemind/external_agents.py | 7 | ✅（批次3 forgekin-external-agents：五种内置 kind 子进程适配器 + Helm LLM 事件桥 + `ctx.forgeExternalAgents`，29 测试） |
 | F10 | 7 层 harness 工程（durable_state 等） | harness/（F008-F010/FR-HRN-04） | 7 | ✅（批次17 forgekin-harness：L1 durable-state（sqlite/git 双后端 + 乐观锁版本）+ L2 tool-mediation（白名单/别名/审计 + 4 拒绝类别）+ L3 evidence-sensors（四类证据 + SHA-256 自验证）+ L4 governance（注入点/优先级 + 5 规则 GOV-001~005）+ L6 entropy-manager（DocGardener/DebtTracker/RuleEvolution/GarbageCollection）+ L7 harnessability（六维加权 + 到期检查），`ctx.forgeHarness`，74 测试） |
-| F11 | 插件市场 + 前端插件 | core/marketplace.py + plugin_* | 7 | ⬜ |
-| F12 | 团队协作 teamact + 审批 | core/teamact + approval_hub | 7 | ⬜ |
+| F11 | 插件市场 + 前端插件 | core/marketplace.py + plugin_* | 7 | ✅（批次18 forgekin-plugins：PluginManifest + 本地/远程注册表 + 七步安装/卸载/更新/四检查验证 + 六挂载点前端注册表 `ctx.forgePlugins`，39 测试） |
+| F12 | 团队协作 teamact + 审批 | core/teamact + approval_hub | 7 | ✅（批次15a cats-teamact：六步循环状态机 + 五项终止条件 + 交接胶囊 + 乒乓熔断 + SteerQueue 7 动作 `ctx.catsTeamAct`，69 测试；审批复用 chat approval） |
 | F13 | 观测/追踪/指标 | core/observability + tracing | 7 | ✅（批次13 forgekin-observability：AsyncLocalStorage trace_id 全链路传播 + TraceManager span 链 + 三类指标采集器 + AuditLogger JSONL + EventBus 发布订阅/请求响应 + 跨项目桥，48 测试） |
 | F14 | Web 页面（council/mission/memory/review/signals/admin） | web/src/app | 8 | ⬜ |
 | F15 | 魔法词 magic_words | forgemind/magic_words.py（F011/F012；A011） | 7 | ✅（批次4 forgekin-magic-words：4 条魔法短语 → stop-and-audit 触发检测 + `ctx.forgeMagicWords`，12 测试） |
@@ -198,7 +198,7 @@
 | F24 | 特性开关 + 金丝雀 | core/feature_flags.py + core/canary.py + config/canary/default.yaml | 2 | ✅（packages/plugins/feature-flags 8 + canary 10 vitest） |
 | F25 | 模式执行器（modes/执行策略/步长限制/超时） | core/base_mode_executor.py + modes/ + execution_policy.py + step_limiter.py + agent_timeout.py | 1/2 | ✅（packages/plugins/modes，14 vitest） |
 | F26 | 内容审核与护栏（moderation/gate/guardrails） | core/{content_moderation,moderation,guardrails}.py + core/gate/（对照 F007 push-back） | 2 | ✅（packages/plugins/guard，16 vitest） |
-| F27 | 状态机族（handoff/状态映射/变量解析/命名空间/上下文层/工具链执行/字段门控） | core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py（F003/F024；A003/A024） | 1/7 | ⬜ |
+| F27 | 状态机族（handoff/状态映射/变量解析/命名空间/上下文层/工具链执行/字段门控） | core/{handoff,state_mapper,state_updates,state_query_tool,variable_resolver,namespace,context_layer_manager,tool_chain_executor,field_condition_gate}.py（F003/F024；A003/A024） | 1/7 | ✅（批次19 packages/core/state：NamespaceRegistry + HandoffManager + StateUpdateMapper + StateMapper/ParamMapping + VariableResolver + FieldConditionGate + ContextLayerManager + StateQueryTool + ToolChainExecutor ReAct 循环，`ctx.forgeState`，61 测试） |
 | F28 | LLM 路由/模型服务/提供商配额 | core/{model_service,model_capability,provider_quota}.py + config/llm_route.yaml|provider_quota.yaml*（F025） | 1/3 | ⬜ |
 | F29 | SOP 标准作业程序 | sop/ + config/sops/*.yaml | 7 | ✅（批次4 forgekin-sop：阶段门禁引擎（PredicateChecker 8 检查器 + SOPExecutor 门禁/流转 + YAML 加载）+ `ctx.forgeSop`，71 测试） |
 | F30 | 物种体系（base/forgekin/registry/species + species_impl + forgekins/*.yaml 8 物种） | forgemind/*.py + forgemind/forgekins/*.yaml（F027；A027） | 4/7 | ✅（批次7 forgekin-species：五物种数据模型 + ForgekinBase chat 降级/重试分类 + Registry selectOwner + SpeciesFactoryRegistry 构造器注册表 + 五形态边界校验 + `ctx.forgeSpecies` 活实例表，69 测试） |

@@ -1,0 +1,35 @@
+{
+  "name": "@flowforge/core-state",
+  "description": "FlowForge core state Cordis plugin — F27 state machine family: NamespaceRegistry (core/namespace.py) + Handoff/HandoffManager (core/handoff.py) + StateUpdateMapper (core/state_updates.py) + StateMapper/ParamMapping (core/state_mapper.py FWK-04) + VariableResolver (core/variable_resolver.py) + FieldConditionGate (core/field_condition_gate.py) + ContextLayerManager (core/context_layer_manager.py) + StateQueryTool (core/state_query_tool.py) + ToolChainExecutor ReAct loop (core/tool_chain_executor.py) at ctx.forgeState",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/core/state" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./namespace": { "types": "./lib/types/namespace.d.ts", "default": "./lib/namespace.js" },
+    "./handoff": { "types": "./lib/types/handoff.d.ts", "default": "./lib/handoff.js" },
+    "./state-updates": { "types": "./lib/types/state-updates.d.ts", "default": "./lib/state-updates.js" },
+    "./state-mapper": { "types": "./lib/types/state-mapper.d.ts", "default": "./lib/state-mapper.js" },
+    "./variable-resolver": { "types": "./lib/types/variable-resolver.d.ts", "default": "./lib/variable-resolver.js" },
+    "./field-condition-gate": { "types": "./lib/types/field-condition-gate.d.ts", "default": "./lib/field-condition-gate.js" },
+    "./context-layer-manager": { "types": "./lib/types/context-layer-manager.d.ts", "default": "./lib/context-layer-manager.js" },
+    "./state-query-tool": { "types": "./lib/types/state-query-tool.d.ts", "default": "./lib/state-query-tool.js" },
+    "./tool-chain-executor": { "types": "./lib/types/tool-chain-executor.d.ts", "default": "./lib/tool-chain-executor.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}
