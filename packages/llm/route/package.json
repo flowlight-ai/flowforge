@@ -1,0 +1,35 @@
+{
+  "name": "@flowforge/llm-route",
+  "description": "FlowForge LLM routing Cordis plugin — F28: LLMRoute/RouteResolver (llm/route.py + config/llm_route.yaml) + LLMRouter (llm/router.py) + ModelService health-check/failover (tools/llm/model_service.py) + HealthChecker (core/model_service.py) + ModelCapabilityProvider (tools/llm/model_capability_provider.py) + ModelCapability zero-config API (core/model_capability.py) + ProviderQuotaManager (core/provider_quota.py) at ctx.forgeLlmRoute",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/llm/route" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./route": { "types": "./lib/types/route.d.ts", "default": "./lib/route.js" },
+    "./router": { "types": "./lib/types/router.d.ts", "default": "./lib/router.js" },
+    "./provider": { "types": "./lib/types/provider.d.ts", "default": "./lib/provider.js" },
+    "./model-service": { "types": "./lib/types/model-service.d.ts", "default": "./lib/model-service.js" },
+    "./quota": { "types": "./lib/types/quota.d.ts", "default": "./lib/quota.js" },
+    "./capability": { "types": "./lib/types/capability.d.ts", "default": "./lib/capability.js" },
+    "./config": { "types": "./lib/types/config.d.ts", "default": "./lib/config.js" },
+    "./http": { "types": "./lib/types/http.d.ts", "default": "./lib/http.js" },
+    "./config/llm-route.yaml": "./config/llm-route.yaml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts", "config/*.yaml" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

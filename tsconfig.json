@@ -387,6 +387,9 @@
       "path": "./packages/llm/llm-retry"
     },
     {
+      "path": "./packages/llm/route"
+    },
+    {
       "path": "./packages/llm/token-meter"
     },
     {

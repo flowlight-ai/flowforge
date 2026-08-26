@@ -3423,6 +3423,16 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
 
+  packages/llm/route:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/llm/token-meter:
     dependencies:
       '@flowforge/schemastery':
