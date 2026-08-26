@@ -1,0 +1,75 @@
+# External Agent Fallback 链配置（EX-007）
+# 跨厂商 fallback：claude code → codex → opencode → trae → FlowForge 内置能力
+# 详见 [doc:review/review.md#第九章§9.2] EX-007 失败回退策略缺失
+# 详见 [doc:decisions/006-external-agent-integration.md] §5 调用流程
+
+# 默认 fallback 链（按优先级排序）
+default_chain:
+  - "anthropic.claude_code"      # 优先：复杂重构 / 代码生成
+  - "openai.codex"               # 次选：推理 / 结构化输出
+  - "opencode.opencode"          # 三选：开源协作 / 插件扩展
+  - "bytedance.trae"             # 四选：IDE 集成 / 实时编辑
+  - "flowforge.internal"         # 兜底：FlowForge 内置能力
+
+# 按能力定制的 fallback 链（key=capability）
+per_capability_chains:
+  code_generation:
+    - "anthropic.claude_code"
+    - "openai.codex"
+    - "bytedance.trae"
+    - "flowforge.internal"
+
+  code_review:
+    - "anthropic.claude_code"
+    - "openai.codex"
+    - "opencode.opencode"
+    - "flowforge.internal"
+
+  complex_refactor:
+    - "anthropic.claude_code"
+    - "flowforge.internal"   # 复杂重构仅有 claude code 擅长，其他易出错
+
+  reasoning:
+    - "openai.codex"
+    - "anthropic.claude_code"
+    - "flowforge.internal"
+
+  ide_integration:
+    - "bytedance.trae"
+    - "anthropic.claude_code"
+    - "flowforge.internal"
+
+# 重试策略
+retry:
+  # 同厂商最大重试次数
+  max_attempts: 3
+  # 重试退避间隔（秒）
+  backoff_seconds: 5.0
+  # 是否启用指数退避
+  exponential_backoff: true
+  # 最大退避间隔（秒，指数退避上限）
+  max_backoff_seconds: 60.0
+
+# 跨厂商 fallback 触发条件
+fallback_triggers:
+  # 超时触发 fallback
+  on_timeout: true
+  # 限流触发 fallback
+  on_rate_limit: true
+  # 服务不可用触发 fallback
+  on_service_unavailable: true
+  # 输出质量不达标触发 fallback（需配合 L4 output_validation）
+  on_quality_failure: true
+  # 输出包含安全违规触发 fallback
+  on_security_violation: true
+
+# 内置能力兜底配置（flowforge.internal）
+internal_fallback:
+  # 启用 FlowForge 内置 Agent 兜底
+  enabled: true
+  # 兜底使用的内置 Agent 名称
+  internal_agent: "flowforge:generic_coder"
+  # 兜底超时（秒）
+  timeout_seconds: 120
+  # 兜底时是否记录到审计日志
+  audit_log: true

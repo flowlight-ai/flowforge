@@ -1,0 +1,45 @@
+{
+  "name": "@flowforge/external-agent",
+  "description": "FlowForge external agent Cordis plugin — F33 shared state (core/external_agent/shared_state.py) + F34 fallback chain (core/external_agent/fallback.py) + F35 capability fusion (core/external_agent/capability_fusion.py) + full EAC v1 domain: manifest/registry/adapter/host-injection/worktree/ACP transport/CLI NDJSON/reference runtime/bridge/session/capability registry/collaboration/avatar sync/prompt config map + six-layer guardrails (L1 input validation - L6 cost ceiling) at ctx.forgeExternalAgent",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/external/agent" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./manifest": { "types": "./lib/types/manifest.d.ts", "default": "./lib/manifest.js" },
+    "./registry": { "types": "./lib/types/registry.d.ts", "default": "./lib/registry.js" },
+    "./adapter": { "types": "./lib/types/adapter.d.ts", "default": "./lib/adapter.js" },
+    "./shared-state": { "types": "./lib/types/shared-state.d.ts", "default": "./lib/shared-state.js" },
+    "./fallback": { "types": "./lib/types/fallback.d.ts", "default": "./lib/fallback.js" },
+    "./capability-fusion": { "types": "./lib/types/capability-fusion.d.ts", "default": "./lib/capability-fusion.js" },
+    "./capability-registry": { "types": "./lib/types/capability-registry.d.ts", "default": "./lib/capability-registry.js" },
+    "./session-manager": { "types": "./lib/types/session-manager.d.ts", "default": "./lib/session-manager.js" },
+    "./collaboration-coordinator": { "types": "./lib/types/collaboration-coordinator.d.ts", "default": "./lib/collaboration-coordinator.js" },
+    "./avatar-sync": { "types": "./lib/types/avatar-sync.d.ts", "default": "./lib/avatar-sync.js" },
+    "./prompt-config-map": { "types": "./lib/types/prompt-config-map.d.ts", "default": "./lib/prompt-config-map.js" },
+    "./host-injection": { "types": "./lib/types/host-injection.d.ts", "default": "./lib/host-injection.js" },
+    "./worktree": { "types": "./lib/types/worktree.d.ts", "default": "./lib/worktree.js" },
+    "./acp-transport": { "types": "./lib/types/acp-transport.d.ts", "default": "./lib/acp-transport.js" },
+    "./cli-ndjson": { "types": "./lib/types/cli-ndjson.d.ts", "default": "./lib/cli-ndjson.js" },
+    "./reference-runtime": { "types": "./lib/types/reference-runtime.d.ts", "default": "./lib/reference-runtime.js" },
+    "./bridge": { "types": "./lib/types/bridge.d.ts", "default": "./lib/bridge.js" },
+    "./guardrails": { "types": "./lib/types/guardrails/index.d.ts", "default": "./lib/guardrails/index.js" },
+    "./src/*": "./src/*",
+    "./config/*": "./config/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts", "config/**/*.yaml" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

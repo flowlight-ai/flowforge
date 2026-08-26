@@ -155,6 +155,19 @@
       ModelCapability 零配置高级 API（chat/embed/summary/agent）；内置 llm-route.yaml；
       依赖（HttpLike/SecretResolver/PluginRegistry）接口注入；LlmRouteService 挂载
       `ctx.forgeLlmRoute`，121 测试）
+- [x] T7.32 `packages/external/agent`：F33-F35 外部 Agent 全族（TS 重写自
+      `core/external_agent/`，F033-F035）
+      （批次21：AgentProviderManifest 声明模型（协议/传输/安全级别校验）+ ProviderTransportRegistry
+      注册/发现/load_from_dir 覆盖语义 + HostInjector host-owned 注入（凭据/sandbox/MCP env
+      脱敏）+ ExternalAgentWorktree 隔离工作区（唯一目录名/复制源跳 4 目录/回滚快照）+ F33
+      ExternalAgentSharedState 共享状态（store DI + listHistory 内存索引）+ F34
+      ExternalAgentFallback 降级回退（双层循环 provider×retry + 默认链只保留已注册）+ F35
+      ExternalAgentCapabilityFusion 能力融合（min_invocations=3/min_success_rate=0.7 门槛 +
+      weight=min(base×count,max) + 能力/盲点不去重合并）+ ExternalAgentBridge 五步调用链
+      （选 Provider→注入历史→fallback 链→写共享状态+融合→聚合成本）+ ACPTransport/CLI-NDJSON
+      传输层 + ReferenceAgentAdapter 参考运行时 + 六层 Guardrails（L1 输入/L2 提示词/L3 工具
+      白名单/L4 输出脱敏/L5 操作确认/L6 成本上限）+ 内置 claude_code.yaml 等 4 Manifest；
+      ExternalAgentService 挂载 `ctx.forgeExternalAgent`，113 测试）
 
 ## 验收标准
 
