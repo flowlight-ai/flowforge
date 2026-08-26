@@ -143,6 +143,18 @@
       StateQueryTool 状态查询基类（scope 过滤 + web_search 降级）+ ToolChainExecutor ReAct
       循环（消息窗口裁剪/同工具连续 3 次循环检测/max_iterations）；依赖（Memory/LLM/
       ToolRegistry/EventBus/web_search）接口注入；StateService 挂载 `ctx.forgeState`，61 测试）
+- [x] T7.31 `packages/llm/route`：F28 LLM 路由/模型服务/提供商配额（TS 重写自
+      `core/{model_service,model_capability,provider_quota}.py` + `config/llm_route.yaml` +
+      `config/provider_quota.yaml*`，F025）
+      （批次20：LLMRoute/FailoverPolicy/RouteResolver 路由解析（assignment 解析/双策略
+      failover）+ LLMRouter 健康感知路由（错误率 0.05 步进 1 次即降级/连续 3 次熔断/恢复
+      衰减）+ ModelService 健康检查（24h 可用缓存/冷却期/七类错误分类/forceUpdateModels/
+      autoFix/recordCall）+ HealthChecker 周期巡检（findAffectedAssignments 扁平嵌套/
+      checkAndFailover）+ ModelCapabilityProvider 能力路由（provider 评分/健康追踪）+
+      ProviderQuotaManager 六维配额（日/时/分预算/并发/余额/计数 + backup 切换）+
+      ModelCapability 零配置高级 API（chat/embed/summary/agent）；内置 llm-route.yaml；
+      依赖（HttpLike/SecretResolver/PluginRegistry）接口注入；LlmRouteService 挂载
+      `ctx.forgeLlmRoute`，121 测试）
 
 ## 验收标准
 
