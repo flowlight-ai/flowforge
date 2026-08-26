@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@flowforge/chat-approval",
   "description": "FlowForge chat approval domain Cordis plugin — F128 proposal state machine / F079 votes / Approval Hub projection at ctx.chatApproval",
   "version": "0.1.0-rc.1",
