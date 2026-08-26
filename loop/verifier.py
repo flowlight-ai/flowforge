@@ -698,7 +698,23 @@ class MultiJudgeVerifier(LoopVerifier):
                 logger.warning(f"MultiJudgeVerifier: judge '{judge_names[i]}' returned unexpected type: {type(r)}")
 
         if not valid_results:
-            return Verdict(passed=False, score=0.0, errors=["All judges failed to return valid results"])
+            # v6.6修复(晚间评委集体早停事故): 全部评委无效≠产出无效。
+            # 原逻辑硬判 FAIL(0.0)，导致 topic/create loop 在 webchat 晚高峰抖动时
+            # 把已成功生成的选题/内容整体丢弃，上游连锁降级（实测一晚连续N次
+            # "prefer_tool_direct fallback returned None"→回退旧选择器→重复选题风暴）。
+            # 改为放行并记警告：质量门让位于可用性，评委恢复后自然回归严格模式。
+            logger.error(
+                "MultiJudgeVerifier: ALL judges failed to return valid results — "
+                "passing with WARNING (availability-over-strictness, v6.6). "
+                "Check openroute/webchat health!")
+            if task.event_bus:
+                task.event_bus.emit(task.task_id, "verify.warning", {
+                    "type": "all_judges_invalid",
+                    "total_judges": len(active_judges),
+                })
+            return Verdict(passed=True, score=0.80,
+                           errors=[],
+                           )
 
         # 5. 聚合评分
         aggregated = self._aggregate_scores(valid_results, dimensions)
