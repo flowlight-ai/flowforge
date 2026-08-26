@@ -1578,6 +1578,16 @@ importers:
         specifier: workspace:^
         version: link:../../typert/registry
 
+  packages/core/state:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/core/system-prompt:
     dependencies:
       '@flowforge/schemastery':
