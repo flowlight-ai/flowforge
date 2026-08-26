@@ -118,7 +118,8 @@
 | `core/mcp_integration.py` + `native_tool_server.py` + `tools_bridge.py`（forgemind） | `packages/plugins/mcp` | 行为基线对照 | ⬜ |
 | `core/tracing.py` + `observability.py` + `metrics.py` + `event_bridge.py` + `events/event_bus.py` | `packages/forgekin/observability`（ctx.forgeObservability） | 直接翻译（P-94） | ✅（批次13，48 测试） |
 | `core/guardrails.py` + `moderation.py` + `content_moderation.py` + `core/gate/` | `packages/plugins/guard` | 直接翻译 | ⬜ |
-| `core/workspace.py` + `core/external_agent/` | `packages/plugins/workspace` + `packages/limb` | 直接翻译 | ⬜ |
+| `core/workspace.py` | `packages/plugins/workspace` | 直接翻译 | ⬜ |
+| `core/external_agent/`（manifest/registry/host_injection/worktree/shared_state/fallback/capability_fusion/guardrails/acp_transport/cli_ndjson/bridge 等，F33/F34/F35） | `packages/external/agent` | 直接翻译（F33/F34/F35；CL-014~017） | ✅（批次21 packages/external/agent：AgentProviderManifest + ProviderTransportRegistry + HostInjector host-owned 注入 + ExternalAgentWorktree 隔离工作区 + F33 ExternalAgentSharedState + F34 ExternalAgentFallback + F35 ExternalAgentCapabilityFusion + ExternalAgentBridge 五步调用链 + ACPTransport/CLI-NDJSON 传输 + 六层 Guardrails + ReferenceAgentAdapter 参考运行时 + 内置 4 Manifest + `ctx.forgeExternalAgent`，113 测试） |
 | `core/event_bridge.py` + `hooks.py` | `packages/harness/hooks` | 行为基线对照 | ⬜ |
 | `core/config.py`（ConfigLoader/system_config）+ `core/config_version.py`（迁移） | `packages/harness/config`（schemastery schema + 迁移函数，R17） | 加载链路重构：无校验 yaml.safe_load → schema 校验 + patch 装配；config/ 全量 YAML 清单登记（T0.19） | ⬜ |
 | `core/session_persistence.py` + `checkpoint_*` + `restart_recovery.py` | `packages/core/session` + `packages/harness/storage` | 行为基线对照 | ⬜ |

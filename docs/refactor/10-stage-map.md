@@ -204,9 +204,9 @@
 | F30 | 物种体系（base/forgekin/registry/species + species_impl + forgekins/*.yaml 8 物种） | forgemind/*.py + forgemind/forgekins/*.yaml（F027；A027） | 4/7 | ✅（批次7 forgekin-species：五物种数据模型 + ForgekinBase chat 降级/重试分类 + Registry selectOwner + SpeciesFactoryRegistry 构造器注册表 + 五形态边界校验 + `ctx.forgeSpecies` 活实例表，69 测试） |
 | F31 | 锻造流水线 forging | forging/ + forgemind/config/forging.yaml（F028；A028） | 7 | ✅（批次7 forgekin-forging：六阶段 ForgePipeline（失败包装/计时）+ 默认锚点印记 + forgeFromYaml + 内置双 YAML，`ctx.forgeForging`，30 测试） |
 | F32 | Trae 桥接 | config/trae_bridge.yaml + .trae_bridge/（F045） | 7 | ✅（批次6 forgekin-trae-bridge：TraeBridgeProtocol 文件协议（F045 I1-I8）+ TraeLLMClient 门面 + BridgeLLMOperator OpenRoute 轮询 + 会话持久化 + YAML 配置）+ `ctx.forgeTraeBridge`，113 测试） |
-| F33 | 外部 agent 共享状态 | core/external_agent/（F033） | 6 | ⬜ |
-| F34 | 外部 agent 降级回退 | core/external_agent/ + fallback_chain（F034） | 6 | ⬜ |
-| F35 | 外部 agent 能力融合 | core/external_agent/（F035） | 6 | ⬜ |
+| F33 | 外部 agent 共享状态 | core/external_agent/（F033） | 6 | ✅（批次21 packages/external/agent：ExternalAgentSharedState 共享状态（store DI 注入 + listHistory 内存索引 + read/write/clear/listKeys），`ctx.forgeExternalAgent`，113 测试） |
+| F34 | 外部 agent 降级回退 | core/external_agent/ + fallback_chain（F034） | 6 | ✅（批次21 packages/external/agent：ExternalAgentFallback withFallback 双层循环（provider × retry，success===true 判定，失败退避）+ getDefaultChain 默认链只保留已注册 Provider） |
+| F35 | 外部 agent 能力融合 | core/external_agent/（F035） | 6 | ✅（批次21 packages/external/agent：ExternalAgentCapabilityFusion fuse（min_invocations=3 / min_success_rate=0.7 门槛 + weight=min(base×count, max) + 能力/盲点不去重合并 + 融合历史）） |
 | F36 | harness-eval 控制面 | harness/ + evaluators/（F040） | 7 | ✅（批次16 forgekin-harness-eval：LifecycleJudge 五态判定 + ActionRecommender 行动路由 + DailySummarizer 每日汇总 + ScoringRule/MultiDimension 评估器 + FeedbackLoop 外环质量门控（4 维评分 + 三模式 + 启发式回退）+ EvaluatorRegistry + EvalDomainRegistry 16 域，`ctx.forgeHarnessEval`，86 测试） |
 | F37 | ForgeMind 锻造关系/谱系/应用层 | forgemind/（F026/F036/F038） | 7 | ⬜ |
 | F38 | MindCodex 检索（三入口/消费加权排名/可检索） | core/knowledge_evolution.py + memory_federation/（F015/F016/F039） | 7 | ✅（批次1 forgekin-knowledge：search/listByDomain/listByTag 三入口 + recordConsumption 消费加权，见 F4） |

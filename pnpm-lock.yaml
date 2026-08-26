@@ -1928,6 +1928,16 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
 
+  packages/external/agent:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/feedback/command-feedback:
     devDependencies:
       '@flowforge/agent':

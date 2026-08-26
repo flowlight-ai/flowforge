@@ -1,0 +1,41 @@
+# External Agent Adapter 注册映射
+# 按 F241 (CL-014) + EX-003 配置驱动：Provider → Adapter 类路径映射
+# 详见 [doc:decisions/006-external-agent-integration.md] §3 ExternalAgentAdapter 抽象层
+# 详见 [doc:review/review.md#第九章§9.2] EX-003 协议适配层
+
+# Adapter 类路径映射（host 通过此映射实例化 Adapter）
+# 配置驱动 > 代码实现（铁律）
+adapter_mapping:
+  anthropic.claude_code:
+    module: "flowforge.core.external_agent.adapters.claude_code"
+    class: "ClaudeCodeAdapter"
+    manifest_file: "manifests/claude_code.yaml"
+
+  openai.codex:
+    module: "flowforge.core.external_agent.adapters.codex"
+    class: "CodexAdapter"
+    manifest_file: "manifests/codex.yaml"
+
+  opencode.opencode:
+    module: "flowforge.core.external_agent.adapters.opencode"
+    class: "OpenCodeAdapter"
+    manifest_file: "manifests/opencode.yaml"
+
+  bytedance.trae:
+    module: "flowforge.core.external_agent.adapters.trae"
+    class: "TraeAdapter"
+    manifest_file: "manifests/trae.yaml"
+
+# 默认 Adapter（当 Provider 未在 mapping 中时使用）
+default_adapter:
+  module: "flowforge.core.external_agent.reference_runtime"
+  class: "ReferenceAgentAdapter"
+
+# Adapter 加载策略
+load_strategy:
+  # 是否启用懒加载（首次调用时实例化）
+  lazy_load: true
+  # 是否在注册时校验 Manifest（启动期失败优于运行期失败）
+  validate_on_register: true
+  # 是否在注册时尝试导入 Adapter 类（检测缺失依赖）
+  import_check: true

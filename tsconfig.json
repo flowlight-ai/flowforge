@@ -390,6 +390,9 @@
       "path": "./packages/llm/route"
     },
     {
+      "path": "./packages/external/agent/tsconfig.host.json"
+    },
+    {
       "path": "./packages/llm/token-meter"
     },
     {
