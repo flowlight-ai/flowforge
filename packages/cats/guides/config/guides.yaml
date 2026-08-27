@@ -1,0 +1,22 @@
+# C25 礼宾 + 指南 配置（批次24）
+# 契约：clowder-ai domains/concierge（F229）+ domains/guides（F155）
+# 参考：clowder-ai packages/api/src/domains/{concierge,guides}
+
+guides:
+  # 内置 guide registry 路径（相对包内 config/ 目录，可被 configPath 覆盖）
+  registry_path: registry.yaml
+  # 共享默认线程 id（clowder DEFAULT_THREAD_ID='default'，createdBy='system' 全局可访问）
+  default_thread_id: default
+  # 关键词反向子串匹配阈值（MIN_ASCII=3 / MIN_NON_ASCII=2）
+  min_ascii_reverse_match_length: 3
+  min_non_ascii_reverse_match_length: 2
+
+concierge:
+  # 每用户默认配置（dutyCatProfileId 由运行时 roster 解析：gemini35 → 首个 → sonnet）
+  default_display_name: 猫猫球
+  default_persona_tone: 温暖、简短、不啰嗦
+  default_skin: yanyan-codex
+  default_proactive_policy: quiet-badge
+  ball_size_min: 48
+  ball_size_max: 192
+  ball_size_default: 72

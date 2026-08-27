@@ -66,6 +66,9 @@
       "path": "./packages/cats/ball-custody/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/guides/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {

@@ -130,7 +130,7 @@
 | C22 | 信号 signals / 记忆 memory / 任务 tasks | routes/* | 5 | ✅（批次7 chat-misc Signal/MemoryPublish/TaskService） |
 | C23 | 梦境回放/自动化反思 auto-dream | domains/auto-dream | 7 | ✅（批次10 forgekin-auto-dream：双层架构 + 五级成熟度 + 贪心聚类 + L2 草稿 + TopK 浮现 + 4 信号 telemetry，见 F20） |
 | C24 | 球权托管租约 ball-custody | domains/ball-custody | 5 | ✅（批次23 cats-ball-custody：8 态 × 17 事件表驱动转移 + 事件溯源 Projector（apply/rebuild/rebuildAll）+ 内存 log/store，见 F40） |
-| C25 | 礼宾 concierge + 指南 guides（registry.yaml + flows/*.yaml） | domains/concierge + domains/guides | 4 | ⬜ |
+| C25 | 礼宾 concierge + 指南 guides（registry.yaml + flows/*.yaml） | domains/concierge + domains/guides | 4 | ✅（批次24 cats-guides：concierge 全服务群（config/thread/relay/confirmation/triage/investigation/search-context/reply-validator/target-cats/verified-tool-target/worker）+ guides 插件入口（registry-loader/5 态状态机/session-store/lifecycle/action/routing-interceptor/prompt-section/thread-store），KV 接口注入替代 Redis、RosterResolver 替代 catRegistry，85 测试，见 F155/F229） |
 | C26 | 功能轨迹 feat-trajectory | domains/feat-trajectory | 4 | ⬜ |
 | C27 | 健康检查 health | domains/health | 3 | ✅（阶段 3 以 apiproxy RPC 域承载：health/session/settings/credentials 全测试覆盖） |
 | C28 | 人性倾向/项目/预览/工作区（human-disposition/projects/preview/workspace） | domains/* | 4-5 | ⬜ |
