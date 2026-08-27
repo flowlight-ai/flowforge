@@ -1,0 +1,32 @@
+{
+  "name": "@flowforge/cats-taste",
+  "description": "FlowForge taste Cordis plugin - C29 Taste (F221), TS rewrite of clowder-ai domains/taste: TasteProposal store port (pending→approving→approved two-phase CAS + rejected one-shot, dedup reservation, ApprovalPublication envelope), InMemory store, locked+checkpointed approve pipeline (SessionMutexService seam + write checkpoint crash recovery), vignette writer (deriveSlug/formatVignette/index section insert + main-only git commit with dirty-path refusal + rollback), canonical main-worktree repository resolution (GitRunner injected), taste-signal routing advisory guard at ctx.catsTaste",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/taste" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./store": { "types": "./lib/types/store.d.ts", "default": "./lib/store.js" },
+    "./taste-repository": { "types": "./lib/types/taste-repository.d.ts", "default": "./lib/taste-repository.js" },
+    "./write-vignette": { "types": "./lib/types/write-vignette.d.ts", "default": "./lib/write-vignette.js" },
+    "./approve-taste-proposal": { "types": "./lib/types/approve-taste-proposal.d.ts", "default": "./lib/approve-taste-proposal.js" },
+    "./taste-routing-guard": { "types": "./lib/types/taste-routing-guard.d.ts", "default": "./lib/taste-routing-guard.js" },
+    "./keys": { "types": "./lib/types/keys.d.ts", "default": "./lib/keys.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^"
+  }
+}

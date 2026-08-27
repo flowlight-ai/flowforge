@@ -60,10 +60,10 @@
 | `domains/auto-dream`（梦境回放/自动化反思） | `packages/forgekin/auto-dream` | vendor；对照 P: `evolution/auto_dream.py`（F20） | 🔶（批次10：梦境整合核心已落 `packages/forgekin/auto-dream`，CL-031 双层架构 `ctx.forgeAutoDream`） |
 | `domains/ball-custody`（球权托管租约） | `packages/cats/ball-custody` | vendor；对照 P: `docs/features/F006-ball-custody-lease.md`（F40） | ✅（批次23：C24 状态机 + 事件溯源 Projector 已落 cats-ball-custody，`ctx.catsBallCustody`） |
 | `domains/concierge` + `domains/guides`（礼宾/指南注册 `guides/registry.yaml` + `guides/flows/*.yaml`） | `packages/cats/guides` | vendor（阶段 4） | ✅（批次24：C25 concierge 全服务群 + guides 插件入口已落 cats-guides，`ctx.catsGuides`，85 测试） |
-| `domains/feat-trajectory`（功能轨迹） | `packages/cats/feat-trajectory` | vendor（阶段 4） | ⬜ |
+| `domains/feat-trajectory`（功能轨迹） | `packages/cats/feat-trajectory` | vendor（阶段 4） | ✅（批次25 cats-feat-trajectory：keys/store/projector/git-ref-collector/cross-post-collector/thread-split-collector/scheduler/backfill，git/gh IO 接口化注入，`ctx.catsFeatTrajectory`，64 测试） |
 | `domains/health`（健康检查） | `packages/api/health` | vendor（阶段 3） | ⬜ |
-| `domains/human-disposition` + `domains/projects` + `domains/preview` + `domains/workspace` | `packages/cats|chat/*` | vendor（阶段 4/5） | ⬜ |
-| `domains/taste`（品味记忆） | `packages/cats/taste` | vendor（阶段 4） | ⬜ |
+| `domains/human-disposition` + `domains/projects` + `domains/preview` + `domains/workspace` | `packages/cats/{human-disposition,projects,preview,workspace}` | vendor（阶段 4/5） | ✅（批次25 四包：cats-projects（F076/F070，33 测试）/cats-human-disposition（F281，21）/cats-workspace（F063，21）/cats-preview（F120/F156，31），Redis→KV 注入、http-proxy→PreviewProxyServer 注入、socket.io→端口接口，106 测试） |
+| `domains/taste`（品味记忆） | `packages/cats/taste` | vendor（阶段 4） | ✅（批次25 cats-taste：taste-routing-guard/TasteRepository/writeVignette/approveTasteProposal/InMemoryTasteProposalStore（Redis 变体不移植仅保留 keys），GitRunner + ApprovalLock 端口注入，`ctx.catsTaste`，37 测试） |
 | `domains/packs`（技能包）+ `domains/plugin`（host-inventory 控制面） | `packages/cats/packs` + `packages/plugin` | vendor；**发现模型统一 dsh cordis YAML 装配**（R13），host-inventory 仅作控制面视图 | ⬜ |
 | `agent-hooks`（agent 生命周期钩子） | `packages/harness/agent-hooks` | vendor；对照 P: `core/hooks.py` | ⬜ |
 | `infrastructure/harness-eval/*`（a2a/anchor-first/capability-tips/capability-wakeup/freshness/friction/memory/sop/task-outcome/measurement/publish-verdict/hub 等 16 域） | `packages/forgekin/harness-eval` | vendor；对照 P: `harness/` + `evaluators/`（F36/F40） | ✅（批次16：EvalDomainRegistry 16 域内置注册 + 自定义追加 + 退役/重启用，见 Python 区 harness 行） |
