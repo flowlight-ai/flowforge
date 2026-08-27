@@ -1,0 +1,24 @@
+# ForgeMind 自动锻造配置（F026 — ForgeMindPlugin.register_auto_forge_config）
+# TS 移植自 forgemind/plugins.py + docs/features/F026 §2.2
+# F100 自我进化三模式（review.md §13.1）：
+#   Mode A — Scope Guard（范围守卫）: 防止Forgekin越权修改愿景/规范/架构
+#   Mode B — Process Evolution（流程进化）: 改进Forgekin自身工作方式
+#   Mode C — Knowledge Evolution（知识进化）: 蒸馏新知识到锻典
+# 新锻造Forgekin默认仅启用 Mode A，Mode B/C 需觉醒阶 ≥ E4 后由 operator 显式授权。
+auto_forge:
+  configs:
+    - forgekin_id: "forgemind:template:*"
+      scope_guard:
+        readonly_paths:
+          - "VISION.md#7"
+          - "rules.md#红线"
+          - "decisions/013-all-things-spirit-mind-vision.md"
+        writable_paths:
+          - "forgemind/config/prompts.yaml"
+          - "forgemind/species_impl/"
+      evolution_modes: [ "ModeA_ScopeGuard" ]   # 默认仅启用 Mode A
+      eval_ledger_policy:
+        replay_ab_required: true
+        min_net_gain: 0.05
+      awakening_min_for_mode_b: "E4"
+      awakening_min_for_mode_c: "E4"

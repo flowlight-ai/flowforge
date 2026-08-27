@@ -1,0 +1,43 @@
+{
+  "name": "@flowforge/cats-guides",
+  "description": "FlowForge concierge + guides Cordis plugin - C25 concierge (duty cat config/thread service/search context/reply validator/triage plan/investigation job/relay/confirmation, F229) + guides (guide registry + orchestration flow loader + 5-state guide state machine + session store + lifecycle/action services + routing interceptor + prompt sections, F155) at ctx.catsGuides, TS rewrite of clowder-ai domains/concierge + domains/guides",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/guides" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./models": { "types": "./lib/types/models.d.ts", "default": "./lib/models.js" },
+    "./state-machine": { "types": "./lib/types/state-machine.d.ts", "default": "./lib/state-machine.js" },
+    "./session-repository": { "types": "./lib/types/session-repository.d.ts", "default": "./lib/session-repository.js" },
+    "./registry-loader": { "types": "./lib/types/registry-loader.d.ts", "default": "./lib/registry-loader.js" },
+    "./lifecycle-service": { "types": "./lib/types/lifecycle-service.d.ts", "default": "./lib/lifecycle-service.js" },
+    "./action-service": { "types": "./lib/types/action-service.d.ts", "default": "./lib/action-service.js" },
+    "./routing-interceptor": { "types": "./lib/types/routing-interceptor.d.ts", "default": "./lib/routing-interceptor.js" },
+    "./prompt-section": { "types": "./lib/types/prompt-section.d.ts", "default": "./lib/prompt-section.js" },
+    "./thread-store": { "types": "./lib/types/thread-store.d.ts", "default": "./lib/thread-store.js" },
+    "./concierge/*": {
+      "types": "./lib/types/concierge/*.d.ts",
+      "default": "./lib/concierge/*.js"
+    },
+    "./config": { "types": "./lib/types/config.d.ts", "default": "./lib/config.js" },
+    "./config/guides.yaml": "./config/guides.yaml",
+    "./config/registry.yaml": "./config/registry.yaml",
+    "./config/flows/*.yaml": "./config/flows/*.yaml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts", "config/*.yaml", "config/flows/*.yaml" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

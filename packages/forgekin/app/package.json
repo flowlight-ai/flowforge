@@ -1,0 +1,36 @@
+{
+  "name": "@flowforge/forgekin-app",
+  "description": "FlowForge ForgeMind application layer Cordis plugin - F026 ForgeMindPlugin four hooks (register_forgekins templates / register_forge_skills / register_council_channels / register_auto_forge_config) + forge_from_template convenience entry, TS rewrite of forgemind/plugins.py at ctx.forgeMind",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/app" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./templates": { "types": "./lib/types/templates.d.ts", "default": "./lib/templates.js" },
+    "./skills": { "types": "./lib/types/skills.d.ts", "default": "./lib/skills.js" },
+    "./channels": { "types": "./lib/types/channels.d.ts", "default": "./lib/channels.js" },
+    "./auto-forge": { "types": "./lib/types/auto-forge.d.ts", "default": "./lib/auto-forge.js" },
+    "./config": { "types": "./lib/types/config.d.ts", "default": "./lib/config.js" },
+    "./config/auto-forge.yaml": "./config/auto-forge.yaml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts", "config/*.yaml" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-species": "workspace:^",
+    "@flowforge/forgekin-forging": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/forgekin-species": "workspace:^",
+    "@flowforge/forgekin-forging": "workspace:^"
+  }
+}

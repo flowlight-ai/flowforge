@@ -58,8 +58,8 @@
 |---|---|---|---|
 | `src/services/agents/registry`（AgentRegistry） | `packages/cats/registry` | vendor；概念映射 cat→Forgekin | ⬜ |
 | `domains/auto-dream`（梦境回放/自动化反思） | `packages/forgekin/auto-dream` | vendor；对照 P: `evolution/auto_dream.py`（F20） | 🔶（批次10：梦境整合核心已落 `packages/forgekin/auto-dream`，CL-031 双层架构 `ctx.forgeAutoDream`） |
-| `domains/ball-custody`（球权托管租约） | `packages/chat/ball-custody` | vendor；对照 P: `docs/features/F006-ball-custody-lease.md`（F40） | ⬜ |
-| `domains/concierge` + `domains/guides`（礼宾/指南注册 `guides/registry.yaml` + `guides/flows/*.yaml`） | `packages/cats/guides` | vendor（阶段 4） | ⬜ |
+| `domains/ball-custody`（球权托管租约） | `packages/cats/ball-custody` | vendor；对照 P: `docs/features/F006-ball-custody-lease.md`（F40） | ✅（批次23：C24 状态机 + 事件溯源 Projector 已落 cats-ball-custody，`ctx.catsBallCustody`） |
+| `domains/concierge` + `domains/guides`（礼宾/指南注册 `guides/registry.yaml` + `guides/flows/*.yaml`） | `packages/cats/guides` | vendor（阶段 4） | ✅（批次24：C25 concierge 全服务群 + guides 插件入口已落 cats-guides，`ctx.catsGuides`，85 测试） |
 | `domains/feat-trajectory`（功能轨迹） | `packages/cats/feat-trajectory` | vendor（阶段 4） | ⬜ |
 | `domains/health`（健康检查） | `packages/api/health` | vendor（阶段 3） | ⬜ |
 | `domains/human-disposition` + `domains/projects` + `domains/preview` + `domains/workspace` | `packages/cats|chat/*` | vendor（阶段 4/5） | ⬜ |
@@ -98,6 +98,9 @@
 | 来源（P） | 落点（T） | 处理 | 状态 |
 |---|---|---|---|
 | `forgemind/soul_imprint.py` | `packages/forgekin/soul`（SoulImprint） | 直接翻译 + golden tests | ✅（批次1 forgekin-soul：不可变哈希/命名空间隔离 + `ctx.forgeSoul`，8 测试） |
+| `docs/features/F036-forgemind-forge-relationship.md`（无 Python 实现，按文档建模） | `packages/forgekin/relationship`（ForgeLayer/LayerTransition/ForgeRelationship） | 直接翻译（F036） | ✅（批次22 forgekin-relationship：层动态注册 + 进化/回炉协议（Eval≥0.85 + 5任务 + operator 审批 + 仅蒸馏通用能力）+ `ctx.forgeRelationship`，28 测试） |
+| `docs/features/F038-forgemind-lineage.md`（无 Python 实现，按文档建模） | `packages/forgekin/lineage`（LineageNode/Edge/Store + split/fuse 执行器） | 直接翻译（F038） | ✅（批次22 forgekin-lineage：SoulImprint 唯一锚点 + 双向遍历 + 分裂保留父血缘/融合加权合并 + `ctx.forgeLineage`，26 测试） |
+| `forgemind/plugins.py`（F026 四钩子 + forge_from_template） | `packages/forgekin/app`（ForgeMind 应用层） | 直接翻译（F026） | ✅（批次22 forgekin-app：四钩子注册表（4 模板/4 技能/2 通道/1 自我进化配置 YAML 驱动）+ forgeFromTemplate 便捷锻造 + `ctx.forgeMind`，12 测试） |
 | `core/capability/*` | `packages/forgekin/capability`（CapabilityProfile/proficiency/blind_spots） | 直接翻译 | ✅（批次1 forgekin-capability：models/analyzer/profile + `ctx.forgeCapability`，38 测试） |
 | `core/memory_federation/` + `core/event_memory.py` + `core/state_*` | `packages/forgekin/memory`（EchoStore 情景）+ `packages/forgekin/knowledge`（MindCodex 程序）+ `packages/forgekin/stores`（记忆治理） | 直接翻译；数据迁移见 `31-stage11-sunset.md` §4 | ✅（批次1 forgekin-memory：五存储 + EpisodePersistenceHook + `ctx.forgeMemory`；forgekin-knowledge：MindCodex 检索三入口；批次12 forgekin-stores：Collection/CollectionManager + 治理三要素，`ctx.forgeStores`） |
 | `evolution/knowledge_evolution.py` | `packages/forgekin/knowledge`（SpiritForge 蒸馏管线） | 直接翻译 | ✅（批次1 forgekin-knowledge：三问→Episode→蒸馏→Eval 双门→storeToCodex，26 测试） |
@@ -132,6 +135,9 @@
 | `forgemind/swarm.py` + `config/agent_swarm.yaml` | `packages/forgekin/swarm` | 直接翻译（F16；F049） | ✅（批次5 forgekin-swarm：SwarmCoordinator 调度/心跳回收/跨厂商 + `ctx.forgeSwarm`，68 测试） |
 | `core/im_council.py` + `config/im_council.yaml` + `config/im_channels.yaml` + `config/a2a_channels.yaml` + `core/channel_manager.py` | `packages/forgekin/im-council` + `packages/chat/channels` | 直接翻译（F17；F047）；A2A 域独立 `packages/a2a` | ✅（批次14 forgekin-im-council：五步议事 + I1-I5 不变量 + Console/WebChat/TraeBridge 三通道 + `ctx.forgeImCouncil`；chat-channels：ChannelManager 注册/广播/分发，45 测试） |
 | `core/teamact/` + `config/teamact_steer.yaml` | `packages/cats/teamact` | 直接翻译（F18；F048） | ✅（批次15a cats-teamact：TeamActState 六步循环 + TerminationReport 五项 + HandoffCapsule + PingPongCircuitBreaker + SteerQueue 7 动作 I1-I5，`ctx.catsTeamAct`，69 测试） |
+| `docs/features/F005/F006`（Python 老代码无 ball_custody/push_back，按文档契约建模） + clowder-ai `domains/ball-custody` + `packages/shared/src/types/ball-custody.ts` | `packages/cats/ball-custody` | 直接翻译（F40；C24） | ✅（批次23 cats-ball-custody：F005 BallCustodyRegistry + F006 PushBackProtocol + C24 8 态 × 17 事件表驱动状态机 + 事件溯源 Projector，`ctx.catsBallCustody`，61 测试） |
+| clowder-ai `domains/guides`（GuideLifecycleService/GuideSessionRepository/GuideRoutingInterceptor/GuidePromptSection/guide-registry-loader） | `packages/cats/guides`（lifecycle-service/session-repository/routing-interceptor/prompt-section/registry-loader） | 直接翻译（F155；C25） | ✅（批次24 cats-guides：5 态 forward-only 状态机 + GuideStateBridge（独立 session store）+ 三阶段 routing-interceptor（prepare/guideContextForCat/ack）+ bootcamp→guide bridge（F171）+ KV 接口注入替代 Redis，`ctx.catsGuides`） |
+| clowder-ai `domains/concierge`（ConciergeConfig/ThreadService/Relay/Confirmation/TriagePlan/InvestigationJob/search-context/reply-validator/target-cats/verified-tool-target/prompt-section/routing-interceptor） + `packages/shared/src/types/concierge.ts` | `packages/cats/guides/src/concierge/*` | 直接翻译（F229；C25） | ✅（批次24 cats-guides concierge：KV 接口注入替代 Redis Lua CAS、RosterResolver 替代 catRegistry 单例、ConciergeWorkerLog 可选注入、TTL=0 铁律 5 LL-048、INV R1-R4/C1-C4/T1-T3/I1-I3 不变量全部落地，85 测试） |
 | `forgemind/forms.py` + `forgemind/species_impl/org.py` + `forgemind/base.py` + `config/forgekins/keane.yaml*`（F041-F044） | `packages/forgekin/roles` | 直接翻译（F43；四角色子代理） | ✅（批次15b forgekin-roles：ForgekinRole 基类 observe/act/verify 三方法 + 四角色 ProductManager/DevOps/SecurityOfficer/DeliveryManager 各 5 动作 + 审批降级/WAL 先行/Tier0 拒绝/金丝雀/质量门禁不变量，`ctx.forgeRoles`，56 测试） |
 | `evolution/eval_ledger.py` + `core/eval/`（contract/three_signals/attribution） | `packages/forgekin/eval-ledger` | 直接翻译（F19/F41；F050） | ✅（批次8 forgekin-eval-ledger：Replay A/B 七步台账 + 五问契约 + 三方信号交叉 + 七类归因，`ctx.forgeEvalLedger`，59 测试） |
 | `forgemind/autonomous.py` + `evolution/auto_dream.py` | `packages/forgekin/autonomous` + `packages/forgekin/auto-dream` | 直接翻译（F20；F051） | ✅（批次10：F052 自主守护进程 `ctx.forgeAutonomous` + CL-031 梦境整合 `ctx.forgeAutoDream`，81 测试） |

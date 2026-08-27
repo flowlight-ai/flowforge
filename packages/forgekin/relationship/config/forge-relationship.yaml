@@ -1,0 +1,24 @@
+# Forge Relationship 配置（F036 — forgemind 与 *Forge 关系）
+# TS 移植自 docs/features/F036-forgemind-forge-relationship.md §3.4
+# 配置驱动（铁律5+P16）：核心层不硬编码具体 *Forge 项目名，
+# 垂直承载层由 *Forge 业务项目通过插件 registerLayer 动态注册。
+forge_relationship:
+  # 通用承载层（forgemind 自身，固定存在）
+  layers:
+    forgemind:
+      role: general                       # 通用承载层
+      can_evolve_to: []                   # 由插件注册 *Forge 项目时动态填充
+  # 垂直承载层由 *Forge 业务项目动态注册，配置示例：
+  # <forge_project_id>:
+  #   role: vertical
+  #   can_reclaim_to: forgemind
+  #   vertical_skills: [<domain-specific-skills>]
+  transition_rules:
+    evolve:
+      min_eval_score: 0.85
+      min_task_count: 5
+      require_operator_approval: true
+    reclaim:
+      distill_general_only: true          # 仅蒸馏通用能力
+      preserve_vertical_in_original: true # 垂直能力保留原层
+      require_operator_approval: true

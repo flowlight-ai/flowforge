@@ -346,6 +346,38 @@
    session-persistence-sqlite 范式）；9 表 STRICT + WAL + user_version 守护；CAS 经
    BEGIN IMMEDIATE 事务；与 Memory 版语义差异（无容量上限/UNIQUE 冲突显式化）已在文件头注明。
 
+### 批次 7：C25 concierge + guides 全插件化（2026-08-26）✅
+
+> 目标：全量移植 clowder-ai `domains/concierge`（F229）与 `domains/guides`（F155）到
+> `@flowforge/cats-guides`（`ctx.catsGuides`），参考 dhs 既有模块全部改造为 Cordis 插件。
+>
+> **插件化改造决策**（对照 clowder 强依赖）：
+> - RedisClient → `ConciergeKeyValueStore` 注入接口（get/set/setNx/deleteIf/addToSet/setMembers，
+>   缺省 Memory 实现；Lua CAS → 注入端保证原子性 + Memory 同步 CAS）
+> - catRegistry 单例 → `RosterResolver` 注入（缺省空 roster）
+> - socket.emitToUser → `GuideEmitFn` 回调；guideTransitions.add → `TelemetryFn` 回调
+> - 模块级 logger → `ConciergeWorkerLog` 可选注入（缺省 console 前缀）
+> - 模块级 registry 全局单例 → `GuideRegistryLoader` 注入（缺省 name 回退 guideId）
+> - IThreadStore 裁剪为最小接口（get/create/updatePreferredCats/updateThreadKind/softDelete/\
+>   getParticipants），缺省 `InMemoryGuideThreadStore`
+>
+> **批次7 子任务分解**：
+> - 批次7.1 ✅ concierge 服务群：ConciergeKeys + kv-store（CAS 语义）+ config-store（FIX-3 stale
+>   校验）+ thread-service + relay-store（INV R1-R4）+ confirmation-store（INV C1-C4）+
+>   triage-plan-store（INV T1-T3 + claimTransition CAS）+ investigation-job-store（INV I1-I3 +
+>   claimDoneWithReport 原子 done+report）+ search-context（KD-23 per-invocation handle 表）+
+>   reply-validator（BUG-UX-9/12 + integrity unit fail-closed）+ target-cats-resolver +
+>   verified-tool-target + investigation-worker（deadline 双检查）+ prompt-section + routing-interceptor
+> - 批次7.2 ✅ guides 插件入口：`index.ts` GuidesService（config/registry/sessionStore/dismissTracker/
+>   threadStore/kv 全可选注入）+ routing-interceptor（prepare/guideContextForCat/ack 三阶段 +
+>   bootcamp→guide bridge F171）+ prompt-section + thread-store + lifecycle-service/action-service
+>   （emit/telemetry/dismissTracker 回调注入）
+> - 批次7.3 ✅ 测试 + typecheck：5 个 `.spec.ts` 85 测试（state-machine 14 + concierge-stores 22 +
+>   reply-validator 21 + search-context 12 + routing-interceptor 16）+ `tsc -b tsconfig.host.json`
+>   全量通过（补 tsconfig.host.json 注册）
+>
+> 验收：85/85 测试全绿；全量 typecheck 零错误；`ctx.catsGuides` 挂载点就绪；docs 三件套更新。
+
 ## 验收标准
 
 1. 可通过 YAML 档案注册/更新/停用灵智体（Forgekin），迁移与审批流程可用。
