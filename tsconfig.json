@@ -57,6 +57,9 @@
       "path": "./packages/cats/session/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/ball-custody/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {
@@ -169,6 +172,15 @@
     },
     {
       "path": "./packages/forgekin/evolution-engine/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/relationship/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/lineage/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/app/tsconfig.host.json"
     },
     {
       "path": "./packages/attachment/attachment"

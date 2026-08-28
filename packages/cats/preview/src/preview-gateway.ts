@@ -1,0 +1,318 @@
+/**
+ * @flowforge/cats-preview — Preview Gateway 反向代理（F120/F156 D-5）。
+ *
+ * TS 移植自 clowder-ai `domains/preview/preview-gateway.ts`：
+ * 独立端口的反向代理（iframe 永远只打开 gateway URL），loopback-only +
+ * 端口白名单 + Origin 校验（F156）+ 剥离 X-Frame-Options/CSP frame-ancestors +
+ * HTML 注入 bridge/WS-patch 脚本 + WebSocket upgrade 代理（HMR）。
+ * 插件化改造：`http-proxy` 剥离为 `PreviewProxyServer` 工厂注入（包零外部
+ * 依赖），`process.env` 剥离为 `env` 注入参数（缺省 process.env）。
+ *
+ * @module @flowforge/cats-preview/preview-gateway
+ */
+
+import http from 'node:http';
+import { createGunzip, createInflate } from 'node:zlib';
+
+import { isOriginAllowed, resolveFrontendCorsOrigins } from './origin.js';
+import { BRIDGE_SCRIPT } from './bridge-script.js';
+import { validatePort } from './port-validator.js';
+import { buildWsPatchScript } from './ws-patch-script.js';
+import type { PreviewProxyServer } from './types.js';
+
+/** http-proxy 创建参数（与 clowder-ai 原装配一致）。 */
+export interface PreviewProxyCreateOptions {
+  ws: boolean;
+  xfwd: boolean;
+  changeOrigin: boolean;
+  selfHandleResponse: boolean;
+}
+
+export interface PreviewGatewayOptions {
+  /** 0 = random port */
+  port: number;
+  host?: string;
+  /** Runtime-configured ports to exclude */
+  runtimePorts?: number[];
+  /** Override allowed origins (for testing). If omitted, resolved from env. */
+  allowedOrigins?: (string | RegExp)[];
+  /** env 注入（缺省 process.env），用于 origin 解析 */
+  env?: NodeJS.ProcessEnv;
+  /** http-proxy 工厂注入（缺省直接使用注入的 proxy 实例，二者必居其一） */
+  createProxy?: (opts: PreviewProxyCreateOptions) => PreviewProxyServer;
+  /** 已构造的 proxy 实例（测试便捷注入，优先于 createProxy） */
+  proxy?: PreviewProxyServer;
+}
+
+/**
+ * Preview Gateway — 独立端口的反向代理。
+ * iframe 永远只打开 gateway URL，不直接连 localhost:xxxx。
+ *
+ * 请求：GET http://gateway:PORT/path?__preview_port=3847
+ *   → proxy to http://localhost:3847/path
+ *
+ * 安全：loopback-only + 端口白名单 + 剥离 X-Frame-Options/CSP frame-ancestors
+ * WebSocket upgrade 代理（HMR）
+ */
+export class PreviewGateway {
+  private server: http.Server;
+  private proxy: PreviewProxyServer;
+  private port: number;
+  private host: string;
+  private runtimePorts: number[];
+  private allowedOrigins: (string | RegExp)[];
+  actualPort = 0;
+
+  constructor(opts: PreviewGatewayOptions) {
+    this.port = opts.port;
+    this.host = opts.host ?? '127.0.0.1';
+    this.runtimePorts = opts.runtimePorts ?? [];
+    this.allowedOrigins = opts.allowedOrigins ?? resolveFrontendCorsOrigins(opts.env ?? process.env);
+
+    if (opts.proxy) {
+      this.proxy = opts.proxy;
+    } else if (opts.createProxy) {
+      this.proxy = opts.createProxy({
+        ws: true,
+        xfwd: false,
+        changeOrigin: true,
+        selfHandleResponse: true,
+      });
+    } else {
+      throw new Error(
+        'PreviewGateway: no proxy injected — pass `proxy` or `createProxy` (http-proxy factory)',
+      );
+    }
+
+    // Prevent unhandled proxy errors from crashing the process
+    this.proxy.on('error', (...args: unknown[]) => {
+      const err = args[0] as Error;
+      // res may be a ServerResponse (HTTP) or a Socket (WS upgrade)
+      const res = args[2];
+      if (res && typeof res === 'object' && 'writeHead' in res && !(res as http.ServerResponse).headersSent) {
+        (res as http.ServerResponse).writeHead(502, { 'Content-Type': 'application/json' });
+        (res as http.ServerResponse).end(JSON.stringify({ error: 'Proxy error', message: err.message }));
+      } else if (res && typeof res === 'object' && 'destroy' in res) {
+        (res as import('node:net').Socket).destroy();
+      }
+    });
+    // Handle proxied responses: strip iframe headers + inject bridge + WS patch scripts into HTML
+    this.proxy.on('proxyRes', (proxyRes: unknown, _req: unknown, res: unknown) => {
+      const upstream = proxyRes as Record<string, unknown> & {
+        headers: Record<string, string | string[] | undefined>;
+        statusCode?: number;
+        pipe: (dest: NodeJS.WritableStream) => NodeJS.ReadableStream;
+        on: (event: string, fn: (...args: unknown[]) => void) => unknown;
+      };
+      const clientRes = res as http.ServerResponse;
+      // Strip iframe-blocking headers
+      delete upstream.headers['x-frame-options'];
+      const csp = upstream.headers['content-security-policy'];
+      if (typeof csp === 'string') {
+        const cleaned = csp
+          .split(';')
+          .filter((d: string) => !d.trim().startsWith('frame-ancestors'))
+          .join(';')
+          .trim();
+        if (cleaned) {
+          upstream.headers['content-security-policy'] = cleaned;
+        } else {
+          delete upstream.headers['content-security-policy'];
+        }
+      }
+
+      const ct = (upstream.headers['content-type'] ?? '') as string;
+      const isHtml = ct.includes('text/html');
+
+      if (!isHtml) {
+        // Non-HTML: pipe through unchanged
+        clientRes.writeHead(upstream.statusCode ?? 200, upstream.headers);
+        upstream.pipe(clientRes);
+        return;
+      }
+
+      // HTML: buffer body, inject bridge script, then send
+      const encoding = (upstream.headers['content-encoding'] ?? '') as string;
+      // If encoding is unsupported (e.g. br), passthrough without injection
+      // 'identity' means no encoding, treat same as empty
+      if (encoding && encoding !== 'gzip' && encoding !== 'deflate' && encoding !== 'identity') {
+        clientRes.writeHead(upstream.statusCode ?? 200, upstream.headers);
+        upstream.pipe(clientRes);
+        return;
+      }
+      const chunks: Buffer[] = [];
+      // Decompress if needed
+      let stream: NodeJS.ReadableStream = upstream as unknown as NodeJS.ReadableStream;
+      if (encoding === 'gzip') {
+        stream = (upstream as unknown as NodeJS.ReadableStream).pipe(createGunzip());
+      } else if (encoding === 'deflate') {
+        stream = (upstream as unknown as NodeJS.ReadableStream).pipe(createInflate());
+      }
+
+      stream.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+      stream.on('end', () => {
+        let html = Buffer.concat(chunks).toString('utf-8');
+        // Build injection payload: bridge script + WS port patch for HMR
+        const targetPort = (_req as Record<string, unknown>).__catCafeTargetPort as number | undefined;
+        const wsPatch = targetPort ? buildWsPatchScript(targetPort) : '';
+        const injection = wsPatch + BRIDGE_SCRIPT;
+        // Inject before </head> or before </body> or at end
+        if (html.includes('</head>')) {
+          html = html.replace('</head>', `${injection}</head>`);
+        } else if (html.includes('<body')) {
+          html = html.replace(/<body([^>]*)>/, `<body$1>${injection}`);
+        } else {
+          html = injection + html;
+        }
+        // Remove content-encoding (we've decompressed) and update content-length
+        const headers = { ...upstream.headers };
+        delete headers['content-encoding'];
+        delete headers['transfer-encoding'];
+        const buf = Buffer.from(html, 'utf-8');
+        headers['content-length'] = String(buf.length);
+        clientRes.writeHead(upstream.statusCode ?? 200, headers);
+        clientRes.end(buf);
+      });
+      stream.on('error', () => {
+        // Fallback: send without injection
+        clientRes.writeHead(upstream.statusCode ?? 200, upstream.headers);
+        clientRes.end(Buffer.concat(chunks));
+      });
+    });
+
+    this.server = http.createServer((req, res) => {
+      // F156 D-5: Origin validation before any proxying
+      if (!this.checkOrigin(req, res)) return;
+
+      const parsed = this.parseTarget(req);
+      if (!parsed) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing __preview_port query parameter' }));
+        return;
+      }
+
+      const validation = validatePort(parsed.port, {
+        host: parsed.host,
+        gatewaySelfPort: this.actualPort,
+        runtimePorts: this.runtimePorts,
+      });
+      if (!validation.allowed) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: validation.reason }));
+        return;
+      }
+
+      // Store target port for proxyRes handler (before stripping params)
+      (req as unknown as Record<string, unknown>).__catCafeTargetPort = parsed.port;
+
+      // Strip preview params from forwarded URL
+      const url = new URL(req.url!, `http://${req.headers.host}`);
+      url.searchParams.delete('__preview_port');
+      url.searchParams.delete('__preview_host');
+      req.url = url.pathname + (url.search === '?' ? '' : url.search);
+
+      const target = `http://${parsed.host}:${parsed.port}`;
+      this.proxy.web(req, res, { target }, (err: Error) => {
+        if (!res.headersSent) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Proxy error', message: err.message }));
+        }
+      });
+    });
+
+    // WebSocket upgrade handler (HMR)
+    this.server.on('upgrade', (req, socket, head) => {
+      // F156 D-5: Origin validation on WS upgrade
+      const origin = req.headers.origin as string | undefined;
+      if (origin && !isOriginAllowed(origin, this.allowedOrigins)) {
+        // Send HTTP 403 before destroying (so test can read status)
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      const parsed = this.parseTarget(req);
+      if (!parsed) {
+        socket.destroy();
+        return;
+      }
+      const validation = validatePort(parsed.port, {
+        host: parsed.host,
+        gatewaySelfPort: this.actualPort,
+        runtimePorts: this.runtimePorts,
+      });
+      if (!validation.allowed) {
+        socket.destroy();
+        return;
+      }
+      const target = `http://${parsed.host}:${parsed.port}`;
+      socket.on('error', () => socket.destroy()); // prevent unhandled socket error crash
+      this.proxy.ws(req, socket, head, { target });
+    });
+  }
+
+  /** F156 D-5: Validate Origin header. No Origin (non-browser) is allowed. */
+  private checkOrigin(req: http.IncomingMessage, res?: http.ServerResponse): boolean {
+    const origin = req.headers.origin as string | undefined;
+    if (!origin) return true; // non-browser (curl, server-to-server)
+    if (isOriginAllowed(origin, this.allowedOrigins)) return true;
+    if (res) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Origin not allowed' }));
+    }
+    return false;
+  }
+
+  private parseTarget(req: http.IncomingMessage): { port: number; host: string } | null {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const portStr = url.searchParams.get('__preview_port');
+    if (!portStr) return null;
+    const port = Number.parseInt(portStr, 10);
+    if (Number.isNaN(port)) return null;
+    const host = url.searchParams.get('__preview_host') ?? 'localhost';
+    return { port, host };
+  }
+
+  async start(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        this.server.off('error', handleError);
+        this.server.off('listening', handleListening);
+      };
+
+      const handleError = (err: Error) => {
+        cleanup();
+        reject(err);
+      };
+
+      const handleListening = () => {
+        cleanup();
+        const addr = this.server.address() as { port: number } | null;
+        this.actualPort = addr?.port ?? 0;
+        resolve();
+      };
+
+      this.server.once('error', handleError);
+      this.server.once('listening', handleListening);
+      this.server.listen(this.port, this.host);
+    });
+  }
+
+  async stop(): Promise<void> {
+    this.proxy.close();
+
+    if (!this.server.listening) {
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      this.server.close((err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+}

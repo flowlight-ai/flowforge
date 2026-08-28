@@ -1,0 +1,22 @@
+# Forgekin Lineage 配置（F038 — Forgekin 进化谱系）
+# TS 移植自 docs/features/F038-forgemind-lineage.md §3.4
+# 配置驱动（铁律5+P16）：分裂/融合规则 + 谱系查询深度 + 审计策略。
+forgekin_lineage:
+  store:
+    backend: durable_state_surfaces            # 复用 F008
+    index_by: soul_imprint
+  split:
+    require_operator_approval: true
+    max_children_per_split: 5
+    copy_capability_from_parent: true
+    adjust_by_manifest: true
+  fuse:
+    require_operator_approval: true
+    max_parents_per_fuse: 3
+    merge_strategy: weighted_by_performance    # 按历史表现加权合并
+  ancestry_query:
+    max_depth: 10
+    include_capability_snapshots: true
+  audit:
+    log_all_edges: true
+    alert_on_unauthorized_split: true

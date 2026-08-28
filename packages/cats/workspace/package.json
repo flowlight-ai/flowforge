@@ -1,0 +1,30 @@
+{
+  "name": "@flowforge/cats-workspace",
+  "description": "FlowForge workspace Cordis plugin - C28 Workspace (F063), TS rewrite of clowder-ai domains/workspace: worktree/linked-root registry with path-traversal + symlink-escape + denylist guards, memory-bounded file preview (OOM fix) with sha256 change detection, HMAC edit-session tokens + atomic conflict-free writes, socket.io-stripped file watcher with polling fallback, navigation delivery receipts, absolute-path/document-href resolution at ctx.catsWorkspace",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/workspace" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./security": { "types": "./lib/types/security.d.ts", "default": "./lib/security.js" },
+    "./git-worktree-probe": { "types": "./lib/types/git-worktree-probe.d.ts", "default": "./lib/git-worktree-probe.js" },
+    "./path-resolution": { "types": "./lib/types/path-resolution.d.ts", "default": "./lib/path-resolution.js" },
+    "./edit": { "types": "./lib/types/edit.d.ts", "default": "./lib/edit.js" },
+    "./file-read": { "types": "./lib/types/file-read.d.ts", "default": "./lib/file-read.js" },
+    "./watcher": { "types": "./lib/types/watcher.d.ts", "default": "./lib/watcher.js" },
+    "./navigation-delivery": { "types": "./lib/types/navigation-delivery.d.ts", "default": "./lib/navigation-delivery.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@flowforge/cats-feat-trajectory",
+  "description": "FlowForge feat trajectory Cordis plugin - C26 FeatTrajectory (F233), TS rewrite of clowder-ai domains/feat-trajectory: 3-source projector (event-stream/git-ref-snapshot/historical-stitched) with rebuild-safe upsert semantics (INV-2), GitRefSnapshotCollector with heuristic feat join (feat_index/branch_name_F#/commit_message_F#) + multi-candidate policy, CrossPostCollector/ThreadSplitCollector emitters, collector scheduler tick + historical backfill, InMemory store with last-collector-tick freshness at ctx.catsFeatTrajectory",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/feat-trajectory" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./keys": { "types": "./lib/types/keys.d.ts", "default": "./lib/keys.js" },
+    "./store": { "types": "./lib/types/store.d.ts", "default": "./lib/store.js" },
+    "./projector": { "types": "./lib/types/projector.d.ts", "default": "./lib/projector.js" },
+    "./git-ref-collector": { "types": "./lib/types/git-ref-collector.d.ts", "default": "./lib/git-ref-collector.js" },
+    "./cross-post-collector": { "types": "./lib/types/cross-post-collector.d.ts", "default": "./lib/cross-post-collector.js" },
+    "./thread-split-collector": { "types": "./lib/types/thread-split-collector.d.ts", "default": "./lib/thread-split-collector.js" },
+    "./scheduler": { "types": "./lib/types/scheduler.d.ts", "default": "./lib/scheduler.js" },
+    "./backfill": { "types": "./lib/types/backfill.d.ts", "default": "./lib/backfill.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

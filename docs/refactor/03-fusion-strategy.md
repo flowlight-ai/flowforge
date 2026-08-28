@@ -97,7 +97,7 @@
 | 物种 | — | breeds（cat-template） | species + species_impl | `packages/forgekin/species` |
 | 锻造流水线 | — | Bootcamp | forging/（F028） | `packages/forgekin/forging` + `packages/cats/bootcamp` |
 | Trae 桥 | — | — | trae_bridge（F045） | `packages/forgekin/trae-bridge` |
-| 球权托管 | — | ball-custody | push-back 协议（F006） | `packages/chat/ball-custody` |
+| 球权托管 | — | ball-custody | push-back 协议（F006）+ F005 lease + C24 状态机 | `packages/cats/ball-custody`（批次23 ✅） |
 | 礼宾/指南 | — | concierge + guides/registry.yaml | — | `packages/cats/guides` |
 | 梦境回放 | — | auto-dream | auto_dream（F051） | `packages/forgekin/auto-dream` |
 

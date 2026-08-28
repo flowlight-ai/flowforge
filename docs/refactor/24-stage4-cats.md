@@ -346,6 +346,86 @@
    session-persistence-sqlite 范式）；9 表 STRICT + WAL + user_version 守护；CAS 经
    BEGIN IMMEDIATE 事务；与 Memory 版语义差异（无容量上限/UNIQUE 冲突显式化）已在文件头注明。
 
+### 批次 7：C25 concierge + guides 全插件化（2026-08-26）✅
+
+> 目标：全量移植 clowder-ai `domains/concierge`（F229）与 `domains/guides`（F155）到
+> `@flowforge/cats-guides`（`ctx.catsGuides`），参考 dhs 既有模块全部改造为 Cordis 插件。
+>
+> **插件化改造决策**（对照 clowder 强依赖）：
+> - RedisClient → `ConciergeKeyValueStore` 注入接口（get/set/setNx/deleteIf/addToSet/setMembers，
+>   缺省 Memory 实现；Lua CAS → 注入端保证原子性 + Memory 同步 CAS）
+> - catRegistry 单例 → `RosterResolver` 注入（缺省空 roster）
+> - socket.emitToUser → `GuideEmitFn` 回调；guideTransitions.add → `TelemetryFn` 回调
+> - 模块级 logger → `ConciergeWorkerLog` 可选注入（缺省 console 前缀）
+> - 模块级 registry 全局单例 → `GuideRegistryLoader` 注入（缺省 name 回退 guideId）
+> - IThreadStore 裁剪为最小接口（get/create/updatePreferredCats/updateThreadKind/softDelete/\
+>   getParticipants），缺省 `InMemoryGuideThreadStore`
+>
+> **批次7 子任务分解**：
+> - 批次7.1 ✅ concierge 服务群：ConciergeKeys + kv-store（CAS 语义）+ config-store（FIX-3 stale
+>   校验）+ thread-service + relay-store（INV R1-R4）+ confirmation-store（INV C1-C4）+
+>   triage-plan-store（INV T1-T3 + claimTransition CAS）+ investigation-job-store（INV I1-I3 +
+>   claimDoneWithReport 原子 done+report）+ search-context（KD-23 per-invocation handle 表）+
+>   reply-validator（BUG-UX-9/12 + integrity unit fail-closed）+ target-cats-resolver +
+>   verified-tool-target + investigation-worker（deadline 双检查）+ prompt-section + routing-interceptor
+> - 批次7.2 ✅ guides 插件入口：`index.ts` GuidesService（config/registry/sessionStore/dismissTracker/
+>   threadStore/kv 全可选注入）+ routing-interceptor（prepare/guideContextForCat/ack 三阶段 +
+>   bootcamp→guide bridge F171）+ prompt-section + thread-store + lifecycle-service/action-service
+>   （emit/telemetry/dismissTracker 回调注入）
+> - 批次7.3 ✅ 测试 + typecheck：5 个 `.spec.ts` 85 测试（state-machine 14 + concierge-stores 22 +
+>   reply-validator 21 + search-context 12 + routing-interceptor 16）+ `tsc -b tsconfig.host.json`
+>   全量通过（补 tsconfig.host.json 注册）
+>
+> 验收：85/85 测试全绿；全量 typecheck 零错误；`ctx.catsGuides` 挂载点就绪；docs 三件套更新。
+
+### 批次 8：C26/C28/C29 六包全插件化（2026-08-27）✅
+
+> 目标：全量移植 clowder-ai `domains/feat-trajectory`（C26/F233）、`domains/projects`（C28/F076/F070）、
+> `domains/human-disposition`（C28/F281）、`domains/workspace`（C28/F063）、`domains/preview`（C28/F120/F156）、
+> `domains/taste`（C29/F221）到六个独立包（`ctx.catsFeatTrajectory` / `ctx.catsProjects` /
+> `ctx.catsHumanDisposition` / `ctx.catsWorkspace` / `ctx.catsPreview` / `ctx.catsTaste`），
+> 参考 dhs 既有模块全部改造为 Cordis 插件。
+>
+> **插件化改造决策**（对照 clowder 强依赖）：
+> - git/gh 外部进程 → `GitRunner` / `GhClient` 注入接口（缺省 `nodeGitRunner`，promisify(execFile)，
+>   cats-workspace / cats-feat-trajectory / cats-taste 同构复用）
+> - Redis → 域内 KV 注入接口（human-disposition `HumanDispositionLedgerKV` 含 CAS appendReceipt、
+>   projects `ExternalProjectKV`；Redis Lua 脚本常量保留供 Redis 宿主直接加载）
+> - http-proxy → `PreviewProxyServer` 注入（preview-gateway loopback-only 反向代理保持端口级能力）
+> - socket.io → `WorkspaceSocketServer` / `WorkspaceSocket` 端口接口 + emitter 回调注入（watcher / navigation-delivery）
+> - fetch → `probeFn` 注入（port-discovery 可达性探测）
+> - session-handoff / person-memory / wait-cancel 跨域依赖 → 适配器注入（human-disposition adapters）
+> - SessionMutex → `ApprovalLock` 端口（结构化兼容 `@flowforge/cats-invocation` SessionMutexService，保持包松耦合）
+> - @cat-cafe/shared → `@flowforge/cats-shared`（类型/纯函数复用；taste Redis 变体不移植仅保留 keys）
+>
+> **批次8 子任务分解**：
+> - 批次8.1 ✅ feat-trajectory（C26）：keys（stale bucket 阈值 + 三源 entry id / subjectKey）+ store
+>   （IFeatTrajectoryStore port + InMemory）+ projector（三源投影 + rebuild-safe upsert INV-2）+
+>   git-ref-collector（IO 接口化 + heuristic feat join + multi-candidate 'skip-low-confidence'）+
+>   cross-post / thread-split collector（F252 前置 emit）+ scheduler（tick + git 失败降级 + freshness
+>   诚实记录）+ backfill 回填纯函数，6 个 `.spec.ts` 64 测试
+> - 批次8.2 ✅ projects（C28a）：triage computeBucket 纯函数（A-tag 硬门控 + 5 维评分五桶）+ risk 8 信号
+>   + intent-card（Stage 1-2）+ need-audit-frame + resolution（Stage 3 澄清队列）+ slice（Stage 4 计数）+
+>   reflux-pattern + external-project（KV 注入 + P2-1 路径逃逸）+ execution-digest（F070），33 测试
+> - 批次8.3 ✅ human-disposition（C28b）：reason codes 6 类 + ledger 双索引 zset + 严格游标分页
+>   （cursor 校验 + strictHydration）+ CAS appendReceipt + receipt-index（applied/replay/conflict）+
+>   三适配器（session-handoff / person-memory / wait-cancel）+ exact-subject 反馈上下文投影，21 测试
+> - 批次8.4 ✅ workspace（C28c）：traversal / symlink-escape / denylist 三重防护 + worktree/linked-root
+>   注册 + git-worktree-probe（GitRunner 注入）+ HMAC 编辑会话 token + sha256 冲突检测原子写（F063 AC-9）+
+>   内存有界预览 + 二进制分类（OOM 修复）+ watcher + navigation 回执聚合，21 测试
+> - 批次8.5 ✅ preview（C28d）：loopback-only PreviewGateway（PreviewProxyServer 注入）+ 端口白名单
+>   （DEFAULT_EXCLUDED_PORTS + runtime env）+ F156 Origin 校验（loopback 永放行 / RFC1918 opt-in）+
+>   stdout 端口发现 + 可达性 probe（probeFn 注入）+ bridge / ws-patch 注入脚本，31 测试
+> - 批次8.6 ✅ taste（C29）：taste-routing-guard（ADVISORY，KD-8 不阻止）+ FileTasteRepository
+>   （canonical worktree 定位 refs/heads/main）+ write-vignette（public git commit main-only / sensitive
+>   直写 + 幂等跳过 + 脏路径拒绝 + 回滚）+ approveTasteProposal（locked + checkpointed 三阶段 +
+>   恢复语义 recovered）+ InMemoryTasteProposalStore（pending→approving→approved + Phase-I publication
+>   envelope），37 测试
+> - 批次8.7 ✅ 测试 + typecheck：7 个 `.spec.ts` 207 测试（64+33+21+21+31+37）+ `tsc -b tsconfig.host.json`
+>   全量通过（补 tsconfig.host.json 注册）
+>
+> 验收：207/207 测试全绿；全量 typecheck 零错误；六个 `ctx.cats*` 挂载点就绪；docs 三件套更新。
+
 ## 验收标准
 
 1. 可通过 YAML 档案注册/更新/停用灵智体（Forgekin），迁移与审批流程可用。

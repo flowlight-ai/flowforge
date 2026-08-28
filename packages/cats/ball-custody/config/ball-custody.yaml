@@ -1,0 +1,15 @@
+# F005/F006 球权托管 + C24 球状态机 配置（批次23）
+# 契约：docs/features/F005-ball-custody-lease.md + F006-push-back-protocol.md
+# 参考：clowder-ai packages/api/src/domains/ball-custody
+
+ball_custody:
+  # F005 RA-014：TTL 是安全网不是主要释放机制（持球者应主动 release）
+  default_ttl_seconds: 300
+  # C24 clowder：死球迟到心跳 grace（DEAD_BALL_ZOMBIE_GRACE_MS=600s）
+  dead_ball_zombie_grace_ms: 600000
+
+push_back:
+  # F006 RA-015：无证据推回非法（evidence 至少一个 anchor）
+  require_evidence: true
+  # 未解决推回阻塞 TeamAct QUALITY_BAR_MET 终止条件
+  block_termination: true
