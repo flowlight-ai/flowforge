@@ -63,10 +63,25 @@
       "path": "./packages/cats/ball-custody/tsconfig.host.json"
     },
     {
-      "path": "./packages/cats/ball-custody/tsconfig.host.json"
+      "path": "./packages/cats/guides/tsconfig.host.json"
     },
     {
-      "path": "./packages/cats/guides/tsconfig.host.json"
+      "path": "./packages/cats/feat-trajectory/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/projects/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/human-disposition/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/workspace/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/preview/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/taste/tsconfig.host.json"
     },
     {
       "path": "./packages/chat/threads/tsconfig.host.json"

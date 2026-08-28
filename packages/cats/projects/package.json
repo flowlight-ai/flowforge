@@ -1,0 +1,33 @@
+{
+  "name": "@flowforge/cats-projects",
+  "description": "FlowForge projects Cordis plugin - C28 Projects (F076/F070), TS rewrite of clowder-ai domains/projects: intent card triage (A-tag hard gate + 5-dim scoring computeBucket), 8-signal risk detection, need-audit-frame, stage-3 resolution queue, stage-4 slice planning with per-project order counters, reflux pattern capture, external project store with P2-1 path traversal guard, dispatch execution digest store, sortable-id generation at ctx.catsProjects",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/projects" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./triage": { "types": "./lib/types/triage.d.ts", "default": "./lib/triage.js" },
+    "./risk-detection": { "types": "./lib/types/risk-detection.d.ts", "default": "./lib/risk-detection.js" },
+    "./execution-digest-store": { "types": "./lib/types/execution-digest-store.d.ts", "default": "./lib/execution-digest-store.js" },
+    "./external-project-store": { "types": "./lib/types/external-project-store.d.ts", "default": "./lib/external-project-store.js" },
+    "./intent-card-store": { "types": "./lib/types/intent-card-store.d.ts", "default": "./lib/intent-card-store.js" },
+    "./need-audit-frame-store": { "types": "./lib/types/need-audit-frame-store.d.ts", "default": "./lib/need-audit-frame-store.js" },
+    "./reflux-pattern-store": { "types": "./lib/types/reflux-pattern-store.d.ts", "default": "./lib/reflux-pattern-store.js" },
+    "./resolution-store": { "types": "./lib/types/resolution-store.d.ts", "default": "./lib/resolution-store.js" },
+    "./slice-store": { "types": "./lib/types/slice-store.d.ts", "default": "./lib/slice-store.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

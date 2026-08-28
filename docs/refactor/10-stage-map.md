@@ -131,10 +131,10 @@
 | C23 | 梦境回放/自动化反思 auto-dream | domains/auto-dream | 7 | ✅（批次10 forgekin-auto-dream：双层架构 + 五级成熟度 + 贪心聚类 + L2 草稿 + TopK 浮现 + 4 信号 telemetry，见 F20） |
 | C24 | 球权托管租约 ball-custody | domains/ball-custody | 5 | ✅（批次23 cats-ball-custody：8 态 × 17 事件表驱动转移 + 事件溯源 Projector（apply/rebuild/rebuildAll）+ 内存 log/store，见 F40） |
 | C25 | 礼宾 concierge + 指南 guides（registry.yaml + flows/*.yaml） | domains/concierge + domains/guides | 4 | ✅（批次24 cats-guides：concierge 全服务群（config/thread/relay/confirmation/triage/investigation/search-context/reply-validator/target-cats/verified-tool-target/worker）+ guides 插件入口（registry-loader/5 态状态机/session-store/lifecycle/action/routing-interceptor/prompt-section/thread-store），KV 接口注入替代 Redis、RosterResolver 替代 catRegistry，85 测试，见 F155/F229） |
-| C26 | 功能轨迹 feat-trajectory | domains/feat-trajectory | 4 | ⬜ |
+| C26 | 功能轨迹 feat-trajectory | domains/feat-trajectory | 4 | ✅（批次25 cats-feat-trajectory：三源投影（event-stream/git-ref/thread-split+merge）+ git-ref-collector（git/gh IO 接口化注入 + multi-candidate skip-low-confidence）+ cross-post/thread-split collector + scheduler（git 失败降级 + freshness 诚实记录）+ backfill 回填，ctx.catsFeatTrajectory，64 测试，见 F233） |
 | C27 | 健康检查 health | domains/health | 3 | ✅（阶段 3 以 apiproxy RPC 域承载：health/session/settings/credentials 全测试覆盖） |
-| C28 | 人性倾向/项目/预览/工作区（human-disposition/projects/preview/workspace） | domains/* | 4-5 | ⬜ |
-| C29 | 品味记忆 taste | domains/taste | 4 | ⬜ |
+| C28 | 人性倾向/项目/预览/工作区（human-disposition/projects/preview/workspace） | domains/* | 4-5 | ✅（批次25 四包：cats-projects（F076/F070 triage 五桶 + risk 8 信号 + Intent Card 四阶段 + external-project KV 注入，33 测试）+ cats-human-disposition（F281 ledger 双索引 + CAS append + 三适配器 + 严格游标分页，21 测试）+ cats-workspace（F063 traversal/symlink 三重防护 + HMAC 编辑会话 + 有界预览，21 测试）+ cats-preview（F120 loopback-only 代理 + 端口白名单 + F156 Origin 校验，31 测试） |
+| C29 | 品味记忆 taste | domains/taste | 4 | ✅（批次25 cats-taste：F221 品味信号检测（ADVISORY，KD-8 不阻止）+ canonical worktree 定位 + vignette 写入（public git commit main-only / sensitive 直写）+ locked+checkpointed 审批管线（ApprovalLock 端口，结构化兼容 cats-invocation SessionMutex），ctx.catsTaste，37 测试） |
 | C30 | 技能包 packs + 插件控制面 plugin（host-inventory 仅视图，发现模型统一上游 cordis，F15） | domains/packs + domains/plugin | 5 | ⬜ |
 | C31 | agent 生命周期钩子 agent-hooks | agent-hooks | 4 | ⬜ |
 | C32 | harness-eval 16 域评估（a2a/anchor-first/capability-tips/freshness/sop/task-outcome 等） | infrastructure/harness-eval | 7 | ✅（批次16 forgekin-harness-eval：EvalDomainRegistry 16 域注册表，见 F36） |
