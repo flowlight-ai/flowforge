@@ -426,6 +426,41 @@
 >
 > 验收：207/207 测试全绿；全量 typecheck 零错误；六个 `ctx.cats*` 挂载点就绪；docs 三件套更新。
 
+### 批次 9：C30/C31 三包全插件化（2026-08-27）✅
+
+> 目标：全量移植 clowder-ai `domains/packs`（C30/F15 技能包）+ `domains/plugin`（C30 host-inventory
+> 控制面）+ `agent-hooks`（C31 agent 生命周期钩子）到三个独立包（`ctx.catsPacks` /
+> `ctx.catsPluginInventory` / `ctx.catsAgentHooks`），参考 dhs 既有模块全部改造为 Cordis 插件。
+>
+> **插件化改造决策**（对照 clowder 强依赖）：
+> - 证据存储 → `PackKnowledgeStore` 端口注入（upsert/deleteByAnchor/deleteByPackId，宿主实现）
+> - 上游 config/mcp/skills/startup-root 四域 → `AgentHookCapabilityProbes` 探针端口注入（health/sync
+>   域剥离宿主注入实现，ownerAuthorized fail-closed：未授权只同步 hook 文件，不写能力）
+> - Redis 依赖全部剥离（plugin-inventory 快照纯内存/文件；claude-settings 直接文件操作）
+> - @cat-cafe/shared → `@flowforge/cats-shared`（PackManifestSchema 严格模式复用）
+>
+> **批次9 子任务分解**：
+> - 批次9.1 ✅ packs（C30a）：PackStore（add/get/has/list/remove）+ PackSecurityGuard（9 步校验链：
+>   digest 规范 / 来源 / 路径逃逸 / masks 泄漏 / growth 边界）+ PackCompiler（中文提示块 + blocks
+>   编译 + GROWTH_BOUNDARY 拦截）+ PackLoader（校验→编译→加载编排）+ GrowthBoundary（growth.yaml
+>   域门控）+ PackKnowledgeScope（registerKnowledge .md/.txt + anchor pack 前缀）+ getActivePackBlocks，
+>   27 测试
+> - 批次9.2 ✅ plugin-inventory（C30b）：contract（PackManifestSchema 严格模式 validateManifest +
+>   validateEffectiveGrants 17 能力）+ snapshot（解析三不变量：digest 去重 / instance↔package /
+>   instance↔grant + 同 pluginId 单 installed）+ stores（Memory 事务队列串行化 + File 原子
+>   temp+rename）+ HostInventoryControlPlane（installPackage / upgrade / recover / revokeGrant 全生命周期），
+>   33 测试
+> - 批次9.3 ✅ agent-hooks（C31）：sync-targets（4 个 SyncTarget：session-start/stop 可执行脚本 +
+>   codex-hooks/gemini-hooks JSON，canonical JSON 漂移 + applySync dryRun/chmod）+ claude-settings
+>   （settings.json 四态健康 configured/missing/stale/error + 保留用户 hooks 同步）+ health
+>   （getAgentHookStatus 统一健康 + syncAgentHooks 同步（AgentHookCapabilityProbes 注入 +
+>   ownerAuthorized fail-closed keep-project）），22 测试
+> - 批次9.4 ✅ 测试 + typecheck：3 个 `.spec.ts` 82 测试（27+33+22）+ `tsc -b tsconfig.host.json`
+>   全量通过（补 tsconfig.host.json 注册）+ 全量回归 12045 通过（3 个既有 flaky 单独重跑全绿）
+>
+> 验收：82/82 测试全绿；全量 typecheck 零错误；三个 `ctx.cats*` 挂载点就绪；docs 三件套更新。
+
+
 ## 验收标准
 
 1. 可通过 YAML 档案注册/更新/停用灵智体（Forgekin），迁移与审批流程可用。

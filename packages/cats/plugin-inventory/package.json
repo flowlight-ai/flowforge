@@ -1,0 +1,29 @@
+{
+  "name": "@flowforge/cats-plugin-inventory",
+  "description": "FlowForge cats plugin inventory Cordis plugin - C30 (P15/F129 plugin host control plane), TS rewrite of clowder-ai domains/plugin/host-inventory: minimal in-package plugin contract (17-value Capability enum, PluginManifest, fail-closed validateManifest, validateEffectiveGrants MAX_GRANT_ITEMS=17), PLUGIN_CONTRACT_VERSION 0.1.0-beta.7, parsePluginInventorySnapshot (fail-closed CORRUPT_SNAPSHOT/UNSUPPORTED_SCHEMA, canonical sha512 SRI digest, 3 invariants), verifyPackageAdmission (6 checks: INVALID_MANIFEST/INVALID_PACKAGE_DIGEST/PACKAGE_DIGEST_MISMATCH/PACKAGE_ID_MISMATCH/CONTRACT_VERSION_MISMATCH/INVALID_GRANT), MemoryPluginInventoryStore + FilePluginInventoryStore (serialized transaction queue, atomic temp+rename with injected fileOps), HostInventoryControlPlane (install/upgrade/reinstall/revoke/recoverAfterRestart with injected now/createInstanceId) at ctx.catsPluginInventory",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/plugin-inventory" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./contract": { "types": "./lib/types/contract.d.ts", "default": "./lib/contract.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./snapshot": { "types": "./lib/types/snapshot.d.ts", "default": "./lib/snapshot.js" },
+    "./manifest-verifier": { "types": "./lib/types/manifest-verifier.d.ts", "default": "./lib/manifest-verifier.js" },
+    "./stores": { "types": "./lib/types/stores.d.ts", "default": "./lib/stores.js" },
+    "./control-plane": { "types": "./lib/types/control-plane.d.ts", "default": "./lib/control-plane.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}
