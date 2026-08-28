@@ -34,6 +34,7 @@ import CatsTaste, {
   insertIntoIndex,
   nodeGitRunner,
   type ApprovalLock,
+  type GitResult,
   type GitRunner,
 } from '../src/index.js';
 
@@ -103,10 +104,10 @@ function fakeLock(): ApprovalLock & { acquired: string[]; released: number } {
 }
 
 function fakeRunner(
-  handlers: Record<string, (args: string[]) => { ok: boolean; stdout?: string; err?: unknown }>,
+  handlers: Record<string, (args: string[]) => GitResult>,
 ): GitRunner {
   return {
-    async exec(args, _cwd) {
+    async exec(args, _cwd): Promise<GitResult> {
       const op = handlers[args[0] ?? ''];
       if (!op) return { ok: false, err: new Error(`unexpected git ${args.join(' ')}`) };
       return op(args);
@@ -431,10 +432,12 @@ describe('approveTasteProposal', () => {
     partialStore.claimForApproval(p2.id, 'op-1');
     partialStore.recordWriteCheckpoint(p2.id, { vignetteSlug: 's', vignettePath: 'v' });
     const customStore = Object.create(partialStore) as InMemoryTasteProposalStore;
-    customStore.get = async (id: string) => {
+    customStore.get = (id: string): TasteProposal | null => {
       if (id !== p2.id) return null;
       const found = partialStore.get(id)!;
-      return { ...found, vignettePath: undefined };
+      const snapshot = { ...found };
+      delete snapshot.vignettePath;
+      return snapshot;
     };
     const result = await approveTasteProposal(p2.id, 'op-1', {
       store: customStore,
@@ -685,7 +688,7 @@ describe('write-vignette', () => {
         exec: async (args: string[]) => {
           if (args[0] === 'rev-parse') return { ok: true, stdout: root };
           if (args[0] === 'worktree') return { ok: true, stdout: `worktree ${root}\0branch refs/heads/main\0` };
-          gitCalls.push(args[0]);
+          gitCalls.push(args[0] ?? '');
           return { ok: true, stdout: '' };
         },
       } as GitRunner);

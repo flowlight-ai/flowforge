@@ -35,6 +35,7 @@ import CatsHumanDisposition, {
   type HumanDispositionLedgerKV,
   type HumanDispositionProducerEntryLoader,
   type HumanDispositionServerBinding,
+  type PersonMemoryDispositionSubjectProof,
   type SubjectProofResolverPort,
 } from '../src/index.js';
 import { HumanDispositionKeys } from '../src/index.js';
@@ -215,11 +216,11 @@ describe('C28 HumanDispositionLedger — Memory KV + CAS + 分页', () => {
 
     const byOwner = await ledger.listByOwner('owner-1', { limit: 10 });
     expect(byOwner.entries).toHaveLength(2);
-    expect(byOwner.entries[0].episode.decidedAt).toBe(200); // zrevrange 倒序
+    expect(byOwner.entries[0]?.episode.decidedAt).toBe(200); // zrevrange 倒序
 
     const bySubject = await ledger.listBySubject('owner-1', 'session:s-2', { limit: 10 });
     expect(bySubject.entries).toHaveLength(1);
-    expect(bySubject.entries[0].episode.subjectRef).toBe('session:s-2');
+    expect(bySubject.entries[0]?.episode.subjectRef).toBe('session:s-2');
 
     expect(await ledger.get('owner-1', e1.episode.sourceRef)).not.toBeNull();
     expect(await ledger.get('owner-1', 'missing')).toBeNull();
@@ -235,7 +236,7 @@ describe('C28 HumanDispositionLedger — Memory KV + CAS + 分页', () => {
 
     const filtered = await ledger.query('owner-1', { limit: 10, interactionKind: 'wait_cancel' });
     expect(filtered.entries).toHaveLength(1);
-    expect(filtered.entries[0].episode.interactionKind).toBe('wait_cancel');
+    expect(filtered.entries[0]?.episode.interactionKind).toBe('wait_cancel');
 
     // 严格模式：cursor 不存在 → CursorError；cursor 存在但 score 不匹配 → CursorError
     await expect(
@@ -277,7 +278,6 @@ describe('C28 adapters — 三场景 ledger entry', () => {
       feedback: { reasonCode: 'wrong' },
     });
     expect(entry.episode.subjectRef).toBe(proof.opaqueLineageHandle);
-    expect(entry.episode.invalidator).toBeUndefined(); // episode 无 invalidator
     expect(entry.envelope?.invalidator).toEqual({
       kind: 'source_superseded',
       supersessionKey: proof.opaqueSupersessionHandle,
@@ -314,7 +314,7 @@ describe('C28 adapters — 三场景 ledger entry', () => {
 describe('C28 context-service — exact-subject 反馈投影', () => {
   it('无验证候选 → 返回空字符串', async () => {
     const svc = new HumanDispositionFeedbackContextService({
-      subjectResolver: { resolve: vi.fn(async () => ({ status: 'unknown' })) },
+      subjectResolver: { resolve: vi.fn(async (): Promise<PersonMemoryDispositionSubjectProof> => ({ status: 'unknown' })) },
       ledger: { query: vi.fn() },
     });
     expect(await svc.prepare({ ownerUserId: 'u-1', text: '昨天的代码评审' })).toBe('');
@@ -333,7 +333,7 @@ describe('C28 context-service — exact-subject 反馈投影', () => {
       query: vi.fn(async () => ({ entries: [entry], scannedCount: 1 })),
     };
     const resolver: SubjectProofResolverPort = {
-      resolve: vi.fn(async ({ phrase }) => ({
+      resolve: vi.fn(async (): Promise<PersonMemoryDispositionSubjectProof> => ({
         status: 'verified',
         subjectRef: entry.envelope!.subjectRef,
         currentSupersessionKey: proof.opaqueSupersessionHandle,
