@@ -93,6 +93,18 @@
       "path": "./packages/cats/agent-hooks/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/catalog/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/harness/env-registry/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/prompt-hooks/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/capabilities/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {

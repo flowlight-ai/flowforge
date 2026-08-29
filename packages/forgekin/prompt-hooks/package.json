@@ -1,0 +1,32 @@
+{
+  "name": "@flowforge/forgekin-prompt-hooks",
+  "description": "FlowForge Forgekin prompt-hooks Cordis plugin - C41 declarative prompt hook pipeline (hook.yaml manifest parser + HookRegistry scan/validate + HookPipeline executeStage order/disabled/skipped/fired + PipelinePromptBuilder session/turn/system assembly + InjectionTraceStore dual-layer trace + resolver registry port), TS rewrite of clowder-ai domains/prompt-hooks (F237) with all 46 built-in hook.yaml manifests + 48 prompt templates at ctx.forgePromptHooks",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/prompt-hooks" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./hook-manifest-parser": { "types": "./lib/types/hook-manifest-parser.d.ts", "default": "./lib/hook-manifest-parser.js" },
+    "./hook-registry": { "types": "./lib/types/hook-registry.d.ts", "default": "./lib/hook-registry.js" },
+    "./hook-pipeline": { "types": "./lib/types/hook-pipeline.d.ts", "default": "./lib/hook-pipeline.js" },
+    "./prompt-builder": { "types": "./lib/types/prompt-builder.d.ts", "default": "./lib/prompt-builder.js" },
+    "./injection-trace": { "types": "./lib/types/injection-trace.d.ts", "default": "./lib/injection-trace.js" },
+    "./resolvers": { "types": "./lib/types/resolvers.d.ts", "default": "./lib/resolvers.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts", "assets/**/*" ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

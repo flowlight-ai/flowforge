@@ -159,6 +159,12 @@
       "path": "./packages/forgekin/harness/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/prompt-hooks/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/capabilities/tsconfig.host.json"
+    },
+    {
       "path": "./packages/forgekin/plugins/tsconfig.host.json"
     },
     {

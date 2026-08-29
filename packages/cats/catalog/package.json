@@ -1,0 +1,31 @@
+{
+  "name": "@flowforge/cats-catalog",
+  "description": "FlowForge cats catalog Cordis plugin - C37 cat-template.json catalog model (breeds/variants/roster) + C38 .cat-cafe runtime JSON (cat-catalog.json bootstrap/migration, accounts.json, user-preferences.json), TS rewrite of clowder-ai config/cat-catalog-store.ts + catalog-accounts.ts + user-preferences-store.ts + runtime-cat-catalog.ts: atomic temp+rename writes, template variant/breed backfill allowlist, tombstone tracking, P5 variant migrations, provider-profiles → accounts migration, message-disposition preferences, runtime cat CRUD with mention-alias uniqueness + duplicate-catId validation at ctx.catsCatalog",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/catalog" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./cat-catalog-store": { "types": "./lib/types/cat-catalog-store.d.ts", "default": "./lib/cat-catalog-store.js" },
+    "./catalog-accounts": { "types": "./lib/types/catalog-accounts.d.ts", "default": "./lib/catalog-accounts.js" },
+    "./user-preferences-store": { "types": "./lib/types/user-preferences-store.d.ts", "default": "./lib/user-preferences-store.js" },
+    "./runtime-cat-catalog": { "types": "./lib/types/runtime-cat-catalog.d.ts", "default": "./lib/runtime-cat-catalog.js" },
+    "./template-variant-backfill": { "types": "./lib/types/template-variant-backfill.d.ts", "default": "./lib/template-variant-backfill.js" },
+    "./template-variant-tombstones": { "types": "./lib/types/template-variant-tombstones.d.ts", "default": "./lib/template-variant-tombstones.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "@flowforge/forgekin-capabilities",
+  "description": "FlowForge Forgekin capabilities domain Cordis plugin - C34a F041 unified capability model (capabilities.json single source of truth): capability orchestrator (read/write/bootstrap/discovery/heal topology/CLI config generation per provider), MCP config adapters (Claude/Codex/Gemini/Kimi/Antigravity/OpenCode normalize to McpServerDescriptor), install preview + audit jsonl + revoke + redaction + version-lock + install-policy + probe-state + write-guards (loopback/owner gate abstracted to pure request params), TS rewrite of clowder-ai config/capabilities/* at ctx.forgeCapabilities",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/capabilities" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./capability-orchestrator": { "types": "./lib/types/capability-orchestrator.d.ts", "default": "./lib/capability-orchestrator.js" },
+    "./capability-mcp-service": { "types": "./lib/types/capability-mcp-service.d.ts", "default": "./lib/capability-mcp-service.js" },
+    "./mcp-config-adapters": { "types": "./lib/types/mcp-config-adapters.d.ts", "default": "./lib/mcp-config-adapters.js" },
+    "./mcp-constants": { "types": "./lib/types/mcp-constants.d.ts", "default": "./lib/mcp-constants.js" },
+    "./capabilities-migration": { "types": "./lib/types/capabilities-migration.d.ts", "default": "./lib/capabilities-migration.js" },
+    "./capability-install": { "types": "./lib/types/capability-install.d.ts", "default": "./lib/capability-install.js" },
+    "./capability-revoke": { "types": "./lib/types/capability-revoke.d.ts", "default": "./lib/capability-revoke.js" },
+    "./capability-redaction": { "types": "./lib/types/capability-redaction.d.ts", "default": "./lib/capability-redaction.js" },
+    "./capability-audit": { "types": "./lib/types/capability-audit.d.ts", "default": "./lib/capability-audit.js" },
+    "./capability-write-guards": { "types": "./lib/types/capability-write-guards.d.ts", "default": "./lib/capability-write-guards.js" },
+    "./install-policy": { "types": "./lib/types/install-policy.d.ts", "default": "./lib/install-policy.js" },
+    "./probe-state": { "types": "./lib/types/probe-state.d.ts", "default": "./lib/probe-state.js" },
+    "./version-lock": { "types": "./lib/types/version-lock.d.ts", "default": "./lib/version-lock.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^"
+  }
+}
