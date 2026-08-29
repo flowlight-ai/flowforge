@@ -14,7 +14,29 @@ import json
 import time
 import asyncio
 import httpx
+import subprocess
+import threading
 from typing import List, Dict, Optional, AsyncIterator, TYPE_CHECKING
+
+# v6.6 自愈：本地 openroute(webchat 网关) 会在长任务中途腐烂（进程活着但停止响应），
+# 导致 flowforge 候选链全部连接失败、产出"文章生成失败"残桩（实测昨夜 01:58 全军覆没）。
+# 连接异常时主动重启 openroute 刷新 webchat 会话，续跑剩余候选模型。冷却避免抖动。
+_OR_LOCK = threading.Lock()
+_OR_LAST_RESTART = 0.0
+_OR_COOLDOWN = 60.0
+def _ff_selfheal_openroute():
+    global _OR_LAST_RESTART
+    now = time.time()
+    with _OR_LOCK:
+        if now - _OR_LAST_RESTART < _OR_COOLDOWN:
+            return
+        _OR_LAST_RESTART = now
+    try:
+        subprocess.run(["systemctl", "--user", "restart", "hiclaw-openroute.service"],
+                       timeout=15, capture_output=True)
+        logger.warning("[self-heal] 本地 openroute 连接异常，已触发重启刷新 webchat 会话")
+    except Exception:
+        pass
 from flowforge.core.base_tool import BaseTool, ToolInput, ToolOutput
 from flowforge.core.secret_store import get_secret_store
 from flowforge.core.tracing import get_logger, get_trace_id
@@ -1596,11 +1618,17 @@ class LLMClient(BaseTool):
             duration = time.time() - start
             logger.warning(f"[_normal_call] 请求超时 URL={url} model={model_id} "
                            f"耗时={duration:.2f}s (timeout={req_timeout}s) 错误={str(e)[:300]}")
+            if "127.0.0.1:13001" in url or "localhost:13001" in url:
+                _ff_selfheal_openroute()
             raise
         except Exception as e:
             duration = time.time() - start
             logger.warning(f"[_normal_call] 请求失败 URL={url} model={model_id} "
                            f"耗时={duration:.2f}s 错误={str(e)[:300]}")
+            if "127.0.0.1:13001" in url or "localhost:13001" in url:
+                if isinstance(e, (httpx.ConnectError, httpx.ConnectTimeout,
+                                  httpx.RemoteProtocolError, httpx.TransportError)):
+                    _ff_selfheal_openroute()
             raise
 
     async def _stream_call(self, url: str, headers: dict, payload: dict,
@@ -1662,6 +1690,10 @@ class LLMClient(BaseTool):
             duration = time.time() - start
             logger.warning(f"[_stream_call] 请求失败 URL={url} model={model_id} "
                            f"耗时={duration:.2f}s 错误={str(e)[:300]}")
+            if "127.0.0.1:13001" in url or "localhost:13001" in url:
+                if isinstance(e, (httpx.ConnectError, httpx.ConnectTimeout,
+                                  httpx.RemoteProtocolError, httpx.TransportError)):
+                    _ff_selfheal_openroute()
             raise
 
     async def stream(self, input: ToolInput) -> AsyncIterator[str]:
