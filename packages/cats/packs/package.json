@@ -1,0 +1,37 @@
+{
+  "name": "@flowforge/cats-packs",
+  "description": "FlowForge cats packs Cordis plugin - C30 (F129), TS rewrite of clowder-ai domains/packs: PackSecurityGuard (9-step fail-closed validation, 11 injection patterns, 12 immutable identity fields KD-3/KD-9), PackCompiler (schema -> canonical prompt blocks, dual-track hard/overridable rails AC-A3/AC-A6), PackLoader (Phase A local-path only, security + growth boundary pipeline), PackStore (baseDir-injected install/remove/list), GrowthBoundary (KD-11 no private Growth data), PackExporter (cat-config + shared-rules + skills manifest -> pack directory), PackKnowledgeScope (pack-scoped knowledge isolation AC-A10 via PackKnowledgeStore port), getActivePackBlocks at ctx.catsPacks",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/packs" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./pack-store": { "types": "./lib/types/pack-store.d.ts", "default": "./lib/pack-store.js" },
+    "./pack-security-guard": { "types": "./lib/types/pack-security-guard.d.ts", "default": "./lib/pack-security-guard.js" },
+    "./pack-compiler": { "types": "./lib/types/pack-compiler.d.ts", "default": "./lib/pack-compiler.js" },
+    "./pack-loader": { "types": "./lib/types/pack-loader.d.ts", "default": "./lib/pack-loader.js" },
+    "./growth-boundary": { "types": "./lib/types/growth-boundary.d.ts", "default": "./lib/growth-boundary.js" },
+    "./pack-exporter": { "types": "./lib/types/pack-exporter.d.ts", "default": "./lib/pack-exporter.js" },
+    "./pack-knowledge-scope": { "types": "./lib/types/pack-knowledge-scope.d.ts", "default": "./lib/pack-knowledge-scope.js" },
+    "./get-active-pack-blocks": { "types": "./lib/types/get-active-pack-blocks.d.ts", "default": "./lib/get-active-pack-blocks.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^",
+    "zod": "^4.4.3",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/cordis": "workspace:^",
+    "zod": "^4.4.3",
+    "yaml": "^2.6.0"
+  }
+}
