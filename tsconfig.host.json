@@ -105,6 +105,9 @@
       "path": "./packages/forgekin/capabilities/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/governance/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {

@@ -1,0 +1,36 @@
+{
+  "name": "@flowforge/forgekin-governance",
+  "description": "FlowForge Forgekin governance domain Cordis plugin - C34b F070 portable governance pack: managed block generator (env-aware ports + checksum) + GovernanceRegistry (.cat-cafe/governance-registry.json dispatch audit trail) + preflight gate (needsBootstrap/needsConfirmation actionable state) + GovernanceBootstrapService (managed blocks + per-skill symlinks + hooks symlinks + methodology skeleton + bootstrap report) + mission pack / execution digest capture / project enumeration, TS rewrite of clowder-ai config/governance/* at ctx.forgeGovernance",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/forgekin/governance" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./governance-pack": { "types": "./lib/types/governance-pack.d.ts", "default": "./lib/governance-pack.js" },
+    "./governance-registry": { "types": "./lib/types/governance-registry.d.ts", "default": "./lib/governance-registry.js" },
+    "./governance-preflight": { "types": "./lib/types/governance-preflight.d.ts", "default": "./lib/governance-preflight.js" },
+    "./governance-bootstrap": { "types": "./lib/types/governance-bootstrap.d.ts", "default": "./lib/governance-bootstrap.js" },
+    "./methodology-templates": { "types": "./lib/types/methodology-templates.d.ts", "default": "./lib/methodology-templates.js" },
+    "./mission-pack": { "types": "./lib/types/mission-pack.d.ts", "default": "./lib/mission-pack.js" },
+    "./execution-digest-capture": { "types": "./lib/types/execution-digest-capture.d.ts", "default": "./lib/execution-digest-capture.js" },
+    "./skill-sync": { "types": "./lib/types/skill-sync.d.ts", "default": "./lib/skill-sync.js" },
+    "./list-all-projects": { "types": "./lib/types/list-all-projects.d.ts", "default": "./lib/list-all-projects.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/forgekin-capabilities": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^",
+    "@flowforge/forgekin-capabilities": "workspace:^"
+  }
+}

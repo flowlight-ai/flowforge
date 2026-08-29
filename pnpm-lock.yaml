@@ -852,6 +852,12 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
 
+  packages/cats/agent-hooks:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/cats/ball-custody:
     dependencies:
       yaml:
@@ -861,6 +867,43 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+
+  packages/cats/catalog:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/cats/feat-trajectory:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/cats/guides:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/cats/human-disposition:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
 
   packages/cats/invocation:
     devDependencies:
@@ -886,6 +929,33 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/packs:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      yaml:
+        specifier: ^2.6.0
+        version: 2.9.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+
+  packages/cats/plugin-inventory:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/cats/preview:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/cats/profile:
     devDependencies:
       '@flowforge/cats-shared':
@@ -894,6 +964,12 @@ importers:
       '@flowforge/cats-stores':
         specifier: workspace:^
         version: link:../stores
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/cats/projects:
+    devDependencies:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
@@ -944,7 +1020,22 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/taste:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/cats/teamact:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/cats/workspace:
     devDependencies:
       '@flowforge/cordis':
         specifier: workspace:^
@@ -2061,6 +2152,15 @@ importers:
         specifier: workspace:^
         version: link:../swarm
 
+  packages/forgekin/capabilities:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/forgekin/capability:
     devDependencies:
       '@flowforge/cordis':
@@ -2125,6 +2225,18 @@ importers:
       '@flowforge/forgekin-stage':
         specifier: workspace:^
         version: link:../stage
+
+  packages/forgekin/governance:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-capabilities':
+        specifier: workspace:^
+        version: link:../capabilities
 
   packages/forgekin/harness:
     devDependencies:
@@ -2194,6 +2306,16 @@ importers:
         version: link:../../../vendor/cordis
 
   packages/forgekin/plugins:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/forgekin/prompt-hooks:
     dependencies:
       yaml:
         specifier: ^2.4.0
@@ -2698,6 +2820,12 @@ importers:
         version: link:../../core/tools
 
   packages/harness/boot:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/harness/env-registry:
     devDependencies:
       '@flowforge/cordis':
         specifier: workspace:^

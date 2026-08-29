@@ -168,6 +168,12 @@
       "@flowforge/forgekin-autonomous": [
         "./packages/forgekin/autonomous/src/index.ts"
       ],
+      "@flowforge/forgekin-capabilities": [
+        "./packages/forgekin/capabilities/src/index.ts"
+      ],
+      "@flowforge/forgekin-governance": [
+        "./packages/forgekin/governance/src/index.ts"
+      ],
       "@flowforge/forgekin-evolution-engine": [
         "./packages/forgekin/evolution-engine/src/index.ts"
       ],
