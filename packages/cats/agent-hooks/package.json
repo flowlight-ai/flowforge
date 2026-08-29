@@ -1,0 +1,26 @@
+{
+  "name": "@flowforge/cats-agent-hooks",
+  "description": "FlowForge cats agent-hooks Cordis plugin - C31, TS rewrite of clowder-ai agent-hooks: sync-targets (4 SyncTargets: session-start/session-stop/codex-hooks/gemini-hooks, canonical JSON drift detection, applySync with executable bit), claude-settings (MANAGED_HOOKS SessionStart/Stop, 4-state health configured/missing/stale/error, user-hook-preserving sync with bash prefix), health (unified status aggregation severity 1-5, text/json diff summaries, skill+MCP drift health via injected AgentHookCapabilityProbes port, ownerAuthorized fail-closed capability sync with keep-project policy) at ctx.catsAgentHooks",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/cats/agent-hooks" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./sync-targets": { "types": "./lib/types/sync-targets.d.ts", "default": "./lib/sync-targets.js" },
+    "./claude-settings": { "types": "./lib/types/claude-settings.d.ts", "default": "./lib/claude-settings.js" },
+    "./health": { "types": "./lib/types/health.d.ts", "default": "./lib/health.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

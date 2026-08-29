@@ -84,6 +84,15 @@
       "path": "./packages/cats/taste/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/packs/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/plugin-inventory/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/agent-hooks/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {

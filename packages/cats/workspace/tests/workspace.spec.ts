@@ -13,7 +13,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -31,6 +31,7 @@ import CatsWorkspace, {
   resolveWorkspaceAbsolutePath,
   resolveWorkspaceDocumentHref,
   setupWorkspaceFileWatcher,
+  type GitResult,
   type GitRunner,
   type WorkspaceSocketServer,
 } from '../src/index.js';
@@ -55,7 +56,7 @@ async function withWorkspace(): Promise<Context> {
 function worktreeRunner(stdout: string | null, opts: { isGit?: boolean } = {}): GitRunner {
   const isGit = opts.isGit ?? true;
   return {
-    exec: vi.fn(async (args) => {
+    exec: vi.fn(async (args: string[]): Promise<GitResult> => {
       if (!isGit && (args.includes('--is-inside-work-tree') || args.includes('--is-bare-repository'))) {
         return { ok: false, err: { code: '128' } };
       }
@@ -131,10 +132,10 @@ describe('C28 WorkspaceSecurity — worktree + linked roots', () => {
     const security = new WorkspaceSecurity({ cwd: '/repo', gitRunner: worktreeRunner(PORCELAIN) });
     const entries = await security.listWorktrees('/repo');
     expect(entries).toHaveLength(2);
-    expect(entries[0].root).toBe('/repo/main');
-    expect(entries[0].branch).toBe('main');
-    expect(entries[0].head).toBe('abcdef12');
-    expect(entries[1].branch).toBe('feature-1');
+    expect(entries[0]?.root).toBe('/repo/main');
+    expect(entries[0]?.branch).toBe('main');
+    expect(entries[0]?.head).toBe('abcdef12');
+    expect(entries[1]?.branch).toBe('feature-1');
   });
 
   it('非 git 仓库 → fallback startup-root 条目；git 不可用 → null 上游回退', async () => {
@@ -144,8 +145,8 @@ describe('C28 WorkspaceSecurity — worktree + linked roots', () => {
     });
     const entries = await security.listWorktrees('/repo');
     expect(entries).toHaveLength(1);
-    expect(entries[0].head).toBe('nogit');
-    expect(entries[0].branch).toBe('exported');
+    expect(entries[0]?.head).toBe('nogit');
+    expect(entries[0]?.branch).toBe('exported');
   });
 
   it('linked roots：env var + 注入 config 合并去重（env 优先）', async () => {
@@ -339,6 +340,8 @@ describe('C28 watcher — socket 端口注入', () => {
     id: string;
     handlers: Map<string, (data: unknown) => void>;
     emitted: Array<{ event: string; data: unknown }>;
+    on: (event: string, listener: (data: unknown) => void) => void;
+    emit: (event: string, data: unknown) => void;
   }
 
   function mockServer(): { server: WorkspaceSocketServer; sockets: MockSocket[]; connections: MockSocket[] } {
@@ -351,12 +354,12 @@ describe('C28 watcher — socket 端口注入', () => {
           id: `sock-${sockets.length}`,
           handlers: new Map(),
           emitted: [],
-        };
-        socket.on = (ev, l) => {
-          socket.handlers.set(ev, l);
-        };
-        socket.emit = (ev, data) => {
-          socket.emitted.push({ event: ev, data });
+          on: (ev: string, l: (data: unknown) => void) => {
+            socket.handlers.set(ev, l);
+          },
+          emit: (ev: string, data: unknown) => {
+            socket.emitted.push({ event: ev, data });
+          },
         };
         sockets.push(socket);
         connections.push(socket);
@@ -380,13 +383,13 @@ describe('C28 watcher — socket 端口注入', () => {
     setupWorkspaceFileWatcher(server, security, logger);
 
     expect(sockets).toHaveLength(1);
-    const socket = sockets[0];
+    const socket = sockets[0]!;
     const watchHandler = socket.handlers.get('workspace:watch-file')!;
     await watchHandler({ worktreeId: 'ws-1', path: 'w.txt', sha256: 'stale-sha' });
 
     expect(socket.emitted).toHaveLength(1);
-    expect(socket.emitted[0].event).toBe('workspace:file-changed');
-    expect((socket.emitted[0].data as { sha256: string }).sha256).toBe(
+    expect(socket.emitted[0]?.event).toBe('workspace:file-changed');
+    expect((socket.emitted[0]?.data as { sha256: string } | undefined)?.sha256).toBe(
       createHash('sha256').update('content-v1').digest('hex'),
     );
 
@@ -400,7 +403,7 @@ describe('C28 watcher — socket 端口注入', () => {
     const security = new WorkspaceSecurity({ cwd: tmpdir() });
     const { server, sockets } = mockServer();
     setupWorkspaceFileWatcher(server, security);
-    const socket = sockets[0];
+    const socket = sockets[0]!;
     const watchHandler = socket.handlers.get('workspace:watch-file')!;
     await watchHandler({});
     expect(socket.emitted).toHaveLength(0);

@@ -68,8 +68,8 @@ function fakeProxyServer(opts: FakeProxyOpts = {}) {
     on(event: string, listener: (...args: unknown[]) => void): void {
       (listeners[event] ??= []).push(listener);
     },
-    web(req, res, proxyOpts, callback) {
-      calls.push({ kind: 'web', target: proxyOpts.target, url: req.url });
+    web(req, res, proxyOpts) {
+      calls.push({ kind: 'web', target: proxyOpts.target, ...(req.url !== undefined ? { url: req.url } : {}) });
       // 模拟上游响应：先设置 statusCode/headers（proxyRes listener 同步读取），
       // 再触发 proxyRes 监听器，最后喂 body。
       const proxyRes = new PassThrough() as PassThrough & {
@@ -367,7 +367,7 @@ describe('preview-gateway（F120 反向代理）', () => {
     expect(html).toContain('__vite_hmr');
     // 转发 URL 已剥离 preview 参数
     expect(calls[0]).toMatchObject({ kind: 'web', target: 'http://localhost:5173' });
-    expect(calls[0].url).toBe('/path');
+    expect(calls[0]?.url).toBe('/path');
     await gateway.stop();
   });
 
@@ -422,7 +422,7 @@ describe('preview-gateway（F120 反向代理）', () => {
       `http://127.0.0.1:${gateway.actualPort}/?__preview_port=${target.port}`,
     );
     expect(ok.status).toBe(200);
-    expect(calls[0].target).toBe(`http://localhost:${target.port}`);
+    expect(calls[0]?.target).toBe(`http://localhost:${target.port}`);
 
     await gateway.stop();
     await target.close();
