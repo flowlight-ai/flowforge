@@ -139,14 +139,14 @@
 | C31 | agent 生命周期钩子 agent-hooks | agent-hooks | 4 | ✅（批次26 cats-agent-hooks：buildAgentHookTargets 4 目标（session-start/stop 可执行脚本 + codex/gemini JSON）+ canonical JSON 漂移检测 + applySync（dryRun/正式写入/chmod）+ claude-settings 四态健康（保留用户 hooks）+ getAgentHookStatus/syncAgentHooks 统一健康（AgentHookCapabilityProbes 探针端口注入 + ownerAuthorized fail-closed keep-project），22 测试） |
 | C32 | harness-eval 16 域评估（a2a/anchor-first/capability-tips/freshness/sop/task-outcome 等） | infrastructure/harness-eval | 7 | ✅（批次16 forgekin-harness-eval：EvalDomainRegistry 16 域注册表，见 F36） |
 | C33 | infrastructure 域（commands/debug/distillation/document/email/enterprise/github/grounding/scheduler/telemetry） | infrastructure/* | 3-5 | ⬜ |
-| C34 | 能力/治理/挂载配置（capabilities/governance/mount） | config/* | 3-4 | ⬜ |
+| C34 | 能力/治理/挂载配置（capabilities/governance/mount） | config/* | 3-4 | 🟦（批次27 forgekin-capabilities：CapabilityOrchestrator（bootstrapCapabilities/ensureCoreManagedMcps/healCatCafeMcpTopology/collect/resolve/generate/orchestrate）+ CapabilityMcpService（installMcp→removeMcp 管线 + 审计日志）+ capabilities-migration/audit/redaction/revoke/write-guards/install-policy/mcp-config-adapters/probe-state/version-lock，`ctx` 注入式，17 测试；governance 包 C34b 进行中） |
 | C35 | 上游参考插件（github/video-analysis/video-gen/wechat-visible-reader/weixin-mp，manifest 迁移装配声明） | plugins/* | 5-6 | ⬜ |
 | C36 | 技能安全 skill-security | skill-security | 2 | ✅（packages/plugins/skill-security，13 vitest） |
-| C37 | 档案目录模型 cat-template.json（breeds/variants/CLI 适配器；Forgekin 档案保持 YAML） | packages/cats/catalog | 4 | ⬜ |
+| C37 | 档案目录模型 cat-template.json（breeds/variants/CLI 适配器；Forgekin 档案保持 YAML） | packages/cats/catalog | 4 | ✅（批次27 cats-catalog：CatCatalogStore/CatalogAccounts/UserPreferencesStore/TemplateVariantBackfill/TemplateVariantTombstones/RuntimeCatCatalog/bootstrap-roster，36 测试） |
 | C38 | .cat-cafe 运行态 JSON（accounts/user-preferences/proxy-upstreams/provider-profiles） | data/ + ~/.flowforge | 4 | ⬜ |
-| C39 | 环境变量注册表 env-registry（CAT_CAFE_* → FF_*） | packages/harness/env-registry | 0 | ⬜ |
+| C39 | 环境变量注册表 env-registry（CAT_CAFE_* → FF_*） | packages/harness/env-registry | 0 | ✅（批次27 env-registry：ENV_VARS 单一事实源 12 分类 + 掩码/汇总 + fail-closed 可编辑白名单，10 测试） |
 | C40 | 连接器配置 cat-config-loader + connector.yaml（IM stretch 时仅 ports） | packages/chat|limb | 5-6 | 🟦（批次8 chat-stretch 已交付 IM ports + mock；cat-config-loader 待阶段 6） |
-| C41 | prompt 钩子 hook.yaml | packages/core/system-prompt + packages/forgekin | 1/4 | ⬜ |
+| C41 | prompt 钩子 hook.yaml | packages/core/system-prompt + packages/forgekin | 1/4 | ✅（批次27 forgekin-prompt-hooks：HookManifestParser/HookRegistry（46 hooks）/HookPipeline/PromptBuilder/InjectionTrace，`ctx.forgePromptHooks`，30 测试） |
 | C42 | shared 包（catId/threadId schema、frontmatter-parser、registry 纯函数） | packages/shared | 0 | ✅（批次1 cats-shared，100+ 类型文件） |
 
 ### 3.4 Stretch 清单（Phase 11 之后，功能全集之外的扩展目标）

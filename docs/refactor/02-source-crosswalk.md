@@ -85,11 +85,11 @@
 | `src/domains/services/*`（memory/signals/approval/notifications 等） | `packages/cats|chat` 对应域 | vendor 按域拆分 | ⬜ |
 | `src/routes/threads|messages|callback-multi-mention|session-*|thread-branch|approval-hub|proposal|votes|world|community|story|leaderboard|marketplace|settings|…` | `packages/chat` + `packages/marketplace` | vendor；world/community/story 等 clowder 扩展降级 stretch（S1-S3/S7，见 `10-stage-map.md` §3.4） | ✅（批次1-8 chat-threads/messages/mention/session-chain/approval/realtime/misc + stretch-ports ports+mock + e2e） |
 | `src/infrastructure/*`（websocket/socket.io、db better-sqlite3、redis、queues、events） | `packages/api/infrastructure` | vendor（阶段 3/5） | ⬜ |
-| `cat-template.json` + `.cat-cafe/cat-catalog.json`（**JSON** 档案/目录模型：breeds/variants/CLI 适配器定义） | `packages/cats/catalog` | 结构对齐；Forgekin 档案保持 YAML（R17） | ⬜ |
-| `.cat-cafe/` 运行态 JSON（accounts.json / user-preferences.json / proxy-upstreams.json / provider-profiles 迁移） | `data/` + `~/.flowforge/` | 格式对齐（JSON），改名 ff2 域（R17） | ⬜ |
-| `src/config/env-registry.ts`（`CAT_CAFE_*` 环境变量集中登记：名称/默认值/分类/敏感标记） | `packages/harness/env-registry` | 移植为 `FF_*` 注册表（R17，阶段 0 T0.19） | ⬜ |
+| `cat-template.json` + `.cat-cafe/cat-catalog.json`（**JSON** 档案/目录模型：breeds/variants/CLI 适配器定义） | `packages/cats/catalog` | 结构对齐；Forgekin 档案保持 YAML（R17） | ✅（批次27 cats-catalog：CatCatalogStore 全生命周期（模板/variants/tombstones 合并视图）+ CatalogAccounts（损坏备份 .bak + 冲突 global 优先 skipConflicts）+ UserPreferencesStore + TemplateVariantBackfill 回填 + TemplateVariantTombstones 墓碑 + RuntimeCatCatalog + bootstrap-roster，`ctx.cats`，36 测试） |
+| `.cat-cafe/` 运行态 JSON（accounts.json / user-preferences.json / proxy-upstreams.json / provider-profiles 迁移） | `data/` + `~/.flowforge/` | 格式对齐（JSON），改名 ff2 域（R17） | 🟦（批次27 accounts/user-preferences 已随 cats-catalog 交付；proxy-upstreams/provider-profiles 待阶段 6） |
+| `src/config/env-registry.ts`（`CAT_CAFE_*` 环境变量集中登记：名称/默认值/分类/敏感标记） | `packages/harness/env-registry` | 移植为 `FF_*` 注册表（R17，阶段 0 T0.19） | ✅（批次27 env-registry：ENV_VARS 单一事实源（12 分类）+ maskUrlCredentials/buildEnvSummary（敏感/URL 掩码）+ isEditableEnvVar* fail-closed 白名单 + `ctx.forgeEnvRegistry`，10 测试） |
 | `src/config/cat-config-loader.ts` + connector.yaml/plugin.yaml（connector 配置 YAML manifest） | `packages/chat|limb` 对应域 | 移植（R17；IM 通道为 stretch S1 时仅 ports） | 🟦（批次8 chat-stretch 已交付 IM ports + mock；cat-config-loader 待阶段 6） |
-| `assets/prompt-hooks/*/hook.yaml`（prompt 钩子 YAML 定义） | `packages/core/system-prompt` + `packages/forgekin` | 移植（hook.yaml → prompt 插件 schema 段） | ⬜ |
+| `assets/prompt-hooks/*/hook.yaml`（prompt 钩子 YAML 定义） | `packages/core/system-prompt` + `packages/forgekin` | 移植（hook.yaml → prompt 插件 schema 段） | ✅（批次27 forgekin-prompt-hooks：HookManifestParser（hook.yaml 解析 + 目录前缀↔id 校验）+ HookRegistry（46 hooks 真实资产扫描）+ scope 过滤（session=S 系/turn=D 系）+ PromptBuilder buildSystemPrompt + InjectionTrace 双 trace（drain 一次清空）+ HookPipeline，`ctx.forgePromptHooks`，30 测试） |
 | `packages/shared/*`（catId/threadId schema、profile-frontmatter-parser、registry 纯函数） | `packages/shared` | vendor | ⬜ |
 | `apps/web`（页面与组件） | `apps/web` | 与 P: `web/` 前端融合（阶段 8） | ⬜ |
 
