@@ -108,6 +108,15 @@
       "path": "./packages/forgekin/governance/tsconfig.host.json"
     },
     {
+      "path": "./packages/infrastructure/commands/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/distillation/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/document/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {
