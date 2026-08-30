@@ -3184,6 +3184,15 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/infrastructure/debug:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/infrastructure-telemetry':
+        specifier: workspace:^
+        version: link:../telemetry
+
   packages/infrastructure/distillation:
     devDependencies:
       '@flowforge/cats-shared':
@@ -3194,6 +3203,12 @@ importers:
         version: link:../../../vendor/cordis
 
   packages/infrastructure/document:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/telemetry:
     devDependencies:
       '@flowforge/cordis':
         specifier: workspace:^

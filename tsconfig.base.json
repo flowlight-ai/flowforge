@@ -183,6 +183,12 @@
       "@flowforge/infrastructure-document": [
         "./packages/infrastructure/document/src/index.ts"
       ],
+      "@flowforge/infrastructure-telemetry": [
+        "./packages/infrastructure/telemetry/src/index.ts"
+      ],
+      "@flowforge/infrastructure-debug": [
+        "./packages/infrastructure/debug/src/index.ts"
+      ],
       "@flowforge/forgekin-evolution-engine": [
         "./packages/forgekin/evolution-engine/src/index.ts"
       ],
