@@ -68,7 +68,7 @@
 | `agent-hooks`（agent 生命周期钩子） | `packages/cats/agent-hooks` | vendor；对照 P: `core/hooks.py` | ✅（批次26 cats-agent-hooks：4 个 SyncTarget（session-start/stop 脚本 + codex/gemini JSON）+ canonical JSON 漂移 + applySync（dryRun/chmod）+ claude-settings 四态健康（保留用户 hooks）+ health 统一检查/同步（AgentHookCapabilityProbes 端口注入 + ownerAuthorized fail-closed），`ctx.catsAgentHooks`，22 测试） |
 | `infrastructure/harness-eval/*`（a2a/anchor-first/capability-tips/capability-wakeup/freshness/friction/memory/sop/task-outcome/measurement/publish-verdict/hub 等 16 域） | `packages/forgekin/harness-eval` | vendor；对照 P: `harness/` + `evaluators/`（F36/F40） | ✅（批次16：EvalDomainRegistry 16 域内置注册 + 自定义追加 + 退役/重启用，见 Python 区 harness 行） |
 | `infrastructure/{commands,debug,distillation,document,email,enterprise,github,grounding,scheduler,telemetry}` | `packages/api/infrastructure` | vendor 按域拆分（阶段 3-5） | ⬜ |
-| `config/{capabilities,governance,mount}` | `packages/harness/config` | vendor；capability 声明对照 P: `core/capability/` | ⬜ |
+| `config/{capabilities,governance,mount}` | `packages/harness/config` | vendor；capability 声明对照 P: `core/capability/` | ✅（批次27-28：forgekin-capabilities（C34a 17 测试）+ forgekin-governance（C34b：GovernanceBootstrapService/GovernanceRegistry/preflight/mission-pack/execution-digest-capture，19 测试）） |
 | `plugins/{github,video-analysis,video-gen,wechat-visible-reader,weixin-mp}`（manifest `plugin.yaml` + `limbs/*.yml` + `protocols/*.yaml`） | `packages/plugins/*` | vendor（阶段 5/6 或 stretch）；manifest 迁移为插件装配声明（R17 §4） | ⬜ |
 | `skill-security`（技能安全） | `packages/plugins/skill-security` | vendor（阶段 2） | ⬜ |
 | `src/services/agents/invocation`（InvocationQueue/QueueProcessor/TaskProgressStore） | `packages/cats/invocation` | vendor；执行委托 `ctx.agentLoop`（F5） | ⬜ |
