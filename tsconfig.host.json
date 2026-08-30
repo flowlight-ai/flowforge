@@ -117,6 +117,12 @@
       "path": "./packages/infrastructure/document/tsconfig.host.json"
     },
     {
+      "path": "./packages/infrastructure/telemetry/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/debug/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {
