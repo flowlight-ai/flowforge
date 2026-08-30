@@ -165,6 +165,9 @@
       "path": "./packages/forgekin/capabilities/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/governance/tsconfig.host.json"
+    },
+    {
       "path": "./packages/forgekin/plugins/tsconfig.host.json"
     },
     {

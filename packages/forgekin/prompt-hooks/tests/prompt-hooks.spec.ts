@@ -22,7 +22,7 @@ import { PipelinePromptBuilder } from '../src/prompt-builder.js';
 import { InjectionTraceStore, MemoryTraceBackend } from '../src/injection-trace.js';
 import { InputGatedResolver, ResolverRegistry, VariantPickerResolver } from '../src/resolvers.js';
 import ForgePromptHooksService from '../src/index.js';
-import type { AssemblerInput } from '../src/types.js';
+import type { AssemblerInput, ResolveResult } from '../src/types.js';
 
 // ---------------------------------------------------------------------------
 // 资产路径（真实包资产）
