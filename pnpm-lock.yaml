@@ -3216,6 +3216,9 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@flowforge/infrastructure-distillation':
+        specifier: workspace:^
+        version: link:../distillation
       '@flowforge/infrastructure-github':
         specifier: workspace:^
         version: link:../github
