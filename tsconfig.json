@@ -183,6 +183,9 @@
       "path": "./packages/infrastructure/debug/tsconfig.host.json"
     },
     {
+      "path": "./packages/infrastructure/scheduler/tsconfig.host.json"
+    },
+    {
       "path": "./packages/forgekin/plugins/tsconfig.host.json"
     },
     {
