@@ -3208,6 +3208,21 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/infrastructure/email:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/enterprise:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/infrastructure/github:
     devDependencies:
       '@flowforge/cordis':
