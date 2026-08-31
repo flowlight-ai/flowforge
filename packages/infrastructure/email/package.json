@@ -30,12 +30,14 @@
     "@flowforge/cordis": "workspace:^",
     "@flowforge/cats-shared": "workspace:^",
     "@flowforge/infrastructure-redis-port": "workspace:^",
-    "@flowforge/infrastructure-github": "workspace:^"
+    "@flowforge/infrastructure-github": "workspace:^",
+    "@flowforge/infrastructure-distillation": "workspace:^"
   },
   "devDependencies": {
     "@flowforge/cordis": "workspace:^",
     "@flowforge/cats-shared": "workspace:^",
     "@flowforge/infrastructure-redis-port": "workspace:^",
-    "@flowforge/infrastructure-github": "workspace:^"
+    "@flowforge/infrastructure-github": "workspace:^",
+    "@flowforge/infrastructure-distillation": "workspace:^"
   }
 }

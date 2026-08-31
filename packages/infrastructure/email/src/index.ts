@@ -269,6 +269,11 @@ export {
   type MinimalLog,
 } from './ci-status-fetcher.ts';
 export { ciStatusTargetKey, fetchPrCiStatuses, type PrCiStatusTarget } from './ci-status-batch-fetcher.ts';
+export { deliverConnectorMessage, type ConnectorDeliveryDeps, type ConnectorDeliveryInput, type ConnectorDeliveryResult, type MessageAppender, type SocketBroadcaster } from './deliver-connector-message.ts';
+export { buildConflictMessageContent, ConflictRouter, prSubjectKey, type ConflictRouteResult, type ConflictSignal, type TaskLookup, type WaitLifecyclePort } from './conflict-router.ts';
+export { ConflictAutoExecutor, type AutoResolveResult, type SubprocessRunner, type WorktreeLister } from './conflict-auto-executor.ts';
+export { createConflictCheckTaskSpec, type ConflictCheckSpec, type ConflictSignalWorkItem, type ConnectorTriggerPolicy, type InvokeTriggerPort, type TaskListPort } from './conflict-check-task-spec.ts';
+export { projectReviewFeedbackTerminalEffects, type CommunityEventPort, type ReviewFeedbackTerminalEffectsOptions } from './review-feedback-terminal-effects.ts';
 export {
   PR_TRACKING_PATCH_STATE_LUA,
   PR_TRACKING_REMOVE_LUA,
