@@ -278,6 +278,9 @@ export { validateIssueFixEvidence, hasIssueFixClaim, isCriticalIssueSignal, extr
 export { IssueCommentRouter, buildIssueCommentContent, type IssueComment, type IssueCommentRouteResult, type IssueCommentSignal } from './issue-comment-router.ts';
 export { ReviewFeedbackRouter, buildReviewFeedbackContent, type PrFeedbackComment, type PrReviewDecision, type ReviewFeedbackRouteResult, type ReviewFeedbackRoutingAudit, type ReviewFeedbackSignal, type ReviewWaitLifecyclePort } from './review-feedback-router.ts';
 export { backfillLegacyPrTracking, type LegacyPrTrackingBackfillOptions, type LegacyPrTrackingBackfillResult } from './backfill-legacy-pr-tracking.ts';
+export { createIssueCommentTaskSpec, type IssueCommentSpec, type IssueCommentTaskSpecOptions, type IssueEventLogPort, type IssueTrackingMetadata } from './issue-comment-task-spec.ts';
+export { createReviewFeedbackTaskSpec, type ReviewFeedbackSpec, type ReviewFeedbackTaskSpecOptions, type ReviewFetchResult } from './review-feedback-task-spec.ts';
+export { createConnectorInvokeTrigger, type ConnectorInvokeTriggerOptions, type InvocationWakePort } from './connector-invoke-trigger.ts';
 export { createCiCdCheckTaskSpec, type CiCdCheckSignal, type CiCdCheckSpec, type CiCdCheckTaskSpecOptions, type CiPollResultLike } from './ci-cd-check-task-spec.ts';
 export {
   buildDeliveryDecisionCueCarrier,
