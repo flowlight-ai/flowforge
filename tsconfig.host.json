@@ -132,6 +132,9 @@
       "path": "./packages/infrastructure/grounding/tsconfig.host.json"
     },
     {
+      "path": "./packages/infrastructure/redis-port/tsconfig.host.json"
+    },
+    {
       "path": "./packages/infrastructure/enterprise/tsconfig.host.json"
     },
     {

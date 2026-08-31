@@ -204,6 +204,9 @@
       "@flowforge/infrastructure-email": [
         "./packages/infrastructure/email/src/index.ts"
       ],
+      "@flowforge/infrastructure-redis-port": [
+        "./packages/infrastructure/redis-port/src/index.ts"
+      ],
       "@flowforge/forgekin-evolution-engine": [
         "./packages/forgekin/evolution-engine/src/index.ts"
       ],

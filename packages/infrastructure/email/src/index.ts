@@ -238,98 +238,26 @@ export function createGitHubFeedbackFilter(opts: GitHubFeedbackFilterOptions): G
  * F140 polling（ReviewFeedback/ConflictCheck）与 F133 CI/CD tracking 用于
  * 将通知路由到正确的 cat/thread。
  */
-export interface PrTrackingEntry {
-  readonly repoFullName: string;
-  readonly prNumber: number;
-  readonly catId: string;
-  readonly threadId: string;
-  readonly userId: string;
-  readonly registeredAt: number;
-  // F133: CI/CD state fields（首次 CI 轮询前缺席）
-  readonly headSha?: string;
-  readonly lastCiFingerprint?: string;
-  readonly lastCiBucket?: string;
-  readonly lastCiNotifiedAt?: number;
-  readonly ciTrackingEnabled?: boolean;
-  // F140: Conflict state fields（首次冲突检查前缺席）
-  readonly lastConflictFingerprint?: string;
-  readonly lastConflictNotifiedAt?: number;
-  readonly mergeState?: string;
-}
+// ── pr-tracking-store（类型/key/内存实现）─────────────────────
 
-export type PrTrackingInput = Omit<PrTrackingEntry, 'registeredAt'>;
+import { MemoryPrTrackingStore } from './pr-tracking-store.ts';
 
-/** CI state fields for partial update via patchCiState()（KD-7：不动 registeredAt）。 */
-export interface CiStateFields {
-  headSha?: string;
-  lastCiFingerprint?: string;
-  lastCiBucket?: string;
-  lastCiNotifiedAt?: number;
-  ciTrackingEnabled?: boolean;
-}
-
-/** F140: Conflict state fields（KD-12：与 CI 状态域独立）。 */
-export interface ConflictStateFields {
-  lastConflictFingerprint?: string;
-  lastConflictNotifiedAt?: number;
-  mergeState?: string;
-}
-
-export interface IPrTrackingStore {
-  register(input: PrTrackingInput): PrTrackingEntry | Promise<PrTrackingEntry>;
-  get(repoFullName: string, prNumber: number): PrTrackingEntry | null | Promise<PrTrackingEntry | null>;
-  remove(repoFullName: string, prNumber: number): boolean | Promise<boolean>;
-  listAll(): PrTrackingEntry[] | Promise<PrTrackingEntry[]>;
-  patchCiState(repoFullName: string, prNumber: number, ciFields: CiStateFields): void | Promise<void>;
-  patchConflictState(repoFullName: string, prNumber: number, conflictFields: ConflictStateFields): void | Promise<void>;
-}
-
-/** Redis key patterns（RedisPrTrackingStore 随持久化加固再补）。 */
-export const PrTrackingKeys = {
-  detail: (repoFullName: string, prNumber: number) => `pr-tracking:${repoFullName}#${prNumber}`,
-  all: () => 'pr-tracking:all',
-} as const;
-
-function makeKey(repoFullName: string, prNumber: number): string {
-  return `${repoFullName}#${prNumber}`;
-}
-
-/** In-memory implementation of PrTrackingStore. */
-export class MemoryPrTrackingStore implements IPrTrackingStore {
-  private readonly entries = new Map<string, PrTrackingEntry>();
-
-  register(input: PrTrackingInput): PrTrackingEntry {
-    const entry: PrTrackingEntry = { ...input, registeredAt: Date.now() };
-    this.entries.set(makeKey(input.repoFullName, input.prNumber), entry);
-    return entry;
-  }
-
-  get(repoFullName: string, prNumber: number): PrTrackingEntry | null {
-    return this.entries.get(makeKey(repoFullName, prNumber)) ?? null;
-  }
-
-  remove(repoFullName: string, prNumber: number): boolean {
-    return this.entries.delete(makeKey(repoFullName, prNumber));
-  }
-
-  listAll(): PrTrackingEntry[] {
-    return [...this.entries.values()].sort((a, b) => b.registeredAt - a.registeredAt);
-  }
-
-  patchCiState(repoFullName: string, prNumber: number, ciFields: CiStateFields): void {
-    const key = makeKey(repoFullName, prNumber);
-    const existing = this.entries.get(key);
-    if (!existing) return;
-    this.entries.set(key, { ...existing, ...ciFields });
-  }
-
-  patchConflictState(repoFullName: string, prNumber: number, conflictFields: ConflictStateFields): void {
-    const key = makeKey(repoFullName, prNumber);
-    const existing = this.entries.get(key);
-    if (!existing) return;
-    this.entries.set(key, { ...existing, ...conflictFields });
-  }
-}
+export {
+  MemoryPrTrackingStore,
+  PrTrackingKeys,
+  type CiStateFields,
+  type ConflictStateFields,
+  type IPrTrackingStore,
+  type PrTrackingEntry,
+  type PrTrackingInput,
+} from './pr-tracking-store.ts';
+export {
+  PR_TRACKING_PATCH_STATE_LUA,
+  PR_TRACKING_REMOVE_LUA,
+  PR_TRACKING_SELF_HEAL_LUA,
+  RedisPrTrackingStore,
+  type RedisPrTrackingStoreOptions,
+} from './redis-pr-tracking-store.ts';
 
 // ── ci-message-content ──────────────────────────────────────
 

@@ -64,6 +64,13 @@ export {
   extractPrTrackingClaims,
 } from './claim-extractors.ts';
 export { GroundingSampleStore } from './grounding-sample-store.ts';
+export {
+  COUNTER_TTL_SECONDS,
+  DEFAULT_TTL_SECONDS as GROUNDING_REDIS_DEFAULT_TTL_SECONDS,
+  GROUNDING_REDIS_KEYS,
+  RedisGroundingSampleStore,
+  type RedisGroundingSampleStoreOptions,
+} from './redis-grounding-sample-store.ts';
 
 // ── Resolver interface ────────────────────────────────────────
 
