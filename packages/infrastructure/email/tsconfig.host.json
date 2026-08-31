@@ -17,6 +17,9 @@
     },
     {
       "path": "../redis-port"
+    },
+    {
+      "path": "../github"
     }
   ]
 }
