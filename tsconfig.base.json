@@ -198,6 +198,12 @@
       "@flowforge/infrastructure-grounding": [
         "./packages/infrastructure/grounding/src/index.ts"
       ],
+      "@flowforge/infrastructure-enterprise": [
+        "./packages/infrastructure/enterprise/src/index.ts"
+      ],
+      "@flowforge/infrastructure-email": [
+        "./packages/infrastructure/email/src/index.ts"
+      ],
       "@flowforge/forgekin-evolution-engine": [
         "./packages/forgekin/evolution-engine/src/index.ts"
       ],

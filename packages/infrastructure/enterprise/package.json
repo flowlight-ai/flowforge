@@ -1,0 +1,21 @@
+{
+  "name": "@flowforge/infrastructure-enterprise",
+  "description": "FlowForge infrastructure enterprise domain Cordis plugin - C33 F162 enterprise IM operations at the ADR-029 governance boundary: Lark/Feishu (LarkCliExecutor over lark-cli Go binary with {ok,data|error} envelope, LarkActionService docs/base/task/calendar/slides/searchUsers with scope-error degradation and GoldenChain) + WeChat Work (WeComCliExecutor over wecom-cli Rust binary with {errcode,errmsg} and MCP content wrapper unwrapping, WeComActionService doc/smartsheet/todo/meeting/contact and GoldenChain), injectable execFile + enterprise logger, TS rewrite of clowder-ai infrastructure/enterprise/* at ctx.forgeEnterprise",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/infrastructure/enterprise" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./lark-types": { "types": "./lib/types/lark-types.d.ts", "default": "./lib/lark-types.js" },
+    "./wecom-types": { "types": "./lib/types/wecom-types.d.ts", "default": "./lib/wecom-types.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": { "@flowforge/cordis": "workspace:^" },
+  "devDependencies": { "@flowforge/cordis": "workspace:^" }
+}

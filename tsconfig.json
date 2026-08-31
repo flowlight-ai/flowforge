@@ -192,6 +192,12 @@
       "path": "./packages/infrastructure/grounding/tsconfig.host.json"
     },
     {
+      "path": "./packages/infrastructure/enterprise/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/email/tsconfig.host.json"
+    },
+    {
       "path": "./packages/forgekin/plugins/tsconfig.host.json"
     },
     {

@@ -2,9 +2,21 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib",
-    "noEmit": true
+    "outDir": "lib/types",
+    "composite": true,
+    "tsBuildInfoFile": "lib/.tsbuildinfo"
   },
-  "include": [ "src", "tests" ],
-  "references": [ { "path": "../../../vendor/cordis" } ]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "lib",
+    "node_modules",
+    "tests"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cordis"
+    }
+  ]
 }
