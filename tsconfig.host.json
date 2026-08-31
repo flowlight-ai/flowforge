@@ -126,6 +126,12 @@
       "path": "./packages/infrastructure/scheduler/tsconfig.host.json"
     },
     {
+      "path": "./packages/infrastructure/github/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/grounding/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {

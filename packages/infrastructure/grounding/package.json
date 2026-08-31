@@ -1,0 +1,20 @@
+{
+  "name": "@flowforge/infrastructure-grounding",
+  "description": "FlowForge infrastructure grounding domain Cordis plugin - C33 F167 Phase O PR-O2 claim grounding shadow telemetry: type contracts (ClaimType/Verdict/SourceRef/WaitSourceRef/ClaimGroundingEvent), claim extractors (hold_ball/register_pr_tracking/register_issue_tracking), resolver budget (INV-O9) + high-risk T0/T1 evidence (INV-O3) + wouldBlock shadow signal (INV-O4), shadow-mode checker (INV-O7 cache-hit refund / INV-O8 next-resolver / INV-O10 read_intent skip), bounded sample store (mismatch 100% / insufficient 3-per-day / verified 1/N + daily cap), TS rewrite of clowder-ai infrastructure/grounding/* at ctx.forgeGrounding",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/infrastructure/grounding" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./types": { "types": "./lib/types/types.d.ts", "default": "./lib/types.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": { "@flowforge/cordis": "workspace:^" },
+  "devDependencies": { "@flowforge/cordis": "workspace:^" }
+}

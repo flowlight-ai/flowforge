@@ -64,6 +64,11 @@ export const AGENT_ID = 'agent.id';
 export const OPERATION_NAME = 'operation.name';
 export const STATUS = 'status';
 export const TRIGGER = 'trigger';
+export const CALLBACK_TOOL = 'callback.tool';
+export const GROUNDING_CLAIM_TYPE = 'grounding.claim_type';
+export const GROUNDING_VERDICT = 'grounding.verdict';
+export const GROUNDING_ACTION_FAMILY = 'grounding.action_family';
+export const GROUNDING_SOURCE_TIER = 'grounding.source_tier';
 
 // ── local-trace-store ───────────────────────────────────────
 
