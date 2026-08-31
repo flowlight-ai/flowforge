@@ -192,6 +192,12 @@
       "@flowforge/infrastructure-scheduler": [
         "./packages/infrastructure/scheduler/src/index.ts"
       ],
+      "@flowforge/infrastructure-github": [
+        "./packages/infrastructure/github/src/index.ts"
+      ],
+      "@flowforge/infrastructure-grounding": [
+        "./packages/infrastructure/grounding/src/index.ts"
+      ],
       "@flowforge/forgekin-evolution-engine": [
         "./packages/forgekin/evolution-engine/src/index.ts"
       ],

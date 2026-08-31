@@ -3208,6 +3208,18 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/infrastructure/github:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/grounding:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/infrastructure/scheduler:
     devDependencies:
       '@flowforge/cordis':
