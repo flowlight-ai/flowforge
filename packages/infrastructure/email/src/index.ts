@@ -23,6 +23,10 @@
  */
 
 import { Context, Service } from '@flowforge/cordis';
+import { resolveGhCliToken } from '@flowforge/infrastructure-github';
+
+import { fetchPrCiStatus, type FetchPrCiStatusOptions, type MinimalLog } from './ci-status-fetcher.ts';
+import { fetchPrCiStatuses } from './ci-status-batch-fetcher.ts';
 import type { AwaitStateV1, WaitOutcomeV1 } from '@flowforge/cats-shared';
 
 // ── ci-cd-contract ──────────────────────────────────────────
@@ -251,6 +255,20 @@ export {
   type PrTrackingEntry,
   type PrTrackingInput,
 } from './pr-tracking-store.ts';
+export { classifyGitHubExecutionFailure, enrichGitHubExecutionFailures, type GitHubExecutionFailureEvidence } from './ci-execution-failure.ts';
+export {
+  computeAggregateBucket,
+  executeGh,
+  fetchPrCiStatus,
+  fetchRequiredFailingChecks,
+  ghApiJson,
+  normalizeBucket,
+  normalizePrState,
+  type FetchPrCiStatusOptions,
+  type GhExecFileAsync,
+  type MinimalLog,
+} from './ci-status-fetcher.ts';
+export { ciStatusTargetKey, fetchPrCiStatuses, type PrCiStatusTarget } from './ci-status-batch-fetcher.ts';
 export {
   PR_TRACKING_PATCH_STATE_LUA,
   PR_TRACKING_REMOVE_LUA,
@@ -305,6 +323,8 @@ export interface EmailToolsConfig {
   /** 自反馈过滤：authenticated GitHub login（静态或 late-bound thunk）。 */
   selfGitHubLogin?: string;
   getSelfGitHubLogin?: () => string | undefined;
+  /** pluginEnv（gh token 解析注入缝）。 */
+  pluginEnv?: Record<string, string | undefined>;
 }
 
 declare module '@flowforge/cordis' {
@@ -317,20 +337,53 @@ declare module '@flowforge/cordis' {
 /**
  * email 域服务 — 挂载 `ctx.forgeEmailTools`。
  * 纯工具聚合：severity 解析 / setup-noise / self-feedback 过滤 /
- * PR tracking store / CI 消息构建。
+ * PR tracking store / CI 消息构建 / CI 状态获取。
  */
 export class ForgeEmailToolsService extends Service {
   readonly prTracking: MemoryPrTrackingStore;
   readonly isSetupNoise: (c: SetupNoiseContext) => boolean;
   readonly feedbackFilter: GitHubFeedbackFilter;
+  private readonly cfg: EmailToolsConfig;
 
   constructor(ctx: Context, config: EmailToolsConfig = {}) {
     super(ctx, 'forgeEmailTools');
+    this.cfg = config;
     this.prTracking = new MemoryPrTrackingStore();
     this.isSetupNoise = createSetupNoiseFilter(config.setupNoiseBotLogins ?? []);
     this.feedbackFilter = createGitHubFeedbackFilter({
       ...(config.selfGitHubLogin !== undefined ? { selfGitHubLogin: config.selfGitHubLogin } : {}),
       ...(config.getSelfGitHubLogin !== undefined ? { getSelfGitHubLogin: config.getSelfGitHubLogin } : {}),
+    });
+  }
+
+  private resolveGhToken(): string | undefined {
+    return this.cfg.pluginEnv ? resolveGhCliToken({ pluginEnv: this.cfg.pluginEnv }) : undefined;
+  }
+
+  /** 拉取单个 PR 的 CI 状态（gh pr view）。 */
+  fetchPrCiStatus(
+    repoFullName: string,
+    prNumber: number,
+    log: MinimalLog,
+    options: Omit<FetchPrCiStatusOptions, 'ghToken'> = {},
+  ) {
+    const token = this.resolveGhToken();
+    return fetchPrCiStatus(repoFullName, prNumber, log, {
+      ...options,
+      ...(token !== undefined ? { ghToken: token } : {}),
+    });
+  }
+
+  /** 批量拉取（单次 gh GraphQL）。 */
+  fetchPrCiStatuses(
+    targets: readonly import('./ci-status-batch-fetcher.ts').PrCiStatusTarget[],
+    log: MinimalLog,
+    options: Omit<FetchPrCiStatusOptions, 'ghToken'> = {},
+  ) {
+    const token = this.resolveGhToken();
+    return fetchPrCiStatuses(targets, log, {
+      ...options,
+      ...(token !== undefined ? { ghToken: token } : {}),
     });
   }
 }

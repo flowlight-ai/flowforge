@@ -29,11 +29,13 @@
   "peerDependencies": {
     "@flowforge/cordis": "workspace:^",
     "@flowforge/cats-shared": "workspace:^",
-    "@flowforge/infrastructure-redis-port": "workspace:^"
+    "@flowforge/infrastructure-redis-port": "workspace:^",
+    "@flowforge/infrastructure-github": "workspace:^"
   },
   "devDependencies": {
     "@flowforge/cordis": "workspace:^",
     "@flowforge/cats-shared": "workspace:^",
-    "@flowforge/infrastructure-redis-port": "workspace:^"
+    "@flowforge/infrastructure-redis-port": "workspace:^",
+    "@flowforge/infrastructure-github": "workspace:^"
   }
 }
