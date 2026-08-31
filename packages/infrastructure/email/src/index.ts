@@ -275,6 +275,21 @@ export { ConflictAutoExecutor, type AutoResolveResult, type SubprocessRunner, ty
 export { createConflictCheckTaskSpec, type ConflictCheckSpec, type ConflictSignalWorkItem, type ConnectorTriggerPolicy, type InvokeTriggerPort, type TaskListPort } from './conflict-check-task-spec.ts';
 export { projectReviewFeedbackTerminalEffects, type CommunityEventPort, type ReviewFeedbackTerminalEffectsOptions } from './review-feedback-terminal-effects.ts';
 export {
+  buildDeliveryDecisionCueCarrier,
+  CiCdRouter,
+  classifyCiWaitBucket,
+  EMPTY_ROLLUP_STABILITY_MS,
+  settleEmptyCheckRollup,
+  type CiDistillationPort,
+  type CiEventLogPort,
+  type CiExternalReviewPort,
+  type CiProjectorPort,
+  type CiTaskStorePort,
+  type CiWaitLifecyclePort,
+  type CiWaitLifecycleResult,
+  type TerminalEffectCommit,
+} from './ci-cd-router.ts';
+export {
   PR_TRACKING_PATCH_STATE_LUA,
   PR_TRACKING_REMOVE_LUA,
   PR_TRACKING_SELF_HEAL_LUA,
