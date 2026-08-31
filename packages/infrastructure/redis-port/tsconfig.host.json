@@ -5,15 +5,5 @@
     "outDir": "lib/types",
     "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    {
-      "path": "../../../vendor/cordis"
-    },
-    {
-      "path": "../redis-port"
-    }
-  ]
+  "include": [ "src" ]
 }

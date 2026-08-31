@@ -20,6 +20,9 @@
     },
     {
       "path": "../../cats/shared"
+    },
+    {
+      "path": "../redis-port"
     }
   ]
 }

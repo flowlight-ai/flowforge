@@ -3216,6 +3216,9 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@flowforge/infrastructure-redis-port':
+        specifier: workspace:^
+        version: link:../redis-port
 
   packages/infrastructure/enterprise:
     devDependencies:
@@ -3234,6 +3237,11 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@flowforge/infrastructure-redis-port':
+        specifier: workspace:^
+        version: link:../redis-port
+
+  packages/infrastructure/redis-port: {}
 
   packages/infrastructure/scheduler:
     devDependencies:
