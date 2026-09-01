@@ -873,6 +873,12 @@
       "@flowforge/subagent-acp/invariant": [
         "./packages/subagent/subagent-acp/src/invariant.ts"
       ],
+      "@flowforge/context-file-reference": [
+        "./packages/context/file-reference/src/index.ts"
+      ],
+      "@flowforge/context-file-reference-local": [
+        "./packages/context/file-reference-local/src/index.ts"
+      ],
       "@flowforge/time-context": [
         "./packages/context/time-context/src/index.ts"
       ],
