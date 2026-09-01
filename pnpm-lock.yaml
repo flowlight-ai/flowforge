@@ -3963,6 +3963,12 @@ importers:
 
   packages/plugins/skill-security: {}
 
+  packages/plugins/weixin-mp:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/preset/agent-presets:
     dependencies:
       '@flowforge/schemastery':

@@ -850,6 +850,9 @@
     },
     {
       "path": "./packages/context/file-reference-local/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/plugins/weixin-mp/tsconfig.host.json"
     }
   ]
 }
