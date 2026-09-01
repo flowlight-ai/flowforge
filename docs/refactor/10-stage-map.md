@@ -95,7 +95,7 @@
 | D36 | 附件 attachment | packages/attachment | 2 | ✅（阶段 1 提前移植） |
 | D37 | Web 工具族（web-fetch-http/web-search-deepseek|exa|perplexity/tool-web） | packages/web/* | 2 | ✅ |
 | D38 | 目标族 goal（goal-round-driver/tool-goal/command-goal） | packages/goal | 2 | ✅ |
-| D39 | 上下文族 context（agent-instructions/packed-chunks/prompt-assembly） | packages/core/context | 1 | ⬜ |
+| D39 | 上下文族 context（agent-instructions/packed-chunks/prompt-assembly + file-reference） | packages/core/context | 1 | 🟦（批次40 context-file-reference：FileReferenceCandidate + @file token 语法（activeAtToken/formatFileMention 浏览器安全）+ FILE_REFERENCE_PROMPT + 抽象 ctx.fileReferences，5 测试；context-file-reference-local：WorkspaceFileSearch 可取消模糊索引（目录作用域实时 + 有界全局遍历后台刷新/排除目录/路径逃逸拒绝/模糊排序）+ LocalFileReferenceService 注入式 cwd 解析 + invalidate，6 测试；agent-instructions 等既有包 ✅） |
 | D40 | host 族（apiproxy/directory-picker/frontend-static/plugin-inventory/webserver） | packages/host/* | 3 | ✅（9 包随阶段 3 移植，PR #86） |
 | D41 | e2b（fs-e2b/subprocess-e2b，可选沙箱后端） | packages/e2b/* | 2 | ✅ |
 | D42 | test-support 族（agent-loop-testkit/acp-snapshot/client-runtime/llm-replay/loader-smoke） | packages/test-support/* | 1-2 | 🟦（4/5 已移植；client-runtime 依赖阶段 3 client/host 域） |

@@ -790,6 +790,12 @@
     },
     {
       "path": "./vendor/timer"
+    },
+    {
+      "path": "./packages/context/file-reference/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/context/file-reference-local/tsconfig.host.json"
     }
   ]
 }

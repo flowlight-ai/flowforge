@@ -1430,6 +1430,21 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
 
+  packages/context/file-reference:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/context/file-reference-local:
+    devDependencies:
+      '@flowforge/context-file-reference':
+        specifier: workspace:^
+        version: link:../file-reference
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/context/session-reference:
     dependencies:
       '@flowforge/schemastery':
