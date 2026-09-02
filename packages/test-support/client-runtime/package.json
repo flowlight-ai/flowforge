@@ -1,0 +1,39 @@
+{
+  "name": "@flowforge/client-runtime",
+  "description": "FlowForge client runtime test support (D42 gap delivery): in-process host RPC router + isomorphic client caller typed against @flowforge/client-connection HostConnectionRpc contracts (handle/intercept/dispatch with authority policy, transportError folding, cancellation passthrough) so tests drive host endpoints without sockets/HTTP",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/test-support/client-runtime"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./host": {
+      "types": "./lib/types/host.d.ts",
+      "default": "./lib/host.js"
+    },
+    "./client": {
+      "types": "./lib/types/client.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {},
+  "devDependencies": {}
+}
