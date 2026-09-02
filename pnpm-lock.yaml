@@ -1430,6 +1430,21 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
 
+  packages/context/file-reference:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/context/file-reference-local:
+    devDependencies:
+      '@flowforge/context-file-reference':
+        specifier: workspace:^
+        version: link:../file-reference
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/context/session-reference:
     dependencies:
       '@flowforge/schemastery':
@@ -3175,6 +3190,92 @@ importers:
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
 
+  packages/infrastructure/commands:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/debug:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/infrastructure-telemetry':
+        specifier: workspace:^
+        version: link:../telemetry
+
+  packages/infrastructure/distillation:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/document:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/email:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/infrastructure-distillation':
+        specifier: workspace:^
+        version: link:../distillation
+      '@flowforge/infrastructure-github':
+        specifier: workspace:^
+        version: link:../github
+      '@flowforge/infrastructure-redis-port':
+        specifier: workspace:^
+        version: link:../redis-port
+
+  packages/infrastructure/enterprise:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/github:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/grounding:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/infrastructure-redis-port':
+        specifier: workspace:^
+        version: link:../redis-port
+
+  packages/infrastructure/redis-port: {}
+
+  packages/infrastructure/scheduler:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/infrastructure/telemetry:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/interaction/commands:
     dependencies:
       zod:
@@ -3861,6 +3962,12 @@ importers:
         version: link:../../../vendor/cordis
 
   packages/plugins/skill-security: {}
+
+  packages/plugins/weixin-mp:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
 
   packages/preset/agent-presets:
     dependencies:

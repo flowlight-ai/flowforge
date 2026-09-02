@@ -108,6 +108,39 @@
       "path": "./packages/forgekin/governance/tsconfig.host.json"
     },
     {
+      "path": "./packages/infrastructure/commands/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/distillation/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/document/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/telemetry/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/debug/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/scheduler/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/github/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/grounding/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/redis-port/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/enterprise/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/email/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/threads/tsconfig.host.json"
     },
     {
@@ -811,6 +844,15 @@
     },
     {
       "path": "./vendor/timer"
+    },
+    {
+      "path": "./packages/context/file-reference/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/context/file-reference-local/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/plugins/weixin-mp/tsconfig.host.json"
     }
   ]
 }

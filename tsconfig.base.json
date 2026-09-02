@@ -174,6 +174,39 @@
       "@flowforge/forgekin-governance": [
         "./packages/forgekin/governance/src/index.ts"
       ],
+      "@flowforge/infrastructure-commands": [
+        "./packages/infrastructure/commands/src/index.ts"
+      ],
+      "@flowforge/infrastructure-distillation": [
+        "./packages/infrastructure/distillation/src/index.ts"
+      ],
+      "@flowforge/infrastructure-document": [
+        "./packages/infrastructure/document/src/index.ts"
+      ],
+      "@flowforge/infrastructure-telemetry": [
+        "./packages/infrastructure/telemetry/src/index.ts"
+      ],
+      "@flowforge/infrastructure-debug": [
+        "./packages/infrastructure/debug/src/index.ts"
+      ],
+      "@flowforge/infrastructure-scheduler": [
+        "./packages/infrastructure/scheduler/src/index.ts"
+      ],
+      "@flowforge/infrastructure-github": [
+        "./packages/infrastructure/github/src/index.ts"
+      ],
+      "@flowforge/infrastructure-grounding": [
+        "./packages/infrastructure/grounding/src/index.ts"
+      ],
+      "@flowforge/infrastructure-enterprise": [
+        "./packages/infrastructure/enterprise/src/index.ts"
+      ],
+      "@flowforge/infrastructure-email": [
+        "./packages/infrastructure/email/src/index.ts"
+      ],
+      "@flowforge/infrastructure-redis-port": [
+        "./packages/infrastructure/redis-port/src/index.ts"
+      ],
       "@flowforge/forgekin-evolution-engine": [
         "./packages/forgekin/evolution-engine/src/index.ts"
       ],
@@ -839,6 +872,12 @@
       ],
       "@flowforge/subagent-acp/invariant": [
         "./packages/subagent/subagent-acp/src/invariant.ts"
+      ],
+      "@flowforge/context-file-reference": [
+        "./packages/context/file-reference/src/index.ts"
+      ],
+      "@flowforge/context-file-reference-local": [
+        "./packages/context/file-reference-local/src/index.ts"
       ],
       "@flowforge/time-context": [
         "./packages/context/time-context/src/index.ts"

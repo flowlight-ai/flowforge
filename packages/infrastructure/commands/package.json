@@ -1,0 +1,26 @@
+{
+  "name": "@flowforge/infrastructure-commands",
+  "description": "FlowForge infrastructure commands domain Cordis plugin - C33 F142 Phase B unified command registry (core + skill aggregation, core-priority AC-B2, exact name + expanded subcommand conflict detection) + manifest.yaml slashCommands discovery (schema-validated, invalid entries silently skipped), TS rewrite of clowder-ai infrastructure/commands/* at ctx.forgeCommands",
+  "version": "0.1.0-rc.1",
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/infrastructure/commands" },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
+    "./manifest-commands": { "types": "./lib/types/manifest-commands.d.ts", "default": "./lib/manifest-commands.js" },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/cats-shared": "workspace:^"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "@flowforge/context-file-reference",
+  "description": "FlowForge context file-reference discovery seam (dsh port, D39): FileReferenceCandidate path-only candidates, browser-safe @file token grammar (activeAtToken/formatFileMention shared by terminal+web clients), FILE_REFERENCE_PROMPT model guidance, abstract ctx.fileReferences FileReferenceService",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/context/file-reference"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./grammar": {
+      "types": "./lib/types/grammar.d.ts",
+      "default": "./lib/grammar.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}
