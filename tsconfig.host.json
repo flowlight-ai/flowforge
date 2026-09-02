@@ -96,10 +96,19 @@
       "path": "./packages/cats/catalog/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/bootcamp/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/cats/cat-config-loader/tsconfig.host.json"
+    },
+    {
       "path": "./packages/harness/env-registry/tsconfig.host.json"
     },
     {
       "path": "./packages/forgekin/prompt-hooks/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/forgekin/liveness/tsconfig.host.json"
     },
     {
       "path": "./packages/forgekin/capabilities/tsconfig.host.json"
@@ -750,6 +759,9 @@
       "path": "./packages/test-support/loader-smoke"
     },
     {
+      "path": "./packages/test-support/client-runtime"
+    },
+    {
       "path": "./packages/todo/tool-todo"
     },
     {
@@ -853,6 +865,21 @@
     },
     {
       "path": "./packages/plugins/weixin-mp/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/plugins/wechat-visible-reader/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/plugins/github/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/plugins/video-protocol/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/plugins/video-analysis/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/plugins/video-gen/tsconfig.host.json"
     }
   ]
 }

@@ -674,6 +674,12 @@ const aliasEntries = [
       { find: '@flowforge/base', replacement: path.resolve(import.meta.dirname, 'packages/bundle/base/src') },
       { find: '@flowforge/headless/src', replacement: path.resolve(import.meta.dirname, 'packages/bundle/headless/src') },
       { find: '@flowforge/headless', replacement: path.resolve(import.meta.dirname, 'packages/bundle/headless/src') },
+      { find: '@flowforge/plugins-video-protocol/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-protocol/src') },
+      { find: '@flowforge/plugins-video-protocol', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-protocol/src') },
+      { find: '@flowforge/plugins-video-analysis/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-analysis/src') },
+      { find: '@flowforge/plugins-video-analysis', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-analysis/src') },
+      { find: '@flowforge/plugins-video-gen/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-gen/src') },
+      { find: '@flowforge/plugins-video-gen', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-gen/src') },
       // <generated-alias:end>
 ]
 

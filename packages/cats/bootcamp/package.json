@@ -1,0 +1,47 @@
+{
+  "name": "@flowforge/cats-bootcamp",
+  "description": "FlowForge cats bootcamp guide service (C8 gap delivery, clowder port): F087 interactive blocks (cat-selection + level-split task-selection, BOOTCAMP_BLOCKS) + environment check (node/pnpm/git/CLI/MCP/ports, injectable probes) + workspace-root resolution (CAT_CAFE_WORKSPACE_ROOT with runtime-cwd refusal + injectable project-path validation), ctx.catsBootcamp",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/cats/bootcamp"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./blocks": {
+      "types": "./lib/types/blocks.d.ts",
+      "default": "./lib/blocks.js"
+    },
+    "./env-check": {
+      "types": "./lib/types/env-check.d.ts",
+      "default": "./lib/env-check.js"
+    },
+    "./workspace-root": {
+      "types": "./lib/types/workspace-root.d.ts",
+      "default": "./lib/workspace-root.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

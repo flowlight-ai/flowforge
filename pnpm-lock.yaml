@@ -868,6 +868,18 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/bootcamp:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/cats/cat-config-loader:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/cats/catalog:
     devDependencies:
       '@flowforge/cats-shared':
@@ -2295,6 +2307,12 @@ importers:
       '@flowforge/forgekin-soul':
         specifier: workspace:^
         version: link:../soul
+
+  packages/forgekin/liveness:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
 
   packages/forgekin/loops:
     devDependencies:
@@ -3951,6 +3969,12 @@ importers:
         specifier: ^4.1.0
         version: 4.3.1
 
+  packages/plugins/github:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/plugins/guard: {}
 
   packages/plugins/modes: {}
@@ -3962,6 +3986,36 @@ importers:
         version: link:../../../vendor/cordis
 
   packages/plugins/skill-security: {}
+
+  packages/plugins/video-analysis:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/plugins-video-protocol':
+        specifier: workspace:^
+        version: link:../video-protocol
+
+  packages/plugins/video-gen:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/plugins-video-protocol':
+        specifier: workspace:^
+        version: link:../video-protocol
+
+  packages/plugins/video-protocol:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/plugins/wechat-visible-reader:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
 
   packages/plugins/weixin-mp:
     devDependencies:
@@ -6046,6 +6100,8 @@ importers:
       '@flowforge/tools':
         specifier: workspace:^
         version: link:../../core/tools
+
+  packages/test-support/client-runtime: {}
 
   packages/test-support/llm-mock-server:
     devDependencies:
