@@ -1,0 +1,43 @@
+{
+  "name": "@flowforge/forgekin-liveness",
+  "description": "FlowForge liveness probe + canonical read model (F42/F023, python reliability/liveness port): read-only LivenessSpec registry with serial isolated execution (healthy/latencyMs/lastChecked/error, SLA exceeded detection, impacted-capability mapping) + single canonical read model with source priority durable_record>in_process_tracker>draft_cache and four-state judgement alive/degraded/zombie/grace_waiting with grace period, ctx.forgeLiveness",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/forgekin/liveness"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./probe": {
+      "types": "./lib/types/probe.d.ts",
+      "default": "./lib/probe.js"
+    },
+    "./canonical": {
+      "types": "./lib/types/canonical.d.ts",
+      "default": "./lib/canonical.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}
