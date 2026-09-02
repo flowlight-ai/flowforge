@@ -1,0 +1,41 @@
+{
+  "name": "@flowforge/plugins-video-analysis",
+  "description": "FlowForge video analysis upstream reference plugin (C35, clowder F205 port): declarative video understanding via protocol templates (gemini/zhipu), request building + result extraction on @flowforge/plugins-video-protocol engine, env config VIDEO_ANALYSIS_PROVIDER/AUTH_TYPE/API_KEY/BASE_URL/MODEL",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/plugins/video-analysis"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./protocols": {
+      "types": "./lib/types/protocols.d.ts",
+      "default": "./lib/protocols.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/plugins-video-protocol": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^",
+    "@flowforge/plugins-video-protocol": "workspace:^"
+  }
+}
