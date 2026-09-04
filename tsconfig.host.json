@@ -105,6 +105,9 @@
       "path": "./packages/harness/env-registry/tsconfig.host.json"
     },
     {
+      "path": "./packages/config/schema/tsconfig.host.json"
+    },
+    {
       "path": "./packages/forgekin/prompt-hooks/tsconfig.host.json"
     },
     {
