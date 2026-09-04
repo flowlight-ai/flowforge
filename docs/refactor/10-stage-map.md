@@ -84,7 +84,7 @@
 | D25 | boot 引导 / bundle 打包 / client / host | packages/boot 等 | 3 | ✅（app-boot/cmdline/base/headless/client-connection，PR #86） |
 | D26 | runtime-diagnostics / typert / util / spill | packages/* | 1-2 | ✅ |
 | D27 | LLM 抽象 + mock server | packages/llm | 1 | ✅ |
-| D28 | 配置体系基座（patch 装配/env-registry/前端 schema 校验） | packages/bundle + core/config | 0-3 | 🟦（patch 装配链随阶段 3 落地：bundle patch/profile 层/--patch 覆盖 + 热更新；env-registry 见 C39、前端校验随阶段 8） |
+| D28 | 配置体系基座（patch 装配/env-registry/前端 schema 校验） | packages/bundle + core/config | 0-3 | ✅（patch 装配链随阶段 3 落地：bundle patch/profile 层/--patch 覆盖 + 热更新；env-registry 见 C39；批次48 前端 schema 校验：@flowforge/config-schema 浏览器安全零依赖共享包（EnvSchemaEntry 归一 + validateEnvSchemaValue/validateEnvDraft 的 editable 白名单·required·allowedValues·boolean·masked 哨兵跳过 PUT + parseEnvDraft .env 行级语法，14 vitest）→ web 经 file: 依赖 + next transpilePackages 引入同一源码，HubEnvFilesTab 保存前客户端校验/行内错误/非法禁用 + SystemSection env 文件合并保存前语法拦截，web tsc + next build 通过） |
 | D29 | 会话标题 session-title（first-prompt-llm/all-prompts-llm） | packages/session/session-title | 1 | ✅ |
 | D30 | 会话遥测 session-telemetry（otel/stats/checkpoint-policy） | packages/session/* | 1 | ✅ |
 | D31 | 会话持久化（jsonl zstd/sqlite/projection/cache） | packages/session/* | 1-2 | ✅ |

@@ -1393,6 +1393,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/token-meter
 
+  packages/config/schema: {}
+
   packages/context/agent-instructions:
     dependencies:
       '@flowforge/schemastery':
