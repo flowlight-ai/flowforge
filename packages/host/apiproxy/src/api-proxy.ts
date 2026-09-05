@@ -81,6 +81,9 @@ import type {} from '@flowforge/skill'
 import { SettingsConflictError, settingsNamespace } from '@flowforge/settings'
 import type { SettingsDescriptor, SettingsNamespace, SettingsPathOp } from '@flowforge/settings'
 import { credentialRef } from '@flowforge/credentials'
+// Side-effect type import: resolves `ctx.get('envRegistry')` to the env registry
+// service without a value dependency (optional composition — domain errs when absent).
+import type {} from '@flowforge/harness-env-registry'
 // Value edge: the rename impl narrows the title service's validation failure; the import also resolves `ctx.get('sessionTitle')`.
 import { SessionTitleInvalidError } from '@flowforge/session-title'
 import type { CallId } from '@flowforge/llm/brand'
@@ -3254,6 +3257,38 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         } catch (error: unknown) {
           return err(request, { code: 'internal', message: `skill listing failed: ${String(error)}`, details: {} })
         }
+      },
+    },
+
+    env: {
+      // Read-only env-registry projection. Masking already happened host-side
+      // in the registry's buildEnvSummary (sensitive → '***', url credentials
+      // stripped), so the wire never carries a raw secret. A composition that
+      // does not mount @flowforge/harness-env-registry still serves every other
+      // domain — this one reports the absence rather than fabricating entries.
+      summary(request) {
+        const registry = ctx.get('envRegistry')
+        if (registry === undefined) {
+          return Promise.resolve(err(request, {
+            code: 'internal',
+            message: 'env registry is absent: this deployment does not mount @flowforge/harness-env-registry in its composition',
+            details: {},
+          }))
+        }
+        const entries = registry.summary()
+        return Promise.resolve(ok(request, {
+          categories: registry.categories(),
+          variables: entries.map(entry => ({
+            name: entry.name,
+            ...entry.description === undefined ? {} : { description: entry.description },
+            category: entry.category,
+            sensitive: entry.sensitive,
+            editable: registry.editable(entry.name),
+            ...entry.allowedValues === undefined ? {} : { allowedValues: entry.allowedValues },
+            currentValue: entry.currentValue,
+            ...entry.sensitive ? { masked: true } : {},
+          })),
+        }))
       },
     },
 

@@ -35,6 +35,8 @@
 
     - id: typert-gateway
       name: '@flowforge/api-gateway'
+    - id: env-registry
+      name: '@flowforge/harness-env-registry'
 
     - id: session-title
       name: '@flowforge/session-title'
