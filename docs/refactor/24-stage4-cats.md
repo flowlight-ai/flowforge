@@ -326,7 +326,7 @@
 - [x] T4.6.2 C5 TranscriptWriter/SessionSealer/TranscriptReader 移植为 Cordis 插件（会话转录
       持久化+回放，目录结构 threads/<threadId>/<catId>/sessions/<sessionId>/）— 完成
       （@flowforge/cats-session 包，82 测试：writer 26 + sealer 56）
-- [ ] T4.6.3 T4.2.6 Sqlite 后端（CAS 用事务替代 Redis Lua；`static Config` Schemastery schema）
+- [x] T4.6.3 T4.2.6 Sqlite 后端（CAS 用事务替代 Redis Lua；`static Config` Schemastery schema）（批次52 收尾：21 个 full-contract store 全量 sqlite 实现，54 测试）
       — 批次6.5 已交付首版（核心 5 store + 4 CAS store；其余 optional store 的 sqlite 实现
       随后续批次依赖落地补全）
 

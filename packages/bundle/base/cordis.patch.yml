@@ -35,6 +35,8 @@
 
     - id: typert-gateway
       name: '@flowforge/api-gateway'
+    - id: env-registry
+      name: '@flowforge/harness-env-registry'
 
     - id: session-title
       name: '@flowforge/session-title'
@@ -280,6 +282,9 @@
 
     - id: token-meter
       name: '@flowforge/token-meter'
+
+    - id: llm-openroute
+      name: '@flowforge/llm-openroute'
 
     - id: compaction-basic
       name: '@flowforge/compaction-basic'

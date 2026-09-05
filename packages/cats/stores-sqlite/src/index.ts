@@ -6,7 +6,7 @@
  * dsh 范式（对齐 `@flowforge/session-persistence-sqlite`）：static inject =
  * ['catStores']、static Config（Schemastery）、constructor 内打开
  * `node:sqlite` DatabaseSync（`:memory:` 支持 + 父目录 mkdir）、schema 初始化、
- * 实例化 9 个 store、`ctx.effect` 注册到 `catStores.registerBackend('sqlite',
+ * 实例化 21 个 store、`ctx.effect` 注册到 `catStores.registerBackend('sqlite',
  * …)`，fiber dispose 时注销并 close db。
  *
  * Mount in cordis.patch.yml:
@@ -29,12 +29,24 @@ import { DatabaseSync } from 'node:sqlite'
 import { type JournalMode, openDatabase } from './schema.ts'
 import { SqliteBacklogStore } from './sqlite/backlog-store.ts'
 import { SqliteDeliveryCursorStore } from './sqlite/delivery-cursor-store.ts'
+import {
+  SqliteDossierDistillationProposalStore,
+  SqliteDossierObservationStore,
+  SqliteMemoryGovernanceStore,
+} from './sqlite/dossier-stores.ts'
 import { SqliteInvocationRecordStore } from './sqlite/invocation-record-store.ts'
 import { SqliteMemoryStore } from './sqlite/memory-store.ts'
 import { SqliteMessageStore } from './sqlite/message-store.ts'
+import { SqliteProfileUpdateProposalStore } from './sqlite/profile-update-proposal-store.ts'
+import { SqliteProposalStore } from './sqlite/proposal-store.ts'
 import { SqliteSessionChainStore } from './sqlite/session-chain-store.ts'
+import { SqliteSessionHandoffProposalStore } from './sqlite/session-handoff-proposal-store.ts'
+import { SqliteSignalArticleStore } from './sqlite/signal-article-store.ts'
 import { SqliteSummaryStore } from './sqlite/summary-store.ts'
 import { SqliteTaskStore } from './sqlite/task-store.ts'
+import { SqliteTaskManagedWorkRegistrationStore, SqliteTaskProgressStore } from './sqlite/task-stores.ts'
+import { SqliteThreadMemoryStore, SqliteVoteStore } from './sqlite/thread-memory-store.ts'
+import { SqliteThreadReadStateStore } from './sqlite/read-state-store.ts'
 import { SqliteThreadStore } from './sqlite/thread-store.ts'
 
 export { SCHEMA_VERSION } from './schema.ts'
@@ -101,6 +113,19 @@ export class SqliteStoresBackend extends Service {
   readonly sessionChainStore: SqliteSessionChainStore
   readonly deliveryCursorStore: SqliteDeliveryCursorStore
   readonly summaryStore: SqliteSummaryStore
+  // 批次52：其余 12 个 full-contract store
+  readonly threadReadStateStore: SqliteThreadReadStateStore
+  readonly voteStore: SqliteVoteStore
+  readonly threadMemoryStore: SqliteThreadMemoryStore
+  readonly taskProgressStore: SqliteTaskProgressStore
+  readonly taskManagedWorkRegistrationStore: SqliteTaskManagedWorkRegistrationStore
+  readonly signalArticleStore: SqliteSignalArticleStore
+  readonly dossierDistillationProposalStore: SqliteDossierDistillationProposalStore
+  readonly dossierObservationStore: SqliteDossierObservationStore
+  readonly memoryGovernanceStore: SqliteMemoryGovernanceStore
+  readonly proposalStore: SqliteProposalStore
+  readonly profileUpdateProposalStore: SqliteProfileUpdateProposalStore
+  readonly sessionHandoffProposalStore: SqliteSessionHandoffProposalStore
 
   constructor(ctx: Context, config: Config) {
     super(ctx, 'catStoresSqlite')
@@ -125,6 +150,18 @@ export class SqliteStoresBackend extends Service {
     this.sessionChainStore = new SqliteSessionChainStore(this.db)
     this.deliveryCursorStore = new SqliteDeliveryCursorStore(this.db)
     this.summaryStore = new SqliteSummaryStore(this.db)
+    this.threadReadStateStore = new SqliteThreadReadStateStore(this.db)
+    this.voteStore = new SqliteVoteStore(this.db)
+    this.threadMemoryStore = new SqliteThreadMemoryStore(this.db)
+    this.taskProgressStore = new SqliteTaskProgressStore(this.db)
+    this.taskManagedWorkRegistrationStore = new SqliteTaskManagedWorkRegistrationStore(this.db)
+    this.signalArticleStore = new SqliteSignalArticleStore(this.db)
+    this.dossierDistillationProposalStore = new SqliteDossierDistillationProposalStore(this.db)
+    this.dossierObservationStore = new SqliteDossierObservationStore(this.db)
+    this.memoryGovernanceStore = new SqliteMemoryGovernanceStore(this.db)
+    this.proposalStore = new SqliteProposalStore(this.db)
+    this.profileUpdateProposalStore = new SqliteProfileUpdateProposalStore(this.db)
+    this.sessionHandoffProposalStore = new SqliteSessionHandoffProposalStore(this.db)
 
     ctx.effect(() => {
       ctx.catStores.registerBackend(SQLITE_BACKEND_NAME, {
@@ -137,6 +174,18 @@ export class SqliteStoresBackend extends Service {
         sessionChainStore: this.sessionChainStore,
         deliveryCursorStore: this.deliveryCursorStore,
         summaryStore: this.summaryStore,
+        threadReadStateStore: this.threadReadStateStore,
+        voteStore: this.voteStore,
+        threadMemoryStore: this.threadMemoryStore,
+        taskProgressStore: this.taskProgressStore,
+        taskManagedWorkRegistrationStore: this.taskManagedWorkRegistrationStore,
+        signalArticleStore: this.signalArticleStore,
+        dossierDistillationProposalStore: this.dossierDistillationProposalStore,
+        dossierObservationStore: this.dossierObservationStore,
+        memoryGovernanceStore: this.memoryGovernanceStore,
+        proposalStore: this.proposalStore,
+        profileUpdateProposalStore: this.profileUpdateProposalStore,
+        sessionHandoffProposalStore: this.sessionHandoffProposalStore,
       })
       return () => {
         ctx.catStores.unregisterBackend(SQLITE_BACKEND_NAME)

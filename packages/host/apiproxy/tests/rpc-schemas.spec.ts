@@ -29,6 +29,7 @@ import {
   workspaceRenameRequestSchema, workspaceRenameValueSchema, workspaceViewSchema,
 } from '../src/api/workspace.schema.ts'
 import { skillEntrySchema, skillListRequestSchema, skillListValueSchema } from '../src/api/skills.schema.ts'
+import { envSummaryRequestSchema, envSummaryValueSchema, envVariableViewSchema } from '../src/api/env.schema.ts'
 import {
   agentPresetEntrySchema, agentPresetListValueSchema, agentPresetOpenDocumentValueSchema,
 } from '../src/api/agent-presets.schema.ts'
@@ -424,6 +425,39 @@ describe('skills domain schemas', () => {
     expect(() => skillEntrySchema.parse({ name: '', description: 'd', modelInvocable: true })).toThrow()
     // modelInvocable is required wire data: an entry without it fails.
     expect(() => skillEntrySchema.parse({ name: 'n', description: 'd' })).toThrow()
+  })
+})
+
+describe('env domain schemas', () => {
+  it('validates the summary request/value pair', () => {
+    expect(envSummaryRequestSchema.parse({})).toEqual({})
+    const value = envSummaryValueSchema.parse({
+      variables: [{
+        name: 'FF_GLOBAL_CONFIG_ROOT',
+        category: 'storage',
+        sensitive: false,
+        editable: false,
+        currentValue: null,
+      }],
+      categories: { storage: '存储' },
+    })
+    expect(value.variables[0]?.name).toBe('FF_GLOBAL_CONFIG_ROOT')
+    expect(value.categories.storage).toBe('存储')
+    expect(() => envSummaryValueSchema.parse({ variables: [{ name: '' }], categories: {} })).toThrow()
+  })
+
+  it('validates the variable view row', () => {
+    expect(envVariableViewSchema.parse({
+      name: 'ANTHROPIC_API_KEY',
+      category: 'proxy',
+      sensitive: true,
+      editable: true,
+      currentValue: '***',
+      masked: true,
+    }).currentValue).toBe('***')
+    // currentValue is required and string-or-null on the wire.
+    expect(() => envVariableViewSchema.parse({ name: 'A', category: 'c', sensitive: false, editable: true })).toThrow()
+    expect(() => envVariableViewSchema.parse({ name: 'A', category: 'c', sensitive: false, editable: true, currentValue: 42 })).toThrow()
   })
 })
 

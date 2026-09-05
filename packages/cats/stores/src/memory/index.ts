@@ -19,6 +19,7 @@ export { MemoryProfileUpdateProposalStore } from './profile-update-proposal-stor
 export { MemoryProposalStore } from './proposal-store.ts'
 export { MemoryReadStateStore, MemoryThreadReadStateStore } from './read-state-store.ts'
 export { MemoryVoteStore } from './vote-store.ts'
+export { createSignalArticleId, normalizeArticleUrl } from './signal-article-store.ts'
 export { MemorySessionChainStore } from './session-chain-store.ts'
 export { MemorySessionHandoffProposalStore } from './session-handoff-proposal-store.ts'
 export { MemorySummaryStore } from './summary-store.ts'

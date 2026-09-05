@@ -178,6 +178,8 @@ const aliasEntries = [
       { find: '@flowforge/chat-stretch/src', replacement: path.resolve(import.meta.dirname, 'packages/chat/stretch-ports/src') },
       { find: '@flowforge/chat-stretch', replacement: path.resolve(import.meta.dirname, 'packages/chat/stretch-ports/src') },
       { find: /^@flowforge\/chat-stretch$/, replacement: path.resolve(import.meta.dirname, 'packages/chat/stretch-ports/src') },
+      { find: '@flowforge/forgekin-e2e/src', replacement: path.resolve(import.meta.dirname, 'packages/forgekin/e2e/src') },
+      { find: '@flowforge/forgekin-e2e', replacement: path.resolve(import.meta.dirname, 'packages/forgekin/e2e/src') },
       { find: '@flowforge/chat-e2e/src', replacement: path.resolve(import.meta.dirname, 'packages/chat/e2e/src') },
       { find: '@flowforge/chat-e2e', replacement: path.resolve(import.meta.dirname, 'packages/chat/e2e/src') },
       { find: /^@flowforge\/chat-e2e$/, replacement: path.resolve(import.meta.dirname, 'packages/chat/e2e/src') },
@@ -518,6 +520,8 @@ const aliasEntries = [
       { find: '@flowforge/spill-local', replacement: path.resolve(import.meta.dirname, 'packages/spill/spill-local/src') },
       { find: '@flowforge/token-meter/src', replacement: path.resolve(import.meta.dirname, 'packages/llm/token-meter/src') },
       { find: '@flowforge/token-meter', replacement: path.resolve(import.meta.dirname, 'packages/llm/token-meter/src') },
+      { find: '@flowforge/llm-openroute/src', replacement: path.resolve(import.meta.dirname, 'packages/llm/openroute/src') },
+      { find: '@flowforge/llm-openroute', replacement: path.resolve(import.meta.dirname, 'packages/llm/openroute/src') },
       { find: '@flowforge/tool-cordis/src', replacement: path.resolve(import.meta.dirname, 'packages/extensions/tool-cordis/src') },
       { find: '@flowforge/tool-cordis', replacement: path.resolve(import.meta.dirname, 'packages/extensions/tool-cordis/src') },
       { find: '@flowforge/agent-loop/src', replacement: path.resolve(import.meta.dirname, 'packages/core/agent-loop/src') },
@@ -674,6 +678,14 @@ const aliasEntries = [
       { find: '@flowforge/base', replacement: path.resolve(import.meta.dirname, 'packages/bundle/base/src') },
       { find: '@flowforge/headless/src', replacement: path.resolve(import.meta.dirname, 'packages/bundle/headless/src') },
       { find: '@flowforge/headless', replacement: path.resolve(import.meta.dirname, 'packages/bundle/headless/src') },
+      { find: '@flowforge/plugins-video-protocol/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-protocol/src') },
+      { find: '@flowforge/plugins-video-protocol', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-protocol/src') },
+      { find: '@flowforge/plugins-video-analysis/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-analysis/src') },
+      { find: '@flowforge/plugins-video-analysis', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-analysis/src') },
+      { find: '@flowforge/plugins-video-gen/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-gen/src') },
+      { find: '@flowforge/plugins-video-gen', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-gen/src') },
+      { find: '@flowforge/harness-env-registry/src', replacement: path.resolve(import.meta.dirname, 'packages/harness/env-registry/src') },
+      { find: '@flowforge/harness-env-registry', replacement: path.resolve(import.meta.dirname, 'packages/harness/env-registry/src') },
       // <generated-alias:end>
 ]
 

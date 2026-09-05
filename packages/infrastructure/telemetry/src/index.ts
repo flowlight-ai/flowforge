@@ -11,64 +11,48 @@
  * 插件化改造：
  *   - env 全部改 FF_* 系（R17）：TELEMETRY_HMAC_SALT → FF_TELEMETRY_HMAC_SALT 等
  *   - clowder createModuleLogger → 注入式 TelemetryLogger 接口（缺省 console）
- *   - OTel SDK 耦合文件（redactor/local-trace-exporter/init/instruments）随各特性移植再补
+ *   - 批次51：hmac/semconv 拆分为独立模块（供纯逻辑层引用，消循环）；新增
+ *     redactor/model-normalizer/tool-span-tracker/metric-allowlist 纯逻辑层；
+ *     OTel SDK 耦合接线（SpanProcessor/LogRecordProcessor/init/instruments/Views）
+ *     挂阶段9 T9.5 按需补
  *
  * @module @flowforge/infrastructure-telemetry
  */
 
 import { Context, Service } from '@flowforge/cordis';
-import { createHmac } from 'node:crypto';
 
-// ── hmac ────────────────────────────────────────────────────
+import { hmacId, pseudonymizeId } from './hmac.ts';
+import { AGENT_ID } from './semconv.ts';
 
-const TENANT_SALT = process.env.FF_TELEMETRY_HMAC_SALT;
+// ── hmac / semconv（实现拆分至独立模块，此处 re-export 保持公共 API 稳定）──
 
-function getSalt(): string {
-  if (TENANT_SALT) return TENANT_SALT;
-  const env = process.env.NODE_ENV;
-  if (env === 'development' || env === 'test') {
-    return 'dev-only-insecure-salt';
-  }
-  throw new Error(
-    'FF_TELEMETRY_HMAC_SALT is required in non-dev environments. Set it in .env or your secret manager.',
-  );
-}
+export {
+  hmacId,
+  pseudonymizeId,
+  shouldExportRawIds,
+  validateSalt,
+} from './hmac.ts';
+export * from './semconv.ts';
 
-/** 校验 salt 可用（非 dev 环境缺 salt 抛错，调用方捕获并禁用遥测）。 */
-export function validateSalt(): void {
-  getSalt();
-}
+// ── 批次51: 纯逻辑层（redactor / model-normalizer / tool-span-tracker / allowlist）──
 
-/** HMAC-SHA256 伪名化标识符（前 32 hex 字符，128-bit 碰撞安全）。 */
-export function hmacId(id: string): string {
-  return createHmac('sha256', getSalt()).update(id).digest('hex').slice(0, 32);
-}
-
-/** Env 闸门：导出原 ID（自托管受控环境）。 */
-export function shouldExportRawIds(): boolean {
-  return process.env.FF_TELEMETRY_EXPORT_RAW_IDS === '1';
-}
-
-/** 伪名化系统标识符（escape hatch 开启时返回原 ID）。 */
-export function pseudonymizeId(id: string): string {
-  return shouldExportRawIds() ? id : hmacId(id);
-}
-
-// ── genai-semconv 常量 ──────────────────────────────────────
-
-export const GENAI_SYSTEM = 'gen_ai.system';
-export const GENAI_MODEL = 'gen_ai.request.model';
-export const GENAI_TOKENS_INPUT = 'gen_ai.usage.input_tokens';
-export const GENAI_TOKENS_OUTPUT = 'gen_ai.usage.output_tokens';
-export const AGENT_ID = 'agent.id';
-export const OPERATION_NAME = 'operation.name';
-export const STATUS = 'status';
-export const TRIGGER = 'trigger';
-export const CALLBACK_TOOL = 'callback.tool';
-export const GROUNDING_CLAIM_TYPE = 'grounding.claim_type';
-export const GROUNDING_VERDICT = 'grounding.verdict';
-export const GROUNDING_ACTION_FAMILY = 'grounding.action_family';
-export const GROUNDING_SOURCE_TIER = 'grounding.source_tier';
+export {
+  isClassA,
+  isClassB,
+  isClassC,
+  redactAttributes,
+  redactRecord,
+  redactValue,
+} from './redactor.ts';
+export { normalizeModel } from './model-normalizer.ts';
+export {
+  isMcpToolName,
+  ToolSpanTracker,
+  type SpanFactory,
+  type TelemetrySpan,
+  type ToolResultStatus,
+} from './tool-span-tracker.ts';
+export { ALLOWED_METRIC_ATTRIBUTES, filterMetricAttributes } from './metric-allowlist.ts';
 
 // ── local-trace-store ───────────────────────────────────────
 
@@ -285,7 +269,7 @@ export class BurnRateMonitor {
         if (this.consecutiveBreaches >= this.config.debounceCount && !this.alertActive) {
           this.alertActive = true;
           this.config.onAlert(alerts);
-          this.config.log.warn(`[burn-rate] alert triggered: ${JSON.stringify(alert)}`);
+          this.config.log.warn(`[burn-rate] alert triggered: ${JSON.stringify(alerts)}`);
         }
       } else {
         if (this.alertActive) {

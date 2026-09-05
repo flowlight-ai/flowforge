@@ -1364,6 +1364,15 @@
       ],
       "@flowforge/fs/invariant": [
         "./packages/fs/fs/src/invariant.ts"
+      ],
+      "@flowforge/plugins-video-protocol": [
+        "./packages/plugins/video-protocol/src/index.ts"
+      ],
+      "@flowforge/plugins-video-analysis": [
+        "./packages/plugins/video-analysis/src/index.ts"
+      ],
+      "@flowforge/plugins-video-gen": [
+        "./packages/plugins/video-gen/src/index.ts"
       ]
     }
   }

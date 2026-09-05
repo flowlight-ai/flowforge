@@ -11,8 +11,10 @@
  * 插件化改造：
  *   - better-sqlite3 → node:sqlite DatabaseSync（对齐 cats-stores-sqlite）
  *   - clowder 单例 → ctx.forgeScheduler 服务（dbPath 注入，`:memory:` 测试）
- *   - TaskRunnerV2/execute-pipeline/delivery/content-fetcher/schedule-notify
- *     等运行时文件深度耦合 cats invocation/connector，随对应特性移植再补
+ *   - 批次51：TaskRunnerV2/execute-pipeline 运行时移植完成（深度耦合面改为
+ *     注入端口：invokeTrigger/deliver/fetchContent/ballCustody/isThreadBusy/
+ *     dynamicTaskStore 均由宿主组合根装配；OTel instruments/span 以钩子承接，
+ *     随 T9.5 接线）
  *
  * 消费者加载默认插件：
  * ```ts
@@ -55,6 +57,31 @@ export {
   isF255PresentLoopBuiltinRef,
 } from './f255-template-boundary.ts';
 export * from './types.ts';
+export {
+  computeNextCronSlot,
+  countAdditionalDueCronSlots,
+  getNextCronMs,
+} from './cron-utils.ts';
+export { executeTaskPipeline, type PipelineContext } from './execute-pipeline.ts';
+export {
+  TaskRunnerV2,
+  computeSubjectPreview,
+  type DynamicTaskStorePort,
+  type OnceCancellationReservationResult,
+  type TaskExecutionAdmissionOutcome,
+  type TaskRunnerV2Options,
+} from './task-runner-v2.ts';
+export {
+  computeNextFireTime,
+  notifyTaskDeleted,
+  notifyTaskFailed,
+  notifyTaskPaused,
+  notifyTaskRegistered,
+  notifyTaskResumed,
+  notifyTaskSucceeded,
+  SCHEDULER_TOAST_DURATION_MS,
+} from './schedule-notify.ts';
+export type { DynamicTaskParams, TaskTemplate } from './templates.ts';
 
 export interface SchedulerConfig {
   /** SQLite 数据库路径（`:memory:` 用于测试）。必填。 */

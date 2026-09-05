@@ -53,6 +53,7 @@
     "@flowforge/commands": "workspace:^",
     "@flowforge/credentials": "workspace:^",
     "@flowforge/goal": "workspace:^",
+    "@flowforge/harness-env-registry": "workspace:^",
     "@flowforge/host-directory-picker": "workspace:^",
     "@flowforge/llm": "workspace:^",
     "@flowforge/native-command": "workspace:^",

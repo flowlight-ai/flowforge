@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, Box, Bot, FileKey, Settings as SettingsIcon, Wrench, Zap } from 'lucide-react';
+
+import { parseEnvDraft } from '@flowforge/config-schema';
+
 import {
   SettingsBadge,
   SettingsEmptyState,
@@ -113,6 +116,16 @@ export function SystemSection() {
   }, [tab, fetchTab]);
 
   const saveEnvFile = async (filename: string) => {
+    // D28：合并写入前先做 .env 语法级校验（行级错误带 1-based 行号）
+    const parsed = parseEnvDraft(envDraft);
+    if (parsed.errors.length > 0) {
+      const preview = parsed.errors
+        .slice(0, 3)
+        .map((e) => e.message)
+        .join('；');
+      setEnvMessage(`保存失败：${preview}${parsed.errors.length > 3 ? `（等共 ${parsed.errors.length} 处）` : ''}`);
+      return;
+    }
     setEnvSaving(true);
     setEnvMessage(null);
     try {

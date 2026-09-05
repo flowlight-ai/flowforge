@@ -1,6 +1,6 @@
 {
   "name": "@flowforge/infrastructure-scheduler",
-  "description": "FlowForge infrastructure scheduler domain Cordis plugin - C33 F139 unified schedule abstraction: type contracts (WorkItem/GateResult/TriggerSpec/RunOutcome/ActorSpec), ActorResolver (actor role + costTier -> catId, injectable roster), five node:sqlite stores (RunLedger / DynamicTaskStore / EmissionStore self-echo suppression / GlobalControlStore pause-resume / PackTemplateStore F255 pack delegate), f255-template-boundary; TS rewrite of clowder-ai infrastructure/scheduler/* at ctx.forgeScheduler (TaskRunnerV2/execute-pipeline runtime deferred to feature-port batches)",
+  "description": "FlowForge infrastructure scheduler domain Cordis plugin - C33 F139 unified schedule abstraction: type contracts, ActorResolver, five node:sqlite stores, f255-template-boundary, plus batch-51 TaskRunnerV2/execute-pipeline runtime (interval/cron/once triggers, governance checks, self-echo suppression, F167 misfire watchdog + pre-fire defer, F280 once-cancellation fence, #415 dynamic task hydrate/retire) at ctx.forgeScheduler",
   "version": "0.1.0-rc.1",
   "publishConfig": { "access": "public" },
   "repository": { "type": "git", "url": "git+https://gitee.com/flowlight-ai/flowforge.git", "directory": "packages/infrastructure/scheduler" },
@@ -16,6 +16,7 @@
   },
   "files": [ "lib/**/*.js", "lib/**/*.d.ts" ],
   "license": "MIT",
+  "dependencies": { "cron-parser": "^5.5.0" },
   "peerDependencies": { "@flowforge/cordis": "workspace:^" },
   "devDependencies": { "@flowforge/cordis": "workspace:^" }
 }

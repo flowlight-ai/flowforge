@@ -45,8 +45,13 @@
       卸载依赖者拒绝/更新/四检查验证（files/entry/checksum/safety）+ FrontendPluginRegistry
       六挂载点前端注册表 + MarketplaceService 挂载 `ctx.forgePlugins`，39 测试）
 - [x] T7.12 `packages/forgekin/observability`：追踪/指标/事件总线（TS 重写自 `core/{tracing,observability,metrics,event_bridge}.py` + `events/event_bus.py`，F13/P-94，ctx.forgeObservability，48 测试）
-- [ ] T7.13 测试：YAML 注册 Forgekin → 五闭环各跑通 mock 演进；跨厂商审议拒绝同厂商；
-      工作流编译器 DAG 执行；SpiritForge 蒸馏入库可检索
+- [x] T7.13 测试（批次53 交付）：`packages/forgekin/e2e`（@flowforge/forgekin-e2e）跨包集成——
+      ① YAML 注册：config/forgekins 五份真实档案→Forgekin 构造→Registry 检索（类型/能力/selectOwner）+ 重复注册拒绝；
+      ② 五闭环：doc-loop 真实临时 fs discover→plan→act→verify 全演进 + 四环构造/discover 冒烟 + checkAwakeningStage 门槛（E2 拒/E3 过）+ preActScopeGuardCheck fail-closed；
+      ③ 跨厂商审议：同厂商三评审 ESCALATE / 双厂商 PASS / CouncilService 挂载冒烟；
+      ④ 编译器：真实 doc_iterative.yaml→五步 DAG（三厂商）+ 非法 YAML fail-fast；
+      ⑤ SpiritForge：三问否决不入库 / 三问通过 Episode→MethodCard→Eval 双门→storeToCodex / MindCodex 三入口（list/search/recordConsumption）。
+      LLM 双模式：OpenRoute env 可达走真实调用；不可达时真客户端指向默认网关→循环内置生产降级路径（非 mock）。16 测试
 - [x] T7.14 `packages/forgekin/magic-words`：魔法词（TS 重写自 `forgemind/magic_words.py`，F15）
       （批次4：4 条魔法短语 → stop-and-audit 触发动作子串检测 + MagicWordsService 挂载
       `ctx.forgeMagicWords`，12 测试）
@@ -131,8 +136,9 @@
       SecurityOfficer 狼·阿尔法 五动作/阻断审批/扫描审计告警自主/审计 append-only，
       DeliveryManager 象·牛顿 五动作/资源重分配审批/质量门禁不可绕过/阻塞风险上报）+
       RolesService 挂载 `ctx.forgeRoles`（四角色注册表 + 自定义角色注册），56 测试）
-- [ ] T7.29 测试：魔法词触发/群编排/IM 议会拒绝同通道/评估台账记账/进化引擎三循环演进/
-      弹性栈故障注入恢复/检索排序/锻造流水线产物验收
+- [ ] T7.29 测试（批次54 执行）：魔法词触发（真实短语样本）/群编排/IM 议会拒绝同通道/
+      评估台账记账/进化引擎三循环演进/弹性栈故障注入恢复（注入式故障端口）/检索排序/
+      锻造流水线产物验收（LLM 边界同 T7.13：OpenRoute 真实/llm-replay 双模式）
 - [x] T7.30 `packages/core/state`：F27 状态机族（TS 重写自 `core/{namespace,handoff,state_updates,state_mapper,variable_resolver,field_condition_gate,context_layer_manager,state_query_tool,tool_chain_executor}.py`，F003/F024；A003/A024）
       （批次19：NamespaceRegistry 命名空间注册表 + HandoffManager 交接路由（按 target 去重/
       LLM 提示词生成）+ StateUpdateMapper 统一状态输出（嵌套路径设置/新旧格式提取）+

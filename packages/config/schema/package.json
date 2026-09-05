@@ -1,0 +1,21 @@
+{
+  "name": "@flowforge/config-schema",
+  "description": "FlowForge config foundation frontend schema validation (D28): browser-safe pure env/config edit validation — EnvSchemaEntry model + validateEnvSchemaValue/validateEnvDraft/parseEnvDraft + masked-secret sentinel handling, single source of truth shared by web and host, zero runtime deps",
+  "version": "0.1.0-rc.1",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "src"
+  ],
+  "license": "MIT"
+}

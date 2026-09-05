@@ -230,6 +230,157 @@ const DDL = `
   ) STRICT;
 
   CREATE INDEX IF NOT EXISTS idx_summaries_thread ON summaries (thread_id, created_at);
+
+  -- ── 批次52：其余 12 个 full-contract store ─────────────────
+
+  CREATE TABLE IF NOT EXISTS thread_read_states (
+    user_id               TEXT NOT NULL,
+    thread_id             TEXT NOT NULL,
+    last_read_message_id  TEXT NOT NULL,
+    updated_at            INTEGER NOT NULL,
+    PRIMARY KEY (user_id, thread_id)
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_read_states_thread ON thread_read_states (thread_id);
+
+  CREATE TABLE IF NOT EXISTS thread_votes (
+    thread_id  TEXT PRIMARY KEY,
+    data       TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS thread_memories (
+    thread_id   TEXT NOT NULL,
+    key         TEXT NOT NULL,
+    updated_at  INTEGER NOT NULL,
+    data        TEXT NOT NULL,
+    PRIMARY KEY (thread_id, key)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS task_progress (
+    thread_id           TEXT NOT NULL,
+    cat_id              TEXT NOT NULL,
+    status              TEXT NOT NULL,
+    last_invocation_id  TEXT,
+    updated_at          INTEGER NOT NULL,
+    data                TEXT NOT NULL,
+    PRIMARY KEY (thread_id, cat_id)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS task_managed_work (
+    task_id     TEXT PRIMARY KEY,
+    work_id     TEXT NOT NULL,
+    attempt_id  TEXT NOT NULL,
+    data        TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_managed_work_attempt ON task_managed_work (work_id, attempt_id);
+
+  CREATE TABLE IF NOT EXISTS signal_articles (
+    id              TEXT PRIMARY KEY,
+    normalized_url  TEXT NOT NULL UNIQUE,
+    status          TEXT NOT NULL,
+    fetched_at      TEXT NOT NULL,
+    data            TEXT NOT NULL,
+    content         TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS dossier_distillation_proposals (
+    id             TEXT PRIMARY KEY,
+    source_id      TEXT NOT NULL UNIQUE,
+    target_cat_id  TEXT NOT NULL,
+    status         TEXT NOT NULL,
+    created_at     INTEGER NOT NULL,
+    data           TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_distill_status ON dossier_distillation_proposals (status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_distill_cat ON dossier_distillation_proposals (target_cat_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS dossier_observations (
+    id          TEXT PRIMARY KEY,
+    cat_id      TEXT NOT NULL,
+    created_at  INTEGER NOT NULL,
+    data        TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_dossier_obs_cat ON dossier_observations (cat_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS memory_governance (
+    entry_id    TEXT PRIMARY KEY,
+    status      TEXT NOT NULL,
+    updated_at  INTEGER NOT NULL,
+    data        TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS thread_proposals (
+    id                TEXT PRIMARY KEY,
+    source_thread_id  TEXT NOT NULL,
+    created_by        TEXT NOT NULL,
+    status            TEXT NOT NULL,
+    decided_at        INTEGER,
+    created_at        INTEGER NOT NULL,
+    data              TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_proposals_pending ON thread_proposals (created_by, status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_proposals_thread ON thread_proposals (source_thread_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS thread_proposal_dedup (
+    user_id             TEXT NOT NULL,
+    client_request_id   TEXT NOT NULL,
+    proposal_id         TEXT NOT NULL,
+    PRIMARY KEY (user_id, client_request_id)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS profile_update_proposals (
+    id                TEXT PRIMARY KEY,
+    source_thread_id  TEXT NOT NULL,
+    created_by        TEXT NOT NULL,
+    status            TEXT NOT NULL,
+    decided_at        INTEGER,
+    created_at        INTEGER NOT NULL,
+    data              TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_profile_proposals_pending ON profile_update_proposals (created_by, status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_profile_proposals_thread ON profile_update_proposals (source_thread_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS profile_update_dedup (
+    user_id             TEXT NOT NULL,
+    client_request_id   TEXT NOT NULL,
+    proposal_id         TEXT NOT NULL,
+    PRIMARY KEY (user_id, client_request_id)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS session_handoff_proposals (
+    id                 TEXT PRIMARY KEY,
+    source_session_id  TEXT NOT NULL,
+    user_id            TEXT NOT NULL,
+    source_cat_id      TEXT NOT NULL,
+    source_thread_id   TEXT NOT NULL,
+    status             TEXT NOT NULL,
+    created_at         INTEGER NOT NULL,
+    updated_at         INTEGER NOT NULL,
+    data               TEXT NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS idx_handoff_session_active ON session_handoff_proposals (source_session_id, status);
+  CREATE INDEX IF NOT EXISTS idx_handoff_user_pending ON session_handoff_proposals (user_id, status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_handoff_cat_thread ON session_handoff_proposals (user_id, source_cat_id, source_thread_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS session_handoff_dedup (
+    user_id             TEXT NOT NULL,
+    client_request_id   TEXT NOT NULL,
+    proposal_id         TEXT NOT NULL,
+    PRIMARY KEY (user_id, client_request_id)
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS session_handoff_receipts (
+    owner_user_id  TEXT NOT NULL,
+    source_ref     TEXT NOT NULL,
+    receipt_json   TEXT NOT NULL,
+    PRIMARY KEY (owner_user_id, source_ref)
+  ) STRICT;
 `
 
 /**

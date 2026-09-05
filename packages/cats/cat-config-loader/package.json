@@ -1,0 +1,51 @@
+{
+  "name": "@flowforge/cats-cat-config-loader",
+  "description": "FlowForge cat config loader (C40) + .cat-cafe runtime JSON (C38, clowder port): zod v1/v2 versioned cat config with deepMergeConfig atomic-key merge, cat-template.json base + .cat-cafe/cat-catalog.json overlay load with template-breed filter, injectable-fs explicit-file load, no-cache accessors (roster/reviewPolicy/coCreator/sessionChain/availability), and typed .cat-cafe runtime JSON store (accounts/capabilities/user-preferences/mcp-resolved, tmp+rename atomic writes), ctx.forgeCatConfigLoader",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/cats/cat-config-loader"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./schema": {
+      "types": "./lib/types/schema.d.ts",
+      "default": "./lib/schema.js"
+    },
+    "./loader": {
+      "types": "./lib/types/loader.d.ts",
+      "default": "./lib/loader.js"
+    },
+    "./accessors": {
+      "types": "./lib/types/accessors.d.ts",
+      "default": "./lib/accessors.js"
+    },
+    "./runtime-json": {
+      "types": "./lib/types/runtime-json.d.ts",
+      "default": "./lib/runtime-json.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  }
+}

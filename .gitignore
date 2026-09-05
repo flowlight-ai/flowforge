@@ -262,3 +262,8 @@ packages/*/*/src/**/*.d.ts.map
 packages/*/*/src/**/*.js
 packages/*/*/src/**/*.js.map
 packages/*/*/src/**/*.map
+
+# T0.12 补齐（批次49）
+.vitest/
+coverage/
+.pnpm-store/
