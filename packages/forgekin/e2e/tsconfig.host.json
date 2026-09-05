@@ -3,8 +3,7 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/types",
-    
-    
+    "tsBuildInfoFile": "lib/.tsbuildinfo"
   },
   "include": [ "src" ],
   "exclude": [ "lib", "node_modules", "tests" ],
@@ -15,6 +14,13 @@
     { "path": "../../forgekin/loops" },
     { "path": "../../forgekin/species" },
     { "path": "../../forgekin/workflow-compiler" },
-    { "path": "../../llm/openroute" }
+    { "path": "../../llm/openroute" },
+    { "path": "../../forgekin/magic-words" },
+    { "path": "../../forgekin/swarm" },
+    { "path": "../../forgekin/im-council" },
+    { "path": "../../forgekin/eval-ledger" },
+    { "path": "../../forgekin/evolution-engine" },
+    { "path": "../../forgekin/forging" },
+    { "path": "../../plugins/resilience" }
   ]
 }
