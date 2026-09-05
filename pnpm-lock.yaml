@@ -2208,6 +2208,34 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/forgekin/e2e:
+    dependencies:
+      yaml:
+        specifier: ^2.4.0
+        version: 2.9.0
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-council':
+        specifier: workspace:^
+        version: link:../council
+      '@flowforge/forgekin-knowledge':
+        specifier: workspace:^
+        version: link:../knowledge
+      '@flowforge/forgekin-loops':
+        specifier: workspace:^
+        version: link:../loops
+      '@flowforge/forgekin-species':
+        specifier: workspace:^
+        version: link:../species
+      '@flowforge/forgekin-workflow-compiler':
+        specifier: workspace:^
+        version: link:../workflow-compiler
+      '@flowforge/llm-openroute':
+        specifier: workspace:^
+        version: link:../../llm/openroute
+
   packages/forgekin/eval-ledger:
     dependencies:
       yaml:
