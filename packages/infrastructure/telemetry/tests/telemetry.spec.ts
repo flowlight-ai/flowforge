@@ -145,9 +145,7 @@ describe('BurnRateMonitor', () => {
     await monitor.check();
     expect(alerts.length).toBe(1);
     expect(monitor.isAlertActive()).toBe(true);
-    // 恢复：清除
-    monitor['config' as never] as never;
-    // 改用注入：重建一个恢复源监控
+    // 恢复：清除（改用注入：重建一个恢复源监控）
     const monitor2 = svc.createBurnRateMonitor({
       getMetricsText: async () => 'cat_cafe_invocation_completed{status="ok"} 100\ncat_cafe_invocation_completed{status="error"} 1',
       onAlert: () => {},
