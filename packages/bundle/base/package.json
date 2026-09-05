@@ -60,6 +60,7 @@
     "@flowforge/goal": "workspace:^",
     "@flowforge/goal-round-driver": "workspace:^",
     "@flowforge/api-gateway": "workspace:^",
+    "@flowforge/harness-env-registry": "workspace:^",
     "@flowforge/llm": "workspace:^",
     "@flowforge/llm-deepseek": "workspace:^",
     "@flowforge/llm-pi-ai": "workspace:^",

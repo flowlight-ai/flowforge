@@ -639,6 +639,9 @@ importers:
       '@flowforge/goal-round-driver':
         specifier: workspace:^
         version: link:../../goal/goal-round-driver
+      '@flowforge/harness-env-registry':
+        specifier: workspace:^
+        version: link:../../harness/env-registry
       '@flowforge/jobs-local':
         specifier: workspace:^
         version: link:../../jobs/jobs-local
@@ -3008,6 +3011,9 @@ importers:
       '@flowforge/goal':
         specifier: workspace:^
         version: link:../../goal/goal
+      '@flowforge/harness-env-registry':
+        specifier: workspace:^
+        version: link:../../harness/env-registry
       '@flowforge/host-directory-picker':
         specifier: workspace:^
         version: link:../directory-picker

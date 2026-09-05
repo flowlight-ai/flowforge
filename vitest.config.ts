@@ -680,6 +680,8 @@ const aliasEntries = [
       { find: '@flowforge/plugins-video-analysis', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-analysis/src') },
       { find: '@flowforge/plugins-video-gen/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-gen/src') },
       { find: '@flowforge/plugins-video-gen', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-gen/src') },
+      { find: '@flowforge/harness-env-registry/src', replacement: path.resolve(import.meta.dirname, 'packages/harness/env-registry/src') },
+      { find: '@flowforge/harness-env-registry', replacement: path.resolve(import.meta.dirname, 'packages/harness/env-registry/src') },
       // <generated-alias:end>
 ]
 
