@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    
+    
+  },
+  "include": [ "src" ],
+  "exclude": [ "lib", "node_modules", "tests" ],
+  "references": [
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../forgekin/council" },
+    { "path": "../../forgekin/knowledge" },
+    { "path": "../../forgekin/loops" },
+    { "path": "../../forgekin/species" },
+    { "path": "../../forgekin/workflow-compiler" },
+    { "path": "../../llm/openroute" }
+  ]
+}

@@ -183,6 +183,9 @@
       "path": "./packages/chat/e2e/tsconfig.host.json"
     },
     {
+      "path": "./packages/forgekin/e2e/tsconfig.host.json"
+    },
+    {
       "path": "./packages/limb/core/tsconfig.host.json"
     },
     {
