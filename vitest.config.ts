@@ -178,6 +178,8 @@ const aliasEntries = [
       { find: '@flowforge/chat-stretch/src', replacement: path.resolve(import.meta.dirname, 'packages/chat/stretch-ports/src') },
       { find: '@flowforge/chat-stretch', replacement: path.resolve(import.meta.dirname, 'packages/chat/stretch-ports/src') },
       { find: /^@flowforge\/chat-stretch$/, replacement: path.resolve(import.meta.dirname, 'packages/chat/stretch-ports/src') },
+      { find: '@flowforge/cats-routes/src', replacement: path.resolve(import.meta.dirname, 'packages/cats/routes/src') },
+      { find: '@flowforge/cats-routes', replacement: path.resolve(import.meta.dirname, 'packages/cats/routes/src') },
       { find: '@flowforge/forgekin-e2e/src', replacement: path.resolve(import.meta.dirname, 'packages/forgekin/e2e/src') },
       { find: '@flowforge/forgekin-e2e', replacement: path.resolve(import.meta.dirname, 'packages/forgekin/e2e/src') },
       { find: '@flowforge/chat-e2e/src', replacement: path.resolve(import.meta.dirname, 'packages/chat/e2e/src') },
