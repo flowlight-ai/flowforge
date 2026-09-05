@@ -47,6 +47,41 @@ export const runtimeCapabilitySchema = z
   })
   .strict();
 
+export const runtimeProxyUpstreamsSchema = z.record(
+  z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9-]+$/, 'upstream slug must be a lowercase url-path segment'),
+  z
+    .object({
+      /** 上游目标（如第三方 Anthropic 兼容网关地址）。 */
+      baseUrl: z.string().min(1),
+      /** 凭据仅存引用指针，绝不落盘密钥（红线 11；clowder 原文件存 apiKey 的部分走凭据插件）。 */
+      credentialRef: z.string().min(1).optional(),
+      label: z.string().min(1).optional(),
+      updatedAt: z.string().datetime({ offset: true }).optional(),
+    })
+    .strict(),
+);
+
+export const runtimeProviderProfileSchema = z
+  .object({
+    id: z.string().min(1),
+    authType: z.enum(['oauth', 'api_key']),
+    client: z.string().min(1).optional(),
+    protocol: z.string().min(1).optional(),
+    baseUrl: z.string().min(1).optional(),
+    models: z.array(z.string().min(1)).optional(),
+    modelAliases: z.record(z.string(), z.string().min(1)).optional(),
+    /** F171: agent 子进程注入的用户自定义 env（非密钥语义由调用方保证）。 */
+    envVars: z.record(z.string(), z.string()).optional(),
+    /** 凭据仅存引用指针（clowder provider-profiles.secrets.local.json → 凭据插件，R17）。 */
+    credentialRef: z.string().min(1).optional(),
+    label: z.string().min(1).optional(),
+    updatedAt: z.string().datetime({ offset: true }).optional(),
+  })
+  .strict();
+
 export const runtimeMcpResolvedSchema = z
   .object({
     catId: z.string().min(1),
@@ -61,8 +96,17 @@ export type RuntimeAccount = z.infer<typeof runtimeAccountSchema>;
 export type RuntimeUserPreferences = z.infer<typeof runtimeUserPreferencesSchema>;
 export type RuntimeCapability = z.infer<typeof runtimeCapabilitySchema>;
 export type RuntimeMcpResolved = z.infer<typeof runtimeMcpResolvedSchema>;
+export type RuntimeProxyUpstreams = z.infer<typeof runtimeProxyUpstreamsSchema>;
+export type RuntimeProviderProfile = z.infer<typeof runtimeProviderProfileSchema>;
 
-export type RuntimeFileKind = 'accounts' | 'user-preferences' | 'capabilities' | 'cat-catalog' | 'mcp-resolved';
+export type RuntimeFileKind =
+  | 'accounts'
+  | 'user-preferences'
+  | 'capabilities'
+  | 'cat-catalog'
+  | 'mcp-resolved'
+  | 'proxy-upstreams'
+  | 'provider-profiles';
 
 export type RuntimeTypedKind = Exclude<RuntimeFileKind, 'cat-catalog'>;
 
@@ -89,6 +133,8 @@ const parseByKind: Record<RuntimeTypedKind, (value: unknown) => unknown> = {
   'user-preferences': (value) => runtimeUserPreferencesSchema.parse(value),
   capabilities: (value) => z.array(runtimeCapabilitySchema).parse(value),
   'mcp-resolved': (value) => z.array(runtimeMcpResolvedSchema).parse(value),
+  'proxy-upstreams': (value) => runtimeProxyUpstreamsSchema.parse(value),
+  'provider-profiles': (value) => z.array(runtimeProviderProfileSchema).parse(value),
 };
 
 export function runtimeFileName(kind: RuntimeFileKind): string {
