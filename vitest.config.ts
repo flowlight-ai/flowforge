@@ -518,6 +518,8 @@ const aliasEntries = [
       { find: '@flowforge/spill-local', replacement: path.resolve(import.meta.dirname, 'packages/spill/spill-local/src') },
       { find: '@flowforge/token-meter/src', replacement: path.resolve(import.meta.dirname, 'packages/llm/token-meter/src') },
       { find: '@flowforge/token-meter', replacement: path.resolve(import.meta.dirname, 'packages/llm/token-meter/src') },
+      { find: '@flowforge/llm-openroute/src', replacement: path.resolve(import.meta.dirname, 'packages/llm/openroute/src') },
+      { find: '@flowforge/llm-openroute', replacement: path.resolve(import.meta.dirname, 'packages/llm/openroute/src') },
       { find: '@flowforge/tool-cordis/src', replacement: path.resolve(import.meta.dirname, 'packages/extensions/tool-cordis/src') },
       { find: '@flowforge/tool-cordis', replacement: path.resolve(import.meta.dirname, 'packages/extensions/tool-cordis/src') },
       { find: '@flowforge/agent-loop/src', replacement: path.resolve(import.meta.dirname, 'packages/core/agent-loop/src') },

@@ -283,6 +283,9 @@
     - id: token-meter
       name: '@flowforge/token-meter'
 
+    - id: llm-openroute
+      name: '@flowforge/llm-openroute'
+
     - id: compaction-basic
       name: '@flowforge/compaction-basic'
 

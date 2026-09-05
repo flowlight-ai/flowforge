@@ -510,6 +510,9 @@
       "path": "./packages/llm/route"
     },
     {
+      "path": "./packages/llm/openroute/tsconfig.host.json"
+    },
+    {
       "path": "./packages/external/agent/tsconfig.host.json"
     },
     {

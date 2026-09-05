@@ -651,6 +651,9 @@ importers:
       '@flowforge/llm-deepseek':
         specifier: workspace:^
         version: link:../../llm/llm-deepseek
+      '@flowforge/llm-openroute':
+        specifier: workspace:^
+        version: link:../../llm/openroute
       '@flowforge/llm-pi-ai':
         specifier: workspace:^
         version: link:../../llm/llm-pi-ai
@@ -3736,6 +3739,12 @@ importers:
       '@flowforge/tools':
         specifier: workspace:^
         version: link:../../core/tools
+
+  packages/llm/openroute:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
 
   packages/llm/route:
     dependencies:
