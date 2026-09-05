@@ -16,6 +16,13 @@
   "license": "MIT",
   "dependencies": { "yaml": "^2.4.0" },
   "peerDependencies": {
+    "@flowforge/forgekin-magic-words": "workspace:^",
+    "@flowforge/forgekin-swarm": "workspace:^",
+    "@flowforge/forgekin-im-council": "workspace:^",
+    "@flowforge/forgekin-eval-ledger": "workspace:^",
+    "@flowforge/forgekin-evolution-engine": "workspace:^",
+    "@flowforge/forgekin-forging": "workspace:^",
+    "@flowforge/resilience": "workspace:^",
     "@flowforge/cordis": "workspace:^",
     "@flowforge/forgekin-council": "workspace:^",
     "@flowforge/forgekin-knowledge": "workspace:^",
@@ -25,6 +32,13 @@
     "@flowforge/llm-openroute": "workspace:^"
   },
   "devDependencies": {
+    "@flowforge/forgekin-magic-words": "workspace:^",
+    "@flowforge/forgekin-swarm": "workspace:^",
+    "@flowforge/forgekin-im-council": "workspace:^",
+    "@flowforge/forgekin-eval-ledger": "workspace:^",
+    "@flowforge/forgekin-evolution-engine": "workspace:^",
+    "@flowforge/forgekin-forging": "workspace:^",
+    "@flowforge/resilience": "workspace:^",
     "@flowforge/cordis": "workspace:^",
     "@flowforge/forgekin-council": "workspace:^",
     "@flowforge/forgekin-knowledge": "workspace:^",

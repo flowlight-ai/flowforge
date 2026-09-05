@@ -136,9 +136,15 @@
       SecurityOfficer 狼·阿尔法 五动作/阻断审批/扫描审计告警自主/审计 append-only，
       DeliveryManager 象·牛顿 五动作/资源重分配审批/质量门禁不可绕过/阻塞风险上报）+
       RolesService 挂载 `ctx.forgeRoles`（四角色注册表 + 自定义角色注册），56 测试）
-- [ ] T7.29 测试（批次54 执行）：魔法词触发（真实短语样本）/群编排/IM 议会拒绝同通道/
-      评估台账记账/进化引擎三循环演进/弹性栈故障注入恢复（注入式故障端口）/检索排序/
-      锻造流水线产物验收（LLM 边界同 T7.13：OpenRoute 真实/llm-replay 双模式）
+- [x] T7.29 测试（批次54 交付）：续 `packages/forgekin/e2e`——
+      ① 魔法词：四条真实短语各自触发正确 STOP 动作 + 子串检测 + service snapshot；
+      ② swarm：多厂商能力路由分发 / 无匹配保持 PENDING / fail-cancel 状态迁移；
+      ③ IM 议会：I1 降级链路（首通道故障回落次选 + 全故障 NoAvailableChannelError）/ I4 超时自动拒绝 / 审批归档；
+      ④ 评估台账：Replay A/B 八用例记账（3 smoke + 5 promotion 三类覆盖）+ 三信号交叉 + 归因；
+      ⑤ 进化引擎：SelfDev 装配 runSelfDevLoop / 三模式治理（scope_guard/process_evolution/knowledge_evolution）/ ApprovalHub 提交批准 / CloseGate 决议；
+      ⑥ 弹性栈：熔断器连续失败 OPEN→reset 恢复 / FallbackChain 降级 / checkpoint 快照；
+      ⑦ MindCodex 检索排序：标题命中优先 + topK 截断；
+      ⑧ 锻造流水线：forge() 产物 SoulImprint 锚点 + 形态正确 + stage 快照可审计。21 测试（纯逻辑/注入式故障端口，无 LLM 依赖）
 - [x] T7.30 `packages/core/state`：F27 状态机族（TS 重写自 `core/{namespace,handoff,state_updates,state_mapper,variable_resolver,field_condition_gate,context_layer_manager,state_query_tool,tool_chain_executor}.py`，F003/F024；A003/A024）
       （批次19：NamespaceRegistry 命名空间注册表 + HandoffManager 交接路由（按 target 去重/
       LLM 提示词生成）+ StateUpdateMapper 统一状态输出（嵌套路径设置/新旧格式提取）+

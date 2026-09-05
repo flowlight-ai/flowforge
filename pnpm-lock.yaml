@@ -2220,21 +2220,42 @@ importers:
       '@flowforge/forgekin-council':
         specifier: workspace:^
         version: link:../council
+      '@flowforge/forgekin-eval-ledger':
+        specifier: workspace:^
+        version: link:../eval-ledger
+      '@flowforge/forgekin-evolution-engine':
+        specifier: workspace:^
+        version: link:../evolution-engine
+      '@flowforge/forgekin-forging':
+        specifier: workspace:^
+        version: link:../forging
+      '@flowforge/forgekin-im-council':
+        specifier: workspace:^
+        version: link:../im-council
       '@flowforge/forgekin-knowledge':
         specifier: workspace:^
         version: link:../knowledge
       '@flowforge/forgekin-loops':
         specifier: workspace:^
         version: link:../loops
+      '@flowforge/forgekin-magic-words':
+        specifier: workspace:^
+        version: link:../magic-words
       '@flowforge/forgekin-species':
         specifier: workspace:^
         version: link:../species
+      '@flowforge/forgekin-swarm':
+        specifier: workspace:^
+        version: link:../swarm
       '@flowforge/forgekin-workflow-compiler':
         specifier: workspace:^
         version: link:../workflow-compiler
       '@flowforge/llm-openroute':
         specifier: workspace:^
         version: link:../../llm/openroute
+      '@flowforge/resilience':
+        specifier: workspace:^
+        version: link:../../plugins/resilience
 
   packages/forgekin/eval-ledger:
     dependencies:
