@@ -62,6 +62,7 @@
     "@flowforge/api-gateway": "workspace:^",
     "@flowforge/harness-env-registry": "workspace:^",
     "@flowforge/llm": "workspace:^",
+    "@flowforge/llm-openroute": "workspace:^",
     "@flowforge/llm-deepseek": "workspace:^",
     "@flowforge/llm-pi-ai": "workspace:^",
     "@flowforge/llm-retry": "workspace:^",

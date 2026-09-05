@@ -281,6 +281,7 @@ export { backfillLegacyPrTracking, type LegacyPrTrackingBackfillOptions, type Le
 export { createIssueCommentTaskSpec, type IssueCommentSpec, type IssueCommentTaskSpecOptions, type IssueEventLogPort, type IssueTrackingMetadata } from './issue-comment-task-spec.ts';
 export { createReviewFeedbackTaskSpec, type ReviewFeedbackSpec, type ReviewFeedbackTaskSpecOptions, type ReviewFetchResult } from './review-feedback-task-spec.ts';
 export { createConnectorInvokeTrigger, type ConnectorInvokeTriggerOptions, type InvocationWakePort } from './connector-invoke-trigger.ts';
+export { createInvocationWakePort, type InvocationQueueWakeSource, type InvocationWakeBridgeOptions } from './invocation-wake-bridge.ts';
 export { createCiCdCheckTaskSpec, type CiCdCheckSignal, type CiCdCheckSpec, type CiCdCheckTaskSpecOptions, type CiPollResultLike } from './ci-cd-check-task-spec.ts';
 export {
   buildDeliveryDecisionCueCarrier,

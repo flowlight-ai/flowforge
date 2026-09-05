@@ -12,28 +12,28 @@
 - [x] T0.4 编写 `docs/refactor/10-stage-map.md`（阶段地图 + 功能全集矩阵）
 - [x] T0.5 编写 `docs/refactor/31-stage11-sunset.md`（Python 日落计划）
 - [x] T0.6 编写本文件 `docs/refactor/20-stage0-infra.md`
-- [ ] T0.7 根目录新增 `package.json`（name=flowforge、packageManager=pnpm、engines node>=22.19）
-- [ ] T0.8 根目录新增 `pnpm-workspace.yaml`（workspaces: vendor/*, packages/*/*, apps/*）
-- [ ] T0.9 根目录新增 `tsconfig.base.json`（strict 基线，对齐 dsh）
-- [ ] T0.10 根目录新增 `vitest.config.ts`（workspace 项目扫描）
-- [ ] T0.11 根目录新增 `.oxlintrc.json`（对齐 dsh lint 基线）
-- [ ] T0.12 `.gitignore` 增补：`**/dist/`、`**/*.tsbuildinfo`、`**/.vitest/`、`coverage/`、`.pnpm-store/`
-- [ ] T0.13 vendor cordis 全家桶：从 `ex/deepseek-harness/vendor/` 复制
+- [x] T0.7 根目录新增 `package.json`（name=flowforge、packageManager=pnpm、engines node>=22.19）
+- [x] T0.8 根目录新增 `pnpm-workspace.yaml`（workspaces: vendor/*, packages/*/*, apps/*）
+- [x] T0.9 根目录新增 `tsconfig.base.json`（strict 基线，对齐 dsh）
+- [x] T0.10 根目录新增 `vitest.config.ts`（workspace 项目扫描）
+- [x] T0.11 根目录新增 `.oxlintrc.json`（对齐 dsh lint 基线）
+- [x] T0.12 `.gitignore` 增补：`**/dist/`、`**/*.tsbuildinfo`、`**/.vitest/`、`coverage/`、`.pnpm-store/`（批次49 核验：dist/ 与 *.tsbuildinfo 已有，补齐 .vitest//coverage//.pnpm-store/）
+- [x] T0.13 vendor cordis 全家桶：从 `ex/deepseek-harness/vendor/` 复制
       cordis / cosmokit / group / hmr / include / loader / logger-console / schemastery / timer，
-      保留各包 LICENSE 与根 `THIRD_PARTY_NOTICES.md` 增补声明
-- [ ] T0.14 **插件基座**：`packages/harness/boot` 最小插件宿主——加载插件清单（manifest）→
+      保留各包 LICENSE 与根 `THIRD_PARTY_NOTICES.md` 增补声明（批次49 核验：九库齐全）
+- [x] T0.14 **插件基座**：`packages/harness/boot` 最小插件宿主——加载插件清单（manifest）→
       按依赖顺序 `ctx.plugin()` 安装 → start/stop；冒烟测试覆盖插件生命周期
       （created/ready/dispose）与跨插件服务注入
-- [ ] T0.15 根目录新增冒烟测试 `tests/refactor/smoke.test.ts`：
+- [x] T0.15 根目录新增冒烟测试 `tests/refactor/smoke.test.ts`：
       ① cordis Context 可用；② 自定义插件加载后 `ctx.*` 服务可用；③ 卸载后不可用
-- [ ] T0.16 验证：`pnpm install` 成功；`pnpm test` 冒烟通过
-- [ ] T0.17 验证：Python 旧版 `pytest -m "not slow and not integration"` 全绿（双栈共存）
-- [ ] T0.18 `./mgr` 提交
-- [ ] T0.19 **配置体系基座**（R17/R19 落地第一步）：
-      ① 根级 `FF_*` 环境变量注册表骨架（`packages/harness/env-registry`，对齐 clowder env-registry.ts）；
-      ② schemastery schema 校验链路冒烟（插件声明 `schema` → boot 合并 → 校验，覆盖 T0.14 基座）；
-      ③ vendor dsh `packages/settings/settings` + `settings-file`（设置抽象）；
-      ④ `config/` 现有 YAML 全量清单登记（名称→归属插件→迁移状态，纳入 `02-source-crosswalk.md` §3）
+- [x] T0.16 验证：`pnpm install` 成功；`pnpm test` 冒烟通过
+- [x] T0.17 验证：Python 旧版 `pytest -m "not slow and not integration"` 全绿（双栈共存；历史时点已验证，持续由 pytest 回归保底）
+- [x] T0.18 `./mgr` 提交
+- [x] T0.19 **配置体系基座**（R17/R19 落地第一步）：
+      ① 根级 `FF_*` 环境变量注册表骨架（`packages/harness/env-registry`，批次27 交付 C39，批次49 起接入 apiproxy env API）；
+      ② schemastery schema 校验链路冒烟（插件声明 `schema` → boot 合并 → 校验，覆盖 T0.14 基座；config-schema 批次48 D28 强化）；
+      ③ vendor dsh `packages/settings/settings` + `settings-file`（设置抽象；packages/settings/settings + settings-file）；
+      ④ `config/` 现有 YAML 全量清单登记（✅ 01-stack-decision.md R17-C 表：名称→落点插件→处理）
 
 ## 验收标准
 

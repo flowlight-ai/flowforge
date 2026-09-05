@@ -1,0 +1,805 @@
+/**
+ * TaskRunnerV2（TS 移植自 clowder-ai `infrastructure/scheduler/TaskRunnerV2.ts`）。
+ *
+ * 触发调度运行时：interval/cron/once 三种触发器 + 治理检查（AC-D1）+ 自回声抑制
+ * （AC-D2）+ F167 边界竞态守卫/watchdog/pre-fire defer + F280 once 取消线性化栅栏
+ * + #415 动态任务持久化（hydrate/retire/missed-window）+ Phase 2.5 任务摘要。
+ *
+ * 插件化适配（对照 clowder）：
+ *   - telemetry instruments（holdStaleWakeSuppressedTotal）与 OTel span
+ *     （emitHoldExpiredAfterSatisfied）→ 注入式钩子 onStaleWakeSuppressed /
+ *     onHoldExpiredAfterSatisfied（OTel-SDK 耦合随 T9.5 按需接线）
+ *   - DynamicTaskStore 等沿用本包 stores.ts 的 node:sqlite 实现
+ */
+
+import {
+  computeNextCronSlot,
+  countAdditionalDueCronSlots,
+} from './cron-utils.ts';
+import { notifyTaskFailed, notifyTaskSucceeded, SCHEDULER_TOAST_DURATION_MS } from './schedule-notify.ts';
+import { executeTaskPipeline } from './execute-pipeline.ts';
+import type { EmissionStore, GlobalControlStore, RunLedger } from './stores.ts';
+import { buildHoldExpiredEvent, type DynamicTaskDef } from './types.ts';
+import type { TaskTemplate } from './templates.ts';
+import type {
+  ActorRole,
+  CostTier,
+  DeliverOpts,
+  FetchResult,
+  RunLedgerRow,
+  ScheduleInvokeTrigger,
+  ScheduleLifecycleNotifier,
+  ScheduleRunTiming,
+  ScheduleTaskSummary,
+  SubjectKind,
+  TaskSource,
+  TaskSpec_P1,
+} from './types.ts';
+
+export interface TaskRunnerV2Options {
+  logger: { info: (msg: string) => void; error: (msg: string, err?: unknown) => void };
+  ledger: RunLedger;
+  /** Phase 1b: optional actor resolver — maps role + costTier to actor id */
+  actorResolver?: ((role: ActorRole, costTier: CostTier) => string | null) | undefined;
+  /** Phase 3B (AC-D1): governance store for global pause + task overrides */
+  globalControlStore?: GlobalControlStore | undefined;
+  /** Phase 3B (AC-D2): emission store for self-echo suppression */
+  emissionStore?: EmissionStore | undefined;
+  /** Phase 4 (AC-H1): deliver message to a thread */
+  deliver?: ((opts: DeliverOpts) => Promise<string>) | undefined;
+  /** Phase 4 (AC-H2): fetch web content with browser-automation routing */
+  fetchContent?: ((url: string, signal?: AbortSignal) => Promise<FetchResult>) | undefined;
+  /** Phase 4b: invoke a cat to handle a scheduled task (fire-and-forget) */
+  invokeTrigger?: ScheduleInvokeTrigger | undefined;
+  /** F233 PR3: optional ball-custody event sink for scheduler-originated events. */
+  ballCustody?: import('./types.ts').SchedulerBallCustodyIngest | undefined;
+  /** Ephemeral lifecycle notifications (toast-only, not persisted in thread history) */
+  notifyLifecycle?: ScheduleLifecycleNotifier | undefined;
+  /** #415: dynamic task store — needed for once-trigger auto-retirement */
+  dynamicTaskStore?: DynamicTaskStorePort | undefined;
+  /**
+   * F167 Phase M: busy checker for pre-fire defer. When a task with
+   * firePolicy.deferWhileThreadBusy fires while its thread is busy, the scheduler
+   * re-arms instead of executing. Mechanical occupancy only — NOT structured
+   * callback subject binding (KD-27 safe). Late-bind via setBusyChecker() when the
+   * invocationTracker/queueProcessor are constructed after the runner.
+   */
+  isThreadBusy?: ((threadId: string) => boolean) | undefined;
+  /** 批次50 适配：OTel instruments 挂 T9.5，先以钩子承接计数语义 */
+  onStaleWakeSuppressed?: (() => void) | undefined;
+  /** 批次50 适配：OTel span 挂 T9.5，先以钩子承接 hold 过期读模型语义 */
+  onHoldExpiredAfterSatisfied?: ((def: DynamicTaskDef) => void) | undefined;
+}
+
+/** #415 动态任务持久化最小端口（stores.ts DynamicTaskStore 结构兼容） */
+export interface DynamicTaskStorePort {
+  getAll(): DynamicTaskDef[];
+  getById(id: string): DynamicTaskDef | null;
+  remove(id: string): boolean;
+  updateTrigger(id: string, trigger: DynamicTaskDef['trigger']): boolean;
+}
+
+/** Phase 2.5: Compute human-readable subject preview from subjectKind + lastRun (AC-E2) */
+export function computeSubjectPreview(
+  subjectKind: SubjectKind | undefined,
+  lastRun: RunLedgerRow | null,
+): string | null {
+  if (!lastRun || !subjectKind || subjectKind === 'none') return null;
+  const key = lastRun.subject_key;
+  // Strict prefix matching: unrecognized keys (e.g. task.id from SKIP_NO_SIGNAL) → null
+  switch (subjectKind) {
+    case 'pr': {
+      // #320: unified subject key uses `pr:owner/repo#N` format
+      if (key.startsWith('pr:')) return key.slice(3);
+      if (key.startsWith('pr-')) return key.slice(3);
+      return null;
+    }
+    case 'thread': {
+      if (key.startsWith('thread-')) return formatThreadPreview(key.slice(7));
+      if (key.startsWith('thread:')) return formatThreadPreview(key.slice(7));
+      return null;
+    }
+    case 'repo': {
+      // F141 real format: "repo-owner/repo#pr-42" or "repo:owner/name"
+      if (key.startsWith('repo-')) return key.slice(5);
+      if (key.startsWith('repo:')) return key.slice(5);
+      return null;
+    }
+    case 'issue': {
+      // F202 Phase 2D: issue tracking uses `issue:owner/repo#N` format
+      if (key.startsWith('issue:')) return key.slice(6);
+      return null;
+    }
+    case 'external': {
+      return key;
+    }
+    default:
+      return null;
+  }
+}
+
+function formatThreadPreview(id: string): string {
+  return id ? `Thread ${id.slice(0, 8)}…` : 'Thread';
+}
+
+function isHoldBallReminderDef(def: DynamicTaskDef): boolean {
+  return def.id.startsWith('hold-ball-') && def.templateId === 'reminder' && def.createdBy.startsWith('hold-ball:');
+}
+
+function readHoldBallCatId(def: DynamicTaskDef): string | null {
+  const catId = def.createdBy.slice('hold-ball:'.length);
+  return catId.length > 0 ? catId : null;
+}
+
+function readHoldLifecycleStatus(def: DynamicTaskDef): string | null {
+  const lifecycle = def.params.holdLifecycle;
+  if (typeof lifecycle !== 'object' || lifecycle === null || Array.isArray(lifecycle)) return null;
+  const status = (lifecycle as Record<string, unknown>).status;
+  return typeof status === 'string' ? status : null;
+}
+
+function isSuppressedHoldWakeDef(def: DynamicTaskDef): boolean {
+  if (!isHoldBallReminderDef(def)) return false;
+  if (!def.enabled) return true;
+  const status = readHoldLifecycleStatus(def);
+  return status !== null && status !== 'active';
+}
+
+function isRetiredHoldStillEnabled(def: DynamicTaskDef): boolean {
+  return isHoldBallReminderDef(def) && def.enabled && readHoldLifecycleStatus(def) === 'retired_by_event';
+}
+
+function readManagedCommandWakeState(def: DynamicTaskDef): string | null {
+  if (!isHoldBallReminderDef(def)) return null;
+  const lifecycle = def.params.holdLifecycle;
+  if (typeof lifecycle !== 'object' || lifecycle === null || Array.isArray(lifecycle)) return null;
+  const record = lifecycle as Record<string, unknown>;
+  if (record.mode !== 'wake_when') return null;
+  const command = record.managedCommand;
+  if (typeof command !== 'object' || command === null || Array.isArray(command)) return null;
+  const state = (command as Record<string, unknown>).state;
+  return typeof state === 'string' ? state : null;
+}
+
+type AnyTaskSpec = TaskSpec_P1<unknown>;
+
+export type OnceCancellationReservationResult =
+  | { outcome: 'reserved'; token: number }
+  | { outcome: 'execution_started' | 'cancellation_pending' | 'not_found' };
+
+export type TaskExecutionAdmissionOutcome = 'executed' | 'cancellation_pending';
+
+export class TaskRunnerV2 {
+  private tasks: AnyTaskSpec[] = [];
+  private timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private running = new Map<string, boolean>();
+  private tickCounts = new Map<string, number>();
+  private lastRunAt = new Map<string, number | null>();
+  /**
+   * F167 verdict 2026-05-29: epoch-ms of the most recent cron slot already fired
+   * per task. Used by scheduleCronTick() to skip past slots whose tick was already
+   * triggered — prevents the boundary race where setTimeout drift fires the same
+   * cron slot twice via the `.finally` reschedule path.
+   */
+  private cronSlotFired = new Map<string, number>();
+  private cronNextSlots = new Map<string, number>();
+  private cronWatchdogTimer: ReturnType<typeof setInterval> | null = null;
+  /** Phase 3A: track dynamic task IDs → DynamicTaskDef.id mapping */
+  private dynamicTaskIds = new Map<string, string>();
+  /** True after start() has been called — used to auto-schedule late-registered tasks */
+  private started = false;
+  private readonly logger: TaskRunnerV2Options['logger'];
+  private readonly ledger: RunLedger;
+  private actorResolver: TaskRunnerV2Options['actorResolver'];
+  private globalControlStore: TaskRunnerV2Options['globalControlStore'];
+  private emissionStore: TaskRunnerV2Options['emissionStore'];
+  private deliver: TaskRunnerV2Options['deliver'];
+  private fetchContent: TaskRunnerV2Options['fetchContent'];
+  private invokeTrigger: TaskRunnerV2Options['invokeTrigger'];
+  private ballCustody: TaskRunnerV2Options['ballCustody'];
+  private notifyLifecycle: TaskRunnerV2Options['notifyLifecycle'];
+  private dynamicTaskStore: TaskRunnerV2Options['dynamicTaskStore'];
+  private isThreadBusy: TaskRunnerV2Options['isThreadBusy'];
+  private managedCommandWakeRecovery?: ((taskId: string) => Promise<'missing' | 'pending' | 'recovered'>) | undefined;
+  /** F167 Phase M: per-task consecutive defer counter (reset on fire) */
+  private deferCounts = new Map<string, number>();
+  private readonly onStaleWakeSuppressed: TaskRunnerV2Options['onStaleWakeSuppressed'];
+  private readonly onHoldExpiredAfterSatisfied: TaskRunnerV2Options['onHoldExpiredAfterSatisfied'];
+  /**
+   * F280: linearization fence between a due one-shot and durable user cancellation.
+   * A reservation is transient runtime state, not terminal truth; the durable event
+   * still commits before unregister removes the execution projection.
+   */
+  private onceCancellationReservations = new Map<string, number>();
+  private onceCancellationDeferredTicks = new Set<string>();
+  private nextOnceCancellationToken = 1;
+
+  /** Max safe setTimeout delay — Node clamps values above 2^31-1 ms to ~1ms */
+  private static readonly MAX_TIMER_DELAY = 2_147_483_647;
+  private static readonly CRON_WATCHDOG_INTERVAL_MS = 60_000;
+  private static readonly CRON_LATE_THRESHOLD_MS = 5_000;
+
+  constructor(opts: TaskRunnerV2Options) {
+    this.logger = opts.logger;
+    this.ledger = opts.ledger;
+    this.actorResolver = opts.actorResolver;
+    this.globalControlStore = opts.globalControlStore;
+    this.emissionStore = opts.emissionStore;
+    this.deliver = opts.deliver;
+    this.fetchContent = opts.fetchContent;
+    this.invokeTrigger = opts.invokeTrigger;
+    this.ballCustody = opts.ballCustody;
+    this.notifyLifecycle = opts.notifyLifecycle;
+    this.dynamicTaskStore = opts.dynamicTaskStore;
+    this.isThreadBusy = opts.isThreadBusy;
+    this.onStaleWakeSuppressed = opts.onStaleWakeSuppressed;
+    this.onHoldExpiredAfterSatisfied = opts.onHoldExpiredAfterSatisfied;
+  }
+
+  /** Late-bind invokeTrigger (constructed after TaskRunnerV2 in boot sequence) */
+  setInvokeTrigger(trigger: ScheduleInvokeTrigger): void {
+    this.invokeTrigger = trigger;
+  }
+
+  /** F167 Phase M: late-bind busy checker (invocationTracker/queueProcessor built after runner in boot) */
+  setBusyChecker(fn: (threadId: string) => boolean): void {
+    this.isThreadBusy = fn;
+  }
+
+  /** #415: Late-bind dynamicTaskStore (constructed after TaskRunnerV2 in boot sequence) */
+  setDynamicTaskStore(store: DynamicTaskStorePort): void {
+    this.dynamicTaskStore = store;
+  }
+
+  setManagedCommandWakeRecovery(recovery: (taskId: string) => Promise<'missing' | 'pending' | 'recovered'>): void {
+    this.managedCommandWakeRecovery = recovery;
+  }
+
+  register(task: AnyTaskSpec): void {
+    if (this.tasks.some((t) => t.id === task.id)) {
+      throw new Error(`TaskRunnerV2: duplicate task id "${task.id}"`);
+    }
+    this.tasks.push(task);
+  }
+
+  /** Phase 3A: register a dynamic task and track its def ID */
+  registerDynamic(task: AnyTaskSpec, dynamicDefId: string): void {
+    this.register(task);
+    this.dynamicTaskIds.set(task.id, dynamicDefId);
+    // If runner is already started, schedule timer immediately — but defer first tick
+    // so that user-registered tasks don't fire at t=0 (bug: "注册上就出触发了")
+    if (this.started) {
+      this.scheduleTask(task, /* deferFirstTick */ true);
+    }
+  }
+
+  /**
+   * F202 Phase 2: Register a builtin task that may arrive after start() (e.g., plugin schedule activation).
+   * Unlike registerDynamic, this does NOT mark the task in dynamicTaskIds, so it reports
+   * as source: 'builtin' and won't be targeted by SchedulePanel's dynamic PATCH/DELETE.
+   */
+  registerPostStart(task: AnyTaskSpec): void {
+    this.register(task);
+    if (this.started) {
+      this.scheduleTask(task, /* deferFirstTick */ true);
+    }
+  }
+
+  /** Phase 3A: unregister a task by spec ID (stops timer if running) */
+  unregister(taskId: string): boolean {
+    const idx = this.tasks.findIndex((t) => t.id === taskId);
+    if (idx === -1) return false;
+    this.tasks.splice(idx, 1);
+    const timer = this.timers.get(taskId);
+    if (timer) {
+      clearTimeout(timer);
+      this.timers.delete(taskId);
+    }
+    this.running.delete(taskId);
+    this.tickCounts.delete(taskId);
+    this.lastRunAt.delete(taskId);
+    this.cronSlotFired.delete(taskId);
+    this.cronNextSlots.delete(taskId);
+    this.dynamicTaskIds.delete(taskId);
+    this.onceCancellationReservations.delete(taskId);
+    this.onceCancellationDeferredTicks.delete(taskId);
+    return true;
+  }
+
+  /**
+   * Reserve a once-task for durable cancellation before the commit starts.
+   * JavaScript runs the timer guard and the `running=true` transition in one
+   * synchronous turn, so exactly one side can win this reservation boundary.
+   */
+  reserveOnceCancellation(taskId: string): OnceCancellationReservationResult {
+    const task = this.tasks.find((candidate) => candidate.id === taskId);
+    if (!task || task.trigger.type !== 'once') return { outcome: 'not_found' };
+    if (this.running.get(taskId) === true) return { outcome: 'execution_started' };
+    if (this.onceCancellationReservations.has(taskId)) return { outcome: 'cancellation_pending' };
+    const token = this.nextOnceCancellationToken++;
+    this.onceCancellationReservations.set(taskId, token);
+    return { outcome: 'reserved', token };
+  }
+
+  /** Release a failed persistence attempt and re-arm a timer that became due while fenced. */
+  releaseOnceCancellation(taskId: string, token: number): boolean {
+    if (this.onceCancellationReservations.get(taskId) !== token) return false;
+    this.onceCancellationReservations.delete(taskId);
+    if (!this.onceCancellationDeferredTicks.delete(taskId)) return true;
+    const task = this.tasks.find((candidate) => candidate.id === taskId);
+    if (!task || task.trigger.type !== 'once' || !this.started) return true;
+    const timer = this.timers.get(taskId);
+    if (timer) clearTimeout(timer);
+    this.timers.delete(taskId);
+    this.scheduleOnceTick(task);
+    return true;
+  }
+
+  private deferOnceTickForCancellation(taskId: string): boolean {
+    if (!this.onceCancellationReservations.has(taskId)) return false;
+    this.onceCancellationDeferredTicks.add(taskId);
+    this.logger.info(`[scheduler] ${taskId}: due one-shot held behind F280 cancellation reservation`);
+    return true;
+  }
+
+  private suppressRetiredHoldWake(taskId: string): boolean {
+    const def = this.getSuppressedHoldWakeDef(taskId);
+    if (!def) return false;
+    this.unregister(taskId);
+    this.onStaleWakeSuppressed?.();
+    if (isRetiredHoldStillEnabled(def)) this.onHoldExpiredAfterSatisfied?.(def);
+    this.logger.info(`[scheduler] ${taskId}: suppressed retired hold wake before execution`);
+    return true;
+  }
+
+  /** Phase 3A: hydrate dynamic tasks from persistent store (AC-G3) */
+  hydrateDynamic(store: DynamicTaskStorePort, templateGetter: { get: (id: string) => TaskTemplate | null }): number {
+    const defs = store.getAll().filter((d) => d.enabled);
+    let loaded = 0;
+    for (const def of defs) {
+      const managedCommandState = readManagedCommandWakeState(def);
+      if (managedCommandState !== null && managedCommandState !== 'command_running') continue;
+      // #415: once tasks with past fireAt → missed window, cancel + notify + retire
+      if (def.trigger.type === 'once' && def.trigger.fireAt < Date.now() && managedCommandState === null) {
+        this.handleMissedOnceTask(def, store);
+        continue;
+      }
+
+      const template = templateGetter.get(def.templateId);
+      if (!template) {
+        this.logger.error(`[scheduler] hydrate: unknown template "${def.templateId}" for def ${def.id}`);
+        continue;
+      }
+      const spec = template.createSpec(def.id, {
+        trigger: def.trigger,
+        params: def.params,
+        deliveryThreadId: def.deliveryThreadId,
+      });
+      // Override display with persisted display
+      spec.display = def.display;
+      try {
+        this.registerDynamic(spec, def.id);
+        loaded++;
+      } catch {
+        // Duplicate — skip
+      }
+    }
+    return loaded;
+  }
+
+  start(): void {
+    this.started = true;
+    for (const task of this.tasks) {
+      this.scheduleTask(task);
+    }
+    this.ensureCronWatchdog();
+  }
+
+  private ensureCronWatchdog(): void {
+    if (this.cronWatchdogTimer) return;
+    const timer = setInterval(() => {
+      this.checkCronMisfires().catch((err) => {
+        this.logger.error('[scheduler] cron watchdog failed', err);
+      });
+    }, TaskRunnerV2.CRON_WATCHDOG_INTERVAL_MS);
+    if (typeof timer === 'object' && 'unref' in timer) timer.unref();
+    this.cronWatchdogTimer = timer;
+  }
+
+  /**
+   * Watchdog path for host sleep/wake and dropped timer callbacks. It scans the
+   * wall-clock cron grid and fires at most one compensating run for each due
+   * task. Public for test harnesses; production calls it from the watchdog timer.
+   */
+  async checkCronMisfires(now = Date.now()): Promise<void> {
+    const due: Promise<void>[] = [];
+    for (const task of this.tasks) {
+      if (task.trigger.type !== 'cron') continue;
+      const nextSlotMs = this.cronNextSlots.get(task.id);
+      if (nextSlotMs === undefined || nextSlotMs > now) continue;
+      const lastFired = this.cronSlotFired.get(task.id);
+      if (lastFired !== undefined && nextSlotMs <= lastFired) continue;
+      due.push(this.fireCronSlot(task, nextSlotMs));
+    }
+    await Promise.all(due);
+  }
+
+  /**
+   * Initialize tracking state and set up timer for a single task.
+   * @param deferFirstTick - when true, skip the immediate first tick (for live-registered dynamic tasks)
+   */
+  private scheduleTask(task: AnyTaskSpec, deferFirstTick = false): void {
+    if (this.timers.has(task.id)) return;
+    this.running.set(task.id, false);
+    this.tickCounts.set(task.id, 0);
+    this.lastRunAt.set(task.id, null);
+
+    if (task.trigger.type === 'cron') {
+      this.scheduleCronTick(task);
+    } else if (task.trigger.type === 'once') {
+      this.scheduleOnceTick(task);
+    } else {
+      const runTick = (): void => {
+        // Guard: skip if task was unregistered before tick fires (防幽灵执行)
+        if (!this.timers.has(task.id)) return;
+        this.executePipeline(task).catch((err) => {
+          this.logger.error(`[scheduler] ${task.id}: pipeline error`, err);
+        });
+      };
+      if (!deferFirstTick) {
+        // Boot: fire first tick immediately for pollers that need to check pending work
+        setTimeout(runTick, 0);
+      }
+      const timer = setInterval(runTick, task.trigger.ms);
+      if (typeof timer === 'object' && 'unref' in timer) timer.unref();
+      this.timers.set(task.id, timer);
+      this.logger.info(`[scheduler] ${task.id}: registered (profile=${task.profile}, interval=${task.trigger.ms}ms)`);
+    }
+  }
+
+  /** Schedule next cron tick via setTimeout chain */
+  private scheduleCronTick(task: AnyTaskSpec): void {
+    if (!this.started) return;
+    if (task.trigger.type !== 'cron') return;
+    // F167 fix (boundary-race guard): compute the next slot strictly after the
+    // last slot we already fired. Without this, when setTimeout drifts a few
+    // ms before its target cron time and executePipeline returns quickly, the
+    // `.finally` reschedule below can recompute the same slot (Date.now() is
+    // still before it) and fire it a second time. Marking the slot as fired
+    // synchronously inside the setTimeout callback below closes the race.
+    const lastFired = this.cronSlotFired.get(task.id);
+    let nextSlotMs: number;
+    try {
+      nextSlotMs = computeNextCronSlot(task.trigger.expression, task.trigger.timezone, Date.now(), lastFired);
+    } catch (err) {
+      this.logger.error(`[scheduler] ${task.id}: cron expression invalid`, err);
+      return;
+    }
+    const ms = Math.max(1, nextSlotMs - Date.now());
+    this.cronNextSlots.set(task.id, nextSlotMs);
+    const existingTimer = this.timers.get(task.id);
+    if (existingTimer) clearTimeout(existingTimer);
+    // #605: chunk long delays to avoid Node setTimeout 32-bit overflow
+    if (ms > TaskRunnerV2.MAX_TIMER_DELAY) {
+      const timer = setTimeout(() => {
+        if (this.timers.has(task.id)) this.scheduleCronTick(task);
+      }, TaskRunnerV2.MAX_TIMER_DELAY);
+      if (typeof timer === 'object' && 'unref' in timer) timer.unref();
+      this.timers.set(task.id, timer);
+      this.logger.info(
+        `[scheduler] ${task.id}: cron delay ${ms}ms exceeds safe limit, chunking (next check in ${TaskRunnerV2.MAX_TIMER_DELAY}ms)`,
+      );
+      return;
+    }
+    const timer = setTimeout(() => {
+      this.fireCronSlot(task, nextSlotMs).catch((err) => {
+        this.logger.error(`[scheduler] ${task.id}: pipeline error`, err);
+      });
+    }, ms);
+    if (typeof timer === 'object' && 'unref' in timer) timer.unref();
+    this.timers.set(task.id, timer);
+    this.logger.info(
+      `[scheduler] ${task.id}: registered (profile=${task.profile}, cron="${task.trigger.expression}", next in ${ms}ms)`,
+    );
+  }
+
+  private async fireCronSlot(task: AnyTaskSpec, scheduledSlotMs: number): Promise<void> {
+    if (task.trigger.type !== 'cron') return;
+    if (!this.tasks.some((t) => t.id === task.id)) return;
+    const lastFired = this.cronSlotFired.get(task.id);
+    if (lastFired !== undefined && scheduledSlotMs <= lastFired) {
+      this.scheduleCronTick(task);
+      return;
+    }
+
+    // F167 boundary-race guard + F245 sleep/wake contract: mark the expected
+    // slot fired before async work so timer/watchdog races cannot duplicate it.
+    this.cronSlotFired.set(task.id, scheduledSlotMs);
+    const firedMs = Date.now();
+    const latenessMs = Math.max(0, firedMs - scheduledSlotMs);
+    const missedSlots = countAdditionalDueCronSlots(
+      task.trigger.expression,
+      task.trigger.timezone,
+      scheduledSlotMs,
+      firedMs,
+    );
+    const schedule: ScheduleRunTiming = {
+      triggerKind: 'cron',
+      scheduledAt: new Date(scheduledSlotMs).toISOString(),
+      firedAt: new Date(firedMs).toISOString(),
+      latenessMs,
+      missedSlots,
+      late: missedSlots > 0 || latenessMs >= TaskRunnerV2.CRON_LATE_THRESHOLD_MS,
+      misfirePolicy: 'merge_late_one',
+    };
+
+    try {
+      await this.executePipeline(task, false, schedule);
+    } catch (err) {
+      this.logger.error(`[scheduler] ${task.id}: pipeline error`, err);
+    } finally {
+      if (this.started && this.tasks.some((t) => t.id === task.id)) {
+        this.scheduleCronTick(task);
+      }
+    }
+  }
+
+  /** #415: Schedule a one-shot task — fires once at fireAt, then auto-retires */
+  private scheduleOnceTick(task: AnyTaskSpec): void {
+    if (task.trigger.type !== 'once') return;
+    const remaining = Math.max(0, task.trigger.fireAt - Date.now());
+    // Node setTimeout overflows at 2^31-1 ms — chunk long delays into safe steps
+    if (remaining > TaskRunnerV2.MAX_TIMER_DELAY) {
+      const timer = setTimeout(() => {
+        if (this.timers.has(task.id)) this.scheduleOnceTick(task);
+      }, TaskRunnerV2.MAX_TIMER_DELAY);
+      if (typeof timer === 'object' && 'unref' in timer) timer.unref();
+      this.timers.set(task.id, timer);
+      return;
+    }
+    const timer = setTimeout(() => {
+      // Guard: skip if task was unregistered before timeout fires
+      if (!this.timers.has(task.id)) return;
+      if (this.deferOnceTickForCancellation(task.id)) return;
+      if (this.suppressRetiredHoldWake(task.id)) return;
+      // F167 Phase M: pre-fire defer — if the target thread is busy at fire time,
+      // re-arm with a fresh fireAt instead of executing (avoids stale-wake "history
+      // replay" while the actor is mid-work). This happens PRE-FIRE (codex insight:
+      // execute is too late — it delivers-or-fails then retires via .finally). The
+      // busy signal is the scheduler's own mechanical occupancy check (KD-27 safe).
+      const fp = task.firePolicy;
+      if (fp?.deferWhileThreadBusy === true && task.trigger.type === 'once' && this.isThreadBusy?.(fp.threadId) === true) {
+        const deferred = this.deferCounts.get(task.id) ?? 0;
+        const maxDefers = fp.maxDefers ?? 10;
+        if (deferred < maxDefers) {
+          this.deferCounts.set(task.id, deferred + 1);
+          task.trigger.fireAt = Date.now() + (fp.deferIntervalMs ?? 30_000);
+          // persist re-armed fireAt so a restart mid-defer doesn't read a stale (missed) window
+          this.dynamicTaskStore?.updateTrigger(task.id, task.trigger);
+          this.logger.info(
+            `[scheduler] ${task.id}: pre-fire defer (thread ${fp.threadId} busy, ${deferred + 1}/${maxDefers})`,
+          );
+          this.scheduleOnceTick(task); // re-arm with new fireAt — no execute, no deliver, no retire
+          return;
+        }
+        this.logger.info(`[scheduler] ${task.id}: maxDefers (${maxDefers}) reached → force-fire despite busy thread`);
+      }
+      this.deferCounts.delete(task.id); // reset defer counter on actual fire
+      this.executePipeline(task)
+        .catch((err) => {
+          this.logger.error(`[scheduler] ${task.id}: pipeline error`, err);
+        })
+        .finally(() => {
+          // Check ledger to distinguish governance skip from actual execution/other skips
+          const entries = this.ledger.query(task.id, 1);
+          const lastOutcome = entries[0]?.outcome;
+          const isGovernanceSkip = lastOutcome === 'SKIP_GLOBAL_PAUSE' || lastOutcome === 'SKIP_TASK_OVERRIDE';
+          if (isGovernanceSkip) {
+            this.logger.info(`[scheduler] ${task.id}: once task governance-skipped, retrying in 30s`);
+            const retryTimer = setTimeout(() => {
+              if (!this.started || !this.tasks.some((t) => t.id === task.id)) return;
+              this.scheduleOnceTick(task);
+            }, 30_000);
+            if (typeof retryTimer === 'object' && 'unref' in retryTimer) retryTimer.unref();
+            this.timers.set(task.id, retryTimer);
+          } else {
+            this.retireOnceTask(task.id);
+          }
+        });
+    }, remaining);
+    if (typeof timer === 'object' && 'unref' in timer) timer.unref();
+    this.timers.set(task.id, timer);
+    this.logger.info(
+      `[scheduler] ${task.id}: registered (profile=${task.profile}, once, fireAt=${new Date(task.trigger.fireAt).toISOString()}, delay=${remaining}ms)`,
+    );
+  }
+
+  /** #415: Remove a once-task from runtime + persistent store after execution */
+  private retireOnceTask(taskId: string): void {
+    const def = this.dynamicTaskStore?.getById(taskId);
+    if (def !== null && def !== undefined && readManagedCommandWakeState(def) !== null) {
+      this.unregister(taskId);
+      this.logger.info(`[scheduler] ${taskId}: managed-command wake handed to durable recovery`);
+      return;
+    }
+    // Use taskId directly — for dynamic tasks, taskId === dynDefId
+    if (this.dynamicTaskStore) {
+      this.dynamicTaskStore.remove(taskId);
+    }
+    this.unregister(taskId);
+    this.logger.info(`[scheduler] ${taskId}: retired (once task completed)`);
+  }
+
+  /** #415: Handle once-task that missed its execution window (hydrated after restart) */
+  private handleMissedOnceTask(def: DynamicTaskDef, store: DynamicTaskStorePort): void {
+    const fireAt = def.trigger.type === 'once' ? def.trigger.fireAt : 0;
+    const fireAtIso = new Date(fireAt).toISOString();
+    this.logger.info(`[scheduler] ${def.id}: once task missed window (fireAt=${fireAtIso}), retiring`);
+
+    // Record in ledger for audit trail
+    this.ledger.record({
+      task_id: def.id,
+      subject_key: def.id,
+      outcome: 'SKIP_MISSED_WINDOW',
+      signal_summary: `Execution window missed: fireAt=${fireAtIso}`,
+      duration_ms: 0,
+      started_at: Date.now(),
+      assigned_cat_id: null,
+      error_summary: null,
+    });
+
+    if (def.deliveryThreadId !== null && isHoldBallReminderDef(def)) {
+      const catId = readHoldBallCatId(def);
+      if (catId !== null) {
+        this.ballCustody
+          ?.record(buildHoldExpiredEvent({ threadId: def.deliveryThreadId, catId, fireAt, at: Date.now() }))
+          .catch((err) => this.logger.error(`[scheduler] ${def.id}: failed to record missed hold expiry`, err));
+      }
+    }
+
+    // Notify user ephemerally so admin receipts don't pollute thread history.
+    if (def.deliveryThreadId !== null && this.notifyLifecycle) {
+      const eventLabel = def.display?.label ?? def.templateId;
+      this.notifyLifecycle({
+        threadId: def.deliveryThreadId,
+        userId: ((def.params as Record<string, unknown>).triggerUserId as string) ?? 'system',
+        toast: {
+          type: 'error',
+          title: '定时任务错过执行窗口',
+          message: `「${eventLabel}」原定 ${fireAtIso} 执行，服务当时未运行，任务已自动取消。`,
+          duration: SCHEDULER_TOAST_DURATION_MS.error,
+          lifecycleEvent: 'missed_window',
+        },
+      });
+    }
+
+    // Remove from persistent store
+    store.remove(def.id);
+  }
+
+  private getSuppressedHoldWakeDef(taskId: string): DynamicTaskDef | null {
+    const def = this.dynamicTaskStore?.getById(taskId);
+    return def !== null && def !== undefined && isSuppressedHoldWakeDef(def) ? def : null;
+  }
+
+  stop(): void {
+    for (const [id, timer] of this.timers) {
+      clearTimeout(timer);
+      clearInterval(timer);
+      this.logger.info(`[scheduler] ${id}: stopped`);
+    }
+    this.timers.clear();
+    this.onceCancellationReservations.clear();
+    this.onceCancellationDeferredTicks.clear();
+    this.cronSlotFired.clear();
+    this.cronNextSlots.clear();
+    if (this.cronWatchdogTimer) {
+      clearInterval(this.cronWatchdogTimer);
+      this.cronWatchdogTimer = null;
+    }
+    this.started = false;
+  }
+
+  async triggerNow(taskId: string, opts?: { manual?: boolean }): Promise<TaskExecutionAdmissionOutcome> {
+    const task = this.tasks.find((t) => t.id === taskId);
+    if (!task) throw new Error(`TaskRunnerV2: unknown task "${taskId}"`);
+    return await this.executePipeline(task, opts?.manual);
+  }
+
+  getRegisteredTasks(): string[] {
+    return this.tasks.map((t) => t.id);
+  }
+
+  /** Phase 2: Full task summaries for schedule panel API */
+  getTaskSummaries(): ScheduleTaskSummary[] {
+    const globalEnabled = this.globalControlStore ? this.globalControlStore.getGlobalEnabled() : true;
+    return this.tasks.map((task) => {
+      const lastRuns = this.ledger.query(task.id, 1);
+      const stats = this.ledger.stats(task.id);
+      const dynDefId = this.dynamicTaskIds.get(task.id);
+      const taskEnabled = task.enabled();
+      // AC-D1: effectiveEnabled reflects global pause + task override + task.enabled
+      let effectiveEnabled = taskEnabled;
+      if (effectiveEnabled && this.globalControlStore) {
+        if (!globalEnabled) effectiveEnabled = false;
+        const override = this.globalControlStore.getTaskOverride(task.id);
+        if (override && !override.enabled) effectiveEnabled = false;
+      }
+      const lastRun = lastRuns[0] ?? null;
+      return {
+        id: task.id,
+        profile: task.profile,
+        trigger: task.trigger,
+        enabled: taskEnabled,
+        effectiveEnabled,
+        ...(task.actor === undefined ? {} : { actor: task.actor }),
+        ...(task.context === undefined ? {} : { context: task.context }),
+        lastRun,
+        runStats: stats,
+        ...(task.display === undefined ? {} : { display: task.display }),
+        subjectPreview: computeSubjectPreview(task.display?.subjectKind, lastRun),
+        source: (dynDefId !== undefined ? 'dynamic' : 'builtin') as TaskSource,
+        ...(dynDefId === undefined ? {} : { dynamicTaskId: dynDefId }),
+        registered: true,
+      };
+    });
+  }
+
+  /** Expose ledger for route handlers */
+  getLedger(): RunLedger {
+    return this.ledger;
+  }
+
+  private async executePipeline(
+    task: AnyTaskSpec,
+    isManualTrigger?: boolean,
+    schedule?: ScheduleRunTiming,
+  ): Promise<TaskExecutionAdmissionOutcome> {
+    // F280: every execution entry reaches this admission check before the
+    // pipeline can synchronously claim `running`. Timer callbacks retain their
+    // earlier defer marker so a failed durable cancel can re-arm the due tick;
+    // manual/future entries are still fenced by this shared invariant.
+    if (task.trigger.type === 'once' && this.onceCancellationReservations.has(task.id)) {
+      this.logger.info(`[scheduler] ${task.id}: execution held behind F280 cancellation reservation`);
+      return 'cancellation_pending';
+    }
+
+    // #415 P2 fix: aggregate outcomes at run level, send one notification per tick
+    let hasDelivered = false;
+    let lastError: string | null = null;
+
+    await executeTaskPipeline({
+      task,
+      ledger: this.ledger,
+      logger: this.logger,
+      running: this.running,
+      tickCounts: this.tickCounts,
+      lastRunAt: this.lastRunAt,
+      actorResolver: this.actorResolver,
+      globalControlStore: this.globalControlStore,
+      emissionStore: this.emissionStore,
+      isManualTrigger,
+      schedule,
+      deliver: this.deliver,
+      fetchContent: this.fetchContent,
+      invokeTrigger: this.invokeTrigger,
+      ballCustody: this.ballCustody,
+      managedCommandWakeRecovery: this.managedCommandWakeRecovery,
+      onItemOutcome: (_taskId, _subjectKey, outcome, errorSummary) => {
+        if (outcome === 'RUN_DELIVERED') hasDelivered = true;
+        if (outcome === 'RUN_FAILED') lastError = errorSummary;
+      },
+    });
+
+    // Run-level notification: one message per tick, not per workItem
+    const dynDefId = this.dynamicTaskIds.get(task.id);
+    if (dynDefId !== undefined && this.dynamicTaskStore) {
+      const def = this.dynamicTaskStore.getById(dynDefId);
+      if (def !== null && def !== undefined) {
+        if (lastError !== null) notifyTaskFailed(this.notifyLifecycle, def, lastError);
+        else if (hasDelivered) notifyTaskSucceeded(this.notifyLifecycle, def);
+      }
+    }
+    return 'executed';
+  }
+}
