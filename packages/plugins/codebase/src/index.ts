@@ -104,8 +104,9 @@ export {
   schemaFor,
   indexStatus,
   iteratePages,
+  checkIndexCoverage,
 } from './query.ts'
-export type { QueryInput, IndexStatus } from './query.ts'
+export type { QueryInput, IndexStatus, IndexCoverageResult } from './query.ts'
 
 export { TOOLS, implementedTools, executeTool } from './tools.ts'
 export type {
@@ -118,3 +119,75 @@ export type {
   GetFileOutlineInput,
   GetCodeSnippetInput,
 } from './tools.ts'
+
+export { tracePath } from './trace.ts'
+export type { TraceOptions, TraceResult, TraceRow, TraceDirection } from './trace.ts'
+
+export { searchCode } from './search.ts'
+export type { SearchCodeOptions, SearchCodeResult, SearchCodeMatch } from './search.ts'
+
+export { getArchitecture } from './architecture.ts'
+export type {
+  ArchitectureOptions,
+  ArchitectureResult,
+  ArchitectureModule,
+  CrossModuleDependency,
+  HotFile,
+} from './architecture.ts'
+
+export { detectChanges } from './changes.ts'
+export type {
+  DetectChangesOptions,
+  DetectChangesResult,
+  ChangeGroup,
+} from './changes.ts'
+
+export { compareGraphs } from './compare.ts'
+export type {
+  CompareGraphsOptions,
+  CompareGraphsResult,
+  CompareNodeDelta,
+  CompareEdgeDelta,
+} from './compare.ts'
+
+export { listAdrs, getAdr, createAdr, nextAdrId, AdrNotFoundError } from './adr.ts'
+export type {
+  AdrAction,
+  AdrEntry,
+  AdrListResult,
+  AdrGetResult,
+  AdrCreateResult,
+  AdrOptions,
+} from './adr.ts'
+
+export { generateDocument } from './docgen.ts'
+export type {
+  DocTemplate,
+  DocgenOptions,
+  DocgenResult,
+  DocgenSection,
+} from './docgen.ts'
+
+export { codebaseToolCards, isCodebaseTool, READ_ONLY_TOOL_NAMES } from './mcp.ts'
+export type { McpTocCard } from './mcp.ts'
+
+export { TRACE_EDGE_TYPES } from './store.ts'
+
+export { queryCypher, tokenizeCypher, parseCypher, executeCypher, buildAdjacency, MAX_RESULT_ROWS, DEFAULT_EXEC_BUDGET, MAX_HOPS, ORDER_KEYS_MAX } from './cypher.ts'
+export type {
+  CypherQueryOptions, CypherResult, ExecOptions, CypherToken, CypherTokenType,
+  CypherQuery, CypherPattern, NodePattern, RelPattern, Condition, WhereExpr,
+  ReturnItem, OrderKey, PropFilter,
+} from './cypher.ts'
+
+export { missedGraph } from './missed.ts'
+export type { MissedResult, MissedDir, MissedFile } from './missed.ts'
+
+export { watchIndex, detectFileDelta } from './watcher.ts'
+export type { WatchOptions, WatchResult } from './watcher.ts'
+
+export { ingestTraces, queryTraces } from './traces.ts'
+export type { IngestOptions, IngestResult } from './traces.ts'
+
+export { dumpArtifact, restoreArtifact, removeArtifact } from './artifact.ts'
+export type { ArtifactReport, DumpOptions, RestoreOptions } from './artifact.ts'

@@ -15,8 +15,20 @@ import { indexRepository } from '../indexer.ts'
 import { INDEX_MODES } from '../indexer.ts'
 import type { IndexMode } from '../indexer.ts'
 import { deriveProjectName } from '../project.ts'
-import { ProjectNotFoundError, UsageError, indexStatus, schemaFor, searchNodes } from '../query.ts'
+import { ProjectNotFoundError, UsageError, indexStatus, schemaFor, searchNodes, checkIndexCoverage } from '../query.ts'
 import { SymbolNotFoundError, codeSnippet, fileOutline } from '../outline.ts'
+import { tracePath } from '../trace.ts'
+import { searchCode } from '../search.ts'
+import { getArchitecture } from '../architecture.ts'
+import { detectChanges } from '../changes.ts'
+import { compareGraphs } from '../compare.ts'
+import { createAdr, getAdr, listAdrs, nextAdrId } from '../adr.ts'
+import { generateDocument } from '../docgen.ts'
+import { queryCypher } from '../cypher.ts'
+import { missedGraph } from '../missed.ts'
+import { watchIndex } from '../watcher.ts'
+import { ingestTraces } from '../traces.ts'
+import { dumpArtifact, restoreArtifact } from '../artifact.ts'
 
 const USAGE = `ff_codebase — FlowForge 代码智能 CLI（@flowforge/plugin-codebase）
 
@@ -31,6 +43,19 @@ const USAGE = `ff_codebase — FlowForge 代码智能 CLI（@flowforge/plugin-co
   ff_codebase status  [--repo <path>] [--project <name>] [--db <path>]
   ff_codebase projects [--repo <path>] [--db <path>]
   ff_codebase delete  --project <name> [--repo <path>] [--db <path>]
+  ff_codebase trace   --repo <path> --qn <qualifiedName> [--direction callers|callees] [--max-depth <n>] [--project <name>]
+  ff_codebase grep    --repo <path> --pattern <text|regex> [--repo-path <root>] [--file-pattern <re>] [--limit <n>]
+  ff_codebase arch    --repo <path> [--depth <n>] [--project <name>]
+  ff_codebase coverage --repo <path> [--file-pattern <re>] [--project <name>]
+  ff_codebase changes --repo <path> [--project <name>]
+  ff_codebase compare --project-a <a> --project-b <b> [--repo <path>]
+  ff_codebase adr     --repo <path> --action list|next-id|get|create [--id <n>] [--title <t>] [--context <c>] [--decision <d>] [--status <s>] [--dir <path>]
+  ff_codebase docgen  --repo <path> --template spec|plan [--feature <name>] [--name <name>] [--out <path>]
+  ff_codebase cypher  --repo <path> --query "<MATCH ...>" [--max-rows <n>] [--budget <n>] [--project <name>]
+  ff_codebase missed  --repo <path> [--project <name>]
+  ff_codebase watch   --repo <path> [--project <name>]
+  ff_codebase ingest  --repo <path> --trace-id <id> --name <t> [--agent <a>] [--project <name>]
+  ff_codebase artifact --repo <path> --action dump|restore [--out <path>] [--in <path>] [--project <name>]
 
 默认 DB：<repo>/.flowforge/codebase.db（gitignore 内）。默认项目名：仓库目录名（安全化）。
 退出码：0 = 成功；1 = 项目不存在/无结果；2 = 用法错误。`
@@ -212,6 +237,187 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
         if (!store.deleteProject(project)) failViolation(`项目不存在：${project}`)
         emit({ deleted: project })
         return 0
+      })
+    }
+    case 'trace': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const qualifiedName = flagString(args.flags, 'qn') ?? failUsage('trace 需要 --qn <qualifiedName>')
+      const direction = flagString(args.flags, 'direction') as 'callers' | 'callees' | undefined
+      if (direction !== undefined && direction !== 'callers' && direction !== 'callees') failUsage('--direction 仅支持 callers|callees')
+      const maxDepth = flagNumber(args.flags, 'max-depth')
+      return withStore(args.flags, repo, store => {
+        emit(tracePath(store, {
+          project,
+          qualifiedName,
+          ...(direction === undefined ? {} : { direction }),
+          ...(maxDepth === undefined ? {} : { maxDepth }),
+        }))
+        return 0
+      })
+    }
+    case 'grep': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const pattern = flagString(args.flags, 'pattern') ?? failUsage('grep 需要 --pattern <text|regex>')
+      const repoPath = flagString(args.flags, 'repo-path') ?? repo
+      const filePattern = flagString(args.flags, 'file-pattern')
+      const limit = flagNumber(args.flags, 'limit')
+      return withStore(args.flags, repo, store => {
+        emit(searchCode(store, {
+          project,
+          pattern,
+          repoPath,
+          ...(filePattern === undefined ? {} : { filePattern }),
+          ...(limit === undefined ? {} : { limit }),
+        }))
+        return 0
+      })
+    }
+    case 'arch': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const depth = flagNumber(args.flags, 'depth')
+      return withStore(args.flags, repo, store => {
+        emit(getArchitecture(store, {
+          project,
+          ...(depth === undefined ? {} : { depth }),
+        }))
+        return 0
+      })
+    }
+    case 'coverage': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const filePattern = flagString(args.flags, 'file-pattern')
+      return withStore(args.flags, repo, store => {
+        emit(checkIndexCoverage(store, project, repo, filePattern))
+        return 0
+      })
+    }
+    case 'changes': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      return withStore(args.flags, repo, store => {
+        emit(detectChanges(store, { project, repoPath: repo }))
+        return 0
+      })
+    }
+    case 'compare': {
+      const projectA = flagString(args.flags, 'project-a') ?? failUsage('compare 需要 --project-a <name>')
+      const projectB = flagString(args.flags, 'project-b') ?? failUsage('compare 需要 --project-b <name>')
+      return withStore(args.flags, repo, store => {
+        emit(compareGraphs(store, { projectA, projectB }))
+        return 0
+      })
+    }
+    case 'adr': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const dirFlag = flagString(args.flags, 'dir')
+      const directory = dirFlag ?? resolve(repo, 'docs', 'decisions')
+      const action = flagString(args.flags, 'action') ?? failUsage('adr 需要 --action list|next-id|get|create')
+      return withStore(args.flags, repo, () => {
+        switch (action) {
+          case 'list':
+            emit(listAdrs(directory))
+            return 0
+          case 'next-id':
+            emit({ nextId: nextAdrId(directory) })
+            return 0
+          case 'get': {
+            const id = flagNumber(args.flags, 'id') ?? failUsage('adr get 需要 --id <n>')
+            try {
+              emit(getAdr(directory, id))
+            } catch (error) {
+              failViolation((error as Error).message)
+            }
+            return 0
+          }
+          case 'create': {
+            const result = createAdr({
+              directory,
+              action,
+              ...(flagNumber(args.flags, 'id') === undefined ? {} : { id: flagNumber(args.flags, 'id') as number }),
+              ...(flagString(args.flags, 'title') === undefined ? {} : { title: flagString(args.flags, 'title') as string }),
+              ...(flagString(args.flags, 'context') === undefined ? {} : { context: flagString(args.flags, 'context') as string }),
+              ...(flagString(args.flags, 'decision') === undefined ? {} : { decision: flagString(args.flags, 'decision') as string }),
+              ...(flagString(args.flags, 'status') === undefined ? {} : { status: flagString(args.flags, 'status') as string }),
+            })
+            emit(result)
+            return 0
+          }
+          default:
+            failUsage(`未知 adr action "${action}"`)
+        }
+        void project
+      })
+    }
+    case 'docgen': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const templateRaw = flagString(args.flags, 'template') ?? failUsage('docgen 需要 --template spec|plan')
+      const feature = flagString(args.flags, 'feature') ?? flagString(args.flags, 'name')
+      return withStore(args.flags, repo, store => {
+        emit(generateDocument(store, {
+          project,
+          template: templateRaw as 'spec' | 'plan',
+          ...(feature === undefined ? {} : { featureName: feature }),
+          ...(flagString(args.flags, 'out') === undefined ? {} : { outPath: flagString(args.flags, 'out') as string }),
+        }))
+        return 0
+      })
+    }
+    case 'cypher': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const query = flagString(args.flags, 'query') ?? failUsage('cypher 需要 --query "<MATCH ...>"')
+      const maxRows = flagNumber(args.flags, 'max-rows')
+      const budget = flagNumber(args.flags, 'budget')
+      return withStore(args.flags, repo, store => {
+        emit(queryCypher(store, {
+          project,
+          query,
+          ...(maxRows === undefined ? {} : { maxRows }),
+          ...(budget === undefined ? {} : { budget }),
+        }))
+        return 0
+      })
+    }
+    case 'missed': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      return withStore(args.flags, repo, store => {
+        emit(missedGraph(store, project, repo))
+        return 0
+      })
+    }
+    case 'watch': {
+      const project = flagString(args.flags, 'project')
+      return withStore(args.flags, repo, store => {
+        emit(watchIndex({ repoPath: repo, store, ...(project === undefined ? {} : { projectName: project }) }))
+        return 0
+      })
+    }
+    case 'ingest': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const traceId = flagString(args.flags, 'trace-id') ?? failUsage('ingest 需要 --trace-id <id>')
+      const name = flagString(args.flags, 'name') ?? failUsage('ingest 需要 --name <t>')
+      const agent = flagString(args.flags, 'agent')
+      return withStore(args.flags, repo, store => {
+        emit(ingestTraces(store, {
+          project,
+          traces: [{ project, trace_id: traceId, name, ...(agent === undefined ? {} : { agent }) }],
+        }))
+        return 0
+      })
+    }
+    case 'artifact': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const action = flagString(args.flags, 'action') ?? failUsage('artifact 需要 --action dump|restore')
+      return withStore(args.flags, repo, store => {
+        if (action === 'dump') {
+          const out = flagString(args.flags, 'out') ?? failUsage('artifact dump 需要 --out <path>')
+          emit(dumpArtifact({ store, project, outPath: out }))
+          return 0
+        }
+        if (action === 'restore') {
+          const inPath = flagString(args.flags, 'in') ?? failUsage('artifact restore 需要 --in <path>')
+          emit(restoreArtifact({ store, project, inPath }))
+          return 0
+        }
+        failUsage(`未知 artifact action "${action}"（dump|restore）`)
       })
     }
     case 'help':

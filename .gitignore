@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+# stray dependency-cache backup dirs (must never be committed)
+**/node_modules.bak/
 *.egg-info/
 *.egg
 dist/
