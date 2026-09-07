@@ -1,0 +1,53 @@
+name: TS CI
+
+# EP0-4 T0.4.3 — TS monorepo 硬拦截层（遵从度体系 L4）。
+# Python 遗留 ci.yml 保留至 EP4 双栈下线（决策点 D7），本文件只管 TS 侧：
+#   1. typecheck（tsc -b tsconfig.host.json）
+#   2. vitest（全量单测，含 plugin-dev 87 项契约测试）
+#   3. ff_doctor all（plugin-dev 流程遵从度：活跃实例计划 No-Placeholder 校验 + 状态一致性）
+# 退出码契约：0=合规 / 1=违规 / 2=用法错误（docs/rules/13-dev-process.md §5）。
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  ts:
+    name: TS (typecheck + vitest + ff_doctor)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node-version: ["22"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Set up pnpm (Corepack)
+        run: corepack enable && corepack prepare pnpm@11.7.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (tsc -b tsconfig.host.json)
+        run: pnpm typecheck
+
+      - name: Unit tests (vitest run)
+        run: pnpm test
+
+      - name: Process compliance (ff_doctor all)
+        run: node packages/plugins/dev/bin/ff_doctor.mjs all --repo .

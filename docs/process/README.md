@@ -37,6 +37,7 @@ requirement（需求） → design（设计） → plan（计划） → implemen
 ```
 docs/process/
 ├── README.md                  # 本文件：双平面说明 + 七阶段流程图 + 使用指引
+├── governance.md              # 存量治理台账（EP0-7 盘点基线 + 治理进度）
 ├── skills/                    # 14 份流程指令资产（Plane 1 核心）
 │   ├── using-plugin-dev.md             # ⑭ 流程插件入口（先读这个）
 │   ├── brainstorming.md               # ① 需求头脑风暴（requirement/design 阶段）
@@ -52,13 +53,31 @@ docs/process/
 │   ├── verification-before-completion.md # ⑩ 完成前验证（verify 阶段）
 │   ├── finishing-a-development-branch.md # ⑫ 完成开发分支（finish 阶段）
 │   └── writing-skills.md              # ⑬ 编写技能（元方法论，资产自身迭代）
+├── templates/                 # 4 类产物模板（design/plan/review/verification）
 ├── specs/                     # 设计文档产物（brainstorming 产物，YYYY-MM-DD-<topic>-design.md）
 ├── plans/                     # 实施计划产物（writing-plans 产物，YYYY-MM-DD-<feature>.md）
-├── reviews/                   # 审查记录产物
-└── verifications/             # 验证证据产物
+├── reviews/                   # 审查记录产物（两阶段审查，P1/P2/P3 分级）
+├── verifications/             # 验证证据产物（命令/exit code/输出摘要/耗时/时间戳）
+└── instances/                 # 流程实例状态（<name>.json，状态契约——跨工具/跨会话接续）
 ```
 
-> `specs/plans/reviews/verifications/` 四个产物目录随 EP0-2 文档模板批次正式启用；当前批次先落 `skills/`。
+## 3a. ff_ 命令族与状态契约（Plane 2 执行入口）
+
+四工作流模板（同一脊柱，门禁与产物期望不同）：`greenfield`（0→1）/ `feature`（标准）/ `change`（变更）/ `hotfix`（修复，verify 硬门禁永不豁免）。
+
+```sh
+node packages/plugins/dev/bin/ff_dev.mjs resume            # 接续简报（任何工具开工第一步）
+node packages/plugins/dev/bin/ff_dev.mjs init <name> --workflow feature|greenfield|change|hotfix
+node packages/plugins/dev/bin/ff_dev.mjs status [name]     # 实例状态（阶段/门禁/产物/工作流）
+node packages/plugins/dev/bin/ff_dev.mjs advance <name>    # 推进（三道硬门禁校验，拒绝即非零退出）
+node packages/plugins/dev/bin/ff_dev.mjs gate <name> <design|plan|verify> [--score N --evidence <path> --approver <who>]
+node packages/plugins/dev/bin/ff_dev.mjs evidence <name> --command "..." --exit 0 --summary "..."
+node packages/plugins/dev/bin/ff_doctor.mjs all            # 遵从度检查（CI ts-ci.yml 硬拦截项）
+```
+
+**状态契约**：实例状态落盘 `instances/<name>.json`（状态在文件不在会话）——flowforge 主导开发换智能体/换模型接续（场景 1）、外部 AI 工具主导开发接续（场景 2），均凭 `ff_dev resume` 从中断处无损继续。退出码契约：`0`=合规 / `1`=违规 / `2`=用法错误（CI 与脚本依赖）。
+
+规范铁律详见 `docs/rules/13-dev-process.md`；存量治理台账见 `governance.md`。
 
 ## 4. 阶段 ↔ 指令资产映射
 

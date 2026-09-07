@@ -40,6 +40,7 @@
 
 ## 六、与 AI 工具协作
 
+- **规则：** 文档交付与其他需求一样必须走 plugin-dev 七阶段工程化流程（`rules/13-dev-process.md` 铁律）：动手前执行 `ff_dev resume`（无实例则 `ff_dev init`），设计/计划/审查/验证产物落 `docs/process/{specs,plans,reviews,verifications}/`。静态分层（11-doc-layering）决定文档长什么样；七阶段流程决定先做什么后做什么——两者叠加使用。
 - **规则：** AI 工具动手前必须先读 `docs/rules/` 下规范与 `docs/prompts/` 下提示词模板；本仓库 `docs/` 只记录 flowforge 平台自身内容，与其他项目解耦。
 - **规则：** 涉及 Git 远程操作（commit/push/PR）一律走 `./mgr`，禁止 AI 直接调 `git push` 或 API 绕过规范检查（见根目录 `AGENTS.md`）。
 - **规则：** 提交前必须运行 lint 与测试（`refactor/04-code-standards.md` R20/R21）；文档改动同样纳入 `./mgr commit` 规范检查。

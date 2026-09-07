@@ -146,6 +146,9 @@
 
 ```
 开工前（必读）：
+  0. 流程实例挂接（rules/13-dev-process.md 铁律）：node packages/plugins/dev/bin/ff_dev.mjs resume
+     ——有活跃实例按接续简报继续；无实例则 ff_dev init <name> --workflow feature|greenfield|change|hotfix；
+     设计/计划产物落 docs/process/{specs,plans}/，门禁由 ff_dev gate 把守（CI ff_doctor 硬拦截）
   1. 重读本文件 §1-§5（规范优先级与裁决）
   2. 重读 00-overview.md（总览）+ 10-stage-map.md（功能矩阵勾选状态）
   3. 重读当前阶段 2X-*.md 任务清单 + 02-source-crosswalk.md 相关行
@@ -155,8 +158,10 @@
   6. 每完成一个能力：矩阵勾选（10-stage-map.md §3）+ crosswalk 状态更新
 收尾（强制，禁止搁置）：
   7. 跑 lint + typecheck + vitest（提交前必过；Python 旧版 pytest 回归全绿）
-  8. ./mgr commit "type(scope): 描述 [署名]"（或 ./mgr sync 一键提交+push+PR）
-  9. 更新记忆（新经验/新裁决写入本文件 §5 + 系统记忆）
+  8. 验证证据登记：ff_dev evidence <name> --command "..." --exit 0 --summary "..."
+     （verify→finish 硬门禁；T1-T9 测试铁律的证据化落点，见 docs/process/skills/⑩）
+  9. ./mgr commit "type(scope): 描述 [署名]"（或 ./mgr sync 一键提交+push+PR）
+  10. 更新记忆（新经验/新裁决写入本文件 §5 + 系统记忆）
 ```
 
 ## 7. 常见违规自查清单（提交前逐项确认）

@@ -21,10 +21,14 @@
 | 批次 | 内容 | DoD | 状态 |
 |---|---|---|---|
 | EP0-1 | 插件骨架（状态机/实例注册表/类型面）+ `docs/process/` 建立 + 14 份流程指令资产移植 | 状态机单测全绿；14 份资产入库 | 🟩 |
-| EP0-2 | 4 份文档模板（design/plan/review/verification）+ No-Placeholder 校验器 + 单测 | 校验器拦截 TBD/TODO/无代码块步骤 | ⬜ |
-| EP0-3 | CLI 命令面 `flowforge process *` + 门禁接线 + cordis 挂载 `ctx.forgeProcess` | CLI 端到端冒烟 + 门禁单测 | ⬜ |
-| EP0-4 | subagent 派发编排 + 两阶段审查（P1/P2/P3）+ verification 证据采集 | 真实小需求走完七阶段验收 | ⬜ |
-| EP0-5 | 规范回填（`docs/rules/13-dev-process.md` + AGENTS.md + 04-code-standards 联动）+ 流程切换声明 | 规范体系更新；此后所有批次走 forgeProcess | ⬜ |
+| EP0-2 | 4 份文档模板（design/plan/review/verification）+ No-Placeholder 校验器 + 单测 | 校验器拦截 TBD/TODO/无代码块步骤 | 🟩 |
+| EP0-3 | `ff_` CLI 命令族（operator 指令替换 `flowforge process *` 前缀）+ 四工作流模板 + 实例持久化 + 门禁接线 | CLI 端到端冒烟 + 门禁单测 | 🟩 |
+| EP0-4 | ff_doctor 遵从度四模式 + 入口三件套 + ts-ci.yml + subagent 派发编排（NullDispatcher 降级）+ 两阶段审查（P1/P2/P3）+ verification 证据采集 | 真实小需求走完七阶段验收（实例 `ep0-plugin-dev` 7/7 完结，`ff_doctor all` 合规） | 🟩 |
+| EP0-5 | 规范回填（`docs/rules/13-dev-process.md` + AGENTS.md 三件套 + 04-code-standards 联动）+ 流程切换声明 + 存量治理基线 | 规范体系更新；此后所有批次走 forgeProcess | 🟩 |
+
+> EP0 全批次完成（2026-09-07）。遗留接线项：`ctx.forgeProcess` cordis 挂载与 mgr 前置 `ff_doctor`（D5）
+> 随 harness/mgr 独立批次实施；存量文档/代码治理（T0.7.2/T0.7.3）按 D2 节奏并入 EP1-EP4（台账
+> `docs/process/governance.md`）。此后所有批次交付必须走 forgeProcess 七阶段流程（`docs/rules/13-dev-process.md` §13.7）。
 
 ### EP0-1 细化任务（T0.x.y，详见 `33-stage-ep0-plugin-dev.md`）
 
