@@ -13,6 +13,10 @@
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
+  "bin": {
+    "ff_dev": "bin/ff_dev.mjs",
+    "ff_doctor": "bin/ff_doctor.mjs"
+  },
   "exports": {
     ".": {
       "types": "./lib/types/index.d.ts",

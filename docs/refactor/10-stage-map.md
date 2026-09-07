@@ -70,16 +70,20 @@
 | P2 | 七阶段流程状态机（requirement→design→plan→implement→review→verify→finish，非法跳转拒绝 + 三道门禁 + 快照恢复） | superpowers | EP0-1 | ✅ |
 | P3 | 流程实例注册表（create/get/list + design/plan/review/verification 产物路径登记） | superpowers | EP0-1 | ✅ |
 | P4 | 14 份流程指令资产（`docs/process/skills/`，harness 无关文档资产层） | superpowers | EP0-1 | ✅ |
-| P5 | 4 份文档模板（design/plan/review/verification，`docs/process/templates/`） | superpowers | EP0-2 | ⬜ |
-| P6 | No-Placeholder plan 校验器（拦截 TBD/TODO/无代码块步骤） | superpowers | EP0-2 | ⬜ |
-| P7 | CLI 命令面 `flowforge process <new\|design\|plan\|implement\|review\|verify\|finish\|status>` | superpowers | EP0-3 | ⬜ |
-| P8 | cordis 服务挂载 `ctx.forgeProcess`（对齐 harness/boot 装配契约） | 我方插件化 | EP0-3 | ⬜ |
-| P9 | subagent 派发编排（对接 subagent-ff-sdk，每任务全新子代理） | superpowers | EP0-4 | ⬜ |
-| P10 | 两阶段审查（spec 合规 → 代码质量，P1/P2/P3 分级报告） | clowder 交叉 review | EP0-4 | ⬜ |
-| P11 | verification 证据采集（命令/exit code/输出摘要/时间戳入档） | superpowers | EP0-4 | ⬜ |
-| P12 | 规范回填（`docs/rules/13-dev-process.md` + AGENTS.md + 04-code-standards 联动） | 我方规范 | EP0-5 | ⬜ |
-| P13 | 端到端验收（真实小需求走完七阶段，产物齐备并 mgr PR 合入） | — | EP0-4/5 | ⬜ |
-| P14 | 流程切换声明（此后所有批次交付必须走 forgeProcess 流程） | — | EP0-5 | ⬜ |
+| P5 | 4 份文档模板（design/plan/review/verification，`docs/process/templates/`） | superpowers | EP0-2 | ✅ |
+| P6 | No-Placeholder plan 校验器（拦截 TBD/TODO/无代码块步骤） | superpowers | EP0-2 | ✅ |
+| P7 | `ff_` CLI 命令族（ff_dev 生命周期 + ff_doctor 遵从度；operator 指令前缀替换原 `flowforge process *`） | superpowers | EP0-3 | ✅ |
+| P8 | 四工作流模板（greenfield/feature/change/hotfix + DCP/TR 决策门 + fastpass 语义） | devforge | EP0-3 | ✅ |
+| P9 | subagent 派发编排（TaskDispatcher 注入式驱动，无宿主时 NullDispatcher 人工降级） | superpowers | EP0-4 | ✅ |
+| P10 | 两阶段审查（spec 合规 → 代码质量，P1/P2/P3 分级报告） | clowder 交叉 review | EP0-4 | ✅ |
+| P11 | verification 证据采集（命令/exit code/输出摘要/时间戳入档） | superpowers | EP0-4 | ✅ |
+| P12 | 规范回填（`docs/rules/13-dev-process.md` + AGENTS.md 三件套 + 04-code-standards 联动） | 我方规范 | EP0-5 | ✅ |
+| P13 | 端到端验收（真实小需求走完七阶段，产物齐备并 mgr PR 合入；实例 `ep0-plugin-dev` 7/7 完结） | — | EP0-4/5 | ✅ |
+| P14 | 流程切换声明（此后所有批次交付必须走 forgeProcess 流程，13-dev-process.md §13.7） | — | EP0-5 | ✅ |
+
+> EP0 全批次完成（2026-09-07，七批次详见 `33-stage-ep0-plugin-dev.md` 勾选清单）。
+> 遗留接线：`ctx.forgeProcess` cordis 挂载 + mgr 前置 `ff_doctor`（D5 裁决独立批次）；
+> 存量治理（文档 F-A-D-T 补全 / 无测试包补测）按 D2 节奏并入 EP1-EP4（`docs/process/governance.md`）。
 
 ### 3.1 上游框架参考侧（框架/插件）
 

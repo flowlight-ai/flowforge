@@ -109,6 +109,22 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 
 示例：`feat(api): 新增用户认证接口 [sherlock]`
 
+## 软件开发流程（@flowforge/plugin-dev，最高优先级）
+
+> 本仓库一切需求开发（新功能 / 变更 / Bug 修复 / 0→1 孵化）必须走 plugin-dev 七阶段工程化流程，
+> 与 Git 工作流同级强制。提示词不遵守没有关系——CI（`ts-ci.yml`）与 `ff_doctor` 会硬拦截。
+
+**任何 AI 工具动手写第一行代码前，先做两件事：**
+
+1. 读 `docs/process/README.md`（流程总览 + 方法论资产索引）；
+2. 在仓库根目录执行 `node packages/plugins/dev/bin/ff_dev.mjs resume`（以下简称 `ff_dev resume`）——
+   有活跃实例则按简报接续；无实例则 `ff_dev init <name> --workflow feature|greenfield|change|hotfix` 创建。
+
+七阶段脊柱（不允许跳过或倒退）：`requirement → design → plan → implement → review → verify → finish`；
+三道硬门禁（designApproved / planValidated / verificationEvidence）由 `ff_dev advance/gate/evidence` 把守，
+产物落 `docs/process/{specs,plans,reviews,verifications}/`，实例状态落 `docs/process/instances/<name>.json`
+（状态在文件不在会话——换工具/换模型/换会话均无损接续）。流程铁律详见 `docs/rules/13-dev-process.md`。
+
 ## 开发红线
 
 1. 禁止提交密钥/Token（一律环境变量注入）
@@ -131,9 +147,10 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 
 ```
 1. ./mgr pull                          # 拉取最新（保持在共享主干分支 master/main）
-2. ... 开发 ...                        # 始终在 master/main 上工作，不切私有本地分支
-3. ./mgr sync "feat(x): 描述 [id]" --body "PR描述"   # 一键：提交已暂存改动 + 固定远端分支 sync/<id> + PR（本地停留主干）
-4. 平台 Web 合入 PR
-5. ./mgr pull                          # 合入后拉回主干，保持本地 master/main 最新
-6. ./mgr merge-cross                   # 需要时跨平台同步
+2. ff_dev resume（或 init <name>）       # 接续/创建七阶段流程实例（plugin-dev，见上方流程节）
+3. ... 按七阶段推进（门禁命令推进，产物落 docs/process/）...
+4. ./mgr sync "feat(x): 描述 [id]" --body "PR描述"   # 一键：提交已暂存改动 + 固定远端分支 sync/<id> + PR（本地停留主干）
+5. 平台 Web 合入 PR
+6. ./mgr pull                          # 合入后拉回主干，保持本地 master/main 最新
+7. ./mgr merge-cross                   # 需要时跨平台同步
 ```
