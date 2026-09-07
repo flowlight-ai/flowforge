@@ -54,7 +54,7 @@
 
 | 序 | 任务 | 来源 | 预估批次 | 状态 |
 |---|---|---|---|---|
-| 1 | `mcp-server` 整包（工具治理全家 + 6 toolsets + protocol-server）⚠Q3 | B1 | 2 | ⬜ |
+| 1 | `mcp-server` 整包（工具治理全家 + 6 toolsets + protocol-server）⚠Q3 | B1 | 2 | 🟩（EP1-1a 治理框架本体 + registry + snapshot + protocol-server 落 `packages/mcp/mcp-server`，PR #163；EP1-1b 六 family 工具清单待领域层） |
 | 2 | `infrastructure/connectors` IM 框架本体 | B7 | 2 | ⬜ |
 | 3 | `chat/messaging` 域（envelope/ledger/snapshot + Redis）⚠Q6 | B4 | 1 | ⬜ |
 | 4 | `cats/signal-intake` 域（25+ 文件）⚠Q6 | B3 | 2 | ⬜ |

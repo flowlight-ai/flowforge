@@ -336,6 +336,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 | 序 | 任务 | 来源 | 预估批次 |
 |---|---|---|---|
 | 1 | `mcp-server` 整包（工具治理全家+6 toolsets+protocol-server） | B1 | 2 批次 |
+> **EP1-1a ✅**（2026-09-07，治理框架本体先行，独立自包含）：落 `packages/mcp/mcp-server`（@flowforge/mcp-server）——tool-governance-types/ts/registry/validation/snapshot 全家 + canonical-tool-registry + json-schema-to-zod（zod v4 适配）+ server-toolsets 装配机制（注入式，不硬编码 clowder 工具）+ refresh-loop（callback seam 注入化）+ protocol-server + protocol-engine/auth 全套 + protocol-tools。**46 契约测试全绿、包级 tsc exit 0、oxlint 0 告警**。依据 `docs/process/specs/2026-09-07-mcp-server-design.md`。**EP1-1b 待领域层**：collab/memory/signals/limb/audio/finance 六 family canonical 工具清单与 `callback-*` HTTP 代理 seam，依赖 EP4-3 cats/shared 承接后经注册注入暴露（禁引 @cat-cafe/* 依赖）。与 `10-stage-map.md` C43 同步。
 | 2 | `infrastructure/connectors` IM 框架本体 | B7 | 2 批次 |
 | 3 | `chat/messaging` 域（envelope/ledger/snapshot + Redis） | B4 | 1 批次 |
 | 4 | `cats/signal-intake` 域（25+ 文件） | B3 | 2 批次 |

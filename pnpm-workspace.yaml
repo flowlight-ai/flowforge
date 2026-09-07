@@ -2,6 +2,8 @@ packages:
   - vendor/*
   - packages/*/*
   - apps/*
+  # T8.1：顶层 Next.js 前端原地并入 workspace（web/ 目录不动，CI 分层见 .github/workflows/web-ci.yml）。
+  - web
   # The Landlock launcher keeps its native build and publication scripts
   # under native/landlock-run; entry + per-platform prebuilt packages live there.
   - native/landlock-run
