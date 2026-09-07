@@ -252,3 +252,66 @@ describe('EP-CB2 工具面 CLI 冒烟（trace/grep/arch/coverage）', () => {
     expect(result.out).toContain('index')
   })
 })
+
+describe('EP-CB3 CLI 冒烟（cypher/missed/watch/ingest/artifact）', () => {
+  beforeAll(() => {
+    const result = run(['index', '--repo', repo])
+    expect(result.status).toBe(0)
+  })
+
+  it('cypher runs a real single-node MATCH and returns mapped rows', () => {
+    const result = run(['cypher', '--repo', repo, '--query', 'MATCH (n:Function) RETURN n.name LIMIT 5'])
+    expect(result.status).toBe(0)
+    const payload = json<{ columns: string[]; rows: string[][] }>(result)
+    expect(payload.columns).toEqual(['n.name'])
+    expect(payload.rows.length).toBeGreaterThan(0)
+  })
+
+  it('cypher rejects a write clause with exit 2', () => {
+    const result = run(['cypher', '--repo', repo, '--query', 'CREATE (n) RETURN n'])
+    expect(result.status).toBe(2)
+    expect(result.err).toContain('Cypher')
+  })
+
+  it('missed reports zero unindexed discovered files for a full index', () => {
+    const result = run(['missed', '--repo', repo])
+    expect(result.status).toBe(0)
+    const payload = json<{ project: string; totalMissed: number; tree: unknown[] }>(result)
+    expect(payload.project).toBe('mini-repo')
+    expect(payload.totalMissed).toBe(0)
+  })
+
+  it('watch computes a full-reindex-free incremental pass', () => {
+    const result = run(['watch', '--repo', repo])
+    expect(result.status).toBe(0)
+    const payload = json<{ fullReindexRequired: boolean; modified: string[] }>(result)
+    expect(payload.fullReindexRequired).toBe(false)
+    expect(payload.modified).toContain('README.md')
+  })
+
+  it('ingest writes a trace and returns the ingested count', () => {
+    const result = run(['ingest', '--repo', repo, '--trace-id', 'cli-trace-1', '--name', 'smoke', '--agent', 'trae'])
+    expect(result.status).toBe(0)
+    const payload = json<{ project: string; ingested: number }>(result)
+    expect(payload.project).toBe('mini-repo')
+    expect(payload.ingested).toBe(1)
+  })
+
+  it('artifact dumps then restores a snapshot', () => {
+    const snap = join(workspace, 'snapshot.ffg')
+    const dump = run(['artifact', '--repo', repo, '--action', 'dump', '--out', snap])
+    expect(dump.status).toBe(0)
+    const report = json<{ format: string; nodeCount: number; path: string }>(dump)
+    expect(['gzip', 'zstd']).toContain(report.format)
+    expect(report.nodeCount).toBeGreaterThan(0)
+    const restore = run(['artifact', '--repo', repo, '--action', 'restore', '--in', report.path])
+    expect(restore.status).toBe(0)
+    expect(json<{ project: string }>(restore).project).toBe('mini-repo')
+  })
+
+  it('artifact rejects an unknown action with exit 2', () => {
+    const result = run(['artifact', '--repo', repo, '--action', 'bogus'])
+    expect(result.status).toBe(2)
+    expect(result.err).toContain('未知 artifact action')
+  })
+})

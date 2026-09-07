@@ -24,6 +24,11 @@ import { detectChanges } from '../changes.ts'
 import { compareGraphs } from '../compare.ts'
 import { createAdr, getAdr, listAdrs, nextAdrId } from '../adr.ts'
 import { generateDocument } from '../docgen.ts'
+import { queryCypher } from '../cypher.ts'
+import { missedGraph } from '../missed.ts'
+import { watchIndex } from '../watcher.ts'
+import { ingestTraces } from '../traces.ts'
+import { dumpArtifact, restoreArtifact } from '../artifact.ts'
 
 const USAGE = `ff_codebase — FlowForge 代码智能 CLI（@flowforge/plugin-codebase）
 
@@ -46,6 +51,11 @@ const USAGE = `ff_codebase — FlowForge 代码智能 CLI（@flowforge/plugin-co
   ff_codebase compare --project-a <a> --project-b <b> [--repo <path>]
   ff_codebase adr     --repo <path> --action list|next-id|get|create [--id <n>] [--title <t>] [--context <c>] [--decision <d>] [--status <s>] [--dir <path>]
   ff_codebase docgen  --repo <path> --template spec|plan [--feature <name>] [--name <name>] [--out <path>]
+  ff_codebase cypher  --repo <path> --query "<MATCH ...>" [--max-rows <n>] [--budget <n>] [--project <name>]
+  ff_codebase missed  --repo <path> [--project <name>]
+  ff_codebase watch   --repo <path> [--project <name>]
+  ff_codebase ingest  --repo <path> --trace-id <id> --name <t> [--agent <a>] [--project <name>]
+  ff_codebase artifact --repo <path> --action dump|restore [--out <path>] [--in <path>] [--project <name>]
 
 默认 DB：<repo>/.flowforge/codebase.db（gitignore 内）。默认项目名：仓库目录名（安全化）。
 退出码：0 = 成功；1 = 项目不存在/无结果；2 = 用法错误。`
@@ -349,6 +359,65 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
           ...(flagString(args.flags, 'out') === undefined ? {} : { outPath: flagString(args.flags, 'out') as string }),
         }))
         return 0
+      })
+    }
+    case 'cypher': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const query = flagString(args.flags, 'query') ?? failUsage('cypher 需要 --query "<MATCH ...>"')
+      const maxRows = flagNumber(args.flags, 'max-rows')
+      const budget = flagNumber(args.flags, 'budget')
+      return withStore(args.flags, repo, store => {
+        emit(queryCypher(store, {
+          project,
+          query,
+          ...(maxRows === undefined ? {} : { maxRows }),
+          ...(budget === undefined ? {} : { budget }),
+        }))
+        return 0
+      })
+    }
+    case 'missed': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      return withStore(args.flags, repo, store => {
+        emit(missedGraph(store, project, repo))
+        return 0
+      })
+    }
+    case 'watch': {
+      const project = flagString(args.flags, 'project')
+      return withStore(args.flags, repo, store => {
+        emit(watchIndex({ repoPath: repo, store, ...(project === undefined ? {} : { projectName: project }) }))
+        return 0
+      })
+    }
+    case 'ingest': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const traceId = flagString(args.flags, 'trace-id') ?? failUsage('ingest 需要 --trace-id <id>')
+      const name = flagString(args.flags, 'name') ?? failUsage('ingest 需要 --name <t>')
+      const agent = flagString(args.flags, 'agent')
+      return withStore(args.flags, repo, store => {
+        emit(ingestTraces(store, {
+          project,
+          traces: [{ project, trace_id: traceId, name, ...(agent === undefined ? {} : { agent }) }],
+        }))
+        return 0
+      })
+    }
+    case 'artifact': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const action = flagString(args.flags, 'action') ?? failUsage('artifact 需要 --action dump|restore')
+      return withStore(args.flags, repo, store => {
+        if (action === 'dump') {
+          const out = flagString(args.flags, 'out') ?? failUsage('artifact dump 需要 --out <path>')
+          emit(dumpArtifact({ store, project, outPath: out }))
+          return 0
+        }
+        if (action === 'restore') {
+          const inPath = flagString(args.flags, 'in') ?? failUsage('artifact restore 需要 --in <path>')
+          emit(restoreArtifact({ store, project, inPath }))
+          return 0
+        }
+        failUsage(`未知 artifact action "${action}"（dump|restore）`)
       })
     }
     case 'help':

@@ -26,6 +26,10 @@ import { getArchitecture } from './architecture.ts'
 import { detectChanges } from './changes.ts'
 import { compareGraphs } from './compare.ts'
 import { getAdr, listAdrs, createAdr, nextAdrId } from './adr.ts'
+import { queryCypher } from './cypher.ts'
+import type { CypherResult } from './cypher.ts'
+import { ingestTraces } from './traces.ts'
+import type { IngestResult } from './traces.ts'
 import type { ProjectInfo, SchemaOverview, StoreQueryResult } from './store.ts'
 import type { CodebaseStore } from './store.ts'
 
@@ -197,14 +201,14 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: 'ingest_traces',
-    description: 'Ingest agent execution traces into the graph for usage analytics.',
+    description: 'Ingest agent execution traces (trace_id/name/agent) into the project ledger; idempotent per trace_id.',
     implementedIn: 'EP-CB3',
-    inputSchema: { type: 'object', properties: { project: { type: 'string' }, trace_path: { type: 'string' } }, required: ['project', 'trace_path'] },
+    inputSchema: { type: 'object', properties: { project: { type: 'string' }, trace_id: { type: 'string' }, name: { type: 'string' }, agent: { type: 'string' } }, required: ['project', 'trace_id', 'name'] },
   },
 ]
 
 export function implementedTools(): readonly ToolDefinition[] {
-  return TOOLS.filter(tool => tool.implementedIn === 'EP-CB0' || tool.implementedIn === 'EP-CB1' || tool.implementedIn === 'EP-CB2')
+  return TOOLS.filter(tool => tool.implementedIn === 'EP-CB0' || tool.implementedIn === 'EP-CB1' || tool.implementedIn === 'EP-CB2' || tool.implementedIn === 'EP-CB3')
 }
 
 export interface ToolContext {
@@ -263,6 +267,8 @@ export type ToolResult =
   | { readonly kind: 'changes'; readonly result: ReturnType<typeof detectChanges> }
   | { readonly kind: 'compare'; readonly result: ReturnType<typeof compareGraphs> }
   | { readonly kind: 'adr'; readonly result: AdrToolResult }
+  | { readonly kind: 'cypher'; readonly result: CypherResult }
+  | { readonly kind: 'ingested'; readonly result: IngestResult }
   | { readonly kind: 'not-implemented'; readonly plannedFor: string }
 
 /** Discriminated ADR tool output (list / get / create / next-id). */
@@ -398,6 +404,25 @@ export async function executeTool(context: ToolContext, name: ToolName, args: Re
           ...(args.status === undefined ? {} : { status: args.status as string }),
         }),
       }
+    }
+    case 'query_graph': {
+      const project = args.project as string ?? args.subgraph_name as string | undefined
+      const query = args.query as string
+      if (query === undefined || query.trim().length === 0) {
+        throw new UsageError('query_graph 需要 query（Cypher 查询）')
+      }
+      return {
+        kind: 'cypher',
+        result: queryCypher(context.store, {
+          project,
+          query,
+          ...(args.limit === undefined ? {} : { maxRows: args.limit as number }),
+        }),
+      }
+    }
+    case 'ingest_traces': {
+      const input = args as { project: string; trace_id: string; name: string; agent?: string }
+      return { kind: 'ingested', result: ingestTraces(context.store, { project: input.project, traces: [{ project: input.project, trace_id: input.trace_id, name: input.name, ...(input.agent === undefined ? {} : { agent: input.agent }) }] }) }
     }
     default: {
       const plannedFor = TOOLS.find(tool => tool.name === name)?.implementedIn ?? 'later batch'

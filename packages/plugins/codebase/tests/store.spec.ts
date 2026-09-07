@@ -295,3 +295,64 @@ describe('EP-CB1 — QN lookup and file outline', () => {
     expect(schema.nodeLabels).toContainEqual({ label: 'Type', count: 1 })
   })
 })
+
+describe('EP-CB3 — traces, edgesByType and subtractNodesForFiles', () => {
+  beforeEach(() => {
+    store.upsertNodes([
+      { ...node('f:1', 'File', 'src/a.ts'), filePath: 'src/a.ts' },
+      { ...node('s:1', 'Function', 'demo.src.a.alpha'), filePath: 'src/a.ts' },
+      { ...node('f:2', 'File', 'src/b.ts'), filePath: 'src/b.ts' },
+      { ...node('s:2', 'Function', 'demo.src.b.beta'), filePath: 'src/b.ts' },
+    ])
+    store.insertEdges([
+      { project: 'demo', source: 's:1', target: 's:2', type: 'CALLS' },
+      { project: 'demo', source: 'f:1', target: 's:1', type: 'DEFINES' },
+      { project: 'demo', source: 'f:1', target: 's:2', type: 'USAGE' },
+    ])
+  })
+
+  it('upserts and queries trace records newest-first', () => {
+    store.upsertTraces([
+      { project: 'demo', trace_id: 't-1', name: 'index', agent: 'trae', timestamp: '2026-09-07T01:00:00Z', metadata: { files: 3 } },
+      { project: 'demo', trace_id: 't-2', name: 'query', timestamp: '2026-09-07T03:00:00Z' },
+    ])
+    const traces = store.queryTraces('demo', 10)
+    expect(traces.map(trace => trace.trace_id)).toEqual(['t-2', 't-1'])
+    expect(traces[1]?.agent).toBe('trae')
+    expect(traces[1]?.metadata).toEqual({ files: 3 })
+    // Overwrites on the same trace_id (idempotent upsert).
+    store.upsertTraces([{ project: 'demo', trace_id: 't-1', name: 'reindex' }])
+    const updated = store.queryTraces('demo', 10)
+    expect(updated.find(trace => trace.trace_id === 't-1')?.name).toBe('reindex')
+    expect(updated.length).toBe(2)
+  })
+
+  it('filters edges by edge type via edgesByType', () => {
+    const calls = store.edgesByType('demo', ['CALLS'])
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({ source: 's:1', target: 's:2', type: 'CALLS' })
+    const multi = store.edgesByType('demo', ['CALLS', 'USAGE'])
+    expect(multi).toHaveLength(2)
+    expect(store.edgesByType('demo', [])).toEqual([])
+    const unknown = store.edgesByType('demo', ['INHERITS'])
+    expect(unknown).toEqual([])
+  })
+
+  it('subtractNodesForFiles deletes file + symbol nodes and touching edges', () => {
+    const removed = store.subtractNodesForFiles('demo', ['src/a.ts'])
+    expect(removed).toBe(2)
+    const remaining = store.allNodes('demo').map(node => node.filePath)
+    expect(remaining).not.toContain('src/a.ts')
+    // The CALLS edge between the removed symbol and b's symbol is gone.
+    const edges = store.edgesOf('demo')
+    expect(edges.filter(edge => edge.type === 'CALLS')).toEqual([])
+    // FTS rows for the removed symbols are gone.
+    expect(store.search({ project: 'demo', query: 'alpha' }).total).toBe(0)
+  })
+
+  it('listFileNodes returns only File-label nodes', () => {
+    const files = store.listFileNodes('demo')
+    expect(files.map(file => file.filePath)).toEqual(['src/a.ts', 'src/b.ts'])
+    expect(files.every(file => file.label === 'File')).toBe(true)
+  })
+})

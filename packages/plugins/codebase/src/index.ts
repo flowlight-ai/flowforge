@@ -172,3 +172,22 @@ export { codebaseToolCards, isCodebaseTool, READ_ONLY_TOOL_NAMES } from './mcp.t
 export type { McpTocCard } from './mcp.ts'
 
 export { TRACE_EDGE_TYPES } from './store.ts'
+
+export { queryCypher, tokenizeCypher, parseCypher, executeCypher, buildAdjacency, MAX_RESULT_ROWS, DEFAULT_EXEC_BUDGET, MAX_HOPS, ORDER_KEYS_MAX } from './cypher.ts'
+export type {
+  CypherQueryOptions, CypherResult, ExecOptions, CypherToken, CypherTokenType,
+  CypherQuery, CypherPattern, NodePattern, RelPattern, Condition, WhereExpr,
+  ReturnItem, OrderKey, PropFilter,
+} from './cypher.ts'
+
+export { missedGraph } from './missed.ts'
+export type { MissedResult, MissedDir, MissedFile } from './missed.ts'
+
+export { watchIndex, detectFileDelta } from './watcher.ts'
+export type { WatchOptions, WatchResult } from './watcher.ts'
+
+export { ingestTraces, queryTraces } from './traces.ts'
+export type { IngestOptions, IngestResult } from './traces.ts'
+
+export { dumpArtifact, restoreArtifact, removeArtifact } from './artifact.ts'
+export type { ArtifactReport, DumpOptions, RestoreOptions } from './artifact.ts'

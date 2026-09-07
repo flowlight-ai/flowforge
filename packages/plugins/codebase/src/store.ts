@@ -62,6 +62,16 @@ export interface EdgeTypeCount {
   readonly count: number
 }
 
+/** EP-CB3: a trace record ingested by ingest_traces (external agent trace). */
+export interface TraceRecord {
+  readonly project: string
+  readonly trace_id: string
+  readonly name: string
+  readonly agent?: string
+  readonly timestamp?: string
+  readonly metadata?: Readonly<Record<string, string | number | boolean>>
+}
+
 export interface SchemaOverview {
   readonly projects: readonly ProjectInfo[]
   readonly nodeLabels: readonly LabelCount[]
@@ -136,6 +146,16 @@ CREATE VIRTUAL TABLE IF NOT EXISTS node_fts USING fts5(
   node_id UNINDEXED,
   project UNINDEXED
 );
+CREATE TABLE IF NOT EXISTS traces (
+  project TEXT NOT NULL,
+  trace_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  agent TEXT,
+  timestamp TEXT,
+  metadata_json TEXT,
+  PRIMARY KEY (project, trace_id)
+);
+CREATE INDEX IF NOT EXISTS idx_traces_project_time ON traces(project, timestamp);
 `
 
 interface NodeRow {
@@ -263,6 +283,7 @@ export class CodebaseStore {
       db.prepare('DELETE FROM nodes WHERE project = ?').run(name)
       db.prepare('DELETE FROM edges WHERE project = ?').run(name)
       db.prepare('DELETE FROM node_fts WHERE project = ?').run(name)
+      db.prepare('DELETE FROM traces WHERE project = ?').run(name)
       db.prepare('DELETE FROM projects WHERE name = ?').run(name)
       db.exec('COMMIT')
       return true
@@ -532,5 +553,99 @@ export class CodebaseStore {
     const offset = Math.max(0, options.offset ?? 0)
     const page = sorted.slice(offset, offset + limit)
     return { rows: page, total: sorted.length, hasMore: offset + page.length < sorted.length }
+  }
+
+  /**
+   * EP-CB3: edges filtered to the given edge types (the Cypher executor and
+   * watcher load adjacency subsets rather than the full edge table).
+   */
+  edgesByType(project: string, types: readonly string[]): readonly GraphEdge[] {
+    const db = this.requireDb()
+    if (types.length === 0) return []
+    const placeholders = types.map(() => '?').join(', ')
+    const rows = db.prepare('SELECT project, source, target, type FROM edges WHERE project = ? AND type IN (' + placeholders + ')')
+      .all(project, ...types) as Record<string, unknown>[]
+    return rows.map(row => ({ project: row.project as string, source: row.source as string, target: row.target as string, type: row.type as EdgeType }))
+  }
+
+  /**
+   * EP-CB3: all edges of a project as raw {source,target,type} adjacency
+   * (watcher/executor bulk-consumption surface; same data as edgesOf).
+   */
+  edgesByProject(project: string): readonly GraphEdge[] {
+    return this.edgesOf(project)
+  }
+
+  /**
+   * EP-CB3: upvote trace records for a project (idempotent on (project,trace_id)
+   * primary key). Exposes the metadata bag as the `props` record.
+   */
+  upsertTraces(traces: readonly TraceRecord[]): void {
+    const db = this.requireDb()
+    if (traces.length === 0) return
+    db.exec('BEGIN')
+    try {
+      const upsert = db.prepare(`
+        INSERT INTO traces (project, trace_id, name, agent, timestamp, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(project, trace_id) DO UPDATE SET
+          name = excluded.name,
+          agent = excluded.agent,
+          timestamp = excluded.timestamp,
+          metadata_json = excluded.metadata_json
+      `)
+      for (const trace of traces) {
+        upsert.run(trace.project, trace.trace_id, trace.name, trace.agent ?? null, trace.timestamp ?? null, trace.metadata === undefined ? null : JSON.stringify(trace.metadata))
+      }
+      db.exec('COMMIT')
+    } catch (error) {
+      db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
+  /** EP-CB3: most recent trace records of a project, newest first. */
+  queryTraces(project: string, limit = 50): readonly TraceRecord[] {
+    const db = this.requireDb()
+    const rows = db.prepare('SELECT project, trace_id, name, agent, timestamp, metadata_json FROM traces WHERE project = ? ORDER BY COALESCE(timestamp, trace_id) DESC LIMIT ?')
+      .all(project, Math.max(1, limit)) as Record<string, unknown>[]
+    return rows.map(row => {
+      const record: TraceRecord = {
+        project: row.project as string,
+        trace_id: row.trace_id as string,
+        name: row.name as string,
+        ...(row.agent === null ? {} : { agent: row.agent as string }),
+        ...(row.timestamp === null ? {} : { timestamp: row.timestamp as string }),
+        ...(row.metadata_json === null ? {} : { metadata: JSON.parse(row.metadata_json as string) as Record<string, string | number | boolean> }),
+      }
+      return record
+    })
+  }
+
+  /**
+   * EP-CB3: delete the nodes of the given file paths (File nodes plus their
+   * symbol children) and any edge touching them, plus FTS rows. Used by the
+   * watcher when a file disappears.
+   */
+  subtractNodesForFiles(project: string, filePaths: readonly string[]): number {
+    const db = this.requireDb()
+    if (filePaths.length === 0) return 0
+    const ids = db.prepare('SELECT id FROM nodes WHERE project = ? AND file_path IN (' + filePaths.map(() => '?').join(', ') + ')')
+      .all(project, ...filePaths) as Record<string, unknown>[]
+    const nodeIds = ids.map(row => row.id as string)
+    if (nodeIds.length === 0) return 0
+    const placeholders = nodeIds.map(() => '?').join(', ')
+    db.exec('BEGIN')
+    try {
+      db.prepare('DELETE FROM edges WHERE project = ? AND (source IN (' + placeholders + ') OR target IN (' + placeholders + '))')
+        .run(project, ...nodeIds, ...nodeIds)
+      db.prepare('DELETE FROM node_fts WHERE node_id IN (' + placeholders + ')').run(...nodeIds)
+      db.prepare('DELETE FROM nodes WHERE id IN (' + placeholders + ')').run(...nodeIds)
+      db.exec('COMMIT')
+      return nodeIds.length
+    } catch (error) {
+      db.exec('ROLLBACK')
+      throw error
+    }
   }
 }
