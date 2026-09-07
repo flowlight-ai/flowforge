@@ -66,10 +66,10 @@
 
 | # | 能力 | 来源 | 批次 | 状态 |
 |---|---|---|---|---|
-| P1 | 插件包骨架 `@flowforge/plugin-dev`（package/exports/tsconfig references） | superpowers | EP0-1 | ⬜ |
-| P2 | 七阶段流程状态机（requirement→design→plan→implement→review→verify→finish，非法跳转拒绝 + 三道门禁 + 快照恢复） | superpowers | EP0-1 | ⬜ |
-| P3 | 流程实例注册表（create/get/list + design/plan/review/verification 产物路径登记） | superpowers | EP0-1 | ⬜ |
-| P4 | 14 份流程指令资产（`docs/process/skills/`，harness 无关文档资产层） | superpowers | EP0-1 | ⬜ |
+| P1 | 插件包骨架 `@flowforge/plugin-dev`（package/exports/tsconfig references） | superpowers | EP0-1 | ✅ |
+| P2 | 七阶段流程状态机（requirement→design→plan→implement→review→verify→finish，非法跳转拒绝 + 三道门禁 + 快照恢复） | superpowers | EP0-1 | ✅ |
+| P3 | 流程实例注册表（create/get/list + design/plan/review/verification 产物路径登记） | superpowers | EP0-1 | ✅ |
+| P4 | 14 份流程指令资产（`docs/process/skills/`，harness 无关文档资产层） | superpowers | EP0-1 | ✅ |
 | P5 | 4 份文档模板（design/plan/review/verification，`docs/process/templates/`） | superpowers | EP0-2 | ⬜ |
 | P6 | No-Placeholder plan 校验器（拦截 TBD/TODO/无代码块步骤） | superpowers | EP0-2 | ⬜ |
 | P7 | CLI 命令面 `flowforge process <new\|design\|plan\|implement\|review\|verify\|finish\|status>` | superpowers | EP0-3 | ⬜ |

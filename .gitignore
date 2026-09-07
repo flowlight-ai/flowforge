@@ -178,8 +178,6 @@ docs/perspectives/
 docs/setup/
 # review/: 内部审核追溯文档（含 RA/FM/FR/CL ID 命名空间）
 docs/review/
-# process/: 内部过程文档
-docs/process/
 
 # ==================== Local config overrides (P3-011) ====================
 config/local/

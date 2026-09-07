@@ -20,7 +20,7 @@
 
 | 批次 | 内容 | DoD | 状态 |
 |---|---|---|---|
-| EP0-1 | 插件骨架（状态机/实例注册表/类型面）+ `docs/process/` 建立 + 14 份流程指令资产移植 | 状态机单测全绿；14 份资产入库 | 🟦 |
+| EP0-1 | 插件骨架（状态机/实例注册表/类型面）+ `docs/process/` 建立 + 14 份流程指令资产移植 | 状态机单测全绿；14 份资产入库 | 🟩 |
 | EP0-2 | 4 份文档模板（design/plan/review/verification）+ No-Placeholder 校验器 + 单测 | 校验器拦截 TBD/TODO/无代码块步骤 | ⬜ |
 | EP0-3 | CLI 命令面 `flowforge process *` + 门禁接线 + cordis 挂载 `ctx.forgeProcess` | CLI 端到端冒烟 + 门禁单测 | ⬜ |
 | EP0-4 | subagent 派发编排 + 两阶段审查（P1/P2/P3）+ verification 证据采集 | 真实小需求走完七阶段验收 | ⬜ |
@@ -28,18 +28,18 @@
 
 ### EP0-1 细化任务（T0.x.y，详见 `33-stage-ep0-plugin-dev.md`）
 
-- [ ] T0.1.1 `packages/plugins/dev/package.json`（@flowforge/plugin-dev，ESM，对齐 canary/modes 包形态）
-- [ ] T0.1.2 `tsconfig.json` + 根 `tsconfig.host.json` references 增补
-- [ ] T0.1.3 `src/state-machine.ts`：七阶段 ProcessPhase + 合法迁移表 + 三道门禁 + ForgeProcessStateMachine
-- [ ] T0.1.4 `src/registry.ts`：ForgeProcessRegistry（create/get/list + 产物路径登记）
-- [ ] T0.1.5 `src/index.ts` 导出面 + `tests/dev.spec.ts`（合法推进/非法跳转/门禁三例/registry round-trip）
-- [ ] T0.1.6 `docs/process/README.md`（双平面说明/目录索引/七阶段流程图/AI 工具使用指引）
-- [ ] T0.1.7 移植 14 份流程指令资产至 `docs/process/skills/`（①brainstorming ②writing-plans ③executing-plans
+- [x] T0.1.1 `packages/plugins/dev/package.json`（@flowforge/plugin-dev，ESM，对齐 canary/modes 包形态）
+- [x] T0.1.2 `tsconfig.json` + 根 `tsconfig.host.json` references 增补
+- [x] T0.1.3 `src/state-machine.ts`：七阶段 ProcessPhase + 合法迁移表 + 三道门禁 + ForgeProcessStateMachine
+- [x] T0.1.4 `src/registry.ts`：ForgeProcessRegistry（create/get/list + 产物路径登记）
+- [x] T0.1.5 `src/index.ts` 导出面 + `tests/dev.spec.ts`（合法推进/非法跳转/门禁三例/registry round-trip，16/16 绿）
+- [x] T0.1.6 `docs/process/README.md`（双平面说明/目录索引/七阶段流程图/AI 工具使用指引）
+- [x] T0.1.7 移植 14 份流程指令资产至 `docs/process/skills/`（①brainstorming ②writing-plans ③executing-plans
       ④subagent-driven-development ⑤dispatching-parallel-agents ⑥test-driven-development
       ⑦requesting-code-review ⑧receiving-code-review ⑨systematic-debugging ⑩verification-before-completion
       ⑪using-git-worktrees ⑫finishing-a-development-branch ⑬writing-skills ⑭using-plugin-dev）
-- [ ] T0.1.8 `pnpm vitest run packages/plugins/dev` 全绿 + `pnpm typecheck` 通过
-- [ ] T0.1.9 `10-stage-map.md` §3.0 勾选（P1-P4）+ 本文件进度更新
+- [x] T0.1.8 `pnpm vitest run packages/plugins/dev` 全绿 + `pnpm typecheck` 通过
+- [x] T0.1.9 `10-stage-map.md` §3.0 勾选（P1-P4）+ 本文件进度更新
 - [ ] T0.1.10 `./mgr sync` 提交 PR（docs + code 同批）
 
 ---
