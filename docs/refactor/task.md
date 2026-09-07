@@ -67,7 +67,7 @@
 | 11 | `extensions/ui-cordis` + `cordis-client-runner` | A9/A10 | 1 | ⬜ |
 | 12 | `bundle/web-app`（+acp/sdk 模板） | A4-A7 | 1 | ⬜ |
 | 13 | dsh `client/*` 能力级清单登记（归入 EP2 实施） | A32 | — | ⬜ |
-| 14 | 矩阵补录：`10-stage-map.md` 增设 D45+/C43+/F45+ 编号 + crosswalk 漂移纠偏 | 文档 | 0.5 | ⬜ |
+| 14 | 矩阵补录：`10-stage-map.md` 增设 D45+/C43+/F45+ 编号 + crosswalk 漂移纠偏 | 文档 | 0.5 | 🟩（`10-stage-map.md` D45-D55/C43-C51/F45 补录 + crosswalk L31/L41/L59/L80 漂移纠偏 + D9/S1 表述勘误完成） |
 
 ---
 

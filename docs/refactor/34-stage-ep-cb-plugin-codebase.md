@@ -75,15 +75,15 @@ packages/plugins/codebase/
 - [x] T3.5 MCP 挂接：mcp.ts 装配契约（18 工具注册表 → flowforge mcp 工具体系，对齐 tool-lsp）
 - [x] T3.6 测试与验证：148 契约测试全绿（18 文件）+ 包级 tsc exit 0 + oxlint 0（见 `docs/process/verifications/plugin-codebase-cb2.md`）
 
-### EP-CB3 Cypher 子集 + 增量索引 + 轨迹 ⬜（Q19 裁决后动工）
+### EP-CB3 Cypher 子集 + 增量索引 + 轨迹 ✅（已合入 PR #158 中）
 
-- [ ] T4.1 Cypher 查询引擎子集（MATCH/WHERE/RETURN/ORDER BY/LIMIT + 100k 行上限契约）
-- [ ] T4.2 missed graph（未完全索引文件的文件结构图）+ graph="missed" 查询
-- [ ] T4.3 watcher 增量索引 + detect_changes 集成
-- [ ] T4.4 ingest_traces 轨迹摄取
-- [ ] T4.5 持久化工件（压缩 artifact 团队共享，对齐 C 的 graph.db.zst 模型）
+- [x] T4.1 Cypher 查询引擎子集（MATCH/WHERE/RETURN/ORDER BY/LIMIT + 100k 行上限契约 + 执行预算诚实部分集）
+- [x] T4.2 missed graph（未完全索引文件的文件结构图）+ graph="missed" 查询
+- [x] T4.3 watcher 增量索引 + detect_changes 集成 + 删除节点减除
+- [x] T4.4 ingest_traces 轨迹摄取（幂等）
+- [x] T4.5 持久化工件（压缩 artifact 团队共享，对齐 C 的 graph.db.zst 模型）
 
-### EP-CB4 语义层 + LSP 融合 + 跨仓库 ✅（PR 待提交，TDD 已完成）
+### EP-CB4 语义层 + LSP 融合 + 跨仓库 ✅（已并入 master：commit 250377a3/8101128f）
 
 - [x] T5.0 设计 + 计划（`docs/process/specs/2026-09-07-plugin-codebase-cb4-design.md` / `docs/process/plans/2026-09-07-plugin-codebase-cb4.md`）
 - [x] T5.1 semantic edges + simhash 相似度去重边
@@ -91,6 +91,8 @@ packages/plugins/codebase/
 - [x] T5.3 LSP 融合：CALL/USAGE 语义解析经 ctx.lsp seam 增强（Hybrid LSP 落地）
 - [x] T5.4 cross-repo-intelligence（CROSS_HTTP_CALLS/CROSS_ASYNC_CALLS/CROSS_CHANNEL 跨项目边）
 - [x] T5.5 transitive_loop_depth 过程间传播（最坏嵌套环深沿 CALLS 边传播）
+
+> **EP-CB 系列终态**：EP-CB0~EP-CB4 全部完成（对齐 16.3 全量移植目标，覆盖存储引擎/结构层/符号级/tree-sitter/Cypher/语义层/LSP 融合/跨仓库六域）。剩余落在 EP2 前端融合（Q17：graph-ui 3D 可视化）与语言资产按需增量（Q18）。
 
 ## 4. 决策点登记（对应 review_code.md §15 Q14-Q19，operator 2026-09-07 全部裁决）
 

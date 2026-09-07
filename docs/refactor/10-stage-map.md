@@ -97,7 +97,7 @@
 | D6 | 默认 agent 驱动循环 | core/agent-loop | 1 | ✅ |
 | D7 | scope 作用域原语 | core/scope | 1 | ✅ |
 | D8 | hooks 事件钩子 | packages/hooks | 2 | ✅ |
-| D9 | MCP 客户端/服务器 | packages/mcp | 2 | ✅ |
+| D9 | MCP **客户端**（server 侧见 C43，B1 未移植——表述勘误防"服务器已交付"误读，纠偏见 review_code §6-5） | packages/mcp | 2 | ✅（mcp-client；server 侧 ⬜ EP1-1） |
 | D10 | 技能系统（fs/badge/tool-skill） | packages/skill | 2 | ✅ |
 | D11 | 子代理 subagent | packages/subagent | 2 | ✅ |
 | D12 | 沙箱（landlock-run + e2b 可选） | packages/sandbox | 2 | ✅ |
@@ -134,6 +134,19 @@
 | D42 | test-support 族（agent-loop-testkit/acp-snapshot/client-runtime/llm-replay/loader-smoke） | packages/test-support/* | 1-2 | ✅（批次47 client-runtime：与 @flowforge/client-connection HostConnectionRpc 契约结构同构的进程内 host RPC 路由（handle 通道注册校验 /api 前缀+重复拒绝 / intercept 抢占 + 优先于 channel fallback + disposer 移除）+ 同构 client 调用器（call/request + 取消信号透传）+ 异常折叠 internal + 未知 channel 错误分支，9 测试；至此 5/5 全移植） |
 | D43 | util 族（atomic-write/brand/home-paths/launch-environment/native-command/output-retention/timeout） | packages/harness/util | 0-1 | ✅ |
 | D44 | 预设 preset（agent-presets/persona，结构对齐 forgekins 档案） | packages/preset | 2 | ✅ |
+| D45 | REST 控制器族（session/settings/workspace-controller，阶段8 服务端 API 面前置） | dsh `api/*-controller`（A1-A3） | 3/8 | ⬜（EP1-7） |
+| D46 | 凭证授权层 credentials/authorization（OAuth invariant/types，独立于 credentials-local） | dsh `credentials/authorization`（A8） | 2 | ⬜（EP1-10） |
+| D47 | 会话格式版本化 session-format（v0→v1→v2 迁移链 4 包，持久化兼容关键缺口） | dsh `session/session-format*`（A17） | 1 | ⬜（EP1-8） |
+| D48 | 会话日志导出 session-log-export（crosswalk 来源列已列出、落点遗漏） | dsh `session-query/session-log-export`（A20） | 2 | ⬜（EP1-8） |
+| D49 | Webhook 接收与 GitHub 事件分发（webhook + webhook-github） | dsh `webhook/*`（A29） | 2 | ⬜（EP1-9） |
+| D50 | 前端扩展与客户端运行器（ui-cordis + cordis-client-runner，crosswalk 状态虚报纠偏 A9/A10） | dsh `extensions/*` | 8 | ⬜（EP1-11） |
+| D51 | web/sdk/acp 装配模板（web-app + acp-app + sdk-app + sdk-minimal bundle） | dsh `bundle/*`（A4-A7） | 3/8 | ⬜（EP1-12） |
+| D52 | dsh `client/*` 46 包 UI 组件层（ui-chat/plan/goal/jobs/schedule/trajectory/deliverables/settings-* 等，能力级融入 Next.js） | dsh `client/*`（A32） | 8 | ⬜（EP2-5） |
+| D53 | 预期输出快照体系 snapshots（acp/sdk/session/web 四域测试基建） | dsh `snapshots/`（A36） | 9 | ⬜（EP3-1） |
+| D54 | 依赖补丁 patches（@yao-pkg/pkg、node-pty Windows 验证） | dsh `patches/`（A37） | 9 | ⬜（EP3-3） |
+| D55 | dsh P1/P2 其余遗漏（A5-A7/A11/A13/A15-A16/A18-A19/A21-A23/A25-A28/A30-A31/A35：agent-team/code-runtime-python/win32-process/session-snapshot/util 族等） | dsh `packages/*` | 10-11 | ⬜（EP4-3） |
+
+> **补录说明**：D45-D55 为 review_code §4（dsh 遗漏 A 系列）映射，编号续接 D44 之后，与 `02-source-crosswalk.md`、`review_code.md` §13.2（EP1）引用一致。DR-8
 
 ### 3.2 上游应用平台参考侧（群聊/灵智/CLI 控制）
 
@@ -181,6 +194,17 @@
 | C40 | 连接器配置 cat-config-loader + connector.yaml（IM stretch 时仅 ports） | packages/chat|limb | 5-6 | ✅（批次8 chat-stretch 已交付 IM ports + mock；批次46 cats-cat-config-loader：zod v1/v2 版本化 schema（breeds defaultVariantId 引用/mentionPatterns 非空/roster/reviewPolicy/coCreator + legacy owner 迁移）+ deepMergeConfig（cli/agyProfile/color/voiceConfig/acp 原子键整替换 + id 数组合并 + 递归对象）+ cat-template.json base + .cat-cafe/cat-catalog.json overlay 合并加载（#772 模板 breed 过滤 + 注入式 fs）+ 无缓存 accessors（roster/reviewPolicy/coCreator/sessionChain/可用性/mention 回落 @catId），`ctx.forgeCatConfigLoader`，15 测试） |
 | C41 | prompt 钩子 hook.yaml | packages/core/system-prompt + packages/forgekin | 1/4 | ✅（批次27 forgekin-prompt-hooks：HookManifestParser/HookRegistry（46 hooks）/HookPipeline/PromptBuilder/InjectionTrace，`ctx.forgePromptHooks`，30 测试） |
 | C42 | shared 包（catId/threadId schema、frontmatter-parser、registry 纯函数） | packages/shared | 0 | ✅（批次1 cats-shared，100+ 类型文件） |
+| C43 | MCP 服务器整包（canonical-tool-registry/tool-cutover/evidence/migration/bootstrap/cli 治理全家 + limb/memory/signals/collab/finance/audio 6 server-toolsets + protocol-server + json-schema-to-zod；flowforge 仅 mcp-client 无服务器侧） | clowder `packages/mcp-server`（B1） | 2 | ⬜（EP1-1） |
+| C44 | IM connector 框架本体（ConnectorRouter/CommandLayer/MessageFormatter/PermissionStore/ThreadBindingStore/gateway-bootstrap/lifecycle + FeishuQrBindClient + telegram-token + GitHubRepoWebhook + mention-parser + StreamingOutboundHook + InboundMessageDedup；S1 stretch 仅 ports+mock，框架本体未移植） | clowder `infrastructure/connectors`（B7） | 5-6/11 | ⬜（EP1-2；S1 升格主线） |
+| C45 | Plugin Messaging 域（envelope/ledger/append-elements/event-stream/snapshot-capture/page-assembly/tokens + Redis Lua stores，K-1/F288） | clowder `domains/messaging`（B4） | 5 | ⬜（EP1-3） |
+| C46 | 信号准入域 signal-intake（SignalAdmission/RouteStore/MeetingIntake 全家/ASR 人物记忆队列/来源访问租约/LarkCliFeishuSourceResolver/ThreadDestinationAuthority + 25+ 文件） | clowder `domains/signal-intake`（B3） | 5 | ⬜（EP1-4） |
+| C47 | GitHub 等待生命周期（WaitLifecycleService/baseline readers/predicate catalog/wait renderer；email 域仅移植 wait-lifecycle 端口，本体未移植） | clowder `domains/github-signals`（B5） | 7 | ⬜（EP1-5） |
+| C48 | 会话上下文组装治理 context-assembly（ContextAssembler/governance-l0/IntentParser/MessageBundleCarrierResolver/message-bundle-quote-matching，17 文件） | clowder `cats/services/context`（B12） | 4 | ⬜（EP1-6） |
+| C49 | 服务面板/工具使用/运行时会话/挫败/云桥/首启（services-panel + tool-usage + runtime-session + frustration + cloud-bridge + first-run-quest） | clowder `cats/services/*`（B6/B13-B17） | 4-6 | ⬜（EP4-3） |
+| C50 | 技能治理（skill-manage/meta/mount-ops/query/sync-all/sync-config/sync-engine + drift-detector/resolver）+ MCP 拓扑同步 + utils 清点归位 | clowder `api/src/{skills,mcp,utils}`（B8/B9/B11） | 7 | ⬜（EP4-3，diff 后并入 forgekin/governance 或独立包） |
+| C51 | 财经数据域 finance（配合 mcp-server finance toolset；是否属目标能力待裁决 Q3）+ cat-cafe-skills 内容资产（Q5）+ sop-definitions 内容（B20）+ assets 静态资源（B21）+ 路由平台面余量（B22） | clowder `packages/*` | 11 | ⬜（EP4-3，⚠ Q3/Q5 裁决） |
+
+> **补录说明**：C43-C51 为 review_code §4（clowder 遗漏 B 系列）映射，编号续接 C42 之后，与 `02-source-crosswalk.md`、`review_code.md` §13.2（EP1）及 §15（Q1-Q6 决策点）引用一致。
 
 ### 3.4 Stretch 清单（Phase 11 之后，功能全集之外的扩展目标）
 
@@ -189,7 +213,7 @@
 
 | # | 能力 | 来源 | 建议阶段 | 状态 |
 |---|---|---|---|---|
-| S1 | IM 通道（飞书/Telegram/钉钉/企微/WebChat） | 上游应用平台 routes/push 等 | 11+ | 🟦（批次8 chat-stretch 已交付 IImChannelAdapter ports + InMemory mock；真实通道按凭据启用） |
+| S1 | IM 通道连接器（**拆二**：①connector 框架本体 = C44 主线，EP1-2 交付；②真实通道凭据启用 = stretch，按凭据接线） | 上游应用平台 routes/push 等 | 11+ | 🟪（框架本体 ⬜ C44/EP1-2；批次8 chat-stretch 已交付 IImChannelAdapter ports + InMemory mock；真实通道凭据按裁决启用） |
 | S2 | TTS/语音 / RSS / 邮件 / GitHub signals | 上游应用平台 services | 11+ | ⬜ |
 | S3 | 世界 world / 社区 / 故事 / 排行榜 | 上游应用平台 routes/* | 11+ | 🟦（批次8 chat-stretch 已交付 IStory/ICommunity/ILeaderboard ports + InMemory mock） |
 | S4 | 桌面端 desktop | 上游应用平台 desktop/ | 11+ | ⬜ |
@@ -249,6 +273,10 @@
 | F42 | 活性探针与规范读（liveness canonical read） | core/（F023） | 3/7 | ✅（批次47 forgekin-liveness：只读 LivenessProbe 注册表（LivenessSpec name/description/slaSeconds/requiredFor + registerProbe/registerSpec/runProbe/runAll 串行隔离执行 + healthy/latencyMs/lastChecked/error + SLA 超时判定 + 能力影响映射，`ctx.forgeLiveness`，5 测试）+ CanonicalReadModel 单一规范读（源优先级 durable_record > in_process_tracker > draft_cache + 四态 alive/degraded/zombie/grace_waiting 判定 + 宽限期不转 zombie + 心跳全失联直判 zombie + split-brain 以 durable 为准 + 阈值注入，5 测试） |
 | F43 | 特种角色子代理（产品经理/DevOps/安全官/交付经理） | forgemind/forms.py 相关（F041-F044） | 7 | ✅（批次15b forgekin-roles：ForgekinRole 基类 + 四角色各 5 动作 + 审批降级不变量，`ctx.forgeRoles`，56 测试） |
 | F44 | 物理 AI 传感器 + 虚拟世界设置 | core/world_engine/ + conditional_router.py（F029/F030） | stretch | ⬜ |
+| F45 | 其他未编号 FlowForge 特色迭代（合并市场/前端插件挂载点随 EP2、编排平台面随 EP3、observability 面随 T9.5） | P: core/*（residual） | 8-11 | ⬜ |
+
+> **F45 契约说明**：F 系列补录以"预留扩展编号"形式存在——具体能力在 EP2/EP3 阶段 8-11 交付时按实际命名续接 F46+；
+> 与 review_code §13.2（EP1-14）要求"增设 F45+"一致，编号续接 F44。
 
 ## 4. 每阶段通用验收门（DoD）
 
