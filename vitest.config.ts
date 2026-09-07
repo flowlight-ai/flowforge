@@ -33,6 +33,12 @@ function standardDecoratorPlugin() {
 // Process-bound suites exercise process-global state or timing-sensitive
 // process I/O that worker threads cannot isolate reliably under aggregate
 // gate contention (upstream keeps the same narrow exception in forks).
+// 批次56：forks/threads 池在本环境（Node 24.13 + pnpm 多 peer 实例）下 worker
+// state 未初始化（getWorkerState() undefined → describe 抛 reading 'config'），
+// 唯一可用池为 vmThreads —— 8 个 process-bound 套件已并回主 include 全量通过。
+// 两处配套修正：time-context 时区断言显式 UTC（vm 与宿主共享系统时区）；
+// zstd 私有解码器探测改 ArrayBuffer.isView（vmThreads 下流对象属宿主 realm，
+// 跨 realm instanceof 恒假会误回退公解码器）。
 const processBoundTests = [
   'packages/session/session-persistence-jsonl/tests/jsonl.spec.ts',
   'packages/session/session-persistence-jsonl/tests/zstd.spec.ts',
@@ -735,20 +741,9 @@ export default defineConfig({
         resolve: { alias: aliasEntries },
         test: {
           name: 'thread-safe',
-          pool: 'forks',
+          pool: 'vmThreads',
           ...projectTestBase,
-          include: testInclude,
-          exclude: [...testExclude, ...processBoundTests],
-        },
-      },
-      {
-        plugins: [standardDecoratorPlugin()],
-        resolve: { alias: aliasEntries },
-        test: {
-          name: 'process-bound',
-          pool: 'forks',
-          ...projectTestBase,
-          include: processBoundTests,
+          include: [...testInclude, ...processBoundTests],
           exclude: testExclude,
         },
       },

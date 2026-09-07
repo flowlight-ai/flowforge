@@ -38,6 +38,10 @@
       "types": "./lib/types/transport.d.ts",
       "default": "./lib/transport.js"
     },
+    "./socket-io-transport": {
+      "types": "./lib/types/socket-io-transport.d.ts",
+      "default": "./lib/socket-io-transport.js"
+    },
     "./service": {
       "types": "./lib/types/realtime-service.d.ts",
       "default": "./lib/realtime-service.js"
