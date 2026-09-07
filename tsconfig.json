@@ -483,6 +483,9 @@
       "path": "./packages/plugins/canary"
     },
     {
+      "path": "./packages/plugins/dev"
+    },
+    {
       "path": "./packages/plugins/feature-flags"
     },
     {

@@ -25,23 +25,26 @@
 
 ### EP0-1 插件骨架 + 14 份流程指令资产（当前批次）
 
-- [ ] T0.1.1 `packages/plugins/dev/package.json`（`@flowforge/plugin-dev`，ESM，
+- [x] T0.1.1 `packages/plugins/dev/package.json`（`@flowforge/plugin-dev`，ESM，
       exports 指向 `lib/index.js` + `lib/types/index.d.ts`，对齐 canary/modes 包形态）
-- [ ] T0.1.2 `packages/plugins/dev/tsconfig.json`（extends `../../../tsconfig.base.json`，
+- [x] T0.1.2 `packages/plugins/dev/tsconfig.json`（extends `../../../tsconfig.base.json`，
       rootDir=src / outDir=lib/types）+ 根 `tsconfig.host.json` references 增补
       `"path": "./packages/plugins/dev"`
-- [ ] T0.1.3 `src/state-machine.ts`：七阶段 `ProcessPhase` + 合法迁移表 + 门禁校验
+- [x] T0.1.3 `src/state-machine.ts`：七阶段 `ProcessPhase` + 合法迁移表 + 门禁校验
       （design 未签核禁止 plan / plan 未校验禁止 implement / verify 无证据禁止 finish）
       + `ForgeProcessStateMachine` 类（advance/guard/snapshot/restore）
-- [ ] T0.1.4 `src/registry.ts`：`ForgeProcessRegistry`（内存实例表 + 工厂 create/get/list
+- [x] T0.1.4 `src/registry.ts`：`ForgeProcessRegistry`（内存实例表 + 工厂 create/get/list
       + 产物路径登记 design/plan/review/verification artifact path）
-- [ ] T0.1.5 `src/index.ts` 导出面（类型 + 类 + 阶段常量），`tests/dev.spec.ts`
+- [x] T0.1.5 `src/index.ts` 导出面（类型 + 类 + 阶段常量），`tests/dev.spec.ts`
       覆盖：合法全流程推进 / 非法跳转拒绝 / 门禁拦截三例 / registry round-trip
-- [ ] T0.1.6 `docs/process/README.md`：双平面说明、目录索引、七阶段流程图、
+      （16 个用例全绿）
+- [x] T0.1.6 `docs/process/README.md`：双平面说明、目录索引、七阶段流程图、
       "任何 AI 工具如何使用本目录资产"指引
-- [ ] T0.1.7 移植 14 份流程指令资产至 `docs/process/skills/`（superpowers → flowforge
+- [x] T0.1.7 移植 14 份流程指令资产至 `docs/process/skills/`（superpowers → flowforge
       适配：命名契约 P0 术语优先、对接 mgr 与 T1-T9、去除 Claude/Claude Code 专属措辞、
       每份含"触发时机/流程步骤/门禁/与我方规范对接"四节）：
+      （前置：移除 `.gitignore` 对 `docs/process/` 的忽略——旧规则将其定位为
+      "内部过程文档"，operator Q8 裁决后该目录为工程化流程资产层，必须入库）：
       ① `brainstorming.md` 需求头脑风暴
       ② `writing-plans.md` 编写实施计划（含 No Placeholders 铁律与任务模板）
       ③ `executing-plans.md` 执行计划（批次执行 + 检查点）
@@ -56,9 +59,12 @@
       ⑫ `finishing-a-development-branch.md` 完成开发分支（测试→mgr PR→清理）
       ⑬ `writing-skills.md` 编写技能（元方法论，服务流程资产自身迭代）
       ⑭ `using-plugin-dev.md` 流程插件入口（using-superpowers 的 flowforge 版）
-- [ ] T0.1.8 `pnpm vitest run packages/plugins/dev` 全绿 + `pnpm typecheck` 通过
-- [ ] T0.1.9 更新 `10-stage-map.md` §3.0（P1-P14 勾选 EP0-1 部分）+ `task.md` 进度
-- [ ] T0.1.10 `./mgr sync` 提交 PR（docs + code 同批）
+- [x] T0.1.8 `pnpm vitest run packages/plugins/dev` 全绿 + `pnpm typecheck` 通过
+      （16/16 通过；typecheck 中 dev 包 0 错误——`packages/chat/realtime` 的既有失败为
+      未跟踪遗留文件所致，与本次无关）
+- [x] T0.1.9 更新 `10-stage-map.md` §3.0（P1-P14 勾选 EP0-1 部分）+ `task.md` 进度
+- [x] T0.1.10 `./mgr sync` 提交 PR（docs + code 同批）——commit `5af3c6c3`，
+      PR #152（https://gitee.com/flowlight-ai/flowforge/pulls/152）
 
 ### EP0-2 文档模板 + No-Placeholder 校验器
 
