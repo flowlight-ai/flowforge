@@ -3,7 +3,8 @@
 > ⛔ **每次重构开工前、每个阶段编码前、每次提交前，必须先重读 `04-code-standards.md`（三方规范合并版）**，
 > 再读本文件；规范优先级固定：我方规范 → dsh 规范 → clowder 规范（冲突裁决见 04 §5）。
 
-> 状态：进行中 ｜ 创建：2026-08-16 ｜ 更新：2026-08-16（补充：插件化前置/融合策略/Python 日落/配置格式/双栈隔离/stretch/技术栈全景对齐/开发与测试规范对齐/三方能力全集补齐）
+> 状态：进行中 ｜ 创建：2026-08-16 ｜ 更新：2026-09-07（新增 EP0 工程化流程插件为最高优先级先行阶段：
+> `@flowforge/plugin-dev` 双平面架构 + 四源全量移植立场 + EP0-EP4 执行计划，见 `review_code.md` §11/§13 与 `33-stage-ep0-plugin-dev.md`）
 > 本文档是重构的单一信息源，阶段任务清单见 `10-stage-map.md` 及对应 `2X-*.md`。
 > 源码对照见 `02-source-crosswalk.md`；融合策略详见 `03-fusion-strategy.md`；Python 日落详见 `31-stage11-sunset.md`。
 > 开发/测试规范：三方规范已合并为单一文件 `04-code-standards.md`（重构期间只读此文件）；决策溯源见 `01-stack-decision.md` R20/R21。
@@ -93,6 +94,7 @@ Harness 架构，决定参考两个开源项目进行全量重构：
 
 | 阶段 | 名称 | 产出 | 提交署名 |
 |---|---|---|---|
+| **EP0** | **工程化流程插件（最高优先级先行）** | `@flowforge/plugin-dev`（状态机/门禁/CLI/subagent 编排）+ `docs/process/`（14 份流程指令资产 + 4 模板）+ 规范回填 | [sherlock] |
 | 0 | 计划文档 + TS 基础设施 + **插件基座** | docs/refactor/* + 根配置 + vendor cordis + 宿主装配器 + 插件生命周期冒烟 | [luban] |
 | 1 | 框架内核 core（插件化） | scope/session/system-prompt/tools/agent/agent-loop + session-title/session-query/sdk 契约 | [sherlock] |
 | 2 | 插件体系 | mcp/skill/subagent/sandbox/shell/workflow/plan/goal/session-query/sdk/code-runtime/acp 等 + 插件开发契约 | [sherlock] |
