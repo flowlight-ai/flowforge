@@ -202,6 +202,48 @@ describe('退出码契约（0/1/2）', () => {
       rmSync(fresh, { recursive: true, force: true })
     }
   })
+})
+
+describe('EP-CB2 工具面 CLI 冒烟（trace/grep/arch/coverage）', () => {
+  beforeAll(() => {
+    // The 退出码契约 suite deleted the project; re-index against the shared repo.
+    const result = run(['index', '--repo', repo])
+    expect(result.status).toBe(0)
+  })
+
+  it('trace resolves callers of a symbol with a deterministic path row', () => {
+    const result = run(['trace', '--repo', repo, '--qn', 'mini-repo.src.utils.helper.updateCloudClient', '--direction', 'callers'])
+    expect(result.status).toBe(0)
+    const payload = json<{ start: string; direction: string; path: { qn: string; depth: number; via: string }[] }>(result)
+    expect(payload.start).toBe('mini-repo.src.utils.helper.updateCloudClient')
+    expect(payload.path.some(row => row.qn === 'mini-repo.symbols.demo.render' && row.depth === 1 && row.via === 'CALLS')).toBe(true)
+  })
+
+  it('grep returns on-disk matches with column and line number', () => {
+    const result = run(['grep', '--repo', repo, '--pattern', 'updateCloudClient'])
+    expect(result.status).toBe(0)
+    const payload = json<{ matches: { filePath: string; lineNumber: number; column?: number }[]; total: number }>(result)
+    expect(payload.total).toBeGreaterThan(0)
+    expect(payload.matches[0].filePath).toBe('src/utils/helper.ts')
+    expect(payload.matches[0].column).toBeTypeOf('number')
+  })
+
+  it('arch reports modules and cross-module dependencies', () => {
+    const result = run(['arch', '--repo', repo, '--depth', '1'])
+    expect(result.status).toBe(0)
+    const payload = json<{ moduleCount: number; modules: { name: string }[]; dependencies: { from: string; to: string }[] }>(result)
+    expect(payload.modules.map(module => module.name)).toEqual(expect.arrayContaining(['src', 'symbols']))
+    expect(payload.dependencies.some(dependency => dependency.from === 'symbols' && dependency.to === 'src')).toBe(true)
+  })
+
+  it('coverage reports the node/edge/symbol counts with honest coverage', () => {
+    const result = run(['coverage', '--repo', repo])
+    expect(result.status).toBe(0)
+    const payload = json<{ project: string; nodeCount: number; edgeCount: number; symbolCount: number }>(result)
+    expect(payload.project).toBe('mini-repo')
+    expect(payload.nodeCount).toBeGreaterThan(0)
+    expect(payload.symbolCount).toBe(14)
+  })
 
   it('prints usage for help with exit 0', () => {
     const result = run(['help'])

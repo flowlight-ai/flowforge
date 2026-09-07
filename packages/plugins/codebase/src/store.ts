@@ -99,6 +99,9 @@ export interface FileOutlineOptions {
 /** Edge types counted toward the in/out degree surface (C parity). */
 const DEGREE_EDGE_TYPES = ['CALLS', 'USAGE', 'CALL_REFERENCE', 'INHERITS', 'IMPLEMENTS'] as const
 
+/** Edge types traversed by trace_path (C parity). */
+export const TRACE_EDGE_TYPES = ['CALLS', 'USAGE', 'INHERITS', 'IMPLEMENTS'] as const
+
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS projects (
   name TEXT PRIMARY KEY,
@@ -442,6 +445,38 @@ export class CodebaseStore {
     const db = this.requireDb()
     const rows = db.prepare('SELECT project, source, target, type FROM edges WHERE project = ?').all(project) as Record<string, unknown>[]
     return rows.map(row => ({ project: row.project as string, source: row.source as string, target: row.target as string, type: row.type as EdgeType }))
+  }
+
+  /** File nodes of a project (structural index surface for disk reads). */
+  listFileNodes(project: string): readonly GraphNode[] {
+    const db = this.requireDb()
+    const rows = db.prepare('SELECT id, project, label, name, file_path, language, lines, size_bytes, props_json FROM nodes WHERE project = ? AND label = ?')
+      .all(project, 'File') as unknown as NodeRow[]
+    return rows.map(rowToNode)
+  }
+
+  /** Maps node id → file_path for every node carrying one (O(1) resolve). */
+  indexNodePaths(project: string): ReadonlyMap<string, string> {
+    const db = this.requireDb()
+    const rows = db.prepare('SELECT id, file_path FROM nodes WHERE project = ? AND file_path IS NOT NULL').all(project) as Record<string, unknown>[]
+    const map = new Map<string, string>()
+    for (const row of rows) map.set(row.id as string, row.file_path as string)
+    return map
+  }
+
+  /** Every node of a project (summary fields for compare/other consumers). */
+  allNodes(project: string): readonly GraphNode[] {
+    const db = this.requireDb()
+    const rows = db.prepare('SELECT id, project, label, name, file_path, language, lines, size_bytes, props_json FROM nodes WHERE project = ?')
+      .all(project) as unknown as NodeRow[]
+    return rows.map(rowToNode)
+  }
+
+  /** The most recent `last_indexed_at` for a project (mtime baseline). */
+  lastIndexedAt(project: string): string | undefined {
+    const db = this.requireDb()
+    const row = db.prepare('SELECT last_indexed_at FROM projects WHERE name = ?').get(project) as { last_indexed_at: string | null } | undefined
+    return row === undefined || row.last_indexed_at === null ? undefined : row.last_indexed_at
   }
 
   /**

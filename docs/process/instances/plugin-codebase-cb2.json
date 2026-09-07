@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "name": "plugin-codebase-cb2",
+  "workflow": "feature",
+  "snapshot": {
+    "name": "plugin-codebase-cb2",
+    "phase": "design",
+    "gates": {
+      "designApproved": false,
+      "planValidated": false,
+      "verificationEvidence": false
+    },
+    "artifacts": {},
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-07T10:34:52.961Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-07T10:35:14.494Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-07T10:35:14.495Z"
+}

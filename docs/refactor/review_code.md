@@ -319,8 +319,11 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 > 源项目 `D:\software\fl\ex\codebase-memory-mcp`（纯 C，197 文件 / 14.4 万行：tree-sitter 知识图谱 + SQLite + 15+ MCP 工具）。
 > 定位：dev 插件的基础（代码索引/文档生成）+ 任何上层模块与业务的快速索引底座。详见 §16 与 `34-stage-ep-cb-plugin-codebase.md`。
 > **进度**：EP-CB0（骨架 + 存储引擎 + 结构层索引闭环）✅ PR #154——57 项契约测试全绿，真实仓库 8376 文件索引闭环；
-> EP-CB1（tree-sitter 解析管线 + 符号级图谱）✅ 本次 PR——web-tree-sitter 解析 + 符号抽取（Function/Method/Class/Interface/Enum/Type/Variable）+ 复杂度属性族 + 五级边解析链（DEFINES/DEFINES_METHOD/CALLS/USAGE/INHERITS/IMPLEMENTS）+ get_file_outline/get_code_snippet + parse_partial 覆盖率上报；108 契约测试连续两次全绿，真实仓库全量索引 + outline/snippet 冒烟验证（见 `docs/process/verifications/plugin-codebase-cb1.md`）；
-> EP-CB2（工具面补全+文档生成器+MCP）、EP-CB3（Cypher+增量索引）、EP-CB4（语义层+LSP+跨仓库）待推进。
+> EP-CB1（tree-sitter 解析管线 + 符号级图谱）✅ PR #155——web-tree-sitter 解析 + 符号抽取（Function/Method/Class/Interface/Enum/Type/Variable）+ 复杂度属性族 + 五级边解析链（DEFINES/DEFINES_METHOD/CALLS/USAGE/INHERITS/IMPLEMENTS）+ get_file_outline/get_code_snippet + parse_partial 覆盖率上报；108 契约测试连续两次全绿，真实仓库全量索引 + outline/snippet 冒烟验证（见 `docs/process/verifications/plugin-codebase-cb1.md`）；
+> EP-CB2（工具面补全+文档生成器+MCP）✅ 本 PR（待合入）——`trace.ts`（id→QN 符号邻接 + 双向 BFS 防环/深度截断，修复"edgesOf 返回节点 ID 而遍历以 QN 为键"致 trace 恒空的真实缺陷）、`search.ts`（磁盘原文行级检索，修复"limit 截断时 hasMore 恒 false 违背诚实契约"缺陷）、`architecture.ts`（跨模块依赖聚合，修复"边 target 为符号节点 ID 而 fileToModule 只含 File 节点致依赖遗漏"缺陷）、`changes.ts`（mtime 变更检测）、`compare.ts`（快照差集）、`adr.ts`（ADR 生命周期，修复"`# ADR-N:` 开头不被正则解析致 list 恒空"缺陷）、`docgen.ts`（spec/plan 骨架，No-Placeholder 纪律）、`mcp.ts`（tool-lsp 装配契约）+ CLI 冒烟；**148 契约测试全绿（108 既有 + 40 新增）、包级 tsc exit 0、oxlint 0 告警**；
+> EP-CB3（Cypher+增量索引）、EP-CB4（语义层+LSP+跨仓库）待推进。
+
+> **operator 审计反馈（sherlock 2026-09-07 第三轮补充）**：核验 AI 编程工具此前交付，确认 EP0/EP-CB0/EP-CB1 均已按 git-workflow 经 mgr 走 PR 合入（#152/#153/#154/#155），无违规直推主干；`web/node_modules.bak/` 等依赖缓存备份目录已补 `.gitignore`（`**/node_modules.bak/`）防误提交。审查中发现的 4 处真实缺陷（trace 恒空、search hasMore 恒 false、architecture 跨模块依赖遗漏、adr list 恒空）在本 PR 一并修复并各以契约测试锁定。
 
 ### 13.1 EP0 — 工程化流程插件 + 文档规范（第一优先级，✅ 已完成）
 

@@ -16,9 +16,16 @@
 
 import { indexRepository } from './indexer.ts'
 import type { IndexMode, IndexResult } from './indexer.ts'
-import { UsageError, searchNodes, schemaFor, indexStatus } from './query.ts'
+import { UsageError, searchNodes, schemaFor, indexStatus, checkIndexCoverage } from './query.ts'
 import { codeSnippet, fileOutline } from './outline.ts'
 import type { OutlineResult, SnippetResult } from './outline.ts'
+import { tracePath } from './trace.ts'
+import type { TraceResult } from './trace.ts'
+import { searchCode } from './search.ts'
+import { getArchitecture } from './architecture.ts'
+import { detectChanges } from './changes.ts'
+import { compareGraphs } from './compare.ts'
+import { getAdr, listAdrs, createAdr, nextAdrId } from './adr.ts'
 import type { ProjectInfo, SchemaOverview, StoreQueryResult } from './store.ts'
 import type { CodebaseStore } from './store.ts'
 
@@ -186,7 +193,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     name: 'manage_adr',
     description: 'Architecture decision record management integrated with docs/decisions/.',
     implementedIn: 'EP-CB2',
-    inputSchema: { type: 'object', properties: { project: { type: 'string' }, action: { type: 'string', enum: ['list', 'get', 'create'] }, id: { type: 'string' } }, required: ['project', 'action'] },
+    inputSchema: { type: 'object', properties: { project: { type: 'string' }, action: { type: 'string', enum: ['list', 'get', 'create', 'next-id'] }, id: { type: 'number' }, adr_directory: { type: 'string', description: 'Override ADR directory (defaults to ToolContext.repoPath/docs/decisions)' }, title: { type: 'string' }, context: { type: 'string' }, decision: { type: 'string' }, status: { type: 'string' } }, required: ['project', 'action'] },
   },
   {
     name: 'ingest_traces',
@@ -197,7 +204,7 @@ export const TOOLS: readonly ToolDefinition[] = [
 ]
 
 export function implementedTools(): readonly ToolDefinition[] {
-  return TOOLS.filter(tool => tool.implementedIn === 'EP-CB0' || tool.implementedIn === 'EP-CB1')
+  return TOOLS.filter(tool => tool.implementedIn === 'EP-CB0' || tool.implementedIn === 'EP-CB1' || tool.implementedIn === 'EP-CB2')
 }
 
 export interface ToolContext {
@@ -249,7 +256,21 @@ export type ToolResult =
   | { readonly kind: 'projects'; readonly result: readonly ProjectInfo[] }
   | { readonly kind: 'status'; readonly result: ReturnType<typeof indexStatus> }
   | { readonly kind: 'deleted'; readonly result: boolean }
+  | { readonly kind: 'trace'; readonly result: TraceResult }
+  | { readonly kind: 'search-code'; readonly result: ReturnType<typeof searchCode> }
+  | { readonly kind: 'architecture'; readonly result: ReturnType<typeof getArchitecture> }
+  | { readonly kind: 'coverage'; readonly result: ReturnType<typeof checkIndexCoverage> }
+  | { readonly kind: 'changes'; readonly result: ReturnType<typeof detectChanges> }
+  | { readonly kind: 'compare'; readonly result: ReturnType<typeof compareGraphs> }
+  | { readonly kind: 'adr'; readonly result: AdrToolResult }
   | { readonly kind: 'not-implemented'; readonly plannedFor: string }
+
+/** Discriminated ADR tool output (list / get / create / next-id). */
+type AdrToolResult =
+  | ReturnType<typeof listAdrs>
+  | ReturnType<typeof getAdr>
+  | ReturnType<typeof createAdr>
+  | { readonly nextId: number }
 
 /**
  * Execute a tool by name. Async so the indexing tools can share the same
@@ -309,9 +330,87 @@ export async function executeTool(context: ToolContext, name: ToolName, args: Re
       return { kind: 'status', result: indexStatus(context.store, args.project as string | undefined) }
     case 'delete_project':
       return { kind: 'deleted', result: context.store.deleteProject(args.project as string) }
+    case 'trace_path': {
+      const traced = tracePath(context.store, {
+        project: args.project as string,
+        qualifiedName: args.qualified_name as string,
+        ...(args.direction === undefined ? {} : { direction: args.direction as 'callers' | 'callees' }),
+        ...(args.max_depth === undefined ? {} : { maxDepth: args.max_depth as number }),
+      })
+      return { kind: 'trace', result: traced }
+    }
+    case 'search_code': {
+      const found = searchCode(context.store, {
+        project: args.project as string,
+        pattern: args.pattern as string,
+        ...(args.repo_path === undefined ? {} : { repoPath: args.repo_path as string }),
+        ...(args.file_pattern === undefined ? {} : { filePattern: args.file_pattern as string }),
+        ...(args.limit === undefined ? {} : { limit: args.limit as number }),
+      })
+      return { kind: 'search-code', result: found }
+    }
+    case 'get_architecture': {
+      return {
+        kind: 'architecture',
+        result: getArchitecture(context.store, {
+          project: args.project as string,
+          ...(args.depth === undefined ? {} : { depth: args.depth as number }),
+        }),
+      }
+    }
+    case 'check_index_coverage': {
+      const repoPath = args.repo_path as string ?? context.repoPath
+      if (repoPath === undefined) {
+        throw new UsageError('check_index_coverage 需要 repo_path 或 ToolContext.repoPath')
+      }
+      return {
+        kind: 'coverage',
+        result: checkIndexCoverage(context.store, args.project as string, repoPath, args.file_pattern as string | undefined),
+      }
+    }
+    case 'detect_changes': {
+      const repoPath = args.repo_path as string ?? context.repoPath
+      if (repoPath === undefined) {
+        throw new UsageError('detect_changes 需要 repo_path 或 ToolContext.repoPath')
+      }
+      return { kind: 'changes', result: detectChanges(context.store, { project: args.project as string, repoPath }) }
+    }
+    case 'compare_graphs':
+      return { kind: 'compare', result: compareGraphs(context.store, { projectA: args.project_a as string, projectB: args.project_b as string }) }
+    case 'manage_adr': {
+      const directory = args.adr_directory as string ?? resolveDir(context, args.project as string)
+      const action = args.action as 'list' | 'get' | 'create' | 'next-id'
+      if (action === 'list') return { kind: 'adr', result: listAdrs(directory) }
+      if (action === 'next-id') return { kind: 'adr', result: { nextId: nextAdrId(directory) } }
+      if (action === 'get') {
+        if (args.id === undefined) throw new UsageError('manage_adr get 需要 id')
+        return { kind: 'adr', result: getAdr(directory, args.id as number) }
+      }
+      return {
+        kind: 'adr',
+        result: createAdr({
+          directory,
+          action,
+          ...(args.id === undefined ? {} : { id: args.id as number }),
+          ...(args.title === undefined ? {} : { title: args.title as string }),
+          ...(args.context === undefined ? {} : { context: args.context as string }),
+          ...(args.decision === undefined ? {} : { decision: args.decision as string }),
+          ...(args.status === undefined ? {} : { status: args.status as string }),
+        }),
+      }
+    }
     default: {
       const plannedFor = TOOLS.find(tool => tool.name === name)?.implementedIn ?? 'later batch'
       return { kind: 'not-implemented', plannedFor }
     }
   }
+}
+
+/** Resolve the ADR directory from the tool context (repo root /docs/decisions). */
+function resolveDir(context: ToolContext, _project: string): string {
+  const root = context.repoPath
+  if (root === undefined) {
+    throw new UsageError('manage_adr 需要 adr_directory 或 ToolContext.repoPath（docs/decisions 目录）')
+  }
+  return `${root.replaceAll('\\', '/').replace(/\/+$/, '')}/docs/decisions`
 }

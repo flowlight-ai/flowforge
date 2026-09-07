@@ -12,6 +12,7 @@
 import type { NodeLabel, Pagination } from './graph-model.ts'
 import { SYMBOL_LABELS } from './graph-model.ts'
 import type { CodebaseStore, SearchOptions, StoreQueryResult, ProjectInfo, SchemaOverview } from './store.ts'
+import { discoverFiles } from './discover.ts'
 
 export class UsageError extends Error {
   constructor(message: string) {
@@ -112,6 +113,50 @@ export function* iteratePages(store: CodebaseStore, input: QueryInput, pageSize 
     offset += page.rows.length
     if (!page.hasMore) return
   }
+}
+
+/**
+ * Targeted index-coverage check (EP-CB2, T3.2a): "absence ≠ complete" honor
+ * contract. Lists which disk files are NOT present in the graph (optionally
+ * filtered), so a caller can tell "fully indexed" from "best-effort". The
+ * indexer's transient coverage signals (skipped/parse_partial) are not
+ * persisted; this surface re-derives the durable facts: indexed vs on-disk.
+ */
+export function checkIndexCoverage(store: CodebaseStore, project: string, repoPath: string, filePattern?: string): IndexCoverageResult {
+  requireProject(store, project)
+  const regex = filePattern === undefined ? undefined : new RegExp(filePattern, 'u')
+  const indexed = new Set(
+    store.listFileNodes(project)
+      .map(node => node.filePath)
+      .filter((path): path is string => path !== undefined),
+  )
+  const disk = discoverFiles(repoPath.replace(/\\/g, '/'))
+  const absent: string[] = []
+  for (const file of disk.files) {
+    if (regex !== undefined && !regex.test(file.relativePath)) continue
+    if (!indexed.has(file.relativePath)) absent.push(file.relativePath)
+  }
+  absent.sort()
+  const status = indexStatus(store, project) as readonly IndexStatus[]
+  return {
+    project,
+    nodeCount: status[0]?.nodeCount ?? 0,
+    edgeCount: status[0]?.edgeCount ?? 0,
+    symbolCount: status[0]?.symbolCount ?? 0,
+    excluded: disk.excluded,
+    absentFiles: absent,
+    absentCount: absent.length,
+  }
+}
+
+export interface IndexCoverageResult {
+  readonly project: string
+  readonly nodeCount: number
+  readonly edgeCount: number
+  readonly symbolCount: number
+  readonly excluded: readonly string[]
+  readonly absentFiles: readonly string[]
+  readonly absentCount: number
 }
 
 export type { Pagination }
