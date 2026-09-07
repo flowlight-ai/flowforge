@@ -241,21 +241,34 @@ superpowers 的关键工程机制（porting-to-a-new-harness.md）：**skills �
 | ⚠ 决策点 C（subagent 身份） | 六智能体署名（sherlock/luban/davinci/wenxin…） | fresh subagent per task（无署名概念） | 提案：subagent 派发时绑定批次责任智能体署名（实现=sherlock，基础设施=luban，测试=davinci，文档=wenxin），保持 mgr 署名语义不变，待 operator 确认 |
 | ⚠ 决策点 D（worktree 必选性） | 我方当前直接在 master 工作区开发 | superpowers 强制 worktree 隔离 | 提案：EP0 阶段 worktree 为**可选**（本机 Windows 长路径风险），流程状态机不强制；EP0-4 后按验证结果决定是否升级为强制，待 operator 确认 |
 
-### 11.4 交付计划（EP0 批次划分 → 详细任务清单见 `33-stage-ep0-plugin-dev.md`）
+### 11.4 交付计划（EP0 批次划分 → 详细任务清单见 `33-stage-ep0-plugin-dev.md`）✅ 已全部交付
 
-> 本表为总览；**五批次的具体任务清单（T0.x.y 级 checklist + 文件落点 + 验收命令）已细化在 `docs/refactor/33-stage-ep0-plugin-dev.md`**，EP0 执行以该文件为唯一任务依据。
+> 本表为总览；**七批次的具体任务清单（T0.x.y 级 checklist + 文件落点 + 验收命令）已细化在 `docs/refactor/33-stage-ep0-plugin-dev.md`**，EP0 执行以该文件为唯一任务依据。
+> **交付状态（2026-09-07）**：EP0-1 ~ EP0-7 全部完成并合入主干（PR #152 + PR #153）。
 
-| 批次 | 内容 | DoD |
+| 批次 | 内容 | DoD | 状态 |
+|---|---|---|---|
+| EP0-1 | 插件骨架：`packages/plugins/dev`（@flowforge/plugin-dev：状态机/实例注册表/类型面）+ Plane 1 文档资产目录 `docs/process/` 建立 + 14 份流程指令资产移植（适配命名契约/对接 mgr 与 T1-T9/去除 harness 专属措辞） | 插件可安装；状态机单测全绿；14 份流程指令资产入库 | ✅ PR #152 |
+| EP0-2 | 文档模板 4 件（design/plan/review/verification 模板）+ No-Placeholder 校验器 + plan 文档校验单测 | 模板可用；校验器能拦截 TBD/TODO/无代码块步骤 | ✅ PR #153 |
+| EP0-3 | `ff_` CLI 命令族（operator 指令：前缀由 `flowforge process *` 替换为 `ff_dev`/`ff_doctor`）+ 四工作流模板（greenfield/feature/change/hotfix，DCP/TR 决策门照搬 devforge）+ 实例持久化（状态契约：状态在文件不在会话） | CLI 端到端冒烟 + 门禁单测 | ✅ PR #153 |
+| EP0-4 | subagent 派发编排（TaskDispatcher 注入式驱动，无宿主时 NullDispatcher 人工降级——双向互操作）+ 两阶段审查（P1/P2/P3）+ verification 证据采集 | 以一个小需求端到端走完七阶段流程作为验收 | ✅ PR #153（实例 `ep0-plugin-dev` 7/7 完结，四产物齐备） |
+| EP0-5 | 规范回填：`docs/rules/13-dev-process.md`（流程铁律）+ 入口三件套（AGENTS/CLAUDE/GEMINI）+ ts-ci.yml（L4 硬拦截）+ 04-code-standards 联动 + 存量治理基线（governance.md 台账） | 规范文档体系更新；**此后所有批次交付走 forgeProcess 流程** | ✅ PR #153 |
+
+### 11.4a 遵从度五层体系（"提示词可以不听，CI 不放行"——EP0-4 落地）
+
+| 层 | 手段 | 强度 |
 |---|---|---|
-| EP0-1 | 插件骨架：`packages/plugins/dev`（@flowforge/plugin-dev：状态机/实例注册表/类型面）+ Plane 1 文档资产目录 `docs/process/` 建立 + 14 份流程指令资产移植（适配命名契约/对接 mgr 与 T1-T9/去除 harness 专属措辞） | 插件可安装；状态机单测全绿；14 份流程指令资产入库 |
-| EP0-2 | 文档模板 4 件（design/plan/review/verification 模板）+ No-Placeholder 校验器 + plan 文档校验单测 | 模板可用；校验器能拦截 TBD/TODO/无代码块步骤 |
-| EP0-3 | CLI 命令面 `flowforge process *` + 门禁 1（design 签核后才可 plan；plan 校验通过后才可 implement）+ cordis 服务挂载 `ctx.forgeProcess` | CLI 端到端冒烟 + 门禁单测 |
-| EP0-4 | subagent 派发编排（subagent-ff-sdk 集成）+ 两阶段审查 + verification 证据采集 | 以一个小需求端到端走完七阶段流程作为验收 |
-| EP0-5 | 规范文档回填：`docs/rules/13-dev-process.md`（动态流程规范）+ `docs/AGENTS.md` 与 `04-code-standards.md` 引用联动；Mgr/铁律引用更新 | 规范文档体系更新；**此后所有批次交付走 forgeProcess 流程** |
+| L0 入口引导 | AGENTS.md / CLAUDE.md / GEMINI.md 三件套（自然语言入口无需提示词模板：任何 AI 工具开工第一步读入口 + `ff_dev resume` 取状态锚点） | 软 |
+| L1 方法论资产 | `docs/process/skills/` 14 份（harness 无关） | 软 |
+| L2 状态机门禁 | `ff_dev advance` 拒绝无证据推进（三道硬门禁：design 签核 / plan No-Placeholder / verify 证据） | 硬（工具内） |
+| L3 本地 Git 拦截 | mgr 提交前跑 `ff_doctor`（D5 裁决：独立批次实施） | 硬（本地，待接线） |
+| L4 CI 强制拦截 | `.github/workflows/ts-ci.yml`：typecheck + vitest + `ff_doctor all`，PR 必须 | **硬（远端）** |
 
-### 11.5 后续交付方式切换
+**双向互操作两场景（状态契约支撑）**：① flowforge 主导开发，换外部智能体/换 LLM 模型后凭 `ff_dev resume` 从中断处接续；② 外部 AI 工具主导开发 flowforge，凭状态文件（`docs/process/instances/<name>.json`）按同一规范接续。
 
-EP0 完成后，本 review_code.md §13/§14 中的每个开发批次都必须：① 先 `process design` 产出设计文档；② `process plan` 产出计划文档（含 TDD 步骤）；③ subagent 执行；④ 两阶段审查；⑤ verification 后 mgr PR。**这正是"文档→代码"流水线的闭环**。
+### 11.5 后续交付方式切换（✅ 已生效，2026-09-07）
+
+EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须：① design 阶段产出设计文档（`docs/process/specs/`）；② plan 阶段产出计划文档（`docs/process/plans/`，过 No-Placeholder 校验）；③ implement（TDD）；④ 两阶段审查（`docs/process/reviews/`）；⑤ verification 证据（`docs/process/verifications/`）后 mgr sync PR。**这正是"文档→代码"流水线的闭环**。
 
 ---
 
@@ -299,11 +312,17 @@ EP0 完成后，本 review_code.md §13/§14 中的每个开发批次都必须�
 
 ## 13. 未完成任务全集（百万行级项目任务登记）
 
-> 本节为"单一事实来源"：合并 ①阶段地图剩余 ②三源遗漏（§3/§4）③工程化插件（§11）④文档标准化（§12）。每项任务后续按 §11.5 流程交付。
+> 本节为"单一事实来源"：合并 ①阶段地图剩余 ②三源遗漏（§3/§4）③工程化插件（§11）④文档标准化（§12）⑤代码智能插件（§16）。每项任务按 §11.5 流程交付。
 
-### 13.1 EP0 — 工程化流程插件 + 文档规范（第一优先级，5 批次）
+### 13.0 EP-CB — 代码智能插件 @flowforge/plugin-codebase（高优先级，operator 2026-09-07 第二指令）
 
-见 §11.4（EP0-1 ~ EP0-5）。**这是后续一切交付的底座，必须最先完成。**
+> 源项目 `D:\software\fl\ex\codebase-memory-mcp`（纯 C，197 文件 / 14.4 万行：tree-sitter 知识图谱 + SQLite + 15+ MCP 工具）。
+> 定位：dev 插件的基础（代码索引/文档生成）+ 任何上层模块与业务的快速索引底座。详见 §16 与 `34-stage-ep-cb-plugin-codebase.md`。
+> **进度**：EP-CB0（骨架 + 存储引擎 + 结构层索引闭环）✅ PR #154——57 项契约测试全绿，真实仓库 8376 文件索引闭环；EP-CB1~4 待 Q14/Q15/Q17-Q19 裁决后推进。
+
+### 13.1 EP0 — 工程化流程插件 + 文档规范（第一优先级，✅ 已完成）
+
+见 §11.4（EP0-1 ~ EP0-7，PR #152 + PR #153 已合入）。**一切交付的底座，已就位。**
 
 ### 13.2 EP1 — 三源 P0 遗漏项移植（16 项，约 14 个批次）
 
@@ -348,8 +367,10 @@ EP0 完成后，本 review_code.md §13/§14 中的每个开发批次都必须�
 ## 14. 整体执行计划（时序）
 
 ```
-EP0 工程化流程插件（5 批次，先行——一切交付的底座）
-  ↓（此后所有批次走 forgeProcess 七阶段流程交付）
+EP0 工程化流程插件（✅ 已完成，PR #152/#153——一切交付的底座）
+  ↓（此后所有批次走 forgeProcess 七阶段流程交付：ff_dev 状态机 + ff_doctor 拦截）
+EP-CB 代码智能插件 @flowforge/plugin-codebase（高优先级，operator 2026-09-07 第二指令）
+  ↓（plugin-codebase 是 dev 的基础与全仓库快速索引底座，与 EP1 并行推进时优先保障 EP-CB）
 EP1 P0 遗漏移植（约 14 批次）——含矩阵补录
   ↓
 EP2 阶段 8 前端融合（批次 56-59 + dsh client 能力级融入）
@@ -359,7 +380,7 @@ EP3 阶段 9-10 集成回归 + 入口切换（含 snapshots/patches 基建）
 EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 ```
 
-**执行纪律**：每批次交付 = `process design → plan → implement(TDD) → review(两阶段) → verify → mgr sync PR`；本文件作为任务登记单一事实来源，每完成一项即在 §13 对应条目标注 ✅ + PR 号。
+**执行纪律**：每批次交付 = `ff_dev design → plan → implement(TDD) → review(两阶段) → verify → mgr sync PR`；本文件作为任务登记单一事实来源，每完成一项即在 §13 对应条目标注 ✅ + PR 号。
 
 ## 15. 决策问题登记表（含已裁决项）
 
@@ -376,10 +397,98 @@ EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 | Q7 | EP0 插件命名 | ✅ **已定名 `@flowforge/plugin-dev`（软件工程化流程插件）**，包路径 `packages/plugins/dev` |
 | Q8 | 新流程文档自 `docs/process/` 起步；旧批次文档保留 `docs/refactor/` 原位 | ✅ operator 确认 |
 | Q9 | 四源全量移植立场（flowforge Python + dsh + clowder-ai + superpowers）+ 业界开源工程实践参考 | ✅ operator 确认 |
-| Q10 | 决策点 A：forgeProcess design 产物与 F/A/D 分层的衔接粒度（小需求独立 design / 跨域需求强制升格 F/A/D 三件套） | ⚠ 见 §11.3 |
-| Q11 | 决策点 B：流程层级映射（forgeProcess plan = 我方批次；superpowers task = 批次内 checklist 步骤，不新开管理层级） | ⚠ 见 §11.3 |
-| Q12 | 决策点 C：subagent 派发与六智能体署名的绑定规则 | ⚠ 见 §11.3 |
-| Q13 | 决策点 D：worktree 隔离 EP0 期可选、EP0-4 后评估是否强制 | ⚠ 见 §11.3 |
+| Q10 | 决策点 A：forgeProcess design 产物与 F/A/D 分层的衔接粒度（小需求独立 design / 跨域需求强制升格 F/A/D 三件套） | ✅ 已裁决：小需求独立 design；跨域/新增 capability 需求升格（33-stage §8 A 项，随 EP1 首批次验证） |
+| Q11 | 决策点 B：流程层级映射（forgeProcess plan = 我方批次；superpowers task = 批次内 checklist 步骤，不新开管理层级） | ✅ 已裁决（33-stage §8 B 项） |
+| Q12 | 决策点 C：subagent 派发与六智能体署名的绑定规则 | ✅ 已裁决（33-stage §8 C 项：dispatcher 注入式署名） |
+| Q13 | 决策点 D：worktree 隔离 EP0 期可选、EP0-4 后评估是否强制 | ✅ 已裁决（33-stage §8 D 项：保持可选，Windows 长路径风险） |
+| Q14 | plugin-codebase 解析器依赖策略：web-tree-sitter（WASM，纯 TS 生态）/ node 原生绑定 / vendored 语法资产 | ⚠ EP-CB1 前裁决（EP-CB0 不涉及，见 §16.4 建议） |
+| Q15 | plugin-codebase 与 packages/lsp（ctx.lsp seam）融合边界：图谱解析用 LSP 语义（Hybrid LSP 思想）还是纯 tree-sitter | ⚠ EP-CB4 前裁决（建议：LSP seam 作为语义增强源接入，不替代 tree-sitter 主链路） |
+| Q16 | 索引数据落点：仓库本地 `.flowforge/codebase.db`（gitignore）vs 集中 `~/.flowforge/`（C 源项目两态并存） | ✅ 已裁决：仓库本地优先 + 集中注册表（EP-CB0 按建议执行，见 34-stage D-CB3） |
+| Q17 | graph-ui 3D 可视化（C 源项目内置 web 服务）是否纳入移植范围 | ⚠ EP-CB3 前裁决（建议：纳入 EP2 前端融合，非核心链路） |
+| Q18 | 162 语言全量语法资产 vs 先 TS/JS 后扩展的批次节奏 | ⚠ EP-CB1 前裁决（建议：先 TS/JS（本仓库自身即 TS）+ JSON/YAML/Markdown 结构层，语言资产按需增量） |
+| Q19 | Cypher 查询引擎移植深度：全语法子集（C 源项目 cypher/ 模块）vs 先 search_graph 结构化查询后 Cypher | ⚠ EP-CB2 前裁决（建议：结构化查询先行，Cypher 子集随 EP-CB3 落地） |
+
+---
+
+# 第五部分：代码智能插件 @flowforge/plugin-codebase 移植规划（EP-CB）
+
+## 16. 源项目对照与移植定位（operator 2026-09-07 第二指令）
+
+> 指令原文要点：codebase-memory-mcp 作为重要插件高优先级全量移植，命名 `@flowforge/plugin-codebase`；
+> 除了作为 dev 的基础（代码索引和文档生成）外，也是其他任何上层模块和其他业务的快速索引基础；
+> 参考优秀框架发挥其他用途；项目中已有类似框架则融合到一起。
+
+### 16.1 源项目架构解构（D:\software\fl\ex\codebase-memory-mcp）
+
+纯 C 实现（197 文件 / 144,380 行），tree-sitter 语法分析 + 知识图谱 + SQLite 存储，原生可执行 MCP 服务器。
+核心模块（src/ 下 15 个目录）：
+
+| C 模块 | 职责 | TS 移植落点（plugin-codebase 内） |
+|---|---|---|
+| foundation | arena 内存池/兼容层（跨平台 fs/regex/thread） | 不移植（TS 运行时天然提供） |
+| graph_buffer | 索引期内存图缓冲 → SQLite dump | `graph-model.ts` + `store.ts`（RAM-first 设计保留：先内存聚合再批量落盘） |
+| store | SQLite 存储 + BM25 全文 + 向量 + 标签计数 | `store.ts`（node:sqlite 内置，FTS5 对齐 BM25） |
+| pipeline | tree-sitter 抽取管线 + LSP 解析 | `pipeline/`（EP-CB1 语言抽取 + EP-CB4 LSP 融合） |
+| semantic | 语义边（相似度/语义查询） | `semantic.ts`（EP-CB4） |
+| simhash | 相似度去重边 | `simhash.ts`（EP-CB4） |
+| cypher | Cypher 查询解析/执行引擎 | `cypher/`（EP-CB3） |
+| traces | ingest_traces 轨迹摄取 | `traces.ts`（EP-CB3） |
+| git | 变更检测（detect_changes） | `git.ts`（EP-CB2） |
+| discover | 文件发现（gitignore/.cbmignore 感知） | `discover.ts`（EP-CB0） |
+| watcher | 文件监视增量索引 | `watcher.ts`（EP-CB3） |
+| daemon | 后台守护进程模式 | cordis 插件生命周期等价（不单独移植） |
+| mcp | JSON-RPC MCP 服务器 + 工具注册 + 索引监督进程 | `tools/`（挂接 flowforge mcp 工具体系，形态对齐 tool-lsp） |
+| cli | 命令行入口 | `bin/ff_codebase.mjs`（ff_ 命令族，对齐 plugin-dev） |
+| ui | 3D 图可视化 web 服务 | EP2 前端融合（Q17，非核心链路） |
+
+**MCP 工具面（17 个，全量移植对象）**：index_repository / search_graph / query_graph / trace_path /
+get_code_snippet / get_file_outline / get_graph_schema / compare_graphs / get_architecture /
+search_code / list_projects / delete_project / index_status / check_index_coverage / detect_changes /
+manage_adr / ingest_traces。
+
+**图谱模型（移植核心，数值与语义照搬）**：
+- 节点标签：Function / Method / Class / Interface / Module / File / Folder / Route / Variable / Resource（K8s）/ Channel…
+- 边类型：CALLS / USAGE / CALL_REFERENCE / INHERITS / IMPLEMENTS / CONTAINS_FOLDER / CONTAINS_FILE / IMPORTS / CROSS_HTTP_CALLS / CROSS_ASYNC_CALLS / CROSS_CHANNEL…
+- 节点属性：complexity（圈复杂度）/ cognitive / loop_count / loop_depth / transitive_loop_depth /
+  recursive / linear_scan_in_loop / alloc_in_loop / recursion_in_loop / unguarded_recursion /
+  param_count / max_access_depth / signature / docstring / return_type / is_test / lines
+- 索引模式：full（全文件+相似度/语义边）/ moderate（过滤文件+语义）/ fast（过滤文件，无语义）/
+  cross-repo-intelligence（跨项目路由/信道匹配建 CROSS_* 边）
+- 覆盖率诚实契约：skipped / parse_partial / excluded / not_indexed_files 明确上报，"缺席≠完整"
+
+### 16.2 融合决策：项目内既有能力
+
+| 既有能力 | 融合方式 |
+|---|---|
+| `packages/lsp`（@flowforge/lsp：ctx.lsp seam + @flowforge/tool-lsp 模型工具） | EP-CB4 对接：Hybrid LSP 思想落地——图谱的 CALL/USAGE 语义解析经 ctx.lsp 增强（Q15） |
+| `packages/storage`（storage hub：node:sqlite 后端 @flowforge/storage-sqlite） | 存储驱动对齐：plugin-codebase 直接用 node:sqlite（同 storage-sqlite 驱动选型），图 schema 独立演进不并入 kv hub |
+| `packages/mcp`（mcp-client） | 工具暴露形态对齐 tool-lsp 模式（模型面只读工具 + capability seam） |
+| `@flowforge/plugin-dev` | plugin-codebase 是其"基础"：文档生成/代码索引为 dev 流程的 design/plan 阶段供料（EP-CB2 文档生成器对接 specs/plans 模板） |
+
+### 16.3 移植策略：全量目标 + 分批交付（dev 打法复用）
+
+全量移植 14.4 万行 C 不可能单批完成，按 dev 插件 EP0 打法分批：
+
+| 批次 | 内容 | 核心交付 |
+|---|---|---|
+| EP-CB0 | 插件骨架 + 图谱域模型 + node:sqlite 存储引擎 + 结构层索引（Project→Folder→File→Module 树）+ 结构化查询（search/label/degree/分页契约）+ ff_codebase CLI + get_graph_schema/index_status/list_projects 工具 + FTS5 BM25 搜索 | 可对本仓库跑通"索引→查询→schema"闭环 |
+| EP-CB1 | tree-sitter 解析管线（Q14 依赖裁决后）+ 符号级抽取（Function/Class/Method/Route/Variable + 复杂度属性族）+ CALLS/INHERITS/IMPLEMENTS/CONTAINS 边 + get_file_outline/get_code_snippet | 本仓库 TS/JS 符号图谱可用 |
+| EP-CB2 | 工具面补全（trace_path/search_code/check_index_coverage/detect_changes/delete_project/compare_graphs/get_architecture/manage_adr）+ 文档生成器（对接 plugin-dev specs/plans 模板）+ git 变更检测 | dev 插件可消费的文档生成链路 |
+| EP-CB3 | Cypher 查询引擎子集（Q19）+ ingest_traces + watcher 增量索引 + 持久化工件（压缩 artifact 团队共享） | 复杂多跳查询可用 |
+| EP-CB4 | 语义层（semantic edges + simhash 相似度 + 向量检索）+ LSP 融合（Q15）+ cross-repo-intelligence 跨仓库智能 | Hybrid LSP 全量对齐 |
+
+### 16.4 关键工程决策（移植即重构，非逐行翻译）
+
+1. **语言运行时**：C 原生二进制 → TS 插件（cordis 形态，对齐 plugin-dev 包模板）；foundation/compat 层全部不移植（TS 运行时天然跨平台）。
+2. **存储**：C 的 SQLite + FTS5 + 内存图缓冲 → `node:sqlite`（Node ≥22.5 内置，零外部依赖，与 storage-sqlite 同选型）；RAM-first 管线保留（先内存聚合再批量事务落盘）。
+3. **索引监督进程**（C：MCP 服务端 spawn `cli --index-worker` 子进程防内存膨胀）→ TS 内采用同一模式：CLI 子命令 `ff_codebase index` 独立进程跑索引，插件/工具侧只读消费（隔离重活，崩不倒宿主）。
+4. **覆盖率诚实契约照搬**：skipped/parse_partial/excluded 三态上报与"缺席≠完整"原则写入 EP-CB0 的存储与工具层。
+5. **测试铁律适配**：T1-T9 不 Mock 原则对索引管线天然适配（真实文件真实解析）；测试语料用仓库真实结构 + fixture 微型仓库。
+6. **命名契约**：包名 `@flowforge/plugin-codebase`、CLI `ff_codebase`（ff_ 命令族成员）、目录 `packages/plugins/codebase`、数据落点 `.flowforge/`（Q16）。
+
+### 16.5 交付方式
+
+EP-CB 各批次全部走 plugin-dev 七阶段流程（§11.5）：设计文档（specs/）→ 计划文档（plans/，No-Placeholder 校验）→ TDD 实现 → 两阶段审查（reviews/）→ 验证证据（verifications/）→ mgr sync PR。详细任务清单见 `docs/refactor/34-stage-ep-cb-plugin-codebase.md`（本部分为总览，该文件为唯一任务依据）。
 
 ---
 

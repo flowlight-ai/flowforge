@@ -1,0 +1,240 @@
+/**
+ * Storage engine suite (EP-CB0, T1.10) — real node:sqlite, real temp
+ * directory, zero mocks (test ironclad rule T1–T9).
+ *
+ * Pins: schema bootstrap idempotency, RAM-first batched upserts (FTS resync),
+ * edge dedup, multi-project registry, deleteProject cascade, BM25 search
+ * (camelCase split + label boost + noise filter + id tie-break) and the
+ * pagination contract (total/hasMore across offset pages).
+ */
+
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { CodebaseStore, buildFtsMatch, tokenizeName } from '../src/index.ts'
+import type { EdgeRecord, NodeRecord } from '../src/index.ts'
+
+let dir: string
+let dbPath: string
+let store: CodebaseStore
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'ff-codebase-store-'))
+  dbPath = join(dir, 'codebase.db')
+  store = new CodebaseStore(dbPath)
+  store.open()
+})
+
+afterEach(() => {
+  store.dispose()
+  rmSync(dir, { recursive: true, force: true })
+})
+
+function node(id: string, label: NodeRecord['label'], name: string, extra: Partial<NodeRecord> = {}): NodeRecord {
+  return { id, project: 'demo', label, name, ...extra }
+}
+
+describe('open / dispose', () => {
+  it('bootstraps the schema idempotently across reopens', () => {
+    store.dispose()
+    const reopened = new CodebaseStore(dbPath)
+    reopened.open()
+    reopened.registerProject('demo')
+    expect(reopened.listProjects().map(info => info.name)).toEqual(['demo'])
+    reopened.dispose()
+  })
+
+  it('rejects operations before open()', () => {
+    const closed = new CodebaseStore(dbPath)
+    expect(() => closed.registerProject('demo')).toThrow('store 未 open')
+  })
+})
+
+describe('tokenizeName / buildFtsMatch', () => {
+  it('splits camelCase, snake/kebab separators and keeps the raw identifier', () => {
+    expect(tokenizeName('updateCloudClient')).toBe('updatecloudclient update cloud client')
+    expect(tokenizeName('ff_codebase-cli')).toBe('ff_codebase-cli ff codebase cli')
+    expect(tokenizeName('HandleHTTPResponse')).toBe('handlehttpresponse handle http response')
+  })
+
+  it('escapes user tokens into an implicit-OR FTS match expression', () => {
+    expect(buildFtsMatch('cloud client')).toBe('"cloud" OR "client"')
+    expect(buildFtsMatch('')).toBe('""')
+    expect(buildFtsMatch('we"ird')).toBe('"we""ird"')
+  })
+})
+
+describe('upsertNodes / insertEdges', () => {
+  it('upserts nodes with full FTS resync (idempotent, no stale rows)', () => {
+    store.upsertNodes([node('fn:1', 'Function', 'updateCloudClient', { lines: 10 })])
+    store.upsertNodes([node('fn:1', 'Function', 'renamedFunction', { lines: 20 })])
+    const result = store.search({ project: 'demo', query: 'updateCloudClient' })
+    expect(result.total).toBe(0)
+    const renamed = store.search({ project: 'demo', query: 'renamedFunction' })
+    expect(renamed.total).toBe(1)
+    expect(renamed.rows[0]?.name).toBe('renamedFunction')
+    expect(renamed.rows[0]?.lines).toBe(20)
+  })
+
+  it('round-trips optional fields and props as absent-or-present (never null)', () => {
+    store.upsertNodes([
+      node('fn:1', 'Function', 'plain'),
+      node('fn:2', 'Function', 'rich', { filePath: 'src/a.ts', language: 'typescript', lines: 3, sizeBytes: 42, props: { complexity: 7, recursive: true } }),
+    ])
+    const rows = store.search({ project: 'demo', namePattern: 'plain|rich' }).rows
+    const plain = rows.find(row => row.name === 'plain')
+    const rich = rows.find(row => row.name === 'rich')
+    expect(plain?.filePath).toBeUndefined()
+    expect(plain?.props).toBeUndefined()
+    expect(rich?.filePath).toBe('src/a.ts')
+    expect(rich?.language).toBe('typescript')
+    expect(rich?.lines).toBe(3)
+    expect(rich?.sizeBytes).toBe(42)
+    expect(rich?.props).toEqual({ complexity: 7, recursive: true })
+  })
+
+  it('dedups edges via the primary key', () => {
+    const edge: EdgeRecord = { project: 'demo', source: 'fn:1', target: 'fn:2', type: 'CALLS' }
+    store.insertEdges([edge, edge, edge])
+    expect(store.edgeTypeCounts('demo')).toEqual([{ type: 'CALLS', count: 1 }])
+  })
+})
+
+describe('multi-project registry', () => {
+  it('lists projects ordered by name and keeps index state per project', () => {
+    store.registerProject('beta')
+    store.registerProject('alpha')
+    store.updateProjectIndexState('beta', 'full', 12)
+    const names = store.listProjects().map(info => info.name)
+    expect(names).toEqual(['alpha', 'beta'])
+    const beta = store.listProjects().find(info => info.name === 'beta')
+    expect(beta?.lastMode).toBe('full')
+    expect(beta?.filesIndexed).toBe(12)
+    expect(beta?.lastIndexedAt).toBeDefined()
+    const alpha = store.listProjects().find(info => info.name === 'alpha')
+    expect(alpha?.lastIndexedAt).toBeUndefined()
+  })
+
+  it('deletes a project cascading nodes, edges and FTS rows', () => {
+    store.registerProject('demo')
+    store.registerProject('other')
+    store.upsertNodes([
+      node('fn:1', 'Function', 'updateCloudClient'),
+      { ...node('fn:x', 'Function', 'otherProject'), project: 'other' },
+    ])
+    store.insertEdges([{ project: 'demo', source: 'fn:1', target: 'fn:x', type: 'CALLS' }])
+    expect(store.deleteProject('demo')).toBe(true)
+    expect(store.deleteProject('demo')).toBe(false)
+    expect(store.search({ project: 'demo', query: 'cloud' }).total).toBe(0)
+    expect(store.search({ project: 'demo' }).total).toBe(0)
+    expect(store.search({ project: 'other', query: 'otherProject' }).total).toBe(1)
+    expect(store.edgeTypeCounts('demo')).toEqual([])
+  })
+})
+
+describe('search — BM25 ranked mode (query provided)', () => {
+  beforeEach(() => {
+    store.upsertNodes([
+      node('fn:cloud', 'Function', 'updateCloudClient', { filePath: 'src/cloud.ts' }),
+      node('cls:cloud', 'Class', 'CloudClient', { filePath: 'src/cloud.ts' }),
+      node('mod:cloud', 'Module', 'cloud', { filePath: 'src/cloud.ts' }),
+      node('file:cloud', 'File', 'cloud.ts', { filePath: 'src/cloud.ts' }),
+      node('fn:other', 'Function', 'parseConfig', { filePath: 'src/config.ts' }),
+    ])
+  })
+
+  it('ranks label-boost order Function > Class > Module and filters noise labels', () => {
+    const result = store.search({ project: 'demo', query: 'cloud' })
+    expect(result.rows.map(row => row.name)).toEqual(['updateCloudClient', 'CloudClient', 'cloud'])
+    expect(result.rows.map(row => row.label)).toEqual(['Function', 'Class', 'Module'])
+    expect(result.total).toBe(3)
+  })
+
+  it('matches camelCase identifiers through the split-token index', () => {
+    const orQuery = store.search({ project: 'demo', query: 'cloud client' })
+    expect(orQuery.rows.map(row => row.name)).toEqual(['updateCloudClient', 'CloudClient', 'cloud'])
+    const updateOnly = store.search({ project: 'demo', query: 'update' })
+    expect(updateOnly.rows.map(row => row.name)).toEqual(['updateCloudClient'])
+    const single = store.search({ project: 'demo', query: 'cloudclient' })
+    expect(single.rows.map(row => row.name)).toEqual(['CloudClient'])
+  })
+
+  it('applies label and regex filters as rank-preserving post-filters', () => {
+    const all = store.search({ project: 'demo', query: 'cloud' })
+    const classes = store.search({ project: 'demo', query: 'cloud', label: 'Class' })
+    expect(classes.rows.map(row => row.name)).toEqual(['CloudClient'])
+    const byFile = store.search({ project: 'demo', query: 'cloud', filePattern: 'cloud\\.ts$' })
+    expect(byFile.rows.length).toBe(3)
+    const byName = store.search({ project: 'demo', query: 'cloud', namePattern: '^Cloud' })
+    expect(byName.rows.map(row => row.name)).toEqual(['CloudClient'])
+    expect(classes.rows[0]?.name).toBe(all.rows.find(row => row.label === 'Class')?.name)
+  })
+
+  it('filters by CALLS-degree (min/max over in+out)', () => {
+    store.insertEdges([
+      { project: 'demo', source: 'fn:cloud', target: 'fn:other', type: 'CALLS' },
+      { project: 'demo', source: 'cls:cloud', target: 'fn:cloud', type: 'CONTAINS_FILE' },
+    ])
+    const minOne = store.search({ project: 'demo', query: 'cloud', minDegree: 1 })
+    expect(minOne.rows.map(row => row.name)).toEqual(['updateCloudClient'])
+    const maxZero = store.search({ project: 'demo', query: 'cloud', maxDegree: 0 })
+    expect(maxZero.rows.map(row => row.name)).toEqual(['CloudClient', 'cloud'])
+  })
+})
+
+describe('search — structural mode (no query)', () => {
+  it('paginates deterministically with the total/hasMore contract', () => {
+    const nodes: NodeRecord[] = []
+    for (let index = 0; index < 25; index += 1) {
+      nodes.push(node(`f:${index}`, 'File', `file${index}.ts`))
+    }
+    store.upsertNodes(nodes)
+    const page1 = store.search({ project: 'demo', limit: 10, offset: 0 })
+    expect(page1.rows).toHaveLength(10)
+    expect(page1.total).toBe(25)
+    expect(page1.hasMore).toBe(true)
+    const page3 = store.search({ project: 'demo', limit: 10, offset: 20 })
+    expect(page3.rows).toHaveLength(5)
+    expect(page3.hasMore).toBe(false)
+    const union = [...store.search({ project: 'demo', limit: 10, offset: 0 }).rows, ...store.search({ project: 'demo', limit: 10, offset: 10 }).rows, ...page3.rows]
+    expect(new Set(union.map(row => row.id)).size).toBe(25)
+  })
+
+  it('applies structural filters without BM25', () => {
+    store.upsertNodes([
+      node('f:1', 'File', 'a.ts', { filePath: 'src/a.ts' }),
+      node('f:2', 'File', 'b.ts', { filePath: 'src/b.ts' }),
+      node('f:3', 'Folder', 'src'),
+    ])
+    const files = store.search({ project: 'demo', label: 'File' })
+    expect(files.total).toBe(2)
+    const srcOnly = store.search({ project: 'demo', filePattern: '^src/' })
+    expect(srcOnly.rows.map(row => row.name)).toEqual(['a.ts', 'b.ts'])
+    const folder = store.search({ project: 'demo', label: 'Folder', namePattern: '^sr' })
+    expect(folder.rows.map(row => row.name)).toEqual(['src'])
+  })
+})
+
+describe('schemaOverview', () => {
+  it('aggregates label and edge type counts across projects', () => {
+    store.upsertNodes([
+      node('f:1', 'File', 'a.ts'),
+      node('f:2', 'File', 'b.ts'),
+      node('d:1', 'Folder', 'src'),
+    ])
+    store.insertEdges([{ project: 'demo', source: 'd:1', target: 'f:1', type: 'CONTAINS_FILE' }])
+    const overview = store.schemaOverview('demo')
+    expect(overview.nodeLabels).toEqual([
+      { label: 'File', count: 2 },
+      { label: 'Folder', count: 1 },
+    ])
+    expect(overview.edgeTypes).toEqual([{ type: 'CONTAINS_FILE', count: 1 }])
+    expect(store.schemaOverview().nodeLabels).toEqual(overview.nodeLabels)
+  })
+
+  it('exposes edgesOf for raw adjacency access', () => {
+    store.insertEdges([{ project: 'demo', source: 'a', target: 'b', type: 'CALLS' }])
+    expect(store.edgesOf('demo')).toEqual([{ project: 'demo', source: 'a', target: 'b', type: 'CALLS' }])
+  })
+})

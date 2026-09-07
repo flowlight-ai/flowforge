@@ -37,6 +37,11 @@ pnpm typecheck                     # 类型检查（同 build 的 tsc 阶段）
 pnpm lint                          # oxlint 静态检查
 pnpm test                          # vitest run 运行测试
 
+# ff_ 命令族（plugin-dev / plugin-codebase）
+node packages/plugins/dev/bin/ff_dev.mjs resume    # 接续七阶段流程实例（详见下方标准开发流程）
+node packages/plugins/dev/bin/ff_doctor.mjs all    # 流程遵从度检查（CI 同款）
+node packages/plugins/codebase/bin/ff_codebase.mjs index --repo . --mode fast   # 代码知识图谱索引（查询面见包 README）
+
 # Git 远程操作一律走 ./mgr（详见下方 ./mgr  essentials）
 ./mgr pull                                          # 拉取当前平台更新（保持在共享主干分支）
 ./mgr commit "type(scope): 描述 [agentID]"          # 本地提交（强制规范检查；本地始终在主干，不建私有分支）

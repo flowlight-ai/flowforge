@@ -546,6 +546,9 @@
       "path": "./packages/plugins/canary"
     },
     {
+      "path": "./packages/plugins/codebase"
+    },
+    {
       "path": "./packages/plugins/dev"
     },
     {

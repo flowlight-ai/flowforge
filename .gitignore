@@ -64,6 +64,8 @@ desktop.ini
 
 # ==================== FlowForge specific ====================
 flowforge.egg-info/
+# @flowforge/plugin-codebase 索引数据落点（仓库本地，见 docs/refactor/34-stage-ep-cb-plugin-codebase.md Q16）
+.flowforge/
 
 # ==================== Temporary & backup ====================
 tmp/
