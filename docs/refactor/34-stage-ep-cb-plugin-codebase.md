@@ -66,13 +66,14 @@ packages/plugins/codebase/
 - [x] T2.4 get_file_outline / get_code_snippet 工具 + parse_partial 覆盖率上报（ERROR 树 → coverage.parsePartial）
 - [x] T2.5 对本仓库全量索引验证（TS/JS 主仓库为验收语料）（108 用例连续两次全绿 + 全量索引 + outline/snippet 冒烟，见 `docs/process/verifications/plugin-codebase-cb1.md`）
 
-### EP-CB2 工具面补全 + 文档生成器 ⬜
+### EP-CB2 工具面补全 + 文档生成器 ✅ PR #158
 
-- [ ] T3.1 trace_path（调用链追踪）/ search_code（原文检索）/ get_architecture（架构视图）
-- [ ] T3.2 check_index_coverage / detect_changes（git 变更检测）/ compare_graphs
-- [ ] T3.3 manage_adr（ADR 管理对接 docs/decisions/）/ delete_project 补全
-- [ ] T3.4 文档生成器：图谱 → plugin-dev specs/plans 模板骨架生成（dev 插件供料闭环）
-- [ ] T3.5 MCP 挂接：tools.ts 注册表 → flowforge mcp 工具体系（对齐 tool-lsp 装配契约）
+- [x] T3.1 trace_path（调用链追踪，id→QN 邻接 + 双向 BFS 防环/深度截断）/ search_code（磁盘原文行级检索，limit 截断诚实上报 hasMore）/ get_architecture（跨模块依赖聚合，符号节点经 filePath 解析到模块）
+- [x] T3.2 check_index_coverage / detect_changes（mtime 变更检测）/ compare_graphs（快照差集，identical 契约）
+- [x] T3.3 manage_adr（ADR 生命周期 list/get/create，`# ADR-N:` 正则勘误）/ delete_project 补全
+- [x] T3.4 文档生成器 docgen.ts：图谱 → plugin-dev specs/plans 模板骨架生成（No-Placeholder 纪律，结构头齐备）
+- [x] T3.5 MCP 挂接：mcp.ts 装配契约（18 工具注册表 → flowforge mcp 工具体系，对齐 tool-lsp）
+- [x] T3.6 测试与验证：148 契约测试全绿（18 文件）+ 包级 tsc exit 0 + oxlint 0（见 `docs/process/verifications/plugin-codebase-cb2.md`）
 
 ### EP-CB3 Cypher 子集 + 增量索引 + 轨迹 ⬜（Q19 裁决后动工）
 
