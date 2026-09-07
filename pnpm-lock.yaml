@@ -3290,6 +3290,15 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/infrastructure/connectors:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/infrastructure-redis-port':
+        specifier: workspace:^
+        version: link:../redis-port
+
   packages/infrastructure/debug:
     devDependencies:
       '@flowforge/cordis':
