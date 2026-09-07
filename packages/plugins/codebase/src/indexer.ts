@@ -1,12 +1,19 @@
 /**
- * @flowforge/plugin-codebase — structural indexer (EP-CB0, T1.5).
+ * @flowforge/plugin-codebase — structural + symbol indexer (EP-CB0 T1.5,
+ * EP-CB1 T2.4b).
  *
- * Ported from codebase-memory-mcp's graph_buffer + pipeline design (structure
- * slice): aggregate the Project → Folder → File tree in RAM first, then flush
- * nodes/edges to the store in two batched transactions (RAM-first). Module
+ * Ported from codebase-memory-mcp's graph_buffer + pipeline design: aggregate
+ * the Project → Folder → File tree and the symbol slice in RAM first, then
+ * flush nodes/edges to the store in batched transactions (RAM-first). Module
  * detection marks package directories (package.json / pyproject.toml) on the
- * Folder node's properties; dedicated Module nodes with IMPORTS dependency
- * edges land with the symbol pipeline (EP-CB1+).
+ * Folder node's properties.
+ *
+ * Symbol layer (EP-CB1): TS/TSX/JS files parse through the web-tree-sitter
+ * singleton; a definition pass aggregates symbol nodes + DEFINES /
+ * DEFINES_METHOD material, then a resolution pass rebuilds the registry and
+ * emits CALLS / INHERITS / IMPLEMENTS / USAGE edges. Files whose tree carries
+ * ERROR nodes are reported through coverage.parsePartial (the coverage
+ * honesty contract's third state).
  *
  * Index modes (C parity): `full` indexes every discovered file (subject to
  * exclusion rules); `moderate`/`fast` restrict to code extensions — modes
@@ -22,6 +29,12 @@ import type { CoverageReport, SkippedFile } from './coverage.ts'
 import { discoverFiles } from './discover.ts'
 import type { NodeRecord, EdgeRecord, CodebaseStore } from './store.ts'
 import { deriveProjectName } from './project.ts'
+import { computeQualifiedName, extractSymbols } from './symbols.ts'
+import type { EdgeMaterial } from './symbols.ts'
+import { buildRegistry, extractEdges, extractImports } from './edges.ts'
+import { createCodebaseParser } from './parser.ts'
+import { SUPPORTED_SYMBOL_LANGUAGES } from './parser.ts'
+import type { Tree } from 'web-tree-sitter'
 
 export type IndexMode = 'full' | 'moderate' | 'fast'
 
@@ -69,6 +82,8 @@ export interface IndexResult {
   readonly filesIndexed: number
   readonly nodeCount: number
   readonly edgeCount: number
+  /** Symbol-layer node count (EP-CB1): symbols minted by the definition pass. */
+  readonly symbolCount: number
   readonly coverage: CoverageReport
   readonly durationMs: number
 }
@@ -124,8 +139,19 @@ function readPackageIdentity(root: string, relativePath: string): PackageIdentit
   }
 }
 
-/** Index the structural slice of a repository into the store. */
-export function indexRepository(options: IndexOptions): IndexResult {
+interface ParsedSymbolFile {
+  readonly relPath: string
+  readonly language: string
+  readonly source: string
+  readonly tree: Tree
+}
+
+/**
+ * Index the structural + symbol slices of a repository into the store.
+ * Async since EP-CB1: the first symbol file awaits the parser singleton
+ * (wasm preload); structure semantics are unchanged.
+ */
+export async function indexRepository(options: IndexOptions): Promise<IndexResult> {
   const started = Date.now()
   const mode: IndexMode = options.mode ?? 'full'
   const repoRoot = options.repoPath.replace(/\\/g, '/').replace(/\/+$/, '')
@@ -209,21 +235,71 @@ export function indexRepository(options: IndexOptions): IndexResult {
     }
   }
 
+  // ---- Symbol layer (EP-CB1): definition pass → registry → resolution pass.
+
+  const parser = await createCodebaseParser()
+  const skippedPaths = new Set(skipped.map(entry => entry.path))
+  const parsed: ParsedSymbolFile[] = []
+  for (const file of discovered.files) {
+    const ext = extensionOf(file.relativePath)
+    if (!SUPPORTED_SYMBOL_LANGUAGES.includes(ext)) continue
+    if (mode !== 'full' && !CODE_EXTENSIONS.includes(ext)) continue
+    if (skippedPaths.has(file.relativePath) || file.sizeBytes > maxFileBytes) continue
+    let source: string
+    try {
+      source = readFileSync(file.absolutePath, 'utf8')
+    } catch {
+      continue // already reported by the structural pass (or unreadable)
+    }
+    const tree = parser.parseFile(source, ext)
+    if (tree !== undefined) parsed.push({ relPath: file.relativePath, language: detectLanguage(file.relativePath) ?? ext, source, tree })
+  }
+
+  const parsePartial: SkippedFile[] = []
+  const symbolNodes: NodeRecord[] = []
+  const symbolEdgeMaterial: EdgeMaterial[] = []
+  for (const file of parsed) {
+    const extraction = extractSymbols(file.tree, file.source, { project, relPath: file.relPath, language: file.language })
+    symbolNodes.push(...extraction.nodes)
+    symbolEdgeMaterial.push(...extraction.defines, ...extraction.methods)
+    if (extraction.parseIncomplete) {
+      parsePartial.push({ path: file.relPath, reason: '语法错误（ERROR/MISSING 节点），符号可能不完整' })
+    }
+  }
+
+  const registry = buildRegistry(symbolNodes)
+  for (const file of parsed) {
+    const fileQn = computeQualifiedName(project, file.relPath, '')
+    const imports = extractImports(file.tree, file.source, { project, relPath: file.relPath })
+    const resolved = extractEdges(file.tree, file.source, { project, relPath: file.relPath, fileQn, imports, registry })
+    symbolEdgeMaterial.push(...resolved.calls, ...resolved.inherits, ...resolved.implements, ...resolved.usages)
+  }
+
+  const symbolEdges: EdgeRecord[] = symbolEdgeMaterial.map(material => ({
+    project,
+    source: material.source,
+    target: material.target,
+    type: material.type,
+  }))
+
   options.store.open()
   options.store.deleteProject(project)
   options.store.registerProject(project)
   options.store.upsertNodes(nodes)
   options.store.insertEdges(edges)
+  options.store.upsertNodes(symbolNodes)
+  options.store.insertEdges(symbolEdges)
   options.store.updateProjectIndexState(project, mode, nodes.filter(node => node.label === 'File').length)
 
-  const coverage: CoverageReport = { ...emptyCoverage(discovered.excluded), skipped }
+  const coverage: CoverageReport = { ...emptyCoverage(discovered.excluded), skipped, parsePartial }
 
   return {
     project,
     mode,
     filesIndexed: nodes.filter(node => node.label === 'File').length,
-    nodeCount: nodes.length,
-    edgeCount: edges.length,
+    nodeCount: nodes.length + symbolNodes.length,
+    edgeCount: edges.length + symbolEdges.length,
+    symbolCount: symbolNodes.length,
     coverage,
     durationMs: Date.now() - started,
   }

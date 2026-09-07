@@ -51,7 +51,7 @@ afterAll(() => {
 })
 
 describe('index → query → schema → status 闭环', () => {
-  it('index exits 0 with the structural summary and coverage report', () => {
+  it('index exits 0 with the structural + symbol summary and coverage report', () => {
     const result = run(['index', '--repo', repo])
     expect(result.status).toBe(0)
     const payload = json<{
@@ -60,16 +60,19 @@ describe('index → query → schema → status 闭环', () => {
       filesIndexed: number
       nodeCount: number
       edgeCount: number
-      coverage: { excluded: string[]; skipped: { path: string }[] }
+      symbolCount: number
+      coverage: { excluded: string[]; skipped: { path: string }[]; parsePartial: { path: string }[] }
     }>(result)
     expect(payload.project).toBe('mini-repo')
     expect(payload.mode).toBe('full')
-    expect(payload.filesIndexed).toBe(5)
-    expect(payload.nodeCount).toBe(9)
-    expect(payload.edgeCount).toBe(8)
+    expect(payload.filesIndexed).toBe(7)
+    expect(payload.nodeCount).toBe(26)
+    expect(payload.edgeCount).toBe(33)
+    expect(payload.symbolCount).toBe(14)
     expect(payload.coverage.excluded).toContain('out')
     expect(payload.coverage.excluded).toContain('.flowforge')
     expect(payload.coverage.skipped).toEqual([])
+    expect(payload.coverage.parsePartial.map(entry => entry.path)).toEqual(['symbols/broken.ts'])
   })
 
   it('query paginates File nodes with the total/hasMore contract', () => {
@@ -77,7 +80,7 @@ describe('index → query → schema → status 闭环', () => {
     expect(result.status).toBe(0)
     const payload = json<{ rows: unknown[]; total: number; hasMore: boolean }>(result)
     expect(payload.rows).toHaveLength(2)
-    expect(payload.total).toBe(5)
+    expect(payload.total).toBe(7)
     expect(payload.hasMore).toBe(true)
   })
 
@@ -92,21 +95,26 @@ describe('index → query → schema → status 闭环', () => {
     const result = run(['schema', '--repo', repo])
     expect(result.status).toBe(0)
     const payload = json<{ nodeLabels: { label: string; count: number }[]; edgeTypes: { type: string; count: number }[] }>(result)
-    expect(payload.nodeLabels).toContainEqual({ label: 'File', count: 5 })
-    expect(payload.edgeTypes).toContainEqual({ type: 'CONTAINS_FILE', count: 5 })
-    expect(payload.edgeTypes).toContainEqual({ type: 'CONTAINS_FOLDER', count: 3 })
+    expect(payload.nodeLabels).toContainEqual({ label: 'File', count: 7 })
+    expect(payload.nodeLabels).toContainEqual({ label: 'Function', count: 3 })
+    expect(payload.nodeLabels).toContainEqual({ label: 'Class', count: 2 })
+    expect(payload.edgeTypes).toContainEqual({ type: 'CONTAINS_FILE', count: 7 })
+    expect(payload.edgeTypes).toContainEqual({ type: 'CONTAINS_FOLDER', count: 4 })
+    expect(payload.edgeTypes).toContainEqual({ type: 'DEFINES', count: 14 })
+    expect(payload.edgeTypes).toContainEqual({ type: 'DEFINES_METHOD', count: 3 })
   })
 
   it('status reports the persisted index metadata', () => {
     const result = run(['status', '--repo', repo])
     expect(result.status).toBe(0)
-    const payload = json<{ project: { name: string; filesIndexed: number; lastMode: string }; nodeCount: number; edgeCount: number }[]>(result)
+    const payload = json<{ project: { name: string; filesIndexed: number; lastMode: string }; nodeCount: number; edgeCount: number; symbolCount: number }[]>(result)
     expect(payload).toHaveLength(1)
     expect(payload[0]?.project.name).toBe('mini-repo')
-    expect(payload[0]?.project.filesIndexed).toBe(5)
+    expect(payload[0]?.project.filesIndexed).toBe(7)
     expect(payload[0]?.project.lastMode).toBe('full')
-    expect(payload[0]?.nodeCount).toBe(9)
-    expect(payload[0]?.edgeCount).toBe(8)
+    expect(payload[0]?.nodeCount).toBe(26)
+    expect(payload[0]?.edgeCount).toBe(33)
+    expect(payload[0]?.symbolCount).toBe(14)
   })
 
   it('projects lists the registered project', () => {
@@ -115,13 +123,47 @@ describe('index → query → schema → status 闭环', () => {
     expect(json<{ name: string }[]>(result).map(info => info.name)).toEqual(['mini-repo'])
   })
 
-  it('search on a structural-only graph returns the empty-with-note contract (noise filter)', () => {
-    const result = run(['search', '--repo', repo, '--query', 'helper'])
+  it('search on a query matching only File nodes returns the empty-with-note contract (noise filter)', () => {
+    const result = run(['search', '--repo', repo, '--query', 'guide'])
     expect(result.status).toBe(0)
     const payload = json<{ rows: unknown[]; total: number; note?: string }>(result)
     expect(payload.total).toBe(0)
     expect(payload.rows).toEqual([])
     expect(payload.note).toContain('无匹配结果')
+  })
+
+  it('search returns symbol-level BM25 rows for a symbol-name query', () => {
+    const result = run(['search', '--repo', repo, '--query', 'circle', '--limit', '10'])
+    expect(result.status).toBe(0)
+    const payload = json<{ rows: { name: string; label: string }[]; total: number }>(result)
+    expect(payload.total).toBe(3)
+    const names = payload.rows.map(row => row.name)
+    expect(names).toContain('mini-repo.symbols.demo.Circle')
+    expect(payload.rows.every(row => row.label !== 'File')).toBe(true)
+  })
+
+  it('outline prints the line-ordered symbol table of an indexed file', () => {
+    const result = run(['outline', '--repo', repo, '--file', 'symbols/demo.ts'])
+    expect(result.status).toBe(0)
+    const payload = json<{ file: string; rows: { qn: string; name: string; label: string; lines: string }[]; total: number }>(result)
+    expect(payload.file).toBe('symbols/demo.ts')
+    expect(payload.total).toBe(10)
+    const circle = payload.rows.find(row => row.name === 'Circle')
+    expect(circle?.label).toBe('Class')
+    expect(circle?.lines).toMatch(/^\d+-\d+$/)
+    const startLines = payload.rows.map(row => Number(row.lines.split('-')[0]))
+    expect(startLines).toEqual([...startLines].sort((a, b) => a - b))
+  })
+
+  it('snippet prints the resolved source slice for a qualified name', () => {
+    const result = run(['snippet', '--repo', repo, '--qn', 'mini-repo.symbols.demo.render'])
+    expect(result.status).toBe(0)
+    const payload = json<{ kind: string; qualifiedName: string; label: string; filePath: string; startLine: number; endLine: number; source: string }>(result)
+    expect(payload.kind).toBe('snippet')
+    expect(payload.qualifiedName).toBe('mini-repo.symbols.demo.render')
+    expect(payload.label).toBe('Function')
+    expect(payload.filePath).toBe('symbols/demo.ts')
+    expect(payload.source).toContain("updateCloudClient('demo')")
   })
 })
 

@@ -16,6 +16,7 @@ import { INDEX_MODES } from '../indexer.ts'
 import type { IndexMode } from '../indexer.ts'
 import { deriveProjectName } from '../project.ts'
 import { ProjectNotFoundError, UsageError, indexStatus, schemaFor, searchNodes } from '../query.ts'
+import { SymbolNotFoundError, codeSnippet, fileOutline } from '../outline.ts'
 
 const USAGE = `ff_codebase — FlowForge 代码智能 CLI（@flowforge/plugin-codebase）
 
@@ -24,6 +25,8 @@ const USAGE = `ff_codebase — FlowForge 代码智能 CLI（@flowforge/plugin-co
   ff_codebase query   --repo <path> [--label <label>] [--name-pattern <re>] [--file-pattern <re>]
                       [--min-degree <n>] [--max-degree <n>] [--limit <n>] [--offset <n>] [--project <name>]
   ff_codebase search  --repo <path> --query "<bm25 tokens>" [--limit <n>] [--offset <n>] [--project <name>]
+  ff_codebase outline --repo <path> --file <relPath> [--labels Class,Function] [--limit <n>] [--offset <n>] [--project <name>] [--db <path>]
+  ff_codebase snippet --repo <path> --qn <qualifiedName> [--neighbors] [--project <name>] [--db <path>]
   ff_codebase schema  [--repo <path>] [--project <name>] [--db <path>]
   ff_codebase status  [--repo <path>] [--project <name>] [--db <path>]
   ff_codebase projects [--repo <path>] [--db <path>]
@@ -94,7 +97,7 @@ function failViolation(message: string): never {
   process.exit(1)
 }
 
-export function main(argv: readonly string[] = process.argv.slice(2)): number {
+export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<number> {
   const args = parseArgs(argv)
   const repoFlag = flagString(args.flags, 'repo') ?? '.'
   const repo = resolve(repoFlag)
@@ -108,7 +111,7 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
       const nameFlag = flagString(args.flags, 'name')
       const store = new CodebaseStore(dbPathFor(args.flags, repo))
       try {
-        const result = indexRepository({
+        const result = await indexRepository({
           repoPath: repo,
           store,
           mode,
@@ -148,6 +151,36 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
           return 0
         }
         emit(result)
+        return 0
+      })
+    }
+    case 'outline': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const filePath = flagString(args.flags, 'file') ?? failUsage('outline 需要 --file <relPath>')
+      const labelsRaw = flagString(args.flags, 'labels')
+      const labels = labelsRaw === undefined ? undefined : labelsRaw.split(',').map(item => item.trim()).filter(item => item.length > 0)
+      const limit = flagNumber(args.flags, 'limit')
+      const offset = flagNumber(args.flags, 'offset')
+      return withStore(args.flags, repo, store => {
+        const result = fileOutline(store, project, filePath, {
+          ...(labels === undefined ? {} : { labels }),
+          ...(limit === undefined ? {} : { limit }),
+          ...(offset === undefined ? {} : { offset }),
+        })
+        if (result.total === 0) {
+          emit({ ...result, note: '该文件无符号（未索引或非符号语言）' })
+          return 0
+        }
+        emit(result)
+        return 0
+      })
+    }
+    case 'snippet': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const qualifiedName = flagString(args.flags, 'qn') ?? failUsage('snippet 需要 --qn <qualifiedName>')
+      const includeNeighbors = args.flags.get('neighbors') === true
+      return withStore(args.flags, repo, store => {
+        emit(codeSnippet(store, project, qualifiedName, { repoPath: repo, includeNeighbors }))
         return 0
       })
     }
@@ -211,7 +244,7 @@ function mapQueryError(error: unknown): number {
     process.stderr.write(`ff_codebase: ${error.message}\n`)
     return 2
   }
-  if (error instanceof ProjectNotFoundError) {
+  if (error instanceof ProjectNotFoundError || error instanceof SymbolNotFoundError) {
     process.stderr.write(`ff_codebase: ${error.message}\n`)
     return 1
   }
@@ -222,5 +255,14 @@ function mapQueryError(error: unknown): number {
 }
 
 if (process.env.FF_CODEBASE_CLI_ENTRY === '1') {
-  process.exit(main())
+  // process.exit() would tear down the loop mid-close: the WASM compile /
+  // tsx loader async handles can still be closing on Windows, which trips
+  // libuv's UV_HANDLE_CLOSING assertion (0xC0000409). Exit through
+  // process.exitCode so the event loop drains naturally.
+  void main().then(code => {
+    process.exitCode = code
+  }, error => {
+    process.stderr.write(`ff_codebase: ${error instanceof Error ? error.message : String(error)}\n`)
+    process.exitCode = 1
+  })
 }

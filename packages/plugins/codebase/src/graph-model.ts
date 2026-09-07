@@ -1,11 +1,12 @@
 /**
- * @flowforge/plugin-codebase — knowledge-graph domain model (EP-CB0, T1.2).
+ * @flowforge/plugin-codebase — knowledge-graph domain model (EP-CB0 T1.2,
+ * extended by EP-CB1 T2.1 with symbol labels and define edges).
  *
  * Ported verbatim (semantics and naming) from codebase-memory-mcp's graph
- * model: node labels, edge types and the complexity property family. The
- * seven-phase symbol extraction (EP-CB1) extends this surface; EP-CB0 only
- * populates the structural labels (Project/Folder/File/Module) but the model
- * is complete so later batches do not break the contract.
+ * model: node labels, edge types and the complexity property family. EP-CB0
+ * populates the structural labels (Project/Folder/File/Module); EP-CB1 adds
+ * the symbol pipeline labels (Enum/Type/Field via tree-sitter extraction) and
+ * the DEFINES/DEFINES_METHOD edges (File→symbol, Class→Method).
  *
  * @module @flowforge/plugin-codebase/graph-model
  */
@@ -20,6 +21,9 @@ export const NODE_LABELS = [
   'Method',
   'Class',
   'Interface',
+  'Enum',
+  'Type',
+  'Field',
   'Route',
   'Variable',
   'Resource',
@@ -30,6 +34,8 @@ export type NodeLabel = (typeof NODE_LABELS)[number]
 
 /** Edge types carried over from the C knowledge graph. */
 export const EDGE_TYPES = [
+  'DEFINES',
+  'DEFINES_METHOD',
   'CALLS',
   'USAGE',
   'CALL_REFERENCE',
@@ -50,6 +56,13 @@ export type EdgeType = (typeof EDGE_TYPES)[number]
  * (symbols) arrive with the tree-sitter pipeline in EP-CB1.
  */
 export const STRUCTURAL_LABELS: readonly NodeLabel[] = ['Project', 'Folder', 'File', 'Module']
+
+/**
+ * Symbol labels populated by the EP-CB1 tree-sitter pipeline. These carry the
+ * qualified-name contract (QN stored in the store's `name` column, simple name
+ * mirrored in `props.shortName`) and participate in QN lookup queries.
+ */
+export const SYMBOL_LABELS: readonly NodeLabel[] = ['Function', 'Method', 'Class', 'Interface', 'Enum', 'Type', 'Variable']
 
 /** Labels that carry the complexity property family (EP-CB1 populates them). */
 export const COMPLEXITY_LABELS: readonly NodeLabel[] = ['Function', 'Method']

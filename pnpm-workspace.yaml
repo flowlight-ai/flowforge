@@ -19,3 +19,8 @@ allowBuilds:
   # succeeds.
   '@google/genai': false
   protobufjs: false
+  # Grammar packages for @flowforge/plugin-codebase (web-tree-sitter WASM
+  # pipeline): only the prebuilt .wasm grammars and query JSON are consumed;
+  # the native node-gyp bindings are never loaded, so deny their builds.
+  tree-sitter-javascript: false
+  tree-sitter-typescript: false

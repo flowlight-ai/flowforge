@@ -58,13 +58,13 @@ packages/plugins/codebase/
 - [x] T1.10 测试：graph-model 契约测试 + store（真实临时目录 DB，不 Mock sqlite）+ discover/indexer（fixture 微型仓库：真实文件树）+ query（含分页契约与 BM25 排序断言）+ CLI 端到端冒烟
 - [x] T1.11 文档：包 README + `.flowforge/` gitignore 规则 + 13-dev-process 与 review_code.md §16 交叉引用回填
 
-### EP-CB1 tree-sitter 解析管线 + 符号级图谱 ⬜（Q14/Q18 裁决后动工）
+### EP-CB1 tree-sitter 解析管线 + 符号级图谱 ✅（Q14/Q18 裁决后动工）
 
-- [ ] T2.1 解析器依赖落地（Q14：web-tree-sitter WASM vs 原生绑定）+ TS/JS 语法资产
-- [ ] T2.2 符号抽取：Function/Method/Class/Interface/Variable/Route + 属性族全量（复杂度属性族计算器）
-- [ ] T2.3 边抽取：CALLS/USAGE/INHERITS/IMPLEMENTS/CONTAINS_FILE
-- [ ] T2.4 get_file_outline / get_code_snippet 工具 + parse_partial 覆盖率上报
-- [ ] T2.5 对本仓库全量索引验证（TS/JS 主仓库为验收语料）
+- [x] T2.1 解析器依赖落地（Q14：web-tree-sitter WASM vs 原生绑定）+ TS/JS 语法资产（web-tree-sitter@0.25 + tree-sitter-typescript/javascript 语法资产，WASM 预加载单例）
+- [x] T2.2 符号抽取：Function/Method/Class/Interface/Enum/Type/Variable + 属性族全量（复杂度属性族计算器：cyclomatic/cognitive/loopDepth/maxAccessDepth/paramCount）
+- [x] T2.3 边抽取：DEFINES/DEFINES_METHOD/CALLS/USAGE/INHERITS/IMPLEMENTS（勘误：文件→符号按 C 语义为 **DEFINES**，非 CONTAINS_FILE——后者为 Folder→File 结构边）
+- [x] T2.4 get_file_outline / get_code_snippet 工具 + parse_partial 覆盖率上报（ERROR 树 → coverage.parsePartial）
+- [x] T2.5 对本仓库全量索引验证（TS/JS 主仓库为验收语料）（108 用例连续两次全绿 + 全量索引 + outline/snippet 冒烟，见 `docs/process/verifications/plugin-codebase-cb1.md`）
 
 ### EP-CB2 工具面补全 + 文档生成器 ⬜
 
@@ -90,16 +90,16 @@ packages/plugins/codebase/
 - [ ] T5.4 cross-repo-intelligence（CROSS_HTTP_CALLS/CROSS_ASYNC_CALLS/CROSS_CHANNEL 跨项目边）
 - [ ] T5.5 transitive_loop_depth 过程间传播（最坏嵌套环深沿 CALLS 边传播）
 
-## 4. 决策点登记（对应 review_code.md §15 Q14-Q19）
+## 4. 决策点登记（对应 review_code.md §15 Q14-Q19，operator 2026-09-07 全部裁决）
 
-| # | 决策点 | 建议 | 状态 |
+| # | 决策点 | 裁决 | 状态 |
 |---|---|---|---|
-| D-CB1 | 解析器依赖（Q14） | web-tree-sitter（WASM）：纯 TS 生态、无原生编译、语法资产可 vendored | ⚠ EP-CB1 前裁决 |
-| D-CB2 | LSP 融合边界（Q15） | ctx.lsp 作为语义增强源接入，不替代 tree-sitter 主链路 | ⚠ EP-CB4 前裁决 |
+| D-CB1 | 解析器依赖（Q14） | web-tree-sitter（WASM）：纯 TS 生态、无原生编译、语法资产 vendored | ✅ 已裁决（operator 确认按建议执行） |
+| D-CB2 | LSP 融合边界（Q15） | ctx.lsp 作为语义增强源接入，不替代 tree-sitter 主链路 | ✅ 已裁决（EP-CB4 接入） |
 | D-CB3 | 数据落点（Q16） | 仓库本地 `.flowforge/codebase.db` + 集中注册表 | ✅ EP-CB0 按建议执行 |
-| D-CB4 | graph-ui（Q17） | 纳入 EP2 前端融合，非核心链路 | ⚠ EP2 前裁决 |
-| D-CB5 | 语言节奏（Q18） | 先 TS/JS + JSON/YAML/MD 结构层，语言资产按需增量 | ⚠ EP-CB1 前裁决 |
-| D-CB6 | Cypher 深度（Q19） | 结构化查询先行，Cypher 子集随 EP-CB3 | ⚠ EP-CB3 前裁决 |
+| D-CB4 | graph-ui（Q17） | 纳入 EP2 前端融合，非核心链路 | ✅ 已裁决（EP2 前端融合批次承接） |
+| D-CB5 | 语言节奏（Q18） | 先 TS/JS + JSON/YAML/MD 结构层，语言资产按需增量 | ✅ 已裁决（EP-CB1 按此执行） |
+| D-CB6 | Cypher 深度（Q19） | 结构化查询先行，Cypher 子集随 EP-CB3 | ✅ 已裁决 |
 
 ## 5. 验收标准（EP-CB0）
 

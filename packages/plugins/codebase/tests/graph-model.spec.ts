@@ -14,6 +14,7 @@ import {
   EDGE_TYPES,
   NODE_LABELS,
   STRUCTURAL_LABELS,
+  SYMBOL_LABELS,
   isEdgeType,
   isNodeLabel,
 } from '../src/index.ts'
@@ -29,6 +30,9 @@ describe('NODE_LABELS / EDGE_TYPES（C 词表契约）', () => {
       'Method',
       'Class',
       'Interface',
+      'Enum',
+      'Type',
+      'Field',
       'Route',
       'Variable',
       'Resource',
@@ -38,6 +42,8 @@ describe('NODE_LABELS / EDGE_TYPES（C 词表契约）', () => {
 
   it('carries the full edge type vocabulary from the C graph model', () => {
     expect(EDGE_TYPES).toEqual([
+      'DEFINES',
+      'DEFINES_METHOD',
       'CALLS',
       'USAGE',
       'CALL_REFERENCE',
@@ -66,6 +72,14 @@ describe('NODE_LABELS / EDGE_TYPES（C 词表契约）', () => {
     expect(COMPLEXITY_LABELS).toEqual(['Function', 'Method'])
     for (const label of COMPLEXITY_LABELS) expect(isNodeLabel(label)).toBe(true)
     for (const label of STRUCTURAL_LABELS) expect(isNodeLabel(label)).toBe(true)
+  })
+
+  it('declares the symbol-label family populated by the EP-CB1 pipeline', () => {
+    expect(SYMBOL_LABELS).toEqual(['Function', 'Method', 'Class', 'Interface', 'Enum', 'Type', 'Variable'])
+    for (const label of SYMBOL_LABELS) {
+      expect(isNodeLabel(label)).toBe(true)
+      expect(STRUCTURAL_LABELS).not.toContain(label)
+    }
   })
 })
 
