@@ -1,12 +1,12 @@
 # 三项目深度对照审查 — 遗漏项、工程化流程插件规划与整体执行计划（review_code）
 
 > 审查人：sherlock（AI 编码工具）
-> 审查对象：flowforge TS 重构现状（`packages/`+`apps/`+`web/`）↔ `ex/deepseek-harness`（dsh）↔ `ex/clowder-ai`（cat-cafe）↔ `ex/superpowers`（工程化方法论参照）
-> 审查日期：2026-09-07（两轮：第一轮三源遗漏审查；第二轮工程化流程插件规划 + 文档规范差距 + 未完成任务全集 + 整体执行计划）
+> 审查对象：flowforge TS 重构现状（`packages/`+`apps/`+`web/`）↔ `ex/deepseek-harness`（dsh）↔ `ex/clowder-ai`（cat-cafe）↔ `ex/superpowers`（工程化方法论第四源）↔ 业界开源工程实践（`ex/` 参照池：opencode/mini-swe-agent/pi/codebase-memory-mcp）
+> 审查日期：2026-09-07（三轮：第一轮三源遗漏审查；第二轮工程化流程插件规划 + 文档规范差距 + 未完成任务全集 + 整体执行计划；第三轮 operator 裁决落定——EP0 插件定名 `@flowforge/plugin-dev`、新流程文档自 `docs/process/` 起步、确认**四源全量移植**（flowforge + dsh + clowder-ai + superpowers）并叠加业界工程实践参考）
 > 审查方法：三方目录级全量 diff（dsh `packages/` 264 包、clowder `packages/`+`api/src/` 全域、flowforge `packages/` 283 包）+ superpowers 14 skill 全文精读 + 我方规范体系（rules/11、12、04-code-standards、dev-spec、git-workflow、test-iron-rules T1-T9）全文精读 + dsh/clowder 文档规范对照。
 >
-> **两轮总结论**：
-> 1. **第一优先级（operator 2026-09-07 指令）**：引入软件工程化交付流程，以**独立插件**形式落地（§11），此后 flowforge 所有需求文档交付与需求代码交付全部基于该插件标准执行；先建流程底座，再谈剩余开发。
+> **总结论**：
+> 1. **第一优先级（operator 2026-09-07 指令，已裁决）**：引入软件工程化交付流程，以**独立插件 `@flowforge/plugin-dev`（软件工程化流程插件）**形式落地（§11），此后 flowforge 所有需求文档交付与需求代码交付全部基于该插件标准执行；先建流程底座，再谈剩余开发。四源全量移植（flowforge Python 旧版 + dsh + clowder-ai + superpowers），并叠加业界开源工程实践参考。
 > 2. 文档规范现状：**静态分层规范强（SRS/SAD/SDD 三层对齐），动态开发流程规范缺位**——缺少"需求→计划→执行→验证→收尾"的文档流水线与 AI 可执行任务清单格式，需重构补齐（§12）。
 > 3. 三源全量移植目标尚未闭环：60+ 项遗漏（dsh 37 项 §3、clowder 22 项 §4），P0 级 16 项（§9）。
 > 4. 依赖合规（禁止 @deepseek-ai/@cat-cafe 依赖）已验证通过（§5）。
@@ -185,9 +185,9 @@ brainstorming（需求澄清，苏格拉底式设计，产物=设计文档）
 
 superpowers 的关键工程机制（porting-to-a-new-harness.md）：**skills 是 harness 无关的文档资产**（markdown 指令），bootstrap 注入是 per-harness 的，强制机制 = "session 启动即注入 + 技能自动触发 + 验收测试证明"。这正好匹配 operator 的第二个诉求："**无论换成什么 AI 开发工具，都可以基于我们的规范化文档进行 AI 自动化开发**"。
 
-### 11.2 插件化设计：`@flowforge/plugin-dev-process`
+### 11.2 插件化设计：`@flowforge/plugin-dev`（软件工程化流程插件，operator 已定名）
 
-**定位**：独立 cordis 插件（`packages/plugins/dev-process`），把 superpowers 工程化方法论全量改造为 flowforge 原生能力，同时保留 harness 无关的文档资产层。此后 flowforge 的需求交付（文档+代码）**必须**走该插件定义的流程状态机。
+**定位**：独立 cordis 插件（`packages/plugins/dev`），把 superpowers 工程化方法论全量改造为 flowforge 原生能力，同时保留 harness 无关的文档资产层。此后 flowforge 的需求交付（文档+代码）**必须**走该插件定义的流程状态机。
 
 **双平面架构（关键设计决策）**：
 
@@ -223,7 +223,9 @@ superpowers 的关键工程机制（porting-to-a-new-harness.md）：**skills �
 | writing-skills | skill 编写元方法论（服务插件自身的 skill 资产迭代） |
 | using-superpowers | 插件入口引导（README + session bootstrap 注入等价物） |
 
-### 11.3 与我方既有规范的融合与冲突裁决
+### 11.3 与我方既有规范的融合与冲突裁决（含待 operator 决策点 ⚠）
+
+> 四源 + 业界实践并存必然产生规范冲突。下表为已裁决项；标 ⚠ 的为**待 operator 决策点**（不影响 EP0-1/EP0-2 先行动工，但影响 EP0-3 之后的行为面）。
 
 | 维度 | 我方规范 | superpowers | 裁决 |
 |---|---|---|---|
@@ -231,17 +233,25 @@ superpowers 的关键工程机制（porting-to-a-new-harness.md）：**skills �
 | 分支流 | mgr sync/PR 到主干，禁直推 | worktree + feature branch + PR | 融合：worktree 内开发，**出口必须走 mgr sync PR**（保留我方 git-workflow 为主） |
 | 文档分层 | 11-doc-layering（spec/arch/design 三顶层 + F/A/D 三子目录） | docs/superpowers/plans/ 计划文档 | 融合：计划文档为**新增第四类流程文档**，存 `docs/process/plans/`，与 F/A/D 并行不冲突（F/A/D=结构，plan=时序） |
 | 评审 | clowder 交叉 review P1/P2/P3 | requesting/receiving-code-review | 融合：两阶段审查（spec 合规→代码质量）采用 clowder P1/P2/P3 分级报告格式 |
-| 提交 | mgr + 规范化 commit message | 每任务一 commit | 融合：任务粒度 commit + mgr 署名规范 |
+| 提交 | mgr + 规范化 commit message + 智能体署名 | 每任务一 commit | 融合：任务粒度 commit + mgr 署名规范（每任务 commit 在 worktree 内，出口统一 mgr sync） |
+| 设计先行 | 11.2 三阶段 SRS→SAD→SDD 不可颠倒 | brainstorming 产出设计文档并分块签核 | ⚠ **决策点 A（衔接粒度）**：forgeProcess 的 design 产物如何与 F/A/D 挂钩？提案：小需求 design 文档独立即可；跨域需求必须升格为 F/A/D 三件套（由门禁按"是否新增 capability"自动判定），待 operator 确认 |
+| 流程粒度 | 批次（约 1-3 天粒度） | 任务（2-5 分钟步骤） | ⚠ **决策点 B（层级映射）**：提案：forgeProcess 的 plan=我方批次；superpowers task=批次内 checklist 步骤，不新开管理层级，待 operator 确认 |
+| AI 工具无关 | 我方规范以 AI 工具视角编写（AGENTS.md） | harness 无关 skills + per-harness bootstrap | 融合：Plane 1 资产为通用规范（任何 AI 可读），Plane 2 插件为 flowforge 原生自动化 |
+| Python 旧版行为基线 | pytest 全绿作为 golden reference | 无对应 | 维持我方：verification 门禁在双栈需求场景同时跑 pytest（TS 侧）与 vitest |
+| ⚠ 决策点 C（subagent 身份） | 六智能体署名（sherlock/luban/davinci/wenxin…） | fresh subagent per task（无署名概念） | 提案：subagent 派发时绑定批次责任智能体署名（实现=sherlock，基础设施=luban，测试=davinci，文档=wenxin），保持 mgr 署名语义不变，待 operator 确认 |
+| ⚠ 决策点 D（worktree 必选性） | 我方当前直接在 master 工作区开发 | superpowers 强制 worktree 隔离 | 提案：EP0 阶段 worktree 为**可选**（本机 Windows 长路径风险），流程状态机不强制；EP0-4 后按验证结果决定是否升级为强制，待 operator 确认 |
 
-### 11.4 交付计划（EP0 批次划分）
+### 11.4 交付计划（EP0 批次划分 → 详细任务清单见 `33-stage-ep0-plugin-dev.md`）
+
+> 本表为总览；**五批次的具体任务清单（T0.x.y 级 checklist + 文件落点 + 验收命令）已细化在 `docs/refactor/33-stage-ep0-plugin-dev.md`**，EP0 执行以该文件为唯一任务依据。
 
 | 批次 | 内容 | DoD |
 |---|---|---|
-| EP0-1 | 插件骨架：`packages/plugins/dev-process`（manifest/服务骨架/状态机/持久化）+ Plane 1 文档资产目录 `docs/process/` 建立 + 14 skill 指令资产移植（中文化+命名契约适配+去除 harness 专属措辞） | 插件可安装；状态机单测；14 份流程指令资产入库 |
+| EP0-1 | 插件骨架：`packages/plugins/dev`（@flowforge/plugin-dev：状态机/实例注册表/类型面）+ Plane 1 文档资产目录 `docs/process/` 建立 + 14 份流程指令资产移植（适配命名契约/对接 mgr 与 T1-T9/去除 harness 专属措辞） | 插件可安装；状态机单测全绿；14 份流程指令资产入库 |
 | EP0-2 | 文档模板 4 件（design/plan/review/verification 模板）+ No-Placeholder 校验器 + plan 文档校验单测 | 模板可用；校验器能拦截 TBD/TODO/无代码块步骤 |
-| EP0-3 | CLI 命令面 `flowforge process *` + 门禁 1（design 签核后才可 plan；plan 校验通过后才可 implement） | CLI 端到端冒烟 + 门禁单测 |
+| EP0-3 | CLI 命令面 `flowforge process *` + 门禁 1（design 签核后才可 plan；plan 校验通过后才可 implement）+ cordis 服务挂载 `ctx.forgeProcess` | CLI 端到端冒烟 + 门禁单测 |
 | EP0-4 | subagent 派发编排（subagent-ff-sdk 集成）+ 两阶段审查 + verification 证据采集 | 以一个小需求端到端走完七阶段流程作为验收 |
-| EP0-5 | 规范文档回填：`docs/rules/` 新增流程规范文件（动态流程规范），`docs/AGENTS.md` 与 `docs/refactor/04-code-standards.md` 引用联动；Mgr/铁律引用更新 | 规范文档体系更新；**此后所有批次交付走 forgeProcess 流程** |
+| EP0-5 | 规范文档回填：`docs/rules/13-dev-process.md`（动态流程规范）+ `docs/AGENTS.md` 与 `04-code-standards.md` 引用联动；Mgr/铁律引用更新 | 规范文档体系更新；**此后所有批次交付走 forgeProcess 流程** |
 
 ### 11.5 后续交付方式切换
 
@@ -351,16 +361,25 @@ EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 
 **执行纪律**：每批次交付 = `process design → plan → implement(TDD) → review(两阶段) → verify → mgr sync PR`；本文件作为任务登记单一事实来源，每完成一项即在 §13 对应条目标注 ✅ + PR 号。
 
-## 15. 需用户裁决的开放问题
+## 15. 决策问题登记表（含已裁决项）
 
-1. **`experimental/agent-team` 5 包**（dsh 多智能体团队框架）：是否全量移植？与 forgekin/swarm（F16 群聊编排）概念边界需先明确（agent-team=同构 agent 组队执行；swarm=跨厂商能力路由）。
-2. **dsh `client/*` 46 包策略**：按"能力级融入 Next.js"执行（现行决策，EP2 落实），阶段 8 任务清单按 UI 能力逐项登记为验收对照表——确认？
-3. **`packages/finance` + mcp-server finance toolset**：财经数据域是否属于目标能力？若不要，B1 移植时剔除 finance/audio toolset 子集。
-4. **`website/` VitePress 文档站**：是否移植（当前文档全在 `docs/`）？
-5. **`cat-cafe-skills/`（20+ 技能内容包）与 `sop-definitions/`**：内容资产是否随代码全量移植并按 naming-contract 改造品牌措辞？
-6. **signal-intake/messaging 的 Redis 重度依赖**：确认按既有 `infrastructure/redis-port`（KV 注入式）模式移植，真实 Redis 后端按凭据启用？
-7. **EP0 插件命名**：`@flowforge/plugin-dev-process`（软件工程化流程插件）是否可接受？或希望其他命名（如 plugin-sdlc/plugin-process）？
-8. **旧批次文档去向**：`docs/refactor/` 29 个批次文档保留原位作为历史交付记录，新流程文档从 `docs/process/` 起步——确认？
+> 状态图例：✅ 已裁决（operator 2026-09-07 指令）｜⚠ 待裁决（不影响 EP0-1/EP0-2 动工）
+
+| # | 问题 | 状态 |
+|---|---|---|
+| Q1 | `experimental/agent-team` 5 包（dsh 多智能体团队框架）是否全量移植？与 forgekin/swarm（F16 群聊编排）概念边界需先明确（agent-team=同构 agent 组队执行；swarm=跨厂商能力路由） | ⚠ EP1 前裁决 |
+| Q2 | dsh `client/*` 46 包按"能力级融入 Next.js"执行（现行决策，EP2 落实），阶段 8 任务清单按 UI 能力逐项登记为验收对照表 | ⚠ EP2 前确认 |
+| Q3 | `packages/finance` + mcp-server finance toolset：财经数据域是否属于目标能力？若不要，B1 移植时剔除 finance/audio toolset 子集 | ⚠ EP1 前裁决 |
+| Q4 | `website/` VitePress 文档站是否移植（当前文档全在 `docs/`）？ | ⚠ EP3 前裁决 |
+| Q5 | `cat-cafe-skills/`（20+ 技能内容包）与 `sop-definitions/` 内容资产是否随代码全量移植并按 naming-contract 改造品牌措辞？ | ⚠ EP1 前裁决 |
+| Q6 | signal-intake/messaging 的 Redis 重度依赖：确认按既有 `infrastructure/redis-port`（KV 注入式）模式移植，真实 Redis 后端按凭据启用？ | ⚠ EP1 前确认 |
+| Q7 | EP0 插件命名 | ✅ **已定名 `@flowforge/plugin-dev`（软件工程化流程插件）**，包路径 `packages/plugins/dev` |
+| Q8 | 新流程文档自 `docs/process/` 起步；旧批次文档保留 `docs/refactor/` 原位 | ✅ operator 确认 |
+| Q9 | 四源全量移植立场（flowforge Python + dsh + clowder-ai + superpowers）+ 业界开源工程实践参考 | ✅ operator 确认 |
+| Q10 | 决策点 A：forgeProcess design 产物与 F/A/D 分层的衔接粒度（小需求独立 design / 跨域需求强制升格 F/A/D 三件套） | ⚠ 见 §11.3 |
+| Q11 | 决策点 B：流程层级映射（forgeProcess plan = 我方批次；superpowers task = 批次内 checklist 步骤，不新开管理层级） | ⚠ 见 §11.3 |
+| Q12 | 决策点 C：subagent 派发与六智能体署名的绑定规则 | ⚠ 见 §11.3 |
+| Q13 | 决策点 D：worktree 隔离 EP0 期可选、EP0-4 后评估是否强制 | ⚠ 见 §11.3 |
 
 ---
 

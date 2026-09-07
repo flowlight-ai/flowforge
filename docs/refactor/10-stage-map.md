@@ -5,6 +5,9 @@
 > 开发/测试规范对齐 R20/R21；**能力全集三源补全**：D29-D44（上游框架参考会话族/sdk/acp/code-runtime/
 > web 工具族等）、C23-C42（上游应用平台 auto-dream/harness-eval/env-registry 等）、F15-F44（flowforge
 > 魔法词/swarm/IM 议会/进化引擎/弹性栈等），编号与 `02-source-crosswalk.md` 完全一致。
+> 更新：2026-09-07 新增 **EP0 工程化流程插件**（最高优先级先行阶段，§3.0，operator 裁决 Q7/Q8/Q9）；
+> 剩余开发重组为 EP0-EP4 执行计划（详见 `review_code.md` §13/§14、`task.md`、`33-stage-ep0-plugin-dev.md`）；
+> EP0 完成后所有批次交付必须走 forgeProcess 七阶段流程（design→plan→implement→review→verify→finish→mgr PR）。
 
 ## 1. 阶段依赖图
 
@@ -47,10 +50,36 @@
 | `29-stage9-integration.md` | 功能矩阵核对、e2e、双栈回归 |
 | `30-stage10-cutover.md` | 入口切换、文档收尾 |
 | `31-stage11-sunset.md` | Python 日落与删除计划（冻结/归档/删除） |
+| `32-other-forge-migration.md` | *Forge 垂直业务项目移植（ContentForge 等 8 项目） |
+| `review_code.md` | 三项目深度对照审查 + 工程化流程插件规划 + EP0-EP4 整体执行计划（任务登记单一事实来源） |
+| `33-stage-ep0-plugin-dev.md` | EP0 工程化流程插件五批次详细任务清单（T0.x.y 级） |
+| `task.md` | EP0-EP4 任务总注册表与进度跟踪（勾选状态） |
 
 ## 3. 功能全集矩阵（验收勾选表）
 
 图例：⬜ 未开始 ｜ 🟦 进行中 ｜ ✅ 完成
+
+### 3.0 EP0 工程化流程插件（@flowforge/plugin-dev，最高优先级先行）
+
+> 来源：superpowers 工程化方法论（第四源）全量移植 + 我方规范融合（mgr/T1-T9/命名契约）。
+> 详细任务清单见 `33-stage-ep0-plugin-dev.md`；进度登记见 `task.md`。
+
+| # | 能力 | 来源 | 批次 | 状态 |
+|---|---|---|---|---|
+| P1 | 插件包骨架 `@flowforge/plugin-dev`（package/exports/tsconfig references） | superpowers | EP0-1 | ⬜ |
+| P2 | 七阶段流程状态机（requirement→design→plan→implement→review→verify→finish，非法跳转拒绝 + 三道门禁 + 快照恢复） | superpowers | EP0-1 | ⬜ |
+| P3 | 流程实例注册表（create/get/list + design/plan/review/verification 产物路径登记） | superpowers | EP0-1 | ⬜ |
+| P4 | 14 份流程指令资产（`docs/process/skills/`，harness 无关文档资产层） | superpowers | EP0-1 | ⬜ |
+| P5 | 4 份文档模板（design/plan/review/verification，`docs/process/templates/`） | superpowers | EP0-2 | ⬜ |
+| P6 | No-Placeholder plan 校验器（拦截 TBD/TODO/无代码块步骤） | superpowers | EP0-2 | ⬜ |
+| P7 | CLI 命令面 `flowforge process <new\|design\|plan\|implement\|review\|verify\|finish\|status>` | superpowers | EP0-3 | ⬜ |
+| P8 | cordis 服务挂载 `ctx.forgeProcess`（对齐 harness/boot 装配契约） | 我方插件化 | EP0-3 | ⬜ |
+| P9 | subagent 派发编排（对接 subagent-ff-sdk，每任务全新子代理） | superpowers | EP0-4 | ⬜ |
+| P10 | 两阶段审查（spec 合规 → 代码质量，P1/P2/P3 分级报告） | clowder 交叉 review | EP0-4 | ⬜ |
+| P11 | verification 证据采集（命令/exit code/输出摘要/时间戳入档） | superpowers | EP0-4 | ⬜ |
+| P12 | 规范回填（`docs/rules/13-dev-process.md` + AGENTS.md + 04-code-standards 联动） | 我方规范 | EP0-5 | ⬜ |
+| P13 | 端到端验收（真实小需求走完七阶段，产物齐备并 mgr PR 合入） | — | EP0-4/5 | ⬜ |
+| P14 | 流程切换声明（此后所有批次交付必须走 forgeProcess 流程） | — | EP0-5 | ⬜ |
 
 ### 3.1 上游框架参考侧（框架/插件）
 
