@@ -30,6 +30,7 @@ import { queryCypher } from './cypher.ts'
 import type { CypherResult } from './cypher.ts'
 import { ingestTraces } from './traces.ts'
 import type { IngestResult } from './traces.ts'
+import { semanticQuery } from './semantic.ts'
 import type { ProjectInfo, SchemaOverview, StoreQueryResult } from './store.ts'
 import type { CodebaseStore } from './store.ts'
 
@@ -51,6 +52,7 @@ export type ToolName =
   | 'detect_changes'
   | 'manage_adr'
   | 'ingest_traces'
+  | 'semantic_query'
 
 export interface ToolDefinition {
   readonly name: ToolName
@@ -205,10 +207,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     implementedIn: 'EP-CB3',
     inputSchema: { type: 'object', properties: { project: { type: 'string' }, trace_id: { type: 'string' }, name: { type: 'string' }, agent: { type: 'string' } }, required: ['project', 'trace_id', 'name'] },
   },
+  {
+    name: 'semantic_query',
+    description: 'Vector retrieval over symbol prose. keywords is an array; each node is scored by the minimum cosine across keywords (AND semantics), ranked descending, paginated total/has_more. File/Folder/Variable/Project excluded.',
+    implementedIn: 'EP-CB4',
+    inputSchema: { type: 'object', properties: { project: { type: 'string' }, keywords: { type: 'array', items: { type: 'string' } }, limit: { type: 'integer', default: 50 }, offset: { type: 'integer', default: 0 } }, required: ['project', 'keywords'] },
+  },
 ]
 
 export function implementedTools(): readonly ToolDefinition[] {
-  return TOOLS.filter(tool => tool.implementedIn === 'EP-CB0' || tool.implementedIn === 'EP-CB1' || tool.implementedIn === 'EP-CB2' || tool.implementedIn === 'EP-CB3')
+  return TOOLS.filter(tool => tool.implementedIn === 'EP-CB0' || tool.implementedIn === 'EP-CB1' || tool.implementedIn === 'EP-CB2' || tool.implementedIn === 'EP-CB3' || tool.implementedIn === 'EP-CB4')
 }
 
 export interface ToolContext {
@@ -269,6 +277,7 @@ export type ToolResult =
   | { readonly kind: 'adr'; readonly result: AdrToolResult }
   | { readonly kind: 'cypher'; readonly result: CypherResult }
   | { readonly kind: 'ingested'; readonly result: IngestResult }
+  | { readonly kind: 'semantic'; readonly result: StoreQueryResult }
   | { readonly kind: 'not-implemented'; readonly plannedFor: string }
 
 /** Discriminated ADR tool output (list / get / create / next-id). */
@@ -423,6 +432,21 @@ export async function executeTool(context: ToolContext, name: ToolName, args: Re
     case 'ingest_traces': {
       const input = args as { project: string; trace_id: string; name: string; agent?: string }
       return { kind: 'ingested', result: ingestTraces(context.store, { project: input.project, traces: [{ project: input.project, trace_id: input.trace_id, name: input.name, ...(input.agent === undefined ? {} : { agent: input.agent }) }] }) }
+    }
+    case 'semantic_query': {
+      const project = args.project as string
+      const keywords = (args.keywords as unknown) as readonly string[] | undefined
+      if (keywords === undefined || keywords.length === 0) {
+        throw new UsageError('semantic_query 需要 keywords（数组关键词，per-keyword min-cosine）')
+      }
+      return {
+        kind: 'semantic',
+        result: semanticQuery(context.store, project, {
+          keywords,
+          ...(args.limit === undefined ? {} : { limit: args.limit as number }),
+          ...(args.offset === undefined ? {} : { offset: args.offset as number }),
+        }),
+      }
     }
     default: {
       const plannedFor = TOOLS.find(tool => tool.name === name)?.implementedIn ?? 'later batch'

@@ -83,13 +83,14 @@ packages/plugins/codebase/
 - [ ] T4.4 ingest_traces 轨迹摄取
 - [ ] T4.5 持久化工件（压缩 artifact 团队共享，对齐 C 的 graph.db.zst 模型）
 
-### EP-CB4 语义层 + LSP 融合 + 跨仓库 ⬜（Q15 裁决后动工）
+### EP-CB4 语义层 + LSP 融合 + 跨仓库 ✅（PR 待提交，TDD 已完成）
 
-- [ ] T5.1 semantic edges + simhash 相似度去重边
-- [ ] T5.2 向量检索（semantic_query 数组关键词 per-keyword min-cosine 契约照搬）
-- [ ] T5.3 LSP 融合：CALL/USAGE 语义解析经 ctx.lsp seam 增强（Hybrid LSP 落地）
-- [ ] T5.4 cross-repo-intelligence（CROSS_HTTP_CALLS/CROSS_ASYNC_CALLS/CROSS_CHANNEL 跨项目边）
-- [ ] T5.5 transitive_loop_depth 过程间传播（最坏嵌套环深沿 CALLS 边传播）
+- [x] T5.0 设计 + 计划（`docs/process/specs/2026-09-07-plugin-codebase-cb4-design.md` / `docs/process/plans/2026-09-07-plugin-codebase-cb4.md`）
+- [x] T5.1 semantic edges + simhash 相似度去重边
+- [x] T5.2 向量检索（semantic_query 数组关键词 per-keyword min-cosine 契约照搬）
+- [x] T5.3 LSP 融合：CALL/USAGE 语义解析经 ctx.lsp seam 增强（Hybrid LSP 落地）
+- [x] T5.4 cross-repo-intelligence（CROSS_HTTP_CALLS/CROSS_ASYNC_CALLS/CROSS_CHANNEL 跨项目边）
+- [x] T5.5 transitive_loop_depth 过程间传播（最坏嵌套环深沿 CALLS 边传播）
 
 ## 4. 决策点登记（对应 review_code.md §15 Q14-Q19，operator 2026-09-07 全部裁决）
 
