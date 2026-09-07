@@ -992,6 +992,19 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/routes:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../stores
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
   packages/cats/session:
     devDependencies:
       '@flowforge/cats-shared':
