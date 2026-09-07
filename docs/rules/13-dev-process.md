@@ -50,6 +50,7 @@ requirement（需求） → design（设计） → plan（计划） → implemen
 | `ff_dev evidence <name> --command "..." --exit 0 --summary "..."` | 记录验证证据 |
 | `ff_dev resume [name]` | **接续简报**（当前阶段/门禁状态/下一步 + skills 资产路径） |
 | `ff_doctor plan\|state\|docs\|all` | 遵从度检查（CI 与 mgr 拦截依赖） |
+| `ff_codebase index\|query\|search\|schema\|status\|projects\|delete` | 代码知识图谱 CLI（`@flowforge/plugin-codebase`，dev 流程 design/plan 阶段的代码索引供料底座，详见 [包 README](../../packages/plugins/codebase/README.md) 与 [34-stage](../refactor/34-stage-ep-cb-plugin-codebase.md)） |
 
 **退出码契约**（CI 与脚本依赖此契约，不可变更）：`0` = 合规/成功；`1` = 违规/门禁拒绝；`2` = 用法错误。
 
