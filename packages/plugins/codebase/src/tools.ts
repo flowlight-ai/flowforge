@@ -16,7 +16,9 @@
 
 import { indexRepository } from './indexer.ts'
 import type { IndexMode, IndexResult } from './indexer.ts'
-import { searchNodes, schemaFor, indexStatus } from './query.ts'
+import { UsageError, searchNodes, schemaFor, indexStatus } from './query.ts'
+import { codeSnippet, fileOutline } from './outline.ts'
+import type { OutlineResult, SnippetResult } from './outline.ts'
 import type { ProjectInfo, SchemaOverview, StoreQueryResult } from './store.ts'
 import type { CodebaseStore } from './store.ts'
 
@@ -97,15 +99,34 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: 'get_code_snippet',
-    description: 'Read a code snippet by file + line range with context.',
+    description: 'Read a symbol\'s real source slice by qualified name (three-tier resolution: exact QN → unique suffix → ambiguous suggestions), optionally expanded by ±5 context lines. The returned text is read from disk, not the index.',
     implementedIn: 'EP-CB1',
-    inputSchema: { type: 'object', properties: { project: { type: 'string' }, file_path: { type: 'string' }, start_line: { type: 'integer' }, end_line: { type: 'integer' } }, required: ['project', 'file_path', 'start_line', 'end_line'] },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string' },
+        qualified_name: { type: 'string', description: 'Fully qualified name or a unique suffix segment' },
+        repo_path: { type: 'string', description: 'Repository root to resolve the symbol file_path against (defaults to ToolContext.repoPath)' },
+        include_neighbors: { type: 'boolean', default: false, description: 'Expand the slice by ±5 context lines' },
+      },
+      required: ['project', 'qualified_name'],
+    },
   },
   {
     name: 'get_file_outline',
-    description: 'Symbol outline of a file (functions/classes with line spans).',
+    description: 'Symbol outline of a file: line-ordered rows (qn / short name / label / line span) with the total/returned/hasMore pagination contract.',
     implementedIn: 'EP-CB1',
-    inputSchema: { type: 'object', properties: { project: { type: 'string' }, file_path: { type: 'string' } }, required: ['project', 'file_path'] },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string' },
+        file_path: { type: 'string', description: 'Repository-relative file path' },
+        labels: { type: 'array', items: { type: 'string' }, description: 'Restrict to these symbol labels (defaults to all)' },
+        limit: { type: 'integer', minimum: 1, maximum: 200, default: 100 },
+        offset: { type: 'integer', minimum: 0, default: 0 },
+      },
+      required: ['project', 'file_path'],
+    },
   },
   {
     name: 'get_graph_schema',
@@ -176,11 +197,13 @@ export const TOOLS: readonly ToolDefinition[] = [
 ]
 
 export function implementedTools(): readonly ToolDefinition[] {
-  return TOOLS.filter(tool => tool.implementedIn === 'EP-CB0')
+  return TOOLS.filter(tool => tool.implementedIn === 'EP-CB0' || tool.implementedIn === 'EP-CB1')
 }
 
 export interface ToolContext {
   readonly store: CodebaseStore
+  /** Default repository root for tools that read on-disk sources (snippet). */
+  readonly repoPath?: string
 }
 
 export interface IndexRepositoryInput {
@@ -202,9 +225,26 @@ export interface SearchGraphInput {
   readonly offset?: number
 }
 
+export interface GetFileOutlineInput {
+  readonly project: string
+  readonly filePath: string
+  readonly labels?: readonly string[]
+  readonly limit?: number
+  readonly offset?: number
+}
+
+export interface GetCodeSnippetInput {
+  readonly project: string
+  readonly qualifiedName: string
+  readonly repoPath?: string
+  readonly includeNeighbors?: boolean
+}
+
 export type ToolResult =
   | { readonly kind: 'index'; readonly result: IndexResult }
   | { readonly kind: 'search'; readonly result: StoreQueryResult }
+  | { readonly kind: 'outline'; readonly result: OutlineResult }
+  | { readonly kind: 'snippet'; readonly result: SnippetResult }
   | { readonly kind: 'schema'; readonly result: SchemaOverview }
   | { readonly kind: 'projects'; readonly result: readonly ProjectInfo[] }
   | { readonly kind: 'status'; readonly result: ReturnType<typeof indexStatus> }
@@ -212,16 +252,18 @@ export type ToolResult =
   | { readonly kind: 'not-implemented'; readonly plannedFor: string }
 
 /**
- * Execute a tool by name. Throws UsageError/ProjectNotFoundError from the
- * query layer for contract violations (callers map them to exit codes).
+ * Execute a tool by name. Async so the indexing tools can share the same
+ * boundary once indexRepository goes async (EP-CB1 T2.4b). Throws
+ * UsageError/ProjectNotFoundError/SymbolNotFoundError from the query and
+ * outline layers for contract violations (callers map them to exit codes).
  */
-export function executeTool(context: ToolContext, name: ToolName, args: Readonly<Record<string, unknown>>): ToolResult {
+export async function executeTool(context: ToolContext, name: ToolName, args: Readonly<Record<string, unknown>>): Promise<ToolResult> {
   switch (name) {
     case 'index_repository': {
       const input = args as unknown as IndexRepositoryInput
       return {
         kind: 'index',
-        result: indexRepository({
+        result: await indexRepository({
           repoPath: input.repoPath,
           store: context.store,
           ...(input.mode === undefined ? {} : { mode: input.mode }),
@@ -233,6 +275,31 @@ export function executeTool(context: ToolContext, name: ToolName, args: Readonly
     case 'search_graph': {
       const input = args as unknown as SearchGraphInput
       return { kind: 'search', result: searchNodes(context.store, input) }
+    }
+    case 'get_file_outline': {
+      const input = args as unknown as GetFileOutlineInput
+      return {
+        kind: 'outline',
+        result: fileOutline(context.store, input.project, input.filePath, {
+          ...(input.labels === undefined ? {} : { labels: input.labels }),
+          ...(input.limit === undefined ? {} : { limit: input.limit }),
+          ...(input.offset === undefined ? {} : { offset: input.offset }),
+        }),
+      }
+    }
+    case 'get_code_snippet': {
+      const input = args as unknown as GetCodeSnippetInput
+      const repoPath = input.repoPath ?? context.repoPath
+      if (repoPath === undefined) {
+        throw new UsageError('get_code_snippet 需要 repo_path（或在 ToolContext.repoPath 挂载仓库根目录）')
+      }
+      return {
+        kind: 'snippet',
+        result: codeSnippet(context.store, input.project, input.qualifiedName, {
+          repoPath,
+          ...(input.includeNeighbors === undefined ? {} : { includeNeighbors: input.includeNeighbors }),
+        }),
+      }
     }
     case 'get_graph_schema':
       return { kind: 'schema', result: schemaFor(context.store, args.project as string | undefined) }

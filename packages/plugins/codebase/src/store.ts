@@ -20,7 +20,7 @@
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { BM25_LABEL_BOOST, BM25_NOISE_LABELS } from './graph-model.ts'
+import { BM25_LABEL_BOOST, BM25_NOISE_LABELS, SYMBOL_LABELS } from './graph-model.ts'
 import type { EdgeType, GraphEdge, GraphNode, NodeLabel } from './graph-model.ts'
 
 /** Persisted node record (input shape for upserts). */
@@ -89,6 +89,13 @@ export interface StoreQueryResult {
   readonly hasMore: boolean
 }
 
+export interface FileOutlineOptions {
+  /** Restrict the outline to these labels (defaults to all symbol labels). */
+  readonly labels?: readonly string[]
+  readonly limit?: number
+  readonly offset?: number
+}
+
 /** Edge types counted toward the in/out degree surface (C parity). */
 const DEGREE_EDGE_TYPES = ['CALLS', 'USAGE', 'CALL_REFERENCE', 'INHERITS', 'IMPLEMENTS'] as const
 
@@ -112,6 +119,7 @@ CREATE TABLE IF NOT EXISTS nodes (
   props_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_nodes_project ON nodes(project);
+CREATE INDEX IF NOT EXISTS idx_nodes_project_file ON nodes(project, file_path);
 CREATE TABLE IF NOT EXISTS edges (
   project TEXT NOT NULL,
   source TEXT NOT NULL,
@@ -434,5 +442,60 @@ export class CodebaseStore {
     const db = this.requireDb()
     const rows = db.prepare('SELECT project, source, target, type FROM edges WHERE project = ?').all(project) as Record<string, unknown>[]
     return rows.map(row => ({ project: row.project as string, source: row.source as string, target: row.target as string, type: row.type as EdgeType }))
+  }
+
+  /**
+   * Exact qualified-name lookup over symbol nodes (the `name` column holds the
+   * QN for symbols; File/Folder nodes carry path-shaped names and are
+   * excluded). Returns the first match deterministically (label ascending).
+   */
+  findNodeByQn(project: string, qn: string): GraphNode | undefined {
+    const db = this.requireDb()
+    const placeholders = SYMBOL_LABELS.map(() => '?').join(', ')
+    const rows = db.prepare(`SELECT id, project, label, name, file_path, language, lines, size_bytes, props_json
+      FROM nodes WHERE project = ? AND name = ? AND label IN (${placeholders}) ORDER BY label, id`)
+      .all(project, qn, ...SYMBOL_LABELS) as unknown as NodeRow[]
+    return rows.length === 0 ? undefined : rowToNode(rows[0] as NodeRow)
+  }
+
+  /**
+   * Segment-boundary suffix lookup: `store.upsertNodes` matches QNs equal to
+   * `qn` or ending with `.<qn>` (the snippet tool's disambiguation surface —
+   * never a mid-segment substring).
+   */
+  findNodesByQnSuffix(project: string, qn: string): readonly GraphNode[] {
+    const db = this.requireDb()
+    const placeholders = SYMBOL_LABELS.map(() => '?').join(', ')
+    const rows = db.prepare(`SELECT id, project, label, name, file_path, language, lines, size_bytes, props_json
+      FROM nodes WHERE project = ? AND label IN (${placeholders})`)
+      .all(project, ...SYMBOL_LABELS) as unknown as NodeRow[]
+    const suffix = `.${qn}`
+    return rows
+      .filter(row => row.name === qn || row.name.endsWith(suffix))
+      .map(row => rowToNode(row))
+  }
+
+  /**
+   * File outline: symbol nodes of a file ordered by start line (ascending),
+   * paginated with the total/hasMore contract. Non-symbol nodes of the file
+   * (none today) would be excluded by the label filter.
+   */
+  fileOutline(project: string, filePath: string, options: FileOutlineOptions = {}): StoreQueryResult {
+    const db = this.requireDb()
+    const labels = options.labels ?? SYMBOL_LABELS
+    if (labels.length === 0) return { rows: [], total: 0, hasMore: false }
+    const placeholders = labels.map(() => '?').join(', ')
+    const rows = db.prepare(`SELECT id, project, label, name, file_path, language, lines, size_bytes, props_json
+      FROM nodes WHERE project = ? AND file_path = ? AND label IN (${placeholders})`)
+      .all(project, filePath, ...labels) as unknown as NodeRow[]
+    const sorted = rows
+      .map(row => rowToNode(row))
+      .sort((a, b) => (Number(a.props?.startLine ?? 0) - Number(b.props?.startLine ?? 0))
+        || (Number(a.props?.endLine ?? 0) - Number(b.props?.endLine ?? 0))
+        || a.name.localeCompare(b.name))
+    const limit = Math.max(1, options.limit ?? 100)
+    const offset = Math.max(0, options.offset ?? 0)
+    const page = sorted.slice(offset, offset + limit)
+    return { rows: page, total: sorted.length, hasMore: offset + page.length < sorted.length }
   }
 }

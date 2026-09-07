@@ -238,3 +238,60 @@ describe('schemaOverview', () => {
     expect(store.edgesOf('demo')).toEqual([{ project: 'demo', source: 'a', target: 'b', type: 'CALLS' }])
   })
 })
+
+describe('EP-CB1 — QN lookup and file outline', () => {
+  beforeEach(() => {
+    store.upsertNodes([
+      node('s:1', 'Function', 'demo.src.store.upsertNodes', { filePath: 'src/store.ts', props: { shortName: 'upsertNodes', startLine: 10, endLine: 40 } }),
+      node('s:2', 'Class', 'demo.src.store.CodebaseStore', { filePath: 'src/store.ts', props: { shortName: 'CodebaseStore', startLine: 50, endLine: 200 } }),
+      node('s:3', 'Method', 'demo.src.store.CodebaseStore.search', { filePath: 'src/store.ts', props: { shortName: 'search', startLine: 60, endLine: 90 } }),
+      node('s:4', 'Enum', 'demo.src.store.Mode', { filePath: 'src/store.ts', props: { shortName: 'Mode', startLine: 5, endLine: 8 } }),
+      node('s:5', 'Type', 'demo.src.store.StoreOptions', { filePath: 'src/store.ts', props: { shortName: 'StoreOptions', startLine: 1, endLine: 3 } }),
+      { ...node('f:1', 'File', 'src/store.ts'), filePath: 'src/store.ts' },
+    ])
+  })
+
+  it('findNodeByQn hits exactly and misses unknowns', () => {
+    expect(store.findNodeByQn('demo', 'demo.src.store.upsertNodes')?.label).toBe('Function')
+    expect(store.findNodeByQn('demo', 'demo.src.store.CodebaseStore.search')?.label).toBe('Method')
+    expect(store.findNodeByQn('demo', 'demo.src.store.missing')).toBeUndefined()
+    expect(store.findNodeByQn('other', 'demo.src.store.upsertNodes')).toBeUndefined()
+  })
+
+  it('findNodesByQnSuffix returns segment-boundary candidates only', () => {
+    const hits = store.findNodesByQnSuffix('demo', 'search')
+    expect(hits.map(hit => hit.name)).toEqual(['demo.src.store.CodebaseStore.search'])
+    const multi = store.findNodesByQnSuffix('demo', 'store.CodebaseStore')
+    expect(multi.map(hit => hit.name)).toEqual(['demo.src.store.CodebaseStore'])
+    const exact = store.findNodesByQnSuffix('demo', 'demo.src.store.Mode')
+    expect(exact.map(hit => hit.name)).toEqual(['demo.src.store.Mode'])
+    expect(store.findNodesByQnSuffix('demo', 'tore')).toEqual([])
+    expect(store.findNodesByQnSuffix('demo', 'store')).toEqual([])
+  })
+
+  it('fileOutline orders by start line and paginates with hasMore', () => {
+    const outline = store.fileOutline('demo', 'src/store.ts')
+    expect(outline.rows.map(row => row.props?.shortName)).toEqual(['StoreOptions', 'Mode', 'upsertNodes', 'CodebaseStore', 'search'])
+    expect(outline.total).toBe(5)
+    expect(outline.hasMore).toBe(false)
+    const page = store.fileOutline('demo', 'src/store.ts', { limit: 2 })
+    expect(page.rows.map(row => row.props?.shortName)).toEqual(['StoreOptions', 'Mode'])
+    expect(page.total).toBe(5)
+    expect(page.hasMore).toBe(true)
+    const classOnly = store.fileOutline('demo', 'src/store.ts', { labels: ['Class', 'Method'] })
+    expect(classOnly.rows.map(row => row.props?.shortName)).toEqual(['CodebaseStore', 'search'])
+  })
+
+  it('round-trips Enum and Type labels with DEFINES/DEFINES_METHOD edges', () => {
+    store.insertEdges([
+      { project: 'demo', source: 'f:1', target: 's:4', type: 'DEFINES' },
+      { project: 'demo', source: 's:2', target: 's:3', type: 'DEFINES_METHOD' },
+    ])
+    const counts = store.edgeTypeCounts('demo')
+    expect(counts).toContainEqual({ type: 'DEFINES', count: 1 })
+    expect(counts).toContainEqual({ type: 'DEFINES_METHOD', count: 1 })
+    const schema = store.schemaOverview('demo')
+    expect(schema.nodeLabels).toContainEqual({ label: 'Enum', count: 1 })
+    expect(schema.nodeLabels).toContainEqual({ label: 'Type', count: 1 })
+  })
+})

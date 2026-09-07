@@ -10,6 +10,7 @@
  */
 
 import type { NodeLabel, Pagination } from './graph-model.ts'
+import { SYMBOL_LABELS } from './graph-model.ts'
 import type { CodebaseStore, SearchOptions, StoreQueryResult, ProjectInfo, SchemaOverview } from './store.ts'
 
 export class UsageError extends Error {
@@ -46,7 +47,8 @@ function assertRegex(kind: string, pattern: string): RegExp {
   }
 }
 
-function requireProject(store: CodebaseStore, project: string): void {
+/** Shared guard: exit-1 semantics for unknown projects (outline reuses it). */
+export function requireProject(store: CodebaseStore, project: string): void {
   const known = store.listProjects().find(info => info.name === project)
   if (known === undefined) throw new ProjectNotFoundError(project)
 }
@@ -81,6 +83,8 @@ export interface IndexStatus {
   readonly project: ProjectInfo
   readonly nodeCount: number
   readonly edgeCount: number
+  /** Symbol-layer node count (EP-CB1): nodes under the symbol labels. */
+  readonly symbolCount: number
 }
 
 export function indexStatus(store: CodebaseStore, project?: string): IndexStatus[] {
@@ -91,7 +95,10 @@ export function indexStatus(store: CodebaseStore, project?: string): IndexStatus
     const labels = store.labelCounts(info.name)
     const nodeCount = labels.reduce((sum, entry) => sum + entry.count, 0)
     const edgeCount = store.edgeTypeCounts(info.name).reduce((sum, entry) => sum + entry.count, 0)
-    return { project: info, nodeCount, edgeCount }
+    const symbolCount = labels
+      .filter(entry => SYMBOL_LABELS.includes(entry.label as NodeLabel))
+      .reduce((sum, entry) => sum + entry.count, 0)
+    return { project: info, nodeCount, edgeCount, symbolCount }
   })
 }
 

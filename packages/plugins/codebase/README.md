@@ -17,12 +17,17 @@ packages/plugins/codebase/
 ├── bin/ff_codebase.mjs            # CLI 入口（ff_ 命令族）
 ├── src/
 │   ├── graph-model.ts             # 图谱域模型：节点标签/边类型/属性族（C 语义照搬）
-│   ├── store.ts                   # node:sqlite 存储引擎（FTS5 BM25 + 分页契约）
+│   ├── store.ts                   # node:sqlite 存储引擎（FTS5 BM25 + 分页契约 + QN/outline 查询）
 │   ├── discover.ts                # 文件发现（默认排除 + 显式 exclude）
-│   ├── indexer.ts                 # 结构层索引器（Project→Folder→File 树 + RAM-first）
+│   ├── indexer.ts                 # 结构层 + 符号层索引器（Project→Folder→File + DEFINES/CALLS，RAM-first）
 │   ├── query.ts                   # 结构化查询 + BM25 搜索
 │   ├── coverage.ts                # 覆盖率诚实契约（excluded/skipped/parsePartial 三态）
-│   ├── tools.ts                   # 工具注册表（17 工具中 EP-CB0 交付 6 个）
+│   ├── parser.ts                  # web-tree-sitter 集成（TS/TSX/JS WASM 预加载单例，EP-CB1）
+│   ├── symbols.ts                 # 符号抽取：Function/Method/Class/Interface/Enum/Type/Variable + QN（EP-CB1）
+│   ├── complexity.ts              # 复杂度属性族计算器（cyclomatic/cognitive/loop/accessDepth）（EP-CB1）
+│   ├── edges.ts                   # 边解析：CALLS/USAGE/INHERITS/IMPLEMENTS + 五级解析链（EP-CB1）
+│   ├── outline.ts                 # 文件大纲 + 代码片段（get_file_outline/get_code_snippet）（EP-CB1）
+│   ├── tools.ts                   # 工具注册表（8 工具：EP-CB0 6 个 + EP-CB1 outline/snippet）
 │   ├── project.ts                 # 项目注册表（多仓库：list/delete/安全化命名）
 │   └── index.ts                   # 库导出面
 └── tests/                         # vitest 契约测试（真实 fixture 微型仓库，不 Mock）
@@ -86,8 +91,8 @@ node packages/plugins/codebase/bin/ff_codebase.mjs schema
 
 | 批次 | 内容 | 状态 |
 |---|---|---|
-| EP-CB0 | 骨架 + 存储引擎 + 结构层索引闭环 | ✅ 本次交付 |
-| EP-CB1 | tree-sitter 解析管线 + 符号级图谱（Q14/Q18 裁决后动工） | ⬜ |
+| EP-CB0 | 骨架 + 存储引擎 + 结构层索引闭环 | ✅ PR #154 |
+| EP-CB1 | tree-sitter 解析管线 + 符号级图谱（符号抽取/复杂度/边/DEFINES/outline-snippet/parse_partial） | ✅ 本次交付 |
 | EP-CB2 | 工具面补全 + 文档生成器 + MCP 挂接 | ⬜ |
 | EP-CB3 | Cypher 子集 + 增量索引 + 轨迹摄取（Q19 裁决后动工） | ⬜ |
 | EP-CB4 | 语义层 + LSP 融合 + 跨仓库（Q15 裁决后动工） | ⬜ |
