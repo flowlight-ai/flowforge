@@ -63,7 +63,8 @@
       （16/16 通过；typecheck 中 dev 包 0 错误——`packages/chat/realtime` 的既有失败为
       未跟踪遗留文件所致，与本次无关）
 - [x] T0.1.9 更新 `10-stage-map.md` §3.0（P1-P14 勾选 EP0-1 部分）+ `task.md` 进度
-- [ ] T0.1.10 `./mgr sync` 提交 PR（docs + code 同批）
+- [x] T0.1.10 `./mgr sync` 提交 PR（docs + code 同批）——commit `5af3c6c3`，
+      PR #152（https://gitee.com/flowlight-ai/flowforge/pulls/152）
 
 ### EP0-2 文档模板 + No-Placeholder 校验器
 

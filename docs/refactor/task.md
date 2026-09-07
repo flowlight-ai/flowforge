@@ -40,7 +40,7 @@
       ⑪using-git-worktrees ⑫finishing-a-development-branch ⑬writing-skills ⑭using-plugin-dev）
 - [x] T0.1.8 `pnpm vitest run packages/plugins/dev` 全绿 + `pnpm typecheck` 通过
 - [x] T0.1.9 `10-stage-map.md` §3.0 勾选（P1-P4）+ 本文件进度更新
-- [ ] T0.1.10 `./mgr sync` 提交 PR（docs + code 同批）
+- [x] T0.1.10 `./mgr sync` 提交 PR（docs + code 同批，commit `5af3c6c3` → PR #152）
 
 ---
 
