@@ -201,7 +201,8 @@ describe('durable step context', () => {
     ['omitted interval', {}],
     ['zero interval', { refreshIntervalMs: 0 }],
   ] as const)('uses the preceding durable step-context timestamp after step one with %s', async (_label, config) => {
-    const { ctx } = await mount(config)
+    // 显式 UTC（批次56：vmThreads 池下 vm 与宿主共享系统时区，缺省不再恒为 UTC）
+    const { ctx } = await mount({ timeZone: 'UTC', ...config })
     const session = Session.create(SessionId('later-step'))
     const agent = sessionAgent(session)
     openMessageTurn(session, 3)

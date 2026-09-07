@@ -73,7 +73,7 @@ export async function validateFilePath(
   allowedRoots: readonly string[],
   label: string,
 ): Promise<string> {
-  let abs = resolve(filePath);
+  const abs = resolve(filePath);
   let resolved = abs;
   try {
     resolved = await realpath(abs);

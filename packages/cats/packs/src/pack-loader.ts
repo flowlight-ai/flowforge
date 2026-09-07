@@ -36,14 +36,13 @@ export class PackLoader {
       throw new Error('Git URL sources are not supported in Phase A. Use a local directory path.');
     }
 
-    let sourceDir: string;
+    const sourceDir = source;
     try {
       const s = await stat(source);
       if (!s.isDirectory()) throw new Error('Not a directory');
     } catch {
       throw new Error(`Source path not found or not a directory: ${source}`);
     }
-    sourceDir = source;
 
     // Security validation
     const result = await this.guard.validate(sourceDir);

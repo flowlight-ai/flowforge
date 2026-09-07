@@ -81,6 +81,13 @@ export type {
   RealtimeTransport,
 } from './transport.ts'
 
+export { SocketIoRealtimeTransport } from './socket-io-transport.ts'
+export type {
+  SocketIoRealtimeTransportOptions,
+  SocketIoServerLike,
+  SocketIoServerSocketLike,
+} from './socket-io-transport.ts'
+
 export default function Plugin(ctx: Context, options?: ChatRealtimeServiceOptions) {
   ctx.plugin(ChatRealtimeService, options)
 }

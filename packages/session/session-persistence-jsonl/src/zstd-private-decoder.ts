@@ -38,6 +38,7 @@ function privateZstdStream(
 ): { stream: NodeZstdPrivateStream; errorKey: symbol } | undefined {
   const candidate = stream as unknown as Partial<NodeZstdPrivateState>
   const handle = candidate._handle
+  const writeState = candidate._writeState
   const errorKey = Reflect.ownKeys(stream).find((key): key is symbol => (
     typeof key === 'symbol' && key.description === 'kError'
   ))
@@ -45,8 +46,9 @@ function privateZstdStream(
   if (
     typeof handle !== 'object' || handle === null
     || typeof (handle as { writeSync?: unknown }).writeSync !== 'function'
-    || !(candidate._writeState instanceof Uint32Array)
-    || candidate._writeState.length < 2
+    /* ArrayBuffer.isView 而非 instanceof Uint32Array：vmThreads 池下流对象属宿主
+     * realm，跨 realm instanceof 恒假会误拒私有形状（批次56）。 */
+    || !(writeState !== undefined && ArrayBuffer.isView(writeState) && writeState.length >= 2)
     || typeof candidate._defaultFlushFlag !== 'number'
     || errorKey === undefined
     || candidate[errorKey] !== null
