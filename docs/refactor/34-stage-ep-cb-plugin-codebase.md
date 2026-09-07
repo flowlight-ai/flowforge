@@ -41,7 +41,7 @@ packages/plugins/codebase/
 
 ## 3. 批次计划与任务清单
 
-### EP-CB0 骨架 + 存储引擎 + 结构层索引闭环 ✅
+### EP-CB0 骨架 + 存储引擎 + 结构层索引闭环 ✅ PR #154
 
 > **DoD**：对本仓库跑通"index → query → schema"闭环；vitest 全绿；`ff_codebase` CLI 可用；
 > 覆盖率诚实契约生效。

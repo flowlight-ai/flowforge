@@ -318,6 +318,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 
 > 源项目 `D:\software\fl\ex\codebase-memory-mcp`（纯 C，197 文件 / 14.4 万行：tree-sitter 知识图谱 + SQLite + 15+ MCP 工具）。
 > 定位：dev 插件的基础（代码索引/文档生成）+ 任何上层模块与业务的快速索引底座。详见 §16 与 `34-stage-ep-cb-plugin-codebase.md`。
+> **进度**：EP-CB0（骨架 + 存储引擎 + 结构层索引闭环）✅ PR #154——57 项契约测试全绿，真实仓库 8376 文件索引闭环；EP-CB1~4 待 Q14/Q15/Q17-Q19 裁决后推进。
 
 ### 13.1 EP0 — 工程化流程插件 + 文档规范（第一优先级，✅ 已完成）
 
@@ -402,7 +403,7 @@ EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 | Q13 | 决策点 D：worktree 隔离 EP0 期可选、EP0-4 后评估是否强制 | ✅ 已裁决（33-stage §8 D 项：保持可选，Windows 长路径风险） |
 | Q14 | plugin-codebase 解析器依赖策略：web-tree-sitter（WASM，纯 TS 生态）/ node 原生绑定 / vendored 语法资产 | ⚠ EP-CB1 前裁决（EP-CB0 不涉及，见 §16.4 建议） |
 | Q15 | plugin-codebase 与 packages/lsp（ctx.lsp seam）融合边界：图谱解析用 LSP 语义（Hybrid LSP 思想）还是纯 tree-sitter | ⚠ EP-CB4 前裁决（建议：LSP seam 作为语义增强源接入，不替代 tree-sitter 主链路） |
-| Q16 | 索引数据落点：仓库本地 `.flowforge/codebase.db`（gitignore）vs 集中 `~/.flowforge/`（C 源项目两态并存） | ⚠ EP-CB0 内裁决（建议：仓库本地优先 + 集中注册表，对齐 C 项目持久化工件模型） |
+| Q16 | 索引数据落点：仓库本地 `.flowforge/codebase.db`（gitignore）vs 集中 `~/.flowforge/`（C 源项目两态并存） | ✅ 已裁决：仓库本地优先 + 集中注册表（EP-CB0 按建议执行，见 34-stage D-CB3） |
 | Q17 | graph-ui 3D 可视化（C 源项目内置 web 服务）是否纳入移植范围 | ⚠ EP-CB3 前裁决（建议：纳入 EP2 前端融合，非核心链路） |
 | Q18 | 162 语言全量语法资产 vs 先 TS/JS 后扩展的批次节奏 | ⚠ EP-CB1 前裁决（建议：先 TS/JS（本仓库自身即 TS）+ JSON/YAML/Markdown 结构层，语言资产按需增量） |
 | Q19 | Cypher 查询引擎移植深度：全语法子集（C 源项目 cypher/ 模块）vs 先 search_graph 结构化查询后 Cypher | ⚠ EP-CB2 前裁决（建议：结构化查询先行，Cypher 子集随 EP-CB3 落地） |
