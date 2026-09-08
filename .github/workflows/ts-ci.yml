@@ -10,8 +10,12 @@ name: TS CI
 on:
   push:
     branches: [main, master, develop]
+    paths-ignore:
+      - "web/**"
   pull_request:
     branches: [main, master, develop]
+    paths-ignore:
+      - "web/**"
 
 permissions:
   contents: read

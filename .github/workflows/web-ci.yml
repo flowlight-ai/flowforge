@@ -1,0 +1,42 @@
+name: Web CI
+
+#T8.1 web/ 分层构建线：仅 web/** 变更触发，与 ts-ci.yml（TS 包矩阵）互不阻塞。
+# mixed PR 双线都跑；web-only PR 只跑本线。
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "web/**"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "web/**"
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web (next lint + next build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up pnpm (Corepack)
+        run: corepack enable && corepack prepare pnpm@11.7.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (next lint)
+        run: pnpm --filter @flowforge/web-app lint
+
+      - name: Build (next build)
+        run: pnpm --filter @flowforge/web-app build
