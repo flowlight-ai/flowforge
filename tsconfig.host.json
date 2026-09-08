@@ -537,6 +537,9 @@
       "path": "./packages/mcp/mcp-client"
     },
     {
+      "path": "./packages/mcp/mcp-server"
+    },
+    {
       "path": "./packages/plan/plan-mode"
     },
     {

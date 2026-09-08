@@ -10,6 +10,7 @@
  */
 
 import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { CodebaseStore } from '../store.ts'
 import { indexRepository } from '../indexer.ts'
 import { INDEX_MODES } from '../indexer.ts'
@@ -29,6 +30,14 @@ import { missedGraph } from '../missed.ts'
 import { watchIndex } from '../watcher.ts'
 import { ingestTraces } from '../traces.ts'
 import { dumpArtifact, restoreArtifact } from '../artifact.ts'
+import { semanticQuery, semanticSimilarityEdges } from '../semantic.ts'
+import { augmentWithLsp } from '../lsp-seam.ts'
+import type { LspSeam } from '../lsp-seam.ts'
+import { detectCrossProjectEdges } from '../cross-repo.ts'
+import type { SiblingProject } from '../cross-repo.ts'
+import { propagateLoopDepth } from '../loop-depth.ts'
+import type { EdgeRecord } from '../store.ts'
+import type { LspEnhanceRequest } from '../lsp-seam.ts'
 
 const USAGE = `ff_codebase — FlowForge 代码智能 CLI（@flowforge/plugin-codebase）
 
@@ -56,6 +65,11 @@ const USAGE = `ff_codebase — FlowForge 代码智能 CLI（@flowforge/plugin-co
   ff_codebase watch   --repo <path> [--project <name>]
   ff_codebase ingest  --repo <path> --trace-id <id> --name <t> [--agent <a>] [--project <name>]
   ff_codebase artifact --repo <path> --action dump|restore [--out <path>] [--in <path>] [--project <name>]
+  ff_codebase similar  --repo <path> [--threshold <n>] [--project <name>]
+  ff_codebase semantic-query --repo <path> --keywords a,b [--limit <n>] [--offset <n>] [--project <name>]
+  ff_codebase lsp      --repo <path> [--script <seam.mjs>] [--project <name>]
+  ff_codebase crossrepo --repo <path> --siblings "<name>@<db>,<name2>@<db2>" [--project <name>]
+  ff_codebase loop-depth --repo <path> [--project <name>]
 
 默认 DB：<repo>/.flowforge/codebase.db（gitignore 内）。默认项目名：仓库目录名（安全化）。
 退出码：0 = 成功；1 = 项目不存在/无结果；2 = 用法错误。`
@@ -420,6 +434,56 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
         failUsage(`未知 artifact action "${action}"（dump|restore）`)
       })
     }
+    case 'similar': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const threshold = flagNumber(args.flags, 'threshold')
+      return withStore(args.flags, repo, store => {
+        emit(semanticSimilarityEdges(store, project, { ...(threshold === undefined ? {} : { threshold }) }))
+        return 0
+      })
+    }
+    case 'semantic-query': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const keywordsRaw = flagString(args.flags, 'keywords') ?? failUsage('semantic-query 需要 --keywords "a,b"')
+      const keywords = keywordsRaw.split(',').map(kw => kw.trim()).filter(kw => kw.length > 0)
+      const limit = flagNumber(args.flags, 'limit')
+      const offset = flagNumber(args.flags, 'offset')
+      return withStore(args.flags, repo, store => {
+        emit(semanticQuery(store, project, {
+          keywords,
+          ...(limit === undefined ? {} : { limit }),
+          ...(offset === undefined ? {} : { offset }),
+        }))
+        return 0
+      })
+    }
+    case 'lsp': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const script = flagString(args.flags, 'script')
+      return withLspStore(args.flags, repo, project, script)
+    }
+    case 'crossrepo': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      const siblingsRaw = flagString(args.flags, 'siblings') ?? failUsage('crossrepo 需要 --siblings "<name>@<db>,..."')
+      const siblings: SiblingProject[] = siblingsRaw.split(',').map(item => item.trim()).filter(item => item.length > 0).map(item => {
+        const at = item.indexOf('@')
+        return { name: item.slice(0, at).trim(), dbPath: item.slice(at + 1).trim() }
+      })
+      if (siblings.some(item => item.name.length === 0 || item.dbPath.length === 0)) {
+        failUsage('--siblings 每项格式为 <name>@<dbPath>')
+      }
+      return withStore(args.flags, repo, store => {
+        emit(detectCrossProjectEdges(store, project, { siblings }))
+        return 0
+      })
+    }
+    case 'loop-depth': {
+      const project = flagString(args.flags, 'project') ?? deriveProjectName(repo)
+      return withStore(args.flags, repo, store => {
+        emit(propagateLoopDepth(store, project))
+        return 0
+      })
+    }
     case 'help':
     case '':
       process.stdout.write(`${USAGE}\n`)
@@ -443,6 +507,31 @@ function withStore(flags: Map<string, string | boolean>, repo: string, body: (st
   } finally {
     store.dispose()
   }
+}
+
+/**
+ * Open the store, run an LSP-seam augmentation (optionally loading the seam
+ * provider from a user script), dispose in `finally`, map query-layer errors.
+ */
+async function withLspStore(flags: Map<string, string | boolean>, repo: string, project: string, script: string | undefined): Promise<number> {
+  const store = new CodebaseStore(dbPathFor(flags, repo))
+  let code = 0
+  try {
+    store.open()
+    let seam: LspSeam | undefined
+    if (script !== undefined) {
+      const module = await import(pathToFileURL(resolve(script)).href)
+      seam = typeof module.default === 'function'
+        ? { enhance: module.default as (request: LspEnhanceRequest) => readonly EdgeRecord[] }
+        : (module.default as LspSeam | undefined)
+    }
+    emit(augmentWithLsp(store, project, seam === undefined ? {} : { seam }))
+  } catch (error) {
+    code = mapQueryError(error)
+  } finally {
+    store.dispose()
+  }
+  return code
 }
 
 function mapQueryError(error: unknown): number {

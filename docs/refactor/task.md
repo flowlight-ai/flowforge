@@ -54,8 +54,8 @@
 
 | 序 | 任务 | 来源 | 预估批次 | 状态 |
 |---|---|---|---|---|
-| 1 | `mcp-server` 整包（工具治理全家 + 6 toolsets + protocol-server）⚠Q3 | B1 | 2 | ⬜ |
-| 2 | `infrastructure/connectors` IM 框架本体 | B7 | 2 | ⬜ |
+| 1 | `mcp-server` 整包（工具治理全家 + 6 toolsets + protocol-server）⚠Q3 | B1 | 2 | 🟩（EP1-1a 治理框架本体 + registry + snapshot + protocol-server 落 `packages/mcp/mcp-server`，PR #163；EP1-1b 六 family 工具清单待领域层） |
+| 2 | `infrastructure/connectors` IM 框架本体 | B7 | 2 | 🟩（EP1-2 框架本体落 `packages/infrastructure/connectors`：Router/CommandLayer/Formatter/PermissionStore/ThreadBindingStore+Redis/Dedup/OutboundDeliveryHook/StreamingOutboundHook/mention/rich-block-plaintext/external-registry/gateway，12 测试 77/77 绿，tsc/oxlint 全绿；适配器+github-repo-event+media 待 EP2/EP4） |
 | 3 | `chat/messaging` 域（envelope/ledger/snapshot + Redis）⚠Q6 | B4 | 1 | ⬜ |
 | 4 | `cats/signal-intake` 域（25+ 文件）⚠Q6 | B3 | 2 | ⬜ |
 | 5 | `infrastructure/github-signals` 域 | B5 | 1 | ⬜ |
@@ -67,7 +67,7 @@
 | 11 | `extensions/ui-cordis` + `cordis-client-runner` | A9/A10 | 1 | ⬜ |
 | 12 | `bundle/web-app`（+acp/sdk 模板） | A4-A7 | 1 | ⬜ |
 | 13 | dsh `client/*` 能力级清单登记（归入 EP2 实施） | A32 | — | ⬜ |
-| 14 | 矩阵补录：`10-stage-map.md` 增设 D45+/C43+/F45+ 编号 + crosswalk 漂移纠偏 | 文档 | 0.5 | ⬜ |
+| 14 | 矩阵补录：`10-stage-map.md` 增设 D45+/C43+/F45+ 编号 + crosswalk 漂移纠偏 | 文档 | 0.5 | 🟩（`10-stage-map.md` D45-D55/C43-C51/F45 补录 + crosswalk L31/L41/L59/L80 漂移纠偏 + D9/S1 表述勘误完成） |
 
 ---
 

@@ -191,3 +191,31 @@ export type { IngestOptions, IngestResult } from './traces.ts'
 
 export { dumpArtifact, restoreArtifact, removeArtifact } from './artifact.ts'
 export type { ArtifactReport, DumpOptions, RestoreOptions } from './artifact.ts'
+
+export {
+  simhash,
+  hammingDistance,
+  cosineSimilarity,
+  termFrequency,
+  semanticSimilarityEdges,
+  semanticQuery,
+} from './semantic.ts'
+export type {
+  SemanticSimilarityOptions,
+  SemanticSimilarityResult,
+  SemanticQueryOptions,
+} from './semantic.ts'
+
+export { augmentWithLsp, LSP_EDGE_TYPES } from './lsp-seam.ts'
+export type {
+  LspSeam,
+  LspEnhanceRequest,
+  AugmentWithLspOptions,
+  AugmentResult,
+} from './lsp-seam.ts'
+
+export { detectCrossProjectEdges } from './cross-repo.ts'
+export type { SiblingProject, CrossRepoOptions, CrossRepoResult } from './cross-repo.ts'
+
+export { propagateLoopDepth } from './loop-depth.ts'
+export type { LoopDepthResult } from './loop-depth.ts'

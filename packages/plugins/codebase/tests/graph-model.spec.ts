@@ -52,6 +52,7 @@ describe('NODE_LABELS / EDGE_TYPES（C 词表契约）', () => {
       'CONTAINS_FOLDER',
       'CONTAINS_FILE',
       'IMPORTS',
+      'SIMILAR',
       'CROSS_HTTP_CALLS',
       'CROSS_ASYNC_CALLS',
       'CROSS_CHANNEL',
