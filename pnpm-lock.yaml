@@ -6718,6 +6718,14 @@ importers:
         specifier: workspace:^
         version: link:../web
 
+  packages/webhook/webhook: {}
+
+  packages/webhook/webhook-github:
+    devDependencies:
+      '@flowforge/webhook':
+        specifier: workspace:^
+        version: link:../webhook
+
   packages/workflow/tool-ralph:
     dependencies:
       '@flowforge/schemastery':
