@@ -2043,6 +2043,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
 
+  packages/extensions/cordis-client-runner: {}
+
   packages/extensions/cordis-host-runner:
     dependencies:
       '@flowforge/schemastery':
@@ -2115,6 +2117,8 @@ importers:
       '@flowforge/tools':
         specifier: workspace:^
         version: link:../../core/tools
+
+  packages/extensions/ui-cordis: {}
 
   packages/external/agent:
     dependencies:

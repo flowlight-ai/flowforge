@@ -1,0 +1,33 @@
+{
+  "name": "@flowforge/ui-cordis",
+  "description": "FlowForge Cordis dynamic-plugin definition/run/action card presentation logic and the frame-wide plugin inventory panel model (A8/D50): injectable-seam port of the dsh `@deepseek-ai/dsh-ui-cordis` client half. Extracts the testable, framework-free presentation logic (card models, status derivation, inventory observable with single-flight reads, the run-card supersession index, panel grouping/selection, and the run-card reading state) plus a pure-logic port of the localizable copy. React/DOM rendering glue and first-party UI primitives are intentionally not ported. Zero `@deepseek-ai/*` / `@cat-cafe/*` / `@clowder-ai/*` references and no cordis Service/Context feathers: every originally-dsh dependency is expressed as a package-local seam (`HostObservable`, `ToolCallViewModelBlock`, and the wire vocabulary re-exported from `@flowforge/cordis-client-runner`).",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/extensions/ui-cordis"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT"
+}

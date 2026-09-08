@@ -456,6 +456,21 @@
       "@flowforge/cordis-host-runner/types": [
         "./packages/extensions/cordis-host-runner/src/types.ts"
       ],
+      "@flowforge/cordis-client-runner": [
+        "./packages/extensions/cordis-client-runner/src/index.ts"
+      ],
+      "@flowforge/cordis-client-runner/types": [
+        "./packages/extensions/cordis-client-runner/src/types.ts"
+      ],
+      "@flowforge/cordis-client-runner/values": [
+        "./packages/extensions/cordis-client-runner/src/values.ts"
+      ],
+      "@flowforge/ui-cordis": [
+        "./packages/extensions/ui-cordis/src/index.ts"
+      ],
+      "@flowforge/ui-cordis/types": [
+        "./packages/extensions/ui-cordis/src/types.ts"
+      ],
       "@flowforge/launch-environment": [
         "./packages/util/launch-environment/src/index.ts"
       ],

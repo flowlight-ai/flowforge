@@ -139,7 +139,7 @@
 | D47 | 会话格式版本化 session-format（v0→v1→v2 迁移链 4 包，持久化兼容关键缺口） | dsh `session/session-format*`（A17） | 1 | ✅（EP1-8 `@flowforge/session-format`、`-v0-to-v1`、`-v1-to-v2`、`-catalog`，迁移链 codec/chain/catalog + assistant-stream 折叠） |
 | D48 | 会话日志导出 session-log-export（crosswalk 来源列已列出、落点遗漏） | dsh `session-query/session-log-export`（A20） | 2 | ✅（EP1-8 `@flowforge/session-log-export`，JSONL + 血缘深序 ZIP 流式导出 + 下载路由/浏览器控制器；D47+D48 合计 349 契约测试全绿） |
 | D49 | Webhook 接收与 GitHub 事件分发（webhook + webhook-github） | dsh `webhook/*`（A29） | 2 | ✅（EP1-9 @flowforge/webhook + @flowforge/webhook-github，93 契约测试全绿） |
-| D50 | 前端扩展与客户端运行器（ui-cordis + cordis-client-runner，crosswalk 状态虚报纠偏 A9/A10） | dsh `extensions/*` | 8 | ⬜（EP1-11） |
+| D50 | 前端扩展与客户端运行器（ui-cordis + cordis-client-runner，crosswalk 状态虚报纠偏 A9/A10） | dsh `extensions/*` | 8 | ✅（EP1-11 双包注入式移植：`@flowforge/cordis-client-runner`（A10 运行时 52 契约） + `@flowforge/ui-cordis`（A9 展示逻辑 30 契约），82 契约测试全绿、tsc exit 0、oxlint 0，详见 task.md 行 11） |
 | D51 | web/sdk/acp 装配模板（web-app + acp-app + sdk-app + sdk-minimal bundle） | dsh `bundle/*`（A4-A7） | 3/8 | ⬜（EP1-12） |
 | D52 | dsh `client/*` 46 包 UI 组件层（ui-chat/plan/goal/jobs/schedule/trajectory/deliverables/settings-* 等，能力级融入 Next.js） | dsh `client/*`（A32） | 8 | ⬜（EP2-5） |
 | D53 | 预期输出快照体系 snapshots（acp/sdk/session/web 四域测试基建） | dsh `snapshots/`（A36） | 9 | ⬜（EP3-1） |
