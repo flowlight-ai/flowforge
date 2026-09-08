@@ -57,6 +57,9 @@
       "path": "./packages/cats/session/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/signal-intake/tsconfig.host.json"
+    },
+    {
       "path": "./packages/cats/teamact/tsconfig.host.json"
     },
     {

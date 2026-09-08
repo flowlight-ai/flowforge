@@ -24,6 +24,9 @@
       "node"
     ],
     "paths": {
+      "@flowforge/cats-signal-intake": [
+        "./packages/cats/signal-intake/src/index.ts"
+      ],
       "@flowforge/cats-shared": [
         "./packages/cats/shared/src/index.ts"
       ],

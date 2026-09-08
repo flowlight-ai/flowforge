@@ -313,7 +313,7 @@ importers:
         version: link:../../packages/interaction/user-questions
       '@flowforge/web':
         specifier: workspace:^
-        version: link:../../web
+        version: link:../../packages/web/web
       '@flowforge/web-search-deepseek':
         specifier: workspace:^
         version: link:../../packages/web/web-search-deepseek
@@ -806,7 +806,7 @@ importers:
         version: link:../../interaction/user-questions
       '@flowforge/web':
         specifier: workspace:^
-        version: link:../../../web
+        version: link:../../web/web
       '@flowforge/web-search-deepseek':
         specifier: workspace:^
         version: link:../../web/web-search-deepseek
@@ -1025,6 +1025,15 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+
+  packages/cats/signal-intake:
+    devDependencies:
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../shared
+      zod:
+        specifier: ^4.4.3
+        version: 4.5.4
 
   packages/cats/stores:
     devDependencies:
@@ -6516,7 +6525,7 @@ importers:
         version: link:../../core/tools
       '@flowforge/web':
         specifier: workspace:^
-        version: link:../../../web
+        version: link:../web
       '@flowforge/web-fetch-http':
         specifier: workspace:^
         version: link:../web-fetch-http
@@ -6560,7 +6569,7 @@ importers:
         version: link:../../util/timeout
       '@flowforge/web':
         specifier: workspace:^
-        version: link:../../../web
+        version: link:../web
 
   packages/web/web-search-deepseek:
     dependencies:
@@ -6594,7 +6603,7 @@ importers:
         version: link:../../settings/settings
       '@flowforge/web':
         specifier: workspace:^
-        version: link:../../../web
+        version: link:../web
 
   packages/web/web-search-exa:
     dependencies:
@@ -6613,7 +6622,7 @@ importers:
         version: link:../../util/launch-environment
       '@flowforge/web':
         specifier: workspace:^
-        version: link:../../../web
+        version: link:../web
 
   packages/web/web-search-perplexity:
     dependencies:
@@ -6632,7 +6641,7 @@ importers:
         version: link:../../util/launch-environment
       '@flowforge/web':
         specifier: workspace:^
-        version: link:../../../web
+        version: link:../web
 
   packages/workflow/tool-ralph:
     dependencies:
@@ -13505,11 +13514,11 @@ snapshots:
 
   '@modelcontextprotocol/server-everything@2026.7.4':
     dependencies:
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
+      '@modelcontextprotocol/sdk': 1.30.0(zod@4.5.4)
       cors: 2.8.6
       express: 5.2.1
       jszip: 3.10.1
-      zod: 4.4.3
+      zod: 4.5.4
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
