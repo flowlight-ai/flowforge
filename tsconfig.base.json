@@ -27,6 +27,9 @@
       "@flowforge/api-rest-controllers": [
         "./packages/api/rest-controllers/src/index.ts"
       ],
+      "@flowforge/credentials-authorization": [
+        "./packages/credentials/authorization/src/index.ts"
+      ],
       "@flowforge/cats-signal-intake": [
         "./packages/cats/signal-intake/src/index.ts"
       ],
@@ -1406,6 +1409,12 @@
       ],
       "@flowforge/plugins-video-gen": [
         "./packages/plugins/video-gen/src/index.ts"
+      ],
+      "@flowforge/webhook": [
+        "./packages/webhook/webhook/src/index.ts"
+      ],
+      "@flowforge/webhook-github": [
+        "./packages/webhook/webhook-github/src/index.ts"
       ]
     }
   }

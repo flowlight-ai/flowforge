@@ -1823,6 +1823,12 @@ importers:
         specifier: workspace:^
         version: link:../../interaction/user-approval
 
+  packages/credentials/authorization:
+    devDependencies:
+      '@flowforge/llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+
   packages/credentials/credentials:
     devDependencies:
       '@flowforge/brand':
