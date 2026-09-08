@@ -213,6 +213,9 @@
       "path": "./packages/infrastructure/redis-port/tsconfig.host.json"
     },
     {
+      "path": "./packages/infrastructure/github-signals/tsconfig.host.json"
+    },
+    {
       "path": "./packages/infrastructure/enterprise/tsconfig.host.json"
     },
     {
