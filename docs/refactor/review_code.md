@@ -351,6 +351,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 | 8 | `session-format` 4 包 + `session-log-export` | A17/A20 | 1 批次 |
 | 9 | `webhook` 2 包 | A29 | 1 批次 |
 | 10 | `credentials/authorization` | A8 | 0.5 批次 |
+> **EP1-10 🟩 交付**（2026-09-08）：落 `packages/credentials/authorization`（@flowforge/credentials-authorization）——plugin-owned 凭据获取授权 seam（`ctx.authorization` 等价），重写为注入 seam 设计：wire-safe 类型面 + `AuthorizationService`（flow 注册/attempt 管理/结算）+ `AuthorizationDeclinedError`（DECLINED）语义 + 注入式端口（`AuthorizationCredentialsPort`/`AuthorizationHostPort` + `MemoryCredentialsStore`/`MemoryAuthorizationHost`）+ invariant companion + 便捷装配（`createAuthorizationService`/`memoryAuthorizationRuntime`）；原 cordis Service/Context feathers、dsh-credentials 记录面、dsh-invariants companion 全部化为包级端口，唯一复用上游 `HarnessError`（@flowforge/llm）。**3 契约测试 50/50 绿、包级 tsc exit 0、oxlint 0 告警**。依据 `docs/process/specs/2026-09-08-credentials-authorization-design.md`。零 @deepseek/@cat-cafe/@clowder 引用。边界：cordis 宿主挂载、真实 surface 渲染、真实凭据存储接线归 EP2。与 `10-stage-map.md` D46、`task.md` 10 同步。
 | 11 | `extensions/ui-cordis` + `cordis-client-runner` | A9/A10 | 1 批次 |
 | 12 | `bundle/web-app`（+acp/sdk 模板） | A4-A7 | 1 批次 |
 | 13 | dsh `client/*` 能力级清单登记 + Next.js 融合实施 | A32 | 归入 EP2 |
