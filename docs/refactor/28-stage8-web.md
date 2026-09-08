@@ -5,7 +5,7 @@
 
 ## 任务清单
 
-- [ ] T8.1 `packages/web` 基础：Next.js 14 + Tailwind + Zustand + socket.io-client 工程
+- [x] T8.1 `packages/web` 基础：Next.js 14 + Tailwind + Zustand + socket.io-client 工程（批次56 2026-09-08：顶层 `web/` 原地并入根 workspace，前端包名 `@flowforge/web-app`，CI 分层 ts-ci/web-ci，流程实例 plugin-web-t81）
 - [ ] T8.2 群聊页：Threads 列表/线程详情/@mention 菜单/线程分支（对齐 clowder 交互）
 - [ ] T8.3 灵智档案页：Forgekin 列表/详情/档案编辑/审批（clowder cats 档案 UI + Forgekin 品牌）
 - [ ] T8.4 终端面板：xterm 组件（对接 limb 输出流）
