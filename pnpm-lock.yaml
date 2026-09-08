@@ -4490,6 +4490,19 @@ importers:
         specifier: workspace:^
         version: link:../../subagent/subagent
 
+  packages/session-query/session-log-export:
+    dependencies:
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
+    devDependencies:
+      '@flowforge/session-format':
+        specifier: workspace:^
+        version: link:../../session/session-format
+      zod:
+        specifier: ^4.4.3
+        version: 4.5.4
+
   packages/session-query/session-query:
     devDependencies:
       '@flowforge/brand':

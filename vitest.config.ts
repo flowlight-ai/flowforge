@@ -698,6 +698,15 @@ const aliasEntries = [
       { find: '@flowforge/plugins-video-gen', replacement: path.resolve(import.meta.dirname, 'packages/plugins/video-gen/src') },
       { find: '@flowforge/harness-env-registry/src', replacement: path.resolve(import.meta.dirname, 'packages/harness/env-registry/src') },
       { find: '@flowforge/harness-env-registry', replacement: path.resolve(import.meta.dirname, 'packages/harness/env-registry/src') },
+      { find: '@flowforge/session-format/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-format/src') },
+      { find: '@flowforge/session-format', replacement: path.resolve(import.meta.dirname, 'packages/session/session-format/src') },
+      { find: /^@flowforge\/session-format$/, replacement: path.resolve(import.meta.dirname, 'packages/session/session-format/src') },
+      { find: '@flowforge/session-format-v0-to-v1/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v0-to-v1/src') },
+      { find: '@flowforge/session-format-v0-to-v1', replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v0-to-v1/src') },
+      { find: /^@flowforge\/session-format-v0-to-v1$/, replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v0-to-v1/src') },
+      { find: '@flowforge/session-format-v1-to-v2/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v1-to-v2/src') },
+      { find: '@flowforge/session-format-v1-to-v2', replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v1-to-v2/src') },
+      { find: /^@flowforge\/session-format-v1-to-v2$/, replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v1-to-v2/src') },
       // <generated-alias:end>
 ]
 

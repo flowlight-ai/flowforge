@@ -134,10 +134,10 @@
 | D42 | test-support 族（agent-loop-testkit/acp-snapshot/client-runtime/llm-replay/loader-smoke） | packages/test-support/* | 1-2 | ✅（批次47 client-runtime：与 @flowforge/client-connection HostConnectionRpc 契约结构同构的进程内 host RPC 路由（handle 通道注册校验 /api 前缀+重复拒绝 / intercept 抢占 + 优先于 channel fallback + disposer 移除）+ 同构 client 调用器（call/request + 取消信号透传）+ 异常折叠 internal + 未知 channel 错误分支，9 测试；至此 5/5 全移植） |
 | D43 | util 族（atomic-write/brand/home-paths/launch-environment/native-command/output-retention/timeout） | packages/harness/util | 0-1 | ✅ |
 | D44 | 预设 preset（agent-presets/persona，结构对齐 forgekins 档案） | packages/preset | 2 | ✅ |
-| D45 | REST 控制器族（session/settings/workspace-controller，阶段8 服务端 API 面前置） | dsh `api/*-controller`（A1-A3） | 3/8 | ⬜（EP1-7） |
+| D45 | REST 控制器族（session/settings/workspace-controller，阶段8 服务端 API 面前置） | dsh `api/*-controller`（A1-A3） | 3/8 | ✅（EP1-7 @flowforge/api-rest-controllers，111 契约测试全绿） |
 | D46 | 凭证授权层 credentials/authorization（OAuth invariant/types，独立于 credentials-local） | dsh `credentials/authorization`（A8） | 2 | ⬜（EP1-10） |
-| D47 | 会话格式版本化 session-format（v0→v1→v2 迁移链 4 包，持久化兼容关键缺口） | dsh `session/session-format*`（A17） | 1 | ⬜（EP1-8） |
-| D48 | 会话日志导出 session-log-export（crosswalk 来源列已列出、落点遗漏） | dsh `session-query/session-log-export`（A20） | 2 | ⬜（EP1-8） |
+| D47 | 会话格式版本化 session-format（v0→v1→v2 迁移链 4 包，持久化兼容关键缺口） | dsh `session/session-format*`（A17） | 1 | ✅（EP1-8 `@flowforge/session-format`、`-v0-to-v1`、`-v1-to-v2`、`-catalog`，迁移链 codec/chain/catalog + assistant-stream 折叠） |
+| D48 | 会话日志导出 session-log-export（crosswalk 来源列已列出、落点遗漏） | dsh `session-query/session-log-export`（A20） | 2 | ✅（EP1-8 `@flowforge/session-log-export`，JSONL + 血缘深序 ZIP 流式导出 + 下载路由/浏览器控制器；D47+D48 合计 349 契约测试全绿） |
 | D49 | Webhook 接收与 GitHub 事件分发（webhook + webhook-github） | dsh `webhook/*`（A29） | 2 | ⬜（EP1-9） |
 | D50 | 前端扩展与客户端运行器（ui-cordis + cordis-client-runner，crosswalk 状态虚报纠偏 A9/A10） | dsh `extensions/*` | 8 | ⬜（EP1-11） |
 | D51 | web/sdk/acp 装配模板（web-app + acp-app + sdk-app + sdk-minimal bundle） | dsh `bundle/*`（A4-A7） | 3/8 | ⬜（EP1-12） |
