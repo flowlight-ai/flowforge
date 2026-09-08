@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "plugin-web-t81",
+  "workflow": "change",
+  "snapshot": {
+    "name": "plugin-web-t81",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/process/specs/2026-09-07-web-t81-workspace-design.md",
+      "plan": "d:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-07-t81-web-workspace.md",
+      "verification": "d:\\software\\fl\\flowlight\\flowforge\\docs\\process\\verifications\\plugin-web-t81.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-07T10:57:38.190Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-07T12:50:13.430Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-07T12:51:36.756Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-07T12:57:12.037Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-08T03:06:46.322Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-08T03:06:47.197Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-08T03:07:14.346Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-08T03:07:14.347Z"
+}
