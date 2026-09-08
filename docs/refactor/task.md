@@ -56,7 +56,7 @@
 |---|---|---|---|---|
 | 1 | `mcp-server` 整包（工具治理全家 + 6 toolsets + protocol-server）⚠Q3 | B1 | 2 | 🟩（EP1-1a 治理框架本体 + registry + snapshot + protocol-server 落 `packages/mcp/mcp-server`，PR #163；EP1-1b 六 family 工具清单待领域层） |
 | 2 | `infrastructure/connectors` IM 框架本体 | B7 | 2 | 🟩（EP1-2 框架本体落 `packages/infrastructure/connectors`：Router/CommandLayer/Formatter/PermissionStore/ThreadBindingStore+Redis/Dedup/OutboundDeliveryHook/StreamingOutboundHook/mention/rich-block-plaintext/external-registry/gateway，12 测试 77/77 绿，tsc/oxlint 全绿；适配器+github-repo-event+media 待 EP2/EP4） |
-| 3 | `chat/messaging` 域（envelope/ledger/snapshot + Redis）⚠Q6 | B4 | 1 | ⬜ |
+| 3 | `chat/messaging` 域（envelope/ledger/snapshot + Redis）⚠Q6 | B4 | 1 | 🟩（EP1-3：envelope 投影 + handles + ledger + Memory stores + contract（host-types/source-admission/validate）+ @flowforge/plugin-contract messaging 契约类型，落 `packages/chat/messaging`，7 测试 50/50 绿、包级 tsc exit 0、oxlint 0；send/append/event-stream/snapshot-*/messaging-service/Redis Lua 归 EP1-4） |
 | 4 | `cats/signal-intake` 域（25+ 文件）⚠Q6 | B3 | 2 | ⬜ |
 | 5 | `infrastructure/github-signals` 域 | B5 | 1 | ⬜ |
 | 6 | `cats/context-assembly`（17 文件） | B12 | 1 | ⬜ |
