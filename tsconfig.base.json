@@ -93,6 +93,9 @@
       "@flowforge/chat-stretch": [
         "./packages/chat/stretch-ports/src/index.ts"
       ],
+      "@flowforge/chat-messaging": [
+        "./packages/chat/messaging/src/index.ts"
+      ],
       "@flowforge/chat-e2e": [
         "./packages/chat/e2e/src/index.ts"
       ],

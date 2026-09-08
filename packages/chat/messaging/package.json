@@ -1,0 +1,57 @@
+{
+  "name": "@flowforge/chat-messaging",
+  "description": "FlowForge chat messaging domain — plugin Messaging host/kernel core (K-1 / F288): message envelope projection, address handles, idempotent settlement ledger, and their in-memory stores. Ported from clowder-ai `domains/messaging`.",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/chat/messaging"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./envelope": {
+      "types": "./lib/types/envelope.d.ts",
+      "default": "./lib/envelope.js"
+    },
+    "./ledger": {
+      "types": "./lib/types/ledger.d.ts",
+      "default": "./lib/ledger.js"
+    },
+    "./handles": {
+      "types": "./lib/types/handles.d.ts",
+      "default": "./lib/handles.js"
+    },
+    "./stores": {
+      "types": "./lib/types/stores/index.d.ts",
+      "default": "./lib/stores/index.js"
+    },
+    "./stores/ports": {
+      "types": "./lib/types/stores/ports.d.ts",
+      "default": "./lib/stores/ports.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/plugin-contract": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cats-stores": "workspace:^",
+    "@flowforge/plugin-contract": "workspace:^"
+  }
+}

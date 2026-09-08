@@ -90,6 +90,9 @@
       "path": "./packages/chat/stretch-ports/tsconfig.host.json"
     },
     {
+      "path": "./packages/chat/messaging/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/e2e/tsconfig.host.json"
     },
     {
