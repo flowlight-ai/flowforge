@@ -1141,6 +1141,15 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/chat/messaging:
+    devDependencies:
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../../cats/stores
+      '@flowforge/plugin-contract':
+        specifier: workspace:^
+        version: link:../../plugin-contract/plugin-contract
+
   packages/chat/misc:
     devDependencies:
       '@flowforge/cats-orchestration':
