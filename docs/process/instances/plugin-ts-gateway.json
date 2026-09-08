@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "plugin-ts-gateway",
+  "workflow": "greenfield",
+  "snapshot": {
+    "name": "plugin-ts-gateway",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/process/specs/2026-09-08-ts-gateway-design.md",
+      "plan": "d:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-08-ts-gateway.md",
+      "verification": "d:\\software\\fl\\flowlight\\flowforge\\docs\\process\\verifications\\plugin-ts-gateway.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-08T09:53:26.667Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-08T09:59:05.024Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-08T09:59:38.501Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-08T10:01:57.193Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-08T12:30:23.075Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-08T13:14:28.624Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-08T13:14:33.521Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-08T13:14:33.522Z"
+}
