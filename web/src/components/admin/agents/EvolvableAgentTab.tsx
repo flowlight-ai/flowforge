@@ -7,7 +7,7 @@
  *   显示 9 个内置 Forgekin 卡片网格（5 通用 + 4 新增）
  *
  * 数据来源：/api/v1/forgemind/roster
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）
  */
 
 import { useEffect, useState } from "react";

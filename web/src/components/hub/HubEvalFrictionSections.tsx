@@ -9,7 +9,7 @@
  *   - 仅引用条目（referenceOnly）：仅保留链接语义
  *   - 原始报告跳转按钮（openWorkspaceFile）
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * 主题：使用 var(--cafe-xxx) CSS 变量。
  * 独立性：仅依赖 HubEvalTypes 类型，不依赖 clowder-ai 任何组件。
  */

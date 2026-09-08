@@ -5,7 +5,7 @@
  *
  * 组合基础字段为更高层级的分区：身份 / 账户 / 路由。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
  * 独立性：不依赖 clowder-ai 任何组件。
  */
@@ -209,7 +209,7 @@ interface TagSectionProps {
  * 包装 HubTagEditor，嵌入 Forgekin 编辑器，提供可进化智能体的
  * 标签管理能力（用于分组与过滤）。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * 持久化：通过 /api/v1/forgemind/{forgekinId}/tags 端点独立保存。
  */
 export function TagSection({ forgekinId, initialTags, onSaved, disabled }: TagSectionProps) {

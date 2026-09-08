@@ -9,13 +9,13 @@
  * 数据来源：/api/v1/external-agents
  *   每个智能体项含连通性状态 + bound_forgekins 绑定关系。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）
  */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-/** 绑定的灵智体信息（来自后端 bound_forgekins 字段） */
+/** 绑定的可进化智能体信息（来自后端 bound_forgekins 字段） */
 interface BoundForgekin {
   id: string;
   name: string;
@@ -125,7 +125,7 @@ export function ExternalAgentList() {
                     }}
                     data-external-agent-bound-count={boundForgekins.length}
                   >
-                    绑定 {boundForgekins.length} 个灵智体
+                    绑定 {boundForgekins.length} 个可进化智能体
                   </span>
                 ) : (
                   <span
@@ -147,7 +147,7 @@ export function ExternalAgentList() {
                   {status.reason}
                 </p>
               )}
-              {/* 绑定的灵智体列表 */}
+              {/* 绑定的可进化智能体列表 */}
               {isBound && (
                 <div className="mt-2 space-y-1" data-external-agent-bound-list="true">
                   {boundForgekins.map((fk) => (

@@ -3,7 +3,7 @@
  *
  * 定义可进化智能体（Forgekin）编辑表单的核心数据结构、初始化函数与 PATCH 构造逻辑。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）
  *
  * 依赖：仅依赖 @/lib/council-types 的 ForgekinRosterItem，不依赖 clowder-ai 任何组件。
  */

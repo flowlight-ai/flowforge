@@ -99,7 +99,7 @@ export interface CliToolCheck {
   error?: string;
   /** 安装命令（ok=false 时存在，如 "npm install -g @openai/codex"） */
   install_cmd?: string;
-  /** 绑定的灵智体名称（如 "sherlock (夏洛克)"） */
+  /** 绑定的可进化智能体名称（如 "sherlock (夏洛克)"） */
   forgekin?: string;
   /** 备注（如 "经 responses proxy 转发"） */
   note?: string;
@@ -121,7 +121,7 @@ export interface ProxyServiceCheck {
   name?: string;
 }
 
-/** Trae 桥接检测结果（butterfly 灵智体） */
+/** Trae 桥接检测结果（butterfly 可进化智能体） */
 export interface TraeBridgeCheck {
   ok: boolean;
   /** 桥接目录路径（ok=true 时为 FLOWFORGE_BRIDGE_DIR 值） */
@@ -169,7 +169,7 @@ export interface WebDepsCheck {
  *   - core_tools: 5 项核心工具（python/node/npm/git/pnpm）
  *   - cli_tools: 8 个 AI CLI 工具（claude/codex/gemini/opencode/codebuddy/qodercli/iflow/kimi）
  *   - proxy_services: 3 个协议代理（claude-code-router/responses-proxy/gemini-proxy）
- *   - trae_bridge: Trae 桥接目录（butterfly 灵智体）
+ *   - trae_bridge: Trae 桥接目录（butterfly 可进化智能体）
  *   - all_ready: 是否全部就绪（核心+CLI+代理+桥接）
  *   - missing: 缺失项名称列表
  */

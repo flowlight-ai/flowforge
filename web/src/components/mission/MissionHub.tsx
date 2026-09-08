@@ -6,7 +6,7 @@
  * 列表视图 + 看板视图切换；支持过滤、刷新、新建任务。
  * 移植自 clowder-ai mission-hub，简化为单容器版。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET /api/v1/missions?status=&priority=&assignee=
  *      POST /api/v1/missions/{id}/move
  */

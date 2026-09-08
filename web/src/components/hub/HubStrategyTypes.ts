@@ -5,7 +5,7 @@
  * 仅包含类型定义，不包含运行时逻辑，便于在 HubRoutingPolicyTab、
  * HubConnectorConfigTab 等多个 Hub 组件间复用。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  */
 
 /** 路由策略匹配条件运算符 */

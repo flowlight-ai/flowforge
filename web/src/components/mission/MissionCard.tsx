@@ -6,7 +6,7 @@
  * 展示单条任务的标题、状态、优先级、负责人、进度。
  * 用于 MissionHub 列表视图与 MissionKanban 列单元格。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  */
 
 import Link from "next/link";

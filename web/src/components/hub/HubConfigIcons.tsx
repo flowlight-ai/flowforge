@@ -9,7 +9,7 @@
  *   - 通用 SVG 图标组件（ChevronRight/ChevronDown/TrashIcon 等）
  *   - 平台状态类型（PlatformStatus）与状态徽章（connStatePill）
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * 主题：使用 var(--cafe-xxx) 与 var(--conn-xxx) CSS 变量。
  */
 

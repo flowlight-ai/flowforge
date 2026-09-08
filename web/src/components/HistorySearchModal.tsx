@@ -6,7 +6,7 @@
  * 顶部 Cmd/Ctrl+K 触发的全局搜索：任务 / 可进化智能体 / 记忆证据 / 信号。
  * 移植自 clowder-ai HistorySearchModal，简化为本地搜索 + 类别切换。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET /api/v1/search?q=&category=&limit=
  */
 

@@ -5,7 +5,7 @@
  * 仅包含类型定义与常量，不包含运行时逻辑，便于在 HubEvalTab、
  * HubEvalVerdictCard、HubEvalFrictionSections 间复用。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  */
 
 /** 摩擦投影状态：available 表示已有可读的 raw report */

@@ -5,7 +5,7 @@
  *
  * 提供温度 / top_p / max_tokens 三个运行时参数的编辑能力。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
  * 独立性：不依赖 clowder-ai 任何组件。
  */

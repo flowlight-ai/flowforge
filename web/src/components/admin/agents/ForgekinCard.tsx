@@ -8,7 +8,7 @@
  * 显示：头像 / 名称 / 角色 / 形态 / 进化阶 / 觉醒阶 / 在线状态
  * 操作：编辑 / 进化 / 觉醒 / 谱系
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）
  */
 
 import { ForgekinRosterItem, FORGEKIN_COLORS, FORGEKIN_EMOJI } from "@/lib/council-types";

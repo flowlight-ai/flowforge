@@ -6,7 +6,7 @@
  * 展示信号来源、强度、摘要、时间戳、关联锚点。
  * 移植自 clowder-ai SignalCard，简化为只读卡片。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  */
 
 export type SignalSeverity = "info" | "warn" | "danger" | "ok";

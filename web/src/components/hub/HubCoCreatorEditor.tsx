@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubCoCreatorEditor，简化为 FlowForge 适配版。
  * 用于 /admin/co-creators，管理可进化智能体的共创关系与权限。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET/POST/PUT/DELETE /api/v1/co-creators。
  */
 

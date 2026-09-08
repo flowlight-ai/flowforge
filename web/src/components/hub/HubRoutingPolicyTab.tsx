@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubRoutingPolicyTab，简化为 FlowForge 适配版。
  * 用于 /admin/routing，管理模型路由策略与回退链。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET/POST/PUT/DELETE /api/v1/routing/policies。
  */
 

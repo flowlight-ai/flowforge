@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubPermissionsTab，简化为 FlowForge 适配版。
  * 用于 /admin/permissions，控制可进化智能体的工具白名单、操作授权范围。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET/PUT /api/v1/permissions/{connectorId}。
  */
 

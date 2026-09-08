@@ -14,7 +14,7 @@
  *
  * 数据来源：/api/v1/forgemind/roster，失败时使用静态兜底。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）
  */
 
 import { Suspense, useCallback, useEffect, useState } from "react";

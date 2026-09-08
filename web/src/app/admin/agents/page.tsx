@@ -15,7 +15,7 @@ import { HubForgekinEditor } from "@/components/admin/agents/HubForgekinEditor";
  *
  * 命名规范（依据 naming-contract.md）：
  *   - 使用 P0 命名 "可进化智能体" / "静态智能体" / "Forgekin"
- *   - 禁止使用 P2 别名 "灵智体"
+ *   - 禁止使用 P2 别名 "可进化智能体"
  */
 
 export default function AgentsPage() {

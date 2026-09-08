@@ -1,20 +1,20 @@
 /**
- * Council Chat 类型定义 — 5 灵智体协作群聊
+ * Council Chat 类型定义 — 5 可进化智能体协作群聊
  *
  * 对应后端 /api/v1/forgemind/* 端点：
- *   - GET  /api/v1/forgemind/roster        → 灵智体花名册
+ *   - GET  /api/v1/forgemind/roster        → 可进化智能体花名册
  *   - POST /api/v1/forgemind/council        → IM 灵议（多轮讨论）
- *   - POST /api/v1/forgemind/webchat/{id}   → 单灵智体对话
+ *   - POST /api/v1/forgemind/webchat/{id}   → 单可进化智能体对话
  *
  * 详见 MERGE-SPEC.md §3.2 聊天模式融合设计
  */
 
 import type { CliDiagnostics } from "@/components/cli-output/CliOutputBlock";
 
-/** 灵智体角色（运行时标签，区别于 capability_profile） */
+/** 可进化智能体角色（运行时标签，区别于 capability_profile） */
 export type ForgekinRole = "primary" | "reviewer" | "tester" | "observer";
 
-/** 灵智体花名册项（来自 /api/v1/forgemind/roster） */
+/** 可进化智能体花名册项（来自 /api/v1/forgemind/roster） */
 export interface ForgekinRosterItem {
   id: string;
   name: string;
@@ -116,9 +116,9 @@ export interface CouncilMessage {
   source: CouncilMessageSource;
   /** forgekin_id（当 source=forgekin 时） */
   forgekinId?: string;
-  /** 灵智体显示名（当 source=forgekin 时） */
+  /** 可进化智能体显示名（当 source=forgekin 时） */
   forgekinName?: string;
-  /** 灵智体角色（当 source=forgekin 时） */
+  /** 可进化智能体角色（当 source=forgekin 时） */
   forgekinRole?: ForgekinRole;
   content: string;
   timestamp: number;
@@ -132,7 +132,7 @@ export interface CouncilMessage {
   branch?: MessageBranch;
   /** 软删除标记 */
   softDelete?: MessageSoftDelete;
-  /** 该灵智体响应的元信息（model/usage/工具调用 等） */
+  /** 该可进化智能体响应的元信息（model/usage/工具调用 等） */
   meta?: {
     model?: string;
     latency_ms?: number;
@@ -189,7 +189,7 @@ export interface CouncilRequest {
   mode?: "auto" | "single" | "parallel";
 }
 
-/** 灵议响应中的单轮单灵智体发言 */
+/** 灵议响应中的单轮单可进化智能体发言 */
 export interface CouncilRoundMessage {
   forgekin_id: string;
   name: string;
@@ -220,7 +220,7 @@ export interface CouncilResponse {
 
 /** 群聊配置 */
 export interface CouncilConfig {
-  /** 参与的灵智体 ID 列表 */
+  /** 参与的可进化智能体 ID 列表 */
   participantIds: string[];
   /** 角色分配：forgekin_id → role */
   roleAssignment: Record<string, ForgekinRole>;
@@ -282,7 +282,7 @@ export const ROLE_CONFIG: Record<ForgekinRole, { label: string; color: string; i
   observer: { label: "观察", color: "bg-gray-600", icon: "○" },
 };
 
-/** 灵智体颜色映射（来自 YAML 配置） */
+/** 可进化智能体颜色映射（来自 YAML 配置） */
 export const FORGEKIN_COLORS: Record<string, { primary: string; secondary: string }> = {
   wenxin: { primary: "#D4A017", secondary: "#F5F5DC" },   // 丹顶鹤金红
   sherlock: { primary: "#4A6FA5", secondary: "#B8C9E0" },  // 猎犬蓝
@@ -295,7 +295,7 @@ export const FORGEKIN_COLORS: Record<string, { primary: string; secondary: strin
   butterfly: { primary: "#DA70D6", secondary: "#FFB6C1" }, // 幻蝶紫
 };
 
-/** 灵智体图标 emoji（用于头像占位） */
+/** 可进化智能体图标 emoji（用于头像占位） */
 export const FORGEKIN_EMOJI: Record<string, string> = {
   wenxin: "🦩",     // 丹顶鹤
   sherlock: "🐕",   // 猎犬

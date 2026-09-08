@@ -6,7 +6,7 @@ import Link from "next/link";
  * 管理中心首页 — 统一入口
  *
  * 整合 FlowForge 原有管理页面 + clowder-ai 设置页面概念：
- *   - 灵智体管理（合并 agents + members + profiles）
+ *   - 可进化智能体管理（合并 agents + members + profiles）
  *   - Provider 配置（合并 models + accounts）
  *   - 系统设置（合并 settings + system + rules）
  *   - MCP 管理、插件管理、可观测性等
@@ -27,11 +27,11 @@ const ADMIN_CARDS: AdminCard[] = [
   // 核心管理
   {
     href: "/admin/agents",
-    title: "灵智体管理",
-    description: "灵智体花名册、状态监控、熔断器、能力画像",
+    title: "可进化智能体管理",
+    description: "可进化智能体花名册、状态监控、熔断器、能力画像",
     icon: "🤖",
     category: "core",
-    badge: "5 灵智体",
+    badge: "5 个可进化智能体",
   },
   {
     href: "/admin/models",
@@ -80,7 +80,7 @@ const ADMIN_CARDS: AdminCard[] = [
   {
     href: "/admin/permissions",
     title: "权限管理",
-    description: "灵智体权限、工具白名单、操作授权",
+    description: "可进化智能体权限、工具白名单、操作授权",
     icon: "🔐",
     category: "advanced",
   },
@@ -199,7 +199,7 @@ export default function AdminHomePage() {
           管理中心
         </h2>
         <p className="page-sub" style={{ marginBottom: "20px" }}>
-          FlowForge 全部管理功能统一入口 · 整合灵智体、Provider、插件、可观测性等
+          FlowForge 全部管理功能统一入口 · 整合可进化智能体、Provider、插件、可观测性等
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>

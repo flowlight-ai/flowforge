@@ -12,7 +12,7 @@ import {
 } from "../lib/council-types";
 
 /**
- * useCouncilChat — 5 灵智体协作群聊 Hook（多会话版）
+ * useCouncilChat — 5 可进化智能体协作群聊 Hook（多会话版）
  *
  * 调用后端端点：
  *   - GET  /api/v1/forgemind/roster           → 加载花名册
@@ -80,7 +80,7 @@ function backendMsgToCouncil(msg: Record<string, unknown>): CouncilMessage {
   };
 }
 
-/** @all 并行状态区条目 — 各灵智体的处理过程（不入消息流） */
+/** @all 并行状态区条目 — 各可进化智能体的处理过程（不入消息流） */
 export interface ParallelStatusEntry {
   forgekinId: string;
   name: string;
@@ -99,7 +99,7 @@ export function useCouncilChat(threadId: string | null) {
   const [config, setConfig] = useState<CouncilConfig>(() =>
     loadFromStorage<CouncilConfig>(STORAGE_KEY_CONFIG, DEFAULT_COUNCIL_CONFIG)
   );
-  // @all 并行状态区 — 各灵智体处理过程展示在聊天窗口上下方，不入消息流
+  // @all 并行状态区 — 各可进化智能体处理过程展示在聊天窗口上下方，不入消息流
   const [parallelStatus, setParallelStatus] = useState<ParallelStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,7 +154,7 @@ export function useCouncilChat(threadId: string | null) {
     };
   }, []);
 
-  /** 加载灵智体花名册 */
+  /** 加载可进化智能体花名册 */
   const loadRoster = useCallback(async () => {
     try {
       const res = await fetch("/api/v1/forgemind/roster");
@@ -182,7 +182,7 @@ export function useCouncilChat(threadId: string | null) {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  /** 解析 @mention，提取被提及的灵智体 ID */
+  /** 解析 @mention，提取被提及的可进化智能体 ID */
   const parseMentions = useCallback(
     (text: string): string[] => {
       const mentioned: string[] = [];
@@ -305,7 +305,7 @@ export function useCouncilChat(threadId: string | null) {
         reqMode = mentioned.length > 1 ? "parallel" : "single";
       }
       // 无 @ → reqForgekinIds 保持空数组 + auto，后端 fallback 链
-      // 决定默认主灵智体回复（上次回复者 > luban），而非全体并行
+      // 决定默认主可进化智能体回复（上次回复者 > luban），而非全体并行
 
       setIsLoading(true);
       // 新讨论开始时清除上一轮 @all 并行状态区
@@ -382,8 +382,8 @@ export function useCouncilChat(threadId: string | null) {
         }
 
         if (data.routing_mode === "parallel" && newMessages.length > 1) {
-          // @all 并行（对齐 clowder-ai）：各灵智体的状态/过程消息展示在
-          // 聊天窗口上下方状态区，仅主灵智体汇总消息进入消息流
+          // @all 并行（对齐 clowder-ai）：各可进化智能体的状态/过程消息展示在
+          // 聊天窗口上下方状态区，仅主可进化智能体汇总消息进入消息流
           setParallelStatus({
             entries: newMessages.map((m) => ({
               forgekinId: m.forgekinId ?? "",
@@ -432,7 +432,7 @@ export function useCouncilChat(threadId: string | null) {
         setMessages((prev) => prev.filter((m) => m.id !== sysMsg.id));
         let errMsg: string;
         if (e instanceof DOMException && e.name === "AbortError") {
-          errMsg = `灵议超时（${timeoutMs / 1000}s），请减少轮数或灵智体数量后重试`;
+          errMsg = `灵议超时（${timeoutMs / 1000}s），请减少轮数或可进化智能体数量后重试`;
         } else if (e instanceof Error) {
           errMsg = e.message;
         } else {
@@ -570,7 +570,7 @@ export function useCouncilChat(threadId: string | null) {
   /** 清除 @all 并行状态区（用户关闭或发起新讨论时） */
   const clearParallelStatus = useCallback(() => setParallelStatus(null), []);
 
-  /** 切换灵智体参与状态 */
+  /** 切换可进化智能体参与状态 */
   const toggleParticipant = useCallback((forgekinId: string) => {
     setConfig((prev) => {
       const isIn = prev.participantIds.includes(forgekinId);
@@ -581,7 +581,7 @@ export function useCouncilChat(threadId: string | null) {
     });
   }, []);
 
-  /** 设置灵智体角色 */
+  /** 设置可进化智能体角色 */
   const setForgekinRole = useCallback((forgekinId: string, role: CouncilConfig["roleAssignment"][string]) => {
     setConfig((prev) => ({
       ...prev,

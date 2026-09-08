@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubToolUsageTab，简化为 FlowForge 适配版。
  * 用于 /admin/tools，统计各工具的调用次数、成功率、平均耗时。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET /api/v1/tools/usage。
  */
 

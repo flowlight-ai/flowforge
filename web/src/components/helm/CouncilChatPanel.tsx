@@ -34,19 +34,19 @@ import {
 interface CouncilChatPanelProps {
   /** 当前会话 ID（多会话支持，传给 useCouncilChat） */
   threadId?: string | null;
-  /** 是否显示右侧灵智体面板（嵌入 HelmLayout 时可关闭） */
+  /** 是否显示右侧可进化智能体面板（嵌入 HelmLayout 时可关闭） */
   showSidebar?: boolean;
   /** 紧凑模式（嵌入时使用） */
   compact?: boolean;
 }
 
 /**
- * CouncilChatPanel — 5 灵智体协作群聊主面板
+ * CouncilChatPanel — 5 可进化智能体协作群聊主面板
  *
  * 集成 useCouncilChat Hook，提供：
- *   - 消息流展示（用户消息 + 灵智体响应 + 系统消息）
+ *   - 消息流展示（用户消息 + 可进化智能体响应 + 系统消息）
  *   - @mention 输入框（带弹窗 + 键盘导航）
- *   - 灵智体选择器（侧边栏）
+ *   - 可进化智能体选择器（侧边栏）
  *   - 灵议轮数配置
  *   - 消息 hover 操作（复制 / 引用）
  *
@@ -301,7 +301,7 @@ export default function CouncilChatPanel({
     });
   }, [roster, messages, config, mutedIds, threadId, activeVote, toggleParticipant, setForgekinRole, handleToggleMute, syncToPanelStore]);
 
-  /** 过滤的灵智体列表（用于 mention 菜单） */
+  /** 过滤的可进化智能体列表（用于 mention 菜单） */
   const filteredRoster = useMemo(() => {
     const f = mentionFilter.toLowerCase();
     return roster.filter((r) =>
@@ -456,7 +456,7 @@ export default function CouncilChatPanel({
     setMentionStart(-1);
   }, [resetHistoryNavigation]);
 
-  /** 选择 @mention 的灵智体 — 替换光标所在的 @xxx 为 @name */
+  /** 选择 @mention 的可进化智能体 — 替换光标所在的 @xxx 为 @name */
   const handleSelectMention = useCallback((forgekinId: string, name: string) => {
     if (mentionStart === -1) return;
     const before = inputText.slice(0, mentionStart);
@@ -504,7 +504,7 @@ export default function CouncilChatPanel({
     }
     // 静音的智能体不参与默认触发（但 @ 显式调用仍生效，符合 clowder-ai 的静音语义）
     // 路由对齐 clowder-ai：@特定→被提及者；@all→前 3 位（后端 MAX_PARALLEL 截断）；
-    // 无 @→默认主灵智体（lead 或 luban）单独回复，而非全体
+    // 无 @→默认主可进化智能体（lead 或 luban）单独回复，而非全体
     const pendingIds = mentioned.length > 0
       ? mentioned
       : isAllMention(inputText)
@@ -1283,7 +1283,7 @@ export default function CouncilChatPanel({
             />
           )}
 
-          {/* @all 并行状态区 — 各灵智体处理过程展示在输入区上方（不入消息流），
+          {/* @all 并行状态区 — 各可进化智能体处理过程展示在输入区上方（不入消息流），
               对齐 clowder-ai 群聊：状态/过程在上下方区域，仅汇总入消息流 */}
           {parallelStatus && parallelStatus.entries.length > 0 && (
             <div
@@ -1311,7 +1311,7 @@ export default function CouncilChatPanel({
               >
                 <span style={{ color: "var(--accent)", fontWeight: 700 }}>◎</span>
                 <span style={{ fontWeight: 600, color: "var(--text)" }}>
-                  并行讨论完成 · {parallelStatus.entries.length} 位灵智体
+                  并行讨论完成 · {parallelStatus.entries.length} 位可进化智能体
                 </span>
                 <span style={{ flex: 1 }} />
                 {parallelStatus.entries.map((e) => (
@@ -1426,7 +1426,7 @@ export default function CouncilChatPanel({
         </div>
       </div>
 
-      {/* 右侧灵智体面板 + 上下文面板已移至 WorkspacePanel 的"智能体"/"上下文" Tab
+      {/* 右侧可进化智能体面板 + 上下文面板已移至 WorkspacePanel 的"智能体"/"上下文" Tab
           （原内嵌侧栏导致 4 栏布局过于拥挤，现合并到右栏工作区） */}
 
       {/* VoteConfigModal — 发起投票弹窗（参考 clowder-ai VoteConfigModal） */}
