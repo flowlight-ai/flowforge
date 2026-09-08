@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CodebaseStore, detectFileDelta, watchIndex, ProjectNotFoundError } from '../src/index.ts'
-import type { NodeRecord } from '../src/index.ts'
+import type { EdgeRecord, NodeRecord } from '../src/index.ts'
 
 const PROJECT = 'demo'
 let dir: string
@@ -102,7 +102,7 @@ function nodeSym(id: string, name: string, filePath: string): NodeRecord {
   return { id, project: PROJECT, label: 'Function', name, filePath, props: { complexity: 1 } }
 }
 
-function ctxEdges(): Array<{ project: string; source: string; target: string; type: string }> {
+function ctxEdges(): Array<{ project: string; source: string; target: string; type: EdgeRecord['type'] }> {
   return [
     { project: PROJECT, source: 's:a', target: 'f:a', type: 'DEFINES' },
   ]

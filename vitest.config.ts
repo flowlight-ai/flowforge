@@ -707,6 +707,12 @@ const aliasEntries = [
       { find: '@flowforge/session-format-v1-to-v2/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v1-to-v2/src') },
       { find: '@flowforge/session-format-v1-to-v2', replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v1-to-v2/src') },
       { find: /^@flowforge\/session-format-v1-to-v2$/, replacement: path.resolve(import.meta.dirname, 'packages/session/session-format-v1-to-v2/src') },
+      { find: '@flowforge/webhook/src', replacement: path.resolve(import.meta.dirname, 'packages/webhook/webhook/src') },
+      { find: '@flowforge/webhook', replacement: path.resolve(import.meta.dirname, 'packages/webhook/webhook/src') },
+      { find: /^@flowforge\/webhook$/, replacement: path.resolve(import.meta.dirname, 'packages/webhook/webhook/src') },
+      { find: '@flowforge/webhook-github/src', replacement: path.resolve(import.meta.dirname, 'packages/webhook/webhook-github/src') },
+      { find: '@flowforge/webhook-github', replacement: path.resolve(import.meta.dirname, 'packages/webhook/webhook-github/src') },
+      { find: /^@flowforge\/webhook-github$/, replacement: path.resolve(import.meta.dirname, 'packages/webhook/webhook-github/src') },
       // <generated-alias:end>
 ]
 

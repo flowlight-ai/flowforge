@@ -58,6 +58,9 @@ web/dist/
 next-env.d.ts
 tsconfig.tsbuildinfo
 package-lock.json
+# next-pwa 生成的 Service Worker 产物（构建自动写入 public/，源在 src/）
+web/public/sw.js
+web/public/workbox-*.js
 
 # ==================== OS ====================
 .DS_Store
