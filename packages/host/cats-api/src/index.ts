@@ -17,6 +17,8 @@
  */
 
 import type { Context } from '@flowforge/cordis'
+// 载入 ctx.webServer 的模块增强（声明合并在宿主包内，必须显式引用）。
+import type {} from '@flowforge/host-webserver'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createCatsRoutesRouter, type CatsRoutesDeps } from '@flowforge/cats-routes'
 import { toRequest, writeResponse } from './adapter.ts'

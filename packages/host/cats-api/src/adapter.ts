@@ -29,12 +29,10 @@ export async function toRequest(req: IncomingMessage, baseUrl: string): Promise<
     headers.set(key, Array.isArray(value) ? value.join(', ') : value)
   }
   const method = req.method ?? 'GET'
-  const hasBody = method !== 'GET' && method !== 'HEAD' && body !== undefined
-  return new Request(new URL(req.url ?? '/', baseUrl), {
-    method,
-    headers,
-    ...(hasBody ? { body } : {}),
-  })
+  const init: RequestInit = { method, headers }
+  // 复制为 Uint8Array<ArrayBuffer>：Buffer 的 ArrayBufferLike 不满足 BodyInit
+  if (method !== 'GET' && method !== 'HEAD' && body !== undefined) init.body = new Uint8Array(body)
+  return new Request(new URL(req.url ?? '/', baseUrl), init)
 }
 
 /** 把 Fetch Response 写回 node:http 出站响应。 */
