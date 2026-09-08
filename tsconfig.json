@@ -36,6 +36,9 @@
       "path": "./packages/api/remotes/tsconfig.host.json"
     },
     {
+      "path": "./packages/api/rest-controllers/tsconfig.host.json"
+    },
+    {
       "path": "./packages/cats/shared/tsconfig.host.json"
     },
     {
@@ -399,6 +402,9 @@
       "path": "./packages/host/apiproxy"
     },
     {
+      "path": "./packages/host/cats-api/tsconfig.host.json"
+    },
+    {
       "path": "./packages/host/directory-picker"
     },
     {
@@ -592,6 +598,18 @@
     },
     {
       "path": "./packages/session/session-title-llm"
+    },
+    {
+      "path": "./packages/session/session-format/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/session/session-format-v0-to-v1/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/session/session-format-v1-to-v2/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/session/session-format-catalog/tsconfig.host.json"
     },
     {
       "path": "./packages/settings/settings"

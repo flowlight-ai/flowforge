@@ -24,6 +24,9 @@
       "node"
     ],
     "paths": {
+      "@flowforge/api-rest-controllers": [
+        "./packages/api/rest-controllers/src/index.ts"
+      ],
       "@flowforge/cats-signal-intake": [
         "./packages/cats/signal-intake/src/index.ts"
       ],
@@ -528,6 +531,18 @@
       "@flowforge/session-telemetry/invariant": [
         "./packages/session/session-telemetry/src/invariant.ts"
       ],
+      "@flowforge/session-format": [
+        "./packages/session/session-format/src/index.ts"
+      ],
+      "@flowforge/session-format-v0-to-v1": [
+        "./packages/session/session-format-v0-to-v1/src/index.ts"
+      ],
+      "@flowforge/session-format-v1-to-v2": [
+        "./packages/session/session-format-v1-to-v2/src/index.ts"
+      ],
+      "@flowforge/session-format-catalog": [
+        "./packages/session/session-format-catalog/src/index.ts"
+      ],
       "@flowforge/session-title-llm": [
         "./packages/session/session-title-llm/src/index.ts"
       ],
@@ -845,6 +860,9 @@
       ],
       "@flowforge/harness-boot": [
         "./packages/harness/boot/src/index.ts"
+      ],
+      "@flowforge/host-cats-api": [
+        "./packages/host/cats-api/src/index.ts"
       ],
       "@flowforge/llm-deepseek": [
         "./packages/llm/llm-deepseek/src/index.ts"

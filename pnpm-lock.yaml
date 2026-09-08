@@ -482,6 +482,12 @@ importers:
         specifier: workspace:^
         version: link:../../typert/registry
 
+  packages/api/rest-controllers:
+    devDependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.5.4
+
   packages/attachment/attachment:
     devDependencies:
       '@flowforge/brand':
@@ -3192,6 +3198,18 @@ importers:
         specifier: workspace:^
         version: link:../../typert/registry
 
+  packages/host/cats-api:
+    devDependencies:
+      '@flowforge/cats-routes':
+        specifier: workspace:^
+        version: link:../../cats/routes
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/host-webserver':
+        specifier: workspace:^
+        version: link:../webserver
+
   packages/host/directory-picker:
     devDependencies:
       '@flowforge/cordis':
@@ -4611,6 +4629,35 @@ importers:
       '@flowforge/tools':
         specifier: workspace:^
         version: link:../../core/tools
+
+  packages/session/session-format: {}
+
+  packages/session/session-format-catalog:
+    devDependencies:
+      '@flowforge/session-format':
+        specifier: workspace:^
+        version: link:../session-format
+      '@flowforge/session-format-v0-to-v1':
+        specifier: workspace:^
+        version: link:../session-format-v0-to-v1
+      '@flowforge/session-format-v1-to-v2':
+        specifier: workspace:^
+        version: link:../session-format-v1-to-v2
+
+  packages/session/session-format-v0-to-v1:
+    devDependencies:
+      '@flowforge/session-format':
+        specifier: workspace:^
+        version: link:../session-format
+
+  packages/session/session-format-v1-to-v2:
+    devDependencies:
+      '@flowforge/session-format':
+        specifier: workspace:^
+        version: link:../session-format
+      '@flowforge/session-format-v0-to-v1':
+        specifier: workspace:^
+        version: link:../session-format-v0-to-v1
 
   packages/session/session-persistence:
     devDependencies:
