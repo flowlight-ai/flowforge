@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubObservabilityTab，简化为 FlowForge 适配版。
  * 用于 /admin/observability，提供子 Tab 切换（健康/运行时会话/回调认证）。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * 子组件：HubRuntimeSessionsTab、HubCallbackAuthPanel。
  */
 

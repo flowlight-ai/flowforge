@@ -6,7 +6,7 @@
  * 引导新用户完成基础配置：选择身份、配置模型 Provider、创建首个 Forgekin。
  * 移植自 clowder-ai FirstRunQuestWizard，简化为单卡片多步骤向导。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * 控制项：localStorage 标记 "flowforge.firstrun.done" 防止重复弹出。
  */
 

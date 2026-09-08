@@ -255,11 +255,11 @@ export default function AutonomousPage() {
                 <div style={{ ...statusCardValueStyle, color: "#ef4444" }}>{status.failed ?? 0}</div>
               </div>
             </div>
-            {/* 灵智体列表 */}
+            {/* 可进化智能体列表 */}
             {status.registered_forgekins && status.registered_forgekins.length > 0 && (
               <div data-autonomous-section="forgekins" style={{ marginBottom: "20px" }}>
                 <h3 style={{ ...sectionTitleStyle, marginBottom: "8px" }}>
-                  已注册灵智体 ({status.registered_forgekins.length})
+                  已注册可进化智能体 ({status.registered_forgekins.length})
                 </h3>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                   {status.registered_forgekins.map((k) => (
@@ -286,7 +286,7 @@ export default function AutonomousPage() {
                     <div style={{ display: "flex", gap: "8px", alignItems: "flex-start", paddingBottom: "8px", marginBottom: "6px", borderBottom: "1px solid #2a2c3a", color: "#585b70", fontSize: "10px", fontWeight: 600 }}>
                       <span style={{ flexShrink: 0, width: "70px" }}>时间</span>
                       <span style={{ flexShrink: 0, width: "70px" }}>事件</span>
-                      <span style={{ flex: 1 }}>标题 / 灵智体 / 模型</span>
+                      <span style={{ flex: 1 }}>标题 / 可进化智能体 / 模型</span>
                     </div>
                     {activities.map((a, idx) => {
                       const label = AUTONOMOUS_EVENT_LABEL[a.event_type] || a.event_type;
@@ -336,7 +336,7 @@ export default function AutonomousPage() {
                           <span style={{ color: "#585b70", fontSize: "10px", flexShrink: 0 }}>{ts}</span>
                         </div>
                         <div style={{ display: "flex", gap: "8px", fontSize: "10px", marginBottom: "6px", flexWrap: "wrap" }}>
-                          {o.agent_id && <span style={{ color: "#89b4fa" }}>灵智体: {o.agent_id}</span>}
+                          {o.agent_id && <span style={{ color: "#89b4fa" }}>可进化智能体: {o.agent_id}</span>}
                           {o.model && <span style={{ color: "#fab387" }}>模型: {o.model}</span>}
                         </div>
                         <div style={{ color: "#a6adc8", fontSize: "11px", whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: expanded ? "none" : "60px", overflow: "hidden" }}>

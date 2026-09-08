@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubCallbackAuthPanel，简化为 FlowForge 适配版。
  * 用于 /admin/observability?tab=callback，校验外部回调签名与认证状态。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET /api/v1/observability/callback-auth, POST /api/v1/observability/callback-auth/test。
  */
 

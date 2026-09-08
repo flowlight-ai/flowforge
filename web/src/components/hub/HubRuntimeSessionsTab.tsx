@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubRuntimeSessionsTab，简化为 FlowForge 适配版。
  * 用于 /admin/observability?tab=runtime，展示当前运行态的会话与执行链。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET /api/v1/observability/runtime-sessions。
  */
 

@@ -237,7 +237,7 @@ export default function ObservabilityPage() {
 
               {autoStatus.registered_forgekins && autoStatus.registered_forgekins.length > 0 && (
                 <div data-autonomous-section="forgekins" style={{ marginBottom: "12px", fontSize: "11px", color: "var(--muted,#9ca3af)" }}>
-                  <span>已注册灵智体: </span>
+                  <span>已注册可进化智能体: </span>
                   {autoStatus.registered_forgekins.map((k) => (
                     <span key={k} style={{ display: "inline-block", padding: "2px 6px", margin: "2px 4px 2px 0", borderRadius: "4px", background: "var(--bg-elevated,#1e1f26)", color: "var(--text,#e5e7eb)", fontFamily: "monospace" }}>
                       {k}

@@ -6,7 +6,7 @@
  * 提供关键词输入、分类筛选、排序选项。
  * 受控组件：value/onChange 由父组件管理。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  */
 
 export type MarketplaceSort = "popular" | "recent" | "name";

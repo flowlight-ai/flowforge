@@ -8,7 +8,7 @@
  *   - 斜杠命令清单（按 category 分组：general/memory/knowledge/task/forgekin/council）
  *   - 全局快捷键清单（如 Cmd+K 命令面板、Cmd+/ 斜杠触发等）
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * 主题：使用 var(--cafe-xxx) CSS 变量。
  * 独立性：内联命令清单，不依赖外部 registry 配置文件。
  *

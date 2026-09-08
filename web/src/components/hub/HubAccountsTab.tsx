@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubAccountsTab，简化为 FlowForge 适配版。
  * 用于 /admin/settings?s=accounts，管理 Provider 账户与认证。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET /api/v1/accounts, DELETE /api/v1/accounts/{id}。
  */
 

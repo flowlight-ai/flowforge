@@ -3,7 +3,7 @@
  *
  * 提供完整创建 payload 的构造函数与表单校验函数。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）
  */
 
 import type { ForgekinFormData } from "./model";

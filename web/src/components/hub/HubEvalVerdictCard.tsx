@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubEvalVerdictCard，简化为 FlowForge 适配版。
  * 用于 /review 评估任务的判决提交（通过/驳回/重做）。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * 由 HubEvalTab 在选中任务后渲染。
  */
 

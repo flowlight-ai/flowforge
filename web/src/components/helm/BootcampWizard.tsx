@@ -12,9 +12,9 @@
  *
  * 环境检测展示分块（与后端 EnvCheckResult 一致）：
  *   - 核心工具 (core_tools): python/node/npm/git/pnpm
- *   - AI CLI 工具 (cli_tools): 8 个灵智体所需 claude/codex/...
+ *   - AI CLI 工具 (cli_tools): 8 个可进化智能体所需 claude/codex/...
  *   - 协议代理 (proxy_services): claude-code-router/responses-proxy/gemini-proxy
- *   - Trae 桥接 (trae_bridge): butterfly 灵智体所需
+ *   - Trae 桥接 (trae_bridge): butterfly 可进化智能体所需
  *   - 其他: .env / .venv / web_deps
  *   - 状态汇总: all_ready + missing[] + install_hint + 一键安装按钮
  */
@@ -436,7 +436,7 @@ function CoreToolItem({ name, result }: { name: string; result?: CoreToolCheck }
   );
 }
 
-/** CLI 工具检测项（8 个灵智体所需）.
+/** CLI 工具检测项（8 个可进化智能体所需）.
  *  支持新格式（ok/version/path/error/install_cmd/forgekin）和旧格式（status/name）兼容。
  */
 function CliToolItem({ name, tool }: { name: string; tool?: CliToolCheck }) {

@@ -11,7 +11,7 @@
  *   - 添加 data-thread-sidebar 标记（T8 测试用）
  *   - 后续 Phase 4 补全 Forgekin 选择器、线程列表、标签过滤等
  *
- * 命名规范：使用 P0 命名（"智能体" 而非 "灵智体"）
+ * 命名规范：使用 P0 命名（"智能体" 而非 "可进化智能体"）
  */
 
 import Link from "next/link";

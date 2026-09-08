@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "plugin-web-t83c",
+  "workflow": "change",
+  "snapshot": {
+    "name": "plugin-web-t83c",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/process/specs/2026-09-08-web-t83c-naming-compliance-design.md",
+      "plan": "d:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-08-web-t83c-naming-compliance.md",
+      "verification": "d:\\software\\fl\\flowlight\\flowforge\\docs\\process\\verifications\\plugin-web-t83c.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-08T07:01:49.801Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-08T07:03:08.792Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-08T07:03:11.216Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-08T07:04:39.350Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-08T07:09:00.734Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-08T07:09:00.993Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-08T07:09:02.154Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-08T07:09:02.154Z"
+}

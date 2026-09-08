@@ -6,7 +6,7 @@
  * 展示信号收件箱（时间倒序）、按严重度/来源过滤、批量已读。
  * 移植自 clowder-ai SignalInboxView，简化为单栏列表 + 过滤栏。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET /api/v1/signals?severity=&sourceId=
  *      POST /api/v1/signals/{id}/read
  */

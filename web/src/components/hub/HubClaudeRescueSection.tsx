@@ -8,7 +8,7 @@
  * ~/.claude/projects 下所有 *.jsonl 中的坏 thinking signature session
  * 并提供一键修复（删除纯 thinking-only assistant turn，执行前自动备份）。
  *
- * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 P0 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * 主题：使用 var(--cafe-xxx) CSS 变量保持与 FlowForge 暗色主题一致。
  * 独立性：内联 Toast 原语，不依赖 clowder-ai useToastStore / apiFetch。
  *

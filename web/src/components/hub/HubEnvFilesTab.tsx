@@ -6,7 +6,7 @@
  * 移植自 clowder-ai HubEnvFilesTab，简化为 FlowForge 适配版。
  * 用于 /admin/env，展示与编辑 .env 配置文件、敏感变量与配置文件清单。
  *
- * 命名规范：使用 "可进化智能体 / Forgekin"（非 "灵智体"）。
+ * 命名规范：使用 "可进化智能体 / Forgekin"（非 "可进化智能体"）。
  * API：GET /api/v1/env/summary, PUT /api/v1/env/{varName}。
  *
  * D28：保存前用 @flowforge/config-schema 做客户端校验（可编辑白名单 /

@@ -135,7 +135,7 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
     return () => { cancelled = true; };
   }, [threadId, router]);
 
-  // 页面级加载灵智体花名册并同步到共享 store —
+  // 页面级加载可进化智能体花名册并同步到共享 store —
   // 对齐 clowder-ai"打开即显示成员"：WorkspacePanel 的智能体面板
   // 无需等选中会话即可展示成员列表（原逻辑依赖 CouncilChatPanel 挂载才加载）
   const syncPanelStore = useCouncilPanelStore((s) => s.syncState);
@@ -283,7 +283,7 @@ export function CouncilContent({ threadId }: { threadId: string | null }) {
             >
               ◉ 记忆
             </a>
-            {/* 灵智训练营入口 — 参考 clowder-ai 猫猫训练营 */}
+            {/* 灵智训练营入口 — 参考 clowder-ai 可进化智能体训练营 */}
             <button
               type="button"
               onClick={() => setShowBootcampWizard(true)}
