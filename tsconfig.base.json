@@ -27,6 +27,9 @@
       "@flowforge/cats-signal-intake": [
         "./packages/cats/signal-intake/src/index.ts"
       ],
+      "@flowforge/cats-context-assembly": [
+        "./packages/cats/context-assembly/src/index.ts"
+      ],
       "@flowforge/cats-shared": [
         "./packages/cats/shared/src/index.ts"
       ],
