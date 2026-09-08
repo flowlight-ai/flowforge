@@ -57,6 +57,9 @@
       "path": "./packages/cats/session/tsconfig.host.json"
     },
     {
+      "path": "./packages/cats/signal-intake/tsconfig.host.json"
+    },
+    {
       "path": "./packages/cats/ball-custody/tsconfig.host.json"
     },
     {
@@ -88,6 +91,9 @@
     },
     {
       "path": "./packages/chat/stretch-ports/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/chat/messaging/tsconfig.host.json"
     },
     {
       "path": "./packages/chat/e2e/tsconfig.host.json"
@@ -205,6 +211,9 @@
     },
     {
       "path": "./packages/infrastructure/redis-port/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/infrastructure/github-signals/tsconfig.host.json"
     },
     {
       "path": "./packages/infrastructure/enterprise/tsconfig.host.json"

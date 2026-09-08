@@ -24,6 +24,9 @@
       "node"
     ],
     "paths": {
+      "@flowforge/cats-signal-intake": [
+        "./packages/cats/signal-intake/src/index.ts"
+      ],
       "@flowforge/cats-shared": [
         "./packages/cats/shared/src/index.ts"
       ],
@@ -92,6 +95,9 @@
       ],
       "@flowforge/chat-stretch": [
         "./packages/chat/stretch-ports/src/index.ts"
+      ],
+      "@flowforge/chat-messaging": [
+        "./packages/chat/messaging/src/index.ts"
       ],
       "@flowforge/chat-e2e": [
         "./packages/chat/e2e/src/index.ts"
@@ -209,6 +215,9 @@
       ],
       "@flowforge/infrastructure-connectors": [
         "./packages/infrastructure/connectors/src/index.ts"
+      ],
+      "@flowforge/infrastructure-github-signals": [
+        "./packages/infrastructure/github-signals/src/index.ts"
       ],
       "@flowforge/forgekin-evolution-engine": [
         "./packages/forgekin/evolution-engine/src/index.ts"

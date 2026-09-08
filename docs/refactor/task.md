@@ -56,9 +56,9 @@
 |---|---|---|---|---|
 | 1 | `mcp-server` 整包（工具治理全家 + 6 toolsets + protocol-server）⚠Q3 | B1 | 2 | 🟩（EP1-1a 治理框架本体 + registry + snapshot + protocol-server 落 `packages/mcp/mcp-server`，PR #163；EP1-1b 六 family 工具清单待领域层） |
 | 2 | `infrastructure/connectors` IM 框架本体 | B7 | 2 | 🟩（EP1-2 框架本体落 `packages/infrastructure/connectors`：Router/CommandLayer/Formatter/PermissionStore/ThreadBindingStore+Redis/Dedup/OutboundDeliveryHook/StreamingOutboundHook/mention/rich-block-plaintext/external-registry/gateway，12 测试 77/77 绿，tsc/oxlint 全绿；适配器+github-repo-event+media 待 EP2/EP4） |
-| 3 | `chat/messaging` 域（envelope/ledger/snapshot + Redis）⚠Q6 | B4 | 1 | ⬜ |
-| 4 | `cats/signal-intake` 域（25+ 文件）⚠Q6 | B3 | 2 | ⬜ |
-| 5 | `infrastructure/github-signals` 域 | B5 | 1 | ⬜ |
+| 3 | `chat/messaging` 域（envelope/ledger/snapshot + Redis）⚠Q6 | B4 | 1 | 🟩（EP1-3：envelope 投影 + handles + ledger + Memory stores + contract（host-types/source-admission/validate）+ @flowforge/plugin-contract messaging 契约类型，落 `packages/chat/messaging`，7 测试 50/50 绿、包级 tsc exit 0、oxlint 0；send/append/event-stream/snapshot-*/messaging-service/Redis Lua 归 EP1-4） |
+| 4 | `cats/signal-intake` 域（25+ 文件）⚠Q6 | B3 | 2 | 🟩（**EP1-4**：SignalAdmission/MeetingIntake 服务与 Memory+Redis stores/契约（events-publish/signals/meeting-intake-codec）/来源访问租约/ThreadDestinationAuthority/ASR 人物记忆场景+队列载体/MeetingArtifactResourceService+read-budget+minutes-reference/ThreadMeetingArtifactDispatcher、注入式 Redis seam + 交付端口（宿主 EP2/EP4 接线），落 `packages/cats/signal-intake`（@flowforge/cats-signal-intake），18 契约测试 109/109 绿、包级 tsc exit 0、oxlint 0；LarkCliFeishuSourceResolver 凭据适配、真实队列/消息 store 接线归 EP2/EP4） |
+| 5 | `infrastructure/github-signals` 域 | B5 | 1 | 🟩（**EP1-5**：GitHubWaitLifecycleService/predicate catalog/baseline readers/wait state-machine/review-loop-brake renderer + 注入式端口（ITaskStore/ConnectorDelivery/IWaitLifecycleEventLog）+ 内存实现，落 `packages/infrastructure/github-signals`（@flowforge/infrastructure-github-signals），59 契约测试 59/59 绿、包级 tsc exit 0、oxlint 0；真实 GitHub API 适配、TaskStore 宿主接线、真实连接器投递、eventLog 持久化归 EP2/EP4） |
 | 6 | `cats/context-assembly`（17 文件） | B12 | 1 | ⬜ |
 | 7 | `api/session-controller` + `settings-controller` + `workspace-controller` | A1-A3 | 1 | ⬜ |
 | 8 | `session-format` 4 包 + `session-log-export` | A17/A20 | 1 | ⬜ |
