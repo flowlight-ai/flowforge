@@ -175,6 +175,9 @@
       "path": "./packages/chat/realtime/tsconfig.host.json"
     },
     {
+      "path": "./packages/chat/realtime-client/tsconfig.host.json"
+    },
+    {
       "path": "./packages/chat/approval/tsconfig.host.json"
     },
     {
