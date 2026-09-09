@@ -140,7 +140,7 @@
 | D48 | 会话日志导出 session-log-export（crosswalk 来源列已列出、落点遗漏） | dsh `session-query/session-log-export`（A20） | 2 | ✅（EP1-8 `@flowforge/session-log-export`，JSONL + 血缘深序 ZIP 流式导出 + 下载路由/浏览器控制器；D47+D48 合计 349 契约测试全绿） |
 | D49 | Webhook 接收与 GitHub 事件分发（webhook + webhook-github） | dsh `webhook/*`（A29） | 2 | ✅（EP1-9 @flowforge/webhook + @flowforge/webhook-github，93 契约测试全绿） |
 | D50 | 前端扩展与客户端运行器（ui-cordis + cordis-client-runner，crosswalk 状态虚报纠偏 A9/A10） | dsh `extensions/*` | 8 | ✅（EP1-11 双包注入式移植：`@flowforge/cordis-client-runner`（A10 运行时 52 契约） + `@flowforge/ui-cordis`（A9 展示逻辑 30 契约），82 契约测试全绿、tsc exit 0、oxlint 0，详见 task.md 行 11） |
-| D51 | web/sdk/acp 装配模板（web-app + acp-app + sdk-app + sdk-minimal bundle） | dsh `bundle/*`（A4-A7） | 3/8 | ⬜（EP1-12） |
+| D51 | web/sdk/acp 装配模板（web-app + acp-app + sdk-app + sdk-minimal bundle） | dsh `bundle/*`（A4-A7） | 7/8 | ✅（EP1-12 四包移植：`@flowforge/web-app`（浏览器胶水+startup+38 行 patch，A4）、`@flowforge/acp-app`（ACP stdio A5）、`@flowforge/sdk-app`（SDK stdio A6）、`@flowforge/sdk-minimal`（独立最小 SDK 树 A7），全部映射现 @flowforge 等价包 + FF_* env + 零 @deepseek 引用；`@flowforge/cmdline` 增补 `exitOnStdinEnd`；9 测试文件 25/25 契约测试全绿、tsc exit 0、oxlint 0；浏览器 client-ui 行 + message-feedback/workspace/session-reference 等标注 EP2 期） |
 | D52 | dsh `client/*` 46 包 UI 组件层（ui-chat/plan/goal/jobs/schedule/trajectory/deliverables/settings-* 等，能力级融入 Next.js） | dsh `client/*`（A32） | 8 | ⬜（EP2-5） |
 | D53 | 预期输出快照体系 snapshots（acp/sdk/session/web 四域测试基建） | dsh `snapshots/`（A36） | 9 | ⬜（EP3-1） |
 | D54 | 依赖补丁 patches（@yao-pkg/pkg、node-pty Windows 验证） | dsh `patches/`（A37） | 9 | ⬜（EP3-3） |

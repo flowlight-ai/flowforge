@@ -331,6 +331,18 @@
       "path": "./packages/bundle/headless"
     },
     {
+      "path": "./packages/bundle/acp-app"
+    },
+    {
+      "path": "./packages/bundle/sdk-app"
+    },
+    {
+      "path": "./packages/bundle/sdk-minimal"
+    },
+    {
+      "path": "./packages/bundle/web-app"
+    },
+    {
       "path": "./packages/client/connection/tsconfig.host.json"
     },
     {
