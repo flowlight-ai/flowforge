@@ -368,6 +368,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 3. 批次 58-59：Playwright 端到端 + 视觉回归。
    - ✅ **EP2-3 完成**（2026-09-09）：端到端冒烟落 `web/`（`@playwright/test` + `playwright.config.ts` + `e2e/routes-smoke.spec.ts` 全静态路由可达 + `e2e/council.spec.ts` 群聊壳层 + `e2e/visual.spec.ts` 视觉回归(默认关) + web-ci.yml 增 Playwright 步骤），见 `task.md`。真实终端面板渲染断言随 T8.4 xterm 接入。
 4. Threads/群聊页 + @mention 菜单 + 线程分支交互（clowder packages/web 能力）。
+   - ✅ **EP2-4 完成**（2026-09-09）：`web/` 群聊 UI 主体已实现（线程列表/详情、@mention 弹窗对 clowder ChatInputMenus、thread 分支 `branchMessage`、`useCouncilSocket` 实时收发、草稿/斜杠/IME）；批次补验证层：`web/e2e/council.spec.ts` 增 @mention 弹出/退出用例，tsc exit 0、playwright --list 3/3 发现。真实 socket.io 组合根注入（批次56）与 xterm（批次57）随 T8.4 下游组件层。
 5. dsh `client/*` 46 包能力级对照表（ui-chat/ui-jobs/ui-schedule/ui-goal/ui-plan/ui-trajectory/ui-deliverables/ui-settings-*/schema-form/locale 等）逐项融入 Next.js。
 6. 前置依赖：EP1-7（REST 控制器）+ EP1-12（web-app bundle）。
 
