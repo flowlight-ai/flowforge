@@ -1,0 +1,41 @@
+{
+  "name": "@flowforge/terminal-panel",
+  "description": "Browser terminal panel controller — decodes a limbed output stream into an xterm-like view seam (injectable, testable).",
+  "version": "0.1.0-alpha.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/terminal/terminal-panel"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./stream": {
+      "types": "./lib/types/stream.d.ts",
+      "default": "./lib/stream.js"
+    },
+    "./view": {
+      "types": "./lib/types/view.d.ts",
+      "default": "./lib/view.js"
+    },
+    "./panel": {
+      "types": "./lib/types/panel.d.ts",
+      "default": "./lib/panel.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT"
+}

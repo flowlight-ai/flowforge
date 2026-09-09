@@ -362,7 +362,9 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 ### 13.3 EP2 — 阶段 8 前端融合（含批次 56-59 + dsh client 能力）
 
 1. 批次 56：socket.io-client 实时通道（web 依赖已确认缺失）。
+   - ✅ **EP2-1 完成**（PR #165，2026-09-09）：`@flowforge/chat-realtime-client` 落 `packages/chat/realtime-client`，见 `task.md`。
 2. 批次 57：xterm 终端面板。
+   - ✅ **EP2-2 完成**（2026-09-09）：`@flowforge/terminal-panel` 落 `packages/terminal/terminal-panel`（NDJSON 帧解析 seam + `TerminalViewLike` xterm 渲染 seam + `TerminalPanelController` 生命周期控制器，13/13 契约测试全绿、包级 tsc exit 0、oxlint 0）。真实 `@xterm/xterm` 组件融入 web（对应 review §12-2 的 `web/package.json` 缺 `@xterm/xterm`）随 T8.4 下游组件层。
 3. 批次 58-59：Playwright 端到端 + 视觉回归。
 4. Threads/群聊页 + @mention 菜单 + 线程分支交互（clowder packages/web 能力）。
 5. dsh `client/*` 46 包能力级对照表（ui-chat/ui-jobs/ui-schedule/ui-goal/ui-plan/ui-trajectory/ui-deliverables/ui-settings-*/schema-form/locale 等）逐项融入 Next.js。
