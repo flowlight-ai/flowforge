@@ -393,6 +393,17 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
      `ensure-spawn-helper.mjs` 恢复 spawn helper exec bit）与 `koffi`（JSONL write-through）经 pnpm 边界声明治理，
      替代上游 `patchedDependencies` 文件覆写；`@yao-pkg/pkg` 无需移植。矩阵 D54 更新。
 
+   - ✅ **EP3-4 stage9 e2e + 性能闭环（T9.2-T9.5）**（2026-09-10）：新增 `@flowforge/integration-e2e`
+     （`packages/integration/e2e`）——三场景装配级验收落 `tests/integration-e2e.spec.ts`（**4 用例全绿**）：
+     T9.2 mention→外部 CLI(mock)→输出回传→`DossierDistillationService` 蒸馏 propose/approve/apply（dossier 部分替换）；
+     T9.3 Forgekin 五闭环（doc/code/framework/review/test）演进→`CouncilService` 跨厂商审议 PASS→mock git 提交 PR；
+     T9.4 MCP(mock)→工作流 DAG→真实 agent loop + session + `BasicCompactionEngine` 压缩→会话续接引用 checkpoint。
+     性能 T9.5 落 `tests/integration-perf.spec.ts`（**2 用例全绿**）——T9.5A 100 并发广播至 10 客户端
+     `ChatRealtimeService`+`InMemoryRealtimeTransport` 7.1ms 总耗时 / 0.07ms·msg⁻¹、seq 单调无丢包乱序；
+     T9.5B 1400 条历史装载 `compactNow` 77.6ms，均远优于 Python 基线。依赖补齐 `@flowforge/chat-realtime` 接线；
+     包级 tsc exit 0。文档同步：`29-stage9-integration.md` 全项勾选 + 遗留清单；task.md EP3 行 1b；
+     验收标准 2/3 达标（T9.6 可选优项/T9.7 Python pytest 双绿因日落冻结不排期）。归入 PR EP3-stage910-cutover。
+
 ### 13.5 EP4 — 阶段 11：Python 日落 + stretch
 
 1. Python 遗留目录日落与删除计划（`agents/`、`brain/`、`core/`、`llm/`、`loop/`、`forgemind/`、`evolution/`、`harness/`、`sop/`、`sdk.py`、根目录 Python 标记文件、`_*.py` 临时文件清理）。
