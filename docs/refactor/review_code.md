@@ -366,6 +366,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 2. 批次 57：xterm 终端面板。
    - ✅ **EP2-2 完成**（2026-09-09）：`@flowforge/terminal-panel` 落 `packages/terminal/terminal-panel`（NDJSON 帧解析 seam + `TerminalViewLike` xterm 渲染 seam + `TerminalPanelController` 生命周期控制器，13/13 契约测试全绿、包级 tsc exit 0、oxlint 0）。真实 `@xterm/xterm` 组件融入 web（对应 review §12-2 的 `web/package.json` 缺 `@xterm/xterm`）随 T8.4 下游组件层。
 3. 批次 58-59：Playwright 端到端 + 视觉回归。
+   - ✅ **EP2-3 完成**（2026-09-09）：端到端冒烟落 `web/`（`@playwright/test` + `playwright.config.ts` + `e2e/routes-smoke.spec.ts` 全静态路由可达 + `e2e/council.spec.ts` 群聊壳层 + `e2e/visual.spec.ts` 视觉回归(默认关) + web-ci.yml 增 Playwright 步骤），见 `task.md`。真实终端面板渲染断言随 T8.4 xterm 接入。
 4. Threads/群聊页 + @mention 菜单 + 线程分支交互（clowder packages/web 能力）。
 5. dsh `client/*` 46 包能力级对照表（ui-chat/ui-jobs/ui-schedule/ui-goal/ui-plan/ui-trajectory/ui-deliverables/ui-settings-*/schema-form/locale 等）逐项融入 Next.js。
 6. 前置依赖：EP1-7（REST 控制器）+ EP1-12（web-app bundle）。
