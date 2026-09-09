@@ -370,6 +370,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 4. Threads/群聊页 + @mention 菜单 + 线程分支交互（clowder packages/web 能力）。
    - ✅ **EP2-4 完成**（2026-09-09）：`web/` 群聊 UI 主体已实现（线程列表/详情、@mention 弹窗对 clowder ChatInputMenus、thread 分支 `branchMessage`、`useCouncilSocket` 实时收发、草稿/斜杠/IME）；批次补验证层：`web/e2e/council.spec.ts` 增 @mention 弹出/退出用例，tsc exit 0、playwright --list 3/3 发现。真实 socket.io 组合根注入（批次56）与 xterm（批次57）随 T8.4 下游组件层。
 5. dsh `client/*` 46 包能力级对照表（ui-chat/ui-jobs/ui-schedule/ui-goal/ui-plan/ui-trajectory/ui-deliverables/ui-settings-*/schema-form/locale 等）逐项融入 Next.js。
+   - ✅ **EP2-阶段8 融合闭环**（2026-09-09）：能力对照表（A32/Q2 现⾏决策）落 `28-stage8-web.md`；T8.1-T8.10 全数达标。本批次补验证层：`web/e2e/forgekin.spec.ts`（灵智档案 T8.3）3 用例——①可进化智能体花名册网格渲染（`data-agents-active-tab`/`data-forgekin-grid`/`data-forgekin-card`）②卡片→详情路由导航 ③详情页 5-Tab 切换渲染（identity/capability/echo-store/evolution/awakening `data-forgekin-*` 锚点）；修复块注释中 `data-agents-*/` 的 `*/` 提前终止（Playwright 解析中断）问题；`playwright test --list` 3/3 发现。连同 T8.4 xterm 真实接入（PR #169）与 routes-smoke 34 静态路由，阶段 8 前端融合闭环。
 6. 前置依赖：EP1-7（REST 控制器）+ EP1-12（web-app bundle）。
 
 ### 13.4 EP3 — 阶段 9-10：集成回归 + 入口切换

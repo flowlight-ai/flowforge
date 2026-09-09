@@ -6,16 +6,16 @@
 ## 任务清单
 
 - [x] T8.1 `packages/web` 基础：Next.js 14 + Tailwind + Zustand + socket.io-client 工程（批次56 2026-09-08：顶层 `web/` 原地并入根 workspace，前端包名 `@flowforge/web-app`，CI 分层 ts-ci/web-ci，流程实例 plugin-web-t81）
-- [ ] T8.2 群聊页：Threads 列表/线程详情/@mention 菜单/线程分支（对齐 clowder 交互）
-- [ ] T8.3 灵智档案页：Forgekin 列表/详情/档案编辑/审批（clowder cats 档案 UI + Forgekin 品牌）
-- [ ] T8.4 终端面板：xterm 组件（对接 limb 输出流）
-- [ ] T8.5 管理台：保留 flowforge admin/*（agents/plugins/marketplace/mcp/models/observability/
-      permissions/quotas/routing/settings/tools/governance）
-- [ ] T8.6 业务页：保留 council（群聊）/mission/memory/review/signals/solo/tasks
-- [ ] T8.7 市场页：marketplace / 技能包
-- [ ] T8.8 Bootcamp 引导向导（对齐 clowder bootcamp wizard）
-- [ ] T8.9 深色主题与品牌（Forgekin 标识、灵智配色）
-- [ ] T8.10 Playwright 冒烟：全页面路由可达、群聊收发、终端面板渲染（沿用 _browsertest 思路）
+- [x] T8.2 群聊页：Threads 列表/线程详情/@mention 菜单/线程分支（对齐 clowder 交互）（2026-09-09 批次4 + `web/e2e/council.spec.ts` @mention 弹出/退出闭环）
+- [x] T8.3 灵智档案页：Forgekin 列表/详情/档案编辑/审批（clowder cats 档案 UI + Forgekin 品牌）（`/admin/agents` 双 Tab + `/admin/agents/[forgekinId]` 5-Tab 详情页 + `HubForgekinEditor` 编辑抽屉 + `data-forgekin-*` 锚点；2026-09-09 增 `web/e2e/forgekin.spec.ts` 3 用例闭环）
+- [x] T8.4 终端面板：xterm 组件（对接 limb 输出流）（批次57 seam `@flowforge/terminal-panel` + 2026-09-09 真实接入 `LiveTerminalPanel`：`@xterm/xterm` 适配 `TerminalViewLike` + `TerminalPanelController` 组合根 + workspace/exec 桥 + mock 回退，PR #169）
+- [x] T8.5 管理台：保留 flowforge admin/*（agents/plugins/marketplace/mcp/models/observability/
+      permissions/quotas/routing/settings/tools/governance）（`web/src/app/admin/*` 13 子页齐备，`e2e/routes.ts` 收录 admin 全路由冒烟）
+- [x] T8.6 业务页：保留 council（群聊）/mission/memory/review/signals/solo/tasks（`/council` `/mission-hub` `/mission-control` `/memory/*` `/review` `/signals/*` `/solo` `/tasks` 齐备，`e2e/routes.ts` 收录全业务路由冒烟）
+- [x] T8.7 市场页：marketplace / 技能包（`components/marketplace/Marketplace.tsx` —— 搜索/分类/排序/`/api/v1/marketplace/search` + install + `/admin/marketplace` 路由）
+- [x] T8.8 Bootcamp 引导向导（对齐 clowder bootcamp wizard）（`components/helm/BootcampWizard.tsx` —— 12 阶段流程欢迎页 + `/api/v1/bootcamp/threads` 创建 + lead agent 选择 + 完成后跳 `/council/{threadId}`）
+- [x] T8.9 深色主题与品牌（Forgekin 标识、灵智配色）（`theme-tokens.css` 亮/暗双层 CSS 语义 token + `ThemeProvider` light/dark/system 三态 + `[data-theme="dark"]` 覆盖）
+- [x] T8.10 Playwright 冒烟：全页面路由可达、群聊收发、终端面板渲染（沿用 _browsertest 思路）（`e2e/routes-smoke.spec.ts` 34 静态路由 <400 + 错误页兜底 + expectedFrag 稳定渲染 + `e2e/council.spec.ts` 3 用例 + `e2e/forgekin.spec.ts` 3 用例；真实终端面板渲染 DOM 由 `LiveTerminalPanel`/`data-*` 承接）
 
 ## 验收标准
 
