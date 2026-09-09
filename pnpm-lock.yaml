@@ -1007,9 +1007,6 @@ importers:
       '@flowforge/cmdline':
         specifier: workspace:^
         version: link:../../boot/cmdline
-      '@flowforge/host-cats-api':
-        specifier: workspace:^
-        version: link:../../host/cats-api
       '@flowforge/host-frontend-static':
         specifier: workspace:^
         version: link:../../host/frontend-static
@@ -1041,6 +1038,9 @@ importers:
       '@flowforge/cordis-plugin-loader':
         specifier: workspace:^
         version: link:../../../vendor/loader
+      '@flowforge/host-cats-api':
+        specifier: workspace:^
+        version: link:../../host/cats-api
       '@flowforge/host-webserver':
         specifier: workspace:^
         version: link:../../host/webserver
