@@ -109,7 +109,25 @@ blind_spots: ["frontend"]
 
 ## 快速开始
 
-### 一键安装（推荐）
+> **入口说明（阶段10 入口切换）**：默认入口已切换为 **TypeScript 栈**，由 `flowforge` CLI（`apps/cli`）统一装配。
+> 下方 Python 快速开始仅为**旧 Python 单体的日落冻结前置（DEPRECATED）**，仅用于回退/参考，正式移除见
+> `docs/refactor/31-stage11-sunset.md`。
+
+### 快速开始（TypeScript，推荐 / 默认入口）
+
+```bash
+git clone <repo> && cd flowforge
+pnpm install        # 安装 TS 依赖
+pnpm build          # tsc -b tsconfig.host.json
+pnpm start          # == pnpm flowforge web —— 启动 web profile（前端+接口统一装配）
+```
+
+一键脚本：Windows `install.bat → start.bat`；macOS/Linux `./install.sh → ./start.sh`（均走 TS 栈）。
+
+> 或手动回退旧 Python：`python3 -m venv .venv && pip install -r requirements.txt`
+> 后运行 `python3 scripts/start_all.py`（DEPRECATED，不再默认启动）。
+
+### 一键安装（旧 Python，已冻结）
 
 ```bash
 git clone https://github.com/flowlight-ai/flowforge.git

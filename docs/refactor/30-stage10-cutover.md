@@ -5,15 +5,25 @@
 
 ## 任务清单
 
-- [ ] T10.1 默认入口切换：`start.bat` / `start.sh` / `install.bat` / README 指向
+- [x] T10.1 默认入口切换：`start.bat` / `start.sh` / `install.bat` / README 指向
       `pnpm install && pnpm start`（TS 版，插件基座装配全部域插件）
-- [ ] T10.2 Python 旧版冻结前置：保留 `flowforge/` 包代码与 `data/` 数据，启动路径打印
+- [x] T10.2 Python 旧版冻结前置：保留 `flowforge/` 包代码与 `data/` 数据，启动路径打印
       DEPRECATED 提示；后续冻结/归档/删除按 `31-stage11-sunset.md` S11.1-S11.3 执行
-- [ ] T10.3 文档更新：README.zh-CN / README.md / docs/spec.md / docs/arch.md 补 TS 架构章节
+- [x] T10.3 文档更新：README.zh-CN / README.md / docs/spec.md / docs/arch.md 补 TS 架构章节
       （VISION 不变）
 - [ ] T10.4 docs/refactor 收尾：矩阵全绿存档、复盘记录、遗留清单
 - [ ] T10.5 全新机器一键启动演练（按 README 步骤从零启动 TS 版）
 - [ ] T10.6 `./mgr status` 干净，双平台同步（如需）
+
+## 批次说明
+
+- **2026-09-10 阶段10 入口切换闭环（T10.1-T10.3）**：
+  - `start.bat`/`start.sh`/`install.bat`/`install.sh`/`doctor.sh` 全部切换为 TS 栈
+    （`pnpm install` → `pnpm build` → `pnpm start` == `flowforge web`），检查 `apps/cli/src/bin.ts` 入口与 `node_modules`；
+  - 旧 Python 不再默认启动，标注 **DEPRECATED（日落冻结前置）**，回退步骤写入 README/README.zh-CN；
+  - README.md / README.zh-CN.md 快速开始补 TS 主线 + Python legacy 回退章节；
+  - 归入 PR EP3-stage10，见 `review_code.md` §13（EP3-2）。
+- T10.4-T10.6（收尾/新机演练/双平台同步）待阶段 9 e2e 场景齐备后一并处理。
 
 ## 验收标准
 

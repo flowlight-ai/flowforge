@@ -89,9 +89,9 @@
 
 | 序 | 任务 | 状态 |
 |---|---|---|
-| 1 | 阶段 9 全量集成回归（三源功能矩阵核对 + snapshots 预期输出体系 A36） | ⬜ |
-| 2 | 阶段 10 入口切换：`flowforge` CLI 唯一入口，web 切换 TS 栈 | ⬜ |
-| 3 | patches 体系补齐（A37：node-pty Windows 验证） | ⬜ |
+| 1 | 阶段 9 全量集成回归（三源功能矩阵核对 + snapshots 预期输出体系 A36） | 🟩（**EP3-1 回归核对闭环（矩阵+snapshots）** 2026-09-10：功能矩阵 10-stage-map D/C/F 核对全部达标（D52/F14 状态补摘 ✅）——D53 snapshots 体系 `@flowforge/acp-snapshot`+`llm-replay` 已落地并补根 `pnpm test:snapshot` 门禁（397 通过）；阶段8 web 融合（D52/F14）核对 ✅。集成 e2e 3 场景（T9.2-T9.4）与性能（T9.5）单列于 `29-stage9-integration.md` 待执行批次，不在本条目重复申报） |
+| 2 | 阶段 10 入口切换：`flowforge` CLI 唯一入口，web 切换 TS 栈 | 🟩（**EP3 入口切换闭环** 2026-09-10：start.bat/start.sh/install.bat/install.sh/doctor.sh 全部改走 TS 栈（`pnpm install/build/start`），旧 Python 标 DEPRECATED 冻结前置并附 README 回退章节；README.md/README.zh-CN.md 补 TS 快速开始；`/web` 由 `apps/cli web` 统一装配） |
+| 3 | patches 体系补齐（A37：node-pty Windows 验证） | 🟩（**EP3 patches 闭环** 2026-09-10：`patches/README.md` 治理表——node-pty（ConPTY，allowBuilds + `ensure-spawn-helper.mjs` 恢复 exec bit）+ koffi（JSONL write-through）经 pnpm-workspace 边界声明治理；`@yao-pkg/pkg` 无需移植；见 10-stage-map D54） |
 
 ---
 

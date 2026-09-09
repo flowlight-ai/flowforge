@@ -120,18 +120,26 @@ FlowForge is currently in **developer preview** and is iterating rapidly. **THER
 
 ### Run from source (TypeScript, active line)
 
-Clone the repository and use pnpm (Corepack `pnpm@11.7.0`, Node `^22.19.0 || >=24.0.0`):
+Clone the repository and use pnpm (Corepack `pnpm@11.7.0`, Node `^22.19.0 || >=24.0.0`). Entry is the `flowforge` CLI; `apps/cli` is the single boot point (阶段10 入口切换).
 
 ```sh
 git clone https://gitee.com/flowlight/flowforge.git   # Gitee (base: master)
 cd flowforge
 pnpm install
 pnpm build          # tsc -b tsconfig.host.json
-pnpm flowforge      # host CLI — PLANNED / stage 3 (apps/cli not yet present)
-pnpm start          # alias for `pnpm flowforge web` — PLANNED / stage 3
+pnpm start          # == `pnpm flowforge web` — boot web profile（前端+接口统一装配）
 ```
 
-The Web UI and host entrypoints land with `apps/cli`; until then, exercise packages through their own examples and the test suite. See the [development guide](docs/development.md).
+Or use the one-click scripts (same as the above, respects TS stack / P1 entry):
+
+- Windows: `install.bat` → `start.bat`
+- macOS / Linux: `./install.sh` → `./start.sh`
+
+The Web UI is served by `apps/cli web` (profile `web`) and the Next.js app under `web/` is wired into the workspace. See the [development guide](docs/development.md).
+
+> **Python legacy（旧版）**: 自阶段10 起旧 Python 清单已切换为日落冻结前置。默认入口为 TS（`pnpm start`）；
+> 旧 Python 需手动 `python3 -m venv .venv && pip install -r requirements.txt` 后运行
+> `python3 scripts/start_all.py`（DEPRECATED，不再默认启动），正式移除见 `docs/refactor/31-stage11-sunset.md`。
 
 ### Local checks before committing
 

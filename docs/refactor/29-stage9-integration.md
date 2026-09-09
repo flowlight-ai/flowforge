@@ -4,7 +4,8 @@
 
 ## 任务清单
 
-- [ ] T9.1 功能全集矩阵核对（`10-stage-map.md` §3 逐项：D1-D44/C1-C42/F1-F44，stretch 项除外）
+- [x] T9.1 功能全集矩阵核对（`10-stage-map.md` §3 逐项：D1-D44/C1-C42/F1-F44，stretch 项除外）
+      （2026-09-10：D/C/F 核对全部达标，D52/F14 状态补摘 ✅；D53 snapshots 与 D54 patches 见 EP3-1/EP3-3）
 - [ ] T9.2 e2e 场景 1：用户群聊 @ 灵智体 → 调用外部 CLI（mock）→ 输出回传 → 经验蒸馏入库
 - [ ] T9.3 e2e 场景 2：Forgekin 五闭环演进 → MindCouncil 跨厂商审议 → 提交 PR（mock git）
 - [ ] T9.4 e2e 场景 3：MCP 工具调用 → 工作流 DAG 执行 → 上下文压缩 → 会话续接

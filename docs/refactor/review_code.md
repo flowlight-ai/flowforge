@@ -375,8 +375,23 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 ### 13.4 EP3 — 阶段 9-10：集成回归 + 入口切换
 
 1. 阶段 9 全量集成回归（三源功能矩阵核对，B22 路由平台面强制复核；snapshots 预期输出体系 A36）。
+   - ✅ **EP3-1 回归核对闭环（矩阵+snapshots）**（2026-09-10）：功能矩阵 `10-stage-map` D/C/F 核对全部达标
+     ——D52（dsh client 能力级融入）与 F14（Web 页面）状态补摘 ✅；D53 snapshots 体系 `@flowforge/acp-snapshot`
+     （launcher/harness/normalize/suite）+ `@flowforge/llm-replay`（keyless replay）已落地并补根
+     `pnpm test:snapshot` 门禁（`vitest run test-support`，397 通过/2 env 类跳失败，均属本地沙箱环境子进程超时，
+     同既有 `headless/startup.spec.ts` 基线类问题，与本次改动无关）。集成 e2e 3 场景（T9.2-T9.4）与性能（T9.5）
+     单列 `29-stage9-integration.md` 待执行批次。
 2. 阶段 10 入口切换：`flowforge` CLI 为唯一入口，web 入口切换到 TS 栈。
+   - ✅ **EP3-2 入口切换闭环（T10.1-T10.3）**（2026-09-10）：`start.bat`/`start.sh`/`install.bat`/`install.sh`/
+     `doctor.sh` 全部切换为 TS 栈（`pnpm install → build → start` == `flowforge web`），校验 `apps/cli/src/bin.ts` 与
+     `node_modules`；旧 Python 单体标注 **DEPRECATED（日落冻结前置）** 并附 README 回退章节；README.md / README.zh-CN
+     补 TS 快速开始 + legacy 回退；`docs/spec.md`（§6）、`docs/arch.md`（§7）补 TS 重构实施索引（正文语义 v7.1 不变）。
+     归入 PR EP3-stage10。
 3. patches 体系补齐（A37：node-pty Windows 验证）。
+   - ✅ **EP3-3 patches 闭环（D54）**（2026-09-10）：新建 `patches/README.md` 治理表——`node-pty`（ConPTY，
+     `pnpm-workspace.yaml` `allowBuilds.node-pty: true` + `@flowforge/subprocess-local` postinstall
+     `ensure-spawn-helper.mjs` 恢复 spawn helper exec bit）与 `koffi`（JSONL write-through）经 pnpm 边界声明治理，
+     替代上游 `patchedDependencies` 文件覆写；`@yao-pkg/pkg` 无需移植。矩阵 D54 更新。
 
 ### 13.5 EP4 — 阶段 11：Python 日落 + stretch
 

@@ -645,9 +645,23 @@ EAC v1 七契约：
 - LLM 内容必须经 LLM 审核（T7）
 - Web 功能必须操控浏览器验证 DOM（T8）
 
+## §6 TypeScript 重构实施（阶段 9-10 落地）
+
+> 本需求文档正文保持 v7.1（Python）语义与命名（VISION 不变）。TS 重构为主线实施面，
+> 需求级落地与验收统一收纳在 [docs/refactor/](refactor/)（`10-stage-map` 功能全集矩阵 / `task.md` 任务注册表），
+> 不在本顶层文档铺设平铺内容。以下仅作索引：
+
+- 功能全集矩阵（D/C/F 三源对照 + 验收勾选）：[refactor/10-stage-map.md](refactor/10-stage-map.md)
+- EP0-EP4 任务总注册表与进度：[refactor/task.md](refactor/task.md)
+- 准入/验收回归（snapshots 预期输出体系、功能矩阵核对、e2e 场景）：[refactor/29-stage9-integration.md](refactor/29-stage9-integration.md)
+- 入口切换与收尾（TS 为默认入口、Python 日落冻结前置）：[refactor/30-stage10-cutover.md](refactor/30-stage10-cutover.md)
+
+> **测试要求**：TS 重构沿用 T1-T8 铁律；新增 `pnpm test:snapshot`（keyless 预期输出快照）作为准入门禁，
+> Web 验收沿用 T8 浏览器 DOM 校验（Playwright，见 `web/e2e/`）。
+
 ---
 
-> **本文档版本**：v7.1（2026-07-19）
+> **本文档版本**：v7.2（2026-09-10，补 §6 TS 重构实施索引；正文语义 v7.1 不变）
 > **下一阶段**：基于本文档开发 [arch.md](arch.md)（SAD 架构设计说明书），按 [CONTRIBUTING.md §11.3](../../CONTRIBUTING.md) 三阶段开发流程执行。
 > **配套文档**：[arch.md](arch.md) + [design.md](design.md) + [features/](features/) + [architecture/](architecture/) + [design/](design/) + [decisions/](decisions/) + [review/](review/)
 > **历史归档**：v7.0/v6.0 历史章节已归档至 [`_archive/spec_v7_historical_background.md`](_archive/spec_v7_historical_background.md)，仅作演化路径参考。
