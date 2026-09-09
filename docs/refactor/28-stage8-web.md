@@ -25,6 +25,31 @@
 4. 品牌词合规（P1 英文名 + 双标注规则，见 naming-contract）。
 5. Python 旧版 `pytest` 回归全绿（旧版 web 不受影响）。
 
+## dsh client/* 46 包能力级对照表（A32 / Q2 现行决策）
+
+> 用途：阶段 8 验收对照表。按「UI 能力」逐项登记 dsh `client/*` UI 组件包 → 落点 T 任务 → 交付形态，前端融合时逐项勾选闭环。
+> 登记于 **EP1-13**（2026-09-09），实际代码落实随 EP2 阶段 8 各批次推进（Q2 现行决策：能力级融入 Next.js）。
+
+| UI 能力 | dsh `client/*` 包 | 落点 T 任务 | 交付形态 |
+|---|---|---|---|
+| 通讯-消息流 | `ui-chat` / `ui-conversation` / `ui-renderer` | T8.2 群聊页 | 对话列表/会话渲染（对齐 clowder 交互） |
+| 通讯-反馈 | `ui-message-feedback` / `ui-user-questions` | T8.2 | 消息反馈/澄清提问交互 |
+| 通讯-附件/输入 | `ui-attachment` / `ui-input-trigger` | T8.2 | 附件上传/输入触发 |
+| 通讯-指令/审批 | `ui-commands` / `ui-approval` | T8.3 灵智档案 / T8.6 业务页 | 指令面板 / 审批流 UI |
+| 会话-布局 | `ui-layout` / `ui-sidebar` / `ui-slots` | T8.1 基建 | 布局容器/侧栏/插槽装载 |
+| 会话-主题/品牌 | `ui-theme` / `ui-brand-official` / `ui-primitives` | T8.9 深色主题与品牌 | 主题令牌/品牌资源/基础原语 |
+| 规划/目标/作业/调度/轨迹 | `ui-plan` / `ui-goal` / `ui-jobs` / `ui-schedule` / `ui-trajectory` | T8.6 业务页 | 计划/目标/任务/调度/轨迹面板 |
+| 生成物-交付/工作区/参考 | `ui-deliverables` / `ui-workspace` / `ui-reference` | T8.6 / T8.7 市场页 | 交付物/工作区/参考面板 |
+| 设置-管理台 | `ui-settings` / `ui-settings-general` / `ui-settings-models` / `ui-settings-plugins` / `ui-settings-plugin-inventory` | T8.5 管理台 | 设置页与各子设置面板 |
+| 选择-模型/子代理/技能/工具 | `ui-model-selection` / `ui-subagent` / `ui-skill` / `ui-tool` / `ui-agent-preset` / `ui-permission-presets` / `ui-directory-picker-browse` / `ui-directory-picker-native` | T8.5 / T8.3 | 模型/子代理/技能/工具/目录选择器 |
+| 会话-状态 | `ui-session` | T8.2 / T8.6 | 会话状态/归档展示 |
+| 工作流-运行 | `ui-workflow-run` | T8.6 | 工作流运行视图 |
+| 基础设施-传输 | `connection` | T8.1（已落 `@flowforge/client-connection`） | 浏览器↔主机实时/HTTP 传输 |
+| 基础设施-国际化 | `locale` | T8.1 | i18n 文案通道 |
+| 基础设施-渲染框架 | `modules` / `schema-form` | T8.1 / T8.3 | 模块装载 / schema 表单渲染 |
+
+> **边界**：括号中 `ui-settings-plugin-inventory` 等以能力级登记，具体组件按 T8 任务推进时分批细化；`connection` 已在 EP1 移植为 `@flowforge/client-connection`，本表仅作能力归属登记。
+
 ## 提交信息模板
 
 ```
