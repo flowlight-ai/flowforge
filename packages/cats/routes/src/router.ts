@@ -170,6 +170,30 @@ export function createCatsRoutesRouter(deps: CatsRoutesDeps): (request: Request)
     }
 
     // ── profile-updates ──
+    // 列表端点必须排在 /:id 正则之前：根路径不在该正则覆盖内，否则直接落 404。
+    if (deps.profileUpdates !== undefined && pathname === '/api/profile-updates' && method === 'GET') {
+      const userId = resolveUserId(request)
+      if (!userId) return json(401, { error: 'Identity required' })
+      if (deps.profileUpdates.list === undefined) {
+        return json(501, { ok: false, error: 'list not supported by this port' })
+      }
+      const params = new URL(request.url).searchParams
+      const statusParam = params.get('status')
+      const status = statusParam === 'pending' || statusParam === 'approved' || statusParam === 'rejected'
+        ? statusParam
+        : undefined
+      const createdBy = params.get('createdBy') ?? undefined
+      const cursor = params.get('cursor') ?? undefined
+      const limitParam = params.get('limit')
+      const limit = limitParam === null ? undefined : Number(limitParam)
+      const result = await deps.profileUpdates.list({
+        ...(status === undefined ? {} : { status }),
+        ...(createdBy === undefined ? {} : { createdBy }),
+        ...(cursor === undefined ? {} : { cursor }),
+        ...(limit === undefined || !Number.isFinite(limit) ? {} : { limit }),
+      })
+      return json(200, result as unknown as Json)
+    }
     const profileMatch = /^\/api\/profile-updates\/([^/]+)(\/approve|\/reject)?$/.exec(pathname)
     if (deps.profileUpdates !== undefined && profileMatch !== null) {
       const proposalId = decodeURIComponent(profileMatch[1] ?? '')

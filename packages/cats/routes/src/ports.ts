@@ -40,6 +40,21 @@ export interface SelfClaimPolicyPort {
   policy(): Record<string, unknown> | Promise<Record<string, unknown>>;
 }
 
+/** 档案更新提案列表查询（审批 UI 的列表面，T8.3a-a1）。 */
+export interface ProfileUpdateListQuery {
+  readonly status?: 'pending' | 'approved' | 'rejected' | undefined;
+  readonly createdBy?: string | undefined;
+  readonly limit?: number | undefined;
+  /** 上一页返回的游标；缺省从首页开始。 */
+  readonly cursor?: string | undefined;
+}
+
+/** 档案更新提案列表结果（游标分页）。 */
+export interface ProfileUpdateListResult {
+  readonly items: readonly Record<string, unknown>[];
+  readonly nextCursor?: string;
+}
+
 /** 档案更新提案结构化端口（cats-stores `IProfileUpdateProposalStore` 兼容）。 */
 export interface ProfileUpdatePort {
   get(proposalId: string): Promise<object | null> | object | null;
@@ -51,6 +66,11 @@ export interface ProfileUpdatePort {
     rejectedBy: string,
     rejectionReason?: string,
   ): unknown | Promise<unknown>;
+  /**
+   * 可选：既有存储仅暴露 listPending/listByThread，通用列表需适配器提供。
+   * 未实现时列表端点返回 501（不静默降级为空列表）。
+   */
+  list?(query: ProfileUpdateListQuery): Promise<ProfileUpdateListResult> | ProfileUpdateListResult;
 }
 
 /** 记忆发布结构化端口（chat-misc `ChatMemoryPublishService.publish` 兼容）。 */

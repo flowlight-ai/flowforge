@@ -90,6 +90,9 @@
       "@flowforge/chat-realtime": [
         "./packages/chat/realtime/src/index.ts"
       ],
+      "@flowforge/chat-realtime-client": [
+        "./packages/chat/realtime-client/src/index.ts"
+      ],
       "@flowforge/chat-approval": [
         "./packages/chat/approval/src/index.ts"
       ],
