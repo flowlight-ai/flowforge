@@ -1,0 +1,22 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../session-format/tsconfig.host.json"
+    },
+    {
+      "path": "../session-format-v0-to-v1/tsconfig.host.json"
+    },
+    {
+      "path": "../session-format-v1-to-v2/tsconfig.host.json"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@flowforge/cordis-client-runner",
+  "description": "FlowForge dynamic-package browser runner (A10, D50): injectable-seam port of the dsh `@deepseek-ai/dsh-cordis-client-runner` client half. Turns a model-authored browser-half source into a live, guard-facade-wrapped plugin on the page — per-package load/unload queueing, converged load-by-run-id, ownership index for render-crash attribution, a whitelisting context facade over package-local injected ports, the Cordis run orchestrator (approve / decline / start / reconcile), the inspect registry, and the client timer Service. Zero `@deepseek-ai/*` / `@cat-cafe/*` / `@clowder-ai/*` references and no direct cordis Service/Context feathers: every originally-cordis or dsh dependency is expressed as a package-local injected port with a real in-memory implementation.",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/extensions/cordis-client-runner"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/types.d.ts",
+      "default": "./lib/types/types.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT"
+}

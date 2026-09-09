@@ -1,0 +1,128 @@
+# Standalone minimal SDK application. Unlike the ordinary SDK profile, this
+# bundle does not layer over base: this insert is the complete Cordis tree.
+# User profile, home, and invocation patches still apply above it.
+
+- insert:
+    - id: sdk-app-startup
+      name: '@flowforge/sdk-app'
+      config:
+        profile: sdk-minimal
+
+    - id: sdk-jsonrpc-server
+      name: '@flowforge/sdk-jsonrpc-server'
+      inject: [sdkAppStartup, loader]
+      config:
+        maxTokensAsSuccess: false
+
+    # The native DeepSeek adapter, standalone: the key is resolved from the
+    # environment and the runtime defaults are pinned for long automation turns.
+    - id: llm-deepseek
+      name: '@flowforge/llm-deepseek'
+      config:
+        apiKeyEnv: DEEPSEEK_API_KEY
+        defaultContextWindow: !!js Number(process.env.FF_CONTEXT_WINDOW ?? 1000000)
+        streamIdleTimeoutMs: 172800000
+
+    - id: sandbox
+      name: '@flowforge/sandbox-local'
+
+    # Shared projection registry: sandbox-policy folds sandbox-mode state
+    # through its units and requires it as a hard injection.
+    - id: session-projection
+      name: '@flowforge/session-projection'
+
+    - id: sandbox-policy
+      name: '@flowforge/sandbox-policy'
+      config:
+        mode: danger-full-access
+        workspaceRoot: !!js process.cwd()
+
+    - id: subprocess
+      name: '@flowforge/subprocess-local'
+
+    - id: pty
+      name: '@flowforge/terminal'
+
+    - id: terminal-bash
+      name: '@flowforge/terminal-bash'
+      disabled: !!js process.platform === 'win32'
+      config:
+        timeoutMs: 300000
+
+    # The editor uses the bare local filesystem; the persistent Bash tool still
+    # consumes the shared danger-full-access sandbox policy above.
+    - id: fs-local
+      name: '@flowforge/fs-local'
+      config:
+        cwd: !!js process.cwd()
+
+    # Keep the minimal agent kernel explicit: unlike base, this profile owns
+    # each service row and omits every optional producer it does not use.
+    - id: timer
+      name: '@flowforge/cordis-plugin-timer'
+
+    - id: llm
+      name: '@flowforge/llm'
+
+    - id: session
+      name: '@flowforge/session'
+
+    - id: session-title
+      name: '@flowforge/session-title'
+      config:
+        fallbackMaxWords: 5
+        fallbackMaxBytes: 40
+        maxTitleBytes: 80
+
+    - id: system-prompt
+      name: '@flowforge/system-prompt'
+      config:
+        includeHarnessIdentity: false
+        includeRuntimeContext: false
+        persona: !!js process.env.FF_SYSTEM_PROMPT ?? 'You are a helpful software engineer assistant.'
+
+    - id: tools
+      name: '@flowforge/tools'
+
+    - id: agent
+      name: '@flowforge/agent'
+
+    - id: llm-retry
+      name: '@flowforge/llm-retry'
+
+    - id: jobs
+      name: '@flowforge/jobs-local'
+
+    - id: invariants
+      name: '@flowforge/invariants'
+
+    - id: session-invariant
+      name: '@flowforge/session/invariant'
+
+    - id: agent-invariant
+      name: '@flowforge/agent/invariant'
+
+    - id: scope-invariant
+      name: '@flowforge/scope/invariant'
+
+    - id: agent-loop-invariant
+      name: '@flowforge/agent-loop/invariant'
+
+    - id: agent-loop
+      name: '@flowforge/agent-loop'
+      config:
+        agents: []
+
+    - id: persistent-bash
+      name: '@flowforge/tool-bash'
+      disabled: !!js process.platform === 'win32'
+
+    - id: str-replace-editor
+      name: '@flowforge/tool-str-replace-editor'
+      config:
+        maxOutputChars: 16000
+
+    - id: sessions
+      name: '@flowforge/session-persistence-jsonl'
+      config:
+        root: !!js flowforgeHomePath('sessions')

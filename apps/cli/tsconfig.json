@@ -1,4 +1,4 @@
-﻿{
+{
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
@@ -17,6 +17,10 @@
     { "path": "../../packages/boot/cmdline" },
     { "path": "../../packages/bundle/base" },
     { "path": "../../packages/bundle/headless" },
+    { "path": "../../packages/bundle/acp-app" },
+    { "path": "../../packages/bundle/sdk-app" },
+    { "path": "../../packages/bundle/sdk-minimal" },
+    { "path": "../../packages/bundle/web-app" },
     { "path": "../../packages/util/launch-environment" },
     { "path": "../../packages/util/home-paths" },
     { "path": "../../packages/mcp/mcp-client" },

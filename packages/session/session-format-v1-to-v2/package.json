@@ -1,0 +1,37 @@
+{
+  "name": "@flowforge/session-format-v1-to-v2",
+  "description": "FlowForge frozen released-v2 physical Session codec and the assistant-stream v1->v2 migration (A17/A20) — v2 physical header/event-row coding with explicit isSeeded lineage, released-v2 event dispositions, assistant/attempt + assistant/message embedded-stream validation, and the assistant-stream fold that embeds released-v1 top-level Assistant chunks into v2 attempt events with full seq-reference remapping and inheritance-cut recomputation. Ported from dsh `dsh-session-format-v1-to-v2`. Depends only on @flowforge/session-format and @flowforge/session-format-v0-to-v1 for its pure core machinery (the assistant-stream state machine is implemented locally).",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/session/session-format-v1-to-v2"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "peerDependencies": {
+    "@flowforge/session-format": "workspace:^",
+    "@flowforge/session-format-v0-to-v1": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/session-format": "workspace:^",
+    "@flowforge/session-format-v0-to-v1": "workspace:^"
+  },
+  "license": "MIT"
+}

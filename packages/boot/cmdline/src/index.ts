@@ -72,9 +72,58 @@ export function provideCmdline(ctx: Context, host: CmdlineHost): void {
 }
 
 /** The process streams commander output is written to; production writes to the process. */
-export const internals: { stdout: { write(chunk: string): unknown }; stderr: { write(chunk: string): unknown } } = {
+export const internals: {
+  stdin: AppStdin
+  stdout: { write(chunk: string): unknown }
+  stderr: { write(chunk: string): unknown }
+} = {
+  stdin: process.stdin,
   stdout: process.stdout,
   stderr: process.stderr,
+}
+
+/** The standard-input stream a stdio app may bind an EOF lifetime to. */
+export interface AppStdin extends NodeJS.ReadableStream {
+  readonly readableEnded: boolean
+}
+
+/**
+ * Make stdin EOF request the launcher's bounded successful shutdown once the
+ * Loader tree settles. A startup rejection therefore remains the process
+ * outcome when it races EOF. The caller invokes this only after its command
+ * action accepts the invocation, so help and usage failures start no transport
+ * lifecycle. This listener does not read or resume stdin: the protocol
+ * transport owns input and receives bytes buffered before it mounts. Disposal
+ * removes the EOF listener.
+ *
+ * This is the flowforge-cmdline form of the reference `exitOnStdinEnd`: it has
+ * no `appReady` service, so readiness is the Loader tree's settlement, exactly
+ * as the one-shot bundles await it. A hand-built tree without a Loader is
+ * already the complete tree and transitions at once.
+ * @param ctx - app plugin context carrying the launcher's exit request.
+ * @param label - effect label naming the owning application.
+ */
+export function exitOnStdinEnd(ctx: Context, label: string): void {
+  const exit = ctx.get('appExit')
+  if (exit === undefined) {
+    throw new Error('stdio app: the launcher must provide ctx.appExit before the tree mounts')
+  }
+  const stdin = internals.stdin
+  let active = true
+  let ended = false
+  const onEnd = (): void => {
+    if (!active || ended) return
+    ended = true
+    const settled = ctx.get('loader')?.await()
+    if (settled === undefined) exit(0)
+    else void settled.then(() => exit(0), () => {})
+  }
+  ctx.effect(() => () => {
+    active = false
+    stdin.off('end', onEnd)
+  }, label)
+  stdin.once('end', onEnd)
+  if (stdin.readableEnded) queueMicrotask(onEnd)
 }
 
 /**

@@ -1,0 +1,29 @@
+# The SDK app bundle patch: stdio JSON-RPC serving over the base layer. Stdout
+# belongs exclusively to the JSON-RPC transport, so the LLM session-title row
+# that would spend model tokens per session is disabled. The sdk-app-startup
+# provider injects `cmdlineArgs` and provides `sdkAppStartup` on a successful
+# parse; the JSON-RPC server row injects that service and the Loader tree (to
+# settle before claiming stdio) and reads its max-token policy from the
+# environment. `--help` provides the service on no invocation, so no transport
+# starts.
+
+- id: system-prompt
+  config:
+    persona: >-
+      You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
+
+# Automation clients own stdout: an LLM title call is noise on the JSON-RPC wire.
+- id: session-title-llm
+  disabled: true
+
+- insert:
+    - id: sdk-app-startup
+      name: '@flowforge/sdk-app'
+      config:
+        profile: sdk
+
+    - id: sdk-jsonrpc-server
+      name: '@flowforge/sdk-jsonrpc-server'
+      inject: [sdkAppStartup, loader]
+      config:
+        maxTokensAsSuccess: !!js "process.env.FF_MAX_TOKENS_AS_SUCCESS === undefined ? true : JSON.parse(process.env.FF_MAX_TOKENS_AS_SUCCESS)"

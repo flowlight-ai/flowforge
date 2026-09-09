@@ -23,7 +23,7 @@ describe('searchCode', () => {
     const files = Array.from(new Set(result.matches.map(match => match.filePath))).sort()
     expect(files).toEqual(['src/utils/helper.ts', 'symbols/demo.ts'])
     expect(result.matches[0]).toMatchObject({ lineNumber: 1, column: 16 })
-    expect(result.matches[0].lineNumber).toBeGreaterThan(0)
+    expect(result.matches[0]!.lineNumber).toBeGreaterThan(0)
   })
 
   it('treats an invalid regex as a literal substring', () => {

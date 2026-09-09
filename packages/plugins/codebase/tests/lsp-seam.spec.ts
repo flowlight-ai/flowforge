@@ -84,7 +84,7 @@ describe('augmentWithLsp (T5.3)', () => {
   it('is idempotent across repeated runs (INSERT OR IGNORE PK dedup)', () => {
     store.registerProject('demo')
     fn('a')
-    const seam = { enhance: () => [{ project: 'demo', source: 'fn:a', target: 'fn:b', type: 'IMPLEMENTS' }] }
+    const seam = { enhance: () => [{ project: 'demo', source: 'fn:a', target: 'fn:b', type: 'IMPLEMENTS' as const }] }
     augmentWithLsp(store, 'demo', { seam })
     augmentWithLsp(store, 'demo', { seam })
     expect(store.edgesByType('demo', LSP_EDGE_TYPES).filter(edge => edge.type === 'IMPLEMENTS')).toHaveLength(1)

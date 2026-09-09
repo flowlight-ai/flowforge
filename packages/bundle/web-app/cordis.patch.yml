@@ -1,0 +1,229 @@
+# The flowforge web-app bundle patch: the browser surface over the flowforge
+# base layer. Applied after base's insert; rows here override base rows by id,
+# with the profile's own cordis.patch.yml and any --patch overlays still to come.
+#
+# A patch replaces the targeted row's whole `config`, so each row below
+# restates every key it owns.
+#
+# The web-startup plugin injects `cmdlineArgs` and provides `webStartup` as an
+# ordinary Cordis service. Rows configured from flags inject that service, so
+# Loader resolves their expressions only after it exists. The web runtime then
+# provides bind-dependent `webRuntime` values to the trust fence.
+# `flowforge --profile web --help` provides neither service, so no server binds.
+#
+# The browser-plugin roster, the client transport's browser half, and the
+# client-capability surface (ui-theme, ui-layout, ui-chat, message-feedback,
+# session-turn-outline, workspace, file-reference, client-hmr, file-upload,
+# api-remotes, ...) are NOT mounted here: they ship with the EP2 dsh client
+# capability-integration batch. Only the host rows FlowForge can compose today
+# appear below.
+
+# ── surface-specific values the base deliberately omits ───────────────────────
+
+- id: system-prompt
+  config:
+    persona: >-
+      You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
+
+# Full-text session search is opt-in (the base row's `openAt: never`). This
+# restatement keeps the Web values on one ephemeral in-memory index; a
+# deployment enabling content search overrides `openAt` to `first-search` in a
+# later patch layer.
+- id: session-query-sqlite
+  config:
+    path: ':memory:'
+    openAt: never
+
+- id: tools
+  config:
+    # TEMPORARY workaround: FF_TOOLS_MODE (native|ptc|both) opts a whole
+    # flowforge process into PTC mode while per-session tool-presentation
+    # selection is being designed; unset keeps the schema default (native).
+    mode: !!js process.env.FF_TOOLS_MODE
+
+# ── web-only host rows, the transport layer, and the host roster ──────────────
+
+- insert:
+    # Worker-thread code execution, exactly as the headless bundle mounts it.
+    - id: code-runtime
+      name: '@flowforge/code-runtime-worker-thread'
+
+    # (EP2) message-feedback — no @flowforge equivalent yet
+    # (EP2) session-turn-outline — no @flowforge equivalent yet
+    # (EP2) workspace — no @flowforge equivalent yet
+    # (EP2) session-reference / file-reference-local — no @flowforge equivalent yet
+    # (EP2) subagent-model-selection-settings — no @flowforge equivalent yet
+
+    # Browser Session ZIP export: `/export` command plus the download dialog.
+    - id: session-log-export
+      name: '@flowforge/session-log-export'
+
+    # Whole-log turn/step counts for the chat stats strip (the sessionStats
+    # projection key); the projection registry itself is a base-layer row.
+    - id: session-stats
+      name: '@flowforge/session-stats'
+
+    # Resolve bind host, SSH launch, and display once at boot, then mount the
+    # matching dual-face directory picker. Mount -native or -browse directly in
+    # an overlay to pin the interaction.
+    - id: directory-picker
+      name: '@flowforge/host-directory-picker'
+
+    # Read-only projection of current Loader entries for trusted client RPCs.
+    - id: plugin-inventory
+      name: '@flowforge/host-plugin-inventory'
+
+    # (EP2) api-rest-controllers — @flowforge/api-rest-controllers exposes a
+    # framework-agnostic handler seam (ports/contract/controllers), not Cordis
+    # plugin rows; the host HTTP/auth wiring for the REST family lands with the
+    # EP2 host framework batch. Mount whatever that package exposes there.
+
+    - id: cordis-host-runner
+      name: '@flowforge/cordis-host-runner'
+
+    # Ordinary provider for the parsed Web flags. Its plugin-level injection
+    # waits for cmdlineArgs; no launcher metadata or special row kind is needed.
+    - id: web-startup
+      name: '@flowforge/web-app/startup'
+
+    # ── layer 2: transport/service ─────────────────────────────────────────────
+
+    # Plain route-registration carrier; host and port come from the app's
+    # webStartup provider, with these deployment fallbacks. The dist is served by
+    # the web-runtime row below through the fallback seat. (The reference
+    # compressor options are dropped: the FlowForge webserver schema owns only
+    # host/port.)
+    - id: webserver
+      name: '@flowforge/host-webserver'
+      inject: [webStartup]
+      config:
+        host: !!js ctx.webStartup.host ?? '127.0.0.1'
+        port: !!js ctx.webStartup.port ?? 3080
+
+    # Web glue owned by this bundle: resolves the built frontend dist (an
+    # assembly fact of web-app, never user config), mounts the frontend-static
+    # fallback owner, registers the web-surface prompt section and the bash
+    # runtime variable, prints the URL line, and opens the canonical local URL
+    # after the full tree settles. The webStartup provider supplies
+    # invocation-only values; after the server binds, this row samples LAN trust
+    # once and provides `webRuntime`. A complete agent-preset persona suppresses
+    # the prompt section for that agent while retaining the host-owned shell
+    # variable.
+    - id: web-runtime
+      name: '@flowforge/web-app'
+      inject: [webStartup]
+      config:
+        openBrowser: !!js ctx.webStartup.openBrowser
+        printUrl: true
+        surfaceContext: true
+        trustedHosts: !!js ctx.webStartup.trustedHosts
+
+    # The host half of the browser transport: binds the RPC gateway under /api
+    # and owns the browser-trust fence. Its browser (fetch/SSE) half joins with
+    # the EP2 client capability-integration batch.
+    - id: connection
+      name: '@flowforge/client-connection'
+      inject: [webRuntime]
+      config:
+        # LAN literals derived from the active bind plus --trusted-host extras.
+        # A deployment adding authorities keeps this expression and concatenates
+        # its literals, for example: ['app.internal', ...ctx.webRuntime.trustedHosts].
+        trustedHosts: !!js ctx.webRuntime.trustedHosts
+
+# ── the agent plane moves behind agent presets ─────────────────────────────
+#
+# Every row below composes what ONE agent contributes to the host registries:
+# its tools, its prompt sections, its delegation backends. The base keeps them
+# for the headless/TUI, which is single-session and composes its agent
+# process-wide; the Web surface disables them here and lets each session mount a
+# preset instead.
+#
+# Disabling rather than deleting is deliberate: the base is shared, and a row
+# absent from a surface overlay would silently reappear the day someone reorders
+# the composition.
+
+# `shell-env` STAYS in the host plane: `apps/cli/src/web.ts` injects it to
+# publish `FF_WEB_URL`, and a host row that injects a service is the criterion
+# for host-plane ownership.
+
+- id: tool-bash
+  disabled: true
+
+- id: tool-pwsh
+  disabled: true
+
+- id: tool-jobs
+  disabled: true
+
+- id: tool-fs
+  disabled: true
+
+- id: tool-fs-search
+  disabled: true
+
+- id: tool-str-replace-editor
+  disabled: true
+
+- id: skill-filesystem
+  disabled: true
+
+- id: tool-skill
+  disabled: true
+
+- id: command-goal
+  disabled: true
+
+- id: tool-goal
+  disabled: true
+
+- id: plan-mode
+  disabled: true
+
+- id: compaction-basic
+  disabled: true
+
+- id: command-compact
+  disabled: true
+
+- id: tool-result-pruner
+  disabled: true
+
+- id: tool-subagent-control
+  disabled: true
+
+- id: tool-subagent-list-agents
+  disabled: true
+
+- id: tool-subagent
+  disabled: true
+
+- id: tool-subagent-fork
+  disabled: true
+
+- id: workflow-worker-thread
+  disabled: true
+
+- id: tool-workflow
+  disabled: true
+
+- id: tool-ralph
+  disabled: true
+
+- id: agent-instructions
+  disabled: true
+
+- id: tool-todo
+  disabled: true
+
+- id: tool-web
+  disabled: true
+
+# The preset roster. The shipped presets are bundled inside
+# `@flowforge/agent-presets` itself and prepended as a read-only `system` root;
+# `$FF_HOME/.agent-presets` is where a person — or an agent — authors their own.
+# This row only names the default and any deployment-added `roots`.
+- insert:
+    - id: agent-presets
+      name: '@flowforge/agent-presets'
+      config:
+        default: standard

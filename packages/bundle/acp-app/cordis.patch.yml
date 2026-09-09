@@ -1,0 +1,27 @@
+# The ACP app bundle patch: automation-only Agent Client Protocol stdio over
+# the base layer. Stdout belongs exclusively to the ACP JSON-RPC transport, so
+# the LLM session-title row that would spend model tokens per session is
+# disabled. The acp-app-startup provider injects `cmdlineArgs` and provides
+# `acpAppStartup` on a successful parse; the ACP bridge row injects that service
+# and reads its provider/model from this row. `--help` provides the service on
+# no invocation, so no transport starts.
+
+- id: system-prompt
+  config:
+    persona: >-
+      You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
+
+# Automating clients own stdout: an LLM title call is noise on the ACP wire.
+- id: session-title-llm
+  disabled: true
+
+- insert:
+    - id: acp-app-startup
+      name: '@flowforge/acp-app'
+
+    - id: acp
+      name: '@flowforge/acp'
+      inject: [acpAppStartup]
+      config:
+        provider: deepseek-official
+        model: deepseek-v4-flash

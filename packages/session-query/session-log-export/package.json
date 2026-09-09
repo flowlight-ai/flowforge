@@ -1,0 +1,40 @@
+{
+  "name": "@flowforge/session-log-export",
+  "description": "FlowForge Session-log ZIP export — streams one canonical-JSONL archive per Session tree (root + subagent descendants + every referenced attachment) with fflate incremental DEFLATE and pull-driven backpressure. Ported from dsh `session-log-export`. Zero runtime `@deepseek/*` references: every backend (Session log source, attachment store, lineage, live-session flush) enters through injected in-package ports with real memory implementations.",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/session-query/session-log-export"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "dependencies": {
+    "fflate": "^0.8.2"
+  },
+  "peerDependencies": {
+    "@flowforge/session-format": "workspace:^",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@flowforge/session-format": "workspace:^",
+    "zod": "^4.4.3"
+  },
+  "license": "MIT"
+}

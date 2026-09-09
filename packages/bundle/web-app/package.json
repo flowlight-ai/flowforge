@@ -1,0 +1,75 @@
+{
+  "name": "@flowforge/web-app",
+  "description": "The flowforge browser-surface bundle: the web patch layer over base plus the runtime glue plugin (frontend dist serving, web-surface prompt, bash runtime variable, URL line, default-browser handoff)",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/bundle/web-app"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./startup": {
+      "types": "./lib/types/startup.d.ts",
+      "default": "./lib/startup.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/startup.js",
+    "lib/invariant.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "flowforge": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@flowforge/app-boot": "workspace:^",
+    "@flowforge/cmdline": "workspace:^",
+    "@flowforge/host-frontend-static": "workspace:^",
+    "@flowforge/launch-environment": "workspace:^",
+    "@flowforge/schemastery": "workspace:^",
+    "@flowforge/subprocess": "workspace:^",
+    "commander": "^15.0.0",
+    "open": "^11.0.0"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/client-connection": "workspace:^",
+    "@flowforge/host-webserver": "workspace:^",
+    "@flowforge/shell-env": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-include": "workspace:^",
+    "@flowforge/cordis-plugin-loader": "workspace:^",
+    "@flowforge/client-connection": "workspace:^",
+    "@flowforge/host-webserver": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/launch-environment": "workspace:^",
+    "@flowforge/shell-env": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}

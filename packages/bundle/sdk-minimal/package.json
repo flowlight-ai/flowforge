@@ -1,0 +1,75 @@
+{
+  "name": "@flowforge/sdk-minimal",
+  "description": "The standalone minimal SDK profile bundle: JSON-RPC, one DeepSeek adapter, persistent shell, editor, and JSONL sessions",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/bundle/sdk-minimal"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "flowforge": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@flowforge/cordis-plugin-timer": "workspace:^",
+    "@flowforge/agent": "workspace:^",
+    "@flowforge/agent-loop": "workspace:^",
+    "@flowforge/fs-local": "workspace:^",
+    "@flowforge/invariants": "workspace:^",
+    "@flowforge/jobs-local": "workspace:^",
+    "@flowforge/llm": "workspace:^",
+    "@flowforge/llm-deepseek": "workspace:^",
+    "@flowforge/llm-retry": "workspace:^",
+    "@flowforge/sandbox-local": "workspace:^",
+    "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/scope": "workspace:^",
+    "@flowforge/sdk-app": "workspace:^",
+    "@flowforge/sdk-jsonrpc-server": "workspace:^",
+    "@flowforge/session": "workspace:^",
+    "@flowforge/session-persistence-jsonl": "workspace:^",
+    "@flowforge/session-projection": "workspace:^",
+    "@flowforge/session-title": "workspace:^",
+    "@flowforge/subprocess-local": "workspace:^",
+    "@flowforge/system-prompt": "workspace:^",
+    "@flowforge/terminal": "workspace:^",
+    "@flowforge/terminal-bash": "workspace:^",
+    "@flowforge/tool-bash": "workspace:^",
+    "@flowforge/tool-str-replace-editor": "workspace:^",
+    "@flowforge/tools": "workspace:^"
+  },
+  "peerDependencies": {
+    "@flowforge/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@flowforge/cordis-plugin-include": "workspace:^",
+    "@flowforge/cordis": "workspace:^"
+  }
+}
