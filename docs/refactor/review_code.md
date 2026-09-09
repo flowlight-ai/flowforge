@@ -68,7 +68,7 @@
 | A29 | `webhook/webhook` + `webhook-github` | Webhook 接收与 GitHub 事件分发 | **P0** | `packages/webhook/`（新组） |
 | A30 | `host/directory-picker-auto` | 自动目录选择器 | P2 | `packages/host/` |
 | A31 | `examples/acp-demo` + `examples/jsonrpc-demo` | ACP/JSON-RPC 示例 | P2 | `packages/examples/` |
-| A32 | `client/*` 46 包 | dsh Web UI 组件层（ui-chat/ui-plan/ui-goal/ui-jobs/ui-schedule/ui-trajectory/ui-deliverables/ui-settings-* 等，仅 `client/connection` 已移植） | **P0** | 阶段 8 按**能力级**登记（§15-2） |
+| A32 | `client/*` 46 包 | dsh Web UI 组件层（ui-chat/ui-plan/ui-goal/ui-jobs/ui-schedule/ui-trajectory/ui-deliverables/ui-settings-* 等，仅 `client/connection` 已移植） | **P0** | ✅ **EP1-13 能力级登记**（2026-09-09）：已落 `28-stage8-web.md` 能力级对照表（46 包按 UI 能力归组 → 落点 T 任务），代码落实随 EP2 阶段 8（Q2 现行决策） |
 | A33 | `apps/web` | Vite 宿主（现行决策：融入 Next.js `web/`，非包级 vendor） | 已决 | 登记决策即可 |
 | A34 | `python/`（sdk + sdk-runtime） | Python SDK 桥 | 已登记 | S6 stretch ⬜（矩阵已有） |
 | A35 | `website/` | VitePress 文档站 | P2 | **需裁决**（§15-4） |
@@ -405,7 +405,7 @@ EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 | # | 问题 | 状态 |
 |---|---|---|
 | Q1 | `experimental/agent-team` 5 包（dsh 多智能体团队框架）是否全量移植？与 forgekin/swarm（F16 群聊编排）概念边界需先明确（agent-team=同构 agent 组队执行；swarm=跨厂商能力路由） | ⚠ EP1 前裁决 |
-| Q2 | dsh `client/*` 46 包按"能力级融入 Next.js"执行（现行决策，EP2 落实），阶段 8 任务清单按 UI 能力逐项登记为验收对照表 | ⚠ EP2 前确认 |
+| Q2 | dsh `client/*` 46 包按"能力级融入 Next.js"执行（现行决策，EP2 落实），阶段 8 任务清单按 UI 能力逐项登记为验收对照表 | ✅ **已确认（现行决策）**：EP1-13 已按能力级登记落 `28-stage8-web.md` 验收对照表（46 包 → 落点 T 任务），代码落实随 EP2 阶段 8 逐批推进 |
 | Q3 | `packages/finance` + mcp-server finance toolset：财经数据域是否属于目标能力？若不要，B1 移植时剔除 finance/audio toolset 子集 | ⚠ EP1 前裁决 |
 | Q4 | `website/` VitePress 文档站是否移植（当前文档全在 `docs/`）？ | ⚠ EP3 前裁决 |
 | Q5 | `cat-cafe-skills/`（20+ 技能内容包）与 `sop-definitions/` 内容资产是否随代码全量移植并按 naming-contract 改造品牌措辞？ | ⚠ EP1 前裁决 |
