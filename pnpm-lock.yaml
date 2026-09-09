@@ -1007,6 +1007,9 @@ importers:
       '@flowforge/cmdline':
         specifier: workspace:^
         version: link:../../boot/cmdline
+      '@flowforge/host-cats-api':
+        specifier: workspace:^
+        version: link:../../host/cats-api
       '@flowforge/host-frontend-static':
         specifier: workspace:^
         version: link:../../host/frontend-static
@@ -6418,6 +6421,8 @@ importers:
         specifier: workspace:^
         version: link:../terminal
 
+  packages/terminal/terminal-panel: {}
+
   packages/terminal/tool-terminal:
     dependencies:
       '@flowforge/schemastery':
@@ -7247,7 +7252,7 @@ importers:
     dependencies:
       '@ducanh2912/next-pwa':
         specifier: ^10.2.9
-        version: 10.2.9(next@14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.0(react@18.3.0))(react@18.3.0))(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))
+        version: 10.2.9(next@14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(react-dom@18.3.0(react@18.3.0))(react@18.3.0))(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))
       '@xyflow/react':
         specifier: ^12.10.2
         version: 12.11.6(@types/react-dom@18.3.0)(@types/react@18.3.31)(react-dom@18.3.0(react@18.3.0))(react@18.3.0)
@@ -7268,7 +7273,7 @@ importers:
         version: 0.372.0(react@18.3.0)
       next:
         specifier: ^14.2.0
-        version: 14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.0(react@18.3.0))(react@18.3.0)
+        version: 14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(react-dom@18.3.0(react@18.3.0))(react@18.3.0)
       react:
         specifier: ^18.3.0
         version: 18.3.0
@@ -7288,6 +7293,9 @@ importers:
       '@flowforge/config-schema':
         specifier: file:../packages/config/schema
         version: link:../packages/config/schema
+      '@playwright/test':
+        specifier: ^1.49.0
+        version: 1.63.0
       '@types/diff':
         specifier: ^7.0.2
         version: 7.0.2
@@ -8848,6 +8856,11 @@ packages:
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -11438,6 +11451,16 @@ packages:
   platform@1.3.6:
     resolution: {integrity: sha512-fnWVljUchTro6RiCFvCXBbNhJc2NijN7oIQxbwsyL0buWJPG85v81ehlHI9fXrJsMNgTofEoWIQeClKpgxFLrg==}
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
@@ -13496,10 +13519,10 @@ snapshots:
     dependencies:
       '@bufbuild/protobuf': 2.14.0
 
-  '@ducanh2912/next-pwa@10.2.9(next@14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.0(react@18.3.0))(react@18.3.0))(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))':
+  '@ducanh2912/next-pwa@10.2.9(next@14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(react-dom@18.3.0(react@18.3.0))(react@18.3.0))(webpack@5.110.3(esbuild@0.28.2)(postcss@8.5.28))':
     dependencies:
       fast-glob: 3.3.2
-      next: 14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.0(react@18.3.0))(react@18.3.0)
+      next: 14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(react-dom@18.3.0(react@18.3.0))(react@18.3.0)
       semver: 7.6.3
       webpack: 5.110.3(esbuild@0.28.2)(postcss@8.5.28)
       workbox-build: 7.1.1
@@ -14130,6 +14153,10 @@ snapshots:
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
+
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -16592,7 +16619,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@18.3.0(react@18.3.0))(react@18.3.0):
+  next@14.2.35(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(react-dom@18.3.0(react@18.3.0))(react@18.3.0):
     dependencies:
       '@next/env': 14.2.35
       '@swc/helpers': 0.5.5
@@ -16614,6 +16641,7 @@ snapshots:
       '@next/swc-win32-ia32-msvc': 14.2.33
       '@next/swc-win32-x64-msvc': 14.2.33
       '@opentelemetry/api': 1.9.1
+      '@playwright/test': 1.63.0
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
@@ -16840,6 +16868,12 @@ snapshots:
   pkce-challenge@5.0.0: {}
 
   platform@1.3.6: {}
+
+  playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   possible-typed-array-names@1.1.0: {}
 

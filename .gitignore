@@ -205,6 +205,9 @@ flowforge_state.db
 webchat_profile/
 chrome_profile/
 .playwright/
+# Playwright E2E 产物（batch 58：测试结果与 HTML 报告不入库）
+web/test-results/
+web/playwright-report/
 
 # ==================== Local logs & crash dumps (P3-011) ====================
 crash_dumps/
