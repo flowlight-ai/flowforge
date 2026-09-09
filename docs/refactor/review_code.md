@@ -407,8 +407,10 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 ### 13.5 EP4 — 阶段 11：Python 日落 + stretch
 
 1. Python 遗留目录日落与删除计划（`agents/`、`brain/`、`core/`、`llm/`、`loop/`、`forgemind/`、`evolution/`、`harness/`、`sop/`、`sdk.py`、根目录 Python 标记文件、`_*.py` 临时文件清理）。
+   - ✅ **EP4 S11.1 冻结期完成**（2026-09-10）：`__main__.py`（`python -m flowforge`）补 DEPRECATED 冻结横幅；start.bat 阶段10 已切 TS 栈并标注 deprecated；`31-stage11-sunset.md` 状态更新"冻结期进行中"。S11.2/S11.3 受 P1/P2 门槛硬约束（P2 TS 默认入口稳定≥2 周未满），**不提前归档/删除**，避免未经收货的破坏性操作。
 2. stretch 项按裁决结果排期：S1 真实通道凭据启用、S2（TTS/邮件推送/push）、S3、S4 desktop、S5 games、S6 Python SDK（A34）、S7。
-3. P1/P2 遗漏项（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35）。
+   - ✅ **EP4-stretch 排期表**（2026-09-10）：`31-stage11-sunset.md` §7 落 S1-S7 排期表——现阶段均不排期（缺凭据/服务或产品优先级不足），随 operator 新指令准入；S1 凭证接线后启用。
+3. P1/P2 遗漏项（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35）。 ⬜（唯一剩余 EP4 工作线程，未见 operator 新指令持续收尾）
 
 ## 14. 整体执行计划（时序）
 
