@@ -1,4 +1,4 @@
-/**
+﻿/**
  * E2E 冒烟：群聊页渲染（T8.2 前端/ T8.10 群聊收发 DOM 证明）
  *
  * 无后端（CI 未起 8000）时仅验证群聊壳层渲染；若后端可达则进一步做输入发送的乐观断言。
@@ -7,7 +7,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("群聊页 /council", () => {
-  test("渲染群聊壳层（布局/标题输入/会话/主区/消息输入/发送）", async ({ page, baseURL }) => {
+  test("渲染群聊壳层（布局/标题输入/会话/主区/消息输入/发送）", async ({ page }) => {
     await page.goto("/council", { waitUntil: "domcontentloaded" });
 
     // 群聊布局容器
@@ -43,5 +43,27 @@ test.describe("群聊页 /council", () => {
 
     // 输入值被消费（发送后清空为乐观成功信号；不等待后端回包）
     await expect(composer).toHaveValue("", { timeout: 5_000 });
+  });
+
+  test("@mention 菜单随输入弹出/退出（对齐 clowder ChatInputMenus 交互）", async ({ page }) => {
+    await page.goto("/council", { waitUntil: "domcontentloaded" });
+
+    const composer = page.getByPlaceholder("输入消息... 使用 @智能体名 指定发言对象，/ 调出命令菜单");
+    await composer.click();
+    await composer.fill("");
+
+    const mentionHeader = page.getByText("选择智能体", { exact: false });
+
+    // 输入 @ 触发提及菜单弹出
+    await composer.pressSequentially("@", { delay: 40 });
+    await expect(mentionHeader).toBeVisible({ timeout: 5_000 });
+
+    // Esc 关闭菜单（输入内容保留）
+    await page.keyboard.press("Escape");
+    await expect(mentionHeader).toBeHidden();
+
+    // 再次输入 @all 弹窗恢复
+    await composer.type("@all");
+    await expect(mentionHeader).toBeVisible({ timeout: 5_000 });
   });
 });
