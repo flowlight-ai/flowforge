@@ -77,8 +77,8 @@
 
 | 序 | 任务 | 状态 |
 |---|---|---|
-| 1 | 批次 56：socket.io-client 实时通道 | 🟩（**EP2-1** `@flowforge/chat-realtime-client` 落 `packages/chat/realtime-client`：`ChatRealtimeClient` 把 socket.io 原始事件收敛为类型化回调面（thread:message / invocation:progress / signal:new / approval:update 四事件对齐 chat-realtime 词表），`SocketIoClientLike` seam 注入可测（不直接 import socket.io-client，R16 最小依赖），纯函数居 transport（threadRoom/userRoom 房间名 + buildJoinRoom/buildLeaveRoom/buildCancelInvocation 载荷 + 多标签页 provenance 去重字段），dispose 幂等清理；13 契约测试 13/13 全绿、包级 tsc exit 0、oxlint 0；真实浏览器连接组合根注入归 EP2 后续） |
-| 2 | 批次 57：xterm 终端面板 | ⬜ |
+| 1 | 批次 56：socket.io-client 实时通道 | ✅ **PR #165**（2026-09-09）：`@flowforge/chat-realtime-client` 落 `packages/chat/realtime-client`：`ChatRealtimeClient` 把 socket.io 原始事件收敛为类型化回调面（thread:message / invocation:progress / signal:new / approval:update 四事件对齐 chat-realtime 词表），`SocketIoClientLike` seam 注入可测（不直接 import socket.io-client，R16 最小依赖），纯函数居 transport（threadRoom/userRoom 房间名 + buildJoinRoom/buildLeaveRoom/buildCancelInvocation 载荷 + 多标签页 provenance 去重字段），dispose 幂等清理；13 契约测试 13/13 全绿、包级 tsc exit 0、oxlint 0；真实浏览器连接组合根注入归 EP2 后续） |
+| 2 | 批次 57：xterm 终端面板 | 🟩（**EP2-2** `@flowforge/terminal-panel` 落 `packages/terminal/terminal-panel`：NDJSON 定向帧解析（五种 frame：output/resize/exit/title/error）+ `TerminalViewLike` 抽象 xterm 渲染 seam（注入可测不碰 DOM，R16 最小依赖）+ `TerminalPanelController` 生命周期控制器（帧应用幂等 + 输入/尺寸上送 + exit 后停止消费 + 幂等 dispose）；13 契约测试 13/13 全绿、包级 tsc exit 0、oxlint 0；真实 `@xterm/xterm` 适配归 EP2 下游组件层） |
 | 3 | 批次 58-59：Playwright 端到端 + 视觉回归 | ⬜ |
 | 4 | Threads/群聊页 + @mention 菜单 + 线程分支交互 | ⬜ |
 | 5 | dsh `client/*` 46 包能力级对照逐项融入 Next.js | ⬜ |

@@ -807,6 +807,9 @@
       "@flowforge/terminal-bash/invariant": [
         "./packages/terminal/terminal-bash/src/invariant.ts"
       ],
+      "@flowforge/terminal-panel": [
+        "./packages/terminal/terminal-panel/src/index.ts"
+      ],
       "@flowforge/tool-ask-user": [
         "./packages/interaction/tool-ask-user/src/index.ts"
       ],

@@ -808,6 +808,9 @@
       "path": "./packages/terminal/terminal-bash"
     },
     {
+      "path": "./packages/terminal/terminal-panel/tsconfig.host.json"
+    },
+    {
       "path": "./packages/terminal/tool-terminal"
     },
     {
