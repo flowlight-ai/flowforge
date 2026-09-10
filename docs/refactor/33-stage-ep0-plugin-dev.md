@@ -1,4 +1,4 @@
-﻿# EP0：软件工程化流程插件 `@flowforge/plugin-dev`（最高优先级，先于一切剩余开发）
+# EP0：软件工程化流程插件 `@flowforge/plugin-dev`（最高优先级，先于一切剩余开发）
 
 > **背景与目标**（operator 2026-09-07 两轮指令合并）：
 > flowforge 是**超级智能体自进化框架**；当前核心痛点是 **AI 协同与 AI 交付的软件质量**。
@@ -238,7 +238,7 @@ flowforge 自有的流程思想（doc-layering 11/12、git-workflow、mgr、T1-T
       工具无关性/与 04-code-standards、git-workflow、T1-T9 的引用关系）
 - [x] T0.6.2 更新 `docs/AGENTS.md`：交付强制入口改为 plugin-dev 七阶段流程
 - [x] T0.6.3 更新 `docs/refactor/04-code-standards.md`：批次交付与 forgeProcess 衔接
-- [ ] T0.6.4 mgr 集成（D5 已裁决：单独批次实施，不动共享基础设施 mgr）：`cmd_sync` 前置 `ff_doctor` 本地拦截
+- [x] T0.6.4 mgr 集成（D5 已裁决：单独批次实施，不动共享基础设施 mgr）：`cmd_sync`/`cmd_commit` 前置 `ff_doctor all` 本地拦截（2026-09-10：_ff_mgr_doctor_check + --no-check/FF_MGR_DOCTOR=0 逃生，契约测试 tools/mgr-doctor-precheck.test.sh 5 场景全绿，PR #随提交）
 - [x] T0.6.5 切换声明：此后所有批次（EP1-EP4）交付必须走 plugin-dev 流程（13-dev-process.md §13.7）；进度回填三文档
 
 ### EP0-7 存量治理（基线 ✅ 已完成；T0.7.2/T0.7.3 按 D2 节奏随批次执行）
