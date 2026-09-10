@@ -375,14 +375,42 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 ### 13.4 EP3 — 阶段 9-10：集成回归 + 入口切换
 
 1. 阶段 9 全量集成回归（三源功能矩阵核对，B22 路由平台面强制复核；snapshots 预期输出体系 A36）。
+   - ✅ **EP3-1 回归核对闭环（矩阵+snapshots）**（2026-09-10）：功能矩阵 `10-stage-map` D/C/F 核对全部达标
+     ——D52（dsh client 能力级融入）与 F14（Web 页面）状态补摘 ✅；D53 snapshots 体系 `@flowforge/acp-snapshot`
+     （launcher/harness/normalize/suite）+ `@flowforge/llm-replay`（keyless replay）已落地并补根
+     `pnpm test:snapshot` 门禁（`vitest run test-support`，397 通过/2 env 类跳失败，均属本地沙箱环境子进程超时，
+     同既有 `headless/startup.spec.ts` 基线类问题，与本次改动无关）。集成 e2e 3 场景（T9.2-T9.4）与性能（T9.5）
+     单列 `29-stage9-integration.md` 待执行批次。
 2. 阶段 10 入口切换：`flowforge` CLI 为唯一入口，web 入口切换到 TS 栈。
+   - ✅ **EP3-2 入口切换闭环（T10.1-T10.3）**（2026-09-10）：`start.bat`/`start.sh`/`install.bat`/`install.sh`/
+     `doctor.sh` 全部切换为 TS 栈（`pnpm install → build → start` == `flowforge web`），校验 `apps/cli/src/bin.ts` 与
+     `node_modules`；旧 Python 单体标注 **DEPRECATED（日落冻结前置）** 并附 README 回退章节；README.md / README.zh-CN
+     补 TS 快速开始 + legacy 回退；`docs/spec.md`（§6）、`docs/arch.md`（§7）补 TS 重构实施索引（正文语义 v7.1 不变）。
+     归入 PR EP3-stage10。
 3. patches 体系补齐（A37：node-pty Windows 验证）。
+   - ✅ **EP3-3 patches 闭环（D54）**（2026-09-10）：新建 `patches/README.md` 治理表——`node-pty`（ConPTY，
+     `pnpm-workspace.yaml` `allowBuilds.node-pty: true` + `@flowforge/subprocess-local` postinstall
+     `ensure-spawn-helper.mjs` 恢复 spawn helper exec bit）与 `koffi`（JSONL write-through）经 pnpm 边界声明治理，
+     替代上游 `patchedDependencies` 文件覆写；`@yao-pkg/pkg` 无需移植。矩阵 D54 更新。
+
+   - ✅ **EP3-4 stage9 e2e + 性能闭环（T9.2-T9.5）**（2026-09-10）：新增 `@flowforge/integration-e2e`
+     （`packages/integration/e2e`）——三场景装配级验收落 `tests/integration-e2e.spec.ts`（**4 用例全绿**）：
+     T9.2 mention→外部 CLI(mock)→输出回传→`DossierDistillationService` 蒸馏 propose/approve/apply（dossier 部分替换）；
+     T9.3 Forgekin 五闭环（doc/code/framework/review/test）演进→`CouncilService` 跨厂商审议 PASS→mock git 提交 PR；
+     T9.4 MCP(mock)→工作流 DAG→真实 agent loop + session + `BasicCompactionEngine` 压缩→会话续接引用 checkpoint。
+     性能 T9.5 落 `tests/integration-perf.spec.ts`（**2 用例全绿**）——T9.5A 100 并发广播至 10 客户端
+     `ChatRealtimeService`+`InMemoryRealtimeTransport` 7.1ms 总耗时 / 0.07ms·msg⁻¹、seq 单调无丢包乱序；
+     T9.5B 1400 条历史装载 `compactNow` 77.6ms，均远优于 Python 基线。依赖补齐 `@flowforge/chat-realtime` 接线；
+     包级 tsc exit 0。文档同步：`29-stage9-integration.md` 全项勾选 + 遗留清单；task.md EP3 行 1b；
+     验收标准 2/3 达标（T9.6 可选优项/T9.7 Python pytest 双绿因日落冻结不排期）。归入 PR EP3-stage910-cutover。
 
 ### 13.5 EP4 — 阶段 11：Python 日落 + stretch
 
 1. Python 遗留目录日落与删除计划（`agents/`、`brain/`、`core/`、`llm/`、`loop/`、`forgemind/`、`evolution/`、`harness/`、`sop/`、`sdk.py`、根目录 Python 标记文件、`_*.py` 临时文件清理）。
+   - ✅ **EP4 S11.1 冻结期完成**（2026-09-10）：`__main__.py`（`python -m flowforge`）补 DEPRECATED 冻结横幅；start.bat 阶段10 已切 TS 栈并标注 deprecated；`31-stage11-sunset.md` 状态更新"冻结期进行中"。S11.2/S11.3 受 P1/P2 门槛硬约束（P2 TS 默认入口稳定≥2 周未满），**不提前归档/删除**，避免未经收货的破坏性操作。
 2. stretch 项按裁决结果排期：S1 真实通道凭据启用、S2（TTS/邮件推送/push）、S3、S4 desktop、S5 games、S6 Python SDK（A34）、S7。
-3. P1/P2 遗漏项（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35）。
+   - ✅ **EP4-stretch 排期表**（2026-09-10）：`31-stage11-sunset.md` §7 落 S1-S7 排期表——现阶段均不排期（缺凭据/服务或产品优先级不足），随 operator 新指令准入；S1 凭证接线后启用。
+3. P1/P2 遗漏项（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35）。 ⬜（唯一剩余 EP4 工作线程，未见 operator 新指令持续收尾）
 
 ## 14. 整体执行计划（时序）
 

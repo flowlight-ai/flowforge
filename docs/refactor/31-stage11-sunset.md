@@ -1,12 +1,20 @@
 # 阶段 11：Python 旧版日落与删除计划（Sunset）
 
-> 状态：未开始（前置依赖阶段 9/10 验收） ｜ 创建：2026-08-16 ｜ 负责人：[wenxin] + [sherlock]
+> 状态：**S11.1 冻结期进行中** ｜ 创建：2026-08-16 ｜ 负责人：[:wenxin] + [:sherlock]
 > 目标：TS 版功能齐平并稳定运行后，分三阶段冻结、归档、删除 Python 旧版，全程 git 历史可追溯。
+> （更新 2026-09-10：阶段10 入口切换（`30-stage10-cutover.md` T10.1）已把默认入口切为 TS 栈并标注
+> Python `DEPRECATED`；S11.1 冻结横幅已落地 `__main__.py`（`python -m flowforge`）。**S11.2 归档 /
+> S11.3 删除受 P1/P2 前置门槛硬约束，不做未经收货的提前删除。** -> S11.2/S11.3 状态见 §1。）
 
-## 1. 启动前置条件（全部满足才允许进入冻结期）
+## 1. 启动前置条件（全部满足才允许进入归档期/删除期）
 
-- [ ] P1. 功能全集矩阵（`10-stage-map.md` §3）D1-D44 / C1-C42 / F1-F44（stretch 项除外）全部 ✅
-- [ ] P2. TS 版作为默认入口稳定运行 ≥ 2 周，无 P0/P1 缺陷（阶段 10 入口切换完成）
+功能全集矩阵核算：D/C/F 主线已全部 ✅（stretch 除外）；**D55 / C49-C51 / F44-F45 为 EP4 遗留项**
+（见 task.md EP4 第 3 项），与"Python 日落"解耦——不阻塞 S11.1 冻结，但 S11.3 删除前需收口。
+
+- [x] P1. 功能全集矩阵（`10-stage-map.md` §3）D1-D44 / C1-C42 / F1-F44（stretch 项除外）✅（EP3-1 核对达标）
+      剩余 D55/C49-C51/F44-F45 归 EP4-3 遗漏项收尾，S11.2/S11.3 判据沿用 §6 验收标准
+- [ ] P2. TS 版作为默认入口稳定运行 **≥ 2 周**，无 P0/P1 缺陷（阶段 10 入口切换 2026-09-10 完成，
+      **稳定性观察期未满，S11.2/S11.3 暂缓**）
 - [ ] P3. 数据处置方案确认（见 §4）：旧数据迁移或冻结只读，双栈不共享写库
 - [ ] P4. 行为基线用例 100% 转写为 TS golden tests（`03-fusion-strategy.md` §5）
 - [ ] P5. 全量 `pytest` 通过快照存档（作为删除前的基线记录）
@@ -15,11 +23,12 @@
 
 ### S11.1 冻结期（Freeze，1-2 个发布迭代）
 
-- [ ] Python 启动路径（`python -m flowforge` / `start_py.bat`）打印
+- [x] Python 启动路径（`python -m flowforge` / `start.bat` 旧逻辑）打印
       `DEPRECATED: Python 版本已冻结，请使用 pnpm start（FlowForge 0.2.0 TS）`
-- [ ] Python 代码只接受 P0 修复；新功能一律只在 TS 版开发
+      （2026-09-10：`start.bat` 已切 TS 栈并标注 deprecated；`__main__.py` 补冻结横幅；无 `start_py.bat`）
+- [x] Python 代码只接受 P0 修复；新功能一律只在 TS 版开发（冻结期声明，2026-09-10）
 - [ ] `pytest` 继续纳入 CI 回归（防数据迁移期间行为漂移），但标记 `legacy`
-- [ ] README / docs/spec.md 顶部标注 Python 版状态为 deprecated
+- [x] README / docs/spec.md 顶部标注 Python 版状态为 deprecated（阶段10 已标注，含回退章节）
 
 ### S11.2 归档期（Archive，1 个发布迭代）
 
@@ -88,3 +97,20 @@ python -m flowforge
 refactor(python): Python旧版归档至python/legacy [wenxin]        # S11.2
 chore(refactor): 阶段11删除Python旧版(历史保留在git) [wenxin]    # S11.3
 ```
+
+## 7. EP4 stretch 项排期（2026-09-10 对齐 review_code §13.5 / §15）
+
+> stretch 不阻塞主线里程碑；以下为按裁决的启用条件与承接批次。S1 拆解见 `10-stage-map.md` §3.4。
+
+| 项 | 内容 | 启用条件 / 承接 | 排期 |
+|---|---|---|---|
+| S1 | IM 真实通道凭据启用（connector 框架本体已交付 C44/EP1-2） | 外部凭据接线后方启用 | P0 修复期后 |
+| S2 | TTS/语音 / RSS / 邮件 / GitHub signals | 依赖外部服务 | 未排期（⬜） |
+| S3 | world/community/story/leaderboard（端口+mock 已交付 batch8 chat-stretch） | 产品优先级 | 未排期（⬜） |
+| S4 | 桌面端 desktop | 产品优先级 | 未排期（⬜） |
+| S5 | 游戏/信号 games | 产品优先级 | 未排期（⬜） |
+| S6 | Python↔TS 桥接 SDK（`python/sdk`，即 T9.6） | 外部 Python 调用方实际需求驱动 | 未排期（⬜） |
+| S7 | 物理 AI 传感器 / 虚拟世界设置（F44） | 产品优先级 | 未排期（⬜） |
+
+> 结论：S1-S7 现阶段均**不排期**（无发起动机、缺外部凭据/服务或产品优先级不足），随 operator 新指令按上表准入；
+> 主线 EP4 剩余工作集中到 §6 验收标准 + P1/P2 遗漏项收尾（task.md EP4 第 3 项）。

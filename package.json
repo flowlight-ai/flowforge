@@ -20,6 +20,7 @@
     "lint": "oxlint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:snapshot": "vitest run test-support --sequence.shuffle=false",
     "flowforge": "node --import tsx/esm apps/cli/src/bin.ts",
     "start": "node --import tsx/esm apps/cli/src/bin.ts web",
     "build:lib:host": "tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host"

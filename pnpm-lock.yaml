@@ -1007,9 +1007,6 @@ importers:
       '@flowforge/cmdline':
         specifier: workspace:^
         version: link:../../boot/cmdline
-      '@flowforge/host-cats-api':
-        specifier: workspace:^
-        version: link:../../host/cats-api
       '@flowforge/host-frontend-static':
         specifier: workspace:^
         version: link:../../host/frontend-static
@@ -3646,6 +3643,60 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+
+  packages/integration/e2e:
+    devDependencies:
+      '@flowforge/agent':
+        specifier: workspace:^
+        version: link:../../core/agent
+      '@flowforge/agent-loop':
+        specifier: workspace:^
+        version: link:../../core/agent-loop
+      '@flowforge/agent-loop-testkit':
+        specifier: workspace:^
+        version: link:../../test-support/agent-loop-testkit
+      '@flowforge/cats-orchestration':
+        specifier: workspace:^
+        version: link:../../cats/orchestration
+      '@flowforge/cats-shared':
+        specifier: workspace:^
+        version: link:../../cats/shared
+      '@flowforge/cats-stores':
+        specifier: workspace:^
+        version: link:../../cats/stores
+      '@flowforge/chat-mention':
+        specifier: workspace:^
+        version: link:../../chat/mention
+      '@flowforge/chat-realtime':
+        specifier: workspace:^
+        version: link:../../chat/realtime
+      '@flowforge/compaction':
+        specifier: workspace:^
+        version: link:../../compaction/compaction
+      '@flowforge/compaction-basic':
+        specifier: workspace:^
+        version: link:../../compaction/compaction-basic
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/forgekin-council':
+        specifier: workspace:^
+        version: link:../../forgekin/council
+      '@flowforge/forgekin-loops':
+        specifier: workspace:^
+        version: link:../../forgekin/loops
+      '@flowforge/invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      '@flowforge/llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@flowforge/session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@flowforge/token-meter':
+        specifier: workspace:^
+        version: link:../../llm/token-meter
 
   packages/interaction/commands:
     dependencies:

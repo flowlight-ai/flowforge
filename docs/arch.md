@@ -553,7 +553,35 @@ Web Chat 渠道（默认）/ 飞书渠道 / 微信公众号/个人号渠道 / We
 
 ---
 
-> **本文档版本**：v7.1（2026-07-19）
+## §7 TypeScript 重构实施（阶段 9-10 落地）
+
+> 本架构文档正文保持 v7.1（Python）语义与命名（VISION 不变）。TS 重构为主线实施面，
+> 详细说明与决策统一收纳在 [docs/refactor/](refactor/)（`00-overview`/`01-stack-decision`/`10-stage-map` 等），
+> 不再在本顶层文档铺设平铺内容，避免与实施文档重复。
+>
+> §7 之下的章节**仅作索引**，供文档读者定向跳转：
+
+### §7.1 栈决策与实施地图
+
+- 栈决策（TS / pnpm monorepo / Cordis 插件基座）：[refactor/01-stack-decision.md](refactor/01-stack-decision.md)
+- 实施总地图（EP0-EP4 + 阶段0-11）：[refactor/10-stage-map.md](refactor/10-stage-map.md)
+- 单仓库结构（`packages/<group>/<pkg>` 插件化 + `apps/cli` 宿主 + `web/` Next.js 前端）：[refactor/00-overview.md](refactor/00-overview.md)
+
+### §7.2 入口切换（阶段10 落地）
+
+- TS 版唯一入口为 `flowforge` CLI（`apps/cli/src/bin.ts`），`pnpm start` == `pnpm flowforge web`。
+- 一键脚本 `start.bat`/`start.sh`/`install.bat`/`install.sh` 均切换为 TS 栈；
+  旧 Python 单体标注 **DEPRECATED（日落冻结前置）**，回退步骤见 [README.md](../../README.md) 与 [refactor/30-stage10-cutover.md](refactor/30-stage10-cutover.md)。
+- Web 前端（`web/` Next.js）经 `apps/cli web`（web profile）统一装配，前端 + 接口由单一入口承载。
+
+### §7.3 实施平台面（阶段9 落地）
+
+- 预期输出快照体系 snapshots（acp/sdk/session/web 域测试基建）与依赖补丁治理（node-pty Windows 等）：
+  见 [refactor/10-stage-map.md](refactor/10-stage-map.md) D53/D54 与 `patches/README.md`。
+
+---
+
+> **本文档版本**：v7.2（2026-09-10，补 §7 TS 重构实施索引；正文语义 v7.1 不变）
 > **下一阶段**：基于本文档 + [spec.md](spec.md) + [features/](features/) 开发 [design.md](design.md)（SDD 详细设计说明书），按 [CONTRIBUTING.md §11.3](../../CONTRIBUTING.md) 三阶段开发流程执行。
 > **配套文档**：[spec.md](spec.md) + [design.md](design.md) + [features/](features/) + [architecture/](architecture/) + [design/](design/) + [decisions/](decisions/) + [review/](review/)
 > **历史归档**：v7.0/v6.0 历史架构章节已归档至 [`_archive/arch_v7_historical_background.md`](_archive/arch_v7_historical_background.md)，仅作演化路径参考。

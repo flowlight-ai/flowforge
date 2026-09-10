@@ -141,9 +141,9 @@
 | D49 | Webhook 接收与 GitHub 事件分发（webhook + webhook-github） | dsh `webhook/*`（A29） | 2 | ✅（EP1-9 @flowforge/webhook + @flowforge/webhook-github，93 契约测试全绿） |
 | D50 | 前端扩展与客户端运行器（ui-cordis + cordis-client-runner，crosswalk 状态虚报纠偏 A9/A10） | dsh `extensions/*` | 8 | ✅（EP1-11 双包注入式移植：`@flowforge/cordis-client-runner`（A10 运行时 52 契约） + `@flowforge/ui-cordis`（A9 展示逻辑 30 契约），82 契约测试全绿、tsc exit 0、oxlint 0，详见 task.md 行 11） |
 | D51 | web/sdk/acp 装配模板（web-app + acp-app + sdk-app + sdk-minimal bundle） | dsh `bundle/*`（A4-A7） | 7/8 | ✅（EP1-12 四包移植：`@flowforge/web-app`（浏览器胶水+startup+38 行 patch，A4）、`@flowforge/acp-app`（ACP stdio A5）、`@flowforge/sdk-app`（SDK stdio A6）、`@flowforge/sdk-minimal`（独立最小 SDK 树 A7），全部映射现 @flowforge 等价包 + FF_* env + 零 @deepseek 引用；`@flowforge/cmdline` 增补 `exitOnStdinEnd`；9 测试文件 25/25 契约测试全绿、tsc exit 0、oxlint 0；浏览器 client-ui 行 + message-feedback/workspace/session-reference 等标注 EP2 期） |
-| D52 | dsh `client/*` 46 包 UI 组件层（ui-chat/plan/goal/jobs/schedule/trajectory/deliverables/settings-* 等，能力级融入 Next.js） | dsh `client/*`（A32） | 8 | ⬜（EP2-5） |
-| D53 | 预期输出快照体系 snapshots（acp/sdk/session/web 四域测试基建） | dsh `snapshots/`（A36） | 9 | ⬜（EP3-1） |
-| D54 | 依赖补丁 patches（@yao-pkg/pkg、node-pty Windows 验证） | dsh `patches/`（A37） | 9 | ⬜（EP3-3） |
+| D52 | dsh `client/*` 46 包 UI 组件层（ui-chat/plan/goal/jobs/schedule/trajectory/deliverables/settings-* 等，能力级融入 Next.js） | dsh `client/*`（A32） | 8 | ✅（**EP2-阶段8 融合闭环** 2026-09-09：能力对照表落 `28-stage8-web.md`，T8.1-T8.10 达标；群聊/灵智档案/终端/管理台/业务/市场/训练营/深色主题齐备，e2e routes-smoke 34 路由 + council/forgekin 用例） |
+| D53 | 预期输出快照体系 snapshots（acp/sdk/session/web 四域测试基建） | dsh `snapshots/`（A36） | 9 | 🟩（**EP3-1**：`@flowforge/acp-snapshot` 已提供 launcher/harness/normalize/suite 预期输出快照基建 + `@flowforge/llm-replay` keyless replay + `agent-loop-testkit`/`client-runtime`/`loader-smoke`；2026-09-10 补根 `pnpm test:snapshot` 门禁（`vitest run test-support`，397 通过/2 env 类跳失败）） |
+| D54 | 依赖补丁 patches（@yao-pkg/pkg、node-pty Windows 验证） | dsh `patches/`（A37） | 9 | 🟩（**EP3-3**：采用 pnpm-workspace 边界声明 + postinstall 治理替代 `patchedDependencies` 覆写——`node-pty`（ConPTY，allowBuilds + `subprocess-local` `ensure-spawn-helper.mjs` 恢复 spawn helper exec bit）+ `koffi`（JSONL write-through）；`@yao-pkg/pkg` 无需移植。治理表见 `patches/README.md`） |
 | D55 | dsh P1/P2 其余遗漏（A5-A7/A11/A13/A15-A16/A18-A19/A21-A23/A25-A28/A30-A31/A35：agent-team/code-runtime-python/win32-process/session-snapshot/util 族等） | dsh `packages/*` | 10-11 | ⬜（EP4-3） |
 
 > **补录说明**：D45-D55 为 review_code §4（dsh 遗漏 A 系列）映射，编号续接 D44 之后，与 `02-source-crosswalk.md`、`review_code.md` §13.2（EP1）引用一致。DR-8
@@ -242,7 +242,7 @@
 | F11 | 插件市场 + 前端插件 | core/marketplace.py + plugin_* | 7 | ✅（批次18 forgekin-plugins：PluginManifest + 本地/远程注册表 + 七步安装/卸载/更新/四检查验证 + 六挂载点前端注册表 `ctx.forgePlugins`，39 测试） |
 | F12 | 团队协作 teamact + 审批 | core/teamact + approval_hub | 7 | ✅（批次15a cats-teamact：六步循环状态机 + 五项终止条件 + 交接胶囊 + 乒乓熔断 + SteerQueue 7 动作 `ctx.catsTeamAct`，69 测试；审批复用 chat approval） |
 | F13 | 观测/追踪/指标 | core/observability + tracing | 7 | ✅（批次13 forgekin-observability：AsyncLocalStorage trace_id 全链路传播 + TraceManager span 链 + 三类指标采集器 + AuditLogger JSONL + EventBus 发布订阅/请求响应 + 跨项目桥，48 测试） |
-| F14 | Web 页面（council/mission/memory/review/signals/admin） | web/src/app | 8 | ⬜ |
+| F14 | Web 页面（council/mission/memory/review/signals/admin） | web/src/app | 8 | ✅（阶段8 T8.5-T8.9/ T8.10：`web/` Next.js 路由齐备，`e2e/routes.ts` 34 静态路由冒烟 + council/forgekin 用例，见 `28-stage8-web.md`） |
 | F15 | 魔法词 magic_words | forgemind/magic_words.py（F011/F012；A011） | 7 | ✅（批次4 forgekin-magic-words：4 条魔法短语 → stop-and-audit 触发检测 + `ctx.forgeMagicWords`，12 测试） |
 | F16 | 群聊编排 swarm | forgemind/swarm.py + config/agent_swarm.yaml（F049） | 7 | ✅（批次5 forgekin-swarm：SwarmCoordinator 能力路由/心跳回收/跨厂商过滤 + `ctx.forgeSwarm`，68 测试） |
 | F17 | IM 议会 im_council + 通道管理 | core/im_council.py + channel_manager.py + config/im_council|im_channels|a2a_channels.yaml（F047） | 7 | ✅（批次14 forgekin-im-council：五步议事 + I1 降级链路 + I2 append-only 归档 + I3 唯一入口 + I4 超时拒绝 + I5 落盘，Console/WebChat/TraeBridge 三通道 `ctx.forgeImCouncil` + chat-channels ChannelManager，45 测试） |
