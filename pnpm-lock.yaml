@@ -6886,6 +6886,8 @@ importers:
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
 
+  packages/util/stdlib: {}
+
   packages/util/time: {}
 
   packages/util/timeout:

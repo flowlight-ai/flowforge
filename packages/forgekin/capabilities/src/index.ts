@@ -71,6 +71,8 @@ import {
 export * from './capability-orchestrator.ts';
 export * from './capability-mcp-service.ts';
 export * from './mcp-config-adapters.ts';
+export * from './mcp-drift-detector.ts';
+export * from './mcp-drift-resolver.ts';
 // 其余符号已由 capability-orchestrator re-export，这里只补缺的。
 export { MCP_SESSION_ENV_KEYS } from './mcp-constants.ts';
 export { migrateCapabilitiesV1ToV2 } from './capabilities-migration.ts';

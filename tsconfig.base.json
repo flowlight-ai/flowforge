@@ -1499,6 +1499,9 @@
       ],
       "@flowforge/forgekin-sop-assets": [
         "./packages/forgekin/sop-assets/src/index.ts"
+      ],
+      "@flowforge/util-stdlib": [
+        "./packages/util/stdlib/src/index.ts"
       ]
     }
   }

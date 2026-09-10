@@ -12,6 +12,8 @@
     "./capability-orchestrator": { "types": "./lib/types/capability-orchestrator.d.ts", "default": "./lib/capability-orchestrator.js" },
     "./capability-mcp-service": { "types": "./lib/types/capability-mcp-service.d.ts", "default": "./lib/capability-mcp-service.js" },
     "./mcp-config-adapters": { "types": "./lib/types/mcp-config-adapters.d.ts", "default": "./lib/mcp-config-adapters.js" },
+    "./mcp-drift-detector": { "types": "./lib/types/mcp-drift-detector.d.ts", "default": "./lib/mcp-drift-detector.js" },
+    "./mcp-drift-resolver": { "types": "./lib/types/mcp-drift-resolver.d.ts", "default": "./lib/mcp-drift-resolver.js" },
     "./mcp-constants": { "types": "./lib/types/mcp-constants.d.ts", "default": "./lib/mcp-constants.js" },
     "./capabilities-migration": { "types": "./lib/types/capabilities-migration.d.ts", "default": "./lib/capabilities-migration.js" },
     "./capability-install": { "types": "./lib/types/capability-install.d.ts", "default": "./lib/capability-install.js" },

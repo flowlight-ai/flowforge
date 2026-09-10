@@ -967,6 +967,9 @@
       "path": "./packages/util/workspace-path"
     },
     {
+      "path": "./packages/util/stdlib"
+    },
+    {
       "path": "./packages/llm/api-extensions"
     },
     {
