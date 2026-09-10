@@ -2592,6 +2592,10 @@ importers:
         version: link:../stage
 
   packages/forgekin/governance:
+    dependencies:
+      yaml:
+        specifier: ^2.6.0
+        version: 2.9.0
     devDependencies:
       '@flowforge/cats-shared':
         specifier: workspace:^

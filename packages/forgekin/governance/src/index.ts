@@ -58,6 +58,8 @@ export * from './methodology-templates.ts';
 export * from './mission-pack.ts';
 export * from './execution-digest-capture.ts';
 export * from './skill-sync.ts';
+export * from './skill-meta.ts';
+export * from './skill-query.ts';
 export * from './list-all-projects.ts';
 
 declare module '@flowforge/cordis' {

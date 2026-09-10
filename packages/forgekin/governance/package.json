@@ -17,6 +17,8 @@
     "./mission-pack": { "types": "./lib/types/mission-pack.d.ts", "default": "./lib/mission-pack.js" },
     "./execution-digest-capture": { "types": "./lib/types/execution-digest-capture.d.ts", "default": "./lib/execution-digest-capture.js" },
     "./skill-sync": { "types": "./lib/types/skill-sync.d.ts", "default": "./lib/skill-sync.js" },
+    "./skill-meta": { "types": "./lib/types/skill-meta.d.ts", "default": "./lib/skill-meta.js" },
+    "./skill-query": { "types": "./lib/types/skill-query.d.ts", "default": "./lib/skill-query.js" },
     "./list-all-projects": { "types": "./lib/types/list-all-projects.d.ts", "default": "./lib/list-all-projects.js" },
     "./src/*": "./src/*",
     "./package.json": "./package.json"
@@ -27,6 +29,9 @@
     "@flowforge/cordis": "workspace:^",
     "@flowforge/cats-shared": "workspace:^",
     "@flowforge/forgekin-capabilities": "workspace:^"
+  },
+  "dependencies": {
+    "yaml": "^2.6.0"
   },
   "devDependencies": {
     "@flowforge/cordis": "workspace:^",
