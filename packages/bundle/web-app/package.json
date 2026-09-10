@@ -66,6 +66,7 @@
     "@flowforge/cordis-plugin-loader": "workspace:^",
     "@flowforge/client-connection": "workspace:^",
     "@flowforge/host-webserver": "workspace:^",
+    "@flowforge/host-cats-api": "workspace:^",
     "@flowforge/invariants": "workspace:^",
     "@flowforge/launch-environment": "workspace:^",
     "@flowforge/shell-env": "workspace:^",

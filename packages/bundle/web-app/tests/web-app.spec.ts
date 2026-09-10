@@ -99,6 +99,8 @@ describe('@flowforge/web-app bundle patch', () => {
     expect(rows.find(row => row.id === 'web-runtime')?.name).toBe('@flowforge/web-app')
     expect(rows.find(row => row.id === 'web-runtime')?.inject).toEqual(['webStartup'])
     expect(rows.find(row => row.id === 'connection')?.inject).toEqual(['webRuntime'])
+    expect(rows.find(row => row.id === 'cats-api')?.name).toBe('@flowforge/host-cats-api')
+    expect(rows.find(row => row.id === 'cats-api')?.inject).toEqual(['webServer'])
     expect(rows.find(row => row.id === 'agent-presets')?.name).toBe('@flowforge/agent-presets')
     expect(patches.find(patch => patch.id === 'tool-bash')).toMatchObject({ disabled: true })
   })
