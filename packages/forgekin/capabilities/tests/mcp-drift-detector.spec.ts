@@ -60,12 +60,12 @@ describe('canonicalJson / computeGlobalMcpHash / extractMcpEntries', () => {
 
   it('computeGlobalMcpHash is stable regardless of entry order', () => {
     const a = makeConfig([
-      { id: 'x', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x' } },
-      { id: 'y', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'y' } },
+      { id: 'x', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x', args: [] } },
+      { id: 'y', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'y', args: [] } },
     ]);
     const reverse = makeConfig([
-      { id: 'y', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'y' } },
-      { id: 'x', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x' } },
+      { id: 'y', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'y', args: [] } },
+      { id: 'x', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x', args: [] } },
     ]);
     expect(computeGlobalMcpHash(extractMcpEntries(a))).toBe(computeGlobalMcpHash(extractMcpEntries(reverse)));
   });
@@ -84,12 +84,12 @@ describe('canonicalJson / computeGlobalMcpHash / extractMcpEntries', () => {
 describe('checkMcpProject', () => {
   it('detects global-new / project-orphan / config-mismatch in one pass', async () => {
     writeConfig(globalRoot, makeConfig([
-      { id: 'new-mcp', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'new' } },
-      { id: 'common', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v2' } },
+      { id: 'new-mcp', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'new', args: [] } },
+      { id: 'common', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v2', args: [] } },
     ]));
     writeConfig(projectRoot, makeConfig([
-      { id: 'common', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v1' } },
-      { id: 'orphan', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x' } },
+      { id: 'common', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v1', args: [] } },
+      { id: 'orphan', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x', args: [] } },
     ]));
 
     const result = await checkMcpProject(projectRoot, globalRoot);
@@ -103,10 +103,10 @@ describe('checkMcpProject', () => {
 
   it('flags config-mismatch with hasOverride when project has override', async () => {
     writeConfig(globalRoot, makeConfig([
-      { id: 'm', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v2' } },
+      { id: 'm', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v2', args: [] } },
     ]));
     writeConfig(projectRoot, makeConfig([
-      { id: 'm', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v2' }, mcpServerOverride: { command: 'local' } },
+      { id: 'm', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v2', args: [] }, mcpServerOverride: { command: 'local', args: [] } },
     ]));
 
     // 同一 mcp/hash，但 override 使项目快照不同源 → 报 mismatch 且带上 override 标记
@@ -119,7 +119,7 @@ describe('checkMcpProject', () => {
   it('exempts external-source orphans from project-orphan', async () => {
     writeConfig(globalRoot, makeConfig([]));
     writeConfig(projectRoot, makeConfig([
-      { id: 'user-mcp', type: 'mcp', enabled: true, source: 'external', mcpServer: { command: 'user' } },
+      { id: 'user-mcp', type: 'mcp', enabled: true, source: 'external', mcpServer: { command: 'user', args: [] } },
     ]));
 
     const result = await checkMcpProject(projectRoot, globalRoot);
@@ -136,12 +136,12 @@ describe('checkMcpGlobal', () => {
     tmpdirs(p2);
 
     writeConfig(globalRoot, makeConfig([
-      { id: 'g', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v1' } },
+      { id: 'g', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'v1', args: [] } },
     ]));
     writeConfig(projectRoot, makeConfig([]));
     writeConfig(p2, makeConfig([
-      { id: 'g', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'stale' } },
-      { id: 'orphan2', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x' } },
+      { id: 'g', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'stale', args: [] } },
+      { id: 'orphan2', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x', args: [] } },
     ]));
 
     const deps: McpDriftDetectorDeps = { listProjectPaths: async () => [projectRoot, p2] };
@@ -153,7 +153,7 @@ describe('checkMcpGlobal', () => {
 
   it('defaults to scanning only the hub root when no port injected', async () => {
     writeConfig(globalRoot, makeConfig([
-      { id: 'in-project', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x' } },
+      { id: 'in-project', type: 'mcp', enabled: true, source: 'cat-cafe', mcpServer: { command: 'x', args: [] } },
     ]));
     const result = await checkMcpGlobal(globalRoot);
     expect(result.perProject).toHaveLength(0); // global == hub → 无 drift
