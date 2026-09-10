@@ -102,7 +102,7 @@
 |---|---|---|
 | 1 | Python 遗留目录日落与删除（`agents/`、`brain/`、`core/`、`llm/`、`loop/`、`forgemind/`、`evolution/`、`harness/`、`sop/`、`sdk.py` 等） | 🟦（**EP4 S11.1 冻结期完成，S11.2 待 P2 门槛** 2026-09-10：`__main__.py`（`python -m flowforge`）补 DEPRECATED 冻结横幅；start.bat 阶段10 已切 TS 栈并标注 deprecated；`31-stage11-sunset.md` 状态更新为"冻结期进行中"。S11.2 归档 / S11.3 删除受 P1/P2 前置门槛硬约束——P2（TS 默认入口稳定≥2 周）未满，不做未经收货的提前删除；README/spec 处 deprecated 标注已随阶段10 完成） |
 | 2 | stretch 项按裁决排期（S1 凭据启用 / S2 TTS/邮件推送 / S4 desktop / S6 Python SDK 等） | ✅（**EP4-stretch 排期表** 2026-09-10：`31-stage11-sunset.md` §7 补 S1-S7 排期表——现阶段均不排期（缺凭据/服务或产品优先级不足），随 operator 新指令准入；S1 凭证接线后启用） |
-| 3 | P1/P2 遗漏项收尾（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35） | ⬜ |
+| 3 | P1/P2 遗漏项收尾（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35） | 🟦（**EP4-P12 收尾批次进行中** 2026-09-10：可立即实施项全量落包——util 域 `@flowforge/crypto`(A23)/`@flowforge/time`(A26)/`@flowforge/values`(A27)/`@flowforge/http-proxy`(A25)/`@flowforge/workspace-path`(A28)；llm 域 `@flowforge/llm-api-extensions`(A15)/`@flowforge/llm-plugin-inventory`(A16)；session 域 `@flowforge/session-log-deepseek`(A18)/`@flowforge/session-turn-outline`(A19)；`@flowforge/win32-process`(A21)/`@flowforge/session-snapshot`(A22)/`@flowforge/directory-picker-auto`(A30)/`@flowforge/acp-demo`+`@flowforge/jsonrpc-demo`(A31)；cats/limb 域 `@flowforge/cats-services-panel`(B6)/`@flowforge/cats-tool-usage`(B13)/`@flowforge/limb-runtime-session`(B14)/`@flowforge/cats-frustration`(B15)/`@flowforge/cats-cloud-bridge`(B16)/`@flowforge/cats-bootcamp-quest`(B17)→forgekin `@flowforge/forgekin-sop-assets`(B20)；均零 @deepseek/@cat-cafe/@clowder 依赖+注入式端口+vitest 契约测试。需裁决项（A11/A13/B2/B19/A35）与 diff 类（B8/B9/B11）单列跟踪） |
 
 ---
 

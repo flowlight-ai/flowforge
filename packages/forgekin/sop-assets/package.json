@@ -1,0 +1,49 @@
+{
+  "name": "@flowforge/forgekin-sop-assets",
+  "description": "FlowForge Forgekin SOP content-assets domain — the sop-definitions content surface: SopAsset schema with pure validator, an in-memory asset registry, builtin default SOPs, and a validating loader. Ported from clowder-ai `sop-definitions` content (B20). Self-contained: no hard I/O dependency; parsing is an injectable seam.",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/forgekin/sop-assets"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./models": {
+      "types": "./lib/types/sop-asset-model.d.ts",
+      "default": "./lib/sop-asset-model.js"
+    },
+    "./validate": {
+      "types": "./lib/types/validate-sop-asset.d.ts",
+      "default": "./lib/validate-sop-asset.js"
+    },
+    "./assets": {
+      "types": "./lib/types/assets.d.ts",
+      "default": "./lib/assets.js"
+    },
+    "./builtin": {
+      "types": "./lib/types/builtin-sops.d.ts",
+      "default": "./lib/builtin-sops.js"
+    },
+    "./loader": {
+      "types": "./lib/types/loader.d.ts",
+      "default": "./lib/loader.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT"
+}

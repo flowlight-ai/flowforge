@@ -1073,6 +1073,8 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/bootcamp-quest: {}
+
   packages/cats/cat-config-loader:
     devDependencies:
       '@flowforge/cordis':
@@ -1087,6 +1089,8 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+
+  packages/cats/cloud-bridge: {}
 
   packages/cats/context-assembly:
     devDependencies:
@@ -1105,6 +1109,8 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+
+  packages/cats/frustration: {}
 
   packages/cats/guides:
     dependencies:
@@ -1207,6 +1213,12 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/cats/services-panel:
+    devDependencies:
+      yaml:
+        specifier: ^2.6.0
+        version: 2.9.0
+
   packages/cats/session:
     devDependencies:
       '@flowforge/cats-shared':
@@ -1276,6 +1288,12 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+
+  packages/cats/tool-usage:
+    devDependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.5.4
 
   packages/cats/workspace:
     devDependencies:
@@ -2131,6 +2149,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
 
+  packages/examples/acp-demo: {}
+
   packages/examples/agent-spine-demo:
     dependencies:
       '@flowforge/schemastery':
@@ -2242,6 +2262,8 @@ importers:
       '@flowforge/tools':
         specifier: workspace:^
         version: link:../../core/tools
+
+  packages/examples/jsonrpc-demo: {}
 
   packages/extensions/cordis-client-runner: {}
 
@@ -2696,6 +2718,8 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+
+  packages/forgekin/sop-assets: {}
 
   packages/forgekin/soul:
     devDependencies:
@@ -3429,6 +3453,8 @@ importers:
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
 
+  packages/host/directory-picker-auto: {}
+
   packages/host/directory-picker-browse:
     dependencies:
       '@flowforge/host-directory-picker':
@@ -3976,7 +4002,15 @@ importers:
         specifier: workspace:^
         version: link:../embodiment
 
+  packages/limb/runtime-session: {}
+
   packages/limb/terminal:
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+
+  packages/llm/api-extensions:
     devDependencies:
       '@flowforge/cordis':
         specifier: workspace:^
@@ -4042,7 +4076,7 @@ importers:
     dependencies:
       '@earendil-works/pi-ai':
         specifier: ^0.82.1
-        version: 0.82.1(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.4.3)
+        version: 0.82.1(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(ws@8.21.3)(zod@4.4.3)
       '@flowforge/schemastery':
         specifier: workspace:^
         version: link:../../../vendor/schemastery
@@ -4138,6 +4172,8 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+
+  packages/llm/plugin-inventory: {}
 
   packages/llm/route:
     dependencies:
@@ -4868,6 +4904,12 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
 
+  packages/session/log-deepseek:
+    devDependencies:
+      '@flowforge/session':
+        specifier: workspace:^
+        version: link:../../core/session
+
   packages/session/session-checkpoint-policy:
     devDependencies:
       '@flowforge/agent':
@@ -5254,6 +5296,22 @@ importers:
       '@flowforge/timeout':
         specifier: workspace:^
         version: link:../../util/timeout
+
+  packages/session/turn-outline:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@flowforge/session-projection':
+        specifier: workspace:^
+        version: link:../session-projection
 
   packages/settings/settings:
     devDependencies:
@@ -5975,7 +6033,7 @@ importers:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
         specifier: 0.3.220
-        version: 0.3.220(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(zod@4.4.3)
+        version: 0.3.220(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(zod@4.4.3)
       '@anthropic-ai/sdk':
         specifier: 0.93.0
         version: 0.93.0(zod@4.4.3)
@@ -6420,6 +6478,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
 
+  packages/subprocess/win32-process: {}
+
   packages/terminal/terminal:
     devDependencies:
       '@flowforge/agent':
@@ -6638,6 +6698,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
 
+  packages/test-support/session-snapshot: {}
+
   packages/todo/tool-todo:
     dependencies:
       '@flowforge/schemastery':
@@ -6777,6 +6839,8 @@ importers:
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
 
+  packages/util/crypto: {}
+
   packages/util/home-paths:
     devDependencies:
       '@flowforge/cordis':
@@ -6785,6 +6849,8 @@ importers:
       '@flowforge/invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
+
+  packages/util/http-proxy: {}
 
   packages/util/launch-environment:
     devDependencies:
@@ -6813,6 +6879,8 @@ importers:
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
 
+  packages/util/time: {}
+
   packages/util/timeout:
     devDependencies:
       '@flowforge/cordis':
@@ -6821,6 +6889,10 @@ importers:
       '@flowforge/invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
+
+  packages/util/values: {}
+
+  packages/util/workspace-path: {}
 
   packages/web/tool-web:
     dependencies:
@@ -12649,10 +12721,10 @@ snapshots:
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.220':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk@0.3.220(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(zod@4.4.3)':
+  '@anthropic-ai/claude-agent-sdk@0.3.220(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(zod@4.4.3)':
     dependencies:
       '@anthropic-ai/sdk': 0.93.0(zod@4.4.3)
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.5.4)
+      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
       zod: 4.4.3
     optionalDependencies:
       '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.220
@@ -13584,11 +13656,11 @@ snapshots:
       - '@types/babel__core'
       - supports-color
 
-  '@earendil-works/pi-ai@0.82.1(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.4.3)':
+  '@earendil-works/pi-ai@0.82.1(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))(ws@8.21.3)(zod@4.4.3)':
     dependencies:
       '@anthropic-ai/sdk': 0.91.1(zod@4.4.3)
       '@aws-sdk/client-bedrock-runtime': 3.1048.0
-      '@google/genai': 1.52.0(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))
+      '@google/genai': 1.52.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))
       '@mistralai/mistralai': 2.2.6(@opentelemetry/api@1.9.0)
       '@opentelemetry/api': 1.9.0
       '@smithy/node-http-handler': 4.7.3
@@ -13688,14 +13760,14 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@google/genai@1.52.0(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))':
+  '@google/genai@1.52.0(@modelcontextprotocol/sdk@1.30.0(zod@4.4.3))':
     dependencies:
       google-auth-library: 10.9.1
       p-retry: 4.6.2
       protobufjs: 7.6.5
       ws: 8.21.3
     optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.30.0(zod@4.5.4)
+      '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -13901,8 +13973,8 @@ snapshots:
     dependencies:
       '@opentelemetry/semantic-conventions': 1.43.0
       ws: 8.21.3
-      zod: 4.5.4
-      zod-to-json-schema: 3.25.2(zod@4.5.4)
+      zod: 4.4.3
+      zod-to-json-schema: 3.25.2(zod@4.4.3)
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
     transitivePeerDependencies:

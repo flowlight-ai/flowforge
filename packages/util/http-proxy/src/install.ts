@@ -1,0 +1,249 @@
+/**
+ * Proxy installation: the environment-publishing half of this package. It owns the process-wide
+ * record of which policy is active and publishes the resolved policy through the proxy environment
+ * that both this process and its children observe.
+ *
+ * Node ≥ 22's built-in `fetch` honours the published proxy environment via its native
+ * `NODE_USE_ENV_PROXY` support, so no external runtime transport (undici) is imported or installed
+ * here: the pure {@link ProxyPolicy} half stays loadable anywhere, and the whole forward path is
+ * covered by the one environment answer this half publishes.
+ * @module @flowforge/http-proxy/install
+ */
+
+import {
+  isSupportedProxyUrl,
+  POLICY_ENV_NAMES,
+  PROXY_ENV_NAMES,
+  proxyForUrl,
+  resolveProxyPolicy,
+  type EnvLookup,
+  type ProxyPolicy,
+} from './policy.ts'
+
+
+/** The active policy, or `undefined` until one is installed. Process-wide, like the environment it tracks. */
+let active: ProxyPolicy | undefined
+
+/**
+ * The proxy environment as the user exported it, or `undefined` when no policy is installed.
+ *
+ * Owned by the OUTERMOST install: one layered over the launcher's would otherwise record the outer
+ * policy's published values as if the user had written them, and
+ * hand every child a normalization the user never asked for.
+ *
+ * {@link proxyEnvironmentForChild} keeps a value the user set rather than the one this process resolved from
+ * it, so a SOCKS proxy `curl` can use is not replaced by an HTTP proxy named for another scheme.
+ */
+let inheritedProxyEnv: Readonly<Record<string, string | undefined>> | undefined
+
+/**
+ * How this process must send one request under an installed policy.
+ *
+ * Node ≥ 22 routes by the published environment itself, so the route is a pure decision
+ * (no transport handle): a caller branches on whether a URL goes through the proxy.
+ */
+export type ProxyRoute =
+  | { readonly proxied: true; readonly proxy: string }
+  | { readonly proxied: false }
+
+/** A route that sends nothing through a proxy, shared because it carries no per-request state. */
+const DIRECT_ROUTE: ProxyRoute = { proxied: false }
+
+/**
+ * Decide how to send one request under the installed policy.
+ *
+ * @param url - the request URL.
+ * @returns the route with its proxy URL, or the direct route.
+ */
+export function proxyRouteFor(url: URL): ProxyRoute {
+  const policy = active
+  if (policy === undefined) return DIRECT_ROUTE
+  const proxy = proxyForUrl(policy, url)
+  return proxy === undefined ? DIRECT_ROUTE : { proxied: true, proxy }
+}
+
+/**
+ * Publish a policy through the proxy environment variables, which is how the consumers that read an
+ * environment rather than a policy object — such as spawn-these-options and every spawned child — see
+ * the one resolved answer, including the `ALL_PROXY` fallback and the merged loopback bypass that
+ * neither derives on its own.
+ *
+ * @param policy - the policy to publish.
+ * @returns a function restoring every name this call changed.
+ */
+function applyPolicyEnv(policy: ProxyPolicy): () => void {
+  const previousInherited = inheritedProxyEnv
+  inheritedProxyEnv = previousInherited ?? snapshotProxyEnv()
+  const published: Record<string, string | undefined> = {}
+  for (const [field, names] of Object.entries(POLICY_ENV_NAMES)) {
+    const value = policy[field as keyof typeof POLICY_ENV_NAMES]
+    for (const name of names) published[name] = value
+  }
+  const restore = writeProxyEnv(published)
+  return () => {
+    restore()
+    inheritedProxyEnv = previousInherited
+  }
+}
+
+/**
+ * Read every proxy name this package publishes, as `process.env` holds it now.
+ *
+ * @returns one entry per name in {@link POLICY_ENV_NAMES}; `undefined` marks an absent name.
+ */
+function snapshotProxyEnv(): Record<string, string | undefined> {
+  const snapshot: Record<string, string | undefined> = {}
+  for (const names of Object.values(POLICY_ENV_NAMES)) {
+    for (const name of names) snapshot[name] = process.env[name]
+  }
+  return snapshot
+}
+
+/**
+ * Set every proxy name to the value `values` holds for it, removing a name whose value is `undefined`.
+ *
+ * @param values - the value each name in {@link POLICY_ENV_NAMES} should hold.
+ * @returns a function restoring every name to what it held before this call.
+ */
+function writeProxyEnv(values: Readonly<Record<string, string | undefined>>): () => void {
+  // Snapshot EVERY name before writing any of them. Windows folds environment names case-insensitively,
+  // so reading the uppercase spelling after writing the lowercase one would read back the value just
+  // written and restore the policy instead of the user's environment.
+  const previous = snapshotProxyEnv()
+  for (const name of Object.keys(previous)) {
+    const value = values[name]
+    if (value === undefined) Reflect.deleteProperty(process.env, name)
+    else process.env[name] = value
+  }
+  return () => {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) Reflect.deleteProperty(process.env, name)
+      else process.env[name] = value
+    }
+  }
+}
+
+/**
+ * Install `policy` as this process's active outbound proxy policy.
+ *
+ * The policy is published through the proxy environment the process observes and its children
+ * inherit. A policy that proxies nothing leaves the environment untouched.
+ *
+ * A worker thread has its own `globalThis` and so its own environment-surface; installing here does
+ * not reach it. A worker that needs the policy has to be handed one explicitly and install it itself.
+ *
+ * @param policy - the resolved policy to install.
+ * @returns a disposer restoring the previous policy and environment.
+ */
+async function installGlobalProxy(policy: ProxyPolicy): Promise<() => Promise<void>> {
+  const previousPolicy = active
+  if (policy.source === 'none') {
+    // A direct policy mounted over an installed one returns the user's own values to the
+    // environment, so a spawned child stops inheriting a normalization no active policy stands
+    // behind. With nothing installed there is nothing to displace.
+    const restoreEnv = inheritedProxyEnv === undefined ? undefined : writeProxyEnv(inheritedProxyEnv)
+    active = policy
+    return async () => {
+      active = previousPolicy
+      restoreEnv?.()
+    }
+  }
+  const restoreEnv = applyPolicyEnv(policy)
+  active = policy
+  return async () => {
+    active = previousPolicy
+    restoreEnv()
+  }
+}
+
+
+
+
+/**
+ * The proxy environment a spawned child needs.
+ *
+ * A child inherits the parent environment, which this process rewrote to its own resolved policy.
+ * Handing that normalization straight through would replace values the user set for other tools, so
+ * each proxy name the user exported is restored to what they wrote: a SOCKS proxy `curl` uses is
+ * not swapped for the HTTP one this package fell back to for that scheme.
+ *
+ * A scheme the user named in neither casing carries the resolved value instead of being removed.
+ * Without that the child's routing silently diverges from its parent's: `NODE_USE_ENV_PROXY` does
+ * not read `ALL_PROXY`, so a child of a parent that resolved its proxy from that name would connect
+ * directly while the parent proxies.
+ *
+ * The bypass list is always the resolved one. It only ever adds the loopback entries to what
+ * the user wrote, so nothing is lost, and the child stops sending its own localhost traffic to a
+ * proxy that cannot route it.
+ *
+ * The flag reaches only Node 22.21+ and 24+; an older runtime keeps that child direct. Such a child
+ * also matches bypass entries with Node's own `NO_PROXY` rules, which differ from this package's in
+ * their separators and IPv4-range support. Non-Node children (curl, git, pnpm) ignore the flag and
+ * read the variables themselves.
+ *
+ * The flag is withheld when a proxy value the child receives is one this package refused. Node
+ * parses `HTTP_PROXY` and `HTTPS_PROXY` under that flag before running the program, and exits on a
+ * scheme other than `http:` or `https:` — so a SOCKS value kept for `curl` would stop every Node
+ * child from starting. Without the flag such a child connects directly, as this process already
+ * reported for that scheme, and `curl` still reads the value it was kept for.
+ *
+ * A worker thread is deliberately NOT served here — it must not receive a proxy URL that may carry
+ * credentials.
+ *
+ * @returns names to apply to the child environment, where `undefined` means remove, or an empty
+ *   object when no proxy is active.
+ */
+export function proxyEnvironmentForChild(): Readonly<Record<string, string | undefined>> {
+  const policy = active
+  const inherited = inheritedProxyEnv
+  if (policy === undefined || policy.source === 'none' || inherited === undefined) return {}
+  const overlay: Record<string, string | undefined> = { NODE_USE_ENV_PROXY: '1' }
+  for (const [field, names] of Object.entries(POLICY_ENV_NAMES)) {
+    const resolved = policy[field as keyof typeof POLICY_ENV_NAMES]
+    // Naming a scheme in either casing claims that scheme: the child then gets exactly what the
+    // user wrote, in the casing they wrote it, rather than a value derived for this process.
+    const named = field !== 'noProxy' && names.some(name => inherited[name] !== undefined)
+    for (const name of names) overlay[name] = named ? inherited[name] : resolved
+  }
+  const parsedByNode = [...POLICY_ENV_NAMES.httpProxy, ...POLICY_ENV_NAMES.httpsProxy]
+  if (parsedByNode.some(name => overlay[name] !== undefined && !isSupportedProxyUrl(overlay[name]))) {
+    delete overlay.NODE_USE_ENV_PROXY
+  }
+  return overlay
+}
+
+/**
+ * Resolve this process's proxy policy from `env` and install it.
+ *
+ * Resolution, reporting, and installation are one operation because no caller needs them apart: the
+ * launcher does all three in sequence before the first plugin mounts, and a policy resolved but not
+ * installed routes nothing.
+ *
+ * A value the environment supplies but this package cannot use is reported and skipped rather than
+ * thrown: the variable may have been exported for another tool, and a proxy the harness cannot use
+ * must not stop the agent from starting.
+ *
+ * @param env - the launch environment, whose own layering already prefers real variables over `.env` files.
+ * @param report - receives one message per rejected value, in the order the values were considered.
+ * @returns a disposer restoring the previous policy and environment.
+ */
+export async function installProxyFromEnvironment(
+  env: EnvLookup,
+  report: (message: string) => void,
+): Promise<() => Promise<void>> {
+  const { policy, diagnostics } = resolveProxyPolicy(env)
+  for (const diagnostic of diagnostics) report(diagnostic.message)
+  return await installGlobalProxy(policy)
+}
+
+/**
+ * The environment overlay that removes every proxy name from a spawned child.
+ *
+ * A process that replays a recorded session must reach its own fixture server, not the proxy a
+ * developer or a CI runner exported; `undefined` is how a spawn removes a name it inherits.
+ *
+ * @returns one entry per proxy name, each `undefined`.
+ */
+export function clearedProxyEnv(): Record<string, undefined> {
+  return Object.fromEntries(PROXY_ENV_NAMES.map(name => [name, undefined]))
+}

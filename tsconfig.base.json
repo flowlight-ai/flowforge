@@ -1436,6 +1436,69 @@
       ],
       "@flowforge/webhook-github": [
         "./packages/webhook/webhook-github/src/index.ts"
+      ],
+      "@flowforge/crypto": [
+        "./packages/util/crypto/src/index.ts"
+      ],
+      "@flowforge/time": [
+        "./packages/util/time/src/index.ts"
+      ],
+      "@flowforge/values": [
+        "./packages/util/values/src/index.ts"
+      ],
+      "@flowforge/http-proxy": [
+        "./packages/util/http-proxy/src/index.ts"
+      ],
+      "@flowforge/workspace-path": [
+        "./packages/util/workspace-path/src/index.ts"
+      ],
+      "@flowforge/llm-api-extensions": [
+        "./packages/llm/api-extensions/src/index.ts"
+      ],
+      "@flowforge/llm-plugin-inventory": [
+        "./packages/llm/plugin-inventory/src/index.ts"
+      ],
+      "@flowforge/session-log-deepseek": [
+        "./packages/session/log-deepseek/src/index.ts"
+      ],
+      "@flowforge/session-turn-outline": [
+        "./packages/session/turn-outline/src/index.ts"
+      ],
+      "@flowforge/win32-process": [
+        "./packages/subprocess/win32-process/src/index.ts"
+      ],
+      "@flowforge/session-snapshot": [
+        "./packages/test-support/session-snapshot/src/index.ts"
+      ],
+      "@flowforge/directory-picker-auto": [
+        "./packages/host/directory-picker-auto/src/index.ts"
+      ],
+      "@flowforge/acp-demo": [
+        "./packages/examples/acp-demo/src/index.ts"
+      ],
+      "@flowforge/jsonrpc-demo": [
+        "./packages/examples/jsonrpc-demo/src/index.ts"
+      ],
+      "@flowforge/cats-services-panel": [
+        "./packages/cats/services-panel/src/index.ts"
+      ],
+      "@flowforge/cats-tool-usage": [
+        "./packages/cats/tool-usage/src/index.ts"
+      ],
+      "@flowforge/limb-runtime-session": [
+        "./packages/limb/runtime-session/src/index.ts"
+      ],
+      "@flowforge/cats-frustration": [
+        "./packages/cats/frustration/src/index.ts"
+      ],
+      "@flowforge/cats-bootcamp-quest": [
+        "./packages/cats/bootcamp-quest/src/index.ts"
+      ],
+      "@flowforge/cats-cloud-bridge": [
+        "./packages/cats/cloud-bridge/src/index.ts"
+      ],
+      "@flowforge/forgekin-sop-assets": [
+        "./packages/forgekin/sop-assets/src/index.ts"
       ]
     }
   }

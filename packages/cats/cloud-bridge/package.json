@@ -1,0 +1,49 @@
+{
+  "name": "@flowforge/cats-cloud-bridge",
+  "description": "FlowForge cats cloud-bridge domain — cloud-invoke bridge dispatching local invocations to a hosted (cloud) runtime when local capability is insufficient, with return-binding back to the local thread, delta-payload computation, and a conversation-host adapter. Ported from clowder-ai `cats/services/cloud-bridge` (B16). Self-contained: dispatch/return-binding/store seams are injectable ports with in-memory implementations.",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/cats/cloud-bridge"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/cloud-bridge-types.d.ts",
+      "default": "./lib/cloud-bridge-types.js"
+    },
+    "./build-delta-payload": {
+      "types": "./lib/types/build-delta-payload.d.ts",
+      "default": "./lib/build-delta-payload.js"
+    },
+    "./return-binding": {
+      "types": "./lib/types/return-binding.d.ts",
+      "default": "./lib/return-binding.js"
+    },
+    "./conversation-host-adapter": {
+      "types": "./lib/types/conversation-host-adapter.d.ts",
+      "default": "./lib/conversation-host-adapter.js"
+    },
+    "./cloud-invoke-bridge": {
+      "types": "./lib/types/cloud-invoke-bridge.d.ts",
+      "default": "./lib/cloud-invoke-bridge.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT"
+}
