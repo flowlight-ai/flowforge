@@ -34,6 +34,8 @@ export type {
   MemoryPublishPort,
   PackExporterPort,
   PackLoaderPort,
+  ProfileUpdateListQuery,
+  ProfileUpdateListResult,
   ProfileUpdatePort,
   SelfClaimPolicyPort,
 } from './ports.ts'

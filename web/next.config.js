@@ -18,7 +18,7 @@ const nextConfig = {
   poweredByHeader: false,
 
   // D28：monorepo 共享源码包经 file: 依赖 + transpile 编译同一份 TS
-  transpilePackages: ["@flowforge/config-schema"],
+  transpilePackages: ["@flowforge/config-schema", "@flowforge/terminal-panel"],
 
   // 性能优化：生产环境移除 console（保留 error）
   compiler: {

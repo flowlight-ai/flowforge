@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { GitPanel } from "./GitPanel";
 import { BrowserPanel } from "./BrowserPanel";
+import LiveTerminalPanel from "./LiveTerminalPanel";
 
 // ── 类型定义 ───────────────────────────────────────────────────────
 
@@ -453,113 +454,10 @@ function ChangesPanel({ worktreeId }: { worktreeId?: string }) {
 
 // ── 终端面板 ──────────────────────────────────────────────────────
 
-function TerminalPanel({ worktreeId }: { worktreeId?: string }) {
-  const [history, setHistory] = useState<string[]>([
-    "> 终端已就绪",
-    `> 工作区: ${worktreeId || "default"}`,
-    "> 输入命令开始...",
-  ]);
-  const [cmd, setCmd] = useState("");
-  const [busy, setBusy] = useState(false);
+// ── 终端面板（T8.4：@xterm/xterm 渲染 + @flowforge/terminal-panel seam ─
 
-  // 终端桥接：命令经 POST /api/v1/workspace/exec 在默认工作区内真实执行
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const command = cmd.trim();
-    if (!command || busy) return;
-    setCmd("");
-    setBusy(true);
-    setHistory((prev) => [...prev, `$ ${command}`]);
-    try {
-      const res = await fetch("/api/v1/workspace/exec", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const lines = [
-        ...(data.stdout || "").split(/\r?\n/).filter((l: string) => l !== ""),
-        ...(data.stderr || "").split(/\r?\n/).filter((l: string) => l !== ""),
-      ];
-      if (data.status === "timeout") lines.push("⚠ 命令执行超时");
-      if (lines.length === 0) lines.push(`(exit ${data.exit_code})`);
-      if (data.exit_code !== 0 && data.exit_code > 0) {
-        lines.push(`(exit ${data.exit_code})`);
-      }
-      setHistory((prev) => [...prev, ...lines]);
-    } catch (err) {
-      setHistory((prev) => [
-        ...prev,
-        `✗ 执行失败: ${err instanceof Error ? err.message : String(err)}`,
-      ]);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--bg)",
-        fontFamily: "var(--mono)",
-        fontSize: "12px",
-      }}
-    >
-      <div style={{ flex: 1, overflow: "auto", padding: "8px 12px" }}>
-        {history.map((line, i) => (
-          <div
-            key={i}
-            style={{
-              color: line.startsWith("$")
-                ? "var(--accent)"
-                : line.startsWith("✗") || line.startsWith("⚠")
-                  ? "var(--warn)"
-                  : "var(--text)",
-              lineHeight: 1.6,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {line}
-          </div>
-        ))}
-        {busy && (
-          <div style={{ color: "var(--muted)", lineHeight: 1.6 }}>... 执行中</div>
-        )}
-      </div>
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          padding: "6px 12px",
-          borderTop: "1px solid var(--border)",
-        }}
-      >
-        <span style={{ color: "var(--accent)" }}>$</span>
-        <input
-          type="text"
-          value={cmd}
-          onChange={(e) => setCmd(e.target.value)}
-          placeholder={busy ? "执行中..." : "输入命令..."}
-          disabled={busy}
-          style={{
-            flex: 1,
-            background: "none",
-            border: "none",
-            color: "var(--text)",
-            fontSize: "12px",
-            fontFamily: "var(--mono)",
-            outline: "none",
-          }}
-        />
-      </form>
-    </div>
-  );
+function TerminalPanel() {
+  return <LiveTerminalPanel />;
 }
 
 // ── 主面板 ────────────────────────────────────────────────────────
