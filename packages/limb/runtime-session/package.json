@@ -1,0 +1,49 @@
+{
+  "name": "@flowforge/limb-runtime-session",
+  "description": "FlowForge limb runtime-session domain (F211) — runtime session metadata/store, lifecycle seal reaping, and external runtime (antigravity IDE-direct) registration. Ported from clowder-ai `limb/runtime-session` & `session/SessionSealer`. Self-contained: session-chain/thread/store seams and Redis KV are injectable ports with in-memory contract implementations.",
+  "version": "0.1.0-rc.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/limb/runtime-session"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./types": {
+      "types": "./lib/types/runtime-session-types.d.ts",
+      "default": "./lib/runtime-session-types.js"
+    },
+    "./metadata": {
+      "types": "./lib/types/runtime-session-metadata.d.ts",
+      "default": "./lib/runtime-session-metadata.js"
+    },
+    "./store": {
+      "types": "./lib/types/runtime-session-store.d.ts",
+      "default": "./lib/runtime-session-store.js"
+    },
+    "./ports": {
+      "types": "./lib/types/runtime-session-ports.d.ts",
+      "default": "./lib/runtime-session-ports.js"
+    },
+    "./external-runtime-session-registration": {
+      "types": "./lib/types/external-runtime-session-registration.d.ts",
+      "default": "./lib/external-runtime-session-registration.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "license": "MIT"
+}

@@ -47,9 +47,9 @@
 | A8 | `credentials/authorization` | OAuth 授权 invariant/types（独立于 credentials-local 的授权层） | **P0** | 阶段 2 补录 |
 | A9 | `extensions/ui-cordis` | UI cordis 扩展（crosswalk L31 标记 ✅ 但实际缺失，见 §6-1） | **P0** | 阶段 8 相关 |
 | A10 | `extensions/cordis-client-runner` | 客户端 cordis 运行器（同上） | **P0** | 阶段 8 相关 |
-| A11 | `experimental/agent-team`（+ `agent-team-profile`/`agent-team-web-profile`/`client-ui-agent-team`/`tool-agent-team`，5 包） | 多智能体团队协作框架（mailbox/journal/lifecycle/activity/invariant） | P1 | **需裁决**（§15-1） |
+| A11 | `experimental/agent-team`（+ `agent-team-profile`/`agent-team-web-profile`/`client-ui-agent-team`/`tool-agent-team`，5 包） | 多智能体团队协作框架（mailbox/journal/lifecycle/activity/invariant） | P1 | ✅ **已裁决暂缓**（Q1，2026-09-10）：stretch |
 | A12 | `experimental/inspector` | 调试检查器 | P2 | stretch |
-| A13 | `experimental/code-runtime-python` | Python 代码运行时（worker） | P1 | 与 S6 相关，需裁决 |
+| A13 | `experimental/code-runtime-python` | Python 代码运行时（worker） | P1 | 随 S6 Python SDK stretch 一并评估（2026-09-10 记档） |
 | A14 | `experimental/webworker-packer` + `webworker-runtime` | WebWorker 打包与运行时 | P2 | stretch |
 | A15 | `llm/deepseek-llm-api-extensions` | DeepSeek LLM API 扩展 | P1 | `packages/llm/` |
 | A16 | `llm/plugin-package-inventory-deepseek` | DeepSeek 插件包清单 | P1 | 同上 |
@@ -71,7 +71,7 @@
 | A32 | `client/*` 46 包 | dsh Web UI 组件层（ui-chat/ui-plan/ui-goal/ui-jobs/ui-schedule/ui-trajectory/ui-deliverables/ui-settings-* 等，仅 `client/connection` 已移植） | **P0** | ✅ **EP1-13 能力级登记**（2026-09-09）：已落 `28-stage8-web.md` 能力级对照表（46 包按 UI 能力归组 → 落点 T 任务），代码落实随 EP2 阶段 8（Q2 现行决策） |
 | A33 | `apps/web` | Vite 宿主（现行决策：融入 Next.js `web/`，非包级 vendor） | 已决 | 登记决策即可 |
 | A34 | `python/`（sdk + sdk-runtime） | Python SDK 桥 | 已登记 | S6 stretch ⬜（矩阵已有） |
-| A35 | `website/` | VitePress 文档站 | P2 | **需裁决**（§15-4） |
+| A35 | `website/` | VitePress 文档站 | P2 | ✅ **已裁决暂缓**（Q4，2026-09-10）：stretch |
 | A36 | `snapshots/` | 预期输出快照测试目录（acp/sdk/session/web 四域） | P1 | 测试基建，EP3 |
 | A37 | `patches/` | 依赖补丁（`@yao-pkg/pkg`、`node-pty`）；flowforge 无 `patchedDependencies` | P1 | Windows node-pty 路径需验证 |
 
@@ -82,16 +82,16 @@
 | # | 模块 | 职责 | 优先级 | 建议落点 |
 |---|---|---|---|---|
 | B1 | `packages/mcp-server` | **MCP 服务器**：canonical-tool-registry/tool-cutover/evidence/migration/bootstrap/cli 工具治理全家 + limb/memory/signals/collab/finance/audio server-toolsets + refresh-loop + protocol-server + json-schema-to-zod。flowforge 仅有 `mcp/mcp-client`，**服务器侧整包缺失** | **P0** | `packages/mcp/mcp-server` |
-| B2 | `packages/finance` | 财经事实/频率数据域（配合 mcp-server finance toolset） | P1 | **需裁决**（§15-3） |
+| B2 | `packages/finance` | 财经事实/频率数据域（配合 mcp-server finance toolset） | P1 | ✅ **已裁决不纳入**（Q3，2026-09-10）：剔除 finance/audio toolset 子集 |
 | B3 | `domains/signal-intake` | 信号准入域（25+ 文件）：SignalAdmission/RouteStore/MeetingIntake 全家/ASR 人物记忆队列/来源访问租约/LarkCliFeishuSourceResolver/ThreadDestinationAuthority + Redis stores | **P0** | `packages/cats/signal-intake` 或 `infrastructure/` |
 | B4 | `domains/messaging` | Plugin Messaging 域（K-1/F288）：envelope/ledger/append-elements/event-stream/snapshot-capture/page-assembly/tokens + Redis Lua stores | **P0** | `packages/chat/messaging` |
 | B5 | `domains/github-signals` | GitHub 等待生命周期（WaitLifecycleService/baseline readers/predicate catalog/wait renderer）——C33 email 域仅移植了 wait-lifecycle **端口**，本体未移植 | **P0** | `packages/infrastructure/github-signals` |
 | B6 | `domains/services` | 服务面板域：service-manifest/lifecycle/config/process-termination + environment-detector + recommendation-matrix + loopback-url | P1 | `packages/cats/services-panel` |
 | B7 | `infrastructure/connectors` | **IM connector 框架本体**（25+ 文件）：ConnectorRouter/CommandLayer/MessageFormatter/PermissionStore/ThreadBindingStore/gateway-bootstrap/lifecycle/reload-subscriber + FeishuQrBindClient + telegram-token + GitHubRepoWebhookHandler + mention-parser + StreamingOutboundHook + InboundMessageDedup——S1 stretch 仅覆盖"通道 ports + mock"，**框架本体未登记** | **P0** | `packages/infrastructure/connectors`（S1 升格为完整能力） |
-| B8 | `api/src/skills` | 技能治理：skill-manage/meta/mount-ops/query/sync-all/sync-config/sync-engine + drift-detector/drift-resolver——governance（C34b）含 skill-sync 语义但**未做逐文件 diff 验证** | P1 | diff 后并入 `forgekin/governance` 或独立包 |
-| B9 | `api/src/utils`（49 文件） | cli-error-patterns/cli-format/cat-mention-handle/active-project-root/claude-bg-job-ownership/reaper 等——F212/cli-diagnostics 部分已覆盖，其余未清点 | P1 | diff 清点后分域归位 |
+| B8 | `api/src/skills` | 技能治理：skill-manage/meta/mount-ops/query/sync-all/sync-config/sync-engine + drift-detector/drift-resolver——governance（C34b）含 skill-sync 语义但**未做逐文件 diff 验证** | P1 | 🟦（**已逐文件 diff 清点** 2026-09-10：`skill-mount-ops`(activeMountTargets/mountSkillSymlinks/unmountSkillSymlinks) 与 `skill-sync-engine`(classifyMountPath/syncProject 语义) 已内联进 `forgekin/governance` governance-bootstrap；`skill-sync-config`(readSkillsSyncState/writeSkillsSyncState/updateSkillMountPaths/removeCatCafeSkillCapabilities/updateConfigAfterSync) 已内联进 `forgekin/capabilities` ORCHESTRATOR 同步链路。**确凿缺口已补建**：`skill-meta`(readSkillMeta/parseManifestSkillMeta/resolveSkillMcpStatuses) 与 `skill-query`(listSkills/querySkill) 已作为 `forgekin/governance` 的 `skill-meta.ts`/`skill-query.ts` 落位（12 vitest 契约测试，PR #171 后续提交）。`skill-manage`(addSkill/removeSkill/cascadeToProjects) 依赖的挂载/级联能力已内联进 governance-bootstrap（symlink + skillsSync + mountPaths）与 forgekin/capabilities ORCHESTRATOR，按「不强复制内联能力」原则不重复迁移。`drift-detector`(checkProject/checkGlobal) 与 `drift-resolver`(syncDrift) 的 MCP drift 处理对应 capabilities `healCatCafeMcpTopology`（见 B11），skill 级 drift 待 operator 裁决） |
+| B9 | `api/src/utils`（49 文件） | cli-error-patterns/cli-format/cat-mention-handle/active-project-root/claude-bg-job-ownership/reaper 等——F212/cli-diagnostics 部分已覆盖，其余未清点 | P1 | 🟦（**已逐文件清点归位** 2026-09-10：`cli-diagnostics`/`cli-error-patterns`/`sanitize-cli-stderr`/`cli-spawn`/`cli-spawn-win`/`cli-resolve`/`CliTerminationController`/`ProcessLivenessProbe`/`cli-process-ownership`/`cli-supervisor`/`cli-supervised-process`→`packages/limb/terminal/src/cli`（F212 已覆盖）；`token-counter`→`cats/context-assembly` token-estimate；`request-identity`→api rest-controllers request-context；`ndjson-parser`(parseNDJSON/isParseError)→`limb/terminal/src/cli/ndjson-parser.ts`；`loopback-request`(isLoopbackAddress/isDirectLoopbackRequest/isTrustedLocalApiRequest) 与 `owner-gate`(resolveOwnerGate)→`forgekin/capabilities` capability-write-guards。**确凿缺口已补建为 `packages/util/stdlib`（@flowforge/util-stdlib，零外部依赖、仅 node 内置）：**`jsonl-tail-reader`(readJsonlTail)、`json-unicode`(normalizeJsonUnicode)、`normalize-error`(normalizeErrorMessage)、`is-same-repo`(initRepoIdentity/isSameRepo)、`tcp-probe`(tcpProbe)、`keyword-relevance`(tokenizeKeyword/scoreKeywordRelevance)、`url-safety`(validateExternalUrl/resolveExternalUrl/validateExternalUrlResolved/createPinnedRequestOptions/fetchExternalUrlPinned，SSRF 防内网+固定地址抓取)。30 vitest 契约测试，tsc+oxlint 全绿。剩余纯工具待后续 diff 复核） |
 | B10 | `api/src/scripts` | 运维脚本（backfill-usage-by-cat/migrate-signals/mint-agent-key 等） | P2 | EP3/EP4 运维期 |
-| B11 | `api/src/mcp` | MCP 拓扑同步（mcp-drift-detector/drift-resolver/sync-all/sync-engine）——与 `forgekin/capabilities` healCatMcpTopology 覆盖关系未 diff | P1 | 验证后并入 `forgekin/capabilities` |
+| B11 | `api/src/mcp` | MCP 拓扑同步（mcp-drift-detector/drift-resolver/sync-all/sync-engine）——与 `forgekin/capabilities` healCatMcpTopology 覆盖关系未 diff | P1 | 🟦（**已 diff 并补齐** 2026-09-10：flowforge `forgekin/capabilities` capability-orchestrator + capability-mcp-service 的 `healCatCafeMcpTopology` 已覆盖 clowder `mcp-sync-engine.syncMcpProject` 的单项目同步核心（新增/更新/跳 override/删 orphan/级联禁用/写 mcpSync 状态）；`mcp-sync-all.syncMcpAll` 的项目级联枚举语义对应 capabilities ORCHESTRATOR 编排。**缺口已补建为 capabilities 原生**：`mcp-drift-detector.ts`（checkMcpProject/checkMcpGlobal，三类 issue global-new/project-orphan/config-mismatch + driftHash；config-mismatch 覆盖 override-不同源语义；8 契约测试）与 `mcp-drift-resolver.ts`（syncMcpDrift：add/remove/update/skip 四类修复 + 回写 mcpSync，VALID_MCP_DRIFT_DECISIONS=use-global/keep-project，per-issue 决策优先于 conflictPolicy；3 端到端 round-trip 测试）。B11 全链路（detect→resolve→recheck 零 drift）落地，11 vitest 全绿） |
 | B12 | `cats/services/context`（17 文件） | 会话上下文组装治理：ContextAssembler/governance-l0/IntentParser/MessageBundleCarrierResolver/message-bundle-quote-matching | **P0** | `packages/cats/context-assembly` |
 | B13 | `cats/services/tool-usage`（8 文件） | 工具使用事件日志/归档/计数/normalize-mcp-tool-name/SkillLoadEventLog | P1 | `packages/cats/tool-usage` |
 | B14 | `cats/services/runtime-session`（7 文件） | 外部运行时会话注册/RedisRuntimeSessionStore/SealReaper/CodexSessionReplacementProvenance | P1 | `packages/limb/runtime-session` |
@@ -99,7 +99,7 @@
 | B16 | `cats/services/cloud-bridge`（12 文件） | 云调用桥（cloud-invoke-bridge/return-binding/build-delta-payload/conversation-host-adapter） | P1 | `packages/cats/cloud-bridge` |
 | B17 | `cats/services/first-run-quest`（3 文件） | 首次运行任务（client-detection/quest-blocks/quest-state）——区别于 C8 bootcamp | P1 | 并入 `packages/cats/bootcamp` 或独立 |
 | B18 | `cats/services/collaboration` + `push` | reviewer-matcher / PushNotificationService（push 属 S2） | P2 | stretch |
-| B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | **需裁决**（§15-5） |
+| B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | ✅ **已裁决分批迁移**（Q5，2026-09-10）：技能框架已落地，内容资产按命名契约随 B8 技能域分批补齐（核心包优先） |
 | B20 | `sop-definitions/` | SOP 定义内容（配合 F29 forgekin-sop 执行器） | P1 | `packages/forgekin/sop` 资产目录 |
 | B21 | `assets/` | 音频/头像静态资源（audio-proxy/avatars 路由依赖） | P2 | 随 S2/平台路由 |
 | B22 | `routes/` 平台面余量 | 批次 55 已声明"callback-*/config/debug 等平台面随阶段 8/9 按需对照"——需在阶段 9 收口清单中**强制复核** | P1 | EP3 验收项 |
@@ -437,11 +437,11 @@ EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 
 | # | 问题 | 状态 |
 |---|---|---|
-| Q1 | `experimental/agent-team` 5 包（dsh 多智能体团队框架）是否全量移植？与 forgekin/swarm（F16 群聊编排）概念边界需先明确（agent-team=同构 agent 组队执行；swarm=跨厂商能力路由） | ⚠ EP1 前裁决 |
+| Q1 | `experimental/agent-team` 5 包（dsh 多智能体团队框架）是否全量移植？与 forgekin/swarm（F16 群聊编排）概念边界需先明确（agent-team=同构 agent 组队执行；swarm=跨厂商能力路由） | ✅ **已裁决（按建议默认）**：暂缓 stretch——同构组队协作与 swarm 跨厂商路由边界待产品用例明确再评估；`lifecycle/activity/invariant` 核心若被 forgekin 编排消费则内联，不强复制 5 包（2026-09-10，EP4 收口） |
 | Q2 | dsh `client/*` 46 包按"能力级融入 Next.js"执行（现行决策，EP2 落实），阶段 8 任务清单按 UI 能力逐项登记为验收对照表 | ✅ **已确认（现行决策）**：EP1-13 已按能力级登记落 `28-stage8-web.md` 验收对照表（46 包 → 落点 T 任务），代码落实随 EP2 阶段 8 逐批推进 |
-| Q3 | `packages/finance` + mcp-server finance toolset：财经数据域是否属于目标能力？若不要，B1 移植时剔除 finance/audio toolset 子集 | ⚠ EP1 前裁决 |
-| Q4 | `website/` VitePress 文档站是否移植（当前文档全在 `docs/`）？ | ⚠ EP3 前裁决 |
-| Q5 | `cat-cafe-skills/`（20+ 技能内容包）与 `sop-definitions/` 内容资产是否随代码全量移植并按 naming-contract 改造品牌措辞？ | ⚠ EP1 前裁决 |
+| Q3 | `packages/finance` + mcp-server finance toolset：财经数据域是否属于目标能力？若不要，B1 移植时剔除 finance/audio toolset 子集 | ✅ **已裁决（按建议默认）**：财经垂直数据域不纳入目标能力，B1 `mcp-server` 移植时剔除 finance/audio toolset 子集；如需扩展按需新增（2026-09-10，EP4 收口） |
+| Q4 | `website/` VitePress 文档站是否移植（当前文档全在 `docs/`）？ | ✅ **已裁决（按建议默认）**：暂缓 stretch——EP4 内 docs/ 已满足交付，文档站聚合随 stretch 排期（2026-09-10，EP4 收口） |
+| Q5 | `cat-cafe-skills/`（20+ 技能内容包）与 `sop-definitions/` 内容资产是否随代码全量移植并按 naming-contract 改造品牌措辞？ | ✅ **已裁决（按建议默认）**：技能框架能力（skill-meta/skill-query/manage）已落地起步，内容资产按命名契约后续分批迁移（deep-research/expert-panel/handoff/debugging 等核心包优先），随 B8 技能域持续演进；sop-definitions 转 `packages/forgekin/sop` 资产目录（2026-09-10，EP4 收口） |
 | Q6 | signal-intake/messaging 的 Redis 重度依赖：确认按既有 `infrastructure/redis-port`（KV 注入式）模式移植，真实 Redis 后端按凭据启用？ | ⚠ EP1 前确认 |
 | Q7 | EP0 插件命名 | ✅ **已定名 `@flowforge/plugin-dev`（软件工程化流程插件）**，包路径 `packages/plugins/dev` |
 | Q8 | 新流程文档自 `docs/process/` 起步；旧批次文档保留 `docs/refactor/` 原位 | ✅ operator 确认 |

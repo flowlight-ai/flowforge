@@ -950,6 +950,72 @@
     },
     {
       "path": "./packages/plugins/video-gen/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/util/crypto"
+    },
+    {
+      "path": "./packages/util/time"
+    },
+    {
+      "path": "./packages/util/values"
+    },
+    {
+      "path": "./packages/util/http-proxy"
+    },
+    {
+      "path": "./packages/util/workspace-path"
+    },
+    {
+      "path": "./packages/util/stdlib"
+    },
+    {
+      "path": "./packages/llm/api-extensions"
+    },
+    {
+      "path": "./packages/llm/plugin-inventory"
+    },
+    {
+      "path": "./packages/session/log-deepseek"
+    },
+    {
+      "path": "./packages/session/turn-outline"
+    },
+    {
+      "path": "./packages/subprocess/win32-process"
+    },
+    {
+      "path": "./packages/test-support/session-snapshot"
+    },
+    {
+      "path": "./packages/host/directory-picker-auto"
+    },
+    {
+      "path": "./packages/examples/acp-demo"
+    },
+    {
+      "path": "./packages/examples/jsonrpc-demo"
+    },
+    {
+      "path": "./packages/cats/services-panel"
+    },
+    {
+      "path": "./packages/cats/tool-usage"
+    },
+    {
+      "path": "./packages/limb/runtime-session"
+    },
+    {
+      "path": "./packages/cats/frustration"
+    },
+    {
+      "path": "./packages/cats/bootcamp-quest"
+    },
+    {
+      "path": "./packages/cats/cloud-bridge"
+    },
+    {
+      "path": "./packages/forgekin/sop-assets"
     }
   ]
 }
