@@ -731,8 +731,15 @@ _ff_mgr_doctor_check() {
     echo -e "  ${Y}⚠ L3 ff_doctor 不可用(node 缺失或非 dev 仓), 跳过合规校验${N}" >&2
     return 0
   fi
-  if ! node "$docbin" all --repo "$d"; then
-    echo -e "  ${R}✗ L3 合规拦截: ff_doctor all 未通过, 提交已中止${N}" >&2
+  local rc
+  node "$docbin" all --repo "$d" || rc=$?
+  # 退出码 2 = ff_doctor 用法错误(节点配置问题): 放行, 避免误拦 (设计 §4 契约)
+  if [ "${rc:-0}" -eq 2 ]; then
+    echo -e "  ${Y}⚠ L3 ff_doctor 用法错误(rc=2), 放行(不拦截)${N}" >&2
+    return 0
+  fi
+  if [ "${rc:-0}" -ne 0 ]; then
+    echo -e "  ${R}✗ L3 合规拦截: ff_doctor all 未通过(rc=${rc}), 提交已中止${N}" >&2
     echo -e "  ${Y}  强制跳过: 追加 --no-check, 或设置 FF_MGR_DOCTOR=0${N}" >&2
     exit 1
   fi

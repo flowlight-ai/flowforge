@@ -99,6 +99,18 @@ warned=0; case "$out" in *跳过合规校验*) warned=1;; esac
   || bad "缺工具链 → 期望 fail-open + warning，got exit=$ec before=$before after=$after warned=$warned; out=$out"
 rm -rf "$r"
 
+echo "── 场景 6/6：用法错误(rc=2) 放行不拦截 ──"
+r=$(mktemp -d); make_harness "$r" 2
+echo second >> "$r/flowlight/harnessrepo/a.txt"
+git -C "$r/flowlight/harnessrepo" add a.txt
+before=$(heads "$r/flowlight/harnessrepo")
+STUB_EXIT=2 bash "$r/flowlight/harnessrepo/mgr" commit "chore(y): b [sherlock]" >/dev/null 2>&1
+ec=$?
+after=$(heads "$r/flowlight/harnessrepo")
+[ "$ec" -eq 0 ] && [ "$after" -eq $((before+1)) ] && ok "rc=2 → 放行并提交成功($before→$after)" \
+  || bad "rc=2 → 期望放行提交，got exit=$ec before=$before after=$after"
+rm -rf "$r"
+
 echo ""
 echo "=========================================="
 echo "结果：$PASS 通过 / $FAIL 失败"
