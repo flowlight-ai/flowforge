@@ -54,7 +54,7 @@ function globalConfig(): CapabilitiesConfig {
         enabled: true,
         globalEnabled: true,
         source: 'cat-cafe',
-        mcpServer: { command: 'node', args: ['a.js'], enabled: true, source: 'cat-cafe' },
+        mcpServer: { command: 'node', args: ['a.js'] },
       },
       {
         id: 'common',
@@ -62,7 +62,7 @@ function globalConfig(): CapabilitiesConfig {
         enabled: true,
         globalEnabled: true,
         source: 'cat-cafe',
-        mcpServer: { command: 'node', args: ['shared.js'], enabled: true, source: 'cat-cafe' },
+        mcpServer: { command: 'node', args: ['shared.js'] },
       },
     ],
   };
@@ -78,8 +78,8 @@ function projectConfig(): CapabilitiesConfig {
         enabled: true,
         globalEnabled: true,
         source: 'cat-cafe',
-        mcpServer: { command: 'node', args: ['shared-old.js'], enabled: true, source: 'cat-cafe' },
-        mcpServerOverride: { command: 'node', args: ['project-own.js'], enabled: true, source: 'external' },
+        mcpServer: { command: 'node', args: ['shared-old.js'] },
+        mcpServerOverride: { command: 'node', args: ['project-own.js'] },
       },
       {
         id: 'orphan',
@@ -87,7 +87,7 @@ function projectConfig(): CapabilitiesConfig {
         enabled: true,
         globalEnabled: true,
         source: 'cat-cafe',
-        mcpServer: { command: 'node', args: ['gone.js'], enabled: true, source: 'cat-cafe' },
+        mcpServer: { command: 'node', args: ['gone.js'] },
       },
     ],
     mcpSync: {
