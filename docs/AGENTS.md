@@ -44,6 +44,7 @@
 - **规则：** AI 工具动手前必须先读 `docs/rules/` 下规范与 `docs/prompts/` 下提示词模板；本仓库 `docs/` 只记录 flowforge 平台自身内容，与其他项目解耦。
 - **规则：** 涉及 Git 远程操作（commit/push/PR）一律走 `./mgr`，禁止 AI 直接调 `git push` 或 API 绕过规范检查（见根目录 `AGENTS.md`）。
 - **规则：** 提交前必须运行 lint 与测试（`refactor/04-code-standards.md` R20/R21）；文档改动同样纳入 `./mgr commit` 规范检查。
+- **规则：** `./mgr commit`/`./mgr sync` 提交前置 L3 合规拦截 `ff_doctor all`（`rules/13-dev-process.md` L3，2026-09-10 接线）：活跃实例状态或计划违规即中止；仅特殊场景用 `--no-check` 或 `FF_MGR_DOCTOR=0` 显式跳过（会打印 warning）。
 
 ---
 
