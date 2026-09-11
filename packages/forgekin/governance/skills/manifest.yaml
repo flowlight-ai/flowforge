@@ -60,3 +60,53 @@ skills:
       - "报错"
       - "test failure"
       - "unexpected behavior"
+  tdd:
+    category: "开发流程"
+    description: >
+      Red-Green-Refactor for changes with behavior or regression risk.
+      Use when: adding observable behavior, fixing a bug, or changing logic not already covered by a precise executable check.
+      Not for: pure docs/research, deterministic generated-artifact refreshes, or mechanical changes already covered by an existing checker.
+      Output: observed RED (new test or existing failing check) → minimal GREEN → refactor under protection.
+    triggers:
+      - "写代码"
+      - "test first"
+      - "TDD"
+      - "红绿重构"
+  writing-plans:
+    category: "开发流程"
+    description: >
+      将 spec/需求拆分为可执行的分步实施计划。
+      Use when: 有 spec 或需求，准备动手前需要拆分步骤。
+      Not for: trivial 改动（≤5 行）、已有详细计划。
+      Output: 分步实施计划（含 TDD 步骤和检查点）。
+    triggers:
+      - "写计划"
+      - "implementation plan"
+      - "拆分步骤"
+  quality-gate:
+    category: "开发流程"
+    description: >
+      完成声明前的按需自检：愿景对照 + spec 合规 + 风险匹配验证。
+      Use when: 准备对交付作完成声明、需要整理风险匹配的自证。
+      Not for: 收到 review 反馈（用 receive-review）、merge（用 merge-gate）。
+      Output: Spec 合规报告（含愿景覆盖度）。
+    triggers:
+      - "开发完了"
+      - "准备 review"
+      - "自检"
+      - "声称完成"
+  merge-gate:
+    category: "开发流程"
+    description: >
+      合入 main：按行为 / 数据 / 安全 / 契约 / 不可逆风险选择 targeted 或 full gate，
+      并消费有客观触发理由的独立 review source。
+      Use when: 选中的 reviewer 放行后准备合入、开 PR 或准备 merge。
+      Not for: 开发中、review 未通过、自检未完成。
+      Output: PR merged + worktree cleaned。
+    triggers:
+      - "合入 main"
+      - "merge"
+      - "准备合入"
+      - "开 PR"
+      - "cloud review"
+      - "gh pr create"
