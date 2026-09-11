@@ -21,6 +21,8 @@
 #   ./mgr commit "type(scope): 描述 [署名]"   提交到当前平台 (强制规范检查)
 #   ./mgr push [--pr] [--title "PR标题"] [--body "PR描述"]   push 当前分支
 #   ./mgr pr "type(scope): 描述 [署名]" [--body "PR描述"]   创建PR (当前平台)
+#   ./mgr pr-update [PR号|auto] [--title "新标题"] [--body "新描述"|--body-file 文件]  更新已有PR标题/描述
+#   ./mgr pr-merge  [PR号|auto] [--method merge|squash|rebase] [--prune] [--yes] [--dry-run]  合入已有PR
 #   ./mgr sync "type(scope): 描述 [署名]" [--body "PR描述"]  提交+push到固定远端分支sync/<agent>+PR (本地不切换)
 #   ./mgr merge-cross [--dry-run]   跨平台单向合并 (当前平台→对端, 手动触发)
 #   ./mgr mirror-setup          配置双端互指 mirror 远程
@@ -116,7 +118,7 @@ _cur_base() { [ "$CURRENT_SIDE" = "gitee" ] && echo "master" || echo "main"; }
 _extract_agent() { echo "$1" | grep -oE '\[[a-z0-9]+\]$' | tr -d '[]'; }
 
 # 构造 JSON 字符串 (转义 \ " 与换行), 避免依赖 python3 (本环境 python3 不可用)
-_json_str() { local s="$1"; s="${s//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//$'\n'/'\\n'}"; printf '"%s"' "$s"; }
+_json_str() { local s="$1"; s="${s//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//$'\r'/}"; s="${s//$'\n'/\\n}"; printf '"%s"' "$s"; }
 
 # ═══════════════════════════════════════════════════════════════
 #  平台感知命令 (仅操作当前平台)
@@ -781,6 +783,164 @@ _create_pr() {
   fi
 }
 
+# ── PR 更新 / 合入 (pr-update / pr-merge) ───────────────────────
+# 解析 PR 号: 显式给号则用之; auto/缺省 → 按当前分支查本平台 open PR
+_resolve_pr_number() {
+  local n="$1" d="$2" num="${3:-}"
+  if [ -n "$num" ] && [ "$num" != "auto" ]; then echo "$num"; return 0; fi
+  local b; b=$(_git "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+  local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
+  local r=""
+  if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
+    r=$(curl -s "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls?state=open&head=${GITEE_ORG}:${b}&access_token=${MGR_TOKEN}" 2>/dev/null | grep -oE '"number":[0-9]+' | head -1 | grep -oE '[0-9]+') || true
+  elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
+    r=$(curl -s "https://api.github.com/repos/${GH_ORG}/${n}/pulls?state=open&head=${GH_ORG}:${b}" -H "Authorization: token ${MGR_GH_TOKEN}" 2>/dev/null | grep -oE '"number": ?[0-9]+' | head -1 | grep -oE '[0-9]+') || true
+  fi
+  [ -n "$r" ] && { echo "$r"; return 0; }
+  return 1
+}
+# 查 PR 状态 (open/closed/merged), 查不到返回空
+_pr_state() {
+  local n="$1" d="$2" num="$3"
+  local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
+  local r=""
+  if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
+    r=$(curl -s "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls/${num}?access_token=${MGR_TOKEN}" 2>/dev/null | grep -oE '"state":"[a-z]+"' | head -1 | sed -E 's/.*:"([a-z]+)"/\1/') || true
+  elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
+    r=$(curl -s "https://api.github.com/repos/${GH_ORG}/${n}/pulls/${num}" -H "Authorization: token ${MGR_GH_TOKEN}" 2>/dev/null | grep -oE '"state": ?"[a-z]+"' | head -1 | sed -E 's/.*"([a-z]+)"/\1/') || true
+  fi
+  echo "$r"
+}
+_pr_api_update() {
+  local n="$1" d="$2" num="$3" title="$4" body="$5"
+  local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
+  local jf; jf="$(mktemp)"
+  local parts=""
+  [ -n "$title" ] && parts="\"title\":$(_json_str "$title")"
+  if [ -n "$body" ]; then
+    [ -n "$parts" ] && parts="$parts,"
+    parts="$parts\"body\":$(_json_str "$body")"
+  fi
+  if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
+    printf '{%s,"access_token":%s}' "$parts" "$(_json_str "$MGR_TOKEN")" > "$jf"
+    local r; r=$(curl -s -X PATCH "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls/${num}" -H "Content-Type: application/json; charset=utf-8" -d @"$(_curl_data_path "$jf")")
+    rm -f "$jf"
+    if echo "$r" | grep -q '"html_url"'; then
+      echo -e "    ${G}Gitee PR #${num} 已更新: https://gitee.com/${GITEE_ORG}/${n}/pulls/${num}${N}"
+    else
+      echo -e "    ${R}Gitee PR #${num} 更新失败: $(echo "$r" | head -c 300)${N}"
+    fi
+  elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
+    printf '{%s}' "$parts" > "$jf"
+    local r; r=$(curl -s -X PATCH "https://api.github.com/repos/${GH_ORG}/${n}/pulls/${num}" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json; charset=utf-8" -d @"$(_curl_data_path "$jf")")
+    rm -f "$jf"
+    if echo "$r" | grep -q '"html_url"'; then
+      echo -e "    ${G}GitHub PR #${num} 已更新: https://github.com/${GH_ORG}/${n}/pull/${num}${N}"
+    else
+      echo -e "    ${R}GitHub PR #${num} 更新失败: $(echo "$r" | head -c 300)${N}"
+    fi
+  else
+    rm -f "$jf"
+    echo -e "    ${R}无 token, 跳过更新 (${side})${N}"
+  fi
+}
+_pr_api_merge() {
+  local n="$1" d="$2" num="$3" method="$4" prune="$5"
+  local side; case "$d" in *flowlight-ai*) side="github";; *) side="gitee";; esac
+  local jf; jf="$(mktemp)"
+  if [ "$side" = "gitee" ] && [ -n "$MGR_TOKEN" ]; then
+    printf '{"merge_method":%s,"prune_source_branch":%s,"access_token":%s}' "$(_json_str "$method")" "$prune" "$(_json_str "$MGR_TOKEN")" > "$jf"
+    local r; r=$(curl -s -X PUT "https://gitee.com/api/v5/repos/${GITEE_ORG}/${n}/pulls/${num}/merge" -H "Content-Type: application/json; charset=utf-8" -d @"$(_curl_data_path "$jf")")
+    rm -f "$jf"
+    if echo "$r" | grep -q '"message"'; then
+      echo -e "    ${R}Gitee PR #${num} 合入失败: $(echo "$r" | head -c 300)${N}"
+    else
+      echo -e "    ${G}Gitee PR #${num} 已合入 (${method})${N}"
+    fi
+  elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
+    printf '{"merge_method":%s}' "$(_json_str "$method")" > "$jf"
+    local r; r=$(curl -s -X PUT "https://api.github.com/repos/${GH_ORG}/${n}/pulls/${num}/merge" -H "Authorization: token ${MGR_GH_TOKEN}" -H "Content-Type: application/json; charset=utf-8" -d @"$(_curl_data_path "$jf")")
+    rm -f "$jf"
+    if echo "$r" | grep -q '"merged": *true'; then
+      echo -e "    ${G}GitHub PR #${num} 已合入 (${method})${N}"
+    else
+      echo -e "    ${R}GitHub PR #${num} 合入失败: $(echo "$r" | head -c 300)${N}"
+    fi
+  else
+    rm -f "$jf"
+    echo -e "    ${R}无 token, 跳过合入 (${side})${N}"
+  fi
+}
+cmd_pr_update() {
+  # 用法: ./mgr pr-update [PR号|auto] [--title "新标题"] [--body "新描述"] [--body-file 文件]
+  # 缺省 PR号(或 auto) → 按当前分支自动定位本平台 open PR
+  local num="" title="" body="" body_file=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --title) title="$2"; shift 2 ;;
+      --body) body="$2"; shift 2 ;;
+      --body-file) body_file="$2"; shift 2 ;;
+      -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
+      *) [ -z "$num" ] && num="$1"; shift ;;
+    esac
+  done
+  [ -n "$body_file" ] && { [ -f "$body_file" ] || { echo -e "${R}--body-file 不存在: $body_file${N}" >&2; exit 1; }; body="$(cat "$body_file")"; }
+  if [ -z "$title" ] && [ -z "$body" ]; then
+    echo -e "${R}pr-update 需要 --title 或 --body/--body-file (至少一项)${N}" >&2
+    exit 1
+  fi
+  # PR 标题仍受规范检查 (与 pr/sync 一致)
+  if [ -n "$title" ] && ! _check_msg_format "$title" "PR标题"; then
+    echo -e "${R}pr-update 已中止。请按规范格式: type(scope): 描述 [署名]${N}" >&2
+    exit 1
+  fi
+  load_token; load_gh_token
+  for n in "${NAMES[@]}"; do
+    local d; d=$(_cur_dir "$n")
+    [ -e "$d/.git" ] || continue
+    local pn; pn=$(_resolve_pr_number "$n" "$d" "$num") || { echo -e "  ${Y}${n}: 未找到 PR (请显式给 PR 号)${N}"; continue; }
+    echo -e "${B}═══ ${n} (${CURRENT_SIDE}) 更新 PR #${pn} ═══${N}"
+    _pr_api_update "$n" "$d" "$pn" "$title" "$body"
+  done
+  echo ""
+}
+cmd_pr_merge() {
+  # 用法: ./mgr pr-merge [PR号|auto] [--method merge|squash|rebase] [--prune] [--yes] [--dry-run]
+  # 安全默认: 不带 --yes 只做预演提示, 不合入 (合入不可逆)
+  local num="" method="merge" prune=false yes=false dry=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --method) method="$2"; shift 2 ;;
+      --prune) prune=true; shift ;;
+      --yes|-y) yes=true; shift ;;
+      --dry-run) dry=true; shift ;;
+      -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
+      *) [ -z "$num" ] && num="$1"; shift ;;
+    esac
+  done
+  case "$method" in merge|squash|rebase) ;; *) echo -e "${R}--method 必须为 merge|squash|rebase${N}" >&2; exit 1 ;; esac
+  load_token; load_gh_token
+  for n in "${NAMES[@]}"; do
+    local d; d=$(_cur_dir "$n")
+    [ -e "$d/.git" ] || continue
+    local pn; pn=$(_resolve_pr_number "$n" "$d" "$num") || { echo -e "  ${Y}${n}: 未找到 PR (请显式给 PR 号)${N}"; continue; }
+    local st; st=$(_pr_state "$n" "$d" "$pn") || true
+    echo -e "${B}═══ ${n} (${CURRENT_SIDE}) 合入 PR #${pn} (state=${st:-未知}) ═══${N}"
+    if [ "$st" != "open" ]; then
+      echo -e "  ${Y}PR #${pn} 当前非 open (${st:-未知}), 跳过${N}"; continue
+    fi
+    if $dry; then
+      if $prune; then echo -e "  ${C}[dry-run] 将以 ${method} 合入 PR #${pn} 并删除源分支${N}"
+      else echo -e "  ${C}[dry-run] 将以 ${method} 合入 PR #${pn}${N}"; fi
+      continue
+    fi
+    if ! $yes; then
+      echo -e "  ${Y}合入不可逆: 确认后加 --yes (./mgr pr-merge ${pn} --yes)${N}"; continue
+    fi
+    _pr_api_merge "$n" "$d" "$pn" "$method" "$prune"
+  done
+  echo ""
+}
 # ═══════════════════════════════════════════════════════════════
 #  其他命令
 # ═══════════════════════════════════════════════════════════════
@@ -820,6 +980,8 @@ main() {
     merge-cross)   shift; cmd_merge_cross "$@" ;;
     mirror-setup)  shift; cmd_mirror_setup "$@" ;;
     pr)            shift; cmd_pr "$@" ;;
+    pr-update|pru) shift; cmd_pr_update "$@" ;;
+    pr-merge|prm)  shift; cmd_pr_merge "$@" ;;
     commit|ci)     shift; cmd_commit "$@" ;;
     push)          shift; cmd_push "$@" ;;
     pull|pl)       shift; cmd_pull "$@" ;;
