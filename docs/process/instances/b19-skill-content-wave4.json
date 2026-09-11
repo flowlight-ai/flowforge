@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "b19-skill-content-wave4",
+  "workflow": "change",
+  "snapshot": {
+    "name": "b19-skill-content-wave4",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/process/specs/2026-09-11-b19-skill-content-wave4-design.md",
+      "plan": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-11-b19-skill-content-wave4.md",
+      "verification": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\verifications\\b19-skill-content-wave4.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-11T13:07:51.899Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-11T13:07:59.149Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-11T13:07:59.490Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-11T13:09:31.536Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-11T13:11:24.760Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-11T13:11:25.008Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-11T13:11:49.920Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-11T13:11:49.921Z"
+}
