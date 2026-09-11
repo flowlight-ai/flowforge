@@ -85,12 +85,17 @@ type(scope): 简短描述 [#PR号] [智能体ID]
 ./mgr push --pr           # push 当前分支并自动创建 PR (推荐)
 ./mgr push                # 仅 push, 不创建 PR
 ./mgr pr "标题"           # 为当前分支创建 PR
+./mgr pr-update [PR号|auto] --title "新标题" --body "新描述"   # 更新已有 PR 的标题/描述 (PR号缺省或 auto → 按当前分支定位本平台 open PR; 多行描述用 --body-file 文件)
+./mgr pr-merge [PR号|auto] --yes [--method merge|squash|rebase] [--prune]  # 合入已有 PR (合入不可逆: 不带 --yes 只提示, --dry-run 预演)
 ./mgr sync "type(scope): 描述 [署名]" --body "PR描述"   # 推荐：本地停留在主干, 推送已暂存改动到固定远端分支 sync/<agent> 并建 PR
 ./mgr log [N]             # 查看最近 N 条提交 (默认 5)
 ./mgr diff                # 查看未提交改动
 ./mgr branch              # 查看当前分支
 ./mgr list                # 查看仓库信息与平台状态
 ```
+
+- `pr-update` / `pr-merge` 的 PR 号可显式给出，也可省略（或填 `auto`）由脚本按当前分支在本平台查询 open PR 自动定位；标题若提供仍受 §3 规范检查（须带 `[署名]`）。
+- `pr-merge` **合入不可逆**：缺省（不带 `--yes`）只打印提示、不做任何操作；`--dry-run` 仅预演；仅当 PR 状态为 `open` 时才真正调用合入 API。`--prune` 会在合入后删除远端源分支。
 
 ### 5.2 跨平台合并命令（手动触发）
 
