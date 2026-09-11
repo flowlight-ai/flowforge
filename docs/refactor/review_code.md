@@ -99,7 +99,7 @@
 | B16 | `cats/services/cloud-bridge`（12 文件） | 云调用桥（cloud-invoke-bridge/return-binding/build-delta-payload/conversation-host-adapter） | P1 | `packages/cats/cloud-bridge` |
 | B17 | `cats/services/first-run-quest`（3 文件） | 首次运行任务（client-detection/quest-blocks/quest-state）——区别于 C8 bootcamp | P1 | 并入 `packages/cats/bootcamp` 或独立 |
 | B18 | `cats/services/collaboration` + `push` | reviewer-matcher / PushNotificationService（push 属 S2） | P2 | stretch |
-| B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | ✅ **已裁决分批迁移**（Q5，2026-09-10）：技能框架已落地，内容资产按命名契约随 B8 技能域分批补齐（核心包优先） |
+| B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | ✅ **已裁决分批迁移**（Q5，2026-09-10）：技能框架已落地，内容资产按命名契约随 B8 技能域分批补齐（核心包优先）。**wave 1 已迁移**（2026-09-11，实例 `b19-skill-content-wave1`）：deep-research/expert-panel/cross-cat-handoff/debugging 四包进 `packages/forgekin/governance/skills/`（SKILL.md 原样 + manifest.yaml 路由 + README 命名映射），附 `b19-skill-content.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0 |
 | B20 | `sop-definitions/` | SOP 定义内容（配合 F29 forgekin-sop 执行器） | P1 | `packages/forgekin/sop` 资产目录 |
 | B21 | `assets/` | 音频/头像静态资源（audio-proxy/avatars 路由依赖） | P2 | 随 S2/平台路由 |
 | B22 | `routes/` 平台面余量 | 批次 55 已声明"callback-*/config/debug 等平台面随阶段 8/9 按需对照"——需在阶段 9 收口清单中**强制复核** | P1 | EP3 验收项 |

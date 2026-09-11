@@ -1,0 +1,216 @@
+---
+name: debugging
+tips_exempt: existing workspace-navigator execution guidance correction; no new capability or discovery moment
+description: >
+  系统化 bug 定位：根因调查 → 模式分析 → 假设验证 → 修复。
+  Use when: 遇到 bug、测试失败、unexpected behavior。
+  Not for: 新功能开发、重构、已知原因的简单修复。
+  Output: Bug report（5件套）+ 根因 + 修复（含回归测试）。
+triggers:
+  - "bug"
+  - "报错"
+  - "test failure"
+  - "unexpected behavior"
+---
+
+# Debugging（系统性调试）
+
+随机尝试修复浪费时间，症状修复掩盖真正问题。
+
+**遇到 bug 先搜（F102 记忆系统）**：`search_evidence("{error关键词}")` 看看历史上有没有类似的坑。
+
+**铁律：没有根因分析，不能提出修复方案。**
+
+## 核心知识
+
+### Runtime Preflight Gate（运行时异常硬门禁）
+
+**如果 bug 涉及 runtime 行为**（前端显示异常、API 返回错误、猫猫行为异常、stream 错误等），**在进入 Phase 1 之前**必须先完成三件套验证：
+
+**手动三件套**（按顺序执行，收集 7 个字段）：
+
+```bash
+# 1. 找到 API 监听进程（绑端口，不用 grep 猜）
+export API_PORT="${API_SERVER_PORT:-3004}"
+lsof -iTCP:"$API_PORT" -sTCP:LISTEN -P -n 2>/dev/null | awk 'NR>1{print "PORT="ENVIRON["API_PORT"], "PID="$2}'
+
+# 2. 进程启动时间
+ps -p <PID> -o lstart=
+
+# 3. Runtime worktree HEAD vs 目标 commit
+git -C <runtime-worktree> log --oneline -1        # HEAD=
+TARGET_COMMIT=<你预期的commit>
+# 判断进程是否在 commit 之后启动：比较 commit 时间 vs 进程启动时间
+
+# 4. 当前 PID 在最新日志中的行数
+grep -c "<PID>" <最新日志文件路径>                  # LOG_EVIDENCE=
+```
+
+收集到的 7 个字段：
+
+```
+PORT=3004              ← 默认 API 端口（3003=前端），只取 LISTEN PID
+PID=53507              ← 精确到监听进程（排除浏览器等客户端连接）
+START_TIME=...         ← 进程启动时间
+HEAD=abc1234 ...       ← runtime worktree HEAD
+TARGET_COMMIT=f78c984  ← 你预期的 commit
+PROCESS_AFTER_TARGET=yes/no  ← 进程是否在 commit 之后启动
+LOG_EVIDENCE=...       ← 当前 PID 在最新日志中的行数
+```
+
+**这 7 行没拿到之前，唯一允许说的话是"我还没查完"。**
+
+以下断言**必须附带 preflight 输出**，否则禁止说出：
+- "runtime 没更新" / "代码没编译" / "没重启" / "还是旧代码"
+
+**为什么这是硬门禁**：启动脚本会自动拉代码并编译。"没更新"本来就不太可能发生。在没有证据的情况下说"没更新" = 把自己的 bug 甩锅给operator。这不是懒，是推卸责任。
+
+> 来源：operator多次纠正（2026-04-05 定为 P0），Maine Coon协助定位根因 + 方案审查。
+
+### 4 阶段流水线
+
+每个阶段必须完成才能进入下一个。
+
+**Phase 1 — 根因调查**（提出任何修复前必须完成）
+
+1. **仔细读错误信息**：不要略过 stack trace，记录行号/文件路径/错误码
+2. **稳定复现**：能稳定触发吗？不能复现 → 收集更多数据，不要猜
+3. **检查最近变更**：git diff、新依赖、配置变更、环境差异
+4. **多组件系统：加诊断桩收集证据**
+   ```
+   对每个组件边界：记录进入的数据、记录输出的数据、验证状态传播
+   先跑一次收集"哪里断了"的证据，再分析，再深入那个组件
+   ```
+5. **数据流逆向追踪**：错误值从哪里来？谁传了这个错误值？一直往上追到源头，在源头修，不在症状处修（完整技术见 `root-cause-tracing.md`）
+
+**Phase 2 — 模式分析**
+
+- 在同一代码库找可以工作的类似代码
+- 对照参考实现**完整地读**（不要略读）
+- 逐项列出工作代码和问题代码的差异，不要假设"这个不重要"
+
+**Phase 3 — 假设验证**
+
+- 明确写下："我认为根因是 X，因为 Y"
+- 做**最小可能的变更**验证假设（一次一个变量）
+- 通过了 → Phase 4；没过 → 提出新假设，不要在上面叠加更多修复
+
+**Phase 4 — 实现修复**
+
+1. **先写失败测试复现 bug**（参见 `tdd` skill）
+2. 实现针对根因的单一修复
+3. 验证测试通过、无回归
+4. 如果修复无效 → 回 Phase 1，带着新信息重新分析
+
+**⚠️ 3+ 次修复都失败 = 架构问题**
+
+出现以下模式就停下来质疑架构，不要尝试第 4 次修复：
+- 每次修复都在不同地方暴露新的耦合/共享状态
+- 修复需要"大规模重构"才能落地
+- 每次修复都在别处制造新症状
+
+停下来和operator讨论是继续修还是重新设计。
+
+### Bug Report 五件套（存档格式）
+
+存放位置：`docs/bug-report/<bug-name>/bug-report.md`
+
+1. **报告人**：谁发现的、怎么发现的
+2. **复现步骤**：期望行为 vs 实际行为
+3. **根因分析**：查了什么、排除了什么、定位过程
+4. **修复方案**：选这个方案的理由、放弃了什么备选
+5. **验证方式**：怎么确认修好了
+
+**五件套是调查完成后的存档格式，不是入口。** 入口是诊断胶囊（见下方「Bug 诊断胶囊」节）。
+
+## 流程
+
+```
+收到 bug / 看到失败
+  ↓
+涉及 runtime？→ 是 → Runtime Preflight Gate（三件套）
+  ↓ 否 / 三件套完成
+填诊断胶囊（8 栏工作模板）← 入口！
+  ↓
+Phase 1: 根因调查（胶囊驱动）
+  ↓ 找到根因？
+Phase 2: 模式分析（对照工作代码）
+  ↓
+Phase 3: 假设验证（最小变更，一次一个）
+  ↓ 假设确认？
+Phase 4: 先写失败测试 → 修复 → 验证
+  ↓ 修复 3 次仍未解决？
+停下来 → 质疑架构 → 找operator讨论
+  ↓ 修复完成
+整理五件套存档（从胶囊提炼）
+```
+
+## Quick Reference
+
+| 阶段 | 关键动作 | 完成标准 |
+|------|----------|----------|
+| 1. 根因调查 | 读错误、复现、加诊断桩、追数据流 | 清楚知道是什么、为什么 |
+| 2. 模式分析 | 找工作代码、完整对照 | 找出差异列表 |
+| 3. 假设验证 | 写下假设、最小变更测试 | 假设确认或新假设 |
+| 4. 实现修复 | 先写失败测试、单一修复、验证 | bug 已解决，测试通过 |
+
+### 立即停止的 Red Flags
+
+听到自己说以下任何一句 → 停下来，回到 Phase 1：
+
+- "先试试改 X 看看效果"
+- "大概是 X，我改一下"
+- "不太理解但这个或许能用"
+- "跳过测试，我手工验一下"
+- "同时改几个地方"
+- "再试一次修复"（已经失败 2 次以上）
+- **"可能没更新/没编译/没重启"**（没跑三件套就说 = 推卸责任）
+
+## Common Mistakes
+
+| 错误 | 正确做法 |
+|------|----------|
+| 没有诊断胶囊就直接修 | 先填 8 栏诊断胶囊，再进 Phase 1 |
+| 看到症状就提修复方案 | Phase 1 根因调查必须完成才能提方案 |
+| 多组件系统直接猜原因 | 加诊断桩，收集每层边界的证据 |
+| 修完直接 push，不写测试 | 先写失败测试复现 bug，再修，再验证 |
+| 第 3 次修复还在叠加 | 停下来，质疑架构，找operator |
+| 错误信息略读 | 完整读 stack trace，记录行号和错误码 |
+
+## 和其他 skill 的区别
+
+- **vs `tdd`**：debugging 是**修复性**的（bug 出现后）；TDD 是**预防性**的（写代码前）。交叉点：Phase 4 写失败测试时切换到 TDD 模式
+- **vs `quality-gate`**：debugging 是找到并修复问题；quality-gate 是提交前确认一切正常
+
+## Bug 诊断胶囊
+
+Phase 1 开始时，用 **8 栏诊断胶囊** 结构化调查过程：
+
+> 模板 → [../.cat-cafe-shared-refs/bug-diagnosis-capsule.md](../.cat-cafe-shared-refs/bug-diagnosis-capsule.md)
+
+胶囊 8 栏：现象 / 证据 / 问题假设或根因 / 诊断策略 / 超时策略 / 预警策略 / 用户可见交互修正（可选） / 验收
+
+**胶囊是调查过程的工作模板，五件套是 bug report 的存档格式。** 两者互补：先填胶囊驱动调查，再整理五件套存档。
+
+## 补充参考文件
+
+以下参考材料已随 skill 合并归档（原 `systematic-debugging/` 目录），可从 git 历史查阅：
+
+- **`root-cause-tracing.md`** — 从 call stack 深处向上追踪原始触发点的完整技术
+- **`defense-in-depth.md`** — 找到根因后，在多层添加防御性校验
+- **`condition-based-waiting.md`** — 用条件轮询替代任意 timeout
+
+## 运行日志快速查看（F130）
+
+右侧状态面板底部有「运行日志 → 查看日志」按钮：
+- 点击后自动切换到 Workspace 面板，展开到 `packages/api/data/logs/api/` 并打开最新日志文件
+- 日志格式：Pino JSON（每行一条），文件名 `api.YYYY-MM-DD.SEQ.log`（日轮转，14天保留）
+- 也可以加载 `workspace-navigator`，调用 typed
+  `cat_cafe_workspace_navigate({ path: "<已确认的绝对日志目录>", action: "reveal", threadId: "<当前 threadId>" })`
+- 不要手写匿名 `POST /api/workspace/navigate`：该安全边界要求 session、direct-loopback
+  identity 或已验证的 callback-token / agent-key；第一方 MCP 会携带正确认证
+- 调试时**先看日志**再分析，不要猜
+
+## 下一步
+
+修复完成并通过验证后 → 加载 `quality-gate` 做提交前验收

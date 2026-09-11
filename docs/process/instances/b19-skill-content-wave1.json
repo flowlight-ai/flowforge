@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "b19-skill-content-wave1",
+  "workflow": "change",
+  "snapshot": {
+    "name": "b19-skill-content-wave1",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/process/specs/2026-09-11-b19-skill-content-wave1-design.md",
+      "plan": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-11-b19-skill-content-wave1.md",
+      "verification": "docs/process/reviews/b19-skill-content-wave1.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-11T02:17:17.151Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-11T02:17:33.473Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-11T02:18:15.871Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-11T02:39:55.233Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-11T02:40:11.923Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-11T02:40:46.272Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-11T02:40:47.278Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-11T02:40:47.278Z"
+}
