@@ -99,7 +99,7 @@
 | B16 | `cats/services/cloud-bridge`（12 文件） | 云调用桥（cloud-invoke-bridge/return-binding/build-delta-payload/conversation-host-adapter） | P1 | `packages/cats/cloud-bridge` |
 | B17 | `cats/services/first-run-quest`（3 文件） | 首次运行任务（client-detection/quest-blocks/quest-state）——区别于 C8 bootcamp | P1 | 并入 `packages/cats/bootcamp` 或独立 |
 | B18 | `cats/services/collaboration` + `push` | reviewer-matcher / PushNotificationService（push 属 S2） | P2 | stretch |
-| B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | ✅ **已裁决分批迁移**（Q5，2026-09-10）：技能框架已落地，内容资产按命名契约随 B8 技能域分批补齐（核心包优先）。**wave 1 已迁移**（2026-09-11，实例 `b19-skill-content-wave1`）：deep-research/expert-panel/cross-cat-handoff/debugging 四包进 `packages/forgekin/governance/skills/`（SKILL.md 原样 + manifest.yaml 路由 + README 命名映射），附 `b19-skill-content.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0。**wave 2 已迁移**（2026-09-11，实例 `b19-skill-content-wave2`）：开发流程域 tdd/writing-plans/quality-gate/merge-gate 四包迁入同目录（manifest.yaml 扩至 8 包路由、README 追加命名映射），附 `b19-skill-content-wave2.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0（16 files） |
+| B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | ✅ **已裁决分批迁移**（Q5，2026-09-10）：技能框架已落地，内容资产按命名契约随 B8 技能域分批补齐（核心包优先）。**wave 1 已迁移**（2026-09-11，实例 `b19-skill-content-wave1`）：deep-research/expert-panel/cross-cat-handoff/debugging 四包进 `packages/forgekin/governance/skills/`（SKILL.md 原样 + manifest.yaml 路由 + README 命名映射），附 `b19-skill-content.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0。**wave 2 已迁移**（2026-09-11，实例 `b19-skill-content-wave2`）：开发流程域 tdd/writing-plans/quality-gate/merge-gate 四包迁入同目录（manifest.yaml 扩至 8 包路由、README 追加命名映射），附 `b19-skill-content-wave2.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0（16 files）。**wave 3 已迁移**（2026-09-11，实例 `b19-skill-content-wave3`）：评审与协作域 fresh-context-review/request-review/receive-review/receive-handoff-grounding 四包迁入同目录（manifest.yaml 扩至 12 包路由、README 追加命名映射），附 `b19-skill-content-wave3.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0（17 files） |
 | B20 | `sop-definitions/` | SOP 定义内容（配合 F29 forgekin-sop 执行器） | P1 | `packages/forgekin/sop` 资产目录 |
 | B21 | `assets/` | 音频/头像静态资源（audio-proxy/avatars 路由依赖） | P2 | 随 S2/平台路由 |
 | B22 | `routes/` 平台面余量 | 批次 55 已声明"callback-*/config/debug 等平台面随阶段 8/9 按需对照"——需在阶段 9 收口清单中**强制复核** | P1 | EP3 验收项 |
@@ -411,7 +411,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
    - ✅ **EP4 S11.1 冻结期完成**（2026-09-10）：`__main__.py`（`python -m flowforge`）补 DEPRECATED 冻结横幅；start.bat 阶段10 已切 TS 栈并标注 deprecated；`31-stage11-sunset.md` 状态更新"冻结期进行中"。S11.2/S11.3 受 P1/P2 门槛硬约束（P2 TS 默认入口稳定≥2 周未满），**不提前归档/删除**，避免未经收货的破坏性操作。
 2. stretch 项按裁决结果排期：S1 真实通道凭据启用、S2（TTS/邮件推送/push）、S3、S4 desktop、S5 games、S6 Python SDK（A34）、S7。
    - ✅ **EP4-stretch 排期表**（2026-09-10）：`31-stage11-sunset.md` §7 落 S1-S7 排期表——现阶段均不排期（缺凭据/服务或产品优先级不足），随 operator 新指令准入；S1 凭证接线后启用。
-3. P1/P2 遗漏项（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35）。B19 wave1/wave2 已完结（2026-09-11），其余包（B19-B21 及 B19 后续波） ⬜（唯一剩余 EP4 工作线程，未见 operator 新指令持续收尾）
+3. P1/P2 遗漏项（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35）。B19 wave1/wave2/wave3 已完结（2026-09-11），其余包（B19-B21 及 B19 后续波） ⬜（唯一剩余 EP4 工作线程，未见 operator 新指令持续收尾）
 
 ## 14. 整体执行计划（时序）
 

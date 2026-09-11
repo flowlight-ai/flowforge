@@ -21,6 +21,10 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | writing-plans | Implementation Planning | 实施计划编写 |
 | quality-gate | Pre-Delivery Self-Gate | 交付前自检门禁 |
 | merge-gate | Merge Governance Gate | 合入治理门禁 |
+| fresh-context-review | Fresh-Context Pre-Review | 新语境评审前置扫描 |
+| request-review | Review Request Routing | 评审请求路由 |
+| receive-review | Review Feedback Processing | 评审反馈处理 |
+| receive-handoff-grounding | Handoff Claim Grounding | 交接声明核验 |
 
 > 本目录正式内容仅使用官方概念名与中文对照；社交/别名语（如灵智系列别称）不进入本目录正文。
 
@@ -28,4 +32,5 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 
 - **wave 1**（2026-09-11）：`deep-research` / `expert-panel` / `cross-cat-handoff` / `debugging` 四核心包内容迁入（B19 首波）。
 - **wave 2**（2026-09-11）：`tdd` / `writing-plans` / `quality-gate` / `merge-gate` 工程流程域四核心包内容迁入（B19 二波）。
+- **wave 3**（2026-09-11）：`fresh-context-review` / `request-review` / `receive-review` / `receive-handoff-grounding` 评审与协作域四核心包内容迁入（B19 三波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。

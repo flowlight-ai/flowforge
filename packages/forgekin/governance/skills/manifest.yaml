@@ -110,3 +110,64 @@ skills:
       - "开 PR"
       - "cloud review"
       - "gh pr create"
+  fresh-context-review:
+    category: "开发流程"
+    description: >
+      Author-triggered fresh-context scan of PR diff.
+      Finding generator, NOT approval authority.
+      Use when: quality-gate 通过且 PR 非 trivial，想降低正式 reviewer 认知负荷。
+      Not for: 正式 review verdict、approval、merge decision。
+      Output: Finding list（附在 review request 中）。
+    triggers:
+      - "fresh context"
+      - "pre-review scan"
+      - "找新眼看看"
+  request-review:
+    category: "开发流程"
+    description: >
+      Route a change to a non-author local peer when local review is the selected independent validation source.
+      Use when: risk routing chooses a stateful local reviewer for implementation, governance, or semantic context.
+      Not for: cloud as the selected source, vision-guardian acceptance, self-check, or review feedback handling.
+      Output: risk-matched review packet + provenance-matched verdict route; mailbox archive only when the change needs the full packet.
+    triggers:
+      - "请 review"
+      - "帮我看看"
+      - "request review"
+  receive-review:
+    category: "开发流程"
+    description: >
+      处理 reviewer 反馈：Red→Green 修复 + 技术论证（禁止表演性同意）。
+      Use when: 收到 review 结果、reviewer 提了 P1/P2、需要处理反馈。
+      Not for: 发 review 请求（用 request-review）、自检（用 quality-gate）。
+      Output: 逐项修复确认 + reviewer 放行。
+    triggers:
+      - "review 结果"
+      - "review 意见"
+      - "reviewer 说"
+      - "fix these"
+  receive-handoff-grounding:
+    category: "协作 / 防御"
+    description: >
+      接球前真相核验三问：claim → resolver → verdict (sourceTier T0/T1/T2 + actionFamily)，
+      防止把传球者当无审视真相源 (F167 Phase O 第一性原理)。
+      Use when: 即将调 hold_ball / register_pr_tracking / register_issue_tracking /
+      merge / takeover / 改 owner / 任何 irreversible action / 基于 "operator signoff" 或
+      "你是 owner" 类 claim 行动之前。
+      Not for: 纯阅读 cross_post (无 actionFamily 后续)、本 thread 日常 @mention 无副作用、
+      implementation continuation (自检通过的下一步)。
+      Output: Claim grounding verdict (verified/mismatch/insufficient) + 接球决策
+      (proceed / block / push back to source thread)。
+    triggers:
+      - "hold_ball"
+      - "register_pr_tracking"
+      - "register_issue_tracking"
+      - "merge approval"
+      - "operator signoff"
+      - "takeover"
+      - "irreversible"
+      - "owner reassignment"
+      - "这是你的"
+      - "应该是你接"
+      - "operator 同意"
+      - "等 X"
+      - "PR 在"
