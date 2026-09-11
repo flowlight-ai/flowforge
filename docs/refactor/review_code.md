@@ -99,7 +99,7 @@
 | B16 | `cats/services/cloud-bridge`（12 文件） | 云调用桥（cloud-invoke-bridge/return-binding/build-delta-payload/conversation-host-adapter） | P1 | `packages/cats/cloud-bridge` |
 | B17 | `cats/services/first-run-quest`（3 文件） | 首次运行任务（client-detection/quest-blocks/quest-state）——区别于 C8 bootcamp | P1 | 并入 `packages/cats/bootcamp` 或独立 |
 | B18 | `cats/services/collaboration` + `push` | reviewer-matcher / PushNotificationService（push 属 S2） | P2 | stretch |
-| B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | ✅ **已裁决分批迁移**（Q5，2026-09-10）：技能框架已落地，内容资产按命名契约随 B8 技能域分批补齐（核心包优先） |
+| B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | ✅ **已裁决分批迁移**（Q5，2026-09-10）：技能框架已落地，内容资产按命名契约随 B8 技能域分批补齐（核心包优先）。**wave 1 已迁移**（2026-09-11，实例 `b19-skill-content-wave1`）：deep-research/expert-panel/cross-cat-handoff/debugging 四包进 `packages/forgekin/governance/skills/`（SKILL.md 原样 + manifest.yaml 路由 + README 命名映射），附 `b19-skill-content.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0 |
 | B20 | `sop-definitions/` | SOP 定义内容（配合 F29 forgekin-sop 执行器） | P1 | `packages/forgekin/sop` 资产目录 |
 | B21 | `assets/` | 音频/头像静态资源（audio-proxy/avatars 路由依赖） | P2 | 随 S2/平台路由 |
 | B22 | `routes/` 平台面余量 | 批次 55 已声明"callback-*/config/debug 等平台面随阶段 8/9 按需对照"——需在阶段 9 收口清单中**强制复核** | P1 | EP3 验收项 |
@@ -261,7 +261,7 @@ superpowers 的关键工程机制（porting-to-a-new-harness.md）：**skills �
 | L0 入口引导 | AGENTS.md / CLAUDE.md / GEMINI.md 三件套（自然语言入口无需提示词模板：任何 AI 工具开工第一步读入口 + `ff_dev resume` 取状态锚点） | 软 |
 | L1 方法论资产 | `docs/process/skills/` 14 份（harness 无关） | 软 |
 | L2 状态机门禁 | `ff_dev advance` 拒绝无证据推进（三道硬门禁：design 签核 / plan No-Placeholder / verify 证据） | 硬（工具内） |
-| L3 本地 Git 拦截 | mgr 提交前跑 `ff_doctor`（D5 裁决：独立批次实施） | 硬（本地，待接线） |
+| L3 本地 Git 拦截 | mgr 提交前跑 `ff_doctor`（D5 已实施：cmd_commit/cmd_sync 前置 ff_doctor all，--no-check/FF_MGR_DOCTOR=0 逃生） | 硬（本地，✅ 已接线 2026-09-10） |
 | L4 CI 强制拦截 | `.github/workflows/ts-ci.yml`：typecheck + vitest + `ff_doctor all`，PR 必须 | **硬（远端）** |
 
 **双向互操作两场景（状态契约支撑）**：① flowforge 主导开发，换外部智能体/换 LLM 模型后凭 `ff_dev resume` 从中断处接续；② 外部 AI 工具主导开发 flowforge，凭状态文件（`docs/process/instances/<name>.json`）按同一规范接续。

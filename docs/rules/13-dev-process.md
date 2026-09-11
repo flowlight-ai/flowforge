@@ -73,7 +73,7 @@ requirement（需求） → design（设计） → plan（计划） → implemen
 | L0 入口引导 | `AGENTS.md` / `CLAUDE.md` / `GEMINI.md` 三件套 | 软 |
 | L1 方法论资产 | `docs/process/skills/` 14 份 | 软 |
 | L2 状态机门禁 | `ff_dev advance` 拒绝无证据推进 | 硬（工具内） |
-| L3 本地 Git 拦截 | mgr 提交前跑 `ff_doctor`（EP0-6 后续批次实施，决策点 D5） | 硬（本地） |
+| L3 本地 Git 拦截 | mgr 提交前跑 `ff_doctor all`（2026-09-10 已接线：cmd_commit/cmd_sync 前置，--no-check/FF_MGR_DOCTOR=0 逃生） | 硬（本地，✅ 已接线） |
 | L4 CI 强制拦截 | `.github/workflows/ts-ci.yml`：typecheck + vitest + `ff_doctor all`，PR 必须 | **硬（远端）** |
 
 ## 13.6 与既有规范的关系（引用优先级）

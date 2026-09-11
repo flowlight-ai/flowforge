@@ -93,6 +93,7 @@ packages/plugins/codebase/
 - [x] T5.5 transitive_loop_depth 过程间传播（最坏嵌套环深沿 CALLS 边传播）
 
 > **EP-CB 系列终态**：EP-CB0~EP-CB4 全部完成（对齐 16.3 全量移植目标，覆盖存储引擎/结构层/符号级/tree-sitter/Cypher/语义层/LSP 融合/跨仓库六域）。剩余落在 EP2 前端融合（Q17：graph-ui 3D 可视化）与语言资产按需增量（Q18）。
+> **程序收官独立复核（2026-09-10）**：239/239 vitest、oxlint 0、包级 tsc exit 0、真实仓库 index→query→schema 冒烟全通（详见 `docs/process/verifications/plugin-codebase-program-final-audit.md`）。程序正式收口，验收通过。
 
 ## 4. 决策点登记（对应 review_code.md §15 Q14-Q19，operator 2026-09-07 全部裁决）
 

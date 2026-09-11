@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "plugin-dev-d5-mgr-precheck",
+  "workflow": "change",
+  "snapshot": {
+    "name": "plugin-dev-d5-mgr-precheck",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "plan": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-10-plugin-dev-d5-mgr-precheck.md",
+      "design": "docs/process/specs/2026-09-10-plugin-dev-d5-mgr-precheck-design.md",
+      "verification": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\verifications\\plugin-dev-d5-mgr-precheck.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-10T11:43:33.611Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-10T11:45:51.949Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-10T11:46:02.259Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-10T11:46:02.463Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-10T11:51:19.455Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-10T11:57:00.802Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-10T11:57:08.248Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-10T11:57:08.248Z"
+}
