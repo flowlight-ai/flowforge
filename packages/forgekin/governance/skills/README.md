@@ -17,10 +17,15 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | expert-panel | Expert Panel | 专家评审团 |
 | cross-cat-handoff | Cross-cat Handoff | 跨智能体交接 |
 | debugging | Systematic Debugging | 系统化调试 |
+| tdd | Test-First Development | 测试驱动开发 |
+| writing-plans | Implementation Planning | 实施计划编写 |
+| quality-gate | Pre-Delivery Self-Gate | 交付前自检门禁 |
+| merge-gate | Merge Governance Gate | 合入治理门禁 |
 
 > 本目录正式内容仅使用官方概念名与中文对照；社交/别名语（如灵智系列别称）不进入本目录正文。
 
 ## 批次登记
 
 - **wave 1**（2026-09-11）：`deep-research` / `expert-panel` / `cross-cat-handoff` / `debugging` 四核心包内容迁入（B19 首波）。
+- **wave 2**（2026-09-11）：`tdd` / `writing-plans` / `quality-gate` / `merge-gate` 工程流程域四核心包内容迁入（B19 二波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。
