@@ -28,7 +28,9 @@
 | `./mgr commit "type(scope): 描述 [agentID]"` | 暂存全部并在当前平台提交（强制校验消息格式）。 |
 | `./mgr push [--pr] [--title "标题"] [--body "说明"]` | 推送当前分支；带 `--pr` 同时创建/更新 PR。拒绝直接推送到 `master`/`main`。 |
 | `./mgr pr "type(scope): 描述 [agentID]" [--body "说明"]` | 为当前分支在当前平台创建 PR。 |
-| `./mgr sync "type(scope): 描述 [agentID]" [--body "说明"]` | 一键完成：提交改动 + 智能推送 + 开 PR。在主干上会自动建临时分支 `sync/<base>-<ts>`。 |
+| `./mgr pr-update [PR号\|auto] [--title "标题"] [--body "说明"\|--body-file 文件]` | 更新已有 PR 的标题/描述。PR 号省略或填 `auto` 时按当前分支定位本平台 open PR。 |
+| `./mgr pr-merge [PR号\|auto] --yes [--method merge\|squash\|rebase] [--prune] [--dry-run]` | 合入已有 PR。合入不可逆：不带 `--yes` 只提示；`--dry-run` 仅预演；非 `open` 状态自动跳过。 |
+| `./mgr sync "type(scope): 描述 [agentID]" [--body "说明"]` | 一键完成：提交改动 + 智能推送 + 开 PR。在主干上推送到**固定**远端分支 `sync/<agent>`（取自标题 `[署名]`），本地不切分支。 |
 | `./mgr status [--cross] [--fetch]` | 显示当前平台分支与同步状态（`--cross` 显示双端，`--fetch` 从远端刷新）。 |
 | `./mgr merge-cross [--dry-run]` | **单向**跨平台合并：当前平台 → 对端。在对端创建同步 PR。`--dry-run` 仅查看文件差异。 |
 | `./mgr log [N]` | 查看最近 N 条提交（默认 5）。 |
