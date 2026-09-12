@@ -88,9 +88,9 @@ export function codeSnippet(store: CodebaseStore, project: string, qualifiedName
 
 ### 任务 7：indexer 集成 + parse_partial（T2.4b）
 
-- [ ] 步骤 1：写失败测试 tests/discover-indexer.spec.ts 增 4 用例——索引后 schema 含 Function/Class 计数、DEFINES 边存在、语法损坏文件上报 parse_partial、非符号语言（.md）不入符号层。
-- [ ] 步骤 2：实现 indexer.ts：indexRepository 变 async（结构层不变）；符号层两遍（聚合→注册表→边解析）批量落盘；hasError→coverage.parsePartial；index_status 增 symbolCount/edgeCount。
-- [ ] 步骤 3：跑 pnpm vitest run packages/plugins/codebase 确认 57 旧测试零回归 + 新增通过后进入任务 8。
+- [x] 步骤 1：写失败测试 tests/discover-indexer.spec.ts 增 4 用例——索引后 schema 含 Function/Class 计数、DEFINES 边存在、语法损坏文件上报 parse_partial、非符号语言（.md）不入符号层。
+- [x] 步骤 2：实现 indexer.ts：indexRepository 变 async（结构层不变）；符号层两遍（聚合→注册表→边解析）批量落盘；hasError→coverage.parsePartial；index_status 增 symbolCount/edgeCount。
+- [x] 步骤 3：跑 pnpm vitest run packages/plugins/codebase 确认 57 旧测试零回归 + 新增通过后进入任务 8。
 
 ```ts
 // 索引结果不变量扩展（IndexResult.coverage.parsePartial 从常量空数组变为真实上报）
@@ -99,9 +99,9 @@ const symbolResult = await indexRepository({ repoPath, store, mode: 'fast' }) //
 
 ### 任务 8：fixture 扩充 + 全套收口
 
-- [ ] 步骤 1：新建 tests/fixtures/mini-repo/symbols/demo.ts（类/接口/枚举/方法/字段箭头/模块级变量/调用/继承/实现/导入全覆盖）与 broken.ts（语法损坏）；cli.spec.ts 增 outline/snippet/符号层 index 冒烟 3 用例。
-- [ ] 步骤 2：跑 pnpm vitest run packages/plugins/codebase 全量收口（≥90 用例全绿、连续两次运行一致）。
-- [ ] 步骤 3：确认零回归后进入任务 9。
+- [x] 步骤 1：新建 tests/fixtures/mini-repo/symbols/demo.ts（类/接口/枚举/方法/字段箭头/模块级变量/调用/继承/实现/导入全覆盖）与 broken.ts（语法损坏）；cli.spec.ts 增 outline/snippet/符号层 index 冒烟 3 用例。
+- [x] 步骤 2：跑 pnpm vitest run packages/plugins/codebase 全量收口（≥90 用例全绿、连续两次运行一致）。
+- [x] 步骤 3：确认零回归后进入任务 9。
 
 ```ts
 // cli.spec.ts 冒烟断言形态
@@ -112,9 +112,9 @@ expect(schema.nodeLabels.some(l => l.label === 'Function' && l.count > 0)).toBe(
 
 ### 任务 9：本仓库全量验证（T2.5）+ 文档
 
-- [ ] 步骤 1：写验证测试（真实仓库验收，记入 docs/process/verifications/plugin-codebase-cb1.md）：node packages/plugins/codebase/bin/ff_codebase.mjs index --repo . --mode fast 全量索引 exit 0，记录时长/符号数/边数/parse_partial 计数；search --query "store index" 符号级 BM25 非空返回。
-- [ ] 步骤 2：跑 outline/snippet 对真实文件（src/store.ts）冒烟测试 exit 0（ff_codebase outline/snippet 输出 JSON 断言 name/label/lines 字段存在），输出数字同步记入验证文档。
-- [ ] 步骤 3：跑 pnpm vitest run packages/plugins/codebase 确认全部测试通过（连续两次运行一致）后，34-stage T2.1-T2.5 勾选 + T2.3 边名勘误 + README 批次表更新 + review_code.md §13.0 进度登记，走 ./mgr sync 提交 PR。
+- [x] 步骤 1：写验证测试（真实仓库验收，记入 docs/process/verifications/plugin-codebase-cb1.md）：node packages/plugins/codebase/bin/ff_codebase.mjs index --repo . --mode fast 全量索引 exit 0，记录时长/符号数/边数/parse_partial 计数；search --query "store index" 符号级 BM25 非空返回。
+- [x] 步骤 2：跑 outline/snippet 对真实文件（src/store.ts）冒烟测试 exit 0（ff_codebase outline/snippet 输出 JSON 断言 name/label/lines 字段存在），输出数字同步记入验证文档。
+- [x] 步骤 3：跑 pnpm vitest run packages/plugins/codebase 确认全部测试通过（连续两次运行一致）后，34-stage T2.1-T2.5 勾选 + T2.3 边名勘误 + README 批次表更新 + review_code.md §13.0 进度登记，走 ./mgr sync 提交 PR。
 
 ```sh
 node packages/plugins/codebase/bin/ff_codebase.mjs index --repo . --mode fast
