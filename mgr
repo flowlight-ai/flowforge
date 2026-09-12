@@ -829,6 +829,7 @@ _pr_api_update() {
       echo -e "    ${G}Gitee PR #${num} 已更新: https://gitee.com/${GITEE_ORG}/${n}/pulls/${num}${N}"
     else
       echo -e "    ${R}Gitee PR #${num} 更新失败: $(echo "$r" | head -c 300)${N}"
+      return 1
     fi
   elif [ "$side" = "github" ] && [ -n "$MGR_GH_TOKEN" ]; then
     printf '{%s}' "$parts" > "$jf"
@@ -838,10 +839,12 @@ _pr_api_update() {
       echo -e "    ${G}GitHub PR #${num} 已更新: https://github.com/${GH_ORG}/${n}/pull/${num}${N}"
     else
       echo -e "    ${R}GitHub PR #${num} 更新失败: $(echo "$r" | head -c 300)${N}"
+      return 1
     fi
   else
     rm -f "$jf"
     echo -e "    ${R}无 token, 跳过更新 (${side})${N}"
+    return 1
   fi
 }
 _pr_api_merge() {
@@ -854,6 +857,7 @@ _pr_api_merge() {
     rm -f "$jf"
     if echo "$r" | grep -q '"message"'; then
       echo -e "    ${R}Gitee PR #${num} 合入失败: $(echo "$r" | head -c 300)${N}"
+      return 1
     else
       echo -e "    ${G}Gitee PR #${num} 已合入 (${method})${N}"
     fi
@@ -865,13 +869,16 @@ _pr_api_merge() {
       echo -e "    ${G}GitHub PR #${num} 已合入 (${method})${N}"
     else
       echo -e "    ${R}GitHub PR #${num} 合入失败: $(echo "$r" | head -c 300)${N}"
+      return 1
     fi
   else
     rm -f "$jf"
     echo -e "    ${R}无 token, 跳过合入 (${side})${N}"
+    return 1
   fi
 }
 cmd_pr_update() {
+  local rc=0
   # 用法: ./mgr pr-update [PR号|auto] [--title "新标题"] [--body "新描述"] [--body-file 文件]
   # 缺省 PR号(或 auto) → 按当前分支自动定位本平台 open PR
   local num="" title="" body="" body_file=""
@@ -900,11 +907,13 @@ cmd_pr_update() {
     [ -e "$d/.git" ] || continue
     local pn; pn=$(_resolve_pr_number "$n" "$d" "$num") || { echo -e "  ${Y}${n}: 未找到 PR (请显式给 PR 号)${N}"; continue; }
     echo -e "${B}═══ ${n} (${CURRENT_SIDE}) 更新 PR #${pn} ═══${N}"
-    _pr_api_update "$n" "$d" "$pn" "$title" "$body"
+    if ! _pr_api_update "$n" "$d" "$pn" "$title" "$body"; then rc=1; fi
   done
+  if [ "$rc" -ne 0 ]; then echo ""; exit 1; fi
   echo ""
 }
 cmd_pr_merge() {
+  local rc=0
   # 用法: ./mgr pr-merge [PR号|auto] [--method merge|squash|rebase] [--prune] [--yes] [--dry-run]
   # 安全默认: 不带 --yes 只做预演提示, 不合入 (合入不可逆)
   local num="" method="merge" prune=false yes=false dry=false
@@ -937,8 +946,9 @@ cmd_pr_merge() {
     if ! $yes; then
       echo -e "  ${Y}合入不可逆: 确认后加 --yes (./mgr pr-merge ${pn} --yes)${N}"; continue
     fi
-    _pr_api_merge "$n" "$d" "$pn" "$method" "$prune"
+    if ! _pr_api_merge "$n" "$d" "$pn" "$method" "$prune"; then rc=1; fi
   done
+  if [ "$rc" -ne 0 ]; then echo ""; exit 1; fi
   echo ""
 }
 # ═══════════════════════════════════════════════════════════════
