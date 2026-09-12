@@ -225,3 +225,50 @@ skills:
       - "operator 同意"
       - "等 X"
       - "PR 在"
+  feat-lifecycle:
+    category: "开发流程"
+    description: >
+      Feature 立项、讨论、完成的全生命周期管理。
+      Use when: 开个新功能、new feature、F0xx、立项、feature 完成、验收通过、讨论新功能需求。
+      Not for: 不涉及 Feature/Design Gate 真相更新的纯代码实现、review、merge（那些有专门的 skill）。
+      Output: Feature 聚合文件 + BACKLOG 索引 + 真相源同步。
+    triggers:
+      - "开个新功能"
+      - "new feature"
+      - "建档"
+      - "立项"
+      - "F0xx"
+  worktree:
+    category: "开发流程"
+    description: >
+      创建 Git worktree 隔离开发环境，含 Redis 6398 安全配置。
+      Use when: 开始任何代码修改、新功能开发、bug fix。
+      Not for: classifier 放行的 co-creation docs direct-push lane、不涉及代码的讨论。
+      Output: 隔离的 worktree + 正确的 Redis/环境配置。
+    triggers:
+      - "开始开发"
+      - "新 worktree"
+      - "隔离环境"
+  co-creation-docs:
+    category: "开发流程"
+    description: >
+      共创型文档交付 lane：先区分只审阅还是授权落盘，再用冲突、治理风险、可逆性决定 direct push / PR / cloud / full gate。
+      Use when: 共创架构图、思想纲领、discussion、研究笔记或其他 docs-only 内容并准备落盘。
+      Not for: 只读 review、任何代码/脚本/skill/SOP 执行面改动、用户数据或外部契约变更。
+      Output: 风险匹配的文档校验 + 可选内容 review + commit/push 或 PR 证据。
+      GOTCHA: 行数和 Markdown diff 不是升档条件；显然 light 可自判直推，进入重载体前或拿不准时才运行 classifier。
+    triggers:
+      - "共创文档"
+      - "落盘文档"
+      - "docs lane"
+  owner-friendly-plugin-development:
+    category: "开发流程"
+    description: >
+      把真实用户旅程转成可安装、可授权、状态诚实、可恢复的 Clowder AI 插件产品边界。
+      Use when: 设计或开发需要 Settings 安装/授权、后台 runtime、事件或数据入站、Needs Me、Host 路由的插件。
+      Not for: 只搭 Codex 插件目录、纯 skill/MCP、无宿主生命周期的一次性 API 脚本、只修插件内部实现 bug。
+      Output: 用户旅程契约 + ownership/authority map + 生命周期/恢复/发布方案 + fresh-consumer 与真实 dogfood 证据。
+    triggers:
+      - "开发插件"
+      - "设计插件"
+      - "插件产品边界"

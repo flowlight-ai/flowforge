@@ -29,6 +29,10 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | cross-thread-sync | Cross-Thread Coordination | 跨线程协同 |
 | collaborative-thinking | Collaborative Deliberation | 协作思辨收敛 |
 | custody-recognition | Custody Acceptance | 接球权识别 |
+| feat-lifecycle | Feature Lifecycle Management | 功能生命周期管理 |
+| worktree | Isolated Workspace Setup | 隔离工作区搭建 |
+| co-creation-docs | Co-Creation Docs Delivery | 共创文档交付 |
+| owner-friendly-plugin-development | Hosted Plugin Product Boundary | 宿主插件产品边界 |
 
 > 本目录正式内容仅使用官方概念名与中文对照；社交/别名语（如灵智系列别称）不进入本目录正文。
 
@@ -38,4 +42,5 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 - **wave 2**（2026-09-11）：`tdd` / `writing-plans` / `quality-gate` / `merge-gate` 工程流程域四核心包内容迁入（B19 二波）。
 - **wave 3**（2026-09-11）：`fresh-context-review` / `request-review` / `receive-review` / `receive-handoff-grounding` 评审与协作域四核心包内容迁入（B19 三波）。
 - **wave 4**（2026-09-11）：`thread-orchestration` / `cross-thread-sync` / `collaborative-thinking` / `custody-recognition` 协作与编排域四核心包内容迁入（B19 四波）。
+- **wave 5**（2026-09-11）：`feat-lifecycle` / `worktree` / `co-creation-docs` / `owner-friendly-plugin-development` 工程生命周期与工具链开发流程域四核心包内容迁入（B19 五波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。
