@@ -27,7 +27,15 @@ packages/plugins/codebase/
 │   ├── complexity.ts              # 复杂度属性族计算器（cyclomatic/cognitive/loop/accessDepth）（EP-CB1）
 │   ├── edges.ts                   # 边解析：CALLS/USAGE/INHERITS/IMPLEMENTS + 五级解析链（EP-CB1）
 │   ├── outline.ts                 # 文件大纲 + 代码片段（get_file_outline/get_code_snippet）（EP-CB1）
-│   ├── tools.ts                   # 工具注册表（8 工具：EP-CB0 6 个 + EP-CB1 outline/snippet）
+│   ├── trace.ts                   # 调用链追踪（callers/callees BFS 防环 + 深度截断）（EP-CB2）
+│   ├── search.ts                  # 磁盘原文行级检索（正则/字面量 + file_pattern + truncated 诚实标记）（EP-CB2）
+│   ├── architecture.ts            # 架构视图（模块边界 + 跨模块依赖 + 热点文件）（EP-CB2）
+│   ├── changes.ts                 # 变更检测（mtime 对比 last_indexed_at，纯 Node）（EP-CB2）
+│   ├── compare.ts                 # 图谱快照差集（added/removed + identical 契约）（EP-CB2）
+│   ├── adr.ts                     # ADR 生命周期（list/get/create，对接 docs/decisions/）（EP-CB2）
+│   ├── docgen.ts                  # 文档生成器（图谱 → plugin-dev specs/plans 骨架，dev 供料闭环）（EP-CB2）
+│   ├── mcp.ts                     # MCP 装配（mountCodebaseTools，对齐 tool-lsp 契约，零 cordis 依赖）（EP-CB2）
+│   ├── tools.ts                   # 工具注册表（18 工具：EP-CB0 6 + EP-CB1 outline/snippet + EP-CB2 7工具/docgen）
 │   ├── project.ts                 # 项目注册表（多仓库：list/delete/安全化命名）
 │   └── index.ts                   # 库导出面
 └── tests/                         # vitest 契约测试（真实 fixture 微型仓库，不 Mock）
@@ -93,6 +101,6 @@ node packages/plugins/codebase/bin/ff_codebase.mjs schema
 |---|---|---|
 | EP-CB0 | 骨架 + 存储引擎 + 结构层索引闭环 | ✅ PR #154 |
 | EP-CB1 | tree-sitter 解析管线 + 符号级图谱（符号抽取/复杂度/边/DEFINES/outline-snippet/parse_partial） | ✅ 本次交付 |
-| EP-CB2 | 工具面补全 + 文档生成器 + MCP 挂接 | ⬜ |
+| EP-CB2 | 工具面补全 + 文档生成器 + MCP 挂接 | ✅ PR #158 |
 | EP-CB3 | Cypher 子集 + 增量索引 + 轨迹摄取（Q19 裁决后动工） | ⬜ |
 | EP-CB4 | 语义层 + LSP 融合 + 跨仓库（Q15 裁决后动工） | ⬜ |
