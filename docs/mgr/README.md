@@ -29,7 +29,9 @@ English | [中文](README.zh.md)
 | `./mgr commit "type(scope): desc [agentID]"` | Stage all and commit on the current platform (enforces message format). |
 | `./mgr push [--pr] [--title "T"] [--body "B"]` | Push the current branch; with `--pr` also creates/updates the PR. Refuses to push directly to `master`/`main`. |
 | `./mgr pr "type(scope): desc [agentID]" [--body "B"]` | Open a PR for the current branch on the current platform. |
-| `./mgr sync "type(scope): desc [agentID]" [--body "B"]` | One-shot: commit dirty + smart-push + open PR. On the base branch it auto-creates a temporary `sync/<base>-<ts>` branch. |
+| `./mgr pr-update [PR#\|auto] [--title "T"] [--body "B"\|--body-file FILE]` | Update an existing PR's title/body. Omit the number (or pass `auto`) to resolve it from the current branch's open PR. |
+| `./mgr pr-merge [PR#\|auto] --yes [--method merge\|squash\|rebase] [--prune] [--dry-run]` | Merge an existing PR. Irreversible: without `--yes` it only hints; `--dry-run` previews; non-`open` PRs are skipped. |
+| `./mgr sync "type(scope): desc [agentID]" [--body "B"]` | One-shot: commit dirty + smart-push + open PR. On the base branch it pushes to the **fixed** remote branch `sync/<agent>` (derived from the `[agentID]` signature) without switching the local branch. |
 | `./mgr status [--cross] [--fetch]` | Show branch & sync state of the current platform (`--cross` shows both sides, `--fetch` refreshes from remote). |
 | `./mgr merge-cross [--dry-run]` | **One-way** cross-platform merge: current platform → opposite platform. Creates a sync PR on the opposite side. `--dry-run` shows the file diff only. |
 | `./mgr log [N]` | Show the last N commits (default 5). |
