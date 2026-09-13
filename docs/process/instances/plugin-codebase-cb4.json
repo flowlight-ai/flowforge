@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "plugin-codebase-cb4",
+  "workflow": "feature",
+  "snapshot": {
+    "name": "plugin-codebase-cb4",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/process/specs/2026-09-07-plugin-codebase-cb4-design.md",
+      "plan": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-07-plugin-codebase-cb4.md",
+      "verification": "docs/process/verifications/plugin-codebase-cb4.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-12T15:42:57.080Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-12T15:43:03.561Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-12T15:43:04.103Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-12T15:44:10.003Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-12T15:44:16.279Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-12T15:44:16.479Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-12T15:53:06.671Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-12T15:53:06.672Z"
+}
