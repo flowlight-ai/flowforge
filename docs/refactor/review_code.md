@@ -100,7 +100,7 @@
 | B17 | `cats/services/first-run-quest`（3 文件） | 首次运行任务（client-detection/quest-blocks/quest-state）——区别于 C8 bootcamp | P1 | 并入 `packages/cats/bootcamp` 或独立 |
 | B18 | `cats/services/collaboration` + `push` | reviewer-matcher / PushNotificationService（push 属 S2） | P2 | stretch |
 | B19 | `cat-cafe-skills/`（20+ 技能包） | 技能**内容资产**（deep-research/expert-panel/cross-cat-handoff/debugging 等），非框架代码 | P1 | ✅ **已裁决分批迁移**（Q5，2026-09-10）：技能框架已落地，内容资产按命名契约随 B8 技能域分批补齐（核心包优先）。**wave 1 已迁移**（2026-09-11，实例 `b19-skill-content-wave1`）：deep-research/expert-panel/cross-cat-handoff/debugging 四包进 `packages/forgekin/governance/skills/`（SKILL.md 原样 + manifest.yaml 路由 + README 命名映射），附 `b19-skill-content.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0。**wave 2 已迁移**（2026-09-11，实例 `b19-skill-content-wave2`）：开发流程域 tdd/writing-plans/quality-gate/merge-gate 四包迁入同目录（manifest.yaml 扩至 8 包路由、README 追加命名映射），附 `b19-skill-content-wave2.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0（16 files）。**wave 3 已迁移**（2026-09-11，实例 `b19-skill-content-wave3`）：评审与协作域 fresh-context-review/request-review/receive-review/receive-handoff-grounding 四包迁入同目录（manifest.yaml 扩至 12 包路由、README 追加命名映射），附 `b19-skill-content-wave3.spec.ts` 契约测试 3/3 全绿、tsc exit 0、oxlint 0（17 files）。**wave 4 已迁移**（2026-09-11，实例 `b19-skill-content-wave4`）：协作与编排域 thread-orchestration/cross-thread-sync/collaborative-thinking/custody-recognition 四包迁入同目录（manifest.yaml 扩至 16 包路由、README 追加命名映射），附 `b19-skill-content-wave4.spec.ts` 契约测试 3/3、wave1-4 合计 12/12 全绿、tsc exit 0、oxlint 0（18 files） |
-| B20 | `sop-definitions/` | SOP 定义内容（配合 F29 forgekin-sop 执行器） | P1 | `packages/forgekin/sop` 资产目录 |
+| B20 | `sop-definitions/` | SOP 定义内容（配合 F29 forgekin-sop 执行器） | P1 | ✅ **已交付**（2026-09-10，随 EP4-P12 批次 PR #171 / commit `5b8a779a`）：内容资产落 `packages/forgekin/sop`（内置 `sops/development.yaml`）+ `packages/forgekin/sop-assets`（schema / validator / builtin `phase.cat.*` / loader），15 契约测试全绿 |
 | B21 | `assets/` | 音频/头像静态资源（audio-proxy/avatars 路由依赖） | P2 | 随 S2/平台路由 |
 | B22 | `routes/` 平台面余量 | 批次 55 已声明"callback-*/config/debug 等平台面随阶段 8/9 按需对照"——需在阶段 9 收口清单中**强制复核** | P1 | EP3 验收项 |
 
@@ -290,7 +290,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 | 参照 | 文档管理做法 | 我方差距 |
 |---|---|---|
 | **dsh** | `docs/development.md`+`testing.md` 双规范、每包 README、`website/` VitePress 文档站、AGENTS.md（构建顺序/vendor 纪律）、snapshots 预期输出 | 我方无文档站（A35 待裁决）、无预期输出快照体系（A36） |
-| **clowder** | AGENTS.md Iron Laws、`feature-specs/`（规格先行）、`review-notes/`（评审记录）、`sop-definitions/` | 我方 review 记录散在 refactor/ 下未体系化；SOP 定义资产未迁移（B20） |
+| **clowder** | AGENTS.md Iron Laws、`feature-specs/`（规格先行）、`review-notes/`（评审记录）、`sop-definitions/` | 我方 review 记录散在 refactor/ 下未体系化；SOP 定义资产已迁移至 `sop-assets`（B20，PR #171） |
 | **superpowers** | brainstorm→plan→execute 流程产物规范（design 文档+plan 文档+checkbox 步骤）、No Placeholders、验证后完成 | **我方完全缺失动态流程文档层**（EP0 补齐） |
 | **opencode 等业界**（`ex/` 参照池） | AI 工具无关的指令文档 + 插件化能力 | 与 EP0 双平面设计方向一致 |
 
