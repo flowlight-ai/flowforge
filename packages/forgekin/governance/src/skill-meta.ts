@@ -41,7 +41,8 @@ export async function readSkillMeta(skillDir: string): Promise<SkillMeta> {
   const skillMdPath = join(skillDir, 'SKILL.md');
   try {
     const content = await readFile(skillMdPath, 'utf-8');
-    const match = content.match(/^---\n([\s\S]*?)\n---/);
+    // 容忍 CRLF 工作树（core.autocrlf=true 在 Windows checkout 会转 CRLF），blob 恒为 LF。
+    const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!match) return {};
     const fm = parseYaml(match[1]!) as { description?: unknown; triggers?: unknown } | null;
     const desc = typeof fm?.description === 'string' ? fm.description.trim() : '';

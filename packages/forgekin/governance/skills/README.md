@@ -33,6 +33,13 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | worktree | Isolated Workspace Setup | 隔离工作区搭建 |
 | co-creation-docs | Co-Creation Docs Delivery | 共创文档交付 |
 | owner-friendly-plugin-development | Hosted Plugin Product Boundary | 宿主插件产品边界 |
+| anime-forge | Anime Short Production Line | 动画短片生产线 |
+| video-forge | Video Production Pipeline | 视频制作全链路 |
+| sprite-forge | Character Sprite Production Line | 角色动态素材生产线 |
+| ppt-forge | Low-Fidelity MD → AI Image Deck | 演示文稿图像管线 |
+| image-generation | AI Image Generation | AI 图片生成 |
+| pencil-design | Pencil Design & Code Export | 设计文件与代码导出 |
+| ttfund-skills | TTFund Skills Gateway | 天天基金网关数据 |
 
 > 本目录正式内容仅使用官方概念名与中文对照；社交/别名语（如灵智系列别称）不进入本目录正文。
 
@@ -43,4 +50,5 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 - **wave 3**（2026-09-11）：`fresh-context-review` / `request-review` / `receive-review` / `receive-handoff-grounding` 评审与协作域四核心包内容迁入（B19 三波）。
 - **wave 4**（2026-09-11）：`thread-orchestration` / `cross-thread-sync` / `collaborative-thinking` / `custody-recognition` 协作与编排域四核心包内容迁入（B19 四波）。
 - **wave 5**（2026-09-11）：`feat-lifecycle` / `worktree` / `co-creation-docs` / `owner-friendly-plugin-development` 工程生命周期与工具链开发流程域四核心包内容迁入（B19 五波）。
+- **wave 11**（2026-09-13）：`anime-forge` / `video-forge` / `sprite-forge` / `ppt-forge` / `image-generation` / `pencil-design` / `ttfund-skills` 创意与生产工具域七包内容迁入（B19 十一波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。

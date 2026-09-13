@@ -272,3 +272,124 @@ skills:
       - "开发插件"
       - "设计插件"
       - "插件产品边界"
+  anime-forge:
+    category: "生产"
+    description: >
+      AI 生成动画短片生产线：图（关键帧锁确定性）→ 视频（i2v 给活气）→ 后期（剪辑做节奏）。
+      Use when: 做动画短剧/角色 IP 短片、猫咖日记系列新集、图生视频管线、剧情类 AI 视频。
+      Not for: 录屏/教程/showcase 视频（用 video-forge）、单张图生成（用 image-generation）、PPT（用 ppt-forge）。
+      Output: charter+分镜+prompt book+素材账本+EDL 驱动的成片，全程可复现可重渲。
+    triggers:
+      - "动画短剧"
+      - "动画短片"
+      - "图生视频"
+      - "角色 IP 短片"
+      - "猫咖日记新集"
+      - "动画成片"
+      - "动画生产线"
+      - "i2v"
+      - "做动画"
+  video-forge:
+    category: "生产"
+    description: >
+      视频制作全链路：素材入库 → 剧本冻结 → 全局配音 → 对齐 → 渲染 → 审查 → 交付。
+      Use when: 已明确要制作视频、做 showcase、做教程视频、录屏剪辑、video review、节奏审查。
+      Not for: Agent 产品宣传片仍未锁定主角、观众信念与导演语法（先用 agent-product-promo-director）；
+      只找时效性外部参考（用 deep-research）；纯代码开发（用 worktree/tdd）、纯文档写作（直接写）、PPT（用 ppt-forge）。
+      Output: schema 驱动的视频成片 + operator 创意验收 + 风险匹配的技术审查 + 可发布。
+    triggers:
+      - "做视频"
+      - "做 showcase"
+      - "教程视频"
+      - "录屏剪辑"
+      - "视频成片"
+      - "video review"
+      - "节奏审查"
+      - "视频生产线"
+      - "剪视频"
+      - "视频制作"
+  sprite-forge:
+    category: "生产"
+    description: >
+      角色动态 sprite / 桌宠皮肤 / atlas 状态行生产线：母图锚身份 → Frame A 首帧 → AI 视频生成（人工环节）→ 截帧确定性加工 → atlas row + 三道闸。
+      Use when: 做桌宠皮肤、给猫补新状态动画行、visible-cafe/F258 猫形象素材、角色小循环动画（呼吸/走路/睡觉/挥手级）、把静态角色"做成动态的"。
+      Not for: 动画短片成片（用 anime-forge）、录屏/教程视频（用 video-forge）、单张静态图/头像（用 image-generation）、UI 图标。
+      Output: 192×208 atlas row strip + QA 包（contact/GIF/provenance）→ 过三道闸 + operator identity veto 后接 pet.json。
+    triggers:
+      - "桌宠皮肤"
+      - "角色动态"
+      - "sprite"
+      - "atlas"
+      - "动态角色"
+      - "小循环动画"
+      - "表情动图"
+      - "变成动态的"
+      - "状态动画"
+      - "角色形象素材"
+  ppt-forge:
+    category: "生产"
+    description: >
+      PPT 制作全链路：内容分析 → 分页规划 → 低保真 MD → imagegen 精美图。架构猫写低保真 MD（ASCII art 结构图 + 视觉指引），imagegen 猫逐页出精美图。
+      Use when: 做 PPT、做演示文稿、做 slide、帮朋友做 PPT、画架构图、画技术蓝图。
+      Not for: 纯代码开发（用 worktree/tdd）、纯文档写作（直接写）。
+      Output: 低保真 MD + AI 原生精美图（raster PNG）。
+    triggers:
+      - "做 PPT"
+      - "做演示文稿"
+      - "做 slide"
+      - "画架构图"
+      - "画技术蓝图"
+      - "PPT 页面"
+      - "presentation"
+      - "做一份 PPT"
+      - "演示稿"
+  image-generation:
+    category: "生产"
+    description: >
+      AI 图片生成：原生 tool call（Codex/Antigravity）或浏览器自动化（Gemini/ChatGPT）。
+      Use when: 需要 AI 生成概念图、UI 参考、像素画素材、完整 PPT 页面、复杂架构图、信息图或视觉 mock。
+      Not for: 已有图片的展示（用 media_gallery rich block）、硬要求可编辑/native text 的 PPT/图表（用 PPT/HTML 管线）。
+      Output: 生成图片自动发布，或作为完整视觉 mock / 图像素材进入后续交付。
+    triggers:
+      - "生成图片"
+      - "概念图"
+      - "UI 参考图"
+      - "像素画"
+      - "插画"
+      - "文生图"
+      - "信息图"
+      - "视觉 mock"
+      - "生成头像"
+      - "出图"
+      - "imagegen"
+  pencil-design:
+    category: "生产"
+    description: >
+      使用 Pencil MCP 创建/编辑 .pen 设计文件，或导出为 React 代码。
+      Use when: 设计 UI、编辑 .pen 文件、从设计稿生成代码。
+      Not for: 纯代码实现（无设计稿）、非 Pencil 工具的设计工作。
+      Output: .pen 设计文件 或 React/Tailwind 组件代码。
+      GOTCHA: .pen 是加密格式，只能通过 Pencil MCP 工具读写，Read/Grep/cat 无法解析。
+    triggers:
+      - "pencil"
+      - ".pen 文件"
+      - "设计稿"
+      - "从设计稿生成代码"
+  ttfund-skills:
+    category: "调研与知识"
+    description: >
+      天天基金官方 Skills 网关调用封装。
+      Use when: 查询天天基金/天天财富基金数据、基金搜索、基金净值、基金持仓、基金经理、指数、黄金、债市、活期宝或官方 ttfund skills。
+      Not for: 交易执行、券商/银行账户操作、FRED/Tushare/yfinance/AKShare 结构化数据源、投资建议。
+      Output: 通过官方网关返回的结构化 JSON 事实数据，带 source/asOf 后再进入 F207 数据层。
+      GOTCHA: 必须有本机 TTFUND_APIKEY，且 key 只放环境变量或 gitignored .env，绝不写入 git 或回复全文。
+    triggers:
+      - "天天基金 skills"
+      - "ttfund"
+      - "TTFUND_APIKEY"
+      - "天天基金净值"
+      - "天天基金搜索"
+      - "天天基金经理"
+      - "天天基金持仓"
+      - "天天黄金"
+      - "天天债市"
