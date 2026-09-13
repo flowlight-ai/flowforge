@@ -272,3 +272,97 @@ skills:
       - "开发插件"
       - "设计插件"
       - "插件产品边界"
+  memory-navigation:
+    category: "记忆与检索"
+    description: >
+      记忆系统三入口路由（search_evidence / graph_resolve / list_recent）决策树 + 噪音控制 + 加载时机。
+      Use when: 没先验、压缩后回顾、"我记得最近讨论过 X"、search_evidence 反复 low-hit。
+      Not for: 已有精确 anchor 直接 Read；代码符号查 Grep/LSP。
+      Output: 选定入口 + 噪音控制参数 + 进入对应 MCP 工具。
+    triggers:
+      - "没先验"
+      - "压缩后"
+      - "我记得讨论过"
+      - "最近讨论"
+      - "找不到 anchor"
+      - "cold start"
+      - "扫一眼最近"
+      - "memory navigation"
+  memory-search-best-practices:
+    category: "记忆与检索"
+    description: >
+      记忆系统多刀检索 + recall coverage 策略（8 类题型 recipe）。
+      Use when: "哪些地方提过 X" / "X 的来源 / source map" / "有没有提过 Y / absence check" / "上次到现在变了什么 / delta" / 冷启动 onboard 复杂主题 / 召回任务一刀不够。
+      Not for: 只是选哪个入口走第一刀（用 memory-navigation）/ 已知精确 anchor 单 Read / 代码符号查 / 新功能开发。
+      Output: 多 query / 多 scope union + coverage matrix（item/source/谁提到/直接 vs 间接）+ 一次终局交付。
+    triggers:
+      - "哪些 thread"
+      - "哪些 md"
+      - "哪些地方提过"
+      - "所有"
+      - "历史上"
+      - "沉淀过"
+      - "source map"
+      - "provenance"
+      - "有没有提过"
+  proactive-memory-judgment:
+    category: "记忆与检索"
+    description: >
+      F276 即时提案 / known-person defer / abstention 主动记忆判断策略。
+      Use when: 人物线索需在 F276 即时提案、known-person defer、abstention 间判断。
+      Not for: 裸人名、taste、后台扫描或 workspace alias。
+      Output: 可拒绝 proposal、无正文 receipt 或 abstention；永不静默物化。
+    triggers:
+      - "continuity-valued 人物线索"
+      - "proactive-memory-candidate"
+      - "人物记忆机会"
+      - "主动记忆判断"
+      - "person memory opportunity"
+  organize-threads:
+    category: "引导与协作"
+    description: >
+      猫猫辅助整理未分类 thread，分析标题和元数据，建议合适的标签。
+      Use when: 用户说"帮我整理"、"分类 thread"、点击整理按钮。
+      Not for: 删除/编辑标签本身。
+      Output: 按 thread 的标签建议列表。
+    triggers:
+      - "帮我整理"
+      - "整理 thread"
+      - "organize threads"
+      - "分类建议"
+  schedule-tasks:
+    category: "实用工具"
+    description: >
+      定时任务注册、管理、能力指南。支持周期任务和一次性延迟任务。
+      Use when: 想设定时任务、定期提醒、周期巡检、定时发送内容、延迟执行一次性操作。
+      Not for: 已有 builtin 任务的手动触发。
+      Output: 注册/管理定时任务，任务到点唤醒执行。
+    triggers:
+      - "定时"
+      - "每天"
+      - "每小时"
+      - "每隔"
+      - "提醒我"
+      - "remind me"
+      - "schedule"
+      - "cron"
+  workspace-navigator:
+    category: "实用工具"
+    description: >
+      把"打开文档、代码或日志"等模糊意图解析成本地绝对路径或 worktree 相对路径，并返回 applied / queued / blocked / unconfirmed 的真实 Workspace 投递状态。
+      Use when: 用户要求打开文档、代码、日志、设计图、spec、discussion、feature 等。
+      Output: 解析后的绝对路径 + 真实投递状态。
+    triggers:
+      - "打开文件"
+      - "看看代码"
+      - "看日志"
+      - "帮我打开"
+      - "一起看看"
+      - "打开设计图"
+      - "看看这个文档"
+      - "打开 discussion"
+      - "看看 feature"
+      - "打开审计日志"
+      - "看看 spec"
+      - "帮我找到"
+      - "打开那个"

@@ -33,6 +33,12 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | worktree | Isolated Workspace Setup | 隔离工作区搭建 |
 | co-creation-docs | Co-Creation Docs Delivery | 共创文档交付 |
 | owner-friendly-plugin-development | Hosted Plugin Product Boundary | 宿主插件产品边界 |
+| memory-navigation | Memory Entry Routing | 记忆入口路由 |
+| memory-search-best-practices | Memory Recall Strategy | 记忆召回策略 |
+| proactive-memory-judgment | Proactive Memory Judgment | 主动记忆判断 |
+| organize-threads | Thread Organization | 线程整理分类 |
+| schedule-tasks | Scheduled Task Management | 定时任务管理 |
+| workspace-navigator | Workspace Resolution | 工作区路径解析 |
 
 > 本目录正式内容仅使用官方概念名与中文对照；社交/别名语（如灵智系列别称）不进入本目录正文。
 
@@ -43,4 +49,5 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 - **wave 3**（2026-09-11）：`fresh-context-review` / `request-review` / `receive-review` / `receive-handoff-grounding` 评审与协作域四核心包内容迁入（B19 三波）。
 - **wave 4**（2026-09-11）：`thread-orchestration` / `cross-thread-sync` / `collaborative-thinking` / `custody-recognition` 协作与编排域四核心包内容迁入（B19 四波）。
 - **wave 5**（2026-09-11）：`feat-lifecycle` / `worktree` / `co-creation-docs` / `owner-friendly-plugin-development` 工程生命周期与工具链开发流程域四核心包内容迁入（B19 五波）。
+- **wave 9**（2026-09-13）：`memory-navigation` / `memory-search-best-practices` / `proactive-memory-judgment` / `organize-threads` / `schedule-tasks` / `workspace-navigator` 记忆/检索/组织域六核心包内容迁入（B19 九波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。
