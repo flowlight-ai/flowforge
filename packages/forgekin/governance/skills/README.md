@@ -33,6 +33,11 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | worktree | Isolated Workspace Setup | 隔离工作区搭建 |
 | co-creation-docs | Co-Creation Docs Delivery | 共创文档交付 |
 | owner-friendly-plugin-development | Hosted Plugin Product Boundary | 宿主插件产品边界 |
+| source-audit | Source Claim Audit | 外部来源审计 |
+| incident-response | Incident Response | 事故应急响应 |
+| capability-evolution | Capability Evolution | 能力进化 |
+| console-dev | Console Front-End Delivery | Console 前端交付 |
+| enterprise-workflow | Enterprise IM Workflow Automation | 企业 IM 工作流自动化 |
 
 > 本目录正式内容仅使用官方概念名与中文对照；社交/别名语（如灵智系列别称）不进入本目录正文。
 
@@ -43,4 +48,5 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 - **wave 3**（2026-09-11）：`fresh-context-review` / `request-review` / `receive-review` / `receive-handoff-grounding` 评审与协作域四核心包内容迁入（B19 三波）。
 - **wave 4**（2026-09-11）：`thread-orchestration` / `cross-thread-sync` / `collaborative-thinking` / `custody-recognition` 协作与编排域四核心包内容迁入（B19 四波）。
 - **wave 5**（2026-09-11）：`feat-lifecycle` / `worktree` / `co-creation-docs` / `owner-friendly-plugin-development` 工程生命周期与工具链开发流程域四核心包内容迁入（B19 五波）。
+- **wave 7**（2026-09-13）：`source-audit` / `incident-response` / `capability-evolution` / `console-dev` / `enterprise-workflow` 工程审计/响应与能力进化/前端交付/企业协作域五核心包内容迁入（B19 七波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。
