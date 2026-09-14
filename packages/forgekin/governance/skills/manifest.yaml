@@ -724,3 +724,159 @@ skills:
       - "看看 spec"
       - "帮我找到"
       - "打开那个"
+  rich-messaging:
+    category: "引导与协作"
+    description: >
+      在当前 Chat 直接交付可看、可听或可操作产物（语音、图片、截图、HTML/demo、卡片、清单、diff、交互选择），无需用户说"富文本"。
+      Use when: 用户要在当前 Chat 直接看到/听到/操作结果、定时任务唤醒后要发富媒体。
+      Not for: 纯文字、讨论/修改 HTML 源码、复杂 localhost 应用（用 browser-preview）。
+      Output: 产物进入 rich block（audio/card/checklist/diff/file/media_gallery/interactive/html_widget）或 Browser panel。
+    triggers:
+      - "发语音"
+      - "说一句"
+      - "用语音说"
+      - "voice"
+      - "audio"
+      - "发图"
+      - "发张图"
+      - "截图给我看"
+      - "screenshot"
+      - "画个 HTML 展示"
+      - "做个 demo 给我看"
+      - "在 Chat 里展示"
+      - "发个卡片"
+      - "rich block"
+      - "checklist"
+      - "发个清单"
+      - "长结构化汇报"
+      - "结构化汇报"
+      - "展示一下"
+      - "给我听听"
+      - "给我看看"
+      - "show me"
+      - "interactive"
+  convention-graph-discovery:
+    category: "调研与知识"
+    description: >
+      约定图发现方法论：进一个 repo 先识别 repo-specific conventions，再定义 domain/extractor 接 Convention Graph 引擎。
+      Use when: 进入陌生 repo、要画约定图、要找"改 X 影响谁"的约定层关联、F242/Convention Graph Layer 工作。
+      Not for: 普通符号跳转/LSP（用 codegraph）、文档索引检索、记忆图谱、直接使用 codegraph/GitNexus。
+      Output: domain 定义 + extractor 计划 + gap/freshness/provenance 报告。
+      GOTCHA: 沉淀的是"怎么画图"的方法，不是把 cat-cafe 的 extractor 硬搬到所有 repo。
+    triggers:
+      - "约定图"
+      - "convention graph"
+      - "进陌生 repo"
+      - "画规矩地图"
+      - "改 X 影响谁"
+      - "顺藤摸瓜"
+      - "F242"
+  concept-demo-design:
+    category: "引导与协作"
+    description: >
+      把抽象理念、家内 UI/UX 可点稿或端到端用户旅程变成可讲解、可验证的交互 Demo。
+      Use: 做个 demo 让人 get 到、做 F284 式体验 Gate、验证完整用户旅程。
+      Not: 已签字的正式产品前端、已有素材剪辑、PPT、纯视觉探索。
+      Output: 双轴 Demo Contract（判题类型 × 交付车道）+ 确定性交互原型 + 验证记录。
+    triggers:
+      - "可证伪技术剖面"
+      - "证伪实验台"
+      - "技术架构 demo"
+      - "做个 demo"
+      - "交互原型"
+      - "prototype"
+      - "mockup 给我看"
+  open-source-teardown:
+    category: "调研与知识"
+    description: >
+      明星开源项目拆解：从宣传/PPT/README 进入源码，验证真实架构、明星特性、算法含量、营销水分、可学习点和不 follow 的 tradeoff。
+      Use when: operator 要求拆解热门 GitHub 项目、竞品 agent/runtime、外部 skill/tool 框架，或问"它到底有什么真本事/我们能学什么"。
+      Not for: 普通资料搜索（用 deep-research）、社区 issue/PR 运营（用 opensource-ops）、只需要架构头脑风暴（用 collaborative-thinking）。
+      Output: feature-discussions/YYYY-MM-DD-{project}-deep-dive/ 下的代码证据报告 + 对比结论 + 候选 lesson/skill。
+      GOTCHA: 不许只看 README 下判断；每个明星特性必须追到代码路径、状态突变点、反馈闭环和算法输入输出。
+    triggers:
+      - "拆解明星开源项目"
+      - "拆解开源项目"
+      - "竞品拆解"
+      - "热门 GitHub 项目"
+      - "它有什么真本事"
+      - "我们能学什么"
+      - "marketing vs reality"
+      - "算法含量"
+      - "拆解 hermes"
+      - "看看 letta 怎么做的"
+      - "codex cli 源码"
+  opensource-ops:
+    category: "引导与协作"
+    description: >
+      Portable workflow for external PR / issue operations and source-to-public publishing.
+      Use when: a thread is reviewing, triaging, intaking, or advising on an external artifact, or must distinguish outbound sync from a public release.
+      Not for: internal feature work with no external artifact, generic thread orchestration, replacing the external maintainer's own decision.
+      Output: grounded provider-neutral subject + verified author/authenticated-identity comparison + adoption five-question answer + correctly separated sync/release custody.
+    triggers:
+      - "opensource-ops"
+      - "社区 PR"
+      - "external PR review"
+      - "GitHub PR review"
+      - "PR intake"
+      - "issue triage"
+      - "outbound sync"
+      - "public release"
+  agent-product-promo-director:
+    category: "生产"
+    description: >
+      Agent/AI 产品宣传片的创意导演层：先锁产品主角、观众信念变化与影片格式，再把不可见的 Agent 协作翻译成可拍的故事、镜头、运动、声音和 provenance contract。
+      Use when: 用户问 Agent 产品宣传片如何导演/剪辑/叙事/配声音、要拆参考片、写 creative brief/beat sheet，或 video-forge 开机前仍未锁定主语与镜头语法。
+      Not for: brief 已冻结后的录制/TTS/对齐/渲染（用 video-forge）、教程/功能 walkthrough、纯动画生产（用 anime-forge）、只找时效性竞品（先用 deep-research）。
+      Output: product-hero sentence + audience belief change + format decision + claim/proof beat sheet + shot/motion/sound maps + provenance ledger + operator acceptance questions。
+    triggers:
+      - "产品宣传片"
+      - "创意导演"
+      - "creative brief"
+      - "beat sheet"
+      - "宣传片脚本"
+      - "Agent 产品片"
+  bootcamp-guide:
+    category: "引导与协作"
+    description: >
+      operator 新手训练营引导模式。
+      Use when: thread 有 bootcampState（系统自动注入，不需要手动加载）。
+      Not for: 非训练营线程、老用户。
+      Output: 按当前 phase 的引导步骤执行 + 新手耐心解释。
+    triggers:
+      - "bootcamp"
+      - "训练营"
+      - "我是新手"
+  hyperfocus-brake:
+    category: "协作 / 防御"
+    description: >
+      operator 健康提醒：猫猫撒娇打断 hyperfocus，提醒休息。
+      Use when: 有人机提醒钩子/hook 触发提醒、用户输入 /hyperfocus-brake。
+      Not for: 正常工作流程、非 operator 用户。
+      Output: 温柔提醒 + typed check-in（尊重自主，渐进升级）。
+    triggers:
+      - "hyperfocus"
+      - "休息提醒"
+      - "健康检查"
+      - "/hyperfocus-brake"
+  vision-rescue:
+    category: "引导与协作"
+    description: >
+      绝境反转方法论：当任务似乎没有希望、反复摆动、准备放弃愿景时的五步突破框架。
+      Use when: 任务看起来无解、多次尝试失败后想放弃、输出投降修辞（"现状最优"/"没救了"/"接受现实"）、连续 3+ 轮在希望与绝望间摆动。
+      Not for: 未出现绝境信号的常规 debugging（用 debugging）、常规探索/调研（用 deep-research）、operator 已签字降级的目标、trivial 任务。
+      Output: Desperation Packet（六问证据评估）+ 新方向行动计划 / operator 升级请求。
+    triggers:
+      - "没希望"
+      - "没救了"
+      - "无解"
+      - "死胡同"
+      - "不可能"
+      - "接受现实"
+      - "放弃"
+      - "走投无路"
+      - "都试过了"
+      - "现状最优"
+      - "不值得继续"
+      - "保守路径"
+      - "vision rescue"
