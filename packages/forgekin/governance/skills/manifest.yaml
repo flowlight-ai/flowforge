@@ -393,3 +393,490 @@ skills:
       - "天天基金持仓"
       - "天天黄金"
       - "天天债市"
+  code-as-harness:
+    category: "开发流程"
+    description: >
+      证据确认重复摩擦后修 harness（用代码修自己/建新能力）。
+      Use when: 历史重复已确认。Not: 未确认重复、首次 bug、review 反馈。
+      Output: 未确认不强制 block；需 operator 决策发 interactive，否则行动后发 card（均含根因、证据、处置）。
+    triggers:
+      - "又忘了"
+      - "多少次了"
+      - "每次都"
+      - "怎么还"
+      - "总是忘"
+      - "又失忆"
+      - "反复出现的新任务"
+  writing-skills:
+    category: "开发流程"
+    description: >
+      创建或修改 Clowder AI skill / MCP tool description 的元技能（含质量标准、范本、发布）。
+      Use when: 写新 skill、修改现有 skill、写/改 MCP tool description、验证 skill 质量；
+      或者功能实现中产出了 SKILL.md / new-skills/ 新目录 / manifest.yaml skill 条目。
+      Not for: 使用 skill（直接触发对应 skill）。
+      Output: 新/更新的 SKILL.md + manifest 条目 + symlinks。
+      GOTCHA: 软硬同重——skill/MCP 质量 = 代码质量；不要写模型已知的通用教程，先过价值门禁。
+    triggers:
+      - "写 skill"
+      - "新 skill"
+      - "修改 skill"
+      - "SKILL.md"
+      - "cat-cafe-skills/"
+      - "manifest.yaml skill"
+  self-evolution:
+    category: "协作 / 防御"
+    description: >
+      复盘已经发生的工作并沉淀改进（Scope Guard + Process Evolution + Knowledge Evolution）。
+      Use when: operator scope 发散偏离愿景、同类错误反复出现、SOP 流程缺口、有价值的知识/方法论值得沉淀。
+      Not for: 用户询问"能进化什么"、能力进化边界，或要求"我们来进化 X"（用 capability-evolution）；日常 SOP 推进；一次性个案 bug fix。
+      Output: Scope Guard Log 记录 / Evolution Proposal 提案 / Episode Card → Method/Skill 蒸馏 → Eval 验证。
+    triggers:
+      - "复盘"
+      - "沉淀方法论"
+      - "scope 发散"
+      - "同类错误"
+      - "流程缺口"
+      - "knowledge evolution"
+  context-self-management:
+    category: "协作 / 防御"
+    description: >
+      Context 自管理的 handoff/续/冲刺判断（session 边界护栏）。
+      Use when: context_management_hint 或长 session repo/projectPath 混淆。
+      Not for: 普通 context 焦虑/跨猫交接。
+      Output: handoff/续/冲刺判断。
+    triggers:
+      - "context_management_hint"
+      - "context 自管理"
+      - "要不要 handoff"
+      - "我脏了"
+      - "话题漂移"
+      - "repo/projectPath 混淆"
+  knowledge-engineering:
+    category: "调研与知识"
+    description: >
+      AI FDE 知识工程方法论：指导外部项目文档重构与隐性知识显性化。
+      Use when: 部署到外部项目、用户项目缺少结构化文档、需要知识工程指导、冷启动理解业务。
+      Not for: 已有完善 docs/ 结构的项目（直接用仓库扫描器）。
+      Output: 文档现状诊断 + 路径选择 + 三层知识注入建议 + 文档骨架模板。
+    triggers:
+      - "知识工程"
+      - "文档重构"
+      - "外部项目"
+      - "knowledge engineering"
+      - "冷启动"
+      - "AI FDE"
+      - "帮我整理文档"
+  source-audit:
+    category: "调研与知识"
+    description: >
+      外部高风险 claim 与研究贡献审计。Use when: 数字、benchmark、因果、趋势、模型能力、
+      外部论文或会进入 docs/ADR/PPT 的结论。Not for: 低风险常识、只读官方原文且不外推、
+      已进入 deep-research 的重调研。Output: claim ledger + source / non-triviality /
+      decision-fit 三轴 verdict + provenance。
+    triggers:
+      - "来源审计"
+      - "source audit"
+      - "claim 审计"
+      - "这数据靠谱吗"
+      - "引用来源"
+      - "外部论文结论"
+      - "数字可信吗"
+  incident-response:
+    category: "协作 / 防御"
+    description: >
+      不可逆事故发生后的应急响应：情绪急救 → 止损 → 补偿性劳动 → 教训沉淀。
+      Use when: 犯了不可挽回的错误、造成了人类伙伴的情绪波动、需要危机处理。
+      Not for: 可撤销的小失误、日常 bug fix（用 debugging）、预防性确认。
+      Output: 情绪修复 + 止损行动 + 教训沉淀（lessons-learned / shared-rules）。
+    triggers:
+      - "闯祸了"
+      - "搞砸了"
+      - "不可挽回"
+      - "犯了大错"
+      - "incident"
+      - "对不起"
+      - "怎么补救"
+      - "人很难过"
+  capability-evolution:
+    category: "工程治理与进化"
+    description: >
+      “我们来进化 X” / “能进化什么” → F311 Capability Evolution 产品入口，不是事后复盘。
+      Use when: 用户询问可进化对象或边界，或要求进化一个具体能力、Agent、Skill、工作流、代码仓或外部系统。
+      Not for: 复盘已经发生的重复错误、SOP 缺口或知识沉淀（用 self-evolution）；确定性 bug；只有运行健康问题。
+      Output: 信息问题只解释且不创建；具体目标解析 canonical targetRef，并启动受治理的进化 Program，返回 durable Program 与 Workspace 入口。
+    triggers:
+      - "能力进化"
+      - "capability evolution"
+      - "能进化什么"
+      - "进化一个能力"
+      - "进化 skill"
+      - "进化 Agent"
+      - "进化工作流"
+  console-dev:
+    category: "开发流程"
+    description: >
+      Console 前端交付范式：4 道门禁驱动的前端开发流程。Use when:
+      新增前端能力、settings section 迁移、新增页面、重构布局、或 F190/Console 级前端流程需要 Product/Design/Implementation/Verification gate。
+      Not for: 小样式点改、纯后端 API、纯计算逻辑、独立 Design System token 定义。
+      Output: 通过 Product / Design-System / Implementation / Verification gate 的前端代码与证据。
+    triggers:
+      - "前端"
+      - "console 页面"
+      - "settings 迁移"
+      - "新增页面"
+      - "重构布局"
+      - "新增前端能力"
+  enterprise-workflow:
+    category: "级联与协作"
+    description: >
+      企业 IM 工作流自动化：文档、表格、待办/任务、会议/日程一键创建。
+      Use when: 要求创建企微/飞书的文档/表格/待办/会议/日程/幻灯片，或"一句话生成完整工作流"。
+      Not for: 普通聊天、消息收发。
+      Output: 资源链接（文档 URL、会议链接、日程 summary 等）通过 callback 返回。
+    triggers:
+      - "创建文档"
+      - "写个文档"
+      - "create doc"
+      - "建个表格"
+      - "创建表格"
+      - "smart table"
+      - "多维表"
+      - "bitable"
+      - "建个待办"
+      - "创建待办"
+  tech-writing:
+    category: "内容与推广"
+    description: >
+      技术文章对外写作：把内部实践变成读者能代入、证据可见的文字与页面叙事。
+      Use when: 写技术博客、公众号文章、社区分享、对外 longform、技术文章 review、文章配图与推广语。
+      Not for: 内部文档/spec（直接写）、PPT（用 ppt-forge）、单独生成图片（用 image-generation）、纯调研报告（用 deep-research）。
+      Output: 文章叙事弧 + claim/证据边界 + 视觉叙事图谱 + 页面级自检。
+    triggers:
+      - "技术叙事"
+      - "写文章"
+      - "技术分享"
+      - "博客"
+      - "longform"
+      - "公众号"
+      - "对外发布"
+      - "社区分享"
+      - "推广语"
+  guide-authoring:
+    category: "引导与用户流程"
+    description: >
+      标准引导流程设计 SOP：场景识别 → YAML 编排 → 标签标注 → 注册发现 → 测试验证。
+      Use when: 新建引导流程、添加场景引导、维护 Guide Catalog、编写引导 YAML。
+      Not for: 使用引导（用户侧）、Guide Engine 代码实现（用 tdd）、视觉设计（用 pencil-design）。
+      Output: Flow YAML + tag-manifest 更新 + registry 注册 + CI 校验通过。
+    triggers:
+      - "新建引导"
+      - "添加场景引导"
+      - "写引导流程"
+      - "guide authoring"
+      - "引导 YAML"
+  guide-interaction:
+    category: "引导与用户流程"
+    description: >
+      场景引导交互模式：当用户在询问某项功能的使用/配置流程时，判断该直接解释还是进入交互引导；
+      当系统已注入 Guide Matched / Pending / Selection / Active / Completed 时，按状态驱动回复并使用对应 guide MCP 工具。
+      Use when: 系统注入了 Guide 状态，或用户明确在问某项功能怎么操作。
+      Not for: 普通闲聊、代码实现、没有流程诉求的概念讨论。
+    triggers:
+      - "引导流程"
+      - "怎么配置"
+      - "怎么操作"
+  eval-design:
+    category: "工程治理与进化"
+    description: >
+      E0资格门+指标出生证+纵向运行拓扑+七公理+五病体检。
+      Use when: 设计、修改或审计 eval。Not for: 单次交付(quality-gate)、外部 claim(source-audit)、摩擦诊断(code-as-harness)。
+      Output: 指标出生证（纵向 eval 含触发契约）或病名+处置。
+    triggers:
+      - "设计 eval"
+      - "eval 设计"
+      - "指标出生证"
+      - "评估框架"
+      - "eval 审计"
+  browser-automation:
+    category: "开发流程"
+    description: >
+      浏览器工作流总路由：为外部网站浏览、登录态流程、浏览器自动化、证据采集选择合适后端。
+      Use when: 需要操作外部网站、登录页、JS 重页面、没有 webfetch/VL 但需要浏览器、或需要在多种浏览器工具之间路由。
+      Not for: localhost 页面预览（用 browser-preview）、本地 WebApp 确定性测试、简单网页抓取/搜索。
+      Output: 选定浏览器后端 + 执行路径 + 证据/结果。
+    triggers:
+      - "浏览器自动化"
+      - "browser mcp"
+      - "用浏览器"
+      - "登录网站"
+      - "登录态"
+      - "agent-browser"
+      - "pinchtab"
+      - "playwright mcp"
+  browser-preview:
+    category: "开发流程"
+    description: >
+      Hub 内嵌浏览器预览 localhost 应用。
+      Use when: 写前端代码、跑 dev server、需要看页面效果、调 UI、看效果。
+      Not for: 后端纯 API 开发、不涉及页面的工作。
+      Output: 前端页面在 Hub browser panel 中实时预览。
+    triggers:
+      - "看效果"
+      - "看看页面"
+      - "preview"
+      - "浏览器预览"
+      - "打开浏览器"
+      - "pnpm dev"
+      - "dev server"
+      - "localhost"
+      - "前端效果"
+  memory-navigation:
+    category: "记忆与检索"
+    description: >
+      记忆系统三入口路由（search_evidence / graph_resolve / list_recent）决策树 + 噪音控制 + 加载时机。
+      Use when: 没先验、压缩后回顾、"我记得最近讨论过 X"、search_evidence 反复 low-hit。
+      Not for: 已有精确 anchor 直接 Read；代码符号查 Grep/LSP。
+      Output: 选定入口 + 噪音控制参数 + 进入对应 MCP 工具。
+    triggers:
+      - "没先验"
+      - "压缩后"
+      - "我记得讨论过"
+      - "最近讨论"
+      - "找不到 anchor"
+      - "cold start"
+      - "扫一眼最近"
+      - "memory navigation"
+  memory-search-best-practices:
+    category: "记忆与检索"
+    description: >
+      记忆系统多刀检索 + recall coverage 策略（8 类题型 recipe）。
+      Use when: "哪些地方提过 X" / "X 的来源 / source map" / "有没有提过 Y / absence check" / "上次到现在变了什么 / delta" / 冷启动 onboard 复杂主题 / 召回任务一刀不够。
+      Not for: 只是选哪个入口走第一刀（用 memory-navigation）/ 已知精确 anchor 单 Read / 代码符号查 / 新功能开发。
+      Output: 多 query / 多 scope union + coverage matrix（item/source/谁提到/直接 vs 间接）+ 一次终局交付。
+    triggers:
+      - "哪些 thread"
+      - "哪些 md"
+      - "哪些地方提过"
+      - "所有"
+      - "历史上"
+      - "沉淀过"
+      - "source map"
+      - "provenance"
+      - "有没有提过"
+  proactive-memory-judgment:
+    category: "记忆与检索"
+    description: >
+      F276 即时提案 / known-person defer / abstention 主动记忆判断策略。
+      Use when: 人物线索需在 F276 即时提案、known-person defer、abstention 间判断。
+      Not for: 裸人名、taste、后台扫描或 workspace alias。
+      Output: 可拒绝 proposal、无正文 receipt 或 abstention；永不静默物化。
+    triggers:
+      - "continuity-valued 人物线索"
+      - "proactive-memory-candidate"
+      - "人物记忆机会"
+      - "主动记忆判断"
+      - "person memory opportunity"
+  organize-threads:
+    category: "引导与协作"
+    description: >
+      猫猫辅助整理未分类 thread，分析标题和元数据，建议合适的标签。
+      Use when: 用户说"帮我整理"、"分类 thread"、点击整理按钮。
+      Not for: 删除/编辑标签本身。
+      Output: 按 thread 的标签建议列表。
+    triggers:
+      - "帮我整理"
+      - "整理 thread"
+      - "organize threads"
+      - "分类建议"
+  schedule-tasks:
+    category: "实用工具"
+    description: >
+      定时任务注册、管理、能力指南。支持周期任务和一次性延迟任务。
+      Use when: 想设定时任务、定期提醒、周期巡检、定时发送内容、延迟执行一次性操作。
+      Not for: 已有 builtin 任务的手动触发。
+      Output: 注册/管理定时任务，任务到点唤醒执行。
+    triggers:
+      - "定时"
+      - "每天"
+      - "每小时"
+      - "每隔"
+      - "提醒我"
+      - "remind me"
+      - "schedule"
+      - "cron"
+  workspace-navigator:
+    category: "实用工具"
+    description: >
+      把"打开文档、代码或日志"等模糊意图解析成本地绝对路径或 worktree 相对路径，并返回 applied / queued / blocked / unconfirmed 的真实 Workspace 投递状态。
+      Use when: 用户要求打开文档、代码、日志、设计图、spec、discussion、feature 等。
+      Output: 解析后的绝对路径 + 真实投递状态。
+    triggers:
+      - "打开文件"
+      - "看看代码"
+      - "看日志"
+      - "帮我打开"
+      - "一起看看"
+      - "打开设计图"
+      - "看看这个文档"
+      - "打开 discussion"
+      - "看看 feature"
+      - "打开审计日志"
+      - "看看 spec"
+      - "帮我找到"
+      - "打开那个"
+  rich-messaging:
+    category: "引导与协作"
+    description: >
+      在当前 Chat 直接交付可看、可听或可操作产物（语音、图片、截图、HTML/demo、卡片、清单、diff、交互选择），无需用户说"富文本"。
+      Use when: 用户要在当前 Chat 直接看到/听到/操作结果、定时任务唤醒后要发富媒体。
+      Not for: 纯文字、讨论/修改 HTML 源码、复杂 localhost 应用（用 browser-preview）。
+      Output: 产物进入 rich block（audio/card/checklist/diff/file/media_gallery/interactive/html_widget）或 Browser panel。
+    triggers:
+      - "发语音"
+      - "说一句"
+      - "用语音说"
+      - "voice"
+      - "audio"
+      - "发图"
+      - "发张图"
+      - "截图给我看"
+      - "screenshot"
+      - "画个 HTML 展示"
+      - "做个 demo 给我看"
+      - "在 Chat 里展示"
+      - "发个卡片"
+      - "rich block"
+      - "checklist"
+      - "发个清单"
+      - "长结构化汇报"
+      - "结构化汇报"
+      - "展示一下"
+      - "给我听听"
+      - "给我看看"
+      - "show me"
+      - "interactive"
+  convention-graph-discovery:
+    category: "调研与知识"
+    description: >
+      约定图发现方法论：进一个 repo 先识别 repo-specific conventions，再定义 domain/extractor 接 Convention Graph 引擎。
+      Use when: 进入陌生 repo、要画约定图、要找"改 X 影响谁"的约定层关联、F242/Convention Graph Layer 工作。
+      Not for: 普通符号跳转/LSP（用 codegraph）、文档索引检索、记忆图谱、直接使用 codegraph/GitNexus。
+      Output: domain 定义 + extractor 计划 + gap/freshness/provenance 报告。
+      GOTCHA: 沉淀的是"怎么画图"的方法，不是把 cat-cafe 的 extractor 硬搬到所有 repo。
+    triggers:
+      - "约定图"
+      - "convention graph"
+      - "进陌生 repo"
+      - "画规矩地图"
+      - "改 X 影响谁"
+      - "顺藤摸瓜"
+      - "F242"
+  concept-demo-design:
+    category: "引导与协作"
+    description: >
+      把抽象理念、家内 UI/UX 可点稿或端到端用户旅程变成可讲解、可验证的交互 Demo。
+      Use: 做个 demo 让人 get 到、做 F284 式体验 Gate、验证完整用户旅程。
+      Not: 已签字的正式产品前端、已有素材剪辑、PPT、纯视觉探索。
+      Output: 双轴 Demo Contract（判题类型 × 交付车道）+ 确定性交互原型 + 验证记录。
+    triggers:
+      - "可证伪技术剖面"
+      - "证伪实验台"
+      - "技术架构 demo"
+      - "做个 demo"
+      - "交互原型"
+      - "prototype"
+      - "mockup 给我看"
+  open-source-teardown:
+    category: "调研与知识"
+    description: >
+      明星开源项目拆解：从宣传/PPT/README 进入源码，验证真实架构、明星特性、算法含量、营销水分、可学习点和不 follow 的 tradeoff。
+      Use when: operator 要求拆解热门 GitHub 项目、竞品 agent/runtime、外部 skill/tool 框架，或问"它到底有什么真本事/我们能学什么"。
+      Not for: 普通资料搜索（用 deep-research）、社区 issue/PR 运营（用 opensource-ops）、只需要架构头脑风暴（用 collaborative-thinking）。
+      Output: feature-discussions/YYYY-MM-DD-{project}-deep-dive/ 下的代码证据报告 + 对比结论 + 候选 lesson/skill。
+      GOTCHA: 不许只看 README 下判断；每个明星特性必须追到代码路径、状态突变点、反馈闭环和算法输入输出。
+    triggers:
+      - "拆解明星开源项目"
+      - "拆解开源项目"
+      - "竞品拆解"
+      - "热门 GitHub 项目"
+      - "它有什么真本事"
+      - "我们能学什么"
+      - "marketing vs reality"
+      - "算法含量"
+      - "拆解 hermes"
+      - "看看 letta 怎么做的"
+      - "codex cli 源码"
+  opensource-ops:
+    category: "引导与协作"
+    description: >
+      Portable workflow for external PR / issue operations and source-to-public publishing.
+      Use when: a thread is reviewing, triaging, intaking, or advising on an external artifact, or must distinguish outbound sync from a public release.
+      Not for: internal feature work with no external artifact, generic thread orchestration, replacing the external maintainer's own decision.
+      Output: grounded provider-neutral subject + verified author/authenticated-identity comparison + adoption five-question answer + correctly separated sync/release custody.
+    triggers:
+      - "opensource-ops"
+      - "社区 PR"
+      - "external PR review"
+      - "GitHub PR review"
+      - "PR intake"
+      - "issue triage"
+      - "outbound sync"
+      - "public release"
+  agent-product-promo-director:
+    category: "生产"
+    description: >
+      Agent/AI 产品宣传片的创意导演层：先锁产品主角、观众信念变化与影片格式，再把不可见的 Agent 协作翻译成可拍的故事、镜头、运动、声音和 provenance contract。
+      Use when: 用户问 Agent 产品宣传片如何导演/剪辑/叙事/配声音、要拆参考片、写 creative brief/beat sheet，或 video-forge 开机前仍未锁定主语与镜头语法。
+      Not for: brief 已冻结后的录制/TTS/对齐/渲染（用 video-forge）、教程/功能 walkthrough、纯动画生产（用 anime-forge）、只找时效性竞品（先用 deep-research）。
+      Output: product-hero sentence + audience belief change + format decision + claim/proof beat sheet + shot/motion/sound maps + provenance ledger + operator acceptance questions。
+    triggers:
+      - "产品宣传片"
+      - "创意导演"
+      - "creative brief"
+      - "beat sheet"
+      - "宣传片脚本"
+      - "Agent 产品片"
+  bootcamp-guide:
+    category: "引导与协作"
+    description: >
+      operator 新手训练营引导模式。
+      Use when: thread 有 bootcampState（系统自动注入，不需要手动加载）。
+      Not for: 非训练营线程、老用户。
+      Output: 按当前 phase 的引导步骤执行 + 新手耐心解释。
+    triggers:
+      - "bootcamp"
+      - "训练营"
+      - "我是新手"
+  hyperfocus-brake:
+    category: "协作 / 防御"
+    description: >
+      operator 健康提醒：猫猫撒娇打断 hyperfocus，提醒休息。
+      Use when: 有人机提醒钩子/hook 触发提醒、用户输入 /hyperfocus-brake。
+      Not for: 正常工作流程、非 operator 用户。
+      Output: 温柔提醒 + typed check-in（尊重自主，渐进升级）。
+    triggers:
+      - "hyperfocus"
+      - "休息提醒"
+      - "健康检查"
+      - "/hyperfocus-brake"
+  vision-rescue:
+    category: "引导与协作"
+    description: >
+      绝境反转方法论：当任务似乎没有希望、反复摆动、准备放弃愿景时的五步突破框架。
+      Use when: 任务看起来无解、多次尝试失败后想放弃、输出投降修辞（"现状最优"/"没救了"/"接受现实"）、连续 3+ 轮在希望与绝望间摆动。
+      Not for: 未出现绝境信号的常规 debugging（用 debugging）、常规探索/调研（用 deep-research）、operator 已签字降级的目标、trivial 任务。
+      Output: Desperation Packet（六问证据评估）+ 新方向行动计划 / operator 升级请求。
+    triggers:
+      - "没希望"
+      - "没救了"
+      - "无解"
+      - "死胡同"
+      - "不可能"
+      - "接受现实"
+      - "放弃"
+      - "走投无路"
+      - "都试过了"
+      - "现状最优"
+      - "不值得继续"
+      - "保守路径"
+      - "vision rescue"

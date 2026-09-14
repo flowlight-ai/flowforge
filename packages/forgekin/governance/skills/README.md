@@ -33,6 +33,37 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | worktree | Isolated Workspace Setup | 隔离工作区搭建 |
 | co-creation-docs | Co-Creation Docs Delivery | 共创文档交付 |
 | owner-friendly-plugin-development | Hosted Plugin Product Boundary | 宿主插件产品边界 |
+| code-as-harness | Harness Self-Repair | 代码即工作台修复 |
+| writing-skills | Skill Authoring Meta-Skill | 技能编写元技能 |
+| self-evolution | Self-Evolution (Scope Guard + Process/Knowledge Evolution) | 自我进化（范围护栏+流程/知识进化） |
+| context-self-management | Context Self-Management | 上下文自管理 |
+| knowledge-engineering | AI FDE Knowledge Engineering | 知识工程方法论 |
+| source-audit | Source Claim Audit | 外部来源审计 |
+| incident-response | Incident Response | 事故应急响应 |
+| capability-evolution | Capability Evolution | 能力进化 |
+| console-dev | Console Front-End Delivery | Console 前端交付 |
+| enterprise-workflow | Enterprise IM Workflow Automation | 企业 IM 工作流自动化 |
+| tech-writing | Technical Article Authoring | 技术文章写作 |
+| guide-authoring | Guide Flow Authoring | 引导流程编写 |
+| guide-interaction | Guide Interaction Routing | 引导交互路由 |
+| eval-design | Eval Design Governance | 评测设计治理 |
+| browser-automation | Browser Workflow Routing | 浏览器工作流路由 |
+| browser-preview | Embedded Browser Preview | 内嵌浏览器预览 |
+| memory-navigation | Memory Entry Routing | 记忆入口路由 |
+| memory-search-best-practices | Memory Recall Strategy | 记忆召回策略 |
+| proactive-memory-judgment | Proactive Memory Judgment | 主动记忆判断 |
+| organize-threads | Thread Organization | 线程整理分类 |
+| schedule-tasks | Scheduled Task Management | 定时任务管理 |
+| workspace-navigator | Workspace Resolution | 工作区路径解析 |
+| rich-messaging | Rich Media Delivery | 富媒体直接交付 |
+| convention-graph-discovery | Convention Graph Discovery | 约定图发现 |
+| concept-demo-design | Concept Demo Design | 概念证伪演示设计 |
+| open-source-teardown | Open-Source Teardown | 开源项目拆解 |
+| opensource-ops | Open-Source Operations | 开源协作运营 |
+| agent-product-promo-director | Agent Product Promo Direction | Agent 产品宣传创意导演 |
+| bootcamp-guide | Bootcamp Onboarding Guide | 新手营引导 |
+| hyperfocus-brake | Hyperfocus Brake | 过度专注打断 |
+| vision-rescue | Vision Rescue | 愿景绝境反转 |
 | anime-forge | Anime Short Production Line | 动画短片生产线 |
 | video-forge | Video Production Pipeline | 视频制作全链路 |
 | sprite-forge | Character Sprite Production Line | 角色动态素材生产线 |
@@ -50,5 +81,10 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 - **wave 3**（2026-09-11）：`fresh-context-review` / `request-review` / `receive-review` / `receive-handoff-grounding` 评审与协作域四核心包内容迁入（B19 三波）。
 - **wave 4**（2026-09-11）：`thread-orchestration` / `cross-thread-sync` / `collaborative-thinking` / `custody-recognition` 协作与编排域四核心包内容迁入（B19 四波）。
 - **wave 5**（2026-09-11）：`feat-lifecycle` / `worktree` / `co-creation-docs` / `owner-friendly-plugin-development` 工程生命周期与工具链开发流程域四核心包内容迁入（B19 五波）。
+- **wave 6**（2026-09-13）：`code-as-harness` / `writing-skills` / `self-evolution` / `context-self-management` / `knowledge-engineering` 开发/调试域与能力进化/会话护栏域五核心包内容迁入（B19 六波）。
+- **wave 7**（2026-09-13）：`source-audit` / `incident-response` / `capability-evolution` / `console-dev` / `enterprise-workflow` 工程审计/响应与能力进化/前端交付/企业协作域五核心包内容迁入（B19 七波）。
+- **wave 8**（2026-09-13）：`tech-writing` / `guide-authoring` / `guide-interaction` / `eval-design` / `browser-automation` / `browser-preview` 技术写作/引导/评测/浏览器域六核心包内容迁入（B19 八波）。
+- **wave 9**（2026-09-13）：`memory-navigation` / `memory-search-best-practices` / `proactive-memory-judgment` / `organize-threads` / `schedule-tasks` / `workspace-navigator` 记忆/检索/组织域六核心包内容迁入（B19 九波）。
+- **wave 10**（2026-09-13）：`rich-messaging` / `convention-graph-discovery` / `concept-demo-design` / `open-source-teardown` / `opensource-ops` / `agent-product-promo-director` / `bootcamp-guide` / `hyperfocus-brake` / `vision-rescue` 协作与生产域九包内容迁入（B19 十波）。
 - **wave 11**（2026-09-13）：`anime-forge` / `video-forge` / `sprite-forge` / `ppt-forge` / `image-generation` / `pencil-design` / `ttfund-skills` 创意与生产工具域七包内容迁入（B19 十一波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。
