@@ -544,3 +544,89 @@ skills:
       - "bitable"
       - "建个待办"
       - "创建待办"
+  tech-writing:
+    category: "内容与推广"
+    description: >
+      技术文章对外写作：把内部实践变成读者能代入、证据可见的文字与页面叙事。
+      Use when: 写技术博客、公众号文章、社区分享、对外 longform、技术文章 review、文章配图与推广语。
+      Not for: 内部文档/spec（直接写）、PPT（用 ppt-forge）、单独生成图片（用 image-generation）、纯调研报告（用 deep-research）。
+      Output: 文章叙事弧 + claim/证据边界 + 视觉叙事图谱 + 页面级自检。
+    triggers:
+      - "技术叙事"
+      - "写文章"
+      - "技术分享"
+      - "博客"
+      - "longform"
+      - "公众号"
+      - "对外发布"
+      - "社区分享"
+      - "推广语"
+  guide-authoring:
+    category: "引导与用户流程"
+    description: >
+      标准引导流程设计 SOP：场景识别 → YAML 编排 → 标签标注 → 注册发现 → 测试验证。
+      Use when: 新建引导流程、添加场景引导、维护 Guide Catalog、编写引导 YAML。
+      Not for: 使用引导（用户侧）、Guide Engine 代码实现（用 tdd）、视觉设计（用 pencil-design）。
+      Output: Flow YAML + tag-manifest 更新 + registry 注册 + CI 校验通过。
+    triggers:
+      - "新建引导"
+      - "添加场景引导"
+      - "写引导流程"
+      - "guide authoring"
+      - "引导 YAML"
+  guide-interaction:
+    category: "引导与用户流程"
+    description: >
+      场景引导交互模式：当用户在询问某项功能的使用/配置流程时，判断该直接解释还是进入交互引导；
+      当系统已注入 Guide Matched / Pending / Selection / Active / Completed 时，按状态驱动回复并使用对应 guide MCP 工具。
+      Use when: 系统注入了 Guide 状态，或用户明确在问某项功能怎么操作。
+      Not for: 普通闲聊、代码实现、没有流程诉求的概念讨论。
+    triggers:
+      - "引导流程"
+      - "怎么配置"
+      - "怎么操作"
+  eval-design:
+    category: "工程治理与进化"
+    description: >
+      E0资格门+指标出生证+纵向运行拓扑+七公理+五病体检。
+      Use when: 设计、修改或审计 eval。Not for: 单次交付(quality-gate)、外部 claim(source-audit)、摩擦诊断(code-as-harness)。
+      Output: 指标出生证（纵向 eval 含触发契约）或病名+处置。
+    triggers:
+      - "设计 eval"
+      - "eval 设计"
+      - "指标出生证"
+      - "评估框架"
+      - "eval 审计"
+  browser-automation:
+    category: "开发流程"
+    description: >
+      浏览器工作流总路由：为外部网站浏览、登录态流程、浏览器自动化、证据采集选择合适后端。
+      Use when: 需要操作外部网站、登录页、JS 重页面、没有 webfetch/VL 但需要浏览器、或需要在多种浏览器工具之间路由。
+      Not for: localhost 页面预览（用 browser-preview）、本地 WebApp 确定性测试、简单网页抓取/搜索。
+      Output: 选定浏览器后端 + 执行路径 + 证据/结果。
+    triggers:
+      - "浏览器自动化"
+      - "browser mcp"
+      - "用浏览器"
+      - "登录网站"
+      - "登录态"
+      - "agent-browser"
+      - "pinchtab"
+      - "playwright mcp"
+  browser-preview:
+    category: "开发流程"
+    description: >
+      Hub 内嵌浏览器预览 localhost 应用。
+      Use when: 写前端代码、跑 dev server、需要看页面效果、调 UI、看效果。
+      Not for: 后端纯 API 开发、不涉及页面的工作。
+      Output: 前端页面在 Hub browser panel 中实时预览。
+    triggers:
+      - "看效果"
+      - "看看页面"
+      - "preview"
+      - "浏览器预览"
+      - "打开浏览器"
+      - "pnpm dev"
+      - "dev server"
+      - "localhost"
+      - "前端效果"

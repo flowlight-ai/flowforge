@@ -43,6 +43,12 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | capability-evolution | Capability Evolution | 能力进化 |
 | console-dev | Console Front-End Delivery | Console 前端交付 |
 | enterprise-workflow | Enterprise IM Workflow Automation | 企业 IM 工作流自动化 |
+| tech-writing | Technical Article Authoring | 技术文章写作 |
+| guide-authoring | Guide Flow Authoring | 引导流程编写 |
+| guide-interaction | Guide Interaction Routing | 引导交互路由 |
+| eval-design | Eval Design Governance | 评测设计治理 |
+| browser-automation | Browser Workflow Routing | 浏览器工作流路由 |
+| browser-preview | Embedded Browser Preview | 内嵌浏览器预览 |
 | anime-forge | Anime Short Production Line | 动画短片生产线 |
 | video-forge | Video Production Pipeline | 视频制作全链路 |
 | sprite-forge | Character Sprite Production Line | 角色动态素材生产线 |
@@ -62,5 +68,6 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 - **wave 5**（2026-09-11）：`feat-lifecycle` / `worktree` / `co-creation-docs` / `owner-friendly-plugin-development` 工程生命周期与工具链开发流程域四核心包内容迁入（B19 五波）。
 - **wave 6**（2026-09-13）：`code-as-harness` / `writing-skills` / `self-evolution` / `context-self-management` / `knowledge-engineering` 开发/调试域与能力进化/会话护栏域五核心包内容迁入（B19 六波）。
 - **wave 7**（2026-09-13）：`source-audit` / `incident-response` / `capability-evolution` / `console-dev` / `enterprise-workflow` 工程审计/响应与能力进化/前端交付/企业协作域五核心包内容迁入（B19 七波）。
+- **wave 8**（2026-09-13）：`tech-writing` / `guide-authoring` / `guide-interaction` / `eval-design` / `browser-automation` / `browser-preview` 技术写作/引导/评测/浏览器域六核心包内容迁入（B19 八波）。
 - **wave 11**（2026-09-13）：`anime-forge` / `video-forge` / `sprite-forge` / `ppt-forge` / `image-generation` / `pencil-design` / `ttfund-skills` 创意与生产工具域七包内容迁入（B19 十一波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。
