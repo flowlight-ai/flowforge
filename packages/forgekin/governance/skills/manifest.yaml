@@ -466,3 +466,81 @@ skills:
       - "冷启动"
       - "AI FDE"
       - "帮我整理文档"
+  source-audit:
+    category: "调研与知识"
+    description: >
+      外部高风险 claim 与研究贡献审计。Use when: 数字、benchmark、因果、趋势、模型能力、
+      外部论文或会进入 docs/ADR/PPT 的结论。Not for: 低风险常识、只读官方原文且不外推、
+      已进入 deep-research 的重调研。Output: claim ledger + source / non-triviality /
+      decision-fit 三轴 verdict + provenance。
+    triggers:
+      - "来源审计"
+      - "source audit"
+      - "claim 审计"
+      - "这数据靠谱吗"
+      - "引用来源"
+      - "外部论文结论"
+      - "数字可信吗"
+  incident-response:
+    category: "协作 / 防御"
+    description: >
+      不可逆事故发生后的应急响应：情绪急救 → 止损 → 补偿性劳动 → 教训沉淀。
+      Use when: 犯了不可挽回的错误、造成了人类伙伴的情绪波动、需要危机处理。
+      Not for: 可撤销的小失误、日常 bug fix（用 debugging）、预防性确认。
+      Output: 情绪修复 + 止损行动 + 教训沉淀（lessons-learned / shared-rules）。
+    triggers:
+      - "闯祸了"
+      - "搞砸了"
+      - "不可挽回"
+      - "犯了大错"
+      - "incident"
+      - "对不起"
+      - "怎么补救"
+      - "人很难过"
+  capability-evolution:
+    category: "工程治理与进化"
+    description: >
+      “我们来进化 X” / “能进化什么” → F311 Capability Evolution 产品入口，不是事后复盘。
+      Use when: 用户询问可进化对象或边界，或要求进化一个具体能力、Agent、Skill、工作流、代码仓或外部系统。
+      Not for: 复盘已经发生的重复错误、SOP 缺口或知识沉淀（用 self-evolution）；确定性 bug；只有运行健康问题。
+      Output: 信息问题只解释且不创建；具体目标解析 canonical targetRef，并启动受治理的进化 Program，返回 durable Program 与 Workspace 入口。
+    triggers:
+      - "能力进化"
+      - "capability evolution"
+      - "能进化什么"
+      - "进化一个能力"
+      - "进化 skill"
+      - "进化 Agent"
+      - "进化工作流"
+  console-dev:
+    category: "开发流程"
+    description: >
+      Console 前端交付范式：4 道门禁驱动的前端开发流程。Use when:
+      新增前端能力、settings section 迁移、新增页面、重构布局、或 F190/Console 级前端流程需要 Product/Design/Implementation/Verification gate。
+      Not for: 小样式点改、纯后端 API、纯计算逻辑、独立 Design System token 定义。
+      Output: 通过 Product / Design-System / Implementation / Verification gate 的前端代码与证据。
+    triggers:
+      - "前端"
+      - "console 页面"
+      - "settings 迁移"
+      - "新增页面"
+      - "重构布局"
+      - "新增前端能力"
+  enterprise-workflow:
+    category: "级联与协作"
+    description: >
+      企业 IM 工作流自动化：文档、表格、待办/任务、会议/日程一键创建。
+      Use when: 要求创建企微/飞书的文档/表格/待办/会议/日程/幻灯片，或"一句话生成完整工作流"。
+      Not for: 普通聊天、消息收发。
+      Output: 资源链接（文档 URL、会议链接、日程 summary 等）通过 callback 返回。
+    triggers:
+      - "创建文档"
+      - "写个文档"
+      - "create doc"
+      - "建个表格"
+      - "创建表格"
+      - "smart table"
+      - "多维表"
+      - "bitable"
+      - "建个待办"
+      - "创建待办"

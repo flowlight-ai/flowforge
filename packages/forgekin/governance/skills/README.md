@@ -38,6 +38,11 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | self-evolution | Self-Evolution (Scope Guard + Process/Knowledge Evolution) | 自我进化（范围护栏+流程/知识进化） |
 | context-self-management | Context Self-Management | 上下文自管理 |
 | knowledge-engineering | AI FDE Knowledge Engineering | 知识工程方法论 |
+| source-audit | Source Claim Audit | 外部来源审计 |
+| incident-response | Incident Response | 事故应急响应 |
+| capability-evolution | Capability Evolution | 能力进化 |
+| console-dev | Console Front-End Delivery | Console 前端交付 |
+| enterprise-workflow | Enterprise IM Workflow Automation | 企业 IM 工作流自动化 |
 | anime-forge | Anime Short Production Line | 动画短片生产线 |
 | video-forge | Video Production Pipeline | 视频制作全链路 |
 | sprite-forge | Character Sprite Production Line | 角色动态素材生产线 |
@@ -56,5 +61,6 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 - **wave 4**（2026-09-11）：`thread-orchestration` / `cross-thread-sync` / `collaborative-thinking` / `custody-recognition` 协作与编排域四核心包内容迁入（B19 四波）。
 - **wave 5**（2026-09-11）：`feat-lifecycle` / `worktree` / `co-creation-docs` / `owner-friendly-plugin-development` 工程生命周期与工具链开发流程域四核心包内容迁入（B19 五波）。
 - **wave 6**（2026-09-13）：`code-as-harness` / `writing-skills` / `self-evolution` / `context-self-management` / `knowledge-engineering` 开发/调试域与能力进化/会话护栏域五核心包内容迁入（B19 六波）。
+- **wave 7**（2026-09-13）：`source-audit` / `incident-response` / `capability-evolution` / `console-dev` / `enterprise-workflow` 工程审计/响应与能力进化/前端交付/企业协作域五核心包内容迁入（B19 七波）。
 - **wave 11**（2026-09-13）：`anime-forge` / `video-forge` / `sprite-forge` / `ppt-forge` / `image-generation` / `pencil-design` / `ttfund-skills` 创意与生产工具域七包内容迁入（B19 十一波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。
