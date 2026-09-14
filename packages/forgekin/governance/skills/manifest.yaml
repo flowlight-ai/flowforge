@@ -393,3 +393,76 @@ skills:
       - "天天基金持仓"
       - "天天黄金"
       - "天天债市"
+  code-as-harness:
+    category: "开发流程"
+    description: >
+      证据确认重复摩擦后修 harness（用代码修自己/建新能力）。
+      Use when: 历史重复已确认。Not: 未确认重复、首次 bug、review 反馈。
+      Output: 未确认不强制 block；需 operator 决策发 interactive，否则行动后发 card（均含根因、证据、处置）。
+    triggers:
+      - "又忘了"
+      - "多少次了"
+      - "每次都"
+      - "怎么还"
+      - "总是忘"
+      - "又失忆"
+      - "反复出现的新任务"
+  writing-skills:
+    category: "开发流程"
+    description: >
+      创建或修改 Clowder AI skill / MCP tool description 的元技能（含质量标准、范本、发布）。
+      Use when: 写新 skill、修改现有 skill、写/改 MCP tool description、验证 skill 质量；
+      或者功能实现中产出了 SKILL.md / new-skills/ 新目录 / manifest.yaml skill 条目。
+      Not for: 使用 skill（直接触发对应 skill）。
+      Output: 新/更新的 SKILL.md + manifest 条目 + symlinks。
+      GOTCHA: 软硬同重——skill/MCP 质量 = 代码质量；不要写模型已知的通用教程，先过价值门禁。
+    triggers:
+      - "写 skill"
+      - "新 skill"
+      - "修改 skill"
+      - "SKILL.md"
+      - "cat-cafe-skills/"
+      - "manifest.yaml skill"
+  self-evolution:
+    category: "协作 / 防御"
+    description: >
+      复盘已经发生的工作并沉淀改进（Scope Guard + Process Evolution + Knowledge Evolution）。
+      Use when: operator scope 发散偏离愿景、同类错误反复出现、SOP 流程缺口、有价值的知识/方法论值得沉淀。
+      Not for: 用户询问"能进化什么"、能力进化边界，或要求"我们来进化 X"（用 capability-evolution）；日常 SOP 推进；一次性个案 bug fix。
+      Output: Scope Guard Log 记录 / Evolution Proposal 提案 / Episode Card → Method/Skill 蒸馏 → Eval 验证。
+    triggers:
+      - "复盘"
+      - "沉淀方法论"
+      - "scope 发散"
+      - "同类错误"
+      - "流程缺口"
+      - "knowledge evolution"
+  context-self-management:
+    category: "协作 / 防御"
+    description: >
+      Context 自管理的 handoff/续/冲刺判断（session 边界护栏）。
+      Use when: context_management_hint 或长 session repo/projectPath 混淆。
+      Not for: 普通 context 焦虑/跨猫交接。
+      Output: handoff/续/冲刺判断。
+    triggers:
+      - "context_management_hint"
+      - "context 自管理"
+      - "要不要 handoff"
+      - "我脏了"
+      - "话题漂移"
+      - "repo/projectPath 混淆"
+  knowledge-engineering:
+    category: "调研与知识"
+    description: >
+      AI FDE 知识工程方法论：指导外部项目文档重构与隐性知识显性化。
+      Use when: 部署到外部项目、用户项目缺少结构化文档、需要知识工程指导、冷启动理解业务。
+      Not for: 已有完善 docs/ 结构的项目（直接用仓库扫描器）。
+      Output: 文档现状诊断 + 路径选择 + 三层知识注入建议 + 文档骨架模板。
+    triggers:
+      - "知识工程"
+      - "文档重构"
+      - "外部项目"
+      - "knowledge engineering"
+      - "冷启动"
+      - "AI FDE"
+      - "帮我整理文档"
