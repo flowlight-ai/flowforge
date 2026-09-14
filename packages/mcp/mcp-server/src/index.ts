@@ -136,3 +136,22 @@ export type {
   PollEndpoint,
   ResponseMapping,
 } from './protocol-engine/types.js';
+
+// --- EP1-1b: domain toolset catalogs + injected callback transport ---
+export {
+  assembleMcpSeverToolsets,
+  buildCanonicalToolSources,
+  buildCanonicalToolRegistryForPort,
+  TOOLSET_GROUP_ANCHOR,
+  unavailableCallbackPort,
+  defineMcpToolsetTool,
+  defineMcpToolsetTools,
+} from './toolsets/assemble.js';
+export type {
+  AuthorizationHint,
+  ToolsetToolInput,
+} from './toolsets/assemble.js';
+export {
+  createCallbackInvoker,
+} from './toolsets/callback-transport.js';
+export type { CallbackRequest, CallbackRoute, CallbackTransportPort } from './toolsets/callback-transport.js';
