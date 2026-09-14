@@ -49,6 +49,12 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 | eval-design | Eval Design Governance | 评测设计治理 |
 | browser-automation | Browser Workflow Routing | 浏览器工作流路由 |
 | browser-preview | Embedded Browser Preview | 内嵌浏览器预览 |
+| memory-navigation | Memory Entry Routing | 记忆入口路由 |
+| memory-search-best-practices | Memory Recall Strategy | 记忆召回策略 |
+| proactive-memory-judgment | Proactive Memory Judgment | 主动记忆判断 |
+| organize-threads | Thread Organization | 线程整理分类 |
+| schedule-tasks | Scheduled Task Management | 定时任务管理 |
+| workspace-navigator | Workspace Resolution | 工作区路径解析 |
 | anime-forge | Anime Short Production Line | 动画短片生产线 |
 | video-forge | Video Production Pipeline | 视频制作全链路 |
 | sprite-forge | Character Sprite Production Line | 角色动态素材生产线 |
@@ -69,5 +75,6 @@ B19 技能内容迁入目录。每包一个 `<kebab-case-id>/SKILL.md`，路由�
 - **wave 6**（2026-09-13）：`code-as-harness` / `writing-skills` / `self-evolution` / `context-self-management` / `knowledge-engineering` 开发/调试域与能力进化/会话护栏域五核心包内容迁入（B19 六波）。
 - **wave 7**（2026-09-13）：`source-audit` / `incident-response` / `capability-evolution` / `console-dev` / `enterprise-workflow` 工程审计/响应与能力进化/前端交付/企业协作域五核心包内容迁入（B19 七波）。
 - **wave 8**（2026-09-13）：`tech-writing` / `guide-authoring` / `guide-interaction` / `eval-design` / `browser-automation` / `browser-preview` 技术写作/引导/评测/浏览器域六核心包内容迁入（B19 八波）。
+- **wave 9**（2026-09-13）：`memory-navigation` / `memory-search-best-practices` / `proactive-memory-judgment` / `organize-threads` / `schedule-tasks` / `workspace-navigator` 记忆/检索/组织域六核心包内容迁入（B19 九波）。
 - **wave 11**（2026-09-13）：`anime-forge` / `video-forge` / `sprite-forge` / `ppt-forge` / `image-generation` / `pencil-design` / `ttfund-skills` 创意与生产工具域七包内容迁入（B19 十一波）。
 - 后续 wave：按 B8 技能域分批补齐其余核心包（见 review_code.md §15 Q5）。
