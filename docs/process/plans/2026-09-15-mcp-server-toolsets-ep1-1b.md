@@ -19,6 +19,20 @@
 
 > 分批可合并提交（B1+B2 为「范式确立」批次），以控制 PR 粒度；B3–B5 按家族呈现稳定性后独立 PR。
 
+## 批进度
+
+- **B1+B2 范式确立 ✅（2026-09-15，PR #191）**：`callback-transport.ts`（注入式 `CallbackTransportPort` + `${key}` 路径模板 + `unavailableCallbackPort`）、
+  `define-toolset-tool.ts`（`AuthorizationHint` authority 推导表 fail-fast + `defineMcpToolsetTool(s)`）、
+  `assemble.ts`（`assembleMcpSeverToolsets` 接入 EP1-1a `registerToolset`）、`canonical-tool-sources.ts`
+  （`buildCanonicalToolSources` + 规模锚 `TOOLSET_GROUP_ANCHOR`）；collab 两小组（capability-evolution-change / entrusted-work-read）迁入确立 catalog 范式。
+  契约测试 3 文件 11/11 全绿，全包 9 文件 57/57 全绿，包级 tsc exit 0、oxlint 0，零 @cat-cafe 依赖；`index.ts` 增补导出。
+- **B3 collab 小组 ✅（2026-09-15）**：collab 余 16 小组迁入（community-route-acceptance / auto-dream / capability-evolution /
+  capability-evolution-round / eval-lifecycle / event-memory / external-review-verdict / external-runtime-session-callback /
+  game-action / hub-action / paw-feel-disposition / publish-verdict / rich-block-rules / schedule / shell / skill-consumption），
+  collab 综合 18 组 41 工具；`canonical-tool-sources.ts` concat+规模锚扩展、`tests/toolsets/collab-B3.spec.ts`、
+  全包 10 文件 62/62 全绿、tsc exit 0、oxlint 0、零禁用依赖。两处框架性保真度调和已在文件头 NOTE（remove_task DELETE→GET；shell_exec 本地 exec 占位 GET 路由）。collab 仅余 `callback-tools.ts` 超大组（211KB，数十工具）单列后续。
+- **B4-B5（待迁）**：collab 余 callback 大组 / memory 11 组 / signals 2 组 / limb 1 组，按家族分批演进。
+
 ## 文件清单
 
 - 新增（src/toolsets）：`callback-transport.ts`、`define-toolset-tool.ts`、`assemble.ts`、`canonical-tool-sources.ts`、`README.md`、`collab/{callback,capability-evolution,capability-evolution-round,capability-evolution-change,auto-dream,community-route-acceptance,external-review-verdict,external-runtime-session-callback,hub-action,skill-consumption,entrusted-work-read,event-memory,publish-verdict,eval-lifecycle,paw-feel-disposition,rich-block-rules,game-action,schedule,shell}.ts`、`memory/{callback-memory,distillation,evidence,external-runtime-session-read,meeting-artifact,file-slice,graph,library-lifecycle,perspective,recent,session-chain}.ts`、`signals/{signals,signal-study}.ts`、`limb/limb.ts`

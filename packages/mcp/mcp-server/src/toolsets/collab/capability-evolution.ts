@@ -1,0 +1,238 @@
+/**
+ * collab/capability-evolution toolset (EP1-1b, B3).
+ *
+ * Migrated from clowder `tools/capability-evolution-tools.ts`. All five handlers
+ * converge on the F311 evolution-programs callback routes; the measurement tool
+ * is a separate F267 authority-boundary admission. Resource family
+ * `evolution-program`.
+ *
+ * NOTE: `cat_cafe_get_evolution_program` in clowder conditionally hit the
+ * single-Program path when `programId` was supplied and the list path otherwise.
+ * The injected transport supports one static path template, so the single-Program
+ * `${programId}` route is declared; the bare-list read is out of scope for this
+ * framework and would need a host extension.
+ */
+
+import { z } from 'zod';
+import { defineMcpToolsetTools } from '../define-toolset-tool.js';
+import type { CallbackTransportPort } from '../callback-transport.js';
+
+const bounded = (max: number) => z.string().trim().min(1).max(max);
+const ownerRef = z
+  .object({
+    ownerFeatureId: bounded(120),
+    ownerStateRef: bounded(500).regex(/^[a-z][a-z0-9-]*:[^\s{}[\]"']+$/),
+    version: bounded(240).optional(),
+  })
+  .strict();
+const programId = z.string().regex(/^evolution-program:[0-9a-f]{32}$/);
+const clientMessageId = bounded(240);
+const sourceMessageId = z
+  .string()
+  .min(1)
+  .max(240)
+  .refine((value) => value === value.trim(), { message: 'source message id must not be normalized' })
+  .refine((value) => !/[\r\n]/.test(value), { message: 'source message id must be a single line' });
+const ttlSeconds = z.number().int().positive().max(31_536_000);
+const agentKeyCatId = bounded(120)
+  .optional()
+  .describe(
+    'Persistent-agent identity selector. Required for shared agent-key MCP variants; ignored under invocation auth.',
+  );
+const commandAction = z.union([
+  z.object({ type: z.literal('pause'), reasonRef: ownerRef }).strict(),
+  z.object({ type: z.literal('resume'), resumeRef: ownerRef }).strict(),
+  z
+    .object({
+      type: z.literal('needs_expert'),
+      missingRole: z.enum(['observer', 'domain_owner', 'consumer', 'calibrator']),
+      blockerRef: ownerRef,
+    })
+    .strict(),
+  z.object({ type: z.literal('bind_expert'), roleOwnerRef: ownerRef }).strict(),
+  z.object({ type: z.literal('withdraw'), decisionRef: ownerRef }).strict(),
+  z.object({ type: z.literal('retention'), mode: z.literal('keep_forever'), retentionActionRef: ownerRef }).strict(),
+  z
+    .object({
+      type: z.literal('retention'),
+      mode: z.literal('forget_after'),
+      ttlSeconds,
+      retentionActionRef: ownerRef,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('forget'),
+      ttlSeconds,
+      decisionRef: ownerRef,
+      retentionActionRef: ownerRef,
+    })
+    .strict(),
+]);
+
+const startEvolutionProgramInputSchema = {
+  targetRef: ownerRef.describe('Canonical ref to the one capability/object being evolved; never copy its payload.'),
+  clientMessageId: clientMessageId.describe('Stable idempotency id for the user message that requested this Program.'),
+  agentKeyCatId,
+};
+
+const getEvolutionProgramInputSchema = {
+  programId: programId.optional().describe('Exact Program id. Omit to list all Programs in the caller workspace.'),
+  agentKeyCatId,
+};
+
+const updateEvolutionProgramInputSchema = {
+  programId: programId.describe('Exact canonical Evolution Program id.'),
+  expectedSequence: z.number().int().nonnegative().describe('Current Program sequence for CAS.'),
+  clientMessageId: clientMessageId.describe('Stable idempotency id for this lifecycle command.'),
+  action: commandAction.describe('One lifecycle command; owner truth remains ref-only.'),
+  agentKeyCatId,
+};
+
+const issueCapabilityEvolutionMeasurementInputSchema = {
+  programId: programId.describe(
+    'Exact canonical Evolution Program id whose target owner supplies the source manifest.',
+  ),
+  clientMessageId: sourceMessageId.describe('Stable source message id for the immutable issuance PR.'),
+  agentKeyCatId,
+};
+
+const trajectoryRef = ownerRef.refine(
+  (value) => value.ownerFeatureId === 'F299' && /^inv:[^\s:]+$/.test(value.ownerStateRef),
+  'trajectoryRef must be the canonical F299 inv:<id> ref',
+);
+const ownerSurfaceBinding = z
+  .object({
+    sourceKind: bounded(120).regex(/^[a-z0-9][a-z0-9-]*$/),
+    ownerSurfaceRef: ownerRef,
+    joinKey: bounded(500).regex(/^(?:thread|message|subject):[^\s{}[\]"']+$/),
+    namedConsumerRef: ownerRef,
+    instrumentationRef: ownerRef,
+  })
+  .strict();
+
+const linkEvolutionProgramObservationInputSchema = {
+  programId: programId.describe('Exact canonical Evolution Program id.'),
+  expectedSequence: z.number().int().nonnegative().describe('Current Program sequence for CAS.'),
+  clientMessageId: clientMessageId.describe('Stable idempotency id for this observation link.'),
+  trajectoryRef: trajectoryRef.describe('Canonical F299 inv:<id> trajectory ref; no trajectory payload.'),
+  sourceBindings: z
+    .array(ownerSurfaceBinding)
+    .min(2)
+    .max(128)
+    .describe('Canonical owner refs, join keys, named consumers, and owner-held instrumentation refs.'),
+  evidenceProofRef: ownerRef.describe('Canonical F267 decision-proof ref; no proof payload.'),
+  agentKeyCatId,
+};
+
+export const CAPABILITY_EVOLUTION_SERVER_FAMILY = 'collab' as const;
+const F311 = 'file:docs/features/F311-capability-evolution-workspace.md' as const;
+const F267 = 'file:docs/features/F267-eval-measurement-validity.md' as const;
+
+export function buildCapabilityEvolutionToolset(port: CallbackTransportPort) {
+  return defineMcpToolsetTools(port, CAPABILITY_EVOLUTION_SERVER_FAMILY, [
+    {
+      name: 'cat_cafe_issue_capability_evolution_measurement',
+      description:
+        'Ask F267 to issue the canonical measurement chain for one Evolution Program from its target owner source-owner manifest. ' +
+        'Use only the exact Program id + source message id after the owner has committed a real certificate, role assignment, and revision-bound cohort; consumer-consumption, optimizer-exposure, or independent-holdout proof may be absent and then resolves as typed insufficient. ' +
+        'NOT for: uploading evidence payloads, inventing defaults, relabeling content as measurement proof, or advancing the F311 Program. ' +
+        'Output: an immutable owner-backed artifact PR, or typed insufficient with the precise missing owner contract; issuance does not advance the Program. ' +
+        'GOTCHA: only the configured eval-domain cat may issue; shared persistent MCP callers pass agentKeyCatId.',
+      action: 'create',
+      risk: { level: 'write', openWorld: false },
+      inputSchema: issueCapabilityEvolutionMeasurementInputSchema,
+      resourceFamily: 'evolution-program',
+      runtimeProfiles: ['full', 'agent-key'],
+      admissionRef: F267,
+      sourceExport: 'handleIssueCapabilityEvolutionMeasurement',
+      authorizationHint: 'callback-owner',
+      standaloneKind: 'authority-boundary',
+      route: {
+        method: 'POST',
+        path: '/api/callbacks/evolution-programs/${programId}/measurement-issuance',
+        bodyKeys: ['clientMessageId'],
+      },
+    },
+    {
+      name: 'cat_cafe_start_evolution_program',
+      description:
+        'Start the permanent Evolution Program when the user says “我们来进化 X” or clearly asks to evolve one capability. ' +
+        'Use only targetRef + clientMessageId: the server drafts the Goal/claim, economic and measurement refs, and role refs; typed blocker explains anything still missing，不让用户填写大表. ' +
+        'NOT for: copying owner payload, caller-authored lifecycle/stage/certificates, mock cards, or a second queue. ' +
+        'Output: appended/duplicate plus the canonical Program projection and its F307 Workbench surface descriptor. ' +
+        'GOTCHA: shared persistent MCP callers pass agentKeyCatId so callback auth selects the matching Cat sidecar key.',
+      action: 'create',
+      risk: { level: 'write', openWorld: false },
+      inputSchema: startEvolutionProgramInputSchema,
+      resourceFamily: 'evolution-program',
+      runtimeProfiles: ['full', 'agent-key'],
+      admissionRef: F311,
+      sourceExport: 'handleStartEvolutionProgram',
+      authorizationHint: 'callback-owner',
+      route: { method: 'POST', path: '/api/callbacks/evolution-programs', bodyKeys: ['targetRef', 'clientMessageId'] },
+    },
+    {
+      name: 'cat_cafe_get_evolution_program',
+      description:
+        'Read the caller workspace canonical Evolution Program projection or list. ' +
+        'Use for lifecycle, constitution progress, typed blockers, refs, and the next action. ' +
+        'NOT for: reading owner payloads or inferring readiness beyond the projection. ' +
+        'Output: the same durable truth consumed by REST and F307 Workbench. ' +
+        'GOTCHA: shared persistent MCP callers pass agentKeyCatId so callback auth selects the matching Cat sidecar key.',
+      action: 'read',
+      risk: { level: 'read', openWorld: false },
+      inputSchema: getEvolutionProgramInputSchema,
+      resourceFamily: 'evolution-program',
+      runtimeProfiles: ['full', 'readonly', 'agent-key'],
+      admissionRef: F311,
+      sourceExport: 'handleGetEvolutionProgram',
+      authorizationHint: 'read-only',
+      route: { method: 'GET', path: '/api/callbacks/evolution-programs/${programId}', paramKeys: [] },
+    },
+    {
+      name: 'cat_cafe_link_evolution_program_observation',
+      description:
+        'Connect one permanent Evolution Program to real observation eyes after the source owners have produced canonical refs. ' +
+        'Use only an F299 inv:<id> trajectory ref, at least two heterogeneous owner surface refs + join keys, the exact F311 named consumer refs, owner-held instrumentation refs, and one F267 decision-proof ref. ' +
+        'NOT for: copying trajectory/evidence/decision payloads, inventing an instrumentation fallback, weakening missing proof, or creating a CEW query/scheduler ledger. ' +
+        'Output: appended/duplicate/conflict or typed insufficient with the canonical Program projection; F192 owns event/quota/time triggering. ' +
+        'GOTCHA: shared persistent MCP callers pass agentKeyCatId so callback auth selects the matching Cat sidecar key.',
+      action: 'update',
+      risk: { level: 'write', openWorld: false },
+      inputSchema: linkEvolutionProgramObservationInputSchema,
+      resourceFamily: 'evolution-program',
+      runtimeProfiles: ['full', 'agent-key'],
+      admissionRef: F311,
+      sourceExport: 'handleLinkEvolutionProgramObservation',
+      authorizationHint: 'callback-owner',
+      route: {
+        method: 'POST',
+        path: '/api/callbacks/evolution-programs/${programId}/observations',
+        bodyKeys: ['expectedSequence', 'clientMessageId', 'trajectoryRef', 'sourceBindings', 'evidenceProofRef'],
+      },
+    },
+    {
+      name: 'cat_cafe_update_evolution_program',
+      description:
+        'Append one audited lifecycle choice to a canonical Evolution Program using expected-sequence CAS. ' +
+        'Use for pause, resume, needs_expert, bind_expert, withdraw, explicit retention, or atomic active forget. ' +
+        'NOT for: direct stage changes, owner payload mutation, automatic TTL on close/sunset, or generic GC. ' +
+        'Output: appended/duplicate/conflict plus the replayed Program projection. ' +
+        'GOTCHA: shared persistent MCP callers pass agentKeyCatId so callback auth selects the matching Cat sidecar key.',
+      action: 'update',
+      risk: { level: 'write', openWorld: false },
+      inputSchema: updateEvolutionProgramInputSchema,
+      resourceFamily: 'evolution-program',
+      runtimeProfiles: ['full', 'agent-key'],
+      admissionRef: F311,
+      sourceExport: 'handleUpdateEvolutionProgram',
+      authorizationHint: 'callback-owner',
+      route: {
+        method: 'POST',
+        path: '/api/callbacks/evolution-programs/${programId}/commands',
+        bodyKeys: ['expectedSequence', 'clientMessageId', 'action'],
+      },
+    },
+  ]);
+}
