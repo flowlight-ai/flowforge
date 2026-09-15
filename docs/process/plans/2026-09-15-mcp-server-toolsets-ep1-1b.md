@@ -26,12 +26,11 @@
   `assemble.ts`（`assembleMcpSeverToolsets` 接入 EP1-1a `registerToolset`）、`canonical-tool-sources.ts`
   （`buildCanonicalToolSources` + 规模锚 `TOOLSET_GROUP_ANCHOR`）；collab 两小组（capability-evolution-change / entrusted-work-read）迁入确立 catalog 范式。
   契约测试 3 文件 11/11 全绿，全包 9 文件 57/57 全绿，包级 tsc exit 0、oxlint 0，零 @cat-cafe 依赖；`index.ts` 增补导出。
-- **B3 collab 小组 ✅（2026-09-15）**：collab 余 16 小组迁入（community-route-acceptance / auto-dream / capability-evolution /
-  capability-evolution-round / eval-lifecycle / event-memory / external-review-verdict / external-runtime-session-callback /
-  game-action / hub-action / paw-feel-disposition / publish-verdict / rich-block-rules / schedule / shell / skill-consumption），
-  collab 综合 18 组 41 工具；`canonical-tool-sources.ts` concat+规模锚扩展、`tests/toolsets/collab-B3.spec.ts`、
-  全包 10 文件 62/62 全绿、tsc exit 0、oxlint 0、零禁用依赖。两处框架性保真度调和已在文件头 NOTE（remove_task DELETE→GET；shell_exec 本地 exec 占位 GET 路由）。collab 仅余 `callback-tools.ts` 超大组（211KB，数十工具）单列后续。
-- **B4-B5（待迁）**：collab 余 callback 大组 / memory 11 组 / signals 2 组 / limb 1 组，按家族分批演进。
+- **B3 collab 小组 ✅（2026-09-15，PR #192）**：collab 16 小组迁入，collab 综合 18 组 41 工具；全包 10 文件 62/62 全绿、tsc exit 0、oxlint 0、零禁用依赖。
+- **B4 collab callback 大组 ✅（2026-09-15）**：`collab/callback.ts` 迁入 **49 工具**（源 `callbackTools` 无遗漏），collab 累计 19 组 **90 工具** 全迁完成；
+  47 个标准 callbackPost/callbackGet，2 例调和（`set_read_mode` 本地写会话文件→合成 POST 路由；`cross_post_message` 复用 `post_message` 出站路径，均文件头 NOTE）。
+  `canonical-tool-sources.ts` concat+规模锚 `callback:49`、`tests/toolsets/collab-callback.spec.ts`；全包 11 文件 **67/67 全绿**、tsc exit 0、oxlint 0、零禁用依赖。
+- **B5-B7（待迁）**：memory 11 组 / signals 2 组 / limb 1 组 按家族分批演进；随后全量核验 + `mgr` PR 收口。
 
 ## 文件清单
 
