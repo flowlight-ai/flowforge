@@ -29,7 +29,7 @@
 | collab | `schedule-tools.ts` | `collab/schedule.ts` | schedule（计划任务） | 计划任务 |
 | collab | `shell-tools.ts` | `collab/shell.ts` | shell（只读 Shell） | 只读 Shell |
 | collab | `skill-consumption-tools.ts` | `collab/skill-consumption.ts` | skill-consumption（技能消费） | 技能消费 |
-| collab | `callback-tools.ts` | `collab/callback.ts`（待迁） | callback（回调） | 回调 |
+| collab | `callback-tools.ts` | `collab/callback.ts` | callback（回调） | 回调 |
 | — | — | — | — | — |
 | memory | `callback-memory-tools.ts` 等 | `memory/*`（待迁） | memory（记忆） | 记忆域工具集 |
 | signals | `signals-tools.ts` / `signal-study-tools.ts` | `signals/*`（待迁） | signals（信号） | 信号域工具集 |
@@ -47,3 +47,7 @@
   game-action / hub-action / paw-feel-disposition / publish-verdict / rich-block-rules / schedule / shell / skill-consumption），
   collab 合计 41 工具。`publish-verdict` 内联其 `*_source-refs` / `*_findings` / `*_refresh-action` 纯文件常量；无 `@cat-cafe` / `@deepseek-ai` / `@clowder` 运行时依赖。
   契约测试 `tests/toolsets/collab-B3.spec.ts` 全绿。
+- **B4 callback 组迁移（2026-09-15）**：collab 最末也是最大一组——`collab/callback.ts`（49 工具）迁入，
+  覆盖 post/mention/thread/task/workflow/custody/entrusted-work/rich-block/document/tracking/community/guide/hold/ball/a2a/metadata 等回调端口；
+  仅处理源 `callbackTools` 数组直出定义，不越界重复迁移其它组。collab 总计 90 工具，`TOOLSET_GROUP_ANCHOR.collab.callback = 49` 登记；
+  契约测试 `tests/toolsets/collab-callback.spec.ts` 全绿。至此 collab 家族全部迁完。

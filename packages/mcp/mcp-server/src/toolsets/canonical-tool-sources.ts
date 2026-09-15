@@ -12,6 +12,7 @@ import type { McpToolDefinition } from '../tool-governance-types.js';
 import type { CanonicalToolSources } from '../canonical-tool-registry.js';
 import { buildCanonicalToolRegistry } from '../canonical-tool-registry.js';
 import type { CallbackTransportPort } from './callback-transport.js';
+import { buildCallbackToolset } from './collab/callback.js';
 import { buildCapabilityEvolutionChangeToolset } from './collab/capability-evolution-change.js';
 import { buildEntrustedWorkReadToolset } from './collab/entrusted-work-read.js';
 import { buildCommunityRouteAcceptanceToolset } from './collab/community-route-acceptance.js';
@@ -42,6 +43,7 @@ function concat(...groups: readonly (readonly McpToolDefinition[])[]): readonly 
 export function buildCanonicalToolSources(port: CallbackTransportPort): CanonicalToolSources {
   return {
     collab: concat(
+      buildCallbackToolset(port),
       buildCapabilityEvolutionChangeToolset(port),
       buildEntrustedWorkReadToolset(port),
       buildCommunityRouteAcceptanceToolset(port),
@@ -79,6 +81,7 @@ export function buildCanonicalToolRegistryForPort(port: CallbackTransportPort) {
 /** Static catalog-size anchor for contract tests (source-of-truth counts). */
 export const TOOLSET_GROUP_ANCHOR = {
   collab: {
+    callback: 49,
     capabilityEvolutionChange: 1,
     entrustedWorkRead: 1,
     communityRouteAcceptance: 1,
