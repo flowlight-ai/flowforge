@@ -31,7 +31,17 @@
 | collab | `skill-consumption-tools.ts` | `collab/skill-consumption.ts` | skill-consumption（技能消费） | 技能消费 |
 | collab | `callback-tools.ts` | `collab/callback.ts` | callback（回调） | 回调 |
 | — | — | — | — | — |
-| memory | `callback-memory-tools.ts` 等 | `memory/*`（待迁） | memory（记忆） | 记忆域工具集 |
+| memory | `callback-memory-tools.ts` | `memory/callback-memory.ts` | callback-memory（回调记忆） | 回调记忆 |
+| memory | `distillation-tools.ts` | `memory/distillation.ts` | distillation（蒸馏/全局回流） | 知识蒸馏 |
+| memory | `evidence-tools.ts` | `memory/evidence.ts` | evidence（知识检索） | 证据检索 |
+| memory | `external-runtime-session-tools.ts`（读侧） | `memory/external-runtime-session-read.ts`（空，已并入 collab） | external-runtime-session-read（外部运行时会话·读） | 外部运行时会话（读） |
+| memory | `file-tools.ts`（`fileSliceTools`） | `memory/file-slice.ts` | file-slice（文件切片读取） | 文件切片 |
+| memory | `graph-tools.ts` | `memory/graph.ts` | graph（知识图谱解析） | 知识图谱 |
+| memory | `library-lifecycle-tools.ts` | `memory/library-lifecycle.ts` | library-lifecycle（库生命周期） | 资料库生命周期 |
+| memory | `meeting-artifact-tools.ts` | `memory/meeting-artifact.ts` | meeting-artifact（会议产物读取） | 会议产物 |
+| memory | `perspective-tools.ts` | `memory/perspective.ts` | perspective（Perspective 查询计划） | 视角查询 |
+| memory | `recent-tools.ts` | `memory/recent.ts` | recent（最近浏览） | 最近浏览 |
+| memory | `session-chain-tools.ts` | `memory/session-chain.ts` | session-chain（会话链读取） | 会话链 |
 | signals | `signals-tools.ts` / `signal-study-tools.ts` | `signals/*`（待迁） | signals（信号） | 信号域工具集 |
 | limb | `limb-tools.ts` | `limb/limb.ts`（待迁） | limb（肢端运行时） | 肢端运行时工具集 |
 
@@ -51,3 +61,9 @@
   覆盖 post/mention/thread/task/workflow/custody/entrusted-work/rich-block/document/tracking/community/guide/hold/ball/a2a/metadata 等回调端口；
   仅处理源 `callbackTools` 数组直出定义，不越界重复迁移其它组。collab 总计 90 工具，`TOOLSET_GROUP_ANCHOR.collab.callback = 49` 登记；
   契约测试 `tests/toolsets/collab-callback.spec.ts` 全绿。至此 collab 家族全部迁完。
+- **B5 memory 家族迁移（2026-09-15）**：memory 家族 11 小组迁入 `memory/*`，合计 20 工具
+  （callback-memory 1 / distillation 3 / evidence 1 / file-slice 1 / graph 1 / library-lifecycle 6 / meeting-artifact 1 /
+  perspective 1 / recent 1 / session-chain 4；`external-runtime-session-read` 0 工具——其 list/read 读侧 handler 已在 B3
+  由 `collab/external-runtime-session-callback.ts` 迁入，为避免 `buildCanonicalToolRegistry` 重名工具冲突而置空并登记 0）。
+  `TOOLSET_GROUP_ANCHOR.memory` 各项登记；`@cat-cafe` / `@deepseek-ai` / `@clowder` 无运行时依赖（仅注释）。
+  契约测试 `tests/toolsets/memory-B5.spec.ts` 全绿。至此 memory 家族全部迁完；signals / limb 仍待迁。

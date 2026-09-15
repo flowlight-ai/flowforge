@@ -31,6 +31,17 @@ import { buildRichBlockRulesToolset } from './collab/rich-block-rules.js';
 import { buildScheduleToolset } from './collab/schedule.js';
 import { buildShellToolset } from './collab/shell.js';
 import { buildSkillConsumptionToolset } from './collab/skill-consumption.js';
+import { buildCallbackMemoryToolset } from './memory/callback-memory.js';
+import { buildDistillationToolset } from './memory/distillation.js';
+import { buildEvidenceToolset } from './memory/evidence.js';
+import { buildExternalRuntimeSessionReadToolset } from './memory/external-runtime-session-read.js';
+import { buildFileSliceToolset } from './memory/file-slice.js';
+import { buildGraphToolset } from './memory/graph.js';
+import { buildLibraryLifecycleToolset } from './memory/library-lifecycle.js';
+import { buildMeetingArtifactToolset } from './memory/meeting-artifact.js';
+import { buildPerspectiveToolset } from './memory/perspective.js';
+import { buildRecentToolset } from './memory/recent.js';
+import { buildSessionChainToolset } from './memory/session-chain.js';
 
 function concat(...groups: readonly (readonly McpToolDefinition[])[]): readonly McpToolDefinition[] {
   return groups.flat() as readonly McpToolDefinition[];
@@ -63,7 +74,19 @@ export function buildCanonicalToolSources(port: CallbackTransportPort): Canonica
       buildShellToolset(port),
       buildSkillConsumptionToolset(port),
     ),
-    memory: [],
+    memory: concat(
+      buildCallbackMemoryToolset(port),
+      buildDistillationToolset(port),
+      buildEvidenceToolset(port),
+      buildExternalRuntimeSessionReadToolset(port),
+      buildFileSliceToolset(port),
+      buildGraphToolset(port),
+      buildLibraryLifecycleToolset(port),
+      buildMeetingArtifactToolset(port),
+      buildPerspectiveToolset(port),
+      buildRecentToolset(port),
+      buildSessionChainToolset(port),
+    ),
     signals: [],
     limb: [],
     // finance / audio excluded per Q3 (2026-09-10) — left empty to keep the
@@ -101,7 +124,19 @@ export const TOOLSET_GROUP_ANCHOR = {
     shell: 1,
     skillConsumption: 3,
   },
-  memory: {},
+  memory: {
+    callbackMemory: 1,
+    distillation: 3,
+    evidence: 1,
+    externalRuntimeSessionRead: 0,
+    fileSlice: 1,
+    graph: 1,
+    libraryLifecycle: 6,
+    meetingArtifact: 1,
+    perspective: 1,
+    recent: 1,
+    sessionChain: 4,
+  },
   signals: {},
   limb: {},
 } as const;
