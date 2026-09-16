@@ -194,6 +194,18 @@ config/secrets.yaml
 config/secrets.yml
 config/generated.yaml  # D046 OOTB 生成的配置（审计用，不入仓）
 
+# ==================== Python legacy 归档内 e2e test artifacts (S11.2 2026-09-16) ====================
+# git mv 自根 tests/e2e 带入的浏览器巡检/快照产物（原根 .gitignore 的 tests/e2e/* 规则因路径迁移失效，补此段）
+python/legacy/tests/e2e/*_report.json
+python/legacy/tests/e2e/browser_shots/
+python/legacy/tests/e2e/browser_*.py
+python/legacy/tests/e2e/browser_*.json
+python/legacy/tests/e2e/inspect_*.png
+python/legacy/tests/e2e/*_selected.png
+python/legacy/tests/e2e/*_thread.png
+python/legacy/tests/e2e/*.png
+python/legacy/tests/e2e/roster_check.png
+
 # ==================== Local databases & caches (P3-011) ====================
 *.sqlite
 *.sqlite-journal

@@ -285,5 +285,7 @@
 3. 对应域 vitest 测试全绿（`pnpm test`）。
 4. **插件化验收**：阶段 1-8 产出均以 cordis 插件形式提供，可独立 `ctx.plugin()`
    加载/卸载，生命周期与依赖注入正确（契约见 `01-stack-decision.md` R13）。
-5. Python 旧版 `pytest` 回归全绿（双栈共存/行为基线验证）。
+5. `🗑️` Python 旧版（legacy，sunset）：已随 S11.2 于 2026-09-16 归档至 `python/legacy/`（根包目录 + 根 Python
+   文件 + pytest `tests/` + `scripts/*.py`；`config/`、`data/`、`web/`、`packages/`、`apps/` 保留原位），
+   基线快照 `python/legacy-pytest-baseline-2026-09-16/`；S11.3 删除待归档后 ≥2 个发布迭代（见 `31-stage11-sunset.md`）。
 6. 按 `docs/git-workflow.md` 用 `./mgr` 提交并创建 PR（Gitee）。

@@ -409,6 +409,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 
 1. Python 遗留目录日落与删除计划（`agents/`、`brain/`、`core/`、`llm/`、`loop/`、`forgemind/`、`evolution/`、`harness/`、`sop/`、`sdk.py`、根目录 Python 标记文件、`_*.py` 临时文件清理）。
    - ✅ **EP4 S11.1 冻结期完成**（2026-09-10）：`__main__.py`（`python -m flowforge`）补 DEPRECATED 冻结横幅；start.bat 阶段10 已切 TS 栈并标注 deprecated；`31-stage11-sunset.md` 状态更新"冻结期进行中"。S11.2/S11.3 受 P1/P2 门槛硬约束（P2 TS 默认入口稳定≥2 周未满），**不提前归档/删除**，避免未经收货的破坏性操作。
+   - ✅ **EP4 S11.2 归档完成**（2026-09-16）：operator 提前放行 P2（见 §15），Python 旧版运行时代码已 `git mv` 至 `python/legacy/`（根包目录 + 根 Python 文件 + `tests/`(pytest) + `scripts/*.py`；`config/`、`data/`、`web/`、`packages/`、`apps/` 保留原位）；pytest 基线快照落 `python/legacy-pytest-baseline-2026-09-16/`；根 `pyproject.toml` 改指向 `python/legacy`。S11.3 删除待归档后 ≥2 个发布迭代，本轮不执行。
 2. stretch 项按裁决结果排期：S1 真实通道凭据启用、S2（TTS/邮件推送/push）、S3、S4 desktop、S5 games、S6 Python SDK（A34）、S7。
    - ✅ **EP4-stretch 排期表**（2026-09-10）：`31-stage11-sunset.md` §7 落 S1-S7 排期表——现阶段均不排期（缺凭据/服务或产品优先级不足），随 operator 新指令准入；S1 凭证接线后启用。
 3. P1/P2 遗漏项（A5-A7、A11、A13、A15-A16、A18-A19、A21-A23、A25-A28、A30-A31、B2、B6、B8-B9、B11、B13-B17、B19-B21、A35）。B19 wave1/wave2/wave3/wave4/wave5/wave6/wave7/wave8/wave9/wave10 已完结（2026-09-11 起；wave6 2026-09-13 开发/调试域与能力进化/会话护栏域 5 包：code-as-harness/writing-skills/self-evolution/context-self-management/knowledge-engineering；wave7 2026-09-13 工程审计/响应与能力进化/前端交付/企业协作域 5 包：source-audit/incident-response/capability-evolution/console-dev/enterprise-workflow；wave8 2026-09-13 技术写作/引导/评测/浏览器域 6 包：tech-writing/guide-authoring/guide-interaction/eval-design/browser-automation/browser-preview；wave9 2026-09-13 记忆/检索/组织域 6 包：memory-navigation/memory-search-best-practices/proactive-memory-judgment/organize-threads/schedule-tasks/workspace-navigator；wave10 2026-09-13 协作与生产域 9 包：rich-messaging/convention-graph-discovery/concept-demo-design/open-source-teardown/opensource-ops/agent-product-promo-director/bootcamp-guide/hyperfocus-brake/vision-rescue，skill-manifest 达 29 包路由，契约测试 wave1-10 27/27 全绿、tsc exit 0、oxlint 0），其余包（B19-B21 及 B19 后续波） ⬜（唯一剩余 EP4 工作线程，未见 operator 新指令持续收尾）
@@ -456,6 +457,7 @@ EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 | Q17 | graph-ui 3D 可视化（C 源项目内置 web 服务）是否纳入移植范围 | ✅ 已裁决：纳入 EP2 前端融合，非核心链路（见 34-stage D-CB4） |
 | Q18 | 162 语言全量语法资产 vs 先 TS/JS 后扩展的批次节奏 | ✅ 已裁决：先 TS/JS（本仓库自身即 TS）+ JSON/YAML/Markdown 结构层，语言资产按需增量（见 34-stage D-CB5） |
 | Q19 | Cypher 查询引擎移植深度：全语法子集（C 源项目 cypher/ 模块）vs 先 search_graph 结构化查询后 Cypher | ✅ 已裁决：结构化查询先行，Cypher 子集随 EP-CB3 落地（见 34-stage D-CB6） |
+| Q20 | **EP4 S11.2 提前归档放行**：Python 旧版归档的前置门槛 P2（TS 默认入口稳定 ≥2 周，阶段10 切换 2026-09-10）观察期未满，是否允许 S11.2 提前执行归档？ | ✅ **已裁决放行（operator，2026-09-16）**：允执行「**仅归档不删除**」——Python 旧版运行时代码 `git mv` 至 `python/legacy/`（根包目录 + 根 Python 文件 + pytest `tests/` + `scripts/*.py`；`config/`、`data/`、`web/`、`packages/`、`apps/` 保留原位）；pytest 基线快照落 `python/legacy-pytest-baseline-2026-09-16/`；根 `pyproject.toml` 改指向 `python/legacy`。**S11.3 删除仍须待归档后 ≥2 个发布迭代，本轮不执行**（已同步 `31-stage11-sunset.md` §1 P2 / §2 S11.2） |
 
 ---
 
