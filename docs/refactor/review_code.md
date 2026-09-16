@@ -442,7 +442,7 @@ EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 | Q3 | `packages/finance` + mcp-server finance toolset：财经数据域是否属于目标能力？若不要，B1 移植时剔除 finance/audio toolset 子集 | ✅ **已裁决（按建议默认）**：财经垂直数据域不纳入目标能力，B1 `mcp-server` 移植时剔除 finance/audio toolset 子集；如需扩展按需新增（2026-09-10，EP4 收口） |
 | Q4 | `website/` VitePress 文档站是否移植（当前文档全在 `docs/`）？ | ✅ **已裁决（按建议默认）**：暂缓 stretch——EP4 内 docs/ 已满足交付，文档站聚合随 stretch 排期（2026-09-10，EP4 收口） |
 | Q5 | `cat-cafe-skills/`（20+ 技能内容包）与 `sop-definitions/` 内容资产是否随代码全量移植并按 naming-contract 改造品牌措辞？ | ✅ **已裁决（按建议默认）**：技能框架能力（skill-meta/skill-query/manage）已落地起步，内容资产按命名契约后续分批迁移（deep-research/expert-panel/handoff/debugging 等核心包优先），随 B8 技能域持续演进；sop-definitions 转 `packages/forgekin/sop` 资产目录（2026-09-10，EP4 收口） |
-| Q6 | signal-intake/messaging 的 Redis 重度依赖：确认按既有 `infrastructure/redis-port`（KV 注入式）模式移植，真实 Redis 后端按凭据启用？ | ⚠ EP1 前确认 |
+| Q6 | signal-intake/messaging 的 Redis 重度依赖：确认按既有 `infrastructure/redis-port`（KV 注入式）模式移植，真实 Redis 后端按凭据启用？ | ✅ **已闭环（2026-09-16）**：signals/messaging 均已交付为**注入式 Redis/KV seam**——统一端口 `@flowforge/infrastructure-redis-port` 提供 ioredis 最小子集 `RedisLikeClient`（string/hash/zset/scripting/pipeline）；`@flowforge/cats-signal-intake` 以本地 `SignalIntakeRedisClient` seam（get/set NX·PX/eval/smembers/mget/sadd + Lua 常量 + 内存假实现，契约测试 109/109）+ 交付端口（ThreadDestinationAuthority/MeetingArtifactResourceService/Dispatcher）落地；messaging stores 走 Memory + Redis Lua（EP1-4 接线）。真实 Redis 后端按凭据接线归 EP2/EP4，本决策点代码侧已闭环；`infrastructure/redis-port` 保持统一 KV 注入式模式 |
 | Q7 | EP0 插件命名 | ✅ **已定名 `@flowforge/plugin-dev`（软件工程化流程插件）**，包路径 `packages/plugins/dev` |
 | Q8 | 新流程文档自 `docs/process/` 起步；旧批次文档保留 `docs/refactor/` 原位 | ✅ operator 确认 |
 | Q9 | 四源全量移植立场（flowforge Python + dsh + clowder-ai + superpowers）+ 业界开源工程实践参考 | ✅ operator 确认 |
