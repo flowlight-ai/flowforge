@@ -31,7 +31,10 @@
   47 个标准 callbackPost/callbackGet，2 例调和（`set_read_mode` 本地写会话文件→合成 POST 路由；`cross_post_message` 复用 `post_message` 出站路径，均文件头 NOTE）。
   `canonical-tool-sources.ts` concat+规模锚 `callback:49`、`tests/toolsets/collab-callback.spec.ts`；全包 11 文件 **67/67 全绿**、tsc exit 0、oxlint 0、零禁用依赖。
 - **B5 memory 家族 ✅（2026-09-15）**：memory 11 小组迁入（callback-memory / distillation / evidence / external-runtime-session-read / file-slice / graph / library-lifecycle / meeting-artifact / perspective / recent / session-chain），其中 **external-runtime-session-read 与 B3 collab/external-runtime-session-callback 同源同 3 工具（register/list/read），去重置 0 + NOTE**，bytes no loss；file-slice 定位自 clowder `tools/file-tools.ts`；collab 90 + memory 20 = **四家族 110**。非标准 handler 调和：distillation 3 个 fetch（含 PATCH→POST）、evidence 等公开 GET fetch→合成 GET 路由、file-slice 本地只读→local-operator 占位 GET，均 `// NOTE(E2b memory)`。既有测试 `registry.length` 断言改为四家族求和。全包 12 文件 **74/74 全绿**、tsc exit 0、oxlint 0、零禁用依赖。
-- **B6-B7（待迁）**：signals（2 组）+ limb（1 组）；随后全量核验 + `mgr` PR 收口登记 review_code/10-stage-map。
+- **B6 signals + limb 家族迁移 ✅（2026-09-16）**：signals 2 小组迁入 `signals/{signals,signal-study}.ts`（5 + 7 = **12 工具**），limb 1 小组迁入 `limb/limb.ts`（**6 工具**），`TOOLSET_GROUP_ANCHOR.signals` / `.limb` 各项登记；四家族合计 33 工具组 **128 工具**（collab 90 + memory 20 + signals 12 + limb 6）。
+  非标准 handler 调和：`PATCH`（mark_read / update_article / save_notes）降级为 POST、`PATCH→DELETE` 分支（link_thread unlink）与两步编排（summarize / start_study / save_notes 的 study-GET 前缀）只保留写效果，均 `// NOTE(E2b signals)`；工具名保留 clowder 裸名（`signal_*` / `limb_*`，无 `cat_cafe_` 前缀），故 `collab-callback.spec.ts` / `memory-B5.spec.ts` 的「全量 `cat_cafe_` 前缀」断言收窄为 collab + memory 家族范围。
+  `X-Cat-Cafe-User` 签名头与 `CAT_CAFE_API_URL` 为宿主接线端注入项，不移植。契约测试 `tests/toolsets/signals-limb-B6.spec.ts`（6 用例）全绿；**mcp-server 全包 13 文件 80/80 全绿、包级 tsc exit 0、oxlint 0、零禁用依赖**。至此四家族全迁完。
+- **B7 收口（✅ 2026-09-16）**：`toolsets/README.md` 命名映射去「待迁」+ B6 批登记；登记 `task.md` EP1 序 1、`review_code.md` §13.2 序号 1（EP1-1b ✅）、`10-stage-map.md` C43；经 `mgr sync` 提交 PR（type feat，scope mcp-server，署名）。
 
 ## 文件清单
 

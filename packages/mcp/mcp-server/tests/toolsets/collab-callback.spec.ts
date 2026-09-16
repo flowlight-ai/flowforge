@@ -35,8 +35,12 @@ describe('toolsets/collab-callback', () => {
     const expected = ['collab', 'memory', 'signals', 'limb']
       .map((family) => Object.values(TOOLSET_GROUP_ANCHOR[family as keyof typeof TOOLSET_GROUP_ANCHOR]).reduce((a, b) => a + b, 0))
       .reduce((a, b) => a + b, 0);
+    // Only collab + memory use the `cat_cafe_` prefix; signals + limb keep bare names.
+    const catCafeExpected =
+      Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a, b) => a + b, 0) +
+      Object.values(TOOLSET_GROUP_ANCHOR.memory).reduce((a, b) => a + b, 0);
     expect(registry.length).toBe(expected);
-    expect(registry.filter((d) => d.name.startsWith('cat_cafe_')).length).toBe(expected);
+    expect(registry.filter((d) => d.name.startsWith('cat_cafe_')).length).toBe(catCafeExpected);
     expect(registry.every((d) => d.actionInventory.length > 0)).toBe(true);
   });
 

@@ -42,6 +42,9 @@ import { buildMeetingArtifactToolset } from './memory/meeting-artifact.js';
 import { buildPerspectiveToolset } from './memory/perspective.js';
 import { buildRecentToolset } from './memory/recent.js';
 import { buildSessionChainToolset } from './memory/session-chain.js';
+import { buildSignalsToolset } from './signals/signals.js';
+import { buildSignalStudyToolset } from './signals/signal-study.js';
+import { buildLimbToolset } from './limb/limb.js';
 
 function concat(...groups: readonly (readonly McpToolDefinition[])[]): readonly McpToolDefinition[] {
   return groups.flat() as readonly McpToolDefinition[];
@@ -87,8 +90,8 @@ export function buildCanonicalToolSources(port: CallbackTransportPort): Canonica
       buildRecentToolset(port),
       buildSessionChainToolset(port),
     ),
-    signals: [],
-    limb: [],
+    signals: concat(buildSignalsToolset(port), buildSignalStudyToolset(port)),
+    limb: concat(buildLimbToolset(port)),
     // finance / audio excluded per Q3 (2026-09-10) — left empty to keep the
     // six-family `CanonicalToolSources` type conformance without importing them.
     finance: [],
@@ -137,6 +140,11 @@ export const TOOLSET_GROUP_ANCHOR = {
     recent: 1,
     sessionChain: 4,
   },
-  signals: {},
-  limb: {},
+  signals: {
+    signals: 5,
+    signalStudy: 7,
+  },
+  limb: {
+    limb: 6,
+  },
 } as const;

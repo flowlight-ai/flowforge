@@ -52,7 +52,9 @@ describe('toolsets/memory-B5', () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual([...names].sort());
     expect(registry.length).toBe(anchorSums().total);
-    expect(registry.filter((d) => d.name.startsWith('cat_cafe_')).length).toBe(anchorSums().total);
+    // Only collab + memory use the `cat_cafe_` prefix; signals + limb keep bare names.
+    const { collab, memory } = anchorSums();
+    expect(registry.filter((d) => d.name.startsWith('cat_cafe_')).length).toBe(collab + memory);
     expect(registry.every((d) => d.actionInventory.length > 0)).toBe(true);
   });
 
