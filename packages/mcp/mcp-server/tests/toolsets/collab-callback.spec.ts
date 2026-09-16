@@ -32,7 +32,9 @@ describe('toolsets/collab-callback', () => {
     const names = registry.map((d) => d.name);
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual([...names].sort());
-    const expected = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a, b) => a + b, 0);
+    const expected = ['collab', 'memory', 'signals', 'limb']
+      .map((family) => Object.values(TOOLSET_GROUP_ANCHOR[family as keyof typeof TOOLSET_GROUP_ANCHOR]).reduce((a, b) => a + b, 0))
+      .reduce((a, b) => a + b, 0);
     expect(registry.length).toBe(expected);
     expect(registry.filter((d) => d.name.startsWith('cat_cafe_')).length).toBe(expected);
     expect(registry.every((d) => d.actionInventory.length > 0)).toBe(true);

@@ -30,7 +30,8 @@
 - **B4 collab callback 大组 ✅（2026-09-15）**：`collab/callback.ts` 迁入 **49 工具**（源 `callbackTools` 无遗漏），collab 累计 19 组 **90 工具** 全迁完成；
   47 个标准 callbackPost/callbackGet，2 例调和（`set_read_mode` 本地写会话文件→合成 POST 路由；`cross_post_message` 复用 `post_message` 出站路径，均文件头 NOTE）。
   `canonical-tool-sources.ts` concat+规模锚 `callback:49`、`tests/toolsets/collab-callback.spec.ts`；全包 11 文件 **67/67 全绿**、tsc exit 0、oxlint 0、零禁用依赖。
-- **B5-B7（待迁）**：memory 11 组 / signals 2 组 / limb 1 组 按家族分批演进；随后全量核验 + `mgr` PR 收口。
+- **B5 memory 家族 ✅（2026-09-15）**：memory 11 小组迁入（callback-memory / distillation / evidence / external-runtime-session-read / file-slice / graph / library-lifecycle / meeting-artifact / perspective / recent / session-chain），其中 **external-runtime-session-read 与 B3 collab/external-runtime-session-callback 同源同 3 工具（register/list/read），去重置 0 + NOTE**，bytes no loss；file-slice 定位自 clowder `tools/file-tools.ts`；collab 90 + memory 20 = **四家族 110**。非标准 handler 调和：distillation 3 个 fetch（含 PATCH→POST）、evidence 等公开 GET fetch→合成 GET 路由、file-slice 本地只读→local-operator 占位 GET，均 `// NOTE(E2b memory)`。既有测试 `registry.length` 断言改为四家族求和。全包 12 文件 **74/74 全绿**、tsc exit 0、oxlint 0、零禁用依赖。
+- **B6-B7（待迁）**：signals（2 组）+ limb（1 组）；随后全量核验 + `mgr` PR 收口登记 review_code/10-stage-map。
 
 ## 文件清单
 
