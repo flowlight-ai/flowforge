@@ -42,8 +42,9 @@
 | memory | `perspective-tools.ts` | `memory/perspective.ts` | perspective（Perspective 查询计划） | 视角查询 |
 | memory | `recent-tools.ts` | `memory/recent.ts` | recent（最近浏览） | 最近浏览 |
 | memory | `session-chain-tools.ts` | `memory/session-chain.ts` | session-chain（会话链读取） | 会话链 |
-| signals | `signals-tools.ts` / `signal-study-tools.ts` | `signals/*`（待迁） | signals（信号） | 信号域工具集 |
-| limb | `limb-tools.ts` | `limb/limb.ts`（待迁） | limb（肢端运行时） | 肢端运行时工具集 |
+| signals | `signals-tools.ts` | `signals/signals.ts` | signals（信号） | 信号域工具集 |
+| signals | `signal-study-tools.ts` | `signals/signal-study.ts`（signal-study） | signal-study（信号研究） | 信号研究工具集 |
+| limb | `limb-tools.ts` | `limb/limb.ts` | limb（肢端运行时） | 肢端运行时工具集 |
 
 ## 批登记
 
@@ -67,3 +68,12 @@
   由 `collab/external-runtime-session-callback.ts` 迁入，为避免 `buildCanonicalToolRegistry` 重名工具冲突而置空并登记 0）。
   `TOOLSET_GROUP_ANCHOR.memory` 各项登记；`@cat-cafe` / `@deepseek-ai` / `@clowder` 无运行时依赖（仅注释）。
   契约测试 `tests/toolsets/memory-B5.spec.ts` 全绿。至此 memory 家族全部迁完；signals / limb 仍待迁。
+- **B6 signals+limb 家族迁移（2026-09-16）**：signals 家族 2 小组迁入 `signals/*`，合计 12 工具
+  （signals 5 / signal-study 7），limb 家族 1 小组迁入 `limb/limb.ts`，合计 6 工具。
+  `signals` 与 `limb` 源用 `defineMcpMigrationFactory` 仅 `implementationExport/action/risk/runtimeProfiles/targetExposure`、
+  无 `standaloneReason`，故 `admissionRef` 用本 catalog 模块路径，`standaloneKind` 统一 `'resource-entry'`；`authorizationHint`
+  signals 全用 `'local-operator'`（源 authority=local-runtime），limb 用 `'callback-owner'`（源 authority=callback-limb）。
+  工具名保留裸名（`signal_*`/`signal_study_*`/`limb_*`，无 `cat_cafe_` 前缀）；`X-Cat-Cafe-User` 签名头与 `CAT_CAFE_API_URL`
+  为宿主接线端注入项，不移植。`TOOLSET_GROUP_ANCHOR.signals` / `.limb` 各项登记。
+  契约测试 `tests/toolsets/signals-limb-B6.spec.ts` 全绿。至此四家族（collab / memory / signals / limb）全部迁完，
+  工具总量 128（collab 90 + memory 20 + signals 12 + limb 6）。
