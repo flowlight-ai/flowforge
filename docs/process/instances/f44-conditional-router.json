@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "f44-conditional-router",
+  "workflow": "feature",
+  "snapshot": {
+    "name": "f44-conditional-router",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/process/specs/2026-09-17-f44-conditional-router-design.md",
+      "plan": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-17-f44-conditional-router.md",
+      "verification": "docs/process/verifications/f44-conditional-router.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-17T11:07:44.756Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-17T11:08:16.272Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-17T11:08:17.008Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-17T11:08:44.922Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-17T11:13:31.745Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-17T11:13:45.303Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-17T11:13:56.628Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-17T11:13:56.628Z"
+}

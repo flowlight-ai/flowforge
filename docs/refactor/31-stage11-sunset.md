@@ -11,11 +11,11 @@
 
 ## 1. 启动前置条件（全部满足才允许进入归档期/删除期）
 
-功能全集矩阵核算：D/C/F 主线已全部 ✅（stretch 除外）；**经 2026-09-17 对账（实例 `matrix-reconcile-ep4`），实际遗留仅 F44-F45 与 C51 残余（B21 assets 静态资源）+ 两项 stretch 裁决（A11/A13/A35）**
+功能全集矩阵核算：D/C/F 主线已全部 ✅（stretch 除外）；**经 2026-09-17 对账（实例 `matrix-reconcile-ep4`），实际遗留仅 F44 增量二（world_engine 三层架构）与 F45、C51 残余（B21 assets 静态资源）+ 三项 stretch 裁决（A11/A13/A35）**（F44 增量一 conditional_router 已于 2026-09-17 交付，实例 `f44-conditional-router`）
 （见 task.md EP4 第 3 项），与"Python 日落"解耦——不阻塞 S11.1 冻结，但 S11.3 删除前需收口。
 
 - [x] P1. 功能全集矩阵（`10-stage-map.md` §3）D1-D44 / C1-C42 / F1-F44（stretch 项除外）✅（EP3-1 核对达标）
-      剩余 F44-F45 与 C51 残余（B21 assets）归 EP4-3 收尾，A11/A13/A35 依 Q1/Q4/S6 裁决挂 stretch；S11.2/S11.3 判据沿用 §6 验收标准
+      剩余 F44 增量二（world_engine）与 F45、C51 残余（B21 assets）归 EP4-3 收尾，A11/A13/A35 依 Q1/Q4/S6 裁决挂 stretch；S11.2/S11.3 判据沿用 §6 验收标准
 - [x] P2. TS 版作为默认入口稳定运行 **≥ 2 周**，无 P0/P1 缺陷（阶段 10 入口切换 2026-09-10 完成）。
       **operator 于 2026-09-16 提前放行 S11.2 归档**（TS 默认入口稳定 ≥ 2 周未满仍执行「仅归档不删除」，
       已登记 `review_code.md` §13.2 / §15；S11.3 删除仍须待归档后 ≥ 2 个发布迭代，见 §5）

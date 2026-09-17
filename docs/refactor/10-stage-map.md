@@ -219,7 +219,7 @@
 | S4 | 桌面端 desktop | 上游应用平台 desktop/ | 11+ | ⬜ |
 | S5 | 游戏/信号（games） | 上游应用平台 routes/* | 11+ | ⬜ |
 | S6 | Python↔TS 桥接 SDK（`python/sdk`） | 本项目 | 10-11 | ⬜ |
-| S7 | 物理 AI 传感器 / 虚拟世界设置（F44） | P: core/world_engine + conditional_router | 11+ | ⬜ |
+| S7 | 物理 AI 传感器 / 虚拟世界设置（F44） | P: core/world_engine + conditional_router | 11+ | 🟦（**conditional_router 已交付** 2026-09-17：`@flowforge/workflow-conditional-router`；world_engine 三层架构待增量二） |
 
 - S1-S3 对应上游应用平台历史能力编号 C23-C25（IM/世界/TTS 等，`02-source-crosswalk.md` §2 中
   world/community/story 等行）与 S7（F44）同步标注 stretch，与主表 C23-C42 编号互不冲突；
@@ -272,7 +272,7 @@
 | F41 | 评估契约/三信号交叉/归因矩阵 | core/eval/ + evolution/eval_ledger.py（F018/F019/F020） | 7 | ✅（批次8 forgekin-eval-ledger：EvalContract 五问 + ContractRegistry + ThreeSignalCrossValidator + Attributor 七类归因，`ctx.forgeEvalLedger`） |
 | F42 | 活性探针与规范读（liveness canonical read） | core/（F023） | 3/7 | ✅（批次47 forgekin-liveness：只读 LivenessProbe 注册表（LivenessSpec name/description/slaSeconds/requiredFor + registerProbe/registerSpec/runProbe/runAll 串行隔离执行 + healthy/latencyMs/lastChecked/error + SLA 超时判定 + 能力影响映射，`ctx.forgeLiveness`，5 测试）+ CanonicalReadModel 单一规范读（源优先级 durable_record > in_process_tracker > draft_cache + 四态 alive/degraded/zombie/grace_waiting 判定 + 宽限期不转 zombie + 心跳全失联直判 zombie + split-brain 以 durable 为准 + 阈值注入，5 测试） |
 | F43 | 特种角色子代理（产品经理/DevOps/安全官/交付经理） | forgemind/forms.py 相关（F041-F044） | 7 | ✅（批次15b forgekin-roles：ForgekinRole 基类 + 四角色各 5 动作 + 审批降级不变量，`ctx.forgeRoles`，56 测试） |
-| F44 | 物理 AI 传感器 + 虚拟世界设置 | core/world_engine/ + conditional_router.py（F029/F030） | stretch | ⬜ |
+| F44 | 物理 AI 传感器 + 虚拟世界设置 | core/world_engine/ + conditional_router.py（F029/F030） | stretch | 🟦（**增量一 ✅ 2026-09-17**（实例 `f44-conditional-router`）：`conditional_router.py`（616 行）移植为 `@flowforge/workflow-conditional-router`（落 `packages/workflow/conditional-router`）——安全条件表达式求值（自研 tokenizer/parser/evaluator 替代 Python `ast` 白名单）+ 声明式优先级路由 + YAML 装载，54 契约测试全绿、包级 tsc exit 0、oxlint 0、零禁用依赖；**增量二待做**：`world_engine/` 三层架构（F093，2746 行 / 14 文件）） |
 | F45 | 其他未编号 FlowForge 特色迭代（合并市场/前端插件挂载点随 EP2、编排平台面随 EP3、observability 面随 T9.5） | P: core/*（residual） | 8-11 | ⬜ |
 
 > **F45 契约说明**：F 系列补录以"预留扩展编号"形式存在——具体能力在 EP2/EP3 阶段 8-11 交付时按实际命名续接 F46+；
