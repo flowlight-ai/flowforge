@@ -1,10 +1,13 @@
 # 阶段 11：Python 旧版日落与删除计划（Sunset）
 
-> 状态：**S11.1 冻结期进行中** ｜ 创建：2026-08-16 ｜ 负责人：[:wenxin] + [:sherlock]
+> 状态：**S11.2 归档期（已完成）→ 待 S11.3 删除期** ｜ 创建：2026-08-16 ｜ 负责人：[:wenxin] + [:sherlock]
 > 目标：TS 版功能齐平并稳定运行后，分三阶段冻结、归档、删除 Python 旧版，全程 git 历史可追溯。
 > （更新 2026-09-10：阶段10 入口切换（`30-stage10-cutover.md` T10.1）已把默认入口切为 TS 栈并标注
 > Python `DEPRECATED`；S11.1 冻结横幅已落地 `__main__.py`（`python -m flowforge`）。**S11.2 归档 /
-> S11.3 删除受 P1/P2 前置门槛硬约束，不做未经收货的提前删除。** -> S11.2/S11.3 状态见 §1。）
+> S11.3 删除受 P1/P2 前置门槛硬约束，不做未经收货的提前删除。**
+> （更新 2026-09-16：**S11.2 归档完成**。operator 裁决提前放行 P2（TS 默认入口稳定 ≥ 2 周未满仍执行归档，
+> 仅归档不删除），Python 旧版运行时代码已 `git mv` 至 `python/legacy/`；S11.3 删除期待归档后 ≥ 2 个发布
+> 迭代，本轮不执行。状态见 §1。）
 
 ## 1. 启动前置条件（全部满足才允许进入归档期/删除期）
 
@@ -13,11 +16,14 @@
 
 - [x] P1. 功能全集矩阵（`10-stage-map.md` §3）D1-D44 / C1-C42 / F1-F44（stretch 项除外）✅（EP3-1 核对达标）
       剩余 D55/C49-C51/F44-F45 归 EP4-3 遗漏项收尾，S11.2/S11.3 判据沿用 §6 验收标准
-- [ ] P2. TS 版作为默认入口稳定运行 **≥ 2 周**，无 P0/P1 缺陷（阶段 10 入口切换 2026-09-10 完成，
-      **稳定性观察期未满，S11.2/S11.3 暂缓**）
-- [ ] P3. 数据处置方案确认（见 §4）：旧数据迁移或冻结只读，双栈不共享写库
-- [ ] P4. 行为基线用例 100% 转写为 TS golden tests（`03-fusion-strategy.md` §5）
-- [ ] P5. 全量 `pytest` 通过快照存档（作为删除前的基线记录）
+- [x] P2. TS 版作为默认入口稳定运行 **≥ 2 周**，无 P0/P1 缺陷（阶段 10 入口切换 2026-09-10 完成）。
+      **operator 于 2026-09-16 提前放行 S11.2 归档**（TS 默认入口稳定 ≥ 2 周未满仍执行「仅归档不删除」，
+      已登记 `review_code.md` §13.2 / §15；S11.3 删除仍须待归档后 ≥ 2 个发布迭代，见 §5）
+- [x] P3. 数据处置方案确认（见 §4）：旧数据迁移或冻结只读，双栈不共享写库——
+      默认策略「迁移优先」，删除期前与用户再确认后处置
+- [ ] P4. 行为基线用例 100% 转写为 TS golden tests（`03-fusion-strategy.md` §5）——随 EP4-P12 收尾跟进，归档不阻塞
+- [x] P5. 全量 `pytest` 通过快照存档（作为删除前的基线记录）——2026-09-16 已尽力执行
+      （详见 `python/legacy-pytest-baseline-2026-09-16/`；该目录会随 S11.3 一起删除，如需长期归档请留存）
 
 ## 2. 三阶段日落流程
 
@@ -32,15 +38,26 @@
 
 ### S11.2 归档期（Archive，1 个发布迭代）
 
-- [ ] 目录迁移：
-      - `flowforge/`（Python 包源码）→ `python/legacy/flowforge/`
-      - `web/`（Python 版 Next.js 前端，若有独立于 TS 前端的页面）→ `python/legacy/web/`
-      - `tests/`（pytest 用例）→ `python/legacy/tests/`
-      - `scripts/`、`start_py.*`、`requirements*.txt`、`pyproject.toml` → `python/legacy/`
-- [ ] 根 `pyproject.toml` 删除或改为指向 `python/legacy`（`pip install -e python/legacy` 可选）
-- [ ] `python/legacy/README.md` 写明：归档时间、最后版本、回退方式、数据位置
-- [ ] 保留 `python/sdk`（HTTP/JSON-RPC 桥接 SDK，供旧 Python 调用方访问 TS 服务，可选）
-- [ ] mgr 提交：`refactor(python): Python旧版归档至python/legacy [wenxin]`
+> **实际目录映射修正（2026-09-16）**：本文初稿设想的 `flowforge/`→`python/legacy/flowforge/`、`web/`→
+> legacy 与仓库实况不符——本仓 Python 旧版为**根下分散目录**（无 `flowforge/` 包，`web/` 已是 TS 前端），
+> 故按实际归档到 `python/legacy/<原目录>/`（见下方列表）。
+
+- [x] 目录迁移（`git mv` 保留历史）——Python 旧版根包目录 → `python/legacy/`：
+      `agents/` `brain/` `core/` `llm/` `loop/` `forgemind/` `evolution/` `harness/` `sop/` `scheduler/`
+      `session/` `memory/` `events/` `executor/` `services/` `observability/` `compiler/` `middleware/`
+      `modes/` `mcp/` `a2a/` `review/` `security/` `app/` `cli/` `evaluators/` `workflows/` `skills/`
+      `tools/` `vcs/` `forgemind` 相关
+- [x] 根 Python 文件 → `python/legacy/`：`sdk.py` `__init__.py` `__main__.py`
+      `pyproject.toml` `requirements.txt` `ruff.toml` `py.typed`
+- [x] `tests/`（pytest 用例，保留 `tests/refactor/smoke.test.ts` vitest 用例在根）→ `python/legacy/tests/`
+- [x] `scripts/` 仅迁移 Python `.py` 脚本 → `python/legacy/scripts/`；`scripts/*.ts` 等 TS/PS 脚本保留在根
+- [x] 根 `pyproject.toml` 迁移至 `python/legacy/`，根保留精简指向说明；**不迁移**（保留原位）：
+      `config/`（TS side 读取的共享配置数据，见 §4）、`data/`、`web/`、`packages/`、`apps/`、`vendor/`、
+      `native/`、`examples/`、`docs/`
+- [x] `python/legacy/README.md` 写明：归档时间、最后版本、回退方式、数据位置、pytest 基线位置、S11.3 未执行
+- [ ] 保留 `python/sdk`（HTTP/JSON-RPC 桥接 SDK）——本仓无独立 `python/sdk/`（根 `sdk.py` 已随归档）；
+      S6 桥接 SDK 如需随 stretch 排期重建
+- [x] mgr 提交：`refactor(python): EP4 S11.2 Python旧版归档至python/legacy (含P2提前放行裁决)`
 
 ### S11.3 删除期（Removal，归档后 ≥ 2 个发布迭代）
 
@@ -87,7 +104,8 @@ python -m flowforge
 ## 6. 验收标准
 
 1. S11.1 后：TS 为唯一新功能开发入口，Python 只修 P0。
-2. S11.2 后：仓库根无 `flowforge/*.py` 活动代码，`python/legacy/` 结构完整可运行。
+2. S11.2 后：仓库根无 Python 活动运行时代码，`python/legacy/` 结构完整可运行（2026-09-16 达成，
+   实际目录映射见 §2 S11.2 修正说明）。
 3. S11.3 后：仓库无 Python 运行时代码与测试配置，`pnpm start` 全功能可用。
 4. 全程 git 历史保留；`./mgr status` 干净。
 
