@@ -15,18 +15,19 @@ flowforge/
 │   ├── group/  include/  hmr/  timer/  logger-console/
 ├── packages/               # TS 插件（active rewrite），结构 packages/<group>/<pkg>/
 │   ├── core/  harness/  llm/  web/  acp/  workflow/  mcp/  ...
-├── apps/                   # (planned / stage 3) 主机 CLI，入口 apps/cli/src/bin.ts
+├── apps/                   # 主机 CLI（@flowforge/cli），入口 apps/cli/src/bin.ts
 ├── web/                    # Web UI（Next.js 前端）
 ├── native/landlock-run/    # 原生沙箱运行器（独立子工程）
 ├── docs/                   # 规范 / 架构 / 开发文档
 ├── mgr  mgr.cmd  mgr.ps1   # 强制 Git 工作流 CLI（禁止直接 git 远程操作）
 ├── scripts/                # 辅助脚本
-├── agents/  brain/  core/  llm/  loop/  forgemind/  web/  sdk.py   # Python 3.11+ 单体（legacy，sunset 路径）
+├── python/legacy/           # Python 3.11+ 旧版单体（已归档 S11.2，sunset 路径）
+├── python/legacy-pytest-baseline-2026-09-16/   # pytest 基线快照（随 S11.3 一并删除）
 └── ...
 ```
 
 - `packages/` 下的每个包都是 cordis 插件，按 `packages/<group>/<pkg>/` 组织；vendored 库统一放在 `vendor/`（cordis、cosmokit、schemastery、loader、group、include、hmr、timer、logger-console）。
-- TS 重写（`packages/*`）是当前活跃主线；Python 3.11+ 单体（`agents/`、`brain/`、`core/`、`llm/`、`loop/`、`forgemind/`、`web/`、`sdk.py`）为 legacy 实现，处于 sunset 路径——`pnpm` 管 TS，`pytest`/`ruff` 管 Python。
+- TS 重写（`packages/*`）是当前活跃主线；Python 3.11+ 旧版单体已归档至 `python/legacy/`（S11.2，sunset 路径）——`pnpm` 管 TS，`pytest`/`ruff` 管 Python（legacy）。
 
 ## 常用命令
 
@@ -54,7 +55,7 @@ node packages/plugins/codebase/bin/ff_codebase.mjs index --repo . --mode fast   
 
 > **Node 版本**：`^22.19.0 || >=24.0.0`，pnpm `11.7.0`（Corepack）。
 > **平台感知**：`flowlight/flowforge/mgr` → Gitee（base `master`）；`flowlight-ai/...` → GitHub（base `main`）。
-> **主机 CLI** `pnpm flowforge` / `pnpm start`（`apps/cli/src/bin.ts`）为 **planned / stage 3**，目录尚未落地，暂不可运行。
+> **主机 CLI** `pnpm flowforge` / `pnpm start` 由 `@flowforge/cli`（`apps/cli/`，入口 `apps/cli/src/bin.ts`）提供，已落地可运行。
 
 ### 本地检查
 

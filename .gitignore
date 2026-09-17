@@ -46,6 +46,7 @@ test_reports/
 # ==================== IDE ====================
 .idea/
 .vscode/
+.trae/
 *.swp
 *.swo
 *~
