@@ -97,7 +97,7 @@
 | D6 | 默认 agent 驱动循环 | core/agent-loop | 1 | ✅ |
 | D7 | scope 作用域原语 | core/scope | 1 | ✅ |
 | D8 | hooks 事件钩子 | packages/hooks | 2 | ✅ |
-| D9 | MCP **客户端**（server 侧见 C43，B1 未移植——表述勘误防"服务器已交付"误读，纠偏见 review_code §6-5） | packages/mcp | 2 | ✅（mcp-client；server 侧 ⬜ EP1-1） |
+| D9 | MCP **客户端**（server 侧见 C43；表述勘误：勿把客户端交付误读为"服务器未交付"，纠偏见 review_code §6-5） | packages/mcp | 2 | ✅（`packages/mcp/mcp-client`；**server 侧亦已交付**见 C43——EP1-1a 治理框架（PR #163）+ EP1-1b 四家族 33 工具组 128 工具（PR #192/#193/#194/#195）） |
 | D10 | 技能系统（fs/badge/tool-skill） | packages/skill | 2 | ✅ |
 | D11 | 子代理 subagent | packages/subagent | 2 | ✅ |
 | D12 | 沙箱（landlock-run + e2b 可选） | packages/sandbox | 2 | ✅ |
@@ -144,7 +144,7 @@
 | D52 | dsh `client/*` 46 包 UI 组件层（ui-chat/plan/goal/jobs/schedule/trajectory/deliverables/settings-* 等，能力级融入 Next.js） | dsh `client/*`（A32） | 8 | ✅（**EP2-阶段8 融合闭环** 2026-09-09：能力对照表落 `28-stage8-web.md`，T8.1-T8.10 达标；群聊/灵智档案/终端/管理台/业务/市场/训练营/深色主题齐备，e2e routes-smoke 34 路由 + council/forgekin 用例） |
 | D53 | 预期输出快照体系 snapshots（acp/sdk/session/web 四域测试基建） | dsh `snapshots/`（A36） | 9 | 🟩（**EP3-1**：`@flowforge/acp-snapshot` 已提供 launcher/harness/normalize/suite 预期输出快照基建 + `@flowforge/llm-replay` keyless replay + `agent-loop-testkit`/`client-runtime`/`loader-smoke`；2026-09-10 补根 `pnpm test:snapshot` 门禁（`vitest run test-support`，397 通过/2 env 类跳失败）） |
 | D54 | 依赖补丁 patches（@yao-pkg/pkg、node-pty Windows 验证） | dsh `patches/`（A37） | 9 | 🟩（**EP3-3**：采用 pnpm-workspace 边界声明 + postinstall 治理替代 `patchedDependencies` 覆写——`node-pty`（ConPTY，allowBuilds + `subprocess-local` `ensure-spawn-helper.mjs` 恢复 spawn helper exec bit）+ `koffi`（JSONL write-through）；`@yao-pkg/pkg` 无需移植。治理表见 `patches/README.md`） |
-| D55 | dsh P1/P2 其余遗漏（A5-A7/A11/A13/A15-A16/A18-A19/A21-A23/A25-A28/A30-A31/A35：agent-team/code-runtime-python/win32-process/session-snapshot/util 族等） | dsh `packages/*` | 10-11 | ⬜（EP4-3） |
+| D55 | dsh P1/P2 其余遗漏（A5-A7/A11/A13/A15-A16/A18-A19/A21-A23/A25-A28/A30-A31/A35：agent-team/code-runtime-python/win32-process/session-snapshot/util 族等） | dsh `packages/*` | 10-11 | 🟦（**EP4-P12 主体已交付**（PR #171 批次）：`subprocess/win32-process`、`test-support/session-snapshot`、`util/stdlib`、`host/directory-picker-auto`、`examples/{acp-demo,jsonrpc-demo,agent-spine-demo}`、`bundle/{acp-app,sdk-app,sdk-minimal}`（A5-A7，EP1-12）。**残余（均为裁决态，非欠交付）**：A11 `agent-team` 依 Q1 暂缓 stretch、A13 `code-runtime-python` 随 S6 stretch、A35 文档站依 Q4 暂缓 stretch） |
 
 > **补录说明**：D45-D55 为 review_code §4（dsh 遗漏 A 系列）映射，编号续接 D44 之后，与 `02-source-crosswalk.md`、`review_code.md` §13.2（EP1）引用一致。DR-8
 
@@ -200,9 +200,9 @@
 | C46 | 信号准入域 signal-intake（SignalAdmission/RouteStore/MeetingIntake 全家/ASR 人物记忆队列/来源访问租约/LarkCliFeishuSourceResolver/ThreadDestinationAuthority + 25+ 文件） | clowder `domains/signal-intake`（B3） | 5 | 🟩（**EP1-4**：SignalAdmission/MeetingIntake 服务与 Memory+Redis stores/契约（events-publish/signals/meeting-intake-codec）/来源访问租约/ThreadDestinationAuthority/ASR 人物记忆场景+队列载体/MeetingArtifactResourceService+read-budget+minutes-reference/ThreadMeetingArtifactDispatcher、注入式 Redis seam + 交付端口（宿主 EP2/EP4 接线），落 `packages/cats/signal-intake`（@flowforge/cats-signal-intake），18 契约测试 109/109 绿、包级 tsc exit 0、oxlint 0 告警；LarkCliFeishuSourceResolver 凭据适配、真实队列/消息 store 接线归 EP2/EP4 承接） |
 | C47 | GitHub 等待生命周期（WaitLifecycleService/baseline readers/predicate catalog/wait renderer；email 域仅移植 wait-lifecycle 端口，本体未移植） | clowder `domains/github-signals`（B5） | 7 | 🟩（**EP1-5**：GitHubWaitLifecycleService/predicate catalog/baseline readers/wait state-machine/review-loop-brake renderer + 注入式端口（ITaskStore/ConnectorDelivery/IWaitLifecycleEventLog）+ 内存实现，落 `packages/infrastructure/github-signals`（@flowforge/infrastructure-github-signals），59 契约测试 59/59 绿、包级 tsc exit 0、oxlint 0 告警；真实 GitHub API 适配、TaskStore 宿主接线、真实连接器投递、eventLog 持久化归 EP2/EP4 承接） |
 | C48 | 会话上下文组装治理 context-assembly（ContextAssembler/governance-l0/IntentParser/MessageBundleCarrierResolver/message-bundle-quote-matching，17 文件） | clowder `cats/services/context`（B12） | 4 | 🟩（**EP1-6**：Message Bundle 选择/投影/carrier 解析 + IntentParser + governance-L0 编译 + prompt-template-loader + L0 staging content + chat history ContextAssembler/SystemPromptBuilder + 注入式端口（MessageStore/ThreadStore/CatContext/FileSystem + 存储/配置/file/dossier/model/prompt 纯函数 seam）+ 内存契约实现，落 `packages/cats/context-assembly`（@flowforge/cats-context-assembly），纯函数契型 + MessageSelectionResolver 全部消息源/预算/回退 + governance 段裁剪排序守卫 + prompt 外部化，2 契约测试 58/58 全绿、包级 tsc exit 0、oxlint 0 告警；真实 LLM/embedding 客户端、宿主 prompt 目录、真实 store/Redis、宿主 Quadratic/reservation 接线归 EP2/EP4 承接） |
-| C49 | 服务面板/工具使用/运行时会话/挫败/云桥/首启（services-panel + tool-usage + runtime-session + frustration + cloud-bridge + first-run-quest） | clowder `cats/services/*`（B6/B13-B17） | 4-6 | ⬜（EP4-3） |
-| C50 | 技能治理（skill-manage/meta/mount-ops/query/sync-all/sync-config/sync-engine + drift-detector/resolver）+ MCP 拓扑同步 + utils 清点归位 | clowder `api/src/{skills,mcp,utils}`（B8/B9/B11） | 7 | ⬜（EP4-3，diff 后并入 forgekin/governance 或独立包） |
-| C51 | 财经数据域 finance（配合 mcp-server finance toolset；是否属目标能力待裁决 Q3）+ cat-cafe-skills 内容资产（Q5）+ sop-definitions 内容（B20）+ assets 静态资源（B21）+ 路由平台面余量（B22） | clowder `packages/*` | 11 | ⬜（EP4-3，⚠ Q3/Q5 裁决） |
+| C49 | 服务面板/工具使用/运行时会话/挫败/云桥/首启（services-panel + tool-usage + runtime-session + frustration + cloud-bridge + first-run-quest） | clowder `cats/services/*`（B6/B13-B17） | 4-6 | ✅（**六组落点齐备**：`cats/services-panel`(11 src/2 tests)、`cats/tool-usage`(15/5)、`limb/runtime-session`(6/1)、`cats/frustration`(6/1)、`cats/cloud-bridge`(12/1)、`cats/bootcamp-quest`(4/1)；2026-09-17 对账实例 `matrix-reconcile-ep4`） |
+| C50 | 技能治理（skill-manage/meta/mount-ops/query/sync-all/sync-config/sync-engine + drift-detector/resolver）+ MCP 拓扑同步 + utils 清点归位 | clowder `api/src/{skills,mcp,utils}`（B8/B9/B11） | 7 | 🟦（**已 diff 归位补齐**，与 `review_code.md` §4 B8/B9/B11 同证：`skill-meta`/`skill-query`/`skill-sync` 落 `governance/src/`；mount/skillsSync 语义内联 `governance-bootstrap.ts`；`mcp-drift-detector`/`mcp-drift-resolver` 落 `capabilities/src/`；utils 归位 `util-stdlib`。**残余**：skill 级 drift 待 operator 裁决 + 剩余纯工具待复核） |
+| C51 | 财经数据域 finance（配合 mcp-server finance toolset；是否属目标能力待裁决 Q3）+ cat-cafe-skills 内容资产（Q5）+ sop-definitions 内容（B20）+ assets 静态资源（B21）+ 路由平台面余量（B22） | clowder `packages/*` | 11 | 🟦（**逐项拆分**：finance 依 Q3（2026-09-10）剔除；B19 技能内容 ✅ PR #190（wave1-12）；B20 SOP 定义 ✅ PR #171；B22 路由平台面 → `packages/cats/routes/src/{router,ports,index}.ts` 已落。**残余**：B21 assets 静态资源未迁，随 S2/平台路由（P2）） |
 
 > **补录说明**：C43-C51 为 review_code §4（clowder 遗漏 B 系列）映射，编号续接 C42 之后，与 `02-source-crosswalk.md`、`review_code.md` §13.2（EP1）及 §15（Q1-Q6 决策点）引用一致。
 
@@ -213,7 +213,7 @@
 
 | # | 能力 | 来源 | 建议阶段 | 状态 |
 |---|---|---|---|---|
-| S1 | IM 通道连接器（**拆二**：①connector 框架本体 = C44 主线，EP1-2 交付；②真实通道凭据启用 = stretch，按凭据接线） | 上游应用平台 routes/push 等 | 11+ | 🟪（框架本体 ⬜ C44/EP1-2；批次8 chat-stretch 已交付 IImChannelAdapter ports + InMemory mock；真实通道凭据按裁决启用） |
+| S1 | IM 通道连接器（**拆二**：①connector 框架本体 = C44 主线，**已交付** `packages/infrastructure/connectors`（C44 🟩 EP1-2）；②真实通道凭据启用 = stretch，按凭据接线） | 上游应用平台 routes/push 等 | 11+ | 🟪（批次8 chat-stretch 已交付 IImChannelAdapter ports + InMemory mock；真实通道凭据按裁决启用——框架本体已随 C44 交付，不再欠） |
 | S2 | TTS/语音 / RSS / 邮件 / GitHub signals | 上游应用平台 services | 11+ | ⬜ |
 | S3 | 世界 world / 社区 / 故事 / 排行榜 | 上游应用平台 routes/* | 11+ | 🟦（批次8 chat-stretch 已交付 IStory/ICommunity/ILeaderboard ports + InMemory mock） |
 | S4 | 桌面端 desktop | 上游应用平台 desktop/ | 11+ | ⬜ |
