@@ -901,9 +901,6 @@
       "path": "./packages/workflow/workflow-worker-thread"
     },
     {
-      "path": "./packages/workflow/conditional-router"
-    },
-    {
       "path": "./packages/workspace/workspace"
     },
     {
