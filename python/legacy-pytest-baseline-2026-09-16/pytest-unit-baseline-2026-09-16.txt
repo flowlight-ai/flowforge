@@ -50,3 +50,96 @@ tests\unit\test_security.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[
 tests\unit\test_skills.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[31mF[0m[31mF[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m           [ 90%][0m
 tests\unit\test_state_manager.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                          [ 91%][0m
 tests\unit\test_task_board.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                                   [ 92%][0m
+tests\unit\test_test_strategy.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                         [ 94%][0m
+tests\unit\test_tools.py [32m.[0m[32m.[0m[32m.[0m[31m                                             [ 94%][0m
+tests\unit\test_unified_plugin_protocol.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 98%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                                                                   [ 98%][0m
+tests\unit\test_xscene_routing.py [33ms[0m[33ms[0m[33ms[0m[33ms[0m[33ms[0m[33ms[0m[33ms[0m[33ms[0m[33ms[0m[33ms[0m[31m                             [100%][0m
+
+================================== FAILURES ===================================
+[31m[1m________________ TestSkillManager.test_execute_skill_not_found ________________[0m
+[1m[31mtests\unit\test_skills.py[0m:276: in test_execute_skill_not_found
+    [0masyncio.get_event_loop().run_until_complete([90m[39;49;00m
+    ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mC:\Users\hyg\.workbuddy\binaries\python\versions\3.13.12\Lib\asyncio\events.py[0m:719: in get_event_loop
+    [0m[94mraise[39;49;00m [96mRuntimeError[39;49;00m([33m'[39;49;00m[33mThere is no current event loop in thread [39;49;00m[33m%r[39;49;00m[33m.[39;49;00m[33m'[39;49;00m[90m[39;49;00m
+[1m[31mE   RuntimeError: There is no current event loop in thread 'MainThread'.[0m
+[31m[1m______________ TestComboSkill.test_pipeline_run_with_mock_skills ______________[0m
+[1m[31mtests\unit\test_skills.py[0m:363: in test_pipeline_run_with_mock_skills
+    [0mresult = asyncio.get_event_loop().run_until_complete(pipeline.run(ctx))[90m[39;49;00m
+             ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mC:\Users\hyg\.workbuddy\binaries\python\versions\3.13.12\Lib\asyncio\events.py[0m:719: in get_event_loop
+    [0m[94mraise[39;49;00m [96mRuntimeError[39;49;00m([33m'[39;49;00m[33mThere is no current event loop in thread [39;49;00m[33m%r[39;49;00m[33m.[39;49;00m[33m'[39;49;00m[90m[39;49;00m
+[1m[31mE   RuntimeError: There is no current event loop in thread 'MainThread'.[0m
+[31m[1m_____________ TestComboSkill.test_pipeline_stop_on_missing_skill ______________[0m
+[1m[31mtests\unit\test_skills.py[0m:373: in test_pipeline_stop_on_missing_skill
+    [0mresult = asyncio.get_event_loop().run_until_complete(pipeline.run(ctx))[90m[39;49;00m
+             ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mC:\Users\hyg\.workbuddy\binaries\python\versions\3.13.12\Lib\asyncio\events.py[0m:719: in get_event_loop
+    [0m[94mraise[39;49;00m [96mRuntimeError[39;49;00m([33m'[39;49;00m[33mThere is no current event loop in thread [39;49;00m[33m%r[39;49;00m[33m.[39;49;00m[33m'[39;49;00m[90m[39;49;00m
+[1m[31mE   RuntimeError: There is no current event loop in thread 'MainThread'.[0m
+[31m[1m_____________ TestComboSkill.test_pipeline_skip_on_missing_skill ______________[0m
+[1m[31mtests\unit\test_skills.py[0m:383: in test_pipeline_skip_on_missing_skill
+    [0mresult = asyncio.get_event_loop().run_until_complete(pipeline.run(ctx))[90m[39;49;00m
+             ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mC:\Users\hyg\.workbuddy\binaries\python\versions\3.13.12\Lib\asyncio\events.py[0m:719: in get_event_loop
+    [0m[94mraise[39;49;00m [96mRuntimeError[39;49;00m([33m'[39;49;00m[33mThere is no current event loop in thread [39;49;00m[33m%r[39;49;00m[33m.[39;49;00m[33m'[39;49;00m[90m[39;49;00m
+[1m[31mE   RuntimeError: There is no current event loop in thread 'MainThread'.[0m
+[31m[1m________________ TestComboSkill.test_pipeline_context_passing _________________[0m
+[1m[31mtests\unit\test_skills.py[0m:411: in test_pipeline_context_passing
+    [0mresult = asyncio.get_event_loop().run_until_complete(pipeline.run(ctx))[90m[39;49;00m
+             ^^^^^^^^^^^^^^^^^^^^^^^^[90m[39;49;00m
+[1m[31mC:\Users\hyg\.workbuddy\binaries\python\versions\3.13.12\Lib\asyncio\events.py[0m:719: in get_event_loop
+    [0m[94mraise[39;49;00m [96mRuntimeError[39;49;00m([33m'[39;49;00m[33mThere is no current event loop in thread [39;49;00m[33m%r[39;49;00m[33m.[39;49;00m[33m'[39;49;00m[90m[39;49;00m
+[1m[31mE   RuntimeError: There is no current event loop in thread 'MainThread'.[0m
+[33m============================== warnings summary ===============================[0m
+core\gate\registry.py:35
+  D:\software\fl\flowlight\flowforge\core\gate\registry.py:35: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class GateConfig(BaseModel):
+
+core\config.py:89
+  D:\software\fl\flowlight\flowforge\core\config.py:89: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class SystemConfig(BaseSettings):
+
+skills\base.py:66
+  D:\software\fl\flowlight\flowforge\skills\base.py:66: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class SkillContext(BaseModel):
+
+tests/unit/test_phase3_hot_reload.py::TestRegistrationTracking::test_tracks_registered_agents
+  D:\software\fl\flowlight\flowforge\core\canary.py:34: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class CanaryDeploymentConfig(BaseModel):
+
+tests/unit/test_phase3_hot_reload.py::TestRegistrationTracking::test_tracks_registered_agents
+  D:\software\fl\flowlight\flowforge\core\canary.py:124: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class CanaryStageResult(BaseModel):
+
+tests/unit/test_phase3_hot_reload.py::TestRegistrationTracking::test_tracks_registered_agents
+  D:\software\fl\flowlight\flowforge\core\canary.py:141: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class CanaryExecution(BaseModel):
+
+tests/unit/test_phase3_hot_reload.py::TestRegistrationTracking::test_tracks_registered_agents
+  D:\software\fl\flowlight\flowforge\core\canary.py:159: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class HealthCheckResult(BaseModel):
+
+tests/unit/test_phase3_hot_reload.py::TestRegistrationTracking::test_tracks_registered_agents
+  D:\software\fl\flowlight\flowforge\evaluators\registry.py:23: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class EvaluatorConfig(BaseModel):
+
+tests/unit/test_phase3_hot_reload.py::TestDomainPluginAPI::test_list_domain_plugins
+  D:\software\fl\flowlight\flowforge\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/unit/test_plugin_registry_transport.py::TestHealthMonitoring::test_health_check_timeout_handled
+  D:\software\fl\flowlight\flowforge\tests\conftest.py:26: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    gc.collect()
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+[36m[1m=========================== short test summary info ===========================[0m
+[31mFAILED[0m tests/unit/test_skills.py::[1mTestSkillManager::test_execute_skill_not_found[0m - RuntimeError: There is no current event loop in thread 'MainThread'.
+[31mFAILED[0m tests/unit/test_skills.py::[1mTestComboSkill::test_pipeline_run_with_mock_skills[0m - RuntimeError: There is no current event loop in thread 'MainThread'.
+[31mFAILED[0m tests/unit/test_skills.py::[1mTestComboSkill::test_pipeline_stop_on_missing_skill[0m - RuntimeError: There is no current event loop in thread 'MainThread'.
+[31mFAILED[0m tests/unit/test_skills.py::[1mTestComboSkill::test_pipeline_skip_on_missing_skill[0m - RuntimeError: There is no current event loop in thread 'MainThread'.
+[31mFAILED[0m tests/unit/test_skills.py::[1mTestComboSkill::test_pipeline_context_passing[0m - RuntimeError: There is no current event loop in thread 'MainThread'.
+[31m===== [31m[1m5 failed[0m, [32m831 passed[0m, [33m14 skipped[0m, [33m10 warnings[0m[31m in 4740.29s (1:19:00)[0m[31m =====[0m

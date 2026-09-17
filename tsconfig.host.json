@@ -886,6 +886,9 @@
       "path": "./packages/web/web-search-perplexity"
     },
     {
+      "path": "./packages/workflow/conditional-router"
+    },
+    {
       "path": "./packages/workflow/tool-ralph"
     },
     {
