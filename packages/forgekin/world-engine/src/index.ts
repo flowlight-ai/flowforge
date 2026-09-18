@@ -79,3 +79,56 @@ export type { RelationalMemoryOptions } from './relational-memory.js';
 export { InMemorySessionMemory } from './session-memory.js';
 export { WorldLayer } from './world-layer.js';
 export type { WorldLayerDependencies, WorldLayerDescription } from './world-layer.js';
+
+// ── wave 2b: bridge layer + mind families ──────────────────────────────────
+export { silentLogger } from './logger.js';
+export type { Logger } from './logger.js';
+export {
+  ONTOLOGY_LAYERS,
+  ROLE_MASK_LAYERS,
+  RoleMask,
+  SCENE_LAYERS,
+  assertRoleMaskLayer,
+  roleMaskLayerName,
+} from './bridge/role-mask.js';
+export type {
+  RoleMaskContent,
+  RoleMaskDescription,
+  RoleMaskLayer,
+} from './bridge/role-mask.js';
+export { CANON_CONFIRMERS, CanonSyncProtocol } from './bridge/canon-sync.js';
+export type {
+  CanonConfirmer,
+  CanonProposal,
+  CanonProposalSnapshot,
+  CanonProposalStatus,
+  CanonProposer,
+  CanonSyncProtocolOptions,
+} from './bridge/canon-sync.js';
+export { WorldDriver } from './bridge/world-driver.js';
+export type { WorldDriverOptions, WorldDriverState, WorldRotationEvent } from './bridge/world-driver.js';
+export { RuntimeCoordinator } from './bridge/runtime-coordinator.js';
+export type { RuntimeCoordinatorDescription, RuntimeCoordinatorOptions } from './bridge/runtime-coordinator.js';
+export { BridgeLayer } from './bridge/bridge-layer.js';
+export type { BridgeLayerDescription, BridgeLayerOptions } from './bridge/bridge-layer.js';
+export {
+  FAMILY_ALLOWED_ACTIONS,
+  FAMILY_AWAKENING_RANGE,
+  FAMILY_GUARDRAIL_STRENGTH,
+  GUARDRAIL_DECISIONS,
+  HotfixGuardrail,
+  MaineCoonGuardrail,
+  MIND_FAMILIES,
+  MindFamilyRouter,
+  RagdollGuardrail,
+  SiameseGuardrail,
+  defaultFamilyHooks,
+} from './mind-families.js';
+export type {
+  GuardrailContext,
+  GuardrailDecision,
+  GuardrailHook,
+  MindFamily,
+  MindFamilyRouterOptions,
+  RouteOutcome,
+} from './mind-families.js';
