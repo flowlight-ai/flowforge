@@ -2784,6 +2784,12 @@ importers:
         specifier: workspace:^
         version: link:../../../vendor/cordis
 
+  packages/forgekin/world-engine:
+    devDependencies:
+      yaml:
+        specifier: ^2.6.0
+        version: 2.9.0
+
   packages/fs/fs:
     devDependencies:
       '@flowforge/brand':
