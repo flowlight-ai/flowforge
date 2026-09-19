@@ -86,9 +86,11 @@ describe('MeetingArtifactResourceService.read', () => {
       maxTokens: 2_000,
     })
     expect(result.view).toBe('overview')
-    expect(result.overview.characterCount).toBe(TRANSCRIPT.length)
-    expect(result.overview.detectedSpeakers).toContain('Alice')
-    expect(result.overview.detectedSpeakers).toContain('Bob')
+    if (result.view === 'overview') {
+      expect(result.overview.characterCount).toBe(TRANSCRIPT.length)
+      expect(result.overview.detectedSpeakers).toContain('Alice')
+      expect(result.overview.detectedSpeakers).toContain('Bob')
+    }
   })
 
   it('returns a content page with a nextCursor when it has more', async () => {
@@ -103,7 +105,9 @@ describe('MeetingArtifactResourceService.read', () => {
       maxChars: 8,
       maxTokens: 2_000,
     })
-    expect(result.content.length).toBeGreaterThan(0)
+    if (result.view !== 'overview') {
+      expect(result.content.length).toBeGreaterThan(0)
+    }
     expect(typeof result.nextCursor).toBe('string')
   })
 

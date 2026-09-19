@@ -261,7 +261,6 @@ export class ScopedLayers<L extends ScopeLayer> {
       }
       if (notify) this.onChange()
     }.bind(this), options.label)
-    // oxlint-disable-next-line typescript/no-misused-promises -- exact synchronous disposer preserves Cordis effect identity
     return dispose
   }
 }

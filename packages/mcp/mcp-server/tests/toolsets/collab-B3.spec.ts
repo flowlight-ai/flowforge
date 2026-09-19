@@ -22,7 +22,7 @@ describe('toolsets/collab-B3', () => {
   it('collab total matches the sum of TOOLSET_GROUP_ANCHOR.collab', () => {
     const { port } = fixturePort();
     const sources = assembleMcpSeverToolsets(port);
-    const expected = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a, b) => a + b, 0);
+    const expected = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a: number, b: number) => a + b, 0);
     expect(sources.collab.length).toBe(expected);
   });
 
@@ -33,8 +33,8 @@ describe('toolsets/collab-B3', () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual([...names].sort());
     const expected = ['collab', 'memory', 'signals', 'limb']
-      .map((family) => Object.values(TOOLSET_GROUP_ANCHOR[family as keyof typeof TOOLSET_GROUP_ANCHOR]).reduce((a, b) => a + b, 0))
-      .reduce((a, b) => a + b, 0);
+      .map((family) => Object.values(TOOLSET_GROUP_ANCHOR[family as keyof typeof TOOLSET_GROUP_ANCHOR]).reduce((a: number, b: number) => a + b, 0))
+      .reduce((a: number, b: number) => a + b, 0);
     expect(registry.length).toBe(expected);
     expect(registry.every((d) => d.actionInventory.length > 0)).toBe(true);
   });
@@ -44,7 +44,7 @@ describe('toolsets/collab-B3', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'cat_cafe_validate_community_route');
     expect(tool).toBeDefined();
-    await tool!.handler({ issueId: 'case-42', decision: 'accept', reason: 'verified custody' });
+    await tool!.handler({ issueId: 'case-42', decision: 'accept', reason: 'verified custody' } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: `/api/community-issues/${encodeURIComponent('case-42')}/validate-route`,
@@ -57,7 +57,7 @@ describe('toolsets/collab-B3', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'cat_cafe_list_events');
     expect(tool).toBeDefined();
-    await tool!.handler({ cat: 'cat-miao', limit: 12 });
+    await tool!.handler({ cat: 'cat-miao', limit: 12 } as never);
     expect(calls[0]).toMatchObject({
       method: 'GET',
       path: '/api/memory/events',
@@ -78,7 +78,7 @@ describe('toolsets/collab-B3', () => {
       action: 'vote',
       target: 5,
       nonce: 'n-1',
-    });
+    } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: `/api/game/${encodeURIComponent('game-1')}/action`,

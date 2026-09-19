@@ -2,6 +2,7 @@
  * Envelope pure projection — contract tests (T-D1, D-1 / P4).
  */
 import { describe, expect, it } from 'vitest'
+import { createCatId } from '@flowforge/cats-shared'
 import type { EnvelopeStoredMessage } from '../src/envelope.js'
 import { projectEnvelope, renderElementsText } from '../src/envelope.js'
 
@@ -44,7 +45,7 @@ describe('projectEnvelope — user message', () => {
 
 describe('projectEnvelope — cat message', () => {
   it('projects a cat message with inference epistemic and cat actor', () => {
-    const env = projectEnvelope(baseRow({ catId: 'c1' }))
+    const env = projectEnvelope(baseRow({ catId: createCatId('c1') }))
     expect(env).not.toBeNull()
     expect(env!.actor).toEqual({ kind: 'cat', id: 'c1' })
     const payload = env!.payload as { provenance: { epistemicStatus: string } }
@@ -54,7 +55,7 @@ describe('projectEnvelope — cat message', () => {
 
 describe('projectEnvelope — whisper audience', () => {
   it('projects visibility=whisper into a whisper audience with target copies', () => {
-    const env = projectEnvelope(baseRow({ visibility: 'whisper', whisperTo: ['u2', 'u3'] }))
+    const env = projectEnvelope(baseRow({ visibility: 'whisper', whisperTo: [createCatId('u2'), createCatId('u3')] }))
     expect(env).not.toBeNull()
     expect(env!.audience).toEqual({ kind: 'whisper', targets: ['u2', 'u3'] })
   })

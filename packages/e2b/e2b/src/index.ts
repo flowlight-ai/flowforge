@@ -131,7 +131,6 @@ export class E2BRuntime extends Service {
     if (this.disposed) throw new Error('E2B sandbox service is disposing')
     const sandbox = await this.ready
     // Disposal can race the awaited sandbox readiness despite the synchronous precheck.
-    // oxlint-disable-next-line typescript/no-unnecessary-condition -- Awaiting readiness yields to disposal.
     if (this.disposed) throw new Error('E2B sandbox service is disposing')
     return sandbox
   }

@@ -192,7 +192,6 @@ export class InvariantRegistry extends Service {
     }
     // Cordis attaches setup thenability and async teardown to this callable;
     // the service contract intentionally exposes only the conventional disposer.
-    // oxlint-disable-next-line typescript/no-misused-promises -- the extra runtime shape stays private.
     return registration
   }
 }

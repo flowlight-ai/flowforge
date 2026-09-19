@@ -30,8 +30,8 @@ describe('renderRichBlockPlaintext', () => {
       kind: 'checklist',
       title: 'Regression',
       items: [
-        { text: '通过', checked: true },
-        { text: '待办', checked: false },
+        { id: 'c1', text: '通过', checked: true },
+        { id: 'c2', text: '待办', checked: false },
       ],
     };
     const out = renderRichBlockPlaintext(block);
@@ -61,7 +61,7 @@ describe('renderRichBlockPlaintext', () => {
 
   it('renderAllRichBlocksPlaintext 用空行连接多块', () => {
     const blocks: RichBlock[] = [
-      { ...base, kind: 'card' as const, title: 'A', bodyMarkdown: undefined },
+      { ...base, kind: 'card' as const, title: 'A', bodyMarkdown: '' },
       { ...base, id: 'b2', kind: 'checklist' as const, title: 'Todo', items: [] },
     ];
     expect(renderAllRichBlocksPlaintext(blocks)).toBe('📋 A\n\n☑️ Todo');

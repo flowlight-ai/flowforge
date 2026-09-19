@@ -13,7 +13,7 @@ describe('MemoryClientSlots (slot registry seam)', () => {
     const component = { render: 'CordisPanel' }
     const dispose = slots.register({ name: 'sidebar.footer.action', locale: 'cordis' }, component)
     expect(slots.entries('sidebar.footer.action')).toHaveLength(1)
-    expect(slots.entries('sidebar.footer.action')[0].component).toBe(component)
+    expect(slots.entries('sidebar.footer.action')[0]!.component).toBe(component)
 
     dispose()
     expect(slots.entries('sidebar.footer.action')).toHaveLength(0)
@@ -27,13 +27,13 @@ describe('MemoryClientSlots (slot registry seam)', () => {
 
     const tree = slots.snapshot()
     expect(tree).toHaveLength(1)
-    expect(tree[0].name).toBe('root')
-    expect(tree[0].children[0].name).toBe('child')
-    expect(tree[0].children[0].occupants).toHaveLength(1)
+    expect(tree[0]!.name).toBe('root')
+    expect(tree[0]!.children[0]!.name).toBe('child')
+    expect(tree[0]!.children[0]!.occupants).toHaveLength(1)
 
     const anchored = slots.snapshot('child')
     expect(anchored).toHaveLength(1)
-    expect(anchored[0].name).toBe('child')
+    expect(anchored[0]!.name).toBe('child')
   })
 
   it('fans a crash out to every subscribed supervisor', () => {

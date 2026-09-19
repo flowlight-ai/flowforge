@@ -5,9 +5,10 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { createCatId } from '@flowforge/cats-shared';
 import { parseMentions } from '../src/index.ts';
 
-const DEFAULT = 'cat-default';
+const DEFAULT = createCatId('cat-default');
 
 function patterns(map: Record<string, string[]>): Map<string, string[]> {
   return new Map(Object.entries(map));

@@ -316,7 +316,6 @@ function descendantCandidates(
   const visited = new Set<SessionId>([rootSessionId])
   while (stack.length > 0) {
     // The length guard proves one frame exists.
-    // oxlint-disable-next-line typescript/no-non-null-assertion
     const position = stack.pop()!
     const id = position.record.header.id
     if (visited.has(id)) continue

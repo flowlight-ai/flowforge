@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
+import { createCatId } from '@flowforge/cats-shared'
 import { buildAsrPersonMemoryDynamicScenes } from '../src/AsrPersonMemorySceneBuilder.ts'
 import { asrPersonMemoryDynamicSceneEntryV1Schema } from '../src/contract/asr-person-memory-scene.ts'
 import { makeArtifact, makeIntake } from './fixtures.ts'
@@ -22,7 +23,7 @@ describe('buildAsrPersonMemoryDynamicScenes', () => {
       intake: confirmedIntake(),
       artifact: makeArtifact(),
       threadId: 'thread-abc',
-      consumerCatId: 'cat-a',
+      consumerCatId: createCatId('cat-a'),
       now: 5_000,
     })
     expect(scenes).toHaveLength(1)
@@ -36,7 +37,7 @@ describe('buildAsrPersonMemoryDynamicScenes', () => {
       intake: confirmedIntake(),
       artifact: makeArtifact(),
       threadId: 'thread-abc',
-      consumerCatId: 'cat-a',
+      consumerCatId: createCatId('cat-a'),
       now: 5_000,
     })
     expect(scenes[0]!.opportunity.sourceCoordinates).toHaveLength(2)
@@ -45,7 +46,7 @@ describe('buildAsrPersonMemoryDynamicScenes', () => {
   it('returns no scenes for a non-confirmed intake', () => {
     const intake = makeIntake({ judgmentState: 'unresolved', choices: { speakerMap: { spk1: 'Alice' } } })
     expect(
-      buildAsrPersonMemoryDynamicScenes({ intake, artifact: makeArtifact(), threadId: 't', consumerCatId: 'c', now: 1 } ),
+      buildAsrPersonMemoryDynamicScenes({ intake, artifact: makeArtifact(), threadId: 't', consumerCatId: createCatId('c'), now: 1 } ),
     ).toHaveLength(0)
   })
 
@@ -55,7 +56,7 @@ describe('buildAsrPersonMemoryDynamicScenes', () => {
         intake: confirmedIntake(),
         artifact: makeArtifact({ byteLength: 0 }),
         threadId: 't',
-        consumerCatId: 'c',
+        consumerCatId: createCatId('c'),
         now: 1,
       }),
     ).toHaveLength(0)
@@ -64,7 +65,7 @@ describe('buildAsrPersonMemoryDynamicScenes', () => {
         intake: confirmedIntake(),
         artifact: makeArtifact({ trust: 'untrusted_external', instructionPolicy: 'data_only', byteLength: 0 }),
         threadId: 't',
-        consumerCatId: 'c',
+        consumerCatId: createCatId('c'),
         now: 1,
       }),
     ).toHaveLength(0)
@@ -75,14 +76,14 @@ describe('buildAsrPersonMemoryDynamicScenes', () => {
       intake: confirmedIntake(),
       artifact: makeArtifact(),
       threadId: 'thread-abc',
-      consumerCatId: 'cat-a',
+      consumerCatId: createCatId('cat-a'),
       now: 5_000,
     })
     const b = buildAsrPersonMemoryDynamicScenes({
       intake: confirmedIntake(),
       artifact: makeArtifact(),
       threadId: 'thread-abc',
-      consumerCatId: 'cat-a',
+      consumerCatId: createCatId('cat-a'),
       now: 6_000,
     })
     expect(a[0]!.opportunity.dedupeLineage).toBe(b[0]!.opportunity.dedupeLineage)

@@ -3,7 +3,7 @@
 import { EventEmitter } from 'node:events'
 import { Context } from '@flowforge/cordis'
 import { afterEach, describe, expect, it } from 'vitest'
-import { internals, provideCmdline } from '@flowforge/cmdline'
+import { internals, provideCmdline, type AppStdin } from '@flowforge/cmdline'
 import { apply, type Config, SDK_APP_STARTUP_SERVICE } from '../src/index.ts'
 
 /** Controllable stdin for one startup invocation. */
@@ -33,7 +33,7 @@ function start(args: string[], config: Config = {}): { ctx: Context; exits: numb
   const stdin = new TestStdin()
   let out = ''
   const capture = { write: (chunk: string) => { out += chunk; return true } }
-  internals.stdin = stdin
+  internals.stdin = stdin as unknown as AppStdin
   internals.stdout = capture
   internals.stderr = capture
   provideCmdline(ctx, {

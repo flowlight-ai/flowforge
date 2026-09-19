@@ -1,6 +1,6 @@
 /** 契约测试共享的内存夹具构造器。 */
 
-import type { SessionFormatHeader } from '@flowforge/session-format'
+import type { SessionFormatHeader, SessionFormatEvent, SessionFormatJsonValue } from '@flowforge/session-format'
 
 /** 构造一个最小合法会话头；提供可选的 `version` / `delegationDepth` 等覆盖。 */
 export function makeHeader(
@@ -31,7 +31,7 @@ export function makeHeader(
 
 /** 构造一条最小合法事件。 */
 export function makeEvent(seq: number, data: unknown, type = 'message'): SessionFormatEvent {
-  return { type, seq, time: seq + 1, data }
+  return { type, seq, time: seq + 1, data: data as SessionFormatJsonValue }
 }
 
 /** 一个携带图片块引用的内容块。 */

@@ -184,7 +184,6 @@ export class E2BSubprocessRuntime extends SubprocessRuntime {
         this.pollMs,
       )
       this.terminals.add(terminal)
-      // oxlint-disable-next-line typescript/no-unnecessary-condition -- Remote allocation yields to disposal.
       if (this.disposing) {
         await terminal.terminate()
         this.terminals.delete(terminal)

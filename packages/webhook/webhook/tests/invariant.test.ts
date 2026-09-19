@@ -30,7 +30,7 @@ function delivery(): VerifiedWebhookDelivery<'github'> {
     kind: 'github',
     source: WebhookSourceId('primary-github'),
     deliveryId: WebhookDeliveryId('uuid-1'),
-    event: {},
+    event: { name: 'issues', payload: {} },
     receivedAt: 1_700_000_000_000,
   }
 }

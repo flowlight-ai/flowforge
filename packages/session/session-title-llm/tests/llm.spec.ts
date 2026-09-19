@@ -36,7 +36,7 @@ class CooperativeAdapter extends LlmAdapter {
     if (signal === undefined) throw new Error('expected title request signal')
     await new Promise<never>((_resolve, reject) => {
       const rejectAbort = (): void => {
-        // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- exercise exact AbortSignal.reason propagation
+        // exercise exact AbortSignal.reason propagation
         reject(signal.reason)
       }
       if (signal.aborted) {

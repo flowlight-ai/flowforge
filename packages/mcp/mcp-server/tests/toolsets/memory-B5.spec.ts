@@ -19,10 +19,10 @@ function fixturePort() {
 }
 
 function anchorSums() {
-  const collab = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a, b) => a + b, 0);
-  const memory = Object.values(TOOLSET_GROUP_ANCHOR.memory).reduce((a, b) => a + b, 0);
-  const signals = Object.values(TOOLSET_GROUP_ANCHOR.signals).reduce((a, b) => a + b, 0);
-  const limb = Object.values(TOOLSET_GROUP_ANCHOR.limb).reduce((a, b) => a + b, 0);
+  const collab = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a: number, b: number) => a + b, 0);
+  const memory = Object.values(TOOLSET_GROUP_ANCHOR.memory).reduce((a: number, b: number) => a + b, 0);
+  const signals = Object.values(TOOLSET_GROUP_ANCHOR.signals).reduce((a: number, b: number) => a + b, 0);
+  const limb = Object.values(TOOLSET_GROUP_ANCHOR.limb).reduce((a: number, b: number) => a + b, 0);
   return { collab, memory, signals, limb, total: collab + memory + signals + limb };
 }
 
@@ -63,7 +63,7 @@ describe('toolsets/memory-B5', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'cat_cafe_mark_generalizable');
     expect(tool).toBeDefined();
-    await tool!.handler({ anchor: 'LL-029', generalizable: true });
+    await tool!.handler({ anchor: 'LL-029', generalizable: true } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: `/api/evidence/${encodeURIComponent('LL-029')}/generalizable`,
@@ -76,7 +76,7 @@ describe('toolsets/memory-B5', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'cat_cafe_read_session_events');
     expect(tool).toBeDefined();
-    await tool!.handler({ sessionId: 'sess-1', cursor: 3, limit: 50, view: 'handoff' });
+    await tool!.handler({ sessionId: 'sess-1', cursor: 3, limit: 50, view: 'handoff' } as never);
     expect(calls[0]).toMatchObject({
       method: 'GET',
       path: `/api/sessions/${encodeURIComponent('sess-1')}/events`,
@@ -96,7 +96,7 @@ describe('toolsets/memory-B5', () => {
       maxTokens: 300,
       threadId: 'thread-7',
       agentKeyCatId: 'ak-1',
-    });
+    } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: '/api/callbacks/meeting-artifacts/read',
@@ -112,7 +112,7 @@ describe('toolsets/memory-B5', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'cat_cafe_read_file_slice');
     expect(tool).toBeDefined();
-    await tool!.handler({ path: '/repo/docs/F186.md', startLine: 10, endLine: 20 });
+    await tool!.handler({ path: '/repo/docs/F186.md', startLine: 10, endLine: 20 } as never);
     expect(calls[0]).toMatchObject({
       method: 'GET',
       path: '/api/callbacks/local/read-file-slice',

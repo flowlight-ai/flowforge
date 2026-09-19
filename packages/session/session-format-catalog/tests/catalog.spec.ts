@@ -71,7 +71,7 @@ describe('Session format catalog', () => {
     const folded = migrated.events.find(candidate => candidate.type === 'assistant/message' || candidate.type === 'assistant/attempt')
     expect(folded?.type).toBe('assistant/message')
     if (folded?.type !== 'assistant/message') throw new Error('expected folded assistant/message')
-    const stream = folded.data['stream'] as readonly Record<string, unknown>[]
+    const stream = (folded.data as unknown as Record<string, unknown> | undefined)?.['stream'] as readonly Record<string, unknown>[]
     expect(stream[0]).toMatchObject({ type: 'text-chunks', texts: ['hello'] })
     expect(stream[1]).toMatchObject({ type: 'chunk', chunk: { type: 'finish', reason: { kind: 'stop' } } })
 

@@ -107,10 +107,10 @@ describe('CordisRunOrchestrator', () => {
   })
 
   it('host-only packages settle without a client load', async () => {
-    const seam: CordisRunHostSeam = {
+    const seam = {
       ...hostSeam(),
       getClientCode: async () => { throw new Error('must not read client code for host-only runs') },
-      runHostHalf: async () => ({ ok: true, pluginId: 'p1', packageId: 'p1@v1', pluginRunId: 'p1#1', waitingFor: [], startedHere: true }),
+      runHostHalf: (async () => ({ ok: true, pluginId: 'p1', packageId: 'p1@v1', pluginRunId: 'p1#1', waitingFor: [], startedHere: true })) as CordisRunHostSeam['runHostHalf'],
     }
     const o = makeOrchestrator(seam)
     await o.startUserRun({ agentId: 'agent-1', pluginId: 'p1', packageId: 'p1@v1', mode: 'run', hasClientHalf: false })

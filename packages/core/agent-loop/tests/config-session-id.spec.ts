@@ -264,7 +264,6 @@ describe('config-driven session id', () => {
     const failures: unknown[] = []
     ctx.on('agent-loop/config-start-failed', () => { throw unrenderable })
     // Deliberately violate the normal Error-only rejection rule to exercise the unknown boundary.
-    // oxlint-disable-next-line typescript/prefer-promise-reject-errors
     ctx.on('agent-loop/config-start-failed', () => Promise.reject(unrenderable) as never)
     ctx.on('agent-loop/config-start-failed', ({ error }) => { failures.push(error) })
     vi.spyOn(ctx.sessionPersistence, 'list').mockRejectedValue(unrenderable)

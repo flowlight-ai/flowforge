@@ -50,8 +50,8 @@ describe('dynamicCordisContext (guard facade)', () => {
     const { ctx, ledger, failures } = makeGuard()
     ctx.slots.register({ name: 'slot-a' }, { v: 1 })
     expect(ledger).toHaveLength(1)
-    expect(ledger[0].slot).toBe('slot-a')
-    expect(ledger[0].priority).toBe(7)
+    expect(ledger[0]!.slot).toBe('slot-a')
+    expect(ledger[0]!.priority).toBe(7)
     expect(failures).toHaveLength(0)
   })
 
@@ -82,7 +82,7 @@ describe('dynamicCordisContext (guard facade)', () => {
     const { ctx, slots } = makeGuard({ maySlot: 'tool.view.cordis' })
     slots.declare('tool.view.cordis', { kind: 'keyed', scope: 'session' })
     ctx.slots.register({ name: 'tool.view.cordis', key: 'self' }, { v: 1 })
-    const entry = slots.entries('tool.view.cordis')[0]
+    const entry = slots.entries('tool.view.cordis')[0]!
     expect(entry.options.key).toBe('p1.p1@v1')
   })
 

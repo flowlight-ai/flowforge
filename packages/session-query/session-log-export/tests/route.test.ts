@@ -126,7 +126,7 @@ describe('浏览器下载上下文内存实现', () => {
   it('streamSessionLogZipFromEntries 在该管线可打包包裹（冒烟）', async () => {
     const entries: SessionLogZipEntry[] = [{ path: 'x', content: 'data' }]
     const stream = streamSessionLogZipFromEntries(
-      (async function* () { yield entries[0] })(),
+      (async function* () { yield entries[0]! })(),
       6,
       new AbortController().signal,
     )

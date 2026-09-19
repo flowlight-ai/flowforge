@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { createCatId } from '@flowforge/cats-shared';
 import {
   MemoryConnectorThreadBindingStore,
   StreamingOutboundHook,
@@ -45,8 +46,8 @@ class StreamableAdapter implements IStreamableOutboundAdapter {
 
 /** 支持 inline-final 登记/清除 extends 基础适配器（onStreamEnd 走 inline 分支）。 */
 class InlineStreamableAdapter extends StreamableAdapter {
-  inlineRegistered: Array<{ chatId: string; msgId: string }> = [];
-  inlineCleared: Array<{ chatId: string }> = [];
+  override inlineRegistered: Array<{ chatId: string; msgId: string }> = [];
+  override inlineCleared: Array<{ chatId: string }> = [];
   registerInlinePlaceholder(chatId: string, msgId: string): void {
     this.inlineRegistered.push({ chatId, msgId });
   }
@@ -74,7 +75,7 @@ describe('StreamingOutboundHook', () => {
     const { hook, bindingStore } = makeHook(adapter);
     bindingStore.bind('feishu', 'chat-1', 'th-1', 'u-1');
 
-    await hook.onStreamStart('th-1', 'cat-a');
+    await hook.onStreamStart('th-1', createCatId('cat-a'));
     expect(adapter.placeholders).toHaveLength(1);
     expect(adapter.placeholders[0]?.text).toContain('思考中');
 
@@ -93,7 +94,7 @@ describe('StreamingOutboundHook', () => {
     const { hook, bindingStore } = makeHook(adapter, { receiptOnlyUntilCommit: false, updateIntervalMs: 0, minDeltaChars: 1 });
     bindingStore.bind('feishu', 'chat-1', 'th-2', 'u-1');
 
-    await hook.onStreamStart('th-2', 'cat-a');
+    await hook.onStreamStart('th-2', createCatId('cat-a'));
     await hook.onStreamChunk('th-2', '部分');
     expect(adapter.edits.length).toBeGreaterThan(0);
   });
@@ -103,7 +104,7 @@ describe('StreamingOutboundHook', () => {
     const { hook, bindingStore } = makeHook(adapter);
     bindingStore.bind('feishu', 'chat-1', 'th-3', 'u-1');
 
-    await hook.onStreamStart('th-3', 'cat-a');
+    await hook.onStreamStart('th-3', createCatId('cat-a'));
     await hook.onStreamEnd('th-3', '答案');
     expect(adapter.inlineRegistered).toHaveLength(1);
     await hook.cleanupPlaceholders('th-3');
@@ -116,7 +117,7 @@ describe('StreamingOutboundHook', () => {
     bindingStore.bind('feishu', 'chat-1', 'th-4', 'u-1');
     // 无进行中会话 → 直接对绑定发送恢复文本；仅验证稳定执行
     await expect(
-      hook.onClosureBlocked('th-4', 'cat-a', 'timeout', undefined, 'https://app'),
+      hook.onClosureBlocked('th-4', createCatId('cat-a'), 'timeout', undefined, 'https://app'),
     ).resolves.toBeUndefined();
   });
 
@@ -124,7 +125,7 @@ describe('StreamingOutboundHook', () => {
     const adapter = new StreamableAdapter();
     const { hook, bindingStore } = makeHook(adapter, { receiptOnlyUntilCommit: true });
     bindingStore.bind('feishu', 'chat-1', 'th-5', 'u-1');
-    await hook.onStreamStart('th-5', 'cat-a');
+    await hook.onStreamStart('th-5', createCatId('cat-a'));
     await hook.onStreamChunk('th-5', '一些文本');
     expect(adapter.edits).toHaveLength(0);
   });

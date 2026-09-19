@@ -224,8 +224,8 @@ describe('EP-CB2 工具面 CLI 冒烟（trace/grep/arch/coverage）', () => {
     expect(result.status).toBe(0)
     const payload = json<{ matches: { filePath: string; lineNumber: number; column?: number }[]; total: number }>(result)
     expect(payload.total).toBeGreaterThan(0)
-    expect(payload.matches[0].filePath).toBe('src/utils/helper.ts')
-    expect(payload.matches[0].column).toBeTypeOf('number')
+    expect(payload.matches[0]!.filePath).toBe('src/utils/helper.ts')
+    expect(payload.matches[0]!.column).toBeTypeOf('number')
   })
 
   it('arch reports modules and cross-module dependencies', () => {

@@ -11,8 +11,8 @@ import {
   installAuthorizationInvariant,
   INVARIANT_PACKAGE_NAME,
   createAuthorizationInvariantTarget,
-} from '../src/index.ts'
-import type { AuthorizationService } from '../src/index.ts'
+} from '@flowforge/credentials-authorization'
+import type { AuthorizationService } from '@flowforge/credentials-authorization'
 import { makeInteraction, key } from './helpers.ts'
 
 describe('installAuthorizationInvariant（真实装配）', () => {

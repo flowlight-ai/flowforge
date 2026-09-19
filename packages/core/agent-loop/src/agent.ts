@@ -315,7 +315,7 @@ export class ReactLoopAgent implements Agent {
       this.throwError(error)
     } finally {
       try {
-        // oxlint-disable-next-line typescript/no-non-null-assertion -- every exit assigns a turn ending
+        // every exit assigns a turn ending
         this.session.append('turn/end', { turn, reason: turnEnds! })
       } catch (error: unknown) {
         this.throwError(error)
@@ -427,7 +427,7 @@ export class ReactLoopAgent implements Agent {
     const maxTokens = this.options.maxTokens
     const seedConfig = deepFreeze(structuredClone(
       this.requestHeaderLogged
-        // oxlint-disable-next-line typescript/no-non-null-assertion -- the instance logged the header it now folds
+        // the instance logged the header it now folds
         ? requestProposal(persistedHeader!)
         : {
           ...route,

@@ -89,7 +89,7 @@ const T92_DOSSIER = [
 describe('T9.2 mention → external CLI (mock) → output → distillation', () => {
   it('完整链路：@ 编排 → CLI 输出回传 → 经验蒸馏 propose/approve/apply', async () => {
     const ctx = new Context()
-    disposables.push(ctx)
+    disposables.push({ dispose: () => ctx.fiber.dispose() })
 
     // 装配真实服务：cats-stores（内存后端）+ 蒸馏 + 多 @ 编排
     new CatStores(ctx)
@@ -154,7 +154,7 @@ describe('T9.2 mention → external CLI (mock) → output → distillation', () 
       author: 'operator',
     })
     const proposal = await distiller.propose({
-      sourceEvent: 'stage9-e2e',
+      sourceEvent: 'feat-phase-close',
       sourceId: `t92-${request.id}`,
       targetCatId: T92_CAT,
       targetFields: ['nativePeakAbilities'],
@@ -236,7 +236,7 @@ describe('T9.3 forgekin loops → council v2 review → mock git PR', () => {
     tmpRoots.push(root)
 
     const ctx = new Context()
-    disposables.push(ctx)
+    disposables.push({ dispose: () => ctx.fiber.dispose() })
     const llm = new ScriptedForgekinLlm()
     const persist = new NoopPersistEngine()
     const git = new MockGitRepo()
@@ -285,7 +285,7 @@ describe('T9.3 forgekin loops → council v2 review → mock git PR', () => {
     expect(session.finalScore).toBeGreaterThanOrEqual(0.85)
 
     // 审议通过 → 治理层 commit + 提交 PR（mock git）
-    const sha = git.commit(session.finalVerdict)
+    const sha = git.commit(session.finalVerdict as string)
     const pr = git.submitPr(`feat(stage9): apply council-approved evolution (${sha})`)
 
     expect(git.commits).toHaveLength(1)
@@ -378,7 +378,7 @@ async function t94Harness(): Promise<T94Harness> {
 describe('T9.4 MCP → workflow DAG → compaction → session resume', () => {
   it('MCP 载荷入上下文 → DAG 产出 → 压缩旧区段 → 会话续接引用摘要', async () => {
     const h = await t94Harness()
-    disposables.push(h.ctx)
+    disposables.push({ dispose: () => h.ctx.fiber.dispose() })
 
     // 1) MCP 工具调用（mock）返回大体量载荷
     const toolPayload = await mockMcpCall()
@@ -417,7 +417,7 @@ describe('T9.4 MCP → workflow DAG → compaction → session resume', () => {
 
   it('会话可派生：压缩摘要与续接消息共同可见', async () => {
     const h = await t94Harness()
-    disposables.push(h.ctx)
+    disposables.push({ dispose: () => h.ctx.fiber.dispose() })
 
     const messageText = await runWorkflowDag(await mockMcpCall())
     h.agent.followup(createUserMessage({ content: [{ type: 'text', text: messageText }], source: { kind: 'user' } }))

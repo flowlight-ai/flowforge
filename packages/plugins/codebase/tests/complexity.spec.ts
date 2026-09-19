@@ -16,6 +16,7 @@ import { createCodebaseParser } from '../src/parser.ts'
 function firstOfType(node: Node, type: string): Node | undefined {
   if (node.type === type) return node
   for (const child of node.children) {
+    if (child === null) continue
     const hit = firstOfType(child, type)
     if (hit !== undefined) return hit
   }
@@ -70,7 +71,7 @@ describe('computeComplexity（C helpers.c L699-769 移植）', () => {
     const fn = await functionNodeOf('function f(a: number, b = 2) { return a + b }')
     const params = fn.childForFieldName('parameters')
     expect(params).toBeDefined()
-    expect(countParams(params)).toBe(2)
+    expect(countParams(params ?? undefined)).toBe(2)
     expect(countParams(undefined)).toBe(0)
   })
 })

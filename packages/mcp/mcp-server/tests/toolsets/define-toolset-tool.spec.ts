@@ -35,11 +35,11 @@ describe('toolsets/define-toolset-tool', () => {
         route: { method: 'GET', path: '/api/examples' },
       },
     ]);
-    expect(tool.name).toBe('cat_cafe_read_example');
-    expect(tool.effectiveRisk).toEqual({ level: 'read', openWorld: false });
-    expect(tool.annotations).toEqual({ readOnlyHint: true, destructiveHint: false, openWorldHint: false });
-    expect(tool.actionInventory).toEqual(['read']);
-    expect(tool.serverFamily).toBe('collab');
+    expect(tool!.name).toBe('cat_cafe_read_example');
+    expect(tool!.effectiveRisk).toEqual({ level: 'read', openWorld: false });
+    expect(tool!.annotations).toEqual({ readOnlyHint: true, destructiveHint: false, openWorldHint: false });
+    expect(tool!.actionInventory).toEqual(['read']);
+    expect(tool!.serverFamily).toBe('collab');
   });
 
   it('binds handler to port.send with the declared route', async () => {
@@ -59,9 +59,9 @@ describe('toolsets/define-toolset-tool', () => {
         route: { method: 'POST', path: '/api/examples', bodyKeys: ['id'] },
       },
     ]);
-    const result = (await tool.handler({ id: 'abc' })) as { content: { text: string }[] };
+    const result = (await tool!.handler({ id: 'abc' } as never)) as { content: { text: string }[] };
     expect(calls).toHaveLength(1);
-    expect(result.content[0].text).toBe(JSON.stringify(calls[0]));
+    expect(result.content[0]!.text).toBe(JSON.stringify(calls[0]));
     expect(calls[0]).toMatchObject({ method: 'POST', path: '/api/examples', body: { id: 'abc' } });
   });
 
@@ -85,8 +85,8 @@ describe('toolsets/define-toolset-tool', () => {
     const server = new McpServer({ name: 'acme', version: '1.0.0' });
     expect(() => registerTools(server, tools)).not.toThrow();
     // The registered tool's handler forwards onto the injected callback port.
-    const result = (await tools[0].handler({})) as { content: { text: string }[] };
-    expect(result.content[0].text).toBe(JSON.stringify(calls[0]));
+    const result = (await tools[0]!.handler({} as never)) as { content: { text: string }[] };
+    expect(result.content[0]!.text).toBe(JSON.stringify(calls[0]));
     expect(calls[0]).toMatchObject({ method: 'GET', path: '/api/signals' });
   });
 });

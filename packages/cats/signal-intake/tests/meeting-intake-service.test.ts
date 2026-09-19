@@ -34,7 +34,7 @@ const FULL_CHOICES = {
   speakerMap: { spk1: 'Alice' },
   context: 'Design review',
   destinationHandle: DEST,
-  outputs: ['minutes', 'tasks'],
+  outputs: ['minutes', 'tasks'] as const,
 }
 
 describe('MeetingIntakeService.confirm', () => {

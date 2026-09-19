@@ -189,7 +189,7 @@ describe('manual seal', () => {
 });
 
 describe('unseal / restore', () => {
-  const sealedActivePair = () => [
+  const sealedActivePair = (): [SessionRecord, SessionRecord] => [
     record({ id: 'sealed1', threadId: 't1', catId: 'cat1', status: 'sealed' }),
     record({ id: 'active1', threadId: 't1', catId: 'cat1' }),
   ];

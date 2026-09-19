@@ -441,7 +441,6 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
     // Observe from the first termination tier onward, even when inherited
     // pipes delay `done` and no consumer has begun its own teardown wait.
     void observeTreeExit()
-    // oxlint-disable-next-line typescript/no-unnecessary-condition -- observer can record absence before its first await.
     if (treeExitObserved) return
     kill('SIGTERM')
     // The escalation must survive direct-child settlement — the leader dying

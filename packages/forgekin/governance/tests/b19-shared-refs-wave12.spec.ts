@@ -29,7 +29,7 @@ describe('B19 wave12 shared refs asset', () => {
       const skillMd = join(skillsSource, dir, 'SKILL.md');
       const content = await readFile(skillMd, 'utf-8').catch(() => null);
       if (content === null) continue;
-      const refs = [...content.matchAll(/\.\.\/\.cat-cafe-shared-refs\/([\w.\-]+)/g)].map((m) => m[1]);
+      const refs = [...content.matchAll(/\.\.\/\.cat-cafe-shared-refs\/([\w.\-]+)/g)].map((m) => m[1]).filter((ref): ref is string => ref !== undefined);
       if (refs.length > 0) checked++;
       for (const ref of refs) {
         checkedRefs++;

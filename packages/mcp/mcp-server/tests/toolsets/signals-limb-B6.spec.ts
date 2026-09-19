@@ -19,10 +19,10 @@ function fixturePort() {
 }
 
 function anchorSums() {
-  const collab = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a, b) => a + b, 0);
-  const memory = Object.values(TOOLSET_GROUP_ANCHOR.memory).reduce((a, b) => a + b, 0);
-  const signals = Object.values(TOOLSET_GROUP_ANCHOR.signals).reduce((a, b) => a + b, 0);
-  const limb = Object.values(TOOLSET_GROUP_ANCHOR.limb).reduce((a, b) => a + b, 0);
+  const collab = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a: number, b: number) => a + b, 0);
+  const memory = Object.values(TOOLSET_GROUP_ANCHOR.memory).reduce((a: number, b: number) => a + b, 0);
+  const signals = Object.values(TOOLSET_GROUP_ANCHOR.signals).reduce((a: number, b: number) => a + b, 0);
+  const limb = Object.values(TOOLSET_GROUP_ANCHOR.limb).reduce((a: number, b: number) => a + b, 0);
   return { collab, memory, signals, limb, total: collab + memory + signals + limb };
 }
 
@@ -52,7 +52,7 @@ describe('toolsets/signals-limb-B6', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'signal_get_article');
     expect(tool).toBeDefined();
-    await tool!.handler({ id: 'art-42' });
+    await tool!.handler({ id: 'art-42' } as never);
     expect(calls[0]).toMatchObject({
       method: 'GET',
       path: `/api/signals/articles/${encodeURIComponent('art-42')}`,
@@ -64,7 +64,7 @@ describe('toolsets/signals-limb-B6', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'limb_list_tools');
     expect(tool).toBeDefined();
-    await tool!.handler({ nodeId: 'weixin-mp', command: 'weixin_mp.create_draft', agentKeyCatId: 'antig-opus' });
+    await tool!.handler({ nodeId: 'weixin-mp', command: 'weixin_mp.create_draft', agentKeyCatId: 'antig-opus' } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: '/api/callback/limb/list-tools',
@@ -80,7 +80,7 @@ describe('toolsets/signals-limb-B6', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'signal_mark_read');
     expect(tool).toBeDefined();
-    await tool!.handler({ id: 'art-7' });
+    await tool!.handler({ id: 'art-7' } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: `/api/signals/articles/${encodeURIComponent('art-7')}`,
@@ -92,7 +92,7 @@ describe('toolsets/signals-limb-B6', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'signal_search');
     expect(tool).toBeDefined();
-    await tool!.handler({ query: 'redis', limit: 10, status: 'inbox' });
+    await tool!.handler({ query: 'redis', limit: 10, status: 'inbox' } as never);
     expect(calls[0]).toMatchObject({
       method: 'GET',
       path: '/api/signals/search',

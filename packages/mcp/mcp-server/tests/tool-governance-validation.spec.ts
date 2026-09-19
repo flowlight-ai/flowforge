@@ -113,7 +113,7 @@ describe('validateToolGovernance finding codes', () => {
 
   it('unresolved-implementation-binding', () => {
     const ctx = validContext();
-    ctx.implementationCatalog.delete('module:cat-shared#readX');
+    ctx.implementationCatalog = new Map();
     const def = defineMcpTool(input({}));
     expect(run([def], ctx)).toContain('unresolved-implementation-binding');
   });

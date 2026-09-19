@@ -233,7 +233,6 @@ async function rollbackUnpublishedTerminal(
     }
   }
   // Completion can settle while any awaited provider cleanup above is running.
-  // oxlint-disable-next-line typescript/no-unnecessary-condition -- Provider cleanup yields to completion.
   if (!topLevelExited) {
     try {
       await handle.kill()
@@ -257,7 +256,6 @@ async function rollbackUnpublishedTerminal(
     }
   }
   // The bounded completion race above updates this callback-owned state.
-  // oxlint-disable-next-line typescript/no-unnecessary-condition -- The callback mutates this after a race.
   if (!topLevelExited) {
     proofFailures.push(new Error(`subprocess-e2b: terminal setup rollback failed; surviving pid: ${handle.pid}`))
   }

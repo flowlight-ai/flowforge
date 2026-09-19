@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 
-import type { RichBlock } from '@flowforge/cats-shared';
+import { createCatId, type RichBlock } from '@flowforge/cats-shared';
 import {
   MemoryConnectorThreadBindingStore,
   OutboundDeliveryHook,
@@ -65,7 +65,7 @@ describe('OutboundDeliveryHook', () => {
   it('绑定线程收到纯文本 → 走 sendFormattedReply 并带身份前缀', async () => {
     const { hook, adapter, bindingStore } = makeHook();
     bindingStore.bind('feishu', 'chat-1', 'th-1', 'u-1');
-    await hook.deliver('th-1', '结果如下', 'cat-a', undefined, {
+    await hook.deliver('th-1', '结果如下', createCatId('cat-a'), undefined, {
       threadShortId: 'T1',
       threadTitle: '排查',
     });
@@ -78,7 +78,7 @@ describe('OutboundDeliveryHook', () => {
     const { hook, adapter, bindingStore } = makeHook();
     bindingStore.bind('feishu', 'chat-1', 'th-2', 'u-1');
     const blocks: RichBlock[] = [{ id: 'b1', kind: 'card', v: 1, title: '📋 分析', bodyMarkdown: '结论' }];
-    await hook.deliver('th-2', '内容', 'cat-a', blocks);
+    await hook.deliver('th-2', '内容', createCatId('cat-a'), blocks);
     expect(adapter.rich).toHaveLength(1);
     expect(adapter.rich[0]?.blocks).toEqual(blocks);
   });
@@ -97,7 +97,7 @@ describe('OutboundDeliveryHook', () => {
     const blocks: RichBlock[] = [
       { id: 'b1', kind: 'media_gallery', v: 1, title: '截图', items: [{ url: dataUri, caption: '主界面' }] },
     ];
-    await hook.deliver('th-3', '见图', 'cat-a', blocks);
+    await hook.deliver('th-3', '见图', createCatId('cat-a'), blocks);
 
     const mediaCall = adapter.media.find((m) => m.type === 'image');
     expect(mediaCall).toBeDefined();
@@ -116,7 +116,7 @@ describe('OutboundDeliveryHook', () => {
       catLookup: () => undefined,
     });
     bindingStore.bind('telegram', 'chat-1', 'th-4', 'u-1');
-    await hook.deliver('th-4', '普通回复', 'cat-a');
+    await hook.deliver('th-4', '普通回复', createCatId('cat-a'));
     // 仅支持 sendReply → 走纯文本路径
     expect(adapter.replies).toEqual(['普通回复']);
   });
