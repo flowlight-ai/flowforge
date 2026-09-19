@@ -335,3 +335,51 @@ node --import tsx/esm apps/cli/src/bin.ts plugin --profile web install
 - **T7/T8**：否（但**阻断 T8**——后端起不来）
 
 **新增计数**：P-545（S1）→ DI 增量 +10（1185 → **1195**）；P-544 状态维持 `Open（Partial）`。
+
+### P-545 追查补充（2026-09-19，第二轮定向侦察）
+
+**profile 目录的真实布局**（`~/.flowforge/profiles/`）：
+
+```
+profiles/
+├── node_modules/@flowforge/   # 136 个包（早前安装的陈旧快照）
+├── web/                       # 自包含 pnpm 工程：packages:[.] + nodeLinker:hoisted
+│   ├── package.json           # name=flowforge-profile-web；dependencies: {}（空！）
+│   ├── pnpm-workspace.yaml
+│   └── pnpm-lock.yaml         # importers: .: {}（无任何依赖解析记录）
+└── headless/
+```
+
+**缺包核对**（`profiles/node_modules/@flowforge/`）：
+
+| 包 | 状态 | 影响 |
+|---|---|---|
+| `@flowforge/harness-env-registry` | **缺失** | loader 条目 `env-registry` 导入失败 |
+| `@flowforge/llm-openroute` | **缺失** | loader 条目 `llm-openroute` 导入失败 |
+| `@flowforge/session-log-export` | **缺失** | loader 条目 `session-log-export` 导入失败 |
+| `@flowforge/web-app` | 存在但 `lib/` 缺失 | loader 条目 `web-app` / `web-startup` 导入失败 |
+
+**定性（核心矛盾）**：`resolveBundleDir` 的契约是「in-box bundle 从**安装目录**解析」，但 loader 的**插件条目**却是从 **profile 目录**导入的（错误信息明示 `imported from C:\Users\hyg\.flowforge\profiles\web\`）。而 profile 的 `package.json` 的 `dependencies` 为空、lockfile 的 `importers` 也为空——**profile 没有任何依赖声明能把这批运行期插件装进来**。当前之所以大部分条目还能用，只是因为 `profiles/node_modules` 里躺着一份**早前安装的 136 包快照**；它既不随仓库更新，也没有任何流程会去刷新它。
+
+**推论**：这不是「环境脏了，重装即可」，而是**设计缺口**——profile 运行期依赖的来源与刷新机制未定义。可选修法（需 owner 裁决，测试侧不拍板）：
+
+| 方案 | 内容 | 取舍 |
+|---|---|---|
+| C1 | 插件条目也按「安装目录优先」解析（与 bundle 同契约） | 契约统一，但要改 loader 解析链，影响所有 profile |
+| C2 | profile 装配时把 bundle 的运行期依赖声明进 manifest（使 `plugin install` 真正可装） | 贴近现有 `plugin install` 设计，但需要 bundle 提供依赖清单 |
+| C3 | 提供 `plugin --profile <name> reset`（清空并重建 profile，含刷新快照） | 见效快，但治标；且要明确「重建」的数据边界（用户层配置是否保留） |
+
+**结论**：P-545 维持 `Open`（S1）。**测试回归结论待独立复判**——见下。
+
+---
+
+## 角色分离声明（operator 要求「另一侧复判」）
+
+本轮 P-542 / P-544 的**修复与回归由同一执行体（sherlock）完成**，违反 BUG_PROTOCOL「修复归开发、回归归测试」的角色分离原则（虽经 operator 明示授权）。为恢复协议效力，自本单起处理如下：
+
+- **P-542 / P-544 / P-545 的 `测试回归结论` 一律不由 sherlock 签署**；
+- 上述三单的现状标注为：**`⏳ 待另一侧独立复判`**（联动状态 `Fixed（待回归）` / `Open（Partial，待复判）`）；
+- sherlock 仅提供**可复现证据**（命令 + 真实输出，均已随单记录），**不给出最终判定**；
+- 复判人由 operator 指派；复判通过后由复判人签署 `✅ Verified` / 或按实态打回。
+
+**⚠️ 遗留风险提示**：P-544 的修复（`tsdown.config.ts` 派生打包图 + `build` 脚本解耦）已实测使 `pnpm build` 转为 exit 0 且产出 `lib/index.js`，但其**对 client face 与 CI 的完整影响未经独立复核**（client face 保持原 glob 未变，理论上无影响，但未实测 client 构建）。建议复判时一并覆盖：`FF_BUILD_FACE=client` 的构建路径与 `ts-ci.yml` / `web-ci.yml` 的通过情况。
