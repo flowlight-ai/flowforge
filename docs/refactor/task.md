@@ -108,7 +108,7 @@
 
 ## 根层三门禁债务整备批次（debt-remediation，2026-09-18）
 
-> 类型：仓库级既有债务清理（非功能移植，与 EP1-EP4 并行独立线程）｜设计：`docs/process/specs/2026-09-18-debt-remediation-design.md` ｜ 计划：`docs/process/plans/2026-09-18-debt-remediation.md` ｜ 单一事实来源条目：`review_code.md` §13.6 ✅ **已交付（本会话审计后收尾：ff_dev 门禁全过、实例闭合、mgr sync PR）**
+> 类型：仓库级既有债务清理（非功能移植，与 EP1-EP4 并行独立线程）｜设计：`docs/process/specs/2026-09-18-debt-remediation-design.md` ｜ 计划：`docs/process/plans/2026-09-18-debt-remediation.md` ｜ 单一事实来源条目：`review_code.md` §13.6 ✅ **已交付（本会话审计后收尾：ff_dev 门禁全过、实例闭合、mgr sync PR #201）**
 > 目标：根层三项既有债务清零——①`pnpm typecheck`（tsc -b tsconfig.host.json）272 条 error TS（61 TS6307 + 211 契约）；②`pnpm lint`（oxlint .）1 error + 100 warnings；③vitest 46 失败中的逻辑类（环境依赖类登台账不强行改绿）。
 > **达成**：L1 lint **0e/0w exit 0**（3344 文件）；L2 typecheck **272 条全清零 exit 0**（TS6307 = `tsconfig.host.json` 补 5 包缺失 root references；211 契约仅改 tests 类型契约，src 语义零改动）；L3 vitest 被修 **35 文件 / 273 用例单跑全绿**，环境依赖类登 design §5 台账。生产 src 仅补 root references 结构装配 + 清理 lint 抑制指令（非业务语义）。流程实例 `debt-remediation` 已 `ff_dev` design/plan/verify 门禁全过并闭合至 finish。
 

@@ -13,7 +13,7 @@
 > 5. 未完成任务全集与整体执行计划见 §13/§14：EP0（工程化插件+文档规范）→ EP1（P0 遗漏移植）→ EP2（阶段 8 前端）→ EP3（阶段 9-10 集成与切换）→ EP4（阶段 11 Python 日落 + stretch）。
 
 > **复查审计（2026-09-19，第七轮）**：逐项核验上述全部交付，结论——
-> ① **EP0/EP-CB/EP1/EP2/EP3/EP4 全部闭环**（git 合入 master，origin/master 同步，PR #152-#200 可溯）；② plugin-dev、plugin-codebase 两包在 `packages/plugins/` 实位交付；③ **唯一未落地项 = `debt-remediation` 批次（§13.6）**——工作树已完成（lint 0/0、typecheck 272 清零、vitest 逻辑类 35/273）、计划/验证文档齐备，但**未提交/未推 PR**、流程实例停于 `plan` 阶段、PR #ⓞ 占位未回填。本会话已按 dev 流程补齐：修正计划文档过 `ff_doctor plan`、`ff_dev gate plan/verify` + evidence + advance 至 `finish` 闭合实例、规划 mgr sync PR（见 §13.6），提交后回填 PR 号。④ 根目录临时产物（`_check_refs.cjs` 等）未入库即清理；`node_modules.bak` 已加 `.gitignore`。**无其余未完成任务残留。**
+> ① **EP0/EP-CB/EP1/EP2/EP3/EP4 全部闭环**（git 合入 master，origin/master 同步，PR #152-#200 可溯）；② plugin-dev、plugin-codebase 两包在 `packages/plugins/` 实位交付；③ **唯一未落地项 = `debt-remediation` 批次（§13.6）**——工作树已完成（lint 0/0、typecheck 272 清零、vitest 逻辑类 35/273）、计划/验证文档齐备，但**未提交/未推 PR**、流程实例停于 `plan` 阶段、PR #ⓞ 占位未回填。本会话已按 dev 流程补齐：修正计划文档过 `ff_doctor plan`、`ff_dev gate plan/verify` + evidence + advance 至 `finish` 闭合实例、mgr sync PR **#201**。④ 根目录临时产物（`_check_refs.cjs` 等）未入库即清理；`node_modules.bak` 已加 `.gitignore`。**无其余未完成任务残留。**
 
 ---
 
@@ -546,7 +546,7 @@ EP-CB 各批次全部走 plugin-dev 七阶段流程（§11.5）：设计文档�
 
 ### 13.6 根层三门禁债务整备批次（root typecheck / lint / 逻辑类 vitest）
 
-> 实例：`debt-remediation` ｜ 类型：仓库级既有债务清理（非功能移植批次，与 EP1-EP4 并行独立线程）｜ 产出：`docs/process/specs/2026-09-18-debt-remediation-design.md` + `docs/process/plans/2026-09-18-debt-remediation.md` ✅ **已交付（本会话审计后收尾提交：ff_dev 门禁全过、实例闭合、mgr sync PR）**
+> 实例：`debt-remediation` ｜ 类型：仓库级既有债务清理（非功能移植批次，与 EP1-EP4 并行独立线程）｜ 产出：`docs/process/specs/2026-09-18-debt-remediation-design.md` + `docs/process/plans/2026-09-18-debt-remediation.md` ✅ **已交付（本会话审计后收尾：ff_dev 门禁全过、实例闭合、mgr sync PR #201）**
 > **背景（N1-N3）**：①根层 `pnpm typecheck`（tsc -b tsconfig.host.json）实测 **272 条 error TS**（61 条 TS6307 + 211 条契约），退出码 1；②`pnpm lint`（oxlint .）1 error + 100 warnings；③vitest 46 文件 / 144 用例失败，其中一部分为**逻辑类**、其余为**环境依赖类**。
 > **修复与验证达成**：
 > - **L1 lint ✅**：`oxlint .` 全仓 3344 文件 → **0 error / 0 warning / exit 0**（1 error= `github-signals/tests/fixtures.ts` 未用解构变量 `automationState` 改 `_automationState`；100 warnings = 清除 no-op 的 `oxlint-disable` directive）。
