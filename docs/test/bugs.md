@@ -2762,3 +2762,27 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 **本轮新增 DI 增量** = 4×5 + 7×2 + 2×1 = **36**（累计 1159）｜ **功能验证结论**：33 个前端路由全部 HTTP 200、无白屏崩溃标记；但 3 个路由（`/mission-control`、`/memory/health`、`/signals`）因未捕获异常整页白屏（body 文本长度 0），6 个路由存在后端接口 404/422。
 
 > ⚠️ 历史仪表盘（§一）的 `Fixed（待回归）/Closed` 口径与 2026-08-11 回归备注（称 10 单已清零：8 Closed + 2 回退 Open）相互矛盾，且未计入本轮新增。建议开发/测试双方择机全量重算 DI 仪表盘并对齐状态机。
+
+---
+
+## 十三、第十三轮 前后端启动 + 浏览器端到端实测缺陷索引（2026-09-19）
+
+> 测试人员（QA）：真实 Chromium 浏览器 E2E，遵循 T8 铁律（真实浏览器 + 真实 DOM 验证）。
+> 环境：前端 `next dev --port 5174`（Next.js 14.2.35 dev 模式）；**后端官方入口 `pnpm start` 启动失败（P-542）**，故本轮仅覆盖前端壳层。
+> 复现脚本（仓库内可复现）：`cd web && npx playwright test --reporter=list`。
+> 明细（全字段 + 真实输出 + DOM 快照）：[`bugs/round13-browser-e2e-2026-09-19.md`](bugs/round13-browser-e2e-2026-09-19.md)
+> 编号区间：P-541 … P-543（承接第十二轮 P-540）。全部 3 单状态 `Open`。
+
+| ID | 标题 | 严重度 | 分类 | 状态 | 文件:行号 |
+|----|------|:----:|------|:----:|----------|
+| P-541 | `/council` 三个 e2e 用例稳定失败：断言的消息输入框在「无会话空态」下不渲染 | S2 | 测试脚本缺陷 | Open | `web/e2e/council.spec.ts:26-27` |
+| P-542 | `pnpm start`（web profile）无法启动，官方一键入口不可用（`@flowforge/web-app` 不可解析 + 与前端包重名） | S1 | `CI / 配置` | Open | `packages/boot/app-boot/src/profile.ts:115`、`apps/cli/package.json`、`web/package.json:2` |
+| P-543 | 运行 `pnpm dev` 后工作区出现未跟踪的生成资产 `web/public/vendor/xterm/xterm.css` | S4 | `CI / 配置` | Open | `web/package.json:9`、`.gitignore` |
+
+**本轮严重度分布**：S1×1、S2×1、S4×1 ｜ **分类分布**：`CI / 配置`×2、测试脚本缺陷×1
+**本轮新增 DI 增量** = 1×10 + 1×5 + 1×1 = **16**（累计 1159 + 16 = **1175**）
+
+**功能验证结论**：Playwright `routes-smoke` 覆盖的 **33 条前端路由全部 HTTP <400 且预期片段渲染正常**（无整页白屏）；
+`forgekin.spec.ts` 3/3 通过；`council.spec.ts` 3/3 稳定失败（P-541，经单跑复测确认非环境噪音）；
+视觉回归 33 条默认跳过（`FF_E2E_VISUAL` 未开启）。**后端接口链路未覆盖**——官方入口启动失败（P-542，S1 阻断）。
+首轮并行运行时 `forgekin.spec.ts:31` 出现的 `data-guide-overlay` 拦截点击与在库 **P-540** 同源，单跑未复现，故不重复立单。
