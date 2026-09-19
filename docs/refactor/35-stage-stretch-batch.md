@@ -4,6 +4,8 @@
 > 依据：review_code §13.5 EP4-stretch 排期表 + 阶段 11 日落冻结（Python 运行时仅用于测试、不进入交付面）。
 > 红线：无 `@deepseek-ai`/`@cat-cafe` 真依赖（全量移植）；一切皆插件；走 ff_dev 七阶段流程 + ff_doctor L0-L3 校验；mgr 提交 PR 至 gitee。
 
+> **批次进度**：🟩 S-B21 ✓（PR #202） ｜ 🟩 S-S1 ✓（飞书真实 IImChannelAdapter，可独立观测） ｜ ⬜ S-A13（code-runtime-python 内联移植，CPython 测试费时）
+
 ## 1. 已确认的源→目标映射（探查结论）
 
 | 项 | 源（clowder / dsh） | 目标（flowforge） | 依赖扫描结论 |
