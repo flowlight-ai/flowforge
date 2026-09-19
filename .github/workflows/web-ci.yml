@@ -36,18 +36,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint (next lint)
-        run: pnpm --filter @flowforge/web-app lint
+        run: pnpm --filter @flowforge/web-frontend lint
 
       - name: Build (next build)
-        run: pnpm --filter @flowforge/web-app build
+        run: pnpm --filter @flowforge/web-frontend build
 
       # T8.10：端到端冒烟（全路由可达 + 群聊壳层）。next start 由 playwright webServer 拉起，
       # 依赖上一步 build 产物 .next。chromium 浏览器经 --with-deps 安装系统依赖。
       - name: Install Playwright browsers
-        run: pnpm --filter @flowforge/web-app exec playwright install --with-deps chromium
+        run: pnpm --filter @flowforge/web-frontend exec playwright install --with-deps chromium
 
       - name: E2E smoke (Playwright)
-        run: pnpm --filter @flowforge/web-app test:e2e
+        run: pnpm --filter @flowforge/web-frontend test:e2e
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

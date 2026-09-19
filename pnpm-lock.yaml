@@ -314,6 +314,9 @@ importers:
       '@flowforge/web':
         specifier: workspace:^
         version: link:../../packages/web/web
+      '@flowforge/web-app':
+        specifier: workspace:^
+        version: link:../../packages/bundle/web-app
       '@flowforge/web-search-deepseek':
         specifier: workspace:^
         version: link:../../packages/web/web-search-deepseek
