@@ -1,5 +1,5 @@
 {
-  "name": "@flowforge/web-app",
+  "name": "@flowforge/web-frontend",
   "version": "0.1.0",
   "private": true,
   "main": "src/index.ts",

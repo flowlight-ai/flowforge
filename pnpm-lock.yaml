@@ -314,6 +314,9 @@ importers:
       '@flowforge/web':
         specifier: workspace:^
         version: link:../../packages/web/web
+      '@flowforge/web-app':
+        specifier: workspace:^
+        version: link:../../packages/bundle/web-app
       '@flowforge/web-search-deepseek':
         specifier: workspace:^
         version: link:../../packages/web/web-search-deepseek
@@ -1509,6 +1512,28 @@ importers:
       '@flowforge/invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
+
+  packages/code-runtime/code-runtime-python:
+    dependencies:
+      '@flowforge/schemastery':
+        specifier: workspace:^
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@flowforge/code-runtime':
+        specifier: workspace:^
+        version: link:../code-runtime
+      '@flowforge/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@flowforge/invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      '@flowforge/session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@flowforge/timeout':
+        specifier: workspace:^
+        version: link:../../util/timeout
 
   packages/code-runtime/code-runtime-worker-thread:
     dependencies:

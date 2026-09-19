@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "p542-web-profile-boot",
+  "workflow": "hotfix",
+  "snapshot": {
+    "name": "p542-web-profile-boot",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/test/bugs/round13-browser-e2e-2026-09-19.md",
+      "plan": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-19-p542-web-profile-boot.md",
+      "verification": "docs/process/verifications/p542-web-profile-boot.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-19T05:44:26.120Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-19T05:44:39.016Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-19T05:45:01.256Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-19T05:45:47.692Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-19T05:55:08.946Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-19T05:55:19.693Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-19T05:55:20.217Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-19T05:55:20.217Z"
+}

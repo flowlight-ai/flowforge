@@ -150,3 +150,84 @@ git ls-files web/public/vendor | wc -l
   `<div data-guide-overlay="true" class="fixed inset-0 z-[9995]"></div> intercepts pointer events`
   与在库 **P-540（GuideOverlay 非目标步缺 pointer-events-none 拦截交互，S3/Open）** 同源；但该现象在单跑复测中**未复现**（引导弹窗仅首次访问出现），故本轮**不新增重复单**，仅作为 P-540 的补充现场记录。
 - **本轮新增 DI 增量** = S1×1 + S2×1 + S4×1 = 10 + 5 + 1 = **16**（累计 1159 + 16 = **1175**）
+
+---
+
+## 第十三轮·修复回归记录（2026-09-19，P-542）
+
+> ⚠️ **角色声明**：按 BUG_PROTOCOL 修复应归开发、回归应归测试。本轮由同一执行体完成修复与回归（operator 明确授权「修复 P-542 后回归后端」），**偏离角色分离原则**，特此留痕，请 operator 确认。
+
+### P-542 开发自述
+
+- **修复提交**：见本仓库本次提交（`fix(cli)` 系列，随本轮测试产物同批提交）
+- **改动点**（两处装配缺陷）：
+  1. `web/package.json` 的 `name` 由 `@flowforge/web-app` 改为 **`@flowforge/web-frontend`**——消除与 in-box bundle `packages/bundle/web-app` 的**包名冲突**；该名字与 bundle 源码注释记载的既定名一致（`packages/bundle/web-app/src/index.ts:13`、`:182`）。
+  2. `.github/workflows/web-ci.yml` 4 处 `pnpm --filter @flowforge/web-app …` 同步改为 `@flowforge/web-frontend`（原过滤器与 bundle 同名，存在歧义）。
+  3. `apps/cli/package.json` 按字母序声明 `"@flowforge/web-app": "workspace:^"`，使 in-box bundle 在**安装目录**可解析（`resolveBundleDir` 契约要求安装目录优先；与既有 `@flowforge/base` / `@flowforge/headless` 同法）。
+- **自测**：`pnpm install` 后 `apps/cli/node_modules/@flowforge/web-app` 链接建立；`--profile web --dump-config` 由「抛 cannot resolve profile bundle」变为 **exit 0 正常输出组合配置**。
+
+### P-542 测试回归结论
+
+- **测试回归结论**：⚠️ **Partial** ｜ 回归日期 2026-09-19 ｜ 签署 QA
+  - **复现命令 1（第一层根因，已验证消除）**：`timeout 60 node --import tsx/esm apps/cli/src/bin.ts --profile web --dump-config`
+    - 修复前真实输出：`Error: flowforge: cannot resolve profile bundle "@flowforge/web-app" …`（退出码 1）
+    - 修复后真实输出：`# == @flowforge/base` / `- id: timer` …（退出码 **0**）
+  - **复现命令 2（端到端启动，仍失败）**：`pnpm start --no-open --port 5200`
+    - 真实输出（修复后）：`Error: flowforge: plugin tree failed to load: failed to apply loader entry include (cordis:include): loader entries failed to apply`，含 7 条 `ERR_MODULE_NOT_FOUND`；伴随 `AttributeError`… 无（见下 P-544）
+  - **判定说明**：**第一层根因（包名冲突 + 缺 in-box bundle 依赖声明）已修复并实测验证**；但官方入口**仍无法完成启动**，受阻于**独立根因**——构建产物 `lib/` 从未产出（详见新工单 P-544）。按 B4「一因一单」拆出 P-544，本单维持 **Open（Partial）**，待 P-544 修复后合并回归。
+
+---
+
+## P-544 — `pnpm build` 无法产出 `lib/`：`tsc -b` 短路 + `code-runtime-python` 缺入口，致宿主整包构建失败
+
+- **严重度**：S1
+- **分类**：`CI / 配置`
+- **文件:行号**：`package.json:3`（`build: tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host`）、`packages/code-runtime/code-runtime-python/`（缺 `src/index.ts`）
+- **现象**：官方构建脚本无法完成，`lib/` 构建产物永不产出；连带 `pnpm start` 的 loader 无法导入 `@flowforge/cats-routes` 等条目（`ERR_MODULE_NOT_FOUND`），后端（web profile）无法启动。
+- **复现命令与真实输出**：
+
+```bash
+pnpm build
+```
+
+```
+$ tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host
+packages/chat/stretch-ports/tests/feishu-im-channel.spec.ts(122,12): error TS2532: Object is possibly 'undefined'.
+[ELIFECYCLE] Command failed with exit code 2.
+# 退出码 2：tsc 失败 → && 短路 → tsdown 从未执行
+ls packages/cats/routes/lib/index.js   # → 未产出
+```
+
+绕过 tsc 直接跑 bundler，暴露更下层的入口缺失：
+
+```bash
+npx tsdown --env.FF_BUILD_FACE host
+```
+
+```
+ERROR  Error: [@flowforge/code-runtime-python] Cannot find entry: ["lib/types/{index,invariant,startup}.js"]
+# 退出码 1；packages/cats/routes/lib/index.js 仍未产出
+```
+
+```bash
+ls packages/code-runtime/code-runtime-python/src/
+# bootstrap.ts  invariant.ts  output-json.ts  protocol.ts      ← 无 index.ts
+ls packages/code-runtime/code-runtime-python/lib/    # → 无 lib
+```
+
+- **两个成因**（同一后果，故合为一张单）：
+  1. **`tsc -b` 存在既有类型债**（`pnpm typecheck` 全仓约 292 条，含本次样例中的 `packages/chat/stretch-ports/tests/feishu-im-channel.spec.ts:122-123`），因 `&&` 短路使 bundler 永不执行；
+  2. **`@flowforge/code-runtime-python` 缺 `src/index.ts`** → tsc 不产出 `lib/types/index.js` → bundler 因找不到入口而整包失败。该包目录时间戳为**当日 13:52–13:53**，疑为**并行会话在途新增**（A13 code-runtime-python 属 stretch 项）。
+- **影响面**：不止 web profile——`--profile headless --dump-config` 虽能列出配置，但任何需要 `lib/` 产物的 loader 条目在真实启动时都会失败；因此**宿主整包构建能力当前不可用**。
+- **建议**：
+  1. `code-runtime-python` 补 `src/index.ts`（导出面），或若该包尚未就绪则从构建入口/`tsconfig.host.json` 引用中摘除，避免**一个未完成包拖垮全量构建**；
+  2. `build` 脚本解耦：`tsc -b`（类型门禁）与 `tsdown`（产物打包）不应以 `&&` 串联——至少在打包阶段用「已 emit 产物」而非「零错误」作前提，或拆为 `build:types` / `build:bundle` 两个脚本，避免类型债阻断产物生成；
+  3. 类型债清理可参照并行会话已合入的 `debt-remediation`（PR #201）节奏继续收敛。
+- **T7/T8**：否（但**阻断 T8**——后端起不来）
+
+---
+
+## 第十三轮补充计数
+
+- 新增工单 **P-544**（S1）｜ 新增 DI 增量 = **10**（累计 1175 → **1185**）
+- P-542 状态由 `Open` 改为 **`Open（Partial）`**（第一层已修并验证，残留拆至 P-544）

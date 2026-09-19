@@ -2776,11 +2776,14 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 | ID | 标题 | 严重度 | 分类 | 状态 | 文件:行号 |
 |----|------|:----:|------|:----:|----------|
 | P-541 | `/council` 三个 e2e 用例稳定失败：断言的消息输入框在「无会话空态」下不渲染 | S2 | 测试脚本缺陷 | Open | `web/e2e/council.spec.ts:26-27` |
-| P-542 | `pnpm start`（web profile）无法启动，官方一键入口不可用（`@flowforge/web-app` 不可解析 + 与前端包重名） | S1 | `CI / 配置` | Open | `packages/boot/app-boot/src/profile.ts:115`、`apps/cli/package.json`、`web/package.json:2` |
+| P-542 | `pnpm start`（web profile）无法启动，官方一键入口不可用（`@flowforge/web-app` 不可解析 + 与前端包重名） | S1 | `CI / 配置` | Open（Partial） | `packages/boot/app-boot/src/profile.ts:115`、`apps/cli/package.json`、`web/package.json:2` |
 | P-543 | 运行 `pnpm dev` 后工作区出现未跟踪的生成资产 `web/public/vendor/xterm/xterm.css` | S4 | `CI / 配置` | Open | `web/package.json:9`、`.gitignore` |
+| P-544 | `pnpm build` 无法产出 `lib/`：`tsc -b` 短路 + `code-runtime-python` 缺入口，致宿主整包构建失败、后端无法启动 | S1 | `CI / 配置` | Open | `package.json:3`、`packages/code-runtime/code-runtime-python/` |
 
-**本轮严重度分布**：S1×1、S2×1、S4×1 ｜ **分类分布**：`CI / 配置`×2、测试脚本缺陷×1
-**本轮新增 DI 增量** = 1×10 + 1×5 + 1×1 = **16**（累计 1159 + 16 = **1175**）
+**本轮严重度分布**：S1×2、S2×1、S4×1 ｜ **分类分布**：`CI / 配置`×3、测试脚本缺陷×1
+**本轮新增 DI 增量** = 2×10 + 1×5 + 1×1 = **26**（累计 1159 + 26 = **1185**）
+
+> **修复回归（2026-09-19）**：**P-542 ⚠️ Partial**——「包名冲突 + 缺 in-box bundle 依赖声明」第一层根因已修复并实测验证（`--profile web --dump-config` 由报错变为 exit 0），但 `pnpm start` 端到端启动仍失败，受阻于独立根因（构建产物 `lib/` 从未产出）→ 按 B4 拆出 **P-544**，待其修复后合并回归。修复与回归由同一执行体完成（operator 授权），已留痕。
 
 **功能验证结论**：Playwright `routes-smoke` 覆盖的 **33 条前端路由全部 HTTP <400 且预期片段渲染正常**（无整页白屏）；
 `forgekin.spec.ts` 3/3 通过；`council.spec.ts` 3/3 稳定失败（P-541，经单跑复测确认非环境噪音）；
