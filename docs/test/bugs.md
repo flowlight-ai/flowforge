@@ -2778,7 +2778,7 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 | P-541 | `/council` 三个 e2e 用例稳定失败：断言的消息输入框在「无会话空态」下不渲染 | S2 | 测试脚本缺陷 | Open | `web/e2e/council.spec.ts:26-27` |
 | P-542 | `pnpm start`（web profile）无法启动，官方一键入口不可用（`@flowforge/web-app` 不可解析 + 与前端包重名） | S1 | `CI / 配置` | Open（Partial） | `packages/boot/app-boot/src/profile.ts:115`、`apps/cli/package.json`、`web/package.json:2` |
 | P-543 | 运行 `pnpm dev` 后工作区出现未跟踪的生成资产 `web/public/vendor/xterm/xterm.css` | S4 | `CI / 配置` | Open | `web/package.json:9`、`.gitignore` |
-| P-544 | `pnpm build` 无法产出 `lib/`：`tsc -b` 短路 + `code-runtime-python` 缺入口，致宿主整包构建失败、后端无法启动 | S1 | `CI / 配置` | Open | `package.json:3`、`packages/code-runtime/code-runtime-python/` |
+| P-544 | `pnpm build` 无法产出 `lib/`：`tsc -b` 短路 + **构建图（tsconfig.host.json）与打包图（tsdown workspace glob）不一致**，致宿主整包构建失败、后端无法启动 | S1 | `CI / 配置` | Open | `package.json:3`、`tsdown.config.ts:20-22`、`packages/integration/e2e/` |
 
 **本轮严重度分布**：S1×2、S2×1、S4×1 ｜ **分类分布**：`CI / 配置`×3、测试脚本缺陷×1
 **本轮新增 DI 增量** = 2×10 + 1×5 + 1×1 = **26**（累计 1159 + 26 = **1185**）

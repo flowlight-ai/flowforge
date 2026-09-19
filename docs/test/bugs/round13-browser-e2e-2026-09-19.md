@@ -225,6 +225,45 @@ ls packages/code-runtime/code-runtime-python/lib/    # → 无 lib
   3. 类型债清理可参照并行会话已合入的 `debt-remediation`（PR #201）节奏继续收敛。
 - **T7/T8**：否（但**阻断 T8**——后端起不来）
 
+### P-544 追查进展（2026-09-19 第二轮，由 operator 指派继续处理）
+
+> 本节为**测试侧追查记录**，尚未产生修复提交（结论：不宜作为热修拍板，需 owner 决策）。
+
+**进展 1：成因 b 已被并行会话化解**——`packages/code-runtime/code-runtime-python/src/index.ts` 补齐后，tsdown 的报错**前移**到下一个包，说明该成因已消除：
+
+```
+npx tsdown --env.FF_BUILD_FACE host
+ERROR  Error: [@flowforge/integration-e2e] Cannot find entry: ["lib/types/{index,invariant,startup}.js"]
+```
+
+**进展 2：根因重构（比初判更深）**——真正机制在根 `tsdown.config.ts:20-22`：
+
+```ts
+workspace: ['vendor/*', 'packages/*/*', 'apps/cli'],
+entry: ['lib/types/{index,invariant,startup}.js'],
+```
+
+即 bundler **对所有 `packages/*/*` 与 `apps/cli` 逐一取 `lib/types/{index,invariant,startup}.js` 作为入口**；而 `lib/types/` 是 `tsc -b tsconfig.host.json` 的产物。问题在于：
+
+- `tsconfig.host.json` 的引用集**不覆盖** `packages/*/*` 全量——实测 `@flowforge/integration-e2e` 在 `tsconfig.host.json` 中**引用数 = 0**（`grep -c "integration/e2e" tsconfig.host.json` → `0`），其 `packages/integration/e2e/lib/types/` 为**空目录**；
+- 于是 bundler 找不到入口 → **整包构建失败**，与「某个包写错代码」无关，是**构建图（tsconfig.host.json）与打包图（tsdown workspace glob）不一致**。
+
+**进展 3：脚本解耦是必要但不充分的**——
+
+- 必要：`build = tsc -b && tsdown`，tsc 因既有类型债退出非 0 即短路，bundler 永无机会执行（实测 `packages/cats/routes/lib/types/index.js` **已由 tsc emit 成功**，但 `lib/index.js` 因 bundler 未跑而不存在——证明产物本可产出，纯被 `&&` 卡死）；
+- 不充分：即使解耦，bundler 仍会因上述**未纳入构建图的包**而失败。
+
+**两个候选修法（需 owner 决策，测试侧不擅自拍板）**：
+
+| 方案 | 内容 | 影响面 |
+|---|---|---|
+| A | 把 `tsconfig.host.json` 补齐到覆盖 bundler 的 workspace 全集 | 会让 `integration-e2e` 等**本不该进 host face** 的包也进构建图，可能引入新类型债 |
+| B | 收窄 `tsdown.config.ts` 的 `workspace` glob 到 host 构建图（或改为按包 opt-in） | 触及全仓打包语义，需确认哪些包属于 host face |
+
+**另需一并处理**：`build` 脚本解耦（拆 `build:types` / `build`，让类型门禁不阻断产物生成）。CI 不受影响——`ts-ci.yml:51` 已单独跑 `pnpm typecheck`，根 `pnpm build` 仅被 `install.sh` 使用。
+
+**建议归属**：该单涉及构建图与打包图的架构对齐，且并行会话（debt-remediation / code-runtime-python）正在同一区域施工，**建议由 owner 指派归口后统一处理**，避免与在途改动冲突。测试侧保持 `Open`，待修复后回归。
+
 ---
 
 ## 第十三轮补充计数
