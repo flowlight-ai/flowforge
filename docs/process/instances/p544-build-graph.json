@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "p544-build-graph",
+  "workflow": "hotfix",
+  "snapshot": {
+    "name": "p544-build-graph",
+    "phase": "finish",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": true
+    },
+    "artifacts": {
+      "design": "docs/test/bugs/round13-browser-e2e-2026-09-19.md",
+      "plan": "D:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-09-19-p544-build-graph.md",
+      "verification": "docs/process/verifications/p544-build-graph.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-09-19T09:43:18.717Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-09-19T09:43:19.215Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-09-19T09:43:20.205Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-09-19T09:43:59.044Z"
+      },
+      {
+        "phase": "review",
+        "enteredAt": "2026-09-19T09:50:59.007Z"
+      },
+      {
+        "phase": "verify",
+        "enteredAt": "2026-09-19T09:50:59.772Z"
+      },
+      {
+        "phase": "finish",
+        "enteredAt": "2026-09-19T09:51:00.522Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-09-19T09:51:00.522Z"
+}

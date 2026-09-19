@@ -2780,8 +2780,12 @@ grep -n "inject_to_system_rule" harness/governance.py           # => 259
 | P-543 | 运行 `pnpm dev` 后工作区出现未跟踪的生成资产 `web/public/vendor/xterm/xterm.css` | S4 | `CI / 配置` | Open | `web/package.json:9`、`.gitignore` |
 | P-544 | `pnpm build` 无法产出 `lib/`：`tsc -b` 短路 + **构建图（tsconfig.host.json）与打包图（tsdown workspace glob）不一致**，致宿主整包构建失败、后端无法启动 | S1 | `CI / 配置` | Open | `package.json:3`、`tsdown.config.ts:20-22`、`packages/integration/e2e/` |
 
-**本轮严重度分布**：S1×2、S2×1、S4×1 ｜ **分类分布**：`CI / 配置`×3、测试脚本缺陷×1
-**本轮新增 DI 增量** = 2×10 + 1×5 + 1×1 = **26**（累计 1159 + 26 = **1185**）
+| P-545 | `pnpm start` 残留阻断：profile 安装态陈旧/不完整（缺 3 个仓库包 + `web-app` 旧副本无 lib），`plugin install` 空转 | S1 | `验证阻塞（环境）` | Open | `packages/boot/app-boot/src/profile.ts`、`apps/cli/src/plugin.ts` |
+
+**本轮严重度分布**：S1×3、S2×1、S4×1 ｜ **分类分布**：`CI / 配置`×3、测试脚本缺陷×1、`验证阻塞（环境）`×1
+**本轮新增 DI 增量** = 3×10 + 1×5 + 1×1 = **36**（累计 1159 + 36 = **1195**）
+
+> **二次修复回归（2026-09-19，方案 B + build 脚本解耦）**：**P-544 ⚠️ Partial**——「构建图与打包图不一致」已修复并实测：`npx tsdown --env.FF_BUILD_FACE host` 与 `pnpm build` 均由失败/无产物转为 **exit 0 且产出**（详见轮次明细）。端到端启动仍失败，残留属**第三类独立根因（profile 安装态陈旧/不完整）**→ 按 B4 再拆 **P-545**，P-544 维持 `Open（Partial）`。
 
 > **修复回归（2026-09-19）**：**P-542 ⚠️ Partial**——「包名冲突 + 缺 in-box bundle 依赖声明」第一层根因已修复并实测验证（`--profile web --dump-config` 由报错变为 exit 0），但 `pnpm start` 端到端启动仍失败，受阻于独立根因（构建产物 `lib/` 从未产出）→ 按 B4 拆出 **P-544**，待其修复后合并回归。修复与回归由同一执行体完成（operator 授权），已留痕。
 
