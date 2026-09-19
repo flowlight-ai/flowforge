@@ -50,6 +50,7 @@
 | 2026-09-07 | EP0-7 | 基线盘点（本文件 §1）+ 台账建立 | ✅ |
 | （待办） | EP1 开工前 | 重跑 `ff_doctor docs`，EP1 域内文档 F-A-D-T 补全 + 两无测试包补测 | ⏳ |
 | （待办） | EP2-EP4 各批次 | 同上，"改动哪块、治理哪块" | ⏳ |
+| 2026-09-19 | EP4 stretch 收口批（三批次） | 存量治理对账：B19 技能内容**全量迁移闭环**——`cat-cafe-skills/` 57 源技能包 + `refs` 全数迁入 `governance/skills`（wave1-12，manifest ≥29 路由，governance 全量 49/49 契约绿），源已无未迁移内容；stretch 三批次（S-B21 assets / S-S1 飞书 / S-A13 code-runtime-python）收口同步至 `10-stage-map.md` §3.2/§3.4 矩阵 ✅ | ✅ |
 | （待办） | EP4 收尾批 | 全量对账验收（存量治理 DoD） | ⏳ |
 
 ## 3. 存量治理 DoD（EP4 收尾验收标准）
