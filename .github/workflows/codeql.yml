@@ -1,4 +1,4 @@
-﻿# OpenRoute CodeQL - Security Code Analysis
+# OpenRoute CodeQL - Security Code Analysis
 # Scans for vulnerabilities in Python code
 # Runs on push, PR, and weekly schedule
 
@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
