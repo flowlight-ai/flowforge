@@ -4,3 +4,5 @@ export * from './session-strategy.ts';
 export * from './thread-access.ts';
 export * from './transcript-format.ts';
 export * from './workspace-tree.ts';
+export * from './avatar-format.ts';
+export * from './avatar-catalog.ts';

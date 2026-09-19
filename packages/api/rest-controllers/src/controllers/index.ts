@@ -9,3 +9,5 @@ export * from './workspace-edit.ts';
 export * from './workspace-git.ts';
 export * from './workspace-navigate.ts';
 export * from './settings.ts';
+export * from './avatars.ts';
+export * from './audio-proxy.ts';

@@ -5,3 +5,4 @@ export * from './workspace-fs.ts';
 export * from './git.ts';
 export * from './workspace-security.ts';
 export * from './skill-receipt.ts';
+export * from './upload-store.ts';
