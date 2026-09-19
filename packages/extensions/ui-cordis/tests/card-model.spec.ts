@@ -17,7 +17,7 @@ function running(over: Partial<ToolCallViewModelBlockRunning> = {}): ToolCallVie
 function settled(over: Partial<ToolCallViewModelBlockSettled> = {}): ToolCallViewModelBlockSettled {
   return {
     kind: 'tool-result', seq: 2,
-    call: { name: 'cordis_define', argsRaw: ARGS },
+    call: { argsRaw: ARGS },
     content: [{ type: 'text', text: 'defined dyn-1' }], isError: false,
     meta: { pluginId: 'dyn-1', packageId: 'pkg-1' },
     ...over,
@@ -80,7 +80,7 @@ describe('cordisDefineCard', () => {
   })
 
   it('reports an unknown name when the event window cut the call head', () => {
-    const card = cordisDefineCard(settled({ call: undefined }))
+    const card = cordisDefineCard(settled({ call: {} }))
     expect(card.name).toBeNull()
     expect(card.purpose).toBeNull()
   })
@@ -89,7 +89,7 @@ describe('cordisDefineCard', () => {
 describe('cordisRunCard', () => {
   it('carries the activation identity, mode and log sequence for a settled run', () => {
     const block = settled({
-      call: { name: 'cordis_run', argsRaw: '{"pluginId":"dyn-1","packageId":"pkg-1","mode":"run"}' },
+      call: { argsRaw: '{"pluginId":"dyn-1","packageId":"pkg-1","mode":"run"}' },
       meta: { pluginId: 'dyn-1', packageId: 'pkg-1', pluginRunId: 'run-1' },
       content: [{ type: 'text', text: 'started run-1' }],
     })
@@ -101,7 +101,7 @@ describe('cordisRunCard', () => {
 
   it('falls back to the call arguments when the meta is absent', () => {
     const block = settled({
-      call: { name: 'cordis_run', argsRaw: '{"pluginId":"dyn-1","packageId":"pkg-1","mode":"update"}' },
+      call: { argsRaw: '{"pluginId":"dyn-1","packageId":"pkg-1","mode":"update"}' },
       meta: undefined,
     })
     const card = cordisRunCard(block)
@@ -124,7 +124,7 @@ describe('cordisRunCard', () => {
 describe('cordisActionCard', () => {
   it('keeps the Plugin identity and lifecycle result for Stop and Remove cards', () => {
     const card = cordisActionCard(settled({
-      call: { name: 'cordis_stop', argsRaw: '{"pluginId":"clock-1"}' },
+      call: { argsRaw: '{"pluginId":"clock-1"}' },
       content: [{ type: 'text', text: 'Stopped clock-1.' }],
       meta: undefined,
     }))
@@ -139,7 +139,7 @@ describe('cordisActionCard', () => {
 
   it('accepts the short `id` alias for the plugin identity', () => {
     const card = cordisActionCard(settled({
-      call: { name: 'cordis_undefine', argsRaw: '{"id":"clock-1"}' },
+      call: { argsRaw: '{"id":"clock-1"}' },
       content: [{ type: 'text', text: 'Removed clock-1.' }],
       meta: undefined,
     }))

@@ -236,7 +236,7 @@ export class FakeConnectorRedis implements ConnectorRedisClient {
     // 仅实现 ConnectorThreadBindingStore 的 BIND Lua（含 SREM 清理旧索引）。
     if (script.includes('SREM')) {
       const keys = args.slice(0, numKeys).map(String);
-      const [hashKey, newRevKey, newUserKey] = keys;
+      const [hashKey, newRevKey, newUserKey] = keys as [string, string, string];
       const a0 = numKeys;
       const memberKey = String(args[a0]);
       const connectorId = String(args[a0 + 1]);

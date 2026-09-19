@@ -12,8 +12,8 @@ import {
   createAuthorizationRuntime,
   AuthorizationDeclinedError,
   credentialKey,
-} from '../src/index.ts'
-import type { AuthorizationFlow } from '../src/index.ts'
+} from '@flowforge/credentials-authorization'
+import type { AuthorizationFlow } from '@flowforge/credentials-authorization'
 import { makeInteraction, key, noticeLog } from './helpers.ts'
 
 /** 等待微任务/后台调用结算。 */
@@ -426,7 +426,7 @@ describe('settle 事件 fan-out', () => {
     rt.service.registerFlow(committingFlow(k, rt))
     const first = await rt.service.begin({ key: k, interaction: makeInteraction() })
     expect(first.status).toBe('authorized')
-    const second = await nested
+    const second = await nested!
     expect(second.status).toBe('authorized')
   })
 })

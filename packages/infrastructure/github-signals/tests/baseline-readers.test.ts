@@ -6,10 +6,17 @@
 
 import { describe, expect, it } from 'vitest'
 import { readGitHubWaitBaseline } from '../src/GitHubWaitBaselineReader.ts'
+import type { GitHubWaitBaselineReaderDeps } from '../src/GitHubWaitBaselineReader.ts'
 import { readGitHubIssueWaitBaseline } from '../src/GitHubIssueWaitBaselineReader.ts'
 
+type IssueReaderDeps = {
+  fetchCommentCursor: (repoFullName: string, issueNumber: number) => Promise<number>
+  fetchMetadata: (repoFullName: string, issueNumber: number) => Promise<{ state: 'open' | 'closed'; authorLogin?: string }>
+  now?: () => number
+}
+
 describe('readGitHubWaitBaseline — PR', () => {
-  const makeDeps = (overrides: Record<string, unknown> = {}) => ({
+  const makeDeps = (overrides: Partial<GitHubWaitBaselineReaderDeps> = {}): GitHubWaitBaselineReaderDeps => ({
     fetchCi: overrides.fetchCi ?? (async () => ({ headSha: 'aaaaaaa', aggregateBucket: 'pass' })),
     fetchInlineComments: overrides.fetchInlineComments ?? (async () => [{ id: 1 }, { id: 2 }]),
     fetchConversationComments: overrides.fetchConversationComments ?? (async () => [{ id: 3 }]),
@@ -74,7 +81,7 @@ describe('readGitHubWaitBaseline — PR', () => {
 })
 
 describe('readGitHubIssueWaitBaseline — Issue', () => {
-  const makeDeps = (overrides: Record<string, unknown> = {}) => ({
+  const makeDeps = (overrides: Partial<IssueReaderDeps> = {}): IssueReaderDeps => ({
     fetchCommentCursor: overrides.fetchCommentCursor ?? (async () => 5),
     fetchMetadata: overrides.fetchMetadata ?? (async () => ({ state: 'open', authorLogin: 'korra' })),
     now: () => 300,

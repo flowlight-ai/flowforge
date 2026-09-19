@@ -58,8 +58,8 @@ describe('DynamicCordisPackageRunner', () => {
     expect(runner.isLoaded('p1')).toBe(true)
     const live = runner.getSnapshot()
     expect(live).toHaveLength(1)
-    expect(live[0].pluginId).toBe('p1')
-    expect(live[0].slots).toContain('sidebar.footer.action')
+    expect(live[0]!.pluginId).toBe('p1')
+    expect(live[0]!.slots).toContain('sidebar.footer.action')
     // The guarded apply seated an entry through the real loader + slots.
     expect(slots.entries('sidebar.footer.action').length).toBeGreaterThan(0)
   })
@@ -95,7 +95,7 @@ describe('DynamicCordisPackageRunner', () => {
     }
     await runner.load(newer)
     expect(loader.entryCount()).toBe(prior) // old entry removed, new seated
-    expect(runner.getSnapshot()[0].pluginRunId).toBe('p4#2')
+    expect(runner.getSnapshot()[0]!.pluginRunId).toBe('p4#2')
   })
 
   it('unloads a package on retract', async () => {
@@ -120,13 +120,13 @@ describe('DynamicCordisPackageRunner', () => {
       ...half('p7'),
       code: 'return { inject: ["slots"], apply(ctx) { ctx.slots.register({ name: "boom" }, { name: "boom" }) } }',
     })
-    const entry = slots.entries('boom')[0]
+    const entry = slots.entries('boom')[0]!
     expect(entry).toBeDefined()
     slots.crash('boom', entry, new Error('render exploded'), { abdicated: true })
     expect(renderFailures).toHaveLength(1)
-    expect(renderFailures[0].slot).toBe('boom')
-    expect(renderFailures[0].message).toContain('render exploded')
-    expect(renderFailures[0].abdicated).toBe(true)
+    expect(renderFailures[0]!.slot).toBe('boom')
+    expect(renderFailures[0]!.message).toContain('render exploded')
+    expect(renderFailures[0]!.abdicated).toBe(true)
     expect(runner.renderFailures.getSnapshot().has('p7')).toBe(true)
   })
 

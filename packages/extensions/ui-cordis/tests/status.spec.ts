@@ -43,7 +43,7 @@ describe('cordisVisibleStatus', () => {
     expect(cordisVisibleStatus(r, 'pkg-1', [])).toBe('client-pending')
 
     const loaded: DynamicCordisLivePackage[] = [
-      { pluginId: 'dyn-1', packageId: 'pkg-1', pluginRunId: 'run-1' },
+      { pluginId: 'dyn-1', packageId: 'pkg-1', pluginRunId: 'run-1', name: 'clock', slots: [], styleCount: 0 },
     ]
     expect(cordisVisibleStatus(r, 'pkg-1', loaded)).toBe('running')
   })
@@ -51,7 +51,7 @@ describe('cordisVisibleStatus', () => {
   it('does not count a loaded live package of a different run as running', () => {
     const r = row({ activeRun: { pluginRunId: 'run-1', packageId: 'pkg-1' } })
     const loaded: DynamicCordisLivePackage[] = [
-      { pluginId: 'dyn-1', packageId: 'pkg-1', pluginRunId: 'run-2' },
+      { pluginId: 'dyn-1', packageId: 'pkg-1', pluginRunId: 'run-2', name: 'clock', slots: [], styleCount: 0 },
     ]
     expect(cordisVisibleStatus(r, 'pkg-1', loaded)).toBe('client-pending')
   })

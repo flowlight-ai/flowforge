@@ -97,7 +97,7 @@ describe('sessionLogZipEntries 顺序与装配', () => {
     h.live.register({ id: 'child' })
     h.lineages.set('root', [node('child')])
     const root = serializeSessionLog(makeHeader(), [])
-    await Array.fromAsync(sessionLogZipEntries(h.exportSource, root, 'root', true))
+    await pathsOf(h.exportSource, root, 'root', true)
     expect(h.live.flushed).toEqual(['child'])
   })
 
@@ -117,7 +117,7 @@ describe('sessionLogZipEntries 顺序与装配', () => {
     h.lineages.set('root', [node('no-log')])
     const root = serializeSessionLog(makeHeader(), [])
     await expect(
-      Array.fromAsync(sessionLogZipEntries(h.exportSource, root, 'root', true)),
+      pathsOf(h.exportSource, root, 'root', true),
     ).rejects.toThrow(/no stored log/)
   })
 })

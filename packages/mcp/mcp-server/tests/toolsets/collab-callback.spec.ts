@@ -22,7 +22,7 @@ describe('toolsets/collab-callback', () => {
   it('collab total matches the sum of TOOLSET_GROUP_ANCHOR.collab', () => {
     const { port } = fixturePort();
     const sources = assembleMcpSeverToolsets(port);
-    const expected = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a, b) => a + b, 0);
+    const expected = Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a: number, b: number) => a + b, 0);
     expect(sources.collab.length).toBe(expected);
   });
 
@@ -33,12 +33,12 @@ describe('toolsets/collab-callback', () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual([...names].sort());
     const expected = ['collab', 'memory', 'signals', 'limb']
-      .map((family) => Object.values(TOOLSET_GROUP_ANCHOR[family as keyof typeof TOOLSET_GROUP_ANCHOR]).reduce((a, b) => a + b, 0))
-      .reduce((a, b) => a + b, 0);
+      .map((family) => Object.values(TOOLSET_GROUP_ANCHOR[family as keyof typeof TOOLSET_GROUP_ANCHOR]).reduce((a: number, b: number) => a + b, 0))
+      .reduce((a: number, b: number) => a + b, 0);
     // Only collab + memory use the `cat_cafe_` prefix; signals + limb keep bare names.
     const catCafeExpected =
-      Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a, b) => a + b, 0) +
-      Object.values(TOOLSET_GROUP_ANCHOR.memory).reduce((a, b) => a + b, 0);
+      Object.values(TOOLSET_GROUP_ANCHOR.collab).reduce((a: number, b: number) => a + b, 0) +
+      Object.values(TOOLSET_GROUP_ANCHOR.memory).reduce((a: number, b: number) => a + b, 0);
     expect(registry.length).toBe(expected);
     expect(registry.filter((d) => d.name.startsWith('cat_cafe_')).length).toBe(catCafeExpected);
     expect(registry.every((d) => d.actionInventory.length > 0)).toBe(true);
@@ -55,7 +55,7 @@ describe('toolsets/collab-callback', () => {
       checklist: ['vision', 'tests'],
       approved: true,
       reason: 'verified',
-    });
+    } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: `/api/community-issues/${encodeURIComponent('case-7')}/guardian-signoff`,
@@ -68,7 +68,7 @@ describe('toolsets/collab-callback', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'cat_cafe_get_message');
     expect(tool).toBeDefined();
-    await tool!.handler({ messageId: 'msg-9', contextCount: 5, mode: 'full' });
+    await tool!.handler({ messageId: 'msg-9', contextCount: 5, mode: 'full' } as never);
     expect(calls[0]).toMatchObject({
       method: 'GET',
       path: '/api/callbacks/get-message',
@@ -81,7 +81,7 @@ describe('toolsets/collab-callback', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'cat_cafe_update_task');
     expect(tool).toBeDefined();
-    await tool!.handler({ taskId: 'task-3', status: 'in_progress', why: 'picked up' });
+    await tool!.handler({ taskId: 'task-3', status: 'in_progress', why: 'picked up' } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: '/api/callbacks/update-task',

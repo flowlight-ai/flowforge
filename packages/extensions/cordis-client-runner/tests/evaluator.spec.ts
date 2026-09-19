@@ -65,7 +65,7 @@ describe('evaluateClientHalf', () => {
       expect(await apply(undefined, undefined)).toBe('pong')
     }
     expect(doc.attachedNodes).toHaveLength(1)
-    expect(doc.attachedNodes[0].textContent).toBe('body{color:red}')
+    expect(doc.attachedNodes[0]!.textContent).toBe('body{color:red}')
   })
 
   it('records console.error lines into the load report through the tagged console', async () => {

@@ -38,7 +38,7 @@ describe('ClientCordisInspectRegistry', () => {
     registry.register(provider('svc'))
     await flush()
     expect(synced).toHaveLength(1)
-    expect(synced[0][0].id).toBe('svc')
+    expect(synced[0]![0]!.id).toBe('svc')
 
     await registry.query({
       requestId: 'q1', provider: 'svc', method: 'dir', agentId: 'a', input: undefined,

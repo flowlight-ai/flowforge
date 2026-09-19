@@ -31,7 +31,7 @@ class FakeThreadStore {
   create(userId: string, title?: string): ThreadRecord {
     this.seq++;
     const id = `th-${String(this.seq).padStart(3, '0')}`;
-    const rec: ThreadRecord = { id, userId, title, createdAt: 1000 + this.seq };
+    const rec: ThreadRecord = { id, userId, createdAt: 1000 + this.seq, ...(title === undefined ? {} : { title }) };
     this.threads.set(id, rec);
     return rec;
   }
@@ -46,7 +46,7 @@ class FakeThreadStore {
     if (t) t.preferredCats = catIds;
   }
   appendMsg(threadId: string, catId: string | null, content: string, timestamp: number, userId?: string): void {
-    this.messages.push({ threadId, catId, content, timestamp, userId });
+    this.messages.push({ threadId, catId, content, timestamp, ...(userId === undefined ? {} : { userId }) });
   }
   getByThreadBefore(threadId: string, _before: number, limit?: number) {
     const msgs = this.messages.filter((m) => m.threadId === threadId);
@@ -181,7 +181,7 @@ describe('ConnectorCommandLayer', () => {
     expect(r.kind).toBe('history');
     expect(r.response).toContain('user q2');
     // 保底：响应非空
-    expect(r.response.length).toBeGreaterThan(0);
+    expect(r.response!.length).toBeGreaterThan(0);
   });
 
   it('/focus 设置首选猫', async () => {

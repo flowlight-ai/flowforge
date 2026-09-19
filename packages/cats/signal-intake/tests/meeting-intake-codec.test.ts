@@ -41,7 +41,7 @@ describe('parseMeetingIntake — codec round trip', () => {
   })
 
   it('accepts intake without artifact', () => {
-    const parsed = parseMeetingIntake(JSON.stringify(makeIntake({ artifact: undefined })))
+    const parsed = parseMeetingIntake(JSON.stringify(makeIntake()))
     expect(parsed.artifact).toBeUndefined()
   })
 })

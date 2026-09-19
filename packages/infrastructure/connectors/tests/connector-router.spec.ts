@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { registerConnectorDefinition } from '@flowforge/cats-shared';
+import { createCatId, registerConnectorDefinition } from '@flowforge/cats-shared';
 import {
   ConnectorCommandLayer,
   ConnectorRouter,
@@ -34,17 +34,17 @@ class FakeThreadStore {
   hubStates: Array<Record<string, unknown>> = [];
   async create(_userId: string, title?: string): Promise<{ id: string }> {
     this.threadSeq++;
-    return { id: `t-${this.threadSeq}`, title };
+    return { id: `t-${this.threadSeq}`, ...(title === undefined ? {} : { title }) };
   }
-  async updateConnectorHubState(threadId: string, state: Record<string, unknown>): Promise<void> {
-    this.hubStates.push({ threadId, ...state });
+  async updateConnectorHubState(threadId: string, state: Record<string, unknown> | null): Promise<void> {
+    this.hubStates.push({ threadId, ...(state ?? {}) });
   }
 }
 
 class RecordingAdapter implements IOutboundAdapter {
   readonly connectorId = 'feishu';
   readonly sent: string[] = [];
-  async sendReply(externalChatId: string, content: string): Promise<void> {
+  async sendReply(_externalChatId: string, content: string): Promise<void> {
     this.sent.push(content);
   }
   async sendFormattedReply(_c: string, env: { body: string }): Promise<void> {
@@ -82,7 +82,7 @@ function makeRouter(over: Partial<ConnectorRouterOptions> = {}) {
       },
     },
     defaultUserId: 'u-1',
-    defaultCatId: 'cat-default',
+    defaultCatId: createCatId('cat-default'),
     log: silentLogger,
     commandLayer,
     permissionStore,
@@ -110,9 +110,9 @@ describe('ConnectorRouter', () => {
     const r = await router.route('feishu', 'chat-1', '你好', 'm1', undefined, { id: 's1' });
     expect(r.kind).toBe('routed');
     expect(messageStore.entries).toHaveLength(1);
-    expect(messageStore.entries[0]).toMatchObject({ threadId: r.threadId, source: { connector: 'feishu' } });
+    expect(messageStore.entries[0]).toMatchObject({ threadId: (r as { kind: 'routed'; threadId: string }).threadId, source: { connector: 'feishu' } });
     const binding = await bindingStore.getByExternal('feishu', 'chat-1');
-    expect(binding?.threadId).toBe(r.threadId);
+    expect(binding?.threadId).toBe((r as { kind: 'routed'; threadId: string }).threadId);
     expect(triggers).toHaveLength(1);
     expect(triggers[0]).toContain('cat-default');
   });
@@ -129,7 +129,7 @@ describe('ConnectorRouter', () => {
     const { router, messageStore } = makeRouter();
     const r = await router.route('feishu', 'chat-1', '/new 会话A', 'm-new', undefined, { id: 's1' }, 'p2p');
     expect(r.kind).toBe('command');
-    expect(r.threadId).toBeDefined();
+    expect((r as { threadId?: string }).threadId).toBeDefined();
     // 命令层创建了会话线程并绑定；路由器将其写入（Hub）线程
     expect(messageStore.entries.length).toBeGreaterThan(0);
   });
@@ -144,7 +144,7 @@ describe('ConnectorRouter', () => {
 
   it('路由携 @-mention 时定位目标猫而非默认', async () => {
     const patterns = new Map<string, string[]>([['cat-x', ['宪宪']]]);
-    const { router, triggers } = makeRouter({ mentionPatterns: patterns, defaultCatId: 'cat-default' });
+    const { router, triggers } = makeRouter({ mentionPatterns: patterns, defaultCatId: createCatId('cat-default') });
     await router.route('feishu', 'chat-2', '请 @宪宪 协助', 'm-@', undefined, { id: 's1' });
     expect(triggers[0]).toContain('cat-x');
   });

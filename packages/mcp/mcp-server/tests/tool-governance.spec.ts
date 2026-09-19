@@ -112,7 +112,7 @@ describe('defineMcpTool derivation', () => {
   });
 
   it('bindMcpImplementation rejects malformed refs', () => {
-    expect(() => bindMcpImplementation('bogus', async () => ({}))).toThrow();
+    expect(() => bindMcpImplementation('bogus' as `module:${string}#${string}`, async () => ({}))).toThrow();
     expect(() => bindMcpImplementation('module:m#x', async () => ({}))).not.toThrow();
   });
 });

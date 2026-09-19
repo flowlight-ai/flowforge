@@ -34,9 +34,9 @@ describe('jsonSchemaToZod', () => {
 
   it('preserves describe() metadata (zod v4)', () => {
     const schema = jsonSchemaToZod(SAMPLE);
-    expect(schema.shape.prompt.description).toBe('The prompt to generate');
-    expect(schema.shape.steps.unwrap().description).toBe('Number of steps');
-    expect(schema.shape.optional.unwrap().description).toBe('optional text');
+    expect((schema.shape.prompt as z.ZodString).description).toBe('The prompt to generate');
+    expect((schema.shape.steps as z.ZodOptional<z.ZodNumber>).unwrap().description).toBe('Number of steps');
+    expect((schema.shape.optional as z.ZodOptional<z.ZodString>).unwrap().description).toBe('optional text');
   });
 
   it('supports arrays and unknown-object fields', () => {

@@ -8,9 +8,9 @@ import {
   defineMcpTool,
 } from '../src/index.js';
 import type { McpServerFamily } from '../src/tool-governance-snapshot.js';
-import type { ResolvedImplementationCatalog } from '../src/tool-governance-types.js';
+import type { ResolvedImplementationCatalog, McpActionBoundary, EvidenceRef } from '../src/tool-governance-types.js';
 
-const readBoundary = {
+const readBoundary: McpActionBoundary = {
   authorizationPaths: [
     {
       principal: 'invocation-cat' as const,
@@ -79,7 +79,7 @@ describe('createMcpSurfaceSnapshot', () => {
   });
 
   it('throws when implementation evidence is missing', () => {
-    const missing = new Map<string, never>();
+    const missing: ResolvedImplementationCatalog = new Map();
     expect(() =>
       createMcpSurfaceSnapshot(toFamily([baseTool('a')], 'collab'), {
         protectedBaseSha: 'sha256:base',
@@ -98,8 +98,8 @@ describe('compareMcpSurfaceRegistry', () => {
       ...afterDefs[0]!,
       policy: {
         ...afterDefs[0]!.policy,
-        schemaDelivery: { policy: 'always-visible', evidenceRef: 'file:governance.md' },
-        runtimeProfiles: ['full'],
+        schemaDelivery: { policy: 'always-visible' as const, evidenceRef: 'file:governance.md' as EvidenceRef },
+        runtimeProfiles: ['full'] as const,
       },
     };
 

@@ -55,7 +55,6 @@ class StubCompactionEngine extends CompactionEngine {
     if (this.operation !== undefined) return this.operation()
     return this.failure === undefined
       ? Promise.resolve(this.result === null ? null : this.appendResult(agent, this.result, sourceCommandId))
-      // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- exercise arbitrary backend rejection values.
       : Promise.reject(this.failure)
   }
 

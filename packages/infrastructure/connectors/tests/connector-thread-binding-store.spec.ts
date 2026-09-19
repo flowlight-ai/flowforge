@@ -15,17 +15,17 @@ import { FakeConnectorRedis } from './helpers/fake-redis.ts';
 describe('MemoryConnectorThreadBindingStore', () => {
   const store: IConnectorThreadBindingStore = new MemoryConnectorThreadBindingStore();
 
-  it('bind 后可按外部会话查询 binding 字段', () => {
-    const b = store.bind('feishu', 'chat-1', 'th-1', 'u-1');
+  it('bind 后可按外部会话查询 binding 字段', async () => {
+    const b = await store.bind('feishu', 'chat-1', 'th-1', 'u-1');
     expect(b.connectorId).toBe('feishu');
     expect(b.externalChatId).toBe('chat-1');
     expect(b.threadId).toBe('th-1');
     expect(b.userId).toBe('u-1');
     expect(typeof b.createdAt).toBe('number');
 
-    const got = store.getByExternal('feishu', 'chat-1');
+    const got = await store.getByExternal('feishu', 'chat-1');
     expect(got?.threadId).toBe('th-1');
-    expect(store.getByExternal('feishu', 'nope')).toBeNull();
+    expect(await store.getByExternal('feishu', 'nope')).toBeNull();
   });
 
   it('getByThread 聚合所有绑定，remove 反向清理', () => {
@@ -47,11 +47,11 @@ describe('MemoryConnectorThreadBindingStore', () => {
     expect(limited).toHaveLength(1);
   });
 
-  it('setHubThread 更新 hubThreadId 且对不存在绑定返回 null', () => {
-    store.bind('feishu', 'chat-9', 'th-9', 'u-9');
-    store.setHubThread('feishu', 'chat-9', 'hub-1');
-    expect(store.getByExternal('feishu', 'chat-9')?.hubThreadId).toBe('hub-1');
-    expect(store.setHubThread('feishu', 'missing', 'hub-2')).toBeNull();
+  it('setHubThread 更新 hubThreadId 且对不存在绑定返回 null', async () => {
+    await store.bind('feishu', 'chat-9', 'th-9', 'u-9');
+    await store.setHubThread('feishu', 'chat-9', 'hub-1');
+    expect((await store.getByExternal('feishu', 'chat-9'))?.hubThreadId).toBe('hub-1');
+    expect(await store.setHubThread('feishu', 'missing', 'hub-2')).toBeNull();
   });
 });
 

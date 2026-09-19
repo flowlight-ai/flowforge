@@ -23,10 +23,10 @@ function makeDelivery(overrides: Partial<VerifiedWebhookDelivery> = {}): Verifie
     kind: 'github',
     source: WebhookSourceId('primary-github'),
     deliveryId: WebhookDeliveryId('uuid-1'),
-    event: { action: 'opened', number: 1 },
+    event: { name: 'pull_request', payload: { action: 'opened', number: 1 } },
     receivedAt: 1_700_000_000_000,
     ...overrides,
-  }
+  } as VerifiedWebhookDelivery<'github'>
 }
 
 /** 一个合法 Session 请求。 */
@@ -156,7 +156,7 @@ describe('WebhookRuntime 分发（规则匹配 / fire-and-forget / 清理）', (
   it('投递先被无损快照冻结，规则收到的是不可变副本', async () => {
     const fixture = createMemoryRuntime()
     const runtime = createWebhookRuntime(fixture.ports)
-    let captured: VerifiedWebhookDelivery | undefined
+    let captured: unknown
     runtime.register({ id: WebhookRuleId('r'), kind: 'github', run: delivery => { captured = delivery; return null } })
     runtime.dispatch(makeDelivery())
     await tick()

@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
+import { createCatId } from '@flowforge/cats-shared'
 import { bindAsrPersonMemoryScenesFromQueueMessage, type AsrQueueCarrierMessage } from '../src/AsrPersonMemoryQueueCarrier.ts'
 import { buildAsrPersonMemoryDynamicScenes } from '../src/AsrPersonMemorySceneBuilder.ts'
 import { makeArtifact, makeIntake } from './fixtures.ts'
@@ -14,7 +15,7 @@ function liveMessage(extra: Partial<AsrQueueCarrierMessage> = {}): AsrQueueCarri
     intake: makeIntake({ judgmentState: 'confirmed', choices: { speakerMap: { spk1: 'Alice' } } }),
     artifact: makeArtifact(),
     threadId: 'thread-abc',
-    consumerCatId: 'cat-a',
+    consumerCatId: createCatId('cat-a'),
     now: 5_000,
   })
   return {

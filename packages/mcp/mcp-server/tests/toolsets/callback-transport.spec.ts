@@ -21,7 +21,7 @@ describe('toolsets/callback-transport', () => {
       bodyKeys: ['taskId', 'observedRevision'],
     });
     const result = await invoke({ taskId: 't1', observedRevision: 3, ignored: true });
-    expect(result.content[0].text).toBe('ok');
+    expect(result.content[0]!.text).toBe('ok');
     expect(received).toEqual({
       method: 'POST',
       path: '/api/callbacks/read-entrusted-work',
@@ -64,6 +64,6 @@ describe('toolsets/callback-transport', () => {
   it('errors on the unavailable port instead of sending', async () => {
     const result = await unavailableCallbackPort.send({ method: 'POST', path: '/p', body: {} });
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('not configured');
+    expect(result.content[0]!.text).toContain('not configured');
   });
 });

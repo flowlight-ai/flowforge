@@ -546,19 +546,12 @@ export function defineTool<const S extends ParameterSchemaSpec, const O extends 
   options: DefineToolOptions<S, O>,
 ): ToolDefinition {
   // Object-literal methods do not use `this`; retaining references is safe.
-  // oxlint-disable-next-line typescript/unbound-method
   const userExecute = options.execute
-  // oxlint-disable-next-line typescript/unbound-method
   const userFinalizeContent = options.finalizeContent
-  // oxlint-disable-next-line typescript/unbound-method
   const userRender = options.output.render
-  // oxlint-disable-next-line typescript/unbound-method
   const userPresentationMeta = options.output.presentationMeta
-  // oxlint-disable-next-line typescript/unbound-method
   const userPresentCall = options.presentCall
-  // oxlint-disable-next-line typescript/unbound-method
   const userPresentResult = options.presentResult
-  // oxlint-disable-next-line typescript/unbound-method
   const userIsConcurrencySafe = options.isConcurrencySafe
   if (options.timeoutMs !== undefined && (!Number.isFinite(options.timeoutMs) || options.timeoutMs <= 0)) {
     throw new Error(`defineTool(${options.name}): timeoutMs must be a positive finite number`)

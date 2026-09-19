@@ -18,7 +18,7 @@ describe('serializeSessionLog', () => {
     const text = serializeSessionLog(makeHeader({ id: 'root' }), [makeEvent(0, { text: 'hi' })])
     const lines = text.split('\n')
     expect(lines[lines.length - 1]).toBe('')
-    const headerLine = JSON.parse(lines[0]) as Record<string, unknown>
+    const headerLine = JSON.parse(lines[0]!) as Record<string, unknown>
     expect(headerLine.type).toBe('session')
     expect(headerLine.version).toBe(2)
     expect(headerLine.id).toBe('root')

@@ -126,7 +126,6 @@ export class HookRegistry {
   }
 
   private warn(message: string): void {
-    // eslint-disable-next-line no-console
     console.warn(`[HookRegistry] ${message}`);
   }
 }

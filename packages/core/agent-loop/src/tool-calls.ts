@@ -83,7 +83,6 @@ export async function executeToolCalls(
   let concluded = false
   while (next < planned.length) {
     // Commit before classifying again so registry changes affect unstarted calls.
-    // oxlint-disable-next-line typescript/no-non-null-assertion -- bounded by the loop condition
     const first = planned[next]!
     const mode = ctx.tools.executionMode(first.exec).kind
     const group = mode === 'parallel' ? planned.slice(next) : [first]
@@ -151,7 +150,6 @@ async function runGroup(
       const result = slot.needsPost
         ? await ctx.tools[TOOL_RUNTIME_SCHEDULER].finalize(slot.exec, slot.result)
         : ctx.tools[TOOL_RUNTIME_SCHEDULER].finish(slot.exec, slot.result)
-      // oxlint-disable-next-line typescript/no-non-null-assertion -- bounded index
       appendToolResult(session, turn, step, call!.block, result, callSeqs[committed]!)
       for (const context of result.additionalContexts ?? []) acceptContext(context)
       concluded ||= result.concludesTurn === true
@@ -162,7 +160,6 @@ async function runGroup(
   const inFlight = new Map<number, Promise<number>>()
 
   const startCall = async (index: number): Promise<void> => {
-    // oxlint-disable-next-line typescript/no-non-null-assertion -- bounded index
     const call = group[index]!
     callSeqs[index] = appendToolCall(session, turn, step, call.block)
     started++
@@ -198,7 +195,6 @@ async function runGroup(
   const fillPool = async (): Promise<void> => {
     while (!aborted && nextToStart < group.length && inFlight.size < maxParallelToolCalls) {
       // Re-read later modes after ordered commits so registry changes can create a barrier.
-      // oxlint-disable-next-line typescript/no-non-null-assertion -- bounded by the loop condition
       const nextCall = group[nextToStart]!
       if (nextToStart > 0 && mode === 'parallel'
         && ctx.tools.executionMode(nextCall.exec).kind !== 'parallel') break

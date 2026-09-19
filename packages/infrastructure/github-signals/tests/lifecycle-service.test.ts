@@ -12,7 +12,7 @@ import { MemoryTaskStore } from '../src/ports/ITaskStore.ts'
 import { MemoryConnectorDelivery } from '../src/ports/ConnectorDelivery.ts'
 import { MemoryWaitLifecycleEventLog } from '../src/ports/IWaitLifecycleEventLog.ts'
 import type { WaitRuntimeState } from '../src/wait-state-machine.ts'
-import { makeIssueTask, makePrTask } from './fixtures.ts'
+import { makeIssueTask, makePrTask, makeIssueTaskWithoutAutomation } from './fixtures.ts'
 
 function setup() {
   const taskStore = new MemoryTaskStore()
@@ -81,7 +81,7 @@ describe('GitHubWaitLifecycleService.observe — subject_terminal', () => {
 
   it('marks the task done when subject is terminal but no active wait exists', async () => {
     const { service, taskStore } = setup()
-    taskStore.seed({ ...makeIssueTask(), automationState: undefined })
+    taskStore.seed(makeIssueTaskWithoutAutomation())
     const result = await service.observe({
       taskId: 'task-issue-1',
       facts: { issue: { state: 'open', comments: [] } },
@@ -101,7 +101,7 @@ describe('GitHubWaitLifecycleService.observe — not tracked / no active wait', 
 
   it('returns state_only when there is no active wait', async () => {
     const { service, taskStore } = setup()
-    taskStore.seed({ ...makeIssueTask(), automationState: undefined })
+    taskStore.seed(makeIssueTaskWithoutAutomation())
     const result = await service.observe({
       taskId: 'task-issue-1',
       facts: { issue: { state: 'open', comments: [] } },

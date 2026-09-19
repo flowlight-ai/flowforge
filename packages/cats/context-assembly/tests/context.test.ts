@@ -324,9 +324,9 @@ function catConfig(): CatConfig {
     name: 'cat1',
     displayName: '猫一',
     avatar: 'a',
-    color: 'orange',
+    color: { primary: 'orange', secondary: '#7a4b00' },
     mentionPatterns: ['@cat1'],
-    clientId: 'api',
+    clientId: 'openai',
     defaultModel: 'model-x',
     mcpSupport: true,
     roleDescription: 'roles',
@@ -464,9 +464,9 @@ function multiCatContext(): MemoryCatContext {
     name: 'catA',
     displayName: '老A',
     avatar: 'a',
-    color: 'blue',
+    color: { primary: 'blue', secondary: '#003a7a' },
     mentionPatterns: ['@catA'],
-    clientId: 'api',
+    clientId: 'openai',
     defaultModel: 'openai/gpt-4o',
     mcpSupport: true,
     roleDescription: 'roles',
@@ -479,9 +479,9 @@ function multiCatContext(): MemoryCatContext {
     name: 'catB',
     displayName: '老B',
     avatar: 'b',
-    color: 'green',
+    color: { primary: 'green', secondary: '#007a3a' },
     mentionPatterns: ['@catB'],
-    clientId: 'api',
+    clientId: 'openai',
     defaultModel: 'openai/gpt-4o-2024-08-01',
     mcpSupport: true,
     roleDescription: 'roles',
@@ -490,7 +490,10 @@ function multiCatContext(): MemoryCatContext {
   };
   const ctx = new MemoryCatContext({ catA: a, catB: b });
   ctx.withRoster({
-    getRoster: () => ({ catA: { family: 'alpha' }, catB: { family: 'beta' } }),
+    getRoster: () => ({
+      catA: { family: 'alpha', roles: ['architect'], lead: true, available: true, evaluation: '架构担当' },
+      catB: { family: 'beta', roles: ['implementer'], lead: false, available: true, evaluation: '实现担当' },
+    }),
     isCatLead: (id) => id === 'catA',
     catHasRole: () => true,
   });

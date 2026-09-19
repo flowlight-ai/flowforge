@@ -18,7 +18,7 @@ import { Context } from '@flowforge/cordis'
 import { ChatRealtimeService, InMemoryRealtimeTransport } from '@flowforge/chat-realtime'
 import type { AgentMessage, InMemoryRealtimeClient } from '@flowforge/chat-realtime'
 import { createUserId } from '@flowforge/cats-shared'
-import type { UserId } from '@flowforge/cats-shared'
+import type { UserId, CatId } from '@flowforge/cats-shared'
 import { createUserMessage, LlmAdapter } from '@flowforge/llm'
 import type { ContentBlock, LlmResolvedModelInfo, Message, StreamChunk } from '@flowforge/llm'
 import type { Agent } from '@flowforge/agent'
@@ -34,7 +34,6 @@ import * as AgentLoopInvariant from '@flowforge/agent-loop/invariant'
 import * as CompactionInvariant from '@flowforge/compaction/invariant'
 import * as CompactionBasicInvariant from '@flowforge/compaction-basic/invariant'
 import TokenMeter from '@flowforge/token-meter'
-import SessionId from '@flowforge/session'
 import type { SessionId as SessionIdType } from '@flowforge/session'
 
 /** 毫秒计时。 */
@@ -68,7 +67,7 @@ describe('T9.5A 100 并发消息投递（对照 test_websocket_load）', () => {
     const { ms } = await timed(async () => {
       await Promise.all(
         Array.from({ length: MESSAGE_COUNT }, async (_, m) => {
-          const msg: AgentMessage = { type: 'text', catId: `cat-${m}`, content: `msg-${m}`, timestamp: Date.now() }
+          const msg: AgentMessage = { type: 'text', catId: `cat-${m}` as CatId, content: `msg-${m}`, timestamp: Date.now() }
           realtime.broadcastAgentMessage(msg, 'load')
         }),
       )
@@ -86,7 +85,6 @@ describe('T9.5A 100 并发消息投递（对照 test_websocket_load）', () => {
 
     expect(ms).toBeLessThan(50_000)
     const perMsg = ms / MESSAGE_COUNT
-    // eslint-disable-next-line no-console
     console.log(`[perf] T9.5A ${MESSAGE_COUNT}x${RECEIVER_COUNT} broadcast: ${ms.toFixed(1)}ms total, ${perMsg.toFixed(2)}ms/msg`)
   })
 })
@@ -159,7 +157,6 @@ describe('T9.5B 大 session 上下文压缩耗时', () => {
     expect(ms).toBeLessThan(20_000)
     const r2: CompactionResult | null = result
     void r2
-    // eslint-disable-next-line no-console
     console.log(`[perf] T9.5B large-session compactNow: ${ms.toFixed(1)}ms, summarizer calls=${compact.calls}`)
   })
 })

@@ -87,7 +87,6 @@ export interface FetchPaginatedOptions {
  * 100 项/页 + 2MB maxBuffer —— 单缓冲区溢出结构性不可能。
  * 返回未类型化数组，调用方自行 cast。
  */
-// oxlint-disable-next-line no-explicit-any: GitHub API JSON responses are untyped; callers cast inline
 export async function fetchPaginated(endpoint: string, options: FetchPaginatedOptions = {}): Promise<any[]> {
   const { sinceId, ghToken, execFileAsync: execOverride } = options;
   const execFn =
@@ -103,7 +102,6 @@ export async function fetchPaginated(endpoint: string, options: FetchPaginatedOp
     });
 
   const cursor = sinceId ?? 0;
-  // oxlint-disable-next-line no-explicit-any: GitHub API JSON parse results
   const allItems: any[] = [];
   let page = 1;
 

@@ -97,14 +97,20 @@ export function makeIssueTask(overrides: Partial<TaskItem> = {}): TaskItem {
     createdAt: 100,
     updatedAt: 100,
     userId: 'user-2',
-    automationState: {
-      issue: {
-        lastCommentCursor: 3,
-        lastDeliveredCursor: 3,
-        issueState: 'open',
+      automationState: {
+        issue: {
+          lastCommentCursor: 3,
+          lastDeliveredCursor: 3,
+          issueState: 'open',
+        },
+        await: makeIssueAwait(),
       },
-      await: makeIssueAwait(),
-    },
-    ...overrides,
-  }
+      ...overrides,
+    }
+}
+
+/** An issue-tracking task with no wait automation configured (no active wait). */
+export function makeIssueTaskWithoutAutomation(overrides: Partial<TaskItem> = {}): TaskItem {
+  const { automationState: _automationState, ...rest } = makeIssueTask(overrides)
+  return { ...rest }
 }

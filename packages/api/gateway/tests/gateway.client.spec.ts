@@ -769,7 +769,7 @@ describe('Client Typert API', () => {
     const seen: string[] = []
     // The declared return is void, so nobody awaits an async listener: the
     // rejection has to be contained here or it escapes as an unhandled one.
-    ctx.remote.$on('fixture/changed', () => Promise.reject(new Error('fixture async failure'))) // oxlint-disable-line typescript/no-misused-promises
+    ctx.remote.$on('fixture/changed', () => Promise.reject(new Error('fixture async failure')))
     ctx.remote.$on('fixture/changed', (namespace) => { seen.push(namespace) })
     try {
       ctx.remote.$dispatch('fixture/changed', ['credentials'])

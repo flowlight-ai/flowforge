@@ -142,11 +142,6 @@ class ClientRemoteService extends Service implements TypertClientRemote {
         console.error(`client api: Remote event ${JSON.stringify(event)} listener threw:`, error)
       }
       try {
-        /* oxlint-disable-next-line typescript/no-confusing-void-expression --
-         * The declared return is void, so nobody awaits an async listener; the
-         * runtime value is still a promise, and reading it is the only way to
-         * keep its rejection inside this containment instead of surfacing as an
-         * unhandled one. */
         const settled: unknown = listener(...args as never[])
         if (settled instanceof Promise) settled.catch(report)
       } catch (error) {

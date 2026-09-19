@@ -18,7 +18,6 @@ const sdk = vi.hoisted(() => ({
 vi.mock('e2b', async (importOriginal) => {
   const actual = await importOriginal<typeof import('e2b')>()
   // The mock replaces only the SDK's static factory surface and is never constructed.
-  // oxlint-disable-next-line typescript/no-extraneous-class -- The SDK contract is a class with a static factory.
   class FakeSandbox {
     static create(...args: unknown[]): unknown {
       return sdk.create(...args)

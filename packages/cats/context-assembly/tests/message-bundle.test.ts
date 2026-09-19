@@ -180,7 +180,7 @@ describe('MessageSelectionResolver — admission', () => {
   it('admits a rich_block against stored rich blocks', async () => {
     const block: RichBlock = { id: 'b1', kind: 'card', v: 1, title: 'Card', bodyMarkdown: 'body text' };
     const resolver = makeResolver([
-      message('m1', { content: '', extra: { rich: { blocks: [block] } } }, 100),
+      message('m1', { content: '', extra: { rich: { v: 1, blocks: [block] } } }, 100),
     ]);
     const result = await resolver.resolveForAdmission(
       {
@@ -220,7 +220,10 @@ describe('carrier read-back — tombstones', () => {
     expect(read.status).toBe('resolved');
     if (read.status !== 'resolved') return;
     expect(read.items[0]?.status).toBe('available');
-    expect(read.items[0]?.readableContent).toContain('hello world');
+    const firstReadItem = read.items[0];
+    if (firstReadItem?.status === 'available') {
+      expect(firstReadItem.readableContent).toContain('hello world');
+    }
   });
 
   it('production — read-back tombstones an item whose source vanished', async () => {

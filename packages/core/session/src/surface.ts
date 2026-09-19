@@ -445,7 +445,6 @@ export class SurfaceManager implements SessionSurface {
     const tailSeq = this.baseSeq + this.log.length - 1
     for (let seq = this._lastProcessedSeq + 1; seq <= tailSeq; seq++) {
       const index = seq - this.baseSeq
-      // oxlint-disable-next-line typescript/no-non-null-assertion -- bounded by the loop condition
       const event = this.log[index]!
       const pending = this._pendingPlan
       if (pending?.event === event && pending.expectedSeq === seq) {

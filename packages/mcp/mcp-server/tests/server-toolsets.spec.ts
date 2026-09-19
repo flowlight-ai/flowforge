@@ -6,8 +6,9 @@ import {
   parseToolsetEnv,
 } from '../src/index.js';
 import type { FamilyToolDefinition } from '../src/tool-governance-snapshot.js';
+import type { McpActionBoundary } from '../src/tool-governance-types.js';
 
-const readBoundary = {
+const readBoundary: McpActionBoundary = {
   authorizationPaths: [
     {
       principal: 'invocation-cat' as const,

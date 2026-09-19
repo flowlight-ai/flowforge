@@ -55,7 +55,7 @@ function seedGraph(): void {
   store.insertEdges(edges)
 }
 
-function q(query: string, extra?: { maxRows?: number; budget?: number }): { columns: string[]; rows: readonly (readonly string[])[] } {
+function q(query: string, extra?: { maxRows?: number; budget?: number }): { columns: readonly string[]; rows: readonly (readonly string[])[] } {
   return queryCypher(store, { project: PROJECT, query, ...extra })
 }
 

@@ -3,10 +3,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import { SessionLogDownloadController } from '../src/controller.ts'
 import { MemoryDownloadContext } from '../src/ports/context.ts'
-import { MemorySnapshotStore } from '../src/ports/snapshot-store.ts'
+import { MemorySnapshotStore, type SnapshotStorePort } from '../src/ports/snapshot-store.ts'
 import type { SessionLogDownloadState } from '../src/controller.ts'
 
-function snapshot(store: MemorySnapshotStore<SessionLogDownloadState>): SessionLogDownloadState['bySession'][string] {
+function snapshot(store: SnapshotStorePort<SessionLogDownloadState>): SessionLogDownloadState['bySession'][string] {
   return store.getSnapshot().bySession['s1']
 }
 
@@ -24,16 +24,16 @@ describe('SessionLogDownloadController', () => {
   })
 
   it('以 HEAD 请求并携带 includeDescendants 参数', async () => {
-    const captured = new Array<{ url: string; init?: RequestInit }>()
+    const captured = new Array<{ url: string; init: RequestInit | undefined }>()
     const fetcher = (input: string | URL, init?: RequestInit) => {
       captured.push({ url: String(input), init })
       return Promise.resolve(new Response(null, { status: 200 }))
     }
     const controller = new SessionLogDownloadController(new MemoryDownloadContext(fetcher, () => {}))
     await controller.download('root')
-    expect(captured[0].init?.method).toBe('HEAD')
-    expect(captured[0].url).toContain('includeDescendants=true')
-    expect(captured[0].url).toContain('sessionId=root')
+    expect(captured[0]!.init?.method).toBe('HEAD')
+    expect(captured[0]!.url).toContain('includeDescendants=true')
+    expect(captured[0]!.url).toContain('sessionId=root')
   })
 
   it('保存使用安全文件名', async () => {
@@ -44,7 +44,7 @@ describe('SessionLogDownloadController', () => {
     )
     const controller = new SessionLogDownloadController(context)
     await controller.download('a/b')
-    const [url, filename] = save.mock.calls[0]
+    const [url, filename] = save.mock.calls[0]!
     expect(filename).toBe('flowforge-session-a_b.zip')
     expect(url).toContain('/api/session.export')
   })

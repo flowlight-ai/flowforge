@@ -23,7 +23,7 @@ describe('toolsets/canonical-tool-sources', () => {
     const { port } = fixturePort();
     const sources = assembleMcpSeverToolsets(port);
     for (const family of ['collab', 'memory', 'signals', 'limb'] as const) {
-      const expected = Object.values(TOOLSET_GROUP_ANCHOR[family]).reduce((a, b) => a + b, 0);
+      const expected = Object.values(TOOLSET_GROUP_ANCHOR[family]).reduce((a: number, b: number) => a + b, 0);
       expect(sources[family].length, `${family} catalog size`).toBe(expected);
     }
   });
@@ -35,8 +35,8 @@ describe('toolsets/canonical-tool-sources', () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual([...names].sort());
     const expected = (['collab', 'memory', 'signals', 'limb'] as const)
-      .map((family) => Object.values(TOOLSET_GROUP_ANCHOR[family]).reduce((a, b) => a + b, 0))
-      .reduce((a, b) => a + b, 0);
+      .map((family) => Object.values(TOOLSET_GROUP_ANCHOR[family]).reduce((a: number, b: number) => a + b, 0))
+      .reduce((a: number, b: number) => a + b, 0);
     expect(registry.length).toBe(expected);
     expect(registry.every((d) => d.actionInventory.length > 0)).toBe(true);
   });
@@ -46,8 +46,8 @@ describe('toolsets/canonical-tool-sources', () => {
     const registry = buildCanonicalToolRegistryForPort(port);
     const tool = registry.find((d) => d.name === 'cat_cafe_read_entrusted_work');
     expect(tool).toBeDefined();
-    const result = (await tool!.handler({ taskId: 't1' })) as { content: { text: string }[] };
-    expect(result.content[0].text).toBe(JSON.stringify(calls[0]));
+    const result = (await tool!.handler({ taskId: 't1' } as never)) as { content: { text: string }[] };
+    expect(result.content[0]!.text).toBe(JSON.stringify(calls[0]));
     expect(calls[0]).toMatchObject({ method: 'POST', path: '/api/callbacks/read-entrusted-work', body: { taskId: 't1' } });
   });
 
@@ -61,7 +61,7 @@ describe('toolsets/canonical-tool-sources', () => {
       expectedSequence: 1,
       clientMessageId: 'c-1',
       action: { kind: 'sync' },
-    });
+    } as never);
     expect(calls[0]).toMatchObject({
       method: 'POST',
       path: `/api/callbacks/evolution-programs/${encodeURIComponent('evolution-program:deadbeef000000000000000000000000')}/changes`,

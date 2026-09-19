@@ -160,6 +160,21 @@
       "path": "./packages/infrastructure/github-signals/tsconfig.host.json"
     },
     {
+      "path": "./packages/credentials/authorization"
+    },
+    {
+      "path": "./packages/infrastructure/connectors"
+    },
+    {
+      "path": "./packages/extensions/cordis-client-runner"
+    },
+    {
+      "path": "./packages/extensions/ui-cordis"
+    },
+    {
+      "path": "./packages/session-query/session-log-export"
+    },
+    {
       "path": "./packages/infrastructure/enterprise/tsconfig.host.json"
     },
     {
@@ -887,6 +902,12 @@
     },
     {
       "path": "./packages/web/web-search-perplexity"
+    },
+    {
+      "path": "./packages/webhook/webhook/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/webhook/webhook-github/tsconfig.host.json"
     },
     {
       "path": "./packages/workflow/conditional-router"

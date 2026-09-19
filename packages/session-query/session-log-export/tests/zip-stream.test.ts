@@ -43,7 +43,7 @@ describe('streamSessionLogZipFromEntries', () => {
       new AbortController().signal,
     ))
     const entries = unzipSync(bytes)
-    expect(strFromU8(entries['a.txt'])).toBe('hello world')
+    expect(strFromU8(entries['a.txt']!)).toBe('hello world')
   })
 
   it('二进制条目以原始字节回读', async () => {
@@ -54,7 +54,7 @@ describe('streamSessionLogZipFromEntries', () => {
       new AbortController().signal,
     ))
     const entries = unzipSync(bytes)
-    expect([...entries['media/img.png']]).toEqual([...data])
+    expect([...entries['media/img.png']!]).toEqual([...data])
   })
 
   it('流式文件条目整段回读', async () => {
@@ -68,7 +68,7 @@ describe('streamSessionLogZipFromEntries', () => {
       new AbortController().signal,
     ))
     const entries = unzipSync(bytes)
-    expect([...entries['files/a']]).toEqual([1, 2, 3, 4, 5, 6])
+    expect([...entries['files/a']!]).toEqual([1, 2, 3, 4, 5, 6])
   })
 
   it('多个条目按序打包', async () => {
@@ -81,8 +81,8 @@ describe('streamSessionLogZipFromEntries', () => {
       new AbortController().signal,
     ))
     const unzipped = unzipSync(bytes)
-    expect(strFromU8(unzipped['one'])).toBe('一')
-    expect(strFromU8(unzipped['two'])).toBe('二')
+    expect(strFromU8(unzipped['one']!)).toBe('一')
+    expect(strFromU8(unzipped['two']!)).toBe('二')
   })
 
   it('压缩级别 0 仍产生合法可回读 zip', async () => {
@@ -91,7 +91,7 @@ describe('streamSessionLogZipFromEntries', () => {
       0,
       new AbortController().signal,
     ))
-    expect(strFromU8(unzipSync(bytes)['x'])).toBe('stored')
+    expect(strFromU8(unzipSync(bytes)['x']!)).toBe('stored')
   })
 
   it('跨代理对分块后仍无损回读（surrogate 回退）', async () => {
@@ -102,7 +102,7 @@ describe('streamSessionLogZipFromEntries', () => {
       6,
       new AbortController().signal,
     ))
-    expect(strFromU8(unzipSync(bytes)['emoji'])).toBe(content)
+    expect(strFromU8(unzipSync(bytes)['emoji']!)).toBe(content)
   })
 
   it('慢消费端（反压）仍产出完整且正确的 zip', async () => {
@@ -126,7 +126,7 @@ describe('streamSessionLogZipFromEntries', () => {
       offset += part.byteLength
     }
     const unzipped = unzipSync(out)
-    expect(strFromU8(unzipped['f7'])).toBe(`7:${content}`)
+    expect(strFromU8(unzipped['f7']!)).toBe(`7:${content}`)
   })
 
   it('取消已消费的流不抛错', async () => {
