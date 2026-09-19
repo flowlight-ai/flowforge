@@ -270,3 +270,68 @@ entry: ['lib/types/{index,invariant,startup}.js'],
 
 - 新增工单 **P-544**（S1）｜ 新增 DI 增量 = **10**（累计 1175 → **1185**）
 - P-542 状态由 `Open` 改为 **`Open（Partial）`**（第一层已修并验证，残留拆至 P-544）
+
+---
+
+## P-544 修复记录（2026-09-19 第三轮，方案 B + 脚本解耦）
+
+### 开发自述
+
+- **修复提交**：见随本次测试产物同批的 `fix(build)` 提交
+- **改动点**：
+  1. `tsdown.config.ts`：host face 的 `workspace` 由**原 glob `['vendor/*','packages/*/*','apps/cli']`** 改为**由 `tsconfig.host.json` 的 references 派生并收窄到「构建图 ∩ 原打包范围」**——使打包图恒为构建图子集，杜绝「未纳入构建图的包因无 `lib/types` 而整包构建失败」这一类漂移；client face 保持原 glob（其 `entry: ''` 由包内配置决定，不受本缺陷影响）。
+  2. `package.json`：`build` 解耦为**仅打包**（`tsdown --env.FF_BUILD_FACE host`）；新增 `build:types`（`tsc -b tsconfig.host.json`，即类型门禁 + emit）；`typecheck` 不变；未使用的 `build:lib:host` 改为委托 `pnpm build`。**未使用 `|| true` 等假通过写法**。
+  3. `install.sh`：**经核实无需改动**——其 [2/3] `pnpm typecheck` 与 `build:types` 是同一命令，已 emit 类型产物，[3/3] `pnpm build` 直接可用（与计划 §任务2 步骤2 有出入，此处以实测为准收敛为不改）。
+- **自测**：见下「测试回归结论」。
+
+### 测试回归结论
+
+- **测试回归结论**：⚠️ **Partial** ｜ 回归日期 2026-09-19 ｜ 签署 QA
+  - **复现命令 1（打包步，已验证转绿）**：`npx tsdown --env.FF_BUILD_FACE host`
+    - 修复前：`ERROR  Error: [@flowforge/integration-e2e] Cannot find entry: ["lib/types/{index,invariant,startup}.js"]`（退出码 1）
+    - 修复后：**退出码 0**（37s 完成）
+  - **复现命令 2（官方 build 脚本，已验证转绿）**：`pnpm build`
+    - 修复前：`tsc -b` 失败即短路，`tsdown` 从未执行（退出码非 0，无产物）
+    - 修复后：**退出码 0**（53s，日志含 `✔ [@flowforge/cli] Build complete in 40748ms`），`packages/boot/app-boot/lib/index.js` 已产出
+  - **复现命令 3（端到端启动，仍失败）**：`pnpm start --no-open --port 5200`
+    - 真实输出仍为 `plugin tree failed to load … loader entries failed to apply`，残留 12 处 `Cannot find`，去重后 **5 类**：
+      - profile 侧缺包：`@flowforge/harness-env-registry`、`@flowforge/llm-openroute`、`@flowforge/session-log-export`
+      - profile 侧残留旧副本：`C:\Users\hyg\.flowforge\profiles\node_modules\@flowforge\web-app\lib\{index,startup}.js` 不存在
+      - 仓库侧：`packages/host/cats-api/node_modules/@flowforge/cats-routes/lib/index.js` 不存在
+  - **判定说明**：本轮修复的**构建图/打包图不一致**已实测消除（`pnpm build` 由「失败且无产物」转为「exit 0 且产出」）；但端到端启动的残留属**第三类独立根因——profile 安装态陈旧/不完整**（`~/.flowforge/profiles/` 下缺 3 个仓库包、且持有一份 `lib/` 缺失的 `@flowforge/web-app` 旧副本），与构建图无关。按 B4 拆出新工单 **P-545**，本单维持 `Open（Partial）`。
+
+---
+
+## P-545 — `pnpm start` 残留阻断：profile 安装态陈旧/不完整（缺包 + 旧副本）
+
+- **严重度**：S1
+- **分类**：`验证阻塞（环境）`／`CI / 配置`（待开发判定归属）
+- **文件:行号**：`packages/boot/app-boot/src/profile.ts`（`resolveBundleDir` 与 profile 装配）、`apps/cli/src/plugin.ts`（`plugin install` → `reconcilePlugins` 逻辑）
+- **现象**：`pnpm build` 已可产出产物，但 `pnpm start --no-open --port 5200` 仍在 `cordis:include` 阶段失败，去重后 5 类 `Cannot find`（见上 P-544 复现命令 3 输出）。
+- **复现命令与真实输出**：
+
+```bash
+pnpm start --no-open --port 5200
+```
+
+```
+Error: flowforge: plugin tree failed to load: failed to apply loader entry include (cordis:include)
+Cannot find package '@flowforge/harness-env-registry'      # 导入自 C:\Users\hyg\.flowforge\profiles\web\
+Cannot find package '@flowforge/llm-openroute'
+Cannot find package '@flowforge/session-log-export'
+Cannot find module 'C:\Users\hyg\.flowforge\profiles\node_modules\@flowforge\web-app\lib\index.js'
+Cannot find module '…\packages\host\cats-api\node_modules\@flowforge\cats-routes\lib\index.js'
+```
+
+```bash
+ls ~/.flowforge/profiles/node_modules/@flowforge | wc -l     # → 136（早年安装，缺上述 3 包）
+cat ~/.flowforge/profiles/web/package.json                   # → dependencies: {} 为空
+node --import tsx/esm apps/cli/src/bin.ts plugin --profile web install
+# → "Already up to date"（无依赖可装，实测无效）
+```
+
+- **诊断**：`~/.flowforge/profiles/` 是**早前遗留的安装态**：`profiles/node_modules` 有 136 个包（含一份 `lib/` 缺失的 `web-app` 旧副本），而 `profiles/web/package.json` 的 `dependencies` 为空，官方补救命令 `plugin --profile web install` 因此**空转**（`Already up to date`）——它只按 manifest 依赖装包，不会补齐 in-box bundle 的运行期依赖，也不会清理旧副本。
+- **建议**：① 明确 profile 目录的「重建 vs 增量修」策略（例如提供 `plugin --profile web reset`，或让 `install` 在检测到缺包/旧副本时报错而非静默空转）；② 让 `plugin install` 校验 in-box bundle 的运行期依赖可解析性，缺失即失败并给出可操作提示；③ 文档补充「首次运行前需要哪些步骤」并在 `start` 失败时给出自检清单。
+- **T7/T8**：否（但**阻断 T8**——后端起不来）
+
+**新增计数**：P-545（S1）→ DI 增量 +10（1185 → **1195**）；P-544 状态维持 `Open（Partial）`。

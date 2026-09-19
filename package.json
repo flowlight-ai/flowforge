@@ -15,7 +15,8 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host",
+    "build": "tsdown --env.FF_BUILD_FACE host",
+    "build:types": "tsc -b tsconfig.host.json",
     "typecheck": "tsc -b tsconfig.host.json",
     "lint": "oxlint .",
     "test": "vitest run",
@@ -23,7 +24,7 @@
     "test:snapshot": "vitest run test-support --sequence.shuffle=false",
     "flowforge": "node --import tsx/esm apps/cli/src/bin.ts",
     "start": "node --import tsx/esm apps/cli/src/bin.ts web",
-    "build:lib:host": "tsc -b tsconfig.host.json && tsdown --env.FF_BUILD_FACE host"
+    "build:lib:host": "pnpm build"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
