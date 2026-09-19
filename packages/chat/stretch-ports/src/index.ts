@@ -32,6 +32,8 @@ import type {
   ImSendResult,
 } from './im-ports.ts'
 import { InMemoryImChannelAdapter } from './mock/im-channel-mock.ts'
+import { FeishuImChannelAdapter } from './feishu/feishu-im-channel.ts'
+import type { FeishuChannelConfig } from './feishu/feishu-config.ts'
 import {
   InMemoryCommunityService,
   InMemoryLeaderboardService,
@@ -53,6 +55,10 @@ export interface ChatStretchServiceOptions {
   readonly imAdapters?: readonly IImChannelAdapter[] | undefined
   /** 缺省 mock 自动补全（缺省 true；组合根接管全部通道时置 false）。 */
   readonly autoRegisterMocks?: boolean | undefined
+  /** S1 飞书真实通道配置（凭据齐备走 OpenAPI；缺省不启用，保留 lark mock）。 */
+  readonly feishu?: FeishuChannelConfig | undefined
+  /** 飞书适配器 HTTP 传输覆盖（缺省 globalThis.fetch；测试注入）。 */
+  readonly fetchImpl?: typeof fetch | undefined
   /** 故事服务覆盖（缺省 InMemoryStoryService）。 */
   readonly storyService?: IStoryService | undefined
   /** 社区服务覆盖（缺省 InMemoryCommunityService）。 */
@@ -82,6 +88,23 @@ export type {
 
 export { InMemoryImChannelAdapter } from './mock/im-channel-mock.ts'
 export type { InMemoryImChannelOptions } from './mock/im-channel-mock.ts'
+
+export { FeishuImChannelAdapter } from './feishu/feishu-im-channel.ts'
+export type { FeishuImChannelOptions } from './feishu/feishu-im-channel.ts'
+export {
+  FEISHU_DEFAULT_BASE_URL,
+  FEISHU_RECEIVE_ID_TYPES,
+  FEISHU_CONFIG_ENV_KEYS,
+  resolveFeishuChannelConfig,
+  isFeishuConfigured,
+  feishuConfigGap,
+} from './feishu/feishu-config.ts'
+export type { FeishuChannelConfig, FeishuReceiveIdType, FeishuEnv } from './feishu/feishu-config.ts'
+export {
+  FeishuConnectorOutboundAdapter,
+  createFeishuConnectorOutboundAdapter,
+} from './feishu/feishu-connector-outbound.ts'
+export type { IConnectorOutboundBridgeShape } from './feishu/feishu-connector-outbound.ts'
 
 export {
   InMemoryCommunityService,
@@ -115,6 +138,7 @@ export class ChatStretchService extends Service {
   constructor(ctx: Context, options: ChatStretchServiceOptions = {}) {
     super(ctx, 'chatStretch')
     this.imChannels = new ImChannelRegistry()
+    const providedKinds = new Set((options.imAdapters ?? []).map((adapter) => adapter.kind))
     for (const adapter of options.imAdapters ?? []) {
       this.imChannels.register(adapter)
     }
@@ -124,6 +148,12 @@ export class ChatStretchService extends Service {
           this.imChannels.register(new InMemoryImChannelAdapter(kind))
         }
       }
+    }
+    // S1：飞书真实通道配置提供且未显式预置 lark adapter 时，覆盖缺省 lark mock。
+    if (options.feishu && !providedKinds.has('lark')) {
+      this.imChannels.register(
+        new FeishuImChannelAdapter({ config: options.feishu, fetchImpl: options.fetchImpl }),
+      )
     }
     this.storyService = options.storyService ?? new InMemoryStoryService()
     this.communityService = options.communityService ?? new InMemoryCommunityService()
@@ -150,6 +180,12 @@ export class ChatStretchService extends Service {
   async imHealth(kind: ImChannelKind): Promise<ImHealth> {
     const adapter = this.imChannels.get(kind)
     return adapter ? adapter.health() : { ok: false, detail: `no adapter for ${kind}` }
+  }
+
+  /** S1 飞书真实通道实例（组合根可据此构造 connector outbound 桥）；缺省未启用返回 undefined。 */
+  get feishuChannel(): FeishuImChannelAdapter | undefined {
+    const adapter = this.imChannels.get('lark')
+    return adapter instanceof FeishuImChannelAdapter ? adapter : undefined
   }
 
   // -------------------------------------------------------------------------
