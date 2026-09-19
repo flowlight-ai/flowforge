@@ -52,7 +52,7 @@ port clowder `packages/api/src/routes/games.ts`（`gameRoutes`，`gameStartSchem
 ### 2.3 拆分矩阵
 | 子项 | 内容 | 依赖 | 状态 |
 |---|---|---|---|
-| S5-1 | **命令解析 + 座位构建** pure 层（`parseGameCommand`/`sanitizeCatIds`/`buildGameSeats` + schema 校验）移植为注入式纯函数 | 无 | **首启** |
+| S5-1 | **命令解析 + 座位构建** pure 层（`parseGameCommand`/`sanitizeCatIds`/`buildGameSeats` + schema 校验）移植为注入式纯函数 | 无 | **✅ 已交付（2026-09-19）**：`@flowforge/cats-games`（`packages/cats/games`）忠实移植 game-command-interceptor（parse/sanitize/build + 常量词汇 + clampToPreset）+ zod seatSchema/gameStartSchema/parsedGameCommandSchema/safeParseParsedGameCommand（`z.record` 双参对齐 zod v4 惯例），复用 `@flowforge/cats-shared` `Seat`，零 LLM/传输依赖注入式纯函数；30 包级 vitest / tsc exit 0 / oxlint 0 |
 | S5-2 | 引擎状态机（WerewolfLobby + GameOrchestrator 动作分派） | LLM | 需 LLM 注入 seam |
 | S5-3 | `/game` 路由 + MCP game-action 接线 | S5-1/S5-2 | 后接线 |
 
@@ -89,7 +89,7 @@ email / github-signals / connectors / redis-port 已交付；`audio-proxy.ts` �
 | 顺序 | 批次 | 理由 | 门禁 |
 |---|---|---|---|
 | 1 | S4（先 S4-1） | 唯一零外部凭据、即时动工、符合 operator 准入指令 | ✅ S4-1 已交付（2026-09-19）；S4-2 依 Electron 工具链裁决 |
-| 2 | S5（先 S5-1） | pure 层即时动工；引擎后续需 LLM | S5-2 依 LLM seam |
+| 2 | S5（先 S5-1） | pure 层即时动工；引擎后续需 LLM | ✅ S5-1 已交付（2026-09-19）；S5-2 依 LLM seam |
 | 3 | S6 | 先裁决方向（S6-0） | operator 定方向 |
 | 4 | S2 | 缺服务，保持 ports，待凭据 | 外部 TTS/RSS 凭据 |
 
