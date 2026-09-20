@@ -53,8 +53,11 @@ port clowder `packages/api/src/routes/games.ts`（`gameRoutes`，`gameStartSchem
 | 子项 | 内容 | 依赖 | 状态 |
 |---|---|---|---|
 | S5-1 | **命令解析 + 座位构建** pure 层（`parseGameCommand`/`sanitizeCatIds`/`buildGameSeats` + schema 校验）移植为注入式纯函数 | 无 | **✅ 已交付（2026-09-19）**：`@flowforge/cats-games`（`packages/cats/games`）忠实移植 game-command-interceptor（parse/sanitize/build + 常量词汇 + clampToPreset）+ zod seatSchema/gameStartSchema/parsedGameCommandSchema/safeParseParsedGameCommand（`z.record` 双参对齐 zod v4 惯例），复用 `@flowforge/cats-shared` `Seat`，零 LLM/传输依赖注入式纯函数；30 包级 vitest / tsc exit 0 / oxlint 0 |
-| S5-2 | 引擎状态机（WerewolfLobby + GameOrchestrator 动作分派） | LLM | 需 LLM 注入 seam |
+| S5-2a | **LLM 注入 seam**（决策面适配层）：AI 端口 + prompt 构造 + AI 玩家适配器 + 测试双例 | 无（纯注入式，可离线） | **✅ 已交付（2026-09-20）**：详见行下注 |
+| S5-2b | 完整引擎状态机（WerewolfLobby + GameOrchestrator 动作分派） | S5-2a + LLM runtime | 待 LLM runtime 注入 |
 | S5-3 | `/game` 路由 + MCP game-action 接线 | S5-1/S5-2 | 后接线 |
+
+> **S5-2a 注**（2026-09-20 交付）：`@flowforge/cats-games` 新增 `src/llm/` 三件套 + 测试双例——①`ai-provider.ts`：`GameAIProvider` 端口（`generateAction(prompt,schema)→{actionName,targetSeat?}` + `generateSpeech(prompt)→string`，对齐 clowder `AIProvider` 但改名避歧义）+ `assertAIActionResponse` 不变式守卫（在 seam 边界把 LLM 输出当非安全输入校验：actionName 非空 string、targetSeat 合法座次）；②`werewolf-prompt.ts`：`buildWerewolfPrompt` 忠实移植 clowder werewolf-prompts 全角色（wolf/seer/witch/guard/hunter/idiot/villager）；③`ai-player.ts`：`GameWerewolfAIPlayer` 适配器（`decideNightAction`/`decideSpeech`/`decideVote`/`decideSpeechWithFormat`，动作经 assert 校验后转 `GameAction`）；④`ai-provider-fakes.ts`：`NoopGameAIProvider`（any call → `GameLlmInvariantViolation`）+ `ScriptedGameAIProvider`（FIFO `actions`/`speeches` 队列 + 调用记录，队列耗尽即 throw）。57 包级 vitest（新增 27：seam/guard 7 + prompt 8 + adapter 6 + fakes 6）/ tsc exit 0 / oxlint 0。完整引擎 S5-2b 待 LLM runtime 注入。随 PR 提交。
 
 ---
 
@@ -89,7 +92,7 @@ email / github-signals / connectors / redis-port 已交付；`audio-proxy.ts` �
 | 顺序 | 批次 | 理由 | 门禁 |
 |---|---|---|---|
 | 1 | S4（先 S4-1） | 唯一零外部凭据、即时动工、符合 operator 准入指令 | ✅ S4-1 已交付（2026-09-19）；S4-2 依 Electron 工具链裁决 |
-| 2 | S5（先 S5-1） | pure 层即时动工；引擎后续需 LLM | ✅ S5-1 已交付（2026-09-19）；S5-2 依 LLM seam |
+| 2 | S5（先 S5-1） | pure 层即时动工；引擎后续需 LLM | ✅ S5-1 已交付（2026-09-19）；**S5-2a LLM seam 已交付（2026-09-20）**；S5-2b 完整引擎依 LLM runtime |
 | 3 | S6 | 先裁决方向（S6-0） | operator 定方向 |
 | 4 | S2 | 缺服务，保持 ports，待凭据 | 外部 TTS/RSS 凭据 |
 
