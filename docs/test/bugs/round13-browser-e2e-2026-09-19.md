@@ -455,3 +455,45 @@ return internal.import(specifier, bareModuleBaseUrl, {})   // ← 解析不到�
 **未决残留（无论 C1a/C1b 都需单独处理）**：`packages/host/cats-api/node_modules/@flowforge/cats-routes/lib/index.js` 缺失——该包无包内 `tsdown.config.ts`，未产出 bundled `lib/index.js`；与 profile/解析基点无关，属 P-544 同族的**产出覆盖**问题。
 
 **处置**：本轮改动**已完整回滚**（`apps/cli/src/profile-boot.ts` 还原），仓库未留半成品——因为「只装不回落」会使启动比修改前更差（20 > 12 处失败）。C1 转由复判人/接手人按 C1a 或 C1b 实施。
+
+### P-545 C1b 前置：profile loader 条目全集枚举（2026-09-19）
+
+**方法**（可复现）：
+
+```bash
+node --import tsx/esm apps/cli/src/bin.ts --profile web      --dump-config > /tmp/ff-web-tree.yml
+node --import tsx/esm apps/cli/src/bin.ts --profile headless --dump-config > /tmp/ff-headless-tree.yml
+grep -oE "name: '[^']+'" <tree.yml> | sed "s/name: '//;s/'$//" | sort -u
+```
+
+**结果**：条目的 `name` 全部为 `@flowforge/*`，无第三方条目。
+
+| profile | 条目总数 | `apps/cli` 已声明 | **待补声明** |
+|---|---:|---:|---:|
+| `web` | 91 | 78 | **13** |
+| `headless` | 82 | 78 | **4** |
+
+**C1b 待补清单（两 profile 并集，去重后 11 个包 + 3 个子路径根）**：
+
+| # | 包名 | web | headless | 备注 |
+|---|---|:--:|:--:|---|
+| 1 | `@flowforge/agent-presets` | ✔ | — | |
+| 2 | `@flowforge/client-connection` | ✔ | — | |
+| 3 | `@flowforge/cordis-host-runner` | ✔ | — | |
+| 4 | `@flowforge/harness-env-registry` | ✔ | ✔ | 即 P-545 报错项之一 |
+| 5 | `@flowforge/host-cats-api` | ✔ | — | |
+| 6 | `@flowforge/host-directory-picker` | ✔ | — | |
+| 7 | `@flowforge/host-plugin-inventory` | ✔ | — | |
+| 8 | `@flowforge/host-webserver` | ✔ | — | **Web 服务本体**，未声明即解释「端口不监听」 |
+| 9 | `@flowforge/llm-openroute` | ✔ | ✔ | 即 P-545 报错项之一 |
+| 10 | `@flowforge/session-log-export` | ✔ | ✔ | 即 P-545 报错项之一 |
+| 11 | `@flowforge/session-stats` | ✔ | — | |
+| — | `@flowforge/tool-subagent-control`（子路径 `…/list-agents`） | ✔ | ✔ | 需声明**根包** |
+| — | `@flowforge/headless`（子路径 `…/startup`） | — | ✔ | 需声明**根包** |
+| — | `@flowforge/web-app`（子路径 `…/startup`） | ✔ | — | 已由 P-542 修复补上声明 |
+
+**实施提示（C1b）**：在 `apps/cli/package.json` 按字母序补声明上述包（`workspace:^`，与既有条目同法），随后 `pnpm install` 同步锁文件；预期效果 = 安装目录对**全部** loader 条目可解析 → `bareModuleBaseUrl` 不再需要回落分支（C1a 可省）。验证须覆盖两个 profile 的真实启动与 HTTP 探测。
+
+**仍独立于本清单的残留**：`packages/host/cats-api/node_modules/@flowforge/cats-routes/lib/index.js` 缺失（该包无包内 `tsdown.config.ts`，未产出 bundled 产物）——补声明后仍需单独解决该包的产出覆盖。
+
+**注**：以上枚举为本轮新增的**可复现事实**；C1b 的代码改动**未实施**（本轮仅完成前置枚举），转由复判人/接手人执行。
