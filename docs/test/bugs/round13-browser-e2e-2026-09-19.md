@@ -383,3 +383,44 @@ profiles/
 - 复判人由 operator 指派；复判通过后由复判人签署 `✅ Verified` / 或按实态打回。
 
 **⚠️ 遗留风险提示**：P-544 的修复（`tsdown.config.ts` 派生打包图 + `build` 脚本解耦）已实测使 `pnpm build` 转为 exit 0 且产出 `lib/index.js`，但其**对 client face 与 CI 的完整影响未经独立复核**（client face 保持原 glob 未变，理论上无影响，但未实测 client 构建）。建议复判时一并覆盖：`FF_BUILD_FACE=client` 的构建路径与 `ts-ci.yml` / `web-ci.yml` 的通过情况。
+
+---
+
+## P-545 决策落定与复判指派（2026-09-19，operator 裁决）
+
+### 决策：采用 **C1**（插件条目按「安装目录优先」解析，与 bundle 契约统一）
+
+### 实现落点（已精确定位，供实施者直接切入）
+
+`packages/boot/app-boot/src/index.ts:495-502`（`mountRootInclude` 内的 `import` 覆写）：
+
+```ts
+override import(name: string, getOuterStack?: () => string[]): unknown {
+  ...
+  if (name.startsWith('.') || name.startsWith('cordis:')) return super.import(specifier, getOuterStack)
+  ...
+  if (internal === undefined) return super.import(specifier, getOuterStack)   // ← 落到这里则按 profile 基点解析
+  return internal.import(specifier, bareModuleBaseUrl, {})
+}
+```
+
+**判断**：该处**已存在**「安装目录为基点」的解析机制（`bareModuleBaseUrl`，`app-boot` 在 `mountRootInclude` 调用点传入），只是对「非 internal 的裸包名」回落到 `super.import`（以 profile 目录为基点）→ 正是 3 个缺失包与 `web-app` 旧副本报错的原因。C1 的改动面因此集中在**这一个 `import` 覆写**：让所有**可安装目录解析成功**的裸包名都走 `bareModuleBaseUrl`，仅在安装目录解析不到时才回落 profile 基点。
+
+**实施前必须确认的两点**（避免越界改动）：
+1. `internal` 的语义与判定条件（为何这 3 个包被判为「非 internal」）；
+2. 该覆写的调用面（是否仅服务于 root include；改动是否影响非 profile 启动路径，如源码直跑）。
+
+**验证要求**：改后须以 `pnpm build` + `pnpm start --no-open --port 5200` + 真实 HTTP 探测为证据；并回归 `--profile headless`（避免修好 web 打断 headless）。
+
+### 复判人指派
+
+- **复判人**：`[davinci]`（该身份在仓库有活跃会话，具备独立执行环境）；备选 `[luban]`（文档/流程侧）。
+- **复判范围**：P-542 / P-544 / P-545 三单的 `测试回归结论` 签署；须覆盖 P-544 对 client face 与 CI 的影响（`FF_BUILD_FACE=client`、`ts-ci.yml`、`web-ci.yml`）。
+- **sherlock 的角色**：仅提供上述可复现证据与我方定位，**不参与签判、也不再改本单相关代码**（避免继续叠加角色重叠）。
+- operator 可随时改派；改派后请更新本节。
+
+### 交接现状（诚实记录）
+
+- **后端仍未启动成功**：P-542（已修）→ P-544（已修并实测构建转绿）→ **P-545 待实施**（决策已定 C1，落点已定位，实装未开始）。
+- **前端真实浏览器验证已完成**：33 条路由全通过（`routes-smoke`），交互用例见 P-541。
+- sherlock 本轮在 P-545 上**仅完成定性、决策落点定位与交接**，未产出未经验证的代码改动——bootstrap 路径改动须留完整验证空间，遂于此停手交接。
