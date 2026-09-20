@@ -1,0 +1,44 @@
+{
+  "name": "@flowforge/desktop",
+  "description": "Desktop shell contract layer for the FlowForge host — service-orchestration entrypoint, preload bridge contract, and externalized config (port of clowder desktop/, contract-only, Electron integration deferred)",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/apps/desktop"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./config": {
+      "types": "./lib/types/config.d.ts",
+      "default": "./lib/config.js"
+    },
+    "./bridge": {
+      "types": "./lib/types/bridge.d.ts",
+      "default": "./lib/bridge.js"
+    },
+    "./bridge/invariant": {
+      "types": "./lib/types/bridge/invariant.d.ts",
+      "default": "./lib/bridge/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/config.js",
+    "lib/bridge.js",
+    "lib/bridge/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT"
+}
