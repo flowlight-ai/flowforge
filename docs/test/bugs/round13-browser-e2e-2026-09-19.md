@@ -383,3 +383,75 @@ profiles/
 - 复判人由 operator 指派；复判通过后由复判人签署 `✅ Verified` / 或按实态打回。
 
 **⚠️ 遗留风险提示**：P-544 的修复（`tsdown.config.ts` 派生打包图 + `build` 脚本解耦）已实测使 `pnpm build` 转为 exit 0 且产出 `lib/index.js`，但其**对 client face 与 CI 的完整影响未经独立复核**（client face 保持原 glob 未变，理论上无影响，但未实测 client 构建）。建议复判时一并覆盖：`FF_BUILD_FACE=client` 的构建路径与 `ts-ci.yml` / `web-ci.yml` 的通过情况。
+
+---
+
+## P-545 决策落定与复判指派（2026-09-19，operator 裁决）
+
+### 决策：采用 **C1**（插件条目按「安装目录优先」解析，与 bundle 契约统一）
+
+### 实现落点（已精确定位，供实施者直接切入）
+
+`packages/boot/app-boot/src/index.ts:495-502`（`mountRootInclude` 内的 `import` 覆写）：
+
+```ts
+override import(name: string, getOuterStack?: () => string[]): unknown {
+  ...
+  if (name.startsWith('.') || name.startsWith('cordis:')) return super.import(specifier, getOuterStack)
+  ...
+  if (internal === undefined) return super.import(specifier, getOuterStack)   // ← 落到这里则按 profile 基点解析
+  return internal.import(specifier, bareModuleBaseUrl, {})
+}
+```
+
+**判断**：该处**已存在**「安装目录为基点」的解析机制（`bareModuleBaseUrl`，`app-boot` 在 `mountRootInclude` 调用点传入），只是对「非 internal 的裸包名」回落到 `super.import`（以 profile 目录为基点）→ 正是 3 个缺失包与 `web-app` 旧副本报错的原因。C1 的改动面因此集中在**这一个 `import` 覆写**：让所有**可安装目录解析成功**的裸包名都走 `bareModuleBaseUrl`，仅在安装目录解析不到时才回落 profile 基点。
+
+**实施前必须确认的两点**（避免越界改动）：
+1. `internal` 的语义与判定条件（为何这 3 个包被判为「非 internal」）；
+2. 该覆写的调用面（是否仅服务于 root include；改动是否影响非 profile 启动路径，如源码直跑）。
+
+**验证要求**：改后须以 `pnpm build` + `pnpm start --no-open --port 5200` + 真实 HTTP 探测为证据；并回归 `--profile headless`（避免修好 web 打断 headless）。
+
+### 复判人指派
+
+- **复判人**：`[davinci]`（该身份在仓库有活跃会话，具备独立执行环境）；备选 `[luban]`（文档/流程侧）。
+- **复判范围**：P-542 / P-544 / P-545 三单的 `测试回归结论` 签署；须覆盖 P-544 对 client face 与 CI 的影响（`FF_BUILD_FACE=client`、`ts-ci.yml`、`web-ci.yml`）。
+- **sherlock 的角色**：仅提供上述可复现证据与我方定位，**不参与签判、也不再改本单相关代码**（避免继续叠加角色重叠）。
+- operator 可随时改派；改派后请更新本节。
+
+### 交接现状（诚实记录）
+
+- **后端仍未启动成功**：P-542（已修）→ P-544（已修并实测构建转绿）→ **P-545 待实施**（决策已定 C1，落点已定位，实装未开始）。
+- **前端真实浏览器验证已完成**：33 条路由全通过（`routes-smoke`），交互用例见 P-541。
+- sherlock 本轮在 P-545 上**仅完成定性、决策落点定位与交接**，未产出未经验证的代码改动——bootstrap 路径改动须留完整验证空间，遂于此停手交接。
+
+### P-545 C1 实装尝试与回滚（2026-09-19，第三轮）
+
+**已定位的完整因果链**（本轮的实质产出）：
+
+1. `apps/cli/src/profile-boot.ts:248` 调用 `boot(NAME, rootConfig, patches, prepare)` —— **未传第 5 实参 `bareModuleBaseUrl`**；
+2. 于是 `packages/boot/app-boot/src/index.ts:492` 的三元判断落入 `bareModuleBaseUrl === undefined ? Include : HostResolvedRootInclude` 的**前一分支**：`HostResolvedRootInclude`（安装目录基线解析）**从未被安装**；
+3. 所有裸包名遂走 `super.import`，以 root include 的配置文件为基点 → **profile 目录**（错误信息 `imported from ...\profiles\web\` 即此）；
+4. 大部分条目仍能解析成功，是因为 `profiles/node_modules` 里有一份**早年的 136 包快照**在兜底；缺失的 3 包与 `web-app` 旧副本因此暴露。
+
+**实装尝试**：按 C1 在调用点补上安装锚点（复用既有 `INSTALL_ANCHOR = apps/cli/package.json`，`pathToFileURL(INSTALL_ANCHOR).href`）。
+
+**实测结果：失败得更彻底，已回滚**。真实输出（`pnpm start --no-open --port 5200`）：
+
+- 解析基点**确实切换成功**：错误路径由 `C:\Users\hyg\.flowforge\profiles\...` 变为 `D:\software\fl\flowlight\flowforge\apps\cli\node_modules\...`；
+- 但 `Cannot find` 由 12 处**增至 20 处**，新增 `@flowforge/client-connection`、`@flowforge/host-webserver`、`@flowforge/host-directory-picker`、`@flowforge/host-plugin-inventory` 等——**这些包并未链接进 `apps/cli/node_modules`**（`apps/cli` 未声明它们为依赖），而此前正是 profile 的 136 包快照在替安装目录兜底。
+
+**结论（修正 C1 的实施要求）**：C1 **不能只改调用点**。`HostResolvedRootInclude.import` 当前实现是「**只按安装目录解析、无回落**」：
+
+```ts
+if (internal === undefined) return super.import(specifier, getOuterStack)
+return internal.import(specifier, bareModuleBaseUrl, {})   // ← 解析不到即抛错
+```
+
+正确实装须二选一：
+- **C1a**：在覆盖内实现**安装目录优先 → 解析失败回落 profile 基点**的两级解析（对应工单先前写明的「仅在安装目录解析不到时才回落」）；
+- **C1b**：或在 `apps/cli` 补声明全部运行期插件依赖，使安装目录成为**完备**的解析源（与 P-542 给 `@flowforge/web-app` 补声明同法，但清单更长）。
+
+**未决残留（无论 C1a/C1b 都需单独处理）**：`packages/host/cats-api/node_modules/@flowforge/cats-routes/lib/index.js` 缺失——该包无包内 `tsdown.config.ts`，未产出 bundled `lib/index.js`；与 profile/解析基点无关，属 P-544 同族的**产出覆盖**问题。
+
+**处置**：本轮改动**已完整回滚**（`apps/cli/src/profile-boot.ts` 还原），仓库未留半成品——因为「只装不回落」会使启动比修改前更差（20 > 12 处失败）。C1 转由复判人/接手人按 C1a 或 C1b 实施。
