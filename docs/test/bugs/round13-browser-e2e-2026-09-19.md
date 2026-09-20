@@ -424,3 +424,34 @@ override import(name: string, getOuterStack?: () => string[]): unknown {
 - **后端仍未启动成功**：P-542（已修）→ P-544（已修并实测构建转绿）→ **P-545 待实施**（决策已定 C1，落点已定位，实装未开始）。
 - **前端真实浏览器验证已完成**：33 条路由全通过（`routes-smoke`），交互用例见 P-541。
 - sherlock 本轮在 P-545 上**仅完成定性、决策落点定位与交接**，未产出未经验证的代码改动——bootstrap 路径改动须留完整验证空间，遂于此停手交接。
+
+### P-545 C1 实装尝试与回滚（2026-09-19，第三轮）
+
+**已定位的完整因果链**（本轮的实质产出）：
+
+1. `apps/cli/src/profile-boot.ts:248` 调用 `boot(NAME, rootConfig, patches, prepare)` —— **未传第 5 实参 `bareModuleBaseUrl`**；
+2. 于是 `packages/boot/app-boot/src/index.ts:492` 的三元判断落入 `bareModuleBaseUrl === undefined ? Include : HostResolvedRootInclude` 的**前一分支**：`HostResolvedRootInclude`（安装目录基线解析）**从未被安装**；
+3. 所有裸包名遂走 `super.import`，以 root include 的配置文件为基点 → **profile 目录**（错误信息 `imported from ...\profiles\web\` 即此）；
+4. 大部分条目仍能解析成功，是因为 `profiles/node_modules` 里有一份**早年的 136 包快照**在兜底；缺失的 3 包与 `web-app` 旧副本因此暴露。
+
+**实装尝试**：按 C1 在调用点补上安装锚点（复用既有 `INSTALL_ANCHOR = apps/cli/package.json`，`pathToFileURL(INSTALL_ANCHOR).href`）。
+
+**实测结果：失败得更彻底，已回滚**。真实输出（`pnpm start --no-open --port 5200`）：
+
+- 解析基点**确实切换成功**：错误路径由 `C:\Users\hyg\.flowforge\profiles\...` 变为 `D:\software\fl\flowlight\flowforge\apps\cli\node_modules\...`；
+- 但 `Cannot find` 由 12 处**增至 20 处**，新增 `@flowforge/client-connection`、`@flowforge/host-webserver`、`@flowforge/host-directory-picker`、`@flowforge/host-plugin-inventory` 等——**这些包并未链接进 `apps/cli/node_modules`**（`apps/cli` 未声明它们为依赖），而此前正是 profile 的 136 包快照在替安装目录兜底。
+
+**结论（修正 C1 的实施要求）**：C1 **不能只改调用点**。`HostResolvedRootInclude.import` 当前实现是「**只按安装目录解析、无回落**」：
+
+```ts
+if (internal === undefined) return super.import(specifier, getOuterStack)
+return internal.import(specifier, bareModuleBaseUrl, {})   // ← 解析不到即抛错
+```
+
+正确实装须二选一：
+- **C1a**：在覆盖内实现**安装目录优先 → 解析失败回落 profile 基点**的两级解析（对应工单先前写明的「仅在安装目录解析不到时才回落」）；
+- **C1b**：或在 `apps/cli` 补声明全部运行期插件依赖，使安装目录成为**完备**的解析源（与 P-542 给 `@flowforge/web-app` 补声明同法，但清单更长）。
+
+**未决残留（无论 C1a/C1b 都需单独处理）**：`packages/host/cats-api/node_modules/@flowforge/cats-routes/lib/index.js` 缺失——该包无包内 `tsdown.config.ts`，未产出 bundled `lib/index.js`；与 profile/解析基点无关，属 P-544 同族的**产出覆盖**问题。
+
+**处置**：本轮改动**已完整回滚**（`apps/cli/src/profile-boot.ts` 还原），仓库未留半成品——因为「只装不回落」会使启动比修改前更差（20 > 12 处失败）。C1 转由复判人/接手人按 C1a 或 C1b 实施。
