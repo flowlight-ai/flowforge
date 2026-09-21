@@ -9,7 +9,11 @@ function setup(seed: GameRuntime[], opts: { aiPlayerFactory?: (catId: string) =>
   const store = new InMemoryGameStore(seed)
   const socket = new RecordingSocket()
   const orchestrator = new GameOrchestrator({ gameStore: store, socketManager: socket })
-  const ap = new GameAutoPlayer({ gameStore: store, orchestrator, aiPlayerFactory: opts.aiPlayerFactory })
+  const ap = new GameAutoPlayer({
+    gameStore: store,
+    orchestrator,
+    ...(opts.aiPlayerFactory !== undefined ? { aiPlayerFactory: opts.aiPlayerFactory } : {}),
+  })
   return { store, socket, orchestrator, ap }
 }
 

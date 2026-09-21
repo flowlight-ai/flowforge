@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { GameOrchestrator } from '../../src/engine/game-orchestrator.ts'
 import { createWerewolfDefinition } from '../../src/engine/werewolf-definition.ts'
 import { InMemoryGameStore, makeRuntime, makeSeatsFromRoles, RecordingSocket, RecordingMessageStore } from './game.helpers.ts'
-import type { GameAction, GameConfig } from '@flowforge/cats-shared'
+import type { GameAction, GameConfig, GameRuntime } from '@flowforge/cats-shared'
 
 const CONFIG: GameConfig = { timeoutMs: 30000, voiceMode: false, humanRole: 'player' }
 

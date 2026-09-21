@@ -67,7 +67,10 @@ describe('WerewolfEngine — night resolution', () => {
   it('witch self-heal is allowed on round 1 but not later', () => {
     const e = engine({ phase: 'night_witch' })
     e.getRuntime().round = 1
-    expect(() => e.setNightAction('P4', 'heal', 'P4') && e.resolveNight()).not.toThrow()
+    expect(() => {
+      e.setNightAction('P4', 'heal', 'P4')
+      e.resolveNight()
+    }).not.toThrow()
     e.getRuntime().round = 2
     expect(() => e.setNightAction('P4', 'heal', 'P4')).not.toThrow()
   })

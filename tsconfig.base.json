@@ -36,6 +36,9 @@
       "@flowforge/cats-context-assembly": [
         "./packages/cats/context-assembly/src/index.ts"
       ],
+      "@flowforge/cats-games": [
+        "./packages/cats/games/src/index.ts"
+      ],
       "@flowforge/cats-shared": [
         "./packages/cats/shared/src/index.ts"
       ],

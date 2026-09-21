@@ -39,9 +39,11 @@
   ],
   "license": "MIT",
   "peerDependencies": {
+    "@flowforge/cats-games": "workspace:^",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@flowforge/cats-games": "workspace:^",
     "zod": "^4.4.3"
   }
 }

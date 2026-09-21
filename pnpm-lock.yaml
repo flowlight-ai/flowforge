@@ -520,6 +520,9 @@ importers:
 
   packages/api/rest-controllers:
     devDependencies:
+      '@flowforge/cats-games':
+        specifier: workspace:^
+        version: link:../../cats/games
       zod:
         specifier: ^4.4.3
         version: 4.5.4

@@ -15,10 +15,10 @@ describe('createWerewolfDefinition', () => {
   })
 
   it('exposes standard werewolf roles with correct factions', () => {
-    expect(ROLE_TABLE.wolf.faction).toBe('wolf')
-    expect(ROLE_TABLE.seer.faction).toBe('village')
-    expect(ROLE_TABLE.witch.nightActionPhase).toBe('night_witch')
-    expect(ROLE_TABLE.hunter.nightActionPhase).toBeUndefined()
+    expect(ROLE_TABLE.wolf!.faction).toBe('wolf')
+    expect(ROLE_TABLE.seer!.faction).toBe('village')
+    expect(ROLE_TABLE.witch!.nightActionPhase).toBe('night_witch')
+    expect(ROLE_TABLE.hunter!.nightActionPhase).toBeUndefined()
   })
 
   it('has presets for 6/7/8/9/10/12 player boards', () => {
