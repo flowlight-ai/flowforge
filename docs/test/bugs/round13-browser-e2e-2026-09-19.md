@@ -533,3 +533,22 @@ Cannot find module 'D:\…\packages\host\cats-api\node_modules\@flowforge\cats-r
 - **D2**：或让这些包的 `exports`/`main` 指向 `lib/types/`（tsc 产物）而非 `lib/index.js`，使 bundled 入口成为可选。
 
 **状态**：P-545 维持 `Open`（S1）。C1b 的声明补齐**已实施且有实测证据**（错误性质改善：找不到包 → 找到包但缺入口），但**启动仍未成功**，故不构成终点；最终判定仍留待独立复判。
+
+### P-545 D1 前置：发现 P-544 修法疑似引入退化（2026-09-21）
+
+**实测反证**（决定 D1 之前必须先解决）：
+
+| 检查 | 实测 |
+|---|---|
+| **全仓 `lib/index.js` 数量** | **≈0**（`packages/boot/app-boot/lib/index.js` 时间戳为 **08-17**，属旧残留；`packages/host/cats-api`、`packages/cats/routes` **均无**） |
+| 带本地 `tsdown.config.ts` 的包数 | 27 |
+| `pnpm build` 退出码 | 0，但日志仅报 `✔ [@flowforge/cli] Build complete in 40748ms` |
+| `lib/types/index.js`（tsc 产物） | 广泛存在（09-18 时间戳） |
+
+**推论**：`pnpm build` 虽已 exit 0，却**并未为 workspace 各包产出 bundled 入口**——即 P-544 的修复只做到「不再中止」，但**打包覆盖实质为零**。此前我记录的四包「无产出」现象，实为**全仓现象**，非个别包问题；我此前那张「有/无本地配置决定产出」的表**已被本反证推翻**（`host/cats-api` 与 `cats/routes` 的 `package.json` 入口声明完全相同，产出却都不存在，所谓差异来自旧残留而非构建）。
+
+**最可能的原因（指向 P-544 自己的改动）**：P-544 把 host face 的 `workspace` 由 **glob** `['vendor/*','packages/*/*','apps/cli']` 改为**显式目录路径列表**。tsdown 的 workspace（包发现）语义很可能依赖 glob 模式；改为显式路径后，其包枚举/配置发现行为退化，导致仅少数（如带 config 的 CLI）被处理。
+
+**处置建议**：D1 实施前，须先回退 P-544 中 `workspace` 的那一处改动形态（**恢复 glob 枚举**），再以「容忍缺入口」的其它手段解决 `integration-e2e` 类包（例如把此类包补入 `tsconfig.host.json`，或让 tsdown 忽略无入口的包）——否则 D1 无处落地。
+
+**状态**：P-544 的「构建图派生」修法**存疑，需复判时重点复核**；P-545 维持 `Open`。本轮为**负结果记录**，未再改代码。
