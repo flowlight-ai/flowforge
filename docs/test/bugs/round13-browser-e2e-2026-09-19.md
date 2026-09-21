@@ -497,3 +497,39 @@ grep -oE "name: '[^']+'" <tree.yml> | sed "s/name: '//;s/'$//" | sort -u
 **仍独立于本清单的残留**：`packages/host/cats-api/node_modules/@flowforge/cats-routes/lib/index.js` 缺失（该包无包内 `tsdown.config.ts`，未产出 bundled 产物）——补声明后仍需单独解决该包的产出覆盖。
 
 **注**：以上枚举为本轮新增的**可复现事实**；C1b 的代码改动**未实施**（本轮仅完成前置枚举），转由复判人/接手人执行。
+
+### P-545 C1b 实装与实测（2026-09-19，第四轮）
+
+**改动**：`apps/cli/package.json` 补声明 11 个 loader 条目包（`workspace:^`，按字母序；`web-app` 已由 P-542 补过，`headless`/`tool-subagent-control` 等子路径根一并补齐），`pnpm install` 同步锁文件（`pnpm-lock.yaml` +33 行）。改动面干净：`apps/cli/package.json` 12 增 1 删（删除项仅为排序归位）。
+
+**实测（`pnpm start --no-open --port 5200`）**：端口仍不监听，但**错误性质已变**——
+
+- `Cannot find` 由 12 处降为 **6 类**，且已**不再是「找不到包」**，而统一变成**「找到包但没有构建入口」**：
+
+```
+Cannot find module 'C:\Users\hyg\.flowforge\profiles\node_modules\@flowforge\harness-env-registry\lib\index.js'
+Cannot find module 'C:\Users\hyg\.flowforge\profiles\node_modules\@flowforge\llm-openroute\lib\index.js'
+Cannot find module 'C:\Users\hyg\.flowforge\profiles\node_modules\@flowforge\session-log-export\lib\index.js'
+Cannot find module 'C:\Users\hyg\.flowforge\profiles\node_modules\@flowforge\web-app\lib\{index,startup}.js'
+Cannot find module 'D:\…\packages\host\cats-api\node_modules\@flowforge\cats-routes\lib\index.js'
+```
+
+即：**包解析这一步已被 C1b 修好**（3 个原先「找不到的包」现均能定位），残留全部是 **`lib/index.js`（bundled 入口）未产出**。
+
+**成因实测**（见下表）：tsdown 的 workspace 模式对本仓库大量包**不产出 `lib/index.js`**——产出与否与其是否带**包内 `tsdown.config.ts`** 强相关：
+
+| 包 | 包内 tsdown 配置 | `lib/index.js` |
+|---|:--:|:--:|
+| `packages/host/cats-api`（有配置，作为参照） | 有 | 有 |
+| `packages/cats/routes` | 无 | **无** |
+| `packages/harness/env-registry` | 无 | **无** |
+| `packages/llm/openroute` | 无 | **无** |
+| `packages/session-query/session-log-export` | 无 | **无** |
+
+**结论**：P-544 的修复**只解决了「bundler 整包中止」**（`pnpm build` 转绿），但**打包覆盖仍不完整**——无包内 `tsdown.config.ts` 的包不会产出 bundled 入口，而其 `package.json` 的 `main`/子路径导出正指向 `lib/index.js`。这是 P-545 的**最后一层**，也是 `cats-routes` 那条残留的同源问题（原以为它独立，实测同源）。
+
+**下一步（须先决策，测试侧不拍板）**：
+- **D1**：让 tsdown 的 workspace 模式对**所有** host 构建图内的包强制产出 bundled 入口（不依赖包内是否带 config）；
+- **D2**：或让这些包的 `exports`/`main` 指向 `lib/types/`（tsc 产物）而非 `lib/index.js`，使 bundled 入口成为可选。
+
+**状态**：P-545 维持 `Open`（S1）。C1b 的声明补齐**已实施且有实测证据**（错误性质改善：找不到包 → 找到包但缺入口），但**启动仍未成功**，故不构成终点；最终判定仍留待独立复判。

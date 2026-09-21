@@ -74,6 +74,9 @@ importers:
       '@flowforge/agent-loop':
         specifier: workspace:^
         version: link:../../packages/core/agent-loop
+      '@flowforge/agent-presets':
+        specifier: workspace:^
+        version: link:../../packages/preset/agent-presets
       '@flowforge/api-gateway':
         specifier: workspace:^
         version: link:../../packages/api/gateway
@@ -89,6 +92,9 @@ importers:
       '@flowforge/bash-sandbox':
         specifier: workspace:^
         version: link:../../packages/shell/bash-sandbox
+      '@flowforge/client-connection':
+        specifier: workspace:^
+        version: link:../../packages/client/connection
       '@flowforge/cmdline':
         specifier: workspace:^
         version: link:../../packages/boot/cmdline
@@ -116,6 +122,9 @@ importers:
       '@flowforge/cordis':
         specifier: workspace:^
         version: link:../../vendor/cordis
+      '@flowforge/cordis-host-runner':
+        specifier: workspace:^
+        version: link:../../packages/extensions/cordis-host-runner
       '@flowforge/cordis-plugin-hmr':
         specifier: workspace:^
         version: link:../../vendor/hmr
@@ -143,12 +152,27 @@ importers:
       '@flowforge/goal-round-driver':
         specifier: workspace:^
         version: link:../../packages/goal/goal-round-driver
+      '@flowforge/harness-env-registry':
+        specifier: workspace:^
+        version: link:../../packages/harness/env-registry
       '@flowforge/headless':
         specifier: workspace:^
         version: link:../../packages/bundle/headless
       '@flowforge/home-paths':
         specifier: workspace:^
         version: link:../../packages/util/home-paths
+      '@flowforge/host-cats-api':
+        specifier: workspace:^
+        version: link:../../packages/host/cats-api
+      '@flowforge/host-directory-picker':
+        specifier: workspace:^
+        version: link:../../packages/host/directory-picker
+      '@flowforge/host-plugin-inventory':
+        specifier: workspace:^
+        version: link:../../packages/host/plugin-inventory
+      '@flowforge/host-webserver':
+        specifier: workspace:^
+        version: link:../../packages/host/webserver
       '@flowforge/jobs-local':
         specifier: workspace:^
         version: link:../../packages/jobs/jobs-local
@@ -161,6 +185,9 @@ importers:
       '@flowforge/llm-deepseek':
         specifier: workspace:^
         version: link:../../packages/llm/llm-deepseek
+      '@flowforge/llm-openroute':
+        specifier: workspace:^
+        version: link:../../packages/llm/openroute
       '@flowforge/llm-pi-ai':
         specifier: workspace:^
         version: link:../../packages/llm/llm-pi-ai
@@ -191,6 +218,9 @@ importers:
       '@flowforge/session-checkpoint-policy':
         specifier: workspace:^
         version: link:../../packages/session/session-checkpoint-policy
+      '@flowforge/session-log-export':
+        specifier: workspace:^
+        version: link:../../packages/session-query/session-log-export
       '@flowforge/session-persistence-jsonl':
         specifier: workspace:^
         version: link:../../packages/session/session-persistence-jsonl
@@ -200,6 +230,9 @@ importers:
       '@flowforge/session-query-sqlite':
         specifier: workspace:^
         version: link:../../packages/session-query/session-query-sqlite
+      '@flowforge/session-stats':
+        specifier: workspace:^
+        version: link:../../packages/session/session-stats
       '@flowforge/session-telemetry-otel':
         specifier: workspace:^
         version: link:../../packages/session/session-telemetry-otel
