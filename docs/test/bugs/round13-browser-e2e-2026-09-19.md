@@ -552,3 +552,35 @@ Cannot find module 'D:\…\packages\host\cats-api\node_modules\@flowforge\cats-r
 **处置建议**：D1 实施前，须先回退 P-544 中 `workspace` 的那一处改动形态（**恢复 glob 枚举**），再以「容忍缺入口」的其它手段解决 `integration-e2e` 类包（例如把此类包补入 `tsconfig.host.json`，或让 tsdown 忽略无入口的包）——否则 D1 无处落地。
 
 **状态**：P-544 的「构建图派生」修法**存疑，需复判时重点复核**；P-545 维持 `Open`。本轮为**负结果记录**，未再改代码。
+
+### P-545 D1 前置：workspace glob 回退实测（2026-09-21）
+
+**改动**：`tsdown.config.ts` 的 `workspace` 回退为原 glob `['vendor/*','packages/*/*','apps/cli']`（移除 P-544 引入的「由构建图派生」函数及其 `node:fs` 导入），client face 逻辑不变。
+
+**实测（`pnpm build`）**：
+
+| 指标 | 派生列表（P-544 后） | **glob（回退后）** |
+|---|---|---|
+| 退出码 | 0 | **1** |
+| `lib/index.js` 产出数（`-maxdepth 4`，排除 `lib/types/`） | — | **182** |
+| 报错 | 无（但覆盖疑为零） | `[@flowforge/desktop] Cannot find entry`（**1 处**，末尾中止） |
+
+**关键核对**（关心的包是否产出 `lib/` 顶层入口）：
+
+| 包 | `lib/index.js` |
+|---|---|
+| `packages/host/cats-api` | **无** |
+| `packages/cats/routes` | **无** |
+| `packages/harness/env-registry` | **无** |
+| `packages/llm/openroute` | **无** |
+| `packages/session-query/session-log-export` | **无** |
+| `packages/boot/app-boot` | 仍是 **08-17 旧残留** |
+
+**结论（诚实记录）**：
+1. glob 形态**确实恢复了大量产出**（182 个 `lib/index.js`，派生列表形态下未见），证实「打包图派生」会削弱 tsdown 的包枚举；
+2. **但本次关心的 6 个包仍无 `lib/` 顶层入口**，且构建仍因 `@flowforge/desktop`（落点 `packages/apps/desktop/`）无入口而 **exit 1**；
+3. 因此**回退 glob 不足以解决 P-545 的「缺入口」层**；`@flowforge/desktop` 与先前的 `integration-e2e` 是同类（无 `lib/types` 产物），需「让 tsdown 跳过无入口包」或把它们补入构建图。
+
+**自我更正（重要）**：本单前一轮「全仓 `lib/index.js` ≈0」的测量**有误**——当时用的 `find` 带 `-maxdepth 3`，而 `packages/*/*/lib/index.js` 位于第 4 层，被漏计。该错误测量导致我给出「P-544 使产出归零」的过强结论；**本轮回退实测（182 个）表明派生列表形态下产出究竟多少需重新测量**，此前「零产出」判断**应视为未证实**。
+
+**处置**：本轮仅回退 + 实测记录，**未再改动其它逻辑**；`@flowforge/desktop` 的跳过策略（D1 的落地方式）待决策后实施。P-545 维持 `Open`；P-544 该处修法仍待复判重点复核。
