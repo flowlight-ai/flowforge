@@ -11,3 +11,5 @@ export * from './workspace-navigate.ts';
 export * from './settings.ts';
 export * from './avatars.ts';
 export * from './audio-proxy.ts';
+export * from './game.ts';
+export * from './game-action.ts';

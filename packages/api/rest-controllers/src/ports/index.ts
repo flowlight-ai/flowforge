@@ -6,3 +6,4 @@ export * from './git.ts';
 export * from './workspace-security.ts';
 export * from './skill-receipt.ts';
 export * from './upload-store.ts';
+export * from './game.ts';

@@ -6,8 +6,8 @@ import { NoopGameAIProvider, ScriptedGameAIProvider } from '../../src/llm/ai-pro
 describe('NoopGameAIProvider', () => {
   it('throws on generateAction and generateSpeech', async () => {
     const provider = new NoopGameAIProvider()
-    await expect(provider.generateAction('p', {})).rejects.toThrow(GameLlmInvariantViolation)
-    await expect(provider.generateSpeech('p')).rejects.toThrow(GameLlmInvariantViolation)
+    await expect(provider.generateAction()).rejects.toThrow(GameLlmInvariantViolation)
+    await expect(provider.generateSpeech()).rejects.toThrow(GameLlmInvariantViolation)
   })
 })
 

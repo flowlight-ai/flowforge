@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { HttpGameAIProvider, parseActionResponse } from '../../src/llm/http-ai-provider.ts'
 import { GameLlmInvariantViolation } from '../../src/llm/ai-provider.ts'
-import { GameLlmConfigError } from '../../src/llm/llm-config.ts'
+import { GameLlmConfigError, type LlmProviderConfig } from '../../src/llm/llm-config.ts'
 
 /** A minimal fetch response stub used to drive the injected transport. */
 function jsonResponse(body: unknown): Response {
@@ -17,8 +17,10 @@ interface CapturedRequest {
 function makeFakeFetch(onCall?: (url: string, init?: RequestInit) => void) {
   const calls: CapturedRequest[] = []
   const fetchImpl: typeof fetch = async (input, init) => {
-    const url = typeof input === 'string' ? input : input.url
-    calls.push({ url, init })
+    const url = typeof input === 'string' ? input : String(input)
+    const entry: CapturedRequest = { url }
+    if (init !== undefined) entry.init = init
+    calls.push(entry)
     onCall?.(url, init)
     // empty per-protocol arrays — safe for providers that read index [0].
     return jsonResponse({ content: [], choices: [], candidates: [] })
@@ -103,7 +105,7 @@ describe('HttpGameAIProvider', () => {
 
   it('throws GameLlmConfigError for an unknown provider kind', async () => {
     const provider = new HttpGameAIProvider({
-      resolveConfig: () => ({ provider: 'mystery' as 'mystery', model: 'm', baseUrl: 'u', apiKey: 'k' }),
+      resolveConfig: () => ({ provider: 'mystery', model: 'm', baseUrl: 'u', apiKey: 'k' }) as unknown as LlmProviderConfig,
       catId: 'cat1',
       fetchImpl: makeFakeFetch().fetchImpl,
     })
@@ -113,7 +115,7 @@ describe('HttpGameAIProvider', () => {
   it('passes an AbortSignal into the transport and times out', async () => {
     let signalSeen: AbortSignal | undefined
     const fetchImpl = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
-      signalSeen = init?.signal
+      signalSeen = init?.signal ?? undefined
       return new Promise<Response>((_resolve, reject) => {
         init?.signal?.addEventListener('abort', () => reject(new Error('Aborted')))
       })

@@ -7,9 +7,9 @@ function board(props?: { phase?: string; status?: 'lobby' | 'playing' | 'paused'
   const r = makeRuntime({
     roles: ['wolf', 'wolf', 'seer', 'witch', 'villager', 'villager'],
     currentPhase: props?.phase ?? 'night_wolf',
-    status: props?.status,
-    winner: props?.winner,
-    pendingActions: props?.pending,
+    ...(props?.status !== undefined ? { status: props.status } : {}),
+    ...(props?.winner !== undefined ? { winner: props.winner } : {}),
+    ...(props?.pending !== undefined ? { pendingActions: props.pending } : {}),
   })
   return r
 }

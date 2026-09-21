@@ -111,8 +111,8 @@ describe('buildGameSeats', () => {
       playerCount: 2,
     })
     expect(seats.map((s) => s.actorType)).toEqual(['cat', 'cat'])
-    expect(seats[0].actorId).toBe('opus')
-    expect(seats[1].actorId).toBe('sonnet')
+    expect(seats[0]!.actorId).toBe('opus')
+    expect(seats[1]!.actorId).toBe('sonnet')
   })
 
   it('detective mode behaves like god-view (all cats)', () => {

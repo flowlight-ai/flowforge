@@ -140,6 +140,9 @@ const aliasEntries = [
       { find: '@flowforge/cordis-plugin-logger-console', replacement: path.resolve(import.meta.dirname, 'vendor/logger-console/src') },
       // cats domain (stage 4): src-only resolution since lib/ is gitignored
       // and unbulked during test runs; aligns with every other @flowforge/* pkg.
+      { find: '@flowforge/cats-games/src', replacement: path.resolve(import.meta.dirname, 'packages/cats/games/src') },
+      { find: '@flowforge/cats-games', replacement: path.resolve(import.meta.dirname, 'packages/cats/games/src') },
+      { find: /^@flowforge\/cats-games$/, replacement: path.resolve(import.meta.dirname, 'packages/cats/games/src') },
       { find: '@flowforge/cats-shared/src', replacement: path.resolve(import.meta.dirname, 'packages/cats/shared/src') },
       { find: '@flowforge/cats-shared', replacement: path.resolve(import.meta.dirname, 'packages/cats/shared/src') },
       { find: /^@flowforge\/cats-shared$/, replacement: path.resolve(import.meta.dirname, 'packages/cats/shared/src') },

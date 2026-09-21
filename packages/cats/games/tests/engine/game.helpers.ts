@@ -3,9 +3,9 @@
  * @module tests
  */
 
-import type { GameConfig, GameRuntime, PendingAction, Seat, SeatId, SocketLike } from '@flowforge/cats-shared'
+import type { GameConfig, GameRuntime, PendingAction, Seat, SeatId } from '@flowforge/cats-shared'
 import { createWerewolfDefinition } from '../../src/engine/werewolf-definition.ts'
-import { noopAppLogger, type AppLogger, type IGameStore, type IMessageStore, type StoredGameMessage } from '../../src/engine/engine-ports.ts'
+import { noopAppLogger, type AppLogger, type IGameStore, type IMessageStore, type SocketLike, type StoredGameMessage } from '../../src/engine/engine-ports.ts'
 
 /** Build a `Seat` with sane defaults (AI cat unless overridden). */
 export function makeSeat(seatId: string, opts: { actorType?: Seat['actorType']; actorId?: string; role?: string; alive?: boolean; properties?: Record<string, unknown> } = {}): Seat {

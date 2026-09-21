@@ -10,7 +10,7 @@
   ],
   "references": [
     {
-      "path": "../../../packages/cats/games/tsconfig.host.json"
+      "path": "../shared/tsconfig.host.json"
     }
   ]
 }
