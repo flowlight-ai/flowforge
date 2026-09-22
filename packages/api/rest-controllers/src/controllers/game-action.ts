@@ -15,6 +15,7 @@ import { isSeatId } from '@flowforge/cats-shared'
 import type { IGameStore } from '@flowforge/cats-games'
 import type { GameOrchestrator } from '@flowforge/cats-games'
 import { RestControllerBase, type HttpRequest } from '../ports/http.ts'
+import { readGameIdentity, type GameIdentity } from '../host/game-identity.ts'
 import {
   InMemoryNonceDeduplicator,
   type GameActionAuth,
@@ -74,11 +75,12 @@ export class GameActionController extends RestControllerBase {
     const gameId = typeof req.params?.gameId === 'string' ? req.params.gameId : ''
     if (!gameId) return { status: 400, body: { error: 'gameId required', accepted: false } }
 
-    // --- Identity headers (MCP transport must inject these; see completion criteria) ---
-    const catId = req.headers['x-cat-id'] ?? ''
-    const userId = req.headers['x-cat-cafe-user'] ?? req.headers['x-user-id'] ?? ''
-    if (!catId) return { status: 401, body: { error: 'missing x-cat-id', accepted: false } }
-    if (!userId) return { status: 401, body: { error: 'missing user identity', accepted: false } }
+    // --- Identity headers (MCP transport injects these via injectGameIdentity; see completion criteria) ---
+    const identity: GameIdentity | null = readGameIdentity(req.headers)
+    if (!identity) {
+      return { status: 401, body: { error: 'missing identity (x-cat-id + user header)', accepted: false } }
+    }
+    const { catId, userId } = identity
 
     // --- Body shape ---
     const body = req.body as ActionRequestBody | undefined

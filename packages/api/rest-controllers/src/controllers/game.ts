@@ -26,6 +26,7 @@ import {
 } from '@flowforge/cats-games'
 import type { IGameStore, SocketLike } from '@flowforge/cats-games'
 import { RestControllerBase, type HttpRequest } from '../ports/http.ts'
+import { readUserId } from '../host/game-identity.ts'
 import {
   InMemoryNonceDeduplicator,
   type AutoPlayerSurface,
@@ -119,7 +120,7 @@ export class GameController extends RestControllerBase {
   // ── POST /api/game/start ─────────────────────────────────────────────────
 
   private async startGame(req: HttpRequest): Promise<{ status: number; body: unknown }> {
-    const userId = req.headers['x-cat-cafe-user'] ?? req.headers['x-user-id'] ?? ''
+    const userId = readUserId(req.headers)
     if (!userId) return { status: 401, body: { error: 'missing user identity' } }
 
     const parsed = gameStartSchema.safeParse(req.body)
@@ -219,8 +220,8 @@ export class GameController extends RestControllerBase {
 
   private async viewGame(req: HttpRequest): Promise<{ status: number; body: unknown }> {
     const threadId = typeof req.params?.threadId === 'string' ? req.params.threadId : ''
-    const userId = req.headers['x-cat-cafe-user'] ?? req.headers['x-user-id'] ?? ''
     if (!threadId) return { status: 400, body: { error: 'threadId required' } }
+    const userId = readUserId(req.headers)
     if (!userId) return { status: 401, body: { error: 'missing user identity' } }
 
     const runtime = await this.getActiveGameByThread(threadId)
