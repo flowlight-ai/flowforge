@@ -92,6 +92,7 @@ email / github-signals / connectors / redis-port 已交付；`audio-proxy.ts` �
 ### 4.2 可动工性
 - 低：无外部服务前无法落地真实 TTS/RSS。
 - **建议**：S2 保持"端口 + mock + 显式地址门控"（对齐 B21 audio-proxy 的 `audioServiceUrl` 显式注入模式），**待凭据/服务准入**——本轮**不排期动工**，仅登记可复用 seam 位置。
+- ✅ **S2-1 外部 TTS/RSS 凭据配置面已交付**（2026-09-22）：按 operator 准入指令，先落地**配置探测面**（对齐已批准 S1 飞书通道 `feishu-config.ts` 先例 + audio-proxy 显式地址门控语义，不接真实服务、不硬编码地址/密钥）。`packages/chat/stretch-ports` 新增 `src/tts/tts-config.ts`（权威键 `TTS_SERVICE_URL`/`TTS_API_KEY`/`TTS_VOICE`，`resolveTtsConfig`/`isTtsConfigured`/`ttsConfigGap`）+ `src/rss/rss-config.ts`（权威键 `RSS_SERVICE_URL`/`RSS_API_KEY`，`resolveRssConfig`/`isRssConfigured`/`rssConfigGap`），`index.ts` 导出全集，9 新增包级 vitest 全绿 / oxlint 0 / tsc clean。真实 TTS/RSS 服务接线与凭据由 operator 注入后再行开启。
 
 ---
 
@@ -113,7 +114,7 @@ email / github-signals / connectors / redis-port 已交付；`audio-proxy.ts` �
 | R1 | 确认 **S4 首启**（含 S4-1 壳脚手架先行） | S4 全部子项 |
 | R2 | S6 方向：**Python 客户端库（ACP/stdio）** vs 通用 HTTP 网关 | ✅ **已裁决**（2026-09-22，operator 指令）＝ Python 客户端库对 flowforge SDK stdio JSON-RPC，落地 `python/sdk`（S6-1 已交付）；真 ACP（S6-2）留后续 |
 | R3 | Electron/electron-builder 作为 **devDependency 打包工具** 是否接受 | S4-2 |
-| R4 | S2 本轮**保持 ports 不排期**，确认 | S2 |
+| R4 | S2 本轮**保持 ports 不排期**，确认 | ✅ **已闭环（2026-09-22）**：确认保持 ports + 显式地址门控；本轮已按 operator 指令先落地 TTS/RSS 凭据**配置探测面**（S2-1，同 36-stage §4.2 交付注），真实服务接线仍待凭据 |
 
 ---
 

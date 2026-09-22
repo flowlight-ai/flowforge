@@ -107,6 +107,22 @@ export {
 export type { IConnectorOutboundBridgeShape } from './feishu/feishu-connector-outbound.ts'
 
 export {
+  TTS_CONFIG_ENV_KEYS,
+  TTS_DEFAULT_VOICE,
+  resolveTtsConfig,
+  isTtsConfigured,
+  ttsConfigGap,
+} from './tts/tts-config.ts'
+export type { TtsConfig, TtsEnv } from './tts/tts-config.ts'
+export {
+  RSS_CONFIG_ENV_KEYS,
+  resolveRssConfig,
+  isRssConfigured,
+  rssConfigGap,
+} from './rss/rss-config.ts'
+export type { RssConfig, RssEnv } from './rss/rss-config.ts'
+
+export {
   InMemoryCommunityService,
   InMemoryLeaderboardService,
   InMemoryStoryService,
