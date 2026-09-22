@@ -212,6 +212,12 @@ importers:
       '@flowforge/sandbox-policy':
         specifier: workspace:^
         version: link:../../packages/sandbox/sandbox-policy
+      '@flowforge/sdk-app':
+        specifier: workspace:^
+        version: link:../../packages/bundle/sdk-app
+      '@flowforge/sdk-jsonrpc-server':
+        specifier: workspace:^
+        version: link:../../packages/sdk/server
       '@flowforge/session':
         specifier: workspace:^
         version: link:../../packages/core/session

@@ -114,6 +114,7 @@ export function resolveProfileDir(name: string, home: string = resolveFlowforgeH
 export const PROFILE_TEMPLATES: Record<string, readonly string[]> = {
   web: ['@flowforge/base', '@flowforge/web-app'],
   headless: ['@flowforge/base', '@flowforge/headless'],
+  sdk: ['@flowforge/base', '@flowforge/sdk-app'],
 }
 
 /** Installation-owned bundle tuples normalized to the shipped template. */

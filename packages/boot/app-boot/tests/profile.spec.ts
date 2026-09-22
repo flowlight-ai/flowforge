@@ -159,6 +159,15 @@ describe('loadProfile', () => {
     }
     expect(readProfileManifest('t', resolveProfileDir('web', home)).flowforge?.profile?.bundles)
       .toEqual([...PROFILE_TEMPLATES.web ?? []])
+    // The SDK stdio profile overrides the same base layer.
+    expect(PROFILE_TEMPLATES.sdk).toEqual(['@flowforge/base', '@flowforge/sdk-app'])
+    try {
+      loadProfile('t', 'sdk', anchor, home)
+    } catch {
+      // Resolution failure is the plain-Node outcome for this empty anchor.
+    }
+    expect(readProfileManifest('t', resolveProfileDir('sdk', home)).flowforge?.profile?.bundles)
+      .toEqual([...PROFILE_TEMPLATES.sdk ?? []])
   })
 
   it('normalizes only the exact installation-owned headless bundle tuple', () => {

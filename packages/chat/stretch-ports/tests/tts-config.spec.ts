@@ -22,8 +22,8 @@ describe('tts-config 配置探测', () => {
   it('权威环境键命名清单不含拼写漂移', () => {
     expect(TTS_CONFIG_ENV_KEYS).toEqual(['TTS_SERVICE_URL', 'TTS_API_KEY', 'TTS_VOICE'])
     expect(TTS_CONFIG_ENV_KEYS.includes('TTS_SERVICE_URL')).toBe(true)
-    // RSS 键与该清单独立并列，互不混淆
-    expect(RSS_CONFIG_ENV_KEYS.some((k) => TTS_CONFIG_ENV_KEYS.includes(k))).toBe(false)
+    // RSS 键与该清单独立并列，互不混淆（跨清单比较统一放宽到 string，避免字面量并集不匹配）
+    expect(RSS_CONFIG_ENV_KEYS.some((k: string) => TTS_CONFIG_ENV_KEYS.includes(k as typeof TTS_CONFIG_ENV_KEYS[number]))).toBe(false)
   })
 
   it('空环境 → 未配置（端点缺失），缺省音色', () => {
