@@ -73,13 +73,14 @@ port clowder `packages/api/src/routes/games.ts`（`gameRoutes`，`gameStartSchem
 ### 3.1 目标澄清（关键）
 旧 `python/legacy/sdk.py` = **外部 Python 程序调用 flowforge**（暴露 `FlowForgeSDK`：LLM chat、注册 tool/agent、事件订阅、插件注册、`models/tools/agents` 注册表）。这与 `code-runtime-python`（flowforge **内嵌执行** Python）是**两个相反方向**——S6 缺的是"对外"接入面。
 - 方向判别：沿用 dsh A34 的 **ACP/stdio**（`@flowforge/acp-app`/`sdk-app` 已存在对外 stdio SDK 形态）为底座，做 **Python 客户端 SDK**（Python 侧调用 ACP/stdio → flowforge agent），或 HTTP 网关。
-- 需 operator 先定：**S6 = Python 客户端库（对 ACP/stdio）** 还是 **通用对外 HTTP 网关**。
+- 需 operator 先定：**S6 = Python 客户端库（对 ACP/stdio）** 还是 **通用对外 HTTP 网关**。✅ **已定**（2026-09-22）＝ Python 客户端库对 flowforge SDK stdio JSON-RPC 协议，落地 `python/sdk`；真 ACP 规范（`--profile acp`）为后续可选项。
 
 ### 3.2 拆分矩阵（待方向定后再细化）
 | 子项 | 内容 | 状态 |
 |---|---|---|
-| S6-0 | **方向裁决**：Python 客户端库（ACP/stdio）vs HTTP 网关 | **先裁决** |
-| S6-1 | 依裁决：Python 侧 SDK 包（`py/` stdio 客户端，复用 code-runtime-python 协议经验）或 TS 对外网关 | 裁决后 |
+| S6-0 | **方向裁决**：Python 客户端库（ACP/stdio）vs HTTP 网关 | ✅ **已裁决**（2026-09-22，operator 指令）＝ **Python 客户端库对 flowforge SDK stdio JSON-RPC 协议**，非 HTTP 网关；真 ACP 规范（`--profile acp`）留后续 |
+| S6-1 | Python 侧 SDK 包（`python/sdk` stdio 客户端，复用 code-runtime-python 协议经验，镜像 `@flowforge/sdk-client`） | ✅ **已交付**（2026-09-22）：`python/sdk` 纯标准库 + asyncio，`HarnessClient`/`FlowForgeHarness`/`HarnessSession.run()` 整轮 idle；4 测试文件 28 用例全绿；详见 review_code §13.5 |
+| S6-2 | 真 ACP 规范客户端（`--profile acp`，Agent Client Protocol） | 后续可选项（operator 准入） |
 
 ---
 
@@ -100,7 +101,7 @@ email / github-signals / connectors / redis-port 已交付；`audio-proxy.ts` �
 |---|---|---|---|
 | 1 | S4（先 S4-1） | 唯一零外部凭据、即时动工、符合 operator 准入指令 | ✅ S4-1 已交付（2026-09-19）；S4-2 依 Electron 工具链裁决 |
 | 2 | S5（先 S5-1） | pure 层即时动工；引擎后续需 LLM | ✅ S5-1 已交付（2026-09-19）；**S5-2a seam 已交付 + S5-2b LLM runtime 已交付（2026-09-20）**；**S5-2c 完整引擎状态机已交付（2026-09-21）**；**S5-3 路由/MCP 接线已交付（2026-09-21）** |
-| 3 | S6 | 先裁决方向（S6-0） | operator 定方向 |
+| 3 | S6 | 先裁决方向（S6-0）；`python/sdk` 纯标准库无外部凭据可即时动工 | ✅ **S6-0 已裁决 + S6-1 已交付**（2026-09-22）：`python/sdk` Python SDK stdio 客户端，28 用例全绿 |
 | 4 | S2 | 缺服务，保持 ports，待凭据 | 外部 TTS/RSS 凭据 |
 
 ---
@@ -110,7 +111,7 @@ email / github-signals / connectors / redis-port 已交付；`audio-proxy.ts` �
 | # | 决策 | 影响 |
 |---|---|---|
 | R1 | 确认 **S4 首启**（含 S4-1 壳脚手架先行） | S4 全部子项 |
-| R2 | S6 方向：**Python 客户端库（ACP/stdio）** vs 通用 HTTP 网关 | S6-0/S6-1 |
+| R2 | S6 方向：**Python 客户端库（ACP/stdio）** vs 通用 HTTP 网关 | ✅ **已裁决**（2026-09-22，operator 指令）＝ Python 客户端库对 flowforge SDK stdio JSON-RPC，落地 `python/sdk`（S6-1 已交付）；真 ACP（S6-2）留后续 |
 | R3 | Electron/electron-builder 作为 **devDependency 打包工具** 是否接受 | S4-2 |
 | R4 | S2 本轮**保持 ports 不排期**，确认 | S2 |
 
