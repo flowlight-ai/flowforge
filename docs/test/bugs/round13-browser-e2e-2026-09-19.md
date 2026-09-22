@@ -645,3 +645,44 @@ async function resolveEntry(logger, entry, cwd, color, nameLabel, root) {
 **与 P-544 / P-545 的关系**：P-544（打包图漂移）本质是本单的一个**症状**，其修法（派生列表）**放大了症状**（枚举被削弱）；P-545（缺 bundled 入口）是本单的**下游后果**。故建议本单作为**母单**，P-544 的派生改法待本单定案后一并处置。
 
 - **T7/T8**：否（但**阻断 T8**——构建与后端启动均不通过）
+
+### P-546 决策：采用 **D1-d**（构建图覆盖 workspace 全量，使两者定义上恒等）
+
+> operator 裁决（2026-09-21）：选 **D1-d**。理由：D1-b/D1-c 都只是把差集手工对齐，新包一加又会漂移；D1-d 让「构建图 ≡ workspace 全量」成为**定义**，是唯一根治漂移的解，也顺带消除 P-544 想解决却修错的那类问题。
+
+**实施要点（供接手人直接执行）**：
+
+1. **先量准差集**（本轮已实测，可直接复用；重跑一次确认）：
+   - tsdown `workspace` glob（`vendor/*` + `packages/*/*` + `apps/cli`）覆盖 **341** 包；
+   - `tsconfig.host.json` 引用 **341** 项；
+   - **glob 有 / 构建图无（2）**：`packages/code-runtime/code-runtime-python`、`packages/integration/e2e` ← **本方案要补进构建图的就是这类**；
+   - **构建图有 / glob 无（2）**：`native/landlock-run/packages/entry`、`packages/limb/adapters` ← 非 TS/bundle 目标，**不要求**纳入 glob。
+   → 故 D1-d 的准确语义是：**`glob ⊆ refs`**（凡被 tsdown 枚举的包，必须都在构建图内），而非双向严格相等。
+2. 把差集包补入 `tsconfig.host.json` 的 `references`（`{"path":"./<pkg>"}`，目录形态；注意已有条目用 `/tsconfig.host.json` 形态，保持与邻近条目一致的写法）。
+3. 若补入后 `tsc -b` 对这些包产生新错误（它们此前不在 host face），逐条处置；**不得**用 `|| true` 等手段掩盖。
+4. 验证（**测试证据，逐条留档**）：
+   - `pnpm build` **exit 0**，且关键包产出 `lib/index.js`（`host/cats-api`、`cats/routes`、`harness/env-registry`、`llm/openroute`、`session-query/session-log-export`、`boot/app-boot`）；
+   - `pnpm start --no-open --port 5200` 真实启动 + `curl` HTTP 探测；
+   - `--profile headless` 回归（避免修好 web 打断 headless）；
+   - `pnpm typecheck` 仍如实反映既有类型债（**门禁不得被你改绿**）。
+5. 一并处置：P-544 的派生改法已回退（glob 已恢复）；本单定案后确认 P-544 是否可关闭。
+
+**注意**：`pnpm build` 的 `build`/`build:types` 脚本解耦（P-544 的一部分）**经核实不影响 CI**（`ts-ci.yml:51` 独立跑 typecheck），该部分可保留。
+
+---
+
+## 交接简要（新会话冷启动入口）
+
+**目标**：让 `pnpm start` 能启动 FlowForge 前后端，以便完成原始任务——**用真实浏览器验证全部功能**。
+
+**当前已完成**：前端 33 条路由的**真实浏览器 E2E 全部通过**（`web/e2e/routes-smoke.spec.ts`，见本文件 §第十三轮验证结论）；后端始终未启动成功。
+
+**待办链条（按序）**：
+1. **P-546 按 D1-d 实施**（本单，母单）→ 使 `pnpm build` exit 0 且产出完整
+2. **P-545** 缺 bundled 入口层随之消解后，复测启动
+3. **P-542 / P-544 / P-545 / P-546 的 `测试回归结论`** 由复判人 **`[davinci]`**（备选 `[luban]`）独立签署——**sherlock 未签任何 Verified**
+4. 后端起来后，**补做后端接口级验证**（第十三轮只覆盖了前端壳层）
+
+**关键文件**：`docs/test/bugs/round13-browser-e2e-2026-09-19.md`（全部因果链/实测/失败尝试/源码级结论）、`docs/test/bugs.md`（索引与 DI）、`mgr`（远程操作唯一入口）。
+
+**红线提醒**：一切远程操作走 `./mgr`；`build` 脚本不得用 `|| true` 类假通过；测试回归结论只由复判人签。
