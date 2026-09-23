@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { resolveDesktopConfig } from '../src/config.ts'
+import { resolveDesktopConfig, type DesktopConfig } from '../src/config.ts'
 import { DesktopShellOrchestrator } from '../src/shell.ts'
-import type { BackendSpawner, DesktopConfig, ReadinessProbe } from '../src/shell.ts'
+import type { BackendSpawner, ReadinessProbe } from '../src/shell.ts'
 import type { BridgeContractPersistence } from '../src/bridge/contract.ts'
 
 /** A fake persistence double reused across shell tests. */
@@ -46,7 +46,7 @@ class ScriptedProbe implements ReadinessProbe {
   async probe() {
     const value = this.results[Math.min(this.calls, this.results.length - 1)]
     this.calls += 1
-    return value
+    return value ?? false
   }
 }
 
