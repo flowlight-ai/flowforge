@@ -584,3 +584,105 @@ Cannot find module 'D:\…\packages\host\cats-api\node_modules\@flowforge\cats-r
 **自我更正（重要）**：本单前一轮「全仓 `lib/index.js` ≈0」的测量**有误**——当时用的 `find` 带 `-maxdepth 3`，而 `packages/*/*/lib/index.js` 位于第 4 层，被漏计。该错误测量导致我给出「P-544 使产出归零」的过强结论；**本轮回退实测（182 个）表明派生列表形态下产出究竟多少需重新测量**，此前「零产出」判断**应视为未证实**。
 
 **处置**：本轮仅回退 + 实测记录，**未再改动其它逻辑**；`@flowforge/desktop` 的跳过策略（D1 的落地方式）待决策后实施。P-545 维持 `Open`；P-544 该处修法仍待复判重点复核。
+
+---
+
+## P-546 — 构建图不覆盖 workspace 全量，而 tsdown 要求全量有入口：打包在全量枚举下硬抛（P-544/P-545 的结构性根因）
+
+> **升级说明**：本单由 P-544 / P-545 追查过程中**升格**而来。原以为「打包图与构建图漂移」可用一次配置改动收口（P-544 的派生改法），实测证明那是**错误修法**（已回退）；真正的结构性问题在下面。
+
+- **严重度**：S1（阻断 `pnpm build` 与后端启动）
+- **分类**：`CI / 配置`
+- **文件:行号**：`tsdown.config.ts:20-22`（`workspace` + `entry`）、`tsconfig.host.json`（构建图引用集）、`node_modules/.pnpm/tsdown@0.22.14.../tsdown/dist/options-C1CN2x0L.mjs:66-77`（硬抛点，第三方源码，仅供溯源）
+- **现象**：`pnpm build` 以 **exit 1** 结束；tsdown 在按 `packages/*/*` **全量枚举**打包时，对**没有 `lib/types` 产物**的包（实测 `@flowforge/desktop`、`@flowforge/integration-e2e`）硬抛 `Cannot find entry: ["lib/types/{index,invariant,startup}.js"]`，**中止整个打包**。
+
+**复现命令与真实输出**：
+
+```bash
+pnpm build
+# → exit=1；错误 1 处：
+#   [@flowforge/desktop] Cannot find entry: ["lib/types/{index,invariant,startup}.js"]
+#   （此前为 [@flowforge/integration-e2e]，随在途修复而前移）
+# 同时观测到：lib/index.js 产出 182 个（-maxdepth 4，排除 lib/types）
+```
+
+**根因（源码级结论）**——tsdown **没有「跳过无入口包」的配置项**，是硬抛：
+
+```js
+async function resolveEntry(logger, entry, cwd, color, nameLabel, root) {
+  if (!entry || Object.keys(entry).length === 0) {            // entry 为空才走兜底
+    const defaultEntry = path.resolve(cwd, "src/index.ts");
+    if (await fsExists(defaultEntry)) entry = { index: defaultEntry };
+    else throw new Error(`${nameLabel} No input files, …`);
+  }
+  const [entryMap, computedRoot] = await toObjectEntry(entry, cwd, root);
+  const entries = Object.values(entryMap);
+  if (entries.length === 0) throw new Error(`${nameLabel} Cannot find entry: …`);  // ← 此处
+  …
+}
+```
+
+即：`entry` 为非空数组时走 `toObjectEntry`，任一包 glob 匹配为空即 throw，**无开关可绕过**。
+
+**结构矛盾**：tsdown 的 `workspace` 语义要求 **`packages/*/*` 全量**都能提供 `lib/types/{index,invariant,startup}.js`，而 `tsconfig.host.json` 的构建图只是其中**子集**（实测 glob 覆盖 341 包 / 引用 341 项，但彼此各有 2 项不对应）。两者天然不等价时，全量枚举必然硬抛。
+
+**已验证的失败修法与其实测**（避免后人重走）：
+
+| 修法 | 实测结果 | 结论 |
+|---|---|---|
+| P-544「`workspace` 改为由构建图派生」 | bundler 不再报错，但**包枚举被削弱**；回退 glob 后 `lib/index.js` 产出 **182 个** | ❌ 错误修法，**已回退** |
+| `entry` 置空走 `src/index.ts` 兜底 | 会**产出**而非跳过，且目标包未必有 `src/index.ts` | ❌ 语义不符 |
+| 让 tsdown 忽略无入口包 | **tsdown 无此配置项**（源码级确认） | ❌ 不可行 |
+
+**候选路径（需 owner 裁决）**：
+
+| | 做法 | 取舍 |
+|---|---|---|
+| **D1-b** | 把 `packages/apps/desktop`、`packages/integration/e2e` 等补进 `tsconfig.host.json`，使全量都有 `lib/types` | 会把应用/测试包拉进 host 构建图，可能引入新类型债；且**仍要求构建图与 glob 恒等**，新包一加又会漂移 |
+| **D1-c** | `workspace` 保留 glob，**显式排除**极少数无产物包 | 需确认 tsdown 是否支持排除语法；且排除清单会随新包漂移 |
+| **D1-d（推荐方向）** | 让**构建图覆盖 workspace 全量包**（每个 `packages/*/*` 都成为 tsconfig 引用），使两者**定义上恒等** | 改动面最大，是构建体系的整体收口；但唯一能**根治漂移**的解，也顺带消除 P-544 想解决却修错的那类问题 |
+
+**与 P-544 / P-545 的关系**：P-544（打包图漂移）本质是本单的一个**症状**，其修法（派生列表）**放大了症状**（枚举被削弱）；P-545（缺 bundled 入口）是本单的**下游后果**。故建议本单作为**母单**，P-544 的派生改法待本单定案后一并处置。
+
+- **T7/T8**：否（但**阻断 T8**——构建与后端启动均不通过）
+
+### P-546 决策：采用 **D1-d**（构建图覆盖 workspace 全量，使两者定义上恒等）
+
+> operator 裁决（2026-09-21）：选 **D1-d**。理由：D1-b/D1-c 都只是把差集手工对齐，新包一加又会漂移；D1-d 让「构建图 ≡ workspace 全量」成为**定义**，是唯一根治漂移的解，也顺带消除 P-544 想解决却修错的那类问题。
+
+**实施要点（供接手人直接执行）**：
+
+1. **先量准差集**（本轮已实测，可直接复用；重跑一次确认）：
+   - tsdown `workspace` glob（`vendor/*` + `packages/*/*` + `apps/cli`）覆盖 **341** 包；
+   - `tsconfig.host.json` 引用 **341** 项；
+   - **glob 有 / 构建图无（2）**：`packages/code-runtime/code-runtime-python`、`packages/integration/e2e` ← **本方案要补进构建图的就是这类**；
+   - **构建图有 / glob 无（2）**：`native/landlock-run/packages/entry`、`packages/limb/adapters` ← 非 TS/bundle 目标，**不要求**纳入 glob。
+   → 故 D1-d 的准确语义是：**`glob ⊆ refs`**（凡被 tsdown 枚举的包，必须都在构建图内），而非双向严格相等。
+2. 把差集包补入 `tsconfig.host.json` 的 `references`（`{"path":"./<pkg>"}`，目录形态；注意已有条目用 `/tsconfig.host.json` 形态，保持与邻近条目一致的写法）。
+3. 若补入后 `tsc -b` 对这些包产生新错误（它们此前不在 host face），逐条处置；**不得**用 `|| true` 等手段掩盖。
+4. 验证（**测试证据，逐条留档**）：
+   - `pnpm build` **exit 0**，且关键包产出 `lib/index.js`（`host/cats-api`、`cats/routes`、`harness/env-registry`、`llm/openroute`、`session-query/session-log-export`、`boot/app-boot`）；
+   - `pnpm start --no-open --port 5200` 真实启动 + `curl` HTTP 探测；
+   - `--profile headless` 回归（避免修好 web 打断 headless）；
+   - `pnpm typecheck` 仍如实反映既有类型债（**门禁不得被你改绿**）。
+5. 一并处置：P-544 的派生改法已回退（glob 已恢复）；本单定案后确认 P-544 是否可关闭。
+
+**注意**：`pnpm build` 的 `build`/`build:types` 脚本解耦（P-544 的一部分）**经核实不影响 CI**（`ts-ci.yml:51` 独立跑 typecheck），该部分可保留。
+
+---
+
+## 交接简要（新会话冷启动入口）
+
+**目标**：让 `pnpm start` 能启动 FlowForge 前后端，以便完成原始任务——**用真实浏览器验证全部功能**。
+
+**当前已完成**：前端 33 条路由的**真实浏览器 E2E 全部通过**（`web/e2e/routes-smoke.spec.ts`，见本文件 §第十三轮验证结论）；后端始终未启动成功。
+
+**待办链条（按序）**：
+1. **P-546 按 D1-d 实施**（本单，母单）→ 使 `pnpm build` exit 0 且产出完整
+2. **P-545** 缺 bundled 入口层随之消解后，复测启动
+3. **P-542 / P-544 / P-545 / P-546 的 `测试回归结论`** 由复判人 **`[davinci]`**（备选 `[luban]`）独立签署——**sherlock 未签任何 Verified**
+4. 后端起来后，**补做后端接口级验证**（第十三轮只覆盖了前端壳层）
+
+**关键文件**：`docs/test/bugs/round13-browser-e2e-2026-09-19.md`（全部因果链/实测/失败尝试/源码级结论）、`docs/test/bugs.md`（索引与 DI）、`mgr`（远程操作唯一入口）。
+
+**红线提醒**：一切远程操作走 `./mgr`；`build` 脚本不得用 `|| true` 类假通过；测试回归结论只由复判人签。

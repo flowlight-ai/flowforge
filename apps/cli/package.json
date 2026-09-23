@@ -68,6 +68,8 @@
     "@flowforge/repeat-tool-reminder": "workspace:^",
     "@flowforge/sandbox-local": "workspace:^",
     "@flowforge/sandbox-policy": "workspace:^",
+    "@flowforge/sdk-app": "workspace:^",
+    "@flowforge/sdk-jsonrpc-server": "workspace:^",
     "@flowforge/session": "workspace:^",
     "@flowforge/session-checkpoint-policy": "workspace:^",
     "@flowforge/session-log-export": "workspace:^",

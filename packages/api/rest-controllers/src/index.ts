@@ -9,3 +9,4 @@ export * from './contract/index.ts';
 export * from './ports/index.ts';
 export * from './pure/index.ts';
 export * from './controllers/index.ts';
+export * from './host/game-identity.ts';
