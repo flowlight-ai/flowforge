@@ -379,6 +379,9 @@
       "path": "./packages/code-runtime/code-runtime-worker-thread"
     },
     {
+      "path": "./packages/code-runtime/code-runtime-python/tsconfig.host.json"
+    },
+    {
       "path": "./packages/compaction/command-compact"
     },
     {

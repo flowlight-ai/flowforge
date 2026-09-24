@@ -119,8 +119,8 @@ describe('FeishuImChannelAdapter — 配置齐备走真实 OpenAPI', () => {
     const result = await adapter.send({ target: 'chat', text: 'hello' })
     expect(result).toEqual({ delivered: true, channelMessageId: 'm1' })
     expect(fetchImpl).toHaveBeenCalledTimes(2)
-    expect(fetchImpl.mock.calls[0][0]).toContain('/auth/v3/tenant_access_token/')
-    expect(fetchImpl.mock.calls[1][0]).toContain('/im/v1/messages?receive_id_type=chat_id')
+    expect(fetchImpl.mock.calls[0]?.[0]).toContain('/auth/v3/tenant_access_token/')
+    expect(fetchImpl.mock.calls[1]?.[0]).toContain('/im/v1/messages?receive_id_type=chat_id')
   })
 
   it('send card：interactive 消息透传 action', async () => {
