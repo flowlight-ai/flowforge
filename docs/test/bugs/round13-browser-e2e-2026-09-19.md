@@ -686,3 +686,36 @@ async function resolveEntry(logger, entry, cwd, color, nameLabel, root) {
 **关键文件**：`docs/test/bugs/round13-browser-e2e-2026-09-19.md`（全部因果链/实测/失败尝试/源码级结论）、`docs/test/bugs.md`（索引与 DI）、`mgr`（远程操作唯一入口）。
 
 **红线提醒**：一切远程操作走 `./mgr`；`build` 脚本不得用 `|| true` 类假通过；测试回归结论只由复判人签。
+
+### P-546 执行 D1-d 首轮：发现 D1-d 前提不成立（2026-09-21）
+
+**执行前的重测（差集已变）**：
+
+| 项 | 首测 | **重测** |
+|---|---|---|
+| tsdown glob 覆盖 | 341 | **343** |
+| `tsconfig.host.json` 引用 | 341 | **343** |
+| **glob 有 / 构建图无** | `code-runtime-python`、`integration/e2e`（均**无** `lib/types`） | 同为这 2 包，但**均已有 `lib/types`** |
+| 缺 `lib/types` 的 glob 包 | 若干 | **0 个** |
+
+→ 首测认定的两个「硬抛源」已被并行会话/既有 tsc 产出补齐，差集包不再缺产物。
+
+**实测（`pnpm build`）**：仍 **exit 1**，1 处报错，但**换成了根项目**：
+
+```
+ERROR  Error: [flowforge] Cannot find entry: ["lib/types/{index,invariant,startup}.js"]
+    at resolveEntry (…/tsdown/dist/options-C1CN2x0L.mjs:76:34)
+    at async Promise.all (index 209)
+```
+
+`[flowforge]` 即**仓库根包**——根 `package.json` 没有 `src/`，自然没有 `lib/types/*`，却仍被 tsdown 的 workspace 枚举纳入并硬抛。
+
+**结论：D1-d 的前提不成立**。D1-d 假设「让构建图覆盖 workspace 全量 ⇒ 每个被枚举的包都有 `lib/types` ⇒ 不再硬抛」；但**根项目不在 `packages/*/*` 之内**，补引用无从入手，它的硬抛与构建图无关。
+
+**由此修正诊断**：真正的硬抛源不止一类，至少包括
+1. 在 glob 内但缺 `lib/types` 的**应用/测试包**（`desktop`、`integration/e2e`——已被在途修复补齐）；
+2. **根项目**（`flowforge`）——它不是可打包的包，却进了枚举。
+
+两者共同指向同一结论：**「让全量都有产物」（D1-d）不是正解**，需要的是**让 tsdown 的枚举排除非可打包项**（即 **D1-c 方向**：保留 glob + 显式排除根项目与不可打包包），或改用**逐包显式列目录**——但后者正是 P-544 已证伪的做法（削弱枚举）。
+
+**处置**：本轮**未改任何代码**（未补引用，因前提不成立）。P-546 决策 D1-d **需重新裁决**（建议改判 D1-c 方向，或由 owner 定夺是否值得为 tsdown 的枚举语义做定制封装）。**sherlock 在此停手**：该单已超出热修/试错范围，应作为构建体系专批处理。
