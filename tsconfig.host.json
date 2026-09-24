@@ -25,6 +25,9 @@
       "path": "./apps/cli"
     },
     {
+      "path": "./packages/apps/desktop"
+    },
+    {
       "path": "./native/landlock-run/packages/entry"
     },
     {
