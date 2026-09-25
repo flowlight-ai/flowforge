@@ -719,3 +719,30 @@ ERROR  Error: [flowforge] Cannot find entry: ["lib/types/{index,invariant,startu
 两者共同指向同一结论：**「让全量都有产物」（D1-d）不是正解**，需要的是**让 tsdown 的枚举排除非可打包项**（即 **D1-c 方向**：保留 glob + 显式排除根项目与不可打包包），或改用**逐包显式列目录**——但后者正是 P-544 已证伪的做法（削弱枚举）。
 
 **处置**：本轮**未改任何代码**（未补引用，因前提不成立）。P-546 决策 D1-d **需重新裁决**（建议改判 D1-c 方向，或由 owner 定夺是否值得为 tsdown 的枚举语义做定制封装）。**sherlock 在此停手**：该单已超出热修/试错范围，应作为构建体系专批处理。
+
+### P-546 D1-c 机制确认（2026-09-21，源码级）
+
+**结论：D1-c 在 tsdown 有原生支持**——`workspace` 选项支持**对象形态**（`node_modules/…/tsdown/dist/types-DP3_0kws.d.mts:951-968`）：
+
+```ts
+interface Workspace {
+  include?: "auto" | (string & {}) | string[];   // 工作区目录，支持 glob
+  exclude?: Arrayable<string>;                   // 排除目录（默认 node_modules/dist/test/tests/temp/tmp）
+  config?: boolean | string;                     // 工作区配置文件路径
+}
+```
+
+**正确写法**：
+
+```ts
+workspace: {
+  include: ['vendor/*', 'packages/*/*', 'apps/cli'],
+  exclude: [/* 需命中根项目 */],
+}
+```
+
+**待定项（接手人一轮 build 即可定案）**：根项目（报错标签 `[flowforge]`）不是被 `include` 命中的目录，而是 tsdown 作为「根项目」自动纳入的；`exclude` 需写什么模式才能命中它（候选：`'.'`、`'./'`、`'package.json'`）尚未验证。**验证方式**：改一处 → `pnpm build` → 看是否仍报 `[flowforge] Cannot find entry`（约 6 分钟/轮）。
+
+**次选方案（若 exclude 无法命中根项目）**：给根项目一个可解析的入口（例如根 `package.json` 不含 `src/` 时让根配置的 `entry` 指向 `apps/cli`），或把 host 打包改为不启用 tsdown 的 workspace 自动枚举、改用显式清单（后者即 P-544 已证伪方向，不推荐）。
+
+**本轮未改任何代码**——避免「猜一个 exclude 模式 + 未验证」重蹈 P-544 覆辙。P-546 决策由 D1-d（已证伪）**改判 D1-c**（机制已确认，待写值 + 验证）。

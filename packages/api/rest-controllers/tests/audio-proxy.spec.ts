@@ -22,7 +22,7 @@ function fakeFetch(routes: Record<string, (() => { status: number; body: unknown
   const calls: Array<{ method: string; url: string; body?: string }> = [];
   const impl = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
-    calls.push({ method: init?.method ?? 'GET', url, body: typeof init?.body === 'string' ? init.body : undefined });
+    calls.push({ method: init?.method ?? 'GET', url, ...(typeof init?.body === 'string' ? { body: init.body } : {}) });
     const route = Object.keys(routes)
       .filter((key) => url.includes(key))
       // longest match wins so '/status' and '/sources' don't collide
