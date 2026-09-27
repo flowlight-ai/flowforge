@@ -24,7 +24,7 @@
 
 import { createRequire } from 'node:module'
 import {
-  existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, symlinkSync, unlinkSync, writeFileSync,
+  existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, statSync, symlinkSync, unlinkSync, writeFileSync,
 } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import type { EntryOptions } from '@flowforge/cordis-plugin-loader'
@@ -202,6 +202,67 @@ function ensureSymlink(link: string, target: string): void {
   }
 }
 
+/** State file (inside the fallback dir) that snapshots the built closure. */
+const FALLBACK_CACHE_FILENAME = '.flowforge-fallback.json'
+
+/** One flat symlink the launcher owns, with the target's recorded mtime. */
+interface FallbackLinkRecord {
+  name: string
+  target: string
+  /** `package.json` mtime of {@link target} the instant the closure was built. */
+  targetMtimeMs: number
+}
+
+/** Snapshot of a completed heal, used to skip re-walking the closure. */
+interface FallbackCache {
+  /** Absolute path of the app manifest this closure was resolved for. */
+  installAnchor: string
+  /** Raw app manifest text, so an install-level dependency edit invalidates it. */
+  appManifestText: string
+  links: FallbackLinkRecord[]
+}
+
+/** Whether every cached link is still present, still points at its target, and
+ * the target's `package.json` is byte-for-byte the recorded version (mtime
+ * unchanged). Meeting all three proves the installation's resolvable world is
+ * unchanged, so the previously built closure can be reused verbatim without
+ * re-running the dependency BFS or re-creating any symlink. Any divergence —
+ * a moved installation, an edited manifest, an upgraded or relocated package —
+ * fails a check here and forces a full rebuild. */
+function fallbackCacheFresh(modulesDir: string, links: readonly FallbackLinkRecord[]): boolean {
+  for (const record of links) {
+    let link: ReturnType<typeof lstatSync>
+    try {
+      link = lstatSync(join(modulesDir, record.name))
+    } catch {
+      return false
+    }
+    if (!link.isSymbolicLink() || readlinkSync(join(modulesDir, record.name)) !== record.target) return false
+    let targetManifest: ReturnType<typeof statSync>
+    try {
+      targetManifest = statSync(join(record.target, 'package.json'))
+    } catch {
+      return false
+    }
+    if (targetManifest.mtimeMs !== record.targetMtimeMs) return false
+  }
+  return true
+}
+
+/** Read the persisted closure snapshot, or `undefined` when absent/ill-typed. */
+function readFallbackCache(modulesDir: string): FallbackCache | undefined {
+  try {
+    const parsed = JSON.parse(readFileSync(join(modulesDir, FALLBACK_CACHE_FILENAME), 'utf8')) as FallbackCache | undefined
+    if (parsed !== undefined && typeof parsed.installAnchor === 'string'
+      && typeof parsed.appManifestText === 'string' && Array.isArray(parsed.links)) {
+      return parsed
+    }
+  } catch {
+    /* absent or unparsable: build from scratch */
+  }
+  return undefined
+}
+
 /**
  * Maintain the flat module fallback `$FF_HOME/profiles/node_modules`: one
  * symlink per package in the flowforge app's resolvable dependency CLOSURE (BFS
@@ -217,7 +278,10 @@ function ensureSymlink(link: string, target: string): void {
  * symlink-following), so each package needs only its one flat link.
  * Idempotent: correct links are kept and moved installations are
  * re-pointed; a stale link to a vanished package stays until its name is
- * reused (dangling links are invisible to resolution).
+ * reused (dangling links are invisible to resolution). Closure resolution is
+ * expensive (a breadth-first walk that reads every transitive manifest), so
+ * the result is snapshotted and reused on later boots until the installation
+ * actually changes — see {@link fallbackCacheFresh}.
  * @param installAnchor - absolute path of the flowforge app's package.json.
  * @param home - the FlowForge home; defaults to {@link resolveFlowforgeHome}.
  */
@@ -225,7 +289,14 @@ export function healProfilesModuleFallback(installAnchor: string, home: string =
   const profilesDir = join(home, PROFILES_DIR)
   const modulesDir = join(profilesDir, 'node_modules')
   mkdirSync(modulesDir, { recursive: true })
-  const appManifest = JSON.parse(readFileSync(installAnchor, 'utf8')) as ProfileManifest
+  const appManifestText = readFileSync(installAnchor, 'utf8')
+  const appManifest = JSON.parse(appManifestText) as ProfileManifest
+  const cached = readFallbackCache(modulesDir)
+  if (cached !== undefined && cached.installAnchor === installAnchor
+    && cached.appManifestText === appManifestText
+    && fallbackCacheFresh(modulesDir, cached.links)) {
+    return
+  }
   const links = new Map<string, string>()
   /* v8 ignore next -- a real app manifest always declares its name */
   if (appManifest.name !== undefined) links.set(appManifest.name, dirname(installAnchor))
@@ -252,6 +323,27 @@ export function healProfilesModuleFallback(installAnchor: string, home: string =
     const link = join(modulesDir, packageName)
     mkdirSync(dirname(link), { recursive: true })
     ensureSymlink(link, target)
+  }
+  // Persist the freshly resolved closure so later boots skip the BFS; the
+  // mtime snapshot is recorded here, at the moment the links are current.
+  const cache: FallbackCache = {
+    installAnchor,
+    appManifestText,
+    links: [...links].map(([name, target]) => {
+      let mtimeMs = -1
+      try {
+        mtimeMs = statSync(join(target, 'package.json')).mtimeMs
+      } catch {
+        /* a target without a manifest cannot be snapshot-validated; -1 hand
+           it to every future boot as stale so it is rebuilt eagerly */
+      }
+      return { name, target, targetMtimeMs: mtimeMs }
+    }),
+  }
+  try {
+    writeFileSync(join(modulesDir, FALLBACK_CACHE_FILENAME), JSON.stringify(cache))
+  } catch {
+    /* a cache write is best-effort; a missing cache only costs a rebuild */
   }
 }
 
