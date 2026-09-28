@@ -746,3 +746,32 @@ workspace: {
 **次选方案（若 exclude 无法命中根项目）**：给根项目一个可解析的入口（例如根 `package.json` 不含 `src/` 时让根配置的 `entry` 指向 `apps/cli`），或把 host 打包改为不启用 tsdown 的 workspace 自动枚举、改用显式清单（后者即 P-544 已证伪方向，不推荐）。
 
 **本轮未改任何代码**——避免「猜一个 exclude 模式 + 未验证」重蹈 P-544 覆辙。P-546 决策由 D1-d（已证伪）**改判 D1-c**（机制已确认，待写值 + 验证）。
+
+### P-545/P-546 修复链收官与 web 侧移交（2026-09-27）
+
+**修复链进展（每修一处、报错前移一级，无回退）**：
+
+| 环节 | 状态 | 证据 |
+|---|---|---|
+| P-542 包名冲突（`@flowforge/web-app` ↔ bundle） | ✅ | `--profile web --dump-config` exit 0 |
+| P-544/P-546 构建（打包图） | ✅ | `build:types` exit 0 + `build` exit 0（类型债已清）；`lib/index.js` 产出 333 |
+| P-545 解析链 | ✅ | `Cannot find` **= 0** |
+| `session-log-export` 插件契约 | ✅ **已修并验证生效** | `inject = ['config']` 加入后，`cannot get property "config" without inject` 消失 |
+| `web-app` 解析 `@flowforge/web-frontend` | 🟡 声明已补，**待验证** | 见下 |
+| `web/dist/index.html` 产物 | ❌ 未解决 | `web/dist` 不存在 |
+
+**关键机制（本次排查的核心收获，写入工单备查）**：
+
+1. **`pnpm build` 单独运行不打包源码改动**——tsdown 从 `lib/types/`（tsc 产物）打包；`build` 与 `build:types` 解耦后，必须先 `pnpm build:types` 再 `pnpm build`，否则产物不含源码改动。这是此前多轮误判的共同源头。
+2. **`require.resolve` 从调用者自身位置解析**——`packages/bundle/web-app/lib/index.js` 内 `require.resolve('@flowforge/web-frontend/package.json')` 只沿自身 `node_modules` 链向上找；pnpm 只把链接放进**声明者**的 `node_modules`。故依赖必须声明在 **`packages/bundle/web-app`**（已补），仅声明在 `apps/cli` 无效（实测链接只出现在 `apps/cli/node_modules`）。
+
+**本轮改动（3 处，见随附提交）**：
+- `packages/bundle/web-app/package.json`：补 `@flowforge/web-frontend: workspace:^`（**关键处**）
+- `apps/cli/package.json`：补同名声明（一致性；对该解析链无直接效果）
+- `packages/session-query/session-log-export/src/index.ts`：补 `export const inject = ['config']`（**已验证生效**）
+
+**移交给 web 侧会话的待办**：
+1. `pnpm install`（实测约 14 分钟）使声明生效；
+2. 查 `web/dist/index.html` 的产出方式——bundle 的 `resolveDistIndex()`（`packages/bundle/web-app/src/index.ts:186-192`）期望**前端构建产物 `dist/`**，而 `web/package.json` 的 `build` 是 `next build`（产出 `.next`，非 `dist`）；需确认是补构建脚本产出 `dist/`，还是改 bundle 的解析路径；
+3. 全链验证：`pnpm build:types && pnpm build && pnpm start --no-open --port 5200` + 真实 HTTP 探测；
+4. 后端起来后，补做**后端接口级验证**（第十三轮只覆盖前端壳层）。

@@ -24,6 +24,14 @@ export { resolveCompression } from './contract/config.ts'
 /** 稳定的浏览器下载路径，跨传输迁移保持一致。 */
 export const SESSION_LOG_EXPORT_PATH = '/api/session.export'
 
+/**
+ * cordis 插件声明：`apply` 会读取 `host.config.compressionLevel`，而宿主把本模块
+ * 作为插件行加载（`Fiber.execute` → `apply(ctx)`），此时 `ctx.config` 只有在先
+ * `inject` 之后才可读——否则 cordis 抛 `cannot get property "config" without inject`。
+ * 故此处补上注入声明（本模块其余部分仍不依赖 cordis）。
+ */
+export const inject = ['config']
+
 /** Web `/export` 命令不接收路径参数时返回的请求已记录话术。 */
 const REQUESTED: CommandResult = {
   kind: 'success',

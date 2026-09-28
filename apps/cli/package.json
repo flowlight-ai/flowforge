@@ -116,6 +116,7 @@
     "@flowforge/user-questions": "workspace:^",
     "@flowforge/web": "workspace:^",
     "@flowforge/web-app": "workspace:^",
+    "@flowforge/web-frontend": "workspace:^",
     "@flowforge/web-search-deepseek": "workspace:^",
     "@flowforge/workflow-worker-thread": "workspace:^",
     "commander": "^15.0.0",

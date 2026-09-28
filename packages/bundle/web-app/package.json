@@ -50,6 +50,7 @@
     "@flowforge/launch-environment": "workspace:^",
     "@flowforge/schemastery": "workspace:^",
     "@flowforge/subprocess": "workspace:^",
+    "@flowforge/web-frontend": "workspace:^",
     "commander": "^15.0.0",
     "open": "^11.0.0"
   },
