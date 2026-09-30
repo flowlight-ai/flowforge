@@ -17,6 +17,7 @@
 
 import type { EdgeRecord, NodeRecord, StoreQueryResult } from './store.ts'
 import type { CodebaseStore } from './store.ts'
+import { BM25_NOISE_LABELS } from './graph-model.ts'
 import type { GraphNode } from './graph-model.ts'
 
 /** Edge/symbol labels that participate in SIMILAR duplicate detection (C parity). */
@@ -194,9 +195,10 @@ export function semanticQuery(store: CodebaseStore, project: string, options: Se
   if (kws.length === 0) return { rows: [], total: 0, hasMore: false }
   const kwVectors = kws.map(kw => termFrequency(kw, undefined, undefined))
 
+  const noiseLabels = new Set(BM25_NOISE_LABELS as readonly string[])
   const nodes = store.allNodes(project).filter(node =>
-    // BM25 noise labels are excluded from retrieval (C parity).
-    node.label !== 'File' && node.label !== 'Folder' && node.label !== 'Variable' && node.label !== 'Project')
+    // BM25 noise labels are excluded from retrieval (single source: graph-model).
+    !noiseLabels.has(node.label))
 
   const scored: { node: GraphNode; score: number }[] = []
   for (const node of nodes) {

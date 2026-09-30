@@ -138,12 +138,15 @@ export const BM25_LABEL_BOOST: Readonly<Record<string, number>> = {
 
 /**
  * Labels filtered out of BM25 full-text results as noise (C parity):
- * File/Folder/Variable/Project are indexed but excluded from ranked queries.
- * Module is deliberately NOT excluded (C #518/#519): it is one of the labels
- * that carry prose (Markdown section bodies, config descriptions), so
+ * File/Folder/Project are indexed but excluded from ranked queries.
+ * Variable is deliberately NOT excluded (EP-CB5): EP-CB1 promoted it to a
+ * symbol label (enum members, module-level const/let) carrying shortName and
+ * definition span props, so noise filtering would make it "extracted but
+ * unsearchable". Module is also NOT excluded (C #518/#519): it is one of the
+ * labels that carry prose (Markdown section bodies, config descriptions), so
  * excluding it makes the body column unreachable.
  */
-export const BM25_NOISE_LABELS: readonly NodeLabel[] = ['File', 'Folder', 'Variable', 'Project']
+export const BM25_NOISE_LABELS: readonly NodeLabel[] = ['File', 'Folder', 'Project']
 
 /** Pagination contract carried over from search_graph (total/has_more/offset/limit). */
 export interface Pagination<T> {

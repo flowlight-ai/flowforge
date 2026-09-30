@@ -101,6 +101,17 @@ describe('semanticQuery (T5.2)', () => {
     expect(result.hasMore).toBe(false)
   })
 
+  it('retrieves Variable nodes by keyword min-cosine (EP-CB5)', () => {
+    store.registerProject('demo')
+    store.upsertNodes([
+      symbol('one.http', 'http', { props: { signature: 'http fetch remote' } }),
+      { id: 'var:threshold', project: 'demo', label: 'Variable', name: 'threshold', props: { shortName: 'threshold', signature: 'http fetch timeout limit', startLine: 5, endLine: 5 } },
+    ])
+    const result = semanticQuery(store, 'demo', { keywords: ['http', 'fetch'] })
+    expect(result.rows.some(node => node.id === 'var:threshold')).toBe(true)
+    expect(result.rows.find(node => node.id === 'var:threshold')?.props).toMatchObject({ shortName: 'threshold', startLine: 5, endLine: 5 })
+  })
+
   it('honours AND semantics: a node missing a keyword scores min-cosine 0 and drops out', () => {
     store.registerProject('demo')
     store.upsertNodes([
