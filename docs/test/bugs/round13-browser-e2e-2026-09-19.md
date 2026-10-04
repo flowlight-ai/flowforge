@@ -775,3 +775,19 @@ workspace: {
 2. 查 `web/dist/index.html` 的产出方式——bundle 的 `resolveDistIndex()`（`packages/bundle/web-app/src/index.ts:186-192`）期望**前端构建产物 `dist/`**，而 `web/package.json` 的 `build` 是 `next build`（产出 `.next`，非 `dist`）；需确认是补构建脚本产出 `dist/`，还是改 bundle 的解析路径；
 3. 全链验证：`pnpm build:types && pnpm build && pnpm start --no-open --port 5200` + 真实 HTTP 探测；
 4. 后端起来后，补做**后端接口级验证**（第十三轮只覆盖前端壳层）。
+
+### P-545 收官进展：web-frontend 解析已修 + inject 形式纠正（2026-09-30）
+
+**已完成并验证**：`web/package.json` 的 `exports` 补 `"./package.json": "./package.json"`。
+**根因**：Node 的 **exports 封装**——该包声明了 `exports`（`./components/*`、`./lib/*`、`./hooks/*`、`./style`）却未含 `./package.json`，故 `require.resolve('@flowforge/web-frontend/package.json')` 抛 `ERR_PACKAGE_PATH_NOT_EXPORTED`，被 bundle 的 `catch` 吞成误导性的「not resolvable」。
+**验证**：以与 bundle 相同的 `createRequire(…/packages/bundle/web-app/lib/index.js)` 锚点实测 `✓ 解析成功`；`pnpm start` 中该报错**已消失**（无需重新构建，`package.json` 为运行时读取）。
+
+**纠正：`inject = ['config']` 是错误形式，已回退**。
+- cordis 的 `inject` 只有**必选服务**语义（数组或「名→配置」映射），**不存在 `optional` 形态**（`vendor/cordis/src/registry.d.ts:181`、`registry.ts:296`）。
+- 该写法使 `@flowforge/session-log-export` 变成 `pending (waiting for service: config)`——组合中无 `config` 服务 → 「1 entry did not activate」。
+- **正解方向**（据 guard 本体 `vendor/cordis/src/reflect.ts:143-152`）：`ctx.config` 走代理时若在 `target.reflect.props[prop]` 查不到 **accessor** 才抛 `cannot get property "config" without inject`。故应让该插件**声明 `Config` schema**（cordis 据此提供 config accessor），或由组合**提供 `config` 服务**；而非依赖 `inject`。
+- 处置：已把该 `inject` 行与其注释从 `packages/session-query/session-log-export/src/index.ts` 完整移除（恢复到 `1f17f8f9` 之前的状态），避免把有害改动留在主干路径。
+
+**当前剩余**（按序）：
+1. `session-log-export` 的 config 访问契约（改为 `Config` 声明或供给 `config` 服务）；
+2. `web/dist/index.html` 产物（bundle `resolveDistIndex()` 期望前端 `dist/`）。
