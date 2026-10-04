@@ -95,8 +95,9 @@ describe('BM25 ranking contract（C search_graph 权重照搬）', () => {
     })
   })
 
-  it('filters File/Folder/Variable/Project as noise but keeps Module (C #518/#519)', () => {
-    expect(BM25_NOISE_LABELS).toEqual(['File', 'Folder', 'Variable', 'Project'])
+  it('filters File/Folder/Project as noise but keeps Variable and Module (EP-CB5)', () => {
+    expect(BM25_NOISE_LABELS).toEqual(['File', 'Folder', 'Project'])
+    expect(BM25_NOISE_LABELS).not.toContain('Variable')
     expect(BM25_NOISE_LABELS).not.toContain('Module')
     for (const label of BM25_NOISE_LABELS) expect(isNodeLabel(label)).toBe(true)
   })

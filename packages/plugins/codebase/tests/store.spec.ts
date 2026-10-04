@@ -151,6 +151,22 @@ describe('search — BM25 ranked mode (query provided)', () => {
     expect(result.total).toBe(3)
   })
 
+  it('indexes Variable as a symbol: searchable by BM25 with a definition anchor (EP-CB5)', () => {
+    store.upsertNodes([
+      node('var:limit', 'Variable', 'limit', { filePath: 'src/config.ts', props: { shortName: 'limit', startLine: 12, endLine: 12 } }),
+      node('fn:parse.rate', 'Function', 'parseRate', { filePath: 'src/config.ts' }),
+    ])
+    const byQuery = store.search({ project: 'demo', query: 'limit' })
+    expect(byQuery.rows.map(row => row.name)).toEqual(['limit'])
+    expect(byQuery.rows[0]?.label).toBe('Variable')
+    // structural noise labels (File/Folder/Project) stay excluded.
+    const byLabel = store.search({ project: 'demo', query: 'limit', label: 'Variable' })
+    expect(byLabel.rows.map(row => row.name)).toEqual(['limit'])
+    // definition anchor surfaces from props, forming the search→locate loop.
+    expect(byQuery.rows[0]?.props).toMatchObject({ shortName: 'limit', startLine: 12, endLine: 12 })
+    expect(byLabel.rows[0]?.name).toBe('limit')
+  })
+
   it('matches camelCase identifiers through the split-token index', () => {
     const orQuery = store.search({ project: 'demo', query: 'cloud client' })
     expect(orQuery.rows.map(row => row.name)).toEqual(['updateCloudClient', 'CloudClient', 'cloud'])
