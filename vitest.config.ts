@@ -133,6 +133,9 @@ const aliasEntries = [
 // <generated-alias:start>
       { find: '@flowforge/session-title-first-prompt-llm/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-title-first-prompt-llm/src') },
       { find: '@flowforge/session-title-first-prompt-llm', replacement: path.resolve(import.meta.dirname, 'packages/session/session-title-first-prompt-llm/src') },
+      // graph-ui (EP-CB6): src-only resolution; aligned with other @flowforge/* pkgs.
+      { find: '@flowforge/graph-ui/src', replacement: path.resolve(import.meta.dirname, 'packages/plugins/graph-ui/src') },
+      { find: '@flowforge/graph-ui', replacement: path.resolve(import.meta.dirname, 'packages/plugins/graph-ui/src') },
       { find: '@flowforge/compaction-tool-result-pruner/src', replacement: path.resolve(import.meta.dirname, 'packages/compaction/compaction-tool-result-pruner/src') },
       { find: '@flowforge/compaction-tool-result-pruner', replacement: path.resolve(import.meta.dirname, 'packages/compaction/compaction-tool-result-pruner/src') },
       { find: '@flowforge/session-title-all-prompts-llm/src', replacement: path.resolve(import.meta.dirname, 'packages/session/session-title-all-prompts-llm/src') },

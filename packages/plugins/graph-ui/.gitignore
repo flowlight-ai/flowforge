@@ -1,0 +1,6 @@
+# @flowforge/graph-ui — package-local exceptions to the root .gitignore.
+# Root `.gitignore:30` ignores any directory named `data/` (runtime data/logs).
+# This package ships source modules under `src/data/` (the read-only data seam),
+# which is code, not runtime data — re-include it here.
+!src/data/
+!src/data/**

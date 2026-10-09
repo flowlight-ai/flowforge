@@ -1,0 +1,29 @@
+{
+  "name": "@flowforge/graph-ui",
+  "description": "Code knowledge graph 3D visualization for FlowForge: normalized graph data contract layer, deterministic layout pure functions (structural tree + symbol force-directed), and an injectable renderer seam (RendererPort / ThreeBinding) — decoupled from @flowforge/plugin-codebase via a read-only data seam (EP-CB6)",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/flowlight-ai/flowforge.git",
+    "directory": "packages/plugins/graph-ui"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT"
+}

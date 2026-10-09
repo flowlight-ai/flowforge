@@ -94,6 +94,19 @@ packages/plugins/codebase/
 
 > **EP-CB 系列终态**：EP-CB0~EP-CB4 全部完成（对齐 16.3 全量移植目标，覆盖存储引擎/结构层/符号级/tree-sitter/Cypher/语义层/LSP 融合/跨仓库六域）。剩余落在 EP2 前端融合（Q17：graph-ui 3D 可视化）与语言资产按需增量（Q18）。
 > **程序收官独立复核（2026-09-10）**：239/239 vitest、oxlint 0、包级 tsc exit 0、真实仓库 index→query→schema 冒烟全通（详见 `docs/process/verifications/plugin-codebase-program-final-audit.md`）。程序正式收口，验收通过。
+> **EP-CB5（后记）**：符号级搜索闭口（Q21）另批次完成 ✅（见 §13.0，设计 `docs/process/specs/2026-09-28-plugin-codebase-cb5-design.md`）。
+
+### EP-CB6 graph-ui 3D 可视化（Q17/D-CB4，归 EP2 前端融合，非核心链路）🟨 docs-first（设计待 operator 评审）
+
+> **DoD**：`@flowforge/graph-ui` 图可视化数据契约层（注入式数据源 seam，只读消费 codebase.db 只读查询面）+ vitest 契约测试全绿 + 包级 tsc exit 0 + oxlint 0；web 前端 3D 面板接入（three.js 渲染 seam，React/DOM 胶水隔离）。
+
+- [ ] T6.1 设计 + 计划（`docs/process/specs/2026-10-09-plugin-codebase-cb6-design.md` / `docs/process/plans/2026-10-09-plugin-codebase-cb6.md`）
+- [ ] T6.2 `@flowforge/graph-ui` 包骨架（package.json 对齐 plugin-dev 模板 + tsconfig + 根 tsconfig.host.json 挂接 + vitest 装配）
+- [ ] T6.3 图可视化数据契约：GraphData/Nodes/Edges/NodeLabel/EdgeType 归一化触点 + 只读数据源 seam（GraphDataPort：loadStructureTree/loadSymbolGraph/loadAnchors，消费 codebase.db 查询面）+ 内存实现
+- [ ] T6.4 图布局纯函数（结构层树套壳 FORCE/层次布局、符号层力导向布局，注入式坐标 seam，契约定点纯函数）
+- [ ] T6.5 three.js 渲染 seam（渲染器注入式 RendererPort：节点/边/标签/锚点绘制，React/DOM 胶水隔离）+ web 前端 3D 面板接入（路由 + 面板组件，默认关闭/仅显式启用）
+- [ ] T6.6 契约测试：graph-data（只读数据 seam 消费）、布局（坐标契约）、渲染 seam（注入式渲染桩）；vitest 全绿 + 真实仓库冒烟
+- [ ] T6.7 门禁与文档：tsc exit 0 / oxlint 0 / ff_doctor 通过 + verification 证据 + mgr 提交（PR，`type(scope): desc [sherlock]`）
 
 ## 4. 决策点登记（对应 review_code.md §15 Q14-Q19，operator 2026-09-07 全部裁决）
 
