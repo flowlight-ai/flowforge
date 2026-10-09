@@ -37,6 +37,12 @@ export type {
 } from './data/ports.ts'
 
 export { MemoryGraphDataPort } from './data/memory.ts'
+export { CodebaseGraphInjector } from './data/codebase-injector.ts'
+export type {
+  CodebaseNodeRow,
+  CodebaseEdgeRow,
+  CodebaseGraphRead,
+} from './data/codebase-injector.ts'
 
 export type { Point3, NodePosition, LayoutBounds, LayoutResult } from './layout/types.ts'
 export { layoutStructureTree } from './layout/structure.ts'
