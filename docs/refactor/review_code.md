@@ -327,6 +327,7 @@ EP0 已完成，本 review_code.md §13/§14 中的每个开发批次都必须�
 > EP-CB3（Cypher 查询子集 + 增量索引 + 轨迹摄取 + 持久化工件）✅（已走 mgr 提交 PR，待合入）——`cypher-lexer.ts`/`cypher-parser.ts`/`cypher-executor.ts`（MATCH/WHERE/RETURN/ORDER BY/LIMIT/SKIP 只读子集，对齐 C 源 `cypher/` 语义：lexer 拒绝写/管理关键字、数字与 `..` 边界、关系箭头 `<-`/`->`/无向与多类型 `|` 与跳跃 `*`/`min..max`、WHERE 比较集 `=`/`<>`/`=~`/`>`/`<`/`>=`/`<=`/CONTAINS/IN/IS [NOT] NULL + AND/OR/NOT 优先级，RETURN 别名/函数/去重，ORDER BY 上限 8，结果行 10 万上限 + 执行预算诚实部分集）、`missed.ts`（未索引文件目录树报告）、`watcher.ts`（mtime 增量索引 + 删除节点减除）、`traces.ts`（外部智能体轨迹幂等摄取）、`artifact.ts`（zstd/gzip 图快照团队共享，此次修复 restore 项目注册顺序）；并补 5 条 CLI（cypher/missed/watch/ingest/artifact）+ 2 个工具（query_graph/ingest_traces）。核验：**223 契约测试全绿（25 文件）、包级 tsc exit 0、oxlint 0 告警**；
 > EP-CB4（语义层+LSP+跨仓库）✅ 完成——SIMILAR 边+simhash 去重、semantic_query min-cosine 向量检索、LspSeam 增强接缝（Q15 Hybrid）、CROSS_* 跨仓边、transitive_loop_depth 传播；见 `docs/process/specs/2026-09-07-plugin-codebase-cb4-design.md` 与 `docs/process/plans/2026-09-07-plugin-codebase-cb4.md`。验收：239/239 vitest、tsc exit 0、oxlint 0。
 > **EP-CB5（符号级搜索闭口）✅ 已完成**——收尾 memory 硬约束「@flowforge/plugin-codebase must exclude File/Folder/Variable/Project tags from search results (symbol-level search to come in EP-CB1)」的符号级兑现：EP-CB1 已把 Variable 铸成合法符号标签（枚举成员、模块级 `const` 变量），但 store 的 `search` 仍将其计入 `BM25_NOISE_LABELS` 而排除出 BM25 结果，形成「抽取了却搜不到」的契约缺口（Function/Method/Class/Interface/Enum/Type 均可检索，唯 Variable 例外）。EP-CB5 实现：①按 Q21 裁决把 Variable 移出噪声标签 `BM25_NOISE_LABELS=['File','Folder','Project']`（File/Folder/Project 仍为结构噪声保留排除，Module 维持 prose 保留 C #518/#519）；②`semanticQuery` 排除集改从 `BM25_NOISE_LABELS` 单源派生，消除双处硬编码漂移；③符号搜索结果天然附带定义锚点（shortName/startLine/endLine props，CLI emit 透出）形成「搜到→定位到定义」闭环；④契约测试锁定（graph-model/store/semantic 各新增或更新正向用例）。验收：241/241 vitest、tsc exit 0、oxlint 0。见 `docs/process/specs/2026-09-28-plugin-codebase-cb5-design.md`、`docs/process/plans/2026-09-28-plugin-codebase-cb5.md`、`docs/process/verifications/plugin-codebase-cb5.md`。
+> **EP-CB6（graph-ui 3D 可视化）🟨 进行中（docs-first，设计待 operator 评审）**——承接 Q17/D-CB4 裁决（纳入 EP2 前端融合，非核心链路）。目标：代码知识图谱的只读 3D 可视化浏览；架构分两层——①`@flowforge/graph-ui` 图可视化数据契约层（注入式数据源 seam 消费 codebase.db 只读查询面：结构层 Project/Folder/File 树、符号层节点/边、标签/锚点；输出归一化图数据触点 GraphData/Nodes/Edges 契约）；②前端 3D 渲染（Next.js 14 + React 18 + three.js，渲染蒸 seam 注入式，React/DOM 胶水隔离）。交付物：设计/计划/评审文档 + `@flowforge/graph-ui` 契约层实现 + vitest 契约测试 + web 前端 3D 面板接入。边界：只读消费不写 DB、不重写索引、渲染与数据契约解耦（对齐 stretch 批次 seam 惯例）。见 `docs/process/specs/2026-10-09-plugin-codebase-cb6-design.md` 与 `docs/process/plans/2026-10-09-plugin-codebase-cb6.md`。
 
 > **operator 审计反馈（sherlock 2026-09-07 第三轮补充）**：核验 AI 编程工具此前交付，确认 EP0/EP-CB0/EP-CB1 均已按 git-workflow 经 mgr 走 PR 合入（#152/#153/#154/#155），无违规直推主干；`web/node_modules.bak/` 等依赖缓存备份目录已补 `.gitignore`（`**/node_modules.bak/`）防误提交。审查中发现的 4 处真实缺陷（trace 恒空、search hasMore 恒 false、architecture 跨模块依赖遗漏、adr list 恒空）在本 PR 一并修复并各以契约测试锁定。
 > **（sherlock 第四轮核验 2026-09-07）**：接续前次反馈——EP-CB2 二十九个改动文件 +3 份流程实例已经 mgr 提交为 **PR #158**（`sync/sherlock` 分支 → master），实跑核验 vitest 148/148、包级 tsc exit 0、oxlint 0，无残留依赖/文案，未跟踪产物 `plugin-web-t81.json` 属并行 web 任务已正确排除。EP-CB2 审计闭环 ✅。
@@ -471,11 +472,12 @@ EP4 阶段 11 Python 日落 + stretch（按 §15 裁决结果）
 | Q14 | plugin-codebase 解析器依赖策略：web-tree-sitter（WASM，纯 TS 生态）/ node 原生绑定 / vendored 语法资产 | ✅ 已裁决：web-tree-sitter（WASM）——纯 TS 生态、无原生编译、语法资产 vendored（operator 2026-09-07 确认按建议执行，见 34-stage D-CB1） |
 | Q15 | plugin-codebase 与 packages/lsp（ctx.lsp seam）融合边界：图谱解析用 LSP 语义（Hybrid LSP 思想）还是纯 tree-sitter | ✅ 已裁决：ctx.lsp 作为语义增强源接入，不替代 tree-sitter 主链路（见 34-stage D-CB2） |
 | Q16 | 索引数据落点：仓库本地 `.flowforge/codebase.db`（gitignore）vs 集中 `~/.flowforge/`（C 源项目两态并存） | ✅ 已裁决：仓库本地优先 + 集中注册表（EP-CB0 按建议执行，见 34-stage D-CB3） |
-| Q17 | graph-ui 3D 可视化（C 源项目内置 web 服务）是否纳入移植范围 | ✅ 已裁决：纳入 EP2 前端融合，非核心链路（见 34-stage D-CB4） |
+| Q17 | graph-ui 3D 可视化（C 源项目内置 web 服务）是否纳入移植范围 | ✅ 已裁决：纳入 EP2 前端融合，非核心链路（见 34-stage D-CB4）；**EP-CB6 执行批次已登记（docs-first，设计待 operator 评审）** |
 | Q18 | 162 语言全量语法资产 vs 先 TS/JS 后扩展的批次节奏 | ✅ 已裁决：先 TS/JS（本仓库自身即 TS）+ JSON/YAML/Markdown 结构层，语言资产按需增量（见 34-stage D-CB5） |
 | Q19 | Cypher 查询引擎移植深度：全语法子集（C 源项目 cypher/ 模块）vs 先 search_graph 结构化查询后 Cypher | ✅ 已裁决：结构化查询先行，Cypher 子集随 EP-CB3 落地（见 34-stage D-CB6） |
 | Q20 | **EP4 S11.2 提前归档放行**：Python 旧版归档的前置门槛 P2（TS 默认入口稳定 ≥2 周，阶段10 切换 2026-09-10）观察期未满，是否允许 S11.2 提前执行归档？ | ✅ **已裁决放行（operator，2026-09-16）**：允执行「**仅归档不删除**」——Python 旧版运行时代码 `git mv` 至 `python/legacy/`（根包目录 + 根 Python 文件 + pytest `tests/` + `scripts/*.py`；`config/`、`data/`、`web/`、`packages/`、`apps/` 保留原位）；pytest 基线快照落 `python/legacy-pytest-baseline-2026-09-16/`；根 `pyproject.toml` 改指向 `python/legacy`。**S11.3 删除仍须待归档后 ≥2 个发布迭代，本轮不执行**（已同步 `31-stage11-sunset.md` §1 P2 / §2 S11.2） |
 | Q21 | plugin-codebase 符号级搜索闭口：EP-CB1 已把 Variable 铸成合法符号标签（枚举成员/模块级 const 变量），但 `BM25_NOISE_LABELS` 仍排除 Variable，致「抽取了却搜不到」。是否将 Variable 移出噪声标签、纳入 BM25 符号级检索？（File/Folder/Project 维持结构噪声排除；Module 维持 prose 保留） | 🟩 **提案（EP-CB5）**：移出 Variable → 纳入检索；符号结果附带定义锚点（shortName/startLine/endLine props）形成「搜到→定位」闭环；契约测试锁定（见 §13.0 EP-CB5） |
+| Q22 | **graph-ui 3D 可视化执行方式**（承接 Q17 裁决）：前端图可视化如何落地——数据契约层与渲染层是否解耦为独立包；图形栈选型（three.js 等） | 🟩 **提案（EP-CB6）**：`@flowforge/graph-ui` 契约层（数据 seam 注入式，只读消费 codebase.db，输出 GraphData/Nodes/Edges 归一化触点）+ three.js 渲染 seam（React/DOM 胶水隔离），两层解耦对齐 stretch seam 惯例（见 §13.0 EP-CB6） |
 
 ---
 
@@ -546,8 +548,7 @@ manage_adr / ingest_traces。
 | EP-CB3 | Cypher 查询引擎子集（Q19）+ ingest_traces + watcher 增量索引 + 持久化工件（压缩 artifact 团队共享） | 复杂多跳查询可用 |
 | EP-CB4 | 语义层（semantic edges + simhash 相似度 + 向量检索）+ LSP 融合（Q15）+ cross-repo-intelligence 跨仓库智能 | Hybrid LSP 全量对齐 |
 | EP-CB5 | 符号级搜索闭口（Q21）：Variable 移出 `BM25_NOISE_LABELS` 纳入 BM25 符号级检索（File/Folder/Project 结构噪声保留排除，Module 维持 prose 保留）+ 符号搜索结果附带定义锚点（shortName/startLine/endLine，来自 props）+ 契约测试锁定 | 全部符号标签（Function/Method/Class/Interface/Enum/Type/Variable）可被符号级检索并定位到定义 |
-
-### 16.4 关键工程决策（移植即重构，非逐行翻译）
+| EP-CB6 | graph-ui 3D 可视化（Q17/D-CB4）：归 EP2 前端融合的只读可视化批次——图可视化数据契约层 + 前端 3D 渲染（Next.js 14 + React 18，three.js 数据面注入式 seam）+ web 前端接入 | 代码知识图谱可 3D 可视化浏览（节点/边/标签/锚点渲染），consumed 由 `@flowforge/graph-ui` 契约层提供，渲染 seam 注入式 |
 
 1. **语言运行时**：C 原生二进制 → TS 插件（cordis 形态，对齐 plugin-dev 包模板）；foundation/compat 层全部不移植（TS 运行时天然跨平台）。
 2. **存储**：C 的 SQLite + FTS5 + 内存图缓冲 → `node:sqlite`（Node ≥22.5 内置，零外部依赖，与 storage-sqlite 同选型）；RAM-first 管线保留（先内存聚合再批量事务落盘）。
