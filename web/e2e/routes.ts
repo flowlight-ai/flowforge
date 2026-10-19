@@ -15,6 +15,7 @@ export interface SmokeRoute {
 
 export const SMOKE_ROUTES: readonly SmokeRoute[] = [
   { path: "/", expectedFrag: "运行概览" },
+  { path: "/codebase/graph", expectedFrag: "图谱" },
   { path: "/council" },
   { path: "/memory" },
   { path: "/memory/catalog" },

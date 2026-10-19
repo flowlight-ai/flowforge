@@ -27,7 +27,7 @@ export interface PanelRendererPort {
 /** 宿主装配好的图谱端口：挂载时回调返回渲染 seam，卸载时清理。 */
 export interface GraphUiPort {
   /** 取数 + 布局 + 渲染，返回实际用到的渲染 seam（供卸载时 dispose）。 */
-  readonly load: () => Promise<{ nodeCount: number; renderer: PanelRendererPort | null }>;
+  readonly load: (host: HTMLDivElement) => Promise<{ nodeCount: number; renderer: PanelRendererPort | null }>;
 }
 
 export interface GraphPanelProps {
@@ -51,7 +51,9 @@ export function GraphPanel({ enabled, project, port }: GraphPanelProps) {
     setReady(false);
     setError(null);
     try {
-      const { nodeCount: count, renderer } = await port.load();
+      const host = hostRef.current;
+      if (!host) return;
+      const { nodeCount: count, renderer } = await port.load(host);
       rendererRef.current = renderer;
       setNodeCount(count);
       setReady(true);
