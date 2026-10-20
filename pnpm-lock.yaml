@@ -7486,6 +7486,9 @@ importers:
       '@flowforge/graph-ui':
         specifier: workspace:^
         version: link:../packages/plugins/graph-ui
+      '@flowforge/plugin-codebase':
+        specifier: workspace:^
+        version: link:../packages/plugins/codebase
       '@flowforge/terminal-panel':
         specifier: workspace:^
         version: link:../packages/terminal/terminal-panel
@@ -7542,8 +7545,8 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
       '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.43
+        specifier: ^22.0.0
+        version: 22.20.1
       '@types/react':
         specifier: ^18.3.0
         version: 18.3.31
@@ -9496,9 +9499,6 @@ packages:
 
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
-
-  '@types/node@20.19.43':
-    resolution: {integrity: sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA==}
 
   '@types/node@22.20.1':
     resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
@@ -14723,10 +14723,6 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
-  '@types/node@20.19.43':
-    dependencies:
-      undici-types: 6.21.0
-
   '@types/node@22.20.1':
     dependencies:
       undici-types: 6.21.0
@@ -14775,7 +14771,7 @@ snapshots:
 
   '@types/ws@8.18.2':
     dependencies:
-      '@types/node': 26.2.0
+      '@types/node': 22.20.1
 
   '@ungap/structured-clone@1.4.0': {}
 
@@ -16316,7 +16312,7 @@ snapshots:
 
   jest-worker@27.4.5:
     dependencies:
-      '@types/node': 26.2.0
+      '@types/node': 22.20.1
       merge-stream: 2.0.0
       supports-color: 8.0.0
 
@@ -17239,7 +17235,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.2
-      '@types/node': 26.2.0
+      '@types/node': 22.20.1
       long: 5.3.2
 
   proxy-addr@2.0.8:
