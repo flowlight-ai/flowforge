@@ -63,7 +63,15 @@ export function GraphPanel({ enabled, project, port }: GraphPanelProps) {
   }, [port]);
 
   useEffect(() => {
-    if (active) void load();
+    if (!active) return;
+    const host = hostRef.current;
+    // 端口/工程切换：先释放旧渲染与旧画布，避免叠加 canvas 与 pointerdown 监听。
+    rendererRef.current?.dispose();
+    rendererRef.current = null;
+    if (host) {
+      while (host.firstChild) host.removeChild(host.firstChild);
+    }
+    void load();
   }, [active, load]);
 
   // 卸载清理：dispose 渲染 seam，防 three scene/监听泄漏。

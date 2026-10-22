@@ -24,6 +24,26 @@ interface HttpGraphPayload {
   readonly anchors: Readonly<Record<string, GraphAnchor>>;
 }
 
+/** 工程列表项（?list=1 返回）。 */
+export interface HttpProjectInfo {
+  readonly name: string;
+  readonly createdAt: string;
+  readonly filesIndexed?: number;
+  readonly lastIndexedAt?: string;
+}
+
+/** 一次性拉取已索引工程列表；失败返回 null。 */
+export async function listHttpProjects(): Promise<readonly HttpProjectInfo[] | null> {
+  try {
+    const res = await fetch(`/codebase-graph/data?list=1`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { projects?: readonly HttpProjectInfo[] };
+    return body.projects ?? [];
+  } catch {
+    return null;
+  }
+}
+
 /**
  * 拉取并构造真实只读端口；失败返回 null（调用方回落 seed）。
  * @returns 预取成功返回同步只读端口；db/工程缺失或网络失败返回 null。

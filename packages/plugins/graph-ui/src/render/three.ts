@@ -31,7 +31,7 @@ export class ThreeForceGraphRenderer implements RendererPort {
   private readonly camera: unknown
   private readonly renderer: InstanceType<ThreeBinding['WebGLRenderer']>
   private readonly group: unknown
-  private nodePositions: ReadonlyMap<string, NodePosition> = new Map()
+  private nodeMeshes: unknown[] = []
   private onSelect: ((node: GraphNode) => void) | null = null
   private listenersDisposed = false
 
@@ -56,7 +56,8 @@ export class ThreeForceGraphRenderer implements RendererPort {
     for (const p of layout.positions) positions.set(p.nodeId, p)
     const nodeIds = new Set(data.nodes.map((n) => n.id))
 
-    // 节点 mesh。
+    // 节点 mesh：userData.node 关联 GraphNode（供射线拾取回传真实节点）。
+    const nodeMeshes: unknown[] = []
     for (const node of data.nodes) {
       const pos = positions.get(node.id)
       if (!pos) continue
@@ -65,8 +66,11 @@ export class ThreeForceGraphRenderer implements RendererPort {
         new this.binding.MeshBasicMaterial({ color: nodeColor(node.label) }),
       )
       ;(mesh as { position: { set: (x: number, y: number, z: number) => void } }).position.set(pos.x, pos.y, pos.z)
+      ;(mesh as { userData?: { node?: GraphNode } }).userData = { node }
+      nodeMeshes.push(mesh)
       group.add(mesh)
     }
+    this.nodeMeshes = nodeMeshes
 
     // 边 line：仅连接两端都在布局中的节点。
     for (const edge of data.edges) {
@@ -84,8 +88,6 @@ export class ThreeForceGraphRenderer implements RendererPort {
       group.add(line)
     }
 
-    this.nodePositions = positions
-    this.nodeFor = new Map(data.nodes.map((n) => [n.id, n]))
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -99,11 +101,9 @@ export class ThreeForceGraphRenderer implements RendererPort {
     this.canvas.removeEventListener('pointerdown', this.handlePointerDown)
     this.listenersDisposed = true
     this.onSelect = null
-    this.nodePositions = new Map()
+    this.nodeMeshes = []
     this.renderer.dispose()
   }
-
-  private nodeFor: ReadonlyMap<string, GraphNode> = new Map()
 
   private resize(): void {
     const width = this.canvas.clientWidth || 600
@@ -116,27 +116,31 @@ export class ThreeForceGraphRenderer implements RendererPort {
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
     const cb = this.onSelect
-    if (!cb || this.nodePositions.size === 0) return
+    if (!cb || this.nodeMeshes.length === 0) return
     const rect = this.canvas.getBoundingClientRect()
-    const node = this.pickNearest(
+    const node = this.pickRaycast(
       event.clientX - rect.left,
       event.clientY - rect.top,
+      rect.width || this.canvas.clientWidth,
+      rect.height || this.canvas.clientHeight,
     )
     if (node) cb(node)
   }
 
-  /** 简化拾取：按二维屏幕坐标最近命中（参考实现，未做真实相机投影）。 */
-  private pickNearest(screenX: number, screenY: number): GraphNode | null {
-    let bestId: string | null = null
-    let bestDist = Infinity
-    for (const [id, pos] of this.nodePositions) {
-      const dist = Math.hypot(pos.x - screenX, pos.y - screenY)
-      if (dist < bestDist) {
-        bestDist = dist
-        bestId = id
-      }
-    }
-    return bestId ? (this.nodeFor.get(bestId) ?? null) : null
+  /** 真实相机投射拾取：指针归一化 → GPU 射线 → 命中 mesh 的 userData.node。 */
+  private pickRaycast(x: number, y: number, width: number, height: number): GraphNode | null {
+    if (width === 0 || height === 0) return null
+    const pointer = new this.binding.Vector2(
+      (x / width) * 2 - 1,
+      -(y / height) * 2 + 1,
+    )
+    const raycaster = new this.binding.Raycaster()
+    const setFromCamera = raycaster as { setFromCamera?: (p: unknown, camera: unknown) => void }
+    setFromCamera.setFromCamera?.(pointer, this.camera)
+    const intersect = raycaster as { intersectObjects?: (objects: unknown[]) => { object?: unknown }[] }
+    const hits = intersect.intersectObjects?.(this.nodeMeshes) ?? []
+    const node = (hits[0]?.object as { userData?: { node?: GraphNode } } | undefined)?.userData?.node
+    return node ?? null
   }
 }
 

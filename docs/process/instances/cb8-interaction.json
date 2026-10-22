@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "name": "cb8-interaction",
+  "workflow": "change",
+  "snapshot": {
+    "name": "cb8-interaction",
+    "phase": "implement",
+    "gates": {
+      "designApproved": true,
+      "planValidated": true,
+      "verificationEvidence": false
+    },
+    "artifacts": {
+      "design": "docs/process/specs/2026-10-22-plugin-codebase-cb8-interaction-design.md",
+      "plan": "d:\\software\\fl\\flowlight\\flowforge\\docs\\process\\plans\\2026-10-22-plugin-codebase-cb8-interaction.md"
+    },
+    "history": [
+      {
+        "phase": "requirement",
+        "enteredAt": "2026-10-22T11:46:14.804Z"
+      },
+      {
+        "phase": "design",
+        "enteredAt": "2026-10-22T11:46:18.977Z"
+      },
+      {
+        "phase": "plan",
+        "enteredAt": "2026-10-22T11:46:24.039Z"
+      },
+      {
+        "phase": "implement",
+        "enteredAt": "2026-10-22T11:49:58.952Z"
+      }
+    ]
+  },
+  "updatedAt": "2026-10-22T11:49:58.952Z"
+}

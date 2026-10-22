@@ -105,8 +105,12 @@ describe('RendererPort 注入式契约 + 装配面', () => {
 
 // ---- fake three binding（极窄注入面假件）----
 
-const fakeBinding: ThreeBinding & { rendererInstances: unknown[] } = {
+const fakeBinding: ThreeBinding & {
+  rendererInstances: unknown[]
+  meshes: Array<{ userData?: { node?: GraphNode }; id?: string }>
+} = {
   rendererInstances: [],
+  meshes: [],
   Scene: class {
     objects: unknown[] = []
     add(o: unknown): void { this.objects.push(o) }
@@ -131,6 +135,10 @@ const fakeBinding: ThreeBinding & { rendererInstances: unknown[] } = {
   },
   Mesh: class {
     position = { set(): void {} }
+    userData: { node?: GraphNode } | undefined
+    constructor() {
+      ;(fakeBinding as unknown as { meshes: unknown[] }).meshes.push(this)
+    }
   },
   SphereGeometry: class {},
   MeshBasicMaterial: class {},
@@ -140,16 +148,49 @@ const fakeBinding: ThreeBinding & { rendererInstances: unknown[] } = {
   },
   BufferAttribute: class {},
   LineBasicMaterial: class {},
-} as unknown as ThreeBinding & { rendererInstances: unknown[] }
+  Vector2: class {
+    x: number
+    y: number
+    constructor(x = 0, y = 0) {
+      this.x = x
+      this.y = y
+    }
+  },
+  Raycaster: class {
+    pointer: unknown = null
+    setFromCamera(p: unknown): void {
+      this.pointer = p
+    }
+    intersectObjects(objects: unknown[]): Array<{ object?: unknown }> {
+      // 命中第一个挂载 userData.node 的 mesh（仿真 raycast 命中）。
+      const hit = objects
+        .map((m) => ({ object: m }))
+        .find((item) => (item.object as { userData?: { node?: GraphNode } }).userData?.node)
+      return hit ? [hit] : []
+    }
+  },
+} as unknown as ThreeBinding & {
+  rendererInstances: unknown[]
+  meshes: Array<{ userData?: { node?: GraphNode }; id?: string }>
+}
 
-function makeCanvas(): HTMLElement {
+function makeCanvas(capturePointer = false): HTMLElement & { pointerHandlers: Array<(e: PointerEvent) => void> } {
+  const handlers: Array<(e: PointerEvent) => void> = []
   return {
     clientWidth: 800,
     clientHeight: 500,
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 500, right: 800, bottom: 500, x: 0, y: 0, toJSON: () => ({}) }),
-    addEventListener(_type: string, _cb: EventListenerOrEventListenerObject): void {},
-    removeEventListener(_type: string, _cb: EventListenerOrEventListenerObject): void {},
-  } as unknown as HTMLElement
+    addEventListener(_type: string, _cb: EventListenerOrEventListenerObject): void {
+      if (capturePointer) handlers.push(_cb as (e: PointerEvent) => void)
+    },
+    removeEventListener(_type: string, _cb: EventListenerOrEventListenerObject): void {
+      const i = handlers.indexOf(_cb as (e: PointerEvent) => void)
+      if (i >= 0) handlers.splice(i, 1)
+    },
+    get pointerHandlers() {
+      return handlers
+    },
+  } as unknown as HTMLElement & { pointerHandlers: Array<(e: PointerEvent) => void> }
 }
 
 describe('ThreeForceGraphRenderer（注入 fake binding 装配）', () => {
@@ -171,5 +212,25 @@ describe('ThreeForceGraphRenderer（注入 fake binding 装配）', () => {
 
   it('createThreeRenderer 缺 binding 抛错（要求宿主注入）', () => {
     expect(() => createThreeRenderer(makeCanvas() as HTMLElement)).toThrow(/ThreeBinding/)
+  })
+
+  it('射线拾取：pointerdown 命中 mesh → onNodeSelect 收到真实 GraphNode', () => {
+    const canvas = makeCanvas(true)
+    const renderer = new ThreeForceGraphRenderer({ binding: fakeBinding, canvas })
+    let selected: GraphNode | null = null
+    renderer.renderGraph(sampleData, sampleLayout)
+    renderer.onNodeSelect((n) => { selected = n })
+    expect(canvas.pointerHandlers.length).toBe(1)
+
+    // 触发注册的 pointerdown handler：fake Raycaster.intersectObjects 命中第一个
+    // 挂 userData.node 的 mesh（仿真真实相机投射拾取），回调应收到该真实节点。
+    const handler = canvas.pointerHandlers[0]!
+    handler({ clientX: 400, clientY: 250 } as PointerEvent)
+    expect(selected).not.toBeNull()
+    expect(selected!.id).toBe('fn1')
+    expect(selected!.name).toBe('fn1')
+
+    renderer.dispose()
+    expect(canvas.pointerHandlers.length).toBe(0)
   })
 })

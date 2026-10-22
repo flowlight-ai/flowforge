@@ -17,7 +17,7 @@
  * @module @flowforge/web-frontend/components/codebase/CodebaseGraphView
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import type { GraphData, GraphEdge, GraphNode, LayoutResult, ThreeBinding } from "@flowforge/graph-ui";
@@ -34,7 +34,7 @@ import type { GraphUiPort, PanelRendererPort } from "@/components/graph/GraphPan
 
 import type { CodebaseGraphRead } from "@flowforge/graph-ui";
 import { seedCodebaseRead, SEED_PROJECT } from "./codebase-seed";
-import { loadHttpCodebaseRead } from "./http-codebase-read";
+import { listHttpProjects, loadHttpCodebaseRead, type HttpProjectInfo } from "./http-codebase-read";
 
 /** 合并两个数据层为一幅图谱（节点/边去重）。 */
 function mergeGraphData(struct: GraphData, symbol: GraphData): GraphData {
@@ -107,6 +107,8 @@ function buildPort(project: string): GraphUiPort {
         BufferGeometry: ns.BufferGeometry,
         BufferAttribute: ns.BufferAttribute,
         LineBasicMaterial: ns.LineBasicMaterial,
+        Vector2: ns.Vector2,
+        Raycaster: ns.Raycaster,
       } as unknown as ThreeBinding;
       // 保留严格 RendererPort（供本组件 renderGraph/onNodeSelect 正常调用）；
       // GraphPanel 仅做 DOM 胶水（dispose），返回时 cast 到宽松 PanelRendererPort 即可。
@@ -139,11 +141,70 @@ function buildPort(project: string): GraphUiPort {
   };
 }
 
-/** 默认关闭：?enabled=1 才挂载 heavy GPU 页面；?project=<id> 指定工程。 */
+/**
+ * 默认关闭：?enabled=1 才挂载 heavy GPU 页面；?project=<id> 指定初始工程。
+ * 挂载后拉取已索引工程列表渲染下拉；切换工程重建 port → GraphPanel 自动重装配。
+ */
 export default function CodebaseGraphView() {
   const params = useSearchParams();
   const enabled = params.get("enabled") === "1";
-  const project = params.get("project") || SEED_PROJECT;
+  const initialProject = params.get("project") || SEED_PROJECT;
+
+  const [project, setProject] = useState<string>(initialProject);
+  const [projects, setProjects] = useState<readonly HttpProjectInfo[]>([]);
+
+  // 一次性拉取工程列表（供下拉；失败留空，仅保留当前工程选项）。
+  useEffect(() => {
+    void listHttpProjects().then((list) => {
+      if (list) setProjects(list);
+    });
+  }, []);
+
+  // 下拉选项：http 工程 ∪ 当前工程（当前工程不在列表时仍可选中，如 seed 回退键）。
+  const options = useMemo(() => {
+    const names = new Set(projects.map((p) => p.name));
+    if (!names.has(project)) {
+      return [{ name: project, createdAt: "", filesIndexed: undefined, lastIndexedAt: undefined }, ...projects];
+    }
+    return [...projects];
+  }, [projects, project]);
+
   const port = useMemo(() => buildPort(project), [project]);
-  return <GraphPanel enabled={enabled} project={project} port={port} />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <label
+        style={{
+          display: enabled ? "flex" : "none",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 13,
+          color: "var(--muted)",
+        }}
+      >
+        <span>工程</span>
+        <select
+          data-project-select
+          value={project}
+          onChange={(e) => setProject(e.target.value)}
+          disabled={options.length <= 1}
+          style={{
+            padding: "4px 8px",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border)",
+            background: "var(--bg)",
+            color: "var(--text)",
+          }}
+        >
+          {options.map((p) => (
+            <option key={p.name} value={p.name}>
+              {p.name}
+              {p.filesIndexed != null ? `（${p.filesIndexed} 文件）` : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      <GraphPanel enabled={enabled} project={project} port={port} />
+    </div>
+  );
 }
