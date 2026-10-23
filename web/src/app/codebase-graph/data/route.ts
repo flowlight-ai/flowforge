@@ -86,11 +86,27 @@ function buildAnchors(
   return anchors
 }
 
-/** GET /codebase-graph/data?project=<id> */
+/**
+ * GET /codebase-graph/data?list=1 → 只返回工程列表（供项目选择下拉）。
+ * GET /codebase-graph/data?project=<id> → 返回指定工程全量节点/边/锚点。
+ */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const project = req.nextUrl.searchParams.get('project')
+    const listMode = req.nextUrl.searchParams.get('list') === '1'
     const inst = openCodebaseStore()
+    if (listMode) {
+      const items = inst.listProjects().map((p) => ({
+        name: p.name,
+        createdAt: p.createdAt,
+        ...(p.filesIndexed === undefined ? {} : { filesIndexed: p.filesIndexed }),
+        ...(p.lastIndexedAt === undefined ? {} : { lastIndexedAt: p.lastIndexedAt }),
+      }))
+      return NextResponse.json(
+        { projects: items },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
     const projects = inst.listProjects()
     const target = project ?? projects[0]?.name
     if (target === undefined) {

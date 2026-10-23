@@ -47,4 +47,6 @@ export interface ThreeBinding {
   readonly BufferGeometry: new () => unknown
   readonly BufferAttribute: new (array: Float32Array, itemSize: number) => unknown
   readonly LineBasicMaterial: new (opts?: { readonly color?: string | number }) => unknown
+  readonly Vector2: new (x?: number, y?: number) => unknown
+  readonly Raycaster: new () => unknown
 }

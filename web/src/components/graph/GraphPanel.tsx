@@ -46,24 +46,49 @@ export function GraphPanel({ enabled, project, port }: GraphPanelProps) {
 
   const active = enabled && !!port;
 
+  const loadSeqRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!port) return;
+    const seq = ++loadSeqRef.current;
     setReady(false);
     setError(null);
+    const host = hostRef.current;
+    if (!host) return;
+    // 每次装载使用独立容器：过期装载可整块移除，不污染新画布。
+    while (host.firstChild) host.removeChild(host.firstChild);
+    const slot = document.createElement("div");
+    slot.style.cssText = "width:100%;height:100%";
+    host.appendChild(slot);
     try {
-      const host = hostRef.current;
-      if (!host) return;
-      const { nodeCount: count, renderer } = await port.load(host);
+      const { nodeCount: count, renderer } = await port.load(slot);
+      if (seq !== loadSeqRef.current) {
+        renderer?.dispose();
+        slot.remove();
+        return;
+      }
       rendererRef.current = renderer;
       setNodeCount(count);
       setReady(true);
     } catch (e) {
+      if (seq !== loadSeqRef.current) {
+        slot.remove();
+        return;
+      }
       setError(e instanceof Error ? e.message : String(e));
     }
   }, [port]);
 
   useEffect(() => {
-    if (active) void load();
+    if (!active) return;
+    // 端口/工程切换：load 内先释放旧渲染（dispose）并清空旧容器。
+    rendererRef.current?.dispose();
+    rendererRef.current = null;
+    void load();
+    // 卸载/重载时使在途装载过期，避免 StrictMode 双挂载叠加 canvas。
+    return () => {
+      loadSeqRef.current += 1;
+    };
   }, [active, load]);
 
   // 卸载清理：dispose 渲染 seam，防 three scene/监听泄漏。

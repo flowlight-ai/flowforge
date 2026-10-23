@@ -36,6 +36,13 @@
 | `web/src/components/codebase/CodebaseGraphView.tsx` | 【EP-CB7】接线切到 http 端口（真实库优先，缺库/失败回落 seed；返回 view 收敛 ThreeBinding/RendererPort 类型摩擦） |
 | `web/package.json` | 【EP-CB7】新增 `@flowforge/plugin-codebase: workspace:^`（route handler 引用）+ `@types/node` 升 `^22`（node:sqlite 类型） |
 | `web/next.config.js` | 【EP-CB7】`transpilePackages` 追加 `@flowforge/plugin-codebase`（不改 rewrites） |
+| `packages/plugins/graph-ui/src/render/ports.ts` | 【EP-CB8】`ThreeBinding` 增 `Vector2`/`Raycaster` 注入成员（真实相机投射拾取所需） |
+| `packages/plugins/graph-ui/src/render/three.ts` | 【EP-CB8】`ThreeForceGraphRenderer` 换真实相机投射拾取（`pickRaycast`：指针归一化→GPU 射线→命中 mesh 的 `userData.node`），替换简化最近命中；mesh 收集 `nodeMeshes` 供射线相交 |
+| `packages/plugins/graph-ui/tests/render.spec.ts` | 【EP-CB8】射线拾取契约用例（fake `Raycaster` 仿真命中 → `onNodeSelect` 收真实 `GraphNode`）[6 例] |
+| `web/src/app/codebase-graph/data/route.ts` | 【EP-CB8】`?list=1` 分支返回工程列表（供项目选择下拉） |
+| `web/src/components/codebase/http-codebase-read.ts` | 【EP-CB8】新增 `listHttpProjects` 拉取工程列表 + `HttpProjectInfo` 类型 |
+| `web/src/components/codebase/CodebaseGraphView.tsx` | 【EP-CB8】项目下拉选择 + 切换重装配（`project` 状态→port 重建→GraphPanel 自动重载）；ThreeBinding 接线补 `Vector2`/`Raycaster` |
+| `web/src/components/graph/GraphPanel.tsx` | 【EP-CB8】端口/工程切换时先 dispose 旧渲染并清空宿主画布，避免叠加 canvas 与 pointerdown 监听 |
 | `packages/plugins/graph-ui/src/index.ts` | 导出面 |
 | `packages/plugins/graph-ui/tests/graph-data.spec.ts` | 数据 seam 消费契约（8 例，内存桩 injector） |
 | `packages/plugins/graph-ui/tests/layout.spec.ts` | 布局坐标确定性契约（7 例） |
@@ -46,8 +53,8 @@
 ## 2. 门禁验收
 
 ### 2.1 vitest（仓库根运行，限定 graph-ui 包）
-- `npx vitest run packages/plugins/graph-ui` → **Test Files 4 passed；Tests 25 passed (25)**
-- 四类契约：graph-data（8）、layout（7）、render（5）、codebase-injector（5，真实临时库）。
+- `npx vitest run packages/plugins/graph-ui` → **Test Files 4 passed；Tests 26 passed (26)**
+- 四类契约：graph-data（8）、layout（7）、render（6，EP-CB8 增射线拾取 1 例）、codebase-injector（5，真实临时库）。
 
 ### 2.2 包级 tsc
 - `npx tsc --build packages/plugins/graph-ui/tsconfig.json` → **exit 0**
@@ -72,6 +79,7 @@
   - **数据用内置 seed**（`codebase-seed.ts`，确定性小图），原因：web 的 `/api/*` 仅转发到 Python FastAPI(8000)（`python/legacy/app/main.py` uvicorn 默认 8000），而 GraphData 源在 TS 插件私有 `node:sqlite`（`.flowforge/codebase.db`），跨语言直读属高耦合。真实 DB 通道留作后续独立批次（评审 Python FastAPI 直读 vs TS 独立只读 HTTP 端点）。
   - **【EP-CB7 交付】真实 `codebase.db`→web 数据通道已落地**（独立立项 `docs/process/specs/2026-10-20-plugin-codebase-cb7-design.md`）：新增服务端 route handler `web/src/app/codebase-graph/data/route.ts`，路径 `/codebase-graph/data`（**非 `/api` 前缀 → 处理 by Next 自身 route，不被 rewrites 转发 FastAPI**）；DB 定位 `FF_CODEBASE_DB` 环境变量优先、缺省 `process.cwd()` 向上探测 `.flowforge/codebase.db`（与 CLI 一致）；`node:sqlite` 进程内只读，返回 `{project, nodes, edges, anchors}`（形状对齐 `CodebaseNodeRow`/`CodebaseEdgeRow`/`GraphAnchor`），响应 `Cache-Control: no-store`。浏览器侧新增 `web/src/components/codebase/http-codebase-read.ts`（`HttpCodebaseRead`：预取缓存工厂，返回同步 `CodebaseGraphRead`，失败回 `null`），`CodebaseGraphView` 接线切为「真实库优先、缺库/失败回落内置 seed」的优雅降级；`CodebaseGraphInjector` 与 graph-ui 契约零改动。已验证：web `tsc --noEmit` exit 0；dev server 冒烟 `GET /codebase-graph/data?project=flowforge` → HTTP 200 + `Cache-Control: no-store` + 真实数据（flowforge 工程 45721 nodes / 156073 edges / 45721 anchors），证明未被 FastAPI 劫持、node:sqlite 通道畅通。遗留：函数/符号级项目选择仍后置。
   - **构建链路验证现状**：web 不在仓库门禁内（vitest/oxlint 排除 `web/**`）。本次以 **web `tsc --noEmit` 通过（exit 0，无诊断）** 验证三组件（seed/view/page + GraphPanel 接线）对 graph-ui 类型 + three 类型编译正确。完整 `pnpm --filter web-frontend build` 在本机无法跑通：默认 4GB node 堆 OOM（exit 134，堆溢出 abort），8GB 堆下运行 >60min 且无 `.next` 产物写入（三者/大应用构建的病理耗时）→ 属环境资源限制，非本改动的类型/语法错误（tsc 同源全绿可证）。最终 next 构建门禁交由 CI/内存更充裕环境执行。
-- graph-ui 包本体本轮零改动，其既有门禁（vitest 25/25、包级 tsc exit 0、oxlint 0，见 §2）保持有效。
+- **【EP-CB8 交付】真实相机投射拾取 + 项目选择已落地**（独立立项 `docs/process/specs/2026-10-22-plugin-codebase-cb8-interaction-design.md`）：`ThreeBinding` 增 `Vector2`/`Raycaster` 注入成员，`ThreeForceGraphRenderer` 拾取由「简化最近命中」改为**真实相机投射**（`pickRaycast`：指针归一化 → GPU 射线 `setFromCamera` → `intersectObjects` 命中 mesh 的 `userData.node`），web 侧 `CodebaseGraphView` ThreeBinding 接线补齐两投类；新增射线拾取契约用例（fake `Raycaster` 仿真命中断言 `onNodeSelect` 收真实 `GraphNode`，render.spec 6 例）。项目选择：route handler 增 `?list=1` 返回工程列表，`http-codebase-read` 增 `listHttpProjects`，`CodebaseGraphView` 渲染工程下拉，切换经 `project` 状态 → port 重建 → `GraphPanel` 先 dispose 旧渲染并清空宿主画布再重载（真实库优先、失败回落 seed 的降级策略不变）。门禁：graph-ui vitest 26/26、包级 tsc exit 0、oxlint 0；web `tsc --noEmit` exit 0。遗留：（1）web 不在仓库门禁内（vitest/oxlint 排除 `web/**`），完整 next build 仍归 CI；（2）选中节点的详情展示面板仍后置（当前 onNodeSelect 仅接日志占位）。
+- graph-ui 包本轮门禁（vitest 26/26、包级 tsc exit 0、oxlint 0，见 §2）保持有效。
 - 未修改 plugin-codebase 核心六域任何源码/契约/测试；未触碰任何 Python legacy / TS host 路由文件；未改 `next.config.js` rewrites。
-- 后续批次：真实 `codebase.db`→web 数据通道（独立立项）；真实相机投射拾取（替换当前简化最近命中）与项目选择。
+- 后续批次：选中节点的详情展示面板（当前 `onNodeSelect` 仅接日志占位，见 EP-CB8 遗留）。
