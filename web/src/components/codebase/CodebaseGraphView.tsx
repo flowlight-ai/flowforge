@@ -131,10 +131,9 @@ function buildPort(project: string): GraphUiPort {
 
       const merged = mergeGraphData(struct, symbol);
       renderer.renderGraph(merged, mergeLayout(structLayout, symbolLayout));
-      renderer.onNodeSelect((n) => {
-        // 选中回调先接占位日志；面板展示选中详情留待后续交互批次。
-        console.debug("[graph] node selected", n.id, n.name, "source", httpRead ? "codebase.db" : "seed");
-      });
+      // 节点命中回调（EP-CB8 raycast 拾取）交由 GraphPanel 订阅（EP-CB9 详情侧栏），
+      // 本组件不再自行消费占位日志，避免双责任；renderer 装配时保留 onNodeSelect seam，
+      // 命中 realNode 由 GraphPanel 宿主统一呈现详情（真实库或 seed 降级）。
 
       return { nodeCount: merged.nodes.length, renderer: renderer as unknown as PanelRendererPort };
     },

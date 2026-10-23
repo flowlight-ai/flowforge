@@ -17,11 +17,96 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { displayText, labelToCn, lineRangeText } from "./label-cn";
+
 /** 归一化 RendererPort 结构（与 graph-ui render/ports 对齐，避免运行时依赖）。 */
 export interface PanelRendererPort {
   readonly renderGraph: (data: unknown, layout: unknown) => void;
   readonly onNodeSelect?: (cb: (node: unknown) => void) => void;
   readonly dispose: () => void;
+}
+
+/**
+ * 选中节点详情（web 消费端结构类型，零 graph-ui 运行时依赖）。
+ * 字段与 graph-ui GraphNode 对齐（id/label/name/shortName/filePath/startLine/endLine），
+ * 用 unknown 宽泛承接，展示所需信息全部来自命中节点自身，无需额外取数。
+ */
+export interface NodeDetail {
+  readonly id?: unknown;
+  readonly label?: unknown;
+  readonly name?: unknown;
+  readonly shortName?: unknown;
+  readonly filePath?: unknown;
+  readonly startLine?: unknown;
+  readonly endLine?: unknown;
+}
+
+/** 详情信息项定义：key 为展示文案，取 NodeDetail 中对应字段。 */
+const DETAIL_FIELDS: ReadonlyArray<{ label: string; pick: (n: NodeDetail) => unknown }> = [
+  { label: "名称", pick: (n) => n.name },
+  { label: "类型", pick: (n) => labelToCn(n.label) },
+  { label: "简单名", pick: (n) => n.shortName },
+  { label: "文件路径", pick: (n) => n.filePath },
+  { label: "行范围", pick: (n) => lineRangeText(n.startLine, n.endLine) ?? "—" },
+];
+
+/** 详情侧栏：展示选中节点结构化信息，支持关闭清空选中。 */
+function DetailPanel({ node, onClose }: { node: NodeDetail; onClose: () => void }) {
+  return (
+    <div
+      data-graph-detail="panel"
+      style={{
+        flex: "none",
+        width: 280,
+        marginLeft: 8,
+        padding: "12px",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--border)",
+        background: "var(--bg)",
+        overflowY: "auto",
+        maxHeight: "60vh",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <h3 style={{ margin: 0, fontSize: 14 }}>选中节点</h3>
+        <button
+          data-graph-detail="close"
+          onClick={onClose}
+          aria-label="关闭详情"
+          style={{
+            border: "none",
+            background: "transparent",
+            color: "var(--muted)",
+            cursor: "pointer",
+            fontSize: 14,
+            lineHeight: 1,
+          }}
+        >
+          ✕
+        </button>
+      </div>
+      <dl style={{ margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        {DETAIL_FIELDS.map(({ label, pick }) => {
+          const value = displayText(pick(node));
+          return (
+            <div key={label} style={{ fontSize: 13 }}>
+              <dt style={{ color: "var(--muted)", margin: 0, fontSize: 12 }}>{label}</dt>
+              <dd
+                style={{
+                  margin: 0,
+                  wordBreak: "break-all",
+                  color: "var(--text)",
+                  fontFamily: value === "—" ? undefined : "var(--font-mono, monospace)",
+                }}
+              >
+                {value}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
+  );
 }
 
 /** 宿主装配好的图谱端口：挂载时回调返回渲染 seam，卸载时清理。 */
@@ -43,6 +128,7 @@ export function GraphPanel({ enabled, project, port }: GraphPanelProps) {
   const [ready, setReady] = useState(false);
   const [nodeCount, setNodeCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<NodeDetail | null>(null);
 
   const active = enabled && !!port;
 
@@ -53,6 +139,7 @@ export function GraphPanel({ enabled, project, port }: GraphPanelProps) {
     const seq = ++loadSeqRef.current;
     setReady(false);
     setError(null);
+    setSelected(null);
     const host = hostRef.current;
     if (!host) return;
     // 每次装载使用独立容器：过期装载可整块移除，不污染新画布。
@@ -68,6 +155,8 @@ export function GraphPanel({ enabled, project, port }: GraphPanelProps) {
         return;
       }
       rendererRef.current = renderer;
+      // renderer 就绪后订阅节点命中回调，命中 realNode 置为选中态驱动详情侧栏（EP-CB9）。
+      renderer?.onNodeSelect?.((node) => setSelected(node as NodeDetail));
       setNodeCount(count);
       setReady(true);
     } catch (e) {
@@ -137,19 +226,23 @@ export function GraphPanel({ enabled, project, port }: GraphPanelProps) {
           加载失败：{error}
         </div>
       )}
-      <div
-        ref={hostRef}
-        data-graph-panel="canvas"
-        style={{
-          position: "relative",
-          width: "100%",
-          minHeight: "60vh",
-          background: "var(--bg)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-md)",
-          overflow: "hidden",
-        }}
-      />
+      <div style={{ display: "flex", alignItems: "flex-start", minWidth: 0 }}>
+        <div
+          ref={hostRef}
+          data-graph-panel="canvas"
+          style={{
+            position: "relative",
+            flex: "1 1 auto",
+            minWidth: 0,
+            minHeight: "60vh",
+            background: "var(--bg)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-md)",
+            overflow: "hidden",
+          }}
+        />
+        {selected && <DetailPanel node={selected} onClose={() => setSelected(null)} />}
+      </div>
     </div>
   );
 }
